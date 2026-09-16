@@ -16,7 +16,8 @@ import { describeVersionRange } from "@/utils/format/pack-format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
+import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
+import { showCard } from "./card-shell.ts";
 import { createPack3D } from "./pack-3d.ts";
 import { loadModel2D } from "./skeleton.ts";
 import { summaryCardHTML, type YsmSummary } from "./tpl-summary.ts";
@@ -138,45 +139,59 @@ export async function showModelDetail(
   }
 }
 
-/** 显示资源包信息（pack.mcmeta + pack.png + 模型清单） */
+/** 显示资源包信息（pack.mcmeta + pack.png + 模型清单）
+ * ADR-253 D4：收编进统一卡片壳 showCard（消除最后一个手写详情壳）。
+ * 附带修复：FAB 改由壳在渲染期同步绑定（原实现若 ReadPackMeta 抛错则 FAB 死点击）。 */
 export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<void> {
-  const gen = ctx.detailGen.next();
-  try {
-    const App = await backendGetApp();
-    const { ReadPackMeta } = App;
-    const meta = await ReadPackMeta(path);
-    if (ctx.detailGen.stale(gen)) return;
-    if (!meta) throw new Error("资源包信息为空");
-    const basename = path.split(/[/\\]/).pop() || "";
-    const desc = renderFormattedText(meta.description || "");
-    if (ctx.detailGen.stale(gen)) return;
-    const rv = describeVersionRange(meta);
-    // ADR-131 P3：模型清单（path + 方块数，封顶 200，total 全量）——list 组件占位，
-    // 数据经 ListPackModelsDetail 异步取（Go 绑定 / web-fs 镜像同构）
-    ctx.root.innerHTML = `<div class="content" id="preview-content">
+  return showCard(ctx, path, {
+    icon: UI_ICONS.appearance,
+    label: t("preview.resourcePack"),
+    fetchMeta: async (_ctx, path, app) => {
+      const meta = await app.ReadPackMeta(path);
+      if (!meta) throw new Error("资源包信息为空");
+      return meta;
+    },
+    renderCard: (_ctx, path, meta) => {
+      const m = meta as NonNullable<Awaited<ReturnType<AppBindings["ReadPackMeta"]>>>;
+      const basename = path.split(/[/\\]/).pop() || "";
+      const desc = renderFormattedText(m.description || "");
+      const rv = describeVersionRange(m);
+      // ADR-131 P3：模型清单（path + 方块数，封顶 200，total 全量）——list 组件占位，
+      // 数据经 ListPackModelsDetail 异步取（Go 绑定 / web-fs 镜像同构）
+      return `<div class="content" id="preview-content">
   <h3>${UI_ICONS.appearance} ${t("preview.resourcePack")}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    ${meta.thumbnail ? `<img src="${esc(meta.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:40px;line-height:1">${UI_ICONS.error}</div><div style="font-size:var(--fs-sm);color:var(--muted)">${t("preview.noPackPng")}</div></div>`}
+    ${m.thumbnail ? `<img src="${esc(m.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:var(--fs-xl);line-height:1">${UI_ICONS.error}</div><div style="font-size:var(--fs-sm);color:var(--muted)">${t("preview.noPackPng")}</div></div>`}
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     ${desc ? `<div style="color:var(--muted);line-height:1.6">${desc}</div>` : ""}
     <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${rv.format}${rv.version ? `（${rv.version}）` : ""}</div>
     <div id="pack-model-list"></div>
   </div>
 </div>
-<button class="preview-fab" id="btn-pack-model-3d" title="${t("preview.blockItemModel3d")}" aria-label="${t("preview.blockItemModel3d")}"><span class="preview-ic">&#x1F3D7;&#xFE0F;</span></button>`;
-    const fab = ctx.root.querySelector("#btn-pack-model-3d") as HTMLButtonElement;
-    if (fab) {
+<button class="preview-fab" id="btn-pack-model-3d" data-fab title="${t("preview.blockItemModel3d")}" aria-label="${t("preview.blockItemModel3d")}"><span class="preview-ic">&#x1F3D7;&#xFE0F;</span></button>`;
+    },
+    wireFab: (ctx2, path2, fab) => {
+      if (!fab) return;
       const cleanup = promoteTitleIfPresent(fab);
-      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
+      if (cleanup && ctx2.unsubs) ctx2.unsubs.push(cleanup);
       fab.onclick = (): void => {
-        createPack3D(path).catch((e) => logWarn("preview", "pack3D 失败", e));
+        createPack3D(path2).catch((e) => logWarn("preview", "pack3D 失败", e));
       };
-    }
+    },
     // 模型清单区（异步取数，失败/无模型静默隐藏；详情卡降级约定）
-    void renderPackModelList(ctx, gen, App, path);
-  } catch (e) {
-    if (ctx.detailGen.stale(gen)) return;
-    ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.appearance} ${t("preview.resourcePack")}</h3><div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div></div>`;
+    postRender: (ctx3, path3, gen) => {
+      void renderPackModelListAsync(ctx3, gen, path3);
+    },
+  });
+}
+
+/** 取 App 后渲染资源包模型清单区（postRender 签名不传 App，此处自取——backendGetApp 为缓存访问器） */
+async function renderPackModelListAsync(ctx: PreviewCtx, gen: number, path: string): Promise<void> {
+  try {
+    const App = await backendGetApp();
+    await renderPackModelList(ctx, gen, App, path);
+  } catch {
+    /* 取 App 失败静默：基础卡不受影响（详情卡降级约定） */
   }
 }
 

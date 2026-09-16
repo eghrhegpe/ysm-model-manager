@@ -7,82 +7,19 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { readPmxStats } from "@/preview-3d/adapters/mmd/mmd-detail-stats.ts";
 import { readVrmMeta } from "@/preview-3d/adapters/vrm/vrm-adapter.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
+import { showCard } from "./card-shell.ts";
 import { openModel3DFullscreen } from "./preview-library.ts";
 import { resolveMorphSiblings, resolveStageSiblings } from "./siblings.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
 
-// ===== 统一卡片渲染器 =====
-// 六个 show 函数共享同一模板：invalidate → innerHTML 骨架 → getApp → fetch → stale 检查
-// → innerHTML 内容 → querySelector → wire FAB。差异封装在 CardShowConfig 中。
-// 卡片上的类型徽章一律取 RESOURCE_TYPES.*（= resource_types.json 的 type id，单一事实源），
-// 不走 i18n：type id 是技术标识，翻进语言包会 fork 出第二事实源（违反 ADR-116 前端只读不判）。
-
-interface CardShowConfig {
-  icon: string;
-  label: string;
-  /** 可选 meta 获取（VRM 使用；其他类型直接渲染，无加载态） */
-  fetchMeta?: (
-    ctx: PreviewCtx & DetailGenGuard,
-    path: string,
-    app: AppBindings,
-  ) => Promise<unknown>;
-  /** 渲染卡片 HTML（fetchMeta 有值时传解析结果，无值时传 null） */
-  renderCard: (ctx: PreviewCtx & DetailGenGuard, path: string, meta: unknown) => string;
-  /** 绑定 FAB 按钮事件 */
-  wireFab: (ctx: PreviewCtx & DetailGenGuard, path: string, fab: HTMLElement | null) => void;
-  /** 可选后置异步渲染（PMX 统计 / 兄弟列表 / 舞台内容） */
-  postRender?: (ctx: PreviewCtx & DetailGenGuard, path: string, gen: number) => void;
-}
-
-async function showCard(
-  ctx: PreviewCtx & DetailGenGuard,
-  path: string,
-  config: CardShowConfig,
-): Promise<void> {
-  ctx.detailGen.invalidate();
-  const gen = ctx.detailGen.next();
-
-  // 无 fetchMeta：直接渲染，无加载态，无错误处理
-  if (!config.fetchMeta) {
-    ctx.root.innerHTML = config.renderCard(ctx, path, null);
-    const fab = ctx.root.querySelector<HTMLElement>("[data-fab]");
-    config.wireFab(ctx, path, fab);
-    config.postRender?.(ctx, path, gen);
-    return;
-  }
-
-  // 有 fetchMeta：加载态 → 获取 → 渲染
-  ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${config.icon} ${config.label}</h3>
-  <div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div>
-</div>`;
-
-  try {
-    const App = await backendGetApp();
-    const meta = await config.fetchMeta(ctx, path, App);
-    if (ctx.detailGen.stale(gen)) return;
-    ctx.root.innerHTML = config.renderCard(ctx, path, meta);
-    const fab = ctx.root.querySelector<HTMLElement>("[data-fab]");
-    config.wireFab(ctx, path, fab);
-    config.postRender?.(ctx, path, gen);
-  } catch (e) {
-    if (ctx.detailGen.stale(gen)) return;
-    ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${config.icon} ${config.label}</h3>
-  <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
-</div>`;
-  }
-}
-
-// ===== 六个 show 函数（统一为 CardShowConfig + showCard）=====
+// ===== 六个 show 函数（统一为 CardShowConfig + showCard，壳见 ./card-shell.ts）=====
 
 /** 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） */
 export async function showVrmMeta(

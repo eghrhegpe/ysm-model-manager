@@ -145,6 +145,16 @@ describe("showResourcePack 资源包信息", () => {
     expect(ctx.root.innerHTML).toContain("读取失败");
   });
 
+  // ADR-253 D4：收编 showCard 后，pack 与其余 6 种格式卡语义一致——
+  // 错误态只渲染错误占位、不渲染 FAB（优于原实现「渲染一个点了没反应的死按钮」）。
+  it("读取失败 → 与其他格式卡一致：不渲染 FAB（而非渲染死按钮）", async () => {
+    readPackMock.mockRejectedValue(new Error("ENOENT"));
+    const ctx = makeCtx();
+    await showResourcePack(ctx, "/packs/bad.mcmeta");
+    expect(ctx.root.innerHTML).toContain("读取失败");
+    expect(ctx.root.querySelector("#btn-pack-model-3d")).toBeNull();
+  });
+
   it("模型清单（ADR-131 P3）：渲染 path + 方块数，点击直达 3D（startEntry）", async () => {
     readPackMock.mockResolvedValue({ description: "包", pack_format: 12 });
     packModelsMock.mockResolvedValue({
@@ -434,7 +444,12 @@ describe("detailGen 过期守卫（在途请求作废）", () => {
     ctx.detailGen.invalidate();
     resolveRead({});
     await pending;
-    expect(ctx.root.getElementById("preview-content")).toBeNull();
+    // ADR-253 D4：收编 showCard 后语义与其余 6 种格式卡一致——过期回包不覆盖，
+    // 但壳预写的加载占位仍在（不再是「整页空白」）。断言真正要守的不变量：
+    // 过期结果未渲染出资源包卡内容。
+    expect(ctx.root.querySelector("#btn-pack-model-3d")).toBeNull();
+    expect(ctx.root.querySelector("#pack-model-list")).toBeNull();
+    expect(ctx.root.textContent).toContain("正在解析模型文件");
   });
 
   it("ListPackModelsDetail 在途时切走 → 恢复后 203 静默早退", async () => {

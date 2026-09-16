@@ -127,9 +127,25 @@ D1 落地后，nav-fab 与详情卡 FAB 的差异仅剩：
 
 ### D4 · `showResourcePack` 收编进 `showCard`
 
-`detail.ts` 的 `showResourcePack` 改为 `showCard(CardShowConfig)` 形态（`renderCard` +
-`wireFab` + `postRender`），消除最后一个手写详情壳。数据通道（`ReadPackMeta` /
-`ListPackModelsDetail`）不变，仅收敛渲染装配方式。
+`detail.ts` 的 `showResourcePack` 改为 `showCard(CardShowConfig)` 形态（`fetchMeta` +
+`renderCard` + `wireFab` + `postRender`），消除最后一个手写详情壳。数据通道
+（`ReadPackMeta` / `ListPackModelsDetail`）不变，仅收敛渲染装配方式。
+
+- **壳抽为叶子模块** `card-shell.ts`（`showCard` + `CardShowConfig` 自 `detail-3d.ts` 迁出）：
+  若让 `detail.ts`（2D 详情）直接 import `detail-3d.ts`（3D 入口卡）会造成语义倒挂；
+  抽成双方共依赖的叶子后，`check-circular` 仍为 0 环。
+- **FAB 补 `data-fab`**：壳按 `[data-fab]` 查 FAB，`#btn-pack-model-3d` 原缺该属性，
+  已补齐以对齐其余 6 张卡。
+- **`postRender` 签名不含 `App`**：资源包清单需 `App.ListPackModelsDetail`，
+  经新增的 `renderPackModelListAsync` 内部 `backendGetApp()`（缓存访问器）自取。
+- **错误路径语义变化（修正实施预期）**：原手写实现在 `ReadPackMeta` 抛错时**渲染出 FAB
+  但从不绑定**（死点击）；收编后错误态只渲染错误占位、**不渲染 FAB**——与其余 6 种
+  带 `fetchMeta` 的格式卡完全一致。「没有按钮」优于「有按钮但点了没反应」。
+  测试断言随之从「FAB 存在且已绑定」改为「错误态不渲染 FAB」。
+- **过期守卫语义变化**：壳会在渲染前预写加载占位，故「在途切走」后残留占位而非整页空白
+  （与 6 种格式卡一致）；测试改为断言「过期结果未渲染出卡片内容（FAB / 清单均不存在）」。
+- **范围**：`showModelDetail`（YSM）**未**收编——它需要「详情/骨骼」 tab 行，
+  `showCard` 的加载/错误态写死了 `<h3>` 形态，收编需先给壳加 tab 能力，另立决策。
 
 ### D5 · 3D 切换机制与 2D 骨架加载解耦（实施中发现的缺陷修复）
 

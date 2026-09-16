@@ -5,6 +5,7 @@ import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { stgCard } from "./stg-card.ts";
 import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -24,50 +25,54 @@ function renderStgTabs(): string {
 function renderStgBasicPaths(isViewer: boolean): string {
   const gameRootCard = isViewer
     ? ""
-    : `<div class="stg-card" style="animation-delay:0ms">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between"><label class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.game} ${t("settings.paths.gameRoot")}</label><button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button></div>
-      <div class="stg-card-body">
-        <div class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</div>
-        <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>
-      </div>
-    </div>`;
+    : stgCard(
+        UI_ICONS.game,
+        t("settings.paths.gameRoot"),
+        `<div class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</div>
+        <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>`,
+        {
+          header: {
+            actions: `<button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button>`,
+          },
+          delayMs: 0,
+        },
+      );
   const linkCard = isViewer
     ? ""
-    : `<div class="stg-card" style="animation-delay:60ms">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">
-        <label for="set-link-mode" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.link} ${t("settings.links.title")}</label>
-        <button id="set-relink" class="btn-base sm">${UI_ICONS.refresh} ${t("settings.links.reapply")}</button>
-      </div>
-      <div class="stg-card-body">
-        <select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
+    : stgCard(
+        UI_ICONS.link,
+        t("settings.links.title"),
+        `<select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
           <option value="copy">${UI_ICONS.clipboard} ${t("settings.links.copy")}</option>
           <option value="hardlink" selected>${UI_ICONS.link} ${t("settings.links.hardlink")} ${UI_ICONS.success}</option>
           <option value="symlink">${UI_ICONS.link} ${t("settings.links.symlink")}</option>
         </select>
         <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">${t("settings.links.copyHint")}</div>
         <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">${t("settings.links.hardlinkHint")}</div>
-        <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>
-      </div>
-    </div>`;
+        <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>`,
+        {
+          header: {
+            forId: "set-link-mode",
+            actions: `<button id="set-relink" class="btn-base sm">${UI_ICONS.refresh} ${t("settings.links.reapply")}</button>`,
+          },
+          delayMs: 60,
+        },
+      );
   const mirrorCard = isViewer
     ? ""
-    : `
-    <div class="stg-card" style="animation-delay:120ms">
-      <div class="stg-card-hdr">
-        <label for="set-mirror" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.web} ${t("settings.mirror.title")}</label>
-      </div>
-      <div class="stg-card-body">
-        <select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
+    : stgCard(
+        UI_ICONS.web,
+        t("settings.mirror.title"),
+        `<select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
           <option value="">${UI_ICONS.globe} ${t("settings.mirror.directOption")}</option>
           <option value="jsdelivr">${UI_ICONS.performance} ${t("settings.mirror.jsdelivrOption")}</option>
           <option value="githubapi">${UI_ICONS.github} GitHub API</option>
         </select>
         <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.directHint")}</div>
         <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.jsdelivrHint")}</div>
-        <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.githubapiHint")}</div>
-      </div>
-    </div>
-    `;
+        <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.githubapiHint")}</div>`,
+        { header: { forId: "set-mirror" }, delayMs: 120 },
+      );
   return `<div class="section-title stg-title">${UI_ICONS.settings} ${t("settings.paths.title")}</div>
 
 <div class="stg-grid">
@@ -79,29 +84,37 @@ function renderStgBasicPaths(isViewer: boolean): string {
 
 function renderStgStorageCard(isWebViewer: boolean): string {
   return isWebViewer
-    ? `
-  <div class="stg-card" id="stg-web-repo-card" style="margin-top:8px;animation-delay:180ms">
-    <div class="stg-card-hdr">${UI_ICONS.folder} ${t("settings.webRepo.title")}</div>
-    <div class="stg-card-body">
-      <div class="stg-card-desc">${t("settings.webRepo.desc")}</div>
-      <button class="btn-base sm" id="web-repo-auth-btn" style="margin-top:8px;font-size:var(--fs-sm);padding:4px 12px">${UI_ICONS.folderOpen} ${t("settings.webRepo.authorize")}</button>
-      <div id="web-repo-auth-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.5"></div>
-    </div>
-  </div>
-  `
-    : `
-  <div class="stg-card" id="stg-files-card" style="margin-top:8px;animation-delay:180ms">
-    <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between"><label class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.folder} ${t("settings.storage.title")}</label><button class="btn-base sm" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">${UI_ICONS.folderOpen} ${t("settings.storage.expand")} ▸</button></div>
-    <div class="stg-card-body">
-      <div class="stg-path-val" id="set-files-root">${t("common.loading")}</div>
-      <div class="stg-card-desc">${t("settings.storage.desc")}</div>
-      <div id="set-advanced-panel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
-        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px">${t("settings.path.customHint")}</div>
-        <div class="stg-grid" id="set-advanced-grid"></div>
-      </div>
-    </div>
-  </div>
-  `;
+    ? stgCard(
+        UI_ICONS.folder,
+        t("settings.webRepo.title"),
+        `<div class="stg-card-desc">${t("settings.webRepo.desc")}</div>
+     <button class="btn-base sm" id="web-repo-auth-btn" style="margin-top:8px;font-size:var(--fs-sm);padding:4px 12px">${UI_ICONS.folderOpen} ${t("settings.webRepo.authorize")}</button>
+     <div id="web-repo-auth-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.5"></div>`,
+        {
+          header: { spaceBetween: false, titleSize: "base" },
+          cardId: "stg-web-repo-card",
+          marginTop: 8,
+          delayMs: 180,
+        },
+      )
+    : stgCard(
+        UI_ICONS.folder,
+        t("settings.storage.title"),
+        `<div class="stg-path-val" id="set-files-root">${t("common.loading")}</div>
+     <div class="stg-card-desc">${t("settings.storage.desc")}</div>
+     <div id="set-advanced-panel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
+       <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px">${t("settings.path.customHint")}</div>
+       <div class="stg-grid" id="set-advanced-grid"></div>
+     </div>`,
+        {
+          header: {
+            actions: `<button class="btn-base sm" id="set-advanced-toggle" style="font-size:var(--fs-tiny);padding:2px 8px">${UI_ICONS.folderOpen} ${t("settings.storage.expand")} ▸</button>`,
+          },
+          cardId: "stg-files-card",
+          marginTop: 8,
+          delayMs: 180,
+        },
+      );
 }
 
 function renderStgLangSelect(): string {

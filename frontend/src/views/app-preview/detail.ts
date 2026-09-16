@@ -19,6 +19,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
 import { showCard } from "./card-shell.ts";
 import { createPack3D } from "./pack-3d.ts";
+import { openModel3DFullscreen } from "./preview-library.ts";
 import { loadModel2D } from "./skeleton.ts";
 import { summaryCardHTML, type YsmSummary } from "./tpl-summary.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
@@ -228,14 +229,13 @@ async function renderPackModelList(
     .join("")}
   ${overflow}
 </div>`;
-    // 点击单模型直达 3D（pack-model-adapter 吃 entry path，startEntry 指定初始）
+    // 点击单模型直达 3D（ADR-253 D6：经统一路由传 entry，由 pack opener
+    // 映射为 createPack3D 的 startEntry——不再绕过路由直调包装器）
     host.querySelectorAll<HTMLElement>(".pack-model-item").forEach((el) => {
       el.onclick = (): void => {
         const entry = el.dataset.entry || "";
         if (!entry) return;
-        createPack3D(path, { startEntry: entry }).catch((e) =>
-          logWarn("preview", "pack3D 失败", e),
-        );
+        openModel3DFullscreen(path, { entry }).catch((e) => logWarn("preview", "pack3D 失败", e));
       };
     });
   } catch {

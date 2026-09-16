@@ -62,7 +62,7 @@ describe("openModel3DFullscreen cooperate 跨类型守卫（审核 P3-4）", () 
     await openModel3DFullscreen("new.ysm", { cooperate: true });
     expect(mocks.switchPreview).not.toHaveBeenCalled();
     expect(mocks.cleanupPreview).toHaveBeenCalledTimes(1); // 关旧
-    expect(opener).toHaveBeenCalledWith("new.ysm", undefined); // 开新
+    expect(opener).toHaveBeenCalledWith("new.ysm", undefined); // 无 siblings/entry → undefined（向后兼容）
   });
 
   it("cooperate 但无活跃会话 → 直接 opener（原行为）", async () => {
@@ -80,5 +80,28 @@ describe("openModel3DFullscreen cooperate 跨类型守卫（审核 P3-4）", () 
     });
     await openModel3DFullscreen("new.vrm", { cooperate: true });
     expect(mocks.switchPreview).toHaveBeenCalledWith("new.vrm", { keepInScene: true });
+  });
+});
+
+describe("openModel3DFullscreen entry / siblings 透传（ADR-253 D6）", () => {
+  it("entry 透传到 opener 的 opts（资源包容器内初始条目）", async () => {
+    mocks.hasActivePreview.mockReturnValue(false);
+    await openModel3DFullscreen("p.zip", { entry: "assets/minecraft/models/block/door.json" });
+    expect(opener).toHaveBeenCalledWith("p.zip", {
+      entry: "assets/minecraft/models/block/door.json",
+    });
+  });
+
+  it("siblings + entry 同时透传（互不覆盖）", async () => {
+    mocks.hasActivePreview.mockReturnValue(false);
+    await openModel3DFullscreen("p.zip", { siblings: ["/a.pmx"], entry: "e.json" });
+    expect(opener).toHaveBeenCalledWith("p.zip", { siblings: ["/a.pmx"], entry: "e.json" });
+  });
+
+  it("显式传空 siblings 数组 → 仍透传（调用方显式意图优先，不被兜底改写）", async () => {
+    mocks.hasActivePreview.mockReturnValue(false);
+    await openModel3DFullscreen("p.zip", { siblings: [] });
+    // 空数组是「显式无候选」，非 undefined → 不触发 rtype 自算兜底
+    expect(opener).toHaveBeenCalledWith("p.zip", { siblings: [] });
   });
 });

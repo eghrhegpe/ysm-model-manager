@@ -11,10 +11,8 @@ import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { addOpLog, readFileBytes } from "./view-shell.ts";
 
 // 注册跨类型换角色路由（资源库面板/导航 FAB 选中 FBX 时派发到此）
-// ADR-253 D1：opener 透传 siblings（否则路由兜底白算）
-registerReRoute(RESOURCE_TYPES.FBX, (path, siblings) =>
-  createFbx3D(path, siblings ? { siblings } : undefined),
-);
+// ADR-253 D1+D6：opener 透传 opts（siblings 由路由层兜底，不再被丢弃）
+registerReRoute(RESOURCE_TYPES.FBX, (path, opts) => createFbx3D(path, opts));
 
 const fbxPort: FbxDataPort = {
   readFileBytes,

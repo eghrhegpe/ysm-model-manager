@@ -343,7 +343,7 @@ pitfalls:
 
 - **adapter 矩阵**（`preview-3d/adapters/*.ts`）：6 格式（YSM/VRM/MMD/Litematic/FBX/maid），统一 `PreviewAdapter` 契约，`withPreviewExtras()` 注入 `switchExternal` / `getModelsByType` / `getTypeTabs`
 - **skeleton 2D 层**（`views/app-preview/skeleton.ts`）：`loadModel2D` 渲染骨骼线框图，2D→3D 升级走 `_toggle3D` → `createYsm3D`；`_active3DClose` 模块级单例钩子（全局同时只允许一个活跃 overlay）；`_prevAbort` 管理 2D 拖拽 window 监听（AbortController，非手动产消）
-- **preview-library 路由**（`views/app-preview/preview-library.ts`）：`openModel3DFullscreen(path, { cooperate? })` 类型探测 → 注册表反向注入派发 opener；`scanModelsByType` 懒加载类型 tab 候选；`registerReRoute` / `getRegisteredRoutes` 破循环
+- **preview-library 路由**（`views/app-preview/preview-library.ts`）：`openModel3DFullscreen(path, { siblings?, entry?, cooperate?, rtype? })` 类型探测 → 注册表反向注入派发 opener；opener 签名 `(path, opts?: OpenerOptions)`，ADR-253 D1 起未传 `siblings` 时按 routeKey 自算兜底（`resolveSiblingsForRoute`），D6 起新增 `entry`（容器内初始条目，资源包映射 `startEntry`）；`scanModelsByType` 懒加载类型 tab 候选；`registerReRoute` / `getRegisteredRoutes` 破循环
 - **Go 绑定**：`GetModel3DSpec`（spec 数据）、`DetectResourceType`（类型探测）、`FindPreviewImage`/`ExtractPreviewTexture`（预览纹理）、`SaveCachedTexture`（KTX2 缓存落盘）
 
 ## 不变量

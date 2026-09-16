@@ -35,12 +35,27 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { resolveSiblingsForRoute } from "./siblings.ts";
 
 /** 跨类型换角色注册表：各 createXxx3D 模块加载时注册，路由侧不反向 import 包装器（破循环） */
-const _openers: Record<string, (path: string, siblings?: string[]) => Promise<void>> = {};
-/** 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用；
- *  第二参透传 siblings，切换后新会话「当前目录」tab 有候选，P1-2） */
+const _openers: Record<string, (path: string, opts?: OpenerOptions) => Promise<void>> = {};
+
+/**
+ * opener 收到的选项（ADR-253 D6 由「裸 siblings 数组」升格为选项对象）：
+ * - `siblings` —— 同类型候选（3D 内切换下拉）
+ * - `entry`    —— 容器内初始条目（仅资源包消费，映射为 createPack3D 的 startEntry）
+ *
+ * 升格原因：原签名 `(path, siblings?)` 无法表达「打开包内第 N 个模型」（startEntry），
+ * 而位置参数每加一个能力就得改 7 个 opener。选项对象让新增能力对既有 opener 零改动
+ * （它们只转发 opts 给 createXxx3D）。
+ */
+export interface OpenerOptions extends Mount3DOptions {
+  /** 容器内初始条目（资源包：entry 路径；其他类型忽略） */
+  entry?: string;
+}
+
+/** 注册某资源类型的「打开全屏 3D」入口（由对应 createXxx3D 包装器在模块加载时调用）。
+ *  第二参 opts 透传 siblings（3D 内「当前目录」候选）与 entry（容器内初始条目）。 */
 export function registerReRoute(
   rtype: string,
-  opener: (path: string, siblings?: string[]) => Promise<void>,
+  opener: (path: string, opts?: OpenerOptions) => Promise<void>,
 ): void {
   _openers[rtype] = opener;
 }
@@ -54,6 +69,9 @@ export function getRegisteredRoutes(): string[] {
 export interface OpenModel3DOptions {
   /** 同类型候选路径列表（透传给 opener 的 siblings） */
   siblings?: string[];
+  /** 容器内初始条目（ADR-253 D6）：资源包走 createPack3D 的 startEntry，直达包内指定模型；
+   *  其他类型 opener 忽略。详情卡「包内模型清单」点击即经此直达。 */
+  entry?: string;
   /**
    * 多模型同台追加：有活跃会话时改走 switchPreview({keepInScene}) 把新模型追加进
    * 同一场景，统一收口到注册表主门（消除 appendXxxPreview 绕过路由的接缝）。
@@ -163,7 +181,13 @@ export async function openModel3DFullscreen(
     if (!cooperate && hasActivePreview()) {
       cleanupPreview();
     }
-    await opener(path, siblings);
+    // ADR-253 D6：组装 opener 选项对象——显式空数组视作「显式无候选」按原样透传，
+    // 仅在 siblings 为 undefined（调用方未表态）时才省略字段，保持既有契约与测试口径。
+    const openerOpts: OpenerOptions = {};
+    if (siblings !== undefined) openerOpts.siblings = siblings;
+    if (options?.entry !== undefined) openerOpts.entry = options.entry;
+    const hasOpts = Object.keys(openerOpts).length > 0;
+    await opener(path, hasOpts ? openerOpts : undefined);
     return;
   }
   const { bus } = await import("@/bus");

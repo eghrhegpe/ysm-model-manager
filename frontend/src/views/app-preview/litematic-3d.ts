@@ -137,11 +137,11 @@ function voxelFnFor(path: string): string {
 }
 
 /** 跨类型换角色注册：投影/蓝图进入类型 tab（P2-2），opener 透传 siblings（P1-2） */
-registerReRoute(RESOURCE_TYPES.LITEMATIC, (path, siblings) =>
-  createLitematic3D(path, voxelFnFor(path), siblings ? { siblings } : undefined),
+registerReRoute(RESOURCE_TYPES.LITEMATIC, (path, opts) =>
+  createLitematic3D(path, voxelFnFor(path), opts),
 );
-registerReRoute(RESOURCE_TYPES.BLUEPRINT, (path, siblings) =>
-  createLitematic3D(path, voxelFnFor(path), siblings ? { siblings } : undefined),
+registerReRoute(RESOURCE_TYPES.BLUEPRINT, (path, opts) =>
+  createLitematic3D(path, voxelFnFor(path), opts),
 );
 
 /** 同台追加 Litematic/蓝图 模型：经统一路由主门收口（cooperate → keepInScene 追加，ADR-093 T4），与 mmd/vrm 对称 */

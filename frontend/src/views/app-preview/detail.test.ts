@@ -69,7 +69,9 @@ vi.mock("./siblings.ts", () => ({
   resolveStageSiblings: resolveStageSiblingsMock,
 }));
 // ADR-253 D2：详情卡 FAB 改走统一路由入口（openModel3DFullscreen），不再直调 createXxx3D
-vi.mock("./preview-library.ts", () => ({ openModel3DFullscreen: vi.fn() }));
+vi.mock("./preview-library.ts", () => ({
+  openModel3DFullscreen: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { showModelDetail, showResourcePack, showSimplePreview, showShaderpack } from "./detail.ts";
 import { sleep } from "@/test-utils/index.ts";
@@ -173,14 +175,17 @@ describe("showResourcePack 资源包信息", () => {
       expect(ctx.root.innerHTML).toContain("3 方块");
     });
     expect(packModelsMock).toHaveBeenCalledWith("/packs/pack.mcmeta");
-    // 点击 door 模型行 → 直达 3D 且带 startEntry
+    // 点击 door 模型行 → 直达 3D 且带 entry（ADR-253 D6：经统一路由透传，
+    // 由 pack opener 映射为 createPack3D 的 startEntry）
     const doorRow = [...ctx.root.querySelectorAll<HTMLElement>(".pack-model-item")].find(
       (el) => el.dataset.entry?.includes("door.json"),
     );
     expect(doorRow).toBeTruthy();
     doorRow!.click();
     await vi.waitFor(() =>
-      expect(createPack3DMock).toHaveBeenCalledWith("/packs/pack.mcmeta", { startEntry: "assets/minecraft/models/block/door.json" }),
+      expect(openModel3DFullscreen).toHaveBeenCalledWith("/packs/pack.mcmeta", {
+        entry: "assets/minecraft/models/block/door.json",
+      }),
     );
   });
 

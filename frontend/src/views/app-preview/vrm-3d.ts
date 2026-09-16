@@ -18,8 +18,8 @@ import { readFileBytes } from "./view-shell.ts";
 import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，.vrm→"vrm"）
-// ADR-253 D1：opener 透传 siblings（否则路由兜底白算）
-registerReRoute("vrm", (path, siblings) => createVrm3D(path, siblings ? { siblings } : undefined));
+// ADR-253 D1+D6：opener 透传 opts（siblings 由路由层兜底，不再被丢弃）
+registerReRoute("vrm", (path, opts) => createVrm3D(path, opts));
 
 /** 同目录文件枚举（VRMA 动作扫描用；对齐 MMD 同款 ListAllFilePaths 注入） */
 async function listAllFilePaths(dir: string): Promise<string[] | null> {

@@ -122,8 +122,16 @@ D1 落地后，nav-fab 与详情卡 FAB 的差异仅剩：
 **决策**：删除详情卡 FAB 的前提是「差异项已被判定为可放弃」。当前 `btn-3d-preview` 独有的
 「再点关闭 + 偏好记忆 + onClose 复位」是**交互语义**而非冗余实现，故：
 
-- **本 ADR 不授权删除任何 FAB**；
-- FAB 收敛（含是否迁移 `_prefer3D` 语义到路由层）另立决策，须以 D1 落地为前提。
+- **用户裁决（2026-09-16）= 方案 (b)：接受放弃 `_prefer3D` 语义**。
+  `_prefer3D` 经复核仅为本会话内的一个便利开关（实例级 boolean，不落盘）：
+  「记住上次点开 3D → 切下一个模型自动弹全屏」+「再点关闭」。其代价可接受——
+  批量看 3D 需手点；而「再点关闭」在 3D 全屏内本就有 ESC / ✕ 等价出口，属重复入口。
+  故**不**把该语义迁往路由层（否决 (a)：nav-fab 是「打开最近选中模型」的一次性跳转，
+  给它加有状态的自动全屏行为反而突兀）。
+- **由此 FAB 删除的前提已满足**：D1/D1b/D2 后 nav-fab 与详情卡 FAB 的差异仅剩
+  `_prefer3D`（本节已裁决放弃）与 `startEntry`（D6 已补齐路由通道）。
+  但**删除动作本身仍未执行**——它是独立改动（涉及 7 张卡的 FAB 标记清理与
+  `promoteTitleIfPresent` 清理链），须另行开单实施与验证。
 
 ### D4 · `showResourcePack` 收编进 `showCard`
 
@@ -156,6 +164,24 @@ D1 落地后，nav-fab 与详情卡 FAB 的差异仅剩：
   置于 try 尾部会使 FAB 在「解析失败 / 无 bones / 摘要提取失败」三条路径上永不绑定 → 死点击。
 - 兼容性：A 的迟到渲染不会污染 B 的按钮——同步绑定发生在 A 自己的渲染时机，
   B 后续重建 `innerHTML` 得到的是全新未绑定按钮（既有跨文件污染守卫用例仍绿）。
+
+### D6 · opener 签名升格为选项对象，新增 `entry` 通道（容器内初始条目）
+
+`registerReRoute` 的 opener 由 `(path, siblings?: string[])` 升格为
+`(path, opts?: OpenerOptions)`，其中 `OpenerOptions extends Mount3DOptions { entry?: string }`。
+
+- **动机**：原位置参数无法表达「打开包内第 N 个模型」（`createPack3D` 的 `startEntry`，
+  ADR-131 P3 的详情页模型清单依赖它）；每加一个能力就要改 7 个 opener 的位置参数。
+  选项对象让新增能力对既有 opener 零改动（直接转发 `opts`）。
+- **顺手收编**：D1b 引入的 `siblings ? { siblings } : undefined` 样板在 mmd/fbx/scene/vrm/
+  litematic 六处塌缩为 `createXxx3D(path, opts)` 直通。
+- **entry → startEntry 映射**：`entry` 是路由层通用名，资源包 opener 内映射为
+  `createPack3D` 的 `startEntry`（`Mount3DOptions` 不被 pack 专有字段污染）。
+- **空值语义**：`siblings` 显式传 `[]` 视作「显式无候选」按原样透传；仅 `undefined`
+  （调用方未表态）才触发 D1 的 rtype 自算兜底。产出的 opts 为空对象时回退传
+  `undefined`，保持既有测试与向后兼容。
+- **详情页收编**：资源包模型清单条目点击由 `createPack3D(path, {startEntry})` 直调
+  改为 `openModel3DFullscreen(path, {entry})`——**消灭最后一处绕过路由直调包装器**。
 
 ### 否决的方案
 

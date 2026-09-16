@@ -437,15 +437,19 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 ### 示例
 - `preview-library.ts`：
   ```typescript
-  const _openers: Record<string, (path: string, siblings?: string[]) => Promise<void>> = {};
+  const _openers: Record<string, (path: string, opts?: OpenerOptions) => Promise<void>> = {};
+  // ADR-253 D6：opts 为选项对象（siblings + entry），非位置参数——新增能力零改动既有 opener
+  export interface OpenerOptions extends Mount3DOptions {
+    entry?: string; // 容器内初始条目（资源包映射为 createPack3D 的 startEntry）
+  }
   export function registerReRoute(
     rtype: string,
-    opener: (path: string, siblings?: string[]) => Promise<void>,
+    opener: (path: string, opts?: OpenerOptions) => Promise<void>,
   ): void {
     _openers[rtype] = opener;
   }
   ```
-- `mmd-3d.ts`：`registerReRoute(RESOURCE_TYPES.MMD, (path, siblings) => createMmd3D(path, siblings ? { siblings } : undefined));`（**ADR-253 D1b：第二参必须转发**，否则 `openModel3DFullscreen` 按 rtype 自算的候选在 opener 处被静默丢弃）
+- `mmd-3d.ts`：`registerReRoute(RESOURCE_TYPES.MMD, (path, opts) => createMmd3D(path, opts));`（**ADR-253 D6：opts 必须转发**，否则 `openModel3DFullscreen` 兜底算出的 siblings 与 entry 在 opener 处被静默丢弃；pack 额外把 `entry` 映射为 `startEntry`）
 - `ysm-3d.ts`：`registerReRoute(RESOURCE_TYPES.YSM, openYsmFullscreen);`
 - `preview-library.ts`：查表派发逻辑（`openModel3DFullscreen` 内 `_openers[rtype]`）
 

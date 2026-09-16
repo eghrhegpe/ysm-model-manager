@@ -262,7 +262,7 @@ status: active
 - **纹理口径对称**：`decoder/texture-order.ts` 与 Go `internal/app/texture_order.go` 口径严格对称，改一侧须同步另一侧
 - **3D overlay 单例钩子**（`ctx.active3DClose` 挂组件实例，原模块级 `_active3DClose` 已迁移至实例——P1 修复，多实例互不串扰）：全局同时只允许一个活跃 3D overlay——新开 3D 前先调上一份的 `ctx.active3DClose`（`keepPrefer=true` 保留 `_prefer3D`）
 - **3D 内模型切换**：`PreviewHandle.switchTo(path)` 复用 renderer/rAF/controls/灯光重建内容层；`mount3D` 可选 `Mount3DOptions.siblings`（同类型候选 ≥2 时 topBar 渲染切换下拉）
-- **siblings 归路由层（ADR-253）**：`openModel3DFullscreen` 在调用方未传 `siblings` 时按 routeKey 自算（`siblings.ts` `resolveSiblingsForRoute`，空结果归一为 `undefined`）；详情卡 FAB 与导航栏 FAB 因此行为一致。**新增 opener 必须转发第二参** `(path, siblings) => createXxx3D(path, siblings ? { siblings } : undefined)`——否则候选在 opener 处被静默丢弃
+- **siblings / entry 归路由层（ADR-253 D1+D6）**：`openModel3DFullscreen` 在调用方未传 `siblings` 时按 routeKey 自算（`siblings.ts` `resolveSiblingsForRoute`，空结果归一为 `undefined`）；详情卡 FAB 与导航栏 FAB 因此行为一致。opener 签名已升格为 `(path, opts?: OpenerOptions)`（`OpenerOptions extends Mount3DOptions { entry? }`），**必须转发 opts** `(path, opts) => createXxx3D(path, opts)`——否则候选与 entry 在 opener 处被静默丢弃。`entry` 由资源包 opener 映射为 `createPack3D` 的 `startEntry`
 - **YSM 骨骼动画（ADR-100）**：动画数据优先取 `model._animClips`（loader 统一挂载），无内嵌时兜底扫同目录 `*.animation.json` → `createYsmAnimPlayer` 驱动骨骼
 - **`openModel3DFullscreen` 自洽兜底（P2 修复 2026-09）**：入口 `getApp()` 若后端不可用会 reject——函数内 try-catch + toast（`preview.backendUnavailable`）后 return，不依赖所有调用方各自 catch（app-nav FAB 有兜底，但 litematic-3d 裸调用无）
 - **DOM 注入转义约定（XSS 防御）**：详情/骨骼/骨架面板凡向 DOM 注入外部或模型派生数据，禁止 `innerHTML` 裸拼 `${var}`；一律走 `utils/dom/html.ts` 的 `esc()` 或 `createElement` + `textContent`

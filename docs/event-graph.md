@@ -510,7 +510,7 @@
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 143 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |
-| openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 197 |
+| openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 200 |
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 35 |
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 60 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |

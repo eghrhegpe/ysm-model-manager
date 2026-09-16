@@ -247,7 +247,7 @@ describe("showFbxPreview FBX 入口卡", () => {
 });
 
 describe("showScenePreview 场景 MMD 入口卡", () => {
-  it("SceneModel 徐章 + 场景模型标签 + 文件名（ADR-253 D2/D7）", async () => {
+  it("SceneModel 徽章 + 场景模型标签 + 文件名（ADR-253 D2/D7）", async () => {
     const ctx = makeCtx();
     await showScenePreview(ctx, "/repo/scene/main.pmx");
     const html = ctx.root.innerHTML;

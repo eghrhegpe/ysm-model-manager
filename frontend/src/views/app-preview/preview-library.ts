@@ -157,14 +157,6 @@ export async function openModel3DFullscreen(
     await switchPreview(path, { keepInScene: true });
     return;
   }
-  // ADR-253 D1：调用方未显式传 siblings 时按 rtype 自算兜底——
-  // 3D 入口成为 siblings 的单一出口（导航栏 FAB 与详情卡 FAB 行为一致）。
-  // 显式传入仍优先（向后兼容）；探测失败/无候选 → 保持 undefined，
-  // 退化为下拉不渲染（与调用方原行为一致，不把 [] 当有效候选列表下发）。
-  if (siblings === undefined) {
-    const computed = await resolveSiblingsForRoute(routeKey, rtype);
-    if (computed.length > 0) siblings = computed;
-  }
   // 兜底链（歧义扩展名/容器，仅预览路由派生，不参与类型判定）：
   // 1. ext 兜底：DetectResourceType 对 .pmx 等多声明扩展名保守返回 "other"，
   //    而 variants 明确声明了预览适配器（如 .pmx→mmd）——按扩展名再查一次；
@@ -177,7 +169,18 @@ export async function openModel3DFullscreen(
       ? _openers[resolvePreviewKeyByExt(path)]
       : undefined) ??
     (isContainerExt(extOf(path)) ? _openers[resolveDefaultPreviewKey(rtype)] : undefined);
+  // ADR-253 D1：调用方未显式传 siblings 时按 rtype 自算兜底——
+  // 3D 入口成为 siblings 的单一出口（导航栏 FAB 与详情卡 FAB 行为一致）。
+  // 显式传入仍优先（向后兼容）；探测失败/无候选 → 保持 undefined，
+  // 退化为下拉不渲染（与调用方原行为一致，不把 [] 当有效候选列表下发）。
+  // ⚠️ 须在 opener 兜底链**之后**执行：歧义扩展名/容器路径的 routeKey 在上方
+  // 才被 ext/默认适配器兜底落定，提前扫描会用错误的 rtype（other/容器 rtype）
+  // 得到空候选 → opener 成功派发但下拉缺失（审核 4080b9394 P3-5 实锤）。
   if (opener) {
+    if (siblings === undefined) {
+      const computed = await resolveSiblingsForRoute(routeKey, rtype);
+      if (computed.length > 0) siblings = computed;
+    }
     if (!cooperate && hasActivePreview()) {
       cleanupPreview();
     }

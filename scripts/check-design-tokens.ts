@@ -777,7 +777,10 @@ if (FIX_MODE) {
   }
   console.log("   提示：颜色**有意不自动替换**（语义令牌需人工判定，机械猜测会给错答案）");
 } else {
-  console.log("说明：本闸当前**只读报告**，未接门禁（存量债需先落「只减不增」基线策略）。");
+  console.log(
+    "说明：本闸已接门禁（pre-commit 挂 --staged --added-lines，ADR-256 行级判定）——上表为**全库存量债**盘点，" +
+      "存量债不拦（只判本次提交的新增行，自己动过的行才负责）。",
+  );
   if (fixable.withSuggestion > 0) {
     console.log(
       `     可用 --fix 自动令牌化其中 ${fixable.withSuggestion} 处（值等价，附跟随 --fs-scale 收益）`,

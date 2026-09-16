@@ -100,8 +100,32 @@ status: active
 - `smGetNavItems` 用 `el.offsetParent !== null` 判可见性——**position:fixed 项在真实浏览器 offsetParent 为 null 会被误过滤**（happy-dom 下 offsetParent 是 undefined 恒保留，测试未暴露）。当前菜单项无 fixed 定位未触发；若未来菜单项用 fixed 需改判 `getClientRects().length` 或 `display` 检查。
 - 键盘导航测试补强后仍缺「焦点真正移动」断言之外的边界场景（见 `slide-menu.test.ts` 观察项）；Numpad keyup 释放、输入阻断栈×双轨键组合补测在 `input-and-animation.test.ts` 登记，属同类规模盲区，随真实 a11y 验证需求再补。
 
+## token 层与字号缩放（2026-09 收敛）
+
+3D 菜单样式曾自成一套 `--uih-*` 裸 px token，**不参与全局「基准字号」设置**——用户在设置页调大字号，3D 菜单纹丝不动。2026-09 收敛：
+
+- **字号/尺寸 token 全部经 `calc(... + var(--fs-scale))` 派生**（`components-styles.ts` 的 `:root`）。默认 `--fs-scale: 0px`（`frontend/css/variables.css`），故默认态像素零变化。
+  - 字号类系数 **1**（`--uih-font-ui/-sm/-xs/-title/-lg`、`--uih-cs-label-font-size`）；
+  - 图标类系数 **1.2**（`--uih-slide-icon-size` 等，视觉重量随字号略超前）；
+  - 行高类系数 **1**（`--uih-slide-item-min-height` 等）——**若图标 1.2 而行高 1 会撑破，故刻意差异化**。
+- **token 数 70 → 21**（`components-styles` 19 + `slide-menu-styles` 2）。判据：**只被 `var()` 引用一次即内联**（单次消费的间接层比直接写值还长，是纯意外复杂度）。保留的是多方消费（`--uih-slide-icon-size` 18 处、`--uih-white-medium` 19 处）或语义独立（`--uih-slide-card-bg` = 卡片背景独立于 ysm 主题）。
+- **白色透明度 8 档 → 3 档**（`--uih-white-weak/medium/strong`）：原 04/05/06/08/10/12/16/40 视觉难分辨。
+- **清掉与 `--radius-xs` 重复的 `--uih-cs-bar-radius`**（同为 3px）。
+
+**契约测试**（`components-styles.test.ts`）：字号/尺寸 token 必须含 `var(--fs-scale)`、token 总数**精确**断言（非宽松上限）、**无零引用 token**、本文件零硬编码 `font-size:Npx`。新增合法 token 时须同步改总数——强制走一次「这真有必要吗」的判断。
+
+> ⚠️ 实测教训：宽松上限（≤25）时注入 `--uih-font-bad: 13px` **能溜过**；改精确断言 + 零引用断言后双重命中。断言写松等于没写。
+
+**设计约束**：3D 菜单只允许 MenuNode schema（根 AGENTS.md 红线），故「基准字号」偏好**只在主设置页可达**，未进 3D 菜单——`preview-3d/menu/settings.ts|buildSettingsSchema` 聚合的是渲染相关 cap 控件（视锥裁剪/帧率/分辨率/画质），与 `ui-prefs` 的 UI 偏好零交集。若要进菜单，须走 `settingsOrder` 声明。
+
+## ⚠️ 历史悬空引用（已修）
+
+`--uih-slide-divider` 在 `slide-menu-styles.ts` 被引用 2 次（`.slide-header` 下边框、`.collapsible-header` 边框）但**从未定义**——`border-bottom: 1px solid var(--uih-slide-divider)` 整条声明失效，导致 3D 菜单标题栏下沿与折叠头边框**长期不可见**。2026-09 收敛时补齐（`rgba(255,255,255,0.08)`）。
+> 教训：**收敛盘点引用与定义的对齐关系本身就能挖出潜伏 bug**，不只是洁癖。
+
 ## 相关
 
 - [preview_core](./preview_core.md) — 环境面板等消费方
 - [app-preview](./app-preview.md) — app-preview 侧 mmd-controls 等模块（现不再直接消费该外壳，经 preview-3d/menu cap 栈渲染）
-- ADR-075（环境面板行式菜单）、ADR-076（根菜单 ⚙️ 收编）、ADR-220（ui 收容所解散归位）
+- [ui_components](./ui_components.md) — 🥉 行组件库（`components-styles.ts` 同源）
+- ADR-075（环境面板行式菜单）、ADR-076（根菜单 ⚙️ 收编）、ADR-220（ui 收容所解散归位）、ADR-256（设计令牌行级闸）

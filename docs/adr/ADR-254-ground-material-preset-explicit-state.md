@@ -112,6 +112,7 @@ registerEnvStateMiddleware((patch) => {
 
 - **不改 Go**（同 ADR-249 §2.7）。
 - **不做 PBR 三件套**：邻座的木纹/金属带 albedo/roughness/normal 三贴图，本项目目标域是模型查看器地面，不值得。材质保持现有噪声实现，仅补正确配色。
+- **不引入贴图资产（且不必须）**：⚠️ 见 §5 更正——「贴图 vs 程序化」并非本题分歧点，且我们的程序化路径**已产出平铺贴图**。
 - **不合并旧网格层**（ADR-249 病例 C）：属独立收敛，本次仅登记（见 §3 已知遗留）。
 - **不抽「纹理形状」为独立用户轴**：邻座亦未拆（其 `sourceKind` 是预设层判别式、不落 envState）。B 方案的内核（形状与原语可组合）**降级为内部实现细节**，保留为未来扩展空间，本次不移到 UI。
 
@@ -137,7 +138,7 @@ registerEnvStateMiddleware((patch) => {
 ### 已知遗留
 
 - 旧网格层（y=0）与表面层字段语义重叠（ADR-249 病例 C），**本次仅登记不收敛**。
-- 程序化草/大理石**形状**仍是噪声近似，非真实材质（邻座用贴图绕过；本项目不引入贴图资产）。
+- 程序化草/大理石**形状**仍是**各向同性噪声近似**，非草叶/脉络的真实结构——这是**生成器形状质量**问题，非「缺贴图资产」（见 §5 更正）。
 - 噪声材质的 `density` 属 structural，拖动触发 512² × 3 次 `valueNoise` 重建（ADR-252 已登记的性能观察）。
 
 ---
@@ -151,8 +152,24 @@ registerEnvStateMiddleware((patch) => {
 | 用户分析：一个参数同时承诺语义与形状 | §1.2 病根 |
 | 邻座 `env-ground-presets.ts`（`groundPreset`/`GROUND_PRESET_KEYS`/`buildGroundPresetEnvState`） | §1.3 机制蓝本 |
 | 邻座 `env-bridge.ts:resetGroundPresetOnManualEdit` + `_WATER_KEYS` 教训注释 | §2.3 精确白名单（禁前缀匹配） |
-| 邻座 grass 预设 = `textures/grass.png` + `[0.3,0.5,0.25]` | §1.3 诚实基线；§2.6 不引入贴图资产的边界 |
+| 邻座 grass 预设 = `textures/grass.png` + `[0.3,0.5,0.25]` | §5 更正：差异在**生成器形状质量**，非「有没有 PNG」 |
 | 用户否决 A′「隐式守卫」与撤销 toast 的论证 | §1.4 被否方案 |
 | `rebuildSurface` 中 plain 走 `makeGeneratedTexture`、solid 走 `tex=null` | §2.5 #b 冗余收口 |
 
+---
+
+## 5. 更正（用户复核）
+
+本 ADR 初稿把「邻座用 `grass.png`」框定为「程序化做不好就投降/需引贴图资产」，**该框架错误**，用户复核指出：
+
+> 隔壁的噪声图只是预先生成好的……总之 grass 是确保无限地面之类的也能用上噪点图，不一定真的要往项目放 png。
+
+**正确认识**：
+
+1. **贴图是「可无限平铺的载体」**，不是「程序化的替代品」。大平面/无限地面需要内容能无缝重复——这正是贴图（`RepeatWrapping` + `repeat`）解决的问题。
+2. **我们的程序化路径已具备该能力**：`makeGeneratedTexture` 产出 512² `DataTexture` + `RepeatWrapping`，再由 `textureRepeat(meshSize, scale) = meshSize/TILE_WORLD_SIZE/scale` 驱动 `repeat`——地面尺寸变化时平铺密度自适应。**因此不需要 PNG。**
+3. **颜色未被忽视**（核实）：邻座 `env-ground-spec.ts:170` 有 `color: state.groundColor`（颜色进 spec）；我们则把 `matColor`/`matColor2` **烘焙进生成像素**（材质 color 留白乘）。两边都应用颜色。
+4. **真正的差距是生成器形状质量**：我们的 `grass` 是**各向同性**噪声（圆形斑块），草叶应呈**各向异性**（定向纤维）；`marble` 应呈**脉络**而非斑块。这属像素生成函数的形状建模，**与是否使用贴图资产无关**。
+
+**影响**：§2.6「不引入贴图资产」一项**非必要**——它不是缺点的补偿措施。若未来提升形状质量，两条路均可：改噪声函数（保平铺、零资产），或改预生成/加载贴图（同为平铺载体）。本 ADR 不锁定。
 <!-- 文件名: ground-material-preset-explicit-state.md → 实际文件 ADR-254-ground-material-preset-explicit-state.md -->

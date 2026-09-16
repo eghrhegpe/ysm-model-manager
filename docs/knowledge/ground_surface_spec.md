@@ -100,6 +100,8 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 - **marble**：种子化哈希噪声叠加多频三角波，matColor/matColor2 之间插值产生随机大理石紊纹理
 - **sand / grass**（ADR-251）：纯噪声材质（三倍频 `valueNoise`，无色带），在 matColor/matColor2 间 lerp；仅频率与对比度不同。`gridSize` 作粒度基准，`density` 作频率倍率，`angleRad` 旋转颗粒。
 
+> **平铺已具备，不需 PNG**（ADR-254 §5 更正）：`makeGeneratedTexture` 产出 512² `DataTexture` + `RepeatWrapping`，由 `textureRepeat(meshSize, scale)` 驱动 `repeat`——地面尺寸变化时平铺密度自适应，大平面/无限地面均可复用。**「贴图」是「可无限平铺的载体」，不是程序化的替代品**；若日后要提形状真实度（草叶各向异性、大理石脉络），改噪声函数与换贴图资产**都是候选**，不预设哪条。
+
 ## 核心职责
 
 - **buildGroundSurfaceSpec(params, textureToken)** → `{ structural:{mode,color,color2,gridSize,density,angleRad,textureToken}, appearance:{opacity,textureScale,rotationRad,roughness,metalness} }`（color2/density/angleRad 均为 structural：变则重建。**ADR-252 移除 lineColor**——无表面模式读它）

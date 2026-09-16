@@ -6,6 +6,8 @@ category: core
 status: draft
 source_files:
   - frontend/src/preview-3d/caps/ground-surface-spec.ts
+tests:
+  - frontend/src/preview-3d/caps/ground-surface-spec.test.ts
 auto_fields:
   symbols_with_lines:
     - applyGroundSurfaceAppearance
@@ -16,7 +18,6 @@ auto_fields:
     - DEFAULT_GROUND_SURFACE_PARAMS
     - effectiveParamsOf
     - generateOverlayPixels
-    - generateSurfacePixels
     - GROUND_CANVAS_STYLES
     - GROUND_MAT_PARAMS
     - GROUND_MATERIAL_PRESET_IDS

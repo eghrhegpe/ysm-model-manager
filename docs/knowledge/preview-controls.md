@@ -5,6 +5,7 @@ tier: architecture
 adr:
   - ADR-127
   - ADR-132
+  - ADR-253
 category: feature
 source_files:
   - frontend/src/views/app-preview/mmd-controls.ts
@@ -63,11 +64,15 @@ quick_intents:
   - 3D 控制器、MMD 播放、VRM 材质 / YSM schema
   - 截图按钮、相机控制、模型切换
   - multiModelSelectNode / preview menu node
+  - 3D 入口 / nav-fab / siblings 兜底 / entry 通道
 quick_risk_lines:
   - 相机操作已归核心声明式根菜单，底部导航弹窗已删除；adapter 项必须经 setAdapterItems 注入核心根菜单，禁止内联
+  - 3D 入口统一为左下角 nav-fab（ADR-253 D7）；详情卡内已无 3D 按钮，opener 必须转发 opts 否则 siblings/entry 被静默丢弃
 pitfalls:
   - 新加相机按钮 → 直接注入 mmd-controls → 切类型时按钮消失；必须走 setAdapterItems 注入核心根菜单
   - YSM schema 未走 registerYsmModelSchema 注册 → schema 变更不同步到菜单；必须经 schema-registry
+  - registerReRoute opener 写成 (path) 或 (path, siblings) → 路由层算出的 candidates/entry 被静默丢弃；必须 (path, opts) => createXxx3D(path, opts)
+  - 想在详情卡加 3D 按钮 → 与 ADR-253 D7 冲突（3D 已收敛到 nav-fab）；需要容器内指定模型请用 openModel3DFullscreen(path, { entry })
 
 use_when:
   - 3D 控制器
@@ -75,11 +80,18 @@ use_when:
   - 截图按钮
   - 相机控制
   - 模型切换
+  - 3D 入口
+  - nav-fab
+  - siblings
+  - 容器内模型
+  - 资源包模型直达
 invariant_anchors:
   - frontend/src/views/app-preview/ysm-controls.ts|registerYsmModelSchema
   - frontend/src/views/app-preview/mmd-controls.ts|playNodes
   - frontend/src/preview-3d/infra/camera-controls.ts|CameraControlBridge
   - frontend/src/preview-3d/menu/core.ts|setAdapterItems
+  - frontend/src/views/app-preview/siblings.ts|resolveSiblingsForRoute
+  - frontend/src/views/app-preview/preview-library.ts|openModel3DFullscreen
 status: active
 ---
 

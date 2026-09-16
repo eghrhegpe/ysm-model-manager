@@ -5,6 +5,7 @@ tier: architecture
 adr:
   - ADR-137
   - ADR-138
+  - ADR-253
 category: ui
 source_files:
   - frontend/src/views/app-preview/
@@ -160,15 +161,20 @@ quick_intents:
   - model:select、WASM 解码、放大预览
   - app-preview 组件、_previewGuard、detailGen
   - showResourcePack、showShaderpack
+  - 详情卡 3D 入口、nav-fab、card-shell 统一壳
 quick_risk_lines:
   - 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则
 pitfalls:
   - 手写 .(ysm|zip|json) 判定 → .7z 漏判、注册表变更不同步；必须经 matchTypeByExt(RESOURCE_TYPES.YSM)
   - async 窗口期无 container.isConnected 守卫 → 组件卸载后异步回调写已卸载 DOM；每个 await 后必须检查 isConnected
+  - 找「详情卡里的 3D 按钮」→ ADR-253 D7 已全部删除；3D 入口唯一为左下角 nav-fab（app-nav 的 .nav-viewer-fab）
 use_when:
   - 预览
   - 模型预览
   - 3D 预览
+  - 3D 入口
+  - nav-fab
+  - 详情卡
   - Litematic
   - WASM 解码
 invariant_anchors:

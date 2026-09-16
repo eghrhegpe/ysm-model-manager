@@ -25,7 +25,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
   const gameRootCard = isViewer
     ? ""
     : `<div class="stg-card" style="animation-delay:0ms">
-      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">${UI_ICONS.game} ${t("settings.paths.gameRoot")}<button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button></div>
+      <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between"><label class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.game} ${t("settings.paths.gameRoot")}</label><button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button></div>
       <div class="stg-card-body">
         <div class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</div>
         <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>
@@ -91,7 +91,7 @@ function renderStgStorageCard(isWebViewer: boolean): string {
   `
     : `
   <div class="stg-card" id="stg-files-card" style="margin-top:8px;animation-delay:180ms">
-    <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between">${UI_ICONS.folder} ${t("settings.storage.title")}<button class="btn-base sm" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">${UI_ICONS.folderOpen} ${t("settings.storage.expand")} ▸</button></div>
+    <div class="stg-card-hdr" style="display:flex;align-items:center;justify-content:space-between"><label class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.folder} ${t("settings.storage.title")}</label><button class="btn-base sm" id="set-advanced-toggle" style="font-size:9px;padding:2px 8px">${UI_ICONS.folderOpen} ${t("settings.storage.expand")} ▸</button></div>
     <div class="stg-card-body">
       <div class="stg-path-val" id="set-files-root">${t("common.loading")}</div>
       <div class="stg-card-desc">${t("settings.storage.desc")}</div>

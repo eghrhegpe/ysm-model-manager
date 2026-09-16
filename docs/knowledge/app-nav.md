@@ -8,6 +8,8 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - navCSS
+    - NavItem
+    - navItems
     - VIEW_TESTIDS
 quick_groups:
   - 跨组件通信与页面

@@ -4,7 +4,9 @@
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { navItems } from "@/views/app-nav/index.ts";
 import { stgCard } from "./stg-card.ts";
 import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
 
@@ -279,9 +281,9 @@ function renderStgAnimDefault(): string {
     `<div class="setting-row" style="padding:0;background:none;animation:none">
       <label for="set-default-page" class="label">${t("settings.defaultPage.fixed")}</label>
       <select id="set-default-page" class="stg-select" style="width:auto">
-        <option value="instances">${UI_ICONS.game} ${t("settings.defaultPage.instances")}</option>
-        <option value="workshop">${UI_ICONS.appearance} ${t("settings.defaultPage.workshop")}</option>
-        <option value="repository">${UI_ICONS.package} ${t("settings.defaultPage.repository")}</option>
+        ${navItems()
+          .map((it) => `<option value="${it.id}">${resolveIcon(it.icon)} ${t(it.key)}</option>`)
+          .join("\n        ")}
       </select>
     </div>
     <div class="stg-card-desc">${t("settings.defaultPageHint")}</div>`,

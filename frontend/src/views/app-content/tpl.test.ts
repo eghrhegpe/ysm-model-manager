@@ -13,23 +13,29 @@ import { settingsHTML } from "./settings/tpl-settings.ts";
 import { recycleHTML, renderRecycleListHtml } from "./tpl-recycle.ts";
 import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
-const { getAndroidBridgeMock, isViewerModeMock, isWebPlatformMock } = vi.hoisted(() => ({
-  getAndroidBridgeMock: vi.fn().mockReturnValue(null), // 默认桌面（无 Android 桥）
-  isViewerModeMock: vi.fn().mockReturnValue(false), // 默认桌面（非查看器模式）
-  isWebPlatformMock: vi.fn().mockReturnValue(false), // 默认桌面（非网页版）
-}));
+const { getAndroidBridgeMock, isViewerModeMock, isWebPlatformMock, canBindingMock } = vi.hoisted(
+  () => ({
+    getAndroidBridgeMock: vi.fn().mockReturnValue(null), // 默认桌面（无 Android 桥）
+    isViewerModeMock: vi.fn().mockReturnValue(false), // 默认桌面（非查看器模式）
+    isWebPlatformMock: vi.fn().mockReturnValue(false), // 默认桌面（非网页版）
+    // 桌面能力矩阵全量（启动默认页下拉框经 navItems() → can() 读它拉取菜单项）
+    canBindingMock: vi.fn().mockReturnValue(true),
+  }),
+);
 vi.mock("@/backend/platform.ts", () => ({
   getAndroidBridge: getAndroidBridgeMock,
   isViewerMode: isViewerModeMock,
 }));
 vi.mock("@/backend/platform-web.ts", () => ({
   isWebPlatform: isWebPlatformMock,
+  canBinding: canBindingMock,
 }));
 
 beforeEach(() => {
   getAndroidBridgeMock.mockReturnValue(null);
   isViewerModeMock.mockReturnValue(false);
   isWebPlatformMock.mockReturnValue(false);
+  canBindingMock.mockReturnValue(true);
 });
 
 describe("app-content 模板", () => {
@@ -135,6 +141,20 @@ describe("app-content 模板", () => {
     expect(dpHdr).toMatch(/stg-card-hdr[\s\S]*?id="set-remember-page"/);
     // 两卡并排 2 列（不再是一张张满宽单列）
     expect(html).toContain("grid-template-columns:repeat(2,1fr)");
+    // 启动默认页下拉框从 navItems() 派生（单一事实源）——曾手抄三页副本，
+    // github/diagnostics/settings 可作启动页却在 UI 选不到（能力被 UI 阉割）
+    const dpSel = html.slice(html.indexOf('id="set-default-page"'));
+    const optVals = [...dpSel.slice(0, dpSel.indexOf("</select>")).matchAll(/<option value="([^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    expect(optVals).toEqual([
+      "repository",
+      "instances",
+      "workshop",
+      "github",
+      "diagnostics",
+      "settings",
+    ]);
     expect(html).toContain("set-advanced-grid");
     // worker 解析开关收敛到独立「解析」tab（FBX / MMD PMX 逃生舱），不在界面 tab 内
     expect(html).toContain('data-tab="parser"');

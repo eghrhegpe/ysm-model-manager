@@ -36,6 +36,36 @@ export const VIEW_TESTIDS: readonly string[] = [
   "nav-viewer-fab",
 ];
 
+/** 导航项：页面 id + 语义图标名 + i18n key（三者为渲染一个 nav-item 的全部输入）。 */
+export interface NavItem {
+  id: PageName;
+  /** 语义图标名（ADR-238/ADR-245：resolveIcon 解析为 SVG），非字形字面量。 */
+  icon: string;
+  key: LocaleKey;
+}
+
+/**
+ * 导航页清单（**单一事实源**）：侧边栏渲染与设置页「启动默认页」下拉框均从此派生。
+ *
+ * 准入：`id` 必须是 `PageName`（与 `core/page-store.ts` 的 VALID_PAGES 同源）。
+ * 此前设置页手抄了一份三页副本（只有 repository/instances/workshop），
+ * 导致 github/diagnostics/settings 可作启动页却在 UI 选不到——能力被 UI 阉割。
+ */
+export function navItems(): NavItem[] {
+  // 查看器模式（Android/网页版 ADR-049）：instances 页依赖桌面专属 binding
+  // ListVersionInstances（未桥接），用 can(binding) 能力门控精确判定——
+  // 替代 isViewerMode() 复合判定（平台检测收敛到 capabilities 抽象，债务 #2）。
+  const isViewer = !can("ListVersionInstances");
+  return [
+    { id: "repository", icon: "book", key: "nav.repository" },
+    ...(isViewer ? [] : [{ id: "instances", icon: "game", key: "nav.instances" } as NavItem]),
+    { id: "workshop", icon: "appearance", key: "nav.community" },
+    { id: "github", icon: "parser", key: "nav.workshop" },
+    { id: "diagnostics", icon: "tools", key: "nav.diagnostics" },
+    { id: "settings", icon: "settings", key: "nav.settings" },
+  ];
+}
+
 function anBindNavItems(shadowRoot: ShadowRoot): void {
   const navItems = Array.from(shadowRoot.querySelectorAll<HTMLElement>(".nav-item"));
   navItems.forEach((el) => {
@@ -239,19 +269,8 @@ class AppNav extends WebComponentBase {
     // 折叠态在 host 上以 data-collapsed 标记，CSS 据此切换窄条布局
     if (this._collapsed) this.setAttribute("data-collapsed", "");
     else this.removeAttribute("data-collapsed");
-    // 查看器模式（Android/网页版 ADR-049）：instances 页依赖桌面专属 binding
-    // ListVersionInstances（未桥接），用 can(binding) 能力门控精确判定——
-    // 替代 isViewerMode() 复合判定（平台检测收敛到 capabilities 抽象，债务 #2）。
-    const isViewer = !can("ListVersionInstances");
-    const items = [
-      // icon 为**语义名**（ADR-238/ADR-245：resolveIcon 解析为 SVG），非字形字面量
-      { id: "repository", icon: "book", key: "nav.repository" },
-      ...(isViewer ? [] : [{ id: "instances", icon: "game", key: "nav.instances" }]),
-      { id: "workshop", icon: "appearance", key: "nav.community" },
-      { id: "github", icon: "parser", key: "nav.workshop" },
-      { id: "diagnostics", icon: "tools", key: "nav.diagnostics" },
-      { id: "settings", icon: "settings", key: "nav.settings" },
-    ];
+    // 导航项清单单一事实源：settings 页「启动默认页」下拉框同源派生
+    const items = navItems();
 
     this._shadow.innerHTML = `
       <style>${navCSS}</style>

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **254** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **255** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 10 |
-| [✅ 已采纳](#已采纳) | 234 |
+| [✅ 已采纳](#已采纳) | 235 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -40,10 +40,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（234）
+### ✅ 已采纳（235）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-257](./ADR-257-water-level-decoupling-body-strategy.md) | 水面/容器解耦（`waterLevel`）+ 水体形态策略表（`WaterBodyStrategy`） | ✅ 已采纳 |
 | [ADR-256](./ADR-256-design-tokens-added-lines.md) | 设计令牌门禁改判真行级：判定与账本分离（行号位移幻影实证，复算见 §4） | ✅ 已采纳 |
 | [ADR-255](./ADR-255-water-gerstner-uniform.md) | 水面波浪 uniform 化 + Gerstner 升级 | ✅ 已采纳 |
 | [ADR-254](./ADR-254-ground-material-preset-explicit-state.md) | 地面材质预设化：材质名兑现配色 + 显式预设状态 | ✅ 已采纳 |
@@ -303,6 +304,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-257 | 水面/容器解耦（`waterLevel`）+ 水体形态策略表（`WaterBodyStrategy`） | ✅ 已采纳 | 2026-09-17 |
 | ADR-256 | 设计令牌门禁改判真行级：判定与账本分离（行号位移幻影实证，复算见 §4） | ✅ 已采纳 | 2026-09-16 |
 | ADR-255 | 水面波浪 uniform 化 + Gerstner 升级 | ✅ 已采纳 | 2026-09-16 |
 | ADR-254 | 地面材质预设化：材质名兑现配色 + 显式预设状态 | ✅ 已采纳 | 2026-09-16 |

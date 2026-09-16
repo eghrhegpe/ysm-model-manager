@@ -63,6 +63,20 @@ export function lightDirToPosition(p: DirectionalLightParams, radius: number): T
   return new THREE.Vector3(h * Math.sin(az), y, h * Math.cos(az));
 }
 
+/** three.js 物理光照下 SpotLight 距离衰减（与 three 的 getDistanceAttenuation 逐字对齐，
+ *  r165+ 已移除 useLegacyLights，SpotLight.intensity 单位是坎德拉，到达处照度 = intensity × falloff）。
+ *  lightDistance 处 falloff = 1/pow(d, decay) × cutoffWindow(distance, cutoff)。
+ *  用途：把 UI 暴露的「到达目标处照度(lx)」反推回需设的 candela，使聚光灯强度不随目标高度漂移。 */
+export function spotDistanceAttenuation(
+  lightDistance: number,
+  cutoff: number,
+  decay: number,
+): number {
+  const base = 1 / Math.max(lightDistance ** decay, 0.01);
+  const cutoffF = cutoff > 0 ? Math.max(0, Math.min(1, 1 - (lightDistance / cutoff) ** 4)) ** 2 : 1;
+  return base * cutoffF;
+}
+
 /** PMREM 环境光开启时 ambient 让位系数（双间接光叠加防过亮/互相稀释——
  *  [doc:adr-126-p5] 光系统统一性 #3）。预览（refreshAmbientFromSky）与截图
  *  （preview-3d/screenshot-lights.ts toScreenshotLights，ADR-136 归位）共用——
@@ -250,6 +264,9 @@ export class LightCapability implements SceneCapability {
     this.spotlightTarget.name = "ysm-light-spot-target";
     this.spotlightTarget.position.copy(this.target);
     this.spotlight.target = this.spotlightTarget;
+    // 校正：构造期未应用 enabled → spotlight.visible 默认 true（UI 关灯却仍亮，直到首次 env 变更才同步）。
+    // 与 createDirectional 补齐 visible 同源；applySpotlightToThree 内统一重算强度。
+    this.spotlight.visible = sp.enabled;
 
     // 初始化体积光锥（ADR-177：委派 VolumetricCone；未同时启用则不产出锥组）
     this.cone = new VolumetricCone(this.scene);
@@ -329,6 +346,7 @@ export class LightCapability implements SceneCapability {
   private createDirectional(p: DirectionalLightParams): THREE.DirectionalLight {
     const dl = new THREE.DirectionalLight(p.color, p.intensity);
     dl.position.copy(lightDirToPosition(p, 5));
+    dl.visible = p.enabled;
     return dl;
   }
 
@@ -416,6 +434,8 @@ export class LightCapability implements SceneCapability {
     if (wasMounted && this.cone.hasGroup()) this.cone.attach(this.spotlight.position);
     // [ADR-246 D3] 高度变化 → 聚光灯移位 → 线框同步
     this.spotHelper.update();
+    // 聚光灯移位后到目标的物理距离变化 → 重算 candela 补偿（否则目标处照度随高度漂移）
+    this.applySpotlightToThree();
   }
 
   /** 按模型类别套用预设；opts.manual（light-preset select 入口）记手动选择——手动优先 */
@@ -604,7 +624,13 @@ export class LightCapability implements SceneCapability {
 
   private applySpotlightToThree(state: EnvState = envState): void {
     this.spotlight.color.setHex(state.lightSpotColor);
-    this.spotlight.intensity = state.lightSpotIntensity;
+    // 单位补偿：UI intensity 语义 = 「到达目标处的照度(lx)」（所见即所得）；
+    // 物理模式 SpotLight 单位是坎德拉，须除以到目标的衰减系数。聚光灯固定在 target 正上方，
+    // 距离 = 聚光灯→目标距离（随 setTargetHeight 改变，本函数在其后调用，天然跟随，不再漂移）。
+    const d = Math.max(this.spotlight.position.distanceTo(this.spotlightTarget.position), 0.01);
+    const falloff = spotDistanceAttenuation(d, state.lightSpotDistance, state.lightSpotDecay);
+    this.spotlight.intensity =
+      falloff > 0 ? state.lightSpotIntensity / falloff : state.lightSpotIntensity;
     this.spotlight.distance = state.lightSpotDistance;
     this.spotlight.angle = THREE.MathUtils.degToRad(state.lightSpotAngle);
     this.spotlight.penumbra = state.lightSpotPenumbra;

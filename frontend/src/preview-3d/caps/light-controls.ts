@@ -99,6 +99,21 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
         },
       },
       {
+        // [spot-fix] 暴露强度控件：UI 值语义 = 到达目标处照度(lx)，与衰减解耦，所见即所得。
+        // 此前缺此滑块，聚光灯强度被距离衰减吃掉后用户无任何补救入口（「开了没效果」的体验根因之一）。
+        id: "light-spot-intensity",
+        kind: "slider",
+        labelKey: "preview.spotlightIntensity",
+        hintKey: "preview.spotlightIntensityHint",
+        control: {
+          min: 0,
+          max: 6,
+          step: 0.1,
+          get: () => cap.getParams().spotlight.intensity,
+          set: (v) => cap.setSpotlight({ intensity: v as number }),
+        },
+      },
+      {
         id: "light-cone-angle",
         kind: "slider",
         labelKey: "preview.coneAngle",

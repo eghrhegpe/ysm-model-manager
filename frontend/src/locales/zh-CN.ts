@@ -1027,6 +1027,8 @@ export const zhCN = {
 
   "preview.spotlight": "聚光灯",
   "preview.spotlightHint": "从上方投下的锥形光",
+  "preview.spotlightIntensity": "聚光灯强度",
+  "preview.spotlightIntensityHint": "目标处照度（lx），已与距离衰减解耦",
   "preview.spotlightVolume": "聚光灯与体积光",
   "preview.ambientIntensity": "环境光强度",
   "preview.volumetric": "体积光",
@@ -1260,6 +1262,7 @@ export const zhCN = {
   "preview.groundOverlayStripes": "条纹",
   "preview.groundOverlayDiamond": "菱格",
   "preview.groundWaterModeFilm": "薄膜",
+  "preview.groundWaterLevel": "水位",
   "preview.groundWaterModePool": "水池",
   "preview.toneMappingNone": "无",
   "preview.toneMappingLinear": "线性",

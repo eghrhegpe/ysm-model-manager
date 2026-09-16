@@ -5,6 +5,7 @@ import * as THREE from "three";
 import {
   LightCapability,
   DEFAULT_LIGHT_PARAMS,
+  spotDistanceAttenuation,
 } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
@@ -348,6 +349,7 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
     expect(card.labelKey).toBe("preview.spotlightVolume");
     expect(card.children!.map((c) => c.id)).toEqual([
       "light-spotlight",
+      "light-spot-intensity",
       "light-cone-angle",
       "light-volumetric",
       "light-volumetric-density",
@@ -712,7 +714,10 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     cap.setSpotlight({ angle: 40, intensity: 3 });
     const group = scene.getObjectByName("ysm-light-volumetric-cone");
     expect(group).toBeDefined();
-    expect(cap.getSpotLight().intensity).toBe(3);
+    // 单位补偿：THREE SpotLight.intensity 现在是 candela = UI 照度 ÷ 到目标衰减系数
+    // （默认 distance=30, decay=1.5, targetHeight=8 → 衰减约 0.0438）。
+    const falloff = spotDistanceAttenuation(8, 30, 1.5);
+    expect(cap.getSpotLight().intensity).toBeCloseTo(3 / falloff, 5);
   });
 
   it("setVolumetric({enabled:false}) 移除已挂载锥组", () => {

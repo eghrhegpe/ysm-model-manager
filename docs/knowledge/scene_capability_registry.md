@@ -136,6 +136,7 @@ auto_fields:
     - ShadowType
     - SkyCapability
     - smoothStep
+    - spotDistanceAttenuation
     - SpotlightParams
     - SunBeams
     - SURFACE_PIXEL_GENERATORS

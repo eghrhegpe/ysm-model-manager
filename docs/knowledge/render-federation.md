@@ -61,6 +61,7 @@ auto_fields:
     - ShadowCapability
     - ShadowType
     - SkyCapability
+    - spotDistanceAttenuation
     - switchPreview
     - UpdateableScene
   tests:

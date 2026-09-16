@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-257：水面/容器解耦（`waterLevel`）+ 水体形态策略表（`WaterBodyStrategy`）",
+        "link": "/adr/ADR-257-water-level-decoupling-body-strategy"
+      },
+      {
         "text": "ADR-256：设计令牌门禁改判真行级：判定与账本分离（行号位移幻影实证，复算见 §4）",
         "link": "/adr/ADR-256-design-tokens-added-lines"
       },

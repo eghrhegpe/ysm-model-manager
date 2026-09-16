@@ -1040,6 +1040,8 @@ export const en: Record<string, string> = {
 
   "preview.spotlight": "Spotlight",
   "preview.spotlightHint": "Cone of light from above",
+  "preview.spotlightIntensity": "Spot Intensity",
+  "preview.spotlightIntensityHint": "Illuminance at target (lx); decoupled from distance falloff",
   "preview.spotlightVolume": "Spotlight & Volumetric",
   "preview.ambientIntensity": "Ambient",
   "preview.volumetric": "Volumetric",
@@ -1281,6 +1283,7 @@ export const en: Record<string, string> = {
   "preview.groundOverlayStripes": "Stripes",
   "preview.groundOverlayDiamond": "Diamond",
   "preview.groundWaterModeFilm": "Thin Film",
+  "preview.groundWaterLevel": "Water Level",
   "preview.groundWaterModePool": "Pool",
   "preview.toneMappingNone": "None",
   "preview.toneMappingLinear": "Linear",

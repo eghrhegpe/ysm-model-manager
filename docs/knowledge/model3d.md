@@ -743,6 +743,7 @@ auto_fields:
     - SpecMeshGroup3D
     - SpecModelInput
     - splitMeshByFaceAlpha
+    - spotDistanceAttenuation
     - SpotlightParams
     - Stage1bCtx
     - Stage1Ctx

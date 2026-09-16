@@ -11,8 +11,10 @@ import type { PreviewControlDef, PreviewMenuNode } from "@/preview-3d/menu/menu-
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCapability } from "./ground-capability.ts";
 import {
+  type GroundCanvasStyle,
   type GroundMatParam,
-  type GroundSurfaceMode,
+  type GroundSourceKind,
+  groundMatSourceFromAxes,
   paramIsEffective,
 } from "./ground-surface-spec.ts";
 
@@ -27,8 +29,11 @@ const MAT_GROUP = "preview.groundGroupMaterial";
  * 不在此重写一套判断（防两处漂移）。 */
 function paramVisible(param: GroundMatParam) {
   return (s: Partial<PreviewSnapshot>): boolean => {
-    const mode = s["env.groundMatSource"] as GroundSurfaceMode | undefined;
-    if (!mode) return false;
+    // ADR-249 §2.1 拆轴：由来源轴 + 样式轴派生当前模式
+    const sourceKind = s["env.groundSourceKind"] as GroundSourceKind | undefined;
+    const canvasStyle = s["env.groundCanvasStyle"] as GroundCanvasStyle | undefined;
+    if (!sourceKind) return false;
+    const mode = groundMatSourceFromAxes(sourceKind, canvasStyle);
     return paramIsEffective(mode, param);
   };
 }
@@ -93,7 +98,7 @@ function textureButtonsNode(cap: GroundCapability): PreviewMenuNode {
       },
       getValue: () => null,
       setValue: () => {},
-      visibleWhen: (s) => s["env.groundMatSource"] === "texture",
+      visibleWhen: (s) => s["env.groundSourceKind"] === "texture",
     },
     {
       id: "ground-mat-clear",
@@ -108,7 +113,7 @@ function textureButtonsNode(cap: GroundCapability): PreviewMenuNode {
       },
       getValue: () => null,
       setValue: () => {},
-      visibleWhen: (s) => s["env.groundMatSource"] === "texture",
+      visibleWhen: (s) => s["env.groundSourceKind"] === "texture",
     },
   ];
   return { id: "cap-group-ground-texture-buttons", kind: "controls", controls: buttons };
@@ -126,16 +131,30 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
         options: [
           { value: "none", label: "无" },
           { value: "solid", label: "纯色" },
+          { value: "canvas", label: "程序化画布" },
+          { value: "texture", label: "自定义贴图" },
+        ],
+        get: () => cap.getSourceKind(),
+        set: (v) => cap.setSourceKind(v as GroundSourceKind),
+      },
+    },
+    {
+      id: "ground-mat-canvas-style",
+      kind: "select",
+      labelKey: "preview.groundCanvasStyle",
+      // ADR-249 §2.1：样式轴仅当来源轴 === canvas 时显示
+      visibleWhen: (s) => s["env.groundSourceKind"] === "canvas",
+      control: {
+        options: [
           { value: "plain", label: "素面" },
           { value: "grid", label: "网格" },
           { value: "checker", label: "棋盘" },
           { value: "stripes", label: "条纹" },
           { value: "diamond", label: "菱格" },
           { value: "marble", label: "大理石" },
-          { value: "texture", label: "自定义贴图" },
         ],
-        get: () => cap.getMatSource(),
-        set: (v) => cap.setMatSource(v as GroundSurfaceMode),
+        get: () => cap.getCanvasStyle(),
+        set: (v) => cap.setCanvasStyle(v as GroundCanvasStyle),
       },
     },
     colorNode(

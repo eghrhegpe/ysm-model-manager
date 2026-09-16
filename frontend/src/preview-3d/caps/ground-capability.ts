@@ -17,12 +17,17 @@ import {
   applyGroundSurfaceAppearance,
   applyGroundSurfaceStructural,
   buildGroundSurfaceSpec,
-  GROUND_SURFACE_MODES,
+  GROUND_CANVAS_STYLES,
+  GROUND_SOURCE_KINDS,
+  type GroundCanvasStyle,
+  type GroundSourceKind,
   type GroundSurfaceMode,
   type GroundSurfaceSpec,
   type GroundSurfaceStructuralSpec,
   generateSurfacePixels,
+  groundMatSourceFromAxes,
   groundSurfaceNeedsRebuild,
+  migrateGroundMatSource,
 } from "./ground-surface-spec.ts";
 import {
   GROUND_LAYER_OFFSETS,
@@ -176,7 +181,8 @@ export class GroundCapability implements SceneCapability {
   /** 唯一变更入口：判别重建/原地并落地（所有 setter 的必经之路） */
   private refreshSurface(): void {
     const matParams = {
-      matSource: envState.groundMatSource,
+      // ADR-249 §2.1 拆轴：matSource 由两个轴派生（legacy 字段已废弃）。
+      matSource: groundMatSourceFromAxes(envState.groundSourceKind, envState.groundCanvasStyle),
       matColor: envState.groundMatColor,
       matLineColor: envState.groundMatLineColor,
       matColor2: envState.groundMatColor2,
@@ -202,7 +208,7 @@ export class GroundCapability implements SceneCapability {
   /** 显隐门控：总开关 × 网格显隐 × 模式非 none（水面层独立于表面层） */
   private updateSurfaceVisible(): void {
     this.surface.visible =
-      this.enabled && envState.groundVisible && envState.groundMatSource !== "none";
+      this.enabled && envState.groundVisible && envState.groundSourceKind !== "none";
   }
 
   /** 自定义贴图加载完成入口 */
@@ -215,8 +221,7 @@ export class GroundCapability implements SceneCapability {
     }
     this.customTex = tex;
     this.customTexName = name;
-    setEnvState({ groundMatSource: "texture" }, { source: "manual" });
-    this.refreshSurface();
+    setEnvState({ groundSourceKind: "texture" }, { source: "manual" });
   }
 
   /** 清除自定义贴图缓存并回退 plain（texture 模式时） */
@@ -227,8 +232,8 @@ export class GroundCapability implements SceneCapability {
       this.customTex = null;
       this.customTexName = "";
     }
-    if (envState.groundMatSource === "texture")
-      setEnvState({ groundMatSource: "plain" }, { source: "manual" });
+    if (envState.groundSourceKind === "texture")
+      setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "plain" }, { source: "manual" });
     if (wasAttached) this.surfaceTex = null;
     this.refreshSurface();
   }
@@ -252,12 +257,21 @@ export class GroundCapability implements SceneCapability {
   }
 
   // ── 材质参数 setter/getter（全部经 refreshSurface 单路径落地）──
-  getMatSource(): GroundSurfaceMode {
-    return envState.groundMatSource as GroundSurfaceMode;
+  getSourceKind(): GroundSourceKind {
+    return envState.groundSourceKind;
   }
-  setMatSource(mode: GroundSurfaceMode): void {
-    if (envState.groundMatSource === mode) return;
-    setEnvState({ groundMatSource: mode }, { source: "manual" });
+  setSourceKind(kind: GroundSourceKind): void {
+    if (envState.groundSourceKind === kind) return;
+    setEnvState({ groundSourceKind: kind }, { source: "manual" });
+    this.refreshSurface();
+    this.notify();
+  }
+  getCanvasStyle(): GroundCanvasStyle {
+    return envState.groundCanvasStyle;
+  }
+  setCanvasStyle(style: GroundCanvasStyle): void {
+    if (envState.groundCanvasStyle === style) return;
+    setEnvState({ groundCanvasStyle: style }, { source: "manual" });
     this.refreshSurface();
     this.notify();
   }
@@ -374,8 +388,9 @@ export class GroundCapability implements SceneCapability {
     persistState(this.id, {
       enabled: this.enabled,
       groundVisible: envState.groundVisible,
-      groundMatSource:
-        envState.groundMatSource === "texture" ? "texture" : envState.groundMatSource,
+      // ADR-249 §2.5.1 拆轴：原 groundMatSource 单键拆为两轴持久化。
+      groundSourceKind: envState.groundSourceKind,
+      groundCanvasStyle: envState.groundCanvasStyle,
       groundSize: envState.groundSize,
       groundDivisions: envState.groundDivisions,
       groundColorCenter: envState.groundColorCenter,
@@ -429,7 +444,7 @@ export class GroundCapability implements SceneCapability {
         divisions: "groundDivisions",
         colorCenter: "groundColorCenter",
         colorGrid: "groundColorGrid",
-        matSource: "groundMatSource",
+        // matSource 旧单枚举 → ADR-249 §2.1 拆轴两轴（迁移在循环后单独处理）
         matColor: "groundMatColor",
         matLineColor: "groundMatLineColor",
         matColor2: "groundMatColor2",
@@ -443,7 +458,13 @@ export class GroundCapability implements SceneCapability {
       };
       const migrated: Record<string, unknown> = {};
       for (const k of legacyGroundKeys) {
-        if (k in gs) migrated[map[k]] = gs[k];
+        if (k in gs && k !== "matSource") migrated[map[k]] = gs[k];
+      }
+      // ADR-249 §2.1：旧单枚举 matSource 拆为来源轴 + 样式轴两键
+      if ("matSource" in gs) {
+        const m = migrateGroundMatSource(String(gs.matSource) as GroundSurfaceMode);
+        migrated.groundSourceKind = m.sourceKind;
+        if (m.canvasStyle) migrated.groundCanvasStyle = m.canvasStyle;
       }
       state = migrated;
     }
@@ -459,15 +480,11 @@ export class GroundCapability implements SceneCapability {
         // 「隐藏地面」存档重启后网格重现（半隐形地面：surface 隐藏 grid 仍显示）
         boolean: (v) => this.setVisible(v),
       },
-      groundMatSource: oneOf(GROUND_SURFACE_MODES, (v) =>
-        // ADR-249 §2.5 第 2 条：拆除静默降级。
-        // 历史行为：`v === "texture" && !this.customTex ? "plain" : v` —— 因自定义贴图
-        // 二进制不持久化，重启后 customTex 必为空，于是用户存档里选的「自定义贴图」
-        // 被静默改写成 plain，而 plain 是纯色分支 → 重启后表现为一块看似无关的纯色地面。
-        // 现改为：保留用户选择的来源；无贴图时的渲染兜底由 rebuildSurface 的
-        // `customTex ?? makeGeneratedTexture({...st, mode: "solid"})` 承担（材质层兜底），
-        // 不改写状态层，用户重选贴图后自动恢复。
-        setEnvState({ groundMatSource: v }, { source: "manual" }),
+      groundSourceKind: oneOf(GROUND_SOURCE_KINDS, (v) =>
+        setEnvState({ groundSourceKind: v }, { source: "manual" }),
+      ),
+      groundCanvasStyle: oneOf(GROUND_CANVAS_STYLES, (v) =>
+        setEnvState({ groundCanvasStyle: v }, { source: "manual" }),
       ),
       groundSize: { number: (v) => setEnvState({ groundSize: v }, { source: "manual" }) },
       groundDivisions: { number: (v) => setEnvState({ groundDivisions: v }, { source: "manual" }) },

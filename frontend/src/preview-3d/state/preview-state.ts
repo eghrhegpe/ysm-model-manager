@@ -145,13 +145,21 @@ function waterCap(): WaterModeCap | undefined {
   return lazyCap<WaterModeCap>("water", "getWaterMode", "setWaterMode");
 }
 
-/** [doc:adr-126-p5-c] 地面能力（读/写 matSource）——供 env.groundMatSource 惰性绑定 */
+/** [doc:adr-126-p5-c] 地面能力（读/写 来源轴+样式轴）——供 env.groundSourceKind / env.groundCanvasStyle 惰性绑定 */
 interface GroundMatCap {
-  getMatSource(): string;
-  setMatSource(v: string): void;
+  getSourceKind(): string;
+  setSourceKind(v: string): void;
+  getCanvasStyle(): string;
+  setCanvasStyle(v: string): void;
 }
 function groundMatCap(): GroundMatCap | undefined {
-  return lazyCap<GroundMatCap>("ground", "getMatSource", "setMatSource");
+  return lazyCap<GroundMatCap>(
+    "ground",
+    "getSourceKind",
+    "setSourceKind",
+    "getCanvasStyle",
+    "setCanvasStyle",
+  );
 }
 
 /** 渲染模式线框能力（RenderModeCapability 的 wireframe 单项语义）——
@@ -224,9 +232,14 @@ const bindings: PathBindingMap = {
     set: (v) => waterCap()?.setWaterMode(String(v)),
     available: () => waterCap() !== undefined,
   },
-  "env.groundMatSource": {
-    get: () => groundMatCap()?.getMatSource() ?? "none",
-    set: (v) => groundMatCap()?.setMatSource(String(v)),
+  "env.groundSourceKind": {
+    get: () => groundMatCap()?.getSourceKind() ?? "none",
+    set: (v) => groundMatCap()?.setSourceKind(String(v)),
+    available: () => groundMatCap() !== undefined,
+  },
+  "env.groundCanvasStyle": {
+    get: () => groundMatCap()?.getCanvasStyle() ?? "plain",
+    set: (v) => groundMatCap()?.setCanvasStyle(String(v)),
     available: () => groundMatCap() !== undefined,
   },
   // [doc:adr-126-p4-d] 会话模式：mount 期写一次（setPreviewUiMode），dock 级 visibleWhen

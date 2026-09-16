@@ -68,6 +68,7 @@ status: active
 
 ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 介于网格 y=0 与水面 y=0.01）。架构移植自 MikuMikuAR ADR-226「GroundMaterialSpec 单一事实源」精髓——**spec 是唯一数据源**，所有下游（重建判别、材质落地、纹理密度）只从 `buildGroundSurfaceSpec()` 的产物取值，杜绝双路径手写平行逻辑。
 
+> ⚠️ **ADR-249 已拆轴**：状态层从单枚举 `groundMatSource`（9 值）拆为来源轴 `groundSourceKind`（none/solid/canvas/texture）+ 样式轴 `groundCanvasStyle`（plain/grid/checker/stripes/diamond/marble，仅 canvas 来源生效）。spec 内部仍以派生的 `GroundSurfaceMode` 运作（`groundMatSourceFromAxes` 往返），渲染管线零改动；菜单从「9 选 1」变为「来源 × 样式」双 select 组装（`none` = 真的关闭表面层，`texture` 来源不再被静默降级）。
 扁平 mode 枚举 `"none"|"solid"|"plain"|"grid"|"checker"|"stripes"|"diamond"|"marble"|"texture"`：单字段表达来源+样式组合。CPU 像素生成（Uint8Array→DataTexture）对齐既有 generateNormalMap 口径，node 可测。新增 3 个像素模式：
 
 > ⚠️ **ADR-249 已决策拆轴**（`sourceKind` 来源轴 + `canvasStyle` 样式轴 + 装饰叠加层），理由：单枚举压了两条正交轴，菜单层无法表达「纯色来源下线色不适用」，直接导致死控件。ADR-249 另要求消除 `DEFAULT_GROUND_SURFACE_PARAMS` 与 `env-state-schema.ts` 的默认值双源（`matGridSize`/`matRoughness` 两处不一致）。实施状态查 ADR-249。

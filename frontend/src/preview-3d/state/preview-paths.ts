@@ -32,7 +32,11 @@ export const KNOWN_PATHS = [
   // [doc:adr-126-p5-c] 探针：cap 内部状态上浮至状态层快照，供 cap 控件
   // visibleWhen(s) 谓词消费（替代 cap 内 visible? 闭包），打通 B 轨。
   "env.waterMode",
-  "env.groundMatSource",
+  // [doc:adr-126-p5-c] 探针：cap 内部状态上浮至状态层快照，供 cap 控件
+  // visibleWhen(s) 谓词消费（替代 cap 内 visible? 闭包），打通 B 轨。
+  // ADR-249 §2.1 拆轴：原单枚举 env.groundMatSource 拆为来源/样式两键。
+  "env.groundSourceKind",
+  "env.groundCanvasStyle",
   // ui.activeComponent 已由 per-scene 闭包取代，本键保留仅作类型兼容，不再写入。
   // [doc:adr-126-p4-d] 预览会话模式（shared/self）：mountPreviewRootMenu 入口同步一次，
   // dock 级 visibleWhen 谓词消费（旧 hideInSelfMode/sharedOnly 语义收口到谓词）。
@@ -66,7 +70,8 @@ export type PathValue = {
   "render.wireframe": boolean;
   "env.pmrem": boolean;
   "env.waterMode": string;
-  "env.groundMatSource": string;
+  "env.groundSourceKind": string;
+  "env.groundCanvasStyle": string;
   "ui.mode": "shared" | "self";
   "env.skyGroundCap": boolean;
 };

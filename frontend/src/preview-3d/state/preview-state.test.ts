@@ -558,18 +558,20 @@ describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P
   it("cap 缺席：available=false、get 安全缺省 film/none、写入不抛", () => {
     expect(isPathAvailable("env.waterMode")).toBe(false);
     expect(getStateValue("env.waterMode")).toBe("film");
-    expect(isPathAvailable("env.groundMatSource")).toBe(false);
-    expect(getStateValue("env.groundMatSource")).toBe("none");
+    expect(isPathAvailable("env.groundSourceKind")).toBe(false);
+    expect(getStateValue("env.groundSourceKind")).toBe("none");
+    expect(isPathAvailable("env.groundCanvasStyle")).toBe(false);
+    expect(getStateValue("env.groundCanvasStyle")).toBe("plain");
     expect(() => setStateValue("env.waterMode", "pool")).not.toThrow();
   });
 
   it("cap 就位：get 透传 cap 内部状态、available=true、set 透传", () => {
     const water = { ...baseCap("water"), getWaterMode: () => "pool", setWaterMode: vi.fn() };
-    const ground = { ...baseCap("ground"), getMatSource: () => "texture", setMatSource: vi.fn() };
+    const ground = { ...baseCap("ground"), getSourceKind: () => "texture", setSourceKind: vi.fn(), getCanvasStyle: () => "plain", setCanvasStyle: vi.fn() };
     mountCaps(water as unknown as SceneCapability, ground as unknown as SceneCapability);
     expect(isPathAvailable("env.waterMode")).toBe(true);
     expect(getStateValue("env.waterMode")).toBe("pool");
-    expect(getStateValue("env.groundMatSource")).toBe("texture");
+    expect(getStateValue("env.groundSourceKind")).toBe("texture");
     setStateValue("env.waterMode", "film");
     expect(water.setWaterMode).toHaveBeenCalledWith("film");
   });
@@ -578,8 +580,10 @@ describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P
     mountCaps();
     const snap = previewSnapshot();
     expect("env.waterMode" in snap).toBe(true);
-    expect("env.groundMatSource" in snap).toBe(true);
+    expect("env.groundSourceKind" in snap).toBe(true);
+    expect("env.groundCanvasStyle" in snap).toBe(true);
     expect(snap["env.waterMode"]).toBe("film");
-    expect(snap["env.groundMatSource"]).toBe("none");
+    expect(snap["env.groundSourceKind"]).toBe("none");
+    expect(snap["env.groundCanvasStyle"]).toBe("plain");
   });
 });

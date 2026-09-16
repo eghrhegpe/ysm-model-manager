@@ -1192,7 +1192,8 @@ export const ja: Record<string, string> = {
 
   "preview.groundNormalStrength": "ノーマル強度",
   "preview.groundGroupMaterial": "表面マテリアル",
-  "preview.groundMatSource": "表面マテリアル",
+  "preview.groundMatSource": "ソース",
+  "preview.groundCanvasStyle": "スタイル",
   "preview.groundMatColor": "ベースカラー",
   "preview.groundMatLineColor": "線の色",
   "preview.groundMatGridSize": "分割数",

@@ -1182,7 +1182,8 @@ export const en: Record<string, string> = {
 
   "preview.groundNormalStrength": "Normal Strength",
   "preview.groundGroupMaterial": "Surface Material",
-  "preview.groundMatSource": "Surface Material",
+  "preview.groundMatSource": "Source",
+  "preview.groundCanvasStyle": "Style",
   "preview.groundMatColor": "Base Color",
   "preview.groundMatLineColor": "Line Color",
   "preview.groundMatGridSize": "Cells",

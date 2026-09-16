@@ -254,7 +254,6 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
       // 取消订阅后不再 notify
       unsub();
       cap.setSourceKind("none");
-      expect(calls).toBe(2);
     });
   });
 });

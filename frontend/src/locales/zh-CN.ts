@@ -1162,7 +1162,8 @@ export const zhCN = {
 
   "preview.groundNormalStrength": "法线强度",
   "preview.groundGroupMaterial": "表面材质",
-  "preview.groundMatSource": "表面材质",
+  "preview.groundMatSource": "来源",
+  "preview.groundCanvasStyle": "样式",
   "preview.groundMatColor": "底色",
   "preview.groundMatLineColor": "线色",
   "preview.groundMatGridSize": "格数",

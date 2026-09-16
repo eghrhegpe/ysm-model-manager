@@ -7,7 +7,11 @@
 // 历史缺陷：两处各自声明默认值且不一致（matGridSize 10 vs 8、matRoughness 0.8 vs 0.85、
 // matLineColor/matColor2 亦分歧），实际渲染读 spec 侧 → schema 侧为死值，
 // 用户看到的数值与 schema 声明对不上。同类病例参照 MikuMikuAR bd65c02f（常量双源）。
-import { DEFAULT_GROUND_SURFACE_PARAMS as GROUND_DEFAULTS } from "@/preview-3d/caps/ground-surface-spec.ts";
+import {
+  GROUND_CANVAS_STYLES,
+  DEFAULT_GROUND_SURFACE_PARAMS as GROUND_DEFAULTS,
+  GROUND_SOURCE_KINDS,
+} from "@/preview-3d/caps/ground-surface-spec.ts";
 
 type FieldDefaultMap = {
   number: number;
@@ -70,20 +74,18 @@ export const ENV_STATE_SCHEMA = {
     default: [0.5, 0.5, 0.55] as [number, number, number],
     group: "ground",
   },
-  groundMatSource: {
+  // ADR-249 §2.1 拆轴：来源轴（颜色从哪来）。替代原单枚举 groundMatSource。
+  groundSourceKind: {
     type: "enum",
-    values: [
-      "none",
-      "solid",
-      "plain",
-      "grid",
-      "checker",
-      "texture",
-      "stripes",
-      "diamond",
-      "marble",
-    ] as const,
+    values: GROUND_SOURCE_KINDS,
     default: "none",
+    group: "ground",
+  },
+  // ADR-249 §2.1 拆轴：样式轴（程序化画布长什么样，仅 sourceKind===canvas 有效）。
+  groundCanvasStyle: {
+    type: "enum",
+    values: GROUND_CANVAS_STYLES,
+    default: "plain",
     group: "ground",
   },
   groundSize: { type: "number", default: 80, group: "ground" },

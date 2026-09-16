@@ -68,6 +68,8 @@ export class AppSyncManager extends WebComponentBase {
   private _initGen = 0;
   _eventsBound = false;
   _clickHandler: ((e: Event) => void) | null = null;
+  /** 一次性 click 委托的 unsub（生命周期跟随元素连接，不随 _init——re-init 不得销毁委托） */
+  _clickUnsub: (() => void) | undefined;
   private _unsubs: Array<() => void> = [];
   _singleBusy = new Set<string>();
   _dirOpen: Record<string, boolean> = {};
@@ -119,10 +121,12 @@ export class AppSyncManager extends WebComponentBase {
       });
       this._unsubs = [];
     }
-    // 显式移除 click handler 并复位绑定标记（防御 bindDelegatedEvents 未返回 unsub 的边界）
-    if (this._eventsBound && this._clickHandler) {
-      this.removeEventListener("click", this._clickHandler);
-      this._clickHandler = null;
+    // click 委托清理（_clickUnsub 内部：removeEventListener + 清 _clickHandler + 清 _cbRef）
+    // 替换原 `if (_eventsBound && _clickHandler)` 显式分支——unsub 统一出口，
+    // 与 bindDelegatedEvents 的清理逻辑单一事实源对齐
+    if (this._clickUnsub) {
+      this._clickUnsub();
+      this._clickUnsub = undefined;
     }
     this._eventsBound = false;
     // 清除回调引用，防止重连时残留旧闭包
@@ -159,7 +163,11 @@ export class AppSyncManager extends WebComponentBase {
           }),
       });
       this._eventsBound = true;
-      this._unsubs.push(unsub);
+      // ⚠️ 不进 _unsubs 桶：_init 顶部会对 _unsubs 全量 unsub（re-init 清理 bus 订阅），
+      // click 委托若进桶会在第二次 _init 被连带销毁（_clickHandler=null + _cbRef=undefined），
+      // 而 _eventsBound 仍 true → else 分支 if(self._cbRef) 不命中 → 委托永不重绑，
+      // 状态页签/目录行/push/pull 点击全死。委托生命周期归 disconnectedCallback 管。
+      this._clickUnsub = unsub;
     } else {
       // 后续 _init：仅更新 cbRef 中的回调引用，不重复 addEventListener
       if (self._cbRef) {

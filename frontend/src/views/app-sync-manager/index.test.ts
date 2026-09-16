@@ -272,6 +272,35 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     unmountElement(el);
   });
 
+  // 回归（2026-10）：同元素第二次 _init（instance 属性变更）后，容器级 click 委托
+  // 不得被 _init 顶部的 _unsubs 全量清理连带销毁——否则状态页签/目录行/push/pull
+  // 点击全死（_eventsBound 仍 true + _cbRef undefined → else 分支不重绑）
+  it("instance 属性变更（第二次 _init）→ 状态 tab 点击仍生效", async () => {
+    const el = document.createElement("app-sync-manager");
+    el.setAttribute("instance", "test");
+    document.body.appendChild(el);
+    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
+    const callsBefore = mocks.GetInstanceSyncStatus.mock.calls.length;
+
+    // 首次：missing tab 点击生效
+    const missingTab = el.querySelector('.sm-status-tab[data-status="missing"]') as HTMLElement;
+    expect(missingTab).toBeTruthy();
+    missingTab.click();
+    await waitFor(() => (el.querySelector(".sm-status-tab.active") as HTMLElement)?.dataset.status === "missing");
+
+    // 同元素 instance 变更 → 第二次 _init（无 disconnect，走 _init 顶部 _unsubs 清理路径）
+    el.setAttribute("instance", "other");
+    await waitFor(() => mocks.GetInstanceSyncStatus.mock.calls.length > callsBefore, 5000);
+    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
+
+    // 修复后：synced tab 点击仍生效（须从 missing 真实切回 synced——若委托已死则卡在 missing）
+    const syncedTab = el.querySelector('.sm-status-tab[data-status="synced"]') as HTMLElement;
+    expect(syncedTab).toBeTruthy();
+    syncedTab.click();
+    await waitFor(() => (el.querySelector(".sm-status-tab.active") as HTMLElement)?.dataset.status === "synced", 3000);
+    unmountElement(el);
+  });
+
   // P4 审计新增（陷阱 #3）：异步在途时按钮须灰掉，finally 复位——防用户误判没响应连点
   it("推送在途 → 按钮禁用，完成后复位（陷阱 #3 视觉反馈）", async () => {
     const el = document.createElement("app-sync-manager");
@@ -778,5 +807,31 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     expect(el.querySelectorAll(".sm-file").length).toBe(1);
     expect(el.querySelector(".sm-dir .sm-dir-arrow")?.textContent).toBe("▾");
     unmountElement(el);
+  });
+});
+
+describe("app-sync-manager — 真实环境复现（Shadow DOM 内挂载）", () => {
+  it("ins-content 在 ShadowRoot 内 → 状态 tab 点击仍生效（复现真实点不动）", async () => {
+    // 真实 app-content 用 attachShadow，<app-sync-manager> 经 innerHTML 注入 ShadowRoot 子树。
+    // 单测此前只在 light DOM（document.body）验证，未能覆盖 Shadow 边界。
+    const host = document.createElement("div");
+    const shadow = host.attachShadow({ mode: "open" });
+    shadow.innerHTML =
+      '<div id="ins-content">' +
+      '<app-sync-manager instance="test" default-type="ysm" ' +
+      'style="display:flex;flex-direction:column;flex:1;overflow:hidden;height:100%"></app-sync-manager>' +
+      "</div>";
+    document.body.appendChild(host);
+    const el = shadow.querySelector("app-sync-manager") as HTMLElement;
+    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
+    const missingTab = el.querySelector('.sm-status-tab[data-status="missing"]') as HTMLElement;
+    expect(missingTab).toBeTruthy();
+    missingTab.click();
+    await waitFor(
+      () => (el.querySelector(".sm-status-tab.active") as HTMLElement)?.dataset.status === "missing",
+      5000,
+    );
+    expect((el.querySelector(".sm-status-tab.active") as HTMLElement).dataset.status).toBe("missing");
+    host.remove();
   });
 });

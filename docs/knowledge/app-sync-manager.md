@@ -104,6 +104,7 @@ status: active
 - 状态六态（synced/missing/disabled/optional/legacy/all）与 Go 端 `go/sync` 返回的状态字段一一对应，前端不自造状态
 - 组件 `define` 前先 `customElements.get` 守卫，防 HMR / 重复 import 重复注册
 - **事件绑定一次性委托于组件根（light DOM）**：`events.ts` 的 `bindDelegatedEvents` 在 `_init` 单次执行，render 重建 DOM 不影响委托——消除原 `bindEvents` 每次 render 后 `.then` 全量重绑导致的并发双绑竞态（目录行点一次=翻转两次）；`btn` 分支须 `e.stopPropagation()` 防冒泡到父，恢复对等性
+- **⚠️ 委托生命周期跟随元素连接，不随 `_init`（2026-10 修复，曾致整页点击全死）**：click 委托的 unsub 曾误入 `_unsubs` 桶——`_init` 顶部会对 `_unsubs` 全量 unsub（本意清 bus 订阅），同元素第二次 `_init`（`instance` 属性变更）把委托连带销毁（`_clickHandler=null` + `_cbRef=undefined`），而 `_eventsBound` 仍 true → else 分支 `if(self._cbRef)` 不命中 → 委托永不重绑，状态页签/目录行/push/pull 点击全死。现委托 unsub 单独存 `_clickUnsub`，由 `disconnectedCallback` 统一清理（`index.ts` 有注释锚点）；`_unsubs` 桶只装生命周期跟随 `_init` 的 bus 订阅
 
 ## 已知限制 / 待治理（2026-08-24 审计）
 

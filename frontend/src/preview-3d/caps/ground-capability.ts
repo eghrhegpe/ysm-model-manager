@@ -36,6 +36,7 @@ import {
   migrateGroundMatSource,
   OVERLAY_TEX_SIZE,
   overlayNeedsRebuild,
+  textureRepeat,
 } from "./ground-surface-spec.ts";
 import {
   GROUND_LAYER_OFFSETS,
@@ -144,14 +145,18 @@ export class GroundCapability implements SceneCapability {
     });
 
     if (next.style === "none") {
-      // 叠加层关闭：释放纹理，隐藏 mesh
-      if (this.overlayTex) {
-        safeDispose(this.overlayTex);
-        this.overlayTex = null;
-      }
-      if (this.overlayMat) {
-        this.overlayMat.map = null;
-        this.overlayMat.needsUpdate = true;
+      // 叠加层关闭：释放纹理，隐藏 mesh。
+      // 仅在「曾激活 → none」的过渡分支做销毁：稳态 none 时每次 ground 组变更都会重入
+      // 本回调，无谓置 needsUpdate 会强制材质重传（review 268cc3c21 P3-4）
+      if (this.overlaySpec && this.overlaySpec.style !== "none") {
+        if (this.overlayTex) {
+          safeDispose(this.overlayTex);
+          this.overlayTex = null;
+        }
+        if (this.overlayMat) {
+          this.overlayMat.map = null;
+          this.overlayMat.needsUpdate = true;
+        }
       }
       this.overlay.visible = false;
       this.overlaySpec = next;
@@ -181,7 +186,8 @@ export class GroundCapability implements SceneCapability {
     this.overlay.material = this.overlayMat;
   }
 
-  /** 叠加层像素 → DataTexture（透明底；style=none 时返回 null） */
+  /** 叠加层纹理边长 / 世界格重复：与 surface 同口径（textureRepeat = meshSize/TILE/scale），
+   * 让「叠加格数」滑杆与世界密度一致，而非只改贴图像素（review 268cc3c21 P2-3） */
   private makeOverlayTexture(spec: GroundOverlaySpec): THREE.DataTexture | null {
     const px = generateOverlayPixels(spec.style, OVERLAY_TEX_SIZE, spec.color, spec.size);
     if (px.length === 0) return null;
@@ -189,6 +195,8 @@ export class GroundCapability implements SceneCapability {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     tex.colorSpace = THREE.SRGBColorSpace;
+    const rep = textureRepeat(envState.groundSize, Math.max(1, spec.size));
+    tex.repeat.set(rep, rep);
     tex.needsUpdate = true;
     return tex;
   }
@@ -200,14 +208,14 @@ export class GroundCapability implements SceneCapability {
     if (!this.overlay.parent) this.scene.add(this.overlay);
   }
 
-  /** 地面显隐开关（表面层跟随；水面由 water.enabled 独立控制，不再跟随 grid.visible） */
+  /** 地面显隐开关（表面层/叠加层均跟随；水面由 water.enabled 独立控制，不再跟随 grid.visible） */
   setVisible(v: boolean): void {
     setEnvState({ groundVisible: v }, { source: "manual" });
     this.grid.visible = v;
     this.updateSurfaceVisible();
-    if (this.overlaySpec && this.overlaySpec.style !== "none") {
-      this.overlay.visible = v && this.enabled;
-    }
+    // 叠加层同步跟随（无条件赋值）：不跟随会留「地面已隐、格线还漂」的半隐形残影
+    // （surface 层同形历史缺陷，见本文件 L616-617 注释；review 268cc3c21 P2-2）
+    this.overlay.visible = v && this.enabled;
   }
 
   getVisible(): boolean {
@@ -223,6 +231,10 @@ export class GroundCapability implements SceneCapability {
       if (this.overlay.parent) this.overlay.parent.remove(this.overlay);
     }
     this.updateSurfaceVisible();
+    // 重挂/摘取后 overlay.visible 需重算（保留旧值会 stale：setEnabled(true) 后
+    // 若 groundVisible 此前为 false，overlay 会被 apply 重挂却仍 visible=false；
+    // review 268cc3c21 P3-5）
+    this.refreshOverlay();
   }
 
   /** 程序化像素 → DataTexture（SRGB：albedo 语义；RepeatWrapping 平铺） */

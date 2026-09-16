@@ -70,6 +70,18 @@
 | 参数规格存在哪（单一事实源） | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173_gui_cli_paramspec.md) | - | - |
 | 如何给命令登记 ParamSpec | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173_gui_cli_paramspec.md) | - | - |
 
+## 🎯 审查 finding 取舍
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 查审查器假阳性/假阴性模式 | [AI 审查器偏差与查证方法论（9 轮实战沉淀）](./ai-review-pitfalls.md) | 单一事实源矩阵被早退/局部 if 打破 = ADR-249 §2.4 红线 | - |
+
+## 🎯 测试脱钩
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 查拆轴/新增正交层的回归审核要点 | [AI 审查器偏差与查证方法论（9 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
+
 ## 🎯 后端桥接与数据存储
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -670,6 +682,9 @@
 | internal/app 不得 import go/cli（ADR-145 架构：两侧互不依赖，main 装配）——规格经 main.go cliSpecsToDTO 字段级转换注入，go/cli 侧字段改名/删除会在此编译失败（有意为之的漂移防线） | - | - |
 | 新增命令参数若不登记 ParamSpec，桥接层走 legacy 降级（空串/0/false 丢弃）——与 ADR-173 前行为等价，但拿不到声明序输出与显式空值能力；无 flag 命令（cache-status/perf-log）无需登记 | - | - |
 | scripts/_lib/cli-registry.ts 的 CMD_RE 只解析到 runFn 不强制收尾 ——RegisterCommandC 尾随变参 ParamSpec 拆行注册合法（2026-09-03 教训：曾要求完整 `)` 闭合致 5 命令从注册表解析消失、completions/文档 parity 双双拉红） | `)` | - |
+| 审查器 P1 级凭推断的断言必须实测——getClip API（r185 有公开方法）、缓存失效时序（现实调用序先于预热）两条都是 | `推断成立、实测打折扣` | - |
+| 跑测试是审查器的能力边界——类缺陷（拆轴后快照键/通知语义/嵌套错乱）只有 vitest 实测才暴露，审查器只读 diff 文本看不见 | `测试与实现脱钩` | - |
+| 新层/新范式必须与既有层行为矩阵对一遍——ADR-249 三轮 13 条真缺陷全是（repeat/显隐门控/生命周期/订阅语义） | `新层与既有层口径不一致` | - |
 | 直接请求 MANAGE_EXTERNAL_STORAGE | - | 新版 Android 拒绝、Google Play 下架；必须走 SAF |
 | 目录选择未回传 URI | - | 后续访问失败；必须经 android-bridge 持久化 URI |
 | 各组件各自注册 | - | 重复监听、返回键冲突；必须经 registerAndroidEvents |

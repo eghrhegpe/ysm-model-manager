@@ -1267,6 +1267,10 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
+            "text": "AI 审查器偏差与查证方法论（9 轮实战沉淀）",
+            "link": "/knowledge/ai-review-pitfalls"
+          },
+          {
             "text": "Android 桥接层：存储授权 + 目录选择器",
             "link": "/knowledge/android-bridge"
           },

@@ -126,6 +126,29 @@ describe("LightCapability — apply / setEnabled / dispose", () => {
     expect(scene.children.length).toBe(0);
     cap.dispose(); // 幂等：不抛错
   });
+
+  it("[light-gizmo] 方向光灯 helper 挂场景且显隐跟随 enabled（开灯即见来向，关灯即收）", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    const keyHelper = scene.getObjectByName("ysm-light-key-helper") as THREE.DirectionalLightHelper;
+    const fillHelper = scene.getObjectByName("ysm-light-fill-helper") as THREE.DirectionalLightHelper;
+    const rimHelper = scene.getObjectByName("ysm-light-rim-helper") as THREE.DirectionalLightHelper;
+    expect(keyHelper).toBeDefined();
+    expect(fillHelper).toBeDefined();
+    expect(rimHelper).toBeDefined();
+    // 默认三盏方向光均开 → helper 可见（开关一眼可见）
+    expect(keyHelper.visible).toBe(true);
+    expect(fillHelper.visible).toBe(true);
+    expect(rimHelper.visible).toBe(true);
+    // 关主灯 → 其 helper 立刻收起（其余不变）
+    cap.setParams({ key: { enabled: false } });
+    expect(keyHelper.visible).toBe(false);
+    expect(fillHelper.visible).toBe(true);
+    // 再开 → 恢复可见
+    cap.setParams({ key: { enabled: true } });
+    expect(keyHelper.visible).toBe(true);
+  });
 });
 
 describe("LightCapability — 聚光灯 setSpotlight", () => {
@@ -478,8 +501,18 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     expect(folder.children!.map((c: PreviewMenuNode) => c.id)).toEqual([
       "light-preset",
       "light-fill",
+      "light-fill-azimuth",
+      "light-fill-elevation",
+      "light-fill-intensity",
       "light-rim",
+      "light-rim-azimuth",
+      "light-rim-elevation",
+      "light-rim-intensity",
       "light-ambient",
+      "light-key-azimuth",
+      "light-key-elevation",
+      "light-key-intensity",
+      "light-key-color",
       "cap-group-spot-vol",
     ]);
   });

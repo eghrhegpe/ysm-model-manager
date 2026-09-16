@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-258：诊断页导航：左栏分段收敛为顶部统一 tab 范式",
+        "link": "/adr/ADR-258-diagnostics-nav-top-tabs"
+      },
+      {
         "text": "ADR-257：水面/容器解耦（`waterLevel`）+ 水体形态策略表（`WaterBodyStrategy`）",
         "link": "/adr/ADR-257-water-level-decoupling-body-strategy"
       },

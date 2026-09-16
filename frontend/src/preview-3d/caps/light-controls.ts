@@ -11,7 +11,7 @@
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import type { LightCapability } from "./light-capability.ts";
+import type { DeepPartial, LightCapability, LightParams } from "./light-capability.ts";
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
 const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string; labelKey?: string }> = [
@@ -42,7 +42,73 @@ function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
   };
 }
 
-/** 三点布光 + ambient 节点（与聚光灯/体积光分卡，保持「基础光照」与「戏剧光」语义分离） */
+/** 单盏方向光灯的参数滑块（方位角/仰角/强度，可选颜色）——数据模型本就带这些字段，
+ *  此前 UI 在 ADR-195/246 收敛时被砍成纯 toggle，用户完全摸不到位置/强度；此处补齐暴露。
+ *  setParams 经现有 envState 管线落到 updateDirectional，零额外胶水。 */
+function dirParamSliders(
+  which: "key" | "fill" | "rim",
+  cap: LightCapability,
+  keys: { azimuth: string; elevation: string; intensity: string; color?: string },
+): PreviewMenuNode[] {
+  const getP = () => cap.getParams()[which];
+  const setField = (field: "azimuth" | "elevation" | "intensity", v: number) =>
+    cap.setParams({ [which]: { [field]: v } } as DeepPartial<LightParams>);
+  const sliders: PreviewMenuNode[] = [
+    {
+      id: `light-${which}-azimuth`,
+      kind: "slider",
+      labelKey: keys.azimuth,
+      control: {
+        min: -180,
+        max: 180,
+        step: 1,
+        unit: "°",
+        get: () => getP().azimuth,
+        set: (v) => setField("azimuth", v as number),
+      },
+    },
+    {
+      id: `light-${which}-elevation`,
+      kind: "slider",
+      labelKey: keys.elevation,
+      control: {
+        min: -90,
+        max: 90,
+        step: 1,
+        unit: "°",
+        get: () => getP().elevation,
+        set: (v) => setField("elevation", v as number),
+      },
+    },
+    {
+      id: `light-${which}-intensity`,
+      kind: "slider",
+      labelKey: keys.intensity,
+      control: {
+        min: 0,
+        max: 3,
+        step: 0.1,
+        get: () => getP().intensity,
+        set: (v) => setField("intensity", v as number),
+      },
+    },
+  ];
+  if (keys.color) {
+    sliders.push({
+      id: `light-${which}-color`,
+      kind: "color",
+      labelKey: keys.color,
+      control: {
+        get: () => getP().color,
+        set: (v) => cap.setParams({ [which]: { color: v as number } } as DeepPartial<LightParams>),
+      },
+    });
+  }
+  return sliders;
+}
+
+/** 三点布光 + ambient 节点（与聚光灯/体积光分卡，保持「基础光照」与「戏剧光」语义分离）。
+ *  主灯 key 的 toggle 在顶层平铺，其参数滑块随下方 folder 内 key 滑块组一并暴露。 */
 function baseLightingNodes(cap: LightCapability): PreviewMenuNode[] {
   return [
     {
@@ -54,6 +120,11 @@ function baseLightingNodes(cap: LightCapability): PreviewMenuNode[] {
         set: (v) => cap.setParams({ fill: { enabled: v as boolean } }),
       },
     },
+    ...dirParamSliders("fill", cap, {
+      azimuth: "preview.fillAzimuth",
+      elevation: "preview.fillElevation",
+      intensity: "preview.fillIntensity",
+    }),
     {
       id: "light-rim",
       kind: "toggle",
@@ -63,6 +134,11 @@ function baseLightingNodes(cap: LightCapability): PreviewMenuNode[] {
         set: (v) => cap.setParams({ rim: { enabled: v as boolean } }),
       },
     },
+    ...dirParamSliders("rim", cap, {
+      azimuth: "preview.rimAzimuth",
+      elevation: "preview.rimElevation",
+      intensity: "preview.rimIntensity",
+    }),
     {
       id: "light-ambient",
       kind: "slider",
@@ -75,6 +151,13 @@ function baseLightingNodes(cap: LightCapability): PreviewMenuNode[] {
         set: (v) => cap.setParams({ ambient: { intensity: v as number } }),
       },
     },
+    // 主灯 key 的参数（toggle 在顶层平铺，此处补方位角/仰角/强度/颜色）
+    ...dirParamSliders("key", cap, {
+      azimuth: "preview.keyAzimuth",
+      elevation: "preview.keyElevation",
+      intensity: "preview.keyIntensity",
+      color: "preview.keyColor",
+    }),
   ];
 }
 

@@ -191,6 +191,14 @@ function hasAny(changed: Set<string>, keys: Set<string>): boolean {
   return false;
 }
 
+// [light-gizmo] 方向光灯可视化辅助配色：与灯光颜色解耦，仅用于在视口区分三盏灯的来向，
+// 让「开/关 + 从哪照来」一眼可见（与聚光灯 SpotLightHelper 线框锥同语义的视觉锚点）。
+const DIR_HELPER_COLORS = {
+  key: 0xffd9a0,
+  fill: 0x6fb1ff,
+  rim: 0xff77cc,
+} as const;
+
 export class LightCapability implements SceneCapability {
   readonly id = "light";
   readonly labelKey = "preview.lighting";
@@ -216,6 +224,11 @@ export class LightCapability implements SceneCapability {
 
   // [ADR-246 D3] 聚光灯线框 helper（空间参照：锥角/朝向/位置一眼可见）
   private spotHelper: THREE.SpotLightHelper;
+
+  // [light-gizmo] 方向光灯可视化辅助（key/fill/rim）：开关 + 来向一眼可见，与 spotHelper 同生命周期
+  private keyHelper: THREE.DirectionalLightHelper;
+  private fillHelper: THREE.DirectionalLightHelper;
+  private rimHelper: THREE.DirectionalLightHelper;
 
   // ADR-085 S2：记录当前预设名，消灭 fillLighting 启发式派生
   private currentPreset: ModelType = "default";
@@ -244,6 +257,23 @@ export class LightCapability implements SceneCapability {
     this.keyLight = this.createDirectional(readDirParams("key"));
     this.fillLight = this.createDirectional(readDirParams("fill"));
     this.rimLight = this.createDirectional(readDirParams("rim"));
+    // [light-gizmo] 三盏方向光灯各配一个 DirectionalLightHelper（颜色区分），visible 绑 enabled，
+    // 让「开/关 + 从哪照来」一眼可见——此前方向光无任何空间锚点，开关只能靠模型受光变化猜。
+    this.keyHelper = this.createDirHelper(
+      this.keyLight,
+      DIR_HELPER_COLORS.key,
+      "ysm-light-key-helper",
+    );
+    this.fillHelper = this.createDirHelper(
+      this.fillLight,
+      DIR_HELPER_COLORS.fill,
+      "ysm-light-fill-helper",
+    );
+    this.rimHelper = this.createDirHelper(
+      this.rimLight,
+      DIR_HELPER_COLORS.rim,
+      "ysm-light-rim-helper",
+    );
     this.ambientLight = new THREE.AmbientLight(
       envState.lightAmbientColor,
       envState.lightAmbientIntensity,
@@ -294,12 +324,15 @@ export class LightCapability implements SceneCapability {
     // key/fill/rim 方向灯
     if (hasAny(changed, DIR_KEY_CHANGES)) {
       this.updateDirectional(this.keyLight, readDirParams("key", state));
+      this.syncDirHelper(this.keyHelper, readDirParams("key", state));
     }
     if (hasAny(changed, DIR_FILL_CHANGES)) {
       this.updateDirectional(this.fillLight, readDirParams("fill", state));
+      this.syncDirHelper(this.fillHelper, readDirParams("fill", state));
     }
     if (hasAny(changed, DIR_RIM_CHANGES)) {
       this.updateDirectional(this.rimLight, readDirParams("rim", state));
+      this.syncDirHelper(this.rimHelper, readDirParams("rim", state));
     }
 
     // ambient：总是刷新（依赖 caps 查询器的 sky 环境开关，非纯 envState 派生）
@@ -357,6 +390,24 @@ export class LightCapability implements SceneCapability {
     light.visible = p.enabled;
   }
 
+  /** 方向光灯 helper 工厂：size=2 的线框（灯位 → 目标），配色区分三盏灯 */
+  private createDirHelper(
+    light: THREE.DirectionalLight,
+    color: number,
+    name: string,
+  ): THREE.DirectionalLightHelper {
+    const h = new THREE.DirectionalLightHelper(light, 2, color);
+    h.name = name;
+    h.visible = light.visible;
+    return h;
+  }
+
+  /** 方向光灯 helper 显隐跟随 enabled，并在方向/位置变化后重算几何（与 spotHelper.update 同语义） */
+  private syncDirHelper(h: THREE.DirectionalLightHelper, p: DirectionalLightParams): void {
+    h.visible = p.enabled;
+    h.update();
+  }
+
   /* ----- 公共 API ----- */
 
   apply(): void {
@@ -379,6 +430,16 @@ export class LightCapability implements SceneCapability {
     if (!this.spotHelper.parent) this.scene.add(this.spotHelper);
     this.spotHelper.visible = envState.lightSpotEnabled;
     this.spotHelper.update();
+    // [light-gizmo] 方向光灯 helper 与方向光灯同生命周期挂场景，visible 随 envState 开关
+    if (!this.keyHelper.parent) this.scene.add(this.keyHelper);
+    if (!this.fillHelper.parent) this.scene.add(this.fillHelper);
+    if (!this.rimHelper.parent) this.scene.add(this.rimHelper);
+    this.keyHelper.visible = envState.lightKeyEnabled;
+    this.fillHelper.visible = envState.lightFillEnabled;
+    this.rimHelper.visible = envState.lightRimEnabled;
+    this.keyHelper.update();
+    this.fillHelper.update();
+    this.rimHelper.update();
     if (envState.lightVolumetricEnabled && envState.lightSpotEnabled && this.cone.hasGroup()) {
       if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
     }
@@ -610,6 +671,16 @@ export class LightCapability implements SceneCapability {
     if (!this.spotHelper.parent) this.scene.add(this.spotHelper);
     this.spotHelper.visible = envState.lightSpotEnabled;
     this.spotHelper.update();
+    // [light-gizmo] 方向光灯 helper 挂场景 + 显隐随恢复后的开关（单独 loadState 路径也会静默缺 helper）
+    if (!this.keyHelper.parent) this.scene.add(this.keyHelper);
+    if (!this.fillHelper.parent) this.scene.add(this.fillHelper);
+    if (!this.rimHelper.parent) this.scene.add(this.rimHelper);
+    this.keyHelper.visible = envState.lightKeyEnabled;
+    this.fillHelper.visible = envState.lightFillEnabled;
+    this.rimHelper.visible = envState.lightRimEnabled;
+    this.keyHelper.update();
+    this.fillHelper.update();
+    this.rimHelper.update();
   }
 
   /** sky 环境光开关变化时重算 ambient（防 ×0.5 衰减过期——sky.setEnvironmentEnabled 侧调；
@@ -654,6 +725,9 @@ export class LightCapability implements SceneCapability {
       this.spotlight,
       this.spotlightTarget,
       this.spotHelper,
+      this.keyHelper,
+      this.fillHelper,
+      this.rimHelper,
     ]
       .filter((o): o is THREE.Object3D => o !== null && o !== undefined)
       .forEach((o) => {
@@ -672,6 +746,10 @@ export class LightCapability implements SceneCapability {
     this.rimLight.dispose();
     this.ambientLight.dispose();
     this.spotlight.dispose();
+    // [light-gizmo] helper 释放（几何/材质归 three，dispose 幂等）
+    this.keyHelper.dispose();
+    this.fillHelper.dispose();
+    this.rimHelper.dispose();
     // R1-P2-6：spotlightTarget 是隐形 Object3D（无几何/材质），detach 已从场景移除；
     // 显式置空引用，防止后续误用
     this.spotlightTarget = deferred<THREE.Object3D>();

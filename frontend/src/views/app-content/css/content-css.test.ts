@@ -76,9 +76,14 @@ describe("设置页组间距契约（content-stg）", () => {
 
   it(".settings-group 常量入类：间距/动画由类宣告，不再靠内联副本", () => {
     // 历史：本类曾只有 padding:0 16px，垂直间距靠 7 处手写内联 margin-bottom:12px。
-    const block = contentStgCSS.match(/\.settings-group\s*\{([^}]*)\}/)?.[1] ?? "";
+    // 剔注释再断言：块内说明文字自身含 “padding/margin” 字样，不剔会假红
+    const block = (
+      contentStgCSS.match(/\.settings-group\s*\{([^}]*)\}/)?.[1] ?? ""
+    ).replace(/\/\*[\s\S]*?\*\//g, "");
     expect(block).toMatch(/margin-bottom:\s*12px/);
     expect(block).toMatch(/animation:\s*card-in/);
+    // 不加左右 padding：否则内容比同屏 .stg-card 多缩进 16px（行组已被当单行卡片用）
+    expect(block).not.toMatch(/padding/);
   });
 
   it(".settings-group 紧接节标题时归零 margin（防 12+16=28px 双间距）", () => {

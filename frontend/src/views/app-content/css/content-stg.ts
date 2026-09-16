@@ -124,10 +124,14 @@ export const contentStgCSS: string = `
    .settings-group = 行组声式单元（对照 .stg-card 是卡片单元）：
    与卡片同口径——间距/动画由类宣告，内联只留每处不同的 animation-delay。
    历史：本类曾只有 padding:0 16px，垂直间距靠每处手写内联 margin-bottom:12px（7 份副本）。 */
-.settings-group { padding:0 16px; margin-bottom:12px; animation:card-in var(--tr-enter) both; }
+/* 与卡片同宽对齐：不加左右 padding，由 .setting-row 自身 padding 提供内缩。
+   历史：本类曾写 padding:0 16px，于是行组内容比同屏 .stg-card 多缩进 16px，
+   而它明明已被当单行卡片用——左右边缘与卡片/标题参差不齐。 */
+.settings-group { margin-bottom:12px; animation:card-in var(--tr-enter) both; }
 /* 行组后紧跟节标题（A 式）时，行组不再出 margin——
    否则 12px(margin) + 16px(padding) 不折叠 = 28px 双间距。
-   margin 与 padding 不相叠，只能靠选择器消掉其中一份；此处保留标题的 padding-top。 */
+   margin 与 padding 不相叠，只能靠选择器消掉其中一份；此处保留标题的 padding-top。
+   （与上面的左右 padding 无关：本条管垂直间距。） */
 .settings-group:has(+ .section-title) { margin-bottom: 0; }
 .setting-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surf); border-radius:var(--radius-md); margin-bottom:4px; font-size:var(--fs-md); animation:fadeSlideUp var(--tr-enter) both; }
 .setting-row .label { color:var(--txt); }

@@ -371,7 +371,7 @@ function renderStgTabBody(tabId: string, display: string, body: string): string 
   const style = `overflow-y:auto${display ? `;display:${display}` : ""}`;
   return `<!-- stg-tab-${tabId} -->
 <div class="tab-body" id="stg-tab-${tabId}" style="${style}">
-<div class="stg-page" style="padding:16px 20px">
+<div class="stg-page">
 ${body}
 </div>
 </div>

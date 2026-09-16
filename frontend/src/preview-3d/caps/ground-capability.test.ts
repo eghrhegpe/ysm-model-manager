@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { GroundCapability } from "./ground-capability.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCanvasStyle, GroundSurfaceMode } from "./ground-surface-spec.ts";
 import {
@@ -11,7 +12,10 @@ import {
   GROUND_MATERIAL_PRESET_IDS,
 } from "./ground-surface-spec.ts";
 import { GROUND_MATERIAL_PRESET_KEYS } from "./ground-capability.ts";
-
+// ADR-196：每个构造注册全局 env 回调，且仅 dispose 时注销——
+// 不显式 dispose 的用例会泄漏回调，使后续 setEnvState 触发 O(N²) 纹理重建超时。
+// 与 environment/sky/postprocessing/water 同侪一致：afterEach 清空防止 cap 泄漏跨测试。
+afterEach(() => { clearEnvCallbacks(); });
 /** 便捷设置：材质值走 canvas 来源，none/solid/texture 直接设来源轴。
  *  ADR-252：图案不在表面模式里，图案请走 `setOverlayStyle`。 */
 function setMode(cap: GroundCapability, mode: GroundSurfaceMode): void {

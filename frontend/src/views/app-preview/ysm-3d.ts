@@ -19,7 +19,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { loadModelData } from "./loader.ts";
 import { playNodes } from "./mmd-controls.ts";
 import { type ModelLike, preloadModel } from "./model3d-loader.ts";
-import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
+import { type OpenerOptions, registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { readFileBytes } from "./view-shell.ts";
 import { registerYsmModelSchema, ysmShotNodes } from "./ysm-controls.ts";
 
@@ -30,10 +30,12 @@ async function listAllFilePaths(dir: string): Promise<string[] | null> {
 }
 
 /** 跨类型换角色路由用：注入轻量 loader ctx（decodeYsmViaWasm + 空 appendDebug） */
-async function openYsmFullscreen(path: string): Promise<void> {
+async function openYsmFullscreen(path: string, opts?: OpenerOptions): Promise<void> {
   await createYsm3D(path, 0, {
     loader: async (p) =>
       (await loadModelData(p, { decodeYsmViaWasm, appendDebug: () => {} })).model,
+    // ADR-253 D6：转发路由兜底算出的 siblings（entry 为资源包专用通道，YSM 不消费）
+    ...(opts?.siblings != null ? { siblings: opts.siblings } : {}),
   });
 }
 // 注册跨类型换角色路由（资源库面板/导航 FAB 选中 YSM 时派发到此；未知类型回退入口）

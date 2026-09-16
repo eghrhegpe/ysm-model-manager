@@ -27,7 +27,7 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { loadModelData } from "./loader.ts";
 import { type ModelLike, preloadModel } from "./model3d-loader.ts";
-import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
+import { type OpenerOptions, registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { componentCountsFromSpec } from "./skeleton-render.ts";
 import { type StatsCardModel, statsCardHTML } from "./tpl.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
@@ -37,7 +37,7 @@ import { registerYsmModelSchema, ysmShotNodes } from "./ysm-controls.ts";
 /** 跨类型换角色路由（ADR-253 D7：nav-fab 进入 maid 3D 的唯一入口）。
  *  原 dpToggle3D 随详情卡 FAB 删除，但其 android-back 注册与 cleanup 是**真实生命周期需求**
  *  （mount3D 内部不注册返回键），故在此保留等价接线。 */
-async function openMaidFullscreen(path: string): Promise<void> {
+async function openMaidFullscreen(path: string, opts?: OpenerOptions): Promise<void> {
   let unsubAndroidBack: (() => void) | null = null;
   const close3D = (): void => {
     cleanupMaid3D();
@@ -61,6 +61,8 @@ async function openMaidFullscreen(path: string): Promise<void> {
           )
         ).model,
       onClose: close3D,
+      // ADR-253 D6：转发路由兜底算出的 siblings（entry 为资源包专用通道，Maid 不消费）
+      ...(opts?.siblings != null ? { siblings: opts.siblings } : {}),
     });
   } catch (e) {
     // 挂载失败：core 不会回调 onClose，需就地注销返回键 handler（否则残留恒 return true

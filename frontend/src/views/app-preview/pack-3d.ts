@@ -18,10 +18,13 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（资源库面板/导航 FAB 选中资源包时派发到此）
-// ADR-253 D1+D6：透传 opts（siblings + entry）；entry 映射为 createPack3D 的 startEntry
+// ADR-253 D1+D6：透传 opts（entry）；entry 映射为 createPack3D 的 startEntry
 // ——详情卡「包内模型清单」点击因此可经统一路由直达指定 entry。
+// ⚠️ 路由层的 siblings/displayName **必须剔除**（审核 367c49e51 P2）：包的切换域是
+// 包内 ListPackModels entries，不是同目录候选——透传会把 3D 内切换下拉覆盖成
+// 路由级候选，破坏包内模型切换（core 功能）。
 registerReRoute(RESOURCE_TYPES.PACK, (path, opts) => {
-  const { entry, ...mountOpts } = opts ?? {};
+  const { entry, siblings: _routeSiblings, displayName: _routeName, ...mountOpts } = opts ?? {};
   return createPack3D(path, {
     ...mountOpts,
     ...(entry !== undefined ? { startEntry: entry } : {}),

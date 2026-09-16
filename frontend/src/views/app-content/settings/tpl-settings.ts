@@ -6,7 +6,7 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { navItems } from "@/views/app-nav/index.ts";
+import { navItems } from "@/views/app-nav/nav-items.ts";
 import { stgCard } from "./stg-card.ts";
 import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
 

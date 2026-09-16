@@ -136,6 +136,10 @@ export const ENV_STATE_SCHEMA = {
     default: "film",
     group: "water",
   },
+  // ADR-257：水面世界 y 坐标——「抬高/压低水面」的唯一入口，film 与 pool 共用。
+  // 默认 0.01 与 scene-capability.ts|GROUND_LAYER_OFFSETS.waterFilm 同源（保持 film 历史观感）；
+  // 本 schema 为零 THREE 依赖层，故写字面量而非 import 该常量。
+  waterLevel: { type: "number", default: 0.01, group: "water" },
   waterWetness: { type: "number", default: 0.15, group: "water" },
   waterColor: { type: "number", default: 0x335577, group: "water" },
   waterOpacity: { type: "number", default: 0.25, group: "water" },

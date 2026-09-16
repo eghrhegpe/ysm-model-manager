@@ -2,6 +2,12 @@
 // ===== WaterCapability 测试（ADR-196 迁移至 envState）=====
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
+import {
+  filmStrategy,
+  poolStrategy,
+  type WaterBody,
+  type WaterPartRole,
+} from "./water-body-strategies.ts";
 import { WaterCapability } from "./water-capability.ts";
 import { persistState } from "./scene-capability.ts";
 import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -137,19 +143,25 @@ describe("WaterCapability — 水池几何 / 嵌套参数", () => {
     expect(meshes.length).toBeGreaterThanOrEqual(5);
   });
 
-  it("池体顶 mesh y 位置等于 poolHeight", () => {
+  it("poolHeight 只决定容器墙体几何高度（ADR-257：不再决定水面位置）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
     cap.setWaterMode("pool");
     cap.setPoolHeight(1.2);
     const root = scene.getObjectByName("ysm-ground-water")!;
-    let topY = -Infinity;
+    const walls: THREE.Mesh[] = [];
     root.traverse((o) => {
       const m = o as THREE.Mesh;
-      if (m.isMesh) topY = Math.max(topY, m.getWorldPosition(new THREE.Vector3()).y);
+      if (m.isMesh && m.name.includes("wall")) walls.push(m);
     });
-    expect(topY).toBeCloseTo(1.2, 1);
+    expect(walls.length).toBe(8); // 4 面 × inner/outer
+    // 容器几何由 poolHeight 驱动
+    const inner = walls.find((m) => m.name.endsWith("-inner"))!;
+    const params = (inner.geometry as THREE.PlaneGeometry).parameters;
+    expect(params.height).toBeCloseTo(1.2, 5);
+    // 而顶层水面的 y 由 waterLevel 决定，与 poolHeight 无关
+    expect(scene.getObjectByName("ysm-water-top")!.position.y).toBeCloseTo(cap.getLevel(), 5);
   });
 
   it("setPoolHeight / setPoolWallColor getter/setter 一致", () => {
@@ -697,5 +709,127 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const opacity = look.children!.find((c) => c.id === "ground-water-opacity")!;
     opacity.control!.set!(0.6);
     expect(cap.getWaterOpacity()).toBeCloseTo(0.6, 5);
+  });
+});
+
+describe("WaterCapability — 水面/容器解耦：waterLevel（ADR-257 A 档）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  /** schema 默认值，与 scene-capability.ts|GROUND_LAYER_OFFSETS.waterFilm 同源（0.01） */
+  const DEFAULT_LEVEL = 0.01;
+
+  it("film：改 waterLevel 不重建 mesh 且 root.position.y 跟随", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    expect(cap.getLevel()).toBeCloseTo(DEFAULT_LEVEL, 5);
+    const before = scene.getObjectByName("ysm-ground-water");
+    cap.setLevel(1.25);
+    const after = scene.getObjectByName("ysm-ground-water");
+    expect(after).toBe(before); // 零重建：实例身份不变
+    expect(after!.position.y).toBeCloseTo(1.25, 5);
+    expect(cap.getLevel()).toBeCloseTo(1.25, 5);
+  });
+
+  it("pool：改 waterLevel 不重建容器，顶层水面 y 跟随 level 且几何未被触碰", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("pool");
+    cap.setLevel(0.9);
+    const rootBefore = scene.getObjectByName("ysm-ground-water");
+    const topBefore = scene.getObjectByName("ysm-water-top") as THREE.Mesh;
+    expect(topBefore.position.y).toBeCloseTo(0.9, 5);
+    const geoBefore = topBefore.geometry;
+    cap.setLevel(1.6);
+    expect(scene.getObjectByName("ysm-ground-water")).toBe(rootBefore); // 零重建
+    const topAfter = scene.getObjectByName("ysm-water-top") as THREE.Mesh;
+    expect(topAfter.position.y).toBeCloseTo(1.6, 5);
+    expect(topAfter.geometry).toBe(geoBefore);
+  });
+
+  it("语义分离核心：改 poolHeight 不再移动顶层水面，只改容器几何", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("pool");
+    cap.setLevel(0.5);
+    cap.setPoolHeight(1.2);
+    expect(scene.getObjectByName("ysm-water-top")!.position.y).toBeCloseTo(0.5, 5);
+    // 容器随 h 重建（墙几何依赖 h），但水面高度纹丝不动
+    cap.setPoolHeight(2.4);
+    expect(scene.getObjectByName("ysm-water-top")!.position.y).toBeCloseTo(0.5, 5);
+    expect(cap.getPoolHeight()).toBeCloseTo(2.4, 5);
+  });
+
+  it("菜单 ground-water-level 在 film 与 pool 下均可见（无 visibleWhen 门控）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    const nodes = cap.getMenuNodes();
+    const form = nodes[1]!;
+    const level = form.children!.find((c) => c.id === "ground-water-level");
+    expect(level).toBeDefined();
+    expect(level!.visibleWhen).toBeUndefined(); // 关键：不带模式门控
+    level!.control!.set!(0.77);
+    expect(cap.getLevel()).toBeCloseTo(0.77, 5);
+  });
+});
+
+describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  /** 收集 root 下全部 mesh（用于与新 role 寻址做对照） */
+  const collect = (root: THREE.Object3D): THREE.Mesh[] => {
+    const out: THREE.Mesh[] = [];
+    root.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh);
+    });
+    return out;
+  };
+
+  const bodyOf = (cap: WaterCapability) => (cap as unknown as { water: WaterBody }).water;
+
+  it("pool：getTargets(role) 与旧 mesh-name 寻址口径完全等价（防重构行为漂移）", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    cap.apply();
+    cap.setWaterMode("pool");
+    const body = bodyOf(cap);
+    const cases: Array<[WaterPartRole, (m: THREE.Mesh) => boolean]> = [
+      ["surface", (m) => m.name === "ysm-water-top"],
+      ["floor", (m) => m.name === "ysm-water-bottom"],
+      ["wallInner", (m) => m.name.endsWith("-inner")],
+      ["wallOuter", (m) => m.name.endsWith("-outer")],
+    ];
+    for (const [role, pick] of cases) {
+      expect(poolStrategy.getTargets(body, role)).toEqual(collect(body.root).filter(pick));
+    }
+    // 四个内壁 + 四个外壁都取得到，确保 role 覆盖完整而非部分匹配
+    expect(poolStrategy.getTargets(body, "wallInner")).toHaveLength(4);
+    expect(poolStrategy.getTargets(body, "wallOuter")).toHaveLength(4);
+  });
+
+  it("film：容器类 role 一律为空数组——这是「一行表达式同时适配两种形态」的机理", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    cap.apply();
+    const body = bodyOf(cap);
+    expect(filmStrategy.getTargets(body, "surface")).toEqual([body.top]);
+    expect(filmStrategy.getTargets(body, "floor")).toEqual([]);
+    expect(filmStrategy.getTargets(body, "wallInner")).toEqual([]);
+    expect(filmStrategy.getTargets(body, "wallOuter")).toEqual([]);
+  });
+
+  it("形态能力旗标：film 受 wetness 门控且无体积光学；pool 反之", () => {
+    expect(filmStrategy.wetnessGated).toBe(true);
+    expect(filmStrategy.supportsVolumeOptics).toBe(false);
+    expect(poolStrategy.wetnessGated).toBe(false);
+    expect(poolStrategy.supportsVolumeOptics).toBe(true);
+  });
+
+  it("needsRebuild 由形态自行声明：film 永不重建；pool 因结构字段重建、但不因 waterLevel 重建", () => {
+    expect(filmStrategy.needsRebuild(new Set(["waterLevel", "waterSize"]))).toBe(false);
+    expect(poolStrategy.needsRebuild(new Set(["waterLevel"]))).toBe(false);
+    expect(poolStrategy.needsRebuild(new Set(["waterSize"]))).toBe(true);
+    expect(poolStrategy.needsRebuild(new Set(["waterPoolHeight"]))).toBe(true);
+    expect(poolStrategy.needsRebuild(new Set(["waterPoolWallThickness"]))).toBe(true);
   });
 });

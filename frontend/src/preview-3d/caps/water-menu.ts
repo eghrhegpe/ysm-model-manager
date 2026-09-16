@@ -97,6 +97,15 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
             set: (v) => cap.setWaterMode(v as WaterMode),
           },
         },
+        // ADR-257：水位跨形态通用，故**不带 visibleWhen**——film 下也能抬水面。
+        // 这是本次改造对用户最直接的可感收益（旧：只有 pool 才有高度入口）。
+        wSliderNode(
+          "ground-water-level",
+          "preview.groundWaterLevel",
+          { min: 0, max: 5, step: 0.01, unit: "m" },
+          () => cap.getLevel(),
+          (v) => cap.setLevel(v),
+        ),
       ],
     },
     {

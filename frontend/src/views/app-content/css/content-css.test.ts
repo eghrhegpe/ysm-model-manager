@@ -45,4 +45,12 @@ describe("设置页组间距契约（content-stg）", () => {
     expect(contentStgCSS).toMatch(/\.stg-section\s*\{\s*margin-top:\s*16px/);
     expect(contentStgCSS).toMatch(/\.stg-grid-2\s*\{[^}]*repeat\(2/);
   });
+
+  it(".stg-section 与 .section-title 间距同源（16px），避免两种组间距不一致", () => {
+    // A（带标题）走 .section-title 的 padding-top；B（无标题）走 .stg-section 的 margin-top。
+    // 两者数值须相等，否则同一页内两种组的视觉节奏不一致。
+    const titlePadTop = contentLayoutCSS.match(/\.section-title\s*\{[^}]*padding:\s*(\d+)px/);
+    const sectionMargin = contentStgCSS.match(/\.stg-section\s*\{\s*margin-top:\s*(\d+)px/);
+    expect(titlePadTop?.[1]).toBe(sectionMargin?.[1]);
+  });
 });

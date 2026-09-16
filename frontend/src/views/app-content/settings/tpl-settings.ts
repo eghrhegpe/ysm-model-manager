@@ -120,7 +120,10 @@ function renderStgStorageCard(isWebViewer: boolean): string {
 }
 
 function renderStgLangSelect(): string {
-  return `<div class="section-title stg-title" style="margin-top:12px">${UI_ICONS.web} ${t("settings.language")}</div>
+  // 间距走 .stg-section 显式契约（不再内联 margin-top:12px）——
+  // 该组已挂 .section-title（自带 padding-top:16px），故只需补 0；
+  // 这里保留 .section-title 作为标题，不重复加 stg-section（否则叠加得 32px）。
+  return `<div class="section-title stg-title">${UI_ICONS.web} ${t("settings.language")}</div>
 <div class="stg-card" style="animation-delay:240ms">
   <div class="stg-card-body" style="display:flex;align-items:center;gap:8px">
     <select id="set-lang" class="stg-select" style="width:auto">

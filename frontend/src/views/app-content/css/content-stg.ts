@@ -76,10 +76,12 @@ export const contentStgCSS: string = `
 }
 
 /* ===== 设置页卡片/路径样式（settings 独占） ===== */
-/* 设置页「组」间距显式契约（勿再依赖 .section-title 的 padding 撑间隔）：
-   历史坑：界面 tab 的两张卡直接吐裸 .stg-grid，与上方行组零间距——
-   因为组间空白一直由 .section-title{padding:16px 16px 8px} 隐式提供，
-   一旦某组不挂标题（卡片已自带 card-hdr），那根“间隔柱”就没了。 */
+/* 设置页「组」间距契约（两种组，各取其一的间距来源，勿叠加）：
+     A. 带标题的组 → 标题行用 .section-title（自带 padding:16px 16px 8px）撑开上方空白；
+     B. 无标题的组 → 容器自身挂 .stg-section（margin-top:16px）。
+   卡片自带 card-hdr 的组（如「行为与动画」+「启动默认页」）走 B。
+   历史坑：界面上 tab 的两卡组曾直接吐裸 .stg-grid，与上方行组零间距——
+   因为空白一直由 .section-title 的 padding 隐式提供，一旦不挂标题就没间隔了。 */
 .stg-section { margin-top: 16px; }
 .stg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
 /* 2 列变体：两张卡并排（如「行为与动画」+「启动默认页」） */

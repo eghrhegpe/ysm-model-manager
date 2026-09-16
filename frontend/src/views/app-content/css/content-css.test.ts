@@ -36,3 +36,13 @@ describe("content-css 聚合层", () => {
     for (const css of leaves) expect(contentCSS).toContain(css);
   });
 });
+
+describe("设置页组间距契约（content-stg）", () => {
+  it(".stg-section 提供显式组间距；.stg-grid-2 为两列变体", () => {
+    // 不能再依赖 .section-title{padding:16px 16px 8px} 隐式撑间隔：
+    // 卡片自带 card-hdr 的组不挂标题，缺了那根「间隔柱」就会与上方贴死
+    expect(contentCSS).toContain(".stg-section {");
+    expect(contentStgCSS).toMatch(/\.stg-section\s*\{\s*margin-top:\s*16px/);
+    expect(contentStgCSS).toMatch(/\.stg-grid-2\s*\{[^}]*repeat\(2/);
+  });
+});

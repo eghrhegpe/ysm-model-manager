@@ -155,6 +155,9 @@ describe("app-content 模板", () => {
       "diagnostics",
       "settings",
     ]);
+    // 组间距显式契约：未挂 .section-title 的组必须自带 stg-section，
+    // 否则与上方组贴死（两卡并排组曾因删了 section-title 丢失间隔）
+    expect(html).toContain("stg-grid stg-grid-2 stg-section");
     expect(html).toContain("set-advanced-grid");
     // worker 解析开关收敛到独立「解析」tab（FBX / MMD PMX 逃生舱），不在界面 tab 内
     expect(html).toContain('data-tab="parser"');

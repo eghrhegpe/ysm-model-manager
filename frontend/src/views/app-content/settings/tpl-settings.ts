@@ -298,9 +298,10 @@ function renderStgAnimDefault(): string {
     },
   );
 
-  // 两卡并排成 2 列网格（本 tab 其余段是整行行组，两张满宽卡插在中间会突兀）：
-  // 同为「界面行为」类的两张卡并列，行高对齐。
-  return `<div class="stg-grid" style="grid-template-columns:repeat(2,1fr)">${animCard}${defaultPageCard}</div>`;
+  // 两卡并排：.stg-grid-2 命名类（不再内联 grid-template-columns）。
+  // stg-section 补上组间上间距：本组未挂 .section-title（卡片自带 card-hdr），
+  // 而组间空白一直由该标题的 padding 隐式提供——不补会与上方行组贴死。
+  return `<div class="stg-grid stg-grid-2 stg-section">${animCard}${defaultPageCard}</div>`;
 }
 
 function renderStgPreview3d(): string {

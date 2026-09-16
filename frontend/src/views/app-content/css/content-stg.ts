@@ -9,7 +9,10 @@ export const contentStgCSS: string = `
 .stg-page {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+/* 顶部不垫：上方 .repo-tabs 已有下边框分隔，再垫 16px 会与首个
+   .section-title 自带的 padding-top:16px 叠加成 32px 悬空（同类“双间距”坑）。
+   左右 20px 与上下不得混用——.settings-group 对齐后内容左边距 = 20+12 = 32px。 */
+  padding: 0 20px 16px;
 }
 /* .stg-title：仅作「设置页节标题」标记，不再提供 margin-bottom——
    标题下间距单一来源 = .section-title 的 padding-bottom（现 16px）。
@@ -34,7 +37,7 @@ export const contentStgCSS: string = `
   font-size:var(--fs-xs);
 }
 .stg-hint {
-  font-size: 9px;
+  font-size:var(--fs-micro);
   color: var(--muted);
   padding: 2px 0 0 0;
 }
@@ -58,13 +61,13 @@ export const contentStgCSS: string = `
   cursor: pointer;
 }
 .stg-hint-hidden {
-  font-size: 9px;
+  font-size:var(--fs-micro);
   color: var(--muted);
   padding: 2px 0 0 0;
   display: none;
 }
 .stg-hint-warn {
-  font-size: 9px;
+  font-size:var(--fs-micro);
   color: var(--status-error);
 }
 .stg-select {
@@ -108,7 +111,7 @@ export const contentStgCSS: string = `
 .stg-card-desc { font-size:var(--fs-xs); color:var(--muted); margin-top:6px; line-height:1.4; }
 .stg-adv-reset { margin-left:auto; }
 .stg-card-overridden { border-color:var(--accent); }
-.stg-custom-badge { font-size:9px;color:var(--accent); }
+.stg-custom-badge { font-size:var(--fs-micro);color:var(--accent); }
 .stg-path-picker { display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:var(--radius-md); cursor:pointer; font-size:var(--fs-xs); color:var(--txt); background:var(--bg); transition:border-color var(--tr-fast), background var(--tr-fast); width:100%; box-sizing:border-box; min-height:0; }
 .stg-path-picker:hover { border-color:var(--accent); background:var(--hover); }
 @keyframes advPanelIn { from { opacity:0; max-height:0; } to { opacity:1; max-height:600px; } }

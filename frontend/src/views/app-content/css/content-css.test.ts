@@ -91,4 +91,12 @@ describe("设置页组间距契约（content-stg）", () => {
     // 靠 :has(+ .section-title) 消掉行组那份，间距归下方标题单供。
     expect(contentStgCSS).toMatch(/\.settings-group:has\(\s*\+\s*\.section-title\s*\)\s*\{[^}]*margin-bottom:\s*0/);
   });
+
+  it(".stg-page 顶部不垫（tab 栏已有下边框；防与首个节标题叠加成 32px 悬空）", () => {
+    // 历史：.stg-page 曾写 padding:16px 20px，顶部 16px 与首个 .section-title 的
+    // padding-top:16px 叠加 = 32px 顶部悬空。现顶部归零，左右保持 20px。
+    const block = contentStgCSS.match(/\.stg-page\s*\{([^}]*)\}/)?.[1] ?? "";
+    const m = block.match(/padding:\s*([^;]+);/);
+    expect(m?.[1]).toBe("0 20px 16px");
+  });
 });

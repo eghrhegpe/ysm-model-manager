@@ -124,6 +124,17 @@ describe("app-content 模板", () => {
     expect(html).toContain('id="stg-default-page-card"');
     expect(html).toContain('id="stg-anim-card"');
     expect(html).toContain('id="set-remember-page"');
+    // 开关必须在卡片标题行（.stg-card-hdr）的 actions 里，与「游戏根目录 / 自动搜索」同构——
+    // 回归防线：曾在 body 里左右各写一句同义描述（重复描述）
+    const animHdr = html.slice(
+      html.indexOf('id="stg-anim-card"'),
+      html.indexOf('id="stg-anim-card"') + 600,
+    );
+    expect(animHdr).toMatch(/stg-card-hdr[\s\S]*?id="set-animations"/);
+    const dpHdr = html.slice(html.indexOf('id="stg-default-page-card"'));
+    expect(dpHdr).toMatch(/stg-card-hdr[\s\S]*?id="set-remember-page"/);
+    // 两卡并排 2 列（不再是一张张满宽单列）
+    expect(html).toContain("grid-template-columns:repeat(2,1fr)");
     expect(html).toContain("set-advanced-grid");
     // worker 解析开关收敛到独立「解析」tab（FBX / MMD PMX 逃生舱），不在界面 tab 内
     expect(html).toContain('data-tab="parser"');

@@ -251,14 +251,12 @@ export const zhCN = {
   "settings.animation.enableCheck": "启用过渡动画",
   "settings.animation.hint": "关闭后仅保留布局过渡，移除 hover 和淡入淡出动画，适合低配设备。",
   "settings.defaultPage": "启动默认页面",
-  "settings.defaultPage.remember": "跟随上次访问",
   "settings.defaultPage.rememberCheck": "记住并恢复上次停留的页面",
   "settings.defaultPage.fixed": "固定启动页面",
   "settings.defaultPage.instances": "整合包管理",
   "settings.defaultPage.workshop": "创作者频道",
   "settings.defaultPage.repository": "模型仓库",
-  "settings.defaultPageHint":
-    "勾选则由程序记住并恢复上次停留的页面；取消勾选后固定打开下方所选页面（不再记忆）。",
+  "settings.defaultPageHint": "关闭记忆时，启动总是打开下方所选页面。",
   "settings.preview3d.title": "3D 预览操作",
   "settings.preview3d.camSpeed": "相机移动速度",
   "settings.preview3d.camSpeedHint":

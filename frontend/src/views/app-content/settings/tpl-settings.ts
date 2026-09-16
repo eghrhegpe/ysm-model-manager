@@ -250,32 +250,33 @@ function renderStgFontFamily(): string {
 }
 
 function renderStgAnimDefault(): string {
+  // 开关放卡片标题行（actions，与「游戏根目录 / 自动搜索」同构），
+  // body 只留说明——曾左右各写一句同义描述（信息量 1、占用 2，重复描述）。
   const animCard = stgCard(
     UI_ICONS.sparkle,
     t("settings.animation.title"),
-    `<div class="setting-row" style="padding:0;background:none;animation:none">
-      <label for="set-animations" class="label">${t("settings.animation.enable")}</label>
-      <label class="stg-label" style="gap:8px">
+    `<div class="stg-card-desc" style="margin-top:0">${t("settings.animation.hint")}</div>`,
+    {
+      header: {
+        actions: `<label class="stg-label" style="gap:8px">
         <input type="checkbox" id="set-animations" checked> ${t("settings.animation.enableCheck")}
-      </label>
-    </div>
-    <div class="stg-card-desc">${t("settings.animation.hint")}</div>`,
-    { cardId: "stg-anim-card", delayMs: 180 },
+      </label>`,
+      },
+      cardId: "stg-anim-card",
+      delayMs: 180,
+    },
   );
 
   // 启动默认页：升格为 .stg-card（与「游戏根目录」「文件存储」「语言」同属卡片口径）——
   // 原用 .settings-group 裸行组，无卡片框、两侧 padding:0 16px 缩进，夹在一堆 .stg-card
   // 之间视觉断裂（跨口径混搭）。body 内用 .setting-row 保持行内两端对齐。
+  // 启动默认页：记忆开关上标题行，body 只留「固定页下拉 + 说明」。
+  // 旧写法左侧「跟随上次访问」与右侧「记住并恢复…」同义重复，已删左侧标题
+  // （settings.defaultPage.remember 随之退役）。
   const defaultPageCard = stgCard(
     UI_ICONS.home,
     t("settings.defaultPage"),
     `<div class="setting-row" style="padding:0;background:none;animation:none">
-      <label for="set-remember-page" class="label">${t("settings.defaultPage.remember")}</label>
-      <label class="stg-label" style="gap:8px">
-        <input type="checkbox" id="set-remember-page" checked> ${t("settings.defaultPage.rememberCheck")}
-      </label>
-    </div>
-    <div class="setting-row" style="padding:0;background:none;animation:none;margin-top:8px">
       <label for="set-default-page" class="label">${t("settings.defaultPage.fixed")}</label>
       <select id="set-default-page" class="stg-select" style="width:auto">
         <option value="instances">${UI_ICONS.game} ${t("settings.defaultPage.instances")}</option>
@@ -284,13 +285,20 @@ function renderStgAnimDefault(): string {
       </select>
     </div>
     <div class="stg-card-desc">${t("settings.defaultPageHint")}</div>`,
-    { cardId: "stg-default-page-card", delayMs: 210 },
+    {
+      header: {
+        actions: `<label class="stg-label" style="gap:8px">
+        <input type="checkbox" id="set-remember-page" checked> ${t("settings.defaultPage.rememberCheck")}
+      </label>`,
+      },
+      cardId: "stg-default-page-card",
+      delayMs: 210,
+    },
   );
 
-  // 两卡已各有 card-hdr 标题，无需外挂 section-title（重复标题 + 多余间距）
-  return `${animCard}
-
-${defaultPageCard}`;
+  // 两卡并排成 2 列网格（本 tab 其余段是整行行组，两张满宽卡插在中间会突兀）：
+  // 同为「界面行为」类的两张卡并列，行高对齐。
+  return `<div class="stg-grid" style="grid-template-columns:repeat(2,1fr)">${animCard}${defaultPageCard}</div>`;
 }
 
 function renderStgPreview3d(): string {

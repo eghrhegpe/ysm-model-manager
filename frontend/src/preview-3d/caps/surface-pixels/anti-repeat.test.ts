@@ -8,6 +8,7 @@ import {
   derandomizeDual,
   makeDecorrelatedVariant,
   maxSeamDiscontinuity,
+  maxWrapSeamDiscontinuity,
   repetitionScore,
   textureRepeatForDerepeat,
   tilePlain,
@@ -79,6 +80,9 @@ describe("macro（低频宏观叠加）", () => {
     const out = derandomize(grassTile(1.5), S, { strategy: "macro", tilesPerAxis: N });
     // 宏观调制在缝处叠加极小量（factor 连续），容差 +2 仍属「无新缝」
     expect(maxSeamDiscontinuity(out, N * S, S)).toBeLessThanOrEqual(INPUT_SEAM + 2);
+    // 回绕边界（RepeatWrapping 真正可见处）：周期化低频场后须≈输入固有残差
+    // （旧非周期实现 macro 回绕缝 28 vs 固有 20——审核 3aac32d60 P1 回归）
+    expect(maxWrapSeamDiscontinuity(out, N * S)).toBeLessThanOrEqual(INPUT_SEAM + 2);
   });
 
   it("同种子可复现", () => {
@@ -104,6 +108,8 @@ describe("stochastic（随机瓦片）", () => {
   it("未引入新接缝（羽化回 base 保无缝）", () => {
     const out = derandomize(grassTile(1.5), S, { strategy: "stochastic", tilesPerAxis: N, blend: 4 });
     expect(maxSeamDiscontinuity(out, N * S, S)).toBeLessThanOrEqual(INPUT_SEAM + 1);
+    // 回绕边界同样须受控（羽化已保证 x=0 与 x=out-1 同归 base）
+    expect(maxWrapSeamDiscontinuity(out, N * S)).toBeLessThanOrEqual(INPUT_SEAM + 1);
   });
 
   it("同种子可复现", () => {
@@ -128,6 +134,13 @@ describe("dual（双变体混合）", () => {
     expect(allAlpha255(out)).toBe(true);
     expect(repetitionScore(out, N * S, N)).toBeGreaterThan(repetitionScore(base, N * S, N) + 0.02);
     expect(maxSeamDiscontinuity(out, N * S, S)).toBeLessThanOrEqual(srcSeam + 1);
+    // 回绕边界：周期化 A/B 混合场后须≈两份源 tile 的回绕残差最大值
+    // （旧非周期实现 dual 回绕缝 181 vs 内部 77——审核 3aac32d60 P1 回归）
+    const srcWrap = Math.max(
+      maxWrapSeamDiscontinuity(tilePlain(a, S, N), N * S),
+      maxWrapSeamDiscontinuity(tilePlain(b, S, N), N * S),
+    );
+    expect(maxWrapSeamDiscontinuity(out, N * S)).toBeLessThanOrEqual(srcWrap + 2);
   });
 
   it("近似变体（makeDecorrelatedVariant）亦能去重复（弱于真实双种子）", () => {

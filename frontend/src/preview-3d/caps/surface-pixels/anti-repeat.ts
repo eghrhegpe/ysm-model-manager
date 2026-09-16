@@ -43,10 +43,18 @@
 // 三种解法互不排斥，可单独或组合使用（先 dual 再 macro 叠加宏观等）。
 // 验证：本模块纯函数、零 three 运行时依赖，配套 `anti-repeat.test.ts` node 单测。
 
-import { fbm2, smoothStep } from "./noise.ts";
+import { smoothStep, tiledFbm } from "./noise.ts";
 
 /** 去重复策略（单源：macro / stochastic） */
 export type AntiRepeatStrategy = "macro" | "stochastic";
+
+/** 低频调制/混合场（归一化坐标采样）：`freq` 为铺满整图周期数、`seed` 播种。
+ *  4D 环面 → **out 边界连续**（RepeatWrapping 无缝）；非周期 2D 场会在每圈
+ *  边界留明暗/色带跳变缝（审核 3aac32d60 P1 实锤：dual 回绕缝 181 vs 内部缝 77），
+ *  周期化后回绕缝收敛到与 stochastic 同级的输入固有残差。 */
+export function lowFreqMask(nx: number, ny: number, freq: number, seed: number): number {
+  return tiledFbm(nx, ny, freq, freq, 0, 3, 2, seed);
+}
 
 export interface AntiRepeatOptions {
   /** 解法：macro（低频宏观叠加）| stochastic（随机瓦片） */
@@ -111,8 +119,8 @@ export function derandomizeDual(
       const sy = y % sourceSize;
       const ai = (sy * sourceSize + sx) * 4;
       const bi = ai;
-      // 低频 mask → 软聚类（smoothstep 拉出 A 簇 / B 簇边界）
-      const m = fbm2((x / out) * maskFreq, (y / out) * maskFreq, 4, seed);
+      // 周期化低频 mask（lowFreqMask：4D 环面，out 边界连续 → RepeatWrapping 无缝）
+      const m = lowFreqMask(x / out, y / out, maskFreq, seed);
       const t = smoothStep(Math.min(1, Math.max(0, (m - 0.5) * maskSharp + 0.5)));
       const idx = (y * out + x) * 4;
       for (let c = 0; c < 3; c++) {
@@ -170,8 +178,9 @@ function macroOverlay(
       const sx = x % S;
       const sy = y % S;
       const bi = (sy * S + sx) * 4;
-      // 非周期低频场：跨整张大图变化 → 相邻子块整体色调不同 → 破重复
-      const m = fbm2((x / out) * freq, (y / out) * freq, 4, seed); // [0,1]
+      // 周期化低频场（4D 环面：freq 个周期铺满整张大图，out 边界处连续
+      // → RepeatWrapping 无缝；非周期 fbm2 会在每圈边界留明暗跳变缝）
+      const m = lowFreqMask(x / out, y / out, freq, seed); // [0,1]
       const factor = 1 + (m - 0.5) * 2 * strength;
       const idx = (y * out + x) * 4;
       for (let c = 0; c < 3; c++) px[idx + c] = clamp255(tile[bi + c] * factor);
@@ -346,6 +355,27 @@ export function maxSeamDiscontinuity(rgba: Uint8Array, size: number, sourceSize:
         for (let c = 0; c < 3; c++) max = Math.max(max, Math.abs(rgba[a + c] - rgba[b + c]));
       }
     }
+  }
+  return max;
+}
+
+/**
+ * 单测：回绕边界（x=size-1 → 0、y=size-1 → 0）的最大不连续。
+ * RepeatWrapping 部署时**真正可见**的缝在这两处，而 maxSeamDiscontinuity
+ * 只查内部子块边界——非周期调制场（macro/dual 旧实现）回绕缝 181 vs 内部 77
+ * （审核 3aac32d60 P1 实测），内部全绿而回绕翻车的盲区。周期化后应≈输入固有残差。
+ */
+export function maxWrapSeamDiscontinuity(rgba: Uint8Array, size: number): number {
+  let max = 0;
+  for (let y = 0; y < size; y++) {
+    const a = (y * size + (size - 1)) * 4;
+    const b = (y * size + 0) * 4;
+    for (let c = 0; c < 3; c++) max = Math.max(max, Math.abs(rgba[a + c] - rgba[b + c]));
+  }
+  for (let x = 0; x < size; x++) {
+    const a = ((size - 1) * size + x) * 4;
+    const b = x * 4;
+    for (let c = 0; c < 3; c++) max = Math.max(max, Math.abs(rgba[a + c] - rgba[b + c]));
   }
   return max;
 }

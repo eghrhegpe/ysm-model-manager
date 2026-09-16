@@ -14,11 +14,11 @@ import type { ShadowCapability } from "./shadow-capability.ts";
 const SHADOW_PARAMS_GROUP = "preview.shadowGroupParams";
 
 // 与 shadow-capability.ts 源值一致（影子镜像；刀3 收口时源删除、本文件为唯一声明层）
-const MAP_SIZE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "512", label: "512（性能优先）" },
-  { value: "1024", label: "1024（均衡）" },
-  { value: "2048", label: "2048（清晰）" },
-  { value: "4096", label: "4096（精细）" },
+const MAP_SIZE_OPTIONS: Array<{ value: string; label: string; labelKey?: string }> = [
+  { value: "512", label: "512（性能优先）", labelKey: "preview.shadowMapSize512" },
+  { value: "1024", label: "1024（均衡）", labelKey: "preview.shadowMapSize1024" },
+  { value: "2048", label: "2048（清晰）", labelKey: "preview.shadowMapSize2048" },
+  { value: "4096", label: "4096（精细）", labelKey: "preview.shadowMapSize4096" },
 ];
 
 /** shadow-enabled toggle（真能力总开关；直达面板首行即切，不升 headerToggle） */

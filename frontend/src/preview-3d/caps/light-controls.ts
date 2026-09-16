@@ -14,13 +14,13 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { LightCapability } from "./light-capability.ts";
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
-const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "default", label: "默认" },
-  { value: RESOURCE_TYPES.YSM, label: "YSM方块" },
-  { value: "vrm", label: "VRM角色" },
-  { value: "mmd", label: "MMD角色" },
-  { value: "litematic", label: "体素" },
-  { value: "resourcepack", label: "MC块包" },
+const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string; labelKey?: string }> = [
+  { value: "default", label: "默认", labelKey: "preview.lightPresetDefault" },
+  { value: RESOURCE_TYPES.YSM, label: "YSM方块", labelKey: "preview.lightPresetYsm" },
+  { value: "vrm", label: "VRM角色", labelKey: "preview.lightPresetVrm" },
+  { value: "mmd", label: "MMD角色", labelKey: "preview.lightPresetMmd" },
+  { value: "litematic", label: "体素", labelKey: "preview.lightPresetLitematic" },
+  { value: "resourcepack", label: "MC块包", labelKey: "preview.lightPresetResourcepack" },
 ];
 
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */

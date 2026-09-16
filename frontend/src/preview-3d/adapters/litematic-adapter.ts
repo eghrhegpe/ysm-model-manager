@@ -350,9 +350,9 @@ function buildSliceSchema(
       labelKey: "preview.sliceMode",
       control: {
         options: [
-          { value: "all", label: "全部" },
-          { value: "single", label: "单层" },
-          { value: "range", label: "范围" },
+          { value: "all", label: "全部", labelKey: "preview.sliceModeAll" },
+          { value: "single", label: "单层", labelKey: "preview.sliceModeSingle" },
+          { value: "range", label: "范围", labelKey: "preview.sliceModeRange" },
         ],
         // 模式真源 = shell 闭包（场景级会话态，非全局状态层路径）——get/set 闭包模式
         // 与 MmdPlayBridge 动作 select 同构；slider visibleWhen 谓词读同一闭包

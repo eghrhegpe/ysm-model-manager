@@ -17,19 +17,28 @@ import type {
 const TONE_MAPPING_OPTIONS: ReadonlyArray<{
   value: PostprocessingParams["toneMapping"];
   label: string;
+  labelKey?: string;
 }> = [
-  { value: "none", label: "无" },
-  { value: "linear", label: "线性" },
-  { value: "reinhard", label: "Reinhard" },
-  { value: "aces", label: "ACES Filmic" },
-  { value: "cineon", label: "Cineon" },
+  { value: "none", label: "无", labelKey: "preview.toneMappingNone" },
+  { value: "linear", label: "线性", labelKey: "preview.toneMappingLinear" },
+  { value: "reinhard", label: "Reinhard", labelKey: "preview.toneMappingReinhard" },
+  { value: "aces", label: "ACES Filmic", labelKey: "preview.toneMappingAces" },
+  { value: "cineon", label: "Cineon", labelKey: "preview.toneMappingCineon" },
 ];
 
 // 反射模式选项常量（与 ppcBuildSSR 内 select 保持一致）
-const REFLECTION_MODE_OPTIONS: ReadonlyArray<{ value: ReflectionMode; label: string }> = [
-  { value: "envmap-only", label: "仅环境贴图" },
-  { value: "envmap+ssr", label: "环境贴图 + 屏幕空间" },
-  { value: "ssr-only", label: "仅屏幕空间" },
+const REFLECTION_MODE_OPTIONS: ReadonlyArray<{
+  value: ReflectionMode;
+  label: string;
+  labelKey?: string;
+}> = [
+  { value: "envmap-only", label: "仅环境贴图", labelKey: "preview.reflectionModeEnvmapOnly" },
+  {
+    value: "envmap+ssr",
+    label: "环境贴图 + 屏幕空间",
+    labelKey: "preview.reflectionModeEnvmapSsr",
+  },
+  { value: "ssr-only", label: "仅屏幕空间", labelKey: "preview.reflectionModeSsrOnly" },
 ];
 
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */

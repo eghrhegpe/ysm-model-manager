@@ -38,8 +38,8 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       labelKey: "preview.cameraRotation",
       control: {
         options: [
-          { value: "orbit", label: "环绕" },
-          { value: "free", label: "自身" },
+          { value: "orbit", label: "环绕", labelKey: "preview.cameraRotationOrbit" },
+          { value: "free", label: "自身", labelKey: "preview.cameraRotationFree" },
         ],
         get: () => (ctx.getCamBridge().getOrbit() ? "orbit" : "free"),
         set: (v) => {

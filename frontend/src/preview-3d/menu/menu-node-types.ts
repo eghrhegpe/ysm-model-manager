@@ -112,7 +112,12 @@ export interface PreviewControlDef {
   /** preset-thumb 配置（kind=preset-thumb 时生效） */
   thumb?: {
     size: number;
-    options: Array<{ value: string; label: string; getThumb: () => string | null }>;
+    options: Array<{
+      value: string;
+      label: string;
+      labelKey?: string;
+      getThumb: () => string | null;
+    }>;
     activeValue: () => string;
     onSelect: (value: string) => void;
     /** [预设冗余标签] true = 不渲染控件顶部 label（外层已用 folder 折叠头承载标题，省去内部重复标题行）。 */

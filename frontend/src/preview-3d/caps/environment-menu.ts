@@ -26,6 +26,15 @@ const ENV_GROUP_PRESET = "preview.envGroupPreset";
 const ENV_GROUP_BACKGROUND = "preview.envGroupBackground";
 const ENV_GROUP_CUSTOM_HDR = "preview.envGroupCustomHdr";
 
+/** ENV_PRESETS 预设 id → i18n 键（与 env.ts 快捷预设 select 同源复用 presetQuick*，
+ *  使同一预设在一级快捷选与 cap 缩略图两处文案恒等）。 */
+const ENV_PRESET_LABEL_KEY: Record<string, string> = {
+  sky: "preview.presetQuickSky",
+  studio: "preview.presetQuickStudio",
+  sunset: "preview.presetQuickSunset",
+  night: "preview.presetQuickNight",
+  forest: "preview.presetQuickForest",
+};
 /** 预设缩略图复杂控件（preset-thumb——非纯数据，走 controls 通道节点承载） */
 function envPresetControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
   const preset: PreviewControlDef = {
@@ -46,6 +55,7 @@ function envPresetControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
         return keys.map((id) => ({
           value: id,
           label: ENV_PRESETS[id].label,
+          labelKey: ENV_PRESET_LABEL_KEY[id],
           getThumb: () => cap.getPresetThumbnail(id, 64),
         }));
       })(),

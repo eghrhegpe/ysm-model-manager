@@ -132,10 +132,10 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
       labelKey: "preview.groundMatSource",
       control: {
         options: [
-          { value: "none", label: "无" },
-          { value: "solid", label: "纯色" },
-          { value: "canvas", label: "程序化画布" },
-          { value: "texture", label: "自定义贴图" },
+          { value: "none", label: "无", labelKey: "preview.groundMatSourceNone" },
+          { value: "solid", label: "纯色", labelKey: "preview.groundMatSourceSolid" },
+          { value: "canvas", label: "程序化画布", labelKey: "preview.groundMatSourceCanvas" },
+          { value: "texture", label: "自定义贴图", labelKey: "preview.groundMatSourceTexture" },
         ],
         get: () => cap.getSourceKind(),
         set: (v) => cap.setSourceKind(v as GroundSourceKind),
@@ -151,12 +151,16 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
         options: [
           // ADR-252：本轴只装**噪声材质**；几何图案已归叠加层 folder。
           // ADR-254：下拉值 = **预设状态**；选材质会一次性套用形状 + 配色（材质名兼现颜色）。
-          { value: "plain", label: "素面" },
-          { value: "marble", label: "大理石" },
-          { value: "sand", label: "沙子" },
-          { value: "grass", label: "草地" },
+          { value: "plain", label: "素面", labelKey: "preview.groundCanvasStylePlain" },
+          { value: "marble", label: "大理石", labelKey: "preview.groundCanvasStyleMarble" },
+          { value: "sand", label: "沙子", labelKey: "preview.groundCanvasStyleSand" },
+          { value: "grass", label: "草地", labelKey: "preview.groundCanvasStyleGrass" },
           // 显示项：用户手改过预设关心的字段后由中间件置位，手选它不做事
-          { value: "custom", label: "自定义（已手改）" },
+          {
+            value: "custom",
+            label: "自定义（已手改）",
+            labelKey: "preview.groundCanvasStyleCustom",
+          },
         ],
         get: () => cap.getMaterialPreset(),
         set: (v) => cap.setMaterialPreset(v as GroundMaterialPreset),
@@ -261,11 +265,11 @@ function groundBuildOverlayFolder(cap: GroundCapability): PreviewMenuNode {
       labelKey: "preview.groundOverlay",
       control: {
         options: [
-          { value: "none", label: "无" },
-          { value: "grid", label: "格线" },
-          { value: "checker", label: "棋盘" },
-          { value: "stripes", label: "条纹" },
-          { value: "diamond", label: "菱格" },
+          { value: "none", label: "无", labelKey: "preview.groundOverlayNone" },
+          { value: "grid", label: "格线", labelKey: "preview.groundOverlayGrid" },
+          { value: "checker", label: "棋盘", labelKey: "preview.groundOverlayChecker" },
+          { value: "stripes", label: "条纹", labelKey: "preview.groundOverlayStripes" },
+          { value: "diamond", label: "菱格", labelKey: "preview.groundOverlayDiamond" },
         ],
         get: () => cap.getOverlayStyle(),
         set: (v) => cap.setOverlayStyle(v as GroundOverlayStyle),

@@ -585,7 +585,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
     const img = document.createElement("img");
     const dataUrl = opt.getThumb();
     img.src = dataUrl ?? "";
-    img.alt = opt.label;
+    img.alt = opt.labelKey ? tOf(opt.labelKey) : opt.label;
     img.className = "cc-thumb-img"; // 尺寸动态(P1 豁免)拆内联:width/height 运行时赋值
     img.style.width = `${thumb.size}px`;
     img.style.height = `${Math.max(1, Math.floor(thumb.size / 2))}px`;
@@ -596,7 +596,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
     }
     const span = document.createElement("span");
     span.className = "cc-span-cap";
-    span.textContent = opt.label;
+    span.textContent = opt.labelKey ? tOf(opt.labelKey) : opt.label;
     btn.append(img, span);
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();

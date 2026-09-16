@@ -8,21 +8,37 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import type { RenderModeCapability } from "./render-mode-capability.ts";
 
 /** 混合模式选项（与旧 getMenuControls 内联常量同值） */
-function blendingOptions(): Array<{ value: string; label: string }> {
+function blendingOptions(): Array<{ value: string; label: string; labelKey?: string }> {
   return [
-    { value: String(THREE.NormalBlending), label: "正常" },
-    { value: String(THREE.AdditiveBlending), label: "叠加" },
-    { value: String(THREE.MultiplyBlending), label: "正片叠底" },
-    { value: String(THREE.SubtractiveBlending), label: "减去" },
+    {
+      value: String(THREE.NormalBlending),
+      label: "正常",
+      labelKey: "preview.renderModeBlendingNormal",
+    },
+    {
+      value: String(THREE.AdditiveBlending),
+      label: "叠加",
+      labelKey: "preview.renderModeBlendingAdditive",
+    },
+    {
+      value: String(THREE.MultiplyBlending),
+      label: "正片叠底",
+      labelKey: "preview.renderModeBlendingMultiply",
+    },
+    {
+      value: String(THREE.SubtractiveBlending),
+      label: "减去",
+      labelKey: "preview.renderModeBlendingSubtractive",
+    },
   ];
 }
 
 /** 面剔除选项（与旧 getMenuControls 内联常量同值） */
-function sideOptions(): Array<{ value: string; label: string }> {
+function sideOptions(): Array<{ value: string; label: string; labelKey?: string }> {
   return [
-    { value: String(THREE.FrontSide), label: "正面" },
-    { value: String(THREE.BackSide), label: "背面" },
-    { value: String(THREE.DoubleSide), label: "双面" },
+    { value: String(THREE.FrontSide), label: "正面", labelKey: "preview.renderModeSideFront" },
+    { value: String(THREE.BackSide), label: "背面", labelKey: "preview.renderModeSideBack" },
+    { value: String(THREE.DoubleSide), label: "双面", labelKey: "preview.renderModeSideDouble" },
   ];
 }
 

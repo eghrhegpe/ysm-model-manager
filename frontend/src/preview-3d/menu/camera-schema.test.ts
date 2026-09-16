@@ -57,8 +57,8 @@ describe("buildCameraSchema（ADR-193 第一刀：声明式三节点）", () => 
     const bridge = makeBridge();
     const node = buildCameraSchema(makeCtx(bridge))[0]!;
     expect(node.control!.options).toEqual([
-      { value: "orbit", label: "环绕" },
-      { value: "free", label: "自身" },
+      { value: "orbit", label: "环绕", labelKey: "preview.cameraRotationOrbit" },
+      { value: "free", label: "自身", labelKey: "preview.cameraRotationFree" },
     ]);
     expect(node.control!.get!(undefined)).toBe("orbit");
     node.control!.set!("free");

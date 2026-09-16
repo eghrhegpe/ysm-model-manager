@@ -123,10 +123,11 @@ status: active
 | `vrmShotNodes(screenshot, modelPath)` | vrm-controls.ts | 仅 `shot-current` |
 | `ysmShotNodes(ctx)` | ysm-controls.ts | 六角度（undefined 走 fallback，面板常驻） |
 | `registerYsmModelSchema(ctx, sessionId?) → () => void` | ysm-controls.ts | 注册 schema 到 per-scene 键，返回 off 注销函数 |
-| `showVrmMeta/showMmdPreview/showFbxPreview/showScenePreview/showMorphPreview/showStagePreview` | detail-3d.ts | 3D 入口卡，各含 FAB 进 3D |
+| `showVrmMeta/showMmdPreview/showFbxPreview/showScenePreview/showMorphPreview/showStagePreview` | detail-3d.ts | 格式入口卡（**ADR-253 D7 起不含 3D FAB**，3D 走 nav-fab） |
 | `readFileBytes(path)` / `addOpLog(scope, op, msg, status, err?)` | view-shell.ts | Wails 桥 / 环形日志诊断 |
 
-**bus 事件**：`model:select`（兄弟列表/舞台项切换）、`toast:show`（morph/stage FAB 反馈）
+**bus 事件**：`model:select`（兄弟列表/舞台项切换）、`toast:show`（通用反馈）
+（ADR-253 D7 已删除 morph/stage 两个零订阅假 FAB——它们只发 toast 不执行操作）
 
 ## 与其他子系统关系
 

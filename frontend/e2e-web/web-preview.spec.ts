@@ -11,7 +11,8 @@
 //      → app-preview/index.ts connectedCallback 订阅 → _showModelDetail(path)
 //      → DetectResourceType(path) 分流 → PREVIEW_HANDLERS[rtype] 派发
 //      （YSM → showModelDetail 渲染 #preview-content 详情卡 + 骨骼 tab）。
-//   4. 3D 预览 FAB：detail.ts 渲染 #btn-3d-preview → 点击走 ysm-3d/mount-preview-core
+//   4. 3D 预览入口：ADR-253 D7 起统一为 app-nav 左下角 nav-fab
+//      （.nav-viewer-fab）→ openModel3DFullscreen → ysm-3d/mount-preview-core
 //      创建 WebGL renderer。无 GPU 环境（headless chromium）WebGL 可能不可用，
 //      mount-preview-core catch 后渲染 ⚠️ Load failed 占位 + toast，不崩溃。
 //
@@ -222,29 +223,29 @@ async function webglCapability(page: Page): Promise<"webgl" | "webgl2" | null> {
 }
 
 /**
- * 在 app-preview shadow 内查找 3D FAB 按钮（#btn-3d-preview）。
- * 仅 YSM 模型详情卡渲染该按钮（detail.ts:47）。
- * 返回按钮是否存在。
+ * 在 app-nav shadow 内查找左下角 3D 一键跳转入口（.nav-viewer-fab）。
+ *
+ * ADR-253 D7（2026-09-16）：详情卡内的 3D 入口 FAB（#btn-3d-preview 等）已删除，
+ * 3D 统一从左下角 nav-fab 进入。本 helper 随迁至 app-nav 的 shadowRoot。
+ * 返回入口是否存在。
  */
 async function has3DFab(page: Page): Promise<boolean> {
   return page.evaluate(() => {
-    const content = document.querySelector("app-content");
-    const preview = content?.shadowRoot?.querySelector("app-preview");
-    if (!preview?.shadowRoot) return false;
-    return !!preview.shadowRoot.querySelector("#btn-3d-preview");
+    const nav = document.querySelector("app-nav");
+    if (!nav?.shadowRoot) return false;
+    return !!nav.shadowRoot.querySelector(".nav-viewer-fab");
   });
 }
 
 /**
- * 点击 3D FAB 按钮（#btn-3d-preview），触发 3D 预览。
- * 按钮在 app-preview shadow DOM 内。
+ * 点击左下角 3D 一键跳转入口（.nav-viewer-fab），触发 3D 预览。
+ * 入口在 app-nav shadow DOM 内（ADR-253 D7 后为唯一 3D 入口）。
  */
 async function click3DFab(page: Page): Promise<boolean> {
   return page.evaluate(() => {
-    const content = document.querySelector("app-content");
-    const preview = content?.shadowRoot?.querySelector("app-preview");
-    if (!preview?.shadowRoot) return false;
-    const btn = preview.shadowRoot.querySelector("#btn-3d-preview") as HTMLElement | null;
+    const nav = document.querySelector("app-nav");
+    if (!nav?.shadowRoot) return false;
+    const btn = nav.shadowRoot.querySelector(".nav-viewer-fab") as HTMLElement | null;
     if (!btn) return false;
     btn.click();
     return true;
@@ -463,15 +464,17 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     expect(visibility.skeletonDisplay, "点击 detail tab 后 skeleton 面板应隐藏").toBe("none");
   });
 
-  // ===== 用例 3：3D 预览 FAB 无 GPU 兜底 =====
-  // 意图：验证 3D 预览 FAB（#btn-3d-preview）在无 GPU 环境下的优雅降级——
-  // WebGL 不可用时，点击 3D FAB 不崩溃，页面保持可交互。
+  // ===== 用例 3：3D 预览入口（nav-fab）无 GPU 兜底 =====
+  // 意图：验证 3D 预览入口在无 GPU 环境下的优雅降级——
+  // ADR-253 D7（2026-09-16）：详情卡 FAB 已删，3D 统一从左下角 nav-fab 进入，
+  // 故本用例改为驱动 nav-fab（app-nav shadowRoot 内的 .nav-viewer-fab）。
+  // WebGL 不可用时，点击入口不崩溃，页面保持可交互。
   // 无 GPU 兜底理由：headless chromium 无 GPU 时 WebGL context 创建失败，
   // mount-preview-core catch 后渲染 ⚠️ 占位。本用例用 WebGL 能力探测做条件断言：
   //   - WebGL 可用 → 断言 3D overlay/canvas 出现（正常路径）。
   //   - WebGL 不可用 → 优雅 skip（带原因），断言不白屏不崩溃（降级路径）。
   //     必须保留一条不依赖 WebGL 的硬冒烟（用例 1），3D 路径允许条件 skip。
-  test("3D 预览 FAB 无 GPU 兜底：WebGL 不可用时优雅 skip 不崩溃", async ({ page }) => {
+  test("3D 预览入口无 GPU 兜底：WebGL 不可用时优雅 skip 不崩溃", async ({ page }) => {
     // 1. 导入 .ysm 模型
     await dropFile(page, "三维测试.ysm", "YSM-3D-PREVIEW-BYTES");
     await expect
@@ -489,14 +492,12 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     // 3. 探测 WebGL 能力（无 GPU 环境兜底判据）
     const gl = await webglCapability(page);
 
-    // 4. 断言 3D FAB 按钮存在（YSM 模型详情卡必渲染 #btn-3d-preview）
-    //    注意：若 WASM 解码慢，showModelDetail 可能还在 "Parsing" 占位阶段，
-    //    FAB 尚未渲染。轮询等待 FAB 出现。
+    // 4. 断言 3D 入口存在（nav-fab 常驻于 app-nav 左下角，不依赖模型是否解析成功）
     await expect.poll(async () => has3DFab(page), { timeout: 10000 }).toBe(true);
 
-    // 5. 点击 3D FAB，触发 3D 预览
+    // 5. 点击 nav-fab，触发 3D 预览
     const clicked = await click3DFab(page);
-    expect(clicked, "应成功点击 3D FAB 按钮").toBe(true);
+    expect(clicked, "应成功点击 3D 入口（nav-fab）").toBe(true);
 
     // 6. 条件断言：根据 WebGL 能力走不同验证路径
     //    注意：headless chromium 默认带 SwiftShader 软件 WebGL，webglCapability 探测

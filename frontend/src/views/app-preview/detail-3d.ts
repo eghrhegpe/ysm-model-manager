@@ -7,15 +7,12 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { readPmxStats } from "@/preview-3d/adapters/mmd/mmd-detail-stats.ts";
 import { readVrmMeta } from "@/preview-3d/adapters/vrm/vrm-adapter.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { showCard } from "./card-shell.ts";
-import { openModel3DFullscreen } from "./preview-library.ts";
 import { resolveMorphSiblings, resolveStageSiblings } from "./siblings.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
 
@@ -37,12 +34,11 @@ export async function showVrmMeta(
       const basename = path.split(/[/\\]/).pop() || "";
       const m = meta as Record<string, unknown> | null;
       if (!m || (!m.name && !(m.authors as string[])?.length)) {
-        // 无 meta（非标准 VRM 或解析失败）→ 仅名称 + FAB
+        // 无 meta（非标准 VRM 或解析失败）→ 仅名称
         return `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
-    <button class="preview-fab" id="btn-vrm-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>
   </div>
 </div>`;
       }
@@ -86,19 +82,11 @@ export async function showVrmMeta(
     ${refBadge}
     ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge(t("preview.vrmCommercial"), r.commercial as boolean, UI_ICONS.payment)}${badge(t("preview.allowedUser"), r.allowedUser === "everyone", UI_ICONS.users)}${badge(t("preview.sexual"), r.sexual as boolean, UI_ICONS.violent)}${badge(t("preview.violent"), r.violent as boolean, UI_ICONS.violent)}</div>` : ""}
     ${statsRow}
-    <button class="preview-fab" id="btn-vrm-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>
   </div>
 </div>`;
     },
-    wireFab: (ctx, _path, fab) => {
-      if (!fab) return;
-      const cleanup = promoteTitleIfPresent(fab);
-      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
-      fab.onclick = (): void => {
-        // ADR-253 D2：与其他格式卡统一走路由入口，siblings 由路由按 rtype 自算兜底
-        void openModel3DFullscreen(path);
-      };
-    },
+    // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
+    wireFab: () => {},
   });
 }
 
@@ -120,20 +108,11 @@ export async function showMmdPreview(
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div id="mmd-stats-row"></div>
-    <button class="preview-fab" id="btn-mmd-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>
   </div>
 </div>`;
     },
-    wireFab: (ctx, _path, fab) => {
-      if (!fab) return;
-      const cleanup = promoteTitleIfPresent(fab);
-      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
-      fab.onclick = (): void => {
-        // 3D 内换模型（ADR-066 §5.6 + ADR-253 D2）：siblings 由 3D 入口按 rtype 自算兜底，
-        // 此处不再手算——与导航栏 FAB 走同一条路径，消除「谁点的按钮决定下拉有无」。
-        void openModel3DFullscreen(path);
-      };
-    },
+    // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
+    wireFab: () => {},
     // ADR-131 P2：异步补 PMX 文件统计（仅 .pmx；不阻塞基础卡渲染，gen 守卫过期丢弃）
     postRender: (ctx, path, gen) => {
       if (/\.pmx$/i.test(path)) {
@@ -179,19 +158,11 @@ export async function showFbxPreview(
   <h3>${icon} ${label}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
-    <button class="preview-fab" id="btn-fbx-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>
   </div>
 </div>`;
     },
-    wireFab: (ctx, _path, fab) => {
-      if (!fab) return;
-      const cleanup = promoteTitleIfPresent(fab);
-      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
-      fab.onclick = (): void => {
-        // ADR-253 D2：siblings 由 3D 入口按 rtype 自算兜底（原手算 resolveFbxSiblings 已删）。
-        void openModel3DFullscreen(path);
-      };
-    },
+    // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
+    wireFab: () => {},
   });
 }
 
@@ -213,19 +184,11 @@ export async function showScenePreview(
       <span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.SCENE)}</span>
       <span>${t("preview.sceneModelLabel")}</span>
     </div>
-    <button class="preview-fab" id="btn-scene-3d" data-fab title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}" style="background:linear-gradient(135deg,var(--accent) 0%,color-mix(in srgb,var(--accent) 65%,#000) 100%)"><span class="preview-ic">${UI_ICONS.build}</span></button>
   </div>
 </div>`;
     },
-    wireFab: (ctx, _path, fab) => {
-      if (!fab) return;
-      const cleanup = promoteTitleIfPresent(fab);
-      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
-      fab.onclick = (): void => {
-        // ADR-253 D2：siblings 由 3D 入口按 rtype 自算兜底（原手算 resolveSceneSiblings 已删）。
-        void openModel3DFullscreen(path);
-      };
-    },
+    // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
+    wireFab: () => {},
   });
 }
 
@@ -234,7 +197,6 @@ export async function showMorphPreview(
   ctx: PreviewCtx & DetailGenGuard,
   path: string,
 ): Promise<void> {
-  const basename = path.split(/[/\\]/).pop() || "";
   return showCard(ctx, path, {
     icon: "avatar",
     label: t("preview.customMorph"),
@@ -250,23 +212,12 @@ export async function showMorphPreview(
       <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm)">${t("preview.singleFrameMorph")}</span>
     </div>
     <div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px"></div>
-    <button class="preview-fab" id="btn-morph-apply" data-fab title="${t("preview.applyMorph")}" aria-label="${t("preview.applyMorph")}" style="background:linear-gradient(135deg,var(--status-success) 0%,color-mix(in srgb,var(--status-success) 65%,#000) 100%)"><span class="preview-ic">${UI_ICONS.avatar}</span></button>
   </div>
 </div>`;
     },
-    wireFab: (ctx, _path, fab) => {
-      if (!fab) return;
-      const cleanup = promoteTitleIfPresent(fab);
-      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
-      fab.onclick = (): void => {
-        // P2: morph:apply 零订阅，删发射；保留 toast 反馈
-        bus.emit("toast:show", {
-          msg: t("preview.morphApplySent", { name: basename }),
-          duration: TOAST_MS.success,
-          type: "info",
-        });
-      };
-    },
+    // ADR-253 D7：原「应用 FAB」为零订阅假按钮（点击只弹一个成功 toast，实际不执行任何操作），
+    // 已删除。兄弟列表点击切换（下方 postRender）保留——那是真实功能。
+    wireFab: () => {},
     // 加载兄弟列表
     postRender: (ctx, path) => {
       void (async () => {
@@ -315,7 +266,6 @@ export async function showStagePreview(
   ctx: PreviewCtx & DetailGenGuard,
   path: string,
 ): Promise<void> {
-  const basename = path.split(/[/\\]/).pop() || "";
   return showCard(ctx, path, {
     icon: "voice",
     label: t("preview.stageAnim"),
@@ -330,23 +280,12 @@ export async function showStagePreview(
       <span>${t("preview.stagePerformanceLabel")}</span>
     </div>
     <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px"></div>
-    <button class="preview-fab" id="btn-stage-load" data-fab title="${t("preview.loadStage")}" aria-label="${t("preview.loadStage")}" style="background:linear-gradient(135deg,var(--warning,#ffa050) 0%,color-mix(in srgb,var(--warning,#ffa050) 65%,#000) 100%)"><span class="preview-ic">${UI_ICONS.voice}</span></button>
   </div>
 </div>`;
     },
-    wireFab: (ctx, _path, fab) => {
-      if (!fab) return;
-      const cleanup = promoteTitleIfPresent(fab);
-      if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
-      fab.onclick = (): void => {
-        // P2: stage:load 零订阅，删发射；保留 toast 反馈
-        bus.emit("toast:show", {
-          msg: t("preview.stageLoadSent", { name: basename }),
-          duration: TOAST_MS.success,
-          type: "info",
-        });
-      };
-    },
+    // ADR-253 D7：原「加载 FAB」为零订阅假按钮（点击只弹一个成功 toast，实际不执行任何操作），
+    // 已删除。舞台内容列表（下方 postRender）保留——那是真实功能。
+    wireFab: () => {},
     // 加载舞台内容
     postRender: (ctx, _path) => {
       void (async () => {

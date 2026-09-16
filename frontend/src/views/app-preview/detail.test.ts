@@ -233,7 +233,7 @@ describe("showModelDetail YSM 详情", () => {
 });
 
 describe("showVrmMeta VRM meta 卡", () => {
-  it("有 meta → 渲染名称/作者/许可/版本 + FAB 进 3D", async () => {
+  it("有 meta → 渲染名称/作者/许可/版本", async () => {
     vrmMetaMock.mockResolvedValue({
       name: "测试模型",
       authors: ["作者A", "作者B"],
@@ -249,22 +249,17 @@ describe("showVrmMeta VRM meta 卡", () => {
     expect(html).toContain("测试模型");
     expect(html).toContain("作者A");
     expect(html).toContain("CC_BY");
-    expect(html).toContain("btn-vrm-3d");
-    // FAB 点击 → 统一路由入口（ADR-253 D2；原直调 createVrm3D 已收编）
-    const fab = ctx.root.querySelector<HTMLElement>("#btn-vrm-3d");
-    expect(fab).not.toBeNull();
-    fab?.click();
-    await vi.waitFor(() => expect(openModel3DFullscreen).toHaveBeenCalledWith("/repo/avatar.vrm"));
+    // ADR-253 D7：详情卡 3D 入口 FAB（#btn-vrm-3d）已删除，3D 统一走左下角 nav-fab
+    expect(html).not.toContain("btn-vrm-3d");
   });
 
-  it("无 meta（非标准 VRM）→ 仅文件名 + FAB 仍可进 3D", async () => {
+  it("无 meta（非标准 VRM）→ 仅渲染文件名", async () => {
     vrmMetaMock.mockResolvedValue(null);
     const ctx = makeCtx();
     await showVrmMeta(ctx, "/repo/avatar.vrm");
     const html = ctx.root.innerHTML;
     expect(html).toContain("avatar.vrm");
-    expect(html).toContain("btn-vrm-3d");
-    // 不应渲染作者/许可空行
+    // ADR-253 D7：FAB（#btn-vrm-3d）已删除
     expect(html).not.toContain("作者");
   });
 
@@ -306,17 +301,13 @@ describe("showVrmMeta VRM meta 卡", () => {
 });
 
 describe("showMmdPreview MMD 预览卡", () => {
-  it("渲染标签 + 文件名 + FAB，点击 → openModel3DFullscreen(path)（siblings 由路由兜底，ADR-253 D2）", async () => {
+  it("渲染标签 + 文件名（siblings 由 3D 入口按 rtype 自算兜底，ADR-253 D2）", async () => {
     const ctx = makeCtx();
     await showMmdPreview(ctx, "/repo/miku.pmx");
     const html = ctx.root.innerHTML;
     expect(html).toContain("miku.pmx");
-    expect(html).toContain("btn-mmd-3d");
-    const fab = ctx.root.querySelector<HTMLElement>("#btn-mmd-3d");
-    expect(fab).not.toBeNull();
-    fab?.click();
-    // ADR-253 D2：siblings 不再由详情卡手算，交由 3D 入口按 rtype 自算兜底
-    await vi.waitFor(() => expect(openModel3DFullscreen).toHaveBeenCalledWith("/repo/miku.pmx"));
+    // ADR-253 D7：MMD 详情卡 FAB（#btn-mmd-3d）已删除
+    expect(html).not.toContain("btn-mmd-3d");
   });
 
   it("自定义 opts → 使用传入图标与标签", async () => {
@@ -471,16 +462,7 @@ describe("detailGen 过期守卫（在途请求作废）", () => {
     expect(ctx.root.querySelector(".pack-model-item")).toBeNull();
   });
 
-  it("FAB 点击 → createPack3D（182）", async () => {
-    const ctx = makeCtx();
-    readPackMock.mockResolvedValue({ description: "", pack_format: 12 });
-    await showResourcePack(ctx, "/p/fab.zip");
-    const fab = ctx.root.querySelector("#btn-pack-model-3d") as HTMLButtonElement;
-    fab.click();
-    expect(createPack3DMock).toHaveBeenCalledWith("/p/fab.zip");
-  });
 });
-
 
 describe("showShaderpack 光影包详情", () => {
   beforeEach(() => {

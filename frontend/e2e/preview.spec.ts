@@ -6,16 +6,18 @@
 // 逻辑与 tree 不同层，不混用）。
 //
 // 无 GPU 环境兜底（playwright chromium headless 无 GPU，WebGL 可能失败）：
-//   - 冒烟/tab/FAB 存在性硬断言，不依赖 WebGL
-//   - 3D 挂载分支用 hasWebGL() 检测 + test.skip(带原因) 优雅跳过
+//   - 冒烟/tab/详情卡存在性硬断言，不依赖 WebGL
 //   - 错误路径断言文案出现，不白屏
+//
+// ADR-253 D7（2026-09-16）：3D 入口 FAB（#btn-3d-preview 等）已删除，
+// 3D 统一从左下角 nav-fab 进入。原「FAB 存在性/点击」用例改为锚详情卡容器与 tab 行。
 //
 // 锚点依据（data-testid / id 钩子，源码直读确认）：
 //   - modelDetailHTML(null)（tpl.ts:22）→ #preview-content + .dp-placeholder + .dp-hint
-//   - showModelDetail（detail.ts:39-47）→ .pv-tab[data-tab="detail"/"skeleton"]
-//     + #preview-detail + #preview-skeleton + .preview-fab#btn-3d-preview
-//   - showResourcePack（detail.ts:165-174）→ .preview-fab#btn-pack-model-3d
-//   - catch 分支（detail.ts:135-139）→ #preview-detail 写入 unknownError + parseFailed 文案
+//   - showModelDetail（detail.ts）→ .pv-tab[data-tab="detail"/"skeleton"]
+//     + #preview-detail + #preview-skeleton（FAB 已于 ADR-253 D7 删除）
+//   - showResourcePack（detail.ts）→ #pack-model-list（FAB 已于 ADR-253 D7 删除）
+//   - catch 分支 → #preview-detail 写入 unknownError + parseFailed 文案
 import { expect, type Page, test } from "./fixture.ts";
 import { clickTreeFile, gotoApp, waitForTreeCount } from "./helpers.ts";
 
@@ -93,19 +95,6 @@ async function clickPreviewEl(page: Page, selector: string): Promise<void> {
     const el = preview?.shadowRoot?.querySelector(sel) as HTMLElement | null;
     if (el) el.click();
   }, selector);
-}
-
-/** 检测浏览器是否支持 WebGL（headless chromium 无 GPU 时可能返回 false） */
-async function hasWebGL(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    try {
-      const canvas = document.createElement("canvas");
-      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-      return !!gl;
-    } catch {
-      return false;
-    }
-  });
 }
 
 // ===== 测试用例 =====
@@ -219,42 +208,33 @@ test.describe("模型详情预览页（app-preview）", () => {
     expect(detailDisplayFinal).not.toBe("none");
   });
 
-  test("3D 预览 FAB 存在性硬冒烟（不依赖 WebGL）", async ({ page }) => {
-    // 硬冒烟：断言 btn-3d-preview FAB 存在于 app-preview shadowRoot 内。
+  test("模型详情卡渲染硬冒烟（不依赖 WebGL）", async ({ page }) => {
+    // 硬冒烟：断言详情卡渲染出 #preview-content + 详情/骨骼 tab 行。
     // 不依赖 WebGL：仅断言 DOM 存在。
     //
-    // 锚点依据：showModelDetail（detail.ts:47）渲染
-    //   <button class="preview-fab" id="btn-3d-preview" ...>
-    // FAB 在 showModelDetail 的初始 innerHTML 中即出现，无需等 catch 分支。
+    // ADR-253 D7（2026-09-16）：原锚点为 #btn-3d-preview FAB，该 FAB 已随
+    // 「3D 入口收敛到左下角 nav-fab」删除。改锚详情卡容器与 tab 行本身——
+    // 它们才是这条冒烟真正要守的东西（详情能渲染、不白屏）。
     const fileCount = await waitForTreeCount(page, "tree-file", 10000);
     expect(fileCount).toBeGreaterThan(0);
 
     await clickTreeFile(page, 0);
 
-    // 等 #preview-content 渲染（showModelDetail 初始 innerHTML 包含 FAB）
+    // 等 #preview-content 渲染（showModelDetail 初始 innerHTML 即含它）
     const contentFound = await waitForPreviewEl(page, "#preview-content", 8000);
     expect(contentFound).toBe(true);
 
-    // 硬断言 FAB 存在
-    const fabFound = await waitForPreviewEl(page, "#btn-3d-preview", 5000);
-    expect(fabFound).toBe(true);
+    // 详情/骨骼 tab 行（与 FAB 无关的稳定锚点）
+    const tabFound = await waitForPreviewEl(page, ".pv-tab", 5000);
+    expect(tabFound).toBe(true);
   });
 
-  test("3D 预览 FAB 点击：若 WebGL 可用则 3D 挂载，若不可用则 skip（无 GPU 兜底）", async ({
-    page,
-  }) => {
-    // 无 GPU 兜底理由：playwright chromium headless 无 GPU，WebGL context 可能
-    // 创建失败（getContext("webgl") 返回 null）。3D 渲染依赖 WebGL，无 GPU 时
-    // mount3D 内部 catch 会显示错误占位而非崩溃——但测试无法断言「3D 挂载成功」
-    // 因为环境根本不支持。因此：
-    //   1. 先检测 WebGL 是否可用
-    //   2. 若可用：点击 FAB，断言 3D overlay 挂载（canvas / 3d-container 等）
-    //   3. 若不可用：test.skip(带原因)，不硬崩
-    //
-    // 但在 mock 环境下，showModelDetail 走 catch 分支（ExtractYsmSummary 等
-    // undefined → throw → catch 写错误文案），catch 分支不绑定 btn-3d-preview
-    // 的 onclick（loadModel2D 在 throw 之前不会被调用）。因此 FAB 点击是 no-op。
-    // 此测试验证：点击 FAB 后不 unhandled 崩溃，且预览区不白屏。
+  test("详情卡渲染：预览区不白屏（无 GPU 环境 skip 3D 挂载断言）", async ({ page }) => {
+    // ADR-253 D7（2026-09-16）：原用例点击 #btn-3d-preview FAB 验证 3D 挂载。
+    // 该 FAB 已随「3D 入口收敛到左下角 nav-fab」删除；nav-fab 位于 app-nav 的
+    // shadowRoot，且 mock 环境下 3D 无法真正挂载（showModelDetail 走 catch 分支，
+    // 后端绑定缺失）。故本用例退化为「详情卡渲染后预览区不白屏」的硬断言，
+    // 不再伪造对已删 FAB 的点击。
     const fileCount = await waitForTreeCount(page, "tree-file", 10000);
     expect(fileCount).toBeGreaterThan(0);
 
@@ -263,31 +243,11 @@ test.describe("模型详情预览页（app-preview）", () => {
     const contentFound = await waitForPreviewEl(page, "#preview-content", 8000);
     expect(contentFound).toBe(true);
 
-    const fabFound = await waitForPreviewEl(page, "#btn-3d-preview", 5000);
-    expect(fabFound).toBe(true);
-
-    // 点击 FAB —— mock 环境下 catch 分支不绑定 onclick，点击是 no-op；
-    // 关键断言：点击后不 unhandled 崩溃，且预览区不白屏。
-    await clickPreviewEl(page, "#btn-3d-preview");
-
-    // 等待可能的 3D 挂载或错误处理
     await page.waitForTimeout(500);
 
     // 硬断言：预览区不白屏（preview-content 仍存在）
     const stillThere = await waitForPreviewEl(page, "#preview-content", 3000);
     expect(stillThere).toBe(true);
-
-    // WebGL 可用性检测：无 GPU 环境跳过 3D 挂载断言
-    const webglAvailable = await hasWebGL(page);
-    if (!webglAvailable) {
-      test.skip(true, "无 GPU 环境 WebGL 不可用，跳过 3D 挂载断言");
-      return;
-    }
-
-    // WebGL 可用：理论上 3D 应挂载。但 mock 环境下 FAB onclick 未绑定
-    // （catch 分支跳过了 loadModel2D），故 3D overlay 不会出现。
-    // 此分支仅作为「有 GPU 环境」的占位——实际 3D 挂载断言需要真实后端支持。
-    // 不硬断言 3D overlay 出现，因为 mock 环境下 FAB 是 no-op。
   });
 
   test("错误路径：模型文件读取失败 → 预览区显示错误文案，不白屏", async ({ page }) => {

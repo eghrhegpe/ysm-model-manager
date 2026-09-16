@@ -133,6 +133,37 @@ D1 落地后，nav-fab 与详情卡 FAB 的差异仅剩：
   但**删除动作本身仍未执行**——它是独立改动（涉及 7 张卡的 FAB 标记清理与
   `promoteTitleIfPresent` 清理链），须另行开单实施与验证。
 
+### D7 · 执行 FAB 删除（2026-09-16，本轮已落地）
+
+按 D3 裁决删除全部详情卡 3D 入口 FAB，3D 统一从左下角 nav-fab 进入：
+
+| 删除对象 | 原位置 | 说明 |
+|---|---|---|
+| `#btn-3d-preview` | `detail.ts`（YSM）+ `maid-3d.ts`（maid，两处） | 同一 id 被两个渲染器复用，均已删 |
+| `#btn-vrm-3d` / `#btn-mmd-3d` / `#btn-fbx-3d` / `#btn-scene-3d` | `detail-3d.ts` | 格式卡 3D 入口 |
+| `#btn-pack-model-3d` | `detail.ts` | 整包 3D 入口（**包内单模型经 `entry` 通道仍可直达**，见 D6） |
+| `#btn-morph-apply` / `#btn-stage-load` | `detail-3d.ts` | **零订阅假按钮**：点击只弹成功 toast、不执行任何操作；删除是修正假交互，与 nav-fab 无关 |
+
+连带退役：`skeleton.ts` 的 `_toggle3D` / `_prefer3D` 自动弹整块（D3 已裁决放弃该语义）；
+各卡 `wireFab` 收敛为 no-op（`card-shell.ts` 保留该槽位供未来使用）。
+
+**实施中发现的两点（已处理，非遗留）**：
+1. **maid 的 android-back 必须移植而非丢弃**：原 `dpToggle3D`（FAB 专用入口）承担
+   `registerAndroidBackHandler` 注册，而 `mount3D` **内部不注册返回键**（全仓仅 `skeleton.ts`
+   与 `maid-3d.ts` 注册）。若直接删函数，maid 3D 会静默失去安卓返回键支持。
+   故把该接线移入幸存的 `openMaidFullscreen`（nav-fab 路由入口）。
+2. **YSM 的 `_toggle3D` 成为死代码**：其唯一调用者（FAB onclick）已删，故整块移除，
+   而非留 `void _toggle3D` 之类的占位。YSM 的 3D 生命周期由路由入口 `openYsmFullscreen`
+   自身承担。
+
+**未履行的能力（如实记录）**：`#btn-3d-preview` 原带的「再点关闭」在详情卡侧消失——
+3D 全屏内仍有 ESC / ✕ 等价出口（D3 已判定为重复入口）。YSM/maid 的「切模型自动弹 3D」
+语义**永久移除**（D3 裁决 (b)）。
+
+**e2e 同步**：`e2e/preview.spec.ts` 与 `e2e-web/web-preview.spec.ts` 原以
+`#btn-3d-preview` 为存在性锚点 / 点击目标，已改为锚详情卡容器（`#preview-content` + `.pv-tab`）
+与 nav-fab（`.nav-viewer-fab`，跨 `app-nav` shadowRoot）。
+
 ### D4 · `showResourcePack` 收编进 `showCard`
 
 `detail.ts` 的 `showResourcePack` 改为 `showCard(CardShowConfig)` 形态（`fetchMeta` +

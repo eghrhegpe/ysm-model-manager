@@ -191,9 +191,9 @@ status: active
 - `index.ts` — `<app-preview>` 生命周期编排：监听 `model:select`（回调开头 `this._previewGuard.invalidate()`），按 `DetectResourceType` 结果分流（pack → `showResourcePack`；ysm/空 → `showModelDetail`；litematic/blueprint → `showLitematic`；shaderpack → `showShaderpack`；MMD EntityPlayer → `PREVIEW_HANDLERS` 查表按 variants 分发；其他已知类型 → `showSimplePreview`）。
 - `loader.ts` — `loadModelData`：统一模型加载（缓存 → WASM → Go `AnalyzeBedrockModel` 兜底）；WASM 能力判定由 `matchTypeByExt(modelPath, RESOURCE_TYPES.YSM)`（注册表驱动，防 `.7z` 漏判）；`.zip`/`.json` 支持 `ysm.json` manifest 按声明序合并多角色 geometry 与纹理。
 - `detail.ts` — `showModelDetail` / `showResourcePack` / `showShaderpack` / `showSimplePreview`：详情面板渲染（Go 侧 `ExtractYsmSummary` / `ExtractYSMHeader` / `ReadPackMeta` / `ReadShaderpackLang`）；`showVrmMeta` / `showMmdPreview` 已迁出至 `detail-3d.ts`。
-- `card-shell.ts` — **统一详情卡壳**（ADR-253 D4 自 `detail-3d.ts` 迁出的叶子模块）：`showCard(ctx, path, CardShowConfig)`，`fetchMeta` / `renderCard` / `wireFab` / `postRender` 四件套；**7 张卡全部经它渲染**（6 种 3D 入口卡 + 资源包）。卡内 FAB **必须带 `data-fab`**（壳按 `[data-fab]` 查得后才绑 `wireFab`）；有 `fetchMeta` 时壳预写加载占位，**错误态只渲染错误占位、不渲染 FAB**（避免死按钮）。`showModelDetail`（YSM）因需「详情/骨骼」tab 行**尚未收编**。
+- `card-shell.ts` — **统一详情卡壳**（ADR-253 D4 自 `detail-3d.ts` 迁出的叶子模块）：`showCard(ctx, path, CardShowConfig)`，`fetchMeta` / `renderCard` / `wireFab` / `postRender` 四件套；**7 张卡全部经它渲染**（6 种格式卡 + 资源包）。`wireFab` 槽位保留但**当前各卡均为 no-op**（ADR-253 D7 删除详情卡 3D 入口 FAB 后无按钮可绑）；有 `fetchMeta` 时壳预写加载占位，**错误态只渲染错误占位、不渲染 FAB**。`showModelDetail`（YSM）因需「详情/骨骼」tab 行**尚未收编**。
 - `siblings.ts` — `resolveSiblingsByType` 统一底座 + 各格式 `resolve*` 薄封装 + **`resolveSiblingsForRoute`（ADR-253 D1 路由层单一出口）**：`openModel3DFullscreen` 在调用方未传 `siblings` 时按 routeKey 自算，空结果归一为 `undefined`。
-- `skeleton.ts` — `loadModel2D`：2D/3D 骨骼渲染编排，委托 `views/app-preview/model2d/model2d.ts` 与 `preview-3d/mesh/model3d.ts`；截图走 `SaveScreenshotFile`；3D overlay 触发键 `🎨3D` 为右下角悬浮 FAB。
+- `skeleton.ts` — `loadModel2D`：**纯 2D 骨骼渲染编排**（ADR-253 D7 起 `_toggle3D`/`_prefer3D` 整块已随 FAB 删除退役），委托 `views/app-preview/model2d/model2d.ts` 与 `preview-3d/mesh/model3d.ts`；截图走 `SaveScreenshotFile`。**3D 入口统一为左下角 nav-fab**（`app-nav` 的 `.nav-viewer-fab` → `openModel3DFullscreen`），详情卡内已无 3D 按钮。
 - `*-adapter.ts` / `*-3d.ts` — 各资源类型（YSM/MMD/VRM/Litematic/FBX/maid）的 3D 适配器，均通过 `PreviewAdapter.build` 契约挂内容层，shared 模式复用核心 renderer/rAF/controls。
 - `wasm-decode.ts`（`preview-3d/decoder/`）— `decodeYsmViaWasm`：前端 WASM 解码 .ysm（经 Go `ReadFileBytes` 取字节，走 `decoder/cache.ts` 缓存）；同目录 `.animation.json` 扫描驱动 `createYsmAnimPlayer`。
 - `litematic-3d.ts` — `createLitematic3D` / `cleanupVoxel3D`：通用外壳归 `mount-preview-core.ts` 的 `mount3D(adapter, path)`，体素内容层归 `litematic-adapter.ts` 的 `buildLitematicScene`。
@@ -254,13 +254,14 @@ status: active
 - `showLitematic` 有独立模块级代际 `litematicGen`
 - `_unsubs` 中的 `bus.on` 订阅必须在 `disconnectedCallback` 清理；拖拽 window 监听经 `_unsubs` 挂销毁清理
 - 2D 拖拽的 window 监听先移除上一轮再绑定——用 `AbortController`（**`ctx.dragAbortCtrl` 挂组件实例**，原模块级 `_prevAbort` 已迁移至实例——多实例互不串扰，P3 修复）：`ctx.dragAbortCtrl?.abort()` → `new AbortController()` → 监听带 `signal`，`ctx.unsubs` 注册 abort 清理，替代旧的手动 `_prevWindowMove`/`_prevWindowUp` 产消模式，无竞态
-- **`loadModel2D` 挂载守卫（P1 修复 2026-09）**：rAF 自动弹 3D（`_prefer3D` 路径）回调内必须先查 `ctx.root.isConnected`——rAF 不随 `disconnectedCallback` 取消，组件销毁后仍会 `btn3d.click()` → `createYsm3D` 把全屏 overlay 挂到已卸载 DOM
+- ~~**`loadModel2D` 挂载守卫（P1 修复 2026-09）**：rAF 自动弹 3D（`_prefer3D` 路径）回调内必须先查 `ctx.root.isConnected`……~~
+  **ADR-253 D7 已随 `_prefer3D` 自动弹整块移除**（无 rAF 回调 → 无需该守卫）。
 - 预览缓存淘汰时必须 `URL.revokeObjectURL` 释放 blob URL
 - mount-preview-core 拆分为 `mount3D`（shell 装配 + infra 创建 + 输入绑定 + rAF 管线）+ `cleanupPreview` / `switchPreview` / `_resetSingletons`
 - Three.js 现为静态依赖（`litematic-3d.ts` / `model3d-loader.ts` / `screenshot-render.ts` / `model3d.ts` 均静态 `import * as THREE`）
 - 坐标变换遵循 ysmview 口径（改 model2d/model3d 前先 grep bug-chronicle）
 - **纹理口径对称**：`decoder/texture-order.ts` 与 Go `internal/app/texture_order.go` 口径严格对称，改一侧须同步另一侧
-- **3D overlay 单例钩子**（`ctx.active3DClose` 挂组件实例，原模块级 `_active3DClose` 已迁移至实例——P1 修复，多实例互不串扰）：全局同时只允许一个活跃 3D overlay——新开 3D 前先调上一份的 `ctx.active3DClose`（`keepPrefer=true` 保留 `_prefer3D`）
+- **3D overlay 单例钩子**（`ctx.active3DClose` 挂组件实例，原模块级 `_active3DClose` 已迁移至实例——P1 修复，多实例互不串扰）：全局同时只允许一个活跃 3D overlay——新开 3D 前先调上一份的 `ctx.active3DClose` 关掉旧层（`app-preview/index.ts` 在 `model:select` 时调用 `closeActive3DOverlay`）
 - **3D 内模型切换**：`PreviewHandle.switchTo(path)` 复用 renderer/rAF/controls/灯光重建内容层；`mount3D` 可选 `Mount3DOptions.siblings`（同类型候选 ≥2 时 topBar 渲染切换下拉）
 - **siblings / entry 归路由层（ADR-253 D1+D6）**：`openModel3DFullscreen` 在调用方未传 `siblings` 时按 routeKey 自算（`siblings.ts` `resolveSiblingsForRoute`，空结果归一为 `undefined`）；详情卡 FAB 与导航栏 FAB 因此行为一致。opener 签名已升格为 `(path, opts?: OpenerOptions)`（`OpenerOptions extends Mount3DOptions { entry? }`），**必须转发 opts** `(path, opts) => createXxx3D(path, opts)`——否则候选与 entry 在 opener 处被静默丢弃。`entry` 由资源包 opener 映射为 `createPack3D` 的 `startEntry`
 - **YSM 骨骼动画（ADR-100）**：动画数据优先取 `model._animClips`（loader 统一挂载），无内嵌时兜底扫同目录 `*.animation.json` → `createYsmAnimPlayer` 驱动骨骼

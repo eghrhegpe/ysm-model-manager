@@ -128,7 +128,9 @@ status: active
 ### 域一：2D 显示控制
 - `skeleton.ts` / `skeleton-render.ts` / `model2d.ts` / `zoom.ts`
 - **骨骼名称可见性**（`ysm_showBoneLabels` localStorage，默认 `true`）
-- **3D 偏好切换**（模块级 `_prefer3D`，跨模型保留；ESC/关闭时用户主动关闭才清）
+- ~~**3D 偏好切换**（模块级 `_prefer3D`，跨模型保留；ESC/关闭时用户主动关闭才清）~~
+  **已于 ADR-253 D7 移除**：该语义是「详情卡 FAB 时代的便利开关」（点开 3D 后切下一个模型
+  自动弹全屏），随详情卡 FAB 一并退役。3D 现由左下角 nav-fab 单向进入，无自动弹行为。
 - **2D 画布缩放/旋转**（`renderModel2D` 的 zoom/rotation，无持久化，交互态）
 - **全屏放大预览**（`openFullPreview`，独立 overlay，滚轮缩放 + 拖拽旋转）
 
@@ -162,7 +164,7 @@ status: active
 | 名称 | 作用 | 默认 | 来源文件 |
 |------|------|------|---------|
 | 骨骼名称显示 | 2D 图是否显示骨骼文字 | `true` | `skeleton-render.ts::buildToggleRow` |
-| 3D 偏好 | 是否默认打开 3D 预览（跨模型保留；主动关闭清） | `false` | `skeleton.ts` / `utils.ts::_prefer3D` |
+| ~~3D 偏好~~ | ~~是否默认打开 3D 预览（跨模型保留；主动关闭清）~~ **ADR-253 D7 已移除** | — | — |
 | 2D 缩放 | 画布缩放系数（交互态，滚轮，[0.2,10]） | `1` | `skeleton.ts` / `zoom.ts` |
 | 2D 旋转 | 画布 Y 轴旋转（交互态，拖拽，模 360） | `0` | `skeleton.ts` / `zoom.ts` |
 | 帧率上限 | 3D 渲染节流（0=不限） | `60` | `render-budget.ts` |
@@ -201,7 +203,8 @@ status: active
 - **`ui.activeComponent` 会话态隔离**（ADR-126 P5-B2）：真源是 `registerYsmModelSchema(sessionId)` 内的 per-scene 闭包 `sessionActiveComponent`（不再读全局状态层）；预览 dispose 时 `unregisterSchema` 注销 + 关闭钩子清理；`resetActiveComponent()` 复位模块级 `_activeComponent = -1`，防跨预览陈旧下标越界
 - **截图能力守卫**：`screenshotFn === null`（MMD 无活跃 renderer）→ `shotButtonNodes` 返回 `[]`；`=== undefined`（YSM ctx 可选字段缺省）→ 仍返回 6 按钮，走 `saveScreenshot` 的 `renderMultiAngle` fallback
 - **截图幂等**：`makeShotAction` 内 `let saving=false` 防连点；`saveScreenshot` 对空返回抛错（陷阱 #3：异步失败须可观测），上层 catch 后 toast
-- **3D 关闭语义**（ADR-057 §2.5）：用户主动关闭（ESC/✕/返回键）→ `setPrefer3D(false)`；切模型自动关层 → 保留 `_prefer3D`
+- ~~**3D 关闭语义**（ADR-057 §2.5）：用户主动关闭（ESC/✕/返回键）→ `setPrefer3D(false)`；切模型自动关层 → 保留 `_prefer3D`~~
+  **ADR-253 D7 已随 `_prefer3D` 移除**：`setPrefer3D`/`getPrefer3D` 保留为接口（`utils.ts` 的 `Prefer3DState`、`app-preview/index.ts` 实例字段），但 `loadModel2D` 不再读写它；3D 无「自动弹」故无需关闭语义。
 - **截图灯光"所见即所得"**（ADR-126 P5）：`toScreenshotLights` 从预览 `LightCapability` 提取；三点全关 = 用户刻意暗场景，截图必须保持暗；cap 缺失时才回退标准灯
 - **[ADR-250] 后处理开关不进性能档位表**：原 `render.bloom` 兼具「总闸」「per-type 门禁」「用户开关」三重语义，档位切换会覆盖用户手动开关；现档位只管 `maxFps`/`maxPixelRatio`，后处理开关唯一入口 = `pp-enabled` 控件（写 `envState.ppEnabled`）。语义与既有的「wireframe/pmrem 是视觉项不进档位表」口径一致。
 - **存储必须走 `safeGet`/`safeSet`**（ADR-044 隐私模式红线），不得裸调 `localStorage`

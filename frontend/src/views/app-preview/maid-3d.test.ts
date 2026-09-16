@@ -1,7 +1,9 @@
 // ===== 车万女仆详情预览测试 =====
 // 覆盖：showMaidPreview 渲染彩色分区（statsCardHTML 复用）、GetModel3DSpec 单视图收敛
 // （ADR-160：模型结构蓝卡静态逐角色行，取代 dp-submodels 交互清单 + Entry 逐角色预取）、
-// metadata 段、spec 失败回落聚合口径、封面替换、FAB 进整包 3D。
+// metadata 段、spec 失败回落聚合口径、封面替换。
+// ADR-253 D7：详情卡 3D 入口 FAB（#btn-3d-preview）已删除，3D 统一走左下角 nav-fab
+// （openMaidFullscreen 已在 preview-library 注册为 maid reRoute）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PreviewCtx } from "./utils.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
@@ -185,24 +187,6 @@ describe("showMaidPreview 车万女仆详情", () => {
     const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");
     expect(ctx.root.innerHTML).toContain("无法读取模型数据");
-  });
-
-  it("FAB 进整包 3D：不传 subModelIdx/subPath（角色切换在 3D 内组件下拉）", async () => {
-    loadModelDataMock.mockResolvedValue({ model: { bones: [], cubeCount: 0 } });
-    const ctx = makeCtx();
-    await showMaidPreview(ctx, "/repo/maid.zip");
-    const btn = ctx.root.getElementById("btn-3d-preview");
-    expect(btn).toBeTruthy();
-    btn!.click();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(makeAdapterMock).toHaveBeenCalled();
-    expect(cleanupMock).toHaveBeenCalled();
-    expect(mountMock).toHaveBeenCalled();
-    const adapterOpts = (makeAdapterMock.mock.calls[0]?.[0] ?? {}) as Record<string, unknown>;
-    // 整包加载语义：adapter 不再携带单 entry 选择参数
-    expect(adapterOpts).not.toHaveProperty("subModelIdx");
-    expect(adapterOpts).not.toHaveProperty("subPath");
-    expect(typeof adapterOpts.loader).toBe("function");
   });
 
   it("loadPreviewImage 返回封面 → 渲染 img 替换 🧸 大图标", async () => {

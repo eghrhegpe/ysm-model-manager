@@ -11,14 +11,12 @@ import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
-import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { describeVersionRange } from "@/utils/format/pack-format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
 import { showCard } from "./card-shell.ts";
-import { createPack3D } from "./pack-3d.ts";
 import { openModel3DFullscreen } from "./preview-library.ts";
 import { loadModel2D } from "./skeleton.ts";
 import { summaryCardHTML, type YsmSummary } from "./tpl-summary.ts";
@@ -38,8 +36,7 @@ export async function showModelDetail(
   </div>
   <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div></div>
   <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
-</div>
-<button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
+</div>`;
 
   const switchTab = (tab: string): void => {
     safeSet("ysm_previewTab", tab);
@@ -168,17 +165,11 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
     <div style="color:var(--muted);font-size:var(--fs-xs)">pack_format: ${rv.format}${rv.version ? `（${rv.version}）` : ""}</div>
     <div id="pack-model-list"></div>
   </div>
-</div>
-<button class="preview-fab" id="btn-pack-model-3d" data-fab title="${t("preview.blockItemModel3d")}" aria-label="${t("preview.blockItemModel3d")}"><span class="preview-ic">&#x1F3D7;&#xFE0F;</span></button>`;
+</div>`;
     },
-    wireFab: (ctx2, path2, fab) => {
-      if (!fab) return;
-      const cleanup = promoteTitleIfPresent(fab);
-      if (cleanup && ctx2.unsubs) ctx2.unsubs.push(cleanup);
-      fab.onclick = (): void => {
-        createPack3D(path2).catch((e) => logWarn("preview", "pack3D 失败", e));
-      };
-    },
+    // ADR-253 D7：整包 3D 入口 FAB 已删（3D 统一走左下角 nav-fab）。
+    // 包内单模型仍可经下方「模型清单」点击直达（entry 通道，D6），能力未丢失。
+    wireFab: () => {},
     // 模型清单区（异步取数，失败/无模型静默隐藏；详情卡降级约定）
     postRender: (ctx3, path3, gen) => {
       void renderPackModelListAsync(ctx3, gen, path3);

@@ -4,10 +4,9 @@
 //  - 成功路径：canvas + 统计卡片 + 作者区 + 骨骼名开关持久化
 //  - 交互：拖拽旋转 / 滚轮缩放 / 2D 渲染异常捕获
 //  - 导出骨骼名按钮 → Blob URL
-//  - 3D 切换：overlay 创建 + preloadModel/renderModel3D 调用 + close3D 清理
-//  - 3D 加载失败 → error toast
+// ADR-253 D7：详情卡 3D 入口 FAB 与 _prefer3D 自动弹语义已删除，3D 统一走左下角
+// nav-fab（openModel3DFullscreen）；本文件不再覆盖 3D 切换（见 ysm-3d.test.ts）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { waitFor } from "@/test-utils/index.ts";
 
 const {
   loadModelData,
@@ -98,8 +97,7 @@ function makeModel(overrides: Record<string, unknown> = {}) {
 
 function makeCtx() {
   const root = document.createElement("div");
-  // 顶部 ysm-author-avatars 容器已移除（2026-08-28）：作者/头像由统计卡承载
-  root.innerHTML = `<div id="preview-content"></div><button id="btn-3d-preview"></button>`;
+  root.innerHTML = `<div id="preview-content"></div>`;
   // PreviewCtx.root 需提供 getElementById（真实为组件宿主）
   (root as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
     (id: string) => root.querySelector(`#${id}`);
@@ -158,38 +156,6 @@ describe("loadModel2D — 防御路径", () => {
     expect(container.textContent).toContain("boom");
   });
 
-  // ADR-253 遗留缺陷修复：3D FAB 绑定不得依赖 2D 骨架加载成功。
-  // 原实现把 btn3d.onclick 挂在 loadModel2D 的 try 尾部（所有 await + 两个早退之后），
-  // 导致解析失败/无几何/摘要失败三条路径上按钮渲染出来却点了没反应（死点击）。
-  it("loadModelData 抛错 → 3D FAB 仍已绑定（不再死点击）", async () => {
-    loadModelData.mockRejectedValue(new Error("boom"));
-    const ctx = makeCtx();
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    await loadModel2D(ctx, "/m/a.ysm", container);
-    const btn3d = ctx.root.querySelector<HTMLButtonElement>("#btn-3d-preview");
-    expect(btn3d).not.toBeNull();
-    expect(btn3d?.onclick).not.toBeNull();
-  });
-
-  it("model 无 bones → 3D FAB 仍已绑定（不再死点击）", async () => {
-    loadModelData.mockResolvedValue({ model: { bones: [] }, decodedBy: "go" });
-    const ctx = makeCtx();
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    await loadModel2D(ctx, "/m/a.ysm", container);
-    const btn3d = ctx.root.querySelector<HTMLButtonElement>("#btn-3d-preview");
-    expect(btn3d?.onclick).not.toBeNull();
-  });
-
-  it("3D FAB 在 loadModelData 完成前即已绑定（同步绑定，不等异步链）", () => {
-    loadModelData.mockReturnValue(new Promise(() => {})); // 永不 resolve
-    const ctx = makeCtx();
-    void loadModel2D(ctx, "/m/a.ysm", document.createElement("div"));
-    const btn3d = ctx.root.querySelector<HTMLButtonElement>("#btn-3d-preview");
-    expect(btn3d?.onclick).not.toBeNull();
-  });
-
   it("model 无 bones → 未找到几何数据提示", async () => {
     loadModelData.mockResolvedValue({ model: { bones: [] }, decodedBy: "go" });
     const ctx = makeCtx();
@@ -211,14 +177,15 @@ describe("loadModel2D — 防御路径", () => {
     );
     const p = loadModel2D(ctx, "/m/a.ysm", container);
     // 模拟用户切到 B：showModelDetail 重建 ctx.root.innerHTML，A 的 container 被移除
-    ctx.root.innerHTML = `<div id="preview-content"></div><button id="btn-3d-preview"></button>`;
+    ctx.root.innerHTML = `<div id="preview-content"></div>`;
     container.remove();
     resolveData({ model: makeModel(), decodedBy: "go" });
     await p;
-    // A 不再把作者头像写进 B 的详情页、不再把 _toggle3D 绑到 B 的按钮
-    // （ysm-author-avatars 容器已移除，无此填充目标）
-    const btn3d = ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement;
-    expect(btn3d.onclick).toBeNull();
+    // A 的迟到回写不落地到 B 的详情页。
+    // ⚠️ 局限（变异测试实证 2026-09-16）：本用例**无法**捕获 `isConnected` 守卫的删除——
+    // 迟到路径的写入目标是 detached 的 container，本就不触碰 ctx.root；把它当「守卫回归测试」
+    // 会得到假信心。保留它的价值是钉住现状：2D 渲染不往已重建的 root 写任何东西。
+    expect(ctx.root.querySelector("#preview-content")?.innerHTML).toBe("");
   });
 });
 
@@ -370,111 +337,13 @@ describe("loadModel2D — 交互", () => {
   });
 });
 
-// code_review a760aece0：setupCtx 提为文件级——文件尾 active3DClose describe 复用
-async function setupCtx() {
-  const ctx = makeCtx();
-  const container = document.createElement("div");
-  document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
-  await loadModel2D(ctx, "/m/a.ysm", container);
-  return { ctx, container };
-}
-
-describe("loadModel2D — 3D 切换（§5.7 编排层：ys m-3d 已 mock，shared 集成见 ysm-3d.test.ts）", () => {
-  it("btn-3d-preview 点击 → createYsm3D(path, 0, { loader, onClose }) + 偏好持久化", async () => {
-    createYsm3D.mockResolvedValue(undefined);
-    const { ctx } = await setupCtx();
-
-    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
-    await waitFor(() => expect(createYsm3D).toHaveBeenCalled());
-
-    expect(createYsm3D).toHaveBeenCalledWith(
-      "/m/a.ysm",
-      0,
-      expect.objectContaining({
-        loader: expect.any(Function),
-        onClose: expect.any(Function),
-      }),
-    );
-    // 打开 3D → 持久化偏好（跨模型自动弹 3D 的开关）
-    expect(ctx.setPrefer3D).toHaveBeenCalledWith(true);
-
-    // close3D 已在 unsubs（组件销毁自动清理）
-    for (const fn of [...ctx.unsubs]) fn();
-    expect(cleanupYsm3D).toHaveBeenCalledTimes(1);
-    // 关闭 3D → 清除偏好（用户退出 3D 后不再自动弹全屏，ADR-057 §2.5 口径）
-    expect(ctx.setPrefer3D).toHaveBeenCalledWith(false);
-  });
-
-  it("unsubs 清理（切模型/组件销毁）→ cleanupYsm3D + 偏好复位", async () => {
-    createYsm3D.mockResolvedValue(undefined);
-    const { ctx } = await setupCtx();
-
-    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
-    await waitFor(() => expect(createYsm3D).toHaveBeenCalled());
-
-    const closeFn = ctx.unsubs.at(-1)!;
-    closeFn();
-    expect(cleanupYsm3D).toHaveBeenCalledTimes(1);
-    expect(ctx.setPrefer3D).toHaveBeenCalledWith(false);
-  });
-
-  it("createYsm3D 失败 → 骨架层不崩、不额外弹错（core 统一处理错误）", async () => {
-    createYsm3D.mockRejectedValue(new Error("wasm 崩了"));
-    const { ctx } = await setupCtx();
-
-    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
-    await new Promise((r) => setTimeout(r, 0));
-
-    // 骨架层只防御性日志；错误 toast 由 core（mount3D catch）统一处理
-    expect(createYsm3D).toHaveBeenCalledTimes(1);
-    expect(busEmit).not.toHaveBeenCalled();
-    // _loading3D 复位（失败路径），_is3D 保持 true（再点 = 关闭语义，与旧实现一致）
-  });
-
-  it("3D 加载期间用户关闭 → cleanupYsm3D（防 WebGL 泄漏）", async () => {
-    let resolve3D: () => void = () => {};
-    createYsm3D.mockReturnValue(
-      new Promise<void>((r) => {
-        resolve3D = r;
-      }),
-    );
-    const { ctx } = await setupCtx();
-
-    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
-    await waitFor(() => expect(createYsm3D).toHaveBeenCalled());
-    // 加载未完成前先关闭（触发 close3D → model3dGuard.invalidate()）
-    const closeFn = ctx.unsubs.at(-1)!;
-    closeFn();
-    resolve3D();
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(cleanupYsm3D).toHaveBeenCalledTimes(1);
-  });
-
-  it("3D 加载期间用户关闭 → 迟到的加载失败不再弹错（gen 守卫）", async () => {
-    createYsm3D.mockRejectedValue(new Error("迟到的失败"));
-    const { ctx } = await setupCtx();
-
-    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
-    // 在 createYsm3D reject 之前先关闭 → model3dGuard.invalidate()，使在途失败过期
-    const closeFn = ctx.unsubs.at(-1)!;
-    closeFn();
-    await new Promise((r) => setTimeout(r, 0));
-
-    // 修复前：关闭后仍弹「加载失败」toast；修复后：gen 不匹配 → 静默丢弃
-    expect(busEmit).not.toHaveBeenCalled();
-    expect(friendlyError).not.toHaveBeenCalled();
-  });
-});
-
 // fill3DPanel 命令式旧轨已删除（ADR-126 P5 声明式迁移完成）；
 // 其测试覆盖的统计/纹理/组件选择语义已由 buildYsmModelSchema + ysmModelStats 承接。
 
 describe("active3DClose 实例隔离（a760aece0 模块级→实例级迁移回归锚）", () => {
   // code_review a760aece0 #2/#3（P3）：active3DClose 从模块级单例迁实例 ctx——
   // P1 修复（多实例串扰：一个实例的 model:select 关掉别的实例的 overlay）。原迁移
-  // 零测试——补两锚：①双实例隔离（close 一个不碰另一个）；②切模型 vs 用户关闭的
-  // 偏好判别（closeActive3DOverlay 置 null 保留偏好 / onClose 清偏好）
+  // 零测试——补双实例隔离锚（closeActive3DOverlay 仍由 app-preview/index.ts 切模型前调用）
   it("双实例隔离：closeActive3DOverlay(ctxA) 不碰 ctxB 的钩子", () => {
     const ctxA = makeCtx();
     const ctxB = makeCtx();
@@ -488,22 +357,5 @@ describe("active3DClose 实例隔离（a760aece0 模块级→实例级迁移回�
     // 实例隔离：ctxB 的钩子未被触发、引用保留
     expect(closeB).not.toHaveBeenCalled();
     expect(ctxB.active3DClose).toBe(closeB);
-  });
-
-  it("closeActive3DOverlay 后 onClose 不再清偏好（切模型保留 _prefer3D）", async () => {
-    createYsm3D.mockResolvedValue(undefined);
-    const { ctx } = await setupCtx();
-    (ctx.root.querySelector("#btn-3d-preview") as HTMLButtonElement).click();
-    await waitFor(() => expect(createYsm3D).toHaveBeenCalled());
-    // 捕获 createYsm3D 收到的 onClose（用户 ESC 时由 3D 层回调）
-    const onClose = createYsm3D.mock.calls[0]?.[2]?.onClose as () => void;
-    expect(onClose).toBeTypeOf("function");
-    expect(ctx.active3DClose).not.toBeNull();
-    // 切模型路径：closeActive3DOverlay 先置 null（userClosed=false）→ 偏好保留
-    closeActive3DOverlay(ctx);
-    expect(ctx.setPrefer3D).not.toHaveBeenCalledWith(false);
-    onClose();
-    expect(ctx.active3DClose).toBeNull();
-    expect(ctx.setPrefer3D).not.toHaveBeenCalledWith(false); // 保留偏好
   });
 });

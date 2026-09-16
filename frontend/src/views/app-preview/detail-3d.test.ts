@@ -107,7 +107,7 @@ function emitted(name: string): unknown[] {
 }
 
 describe("showVrmMeta 分支补全", () => {
-  it("完整 meta + 限制徽章 + 缩略图 + 参考链接 → 全量渲染，FAB 进 3D", async () => {
+  it("完整 meta + 限制徽章 + 缩略图 + 参考链接 → 全量渲染", async () => {
     vrmMetaMock.mockResolvedValue({
       name: "测试模型",
       authors: ["作者A", "", "作者B"],
@@ -142,11 +142,6 @@ describe("showVrmMeta 分支补全", () => {
     expect(html).toContain("✅");
     expect(html).toContain("❌");
     expect(html).toContain("—");
-    // FAB 点击 → 统一路由入口（ADR-253 D2；原直调 createVrm3D 已收编）
-    const fab = ctx.root.querySelector<HTMLElement>("#btn-vrm-3d");
-    expect(fab).not.toBeNull();
-    fab?.click();
-    await vi.waitFor(() => expect(openModel3DFullscreenMock).toHaveBeenCalledWith("/repo/avatar.vrm"));
   });
 
   it("meta 只有 name（无 authors）→ 仍走完整卡，作者行不渲染", async () => {
@@ -155,10 +150,12 @@ describe("showVrmMeta 分支补全", () => {
     await showVrmMeta(ctx, "/repo/x.vrm");
     const html = ctx.root.innerHTML;
     expect(html).toContain("仅名称模型");
-    // ADR-238：作者图标由 emoji 改走 SVG，断言形态而非具体路径
-    expect(html).toContain('<svg class="ws-icon"');
+    // 卡片本体已渲染（非解析占位）
+    expect(html).toContain("preview-content");
+    expect(html).not.toContain("正在解析模型文件");
     expect(html).not.toContain("<img");
-    expect(html).toContain("btn-vrm-3d");
+    // ADR-253 D7：详情卡 3D 入口 FAB（#btn-vrm-3d）已删除，3D 统一走左下角 nav-fab
+    expect(html).not.toContain("btn-vrm-3d");
   });
 
   it("meta 无缩略图 → 不渲染 img；restrictions 无 reference → 无参考行", async () => {
@@ -230,17 +227,13 @@ describe("showVrmMeta 分支补全", () => {
 });
 
 describe("showFbxPreview FBX 入口卡", () => {
-  it("默认标签 + 文件名 + FAB；点击 → openModel3DFullscreen(path)（siblings 由路由兜底，ADR-253 D2）", async () => {
+  it("默认标签 + 文件名（siblings 由 3D 入口按 rtype 自算兜底，ADR-253 D2）", async () => {
     const ctx = makeCtx();
     await showFbxPreview(ctx, "/repo/dance.fbx");
     const html = ctx.root.innerHTML;
     expect(html).toContain("FBX 模型/动画");
     expect(html).toContain("dance.fbx");
-    const fab = ctx.root.querySelector<HTMLElement>("#btn-fbx-3d");
-    expect(fab).not.toBeNull();
-    fab?.click();
-    // ADR-253 D2：siblings 不再由详情卡手算，交由 3D 入口按 rtype 自算兜底
-    await vi.waitFor(() => expect(openModel3DFullscreenMock).toHaveBeenCalledWith("/repo/dance.fbx"));
+    // ADR-253 D7：FBX 详情卡 FAB（#btn-fbx-3d）已删除
   });
 
   it("自定义 opts → 使用传入图标与标签", async () => {
@@ -254,20 +247,14 @@ describe("showFbxPreview FBX 入口卡", () => {
 });
 
 describe("showScenePreview 场景 MMD 入口卡", () => {
-  it("SceneModel 徐章 + 场景模型标签 + FAB；点击 → openModel3DFullscreen(path)（ADR-253 D2）", async () => {
+  it("SceneModel 徐章 + 场景模型标签 + 文件名（ADR-253 D2/D7）", async () => {
     const ctx = makeCtx();
     await showScenePreview(ctx, "/repo/scene/main.pmx");
     const html = ctx.root.innerHTML;
     expect(html).toContain("SceneModel");
     expect(html).toContain("场景模型");
     expect(html).toContain("main.pmx");
-    const fab = ctx.root.querySelector<HTMLElement>("#btn-scene-3d");
-    expect(fab).not.toBeNull();
-    fab?.click();
-    // ADR-253 D2：siblings 不再由详情卡手算，交由 3D 入口按 rtype 自算兜底
-    await vi.waitFor(() =>
-      expect(openModel3DFullscreenMock).toHaveBeenCalledWith("/repo/scene/main.pmx"),
-    );
+    // ADR-253 D7：场景卡 FAB（#btn-scene-3d）已删除
   });
 });
 
@@ -307,26 +294,11 @@ describe("showMorphPreview CustomMorph 入口卡", () => {
     expect(ctx.root.querySelectorAll(".morph-item").length).toBe(0);
   });
 
-  it("兄弟列表加载失败 → 不阻断，FAB 仍可用", async () => {
+  it("兄弟列表加载失败 → 不阻断，列表区降级为空", async () => {
     resolveMorphSiblingsMock.mockRejectedValue(new Error("scan fail"));
     const ctx = makeCtx();
     await showMorphPreview(ctx, "/repo/morphs/a.vpd");
-    expect(
-      ctx.root.querySelector<HTMLElement>("#btn-morph-apply"),
-    ).not.toBeNull();
     expect(ctx.root.querySelectorAll(".morph-item").length).toBe(0);
-  });
-
-  it("应用 FAB 点击 → toast:show 反馈（morph:apply 零订阅已删发射）", async () => {
-    const ctx = makeCtx();
-    await showMorphPreview(ctx, "/repo/morphs/smile.vpd");
-    const fab = ctx.root.querySelector<HTMLElement>("#btn-morph-apply");
-    fab?.click();
-    const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
-    expect(toasts.some((t) => t.msg.includes("smile.vpd"))).toBe(true);
-    expect(toasts.some((t) => t.type === "info")).toBe(true);
-    // 不再发射 model:select / morph:apply
-    expect(emitted("model:select")).toEqual([]);
   });
 });
 
@@ -358,15 +330,5 @@ describe("showStagePreview StageAnim 入口卡", () => {
     await showStagePreview(ctx, "/repo/stage/empty");
     expect(ctx.root.innerHTML).toContain("舞台包为空或目录不存在");
     expect(ctx.root.querySelectorAll(".stage-item").length).toBe(0);
-  });
-
-  it("加载 FAB 点击 → toast:show 反馈（stage:load 零订阅已删发射）", async () => {
-    const ctx = makeCtx();
-    await showStagePreview(ctx, "/repo/stage/live");
-    const fab = ctx.root.querySelector<HTMLElement>("#btn-stage-load");
-    fab?.click();
-    const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
-    expect(toasts.some((t) => t.msg.includes("live"))).toBe(true);
-    expect(toasts.some((t) => t.type === "info")).toBe(true);
   });
 });

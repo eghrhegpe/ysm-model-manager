@@ -21,7 +21,6 @@ import { makeYsmAdapter } from "@/preview-3d/adapters/ysm-adapter.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
-import { promoteTitleIfPresent } from "@/utils/dom/tooltip.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -29,25 +28,46 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { loadModelData } from "./loader.ts";
 import { type ModelLike, preloadModel } from "./model3d-loader.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
-import { setActive3DClose } from "./skeleton.ts";
 import { componentCountsFromSpec } from "./skeleton-render.ts";
 import { type StatsCardModel, statsCardHTML } from "./tpl.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
 import { readFileBytes } from "./view-shell.ts";
 import { registerYsmModelSchema, ysmShotNodes } from "./ysm-controls.ts";
 
-/** 跨类型换角色路由 */
+/** 跨类型换角色路由（ADR-253 D7：nav-fab 进入 maid 3D 的唯一入口）。
+ *  原 dpToggle3D 随详情卡 FAB 删除，但其 android-back 注册与 cleanup 是**真实生命周期需求**
+ *  （mount3D 内部不注册返回键），故在此保留等价接线。 */
 async function openMaidFullscreen(path: string): Promise<void> {
-  await createMaid3D(path, 0, {
-    loader: async (p) =>
-      (
-        await loadModelData(
-          p,
-          { decodeYsmViaWasm: () => Promise.resolve(null), appendDebug: () => {} },
-          { skipWasm: true },
-        )
-      ).model,
+  let unsubAndroidBack: (() => void) | null = null;
+  const close3D = (): void => {
+    cleanupMaid3D();
+    if (unsubAndroidBack) {
+      unsubAndroidBack();
+      unsubAndroidBack = null;
+    }
+  };
+  unsubAndroidBack = registerAndroidBackHandler(() => {
+    close3D();
+    return true;
   });
+  try {
+    await createMaid3D(path, 0, {
+      loader: async (p) =>
+        (
+          await loadModelData(
+            p,
+            { decodeYsmViaWasm: () => Promise.resolve(null), appendDebug: () => {} },
+            { skipWasm: true },
+          )
+        ).model,
+      onClose: close3D,
+    });
+  } catch (e) {
+    // 挂载失败：core 不会回调 onClose，需就地注销返回键 handler（否则残留恒 return true
+    // 的 handler 永久吞掉安卓返回键）——对齐 skeleton 侧「加载失败也要复位」的口径。
+    close3D();
+    logError("maid-3d", "加载失败", e);
+  }
 }
 registerReRoute(RESOURCE_TYPES.MAID, openMaidFullscreen);
 
@@ -198,13 +218,12 @@ function dpRenderDetail(modelInfo: MaidModelInfo): string {
   return rows.join("");
 }
 
-/** 重绘主面板 + FAB 事件重绑 */
+/** 重绘主面板（ADR-253 D7：FAB 已删，不再需要事件重绑） */
 function dpRenderPanel(
   ctx: PreviewCtx,
   basename: string,
   modelInfo: MaidModelInfo,
   componentCounts: ComponentCount[],
-  onToggle3d: () => void,
   previewUri?: string | null,
 ): void {
   // 彩色统计卡（模型结构蓝卡 / 纹理尺寸绿卡 / 文件信息橙卡）——复用 YSM statsCardHTML。
@@ -228,73 +247,16 @@ function dpRenderPanel(
   </div>
   ${statsHTML}
   ${detail ? `<div class="pv-card" style="margin-top:8px">${detail}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">${UI_ICONS.warning} 无法读取模型数据</div>` : ""}
-</div>
-<button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
+</div>`;
 
-  // FAB 接线（进整包 3D；角色切换在 3D 内「组件」下拉）
-  const btn3d = ctx.root.getElementById("btn-3d-preview");
-  if (btn3d) {
-    const cleanup = promoteTitleIfPresent(btn3d);
-    if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
-    btn3d.onclick = () => {
-      void onToggle3d();
-    };
-  }
-}
-
-/** 进入 3D 预览（并发防护：loading3D/model3dGuard 放 state 随预览实例隔离）。
- *  整包加载（ADR-160）：3D spec = GetModel3DSpec(zip) 全量，组件下拉即角色切换——
- *  不再按详情页选中角色传 subPath 单 entry。 */
-async function dpToggle3D(state: MaidPreviewState, ctx: PreviewCtx, path: string): Promise<void> {
-  if (state.loading3D) return;
-  state.loading3D = true;
-  const gen = state.model3dGuard.next();
-  let unsubAndroidBack: (() => void) | null = null;
-  const close3D = (): void => {
-    cleanupMaid3D();
-    state.model3dGuard.invalidate();
-    setActive3DClose(ctx, null);
-    if (unsubAndroidBack) {
-      unsubAndroidBack();
-      unsubAndroidBack = null;
-    }
-    const idx = ctx.unsubs?.indexOf(close3D);
-    if (idx !== undefined && idx > -1) ctx.unsubs?.splice(idx, 1);
-  };
-  const onClose = (): void => {
-    setActive3DClose(ctx, null);
-    if (unsubAndroidBack) {
-      unsubAndroidBack();
-      unsubAndroidBack = null;
-    }
-  };
-  ctx.unsubs?.push(close3D);
-  setActive3DClose(ctx, () => close3D());
-  unsubAndroidBack = registerAndroidBackHandler(() => {
-    close3D();
-    return true;
-  });
-  try {
-    await createMaid3D(path, 0, {
-      loader: async (p) =>
-        (
-          await loadModelData(p, ctx, {
-            skipWasm: true,
-          })
-        ).model,
-      onClose,
-    });
-  } catch (e) {
-    if (state.model3dGuard.stale(gen)) return;
-    logError("maid-3d", "加载失败", e);
-  }
-  state.loading3D = false;
+  // ADR-253 D7：3D 入口 FAB 已删——3D 统一从左下角 nav-fab 进入
+  // （maid 已注册为路由类型 openMaidFullscreen，nav-fab 可直达）。
 }
 
 /**
- * 车万女仆详情预览（基本信息卡 + 详细数据 + FAB 进 3D）。
- * 调用 Go 端 AnalyzeBedrockModel 获取骨骼数、方块数、纹理等详细信息。
- * FAB 接线复用 skeleton 的 3D overlay 管理（_active3DClose / android-back）。
+ * 车万女仆详情预览（基本信息卡 + 详细数据）。
+ * ADR-253 D7：3D 入口 FAB 已删，3D 统一从左下角 nav-fab 进入
+ * （openMaidFullscreen，含 android-back 注册）。
  */
 export async function showMaidPreview(
   ctx: PreviewCtx & DetailGenGuard,
@@ -314,8 +276,9 @@ export async function showMaidPreview(
     <div class="dp-hint">${t("preview.bedrockModel")}</div>
     <div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">⏳ ${t("preview.analyzingModel")}</div>
   </div>
-</div>
-<button class="preview-fab" id="btn-3d-preview" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">&#x1F3A8;</span></button>`;
+</div>`;
+
+  // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
 
   // 数据获取（ADR-160 单视图收敛）：
   //  ① AnalyzeBedrockModel —— 聚合纹理/尺寸/格式/metadata（纹理绿卡/文件信息/补充详情用）
@@ -366,16 +329,7 @@ export async function showMaidPreview(
     previewUri: null,
   };
   const render = (): void => {
-    dpRenderPanel(
-      ctx,
-      basename,
-      baseModelInfo,
-      componentCounts,
-      () => {
-        void dpToggle3D(state, ctx, path);
-      },
-      state.previewUri,
-    );
+    dpRenderPanel(ctx, basename, baseModelInfo, componentCounts, state.previewUri);
   };
 
   // 封面预览图（缓存 → WASM → Go 兜底，统一入口）：

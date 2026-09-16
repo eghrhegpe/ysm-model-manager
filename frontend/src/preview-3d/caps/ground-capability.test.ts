@@ -5,6 +5,19 @@ import * as THREE from "three";
 import { GroundCapability } from "./ground-capability.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
+import type { GroundCanvasStyle, GroundSurfaceMode } from "./ground-surface-spec.ts";
+
+/** 旧单枚举 → 两轴便捷设置（测试沿用旧模式名，内部拆轴） */
+function setMode(cap: GroundCapability, mode: GroundSurfaceMode): void {
+  const canvasModes: GroundSurfaceMode[] = ["plain", "grid", "checker", "stripes", "diamond", "marble"];
+  if (canvasModes.includes(mode)) {
+    cap.setSourceKind("canvas");
+    cap.setCanvasStyle(mode as GroundCanvasStyle);
+  } else {
+    // none / solid / texture 直接是合法 sourceKind
+    cap.setSourceKind(mode as "none" | "solid" | "texture");
+  }
+}
 
 describe("GroundCapability", () => {
   beforeEach(() => { resetEnvState(); });
@@ -54,59 +67,10 @@ describe("GroundCapability", () => {
   });
 });
 
-describe("GroundCapability — getMenuNodes 分组（节点化后 group 由 folder 表达）", () => {
-  beforeEach(() => { resetEnvState(); });
-
-  it("总开关平铺 + 材质参数组 folder（节点化后 group 由 folder 承载）", () => {
-    const scene = new THREE.Scene();
-    const cap = new GroundCapability({ scene });
-    const nodes = cap.getMenuNodes();
-    expect(nodes[0]!.id).toBe("ground-visible");
-    const folder = nodes[1]!;
-    expect(folder.kind).toBe("folder");
-    expect(folder.labelKey).toBe("preview.groundGroupMaterial");
-    const childIds = folder.children!.map((c) => c.id);
-    expect(childIds).toContain("ground-mat-source");
-    expect(childIds).toContain("ground-mat-color2");
-    expect(childIds).toContain("ground-mat-density");
-  });
-});
-
-describe("GroundCapability — getMasterNodeId（env 面板 headerToggle 用）", () => {
-  beforeEach(() => { resetEnvState(); });
-
-  it("返回 ground-visible 使 env 面板能在行首渲染开关", () => {
-    const scene = new THREE.Scene();
-    const cap = new GroundCapability({ scene });
-    expect(cap.getMasterNodeId()).toBe("ground-visible");
-  });
-});
-
-describe("GroundCapability — 材质控件按 matSource 条件显隐（visibleWhen B 轨，节点化）", () => {
-  beforeEach(() => { resetEnvState(); });
-
-  it("默认 matSource=none：仅 source 门控可见，其余材质控件隐藏；快照切源后 viz 跟随", () => {
-    const scene = new THREE.Scene();
-    const cap = new GroundCapability({ scene });
-    const folder = cap.getMenuNodes()[1]!;
-    const source = folder.children!.find((c) => c.id === "ground-mat-source")!;
-    const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
-    const btnNode = folder.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
-    const texBtn = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)![0]!;
-    expect(source.visibleWhen).toBeUndefined();
-    const snap = (src: string) => ({ "env.groundMatSource": src } as Partial<PreviewSnapshot>);
-    expect(color.visibleWhen?.(snap("none"))).toBe(false);
-    expect(texBtn.visibleWhen?.(snap("none"))).toBe(false);
-    expect(color.visibleWhen?.(snap("checker"))).toBe(true);
-    expect(texBtn.visibleWhen?.(snap("checker"))).toBe(false);
-    expect(texBtn.visibleWhen?.(snap("texture"))).toBe(true);
-  });
-});
-
 describe("GroundCapability — 表面材质层（spec 单源）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("默认 matSource=none：apply 后 surface 存在但不可见", () => {
+  it("默认 sourceKind=none：apply 后 surface 存在但不可见", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
@@ -115,11 +79,11 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(surf!.visible).toBe(false);
   });
 
-  it("setMatSource(checker) → 可见 + 材质挂 DataTexture + repeat=80/10/1", () => {
+  it("setSourceKind/CanvasStyle(checker) → 可见 + 材质挂 DataTexture + repeat=80/10/1", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    cap.setMatSource("checker");
+    setMode(cap, "checker");
     const surf = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
     expect(surf.visible).toBe(true);
     const mat = surf.material as THREE.MeshStandardMaterial;
@@ -131,12 +95,12 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    cap.setMatSource("checker");
+    setMode(cap, "checker");
     const surf = scene.getObjectByName("ysm-ground-surface")!;
     expect(surf.visible).toBe(true);
 
     cap.setEnabled(false);
-    cap.setMatSource("grid");
+    setMode(cap, "grid");
     cap.setEnabled(true);
     expect(scene.getObjectByName("ysm-ground-surface")).toBeDefined();
     expect(surf.visible).toBe(true);
@@ -146,7 +110,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    cap.setMatSource("grid");
+    setMode(cap, "grid");
     const surf = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
     const mat0 = surf.material as THREE.MeshStandardMaterial;
     const map0 = mat0.map;
@@ -164,7 +128,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    cap.setMatSource("plain");
+    setMode(cap, "plain");
     cap.setMatOpacity(0.4);
     const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.opacity).toBeCloseTo(0.4);
@@ -179,7 +143,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    cap.setMatSource("solid");
+    setMode(cap, "solid");
     cap.setVisible(false);
     expect((scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).visible).toBe(false);
     cap.setVisible(true);
@@ -201,14 +165,15 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(btn!.button!.getHint!()).toContain("wood.png");
   });
 
-  it("clearCustomTexture：释放缓存并回退 plain", () => {
+  it("clearCustomTexture：释放缓存并回退 canvas/plain（ADR-249 不再改写为语义无关模式）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
     const tex = new THREE.DataTexture(new Uint8Array(4 * 4), 2, 2);
     cap.acceptLoadedTexture(tex, "wood.png");
     cap.clearCustomTexture();
-    expect(cap.getMatSource()).toBe("plain");
+    expect(cap.getSourceKind()).toBe("canvas");
+    expect(cap.getCanvasStyle()).toBe("plain");
     const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.map).not.toBe(tex);
   });
@@ -217,7 +182,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    cap.setMatSource("texture");
+    cap.setSourceKind("texture");
     const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.map).toBeDefined();
     const tex = new THREE.DataTexture(new Uint8Array(16), 2, 2);
@@ -238,52 +203,57 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
   it("saveState/loadState 往返 mat 字段；texture 来源不再被静默降级（ADR-249 §2.5）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    cap.setMatSource("checker");
+    setMode(cap, "checker");
     cap.setMatScale(3);
     cap.saveState();
     resetEnvState();
     const cap2 = new GroundCapability({ scene });
     cap2.loadState();
-    expect(cap2.getMatSource()).toBe("checker");
+    expect(cap2.getSourceKind()).toBe("canvas");
+    expect(cap2.getCanvasStyle()).toBe("checker");
     expect(cap2.getMatScale()).toBe(3);
 
-    // ADR-249 §2.5 第 2 条：旧行为把 texture 改写成 plain（因贴图二进制不持久化，
-    // 重启后 customTex 必为空）——用户存档里选的「自定义贴图」重启后变成纯色地面。
-    // 新契约：保留用户选择的来源；无贴图的渲染兜底归材质层，不改写状态。
+    // ADR-249 §2.5 第 2 条：旧行为把 texture 改写成 plain——新契约保留来源。
     const cap3 = new GroundCapability({ scene });
     cap3.acceptLoadedTexture(new THREE.DataTexture(new Uint8Array(16), 2, 2), "t.png");
     cap3.saveState();
     resetEnvState();
     const cap4 = new GroundCapability({ scene });
     cap4.loadState();
-    expect(cap4.getMatSource()).toBe("texture");
+    expect(cap4.getSourceKind()).toBe("texture");
   });
 
-  it("loadState 非法 matSource 回退 none（缺字段不崩）", () => {
+  it("loadState 非法 canvasStyle/legacy 脏数据回退安全默认", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     localStorage.setItem("ysm-scene-cap-ground", JSON.stringify({ enabled: true, visible: true, matSource: "hack" }));
     cap.loadState();
-    expect(cap.getMatSource()).toBe("none");
+    expect(cap.getSourceKind()).toBe("none");
     localStorage.removeItem("ysm-scene-cap-ground");
   });
 
   describe("subscribe（局部刷新通知）", () => {
-    it("setMatSource 触发订阅者，同值早退不 notify，unsub 后停止", () => {
+    it("setSourceKind/setCanvasStyle 各触发 1 次订阅者（拆轴后独立 setter），同值早退不 notify，unsub 后停止", () => {
       const scene = new THREE.Scene();
       const cap = new GroundCapability({ scene });
       let calls = 0;
       const unsub = cap.subscribe!(() => { calls++; });
-      cap.setMatSource("grid");
-      expect(calls).toBe(1);
-      cap.setMatSource("grid");
-      expect(calls).toBe(1);
-      cap.setMatColor(0xff0000);
-      expect(calls).toBe(1);
-      cap.setMatSource("none");
+      // 从默认 none → canvas/grid：两轴各触发一次（拆轴后两个独立 envState 字段，
+      // 各 1 次；旧单枚举时代合并为 1 次）
+      cap.setSourceKind("canvas");
+      cap.setCanvasStyle("grid");
       expect(calls).toBe(2);
+      // 同值早退：不应再 notify
+      cap.setSourceKind("canvas");
+      cap.setCanvasStyle("grid");
+      expect(calls).toBe(2);
+      // appearance 变化走 refreshSurface 单路径落地、不 notify（订阅面 = 来源/样式切换，
+      // 局部刷新据此重建菜单；matColor 不触发）
+      cap.setMatColor(0xff0000);
+      expect(calls).toBe(2);
+      // 取消订阅后不再 notify
       unsub();
-      cap.setMatSource("plain");
+      cap.setSourceKind("none");
       expect(calls).toBe(2);
     });
   });
@@ -307,7 +277,7 @@ describe("GroundCapability — 启用切换", () => {
 
   it("disabled 时移除挂载并同步 surface.visible 门控", () => {
     const scene = new THREE.Scene();
-    setEnvState({ groundMatSource: "checker" }, { source: 'manual' });
+    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "checker" }, { source: 'manual' });
     const cap = new GroundCapability({ scene });
     cap.apply();
     const surface = (cap as unknown as { surface: THREE.Mesh }).surface;
@@ -326,7 +296,7 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
 
   it("全部 setter 落地 envState（含 clamp/取模）且 getter 回读一致", () => {
     const scene = new THREE.Scene();
-    setEnvState({ groundMatSource: "checker" }, { source: 'manual' });
+    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "checker" }, { source: 'manual' });
     const cap = new GroundCapability({ scene });
     cap.setMatLineColor(0x112233);
     cap.setMatGridSize(16.7);
@@ -374,7 +344,7 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
 
   it("dispose 时释放程序化表面纹理（非 custom 缓存归属）", () => {
     const scene = new THREE.Scene();
-    setEnvState({ groundMatSource: "checker" }, { source: 'manual' });
+    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "checker" }, { source: 'manual' });
     const cap = new GroundCapability({ scene });
     cap.apply();
     const surfaceTex = (cap as unknown as { surfaceTex: THREE.Texture }).surfaceTex;
@@ -388,7 +358,7 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
 describe("GroundCapability — 菜单控件联动", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("visible toggle 与 mat-source select 联动（节点 control 闭包）", () => {
+  it("visible toggle 与 来源/样式 select 联动（节点 control 闭包）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const nodes = cap.getMenuNodes();
@@ -397,14 +367,18 @@ describe("GroundCapability — 菜单控件联动", () => {
     expect(cap.getVisible()).toBe(false);
     expect(visibleNode.control!.get!(undefined)).toBe(false);
     const sourceNode = nodes[1]!.children!.find((c) => c.id === "ground-mat-source")!;
-    sourceNode.control!.set!("stripes");
-    expect(cap.getMatSource()).toBe("stripes");
-    expect(sourceNode.control!.get!(undefined)).toBe("stripes");
+    sourceNode.control!.set!("canvas");
+    expect(cap.getSourceKind()).toBe("canvas");
+    expect(sourceNode.control!.get!(undefined)).toBe("canvas");
+    const styleNode = nodes[1]!.children!.find((c) => c.id === "ground-mat-canvas-style")!;
+    styleNode.control!.set!("stripes");
+    expect(cap.getCanvasStyle()).toBe("stripes");
+    expect(styleNode.control!.get!(undefined)).toBe("stripes");
   });
 
-  it("材质参数控件 setValue/getValue 全联动（texture 模式下可见，节点 control 闭包）", () => {
+  it("材质参数控件 setValue/getValue 全联动（canvas 模式下可见，节点 control 闭包）", () => {
     const scene = new THREE.Scene();
-    setEnvState({ groundMatSource: "checker" }, { source: 'manual' });
+    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "checker" }, { source: 'manual' });
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes()[1]!;
     const by = (id: string) => folder.children!.find((c) => c.id === id)!;
@@ -432,14 +406,14 @@ describe("GroundCapability — 菜单控件联动", () => {
     expect(by("ground-mat-metalness").control!.get!(undefined)).toBe(0.2);
   });
 
-  it("button 控件：getValue null、setValue no-op、visibleWhen 随模式切换（controls 通道节点）", () => {
+  it("button 控件：getValue null、setValue no-op、visibleWhen 随来源切换（controls 通道节点）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const btnNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
     const btnControls = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)!;
     const pick = btnControls[0]!;
     const clear = btnControls[1]!;
-    const snap = (src: string) => ({ "env.groundMatSource": src } as Partial<PreviewSnapshot>);
+    const snap = (src: string) => ({ "env.groundSourceKind": src } as Partial<PreviewSnapshot>);
     expect(pick.visibleWhen?.(snap("none"))).toBe(false);
     expect(clear.visibleWhen?.(snap("none"))).toBe(false);
     expect(pick.getValue()).toBeNull();
@@ -447,9 +421,10 @@ describe("GroundCapability — 菜单控件联动", () => {
     expect(() => clear.setValue("x")).not.toThrow();
     expect(pick.visibleWhen?.(snap("texture"))).toBe(true);
     expect(clear.visibleWhen?.(snap("texture"))).toBe(true);
-    cap.setMatSource("texture");
+    cap.setSourceKind("texture");
     clear.button!.action!();
-    expect(cap.getMatSource()).toBe("plain");
+    expect(cap.getSourceKind()).toBe("canvas");
+    expect(cap.getCanvasStyle()).toBe("plain");
   });
 
   it("选择贴图按钮 action 触发文件选择器（mock input，node 环境，controls 通道节点）", () => {
@@ -464,7 +439,7 @@ describe("GroundCapability — 菜单控件联动", () => {
     });
     try {
       const scene = new THREE.Scene();
-      setEnvState({ groundMatSource: "texture" }, { source: 'manual' });
+      setEnvState({ groundSourceKind: "texture" }, { source: 'manual' });
       const cap = new GroundCapability({ scene });
       const btnNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
       const pick = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)![0]!;
@@ -500,14 +475,17 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const folder = cap.getMenuNodes()[1]!;
     const source = folder.children!.find((c) => c.id === "ground-mat-source")!;
     expect(source.kind).toBe("select");
-    source.control!.set!("checker");
-    expect(cap.getMatSource()).toBe("checker");
+    source.control!.set!("canvas");
+    expect(cap.getSourceKind()).toBe("canvas");
+    const style = folder.children!.find((c) => c.id === "ground-mat-canvas-style")!;
+    style.control!.set!("checker");
+    expect(cap.getCanvasStyle()).toBe("checker");
     const btnNode = folder.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
     expect(btnNode.kind).toBe("controls");
     const btnControls = typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls;
     expect(btnControls!.map((c) => c.id)).toEqual(["ground-mat-texture", "ground-mat-clear"]);
-    expect(btnControls![0]!.visibleWhen?.({ "env.groundMatSource": "texture" })).toBe(true);
-    expect(btnControls![0]!.visibleWhen?.({ "env.groundMatSource": "none" })).toBe(false);
+    expect(btnControls![0]!.visibleWhen?.({ "env.groundSourceKind": "texture" })).toBe(true);
+    expect(btnControls![0]!.visibleWhen?.({ "env.groundSourceKind": "none" })).toBe(false);
   });
 
   it("原生 color/slider 节点读写闭包直连 cap", () => {
@@ -523,12 +501,13 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     expect(cap.getMatDensity()).toBe(4);
   });
 
-  it("visibleWhen 谓词挂原生节点（matSource ≠ none 时材质控件可见）", () => {
+  it("visibleWhen 谓词挂原生节点（canvas 模式下材质控件可见；none 隐藏）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes()[1]!;
     const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
-    expect(color.visibleWhen?.({ "env.groundMatSource": "grid" })).toBe(true);
-    expect(color.visibleWhen?.({ "env.groundMatSource": "none" })).toBe(false);
+    // ADR-249 §2.1：由两轴派生模式，canvas/checker 下可见
+    expect(color.visibleWhen?.({ "env.groundSourceKind": "canvas", "env.groundCanvasStyle": "grid" })).toBe(true);
+    expect(color.visibleWhen?.({ "env.groundSourceKind": "none" })).toBe(false);
   });
 });

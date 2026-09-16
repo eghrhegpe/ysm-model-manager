@@ -19,6 +19,7 @@ import {
   GROUND_SURFACE_MODES,
   GROUND_MAT_PARAMS,
   paramIsEffective,
+  migrateGroundMatSource,
   effectiveParamsOf,
   type GroundSurfaceMode,
   type GroundMatParam,
@@ -237,7 +238,13 @@ describe("Suite 4 — 菜单可见集与矩阵生效集同源", () => {
       expect(typeof node!.visibleWhen, `${nodeId} 必须声明 visibleWhen`).toBe("function");
 
       for (const mode of GROUND_SURFACE_MODES) {
-        const snapshot = { "env.groundMatSource": mode } as Partial<PreviewSnapshot>;
+        // 菜单读的是拆轴后的两字段（env.groundSourceKind / env.groundCanvasStyle），
+        // 单枚举 mode 经 migrateGroundMatSource 映射为两轴再喂快照（ADR-249 §2.5 阶段 2）
+        const m = migrateGroundMatSource(mode);
+        const snapshot = {
+          "env.groundSourceKind": m.sourceKind,
+          "env.groundCanvasStyle": m.canvasStyle,
+        } as Partial<PreviewSnapshot>;
         const menuVisible = node!.visibleWhen!(snapshot) === true;
         const matrixEffective = paramIsEffective(mode, param);
         expect(menuVisible, `${nodeId} @ ${mode}：菜单可见性与矩阵不一致`).toBe(matrixEffective);
@@ -249,7 +256,7 @@ describe("Suite 4 — 菜单可见集与矩阵生效集同源", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
-    const snapshot = { "env.groundMatSource": "solid" } as Partial<PreviewSnapshot>;
+    const snapshot = { "env.groundSourceKind": "solid" } as Partial<PreviewSnapshot>;
 
     for (const id of ["ground-mat-line-color", "ground-mat-color2", "ground-mat-grid-size"]) {
       const node = folder.children!.find((c) => c.id === id)!;
@@ -264,7 +271,7 @@ describe("Suite 4 — 菜单可见集与矩阵生效集同源", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
-    const snapshot = { "env.groundMatSource": "none" } as Partial<PreviewSnapshot>;
+    const snapshot = { "env.groundSourceKind": "none" } as Partial<PreviewSnapshot>;
 
     for (const node of folder.children!) {
       if (typeof node.visibleWhen === "function") {

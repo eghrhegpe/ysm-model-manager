@@ -92,6 +92,24 @@ export const GROUND_SURFACE_MODES = [
   "marble",
 ] as const satisfies readonly GroundSurfaceMode[];
 
+/** 来源轴取值集合（ADR-249 §2.1；loadState 校验 + 菜单来源 select 选项用） */
+export const GROUND_SOURCE_KINDS = [
+  "none",
+  "solid",
+  "canvas",
+  "texture",
+] as const satisfies readonly GroundSourceKind[];
+
+/** 样式轴取值集合（仅 sourceKind === "canvas" 有效；loadState 校验用） */
+export const GROUND_CANVAS_STYLES = [
+  "plain",
+  "grid",
+  "checker",
+  "stripes",
+  "diamond",
+  "marble",
+] as const satisfies readonly GroundCanvasStyle[];
+
 /** 矩阵行：材质面板的全部可调参数（与 ground-menu.ts 控件一一对应） */
 export const GROUND_MAT_PARAMS = [
   "matColor",
@@ -214,16 +232,6 @@ export interface GroundAxisMapping {
   canvasStyle?: GroundCanvasStyle;
 }
 
-/** 新两轴中属于画布管线的样式集（迁移判据用） */
-const CANVAS_STYLES: readonly GroundCanvasStyle[] = [
-  "plain",
-  "grid",
-  "checker",
-  "stripes",
-  "diamond",
-  "marble",
-];
-
 /**
  * 旧单枚举值 → 新两轴（ADR-249 §2.5 迁移映射）。
  *
@@ -242,7 +250,7 @@ export function migrateGroundMatSource(old: GroundSurfaceMode): GroundAxisMappin
   if (old === "none" || old === "solid" || old === "texture") {
     return { sourceKind: old };
   }
-  if (CANVAS_STYLES.includes(old as GroundCanvasStyle)) {
+  if (GROUND_CANVAS_STYLES.includes(old as GroundCanvasStyle)) {
     return { sourceKind: "canvas", canvasStyle: old as GroundCanvasStyle };
   }
   // 脏数据兜底：未知值回退 none（不抛错、不静默选中某个真实样式）

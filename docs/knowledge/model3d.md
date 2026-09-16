@@ -312,8 +312,10 @@ auto_fields:
     - GpuLoadSample
     - GpuLoadVerdict
     - GpuPeak
+    - GROUND_CANVAS_STYLES
     - GROUND_LAYER_OFFSETS
     - GROUND_MAT_PARAMS
+    - GROUND_SOURCE_KINDS
     - GROUND_SURFACE_MODES
     - GroundAxisMapping
     - GroundCanvasStyle

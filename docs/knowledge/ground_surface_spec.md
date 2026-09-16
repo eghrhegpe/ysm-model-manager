@@ -14,7 +14,9 @@ auto_fields:
     - DEFAULT_GROUND_SURFACE_PARAMS
     - effectiveParamsOf
     - generateSurfacePixels
+    - GROUND_CANVAS_STYLES
     - GROUND_MAT_PARAMS
+    - GROUND_SOURCE_KINDS
     - GROUND_SURFACE_MODES
     - GroundAxisMapping
     - GroundCanvasStyle

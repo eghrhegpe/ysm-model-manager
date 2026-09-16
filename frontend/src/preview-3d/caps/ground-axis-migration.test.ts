@@ -8,7 +8,9 @@
 //      （历史行为：loadState 把 texture 改写成 plain —— 用户存档里选的
 //        「自定义贴图」重启后变成一块看似无关的纯色地面）
 //
-// 现状（测试编写时）：本文件的 API 尚不存在，预期全红——TDD 红阶段。
+// 实施注记：本文件 TDD 先行编写（当时 API 未落地、预期全红）；
+// migrateGroundMatSource / groundMatSourceFromAxes 现已实装于 ground-surface-spec.ts，
+// 本文件全部用例应绿（ADR-249 §2.5 阶段 2 交付）。
 
 import { describe, it, expect } from "vitest";
 import {

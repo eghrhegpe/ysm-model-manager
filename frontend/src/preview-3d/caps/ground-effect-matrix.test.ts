@@ -53,9 +53,12 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
     }
   });
 
-  it("matColor2 仅 marble 生效（副色专用于大理石纹）", () => {
+  it("matColor2 仅噪声材质（marble/sand/grass）生效——几何图案不用副色", () => {
+    const color2Modes: GroundSurfaceMode[] = ["marble", "sand", "grass"];
     for (const mode of GROUND_SURFACE_MODES) {
-      expect(paramIsEffective(mode, "matColor2"), `${mode}/matColor2`).toBe(mode === "marble");
+      expect(paramIsEffective(mode, "matColor2"), `${mode}/matColor2`).toBe(
+        color2Modes.includes(mode),
+      );
     }
   });
 
@@ -68,8 +71,14 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
     }
   });
 
-  it("matDensity/matAngleDeg 仅新三模式（stripes/diamond/marble）生效", () => {
-    const newModes: GroundSurfaceMode[] = ["stripes", "diamond", "marble"];
+  it("matDensity/matAngleDeg 仅旋转坐标系模式（图案与噪声）生效", () => {
+    const newModes: GroundSurfaceMode[] = [
+      "stripes",
+      "diamond",
+      "marble",
+      "sand",
+      "grass",
+    ];
     for (const mode of GROUND_SURFACE_MODES) {
       const expected = newModes.includes(mode);
       expect(paramIsEffective(mode, "matDensity"), `${mode}/matDensity`).toBe(expected);
@@ -90,6 +99,8 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
       "stripes",
       "diamond",
       "marble",
+      "sand",
+      "grass",
       "texture",
     ];
     for (const mode of GROUND_SURFACE_MODES) {

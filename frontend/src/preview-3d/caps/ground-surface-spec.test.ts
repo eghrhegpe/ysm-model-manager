@@ -23,6 +23,7 @@ import {
   overlayNeedsRebuild,
   generateOverlayPixels,
   type GroundMaterialParams,
+  type GroundSurfaceMode,
 } from "./ground-surface-spec.ts";
 
 const baseParams = (): GroundMaterialParams => ({
@@ -438,5 +439,113 @@ describe("Suite 6 — 叠加层 spec / 像素生成", () => {
     };
     expect(firstOpaque(red)).toBe(255);
     expect(firstOpaque(blue)).toBe(0);
+  });
+});
+
+/* ============ Suite 7 — 噪声材质 sand/grass（ADR-251）============ */
+
+describe("Suite 7 — 噪声材质 sand / grass", () => {
+  const mode = (m: GroundSurfaceMode, over: Partial<GroundMaterialParams> = {}) =>
+    buildGroundSurfaceSpec(
+      {
+        ...DEFAULT_GROUND_SURFACE_PARAMS,
+        matSource: m,
+        matColor: 0x000000,
+        matColor2: 0xffffff,
+        ...over,
+      },
+      "",
+    );
+
+  it("sand/grass 产出非均匀像素（是材质不是纯色）", () => {
+    for (const m of ["sand", "grass"] as const) {
+      const st = mode(m).structural;
+      const px = generateSurfacePixels(st, 32);
+      expect(px.length, `${m} 应有像素`).toBe(32 * 32 * 4);
+      const first = px[0];
+      let varied = false;
+      for (let i = 0; i < px.length; i += 4) if (px[i] !== first) varied = true;
+      expect(varied, `${m} 应为噪声而非均匀色`).toBe(true);
+    }
+  });
+
+  it("sand 与 grass 像素分布不同（频率/对比度确实不同）", () => {
+    const a = generateSurfacePixels(mode("sand").structural, 32);
+    const b = generateSurfacePixels(mode("grass").structural, 32);
+    expect(Array.from(a)).not.toEqual(Array.from(b));
+  });
+
+  it("sand/grass 与 marble 像素分布不同（不同材质）", () => {
+    const sand = generateSurfacePixels(mode("sand").structural, 32);
+    const marble = generateSurfacePixels(mode("marble").structural, 32);
+    expect(Array.from(sand)).not.toEqual(Array.from(marble));
+  });
+
+  it("sand/grass 读 color2：副色变化 → 像素变化", () => {
+    for (const m of ["sand", "grass"] as const) {
+      const dark = generateSurfacePixels(mode(m, { matColor2: 0x111111 }).structural, 32);
+      const light = generateSurfacePixels(mode(m, { matColor2: 0xeeeeee }).structural, 32);
+      expect(Array.from(dark), `${m} 副色应生效`).not.toEqual(Array.from(light));
+    }
+  });
+
+  it("sand/grass 不读 lineColor（材质无格线）", () => {
+    for (const m of ["sand", "grass"] as const) {
+      const a = generateSurfacePixels(mode(m, { matLineColor: 0xff0000 }).structural, 32);
+      const b = generateSurfacePixels(mode(m, { matLineColor: 0x00ff00 }).structural, 32);
+      expect(Array.from(a), `${m} 不应读线色`).toEqual(Array.from(b));
+    }
+  });
+
+  it("sand/grass 确定性：同参数两次生成完全一致", () => {
+    for (const m of ["sand", "grass"] as const) {
+      expect(Array.from(generateSurfacePixels(mode(m).structural, 32))).toEqual(
+        Array.from(generateSurfacePixels(mode(m).structural, 32)),
+      );
+    }
+  });
+
+  it("sand/grass 进 structural（变则重建）", () => {
+    const a = mode("sand");
+    const b = mode("sand", { matDensity: 2 });
+    expect(groundSurfaceNeedsRebuild(a, b)).toBe(true);
+    expect(groundSurfaceNeedsRebuild(a, a)).toBe(false);
+  });
+});
+
+/* ============ Suite 8 — 叠加层补齐几何图案（ADR-251）============ */
+
+describe("Suite 8 — 叠加层 stripes / diamond", () => {
+  const px = (style: "grid" | "checker" | "stripes" | "diamond") =>
+    generateOverlayPixels(style, 32, [255, 255, 255], 8);
+
+  it("stripes/diamond 均为透明底 + 不透明线（可叠加而非实心）", () => {
+    for (const style of ["stripes", "diamond"] as const) {
+      const p = px(style);
+      let opaque = 0;
+      let transparent = 0;
+      for (let i = 3; i < p.length; i += 4) {
+        if (p[i] === 255) opaque++;
+        else if (p[i] === 0) transparent++;
+      }
+      expect(opaque, `${style} 应有线`).toBeGreaterThan(0);
+      expect(transparent, `${style} 应有透明区`).toBeGreaterThan(0);
+    }
+  });
+
+  it("四种叠加样式两两像素不同（样式真实生效）", () => {
+    const styles = ["grid", "checker", "stripes", "diamond"] as const;
+    const seen = styles.map((s) => Array.from(px(s)));
+    for (let i = 0; i < seen.length; i++) {
+      for (let j = i + 1; j < seen.length; j++) {
+        expect(seen[i], `${styles[i]} vs ${styles[j]}`).not.toEqual(seen[j]);
+      }
+    }
+  });
+
+  it("stripes/diamond 确定性", () => {
+    for (const style of ["stripes", "diamond"] as const) {
+      expect(Array.from(px(style))).toEqual(Array.from(px(style)));
+    }
   });
 });

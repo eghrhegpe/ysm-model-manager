@@ -23,7 +23,10 @@ export type GroundSurfaceMode =
   | "texture"
   | "stripes"
   | "diamond"
-  | "marble";
+  | "marble"
+  // ADR-251：噪声类材质（与 marble 同族，非几何图案）
+  | "sand"
+  | "grass";
 
 export interface GroundMaterialParams {
   /** 表面模式 */
@@ -90,6 +93,8 @@ export const GROUND_SURFACE_MODES = [
   "stripes",
   "diamond",
   "marble",
+  "sand",
+  "grass",
 ] as const satisfies readonly GroundSurfaceMode[];
 
 /** 来源轴取值集合（ADR-249 §2.1；loadState 校验 + 菜单来源 select 选项用） */
@@ -108,16 +113,21 @@ export const GROUND_CANVAS_STYLES = [
   "stripes",
   "diamond",
   "marble",
+  "sand",
+  "grass",
 ] as const satisfies readonly GroundCanvasStyle[];
 
 /** 叠加层样式（独立于来源轴/样式轴，可叠加在任意底层之上） */
-export type GroundOverlayStyle = "none" | "grid" | "checker";
+export type GroundOverlayStyle = "none" | "grid" | "checker" | "stripes" | "diamond";
 
-/** 叠加层样式取值集合（ADR-249 §2.3；首期仅落地格线/棋盘，scan/glowEdge 等由后续扩展） */
+/** 叠加层样式取值集合（ADR-249 §2.3 架构；ADR-251 补齐几何图案集）：
+ *  装饰线型家族——与 canvasStyle 的材质家族区别在于「透明底、可叠在任意来源上」。 */
 export const GROUND_OVERLAY_STYLES = [
   "none",
   "grid",
   "checker",
+  "stripes",
+  "diamond",
 ] as const satisfies readonly GroundOverlayStyle[];
 
 /** 矩阵行：材质面板的全部可调参数（与 ground-menu.ts 控件一一对应） */
@@ -145,6 +155,8 @@ const MAP_PRODUCING_MODES: readonly GroundSurfaceMode[] = [
   "stripes",
   "diamond",
   "marble",
+  "sand",
+  "grass",
 ];
 
 /** 使用 lineColor 的模式集（generateSurfacePixels 中读 st.lineColor 的分支） */
@@ -156,19 +168,27 @@ const LINE_COLOR_MODES: readonly GroundSurfaceMode[] = [
   "marble",
 ];
 
-/** 使用 color2 的模式集（仅 marble 的渐变副色） */
-const COLOR2_MODES: readonly GroundSurfaceMode[] = ["marble"];
+/** 使用 color2 的模式集（噪声类材质的色变插值：marble/sand/grass） */
+const COLOR2_MODES: readonly GroundSurfaceMode[] = ["marble", "sand", "grass"];
 
-/** 使用 density / angleRad 的模式集（新三模式的旋转坐标系分支） */
-const NEW_PATTERN_MODES: readonly GroundSurfaceMode[] = ["stripes", "diamond", "marble"];
+/** 使用 density / angleRad 的模式集（噪声与几何图案的旋转坐标系分支） */
+const NEW_PATTERN_MODES: readonly GroundSurfaceMode[] = [
+  "stripes",
+  "diamond",
+  "marble",
+  "sand",
+  "grass",
+];
 
-/** 使用 gridSize 的模式集（grid/checker 为「每边格数」，新三模式为「图案周期数」） */
+/** 使用 gridSize 的模式集（grid/checker 为「每边格数」；图案/噪声为「周期数/粒度」） */
 const GRID_SIZE_MODES: readonly GroundSurfaceMode[] = [
   "grid",
   "checker",
   "stripes",
   "diamond",
   "marble",
+  "sand",
+  "grass",
 ];
 
 /** 外观参数（与模式无关，凡非 none 均生效；texture 亦生效） */
@@ -292,6 +312,17 @@ export function generateOverlayPixels(
         isLine = x % cellSize < lineWidth || y % cellSize < lineWidth;
       } else if (style === "checker") {
         isLine = (Math.floor(x / cellSize) + Math.floor(y / cellSize)) % 2 === 1;
+      } else if (style === "stripes") {
+        // 竖向条带（与 surface stripes 同构，但无角度参数 → 轴对齐）
+        isLine = Math.floor(x / cellSize) % 2 === 1;
+      } else if (style === "diamond") {
+        // 菱形等距线：|u|+|v| = k·t（与 surface diamond 同口径，归一化坐标）
+        const ux = (x / sizePx) * 2 - 1;
+        const uy = (y / sizePx) * 2 - 1;
+        const d = Math.abs(ux) + Math.abs(uy);
+        const t = 2 / n;
+        const localD = ((d % t) + t) % t;
+        isLine = localD < (0.9 / sizePx) * 2;
       }
       if (isLine) {
         px[idx] = r;
@@ -333,7 +364,15 @@ export const OVERLAY_TEX_SIZE = 512;
 export type GroundSourceKind = "none" | "solid" | "canvas" | "texture";
 
 /** 样式轴：程序化画布长什么样（仅 sourceKind === "canvas" 有效） */
-export type GroundCanvasStyle = "plain" | "grid" | "checker" | "stripes" | "diamond" | "marble";
+export type GroundCanvasStyle =
+  | "plain"
+  | "grid"
+  | "checker"
+  | "stripes"
+  | "diamond"
+  | "marble"
+  | "sand"
+  | "grass";
 
 /** 旧枚举 → 新两轴的映射结果 */
 export interface GroundAxisMapping {
@@ -538,14 +577,21 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
     return px;
   }
 
-  // stripes / diamond / marble 不需要基于 cell 的逐格循环，统一按像素 2D 旋转坐标系生成
-  if (st.mode === "stripes" || st.mode === "diamond" || st.mode === "marble") {
+  // 图案 / 噪声材质（stripes/diamond/marble/sand/grass）不需要基于 cell 的逐格循环，
+  // 统一按像素 2D 旋转坐标系生成（ADR-251：噪声材质与几何图案共用坐标系）
+  if (
+    st.mode === "stripes" ||
+    st.mode === "diamond" ||
+    st.mode === "marble" ||
+    st.mode === "sand" ||
+    st.mode === "grass"
+  ) {
     const cosA = Math.cos(st.angleRad);
     const sinA = Math.sin(st.angleRad);
     // 归一化到 [-1,1] 便于几何计算；density 映射为频率倍率
     const half = sizePx / 2;
     const density = Math.max(0.25, st.density);
-    // gridSize 在「新三模式」里作为：条纹周期数（当 angle=0 时画面横向条纹条数 ≈ gridSize * density）
+    // gridSize 在图案/噪声模式下作为周期数或粒度基准（当 angle=0 时条纹条数 ≈ gridSize * density）
     const periodCount = Math.max(1, st.gridSize) * density;
 
     for (let y = 0; y < sizePx; y++) {
@@ -590,7 +636,7 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
             pg = g;
             pb = b;
           }
-        } else {
+        } else if (st.mode === "marble") {
           // marble：多层 valueNoise 叠加 + 沿旋转轴的正弦带，在 color 与 color2 间 lerp
           let n = 0;
           n += valueNoise(rx * 3 * density + 10, ry * 3 * density + 10) * 0.5;
@@ -599,6 +645,21 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
           // 沿主方向（angleRad 已旋转 rx, ry，取 rx 做正弦即沿图案方向的条纹）
           const band = Math.sin((rx * periodCount + n * 2.4) * Math.PI * 2);
           const t2 = 0.5 + 0.5 * band; // [0,1]
+          pr = Math.round(r + t2 * (cr2 - r));
+          pg = Math.round(g + t2 * (cg2 - g));
+          pb = Math.round(b + t2 * (cb2 - b));
+        } else {
+          // ADR-251 sand / grass：纯噪声材质（与 marble 同族，但不是带纹）。
+          // 仅频率与对比度不同——沙=高频细颗粒低对比，草=中频块状高对比。
+          // 复用 valueNoise 基建（三倍频叠加），在 color 与 color2 间 lerp。
+          const grain = Math.max(1, st.gridSize) / 8; // 粒度基准（默认 gridSize=8 → 1.0）
+          const freq = (st.mode === "sand" ? 14 : 5) * density * grain;
+          const contrast = st.mode === "sand" ? 0.45 : 0.95;
+          let n = 0;
+          n += valueNoise(rx * freq + 17, ry * freq + 17) * 0.5;
+          n += valueNoise(rx * freq * 2 - 9, ry * freq * 2 - 9) * 0.3;
+          n += valueNoise(rx * freq * 4 + 5, ry * freq * 4 + 5) * 0.2;
+          const t2 = Math.min(1, Math.max(0, 0.5 + (n - 0.5) * contrast * 2));
           pr = Math.round(r + t2 * (cr2 - r));
           pg = Math.round(g + t2 * (cg2 - g));
           pb = Math.round(b + t2 * (cb2 - b));

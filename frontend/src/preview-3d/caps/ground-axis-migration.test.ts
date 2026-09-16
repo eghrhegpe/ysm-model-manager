@@ -14,6 +14,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  GROUND_CANVAS_STYLES,
   GROUND_SURFACE_MODES,
   migrateGroundMatSource,
   groundMatSourceFromAxes,
@@ -24,7 +25,7 @@ import {
 /* ============ Suite 1 — 旧值 → 新两轴映射完备性 ============ */
 
 describe("Suite 1 — 旧 groundMatSource 值映射到新两轴", () => {
-  it("九个旧枚举值全部有映射（无遗漏、无 undefined）", () => {
+  it("全部模式值均有映射（ADR-251 后含 sand/grass；无遗漏、无 undefined）", () => {
     for (const old of GROUND_SURFACE_MODES) {
       const m = migrateGroundMatSource(old);
       expect(m, `旧值 ${old} 无映射`).toBeDefined();
@@ -47,15 +48,8 @@ describe("Suite 1 — 旧 groundMatSource 值映射到新两轴", () => {
     expect(m.sourceKind).toBe("texture");
   });
 
-  it("plain/grid/checker/stripes/diamond/marble → sourceKind=canvas + 对应 canvasStyle", () => {
-    const canvasStyles: GroundCanvasStyle[] = [
-      "plain",
-      "grid",
-      "checker",
-      "stripes",
-      "diamond",
-      "marble",
-    ];
+  it("全部 canvasStyle → sourceKind=canvas + 对应 canvasStyle（含 ADR-251 的 sand/grass）", () => {
+    const canvasStyles: GroundCanvasStyle[] = [...GROUND_CANVAS_STYLES];
     for (const style of canvasStyles) {
       const m = migrateGroundMatSource(style);
       expect(m.sourceKind, `${style} 应为 canvas 来源`).toBe("canvas");

@@ -138,7 +138,7 @@ function renderStgLangSelect(): string {
 
 function renderStgThemePicker(): string {
   return `<!-- 主题卡片：直接展示 -->
-<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:0ms">
+<div class="settings-group" style="animation-delay:0ms">
   <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
     <span class="label">${UI_ICONS.appearance} ${t("settings.theme.select")}</span>
     <div class="theme-picker" id="theme-picker">
@@ -197,7 +197,7 @@ function renderStgThemePicker(): string {
 
 function renderStgThemeAuto(): string {
   return `<!-- 自动切换：独立一栏 -->
-<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
+<div class="settings-group" style="animation-delay:60ms">
   <div class="setting-row">
     <label for="theme-auto" class="label">${UI_ICONS.clock} ${t("settings.theme.autoTitle")}</label>
     <select id="theme-auto" class="stg-select" style="width:auto">
@@ -310,7 +310,7 @@ function renderStgAnimDefault(): string {
 function renderStgPreview3d(): string {
   return `<div class="section-title stg-title">${UI_ICONS.joystick} ${t("settings.preview3d.title")}</div>
 
-<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:240ms">
+<div class="settings-group" style="animation-delay:240ms">
   <div class="setting-row">
     <label for="td-camspeed" class="label">${UI_ICONS.video} ${t("settings.preview3d.camSpeed")}</label>
     <input type="range" id="td-camspeed" min="2" max="200" value="20" style="flex:1;accent-color:var(--accent,#7c83ff)">
@@ -319,7 +319,7 @@ function renderStgPreview3d(): string {
   <div class="stg-hint">${t("settings.preview3d.camSpeedHint")}</div>
 </div>
 
-<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:270ms">
+<div class="settings-group" style="animation-delay:270ms">
   <div class="setting-row">
     <label for="td-rotmode" class="label">${UI_ICONS.refresh} ${t("settings.preview3d.rotMode")}</label>
     <select id="td-rotmode" class="stg-select" style="width:auto">
@@ -330,7 +330,7 @@ function renderStgPreview3d(): string {
   <div class="stg-hint">${t("settings.preview3d.rotModeHint")}</div>
 </div>
 
-<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:300ms">
+<div class="settings-group" style="animation-delay:300ms">
   <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:8px">
     <span class="label">${UI_ICONS.game} ${t("settings.preview3d.keymap")}</span>
     <div id="td-keymap-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;width:100%"></div>
@@ -344,7 +344,7 @@ function renderStgParserWorkers(): string {
   return `<div class="section-title stg-title">${UI_ICONS.parser} ${t("settings.parser")}</div>
 <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7;margin-bottom:12px">${t("settings.parserDesc")}</div>
 
-<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:0ms">
+<div class="settings-group" style="animation-delay:0ms">
   <div class="setting-row">
     <span class="label">${UI_ICONS.parser} ${t("settings.preview3d.fbxWorker")}</span>
     <label class="stg-label" style="gap:8px">
@@ -354,7 +354,7 @@ function renderStgParserWorkers(): string {
   <div class="stg-hint">${t("settings.preview3d.fbxWorkerHint")}</div>
 </div>
 
-<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
+<div class="settings-group" style="animation-delay:60ms">
   <div class="setting-row">
     <span class="label">${UI_ICONS.parser} ${t("settings.preview3d.mmdWorker")}</span>
     <label class="stg-label" style="gap:8px">

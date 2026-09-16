@@ -120,8 +120,15 @@ export const contentStgCSS: string = `
 /* ===== 通用 tab-body（跨设置/仓库/ins/gh/cr 各 tab 复用，归位 shadow） ===== */
 .tab-body { flex:1;display:flex;flex-direction:column;overflow:hidden; }
 
-/* ===== 设置页分组/行（从 content-diag.ts 收口；tpl-settings.ts 仍消费，属 settings 资产） ===== */
-.settings-group { padding:0 16px; }
+/* ===== 设置页分组/行（从 content-diag.ts 收口；tpl-settings.ts 仍消费，属 settings 资产） =====
+   .settings-group = 行组声式单元（对照 .stg-card 是卡片单元）：
+   与卡片同口径——间距/动画由类宣告，内联只留每处不同的 animation-delay。
+   历史：本类曾只有 padding:0 16px，垂直间距靠每处手写内联 margin-bottom:12px（7 份副本）。 */
+.settings-group { padding:0 16px; margin-bottom:12px; animation:card-in var(--tr-enter) both; }
+/* 行组后紧跟节标题（A 式）时，行组不再出 margin——
+   否则 12px(margin) + 16px(padding) 不折叠 = 28px 双间距。
+   margin 与 padding 不相叠，只能靠选择器消掉其中一份；此处保留标题的 padding-top。 */
+.settings-group:has(+ .section-title) { margin-bottom: 0; }
 .setting-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surf); border-radius:var(--radius-md); margin-bottom:4px; font-size:var(--fs-md); animation:fadeSlideUp var(--tr-enter) both; }
 .setting-row .label { color:var(--txt); }
 .setting-row .value { color:var(--muted); }

@@ -158,6 +158,10 @@ describe("app-content 模板", () => {
     // 组间距显式契约：未挂 .section-title 的组必须自带 stg-section，
     // 否则与上方组贴死（两卡并排组曾因删了 section-title 丢失间隔）
     expect(html).toContain("stg-grid stg-grid-2 stg-section");
+    // .settings-group 的常量（margin-bottom / animation）已入类，
+    // 内联仅保留 animation-delay——不得再把常量手写回模板（曾 7 处副本）
+    expect(html).not.toContain("margin-bottom:12px;animation:card-in");
+    expect(html).toContain('class="settings-group" style="animation-delay:');
     expect(html).toContain("set-advanced-grid");
     // worker 解析开关收敛到独立「解析」tab（FBX / MMD PMX 逃生舱），不在界面 tab 内
     expect(html).toContain('data-tab="parser"');

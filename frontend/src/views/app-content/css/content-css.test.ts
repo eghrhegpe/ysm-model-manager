@@ -73,4 +73,17 @@ describe("设置页组间距契约（content-stg）", () => {
     );
     expect(block).not.toMatch(/margin/);
   });
+
+  it(".settings-group 常量入类：间距/动画由类宣告，不再靠内联副本", () => {
+    // 历史：本类曾只有 padding:0 16px，垂直间距靠 7 处手写内联 margin-bottom:12px。
+    const block = contentStgCSS.match(/\.settings-group\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(block).toMatch(/margin-bottom:\s*12px/);
+    expect(block).toMatch(/animation:\s*card-in/);
+  });
+
+  it(".settings-group 紧接节标题时归零 margin（防 12+16=28px 双间距）", () => {
+    // 行组出 margin-bottom、下方节标题出 padding-top，两者不折叠→叠加。
+    // 靠 :has(+ .section-title) 消掉行组那份，间距归下方标题单供。
+    expect(contentStgCSS).toMatch(/\.settings-group:has\(\s*\+\s*\.section-title\s*\)\s*\{[^}]*margin-bottom:\s*0/);
+  });
 });

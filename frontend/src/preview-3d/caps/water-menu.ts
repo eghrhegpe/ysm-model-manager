@@ -139,6 +139,13 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           () => cap.getClarity(),
           (v) => cap.setClarity(v),
         ),
+        wSliderNode(
+          "ground-water-choppiness",
+          "preview.groundWaterChoppiness",
+          { min: 0, max: 1, step: 0.05 },
+          () => cap.getChoppiness(),
+          (v) => cap.setChoppiness(v),
+        ),
       ],
     },
     {

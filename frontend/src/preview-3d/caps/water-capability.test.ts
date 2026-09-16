@@ -258,13 +258,34 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     mat.onBeforeCompile(shader as unknown as THREE.WebGLProgramParametersWithUniforms, undefined as unknown as THREE.WebGLRenderer);
     expect(shader.uniforms.uTime).toBeDefined();
     expect(shader.uniforms.uHalfSize.value).toBeCloseTo(40, 5);
+    expect(shader.uniforms.uSize.value).toBeCloseTo(80, 5);
     expect(shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.25 * 0.15, 5);
     expect(shader.uniforms.uRoundness.value).toBe(0);
-    expect(shader.vertexShader).toContain("float wave(");
+    expect(shader.uniforms.uChoppiness.value).toBeCloseTo(0.5, 5);
+    expect(shader.vertexShader).toContain("vec3 gerstner(");
     expect(shader.vertexShader).toContain("vWorldPos_wave");
-    expect(shader.vertexShader).toContain("transformed.z += h;");
+    expect(shader.vertexShader).toContain("transformed.z += gdisp.z;");
+    expect(shader.vertexShader).toContain("vFoam");
     expect(shader.fragmentShader).toContain("vWorldPos_wave");
+    expect(shader.fragmentShader).toContain("vFoam");
     expect(shader.fragmentShader).toContain("gl_FragColor.a *= fade;");
+  });
+
+  it("film 模式 waterSize 变更不重建 mesh（scale 驱动，ADR-152 改造 A）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const before = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    const geoBefore = before.geometry;
+    setEnvState({ waterSize: 40 }, { source: "manual" });
+    const after = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    expect(after).toBe(before);
+    expect(after.geometry).toBe(geoBefore);
+    expect(after.scale.x).toBeCloseTo(40, 5);
+    expect(after.scale.y).toBeCloseTo(40, 5);
+    setEnvState({ waterSize: 120 }, { source: "manual" });
+    expect(scene.getObjectByName("ysm-ground-water")).toBe(after);
+    expect(after.scale.x).toBeCloseTo(120, 5);
   });
 
   it("pool 材质 + roundness>0 → uRoundness 取 round，fragment 注入 edge-fade", () => {
@@ -628,6 +649,7 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
       "ground-water-opacity",
       "ground-normal-strength",
       "ground-water-clarity",
+      "ground-water-choppiness",
     ]);
   });
 

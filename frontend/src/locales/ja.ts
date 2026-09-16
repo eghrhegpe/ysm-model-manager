@@ -1223,6 +1223,7 @@ export const ja: Record<string, string> = {
   "preview.groundWaterOpacity": "不透明度",
   "preview.groundWaveSpeed": "波速",
   "preview.groundWaterClarity": "水の透明度",
+  "preview.groundWaterChoppiness": "波の鋭さ",
   "preview.groundPoolHeight": "プール高さ",
   "preview.groundPoolWallThickness": "壁厚",
   "preview.groundPoolWallColor": "壁色",

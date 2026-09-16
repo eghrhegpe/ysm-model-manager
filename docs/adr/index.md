@@ -43,6 +43,7 @@ permalink: /adr/
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-255](./ADR-255-water-gerstner-uniform.md) | 水面波浪 uniform 化 + Gerstner 升级 | ✅ 已采纳 |
 | [ADR-254](./ADR-254-ground-material-preset-explicit-state.md) | 地面材质预设化：材质名兑现配色 + 显式预设状态 | ✅ 已采纳 |
 | [ADR-253](./ADR-253-3d-entry-siblings-unification.md) | 3D 入口统一：路由层 siblings 兜底与详情卡收编 | ✅ 已采纳 |
 | [ADR-252](./ADR-252-ground-canvas-style-material-only.md) | 地面材质第三轴拆分：canvasStyle 收敛为纯材质轴 | ✅ 已采纳 |
@@ -135,7 +136,6 @@ permalink: /adr/
 | [ADR-154](./ADR-154-go-ts-golden.md) | Go-TS 解析层 golden 对拍（双端互锁契约） | ✅ 已采纳 |
 | [ADR-153](./ADR-153-stats-worker-mt-lazy-import.md) | stats.worker WASM 资产条件加载——base / mt 双向动态 import | ✅ 已采纳 |
 | [ADR-152](./ADR-152-gen-stage-concurrency-root.md) | gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收） | ✅ 已采纳 |
-| [ADR-152](./ADR-152-water-gerstner-uniform.md) | 水面波浪 uniform 化 + Gerstner 升级 | ✅ 已采纳 |
 | [ADR-151](./ADR-151-commit-temp-index-concurrency.md) | commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit | ✅ 已采纳 |
 | [ADR-150](./ADR-150-pre-commit-git-add-u-docs-p2-2.md) | pre-commit 兜底收窄：禁用 git add -u docs/ 吞并发漂移 (P2-2 加固) | ✅ 已采纳 |
 | [ADR-149](./ADR-149-modal-ts-dialogs-css.md) | modal.ts 内联样式外提为弹窗类（dialogs.css） | ✅ 已采纳 |
@@ -302,6 +302,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-255 | 水面波浪 uniform 化 + Gerstner 升级 | ✅ 已采纳 | 2026-09-16 |
 | ADR-254 | 地面材质预设化：材质名兑现配色 + 显式预设状态 | ✅ 已采纳 | 2026-09-16 |
 | ADR-253 | 3D 入口统一：路由层 siblings 兜底与详情卡收编 | ✅ 已采纳 | 2026-09-16 |
 | ADR-252 | 地面材质第三轴拆分：canvasStyle 收敛为纯材质轴 | ✅ 已采纳 | 2026-09-16 |
@@ -405,7 +406,6 @@ permalink: /adr/
 | ADR-154 | Go-TS 解析层 golden 对拍（双端互锁契约） | ✅ 已采纳 | 2026-09-02 |
 | ADR-153 | stats.worker WASM 资产条件加载——base / mt 双向动态 import | ✅ 已采纳 | 2026-09-02 |
 | ADR-152 | gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收） | ✅ 已采纳 | 2026-09-01 |
-| ADR-152 | 水面波浪 uniform 化 + Gerstner 升级 | ✅ 已采纳 | 2026-09-16 |
 | ADR-151 | commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit | ✅ 已采纳 | 2026-09-01 |
 | ADR-150 | pre-commit 兜底收窄：禁用 git add -u docs/ 吞并发漂移 (P2-2 加固) | ✅ 已采纳 | 2026-09-01 |
 | ADR-149 | modal.ts 内联样式外提为弹窗类（dialogs.css） | ✅ 已采纳 | 2026-09-01 |

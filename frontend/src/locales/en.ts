@@ -1214,6 +1214,7 @@ export const en: Record<string, string> = {
   "preview.groundWaterOpacity": "Opacity",
   "preview.groundWaveSpeed": "Wave Speed",
   "preview.groundWaterClarity": "Clarity",
+  "preview.groundWaterChoppiness": "Choppiness",
   "preview.groundPoolHeight": "Pool Height",
   "preview.groundPoolWallThickness": "Wall Thickness",
   "preview.groundPoolWallColor": "Wall Color",

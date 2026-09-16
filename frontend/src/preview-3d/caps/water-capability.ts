@@ -73,7 +73,7 @@ export class WaterCapability implements SceneCapability {
         // mode/size 恒重建；池体几何字段仅在 pool 生效时重建（film 下只存参，切 pool 时一并读取）
         const needsRebuild =
           changed.has("waterMode") ||
-          changed.has("waterSize") ||
+          (changed.has("waterSize") && mode === "pool") ||
           ((changed.has("waterPoolHeight") || changed.has("waterPoolWallThickness")) &&
             mode === "pool");
         if (needsRebuild) {
@@ -128,28 +128,64 @@ export class WaterCapability implements SceneCapability {
       const round = Math.max(0, Math.min(0.5, envState.waterPoolRoundness));
       shader.uniforms.uRoundness = { value: opts.forPool ? round : 0 };
       shader.uniforms.uHalfSize = { value: envState.waterSize / 2 };
+      shader.uniforms.uSize = { value: envState.waterSize };
+      shader.uniforms.uChoppiness = { value: envState.waterChoppiness };
       shader.uniforms.uBaseOpacity = { value: mat.opacity };
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
         `#include <common>
          uniform float uTime;
-         uniform float uRoundness;
+         uniform float uSize;
          uniform float uHalfSize;
          uniform float uBaseOpacity;
+         uniform float uRoundness;
+         uniform float uChoppiness;
          varying vec3 vWorldPos_wave;
-         float wave(vec2 p, vec2 dir, float freq, float speed, float amp) {
-           return amp * sin(dot(p, dir) * freq + uTime * speed);
+         varying float vFoam;
+         const int GERSTNER_COUNT = 6;
+         float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+         // Gerstner 余摆线：返回 (水平X, 水平Y, 高度)；out 解析法线(局部) + 碎波泡沫
+         // 方向/相位由 wave index hash 播种，freq*=1.19 amp*=0.82 几何级数；陡度钳制 ΣA·k<0.8 防自交
+         vec3 gerstner(vec2 p, out vec3 nrm, out float foam) {
+           vec3 disp = vec3(0.0);
+           float jxx = 0.0, jzz = 0.0, jxz = 0.0;
+           vec3 n = vec3(0.0);
+           for (int i = 0; i < GERSTNER_COUNT; i++) {
+             float fi = float(i);
+             float ang = hash11(fi + 1.0) * 6.2831853;
+             vec2 dir = vec2(cos(ang), sin(ang));
+             float freq = 0.25 * pow(1.19, fi);
+             float amp = min(0.6 * pow(0.82, fi) / freq, 0.5);
+             float speed = sqrt(9.8 * freq);
+             float wa = freq * amp;
+             float steep = clamp(uChoppiness * 0.8 / (wa * float(GERSTNER_COUNT)), 0.0, 0.8 / (wa * float(GERSTNER_COUNT)));
+             float phase = freq * dot(dir, p) - speed * uTime;
+             float c = cos(phase), s = sin(phase);
+             disp.x += steep * amp * dir.x * c;
+             disp.y += steep * amp * dir.y * c;
+             disp.z += amp * s;
+             n.x += dir.x * wa * c;
+             n.y += dir.y * wa * c;
+             n.z += steep * wa * s;
+             jxx += steep * wa * c;
+             jzz += steep * wa * c;
+             jxz += steep * wa * s;
+           }
+           nrm = normalize(vec3(-n.x, -n.y, 1.0 - n.z));
+           float J = (1.0 + jxx) * (1.0 + jzz) - jxz * jxz;
+           foam = smoothstep(0.0, -0.25, J);
+           return disp;
          }`,
       );
       shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-         vec2 wpos = transformed.xy;
-         float h = 0.0;
-         h += wave(wpos, normalize(vec2(1.0, 0.3)), 0.8, 1.2, 0.08);
-         h += wave(wpos, normalize(vec2(-0.4, 1.0)), 1.1, 0.9, 0.05);
-         h += wave(wpos, normalize(vec2(0.2, -0.8)), 1.6, 1.5, 0.03);
-         transformed.z += h;
+         vec2 wpos = transformed.xy * uSize;
+         vec3 gn; float gf;
+         vec3 gdisp = gerstner(wpos, gn, gf);
+         transformed.x += gdisp.x;
+         transformed.y += gdisp.y;
+         transformed.z += gdisp.z;
          vec4 worldPosWave = modelMatrix * vec4(transformed, 1.0);
          vWorldPos_wave = worldPosWave.xyz;`,
       );
@@ -159,7 +195,8 @@ export class WaterCapability implements SceneCapability {
          uniform float uRoundness;
          uniform float uHalfSize;
          uniform float uBaseOpacity;
-         varying vec3 vWorldPos_wave;`,
+         varying vec3 vWorldPos_wave;
+         varying float vFoam;`,
       );
       shader.fragmentShader = shader.fragmentShader.replace("void main() {", "void main() {\n");
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -172,12 +209,14 @@ export class WaterCapability implements SceneCapability {
            float fade = 1.0 - smoothstep(edge, uHalfSize, md);
            gl_FragColor.a *= fade;
          }
+         // 碎波泡沫：Jacobian<0 处 mix 白沫（不依赖反射，单 pass 廉价）
+         gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.92, 0.95, 0.98), vFoam * 0.55);
          gl_FragColor.a = min(gl_FragColor.a, uBaseOpacity);`,
       );
       // [shader-patch 守卫] 注入检测：5 次无条件 replace 原本零检测（失配全静默）。
       // 现检查关键符号是否落地——vertex 的 wave 函数 / fragment 的 uRoundness 裁剪段，
       // 任一缺失即告警（console 兜底），不再静默降级
-      const vertexOk = shader.vertexShader.includes("float wave(");
+      const vertexOk = shader.vertexShader.includes("vec3 gerstner(");
       const fragOk = shader.fragmentShader.includes("uRoundness");
       if (!vertexOk || !fragOk) {
         reportPatchIssue(
@@ -213,13 +252,14 @@ export class WaterCapability implements SceneCapability {
     return this.water.mode === "film" ? this.water.root : this.water.top;
   }
 
-  /** 构造 film 模式水面 */
+  /** 构造 film 模式水面（单位平面 + scale 驱动尺寸，size 变更不重建几何，ADR-152 改造 A） */
   private createFilmBody(): Extract<WaterRenderBody, { mode: "film" }> {
-    const waterGeo = new THREE.PlaneGeometry(envState.waterSize, envState.waterSize, 32, 32);
+    const waterGeo = new THREE.PlaneGeometry(1, 1, 64, 64);
     const waterMat = this.buildWaveWaterMaterial({ forPool: false });
     const water: WaterTopMesh = new THREE.Mesh(waterGeo, waterMat);
     water.rotation.x = -Math.PI / 2;
     water.position.y = GROUND_LAYER_OFFSETS.waterFilm;
+    water.scale.set(envState.waterSize, envState.waterSize, 1);
     water.name = "ysm-ground-water";
     return { mode: "film", root: water, mat: waterMat };
   }
@@ -232,11 +272,12 @@ export class WaterCapability implements SceneCapability {
     const group = new THREE.Group();
     group.name = "ysm-ground-water";
 
-    const topGeo = new THREE.PlaneGeometry(size, size, 32, 32);
+    const topGeo = new THREE.PlaneGeometry(1, 1, 64, 64);
     const topMat = this.buildWaveWaterMaterial({ forPool: true });
     const top: WaterTopMesh = new THREE.Mesh(topGeo, topMat);
     top.rotation.x = -Math.PI / 2;
     top.position.y = h;
+    top.scale.set(size, size, 1);
     top.name = "ysm-water-top";
     group.add(top);
 
@@ -487,6 +528,33 @@ export class WaterCapability implements SceneCapability {
         }
       }
     }
+    // size：film 改 scale（不重建）；pool 顶同 scale（pool 底/壁走 rebuild 由 needsRebuild 处理）
+    if (changed.has("waterSize")) {
+      if (this.water.mode === "film") {
+        this.water.root.scale.set(s.waterSize, s.waterSize, 1);
+      }
+      const top = this.findTopWater();
+      const topShader = (
+        top?.material as unknown as {
+          userData?: { shader?: { uniforms?: Record<string, { value: number }> } };
+        }
+      )?.userData?.shader;
+      if (topShader?.uniforms?.uSize) {
+        topShader.uniforms.uSize.value = s.waterSize;
+        topShader.uniforms.uHalfSize.value = s.waterSize / 2;
+      }
+    }
+    // choppiness：顶 uChoppiness uniform（film/pool 共用，ADR-152 改造 B）
+    if (changed.has("waterChoppiness")) {
+      const top = this.findTopWater();
+      const topShader = (
+        top?.material as unknown as {
+          userData?: { shader?: { uniforms?: Record<string, { value: number }> } };
+        }
+      )?.userData?.shader;
+      if (topShader?.uniforms?.uChoppiness)
+        topShader.uniforms.uChoppiness.value = s.waterChoppiness;
+    }
     // waterWaveSpeed：无材质应用（仅 update 累加速度读值）
   }
 
@@ -562,6 +630,13 @@ export class WaterCapability implements SceneCapability {
   }
   getWaveSpeed(): number {
     return envState.waterWaveSpeed;
+  }
+
+  setChoppiness(v: number): void {
+    setEnvState({ waterChoppiness: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+  }
+  getChoppiness(): number {
+    return envState.waterChoppiness;
   }
   setClarity(v: number): void {
     setEnvState({ waterClarity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
@@ -655,6 +730,7 @@ export class WaterCapability implements SceneCapability {
       waterNormalStrength: envState.waterNormalStrength,
       waterClarity: envState.waterClarity,
       waterWaveSpeed: envState.waterWaveSpeed,
+      waterChoppiness: envState.waterChoppiness,
       waterPoolHeight: envState.waterPoolHeight,
       waterPoolWallThickness: envState.waterPoolWallThickness,
       waterPoolWallColor: envState.waterPoolWallColor,
@@ -720,6 +796,8 @@ export class WaterCapability implements SceneCapability {
       waterNormalStrength: { number: (v) => this.setNormalStrength(v) },
       waveSpeed: { number: (v) => this.setWaveSpeed(v) },
       waterWaveSpeed: { number: (v) => this.setWaveSpeed(v) },
+      choppiness: { number: (v) => this.setChoppiness(v) },
+      waterChoppiness: { number: (v) => this.setChoppiness(v) },
       clarity: { number: (v) => this.setClarity(v) },
       waterClarity: { number: (v) => this.setClarity(v) },
       poolHeight: { number: (v) => this.setPoolHeight(v) },

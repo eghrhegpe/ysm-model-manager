@@ -142,6 +142,7 @@ export const ENV_STATE_SCHEMA = {
   waterNormalStrength: { type: "number", default: 0.08, group: "water" },
   waterClarity: { type: "number", default: 0.6, group: "water" },
   waterWaveSpeed: { type: "number", default: 1.0, group: "water" },
+  waterChoppiness: { type: "number", default: 0.5, group: "water" },
   waterPoolHeight: { type: "number", default: 0.3, group: "water" },
   waterPoolWallThickness: { type: "number", default: 0.15, group: "water" },
   waterPoolWallColor: { type: "number", default: 0x1a2a44, group: "water" },

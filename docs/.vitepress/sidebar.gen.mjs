@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-255：水面波浪 uniform 化 + Gerstner 升级",
+        "link": "/adr/ADR-255-water-gerstner-uniform"
+      },
+      {
         "text": "ADR-254：地面材质预设化：材质名兑现配色 + 显式预设状态",
         "link": "/adr/ADR-254-ground-material-preset-explicit-state"
       },
@@ -648,10 +652,6 @@ export const autoSidebar = [
       {
         "text": "ADR-152：gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收）",
         "link": "/adr/ADR-152-gen-stage-concurrency-root"
-      },
-      {
-        "text": "ADR-152：水面波浪 uniform 化 + Gerstner 升级",
-        "link": "/adr/ADR-152-water-gerstner-uniform"
       },
       {
         "text": "ADR-151：commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit",

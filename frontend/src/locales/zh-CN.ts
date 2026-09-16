@@ -1193,6 +1193,7 @@ export const zhCN = {
   "preview.groundWaterOpacity": "不透明度",
   "preview.groundWaveSpeed": "波速",
   "preview.groundWaterClarity": "水体通透度",
+  "preview.groundWaterChoppiness": "波峰尖度",
   "preview.groundPoolHeight": "水池高度",
   "preview.groundPoolWallThickness": "池壁厚度",
   "preview.groundPoolWallColor": "池壁颜色",

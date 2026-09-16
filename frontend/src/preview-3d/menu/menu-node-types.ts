@@ -93,7 +93,7 @@ export interface PreviewControlDef {
    *  注入 menu.refresh（refreshOnChange 语义）或广播副作用，renderCap* 无需持有 menu 引用。 */
   onChange?: (v: unknown) => void;
   /** select 配置 */
-  select?: Array<{ value: string; label: string }>;
+  select?: Array<{ value: string; label: string; labelKey?: string }>;
   /** button 配置（kind=button 时生效） */
   button?: {
     /** 按钮展示文案（i18n 键），为空则取 labelKey/fallback */
@@ -179,7 +179,7 @@ export interface PreviewControlSpec {
   max?: number;
   step?: number;
   icon?: IconRef;
-  options?: Array<{ value: string; label: string }>;
+  options?: Array<{ value: string; label: string; labelKey?: string }>;
   /** 衍生控件：状态值 → 控件显示值 */
   get?: (v: unknown) => unknown;
   /** 衍生控件：控件值 → 状态值 */

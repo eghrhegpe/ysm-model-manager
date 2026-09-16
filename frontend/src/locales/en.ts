@@ -1140,6 +1140,8 @@ export const en: Record<string, string> = {
   "preview.reflectorSize": "Floor Size",
   "preview.fog": "Fog",
   "preview.fogMode": "Fog Mode",
+  "preview.fogModeLinear": "Linear",
+  "preview.fogModeExp2": "Exponential",
   "preview.fogNear": "Near",
   "preview.fogFar": "Far",
   "preview.fogDensity": "Density",

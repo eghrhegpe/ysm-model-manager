@@ -5,6 +5,7 @@
 // 结构（对齐旧控件分组）：
 //   - fog-enabled：toggle（能力总开关；env 一级行 headerToggle 语义由消费者抽 master）
 //   - 参数组 folder（preview.fogGroupParams）：color/mode/density/near/far
+//     density 仅 exp2、near/far 仅 linear 可见（visibleWhen 吃 env.fogMode 快照，B 轨）
 
 import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
 import type { FogCapability, FogMode } from "./fog-capability.ts";
@@ -42,8 +43,8 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       labelKey: "preview.fogMode",
       control: {
         options: [
-          { value: "linear", label: "线性" },
-          { value: "exp2", label: "指数" },
+          { value: "linear", label: "线性", labelKey: "preview.fogModeLinear" },
+          { value: "exp2", label: "指数", labelKey: "preview.fogModeExp2" },
         ],
         get: () => cap.getMode(),
         set: (v) => cap.setMode(v as FogMode),
@@ -53,6 +54,8 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       id: "fog-density",
       kind: "slider",
       labelKey: "preview.fogDensity",
+      // 密度仅指数雾（FogExp2）读——线性雾下隐藏，避免拖了没反应的死控件
+      visibleWhen: (s) => s["env.fogMode"] === "exp2",
       control: {
         min: 0.001,
         max: 0.1,
@@ -65,6 +68,8 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       id: "fog-near",
       kind: "slider",
       labelKey: "preview.fogNear",
+      // 近距仅线性雾（THREE.Fog）读——指数雾下隐藏
+      visibleWhen: (s) => s["env.fogMode"] === "linear",
       control: {
         min: 0,
         max: 500,
@@ -78,6 +83,8 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       id: "fog-far",
       kind: "slider",
       labelKey: "preview.fogFar",
+      // 远距仅线性雾读——指数雾下隐藏
+      visibleWhen: (s) => s["env.fogMode"] === "linear",
       control: {
         min: 10,
         max: 2000,

@@ -1125,6 +1125,8 @@ export const zhCN = {
   "preview.reflectorSize": "地面大小",
   "preview.fog": "雾效",
   "preview.fogMode": "雾型",
+  "preview.fogModeLinear": "线性",
+  "preview.fogModeExp2": "指数",
   "preview.fogNear": "近距",
   "preview.fogFar": "远距",
   "preview.fogDensity": "雾密度",

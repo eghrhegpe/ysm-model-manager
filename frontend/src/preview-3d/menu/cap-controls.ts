@@ -41,7 +41,7 @@ export interface CapControlView {
     onCommit?: (v: number) => void;
   };
   /** select 专属 */
-  select?: Array<{ value: string; label: string }>;
+  select?: Array<{ value: string; label: string; labelKey?: string }>;
 }
 
 /**
@@ -320,7 +320,7 @@ export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
   for (const opt of v.select ?? []) {
     const o = document.createElement("option");
     o.value = opt.value;
-    o.textContent = opt.label;
+    o.textContent = opt.labelKey ? tOf(opt.labelKey) : opt.label;
     sel.appendChild(o);
   }
   sel.value = String(v.getValue());

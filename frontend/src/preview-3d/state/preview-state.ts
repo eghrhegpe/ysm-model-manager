@@ -178,6 +178,16 @@ function wireframeModeCap(): WireframeModeCap | undefined {
   return lazyCap<WireframeModeCap>("renderMode", "getWireframe", "setWireframe");
 }
 
+/** [doc:adr-126-p5-c] 雾模式（读/写 mode）——供 env.fogMode 惰性绑定，
+ *  服务雾控件 near/far × density 按 mode 互斥显隐（visibleWhen B 轨消费）。 */
+interface FogModeCap {
+  getMode(): string;
+  setMode(v: string): void;
+}
+function fogModeCap(): FogModeCap | undefined {
+  return lazyCap<FogModeCap>("fog", "getMode", "setMode");
+}
+
 /** 路径 → 读写绑定表（模块级常量；cap 解析全部惰性，不持有实例）
  *  类型用窄联合（`typeof KNOWN_PATHS[number]`）而非 `PreviewStatePath` 全集——
  *  保证"加新路径"必须先扩 `KNOWN_PATHS` + 填 binding，类型层守住"调用方永不传未落地项" */
@@ -251,6 +261,13 @@ const bindings: PathBindingMap = {
     get: () => groundMatCap()?.getOverlayStyle() ?? "none",
     set: (v) => groundMatCap()?.setOverlayStyle(String(v)),
     available: () => groundMatCap() !== undefined,
+  },
+  // [doc:adr-126-p5-c] 探针：雾模式上浮——fog 控件 near/far（linear 专属）
+  // 与 density（exp2 专属）按 mode 互斥显隐，谓词只吃快照不摸 cap 实例。
+  "env.fogMode": {
+    get: () => fogModeCap()?.getMode() ?? "linear",
+    set: (v) => fogModeCap()?.setMode(v === "exp2" ? "exp2" : "linear"),
+    available: () => fogModeCap() !== undefined,
   },
   // [doc:adr-126-p4-d] 会话模式：mount 期写一次（setPreviewUiMode），dock 级 visibleWhen
   // 谓词写 `(s) => s["ui.mode"] !== "self"` 与旧 hideInSelfMode 语义等价

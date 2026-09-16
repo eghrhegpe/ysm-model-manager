@@ -46,6 +46,8 @@ export const KNOWN_PATHS = [
   // [doc:adr-126-p4-d] 环境能力可用性（旧 requiresEnvironment 语义）：sky/ground cap 任一
   // 挂载即 true，经 ADR-168 lookup 注入点惰性解析——caps 后创建由 refreshDock 补回。
   "env.skyGroundCap",
+  // 探针：雾模式上浮（fog 的 near/far × density 按 mode 互斥显隐，visibleWhen B 轨消费）。
+  "env.fogMode",
 ] as const;
 
 /**
@@ -78,6 +80,7 @@ export type PathValue = {
   "env.groundOverlay": string;
   "ui.mode": "shared" | "self";
   "env.skyGroundCap": boolean;
+  "env.fogMode": string;
 };
 
 /** 写入侧输入域：精确类型 ∪ 控件基元（binding 归一后落精确类型） */

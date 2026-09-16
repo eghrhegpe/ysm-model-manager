@@ -1151,6 +1151,8 @@ export const ja: Record<string, string> = {
   "preview.reflectorSize": "床サイズ",
   "preview.fog": "霧",
   "preview.fogMode": "霧タイプ",
+  "preview.fogModeLinear": "線形",
+  "preview.fogModeExp2": "指数",
   "preview.fogNear": "近距離",
   "preview.fogFar": "遠距離",
   "preview.fogDensity": "密度",

@@ -103,3 +103,44 @@ export function tiledFbm(
   }
   return sum / norm;
 }
+
+/* ===== 非周期 2D 噪声（宏观/混合 mask 用；刻意非周期 → 大图自身不再重复）===== */
+
+function hashSeed(x: number, y: number, seed: number): number {
+  let h =
+    (Math.imul(x | 0, 374761393) ^
+      Math.imul(y | 0, 668265263) ^
+      Math.imul(seed | 0, 2654435761)) >>>
+    0;
+  h = (h ^ (h >>> 13)) >>> 0;
+  h = Math.imul(h, 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+
+/** 2D 值噪声（非周期，[0,1]）。seed 改变整张随机场。 */
+export function valueNoise2(x: number, y: number, seed = 0): number {
+  const xi = Math.floor(x),
+    yi = Math.floor(y);
+  const xf = x - xi,
+    yf = y - yi;
+  const a = hashSeed(xi, yi, seed);
+  const b = hashSeed(xi + 1, yi, seed);
+  const c = hashSeed(xi, yi + 1, seed);
+  const d = hashSeed(xi + 1, yi + 1, seed);
+  const u = smoothStep(xf),
+    v = smoothStep(yf);
+  return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + d * u * v;
+}
+
+/** 多层 2D 值噪声（非周期 fbm，[0,1]）；octave 越多越细碎。 */
+export function fbm2(x: number, y: number, octaves = 4, seed = 0): number {
+  let amp = 0.5;
+  let sum = 0;
+  let norm = 0;
+  for (let i = 0; i < octaves; i++) {
+    sum += amp * valueNoise2(x * 2 ** i, y * 2 ** i, seed + i);
+    norm += amp;
+    amp *= 0.5;
+  }
+  return sum / norm;
+}

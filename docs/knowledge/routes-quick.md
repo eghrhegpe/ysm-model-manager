@@ -460,6 +460,12 @@
 |----------|--------|----------|----------|
 | "大理石没有脉络像团块" → domain warping（marble.ts 的 sin(x + k·fbm)） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | - | - |
 
+## 🎯 噪声生成
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| "平铺后每隔约两米出现同一个明星特征" → 无缝但有规律重复，用 anti-repeat.ts（macro/dual/stochastic 三选一或组合） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | - | - |
+
 ## 🎯 install: queue / linkMode / launcher
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -897,6 +903,9 @@
 | 改像素算法却不更新 ground-surface-spec.test.ts（确定性/非均匀/跨材质差异用例） | - | - |
 | 误以为 surface-pixels 管 spec/key —— 那些仍在 ground-surface-spec.ts | - | - |
 | 在生成器内对坐标做 2D 旋转来施加 angleRad | - | 破坏 4D 环面周期，平铺露接缝。angleRad 必须走 tiledFbm 的「环面相位偏移」（任意角度无缝）；整体旋转归 GPU texture.rotation |
+| 把当成「无重复」——**4D 只治接缝，不治重复**。平铺后「每两米出现同一明星特征」是「无缝但有规律重复」，须用 `anti-repeat.ts` 的 macro/dual/stochastic 治理 | `4D 环面无缝` | - |
+| anti-repeat 的输入 tile **必须本身无缝**（周期=S）；非无缝输入它不补接缝，只治重复。本项目的程序化材质（tiledFbm）与已平铺无缝的 PNG 满足 | - | - |
+| macro 的  必须退化为原平铺（factor=1 逐像素相等）——改 macro 时此回归用例（anti-repeat.test.ts）会锁死 | `macroStrength=0` | - |
 | 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
 | LocaleHost 未注入（装配层漏 setLocaleHost）→ loadLocale 告警一次并跳过（fail-open 不挂启动链），host 就绪后可重试自愈 | - | - |
 | 并发 setLang 竞态：快请求后到覆盖旧写入 | - | _langReqGen 代际计数丢弃过期写入 |

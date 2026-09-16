@@ -6,11 +6,23 @@ category: rendering
 status: active
 source_files:
   - frontend/src/preview-3d/caps/surface-pixels/index.ts
+  - frontend/src/preview-3d/caps/surface-pixels/anti-repeat.ts
 auto_fields:
   symbols_with_lines:
+    - AntiRepeatDualOptions
+    - AntiRepeatOptions
+    - AntiRepeatStrategy
+    - derandomize
+    - derandomizeDual
     - generatePlainPixels
+    - makeDecorrelatedVariant
+    - maxSeamDiscontinuity
+    - repetitionScore
     - SURFACE_PIXEL_GENERATORS
+    - textureRepeatForDerepeat
+    - tilePlain
 tests:
+  - frontend/src/preview-3d/caps/surface-pixels/anti-repeat.test.ts
   - frontend/src/test-utils/index.test.ts
   - frontend/src/views/app-nav/index.test.ts
   - frontend/src/views/app-sync-manager/index.branches.test.ts
@@ -26,6 +38,9 @@ pitfalls:
   - 改像素算法却不更新 ground-surface-spec.test.ts（确定性/非均匀/跨材质差异用例）
   - 误以为 surface-pixels 管 spec/key —— 那些仍在 ground-surface-spec.ts
   - 在生成器内对坐标做 2D 旋转来施加 angleRad → 破坏 4D 环面周期，平铺露接缝。angleRad 必须走 tiledFbm 的「环面相位偏移」（任意角度无缝）；整体旋转归 GPU texture.rotation
+  - 把「4D 环面无缝」当成「无重复」——**4D 只治接缝，不治重复**。平铺后「每两米出现同一明星特征」是「无缝但有规律重复」，须用 `anti-repeat.ts` 的 macro/dual/stochastic 治理
+  - anti-repeat 的输入 tile **必须本身无缝**（周期=S）；非无缝输入它不补接缝，只治重复。本项目的程序化材质（tiledFbm）与已平铺无缝的 PNG 满足
+  - macro 的 `macroStrength=0` 必须退化为原平铺（factor=1 逐像素相等）——改 macro 时此回归用例（anti-repeat.test.ts）会锁死
 quick_groups:
   - 地面材质
   - 程序化贴图
@@ -33,10 +48,14 @@ quick_groups:
 quick_intents:
   - "草为什么是圆斑不像纤维" → 各向异性坐标拉伸（grass.ts 的 ANISO_X）
   - "大理石没有脉络像团块" → domain warping（marble.ts 的 sin(x + k·fbm)）
+  - "平铺后每隔约两米出现同一个明星特征" → 无缝但有规律重复，用 anti-repeat.ts（macro/dual/stochastic 三选一或组合）
 quick_risk_lines:
   - 改生成器算法前确认 surfaceSpecKey 不含像素字段（否则触发无谓重建）
 invariant_anchors:
   - frontend/src/preview-3d/caps/surface-pixels/index.ts|SURFACE_PIXEL_GENERATORS
+  - frontend/src/preview-3d/caps/surface-pixels/anti-repeat.ts|derandomize
+  - frontend/src/preview-3d/caps/surface-pixels/anti-repeat.ts|derandomizeDual
+  - frontend/src/preview-3d/caps/surface-pixels/anti-repeat.ts|repetitionScore
 ---
 
 # 程序化地面贴图生成 surface-pixels
@@ -73,7 +92,24 @@ invariant_anchors:
 
 - **草（各向异性）**：游戏行业多不用平铺贴图做草（InstancedMesh + 贝塞尔草叶 + 风噪声）；本场景是地面 albedo 平铺贴图，对应**各向异性坐标拉伸**（`ANISO_X = 0.35` 压缩 x 轴频率）或 **Gabor 噪声**（定向微细节）。
 - **大理石（脉络）**：全网共识 `sin(x + k·fbm(p))`——正弦带被 fbm 湍流掰弯成脉络（domain warping，Inigo Quilez）。团块感源于缺这步。
-- **平铺无缝（已落地）**：生成的 `DataTexture` 用 **4D 环面噪声** `(cos,sin,cos,sin)→4D noise` 采样，u=0 与 u=1 落回同点 → 严格周期 1 → 无接缝。验证见 `ground-surface-spec.test.ts` Suite 9（`tiledFbm(u,v) ≡ tiledFbm(u+1,v)`）。「无缝 ≠ 无重复」的重复感仍需双变体混合/随机化破（**仍留待增强**）。
+- **平铺无缝（已落地）**：生成的 `DataTexture` 用 **4D 环面噪声** `(cos,sin,cos,sin)→4D noise` 采样，u=0 与 u=1 落回同点 → 严格周期 1 → 无接缝。验证见 `ground-surface-spec.test.ts` Suite 9（`tiledFbm(u,v) ≡ tiledFbm(u+1,v)`）。**注意：4D 只治接缝，不治重复**——「无缝 ≠ 无重复」的重复感由 `anti-repeat.ts` 治理（见下）。
+
+## 反重复（anti-repeat）：治「无缝但有规律重复」
+
+输入：一张**本身无缝**的 `S×S` RGBA 贴图（程序化材质 = tiledFbm 产物；或已平铺无缝的 PNG）。
+输出：`outSize = tilesPerAxis * S` 的 `outSize²` RGBA，**仍无缝**（可继续 RepeatWrapping），但内部 `tilesPerAxis²` 子块彼此去相关 → 可见重复周期被放大 `tilesPerAxis` 倍。部署时纹理 `repeat` 须由基线 `R` 调为 `R / tilesPerAxis`（`textureRepeatForDerepeat`，保持每米密度不变）。
+
+三解法（可单用或组合）：
+
+| 解法 | 输入 | 机制 | 适用场景 |
+|---|---|---|---|
+| **macro** | 1 张 tile | 整张大图叠加低频明暗场（非周期 fbm2），相邻子块整体色调不同 | 最快、零额外生成；底层已够丰富时首选；只改明暗不 relocate 特征 |
+| **dual** | 2 张不同变体 tile（A/B） | 低频 mask 把 A/B 软聚成「A 簇/B 簇」混合 | 自然材质两种真实形态可信混交（草/泥/沙）；最自然；2× 生成成本 |
+| **stochastic** | 1 张 tile | 每子块随机朝向/翻转 + 边界羽化回 base 保无缝 | 英雄面、想要「看似随机铺就」；最强去相关 |
+
+- 量化：`repetitionScore` = 相邻子块平均归一化 MAD（0=完全重复，越大去重复越强）；`maxSeamDiscontinuity` 验证未引入新缝。单测见 `anti-repeat.test.ts`（14 用例）。
+- 单张 tile 想造「近似变体 B」可用 `makeDecorrelatedVariant`（旋转+通道微偏移），但**最佳效果请传两份真实不同种子的程序化结果**。
+- 固有残差缝：4D 环面噪声在固定分辨率下，最高频 octave 在边界像素间有亚像素相位差（S=512 实际可忽略）；anti-repeat 契约是「不引入新缝」（输出缝 ≤ 源缝 max），不消除该固有残差。
 
 ## 相关
 

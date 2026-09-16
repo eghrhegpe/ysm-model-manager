@@ -650,6 +650,10 @@ export const autoSidebar = [
         "link": "/adr/ADR-152-gen-stage-concurrency-root"
       },
       {
+        "text": "ADR-152：水面波浪 uniform 化 + Gerstner 升级",
+        "link": "/adr/ADR-152-water-gerstner-uniform"
+      },
+      {
         "text": "ADR-151：commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit",
         "link": "/adr/ADR-151-commit-temp-index-concurrency"
       },

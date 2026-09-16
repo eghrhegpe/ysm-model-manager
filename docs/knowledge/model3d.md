@@ -28,6 +28,9 @@ auto_fields:
     - AlphaIndex
     - AmbientLightParams
     - AngleShot
+    - AntiRepeatDualOptions
+    - AntiRepeatOptions
+    - AntiRepeatStrategy
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
     - applyModelDefaults
@@ -202,6 +205,8 @@ auto_fields:
     - DEFAULT_POSTPROC_PARAMS
     - DEFAULT_TD_KEYMAP
     - deferred
+    - derandomize
+    - derandomizeDual
     - deriveDefaultEnvState
     - detectFormat
     - detectFormatCtx
@@ -247,6 +252,7 @@ auto_fields:
     - evaluateGpuLoad
     - extractIKChainFromTree
     - extractLegChains
+    - fbm2
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
     - fbxBonesToBoneNodes
@@ -418,6 +424,7 @@ auto_fields:
     - luminanceHistogram
     - makeBonePanelRenderer
     - makeBonesPanelItem
+    - makeDecorrelatedVariant
     - makeFbxAdapter
     - makeGpuSampler
     - makeLitematicAdapter
@@ -446,6 +453,7 @@ auto_fields:
     - MAX_KTX2_PIXELS
     - MAX_MODELS
     - MAX_PIXEL_RATIO_KEY
+    - maxSeamDiscontinuity
     - MENU_BTN_CSS
     - MENU_CARD_CSS
     - MENU_DIVIDER_CSS
@@ -628,6 +636,7 @@ auto_fields:
     - RenderMultiAngleOptions
     - renderPreviewPanel
     - RenderVrmBonePanel
+    - repetitionScore
     - reportPatchIssue
     - RepresentativeSnapshot
     - resetEncoderState
@@ -783,9 +792,11 @@ auto_fields:
     - TextureCacheImpl
     - TextureDecoder
     - textureRepeat
+    - textureRepeatForDerepeat
     - TextureTooLargeError
     - TILE_WORLD_SIZE
     - tiledFbm
+    - tilePlain
     - toggleBone
     - toggleBoneVisible
     - toggleMaterialVisible
@@ -803,6 +814,7 @@ auto_fields:
     - unregisterModelRoot
     - unregisterSchema
     - UpdateableScene
+    - valueNoise2
     - valueNoise4D
     - Vec3
     - VMD_FOOT_IK_CANDIDATES

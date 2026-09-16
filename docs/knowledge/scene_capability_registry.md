@@ -11,6 +11,9 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AmbientLightParams
+    - AntiRepeatDualOptions
+    - AntiRepeatOptions
+    - AntiRepeatStrategy
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
     - applyOverlayMaterial
@@ -36,6 +39,8 @@ auto_fields:
     - DEFAULT_GROUND_SURFACE_PARAMS
     - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
+    - derandomize
+    - derandomizeDual
     - DirectionalLightParams
     - drawEnvEquirect
     - effectiveParamsOf
@@ -44,6 +49,7 @@ auto_fields:
     - EnvironmentParams
     - EnvPreset
     - EnvPresetId
+    - fbm2
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
@@ -92,7 +98,9 @@ auto_fields:
     - lightDirToPosition
     - LightParams
     - luminanceHistogram
+    - makeDecorrelatedVariant
     - MAX_MODELS
+    - maxSeamDiscontinuity
     - migrateGroundMatSource
     - ModelEntry
     - oneOf
@@ -111,6 +119,7 @@ auto_fields:
     - ReflectionMode
     - ReflectorCapability
     - RenderModeCapability
+    - repetitionScore
     - restoreFields
     - restoreLightParams
     - restoreState
@@ -133,9 +142,12 @@ auto_fields:
     - SurfacePixelInput
     - surfaceSpecKey
     - textureRepeat
+    - textureRepeatForDerepeat
     - TILE_WORLD_SIZE
     - tiledFbm
+    - tilePlain
     - TONE_MAPPING_KEYS
+    - valueNoise2
     - valueNoise4D
     - VolumetricCone
     - VolumetricParams

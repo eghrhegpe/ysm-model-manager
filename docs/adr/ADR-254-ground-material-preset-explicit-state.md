@@ -204,4 +204,24 @@ registerEnvStateMiddleware((patch) => {
 - **验证**：`ground-surface-spec.test.ts` 新增 **Suite 9** 直接断言 `tiledFbm(u,v) ≡ tiledFbm(u+1,v) / (u,v+1)`（周期 1），覆盖多频率 / 多 `angleRad`；全量 42 用例绿。
 
 **未做（仍留待）**：双变体混合 / 随机化破「无缝 ≠ 无重复」的重复感——属锦上添花，不影响当前正确性。
+
+### 6.3 落地：反重复（anti-repeat）治「无缝但有规律重复」
+
+§6.2 的 4D 环面只治**接缝**，不治**重复**——平铺后同一张 tile 每重复一次，「明星特征」就每隔约两米出现一次，眼睛会锁定它。新增 `surface-pixels/anti-repeat.ts` 实现三种行业解法，把「单 tile」合成为「内部已去重复的大图」：
+
+- **输入**：一张**本身无缝**的 `S×S` RGBA（`tiledFbm` 程序化产物，或已平铺无缝的 PNG）。**非无缝输入不补接缝，只治重复。**
+- **输出**：`outSize = tilesPerAxis * S` 的 `outSize²` RGBA，**仍无缝**（周期 = outSize，可继续 `RepeatWrapping`），但内部 `tilesPerAxis²` 子块彼此去相关 → 可见重复周期放大 `tilesPerAxis` 倍。
+- **部署**：`DataTexture` + `RepeatWrapping`；为保持每米细节密度不变，纹理 `repeat` 由基线 `R` 调为 `R / tilesPerAxis`（`textureRepeatForDerepeat`）。
+
+| 解法 | 输入 | 机制 | 适用 |
+|---|---|---|---|
+| macro | 1 tile | 整张大图叠加非周期低频明暗场（fbm2） | 最快、零额外生成；底层已够丰富时首选；只改明暗 |
+| dual | 2 不同变体 tile | 低频 mask 把 A/B 软聚成簇混合 | 自然材质两种真实形态可信混交；最自然；2× 生成 |
+| stochastic | 1 tile | 每子块随机朝向/翻转 + 边界羽化回 base 保无缝 | 英雄面、想「看似随机铺就」；最强去相关 |
+
+- **量化验证**：`repetitionScore`（相邻子块平均归一化 MAD，0=完全重复）证明去重复生效；`maxSeamDiscontinuity` 证明未引入新缝（输出缝 ≤ 源缝 max）。单测 `anti-repeat.test.ts` **14 用例全绿**（含 determinism、strength=0 退化为原平铺、保无缝、dual 用草×大理石真实双变体）。
+- **固有残差缝（已知，非 bug）**：4D 环面噪声在固定分辨率下，最高频 octave 在边界像素间有亚像素相位差（S=512 实际可忽略）；anti-repeat 契约是「不引入新缝」，不消除该固有残差。
+- **集成点（待接）**：`ground-capability.ts makeGeneratedTexture` 生成 tile 后，按 `derandomize` 策略合成大图并 `texture.repeat = textureRepeatForDerepeat(...)`；该文件当前为用户 WIP，未改。新增 `structural.derandomize` 字段 + `surfaceSpecKey` 纳入即触发重建。
+
+**状态**：代码 + 单测 + 知识卡（`ground_texture_gen.md` §反重复）已落；运行时集成待 `ground-capability.ts` WIP 清后焊接。
 <!-- 文件名: ground-material-preset-explicit-state.md → 实际文件 ADR-254-ground-material-preset-explicit-state.md -->

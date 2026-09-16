@@ -17,6 +17,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { initDefaultPagePrefs } from "./default-page.ts";
 import { initKeymap } from "./keymap.ts";
 import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-cards.ts";
 import type { SettingsCfg } from "./store.ts";
@@ -389,6 +390,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   initUiPrefs(root);
   initWorkerPrefs(root);
+  initDefaultPagePrefs(root);
   initKeymap(root);
 
   await stgBindLangSwitch(root, toastError);

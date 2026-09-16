@@ -126,6 +126,7 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <select id="set-card-density">
       <option value="compact">compact</option><option value="spacious">spacious</option>
     </select>
+    <input type="checkbox" id="set-remember-page">
     <select id="set-default-page">
       <option value="repository">repository</option><option value="instances">instances</option>
     </select>
@@ -417,6 +418,36 @@ describe("initSettings — 主题自动切换（theme.ts）", () => {
     // theme:change 已随 P2 收敛删除（无订阅）；改断言 applyTheme 经 document.body 类生效
     expect([...document.body.classList].some((c) => c.startsWith("theme-"))).toBe(true);
     expect(localStorage.getItem("theme-auto")).toBe("system");
+  });
+});
+
+describe("initSettings — 启动默认页（default-page.ts 接线）", () => {
+  it("未配置 → 记忆开关勾选、固定页下拉框禁用（initSettings 已接线）", async () => {
+    localStorage.removeItem("ui-default-page");
+    const { root } = makeRoot();
+    await initSettings(root);
+    expect((root.getElementById("set-remember-page") as HTMLInputElement).checked).toBe(true);
+    expect((root.getElementById("set-default-page") as HTMLSelectElement).disabled).toBe(true);
+  });
+
+  it("已配置 → 固定模式下回显该页且下拉框可用", async () => {
+    localStorage.setItem("ui-default-page", "instances");
+    const { root } = makeRoot();
+    await initSettings(root);
+    expect((root.getElementById("set-remember-page") as HTMLInputElement).checked).toBe(false);
+    const sel = root.getElementById("set-default-page") as HTMLSelectElement;
+    expect(sel.disabled).toBe(false);
+    expect(sel.value).toBe("instances");
+  });
+
+  it("勾选记忆开关 → 清除 ui-default-page（nav_page 恢复可达）", async () => {
+    localStorage.setItem("ui-default-page", "instances");
+    const { root } = makeRoot();
+    await initSettings(root);
+    const input = root.getElementById("set-remember-page") as HTMLInputElement;
+    input.checked = true;
+    input.dispatchEvent(new Event("change"));
+    expect(localStorage.getItem("ui-default-page")).toBeNull();
   });
 });
 

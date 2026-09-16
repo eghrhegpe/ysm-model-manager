@@ -5,7 +5,7 @@ import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { stgCard } from "./stg-card.ts";
+import { stgCard, stgGroup, stgRow } from "./stg-card.ts";
 import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -250,29 +250,47 @@ function renderStgFontFamily(): string {
 }
 
 function renderStgAnimDefault(): string {
-  return `<div class="section-title stg-title stg-sub-title">${UI_ICONS.performance} ${t("settings.animation.title")}</div>
-
-<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:180ms">
-  <div class="setting-row">
-    <label for="set-animations" class="label">${UI_ICONS.sparkle} ${t("settings.animation.enable")}</label>
-    <label class="stg-label" style="gap:8px">
+  const animGroup = stgGroup(
+    stgRow({
+      icon: UI_ICONS.sparkle,
+      label: t("settings.animation.enable"),
+      forId: "set-animations",
+      control: `<label class="stg-label" style="gap:8px">
       <input type="checkbox" id="set-animations" checked> ${t("settings.animation.enableCheck")}
-    </label>
-  </div>
-  <div class="stg-hint">${t("settings.animation.hint")}</div>
-</div>
+    </label>`,
+    }),
+    { delayMs: 180, hint: t("settings.animation.hint") },
+  );
 
-<div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:210ms">
-  <div class="setting-row">
-    <label for="set-default-page" class="label">${UI_ICONS.home} ${t("settings.defaultPage")}</label>
-    <select id="set-default-page" class="stg-select">
+  // 启动默认页：记忆开关（checkbox）+ 固定页下拉框二态联动（见 default-page.ts）
+  const defaultPageGroup = stgGroup(
+    stgRow({
+      icon: UI_ICONS.home,
+      label: t("settings.defaultPage.remember"),
+      forId: "set-remember-page",
+      control: `<label class="stg-label" style="gap:8px">
+      <input type="checkbox" id="set-remember-page" checked> ${t("settings.defaultPage.rememberCheck")}
+    </label>`,
+    }) +
+      "\n" +
+      stgRow({
+        icon: UI_ICONS.package,
+        label: t("settings.defaultPage.fixed"),
+        forId: "set-default-page",
+        control: `<select id="set-default-page" class="stg-select">
       <option value="instances">${UI_ICONS.game} ${t("settings.defaultPage.instances")}</option>
       <option value="workshop">${UI_ICONS.appearance} ${t("settings.defaultPage.workshop")}</option>
       <option value="repository">${UI_ICONS.package} ${t("settings.defaultPage.repository")}</option>
-    </select>
-  </div>
-  <div class="stg-hint">${t("settings.defaultPageHint")}</div>
-</div>`;
+    </select>`,
+      }),
+    { delayMs: 210, hint: t("settings.defaultPageHint") },
+  );
+
+  return `<div class="section-title stg-title stg-sub-title">${UI_ICONS.performance} ${t("settings.animation.title")}</div>
+
+${animGroup}
+
+${defaultPageGroup}`;
 }
 
 function renderStgPreview3d(): string {

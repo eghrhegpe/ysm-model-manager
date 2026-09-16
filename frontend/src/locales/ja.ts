@@ -199,7 +199,9 @@ export const ja: Record<string, string> = {
   "settings.ui.densityUpdated": "✅ カード密度を更新しました",
   "settings.ui.animOn": "✅ アニメーションを有効にしました",
   "settings.ui.animOff": "✅ アニメーションを無効にしました",
-  "settings.ui.defaultPageSaved": "✅ デフォルトページを保存しました",
+  "settings.ui.defaultPageSaved": "✅ 固定ページを保存しました",
+  "settings.ui.rememberPageOn": "✅ 前回のページを復元する設定に変更しました",
+  "settings.ui.rememberPageOff": "✅ 起動ページを固定しました",
   "settings.worker.fbxOn": "✅ FBX worker を有効にしました",
   "settings.worker.fbxOff": "✅ FBX worker を無効にしました",
   "settings.worker.mmdOn": "✅ MMD PMX worker を有効にしました",
@@ -248,10 +250,14 @@ export const ja: Record<string, string> = {
   "settings.animation.hint":
     "オフにするとレイアウト遷移のみ残し、ホバーやフェードを無効化します。低スペック端末向け。",
   "settings.defaultPage": "起動時の既定ページ",
+  "settings.defaultPage.remember": "前回のページを復元",
+  "settings.defaultPage.rememberCheck": "前回開いていたページを記憶して復元する",
+  "settings.defaultPage.fixed": "起動ページを固定",
   "settings.defaultPage.instances": "統合パック管理",
   "settings.defaultPage.workshop": "クリエイターチャンネル",
   "settings.defaultPage.repository": "モデルリポジトリ",
-  "settings.defaultPageHint": "起動時に自動で開くページ。",
+  "settings.defaultPageHint":
+    "チェックすると前回開いていたページを記憶して復元します。外すと下で選んだページを常に開きます（記憶しません）。",
   "settings.preview3d.title": "3D プレビュー操作",
   "settings.preview3d.camSpeed": "カメラ移動速度",
   "settings.preview3d.camSpeedHint":

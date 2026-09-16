@@ -60,3 +60,45 @@ export function stgCard(icon: string, title: string, body: string, opts: StgCard
   const styleAttr = styleParts.length ? ` style="${styleParts.join(";")}"` : "";
   return `<div class="stg-card"${idAttr}${styleAttr}>${stgCardHeader(icon, title, header)}<div class="stg-card-body">${body}</div></div>`;
 }
+
+/** 单个 `.setting-row` 的内容：左侧标签 + 右侧控件（两端对齐由 CSS 类自持）。 */
+export interface StgRowContent {
+  /** 图标（调用方传 UI_ICONS.*，本模块零依赖）。 */
+  icon: string;
+  /** 标签文案，已 t() 过。 */
+  label: string;
+  /** 标签关联的控件 id（for 属性）。 */
+  forId: string;
+  /** 右侧控件 HTML（select / checkbox 等）。 */
+  control: string;
+}
+
+/** 构建单个 `.setting-row`：图标+标签合并为一个 label，控件作为右侧项。 */
+export function stgRow(row: StgRowContent): string {
+  return `<div class="setting-row">\n    <label for="${row.forId}" class="label">${row.icon} ${row.label}</label>\n    ${row.control}\n  </div>`;
+}
+
+/** `.settings-group` 壳选项（无 hdr，与 .stg-card 是两种壳，勿混用）。 */
+export interface StgGroupOpts {
+  /** 进入动画延迟（ms）——.settings-group 的行内 animation-delay。 */
+  delayMs?: number;
+  /** 底部提示行文案（已 t() 过）；省略则不渲染 `.stg-hint`。 */
+  hint?: string;
+  /** 组下外边距（px），默认 12（与既有手写值一致）。 */
+  marginBottom?: number;
+}
+
+/**
+ * 构建 `.settings-group` 壳（基础设置页的行组，**无卡片头**）：
+ * 包住若干 {@link stgRow} 与可选的 `.stg-hint`。
+ *
+ * 与 {@link stgCard} 的区别：`.settings-group` 是 `padding:0 16px` 的行容器（行自身带
+ * `background:var(--surf)`），`.stg-card` 是带 hdr 的整块卡片。两者视觉层级不同，勿互换。
+ */
+export function stgGroup(rows: string, opts: StgGroupOpts = {}): string {
+  const { delayMs, hint, marginBottom = 12 } = opts;
+  const anim = "animation:card-in var(--tr-enter) both";
+  const delay = delayMs !== undefined ? `;animation-delay:${delayMs}ms` : "";
+  const hintHtml = hint ? `\n  <div class="stg-hint">${hint}</div>` : "";
+  return `<div class="settings-group" style="margin-bottom:${marginBottom}px;${anim}${delay}">\n${rows}${hintHtml}\n</div>`;
+}

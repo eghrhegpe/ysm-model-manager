@@ -98,11 +98,9 @@ export function initUiPrefs(root: ShadowRoot): void {
   if (cardDensitySel) cardDensitySel.value = safeGet("ui-card-density") || "compact";
   const animationsInput = root.querySelector<HTMLInputElement>("#set-animations");
   if (animationsInput) animationsInput.checked = safeGet("ui-animations") !== "off";
-  // 启动默认页面：显示「实际生效」的值——有显式配置用配置，否则回退
-  // resolveInitialPage 的默认结果（仓库页）。旧写法 || "instances" 会显示
-  // 一个从未生效的死默认值，与真实启动页不符（死设置遗留 bug）。
-  const defaultPageSel = root.querySelector<HTMLSelectElement>("#set-default-page");
-  if (defaultPageSel) defaultPageSel.value = safeGet("ui-default-page") || "repository";
+  // 启动默认页面（记忆开关 + 固定页下拉框二态回填）已收编至 default-page.ts：
+  // initDefaultPagePrefs——曾在此处裸写 `safeGet(...) || "repository"`，
+  // 该 `||` 会把空串当成仓库页显示，与其真实启动行为（落回 nav_page）不符。
 
   applyUIPref();
 
@@ -151,13 +149,5 @@ export function initUiPrefs(root: ShadowRoot): void {
     });
   });
 
-  // 默认页面变更
-  root.getElementById("set-default-page")?.addEventListener("change", (e) => {
-    safeSet("ui-default-page", (e.target as HTMLSelectElement).value);
-    bus.emit("toast:show", {
-      msg: t("settings.ui.defaultPageSaved"),
-      duration: TOAST_DURATION_MS,
-      type: "success",
-    });
-  });
+  // 默认页面变更已收编至 default-page.ts:initDefaultPagePrefs（与记忆开关联动，单源）
 }

@@ -15,6 +15,7 @@
 #     两段各有独立逃生键（解耦，避免 --no-verify 连带绕过）：
 #       ① YSM_SKIP_ANDROID=1（Android lite 档）；② YSM_SKIP_BIOME_LINES=1（biome 行级闸）。
 #     2026-09 新增硬阻断③：设计令牌「只减不增」闸（新增设计债 → exit 1），
+#       判定域 = 本次提交文件（--staged，非磁盘全树——否则并行会话未提交的新债会误伤）；
 #       逃生键 YSM_SKIP_DESIGN_TOKENS=1（独立解耦）。
 #   - 其余 gen/格式/i18n/路径卫生段 失败仅提示，不阻断 commit
 #   - 幂等：文档已同步时无 diff，git add docs/ 无副作用
@@ -394,16 +395,25 @@ fi
 # 策略：--baseline 只拦「本次新增」违规（存量条数见 scripts/baseline/
 #   design-tokens-baseline.json 的 count 字段，刻意不在此写死——数字会漂移），
 #   不阻塞提交——新代码不得再欠设计债。
+# ⚠️ --staged 不可省（2026-09-15 修）：判定域 = **本次提交的文件**，不是磁盘全树。
+#   无 scope 时脚本 walk(frontend/src)+walk(frontend/css) 全树扫磁盘，并行会话未提交的
+#   改动同样进视野——baseline 键含行号，同文件任意行位移都会被判成「新增」。实证：一次
+#   不含任何前端文件的 docs 提交，被并行会话改动的 tpl-settings.ts 21 条行号位移幻影
+#   exit 1 阻断；加 --staged 后同场景 exit 0（域内 0 文件）。
+#   钩子无需知道临时索引怎么裁剪：git 已把 GIT_INDEX_FILE（临时索引 / pathspec 提交的
+#   next-index）交给钩子，脚本内 `git diff --cached` 天然只含本次提交文件。
+#   另：含未暂存编辑的文件（磁盘内容 ≠ 提交内容）由脚本跳过并告警——判定对象必须等于提交对象。
 # 防 --no-verify 绕过：与 biome 行级闸同构，挂在钩子里而非仅 pre-push；
 #   另有第二重防线 = gate-config.ts 的 static 清单（pre-push / CI --static）。
-# 清债后收缩基线：node scripts/check-design-tokens.ts --update-baseline
+# 清债后收缩基线：node scripts/check-design-tokens.ts --update-baseline（只许全库，带裁剪被拒）
 # 逃生阀：YSM_SKIP_DESIGN_TOKENS=1（与另两段解耦，命中即留痕）
 if [ "${YSM_SKIP_DESIGN_TOKENS:-0}" = "1" ] && command -v node >/dev/null 2>&1; then
   node scripts/_lib/hook-audit.ts write "${PARENT_OID:-}" YSM_SKIP_DESIGN_TOKENS 2>/dev/null || true
 fi
 if [ "${YSM_SKIP_DESIGN_TOKENS:-0}" != "1" ] && command -v node >/dev/null 2>&1; then
-  if ! node scripts/check-design-tokens.ts --baseline 2>&1; then
+  if ! node scripts/check-design-tokens.ts --baseline --staged 2>&1; then
     echo "[pre-commit] ❌ 本次提交新增设计令牌违规，已阻断（见上）。存量债（基线内）不受影响；"
+    echo "            本闸只判本次提交的文件（--staged），他人未提交改动不背锅；"
     echo "            自动令牌化：node scripts/check-design-tokens.ts --fix（值等价，仅动有精确令牌对应的）"
     echo "            或 YSM_SKIP_DESIGN_TOKENS=1 逃生（命中即留痕 SKIPPED_PRECOMMIT，可审计）"
     exit 1

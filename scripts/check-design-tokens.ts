@@ -44,6 +44,10 @@
  *   node scripts/check-design-tokens.ts --json          # JSON（CI / 子代理消费）
  *   node scripts/check-design-tokens.ts --files <换行分隔路径列表>  # 增量裁剪
  *   node scripts/check-design-tokens.ts --changed       # 相对默认分支自动解析变更
+ *   node scripts/check-design-tokens.ts --baseline --staged  # 判定域 = 本次提交文件（pre-commit；
+ *                                                       空域合法：本次提交不含本域文件）
+ *   node scripts/check-design-tokens.ts --baseline --staged --fix  # 注意：--fix 改的是磁盘内容，
+ *                                                       修完需重新 git add（钩子从不传 --fix）
  *   node scripts/check-design-tokens.ts --top 20        # 热点文件榜条数（默认 15）
  *   node scripts/check-design-tokens.ts --kind emoji-icon   # 只看某类
  *   node scripts/check-design-tokens.ts --json --list       # JSON 含全量明细（收债用）
@@ -52,11 +56,16 @@
  *   node scripts/check-design-tokens.ts --update-baseline   # 刷新基线（清理后收缩）
  *
  * 退出码：0 = 无 ERROR（或仅 WARN）；--strict 且有 ERROR → 1；
- *          --baseline 有新增 → 1；基线缺失/损坏 → 2（fail-closed）；判定失败 → 2。
+ *          --baseline 有新增 → 1；基线缺失/损坏 → 2（fail-closed）；判定失败 → 2；
+ *          --staged 的 git 解析失败 / 未暂存守卫失效 / --update-baseline 带裁剪 → 2（同为 fail-closed）。
  *
  * 逃生阀：YSM_SKIP_DESIGN_TOKENS=1。
  *
- * 门禁接线（2026-09）：pre-commit 挂 `--baseline`（只拦新增，存量放行）；
+ * 门禁接线（2026-09）：pre-commit 挂 `--baseline --staged`（只拦新增，存量放行）；
+ *   ⚠️ `--staged` 不可省——无 scope 时判定域是**磁盘全树**，并行会话未提交的新债会误伤
+ *   本次提交（实测：一次不含前端文件的 docs 提交被 tpl-settings.ts 的 21 条行号位移幻影
+ *   exit 1 阻断；加上 --staged 后同场景 exit 0）。钩子无需知道临时索引如何裁剪：git 已把
+ *   GIT_INDEX_FILE 交给钩子，`git diff --cached` 天然只含本次提交文件。
  *   2026-09 补第二重防线——`_lib/gate-config.ts` 的 FRONTEND/ALL_STATIC_TOOLS 各挂一条
  *   （pre-push + CI --static），堵住「`git commit --no-verify` 一条命令绕过」的单点。
  *   「只减不增」策略——存量债不阻塞提交，但新代码不得再欠；
@@ -69,7 +78,13 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { inChangedScope, resolveChangedScope } from "./_lib/changed-scope.ts";
+import {
+  inChangedScope,
+  partitionByUnstaged,
+  resolveChangedScope,
+  resolveStagedScope,
+  resolveUnstagedFiles,
+} from "./_lib/changed-scope.ts";
 import {
   checkLayoutDocDrift,
   type DesignViolation,
@@ -88,7 +103,7 @@ if (process.env.YSM_SKIP_DESIGN_TOKENS === "1") {
 }
 
 const args = parseArgs(process.argv.slice(2), {
-  bools: ["strict", "json", "changed", "docs", "list", "fix", "baseline", "update-baseline"],
+  bools: ["strict", "json", "changed", "staged", "docs", "list", "fix", "baseline", "update-baseline"],
   strings: ["files", "kind", "top"],
 });
 const STRICT = Boolean(args.strict);
@@ -98,6 +113,7 @@ const LIST_ALL = Boolean(args.list);
 const FIX_MODE = Boolean(args.fix);
 const BASELINE_MODE = Boolean(args.baseline) || Boolean(args["update-baseline"]);
 const UPDATE_BASELINE = Boolean(args["update-baseline"]);
+const STAGED_MODE = Boolean(args.staged);
 const ONLY_KIND = (args.kind as string | null) || null;
 const TOP_N = Number(args.top ?? 15) || 15;
 
@@ -125,14 +141,43 @@ if (args.unknown.length > 0) {
   jsonExit(2, { _summary: { ok: false, error: `未知参数: ${args.unknown.join(", ")}` } });
 }
 
-// ── 扫描域解析：--files（门禁）→ --changed（本地）→ 全库 ──
+// ── 扫描域解析：--files（门禁显式清单）> --staged（本次提交，pre-commit）>
+//    --changed（本地）> 全库 ──
 // 复用 _lib/changed-scope 的 fail-closed 语义（解析失败不得静默退回全库，
 // 否则「本次变更」会被存量债淹没，同 gate-parse 第 4 条纪律）。
-const { scope, error: scopeError } = resolveChangedScope(args.files, Boolean(args.changed));
+// ⚠️ --staged 的空域是**合法**的（本次提交不含本域文件）——与 --changed 的「空即失败」
+// 刻意不同，见 changed-scope.ts|parseNameOnlySet 的对照注释。
+const { scope, error: scopeError } =
+  STAGED_MODE && !args.files
+    ? resolveStagedScope()
+    : resolveChangedScope(args.files, Boolean(args.changed));
 if (scopeError) {
   jsonExit(2, { _summary: { ok: false, error: scopeError } });
 }
-const scopeFilter = args.files ? "files" : args.changed ? "changed" : "all";
+const scopeFilter = args.files
+  ? "files"
+  : STAGED_MODE
+    ? "staged"
+    : args.changed
+      ? "changed"
+      : "all";
+
+// ── --update-baseline 只许全库刷新（防「重建基线洗债」）──
+// 必须早于扫描与「空域早退」：基线是**全库**事实源，带任何裁剪写入的都是局部快照——此后
+// --baseline 会把未入基线的存量债全部判成「新增」（既毁基线也毁门禁：把绕过的口子伪装成绿灯）。
+// 放在此处的第二个理由：空域时脚本会提前 exit 0，闸若建在其后则「空域 + 裁剪」根本不被拦。
+if (UPDATE_BASELINE && (scopeFilter !== "all" || ONLY_KIND)) {
+  const narrowed = [
+    scopeFilter !== "all" ? `scope=${scopeFilter}` : "",
+    ONLY_KIND ? `--kind ${ONLY_KIND}` : "",
+  ].filter(Boolean);
+  const msg =
+    `--update-baseline 只允许全库刷新（当前被裁剪：${narrowed.join(" / ")}）——` +
+    "局部快照会让未入基线的存量债全部变「新增」。请去掉裁剪参数重跑。";
+  if (JSON_OUT) jsonExit(2, { _summary: { ok: false, error: msg } });
+  console.error(`❌ ${msg}`);
+  process.exit(2);
+}
 
 // ── 令牌表：从 variables.css 解析（供 suggestToken 校验令牌真实存在）──
 const VARIABLES_CSS = path.join(ROOT, "frontend/css/variables.css");
@@ -194,7 +239,7 @@ if (DOCS_ONLY) {
 // ── 扫描范围：前端生产 TS + 文档层 CSS（排除测试 / 构建产物 / vendor）──
 const FRONTEND_SRC = path.join(ROOT, "frontend/src");
 const FRONTEND_CSS = path.join(ROOT, "frontend/css");
-const files = (
+let files = (
   [
     ...(walk(FRONTEND_SRC, {
       exts: [".ts"],
@@ -219,9 +264,55 @@ const files = (
   .map((abs) => ({ abs, rel: relPosix(abs) }))
   .filter((f) => inChangedScope(f.rel, scope));
 
+// ── 未暂存编辑守卫（--staged 专用）：磁盘内容 ≠ 提交内容则跳过该文件 ──
+// 扫描器读磁盘（下方 readText(f.abs)），而闸必须为「本次提交」负责：已 staged 又续改的文件
+// （git status 的 MM）或并行会话改了同一文件时，判定对象与提交对象错位——行号位移会被
+// --baseline 判成「新增」（误伤），内容差异又可能漏判。与 check-biome-lines.ts 的 filterClean
+// 守卫同款（那里逐文件 git diff --quiet；此处一次 --name-only 拿全集，省 N 次 git 冷启）。
+let unstagedSkipped: string[] = [];
+// 绑定 `scopeFilter === "staged"` 而非 STAGED_MODE：`--files`（pre-push / CI 显式清单）优先时
+// 判的是「已提交内容」，工作区脏是常态而非错位，不得因此弱化推送门禁。
+if (scopeFilter === "staged") {
+  const unstaged = resolveUnstagedFiles();
+  if (unstaged === null) {
+    // fail-closed：守卫失效不得静默放行（否则「磁盘≠提交」的错位判定无人知晓）
+    const msg = "git diff --name-only 解析失败——无法确认「磁盘内容 = 提交内容」，--staged 守卫失效";
+    if (JSON_OUT) jsonExit(2, { _summary: { ok: false, error: msg } });
+    console.error(`❌ ${msg}`);
+    process.exit(2);
+  }
+  const { clean, skipped } = partitionByUnstaged(
+    files.map((f) => f.rel),
+    unstaged,
+  );
+  unstagedSkipped = skipped;
+  if (skipped.length > 0) {
+    const keep = new Set(clean);
+    files = files.filter((f) => keep.has(f.rel));
+    for (const f of skipped) {
+      // stderr：JSON 模式下 stdout 必须纯净（消费方直接 parse）
+      console.error(`  ⚠️ ${f} 含未暂存编辑（磁盘内容 ≠ 本次提交内容），跳过设计令牌判定`);
+    }
+  }
+}
+
 if (files.length === 0) {
-  log("[check-design-tokens] 扫描域内无文件（--files/--changed 裁剪后为空）——无违规可报 ✅");
-  jsonExit(0, { _summary: { ok: true, files: 0, scope: scopeFilter, reason: "empty-scope" } });
+  if (unstagedSkipped.length > 0) {
+    // 全被守卫跳过 ≠ 无违规：显式说明「本闸本次未判定」，避免被读成绿灯
+    console.error(
+      `[check-design-tokens] ⚠️  本次提交的 ${unstagedSkipped.length} 个本域文件均含未暂存编辑，已全部跳过——本闸本次未判定`,
+    );
+  }
+  log("[check-design-tokens] 扫描域内无文件（--files/--staged/--changed 裁剪后为空）——无违规可报 ✅");
+  jsonExit(0, {
+    _summary: {
+      ok: true,
+      files: 0,
+      scope: scopeFilter,
+      reason: "empty-scope",
+      unstagedSkipped: unstagedSkipped.length,
+    },
+  });
 }
 
 // ── 逐文件逐行扫描 ──
@@ -383,10 +474,14 @@ if (BASELINE_MODE) {
       _summary: {
         ok: added.length === 0,
         mode: "baseline",
+        // 判定域自证（门禁域透明度）：'staged' = 本次提交文件（pre-commit）；'all' = 磁盘全树（--all/CI）。
+        scope: scopeFilter,
         current: currentSet.size,
         baseline: baseSet.size,
         added: added.length,
         gone: gone.length,
+        // --staged 守卫跳过数（磁盘≠提交）：>0 说明部分文件本次未判定，供消费方审计
+        unstagedSkipped: unstagedSkipped.length,
       },
       added,
       gone,

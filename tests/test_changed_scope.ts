@@ -10,6 +10,12 @@
  *   - resolveChangedScope：三路优先级（--files 优先 → --changed → 全库）与
  *     **fail-closed 不变量**——`--files` 空列表必须报 error（不许静默退回全库），
  *     `--changed` 自动解析失败时必须报 error（同 gate-parse 第 4 条纪律）。
+ *   - parseNameOnlySet / resolveStagedScope（2026-09-15 补）：`--staged` = 本次提交文件集。
+ *     空输出 = **合法空集**（与 parseGitNameOnly 的 null 语义刻意相反：此处 git 的 rc 与空
+ *     stdout 可区分，只有 rc≠0 才 fail-closed）——钩子继承 GIT_INDEX_FILE，故 pre-commit
+ *     内 `git diff --cached` 天然只含本次提交文件，临时索引裁剪自动生效。
+ *   - partitionByUnstaged / resolveUnstagedFiles：含未暂存编辑（磁盘 ≠ 提交内容）的文件
+ *     必须被门禁跳过——扫描器读磁盘，而行号位移会被 --baseline 判成「新增」（误伤根治点）。
  *
  * resolveLocalChanged 依赖本机 git 状态（CI 浅克隆 / 无远端时不可用），故只断言
  * 「形状」与「不变量」，不断言具体文件集——避免把环境差异固化成红。
@@ -25,8 +31,12 @@ import {
   inChangedScope,
   parseChangedFiles,
   parseGitNameOnly,
+  parseNameOnlySet,
+  partitionByUnstaged,
   resolveChangedScope,
   resolveLocalChanged,
+  resolveStagedScope,
+  resolveUnstagedFiles,
 } from "../scripts/_lib/changed-scope.ts";
 
 // ─── 1) parseChangedFiles：换行列表 → 集合 ────────────────
@@ -134,4 +144,55 @@ import {
   );
 }
 
-console.log("✅ test_changed_scope.ts 全部通过（7 组契约断言）");
+// ─── 8) parseNameOnlySet：空输出 → 空集（与 parseGitNameOnly 的 null 语义刻意相反）──
+// `--staged` 的空结果只有一个含义：本次提交不含该域文件 = 合法空域。若仿 parseGitNameOnly
+// 返回 null，调用方会跌回「全库」分支——存量债 + 并行会话未提交的脏文件全部涌入，正是本闸
+// 2026-09-15 前的实际病症（一次不含前端文件的 docs 提交被 21 条行号位移幻影 exit 1 阻断）。
+{
+  assert.equal(parseNameOnlySet("").size, 0, "空串 → 空集（不得为 null）");
+  assert.equal(parseNameOnlySet("\n\n  \n").size, 0, "全空白行 → 空集");
+  assert.deepEqual(
+    [...parseNameOnlySet("frontend/src/a.ts\nfrontend/css/b.css\n")],
+    ["frontend/src/a.ts", "frontend/css/b.css"],
+    "尾换行不产生空项，顺序保持",
+  );
+  assert.ok(parseNameOnlySet("frontend\\src\\a.ts").has("frontend/src/a.ts"), "反斜杠归一化");
+}
+
+// ─── 9) partitionByUnstaged：磁盘≠提交的守卫二分（纯函数）──
+{
+  const files = ["a.ts", "b.ts", "c.ts"];
+  const { clean, skipped } = partitionByUnstaged(files, new Set(["b.ts"]));
+  assert.deepEqual(clean, ["a.ts", "c.ts"], "干净文件保序保留");
+  assert.deepEqual(skipped, ["b.ts"], "含未暂存编辑的文件被跳过");
+
+  const none = partitionByUnstaged(files, new Set());
+  assert.deepEqual(none.clean, files, "无未暂存编辑 → 全 clean");
+  assert.deepEqual(none.skipped, [], "无未暂存编辑 → 无 skipped");
+
+  const all = partitionByUnstaged(files, new Set(files));
+  assert.deepEqual(all.clean, [], "全脏 → clean 空（调用方须据此报「本闸未判定」，不得静默绿灯）");
+  assert.equal(all.skipped.length, 3, "全脏 → 3 条 skipped");
+
+  const w = partitionByUnstaged(["frontend\\src\\a.ts"], new Set(["frontend/src/a.ts"]));
+  assert.deepEqual(w.skipped, ["frontend\\src\\a.ts"], "反斜杠输入与正斜杠集合可配对");
+  assert.deepEqual(partitionByUnstaged([], new Set(["a.ts"])), { clean: [], skipped: [] }, "空输入 → 双空");
+}
+
+// ─── 10) resolveStagedScope / resolveUnstagedFiles：形状与 fail-closed 边界 ──
+// 依赖本机 git 状态，故只断言不变量（空域语义由第 8 组在纯函数侧钉死）。
+{
+  const st = resolveStagedScope();
+  if (st.error === undefined) {
+    assert.ok(st.scope instanceof Set, "--staged 无 error 时 scope 恒为 Set（空集 = 合法空域，不得为 null）");
+  }
+  assert.ok(
+    st.error === undefined || (st.scope === null && typeof st.error === "string"),
+    "--staged 要么给 scope、要么给 error（git 失败才 fail-closed）",
+  );
+
+  const un = resolveUnstagedFiles();
+  assert.ok(un === null || un instanceof Set, "unstaged 只能是 Set 或 null（null = git 失败，调用方自决）");
+}
+
+console.log("✅ test_changed_scope.ts 全部通过（10 组契约断言）");

@@ -46,6 +46,7 @@ pitfalls:
   - snap_docs 使用 $ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在
   - 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误
   - drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报
+  - 无 scope 的 `--baseline` 扫磁盘全树 → 判决域 ≠ 提交域（baseline 键含行号，同文件任何行位移都算「新增」）→ pre-commit 必须 `--staged`（2026-09-15 实证：不含前端文件的 docs 提交被并行会话的 21 条幻影 exit 1 阻断）
   - 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件
 status: active
 ---
@@ -54,7 +55,7 @@ status: active
 
 ## 概览
 
-`.githooks/pre-commit` 在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17 P2-2 修复并发隔离）。gen 与格式化段**非阻断**；但钩子另含**三段硬阻断（exit 1）**：`check-biome-lines`（行级新增违规）、`check-android-unavailable`（平台黑名单）、`check-design-tokens --baseline`（设计令牌只减不增）——它们刻意挂 pre-commit 而非仅 pre-push，目的是防 `--no-verify` 单点绕过；全量门禁仍留给 pre-push。
+`.githooks/pre-commit` 在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17 P2-2 修复并发隔离）。gen 与格式化段**非阻断**；但钩子另含**三段硬阻断（exit 1）**：`check-biome-lines`（行级新增违规）、`check-android-unavailable`（平台黑名单）、`check-design-tokens --baseline --staged`（设计令牌只减不增；判决域 = 本次提交文件，非磁盘全树）——它们刻意挂 pre-commit 而非仅 pre-push，目的是防 `--no-verify` 单点绕过；全量门禁仍留给 pre-push。
 
 ## 核心职责
 
@@ -65,6 +66,7 @@ status: active
 - 智能 stage：改源码自动 stage 同名 `.test.ts`（防误 stage）
 - gofmt 自动修复 staged go 文件（失败仅提示）
 - biome 自动修复 staged frontend TS/TSX（2026-09 接线，镜像 gofmt 范式）：只处理 `git diff --cached` 的 `frontend/*.ts/tsx`，跳过含未暂存编辑的文件（防混拼半成品），`check-biome.ts --write --files` 原地修复后重新 stage；失败仅提示不阻断（pre-push 只读校验兜底）。逃生阀 `YSM_SKIP_BIOME_FIX=1`。曾长期只有 pre-push 只读门禁、与 gofmt 不对称（头注释 "—write pre-commit 用" 空挂），2026-09 补齐
+- 设计令牌硬阻断③的判决域（2026-09-15 修）：`check-design-tokens --baseline --staged` 只判**本次提交的文件**——`git commit` 把裁剪后的索引（`commit-temp-index.ts` 的临时索引 / pathspec 提交的 next-index）经 `GIT_INDEX_FILE` 交给钩子，故脚本内 `git diff --cached` 天然只含本次提交，钩子无需知道调用方怎么裁剪；`--files`（pre-push 推送集）仍优先。含未暂存编辑的文件（磁盘 ≠ 提交）跳过并告警，`--update-baseline` 带任何裁剪被 fail-closed 拒绝（防重建基线洗债）
 - 并发配对生成物清单（ADR-232 D1，2026-09-13）：`PARENT_OID=$(git rev-parse HEAD)` 早于 stage 段定义（`set -u` 下必须 `:-` 守卫引用）；gen 产物清单写 `.git/ysm_gen_staged_<PARENT_OID12>`（`_lib/gen-staged-pair.ts` 配对，替代旧版 last-writer-wins 单文件 `ysm_gen_staged`，并发会话父 oid 不同天然互不覆盖）；`/tmp/ysm_gen_to_stage_$$.txt` 加 `$$` 进程后缀防互踩
 - 逃生留痕（ADR-232 D2，2026-09-13）：`YSM_SKIP_BIOME_LINES=1` / `YSM_SKIP_ANDROID=1` 命中时调用 `_lib/hook-audit.ts` 写 `.git/gate-audit.log` 的 `SKIPPED_PRECOMMIT` 行（钩子仍执行→可留痕，区别于 `--no-verify` 整钩不跑的零痕迹绕过）；文案纠正：旧「绕过不留审计」误导已改为「命中即留痕可审计」
 
@@ -72,7 +74,7 @@ status: active
 
 - **禁止 `git add -u docs/` 兜底**：会吞他人未提交 docs 半成品，违反 P2-2。快照缺失宁可跳过也不吞（ADR-150）
 - gen 产物同步幂等：已同步时无 diff，`git add` 无副作用
-- 任何 gen 失败仅提示，不阻断 commit；**但三段硬阻断闸是例外**（biome-lines / android / design-tokens），失败 exit 1——它们与 gen 段解耦，各有独立逃生阀
+- 任何 gen 失败仅提示，不阻断 commit；**但三段硬阻断闸是例外**（biome-lines / android / design-tokens），失败 exit 1——它们与 gen 段解耦，各有独立逃生阀；**硬阻断闸的判决域必须等于「本次提交」**（design-tokens 走 `--staged`，含未暂存编辑的文件跳过）——扫磁盘全树会把并行会话未提交的新债与行号位移算到本提交头上（2026-09-15 实证）
 - 逃生阀：`YSM_SKIP_GEN=1 git commit` 或 `git commit --no-verify`；`YSM_SKIP_BIOME_FIX=1` 跳过 biome 自动修复；`YSM_SKIP_BIOME_LINES=1` / `YSM_SKIP_ANDROID=1` / `YSM_SKIP_DESIGN_TOKENS=1` 命中即留痕 SKIPPED_PRECOMMIT（ADR-232 D2）
 - **PARENT_OID 必须先于 stage 段定义 + `set -u` 下引用须 `:-` 守卫**（`PARENT_OID=` 赋值处；引用处统一 `"${PARENT_OID:-}"`）——2026-09-13 实证：定义晚于 stage 段 + 无守卫 → `git commit` 触发 `PARENT_OID: unbound variable` 中止
 

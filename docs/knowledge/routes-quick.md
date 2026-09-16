@@ -979,6 +979,7 @@
 | snap_docs 使用 $ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在 | - | - |
 | 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误 | - | - |
 | drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报 | - | - |
+| 无 scope 的  扫磁盘全树 | `--baseline` | 判决域 ≠ 提交域（baseline 键含行号，同文件任何行位移都算「新增」）→ pre-commit 必须 `--staged`（2026-09-15 实证：不含前端文件的 docs 提交被并行会话的 21 条幻影 exit 1 阻断） |
 | 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件 | - | - |
 | 跨类型追加走错适配器 | `frontend/src/preview-3d/menu/core.ts` | 必须经 switchExternal → openModel3DFullscreen(cooperate) |
 | 异步回调写入已卸载 DOM | `skeleton.ts` | 每个 await 后检查 container.isConnected |

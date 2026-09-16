@@ -9,8 +9,11 @@
  *
  *   --files <换行分隔的相对路径>   门禁 / CI 侧显式传入（pre-push-gate 同款）
  *   --changed                     本地便利：相对默认分支基线自动解析变更文件
+ *   --staged                      pre-commit 门禁：本次提交（暂存区）文件——git 已把裁剪后的
+ *                                 索引（临时索引 / pathspec 提交）经 GIT_INDEX_FILE 交给钩子，
+ *                                 故钩子自取 `git diff --cached` 即精确，无需知道调用方如何裁剪
  *
- * 语义要点（四条都是踩过的坑）：
+ * 语义要点（五条都是踩过的坑）：
  *   1. 路径口径 = 相对仓库根、正斜杠（与 pre-push-gate 的 --files 一致）；非 ASCII 路径
  *      靠 `-c core.quotepath=false` 拿原始 UTF-8，避免八进制转义后匹配不上。
  *   2. 重命名/删除的文件不会出现在扫描树里——静默忽略，**不报错**（--files 传的是
@@ -21,7 +24,11 @@
  *      与「扫描通过」同形。空 diff 为何也算失败（2026-09-15 修）：CI 在 push 之后跑，
  *      origin/main 已推进到本次提交 → merge-base = HEAD → diff 必空；若把空结果当
  *      「合法空域」，三扫描器会扫 0 文件恒绿——正是本纪律要防的假绿形态。
- *
+ *      「合法空域」，三扫描器会扫 0 文件恒绿——正是本纪律要防的假绿形态。
+ *   5. `--staged` 的空结果与 `--changed` **刻意不同**：git 的 rc 与空 stdout 可区分，故
+ *      「空」只有一个含义（本次提交不含该域文件 = 合法空域），rc≠0 才是失败。若照抄第 4 条
+ *      （空即 fail-closed），docs-only 提交会被整棵磁盘树的存量债阻断；若反过来把 `--changed`
+ *      的空当合法，则假绿。两者只能各自守住自己的边界，见 parseNameOnlySet 的对照注释。
  * 依赖：node:child_process（自建 git()）+ ./to-posix.ts + ./scan-files.ts（ROOT）。
  *
  * 用法：
@@ -29,6 +36,9 @@
  *   const { scope, error } = resolveChangedScope(raw.files, raw.changed);
  *   if (error) failClosed(error);
  *   const scanned = files.filter((f) => inChangedScope(relPosix(f), scope));
+ *   // pre-commit 钩子（本次提交）
+ *   const st = resolveStagedScope();          // 空集 = 合法空域；error 仅 git 失败
+ *   const dirty = resolveUnstagedFiles();     // 磁盘 ≠ 提交（未暂存编辑）→ 调用方跳过该文件
  *
  * 退出码：本模块无独立 CLI（被三个扫描器 import）。
  */
@@ -91,6 +101,25 @@ export function parseGitNameOnly(stdout: string): string[] | null {
 }
 
 /**
+ * git `--name-only` 的 stdout → **相对路径集合**，空输出 = 空集（合法）。
+ *
+ * 与 parseGitNameOnly（→ 空即 null）刻意不同，服务对象不同：
+ *   - parseGitNameOnly 服务 `--changed`：空结果**不可区分**「确实无变更」与「基线已等于
+ *     HEAD」，故必须 null 由调用方 fail-closed（否则空 scope = 扫 0 文件假绿）。
+ *   - 本函数服务 `--staged`：git 的**退出码**已经给出失败信号（rc≠0 由调用方转 error），
+ *     故空 stdout 只剩一个含义：本次提交不含该域文件 = 合法空域。
+ * 纯函数（契约测试锁定）。
+ */
+export function parseNameOnlySet(stdout: string): Set<string> {
+  return new Set(
+    stdout
+      .split("\n")
+      .map((f) => toPosix(f.trim()))
+      .filter(Boolean),
+  );
+}
+
+/**
  * `--changed` 本地解析：相对默认分支合并基线的变更文件（含已提交 + 工作区/暂存改动）。
  *
  * 口径 = `git merge-base HEAD <默认分支>` 后 `git diff --name-only <基线>`——即
@@ -122,6 +151,49 @@ export interface ChangedScopeResult {
   error?: string;
 }
 
+/**
+ * `--staged` 门禁解析：本次提交（暂存区）的文件集。
+ *
+ * 为什么钩子侧拿到的就是「本次提交」：`git commit` 在 GIT_INDEX_FILE 注入（scripts/_lib/
+ * commit-temp-index.ts 的临时索引白名单提交）与 pathspec 提交（`git commit -- <paths>`，
+ * git 内部建 next-index 临时索引）两种场景下，**都把临时索引经 GIT_INDEX_FILE 交给 pre-commit
+ * 钩子**，故钩子内 `git diff --cached` 天然只含本次提交的文件——钩子无需知道调用方怎么裁剪索引。
+ *
+ * fail-closed 边界：git 失败（rc≠0）→ error，调用方必须 exit 2；空输出 → 合法空集
+ * （本次提交不含本域文件），**不得**当失败（与 --changed 的唯一差别，见 parseNameOnlySet）。
+ * 返回的 scope 永不为 null（空集也是合法域）。
+ */
+export function resolveStagedScope(): ChangedScopeResult {
+  const r = git(["diff", "--cached", "--name-only", "--diff-filter=ACMR"]);
+  if (r.rc !== 0) {
+    return { scope: null, error: `git diff --cached 解析失败（rc=${r.rc}）：${r.out || "无输出"}` };
+  }
+  return { scope: parseNameOnlySet(r.out) };
+}
+
+/**
+ * 工作区相对暂存区的改动文件集（= 含「未暂存编辑」的文件）。git 失败 → null（调用方自决）。
+ *
+ * 用途：门禁必须对「提交内容」负责，而扫描器读的是**磁盘**内容——已 staged 又续改的文件
+ * （`git status` 的 `MM`）或并行会话改了同一文件时，判定对象与提交对象错位：行号位移会被
+ * `--baseline` 判成「新增」（误伤），内容差异又可能漏判。该集合即「磁盘 ≠ 提交」的文件，
+ * 调用方据此跳过并告警（同 check-biome-lines.ts 的 filterClean 守卫）。
+ */
+export function resolveUnstagedFiles(): Set<string> | null {
+  const r = git(["diff", "--name-only"]);
+  return r.rc === 0 ? parseNameOnlySet(r.out) : null;
+}
+
+/** 按「是否含未暂存编辑」二分，保持输入顺序（纯函数，契约测试锁定）。 */
+export function partitionByUnstaged(
+  files: readonly string[],
+  unstaged: ReadonlySet<string>,
+): { clean: string[]; skipped: string[] } {
+  const clean: string[] = [];
+  const skipped: string[] = [];
+  for (const f of files) (unstaged.has(toPosix(f)) ? skipped : clean).push(f);
+  return { clean, skipped };
+}
 /**
  * 三个扫描器的统一入口：`--files`（显式，优先）→ `--changed`（git 自解析）→ 全库。
  *

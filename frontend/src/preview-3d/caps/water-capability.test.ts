@@ -271,7 +271,7 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     expect(shader.fragmentShader).toContain("gl_FragColor.a *= fade;");
   });
 
-  it("film 模式 waterSize 变更不重建 mesh（scale 驱动，ADR-152 改造 A）", () => {
+  it("film 模式 waterSize 变更不重建 mesh（scale 驱动，ADR-255 改造 A）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
@@ -480,6 +480,7 @@ describe("WaterCapability — loadState 多分支", () => {
     cap.setPoolWallThickness(0.33);
     cap.setPoolWallColor(0x112233);
     cap.setPoolRoundness(0.28);
+    cap.setChoppiness(0.62);
     cap.saveState();
     resetEnvState();
     const cap2 = new WaterCapability({ scene });
@@ -496,6 +497,7 @@ describe("WaterCapability — loadState 多分支", () => {
     expect(cap2.getPoolWallThickness()).toBeCloseTo(0.33, 5);
     expect(cap2.getPoolWallColor()).toBe(0x112233);
     expect(cap2.getPoolRoundness()).toBeCloseTo(0.28, 5);
+    expect(cap2.getChoppiness()).toBeCloseTo(0.62, 5);
   });
 });
 
@@ -560,6 +562,22 @@ describe("WaterCapability — 法线贴图缓存", () => {
     expect(cap["getNormalMap"]()).toBe(t2);
   });
 
+  it("film 模式 size 变更走 env 回调不重建几何、但法线贴图按新 size 重取（审核 6a25755c1 P1-2 回归）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("film");
+    const topBefore = cap["findTopWater"]() as THREE.Mesh;
+    const n1 = (topBefore.material as THREE.MeshPhysicalMaterial).normalMap as THREE.DataTexture | null;
+    // 走 registerEnvCallback 的 film size 分支（applyChangedParams，非重建路径）
+    setEnvState({ waterSize: 60 }, { source: "manual" });
+    const topAfter = cap["findTopWater"]() as THREE.Mesh;
+    expect(topAfter, "film size 变更不得重建 mesh（scale 驱动）").toBe(topBefore);
+    const n2 = (topAfter.material as THREE.MeshPhysicalMaterial).normalMap as THREE.DataTexture | null;
+    expect(n2, "法线缓存须按 size 重生成").not.toBe(n1);
+    expect(n2, "且新贴图已挂到顶面材质").not.toBeNull();
+  });
+
   it("dispose 释放缓存贴图（释放责任从 disposeWater 挪到 dispose），且幂等", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
@@ -579,7 +597,7 @@ describe("WaterCapability — 法线贴图缓存", () => {
 describe("WaterCapability — 菜单控件全联动", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("12 项控件 setValue/getValue 双向读写联动", () => {
+  it("13 项控件 setValue/getValue 双向读写联动", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
@@ -618,6 +636,8 @@ describe("WaterCapability — 菜单控件全联动", () => {
     expect(by("ground-pool-roundness").control!.get!(undefined)).toBeCloseTo(0.2, 5);
     by("ground-wave-speed").control!.set!(1.8);
     expect(by("ground-wave-speed").control!.get!(undefined)).toBeCloseTo(1.8, 5);
+    by("ground-water-choppiness").control!.set!(0.42);
+    expect(by("ground-water-choppiness").control!.get!(undefined)).toBeCloseTo(0.42, 5);
   });
 });
 

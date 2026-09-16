@@ -144,12 +144,14 @@ export class WaterCapability implements SceneCapability {
          varying float vFoam;
          const int GERSTNER_COUNT = 6;
          float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-         // Gerstner 余摆线：返回 (水平X, 水平Y, 高度)；out 解析法线(局部) + 碎波泡沫
-         // 方向/相位由 wave index hash 播种，freq*=1.19 amp*=0.82 几何级数；陡度钳制 ΣA·k<0.8 防自交
-         vec3 gerstner(vec2 p, out vec3 nrm, out float foam) {
+         // Gerstner 余摆线：返回 (水平X, 水平Y, 高度)；out 碎波泡沫。
+         // 方向/相位由 wave index hash 播种，freq*=1.19 amp*=0.82 几何级数；
+         // 陡度钳制 per-wave σ·k ≤ 0.8/N → Σ ≤ 0.8 防自交。
+         // 注：解析法线注入 objectNormal 为 ADR-255 遗留项（微细节仍由 CPU 法线贴图承担），
+         // 本 pass 只交付位移 + 泡沫掩码。
+         vec3 gerstner(vec2 p, out float foam) {
            vec3 disp = vec3(0.0);
            float jxx = 0.0, jzz = 0.0, jxz = 0.0;
-           vec3 n = vec3(0.0);
            for (int i = 0; i < GERSTNER_COUNT; i++) {
              float fi = float(i);
              float ang = hash11(fi + 1.0) * 6.2831853;
@@ -164,14 +166,11 @@ export class WaterCapability implements SceneCapability {
              disp.x += steep * amp * dir.x * c;
              disp.y += steep * amp * dir.y * c;
              disp.z += amp * s;
-             n.x += dir.x * wa * c;
-             n.y += dir.y * wa * c;
-             n.z += steep * wa * s;
-             jxx += steep * wa * c;
-             jzz += steep * wa * c;
-             jxz += steep * wa * s;
+             // 泡沫掩码 = 水平压缩量：偏导按位移项逐项取（Jacobian 启发式）
+             jxx += steep * wa * dir.x * dir.x * c;
+             jzz += steep * wa * dir.y * dir.y * c;
+             jxz += steep * wa * dir.x * dir.y * c;
            }
-           nrm = normalize(vec3(-n.x, -n.y, 1.0 - n.z));
            float J = (1.0 + jxx) * (1.0 + jzz) - jxz * jxz;
            foam = smoothstep(0.0, -0.25, J);
            return disp;
@@ -181,11 +180,12 @@ export class WaterCapability implements SceneCapability {
         "#include <begin_vertex>",
         `#include <begin_vertex>
          vec2 wpos = transformed.xy * uSize;
-         vec3 gn; float gf;
-         vec3 gdisp = gerstner(wpos, gn, gf);
+         float gf;
+         vec3 gdisp = gerstner(wpos, gf);
          transformed.x += gdisp.x;
          transformed.y += gdisp.y;
          transformed.z += gdisp.z;
+         vFoam = gf;
          vec4 worldPosWave = modelMatrix * vec4(transformed, 1.0);
          vWorldPos_wave = worldPosWave.xyz;`,
       );
@@ -252,7 +252,7 @@ export class WaterCapability implements SceneCapability {
     return this.water.mode === "film" ? this.water.root : this.water.top;
   }
 
-  /** 构造 film 模式水面（单位平面 + scale 驱动尺寸，size 变更不重建几何，ADR-152 改造 A） */
+  /** 构造 film 模式水面（单位平面 + scale 驱动尺寸，size 变更不重建几何，ADR-255 改造 A） */
   private createFilmBody(): Extract<WaterRenderBody, { mode: "film" }> {
     const waterGeo = new THREE.PlaneGeometry(1, 1, 64, 64);
     const waterMat = this.buildWaveWaterMaterial({ forPool: false });
@@ -543,8 +543,15 @@ export class WaterCapability implements SceneCapability {
         topShader.uniforms.uSize.value = s.waterSize;
         topShader.uniforms.uHalfSize.value = s.waterSize / 2;
       }
+      // 法线缓存键 = waterSize：size 变更须重取（缓存内部按新 size 失效重生成），
+      // 否则 film 路径（不重建容器）会让微细节法线停在旧尺寸的世界频率
+      const mat = top?.material as THREE.MeshPhysicalMaterial & { normalMap?: THREE.DataTexture };
+      if (mat) {
+        mat.normalMap = this.getNormalMap();
+        mat.needsUpdate = true;
+      }
     }
-    // choppiness：顶 uChoppiness uniform（film/pool 共用，ADR-152 改造 B）
+    // choppiness：顶 uChoppiness uniform（film/pool 共用，ADR-255 改造 B）
     if (changed.has("waterChoppiness")) {
       const top = this.findTopWater();
       const topShader = (

@@ -30,7 +30,7 @@
 ### 2.2 尺寸 uniform 驱动、不重建几何（改造 A）
 
 - **film 几何改单位平面** `PlaneGeometry(1, 1, 64, 64)` + `mesh.scale.set(size, size, 1)`；shader 用 `uSize` 把局部 `±0.5` 映射到世界尺寸算波频/法线。
-- **`waterSize` 变更分派**：film 走 `scale`（不重建、不重建法线缓存）；pool 顶同走 `scale`，pool 底/壁几何耦合 `waterPoolWallThickness` 仍走 `rebuildWaterContainer`（低频，接受）。
+- **`waterSize` 变更分派**：film 走 `scale`（不重建几何、法线缓存在 applyChangedParams 重取）；pool 的 `waterSize` 变更走**全量 `rebuildWaterContainer`**（顶/底/壁一并重建——needsRebuild 条件为 `waterSize && mode===pool`，顶面不经 scale 路径，与 §3 已知遗留一致，低频接受）。
 - `registerEnvCallback` 的 `needsRebuild` 中 `waterSize` 改为**仅 `mode==="pool"` 触发重建**（`:74` 附近）。
 
 ### 2.3 解析法线为主，CPU 法线贴图降级微细节
@@ -50,8 +50,8 @@
 - 不碰 transmission/反射/FFT，不抢模型预览主帧预算（模型预览器定位正确的克制）。
 
 ### 负面
-- 注入符号从 `float wave(` 改名 `float gerstner(`，须同步 `water-capability.ts:180` 的 `vertexOk` 检测（`shader.vertexShader.includes("float gerstner(")`），否则 shader-patch 守卫误告警。
-- pool 模式 `waterSize` 变更仍全量重建（底/壁几何耦合 thickness），属接受项（低频拖动）。
+- 注入符号从 `float wave(` 改名 `vec3 gerstner(`，须同步 `water-capability.ts` 的 `vertexOk` 检测（`shader.vertexShader.includes("vec3 gerstner(")`），否则 shader-patch 守卫误告警。
+- pool 模式 `waterSize` 变更仍全量重建（顶/底/壁一并 rebuildWaterContainer，底/壁几何耦合 thickness），属接受项（低频拖动）。
 
 ### 风险
 - three `REVISION` 守卫范围 `[185,189]`（`:123`）：本次只改注入内容、不依赖锚点变更，锚点稳定则守卫通过；升级 three 后须重跑水面 shader 测试审计。

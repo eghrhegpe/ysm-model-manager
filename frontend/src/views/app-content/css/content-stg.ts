@@ -11,8 +11,13 @@ export const contentStgCSS: string = `
   overflow-y: auto;
   padding: 16px 20px;
 }
+/* .stg-title：仅作「设置页节标题」标记，不再提供 margin-bottom——
+   标题下间距单一来源 = .section-title 的 padding-bottom:8px。
+   历史 bug：本条曾写 margin-bottom:8px，与 .section-title 的 padding-bottom 叠加成 16px
+   （padding 与 margin 不折叠），两个旋钮管同一件事、改一个不生效。
+   全仓 9 处用法均写作 class="section-title stg-title"，无单独使用，故删除安全。 */
 .stg-title {
-  margin-bottom: 8px;
+  /* 间距归 .section-title，勿在此加 margin */
 }
 .stg-group {
   margin-bottom: 12px;

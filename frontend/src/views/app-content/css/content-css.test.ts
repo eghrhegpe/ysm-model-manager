@@ -62,4 +62,15 @@ describe("设置页组间距契约（content-stg）", () => {
     const m = contentStgCSS.match(/\.stg-sub-title\s*\{\s*margin-top:\s*(\d+)(?:px)?;/);
     expect(m?.[1]).toBe("0");
   });
+
+  it(".stg-title 不提供 margin（标题下间距单一来源 = .section-title 的 padding-bottom）", () => {
+    // 历史 bug：.stg-title{margin-bottom:8px} 与 .section-title{padding-bottom:8px} 叠加成 16px——
+    // padding 与 margin 不折叠，两个旋钮管同一件事，只改一个不生效。
+    // 先剔注释：规则块内的说明文字本身含 “margin” 字样，不剔会自触发假红
+    const block = (contentStgCSS.match(/\.stg-title\s*\{([^}]*)\}/)?.[1] ?? "").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    expect(block).not.toMatch(/margin/);
+  });
 });

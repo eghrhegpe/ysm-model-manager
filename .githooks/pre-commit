@@ -389,31 +389,34 @@ if [ "${YSM_SKIP_BIOME_LINES:-0}" != "1" ] && command -v node >/dev/null 2>&1; t
   fi
 fi
 
-# ── 硬阻断③（exit 1，非提示）：设计令牌「只减不增」闸 ──
+# ── 硬阻断③（exit 1，非提示）：设计令牌「只欠不还」改判**真行级**（ADR-256）──
 # 依据：docs/UI-Design.md 明文禁止硬编码 font-size / border-radius / 颜色 / 阴影 / 过渡时长；
 #   emoji 图标应走 utils/icon 的 SVG 体系（跨平台渲染与主题一致性）。
-# 策略：--baseline 只拦「本次新增」违规（存量条数见 scripts/baseline/
-#   design-tokens-baseline.json 的 count 字段，刻意不在此写死——数字会漂移），
-#   不阻塞提交——新代码不得再欠设计债。
-# ⚠️ --staged 不可省（2026-09-15 修）：判定域 = **本次提交的文件**，不是磁盘全树。
-#   无 scope 时脚本 walk(frontend/src)+walk(frontend/css) 全树扫磁盘，并行会话未提交的
-#   改动同样进视野——baseline 键含行号，同文件任意行位移都会被判成「新增」。实证：一次
-#   不含任何前端文件的 docs 提交，被并行会话改动的 tpl-settings.ts 21 条行号位移幻影
-#   exit 1 阻断；加 --staged 后同场景 exit 0（域内 0 文件）。
+# 策略（2026-09-16 起，ADR-256 D1/D2/D3）：--staged --added-lines =
+#   判定域 = **本次提交的新增行**；内容取**提交侧 blob**（索引 `:path`，非磁盘）。
+#   为什么弃用 `--baseline`（键 file:line:kind）：116 提交窗实测，baseline 报的「新增」
+#   95% 是**行位移幻影**（存量违规被挤到新行号），同时因键相同**漏检** 36 条同行替换类真新增。
+#   行级判定两侧同时修掉，且不再依赖基线文件（少一类 fail-closed 失败面）。
+#   可复现：node scripts/token-shift-audit.ts --window 120
+# ⚠️ --staged 不可省：无 scope 时脚本 walk(frontend/src)+walk(frontend/css) 全树扫，并行会话
+#   未提交的改动同样进视野。实证：一次不含任何前端文件的 docs 提交，被并行会话改动的
+#   tpl-settings.ts 21 条行号位移幻影 exit 1 阻断（其中 20 条纯幻影 + 1 条落在被重写的 hunk 内）；
+#   改行级后同场景只报那 1 条真信号。
 #   钩子无需知道临时索引怎么裁剪：git 已把 GIT_INDEX_FILE（临时索引 / pathspec 提交的
 #   next-index）交给钩子，脚本内 `git diff --cached` 天然只含本次提交文件。
-#   另：含未暂存编辑的文件（磁盘内容 ≠ 提交内容）由脚本跳过并告警——判定对象必须等于提交对象。
+#   行级模式判 blob 而非磁盘 → 「未暂存编辑」不再需要跳过（判定对象 == 提交对象 by construction）。
 # 防 --no-verify 绕过：与 biome 行级闸同构，挂在钩子里而非仅 pre-push；
-#   另有第二重防线 = gate-config.ts 的 static 清单（pre-push / CI --static）。
-# 清债后收缩基线：node scripts/check-design-tokens.ts --update-baseline（只许全库，带裁剪被拒）
+#   另有第二重防线 = gate-config.ts 的 static 清单（pre-push / CI 也用 --added-lines）。
+# 存量债账本（不再参与判定，只供 doctor 报告 / 收债排期）：
+#   node scripts/check-design-tokens.ts --update-baseline（只许全库刷新，带裁剪被拒）
 # 逃生阀：YSM_SKIP_DESIGN_TOKENS=1（与另两段解耦，命中即留痕）
 if [ "${YSM_SKIP_DESIGN_TOKENS:-0}" = "1" ] && command -v node >/dev/null 2>&1; then
   node scripts/_lib/hook-audit.ts write "${PARENT_OID:-}" YSM_SKIP_DESIGN_TOKENS 2>/dev/null || true
 fi
 if [ "${YSM_SKIP_DESIGN_TOKENS:-0}" != "1" ] && command -v node >/dev/null 2>&1; then
-  if ! node scripts/check-design-tokens.ts --baseline --staged 2>&1; then
-    echo "[pre-commit] ❌ 本次提交新增设计令牌违规，已阻断（见上）。存量债（基线内）不受影响；"
-    echo "            本闸只判本次提交的文件（--staged），他人未提交改动不背锅；"
+  if ! node scripts/check-design-tokens.ts --staged --added-lines 2>&1; then
+    echo "[pre-commit] ❌ 本次提交新增的设计令牌违规，已阻断（见上）。存量债不拦（只判新增行）；"
+    echo "            本闸只判本次提交的**新增行**（--staged --added-lines），存量债与位移不背锅；"
     echo "            自动令牌化：node scripts/check-design-tokens.ts --fix（值等价，仅动有精确令牌对应的）"
     echo "            或 YSM_SKIP_DESIGN_TOKENS=1 逃生（命中即留痕 SKIPPED_PRECOMMIT，可审计）"
     exit 1

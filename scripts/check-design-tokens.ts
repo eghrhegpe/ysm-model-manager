@@ -40,36 +40,43 @@
  *
  * 用法：
  *   node scripts/check-design-tokens.ts                 # 全仓报告（默认只读，不阻断）
- *   node scripts/check-design-tokens.ts --strict        # 有 ERROR 时 exit 1（供门禁，暂未接线）
+ *   node scripts/check-design-tokens.ts --strict        # 有 ERROR 时 exit 1（全库报告用）
  *   node scripts/check-design-tokens.ts --json          # JSON（CI / 子代理消费）
- *   node scripts/check-design-tokens.ts --files <换行分隔路径列表>  # 增量裁剪
+ *   node scripts/check-design-tokens.ts --files <换行分隔路径列表>  # 增量裁剪（文件级）
  *   node scripts/check-design-tokens.ts --changed       # 相对默认分支自动解析变更
- *   node scripts/check-design-tokens.ts --baseline --staged  # 判定域 = 本次提交文件（pre-commit；
- *                                                       空域合法：本次提交不含本域文件）
- *   node scripts/check-design-tokens.ts --baseline --staged --fix  # 注意：--fix 改的是磁盘内容，
- *                                                       修完需重新 git add（钩子从不传 --fix）
+ *   node scripts/check-design-tokens.ts --staged --added-lines       # 【门禁口径】只判本次提交的
+ *                                                       新增行（ADR-256；pre-commit 硬阻断③）
+ *   node scripts/check-design-tokens.ts --files <路径> --added-lines  # 同上，range 源（pre-push / CI；
+ *                                                       base = 与默认分支的 merge-base）
+ *   node scripts/check-design-tokens.ts --baseline --staged          # 旧口径（文件级 + 账本比对）：
+ *                                                       仅作对照 / 存量盘点，已不挂门禁（ADR-256）
+ *   node scripts/check-design-tokens.ts --baseline             # 全库 vs 账本（存量盘点）
+ *   node scripts/check-design-tokens.ts --update-baseline      # 刷新账本（只许全库，带裁剪被拒）
  *   node scripts/check-design-tokens.ts --top 20        # 热点文件榜条数（默认 15）
  *   node scripts/check-design-tokens.ts --kind emoji-icon   # 只看某类
  *   node scripts/check-design-tokens.ts --json --list       # JSON 含全量明细（收债用）
  *   node scripts/check-design-tokens.ts --fix               # 自动令牌化（值等价，只动有精确建议的）
- *   node scripts/check-design-tokens.ts --baseline          # 只拦新增违规（门禁用）
- *   node scripts/check-design-tokens.ts --update-baseline   # 刷新基线（清理后收缩）
  *
  * 退出码：0 = 无 ERROR（或仅 WARN）；--strict 且有 ERROR → 1；
- *          --baseline 有新增 → 1；基线缺失/损坏 → 2（fail-closed）；判定失败 → 2；
- *          --staged 的 git 解析失败 / 未暂存守卫失效 / --update-baseline 带裁剪 → 2（同为 fail-closed）。
+ *          --added-lines 且新增行有违规 → 1（只判新增行，存量债不拦）；
+ *          --baseline 有新增 → 1；账本缺失/损坏 → 2（fail-closed）；
+ *          --staged/--files 的 git 解析失败 / --added-lines 缺 diff 上下文或与 --baseline/--fix 混用 /
+ *          --update-baseline 带裁剪 → 2（同为 fail-closed）。
  *
  * 逃生阀：YSM_SKIP_DESIGN_TOKENS=1。
  *
- * 门禁接线（2026-09）：pre-commit 挂 `--baseline --staged`（只拦新增，存量放行）；
- *   ⚠️ `--staged` 不可省——无 scope 时判定域是**磁盘全树**，并行会话未提交的新债会误伤
- *   本次提交（实测：一次不含前端文件的 docs 提交被 tpl-settings.ts 的 21 条行号位移幻影
- *   exit 1 阻断；加上 --staged 后同场景 exit 0）。钩子无需知道临时索引如何裁剪：git 已把
- *   GIT_INDEX_FILE 交给钩子，`git diff --cached` 天然只含本次提交文件。
- *   2026-09 补第二重防线——`_lib/gate-config.ts` 的 FRONTEND/ALL_STATIC_TOOLS 各挂一条
- *   （pre-push + CI --static），堵住「`git commit --no-verify` 一条命令绕过」的单点。
- *   「只减不增」策略——存量债不阻塞提交，但新代码不得再欠；
- *   清理后跑 --update-baseline 收缩基线，债务只降不升。
+ * 门禁接线（2026-09，2026-09-16 改判行级 ADR-256）：pre-commit 挂 `--staged --added-lines`——
+ *   判定域 = **本次提交的新增行**，内容取**提交侧 blob**（索引 `:path`，非磁盘）。
+ *   为何弃用 `--baseline`（键 `file:line:kind`）：116 提交窗实测，它报的「新增」95% 是
+ *   **行位移幻影**（存量违规被挤到新行号），且因键相同**漏检** 36 条同行替换类真新增；
+ *   行级判定两侧同时修掉，且不再依赖账本文件（少一类 fail-closed 失败面）。
+ *   可复现：node scripts/token-shift-audit.ts --window 120
+ *   钩子无需知道临时索引如何裁剪：git 已把 GIT_INDEX_FILE 交给钩子，`git diff --cached`
+ *   天然只含本次提交文件；`--files` 路径走 range 源（pre-push / CI，base = merge-base）。
+ *   第二重防线：`_lib/gate-config.ts` 的 FRONTEND_STATIC_TOOLS 同挂 `--added-lines`
+ *   （堵住「`git commit --no-verify` 一条命令绕过」的单点）；ALL_STATIC_TOOLS 的 `--baseline`
+ *   是**账本漂移报告**（全库 vs 账本），不再参与判定。
+ *   账本：`--update-baseline` 只许全库刷新，债务只降不升（带任何裁剪会被 fail-closed 拒绝）。
  *
  * 设计意图：把「设计规范是否被执行」从人肉审查变成可度量、可增量收敛的机器信号。
  *   适用场景：UI 重构前的债务盘点、评审时量化「令牌失守」规模、按 --kind 分维度
@@ -81,6 +88,7 @@ import path from "node:path";
 import {
   inChangedScope,
   partitionByUnstaged,
+  resolveBaseRev,
   resolveChangedScope,
   resolveStagedScope,
   resolveUnstagedFiles,
@@ -91,9 +99,11 @@ import {
   type DesignViolationKind,
   findEmojiIconViolations,
   findStyleAttrViolations,
+  findViolationsOnLines,
   fixLineTokens,
   parseTokenMap,
 } from "./_lib/design-tokens.ts";
+import { addedLines, content, type DiffSource, renameMap } from "./_lib/diff-source.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { ROOT, readText, relPosix, walk, writeText } from "./_lib/scan-files.ts";
 
@@ -103,7 +113,18 @@ if (process.env.YSM_SKIP_DESIGN_TOKENS === "1") {
 }
 
 const args = parseArgs(process.argv.slice(2), {
-  bools: ["strict", "json", "changed", "staged", "docs", "list", "fix", "baseline", "update-baseline"],
+  bools: [
+    "strict",
+    "json",
+    "changed",
+    "staged",
+    "docs",
+    "list",
+    "fix",
+    "baseline",
+    "update-baseline",
+    "added-lines",
+  ],
   strings: ["files", "kind", "top"],
 });
 const STRICT = Boolean(args.strict);
@@ -114,6 +135,8 @@ const FIX_MODE = Boolean(args.fix);
 const BASELINE_MODE = Boolean(args.baseline) || Boolean(args["update-baseline"]);
 const UPDATE_BASELINE = Boolean(args["update-baseline"]);
 const STAGED_MODE = Boolean(args.staged);
+/** 行级判定（ADR-256）：只判本次变更的新增行，内容取提交侧 blob。 */
+const ADDED_LINES = Boolean(args["added-lines"]);
 const ONLY_KIND = (args.kind as string | null) || null;
 const TOP_N = Number(args.top ?? 15) || 15;
 
@@ -161,6 +184,25 @@ const scopeFilter = args.files
     : args.changed
       ? "changed"
       : "all";
+
+// ── --added-lines 的互斥与前置校验（fail-closed，防语义混淆）──
+// 行级判定（ADR-256）与「基线比对」是两套哲学：前者不依赖基线，后者依赖全库账本。
+// 混用会让「到底在判什么」不可读；--fix 改的是**磁盘**内容，与「只判提交 blob」更是南辕北辙。
+if (ADDED_LINES && (BASELINE_MODE || FIX_MODE)) {
+  const msg =
+    "--added-lines 不能与 --baseline/--update-baseline/--fix 同用（行级判定不依赖基线；--fix 改的是磁盘内容，而本模式判提交 blob）";
+  if (JSON_OUT) jsonExit(2, { _summary: { ok: false, error: msg } });
+  console.error(`❌ ${msg}`);
+  process.exit(2);
+}
+// 行级判定需要 diff 上下文（无上下文时只能全树扫描，那是另一个模式）
+if (ADDED_LINES && scopeFilter === "all") {
+  const msg =
+    "--added-lines 需配合 --staged（pre-commit 暂存区）或 --files（pre-push / CI 变更集）——否则没有「本次变更」可判";
+  if (JSON_OUT) jsonExit(2, { _summary: { ok: false, error: msg } });
+  console.error(`❌ ${msg}`);
+  process.exit(2);
+}
 
 // ── --update-baseline 只许全库刷新（防「重建基线洗债」）──
 // 必须早于扫描与「空域早退」：基线是**全库**事实源，带任何裁剪写入的都是局部快照——此后
@@ -272,7 +314,9 @@ let files = (
 let unstagedSkipped: string[] = [];
 // 绑定 `scopeFilter === "staged"` 而非 STAGED_MODE：`--files`（pre-push / CI 显式清单）优先时
 // 判的是「已提交内容」，工作区脏是常态而非错位，不得因此弱化推送门禁。
-if (scopeFilter === "staged") {
+// ⚠️ 再加 `!ADDED_LINES`：行级模式判的是**提交侧 blob**（index / HEAD），根本不读磁盘，
+//    判定对象 == 提交对象 by construction——此时守卫不是保命而是**误伤**（会把该判的文件跳过）。
+if (scopeFilter === "staged" && !ADDED_LINES) {
   const unstaged = resolveUnstagedFiles();
   if (unstaged === null) {
     // fail-closed：守卫失效不得静默放行（否则「磁盘≠提交」的错位判定无人知晓）
@@ -313,6 +357,118 @@ if (files.length === 0) {
       unstagedSkipped: unstagedSkipped.length,
     },
   });
+}
+
+// ── 行级判定模式（--added-lines，ADR-256）：判定域 = 本次变更的**新增行**，内容取提交侧 blob ──
+// 为什么取代「基线文件级」：键 `file:line:kind` 在 116 提交窗实测中，95% 的「新增」是行位移
+// 幻影（存量违规被挤到新行号），同时漏检 36 条同行替换类真新增——两侧同时失效（可复现：
+// node scripts/token-shift-audit.ts）。行级判定天然不需要基线，且只扫新增行（全树 → diff）。
+if (ADDED_LINES) {
+  const src: DiffSource = (() => {
+    if (scopeFilter === "staged") return { kind: "index" } as DiffSource;
+    const base = resolveBaseRev();
+    if (!base) {
+      const msg =
+        "--added-lines 无法解析推送基线（git 不可用 / 找不到 origin/HEAD|origin/main|main|master）——" +
+        "pre-commit 用 --staged，pre-push / CI 需先 fetch 默认分支";
+      if (JSON_OUT) jsonExit(2, { _summary: { ok: false, error: msg } });
+      console.error(`❌ ${msg}`);
+      process.exit(2);
+    }
+    return { kind: "range", base, head: "HEAD" } as DiffSource;
+  })();
+
+  const renames = renameMap(src);
+  if (renames === null) {
+    const msg = "git diff --name-status 失败——无法解析改名配对，行级判定失败";
+    if (JSON_OUT) jsonExit(2, { _summary: { ok: false, error: msg } });
+    console.error(`❌ ${msg}`);
+    process.exit(2);
+  }
+
+  const addedReports: FileReport[] = [];
+  let addedLineTotal = 0;
+  let addedViolationTotal = 0;
+  for (const f of files) {
+    const lines = addedLines(src, f.rel, renames.get(f.rel));
+    if (lines === null) {
+      const msg = `git diff 解析失败（${f.rel}）——无法判定本次变更的新增行`;
+      if (JSON_OUT) jsonExit(2, { _summary: { ok: false, error: msg } });
+      console.error(`❌ ${msg}`);
+      process.exit(2);
+    }
+    if (lines.size === 0) continue; // 该文件在本次变更里没有新增行（纯删除 / 只改未跟踪）
+    const text = content(src, f.rel);
+    if (text === null) continue; // 该 revision 无此文件（改名残留 / 删除）
+    addedLineTotal += lines.size;
+    const hits = findViolationsOnLines(text, lines, tokenMap).filter(
+      (v) => !ONLY_KIND || v.kind === ONLY_KIND,
+    );
+    if (hits.length > 0) {
+      addedReports.push({ rel: f.rel, violations: hits });
+      addedViolationTotal += hits.length;
+    }
+  }
+  addedReports.sort((a, b) => b.violations.length - a.violations.length);
+
+  if (JSON_OUT) {
+    jsonExit(addedViolationTotal > 0 ? 1 : 0, {
+      _summary: {
+        ok: addedViolationTotal === 0,
+        mode: "added-lines",
+        scope: scopeFilter,
+        source: src.kind,
+        files: files.length,
+        filesWithViolations: addedReports.length,
+        addedLines: addedLineTotal,
+        violations: addedViolationTotal,
+      },
+      ...(LIST_ALL
+        ? {
+            violations: addedReports.flatMap((r) =>
+              r.violations.map((v) => ({
+                file: r.rel,
+                line: v.line,
+                kind: v.kind,
+                suggestion: v.suggestion,
+                snippet: v.snippet,
+              })),
+            ),
+          }
+        : {}),
+      hotspots: addedReports.slice(0, TOP_N).map((r) => ({
+        file: r.rel,
+        count: r.violations.length,
+        sample: r.violations.slice(0, 3).map((v) => ({
+          line: v.line,
+          kind: v.kind,
+          suggestion: v.suggestion,
+        })),
+      })),
+    });
+  }
+
+  console.log("══════════════════════════════════════════════════");
+  console.log(" 设计令牌行级判定 (check-design-tokens --added-lines)");
+  console.log("══════════════════════════════════════════════════");
+  console.log(`判定域      : ${scopeFilter} / ${src.kind}（新增行 ${addedLineTotal} 行，覆盖 ${files.length} 文件）`);
+  console.log(`命中文件    : ${addedReports.length}`);
+  console.log(`新增行违规  : ${addedViolationTotal}（存量债不拦——只对自己动过的行负责）`);
+  if (addedViolationTotal === 0) {
+    console.log("✅ 本次变更的新增行无设计令牌违规。");
+    process.exit(0);
+  }
+  console.error(`\n❌ 本次变更新增 ${addedViolationTotal} 处设计令牌违规（行级判定，存量债不拦）：`);
+  for (const r of addedReports) {
+    for (const v of r.violations) {
+      console.error(`   ${r.rel}:${v.line}  ${v.kind}${v.suggestion ? ` → 建议 ${v.suggestion}` : ""}`);
+    }
+  }
+  console.error(
+    "\n修复：硬编码字号/圆角改走 var(--fs-*)/var(--radius-*)（可跑 --fix 自动令牌化）；" +
+      "emoji 图标改走 utils/icon 的 SVG 体系。",
+  );
+  process.exit(1);
 }
 
 // ── 逐文件逐行扫描 ──
@@ -431,7 +587,7 @@ if (BASELINE_MODE) {
         {
           generated: new Date().toISOString(),
           count: uniqueKeys.length,
-          note: "设计令牌存量债基线——门禁只拦新增；清理后重跑 --update-baseline 收缩",
+          note: "设计令牌存量债账本（ADR-256：已不参与门禁判定，只供 doctor 报告 / 收债排期）；清理后重跑 --update-baseline 收缩",
           violations: uniqueKeys,
         },
         null,

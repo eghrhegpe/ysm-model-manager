@@ -914,3 +914,35 @@ export function findEmojiIconViolations(line: string, lineNo: number): DesignVio
   }
   return out;
 }
+
+/**
+ * 行级判定：只判「指定行号集合」上的违规——「只对自己动过的行负责」（ADR-256）。
+ *
+ * 与逐行扫全文件的区别**只在判哪些行**：两个判定函数与建议逻辑完全复用，
+ * 保证「同一行、同函数、同结论」；输出按行号升序，便于对照 diff 人工核对。
+ *
+ * 为何需要它：基线文件级判定（键 = `file:line:kind`）在 116 提交窗实测中，
+ * 95% 的「新增」是**行位移幻影**（存量违规被挤到新行号），同时又因键相同而**漏检**
+ * 同行替换类真新增（36 条）——行级判定把两侧同时修掉，且无需基线文件参与。
+ *
+ * @param text     文件全文（**提交侧 blob**，不是工作区内容）
+ * @param lines    新增行号集合（1-based，来自 git diff --unified=0）
+ * @param tokenMap 令牌映射（供 suggestToken 校验存在性）；可空
+ */
+export function findViolationsOnLines(
+  text: string,
+  lines: Iterable<number>,
+  tokenMap?: TokenRawMap | null,
+): DesignViolation[] {
+  const all = text.split("\n");
+  const wanted = [...new Set(lines)]
+    .filter((n) => Number.isInteger(n))
+    .sort((a, b) => a - b);
+  const out: DesignViolation[] = [];
+  for (const ln of wanted) {
+    if (ln < 1 || ln > all.length) continue;
+    const line = all[ln - 1] ?? "";
+    out.push(...findStyleAttrViolations(line, ln, tokenMap), ...findEmojiIconViolations(line, ln));
+  }
+  return out;
+}

@@ -92,6 +92,10 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_alias-resolve.ts": ["tests"],
   // 变更域过滤共享层（--files / --changed）——三个档位扫描器接门禁的增量裁剪唯一实现点
   "test_changed_scope.ts": ["tests"],
+  // 变更 diff/内容来源层（ADR-256 行级门禁）——index/range 源 + 提交侧 blob 语义
+  "test_diff_source.ts": ["tests"],
+  // 行位移幻影率量算（ADR-256 决策依据）——纯分类逻辑
+  "test_token_shift_audit.ts": ["tests"],
   // 速查表 pitfalls 列切分（gen-routes-quick.parsePitfall）——产出 docs 产物，docs 域变更亦触发
   "test_gen_routes_quick_pitfall.ts": ["docs", "tests"],
   "test_check_path_hygiene.ts": ["frontend", "tests"],
@@ -222,6 +226,8 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "go-coverage-hint.ts": ["scripts/hooks/go-coverage-hint.ts"],
   "test_alias-resolve.ts": ["scripts/_lib/alias-resolve.ts", "scripts/_lib/scan-files.ts"],
   "test_changed_scope.ts": ["scripts/_lib/changed-scope.ts"],
+  "test_diff_source.ts": ["scripts/_lib/diff-source.ts", "scripts/_lib/git-hunks.ts"],
+  "test_token_shift_audit.ts": ["scripts/token-shift-audit.ts", "scripts/_lib/design-tokens.ts"],
   "test_gen_routes_quick_pitfall.ts": ["scripts/gen-routes-quick.ts"],
   "test_link_checker_scope.ts": ["scripts/link-checker.ts", "scripts/_lib/scan-files.ts"],
   "test_check_path_hygiene.ts": [

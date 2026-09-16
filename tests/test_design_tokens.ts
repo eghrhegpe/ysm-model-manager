@@ -30,6 +30,7 @@ import {
   checkLayoutDocDrift,
   findEmojiIconViolations,
   findStyleAttrViolations,
+  findViolationsOnLines,
   fixLineTokens,
   isCommentLine,
   isRealtimeFeedbackTransition,
@@ -37,6 +38,7 @@ import {
   suggestToken,
   TOKEN_PX_BASELINE,
 } from "../scripts/_lib/design-tokens.ts";
+import { addedLinesFromDiff } from "../scripts/_lib/git-hunks.ts";
 import { allIconNames } from "../scripts/_lib/icon-map.ts";
 import { walk } from "../scripts/_lib/scan-files.ts";
 
@@ -826,6 +828,71 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     );
   }
   console.log("  ✓ 预筛同步锁: 判定层的每个属性类都在预筛关键词表中");
+}
+
+// ─── 行级判定（ADR-256）：只对自己动过的行负责 ─────────────────────
+// 为何这组是本闸的**红线**：基线文件级判定（键 `file:line:kind`）在 116 提交窗实测中，95% 的
+// 「新增」是行位移幻影，同时漏检 36 条同行替换类真新增（复现：node scripts/token-shift-audit.ts）。
+// 行级判定（新增行 ∩ 违规行）把两侧同时修掉——下面四组断言就是这条结论的机器化形式。
+{
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+
+  // ① 反幻影红线：纯插入 1 行 → 下文 20 条存量债整体下移，行级必须 0 条
+  //    （旧规则会把下移后的行号当成「新增」→ 报 20 条）
+  const shiftDiff = "@@ -7,0 +8,1 @@\n+// pure-insert-probe\n";
+  const added = addedLinesFromDiff(shiftDiff);
+  assert.deepEqual([...added], [8], "纯插入：只有新行算新增行");
+  const shifted = [
+    ...Array.from({ length: 7 }, (_, i) => `const pad${i} = ${i};`), // 1..7
+    "// pure-insert-probe", // 8 ← 新增行（本身无违规）
+    ...Array.from({ length: 20 }, () => "  .x { font-size: 13px; }"), // 9..28 ← 存量债
+  ].join("\n");
+  assert.equal(
+    findViolationsOnLines(shifted, added, tokens).length,
+    0,
+    "位移不是新增：下文 20 条存量债整体下移，行级判定必须 0 条（旧基线规则报 20 条）",
+  );
+  const allLines = Array.from({ length: shifted.split("\n").length }, (_, i) => i + 1);
+  assert.ok(
+    findViolationsOnLines(shifted, allLines, tokens).length >= 20,
+    "对照组：全文件扫描确实能看到这 20 条（证明 0 条是「只判新增行」而非「判不出来」）",
+  );
+
+  // ② 重写 hunk 内的行同样算「动过」：行级不是放水，而是精确
+  const rewriteDiff =
+    "@@ -10,3 +10,3 @@\n-old1\n-old2\n-old3\n+new1\n+  .y { border-radius: 6px; }\n+new3\n";
+  const rw = addedLinesFromDiff(rewriteDiff);
+  const rwText = [
+    ...Array.from({ length: 9 }, () => "ctx"),
+    "new1",
+    "  .y { border-radius: 6px; }",
+    "new3",
+  ].join("\n");
+  const rwHits = findViolationsOnLines(rwText, rw, tokens);
+  assert.equal(rwHits.length, 1, "重写 hunk 内新写的硬编码圆角应命中（删3加3 → 新行 10/11/12）");
+  assert.equal(rwHits[0]!.line, 11, "命中行号必须回填成新文件行号（可直接对 diff 核对）");
+
+  // ③ 键碰撞盲区：同行号同 kind 被替换（旧键设计判「不是新增」）→ 行级必命中
+  //    ⚠️ 用色刻意避开「纯通道 hex」（#ff0000 等）：isNeutralColor 的量词实现是
+  //    `every(x => x === 0 || x === 255)`（= 每个通道是 0 或 255），而非注释所写的
+  //    「三通道全 0 或全 255」——于是 #ff0000/#00ff00/#0000ff/#ffff00 全被当**中性色豁免**
+  //    （既有缺陷，另案报告，不在本次改动内）。此处用 #123456（通道非 0/255，正常判定）。
+  const sameLineDiff = "@@ -5,1 +5,1 @@\n-old\n+  .z { color: #123456; }\n";
+  const sl = addedLinesFromDiff(sameLineDiff);
+  const hit3 = findViolationsOnLines(
+    [...Array.from({ length: 4 }, () => "ctx"), "  .z { color: #123456; }"].join("\n"),
+    sl,
+    tokens,
+  );
+  assert.ok(hit3.length > 0, "同行替换同类违规 = 新债，行级判定不得因「键相同」漏判（旧规则漏 36 条）");
+
+  // ④ 越界 / 重复 / 非整数行号：安全忽略，不抛错、不重复计数
+  assert.deepEqual(
+    findViolationsOnLines("a\nb\n", [1, 1, 2, 0, -3, 99, 1.5], tokens),
+    [],
+    "越界 / 重复 / 非整数行号一律安全忽略（不得抛错，也不得重复计数）",
+  );
+  console.log("  ✓ 行级判定锁: 反幻影 / 重写命中 / 键碰撞 / 行号边界");
 }
 
 console.log("\n✅ test_design_tokens.ts 全部通过");

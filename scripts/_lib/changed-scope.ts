@@ -128,16 +128,21 @@ export function parseNameOnlySet(stdout: string): Set<string> {
  * @returns 变更文件相对路径数组；git 不可用 / 无任何默认分支基线 / **解析结果为空** → null
  *          （后一种即「无有效变更域」，调用方必须 fail-closed，见 parseGitNameOnly 注释）。
  */
-export function resolveLocalChanged(): string[] | null {
-  let base: string | null = null;
+/**
+ * 默认分支基线（与默认分支的 merge-base），供 `--changed` / 行级 range 源共用。
+ * @returns 基线 rev；git 不可用 / 找不到任何默认分支引用 → null（调用方 fail-closed）。
+ */
+export function resolveBaseRev(): string | null {
   for (const ref of DEFAULT_BRANCH_REFS) {
     const r = git(["merge-base", "HEAD", ref]);
     const mb = r.rc === 0 ? r.out.trim() : "";
-    if (mb) {
-      base = mb;
-      break;
-    }
+    if (mb) return mb;
   }
+  return null;
+}
+
+export function resolveLocalChanged(): string[] | null {
+  const base = resolveBaseRev();
   if (!base) return null;
   const d = git(["diff", "--name-only", base]);
   if (d.rc !== 0) return null;

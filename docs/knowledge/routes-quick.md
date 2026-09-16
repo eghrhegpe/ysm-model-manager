@@ -949,7 +949,7 @@
 | push 被拒直接 --no-verify | - | 绕过不留审计；应修 FAIL 项或 git pull 整合 |
 | 判定字段写错位置 | - | 门禁静默假绿：`parseToolOutput` 的 `parsed._summary \|\| parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`） |
 | 只证明清单内检查通过——32 个 check-*.ts 与清单项非一一对应（差额走 pre-commit / CI 旁路，或只挂前端域）。三档位扫描器（complexity / params / type-safety）2026-09-13 才接 FRONTEND_STATIC_TOOLS（debt + --files），`--all` / `--docs` 路径仍不跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」 | `门禁全绿` | - |
-| `check-design-tokens` 曾长期只挂 pre-commit 硬阻断③，pre-push / CI 均无排查项——而 pre-commit 可被 `git commit --no-verify` 一条命令绕过（CI `--static` 模式的立项目的正是补这一层）。2026-09 补进 FRONTEND/ALL_STATIC_TOOLS（`--baseline` + debt + scopedFiles），与 `css-layer-check` 同等三重防护。**新增「只减不增」型闸一律双挂**（pre-commit 拦提交 + gate-config 拦推送/CI），勿只挂其一 | `只挂 pre-commit 的闸 = 单点防线` | - |
+| `check-design-tokens` 曾长期只挂 pre-commit 硬阻断③，pre-push / CI 均无排查项——而 pre-commit 可被 `git commit --no-verify` 一条命令绕过（CI `--static` 模式的立项目的正是补这一层）。2026-09 补进 FRONTEND/ALL_STATIC_TOOLS（`--baseline` + debt + scopedFiles），与 `css-layer-check` 同等三重防护。2026-09-16 改口径（ADR-256）：FRONTEND 侧由 `--baseline` 换成 `--added-lines`（行级：只判本次推送引入的新增行，range 源 base..head，与 pre-commit 索引源共用 `_lib/diff-source.ts`）；ALL_STATIC_TOOLS 保留 `--baseline`，但那里已是**账本漂移报告**（全库 vs `baseline/design-tokens-baseline.json`），不再参与判定。**新增「只减不增」型闸一律双挂**（pre-commit 拦提交 + gate-config 拦推送/CI），勿只挂其一；但**判定口径别用行号入键**——实测 95% 的「新增」是位移幻影且漏检同行替换（同上 ADR） | `只挂 pre-commit 的闸 = 单点防线` | - |
 | record() 只把 blockPolicy 用于判定 blocked、不写进 results | - | gate-report.policyTag 读到 undefined，**所有 FAIL 的归属标签退化为「本次引入」**（debt 存量债冒充本次引入，AI 会去修不属于自己的问题）。2026-09-13 修复并加行为契约（test_gate_ctx.ts 第 5/9 组） |
 | 把「过滤后为空」当错误、把空 --files 静默当全库 | `增量裁剪边界` | 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」 |
 | 它走 git diff 故不含未跟踪新文件 | `--changed 的边界` | 权威清单走 --files（门禁侧一律传，见 check-redlines / check-doc-drift 先例）；--changed 仅作本地便利，新文件先 git add 或改传 --files |
@@ -979,7 +979,8 @@
 | snap_docs 使用 $ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在 | - | - |
 | 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误 | - | - |
 | drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报 | - | - |
-| 无 scope 的  扫磁盘全树 | `--baseline` | 判决域 ≠ 提交域（baseline 键含行号，同文件任何行位移都算「新增」）→ pre-commit 必须 `--staged`（2026-09-15 实证：不含前端文件的 docs 提交被并行会话的 21 条幻影 exit 1 阻断） |
+| 用 `file:line:kind` 键做增量判定 = **双向失效**：行位移被当新增（116 提交窗实测 327/346 = 95% 幻影），同行替换同类被当存量（漏检 36 条）→ 必须走真行级 `--added-lines`（ADR-256，`scripts/token-shift-audit.ts` 可复现） | `只减不增` | - |
+| 无 scope 的  扫磁盘全树 | `--baseline` | 判决域 ≠ 提交域（哪怕键设计没问题，也会把并行会话未提交的新债算到本提交头上） |
 | 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件 | - | - |
 | 跨类型追加走错适配器 | `frontend/src/preview-3d/menu/core.ts` | 必须经 switchExternal → openModel3DFullscreen(cooperate) |
 | 异步回调写入已卸载 DOM | `skeleton.ts` | 每个 await 后检查 container.isConnected |

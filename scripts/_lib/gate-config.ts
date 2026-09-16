@@ -84,7 +84,9 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "css-layer-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
   // 设计令牌守规（2026-09 接线）：与 css-layer-check 互补——后者管「样式定义在哪一层生效」，
-  // 本闸管「样式值是否走了令牌」。全量模式不传 --files（全库扫描 + 基线比对）。
+  // 本闸管「样式值是否走了令牌」。全量模式不传 --files（无 diff 上下文）→ 走 `--baseline`：
+  // 这里是**账本漂移报告**（全库 vs scripts/baseline/design-tokens-baseline.json），
+  // 不再参与提交 / 推送判定（判定已改真行级，见 FRONTEND_STATIC_TOOLS 的 ADR-256 注释）。
   { tool: "check-design-tokens.ts", args: ["--baseline"], blockPolicy: "debt" },
   // i18n 未使用键（2026-09）：全量模式亦挂——死键是全仓性质的，与扫描域裁剪无关。
   { tool: "check-i18n-unused.ts", args: ["--baseline"], blockPolicy: "debt" },
@@ -147,17 +149,22 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
   { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-file-lines.ts", blockPolicy: "hard" },
-  // 设计令牌守规（2026-09 接线）：此前**只挂 pre-commit**，pre-push / CI 均无——
-  // 而 pre-commit 可被 `git commit --no-verify` 一条命令绕过（CI --static 模式的
-  // 立项目的正是补这一层，见 pre-push-gate.ts 的 staticMode 注释）。现补第二重防线。
+  // 设计令牌守规（2026-09 接线，2026-09-16 改判真行级 ADR-256）：此前**只挂 pre-commit**，
+  // pre-push / CI 均无——而 pre-commit 可被 `git commit --no-verify` 一条命令绕过
+  // （CI --static 模式的立项目的正是补这一层，见 pre-push-gate.ts 的 staticMode 注释）。
   //
-  // blockPolicy: debt —— 本闸是**基线比对 + 增量**模式（--baseline 只拦新增，
-  // 存量 128 条在 scripts/baseline/design-tokens-baseline.json 放行），与 check-complexity
-  // 等同属「全库阈值 + 存量债」档，按上方 2026-09-13 的准入判据（「不存在存量债冒充」才可
-  // hard）应记 debt。待存量清空、基线归零后可单独升 hard。
+  // args: --added-lines —— 判定域 = **本次推送引入的新增行**（range 源 base..head，
+  // base 取与默认分支的 merge-base；内容取 head blob），与 pre-commit 的索引源共用
+  // `_lib/diff-source.ts` + `_lib/git-hunks.ts` + `findViolationsOnLines`（单一事实源）。
+  // 为什么不再用 --baseline：键 file:line:kind 实测 95% 的「新增」是行位移幻影，且漏检
+  // 同行替换类真新增（ADR-256 §1，可复现 node scripts/token-shift-audit.ts）。
+  // 注：ALL_STATIC_TOOLS 保留 `--baseline`（--all 模式无 diff 上下文，那里是**账本漂移报告**）。
+  //
+  // blockPolicy: debt —— 行级判定已无「存量债冒充」问题（只判新增行），但先观察一轮
+  // push / CI 实况确认无假阻断，再议升 hard（ADR-256 D5）。
   // scopedFiles: true —— 脚本已 import _lib/changed-scope.ts 并接 --files（准入条件满足），
   // 由 tests/test_gate_config.ts 的 scopedFiles 契约断言兜底。
-  { tool: "check-design-tokens.ts", args: ["--baseline"], blockPolicy: "debt", scopedFiles: true },
+  { tool: "check-design-tokens.ts", args: ["--added-lines"], blockPolicy: "debt", scopedFiles: true },
   // ── 三档位阈值扫描器（2026-09-13 接线）──
   // 此前是「无守护债务」：仓库 32 个 check-*.ts 中这 3 个无任何自动化入口，只能手动跑
   // （实证：views 域 10 个 🟥 复杂度档长期无人拦，见 pre_push_gate.md 门禁覆盖边界）。

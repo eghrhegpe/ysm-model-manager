@@ -119,6 +119,11 @@ describe("app-content 模板", () => {
     expect(html).toContain("theme-picker");
     expect(html).toContain("set-animations");
     expect(html).toContain("set-default-page");
+    // 启动默认页与动画开关已升格为 .stg-card（与路径/存储/语言卡同口径）——
+    // 回归防线：曾用 .settings-group 裸行组，夹在卡片间视觉断裂
+    expect(html).toContain('id="stg-default-page-card"');
+    expect(html).toContain('id="stg-anim-card"');
+    expect(html).toContain('id="set-remember-page"');
     expect(html).toContain("set-advanced-grid");
     // worker 解析开关收敛到独立「解析」tab（FBX / MMD PMX 逃生舱），不在界面 tab 内
     expect(html).toContain('data-tab="parser"');

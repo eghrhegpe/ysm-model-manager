@@ -5,7 +5,7 @@ import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { stgCard, stgGroup, stgRow } from "./stg-card.ts";
+import { stgCard } from "./stg-card.ts";
 import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -250,47 +250,47 @@ function renderStgFontFamily(): string {
 }
 
 function renderStgAnimDefault(): string {
-  const animGroup = stgGroup(
-    stgRow({
-      icon: UI_ICONS.sparkle,
-      label: t("settings.animation.enable"),
-      forId: "set-animations",
-      control: `<label class="stg-label" style="gap:8px">
-      <input type="checkbox" id="set-animations" checked> ${t("settings.animation.enableCheck")}
-    </label>`,
-    }),
-    { delayMs: 180, hint: t("settings.animation.hint") },
+  const animCard = stgCard(
+    UI_ICONS.sparkle,
+    t("settings.animation.title"),
+    `<div class="setting-row" style="padding:0;background:none;animation:none">
+      <label for="set-animations" class="label">${t("settings.animation.enable")}</label>
+      <label class="stg-label" style="gap:8px">
+        <input type="checkbox" id="set-animations" checked> ${t("settings.animation.enableCheck")}
+      </label>
+    </div>
+    <div class="stg-card-desc">${t("settings.animation.hint")}</div>`,
+    { cardId: "stg-anim-card", delayMs: 180 },
   );
 
-  // 启动默认页：记忆开关（checkbox）+ 固定页下拉框二态联动（见 default-page.ts）
-  const defaultPageGroup = stgGroup(
-    stgRow({
-      icon: UI_ICONS.home,
-      label: t("settings.defaultPage.remember"),
-      forId: "set-remember-page",
-      control: `<label class="stg-label" style="gap:8px">
-      <input type="checkbox" id="set-remember-page" checked> ${t("settings.defaultPage.rememberCheck")}
-    </label>`,
-    }) +
-      "\n" +
-      stgRow({
-        icon: UI_ICONS.package,
-        label: t("settings.defaultPage.fixed"),
-        forId: "set-default-page",
-        control: `<select id="set-default-page" class="stg-select">
-      <option value="instances">${UI_ICONS.game} ${t("settings.defaultPage.instances")}</option>
-      <option value="workshop">${UI_ICONS.appearance} ${t("settings.defaultPage.workshop")}</option>
-      <option value="repository">${UI_ICONS.package} ${t("settings.defaultPage.repository")}</option>
-    </select>`,
-      }),
-    { delayMs: 210, hint: t("settings.defaultPageHint") },
+  // 启动默认页：升格为 .stg-card（与「游戏根目录」「文件存储」「语言」同属卡片口径）——
+  // 原用 .settings-group 裸行组，无卡片框、两侧 padding:0 16px 缩进，夹在一堆 .stg-card
+  // 之间视觉断裂（跨口径混搭）。body 内用 .setting-row 保持行内两端对齐。
+  const defaultPageCard = stgCard(
+    UI_ICONS.home,
+    t("settings.defaultPage"),
+    `<div class="setting-row" style="padding:0;background:none;animation:none">
+      <label for="set-remember-page" class="label">${t("settings.defaultPage.remember")}</label>
+      <label class="stg-label" style="gap:8px">
+        <input type="checkbox" id="set-remember-page" checked> ${t("settings.defaultPage.rememberCheck")}
+      </label>
+    </div>
+    <div class="setting-row" style="padding:0;background:none;animation:none;margin-top:8px">
+      <label for="set-default-page" class="label">${t("settings.defaultPage.fixed")}</label>
+      <select id="set-default-page" class="stg-select" style="width:auto">
+        <option value="instances">${UI_ICONS.game} ${t("settings.defaultPage.instances")}</option>
+        <option value="workshop">${UI_ICONS.appearance} ${t("settings.defaultPage.workshop")}</option>
+        <option value="repository">${UI_ICONS.package} ${t("settings.defaultPage.repository")}</option>
+      </select>
+    </div>
+    <div class="stg-card-desc">${t("settings.defaultPageHint")}</div>`,
+    { cardId: "stg-default-page-card", delayMs: 210 },
   );
 
-  return `<div class="section-title stg-title stg-sub-title">${UI_ICONS.performance} ${t("settings.animation.title")}</div>
+  // 两卡已各有 card-hdr 标题，无需外挂 section-title（重复标题 + 多余间距）
+  return `${animCard}
 
-${animGroup}
-
-${defaultPageGroup}`;
+${defaultPageCard}`;
 }
 
 function renderStgPreview3d(): string {

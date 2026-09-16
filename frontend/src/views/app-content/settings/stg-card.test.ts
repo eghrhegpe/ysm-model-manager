@@ -1,6 +1,6 @@
 // ===== stg-card.test.ts — 统一卡片头/外壳构造器契约（防「图标+标题」漂移成独立 flex 项）=====
 import { describe, expect, it } from "vitest";
-import { stgCard, stgCardHeader, stgGroup, stgRow } from "./stg-card.ts";
+import { stgCard, stgCardHeader } from "./stg-card.ts";
 
 const ICON = '<svg class="ws-icon" viewBox="0 0 24 24"></svg>';
 const TITLE = "游戏根目录";
@@ -81,49 +81,5 @@ describe("stgCard", () => {
   it("header 选项透传给 stgCardHeader（forId 生成 label）", () => {
     const html = stgCard(ICON, TITLE, "", { header: { forId: "set-link-mode" } });
     expect(html).toContain('<label for="set-link-mode"');
-  });
-});
-
-describe("stgRow", () => {
-  it("图标+标签合并为单一 label（与 stgCardHeader 同源防漂移）", () => {
-    const html = stgRow({ icon: ICON, label: TITLE, forId: "set-x", control: "<select></select>" });
-    expect(html).toMatch(/^<div class="setting-row">/);
-    const label = html.match(/<label for="set-x" class="label">([\s\S]*?)<\/label>/);
-    expect(label).not.toBeNull();
-    expect(label![1]).toContain(ICON);
-    expect(label![1]).toContain(TITLE);
-  });
-
-  it("控件位于 label 之后（右侧项）", () => {
-    const html = stgRow({
-      icon: ICON,
-      label: TITLE,
-      forId: "set-x",
-      control: '<select id="set-x"></select>',
-    });
-    expect(html.indexOf('<select id="set-x"')).toBeGreaterThan(html.indexOf("</label>"));
-  });
-});
-
-describe("stgGroup", () => {
-  it(".settings-group 壳包裹行 + 默认 margin-bottom:12px", () => {
-    const html = stgGroup(stgRow({ icon: ICON, label: TITLE, forId: "a", control: "" }));
-    expect(html).toMatch(/^<div class="settings-group" style="margin-bottom:12px;/);
-    expect(html).toContain("animation:card-in var(--tr-enter) both");
-    expect(html).toContain('class="setting-row"');
-  });
-
-  it("delayMs 注入 animation-delay", () => {
-    const html = stgGroup("", { delayMs: 210 });
-    expect(html).toContain("animation-delay:210ms");
-  });
-
-  it("hint 生成 .stg-hint；省略则不生成", () => {
-    expect(stgGroup("", { hint: "提示" })).toContain('<div class="stg-hint">提示</div>');
-    expect(stgGroup("")).not.toContain("stg-hint");
-  });
-
-  it("marginBottom 可覆盖", () => {
-    expect(stgGroup("", { marginBottom: 0 })).toContain("margin-bottom:0px");
   });
 });

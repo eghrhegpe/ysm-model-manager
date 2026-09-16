@@ -1,16 +1,16 @@
 // @vitest-environment node
 // ===== GroundCapability 测试（ADR-196 迁移至 envState）=====
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { GroundCapability } from "./ground-capability.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCanvasStyle, GroundSurfaceMode } from "./ground-surface-spec.ts";
 
-/** 旧单枚举 → 两轴便捷设置（测试沿用旧模式名，内部拆轴） */
+/** 便捷设置：材质值走 canvas 来源，none/solid/texture 直接设来源轴。
+ *  ADR-252：图案不在表面模式里，图案请走 `setOverlayStyle`。 */
 function setMode(cap: GroundCapability, mode: GroundSurfaceMode): void {
-  const canvasModes: GroundSurfaceMode[] = ["plain", "grid", "checker", "stripes", "diamond", "marble"];
-  if (canvasModes.includes(mode)) {
+  if (mode === "plain" || mode === "marble" || mode === "sand" || mode === "grass") {
     cap.setSourceKind("canvas");
     cap.setCanvasStyle(mode as GroundCanvasStyle);
   } else {
@@ -79,11 +79,11 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(surf!.visible).toBe(false);
   });
 
-  it("setSourceKind/CanvasStyle(checker) → 可见 + 材质挂 DataTexture + repeat=80/10/1", () => {
+  it("setSourceKind/CanvasStyle(marble) → 可见 + 材质挂 DataTexture + repeat=80/10/1", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    setMode(cap, "checker");
+    setMode(cap, "marble");
     const surf = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
     expect(surf.visible).toBe(true);
     const mat = surf.material as THREE.MeshStandardMaterial;
@@ -95,12 +95,12 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    setMode(cap, "checker");
+    setMode(cap, "marble");
     const surf = scene.getObjectByName("ysm-ground-surface")!;
     expect(surf.visible).toBe(true);
 
     cap.setEnabled(false);
-    setMode(cap, "grid");
+    setMode(cap, "sand");
     cap.setEnabled(true);
     expect(scene.getObjectByName("ysm-ground-surface")).toBeDefined();
     expect(surf.visible).toBe(true);
@@ -110,7 +110,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    setMode(cap, "grid");
+    setMode(cap, "sand");
     const surf = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
     const mat0 = surf.material as THREE.MeshStandardMaterial;
     const map0 = mat0.map;
@@ -203,14 +203,14 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
   it("saveState/loadState 往返 mat 字段；texture 来源不再被静默降级（ADR-249 §2.5）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    setMode(cap, "checker");
+    setMode(cap, "marble");
     cap.setMatScale(3);
     cap.saveState();
     resetEnvState();
     const cap2 = new GroundCapability({ scene });
     cap2.loadState();
     expect(cap2.getSourceKind()).toBe("canvas");
-    expect(cap2.getCanvasStyle()).toBe("checker");
+    expect(cap2.getCanvasStyle()).toBe("marble");
     expect(cap2.getMatScale()).toBe(3);
 
     // ADR-249 §2.5 第 2 条：旧行为把 texture 改写成 plain——新契约保留来源。
@@ -232,6 +232,99 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     localStorage.removeItem("ysm-scene-cap-ground");
   });
 
+  // ADR-252 迁移契约：旧图案值必须进位叠加层，且线色/格数一并搬运（视觉等价）
+  describe("ADR-252 迁移：旧几何图案进位叠加层", () => {
+    afterEach(() => {
+      localStorage.removeItem("ysm-scene-cap-ground");
+    });
+
+    it("ADR-249 时代存档：groundCanvasStyle=grid → plain + overlay=grid（线色/格数搬运）", () => {
+      const scene = new THREE.Scene();
+      localStorage.setItem(
+        "ysm-scene-cap-ground",
+        JSON.stringify({
+          enabled: true,
+          groundVisible: true,
+          groundSourceKind: "canvas",
+          groundCanvasStyle: "grid",
+          groundMatLineColor: 0x5a4b3a,
+          groundMatGridSize: 10,
+          groundOverlay: "none",
+        }),
+      );
+      const cap = new GroundCapability({ scene });
+      cap.loadState();
+      expect(cap.getSourceKind()).toBe("canvas");
+      expect(cap.getCanvasStyle()).toBe("plain");
+      expect(cap.getOverlayStyle()).toBe("grid");
+      expect(cap.getOverlayColor()).toBe(0x5a4b3a);
+      expect(cap.getOverlaySize()).toBe(10);
+    });
+
+    it.each(["grid", "checker", "stripes", "diamond"] as const)(
+      "四种旧图案均进位叠加层：%s",
+      (pattern) => {
+        const scene = new THREE.Scene();
+        localStorage.setItem(
+          "ysm-scene-cap-ground",
+          JSON.stringify({
+            enabled: true,
+            groundVisible: true,
+            groundSourceKind: "canvas",
+            groundCanvasStyle: pattern,
+            groundMatLineColor: 0x123456,
+            groundMatGridSize: 12,
+          }),
+        );
+        const cap = new GroundCapability({ scene });
+        cap.loadState();
+        expect(cap.getCanvasStyle(), `${pattern} 底座应为 plain`).toBe("plain");
+        expect(cap.getOverlayStyle(), `${pattern} 应进位叠加层`).toBe(pattern);
+        expect(cap.getOverlayColor()).toBe(0x123456);
+        expect(cap.getOverlaySize()).toBe(12);
+      },
+    );
+
+    it("ADR-249 之前扁平枚举存档：matSource=checker → plain + overlay=checker", () => {
+      const scene = new THREE.Scene();
+      localStorage.setItem(
+        "ysm-scene-cap-ground",
+        JSON.stringify({
+          enabled: true,
+          visible: true,
+          matSource: "checker",
+          matLineColor: 0xabcdef,
+          matGridSize: 16,
+        }),
+      );
+      const cap = new GroundCapability({ scene });
+      cap.loadState();
+      expect(cap.getSourceKind()).toBe("canvas");
+      expect(cap.getCanvasStyle()).toBe("plain");
+      expect(cap.getOverlayStyle()).toBe("checker");
+      expect(cap.getOverlayColor()).toBe(0xabcdef);
+      expect(cap.getOverlaySize()).toBe(16);
+    });
+
+    it("材质存档不受影响：marble 原样保留，不引入叠加层", () => {
+      const scene = new THREE.Scene();
+      localStorage.setItem(
+        "ysm-scene-cap-ground",
+        JSON.stringify({
+          enabled: true,
+          groundVisible: true,
+          groundSourceKind: "canvas",
+          groundCanvasStyle: "marble",
+          groundOverlay: "none",
+        }),
+      );
+      const cap = new GroundCapability({ scene });
+      cap.loadState();
+      expect(cap.getCanvasStyle()).toBe("marble");
+      expect(cap.getOverlayStyle()).toBe("none");
+    });
+  });
+
   describe("subscribe（局部刷新通知）", () => {
     it("setSourceKind/setCanvasStyle 各触发 1 次订阅者（拆轴后独立 setter），同值早退不 notify，unsub 后停止", () => {
       const scene = new THREE.Scene();
@@ -241,11 +334,11 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
       // 从默认 none → canvas/grid：两轴各触发一次（拆轴后两个独立 envState 字段，
       // 各 1 次；旧单枚举时代合并为 1 次）
       cap.setSourceKind("canvas");
-      cap.setCanvasStyle("grid");
+      cap.setCanvasStyle("marble");
       expect(calls).toBe(2);
       // 同值早退：不应再 notify
       cap.setSourceKind("canvas");
-      cap.setCanvasStyle("grid");
+      cap.setCanvasStyle("marble");
       expect(calls).toBe(2);
       // appearance 变化走 refreshSurface 单路径落地、不 notify（订阅面 = 来源/样式切换，
       // 局部刷新据此重建菜单；matColor 不触发）
@@ -276,7 +369,7 @@ describe("GroundCapability — 启用切换", () => {
 
   it("disabled 时移除挂载并同步 surface.visible 门控", () => {
     const scene = new THREE.Scene();
-    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "checker" }, { source: 'manual' });
+    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "marble" }, { source: 'manual' });
     const cap = new GroundCapability({ scene });
     cap.apply();
     const surface = (cap as unknown as { surface: THREE.Mesh }).surface;
@@ -295,9 +388,11 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
 
   it("全部 setter 落地 envState（含 clamp/取模）且 getter 回读一致", () => {
     const scene = new THREE.Scene();
-    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "checker" }, { source: 'manual' });
+    // 用 plain（均匀填充，廉价）而非噪声材质：本用例只验 setter 钳位/回读，
+    // 噪声材质每次 structural 变更都重建 512² × 3 次 valueNoise，会拖爆用例超时。
+    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "plain" }, { source: 'manual' });
     const cap = new GroundCapability({ scene });
-    cap.setMatLineColor(0x112233);
+    cap.setMatColor(0x112233);
     cap.setMatGridSize(16.7);
     cap.setMatGridSize(1);
     cap.setMatOpacity(2);
@@ -320,7 +415,7 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
     expect(cap.getMatColor2()).toBe(0xaabbcc);
     expect(cap.getMatDensity()).toBe(8);
     expect(cap.getMatAngle()).toBe(40);
-    expect(envState.groundMatLineColor).toBe(0x112233);
+    expect(envState.groundMatColor).toBe(0x112233);
     expect(envState.groundMatGridSize).toBe(2);
   });
 
@@ -343,7 +438,7 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
 
   it("dispose 时释放程序化表面纹理（非 custom 缓存归属）", () => {
     const scene = new THREE.Scene();
-    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "checker" }, { source: 'manual' });
+    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "marble" }, { source: 'manual' });
     const cap = new GroundCapability({ scene });
     cap.apply();
     const surfaceTex = (cap as unknown as { surfaceTex: THREE.Texture }).surfaceTex;
@@ -377,13 +472,13 @@ describe("GroundCapability — 菜单控件联动", () => {
 
   it("材质参数控件 setValue/getValue 全联动（canvas 模式下可见，节点 control 闭包）", () => {
     const scene = new THREE.Scene();
-    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "checker" }, { source: 'manual' });
+    // 同前：用廉价材质，避免噪声重建拖爆超时（本用例只验控件闭包读写）
+    setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "plain" }, { source: 'manual' });
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes()[1]!;
     const by = (id: string) => folder.children!.find((c) => c.id === id)!;
     by("ground-mat-color").control!.set!(0xff8800);
     by("ground-mat-color2").control!.set!(0x00ff88);
-    by("ground-mat-line-color").control!.set!(0x445566);
     by("ground-mat-grid-size").control!.set!(12);
     by("ground-mat-density").control!.set!(4);
     by("ground-mat-angle").control!.set!(45);
@@ -394,7 +489,6 @@ describe("GroundCapability — 菜单控件联动", () => {
     by("ground-mat-metalness").control!.set!(0.2);
     expect(by("ground-mat-color").control!.get!(undefined)).toBe(0xff8800);
     expect(by("ground-mat-color2").control!.get!(undefined)).toBe(0x00ff88);
-    expect(by("ground-mat-line-color").control!.get!(undefined)).toBe(0x445566);
     expect(by("ground-mat-grid-size").control!.get!(undefined)).toBe(12);
     expect(by("ground-mat-density").control!.get!(undefined)).toBe(4);
     expect(by("ground-mat-angle").control!.get!(undefined)).toBe(45);
@@ -482,8 +576,8 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     source.control!.set!("canvas");
     expect(cap.getSourceKind()).toBe("canvas");
     const style = folder.children!.find((c) => c.id === "ground-mat-canvas-style")!;
-    style.control!.set!("checker");
-    expect(cap.getCanvasStyle()).toBe("checker");
+    style.control!.set!("marble");
+    expect(cap.getCanvasStyle()).toBe("marble");
     const btnNode = folder.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
     expect(btnNode.kind).toBe("controls");
     const btnControls = typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls;
@@ -510,8 +604,8 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes()[1]!;
     const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
-    // ADR-249 §2.1：由两轴派生模式，canvas/checker 下可见
-    expect(color.visibleWhen?.({ "env.groundSourceKind": "canvas", "env.groundCanvasStyle": "grid" })).toBe(true);
+    // ADR-252：由两轴派生模式，canvas/marble 下可见
+    expect(color.visibleWhen?.({ "env.groundSourceKind": "canvas", "env.groundCanvasStyle": "marble" })).toBe(true);
     expect(color.visibleWhen?.({ "env.groundSourceKind": "none" })).toBe(false);
   });
 });

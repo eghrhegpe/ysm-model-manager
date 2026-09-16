@@ -26,13 +26,14 @@ import {
   type GroundOverlaySpec,
   type GroundOverlayStyle,
   type GroundSourceKind,
-  type GroundSurfaceMode,
   type GroundSurfaceSpec,
   type GroundSurfaceStructuralSpec,
   generateOverlayPixels,
   generateSurfacePixels,
   groundMatSourceFromAxes,
   groundSurfaceNeedsRebuild,
+  LEGACY_CANVAS_PATTERNS,
+  type LegacyGroundMatSource,
   migrateGroundMatSource,
   OVERLAY_TEX_SIZE,
   overlayNeedsRebuild,
@@ -287,7 +288,6 @@ export class GroundCapability implements SceneCapability {
       // ADR-249 §2.1 拆轴：matSource 由两个轴派生（legacy 字段已废弃）。
       matSource: groundMatSourceFromAxes(envState.groundSourceKind, envState.groundCanvasStyle),
       matColor: envState.groundMatColor,
-      matLineColor: envState.groundMatLineColor,
       matColor2: envState.groundMatColor2,
       matGridSize: envState.groundMatGridSize,
       matOpacity: envState.groundMatOpacity,
@@ -431,10 +431,6 @@ export class GroundCapability implements SceneCapability {
     setEnvState({ groundMatColor: hex }, { source: "manual" });
     this.refreshSurface();
   }
-  setMatLineColor(hex: number): void {
-    setEnvState({ groundMatLineColor: hex }, { source: "manual" });
-    this.refreshSurface();
-  }
   setMatGridSize(n: number): void {
     setEnvState({ groundMatGridSize: Math.max(2, Math.round(n)) }, { source: "manual" });
     this.refreshSurface();
@@ -484,9 +480,6 @@ export class GroundCapability implements SceneCapability {
   /* 菜单 getter */
   getMatColor(): number {
     return envState.groundMatColor;
-  }
-  getMatLineColor(): number {
-    return envState.groundMatLineColor;
   }
   getMatGridSize(): number {
     return envState.groundMatGridSize;
@@ -539,7 +532,6 @@ export class GroundCapability implements SceneCapability {
       groundColorCenter: envState.groundColorCenter,
       groundColorGrid: envState.groundColorGrid,
       groundMatColor: envState.groundMatColor,
-      groundMatLineColor: envState.groundMatLineColor,
       groundMatColor2: envState.groundMatColor2,
       groundMatGridSize: envState.groundMatGridSize,
       groundMatOpacity: envState.groundMatOpacity,
@@ -574,7 +566,6 @@ export class GroundCapability implements SceneCapability {
       "colorGrid",
       "matSource",
       "matColor",
-      "matLineColor",
       "matColor2",
       "matGridSize",
       "matOpacity",
@@ -585,6 +576,19 @@ export class GroundCapability implements SceneCapability {
       "matMetalness",
     ] as const;
     const gs = state as Record<string, unknown>; // 非空副本（重赋值丢失收窄）
+    // ADR-252：旧线色/格数需搬入叠加层（图案由 surface 迁至 overlay 时带走样式参数）
+    const legacyLineColor =
+      typeof gs.matLineColor === "number"
+        ? gs.matLineColor
+        : typeof gs.groundMatLineColor === "number"
+          ? gs.groundMatLineColor
+          : undefined;
+    const legacyGridSize =
+      typeof gs.matGridSize === "number"
+        ? gs.matGridSize
+        : typeof gs.groundMatGridSize === "number"
+          ? gs.groundMatGridSize
+          : undefined;
     if (!("groundSize" in gs) && legacyGroundKeys.some((k) => k in gs)) {
       const map: Record<string, string> = {
         visible: "groundVisible",
@@ -592,9 +596,8 @@ export class GroundCapability implements SceneCapability {
         divisions: "groundDivisions",
         colorCenter: "groundColorCenter",
         colorGrid: "groundColorGrid",
-        // matSource 旧单枚举 → ADR-249 §2.1 拆轴两轴（迁移在循环后单独处理）
+        // matSource 旧单枚举 → 三轴（在循环后单独处理）
         matColor: "groundMatColor",
-        matLineColor: "groundMatLineColor",
         matColor2: "groundMatColor2",
         matGridSize: "groundMatGridSize",
         matOpacity: "groundMatOpacity",
@@ -608,13 +611,41 @@ export class GroundCapability implements SceneCapability {
       for (const k of legacyGroundKeys) {
         if (k in gs && k !== "matSource") migrated[map[k]] = gs[k];
       }
-      // ADR-249 §2.1：旧单枚举 matSource 拆为来源轴 + 样式轴两键
+      // ADR-249 §2.1 + ADR-252：旧单枚举 matSource 拆为来源轴 + 材质轴 + 叠加层
       if ("matSource" in gs) {
-        const m = migrateGroundMatSource(String(gs.matSource) as GroundSurfaceMode);
+        const m = migrateGroundMatSource(String(gs.matSource) as LegacyGroundMatSource);
         migrated.groundSourceKind = m.sourceKind;
         if (m.canvasStyle) migrated.groundCanvasStyle = m.canvasStyle;
+        if (m.overlayStyle) {
+          // 旧图案值 → 叠加层，并把线色/格数一并搬过去（视觉等价）
+          migrated.groundOverlay = m.overlayStyle;
+          if (legacyLineColor !== undefined) migrated.groundOverlayColor = legacyLineColor;
+          if (legacyGridSize !== undefined) migrated.groundOverlaySize = legacyGridSize;
+        }
       }
       state = migrated;
+    }
+
+    // ADR-252：ADR-249 时代的存档——`groundCanvasStyle` 可能仍是已废弃的几何图案值。
+    // 拆为「canvasStyle=plain + overlay=<同名>」，并搬运线色/格数（视觉等价）。
+    {
+      const st = state as Record<string, unknown>;
+      const rawStyle = st.groundCanvasStyle;
+      if (
+        typeof rawStyle === "string" &&
+        (LEGACY_CANVAS_PATTERNS as readonly string[]).includes(rawStyle)
+      ) {
+        st.groundCanvasStyle = "plain";
+        if (st.groundOverlay === undefined || st.groundOverlay === "none") {
+          st.groundOverlay = rawStyle;
+        }
+        if (legacyLineColor !== undefined && st.groundOverlayColor === undefined) {
+          st.groundOverlayColor = legacyLineColor;
+        }
+        if (legacyGridSize !== undefined && st.groundOverlaySize === undefined) {
+          st.groundOverlaySize = legacyGridSize;
+        }
+      }
     }
     restoreFields(state, {
       enabled: {
@@ -641,9 +672,6 @@ export class GroundCapability implements SceneCapability {
       },
       groundColorGrid: { number: (v) => setEnvState({ groundColorGrid: v }, { source: "manual" }) },
       groundMatColor: { number: (v) => setEnvState({ groundMatColor: v }, { source: "manual" }) },
-      groundMatLineColor: {
-        number: (v) => setEnvState({ groundMatLineColor: v }, { source: "manual" }),
-      },
       groundMatColor2: { number: (v) => setEnvState({ groundMatColor2: v }, { source: "manual" }) },
       groundMatGridSize: {
         number: (v) => setEnvState({ groundMatGridSize: v }, { source: "manual" }),

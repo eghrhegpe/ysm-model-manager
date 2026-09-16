@@ -62,25 +62,11 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
     }
   });
 
-  it("matLineColor 在 grid/checker/stripes/diamond/marble 生效，solid/plain/none/texture 不生效", () => {
-    const lineColorModes: GroundSurfaceMode[] = ["grid", "checker", "stripes", "diamond", "marble"];
-    for (const mode of GROUND_SURFACE_MODES) {
-      expect(paramIsEffective(mode, "matLineColor"), `${mode}/matLineColor`).toBe(
-        lineColorModes.includes(mode),
-      );
-    }
-  });
 
-  it("matDensity/matAngleDeg 仅旋转坐标系模式（图案与噪声）生效", () => {
-    const newModes: GroundSurfaceMode[] = [
-      "stripes",
-      "diamond",
-      "marble",
-      "sand",
-      "grass",
-    ];
+  it("matDensity/matAngleDeg 仅噪声材质（marble/sand/grass）生效", () => {
+    const noiseModes: GroundSurfaceMode[] = ["marble", "sand", "grass"];
     for (const mode of GROUND_SURFACE_MODES) {
-      const expected = newModes.includes(mode);
+      const expected = noiseModes.includes(mode);
       expect(paramIsEffective(mode, "matDensity"), `${mode}/matDensity`).toBe(expected);
       expect(paramIsEffective(mode, "matAngleDeg"), `${mode}/matAngleDeg`).toBe(expected);
     }
@@ -94,10 +80,6 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
     //    acceptLoadedTexture 设 RepeatWrapping 即为此）——不得被隐藏（死控件）。
     const mapProducing: GroundSurfaceMode[] = [
       "plain",
-      "grid",
-      "checker",
-      "stripes",
-      "diamond",
       "marble",
       "sand",
       "grass",
@@ -118,7 +100,6 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
     const colorParams: GroundMatParam[] = [
       "matColor",
       "matColor2",
-      "matLineColor",
       "matGridSize",
       "matDensity",
       "matAngleDeg",
@@ -145,7 +126,6 @@ describe("Suite 2 — 矩阵与渲染真实行为一致", () => {
   const colorProbes: Array<[GroundMatParam, (p: GroundMaterialParams) => void]> = [
     ["matColor", (p) => (p.matColor = 0xff0000)],
     ["matColor2", (p) => (p.matColor2 = 0x00ff00)],
-    ["matLineColor", (p) => (p.matLineColor = 0x0000ff)],
     ["matDensity", (p) => (p.matDensity = 5)],
   ];
 
@@ -163,24 +143,20 @@ describe("Suite 2 — 矩阵与渲染真实行为一致", () => {
     }
   }
 
-  it("grid 下 matGridSize 变 → 像素变（格数真实生效）", () => {
-    expect(pixelDiffersWith("grid", (p) => (p.matGridSize = 16))).toBe(true);
+  it("marble 下 matGridSize 变 → 像素变（粒度真实生效）", () => {
+    expect(pixelDiffersWith("marble", (p) => (p.matGridSize = 16))).toBe(true);
   });
 
-  it("checker 下 matGridSize 变 → 像素变（格数真实生效）", () => {
-    expect(pixelDiffersWith("checker", (p) => (p.matGridSize = 16))).toBe(true);
-  });
-
-  it("solid 下 matLineColor 变 → 像素不变（死控件确证）", () => {
-    expect(pixelDiffersWith("solid", (p) => (p.matLineColor = 0x0000ff))).toBe(false);
+  it("sand 下 matGridSize 变 → 像素变（粒度真实生效）", () => {
+    expect(pixelDiffersWith("sand", (p) => (p.matGridSize = 16))).toBe(true);
   });
 
   it("solid 下 matColor 变 → 像素变（底色真实生效）", () => {
     expect(pixelDiffersWith("solid", (p) => (p.matColor = 0xff0000))).toBe(true);
   });
 
-  it("stripes 下 matAngleDeg 变 → 像素变（角度真实生效）", () => {
-    expect(pixelDiffersWith("stripes", (p) => (p.matAngleDeg = 45))).toBe(true);
+  it("sand 下 matAngleDeg 变 → 像素变（颗粒角度真实生效）", () => {
+    expect(pixelDiffersWith("sand", (p) => (p.matAngleDeg = 45))).toBe(true);
   });
 
   it("plain 下 matDensity 变 → 像素不变（纯色不受密度影响）", () => {
@@ -225,7 +201,6 @@ describe("Suite 4 — 菜单可见集与矩阵生效集同源", () => {
   const nodeIdToParam: Record<string, GroundMatParam> = {
     "ground-mat-color": "matColor",
     "ground-mat-color2": "matColor2",
-    "ground-mat-line-color": "matLineColor",
     "ground-mat-grid-size": "matGridSize",
     "ground-mat-density": "matDensity",
     "ground-mat-angle": "matAngleDeg",
@@ -263,13 +238,13 @@ describe("Suite 4 — 菜单可见集与矩阵生效集同源", () => {
     }
   });
 
-  it("solid 模式下线色/副色/格数控件不可见（用户反馈的具体症状）", () => {
+  it("solid 模式下副色/格数控件不可见（用户反馈的具体症状）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
     const snapshot = { "env.groundSourceKind": "solid" } as Partial<PreviewSnapshot>;
 
-    for (const id of ["ground-mat-line-color", "ground-mat-color2", "ground-mat-grid-size"]) {
+    for (const id of ["ground-mat-color2", "ground-mat-grid-size"]) {
       const node = folder.children!.find((c) => c.id === id)!;
       expect(node.visibleWhen!(snapshot), `${id} 在纯色下不应可见`).toBe(false);
     }
@@ -299,7 +274,6 @@ describe("Suite 5 — 默认值单一事实源", () => {
     resetEnvState();
     const pairs: Array<[keyof typeof envState, keyof GroundMaterialParams]> = [
       ["groundMatColor", "matColor"],
-      ["groundMatLineColor", "matLineColor"],
       ["groundMatColor2", "matColor2"],
       ["groundMatGridSize", "matGridSize"],
       ["groundMatOpacity", "matOpacity"],

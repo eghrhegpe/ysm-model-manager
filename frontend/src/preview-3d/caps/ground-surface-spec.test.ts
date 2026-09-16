@@ -39,7 +39,7 @@ function makeMap(): THREE.Texture {
 
 describe("Suite 1 — spec 构建与 key 确定性", () => {
   it("同参数两次构建 spec 深度相等", () => {
-    const p = { ...baseParams(), matSource: "checker" as const, matColor: 0xff8800 };
+    const p = { ...baseParams(), matSource: "marble" as const, matColor: 0xff8800 };
     const a = buildGroundSurfaceSpec(p, "");
     const b = buildGroundSurfaceSpec(p, "");
     expect(a).toEqual(b);
@@ -59,19 +59,24 @@ describe("Suite 1 — spec 构建与 key 确定性", () => {
     const without = buildGroundSurfaceSpec(p, "");
     expect(surfaceSpecKey(withTok)).not.toBe(surfaceSpecKey(without));
     // 外观不同但 key 相同（structural 保持一致）
-    const pA = { ...baseParams(), matSource: "grid" as const };
+    const pA = { ...baseParams(), matSource: "sand" as const };
     const p2 = { ...pA, matOpacity: 0.3, matScale: 4, matRoughness: 0.1 };
     expect(surfaceSpecKey(buildGroundSurfaceSpec(pA, ""))).toBe(surfaceSpecKey(buildGroundSurfaceSpec(p2, "")));
   });
 
-  it("key 对字段顺序不敏感（确定性序列化）", () => {
-    const p1 = { ...baseParams(), matSource: "grid" as const, matGridSize: 8, matLineColor: 0x112233 };
-    const p2 = { ...baseParams(), matLineColor: 0x112233, matGridSize: 8, matSource: "grid" as const };
-    expect(surfaceSpecKey(buildGroundSurfaceSpec(p1, ""))).toBe(surfaceSpecKey(buildGroundSurfaceSpec(p2, "")));
+  it("key 对字段顺序不敏感（同值异键序 → 同 key）", () => {
+    const base = { ...baseParams(), matSource: "sand" as const, matColor: 0x112233 };
+    // 同值，但参数对象键插入序相反：规范序列化后 key 必须相等
+    const reversed = Object.fromEntries(
+      Object.entries(base).reverse(),
+    ) as unknown as GroundMaterialParams;
+    expect(surfaceSpecKey(buildGroundSurfaceSpec(base, ""))).toBe(
+      surfaceSpecKey(buildGroundSurfaceSpec(reversed, "")),
+    );
   });
 
   it("structural 逐字段完备：任一字段变化 key 必变（锁死「新增字段自动纳入」）", () => {
-    const spec = buildGroundSurfaceSpec({ ...baseParams(), matSource: "grid" as const }, "");
+    const spec = buildGroundSurfaceSpec({ ...baseParams(), matSource: "sand" as const }, "");
     const base = surfaceSpecKey(spec);
     // code_review 74cc9ad95 #1/#3：嵌套三元扁平化为具名 helper（批次规则禁嵌套三元）
     const mutate = (v: unknown): unknown => {
@@ -91,7 +96,7 @@ describe("Suite 1 — spec 构建与 key 确定性", () => {
   it("key 对 structural 键插入序不敏感（规范序列化契约）", () => {
     // code_review 74cc9ad95 #2/#4 回归锚：整体 JSON.stringify 依赖键插入序，仅
     // buildGroundSurfaceSpec 字面量固定序的约定兜底；排序键投影后同内容异键序 key 相等
-    const spec = buildGroundSurfaceSpec({ ...baseParams(), matSource: "grid" as const }, "");
+    const spec = buildGroundSurfaceSpec({ ...baseParams(), matSource: "sand" as const }, "");
     const stA = spec.structural as unknown as Record<string, unknown>;
     const keys = Object.keys(stA);
     const stB = Object.fromEntries([...keys].reverse().map((k) => [k, stA[k]])) as unknown as typeof spec.structural;
@@ -103,15 +108,15 @@ describe("Suite 1 — spec 构建与 key 确定性", () => {
 
 describe("Suite 2 — 重建判别 groundSurfaceNeedsRebuild", () => {
   it("structural 任一字段变化 → true", () => {
-    const prev = buildGroundSurfaceSpec({ ...baseParams(), matSource: "checker" as const }, "");
+    const prev = buildGroundSurfaceSpec({ ...baseParams(), matSource: "marble" as const }, "");
     const cases: Array<Partial<GroundMaterialParams>> = [
-      { matSource: "grid" },
+      { matSource: "sand" },
       { matColor: 0xffffff },
-      { matLineColor: 0xffffff },
+      { matColor2: 0xffffff },
       { matGridSize: 16 },
     ];
     for (const patch of cases) {
-      const next = buildGroundSurfaceSpec({ ...baseParams(), matSource: "checker" as const, ...patch }, "");
+      const next = buildGroundSurfaceSpec({ ...baseParams(), matSource: "marble" as const, ...patch }, "");
       expect(groundSurfaceNeedsRebuild(prev, next), JSON.stringify(patch)).toBe(true);
     }
     // token 变化
@@ -168,7 +173,7 @@ describe("Suite 3 — 合约：rebuild == in-place", () => {
     }
   }
 
-  const structuralBase = { ...baseParams(), matSource: "checker" as const };
+  const structuralBase = { ...baseParams(), matSource: "marble" as const };
 
   it("opacity 迁移：两路径产物一致", () => {
     const sA = buildGroundSurfaceSpec(structuralBase, "");
@@ -220,50 +225,18 @@ describe("Suite 4 — generateSurfacePixels", () => {
     }
   });
 
-  it("plain（素面）：必须与 solid 同为纯色，禁止落到 grid 分支画格线（刀⑳ 真 bug 回归）", () => {
+  it("plain（素面）：必须与 solid 同为纯色，禁止出现任何图案像素（刀⑳ 真 bug 回归）", () => {
     const st = buildGroundSurfaceSpec(
-      { ...baseParams(), matSource: "plain", matColor: 0xaabbcc, matLineColor: 0x000000, matGridSize: 4 },
+      { ...baseParams(), matSource: "plain", matColor: 0xaabbcc, matGridSize: 4 },
       "",
     ).structural;
-    const px = generateSurfacePixels(st, 8); // gridSize=4 → cell=2px，若误入 grid 分支则 x/y∈{0,2,4,6} 为线
+    const px = generateSurfacePixels(st, 8);
     for (let i = 0; i < px.length; i += 4) {
       expect([px[i], px[i + 1], px[i + 2]]).toEqual([0xaa, 0xbb, 0xcc]); // 全图纯色，无线色
       expect(px[i + 3]).toBe(255);
     }
   });
 
-  it("checker：相邻 cell 颜色交替（color 与 lineColor 棋盘交错）", () => {
-    const st = buildGroundSurfaceSpec(
-      { ...baseParams(), matSource: "checker", matColor: 0xffffff, matLineColor: 0x000000, matGridSize: 4 },
-      "",
-    ).structural;
-    const px = generateSurfacePixels(st, 8); // cell=2px
-    const at = (x: number, y: number): number[] => {
-      const i = (y * 8 + x) * 4;
-      return [px[i], px[i + 1], px[i + 2]];
-    };
-    expect(at(0, 0)).toEqual([255, 255, 255]);
-    expect(at(1, 0)).toEqual([255, 255, 255]);
-    expect(at(2, 0)).toEqual([0, 0, 0]);
-    expect(at(0, 2)).toEqual([0, 0, 0]); // 行交替
-    expect(at(2, 2)).toEqual([255, 255, 255]);
-  });
-
-  it("grid：cell 边界为线色，内部为底色", () => {
-    const st = buildGroundSurfaceSpec(
-      { ...baseParams(), matSource: "grid", matColor: 0x111111, matLineColor: 0xeeeeee, matGridSize: 4 },
-      "",
-    ).structural;
-    const px = generateSurfacePixels(st, 8); // cell=2px：x/y∈{0,2,4,6} 为线
-    const at = (x: number, y: number): number[] => {
-      const i = (y * 8 + x) * 4;
-      return [px[i], px[i + 1], px[i + 2]];
-    };
-    expect(at(0, 0)).toEqual([238, 238, 238]); // 边界线
-    expect(at(1, 1)).toEqual([17, 17, 17]); // 内部
-    expect(at(4, 3)).toEqual([238, 238, 238]);
-    expect(at(5, 5)).toEqual([17, 17, 17]);
-  });
 });
 
 describe("Suite 5 — textureRepeat 密度不变量", () => {
@@ -284,39 +257,6 @@ describe("Suite 6 — 新材质模式（stripes/diamond/marble）", () => {
     ...overrides,
   });
 
-  it("stripes 模式像素：奇偶列方向（angle=0）每半 cell 交替 color / lineColor", () => {
-    // gridSize=8, sizePx=32 → cell=4px；density=1 → stripe 宽度 cell/2=2px
-    const st = buildGroundSurfaceSpec(
-      params({ matSource: "stripes", matColor: 0xff0000, matLineColor: 0x0000ff, matGridSize: 8, matAngleDeg: 0, matDensity: 1 }),
-      "",
-    ).structural;
-    const px = generateSurfacePixels(st, 32);
-    const at = (x: number, y: number): number[] => {
-      const i = (y * 32 + x) * 4;
-      return [px[i], px[i + 1], px[i + 2]];
-    };
-    // angle=0 竖条纹：x=0（第一列）应是 color 红；x=2（跨过半 cell）应是 lineColor 蓝
-    expect(at(0, 0)).toEqual([255, 0, 0]);
-    expect(at(2, 0)).toEqual([0, 0, 255]);
-    expect(at(4, 0)).toEqual([255, 0, 0]);
-    // 垂直方向同一列，颜色一致
-    expect(at(0, 10)).toEqual([255, 0, 0]);
-  });
-
-  it("diamond 模式像素：对角线存在 lineColor（黑色）绘制，面积不超过 50%", () => {
-    const st = buildGroundSurfaceSpec(
-      params({ matSource: "diamond", matColor: 0xcccccc, matLineColor: 0x000000, matGridSize: 4, matAngleDeg: 0, matDensity: 1 }),
-      "",
-    ).structural;
-    const px = generateSurfacePixels(st, 32);
-    let blackPx = 0;
-    for (let i = 0; i < px.length; i += 4) {
-      if (px[i] === 0 && px[i + 1] === 0 && px[i + 2] === 0) blackPx++;
-    }
-    const total = (32 * 32);
-    expect(blackPx).toBeGreaterThan(0);
-    expect(blackPx).toBeLessThan(total * 0.5);
-  });
 
   it("marble 模式：像素不是完全均匀（含噪声扰动），大理石纹占比 >5%", () => {
     const st = buildGroundSurfaceSpec(
@@ -489,13 +429,6 @@ describe("Suite 7 — 噪声材质 sand / grass", () => {
     }
   });
 
-  it("sand/grass 不读 lineColor（材质无格线）", () => {
-    for (const m of ["sand", "grass"] as const) {
-      const a = generateSurfacePixels(mode(m, { matLineColor: 0xff0000 }).structural, 32);
-      const b = generateSurfacePixels(mode(m, { matLineColor: 0x00ff00 }).structural, 32);
-      expect(Array.from(a), `${m} 不应读线色`).toEqual(Array.from(b));
-    }
-  });
 
   it("sand/grass 确定性：同参数两次生成完全一致", () => {
     for (const m of ["sand", "grass"] as const) {

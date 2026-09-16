@@ -148,17 +148,12 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
       visibleWhen: (s) => s["env.groundSourceKind"] === "canvas",
       control: {
         options: [
-          // ADR-251：按家族排序——先噪声材质（素面/大理石/沙子/草地），后几何图案。
-          // 不加上下文前缀：矩阵已用「哪些控件出现」行为性地告知用户所在家族
-          // （选材质 → 线色消失；选图案 → 线色出现），前缀只会重复该信号。
+          // ADR-252：本轴只装**噪声材质**；几何图案已归叠加层 folder。
+          // 不加上下文前缀：矩阵已用「哪些控件出现」行为性告知家族（材质无线色控件）。
           { value: "plain", label: "素面" },
           { value: "marble", label: "大理石" },
           { value: "sand", label: "沙子" },
           { value: "grass", label: "草地" },
-          { value: "grid", label: "网格" },
-          { value: "checker", label: "棋盘" },
-          { value: "stripes", label: "条纹" },
-          { value: "diamond", label: "菱格" },
         ],
         get: () => cap.getCanvasStyle(),
         set: (v) => cap.setCanvasStyle(v as GroundCanvasStyle),
@@ -177,13 +172,6 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
       "matColor2",
       () => cap.getMatColor2(),
       (v) => cap.setMatColor2(v),
-    ),
-    colorNode(
-      "ground-mat-line-color",
-      "preview.groundMatLineColor",
-      "matLineColor",
-      () => cap.getMatLineColor(),
-      (v) => cap.setMatLineColor(v),
     ),
     sliderNode(
       "ground-mat-grid-size",

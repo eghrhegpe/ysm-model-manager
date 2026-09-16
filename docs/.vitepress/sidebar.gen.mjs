@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-252：地面材质第三轴拆分：canvasStyle 收敛为纯材质轴",
+        "link": "/adr/ADR-252-ground-canvas-style-material-only"
+      },
+      {
         "text": "ADR-251：地面材质家族补全：噪声材质与非几何图案分工",
         "link": "/adr/ADR-251-ground-material-family-completion"
       },

@@ -376,6 +376,9 @@ auto_fields:
     - Ktx2TextureLoader
     - Ktx2TextureLoaderDeps
     - LARGE_MODEL_WARN_BYTES
+    - LEGACY_CANVAS_PATTERNS
+    - LEGACY_GROUND_MAT_SOURCES
+    - LegacyGroundMatSource
     - LegChain
     - LightCapability
     - lightDirToPosition

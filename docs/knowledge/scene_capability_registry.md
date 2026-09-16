@@ -77,6 +77,9 @@ auto_fields:
     - GroundSurfaceStructuralSpec
     - injectSkySunScalePatch
     - isSkyEnvironmentOn
+    - LEGACY_CANVAS_PATTERNS
+    - LEGACY_GROUND_MAT_SOURCES
+    - LegacyGroundMatSource
     - LightCapability
     - lightDirToPosition
     - LightParams

@@ -105,7 +105,6 @@ export const ENV_STATE_SCHEMA = {
   groundColorGrid: { type: "number", default: 0x2a2a3a, group: "ground" },
   // ADR-249 §2.6：默认值统一取自 spec（唯一事实源），不在此重写字面量。
   groundMatColor: { type: "number", default: GROUND_DEFAULTS.matColor, group: "ground" },
-  groundMatLineColor: { type: "number", default: GROUND_DEFAULTS.matLineColor, group: "ground" },
   groundMatColor2: { type: "number", default: GROUND_DEFAULTS.matColor2, group: "ground" },
   groundMatGridSize: { type: "number", default: GROUND_DEFAULTS.matGridSize, group: "ground" },
   groundMatOpacity: { type: "number", default: GROUND_DEFAULTS.matOpacity, group: "ground" },

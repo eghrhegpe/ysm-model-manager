@@ -13,8 +13,19 @@ import type * as THREE from "three";
 
 /* ============ 类型 ============ */
 
-/** 地面表面模式（扁平枚举：来源 × 画布样式合一，避免双字段耦合守卫） */
+/** 地面表面模式（当前 = 来源 × **材质**；几何图案已迁至叠加层轴——ADR-252）。
+ *  与 ADR-249 时期的区别：不再含 grid/checker/stripes/diamond。 */
 export type GroundSurfaceMode =
+  | "none"
+  | "solid"
+  | "plain"
+  | "marble"
+  | "sand"
+  | "grass"
+  | "texture";
+
+/** ADR-252 之前的扁平 9 值枚举（**仅作迁移输入**，运行时不出现图案值）。 */
+export type LegacyGroundMatSource =
   | "none"
   | "solid"
   | "plain"
@@ -23,21 +34,18 @@ export type GroundSurfaceMode =
   | "texture"
   | "stripes"
   | "diamond"
-  | "marble"
-  // ADR-251：噪声类材质（与 marble 同族，非几何图案）
-  | "sand"
-  | "grass";
+  | "marble";
 
 export interface GroundMaterialParams {
   /** 表面模式 */
   matSource: GroundSurfaceMode;
   /** 底色 / 素面色（0xRRGGBB） */
   matColor: number;
-  /** 网格线 / 棋盘副色 / 条纹副色 / 菱形线色（0xRRGGBB） */
-  matLineColor: number;
+  // ADR-252：原 `matLineColor` 已删除——几何图案（唯一读线色者）已迁至叠加层轴，
+  // 叠加层用自己的 `groundOverlayColor`。旧存档的该值由迁移搬入 `groundOverlayColor`。
   /** 渐变副色 / 大理石纹线色（0xRRGGBB） */
   matColor2: number;
-  /** 整面网格/棋盘格数（每边） */
+  /** 噪声材质粒度基准（ADR-252：图案离场后仅噪声材质读它） */
   matGridSize: number;
   /** 表面不透明度 0=全透 1=不透明 */
   matOpacity: number;
@@ -58,7 +66,6 @@ export interface GroundMaterialParams {
 export const DEFAULT_GROUND_SURFACE_PARAMS: GroundMaterialParams = {
   matSource: "none",
   matColor: 0x9a8b78,
-  matLineColor: 0x1c2030,
   matColor2: 0x6b5d4c,
   matGridSize: 8,
   matOpacity: 1,
@@ -87,15 +94,24 @@ export const GROUND_SURFACE_MODES = [
   "none",
   "solid",
   "plain",
+  "marble",
+  "sand",
+  "grass",
+  "texture",
+] as const satisfies readonly GroundSurfaceMode[];
+
+/** ADR-252 之前的 9 值扁平枚举（仅迁移路径消费；与 `LegacyGroundMatSource` 同步）。 */
+export const LEGACY_GROUND_MAT_SOURCES = [
+  "none",
+  "solid",
+  "plain",
   "grid",
   "checker",
   "texture",
   "stripes",
   "diamond",
   "marble",
-  "sand",
-  "grass",
-] as const satisfies readonly GroundSurfaceMode[];
+] as const satisfies readonly LegacyGroundMatSource[];
 
 /** 来源轴取值集合（ADR-249 §2.1；loadState 校验 + 菜单来源 select 选项用） */
 export const GROUND_SOURCE_KINDS = [
@@ -105,13 +121,9 @@ export const GROUND_SOURCE_KINDS = [
   "texture",
 ] as const satisfies readonly GroundSourceKind[];
 
-/** 样式轴取值集合（仅 sourceKind === "canvas" 有效；loadState 校验用） */
+/** 样式轴取值集合（纯材质，仅 sourceKind === "canvas" 有效；ADR-252 起不含几何图案）。 */
 export const GROUND_CANVAS_STYLES = [
   "plain",
-  "grid",
-  "checker",
-  "stripes",
-  "diamond",
   "marble",
   "sand",
   "grass",
@@ -121,7 +133,7 @@ export const GROUND_CANVAS_STYLES = [
 export type GroundOverlayStyle = "none" | "grid" | "checker" | "stripes" | "diamond";
 
 /** 叠加层样式取值集合（ADR-249 §2.3 架构；ADR-251 补齐几何图案集）：
- *  装饰线型家族——与 canvasStyle 的材质家族区别在于「透明底、可叠在任意来源上」。 */
+ *  装饰线型家族——透明底、可叠在任意来源上。 */
 export const GROUND_OVERLAY_STYLES = [
   "none",
   "grid",
@@ -130,11 +142,14 @@ export const GROUND_OVERLAY_STYLES = [
   "diamond",
 ] as const satisfies readonly GroundOverlayStyle[];
 
+/** ADR-249 时代曾作为 `groundCanvasStyle` 取值的几何图案（ADR-252 迁移判据）。
+ *  这些值现已非法，读到即拆为「canvasStyle=plain + overlay=<同名>」。 */
+export const LEGACY_CANVAS_PATTERNS = ["grid", "checker", "stripes", "diamond"] as const;
+
 /** 矩阵行：材质面板的全部可调参数（与 ground-menu.ts 控件一一对应） */
 export const GROUND_MAT_PARAMS = [
   "matColor",
   "matColor2",
-  "matLineColor",
   "matGridSize",
   "matDensity",
   "matAngleDeg",
@@ -147,49 +162,20 @@ export const GROUND_MAT_PARAMS = [
 
 export type GroundMatParam = (typeof GROUND_MAT_PARAMS)[number];
 
-/** 产出贴图的模式集（generateSurfacePixels 非空返回）——matScale/matRotationDeg 的生效前提 */
-const MAP_PRODUCING_MODES: readonly GroundSurfaceMode[] = [
-  "plain",
-  "grid",
-  "checker",
-  "stripes",
-  "diamond",
-  "marble",
-  "sand",
-  "grass",
-];
-
-/** 使用 lineColor 的模式集（generateSurfacePixels 中读 st.lineColor 的分支） */
-const LINE_COLOR_MODES: readonly GroundSurfaceMode[] = [
-  "grid",
-  "checker",
-  "stripes",
-  "diamond",
-  "marble",
-];
+/** 产出贴图的模式集（generateSurfacePixels 非空返回）——matScale/matRotationDeg 的生效前提。
+ *  ADR-252：图案已离场，剩下的全是材质，均产贴图。 */
+const MAP_PRODUCING_MODES: readonly GroundSurfaceMode[] = ["plain", "marble", "sand", "grass"];
 
 /** 使用 color2 的模式集（噪声类材质的色变插值：marble/sand/grass） */
 const COLOR2_MODES: readonly GroundSurfaceMode[] = ["marble", "sand", "grass"];
 
-/** 使用 density / angleRad 的模式集（噪声与几何图案的旋转坐标系分支） */
-const NEW_PATTERN_MODES: readonly GroundSurfaceMode[] = [
-  "stripes",
-  "diamond",
-  "marble",
-  "sand",
-  "grass",
-];
+/** 噪声材质集（走 2D 旋转坐标系，读 density / angleRad / gridSize 作颗粒参数）
+ *  ADR-252：几何图案已迁至叠加层，此处只剩噪声材质。 */
+const NOISE_MODES: readonly GroundSurfaceMode[] = ["marble", "sand", "grass"];
 
-/** 使用 gridSize 的模式集（grid/checker 为「每边格数」；图案/噪声为「周期数/粒度」） */
-const GRID_SIZE_MODES: readonly GroundSurfaceMode[] = [
-  "grid",
-  "checker",
-  "stripes",
-  "diamond",
-  "marble",
-  "sand",
-  "grass",
-];
+/** 使用 gridSize 的模式集（噪声材质：gridSize 作粒度基准）。
+ *  ADR-252：不再含 grid/checker（图案已迁至叠加层）。 */
+const GRID_SIZE_MODES: readonly GroundSurfaceMode[] = ["marble", "sand", "grass"];
 
 /** 外观参数（与模式无关，凡非 none 均生效；texture 亦生效） */
 const APPEARANCE_PARAMS: readonly GroundMatParam[] = ["matOpacity", "matRoughness", "matMetalness"];
@@ -215,20 +201,18 @@ export function paramIsEffective(mode: GroundSurfaceMode, param: GroundMatParam)
     return param === "matScale" || param === "matRotationDeg";
   }
 
-  // 其余（非 texture）色彩/图案参数
+  // 其余（非 texture）材质参数
   switch (param) {
     case "matColor":
-      // solid 直出 color；canvas 类（plain/grid/...）填充 color
+      // solid 直出 color；canvas 材质（plain/marble/sand/grass）均填充 color
       return true;
     case "matColor2":
       return COLOR2_MODES.includes(mode);
-    case "matLineColor":
-      return LINE_COLOR_MODES.includes(mode);
     case "matGridSize":
       return GRID_SIZE_MODES.includes(mode);
     case "matDensity":
     case "matAngleDeg":
-      return NEW_PATTERN_MODES.includes(mode);
+      return NOISE_MODES.includes(mode);
     case "matScale":
     case "matRotationDeg":
       // 作用于 mat.map：凡产出贴图的模式均可被读取
@@ -363,53 +347,58 @@ export const OVERLAY_TEX_SIZE = 512;
 /** 来源轴：颜色从哪来（决定渲染管线） */
 export type GroundSourceKind = "none" | "solid" | "canvas" | "texture";
 
-/** 样式轴：程序化画布长什么样（仅 sourceKind === "canvas" 有效） */
-export type GroundCanvasStyle =
-  | "plain"
-  | "grid"
-  | "checker"
-  | "stripes"
-  | "diamond"
-  | "marble"
-  | "sand"
-  | "grass";
+/** 样式轴：程序化画布长什么样（**纯材质**；仅 sourceKind === "canvas" 有效）。
+ *  ADR-252：几何图案（grid/checker/stripes/diamond）已移至叠加层轴，不在此。 */
+export type GroundCanvasStyle = "plain" | "marble" | "sand" | "grass";
 
-/** 旧枚举 → 新两轴的映射结果 */
+/** 旧枚举 → 新三轴的映射结果（ADR-249 拆来源/样式；ADR-252 再拆图案至叠加层）。 */
 export interface GroundAxisMapping {
   sourceKind: GroundSourceKind;
   canvasStyle?: GroundCanvasStyle;
+  /** 旧值若为几何图案：本字段给出对应的叠加层样式。
+   *  消费方还须把旧 `matLineColor` 搬入 `groundOverlayColor`、`matGridSize` 搬入 `groundOverlaySize`。 */
+  overlayStyle?: GroundOverlayStyle;
 }
 
 /**
- * 旧单枚举值 → 新两轴（ADR-249 §2.5 迁移映射）。
+ * 旧单枚举值 → 新三轴（ADR-249 §2.5 + ADR-252 §2.3 迁移映射）。
  *
- * 映射表（与 ADR-249 §2.1 逐行对应）：
+ * 映射表：
  *   none                     → { sourceKind: "none" }
  *   solid                    → { sourceKind: "solid" }
  *   texture                  → { sourceKind: "texture" }
- *   plain/grid/checker/
- *   stripes/diamond/marble   → { sourceKind: "canvas", canvasStyle: <同名> }
+ *   plain                    → { sourceKind: "canvas", canvasStyle: "plain" }
+ *   marble                   → { sourceKind: "canvas", canvasStyle: "marble" }
+ *   grid/checker/stripes/
+ *   diamond                  → { sourceKind: "canvas", canvasStyle: "plain", overlayStyle: <同名> }
  *
  * 注意：不在此做「texture 无贴图则改写为 plain」的降级——那是历史缺陷
  * （loadState 曾静默改写，致用户存档中的自定义贴图重启后变成纯色地面）。
  * 来源选择归用户，「无贴图」由 UI 提示处理（ADR-249 §2.5 第 2 条）。
  */
-export function migrateGroundMatSource(old: GroundSurfaceMode): GroundAxisMapping {
+export function migrateGroundMatSource(
+  old: LegacyGroundMatSource | GroundCanvasStyle,
+): GroundAxisMapping {
   if (old === "none" || old === "solid" || old === "texture") {
     return { sourceKind: old };
   }
-  if (GROUND_CANVAS_STYLES.includes(old as GroundCanvasStyle)) {
-    return { sourceKind: "canvas", canvasStyle: old as GroundCanvasStyle };
+  // ADR-252：旧几何图案 → 材质底座（plain）+ 叠加层进位，视觉等价
+  if (old === "grid" || old === "checker" || old === "stripes" || old === "diamond") {
+    return { sourceKind: "canvas", canvasStyle: "plain", overlayStyle: old };
   }
-  // 脏数据兜底：未知值回退 none（不抛错、不静默选中某个真实样式）
+  // 材质值（plain/marble/sand/grass）原生对应
+  if (old === "plain" || old === "marble" || old === "sand" || old === "grass") {
+    return { sourceKind: "canvas", canvasStyle: old };
+  }
+  // 脏数据兜底：未知值回退 none（不抛错、不静默选中某个真实材质）
   return { sourceKind: "none" };
 }
 
 /**
- * 新两轴 → 旧单枚举值（渲染分支与持久化回写用）。
+ * 新两轴 → 当前表面模式（渲染分支用）。
  *
- * 与 migrateGroundMatSource 互逆（往返测试锁死）。canvas 缺样式时回退 plain
- * （画布默认样式，对齐 DEFAULT_GROUND_SURFACE_PARAMS.matSource 的历史语义）。
+ * 注意：ADR-252 后**不再与 `migrateGroundMatSource` 互逆**——旧图案值经迁移会
+ * 拆为「plain 底座 + 叠加层」，不再回到单值。canvas 缺材质时回退 plain。
  */
 export function groundMatSourceFromAxes(
   sourceKind: GroundSourceKind,
@@ -430,7 +419,6 @@ export function groundMatSourceFromAxes(
 export interface GroundSurfaceStructuralSpec {
   mode: GroundSurfaceMode;
   color: [number, number, number];
-  lineColor: [number, number, number];
   gridSize: number;
   /** 自定义贴图身份标识（文件名:尺寸）；"" = 无。变化触发重建 */
   textureToken: string;
@@ -466,7 +454,6 @@ export function buildGroundSurfaceSpec(
     structural: {
       mode: p.matSource,
       color: hexToTriple(p.matColor),
-      lineColor: hexToTriple(p.matLineColor),
       gridSize: p.matGridSize,
       textureToken,
       color2: hexToTriple(p.matColor2),
@@ -546,21 +533,14 @@ function valueNoise(x: number, y: number): number {
 
 export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: number): Uint8Array {
   // ADR-249 §2.2："none" = 真的关闭地面表面层——不产出任何像素（空数组）。
-  // 历史行为：none 曾与 solid/plain 同支返回不透明纯色，导致「菜单隐了控件、
-  // 地面却仍盖一层实色」的语义矛盾（用户实测反馈）。none 与 solid 自此彻底分离。
-  // 消费方判据：空数组 ⇒ 不创建/不显示表面贴图（GroundCapability.updateSurfaceVisible
-  // 已按 groundMatSource !== "none" 门控 surface.visible，二者语义现已自洽）。
+  // 消费方判据：空数组 ⇒ 不创建/不显示表面贴图。
   if (st.mode === "none") return new Uint8Array(0);
 
-  // ADR-249："texture" 同样不产程序化像素——表面来自用户上传的贴图（走
-  // applyGroundSurfaceStructural 的 tex 非空分支：mat.map = tex + 白乘色）。
-  // 历史行为：texture 未短路，落进尾部 grid 分支画出格线像素，而该像素
-  // **永不被使用**（材质用用户贴图）——属死计算。矩阵测试捕获。
+  // ADR-249："texture" 同样不产程序化像素——表面来自用户上传的贴图。
   if (st.mode === "texture") return new Uint8Array(0);
 
   const px = new Uint8Array(sizePx * sizePx * 4);
   const [r, g, b] = st.color;
-  const [lr, lg, lb] = st.lineColor;
   const [cr2, cg2, cb2] = st.color2;
 
   // "plain"（素面）与 "solid" 同为**纯色**语义，仅来源不同（plain = 内置生成的纯色贴图，
@@ -577,124 +557,53 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
     return px;
   }
 
-  // 图案 / 噪声材质（stripes/diamond/marble/sand/grass）不需要基于 cell 的逐格循环，
-  // 统一按像素 2D 旋转坐标系生成（ADR-251：噪声材质与几何图案共用坐标系）
-  if (
-    st.mode === "stripes" ||
-    st.mode === "diamond" ||
-    st.mode === "marble" ||
-    st.mode === "sand" ||
-    st.mode === "grass"
-  ) {
-    const cosA = Math.cos(st.angleRad);
-    const sinA = Math.sin(st.angleRad);
-    // 归一化到 [-1,1] 便于几何计算；density 映射为频率倍率
-    const half = sizePx / 2;
-    const density = Math.max(0.25, st.density);
-    // gridSize 在图案/噪声模式下作为周期数或粒度基准（当 angle=0 时条纹条数 ≈ gridSize * density）
-    const periodCount = Math.max(1, st.gridSize) * density;
+  // ADR-252：此函数现在只处理**噪声材质**（marble / sand / grass）。
+  // 几何图案（grid/checker/stripes/diamond）已迁至叠加层轴（generateOverlayPixels），
+  // 不再由本函数产出——故原先的 cell 逐格分支与旋转坐标系中的图案分支均已删除。
+  const cosA = Math.cos(st.angleRad);
+  const sinA = Math.sin(st.angleRad);
+  const half = sizePx / 2;
+  const density = Math.max(0.25, st.density);
+  const periodCount = Math.max(1, st.gridSize) * density;
 
-    for (let y = 0; y < sizePx; y++) {
-      const ny = (y - half) / half; // [-1, 1]
-      for (let x = 0; x < sizePx; x++) {
-        const nx = (x - half) / half; // [-1, 1]
-        // 2D 旋转：应用图案角度（st.angleRad 为结构性变化，不与 appearance.rotationRad 重复；
-        // 后者在 UV repeat 阶段再施加一次，两者叠加但意义不同）
-        const rx = nx * cosA + ny * sinA;
-        const ry = -nx * sinA + ny * cosA;
-
-        let pr: number, pg: number, pb: number;
-        if (st.mode === "stripes") {
-          // 沿 x' 轴方向的周期条纹：每 (2/periodCount) 宽度一个周期，color / lineColor 交替
-          const stripeWidth = 2 / Math.max(1, periodCount);
-          const band = Math.floor(
-            ((((rx + 1) % stripeWidth) + stripeWidth) % stripeWidth) / (stripeWidth / 2),
-          );
-          if (band === 0) {
-            pr = r;
-            pg = g;
-            pb = b;
-          } else {
-            pr = lr;
-            pg = lg;
-            pb = lb;
-          }
-        } else if (st.mode === "diamond") {
-          // 菱形等距线：|rx| + |ry| = k * t；线宽 ~1 像素，周期 t = 2/periodCount
-          const pxLineWidth = (0.9 / sizePx) * 2; // ~0.9 px 宽
-          const d = Math.abs(rx) + Math.abs(ry);
-          const t = 2 / Math.max(1, periodCount);
-          const localD = ((d % t) + t) % t;
-          // 只取「接近 0」的单边界：接近 t 实际是下一个周期的 0（相邻菱形重叠），避免双线
-          const onLine = localD < pxLineWidth;
-          if (onLine) {
-            pr = lr;
-            pg = lg;
-            pb = lb;
-          } else {
-            pr = r;
-            pg = g;
-            pb = b;
-          }
-        } else if (st.mode === "marble") {
-          // marble：多层 valueNoise 叠加 + 沿旋转轴的正弦带，在 color 与 color2 间 lerp
-          let n = 0;
-          n += valueNoise(rx * 3 * density + 10, ry * 3 * density + 10) * 0.5;
-          n += valueNoise(rx * 6 * density - 5, ry * 6 * density - 5) * 0.3;
-          n += valueNoise(rx * 12 * density + 3, ry * 12 * density + 3) * 0.2;
-          // 沿主方向（angleRad 已旋转 rx, ry，取 rx 做正弦即沿图案方向的条纹）
-          const band = Math.sin((rx * periodCount + n * 2.4) * Math.PI * 2);
-          const t2 = 0.5 + 0.5 * band; // [0,1]
-          pr = Math.round(r + t2 * (cr2 - r));
-          pg = Math.round(g + t2 * (cg2 - g));
-          pb = Math.round(b + t2 * (cb2 - b));
-        } else {
-          // ADR-251 sand / grass：纯噪声材质（与 marble 同族，但不是带纹）。
-          // 仅频率与对比度不同——沙=高频细颗粒低对比，草=中频块状高对比。
-          // 复用 valueNoise 基建（三倍频叠加），在 color 与 color2 间 lerp。
-          const grain = Math.max(1, st.gridSize) / 8; // 粒度基准（默认 gridSize=8 → 1.0）
-          const freq = (st.mode === "sand" ? 14 : 5) * density * grain;
-          const contrast = st.mode === "sand" ? 0.45 : 0.95;
-          let n = 0;
-          n += valueNoise(rx * freq + 17, ry * freq + 17) * 0.5;
-          n += valueNoise(rx * freq * 2 - 9, ry * freq * 2 - 9) * 0.3;
-          n += valueNoise(rx * freq * 4 + 5, ry * freq * 4 + 5) * 0.2;
-          const t2 = Math.min(1, Math.max(0, 0.5 + (n - 0.5) * contrast * 2));
-          pr = Math.round(r + t2 * (cr2 - r));
-          pg = Math.round(g + t2 * (cg2 - g));
-          pb = Math.round(b + t2 * (cb2 - b));
-        }
-
-        const i = (y * sizePx + x) * 4;
-        px[i] = pr;
-        px[i + 1] = pg;
-        px[i + 2] = pb;
-        px[i + 3] = 255;
-      }
-    }
-    return px;
-  }
-
-  const cell = sizePx / Math.max(1, st.gridSize);
   for (let y = 0; y < sizePx; y++) {
-    const cy = Math.floor(y / cell);
-    const fy = y - cy * cell;
+    const ny = (y - half) / half; // [-1, 1]
     for (let x = 0; x < sizePx; x++) {
-      const cx = Math.floor(x / cell);
-      const fx = x - cx * cell;
-      let pr: number, pg: number, pb: number;
-      if (st.mode === "checker") {
-        const even = (cx + cy) % 2 === 0;
-        pr = even ? r : lr;
-        pg = even ? g : lg;
-        pb = even ? b : lb;
+      const nx = (x - half) / half; // [-1, 1]
+      // 2D 旋转：应用颗粒角度（st.angleRad 为结构性变化，与 appearance.rotationRad 不同层）
+      const rx = nx * cosA + ny * sinA;
+      const ry = -nx * sinA + ny * cosA;
+
+      let pr: number;
+      let pg: number;
+      let pb: number;
+      if (st.mode === "marble") {
+        // marble：多层 valueNoise 叠加 + 沿旋转轴的正弦带，在 color 与 color2 间 lerp
+        let n = 0;
+        n += valueNoise(rx * 3 * density + 10, ry * 3 * density + 10) * 0.5;
+        n += valueNoise(rx * 6 * density - 5, ry * 6 * density - 5) * 0.3;
+        n += valueNoise(rx * 12 * density + 3, ry * 12 * density + 3) * 0.2;
+        const band = Math.sin((rx * periodCount + n * 2.4) * Math.PI * 2);
+        const t = 0.5 + 0.5 * band; // [0,1]
+        pr = Math.round(r + t * (cr2 - r));
+        pg = Math.round(g + t * (cg2 - g));
+        pb = Math.round(b + t * (cb2 - b));
       } else {
-        // grid：cell 首行/首列像素为线
-        const line = fx < 1 || fy < 1;
-        pr = line ? lr : r;
-        pg = line ? lg : g;
-        pb = line ? lb : b;
+        // sand / grass：纯噪声材质（与 marble 同族，但不是带纹）。
+        // 仅频率与对比度不同——沙=高频细颗粒低对比，草=中频块状高对比。
+        const grain = Math.max(1, st.gridSize) / 8; // 粒度基准（默认 gridSize=8 → 1.0）
+        const freq = (st.mode === "sand" ? 14 : 5) * density * grain;
+        const contrast = st.mode === "sand" ? 0.45 : 0.95;
+        let n = 0;
+        n += valueNoise(rx * freq + 17, ry * freq + 17) * 0.5;
+        n += valueNoise(rx * freq * 2 - 9, ry * freq * 2 - 9) * 0.3;
+        n += valueNoise(rx * freq * 4 + 5, ry * freq * 4 + 5) * 0.2;
+        const t = Math.min(1, Math.max(0, 0.5 + (n - 0.5) * contrast * 2));
+        pr = Math.round(r + t * (cr2 - r));
+        pg = Math.round(g + t * (cg2 - g));
+        pb = Math.round(b + t * (cb2 - b));
       }
+
       const i = (y * sizePx + x) * 4;
       px[i] = pr;
       px[i + 1] = pg;

@@ -84,7 +84,9 @@ status: active
 
 ## 概览
 
-`diagnostics/` 是 `app-content` 的「诊断与冲突」页子域（6 个 tab：冲突 / 日志 / 体检 / 去重 / 性能 / 资历），由主卡 `app-content` 的 `init-pages.ts` 在切到诊断页时分发初始化。内部高内聚：`init.ts` 汇聚全部子模块，子模块之间只依赖 `logs.ts`（操作日志渲染），对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据）。
+`diagnostics/` 是 `app-content` 的「诊断与冲突」页子域，顶部 8 个 `repo-tab`（log / single / gui / hist / trace / conflict / health / sync-conflict，ADR-258 由左栏分段收敛而来），由主卡 `app-content` 的 `init-pages.ts` 经 `bindTabs(host, ".repo-tab", "diag", [...])` 接入全站统一范式分发初始化。内部高内聚：`init.ts` 汇聚全部子模块，子模块之间只依赖 `logs.ts`（操作日志渲染），对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据）。
+
+> 导航结构演进（ADR-258）：原左栏 `diag-left`（6 个 `diag-btn` + 复制/刷新/清空）已删除，分段提升为顶部 `repo-tab`；日志合并为 1 个 tab（op/runtime 子 tab 切换），性能拆为 single/gui/hist/trace 4 个 tab；清空按钮归位日志面板工具栏且仅操作日志视图可见（仅 `ClearImportLogs` 生效，运行时日志无清空后端能力）。
 
 ## 核心职责
 

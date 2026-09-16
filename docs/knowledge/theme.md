@@ -54,7 +54,7 @@ status: active
 - `applyTheme(mode)`：校验合法性（非法值回落 `system`），先移除全部 6 个 `theme-*` 类再按模式添加；`system` 模式按 `matchMedia("(prefers-color-scheme: dark)")` 选 `theme-cyber`（暗）或 `theme-warm`（亮）；挂载为 `window.applyTheme` 供设置页调用
 - `initTheme()`：动态 import `LoadAppConfig` 读取 Go 配置，取 `localStorage.getItem("theme") || cfg.theme || THEME_DARK`（THEME_DARK = "cyber"）并回写 localStorage；`LoadAppConfig` 失败时 catch 回退 localStorage 或默认暗色，不阻塞启动
 - 系统主题监听：`matchMedia` change 事件仅在 localStorage 主题为 `system` 时重应用，并 toast 提示「已跟随系统切换至深/浅色主题」
-- `applyUIPrefs()`：应用 UI 偏好——`ui-font-size`（经 `--fs-scale` 缩放，先清除旧版内联 `--fs-*`）、`ui-display-font`（`--font-display` 楷体/系统）、`ui-card-density`（`--card-padding`/`--card-gap`）、`ui-animations`（off 时给 `<html>` 加 `no-animations` 类全局关动画）
+- `applyUIPrefs()`：应用 UI 偏好——`ui-font-size`（**五档** xsmall/small/normal/medium/large = −2/−1/0/+1/+2px，写入 `--fs-scale` 偏移）、`ui-display-font`（`--font-display` 楷体/系统）、`ui-card-density`（`--card-padding`/`--card-gap`）、`ui-animations`（off 时给 `<html>` 加 `no-animations` 类全局关动画）；真基准 `--fs-base-size`（13px）单点定义于 variables.css `:root`，此处不再内联覆盖（旧版曾写死 12px）
 - 设置页入口（frontend/src/views/app-content/settings/init.ts）：主题卡片点选 → `window.applyTheme(themeName)` + 写 localStorage；`theme-auto` 下拉支持 off/系统跟随/按时间（白天 warm、夜晚 cyber）三种自动模式
 - `variables.css`：定义 `.theme-cyber`/`.theme-warm`/`.theme-pro`/`.theme-sakura`/`.theme-ocean`/`.theme-mint` 六组变量与 `.no-animations` 双层通配规则（文档层 `.no-animations *` 覆盖光 DOM；shadow 域另 adopt `utils/dom/css.ts` 的 `noAnimationsCSS`）
 
@@ -82,7 +82,7 @@ status: active
 - 系统偏好监听只在 `system` 模式下生效，手动选定主题不被系统变化覆盖
 - **写入侧也须写合法值**：设置页主题卡写 6 套皮肤名、`theme-auto="time"` 时经 `applyTimeTheme()` 把实际主题（warm/cyber）写入 `theme` 键——不允许写 `"time"`/`"dark"` 等非法值到 `theme`（否则重启 initTheme 归一化为 system，按时间段模式被静默降级，P2 修复）
 - **设置页主题读写同样走 safe 包装**（P3 修复：`themeGet`/`themeSet` 与 app-modules 的 safeGet/safeSet 同口径——原设置页裸 localStorage 在隐私模式下抛错中断 initSettings、主题卡片整页失效）
-- UI 偏好修改只操作 CSS 变量与类名（`--fs-scale`/`no-animations`），不直接改各 `--fs-*` 计算值
+- UI 偏好修改只操作 CSS 变量与类名（`--fs-scale`/`no-animations`），不直接改各 `--fs-*` 计算值；`--fs-base-size` 是唯一真基准——核心 7 个 + 语义 6 个 `--fs-*` 全派生自它，故「调基准」与「调偏移」是两个正交杠杆（前者设计级、后者用户级）
 - **P3 观察**：`theme-auto="time"` 按时间自动切换**仅设置页会话内生效**——启动链（app-modules）不读 `theme-auto`，重启后应用持久层的定格主题（warm/cyber）而非按当前时刻重算（白天设 time 夜间重启仍亮色）；自动模式（system/time）变更未同步 ysm_config.json（localStorage 被清理后回退 cfg 旧主题）
 
 ## 相关

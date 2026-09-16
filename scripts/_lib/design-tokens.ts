@@ -77,21 +77,21 @@ export type TokenRawMap = Map<string, string>;
  * （解析 variables.css 真实文本比对，漂移即测试红）。
  */
 export const TOKEN_PX_BASELINE: Readonly<Record<string, number>> = {
-  // 基础字号（--fs-base-size: 12px 为基准）
-  "--fs-tiny": 7,
-  "--fs-xs": 10,
-  "--fs-sm": 11,
-  "--fs-base": 12,
-  "--fs-md": 13,
-  "--fs-lg": 14,
-  "--fs-xl": 24,
-  // 语义字号
-  "--fs-nav": 13,
-  "--fs-tab": 12,
-  "--fs-filter": 11,
-  "--fs-btn-primary": 12,
-  "--fs-btn-secondary": 11,
-  "--fs-btn-tool": 11,
+  // 基础字号（--fs-base-size: 13px 为基准）
+  "--fs-tiny": 8,
+  "--fs-xs": 11,
+  "--fs-sm": 12,
+  "--fs-base": 13,
+  "--fs-md": 14,
+  "--fs-lg": 15,
+  "--fs-xl": 25,
+  // 语义字号（同样派生自 --fs-base-size；此处为基准 13px 时的等价像素）
+  "--fs-nav": 14,
+  "--fs-tab": 13,
+  "--fs-filter": 12,
+  "--fs-btn-primary": 13,
+  "--fs-btn-secondary": 12,
+  "--fs-btn-tool": 12,
   // 圆角
   "--radius-xs": 3,
   "--radius-sm": 4,
@@ -935,9 +935,7 @@ export function findViolationsOnLines(
   tokenMap?: TokenRawMap | null,
 ): DesignViolation[] {
   const all = text.split("\n");
-  const wanted = [...new Set(lines)]
-    .filter((n) => Number.isInteger(n))
-    .sort((a, b) => a - b);
+  const wanted = [...new Set(lines)].filter((n) => Number.isInteger(n)).sort((a, b) => a - b);
   const out: DesignViolation[] = [];
   for (const ln of wanted) {
     if (ln < 1 || ln > all.length) continue;

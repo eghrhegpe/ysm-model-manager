@@ -118,7 +118,7 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <button id="web-repo-auth-btn"></button>
     <div id="web-repo-auth-status"></div>
     <select id="set-font-size">
-      <option value="small">small</option><option value="normal">normal</option><option value="large">large</option>
+      <option value="xsmall">xsmall</option><option value="small">small</option><option value="normal">normal</option><option value="medium">medium</option><option value="large">large</option>
     </select>
     <select id="set-display-font">
       <option value="kaiti">kaiti</option><option value="system">system</option>
@@ -463,6 +463,18 @@ describe("initSettings — UI 偏好（ui-prefs.ts）", () => {
       "toast:show",
       expect.objectContaining({ msg: expect.stringContaining("字号已更新") }),
     );
+  });
+
+  it("五档区间：medium → +1px、xsmall → −2px", async () => {
+    const { root } = makeRoot();
+    await initSettings(root);
+    const sel = root.getElementById("set-font-size") as HTMLSelectElement;
+    sel.value = "medium";
+    sel.dispatchEvent(new Event("change"));
+    expect(document.documentElement.style.getPropertyValue("--fs-scale")).toBe("1px");
+    sel.value = "xsmall";
+    sel.dispatchEvent(new Event("change"));
+    expect(document.documentElement.style.getPropertyValue("--fs-scale")).toBe("-2px");
   });
 
   it("动画关/开 → .no-animations class 切换", async () => {

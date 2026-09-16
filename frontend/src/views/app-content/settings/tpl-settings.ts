@@ -218,14 +218,16 @@ function renderStgFontFamily(): string {
       <label for="set-font-size" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.ruler} ${t("settings.fontSize")}</label>
     </div>
     <select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
-      <option value="small">${UI_ICONS.bullet} ${t("settings.fontSize.small")}</option>
-      <option value="normal" selected>${UI_ICONS.bulletAlt} ${t("settings.fontSize.normal")}</option>
+      <option value="xsmall">${UI_ICONS.bullet} ${t("settings.fontSize.xsmall")}</option>
+      <option value="small">${UI_ICONS.bulletAlt} ${t("settings.fontSize.small")}</option>
+      <option value="normal" selected>${UI_ICONS.dot} ${t("settings.fontSize.normal")}</option>
+      <option value="medium">${UI_ICONS.radioOn} ${t("settings.fontSize.medium")}</option>
       <option value="large">${UI_ICONS.collision} ${t("settings.fontSize.large")}</option>
     </select>
     <div id="set-size-preview" style="display:flex;gap:8px;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">
-      <span>${t("settings.ui.body")} <b id="sz-base" style="color:var(--txt)">12px</b></span>
+      <span>${t("settings.ui.body")} <b id="sz-base" style="color:var(--txt)">13px</b></span>
       <span>${t("settings.ui.buttonGap")} <b id="sz-space" style="color:var(--txt)">5px</b></span>
-      <span>${t("settings.ui.buttonHeight")} <b id="sz-btn-h" style="color:var(--txt)">23px</b></span>
+      <span>${t("settings.ui.buttonHeight")} <b id="sz-btn-h" style="color:var(--txt)">25px</b></span>
     </div>
     <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontSizeHint")}</div>
   </div>

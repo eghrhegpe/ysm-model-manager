@@ -105,6 +105,7 @@ status: active
 3D 菜单样式曾自成一套 `--uih-*` 裸 px token，**不参与全局「基准字号」设置**——用户在设置页调大字号，3D 菜单纹丝不动。2026-09 收敛：
 
 - **字号/尺寸 token 全部经 `calc(... + var(--fs-scale))` 派生**（`components-styles.ts` 的 `:root`）。默认 `--fs-scale: 0px`（`frontend/css/variables.css`），故默认态像素零变化。
+  - ⚠️ **边界（2026-09）**：3D 菜单只吃**用户偏移** `--fs-scale`，**不随 2D 的真基准 `--fs-base-size` 变动**——2D 核心/语义字号已全部派生自基准（改基准 2D 全盘跟随），3D 仍是独立调校的覆盖层，故两者只在「用户调字号」时同步。
   - 字号类系数 **1**（`--uih-font-ui/-sm/-xs/-title/-lg`、`--uih-cs-label-font-size`）；
   - 图标类系数 **1.2**（`--uih-slide-icon-size` 等，视觉重量随字号略超前）；
   - 行高类系数 **1**（`--uih-slide-item-min-height` 等）——**若图标 1.2 而行高 1 会撑破，故刻意差异化**。

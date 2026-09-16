@@ -74,7 +74,7 @@ status: active
 - `keymap.ts` — 键位绑定编辑（依赖 `preview-3d/mesh/model3d.ts` 的 `loadTdKeymap`，相机快捷键与 3D 预览键位同源）
 - `path-cards.ts` — 路径配置卡片（目录选择器 `utils/dom/directory-picker` + 资源类型注册表 `services/resource-registry`）
 - `theme.ts` — 主题设置（写 `window.applyTheme` + localStorage，见知识卡 `theme`）
-- `ui-prefs.ts` — 界面偏好（字号 `--fs-scale` / 字体 / 密度 / 动画开关 `.no-animations`），`app-modules` 启动 IIFE 内 import 调用
+- `ui-prefs.ts` — 界面偏好（字号五档 `--fs-scale` 偏移 / 字体 / 密度 / 动画开关 `.no-animations`）；真基准 `--fs-base-size` 在 variables.css `:root` 单点定义，此处不再内联覆盖，`app-modules` 启动 IIFE 内 import 调用
 - `worker-prefs.ts` — worker 线程数偏好
 
 ## 对外 API / 入口

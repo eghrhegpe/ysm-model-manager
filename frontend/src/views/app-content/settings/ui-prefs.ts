@@ -16,16 +16,30 @@ export function applyUIPrefs(): void {
   const density = safeGet("ui-card-density") || "compact";
   const anim = safeGet("ui-animations") !== "off";
 
-  // 基准字号 — 通过 --fs-scale 控制，CSS 自动缩放所有 --fs-* 和 --space-*
+  // 基准字号 — 通过 --fs-scale 控制，CSS 自动缩放所有 --fs-*（含语义字号）与 --space-*
   // 先清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）
-  ["--fs-base", "--fs-xs", "--fs-sm", "--fs-md", "--fs-lg", "--fs-tiny", "--fs-xl"].forEach((v) => {
+  [
+    "--fs-base-size",
+    "--fs-base",
+    "--fs-xs",
+    "--fs-sm",
+    "--fs-md",
+    "--fs-lg",
+    "--fs-tiny",
+    "--fs-xl",
+  ].forEach((v) => {
     document.documentElement.style.removeProperty(v);
   });
-  // 小=-1px, 标准=0px, 大=+2px
-  const scaleMap: Record<string, string> = { small: "-1px", normal: "0px", large: "2px" };
+  // 五档偏移：极小 −2px / 小 −1px / 标准 0 / 大 +1px / 很大 +2px
+  const scaleMap: Record<string, string> = {
+    xsmall: "-2px",
+    small: "-1px",
+    normal: "0px",
+    medium: "1px",
+    large: "2px",
+  };
   document.documentElement.style.setProperty("--fs-scale", scaleMap[fontSize] || "0px");
-  // 同步更新 --fs-base-size（保持各字号参考基准一致）
-  document.documentElement.style.setProperty("--fs-base-size", "12px");
+  // --fs-base-size（真基准）单点定义在 frontend/css/variables.css 的 :root，此处不再内联覆盖
 
   // 创作者名字字体
   document.documentElement.style.setProperty(

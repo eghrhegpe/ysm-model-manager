@@ -53,6 +53,7 @@ auto_fields:
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
+    - filmStrategy
     - flattenLightParams
     - FogCapability
     - FogMode
@@ -62,6 +63,7 @@ auto_fields:
     - generatePlainPixels
     - generateSandPixels
     - getTypedCap
+    - getWaterBodyStrategy
     - godRaysIntensity
     - GROUND_CANVAS_STYLES
     - GROUND_LAYER_OFFSETS
@@ -112,6 +114,7 @@ auto_fields:
     - paramIsEffective
     - persistState
     - pickPersistFields
+    - poolStrategy
     - POSTPROC_PERSIST_FIELDS
     - PostprocessingCapability
     - PostprocessingParams
@@ -120,6 +123,7 @@ auto_fields:
     - REFLECTION_MODES
     - ReflectionMode
     - ReflectorCapability
+    - registerWaterBodyStrategy
     - RenderModeCapability
     - repetitionScore
     - restoreFields
@@ -155,8 +159,13 @@ auto_fields:
     - VolumetricCone
     - VolumetricParams
     - WATER_MODES
+    - WaterBody
+    - WaterBodyStrategy
+    - WaterBuildContext
     - WaterCapability
     - WaterMode
+    - WaterPartRole
+    - WaterTopMesh
   tests:
     - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
     - frontend/src/preview-3d/caps/ground-capability.test.ts

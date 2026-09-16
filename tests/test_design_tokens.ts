@@ -45,6 +45,14 @@ import { walk } from "../scripts/_lib/scan-files.ts";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const VARIABLES_CSS = path.join(ROOT, "frontend/css/variables.css");
 
+/**
+ * 字号基准的等价像素（单一事实源 = TOKEN_PX_BASELINE）。
+ * 本文件里凡「拿当前基准 px 当探针/替身」的字面量一律引用它——调 --fs-base-size 时
+ * 只需改 variables.css + 表，不必再逐个改本文件的 13px/11px。
+ */
+const FS_SM_PX = TOKEN_PX_BASELINE["--fs-sm"];
+const FS_MD_PX = TOKEN_PX_BASELINE["--fs-md"];
+
 // ── 1. parseTokenMap：声明解析 ──────────────────────────
 {
   const css = [
@@ -65,23 +73,42 @@ const VARIABLES_CSS = path.join(ROOT, "frontend/css/variables.css");
 
 // ── 2. suggestToken：值精确相等才建议 + 属性域隔离 ───────
 {
-  const tokens = parseTokenMap("--fs-md: 13px;\n--fs-base: 12px;\n--radius-md: 6px;");
+  // 基准 px 从 TOKEN_PX_BASELINE 派生——基准调整（如 12px→13px）不再让本用例漂红
+  const MD_PX = TOKEN_PX_BASELINE["--fs-md"];
+  const BASE_PX = TOKEN_PX_BASELINE["--fs-base"];
+  const tokens = parseTokenMap(`--fs-md: ${MD_PX}px;\n--fs-base: ${BASE_PX}px;\n--radius-md: 6px;`);
 
   // 值相等 → 建议（这是脚本最有价值的输出）
-  assert.equal(suggestToken(13, "font-size", tokens), "--fs-md", "13px 字号应建议 --fs-md");
+  assert.equal(
+    suggestToken(MD_PX, "font-size", tokens),
+    "--fs-md",
+    `${MD_PX}px 字号应建议 --fs-md`,
+  );
   assert.equal(
     suggestToken(6, "border-radius", tokens),
     "--radius-md",
     "6px 圆角应建议 --radius-md",
   );
-  assert.equal(suggestToken(12, "font-size", tokens), "--fs-base", "12px 字号应建议 --fs-base");
+  assert.equal(
+    suggestToken(BASE_PX, "font-size", tokens),
+    "--fs-base",
+    `${BASE_PX}px 字号应建议 --fs-base`,
+  );
 
   // 属性域隔离：字号不该被建议成圆角，反之亦然（防错答）
   assert.equal(suggestToken(6, "font-size", tokens), null, "6px 字号无对应字号令牌 → null");
-  assert.equal(suggestToken(13, "border-radius", tokens), null, "13px 圆角无对应圆角令牌 → null");
+  assert.equal(
+    suggestToken(MD_PX, "border-radius", tokens),
+    null,
+    `${MD_PX}px 圆角无对应圆角令牌 → null`,
+  );
 
-  // 值不等 → null（宁可不说，不给错答案）
-  assert.equal(suggestToken(15, "font-size", tokens), null, "15px 无精确匹配令牌 → null");
+  // 值不等 → null（宁可不说，不给错答案）：该 px 不在本 map 的令牌集合内
+  assert.equal(
+    suggestToken(MD_PX + 1, "font-size", tokens),
+    null,
+    `${MD_PX + 1}px 无精确匹配令牌 → null`,
+  );
   assert.equal(suggestToken(5, "border-radius", tokens), null, "5px 无精确匹配令牌 → null");
 
   // 非字号/圆角属性不参与
@@ -141,11 +168,13 @@ const VARIABLES_CSS = path.join(ROOT, "frontend/css/variables.css");
 
 // ── 4. findStyleAttrViolations：内联三态 + CSS 块 + 豁免 ──
 {
-  const tokens = parseTokenMap("--fs-sm: 11px;\n--fs-md: 13px;\n--radius-md: 6px;");
+  const tokens = parseTokenMap(
+    `--fs-sm: ${FS_SM_PX}px;\n--fs-md: ${FS_MD_PX}px;\n--radius-md: 6px;`,
+  );
 
   // 4a) 内联 font-size → 命中且带建议
   const a = findStyleAttrViolations(
-    '  <div class="x" style="padding:4px;font-size:13px">hi</div>',
+    `  <div class="x" style="padding:4px;font-size:${FS_MD_PX}px">hi</div>`,
     10,
     tokens,
   );
@@ -161,7 +190,7 @@ const VARIABLES_CSS = path.join(ROOT, "frontend/css/variables.css");
   assert.equal(b[0]!.suggestion, "--radius-md", "应建议 --radius-md");
 
   // 4c) 同一条 style 同时含字号+圆角 → 各报 1 条
-  const c = findStyleAttrViolations('style="font-size:13px;border-radius:6px"', 1, tokens);
+  const c = findStyleAttrViolations(`style="font-size:${FS_MD_PX}px;border-radius:6px"`, 1, tokens);
   assert.equal(c.length, 2, "字号+圆角各 1 条");
 
   // 4d) 内联颜色硬编码 → inline-style-color
@@ -325,15 +354,17 @@ console.log("  ✓ isCommentLine: 三种注释形态");
 
 // ── 8. fixLineTokens：机械等价替换（--fix 的判定核心）──
 {
-  const tokens = parseTokenMap("--fs-md: 13px;\n--fs-sm: 11px;\n--radius-md: 6px;");
+  const tokens = parseTokenMap(
+    `--fs-md: ${FS_MD_PX}px;\n--fs-sm: ${FS_SM_PX}px;\n--radius-md: 6px;`,
+  );
 
   // 8a) 字号有精确令牌 → 替换为 var()，且记账
-  const a = fixLineTokens('style="font-size:13px"', tokens);
-  assert.equal(a.text, 'style="font-size:var(--fs-md)"', "13px 应替换为 var(--fs-md)");
+  const a = fixLineTokens(`style="font-size:${FS_MD_PX}px"`, tokens);
+  assert.equal(a.text, 'style="font-size:var(--fs-md)"', `${FS_MD_PX}px 应替换为 var(--fs-md)`);
   assert.equal(a.edits.length, 1, "应记 1 笔");
 
   // 8b) 一行多处独立替换
-  const b = fixLineTokens('style="font-size:13px;border-radius:6px"', tokens);
+  const b = fixLineTokens(`style="font-size:${FS_MD_PX}px;border-radius:6px"`, tokens);
   assert.equal(
     b.text,
     'style="font-size:var(--fs-md);border-radius:var(--radius-md)"',
@@ -399,7 +430,13 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     skipDir: () => false,
   }) as string[];
   const cssNames = new Set(cssScanned.map((p) => path.basename(p)));
-  for (const f of ["variables.css", "layout.css", "components.css", "dialogs.css", "transitions.css"]) {
+  for (const f of [
+    "variables.css",
+    "layout.css",
+    "components.css",
+    "dialogs.css",
+    "transitions.css",
+  ]) {
     assert.ok(cssNames.has(f), `文档层 CSS 必须被扫到：${f}（范围回归锁）`);
   }
   console.log("  ✓ 扫描范围: src 的 css/ 目录 + 文档层 frontend/css/ 均被覆盖");
@@ -514,7 +551,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   }
 
   // 同行的真属性仍须被抓到（防「一刀切不匹配」的假修复）
-  const mixed = ".x { --uih-font-size: 11px; font-size: 13px; }";
+  const mixed = `.x { --uih-font-size: 11px; font-size: ${FS_MD_PX}px; }`;
   const hits = findStyleAttrViolations(mixed, 1, tokens);
   assert.equal(hits.length, 1, "同行内真 font-size 应命中，自定义属性不计入");
   assert.equal(hits[0]!.suggestion, "--fs-md", "真属性应仍给正确建议");
@@ -728,10 +765,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     "components-styles.ts 应使用模板字面量（形态可读；勿退回 \\n 转义单行）",
   );
   const longest = Math.max(...text.split("\n").map((l) => l.length));
-  assert.ok(
-    longest < 2000,
-    `最长行 ${longest} 字符——疑似样式被压回单行（应 <2000）`,
-  );
+  assert.ok(longest < 2000, `最长行 ${longest} 字符——疑似样式被压回单行（应 <2000）`);
   console.log(`  ✓ components-styles 形态锁: 模板字面量、最长行 ${longest} 字符`);
 }
 
@@ -744,7 +778,12 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
 
   // ① 规则本身：三条准入（跟手属性 + linear + <0.1s）
-  for (const v of ["width 0.06s linear", "left 0.06s linear", "height .05s linear", "top 60ms linear"]) {
+  for (const v of [
+    "width 0.06s linear",
+    "left 0.06s linear",
+    "height .05s linear",
+    "top 60ms linear",
+  ]) {
     assert.equal(isRealtimeFeedbackTransition(v), true, `应判为实时反馈：${v}`);
   }
   // 反向：任一条不满足即**不**豁免（防规则过宽变成变相白名单）
@@ -809,10 +848,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
 
   for (const [kw, probe] of PROBES) {
     // ① 判定层确实能报这类（否则探针无意义）
-    assert.ok(
-      findStyleAttrViolations(probe, 1, tokens).length > 0,
-      `判定层应能报该探针：${probe}`,
-    );
+    assert.ok(findStyleAttrViolations(probe, 1, tokens).length > 0, `判定层应能报该探针：${probe}`);
     // ② 探针不含其它预筛关键词——确保它只能靠 kw 通过预筛
     for (const other of OTHER_KWS) {
       if (other === kw) continue;
@@ -884,7 +920,10 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     sl,
     tokens,
   );
-  assert.ok(hit3.length > 0, "同行替换同类违规 = 新债，行级判定不得因「键相同」漏判（旧规则的机制性盲区）");
+  assert.ok(
+    hit3.length > 0,
+    "同行替换同类违规 = 新债，行级判定不得因「键相同」漏判（旧规则的机制性盲区）",
+  );
 
   // ④ 越界 / 重复 / 非整数行号：安全忽略，不抛错、不重复计数
   assert.deepEqual(

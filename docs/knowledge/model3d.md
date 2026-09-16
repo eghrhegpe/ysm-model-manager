@@ -271,6 +271,7 @@ auto_fields:
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
+    - filmStrategy
     - filterAnimFiles
     - findAncestorBoneId
     - fitCameraToRoots
@@ -320,6 +321,7 @@ auto_fields:
     - getTintColorSync
     - getTypedCap
     - getVrmMaterialDetail
+    - getWaterBodyStrategy
     - godRaysIntensity
     - GPU_BUDGET_CALIBRATION_KEY
     - GpuLoadLimits
@@ -568,6 +570,7 @@ auto_fields:
     - PmxReader
     - PmxRigidBodyData
     - PmxVertexData
+    - poolStrategy
     - PoseScene
     - POSTPROC_PERSIST_FIELDS
     - PostprocessingCapability
@@ -619,6 +622,7 @@ auto_fields:
     - registerModelRoot
     - registerPerFrame
     - registerSchema
+    - registerWaterBodyStrategy
     - releaseTextureUrls
     - removeOwnHandle
     - removePerFrame
@@ -851,8 +855,13 @@ auto_fields:
     - warnLargeModelIfNeeded
     - WasdReuse
     - WATER_MODES
+    - WaterBody
+    - WaterBodyStrategy
+    - WaterBuildContext
     - WaterCapability
     - WaterMode
+    - WaterPartRole
+    - WaterTopMesh
     - WorkerBridge
     - WorkerErrorStrategy
     - workerMmdUpdateWithMixer

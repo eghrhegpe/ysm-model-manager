@@ -185,18 +185,19 @@
 
 /* ===== 字体系统 ===== */
 :root {
-  /* 基准大小 + 缩放量（由设置页控制，默认 0px = 12px 基准） */
-  --fs-base-size: 12px;
+  /* 基准大小 + 缩放量（--fs-base-size 是唯一真基准；设置页只调 --fs-scale 偏移） */
+  --fs-base-size: 13px;
   --fs-scale: 0px;
 
   /* 字号 - 全部相对基准缩放 */
-  --fs-tiny: calc(var(--fs-base-size) - 5px + var(--fs-scale)); /* 7px @ 基准 */
-  --fs-xs: calc(var(--fs-base-size) - 2px + var(--fs-scale)); /* 10px @ 基准 */
-  --fs-sm: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 11px @ 基准 */
-  --fs-base: calc(var(--fs-base-size) + var(--fs-scale)); /* 12px @ 基准 */
-  --fs-md: calc(var(--fs-base-size) + 1px + var(--fs-scale)); /* 13px @ 基准 */
-  --fs-lg: calc(var(--fs-base-size) + 2px + var(--fs-scale)); /* 14px @ 基准 */
-  --fs-xl: calc(var(--fs-base-size) + 12px + var(--fs-scale)); /* 24px @ 基准 */
+  --fs-tiny: calc(var(--fs-base-size) - 5px + var(--fs-scale)); /* 8px @ 基准 */
+  --fs-xs: calc(var(--fs-base-size) - 2px + var(--fs-scale)); /* 11px @ 基准 */
+  --fs-sm: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 12px @ 基准 */
+  --fs-base: calc(var(--fs-base-size) + var(--fs-scale)); /* 13px @ 基准 */
+  --fs-md: calc(var(--fs-base-size) + 1px + var(--fs-scale)); /* 14px @ 基准 */
+  --fs-lg: calc(var(--fs-base-size) + 2px + var(--fs-scale)); /* 15px @ 基准 */
+  --fs-xl: calc(var(--fs-base-size) + 12px + var(--fs-scale)); /* 25px @ 基准 */
+  --fs-micro: calc(9px + var(--fs-scale) * 0.5); /* 密集微文字：标签/角标/提示，随基准字号小幅缩放 */
 
   /* 字重 */
   --fw-normal: 400;
@@ -220,17 +221,13 @@
   --space-sm: calc(4px + var(--fs-scale) * 0.35);
   --space-md: calc(5px + var(--fs-scale) * 0.42);
 
-  /* 语义化字号 — 按 UI 角色命名，随 --fs-scale 缩放 */
-  --fs-nav: calc(13px + var(--fs-scale)); /* 导航主标签（repo-tab）*/
-  --fs-tab: calc(12px + var(--fs-scale)); /* 二级子标签（repo-subtab, sm-tab）*/
-  --fs-filter: calc(11px + var(--fs-scale)); /* 筛选标签（sm-status-tab）*/
-  --fs-btn-primary: calc(
-    12px + var(--fs-scale)
-  ); /* 主要操作按钮（hdr-btn, dlg-btn）*/
-  --fs-btn-secondary: calc(
-    11px + var(--fs-scale)
-  ); /* 次要/行内按钮（sm-item-btn）*/
-  --fs-btn-tool: calc(11px + var(--fs-scale)); /* 工具栏小按钮（repo-bar-btn, btn-base.sm）；2026-09 从 10px→11px（对齐 3d 菜单基调） */
+  /* 语义化字号 — 按 UI 角色命名，派生自 --fs-base-size（基准一动全盘跟随）+ --fs-scale 偏移 */
+  --fs-nav: calc(var(--fs-base-size) + 1px + var(--fs-scale)); /* 14px @ 基准（导航主标签 repo-tab）*/
+  --fs-tab: calc(var(--fs-base-size) + var(--fs-scale)); /* 13px @ 基准（二级子标签 repo-subtab, sm-tab）*/
+  --fs-filter: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 12px @ 基准（筛选标签 sm-status-tab）*/
+  --fs-btn-primary: calc(var(--fs-base-size) + var(--fs-scale)); /* 13px @ 基准（主要操作按钮 hdr-btn, dlg-btn）*/
+  --fs-btn-secondary: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 12px @ 基准（次要/行内按钮 sm-item-btn）*/
+  --fs-btn-tool: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 12px @ 基准（工具栏小按钮 repo-bar-btn, btn-base.sm）*/
 
   /* 语义化垂直间距 — 按 UI 角色，随字号比例缩放 */
   --pad-nav: calc(6px + var(--fs-scale) * 0.5);

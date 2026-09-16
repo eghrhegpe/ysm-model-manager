@@ -247,7 +247,6 @@ auto_fields:
     - evaluateGpuLoad
     - extractIKChainFromTree
     - extractLegChains
-    - fbm
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
     - fbxBonesToBoneNodes
@@ -352,7 +351,6 @@ auto_fields:
     - guardSessionAlive
     - hasActivePreview
     - hasBoneRotation
-    - hash2
     - hasSceneStats
     - hasSchema
     - HeaderToggleConfig
@@ -805,7 +803,6 @@ auto_fields:
     - unregisterModelRoot
     - unregisterSchema
     - UpdateableScene
-    - valueNoise
     - valueNoise4D
     - Vec3
     - VMD_FOOT_IK_CANDIDATES

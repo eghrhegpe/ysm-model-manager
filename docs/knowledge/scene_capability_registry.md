@@ -44,7 +44,6 @@ auto_fields:
     - EnvironmentParams
     - EnvPreset
     - EnvPresetId
-    - fbm
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
@@ -84,7 +83,6 @@ auto_fields:
     - groundSurfaceNeedsRebuild
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
-    - hash2
     - injectSkySunScalePatch
     - isSkyEnvironmentOn
     - LEGACY_CANVAS_PATTERNS
@@ -138,7 +136,6 @@ auto_fields:
     - TILE_WORLD_SIZE
     - tiledFbm
     - TONE_MAPPING_KEYS
-    - valueNoise
     - valueNoise4D
     - VolumetricCone
     - VolumetricParams

@@ -282,6 +282,21 @@ describe("Suite 6 — 新材质模式（stripes/diamond/marble）", () => {
     expect(a).toEqual(b);
   });
 
+  it("marble 的 matAngleDeg 真实参与像素生成（审核 d2eee2f50 回归：曾硬编码 0 成死控件）", () => {
+    const mk = (angle: number) =>
+      generateSurfacePixels(
+        buildGroundSurfaceSpec(params({ matSource: "marble", matAngleDeg: angle }), "").structural,
+        32,
+      );
+    const a = mk(0);
+    const b = mk(45);
+    let differs = false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) { differs = true; break; }
+    }
+    expect(differs, "angleRad 须传入 tiledFbm 相位（与 grass/sand 同口径），否则滑杆成死控件").toBe(true);
+  });
+
   it("matColor2 / matDensity / matAngleDeg 变化 → structural specKey 变化（触发重建）", () => {
     const base = params({ matSource: "solid", matColor: 0xff0000, matColor2: 0x0000ff, matDensity: 1, matAngleDeg: 0 });
     const a = buildGroundSurfaceSpec(base, "");

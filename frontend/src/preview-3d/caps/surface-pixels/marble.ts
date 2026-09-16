@@ -23,7 +23,9 @@ export const generateMarblePixels: SurfacePixelGenerator = (input, sizePx) => {
     for (let x = 0; x < sizePx; x++) {
       const u = (x + 0.5) / sizePx;
       // 域扭曲：4D 环面 fbm 湍流偏移带坐标（无缝）→ 直线带弯成自然脉络
-      const warp = tiledFbm(u, v, warpFreq, warpFreq, 0, 4) - 0.5;
+      // angleRad 与 grass/sand 同口径作相位偏移（审核 d2eee2f50：硬编码 0 令
+      // matAngleDeg 滑杆对 marble 成死控件，违反 ADR-249 §2.4）
+      const warp = tiledFbm(u, v, warpFreq, warpFreq, input.angleRad, 4) - 0.5;
       const band = Math.sin(TAU * (u * periodCount + warp * WARP_STRENGTH));
       const t = 0.5 + 0.5 * band;
       const i = (y * sizePx + x) * 4;

@@ -122,3 +122,43 @@ func containsPath(roots []string, want string) bool {
 	}
 	return false
 }
+
+// TestAllowedRootsCache_InvalidateOnSessionOverride 钉住失效契约：
+// 根清单缓存（app_allowed_roots_cache.go）的不变量是「根清单变化处必须 Clear」。
+// SetSessionFilesRoot 是唯一绕过 saveConfig 直改 configCache.FilesRoot 的入口
+// （CLI --files-root，仅内存），须与 saveConfig 同失效——否则 session 覆写后
+// 热路径守卫持续用旧根清单（防御纵深：现实调用时序先于缓存预热，窗口为零，
+// 但契约不能依赖时序）。
+func TestAllowedRootsCache_InvalidateOnSessionOverride(t *testing.T) {
+	base := t.TempDir()
+	oldRoot := filepath.Join(base, "old")
+	newRoot := filepath.Join(base, "new")
+	for _, d := range []string{oldRoot, newRoot} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+	}
+
+	orig := pathMgr
+	defer func() { pathMgr = orig }()
+	pathMgr = fakePathMgr{repo: ""}
+
+	a := repoApp(t, types.AppConfig{FilesRoot: oldRoot})
+
+	// 预热缓存（旧根可读、新根被拒）
+	if !a.isPathInRootOrSelf(filepath.Join(oldRoot, "m.ysm")) {
+		t.Fatal("前提失败：旧根内路径应放行")
+	}
+	if a.isPathInRootOrSelf(filepath.Join(newRoot, "m.ysm")) {
+		t.Fatal("前提失败：新根路径在覆写前应被拒")
+	}
+
+	// session 覆写 → 缓存须失效，新根立即生效
+	a.SetSessionFilesRoot(newRoot)
+	if !a.isPathInRootOrSelf(filepath.Join(newRoot, "m.ysm")) {
+		t.Error("SetSessionFilesRoot 后新根内路径应放行（缓存未失效=stale 旧根清单）")
+	}
+	if a.isPathInRootOrSelf(filepath.Join(oldRoot, "m.ysm")) {
+		t.Error("SetSessionFilesRoot 后旧根内路径应被拒（缓存未失效=stale 旧根清单）")
+	}
+}

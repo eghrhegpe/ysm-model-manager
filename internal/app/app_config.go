@@ -246,6 +246,12 @@ func (a *App) SetSessionFilesRoot(filesRoot string) {
 	defer a.configMu.Unlock()
 	a.configCache.FilesRoot = filesRoot
 	a.configLoaded = true
+	// 根清单直改须与 saveConfig 同失效（防御纵深）：当前唯一调用点 go/cli/registry
+	// 在 dispatch 最早期执行、先于任何缓存预热，现实 staleness 窗口为零；但失效
+	// 契约不能依赖调用时序——凡写 configCache 根字段处一律 Clear（allAllowedRoots
+	// 与 resolvedRoot 同失效范式，见 app_allowed_roots_cache.go / app_resolved_root_cache.go）。
+	a.ensureAllowedRootsCache().Clear()
+	a.ensureResolvedRootCache().Clear()
 }
 
 func orDefault(val, fallback string) string {

@@ -53,4 +53,13 @@ describe("设置页组间距契约（content-stg）", () => {
     const sectionMargin = contentStgCSS.match(/\.stg-section\s*\{\s*margin-top:\s*(\d+)px/);
     expect(titlePadTop?.[1]).toBe(sectionMargin?.[1]);
   });
+
+  it(".stg-sub-title 不再叠加 margin-top（防与 .section-title 双重 16px）", () => {
+    // 历史 bug：「字体与布局」「3D 预览」「鸣谢」同时挂 .section-title + .stg-sub-title，
+    // .section-title 的 padding-top:16px 与 .stg-sub-title 的 margin-top:16px 叠加 = 32px。
+    // 现 .stg-sub-title 归零（类保留兼容，但不提供间距）。
+    // 匹配 0 / 0px 两种写法（归零即可，勿再给正间距）
+    const m = contentStgCSS.match(/\.stg-sub-title\s*\{\s*margin-top:\s*(\d+)(?:px)?;/);
+    expect(m?.[1]).toBe("0");
+  });
 });

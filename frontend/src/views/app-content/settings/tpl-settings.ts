@@ -210,7 +210,7 @@ function renderStgThemeAuto(): string {
 }
 
 function renderStgFontFamily(): string {
-  return `<div class="section-title stg-title stg-sub-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
+  return `<div class="section-title stg-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
 
 <div style="display:flex;gap:12px">
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
@@ -308,7 +308,7 @@ function renderStgAnimDefault(): string {
 }
 
 function renderStgPreview3d(): string {
-  return `<div class="section-title stg-title stg-sub-title">${UI_ICONS.joystick} ${t("settings.preview3d.title")}</div>
+  return `<div class="section-title stg-title">${UI_ICONS.joystick} ${t("settings.preview3d.title")}</div>
 
 <div class="settings-group" style="margin-bottom:12px;animation:card-in var(--tr-enter) both;animation-delay:240ms">
   <div class="setting-row">

@@ -137,7 +137,7 @@ export function creditsHTML(): string {
   </div>
 </div>
 
-<div class="section-title stg-title stg-sub-title">${UI_ICONS.thanks} ${t("credits.special")}</div>
+<div class="section-title stg-title">${UI_ICONS.thanks} ${t("credits.special")}</div>
 
 <div style="display:flex;gap:12px">
   ${CONTRIBUTORS.map(

@@ -32,8 +32,12 @@ export const contentStgCSS: string = `
   color: var(--muted);
   padding: 2px 0 0 0;
 }
+/* ⚠️ 已废弃（勿用）：与 .section-title 叠加得 32px 双重上间距。
+   .section-title 自带 padding-top:16px，再叠 margin-top:16px = 双份。
+   设置页改用 .section-title 单供间距（A 式）；无标题组用 .stg-section（B 式）。
+   历史：本类曾用于「字体与布局」「3D 预览」「鸣谢」三处，均有双间距 bug。 */
 .stg-sub-title {
-  margin-top: 16px;
+  margin-top: 0;
 }
 .stg-radio-row {
   display: flex;

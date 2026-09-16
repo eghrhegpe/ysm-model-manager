@@ -32,6 +32,7 @@ import {
   resolvePreviewKeyToRtype,
 } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { resolveSiblingsForRoute } from "./siblings.ts";
 
 /** 跨类型换角色注册表：各 createXxx3D 模块加载时注册，路由侧不反向 import 包装器（破循环） */
 const _openers: Record<string, (path: string, siblings?: string[]) => Promise<void>> = {};
@@ -78,7 +79,7 @@ export async function openModel3DFullscreen(
   options?: OpenModel3DOptions,
 ): Promise<void> {
   if (!path) return;
-  const siblings = options?.siblings;
+  let siblings = options?.siblings;
   // P2 修复（审核）：backendGetApp() 若后端不可用会 reject——原实现裸 await 在函数顶部，
   // 依赖所有调用方自行 catch（app-nav FAB / switchExternal 包装有兜底，但 litematic-3d
   // L150 裸调用无兜底 → unhandled rejection）。函数内自洽：失败 toast 后 return。
@@ -137,6 +138,14 @@ export async function openModel3DFullscreen(
   if (cooperate) {
     await switchPreview(path, { keepInScene: true });
     return;
+  }
+  // ADR-253 D1：调用方未显式传 siblings 时按 rtype 自算兜底——
+  // 3D 入口成为 siblings 的单一出口（导航栏 FAB 与详情卡 FAB 行为一致）。
+  // 显式传入仍优先（向后兼容）；探测失败/无候选 → 保持 undefined，
+  // 退化为下拉不渲染（与调用方原行为一致，不把 [] 当有效候选列表下发）。
+  if (siblings === undefined) {
+    const computed = await resolveSiblingsForRoute(routeKey, rtype);
+    if (computed.length > 0) siblings = computed;
   }
   // 兜底链（歧义扩展名/容器，仅预览路由派生，不参与类型判定）：
   // 1. ext 兜底：DetectResourceType 对 .pmx 等多声明扩展名保守返回 "other"，

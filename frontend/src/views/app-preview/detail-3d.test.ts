@@ -16,6 +16,7 @@ const {
   createVrm3DMock,
   createFbx3DMock,
   createScene3DMock,
+  openModel3DFullscreenMock,
   resolveMmdSiblingsMock,
   resolveFbxSiblingsMock,
   resolveSceneSiblingsMock,
@@ -27,6 +28,7 @@ const {
   createVrm3DMock: vi.fn(),
   createFbx3DMock: vi.fn(),
   createScene3DMock: vi.fn(),
+  openModel3DFullscreenMock: vi.fn(),
   resolveMmdSiblingsMock: vi.fn(),
   resolveFbxSiblingsMock: vi.fn(),
   resolveSceneSiblingsMock: vi.fn(),
@@ -42,6 +44,8 @@ vi.mock("@/preview-3d/adapters/vrm/vrm-adapter.ts", () => ({
 vi.mock("./vrm-3d.ts", () => ({ createVrm3D: createVrm3DMock }));
 vi.mock("./fbx-3d.ts", () => ({ createFbx3D: createFbx3DMock }));
 vi.mock("./scene-3d.ts", () => ({ createScene3D: createScene3DMock }));
+// ADR-253 D2：详情卡 FAB 改走统一路由入口（openModel3DFullscreen），不再直调 createXxx3D
+vi.mock("./preview-library.ts", () => ({ openModel3DFullscreen: openModel3DFullscreenMock }));
 vi.mock("./siblings.ts", () => ({
   resolveMmdSiblings: resolveMmdSiblingsMock,
   resolveFbxSiblings: resolveFbxSiblingsMock,
@@ -138,11 +142,11 @@ describe("showVrmMeta 分支补全", () => {
     expect(html).toContain("✅");
     expect(html).toContain("❌");
     expect(html).toContain("—");
-    // FAB 点击 → createVrm3D
+    // FAB 点击 → 统一路由入口（ADR-253 D2；原直调 createVrm3D 已收编）
     const fab = ctx.root.querySelector<HTMLElement>("#btn-vrm-3d");
     expect(fab).not.toBeNull();
     fab?.click();
-    expect(createVrm3DMock).toHaveBeenCalledWith("/repo/avatar.vrm");
+    await vi.waitFor(() => expect(openModel3DFullscreenMock).toHaveBeenCalledWith("/repo/avatar.vrm"));
   });
 
   it("meta 只有 name（无 authors）→ 仍走完整卡，作者行不渲染", async () => {
@@ -226,8 +230,7 @@ describe("showVrmMeta 分支补全", () => {
 });
 
 describe("showFbxPreview FBX 入口卡", () => {
-  it("默认标签 + 文件名 + FAB；点击 → resolveFbxSiblings 后 createFbx3D(path, {siblings})", async () => {
-    resolveFbxSiblingsMock.mockResolvedValue(["/repo/other.fbx"]);
+  it("默认标签 + 文件名 + FAB；点击 → openModel3DFullscreen(path)（siblings 由路由兜底，ADR-253 D2）", async () => {
     const ctx = makeCtx();
     await showFbxPreview(ctx, "/repo/dance.fbx");
     const html = ctx.root.innerHTML;
@@ -236,11 +239,8 @@ describe("showFbxPreview FBX 入口卡", () => {
     const fab = ctx.root.querySelector<HTMLElement>("#btn-fbx-3d");
     expect(fab).not.toBeNull();
     fab?.click();
-    await vi.waitFor(() =>
-      expect(createFbx3DMock).toHaveBeenCalledWith("/repo/dance.fbx", {
-        siblings: ["/repo/other.fbx"],
-      }),
-    );
+    // ADR-253 D2：siblings 不再由详情卡手算，交由 3D 入口按 rtype 自算兜底
+    await vi.waitFor(() => expect(openModel3DFullscreenMock).toHaveBeenCalledWith("/repo/dance.fbx"));
   });
 
   it("自定义 opts → 使用传入图标与标签", async () => {
@@ -254,11 +254,7 @@ describe("showFbxPreview FBX 入口卡", () => {
 });
 
 describe("showScenePreview 场景 MMD 入口卡", () => {
-  it("SceneModel 徽章 + 场景模型标签 + FAB；点击 → createScene3D(path, {siblings})", async () => {
-    resolveSceneSiblingsMock.mockResolvedValue([
-      "/repo/scene/stage.pmx",
-      "/repo/scene/floor.pmx",
-    ]);
+  it("SceneModel 徐章 + 场景模型标签 + FAB；点击 → openModel3DFullscreen(path)（ADR-253 D2）", async () => {
     const ctx = makeCtx();
     await showScenePreview(ctx, "/repo/scene/main.pmx");
     const html = ctx.root.innerHTML;
@@ -268,10 +264,9 @@ describe("showScenePreview 场景 MMD 入口卡", () => {
     const fab = ctx.root.querySelector<HTMLElement>("#btn-scene-3d");
     expect(fab).not.toBeNull();
     fab?.click();
+    // ADR-253 D2：siblings 不再由详情卡手算，交由 3D 入口按 rtype 自算兜底
     await vi.waitFor(() =>
-      expect(createScene3DMock).toHaveBeenCalledWith("/repo/scene/main.pmx", {
-        siblings: ["/repo/scene/stage.pmx", "/repo/scene/floor.pmx"],
-      }),
+      expect(openModel3DFullscreenMock).toHaveBeenCalledWith("/repo/scene/main.pmx"),
     );
   });
 });

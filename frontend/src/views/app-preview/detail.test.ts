@@ -68,10 +68,13 @@ vi.mock("./siblings.ts", () => ({
   resolveMorphSiblings: resolveMorphSiblingsMock,
   resolveStageSiblings: resolveStageSiblingsMock,
 }));
+// ADR-253 D2：详情卡 FAB 改走统一路由入口（openModel3DFullscreen），不再直调 createXxx3D
+vi.mock("./preview-library.ts", () => ({ openModel3DFullscreen: vi.fn() }));
 
 import { showModelDetail, showResourcePack, showSimplePreview, showShaderpack } from "./detail.ts";
 import { sleep } from "@/test-utils/index.ts";
 import { showVrmMeta, showMmdPreview } from "./detail-3d.ts";
+import { openModel3DFullscreen } from "./preview-library.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 
 function makeCtx(): PreviewCtx {
@@ -232,11 +235,11 @@ describe("showVrmMeta VRM meta 卡", () => {
     expect(html).toContain("作者A");
     expect(html).toContain("CC_BY");
     expect(html).toContain("btn-vrm-3d");
-    // FAB 点击 → createVrm3D
+    // FAB 点击 → 统一路由入口（ADR-253 D2；原直调 createVrm3D 已收编）
     const fab = ctx.root.querySelector<HTMLElement>("#btn-vrm-3d");
     expect(fab).not.toBeNull();
     fab?.click();
-    expect(createVrm3DMock).toHaveBeenCalledWith("/repo/avatar.vrm");
+    await vi.waitFor(() => expect(openModel3DFullscreen).toHaveBeenCalledWith("/repo/avatar.vrm"));
   });
 
   it("无 meta（非标准 VRM）→ 仅文件名 + FAB 仍可进 3D", async () => {
@@ -288,8 +291,7 @@ describe("showVrmMeta VRM meta 卡", () => {
 });
 
 describe("showMmdPreview MMD 预览卡", () => {
-  it("渲染标签 + 文件名 + FAB，点击 → resolveMmdSiblings 后 createMmd3D(path, {siblings})", async () => {
-    resolveMmdSiblingsMock.mockResolvedValue(["/repo/other.pmx", "/repo/third.pmd"]);
+  it("渲染标签 + 文件名 + FAB，点击 → openModel3DFullscreen(path)（siblings 由路由兜底，ADR-253 D2）", async () => {
     const ctx = makeCtx();
     await showMmdPreview(ctx, "/repo/miku.pmx");
     const html = ctx.root.innerHTML;
@@ -298,12 +300,8 @@ describe("showMmdPreview MMD 预览卡", () => {
     const fab = ctx.root.querySelector<HTMLElement>("#btn-mmd-3d");
     expect(fab).not.toBeNull();
     fab?.click();
-    // 3D 内换模型（ADR-066 §5.6）：siblings 随 opts 传入，核心渲染 topBar 切换下拉
-    await vi.waitFor(() =>
-      expect(createMmd3DMock).toHaveBeenCalledWith("/repo/miku.pmx", {
-        siblings: ["/repo/other.pmx", "/repo/third.pmd"],
-      }),
-    );
+    // ADR-253 D2：siblings 不再由详情卡手算，交由 3D 入口按 rtype 自算兜底
+    await vi.waitFor(() => expect(openModel3DFullscreen).toHaveBeenCalledWith("/repo/miku.pmx"));
   });
 
   it("自定义 opts → 使用传入图标与标签", async () => {

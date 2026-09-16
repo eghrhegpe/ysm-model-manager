@@ -66,6 +66,27 @@ export async function resolveFbxSiblings(): Promise<string[]> {
   return resolveSiblingsByType(RESOURCE_TYPES.FBX);
 }
 
+/**
+ * 路由层 siblings 单一出口（ADR-253 D1）：按预览 routeKey 派生同类型候选。
+ * 3D 入口（openModel3DFullscreen）在调用方未显式传 siblings 时调本函数兜底——
+ * 各详情卡 FAB 与导航栏 FAB 因此得到**同一份**候选，不再取决于谁点的按钮。
+ *
+ * 口径与各详情卡原手算完全一致（含场景的 ext 白名单——Go 白名单含 .vrm/容器，
+ * 直接透传会列出加载不了的条目）。未登记 routeKey 回退按 rtype 裸扫描。
+ */
+export async function resolveSiblingsForRoute(routeKey: string, rtype: string): Promise<string[]> {
+  switch (routeKey) {
+    case "mmd":
+      return resolveMmdSiblings();
+    case "fbx":
+      return resolveFbxSiblings();
+    case "mmd-scene":
+      return resolveSceneSiblings();
+    default:
+      return resolveSiblingsByType(rtype || routeKey);
+  }
+}
+
 // ===== StageAnim 舞台包资源扫描（只扫 StageAnim 目录的 VMD + 音频文件）=====
 // 直接用类型 ID 调 GetRepoRoot，后端返回 FilesRoot/mmd/StageAnim，无需前端回溯拼接
 // StageAnim 目录结构：

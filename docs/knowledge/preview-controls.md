@@ -37,6 +37,7 @@ auto_fields:
     - resolveMorphSiblings
     - resolveSceneSiblings
     - resolveSiblingsByType
+    - resolveSiblingsForRoute
     - resolveStageSiblings
     - SchemaBuilder
     - showFbxPreview
@@ -97,6 +98,7 @@ status: active
 - **截图能力桥接**：向截图面板提供 `screenshotFn`（MMD/YSM 六角度，VRM 仅 current）
 - **材质 bridge**：`MaterialControlBridge` / `VrmMaterialControlBridge` 显隐/透明度，逻辑下沉到 `mmd-materials.ts` / `vrm-materials.ts`（[ADR-180] 骨架收编 `materials-shared.ts`——list/setVisible/setOpacity/detail 骨架共享，格式差异参数化）
 - **模型切换**：zip 内多 pmx/pmd 候选 `multiModelSelectNode`，跨类型走 `switchExternal`；siblings 三壳（mmd/fbx/stage）已合并为 `siblings.ts` 单文件（`resolveSiblingsByType` 统一入口 + 各格式 `resolve*` 薄封装）
+- **siblings 单一出口（ADR-253）**：候选由 3D 入口 `openModel3DFullscreen` 在调用方未传时按 routeKey 自算（`resolveSiblingsForRoute`），详情卡 FAB 不再手算；各 `registerReRoute` opener 必须转发第二参 `siblings`，否则路由兜底白算
 
 ## 三控制器对比
 
@@ -130,8 +132,8 @@ status: active
 
 ```
 app-preview/  (入口层)
-  ├─ detail-3d.ts     → 入口卡 + FAB；FAB.onclick → createXxx3D(path, {siblings})
-  ├─ siblings.ts      → resolveSiblingsByType 统一入口（mmd/fbx/stage 三壳已合并）
+  ├─ detail-3d.ts     → 入口卡 + FAB；FAB.onclick → openModel3DFullscreen(path)（ADR-253：siblings 由路由兜底）
+  ├─ siblings.ts      → resolveSiblingsByType 统一入口（mmd/fbx/stage 三壳已合并）+ resolveSiblingsForRoute（ADR-253 路由层出口）
   ├─ view-shell.ts    → readFileBytes / addOpLog（被多 xxx-3d.ts 复用）
   └─ mmd/vrm/ysm-controls.ts → 产出 PreviewMenuNode[] + 桥接口
 

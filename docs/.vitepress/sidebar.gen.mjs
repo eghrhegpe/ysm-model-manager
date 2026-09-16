@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-253：3D 入口统一：路由层 siblings 兜底与详情卡收编",
+        "link": "/adr/ADR-253-3d-entry-siblings-unification"
+      },
+      {
         "text": "ADR-252：地面材质第三轴拆分：canvasStyle 收敛为纯材质轴",
         "link": "/adr/ADR-252-ground-canvas-style-material-only"
       },

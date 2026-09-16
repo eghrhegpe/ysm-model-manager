@@ -18,7 +18,10 @@ import { makeMmdDataPort } from "./mmd-data-port.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，SceneModel .pmx/.pmd→"mmd-scene"）
-registerReRoute("mmd-scene", (path) => createScene3D(path));
+// ADR-253 D1：opener 透传 siblings（否则路由兜底白算）
+registerReRoute("mmd-scene", (path, siblings) =>
+  createScene3D(path, siblings ? { siblings } : undefined),
+);
 
 const scenePanelHooks: MmdPanelHooks = {
   modelInfoNodes: mmdModelInfoNodes,

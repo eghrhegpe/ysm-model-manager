@@ -15,18 +15,9 @@ import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
-import { createFbx3D } from "./fbx-3d.ts";
-import { createMmd3D } from "./mmd-3d.ts";
-import { createScene3D } from "./scene-3d.ts";
-import {
-  resolveFbxSiblings,
-  resolveMmdSiblings,
-  resolveMorphSiblings,
-  resolveSceneSiblings,
-  resolveStageSiblings,
-} from "./siblings.ts";
+import { openModel3DFullscreen } from "./preview-library.ts";
+import { resolveMorphSiblings, resolveStageSiblings } from "./siblings.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
-import { createVrm3D } from "./vrm-3d.ts";
 
 // ===== 统一卡片渲染器 =====
 // 六个 show 函数共享同一模板：invalidate → innerHTML 骨架 → getApp → fetch → stale 检查
@@ -167,7 +158,8 @@ export async function showVrmMeta(
       const cleanup = promoteTitleIfPresent(fab);
       if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
-        void createVrm3D(path);
+        // ADR-253 D2：与其他格式卡统一走路由入口，siblings 由路由按 rtype 自算兜底
+        void openModel3DFullscreen(path);
       };
     },
   });
@@ -200,11 +192,9 @@ export async function showMmdPreview(
       const cleanup = promoteTitleIfPresent(fab);
       if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
-        // 3D 内换模型（ADR-066 §5.6）：先取同类型候选列表，随 siblings 传入渲染 topBar 切换下拉
-        void (async () => {
-          const siblings = await resolveMmdSiblings();
-          await createMmd3D(path, { siblings });
-        })();
+        // 3D 内换模型（ADR-066 §5.6 + ADR-253 D2）：siblings 由 3D 入口按 rtype 自算兜底，
+        // 此处不再手算——与导航栏 FAB 走同一条路径，消除「谁点的按钮决定下拉有无」。
+        void openModel3DFullscreen(path);
       };
     },
     // ADR-131 P2：异步补 PMX 文件统计（仅 .pmx；不阻塞基础卡渲染，gen 守卫过期丢弃）
@@ -261,11 +251,8 @@ export async function showFbxPreview(
       const cleanup = promoteTitleIfPresent(fab);
       if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
-        // 3D 内换模型（ADR-066 §5.6）：先取同类型 FBX 候选列表，随 siblings 传入渲染 topBar 切换下拉
-        void (async () => {
-          const siblings = await resolveFbxSiblings();
-          await createFbx3D(path, { siblings });
-        })();
+        // ADR-253 D2：siblings 由 3D 入口按 rtype 自算兜底（原手算 resolveFbxSiblings 已删）。
+        void openModel3DFullscreen(path);
       };
     },
   });
@@ -298,10 +285,8 @@ export async function showScenePreview(
       const cleanup = promoteTitleIfPresent(fab);
       if (cleanup && ctx.unsubs) ctx.unsubs.push(cleanup);
       fab.onclick = (): void => {
-        void (async () => {
-          const siblings = await resolveSceneSiblings();
-          await createScene3D(path, { siblings });
-        })();
+        // ADR-253 D2：siblings 由 3D 入口按 rtype 自算兜底（原手算 resolveSceneSiblings 已删）。
+        void openModel3DFullscreen(path);
       };
     },
   });

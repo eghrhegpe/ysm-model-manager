@@ -18,7 +18,10 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（资源库面板/导航 FAB 选中资源包时派发到此）
-registerReRoute(RESOURCE_TYPES.PACK, (path) => createPack3D(path));
+// ADR-253 D1：opener 透传 siblings（否则路由兜底白算）
+registerReRoute(RESOURCE_TYPES.PACK, (path, siblings) =>
+  createPack3D(path, siblings ? { siblings } : undefined),
+);
 
 /** 经 getApp 注入 Go 绑定（适配器 0 backend import，ADR-072 边界判据） */
 function makePackDeps() {

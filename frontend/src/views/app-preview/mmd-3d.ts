@@ -15,7 +15,9 @@ import { makeMmdDataPort } from "./mmd-data-port.ts";
 import { registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
 // 注册跨类型换角色路由（ADR-111：按 variants preview key 路由，.pmx/.pmd→"mmd"）
-registerReRoute("mmd", (path) => createMmd3D(path));
+// ADR-253 D1：opener 透传 siblings（对齐 litematic-3d 既有正确写法），
+// 否则路由层兜底算出的候选会被 opener 丢弃 → 3D 内切换下拉仍为空
+registerReRoute("mmd", (path, siblings) => createMmd3D(path, siblings ? { siblings } : undefined));
 
 const mmdPanelHooks: MmdPanelHooks = {
   modelInfoNodes: mmdModelInfoNodes,

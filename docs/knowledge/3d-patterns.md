@@ -429,19 +429,22 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
 
 ### 解决方案
 **注册表反向注入**：
-1. `preview-library.ts` 定义为**叶子模块**：不反向 import 任何 `createXxx3D`。
+1. `preview-library.ts` 定义为**叶子模块**：不反向 import 任何 `createXxx3D`（可 import 非包装器模块，如 `siblings.ts`）。
 2. 各包装器在模块加载时调用 `registerReRoute(type, opener)` 注册自己的入口。
 3. `openModel3DFullscreen()` 查表派发，无类型注册时 toast 提示。
 
 ### 示例
 - `preview-library.ts`：
   ```typescript
-  const _openers: Record<string, (path: string) => Promise<void>> = {};
-  export function registerReRoute(rtype: string, opener: (path: string) => Promise<void>): void {
+  const _openers: Record<string, (path: string, siblings?: string[]) => Promise<void>> = {};
+  export function registerReRoute(
+    rtype: string,
+    opener: (path: string, siblings?: string[]) => Promise<void>,
+  ): void {
     _openers[rtype] = opener;
   }
   ```
-- `mmd-3d.ts`：`registerReRoute(RESOURCE_TYPES.MMD, (path) => createMmd3D(path));`
+- `mmd-3d.ts`：`registerReRoute(RESOURCE_TYPES.MMD, (path, siblings) => createMmd3D(path, siblings ? { siblings } : undefined));`（**ADR-253 D1b：第二参必须转发**，否则 `openModel3DFullscreen` 按 rtype 自算的候选在 opener 处被静默丢弃）
 - `ysm-3d.ts`：`registerReRoute(RESOURCE_TYPES.YSM, openYsmFullscreen);`
 - `preview-library.ts`：查表派发逻辑（`openModel3DFullscreen` 内 `_openers[rtype]`）
 

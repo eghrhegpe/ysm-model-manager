@@ -208,11 +208,8 @@ export const contentCreatorCSS: string = `
 .cr-search-input::placeholder { color:var(--muted);opacity:.6; }
 
 /* ===== 工坊空状态 ===== */
-.cr-empty-site {
-  flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;
-  padding:48px 20px;color:var(--muted);font-size:var(--fs-md);
-  text-align:center;gap:8px;
-}
+/* 工坊空态：已收编进居中空态原语（content-layout 的 .placeholder-box--roomy）。
+   原 .cr-empty-site 是本原语的第二份复刻（同一配方 + padding:48px 20px），2026-09 退役。 */
 /* ===== 编辑模式卡片（合并 base + override：cascade 后置覆盖，此处合并为单一块） ===== */
 .cr-edit-card {
   padding:4px 8px 6px;

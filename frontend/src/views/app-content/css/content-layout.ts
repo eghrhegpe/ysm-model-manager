@@ -47,8 +47,19 @@ ${FADE_SLIDE_LEFT}
 .stat-card .label { font-size:var(--fs-base); color:var(--muted); margin-top:2px; }
 .stat-card .sub { font-size:var(--fs-sm); color:var(--txt); margin-top:6px; }
 
-.placeholder-box { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--muted); font-size:var(--fs-md); gap:8px; }
-.placeholder-box .big { font-size:48px; }
+/* ===== 居中空态/加载态块（A 族唯一原语）=====
+   形状 = 占满剩余空间 + 双向居中 + 竖排 + muted + 8px 间隙。
+   消费方只放内容（可选 .big 大图标 + 文案 + 操作按钮），**不写布局意图、不内联、不复刻**。
+   历史（2026-09 体检查出）：本类此前**零消费者**（死 CSS），而实例页把同一配方内联照抄了一份，
+   还借用了 app-preview 的类名 .dp-placeholder——该类在 app-content 的 shadow 内根本无规则。
+   刻意**不并**另两族（形状不同，硬并会造视觉回归）：
+     - 居中提示行（padding + text-align:center + 小字号）：.gh-loading-placeholder / .perf-no-data / .gh-initial-hint
+     - 左对齐小提示：.stg-hint / .stg-card-hint
+   机检：css/content-css.test.ts「居中空态块只有本原语一个」 */
+.placeholder-box { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--muted); font-size:var(--fs-md); text-align:center; gap:8px; }
+.placeholder-box .big { font-size:var(--fs-xl); }
+/* 大面积留白变体（工坊站点空态等整页空场用；行内空态不加） */
+.placeholder-box--roomy { padding:48px 20px; }
 .ptag { font-size:var(--fs-xs); background:var(--tag-amber-bg); color:var(--tag-amber); padding:2px 8px; border-radius:var(--radius-sm); }
 
 .repo-layout-wrap { flex:1; }

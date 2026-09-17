@@ -87,8 +87,8 @@ export function instancesHTML(): string {
         body: `<div class="repo-layout">
 <app-sidebar class="ins-sidebar"></app-sidebar>
 <div class="ins-content" id="ins-content" data-testid="ins-content" style="display:flex;flex-direction:column;overflow:hidden">
-<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:var(--fs-base);gap:8px">
-<div style="font-size:var(--fs-xl)">${UI_ICONS.pointerLeft}</div>
+<div class="placeholder-box">
+<div class="big">${UI_ICONS.pointerLeft}</div>
 <div>${t("instances.emptyHint")}</div>
 </div>
 </div>

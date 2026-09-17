@@ -100,3 +100,59 @@ describe("设置页组间距契约（content-stg）", () => {
     expect(m?.[1]).toBe("0 20px 16px");
   });
 });
+
+describe("居中空态块单一原语（A 族收敛，2026-09 体检）", () => {
+  /** 剔注释后逐规则扫描（注释里的说明文字含花括号会干扰扁平正则） */
+  function rules(css: string): Array<{ sel: string; body: string }> {
+    const clean = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    return [...clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+      sel: (m[1] ?? "").trim().split("\n").pop()?.trim() ?? "",
+      body: m[2] ?? "",
+    }));
+  }
+  const SCANNED: Array<[string, string]> = [
+    ["layout", contentLayoutCSS],
+    ["repo", contentRepoCSS],
+    ["creator", contentCreatorCSS],
+    ["diag", contentDiagCSS],
+    ["gh", contentGhCSS],
+    ["util", contentUtilCSS],
+    ["stg", contentStgCSS],
+  ];
+
+  it("「竖排 + 双向居中」配方只出现在 .placeholder-box（防再复刻）", () => {
+    // 历史：同一配方曾有三份实现——.placeholder-box（定义在此却零消费者）、
+    // 实例页内联副本（还借了 app-preview 的类名 .dp-placeholder，本 shadow 内无规则）、
+    // 工坊 .cr-empty-site；值还漂了（--fs-base vs --fs-md）。
+    const offenders: string[] = [];
+    for (const [domain, css] of SCANNED) {
+      for (const r of rules(css)) {
+        // 签名 = 竖排 + 双向居中 + muted 文案（空态的语义标记）。
+        // 刻意不只用三个 flex 属性：那会误伤「圆环内居中数字」这类正当用法
+        //（.health-ring-inner = position:absolute 的体检分数环内层，无 flex:1 无 muted）。
+        const centered =
+          /flex-direction:\s*column/.test(r.body) &&
+          /justify-content:\s*center/.test(r.body) &&
+          /align-items:\s*center/.test(r.body) &&
+          /color:\s*var\(--muted\)/.test(r.body);
+        if (centered && !r.sel.startsWith(".placeholder-box")) {
+          offenders.push(`${domain}: ${r.sel}`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      `居中空态配方被复刻（应收编进 content-layout 的 .placeholder-box）：\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("原语三件套齐备（主体 / 大图标槽 / 留白变体），且不再是死 CSS", () => {
+    expect(contentLayoutCSS).toMatch(/\.placeholder-box\s*\{[^}]*flex:1/);
+    expect(contentLayoutCSS).toMatch(/\.placeholder-box \.big\s*\{/);
+    expect(contentLayoutCSS).toMatch(/\.placeholder-box--roomy\s*\{/);
+  });
+
+  it("退役的复刻类不再有规则（.cr-empty-site）", () => {
+    expect(contentCreatorCSS).not.toMatch(/\.cr-empty-site\s*\{/);
+  });
+});

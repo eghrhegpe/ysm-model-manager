@@ -85,7 +85,8 @@ beforeEach(() => {
 describe("buildSiteHtml 浏览态", () => {
   it("1. 空创作者 → 空态区块 + 计数 0 + 编辑/更新入口，无标签行与搜索词分区", () => {
     const root = renderHtml(makeCtx());
-    expect(root.querySelector(".cr-empty-site")).toBeTruthy();
+    // 空态走居中空态原语（content-layout .placeholder-box--roomy），不再是站点私有的 .cr-empty-site
+    expect(root.querySelector(".placeholder-box.placeholder-box--roomy")).toBeTruthy();
     expect(root.querySelector("[data-local-empty]")).toBeTruthy();
     expect(root.querySelector("#ws-cr-count")?.textContent).toBe("(0)");
     expect(root.querySelector(".cr-fetch-btn")).toBeTruthy();
@@ -110,7 +111,7 @@ describe("buildSiteHtml 浏览态", () => {
     // 声明式契约：卡片由 buildSiteHtml 直接产出（不再留空 grid 交由 events 填充）
     expect(grid!.querySelectorAll(".cr-creator-card")).toHaveLength(2);
     expect(grid!.querySelector(".cr-card-name")?.textContent).toBe("乙");
-    expect(root.querySelector(".cr-empty-site")).toBeNull();
+    expect(root.querySelector(".placeholder-box")).toBeNull();
   });
 
   it("3. 标签过滤行：固定 全部/creator/official + 动态角色标签 + active 高亮", () => {

@@ -336,7 +336,7 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
     parts.push(`<div class="cr-creator-grid" id="cr-creator-grid">${cardsHtml}</div>`);
   } else {
     parts.push(
-      '<div class="cr-empty-site">' +
+      '<div class="placeholder-box placeholder-box--roomy">' +
         t("content.emptyCreators") +
         '<br><br><button class="cr-local-btn" data-local-empty>' +
         t("content.browseLocalModels") +

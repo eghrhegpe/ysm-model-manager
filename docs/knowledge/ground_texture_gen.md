@@ -48,9 +48,11 @@ quick_groups:
   - 程序化贴图
   - 噪声生成
 quick_intents:
-  - "草为什么是圆斑不像纤维" → 各向异性坐标拉伸（grass.ts 的 ANISO_X）
-  - "大理石没有脉络像团块" → domain warping（marble.ts 的 sin(x + k·fbm)）
-  - "平铺后每隔约两米出现同一个明星特征" → 无缝但有规律重复，用 anti-repeat.ts（macro/dual/stochastic 三选一或组合）
+  # 注：值内的引号用中文「」而非 YAML 的 " "——以双引号开头会被当成 YAML 字符串定界符，
+  #   闭合后的 `→ ...` 尾部即成非法内容（VitePress 报 bad indentation of a sequence entry，Pages 长期红）。
+  - 「草为什么是圆斑不像纤维」→ 各向异性坐标拉伸（grass.ts 的 ANISO_X）
+  - 「大理石没有脉络像团块」→ domain warping（marble.ts 的 sin(x + k·fbm)）
+  - 「平铺后每隔约两米出现同一个明星特征」→ 无缝但有规律重复，用 anti-repeat.ts（macro/dual/stochastic 三选一或组合）
 quick_risk_lines:
   - 改生成器算法前确认 surfaceSpecKey 不含像素字段（否则触发无谓重建）
 invariant_anchors:

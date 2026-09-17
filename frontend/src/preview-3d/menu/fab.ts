@@ -29,7 +29,7 @@ export const YSW_FAB_CSS = `
 .ysm-ovl-val{font-size:var(--fs-sm);color:rgba(255,255,255,.6);min-width:20px}
 .ysm-ovl-slider{width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff)}
 .ysm-ovl-shotwrap{position:relative;display:inline-block;margin-right:8px}
-.ysm-ovl-shotmenu{display:none;position:absolute;top:100%;left:0;z-index:100;background:#2a2b3e;border:1px solid rgba(255,255,255,.15);border-radius:var(--radius-md);padding:4px 0;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.ysm-ovl-shotmenu{display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--card);border:1px solid rgba(255,255,255,.15);border-radius:var(--radius-md);padding:4px 0;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
 .ysm-ovl-shotitem{padding:4px 12px;font-size:var(--fs-sm);color:rgba(255,255,255,.85);cursor:pointer;white-space:nowrap;transition:var(--tr-fast)}
 .ysm-ovl-shotitem:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
 
@@ -44,7 +44,7 @@ export const YSW_FAB_CSS = `
 .preview-dock-navbtn:hover{background:rgba(255,255,255,.08);color:#fff}
 .preview-dock-navbtn--on{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.12)}
 .preview-dock-navlabel{white-space:nowrap}
-.ysm-3d-popup{position:absolute;left:50%;bottom:68px;transform:translateX(-50%);width:280px;max-height:min(60vh,420px);overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:var(--radius-md);background:#1b1c24;border:1px solid rgba(255,255,255,.12);box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:25;color:rgba(255,255,255,.85);font-size:var(--fs-sm);box-sizing:border-box}
+.ysm-3d-popup{position:absolute;left:50%;bottom:68px;transform:translateX(-50%);width:280px;max-height:min(60vh,420px);overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:var(--radius-md);background:var(--card);border:1px solid rgba(255,255,255,.12);box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:25;color:rgba(255,255,255,.85);font-size:var(--fs-sm);box-sizing:border-box}
 .ysm-3d-popsec{font-weight:600;font-size:var(--fs-sm);color:rgba(255,255,255,.9);margin:8px 0 4px;padding-top:6px;border-top:1px solid rgba(255,255,255,.08)}
 .ysm-3d-popsec:first-child{border-top:none;padding-top:0;margin-top:0}
 .ysm-3d-poprow{display:flex;align-items:center;gap:8px}

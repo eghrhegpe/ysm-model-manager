@@ -161,6 +161,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - 初始页面**三源同源**：`app-nav`、`app-content`、`PageStore` 都只能通过 `resolveInitialPage()` 取初始页，禁止任一处硬编码页面名，否则 UI 与 `PageStore` 脱节（旧版 DnD 遮罩曾依赖该守卫误判；现 DnD 已组件化，不再依赖）
 - `resolveInitialPage()` 的 localStorage 取值必须过 `sanitizePage()` 白名单（`VALID_PAGES`）：历史页面名 `resources` 映射为 `repository`，其余未知/损坏值一律回退 `repository`，防止 `_render()` 落入 `default` 分支却无对应 init 分发而形成死页
 - 所有 `bus.on` 订阅与页面级拆除统一注册进 `SubscriptionBucket`（`addPage` / `addGlobal` / `setNavUnsub`；`addPage` 收 `() => void | Promise<void>`，ADR-260），在 `disconnectedCallback` 与 `lang:changed` 全量重建时清空。⚠️ **页面级桶不在 `_render()` 开头清**——ADR-163 面板常驻、每页 init 只跑一次，切页清订阅会造「DOM 还在、事件已死」的僵尸页（ADR-260 §2.5）；`document` 级 resize 监听先移除再重绑
+- **幂等订阅用 `addPageOnce(key, fn)` / `addGlobalOnce(key, fn)`，不要自己开布尔标志**（ADR-261）：key 集合与订阅集合**同寿命**（`drainPage` / `cleanupAll` 一并清），故 lang:changed 重建后天然可重注册，无需任何外部复位。旧模式（`state.insListenerReg` / `.avatarRefreshRegistered` + `index.ts` 手工复位）已退役——它的不变量维护点横跨页与协调器两处，漏复位即「语言热切换后页面永久失去监听」（僵尸页同族）。⚠️ 幂等**须跨 init 调用**持存：闭包变量做不到（每次 init 新闭包），这也是不能「删了守卫了事」的原因（导出入口被二次调用也必须幂等，测试已锁定）
 - `_render()` 内页面 init 分发整体包 try/catch：init 抛错不中断调用方，转 `console.error` + `toast:show` 反馈用户而非静默
 - 样式走 `adoptedStyleSheets` + CSS 变量，无硬编码颜色；`innerHTML` 拼接统一过 `_esc` / `esc`
 - 页面级临时缓存（`_workshopCache` / `_githubCache`）与 `_workshopTimer` 定时器在 `disconnectedCallback` 清空

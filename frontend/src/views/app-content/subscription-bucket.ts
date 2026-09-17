@@ -20,7 +20,11 @@ import { swallowError } from "@/utils/base/primitives/async.ts";
 export class SubscriptionBucket {
   navUnsub: (() => void) | null = null;
   globalUnsubs: Array<() => void> = [];
+  /** addGlobalOnce 已用 key（随 cleanupAll 清空） */
+  private globalKeys = new Set<string>();
   pageUnsubs: Array<() => void | Promise<void>> = [];
+  /** addPageOnce 已用 key（同一代页面生命周期内去重；随 drainPage 清空） */
+  private pageKeys = new Set<string>();
 
   /** 注册全局单订阅 */
   setNavUnsub(fn: () => void): void {
@@ -33,12 +37,36 @@ export class SubscriptionBucket {
   }
 
   /**
+   * 幂等注册全局订阅（ADR-261）：同一 `key` 在组件生命周期内只注册一次。
+   * 与 `addPageOnce` 对称——key 随 `cleanupAll()` 清空，组件重建后天然可再注册。
+   */
+  addGlobalOnce(key: string, fn: () => void): void {
+    if (this.globalKeys.has(key)) return;
+    this.globalKeys.add(key);
+    this.globalUnsubs.push(fn);
+  }
+
+  /**
    * 注册页面级清理（bus 退订 / DOM 拆除 / 异步释放皆可）。
    * 收 `() => void | Promise<void>`：**异步清理不再另开旁路**——此前本方法只收同步，
    * 迫使异步清理在 AppContentState 上开了 `repoEventsCleanup` 专用字段，并经
    * github/workshop 两页的 getter/setter 注入链传递（2026-09 收口，见 ADR-260）。
    */
   addPage(fn: () => void | Promise<void>): void {
+    this.pageUnsubs.push(fn);
+  }
+
+  /**
+   * 幂等注册页面级订阅（ADR-261）：同一 `key` 在本代页面生命周期内只注册一次。
+   *
+   * 取代「各页在 AppContentState 上开布尔标志 + 由 index.ts 在 lang:changed 手工复位」
+   * 的旧模式——那套标志的复位时机必须与面板世代同步，却散落在各页与协调器之间。
+   * 此处把幂等交给**已经掌管页面生命周期**的桶：`drainPage()` 清空订阅的同时清空 key，
+   * 故 lang:changed 全量重建后天然允许重新注册，无需任何外部复位。
+   */
+  addPageOnce(key: string, fn: () => void | Promise<void>): void {
+    if (this.pageKeys.has(key)) return;
+    this.pageKeys.add(key);
     this.pageUnsubs.push(fn);
   }
 
@@ -63,6 +91,7 @@ export class SubscriptionBucket {
       }
     }
     this.pageUnsubs = [];
+    this.pageKeys.clear(); // 与订阅同寿命：清空后同 key 可再次注册（lang:changed 重建）
   }
 
   /** 清理所有订阅（disconnectedCallback 调用） */
@@ -76,6 +105,7 @@ export class SubscriptionBucket {
         fn();
       });
       this.globalUnsubs = [];
+      this.globalKeys.clear(); // 与订阅同寿命
     }
     this.drainPage();
   }

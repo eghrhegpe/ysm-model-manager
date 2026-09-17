@@ -157,25 +157,25 @@ export function initWorkshopPage(host: AppContentHost): void {
   // 绑定站点打开事件
   bindSiteEvents(host);
 
-  // 下载完成后增量刷新创作者头像
-  if (!host.state.avatarRefreshRegistered) {
-    host.state.avatarRefreshRegistered = true;
-    host.subs.addGlobal(
-      bus.on("avatar:refresh", ({ author, dataUri }) => {
-        if (host.state.avatarCache[author] === dataUri) return;
-        host.state.avatarCache[author] = dataUri;
-        let found = false;
-        root.querySelectorAll(".cr-creator-card").forEach((c) => {
-          if ((c as HTMLElement).dataset.name === author) {
-            const img = c.querySelector(".cr-avatar") as HTMLImageElement | null;
-            if (img && img.tagName === "IMG") img.src = dataUri;
-            found = true;
-          }
-        });
-        if (!found && host.state.currentSite) showSiteView(host.state.currentSite);
-      }),
-    );
-  }
+  // 下载完成后增量刷新创作者头像。幂等注册（ADR-261）：原靠 `state.avatarRefreshRegistered`
+  // 布尔标志 + cleanupTransient 手工复位；现交给订阅桶的 addGlobalOnce——key 与全局订阅同寿命，
+  // cleanupAll() 清空订阅时一并清 key（组件重建后天然可再注册）。
+  host.subs.addGlobalOnce(
+    "workshop:avatar-refresh",
+    bus.on("avatar:refresh", ({ author, dataUri }) => {
+      if (host.state.avatarCache[author] === dataUri) return;
+      host.state.avatarCache[author] = dataUri;
+      let found = false;
+      root.querySelectorAll(".cr-creator-card").forEach((c) => {
+        if ((c as HTMLElement).dataset.name === author) {
+          const img = c.querySelector(".cr-avatar") as HTMLImageElement | null;
+          if (img && img.tagName === "IMG") img.src = dataUri;
+          found = true;
+        }
+      });
+      if (!found && host.state.currentSite) showSiteView(host.state.currentSite);
+    }),
+  );
 }
 
 // ==================== 模块级状态 ====================

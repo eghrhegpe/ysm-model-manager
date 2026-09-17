@@ -285,8 +285,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 263 |
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 285 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 262 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 284 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**

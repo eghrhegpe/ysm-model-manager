@@ -2,8 +2,7 @@
 // 抽出组件的 15 个状态字段，使 index.ts 瘦身为协调器。
 // 字段分组：
 // - 核心状态：root / current
-// - 标志位：insListenerReg / avatarRefreshRegistered
-// - 拖拽回调：resizeMove / resizeUp
+// - 拖拽回调：resizeMove / resizeUp（app 壳层预览拖拽，非页私有）
 // - workshop/github 借宿状态：currentSite / avatarCache / workshopCache / githubCache / workshopTimer
 // - 定时器：workshopTimer（切页销毁时清）
 // 注：仓库视图的异步清理**不在本容器**——已归订阅桶（host.subs.addPage 收 Promise，ADR-260）。
@@ -23,11 +22,6 @@ export class AppContentState {
   root: ShadowRoot;
   /** 当前页面 key */
   current: PageName;
-
-  /** 实例页监听注册标志（防重复注册 package:selected） */
-  insListenerReg = false;
-  /** 头像刷新订阅注册标志 */
-  avatarRefreshRegistered = false;
 
   /** 预览面板拖拽 move 回调 */
   resizeMove: ((e: PointerEvent) => void) | null = null;
@@ -83,8 +77,6 @@ export class AppContentState {
     if (this.resizeUp) document.removeEventListener("pointerup", this.resizeUp);
     this.resizeMove = null;
     this.resizeUp = null;
-    this.avatarRefreshRegistered = false;
-    this.insListenerReg = false;
     if (this.workshopCache) this.workshopCache.clear();
     this.workshopCache = null;
     if (this.githubCache) this.githubCache.clear();

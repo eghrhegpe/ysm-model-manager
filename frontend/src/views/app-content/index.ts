@@ -80,7 +80,6 @@ class AppContent extends WebComponentBase {
     this.subs.addGlobal(
       bus.on("lang:changed", () => {
         this.subs.cleanupPage();
-        this.state.insListenerReg = false;
         this.state.clearPanels();
         this._render();
       }),

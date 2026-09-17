@@ -37,11 +37,12 @@ export function initDiagnosticsPage(host: AppContentHost): void {
 export function initInstancesPage(host: AppContentHost): void {
   bindTabs(host, ".repo-tab", "ins");
 
-  // 只注册一次，避免重复监听
-  if (host.state.insListenerReg) return;
-  host.state.insListenerReg = true;
+  // 幂等注册（ADR-261）：原先靠 `state.insListenerReg` 布尔标志 + index.ts 在 lang:changed 手工复位。
+  // 该标志的复位时机必须与面板世代同步，却横跨两处——现交给订阅桶的 addPageOnce：
+  // key 与页面级订阅同寿命，drainPage() 清空订阅时一并清 key，世代重建后天然可再注册。
 
-  host.subs.addPage(
+  host.subs.addPageOnce(
+    "instances:package-selected",
     bus.on("package:selected", (pkg) => {
       const content = host.state.root.getElementById("ins-content");
       if (!content) return;

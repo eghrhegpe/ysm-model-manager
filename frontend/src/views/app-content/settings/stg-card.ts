@@ -23,7 +23,7 @@ export interface StgCardHeaderOpts {
 export function stgCardHeader(icon: string, title: string, opts: StgCardHeaderOpts = {}): string {
   const { forId, actions = "", spaceBetween = true, titleSize = "md" } = opts;
   const titleStyle = titleSize === "md" ? "font-size:var(--fs-md);font-weight:600" : "";
-  const titleInner = `${icon} ${title}`;
+  const titleInner = icon ? `${icon} ${title}` : title;
   const titleEl = forId
     ? `<label for="${forId}" class="label"${titleStyle ? ` style="${titleStyle}"` : ""}>${titleInner}</label>`
     : `<span class="label"${titleStyle ? ` style="${titleStyle}"` : ""}>${titleInner}</span>`;

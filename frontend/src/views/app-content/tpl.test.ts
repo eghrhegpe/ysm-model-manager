@@ -139,9 +139,9 @@ describe("app-content 模板", () => {
     expect(animHdr).toMatch(/stg-card-hdr[\s\S]*?id="set-animations"/);
     const dpHdr = html.slice(html.indexOf('id="stg-default-page-card"'));
     expect(dpHdr).toMatch(/stg-card-hdr[\s\S]*?id="set-remember-page"/);
-    // 两卡并排 2 列（不再是一张张满宽单列）
-    expect(html).toContain("grid-template-columns:repeat(2,1fr)");
-    // 启动默认页下拉框从 navItems() 派生（单一事实源）——曾手抄三页副本，
+    // 3D 操作键位网格已改单列（原 2 列挤压标签区至约 10 字宽，奇葩），回归防线锁定单列
+    // 键位网格已改为 stg-grid 工厂小卡容器（与基础设置路径卡同构），不再内联 grid 列
+    expect(html).toContain('id="td-keymap-grid" class="stg-grid"');
     // github/diagnostics/settings 可作启动页却在 UI 选不到（能力被 UI 阉割）
     const dpSel = html.slice(html.indexOf('id="set-default-page"'));
     const optVals = [...dpSel.slice(0, dpSel.indexOf("</select>")).matchAll(/<option value="([^"]+)"/g)].map(
@@ -165,6 +165,15 @@ describe("app-content 模板", () => {
     expect(html).toContain("set-advanced-grid");
     // worker 解析开关收敛到独立「解析」tab（FBX / MMD PMX 逃生舱），不在界面 tab 内
     expect(html).toContain('data-tab="parser"');
+    // 3D 预览操作已独立成「操作」tab（不再混在界面与体验内）
+    expect(html).toContain('data-tab="ops"');
+    expect(html).toContain('id="stg-tab-ops"');
+    const opsTab = html.slice(html.indexOf('<!-- stg-tab-ops -->'), html.indexOf('<!-- /stg-tab-ops -->'));
+    expect(opsTab).toContain('id="td-camspeed"');
+    expect(opsTab).toContain('id="td-keymap-grid"');
+    const uiTab2 = html.slice(html.indexOf('<!-- stg-tab-ui -->'), html.indexOf('<!-- /stg-tab-ui -->'));
+    expect(uiTab2).not.toContain('id="td-camspeed"');
+    expect(uiTab2).not.toContain('id="td-keymap-grid"');
     expect(html).toContain('id="stg-tab-parser"');
     expect(html).toContain("set-fbx-worker");
     expect(html).toContain("set-mmd-worker");
@@ -182,7 +191,6 @@ describe("app-content 模板", () => {
     expect(html).toContain('id="diag-clear"');
     expect(html).toContain('data-tab="sync-conflict"');
   });
-
   it("recycleHTML 包含清空回收站按钮", () => {
     const html = recycleHTML();
     expect(html).toContain('id="recy-empty"');

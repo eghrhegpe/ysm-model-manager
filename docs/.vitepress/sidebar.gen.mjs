@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-259：tab 结构单点产出——renderTabs 工厂与结构契约",
+        "link": "/adr/ADR-259-tab-rendertabs"
+      },
+      {
         "text": "ADR-258：诊断页导航：左栏分段收敛为顶部统一 tab 范式",
         "link": "/adr/ADR-258-diagnostics-nav-top-tabs"
       },

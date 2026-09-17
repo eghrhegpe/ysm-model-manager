@@ -18,6 +18,7 @@ function renderStgTabs(): string {
   return `<div class="repo-tabs">
 <button class="stg-tab active" data-tab="basic">${UI_ICONS.settings} ${t("settings.basic")}</button>
 <button class="stg-tab" data-tab="ui">${UI_ICONS.appearance} ${t("settings.appearance")}</button>
+<button class="stg-tab" data-tab="ops">${UI_ICONS.joystick} ${t("settings.operations")}</button>
 <button class="stg-tab" data-tab="parser">${UI_ICONS.parser} ${t("settings.parser")}</button>
 <button class="stg-tab" data-tab="about">${UI_ICONS.info} ${t("settings.about")}</button>
 <button class="stg-tab" data-tab="credits">${UI_ICONS.thanks} ${t("settings.credits")}</button>
@@ -335,7 +336,7 @@ function renderStgPreview3d(): string {
 <div class="settings-group" style="animation-delay:300ms">
   <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:8px">
     <span class="label">${UI_ICONS.game} ${t("settings.preview3d.keymap")}</span>
-    <div id="td-keymap-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px;width:100%"></div>
+    <div id="td-keymap-grid" class="stg-grid" style="gap:8px"></div>
   </div>
   <div class="stg-hint">${t("settings.preview3d.keymapHint")}</div>
   <div style="margin-top:8px"><button class="btn-base sm" id="td-keymap-reset">${UI_ICONS.undo} ${t("settings.preview3d.resetKeys")}</button></div>
@@ -396,17 +397,18 @@ ${renderStgThemeAuto()}
 
 ${renderStgFontFamily()}
 
-${renderStgAnimDefault()}
-
-${renderStgPreview3d()}`;
+${renderStgAnimDefault()}`;
 
   const parserBody = renderStgParserWorkers();
+
+  const opsBody = `${renderStgPreview3d()}`;
 
   return `<div class="repo-wrap">
 ${renderStgTabs()}
 ${renderStgTabBody("basic", "", basicBody)}
 ${renderStgTabBody("ui", "none", uiBody)}
 ${renderStgTabBody("parser", "none", parserBody)}
+${renderStgTabBody("ops", "none", opsBody)}
 ${aboutHTML()}
 ${creditsHTML()}
 

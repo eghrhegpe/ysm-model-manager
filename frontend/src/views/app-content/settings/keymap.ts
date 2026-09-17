@@ -7,6 +7,7 @@ import { t } from "@/core/i18n/t.ts";
 import { loadTdKeymap, type TdKeyAction } from "@/preview-3d/mesh/model3d.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { stgCard } from "./stg-card.ts";
 
 // 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持
 let _activeCapture: ((e: KeyboardEvent) => void) | null = null;
@@ -75,15 +76,13 @@ function tdRenderKeymap(root: ShadowRoot): void {
   const km = loadTdKeymap();
   grid.innerHTML = "";
   TD_ACTIONS.forEach(({ key, label }) => {
-    const row = document.createElement("div");
-    row.className = "stg-km-row"; // 规则在 content-stg.ts contentStgCSS(shadow adopted)
-    const name = document.createElement("span");
-    name.textContent = label;
-    name.style.color = "var(--muted)";
-    const btn = document.createElement("button");
-    btn.className = "btn-base sm";
-    btn.textContent = tdKeyLabel(km[key]);
-    btn.style.minWidth = KEY_BTN_MIN_WIDTH;
+    // 每张键位 = 一张工厂小卡（hdr=方向名，body=当前键按钮），平铺在 stg-grid 容器，
+    // 对齐基础设置「路径配置」卡组合——自包含、可组合、不浪费整行宽度。
+    const btnHtml = `<button class="btn-base sm" style="min-width:${KEY_BTN_MIN_WIDTH};width:100%">${tdKeyLabel(km[key])}</button>`;
+    const card = document.createElement("div");
+    card.innerHTML = stgCard("", label, btnHtml, { titleSize: "base" });
+    const btn = card.querySelector("button");
+    if (!btn) return;
     btn.addEventListener("click", () => {
       // 取消上一次未完成的捕获，保证同一时刻仅一个
       cleanupKeymap();
@@ -124,9 +123,7 @@ function tdRenderKeymap(root: ShadowRoot): void {
       _activeCapture = onKey;
       document.addEventListener("keydown", onKey, true);
     });
-    row.appendChild(name);
-    row.appendChild(btn);
-    grid.appendChild(row);
+    grid.appendChild(card);
   });
 }
 

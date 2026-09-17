@@ -311,7 +311,7 @@ async function initOldestTab(
  * 初始化设置页
  */
 export async function initSettingsPage(host: AppContentHost): Promise<void> {
-  bindTabs(host, ".stg-tab", "stg", ["basic", "ui", "parser", "about", "credits"]);
+  bindTabs(host, ".stg-tab", "stg", ["basic", "ui", "ops", "parser", "about", "credits"]);
   try {
     await initSettings(host.state.root);
     // 组件卸载/切页时移除 document keydown 捕获监听，防全局劫持泄漏

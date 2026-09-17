@@ -39,10 +39,9 @@ export const contentDiagCSS: string = `
 
 .diag-panel { animation: diagPanelIn .2s ease; }
 @keyframes diagPanelIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
-/* 顶部 tab 栏右侧通用操作 + 弹性占位 */
-.repo-tab-spacer { flex:1; }
-.repo-tab-action { padding:var(--pad-nav) 10px; border-radius:var(--radius-md) var(--radius-md) 0 0; border:1px solid transparent; border-bottom:2px solid transparent; background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-nav); font-family:inherit; transition:var(--tr-normal); white-space:nowrap; min-height:var(--touch-min); }
-.repo-tab-action:hover { color:var(--txt); background:var(--hover); }
+/* 日志面板工具栏：子 tab（操作/运行时）+ 筛选 + 清空/刷新/复制 */
+.diag-log-bar-spacer { flex:1; }
+.diag-log-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:4px 12px; border-bottom:1px solid var(--bd); flex-shrink:0; }
 /* 日志面板：子 tab（操作/运行时）+ 筛选 + 清空 工具栏 */
 .diag-log-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:4px 12px; border-bottom:1px solid var(--bd); flex-shrink:0; }
 .diag-log-subtabs { display:flex; gap:2px; }

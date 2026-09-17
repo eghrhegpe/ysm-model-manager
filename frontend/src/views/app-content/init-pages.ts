@@ -200,20 +200,21 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
     });
     // WAI-ARIA Tabs 键盘模式
     btn.addEventListener("keydown", (e) => {
-      const idx = tabs.indexOf(btn);
+      const vis = tabs.filter((t) => t.style.display !== "none");
+      const vIdx = Math.max(0, vis.indexOf(btn));
       let next: HTMLElement | undefined;
       if (e.key === "ArrowRight") {
         e.preventDefault();
-        next = tabs[(idx + 1) % tabs.length];
+        next = vis[(vIdx + 1) % vis.length];
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
-        next = tabs[(idx - 1 + tabs.length) % tabs.length];
+        next = vis[(vIdx - 1 + vis.length) % vis.length];
       } else if (e.key === "Home") {
         e.preventDefault();
-        next = tabs[0];
+        next = vis[0];
       } else if (e.key === "End") {
         e.preventDefault();
-        next = tabs[tabs.length - 1];
+        next = vis[vis.length - 1];
       } else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         void activate(btn);

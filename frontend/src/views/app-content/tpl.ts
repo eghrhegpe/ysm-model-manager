@@ -113,9 +113,6 @@ export function diagnosticsHTML(): string {
 <button class="repo-tab" data-tab="conflict">${UI_ICONS.performance} ${t("diagnostics.conflict")}</button>
 <button class="repo-tab" data-tab="health">${UI_ICONS.diagnose} ${t("diagnostics.healthTitle")}</button>
 <button class="repo-tab" data-tab="sync-conflict">${UI_ICONS.refresh} ${t("diagnostics.syncConflict")}</button>
-<span class="repo-tab-spacer"></span>
-<button class="repo-tab-action" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
-<button class="repo-tab-action" id="diag-refresh">${t("diagnostics.refresh")}</button>
 </div>
 <div class="tab-body">
 <div class="diag-panel" id="diag-tab-log" data-testid="diag-log">
@@ -132,7 +129,9 @@ export function diagnosticsHTML(): string {
       <input id="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
     </div>
     <button class="btn-base sm" id="diag-clear">${t("diagnostics.clearLog")}</button>
-  </div>
+    <span class="diag-log-bar-spacer"></span>
+    <button class="btn-base sm" id="diag-refresh">${t("diagnostics.refresh")}</button>
+    <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
   <div id="diag-log-list" data-testid="diag-log-list" class="diag-log-scroll"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
   <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>
 </div>

@@ -697,6 +697,23 @@ describe("仓库 tab WAI-ARIA 键盘导航（init-pages.ts|bindTabs）", () => {
     void el;
   });
 
+  it("隐藏 tab（display:none）被键盘导航跳过（viewer 模式收起桌面专属 tab 的场景）", async () => {
+    const { tabs } = await renderRepo();
+    // 模拟 viewer 模式隐藏中间 tab（如 recycle），键盘方向键不应聚焦它
+    tabs[1].style.display = "none";
+    tabs[0].focus();
+    tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    await flushAsyncTurns();
+    // 跳过隐藏的 tabs[1]，应激活 tabs[2]（dedup）
+    expect(tabs[1].classList.contains("active")).toBe(false);
+    expect(tabs[2].classList.contains("active")).toBe(true);
+    // 从末位 End 仍落在最后一个可见 tab（最末本身可见）
+    tabs[2].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    await flushAsyncTurns();
+    const vis = tabs.filter((t) => t.style.display !== "none");
+    expect(vis[vis.length - 1].classList.contains("active")).toBe(true);
+  });
+
   it("懒初始化失败 → inited 复位可重试 + 错误 toast（167-168）", async () => {
     const { el, tabs } = await renderRepo();
     const toasts: Array<{ msg?: string; type?: string }> = [];

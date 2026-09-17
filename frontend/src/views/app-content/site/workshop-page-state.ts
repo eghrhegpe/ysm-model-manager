@@ -3,7 +3,7 @@
 // 为什么需要这一层：`currentSite` 曾借宿 `AppContentState`（app 壳层共享容器），但它
 // 的语义是**页私有**——「用户此刻在工坊页浏览哪个站点」。借宿的代价不是命名不雅，
 // 而是契约：三个消费者拿到的都是整个 `AppContentState` 接口，谁都以为自己可以在上面
-// 写点别的（tabs 就顺手写了 `workshopTimer`）。给它一个只含页语义的句柄，越界就编译不过。
+// 写点别的（tabs 就顺手写了 `workshopTimer`）。给它一个只含页语义的句柄，至少把站点游标这条路堵死。
 //
 // 形态与 `createWorkshopRefs()` 同族（同因同治）：**单源实例，消费者共享同一份**。
 // 历史教训——`initWorkshopTabs` 写入的 ref 与 `showSiteView` 读取的 ref 不是同一对象，

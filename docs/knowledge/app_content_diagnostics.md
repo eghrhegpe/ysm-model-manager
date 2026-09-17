@@ -125,6 +125,7 @@ status: active
 - exec 读用户选中态按组容器查 `input[type="radio"]:checked`（2026-09-03）：组容器按渲染平铺序与 `allResults.groups` 一一对应，替代按 `name="dedup-keep-<gi>"` 全局拼串——组间插入其它控件不致错位，消除「渲染计数 gi / exec 计数 gi2」双轨对齐依赖；keep-all 值为 `-1` 的 radio 同属组内
 
 - **面板结构由 `renderTabs` 工厂单点产出**（ADR-259，2026-09-17 事故收口）：诊断页此前是全仓唯一的例外范式——「一个共享 `.tab-body` 包 8 个 `.diag-panel`」。该范式更脆：`.diag-log-bar` 漏一个 `</div>` 就让 `#diag-tab-log` 把后续 7 个面板吞进自己内部，而 `bindTabs` 切页时把 `#diag-tab-log` 置 `display:none`，嵌在里面的面板一并消失 → **切任何 tab 都只剩空 tab 栏**。现改用 `views/app-content/tabs-shell.ts|renderTabs`（与其他 tab 页同构：每 tab 一个 `.tab-body`），面板 id 与 `bindTabs` 的 `${prefix}-tab-${id}` 共享同一条规则；`.diag-panel` 退化为纯入场动画钩子（布局归 `.tab-body`）。防线三层：`tabs-shell.test.ts`（工厂产出契约）+ `tpl-structure.test.ts`（各页 div 配平 / 按钮↔面板一一对应 / 面板必为 `.tab-body` 且等深同层）+ `e2e/diagnostics.spec.ts`（真实浏览器逐 tab 测 `getBoundingClientRect` 尺寸——`display` 口径对此失明）。泛化规则见 `skills/pitfalls.md` #20。
+- **日志面板工具栏按语义分两行**（2026-09-18 版面收口，方案 A）：行1 = 子 tab（操作 / 运行时）+ 动作（刷新 / 复制 / 清空日志），行2 = 状态筛选 chips + 搜索框；两行容器为 `.diag-log-row`，`.diag-log-bar` 退化为纵向堆叠的框。立因：9 按钮 + 1 输入框挤单行时，`flex:1` 的 spacer 把「清空」（破坏性动作、且只清操作日志）与筛选 chips 划成一组、却把刷新 / 复制推到行尾，视觉分组 ≠ 功能分组，且窄宽下 spacer 随 `flex-wrap` 折行挤散动作组。清空恒排行尾；行2 搜索框 `flex:1; min-width:110px; max-width:320px` 吃掉腾出的宽度。类名 ↔ 规则同步由 `css/content-diag-classes.test.ts` 兜底（`.diag-log-row` 属布局类，有规则即通过）。
 
 ## 相关
 

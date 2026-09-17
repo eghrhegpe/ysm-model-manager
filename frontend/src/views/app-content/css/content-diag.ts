@@ -39,11 +39,15 @@ export const contentDiagCSS: string = `
 
 .diag-panel { animation: diagPanelIn .2s ease; }
 @keyframes diagPanelIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
-/* 日志面板工具栏：子 tab（操作/运行时）+ 筛选 + 清空/刷新/复制 */
+/* 日志面板工具栏：两行语义分组（2026-09-18 版面收口）。
+   行1 = 视图切换（操作/运行时）+ 动作（刷新/复制/清空）；行2 = 状态筛选 + 搜索。
+   立因：9 按钮 + 1 输入框挤单行时，flex:1 的 spacer 把「清空」（破坏性动作）与筛选 chips
+   划成一组、却把刷新/复制推到行尾——视觉分组 ≠ 功能分组；且 spacer 自身会随
+   flex-wrap 折行，窄宽下右侧动作组被挤散。分层后每行语义单一，行2 的搜索框
+   可吃掉腾出的宽度。.diag-log-row 为布局类，由 content-diag-classes.test.ts 强制同步。 */
+.diag-log-bar { display:flex; flex-direction:column; gap:4px; padding:4px 12px; border-bottom:1px solid var(--bd); flex-shrink:0; }
+.diag-log-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .diag-log-bar-spacer { flex:1; }
-.diag-log-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:4px 12px; border-bottom:1px solid var(--bd); flex-shrink:0; }
-/* 日志面板：子 tab（操作/运行时）+ 筛选 + 清空 工具栏 */
-.diag-log-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:4px 12px; border-bottom:1px solid var(--bd); flex-shrink:0; }
 .diag-log-subtabs { display:flex; gap:2px; }
 .diag-sub-tab { padding:3px 10px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-sm); font-family:inherit; transition:var(--tr-fast); }
 .diag-sub-tab:hover { background:var(--hover); color:var(--txt); }
@@ -53,7 +57,7 @@ export const contentDiagCSS: string = `
    → 裸渲染。现恢复为「复用 + 仅覆盖字号」，不再复制一份同构样式。 */
 .diag-log-fbtn { font-size:var(--fs-sm); }
 .diag-log-filter { display:flex; align-items:center; gap:4px; overflow:hidden; flex:1; min-width:0; }
-.diag-log-filter input { width:130px; font-size:var(--fs-sm); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }
+.diag-log-filter input { flex:1; min-width:110px; max-width:320px; font-size:var(--fs-sm); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }
 .diag-log-scroll { overflow-y:auto; flex:1; }
 /* ADR-259：布局基线归 .tab-body（面板即 .tab-body）；.diag-panel 只留入场动画钩子（见上方 diagPanelIn） */
 .diag-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; font-size:var(--fs-md); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); flex-shrink:0; }

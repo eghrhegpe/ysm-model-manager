@@ -95,6 +95,69 @@ test.describe("诊断页", () => {
     }
   });
 
+  test("日志工具栏两行语义分组：行1=子tab+动作，行2=筛选+搜索", async ({ page }) => {
+    // 2026-09-18 版面收口（方案 A）：9 按钮 + 1 输入框挤单行时分组语义错乱（清空与筛选同组、
+    // 刷新/复制被 spacer 推远），且 spacer 随 flex-wrap 折行挤散动作组。本用例锁两行结构与归属。
+    const layout = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const rect = (
+        sel: string,
+      ): { top: number; bottom: number; left: number; right: number } | null => {
+        const el = root?.querySelector(sel) as HTMLElement | null;
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+      };
+      const rows = [
+        ...(root?.querySelectorAll(".diag-log-bar .diag-log-row") ?? []),
+      ] as HTMLElement[];
+      return {
+        rows: rows.map((el) => {
+          const r = el.getBoundingClientRect();
+          return { top: r.top, bottom: r.bottom };
+        }),
+        subTabs: rect(".diag-log-subtabs"),
+        refresh: rect("#diag-refresh"),
+        copy: rect("#diag-copy"),
+        clear: rect("#diag-clear"),
+        filter: rect("#diag-log-filter"),
+        search: rect("#diag-log-search"),
+      };
+    });
+    expect(layout.rows).toHaveLength(2);
+    // 显式守卫收窄类型（biome 禁非空断言）：单行旧范式下 rows 为空，此处先炸即抓到回归
+    const [row1, row2] = layout.rows;
+    if (!row1 || !row2) throw new Error("日志工具栏不是两行");
+    /** 取出元素盒模型，缺失即判失败（避免 `!` 断言） */
+    const box = (
+      name: string,
+      r: { top: number; bottom: number; left: number; right: number } | null,
+    ): { top: number; bottom: number; left: number; right: number } => {
+      if (!r) throw new Error(`日志工具栏缺少元素：${name}`);
+      return r;
+    };
+    // 行1 严格位于行2 上方（互不重叠）
+    expect(row1.bottom).toBeLessThanOrEqual(row2.top);
+    // 行1 归属：子 tab + 三个动作按钮
+    const subTabs = box("subTabs", layout.subTabs);
+    const refresh = box("refresh", layout.refresh);
+    const copy = box("copy", layout.copy);
+    const clear = box("clear", layout.clear);
+    for (const r of [subTabs, refresh, copy, clear]) {
+      expect(r.top).toBeGreaterThanOrEqual(row1.top);
+      expect(r.bottom).toBeLessThanOrEqual(row1.bottom);
+    }
+    // 行1 语义次序：导航靠左、动作被 spacer 顶到右侧，且破坏性「清空」殿后
+    expect(subTabs.right).toBeLessThan(refresh.left);
+    expect(refresh.left).toBeLessThan(copy.left);
+    expect(copy.left).toBeLessThan(clear.left);
+    // 行2 归属：筛选 chips 容器 + 搜索框（清空不得混入筛选行）
+    for (const r of [box("filter", layout.filter), box("search", layout.search)]) {
+      expect(r.top).toBeGreaterThanOrEqual(row2.top);
+      expect(r.bottom).toBeLessThanOrEqual(row2.bottom);
+    }
+  });
+
   test("日志子 tab：操作日志与运行时日志互斥可见", async ({ page }) => {
     // 默认：操作日志可见、运行时隐藏
     expect(await panelDisplay(page)).toEqual({ op: true, runtime: false });

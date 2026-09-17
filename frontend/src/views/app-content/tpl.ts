@@ -114,21 +114,25 @@ export function diagnosticsHTML(): string {
         panelTestid: "diag-log",
         label: `${UI_ICONS.clipboard} ${t("diagnostics.opsLog")}`,
         body: `  <div class="diag-log-bar">
-    <div class="diag-log-subtabs">
-      <button class="diag-sub-tab active" data-log="op">${t("diagnostics.opsLog")}</button>
-      <button class="diag-sub-tab" data-log="runtime">${t("diagnostics.runtimeLog")}</button>
+    <div class="diag-log-row">
+      <div class="diag-log-subtabs">
+        <button class="diag-sub-tab active" data-log="op">${t("diagnostics.opsLog")}</button>
+        <button class="diag-sub-tab" data-log="runtime">${t("diagnostics.runtimeLog")}</button>
+      </div>
+      <span class="diag-log-bar-spacer"></span>
+      <button class="btn-base sm" id="diag-refresh">${t("diagnostics.refresh")}</button>
+      <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
+      <button class="btn-base sm" id="diag-clear">${t("diagnostics.clearLog")}</button>
     </div>
-    <div class="diag-log-filter" id="diag-log-filter">
-      <button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
-      <button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
-      <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
-      <button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.performance} ${t("diagnostics.skipped")}</button>
-      <input id="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
+    <div class="diag-log-row">
+      <div class="diag-log-filter" id="diag-log-filter">
+        <button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
+        <button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
+        <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
+        <button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.performance} ${t("diagnostics.skipped")}</button>
+        <input id="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
+      </div>
     </div>
-    <button class="btn-base sm" id="diag-clear">${t("diagnostics.clearLog")}</button>
-    <span class="diag-log-bar-spacer"></span>
-    <button class="btn-base sm" id="diag-refresh">${t("diagnostics.refresh")}</button>
-    <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
   </div>
   <div id="diag-log-list" data-testid="diag-log-list" class="diag-log-scroll"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
   <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>`,

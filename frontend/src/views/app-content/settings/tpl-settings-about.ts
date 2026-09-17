@@ -2,6 +2,7 @@
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { GH_DOCS, GH_RELEASES, GH_REPO } from "@/utils/base/pure/gh-links.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { stgCard } from "./stg-card.ts";
 
 /** About 标签页（版本/特性/技术栈/链接/快速上手） */
 export function aboutHTML(): string {
@@ -92,66 +93,91 @@ export function aboutHTML(): string {
 <!-- /stg-tab-about -->`;
 }
 
+/** 灵感来源（改这里加项；i18n 见 credits.* + 对应外链） */
+const INSPIRATIONS = [
+  {
+    titleKey: "credits.download",
+    descKey: "credits.downloadDesc",
+    icon: UI_ICONS.download,
+    link: "https://github.com/LaoYutang/lytvpk",
+    linkText: "LaoYutang/lytvpk",
+  },
+  {
+    titleKey: "credits.render3d",
+    descKey: "credits.render3dDesc",
+    icon: UI_ICONS.appearance,
+    link: "https://github.com/DrAbcOfficial/YSMViewer",
+    linkText: "DrAbcOfficial/YSMViewer",
+  },
+  {
+    titleKey: "credits.parse",
+    descKey: "credits.parseDesc",
+    icon: UI_ICONS.lockClosed,
+    link: "",
+    linkText: "YSMParser.Core",
+  },
+  {
+    titleKey: "credits.repo",
+    descKey: "credits.repoDesc",
+    icon: UI_ICONS.package,
+    link: "",
+    linkText: "Mod Organizer 2",
+  },
+] as const satisfies ReadonlyArray<{
+  titleKey: LocaleKey;
+  descKey: LocaleKey;
+  icon: string;
+  link?: string;
+  linkText: string;
+}>;
+
 /** 特别鸣谢贡献者（改这里加人，i18n 描述 key 见 credits.*Contribute） */
 const CONTRIBUTORS = [
   { name: "zuogeren1", github: "zuogeren1", descKey: "credits.zuogeren1Contribute" },
   { name: "JiangKaslana", github: "JiangKaslana", descKey: "credits.jiangkaslanaContribute" },
 ] as const satisfies ReadonlyArray<{ name: string; github: string; descKey: LocaleKey }>;
 
+/** 灵感来源卡片组：stg-grid 平铺 + stgCard 正典卡（设置页样式范式契约） */
+function renderInspirations(): string {
+  const cards = INSPIRATIONS.map((it, i) => {
+    const linkHtml = it.link
+      ? `<br><a href="${it.link}" target="_blank" style="color:var(--accent)">${it.linkText}</a>`
+      : `<br>${it.linkText}`;
+    return stgCard(
+      it.icon,
+      t(it.titleKey),
+      `<div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">${t(it.descKey)}${linkHtml}</div>`,
+      { header: { titleSize: "md" }, delayMs: 60 * (i + 1) },
+    );
+  }).join("");
+  return `<div class="section-title stg-title">${UI_ICONS.target} ${t("credits.inspiration")}</div>
+<div class="stg-grid">${cards}</div>`;
+}
+
+/** 贡献者卡片组：stg-grid 平铺 + stgCard 正典卡（数组驱动，加人只改 CONTRIBUTORS） */
+function renderContributors(): string {
+  const cards = CONTRIBUTORS.map((c, i) =>
+    stgCard(
+      UI_ICONS.user,
+      c.name,
+      `<div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
+      ${t(c.descKey)}<br>
+      <a href="https://github.com/${c.github}" target="_blank" style="color:var(--accent)">@${c.github}</a>
+    </div>`,
+      { header: { titleSize: "md" }, delayMs: 60 * (i + 1) },
+    ),
+  ).join("");
+  return `<div class="section-title stg-title">${UI_ICONS.thanks} ${t("credits.special")}</div>
+<div class="stg-grid">${cards}</div>`;
+}
+
 /** Credits 标签页（灵感来源/特别感谢） */
 export function creditsHTML(): string {
   return `<!-- stg-tab-credits -->
 <div class="tab-body" id="stg-tab-credits" style="display:none;overflow-y:auto">
 <div class="stg-page" style="padding:16px 20px">
-
-<div class="section-title stg-title">${UI_ICONS.target} ${t("credits.inspiration")}</div>
-
-<div style="display:flex;gap:12px">
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:4px">${UI_ICONS.download} ${t("credits.download")}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
-      <a href="https://github.com/LaoYutang/lytvpk" target="_blank" style="color:var(--accent)">LaoYutang/lytvpk</a><br>
-      ${t("credits.downloadDesc")}
-    </div>
-  </div>
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:4px">${UI_ICONS.appearance} ${t("credits.render3d")}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
-      <a href="https://github.com/DrAbcOfficial/YSMViewer" target="_blank" style="color:var(--accent)">DrAbcOfficial/YSMViewer</a><br>
-      ${t("credits.render3dDesc")}
-    </div>
-  </div>
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:4px">${UI_ICONS.lockClosed} ${t("credits.parse")}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
-      YSMParser.Core<br>
-      ${t("credits.parseDesc")}
-    </div>
-  </div>
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:4px">${UI_ICONS.package} ${t("credits.repo")}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
-      Mod Organizer 2<br>
-      ${t("credits.repoDesc")}
-    </div>
-  </div>
-</div>
-
-<div class="section-title stg-title">${UI_ICONS.thanks} ${t("credits.special")}</div>
-
-<div style="display:flex;gap:12px">
-  ${CONTRIBUTORS.map(
-    (c) => `
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:4px">${UI_ICONS.user} ${c.name}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
-      ${t(c.descKey)}<br>
-      <a href="https://github.com/${c.github}" target="_blank" style="color:var(--accent)">@${c.github}</a>
-    </div>
-  </div>`,
-  ).join("")}
-</div>
-
+${renderInspirations()}
+${renderContributors()}
 </div>
 </div>
 <!-- /stg-tab-credits -->`;

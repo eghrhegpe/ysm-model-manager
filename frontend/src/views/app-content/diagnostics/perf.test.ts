@@ -23,26 +23,28 @@ vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 
-// 对齐 Go single-bench printSingleModelStages 真实输出（7 阶段 + 汇总 + 总计）
-const SINGLE_OUTPUT = `🎯 单模型加载基准测试
-======================================================================
-   模型:     ./ysm/player.ysm
-   迭代次数: 3
-
-   📊 各阶段耗时:
-   -----------------------------------------------------------------
-   ① 文件读取              12.34ms ✅
-   ② JSON 解析            1993.66ms 🔴 瓶颈
-   ③ 数据验证               0.00ms ✅
-   ④ 几何数据准备           45.20ms 🟡 注意
-   ⑤ 纹理数据准备           88.10ms 🟢
-   ⑥ IPC 传输模拟           15.60ms ✅
-   ⑦ 缓存检查               30.00ms ✅
-   -----------------------------------------------------------------
-   总计                  2184.90ms
-⏱️  总耗时（3 次迭代）: 6554.70ms
-💡 优化建议:
-   🔴 瓶颈: JSON 解析`;
+// 对齐 Go singleBenchJSON（single-bench --format json）：前端直接消费结构化载荷，
+// 不再反解析中文人类文案（旧夹具的自由文本形态已退役）
+const SINGLE_STRUCTURED = {
+  model: "./ysm/player.ysm",
+  iterations: 3,
+  total_ms: 6554.7, // N 次迭代累计墙钟
+  per_iteration_ms: 2184.9, // 单次平均（累计 / 迭代次数）
+  stages: [
+    { name: "① 文件读取", ms: 12.34, status: "slow", bottleneck: false },
+    { name: "② JSON 解析", ms: 1993.66, status: "bottleneck", bottleneck: true },
+    { name: "③ 数据验证", ms: 0, status: "ok", bottleneck: false },
+    { name: "④ 几何数据准备", ms: 45.2, status: "slow", bottleneck: false },
+    { name: "⑤ 纹理数据准备", ms: 88.1, status: "warn", bottleneck: false },
+    { name: "⑥ IPC 传输模拟", ms: 15.6, status: "slow", bottleneck: false },
+    { name: "⑦ 缓存检查", ms: 30, status: "slow", bottleneck: false },
+  ],
+  bottleneck: "② JSON 解析",
+  hints: ["🔴 瓶颈: JSON 解析"],
+  format: "YSM",
+  size_bytes: 123456,
+  output: "（--format json 时 Go 打印的 JSON 原文，经 AttachSidecar 注入 data.output）",
+};
 
 // 对齐 Go gui-flow printFlowReport 真实输出
 const GUI_OUTPUT = `🎮 GUI 流程模拟器
@@ -116,7 +118,7 @@ beforeEach(() => {
 });
 
 describe("single-bench 面板", () => {
-  it("成功时渲染 7 阶段柱状 + 总耗时（红线瓶颈会画）, 无 model 时提示必填", async () => {
+  it("成功时渲染 7 阶段柱状 + 迭代口径总耗时 + 最慢阶段, 无 model 时提示必填", async () => {
     // —— 缺 model：本地校验拦截，不触发 executeCLI ——
     const emptyRoot = makeRoot();
     initPerfPanel(emptyRoot, esc);
@@ -125,24 +127,32 @@ describe("single-bench 面板", () => {
     expect(executeCLI).not.toHaveBeenCalled();
     expect((emptyRoot.getElementById("diag-perf-single") as HTMLElement).textContent).toContain("模型");
 
-    // —— 有 model：成功渲染 ——
+    // —— 有 model：结构化载荷渲染 ——
     executeCLI.mockResolvedValue({
       status: "success",
       command: "single-bench",
-      data: { output: SINGLE_OUTPUT },
+      data: SINGLE_STRUCTURED,
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
     (root.getElementById("diag-perf-run") as HTMLElement).click();
     await new Promise((r) => setTimeout(r, 10));
+    // 必须走结构化 JSON 出口：旧实现只发 model/iterations，靠正则解析中文文案
+    expect(executeCLI).toHaveBeenCalledWith(
+      "single-bench",
+      expect.objectContaining({ format: "json" }),
+    );
     const out = root.getElementById("diag-perf-single") as HTMLElement;
     expect(out.textContent).toContain("① 文件读取");
     expect(out.textContent).toContain("② JSON 解析");
     expect(out.textContent).toContain("1993.66ms");
     expect(out.textContent).toContain("0.00ms");
-    // 总耗时回退为各阶段求和（无迭代汇总行匹配）
-    expect(out.textContent).toContain("ms");
+    // 迭代口径：单次平均 + 累计双显（旧 UI 把 3 次累计当成单次「总耗时」）
+    expect(out.textContent).toContain("2184.90ms（3 次迭代平均；累计 6554.70ms）");
+    expect(out.textContent).toContain("最慢阶段: ② JSON 解析");
+    expect(out.textContent).toContain("YSM");
+    expect(out.querySelector(".perf-bar-danger")).toBeTruthy();
   });
 
   it("命令失败时显示错误占位", async () => {
@@ -160,11 +170,11 @@ describe("single-bench 面板", () => {
     expect(out.textContent).toContain("必须指定"); // 展示后端错误 message
   });
 
-  it("无解析到阶段时兜底显示失败占位", async () => {
+  it("结构化载荷缺失（Go 契约漂移）时兜底显示失败占位", async () => {
     executeCLI.mockResolvedValue({
       status: "success",
       command: "single-bench",
-      data: { output: "无阶段文本输出" },
+      data: { output: "缺少 stages 的载荷" },
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
@@ -180,7 +190,7 @@ describe("single-bench 面板", () => {
     executeCLI.mockResolvedValue({
       status: "success",
       command: "single-bench",
-      data: { output: SINGLE_OUTPUT },
+      data: SINGLE_STRUCTURED,
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
@@ -200,6 +210,31 @@ describe("single-bench 面板", () => {
     // ≥2 条：渲染趋势 SVG 折线
     const out2 = root.getElementById("diag-perf-single") as HTMLElement;
     expect(out2.innerHTML).toContain('<svg width="560"');
+  });
+
+  it("阶段状态/配色取自 Go status，不在前端自算阈值", async () => {
+    // 150ms 若前端沿用旧的 >100ms 自算阈值会被错标红色；Go 判 ok 就应当是 ok
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "single-bench",
+      data: {
+        ...SINGLE_STRUCTURED,
+        stages: [{ name: "① 文件读取", ms: 150, status: "ok", bottleneck: false }],
+        bottleneck: "",
+      },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./z.ysm";
+    (root.getElementById("diag-perf-run") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const out = root.getElementById("diag-perf-single") as HTMLElement;
+    const val = out.querySelector(".perf-bar-val") as HTMLElement;
+    expect(val.textContent).toContain("✅");
+    expect(val.className).not.toContain("perf-bar-danger");
+    expect(val.className).not.toContain("perf-bar-warn");
+    // 无最慢阶段时不渲染该行
+    expect(out.textContent).not.toContain("最慢阶段");
   });
 });
 
@@ -286,7 +321,7 @@ describe("性能面板复制按钮 — 面板重建后仍工作（perfCopyBound 
     executeCLI.mockResolvedValue({
       status: "success",
       command: "single-bench",
-      data: { output: SINGLE_OUTPUT },
+      data: SINGLE_STRUCTURED,
     });
 
     // 第一次 init + 运行出结果（含复制按钮）→ 复制生效

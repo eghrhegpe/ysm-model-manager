@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-262：性能可观测性模型：统一报告 schema、运行时归属与机器出口",
+        "link": "/adr/ADR-262-perf-observability-model"
+      },
+      {
         "text": "ADR-261：页面级状态下沉——幂等订阅入桶，退役 AppContentState 页私有字段",
         "link": "/adr/ADR-261-appcontentstate"
       },

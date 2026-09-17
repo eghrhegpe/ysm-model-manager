@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **259** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **260** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 10 |
-| [✅ 已采纳](#已采纳) | 239 |
+| [✅ 已采纳](#已采纳) | 240 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -40,10 +40,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（239）
+### ✅ 已采纳（240）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-262](./ADR-262-perf-observability-model.md) | 性能可观测性模型：统一报告 schema、运行时归属与机器出口 | ✅ 已采纳 |
 | [ADR-261](./ADR-261-appcontentstate.md) | 页面级状态下沉——幂等订阅入桶，退役 AppContentState 页私有字段 | ✅ 已采纳 |
 | [ADR-260](./ADR-260-subscriptionbucket-repoeventscleanup.md) | 页面级拆除单源——SubscriptionBucket 收异步清理，退役 repoEventsCleanup 旁路 | ✅ 已采纳 |
 | [ADR-259](./ADR-259-tab-rendertabs.md) | tab 结构单点产出——renderTabs 工厂与结构契约 | ✅ 已采纳 |
@@ -308,6 +309,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-262 | 性能可观测性模型：统一报告 schema、运行时归属与机器出口 | ✅ 已采纳 | 2026-09-17 |
 | ADR-261 | 页面级状态下沉——幂等订阅入桶，退役 AppContentState 页私有字段 | ✅ 已采纳 | 2026-09-17 |
 | ADR-260 | 页面级拆除单源——SubscriptionBucket 收异步清理，退役 repoEventsCleanup 旁路 | ✅ 已采纳 | 2026-09-17 |
 | ADR-259 | tab 结构单点产出——renderTabs 工厂与结构契约 | ✅ 已采纳 | 2026-09-17 |

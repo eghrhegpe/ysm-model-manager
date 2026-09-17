@@ -87,7 +87,7 @@ function dgLsReadSearch(root: ShadowRoot): string {
 
 /**
  * 操作日志搜索命中域：模型名 / 报错内容 / 目标路径 / 源路径 / 操作类型。
- * 2026-09-18 收口：此前只匹配 ModelName，placeholder 写着「搜索模型名」——用户搜报错文本必然空手。
+ * 2026-09-17 收口：此前只匹配 ModelName，placeholder 写着「搜索模型名」——用户搜报错文本必然空手。
  */
 function dgLsMatchDiagSearch(l: ImportLogLike, search: string): boolean {
   if (!search) return true;

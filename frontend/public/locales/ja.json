@@ -331,6 +331,8 @@
   "diagnostics.perfGuiResult": "単一モデル読込パイプライン結果",
   "diagnostics.perfHistResult": "最適化履歴",
   "diagnostics.perfTotal": "総所要時間",
+  "diagnostics.perfTotalDetail": "{avg}ms（{n} 回反復の平均／累計 {total}ms）",
+  "diagnostics.perfBottleneck": "最遅段階",
   "diagnostics.perfTrendTitle": "パフォーマンス傾向（段階ごとの所要時間）",
   "diagnostics.perfTrendNoData": "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",
   "diagnostics.perfRunning": "実行中…",

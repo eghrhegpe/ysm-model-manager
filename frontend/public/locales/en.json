@@ -331,6 +331,8 @@
   "diagnostics.perfGuiResult": "Single-model load pipeline result",
   "diagnostics.perfHistResult": "Optimization history",
   "diagnostics.perfTotal": "Total time",
+  "diagnostics.perfTotalDetail": "{avg}ms (avg over {n} iterations; {total}ms total)",
+  "diagnostics.perfBottleneck": "Slowest stage",
   "diagnostics.perfTrendTitle": "Performance trend (stage time)",
   "diagnostics.perfTrendNoData": "No trend yet — run single-bench twice or more to show the chart",
   "diagnostics.perfRunning": "Running…",

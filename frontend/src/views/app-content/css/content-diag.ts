@@ -39,7 +39,7 @@ export const contentDiagCSS: string = `
 
 .diag-panel { animation: diagPanelIn .2s ease; }
 @keyframes diagPanelIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
-/* 日志面板工具栏：两行语义分组（2026-09-18 版面收口）。
+/* 日志面板工具栏：两行语义分组（2026-09-17 版面收口）。
    行1 = 视图切换（操作/运行时）+ 动作（刷新/复制/清空）；行2 = 状态筛选 + 搜索。
    立因：9 按钮 + 1 输入框挤单行时，flex:1 的 spacer 把「清空」（破坏性动作）与筛选 chips
    划成一组、却把刷新/复制推到行尾——视觉分组 ≠ 功能分组；且 spacer 自身会随

@@ -373,6 +373,8 @@ export const zhCN = {
   "diagnostics.perfGuiResult": "单模型加载链路结果",
   "diagnostics.perfHistResult": "优化历史",
   "diagnostics.perfTotal": "总耗时",
+  "diagnostics.perfTotalDetail": "{avg}ms（{n} 次迭代平均；累计 {total}ms）",
+  "diagnostics.perfBottleneck": "最慢阶段",
   "diagnostics.perfTrendTitle": "性能趋势（阶段耗时变化）",
   "diagnostics.perfTrendNoData": "暂无趋势数据——运行两次以上 single-bench 后展示折线图",
   "diagnostics.perfRunning": "运行中…",

@@ -68,6 +68,34 @@ func TestStagesToJSON_IdentifiesBottleneck(t *testing.T) {
 	}
 }
 
+// 回归（2026-09-17）：旧实现「每超过当前最大值即置 Bottleneck=true」会把先出现的
+// 次大阶段一并打标——本夹具（120 早于 200）在旧实现下产出两个 bottleneck=true。
+func TestStagesToJSON_OnlySlowestIsBottleneck(t *testing.T) {
+	t.Parallel()
+	d := func(ms int64) time.Duration { return time.Duration(ms) * time.Millisecond }
+	avg := []singleBenchStage{
+		{Name: "① 文件读取", Duration: d(120)},
+		{Name: "② JSON 解析", Duration: d(5)},
+		{Name: "③ 数据验证", Duration: d(200)},
+	}
+	stages, bottleneck := stagesToJSON(avg)
+	if bottleneck != "③ 数据验证" {
+		t.Errorf("最慢阶段应为瓶颈, got %q", bottleneck)
+	}
+	marked := 0
+	for _, s := range stages {
+		if s.Bottleneck {
+			marked++
+		}
+	}
+	if marked != 1 {
+		t.Errorf("bottleneck 只能标记一个, got %d: %+v", marked, stages)
+	}
+	if stages[0].Bottleneck {
+		t.Errorf("次大阶段不应标记 bottleneck: %+v", stages[0])
+	}
+}
+
 func TestGenerateHints(t *testing.T) {
 	t.Parallel()
 	fast := generateHints([]singleBenchStage{{Name: "① 文件读取", Duration: time.Millisecond}})

@@ -436,14 +436,28 @@ func runSingleBench(ctx *CmdContext) error {
 
 // singleBenchJSON 单模型基准测试 JSON 输出结构（AI 友好）
 type singleBenchJSON struct {
-	Model      string           `json:"model"`
-	Iterations int              `json:"iterations"`
-	TotalMs    float64          `json:"total_ms"`
-	Stages     []benchStageJSON `json:"stages"`
-	Bottleneck string           `json:"bottleneck"`
-	Hints      []string         `json:"hints"`
-	Format     string           `json:"format"`
-	SizeBytes  int64            `json:"size_bytes"`
+	Model      string `json:"model"`
+	Iterations int    `json:"iterations"`
+	// TotalMs = N 次迭代的累计墙钟；「一次加载多久」看 PerIterationMs。
+	// 旧实现只给 TotalMs，前端直接当成单次总耗时展示——迭代 N 次时虚高 N 倍。
+	TotalMs        float64          `json:"total_ms"`
+	PerIterationMs float64          `json:"per_iteration_ms"`
+	Stages         []benchStageJSON `json:"stages"`
+	Bottleneck     string           `json:"bottleneck"`
+	Hints          []string         `json:"hints"`
+	Format         string           `json:"format"`
+	SizeBytes      int64            `json:"size_bytes"`
+	// ADR-200 D5 sidecar：迁移期保留人类可读文本与 filesRoot，供前端「复制原文」与
+	// respHasOutput 守卫。仅由桥接层注入（AttachSidecar），stdout 载荷不含。
+	Output    string `json:"output,omitempty"`
+	FilesRoot string `json:"filesRoot,omitempty"`
+}
+
+// AttachSidecar 实现 SidecarOutput（ADR-200 D5）：桥接层注入人类可读文本与 filesRoot。
+// 必须指针接收者——buildJsonData 对 SetResult 传入的指针做接口断言。
+func (s *singleBenchJSON) AttachSidecar(output, filesRoot string) {
+	s.Output = output
+	s.FilesRoot = filesRoot
 }
 
 // benchStageJSON 单个阶段 JSON 结构
@@ -456,25 +470,29 @@ type benchStageJSON struct {
 	Note       string  `json:"note,omitempty"`
 }
 
-// stagesToJSON 将平均阶段列表转换为 JSON 结构，同时识别瓶颈
+// stagesToJSON 将平均阶段列表转换为 JSON 结构，同时识别瓶颈。
+// 两趟：先定唯一最大阶段，再单点打标——旧实现「每超过当前最大值即置 true」，
+// 会把先出现的次大阶段也标成 bottleneck（可产出多个 bottleneck=true）。
 func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
-	var stageJSON []benchStageJSON
-	var bottleneckName string
 	var maxMs float64
+	var bottleneckName string
 	for _, s := range avg {
-		ms := msOf(s)
-		status := stageStatus(ms)
-		isBottleneck := ms > maxMs
-		if isBottleneck {
+		if ms := msOf(s); ms > maxMs {
 			maxMs = ms
 			bottleneckName = s.Name
 		}
+	}
+
+	stageJSON := make([]benchStageJSON, 0, len(avg))
+	for _, s := range avg {
+		ms := msOf(s)
 		stageJSON = append(stageJSON, benchStageJSON{
-			Name:       s.Name,
-			Ms:         ms,
-			Bytes:      s.Bytes,
-			Status:     status,
-			Bottleneck: isBottleneck && ms > 10,
+			Name:   s.Name,
+			Ms:     ms,
+			Bytes:  s.Bytes,
+			Status: stageStatus(ms),
+			// 唯一瓶颈且超过「偏慢」阈值（10ms）；并列时首者胜，保证确定性
+			Bottleneck: s.Name == bottleneckName && ms > 10,
 			Note:       s.Notes,
 		})
 	}
@@ -498,22 +516,32 @@ func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, basel
 
 	hints := generateHints(avg)
 
+	totalMs := float64(totalDuration.Microseconds()) / 1000
+	// 单次平均：AI/前端问「这个模型加载一次多久」时要的是它，而非 N 次累计
+	perIterationMs := totalMs
+	if iterations > 0 {
+		perIterationMs = totalMs / float64(iterations)
+	}
 	output := singleBenchJSON{
-		Model:      modelPath,
-		Iterations: iterations,
-		TotalMs:    float64(totalDuration.Microseconds()) / 1000,
-		Stages:     stageJSON,
-		Bottleneck: bottleneckName,
-		Hints:      hints,
-		Format:     modelFormat,
-		SizeBytes:  modelSize,
+		Model:          modelPath,
+		Iterations:     iterations,
+		TotalMs:        totalMs,
+		PerIterationMs: perIterationMs,
+		Stages:         stageJSON,
+		Bottleneck:     bottleneckName,
+		Hints:          hints,
+		Format:         modelFormat,
+		SizeBytes:      modelSize,
 	}
 
 	data, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		return newRuntimeErrf("JSON 序列化失败: %v", err)
 	}
+	// 双出口（ADR-200 D1/D5）：stdout 供 CLI/AI 直接消费；SetResult 让 Wails 桥的 data
+	// 承载结构化对象（而非 output 文本）——前端因此无需再正则解析中文人类文案。
 	fmt.Println(string(data))
+	ctx.SetResult(&output)
 
 	// 基准对比 / 保存
 	return applyBenchBaseline(baseline, saveBaseline, thresholdPct, avg)

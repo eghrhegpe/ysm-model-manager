@@ -96,7 +96,7 @@ test.describe("诊断页", () => {
   });
 
   test("日志工具栏两行语义分组：行1=子tab+动作，行2=筛选+搜索", async ({ page }) => {
-    // 2026-09-18 版面收口（方案 A）：9 按钮 + 1 输入框挤单行时分组语义错乱（清空与筛选同组、
+    // 2026-09-17 版面收口（方案 A）：9 按钮 + 1 输入框挤单行时分组语义错乱（清空与筛选同组、
     // 刷新/复制被 spacer 推远），且 spacer 随 flex-wrap 折行挤散动作组。本用例锁两行结构与归属。
     const layout = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;

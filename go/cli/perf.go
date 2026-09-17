@@ -357,15 +357,22 @@ func runBenchIterations(ctx *CmdContext, targetModel string, iterations int, for
 	totalDuration := time.Since(totalStart)
 	avg := avgBenchStages(allStages)
 	stageJSON, bottleneckName := stagesToJSON(avg)
+	// 与 runSingleBenchJSON 同口径：total_ms 是 N 次累计，单次看 per_iteration_ms
+	totalMs := float64(totalDuration.Microseconds()) / 1000
+	perIterationMs := totalMs
+	if iterations > 0 {
+		perIterationMs = totalMs / float64(iterations)
+	}
 	return &singleBenchJSON{
-		Model:      targetModel,
-		Iterations: iterations,
-		TotalMs:    float64(totalDuration.Microseconds()) / 1000,
-		Stages:     stageJSON,
-		Bottleneck: bottleneckName,
-		Hints:      generateHints(avg),
-		Format:     format,
-		SizeBytes:  modelSize,
+		Model:          targetModel,
+		Iterations:     iterations,
+		TotalMs:        totalMs,
+		PerIterationMs: perIterationMs,
+		Stages:         stageJSON,
+		Bottleneck:     bottleneckName,
+		Hints:          generateHints(avg),
+		Format:         format,
+		SizeBytes:      modelSize,
 	}
 }
 

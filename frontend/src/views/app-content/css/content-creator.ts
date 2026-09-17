@@ -6,9 +6,12 @@ export const contentCreatorCSS: string = `
 .cr-tag-vup { background:var(--tag-vup-bg);color:var(--tag-vup); }
 .cr-tag-oc { background:var(--tag-oc-bg);color:var(--tag-oc); }
 .cr-tag-filter-row { display:flex;gap:4px;margin:0 0 8px;flex-wrap:wrap;align-items:center; }
-.cr-tag-filter-btn { font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:var(--tr-fast);animation:fadeSlideUp var(--tr-enter) both; }
-.cr-tag-filter-btn:hover { border-color:var(--accent);color:var(--txt);background:var(--hover); }
-.cr-tag-filter-btn.active { border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent); }
+/* 多按钮筛选组统一范式（同 shadow 根共享：content-creator + content-diag）。
+   .diag-log-fbtn 复用本组规则、仅覆盖字号（见 content-diag.ts）；
+   app-sync-manager 的 .sm-status-tab 因跨 shadow 根，样式逐值同款但需各自持有。 */
+.cr-tag-filter-btn, .diag-log-fbtn { font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:var(--tr-fast);animation:fadeSlideUp var(--tr-enter) both; }
+.cr-tag-filter-btn:hover, .diag-log-fbtn:hover { border-color:var(--accent);color:var(--txt);background:var(--hover); }
+.cr-tag-filter-btn.active, .diag-log-fbtn.active { border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent); }
 
 /* ===== 创作者频道 (cr-) ===== */
 .cr-page { flex:1; display:flex; overflow:hidden; position:relative; }
@@ -261,14 +264,6 @@ export const contentCreatorCSS: string = `
 .cr-tag-filter-row {
   display:flex;gap:4px;flex-wrap:wrap;padding-bottom:8px;
 }
-.cr-tag-filter-btn {
-  font-size:var(--fs-xs);padding:2px 10px;border-radius:var(--radius-xl);
-  border:1px solid var(--bd);background:transparent;color:var(--muted);
-  cursor:pointer;font-family:inherit;transition:var(--tr-fast);
-  animation:fadeSlideUp var(--tr-enter) both;
-}
-.cr-tag-filter-btn:hover { border-color:var(--accent);color:var(--accent); }
-.cr-tag-filter-btn.active { background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent);border-color:var(--accent); }
 .cr-drop-zone {
   display:flex;align-items:center;justify-content:center;gap:8px;
   padding:12px 16px;margin:4px 0 8px;

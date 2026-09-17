@@ -27,7 +27,7 @@ vi.mock("@/bus", () => ({ bus: { emit: vi.fn() } }));
 
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { createWorkshopPageState } from "./workshop-page-state.ts";
-import type { AppContentHost } from "@/views/app-content/host.ts";
+
 import {
   createWorkshopRefs,
   initWorkshopTabs,
@@ -48,8 +48,8 @@ function makeHost() {
   (el as unknown as { getElementById: (id: string) => Element | null }).getElementById = (
     id: string,
   ) => el.querySelector(`#${id}`);
-  const host = { state: { root: el } } as unknown as AppContentHost;
-  return { host, el };
+  const root = el as unknown as ShadowRoot;
+  return { root, el };
 }
 
 /** 收集 setShowSiteView 注册进来的 showSiteView 闭包调用 */
@@ -82,11 +82,11 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
     vi.useFakeTimers();
     try {
       loadCommunityData.mockResolvedValue({ sites: [site], creators: [], authors: [] });
-      const { host } = makeHost();
+      const { root } = makeHost();
       const page = createWorkshopPageState();
       const spy = spyShowSiteView();
 
-      initWorkshopTabs(host, createWorkshopRefs(), page);
+      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
       expect(page.getCurrentSite()).toBeNull(); // 定时器未触发前不写
 
       await vi.advanceTimersByTimeAsync(150);
@@ -109,11 +109,11 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
         creators: [],
         authors: [],
       });
-      const { host, el } = makeHost();
+      const { root, el } = makeHost();
       const page = createWorkshopPageState();
       const spy = spyShowSiteView();
 
-      initWorkshopTabs(host, createWorkshopRefs(), page);
+      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
 
@@ -133,11 +133,11 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
     vi.useFakeTimers();
     try {
       loadCommunityData.mockResolvedValue({ sites: [site], creators: [], authors: [] });
-      const { host, el } = makeHost();
+      const { root, el } = makeHost();
       const page = createWorkshopPageState();
       const spy = spyShowSiteView();
 
-      initWorkshopTabs(host, createWorkshopRefs(), page);
+      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
       expect(page.getCurrentSite()).toBe(site);
@@ -160,11 +160,11 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
     try {
       loadCommunityData.mockResolvedValue({ sites: [site], creators: [], authors: [] });
       loadLocalAuthors.mockResolvedValue([{ name: "本地作者", desc: "", type: "bilibili" }]);
-      const { host } = makeHost();
+      const { root } = makeHost();
       const page = createWorkshopPageState();
       const spy = spyShowSiteView();
 
-      initWorkshopTabs(host, createWorkshopRefs(), page);
+      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
 

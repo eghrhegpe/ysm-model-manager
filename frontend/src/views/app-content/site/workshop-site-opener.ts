@@ -7,7 +7,7 @@ import { t } from "@/core/i18n/t.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import type { AppContentHost } from "@/views/app-content/host.ts";
+
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { BrowseMode } from "./workshop-browse-mode.ts";
 import type { WorkshopPageState } from "./workshop-page-state.ts";
@@ -26,7 +26,7 @@ const WS_EMBED_TIMEOUT_MS = 15000;
  * 打开站点（外链/内嵌/窗口）
  */
 export function openSite(
-  host: AppContentHost,
+  root: ShadowRoot,
   site: WorkshopSite,
   browseMode: BrowseMode,
   targetUrl = "",
@@ -35,7 +35,7 @@ export function openSite(
   // targetUrl 传入时优先打开目标（搜索带词链接）；缺省回退站点首页
   const url = targetUrl || site.url;
   if (browseMode === "embed") {
-    openEmbedded(host, site, url);
+    openEmbedded(root, site, url);
   } else if (browseMode === "window") {
     // 窗口模式直连（独立 WebView2 窗口，非 iframe，无需反代绕 X-Frame-Options）
     // 网页版没有预热窗口，回退系统浏览器打开，避免 NavigatePlazaWindow fail-fast 静默无反应
@@ -56,8 +56,7 @@ export function openSite(
  * 用 AbortController 替代模块级 timer：每次打开新页面时 abort 上一轮，确保只有
  * 当前页面的 load 完成 / 超时触发；返回按钮同样 abort，彻底消除 timer 残留。
  */
-function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): void {
-  const root = host.state.root;
+function openEmbedded(root: ShadowRoot, _site: WorkshopSite, url: string): void {
   const browserEl = root.getElementById("ws-browser");
   const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;
   const urlEl = root.getElementById("ws-url");
@@ -88,9 +87,7 @@ function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): v
 /**
  * 绑定站点打开相关事件
  */
-export function bindSiteEvents(host: AppContentHost, page: WorkshopPageState): void {
-  const root = host.state.root;
-
+export function bindSiteEvents(root: ShadowRoot, page: WorkshopPageState): void {
   // 返回按钮：abort 当前加载 timer + 隐藏浏览器面板
   root.getElementById("ws-back")?.addEventListener("click", () => {
     const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;

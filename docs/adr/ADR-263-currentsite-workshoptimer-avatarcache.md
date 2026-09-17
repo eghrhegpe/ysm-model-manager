@@ -70,7 +70,7 @@ ADR-261 收尾时留了一条「已知遗留」：`currentSite` / `workshopTimer
 - `currentSite` 的读取从属性访问变为方法调用（`page.getCurrentSite()`），调用点略啰嗦；`backToSite` / `avatar:refresh` 两处改为先取局部再判空，顺带消除重复读取。
 
 **已知遗留（未做，属另一刀）**：
-- **tabs / opener 仍收整个 `host`**（`init-workshop.ts` 的 `initWorkshopTabs(host, refs, page)` / `bindSiteEvents(host, page)`），故它们仍可越界写 `host.state` 上的其他字段——`workshop-tabs.ts` 至今就在写 `workshopTimer`。真正的接口级封堵（把 `host` 拆成 `{ root }` 等最小面）未做，属下一刀。
+- ~~tabs / opener 仍收整个 `host`~~ → **已由 [ADR-265](./ADR-265-site-root-host-site.md) 落地**：site 层三入口改收 `root: ShadowRoot`，定时器经登记函数交回壳层（所有权与清理点不变）。`AppContentHost` 已从 site 目录生产文件零命中，本条遗留关闭。
 - `avatarCache` 借宿 → **已由 [ADR-264](./ADR-264-avatarcache-community-store.md) 落地**：上收为 `features/community/creator-avatar-store.ts`（与 `download-queue-store` 同寿命、同形态），本条遗留关闭。
 - `workshopTimer` 仍借宿。本 ADR 的立场是**它就该留在壳层**；若未来订阅桶新增「切页」粒度，可重新评估。
 

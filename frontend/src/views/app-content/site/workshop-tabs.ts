@@ -15,7 +15,6 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc as escUtil } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getSiteIcon } from "@/utils/icon/workshop-icons.ts";
-import type { AppContentHost } from "@/views/app-content/host.ts";
 import type { RepoAuthorLike } from "./site-view.ts";
 import type { WorkshopPageState } from "./workshop-page-state.ts";
 
@@ -48,12 +47,11 @@ export function createWorkshopRefs(): WorkshopRefs {
  * 初始化创意工坊 Tab
  */
 export function initWorkshopTabs(
-  host: AppContentHost,
+  root: ShadowRoot,
   refs: WorkshopRefs,
   page: WorkshopPageState,
+  registerDefaultSiteTimer: (t: ReturnType<typeof setTimeout>) => void,
 ): void {
-  const root = host.state.root;
-
   // 本地扫描作者的后台补充：首屏渲染不依赖磁盘扫描（曾阻塞 tab 栏秒级~分钟级），
   // 扫描完成后再合并进 allCreatorsRef 并重渲染当前站点视图。
   // enrichPending 在途去重（防双渲染）；完成后置 null，下次数据替换（切 tab 重拉）可再补充；
@@ -107,54 +105,58 @@ export function initWorkshopTabs(
     }
   };
 
-  // 默认显示第一个站点
-  host.state.workshopTimer = setTimeout(async () => {
-    try {
-      const data = await loadCommunityData();
-      refs.allSitesRef.v = data.sites;
-      // 动态生成 Tab
-      const tabsEl = root.getElementById("ws-tabs");
-      if (tabsEl && data.sites.length) {
-        tabsEl.innerHTML = "";
-        data.sites.forEach((s, i) => {
-          const btn = document.createElement("button");
-          btn.className = `repo-tab${i === 0 ? " active" : ""}`;
-          btn.dataset.tab = s.id;
-          btn.innerHTML = `${getSiteIcon(s.id)} ${escUtil(s.label)}`;
-          btn.addEventListener("click", () => showCreatorsBySite(s.id));
-          tabsEl.appendChild(btn);
-        });
-        // 默认显示第一个（复用本次已加载数据，避免 showCreatorsBySite 二次拉取）
-        if (data.sites[0]) {
-          // 恢复上次选中的 tab
-          const last = safeGet("ysm-ws-last-tab") || data.sites[0].id;
-          const target = data.sites.find((s) => s.id === last) || data.sites[0];
-          await showCreatorsBySite(target.id, data);
+  // 默认显示第一个站点——定时器经 registerDefaultSiteTimer 交回 app 壳层持有（ADR-265）：
+  // 壳层在 _render 开头清它（清理点必须早于 page.init，覆盖「未 init 就被切走」的窗口），
+  // tabs 只负责创建，不再经 host.state 直达壳层字段。
+  registerDefaultSiteTimer(
+    setTimeout(async () => {
+      try {
+        const data = await loadCommunityData();
+        refs.allSitesRef.v = data.sites;
+        // 动态生成 Tab
+        const tabsEl = root.getElementById("ws-tabs");
+        if (tabsEl && data.sites.length) {
+          tabsEl.innerHTML = "";
+          data.sites.forEach((s, i) => {
+            const btn = document.createElement("button");
+            btn.className = `repo-tab${i === 0 ? " active" : ""}`;
+            btn.dataset.tab = s.id;
+            btn.innerHTML = `${getSiteIcon(s.id)} ${escUtil(s.label)}`;
+            btn.addEventListener("click", () => showCreatorsBySite(s.id));
+            tabsEl.appendChild(btn);
+          });
+          // 默认显示第一个（复用本次已加载数据，避免 showCreatorsBySite 二次拉取）
+          if (data.sites[0]) {
+            // 恢复上次选中的 tab
+            const last = safeGet("ysm-ws-last-tab") || data.sites[0].id;
+            const target = data.sites.find((s) => s.id === last) || data.sites[0];
+            await showCreatorsBySite(target.id, data);
+          }
+        } else if (tabsEl) {
+          // 空态提示（e2e 反推）：原实现 sites 为空时永久停留 loading 占位，
+          // 加载失败/无配置用户无感知——显示「暂无数据」并允许手动导入站点配置；
+          // 加载失败则提示「加载失败」（ADR-082 续：区分失败与真无数据，不再空白无感知）
+          const emptyText = data.failed ? t("common.loadFailed") : t("common.empty");
+          tabsEl.innerHTML =
+            '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">' +
+            emptyText +
+            " " +
+            UI_ICONS.upload +
+            " " +
+            t("workshop.exportSite") +
+            "</span>";
         }
-      } else if (tabsEl) {
-        // 空态提示（e2e 反推）：原实现 sites 为空时永久停留 loading 占位，
-        // 加载失败/无配置用户无感知——显示「暂无数据」并允许手动导入站点配置；
-        // 加载失败则提示「加载失败」（ADR-082 续：区分失败与真无数据，不再空白无感知）
-        const emptyText = data.failed ? t("common.loadFailed") : t("common.empty");
-        tabsEl.innerHTML =
-          '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">' +
-          emptyText +
-          " " +
-          UI_ICONS.upload +
-          " " +
-          t("workshop.exportSite") +
-          "</span>";
+      } catch (e) {
+        // P3 修复（审核）：定时器回调最外层 catch 出口——原 loadCommunityData 在 try 外，
+        // getApp 失败逸出 unhandled rejection（与 showCreatorsBySite 同出口）
+        bus.emit("toast:show", {
+          msg: `❌ ${(e as Error)?.message || t("workshop.loadCommunityFailed")}`,
+          duration: TOAST_MS.normal,
+          type: "error",
+        });
       }
-    } catch (e) {
-      // P3 修复（审核）：定时器回调最外层 catch 出口——原 loadCommunityData 在 try 外，
-      // getApp 失败逸出 unhandled rejection（与 showCreatorsBySite 同出口）
-      bus.emit("toast:show", {
-        msg: `❌ ${(e as Error)?.message || t("workshop.loadCommunityFailed")}`,
-        duration: TOAST_MS.normal,
-        type: "error",
-      });
-    }
-  }, WS_TAB_LOAD_DELAY_MS);
+    }, WS_TAB_LOAD_DELAY_MS),
+  );
 }
 
 // 实际函数由 init-workshop.ts 注入

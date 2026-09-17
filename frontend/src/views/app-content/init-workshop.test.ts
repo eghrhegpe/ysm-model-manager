@@ -72,6 +72,7 @@ interface MockHost {
     root: HTMLElement;
     workshopCache: Map<string, unknown> | null;
     githubCache: unknown;
+    workshopTimer: ReturnType<typeof setTimeout> | null;
   };
   /** 真订阅桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs */
   subs: SubscriptionBucket;
@@ -93,6 +94,7 @@ function makeHost(cardsHTML = "") {
       root: el,
       workshopCache: null,
       githubCache: null,
+      workshopTimer: null,
     },
     // 真桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs
     subs: new SubscriptionBucket(),
@@ -156,16 +158,26 @@ describe("initWorkshopPage — 初始化装配", () => {
     expect("avatarCache" in raw.state).toBe(false);
     expect(extractAvatars).toHaveBeenCalled();
     expect(initWorkshopTabs).toHaveBeenCalledTimes(1);
-    expect(callArgs(initWorkshopTabs, 0)[0]).toBe(host);
+    // ADR-265：site 子模块收 root（ShadowRoot），不再收整个 host
+    expect(callArgs(initWorkshopTabs, 0)[0]).toBe(raw.state.root);
     // createWorkshopRefs 生成的单源 ref 原样传给 tabs（同实例约定）
     expect(callArgs(initWorkshopTabs, 0)[1]).toBe(createWorkshopRefs.mock.results[0]!.value);
-    // 同一个页作用域句柄也必须原样传给 tabs 与 opener（同实例约定，ADR-263）
+    // 同一个页作用域句柄也必须原样传给 tabs 与 opener（同实例约定，ADR-263）；
+    // 定时器登记函数是第 4 参（ADR-265：timer 归壳层持有，tabs 只创建）
+    expect(typeof callArgs(initWorkshopTabs, 0)[3]).toBe("function");
     const page = callArgs(initWorkshopTabs, 0)[2];
     expect(page).toBe(getPageState());
-    expect(callArgs(bindSiteEvents, 0)[0]).toBe(host);
+    expect(callArgs(bindSiteEvents, 0)[0]).toBe(raw.state.root);
     expect(callArgs(bindSiteEvents, 0)[1]).toBe(page);
     expect(setShowSiteView).toHaveBeenCalledTimes(1);
     expect(typeof callArgs(setShowSiteView, 0)[0]).toBe("function");
+    // ADR-265：tabs 创建的延迟加载定时器必须经登记函数交回壳层持有——
+    // 模拟登记：捕获 initWorkshopTabs 实参里的登记函数并实际执行，验证 timer 落到 host.state.workshopTimer
+    const registrar = callArgs(initWorkshopTabs, 0)[3] as (t: ReturnType<typeof setTimeout>) => void;
+    const fakeTimer = setTimeout(() => {}, 10_000) as unknown as ReturnType<typeof setTimeout>;
+    registrar(fakeTimer);
+    expect(raw.state.workshopTimer).toBe(fakeTimer); // 登记链通到壳层字段
+    clearTimeout(fakeTimer);
   });
 
   it("已有缓存/已注册的 host 二次 init：不重复建 cache、不重复注册 avatar:refresh", () => {
@@ -249,13 +261,13 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     const ctx = lastCallArgs(renderSiteView)[1] as any;
 
     ctx.openUrl("https://github.com/search?q=foo");
-    expect(openSite).toHaveBeenCalledWith(host, site, "external", "https://github.com/search?q=foo");
+    expect(openSite).toHaveBeenCalledWith(expect.anything(), site, "external", "https://github.com/search?q=foo");
 
     ctx.setBrowseMode("embed");
     expect(localStorage.getItem("ysm-browse-mode")).toBe("embed"); // saveBrowseMode 落盘
 
     ctx.openUrl("https://x/y");
-    expect(openSite).toHaveBeenLastCalledWith(host, site, "embed", "https://x/y");
+    expect(openSite).toHaveBeenLastCalledWith(expect.anything(), site, "embed", "https://x/y");
   });
 
   it("ctx.backToSite：有 currentSite → 用它重渲染；无 → 不渲染", () => {

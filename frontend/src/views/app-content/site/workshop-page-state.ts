@@ -24,11 +24,9 @@ import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.
  *
  * 传给 `initWorkshopTabs` / `bindSiteEvents`，承载它们唯一需要的页语义：当前站点。
  *
- * ⚠️ 边界诚实说明：这两个模块**仍收 `host`**（它们还要 `host.state.root` 查 DOM、tabs 还要写
- * `workshopTimer`），所以「够不着 `root`」并非事实。本句柄兑现的是**更窄但确定**的一条：
- * 站点游标的读写**只能**经此接口——`host.state.currentSite` 已随字段删除而**编译不过**，
- * 而 `page` 上没有任何其他字段可写。要封死全部越界（含 `workshopTimer`），需把 `host` 也拆成
- * 最小面，属已知遗留（ADR-263 §3）。
+ * ⚠️ 边界说明（ADR-265 收口）：site 层三入口已改收 `root: ShadowRoot` + `page`，不再收
+ * `host`——定时器经 `registerDefaultSiteTimer` 一次性交回壳层（所有权与清理点不变），
+ * 页私有状态经本句柄读写。site 层已无任何壳层字段可达面，「越界写入」在 site 层结构性封死。
  */
 export interface WorkshopPageState {
   /** 当前浏览站点（未进入任何站点时为 null）；返回引用而非拷贝，调用方勿缓存 */

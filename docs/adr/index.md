@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **262** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **263** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -18,7 +18,7 @@ permalink: /adr/
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 10 |
-| [✅ 已采纳](#已采纳) | 242 |
+| [✅ 已采纳](#已采纳) | 243 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -40,10 +40,11 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（242）
+### ✅ 已采纳（243）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-265](./ADR-265-site-root-host-site.md) | site 子模块收窄为最小依赖——root 直传 + 定时器登记函数，host 不再进 site 层 | ✅ 已采纳 |
 | [ADR-264](./ADR-264-avatarcache-community-store.md) | avatarCache 上收 community 层 store + 订阅桶改收工厂堵孤儿订阅 | ✅ 已采纳 |
 | [ADR-263](./ADR-263-currentsite-workshoptimer-avatarcache.md) | 创意工坊页状态归属：currentSite 下沉、workshopTimer 留壳、avatarCache 上收 | ✅ 已采纳 |
 | [ADR-262](./ADR-262-perf-observability-model.md) | 性能可观测性模型：统一报告 schema、运行时归属与机器出口 | ✅ 已采纳 |
@@ -311,6 +312,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-265 | site 子模块收窄为最小依赖——root 直传 + 定时器登记函数，host 不再进 site 层 | ✅ 已采纳 | 2026-09-17 |
 | ADR-264 | avatarCache 上收 community 层 store + 订阅桶改收工厂堵孤儿订阅 | ✅ 已采纳 | 2026-09-17 |
 | ADR-263 | 创意工坊页状态归属：currentSite 下沉、workshopTimer 留壳、avatarCache 上收 | ✅ 已采纳 | 2026-09-17 |
 | ADR-262 | 性能可观测性模型：统一报告 schema、运行时归属与机器出口 | ✅ 已采纳 | 2026-09-17 |

@@ -108,7 +108,7 @@ export function initWorkshopPage(host: AppContentHost): void {
     runPrevSiteViewCleanup();
     const openUrl = (url: string): void => {
       // 透传目标 URL：搜索按钮拼好的带词链接（fillSearch）需真正打开，不能丢弃只开首页
-      openSite(host, site, browseModeRef.v, url);
+      openSite(root, site, browseModeRef.v, url);
     };
     const ctx: RenderSiteViewCtx = {
       esc: (s) => esc(String(s || "")),
@@ -162,10 +162,14 @@ export function initWorkshopPage(host: AppContentHost): void {
   setShowSiteView(showSiteView);
 
   // 初始化 Tab
-  initWorkshopTabs(host, refs, page);
+  // 定时器交回壳层持有（ADR-265）：清理点在 _render 开头（早于本 init），归属不变，
+  // 只是 tabs 不再经 host.state 直达壳层字段。
+  initWorkshopTabs(root, refs, page, (t) => {
+    host.state.workshopTimer = t;
+  });
 
   // 绑定站点打开事件
-  bindSiteEvents(host, page);
+  bindSiteEvents(root, page);
 
   // 下载完成后增量刷新创作者头像。幂等注册（ADR-261）：原靠 `state.avatarRefreshRegistered`
   // 布尔标志 + cleanupTransient 手工复位；现交给订阅桶的 addGlobalOnce——key 与全局订阅同寿命，

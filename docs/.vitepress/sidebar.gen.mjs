@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-265：site 子模块收窄为最小依赖——root 直传 + 定时器登记函数，host 不再进 site 层",
+        "link": "/adr/ADR-265-site-root-host-site"
+      },
+      {
         "text": "ADR-264：avatarCache 上收 community 层 store + 订阅桶改收工厂堵孤儿订阅",
         "link": "/adr/ADR-264-avatarcache-community-store"
       },

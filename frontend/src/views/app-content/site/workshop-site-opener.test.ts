@@ -26,11 +26,11 @@ vi.mock("@/core/i18n/t.ts", () => ({ t: (key: string) => key }));
 import { getApp } from "@/backend/app.ts";
 import { openSite, bindSiteEvents } from "./workshop-site-opener.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import type { AppContentHost } from "@/views/app-content/host.ts";
+
 import { createWorkshopPageState } from "./workshop-page-state.ts";
 import { flushPromises } from "@/test-utils/index.ts";
 
-/** 组装 openEmbedded 分支需要的假 host（shadow DOM 节点直供） */
+/** 组装假 ShadowRoot（openSite / bindSiteEvents 只收 root，ADR-265） */
 function makeHost() {
   const nodes: Record<string, any> = {
     "ws-iframe": { style: {}, src: "", onload: null },
@@ -38,10 +38,10 @@ function makeHost() {
     "ws-browser": { style: {} },
     "ws-blocked": { style: {} },
   };
-  const host = {
-    state: { root: { getElementById: (id: string) => nodes[id] ?? null } },
-  } as unknown as AppContentHost;
-  return { host, nodes };
+  const root = {
+    getElementById: (id: string) => nodes[id] ?? null,
+  } as unknown as ShadowRoot;
+  return { root, nodes };
 }
 
 function makeApp() {
@@ -61,7 +61,7 @@ describe("openSite — 透传 targetUrl", () => {
   it("外链模式：无 targetUrl → OpenInBrowser(site.url)", async () => {
     const app = makeApp();
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
-    openSite(makeHost().host, site, "external");
+    openSite(makeHost().root, site, "external");
     await flushPromises();
     expect(app.OpenInBrowser).toHaveBeenCalledWith("https://github.com/");
   });
@@ -70,7 +70,7 @@ describe("openSite — 透传 targetUrl", () => {
     const app = makeApp();
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const target = "https://github.com/search?q=%E5%B0%8F%E7%BA%A2";
-    openSite(makeHost().host, site, "external", target);
+    openSite(makeHost().root, site, "external", target);
     await flushPromises();
     expect(app.OpenInBrowser).toHaveBeenCalledWith(target);
     expect(app.OpenInBrowser).not.toHaveBeenCalledWith(site.url);
@@ -80,22 +80,22 @@ describe("openSite — 透传 targetUrl", () => {
     const app = makeApp();
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const target = "https://github.com/search?q=foo";
-    openSite(makeHost().host, site, "window", target);
+    openSite(makeHost().root, site, "window", target);
     await flushPromises();
     expect(app.NavigatePlazaWindow).toHaveBeenCalledWith(target, true);
   });
 
   it("内嵌模式：带 targetUrl → iframe.src 与地址栏都落实到 targetUrl", () => {
-    const { host, nodes } = makeHost();
+    const { root, nodes } = makeHost();
     const target = "https://github.com/search?q=bar";
-    openSite(host, site, "embed", target);
+    openSite(root, site, "embed", target);
     expect(nodes["ws-iframe"].src).toBe(target);
     expect(nodes["ws-url"].textContent).toBe(target);
   });
 
   it("内嵌模式：无 targetUrl → iframe.src 用 site.url", () => {
-    const { host, nodes } = makeHost();
-    openSite(host, site, "embed");
+    const { root, nodes } = makeHost();
+    openSite(root, site, "embed");
     expect(nodes["ws-iframe"].src).toBe(site.url);
   });
 });
@@ -113,15 +113,15 @@ describe("openSite — 窗口模式平台分支与内嵌容器状态", () => {
     const app = makeApp();
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const target = "https://example.com/?q=1";
-    openSite(makeHost().host, site, "window", target);
+    openSite(makeHost().root, site, "window", target);
     await flushPromises();
     expect(app.OpenInBrowser).toHaveBeenCalledWith(target);
     expect(app.NavigatePlazaWindow).not.toHaveBeenCalled();
   });
 
   it("内嵌模式：browser 显示 flex、blocked 隐藏、url 文案落实", () => {
-    const { host, nodes } = makeHost();
-    openSite(host, site, "embed");
+    const { root, nodes } = makeHost();
+    openSite(root, site, "embed");
     expect(nodes["ws-browser"].style.display).toBe("flex");
     expect(nodes["ws-blocked"].style.display).toBe("none");
     expect(nodes["ws-url"].textContent).toBe(site.url);
@@ -135,8 +135,8 @@ describe("openEmbedded — 15s 加载超时兜底（fake timers）", () => {
   });
 
   it("15s 未完成加载 → blocked 显示 flex（提示站点不允许内嵌）", () => {
-    const { host, nodes } = makeHost();
-    openSite(host, site, "embed");
+    const { root, nodes } = makeHost();
+    openSite(root, site, "embed");
     expect(nodes["ws-blocked"].style.display).toBe("none");
     vi.advanceTimersByTime(15000 - 1);
     expect(nodes["ws-blocked"].style.display).toBe("none");
@@ -145,8 +145,8 @@ describe("openEmbedded — 15s 加载超时兜底（fake timers）", () => {
   });
 
   it("iframe.onload 完成 → 清除超时定时器，blocked 不弹出", () => {
-    const { host, nodes } = makeHost();
-    openSite(host, site, "embed");
+    const { root, nodes } = makeHost();
+    openSite(root, site, "embed");
     nodes["ws-iframe"].onload?.(new Event("load"));
     vi.advanceTimersByTime(16000); // 超过 WS_EMBED_TIMEOUT_MS(15000，模块私有常量)
     expect(nodes["ws-blocked"].style.display).toBe("none");
@@ -171,11 +171,11 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
       <div id="ws-browser"></div>
       <div id="ws-blocked" style="display:none"></div>
     `;
-    const host = { state: { root: el } } as unknown as AppContentHost;
+    const root = el as unknown as ShadowRoot;
     // 页作用域句柄（ADR-263）：bindSiteEvents 不再读 host.state.currentSite
     const page = createWorkshopPageState();
     return {
-      host,
+      root,
       page,
       el,
       setCurrentSite: (s: typeof site) => page.setCurrentSite(s),
@@ -188,7 +188,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
   it("ws-back：清 iframe.src + 隐藏 browser 容器", () => {
     const b = makeBindHost();
     b.browser.style.display = "flex";
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-back").click();
     // happy-dom 将 iframe.src="" 解析为 base URL，用 attribute 断言原始写入
     expect(b.iframe.getAttribute("src")).toBe("");
@@ -198,8 +198,8 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
   it("ws-back：内嵌后返回 → 清掉 15s 超时定时器，blocked 不再弹出（回归：局部变量遮蔽模块级）", () => {
     vi.useFakeTimers();
     const b = makeBindHost();
-    bindSiteEvents(b.host, b.page);
-    openSite(b.host, site, "embed");
+    bindSiteEvents(b.root, b.page);
+    openSite(b.root, site, "embed");
     b.btn("ws-back").click();
     vi.advanceTimersByTime(16000); // 超过 WS_EMBED_TIMEOUT_MS
     const blocked = b.el.querySelector("#ws-blocked") as HTMLElement;
@@ -213,7 +213,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const b = makeBindHost();
     b.setCurrentSite(site);
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-open").click();
     b.btn("ws-open-fallback").click();
     await flushPromises();
@@ -225,7 +225,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
     const app = makeApp();
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const b = makeBindHost();
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-open").click();
     b.btn("ws-open-fallback").click();
     b.btn("ws-win-open").click();
@@ -240,7 +240,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const b = makeBindHost();
     b.setCurrentSite(site);
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-win-open").click();
     await flushPromises();
     expect(app.NavigatePlazaWindow).toHaveBeenCalledWith(site.url, true);
@@ -253,7 +253,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const b = makeBindHost();
     b.setCurrentSite(site);
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-win-open").click();
     await flushPromises();
     expect(app.OpenInBrowser).toHaveBeenCalledWith(site.url);
@@ -270,15 +270,15 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
       <button id="ws-export-btn"></button>
       <button id="ws-import-btn"></button>
     `;
-    const host = { state: { root: el } } as unknown as AppContentHost;
+    const root = el as unknown as ShadowRoot;
     const page = createWorkshopPageState();
-    return { host, page, el, btn: (id: string) => el.querySelector(`#${id}`) as HTMLElement };
+    return { root, page, el, btn: (id: string) => el.querySelector(`#${id}`) as HTMLElement };
   }
 
   it("web 平台导出 → warn toast 早退，不碰桥", async () => {
     isWebPlatform.mockReturnValue(true);
     const b = makeBindHost();
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-export-btn").click();
     await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
@@ -296,7 +296,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     );
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const b = makeBindHost();
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-export-btn").click();
     await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
@@ -313,7 +313,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     );
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const b = makeBindHost();
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-export-btn").click();
     await flushPromises();
     expect(friendlyError).toHaveBeenCalledWith(expect.any(Error), "workshop.exportFailed");
@@ -327,7 +327,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
   it("web 平台导入 → warn toast 早退，不碰桥", async () => {
     isWebPlatform.mockReturnValue(true);
     const b = makeBindHost();
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-import-btn").click();
     await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
@@ -343,7 +343,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     (app as Record<string, unknown>).ValidateWorkshopSites = vi.fn(() => Promise.resolve(3));
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const b = makeBindHost();
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-import-btn").click();
     await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
@@ -360,7 +360,7 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     );
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const b = makeBindHost();
-    bindSiteEvents(b.host, b.page);
+    bindSiteEvents(b.root, b.page);
     b.btn("ws-import-btn").click();
     await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {

@@ -1,23 +1,19 @@
 // @vitest-environment node
-// ===== 页面模板「结构完整性」守卫（防标签未闭合致 DOM 嵌套吞并）=====
+// ===== 页面模板结构契约（ADR-259：tab 结构单点产出）=====
 //
-// 复盘（2026-09-17，用户报「诊断看不见界面了」）：
-//   ADR-258 把诊断页左栏收敛为顶部 repo-tab 后，diagnosticsHTML() 的
-//   `.diag-log-bar` 漏了闭合 </div> —— 本该关工具条的 </div> 被当成了面板的闭合，
-//   于是 #diag-tab-single … #diag-tab-sync-conflict 七个面板全被吞进 #diag-tab-log 内部。
-//   而 bindTabs 切页时会把非激活的 `#diag-tab-log` 置 display:none ——
-//   嵌在它里面的面板随之一起消失，**切任何 tab 都只剩空白**。
+// 为什么需要本文件：2026-09-17 诊断页因 `diagnosticsHTML()` 漏一个 `</div>`，
+// `#diag-tab-log` 把后续 7 个面板吞进自己内部；`bindTabs` 切页时隐藏 `#diag-tab-log`，
+// 嵌在里面的面板一并消失 → 切任何 tab 都只剩空 tab 栏。
+// 既有 `tpl.test.ts` 用子串断言（`toContain('id="diag-tab-log"')`）——面板 id 字面量
+// 即便被错误嵌套也照样在字符串里，**断言恒真、对结构完全失明**。
+// 教训与泛化规则见 `skills/pitfalls.md` #20。
 //
-// 既有测试为何没拦住：tpl.test.ts 用子串断言（toContain('id="diag-tab-log"')）——
-//   面板 id 字面量即便被错误嵌套也照样在字符串里，断言恒真，对「结构」完全失明。
-//   本文件改为按 **div 深度** 验证结构，补上这块盲区。
+// 本文件按**结构**验证，三条独立断言缺一不可：
+//   ① 每个页面模板 `<div>` 开合配平                     —— 抓「漏闭合」
+//   ② 每个 tab 页：面板数 == 按钮数，且 id 与 data-tab 一一对应 —— 抓「错配 / 漏面板」
+//   ③ 每个面板都是 `.tab-body` 且全部等深同层（互不嵌套）  —— 抓「兄弟吞并」+ 守住唯一范式
 //
-// 语义（两条独立断言，缺一不可）：
-//   ① 每个页面模板的 <div> 开合必须平衡（直接抓「漏闭合」）；
-//   ② 同一容器（.tab-body）下的面板必须处在**同一层**（抓「被兄弟吞并」——
-//      即使总开合平衡，嵌套错位同样会毁掉面板切换）。
-//
-// 纯字符串实现（node 环境，与 tpl.test.ts 同）——不依赖 jsdom/DOM 解析器。
+// 纯字符串实现（node 环境，与 tpl.test.ts 同）——不依赖 jsdom / DOM 解析器。
 
 import { describe, it, expect } from "vitest";
 import {
@@ -28,37 +24,7 @@ import {
   workshopHTML,
 } from "./tpl.ts";
 
-/** 诊断页顶部 repo-tab 对应的面板 id（与 diagnosticsHTML 的 data-tab 一一对应） */
-const DIAG_TAB_IDS = [
-  "log",
-  "single",
-  "gui",
-  "hist",
-  "trace",
-  "conflict",
-  "health",
-  "sync-conflict",
-] as const;
-
-/** 统计 `<div>` / `</div>` 数量（本仓模板不使用自闭合 `<div/>`） */
-function divTally(html: string): { opens: number; closes: number } {
-  return {
-    opens: (html.match(/<div\b/g) ?? []).length,
-    closes: (html.match(/<\/div>/g) ?? []).length,
-  };
-}
-
-/**
- * `needle` 出现位置之前（不含 `needle` 自身所在的标签）的 div 净深度。
- * `needle` 须含该标签的 `<div` 起始，才能得到「该标签所处的层」。
- */
-function depthBefore(html: string, needle: string): number {
-  const idx = html.indexOf(needle);
-  if (idx < 0) throw new Error(`模板中未找到 ${needle}`);
-  const { opens, closes } = divTally(html.slice(0, idx));
-  return opens - closes;
-}
-
+/** 全部页面模板（用于 ① 配平） */
 const PAGE_TEMPLATES: Array<[string, () => string]> = [
   ["repositoryHTML", repositoryHTML],
   ["instancesHTML", instancesHTML],
@@ -66,6 +32,47 @@ const PAGE_TEMPLATES: Array<[string, () => string]> = [
   ["githubHTML", githubHTML],
   ["workshopHTML", workshopHTML],
 ];
+
+/**
+ * 走 renderTabs 工厂的 tab 页（用于 ②③）。
+ * 三列 = 展示名 / 产物 / 面板 id 前缀。
+ * `workshopHTML` **不在列**：其 tab 栏由 `initWorkshopPage` 运行期动态注入
+ * （`workshop-tabs.ts`），非静态声明——ADR-259 §2.3 明确排除，硬套契约会制造语义谎。
+ */
+const TABBED_PAGES: Array<[string, () => string, string]> = [
+  ["repositoryHTML", repositoryHTML, "repo"],
+  ["instancesHTML", instancesHTML, "ins"],
+  ["diagnosticsHTML", diagnosticsHTML, "diag"],
+  ["githubHTML", githubHTML, "gh"],
+];
+
+/** 统计 `<div>` / `</div>`（本仓模板不使用自闭合 `<div/>`） */
+function divTally(html: string): { opens: number; closes: number } {
+  return {
+    opens: (html.match(/<div\b/g) ?? []).length,
+    closes: (html.match(/<\/div>/g) ?? []).length,
+  };
+}
+
+/** needle 出现位置之前（不含该标签自身）的 div 净深度 */
+function depthBefore(html: string, needle: string): number {
+  const idx = html.indexOf(needle);
+  if (idx < 0) throw new Error(`模板中未找到 ${needle}`);
+  const { opens, closes } = divTally(html.slice(0, idx));
+  return opens - closes;
+}
+
+/** 页面里全部 tab 按钮的 data-tab（按出现顺序） */
+function buttonTabs(html: string): string[] {
+  // 允许 class 与 data-tab 之间存在其它属性（如仓库页四个 tab 共用 data-testid="content-tab"）
+  return [...html.matchAll(/<button class="repo-tab[^"]*"[^>]*data-tab="([^"]+)"/g)].map((m) => m[1] as string);
+}
+
+/** 页面里全部面板：{ id 后段, class } */
+function panels(html: string, prefix: string): Array<{ tab: string; cls: string }> {
+  const re = new RegExp(`<div class="([^"]*)" id="${prefix}-tab-([^"]+)"`, "g");
+  return [...html.matchAll(re)].map((m) => ({ cls: m[1] as string, tab: m[2] as string }));
+}
 
 describe("页面模板 div 开合平衡（抓漏闭合）", () => {
   for (const [name, build] of PAGE_TEMPLATES) {
@@ -76,17 +83,36 @@ describe("页面模板 div 开合平衡（抓漏闭合）", () => {
   }
 });
 
-describe("diagnosticsHTML 面板分层（抓兄弟吞并）", () => {
-  it("八个面板均处于 .tab-body 下一层——未被前一面板吞并", () => {
-    const html = diagnosticsHTML();
-    const bodyOpen = '<div class="tab-body">';
-    const bodyIdx = html.indexOf(bodyOpen);
-    expect(bodyIdx, "未找到 .tab-body 容器").toBeGreaterThanOrEqual(0);
-    // 以 .tab-body 开标签之后为原点，面板自身 <div> 之前的净深度应为 0（即直接子节点）
-    const afterBody = html.slice(bodyIdx + bodyOpen.length);
-    for (const id of DIAG_TAB_IDS) {
-      const needle = `<div class="diag-panel" id="diag-tab-${id}"`;
-      expect(depthBefore(afterBody, needle), `面板 ${id} 被嵌套（说明有标签未闭合）`).toBe(0);
-    }
-  });
+describe("tab 页：按钮与面板一一对应（抓错配 / 漏面板）", () => {
+  for (const [name, build, prefix] of TABBED_PAGES) {
+    it(`${name}：面板与按钮同数同名`, () => {
+      const html = build();
+      const tabs = buttonTabs(html);
+      const ps = panels(html, prefix);
+      expect(tabs.length, `${name} 未产出 tab 按钮`).toBeGreaterThan(0);
+      expect(ps.map((p) => p.tab)).toEqual(tabs);
+    });
+  }
+});
+
+describe("tab 页：面板唯一范式 + 等深同层（抓兄弟吞并 / 范式漂移）", () => {
+  for (const [name, build, prefix] of TABBED_PAGES) {
+    it(`${name}：每个面板都是 .tab-body，且互不嵌套`, () => {
+      const html = build();
+      const ps = panels(html, prefix);
+      expect(ps.length).toBeGreaterThan(0);
+
+      // ③-a 唯一范式：面板必须是 .tab-body（ADR-259 §2.1）。
+      // 这正是否决旧诊断页「.diag-panel 自成一格」的分界线。
+      for (const p of ps) {
+        expect(p.cls.split(/\s+/), `面板 ${prefix}-tab-${p.tab} 未使用 .tab-body 范式`).toContain("tab-body");
+      }
+
+      // ③-b 等深同层：全部面板处在同一 div 深度——嵌套错位会让深度递增
+      const depths = ps.map((p) => depthBefore(html, `<div class="${p.cls}" id="${prefix}-tab-${p.tab}"`));
+      for (const [i, d] of depths.entries()) {
+        expect(d, `面板 ${prefix}-tab-${ps[i]!.tab} 被前一面板吞并（深度 ${d} ≠ ${depths[0]}）`).toBe(depths[0]);
+      }
+    });
+  }
 });

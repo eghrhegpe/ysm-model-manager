@@ -4,6 +4,7 @@ import { isViewerMode } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { renderTabs, type TabSpec } from "./tabs-shell.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -25,45 +26,49 @@ export const VIEW_TESTIDS: readonly string[] = [
 export function repositoryHTML(): string {
   // 查看器模式（Android/网页版 ADR-049）：回收站/查重/最旧模型依赖本地文件系统
   // 操作（MoveToRecycle/FindDuplicateFiles 等 browser-adapter 未实现），隐藏对应 tab
-  const viewerExtras = isViewerMode()
-    ? ""
-    : '<button class="repo-tab" data-testid="content-tab" data-tab="recycle">' +
-      UI_ICONS.recycle +
-      " " +
-      t("recycle.tab") +
-      "</button>" +
-      '<button class="repo-tab" data-testid="content-tab" data-tab="dedup">' +
-      UI_ICONS.link +
-      " " +
-      t("repo.tab.dedup") +
-      "</button>" +
-      '<button class="repo-tab" data-testid="content-tab" data-tab="oldest">' +
-      UI_ICONS.oldest +
-      " " +
-      t("repo.tab.oldest") +
-      "</button>";
+  const tabs: TabSpec[] = [
+    {
+      id: "tree",
+      buttonTestid: "content-tab",
+      label: `${UI_ICONS.folder} ${t("repo.tab.tree")}`,
+      // 默认 YSM 文件树（预览在外层共享）
+      body: `<app-tree root="${RESOURCE_TYPES.YSM}" style="flex:1;min-width:0"></app-tree>`,
+    },
+  ];
+  if (!isViewerMode()) {
+    tabs.push(
+      {
+        id: "recycle",
+        buttonTestid: "content-tab",
+        label: `${UI_ICONS.recycle} ${t("recycle.tab")}`,
+        body: "",
+        panelStyle: "overflow-y:auto",
+      },
+      {
+        id: "dedup",
+        buttonTestid: "content-tab",
+        label: `${UI_ICONS.link} ${t("repo.tab.dedup")}`,
+        body: "",
+        panelStyle: "overflow-y:auto;padding:12px",
+      },
+      {
+        id: "oldest",
+        buttonTestid: "content-tab",
+        label: `${UI_ICONS.oldest} ${t("repo.tab.oldest")}`,
+        body: "",
+        panelStyle: "overflow-y:auto;overflow-x:hidden",
+      },
+    );
+  }
+  // tab 结构由 renderTabs 单点产出（ADR-259）：栏与面板**分产**，落位在此决定——
+  // 面板组挂 .repo-left（与预览面板并列），故不与 tab 栏相邻
+  const { bar, panels } = renderTabs({ prefix: "repo", tabs });
   return (
     '<div class="repo-wrap">' +
-    // 第一栏：操作
-    '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-testid="content-tab" data-tab="tree">' +
-    UI_ICONS.folder +
-    " " +
-    t("repo.tab.tree") +
-    "</button>" +
-    viewerExtras +
-    "</div>" +
+    bar +
     '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
     '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;min-width:0">' +
-    '<div class="tab-body" id="repo-tab-tree" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
-    // 默认 YSM 文件树（预览在外层共享）
-    '<app-tree root="' +
-    RESOURCE_TYPES.YSM +
-    '" style="flex:1;min-width:0"></app-tree>' +
-    "</div>" +
-    '<div class="tab-body" id="repo-tab-recycle" style="display:none;flex:1;overflow-y:auto"></div>' +
-    '<div class="tab-body" id="repo-tab-dedup" style="display:none;flex:1;overflow-y:auto;padding:12px"></div>' +
-    '<div class="tab-body" id="repo-tab-oldest" style="display:none;flex:1;overflow-y:auto;overflow-x:hidden"></div>' +
+    panels +
     "</div>" +
     '<div class="preview-resize-handle" id="preview-resize-handle" style="width:4px;cursor:col-resize;background:transparent;transition:background var(--tr-fast);flex-shrink:0"></div>' +
     '<app-preview id="app-preview" style="width:var(--preview-width,220px);flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
@@ -73,50 +78,42 @@ export function repositoryHTML(): string {
 }
 
 export function instancesHTML(): string {
-  return (
-    '<div class="repo-wrap">' +
-    '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="versions">' +
-    UI_ICONS.game +
-    " " +
-    t("instances.tab.versions") +
-    "</button>" +
-    "</div>" +
-    '<div class="tab-body" id="ins-tab-versions">' +
-    '<div class="repo-layout">' +
-    '<app-sidebar class="ins-sidebar"></app-sidebar>' +
-    '<div class="ins-content" id="ins-content" data-testid="ins-content" style="display:flex;flex-direction:column;overflow:hidden">' +
-    '<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:var(--fs-base);gap:8px">' +
-    '<div style="font-size:var(--fs-xl)">' +
-    UI_ICONS.pointerLeft +
-    "</div>" +
-    "<div>" +
-    t("instances.emptyHint") +
-    "</div>" +
-    "</div>" +
-    "</div>" +
-    "</div>" +
-    "</div>" +
-    "</div>"
-  );
+  const { bar, panels } = renderTabs({
+    prefix: "ins",
+    tabs: [
+      {
+        id: "versions",
+        label: `${UI_ICONS.game} ${t("instances.tab.versions")}`,
+        body: `<div class="repo-layout">
+<app-sidebar class="ins-sidebar"></app-sidebar>
+<div class="ins-content" id="ins-content" data-testid="ins-content" style="display:flex;flex-direction:column;overflow:hidden">
+<div class="dp-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--muted);font-size:var(--fs-base);gap:8px">
+<div style="font-size:var(--fs-xl)">${UI_ICONS.pointerLeft}</div>
+<div>${t("instances.emptyHint")}</div>
+</div>
+</div>
+</div>`,
+      },
+    ],
+  });
+  return `<div class="repo-wrap">${bar}${panels}</div>`;
 }
 // recycleHTML 已拆至 tpl-recycle.ts，消费者直接 import 叶文件（P1-6）
 
 export function diagnosticsHTML(): string {
-  return `<div class="repo-wrap">
-<div class="repo-tabs">
-<button class="repo-tab active" data-tab="log">${UI_ICONS.clipboard} ${t("diagnostics.opsLog")}</button>
-<button class="repo-tab" data-tab="single">${UI_ICONS.clock} ${t("diagnostics.perfRunSingle")}</button>
-<button class="repo-tab" data-tab="gui">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
-<button class="repo-tab" data-tab="hist">${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}</button>
-<button class="repo-tab" data-tab="trace">${UI_ICONS.search} ${t("diagnostics.loadTraceTitle")}</button>
-<button class="repo-tab" data-tab="conflict">${UI_ICONS.performance} ${t("diagnostics.conflict")}</button>
-<button class="repo-tab" data-tab="health">${UI_ICONS.diagnose} ${t("diagnostics.healthTitle")}</button>
-<button class="repo-tab" data-tab="sync-conflict">${UI_ICONS.refresh} ${t("diagnostics.syncConflict")}</button>
-</div>
-<div class="tab-body">
-<div class="diag-panel" id="diag-tab-log" data-testid="diag-log">
-  <div class="diag-log-bar">
+  // ADR-259：tab 结构改由 renderTabs 单点产出。此前这里是全仓唯一的例外范式——
+  // 「一个共享 .tab-body 包 8 个 .diag-panel」，2026-09-17 因漏一个 </div> 使面板被
+  // 前一面板吞并，切任何 tab 都只剩空 tab 栏（skills/pitfalls.md #20）。
+  // 现与其他页同构：每 tab 一个 .tab-body；panelClass 只保留入场动画钩子。
+  const { bar, panels } = renderTabs({
+    prefix: "diag",
+    panelClass: "diag-panel",
+    tabs: [
+      {
+        id: "log",
+        panelTestid: "diag-log",
+        label: `${UI_ICONS.clipboard} ${t("diagnostics.opsLog")}`,
+        body: `  <div class="diag-log-bar">
     <div class="diag-log-subtabs">
       <button class="diag-sub-tab active" data-log="op">${t("diagnostics.opsLog")}</button>
       <button class="diag-sub-tab" data-log="runtime">${t("diagnostics.runtimeLog")}</button>
@@ -134,10 +131,12 @@ export function diagnosticsHTML(): string {
     <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
   </div>
   <div id="diag-log-list" data-testid="diag-log-list" class="diag-log-scroll"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
-  <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>
-</div>
-<div class="diag-panel" id="diag-tab-single" style="display:none">
-  <div class="perf-wrap">
+  <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>`,
+      },
+      {
+        id: "single",
+        label: `${UI_ICONS.clock} ${t("diagnostics.perfRunSingle")}`,
+        body: `  <div class="perf-wrap">
     <div class="perf-controls">
       <button class="btn-base accent" id="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
       <input id="diag-perf-model" type="text" placeholder="${t("diagnostics.perfModelPlaceholder")}">
@@ -145,95 +144,96 @@ export function diagnosticsHTML(): string {
       <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
     </div>
     <div id="diag-perf-single"></div>
-  </div>
-</div>
-<div class="diag-panel" id="diag-tab-gui" style="display:none">
-  <div class="perf-wrap">
+  </div>`,
+      },
+      {
+        id: "gui",
+        label: `${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}`,
+        body: `  <div class="perf-wrap">
     <div class="perf-controls">
       <button class="btn-base" id="diag-perf-gui">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
     </div>
     <div id="diag-perf-gui-out"></div>
-  </div>
-</div>
-<div class="diag-panel" id="diag-tab-hist" style="display:none">
-  <div class="perf-wrap">
+  </div>`,
+      },
+      {
+        id: "hist",
+        label: `${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}`,
+        body: `  <div class="perf-wrap">
     <div class="perf-controls">
       <button class="btn-base" id="diag-perf-log">${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}</button>
     </div>
     <div id="diag-perf-hist"></div>
-  </div>
-</div>
-<div class="diag-panel" id="diag-tab-trace" style="display:none">
-  <div class="perf-wrap">
+  </div>`,
+      },
+      {
+        id: "trace",
+        label: `${UI_ICONS.search} ${t("diagnostics.loadTraceTitle")}`,
+        body: `  <div class="perf-wrap">
     <div class="perf-controls">
       <button class="btn-base" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>
     </div>
     <div id="diag-load-trace"></div>
-  </div>
-</div>
-<div class="diag-panel" id="diag-tab-conflict" style="display:none">
-  <div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
+  </div>`,
+      },
+      {
+        id: "conflict",
+        label: `${UI_ICONS.performance} ${t("diagnostics.conflict")}`,
+        body: `  <div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
   <button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">${UI_ICONS.performance} ${t("diagnostics.startScan")}</button>
-  </div></div>
-</div>
-<div class="diag-panel" id="diag-tab-health" style="display:none">
-  <div id="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.healthHint")}
+  </div></div>`,
+      },
+      {
+        id: "health",
+        label: `${UI_ICONS.diagnose} ${t("diagnostics.healthTitle")}`,
+        body: `  <div id="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.healthHint")}
   <button class="btn-base accent" id="diag-scan-health" style="margin-top:4px">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
-  </div></div>
-</div>
-<div class="diag-panel" id="diag-tab-sync-conflict" style="display:none">
-  <div id="diag-sync-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
+  </div></div>`,
+      },
+      {
+        id: "sync-conflict",
+        label: `${UI_ICONS.refresh} ${t("diagnostics.syncConflict")}`,
+        body: `  <div id="diag-sync-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
   <button class="btn-base accent" id="diag-scan-sync-conflict" style="margin-top:4px">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
-  </div></div>
-</div>
-</div>
-</div>`;
+  </div></div>`,
+      },
+    ],
+  });
+  return `<div class="repo-wrap">${bar}${panels}</div>`;
 }
 
 /* ===== GitHub 仓库页面 ===== */
 
 export function githubHTML(): string {
-  return (
-    '<div class="repo-wrap">' +
-    '<div class="repo-tabs">' +
-    '<button class="repo-tab active" data-tab="github">' +
-    UI_ICONS.github +
-    " " +
-    t("workshop.title") +
-    "</button>" +
-    "</div>" +
-    '<div class="tab-body" id="gh-tab-repos">' +
-    '<div class="gh-page" id="gh-page">' +
-    '<div class="gh-left" id="gh-left">' +
-    '<div class="gh-left-head">' +
-    '<span class="gh-left-head-label">' +
-    t("gh.leftHead") +
-    "</span>" +
-    '<span class="gh-left-head-spacer"></span>' +
-    "</div>" +
-    '<div class="gh-grid" id="gh-grid">' +
-    '<div class="gh-loading-placeholder">' +
-    UI_ICONS.refresh +
-    " " +
-    t("common.loading") +
-    "</div>" +
-    "</div>" +
-    '<div class="gh-left-foot">' +
-    t("gh.sourceInfo") +
-    ': <span id="gh-source-info">-</span>' +
-    "</div>" +
-    "</div>" +
-    '<div class="gh-right" id="gh-right">' +
-    '<div class="gh-right-inner" id="gh-right-inner">' +
-    '<div id="gh-results">' +
-    '<div id="gh-results-body">' +
-    '<div class="gh-initial-hint">' +
-    t("gh.initialHint") +
-    "</div>" +
-    "</div></div></div></div></div>" +
-    "</div>" +
-    "</div>"
-  );
+  // ADR-259：tab 壳走 renderTabs。按钮 data-tab 由 "github" 校正为 "repos"，
+  // 与面板 id `gh-tab-repos` 对齐（原二者不一致，且无消费者依赖旧值）。
+  const { bar, panels } = renderTabs({
+    prefix: "gh",
+    tabs: [
+      {
+        id: "repos",
+        label: `${UI_ICONS.github} ${t("workshop.title")}`,
+        body: `  <div class="gh-page" id="gh-page">
+  <div class="gh-left" id="gh-left">
+  <div class="gh-left-head">
+  <span class="gh-left-head-label">${t("gh.leftHead")}</span>
+  <span class="gh-left-head-spacer"></span>
+  </div>
+  <div class="gh-grid" id="gh-grid">
+  <div class="gh-loading-placeholder">${UI_ICONS.refresh} ${t("common.loading")}</div>
+  </div>
+  <div class="gh-left-foot">${t("gh.sourceInfo")}: <span id="gh-source-info">-</span></div>
+  </div>
+  <div class="gh-right" id="gh-right">
+  <div class="gh-right-inner" id="gh-right-inner">
+  <div id="gh-results">
+  <div id="gh-results-body">
+  <div class="gh-initial-hint">${t("gh.initialHint")}</div>
+  </div></div></div></div></div>`,
+      },
+    ],
+  });
+  return `<div class="repo-wrap">${bar}${panels}</div>`;
 }
 
 export function workshopHTML(): string {

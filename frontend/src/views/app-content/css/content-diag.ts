@@ -51,7 +51,7 @@ export const contentDiagCSS: string = `
 .diag-log-filter { display:flex; align-items:center; gap:4px; overflow:hidden; flex:1; min-width:0; }
 .diag-log-filter input { width:130px; font-size:var(--fs-sm); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }
 .diag-log-scroll { overflow-y:auto; flex:1; }
-.diag-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+/* ADR-259：布局基线归 .tab-body（面板即 .tab-body）；.diag-panel 只留入场动画钩子（见上方 diagPanelIn） */
 .diag-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; font-size:var(--fs-md); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); flex-shrink:0; }
 .stat-row { font-size:var(--fs-md); color:var(--txt); padding:3px 0; display:flex; justify-content:space-between; }
 .diag-stat { padding:12px; font-size:var(--fs-base); display:block; text-align:center; }

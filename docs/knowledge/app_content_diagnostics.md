@@ -124,7 +124,7 @@ status: active
 - 冲突列表顺序与 `logs.ts` 的 `Operation` 分组一致（`OP_META` 标签为单一事实源）
 - exec 读用户选中态按组容器查 `input[type="radio"]:checked`（2026-09-03）：组容器按渲染平铺序与 `allResults.groups` 一一对应，替代按 `name="dedup-keep-<gi>"` 全局拼串——组间插入其它控件不致错位，消除「渲染计数 gi / exec 计数 gi2」双轨对齐依赖；keep-all 值为 `-1` 的 radio 同属组内
 
-- **八个面板必须是 `.tab-body` 的直接子节点**（2026-09-17 事故）：`diagnosticsHTML()` 的 `.diag-log-bar` 曾漏一个 `</div>`，`#diag-tab-log` 把后续 7 个面板吞进自己内部；`bindTabs` 切页时把 `#diag-tab-log` 置 `display:none`，嵌在里面的面板一并消失 → **切任何 tab 都只剩空 tab 栏**。防线双保险：`tpl-structure.test.ts`（div 开合配平 + 面板等深同层，纯字符串深度计数，node 环境）+ `e2e/diagnostics.spec.ts`（真实浏览器逐 tab 切换后测 `getBoundingClientRect` 尺寸——`display` 口径对此失明）。泛化规则与「子串断言验不出结构」的教训见 `skills/pitfalls.md` #20。
+- **面板结构由 `renderTabs` 工厂单点产出**（ADR-259，2026-09-17 事故收口）：诊断页此前是全仓唯一的例外范式——「一个共享 `.tab-body` 包 8 个 `.diag-panel`」。该范式更脆：`.diag-log-bar` 漏一个 `</div>` 就让 `#diag-tab-log` 把后续 7 个面板吞进自己内部，而 `bindTabs` 切页时把 `#diag-tab-log` 置 `display:none`，嵌在里面的面板一并消失 → **切任何 tab 都只剩空 tab 栏**。现改用 `views/app-content/tabs-shell.ts|renderTabs`（与其他 tab 页同构：每 tab 一个 `.tab-body`），面板 id 与 `bindTabs` 的 `${prefix}-tab-${id}` 共享同一条规则；`.diag-panel` 退化为纯入场动画钩子（布局归 `.tab-body`）。防线三层：`tabs-shell.test.ts`（工厂产出契约）+ `tpl-structure.test.ts`（各页 div 配平 / 按钮↔面板一一对应 / 面板必为 `.tab-body` 且等深同层）+ `e2e/diagnostics.spec.ts`（真实浏览器逐 tab 测 `getBoundingClientRect` 尺寸——`display` 口径对此失明）。泛化规则见 `skills/pitfalls.md` #20。
 
 ## 相关
 

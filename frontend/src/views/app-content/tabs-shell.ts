@@ -1,0 +1,90 @@
+// ===== tabs-shell.ts — tab 栏 + 面板容器的单点产出（ADR-259）=====
+//
+// 背景：`bindTabs()`（init-pages.ts）只标准化了 tab 的**运行期**行为——按
+// `${prefix}-tab-${id}` 查面板、切 `display`、统一 ARIA / roving tabindex / 键盘 / 懒加载。
+// 而「tab 栏 + 面板容器」的**标记产出**此前由每个页面各手写一遍，无工厂、无约束，
+// 于是并存两种结构范式（5 页「每 tab 一个 .tab-body」vs 诊断页「一个共享 .tab-body
+// 包 N 个 .diag-panel」）。2026-09-17 诊断页因漏一个 `</div>` 让面板被吞并、切 tab 整片
+// 空白——唯一偏离主流的那页正是出事的那页（`skills/pitfalls.md` #20）。
+//
+// 本模块把该结构收成**单点产出**：结构正确性由代码保证，不由模板作者记忆。
+// 与 `bindTabs` 共享同一条 id 规则（`${prefix}-tab-${id}`），两侧不再靠人对齐。
+//
+// 标准范式（ADR-259 §2.1）：**每个 tab 一个 `.tab-body`**，作为 `.repo-wrap` 的直接子节点；
+// 首个面板不写 `display`（回落 `.tab-body` 布局），其余 `display:none`——与 `bindTabs.activate`
+// 的 `style.display = "" / "none"` 翻转口径一致。
+//
+// 纯字符串（零依赖）：可 node 环境单测，也可被任意页面模板复用。
+
+/** 单个 tab 的声明：按钮文案 + 面板内容 + 该面板的差异项 */
+export interface TabSpec {
+  /** tab 标识。面板 id = `${prefix}-tab-${id}`（与 bindTabs 运行期查找约定同源） */
+  id: string;
+  /** 按钮 inner HTML（图标 + 文案由调用方拼 UI_ICONS / t()） */
+  label: string;
+  /** 按钮 data-testid（如仓库页四个 tab 共用 content-tab） */
+  buttonTestid?: string;
+  /** 面板 inner HTML */
+  body: string;
+  /** 面板额外行内样式。布局基线由 `.tab-body` 提供，此处**只放差异**（如 overflow-y:auto / padding:12px） */
+  panelStyle?: string;
+  /** 面板 data-testid（稳定的测试钩子，ADR-133） */
+  panelTestid?: string;
+}
+
+/** tab 壳声明：栏 + 面板组 */
+export interface TabsShellSpec {
+  /** 面板 id 前缀：面板 id = `${prefix}-tab-${id}` */
+  prefix: string;
+  /** tab 列表；首个即默认激活项。调用方须保证非空 */
+  tabs: readonly TabSpec[];
+  /** tab 栏（`.repo-tabs`）的 id */
+  barId?: string;
+  /** tab 栏的 data-testid */
+  barTestid?: string;
+  /** 按钮样式类，默认 `repo-tab`（settings 页历史用 `stg-tab`） */
+  buttonClass?: string;
+  /** 附加到每个面板的类（如诊断页的动画钩子 `diag-panel`） */
+  panelClass?: string;
+}
+
+/**
+ * tab 壳的两半：栏与面板组**分别产出**——落位由调用方决定。
+ *
+ * 为什么不返回拼接好的单串：仓库页的面板嵌在 `.repo-left`（与预览面板并列），
+ * 并不紧邻 tab 栏；工厂只保证**单元结构**（每个面板都是独立 `.tab-body`、id 与
+ * display 口径正确），**相邻性 / 落位属调用方的布局职责**。
+ */
+export interface TabsShell {
+  /** `.repo-tabs` 栏（含全部按钮，首个 active） */
+  bar: string;
+  /** 面板组（每个 tab 一个 `.tab-body`，首个可见、其余 display:none） */
+  panels: string;
+}
+
+/** 按声明产出「tab 栏 + 面板组」两半；调用方负责外层容器与二者落位。 */
+export function renderTabs(spec: TabsShellSpec): TabsShell {
+  const { prefix, tabs, barId, barTestid, buttonClass = "repo-tab", panelClass } = spec;
+
+  const barAttrs =
+    (barId ? ` id="${barId}"` : "") + (barTestid ? ` data-testid="${barTestid}"` : "");
+  const bar = `<div class="repo-tabs"${barAttrs}>${tabs
+    .map(
+      (tab, i) =>
+        `<button class="${buttonClass}${i === 0 ? " active" : ""}"${tab.buttonTestid ? ` data-testid="${tab.buttonTestid}"` : ""} data-tab="${tab.id}">${tab.label}</button>`,
+    )
+    .join("")}</div>`;
+
+  const panelCls = panelClass ? `tab-body ${panelClass}` : "tab-body";
+  const panels = tabs
+    .map((tab, i) => {
+      // 首个可见：不写 display，回落 `.tab-body{display:flex}`；其余 display:none
+      const style = [i === 0 ? "" : "display:none", tab.panelStyle ?? ""].filter(Boolean).join(";");
+      const styleAttr = style ? ` style="${style}"` : "";
+      const testidAttr = tab.panelTestid ? ` data-testid="${tab.panelTestid}"` : "";
+      return `<div class="${panelCls}" id="${prefix}-tab-${tab.id}"${testidAttr}${styleAttr}>${tab.body}</div>`;
+    })
+    .join("");
+
+  return { bar, panels };
+}

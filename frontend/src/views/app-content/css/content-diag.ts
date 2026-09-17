@@ -47,7 +47,13 @@ export const contentDiagCSS: string = `
 .diag-log-subtabs { display:flex; gap:2px; }
 .diag-sub-tab { padding:3px 10px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-sm); font-family:inherit; transition:var(--tr-fast); }
 .diag-sub-tab:hover { background:var(--hover); color:var(--txt); }
-.diag-sub-tab.active { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+.diag-sub-tab.active { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }
+/* 筛选按钮：样式与 .sm-status-tab 同款（多按钮组统一范式）。
+   ⚠️ 本组三条规则曾在 ADR-258 重构中被误删（当时随 .diag-btn* 左栏残留一并清掉，
+   但按钮仍在使用）→ 裸渲染。恢复并统一为 accent 18% 淡化选中态。 */
+.diag-log-fbtn { font-size:var(--fs-sm); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; font-family:inherit; transition:var(--tr-fast); }
+.diag-log-fbtn:hover { background:var(--hover); color:var(--txt); }
+.diag-log-fbtn.active { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }
 .diag-log-filter { display:flex; align-items:center; gap:4px; overflow:hidden; flex:1; min-width:0; }
 .diag-log-filter input { width:130px; font-size:var(--fs-sm); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }
 .diag-log-scroll { overflow-y:auto; flex:1; }

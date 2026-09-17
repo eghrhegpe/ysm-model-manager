@@ -132,7 +132,7 @@ describe("bindTabs：按钮 data-tab 即唯一真值（ADR-259 运行期契约�
   });
 });
 
-describe("AppContentState 字段归属（ADR-262）", () => {
+describe("AppContentState 字段归属（ADR-263）", () => {
   function makeState(): AppContentState {
     const el = document.createElement("div");
     document.body.appendChild(el);
@@ -149,7 +149,7 @@ describe("AppContentState 字段归属（ADR-262）", () => {
 
   it("尾随借宿字段仍在（跨切生命周期未变）：avatarCache / workshopTimer", () => {
     const state = makeState();
-    // 这两个字段的归属见 ADR-262：avatarCache 写入方是模块级下载队列（比页面长寿），
+    // 这两个字段的归属见 ADR-263：avatarCache 写入方是模块级下载队列（比页面长寿），
     // workshopTimer 的清理点在 app 壳层 _render 开头（早于 page.init）——均**未**随本轮下沉。
     expect("avatarCache" in state).toBe(true);
     expect("workshopTimer" in state).toBe(true);

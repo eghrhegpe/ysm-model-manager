@@ -172,7 +172,7 @@ describe("bindSiteEvents — 返回与打开按钮", () => {
       <div id="ws-blocked" style="display:none"></div>
     `;
     const host = { state: { root: el } } as unknown as AppContentHost;
-    // 页作用域句柄（ADR-262）：bindSiteEvents 不再读 host.state.currentSite
+    // 页作用域句柄（ADR-263）：bindSiteEvents 不再读 host.state.currentSite
     const page = createWorkshopPageState();
     return {
       host,

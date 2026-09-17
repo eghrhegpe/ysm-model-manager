@@ -1,4 +1,4 @@
-// ===== 创意工坊页作用域状态（ADR-262）=====
+// ===== 创意工坊页作用域状态（ADR-263）=====
 //
 // 为什么需要这一层：`currentSite` 曾借宿 `AppContentState`（app 壳层共享容器），但它
 // 的语义是**页私有**——「用户此刻在工坊页浏览哪个站点」。借宿的代价不是命名不雅，
@@ -22,8 +22,13 @@ import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.
 /**
  * 创意工坊页作用域状态句柄。
  *
- * 传给 `initWorkshopTabs` / `bindSiteEvents`，替掉整个 `AppContentState`——
- * 这些模块只该看见工坊页的游标，不该够得着 `root` / `pagePanels` / `resizeMove`。
+ * 传给 `initWorkshopTabs` / `bindSiteEvents`，承载它们唯一需要的页语义：当前站点。
+ *
+ * ⚠️ 边界诚实说明：这两个模块**仍收 `host`**（它们还要 `host.state.root` 查 DOM、tabs 还要写
+ * `workshopTimer`），所以「够不着 `root`」并非事实。本句柄兑现的是**更窄但确定**的一条：
+ * 站点游标的读写**只能**经此接口——`host.state.currentSite` 已随字段删除而**编译不过**，
+ * 而 `page` 上没有任何其他字段可写。要封死全部越界（含 `workshopTimer`），需把 `host` 也拆成
+ * 最小面，属已知遗留（ADR-263 §3）。
  */
 export interface WorkshopPageState {
   /** 当前浏览站点（未进入任何站点时为 null）；返回引用而非拷贝，调用方勿缓存 */

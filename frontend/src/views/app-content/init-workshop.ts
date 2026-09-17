@@ -43,7 +43,7 @@ export function initWorkshopPage(host: AppContentHost): void {
   const searchResults = root.getElementById("ws-search-results");
   const creatorView = root.getElementById("ws-creator-view");
   if (!searchResults || !creatorView) return; // 骨架缺失即页面残废，早退（原下游 !/as 断言）
-  // 页作用域状态（ADR-262）：currentSite 归工坊页——不再借宿 AppContentState。
+  // 页作用域状态（ADR-263）：currentSite 归工坊页——不再借宿 AppContentState。
   // 单一入口创建一份实例，tabs（写）/ opener（读）/ 本文件的注入链（读写）共享同一份，
   // 与 refs 同构：杜绝「形状相同、实例不同」的 stale 错位 bug。
   const page = createWorkshopPageState();

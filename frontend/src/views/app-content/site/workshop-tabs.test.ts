@@ -1,4 +1,4 @@
-// ===== initWorkshopTabs 页作用域接线单测（ADR-262）=====
+// ===== initWorkshopTabs 页作用域接线单测（ADR-263）=====
 // 背景：`initWorkshopTabs` 曾直接读写 `host.state.currentSite`——它手持整个 AppContentState，
 // 因此「顺手」写下了 `workshopTimer` 也无人拦得住（同一个 host 参数，同一个 state 对象）。
 // 本文件锁定收窄后的契约：tabs 只拿到页作用域句柄，写站点必须经 `page.setCurrentSite`，
@@ -77,7 +77,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("initWorkshopTabs — 页作用域句柄（ADR-262）", () => {
+describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
   it("默认站点加载后：currentSite 写入页作用域，重渲染读到同一站点", async () => {
     vi.useFakeTimers();
     try {

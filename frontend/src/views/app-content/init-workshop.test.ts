@@ -72,7 +72,6 @@ interface MockHost {
     avatarCache: Record<string, string>;
     workshopCache: Map<string, unknown> | null;
     githubCache: unknown;
-    avatarRefreshRegistered: boolean;
   };
   /** 真订阅桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs */
   subs: SubscriptionBucket;
@@ -95,7 +94,6 @@ function makeHost(cardsHTML = "") {
       avatarCache: {},
       workshopCache: null,
       githubCache: null,
-      avatarRefreshRegistered: false,
     },
     // 真桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs
     subs: new SubscriptionBucket(),
@@ -112,7 +110,7 @@ function getShowSiteView(): (site: unknown) => void {
 }
 
 /**
- * 取 initWorkshopPage 创建的页作用域句柄（ADR-262）。
+ * 取 initWorkshopPage 创建的页作用域句柄（ADR-263）。
  * 它是页私有对象，不再挂在 host.state 上——测试经 initWorkshopTabs 的实参拿到它，
  * 这同时验证了「同一实例必须下传给 tabs」这条单源契约。
  */
@@ -147,7 +145,7 @@ describe("initWorkshopPage — 初始化装配", () => {
     const { host, raw } = makeHost();
     initWorkshopPage(host);
 
-    // ADR-262：currentSite 已下沉到页作用域（不再借宿 AppContentState）——
+    // ADR-263：currentSite 已下沉到页作用域（不再借宿 AppContentState）——
     // 装配后初始为空，且结构性不可在共享 state 上访问到（后者已无该字段，故此处不断言）
     expect(getPageState().getCurrentSite()).toBeNull();
     expect(raw.state.workshopCache).toBeInstanceOf(Map);
@@ -157,7 +155,7 @@ describe("initWorkshopPage — 初始化装配", () => {
     expect(callArgs(initWorkshopTabs, 0)[0]).toBe(host);
     // createWorkshopRefs 生成的单源 ref 原样传给 tabs（同实例约定）
     expect(callArgs(initWorkshopTabs, 0)[1]).toBe(createWorkshopRefs.mock.results[0]!.value);
-    // 同一个页作用域句柄也必须原样传给 tabs 与 opener（同实例约定，ADR-262）
+    // 同一个页作用域句柄也必须原样传给 tabs 与 opener（同实例约定，ADR-263）
     const page = callArgs(initWorkshopTabs, 0)[2];
     expect(page).toBe(getPageState());
     expect(callArgs(bindSiteEvents, 0)[0]).toBe(host);
@@ -172,7 +170,36 @@ describe("initWorkshopPage — 初始化装配", () => {
     const cache = raw.state.workshopCache;
     initWorkshopPage(host);
     expect(raw.state.workshopCache).toBe(cache); // if (!host.state.workshopCache) 守卫
-    expect(raw.subs.globalUnsubs).toHaveLength(1); // _avatarRefreshRegistered 守卫
+    expect(raw.subs.globalUnsubs).toHaveLength(1); // addGlobalOnce 守卫（ADR-261）
+  });
+
+  // ADR-263 决策 3「只给工厂不给单例」的正面锁：每次 init 必须生成**新**页作用域实例，
+  // 旧游标不得跨代泄漏。若哪天有人为省事改成模块级单例，本用例当场转红。
+  it("二次 init → 页作用域句柄换新实例（不复用单例，旧游标不泄漏）", () => {
+    const { host } = makeHost();
+    initWorkshopPage(host);
+    const page1 = callArgs(initWorkshopTabs, 0)[2] as WorkshopPageState;
+    page1.setCurrentSite(site);
+
+    initWorkshopPage(host);
+    const page2 = callArgs(initWorkshopTabs, 1)[2] as WorkshopPageState;
+
+    expect(page2).not.toBe(page1);
+    expect(page2.getCurrentSite()).toBeNull(); // 新实例空游标——不继承上一代
+    expect(page1.getCurrentSite()).toBe(site); // 旧实例不受影响（无全局共享）
+  });
+
+  // 早退分支（骨架缺失）语义固定：page 尚未创建，initWorkshopTabs / bindSiteEvents 都未接线。
+  // 这与旧实现的 `host.state.currentSite = null` 同样被跳过——行为等价，非回归。
+  it("骨架缺失早退 → 不创建页作用域、不接线子模块（与旧置空路径同样被跳过）", () => {
+    const el = document.createElement("div"); // 无 #ws-search-results / #ws-creator-view
+    (el as unknown as { getElementById: (id: string) => Element | null }).getElementById = (
+      id: string,
+    ) => el.querySelector(`#${id}`);
+    const host = { state: { root: el } } as unknown as AppContentHost;
+    initWorkshopPage(host);
+    expect(initWorkshopTabs).not.toHaveBeenCalled();
+    expect(bindSiteEvents).not.toHaveBeenCalled();
   });
 });
 

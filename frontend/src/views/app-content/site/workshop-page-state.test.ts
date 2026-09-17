@@ -1,4 +1,4 @@
-// ===== 创意工坊页作用域状态单测（ADR-262）=====
+// ===== 创意工坊页作用域状态单测（ADR-263）=====
 // 锁定「currentSite 下沉为页作用域单源」的契约：三个消费者（tabs 写、opener 读、
 // init-workshop 的 showRepoModels 注入链读/写）共享**同一个**实例，杜绝「形状相同、
 // 实例不同」的 stale 错位 bug——与 createWorkshopRefs 同族（同因同治）。

@@ -66,7 +66,7 @@ export function makeBonePanelRenderer(tree: BoneTree | null): RenderVrmBonePanel
     panel.innerHTML = "";
     // 面板容器由框架传入(cssText += 重入会累积重复声明,改属性级赋值幂等)
     panel.style.padding = "4px";
-    panel.style.fontSize = "11px";
+    panel.style.fontSize = "var(--fs-sm)";
 
     if (!tree || tree.roots.length === 0) {
       const empty = document.createElement("div");

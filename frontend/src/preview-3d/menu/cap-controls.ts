@@ -99,7 +99,7 @@ ${MENU_SECTION_CSS}
 .cc-thumb-btn { display:flex;flex-direction:column;align-items:center;gap:2px;background:transparent;border:2px solid rgba(255,255,255,0.12);border-radius:var(--radius-md);cursor:pointer;padding:2px; }
 .cc-thumb-btn-active { border-color:var(--accent,#7c83ff);background:color-mix(in srgb,var(--accent) 15%,transparent); }
 .cc-thumb-img { object-fit:cover;display:block;border-radius:var(--radius-sm);pointer-events:none;user-select:none; }
-.cc-span-cap { font-size:9px;color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px; }
+.cc-span-cap { font-size:var(--fs-micro);color:rgba(255,255,255,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px; }
 ${MENU_BTN_CSS}
 `,
   );

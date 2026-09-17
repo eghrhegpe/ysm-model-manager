@@ -65,7 +65,7 @@ export const contentGhCSS: string = `
 .gh-left-head { padding:4px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap; }
 .gh-left-head-label { font-size:var(--fs-sm);font-weight:600;color:var(--muted); }
 .gh-left-head-spacer { flex:1; }
-.gh-left-foot { padding:4px 12px 8px;font-size:8px;color:var(--muted); }
+.gh-left-foot { padding:4px 12px 8px;font-size:var(--fs-micro);color:var(--muted); }
 .gh-creators-list { flex:1; overflow-y:auto; padding:6px 12px; display:flex; flex-direction:column; gap:4px; }
 .gh-creator-card { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:var(--radius-md); border:1px solid var(--bd); background:var(--surf); cursor:pointer; transition:var(--tr-fast); }
 .gh-creator-card:hover { border-color:var(--accent); background:var(--hover); }
@@ -121,7 +121,7 @@ export const contentGhCSS: string = `
 .gh-action-btn-accent { color:var(--accent); }
 .gh-action-btn-muted { color:var(--muted); }
 .gh-save-btn { padding:4px 14px; border-radius:var(--radius-md); border:none; background:var(--accent); color:var(--bg); cursor:pointer; font-size:var(--fs-base); }
-.gh-hint-text { font-size:8px; color:var(--muted); padding:0 12px 4px; }
+.gh-hint-text { font-size:var(--fs-micro); color:var(--muted); padding:0 12px 4px; }
 
 /* ===== 创作者编辑行（GitHub 侧栏编辑） ===== */
 .gh-cr-row { display:flex; align-items:center; gap:3px; padding:4px 6px; border-radius:var(--radius-sm); border:1px solid var(--bd); font-size:var(--fs-sm); margin:1px 12px; }

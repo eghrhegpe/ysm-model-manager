@@ -171,7 +171,7 @@ function cmPgApplyLock(
       const fillEl = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
       if (pctEl && pctEl.textContent !== "100%") {
         pctEl.textContent = "⏳";
-        pctEl.style.fontSize = "9px";
+        pctEl.style.fontSize = "var(--fs-micro)";
         pctEl._dots = 0;
         pctEl._dotTimer = setInterval(() => {
           // isConnected 守卫：pctEl 被重渲染/移除后文本永远停在 ⏳，原判据（textContent

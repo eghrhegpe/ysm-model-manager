@@ -86,7 +86,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     score +
     "%, var(--bd) 0);" +
     '"><div class="health-ring-inner" style="width:52px;height:52px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column">' +
-    '<span style="font-size:18px;font-weight:700;color:var(--txt)">' +
+    '<span style="font-size:calc(18px + var(--fs-scale));font-weight:700;color:var(--txt)">' +
     score +
     '</span><span style="font-size:var(--fs-xs);color:var(--muted)">/100</span></div></div>' +
     '<div style="flex:1;min-width:0">' +

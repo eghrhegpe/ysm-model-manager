@@ -20,7 +20,7 @@ import type { RepoCacheEntry } from "./state.ts";
  * GitHub 页占位消息（加载/空/错误）统一构造器。
  * 2026-09 锐评 P0-2：原 7 处内联 `style="padding:24px;text-align:center;color:var(--muted);font-size:11px"`
  * 与 content-diag.ts 已定义的 `.gh-loading-placeholder` 类逐值相同——CSS 类与内联并存，
- * 统一收编到类；非 11px 变体（10px）保留字号覆盖。
+ * 统一收编到类；更小变体走 var(--fs-xs) 覆盖（比默认 --fs-sm 小 1px，原为写死 10px——基准 12→13px 后 10px 已无对应令牌，故归位到 --fs-xs）。
  */
 function ghPlaceholder(msg: string, fontSize?: string): string {
   return (
@@ -73,7 +73,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
     if (sourceInfo) sourceInfo.textContent = t("downloads.repoCountDesc", { n: ghCreators.length });
     if (!ghCreators.length) {
       if (grid) {
-        grid.innerHTML = ghPlaceholder(t("downloads.noRepos"), "10px");
+        grid.innerHTML = ghPlaceholder(t("downloads.noRepos"), "var(--fs-xs)");
       }
       return;
     }
@@ -92,7 +92,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
             " " +
             escUtil(cr.name) +
             "</div>" +
-            '<div class="ws-desc" style="font-size:9px">' +
+            '<div class="ws-desc" style="font-size:var(--fs-micro)">' +
             escUtil(cr.desc) +
             "</div>" +
             "</div></div>",
@@ -112,7 +112,7 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
     }
   } catch {
     if (grid) {
-      grid.innerHTML = ghPlaceholder(t("common.loadFailed"), "10px");
+      grid.innerHTML = ghPlaceholder(t("common.loadFailed"), "var(--fs-xs)");
     }
   }
 }

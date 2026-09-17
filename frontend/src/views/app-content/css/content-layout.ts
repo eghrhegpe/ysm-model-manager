@@ -154,7 +154,7 @@ ${noAnimationsCSS}
 .rec-card .actions button { font-size:var(--fs-xs); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; transition:var(--tr-fast); }
 .rec-card .actions button:hover { border-color:var(--accent); color:var(--accent); background:var(--hover); }
 
-.health-ring { width:80px; height:80px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; position:relative; }
+.health-ring { width:80px; height:80px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:calc(16px + var(--fs-scale)); font-weight:700; position:relative; }
 .health-ring { animation:breathe-subtle 4s ease-in-out infinite;will-change:filter; }
 .health-ring-inner { position:absolute; inset:6px; border-radius:50%; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-direction:column; }
 .health-tag { display:inline-block; padding:2px 10px; border-radius:var(--radius-xl); font-size:var(--fs-xs); font-weight:600; }

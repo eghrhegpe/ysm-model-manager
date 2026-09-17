@@ -30,7 +30,7 @@ function buildFormHTML(dir: string, total: number, changed: number): string {
   <input id="br-batch-author" class="dlg-input-sm" placeholder="${t("dialog.keepEmpty")}">
   <span class="dlg-section-label">${t("dialog.work")}：</span>
   <input id="br-batch-work" class="dlg-input-sm" placeholder="${t("dialog.keepEmpty")}">
-  <span class="dlg-header-count" style="font-size:9px">${t("dialog.enterToApply")}</span>
+  <span class="dlg-header-count" style="font-size:var(--fs-micro)">${t("dialog.enterToApply")}</span>
 </div>
 <div id="br-replace-mode" class="dlg-section" style="display:none">
   <span class="dlg-section-label">${t("dialog.find")}：</span>

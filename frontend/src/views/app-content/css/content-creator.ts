@@ -1,7 +1,7 @@
 // ===== 创作者域：标签/频道/卡片/详情浮层/编辑（.cr-* 全族；.ws-* 工坊类已归位 content-layout.ts） =====
 export const contentCreatorCSS: string = `
 /* ===== 创作者标签 (cr-tag) ===== */
-.cr-tag { display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:0 5px;border-radius:var(--radius-xs);line-height:16px;font-weight:500;flex-shrink:0; }
+.cr-tag { display:inline-flex;align-items:center;gap:2px;font-size:var(--fs-micro);padding:0 5px;border-radius:var(--radius-xs);line-height:16px;font-weight:500;flex-shrink:0; }
 .cr-tag-game { background:var(--tag-game-bg);color:var(--tag-game); }
 .cr-tag-vup { background:var(--tag-vup-bg);color:var(--tag-vup); }
 .cr-tag-oc { background:var(--tag-oc-bg);color:var(--tag-oc); }
@@ -157,7 +157,7 @@ export const contentCreatorCSS: string = `
   flex:1;
 }
 .cr-card-local-count {
-  font-size:9px;color:var(--muted);flex-shrink:0;
+  font-size:var(--fs-micro);color:var(--muted);flex-shrink:0;
   border:1px solid var(--bd);border-radius:var(--radius-lg);
   padding:0 5px;line-height:14px;
 }
@@ -174,11 +174,11 @@ export const contentCreatorCSS: string = `
 }
 .cr-card-footer .cr-platform-badge {
   display:inline-flex;
-  font-size:8px;padding:1px 5px;border-radius:var(--radius-xs);line-height:14px;
+  font-size:var(--fs-micro);padding:1px 5px;border-radius:var(--radius-xs);line-height:14px;
   background:var(--surf);color:var(--muted);border:1px solid var(--bd);gap:2px;
 }
-.cr-card-footer .cr-tag { font-size:9px;margin-left:auto; }
-.cr-platform-badge { font-size:8px;padding:1px 4px;border-radius:2px;line-height:12px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd); }
+ .cr-card-footer .cr-tag { font-size:var(--fs-micro);margin-left:auto; }
+.cr-platform-badge { font-size:var(--fs-micro);padding:1px 4px;border-radius:var(--radius-xs);line-height:12px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd); }
 .cr-card-search { cursor:pointer;font-size:var(--fs-sm);transition:transform var(--tr-normal);flex-shrink:0; }
 .cr-card-search:hover { transform:scale(1.15); }
 .cr-star-btn { cursor:pointer;font-size:var(--fs-sm);transition:transform var(--tr-normal);flex-shrink:0; }
@@ -307,7 +307,7 @@ export const contentCreatorCSS: string = `
 .cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:20px;max-width:420px;width:90vw;box-shadow:var(--shadow-xl);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease; }
 .cr-detail-box { position:relative; }
 .cr-detail-header { display:flex;align-items:center;gap:10px; }
-.cr-detail-name { font-size:16px;font-weight:700;color:var(--txt); }
+    .cr-detail-name { font-size:calc(16px + var(--fs-scale));font-weight:700;color:var(--txt); }
 .cr-detail-desc { font-size:var(--fs-sm);color:var(--muted);line-height:1.5;display:flex;flex-wrap:wrap;gap:4px;padding:0;background:transparent; }
 .cr-detail-row { display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);color:var(--muted); }
 .cr-detail-row .cr-tag { font-size:var(--fs-xs); }
@@ -317,7 +317,7 @@ export const contentCreatorCSS: string = `
 /* Overlay avatar sizes (overrides .cr-avatar base: 28px → 36px) */
 .cr-detail-avatar-container { width:36px;height:36px;margin:0; }
 .cr-detail-avatar-img { width:36px;height:36px;border-radius:50%;object-fit:cover; }
-.cr-detail-avatar-text { width:36px;height:36px;font-size:16px; }
+    .cr-detail-avatar-text { width:36px;height:36px;font-size:calc(16px + var(--fs-scale)); }
 
 /* Name area */
 .cr-detail-fill { flex:1;min-width:0; }
@@ -343,7 +343,7 @@ export const contentCreatorCSS: string = `
 .cr-detail-actions .secondary { background:transparent;color:var(--muted);border-color:transparent; }
 .cr-detail-actions .secondary:hover { background:var(--hover);color:var(--txt); }
 .cr-model-count { font-size:var(--fs-xs);color:var(--muted);display:inline-flex;align-items:center;gap:2px; }
-.cr-detail-box .cr-star-btn { position:absolute;top:16px;right:16px;font-size:18px; }
+    .cr-detail-box .cr-star-btn { position:absolute;top:16px;right:16px;font-size:calc(18px + var(--fs-scale)); }
 .cr-local-btn { padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:background-color var(--tr-fast),color var(--tr-fast); }
 .cr-local-btn:hover { background:var(--accent);color:var(--bg); }
 .cr-local-count { font-size:var(--fs-xs);color:var(--muted);align-self:center; }

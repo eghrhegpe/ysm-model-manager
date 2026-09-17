@@ -43,10 +43,13 @@ quick_intents:
   - settings/init / keymap / store
 quick_risk_lines:
   - 设置项必须经 settings/store.ts 持久化，禁止页面组件各自读写 localStorage
+  - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（字体三栏、语言选择是已知待修债）
 pitfalls:
   - 各组件各自读写 localStorage → 值不同步、设置页显示与页面行为不一致；必须经 store 单点
   - 键位未持久化 → 重启恢复默认；必须经 store 的 safeSet 落盘
   - label-for 合规（WCAG 4.1.2）：tpl-settings.ts 14+ 处 `<span class="label">` 全部改为 `<label for="...">` 关联对应 select/input，屏幕阅读器可正确读出「标签→控件」关联
+  - **卡片唯一造法 = `stgCard()`**：新增/重构「卡片型」设置项（hdr 图标+标题 / body 值或控件 / `stg-card-desc` 说明 / `actions` 按钮四区）一律走 `frontend/src/views/app-content/settings/stg-card.ts` 的 `stgCard()` 构造器，禁止手写 `<div class="stg-card">` 或裸 `style="background:var(--surf);border:..."` 仿卡——后者三处间距/圆角/动画各自为政，迟早漂移（见样式范式契约）
+  - **三范式各有边界，禁止混搭**：卡片=`stgCard()`（含 `stg-grid` 平铺的同族小卡如键位/路径）；选择器瓦片=`theme-card`（主题六选一，已在 `.theme-picker` 内）；紧凑单控件=`settings-group`+`setting-row`（滑块/下拉/开关，如相机速度、旋转模式、主题自动切换）。不要把单控件塞进 `stg-card`、也不要把同族多选项拆成行组
     # ⚠️ 本行原为 Markdown 粗体 `**label-for 合规**`，但 frontmatter 是 YAML：行首 `*` 被解析为
     #   alias 标记，导致 VitePress 构建报 `unidentified alias "*label-for"`（Pages 长期红）。已去粗体。
 
@@ -97,7 +100,34 @@ status: active
 - 主题写回必须过白名单（cyber/warm/pro/sakura/ocean/mint/system），防脏值污染持久层
 - **路径选择走统一 `modalPicker` 脚手架**（2026-09-05 code_review 修复 8cfbf2e7）：path-cards 多路径选择不再自建手写 modal（`.mc-pick-item`/`.mc-pick-cancel` 类已删），测试须驱动共享 DOM 契约——行 `[data-testid="pick-item"]`（`data-idx` 定位）、取消 `[data-testid="dlg-cancel"]`；扫描提示 tooltip 的 id 保持 `mc-scan-tooltip`（init.test.ts 经 `getElementById` 驱动 hover/泄漏回归断言，改名即测试断裂）
 - **复制到剪贴板必须消费布尔结果**（code_review 同批修复，宿主 instance-ops.ts 见 [global_handlers](./global-handlers.md)）：`copyText` 永不 reject，Clipboard API/execCommand 兜底失败只返回 false——`await copyText(text)` 丢弃返回值会在失败时误弹「已复制」假成功；须 `const ok = await copyText(text); if (!ok) { error toast; return; }`
+  - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（字体三栏、语言选择是已知待修债）
+  - **tab 按钮 ↔ 路由白名单必须同源**：新增设置页 tab 时，`renderStgTabs()`（按钮 `data-tab`）与 `init-pages.ts` 的 `bindTabs(host,".stg-tab","stg",[...])` 的 `ids` 数组**两处都要登记**，缺一不可——漏登 `ids` 会导致按钮可见但内容区 `hidden`（点击无反应，e2e 肉眼才发现）。建议收敛为 `SETTINGS_TABS` 单一常量派生两处（待修债，见样式范式契约外另立）。
 
+## 样式范式契约（UI 一致性）
+
+设置页当前混用 5 种写法，但按语义收敛为 **3 种范式**，各有唯一使用场景。新增/重构设置项先对号入座，禁止自创第四种。
+
+### 范式总览
+
+| 范式 | 唯一造法 | 适用 | 反例（待修债） |
+|------|----------|------|----------------|
+| 卡片（大/小卡） | `stgCard()`（`settings/stg-card.ts`） | 自包含功能块：hdr（图标+标题）+ body（值/控件）+ `stg-card-desc`（说明）+ `actions`（按钮）四区齐全；同族多选项用 `stg-grid` 平铺（路径三卡、键位六卡） | 字体三栏（裸 `style="background:var(--surf);border:..."` 内联手写卡）、语言选择（手写 `<div class="stg-card">`，未走构造器）→ 间距/圆角/动画与正典卡不一致 |
+| 选择器瓦片 | `theme-card`（`.theme-picker` 内） | 同族多选项的「点选」场景（主题六选一） | 勿把普通卡片写成瓦片 |
+| 紧凑行组 | `settings-group` + `setting-row` | 单控件占用整行的紧凑参数：滑块/下拉/开关（相机速度、旋转模式、主题自动切换） | 勿把 2 字标签撑满整行却内容稀疏的项硬塞；确需并排时改用 `stg-grid` 小卡 |
+
+### 判定口诀
+
+- **「一个有标题+说明+可能按钮的功能块」→ `stgCard()`**
+- **「一排里选一个」→ `theme-card` 瓦片**
+- **「一个滑块/下拉/开关独占一行」→ `setting-row`**
+
+### 已知待修债（回填计划，按卡推进）
+
+1. `renderStgLangSelect()`（tpl-settings.ts）手写 `<div class="stg-card">` → 改为 `stgCard()`（hdr=语言标题，body=select+描述）。
+2. `renderStgFontFamily()`（tpl-settings.ts）三栏裸样式 `div` → 改为 `stgCard()` 紧凑卡（或 `stg-grid` 内三张 `stgCard`）。
+3. 主题自动切换 / 相机速度 / 旋转模式维持 `setting-row`（本就适合，不动）。
+
+> 背景：设置页跨多 ADR/PR 长出，`stgCard()` 是 ADR-040 拆分后才有的「正典卡片」，早于它的 section（主题/字体/相机/语言）从未回填，导致「卡片」在项目里实际有 3 种实现。此为存量债，非新增。
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

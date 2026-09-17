@@ -39,8 +39,9 @@
  *   不是漏改；改一处不必同步其它主题。
  * - 本块 :root 与 .theme-cyber **共块是设计**：cyber 为默认主题（theme-core.ts THEME_DARK），
  *   即「无覆盖的基线」，不是遗漏独立块。按选择器扫描主题块时勿把它当边界异常。
- * - 主题卡片色点（tpl-settings.ts）与上述变量**无映射关系**，是手调设计值；
- *   见 settings/theme-cards.test.ts 首部说明。
+ * - 主题卡片色点（tpl-settings.ts renderStgThemePicker）三态绑定 --bg/--accent/--bd，
+ *   经 .theme-x 作用域类就地解析（全仓 var 使用 72/245/212，对应常态/选中态/边框高频色），
+ *   零硬编码、零运行期 IO；加主题只需 variables.css 加块 + THEME_VALID 加名。见 theme-cards.test.ts。
  * - 交互态口径（2026-08-15 c40c3d66f 起，2026-09 补全）：**常态=容器色 → 悬停/选中=--hover**。
  *   原 --act（选中态二级色）已全量退役删除；按钮若常态已占 --hover，改为「常态 transparent、
  *   悬停 --hover」反向取值，勿再新增第三级色。本文件末尾注释保留 --act 仅为历史审计留存。

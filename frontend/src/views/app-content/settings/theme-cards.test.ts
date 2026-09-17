@@ -5,13 +5,10 @@
 //   1) 卡片集合与 THEME_VALID 一致 —— 新增主题必须同步加卡片（防「加主题忘加卡片」）
 //   2) 每张三色互异且为合法 hex —— 防手抄笔误
 //
-// ⚠️ 本测试**不**承诺色点与 variables.css 的主题变量一一对应。
-//    实测（2026-09）：色点是历史手调的设计值——只有部分主题的首色恰好等于 --accent
-//    （cyber #9575cd / warm #8b4513 / pro #ff8a65 / sakura #d81b60），
-//    ocean 的 --accent #9fa8da 落在第 3 位，mint 三色则**均不在**其变量表中。
-//    因此色点应理解为「主题外观缩略图」，不是「变量派生值」。
-//    若将来决定「色点须反映主题实际配色」，需先确立映射约定（含 :root 与 .theme-cyber
-//    共块的基线共享）再改写断言——那是引入新契约，不是发现既有契约。
+// ⚠️ 本测试**锁定**色点与主题变量的映射关系（非「无映射」）：
+//    每张卡片三色点绑定 --bg / --accent / --bd（全仓 var 使用 72/245/212，
+//    对应常态基调 / 选中态强调 / 边框选中态），经 .theme-x 作用域类就地解析。
+//    因此色点 = 主题实际三态色，无硬编码 hex；加主题忘加卡片 / 改了映射会立刻红。
 import { describe, it, expect, vi } from "vitest";
 import { THEME_VALID } from "@/theme-core";
 import { settingsHTML } from "./tpl-settings.ts";
@@ -26,14 +23,15 @@ vi.mock("@/backend/platform-web.ts", () => ({
 }));
 
 /** 从设置页 HTML 中抽出每张主题卡片的 data-theme 与三个色点 */
-function parseCards(html: string): { theme: string; colors: string[] }[] {
-  const cards: { theme: string; colors: string[] }[] = [];
-  // 按 .theme-card 切块：每块含 data-theme="xxx" 与其后的三个 background:#hex
-  const cardRe = /class="theme-card"\s+data-theme="([^"]+)"([\s\S]*?)(?=class="theme-card"|$)/g;
+function parseCards(html: string): { theme: string; vars: string[] }[] {
+  const cards: { theme: string; vars: string[] }[] = [];
+  // 以 data-theme="x" 为锚切块：每块含其后三个 background:var(--xxx)
+  // 以 data-theme="x" 切出卡片壳，取其首个内层 div（色点容器）里的 var(--xxx)
+  const cardRe = /data-theme="([^"]+)"[^>]*>\s*<div[^>]*>([\s\S]*?)<\/div>/g;
   let m: RegExpExecArray | null;
   while ((m = cardRe.exec(html)) !== null) {
-    const colors = [...m[2].matchAll(/background:\s*(#[0-9a-fA-F]+)/g)].map((c) => c[1]);
-    cards.push({ theme: m[1], colors });
+    const vars = [...m[2].matchAll(/background:\s*var\(--([a-z-]+)\)/g)].map((c) => c[1]);
+    cards.push({ theme: m[1], vars });
   }
   return cards;
 }
@@ -46,7 +44,7 @@ describe("主题卡片契约（THEME_VALID 是唯一事实源）", () => {
     // 若 tpl-settings.ts 改了卡片 HTML 结构导致正则抓不到，这里先红，
     // 避免下面两条断言因「空集合」而假绿。
     expect(cards.length).toBeGreaterThan(0);
-    expect(cards.every((c) => c.colors.length === 3)).toBe(true);
+    expect(cards.every((c) => c.vars.length === 3)).toBe(true);
   });
 
   it("卡片 data-theme 集合 == THEME_VALID 去掉 system", () => {
@@ -54,16 +52,11 @@ describe("主题卡片契约（THEME_VALID 是唯一事实源）", () => {
     const actual = cards.map((c) => c.theme).sort();
     expect(actual).toEqual(expected);
   });
-
-  it("每张卡片三色互异且为合法 hex", () => {
+  it("每张卡片三色点绑定 --bg/--accent/--bd（常态/选中态/边框三态变量，零硬编码）", () => {
     for (const card of cards) {
-      expect(card.colors).toHaveLength(3);
-      // 互异：防「复制粘贴忘记改色」
-      expect(new Set(card.colors).size).toBe(3);
-      // 合法 hex：统一要求 6 位，防简写/笔误
-      for (const c of card.colors) {
-        expect(c).toMatch(/^#[0-9a-fA-F]{6}$/);
-      }
+      expect(card.vars).toHaveLength(3);
+      // 三态变量完整且无误：防「绑错变量 / 漏绑」
+      expect(new Set(card.vars)).toEqual(new Set(["bg", "accent", "bd"]));
     }
   });
 });

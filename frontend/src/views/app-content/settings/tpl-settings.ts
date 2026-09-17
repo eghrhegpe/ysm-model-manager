@@ -4,6 +4,7 @@
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
+import { THEME_VALID } from "@/theme-core";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { navItems } from "@/views/app-nav/nav-items.ts";
@@ -143,61 +144,42 @@ function renderStgLangSelect(): string {
   );
 }
 
+// ===== 主题卡片数据：三态色点绑定 + 图标键（单一事实源 = THEME_VALID）=====
+// 色点绑定全仓 var 使用最高频的 3 个主题变量：
+//   --bg(72) 常态基调 / --accent(245) 选中态强调 / --bd(212) 边框选中态
+// 经每张卡 .theme-${t} 作用域类就地解析（CSS 变量跨 Shadow DOM 靠继承穿透），
+// 零硬编码、零运行期 IO、加主题只需 variables.css 加块 + THEME_VALID 加名。
+const THEME_SWATCH_VARS = ["bg", "accent", "bd"] as const;
+const THEME_ICON: Record<string, string> = {
+  warm: "sun",
+  sakura: "sakura",
+  mint: "mint",
+  pro: "dot",
+  cyber: "moon",
+  ocean: "ocean",
+};
+
 function renderStgThemePicker(): string {
-  return `<!-- 主题卡片：直接展示 -->
+  const cards = THEME_VALID.filter((theme) => theme !== "system")
+    .map((theme) => {
+      const icon = UI_ICONS[THEME_ICON[theme] as keyof typeof UI_ICONS] ?? UI_ICONS.dot;
+      const label = t(("settings.theme." + theme) as Parameters<typeof t>[0]);
+      const swatches = THEME_SWATCH_VARS.map(
+        (v) =>
+          `<span style="width:8px;height:8px;border-radius:50%;background:var(--${v})"></span>`,
+      ).join("");
+      return `<div class="theme-card theme-${theme}" data-theme="${theme}">
+        <div style="display:flex;gap:2px;margin-bottom:2px">${swatches}</div>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${icon} ${label}</span>
+      </div>`;
+    })
+    .join("");
+
+  return `<!-- theme cards: dots bound to --bg/--accent/--bd via .theme-x scope -->
 <div class="settings-group" style="animation-delay:0ms">
   <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
     <span class="label">${UI_ICONS.appearance} ${t("settings.theme.select")}</span>
-    <div class="theme-picker" id="theme-picker">
-      <div class="theme-card" data-theme="warm">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#8b4513"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#a0866a"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#d4a574"></span>
-        </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.sun} ${t("settings.theme.warm")}</span>
-      </div>
-      <div class="theme-card" data-theme="sakura">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#d81b60"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#f5b8cc"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#fce4ec"></span>
-        </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.sakura} ${t("settings.theme.sakura")}</span>
-      </div>
-      <div class="theme-card" data-theme="mint">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#D5F5E3"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#A2D9CE"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#76D7C4"></span>
-        </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.mint} ${t("settings.theme.mint")}</span>
-      </div>
-      <div class="theme-card" data-theme="pro">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#ff8a65"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#b0bec5"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#757575"></span>
-        </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.dot} ${t("settings.theme.pro")}</span>
-      </div>
-      <div class="theme-card" data-theme="cyber">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#9575cd"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#f1fa8c"></span>
-        </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.moon} ${t("settings.theme.cyber")}</span>
-      </div>
-      <div class="theme-card" data-theme="ocean">
-        <div style="display:flex;gap:2px;margin-bottom:2px">
-          <span style="width:8px;height:8px;border-radius:50%;background:#5c6bc0"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#7986cb"></span>
-          <span style="width:8px;height:8px;border-radius:50%;background:#9fa8da"></span>
-        </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.ocean} ${t("settings.theme.ocean")}</span>
-      </div>
-    </div>
+    <div class="theme-picker" id="theme-picker">${cards}</div>
   </div>
 </div>`;
 }

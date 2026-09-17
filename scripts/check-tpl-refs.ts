@@ -34,6 +34,8 @@ function collectDefinedIds(text: string) {
   const out = new Set();
   // 双引号/单引号字面量 + 模板字符串内的静态 id="..."（模板 ${} 片段天然被排除，因为引号不闭合）
   for (const m of text.matchAll(/\bid="([a-zA-Z0-9_-]+)"/g)) out.add(m[1]);
+  // 工厂参数形式：stgCard(..., { cardId: "stg-files-card" }) 由构造器产出 id="..."（ADR-040 收敛）
+  for (const m of text.matchAll(/\bcardId\s*:\s*"([a-zA-Z0-9_-]+)"/g)) out.add(m[1]);
   for (const m of text.matchAll(/\bid='([a-zA-Z0-9_-]+)'/g)) out.add(m[1]);
   // JS 属性赋值形式：el.id = "xxx" / el.style.id = "xxx"（动态创建的真实 id，如 fab.ts 注入 style）
   for (const m of text.matchAll(/\.id\s*=\s*"([a-zA-Z0-9_-]+)"/g)) out.add(m[1]);
@@ -53,6 +55,21 @@ function collectRefs(text: string) {
     if (!out.has(m[1])) out.set(m[1], line);
   }
   return out;
+}
+
+/**
+ * 收集本文件声明的「工厂 tab 坐标」：renderTabs(spec) 以 `prefix` + 各 tab 的 `id` 组合
+ * 出面板 id（`${prefix}-tab-${id}`，ADR-259），模板里是表达式而非字面量，静态扫描不可见。
+ * 取前缀与该文件内全部 `id:` 字面量（tpl.ts 里只用于 tab 声明，无杂项）作为白名单——
+ * 这比「放行任意 `*-tab-*`」紧得多：后缀仍须是**已声明的 tab id**，断链依旧能红。
+ */
+function collectFactoryTabIds(text: string) {
+  const prefixes = new Set<string>();
+  const tabIds = new Set<string>();
+  if (!text.includes("renderTabs(")) return { prefixes, tabIds };
+  for (const m of text.matchAll(/\bprefix\s*:\s*"([a-z0-9-]+)"/g)) prefixes.add(m[1] as string);
+  for (const m of text.matchAll(/^\s*id\s*:\s*"([a-z0-9-]+)"/gm)) tabIds.add(m[1] as string);
+  return { prefixes, tabIds };
 }
 
 function main() {
@@ -85,20 +102,32 @@ function main() {
     }
   }
 
-  // 汇总所有引用
+  // 汇总所有引用 + 收集工厂产出 id 的「前缀」
   const refs = new Map(); // id -> [{ file, line }]
+  const factoryPrefixes = new Set<string>();
+  const factoryTabIds = new Set<string>();
   for (const f of files) {
     const text = fs.readFileSync(f as string, "utf8");
+    const fac = collectFactoryTabIds(text);
+    for (const p of fac.prefixes) factoryPrefixes.add(p);
+    for (const t of fac.tabIds) factoryTabIds.add(t);
     for (const [id, line] of collectRefs(text)) {
       if (!refs.has(id)) refs.set(id, []);
       refs.get(id).push({ file: f, line });
     }
   }
 
-  // 交叉核对：引用但无定义 → 断链
+  // 交叉核对：引用但无定义 → 断链。
+  // 例外（工厂产出 id）：renderTabs 按 `${prefix}-tab-${tab.id}` 产出面板 id（ADR-259），
+  // 模板里是表达式而非字面量，静态扫描看不见。此处按**已声明的 prefix + tab id 对**放行：
+  // 两者都取自各文件 renderTabs(...) 的字面量，未声明的后缀仍判断链（保留本闸的牙）。
+  const isFactoryTabId = (id: string): boolean => {
+    const m = /^([a-z0-9-]+)-tab-([a-z0-9-]+)$/.exec(id);
+    return !!m && factoryPrefixes.has(m[1] as string) && factoryTabIds.has(m[2] as string);
+  };
   const broken: any[] = [];
   for (const [id, occ] of refs) {
-    if (!defined.has(id)) {
+    if (!defined.has(id) && !isFactoryTabId(id)) {
       for (const o of occ) broken.push({ id, file: o.file, line: o.line });
     }
   }

@@ -268,6 +268,9 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - **变更集解析失败必须阻断**，不静默空跑放行（fail-closed）
 - Windows 下 npx 是 npx.cmd，node spawn 需 `shell: true`
 - git 数组参数直走 `procRun`（无 shell 拼接）：ref 允许 `$`/backtick 等元字符，拼字符串经 shell 会构成命令注入（pre-push stdin 的 localRef 可被攻击者控制）
+- **`debt` 标签只在本地 gate 生效；CI 把它当独立 shell 步骤跑 → 退出码传染，照红**（2026-09-17 实证）：本地 `check-deadcode-baseline` 声明 `debt`（非阻断，结论 `PASS ✅ 放行推送`），但 `.github/workflows/test.yml` 里它是**单独一步** `node scripts/check-deadcode-baseline.ts --json | Out-String`，**退出码 1 直接令 job 失败**——与本地「存量债不阻断」判读无关。**推论：本地 PASS ≠ CI 绿；凡 CI 单独跑且非零退出的检查项，债务策略都救不了它。**
+- **基线自动收编必须随提交入库，否则 CI 结构性红**（2026-09-17 根因）：脚本设计「新增 ∩ 责任集为空 → 自动收编进基线 + INFO 留痕」，但**只在非 `--json` 模式写盘**；CI 传 `--json`（无写盘）+ 用**已提交的**基线比对 ⇒ 未提交的收编等于没发生。本次 71 笔一次推送时踩中：本地 `pre-push-gate --all` 把 14 条新增收编进 `scripts/baseline/deadcode-baseline.json`（工作区已改），未提交 → CI 见 14 条「新增」→ 红。**处置：提交该基线文件**（时间戳 + 过期项清理 + 新增项一并入库）。
+- **`*-3d.ts` 的 `createXxx3D` / `YsmOpenOptions` 属 knip 假阳性，勿删导出**（2026-09-17 复核）：`preview-library.ts:6-7` 明文规定「自身**不**反向 import 任何 createXxx3D 包装器，跨类型跳转靠**注册表反向注入**」——各包装器在模块加载时 `registerReRoute(id, opener)`（如 `fbx-3d.ts:15`），故这些导出**按设计就没有跨模块 import**，且测试要 `import { createYsm3D }` 触发注册。判据：**「导出未被其他模块 import」≠「死代码」**，反向注入/自注册架构下必须靠基线放行；删掉会同时打断路由与测试。
 
 ## 相关
 

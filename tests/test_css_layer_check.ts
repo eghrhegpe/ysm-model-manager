@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { noAnimationsCSS } from "../frontend/src/utils/dom/css.ts";
 import {
   expandKeyframeInterpolations,
+  findStrayCommentClose,
   hasMotionDeclaration,
   hasNoAnimationsBridge,
   readConstLiteral,
@@ -122,4 +123,23 @@ assert.equal(
 );
 console.log("  ✓ 检查 4 判定：动效识别（含自定义属性豁免）+ 桥通配/逐类三态");
 
-console.log("\nOK: css-layer-check 插值展开契约（回归锁 6 条）");
+// 7) 注释完整性：注释体内误写星号+斜杠（块注释闭合符）→ 检出；正常注释 / `//` 行注释 → 不误报
+//    真实病因（2026）：content-layout.ts 注释写成“fadeSlide*/breathe-subtle”，注释提前闭合，
+//    解析器吞掉紧随的 @keyframes fadeSlideUp → app-content 全 shadow 入场动画静默失效。
+assert.ok(
+  findStrayCommentClose("/* 引用的 fadeSlide*/breathe-subtle 必须重定义 */\n@keyframes a {}") >= 0,
+  "块注释体内误写闭合符应被检出（会吞掉紧随的 @keyframes）",
+);
+assert.equal(
+  findStrayCommentClose("/* 引用的 fadeSlide* 与 breathe-subtle 必须重定义 */\n@keyframes a {}"),
+  -1,
+  "正常块注释不得误报",
+);
+assert.equal(
+  findStrayCommentClose("// 收口 .dlg-*/.afv-*/.mc-pick-* 于 components.css\nexport const x = 1;"),
+  -1,
+  "`//` 行注释内的闭合符组合不得误报（不在 CSS 上下文）",
+);
+console.log("  ✓ 检查 5 判定：注释完整性（破注释检出 + 正常注释/`//` 不误报）");
+
+console.log("\nOK: css-layer-check 插值展开契约（回归锁 7 条）");

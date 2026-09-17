@@ -114,3 +114,20 @@ export function hasNoAnimationsBridge(cssText: string): boolean {
   if (/\bnoAnimationsCSS\b/.test(cssText)) return true;
   return /:host-context\(\s*\.no-animations\s*\)\s*\*/.test(cssText);
 }
+
+/**
+ * 注释完整性探测：返回「注释体内误写星号+斜杠（即块注释闭合符）导致提前闭合」后
+ * 残留的游离闭合符下标（无则 -1）。
+ *
+ * 原理：先按 TS/CSS 语义剥注释——`//` 行注释 + 块注释（块注释按「首个闭合符」结束）。
+ * 若注释体里再写闭合符（如 `fadeSlide*` 紧跟 `/breathe-subtle`、`.dlg-*` 紧跟 `/.afv-*`），
+ * 注释提前结束，其后文本成为裸 CSS，剥完后仍残留游离闭合符。
+ *
+ * 为何严重：解析器会把裸文本当选择器、并吞掉紧随的第一个 `{...}` 块——2026 实测吞掉
+ * `@keyframes fadeSlideUp`，使 app-content 全 shadow 的入场动画静默失效（无报错，
+ * getComputedStyle().animationName 仍显示名字，但 getAnimations() 为 0）。
+ */
+export function findStrayCommentClose(src: string): number {
+  const stripped = src.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  return stripped.indexOf("*/");
+}

@@ -35,6 +35,18 @@ describe("content-css 聚合层", () => {
   it("每叶内容均出现在聚合中（单叶丢失定位）", () => {
     for (const css of leaves) expect(contentCSS).toContain(css);
   });
+
+  it("注释体内不得出现 `*/`：提前闭合会吞掉紧随的 @keyframes（曾致全 shadow fadeSlideUp 动画静默失效）", () => {
+    // CSS 注释按「首个 */ 闭合」解析。若注释体里再写 */（如 “fadeSlide*/breathe-subtle”），
+    // 注释提前结束，其后文本成为裸 CSS，被当作选择器、吞掉紧随的第一个 {...} 块——
+    // 2026 实测吞掉 @keyframes fadeSlideUp，使 .stg-card / .settings-group / .setting-row 等
+    // 全部入场动画失效（无报错、getAnimations() 为 0，长期潜伏；只有定义在破注释之前的
+    // card-in / pageIn 等旧动画仍能播）。判据：按首闭合语义剥注释后，不应再有游离的 */。
+    const stripped = contentCSS.replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(stripped).not.toContain("*/");
+    // 历史上唯一被吞的那条定义必须幸存（防注释再次破口）
+    expect(stripped).toContain("@keyframes fadeSlideUp");
+  });
 });
 
 describe("设置页组间距契约（content-stg）", () => {

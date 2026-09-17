@@ -47,6 +47,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   expandKeyframeInterpolations,
+  findStrayCommentClose,
   hasMotionDeclaration,
   hasNoAnimationsBridge,
 } from "./_lib/css-layer-utils.ts";
@@ -440,6 +441,25 @@ for (const dom of [...SHADOW_DOMAINS, ...EXTRA_MOTION_DOMAINS]) {
   problems.push(
     `[ERROR] ${dom.name}: shadow 域含 animation/transition 却未 adopt .no-animations 通配桥——「关闭动画」在本域静默失效（文档层规则不穿透 shadow 边界）。修法：在自身 shadow 样式串拼接 utils/dom/css.ts 的 noAnimationsCSS（勿逐类登记 :host-context 选择器，那正是漂移源）`,
   );
+}
+
+// ── 检查 5：shadow CSS 注释体内不得含 `*/`（提前闭合会吞掉紧随的规则）──
+// CSS 注释按「首个 */ 闭合」解析。注释体里再写 `*/`（如 `fadeSlide*/breathe-subtle`）会让注释提前结束，
+// 其后文本成为裸 CSS，被当作选择器、并吞掉紧随的第一个 `{...}` 块——2026 实测吞掉
+// `@keyframes fadeSlideUp`，使 app-content 全 shadow 的入场动画（.stg-card/.settings-group/
+// .setting-row/.gh-card/...）静默失效：无报错、`getComputedStyle().animationName` 仍显示名字，
+// 但 `getAnimations()` 为 0（只有定义在破注释之前的 keyframe 仍能播）。判据：按首闭合语义剥注释后
+// 不应再有游离 `*/`。
+for (const dom of SHADOW_DOMAINS) {
+  for (const f of dom.css) {
+    const raw = readSafe(f) ?? "";
+    const i = findStrayCommentClose(raw);
+    if (i < 0) continue;
+    errorCount++;
+    problems.push(
+      `[ERROR] ${dom.name}: ${f} 注释体内含 '*/'（星号+斜杠）会提前闭合注释，吞掉紧随的规则（曾致 @keyframes fadeSlideUp 静默失效 → 全 shadow 入场动画不播）。修法：改写注释里的该组合（如 'a*/b' → 'a* 与 b'）`,
+    );
+  }
 }
 
 // ── 输出 ──

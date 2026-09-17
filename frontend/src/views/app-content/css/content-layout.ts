@@ -26,7 +26,7 @@ export const contentLayoutCSS: string = `
 @keyframes fade-in { from{opacity:0} to{opacity:1} }
 /* 以下 4 个 keyframes 为 components.css 全局副本的 shadow 本地化：
    document 层定义的 keyframes 不穿透 Shadow DOM 边界，shadow 内 .stg-card / .setting-row /
-   .gh-card / .repo-tab / .recy-item / .rm-* 等引用的 fadeSlide*/breathe-subtle 必须在本层重定义。
+   .gh-card / .repo-tab / .recy-item / .rm-* 等引用的 fadeSlide* 与 breathe-subtle 必须在本层重定义。
    components.css 的全局副本仅服务 document 层光 DOM（dialog 等），两处定义并存但作用域不同。 */
 /* 注意：以下本地化 keyframe 必须与 frontend/css/components.css 全局副本逐字节一致
    （translateY(6px)/translateY(-4px)/translateX(-8px)），否则 document 层 dialog 与

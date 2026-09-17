@@ -751,7 +751,7 @@ export const en: Record<string, string> = {
   "diagnostics.opRename": "Rename",
   "diagnostics.opDelete": "Delete",
   "diagnostics.opUI": "UI",
-  "diagnostics.searchPlaceholder": "Search model names...",
+  "diagnostics.searchPlaceholder": "Search log content...",
   "diagnostics.scanHint": "Click Start Scan to detect modpack conflicts",
   "diagnostics.noMatchLogs": "No matching logs",
   "diagnostics.itemsCount": "{n} items",

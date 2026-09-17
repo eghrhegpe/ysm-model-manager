@@ -199,6 +199,80 @@ describe("initDiagnostics — 日志面板", () => {
     expect(fn.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("搜索命中报错内容 / 目标路径（不再只匹配模型名）", async () => {
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Status: "failed", Operation: "import", ModelName: "a.ysm", ErrorMsg: "权限不足" },
+        { Status: "success", Operation: "scan", ModelName: "b.ysm", TargetDir: "/mc/versions/1.20" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    await waitFor(() => list.textContent!.includes("权限不足"));
+    const input = root.getElementById("diag-log-search") as HTMLInputElement;
+    // 报错内容可命中（旧实现只匹配 ModelName，此处必然空手）
+    input.value = "权限不足";
+    input.dispatchEvent(new Event("input"));
+    await waitFor(() => list.textContent!.includes("权限不足") && !list.textContent!.includes("1.20"));
+    // 目标路径同样可命中
+    input.value = "1.20";
+    input.dispatchEvent(new Event("input"));
+    await waitFor(() => list.textContent!.includes("1.20") && !list.textContent!.includes("权限不足"));
+  });
+
+  it("运行时子 tab：搜索按 Message 过滤，且不回落拉取操作日志", async () => {
+    const opFn = vi.fn(() => []);
+    const rtFn = vi.fn(() => [
+      { Message: "sync failed: timeout", Timestamp: 1700000000001 },
+      { Message: "watcher started", Timestamp: 1700000000000 },
+    ]);
+    mockApp({ GetImportLogs: opFn, GetRuntimeLogs: rtFn });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
+    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    await waitFor(() => rtList.textContent!.includes("watcher started"));
+    const opCalls = opFn.mock.calls.length;
+    const input = root.getElementById("diag-log-search") as HTMLInputElement;
+    input.value = "timeout";
+    input.dispatchEvent(new Event("input"));
+    await waitFor(
+      () => rtList.textContent!.includes("timeout") && !rtList.textContent!.includes("watcher started"),
+    );
+    expect(opFn.mock.calls.length).toBe(opCalls); // 搜索分派到运行时列表，不再白跑 GetImportLogs
+  });
+
+  it("运行时子 tab：搜索无命中 → 「无匹配日志」占位", async () => {
+    mockApp({ GetRuntimeLogs: vi.fn(() => [{ Message: "watcher started", Timestamp: 1 }]) });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
+    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    await waitFor(() => rtList.textContent!.includes("watcher started"));
+    const input = root.getElementById("diag-log-search") as HTMLInputElement;
+    input.value = "zzz-nothing";
+    input.dispatchEvent(new Event("input"));
+    await waitFor(() => rtList.textContent!.includes("无匹配日志"));
+  });
+
+  it("运行时子 tab：点状态 chips 仅更新选中态，不回落拉取操作日志", async () => {
+    const opFn = vi.fn(() => []);
+    mockApp({ GetImportLogs: opFn, GetRuntimeLogs: vi.fn(() => [{ Message: "ok", Timestamp: 1 }]) });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    await waitFor(() =>
+      (root.getElementById("diag-runtime-list") as HTMLElement).textContent!.includes("ok"),
+    );
+    const opCalls = opFn.mock.calls.length;
+    const chip = root.querySelector('.diag-log-fbtn[data-status="success"]') as HTMLElement;
+    chip.click();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(opFn.mock.calls.length).toBe(opCalls);
+    expect(chip.classList.contains("active")).toBe(true);
+  });
+
   it("GetImportLogs 抛错 → 加载日志失败占位", async () => {
     mockApp({ GetImportLogs: vi.fn(() => Promise.reject(new Error("boom"))) });
     const { root } = makeRoot();

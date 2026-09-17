@@ -76,20 +76,38 @@ function dgLsFormatTime(ts: string | number | undefined): string {
   });
 }
 
+/** 读取搜索框当前值（小写去空白）——操作日志与运行时日志共用同一个输入框 */
+function dgLsReadSearch(root: ShadowRoot): string {
+  return (
+    (root.getElementById("diag-log-search") as HTMLInputElement | null)?.value
+      ?.trim()
+      .toLowerCase() || ""
+  );
+}
+
+/**
+ * 操作日志搜索命中域：模型名 / 报错内容 / 目标路径 / 源路径 / 操作类型。
+ * 2026-09-18 收口：此前只匹配 ModelName，placeholder 写着「搜索模型名」——用户搜报错文本必然空手。
+ */
+function dgLsMatchDiagSearch(l: ImportLogLike, search: string): boolean {
+  if (!search) return true;
+  return [l.ModelName, l.ErrorMsg, l.TargetDir, l.SourcePath, l.Operation]
+    .map((v) => String(v ?? ""))
+    .join("\n")
+    .toLowerCase()
+    .includes(search);
+}
+
 function dgLsFilterDiagLogs(logs: ImportLogLike[], root: ShadowRoot): ImportLogLike[] {
   const activeBtn = root.querySelector(".diag-log-fbtn.active");
   const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status : "all";
-  const search =
-    (root.getElementById("diag-log-search") as HTMLInputElement | null)?.value
-      ?.trim()
-      .toLowerCase() || "";
+  const search = dgLsReadSearch(root);
   return logs
     .slice(-500)
     .reverse()
     .filter((l) => {
       if (filter !== "all" && l.Status !== filter) return false;
-      if (search && !(l.ModelName || "").toLowerCase().includes(search)) return false;
-      return true;
+      return dgLsMatchDiagSearch(l, search);
     });
 }
 
@@ -178,10 +196,26 @@ interface RuntimeLogLike {
   Timestamp?: string | number;
 }
 
-function dgLsRenderRuntimeRows(logs: RuntimeLogLike[], esc: EscFn, copyLogTitle: string): string {
+/**
+ * 运行时日志按搜索词过滤（只匹配 Message——运行时日志无 Status/路径概念）。
+ * 与操作日志同口径：在「最新 300 条」窗口内检索（超窗口的历史条目不召回，避免大缓冲全量扫描）。
+ */
+function dgLsFilterRuntimeLogs(logs: RuntimeLogLike[], root: ShadowRoot): RuntimeLogLike[] {
+  const search = dgLsReadSearch(root);
   return logs
     .slice(-300)
     .reverse()
+    .filter(
+      (l) =>
+        !search ||
+        String(l.Message ?? "")
+          .toLowerCase()
+          .includes(search),
+    );
+}
+
+function dgLsRenderRuntimeRows(logs: RuntimeLogLike[], esc: EscFn, copyLogTitle: string): string {
+  return logs
     .map((l, i) => {
       const timeStr = dgLsFormatTime(l.Timestamp);
       return `<div class="log-row" style="animation-delay:${stagger(i, 20, 400)}ms">
@@ -223,7 +257,9 @@ export async function loadRuntimeLogs(root: ShadowRoot, esc: EscFn): Promise<voi
     const logs: RuntimeLogLike[] = (await GetRuntimeLogs()) || [];
     if (dgLsCheckStale(gen)) return;
     if (!logs.length) return dgLsSetEmpty(list, "diagnostics.noRuntimeLogs");
-    list.innerHTML = dgLsRenderRuntimeRows(logs, esc, copyLogTitle);
+    const filtered = dgLsFilterRuntimeLogs(logs, root);
+    if (!filtered.length) return dgLsSetEmpty(list, "diagnostics.noMatchLogs");
+    list.innerHTML = dgLsRenderRuntimeRows(filtered, esc, copyLogTitle);
   } catch (e) {
     logError("diagnostics", "加载运行时日志失败", e);
     dgLsSetEmpty(list, "diagnostics.loadRuntimeLogsFailed", "error");

@@ -670,7 +670,7 @@
   "diagnostics.opRename": "リネーム",
   "diagnostics.opDelete": "削除",
   "diagnostics.opUI": "UI",
-  "diagnostics.searchPlaceholder": "モデル名を検索...",
+  "diagnostics.searchPlaceholder": "ログ内容を検索...",
   "diagnostics.scanHint": "「スキャン開始」をクリックして統合パックの競合を検出",
   "diagnostics.noMatchLogs": "一致するログはありません",
   "diagnostics.itemsCount": "{n} 件",

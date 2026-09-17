@@ -670,7 +670,7 @@
   "diagnostics.opRename": "重命名",
   "diagnostics.opDelete": "删除",
   "diagnostics.opUI": "界面",
-  "diagnostics.searchPlaceholder": "搜索模型名...",
+  "diagnostics.searchPlaceholder": "搜索日志内容...",
   "diagnostics.scanHint": "点击「开始扫描」检测整合包冲突",
   "diagnostics.noMatchLogs": "无匹配日志",
   "diagnostics.itemsCount": "{n} 条",

@@ -191,7 +191,9 @@ function dgInBindLogFilter(root: ShadowRoot, esc: EscFn): void {
         b.classList.remove("active");
       });
       btn.classList.add("active");
-      loadDiagnosticsLogs(root, esc);
+      // 状态 chips 只作用于操作日志（运行时日志无 Status，恒为 info）；运行时子 tab 下仅更新选中态，
+      // 不回落拉操作日志列表——避免白跑一次 GetImportLogs（切回「操作」子 tab 时按新条件重载）。
+      if (!dgInIsRuntimeLog(root)) loadDiagnosticsLogs(root, esc);
     });
   });
 }
@@ -202,7 +204,11 @@ function dgInBindLogSearch(root: ShadowRoot, esc: EscFn): void {
     let timer: ReturnType<typeof setTimeout> | undefined;
     logSearch.addEventListener("input", () => {
       clearTimeout(timer);
-      timer = setTimeout(() => loadDiagnosticsLogs(root, esc), 300);
+      // 搜索按当前子 tab 分派：操作日志匹配模型名/报错/路径/操作，运行时日志匹配 Message
+      timer = setTimeout(() => {
+        if (dgInIsRuntimeLog(root)) loadRuntimeLogs(root, esc);
+        else loadDiagnosticsLogs(root, esc);
+      }, 300);
     });
   }
 }

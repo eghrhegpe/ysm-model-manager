@@ -330,7 +330,20 @@ func runPerfSnapshot(ctx *CmdContext) error {
 // resolveTargetModel 解析 --model 参数；为空时自动选第一个模型。
 func resolveTargetModel(modelPath, filesRoot string) (string, error) {
 	if modelPath != "" {
-		return modelPath, nil
+		// 目录式模型归一化（增强）：折叠为 <dir>/ysm.json —— 与 scanner 条目约定一致，
+		// 见 resolveBenchModelTarget。
+		entry, _, err := resolveBenchModelTarget(modelPath)
+		switch {
+		case err == nil:
+			return entry, nil
+		case os.IsNotExist(err):
+			// 路径不存在 → 保持既有契约：显式 --model 直返（TestResolveTargetModel_ExplicitWins），
+			// 让 ① 阶段如实报读盘失败（D8 保证失败在载荷里可见，不再静默假绿）。
+			return modelPath, nil
+		default:
+			// 路径存在但形态不可用（如目录内缺 ysm.json）→ 明确报错，不静默降级
+			return "", newParamErrf("模型路径不可用: %v", err)
+		}
 	}
 	if m := scanFirstModel(filesRoot); m != "" {
 		return m, nil

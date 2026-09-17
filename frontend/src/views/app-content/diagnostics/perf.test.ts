@@ -263,6 +263,31 @@ describe("single-bench 面板", () => {
     expect(out.textContent).toContain("① 文件读取");
     expect(out.querySelector(".diag-stat-error")).toBeNull();
   });
+
+  it("status=failed（阶段失败且 0ms）→ ❌ 红条，不被耗时分级掩盖", async () => {
+    // Go 侧「失败优先于耗时分级」（bench_dirform_test.go 同源）在展示层的对应断言：
+    // 失败阶段常是 0ms，若前端按 ms 自行分级就会画成绿条 ✅——假绿比红更危险
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "single-bench",
+      data: {
+        ...SINGLE_STRUCTURED,
+        stages: [
+          { name: "① 清单读取", ms: 0, status: "failed", bottleneck: false, note: "❌ 失败: EISDIR" },
+        ],
+        bottleneck: "",
+      },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./dir";
+    (root.getElementById("diag-perf-run") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const out = root.getElementById("diag-perf-single") as HTMLElement;
+    const val = out.querySelector(".perf-bar-val") as HTMLElement;
+    expect(val.textContent).toContain("❌");
+    expect(val.className).toContain("perf-bar-danger");
+  });
 });
 
 describe("gui-flow 面板", () => {

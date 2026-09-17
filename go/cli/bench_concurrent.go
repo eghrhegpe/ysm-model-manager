@@ -16,6 +16,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func init() {
@@ -357,6 +358,9 @@ type singleBenchStage struct {
 	Duration time.Duration
 	Bytes    int64
 	Notes    string
+	// Failed 阶段失败标记（如 ① 读盘失败）：耗时分级（stageStatus）只看 ms，失败必须独立成字段，
+	// 否则失败阶段会因 0ms 被判为 ok —— 全链路失败的 bench 在载荷里看起来全绿（2026-09-17 实测）。
+	Failed bool
 }
 
 // runSingleBench 单模型加载基准测试
@@ -382,6 +386,14 @@ func runSingleBench(ctx *CmdContext) error {
 	if *format != "text" && *format != "json" {
 		return newParamErrf("--format 必须是 text 或 json")
 	}
+
+	// 目标解析（复用 perf-snapshot 的同一出口）：目录式模型折叠为 <dir>/ysm.json，下游零目录分支。
+	// 传目录路径曾直接 ① 读盘失败（os.ReadFile 对目录报错），且失败被平均环节吞掉 → 载荷全绿。
+	target, terr := resolveTargetModel(*modelPath, ctx.FilesRoot)
+	if terr != nil {
+		return terr
+	}
+	*modelPath = target
 
 	// JSON 模式：静默运行，最后输出 JSON
 	if *format == "json" {
@@ -489,11 +501,16 @@ func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
 	stageJSON := make([]benchStageJSON, 0, len(avg))
 	for _, s := range avg {
 		ms := msOf(s)
+		// 失败优先于耗时分级：失败阶段常是 0ms（如目录不能 ReadFile），若只按 ms 分级会被判 ok
+		status := stageStatus(ms)
+		if s.Failed {
+			status = "failed"
+		}
 		stageJSON = append(stageJSON, benchStageJSON{
 			Name:   s.Name,
 			Ms:     ms,
 			Bytes:  s.Bytes,
-			Status: stageStatus(ms),
+			Status: status,
 			// 唯一瓶颈且超过「偏慢」阈值（10ms）；并列时首者胜，保证确定性
 			Bottleneck: s.Name == bottleneckName && ms > 10,
 			Note:       s.Notes,
@@ -504,6 +521,12 @@ func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
 
 // runSingleBenchJSON 单模型基准测试 JSON 模式：静默运行，输出结构化数据
 func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, baseline, saveBaseline string, thresholdPct float64) error {
+	// 归一化（经 runSingleBench 进入时已是 entry path，此处幂等）：保证直接调用（测试/内部）同样吃目录
+	target, terr := resolveTargetModel(modelPath, ctx.FilesRoot)
+	if terr != nil {
+		return terr
+	}
+	modelPath = target
 	// 目录式模型（YSM 解压目录）size 记 0——见 perfIdentitySize
 	modelSize := perfIdentitySize(modelPath)
 
@@ -567,6 +590,11 @@ func detectModelFormat(path string) string {
 	case ".litematic":
 		return "Litematic"
 	case ".json":
+		// 目录式模型的入口是 ysm.json：按扩展名报 "JSON" 会与 identity.rtype=ysm 在同一份
+		// 报告里打架（用户/AI 看到「类型 YSM、格式 JSON」）。此处按唯一谓词 IsYsmEntryJSON 归位。
+		if registry.IsYsmEntryJSON(filepath.Base(path)) {
+			return "YSM"
+		}
 		return "JSON"
 	case ".zip":
 		return "Pack"
@@ -637,6 +665,9 @@ func avgBenchStages(allStages [][]singleBenchStage) []singleBenchStage {
 	var order []string
 	totals := map[string]time.Duration{}
 	counts := map[string]int{}
+	bytes := map[string]int64{}
+	notes := map[string]string{}
+	failed := map[string]bool{}
 	for _, stages := range allStages {
 		for _, s := range stages {
 			if counts[s.Name] == 0 {
@@ -644,6 +675,15 @@ func avgBenchStages(allStages [][]singleBenchStage) []singleBenchStage {
 			}
 			totals[s.Name] += s.Duration
 			counts[s.Name]++
+			bytes[s.Name] += s.Bytes
+			// 首个非空 Notes 优先："失败: 目录不能 ReadFile" 这类诊断信息不能被平均环节吞掉
+			// （原实现只取 Duration，Notes/Bytes/Failed 全丢 → 失败在载荷里表现为 ok）
+			if notes[s.Name] == "" && s.Notes != "" {
+				notes[s.Name] = s.Notes
+			}
+			if s.Failed {
+				failed[s.Name] = true
+			}
 		}
 	}
 	out := make([]singleBenchStage, 0, len(order))
@@ -651,6 +691,9 @@ func avgBenchStages(allStages [][]singleBenchStage) []singleBenchStage {
 		out = append(out, singleBenchStage{
 			Name:     name,
 			Duration: totals[name] / time.Duration(counts[name]),
+			Bytes:    bytes[name] / int64(counts[name]),
+			Notes:    notes[name],
+			Failed:   failed[name],
 		})
 	}
 	return out
@@ -830,20 +873,28 @@ func applyBenchBaseline(baseline, saveBaseline string, thresholdPct float64, avg
 func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenchStage {
 	var stages []singleBenchStage
 
+	// 目录式模型的入参是 <dir>/ysm.json 清单（见 resolveBenchModelTarget）：读的是清单而非模型体量，
+	// 阶段名如实标注，避免用户把「读 115 字节」当成「加载整个模型」。
+	readStageName := "① 文件读取"
+	if registry.IsYsmEntryJSON(filepath.Base(modelPath)) {
+		readStageName = "① 清单读取"
+	}
+
 	start := time.Now()
 	data, err := os.ReadFile(modelPath)
 	readDuration := time.Since(start)
 
 	if err != nil {
 		return append(stages, singleBenchStage{
-			Name:     "① 文件读取",
+			Name:     readStageName,
 			Duration: readDuration,
 			Notes:    fmt.Sprintf("❌ 失败: %v", err),
+			Failed:   true,
 		})
 	}
 
 	stages = append(stages, singleBenchStage{
-		Name:     "① 文件读取",
+		Name:     readStageName,
 		Duration: readDuration,
 		Bytes:    int64(len(data)),
 		Notes:    fmt.Sprintf("✅ %s, %.0f MB/s", fsutil.FormatSize(int64(len(data))), float64(len(data))/readDuration.Seconds()/1024/1024),

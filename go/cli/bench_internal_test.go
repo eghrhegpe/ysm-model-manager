@@ -100,26 +100,32 @@ func TestBuildPerfIdentity_Sources(t *testing.T) {
 		wantRtype  string
 		wantSource string
 		wantRel    string
+		wantForm   string
 	}{
 		{
 			// 目录归属优先：MMD 子类型共享 .vpd/.vmd/.zip，扩展名推不出归属
 			name: "location/MMD 容器的目录归属", path: filepath.Join(root, "mmd", "PMX", "角色包.zip"),
-			wantRtype: "EntityPlayer", wantSource: "location", wantRel: "mmd/PMX/角色包.zip",
+			wantRtype: "EntityPlayer", wantSource: "location", wantRel: "mmd/PMX/角色包.zip", wantForm: "file",
 		},
 		{
 			// 深目录优先（比 EntityPlayer 更深的自有 storageSubDir）
 			name: "location/深目录优先", path: filepath.Join(root, "mmd", "PMX", "DefaultMorph", "内嵌.vpd"),
-			wantRtype: "DefaultMorph", wantSource: "location", wantRel: "mmd/PMX/DefaultMorph/内嵌.vpd",
+			wantRtype: "DefaultMorph", wantSource: "location", wantRel: "mmd/PMX/DefaultMorph/内嵌.vpd", wantForm: "file",
 		},
 		{
 			// .ysm 无 location 命中（instanceDir 是 config/yes_steve_model/custom）→ 扩展名消歧
 			name: "extension/.ysm 扩展名消歧", path: filepath.Join(root, "ysm", "模型A.ysm"),
-			wantRtype: "ysm", wantSource: "extension", wantRel: "ysm/模型A.ysm",
+			wantRtype: "ysm", wantSource: "extension", wantRel: "ysm/模型A.ysm", wantForm: "file",
+		},
+		{
+			// 目录式模型的入口 ysm.json：形态 dir（打包形态不可能以 ysm.json 结尾）
+			name: "dir/解包目录入口", path: filepath.Join(root, "ysm", "模型B", "ysm.json"),
+			wantRtype: "ysm", wantSource: "extension", wantRel: "ysm/模型B/ysm.json", wantForm: "dir",
 		},
 		{
 			// 容器兜底：.zip 被 14 类型声明，无 location 命中时诚实标 container（不猜）
 			name: "container/共享扩展名兜底", path: filepath.Join(root, "whatever", "x.zip"),
-			wantRtype: "container", wantSource: "container", wantRel: "whatever/x.zip",
+			wantRtype: "container", wantSource: "container", wantRel: "whatever/x.zip", wantForm: "file",
 		},
 	}
 	for _, tc := range cases {
@@ -127,6 +133,9 @@ func TestBuildPerfIdentity_Sources(t *testing.T) {
 		if got.Rtype != tc.wantRtype || got.RtypeSource != tc.wantSource {
 			t.Errorf("%s: buildPerfIdentity = %s/%s, 期望 %s/%s",
 				tc.name, got.Rtype, got.RtypeSource, tc.wantRtype, tc.wantSource)
+		}
+		if got.Form != tc.wantForm {
+			t.Errorf("%s: form = %q, 期望 %q", tc.name, got.Form, tc.wantForm)
 		}
 		if got.RelPath != filepath.ToSlash(tc.wantRel) {
 			t.Errorf("%s: relPath = %q, 期望 %q", tc.name, got.RelPath, filepath.ToSlash(tc.wantRel))

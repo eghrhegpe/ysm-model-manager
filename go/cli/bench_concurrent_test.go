@@ -34,6 +34,9 @@ func TestDetectModelFormat(t *testing.T) {
 		"a.ysm": "YSM", "b.pmx": "PMX", "c.PMD": "PMD", "d.vrm": "VRM",
 		"e.gltf": "GLTF", "f.glb": "GLTF", "g.litematic": "Litematic",
 		"h.json": "JSON", "i.zip": "Pack", "j.txt": "Unknown",
+		// 目录式模型的入口 ysm.json 归 YSM（否则与 identity.rtype=ysm 在同一报告里打架）；
+		// 同名近似文件不得被误判（IsYsmEntryJSON 是精确匹配）
+		"k/ysm.json": "YSM", "l/notysm.json": "JSON",
 	}
 	for path, want := range cases {
 		if got := detectModelFormat(path); got != want {

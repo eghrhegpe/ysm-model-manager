@@ -33,7 +33,7 @@ interface SingleBenchStage {
   name: string;
   ms: number;
   bytes?: number;
-  /** Go stageStatus 口径：bottleneck / warn / slow / ok */
+  /** Go stageStatus 口径：bottleneck / warn / slow / ok / failed（failed 优先于耗时分级） */
   status: string;
   bottleneck: boolean;
   note?: string;
@@ -51,6 +51,8 @@ interface PerfIdentity {
   /** 相对仓库根，跨机器可比（测试/AI 断言用这个，不用 absPath） */
   relPath: string;
   absPath: string;
+  /** 模型形态：dir（解包目录，入口 <dir>/ysm.json）| file（打包容器/单文件） */
+  form?: "file" | "dir";
 }
 
 /** Go singleBenchJSON 载荷（附 AttachSidecar 注入的 output/filesRoot，ADR-200 D5） */
@@ -117,6 +119,8 @@ const STAGE_STATUS_META: Record<string, { icon: string; cls: string }> = {
   warn: { icon: "🟡", cls: "perf-bar-warn" },
   slow: { icon: "🟢", cls: "" },
   ok: { icon: "✅", cls: "" },
+  // failed 由 Go 在「阶段失败」时优先于耗时分级给出（失败常是 0ms，按 ms 分级会误判 ok）
+  failed: { icon: "❌", cls: "perf-bar-danger" },
 };
 
 function singleBenchStageMeta(status: string): { icon: string; cls: string } {

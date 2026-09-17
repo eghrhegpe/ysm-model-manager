@@ -4,7 +4,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { loadOldestModel } from "@/features/maintenance/oldest-models.ts";
 import { initRecycleBin } from "@/features/maintenance/recycle-bin.ts";
-import { logError } from "@/utils/base/primitives/log.ts";
+import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -27,16 +27,7 @@ import type { AppContentHost } from "./host.ts";
  *   log(日志,含op/runtime子tab) / single / gui / hist / trace / conflict / health / sync-conflict
  */
 export function initDiagnosticsPage(host: AppContentHost): void {
-  bindTabs(host, ".repo-tab", "diag", [
-    "log",
-    "single",
-    "gui",
-    "hist",
-    "trace",
-    "conflict",
-    "health",
-    "sync-conflict",
-  ]);
+  bindTabs(host, ".repo-tab", "diag");
   initDiagnostics(host.state.root, (s) => esc(String(s || "")));
 }
 
@@ -44,7 +35,7 @@ export function initDiagnosticsPage(host: AppContentHost): void {
  * 初始化实例页
  */
 export function initInstancesPage(host: AppContentHost): void {
-  bindTabs(host, ".repo-tab", "ins", ["versions"]);
+  bindTabs(host, ".repo-tab", "ins");
 
   // 只注册一次，避免重复监听
   if (host.state.insListenerReg) return;
@@ -73,7 +64,7 @@ export function initInstancesPage(host: AppContentHost): void {
  * 初始化仓库页
  */
 export function initRepositoryPage(host: AppContentHost): void {
-  bindTabs(host, ".repo-tab", "repo", ["tree", "recycle", "dedup", "oldest"]);
+  bindTabs(host, ".repo-tab", "repo");
 
   // 资源类型由导航栏全局切换器驱动（app-nav 双下拉 → repo:rtype-changed + repo_rtype/repo_subdir 落盘）。
   // 仓库页不再持有本地 subtabs，只订阅全局事件重建文件树（单一入口，ADR-092/094 收敛）。
@@ -104,12 +95,37 @@ export function initRepositoryPage(host: AppContentHost): void {
 }
 
 /**
- * 绑定 tab 按钮切换。按钮选择器与内容卡前缀解耦（样式类可复用，语义前缀独立）：
- *   bindTabs(host, ".repo-tab", "ins", ["versions"]) —— 按钮用 repo-tab 样式类，内容卡 id 为 ins-tab-versions
+ * 绑定一页的 tab 壳：ARIA（tablist/tab/tabpanel）+ roving tabindex + 键盘导航 + 懒初始化 + 面板切换。
+ * 按钮选择器与内容卡前缀解耦（样式类可复用，语义前缀独立）：
+ *   bindTabs(host, ".repo-tab", "ins") —— 按钮用 repo-tab 样式类，内容卡 id 为 ins-tab-<data-tab>
+ *
+ * **真值源 = 按钮自身的 `data-tab`**（由 `renderTabs` 工厂保证与面板 id 同源）。
+ * 本函数**不接受调用方手传的 id 白名单**——白名单是第二份手工真值，新增 tab 时漏同步就是
+ * 「按钮在、点了没反应、内容区空白」且**不报错**（2026-09 设置页新增「操作」tab 的真实事故）。
+ * 新增 tab 只需改模板一处；契约违例（按钮缺 data-tab / 面板缺失）在此响亮告警，不静默。
+ *
+ * @param tabSelector tab 按钮选择器（如 `.repo-tab` / `.stg-tab`）
+ * @param prefix 面板 id 前缀：面板 id = `${prefix}-tab-${data-tab}`
  */
-function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids: string[]): void {
+export function bindTabs(host: AppContentHost, tabSelector: string, prefix: string): void {
   const tabs = Array.from(host.state.root.querySelectorAll<HTMLElement>(tabSelector));
   if (!tabs.length) return;
+
+  // 真值源 = 按钮自身的 data-tab（由 renderTabs 工厂保证与面板 id 同源）。
+  // 无 data-tab 的按钮切不出任何面板——静默跳过等于埋一个「点了没反应」的哑按钮，故响亮告警。
+  const ids: string[] = [];
+  for (const btn of tabs) {
+    const id = btn.dataset.tab ?? "";
+    if (!id) {
+      logWarn("tabs", `${prefix}: tab 按钮缺 data-tab，已跳过（该按钮不可切换）`, btn);
+      continue;
+    }
+    ids.push(id);
+    if (!host.state.root.getElementById(`${prefix}-tab-${id}`)) {
+      logWarn("tabs", `${prefix}: 缺面板 #${prefix}-tab-${id}（按钮在但内容区将空白）`);
+    }
+  }
+  if (!ids.length) return;
 
   // ARIA 语义化：tablist + tab + tabpanel（一次性注入，避免重复 setAttribute）
   const tabList = tabs[0].parentElement;
@@ -117,7 +133,8 @@ function bindTabs(host: AppContentHost, tabSelector: string, prefix: string, ids
     tabList.setAttribute("role", "tablist");
   }
   tabs.forEach((btn, i) => {
-    const tabId = btn.dataset.tab || ids[i] || "";
+    const tabId = btn.dataset.tab ?? "";
+    if (!tabId) return; // 缺 data-tab：派生循环已告警，此处跳过
     const panelId = `${prefix}-tab-${tabId}`;
     btn.setAttribute("role", "tab");
     btn.setAttribute("id", `${prefix}-tab-btn-${tabId}`);
@@ -311,7 +328,7 @@ async function initOldestTab(
  * 初始化设置页
  */
 export async function initSettingsPage(host: AppContentHost): Promise<void> {
-  bindTabs(host, ".stg-tab", "stg", ["basic", "ui", "ops", "parser", "about", "credits"]);
+  bindTabs(host, ".stg-tab", "stg");
   try {
     await initSettings(host.state.root);
     // 组件卸载/切页时移除 document keydown 捕获监听，防全局劫持泄漏

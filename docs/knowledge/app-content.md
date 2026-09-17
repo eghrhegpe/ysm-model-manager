@@ -35,6 +35,7 @@ auto_fields:
     - AppContentState
     - appContentStyle
     - bindSiteEvents
+    - bindTabs
     - contentCreatorCSS
     - contentCSS
     - contentDiagCSS
@@ -125,6 +126,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:changed` 切页、`_render()` 按 `_current` 选择模板并重渲染、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（localStorage `preview-width`，范围 160–500）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）；`connectedCallback` 末尾直接注册四组全局 handler（`registerSync` / `registerContextMenus` / `registerInstanceOps` / `registerAndroidEvents`，见 `features/sync.ts` / `features/context-menu/context-menus.ts` / `features/pack-ops/instance-ops.ts` / `features/platform/android-events.ts`）
 - `tpl.ts` — 页面布局模板：`repositoryHTML` / `instancesHTML` / `settingsHTML` / `diagnosticsHTML` / `workshopHTML` / `githubHTML` / `downloadsHTML` / `recycleHTML`
 - `tabs-shell.ts` — **tab 栏 + 面板容器的单点产出**（ADR-259）：`renderTabs(spec) → { bar, panels }`，由声明数组产出「`.repo-tabs` + 每 tab 一个 `.tab-body`」。面板 id 一律 `${prefix}-tab-${id}`，与 `init-pages.ts|bindTabs` 的运行期查找**共享同一条规则**；首个面板不写 `display`（回落 `.tab-body`）、其余 `display:none`，与 `bindTabs.activate` 的翻转口径一致。差异项（`buttonClass` / `panelClass` / `barId` / `panelTestid` / `buttonTestid` / `panelStyle`）全走声明参数。**新增 tab 只填数组，结构由工厂保证**；`workshopHTML` 例外——其 tab 栏由 `initWorkshopPage` 运行期动态注入，非静态声明。结构性防线见 `tpl-structure.test.ts`。
+- `init-pages.ts|bindTabs(host, tabSelector, prefix)` — tab 壳的**运行期**绑定（ARIA tablist/roving tabindex/键盘/懒初始化/面板切换）。**真值源 = 按钮自身的 `data-tab`，不接受调用方手传 id 白名单**（ADR-259 §2.6）：白名单曾是第二份手工真值，新增 tab 漏同步即「按钮在、点了没反应、内容区空白」且不报错（2026-09 设置页新增「操作」tab 的真实事故）。新增 tab 只需改模板一处；契约违例（按钮缺 `data-tab` / 缺面板）走 `logWarn` 响亮告警。懒初始化仍须在 `TAB_INIT` 登记（当前 recycle/dedup/oldest）。防线：`init-pages.test.ts` + `tpl-structure.test.ts` 的「调用点不得出现数组白名单」静态闸。
 - `css/content-css.ts` — 样式组合层：6 个域 CSS 文件（同在 `css/` 子目录）join 输出单一字符串，经 `adoptedStyleSheets` 注入 Shadow DOM，全走 CSS 变量。
 - `css/content-layout.ts` — 基础层：`::host` 变量 + 通用 keyframes + 骨架卡片系统（`.page` / `.stat-card` / `.model-card` / `.health-ring` 等）+ 工坊通用按钮类（`.ws-*`）。**CSS 变量可穿 shadow，@keyframes 不可**——必须在 shadow 层本地重定义副本，且参数值与全局副本一致（机检 1c 硬校验，`scripts/css-layer-check.ts` 阻断 pre-push）。
 - `css/content-repo.ts` — 仓库/实例/站点骨架 + 资历页 + 热力图 + 通用标签。

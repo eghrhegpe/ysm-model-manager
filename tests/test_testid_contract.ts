@@ -77,6 +77,10 @@ const seen = new Set(); // 真实源码钩子字面量（仅非测试源码）
     // 2. 钩子字面量收集
     for (const hm of c.matchAll(/data-testid="([a-z0-9-]+)"/g)) seen.add(hm[1]);
     for (const hm of c.matchAll(/dataset\.testid\s*=\s*"([a-z0-9-]+)"/g)) seen.add(hm[1]);
+    // 第三类来源（ADR-259）：testid 降为 renderTabs 工厂的**声明参数**（buttonTestid/panelTestid），
+    // 字面量仍写在声明它的视图文件里，data-testid 由 tabs-shell.ts 单点产出——
+    // 不认这一类，「迁工厂」会被误判成「钩子被删」（G-1 删能红不因此放松：字面量缺席照样红）。
+    for (const hm of c.matchAll(/(?:button|panel)Testid:\s*"([a-z0-9-]+)"/g)) seen.add(hm[1]);
   }
 })(path.join(FE, "src"));
 

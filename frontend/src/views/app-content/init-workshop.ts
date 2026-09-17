@@ -10,6 +10,11 @@ import { Events } from "@/backend/runtime.ts";
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "@/bus";
 import { fillSearch } from "@/features/community/community-data.ts";
+import {
+  getAvatar,
+  getAvatarSnapshot,
+  setAvatar,
+} from "@/features/community/creator-avatar-store.ts";
 import type { WorkshopModel } from "@/features/community/render.ts";
 import { showRepoModels } from "@/features/community/show-repo-models.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
@@ -72,16 +77,15 @@ export function initWorkshopPage(host: AppContentHost): void {
     saveBrowseMode(mode);
   };
 
-  // 后台批量提取创作者头像
-  host.state.avatarCache = {};
-  extractAvatars(host);
-
+  // 后台批量提取创作者头像（写入 community 层 store，ADR-264：不再置空 host.state.avatarCache——
+  // 那个缓存跨页存活，每次进工坊页清零会把下载期间累积的增量抹掉）
+  extractAvatars();
   // 配置加载完成后重新提取
   if (!_avatarConfigLoadedRegistered) {
     _avatarConfigLoadedRegistered = true;
     _avatarConfigLoadedUnsub = Events.On("config-loaded", () => {
       dbg("avatar", "配置已加载，重新提取头像");
-      extractAvatars(host);
+      extractAvatars();
     });
   }
 
@@ -134,7 +138,8 @@ export function initWorkshopPage(host: AppContentHost): void {
       fillSearch,
       repoModelCache,
       openUrl,
-      avatarCache: host.state.avatarCache,
+      // 头像表直接取 store 活体引用（ADR-264）：增量写是原地改写，已渲染 ctx 能立即看到新值
+      avatarCache: getAvatarSnapshot(),
       browseMode: browseModeRef,
       setBrowseMode,
       activeTag: safeGet("ysm-ws-active-tag") || "",
@@ -165,22 +170,27 @@ export function initWorkshopPage(host: AppContentHost): void {
   // 下载完成后增量刷新创作者头像。幂等注册（ADR-261）：原靠 `state.avatarRefreshRegistered`
   // 布尔标志 + cleanupTransient 手工复位；现交给订阅桶的 addGlobalOnce——key 与全局订阅同寿命，
   // cleanupAll() 清空订阅时一并清 key（组件重建后天然可再注册）。
+  //
+  // ⚠️ 这个订阅仍住 global 桶（ADR-264）：其数据源（下载队列）跨页存活，事件在任意页面派发。
+  // 区别是它现在写的是 community 层 store 而非工坊页借宿字段——「替页面写数据」的错位已消除。
   host.subs.addGlobalOnce(
     "workshop:avatar-refresh",
-    bus.on("avatar:refresh", ({ author, dataUri }) => {
-      if (host.state.avatarCache[author] === dataUri) return;
-      host.state.avatarCache[author] = dataUri;
-      let found = false;
-      root.querySelectorAll(".cr-creator-card").forEach((c) => {
-        if ((c as HTMLElement).dataset.name === author) {
-          const img = c.querySelector(".cr-avatar") as HTMLImageElement | null;
-          if (img && img.tagName === "IMG") img.src = dataUri;
-          found = true;
-        }
-      });
-      const cur = page.getCurrentSite();
-      if (!found && cur) showSiteView(cur);
-    }),
+    // 工厂形式（ADR-264）：订阅只在 key 真正认领时创建——否则重复 init 会遗留孤儿订阅
+    () =>
+      bus.on("avatar:refresh", ({ author, dataUri }) => {
+        if (getAvatar(author) === dataUri) return;
+        setAvatar(author, dataUri);
+        let found = false;
+        root.querySelectorAll(".cr-creator-card").forEach((c) => {
+          if ((c as HTMLElement).dataset.name === author) {
+            const img = c.querySelector(".cr-avatar") as HTMLImageElement | null;
+            if (img && img.tagName === "IMG") img.src = dataUri;
+            found = true;
+          }
+        });
+        const cur = page.getCurrentSite();
+        if (!found && cur) showSiteView(cur);
+      }),
   );
 }
 

@@ -13,41 +13,59 @@ describe("SubscriptionBucket — addPageOnce / addGlobalOnce 幂等契约", () =
   it("addPageOnce：同 key 二次注册 → 只挂一次", () => {
     const subs = new SubscriptionBucket();
     const fn = vi.fn();
-    subs.addPageOnce("instances:package-selected", fn);
-    subs.addPageOnce("instances:package-selected", fn);
+    subs.addPageOnce("instances:package-selected", () => fn);
+    subs.addPageOnce("instances:package-selected", () => fn);
     expect(subs.pageUnsubs).toHaveLength(1);
   });
 
   it("addPageOnce：不同 key → 各自注册（key 是身份，不是去重池）", () => {
     const subs = new SubscriptionBucket();
-    subs.addPageOnce("a", vi.fn());
-    subs.addPageOnce("b", vi.fn());
+    subs.addPageOnce("a", () => vi.fn());
+    subs.addPageOnce("b", () => vi.fn());
     expect(subs.pageUnsubs).toHaveLength(2);
+  });
+
+  // ⚠️ ADR-264 回归锁：工厂必须**惰性调用**——幂等分支命中时不得创建订阅，
+  // 否则会遗留一个「已生效但未入桶」的孤儿监听（实测：重复 init 后一次 emit 触发两次）。
+  it("addPageOnce：key 已存在时**不调用**订阅工厂（防孤儿订阅）", () => {
+    const subs = new SubscriptionBucket();
+    const factory = vi.fn(() => vi.fn());
+    subs.addPageOnce("dup", factory);
+    subs.addPageOnce("dup", factory);
+    expect(factory).toHaveBeenCalledTimes(1);
+  });
+
+  it("addGlobalOnce：key 已存在时**不调用**订阅工厂（防孤儿订阅）", () => {
+    const subs = new SubscriptionBucket();
+    const factory = vi.fn(() => vi.fn());
+    subs.addGlobalOnce("dup", factory);
+    subs.addGlobalOnce("dup", factory);
+    expect(factory).toHaveBeenCalledTimes(1);
   });
 
   it("addPageOnce：cleanupPage 后可再次注册（lang:changed 重建的关键契约）", () => {
     const subs = new SubscriptionBucket();
-    subs.addPageOnce("instances:package-selected", vi.fn());
+    subs.addPageOnce("instances:package-selected", () => vi.fn());
     expect(subs.pageUnsubs).toHaveLength(1);
 
     subs.cleanupPage(); // ← lang:changed 全量重建
     expect(subs.pageUnsubs).toHaveLength(0);
 
     // 关键：若 drainPage 未清 pageKeys，这里会被静默吞掉 → 页面永久失去监听
-    subs.addPageOnce("instances:package-selected", vi.fn());
+    subs.addPageOnce("instances:package-selected", () => vi.fn());
     expect(subs.pageUnsubs, "世代重建后必须允许重新注册").toHaveLength(1);
   });
 
   it("addGlobalOnce：同 key 幂等；cleanupAll 后可再注册", () => {
     const subs = new SubscriptionBucket();
-    subs.addGlobalOnce("workshop:avatar-refresh", vi.fn());
-    subs.addGlobalOnce("workshop:avatar-refresh", vi.fn());
+    subs.addGlobalOnce("workshop:avatar-refresh", () => vi.fn());
+    subs.addGlobalOnce("workshop:avatar-refresh", () => vi.fn());
     expect(subs.globalUnsubs).toHaveLength(1);
 
     subs.cleanupAll();
     expect(subs.globalUnsubs).toHaveLength(0);
 
-    subs.addGlobalOnce("workshop:avatar-refresh", vi.fn());
+    subs.addGlobalOnce("workshop:avatar-refresh", () => vi.fn());
     expect(subs.globalUnsubs, "组件重建后必须允许重新注册").toHaveLength(1);
   });
 
@@ -55,8 +73,8 @@ describe("SubscriptionBucket — addPageOnce / addGlobalOnce 幂等契约", () =
     const subs = new SubscriptionBucket();
     const sync = vi.fn();
     const asyncFn = vi.fn(async () => {});
-    subs.addPageOnce("k1", sync);
-    subs.addPageOnce("k2", asyncFn);
+    subs.addPageOnce("k1", () => sync);
+    subs.addPageOnce("k2", () => asyncFn);
 
     subs.cleanupPage();
     await Promise.resolve();

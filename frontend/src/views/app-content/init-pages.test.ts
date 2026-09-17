@@ -147,11 +147,11 @@ describe("AppContentState 字段归属（ADR-263）", () => {
     expect("currentSite" in state).toBe(false);
   });
 
-  it("尾随借宿字段仍在（跨切生命周期未变）：avatarCache / workshopTimer", () => {
+  it("尾随借宿字段仍在：workshopTimer；avatarCache 已于 ADR-264 上收", () => {
     const state = makeState();
-    // 这两个字段的归属见 ADR-263：avatarCache 写入方是模块级下载队列（比页面长寿），
-    // workshopTimer 的清理点在 app 壳层 _render 开头（早于 page.init）——均**未**随本轮下沉。
-    expect("avatarCache" in state).toBe(true);
+    // workshopTimer 的清理点在 app 壳层 _render 开头（早于 page.init）——未随 ADR-263/264 下沉。
+    // avatarCache 已于 ADR-264 上收 community 层 store，其断言转为「已不在容器内」。
     expect("workshopTimer" in state).toBe(true);
+    expect("avatarCache" in state).toBe(false);
   });
 });

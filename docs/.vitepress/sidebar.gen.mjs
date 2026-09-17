@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-264：avatarCache 上收 community 层 store + 订阅桶改收工厂堵孤儿订阅",
+        "link": "/adr/ADR-264-avatarcache-community-store"
+      },
+      {
         "text": "ADR-263：创意工坊页状态归属：currentSite 下沉、workshopTimer 留壳、avatarCache 上收",
         "link": "/adr/ADR-263-currentsite-workshoptimer-avatarcache"
       },

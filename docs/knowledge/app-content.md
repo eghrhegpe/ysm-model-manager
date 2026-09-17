@@ -140,7 +140,8 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - 社区数据层（`community-data.ts`，ADR-223 北迁 `features/community/community-data.ts`，经 `community-deps` seam 取绑定）：`loadCommunityData` 首屏快路径（不含磁盘扫描）；`loadLocalAuthors` withCached 5min **STALE** 策略（过期返旧值后台刷新）；`mergeLocalAuthorsInto` 幂等合并（同名去重 + type 分段精确比较）。
 - `workshop-icons.ts` — SVG 图标表 `ICONS` 与 `getSiteIcon` / `getTagIconFromRole`
 - `workshop-site-opener.ts` — 站点打开器：`openSite(host, site, browseMode, targetUrl)` 按模式走 `openEmbedded` / `NavigatePlazaWindow` / `OpenInBrowser`；`targetUrl` 缺省回退 `site.url`；site-view 的 `ctx.openUrl` 须把搜索词链接**透传**给 `openSite`，不得丢弃。`bindSiteEvents(host, page)` 经页作用域句柄读当前站点（ADR-263）。
-- **`AppContentState` 字段归属（ADR-262 收尾 / ADR-263）**：容器只收 app 壳层基础设施（`root` / `current` / `pagePanels` / `resizeMove` / `resizeUp`）与两个**有意跨切**的字段——`avatarCache`（写入方是模块级下载队列，比页面长寿，正解是上收 community 层 store，未做）、`workshopTimer`（清理点在 `_render` 开头且**必须早于 `page.init`**，搬进页内无法等效）。页私有的 `currentSite` 已下沉 `site/workshop-page-state.ts`；新增字段前先读 `state.ts` 逐字段注释，别再把页私有状态往里塞。
+- **`AppContentState` 字段归属（ADR-263/264 收口）**：容器只收 app 壳层基础设施（`root` / `current` / `pagePanels` / `resizeMove` / `resizeUp`）与唯一一个**有意跨切**的字段——`workshopTimer`（清理点在 `_render` 开头且**必须早于 `page.init`**，搬进页内无法等效）。`currentSite` 已下沉 `site/workshop-page-state.ts`（ADR-263）；`avatarCache` 已上收 `features/community/creator-avatar-store.ts`（ADR-264，与写入方 download-queue-store 同寿命同形态）。新增字段前先读 `state.ts` 逐字段注释，别再把页私有/跨页状态往里塞。
+- **订阅桶 `add*Once` 改收工厂（ADR-264）**：`addGlobalOnce(key, () => bus.on(...))` / `addPageOnce(key, () => bus.on(...))`——传现成退订函数会在实参位置急切求值，幂等分支命中时遗留「已生效但未入桶」的孤儿订阅（实测：二次 init 后一次 emit 触发两次）。TypeScript 签名 `() => () => void` 会拦截写错形态。
 
 ## 对外 API / 入口
 

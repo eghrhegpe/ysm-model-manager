@@ -43,21 +43,23 @@ export function initInstancesPage(host: AppContentHost): void {
 
   host.subs.addPageOnce(
     "instances:package-selected",
-    bus.on("package:selected", (pkg) => {
-      const content = host.state.root.getElementById("ins-content");
-      if (!content) return;
-      // P1 修复：去掉 || RESOURCE_TYPES.YSM 静默兜底。
-      // 发射点（app-sidebar/events.ts）已拦空 rtype，这里防御性 return。
-      if (!pkg.rtype) return;
-      const insName = pkg.name || "";
-      const defaultType = pkg.rtype;
-      content.innerHTML =
-        '<app-sync-manager instance="' +
-        esc(insName) +
-        '" default-type="' +
-        esc(defaultType) +
-        '" style="display:flex;flex-direction:column;flex:1;overflow:hidden;height:100%"></app-sync-manager>';
-    }),
+    // 工厂形式（ADR-264）：订阅只在 key 真正认领时创建
+    () =>
+      bus.on("package:selected", (pkg) => {
+        const content = host.state.root.getElementById("ins-content");
+        if (!content) return;
+        // P1 修复：去掉 || RESOURCE_TYPES.YSM 静默兜底。
+        // 发射点（app-sidebar/events.ts）已拦空 rtype，这里防御性 return。
+        if (!pkg.rtype) return;
+        const insName = pkg.name || "";
+        const defaultType = pkg.rtype;
+        content.innerHTML =
+          '<app-sync-manager instance="' +
+          esc(insName) +
+          '" default-type="' +
+          esc(defaultType) +
+          '" style="display:flex;flex-direction:column;flex:1;overflow:hidden;height:100%"></app-sync-manager>';
+      }),
   );
 }
 

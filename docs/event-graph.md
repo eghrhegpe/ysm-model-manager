@@ -52,7 +52,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 170 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 180 |
 
 ### `batch:disable-all`
 
@@ -266,7 +266,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 46 |
+| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 48 |
 
 ### `repo:focus-search`
 
@@ -293,8 +293,8 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
-| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 88 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 304 |
+| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 90 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 306 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 241 |
@@ -461,8 +461,8 @@
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 74 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 33 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
-| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 201 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 339 |
+| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 203 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 341 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |

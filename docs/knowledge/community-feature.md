@@ -9,12 +9,14 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - addQueueError
+    - AvatarMap
     - bindRepoEvents
     - buildDownloadTasks
     - buildModelRow
     - cancelDownloads
     - classifyDownloadSize
     - clearAllCommunityCache
+    - clearAvatars
     - cmReBindBack
     - cmReBindContextMenu
     - cmReBindDlSelected
@@ -54,6 +56,8 @@ auto_fields:
     - forceRefreshCommunityMerge
     - forceRefreshCommunitySites
     - forceRefreshScanAuthors
+    - getAvatar
+    - getAvatarSnapshot
     - getState
     - getStateSnapshot
     - GH_DOCS
@@ -89,9 +93,12 @@ auto_fields:
     - resume
     - rollbackToIdle
     - runWebEnqueue
+    - setAvatar
+    - setAvatars
     - showProgress
     - showRepoModels
     - subscribe
+    - subscribeAvatars
     - tryFetchModels
     - VIEW_TESTIDS
     - VirtualList
@@ -152,6 +159,7 @@ status: active
   - **`download-queue-store.ts`（模块级持久层）**：`STATE`（status/total/remaining/currentFile/progress/errorList/_lastDone/_lastDoneSeq）+ `subscribe`/`getState`/`resume`/`enqueueDownloads`/`cancelDownloads`/`isActiveStatus`；脚本加载时一次性 `Events.On` 注册 `queue:status`、`queue:file-start`、`queue:file-done`、`download:progress`（`_registered` 守卫，页面切换不丢事件，致命陷阱 #7 的解法）；`.ysm` 下载成功且文件名含 `[作者]` 前缀时，异步 `CachedCreatorAvatar` →（未命中则 `DebugExtractCreatorAvatar` 后重取）→ 广播 `avatar:refresh`（`_avatarChain` Promise 链串行限并发 1）；`resume()`：切回页面时调 `QueueStatus()` 恢复状态，对 Wails 多返回值的三种映射形态（数组 / `{Remaining,Running}` 对象 / 裸数字）都做兜底解析，仅在 `running` 为真时把 STATE 置回 `downloading`
   - **`download-queue-progress.ts`（99% 卡进度守护）**：`createProgressGuard` 状态机分两档——小文件（`total ≤ 100KB`）从 `<10%` 直跳 `≥99%` → 锁 99%，**300ms** 后补写 100%；大文件（`total > 1MB`）同样条件 → 锁 99%，**2s** 后转「⏳…」菊花动画（`_dotTimer` 每 400ms 加一个点）；`forceFileDone` 在 `file-done` 到达时强制把卡在 99% 的进度覆盖为 100%（fail 显示 ❌ 并复位锁定）；3s `completeTimer` 收口与队列结束双路互斥（`beginQueueEnded`，防重复 onAllDone/cleanup）
   - **`download-queue.ts`（UI 控制器）**：`createDownloadQueue(options)`：订阅 STATE 渲染 `#gh-queue-status` 进度行；`stuckGuardReset()` 集中清理定时器；队列结束经 `cleanupProgressUI` 统一恢复按钮、发 `tree:reload` + `stats:refresh`、清 `ClearScanCache`；**`destroy()` 清理全部定时器**（P2 修复：原仅 unsub——视图销毁后 `_dotTimer` interval 无限自旋、3s `completeTimer` 在死视图上触发副作用；现 `stuckGuardReset()` 集中清 `_stuckTimer`/`_dotTimer`/`completeTimer` 后再退订）；`enqueue()` 先 `GetRepoRoot(RESOURCE_TYPES.YSM)` 取仓库根目录并写入每个 task 的 `saveDir`，取不到则 toast「请先配置仓库目录」并中止；并对旧单文件契约 re-export 全部公开符号（store 的 subscribe/getState/resume/enqueueDownloads/cancelDownloads/isActiveStatus + 类型），消费者零改动
+- **`creator-avatar-store.ts`（创作者头像 store，ADR-264）**：模块级单例（与 `download-queue-store` 同寿命同形态，底层 ADR-216 listener-set），承载「`作者 → dataUri`」头像表。写入方两路：`download-queue-store` 的 `.ysm` 成功增量（`setAvatar`，**原地改写**——已渲染卡片即时更新）与工坊页批量提取 `extractAvatars`（`setAvatars`，**整表替换**，旧 ctx 不可见由重渲染兑底）——两种语义刻意不同勿统一（契约测试锁定）。**空表不覆盖**：批量提取返回空表是「这次没提取到」而非「头像没了」，照收会抹掉已知头像。`avatar:refresh` 的消费方（工坊页订阅）从此处读，不再借宿 `AppContentState`（历史归属：曾借宿页面容器、寿命错配，ADR-263 裁定上收、ADR-264 落地）。
 
 ## 对外 API / 入口
 

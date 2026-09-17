@@ -48,6 +48,7 @@ vi.mock("./site/workshop-site-opener.ts", () => ({ openSite, bindSiteEvents }));
 vi.mock("./site/workshop-tabs.ts", () => ({ initWorkshopTabs, setShowSiteView, createWorkshopRefs }));
 vi.mock("@/features/community/community-data.ts", () => ({ fillSearch }));
 
+import { clearAvatars, getAvatar } from "@/features/community/creator-avatar-store.ts";
 import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
 import { flushPromises } from "@/test-utils/index.ts";
@@ -69,7 +70,6 @@ function lastCallArgs(mock: unknown): unknown[] {
 interface MockHost {
   state: {
     root: HTMLElement;
-    avatarCache: Record<string, string>;
     workshopCache: Map<string, unknown> | null;
     githubCache: unknown;
   };
@@ -91,7 +91,6 @@ function makeHost(cardsHTML = "") {
   const raw: MockHost = {
     state: {
       root: el,
-      avatarCache: {},
       workshopCache: null,
       githubCache: null,
     },
@@ -125,13 +124,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   document.body.innerHTML = "";
+  // 头像 store 是模块级单例（ADR-264），跨测试存活——不清会让上一例的 author 泄漏到下一例
+  clearAvatars();
 });
 
 afterEach(() => {
-  // 回收真实 bus 上的 avatar:refresh 订阅，防止跨测试泄漏触发旧 host 副作用
+  // 回收真实 bus 上的 avatar:refresh 订阅，防止跨测试泄漏触发旧 host 副作用。
+  // ⚠️ 必须走 cleanupAll()（而非手清 globalUnsubs 数组）：addGlobalOnce 的 globalKeys 只随
+  // cleanupAll 清空，绕过它会让下一例的 addGlobalOnce 因 key 未清而**静默跳过注册**。
   createdHosts.forEach((h) => {
-    h.subs.globalUnsubs.forEach((u) => u());
-    h.subs.globalUnsubs = [];
+    h.subs.cleanupAll();
   });
   createdHosts.length = 0;
   resetAvatarConfigLoaded();
@@ -141,7 +143,7 @@ const site = { id: "github", url: "https://github.com/", label: "GitHub" } as un
 const site2 = { id: "bilibili", url: "https://bilibili.com/", label: "B站" } as unknown as WorkshopSite;
 
 describe("initWorkshopPage — 初始化装配", () => {
-  it("状态装配：页作用域 currentSite 置空、workshopCache/avatarCache 初始化、子模块接线", () => {
+  it("状态装配：页作用域 currentSite 置空、workshopCache 初始化、头像 store 上收、子模块接线", () => {
     const { host, raw } = makeHost();
     initWorkshopPage(host);
 
@@ -149,8 +151,10 @@ describe("initWorkshopPage — 初始化装配", () => {
     // 装配后初始为空，且结构性不可在共享 state 上访问到（后者已无该字段，故此处不断言）
     expect(getPageState().getCurrentSite()).toBeNull();
     expect(raw.state.workshopCache).toBeInstanceOf(Map);
-    expect(raw.state.avatarCache).toEqual({});
-    expect(extractAvatars).toHaveBeenCalledWith(host);
+    // ADR-264：avatarCache 已上收 community 层 store——不再在共享 state 上初始化/置空，
+    // 且 extractAvatars 不再需要 host（它写的是 store，不是页面字段）
+    expect("avatarCache" in raw.state).toBe(false);
+    expect(extractAvatars).toHaveBeenCalled();
     expect(initWorkshopTabs).toHaveBeenCalledTimes(1);
     expect(callArgs(initWorkshopTabs, 0)[0]).toBe(host);
     // createWorkshopRefs 生成的单源 ref 原样传给 tabs（同实例约定）
@@ -328,27 +332,26 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
 describe("initWorkshopPage — avatar:refresh 订阅", () => {
   const cardHTML = `<div class="cr-creator-card" data-name="alice"><img class="cr-avatar" src=""/></div>`;
 
-  it("命中卡片：更新 img.src 与缓存", () => {
-    const { host, raw, el } = makeHost(cardHTML);
+  it("命中卡片：更新 img.src 与 store 缓存", () => {
+    const { host, el } = makeHost(cardHTML);
     initWorkshopPage(host);
-    expect(raw.subs.globalUnsubs).toHaveLength(1);
+    expect((host as unknown as MockHost).subs.globalUnsubs).toHaveLength(1);
 
     bus.emit("avatar:refresh", { author: "alice", dataUri: "data:image/png;base64,AAA" });
     const img = el.querySelector(".cr-avatar") as HTMLImageElement;
     expect(img.src).toBe("data:image/png;base64,AAA");
-    expect((raw.state.avatarCache as Record<string, string>).alice).toBe(
-      "data:image/png;base64,AAA",
-    );
+    // ADR-264：增量写落到 community 层 store（不再是 host.state.avatarCache）
+    expect(getAvatar("alice")).toBe("data:image/png;base64,AAA");
   });
 
   it("重复 dataUri 提前返回（不再扫 DOM）；未命中且无 currentSite 不重渲染", () => {
-    const { host, raw, el } = makeHost(cardHTML);
+    const { host, el } = makeHost(cardHTML);
     initWorkshopPage(host);
     const qsa = vi.spyOn(el, "querySelectorAll");
 
     bus.emit("avatar:refresh", { author: "bob", dataUri: "X" });
     expect(qsa).toHaveBeenCalledTimes(1);
-    expect((raw.state.avatarCache as Record<string, string>).bob).toBe("X");
+    expect(getAvatar("bob")).toBe("X");
 
     // 同 author 同 dataUri → 提前 return，不再 querySelectorAll
     bus.emit("avatar:refresh", { author: "bob", dataUri: "X" });

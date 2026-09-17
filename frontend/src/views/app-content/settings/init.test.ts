@@ -108,7 +108,6 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="lm-hint-copy"></div><div id="lm-hint-hardlink"></div><div id="lm-hint-symlink"></div>
     <button id="set-relink"></button>
     <div id="set-version"></div>
-    <button id="set-releases"></button>
     <select id="set-lang">
       <option value="zh-CN">简体中文</option><option value="en">English</option>
     </select>
@@ -358,15 +357,6 @@ describe("initSettings — 高级面板/主题/镜像/发布页", () => {
     ).toBe("block");
   });
 
-  it("发布页按钮 → OpenInBrowser", async () => {
-    const { root } = makeRoot();
-    await initSettings(root);
-    (root.getElementById("set-releases") as HTMLElement).click();
-    await waitFor(() => appObj.OpenInBrowser.mock.calls.length > 0);
-    expect(appObj.OpenInBrowser).toHaveBeenCalledWith(
-      "https://github.com/eghrhegpe/ysm-model-manager/releases",
-    );
-  });
 
   it("初始化调用 initVersionUpdater + loadTdKeymap", async () => {
     const { root } = makeRoot();
@@ -921,18 +911,6 @@ describe("initSettings — relink 收尾分支（busy / 全跳过 / 外层失败
 });
 
 describe("initSettings — 发布页失败 / 语言切换 / filesRoot 卡片 / 面板收起", () => {
-  it("OpenInBrowser 失败 → 「❌ 打开浏览器失败」toast", async () => {
-    mockApp({ OpenInBrowser: vi.fn(() => Promise.reject(new Error("open boom"))) });
-    const { root } = makeRoot();
-    await initSettings(root);
-    (root.getElementById("set-releases") as HTMLElement).click();
-    await waitFor(() =>
-      busEmit.mock.calls.some(
-        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("打开浏览器失败"),
-      ),
-    );
-  });
-
   it("语言切换 change → setLang 落盘 + lang:changed 广播", async () => {
     const { root } = makeRoot();
     await initSettings(root);

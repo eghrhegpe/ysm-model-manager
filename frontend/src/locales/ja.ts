@@ -417,7 +417,6 @@ export const ja: Record<string, string> = {
   "recycle.deleted": "✅ 削除しました",
 
   // ── About Page ──
-  "about.title": "YSMモデルマネージャーについて",
   "about.appName": "YSM モデルマネージャー",
   "about.intro":
     "は Minecraft YSM モッド向けのモデル管理ツールで、Steam Workshop のようにモデルコレクションを管理できます。",
@@ -445,10 +444,7 @@ export const ja: Record<string, string> = {
   "about.qs3": "モデルが自動でリポジトリにアーカイブ",
   "about.qs4": "「統合パック管理」で統合パックにインストール",
   "about.qs5": "ゲーム内で YSM リソースパックを読み込むとモデルが表示されます",
-  "about.version": "現在のバージョン",
   "about.checkUpdate": "アップデートを確認",
-  "about.releasePage": "リリースページ",
-  "about.openReleases": "GitHub Releases を開く",
   "about.features": "これは何？",
   "about.techStack": "技術スタック",
   "about.links": "リソースリンク",

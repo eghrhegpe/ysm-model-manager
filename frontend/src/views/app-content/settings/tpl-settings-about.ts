@@ -10,21 +10,18 @@ export function aboutHTML(): string {
 <div class="tab-body" id="stg-tab-about" style="display:none;overflow-y:auto">
 <div class="stg-page" style="padding:16px 20px">
 
-<div class="section-title stg-title">${UI_ICONS.info} ${t("about.title")}</div>
+<div class="section-title stg-title">${UI_ICONS.info} ${t("settings.about")}</div>
 
 <div class="stg-grid" style="margin-bottom:12px">
   <div class="stg-card">
     <div class="stg-card-hdr" style="display:flex;align-items:center;gap:8px">
-      <span>${UI_ICONS.info} ${t("about.version")}</span>
+      <span>${UI_ICONS.info} ${t("about.appName")}</span>
       <span id="set-version" style="font-size:var(--fs-lg);font-weight:700;color:var(--accent)">${t("common.loading")}</span>
     </div>
     <div class="stg-card-body" style="display:flex;flex-direction:column;gap:8px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="btn-base sm stg-btn" id="set-check-update">${UI_ICONS.refresh} ${t("about.checkUpdate")}</button>
-        <button class="btn-base sm" id="set-releases" title="${t("about.openReleases")}">${UI_ICONS.clipboard} ${t("about.releasePage")}</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:var(--fs-base);color:var(--muted)">
-        <span>${UI_ICONS.clock} ${t("settings.updateCheck.title")}:</span>
+      <button class="btn-base sm stg-btn" id="set-check-update">${UI_ICONS.refresh} ${t("about.checkUpdate")}</button>
+      <div class="setting-row" style="margin:0;padding:4px 0;background:none;border-radius:0">
+        <span style="font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.clock} ${t("settings.updateCheck.title")}</span>
         <select id="set-update-check" class="stg-select" style="width:auto;font-size:var(--fs-sm);padding:2px 4px">
           <option value="21600000">${t("settings.updateCheck.option6h")}</option>
           <option value="43200000">${t("settings.updateCheck.option12h")}</option>

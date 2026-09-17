@@ -412,11 +412,7 @@ export const zhCN = {
   "recycle.deleted": "✅ 已删除",
 
   // ── 关于页 ──
-  "about.title": "关于 YSM 模型管理器",
-  "about.version": "当前版本",
   "about.checkUpdate": "检查更新",
-  "about.releasePage": "发布页",
-  "about.openReleases": "打开 GitHub Releases",
   "about.features": "这是什么？",
   "about.appName": "YSM 模型管理器",
   "about.intro":

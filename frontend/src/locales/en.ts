@@ -413,11 +413,7 @@ export const en: Record<string, string> = {
   "recycle.deleted": "✅ Deleted",
 
   // ── About Page ──
-  "about.title": "About YSM Model Manager",
-  "about.version": "Current Version",
   "about.checkUpdate": "Check for Updates",
-  "about.releasePage": "Release Page",
-  "about.openReleases": "Open GitHub Releases",
   "about.features": "What Is This?",
   "about.appName": "YSM Model Manager",
   "about.intro":

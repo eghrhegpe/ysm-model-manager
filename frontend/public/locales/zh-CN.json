@@ -366,8 +366,6 @@
   "recycle.deleteOk": "🗑️ 删除",
   "recycle.restored": "✅ 已恢复",
   "recycle.deleted": "✅ 已删除",
-  "about.title": "关于 YSM 模型管理器",
-  "about.version": "当前版本",
   "about.checkUpdate": "检查更新",
   "about.features": "这是什么？",
   "about.appName": "YSM 模型管理器",

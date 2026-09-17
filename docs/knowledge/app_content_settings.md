@@ -127,9 +127,8 @@ status: active
 1. ✅ `renderStgLangSelect()`（tpl-settings.ts）手写 `<div class="stg-card">` → 已回填为 `stgCard()`（hdr=语言标题，body=select+描述），单卡场景不再另挂 section-title（2026-09-15）。
 2. ✅ `renderStgFontFamily()`（tpl-settings.ts）三栏裸样式 `div` → 已回填为 `stg-grid` 内三张 `stgCard()`（字号/显示字体/密度各一卡，hdr 小标题+body 控件），与路径三卡同构（2026-09-15）。
 3. 主题自动切换 / 相机速度 / 旋转模式维持 `setting-row`（本就适合，不动）。
-> 剩余非正典卡仅剩：主题选择（`theme-card` 瓦片，属选择器范式，正确）、主题自动切换/相机速度/旋转模式（`setting-row`，属行组范式，正确）。设置页三范式现已全部落在正典实现上。
+> 剩余非正典卡：主题选择（`theme-card` 瓦片，属选择器范式，正确）、主题自动切换/相机速度/旋转模式（`setting-row`，属行组范式，正确）；**About 页（`aboutHTML`）的 features / 技术栈 / 链接 / 快速开始四组仍为裸样式手写卡**（`background:var(--surf);border:...`），用户 2026-09-15 明确暂不处理，列为遗留债。
 > 鸣谢页（tpl-settings-about.ts `creditsHTML`）已数组化 + `stgCard`：灵感来源四张抽 `INSPIRATIONS` 数组、贡献者沿用 `CONTRIBUTORS` 数组，二者均 `map` 出 `stgCard()` 平铺于 `stg-grid`（2026-09-15）；加人/加灵感来源只改数据数组。
-> 剩余非正典卡仅剩：主题选择（`theme-card` 瓦片，属选择器范式，正确）、主题自动切换/相机速度/旋转模式（`setting-row`，属行组范式，正确）。设置页三范式现已全部落在正典实现上。
 > 背景：设置页跨多 ADR/PR 长出，`stgCard()` 是 ADR-040 拆分后才有的「正典卡片」，早于它的 section（主题/字体/相机/语言）从未回填，导致「卡片」在项目里实际有 3 种实现。此为存量债，非新增。
 ## 相关
 

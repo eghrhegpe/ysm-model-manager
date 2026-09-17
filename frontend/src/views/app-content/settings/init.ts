@@ -4,7 +4,6 @@
 // 本文件保留为编排壳：加载 cfg/registry → 调用各模块初始化 → 组装其余事件绑定骨架。
 
 import { getFsaAuthState, rescanFsaRoot, selectLocalRepo } from "@/backend/browser-adapter.ts";
-import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
@@ -12,7 +11,6 @@ import { initVersionUpdater } from "@/features/maintenance/version-updater.ts";
 import { loadResourceRegistry } from "@/services/resource-registry.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
-import { GH_RELEASES } from "@/utils/base/pure/gh-links.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -226,30 +224,6 @@ async function stgBindShowVersion(root: ShadowRoot): Promise<void> {
   }
 }
 
-function stgBindReleasesClick(
-  root: ShadowRoot,
-  isViewerModeFn: typeof isViewerMode,
-  ghReleases: string,
-): void {
-  root.getElementById("set-releases")?.addEventListener("click", () => {
-    const url = ghReleases;
-    if (isViewerModeFn()) {
-      window.open(url, "_blank", "noopener");
-      return;
-    }
-    backendGetApp()
-      .then(({ OpenInBrowser }) => OpenInBrowser(url))
-      .catch((e) => {
-        logWarn("settings", "打开发布页失败", e);
-        bus.emit("toast:show", {
-          msg: `❌ ${t("tree.browserFailed")}`,
-          duration: TOAST_MS.normal,
-          type: "error",
-        });
-      });
-  });
-}
-
 async function stgBindLangSwitch(
   root: ShadowRoot,
   toastErrorLocal: typeof toastError,
@@ -386,7 +360,6 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   void stgBindShowVersion(root);
   initVersionUpdater(root);
-  stgBindReleasesClick(root, isViewerMode, GH_RELEASES);
 
   initUiPrefs(root);
   initWorkerPrefs(root);

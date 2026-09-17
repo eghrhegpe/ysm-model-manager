@@ -154,8 +154,8 @@ export const contentGhCSS: string = `
 .gh-progress-remain { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
 .gh-cancel-btn { width:20px; height:20px; border-radius:50%; border:none; background:rgba(128,128,128,.15); color:var(--muted); cursor:pointer; font-size:var(--fs-base); flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:background var(--tr-normal); }
 .gh-cancel-btn:hover { background:rgba(128,128,128,.3); }
-.gh-progress-bar-wrap { margin-top:3px; height:4px; border-radius:2px; background:var(--bd); overflow:hidden; }
-.gh-progress-fill { height:100%; width:0%; border-radius:2px; background:var(--accent); transition:width 0.06s linear; box-shadow:0 0 4px var(--accent); animation:breathe-subtle 4s ease-in-out infinite;will-change:filter,box-shadow; }
+.gh-progress-bar-wrap { margin-top:3px; height:4px; border-radius:var(--radius-xs); background:var(--bd); overflow:hidden; }
+.gh-progress-fill { height:100%; width:0%; border-radius:var(--radius-xs); background:var(--accent); transition:width 0.06s linear; box-shadow:0 0 4px var(--accent); animation:breathe-subtle 4s ease-in-out infinite;will-change:filter,box-shadow; }
 .gh-progress-pct.gh-progress-error { color:var(--status-error); }
 .gh-progress-fill.gh-progress-fill-error { background:var(--status-error); }
 .gh-progress-box { padding:24px 12px; text-align:center; }

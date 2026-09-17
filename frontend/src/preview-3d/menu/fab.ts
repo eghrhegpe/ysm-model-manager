@@ -38,7 +38,7 @@ export const YSW_FAB_CSS = `
 
 /* ===== 底部导航 + 分类弹窗（紧凑工具型外观）=====
    3D 全屏无常驻侧栏，功能经底部导航按域分组。 */
-.preview-dock-nav{position:absolute;left:12px;bottom:12px;display:flex;gap:2px;padding:4px;border-radius:5px;background:#1b1c24;border:1px solid rgba(255,255,255,.12);box-shadow:0 3px 10px rgba(0,0,0,.28);z-index:20}
+.preview-dock-nav{position:absolute;left:12px;bottom:12px;display:flex;gap:2px;padding:4px;border-radius:var(--radius-sm);background:var(--surf);border:1px solid rgba(255,255,255,.12);box-shadow:0 3px 10px rgba(0,0,0,.28);z-index:20}
 .preview-dock-navbtn{display:flex;align-items:center;min-width:0;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid transparent;background:transparent;color:rgba(255,255,255,.72);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);line-height:1.2;transition:var(--tr-fast)}
 .preview-dock-navbtn .preview-ic{display:none}
 .preview-dock-navbtn:hover{background:rgba(255,255,255,.08);color:#fff}

@@ -107,7 +107,7 @@ class ContextMenu extends WebComponentBase {
           align-items: center;
           gap: 8px;
           padding: 6px 10px;
-          border-radius: 5px;
+          border-radius: var(--radius-sm);
           font-size: var(--fs-btn-secondary);
           color: var(--txt);
           cursor: pointer;

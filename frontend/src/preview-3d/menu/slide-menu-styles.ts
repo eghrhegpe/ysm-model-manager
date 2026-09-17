@@ -45,7 +45,7 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   touch-action: pan-y;

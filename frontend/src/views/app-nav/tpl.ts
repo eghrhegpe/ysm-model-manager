@@ -82,7 +82,7 @@ export const navCSS: string = `
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   font-size: calc(var(--fs-nav) + 2px);
   color: var(--muted);
   cursor: pointer;
@@ -104,7 +104,7 @@ export const navCSS: string = `
   gap: 8px;
   margin: 2px 8px 6px;
   padding: 8px 10px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   font-size: calc(var(--fs-nav) + 2px);
   color: var(--muted);
   cursor: pointer;

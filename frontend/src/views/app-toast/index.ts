@@ -59,7 +59,7 @@ class AppToast extends WebComponentBase {
         .toast.warn { border-left: 3px solid var(--status-error); }
         .toast.info { border-left: 3px solid var(--accent); }
         .toast .msg { flex: 1; white-space: pre-line; }
-        .toast .undo-btn { padding: 4px 10px; border-radius: 5px; border: none; background: var(--hover); color: var(--accent); cursor: pointer; font-size: var(--fs-sm); font-family: inherit; transition: background var(--tr-fast); }
+        .toast .undo-btn { padding: 4px 10px; border-radius: var(--radius-sm); border: none; background: var(--hover); color: var(--accent); cursor: pointer; font-size: var(--fs-sm); font-family: inherit; transition: background var(--tr-fast); }
         .toast .undo-btn:hover { background: var(--act); }
         .toast .close-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: var(--fs-md); padding: 0 2px; }
         .toast .close-btn:hover { color: var(--txt); }

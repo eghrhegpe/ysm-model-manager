@@ -35,7 +35,9 @@
 **D2 · 阶段三要素、总计拆分与身份块。**
 每个阶段必须携带：`runtime`（`go` | `rust` | `wasm` | `js` | `three`）、`kind`（`measured` | `estimated`）、样本统计（`n` / `median` / `p95`，实测才允许有分位数）。总计拆成 `measured_ms` 与 `estimated_ms` 两个字段，**估算不得计入总耗时展示**；估算行必须显式标注其假设与公式。阶段失败独立成 `failed`（见 D8），不得混进耗时分级。
 
-**gui-flow 的落地形态**：阶段条目带 `kind` / `estimated_ms` / `note`，顶层带 `estimated_ms` 合计且**不计入 `total_ms`**（`total_ms` 语义 = 实测墙钟）。⑤ 数据准备 = 实测的尺寸估算工作 + IPC 传输估算（50MB/s 假设，进 `estimated_ms`）；⑥ 渲染预估 = `kind: "estimated"`、`ms: 0`（**没有实测工作量可报**）+ 首帧公式区间取中值进 `estimated_ms` + `note` 写明公式与「真实首帧须在 GUI 验证」。文本报告同步标 `[估算]` 并单列「其中估算 X ms（不计入总耗时）」。
+**gui-flow 的落地形态**：阶段条目带 `kind` / `estimated_ms` / `note`，顶层带 `estimated_ms` 合计且**不计入 `total_ms`**（`total_ms` 语义 = 实测墙钟）。⑤ 数据准备 = **实测**的 JSON 序列化（载荷字节数 = `len(json.Marshal(model))`、耗时 = 实测）+ 仅传输时间按 `ipcAssumedBytesPerSec`（50MB/s）假设外推进 `estimated_ms`；⑥ 渲染预估 = `kind: "estimated"`、`ms: 0`（**没有实测工作量可报**）+ 首帧公式区间取中值进 `estimated_ms` + `note` 写明公式与「真实首帧须在 GUI 验证」。文本报告同步标 `[估算]` 并单列「其中估算 X ms（不计入总耗时）」。
+
+**「能测的不要估」**：只有 CLI **观测不到**的环节才允许用估算（如 Wails IPC 的传输时间——CLI 只产出载荷、不经过那条通道）。凡是本地可执行的，一律取实测值：⑤ 的载荷大小与序列化耗时曾按 `(几何+纹理)*4/3` 估算、single-bench ⑥ 的 IPC 字节数同样如此——`json.Marshal` 本来就是真跑的，字节数与耗时都是现成实测。估算的每一项都必须能被追问「为什么不能测」，否则不得写成估算。
 
 报告必须携带**身份块** `identity`：`rtype`（registry 类型 id，判定复用 `classifyForScan` 的三段口径：目录归属 > 扩展名 > 容器兜底）、`rtype_source`（location / extension / container，说明凭什么这么判）、`rtype_label`（registry 显示名，前端不得自建类型映射）、`filesRoot` + `relPath`（相对仓库根，跨机器可比）+ `absPath`（诊断用）。**理由**：`format`（YSM/PMX/…）是扩展名表派生的展示标签，推不出归属——`.zip` 被 14 个类型声明、MMD 子类型共享 `.vpd`/`.vmd`；只给绝对路径则换机器后报告无法回溯识别，测试与 AI 断言只能靠绝对路径（必脆）。**测试与断言一律用 `rtype` + `relPath`，不用 `absPath`。**
 

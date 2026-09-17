@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-17T07:19:45.661Z",
+  "generated": "2026-09-17T15:52:42.705Z",
   "knip": [
     "package.json|binaries|wails3",
     "package.json|devDependencies|esbuild",
@@ -115,7 +115,6 @@
     "src/views/app-content/diagnostics/dedup-render.ts|exports|renderConfigHtml",
     "src/views/app-content/diagnostics/dedup-types.ts|types|ScanGroup",
     "src/views/app-content/diagnostics/dedup.ts|types|DedupConfigShape",
-    "src/views/app-content/diagnostics/perf-common.ts|types|CLIResp",
     "src/views/app-content/init-github.ts|types|GithubPageCtx",
     "src/views/app-content/settings/tpl-settings.ts|exports|VIEW_TESTIDS",
     "src/views/app-content/tpl.ts|exports|VIEW_TESTIDS",
@@ -213,6 +212,7 @@
     "utils/resource/types.test.ts#utils/resource/types.ts",
     "utils/storage/idb.ts#utils/storage/idb.ts",
     "views/app-content/app-content.component.test.ts#views/app-nav/index.test.ts",
+    "views/app-content/css/content-diag-classes.test.ts#views/app-content/settings/theme-cards.test.ts",
     "views/app-content/diagnostics/perf.test.ts#views/app-content/diagnostics/perf.test.ts",
     "views/app-content/init-github.test.ts#views/app-content/init-github.test.ts",
     "views/app-content/settings/init.ts#views/app-tree/index.ts",

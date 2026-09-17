@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -416,23 +417,37 @@ func runPhaseTextureCache(modelPath string) guiFlowResult {
 	}
 }
 
-// runPhaseDataPrep 模拟数据准备与 IPC 传输。
+// ipcAssumedBytesPerSec IPC 传输速率的**假设值**（50MB/s）。
 //
-// model 由 ③ 传入（不再自行 AnalyzeBedrockModel：重复分析会让本阶段耗时变成"又一次解析"，
-// 而不是"数据准备工作量"）。阶段耗时 = 自身的尺寸估算工作；IPC 传输是**估算**，
-// 走 Estimated 字段 + Note 标注假设，不计入 total_ms（ADR-262 D2）。
+// 传输通道（Wails binding → WebView2）在 CLI 侧不可观测：CLI 只产出载荷，不经过那条通道。
+// 因此"载荷大小"与"序列化耗时"一律实测（能测的不要估，ADR-262 D2），只有传输时间按此假设外推，
+// 并明确标为 estimated、不计入总耗时。
+const ipcAssumedBytesPerSec = 50 * 1024 * 1024
+
+// runPhaseDataPrep 数据准备与 IPC 载荷。
+//
+// model 由 ③ 传入（不再自行 AnalyzeBedrockModel：重复分析会让本阶段耗时变成"又一次解析"）。
+// 阶段耗时 = **实测**的 JSON 序列化耗时（Wails binding 走 JSON，这就是真正过桥的工作量）；
+// 载荷字节数同样是实测（`len(json.Marshal(model))`）——原实现按 (几何+纹理)*4/3 估算，
+// 但 Base64 早已在 model.Textures 里，膨胀系数属多余假设。
+// 唯一保留的估算是"传输时间"（通道不可观测），走 Estimated + Note，不计入 total_ms。
 func runPhaseDataPrep(model types.BedrockModel, modelPath string) guiFlowResult {
 	start := time.Now()
-
-	// 估算 IPC 传输大小
-	geoSize := estimateGeometrySize(model)
-	texSize := estimateTextureSize(model)
-	totalSize := geoSize + texSize
-
-	// Base64 编码后会膨胀约 33%
-	ipcSize := totalSize * 4 / 3
-	transfer := time.Duration(float64(ipcSize) / (50 * 1024 * 1024) * float64(time.Second))
+	data, marshalErr := json.Marshal(model)
 	elapsed := time.Since(start)
+
+	if marshalErr != nil {
+		return guiFlowResult{
+			Stage:       "⑤ 数据准备",
+			Duration:    elapsed,
+			Success:     false,
+			Description: fmt.Sprintf("❌ 序列化失败: %v", marshalErr),
+		}
+	}
+
+	payloadBytes := int64(len(data))
+	transfer := time.Duration(float64(payloadBytes) / ipcAssumedBytesPerSec * float64(time.Second))
+	transferMs := float64(payloadBytes) / ipcAssumedBytesPerSec * 1000
 
 	return guiFlowResult{
 		Stage:     "⑤ 数据准备",
@@ -440,13 +455,16 @@ func runPhaseDataPrep(model types.BedrockModel, modelPath string) guiFlowResult 
 		Success:   true,
 		Kind:      "measured",
 		Estimated: transfer,
-		Note:      "IPC 传输按 50MB/s 假设估算（Base64 后 4/3 膨胀）——估算不计入总耗时",
+		Note: fmt.Sprintf(
+			"载荷与序列化耗时为实测（%s / %.2fms）；仅传输时间按 %dMB/s 假设外推（CLI 观测不到 Wails IPC 通道），估算不计入总耗时",
+			fsutil.FormatSize(payloadBytes), float64(elapsed.Microseconds())/1000, ipcAssumedBytesPerSec/1024/1024,
+		),
 		Description: fmt.Sprintf(
-			"📦 数据就绪\n   几何数据: %s\n   纹理数据: %s\n   IPC 估算: %s (Base64 后)\n   预计传输: %.0fms (假设 50MB/s，估算)",
-			fsutil.FormatSize(geoSize),
-			fsutil.FormatSize(texSize),
-			fsutil.FormatSize(ipcSize),
-			float64(ipcSize)/(50*1024*1024)*1000,
+			"📦 数据就绪\n   载荷(实测 JSON): %s\n   序列化(实测): %.2fms\n   预计传输: %.0fms (假设 %dMB/s，估算)",
+			fsutil.FormatSize(payloadBytes),
+			float64(elapsed.Microseconds())/1000,
+			transferMs,
+			ipcAssumedBytesPerSec/1024/1024,
 		),
 	}
 }
@@ -578,21 +596,6 @@ func estimateGeometrySize(model types.BedrockModel) int64 {
 	return size
 }
 
-// estimateTextureSize 估算纹理数据大小
-func estimateTextureSize(model types.BedrockModel) int64 {
-	var size int64
-
-	// 主纹理
-	if model.Texture != "" {
-		size += int64(len(model.Texture)) * 3 / 4 // Base64 解码后大小
-	}
-
-	// 多纹理
-	for _, tex := range model.Textures {
-		if tex != "" {
-			size += int64(len(tex)) * 3 / 4
-		}
-	}
-
-	return size
-}
+// 说明：原 estimateTextureSize（按 Base64 长度 *3/4 估算纹理字节数）已随 ⑤ 改为实测载荷而删除——
+// 唯一的消费者是 ⑤，而它的估算口径已被 json.Marshal 的实测长度取代（ADR-262 D2「能测的不要估」）。
+// estimateGeometrySize 仍被 ③ 的「预估几何」信息行使用，保留。

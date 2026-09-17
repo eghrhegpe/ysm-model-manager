@@ -12,6 +12,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -106,10 +107,17 @@ func TestGUIFlow_EstimatedStagesSeparatedFromMeasured(t *testing.T) {
 		t.Fatalf("应有 ⑤ 数据准备: %+v", structured.Stages)
 	}
 	if five.Kind != "measured" {
-		t.Errorf("⑤ 的阶段耗时是实测工作（尺寸估算），kind 应为 measured, got %q", five.Kind)
+		t.Errorf("⑤ 的阶段耗时是实测的序列化工作，kind 应为 measured, got %q", five.Kind)
 	}
-	if five.EstimatedMs <= 0 || five.Note == "" {
-		t.Errorf("⑤ 含 IPC 传输估算，应带 estimated_ms 与假设说明: %+v", five)
+	// 能测的不要估（ADR-262 D2）：载荷大小与序列化耗时是实测，只有传输时间是估算
+	if !strings.Contains(five.Note, "实测") || !strings.Contains(five.Note, "假设") {
+		t.Errorf("⑤ 的 note 应同时说明「实测了什么」与「假设了什么」: %q", five.Note)
+	}
+	if desc := strings.Join(five.Desc, "\n"); !strings.Contains(desc, "载荷(实测 JSON)") {
+		t.Errorf("⑤ 描述应展示实测载荷大小: %q", desc)
+	}
+	if five.EstimatedMs >= 1 {
+		t.Errorf("⑤ 的估算应只剩传输时间（小模型远小于 1ms），got %.3f", five.EstimatedMs)
 	}
 
 	// 实测阶段默认 kind=measured（空值兜底）

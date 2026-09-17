@@ -1122,16 +1122,22 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 	})
 
 	ipcStart := time.Now()
-	ipcSize := (geoSize + texSize) * 4 / 3
-	// 基准隔离（ADR-176 2.4 例）：故意吞错以只测序列化耗时，非生产数据丢失——模拟序列化开销
-	_, _ = json.Marshal(model)
+	// 实测序列化载荷（原实现按 (几何+纹理)*4/3 估算字节数，并注释"Base64 4/3 膨胀为历史假设"——
+	// 但 Base64 早已在 model.Textures 里，膨胀系数是多余假设。能测的不要估：ADR-262 D2）
+	ipcData, ipcErr := json.Marshal(model)
 	ipcDuration := time.Since(ipcStart)
+	ipcSize := int64(len(ipcData))
+	ipcNote := fmt.Sprintf("✅ 实测载荷 %s（Wails binding 走 JSON 序列化）", fsutil.FormatSize(ipcSize))
+	if ipcErr != nil {
+		ipcNote = fmt.Sprintf("❌ 序列化失败: %v", ipcErr)
+	}
 
 	stages = append(stages, singleBenchStage{
 		Name:     "⑥ 序列化模拟",
 		Duration: ipcDuration,
 		Bytes:    ipcSize,
-		Notes:    fmt.Sprintf("📦 估算 %s（Wails binding 走 JSON 序列化；Base64 4/3 膨胀为历史假设，仅量级参考）", fsutil.FormatSize(ipcSize)),
+		Notes:    ipcNote,
+		Failed:   ipcErr != nil,
 	})
 
 	cacheStart := time.Now()

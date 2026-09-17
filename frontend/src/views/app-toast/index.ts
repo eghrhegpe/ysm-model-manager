@@ -59,8 +59,10 @@ class AppToast extends WebComponentBase {
         .toast.warn { border-left: 3px solid var(--status-error); }
         .toast.info { border-left: 3px solid var(--accent); }
         .toast .msg { flex: 1; white-space: pre-line; }
-        .toast .undo-btn { padding: 4px 10px; border-radius: var(--radius-sm); border: none; background: var(--hover); color: var(--accent); cursor: pointer; font-size: var(--fs-sm); font-family: inherit; transition: background var(--tr-fast); }
-        .toast .undo-btn:hover { background: var(--act); }
+        /* 常态=容器色（隐形）→ 悬停 --hover 浮现，与设置页 .stg-path-* / 导航选中态同口径
+           （原常态 --hover → 悬停 --act，起手高一档故需第二级色；2026-09 反向取值对齐全站） */
+        .toast .undo-btn { padding: 4px 10px; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--accent); cursor: pointer; font-size: var(--fs-sm); font-family: inherit; transition: background var(--tr-fast); }
+        .toast .undo-btn:hover { background: var(--hover); }
         .toast .close-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: var(--fs-md); padding: 0 2px; }
         .toast .close-btn:hover { color: var(--txt); }
         @keyframes toastIn { 0% { transform: translateY(20px) scale(.95); opacity: 0; } 60% { transform: translateY(-4px) scale(1.02); opacity: 1; } 100% { transform: translateY(0) scale(1); } }

@@ -41,6 +41,9 @@
  *   即「无覆盖的基线」，不是遗漏独立块。按选择器扫描主题块时勿把它当边界异常。
  * - 主题卡片色点（tpl-settings.ts）与上述变量**无映射关系**，是手调设计值；
  *   见 settings/theme-cards.test.ts 首部说明。
+ * - 交互态口径（2026-08-15 c40c3d66f 起，2026-09 补全）：**常态=容器色 → 悬停/选中=--hover**。
+ *   原 --act（选中态二级色）已全量退役删除；按钮若常态已占 --hover，改为「常态 transparent、
+ *   悬停 --hover」反向取值，勿再新增第三级色。本文件末尾注释保留 --act 仅为历史审计留存。
  */
 
 /* ===== 赛博霓虹（默认深色） ===== */
@@ -50,7 +53,6 @@
   --surf: #161622;
   --card: #24243e;
   --hover: #2a2a42;
-  --act: #313145;
   --accent: #9575cd;
   --txt: #e0d5f5;
   /* WCAG 实测 2026：原 #8b7fad on --card 仅 4.11（卡片内不合格，on --bg 5.12 却合格）——
@@ -81,7 +83,6 @@
   --surf: #ede4cf;
   --card: #faf6ed;
   --hover: #e6dcc4;
-  --act: #ddd0b8;
   --accent: #8b4513;
   --txt: #3e2723;
   /* WCAG 实测 2026：原 #8b7355 三面全不合格（bg 3.94 / surf 3.55 / card 4.16）——
@@ -108,7 +109,6 @@
   --surf: #1a1a1a;
   --card: #222222;
   --hover: #2a2a2a;
-  --act: #333333;
   --accent: #ff8a65;
   --txt: #f0e6e0;
   --muted: #a09080;
@@ -131,7 +131,6 @@
   --surf: #fbe8ee;
   --card: #fff0f4;
   --hover: #fce0e8;
-  --act: #f5b8cc;
   --accent: #d81b60;
   --txt: #45313c;
   /* --muted 色相须属 accent 粉色系（子代理审计 2026-08-15：原 #78909c 冷蓝灰 WCAG 3.06:1 + 色系脱节） */
@@ -155,7 +154,6 @@
   --surf: #0f2a3d;
   --card: #15334a;
   --hover: #1a3d55;
-  --act: #1f4a65;
   --accent: #9fa8da;
   --txt: #c5d8e8;
   --muted: #5f8a87;
@@ -178,8 +176,7 @@
   --surf: #e6f5ec;
   --card: #f5fdf9;
   --hover: #dceede;
-  --act: #c0e2ca;
-  /* 亮色主题 --accent 取深色系：子代理审计 WCAG 实测（2026-08-15）原 #4db6ac on --act 仅 1.74:1（全站最差） */
+  /* 亮色主题 --accent 取深色系：子代理审计 WCAG 实测（2026-08-15）原 #4db6ac 在选中态底（时为 --act）仅 1.74:1（全站最差） */
   --accent: #00695c;
   --txt: #2c3e3a;
   --muted: #4d7163;

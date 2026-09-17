@@ -366,8 +366,10 @@ type singleBenchStage struct {
 // runSingleBench 单模型加载基准测试
 func runSingleBench(ctx *CmdContext) error {
 	fs := newCmdFlagSet("single-bench")
-	modelPath := fs.String("model", "", "指定模型路径（必填）")
+	modelPath := fs.String("model", "", "指定模型路径（与 --rtype 二选一；目录式模型可传解包目录或 <dir>/ysm.json）")
 	iterations := fs.Int("iterations", 3, "重复测试次数")
+	rtype := fs.String("rtype", "", "按资源类型跑矩阵（registry 类型 id，如 ysm；仅 --format json）")
+	maxModels := fs.Int("max-models", 5, "矩阵模式最多测试的模型数（按路径字典序确定性取样）")
 	baseline := fs.String("baseline", "", "对比基准 JSON 文件（[{name,ms}]），任一阶段退化超 --threshold 时返回失败")
 	saveBaseline := fs.String("save-baseline", "", "把本次各阶段平均耗时写入该 JSON 文件（供后续 --baseline 对比）")
 	thresholdPct := fs.Float64("threshold", 50, "退化阈值百分比（默认 50），配合 --baseline 使用")
@@ -377,14 +379,28 @@ func runSingleBench(ctx *CmdContext) error {
 		return err
 	}
 
-	if *modelPath == "" {
-		return newParamErrf("必须指定 --model 参数")
+	if *modelPath == "" && *rtype == "" {
+		return newParamErrf("必须指定 --model 参数，或用 --rtype <类型> 跑类型矩阵")
+	}
+	if *modelPath != "" && *rtype != "" {
+		return newParamErrf("--model 与 --rtype 互斥：单模型基准传 --model，类型矩阵传 --rtype")
 	}
 	if *iterations <= 0 {
 		return newParamErrf("--iterations 必须大于 0")
 	}
 	if *format != "text" && *format != "json" {
 		return newParamErrf("--format 必须是 text 或 json")
+	}
+	if *maxModels <= 0 {
+		return newParamErrf("--max-models 必须大于 0")
+	}
+
+	// 类型矩阵（ADR-262 D3）：目标集由 Go 侧按 registry 类型扫描，仅结构化输出（text 模式无矩阵呈现口径）
+	if *rtype != "" {
+		if *format != "json" {
+			return newParamErrf("--rtype 矩阵模式仅支持 --format json（text 模式无矩阵呈现口径）")
+		}
+		return runSingleBenchMatrixJSON(ctx, *rtype, *maxModels, *iterations)
 	}
 
 	// 目标解析（复用 perf-snapshot 的同一出口）：目录式模型折叠为 <dir>/ysm.json，下游零目录分支。
@@ -519,6 +535,49 @@ func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
 	return stageJSON, bottleneckName
 }
 
+// benchOneModel 跑一个模型的 N 次迭代并组装单模型载荷（单模型命令与类型矩阵共用，不打印）。
+// 第二返回值 = 平均阶段列表，供 --baseline 退化对比复用（避免重复采集）。
+func benchOneModel(a AppService, modelPath, filesRoot string, iterations int) (singleBenchJSON, []singleBenchStage) {
+	allStages, totalDuration := runSingleBenchSamples(a, modelPath, filesRoot, iterations, nil)
+	avg := avgBenchStages(allStages)
+	stageJSON, bottleneckName := stagesToJSON(avg)
+
+	totalMs := float64(totalDuration.Microseconds()) / 1000
+	// 单次平均：AI/前端问「这个模型加载一次多久」时要的是它，而非 N 次累计
+	perIterationMs := totalMs
+	if iterations > 0 {
+		perIterationMs = totalMs / float64(iterations)
+	}
+	return singleBenchJSON{
+		Model:          modelPath,
+		Iterations:     iterations,
+		TotalMs:        totalMs,
+		PerIterationMs: perIterationMs,
+		Stages:         stageJSON,
+		Bottleneck:     bottleneckName,
+		Hints:          generateHints(avg),
+		Format:         detectModelFormat(modelPath),
+		// 目录式模型（ysm.json 入口）size 记 0——见 perfIdentitySize
+		SizeBytes: perfIdentitySize(modelPath),
+		// 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定，供测试/AI 分辨真实场景类别
+		Identity: buildPerfIdentity(modelPath, filesRoot, nil),
+	}, avg
+}
+
+// identityOnlyPayload CLI 无该类型解析器时的诚实载荷：只给身份与格式，**不采集阶段耗时**
+// （空模型的阶段数据不是实测，采集出来就是「数字不可信」的又一个来源）。
+func identityOnlyPayload(modelPath, filesRoot, rtype string) singleBenchJSON {
+	return singleBenchJSON{
+		Model:    modelPath,
+		Stages:   []benchStageJSON{},
+		Format:   detectModelFormat(modelPath),
+		Identity: buildPerfIdentity(modelPath, filesRoot, nil),
+		Hints: []string{
+			"⛔ CLI 无 " + rtype + " 解析器：未采集阶段耗时（解析器在前端 3D adapter，见 gui-flow 对 PMX 跳过 ④⑤⑥ 的同源口径）",
+		},
+	}
+}
+
 // runSingleBenchJSON 单模型基准测试 JSON 模式：静默运行，输出结构化数据
 func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, baseline, saveBaseline string, thresholdPct float64) error {
 	// 归一化（经 runSingleBench 进入时已是 entry path，此处幂等）：保证直接调用（测试/内部）同样吃目录
@@ -527,38 +586,8 @@ func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, basel
 		return terr
 	}
 	modelPath = target
-	// 目录式模型（YSM 解压目录）size 记 0——见 perfIdentitySize
-	modelSize := perfIdentitySize(modelPath)
 
-	allStages, totalDuration := runSingleBenchSamples(ctx.App, modelPath, ctx.FilesRoot, iterations, nil)
-	avg := avgBenchStages(allStages)
-
-	// 检测模型格式
-	modelFormat := detectModelFormat(modelPath)
-
-	stageJSON, bottleneckName := stagesToJSON(avg)
-
-	hints := generateHints(avg)
-
-	totalMs := float64(totalDuration.Microseconds()) / 1000
-	// 单次平均：AI/前端问「这个模型加载一次多久」时要的是它，而非 N 次累计
-	perIterationMs := totalMs
-	if iterations > 0 {
-		perIterationMs = totalMs / float64(iterations)
-	}
-	output := singleBenchJSON{
-		Model:          modelPath,
-		Iterations:     iterations,
-		TotalMs:        totalMs,
-		PerIterationMs: perIterationMs,
-		Stages:         stageJSON,
-		Bottleneck:     bottleneckName,
-		Hints:          hints,
-		Format:         modelFormat,
-		SizeBytes:      modelSize,
-		// 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定，供测试/AI 分辨真实场景类别
-		Identity: buildPerfIdentity(modelPath, ctx.FilesRoot, nil),
-	}
+	output, avg := benchOneModel(ctx.App, modelPath, ctx.FilesRoot, iterations)
 
 	data, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
@@ -571,6 +600,74 @@ func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, basel
 
 	// 基准对比 / 保存
 	return applyBenchBaseline(baseline, saveBaseline, thresholdPct, avg)
+}
+
+// singleBenchMatrixJSON 多模型矩阵载荷（ADR-262 D3）：目标集由 Go 侧按 registry 类型扫描产出，
+// 前端/AI 只需读 models[]，不自行挑样本、不自行判类型。
+type singleBenchMatrixJSON struct {
+	Spec   perfMatrixSpec    `json:"spec"`
+	Models []singleBenchJSON `json:"models"`
+	// ADR-200 D5 sidecar（桥接层注入）
+	Output    string `json:"output,omitempty"`
+	FilesRoot string `json:"filesRoot,omitempty"`
+}
+
+// AttachSidecar 实现 SidecarOutput（ADR-200 D5）。
+func (m *singleBenchMatrixJSON) AttachSidecar(output, filesRoot string) {
+	m.Output = output
+	m.FilesRoot = filesRoot
+}
+
+// perfMatrixSpec 矩阵实验规格（回显解析结果，供 AI 复盘「跑的是谁、几个、为什么跳」）。
+type perfMatrixSpec struct {
+	Rtype      string `json:"rtype"`
+	MaxModels  int    `json:"max_models"`
+	Iterations int    `json:"iterations"`
+	// Analyzed 实际采集了阶段耗时的模型数
+	Analyzed int `json:"analyzed"`
+	// Unsupported 命中类型但 CLI 无解析器、只出身份的模型数（非静默跳过：见 identityOnlyPayload）
+	Unsupported int `json:"unsupported"`
+	// CliAnalyzable 该类型在 CLI 侧是否具备分析链路（解析器在前端 3D adapter 的类型为 false）
+	CliAnalyzable bool `json:"cli_analyzable"`
+}
+
+// runSingleBenchMatrixJSON 类型矩阵：按 rtype 扫描目标集，逐个采集（或仅出身份）。
+func runSingleBenchMatrixJSON(ctx *CmdContext, rtype string, maxModels, iterations int) error {
+	if ctx.FilesRoot == "" {
+		return newParamErrf("--rtype 矩阵模式需要 --files-root 指定仓库根")
+	}
+	targets := scanBenchTargets(ctx.FilesRoot, rtype, maxModels)
+	if len(targets) == 0 {
+		return newRuntimeErrf("仓库中未找到 rtype=%s 的模型（root=%s）", rtype, ctx.FilesRoot)
+	}
+	analyzable := cliAnalyzableRtype[rtype]
+	out := singleBenchMatrixJSON{
+		Spec: perfMatrixSpec{
+			Rtype:         rtype,
+			MaxModels:     maxModels,
+			Iterations:    iterations,
+			CliAnalyzable: analyzable,
+		},
+		Models: make([]singleBenchJSON, 0, len(targets)),
+	}
+	for _, t := range targets {
+		if analyzable {
+			payload, _ := benchOneModel(ctx.App, t, ctx.FilesRoot, iterations)
+			out.Models = append(out.Models, payload)
+			out.Spec.Analyzed++
+			continue
+		}
+		out.Models = append(out.Models, identityOnlyPayload(t, ctx.FilesRoot, rtype))
+		out.Spec.Unsupported++
+	}
+
+	data, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return newRuntimeErrf("JSON 序列化失败: %v", err)
+	}
+	fmt.Println(string(data))
+	ctx.SetResult(&out)
+	return nil
 }
 
 // detectModelFormat 根据文件扩展名检测模型格式

@@ -18,6 +18,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
+	"ysm-model-manager/go/types/registry"
 )
 
 func init() {
@@ -585,7 +586,12 @@ func scanFirstModel(filesRoot string) string {
 		if err != nil {
 			return nil
 		}
-		if !info.IsDir() && allowedExts[strings.ToLower(filepath.Ext(path))] {
+		if info.IsDir() {
+			return nil
+		}
+		// 目录式模型的入口 ysm.json 与打包模型同列（不在扩展名白名单内，走唯一谓词判定）——
+		// 原实现只认扩展名，纯解包目录的仓库会「未找到模型」而跳过（README 式假失败）。
+		if allowedExts[strings.ToLower(filepath.Ext(path))] || registry.IsYsmEntryJSON(filepath.Base(path)) {
 			firstModel = path
 			return filepath.SkipAll
 		}

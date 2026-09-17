@@ -261,8 +261,10 @@ app --cli --files-root <路径> single-bench [选项...]
 
 | 选项 | 类型 | 说明 |
 |------|------|------|
-| `--model` | string — 指定模型路径（必填） |
+| `--model` | string — 指定模型路径（与 --rtype 二选一；目录式模型可传解包目录或 <dir>/ysm.json） |
 | `--iterations` | int — 重复测试次数 |
+| `--rtype` | string — 按资源类型跑矩阵（registry 类型 id，如 ysm；仅 --format json） |
+| `--max-models` | int — 矩阵模式最多测试的模型数（按路径字典序确定性取样） |
 | `--baseline` | string — 对比基准 JSON 文件（[{name,ms}]），任一阶段退化超 --threshold 时返回失败 |
 | `--save-baseline` | string — 把本次各阶段平均耗时写入该 JSON 文件（供后续 --baseline 对比） |
 | `--threshold` | float — 退化阈值百分比（默认 50），配合 --baseline 使用 |

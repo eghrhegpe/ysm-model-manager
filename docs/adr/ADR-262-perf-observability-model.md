@@ -40,6 +40,8 @@
 **D3 · 实验规格显式化，执行与聚合归 Go。**
 引入 `PerfSpec`：目标集（显式路径[] / 按 registry 类型各取 N 个 / 全库前 N 大）、样本数、迭代次数、冷热口径、是否启用 `rust_backend`（Go/Rust 对照）。目标集从 `resource_types.json` + Go 侧 registry 派生，**不得**在任一语言里另立类型表。矩阵遍历与聚合在 Go 侧完成（前端只提交 spec、渲染 report），对齐「筛选 / 聚合归 Go」红线。
 
+已落地的形态：`--rtype <id> --max-models N`（仅 `--format json`；与 `--model` 互斥）→ 目标集由 `perf_targets.go|scanBenchTargets` 从 `scanner.ScanEntries` + `classifyForScan` 派生（发现权与类型判定各自单点，路径字典序保证可复现），载荷为 `{spec, models[]}`，`spec` 回显 `rtype/max_models/iterations/analyzed/unsupported/cli_analyzable`。**CLI 侧可分析类型白名单**（`cliAnalyzableRtype`，当前仅 `ysm`）必须与发现白名单分开：解析器只存在于前端 3D adapter 的类型（PMX/PMD/VRM/FBX 等）在矩阵里**只出身份、不采集阶段耗时**并给出解释性 hint——拿空模型的阶段数据冒充实测正是「数字不可信」的来源之一。新增类型的 CLI 分析链路时同步登记该表。
+
 **D4 · 阈值分级单一来源。**
 分级（bottleneck / warn / slow / ok）与阈值（100/50/10ms）只存在于 Go；前端只做展示映射（emoji、配色、排序），**不得**自算阈值。
 

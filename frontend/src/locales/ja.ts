@@ -379,6 +379,10 @@ export const ja: Record<string, string> = {
   "diagnostics.perfTotal": "総所要時間",
   "diagnostics.perfTotalDetail": "{avg}ms（{n} 回反復の平均／累計 {total}ms）",
   "diagnostics.perfBottleneck": "最遅段階",
+  "diagnostics.perfEstimated": "推定",
+  "diagnostics.perfEstimatedHint":
+    "推定値（レンダリングパイプライン無し／仮定からの概算、合計に含まず）",
+  "diagnostics.perfEstimatedTotal": "うち推定 {ms}ms（合計に含まず）",
   "diagnostics.perfTrendTitle": "パフォーマンス傾向（段階ごとの所要時間）",
   "diagnostics.perfTrendNoData":
     "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",

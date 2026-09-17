@@ -35,6 +35,8 @@
 **D2 · 阶段三要素、总计拆分与身份块。**
 每个阶段必须携带：`runtime`（`go` | `rust` | `wasm` | `js` | `three`）、`kind`（`measured` | `estimated`）、样本统计（`n` / `median` / `p95`，实测才允许有分位数）。总计拆成 `measured_ms` 与 `estimated_ms` 两个字段，**估算不得计入总耗时展示**；估算行必须显式标注其假设与公式。阶段失败独立成 `failed`（见 D8），不得混进耗时分级。
 
+**gui-flow 的落地形态**：阶段条目带 `kind` / `estimated_ms` / `note`，顶层带 `estimated_ms` 合计且**不计入 `total_ms`**（`total_ms` 语义 = 实测墙钟）。⑤ 数据准备 = 实测的尺寸估算工作 + IPC 传输估算（50MB/s 假设，进 `estimated_ms`）；⑥ 渲染预估 = `kind: "estimated"`、`ms: 0`（**没有实测工作量可报**）+ 首帧公式区间取中值进 `estimated_ms` + `note` 写明公式与「真实首帧须在 GUI 验证」。文本报告同步标 `[估算]` 并单列「其中估算 X ms（不计入总耗时）」。
+
 报告必须携带**身份块** `identity`：`rtype`（registry 类型 id，判定复用 `classifyForScan` 的三段口径：目录归属 > 扩展名 > 容器兜底）、`rtype_source`（location / extension / container，说明凭什么这么判）、`rtype_label`（registry 显示名，前端不得自建类型映射）、`filesRoot` + `relPath`（相对仓库根，跨机器可比）+ `absPath`（诊断用）。**理由**：`format`（YSM/PMX/…）是扩展名表派生的展示标签，推不出归属——`.zip` 被 14 个类型声明、MMD 子类型共享 `.vpd`/`.vmd`；只给绝对路径则换机器后报告无法回溯识别，测试与 AI 断言只能靠绝对路径（必脆）。**测试与断言一律用 `rtype` + `relPath`，不用 `absPath`。**
 
 **D3 · 实验规格显式化，执行与聚合归 Go。**
@@ -61,7 +63,7 @@ CI / AI 断言所需的「真渲染」放 e2e 层（Playwright 单页面 + 软�
 目录式模型（解包 YSM 目录）在仓里已有既有约定：`scanner.go` 扫到 `ysm.json` 时条目 `Path` 保持该文件路径、`Name` 取父目录名，全体消费方（`fileops` 整组移动/复制/删除/禁用、`avatar` 元数据、`importer`、`app_model` 的 `.json` 分支）统一用 `registry.IsYsmEntryJSON` 判定。因此 perf/bench 只需在**入口单点**把用户/测试传入的目录折叠成该约定路径（`resolveBenchModelTarget`，经 `resolveTargetModel` 供单模型基准与 perf-snapshot 共用），**禁止各消费方自写目录分支**。理由：目录分支若散落到每个读盘点，就是「每加一个功能都要补一次目录支持」的成因；而实际唯一缺的就是这个入口归一化——`os.ReadFile(目录)` 会直接失败。
 
 **D8 · 报告不得掩盖失败。**
-阶段失败必须独立成字段（`failed`）并**优先于耗时分级**：失败阶段常是 0ms，只按 ms 分级会被判 `ok`，一次全链路失败的 bench 在载荷里看起来全绿（2026-09-17 实测）。平均/聚合环节必须保留诊断信息（`notes` / `bytes` / `failed`），禁止只留耗时——否则失败原因在到达消费方之前就已丢失。
+阶段失败必须独立成字段（`failed`）并**优先于耗时分级**：失败阶段常是 0ms，只按 ms 分级会被判 `ok`，一次全链路失败的 bench 在载荷里看起来全绿（2026-09-17 实测）。平均/聚合环节必须保留诊断信息（`notes` / `bytes` / `failed`），禁止只留耗时——否则失败原因在到达消费方之前就已丢失。**同一份工作不得重复计时**：gui-flow 的 ③⑤⑥ 曾各自调一次 `AnalyzeBedrockModel`，同一份解析被计 3 次耗时、⑤⑥ 的"阶段耗时"因此不是自己的工作量的度量——现 ③ 分析一次并把模型传给 ⑤⑥（`flow_estimated_test.go` 用计数桩锁死「每次运行只分析一次」）。
 
 ## 3. 后果（Consequences）
 

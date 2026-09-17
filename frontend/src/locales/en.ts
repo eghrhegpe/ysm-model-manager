@@ -376,6 +376,10 @@ export const en: Record<string, string> = {
   "diagnostics.perfTotal": "Total time",
   "diagnostics.perfTotalDetail": "{avg}ms (avg over {n} iterations; {total}ms total)",
   "diagnostics.perfBottleneck": "Slowest stage",
+  "diagnostics.perfEstimated": "est.",
+  "diagnostics.perfEstimatedHint":
+    "Estimated (no render pipeline / derived from assumptions; not counted in total)",
+  "diagnostics.perfEstimatedTotal": "of which estimated {ms}ms (not counted in total)",
   "diagnostics.perfTrendTitle": "Performance trend (stage time)",
   "diagnostics.perfTrendNoData": "No trend yet — run single-bench twice or more to show the chart",
   "diagnostics.perfRunning": "Running…",

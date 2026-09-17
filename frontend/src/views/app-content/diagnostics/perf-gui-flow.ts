@@ -25,7 +25,13 @@ interface GuiFlowStage {
   status: string;
   name: string;
   ms: number;
+  /** measured（实测）| estimated（估算，如 ⑥ 渲染预估）——ADR-262 D2 */
+  kind?: "measured" | "estimated";
   desc: string[];
+  /** 估算成分（不计入 total_ms） */
+  estimated_ms?: number;
+  /** 估算假设/公式 */
+  note?: string;
 }
 
 function guiFlowWebModeCheck(): boolean {
@@ -44,6 +50,8 @@ function guiFlowWebModeCheck(): boolean {
 interface GuiFlowStructured {
   stages: GuiFlowStage[];
   total_ms: number;
+  /** 各阶段估算合计（ADR-262 D2）：不计入 total_ms */
+  estimated_ms?: number;
   failed: boolean;
   /** deprecated（ADR-200 D5）：迁移期保留，供复制原文与守卫兼容 */
   output?: string;
@@ -53,6 +61,7 @@ interface GuiFlowStructured {
 function guiFlowRenderStages(
   entries: GuiFlowStage[],
   flowTotal: number | null,
+  flowEstimated: number | null,
   failed: boolean,
   rawOutput: string,
   esc: EscFn,
@@ -63,16 +72,29 @@ function guiFlowRenderStages(
         ? `<span class="perf-gui-desc">${esc(e.desc.join("<br>"))}</span>`
         : "";
       const cls = e.status === "❌" ? "perf-gui-fail" : "";
+      // 估算标记（ADR-262 D2）：人眼必须能区分实测与估算，不能只靠描述里一句话
+      const isEstimated = e.kind === "estimated" || (e.estimated_ms ?? 0) > 0;
+      const estTag = isEstimated
+        ? ` <span class="perf-gui-est" title="${esc(e.note ?? t("diagnostics.perfEstimatedHint"))}">${t("diagnostics.perfEstimated")}</span>`
+        : "";
+      const msText = isEstimated
+        ? `${e.ms.toFixed(2)}ms + ${(e.estimated_ms ?? 0).toFixed(2)}ms`
+        : `${e.ms.toFixed(2)}ms`;
       return `<div class="perf-gui-stage ${cls}">
 <span class="perf-gui-status">${e.status}</span>
 <span class="perf-gui-name">${esc(e.name)}</span>
-<span class="perf-gui-ms">${e.ms.toFixed(2)}ms</span>${desc}
+<span class="perf-gui-ms">${msText}${estTag}</span>${desc}
 </div>`;
     })
     .join("");
   const totalLine =
     flowTotal !== null
       ? `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${flowTotal.toFixed(2)}ms</div>`
+      : "";
+  // 估算单独一行且明确「不计入总耗时」——混在一起就是「数字不可信」的来源
+  const estimatedLine =
+    flowEstimated !== null && flowEstimated > 0
+      ? `<div class="perf-total">${UI_ICONS.performance} ${t("diagnostics.perfEstimatedTotal", { ms: flowEstimated.toFixed(2) })}</div>`
       : "";
   const failLine = failed
     ? `<div class="diag-stat diag-stat-error">${UI_ICONS.error} ${t("diagnostics.perfGuiFailed")}</div>`
@@ -81,6 +103,7 @@ function guiFlowRenderStages(
     sectionHeader(UI_ICONS.diagnose, t("diagnostics.perfGuiResult"), rawOutput) +
     `<div class="perf-gui" style="padding:8px 2px;user-select:text;-webkit-user-select:text">${rows}</div>` +
     totalLine +
+    estimatedLine +
     failLine
   );
 }
@@ -113,6 +136,7 @@ export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
     out.innerHTML = guiFlowRenderStages(
       data.stages,
       typeof data.total_ms === "number" ? data.total_ms : null,
+      typeof data.estimated_ms === "number" ? data.estimated_ms : null,
       !!data.failed,
       data.output ?? "",
       esc,

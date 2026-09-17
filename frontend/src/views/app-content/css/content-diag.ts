@@ -65,6 +65,7 @@ export const contentDiagCSS: string = `
 .diag-stat { padding:12px; font-size:var(--fs-base); display:block; text-align:center; }
 .diag-stat-muted { color:var(--muted); }
 .diag-stat-error { color: var(--status-error); }
+.perf-gui-est { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--warning, #b8860b) 20%, transparent); color:var(--warning, #b8860b); flex-shrink:0; }
 
 /* ===== 性能面板（single-bench / gui-flow / perf-log） ===== */
 .perf-section { font-size:var(--fs-sm); font-weight:600; color:var(--txt); display:flex; align-items:center; gap:6px; }

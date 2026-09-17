@@ -30,27 +30,41 @@ type guiFlowResult struct {
 	// FirstModel 机器可读的首个可分析模型路径——曾塞进 Description 由下游反解析
 	// 「首个模型:」文案 token（改个 emoji 就断），结构化直传
 	FirstModel string
+	// Kind 阶段性质：measured（实测，默认）| estimated（估算，如 ⑥ 渲染预估）。
+	// ADR-262 D2：估算与实测必须显式区分，不能靠描述文字里的一句「估算」来暗示。
+	Kind string
+	// Estimated 该阶段内含的**估算**耗时（⑤ 的 IPC 传输、⑥ 的首帧），不计入 total_ms。
+	Estimated time.Duration
+	// Note 估算依赖的假设/公式（D2 要求估算显式标注来源），实测阶段留空
+	Note string
 }
 
 // guiFlowStageItem 单阶段结构化结果（ADR-200 D2：gui-flow 为首批结构化命令）。
-// 字段与前端 GuiFlowStage（perf-cli.ts）逐字对齐，前端据此直接渲染、
+// 字段与前端 GuiFlowStage（perf-gui-flow.ts）逐字对齐，前端据此直接渲染、
 // 不再对人类文案做正则反解析。
 type guiFlowStageItem struct {
 	Status string   `json:"status"` // "✅" / "❌"
 	Name   string   `json:"name"`
 	Ms     float64  `json:"ms"`
+	Kind   string   `json:"kind"` // measured | estimated
 	Desc   []string `json:"desc"`
+	// EstimatedMs 估算成分（不计入 total_ms）
+	EstimatedMs float64 `json:"estimated_ms,omitempty"`
+	// Note 估算假设/公式
+	Note string `json:"note,omitempty"`
 }
 
 // guiFlowStructured gui-flow --json 结构化载荷（ADR-200 D1/D5）：
 // Data 优先承载本对象；output/filesRoot 迁移期保留（Sidecar 注入，标 deprecated），
 // 兼容前端 respHasOutput 守卫与复制原文功能。
 type guiFlowStructured struct {
-	Stages    []guiFlowStageItem `json:"stages"`
-	TotalMs   float64            `json:"total_ms"`
-	Failed    bool               `json:"failed"`
-	Output    string             `json:"output,omitempty"`
-	FilesRoot string             `json:"filesRoot,omitempty"`
+	Stages  []guiFlowStageItem `json:"stages"`
+	TotalMs float64            `json:"total_ms"`
+	// EstimatedMs 各阶段估算成分合计（ADR-262 D2）：**不计入 total_ms**，展示时分开呈现
+	EstimatedMs float64 `json:"estimated_ms,omitempty"`
+	Failed      bool    `json:"failed"`
+	Output      string  `json:"output,omitempty"`
+	FilesRoot   string  `json:"filesRoot,omitempty"`
 }
 
 // AttachSidecar 实现 SidecarOutput（ADR-200 D5）：由 buildJsonData 在 --json 响应时注入。
@@ -65,21 +79,32 @@ func (g *guiFlowStructured) AttachSidecar(output, filesRoot string) {
 func buildGuiFlowStructured(results []guiFlowResult, totalDuration time.Duration) *guiFlowStructured {
 	items := make([]guiFlowStageItem, 0, len(results))
 	failed := false
+	var estimatedTotal time.Duration
 	for _, r := range results {
 		if !r.Success {
 			failed = true
 		}
+		// 空 Kind = 实测：绝大多数阶段不改动即正确，只有估算阶段需要显式声明
+		kind := r.Kind
+		if kind == "" {
+			kind = "measured"
+		}
+		estimatedTotal += r.Estimated
 		items = append(items, guiFlowStageItem{
-			Status: map[bool]string{true: "✅", false: "❌"}[r.Success],
-			Name:   r.Stage,
-			Ms:     float64(r.Duration.Microseconds()) / 1000,
-			Desc:   splitDescLines(r.Description),
+			Status:      map[bool]string{true: "✅", false: "❌"}[r.Success],
+			Name:        r.Stage,
+			Ms:          float64(r.Duration.Microseconds()) / 1000,
+			Kind:        kind,
+			Desc:        splitDescLines(r.Description),
+			EstimatedMs: float64(r.Estimated.Nanoseconds()) / 1e6,
+			Note:        r.Note,
 		})
 	}
 	return &guiFlowStructured{
-		Stages:  items,
-		TotalMs: float64(totalDuration.Microseconds()) / 1000,
-		Failed:  failed,
+		Stages:      items,
+		TotalMs:     float64(totalDuration.Microseconds()) / 1000,
+		EstimatedMs: float64(estimatedTotal.Microseconds()) / 1000,
+		Failed:      failed,
 	}
 }
 
@@ -131,8 +156,11 @@ func runGUIFlow(ctx *CmdContext) error {
 	}
 
 	// ============ Phase 3: 模型分析（Go 侧）============
+	// 模型只分析一次，③⑤⑥ 共用（原实现 ⑤⑥ 各自再调 AnalyzeBedrockModel，
+	// 同一份分析被计 3 次耗时——⑤⑥ 的阶段耗时因此不是自己的工作量的度量）
 	if targetModel != "" {
-		results = append(results, runPhaseModelAnalyze(ctx.App, targetModel))
+		analyzeResult, model := runPhaseModelAnalyze(ctx.App, targetModel)
+		results = append(results, analyzeResult)
 
 		// PMX/PMD 加载链路在 Three.js 前端（@moeru/three-mmd），CLI 无解析器，
 		// ④⑤⑥ 阶段（纹理缓存/数据准备/渲染预估）依赖 AnalyzeBedrockModel（仅 Bedrock geometry），
@@ -142,12 +170,12 @@ func runGUIFlow(ctx *CmdContext) error {
 			// ============ Phase 4: 纹理缓存检查 ============
 			results = append(results, runPhaseTextureCache(targetModel))
 
-			// ============ Phase 5: 数据准备（IPC 传输模拟）============
-			results = append(results, runPhaseDataPrep(ctx.App, targetModel))
+			// ============ Phase 5: 数据准备（IPC 传输估算）============
+			results = append(results, runPhaseDataPrep(model, targetModel))
 
-			// ============ Phase 6: 渲染预估 ============
+			// ============ Phase 6: 渲染预估（无渲染管线，纯估算）============
 			if *verbose {
-				results = append(results, runPhaseRenderEstimate(ctx.App, targetModel, *verbose))
+				results = append(results, runPhaseRenderEstimate(model, targetModel))
 			}
 		}
 	} else {
@@ -285,8 +313,12 @@ func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 	}
 }
 
-// runPhaseModelAnalyze 模拟模型分析
-func runPhaseModelAnalyze(a AppService, modelPath string) guiFlowResult {
+// runPhaseModelAnalyze 模拟模型分析。
+//
+// 返回模型本体供 ⑤⑥ 复用：原实现让 ⑤⑥ 各自再调一次 AnalyzeBedrockModel，
+// 同一份分析被计 3 次耗时（③⑤⑥ 的 ms 里都有它），⑤⑥ 的阶段耗时因此不是自己的工作量
+// ——「同一分析重复计时」是数字不可信的一个具体来源（ADR-262 D2/D8）。
+func runPhaseModelAnalyze(a AppService, modelPath string) (guiFlowResult, types.BedrockModel) {
 	start := time.Now()
 	ext := strings.ToLower(filepath.Ext(modelPath))
 
@@ -302,7 +334,7 @@ func runPhaseModelAnalyze(a AppService, modelPath string) guiFlowResult {
 				"ℹ️ PMX/PMD 加载链路在 Three.js 前端（@moeru/three-mmd），CLI 不模拟\n   文件: %s\n   请在 GUI 3D 预览实测首帧耗时",
 				filepath.Base(modelPath),
 			),
-		}
+		}, types.BedrockModel{}
 	}
 
 	model := a.AnalyzeBedrockModel(modelPath)
@@ -314,7 +346,7 @@ func runPhaseModelAnalyze(a AppService, modelPath string) guiFlowResult {
 			Duration:    elapsed,
 			Success:     false,
 			Description: fmt.Sprintf("❌ 分析失败: %s", modelPath),
-		}
+		}, types.BedrockModel{}
 	}
 
 	boneCount := len(model.Bones)
@@ -331,7 +363,7 @@ func runPhaseModelAnalyze(a AppService, modelPath string) guiFlowResult {
 			boneCount, texCount,
 			fsutil.FormatSize(geoSize),
 		),
-	}
+	}, model
 }
 
 // runPhaseTextureCache 检查纹理缓存状态
@@ -384,12 +416,13 @@ func runPhaseTextureCache(modelPath string) guiFlowResult {
 	}
 }
 
-// runPhaseDataPrep 模拟数据准备与 IPC 传输
-func runPhaseDataPrep(a AppService, modelPath string) guiFlowResult {
+// runPhaseDataPrep 模拟数据准备与 IPC 传输。
+//
+// model 由 ③ 传入（不再自行 AnalyzeBedrockModel：重复分析会让本阶段耗时变成"又一次解析"，
+// 而不是"数据准备工作量"）。阶段耗时 = 自身的尺寸估算工作；IPC 传输是**估算**，
+// 走 Estimated 字段 + Note 标注假设，不计入 total_ms（ADR-262 D2）。
+func runPhaseDataPrep(model types.BedrockModel, modelPath string) guiFlowResult {
 	start := time.Now()
-
-	model := a.AnalyzeBedrockModel(modelPath)
-	elapsed := time.Since(start)
 
 	// 估算 IPC 传输大小
 	geoSize := estimateGeometrySize(model)
@@ -398,13 +431,18 @@ func runPhaseDataPrep(a AppService, modelPath string) guiFlowResult {
 
 	// Base64 编码后会膨胀约 33%
 	ipcSize := totalSize * 4 / 3
+	transfer := time.Duration(float64(ipcSize) / (50 * 1024 * 1024) * float64(time.Second))
+	elapsed := time.Since(start)
 
 	return guiFlowResult{
-		Stage:    "⑤ 数据准备",
-		Duration: elapsed,
-		Success:  true,
+		Stage:     "⑤ 数据准备",
+		Duration:  elapsed,
+		Success:   true,
+		Kind:      "measured",
+		Estimated: transfer,
+		Note:      "IPC 传输按 50MB/s 假设估算（Base64 后 4/3 膨胀）——估算不计入总耗时",
 		Description: fmt.Sprintf(
-			"📦 数据就绪\n   几何数据: %s\n   纹理数据: %s\n   IPC 估算: %s (Base64 后)\n   预计传输: %.0fms (假设 50MB/s)",
+			"📦 数据就绪\n   几何数据: %s\n   纹理数据: %s\n   IPC 估算: %s (Base64 后)\n   预计传输: %.0fms (假设 50MB/s，估算)",
 			fsutil.FormatSize(geoSize),
 			fsutil.FormatSize(texSize),
 			fsutil.FormatSize(ipcSize),
@@ -413,13 +451,12 @@ func runPhaseDataPrep(a AppService, modelPath string) guiFlowResult {
 	}
 }
 
-// runPhaseRenderEstimate 模拟渲染预估
-func runPhaseRenderEstimate(a AppService, modelPath string, verbose bool) guiFlowResult {
-	start := time.Now()
-
-	model := a.AnalyzeBedrockModel(modelPath)
-	elapsed := time.Since(start)
-
+// runPhaseRenderEstimate 渲染预估。
+//
+// 本阶段**完全没有渲染管线**：Go 侧只按骨骼/纹理数套公式，故 Kind = estimated、
+// Duration = 0（没有实测工作量可报），估算值走 Estimated + Note（公式与区间），
+// 不进 total_ms（ADR-262 D2）。model 由 ③ 传入，避免第二次重复分析。
+func runPhaseRenderEstimate(model types.BedrockModel, modelPath string) guiFlowResult {
 	boneCount := len(model.Bones)
 	texCount := len(model.Textures)
 
@@ -434,16 +471,25 @@ func runPhaseRenderEstimate(a AppService, modelPath string, verbose bool) guiFlo
 		renderEstimate = "🟢 轻量负载 — 可流畅渲染"
 	}
 
+	lo := float64(boneCount)*0.01 + 50
+	hi := float64(boneCount)*0.02 + 100
+	mid := time.Duration((lo + hi) / 2 * float64(time.Millisecond))
+
 	return guiFlowResult{
-		Stage:    "⑥ 渲染预估",
-		Duration: elapsed,
-		Success:  true,
+		Stage:     "⑥ 渲染预估",
+		Duration:  0,
+		Success:   true,
+		Kind:      "estimated",
+		Estimated: mid,
+		Note: fmt.Sprintf(
+			"无渲染管线：首帧按 boneCount*0.01+50 ~ *0.02+100 粗估（区间 %.0f-%.0fms，此处取中值），真实首帧须在 GUI 验证",
+			lo, hi,
+		),
 		Description: fmt.Sprintf(
-			"%s\n   ⚠️ CLI 估算值（无渲染管线，仅按骨骼/纹理数粗估；真实首帧须在 GUI 验证）\n   骨骼: %d, 纹理: %d\n   预估首帧: %.0f-%.0fms",
+			"%s\n   ⚠️ CLI 估算值（无渲染管线，仅按骨骼/纹理数粗估；真实首帧须在 GUI 验证）\n   骨骼: %d, 纹理: %d\n   预估首帧: %.0f-%.0fms（估算，不计入总耗时）",
 			renderEstimate,
 			boneCount, texCount,
-			float64(boneCount)*0.01+50, // 粗略估计
-			float64(boneCount)*0.02+100,
+			lo, hi,
 		),
 	}
 }
@@ -456,6 +502,7 @@ func printFlowReport(results []guiFlowResult, totalDuration time.Duration, verbo
 
 	var successCount int
 	var failCount int
+	var estimatedTotal time.Duration
 
 	for i, r := range results {
 		status := "✅"
@@ -465,9 +512,16 @@ func printFlowReport(results []guiFlowResult, totalDuration time.Duration, verbo
 		} else {
 			successCount++
 		}
+		estimatedTotal += r.Estimated
 
-		fmt.Printf("\n%s [%d] %s (%.2fms)\n",
-			status, i+1, r.Stage,
+		// 估算阶段显式标注（ADR-262 D2）：人读文本同样要能区分实测与估算
+		kindMark := ""
+		if r.Kind == "estimated" {
+			kindMark = " [估算]"
+		}
+
+		fmt.Printf("\n%s [%d] %s%s (%.2fms)\n",
+			status, i+1, r.Stage, kindMark,
 			float64(r.Duration.Microseconds())/1000)
 
 		// 打印描述（缩进）
@@ -478,7 +532,11 @@ func printFlowReport(results []guiFlowResult, totalDuration time.Duration, verbo
 
 	fmt.Println()
 	fmt.Println(strings.Repeat("-", 70))
-	fmt.Printf("⏱️  总耗时: %.2fms\n", float64(totalDuration.Microseconds())/1000)
+	fmt.Printf("⏱️  总耗时: %.2fms（实测）\n", float64(totalDuration.Microseconds())/1000)
+	if estimatedTotal > 0 {
+		// ADR-262 D2：估算单独呈现，不进总耗时
+		fmt.Printf("📐 其中估算: %.2fms（不计入总耗时）\n", float64(estimatedTotal.Microseconds())/1000)
+	}
 	fmt.Printf("📈 成功: %d, 失败: %d\n", successCount, failCount)
 
 	if failCount > 0 {

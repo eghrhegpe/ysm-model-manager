@@ -80,9 +80,20 @@ const GUI_STRUCTURED = {
   stages: [
     { status: "✅", name: "① 配置加载", ms: 1.23, desc: ["仓库根: /models", "模型根: /models/ysm"] },
     { status: "✅", name: "② 模型扫描", ms: 30, desc: ["发现 10 个模型 (333 models/sec)"] },
-    { status: "❌", name: "③ 模型分析", ms: 200.5, desc: ["分析失败: /models/ysm/player.ysm"] },
+    { status: "❌", name: "③ 模型分析", ms: 200.5, kind: "measured", desc: ["分析失败: /models/ysm/player.ysm"] },
+    // 估算阶段（ADR-262 D2）：⑥ 无渲染管线，ms=0 + estimated_ms>0 + note（假设/公式）
+    {
+      status: "✅",
+      name: "⑥ 渲染预估",
+      ms: 0,
+      kind: "estimated",
+      estimated_ms: 120.5,
+      note: "无渲染管线：按骨骼数粗估",
+      desc: ["🟢 轻量负载"],
+    },
   ],
   total_ms: 231.73,
+  estimated_ms: 120.5,
   failed: true,
   output: GUI_OUTPUT, // deprecated（D5）：迁移期保留
 };
@@ -307,6 +318,27 @@ describe("gui-flow 面板", () => {
     // 失败行存在 → 有红色失败提示
     expect(out.textContent).toContain("③ 模型分析");
     expect(out.querySelector("[class*='perf-gui-fail']")).toBeTruthy();
+  });
+
+  it("估算阶段带标记，估算合计单独呈现且不进总耗时（ADR-262 D2）", async () => {
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "gui-flow",
+      data: GUI_STRUCTURED,
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-gui") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const out = root.getElementById("diag-perf-gui-out") as HTMLElement;
+    // ⑥ 估算行：标记 + 实测/估算分开写（0.00ms + 120.50ms）与公式 tooltip
+    const estTag = out.querySelector(".perf-gui-est") as HTMLElement;
+    expect(estTag).toBeTruthy();
+    expect(estTag.getAttribute("title")).toContain("粗估");
+    expect(out.textContent).toContain("0.00ms + 120.50ms");
+    // 总耗时只含实测；估算单独一行并声明不计入
+    expect(out.textContent).toContain("总耗时: 231.73ms");
+    expect(out.textContent).toContain("其中估算 120.50ms（不计入总耗时）");
   });
 
   it("status=error（阶段失败）时仍渲染结构化阶段明细（规律六）", async () => {

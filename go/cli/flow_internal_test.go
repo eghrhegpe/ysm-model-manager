@@ -14,11 +14,13 @@ import (
 func TestGuiFlowStructured_JSONShape(t *testing.T) {
 	g := &guiFlowStructured{
 		Stages: []guiFlowStageItem{
-			{Status: "✅", Name: "① 配置加载", Ms: 1.23, Desc: []string{"仓库根: /models"}},
-			{Status: "❌", Name: "③ 模型分析", Ms: 200.5, Desc: []string{"分析失败: x.ysm"}},
+			{Status: "✅", Name: "① 配置加载", Ms: 1.23, Kind: "measured", Desc: []string{"仓库根: /models"}},
+			{Status: "✅", Name: "⑥ 渲染预估", Ms: 0, Kind: "estimated",
+				EstimatedMs: 120.5, Note: "无渲染管线：按骨骼数粗估", Desc: []string{"🟢 轻量负载"}},
 		},
-		TotalMs: 231.73,
-		Failed:  true,
+		TotalMs:     231.73,
+		EstimatedMs: 120.5,
+		Failed:      true,
 	}
 	g.AttachSidecar("raw output", "/models")
 
@@ -30,6 +32,8 @@ func TestGuiFlowStructured_JSONShape(t *testing.T) {
 	for _, want := range []string{
 		`"stages"`, `"status"`, `"name"`, `"ms"`, `"desc"`,
 		`"total_ms"`, `"failed"`, `"output"`, `"filesRoot"`,
+		// ADR-262 D2：实测/估算必须可区分，估算是独立字段而非描述文字
+		`"kind"`, `"estimated_ms"`, `"note"`,
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("JSON 缺少字段 %s: %s", want, s)

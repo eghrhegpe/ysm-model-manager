@@ -1,24 +1,26 @@
 #!/usr/bin/env node
 /**
- * 契约测试：CLI 性能命令输出格式 ↔ 前端解析 契约锚定。
+ * 契约测试：CLI 性能命令**结构化载荷** ↔ 前端消费 契约锚定。
  *
- * B-1 目标（规划：CLI→Wails 桥协同的「静态层」）：锁住 Go CLI 输出格式与前端
- * diagnostics/perf.ts 解析正则之间的契约，防止一端改样一端不感知导致面板空转。
- * 纯静态、读源码 + 文本样本、零副作用、零 Go 编译，可进每次 push 门禁。
+ * 2026-09-17 改写（ADR-262 D1）：本文件此前锚定的是 **人类可读文案模板**
+ * （`"[%d] %s (%.2fms)"` / `"总耗时: %.2fms"`）与前端解析这些文案的正则——
+ * 即「把人类文案当 API」。单模型基准与加载链路模拟现均消费结构化 `resp.data`
+ * （`--format json` + ADR-200 D5 sidecar），文本正则解析已删除，故契约改为锁
+ * **JSON 字段名双端一致**，并反向断言前端**不得**再出现对阶段/总耗时的文本正则解析。
  *
- * 断言三件事：
- *  1. 性能命令（gui-flow / single-bench / perf-log）在前端 cli-bridge 白名单内
- *  2. Go 侧 gui-flow 输出模板（阶段行/总耗时）仍存在，且能被前端解析正则命中
- *  3. Go 侧 single-bench 输出模板（阶段行/总耗时）仍存在，且能被前端解析正则命中
+ * 纯静态、读源码 + 字符串断言、零副作用、零 Go 编译，可进每次 push 门禁。
+ *
+ * 断言四件事：
+ *  1. 性能命令（gui-flow / single-bench / perf-log / concurrent-bench / benchmark）在前端白名单内
+ *  2. Go 侧 gui-flow 结构化字段名齐备，且前端 GuiFlowStage/GuiFlowStructured 同名同义
+ *  3. Go 侧 single-bench 结构化字段名齐备（含 identity 身份块），且前端载荷接口同名同义
+ *  4. 前端**不得**回退到文本正则解析（防「文案当 API」范式回流）
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const _CLI_ALLOWLIST = path.join(ROOT, "frontend/src/backend/cli-allowlist.ts");
-const _FLOW_GO = path.join(ROOT, "go/cli/flow.go");
-const _CONCURRENT_GO = path.join(ROOT, "go/cli/bench_concurrent.go");
 
 const errors = [];
 function must(cond, msg) {
@@ -35,94 +37,113 @@ function readOrDie(rel) {
   return fs.readFileSync(p, "utf8");
 }
 
+/**
+ * Go 源码里是否存在指定 json tag 字段名。
+ * 尾随字符必须落在 `"` / `,`（omitempty 等选项）上——避免 `json:"note"` 误命中 `json:"note_other"`。
+ */
+function hasJSONTag(src, name) {
+  return new RegExp(`json:"${name}[,"]`).test(src);
+}
+/**
+ * 剥离 TS 注释后再做「反回退」断言：源码注释里为了说明历史缺陷会引用旧正则/旧锚点原文，
+ * 直接在全文里查子串会误伤注释（本文件自己就引用了 `/⏱️\s*总耗时.*?([\d.]+)ms/`）。
+ * 断言的是**代码行为**，不是文档措辞。
+ */
+function stripComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+}
+
 const allowlist = readOrDie("frontend/src/backend/cli-allowlist.ts");
 const flowGo = readOrDie("go/cli/flow.go");
 const concurrentGo = readOrDie("go/cli/bench_concurrent.go");
+const identityGo = readOrDie("go/cli/perf_identity.go");
+const guiTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-gui-flow.ts");
+const singleTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-single-bench.ts");
+/** 反回退断言只看**代码**：注释里为说明历史缺陷会引用旧正则/旧锚点原文 */
+const singleCode = stripComments(singleTs);
 
 // ── 1) 命令白名单契约（前端 cli-allowlist 单一事实源）────────────
-// 白名单字符串字面量从 cli-allowlist.ts 找（cli-bridge.ts 仅 re-export，无字面量）。
 const PERF_COMMANDS = ["gui-flow", "single-bench", "perf-log", "concurrent-bench", "benchmark"];
-if (allowlist) {
-  for (const cmd of PERF_COMMANDS) {
-    must(
-      allowlist.includes(`"${cmd}"`),
-      `CLI 命令 ${cmd} 未在前端 cli-allowlist 白名单（CLI_ALLOWLIST）`,
-    );
-  }
-}
-
-// ── 2) gui-flow 阶段行格式契约 ────────────────────────────────────
-// Go printFlowReport: fmt.Printf("\n%s [%d] %s (%.2fms)\n") → `✅ [1] ① 配置加载 (1.23ms)`
-// 前端 perf.ts: /^([✅❌])\s*\[\d+\]\s*(.+?)\s*\(([\d.]+)ms\)$/
-const guiStageRe = /^([✅❌])\s*\[\d+\]\s*(.+?)\s*\(([\d.]+)ms\)$/;
-const guiTotalRe = /⏱️\s*总耗时:\s*([\d.]+)ms/;
-
-if (flowGo) {
-  // Go 侧模板仍存在（锚定上游格式；攻破方向：有人改了 Go 输出格式）
+for (const cmd of PERF_COMMANDS) {
   must(
-    flowGo.includes("[%d] %s (%.2fms)"),
-    'gui-flow 阶段行模板失效：go/cli/flow.go 不再包含 "[%d] %s (%.2fms)"',
-  );
-  must(
-    flowGo.includes("总耗时: %.2fms"),
-    'gui-flow 总耗时模板失效：go/cli/flow.go 不再包含 "总耗时: %.2fms"',
+    allowlist.includes(`"${cmd}"`),
+    `CLI 命令 ${cmd} 未在前端 cli-allowlist 白名单（CLI_ALLOWLIST）`,
   );
 }
 
-// 下游解析契约：前端正则必须命中由 Go 模板生成的样本
-{
-  const sample = "✅ [1] ① 配置加载 (1.23ms)";
-  const m = sample.match(guiStageRe);
-  must(
-    m && m[2].trim() === "① 配置加载" && m[3] === "1.23",
-    `gui-flow 阶段行契约失配（前端正则漏接 Go 模板输出）: ${sample}`,
-  );
+// ── 2) gui-flow 结构化载荷契约（Go tags ↔ 前端接口）───────────────
+// Go: guiFlowStageItem / guiFlowStructured 的 json tag；前端: GuiFlowStage / GuiFlowStructured
+const GUI_FIELDS = [
+  '"stages"',
+  '"total_ms"',
+  '"failed"',
+  '"kind"', // measured | estimated（ADR-262 D2）
+  '"estimated_ms"',
+  '"note"',
+];
+for (const field of GUI_FIELDS) {
+  must(hasJSONTag(flowGo, field.replaceAll('"', "")), `gui-flow 结构化载荷缺少字段 json:${field}（go/cli/flow.go）`);
+}
+for (const field of ["total_ms", "estimated_ms", "failed", "kind", "estimated_ms"]) {
+  must(guiTs.includes(field), `前端 GuiFlowStructured/GuiFlowStage 未声明 ${field}（perf-gui-flow.ts）`);
 }
 must(
-  guiTotalRe.test("⏱️  总耗时: 231.73ms"),
-  'gui-flow 总耗时契约失配（前端正则漏接 "⏱️  总耗时: Xms"）: ⏱️  总耗时: 231.73ms',
+  guiTs.includes("perf-gui-est"),
+  "前端未渲染估算标记（.perf-gui-est）——估算与实测必须在展示层可区分（ADR-262 D2）",
 );
 
-// ── 3) single-bench 阶段行格式契约 ───────────────────────────────
-// Go printSingleModelStages: "   %-20s %10.2fms %s" → `   ② JSON 解析  1993.66ms 🔴 瓶颈`
-// 前端 perf.ts: /^\s+(.+?)\s+(\d+(?:\.\d+)?)ms(?:\s+(.*))?$/
-const sbStageRe = /^\s+(.+?)\s+(\d+(?:\.\d+)?)ms(?:\s+(.*))?$/;
-const sbTotalRe = /⏱️\s*总耗时.*?([\d.]+)ms/;
-
-if (concurrentGo) {
+// ── 3) single-bench 结构化载荷契约（含身份块）─────────────────────
+// 前 9 个字段在 singleBenchJSON（bench_concurrent.go）；identity 块在 perf_identity.go。
+const SB_FIELDS = [
+  '"model"',
+  '"iterations"',
+  '"total_ms"',
+  '"per_iteration_ms"', // 单次平均（与 total_ms 的累计口径分开）
+  '"stages"',
+  '"bottleneck"',
+  '"format"',
+  '"size_bytes"',
+  '"identity"', // ADR-262 D2 身份块
+];
+for (const field of SB_FIELDS) {
   must(
-    concurrentGo.includes("%10.2fms"),
-    'single-bench 阶段行模板失效：go/cli/bench_concurrent.go 不再包含 "%10.2fms"',
-  );
-  must(
-    concurrentGo.includes("总耗时（"),
-    'single-bench 总耗时模板失效：go/cli/bench_concurrent.go 不再包含 "总耗时（"',
-  );
-}
-
-{
-  const sample = "   ② JSON 解析            1993.66ms 🔴 瓶颈";
-  const m = sample.match(sbStageRe);
-  must(
-    m && m[1].trim() === "② JSON 解析" && m[2] === "1993.66",
-    `single-bench 阶段行契约失配（前端正则漏接 Go 模板输出）: ${sample}`,
+    hasJSONTag(concurrentGo, field.replaceAll('"', "")),
+    `single-bench 结构化载荷缺少字段 json:${field}（go/cli/bench_concurrent.go）`,
   );
 }
+const IDENTITY_FIELDS = ['"rtype"', '"rtype_source"', '"rtype_label"', '"form"', '"relPath"', '"absPath"'];
+for (const field of IDENTITY_FIELDS) {
+  must(
+    hasJSONTag(identityGo, field.replaceAll('"', "")),
+    `身份块缺少字段 json:${field}（go/cli/perf_identity.go）`,
+  );
+}
+for (const field of ["total_ms", "per_iteration_ms", "identity", "relPath", "rtype"]) {
+  must(singleTs.includes(field), `前端 SingleBenchPayload 未声明 ${field}（perf-single-bench.ts）`);
+}
+
+// ── 4) 反回退：前端不得再用文本正则解析阶段/总耗时 ────────────────
+// 范式：旧实现用 /⏱️\s*总耗时.*?([\d.]+)ms/ 解析中文文案，并把 "总计" 当解析锚点。
 must(
-  sbTotalRe.test("⏱️  总耗时（3 次迭代）: 6554.70ms"),
-  "single-bench 总耗时契约失配：⏱️  总耗时（3 次迭代）: 6554.70ms",
+  !singleCode.includes("总耗时"),
+  "single-bench 前端出现「总耗时」文本解析痕迹——结构化出口已就位，禁止回退到文案正则（ADR-262 D1）",
+);
+must(
+  !singleCode.includes("BENCH_TOTAL_LABEL"),
+  "single-bench 前端仍存在中文标签作为解析锚点（BENCH_TOTAL_LABEL）——违反 ADR-262 D1",
 );
 
 // ── 汇总结论 ─────────────────────────────────────────────────────
 if (errors.length) {
-  console.error("❌ 契约测试失败（gui-flow/single-bench 输出格式 ↔ 前端解析）：");
+  console.error("❌ 契约测试失败（CLI 性能命令结构化载荷 ↔ 前端消费）：");
   for (const e of errors) console.error(`  - ${e}`);
-  const note =
-    "frontend/perf.ts 的正则仅接收由 Go 模板生成的输出；若 Go 改了输出格式或前端改了正则，需同步并更新本契约样本。";
-  console.error(`  提示：${note}`);
+  console.error(
+    "  提示：契约锚点是 **JSON 字段名**（ADR-262 D1 明令禁止把人类文案当 API）；" +
+      "改 Go 结构体 tag 或前端接口时必须同步本文件。",
+  );
   process.exit(1);
 }
 console.log(
-  "✅ 契约测试通过：CLI 性能命令输出格式与前端解析锚定一致（白名单 + gui-flow + single-bench）",
+  "✅ 契约测试通过：CLI 性能命令结构化载荷字段与前端消费锚定一致（白名单 + gui-flow + single-bench + 反文本解析）",
 );
 process.exit(0);

@@ -121,20 +121,26 @@ function renderStgStorageCard(isWebViewer: boolean): string {
 }
 
 function renderStgLangSelect(): string {
-  // 间距走 .stg-section 显式契约（不再内联 margin-top:12px）——
-  // 该组已挂 .section-title（自带 padding-top:16px），故只需补 0；
-  // 这里保留 .section-title 作为标题，不重复加 stg-section（否则叠加得 32px）。
-  return `<div class="section-title stg-title">${UI_ICONS.web} ${t("settings.language")}</div>
-<div class="stg-card" style="animation-delay:240ms">
-  <div class="stg-card-body" style="display:flex;align-items:center;gap:8px">
+  // 升格为 .stg-card 正典卡（设置页样式范式契约待修债 #1）：原手写 <div class="stg-card"> 未走
+  // stgCard() 构造器，hdr 缺失、间距/圆角与正典卡不一致。单卡场景：hdr 标题即「语言」，
+  // body 内 select+描述，不再另挂 .section-title（避免标题重复，与动画卡同构）。
+  return stgCard(
+    UI_ICONS.web,
+    t("settings.language"),
+    `<div style="display:flex;align-items:center;gap:8px">
     <select id="set-lang" class="stg-select" style="width:auto">
       <option value="zh-CN">简体中文</option>
       <option value="en">English</option>
       <option value="ja">日本語</option>
     </select>
     <span style="font-size:var(--fs-xs);color:var(--muted)">${t("settings.languageDesc")}</span>
-  </div>
-</div>`;
+  </div>`,
+    {
+      header: { titleSize: "md" },
+      cardId: "stg-lang-card",
+      delayMs: 240,
+    },
+  );
 }
 
 function renderStgThemePicker(): string {
@@ -149,7 +155,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#a0866a"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#d4a574"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#5d4037">${UI_ICONS.sun} ${t("settings.theme.warm")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.sun} ${t("settings.theme.warm")}</span>
       </div>
       <div class="theme-card" data-theme="sakura">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -157,7 +163,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#f5b8cc"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#fce4ec"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#5d4037">${UI_ICONS.sakura} ${t("settings.theme.sakura")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.sakura} ${t("settings.theme.sakura")}</span>
       </div>
       <div class="theme-card" data-theme="mint">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -165,7 +171,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#A2D9CE"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#76D7C4"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#2c3e3a">${UI_ICONS.mint} ${t("settings.theme.mint")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.mint} ${t("settings.theme.mint")}</span>
       </div>
       <div class="theme-card" data-theme="pro">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -173,7 +179,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#b0bec5"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#757575"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#e0e0e0">${UI_ICONS.dot} ${t("settings.theme.pro")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.dot} ${t("settings.theme.pro")}</span>
       </div>
       <div class="theme-card" data-theme="cyber">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -181,7 +187,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#66d9ef"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#f1fa8c"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#e0d5f5">${UI_ICONS.moon} ${t("settings.theme.cyber")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.moon} ${t("settings.theme.cyber")}</span>
       </div>
       <div class="theme-card" data-theme="ocean">
         <div style="display:flex;gap:2px;margin-bottom:2px">
@@ -189,7 +195,7 @@ function renderStgThemePicker(): string {
           <span style="width:8px;height:8px;border-radius:50%;background:#7986cb"></span>
           <span style="width:8px;height:8px;border-radius:50%;background:#9fa8da"></span>
         </div>
-        <span style="font-size:var(--fs-xs);font-weight:600;color:#c5d8e8">${UI_ICONS.ocean} ${t("settings.theme.ocean")}</span>
+        <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${UI_ICONS.ocean} ${t("settings.theme.ocean")}</span>
       </div>
     </div>
   </div>

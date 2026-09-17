@@ -48,10 +48,11 @@ pitfalls:
   - 各组件各自读写 localStorage → 值不同步、设置页显示与页面行为不一致；必须经 store 单点
   - 键位未持久化 → 重启恢复默认；必须经 store 的 safeSet 落盘
   - label-for 合规（WCAG 4.1.2）：tpl-settings.ts 14+ 处 `<span class="label">` 全部改为 `<label for="...">` 关联对应 select/input，屏幕阅读器可正确读出「标签→控件」关联
-  - **卡片唯一造法 = `stgCard()`**：新增/重构「卡片型」设置项（hdr 图标+标题 / body 值或控件 / `stg-card-desc` 说明 / `actions` 按钮四区）一律走 `frontend/src/views/app-content/settings/stg-card.ts` 的 `stgCard()` 构造器，禁止手写 `<div class="stg-card">` 或裸 `style="background:var(--surf);border:..."` 仿卡——后者三处间距/圆角/动画各自为政，迟早漂移（见样式范式契约）
-  - **三范式各有边界，禁止混搭**：卡片=`stgCard()`（含 `stg-grid` 平铺的同族小卡如键位/路径）；选择器瓦片=`theme-card`（主题六选一，已在 `.theme-picker` 内）；紧凑单控件=`settings-group`+`setting-row`（滑块/下拉/开关，如相机速度、旋转模式、主题自动切换）。不要把单控件塞进 `stg-card`、也不要把同族多选项拆成行组
-    # ⚠️ 本行原为 Markdown 粗体 `**label-for 合规**`，但 frontmatter 是 YAML：行首 `*` 被解析为
-    #   alias 标记，导致 VitePress 构建报 `unidentified alias "*label-for"`（Pages 长期红）。已去粗体。
+  - '**卡片唯一造法 = `stgCard()`**：新增/重构「卡片型」设置项（hdr 图标+标题 / body 值或控件 / `stg-card-desc` 说明 / `actions` 按钮四区）一律走 `frontend/src/views/app-content/settings/stg-card.ts` 的 `stgCard()` 构造器，禁止手写 `<div class="stg-card">` 或裸 `style="background:var(--surf);border:..."` 仿卡——后者三处间距/圆角/动画各自为政，迟早漂移（见样式范式契约）'
+  - '**三范式各有边界，禁止混搭**：卡片=`stgCard()`（含 `stg-grid` 平铺的同族小卡如键位/路径）；选择器瓦片=`theme-card`（主题六选一，已在 `.theme-picker` 内）；紧凑单控件=`settings-group`+`setting-row`（滑块/下拉/开关，如相机速度、旋转模式、主题自动切换）。不要把单控件塞进 `stg-card`、也不要把同族多选项拆成行组'
+  # ⚠️ frontmatter 是 YAML：行首 `*`（Markdown 粗体）会被解析成 alias 引用，令 VitePress 构建报
+  #   `unidentified alias`（Pages 长期红）。本文件 frontmatter 已全部去粗体 / 或加引号包裹；
+  #   正文里的 `**...**` 不受影响（那是 Markdown，不是 YAML）。
 
 use_when:
   - 设置页

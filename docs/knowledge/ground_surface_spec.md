@@ -65,7 +65,9 @@ quick_risk_lines:
 pitfalls:
   - 下游手写材质参数 → 与 spec 不一致、needsRebuild 判别错误；必须经 buildGroundSurfaceSpec
   - specKey 不完整 → 相同材质不同渲染；specKey 必须含所有影响渲染的参数
-  - **控件参数未进入像素生成 = 死控件**：叠加层初版 `generateOverlayPixels` 硬编码 `sizePx/8` 且不设 `map.repeat`，「叠加格数」滑杆可拖、会触发重建、产出却完全相同。ADR-249 §2.4 矩阵约束：渲染消费的参数菜单必须可见，反之亦然——控件参数必须真实参与像素/材质
+  - 控件参数未进入像素生成 = 死控件：叠加层初版 `generateOverlayPixels` 硬编码 `sizePx/8` 且不设 `map.repeat`，「叠加格数」滑杆可拖、会触发重建、产出却完全相同。ADR-249 §2.4 矩阵约束：渲染消费的参数菜单必须可见，反之亦然——控件参数必须真实参与像素/材质
+    # ⚠️ 本行去粗体：frontmatter 是 YAML，行首 `*` 会被当 alias 引用 → VitePress 报
+    #   `unidentified alias`（Pages 长期红）。详见 app_content_settings 卡同处说明。
 
 use_when:
   - 地面材质 / 地面贴图 / 地板 / surface

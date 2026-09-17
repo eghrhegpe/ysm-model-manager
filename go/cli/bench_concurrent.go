@@ -369,7 +369,8 @@ func runSingleBench(ctx *CmdContext) error {
 	modelPath := fs.String("model", "", "指定模型路径（与 --rtype 二选一；目录式模型可传解包目录或 <dir>/ysm.json）")
 	iterations := fs.Int("iterations", 3, "重复测试次数")
 	rtype := fs.String("rtype", "", "按资源类型跑矩阵（registry 类型 id，如 ysm；仅 --format json）")
-	maxModels := fs.Int("max-models", 5, "矩阵模式最多测试的模型数（按路径字典序确定性取样）")
+	allTypes := fs.Bool("all-types", false, "跑仓库中全部资源类型的矩阵（每类型各取 --max-models 条；仅 --format json）")
+	maxModels := fs.Int("max-models", 5, "矩阵模式每类型最多测试的模型数（按路径字典序确定性取样）")
 	baseline := fs.String("baseline", "", "对比基准 JSON 文件（[{name,ms}]），任一阶段退化超 --threshold 时返回失败")
 	saveBaseline := fs.String("save-baseline", "", "把本次各阶段平均耗时写入该 JSON 文件（供后续 --baseline 对比）")
 	thresholdPct := fs.Float64("threshold", 50, "退化阈值百分比（默认 50），配合 --baseline 使用")
@@ -379,11 +380,14 @@ func runSingleBench(ctx *CmdContext) error {
 		return err
 	}
 
-	if *modelPath == "" && *rtype == "" {
-		return newParamErrf("必须指定 --model 参数，或用 --rtype <类型> 跑类型矩阵")
+	if *modelPath == "" && *rtype == "" && !*allTypes {
+		return newParamErrf("必须指定 --model 参数，或用 --rtype <类型> / --all-types 跑类型矩阵")
 	}
-	if *modelPath != "" && *rtype != "" {
-		return newParamErrf("--model 与 --rtype 互斥：单模型基准传 --model，类型矩阵传 --rtype")
+	if *modelPath != "" && (*rtype != "" || *allTypes) {
+		return newParamErrf("--model 与 --rtype/--all-types 互斥：单模型基准传 --model，类型矩阵传后者")
+	}
+	if *rtype != "" && *allTypes {
+		return newParamErrf("--rtype 与 --all-types 互斥：指定类型用 --rtype，全类型用 --all-types")
 	}
 	if *iterations <= 0 {
 		return newParamErrf("--iterations 必须大于 0")
@@ -396,9 +400,12 @@ func runSingleBench(ctx *CmdContext) error {
 	}
 
 	// 类型矩阵（ADR-262 D3）：目标集由 Go 侧按 registry 类型扫描，仅结构化输出（text 模式无矩阵呈现口径）
-	if *rtype != "" {
+	if *rtype != "" || *allTypes {
 		if *format != "json" {
-			return newParamErrf("--rtype 矩阵模式仅支持 --format json（text 模式无矩阵呈现口径）")
+			return newParamErrf("矩阵模式（--rtype / --all-types）仅支持 --format json（text 模式无矩阵呈现口径）")
+		}
+		if *allTypes {
+			return runSingleBenchAllTypesJSON(ctx, *maxModels, *iterations)
 		}
 		return runSingleBenchMatrixJSON(ctx, *rtype, *maxModels, *iterations)
 	}
@@ -620,47 +627,94 @@ func (m *singleBenchMatrixJSON) AttachSidecar(output, filesRoot string) {
 
 // perfMatrixSpec 矩阵实验规格（回显解析结果，供 AI 复盘「跑的是谁、几个、为什么跳」）。
 type perfMatrixSpec struct {
-	Rtype      string `json:"rtype"`
-	MaxModels  int    `json:"max_models"`
-	Iterations int    `json:"iterations"`
+	// Rtype 单类型矩阵时回显目标类型；--all-types 时为空（逐类型信息看 types[]）
+	Rtype     string `json:"rtype,omitempty"`
+	AllTypes  bool   `json:"all_types"`
+	MaxModels int    `json:"max_models"`
+	// MaxModels 是**每类型**上限（--all-types 下各类型独立取样）
+	Iterations int `json:"iterations"`
 	// Analyzed 实际采集了阶段耗时的模型数
 	Analyzed int `json:"analyzed"`
 	// Unsupported 命中类型但 CLI 无解析器、只出身份的模型数（非静默跳过：见 identityOnlyPayload）
 	Unsupported int `json:"unsupported"`
-	// CliAnalyzable 该类型在 CLI 侧是否具备分析链路（解析器在前端 3D adapter 的类型为 false）
+	// CliAnalyzable 单类型矩阵下该类型是否具备 CLI 分析链路（--all-types 看 types[].cli_analyzable）
 	CliAnalyzable bool `json:"cli_analyzable"`
+	// Types 逐类型汇总（单类型矩阵也有一项，形状统一）
+	Types []perfTypeSummary `json:"types"`
 }
 
-// runSingleBenchMatrixJSON 类型矩阵：按 rtype 扫描目标集，逐个采集（或仅出身份）。
-func runSingleBenchMatrixJSON(ctx *CmdContext, rtype string, maxModels, iterations int) error {
-	if ctx.FilesRoot == "" {
-		return newParamErrf("--rtype 矩阵模式需要 --files-root 指定仓库根")
-	}
-	targets := scanBenchTargets(ctx.FilesRoot, rtype, maxModels)
-	if len(targets) == 0 {
-		return newRuntimeErrf("仓库中未找到 rtype=%s 的模型（root=%s）", rtype, ctx.FilesRoot)
-	}
-	analyzable := cliAnalyzableRtype[rtype]
-	out := singleBenchMatrixJSON{
-		Spec: perfMatrixSpec{
-			Rtype:         rtype,
-			MaxModels:     maxModels,
-			Iterations:    iterations,
-			CliAnalyzable: analyzable,
-		},
-		Models: make([]singleBenchJSON, 0, len(targets)),
-	}
-	for _, t := range targets {
-		if analyzable {
-			payload, _ := benchOneModel(ctx.App, t, ctx.FilesRoot, iterations)
-			out.Models = append(out.Models, payload)
-			out.Spec.Analyzed++
-			continue
-		}
-		out.Models = append(out.Models, identityOnlyPayload(t, ctx.FilesRoot, rtype))
-		out.Spec.Unsupported++
-	}
+// perfTypeSummary 单类型汇总：仓库里有多少、跑了几条、清单声明该几条阶段、实际是否吻合。
+type perfTypeSummary struct {
+	Rtype         string `json:"rtype"`
+	RtypeLabel    string `json:"rtype_label,omitempty"`
+	CliAnalyzable bool   `json:"cli_analyzable"`
+	// Found 仓库中该类型条目总数（截断前）
+	Found int `json:"found"`
+	// Analyzed / Unsupported 实际采集 / 仅出身份的模型数
+	Analyzed    int `json:"analyzed"`
+	Unsupported int `json:"unsupported"`
+	// ExpectedStages 样本清单声明的阶段链长度（0 = CLI 不采集阶段）
+	ExpectedStages int `json:"expected_stages"`
+	// StageMismatch 可分析类型但实际阶段数与清单声明不符 —— 阶段链断裂的显式信号
+	// （样本清单因此不只是文档，而是矩阵运行时的自检依据）
+	StageMismatch bool `json:"stage_mismatch,omitempty"`
+}
 
+// matrixGroups 矩阵目标分组：rtype 为空取仓库全部类型；否则只取该类型（未命中返回 nil）。
+func matrixGroups(filesRoot, rtype string, maxModels int) []perfTypeGroup {
+	all := scanTargetsGrouped(filesRoot, maxModels)
+	if rtype == "" {
+		return all
+	}
+	for _, g := range all {
+		if g.Rtype == rtype {
+			return []perfTypeGroup{g}
+		}
+	}
+	return nil
+}
+
+// buildMatrixPayload 把类型分组采集为矩阵载荷（单类型与 --all-types 共用同一形状）。
+func buildMatrixPayload(ctx *CmdContext, groups []perfTypeGroup, iterations int, allTypes bool, maxModels int) singleBenchMatrixJSON {
+	out := singleBenchMatrixJSON{
+		Spec:   perfMatrixSpec{AllTypes: allTypes, MaxModels: maxModels, Iterations: iterations, Types: []perfTypeSummary{}},
+		Models: make([]singleBenchJSON, 0),
+	}
+	for _, g := range groups {
+		entry := perfTypeManifest[g.Rtype]
+		sum := perfTypeSummary{
+			Rtype:          g.Rtype,
+			RtypeLabel:     rtypeDisplayName(g.Rtype),
+			CliAnalyzable:  entry.CliAnalyzable,
+			Found:          g.Found,
+			ExpectedStages: entry.ExpectedStages,
+		}
+		for _, t := range g.Targets {
+			if !entry.CliAnalyzable {
+				out.Models = append(out.Models, identityOnlyPayload(t, ctx.FilesRoot, g.Rtype))
+				sum.Unsupported++
+				continue
+			}
+			payload, _ := benchOneModel(ctx.App, t, ctx.FilesRoot, iterations)
+			if entry.ExpectedStages > 0 && len(payload.Stages) != entry.ExpectedStages {
+				sum.StageMismatch = true
+			}
+			out.Models = append(out.Models, payload)
+			sum.Analyzed++
+		}
+		out.Spec.Analyzed += sum.Analyzed
+		out.Spec.Unsupported += sum.Unsupported
+		out.Spec.Types = append(out.Spec.Types, sum)
+	}
+	if !allTypes && len(groups) == 1 {
+		out.Spec.Rtype = groups[0].Rtype
+		out.Spec.CliAnalyzable = cliAnalyzable(groups[0].Rtype)
+	}
+	return out
+}
+
+// emitMatrix 打印矩阵载荷并走双出口（ADR-200 D1/D5）。
+func emitMatrix(ctx *CmdContext, out singleBenchMatrixJSON) error {
 	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return newRuntimeErrf("JSON 序列化失败: %v", err)
@@ -668,6 +722,30 @@ func runSingleBenchMatrixJSON(ctx *CmdContext, rtype string, maxModels, iteratio
 	fmt.Println(string(data))
 	ctx.SetResult(&out)
 	return nil
+}
+
+// runSingleBenchMatrixJSON 单类型矩阵：按 rtype 取目标集，逐个采集（或仅出身份）。
+func runSingleBenchMatrixJSON(ctx *CmdContext, rtype string, maxModels, iterations int) error {
+	if ctx.FilesRoot == "" {
+		return newParamErrf("--rtype 矩阵模式需要 --files-root 指定仓库根")
+	}
+	groups := matrixGroups(ctx.FilesRoot, rtype, maxModels)
+	if len(groups) == 0 {
+		return newRuntimeErrf("仓库中未找到 rtype=%s 的模型（root=%s）", rtype, ctx.FilesRoot)
+	}
+	return emitMatrix(ctx, buildMatrixPayload(ctx, groups, iterations, false, maxModels))
+}
+
+// runSingleBenchAllTypesJSON 全类型矩阵：仓库里有什么类型就跑什么，每类型各取 maxModels 条。
+func runSingleBenchAllTypesJSON(ctx *CmdContext, maxModels, iterations int) error {
+	if ctx.FilesRoot == "" {
+		return newParamErrf("--all-types 矩阵模式需要 --files-root 指定仓库根")
+	}
+	groups := matrixGroups(ctx.FilesRoot, "", maxModels)
+	if len(groups) == 0 {
+		return newRuntimeErrf("仓库中未发现任何模型（root=%s）", ctx.FilesRoot)
+	}
+	return emitMatrix(ctx, buildMatrixPayload(ctx, groups, iterations, true, maxModels))
 }
 
 // detectModelFormat 根据文件扩展名检测模型格式

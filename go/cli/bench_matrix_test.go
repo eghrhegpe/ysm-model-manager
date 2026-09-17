@@ -17,6 +17,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/internal/app"
 )
 
@@ -174,5 +175,92 @@ func TestSingleBench_ModelAndRtypeMutuallyExclusive(t *testing.T) {
 	err := runSingleBench(ctx)
 	if err == nil || !strings.Contains(err.Error(), "互斥") {
 		t.Errorf("--model 与 --rtype 应互斥, got %v", err)
+	}
+}
+
+// TestPerfTypeManifest_Consistent 样本清单必须与 registry 一致：
+// 清单 key 拼错 / 类型被删、可分析类型却没声明阶段链，都会让矩阵的自检依据失效。
+func TestPerfTypeManifest_Consistent(t *testing.T) {
+	t.Parallel()
+	known := map[string]bool{}
+	for _, rt := range registry.LoadRegistry().ResourceTypes {
+		known[rt.ID] = true
+	}
+	for id, entry := range perfTypeManifest {
+		if !known[id] {
+			t.Errorf("清单登记了 registry 里不存在的类型 %q（拼写漂移或类型已删）", id)
+		}
+		if entry.CliAnalyzable && entry.ExpectedStages <= 0 {
+			t.Errorf("可分析类型 %q 必须声明期望阶段链长度", id)
+		}
+		if !entry.CliAnalyzable && entry.ExpectedStages != 0 {
+			t.Errorf("不可分析类型 %q 不应声明阶段链长度", id)
+		}
+	}
+	if !cliAnalyzable("ysm") {
+		t.Error("ysm 应有 CLI 分析链路")
+	}
+	if cliAnalyzable("EntityPlayer") {
+		t.Error("EntityPlayer 的解析器在前端 adapter，CLI 不应判为可分析")
+	}
+	if rtypeDisplayName("ysm") == "" {
+		t.Error("类型显示名应取自 registry")
+	}
+}
+
+func TestSingleBench_AllTypes_Fixtures(t *testing.T) {
+	root := filepath.Join("..", "..", "tests", "fixtures", "ysm")
+	ctx := &CmdContext{App: &app.App{}, FilesRoot: root}
+
+	var err error
+	out := captureOutput(t, func() { err = runSingleBenchAllTypesJSON(ctx, 2, 1) })
+	if err != nil {
+		t.Fatalf("--all-types 报错: %v", err)
+	}
+	var m singleBenchMatrixJSON
+	if err := json.Unmarshal([]byte(out), &m); err != nil {
+		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
+	}
+	if !m.Spec.AllTypes || m.Spec.Rtype != "" {
+		t.Errorf("--all-types 应置 all_types 且不填单类型 rtype: %+v", m.Spec)
+	}
+	if len(m.Spec.Types) != 1 {
+		t.Fatalf("fixtures 只有 ysm 类型, types 应为 1 项: %+v", m.Spec.Types)
+	}
+	sum := m.Spec.Types[0]
+	if sum.Rtype != "ysm" || !sum.CliAnalyzable || sum.RtypeLabel != "YSM 模型" {
+		t.Errorf("类型汇总应取自清单 + registry: %+v", sum)
+	}
+	if sum.Found < 2 || sum.Analyzed != 2 || sum.Unsupported != 0 {
+		t.Errorf("应按 max-models=2 采集 2 条且 found 为截断前总数: %+v", sum)
+	}
+	if sum.ExpectedStages != 7 || sum.StageMismatch {
+		t.Errorf("实际阶段链应与清单声明（7 段）一致: %+v", sum)
+	}
+	for _, p := range m.Models {
+		if len(p.Stages) != 7 {
+			t.Errorf("目录式 ysm 应产出 7 阶段: %d %+v", len(p.Stages), p.Stages)
+		}
+	}
+}
+
+func TestSingleBench_AllTypes_MutualExclusion(t *testing.T) {
+	root := t.TempDir()
+	writeDirFormYsm(t, root, "a_model")
+	cases := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"--model 与 --all-types 互斥", []string{"--model", "x.ysm", "--all-types", "--format", "json"}, "互斥"},
+		{"--rtype 与 --all-types 互斥", []string{"--rtype", "ysm", "--all-types", "--format", "json"}, "互斥"},
+		{"矩阵模式拒绝 text 输出", []string{"--all-types"}, "仅支持 --format json"},
+	}
+	for _, tc := range cases {
+		ctx := &CmdContext{App: &app.App{}, FilesRoot: root, Args: tc.args}
+		err := runSingleBench(ctx)
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: got %v", tc.name, err)
+		}
 	}
 }

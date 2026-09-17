@@ -66,7 +66,7 @@ _ysm_complete() {
     scan) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     scan-dir) COMPREPLY=( $(compgen -W "--help --dir --detail --output" -- "$cur") ); return ;;
     search) COMPREPLY=( $(compgen -W "--help --keyword --min-bones --max-bones --min-cubes --max-cubes --min-tex --max-tex --format" -- "$cur") ); return ;;
-    single-bench) COMPREPLY=( $(compgen -W "--help --model --iterations --rtype --max-models --baseline --save-baseline --threshold --format" -- "$cur") ); return ;;
+    single-bench) COMPREPLY=( $(compgen -W "--help --model --iterations --rtype --all-types --max-models --baseline --save-baseline --threshold --format" -- "$cur") ); return ;;
     tags) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     toggle) COMPREPLY=( $(compgen -W "--help --path" -- "$cur") ); return ;;
     verify) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;

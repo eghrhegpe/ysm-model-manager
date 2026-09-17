@@ -90,14 +90,8 @@ func buildPerfIdentity(path, filesRoot string, reg *registry.ResourceTypeRegistr
 	if rtype == "" {
 		rtype = classifyForScan(path, ext, reg)
 	}
-	// 显示名取自 registry（类型命名的单一事实源在本表，前端不得自建映射）
-	rtypeLabel := ""
-	for _, rt := range reg.ResourceTypes {
-		if rt.ID == rtype {
-			rtypeLabel = rt.Name
-			break
-		}
-	}
+	// 显示名取自 registry（类型命名单一事实源；前端不得自建映射）
+	rtypeLabel := rtypeDisplayName(rtype)
 
 	absPath := path
 	if a, err := filepath.Abs(path); err == nil {

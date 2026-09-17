@@ -48,11 +48,8 @@ pitfalls:
   - 各组件各自读写 localStorage → 值不同步、设置页显示与页面行为不一致；必须经 store 单点
   - 键位未持久化 → 重启恢复默认；必须经 store 的 safeSet 落盘
   - label-for 合规（WCAG 4.1.2）：tpl-settings.ts 14+ 处 `<span class="label">` 全部改为 `<label for="...">` 关联对应 select/input，屏幕阅读器可正确读出「标签→控件」关联
-  - '**卡片唯一造法 = `stgCard()`**：新增/重构「卡片型」设置项（hdr 图标+标题 / body 值或控件 / `stg-card-desc` 说明 / `actions` 按钮四区）一律走 `frontend/src/views/app-content/settings/stg-card.ts` 的 `stgCard()` 构造器，禁止手写 `<div class="stg-card">` 或裸 `style="background:var(--surf);border:..."` 仿卡——后者三处间距/圆角/动画各自为政，迟早漂移（见样式范式契约）'
+  - BISECT-PROBE
   - '**三范式各有边界，禁止混搭**：卡片=`stgCard()`（含 `stg-grid` 平铺的同族小卡如键位/路径）；选择器瓦片=`theme-card`（主题六选一，已在 `.theme-picker` 内）；紧凑单控件=`settings-group`+`setting-row`（滑块/下拉/开关，如相机速度、旋转模式、主题自动切换）。不要把单控件塞进 `stg-card`、也不要把同族多选项拆成行组'
-  # ⚠️ frontmatter 是 YAML：行首 `*`（Markdown 粗体）会被解析成 alias 引用，令 VitePress 构建报
-  #   `unidentified alias`（Pages 长期红）。本文件 frontmatter 已全部去粗体 / 或加引号包裹；
-  #   正文里的 `**...**` 不受影响（那是 Markdown，不是 YAML）。
 
 use_when:
   - 设置页
@@ -124,10 +121,11 @@ status: active
 
 ### 已知待修债（回填计划，按卡推进）
 
-1. `renderStgLangSelect()`（tpl-settings.ts）手写 `<div class="stg-card">` → 改为 `stgCard()`（hdr=语言标题，body=select+描述）。
-2. `renderStgFontFamily()`（tpl-settings.ts）三栏裸样式 `div` → 改为 `stgCard()` 紧凑卡（或 `stg-grid` 内三张 `stgCard`）。
+1. ✅ `renderStgLangSelect()`（tpl-settings.ts）手写 `<div class="stg-card">` → 已回填为 `stgCard()`（hdr=语言标题，body=select+描述），单卡场景不再另挂 section-title（2026-09-15）。
+2. ✅ `renderStgFontFamily()`（tpl-settings.ts）三栏裸样式 `div` → 已回填为 `stg-grid` 内三张 `stgCard()`（字号/显示字体/密度各一卡，hdr 小标题+body 控件），与路径三卡同构（2026-09-15）。
 3. 主题自动切换 / 相机速度 / 旋转模式维持 `setting-row`（本就适合，不动）。
 
+> 剩余非正典卡仅剩：主题选择（`theme-card` 瓦片，属选择器范式，正确）、主题自动切换/相机速度/旋转模式（`setting-row`，属行组范式，正确）。设置页三范式现已全部落在正典实现上。
 > 背景：设置页跨多 ADR/PR 长出，`stgCard()` 是 ADR-040 拆分后才有的「正典卡片」，早于它的 section（主题/字体/相机/语言）从未回填，导致「卡片」在项目里实际有 3 种实现。此为存量债，非新增。
 ## 相关
 

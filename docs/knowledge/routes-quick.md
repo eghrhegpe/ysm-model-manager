@@ -452,19 +452,19 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| "草为什么是圆斑不像纤维" → 各向异性坐标拉伸（grass.ts 的 ANISO_X） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | 改生成器算法前确认 surfaceSpecKey 不含像素字段（否则触发无谓重建） | - |
+| 「草为什么是圆斑不像纤维」→ 各向异性坐标拉伸（grass.ts 的 ANISO_X） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | 改生成器算法前确认 surfaceSpecKey 不含像素字段（否则触发无谓重建） | - |
 
 ## 🎯 程序化贴图
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| "大理石没有脉络像团块" → domain warping（marble.ts 的 sin(x + k·fbm)） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | - | - |
+| 「大理石没有脉络像团块」→ domain warping（marble.ts 的 sin(x + k·fbm)） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | - | - |
 
 ## 🎯 噪声生成
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| "平铺后每隔约两米出现同一个明星特征" → 无缝但有规律重复，用 anti-repeat.ts（macro/dual/stochastic 三选一或组合） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | - | - |
+| 「平铺后每隔约两米出现同一个明星特征」→ 无缝但有规律重复，用 anti-repeat.ts（macro/dual/stochastic 三选一或组合） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | - | - |
 
 ## 🎯 install: queue / linkMode / launcher
 

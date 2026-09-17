@@ -217,14 +217,13 @@ function renderStgThemeAuto(): string {
 }
 
 function renderStgFontFamily(): string {
-  return `<div class="section-title stg-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
-
-<div style="display:flex;gap:12px">
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
-    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <label for="set-font-size" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.ruler} ${t("settings.fontSize")}</label>
-    </div>
-    <select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
+  // 三栏裸样式手写卡升格为 .stg-grid + .stgCard 正典卡（设置页样式范式契约待修债 #2）：
+  // 原 <div style="background:var(--surf);border:..."> 三处间距/圆角/动画各自为政，已漂移；
+  // 现与路径三卡同构（stg-grid 三列平铺，各卡 hdr 小标题 + body 控件）。
+  const sizeCard = stgCard(
+    UI_ICONS.ruler,
+    t("settings.fontSize"),
+    `<select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
       <option value="xsmall">${UI_ICONS.bullet} ${t("settings.fontSize.xsmall")}</option>
       <option value="small">${UI_ICONS.bulletAlt} ${t("settings.fontSize.small")}</option>
       <option value="normal" selected>${UI_ICONS.dot} ${t("settings.fontSize.normal")}</option>
@@ -236,30 +235,46 @@ function renderStgFontFamily(): string {
       <span>${t("settings.ui.buttonGap")} <b id="sz-space" style="color:var(--txt)">5px</b></span>
       <span>${t("settings.ui.buttonHeight")} <b id="sz-btn-h" style="color:var(--txt)">25px</b></span>
     </div>
-    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontSizeHint")}</div>
-  </div>
-
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
-    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <label for="set-display-font" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.brush} ${t("settings.font.creatorFont")}</label>
-    </div>
-    <select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
+    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontSizeHint")}</div>`,
+    {
+      header: { forId: "set-font-size", titleSize: "md" },
+      cardId: "stg-font-size-card",
+      delayMs: 60,
+    },
+  );
+  const displayCard = stgCard(
+    UI_ICONS.brush,
+    t("settings.font.creatorFont"),
+    `<select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="kaiti" selected>${UI_ICONS.brush} ${t("settings.font.kaiti")}</option>
       <option value="system">${UI_ICONS.note} ${t("settings.font.systemFont")}</option>
     </select>
-    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontHint")}</div>
-  </div>
-
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
-    <div class="setting-row" style="margin:0 0 6px;padding:4px 0">
-      <label for="set-card-density" class="label" style="font-size:var(--fs-md);font-weight:600">${UI_ICONS.payment} ${t("settings.density")}</label>
-    </div>
-    <select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
+    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontHint")}</div>`,
+    {
+      header: { forId: "set-display-font", titleSize: "md" },
+      cardId: "stg-font-display-card",
+      delayMs: 90,
+    },
+  );
+  const densityCard = stgCard(
+    UI_ICONS.payment,
+    t("settings.density"),
+    `<select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="compact" selected>${UI_ICONS.package} ${t("settings.density.compact")}</option>
       <option value="normal">${UI_ICONS.package} ${t("settings.density.normal")}</option>
     </select>
-    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.densityHint")}</div>
-  </div>
+    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.densityHint")}</div>`,
+    {
+      header: { forId: "set-card-density", titleSize: "md" },
+      cardId: "stg-font-density-card",
+      delayMs: 120,
+    },
+  );
+  return `<div class="section-title stg-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
+<div class="stg-grid">
+  ${sizeCard}
+  ${displayCard}
+  ${densityCard}
 </div>`;
 }
 

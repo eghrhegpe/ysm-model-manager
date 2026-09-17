@@ -30,6 +30,17 @@
  * - 优先使用语义化变量（如 --status-success）而非具体颜色值
  * - 避免硬编码颜色，使用 var() 引用主题变量
  * - 新增变量时在对应主题中同步定义
+ *
+ * 实测登记（2026-09，AI 会话核算，防后续误判）：
+ * - 每主题 15 个字面量色 + 4 个派生色（--bd / --accent-btn-* 走 color-mix）。
+ * - 6 主题间**恒等**的只有两组冗余对：--size-ok ≡ --status-success、
+ *   --size-large ≡ --status-error（逐主题逐字相同）。其余字面量各有独立取值。
+ * - --accent-btn-* 的百分比是**有意差异**（深色 pro 需 20/33 保对比、亮色 mint 用 15/28），
+ *   不是漏改；改一处不必同步其它主题。
+ * - 本块 :root 与 .theme-cyber **共块是设计**：cyber 为默认主题（theme-core.ts THEME_DARK），
+ *   即「无覆盖的基线」，不是遗漏独立块。按选择器扫描主题块时勿把它当边界异常。
+ * - 主题卡片色点（tpl-settings.ts）与上述变量**无映射关系**，是手调设计值；
+ *   见 settings/theme-cards.test.ts 首部说明。
  */
 
 /* ===== 赛博霓虹（默认深色） ===== */
@@ -51,8 +62,10 @@
   --meta-date: #f1fa8c;
   --status-success: #a6e3a1;
   --status-error: #f38ba8;
-  --size-ok: #a6e3a1;
-  --size-large: #f38ba8;
+  /* 文件大小色标：语义独立（树内 sz-green/sz-red），取值恒等 status——
+     派生以消重复字面量；若将来「大小色」需独立于「状态色」，改回字面量即可 */
+  --size-ok: var(--status-success);
+  --size-large: var(--status-error);
   /* P2 修复：默认 cyber 主题补 --accent-btn-*（.btn-base.accent 消费，与 pro 主题同值口径）——
      原缺失导致默认暗色主题下 accent 主操作按钮静默失去样式（var 无 fallback → background 归初始） */
   --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
@@ -82,8 +95,8 @@
   --meta-date: #a0866a;
   --status-success: #2e7d32;  /* 绿色 — 与深色主题语义一致 */
   --status-error: #c62828;
-  --size-ok: #2e7d32;
-  --size-large: #c62828;
+  --size-ok: var(--status-success);
+  --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
   --accent-btn-color: var(--accent);
   --accent-btn-border: color-mix(in srgb, var(--accent) 25%, transparent);
@@ -105,8 +118,8 @@
   --meta-date: #90a4ae;
   --status-success: #a5d6a7;
   --status-error: #ef9a9a;
-  --size-ok: #a5d6a7;
-  --size-large: #ef9a9a;
+  --size-ok: var(--status-success);
+  --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 20%, transparent);
   --accent-btn-color: var(--accent);
   --accent-btn-border: color-mix(in srgb, var(--accent) 33%, transparent);
@@ -129,8 +142,8 @@
   --meta-date: #ef6c00;
   --status-success: #2e7d32;
   --status-error: #c62828;
-  --size-ok: #2e7d32;
-  --size-large: #c62828;
+  --size-ok: var(--status-success);
+  --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
   --accent-btn-color: var(--accent);
   --accent-btn-border: color-mix(in srgb, var(--accent) 28%, transparent);
@@ -152,8 +165,8 @@
   --meta-date: #ffb74d;
   --status-success: #81c784;
   --status-error: #e57373;
-  --size-ok: #81c784;
-  --size-large: #e57373;
+  --size-ok: var(--status-success);
+  --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 18%, transparent);
   --accent-btn-color: var(--accent);
   --accent-btn-border: color-mix(in srgb, var(--accent) 30%, transparent);
@@ -176,8 +189,8 @@
   --meta-date: #ffb74d;
   --status-success: #2e7d32;
   --status-error: #c62828;
-  --size-ok: #2e7d32;
-  --size-large: #c62828;
+  --size-ok: var(--status-success);
+  --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
   --accent-btn-color: var(--accent);
   --accent-btn-border: color-mix(in srgb, var(--accent) 28%, transparent);

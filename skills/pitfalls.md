@@ -135,6 +135,26 @@ description: 项目历史事故浓缩的 18 条避坑教训 — 现象 × 根因
 
 ---
 
+## 20. 结构化产物只验「存在」不验「结构」：标签未闭合静默通过，界面整片消失
+
+**现象**：测试用 `expect(html).toContain('<div id="x">')` 验证生成的 HTML——**字符串里有这个 id 就绿**。但「存在」与「结构合法」是两回事：漏一个 `</div>` 会让后续兄弟节点被**吞进**前一个节点内部，字符串里的 id 一个不少，断言全绿，而 DOM 结构已彻底错位。
+
+**实例（2026-09-17，用户报「诊断看不见界面了」）**：ADR-258 把诊断页左栏收敛为顶部 `repo-tab` 后，`tpl.ts|diagnosticsHTML()` 的 `.diag-log-bar` 漏了闭合 `</div>`——本该关工具条的那个 `</div>` 被当成了面板闭合，于是 `#diag-tab-single` … `#diag-tab-sync-conflict` **七个面板全被吞进 `#diag-tab-log`**。而 `bindTabs` 切页时会把非激活的 `#diag-tab-log` 置 `display:none`——嵌在它里面的面板随之一起消失，**切任何 tab 都只剩空 tab 栏**（e2e 页面快照实证：`tablist` 在、`[selected]` 也对，但面板区域是空的）。
+
+| 防线 | 当时结果 | 原因 |
+|------|---------|------|
+| `tpl.test.ts` 子串断言 | ✅ 全绿 | 面板 id 字面量仍在字符串里，`toContain` 恒真 |
+| jsdom 单元层 | ✅ 测不出 | jsdom **不做布局**；且 `.diag-panel{display:flex}` 覆盖 `[hidden]`，`getComputedStyle` 拿不到「塌成 0 高」 |
+| 真实浏览器 e2e | ❌ 一击命中 | `getBoundingClientRect()` 尺寸判定 + 页面快照暴露空面板区 |
+
+- **规则 1（结构化产物必须验结构）**：凡产出**结构化文本**的测试（HTML 字符串模板 / CSS 组合层 / 生成的文档与清单），**不得只做子串断言**。至少补一条结构断言：HTML 验 `<div>` 开合平衡 + 关键节点**等深同层**（纯字符串深度计数即可，无需 DOM 解析器）；CSS 验选择器归属；文档验小节与表格列数。
+- **规则 2（「可见」必须落到布局）**：断言 UI 可见时 `display !== "none"` **不够**——嵌套吞并、父级塌陷、`overflow:hidden` 裁剪都会让它「display 正常但实际看不见」。须在真实浏览器补 `getBoundingClientRect()` 尺寸判定；jsdom 层无法替代。
+- **规则 3（改容器结构先数标签）**：改动容器型模板（增删一层包裹、改 tab 归属）时，`<div` 与 `</div>` 计数必须配平——这是重构中最易漏、后果最重（整页空白）而**静态检查全绿**的一类。
+- **常驻防线（本条的落地）**：`frontend/src/views/app-content/tpl-structure.test.ts`（结构：div 配平 + 面板等深同层）、`frontend/e2e/diagnostics.spec.ts`（真实可见性：逐个 tab 切换后测尺寸）。两者均在移除修复时实测转红。
+- **自查口令**：改完生成 HTML 的模板问三句——① 我的断言是「有这个东西」还是「结构对」？② 我增删了一层容器，标签配平了吗？③ 这个「可见」我拿 display 判的还是拿尺寸判的？
+
+---
+
 ## 维护约定
 
 - 新增陷阱：`ai-mistake-tracker.mjs` 发现连续修复链 / 高频 fix 文件时，提炼后追加本手册 + 同步 `AGENTS.md` §二 摘要表。

@@ -132,6 +132,7 @@ export function diagnosticsHTML(): string {
     <span class="diag-log-bar-spacer"></span>
     <button class="btn-base sm" id="diag-refresh">${t("diagnostics.refresh")}</button>
     <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
+  </div>
   <div id="diag-log-list" data-testid="diag-log-list" class="diag-log-scroll"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
   <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>
 </div>

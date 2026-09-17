@@ -124,6 +124,8 @@ status: active
 - 冲突列表顺序与 `logs.ts` 的 `Operation` 分组一致（`OP_META` 标签为单一事实源）
 - exec 读用户选中态按组容器查 `input[type="radio"]:checked`（2026-09-03）：组容器按渲染平铺序与 `allResults.groups` 一一对应，替代按 `name="dedup-keep-<gi>"` 全局拼串——组间插入其它控件不致错位，消除「渲染计数 gi / exec 计数 gi2」双轨对齐依赖；keep-all 值为 `-1` 的 radio 同属组内
 
+- **八个面板必须是 `.tab-body` 的直接子节点**（2026-09-17 事故）：`diagnosticsHTML()` 的 `.diag-log-bar` 曾漏一个 `</div>`，`#diag-tab-log` 把后续 7 个面板吞进自己内部；`bindTabs` 切页时把 `#diag-tab-log` 置 `display:none`，嵌在里面的面板一并消失 → **切任何 tab 都只剩空 tab 栏**。防线双保险：`tpl-structure.test.ts`（div 开合配平 + 面板等深同层，纯字符串深度计数，node 环境）+ `e2e/diagnostics.spec.ts`（真实浏览器逐 tab 切换后测 `getBoundingClientRect` 尺寸——`display` 口径对此失明）。泛化规则与「子串断言验不出结构」的教训见 `skills/pitfalls.md` #20。
+
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

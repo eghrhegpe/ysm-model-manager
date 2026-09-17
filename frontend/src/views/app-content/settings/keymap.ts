@@ -80,7 +80,7 @@ function tdRenderKeymap(root: ShadowRoot): void {
     // 对齐基础设置「路径配置」卡组合——自包含、可组合、不浪费整行宽度。
     const btnHtml = `<button class="btn-base sm" style="min-width:${KEY_BTN_MIN_WIDTH};width:100%">${tdKeyLabel(km[key])}</button>`;
     const card = document.createElement("div");
-    card.innerHTML = stgCard("", label, btnHtml, { titleSize: "base" });
+    card.innerHTML = stgCard("", label, btnHtml, { header: { titleSize: "base" } });
     const btn = card.querySelector("button");
     if (!btn) return;
     btn.addEventListener("click", () => {

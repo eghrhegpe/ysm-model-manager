@@ -32,8 +32,10 @@
 **D1 · 报告是唯一事实源，人类文案只能是它的派生。**
 性能命令一律提供结构化载荷，并同时满足两个出口：CLI stdout 的 JSON（供 CLI 用户与 AI 直读）与 Wails 桥的 `data` 对象（供前端消费）。桥侧统一走 `CmdContext.SetResult` + `SidecarOutput.AttachSidecar`（ADR-200 D1/D5），`output` 字段只用于「复制原文」。**禁止**前端再以正则反解析人类文案；**禁止**把中文标签（如「总计」）作为契约锚点，既有此类契约测试改锁 JSON 字段名。
 
-**D2 · 阶段三要素 + 总计拆分。**
+**D2 · 阶段三要素、总计拆分与身份块。**
 每个阶段必须携带：`runtime`（`go` | `rust` | `wasm` | `js` | `three`）、`kind`（`measured` | `estimated`）、样本统计（`n` / `median` / `p95`，实测才允许有分位数）。总计拆成 `measured_ms` 与 `estimated_ms` 两个字段，**估算不得计入总耗时展示**；估算行必须显式标注其假设与公式。
+
+报告必须携带**身份块** `identity`：`rtype`（registry 类型 id，判定复用 `classifyForScan` 的三段口径：目录归属 > 扩展名 > 容器兜底）、`rtype_source`（location / extension / container，说明凭什么这么判）、`rtype_label`（registry 显示名，前端不得自建类型映射）、`filesRoot` + `relPath`（相对仓库根，跨机器可比）+ `absPath`（诊断用）。**理由**：`format`（YSM/PMX/…）是扩展名表派生的展示标签，推不出归属——`.zip` 被 14 个类型声明、MMD 子类型共享 `.vpd`/`.vmd`；只给绝对路径则换机器后报告无法回溯识别，测试与 AI 断言只能靠绝对路径（必脆）。**测试与断言一律用 `rtype` + `relPath`，不用 `absPath`。**
 
 **D3 · 实验规格显式化，执行与聚合归 Go。**
 引入 `PerfSpec`：目标集（显式路径[] / 按 registry 类型各取 N 个 / 全库前 N 大）、样本数、迭代次数、冷热口径、是否启用 `rust_backend`（Go/Rust 对照）。目标集从 `resource_types.json` + Go 侧 registry 派生，**不得**在任一语言里另立类型表。矩阵遍历与聚合在 Go 侧完成（前端只提交 spec、渲染 report），对齐「筛选 / 聚合归 Go」红线。

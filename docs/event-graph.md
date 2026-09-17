@@ -52,7 +52,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 180 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 184 |
 
 ### `batch:disable-all`
 
@@ -499,14 +499,14 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 254 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 145 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 281 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 132 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 142 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 148 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 158 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 169 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 175 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 102 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 151 |
+| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 130 |
+| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 140 |
+| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 146 |
+| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 156 |
+| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 167 |
+| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 173 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 101 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 153 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 150 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |

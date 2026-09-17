@@ -39,6 +39,20 @@ interface SingleBenchStage {
   note?: string;
 }
 
+/** 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定 —— 报告靠它分辨真实场景类别 */
+interface PerfIdentity {
+  /** registry 类型 id（ysm / EntityPlayer / resourcepack / …）；容器兜底为 container */
+  rtype: string;
+  /** 判定来源：location（祖先目录归属）| extension（扩展名消歧）| container（容器兜底） */
+  rtype_source: string;
+  /** registry 显示名（如「YSM 模型」）；由 Go 给出，前端不建类型映射 */
+  rtype_label?: string;
+  filesRoot?: string;
+  /** 相对仓库根，跨机器可比（测试/AI 断言用这个，不用 absPath） */
+  relPath: string;
+  absPath: string;
+}
+
 /** Go singleBenchJSON 载荷（附 AttachSidecar 注入的 output/filesRoot，ADR-200 D5） */
 interface SingleBenchPayload {
   model: string;
@@ -51,6 +65,8 @@ interface SingleBenchPayload {
   bottleneck: string;
   format: string;
   size_bytes?: number;
+  /** 身份块；旧版 Go 载荷缺省（前端按可选处理并回落 format 标签） */
+  identity?: PerfIdentity;
   /** 人类可读原文（复制/AI 直读用） */
   output?: string;
 }
@@ -126,9 +142,13 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
   savePerfRecord(stages.map((s) => ({ name: s.name, ms: s.ms })));
 
   const rawOutput = payload.output ?? JSON.stringify(payload, null, 2);
-  const label = payload.format
-    ? `${t("diagnostics.perfSingleResult")} · ${esc(payload.format)}`
-    : t("diagnostics.perfSingleResult");
+  // 身份优先（ADR-262 D2）：registry 类型显示名 + 相对路径；format 仅作旧载荷回落
+  const id = payload.identity;
+  const typeText = id?.rtype_label || id?.rtype || payload.format;
+  const labelParts = [t("diagnostics.perfSingleResult")];
+  if (typeText) labelParts.push(typeText);
+  if (id?.relPath) labelParts.push(id.relPath);
+  const label = labelParts.map((s) => esc(s)).join(" · ");
   const totalLine = `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${t(
     "diagnostics.perfTotalDetail",
     {

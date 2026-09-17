@@ -447,6 +447,9 @@ type singleBenchJSON struct {
 	Hints          []string         `json:"hints"`
 	Format         string           `json:"format"`
 	SizeBytes      int64            `json:"size_bytes"`
+	// Identity 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定。
+	// format/size_bytes 保留在原处不动（既有消费者），rtype 才是判定口径。
+	Identity perfIdentity `json:"identity"`
 	// ADR-200 D5 sidecar：迁移期保留人类可读文本与 filesRoot，供前端「复制原文」与
 	// respHasOutput 守卫。仅由桥接层注入（AttachSidecar），stdout 载荷不含。
 	Output    string `json:"output,omitempty"`
@@ -501,10 +504,8 @@ func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
 
 // runSingleBenchJSON 单模型基准测试 JSON 模式：静默运行，输出结构化数据
 func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, baseline, saveBaseline string, thresholdPct float64) error {
-	var modelSize int64
-	if info, err := os.Stat(modelPath); err == nil {
-		modelSize = info.Size()
-	}
+	// 目录式模型（YSM 解压目录）size 记 0——见 perfIdentitySize
+	modelSize := perfIdentitySize(modelPath)
 
 	allStages, totalDuration := runSingleBenchSamples(ctx.App, modelPath, ctx.FilesRoot, iterations, nil)
 	avg := avgBenchStages(allStages)
@@ -532,6 +533,8 @@ func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, basel
 		Hints:          hints,
 		Format:         modelFormat,
 		SizeBytes:      modelSize,
+		// 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定，供测试/AI 分辨真实场景类别
+		Identity: buildPerfIdentity(modelPath, ctx.FilesRoot, nil),
 	}
 
 	data, err := json.MarshalIndent(output, "", "  ")

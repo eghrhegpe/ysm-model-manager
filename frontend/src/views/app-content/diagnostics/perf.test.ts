@@ -43,6 +43,15 @@ const SINGLE_STRUCTURED = {
   hints: ["🔴 瓶颈: JSON 解析"],
   format: "YSM",
   size_bytes: 123456,
+  // 身份块（ADR-262 D2）：类别判定来自 Go registry，路径限定用 relPath（跨机器可比）
+  identity: {
+    rtype: "ysm",
+    rtype_source: "extension",
+    rtype_label: "YSM 模型",
+    filesRoot: "/repo",
+    relPath: "ysm/player.ysm",
+    absPath: "/repo/ysm/player.ysm",
+  },
   output: "（--format json 时 Go 打印的 JSON 原文，经 AttachSidecar 注入 data.output）",
 };
 
@@ -151,7 +160,9 @@ describe("single-bench 面板", () => {
     // 迭代口径：单次平均 + 累计双显（旧 UI 把 3 次累计当成单次「总耗时」）
     expect(out.textContent).toContain("2184.90ms（3 次迭代平均；累计 6554.70ms）");
     expect(out.textContent).toContain("最慢阶段: ② JSON 解析");
-    expect(out.textContent).toContain("YSM");
+    // 身份：类别显示名取自 Go registry，路径限定显示相对路径
+    expect(out.textContent).toContain("YSM 模型");
+    expect(out.textContent).toContain("ysm/player.ysm");
     expect(out.querySelector(".perf-bar-danger")).toBeTruthy();
   });
 
@@ -235,6 +246,22 @@ describe("single-bench 面板", () => {
     expect(val.className).not.toContain("perf-bar-warn");
     // 无最慢阶段时不渲染该行
     expect(out.textContent).not.toContain("最慢阶段");
+  });
+
+  it("旧载荷无 identity 时回落 format 标签，不崩", async () => {
+    // 兼容窗口：identity 是 ADR-262 D2 新增字段，旧版 Go 载荷没有它
+    const legacy: Record<string, unknown> = { ...SINGLE_STRUCTURED };
+    delete legacy.identity;
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: legacy });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./legacy.ysm";
+    (root.getElementById("diag-perf-run") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const out = root.getElementById("diag-perf-single") as HTMLElement;
+    expect(out.textContent).toContain("YSM"); // format 回落标签
+    expect(out.textContent).toContain("① 文件读取");
+    expect(out.querySelector(".diag-stat-error")).toBeNull();
   });
 });
 

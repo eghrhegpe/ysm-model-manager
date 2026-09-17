@@ -373,6 +373,7 @@ func runBenchIterations(ctx *CmdContext, targetModel string, iterations int, for
 		Hints:          generateHints(avg),
 		Format:         format,
 		SizeBytes:      modelSize,
+		Identity:       buildPerfIdentity(targetModel, ctx.FilesRoot, nil),
 	}
 }
 

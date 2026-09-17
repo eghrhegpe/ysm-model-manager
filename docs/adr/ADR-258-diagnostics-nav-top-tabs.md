@@ -28,9 +28,8 @@
 1. **日志（合并）**：操作日志 + 运行时日志合并为 1 个顶部 tab `diag-tab-log`，面板内用小型子切换（数据源 radio/按钮）切换两种日志；**清空按钮归位到日志面板工具栏，且仅在操作日志视图可见**（运行时日志无清空能力）。
 2. **性能（拆 4）**：原性能段拆成 4 个顶部 tab：`single`（单一模型基准）/ `gui`（GUI 加载链路）/ `hist`（优化历史）/ `trace`（加载剖析）。与仓库页扁平「一 tab = 一内容卡」范式一致。
 3. **冲突/体检/同步冲突（原样）**：保留为 3 个顶部 tab `conflict` / `health` / `sync-conflict`，各自绑定原扫描入口。
-4. **复制/刷新**：提升为顶部 tab 栏右侧的通用操作按钮（类 github 页刷新），不参与左侧分段。
-
-内容卡 id 沿用 `diag-tab-<name>` 前缀（与 `bindTabs` 的 `${prefix}-tab-${id}` 约定对齐）。查看器模式（`isViewerMode`）隐藏桌面专属 tab（conflict/health/sync-conflict）的逻辑从 `dgInHideDesktopOnly` 平移到 `bindTabs` 调用处或页内 init。
+4. **复制/刷新**：归位到日志面板工具栏（`diag-log-bar`，与清空同处），而非顶部 tab 栏。理由：`.repo-tabs` 由 `bindTabs` 注入 `role="tablist"`，tablist 内只应含 `role="tab"` 元素，混入非 tab 操作按钮会破坏 ARIA 语义；且复制/刷新语义上只作用于日志视图，与工具栏内的清空按钮同组更自洽（与 github/workshop 页「操作按钮置于内容工具栏而非 tablist」的布局惯例一致）。
+内容卡 id 沿用 `diag-tab-<name>` 前缀（与 `bindTabs` 的 `${prefix}-tab-${id}` 约定对齐）。查看器模式（`isViewerMode`）隐藏桌面专属 tab（conflict/health/sync-conflict）仍由 `dgInHideDesktopOnly` 负责（仅保留该隐藏分支，左栏分段分支已删）；因其对 tab 设 `display:none`，`bindTabs` 的键盘导航（Arrow/Home/End）已同步改为跳过 `display:none` 的 tab，避免 viewer 模式方向键聚焦隐藏 tab。
 
 ## 3. 后果（Consequences）
 
@@ -44,11 +43,11 @@
 **负面 / 已知遗留**
 
 - 多文件改动（tpl.ts / content-diag.ts / init.ts / init-pages.ts / 测试），需同步更新 `init.test.ts`、`tpl.test.ts` 的 DOM 选择器与绑定断言。
-- 顶部 tab 数由「1 个退化 tab」变为「6 个真实 tab」（日志/4性能/冲突/体检/同步 + 复制刷新），窄屏需确认 `repo-tabs` 的 `overflow-x:auto` 横向滚动体验。
+- 顶部 tab 数由「1 个退化 tab」变为「8 个真实 repo-tab」（日志 / 性能×4 / 冲突 / 体检 / 同步冲突），窄屏需确认 `.repo-tabs` 的 `overflow-x:auto` 横向滚动体验；复制/刷新已下沉至日志面板工具栏，不占顶栏。
 - 性能 4 个子 tab 的初始化需登记进 `bindTabs` 的 `TAB_INIT` 表（或页内 init 直接渲染，因性能面板本就随诊断页 init 一次性挂载）。
 
 ## 4. 数据溯源
 
 - 来源：`frontend/src/views/app-content/tpl.ts:99-145`（诊断页模板，含退化顶部 tab + 左栏）、`frontend/src/views/app-content/diagnostics/init.ts:143`（dgInBindTabSwitcher）、`frontend/src/views/app-content/init-pages.ts:92`（bindTabs 范式）、`frontend/src/views/app-content/css/content-diag.ts`（diag-left/diag-btn 样式）。
-- 结果：本次重构落地后，诊断页顶部 tab 数 = 日志 + 性能×4 + 冲突 + 体检 + 同步冲突 = 8 个内容 tab，加复制/刷新 2 个通用操作；左栏 `diag-left` 删除。
+- 结果：本次重构落地后，诊断页顶部 tab 栏 = 8 个 `repo-tab` 内容卡；复制/刷新/清空归位于日志面板工具栏 `diag-log-bar`；左栏 `diag-left` 删除。
 

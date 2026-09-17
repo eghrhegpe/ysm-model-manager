@@ -49,6 +49,8 @@ vi.mock("./site/workshop-tabs.ts", () => ({ initWorkshopTabs, setShowSiteView, c
 vi.mock("@/features/community/community-data.ts", () => ({ fillSearch }));
 
 import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";
+import { SubscriptionBucket } from "./subscription-bucket.ts";
+import { flushPromises } from "@/test-utils/index.ts";
 import type { AppContentHost } from "./host.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
@@ -71,15 +73,10 @@ interface MockHost {
     workshopCache: Map<string, unknown> | null;
     githubCache: unknown;
     workshopTimer: unknown;
-    repoEventsCleanup: unknown;
     avatarRefreshRegistered: boolean;
   };
-  subs: {
-    pageUnsubs: Array<() => void>;
-    globalUnsubs: Array<() => void>;
-    addGlobal: (fn: () => void) => void;
-    addPage: (fn: () => void) => void;
-  };
+  /** 真订阅桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs */
+  subs: SubscriptionBucket;
 }
 
 /** 组装 initWorkshopPage 需要的假 host（真实 DOM 承载 getElementById / querySelectorAll） */
@@ -101,15 +98,10 @@ function makeHost(cardsHTML = "") {
       workshopCache: null,
       githubCache: null,
       workshopTimer: null,
-      repoEventsCleanup: null,
       avatarRefreshRegistered: false,
     },
-    subs: {
-      pageUnsubs: [],
-      globalUnsubs: [],
-      addGlobal: (fn: () => void) => { raw.subs.globalUnsubs.push(fn); },
-      addPage: (fn: () => void) => { raw.subs.pageUnsubs.push(fn); },
-    },
+    // 真桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs
+    subs: new SubscriptionBucket(),
   };
   createdHosts.push(raw);
   return { host: raw as unknown as AppContentHost, raw, el };
@@ -270,11 +262,18 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     expect(showRepoModels).toHaveBeenCalledTimes(1);
     const args = callArgs(showRepoModels, 0);
     expect(args[0]).toBeTypeOf("function"); // esc
-    expect(args[1]).toBe(raw.state.repoEventsCleanup);
-    // setter 以内联 lambda 透传（直写 state 字段），钉行为而非引用
-    expect(args[2]).toBeTypeOf("function");
-    (args[2] as (fn: unknown) => void)("cleanup-token");
-    expect(raw.state.repoEventsCleanup).toBe("cleanup-token");
+    // 首绑无前次清理 → args[1] 为 null（值口径，非 getter）
+    expect(args[1]).toBeNull();
+    expect(args[2]).toBeTypeOf("function"); // setter
+    // setter 写入「页内可替换槽」；再调一次 showRepoModels 即应读到该值（往返一致）
+    const token = vi.fn(async () => {});
+    (args[2] as (fn: unknown) => void)(token);
+    await ctx.showRepoModels("o/r", models, "raw");
+    expect(callArgs(showRepoModels, 1)[1], "第二次应读到上次写入的清理").toBe(token);
+    // 且该槽已随订阅桶登记：桶清理即执行（ADR-260 拆除单源）
+    raw.subs.cleanupPage();
+    await flushPromises();
+    expect(token).toHaveBeenCalledTimes(1);
     expect(args[3]).toBe(raw.state.currentSite);
     expect(args[4]).toBeTypeOf("function");
     (args[4] as (site: unknown) => void)("site-token");

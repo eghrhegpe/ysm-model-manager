@@ -52,7 +52,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 156 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 164 |
 
 ### `batch:disable-all`
 
@@ -100,7 +100,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 91 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 90 |
 
 ### `ctx:show`
 
@@ -202,7 +202,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 82 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 81 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
 
 ### `menu:show`
@@ -241,8 +241,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 74 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 192 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 73 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 188 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 229 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 223 |
@@ -252,7 +252,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 61 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 60 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 193 |
 
 ### `package:selected`
@@ -310,7 +310,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 72 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 71 |
 
 ### `repo:subdir-changed`
 
@@ -460,7 +460,7 @@
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 132 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 74 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 33 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 183 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 179 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 200 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 338 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
@@ -622,7 +622,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 76 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 75 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

@@ -64,13 +64,13 @@ function setup() {
       rtype?: string;
       models?: WorkshopModel[];
       repo?: string;
-      repoEventsCleanup?: (() => Promise<void>) | null;
+      prevRepoEventsCleanup?: (() => Promise<void>) | null;
       currentSite?: WorkshopSite | null;
     } = {},
   ) =>
     showRepoModels(
       escAny,
-      over.repoEventsCleanup ?? null,
+      over.prevRepoEventsCleanup ?? null,
       setRepoEventsCleanup,
       over.currentSite ?? null,
       setCurrentSite,
@@ -240,7 +240,7 @@ describe("showRepoModels", () => {
     const failingCleanup = vi.fn(async () => {
       throw new Error("cleanup boom");
     });
-    await run({ rtype: "ysm", repoEventsCleanup: failingCleanup });
+    await run({ rtype: "ysm", prevRepoEventsCleanup: failingCleanup });
     expect(failingCleanup).toHaveBeenCalledTimes(1);
     expect(dbgMock).toHaveBeenCalledWith("repo-events", "清理旧仓库事件失败:", "cleanup boom");
     expect(bindRepoEventsMock).toHaveBeenCalledTimes(1);

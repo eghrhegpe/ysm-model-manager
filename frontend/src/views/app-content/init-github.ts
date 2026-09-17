@@ -290,15 +290,23 @@ export function initGithubPage(host: AppContentHost): void {
   if (!host.state.githubCache) host.state.githubCache = new Map();
   // _currentRepo 用于检测过时的异步响应（竞态防护），多闭包共享同一代际
   let _currentRepo = "";
+  // 页内「可替换清理槽」（同 _currentRepo 范式）：重绑前清旧、绑完存新。
+  // 经订阅桶登记拆除（ADR-260）——不再借宿 AppContentState 字段，也不需注入链。
+  let _repoEventsCleanup: (() => Promise<void>) | null = null;
+  host.subs.addPage(async () => {
+    const prev = _repoEventsCleanup;
+    _repoEventsCleanup = null;
+    await prev?.();
+  });
   const ctx = {
     _root: host.state.root,
     _githubCache: () => host.state.githubCache,
     _setGithubCache: (cache: Map<string, RepoCacheEntry> | null): void => {
       host.state.githubCache = cache;
     },
-    _repoEventsCleanup: () => host.state.repoEventsCleanup,
+    _repoEventsCleanup: () => _repoEventsCleanup,
     _setRepoEventsCleanup: (fn: (() => Promise<void>) | null): void => {
-      host.state.repoEventsCleanup = fn;
+      _repoEventsCleanup = fn;
     },
     grid: host.state.root.getElementById("gh-grid"),
     resultsBody: host.state.root.getElementById("gh-results-body"),

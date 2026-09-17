@@ -5,7 +5,8 @@
 // - 标志位：insListenerReg / avatarRefreshRegistered
 // - 拖拽回调：resizeMove / resizeUp
 // - workshop/github 借宿状态：currentSite / avatarCache / workshopCache / githubCache / workshopTimer
-// - 异步清理：repoEventsCleanup
+// - 定时器：workshopTimer（切页销毁时清）
+// 注：仓库视图的异步清理**不在本容器**——已归订阅桶（host.subs.addPage 收 Promise，ADR-260）。
 
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import type { PageName } from "@/bus";
@@ -44,8 +45,8 @@ export class AppContentState {
   /** 创意工坊默认站点定时器（切页销毁时清理） */
   workshopTimer: ReturnType<typeof setTimeout> | null = null;
 
-  /** 仓库视图异步清理函数 */
-  repoEventsCleanup: (() => Promise<void>) | null = null;
+  // 注：仓库视图的异步清理已归订阅桶（host.subs.addPage 收 Promise，ADR-260）——
+  // 不再在共享 state 上开专用字段；页面级可变状态由各页闭包自持。
 
   /** 页面面板缓存（ADR-163：tab-panel 常驻化——首次访问渲染并缓存 DOM 节点，
    *  切页复用节点不重建；key=页面名，value=面板节点） */

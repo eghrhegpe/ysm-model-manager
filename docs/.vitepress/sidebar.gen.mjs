@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-260：页面级拆除单源——SubscriptionBucket 收异步清理，退役 repoEventsCleanup 旁路",
+        "link": "/adr/ADR-260-subscriptionbucket-repoeventscleanup"
+      },
+      {
         "text": "ADR-259：tab 结构单点产出——renderTabs 工厂与结构契约",
         "link": "/adr/ADR-259-tab-rendertabs"
       },

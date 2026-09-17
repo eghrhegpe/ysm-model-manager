@@ -152,7 +152,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - `app-nav` 是 `nav:changed` 的主要派发源；本组件与 `PageStore` 监听 `nav:changed`（本组件切页整块重渲染，`PageStore` 单向更新状态；2026-08-17 起单事件模型，见知识卡 `app_nav`、`page_store`）
 - `<app-preview>` 由本模块顶部副作用静态导入完成注册，仓库页模板直接放置元素（见知识卡 `app_preview`）
 - `package:selected` 由 `app-sidebar` 卡片点击派发，本组件据此挂载 `<app-sync-manager instance=...>`（见知识卡 `app_sidebar`、`app_sync_manager`）
-- 仓库页事件绑定与卡片渲染委托 `features/community/events.ts`（`bindRepoEvents`，清理函数存 `_repoEventsCleanup`）与 `features/community/render.ts`；工坊模型列表接入定高虚拟滚动（`virtual-list.ts`，社区上线后索引可顶 2000 级）
+- 仓库页事件绑定与卡片渲染委托 `features/community/events.ts`（`bindRepoEvents`）与 `features/community/render.ts`；其 cleanup 为**异步**，由两页（github/workshop）各自持页内可替换槽并 `host.subs.addPage` 登记（ADR-260，**不再**存 `state.repoEventsCleanup` 字段、也不经注入链）；工坊模型列表接入定高虚拟滚动（`virtual-list.ts`，社区上线后索引可顶 2000 级）
 - 所有 Go 调用统一走 `getApp()`（见知识卡 `wails_bridge`）；跨组件通信走 bus（见知识卡 `event_bus`）
 
 ## 不变量
@@ -160,7 +160,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - 全局事件 handler 只在 `app-content` 的 `connectedCallback` 注册一次（致命陷阱 #2），返回的 unsub 全部收进 `_globalUnsubs`
 - 初始页面**三源同源**：`app-nav`、`app-content`、`PageStore` 都只能通过 `resolveInitialPage()` 取初始页，禁止任一处硬编码页面名，否则 UI 与 `PageStore` 脱节（旧版 DnD 遮罩曾依赖该守卫误判；现 DnD 已组件化，不再依赖）
 - `resolveInitialPage()` 的 localStorage 取值必须过 `sanitizePage()` 白名单（`VALID_PAGES`）：历史页面名 `resources` 映射为 `repository`，其余未知/损坏值一律回退 `repository`，防止 `_render()` 落入 `default` 分支却无对应 init 分发而形成死页
-- 所有 `bus.on` 订阅（`_globalUnsubs` / `_unsubs`）必须在 `disconnectedCallback` 逐一清理；`_unsubs` 在 `_render()` 开头同样清理（防 app-content 常驻下跨访问累积）；`document` 级 resize 监听先移除再重绑
+- 所有 `bus.on` 订阅与页面级拆除统一注册进 `SubscriptionBucket`（`addPage` / `addGlobal` / `setNavUnsub`；`addPage` 收 `() => void | Promise<void>`，ADR-260），在 `disconnectedCallback` 与 `lang:changed` 全量重建时清空。⚠️ **页面级桶不在 `_render()` 开头清**——ADR-163 面板常驻、每页 init 只跑一次，切页清订阅会造「DOM 还在、事件已死」的僵尸页（ADR-260 §2.5）；`document` 级 resize 监听先移除再重绑
 - `_render()` 内页面 init 分发整体包 try/catch：init 抛错不中断调用方，转 `console.error` + `toast:show` 反馈用户而非静默
 - 样式走 `adoptedStyleSheets` + CSS 变量，无硬编码颜色；`innerHTML` 拼接统一过 `_esc` / `esc`
 - 页面级临时缓存（`_workshopCache` / `_githubCache`）与 `_workshopTimer` 定时器在 `disconnectedCallback` 清空

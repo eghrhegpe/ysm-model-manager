@@ -26,7 +26,6 @@ import { registerContextMenus } from "@/features/context-menu/context-menus.ts";
 import { registerInstanceOps } from "@/features/pack-ops/instance-ops.ts";
 import { registerAndroidEvents } from "@/features/platform/android-events.ts";
 import { registerSync } from "@/features/sync/sync.ts";
-import { swallowError } from "@/utils/base/primitives/async.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "@/views/app-preview/index.ts";
 import { t } from "@/core/i18n/t.ts";
@@ -112,11 +111,8 @@ class AppContent extends WebComponentBase {
     // config-loaded Wails 订阅回收 + flag 复位（init-workshop.ts 模块级状态，
     // 经导出函数访问——组件重建后新实例可重新注册）
     resetAvatarConfigLoaded();
-    // 清理 repo 视图事件
-    if (this.state.repoEventsCleanup) {
-      swallowError(this.state.repoEventsCleanup());
-      this.state.repoEventsCleanup = null;
-    }
+    // 注：repo 视图事件清理不再手工执行——已随 subs.addPage 入桶，上面 cleanupAll() 已覆盖
+    //（ADR-260：页面级拆除单源，避免「桶清一半、字段清一半」的双轨）
   }
 
   /**

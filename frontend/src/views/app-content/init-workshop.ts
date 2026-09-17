@@ -46,6 +46,14 @@ export function initWorkshopPage(host: AppContentHost): void {
   // 单一入口：所有可变 ref 由 createWorkshopRefs() 生成一份；tabs 写入、showSiteView 读取，
   // 永远是同一实例——杜绝「形状相同、实例不同」的错位 bug。
   const refs = createWorkshopRefs();
+  // 页内「可替换清理槽」：重绑前清旧、绑完存新；经订阅桶登记拆除（ADR-260），
+  // 不再借宿 AppContentState 字段，也不再作为注入参数穿过 showRepoModels。
+  let _repoEventsCleanup: (() => Promise<void>) | null = null;
+  host.subs.addPage(async () => {
+    const prev = _repoEventsCleanup;
+    _repoEventsCleanup = null;
+    await prev?.();
+  });
   let repoModelCache = host.state.workshopCache;
   if (!repoModelCache) {
     repoModelCache = new Map();
@@ -105,9 +113,9 @@ export function initWorkshopPage(host: AppContentHost): void {
       showRepoModels: async (repo, models, source) => {
         await showRepoModels(
           (s) => esc(String(s || "")),
-          host.state.repoEventsCleanup,
+          _repoEventsCleanup,
           (fn: (() => Promise<void>) | null) => {
-            host.state.repoEventsCleanup = fn;
+            _repoEventsCleanup = fn;
           },
           host.state.currentSite,
           (site: WorkshopSite | null) => {

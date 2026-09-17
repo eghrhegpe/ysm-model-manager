@@ -30,6 +30,7 @@ import { initGithubPage } from "./init-github.ts";
 import type { AppContentHost } from "./host.ts";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import type { RepoCacheEntry } from "./state.ts";
+import { SubscriptionBucket } from "./subscription-bucket.ts";
 
 /** vi.fn() 未显式标注入参时 mock.calls 元组推断为空，统一经 unknown[] 取参 */
 function callArgs(mock: unknown, index: number): unknown[] {
@@ -42,14 +43,10 @@ interface MockGithubHost {
   state: {
     root: HTMLElement;
     githubCache: Map<string, RepoCacheEntry> | null;
-    repoEventsCleanup: (() => Promise<void>) | null;
     setGithubCache: (c: Map<string, RepoCacheEntry> | null) => void;
-    setRepoEventsCleanup: (fn: (() => Promise<void>) | null) => void;
   };
-  subs: {
-    pageUnsubs: Array<() => void>;
-    globalUnsubs: Array<() => void>;
-  };
+  /** 真订阅桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs */
+  subs: SubscriptionBucket;
 }
 
 /** 组装 initGithubPage 需要的假 host（gh-grid / gh-results-body / gh-source-info） */
@@ -66,14 +63,10 @@ function makeHost() {
     state: {
       root: el,
       githubCache: null,
-      repoEventsCleanup: null,
       setGithubCache: (c: Map<string, RepoCacheEntry> | null) => { raw.state.githubCache = c; },
-      setRepoEventsCleanup: (fn: (() => Promise<void>) | null) => { raw.state.repoEventsCleanup = fn; },
     },
-    subs: {
-      pageUnsubs: [],
-      globalUnsubs: [],
-    },
+    // 真桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs
+    subs: new SubscriptionBucket(),
   };
   return { host: raw as unknown as AppContentHost, raw, el };
 }
@@ -360,39 +353,68 @@ describe("githubShowRepo — 竞态守卫", () => {
 });
 
 describe("githubRenderModels — 清理与异常", () => {
-  it("prevCleanup 存在 → 先 await 清理再绑定，并把新 cleanup 登记回 host", async () => {
+  it("重绑先清旧 + 新 cleanup 经桶登记（ADR-260 行为口径）", async () => {
     const { host, raw, el } = makeHost();
-    const prevCleanup = vi.fn(async () => {});
-    raw.state.repoEventsCleanup = prevCleanup;
-    mockApp({ LoadGitHubRepos: vi.fn(() => [{ name: "o/r1", desc: "d" }]) });
+    mockApp({
+      LoadGitHubRepos: vi.fn(() => [
+        { name: "o/r1", desc: "d" },
+        { name: "o/r2", desc: "d" },
+      ]),
+    });
+    // 首个绑定的 cleanup 用可观测 spy（旧测试靠预置内部槽，现改为行为触发）
+    const firstCleanup = vi.fn(async () => {});
+    bindRepoEvents.mockImplementationOnce(() => ({ renderList, cleanup: firstCleanup }));
     raw.state.githubCache = new Map<string, RepoCacheEntry>([
       ["o/r1", { models: [{ name: "m1", path: "p1" }], source: "raw" }],
+      ["o/r2", { models: [{ name: "m2", path: "p2" }], source: "raw" }],
     ]);
 
     initGithubPage(host);
-    await waitFor(() => gridOf(el).querySelectorAll(".gh-repo-card").length === 1);
-    gridOf(el).querySelectorAll<HTMLElement>(".gh-repo-card")[0]!.click();
-    await waitFor(() => bindRepoEvents.mock.calls.length > 0);
+    await waitFor(() => gridOf(el).querySelectorAll(".gh-repo-card").length === 2);
+    const cards = gridOf(el).querySelectorAll<HTMLElement>(".gh-repo-card");
+    cards[0]!.click(); // 绑 #1
+    await waitFor(() => bindRepoEvents.mock.calls.length === 1);
+    cards[1]!.click(); // 重绑 #2 —— 必须先清 #1
+    await waitFor(() => bindRepoEvents.mock.calls.length === 2);
+    expect(firstCleanup, "重绑前应 await 清旧").toHaveBeenCalledTimes(1);
 
-    expect(prevCleanup).toHaveBeenCalledTimes(1);
-    expect(raw.state.repoEventsCleanup).toBe(repoCleanup); // 新 cleanup 已登记
+    // 新 cleanup 经「桶」登记（不再回写 state 字段）：调用桶清理即执行最新 cleanup
+    repoCleanup.mockClear();
+    raw.subs.cleanupPage();
+    await flushPromises();
+    expect(repoCleanup, "桶清理应执行最新登记的 repo 事件 cleanup").toHaveBeenCalled();
   });
 
-  it("prevCleanup reject → 不阻断新绑定（c7cd6363 模式回归）", async () => {
+  it("旧 cleanup reject → 不阻断新绑定（c7cd6363 模式回归）", async () => {
     const { host, raw, el } = makeHost();
-    raw.state.repoEventsCleanup = vi.fn(async () => {
-      throw new Error("cleanup boom");
+    mockApp({
+      LoadGitHubRepos: vi.fn(() => [
+        { name: "o/r1", desc: "d" },
+        { name: "o/r2", desc: "d" },
+      ]),
     });
-    mockApp({ LoadGitHubRepos: vi.fn(() => [{ name: "o/r1", desc: "d" }]) });
+    // #1 的 cleanup reject：重绑时 await 它不得把异常逸出、也不得中断 #2 绑定
+    bindRepoEvents.mockImplementationOnce(() => ({
+      renderList,
+      cleanup: vi.fn(async (): Promise<void> => {
+        throw new Error("cleanup boom");
+      }),
+    }));
     raw.state.githubCache = new Map<string, RepoCacheEntry>([
       ["o/r1", { models: [{ name: "m1", path: "p1" }], source: "raw" }],
+      ["o/r2", { models: [{ name: "m2", path: "p2" }], source: "raw" }],
     ]);
 
     initGithubPage(host);
-    await waitFor(() => gridOf(el).querySelectorAll(".gh-repo-card").length === 1);
-    gridOf(el).querySelectorAll<HTMLElement>(".gh-repo-card")[0]!.click();
-    await waitFor(() => bindRepoEvents.mock.calls.length > 0); // 仍完成绑定
-    expect(renderList).toHaveBeenCalledTimes(1);
+    await waitFor(() => gridOf(el).querySelectorAll(".gh-repo-card").length === 2);
+    const cards = gridOf(el).querySelectorAll<HTMLElement>(".gh-repo-card");
+    cards[0]!.click();
+    await waitFor(() => bindRepoEvents.mock.calls.length === 1);
+    const rendersBefore = renderList.mock.calls.length;
+
+    cards[1]!.click();
+    await waitFor(() => bindRepoEvents.mock.calls.length === 2); // 仍完成新绑定
+    expect(renderList.mock.calls.length, "#2 仍完成初始渲染").toBeGreaterThan(rendersBefore);
   });
 
   it("bindRepoEvents 同步抛错 → catch 留痕不逸出（fire-and-forget 回归）", async () => {

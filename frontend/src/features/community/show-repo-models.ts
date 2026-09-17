@@ -61,8 +61,8 @@ const defaultRepoGuard = createRepoRenderGuard();
  * 包含：本地扫描、sourceLabel构建、countMissing、renderRepoHeaderHTML、bindRepoEvents
  *
  * @param esc - HTML 转义函数
- * @param repoEventsCleanup - 前一次绑定清理函数
- * @param setRepoEventsCleanup - 设置清理函数
+ * @param prevRepoEventsCleanup - 读「前一次绑定清理」的 getter（页内可替换槽，ADR-260）
+ * @param setRepoEventsCleanup - 写回新清理（同槽 setter）
  * @param currentSite - 当前站点（用于 backToSite）
  * @param setCurrentSite - 设置当前站点
  * @param repo - 仓库名称（如 "user/repo"）
@@ -75,7 +75,7 @@ const defaultRepoGuard = createRepoRenderGuard();
  */
 export async function showRepoModels(
   esc: (s: unknown) => string,
-  repoEventsCleanup: (() => Promise<void>) | null,
+  prevRepoEventsCleanup: (() => Promise<void>) | null,
   setRepoEventsCleanup: (fn: (() => Promise<void>) | null) => void,
   currentSite: WorkshopSite | null,
   setCurrentSite: (site: WorkshopSite | null) => void,
@@ -152,9 +152,9 @@ export async function showRepoModels(
   });
 
   // 清理前一次绑定
-  if (repoEventsCleanup) {
+  if (prevRepoEventsCleanup) {
     try {
-      await repoEventsCleanup();
+      await prevRepoEventsCleanup();
     } catch (e) {
       // P3 修复（审核）：cleanup（含 queue.cancel）失败不阻断新仓库绑定——
       // 原裸 await 会把 reject 逸出成 unhandled rejection，且中断 showRepoModels
@@ -173,7 +173,7 @@ export async function showRepoModels(
     showRepoModels: () =>
       showRepoModels(
         esc,
-        repoEventsCleanup,
+        prevRepoEventsCleanup,
         setRepoEventsCleanup,
         currentSite,
         setCurrentSite,

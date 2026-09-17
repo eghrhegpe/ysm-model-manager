@@ -4,8 +4,12 @@
 // - navUnsub:       全局单订阅（nav:changed），连入注册、卸载清除
 // - globalUnsubs:   全局多订阅（lang:changed / repo:search-creator / handlers），
 //                    连入注册、卸载清除，不随切页清空
-// - pageUnsubs:     页面级临时订阅（各 initXxx 注入的 bus.on 退订），
-//                    每次 _render() 开头清空（防跨页累积）+ disconnectedCallback 兜底
+// - pageUnsubs:     页面级订阅（各 initXxx 注入的 bus.on 退订）。**随页面常驻保留**，
+//                    仅在 lang:changed 全量重建、与 disconnectedCallback 时清空。
+//                    ⚠️ 不要在 _render() 开头清：ADR-163 让页面面板常驻缓存、每页 init 只跑一次，
+//                    切页只是「换挂面板节点」而不重跑 init——此时若清了订阅，DOM 还在但事件已死
+//                    （僵尸页：看着正常、点击无反应）。清理时机与面板缓存策略是绑定的，
+//                    改其一必须同时改其二。
 // 未来新增订阅必须二选一入桶，禁止裸 bus.on。
 
 export class SubscriptionBucket {
@@ -28,7 +32,7 @@ export class SubscriptionBucket {
     this.pageUnsubs.push(fn);
   }
 
-  /** 清理页面级订阅（_render 开头调用，防跨页累积） */
+  /** 清理页面级订阅（**仅** lang:changed 全量重建 / 卸载调用；切页不调，理由见文件头 ⚠️） */
   cleanupPage(): void {
     if (this.pageUnsubs.length) {
       this.pageUnsubs.forEach((fn) => {

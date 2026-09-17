@@ -14,6 +14,9 @@
 //   强行 schema 化需新增「动态 row」「跨域 state 绑定」抽象，ROI 为负。
 //   makeBonePanelRenderer（vrm-bone-ui.ts）本身就是 ADR-074 S2 抽的通用组件，本工厂只是它的
 //   「菜单项胶水」——并非"手写 3D 菜单"，符合 AGENTS.md 精神。
+// ⚠️ 本面板是 ADR-193 §2.2② 拍板的唯一永久例外，已登记进单一事实源
+//    menu/sanctioned.ts（审计门据此放行、menu-graph 报告据此显式标注，不可静默）。
+//    动这里的 renderCustom 前先看那张表——例外要摆明面，不许悄悄扩散。
 //
 // 是否注入（adapter 决策）：
 //   - mmd：无 o.bonePanel 不注入（o.bonePanel 整块不推）

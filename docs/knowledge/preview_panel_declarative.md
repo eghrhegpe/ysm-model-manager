@@ -138,7 +138,7 @@ MMD 与 YSM 截图面板同构（6 角度按钮 + 截图副作用），共享 `S
 - builder 吃状态层快照（与 P4-D visibleWhen 同构）——面板内容随状态响应
 - `PreviewMenuNode.schemaId?: string`：面板节点声明注册 key（缺省回退 node.id），renderPreviewPanel 优先查 registry
 - 重复注册**覆盖**旧 builder（多模型同框活跃模型换菜单语义，与 setAdapterItems 一致）
-- 渲染分派（[G4 收口]）：schema 面板内容经 `schemaBuilders → renderMenu(renderCustomDirect)`；adapter 面板经 `schema-registry(schemaId) → children → renderCustom` 三通道衰退；fillers 仅 roles（白名单守卫）
+- 渲染分派（[G4 收口]）：schema 面板内容经 `schemaBuilders → renderMenu(renderCustomDirect)`；adapter 面板经 `schema-registry(schemaId) → children → renderCustom` 三通道衰退。**fillers 通道已退役**（ADR-193 第四刀：roles 迁 schemaBuilders 声明式，`routers.fillers` 字段不存在，`proceduralPanels` 恒空）——旧「fillers 仅 roles（白名单守卫）」表述已过期。`renderCustom` 末段仅余 bones 一个在册构造点，名单单一事实源 = `menu/sanctioned.ts`（详 `preview-menu` 卡）
 
 ### select 分支（renderMenu，[doc:adr-126-p5-c] 交互控件受控化）
 

@@ -188,8 +188,8 @@ status: active
 - **菜单即数据**：新增/迁移菜单项写 `PreviewMenuNode` 数据即可，渲染逻辑不随菜单项膨胀。
 - **visibleWhen 谓词统一**：dock 组过滤（`dockGroupItemsFor`）与内容级渲染（`renderMenu`）共用同一求值器，谓词吃 `previewSnapshot()` 状态层快照。
 - **schemaId 必显式**：panel id 不再隐式兜底作 schema key（P5 复盘：id 撞注册键渲染错内容且无告警）。
-- **fillers 仅 roles**：G3 删 fill* 后唯一残留；health.test 白名单守卫——禁止新增 filler。
-- **renderCustom 末段逃生舱**：schemaId 未注册时走 renderCustom 会 console.warn 提示。
+- **fillers 通道已退役**（ADR-193 第四刀）：roles 迁 `schemaBuilders` 声明式后 filler 过程式臂删除，`routers` 上不再有 `fillers` 字段，`proceduralPanels` 恒空。新增面板只有 schemaBuilders / schema-registry / children 三条声明式通道（旧「schema / fillers / runners 三级衰退链」表述已过期）。
+- **renderCustom 末段逃生舱**：schemaId 未注册时走 renderCustom 会 console.warn 提示。**唯一在册构造点 = bones**（ADR-193 §2.2② 拍板的永久例外，camera/env 退役后唯余此项）——名单**单一事实源 = `menu/sanctioned.ts|SANCTIONED_PROCEDURAL_PANELS`**，由两处共同消费：审计门（`adapters/render-custom-audit.test.ts`，生产源码「`renderCustom`+冒号」构造点须与名单**逐一相等**）与导航图报告（`collectMenuGraph().sanctionedProcedural`，兑现 §3「不可静默」——报告不再一边宣称 `coverage:"full"` 一边对已豁免的手写 DOM 面板只字不提）。**新增例外须先 code review 拍板并把条目（id/decidedBy/rationale）写进该表**，不得只在测试白名单或注释里挂单（审计门会抓裸加）。⚠️ bones 由 adapter 注入 `menuItems`，不经 collectMenuGraph 的三通道枚举，故 `escapeHatch` 标记对它永不触发——`sanctionedProcedural` 是它唯一的显式曝光面。
 - **renderCustom cleanup 双持有者**（2026-09 生命周期收编）：`renderCustom` 返回 cleanup 后同时交给两方——① 渲染器（render.ts `runCustomMount` 按容器持有，重渲染前先清旧 / `disposeCustomCleanups` 菜单 dispose 全清）；② bones 的 `cleanupRef`（adapter.dispose 模型级兜底，摘挂 viewContainer 的 raycaster listener——模型卸载而菜单存活时唯一防线）。两者持同一函数，renderer 实现幂等，双清无害。**新增 renderCustom 逃生舱自动获得面板级生命周期，勿自搓 cleanupRef**；仅当 cleanup 跨面板存活（引用模型资源）时才需模型级兜底通道。
 - **disposeCustomCleanups 只挂 dispose**：不可挂 `onOverlayStyleTargetReset`——该钩子每次 mount 都触发，而 cleanup 表是模块级共享，全清会误伤并行挂载会话仍存活的骨骼面板（listener 被摘而 DOM 仍在 → 拾取静默失效）。
 - **setAdapterItems id 冲突守卫**（ADR-085 S1）：重复 id 或与 CORE_MENU_ITEMS 冲突时抛错阻断。

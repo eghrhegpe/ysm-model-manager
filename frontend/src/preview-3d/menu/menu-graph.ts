@@ -18,6 +18,7 @@ import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewMenuRouters } from "./core.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
 import type { PreviewMenuNode, PreviewMenuNodeKind } from "./node-types.ts";
+import { SANCTIONED_PROCEDURAL_PANELS, type SanctionedProceduralPanel } from "./sanctioned.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";
 
 /** 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn）。
@@ -63,6 +64,16 @@ export interface MenuGraph {
   uncoveredLayers: string[];
   /** 过程式面板 id（fillers，图内仅占位，内部节点不可枚举） */
   proceduralPanels: string[];
+  /**
+   * 受控过程式面板（ADR-193 §2.2② 拍板豁免的手写 DOM 逃生舱，单一事实源 menu/sanctioned.ts）。
+   *
+   * 与 coverage 的关系：这些面板**不在本图枚举范围内**——它们由 adapter 注入 `menuItems`
+   * （`makeBonesPanelItem` 等），不经 schemaBuilders / registry / runners 三通道，故
+   * coverage 仍可为 "full"。但 ADR-193 §3 明令该洞**不可静默**：报告必须显式列出，
+   * 否则「对外宣称 full」与「实际存在手写 DOM 面板」就是一桩瞒报。
+   * 空数组 = 无豁免（干净的 full）；非空 = 明账上的欠账。
+   */
+  sanctionedProcedural: SanctionedProceduralPanel[];
   /** 节点级 visibleWhen 谓词总数（与 cap 级 collectVisiblePredicates 区分） */
   predicateCount: number;
 }
@@ -227,5 +238,13 @@ export function collectMenuGraph(opts: CollectMenuGraphOpts): MenuGraph {
 
   const predicateCount = collectNodePredicates(allResolvedNodes.flat()).length;
 
-  return { docks, actions, coverage, uncoveredLayers, proceduralPanels, predicateCount };
+  return {
+    docks,
+    actions,
+    coverage,
+    uncoveredLayers,
+    proceduralPanels,
+    sanctionedProcedural: [...SANCTIONED_PROCEDURAL_PANELS],
+    predicateCount,
+  };
 }

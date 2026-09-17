@@ -17,12 +17,17 @@ import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SANCTIONED_PROCEDURAL_PANELS } from "@/preview-3d/menu/sanctioned.ts";
 
 /** frontend/src 根（本文件位于 src/preview-3d/adapters/） */
 const SRC_ROOT = join(fileURLToPath(new URL("../../..", import.meta.url)), "src");
 
-/** 允许出现 `renderCustom:` 构造点的生产源码文件（相对 src 的正斜杠路径） */
-const RENDER_CUSTOM_ALLOWLIST = ["preview-3d/menu/bones-panel-node.ts"];
+/**
+ * 允许出现 `renderCustom:` 构造点的生产源码文件（相对 src 的正斜杠路径）。
+ * **单一事实源 = `menu/sanctioned.ts`**（ADR-193 §2.2② 拍板 + §3「不可静默」）——
+ * 本处不再自带一份数组：名单、报告、代码注释三处各说各话正是被收口的病灶。
+ */
+const RENDER_CUSTOM_ALLOWLIST = SANCTIONED_PROCEDURAL_PANELS.map((p) => p.sourceFile);
 
 function collectTsFiles(dir: string, acc: string[]): string[] {
   for (const name of readdirSync(dir)) {
@@ -49,6 +54,17 @@ describe("renderCustom 构造点白名单（逃生舱审计门）", () => {
     for (const rel of RENDER_CUSTOM_ALLOWLIST) {
       const full = join(SRC_ROOT, ...rel.split("/"));
       expect(readFileSync(full, "utf8").includes("renderCustom:")).toBe(true);
+    }
+  });
+
+  it("豁免条目必须自证依据（ADR 编号 + 具体理由），防「裸加白名单」", () => {
+    // 名单被清空 → 本门空转恒绿，故先钉非空
+    expect(SANCTIONED_PROCEDURAL_PANELS.length).toBeGreaterThan(0);
+    for (const p of SANCTIONED_PROCEDURAL_PANELS) {
+      expect(p.id, "条目缺 id").toBeTruthy();
+      expect(p.decidedBy, `"${p.id}" 缺 ADR 依据`).toMatch(/ADR-\d+/);
+      // 理由须写「真·无法数据化的具体性质」而非「很复杂」套话（ADR-193 §2.2 豁免流程）
+      expect(p.rationale.length, `"${p.id}" 豁免理由过短，疑为套话`).toBeGreaterThan(40);
     }
   });
 });

@@ -12,6 +12,7 @@ import { unregisterCorePanelSchemas } from "./core.ts";
 import type { PreviewMenuNode } from "./node-types.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";
+import { SANCTIONED_PROCEDURAL_PANELS } from "./sanctioned.ts";
 
 /** 默认代表性快照：空记录（无状态守卫激活）→ 非守卫节点可达，守卫节点隐藏 */
 const DEFAULT_SNAP: Partial<PreviewSnapshot> = {};
@@ -120,6 +121,27 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     const ysm: MenuGraphNode = graph.docks.find((d) => d.group === "model")!.panels.find((p) => p.id === "ysm-model")!;
     const modelNode = ysm.children.find((c) => c.id === "model")!;
     expect(modelNode.children.find((c) => c.id === "raw")!.escapeHatch).toBe(true);
+  });
+
+  it("sanctionedProcedural 显式列出豁免面板（ADR-193 §3「不可静默」）", () => {
+    // coverage 可为 "full"，但已拍板豁免的手写 DOM 面板必须摆在明面上——
+    // 这些面板由 adapter 注入 menuItems，不在本图枚举范围内，故不能靠 escapeHatch 兜底。
+    const { routers, menu } = buildGraphRouters();
+    const graph = collectMenuGraph({
+      routers,
+      menu,
+      snapshots: [{ name: "default", snapshot: DEFAULT_SNAP }],
+    });
+    expect(graph.coverage).toBe("full");
+    // 与单一事实源 menu/sanctioned.ts 同源，且 bones 在册
+    expect(graph.sanctionedProcedural.map((p) => p.id)).toEqual(["bones"]);
+    // 每项自带 ADR 依据（报告读者可追溯「凭什么例外」，而非无据白名单）
+    for (const p of graph.sanctionedProcedural) {
+      expect(p.decidedBy).toMatch(/ADR-\d+/);
+      expect(p.rationale.length).toBeGreaterThan(40);
+    }
+    // 防御：报告侧是副本，改动不反噬事实源
+    expect(graph.sanctionedProcedural).not.toBe(SANCTIONED_PROCEDURAL_PANELS);
   });
 
   it("runners 动作节点标 nonNav（close 不进导航路径）", () => {

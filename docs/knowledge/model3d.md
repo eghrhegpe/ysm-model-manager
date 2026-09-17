@@ -675,6 +675,8 @@ auto_fields:
     - safeDispose
     - sampleAdaptivePixelRatio
     - sampleGpuLoad
+    - SANCTIONED_PROCEDURAL_PANELS
+    - SanctionedProceduralPanel
     - scaleForHeight
     - SceneCapability
     - SceneCapabilityFactory

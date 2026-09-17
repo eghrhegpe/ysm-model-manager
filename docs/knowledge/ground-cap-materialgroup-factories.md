@@ -66,9 +66,9 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 
 - 全部节点 `id`/`labelKey`/`group`/`kind`/`control` 字段不可变（e2e 选择器依赖）。
 - `group: "preview.groundGroupMaterial"` 所有 material 项共享，不可改。
-- `GROUND_SURFACE_MODES` 白名单与 select 选项列表保持对齐（9 项）：`none/solid/plain/grid/checker/stripes/diamond/marble/texture`。
+- 白名单与 select 选项列表保持对齐（ADR-249/252 拆轴后：来源轴 `GROUND_SOURCE_KINDS` = none/solid/canvas/texture，样式轴 `GROUND_CANVAS_STYLES` = plain/marble/sand/grass；统一枚举 `GROUND_SURFACE_MODES` 当前 7 项 = none/solid/plain/marble/sand/grass/texture，旧 9 值已迁出至 `LEGACY_GROUND_MAT_SOURCES` 仅迁移路径消费）。
 - `textureButtonsNode` 走 `controls` 通道节点（保 `variant`/`getHint` 语义），非原生 button 节点。
-- `visibleWhen` 谓词（B 轨快照驱动）原样挂节点：`groundSurfaceOn` 判定 `matSource ≠ none` 时材质子控件可见。
+- `visibleWhen` 谓词（B 轨快照驱动）原样挂节点：`paramVisible(param)` 逐参数 × 逐模式判定（`ground-surface-spec.ts|paramIsEffective`），在来源轴/样式轴下对应子控件可见；原 `groundSurfaceOn` 已删除（`paramIsEffective` 对 `none` 全返 false，语义已覆盖）。
 
 ## 历史问题清单（2026-08-27 ts-package-review）— 已完成修复
 

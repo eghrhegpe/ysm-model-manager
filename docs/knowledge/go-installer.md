@@ -58,7 +58,7 @@ status: active
 
 ## 概览
 
-`go/installer/`（单文件 `installer.go`）负责把仓库中的模型/资源文件**落地**到 Minecraft 整合包实例目录：按 `LinkMode`（`copy` / `hardlink` / `symlink`）选择落地方式，落地前做路径安全校验，落地时对已存在目标做原子替换，失败时把系统错误分类成可操作的中文提示。它是被动的执行层，不监听下载/事件、不直接与前端通信。
+`go/installer/`（`installer.go` + `lock_tracker.go`，非单文件）负责把仓库中的模型/资源文件**落地**到 Minecraft 整合包实例目录：按 `LinkMode`（`copy` / `hardlink` / `symlink`）选择落地方式，落地前做路径安全校验，落地时对已存在目标做原子替换，失败时把系统错误分类成可操作的中文提示。它是被动的执行层，不监听下载/事件、不直接与前端通信。`lock_tracker.go` 定义 `LockTracker`（内外层锁 + goroutine owner 追踪，ADR-056 升级为 `InstallLock` 字段类型），是安装互斥的核心依赖。
 
 ## 核心职责
 

@@ -1,6 +1,6 @@
 ---
 title: 前端治理规则手册
-description: 9 条前端治理规则的唯一事实来源 — 规则条文 × 严重度 × 替代方案 × 检测工具
+description: 10 条前端治理规则的唯一事实来源 — 规则条文 × 严重度 × 替代方案 × 检测工具
 ---
 
 # 前端治理规则手册（Governance Rules）
@@ -17,17 +17,17 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 | # | 规则 | 严重度 | 检测 |
 |---|------|--------|------|
 | R1 | 禁止 `window.*` 全局变量 | Error | `check-redlines.mjs R1` + `doctor.mjs` |
-| R2 | 禁止 `repoRoot` 变量名 | Error | `check-redlines.mjs R2` |
-| R3 | 禁止回调式 API | Warn | `check-redlines.mjs R3` |
+| R2 | 禁止 `repoRoot` 变量名 | Warn | `check-redlines.mjs R2` |
+| R3 | 禁止回调式 API | Error | `check-redlines.mjs R3` |
 | R4 | 禁止 `display: none/block` 做动画切换 | Warn | `check-redlines.mjs R4` |
 | R5 | 禁止硬编码颜色值 | Warn | `check-redlines.mjs R5` + `doctor.mjs` |
 | R6 | 禁止 `public/` 下放 JS | Error | `check-redlines.mjs R6` |
 | R7 | 禁止魔法字符串资源类型字面量 | Warn | `check-redlines.mjs R7` + `type-consistency.ts`（派生守卫，禁手写 RESOURCE_EXTS 副本） |
 | R8 | 禁止未转义拼接 HTML | Error | `check-redlines.mjs R8` + `doctor.mjs` |
-| R9 | 禁止侧边栏手动拼接 | Warn | `check-redlines.mjs R9` |
+| R9 | 禁止侧边栏手动拼接 | Error | `check-redlines.mjs R9` |
 | R10 | 禁止重复实现 esc 转义 | Error | `check-redlines.mjs R10` |
 
-**严重度分级**：Error（5 条，对应脚本 blocking 分组）= 运行时错误或安全风险，必须拦截；Warn（5 条，对应脚本 advisory 分组）= 长期债务或可维护性问题，建议修复，不阻塞发布。
+**严重度分级**：Error（6 条，R1/R3/R6/R8/R9/R10，对应脚本 blocking 分组）= 运行时错误或安全风险，必须拦截；Warn（4 条，R2/R4/R5/R7，对应脚本 advisory 分组）= 长期债务或可维护性问题，建议修复，不阻塞发布。
 
 > check-redlines.mjs 另有 W1/W2/W5/W6/W7/W8 附加扫描项（反斜杠路径 / `window.go.main.App` 直调 / async DOM race / bypass dialogs / 绑定层写操作缓存失效 / rtype 字面量分支；W3/W4 已移交 `comment-checker.mjs`），属 AGENTS.md §三 治理红线范畴，不在本手册总表之内。
 
@@ -41,13 +41,13 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 - **替代**：模块级 `let` + getter/setter，或 `PageStore`（`core/page-store.ts`）。
 - **背景**：v1.5.1 清理。多个 AI 代理反复引入全局变量，状态跨页面泄漏，调试成本极高。
 
-### R2 禁止 `cfg.repoRoot` / `repoRoot` 变量名（Error）
+### R2 禁止 `cfg.repoRoot` / `repoRoot` 变量名（Warn）
 
 - **规则**：Go/JS 中均不得使用 `repoRoot` 变量名。
 - **替代**：Go 用 `cfg.FilesRoot`，JS 用 `filesRoot`。
 - **背景**：v1.6.4 统一命名。"repo" 在此项目指"模型仓库"（用户实例）而非代码仓库，命名歧义导致多模块混用。
 
-### R3 禁止回调式 API（Warn）
+### R3 禁止回调式 API（Error）
 
 - **规则**：不得直接使用 `entry.file(callback)` 等回调式 API。
 - **替代**：`new Promise(resolve => entry.file(resolve))` 包装为 Promise。
@@ -83,7 +83,7 @@ description: 9 条前端治理规则的唯一事实来源 — 规则条文 × �
 - **替代**：`esc()`、`renderFormattedText()`、`renderDisplayName()`。
 - **背景**：copilot XSS 加固阶段引入，所有 `innerHTML` 拼接必须转义，否则存在注入风险。
 
-### R9 禁止侧边栏手动拼接（Warn）
+### R9 禁止侧边栏手动拼接（Error）
 
 - **规则**：不得在 `public/` 侧手动拼接 `sidebarItem` / `tb-btn` 元素。
 - **替代**：统一用 `renderSidebar()` 模板函数。

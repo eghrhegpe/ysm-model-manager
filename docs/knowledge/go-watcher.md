@@ -52,7 +52,7 @@ status: active
 ## 对外 API / 入口
 
 - `New` — 创建 `Watcher`
-- `Start` / `Stop` — 启动/停止文件监听（`loop` 轮询 + `debounceSync` 防抖合并）
+- `Start` / `Stop` — 启动/停止文件监听（`loop` 事件循环：fsnotify 通道 `select` 驱动 + `debounceSync` 防抖合并；非文件系统轮询）
 - `IsRunning` — 当前是否运行中
 - `syncAll` — 全量同步入口（内部供 loop 调用）
 

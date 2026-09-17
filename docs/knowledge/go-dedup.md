@@ -56,7 +56,7 @@ status: active
 
 `go/dedup/` 包提供资源去重检测，避免重复导入相同资源。
 
-**路径安全（BUG-1 已免疫）**：`filepath.WalkDir` 不跟随符号链接（Go 标准库语义，仅 root 自身例外）+ 显式跳过 `ModeSymlink` 条目 + 根为 符号链接时返回 `ErrSymlinkRoot`。Go 1.25.0 处于 GO-2026-4970 受影响范围，若未来考虑 `os.Root` 迁移需先升 go1.25.12+。
+**路径安全（BUG-1 已免疫）**：`filepath.WalkDir` 用 Lstat，默认不跟随**任何**符号链接（含 root，非「仅 root 自身例外」）；代码在原语义之上显式跳过 `ModeSymlink` 子树条目，root 本身为 符号链接时返回 `ErrSymlinkRoot`（silent 返回「无重复」= 假绿，sentinel 防文本匹配）。Go 1.25.0 处于 GO-2026-4970 受影响范围，若未来考虑 `os.Root` 迁移需先升 go1.25.12+。
 
 ## 核心职责
 

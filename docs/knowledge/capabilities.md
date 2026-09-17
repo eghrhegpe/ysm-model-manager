@@ -48,7 +48,7 @@ ADR-071 后判定逻辑收拢至 `canBinding()`，`backend/capabilities.ts`（AD
 
 - **`can(binding: string): boolean`** — 绑定级门控，唯一对外入口；所有「该 binding 当前平台是否可用」的判定统一走它，禁止各消费方重复实现三态矩阵。
 - **`canWebAction(action: string): boolean`** — viewer/web 模式右键菜单 action 可达性：先查 `VIEWER_PURE_ACTIONS`（纯前端恒可达），再查 `VIEWER_WEB_ACTION_BINDINGS[action]` 走 `can()` 探测。
-- **`VIEWER_WEB_ACTION_BINDINGS`** — viewer 模式 action → binding 需求映射表（`file.rename`/`file.move`/`file.copy`/`batch.move`/`batch.copy`/`dir.batch-rename`/`file.edit-tags`）；新增 web 可达 action 只改此表。
+- **`VIEWER_WEB_ACTION_BINDINGS`** — viewer 模式 action → binding 需求映射表（`file.rename`/`dir.rename`/`file.move`/`file.copy`/`batch.move`/`batch.copy`/`dir.batch-rename`/`file.edit-tags`，共 8 项）；新增 web 可达 action 只改此表。
 - **`VIEWER_PURE_ACTIONS`** — 纯前端动作集（`noop`/`batch.copy-paths`/`batch.export-list`/`file.copy-path`），不调 Wails binding，viewer 模式恒可达。
 
 ## 对外 API / 入口

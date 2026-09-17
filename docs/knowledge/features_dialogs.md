@@ -11,14 +11,15 @@ source_files:
   - frontend/src/features/dialogs/batch-rename-form.ts
   - frontend/src/utils/dom/modal-core.ts
 tests:
-  - frontend/src/utils/dom/adv-filter-util.test.ts
-  - frontend/src/utils/dom/adv-filter.test.ts
-  - frontend/src/utils/dom/batch-rename-util.test.ts
-  - frontend/src/utils/dom/batch-rename.test.ts
+  - frontend/src/features/dialogs/adv-filter.test.ts
+  - frontend/src/features/dialogs/adv-filter-util.test.ts
+  - frontend/src/features/dialogs/batch-rename.test.ts
+  - frontend/src/features/dialogs/batch-rename-util.test.ts
+  - frontend/src/features/dialogs/rename.test.ts
+  - frontend/src/features/dialogs/rename-format.test.ts
+  - frontend/src/features/dialogs/tag-editor.test.ts
+  - frontend/src/features/dialogs/tag-set.test.ts
   - frontend/src/utils/dom/modal.test.ts
-  - frontend/src/utils/dom/rename-format.test.ts
-  - frontend/src/utils/dom/rename.test.ts
-  - frontend/src/utils/dom/tag-editor.test.ts
 auto_fields:
   symbols_with_lines:
     - __resetModalStateForTest
@@ -70,7 +71,7 @@ invariant_anchors:
 
 ## 概览
 
-`frontend/src/utils/dom/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整业务功能，不再误住 utils 叶子层。
+`frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整业务功能，不再误住 utils 叶子层。
 
 ## 核心职责
 

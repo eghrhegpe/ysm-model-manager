@@ -1,6 +1,6 @@
 # ADR-181：processForEpoch 枚举化——竞态测试先行
 
-- **状态**：🧊 已废弃（deferred）
+- **状态**：✅ 已采纳（决策 = 标记技术债 + 暂缓枚举化，非废弃；实施状态见正文 §2 与知识卡 go_design_critique）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[go_design_critique](../knowledge/go_design_critique.md)、`internal/app/install/queue.go`、[install_domain_split](../knowledge/install_domain_split.md)

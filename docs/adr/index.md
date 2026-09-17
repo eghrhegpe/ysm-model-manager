@@ -17,15 +17,15 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 11 |
-| [✅ 已采纳](#已采纳) | 242 |
+| [🔄 部分采纳](#部分采纳) | 12 |
+| [✅ 已采纳](#已采纳) | 241 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（11）
+### 🔄 部分采纳（12）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -39,9 +39,10 @@ permalink: /adr/
 | [ADR-203](./ADR-203-platform-gate-backend.md) | 平台门控归位 backend——断 utils/dom→backend 依赖环 | 🔄 部分采纳 |
 | [ADR-186](./ADR-186-i18n-tr-locale-core.md) | i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core | 🔄 部分采纳 ⚠️ 被 [ADR-210] |
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
+| [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（242）
+### ✅ 已采纳（241）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -164,7 +165,6 @@ permalink: /adr/
 | [ADR-132](./ADR-132-multi-model-select-menu-primitive.md) | 多模型选择菜单原语（跨资源类型统一 select） | ✅ 已采纳 |
 | [ADR-131](./ADR-131-preview-stats-extraction.md) | 3D 渲染期统计提取（预览期统计与类型判定解耦） | ✅ 已采纳 |
 | [ADR-130](./ADR-130-pack-dnd-repo-first-push.md) | 整合包卡片拖拽导入：先入仓库再推送 | ✅ 已采纳 |
-| [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | ✅ 已采纳 |
 | [ADR-128](./ADR-128-menu-nav-graph-e2e-selectors.md) | 菜单导航图生成器与 e2e 选择器派生（声明式收口后的可验证性） | ✅ 已采纳 |
 | [ADR-127](./ADR-127-preview-perf-presets.md) | 性能档位薄壳版——数据表 + 通用套用器（低/中/高/自定义） | ✅ 已采纳 |
 | [ADR-126](./ADR-126-menu-schema-final-form.md) | 3D 预览菜单声明式 Schema 终态——状态层泛化 + 面板 schema 化 + 可见性谓词化 + dockGroup 解耦 | ✅ 已采纳 |
@@ -448,7 +448,7 @@ permalink: /adr/
 | ADR-132 | 多模型选择菜单原语（跨资源类型统一 select） | ✅ 已采纳 | 2026-08-29 |
 | ADR-131 | 3D 渲染期统计提取（预览期统计与类型判定解耦） | ✅ 已采纳 | 2026-08-29 |
 | ADR-130 | 整合包卡片拖拽导入：先入仓库再推送 | ✅ 已采纳 | 2026-08-29 |
-| ADR-129 | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | ✅ 已采纳 | 2026-08-29 |
+| ADR-129 | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 | 2026-08-29 |
 | ADR-128 | 菜单导航图生成器与 e2e 选择器派生（声明式收口后的可验证性） | ✅ 已采纳 | 2026-08-29 |
 | ADR-127 | 性能档位薄壳版——数据表 + 通用套用器（低/中/高/自定义） | ✅ 已采纳 | 2026-08-29 |
 | ADR-126 | 3D 预览菜单声明式 Schema 终态——状态层泛化 + 面板 schema 化 + 可见性谓词化 + dockGroup 解耦 | ✅ 已采纳 | 2026-08-28 |

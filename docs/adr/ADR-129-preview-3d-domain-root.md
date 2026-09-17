@@ -1,6 +1,6 @@
 # ADR-129：3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置）
 
-- **状态**：已采纳（Accepted）
+- **状态**：🔄 部分采纳（总纲方向「升格为领域根 + 修依赖倒置」有效；第四刀/第五刀/收尾分别被 [ADR-136](./ADR-136-screenshot-domain-homecoming.md) / [ADR-137](./ADR-137-ysm-decoder-homecoming.md) / [ADR-138](./ADR-138-preview-3d-to-src.md) 取代，见 §1 子刀表格）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-29
 - **决策人**：Jieling（人类首席架构师）、AI 代理

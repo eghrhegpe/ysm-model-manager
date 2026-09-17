@@ -33,7 +33,7 @@ YSM 模型管理器是一个跨平台桌面 + 移动 + 网页应用，用于管�
 | 平台抽象 | **build tags** + PathManager | `pathmgr_{desktop,android}.go`、`screen_{windows,other}.go`、`app_config_{windows,other,android}.go` 等 |
 | Web 后端 | **backend adapter** | `backend/browser-adapter.ts` Proxy 同形状绑定；`backend/platform.ts` Tier 分层判定 |
 | 数据 | `resource_types.json` 单一事实来源 + `creators.json` / `workshop_sites.json` / `workshop-github.json` | 资源类型/创作者/工坊站点/镜像仓库 |
-| 脚本 | Node（`.mjs` 零依赖治理工具链） | `scripts/` 下 40+ 个校验/生成脚本 |
+| 脚本 | Node（`.ts` 零依赖治理工具链） | `scripts/` 下 92 个校验/生成脚本 |
 | 测试 | Go 单测 + Node 契约测试（`tests/*.ts`）+ Vitest | 三层防护 |
 
 ### 分层职责
@@ -253,7 +253,7 @@ type CliCommand struct {
 ```
 
 **注册表不携带的元数据**（新 AI 勿据此推断功能）：
-- ❌ **Flags 列表**：`--format json`、`--model`、`--iterations` 等选项描述写在各自 `print*Usage()` 函数的字符串里，`gen-cli-doc.mjs` 用正则提取——**加 flag 必须同步改 `print*Usage` 和 `parse*Flags` 两处**，否则文档过期/解析失效。
+- ❌ **Flags 列表**：`--format json`、`--model`、`--iterations` 等选项描述写在各自 `print*Usage()` 函数的字符串里，`gen-cli-doc.ts` 用正则提取——**加 flag 必须同步改 `print*Usage` 和 `parse*Flags` 两处**，否则文档过期/解析失效。
 - ❌ **子命令结构**：无结构化子命令描述，靠 `printSubcommands()` 打印。
 - ❌ **版本/废弃标记**：无 `deprecated` / `since` 字段。
 - ❌ **权限/前置条件**：是否必须 `--files-root` 由 `DispatchCommand` 全局判断，不区分命令。
@@ -650,9 +650,9 @@ MMD 适配器通过 `MMDAmmoPlugin` 一行注册：`new MMDLoader(manager).regis
 
 四平台打包矩阵 + test job：`tests/*.ts` → 构建 updater helper → `go vet ./go/...` → `go test ./go/...` → `npm ci` → `tsc --noEmit` → `vitest run` → `vite build` → `task` 安装。另有 `pages-deploy.yml`（网页版 GitHub Pages）。
 
-### 10.4 治理脚本（`scripts/`，40+ `.mjs`）
+### 10.4 治理脚本（`scripts/`，92 个 `.ts`）
 
-`binding-check` / `adr-check` / `event-audit` / `check-circular` / `check-doc-drift` / `check-knowledge-drift` / `doctor` / `link-checker` / `new-adr` / `android-build` / `android-install` 等。改完文档跑 `node scripts/doctor.ts` 一键全量自检。
+`binding-check` / `adr-check` / `check-adr-health` / `check-circular` / `check-doc-drift` / `check-knowledge-drift` / `doctor` / `link-checker` / `new-adr` / `android-build` / `android-install` 等。改完文档跑 `node scripts/doctor.ts` 一键全量自检。
 
 ---
 
@@ -735,16 +735,16 @@ ysm-model-manager/
 │   │       ├── WailsPathHandler.java
 │   │       └── WailsForegroundService.java
 │   └── config.yml               # Wails v3 多平台配置
-├── tests/                      # ★ 契约测试 (8 个 .mjs, CI 禁改)
-│   ├── test_resource_schema.mjs test_creators_schema.mjs
-│   ├── test_workshop_schema.mjs test_config_*.mjs
-│   └── test_html_integrity.mjs test_scripts_*.mjs
+├── tests/                      # ★ 契约测试 (101 个 .ts, CI 禁改)
+│   ├── test_android_bridge_contract.ts test_api_break.ts
+│   ├── test_bus_contract.ts test_check_layering.ts 等
+│   └── （100+ test_*.ts 契约用例）
 ├── docs/                        # ADR / guide / knowledge / archive / 根文档
 │   ├── architecture.md          # 本文 (单一权威视图)
 │   ├── android-dev.md           # ★ Android 开发手册
-│   ├── adr/                     # ADR-001~049
-│   └── knowledge/               # 163 张知识卡（自动生成索引）
-├── scripts/                     # 40+ 治理 .mjs
+│   ├── adr/                     # ADR-001~263
+│   └── knowledge/               # 192 张知识卡（自动生成索引）
+├── scripts/                     # 92 个治理 .ts
 ```
 
 ---
@@ -801,9 +801,9 @@ app-content/community/core.ts:35-36
 
 | 层 | 载体 | 守护内容 |
 |----|------|----------|
-| 契约测试 | `tests/*.ts`（8 个，CI 禁改） | `test_resource_schema.mjs`（resource_types.json 必填字段 / kebab-case id / 唯一性 / extensions 以 `.` 开头 / installDir 尾斜杠 / 枚举 preview·detector·actions / configField 须 PascalCase+Root）、`test_creators_schema.mjs`、`test_workshop_schema.mjs`、`test_config_defaults/syntax.mjs`、`test_html_integrity.mjs`、`test_scripts_json/lib.mjs` |
-| Go 单测 | `go/*_test.go`（12 个） | `go/types/registry_test.go`（JSON↔Go 扩展名一致性）、`go/ysm`、`go/sync`、`go/installer`、`go/recycle`、`go/threejs`、`go/updater`、`go/watcher`、`go/importer`、`go/dedup`、`go/packs`、`go/avatar`、`go/fsutil`、`go/tags` |
-| 前端 Vitest | `*.test.js`（19 个） | `core/context-menus.test.js`(18.9KB)、`features/community/download-queue.test.js`(13.8KB)、`utils/model2d`、`utils/animation`、`utils/summarize`、`utils/extensions` 等 |
+| 契约测试 | `tests/*.ts`（101 个，CI 禁改；入口 `node scripts/contract-tests.ts`） | `test_resource_schema.ts`（resource_types.json 必填字段 / kebab-case id / 唯一性 / extensions 以 `.` 开头 / installDir 尾斜杠 / 枚举 preview·detector·actions / configField 须 PascalCase+Root）、`test_creators_schema.ts`、`test_workshop_schema.ts`、`test_config_defaults/syntax.ts`、`test_html_integrity.ts`、`test_scripts_json.ts` 等 |
+| Go 单测 | `go/*_test.go`（260 个） | `go/types/registry_test.go`（JSON↔Go 扩展名一致性）、`go/ysm`、`go/sync`、`go/installer`、`go/recycle`、`go/threejs`、`go/updater`、`go/watcher`、`go/importer`、`go/dedup`、`go/packs`、`go/avatar`、`go/fsutil`、`go/tags` 等 |
+| 前端 Vitest | `*.test.ts`（405 个） | `core/context-menus.test.ts`、`features/community/download-queue.test.ts`、`utils/model2d`、`utils/animation`、`utils/summarize`、`utils/extensions` 等 |
 
 > 测试为**宪法基石，禁止修改**（AGENTS.md 硬约束）。改完即验：`node scripts/contract-tests.ts` + `go test ./... -count=1` + `npm run typecheck`。
 >

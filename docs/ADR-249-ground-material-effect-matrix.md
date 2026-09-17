@@ -1,7 +1,8 @@
 # 地面材质参数 × 模式生效矩阵（ADR-249 §2.4 交付物）
 
 > **性质**：ADR-249 的执行依据，非独立 ADR。
-> **状态**：✅ 已按源码逐格核实（2026-09-16）。核实基准 = `frontend/src/preview-3d/caps/ground-surface-spec.ts` 当前实现。
+> ⚠️ **已过时（2026-09-17 标注）**：本矩阵的 9 值枚举（含 `grid`/`checker`/`stripes`/`diamond`）已被 [ADR-252](adr/ADR-252-ground-canvas-style-material-only.md) 取代——几何图案全部退役，样式轴收敛为纯材质（`plain`/`marble`/`sand`/`grass`）。当前事实源 = `frontend/src/preview-3d/caps/ground-surface-spec.ts` 的 `GROUND_SOURCE_KINDS`（来源轴）/ `GROUND_CANVAS_STYLES`（样式轴）/ `paramIsEffective`（逐参数 × 逐模式判定，`paramVisible` 同源）。本矩阵仅存史，勿按 9 列推断当前控件行为。
+> **状态**：🔄 已过时（9 值矩阵仅存史；当前实现以 ground-surface-spec.ts 拆轴后枚举为准）
 > **用途**：拆轴（`sourceKind` + `canvasStyle`）时，本矩阵是**菜单可见性**与**渲染读取**的共同单一事实源。禁止菜单与渲染各写一份判断。
 
 ---

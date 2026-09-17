@@ -1,6 +1,6 @@
 # ADR-183：SearchModels 8 参数封装
 
-- **状态**：🧊 已废弃（deferred）
+- **状态**：✅ 已采纳（决策 = 标记技术债 + 暂缓封装，非废弃；实施状态见正文 §2 与知识卡 go_design_critique）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`internal/app/app_scan.go:63`、`go/cli/appservice.go:19`、`go/cli/model.go:54/337/358`、`frontend/src/views/app-tree/toolbar-search.ts:195-204`、[go_design_critique](../knowledge/go_design_critique.md)

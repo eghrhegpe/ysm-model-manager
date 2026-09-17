@@ -14,6 +14,7 @@ auto_fields:
     - loadView
     - normalizeTheme
     - revealMainWindow
+    - THEME_VALID
     - unregisterDevtools
   tests:
     - frontend/src/app-modules.test.ts

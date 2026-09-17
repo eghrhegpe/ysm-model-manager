@@ -15,6 +15,7 @@ auto_fields:
     - initTheme
     - loadView
     - normalizeTheme
+    - THEME_VALID
     - unregisterDevtools
 quick_groups:
   - 跨组件通信与页面

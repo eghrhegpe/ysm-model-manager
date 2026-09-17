@@ -9,7 +9,8 @@ import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 
 const THEME_DARK = "cyber";
 // 主题白名单（applyTheme 与 initTheme 共用，防两处口径漂移）
-const THEME_VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
+// 导出供测试引用：设置页主题卡片的 data-theme 集合必须与此一致（防「加主题忘加卡片」）
+export const THEME_VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
 // class 清理列表由 THEME_VALID 推导，新增主题无需再手抄第二份（原 applyTheme 手抄双份是漂移源）
 const THEME_CLASSES = THEME_VALID.filter((t) => t !== "system").map((t) => `theme-${t}`);
 

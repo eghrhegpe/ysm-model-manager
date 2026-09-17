@@ -71,7 +71,7 @@ ${MENU_ERROR_NOTE_CSS}
 }
 .fr-unload-row {
   display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius:var(--radius-lg);
-  cursor: pointer; font-size:var(--fs-md); color: #ff7b7b;
+  cursor: pointer; font-size:var(--fs-md); color: var(--status-error);
 }
 .fr-section-title { padding: 6px 10px 2px; color: rgba(255,255,255,0.5); font-size:var(--fs-sm); }
 .fr-comp-mark { width: 14px; flex-shrink: 0; text-align: center; }

@@ -141,7 +141,7 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   ensureCoreStyles();
   row.className = "ysm-preview-menu-row cm-row";
   row.dataset.testid = `preview-${node.id}`;
-  if (node.danger) row.style.color = "#ff7b7b";
+  if (node.danger) row.style.color = "var(--status-error)";
   const ic = document.createElement("span");
   applyIcon(ic, node.icon); // 语义名 → SVG；未迁的旧字形 → 文本兜底
   ic.className = "cm-row-icon";

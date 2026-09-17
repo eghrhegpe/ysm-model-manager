@@ -22,7 +22,6 @@ export const contentLayoutCSS: string = `
 @keyframes pageIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
 .page { flex:1; display:flex; flex-direction:column; overflow:hidden; animation: pageIn .2s ease; }
 @keyframes ring-spin { to{transform:rotate(360deg)} }
-@keyframes card-in { from{opacity:0;transform:translateY(8px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
 @keyframes detail-in { from{opacity:0;transform:scale(.92) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
 @keyframes fade-in { from{opacity:0} to{opacity:1} }
 /* 以下 4 个 keyframes 为 components.css 全局副本的 shadow 本地化：

@@ -130,7 +130,7 @@ export const contentStgCSS: string = `
 /* 与卡片同宽对齐：不加左右 padding，由 .setting-row 自身 padding 提供内缩。
    历史：本类曾写 padding:0 16px，于是行组内容比同屏 .stg-card 多缩进 16px，
    而它明明已被当单行卡片用——左右边缘与卡片/标题参差不齐。 */
-.settings-group { margin-bottom:12px; animation:card-in var(--tr-enter) both; }
+.settings-group { margin-bottom:12px; animation:fadeSlideUp var(--tr-enter) both; }
 /* 行组后紧跟节标题（A 式）时，行组不再出 margin——
    否则 12px(margin) + 16px(padding) 不折叠 = 28px 双间距。
    margin 与 padding 不相叠，只能靠选择器消掉其中一份；此处保留标题的 padding-top。

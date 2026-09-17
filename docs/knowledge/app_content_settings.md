@@ -122,6 +122,13 @@ status: active
 - **「一排里选一个」→ `theme-card` 瓦片**
 - **「一个滑块/下拉/开关独占一行」→ `setting-row`**
 
+### 入场动画（单一 keyframe）
+
+设置页三类范式的入场动画**统一用 `fadeSlideUp var(--tr-enter) both`**（`.stg-card` / `.settings-group` / `.setting-row` 同一节奏，错峰只靠内联 `animation-delay`）。
+
+- `card-in`（`scale(.95)` 弹出）是 v1.7.6「Keyframe 合并 13→3」明确并入 `fadeSlideUp` 的**旧动画**，其唯一 shadow 层定义已删除；新增卡片/行组/行**不得再引用 `card-in`**（引用已删 keyframe 会静默失效，`css-layer-check` 检查 1/1b 阻断）。
+- 内联 `style="animation:..."` 的 keyframe 名必须在同 shadow 层有 `@keyframes` 定义（@keyframes 不穿 shadow，CSS 变量可穿）。
+
 ### 已知待修债（回填计划，按卡推进）
 
 1. ✅ `renderStgLangSelect()`（tpl-settings.ts）手写 `<div class="stg-card">` → 已回填为 `stgCard()`（hdr=语言标题，body=select+描述），单卡场景不再另挂 section-title（2026-09-15）。

@@ -81,7 +81,7 @@ describe("设置页组间距契约（content-stg）", () => {
       contentStgCSS.match(/\.settings-group\s*\{([^}]*)\}/)?.[1] ?? ""
     ).replace(/\/\*[\s\S]*?\*\//g, "");
     expect(block).toMatch(/margin-bottom:\s*12px/);
-    expect(block).toMatch(/animation:\s*card-in/);
+    expect(block).toMatch(/animation:\s*fadeSlideUp/);
     // 不加左右 padding：否则内容比同屏 .stg-card 多缩进 16px（行组已被当单行卡片用）
     expect(block).not.toMatch(/padding/);
   });

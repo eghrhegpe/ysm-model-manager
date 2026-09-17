@@ -34,7 +34,7 @@ export function aboutHTML(): string {
 </div>
 
 <div style="display:flex;gap:12px;margin-bottom:12px">
-  <div style="flex:2;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:60ms">
+  <div style="flex:2;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:60ms">
     <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.tools} ${t("about.features")}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <b>${t("about.appName")}</b> ${t("about.intro")}
@@ -49,7 +49,7 @@ export function aboutHTML(): string {
     </div>
   </div>
 
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:90ms">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:90ms">
     <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.gem} ${t("about.techStack")}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <div>${UI_ICONS.bullet} ${t("about.tech1")}</div>
@@ -63,7 +63,7 @@ export function aboutHTML(): string {
 </div>
 
 <div style="display:flex;gap:12px;margin-bottom:12px">
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:120ms">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:120ms">
     <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.package} ${t("about.links")}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.8">
       <div>${UI_ICONS.github} ${t("about.ghRepo")}：<a href="${GH_REPO}" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
@@ -73,7 +73,7 @@ export function aboutHTML(): string {
     </div>
   </div>
 
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:card-in var(--tr-enter) both;animation-delay:150ms">
+  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:150ms">
     <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.hint} ${t("about.quickStart")}</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
       <div>1. ${t("about.qs1")}</div>

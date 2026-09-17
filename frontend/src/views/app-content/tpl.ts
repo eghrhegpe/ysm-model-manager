@@ -19,6 +19,8 @@ export const VIEW_TESTIDS: readonly string[] = [
   "ws-tabs",
   "ws-search-view",
   "ws-search-results",
+  // ADR-262 D3：性能 tab 的类型选择器（矩阵入口，e2e 用它断言选项来自 registry）
+  "diag-perf-rtype",
 ];
 
 // settingsHTML 已拆至 settings/tpl-settings.ts，消费者直接 import 叶文件（P1-6）
@@ -146,6 +148,12 @@ export function diagnosticsHTML(): string {
       <input id="diag-perf-model" type="text" placeholder="${t("diagnostics.perfModelPlaceholder")}">
       <label for="diag-perf-iter">${t("diagnostics.perfIterations")}</label>
       <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
+      <label for="diag-perf-rtype">${t("diagnostics.perfRtype")}</label>
+      <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
+        <option value="">${t("diagnostics.perfRtypeSingle")}</option>
+      </select>
+      <label for="diag-perf-max">${t("diagnostics.perfMaxModels")}</label>
+      <input id="diag-perf-max" type="number" min="1" step="1" value="5">
     </div>
     <div id="diag-perf-single"></div>
   </div>`,

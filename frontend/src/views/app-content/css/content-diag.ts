@@ -66,6 +66,17 @@ export const contentDiagCSS: string = `
 .diag-stat-muted { color:var(--muted); }
 .diag-stat-error { color: var(--status-error); }
 .perf-gui-est { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--warning, #b8860b) 20%, transparent); color:var(--warning, #b8860b); flex-shrink:0; }
+/* 类型矩阵（ADR-262 D3）：表格 + 逐模型明细；未采集/阶段不符用 warning 色显式标注 */
+.perf-matrix { width:100%; border-collapse:collapse; margin:6px 0; font-size:var(--fs-xs); color:var(--txt); }
+.perf-matrix th, .perf-matrix td { text-align:left; padding:4px 8px; border-bottom:1px solid var(--bd); }
+.perf-matrix th { color:var(--muted); font-weight:600; }
+.perf-matrix-id { color:var(--muted); font-size:var(--fs-micro); }
+.perf-matrix-tag { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:var(--surf); color:var(--muted); }
+.perf-matrix-warn { color:var(--warning, #b8860b); }
+.perf-matrix-models { display:flex; flex-direction:column; gap:2px; padding:2px 0; }
+.perf-matrix-model { display:flex; align-items:center; gap:8px; font-size:var(--fs-xs); }
+.perf-matrix-model-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); }
+.perf-matrix-model-detail { color:var(--muted); font-variant-numeric:tabular-nums; flex-shrink:0; }
 
 /* ===== 性能面板（single-bench / gui-flow / perf-log） ===== */
 .perf-section { font-size:var(--fs-sm); font-weight:600; color:var(--txt); display:flex; align-items:center; gap:6px; }

@@ -24,6 +24,10 @@ func init() {
 	RegisterCommandC("single-bench", CatPerf, "单模型加载基准测试（优化基础，单模型快=所有场景快）", runSingleBench,
 		ParamSpec{Key: "model", Type: ParamString},
 		ParamSpec{Key: "iterations", Type: ParamNumber},
+		// ADR-262 D3 矩阵：rtype / all-types / max-models 与 flag 定义序一致
+		ParamSpec{Key: "rtype", Type: ParamString},
+		ParamSpec{Key: "all-types", Type: ParamBool},
+		ParamSpec{Key: "max-models", Type: ParamNumber},
 		ParamSpec{Key: "baseline", Type: ParamString},
 		ParamSpec{Key: "save-baseline", Type: ParamString},
 		ParamSpec{Key: "threshold", Type: ParamNumber},

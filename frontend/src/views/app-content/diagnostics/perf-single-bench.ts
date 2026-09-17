@@ -23,6 +23,7 @@ import {
   setErrorMsg,
   setErrorResp,
 } from "./perf-common.ts";
+import { PERF_RTYPE_ALL, type PerfMatrixPayload, renderPerfMatrix } from "./perf-matrix-render.ts";
 import { renderPerfTrendSection, savePerfRecord } from "./perf-trend.ts";
 
 // 代际守卫（ADR-230）：single-bench 命令可并发/快速连点，旧响应后到会覆盖新响应
@@ -73,6 +74,7 @@ interface SingleBenchPayload {
   output?: string;
 }
 
+/** 单模型基准参数 */
 type SingleBenchParams = CLIArgs & {
   model: string;
   iterations: number;
@@ -80,25 +82,53 @@ type SingleBenchParams = CLIArgs & {
   format: "json";
 };
 
-function singleBenchGetParams(root: ShadowRoot): SingleBenchParams {
-  const model =
-    (root.getElementById("diag-perf-model") as HTMLInputElement | null)?.value.trim() ?? "";
-  const iterRaw = (root.getElementById("diag-perf-iter") as HTMLInputElement | null)?.value ?? "3";
-  const iterations = Math.max(1, parseInt(iterRaw, 10) || 3);
-  return { model, iterations, format: "json" };
+/** 运行模式：单模型（按路径）/ 单类型矩阵 / 全类型矩阵（ADR-262 D3） */
+type BenchMode =
+  | { kind: "model"; model: string; iterations: number }
+  | { kind: "rtype"; rtype: string; maxModels: number; iterations: number }
+  | { kind: "all"; maxModels: number; iterations: number };
+
+function singleBenchReadIterations(root: ShadowRoot): number {
+  const raw = (root.getElementById("diag-perf-iter") as HTMLInputElement | null)?.value ?? "3";
+  return Math.max(1, parseInt(raw, 10) || 3);
 }
 
-function singleBenchValidateAndRender(
-  root: ShadowRoot,
-  out: HTMLElement,
-  esc: EscFn,
-): SingleBenchParams | null {
-  const params = singleBenchGetParams(root);
-  if (!params.model) {
-    setErrorMsg(out, t("diagnostics.perfModelRequired"), esc);
+function singleBenchReadMaxModels(root: ShadowRoot): number {
+  const raw = (root.getElementById("diag-perf-max") as HTMLInputElement | null)?.value ?? "5";
+  return Math.max(1, parseInt(raw, 10) || 5);
+}
+
+/**
+ * 读取运行模式：类型选择器为空 → 单模型（需路径）；`__all__` → 全类型矩阵；其余 → 该类型矩阵。
+ * 返回 null 表示参数不合法（调用方渲染提示），不在此处静默取默认值。
+ */
+function singleBenchReadMode(root: ShadowRoot): BenchMode | null {
+  const iterations = singleBenchReadIterations(root);
+  const rtype =
+    (root.getElementById("diag-perf-rtype") as HTMLSelectElement | null)?.value.trim() ?? "";
+  if (rtype === PERF_RTYPE_ALL) {
+    return { kind: "all", maxModels: singleBenchReadMaxModels(root), iterations };
+  }
+  if (rtype) {
+    return { kind: "rtype", rtype, maxModels: singleBenchReadMaxModels(root), iterations };
+  }
+  const model =
+    (root.getElementById("diag-perf-model") as HTMLInputElement | null)?.value.trim() ?? "";
+  if (!model) return null;
+  return { kind: "model", model, iterations };
+}
+
+/**
+ * 矩阵载荷守卫：形状不对即返回 null（同单模型载荷口径，不做 `as` 断言穿透）。
+ * 只要 `spec.types` 与 `models` 齐备即可渲染——`models` 允许为空（走显式空态）。
+ */
+function singleBenchParseMatrix(resp: CLIResp): PerfMatrixPayload | null {
+  if (resp.status !== "success") return null;
+  const data = resp.data as Partial<PerfMatrixPayload> | undefined;
+  if (!data?.spec || !Array.isArray(data.spec.types) || !Array.isArray(data.models)) {
     return null;
   }
-  return params;
+  return data as PerfMatrixPayload;
 }
 
 /**
@@ -177,25 +207,63 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
   const gen = perfSingleGuard.next();
   const out = getOutBox(root, "diag-perf-single");
   if (!out) return;
-  const params = singleBenchValidateAndRender(root, out, esc);
-  if (!params) return;
+  const mode = singleBenchReadMode(root);
+  if (!mode) {
+    setErrorMsg(out, t("diagnostics.perfModelRequired"), esc);
+    return;
+  }
   setBusy(out);
   try {
-    const resp = await executeCLI("single-bench", params);
-    if (perfSingleGuard.stale(gen)) return;
-    const payload = singleBenchParsePayload(resp);
-    if (!payload) {
-      // 命令成功但载荷不可用 = 契约漂移（比"执行失败"更值得暴露，故也走失败分支）
-      if (resp.status === "success") {
-        setErrorMsg(out, t("diagnostics.perfFail"), esc);
-      } else {
-        setErrorResp(out, resp, esc);
+    if (mode.kind === "model") {
+      const resp = await executeCLI("single-bench", {
+        model: mode.model,
+        iterations: mode.iterations,
+        format: "json",
+      } satisfies SingleBenchParams);
+      if (perfSingleGuard.stale(gen)) return;
+      const payload = singleBenchParsePayload(resp);
+      if (!payload) {
+        renderBenchFailure(out, resp, esc);
+        return;
       }
+      out.innerHTML = singleBenchRenderBars(payload, esc);
       return;
     }
-    out.innerHTML = singleBenchRenderBars(payload, esc);
+
+    // 类型矩阵（ADR-262 D3）：目标集归 Go；前端只提交「类型 + 每类上限 + 迭代」
+    const args =
+      mode.kind === "all"
+        ? {
+            "all-types": true,
+            "max-models": mode.maxModels,
+            iterations: mode.iterations,
+            format: "json",
+          }
+        : {
+            rtype: mode.rtype,
+            "max-models": mode.maxModels,
+            iterations: mode.iterations,
+            format: "json",
+          };
+    const resp = await executeCLI("single-bench", args);
+    if (perfSingleGuard.stale(gen)) return;
+    const matrix = singleBenchParseMatrix(resp);
+    if (!matrix) {
+      renderBenchFailure(out, resp, esc);
+      return;
+    }
+    out.innerHTML = renderPerfMatrix(matrix, esc);
   } catch (e) {
     if (perfSingleGuard.stale(gen)) return;
     setErrorCatch(out, e, esc);
   }
+}
+
+/** 载荷不可用时的统一失败渲染：命令成功但形状不对 = 契约漂移，比"执行失败"更值得暴露。 */
+function renderBenchFailure(out: HTMLElement, resp: CLIResp, esc: EscFn): void {
+  if (resp.status === "success") {
+    setErrorMsg(out, t("diagnostics.perfFail"), esc);
+    return;
+  }
+  setErrorResp(out, resp, esc);
 }

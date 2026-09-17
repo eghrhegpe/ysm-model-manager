@@ -149,7 +149,10 @@ export const MOCK_DATA = {
       HasMod: false,
     },
   ],
-  LoadResourceTypes: JSON.stringify({
+  // ADR-143 P0「去 string-JSON 化」：Go binding 返回 ResourceTypeRegistry 结构体，
+  // mock 必须同形状返回对象——此前用 JSON.stringify 返回字符串，导致 loadResourceRegistry()
+  // 在 e2e 里恒判「空注册表」而返回 {}（注册表驱动的 UI 全部静默降级，含类型选择器）。
+  LoadResourceTypes: {
     resourceTypes: [
       { id: "ysm", name: "YSM 模型", icon: "💎" },
       {
@@ -159,7 +162,7 @@ export const MOCK_DATA = {
         actions: ["import", "toggle", "delete", "openFolder"],
       },
     ],
-  }),
+  },
   ToggleModelEnable: true,
   // 统一启禁（方案 A）：e2e 未直接触达，补键防绑定契约守卫报错（undefined 最安全）
   ToggleEnable: undefined,

@@ -158,6 +158,31 @@ test.describe("诊断页", () => {
     }
   });
 
+  test("单模型 tab：类型选择器选项来自 registry（前端不写死类型表）", async ({ page }) => {
+    // ADR-262 D3：矩阵的类型选项必须来自 Go/registry（resource_types.json 单一事实源），
+    // 前端只读不判。选择器除固定的「单模型」「全部类型」外，应出现 mock 注册表里的类型。
+    await clickBySelector(page, '.repo-tab[data-tab="single"]');
+    const info = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const select = root?.querySelector(
+        '[data-testid="diag-perf-rtype"]',
+      ) as HTMLSelectElement | null;
+      if (!select) return null;
+      return {
+        values: [...select.options].map((o) => o.value),
+        text: select.textContent ?? "",
+      };
+    });
+    // 显式守卫收窄类型（biome 禁非空断言）
+    if (!info) throw new Error("未找到类型选择器 #diag-perf-rtype");
+    // 首项 = 单模型（空值）；其后应有「全部类型」哨兵与 registry 类型
+    expect(info.values[0]).toBe("");
+    expect(info.values).toContain("__all__");
+    expect(info.values).toContain("ysm");
+    expect(info.values).toContain("resourcepack");
+    expect(info.text).toContain("YSM 模型");
+  });
+
   test("日志子 tab：操作日志与运行时日志互斥可见", async ({ page }) => {
     // 默认：操作日志可见、运行时隐藏
     expect(await panelDisplay(page)).toEqual({ op: true, runtime: false });

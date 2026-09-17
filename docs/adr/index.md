@@ -17,19 +17,20 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 10 |
-| [✅ 已采纳](#已采纳) | 243 |
+| [🔄 部分采纳](#部分采纳) | 11 |
+| [✅ 已采纳](#已采纳) | 242 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（10）
+### 🔄 部分采纳（11）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
+| [ADR-249](./ADR-249-ground-material-axis-split-layer-overlay.md) | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | 🔄 部分采纳 |
 | [ADR-247](./ADR-247-postproc-linkage-gate.md) | 后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移 | 🔄 部分采纳 |
 | [ADR-246](./ADR-246-light-volumetric-simplify.md) | 灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化 | 🔄 部分采纳 |
 | [ADR-227](./ADR-227-preview-3d-singleton-to-instance.md) | preview-3d 模块级单例收敛为实例（P1 战役） | 🔄 部分采纳 |
@@ -40,7 +41,7 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（243）
+### ✅ 已采纳（242）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -59,7 +60,6 @@ permalink: /adr/
 | [ADR-253](./ADR-253-3d-entry-siblings-unification.md) | 3D 入口统一：路由层 siblings 兜底与详情卡收编 | ✅ 已采纳 |
 | [ADR-252](./ADR-252-ground-canvas-style-material-only.md) | 地面材质第三轴拆分：canvasStyle 收敛为纯材质轴 | ✅ 已采纳 |
 | [ADR-250](./ADR-250-cap-composer-sky.md) | 后处理门禁降参——模型类别不写 cap 参数、composer 常驻、曝光属主归 sky | ✅ 已采纳 |
-| [ADR-249](./ADR-249-ground-material-axis-split-layer-overlay.md) | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | ✅ 已采纳 |
 | [ADR-248](./ADR-248-icon-field-typing.md) | 图标字段类型化：用类型取代清单与扫描（ADR-238 边界落地） | ✅ 已采纳 |
 | [ADR-245](./ADR-245-context-menu-adr-238.md) | context-menu 图标语义名统一（对齐 ADR-238） | ✅ 已采纳 |
 | [ADR-244](./ADR-244-ci-gate-change-context-and-scan-scope.md) | CI 门禁的变更上下文与扫描域收口——post-push 不可得须显式给定，扫描域限于仓库跟踪文件 | ✅ 已采纳 |
@@ -328,7 +328,7 @@ permalink: /adr/
 | ADR-252 | 地面材质第三轴拆分：canvasStyle 收敛为纯材质轴 | ✅ 已采纳 | 2026-09-16 |
 | ADR-251 | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 | 2026-09-16 |
 | ADR-250 | 后处理门禁降参——模型类别不写 cap 参数、composer 常驻、曝光属主归 sky | ✅ 已采纳 | 2026-09-16 |
-| ADR-249 | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | ✅ 已采纳 | 2026-09-16 |
+| ADR-249 | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | 🔄 部分采纳 | 2026-09-16 |
 | ADR-248 | 图标字段类型化：用类型取代清单与扫描（ADR-238 边界落地） | ✅ 已采纳 | 2026-09-16 |
 | ADR-247 | 后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移 | 🔄 部分采纳 | 2026-09-16 |
 | ADR-246 | 灯光-体积光简化：删除空壳 postprocess 引擎、参数语义收编、补可视化 | 🔄 部分采纳 | 2026-09-16 |

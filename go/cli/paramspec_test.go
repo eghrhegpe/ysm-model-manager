@@ -36,12 +36,22 @@ func TestParamSpecRegistration(t *testing.T) {
 		assertSpecKeys(t, spec, []string{"limit", "format"})
 	})
 
-	t.Run("single-bench 六参数", func(t *testing.T) {
+	t.Run("single-bench 九参数（含 ADR-262 D3 矩阵三参）", func(t *testing.T) {
 		spec, ok := specs["single-bench"]
 		if !ok {
 			t.Fatal("single-bench 未登记 ParamSpec")
 		}
-		assertSpecKeys(t, spec, []string{"model", "iterations", "baseline", "save-baseline", "threshold", "format"})
+		assertSpecKeys(t, spec, []string{
+			"model", "iterations", "rtype", "all-types", "max-models",
+			"baseline", "save-baseline", "threshold", "format",
+		})
+		// 矩阵三参的类型必须与 flag 语义一致（bool/number 决定桥的序列化形态）
+		if spec[3].Type != ParamBool {
+			t.Errorf("single-bench.all-types 应为 bool, 实际 %s", spec[3].Type)
+		}
+		if spec[4].Type != ParamNumber {
+			t.Errorf("single-bench.max-models 应为 number, 实际 %s", spec[4].Type)
+		}
 	})
 
 	t.Run("gui-flow model/verbose", func(t *testing.T) {

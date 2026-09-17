@@ -41,8 +41,8 @@
 
 报告必须携带**身份块** `identity`：`rtype`（registry 类型 id，判定复用 `classifyForScan` 的三段口径：目录归属 > 扩展名 > 容器兜底）、`rtype_source`（location / extension / container，说明凭什么这么判）、`rtype_label`（registry 显示名，前端不得自建类型映射）、`filesRoot` + `relPath`（相对仓库根，跨机器可比）+ `absPath`（诊断用）。**理由**：`format`（YSM/PMX/…）是扩展名表派生的展示标签，推不出归属——`.zip` 被 14 个类型声明、MMD 子类型共享 `.vpd`/`.vmd`；只给绝对路径则换机器后报告无法回溯识别，测试与 AI 断言只能靠绝对路径（必脆）。**测试与断言一律用 `rtype` + `relPath`，不用 `absPath`。**
 
-**D3 · 实验规格显式化，执行与聚合归 Go。**
-引入 `PerfSpec`：目标集（显式路径[] / 按 registry 类型各取 N 个 / 全库前 N 大）、样本数、迭代次数、冷热口径、是否启用 `rust_backend`（Go/Rust 对照）。目标集从 `resource_types.json` + Go 侧 registry 派生，**不得**在任一语言里另立类型表。矩阵遍历与聚合在 Go 侧完成（前端只提交 spec、渲染 report），对齐「筛选 / 聚合归 Go」红线。
+**D3 · 实验规格显式化，执行与聚合归 Go，前端只提交规格与渲染。**
+引入 `PerfSpec`：目标集（显式路径[] / 按 registry 类型各取 N 个 / 全库前 N 大）、样本数、迭代次数、冷热口径、是否启用 `rust_backend`（Go/Rust 对照）。目标集从 `resource_types.json` + Go 侧 registry 派生，**不得**在任一语言里另立类型表。矩阵遍历与聚合在 Go 侧完成（前端只提交 spec、渲染 report），对齐「筛选 / 聚合归 Go」红线。**前端接入形态**：单模型 tab 的类型选择器（选项由 `loadResourceRegistry()` 填充，前端不写死类型表）+ 每类上限 → `--rtype` / `--all-types`；矩阵渲染中 `cli_analyzable=false` 的类型显示「未采集」而非 0.00ms（展示层同样不得把空模型数据当实测）。
 
 已落地的形态：`--rtype <id>`（单类型）与 `--all-types`（仓库里有什么类型就跑什么，每类型各取 `--max-models` 条），均仅 `--format json`、与 `--model` 互斥；目标集由 `perf_targets.go|scanTargetsGrouped` 从 `scanner.ScanEntries` + `classifyForScan` 派生（发现权与类型判定各自单点，类型与组内路径均按字典序，保证可复现），载荷为 `{spec{all_types,max_models,iterations,analyzed,unsupported,types[]}, models[]}`。
 

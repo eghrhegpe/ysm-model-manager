@@ -121,6 +121,8 @@ function makeRoot(): ShadowRoot {
     <button class="diag-btn" id="diag-perf-refresh-trace">刷新</button>
     <input id="diag-perf-model">
     <input id="diag-perf-iter">
+    <select id="diag-perf-rtype"><option value="">（单模型，按路径）</option></select>
+    <input id="diag-perf-max" value="5">
     <div id="diag-perf-single"></div>
     <div id="diag-perf-gui-out"></div>
     <div id="diag-perf-hist"></div>

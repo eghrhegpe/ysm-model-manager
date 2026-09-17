@@ -124,10 +124,11 @@ status: active
 
 ### 入场动画（单一 keyframe）
 
-设置页三类范式的入场动画**统一用 `fadeSlideUp var(--tr-enter) both`**（`.stg-card` / `.settings-group` / `.setting-row` 同一节奏，错峰只靠内联 `animation-delay`）。
+设置页三类范式的入场动画**统一用 `fadeSlideUp var(--tr-enter) both`**（`.stg-card` / `.settings-group` / `.setting-row` 同一节奏，错峰只靠内联 `animation-delay`）；**节标题 `.section-title`（全 app-content 共享原语）也已纳入**——否则切 tab 时标题瞬时出现、内容再滑入，观感割裂（2026-09 补）。
 
 - `card-in`（`scale(.95)` 弹出）是 v1.7.6「Keyframe 合并 13→3」明确并入 `fadeSlideUp` 的**旧动画**，其唯一 shadow 层定义已删除；新增卡片/行组/行**不得再引用 `card-in`**（引用已删 keyframe 会静默失效，`css-layer-check` 检查 1/1b 阻断）。
 - 内联 `style="animation:..."` 的 keyframe 名必须在同 shadow 层有 `@keyframes` 定义（@keyframes 不穿 shadow，CSS 变量可穿）。
+- ⚠️ **注释体内不得写“星号+斜杠”**：会提前闭合注释，其后文本成为裸 CSS 并被当作选择器、吞掉紧随的 `{...}` 块——2026 实测吞掉 `@keyframes fadeSlideUp`，使全 shadow 入场动画（含本节全部范式）静默失效数月（`animationName` 仍显示名字、`getAnimations()` 为 0）。机检 `css-layer-check` 检查 5 + `content-css.test.ts` 单测。
 
 ### 已知待修债（回填计划，按卡推进）
 

@@ -38,7 +38,9 @@ ${FADE_SLIDE_LEFT}
 @keyframes breathe-subtle { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.18); } }
 
 /* ===== 页头 & 段落标题（跨域通用） ===== */
-.section-title { font-size:var(--fs-lg); font-weight:600; color:var(--txt); padding:16px 16px 16px; }
+/* 标题与内容同层入场：切 tab / 切页时标题先于卡片滑入（否则标题瞬时出现、内容再滑，观感割裂）。
+   与卡片同 keyframe 同参数，只靠 animation-delay 分先后。 */
+.section-title { font-size:var(--fs-lg); font-weight:600; color:var(--txt); padding:16px 16px 16px; animation:fadeSlideUp var(--tr-enter) both; }
 .stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-xl); padding:16px; }
 /* .num bump 用回弹缓动（overshoot 1.56）：令牌三档均 ease/ease-out 直落、无回弹档 → 保留硬编码 */
 .stat-card .num { font-size:var(--fs-xl); font-weight:700; color:var(--accent); transition:transform .2s cubic-bezier(.34,1.56,.64,1); }

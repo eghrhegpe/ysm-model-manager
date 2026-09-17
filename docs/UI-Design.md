@@ -264,7 +264,7 @@ transition: grid-template-columns var(--tr-normal); /* 布局变化 */
 
 | keyframe | 方向 | 用途 |
 |----------|------|------|
-| `fadeSlideUp` | 向上 6px | 卡片、列表项、行、面板 |
+| `fadeSlideUp` | 向上 6px | 标题、卡片、列表项、行、面板 |
 | `fadeSlideLeft` | 向左 8px | 侧栏、嵌套菜单、日志行 |
 | `fadeSlideDown` | 向下 4px | 顶栏 Tab |
 

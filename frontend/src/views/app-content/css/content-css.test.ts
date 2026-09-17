@@ -66,6 +66,12 @@ describe("设置页组间距契约（content-stg）", () => {
     expect(titlePadTop?.[1]).toBe(sectionMargin?.[1]);
   });
 
+  it(".section-title 纳入入场动画（与卡片同 keyframe，只靠 delay 分先后）", () => {
+    // 2026：切 tab 时标题瞬时出现、内容再滑入（观感割裂）。标题改用与卡片同源的 fadeSlideUp；
+    // 本断言防其被静默移除（keyframe 名被注释吞掉的教训见本文件「注释体内不得出现闭合符」用例）。
+    expect(contentLayoutCSS).toMatch(/\.section-title\s*\{[^}]*animation:\s*fadeSlideUp/);
+  });
+
   it(".stg-sub-title 不再叠加 margin-top（防与 .section-title 双重 16px）", () => {
     // 历史 bug：「字体与布局」「3D 预览」「鸣谢」同时挂 .section-title + .stg-sub-title，
     // .section-title 的 padding-top:16px 与 .stg-sub-title 的 margin-top:16px 叠加 = 32px。

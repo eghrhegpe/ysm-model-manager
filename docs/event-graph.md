@@ -36,7 +36,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 179 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 178 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -52,7 +52,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 164 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 165 |
 
 ### `batch:disable-all`
 
@@ -100,7 +100,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 90 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 89 |
 
 ### `ctx:show`
 
@@ -242,7 +242,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 73 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 188 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 187 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 229 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 223 |
@@ -266,7 +266,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 45 |
+| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 46 |
 
 ### `repo:focus-search`
 
@@ -285,16 +285,16 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 288 |
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 310 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 263 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 285 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
-| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 87 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 303 |
+| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 88 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 304 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 241 |
@@ -342,7 +342,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 110 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 151 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 149 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 77 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 340 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
@@ -460,19 +460,18 @@
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 132 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 74 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 33 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 179 |
-| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 200 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 338 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 178 |
+| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 201 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 339 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
-| stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 51 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 89 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 130 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 153 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 161 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 170 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 198 |
-| stgBindReleasesClick | `frontend/src/views/app-content/settings/init.ts` | 244 |
+| stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |
+| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 87 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 128 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 151 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 159 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 168 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 196 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 106 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 117 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 136 |

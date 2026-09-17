@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-261：页面级状态下沉——幂等订阅入桶，退役 AppContentState 页私有字段",
+        "link": "/adr/ADR-261-appcontentstate"
+      },
+      {
         "text": "ADR-260：页面级拆除单源——SubscriptionBucket 收异步清理，退役 repoEventsCleanup 旁路",
         "link": "/adr/ADR-260-subscriptionbucket-repoeventscleanup"
       },

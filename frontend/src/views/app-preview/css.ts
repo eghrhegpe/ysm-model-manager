@@ -2,7 +2,7 @@
 // ADR-238：本串被 app-preview 的 shadow 根 adopt。UI_ICONS 的 SVG 依赖 .ws-icon
 // 尺寸/着色规则，而 CSS 不穿透 shadow 边界 ⇒ 必须就地带上 wsIconCSS；
 // 缺它时图标退回 viewBox 默认 24×24，在 12px 按钮里显巨块（.pv-tab 一族即此症状）。
-import { noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
+import { metaTagCSS, noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 
 export const previewCSS: string = `
 :host {
@@ -95,6 +95,10 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 
 /* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
 ${wsIconCSS}
+
+/* 元数据标签（.tag-author/.tag-work/.tag-date）——tpl-summary.ts 渲染作者段用，
+   原缺本串导致摘要页作者标签无样式（2026-09 补；与 app-tree/content-repo 同源） */
+${metaTagCSS}
 
 /* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts） */
 ${noAnimationsCSS}

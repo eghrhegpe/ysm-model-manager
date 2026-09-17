@@ -93,7 +93,30 @@ export const dropdownBaseCSS = `
 export const dropdownHoverCSS = `
 .dd-wrap:hover .dd-menu { display:block; }
 `;
-
+/**
+ * 元数据标签（`.tag-author` / `.tag-work` / `.tag-date`）——模型名后缀的作者/作品/日期色标。
+ *
+ * 是什么：app-tree（`.fh` 行 / `.fl` 行）与 app-content 仓库页（`content-repo.ts`）
+ * 各有一份**逐值同构**的实现（同 padding / 同 --radius-xs / 同 0.9em / 同 text-shadow）。
+ * 本串收敛那三份重复，供各 shadow 根 adopt。
+ *
+ * ⚠️ 各自 adopt 机制（同 `wsIconCSS` / `dropdownBaseCSS`）：漏带即标签「裸奔」——
+ * 无色标、无背景、无圆角。
+ *
+ * 配色：`--meta-*` 三色由主题定义（六主题各不同），此处只消费。
+ * date 混色比例统一 **12%**（与 author/work 一致）；app-tree 侧历史为 20%，
+ * 2026-09 收敛时统一——如需树内更醒目，消费方在自己的 stylesheet 里用更高优先级覆盖。
+ *
+ * 产出方：`utils/model-name/display.ts` 的 renderDisplayName（`[作者]`/`【作品】`/日期段）；
+ * 消费方：app-tree（.fh/.fl 行）、content-repo（仓库页）、app-preview（摘要页）——
+ * 三个 shadow 根各自 adopt。新增渲染 .tag-* 的视图若漏带，标签会无色标/无背景。
+ */
+export const metaTagCSS = `
+.tag-author,.tag-work,.tag-date { display:inline-block;padding:0 5px;border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
+.tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
+.tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
+`;
 /**
  * `.no-animations` 在 Shadow DOM 内的通配桥（ADR-015 §2.4 约束 1：用户关闭时零动画）。
  *

@@ -41,6 +41,7 @@ auto_fields:
     - isFileExistsError
     - isInputBlocked
     - makeLocaleHost
+    - metaTagCSS
     - modalConfirm
     - ModalConfirmOptions
     - ModalLabels

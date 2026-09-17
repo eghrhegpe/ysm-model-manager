@@ -369,8 +369,6 @@
   "about.title": "About YSM Model Manager",
   "about.version": "Current Version",
   "about.checkUpdate": "Check for Updates",
-  "about.releasePage": "Release Page",
-  "about.openReleases": "Open GitHub Releases",
   "about.features": "What Is This?",
   "about.appName": "YSM Model Manager",
   "about.intro": "is a model management tool for the Minecraft YSM mod, letting you manage your model collection like a Steam Workshop.",

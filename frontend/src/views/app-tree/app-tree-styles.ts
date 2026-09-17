@@ -4,6 +4,7 @@ import {
   dropdownBaseCSS,
   dropdownHoverCSS,
   focusVisibleCSS,
+  metaTagCSS,
   noAnimationsCSS,
   wsIconCSS,
 } from "@/utils/dom/css.ts";
@@ -33,6 +34,10 @@ export const treeCSS: string = `
 .af-inp { width:56px;padding:2px 4px;font-size:var(--fs-xs);border:1px solid var(--bd);border-radius:var(--radius-sm);background:var(--bg);color:var(--txt);font-family:inherit; }
 .af-inp::placeholder { color:var(--muted);font-size:var(--fs-micro); }
 .af-sep { font-size:var(--fs-xs);color:var(--muted); }
+/* ===== 元数据标签（.tag-author/.tag-work/.tag-date）共享串 =====
+   与 content-repo / app-preview 同源，防三份同构实现漂移；
+   .fh/.fl 的域内排布规则在下方各自追加 */
+${metaTagCSS}
 /* ===== 统一按钮系统 .btn-base ===== */
 ${btnBaseCSS}
 /* P2 修复：内联 focusVisibleCSS——Shadow DOM 内通用 :focus-visible 焦点环，
@@ -77,10 +82,9 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .fh .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
 .fh .ar.open { transform: rotate(90deg); }
 .fh .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
+/* .tag-author/.tag-work/.tag-date 外观由共享 metaTagCSS 承载（本串在下方插值）；
+   此处只留本域特有的行内排布 */
 .fh .nm .tag-author,.fh .nm .tag-work,.fh .nm .tag-date { display:inline-block;padding:0 5px;border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
-.fh .nm .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
-.fh .nm .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
-.fh .nm .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 20%,transparent); }
 .fh .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
 .fh.locked { opacity: .5; }
 .fh.locked .nm { color: var(--muted); }
@@ -122,10 +126,9 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .fh .ck.partial { background: var(--sm-optional); }
 .fh .ck.partial::after { left: 7px; }
 .fl .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* .fl 与 .fh 同：外观走共享 metaTagCSS（本串在下方插值）。
+   原 .nm-tag/.nm-bracket 别名选择器为死代码（renderDisplayName 只产出 .tag-*），2026-09 删除 */
 .fl .nm .tag-author,.fl .nm .tag-work,.fl .nm .tag-date { display:inline-block;padding:0 5px;border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
-.fl .nm .nm-tag, .fl .nm .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
-.fl .nm .nm-bracket, .fl .nm .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
-.fl .nm .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 20%,transparent); }
 .fl .nm .tag-ext { color: var(--muted); font-size: 0.85em; }
 .fl .nm.ysm { color: var(--txt); }
 .fl .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; text-shadow:0 1px 2px rgba(0,0,0,.12); }

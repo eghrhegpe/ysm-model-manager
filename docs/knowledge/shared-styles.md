@@ -12,6 +12,7 @@ auto_fields:
     - dropdownBaseCSS
     - dropdownHoverCSS
     - focusVisibleCSS
+    - metaTagCSS
     - noAnimationsCSS
     - treeCSS
     - wsIconCSS

@@ -1,5 +1,8 @@
 // ===== 仓库/实例/站点页骨架 + 资历最深页 + 热力图 + 通用标签 =====
+import { metaTagCSS } from "@/utils/dom/css.ts";
+
 export const contentRepoCSS: string = `
+${metaTagCSS}
 .repo-wrap { display:flex;flex-direction:column;flex:1;overflow:hidden; }
 .repo-tabs { display:flex;gap:2px;padding:4px 12px 0;border-bottom:1px solid var(--bd);flex-shrink:0;overflow-x:auto;flex-wrap:nowrap; }
 .repo-tab { padding:var(--pad-nav) 14px;border-radius:var(--radius-md) var(--radius-md) 0 0;border:1px solid transparent;border-bottom:2px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-nav);font-family:inherit;transition:var(--tr-normal);white-space:nowrap;min-height:var(--touch-min);animation:fadeSlideDown var(--tr-enter) both; }
@@ -33,12 +36,9 @@ export const contentRepoCSS: string = `
 .batch-dropdown { position:relative;display:inline-block; }
 .batch-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);min-width:120px; }
 .repo-footer { padding:3px 12px;font-size:var(--fs-xs);color:var(--muted);border-top:1px solid var(--bd);flex-shrink:0; }
-
-/* ===== 通用标签（作者/作品/日期；模型名高亮复用 display.js renderDisplayName） ===== */
-.tag-author,.tag-work,.tag-date { display:inline-block;padding:0 5px;border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
-.tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
-.tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
-.tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
+/* 通用标签（作者/作品/日期）外观由共享 metaTagCSS 承载（utils/dom/css.ts）——
+   原三行本地实现已删，避免与 app-tree 侧第三份同构实现漂移。
+   模型名高亮复用 display.js renderDisplayName */
 .link-badge { display:inline-block; padding:0 5px; border-radius:var(--radius-xs); font-size:var(--fs-xs); font-weight:600; }
 .link-badge-raw { color:var(--status-success); background:color-mix(in srgb,var(--status-success) 12%,transparent); }
 .link-badge-jsd { color:var(--badge-jsd); background:var(--badge-jsd-bg); }

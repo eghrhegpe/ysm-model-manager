@@ -18,7 +18,6 @@ const {
   toggleFav,
   getSiteIcon,
   getTagIconFromRole,
-  createCrCard,
   getApp,
 } = vi.hoisted(() => ({
   busEmit: vi.fn(),
@@ -32,7 +31,6 @@ const {
   toggleFav: vi.fn(() => true),
   getSiteIcon: vi.fn(() => "🌐"),
   getTagIconFromRole: vi.fn(() => "🏷️"),
-  createCrCard: vi.fn(() => document.createElement("div")),
   getApp: vi.fn(),
 }));
 
@@ -50,7 +48,6 @@ vi.mock("@/utils/icon/workshop-icons.ts", () => ({
   getSiteIcon,
   getTagIconFromRole,
 }));
-vi.mock("./render.ts", () => ({ createCrCard }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
 
 import { bindBrowseEvents } from "./events.ts";
@@ -66,14 +63,29 @@ function makeState(overrides: Record<string, unknown> = {}): {
   const searchResults = document.createElement("div");
   searchResults.innerHTML = `
     <div data-local-empty></div>
-    <div id="cr-creator-grid" class="cr-creator-grid"></div>
-    <button class="cr-preset-btn" data-q="dog">dog</button>
-    <div class="gh-card" data-name="A">
-      <div class="cr-star-btn" data-star="A">☆</div>
-      <span class="cr-card-search" data-search-creator="A">🔍</span>
-      <span class="cr-card-local-count cr-card-local-jump" data-local-creator="A">📁3</span>
+    <div id="cr-creator-grid" class="cr-creator-grid">
+      <div class="gh-card cr-creator-card cr-creator-card--grid" tabindex="0" data-name="A" data-tag="modeler" title="搜索 A">
+        <div class="cr-card-header">
+          <div class="cr-avatar-container">
+            <div class="cr-avatar-ring"></div>
+            <div class="cr-avatar cr-avatar-fallback">A</div>
+          </div>
+          <div class="cr-card-name-row">
+            <span class="cr-card-name">A</span>
+            <span class="cr-card-local-count cr-card-local-jump" data-local-creator="A" title="查看本地模型">📁3</span>
+            <span class="cr-star-btn" data-star="A">☆</span>
+            <span class="cr-card-search" data-search-creator="A" title="搜索更多模型">🔍</span>
+          </div>
+        </div>
+        <div class="cr-card-desc">好模型</div>
+        <div class="cr-card-footer">
+          <span class="cr-platform-badge">github</span>
+          <span class="cr-tag cr-tag-modeler">🏷️ <span>modeler</span></span>
+        </div>
+      </div>
     </div>
-    <img data-debug-avatar="A" alt="avatar">
+    <button class="cr-preset-btn" data-q="dog">dog</button>
+    <img data-debug-avatar="A" data-avatar-fallback="A" alt="avatar">
     <div id="cr-mode-switch">
       <button class="cr-mode-opt" data-mode="external">external</button>
       <button class="cr-mode-opt" data-mode="window">window</button>
@@ -115,21 +127,16 @@ describe("bindBrowseEvents — 基础绑定", () => {
     expect(busEmit).toHaveBeenCalledWith("nav:changed", { page: "repository" });
   });
 
-  it("有创作者且非编辑模式 → 每创作者生成一张卡片", () => {
+  it("有创作者且非编辑模式 → 声明式 HTML 已包含卡片（grid 有子元素）", () => {
     const { state } = makeState();
     bindBrowseEvents(state, () => {});
-    expect(createCrCard).toHaveBeenCalledTimes(1);
-    expect(createCrCard).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "A" }),
-      expect.objectContaining({ creators: expect.any(Array) }),
-    );
+    const grid = state.searchResults.querySelector(".cr-creator-grid");
+    expect(grid).toBeTruthy();
+    expect(grid!.querySelectorAll(".cr-creator-card")).toHaveLength(1);
   });
 
-  it("编辑模式 → 不生成网格卡片", () => {
-    const { state } = makeState({ wsEditModeRef: { v: true } });
-    bindBrowseEvents(state, () => {});
-    expect(createCrCard).not.toHaveBeenCalled();
-  });
+  // 注：「编辑模式不渲染网格」已随职责迁至 render.ts（buildSiteHtml 决定网格存亡），
+  // events.ts 只做绑定，不再承担网格填充——断言见 render.test.ts「编辑态不渲染创作者网格」。
 
   it("预设搜索按钮 → openUrl(fillSearch)；无 searchUrl → 打开站点首页", () => {
     const { state } = makeState();
@@ -198,6 +205,17 @@ describe("bindBrowseEvents — 基础绑定", () => {
     await waitFor(() => dbg.mock.calls.length > 0);
     expect(dbg.mock.calls[0]![0]).toBe("avatar-debug");
     expect(dbg.mock.calls[0]![1]).toBe("A");
+  });
+
+  it("头像加载失败（error）→ 用 data-avatar-fallback 字母替换 img", () => {
+    const { state, searchResults } = makeState();
+    bindBrowseEvents(state, () => {});
+    const img = searchResults.querySelector("[data-debug-avatar]") as HTMLImageElement;
+    img.dispatchEvent(new Event("error"));
+    const fallback = searchResults.querySelector(".cr-avatar-fallback");
+    expect(fallback?.textContent).toBe("A");
+    // img 已就地替换（声明式降级不残留破图节点）
+    expect(searchResults.querySelector("[data-debug-avatar]")).toBeNull();
   });
 
   it("storage 同步：ysm-fav-creators 事件 → 星标同步 + cleanup 移除监听", () => {

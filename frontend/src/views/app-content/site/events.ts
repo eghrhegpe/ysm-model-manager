@@ -8,7 +8,6 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getSiteIcon, getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { type CrCardCtx, createCrCard } from "./render.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
 import type { BrowseMode } from "./workshop-browse-mode.ts";
 import {
@@ -171,6 +170,19 @@ function cmCrBindOverlayEvents(
   }
 }
 
+/**
+ * 头像加载失败 → 用字母 fallback 替换 img（单点实现：grid 卡片与详情浮层共用）。
+ * 两处仅 fallback 元素的 class 不同，由调用方显式传入，避免助手内猜语义。
+ */
+function bindAvatarFallback(img: HTMLImageElement, fallbackClass: string, char: string): void {
+  img.addEventListener("error", () => {
+    const fb = document.createElement("div");
+    fb.className = fallbackClass;
+    fb.textContent = char;
+    img.replaceWith(fb);
+  });
+}
+
 function cmCrCreateDetailOverlay(
   cr: LocalCreatorLike,
   esc: (s: unknown) => string,
@@ -201,12 +213,7 @@ function cmCrCreateDetailOverlay(
   overlay.innerHTML = html;
   const detailImg = overlay.querySelector<HTMLImageElement>("img.cr-detail-avatar-img");
   if (detailImg) {
-    detailImg.addEventListener("error", () => {
-      const fb = document.createElement("div");
-      fb.className = "cr-avatar cr-detail-avatar-text";
-      fb.textContent = fallbackChar;
-      detailImg.replaceWith(fb);
-    });
+    bindAvatarFallback(detailImg, "cr-avatar cr-detail-avatar-text", fallbackChar);
   }
   return overlay;
 }
@@ -220,21 +227,6 @@ function cmBbBindEmptyLocalBtn(searchResults: HTMLElement, busRef: typeof bus): 
   if (emptyLocalBtn) {
     emptyLocalBtn.addEventListener("click", () => {
       busRef.emit("nav:changed", { page: "repository" });
-    });
-  }
-}
-
-function cmBbPopulateCreatorGrid(
-  searchResults: HTMLElement,
-  wsEditModeRef: { v: boolean },
-  creators: LocalCreatorLike[],
-  cardCtx: CrCardCtx,
-): void {
-  const grid = searchResults.querySelector("#cr-creator-grid");
-  if (grid && !wsEditModeRef.v && creators.length) {
-    creators.forEach((cr) => {
-      const card = createCrCard(cr, cardCtx);
-      grid.appendChild(card);
     });
   }
 }
@@ -326,6 +318,10 @@ function cmBbBindLocalBadges(searchResults: HTMLElement, busRef: typeof bus): vo
 
 function cmBbBindDebugAvatar(searchResults: HTMLElement, getDisposed: () => boolean): void {
   qsa<HTMLElement>(searchResults, "[data-debug-avatar]").forEach((img) => {
+    // 头像加载失败 → 字母 fallback（声明式 data-avatar-fallback 属性；单点实现见 bindAvatarFallback）
+    if (img instanceof HTMLImageElement && img.dataset.avatarFallback) {
+      bindAvatarFallback(img, "cr-avatar cr-avatar-fallback", img.dataset.avatarFallback);
+    }
     img.addEventListener("click", async (e) => {
       e.stopPropagation();
       const name = img.dataset.debugAvatar;
@@ -434,8 +430,6 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
   const {
     esc,
     searchResults,
-    allCreators,
-    wsEditModeRef,
     avatarCache,
     site,
     creators,
@@ -448,18 +442,7 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
   let disposed = false;
   const getDisposed = () => disposed;
 
-  const cardCtx: CrCardCtx = {
-    esc,
-    isFaved,
-    authorCountMap,
-    avatarCache,
-    creators,
-    allCreators,
-    site,
-  };
-
   cmBbBindEmptyLocalBtn(searchResults, busRef);
-  cmBbPopulateCreatorGrid(searchResults, wsEditModeRef, creators, cardCtx);
   cmBbBindPresetSearchBtns(searchResults, site, openUrl, fillSearch);
   cmBbBindModeToggle(searchResults, state, refreshView);
   cmBbBindStarBtns(searchResults, busRef);

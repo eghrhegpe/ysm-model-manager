@@ -16,7 +16,6 @@ export interface CrCardCtx {
   authorCountMap: Record<string, number>;
   avatarCache?: Record<string, string> | null;
   creators: LocalCreatorLike[];
-  allCreators: LocalCreatorLike[];
   site: WorkshopSite;
 }
 
@@ -38,10 +37,12 @@ export interface BuildSiteHtmlCtx {
   searchKw: string;
   /** 查看器模式（网页版/Android ADR-049 能力门控）：隐藏桌面专属的创作者编辑入口（保存走未桥接 BySite 绑定） */
   viewerMode: boolean;
+  /** 收藏状态查询函数（供卡片工厂声明式渲染星标） */
+  isFaved: (name: string) => boolean;
 }
 
 /** 创作者卡片工厂 */
-export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement {
+export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
   const { esc, isFaved, authorCountMap, avatarCache, creators, site } = ctx;
   const authorCount = authorCountMap[cr.name] || 0;
   const sorted = [...creators].sort(
@@ -52,15 +53,6 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
   const tierRank = pct < 0.1 ? "gold" : pct < 0.25 ? "silver" : "";
   const hasAvatar = avatarCache?.[cr.name];
 
-  const card = document.createElement("div");
-  card.className = "gh-card cr-creator-card cr-creator-card--grid";
-  card.tabIndex = 0;
-  card.style.animationDelay = `${idx * 0.03}s`;
-  card.dataset.name = cr.name;
-  card.dataset.tag = getTagFromRole(cr.role);
-  card.title = t("content.searchFor", { name: cr.name });
-  if (tierRank) card.dataset.tier = tierRank;
-
   const fallbackChar = cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?";
   const fallbackDiv = `<div class="cr-avatar cr-avatar-fallback">${fallbackChar}</div>`;
   const avatarHtml = hasAvatar
@@ -68,6 +60,8 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
       esc(avatarCache[cr.name]) +
       '" data-debug-avatar="' +
       esc(cr.name) +
+      '" data-avatar-fallback="' +
+      fallbackChar +
       '">'
     : fallbackDiv;
 
@@ -107,12 +101,33 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
       "</span>"
     : "";
 
-  card.innerHTML =
-    (tierRank ? '<div class="cr-card-tier-bar"></div>' : "") +
+  const tierBar = tierRank ? '<div class="cr-card-tier-bar"></div>' : "";
+  const dataSpin = tierRank ? ` data-spin="${tierRank}"` : "";
+  const starIcon = isFaved(cr.name) ? "⭐" : "☆";
+  const tagRole = getTagFromRole(cr.role);
+  const tagIcon = getTagIconFromRole(cr.role);
+
+  return (
+    '<div class="gh-card cr-creator-card cr-creator-card--grid"' +
+    ' tabindex="0"' +
+    ' style="animation-delay:' +
+    idx * 0.03 +
+    's"' +
+    ' data-name="' +
+    esc(cr.name) +
+    '"' +
+    ' data-tag="' +
+    esc(tagRole) +
+    '"' +
+    (tierRank ? ` data-tier="${esc(tierRank)}"` : "") +
+    ' title="' +
+    esc(t("content.searchFor", { name: cr.name })) +
+    '">' +
+    tierBar +
     '<div class="cr-card-header">' +
     '<div class="cr-avatar-container">' +
     '<div class="cr-avatar-ring"' +
-    (tierRank ? ` data-spin="${tierRank}"` : "") +
+    dataSpin +
     "></div>" +
     avatarHtml +
     "</div>" +
@@ -124,7 +139,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
     '<span class="cr-star-btn" data-star="' +
     esc(cr.name) +
     '">' +
-    (isFaved(cr.name) ? "⭐" : "☆") +
+    starIcon +
     "</span>" +
     searchBtn +
     "</div>" +
@@ -135,31 +150,15 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): HTMLElement 
     '<div class="cr-card-footer">' +
     platformBadges +
     '<span class="cr-tag cr-tag-' +
-    esc(getTagFromRole(cr.role)) +
+    esc(tagRole) +
     '">' +
-    getTagIconFromRole(cr.role) +
+    tagIcon +
     " <span>" +
-    esc(getTagFromRole(cr.role)) +
+    esc(tagRole) +
     "</span>" +
-    "</span>" +
-    "</div>";
-
-  // 头像加载失败 → 替换为字母 fallback（避免内联 onerror 字符串拼接）
-  const imgEl = card.querySelector<HTMLImageElement>("img.cr-avatar");
-  if (imgEl) {
-    imgEl.addEventListener("error", () => {
-      imgEl.replaceWith(
-        (() => {
-          const d = document.createElement("div");
-          d.className = "cr-avatar cr-avatar-fallback";
-          d.textContent = fallbackChar;
-          return d;
-        })(),
-      );
-    });
-  }
-
-  return card;
+    "</div>" +
+    "</div>"
+  );
 }
 
 /** 搜索词分区：模式切换按钮 + 预设搜索按钮。无 preset 时返回空串（由主函数按条件跳过）。 */
@@ -324,7 +323,17 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
     // 收藏置顶
     sortCreatorsFavedFirst(creators, authorCountMap);
     parts.push(buildSiteTagFilterRow(ctx));
-    parts.push('<div class="cr-creator-grid" id="cr-creator-grid"></div>');
+    // 声明式生成创作者卡片（不再留空 grid 给 events 填充）
+    const cardCtx: CrCardCtx = {
+      esc: ctx.esc,
+      isFaved: ctx.isFaved,
+      authorCountMap: ctx.authorCountMap,
+      avatarCache: ctx.avatarCache,
+      creators,
+      site: ctx.site,
+    };
+    const cardsHtml = creators.map((cr) => createCrCard(cr, cardCtx)).join("");
+    parts.push(`<div class="cr-creator-grid" id="cr-creator-grid">${cardsHtml}</div>`);
   } else {
     parts.push(
       '<div class="cr-empty-site">' +

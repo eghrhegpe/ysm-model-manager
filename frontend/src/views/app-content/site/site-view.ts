@@ -8,6 +8,7 @@ import { bindEditEvents } from "./edit.ts";
 import { bindBrowseEvents } from "./events.ts";
 import { buildSiteHtml } from "./render.ts";
 import type { CleanupFn, RenderSiteViewCtx, SiteViewState } from "./types.ts";
+import { isFaved } from "./workshop-data.ts";
 
 export type { LocalCreatorLike, RenderSiteViewCtx, RepoAuthorLike } from "./types.ts";
 
@@ -65,6 +66,7 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
     activeTag,
     searchKw,
     viewerMode: isViewerMode(),
+    isFaved,
   });
   searchResults.innerHTML = html;
 

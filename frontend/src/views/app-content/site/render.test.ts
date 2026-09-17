@@ -35,6 +35,13 @@ function renderHtml(ctx: BuildSiteHtmlCtx): HTMLElement {
   return root;
 }
 
+/** 解析 createCrCard 产物（声明式字符串 → DOM） */
+function parseCardHtml(html: string): HTMLElement {
+  const root = document.createElement("div");
+  root.innerHTML = html;
+  return root.firstElementChild as HTMLElement;
+}
+
 function makeCtx(overrides: Partial<BuildSiteHtmlCtx> = {}): BuildSiteHtmlCtx {
   return {
     esc,
@@ -49,6 +56,7 @@ function makeCtx(overrides: Partial<BuildSiteHtmlCtx> = {}): BuildSiteHtmlCtx {
     activeTag: "",
     searchKw: "",
     viewerMode: false,
+    isFaved: () => false,
     ...overrides,
   };
 }
@@ -63,11 +71,11 @@ function cardCtx(
     authorCountMap: {},
     avatarCache: null,
     creators,
-    allCreators: creators,
     site: {} as WorkshopSite,
     ...overrides,
   };
 }
+
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -97,7 +105,11 @@ describe("buildSiteHtml 浏览态", () => {
     ).toBe("猫");
     // buildSiteHtml 在 ctx.creators 上就地排序（共享数组副作用），收藏置顶
     expect(creators.map((c) => c.name)).toEqual(["乙", "甲"]);
-    expect(root.querySelector("#cr-creator-grid")).toBeTruthy();
+    const grid = root.querySelector("#cr-creator-grid");
+    expect(grid).toBeTruthy();
+    // 声明式契约：卡片由 buildSiteHtml 直接产出（不再留空 grid 交由 events 填充）
+    expect(grid!.querySelectorAll(".cr-creator-card")).toHaveLength(2);
+    expect(grid!.querySelector(".cr-card-name")?.textContent).toBe("乙");
     expect(root.querySelector(".cr-empty-site")).toBeNull();
   });
 
@@ -158,6 +170,8 @@ describe("buildSiteHtml 编辑态", () => {
     expect(root.querySelector(".cr-edit-btn")).toBeNull();
     expect(root.querySelector(".cr-fetch-btn")).toBeNull();
     expect(root.querySelectorAll(".cr-edit-card[data-edit='preset']")).toHaveLength(0);
+    // 编辑态不渲染浏览态创作者网格（原 cmBbPopulateCreatorGrid 的 wsEditModeRef 守卫已迁至此）
+    expect(root.querySelector("#cr-creator-grid")).toBeNull();
   });
 
   it("7. 编辑态预设卡：label 回填 + 上移/下移/删除按钮", () => {
@@ -198,7 +212,7 @@ describe("buildSiteHtml 编辑态", () => {
   });
 });
 
-describe("createCrCard 创作者卡片工厂", () => {
+describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
   it("9. 基础卡片：名称/描述 esc、平台徽章、星标未收藏、搜索按钮、头像兜底字符", () => {
     const cr = {
       name: "张三",
@@ -206,7 +220,7 @@ describe("createCrCard 创作者卡片工厂", () => {
       type: "siteA;siteB",
       role: "creator",
     } as LocalCreatorLike;
-    const card = createCrCard(cr, cardCtx([cr], { site: { searchUrl: "u" } as WorkshopSite }));
+    const card = parseCardHtml(createCrCard(cr, cardCtx([cr], { site: { searchUrl: "u" } as WorkshopSite })));
     expect(card.dataset.name).toBe("张三");
     expect(card.classList.contains("cr-creator-card")).toBe(true);
     expect(card.querySelector(".cr-card-name")?.textContent).toBe("张三");
@@ -221,7 +235,7 @@ describe("createCrCard 创作者卡片工厂", () => {
 
   it("10. 已收藏 → ⭐；无 searchUrl → 无搜索按钮；单作者 pct=0 → gold 级 + 顶部条", () => {
     const cr = { name: "甲" } as LocalCreatorLike;
-    const card = createCrCard(cr, cardCtx([cr], { isFaved: () => true, avatarCache: {} }));
+    const card = parseCardHtml(createCrCard(cr, cardCtx([cr], { isFaved: () => true, avatarCache: {} })));
     expect(card.querySelector(".cr-star-btn")?.textContent).toBe("⭐");
     expect(card.querySelector(".cr-card-search")).toBeNull();
     expect(card.dataset.tier).toBe("gold");
@@ -231,7 +245,7 @@ describe("createCrCard 创作者卡片工厂", () => {
 
   it("11. 本地徽章三态：有数量 / 无数量 / 非本地不渲染", () => {
     const mk = (cr: LocalCreatorLike, counts: Record<string, number>) =>
-      createCrCard(cr, cardCtx([cr], { authorCountMap: counts, avatarCache: {} }));
+      parseCardHtml(createCrCard(cr, cardCtx([cr], { authorCountMap: counts, avatarCache: {} })));
     const c1 = mk({ name: "甲", desc: "", _fromLocal: true }, { 甲: 5 });
     expect(c1.querySelector(".cr-card-local-count")?.textContent).toBe("📁5");
     expect(c1.querySelector("[data-local-creator]")?.getAttribute("data-local-creator")).toBe("甲");
@@ -245,13 +259,13 @@ describe("createCrCard 创作者卡片工厂", () => {
 
   it("12. 头像：avatarCache 命中 → img；空名 → 兜底 '?'", () => {
     const cr1 = { name: "张三" } as LocalCreatorLike;
-    const c1 = createCrCard(cr1, cardCtx([cr1], { avatarCache: { 张三: "https://x/a.png" } }));
+    const c1 = parseCardHtml(createCrCard(cr1, cardCtx([cr1], { avatarCache: { 张三: "https://x/a.png" } })));
     const img = c1.querySelector(".cr-avatar") as HTMLImageElement;
     expect(img.tagName).toBe("IMG");
     expect(img.getAttribute("src")).toBe("https://x/a.png");
     expect(img.getAttribute("data-debug-avatar")).toBe("张三");
     const cr2 = { name: "" } as LocalCreatorLike;
-    const c2 = createCrCard(cr2, cardCtx([cr2]));
+    const c2 = parseCardHtml(createCrCard(cr2, cardCtx([cr2])));
     expect(c2.querySelector(".cr-avatar-fallback")?.textContent).toBe("?");
   });
 
@@ -266,11 +280,11 @@ describe("createCrCard 创作者卡片工厂", () => {
     ] as LocalCreatorLike[];
     const counts = { 甲: 10, 乙: 9, 丙: 1, 丁: 1, 戊: 1, 己: 1 };
     const ctx = cardCtx(creators, { authorCountMap: counts });
-    const c0 = createCrCard(creators[0], ctx);
+    const c0 = parseCardHtml(createCrCard(creators[0], ctx));
     expect(c0.dataset.tier).toBe("gold");
-    const c1 = createCrCard(creators[1], ctx);
+    const c1 = parseCardHtml(createCrCard(creators[1], ctx));
     expect(c1.dataset.tier).toBe("silver");
-    const c2 = createCrCard(creators[2], ctx);
+    const c2 = parseCardHtml(createCrCard(creators[2], ctx));
     expect(c2.dataset.tier).toBeUndefined();
     expect(c2.querySelector(".cr-card-tier-bar")).toBeNull();
   });

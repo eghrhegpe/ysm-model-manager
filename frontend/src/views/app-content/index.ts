@@ -3,22 +3,14 @@
 import { bus } from "@/bus";
 import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
-import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
+import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { contentCSS } from "@/views/app-content/css/content-css.ts";
 
-// 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
-// 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
-// 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
-const appContentStyle: CSSStyleSheet = (() => {
-  if (typeof CSSStyleSheet === "undefined") {
-    return { replaceSync: () => {} } as unknown as CSSStyleSheet;
-  }
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(contentCSS);
-  return sheet;
-})();
+// 模块级样式表（shadow 根装配，含 HMR 注册；见 utils/dom/shadow-style.ts）。
+// 原 12 行「环境守卫 + new CSSStyleSheet + replaceSync」样板已收敛到该原语。
+const appContentStyle = createShadowStyle(contentCSS, "app-content");
 
 export { appContentStyle };
 
@@ -46,7 +38,7 @@ class AppContent extends WebComponentBase {
   constructor() {
     super();
     const root = this.attachShadow({ mode: "open" });
-    root.adoptedStyleSheets = [appContentStyle];
+    root.adoptedStyleSheets = [appContentStyle.sheet];
     // 与 app-nav 同源：两者均走 resolveInitialPage()，避免硬编码幽灵值（旧 "dashboard"）。
     // app-content 经 app-modules.ts 动态加载，可能晚于 app-nav 派发的初始 nav:changed，
     // 事件被吞后若硬编码首页会让 UI 实际渲染页与 app-nav 脱节。统一走 resolveInitialPage，
@@ -198,6 +190,4 @@ if (typeof customElements !== "undefined" && !customElements.get("app-content"))
   customElements.define("app-content", AppContent);
 }
 // HMR 热更新：仅 contentCSS（./css/content-css.ts）变更时热刷 shadow 样式表；其余依赖变更落到整页重载。
-import.meta.hot?.accept("./css/content-css.ts", (newCssMod) => {
-  refreshAdoptedStyleSheets(newCssMod?.contentCSS, "app-content");
-});
+appContentStyle.acceptHmr(import.meta.hot, "./css/content-css.ts", "contentCSS");

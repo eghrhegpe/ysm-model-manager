@@ -3,22 +3,14 @@
 import { bus } from "@/bus";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
+import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import { sidebarCSS } from "./sidebar-css.ts";
 
-// 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
-// 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
-// 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
-const appSidebarStyle: CSSStyleSheet = (() => {
-  if (typeof CSSStyleSheet === "undefined") {
-    return { replaceSync: () => {} } as unknown as CSSStyleSheet;
-  }
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(sidebarCSS);
-  return sheet;
-})();
+// 模块级样式表（shadow 根装配，含 HMR 注册；见 utils/dom/shadow-style.ts）。
+// 原 12 行「环境守卫 + new CSSStyleSheet + replaceSync」样板已收敛到该原语。
+const appSidebarStyle = createShadowStyle(sidebarCSS, "app-sidebar");
 
 export { appSidebarStyle };
 
@@ -82,7 +74,7 @@ class AppSidebar extends WebComponentBase {
   constructor() {
     super();
     this._root = this.attachShadow({ mode: "open" });
-    this._root.adoptedStyleSheets = [appSidebarStyle];
+    this._root.adoptedStyleSheets = [appSidebarStyle.sheet];
     // P1 修复（ADR-104 整合包视图首屏 rtype 回落）：tpl.ts 挂载 <app-sidebar> 不传 rtype
     // 属性，此前恒回落 YSM，整合包标题首屏显示 (ysm) 需手动切标签才被纠正。
     // 对齐仓库页 initRepositoryPage 的 savedRtype 恢复：属性优先，缺省读
@@ -281,6 +273,4 @@ if (typeof customElements !== "undefined" && !customElements.get("app-sidebar"))
   customElements.define("app-sidebar", AppSidebar);
 }
 // HMR 热更新：仅 sidebarCSS（./sidebar-css.ts）变更时热刷 shadow 样式表；其余依赖变更落到整页重载。
-import.meta.hot?.accept("./sidebar-css.ts", (newCssMod) => {
-  refreshAdoptedStyleSheets(newCssMod?.sidebarCSS, "app-sidebar");
-});
+appSidebarStyle.acceptHmr(import.meta.hot, "./sidebar-css.ts", "sidebarCSS");

@@ -10,6 +10,7 @@ auto_fields:
     - __getTriggerForTest
     - __resetInputBlockStackForTest
     - __resetModalStateForTest
+    - attachStyleSheetMarker
     - attachTooltip
     - btnBaseCSS
     - calcVisibleRange
@@ -21,6 +22,7 @@ auto_fields:
     - createDialog
     - createFocusRestoreManager
     - createInputBlockStack
+    - createShadowStyle
     - createTooltipManager
     - disposeTooltipCore
     - downloadTextFile
@@ -68,6 +70,7 @@ auto_fields:
     - rememberTrigger
     - returnFocus
     - setRepoSearchFocusPending
+    - ShadowStyle
     - stripPathSegments
     - takeRepoSearchFocusPending
     - toast

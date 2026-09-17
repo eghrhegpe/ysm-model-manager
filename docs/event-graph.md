@@ -100,7 +100,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 89 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 81 |
 
 ### `ctx:show`
 
@@ -202,7 +202,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 81 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 73 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
 
 ### `menu:show`
@@ -229,20 +229,20 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 332 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 553 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 545 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 94 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 87 |
 
 ### `nav:changed`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 73 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 187 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 65 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 179 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 229 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 223 |
@@ -252,7 +252,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 60 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 193 |
 
 ### `package:selected`
@@ -296,7 +296,7 @@
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 88 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 304 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 241 |
 
 ### `repo:search-creator`
@@ -310,7 +310,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 71 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 63 |
 
 ### `repo:subdir-changed`
 
@@ -359,7 +359,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 111 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 221 |
 
 ### `sync:download:done`
@@ -460,7 +460,7 @@
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 132 |
 | bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 74 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 33 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 178 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 201 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 339 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
@@ -562,12 +562,12 @@
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 443 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 500 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 510 |
-| toastThrottled | `frontend/src/views/app-tree/index.ts` | 76 |
-| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 323 |
+| toastThrottled | `frontend/src/views/app-tree/index.ts` | 68 |
+| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 315 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 469 |
 | _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 477 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 485 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 605 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 612 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 597 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 604 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 48 |
@@ -621,9 +621,9 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 75 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 67 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 250 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 242 |

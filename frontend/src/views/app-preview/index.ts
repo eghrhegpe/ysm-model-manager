@@ -5,21 +5,14 @@
 import { bus } from "@/bus";
 import { rememberModelPath } from "@/core/model-path-store.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
-import { refreshAdoptedStyleSheets } from "@/utils/dom/css-hmr.ts";
+import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { previewCSS } from "./css.ts";
 
 // 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
 // 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
 // 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
-const appPreviewStyle: CSSStyleSheet = (() => {
-  if (typeof CSSStyleSheet === "undefined") {
-    return { replaceSync: () => {} } as unknown as CSSStyleSheet;
-  }
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(previewCSS);
-  return sheet;
-})();
+const appPreviewStyle = createShadowStyle(previewCSS, "app-preview");
 
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
@@ -81,7 +74,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   constructor() {
     super();
     this.root = this.attachShadow({ mode: "open" });
-    this.root.adoptedStyleSheets = [appPreviewStyle];
+    this.root.adoptedStyleSheets = [appPreviewStyle.sheet];
   }
 
   connectedCallback(): void {
@@ -213,6 +206,4 @@ if (typeof customElements !== "undefined" && !customElements.get("app-preview"))
   customElements.define("app-preview", AppPreview);
 }
 // HMR 热更新：仅 previewCSS（./css.ts）变更时热刷 shadow 样式表；其余依赖变更落到 Vite 整页重载。
-import.meta.hot?.accept("./css.ts", (newCssMod) => {
-  refreshAdoptedStyleSheets(newCssMod?.previewCSS, "app-preview");
-});
+appPreviewStyle.acceptHmr(import.meta.hot, "./css.ts", "previewCSS");

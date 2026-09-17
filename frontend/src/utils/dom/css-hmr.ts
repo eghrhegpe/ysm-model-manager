@@ -13,6 +13,15 @@
 /** WeakMap 存储 sheet → selector 标记（不阻止 GC，旧 sheet 被替换后自动释放） */
 const sheetMarker = new WeakMap<CSSStyleSheet, string>();
 
+/**
+ * 给 sheet 打上归属标记。
+ * 供 `utils/dom/shadow-style.ts` 在首装时标记，使 {@link refreshAdoptedStyleSheets}
+ * 能定位并**只替换那一个** sheet（不洗掉同根其它 sheet）。
+ */
+export function attachStyleSheetMarker(sheet: CSSStyleSheet, selector: string): void {
+  sheetMarker.set(sheet, selector);
+}
+
 export function refreshAdoptedStyleSheets(cssText: string | undefined, selector: string): void {
   if (cssText === undefined) return;
   const style = new CSSStyleSheet();

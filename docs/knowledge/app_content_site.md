@@ -95,6 +95,7 @@ status: active
 - `workshop-icons.ts`（`utils/icon`）→ SVG 图标表 `ICONS` 与 `getSiteIcon` / `getTagIconFromRole`（site/events、site/render 消费）
 - `workshop-site-opener.ts` → `ctx.openUrl` 把搜索链路 `fillSearch` 拼好的带词链接透传给 `openSite`（site 视图的打开器在 `init-workshop.ts` 装配，见主卡）；内嵌分支 `workshop-site-opener.ts|openEmbedded` 的加载超时由 iframe 实例级 `_wsLoadAbort`（AbortController）承载（`WS_EMBED_TIMEOUT_MS` 15s 未完成加载 → 提示站点不允许内嵌浏览）：开新页先 abort 上一轮、load 完成或超时均 abort 收口、返回按钮同样 abort，消除 timer 残留竞态
 - 主卡 `app-content` 负责页面编排与分发；本卡只管站点视图自身的渲染与交互
+- **页作用域句柄 `workshop-page-state.ts`（ADR-263）**：`createWorkshopPageState()` → `WorkshopPageState { getCurrentSite() / setCurrentSite(site) }`，承载「当前浏览站点」。它是 `currentSite` 从 `AppContentState` 下沉后的家——tabs（写）/ opener（读）/ `init-workshop.ts` 注入链（读写）共享**同一实例**（由 `init-workshop.ts` 创建并下传），与 `WorkshopRefs` 同构：只给工厂、**不给模块级单例**，防「形状相同、实例不同」的 stale 错位。两者分工：refs 收**可替换的整份数据**（sites/creators 整体换新），page-state 收**页面级游标**（当前站点）
 
 ## 不变量
 
@@ -102,7 +103,7 @@ status: active
 - 浏览模式「点谁用谁 + 即时生效」，收敛为单源 ref：`browseMode` 存 `BrowseModeRef{ v }`，禁止值拷贝 stale
 - 行内编辑排除预设卡片、拖拽用 `realIdx` 全量重排——两处 P2 修复为站点数据不污染的底线
 - **站点 JSON 导入下沉 Go**（ADR-172 对称，堵 site/edit + site/drag 双轨）：`site/edit.ts` 社区站点并入走 Go `MergeCommunitySitesFromJSON`（返回增量计数，前端 `mergeCommunitySites` 仅内存展示层合并、不驱动写回）；`site/drag.ts` 站点 JSON 拖入走 Go `MergeWorkshopSitesFromJSON`（合并/去重/写回下沉 Go，前端用 `DefaultWorkshopSites()` 拉取落盘后的最新结果刷新 `allSites`）——两端都不再 `SaveWorkshopSites(allSites)` 整存，计数以 Go 返回为准
-
+- **站点游标只经 `WorkshopPageState` 读写（ADR-263）**：`initWorkshopTabs(host, refs, page)` / `bindSiteEvents(host, page)` 收页作用域句柄，**不得**回到 `host.state.currentSite`（该字段已从 `AppContentState` 删除）。收窄接口的原因不是美观：tabs 手持整个 `AppContentState` 时「顺手」写下了 `workshopTimer`——接口宽度即权限，越界写入应编译不过
 - **创作者卡片声明式通道**（2026-09 收口）：创作者卡片 HTML 由 `buildSiteHtml` 内经 `createCrCard` 直接产出并嵌入 `#cr-creator-grid`，`site/events.ts` **不再**查 grid 后 `appendChild`（原 `cmBbPopulateCreatorGrid` 已删）——grid 存亡与卡片内容同归 `buildSiteHtml`（编辑态不渲染网格的守卫随之归位）；头部头像加载失败一律走 `data-avatar-fallback` 属性 + `bindAvatarFallback` 单点实现（grid 卡片与详情浮层共用，仅 fallback class 不同）
 
 ## 相关

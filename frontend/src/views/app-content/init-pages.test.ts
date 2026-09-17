@@ -131,3 +131,27 @@ describe("bindTabs：按钮 data-tab 即唯一真值（ADR-259 运行期契约�
     expect(root.activeElement).toBe(root.querySelector('.repo-tab[data-tab="gamma"]'));
   });
 });
+
+describe("AppContentState 字段归属（ADR-262）", () => {
+  function makeState(): AppContentState {
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    return new AppContentState(el.attachShadow({ mode: "open" }), "repository");
+  }
+
+  // teeth：currentSite 曾借宿此容器，而它只服务工坊页——消费者手持整个 AppContentState 时
+  // 无法从类型上拒绝越界写入（tabs 就顺手写下了 workshopTimer）。沉降后容器不得再持该字段，
+  // 否则「页作用域」名不副实，下一轮又会有人经 host.state 直达。
+  it("currentSite 不再住在共享 state（已下沉 site/workshop-page-state.ts）", () => {
+    const state = makeState();
+    expect("currentSite" in state).toBe(false);
+  });
+
+  it("尾随借宿字段仍在（跨切生命周期未变）：avatarCache / workshopTimer", () => {
+    const state = makeState();
+    // 这两个字段的归属见 ADR-262：avatarCache 写入方是模块级下载队列（比页面长寿），
+    // workshopTimer 的清理点在 app 壳层 _render 开头（早于 page.init）——均**未**随本轮下沉。
+    expect("avatarCache" in state).toBe(true);
+    expect("workshopTimer" in state).toBe(true);
+  });
+});

@@ -24,6 +24,7 @@ import {
 } from "@/views/app-content/site/workshop-browse-mode.ts";
 import type { AppContentHost } from "./host.ts";
 import { extractAvatars } from "./site/workshop-avatar.ts";
+import { createWorkshopPageState } from "./site/workshop-page-state.ts";
 import { bindSiteEvents, openSite } from "./site/workshop-site-opener.ts";
 import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./site/workshop-tabs.ts";
 
@@ -42,7 +43,10 @@ export function initWorkshopPage(host: AppContentHost): void {
   const searchResults = root.getElementById("ws-search-results");
   const creatorView = root.getElementById("ws-creator-view");
   if (!searchResults || !creatorView) return; // 骨架缺失即页面残废，早退（原下游 !/as 断言）
-  host.state.currentSite = null;
+  // 页作用域状态（ADR-262）：currentSite 归工坊页——不再借宿 AppContentState。
+  // 单一入口创建一份实例，tabs（写）/ opener（读）/ 本文件的注入链（读写）共享同一份，
+  // 与 refs 同构：杜绝「形状相同、实例不同」的 stale 错位 bug。
+  const page = createWorkshopPageState();
   // 单一入口：所有可变 ref 由 createWorkshopRefs() 生成一份；tabs 写入、showSiteView 读取，
   // 永远是同一实例——杜绝「形状相同、实例不同」的错位 bug。
   const refs = createWorkshopRefs();
@@ -117,9 +121,9 @@ export function initWorkshopPage(host: AppContentHost): void {
           (fn: (() => Promise<void>) | null) => {
             _repoEventsCleanup = fn;
           },
-          host.state.currentSite,
+          page.getCurrentSite(),
           (site: WorkshopSite | null) => {
-            host.state.currentSite = site;
+            page.setCurrentSite(site);
           },
           repo,
           models as WorkshopModel[],
@@ -136,7 +140,8 @@ export function initWorkshopPage(host: AppContentHost): void {
       activeTag: safeGet("ysm-ws-active-tag") || "",
       searchKw: safeGet("ysm-ws-search-kw") || "",
       backToSite: () => {
-        if (host.state.currentSite) showSiteView(host.state.currentSite);
+        const cur = page.getCurrentSite();
+        if (cur) showSiteView(cur);
       },
       // 重渲染（编辑切换/保存/拖拽/搜索等）经同一 wrapper：先跑旧 cleanup 再存新
       // cleanup（见 runPrevSiteViewCleanup 注释），供 site-view 的 refreshView 调用。
@@ -152,10 +157,10 @@ export function initWorkshopPage(host: AppContentHost): void {
   setShowSiteView(showSiteView);
 
   // 初始化 Tab
-  initWorkshopTabs(host, refs);
+  initWorkshopTabs(host, refs, page);
 
   // 绑定站点打开事件
-  bindSiteEvents(host);
+  bindSiteEvents(host, page);
 
   // 下载完成后增量刷新创作者头像。幂等注册（ADR-261）：原靠 `state.avatarRefreshRegistered`
   // 布尔标志 + cleanupTransient 手工复位；现交给订阅桶的 addGlobalOnce——key 与全局订阅同寿命，
@@ -173,7 +178,8 @@ export function initWorkshopPage(host: AppContentHost): void {
           found = true;
         }
       });
-      if (!found && host.state.currentSite) showSiteView(host.state.currentSite);
+      const cur = page.getCurrentSite();
+      if (!found && cur) showSiteView(cur);
     }),
   );
 }

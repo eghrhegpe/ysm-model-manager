@@ -10,6 +10,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { AppContentHost } from "@/views/app-content/host.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { BrowseMode } from "./workshop-browse-mode.ts";
+import type { WorkshopPageState } from "./workshop-page-state.ts";
 
 // 扩展 HTMLIFrameElement 以携带加载超时 AbortController（实例级，非模块级）
 declare global {
@@ -87,7 +88,7 @@ function openEmbedded(host: AppContentHost, _site: WorkshopSite, url: string): v
 /**
  * 绑定站点打开相关事件
  */
-export function bindSiteEvents(host: AppContentHost): void {
+export function bindSiteEvents(host: AppContentHost, page: WorkshopPageState): void {
   const root = host.state.root;
 
   // 返回按钮：abort 当前加载 timer + 隐藏浏览器面板
@@ -101,7 +102,7 @@ export function bindSiteEvents(host: AppContentHost): void {
 
   // 打开当前站点
   const openCurrent = (): void => {
-    const cs = host.state.currentSite;
+    const cs = page.getCurrentSite();
     if (cs) {
       swallowError(backendGetApp().then(({ OpenInBrowser }) => OpenInBrowser(cs.url)));
     }
@@ -111,7 +112,7 @@ export function bindSiteEvents(host: AppContentHost): void {
 
   // 🖥️ 窗口模式：在预热 WebView2 窗口中直连打开（ADR-050）
   root.getElementById("ws-win-open")?.addEventListener("click", () => {
-    const cs = host.state.currentSite;
+    const cs = page.getCurrentSite();
     if (cs) {
       // 网页版无 WebView2 预热窗口，回退系统浏览器打开
       if (isWebPlatform()) {

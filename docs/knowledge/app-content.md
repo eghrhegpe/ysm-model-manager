@@ -25,6 +25,7 @@ source_files:
   - frontend/src/views/app-content/host.ts
   - frontend/src/views/app-content/subscription-bucket.ts
   - frontend/src/views/app-content/site/workshop-avatar.ts
+  - frontend/src/views/app-content/site/workshop-page-state.ts
   - frontend/src/views/app-content/site/workshop-tabs.ts
   - frontend/src/views/app-content/site/workshop-site-opener.ts
   - frontend/src/utils/icon/workshop-icons.ts
@@ -43,6 +44,7 @@ auto_fields:
     - contentRepoCSS
     - contentStgCSS
     - contentUtilCSS
+    - createWorkshopPageState
     - createWorkshopRefs
     - creditsHTML
     - diagnosticsHTML
@@ -74,6 +76,7 @@ auto_fields:
     - SubscriptionBucket
     - VIEW_TESTIDS
     - workshopHTML
+    - WorkshopPageState
     - WorkshopRefs
   tests:
     - frontend/src/utils/resource/types.test.ts
@@ -136,7 +139,8 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - `css/content-util.ts` — 回收站动画 / 资源管理器 / 预览拖拽 / 主题选择器 / 响应式 `@media`。
 - 社区数据层（`community-data.ts`，ADR-223 北迁 `features/community/community-data.ts`，经 `community-deps` seam 取绑定）：`loadCommunityData` 首屏快路径（不含磁盘扫描）；`loadLocalAuthors` withCached 5min **STALE** 策略（过期返旧值后台刷新）；`mergeLocalAuthorsInto` 幂等合并（同名去重 + type 分段精确比较）。
 - `workshop-icons.ts` — SVG 图标表 `ICONS` 与 `getSiteIcon` / `getTagIconFromRole`
-- `workshop-site-opener.ts` — 站点打开器：`openSite(host, site, browseMode, targetUrl)` 按模式走 `openEmbedded` / `NavigatePlazaWindow` / `OpenInBrowser`；`targetUrl` 缺省回退 `site.url`；site-view 的 `ctx.openUrl` 须把搜索词链接**透传**给 `openSite`，不得丢弃。
+- `workshop-site-opener.ts` — 站点打开器：`openSite(host, site, browseMode, targetUrl)` 按模式走 `openEmbedded` / `NavigatePlazaWindow` / `OpenInBrowser`；`targetUrl` 缺省回退 `site.url`；site-view 的 `ctx.openUrl` 须把搜索词链接**透传**给 `openSite`，不得丢弃。`bindSiteEvents(host, page)` 经页作用域句柄读当前站点（ADR-263）。
+- **`AppContentState` 字段归属（ADR-262 收尾 / ADR-263）**：容器只收 app 壳层基础设施（`root` / `current` / `pagePanels` / `resizeMove` / `resizeUp`）与两个**有意跨切**的字段——`avatarCache`（写入方是模块级下载队列，比页面长寿，正解是上收 community 层 store，未做）、`workshopTimer`（清理点在 `_render` 开头且**必须早于 `page.init`**，搬进页内无法等效）。页私有的 `currentSite` 已下沉 `site/workshop-page-state.ts`；新增字段前先读 `state.ts` 逐字段注释，别再把页私有状态往里塞。
 
 ## 对外 API / 入口
 

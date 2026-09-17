@@ -17,6 +17,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getSiteIcon } from "@/utils/icon/workshop-icons.ts";
 import type { AppContentHost } from "@/views/app-content/host.ts";
 import type { RepoAuthorLike } from "./site-view.ts";
+import type { WorkshopPageState } from "./workshop-page-state.ts";
 
 /** 创意工坊 Tab 延迟加载毫秒数（等首帧渲染后再异步拉数据） */
 const WS_TAB_LOAD_DELAY_MS = 100;
@@ -46,7 +47,11 @@ export function createWorkshopRefs(): WorkshopRefs {
 /**
  * 初始化创意工坊 Tab
  */
-export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void {
+export function initWorkshopTabs(
+  host: AppContentHost,
+  refs: WorkshopRefs,
+  page: WorkshopPageState,
+): void {
   const root = host.state.root;
 
   // 本地扫描作者的后台补充：首屏渲染不依赖磁盘扫描（曾阻塞 tab 栏秒级~分钟级），
@@ -61,7 +66,7 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
         const localAuthors = await loadLocalAuthors();
         if (localAuthors.length) {
           refs.allCreatorsRef.v = mergeLocalAuthorsInto(refs.allCreatorsRef.v, localAuthors);
-          _showSiteView(host.state.currentSite);
+          _showSiteView(page.getCurrentSite());
         }
       } catch {
         // 补充失败不影响首屏（首屏已可用），静默降级
@@ -81,14 +86,14 @@ export function initWorkshopTabs(host: AppContentHost, refs: WorkshopRefs): void
       refs.repoAuthorsRef.v = (authors || []) as RepoAuthorLike[];
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
-      host.state.currentSite = site;
+      page.setCurrentSite(site);
       safeSet("ysm-ws-last-tab", site.id);
       // tab 切换高亮
       root.querySelectorAll(".repo-tab").forEach((t) => {
         t.classList.remove("active");
       });
       root.querySelector(`[data-tab="${siteType}"]`)?.classList.add("active");
-      _showSiteView(host.state.currentSite);
+      _showSiteView(page.getCurrentSite());
       // 首屏已渲染，后台补充本地扫描作者（STALE 缓存，通常立即返回）
       maybeEnrich();
     } catch (e) {

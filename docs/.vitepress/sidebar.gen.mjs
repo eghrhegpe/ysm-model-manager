@@ -238,6 +238,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-263：创意工坊页状态归属：currentSite 下沉、workshopTimer 留壳、avatarCache 上收",
+        "link": "/adr/ADR-263-currentsite-workshoptimer-avatarcache"
+      },
+      {
         "text": "ADR-262：性能可观测性模型：统一报告 schema、运行时归属与机器出口",
         "link": "/adr/ADR-262-perf-observability-model"
       },

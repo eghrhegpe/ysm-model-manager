@@ -48,7 +48,9 @@
 
 **负面 / 代价**：`addPageOnce` / `addGlobalOnce` 的 key 是**字符串字面量**，拼错即静默退化为「每次都注册」（与不加 Once 等价）——属可接受的弱约束（与 `bus.on` 事件名同级），未引入枚举以避过度设计。
 
-**已知遗留（未下沉，属另一刀）**：`currentSite` / `workshopTimer` / `avatarCache` 仍借宿共享 state，但它们的消费者**跨模块**——`site/workshop-tabs.ts`（读 currentSite、写 workshopTimer）、`site/workshop-site-opener.ts`（读 currentSite）、`site/workshop-avatar.ts`（写 avatarCache）均经 `host.state` 直达。真正的下沉需要给这些模块传入**页面作用域句柄**（`WorkshopPageState`）以替掉整个 `AppContentState`；另加 `workshopTimer` 存在 app 壳层防御性清理（`_render` 开头清，防空跑网络请求），即**有意的跨切生命周期**。待专刀评估。
+**已知遗留（未下沉，已转让）**：`currentSite` / `workshopTimer` / `avatarCache` 仍借宿共享 state，但它们的消费者**跨模块**——`site/workshop-tabs.ts`（读 currentSite、写 workshopTimer）、`site/workshop-site-opener.ts`（读 currentSite）、`site/workshop-avatar.ts`（写 avatarCache）均经 `host.state` 直达。真正的下沉需要给这些模块传入**页面作用域句柄**（`WorkshopPageState`）以替掉整个 `AppContentState`；另加 `workshopTimer` 存在 app 壳层防御性清理（`_render` 开头清，防空跑网络请求），即**有意的跨切生命周期**。
+
+→ **已由 [ADR-263](./ADR-263-currentsite-workshoptimer-avatarcache.md) 接手裁定**（2026-09-17）：该刀结论是三字段**不该一刀切**——`currentSite` 按本段设想下沉为 `WorkshopPageState`（已落地）；`workshopTimer` 的壳层清理被认定为**有意跨切生命周期**、就此固化（不下沉）；`avatarCache` 因写入方（模块级下载队列）比页面长寿，方向应为**上收 community 层 store** 而非下沉（待另一刀）。
 
 ## 4. 数据溯源
 

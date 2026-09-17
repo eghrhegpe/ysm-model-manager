@@ -1,6 +1,6 @@
 // ===== init-workshop（创意工坊页编排入口）单测 =====
 // 覆盖 initWorkshopPage / resetAvatarConfigLoaded：
-//  - 初始化状态装配（currentSite / workshopCache / avatarCache / extractAvatars / tabs 接线）
+//  - 初始化状态装配（页作用域 currentSite / workshopCache / avatarCache / extractAvatars / tabs 接线）
 //  - showSiteView 闭包 ctx：openUrl 透传、setBrowseMode 单源 ref、backToSite、reRender cleanup 次序
 //  - avatar:refresh 订阅：命中卡片更新 img.src、未命中重渲染、重复 dataUri 提前返回、单 host 注册守卫
 //  - config-loaded 事件重提取 + 模块级注册守卫 + resetAvatarConfigLoaded 复位
@@ -52,6 +52,7 @@ import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
 import { flushPromises } from "@/test-utils/index.ts";
 import type { AppContentHost } from "./host.ts";
+import type { WorkshopPageState } from "./site/workshop-page-state.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
 /** vi.fn() 未显式标注入参时 mock.calls 元组推断为空，统一经 unknown[] 取参 */
@@ -68,11 +69,9 @@ function lastCallArgs(mock: unknown): unknown[] {
 interface MockHost {
   state: {
     root: HTMLElement;
-    currentSite: unknown;
     avatarCache: Record<string, string>;
     workshopCache: Map<string, unknown> | null;
     githubCache: unknown;
-    workshopTimer: unknown;
     avatarRefreshRegistered: boolean;
   };
   /** 真订阅桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs */
@@ -93,11 +92,9 @@ function makeHost(cardsHTML = "") {
   const raw: MockHost = {
     state: {
       root: el,
-      currentSite: null,
       avatarCache: {},
       workshopCache: null,
       githubCache: null,
-      workshopTimer: null,
       avatarRefreshRegistered: false,
     },
     // 真桶（ADR-260）：页内异步清理经 subs.addPage 登记，测试直接观察 pageUnsubs
@@ -114,6 +111,16 @@ function getShowSiteView(): (site: unknown) => void {
   return call[0] as (site: unknown) => void;
 }
 
+/**
+ * 取 initWorkshopPage 创建的页作用域句柄（ADR-262）。
+ * 它是页私有对象，不再挂在 host.state 上——测试经 initWorkshopTabs 的实参拿到它，
+ * 这同时验证了「同一实例必须下传给 tabs」这条单源契约。
+ */
+function getPageState(): WorkshopPageState {
+  const call = initWorkshopTabs.mock.calls.at(-1);
+  if (!call) throw new Error("initWorkshopTabs 未被调用");
+  return call[2] as WorkshopPageState;
+}
 const createdHosts: Array<MockHost> = [];
 
 beforeEach(() => {
@@ -136,11 +143,13 @@ const site = { id: "github", url: "https://github.com/", label: "GitHub" } as un
 const site2 = { id: "bilibili", url: "https://bilibili.com/", label: "B站" } as unknown as WorkshopSite;
 
 describe("initWorkshopPage — 初始化装配", () => {
-  it("状态装配：currentSite 置空、workshopCache/avatarCache 初始化、子模块接线", () => {
+  it("状态装配：页作用域 currentSite 置空、workshopCache/avatarCache 初始化、子模块接线", () => {
     const { host, raw } = makeHost();
     initWorkshopPage(host);
 
-    expect(raw.state.currentSite).toBeNull();
+    // ADR-262：currentSite 已下沉到页作用域（不再借宿 AppContentState）——
+    // 装配后初始为空，且结构性不可在共享 state 上访问到（后者已无该字段，故此处不断言）
+    expect(getPageState().getCurrentSite()).toBeNull();
     expect(raw.state.workshopCache).toBeInstanceOf(Map);
     expect(raw.state.avatarCache).toEqual({});
     expect(extractAvatars).toHaveBeenCalledWith(host);
@@ -148,7 +157,11 @@ describe("initWorkshopPage — 初始化装配", () => {
     expect(callArgs(initWorkshopTabs, 0)[0]).toBe(host);
     // createWorkshopRefs 生成的单源 ref 原样传给 tabs（同实例约定）
     expect(callArgs(initWorkshopTabs, 0)[1]).toBe(createWorkshopRefs.mock.results[0]!.value);
-    expect(bindSiteEvents).toHaveBeenCalledWith(host);
+    // 同一个页作用域句柄也必须原样传给 tabs 与 opener（同实例约定，ADR-262）
+    const page = callArgs(initWorkshopTabs, 0)[2];
+    expect(page).toBe(getPageState());
+    expect(callArgs(bindSiteEvents, 0)[0]).toBe(host);
+    expect(callArgs(bindSiteEvents, 0)[1]).toBe(page);
     expect(setShowSiteView).toHaveBeenCalledTimes(1);
     expect(typeof callArgs(setShowSiteView, 0)[0]).toBe("function");
   });
@@ -214,16 +227,16 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     expect(openSite).toHaveBeenLastCalledWith(host, site, "embed", "https://x/y");
   });
 
-  it("ctx.backToSite：有 _currentSite → 用它重渲染；无 → 不渲染", () => {
-    const { host, raw } = makeHost();
+  it("ctx.backToSite：有 currentSite → 用它重渲染；无 → 不渲染", () => {
+    const { host } = makeHost();
     initWorkshopPage(host);
     getShowSiteView()(site);
     const ctx = lastCallArgs(renderSiteView)[1] as any;
 
-    ctx.backToSite(); // _currentSite 仍为 null
+    ctx.backToSite(); // currentSite 仍为 null
     expect(renderSiteView).toHaveBeenCalledTimes(1);
 
-    raw.state.currentSite = site2;
+    getPageState().setCurrentSite(site2);
     ctx.backToSite();
     expect(renderSiteView).toHaveBeenCalledTimes(2);
     expect(callArgs(renderSiteView, 1)[0]).toBe(site2);
@@ -274,10 +287,10 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     raw.subs.cleanupPage();
     await flushPromises();
     expect(token).toHaveBeenCalledTimes(1);
-    expect(args[3]).toBe(raw.state.currentSite);
+    expect(args[3]).toBe(getPageState().getCurrentSite());
     expect(args[4]).toBeTypeOf("function");
     (args[4] as (site: unknown) => void)("site-token");
-    expect(raw.state.currentSite).toBe("site-token");
+    expect(getPageState().getCurrentSite()).toBe("site-token");
     expect(args[5]).toBe("o/r");
     expect(args[6]).toEqual(models);
     expect(args[7]).toBe("raw");
@@ -314,16 +327,16 @@ describe("initWorkshopPage — avatar:refresh 订阅", () => {
     bus.emit("avatar:refresh", { author: "bob", dataUri: "X" });
     expect(qsa).toHaveBeenCalledTimes(1);
 
-    // 未命中卡片 + _currentSite 为 null → 不触发重渲染
+    // 未命中卡片 + currentSite 为 null → 不触发重渲染
     bus.emit("avatar:refresh", { author: "carol", dataUri: "Y" });
     expect(renderSiteView).not.toHaveBeenCalled();
     qsa.mockRestore();
   });
 
-  it("未命中卡片但有 _currentSite → showSiteView 重渲染当前站点", () => {
-    const { host, raw } = makeHost();
+  it("未命中卡片但有 currentSite → showSiteView 重渲染当前站点", () => {
+    const { host } = makeHost();
     initWorkshopPage(host);
-    raw.state.currentSite = site;
+    getPageState().setCurrentSite(site);
     getShowSiteView()(site); // 先渲染一次，占位
     renderSiteView.mockClear();
 

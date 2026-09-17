@@ -41,6 +41,16 @@ export const contentStgCSS: string = `
   color: var(--muted);
   padding: 2px 0 0 0;
 }
+/* .stg-desc：设置页「正文段落」原语（比 .stg-hint 大一号、行高更松，用于节级导语 / 卡片正文）。
+   立类因：内联 'font-size:var(--fs-sm);color:var(--muted);line-height:1.7' 配方曾在 4 处复制
+   （解析 tab 导语 + 关于页三张卡）——无单一来源，且裸 div 拿不到入场动画。
+   只管排版，不带 margin/动画：作为顶层条目时应包进 .settings-group（供 12px 下间距 + 入场动画），
+   在卡片内则直接用作正文（不重复动画——卡已入场）。 */
+.stg-desc {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  line-height: 1.7;
+}
 /* ⚠️ 已废弃（勿用）：与 .section-title 叠加得 32px 双重上间距。
    .section-title 自带 padding-top:16px，再叠 margin-top:16px = 双份。
    设置页改用 .section-title 单供间距（A 式）；无标题组用 .stg-section（B 式）。

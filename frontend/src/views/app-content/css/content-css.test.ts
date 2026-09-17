@@ -72,6 +72,17 @@ describe("设置页组间距契约（content-stg）", () => {
     expect(contentLayoutCSS).toMatch(/\.section-title\s*\{[^}]*animation:\s*fadeSlideUp/);
   });
 
+  it(".stg-desc 为正文段落唯一原语（字号/行高/颜色单点，不带 margin/动画）", () => {
+    // 该配方曾内联复制 4 次（解析 tab 导语 + 关于页三张卡）。只声明排版：
+    // 顶层条目靠包进 .settings-group 取 12px 下间距 + 入场动画；卡片内直接用作正文（不重复动画）。
+    const block = contentStgCSS.match(/\.stg-desc\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(block).toMatch(/font-size:\s*var\(--fs-sm\)/);
+    expect(block).toMatch(/color:\s*var\(--muted\)/);
+    expect(block).toMatch(/line-height:\s*1\.7/);
+    expect(block).not.toMatch(/margin/);
+    expect(block).not.toMatch(/animation/);
+  });
+
   it(".stg-sub-title 不再叠加 margin-top（防与 .section-title 双重 16px）", () => {
     // 历史 bug：「字体与布局」「3D 预览」「鸣谢」同时挂 .section-title + .stg-sub-title，
     // .section-title 的 padding-top:16px 与 .stg-sub-title 的 margin-top:16px 叠加 = 32px。

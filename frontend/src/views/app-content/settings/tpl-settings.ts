@@ -366,9 +366,11 @@ function renderStgPreview3d(): string {
 
 function renderStgParserWorkers(): string {
   return `<div class="section-title stg-title">${UI_ICONS.parser} ${t("settings.parser")}</div>
-<div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7;margin-bottom:12px">${t("settings.parserDesc")}</div>
-
 <div class="settings-group" style="animation-delay:0ms">
+  <div class="stg-desc">${t("settings.parserDesc")}</div>
+</div>
+
+<div class="settings-group" style="animation-delay:60ms">
   <div class="setting-row">
     <span class="label">${UI_ICONS.parser} ${t("settings.preview3d.fbxWorker")}</span>
     <label class="stg-label" style="gap:8px">
@@ -378,7 +380,7 @@ function renderStgParserWorkers(): string {
   <div class="stg-hint">${t("settings.preview3d.fbxWorkerHint")}</div>
 </div>
 
-<div class="settings-group" style="animation-delay:60ms">
+<div class="settings-group" style="animation-delay:120ms">
   <div class="setting-row">
     <span class="label">${UI_ICONS.parser} ${t("settings.preview3d.mmdWorker")}</span>
     <label class="stg-label" style="gap:8px">

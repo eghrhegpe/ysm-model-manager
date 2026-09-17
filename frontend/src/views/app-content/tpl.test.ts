@@ -180,6 +180,9 @@ describe("app-content 模板", () => {
     const uiTab = html.slice(html.indexOf("<!-- stg-tab-ui -->"), html.indexOf("<!-- /stg-tab-ui -->"));
     expect(uiTab).not.toContain("set-fbx-worker");
     expect(uiTab).not.toContain("set-mmd-worker");
+    // 正文段落原语：禁止再内联复制 `color:var(--muted);line-height:1.7` 配方（应写 class="stg-desc"）
+    expect(html).not.toContain("color:var(--muted);line-height:1.7");
+    expect(html).toContain('class="stg-desc"');
     // 桌面模式不显示网页版 FSA 授权卡片
     expect(html).not.toContain("web-repo-auth-btn");
   });  it("diagnosticsHTML 包含诊断 Tab 与面板", () => {

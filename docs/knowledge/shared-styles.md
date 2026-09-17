@@ -76,6 +76,7 @@ status: active
 - **`--bg2` 幽灵变量**（P3 观察）：`app-tree-styles.ts` `.adv-filter` 消费 `var(--bg2)` 全库无定义（content-css.ts 已用 `var(--bg2,transparent)` fallback 佐证）——计算值失效静默降级，待定义或补 fallback
 - **@keyframes 不穿 Shadow DOM 边界**（2026-08-24 铁律，区别于 CSS 变量）：CSS 自定义属性可跨界上溯/下穿 shadow，但 `@keyframes` 只能在其定义的同一 shadow 树（或 document 层 light DOM）内被 `animation` 引用生效。任何 Shadow DOM 组件若 `animation: <name>` 引用一个仅定义在 `frontend/css/components.css`（全局 `<link>`，document 层）的 keyframe，则该动画**静默失效**（`getAnimations()` 返回 0，无动画不破功能故长期潜伏）。修复范式：把所需 keyframe 复制进该 shadow 层的 CSS 源（如 `contentLayoutCSS` / `sidebar-css.ts`），全局副本保留给 light DOM 的 dialog 用。机检 `scripts/css-layer-check.ts`（pre-push 阻断）已覆盖此断言
 - **注释体内误写闭合符会吞掉紧随的 `@keyframes`**（2026 实测新坑，比上一条更隐蔽）：块注释按「首个星号+斜杠」闭合。若注释正文里再写该组合（例：`fadeSlide*/breathe-subtle`、`.dlg-*/.afv-*`），注释提前结束，其后文本成为裸 CSS → 解析器将其当作选择器、并**吞掉紧随的第一个 `{...}` 块**。实测后果：`content-layout.ts` 注释写成 `fadeSlide*/breathe-subtle`，吞掉紧随的 `@keyframes fadeSlideUp`，导致 app-content 全 shadow 的入场动画（`.stg-card`/`.settings-group`/`.setting-row`/`.gh-card`/`recy-item`… 均用 `fadeSlideUp`）**静默失效**——`getComputedStyle().animationName` 仍显示 `fadeSlideUp`（声明解析成功），但 `getAnimations()` 为 0、无 `animationstart`；只有定义在破注释**之前**的旧 keyframe（`card-in`/`pageIn`）还能播，造成「只有旧动画能播」的假象。判据：按首闭合语义剥注释后不应残留游离闭合符。机检 `scripts/css-layer-check.ts` 检查 5（pre-push 阻断）+ `content-css.test.ts` 单测双锁定
+- **同在模板串内的 CSS 注释不得含反引号**（写 `.stg-desc` 注释时实测撞上）：shadow CSS 以 TS 模板串承载，注释里的反引号会**提前终止模板串**，esbuild 报 `Expected ";" but found "font"`。与上一条的区别：反引号是**响亮失败**（构建期即红），`*/` 是静默失效——所以只需人记住，无需门禁。引用配方请用单引号。
 
 ## 相关
 

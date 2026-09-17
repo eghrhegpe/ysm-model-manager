@@ -36,7 +36,7 @@ export function aboutHTML(): string {
 <div style="display:flex;gap:12px;margin-bottom:12px">
   <div style="flex:2;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:60ms">
     <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.tools} ${t("about.features")}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
+    <div class="stg-desc">
       <b>${t("about.appName")}</b> ${t("about.intro")}
       <br><br>
       ✅ ${t("about.f1")}<br>
@@ -51,7 +51,7 @@ export function aboutHTML(): string {
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:90ms">
     <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.gem} ${t("about.techStack")}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
+    <div class="stg-desc">
       <div>${UI_ICONS.bullet} ${t("about.tech1")}</div>
       <div>${UI_ICONS.bullet} ${t("about.tech2")}</div>
       <div>${UI_ICONS.bullet} Web Components + Shadow DOM</div>
@@ -75,7 +75,7 @@ export function aboutHTML(): string {
 
   <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:150ms">
     <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.hint} ${t("about.quickStart")}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.7">
+    <div class="stg-desc">
       <div>1. ${t("about.qs1")}</div>
       <div>2. ${t("about.qs2")}</div>
       <div>3. ${t("about.qs3")}</div>

@@ -39,7 +39,7 @@ import {
   setActiveInputSession,
   startGlobalRenderLoop,
 } from "@/preview-3d/infra/render-loop.ts";
-import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
+import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import { makeUnifiedPickHandler } from "@/preview-3d/infra/unified-pick.ts";
 import {
@@ -1014,7 +1014,14 @@ function recoverMountFailure(ctx: MountCtx, loadingEl: HTMLElement, e: unknown):
   if (infra && session.sceneBaseline) {
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
-    for (const c of stale) infra.scene.remove(c);
+    // [P1 对齐] 与 switch-preview 的 keep 失败分支（switch-preview.ts:289-290）保持一致：
+    // 半成品子树只从 scene 摘除而不释放 → geometry/material 常驻 GPU。`adapter.build` 在
+    // `scene.add` 之后才抛错的形态（如 MMD alloc 失败）必然命中此路径，且它没有自愈机会
+    // （内容层未生成、不会重建同内容），故必须在此把资源一并收走。
+    for (const c of stale) {
+      infra.scene.remove(c);
+      disposeObject3D(c);
+    }
   }
   for (const b of session.allContent) safeDispose(b);
   session.allContent.length = 0;

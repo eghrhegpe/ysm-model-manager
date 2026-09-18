@@ -1208,4 +1208,31 @@ describe("会话存活守卫：两条件版语义核实（防未来误『修复�
       cleanupPreview();
     }
   });
+
+  it("[P1] build 抛错时半成品子树须连 GPU 资源一起释放（对齐 switch 的 keep 失败分支）", async () => {
+    // 参照实现 switch-preview.ts:289-290 的 keep 失败分支是「remove + disposeObject3D」；
+    // recoverMountFailure 原先只 remove → 「scene.add 之后才抛错」的半成品子树泄漏 geometry/material。
+    const geo = new THREE.BufferGeometry();
+    const mat = new THREE.MeshBasicMaterial();
+    const geoDispose = vi.spyOn(geo, "dispose");
+    const matDispose = vi.spyOn(mat, "dispose");
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const adapter: PreviewAdapter = {
+        id: "vrm",
+        build: vi.fn(async (buildCtx: PreviewBuildCtx) => {
+          buildCtx.scene!.add(new THREE.Mesh(geo, mat)); // 半成品先进 scene 再抛错
+          throw new Error("build boom");
+        }),
+      };
+      await mount3D(adapter, "/m/partial.vrm");
+      // 反向验证：注释掉 recoverMountFailure 里的 disposeObject3D(c) 即归零
+      expect(geoDispose).toHaveBeenCalledTimes(1);
+      expect(matDispose).toHaveBeenCalledTimes(1);
+    } finally {
+      errSpy.mockRestore();
+      cleanupPreview();
+    }
+  });
+
 });

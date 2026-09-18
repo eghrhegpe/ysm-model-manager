@@ -58,7 +58,7 @@
 ## 五、待确认
 
 1. **conflicts 的 rtype 下拉来源**：~~`conflicts.ts:302-307`（及 `:344`）用 `RESOURCE_TYPE_LABELS`（自 `resource_types.json` 的 `name` 派生，`utils/resource/types.ts:34-38`）建选项，而 perf 两个 tab 用 `populatePerfTargetOptions`（走 Go registry 服务）。二者是否**选项集合与顺序等价**（registry 返回值是否等于 `allResourceTypes` 的 id 集合）我无法从代码判定。若要切 registry，会引入异步填充 + 默认值回落（`perf-matrix-render.ts:261-294` 已有该逻辑可复用）——需先确认「同一个下拉的两种数据源」是否算债。~~ **已关闭（2026-09-18）**：审计核实两源最终都派生自 `resource_types.json`（前端不自行判类型），**不构成单一事实源违规**，只是**展示层派生分叉**（顺序：conflicts 声明序 vs perf 字典序；能力：perf 有 tooltip/异步重填，conflicts 无）。拍板 **方案①**：新建叶模块 `option-rows.ts|optionRows`（跨子域原语，同 status-row/web-gate 取舍），两个下拉都改调它取「id→label→`<option>`」统一构造；**顺序各保留现现状**（零视觉变化）；conflicts 顺带获得 tooltip 构造位（当前不产出，与现状逐字一致）。未做方案②（统一字典序）——那会让 `#sync-rtype` 默认选中从「声明序首项」漂移且重排选项，属需另拍的视觉决策。
-2. **`dedup-render.ts:36` 换 `formatBytes` 后 0 字节重复组的展示**：我已核实 Go 侧按内容 hash 分组（`go/dedup/dedup.go:245-272`）→ 空文件必然成组且 `Size: 0`。是否接受「0 B」（需自建兜底）还是接受空白，需要拍板（我推荐「`formatBytes` 返回空串时回落为 `<size> B`」）。
+2. **`dedup-render.ts:36` 换 `formatBytes` 后 0 字节重复组的展示**：~~我已核实 Go 侧按内容 hash 分组（`go/dedup/dedup.go:245-272`）→ 空文件必然成组且 `Size: 0`。是否接受「0 B」（需自建兜底）还是接受空白，需要拍板（我推荐「`formatBytes` 返回空串时回落为 `<size> B`」）。~~ → **已关闭（2026-09-18）：按推荐采用「回落 `<size> B`」。**
 3. **`init.ts` 复制通路的三态 toast 设计**：现实现「execCommand 也失败仍报已复制」（`init.ts:128-136`）——我判断这是缺陷，但改它需要确定降级成功 / 彻底失败两种文案（现有 `diagnostics.copiedLog` / `copiedLogPrivacy` 是否有失败态键，我未逐键核对三语包）。
 4. **e2e 是否直接依赖两族状态行 class**：我只核到单元测试锚点（`conflicts.test.ts:284,452`、`perf.test.ts:238,306,459,582,605`）。`e2e/diagnostics.spec.ts` 有 20+ 用例，我按关键字检索未见 `diag-msg-*` / `.diag-stat-error` 选择器，但**未逐行通读**；动 C13 前需要完整核一遍。
 5. **`webGate` 单点归属**：~~`perf-common.ts` 是事实共享层但文件名带 perf 语义，`conflicts.ts` 从它 import 一个「网页版门禁」有命名异味。备选：新建 `diagnostics/ui-common.ts`，或放已托管 `EscFn` 的 `logs.ts`。属归属决策（ADR-040 的切文件线怎么续），需你定。~~ **已关闭（2026-09-18）**：落定为独立叶模块 `web-gate.ts`，与 `copy-toast.ts`（C5）/ `status-row.ts`（C13）共同构成「跨子域页级共享原语一律单独立叶」体系；`perf-common.ts` 仍稳守 perf 面板内部共享，`logs.ts` 仍守 `EscFn`。消费端实证：`webGate` 被 perf 族 3 处 + conflicts 2 处共用（跨域必要，放 perf-common 反成跨域异味）。三个叶模块互为佐证、头注互相引用同一取舍，命名体系自洽。判据满足，无残留改动。
@@ -80,7 +80,7 @@
 | C8 isNum | ✅ 已落地 | `guards.ts|isNum` 单点；perf-scan-bench 删本地 `isNum`、perf-concurrent 弃本地 `isFiniteNumber` 全数改名 `isNum`（残留仅 guards.ts 注释） |
 | C9 雷达占位 | ✅ 已落地 | conflicts 内联 `scan-radar-wrap`（原 :200）改调 `dgCfRenderRadarPlaceholder`，两处逐字复制消除 |
 | C10 strategyLabels | ✅ 已落地 | `RESOLVE_STRATEGIES` 单一事实源（token→labelKey）+ `resolveStrategyLabel` 兜底 + 下拉 option 与默认值三者同源 |
-| C11 formatBytes | ⏳ 待核实 | `format.ts|formatBytes` 存在；dedup-render.ts:36 是否已改用未核 |
+| C11 formatBytes | ✅ 已落地（含 0 字节兜底） | dedup-render.ts per-file 大小行改 `formatBytes(e.size) || `${e.size} B``；0 字节回落 `0 B`（#2 拍板）；500B 由误显「0KB」更正为「500 B」 |
 | C12 formatClock | ⛔ 未落地 | 无 `formatClock`；logs 与 perf-trace 两份 `{hour,minute,second}` 仍在 |
 | C13 status-row | ⚠️ 部分 | `status-row.ts|msgRowHTML/statRowHTML` 已建并被 logs/health/dedup/dedup-scan/conflicts 大量调用；但 conflicts.ts:363-405 解决结果行仍手写 `document.createElement` + `stat-row diag-msg success/error` |
 
@@ -89,7 +89,7 @@
 - **#3 三态 toast —— 大部分已被 C6 消化**：`copyWithToast` 已按 `copyText.ok` 分成功/失败，失败走 `diagnostics.copyFail`（不再谎报）；「降级成功 vs 彻底失败」两态是否再细分成文案，可视为独立微调，优先级低。
 
 ### 剩余动作（按优先级）
-1. ✅ **#6 → C7 降级「不动」**（已关闭）+ ✅ **C8/C9/C10 已收敛落地**（2026-09-18）。
-2. **#2 拍板 + C11**：`dedup-render.ts:36` 是否接受「`formatBytes` 空串时回落 `<size> B`」（荐）或空白。定后一起做 C11。
-3. **C12 / C13 残余 / C6 收尾**：`formatClock` 单点、conflicts:363-405 解决行改走 `msgRowHTML`、init 两函数内部核实收尾 — 均为零风险纯重构，次批执行。
+1. ✅ **#6 → C7 降级「不动」**（已关闭）+ ✅ **C8/C9/C10 已收敛落地** + ✅ **#2 拍板 + C11 已落地**（2026-09-18）。
+2. **C12 / C13 残余 / C6 收尾**：`formatClock` 单点、conflicts:363-405 解决行改走 `msgRowHTML`、init 两函数内部核实收尾 — 均为零风险纯重构，次批执行。
+3. **#3 / C6 文案微调**：`copyWithToast` 失败态文案是否再细分「降级成功 vs 彻底失败」，优先级低。
 4. **C11/C2/C6 待核实项**：如需全量闭环，补一次精确 grep 定案。

@@ -4,6 +4,7 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { formatBytes } from "@/utils/format/format.ts";
 import { fileIcon } from "@/utils/icon/icon.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
@@ -34,7 +35,7 @@ function renderGroupFilesHtml(
 <span class="diag-dedup-file-name-text" title="${t("common.viewDetail", { name: esc(e.path) })}" data-path="${esc(e.path)}"><span class="diag-dedup-file-ic">${fileIcon(e.name)}</span>${renderDisplayName(e.name)}</span>
 <span class="diag-dedup-file-dir">${UI_ICONS.folder} ${esc(dir)}</span>
 </span>
-<span class="diag-dedup-file-size">${(e.size / 1024).toFixed(0)}KB</span>
+<span class="diag-dedup-file-size">${formatBytes(e.size) || `${e.size} B`}</span>
 ${dateStr ? `<span class="diag-dedup-file-date">${dateStr}</span>` : ""}
 ${isDefault ? `<span class="diag-dedup-recommend">${t("diagnostics.recommended")}</span>` : ""}
 </label>`;

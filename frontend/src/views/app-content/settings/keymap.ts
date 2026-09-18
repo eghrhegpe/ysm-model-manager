@@ -78,11 +78,14 @@ function tdRenderKeymap(root: ShadowRoot): void {
   TD_ACTIONS.forEach(({ key, label }) => {
     // 每张键位 = 一张工厂小卡（hdr=方向名，body=当前键按钮），平铺在 stg-grid 容器，
     // 对齐基础设置「路径配置」卡组合——自包含、可组合、不浪费整行宽度。
-    const btnHtml = `<button class="btn-base sm" style="min-width:${KEY_BTN_MIN_WIDTH};width:100%">${tdKeyLabel(km[key])}</button>`;
+    const btnHtml = `<button class="btn-base sm" style="min-width:${KEY_BTN_MIN_WIDTH};width:100%"></button>`;
     const card = document.createElement("div");
     card.innerHTML = stgCard("", label, btnHtml, { header: { titleSize: "base" } });
     const btn = card.querySelector("button");
     if (!btn) return;
+    // 按键标签经 textContent 回填（非 innerHTML 插值）：km[key] 来自 localStorage，
+    // 若被污染可携带任意 HTML/JS（tdKeyLabel 对未知值原样透传）——textContent 零注入面
+    btn.textContent = tdKeyLabel(km[key]);
     btn.addEventListener("click", () => {
       // 取消上一次未完成的捕获，保证同一时刻仅一个
       cleanupKeymap();

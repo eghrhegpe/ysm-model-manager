@@ -646,6 +646,7 @@ auto_fields:
     - repetitionScore
     - reportPatchIssue
     - RepresentativeSnapshot
+    - requireSharedInfra
     - resetEncoderState
     - resetEnvState
     - resetLoopState

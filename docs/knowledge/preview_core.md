@@ -190,6 +190,7 @@ auto_fields:
     - readWebFile
     - removeOwnHandle
     - RenderVrmBonePanel
+    - requireSharedInfra
     - resetSceneInfra
     - resolveMmdZipConfig
     - resolveVmdBindings

@@ -78,27 +78,21 @@ func runConcurrentBench(ctx *CmdContext) error {
 		return newRuntimeErrf("未找到任何模型")
 	}
 
-	// 过滤 YSM 模型
-	var ysmModels []string
-	for _, e := range entries {
-		ext := strings.ToLower(filepath.Ext(e.Path))
-		if ext == ".ysm" {
-			ysmModels = append(ysmModels, e.Path)
-		}
+	// 只取 CLI 可分析的模型（归属归 classifyForScan、可分析性归 perfTypeManifest，单点在 perf_targets.go）：
+	// 本命令调 AnalyzeBedrockModel，类型不在分析链路上时拿到空模型、各阶段耗时全是空数据。
+	//
+	// 2026-09-18 收编（ADR-262 D3）：原实现取 `ext == ".ysm"`（ADR 漏记的又一张表），
+	// 且无 .ysm 命中时**退化为取任意条目**——把 PMX/VRM 喂进分析链路。
+	// 现在无可用模型时如实报错，不用空数据凑出一份看起来成功的报告。
+	benchModels := pickCliAnalyzable(entries)
+	if len(benchModels) == 0 {
+		return newRuntimeErrf("未找到 CLI 可分析的模型（仅 .ysm 及其容器/解包目录形态在 CLI 分析链路上）")
+	}
+	if len(benchModels) > *maxModels {
+		benchModels = benchModels[:*maxModels]
 	}
 
-	if len(ysmModels) == 0 {
-		for _, e := range entries {
-			ysmModels = append(ysmModels, e.Path)
-			if len(ysmModels) >= *maxModels {
-				break
-			}
-		}
-	} else if len(ysmModels) > *maxModels {
-		ysmModels = ysmModels[:*maxModels]
-	}
-
-	fmt.Printf("   测试模型数: %d\n", len(ysmModels))
+	fmt.Printf("   测试模型数: %d\n", len(benchModels))
 	fmt.Println()
 
 	// 2. 串行测试
@@ -106,9 +100,9 @@ func runConcurrentBench(ctx *CmdContext) error {
 	fmt.Println("📊 Phase 1: 串行模型分析")
 	fmt.Println(strings.Repeat("-", 70))
 
-	serialResult := benchSerialAnalyze(ctx.App, ysmModels)
+	serialResult := benchSerialAnalyze(ctx.App, benchModels)
 	fmt.Printf("   串行耗时: %.2fms\n", float64(serialResult.Duration.Microseconds())/1000)
-	fmt.Printf("   平均/模型: %.2fms\n", float64(serialResult.Duration.Microseconds())/1000/float64(len(ysmModels)))
+	fmt.Printf("   平均/模型: %.2fms\n", float64(serialResult.Duration.Microseconds())/1000/float64(len(benchModels)))
 
 	// 3. 并行测试
 	fmt.Println()
@@ -123,7 +117,7 @@ func runConcurrentBench(ctx *CmdContext) error {
 	}
 
 	for _, wc := range workerCounts {
-		result := benchParallelAnalyze(ctx.App, ysmModels, wc)
+		result := benchParallelAnalyze(ctx.App, benchModels, wc)
 		if result.Duration > 0 {
 			result.Speedup = float64(serialResult.Duration) / float64(result.Duration)
 		}

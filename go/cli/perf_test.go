@@ -235,23 +235,50 @@ func TestGenerateSnapshotSummary(t *testing.T) {
 	}
 }
 
+// TestScanFirstModel 「首个模型」= CLI 可分析目标集的首个（ADR-262 D3 收编，2026-09-18）。
+//
+// 原断言是「跳过 .txt 命中 .vrm」——那是**锁住了一个诚实缺陷**：.vrm 的解析器只在前端
+// 3D adapter，CLI 拿到是空模型；而本函数的两个消费方（`resolveTargetModel`、`health --bench`）
+// 都直接把返回值喂进 `runSingleModelBench` → 产出「空模型数据当实测」（D3/D8 红线）。
+// 现实现 = `scanBenchTargets` 的空 rtype 形态（发现权 scanner / 归属 classifyForScan /
+// 可分析性 perfTypeManifest），不再自持扩展名白名单。
+//
+// ⚠️ 随之而来的语义变化：发现权归 `scanner.ScanEntries` 后，本函数**继承其目录缓存**
+// （TTL 内同目录复用上次结果，文件变更由 `InvalidatePath` 显式失效）——原实现的直读 Walk 无缓存。
+// 命令级调用（每次进程内各调一次）无实际影响；但**同一目录必须先落盘再调用**，
+// 故本用例的两个场景各用独立 root（各自独立缓存键），不共享一个目录反复追加文件。
 func TestScanFirstModel(t *testing.T) {
 	t.Parallel()
 	if got := scanFirstModel(""); got != "" {
 		t.Errorf("空 root 应返回空, got %q", got)
 	}
-	root := t.TempDir()
-	if got := scanFirstModel(root); got != "" {
+
+	// 场景 1：空目录 → 空
+	inert := t.TempDir()
+	if got := scanFirstModel(inert); got != "" {
 		t.Errorf("空目录应返回空, got %q", got)
 	}
-	want := filepath.Join(root, "b.vrm")
-	if err := os.WriteFile(filepath.Join(root, "a.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+
+	// 场景 2：只含 CLI 不可分析类型（.vrm）与无关扩展名（.txt）→ 空（不得喂空模型当实测）
+	unanalyzable := t.TempDir()
+	for _, name := range []string{"a.txt", "b.vrm"} {
+		if err := os.WriteFile(filepath.Join(unanalyzable, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := os.WriteFile(want, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+	if got := scanFirstModel(unanalyzable); got != "" {
+		t.Errorf("只含 CLI 不可分析类型时应返回空, got %q", got)
 	}
-	if got := scanFirstModel(root); got != want {
-		t.Errorf("应跳过 .txt 命中 .vrm: got %q", got)
+
+	// 场景 3：含可分析模型 → 命中它（不可分析的那两个不得抢先）
+	mixed := t.TempDir()
+	for _, name := range []string{"a.txt", "b.vrm", "c.ysm"} {
+		if err := os.WriteFile(filepath.Join(mixed, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := filepath.Join(mixed, "c.ysm")
+	if got := scanFirstModel(mixed); got != want {
+		t.Errorf("应命中 CLI 可分析的 .ysm: got %q want %q", got, want)
 	}
 }

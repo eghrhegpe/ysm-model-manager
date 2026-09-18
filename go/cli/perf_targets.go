@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/scanner"
+	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -67,6 +68,33 @@ func rtypeDisplayName(rtype string) string {
 // cliAnalyzable 查询类型是否具备 CLI 分析链路（未登记即不可分析）。
 func cliAnalyzable(rtype string) bool {
 	return perfTypeManifest[rtype].CliAnalyzable
+}
+
+// cliAnalyzablePath 判定某路径是否属于 CLI 可分析的模型（ADR-262 D3 收编，2026-09-18）。
+//
+// 这是「这个文件 CLI 能不能真分析」的**单点答案**，由两个既有事实源组合而成：
+// 归属 = `classifyForScan`（三段口径 location > extension > container，flow.go）、
+// 可分析性 = `perfTypeManifest` / `cliAnalyzable`（本文件）。
+//
+// 立因：这问题原先在四处各写一份扩展名白名单（并发基准 `.ysm` 过滤、`scanFirstModel|allowedExts`、
+// gui-flow 首模型 `ext == ".ysm"`），其中 `scanFirstModel` 把 `.vrm/.gltf/.litematic` 也算「模型」
+// ——这些类型的解析器只在前端 3D adapter，CLI 拿到是空模型，喂进基准即「空模型数据当实测」。
+// 故本谓词同时承担去重与诚实两条职责：不新建表，只删表。
+func cliAnalyzablePath(path, ext string, reg *registry.ResourceTypeRegistry) bool {
+	return cliAnalyzable(classifyForScan(path, ext, reg))
+}
+
+// pickCliAnalyzable 从已扫描条目里挑出 CLI 可分析的模型路径：
+// 保持扫描序（排序/截断由调用方决定，本函数不做隐式重排，也不臆断「首选什么类型」）。
+func pickCliAnalyzable(entries []types.ModelEntry) []string {
+	reg := registry.LoadRegistry()
+	out := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if cliAnalyzablePath(e.Path, strings.ToLower(filepath.Ext(e.Path)), reg) {
+			out = append(out, e.Path)
+		}
+	}
+	return out
 }
 
 // scanBenchTargets 按资源类型扫描基准目标集：发现 → 类型过滤 → 确定性排序 → 取前 N。

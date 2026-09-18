@@ -18,7 +18,6 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
-	"ysm-model-manager/go/types/registry"
 )
 
 func init() {
@@ -570,30 +569,26 @@ func generateSnapshotSummary(bench *singleBenchJSON, cache *cacheStatsJSON, form
 	return strings.Join(parts, " | ")
 }
 
-// scanFirstModel 扫描文件根目录获取第一个模型路径
+// scanFirstModel 取文件根目录下「首个可基准模型」的路径；无则以空串如实告知。
+//
+// 实现 = `scanBenchTargets` 的空 rtype 形态（"所有 CLI 可分析类型"取首个）：发现权归
+// `scanner.ScanEntries`、归属归 `classifyForScan`、可分析性归 `perfTypeManifest`。
+//
+// ⚠️ 随发现权一并继承 `scanner.ScanEntries` 的**目录缓存**（TTL 内同目录复用，文件变更由
+// `InvalidatePath` 显式失效）：原实现的直读 Walk 无缓存，故这是本收编带来的语义变化。
+// 命令级调用均只调一次、无实际影响；若某调用方需「刚落盘就必须可见」，应先失效缓存。
+//
+// 2026-09-18 收编（ADR-262 D3）：原实现自持 `allowedExts` 白名单——这是 ADR 漏记的**第 4 张类型表**
+// （ADR 只记了并发基准 `.ysm` 过滤 / `detectModelFormat` / 前端 `LoadTrace.format` 三张）。
+// 它不只是重复：白名单含 `.vrm/.gltf/.glb/.litematic`，而这些类型的解析器只在前端 3D adapter，
+// CLI 拿到是空模型；本函数的消费方（`resolveTargetModel`、`health --bench`）**直接把它喂进
+// `runSingleModelBench`** → 产出「空模型数据当实测」（D3/D8 诚实红线）。
+// 顺带收益：结果改为路径字典序（原为 Walk 首命中，依文件系统而变），测试/AI 可复现；
+// 目录式入口 `<dir>/ysm.json` 由 scanner 折叠工序覆盖，不再需要单独的 IsYsmEntryJSON 分支。
 func scanFirstModel(filesRoot string) string {
-	if filesRoot == "" {
+	targets := scanBenchTargets(filesRoot, "", 1)
+	if len(targets) == 0 {
 		return ""
 	}
-	var firstModel string
-	allowedExts := map[string]bool{
-		".ysm": true, ".pmx": true, ".pmd": true, ".vrm": true,
-		".gltf": true, ".glb": true, ".litematic": true,
-	}
-	_ = filepath.Walk(filesRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if info.IsDir() {
-			return nil
-		}
-		// 目录式模型的入口 ysm.json 与打包模型同列（不在扩展名白名单内，走唯一谓词判定）——
-		// 原实现只认扩展名，纯解包目录的仓库会「未找到模型」而跳过（README 式假失败）。
-		if allowedExts[strings.ToLower(filepath.Ext(path))] || registry.IsYsmEntryJSON(filepath.Base(path)) {
-			firstModel = path
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	return firstModel
+	return targets[0]
 }

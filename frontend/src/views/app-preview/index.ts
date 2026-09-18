@@ -9,9 +9,8 @@ import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { previewCSS } from "./css.ts";
 
-// 模块级样式表（HMR 热更新回注入用：export 给 hot.accept 拿新实例）。
-// 环境守卫对齐 ui-components-styles.ts：node/happy-dom 无 CSSStyleSheet 时返回
-// 占位对象（replaceSync no-op）避免 import 即崩；浏览器恒走真实分支。
+// 模块级样式表（shadow 根装配，含 HMR 注册；见 utils/dom/shadow-style.ts）。
+// 原 12 行「环境守卫 + new CSSStyleSheet + replaceSync」样板已收敛到该原语。
 const appPreviewStyle = createShadowStyle(previewCSS, "app-preview");
 
 import { t } from "@/core/i18n/t.ts";

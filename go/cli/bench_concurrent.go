@@ -407,6 +407,12 @@ func runSingleBench(ctx *CmdContext) error {
 		if *format != "json" {
 			return newParamErrf("矩阵模式（--rtype / --all-types）仅支持 --format json（text 模式无矩阵呈现口径）")
 		}
+		// 基准参数只在单模型路径上有意义（矩阵载荷是 models[]，基准是单模型概念）。
+		// 原先这三个参数在矩阵模式下被**静默吞掉**——用户以为在跟基准比，其实没有：
+		// 参数被吞 = 不诚实，宁可报错。（用 fs.Visit 精确区分「显式传入」与「默认值」。）
+		if explicitMatrixBaselineFlags(fs) {
+			return newParamErrf("类型矩阵模式不支持基准参数（--baseline / --save-baseline / --threshold）：基准是单模型概念，请用 --model 跑单模型基准")
+		}
 		if *allTypes {
 			return runSingleBenchAllTypesJSON(ctx, *maxModels, *iterations)
 		}
@@ -488,6 +494,9 @@ type singleBenchJSON struct {
 	// Identity 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定。
 	// format/size_bytes 保留在原处不动（既有消费者），rtype 才是判定口径。
 	Identity perfIdentity `json:"identity"`
+	// Baseline 基准对比/保存结果（ADR-262 D8）：nil = 本次未用基准参数（缺席就是缺席）。
+	// 判决进载荷后，GUI 才能说出「哪个阶段退化了、退了多少」，而不是只转述一句门槛错误。
+	Baseline *benchBaselineJSON `json:"baseline,omitempty"`
 	// ADR-200 D5 sidecar：迁移期保留人类可读文本与 filesRoot，供前端「复制原文」与
 	// respHasOutput 守卫。仅由桥接层注入（AttachSidecar），stdout 载荷不含。
 	Output    string `json:"output,omitempty"`
@@ -657,6 +666,7 @@ func identityOnlyPayload(modelPath, filesRoot, rtype string) singleBenchJSON {
 }
 
 // runSingleBenchJSON 单模型基准测试 JSON 模式：静默运行，输出结构化数据
+// （stdout 必须可被 json.Unmarshal 直接吃掉——人类可读文案一律不进 stdout，见 bench_baseline.go）。
 func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, baseline, saveBaseline string, thresholdPct float64) error {
 	// 归一化（经 runSingleBench 进入时已是 entry path，此处幂等）：保证直接调用（测试/内部）同样吃目录
 	target, terr := resolveTargetModel(modelPath, ctx.FilesRoot)
@@ -667,6 +677,17 @@ func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, basel
 
 	output, avg := benchOneModel(ctx.App, modelPath, ctx.FilesRoot, iterations)
 
+	// 基准对比 / 保存：判决进载荷，**stdout 保持纯 JSON**。
+	// 旧实现在此处调 compareSingleBenchBaseline —— 它把中文散文 fmt.Println 到 stdout，
+	// 于是 --format json --baseline 的输出是「JSON + 中文」，AI 消费者 json.Unmarshal 必失败
+	// （而本函数的契约就是「静默运行，输出结构化数据」）。
+	// 基准文件本身不可用时 block=nil 且 err≠nil：**仍然**输出并 SetResult 本次基准结果
+	// （规律六：错误分支也要带结构化数据），错误信息说明缺什么。
+	block, degradeErr := buildBaselineJSON(baseline, saveBaseline, thresholdPct, avg)
+	if block != nil {
+		output.Baseline = block
+	}
+
 	data, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		return newRuntimeErrf("JSON 序列化失败: %v", err)
@@ -676,8 +697,8 @@ func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, basel
 	fmt.Println(string(data))
 	ctx.SetResult(&output)
 
-	// 基准对比 / 保存
-	return applyBenchBaseline(baseline, saveBaseline, thresholdPct, avg)
+	// D8 失败优先：退化即失败（CI 靠退出码判定）；载荷已在上面交出
+	return degradeErr
 }
 
 // singleBenchMatrixJSON 多模型矩阵载荷（ADR-262 D3）：目标集由 Go 侧按 registry 类型扫描产出，
@@ -1009,88 +1030,6 @@ func speedEmoji(speedup float64) string {
 // 下限取 1ms——低于此值的人眼不可察抖动不计入性能回归。
 const benchNoiseFloorMs = 1.0
 
-// compareSingleBenchBaseline 与基准 JSON 对比：任一阶段退化超 thresholdPct % 返回错误（供 CI 判定）
-func compareSingleBenchBaseline(baselinePath string, stages []singleBenchStage, thresholdPct float64) error {
-	data, err := os.ReadFile(baselinePath)
-	if err != nil {
-		return newRuntimeErrf("无法读取基准文件 %s: %v", baselinePath, err)
-	}
-	var base []benchStageMs
-	if err := json.Unmarshal(data, &base); err != nil {
-		fmt.Printf("❌ 基准文件格式错误: %s\n%s\n", baselinePath, err)
-		return newRuntimeErrf("基准文件格式错误: %v", err)
-	}
-	baseMap := map[string]float64{}
-	for _, b := range base {
-		baseMap[b.Name] = b.Ms
-	}
-
-	fmt.Println("\n📉 与基准对比（threshold " + fmt.Sprintf("%.0f%%", thresholdPct) + "，噪声下限 " + fmt.Sprintf("%.1fms", benchNoiseFloorMs) + "）:")
-	fmt.Println("   " + strings.Repeat("-", 62))
-
-	var degraded int
-	for _, s := range stages {
-		now := msOf(s)
-		baseMs, ok := baseMap[s.Name]
-		if !ok {
-			fmt.Printf("   🆕 %-16s %8.2fms（无基准，跳过）\n", s.Name, now)
-			continue
-		}
-		// 双向落入噪声区间（base 与 now 都近零）→ 计时抖动，判无退化不计入。
-		if baseMs <= benchNoiseFloorMs && now <= benchNoiseFloorMs {
-			fmt.Printf("   🟢 %-16s %8.2f → %8.2fms (噪声区间，跳过)\n", s.Name, baseMs, now)
-			continue
-		}
-		// 绝对增量本身落在噪声区间 → 同样判无退化（第 2 层保护，见 benchNoiseFloorMs 注释）。
-		// 只判退化为正的一侧：neg 为「更快」，交由下方 relative 分支照常标注 🟢 更快。
-		if delta := now - baseMs; delta > 0 && delta <= benchNoiseFloorMs {
-			fmt.Printf("   🟢 %-16s %8.2f → %8.2fms (增量在噪声区间，跳过)\n", s.Name, baseMs, now)
-			continue
-		}
-		ratio := 0.0
-		if baseMs > 0 {
-			ratio = (now - baseMs) / baseMs * 100
-		} else {
-			// base 恰为 0 但 now 已超出噪声下限 → 视为全量退化（如 0 → 50ms）。
-			ratio = 100
-		}
-		mark := "✅"
-		switch {
-		case ratio > thresholdPct:
-			mark = "🔴 退化"
-			degraded++
-		case ratio > 0:
-			mark = "🟡"
-		case ratio < 0:
-			mark = "🟢 更快"
-		}
-		fmt.Printf("   %s %-16s %8.2f → %8.2fms (%+6.1f%%)\n", mark, s.Name, baseMs, now, ratio)
-	}
-
-	if degraded > 0 {
-		return newRuntimeErrf("%d 个阶段相对基准退化超过 %.0f%%", degraded, thresholdPct)
-	}
-	fmt.Println("   ✅ 无阶段退化超过阈值")
-	return nil
-}
-
-// saveBenchBaseline 把本次平均耗时保存为基准 JSON（[-name,ms]）
-func saveBenchBaseline(path string, stages []singleBenchStage) error {
-	list := make([]benchStageMs, 0, len(stages))
-	for _, s := range stages {
-		list = append(list, benchStageMs{Name: s.Name, Ms: msOf(s)})
-	}
-	data, err := json.MarshalIndent(list, "", "  ")
-	if err != nil {
-		return newRuntimeErrf("序列化基准失败: %v", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return newRuntimeErrf("写入基准失败 %s: %v", path, err)
-	}
-	fmt.Printf("\n💾 基准已保存到: %s\n", path)
-	return nil
-}
-
 // runSingleBenchSamples text/json 双模式的唯一采集路径：N 次迭代运行并计时，
 // perIter 钩子供 text 模式逐迭代打印（json 静默传 nil），杜绝迭代循环双维护。
 func runSingleBenchSamples(a AppService, modelPath, filesRoot string, iterations int, perIter func(iter int, stages []singleBenchStage)) ([][]singleBenchStage, time.Duration) {
@@ -1104,21 +1043,6 @@ func runSingleBenchSamples(a AppService, modelPath, filesRoot string, iterations
 		}
 	}
 	return allStages, time.Since(totalStart)
-}
-
-// applyBenchBaseline 基准对比/保存后处理（CI 性能退化门禁语义，text/json 共享）。
-func applyBenchBaseline(baseline, saveBaseline string, thresholdPct float64, avg []singleBenchStage) error {
-	if baseline != "" {
-		if err := compareSingleBenchBaseline(baseline, avg, thresholdPct); err != nil {
-			return err
-		}
-	}
-	if saveBaseline != "" {
-		if err := saveBenchBaseline(saveBaseline, avg); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // singleBenchRuntime 单模型基准的运行归属恒为 Go：全链路调用的都是 Go 实现

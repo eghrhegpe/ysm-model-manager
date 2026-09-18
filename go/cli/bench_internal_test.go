@@ -43,6 +43,19 @@ func TestSingleBenchJSON_JSONShape(t *testing.T) {
 			RelPath:     "ysm/player.ysm",
 			AbsPath:     "/repo/ysm/player.ysm",
 		},
+		// 基准块（ADR-262 D8）：判决入载荷后，GUI 才能说出「哪个阶段退化、退了多少」
+		Baseline: &benchBaselineJSON{
+			SavedTo: "/cfg/perf-baseline.json",
+			Diff: &perfBaselineDiff{
+				Path:         "/cfg/perf-baseline.json",
+				ThresholdPct: 50,
+				NoiseFloorMs: 1,
+				Verdict:      baselineVerdictOK,
+				Stages: []perfBaselineStageDiff{
+					{Name: "② JSON 解析", BaseMs: 1900, NowMs: 1993.66, DeltaPct: 4.9, Verdict: stageVerdictSlower},
+				},
+			},
+		},
 	}
 
 	b, err := json.Marshal(s)
@@ -62,6 +75,9 @@ func TestSingleBenchJSON_JSONShape(t *testing.T) {
 		`"runtime"`, `"stats"`, `"n"`, `"median_ms"`, `"p95_ms"`,
 		// 身份块（ADR-262 D2）
 		`"identity"`, `"rtype"`, `"rtype_source"`, `"rtype_label"`, `"relPath"`, `"absPath"`,
+		// 基准判决（ADR-262 D8）——degraded 带 omitempty，非退化时缺席（缺席即缺席）
+		`"baseline"`, `"saved_to"`, `"diff"`, `"threshold_pct"`, `"noise_floor_ms"`,
+		`"verdict"`, `"base_ms"`, `"now_ms"`, `"delta_pct"`,
 	} {
 		if !strings.Contains(raw, want) {
 			t.Errorf("JSON 缺少字段 %s: %s", want, raw)

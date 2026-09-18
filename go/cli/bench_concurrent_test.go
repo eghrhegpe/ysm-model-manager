@@ -355,8 +355,16 @@ func TestRunSingleBenchJSON_SaveAndCompareRoundTrip(t *testing.T) {
 		t.Fatalf("基准文件应为合法 JSON: err=%v raw=%s", err, raw)
 	}
 
-	// 用刚保存的基准对比自身 → 各阶段不可能退化超 50%
-	if err := runSingleBenchJSON(&CmdContext{App: &benchFakeApp{}, FilesRoot: root}, modelPath, 1, basePath, "", 50); err != nil {
+	// 用刚保存的基准对比自身 → 这条通路不得报错（保存→读取→比对的接线）。
+	//
+	// 阈值刻意取到抖动不可能触发的量级，而不是 50%：本断言量的是**接线**，
+	// 而两端的耗时都是真实墙钟——高负载下第二次比第一次慢 50% 以上完全合法
+	// （噪声下限只吸收「双方都在下限内」与「绝对增量 ≤ 下限」，中量级阶段不设防）。
+	// 2026-09-18 实证：与并发基准测试并跑时本行必炸（"1 个阶段相对基准退化超过 50%"），
+	// 单跑恒绿——即断言对象错误，不是代码缺陷。
+	// 门禁**效力**由下方两个确定性块锁定（0.001ms 基准必触发 / 亚毫秒 + 小幅增量不触发），
+	// 它们直接注入 stages，不依赖计时。
+	if err := runSingleBenchJSON(&CmdContext{App: &benchFakeApp{}, FilesRoot: root}, modelPath, 1, basePath, "", 100000); err != nil {
 		t.Fatalf("自对比不应触发退化门禁: %v", err)
 	}
 

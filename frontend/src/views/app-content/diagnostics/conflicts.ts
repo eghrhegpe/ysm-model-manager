@@ -9,6 +9,7 @@ import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts"
 import type { AppConfig, FileConflict, VersionInstance } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
+import { optionRows } from "./option-rows.ts";
 import { msgRowHTML } from "./status-row.ts";
 import { webGate } from "./web-gate.ts";
 
@@ -258,12 +259,16 @@ function dgCfBuildConfigPanelHtml(
         `<option value="${esc(ins)}"${ins === selectedInstance ? " selected" : ""}>${esc(ins)}</option>`,
     )
     .join("");
-  const rtypeOptions = Object.entries(RESOURCE_TYPE_LABELS)
-    .map(
-      ([id, label]) =>
-        `<option value="${esc(id)}"${id === selectedRtype ? " selected" : ""}>${esc(label)}</option>`,
-    )
-    .join("");
+  const rtypeOptions = optionRows(
+    // RESOURCE_TYPE_LABELS 已在模块构建期过滤掉无 name 的类型（见 utils/resource/types.ts:35-38），
+    // 故这里不会产出空标签选项；顺序 = JSON 声明序，逐字保持现状
+    Object.entries(RESOURCE_TYPE_LABELS).map(([id, label]) => ({
+      value: id,
+      label,
+      selected: id === selectedRtype,
+    })),
+    esc,
+  );
   return `
       <div class="diag-sync-config">
         <div class="diag-config-item">

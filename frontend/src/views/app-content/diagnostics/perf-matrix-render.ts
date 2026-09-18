@@ -10,8 +10,10 @@
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { loadResourceRegistry } from "@/services/resource-registry.ts";
 import { formatBytes } from "@/utils/format/format.ts";
+import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
+import { type OptionRow, optionRows } from "./option-rows.ts";
 import { sectionHeader } from "./perf-common.ts";
 
 /** 单类型汇总（字段与 Go `perfTypeSummary` 逐字对齐） */
@@ -271,24 +273,21 @@ export async function populatePerfTargetOptions(
 
   // 重填（registry 异步到达）不得重置用户已选好的目标集：先记住当前值，重建后再回填
   const keep = select.value;
-  const opts: HTMLOptionElement[] = [];
-  const add = (value: string, text: string, title?: string): void => {
-    const opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = text;
-    if (title) opt.title = title;
-    opts.push(opt);
-  };
-
-  if (includeModel) add("", t("diagnostics.perfTargetModel"));
-  add(PERF_TARGET_ALL, t("diagnostics.perfTargetAll"));
+  const rows: OptionRow[] = [];
+  if (includeModel) rows.push({ value: "", label: t("diagnostics.perfTargetModel") });
+  rows.push({ value: PERF_TARGET_ALL, label: t("diagnostics.perfTargetAll") });
   // 全库扁平（ADR-262 D3 修订的第三种目标集）：上限单位 = 全库 N 条，排序另由排序控件决定
-  add(PERF_TARGET_REPO, t("diagnostics.perfTargetRepo"), t("diagnostics.perfTargetRepoHint"));
+  rows.push({
+    value: PERF_TARGET_REPO,
+    label: t("diagnostics.perfTargetRepo"),
+    title: t("diagnostics.perfTargetRepoHint"),
+  });
   for (const ty of types) {
     const icon = typeof ty.icon === "string" ? ty.icon : "";
-    add(String(ty.id), `${icon} ${String(ty.name ?? ty.id)}`.trim());
+    // 顺序 = 注册表按 id 字典序（localeCompare），逐字保持现状；label 带图标与 name 兜底 id
+    rows.push({ value: String(ty.id), label: `${icon} ${String(ty.name ?? ty.id)}`.trim() });
   }
-  select.replaceChildren(...opts);
+  select.innerHTML = optionRows(rows, esc);
   select.value = keep;
   // 原选中值不在新选项里（首次填充）→ 回到各自默认：单模型 / 全库扁平（与 Go 默认值一致）
   if (select.value !== keep) select.value = includeModel ? "" : PERF_TARGET_REPO;

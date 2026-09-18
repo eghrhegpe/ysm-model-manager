@@ -15,6 +15,7 @@ import {
   previewSnapshot,
   setStateValue,
 } from "@/preview-3d/state/preview-state.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import { applyIcon } from "@/utils/icon/resolve.ts";
 import {
   type CapControlView,
@@ -702,10 +703,12 @@ export function renderMenu(
   deps: RenderMenuDeps,
 ): void {
   ensureMenuStyles();
+  dbg("preview-menu-render", "start", { nodeCount: nodes.length });
   // [doc:adr-126-p4-d] visibleWhen 吃状态层快照（previewSnapshot()）——AGENTS.md 硬约束
   const snapshot = previewSnapshot();
   for (const node of nodes) {
     if (node.visibleWhen && !node.visibleWhen(snapshot)) continue;
+    dbg("preview-menu-render", "rendering node", { id: node.id, kind: node.kind });
     // 形状前置（2026-09 分派穷举化保留）：folder 或「带 children 的节点」都按可折叠 section
     // 渲染——panel 带 children（如 shot 工具面板在 modelDetailView 里的 folder 形态，
     // roles.test.ts 三通道回归锁）走此路。kind 判不了「声明了 children」，故先于 switch。
@@ -756,9 +759,7 @@ export function renderMenu(
         break;
       case "custom":
         if (deps.renderCustomDirect && node.renderCustom) {
-          // 面板内容语义：直接调 renderCustom(container) 填充（schema 面板路径；
-          // closePopup 可选，MikuMikuAR 单参用法兼容）。cleanup 由注册表持有——
-          // 重渲染前先清旧（runCustomMount），取代逃生舱自搓 cleanupRef。
+          dbg("preview-menu-render", "rendering custom node", { id: node.id });
           runCustomMount(container, node.renderCustom);
         } else {
           rmAppendLeaf(container, node, deps);
@@ -777,6 +778,7 @@ export function renderMenu(
       }
     }
   }
+  dbg("preview-menu-render", "complete", { totalNodes: nodes.length });
 }
 
 // ===================================================================

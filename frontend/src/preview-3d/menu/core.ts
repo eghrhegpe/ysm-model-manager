@@ -17,6 +17,7 @@ import {
 } from "@/preview-3d/infra/schema-registry.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import { applyIcon, resolveIcon } from "@/utils/icon/resolve.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
@@ -627,12 +628,14 @@ export function mountPreviewRootMenu(
   overlay: HTMLElement | ShadowRoot,
   ctx: PreviewMenuCtx,
 ): PreviewMenuHandle {
+  dbg("preview-menu", "mount start", { selfMode: ctx.selfMode });
   // [doc:adr-126-p4-d] 会话模式上浮状态层：dock 级 visibleWhen 谓词经 s["ui.mode"] 读取
   // （旧 hideInSelfMode 语义）。每次 mount 覆盖写，防会话/测试残留（dispose 不复位——
   // 下次 mount 必覆盖，间隙无谓词求值路径）
   setPreviewUiMode(ctx.selfMode ? "self" : "shared");
   // 阶段 1：dock + popup + SlideMenu 外壳装配（含 show/hide）
   const { dock, popup, menu, showMenu, hideMenu } = buildPreviewMenuShell(overlay, ctx);
+  dbg("preview-menu", "shell built", { dockId: dock.id, popupId: popup.id });
   // 阶段 2：action ctx 与 handle 延迟壳（fillRoles 回调在 handle 构造前就能安全引用）
   const actionCtx: PreviewActionMenuCtx = {
     toast: ctx.toast,
@@ -644,6 +647,7 @@ export function mountPreviewRootMenu(
   const adapterItemsRef = { v: [] as PreviewMenuNode[] };
   // 阶段 3：面板路由表（schema / fillers / runners 三级衰退链）
   const routers = buildPreviewMenuRouters(ctx, hideMenu, menu, actionCtx, shell);
+  dbg("preview-menu", "routers built", { panelCount: Object.keys(routers.schemaBuilders).length });
   // 阶段 4：面板/组视图工厂（引用 routers 做渲染）
   const renderPanelFn = (l: HTMLElement, n: PreviewMenuNode): void =>
     renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx, {
@@ -676,13 +680,16 @@ export function mountPreviewRootMenu(
     validateAdapterItemIds(items);
     adapterItemsRef.v = items;
     refreshDock();
+    dbg("preview-menu", "adapter items updated", { count: items.length });
   };
   const openPanel = (id: string): void => {
     const node = [...CORE_MENU_ITEMS, ...adapterItemsRef.v].find((d) => d.id === id);
     if (node?.kind !== "panel") return;
+    dbg("preview-menu", "open panel", { id, kind: node.kind });
     showMenu(makePanelViewFn(node));
   };
   refreshDock();
+  dbg("preview-menu", "mount complete", { dockButtons: PREVIEW_MENU_GROUPS.length });
 
   const handle: PreviewMenuHandle = {
     dispose: (): void => {
@@ -708,6 +715,7 @@ export function mountPreviewRootMenu(
       // remove 后本会话面板容器均已离文档命中全清；并行挂载会话仍存活的面板
       // （isConnected=true）不被本会话误清（render.ts 注释的防御场景）
       disposeCustomCleanups();
+      dbg("preview-menu", "disposed");
     },
     setAdapterItems,
     openPanel,

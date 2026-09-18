@@ -4,12 +4,13 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
+import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { createDialog, type ModalLabels } from "./modal-core.ts";
 
 /** modalSelect 选项 */
 export interface ModalSelectOptions {
   title: string;
-  titleIcon?: string;
+  titleIcon?: UiIconName;
   items: string[];
   placeholder?: string;
   okText?: string;

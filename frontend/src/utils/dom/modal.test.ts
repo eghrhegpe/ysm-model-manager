@@ -181,11 +181,18 @@ describe("modalConfirm — 确认框", () => {
     await expect(promise).resolves.toBe(false);
   });
 
-  it("icon 经 esc 转义（P3 修复：标题 icon 裸插 innerHTML 会注入）", async () => {
-    modalConfirm({ title: "确认", titleIcon: '<img src=x onerror="alert(1)">', message: "m" });
+  it("titleIcon 语义名渲染内联 SVG；标题文本免疫 XSS", async () => {
+    modalConfirm({
+      title: "<img src=x onerror=\"alert(1)\">",
+      titleIcon: "settings",
+      message: "m",
+    });
     const titleEl = document.querySelector(".dlg-title") as HTMLElement;
-    expect(titleEl.querySelector("img")).toBeNull(); // 未生成 img 元素
-    expect(titleEl.innerHTML).toContain("&lt;img"); // 原文以转义形式保留
+    // 图标经 resolveIcon 渲染为 SVG（.ws-icon）
+    expect(titleEl.querySelector(".ws-icon")).not.toBeNull();
+    // 标题走文本节点：注入性 HTML 不生成元素、不以转义字符串堆回显
+    expect(titleEl.querySelector("img")).toBeNull();
+    expect(titleEl.textContent).toContain('onerror="alert(1)"');
     closeActiveDlg();
   });
 });

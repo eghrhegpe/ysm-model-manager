@@ -9,6 +9,7 @@ import { t, tOf } from "@/core/i18n/t.ts";
 import { modalPrompt } from "@/utils/dom/modal-prompt.ts";
 import { toast, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { contextMenuGetApp } from "./context-menu-deps.ts";
 
@@ -60,7 +61,7 @@ export function isUnsafeFolderName(folder: string): boolean {
 export async function resolveDstDir(
   opts: {
     title: string;
-    icon: string;
+    icon: UiIconName;
     okText: string;
     emptyMsg: string;
   },
@@ -104,7 +105,7 @@ export async function runSingleOp(
     const resolved = await resolveDstDir(
       {
         title: tOf(i18n.dialogTitle),
-        icon: isMove ? "📂" : "📋",
+        icon: isMove ? "folderOpen" : "clipboard",
         okText: t(isMove ? "ctx.moveDialogOk" : "ctx.copyDialogOk"),
         emptyMsg: t(isMove ? "ctx.emptyMoveRoot" : "ctx.emptyCopyRoot"),
       },

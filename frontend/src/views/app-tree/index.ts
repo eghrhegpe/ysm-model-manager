@@ -485,7 +485,7 @@ export class AppTree extends WebComponentBase {
     if (
       !(await modalConfirm({
         title: t("tree.batchDeleteTitle"),
-        titleIcon: "🗑️",
+        titleIcon: "delete",
         message: t("tree.batchDeleteConfirm", { n: paths.length }),
         okText: t("tree.deleteOk"),
         danger: true,

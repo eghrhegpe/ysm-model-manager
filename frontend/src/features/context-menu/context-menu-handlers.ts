@@ -14,6 +14,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { toast, toastEmptyRtype, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { contextMenuGetApp } from "./context-menu-deps.ts";
 import { DIR_HANDLERS } from "./context-menu-dir-handlers.ts";
 // P1 修复（ADR-040）：file/dir handler 已拆出，此处合并
@@ -29,7 +30,7 @@ type BatchMode = "move" | "copy";
 const BATCH_TPL: Record<
   BatchMode,
   {
-    icon: string;
+    icon: UiIconName;
     progress: string;
     okAll: string;
     okPartial: string;
@@ -40,7 +41,7 @@ const BATCH_TPL: Record<
   }
 > = {
   move: {
-    icon: "📂",
+    icon: "folderOpen",
     progress: "ctx.moveProgress",
     okAll: "ctx.moveOkAll",
     okPartial: "ctx.moveOkPartial",
@@ -50,7 +51,7 @@ const BATCH_TPL: Record<
     emptyMsg: "ctx.emptyMoveRoot",
   },
   copy: {
-    icon: "📋",
+    icon: "clipboard",
     progress: "ctx.copyProgress",
     okAll: "ctx.copyOkAll",
     okPartial: "ctx.copyOkPartial",
@@ -216,7 +217,7 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
       try {
         const ok2 = await modalConfirm({
           title: t("ctx.recycleTitle"),
-          titleIcon: "♻️",
+          titleIcon: "recycle",
           message: t("ctx.recycleConfirm", {
             n: ctx.paths.length,
           }),

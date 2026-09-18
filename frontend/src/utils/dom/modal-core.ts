@@ -6,7 +6,8 @@
 // 勿直接依赖本文件内部 API；createDialog 为内部脚手架（供同目录 builder 使用），
 // 导出仅为兄弟文件协作，非对外契约。
 
-import { esc } from "@/utils/html/html.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
+import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 
 /**
  * modal 家族文案覆盖（可选注入；未提供时由各 builder 回退 @/core/i18n 默认文案）。
@@ -200,16 +201,26 @@ function appendDialogBox(
 /**
  * 统一标题行（ADR-190 D3：抽象抽全——原 5 个 builder 各自重复渲染）。
  * titleIcon 空时省略图标与空格（与旧实现「空 titleIcon 留前导空格」的视觉差异可忽略）。
+ * titleIcon 传**语义名**（UI_ICONS 的 key，ADR-238），经 resolveIcon 渲染内联 SVG；
+ * 标题文本走 createTextNode（比 esc 更彻底，XSS 免疫由文本节点天然保证）。
  * titleExtra 追加为行内子节点（如 rename 的「读取头部」按钮），保持在标题行右侧。
  */
 function buildTitleRow(
   title: string,
-  titleIcon: string | undefined,
+  titleIcon: UiIconName | undefined,
   titleExtra?: HTMLElement,
 ): HTMLElement {
   const el = document.createElement("div");
   el.className = "dlg-title dlg-title-flush";
-  el.innerHTML = titleIcon ? `${esc(titleIcon)} ${esc(title)}` : esc(title);
+  // 图标只喂 resolveIcon 产物（内部常量 SVG），永不是用户数据；标题走文本节点。
+  const iconSvg = titleIcon ? resolveIcon(titleIcon) : "";
+  if (iconSvg) {
+    const ico = document.createElement("span");
+    ico.innerHTML = iconSvg;
+    el.appendChild(ico);
+    el.append(" ");
+  }
+  el.appendChild(document.createTextNode(title));
   if (titleExtra) el.appendChild(titleExtra);
   return el;
 }
@@ -234,7 +245,7 @@ function registerDialogLife<T>(
  */
 export function createDialog<T>(opts: {
   title: string;
-  titleIcon?: string | undefined;
+  titleIcon?: UiIconName | undefined;
   /** 标题行内追加的自定义节点（如操作按钮），保持行内布局 */
   titleExtra?: HTMLElement;
   width?: string | undefined;

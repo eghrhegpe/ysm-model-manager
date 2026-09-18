@@ -5,11 +5,12 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { fmtMB } from "@/utils/format/fmt-mb.ts";
+import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { createDialog, type ModalLabels } from "./modal-core.ts";
 
 export interface ModalProgressOptions {
   title: string;
-  titleIcon?: string;
+  titleIcon?: UiIconName;
   width?: string;
   /** 是否允许 Esc/点遮罩关闭（默认 true；下载等不可中断任务传 false 防误关丢进度） */
   closable?: boolean;

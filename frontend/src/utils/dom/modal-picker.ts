@@ -4,6 +4,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
+import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { createDialog, type ModalLabels } from "./modal-core.ts";
 
 /** modalPicker 行项（label/meta/sub/hint 由函数内部 esc 转义，调用方传原始文本） */
@@ -18,7 +19,7 @@ export interface ModalPickerItem {
 /** modalPicker 选项 */
 export interface ModalPickerOptions {
   title: string;
-  titleIcon?: string;
+  titleIcon?: UiIconName;
   width?: string;
   /** 标题下、列表上的说明文字 */
   subtitle?: string;

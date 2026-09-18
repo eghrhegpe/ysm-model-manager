@@ -109,7 +109,7 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
   const baseName = dir.split("/").pop();
   const name = await modalPrompt({
     title: t("tree.dirRenameTitle"),
-    titleIcon: "✂️",
+    titleIcon: "cut",
     ...(baseName !== undefined ? { value: baseName } : {}),
     placeholder: t("tree.inputNewFolder"),
     okText: t("tree.dirRenameOk"),
@@ -137,7 +137,7 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
 async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
   const name = await modalPrompt({
     title: t("tree.mkdirTitle"),
-    titleIcon: "📁",
+    titleIcon: "folder",
     placeholder: t("tree.inputFolderName"),
     okText: t("tree.mkdirOk"),
   });
@@ -161,7 +161,7 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
 async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
   const confirmed = await modalConfirm({
     title: t("ctx.fileRecycleTitle"),
-    titleIcon: "♻️",
+    titleIcon: "recycle",
     message: t("tree.dirRecycleConfirm", { dir }),
     okText: t("tree.dirRecycleOk"),
     danger: true,

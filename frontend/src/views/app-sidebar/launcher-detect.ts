@@ -82,7 +82,7 @@ export async function runMcSearch(guard: BusyGuard): Promise<void> {
     if (paths.length > 1) {
       selected = await modalSelect({
         title: t("launcher.mc.selectDir"),
-        titleIcon: "🎮",
+        titleIcon: "game",
         items: [...paths],
         okText: t("dialog.ok"),
       });
@@ -107,8 +107,8 @@ function showLauncherInstancePicker(
   instances: LauncherInstance[],
 ): Promise<LauncherSelection | null> {
   return modalPicker({
-    title: "🎮 HMCL / PCL",
-    titleIcon: "",
+    title: "HMCL / PCL",
+    titleIcon: "game",
     width: "720px",
     subtitle: t("launcher.picker.subtitle"),
     items: instances.map((it) => ({

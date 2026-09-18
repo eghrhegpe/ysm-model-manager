@@ -83,7 +83,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 198 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 199 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -172,7 +172,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 191 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 192 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -184,7 +184,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 181 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 182 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -331,7 +331,7 @@
 |------|------|----|
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 107 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 123 |
-| refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
+| refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 19 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 171 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 56 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 185 |
@@ -594,7 +594,7 @@
 |------|------|----|
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 106 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 122 |
-| refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 17 |
+| refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 172 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 57 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 184 |

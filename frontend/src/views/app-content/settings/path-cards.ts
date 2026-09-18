@@ -95,7 +95,7 @@ async function showPathPicker(paths: string[]): Promise<string | null> {
   const result = await modalPicker({
     title: t("content.pickMcDirTitle"),
     subtitle: t("content.pickMcDirDesc"),
-    titleIcon: "📁",
+    titleIcon: "folder",
     items: paths.map((p) => ({ label: p, meta: "" })),
     cancelText: t("common.cancel"),
   });

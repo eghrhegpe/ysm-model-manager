@@ -117,7 +117,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
         const typeLabel = RESOURCE_TYPE_LABELS[rtype] || rtype;
         const confirmed = await modalConfirm({
           title: t("inst.clearTitle"),
-          titleIcon: "🗑️",
+          titleIcon: "delete",
           message: t("inst.clearMessage", { name: insName, n: totalCount, type: typeLabel }),
           okText: t("inst.clearOk"),
           danger: true,

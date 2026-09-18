@@ -1623,6 +1623,10 @@ export const autoSidebar = [
             "link": "/knowledge/3d-patterns"
           },
           {
+            "text": "toast-emoji-svg",
+            "link": "/knowledge/adr"
+          },
+          {
             "text": "诊断与冲突页 diagnostics",
             "link": "/knowledge/app_content_diagnostics"
           },

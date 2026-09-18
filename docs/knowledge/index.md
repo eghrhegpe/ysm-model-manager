@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 187 张知识卡
+> 总计: 188 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -277,7 +277,7 @@
 - **vmd_vrm_retarget**（VMD→VRM 动作重定向 vmd-retarget）：VRM 生态长期缺动作：MMD 圈产 `.vmd`、动捕产 FBX，几乎无人专门产 `.vrma`。本卡对应的模块把 **VMD 身体 FK 重定向到 VRM humanoid 归一化骨骼**，让 VRM 预览直接吃 MMD 动作（ADR-…
 - **volumetric_cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 
-## ui（37 张）
+## ui（38 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -285,6 +285,7 @@
 |------|------|------|------|--------|
 | 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | cpu-bound | code-split, 超大文件, mmd-adapter, 拆分可行性 |
 | 🏗 3d-patterns | 3D 区审核与修复模式提炼 | architecture | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
+| 🏗 adr | toast-emoji-svg | architecture | — | toast msg 载荷带 emoji 前缀（✅/❌/⚠️）不知如何处理, toast undo 按钮图标迁移, ADR-238 emoji→SVG 收债的 toast 盲区量不到不拦 |
 | 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:changed, 仓库页, 全局 handler |
 | 🏗 app-modules | 组件入口 app-modules | architecture | io-bound | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新 |
 | 🍃 app-nav | 顶部导航 app-nav | leaf | — | 导航栏, 导航, 切页, nav:changed, 菜单, 页面记忆, 版本号 |
@@ -323,6 +324,7 @@
 
 ### 摘要
 
+- **adr**（toast-emoji-svg）：`<app-toast>` 渲染层 `<span class="msg">${esc(msg)}</span>` 走 esc 转义文本槽，
 - **app-content**（主内容页 app-content）：`app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工…
 - **app-modules**（组件入口 app-modules）：`app-modules.ts` 是前端所有 ES module 组件的统一装配入口：注册可替换服务、按「轻量静态 + 重量级动态」策略导入全部 Web Components、注册右键菜单映射、初始化主题与 UI 偏好、静默检查更新。新增组…
 - **app-nav**（顶部导航 app-nav）：`app-nav` 是应用的主导航菜单组件（Shadow DOM，渲染为左侧固定栏），列出模型仓库、整合包管理、创作者频道、创意工坊、诊断与冲突、设置 6 个入口，底部显示应用版本号。它是 `nav:changed` 事件的主要派发源（20…

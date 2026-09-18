@@ -58,6 +58,13 @@
 | ysm-animation-player、molang | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
 | zip 多模型、多候选、蓝图 zip、litematic zip | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | - | ADR-132 |
 
+## 🎯 toast 收债
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 消息弹窗图标 | [toast-emoji-svg](./adr.md) | - | - |
+| toast emoji | [toast-emoji-svg](./adr.md) | app-toast/index.ts\|innerHTML | - |
+
 ## 🎯 CLI 桥
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -706,6 +713,8 @@
 |------|------|----------|
 | Vector3 频繁 new 造成 GC 抖动；必须复用或池化 | - | - |
 | AbortController 未清理导致事件泄漏；必须在 dispose 时 abort + removeEventListener | - | - |
+| app-toast msg 槽走 esc() 转义，塞 SVG 会以字面 <svg> 文本显示，不能直接承载图标（ADR-267 盲区根因） | - | - |
+| .toast 已按 type 左边框着色，msg 载荷 emoji 前缀是信息冗余，应交给 type 驱动 | - | - |
 | internal/app 不得 import go/cli（ADR-145 架构：两侧互不依赖，main 装配）——规格经 main.go cliSpecsToDTO 字段级转换注入，go/cli 侧字段改名/删除会在此编译失败（有意为之的漂移防线） | - | - |
 | 新增命令参数若不登记 ParamSpec，桥接层走 legacy 降级（空串/0/false 丢弃）——与 ADR-173 前行为等价，但拿不到声明序输出与显式空值能力；无 flag 命令（cache-status/perf-log）无需登记 | - | - |
 | scripts/_lib/cli-registry.ts 的 CMD_RE 只解析到 runFn 不强制收尾 ——RegisterCommandC 尾随变参 ParamSpec 拆行注册合法（2026-09-03 教训：曾要求完整 `)` 闭合致 5 命令从注册表解析消失、completions/文档 parity 双双拉红） | `)` | - |

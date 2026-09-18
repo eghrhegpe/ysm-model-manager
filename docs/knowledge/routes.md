@@ -14,6 +14,7 @@
 | 用户意图或关键词 | 首选知识卡 | 摘要 |
 |---|---|---|
 | 3D 渲染循环优化、Vector3 复用、纹理缓存、AbortController 事件管理、资源生命周期 dispose、循环依赖破壁、审核驱动开发、并发防护 gen 守卫 | [3D 区审核与修复模式提炼](./3d-patterns.md) ⚠️歧义（另见 optimization_log.md） | — |
+| toast msg 载荷带 emoji 前缀（✅/❌/⚠️）不知如何处理、toast undo 按钮图标迁移、ADR-238 emoji→SVG 收债的 toast 盲区量不到不拦 | [toast-emoji-svg](./adr.md) | `<app-toast>` 渲染层 `<span class="msg">${esc(msg)}</span>` 走 esc 转义文本槽， |
 | 修改 GUI 桥可调用 CLI 命令的参数时（新增 flag / 需要传空值语义）、排查 ExecuteCLI 参数丢失（空串/0/false 不见、顺序不定、拼写错误静默丢参）、理解 internal/app 与 go/cli 之间参数规格如何跨包传递 | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173_gui_cli_paramspec.md) | GUI→CLI 参数链路（frontend buildArgsMap → Wails map → ExecuteCLI → os/exec 子进程 --cli）曾有四重损耗： |
 | AI 审查器（code_review）finding 的取舍与查证流程、新层/新范式落地后的回归审核 | [AI 审查器偏差与查证方法论（9 轮实战沉淀）](./ai-review-pitfalls.md) | 9 轮 AI 审查器（code_review deep）实战沉淀：~57 条 finding 中真缺陷 15 处、假阳性/已覆盖 ~31 条、留档 ~11 条。本文记录审查器的系统性偏差模式与对应的查证方法论，供后续「审核产出」工作流直接命… |
 | Android、存储授权、目录选择、MANAGE_EXTERNAL_STORAGE、SAF | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) ⚠️歧义（另见 rust-android-bridge.md） | Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 WebView，桌面端无此桥返回 `null`）与跨平台目录选择器。解决 Android 上 Wails 官方**拒绝目录选择**（… |

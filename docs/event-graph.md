@@ -36,7 +36,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 176 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 173 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -449,14 +449,11 @@
 | warnLargeModelIfNeeded | `frontend/src/preview-3d/infra/large-model.ts` | 65 |
 | showLoadFailure | `frontend/src/preview-3d/infra/preview-loading.ts` | 44 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 38 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 49 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 55 |
-| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 99 |
-| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 107 |
-| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 124 |
-| dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 132 |
-| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 79 |
+| copyWithToast | `frontend/src/views/app-content/diagnostics/copy-toast.ts` | 26 |
+| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 28 |
+| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 39 |
+| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 45 |
+| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 89 |
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 203 |

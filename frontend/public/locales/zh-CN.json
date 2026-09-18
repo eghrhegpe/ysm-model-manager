@@ -320,7 +320,7 @@
   "diagnostics.webNoClearLogs": "网页版不支持清除日志",
   "diagnostics.noLogsToCopy": "当前无日志可复制",
   "diagnostics.perfCopied": "已复制原始输出到剪贴板",
-  "diagnostics.perfCopyFail": "复制失败，请手动框选复制",
+  "diagnostics.copyFail": "复制失败，请手动框选复制",
   "diagnostics.webNoPerf": "网页版不支持性能诊断",
   "diagnostics.opImportFallback": "导入",
   "diagnostics.perfModelRequired": "请先填入模型路径",

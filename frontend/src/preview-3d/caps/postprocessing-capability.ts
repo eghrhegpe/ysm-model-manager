@@ -403,8 +403,12 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   private applyReflectorSync(): void {
     const reflectorCap = this.reflectorCap();
     if (!reflectorCap) return;
-    // SSR 活动 + 用户设置了 reflectorDisableWhenSSR
-    const shouldDisableReflector = this.ssrIsActive() && envState.ppReflectorDisableWhenSSR;
+    // 抑制门禁 = 真正在渲染 SSR：reflectionMode 配置 + 启用意图 ppEnabled 同时成立。
+    // 历史：原实现只看 reflectionMode（ssrIsActive），导致「用户关掉整条后处理、SSR pass 已
+    // 旁路（render() 里 ssrPass.enabled=false）」时，镜子仍被压制——SSR 没在渲染却白禁了单平面镜。
+    // 关掉后处理（ppEnabled=false）就该放回镜子、退出抑制态。
+    const shouldDisableReflector =
+      this.ssrIsActive() && this.enabled && envState.ppReflectorDisableWhenSSR;
     if (shouldDisableReflector) {
       // 首次施加压制时记录原值（后续同步不覆盖基准）
       if (!this.reflectorSuppressing) {

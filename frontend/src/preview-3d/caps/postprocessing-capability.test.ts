@@ -1206,15 +1206,16 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
     expect(reflector.isEnabled()).toBe(true);
   });
 
-  it("启用意图关闭后 reflector 保持禁用（SSR 配置仍在），dispose 才恢复", () => {
+  it("启用意图关闭后 reflector 恢复（SSR 不再渲染，不压制），dispose 不重复动作", () => {
     const { cap, reflector } = makePair();
     cap.setEnabled(true);
-    expect(reflector.isEnabled()).toBe(false);
-    // [ADR-250] 关闭后 composer 常驻（不拆）；params.reflectionMode 仍是 SSR
-    // → applyReflectorSync 维持禁用语义
+    expect(reflector.isEnabled()).toBe(false); // SSR 正渲染，压制
+    // 关掉后处理：SSR pass 已旁路（render() 里 ssrPass.enabled=false），镜子应放回，
+    // 而非「配置仍在就维持禁用」——否则关掉后处理也白禁镜子。
     cap.setEnabled(false);
-    expect(reflector.isEnabled()).toBe(false);
-    cap.dispose(); // dispose 精确还原 prev
+    expect(reflector.isEnabled()).toBe(true);
+    // 已退出抑制态，dispose 不再补还原（保持用户选择）
+    cap.dispose();
     expect(reflector.isEnabled()).toBe(true);
   });
 });

@@ -505,7 +505,7 @@ describe("CLI Bridge - 白名单常量", () => {
   it("包含所有预期命令", () => {
     const expected = [
       "search", "analyze", "list", "verify", "benchmark", "export",
-      "file-bench", "single-bench", "concurrent-bench",
+      "file-bench", "single-bench", "concurrent-bench", "scan-bench",
       "scan-dir", "analyze-mmd", "perf-log",
       "cache-status", "cache-verify", "cache-clear", "cache-diag",
       "config-show", "gui-flow",
@@ -518,7 +518,8 @@ describe("CLI Bridge - 白名单常量", () => {
   });
 
   it("数量正确", () => {
-    expect(CLI_ALLOWLIST).toHaveLength(20);
+    // 21 = 原 curated 子集 20 项 + scan-bench（ADR-262 D3 引擎对照：纯诊断、无原生依赖）
+    expect(CLI_ALLOWLIST).toHaveLength(21);
   });
 
   it("类型安全：只能传入白名单中的命令", () => {

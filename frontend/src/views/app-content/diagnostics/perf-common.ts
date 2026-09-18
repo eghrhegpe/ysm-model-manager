@@ -59,7 +59,12 @@ async function copyText(text: string): Promise<boolean> {
  */
 const perfCopyBoundEls = new WeakSet<Element>();
 export function bindPerfCopyHandlers(root: ShadowRoot): void {
-  for (const id of ["diag-perf-single", "diag-perf-gui-out", "diag-perf-hist"]) {
+  for (const id of [
+    "diag-perf-single",
+    "diag-perf-scan-bench-out",
+    "diag-perf-gui-out",
+    "diag-perf-hist",
+  ]) {
     const el = root.getElementById(id);
     if (!el || perfCopyBoundEls.has(el)) continue;
     perfCopyBoundEls.add(el);

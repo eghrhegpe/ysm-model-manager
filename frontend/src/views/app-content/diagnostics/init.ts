@@ -179,6 +179,8 @@ function dgInHideDesktopOnly(root: ShadowRoot): void {
     "diag-perf-gui",
     "diag-perf-log",
     "diag-perf-refresh-trace",
+    // ADR-262 D3：引擎对照同样靠 Go 扫描引擎，查看器/网页版一并隐藏
+    "diag-perf-scan-bench",
   ]) {
     const el = root.getElementById(id);
     if (el) el.style.display = "none";

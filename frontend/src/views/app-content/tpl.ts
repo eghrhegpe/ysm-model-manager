@@ -38,6 +38,9 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-conc-max",
   "diag-perf-conc-run",
   "diag-perf-conc-out",
+  // ADR-262 D3：Go/Rust 扫描引擎对照的入口与结果容器（未采集的引擎显示原因而不是 0ms）
+  "diag-perf-scan-bench",
+  "diag-perf-scan-bench-out",
 ];
 
 // settingsHTML 已拆至 settings/tpl-settings.ts，消费者直接 import 叶文件（P1-6）
@@ -177,8 +180,10 @@ export function diagnosticsHTML(): string {
       <input id="diag-perf-baseline-compare" type="checkbox" data-testid="diag-perf-baseline-compare" title="${t("diagnostics.perfBaselineHint")}">
       <label for="diag-perf-baseline-th">${t("diagnostics.perfBaselineThreshold")}</label>
       <input id="diag-perf-baseline-th" type="number" min="1" step="1" value="50" data-testid="diag-perf-baseline-th">
+      <button class="btn-base" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench" title="${t("diagnostics.perfScanBenchHint")}">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
     </div>
     <div id="diag-perf-single" data-testid="diag-perf-single"></div>
+    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out"></div>
   </div>`,
       },
       {

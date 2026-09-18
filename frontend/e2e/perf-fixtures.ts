@@ -654,3 +654,74 @@ export const TOP_LARGEST_REAL = {
     },
   ],
 };
+
+// 引擎对照 scan-bench：真实 CLI 输出（2026-09-18，`--iterations 2 --format json`）。
+// 两份载荷是**同一条命令在两种构建下**的真实结果，对照读才有意义：
+//   - 默认构建（无 rust_backend）：Go 有实测，Rust `used=false` + `reason="unavailable"`，
+//     `parity.comparable=false`——**0.00ms 不得出现**，界面必须写「未采集」；
+//   - `-tags rust_backend` 构建：两端都实测（条目数一致）且 `parity.match=true`。
+// 数值逐字未动（含 runs_ms 抖动），只保留界面读的键。
+// 注：rust 行的 `skipped` 是「请求了 Rust 却没记成样本」的次数——stub 构建下每次请求都被
+// 生产兜底逻辑走成 Go，故为 2，界面应如实说明而不是当作 0 次。
+export const SCAN_BENCH_REAL = {
+  spec: {
+    files_root: "tests/fixtures/ysm",
+    iterations: 2,
+    build_backend: "go",
+  },
+  engines: [
+    {
+      engine: "go",
+      used: true,
+      runs_ms: [2.69, 1.688],
+      median_ms: 1.688,
+      p95_ms: 2.69,
+      entries: 5,
+      skipped: 0,
+    },
+    {
+      engine: "rust",
+      used: false,
+      reason: "unavailable",
+      entries: 0,
+      skipped: 2,
+    },
+  ],
+  parity: {
+    comparable: false,
+    match: false,
+  },
+};
+
+// `-tags rust_backend` 构建的真实输出（2026-09-18）——两端都实测到，故 parity 可比且一致。
+export const SCAN_BENCH_RUST_REAL = {
+  spec: {
+    files_root: "tests/fixtures/ysm",
+    iterations: 2,
+    build_backend: "rust",
+  },
+  engines: [
+    {
+      engine: "go",
+      used: true,
+      runs_ms: [2.615, 1.639],
+      median_ms: 1.639,
+      p95_ms: 2.615,
+      entries: 5,
+      skipped: 0,
+    },
+    {
+      engine: "rust",
+      used: true,
+      runs_ms: [5.171, 1.004],
+      median_ms: 1.004,
+      p95_ms: 5.171,
+      entries: 5,
+      skipped: 0,
+    },
+  ],
+  parity: {
+    comparable: true,
+    match: true,
+  },
+};

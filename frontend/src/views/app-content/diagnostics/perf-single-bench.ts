@@ -155,7 +155,8 @@ type BenchMode =
   | { kind: "all"; maxModels: number; iterations: number }
   | { kind: "top"; topLargest: number; iterations: number };
 
-function singleBenchReadIterations(root: ShadowRoot): number {
+/** 读取面板既有的「迭代次数」（single-bench 与 scan-bench 共用：同一语义同一控件，默认与 Go 的 3 对齐） */
+export function singleBenchReadIterations(root: ShadowRoot): number {
   const raw = (root.getElementById("diag-perf-iter") as HTMLInputElement | null)?.value ?? "3";
   return Math.max(1, parseInt(raw, 10) || 3);
 }

@@ -18,6 +18,8 @@
  *  5. 基准判决字段双端锚定，且前端**真的传**基准参数（只声明接口不传参 = 功能不可达）
  *  6. 前 N 大目标集的「排名依据」三件套（spec.top_largest / spec.size_source / models[].footprint_bytes）
  *     双端锚定——排名依据不可见就等于不可复核
+ *  7. 扫描引擎对照（scan-bench，ADR-262 D3）：载荷字段名 + 4 个「未参与原因」token 双端锚定，
+ *     且前端**以 used 为渲染分叉依据**（未采集不得渲染成 0.00ms）
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -66,7 +68,14 @@ const singleTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-sing
 const singleCode = stripComments(singleTs);
 
 // ── 1) 命令白名单契约（前端 cli-allowlist 单一事实源）────────────
-const PERF_COMMANDS = ["gui-flow", "single-bench", "perf-log", "concurrent-bench", "benchmark"];
+const PERF_COMMANDS = [
+  "gui-flow",
+  "single-bench",
+  "perf-log",
+  "concurrent-bench",
+  "scan-bench",
+  "benchmark",
+];
 for (const cmd of PERF_COMMANDS) {
   must(
     allowlist.includes(`"${cmd}"`),
@@ -365,6 +374,151 @@ for (const key of TOP_I18N_KEYS) {
   );
 }
 
+// ── 3.8) 扫描引擎对照（ADR-262 D3）：Go/Rust 对照载荷 + 未采集原因 token 双端锚定 ──
+// 立因：`used=false` 时若前端把缺席的数值当 0 渲染，界面就会说「Rust 0ms」——与「拿不到就说
+// 不采集」的诚实红线正好相反（0ms 会被读成「快到测不出」）。故锁三件事：载荷字段名、四个原因
+// token 的字面值、渲染分叉依据；否则 Go 改 tag / 前端漏映射都能静默漂移。
+const scanBenchGo = readOrDie("go/cli/scan_bench.go");
+const scanBenchTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-scan-bench.ts");
+const scanBenchCode = stripComments(scanBenchTs);
+const perfTplTs = readOrDie("frontend/src/views/app-content/tpl.ts");
+// 入口（按钮/testid）声明在 tpl.ts，消费在 perf-scan-bench.ts——两文件的代码合并后查引用
+const scanBenchUsages = scanBenchCode + stripComments(perfTplTs);
+
+const SCAN_BENCH_FIELDS = [
+  '"spec"',
+  '"engines"',
+  '"parity"',
+  '"used"',
+  '"reason"',
+  '"median_ms"',
+  '"p95_ms"',
+  '"runs_ms"',
+  '"entries"',
+  '"skipped"',
+  '"comparable"',
+  '"match"',
+  '"only_go"',
+  '"only_rust"',
+  '"field_diff"',
+];
+for (const field of SCAN_BENCH_FIELDS) {
+  must(
+    hasJSONTag(scanBenchGo, field.replaceAll('"', "")),
+    `scan-bench 载荷缺少字段 json:${field}（go/cli/scan_bench.go）`,
+  );
+}
+for (const field of [
+  "spec",
+  "engines",
+  "parity",
+  "used",
+  "reason",
+  "median_ms",
+  "p95_ms",
+  "runs_ms",
+  "entries",
+  "skipped",
+  "comparable",
+  "match",
+  "only_go",
+  "only_rust",
+  "field_diff",
+]) {
+  must(
+    scanBenchCode.includes(field),
+    `前端 ScanBenchPayload 未声明或未消费 ${field}（perf-scan-bench.ts）`,
+  );
+}
+
+// 四个「未参与原因」token 的常量值必须与前端映射表字面一致：token 是文案映射的判定依据，
+// 改了值前端映射全落空（落到通用句），用户再也看不成「为什么没测到 Rust」。
+const SCAN_BENCH_REASONS = {
+  scanBenchReasonUnavailable: "unavailable",
+  scanBenchReasonFellBack: "fell_back",
+  scanBenchReasonCacheHit: "cache_hit",
+  scanBenchReasonInterfered: "interfered",
+};
+for (const [constName, token] of Object.entries(SCAN_BENCH_REASONS)) {
+  must(
+    scanBenchGo.includes(`${constName} = "${token}"`),
+    `Go 原因 token 常量失守（scan_bench.go 的 ${constName} 应为 "${token}"）`,
+  );
+  // 前端映射表用**无引号对象键**（house style），故按 `token:` 形态断言，而不是带引号的字面量
+  must(
+    scanBenchCode.includes(`${token}:`),
+    `前端原因映射缺 ${token}（加了 token 却没接线，界面会落到通用句）`,
+  );
+}
+
+// 组装点/渲染分叉断言（同前几节教训：只查字段名子串的话，删掉组装或分叉分支断言仍绿）
+must(
+  /executeCLI\(\s*"scan-bench"/.test(scanBenchCode),
+  "前端未提交 scan-bench 命令（GUI 无引擎对照入口）",
+);
+must(
+  /format:\s*"json"/.test(scanBenchCode),
+  "前端未在组装点写 format=json（会退化成解析人类文案）",
+);
+must(
+  /const measured = e\.used === true/.test(scanBenchCode),
+  "前端未以 used 为渲染分叉依据（未采集的引擎会被填上数值）",
+);
+must(
+  scanBenchCode.includes('"—"'),
+  "前端未把未采集的数值列渲染成占位（缺席与 0 必须在展示层可分）",
+);
+must(
+  /comparable !== true/.test(scanBenchCode),
+  "前端未对 comparable=false 单独分支（单侧数据会被画出假 ✅/❌）",
+);
+must(
+  /skipped/.test(scanBenchCode) && scanBenchCode.includes("perfScanBenchSkipped"),
+  "前端未如实说明 skipped（缓存命中/归属不可判定的次数不得静默丢弃）",
+);
+
+const SCAN_BENCH_I18N_KEYS = [
+  "perfScanBenchRun",
+  "perfScanBenchHint",
+  "perfScanBenchTitle",
+  "perfScanBenchSpec",
+  "perfScanBenchColEngine",
+  "perfScanBenchColMedian",
+  "perfScanBenchColP95",
+  "perfScanBenchColEntries",
+  "perfScanBenchColStatus",
+  "perfScanBenchMeasured",
+  "perfScanBenchNotMeasured",
+  "perfScanBenchSamplesHint",
+  "perfScanBenchSkipped",
+  "perfScanBenchReasonUnavailable",
+  "perfScanBenchReasonFellBack",
+  "perfScanBenchReasonCacheHit",
+  "perfScanBenchReasonInterfered",
+  "perfScanBenchReasonUnknown",
+  "perfScanBenchParity",
+  "perfScanBenchParityMatch",
+  "perfScanBenchParityMismatch",
+  "perfScanBenchParityNotComparable",
+  "perfScanBenchOnlyGo",
+  "perfScanBenchOnlyRust",
+  "perfScanBenchFieldDiff",
+  "perfScanBenchEmpty",
+];
+for (const key of SCAN_BENCH_I18N_KEYS) {
+  // 三语都要有：漏一个语种就回落到「显示 key 名」或未翻译中文
+  for (const lang of ["zh-CN", "en", "ja"]) {
+    must(
+      readOrDie(`frontend/src/locales/${lang}.ts`).includes(`"diagnostics.${key}"`),
+      `引擎对照文案缺 ${lang} 落点（diagnostics.${key}）`,
+    );
+  }
+  must(
+    scanBenchUsages.includes(`diagnostics.${key}`),
+    `引擎对照文案 ${key} 未被 perf-scan-bench.ts / tpl.ts 引用（加了键却没接线）`,
+  );
+}
+
 // ── 汇总结论 ─────────────────────────────────────────────────────
 if (errors.length) {
   console.error("❌ 契约测试失败（CLI 性能命令结构化载荷 ↔ 前端消费）：");
@@ -376,6 +530,6 @@ if (errors.length) {
   process.exit(1);
 }
 console.log(
-  "✅ 契约测试通过：CLI 性能命令结构化载荷字段与前端消费锚定一致（白名单 + gui-flow + single-bench + 前 N 大 + 反文本解析）",
+  "✅ 契约测试通过：CLI 性能命令结构化载荷字段与前端消费锚定一致（白名单 + gui-flow + single-bench + 前 N 大 + 引擎对照 + 反文本解析）",
 );
 process.exit(0);

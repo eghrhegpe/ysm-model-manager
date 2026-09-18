@@ -14,6 +14,8 @@ import { gotoApp, navItem } from "./helpers.ts";
 import {
   CONC_BENCH_REAL,
   GUI_FLOW_REAL,
+  SCAN_BENCH_REAL,
+  SCAN_BENCH_RUST_REAL,
   SINGLE_BENCH_BASELINE_MISSING,
   SINGLE_BENCH_SAVED,
   TOP_LARGEST_REAL,
@@ -637,6 +639,129 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     expect(got.echo.join(" ")).toContain(String(TOP_LARGEST_REAL.spec.top_largest));
     expect(got.echo.join(" ")).toContain(TOP_LARGEST_REAL.spec.size_source);
     // ④ 通用残留守卫（占位符 / 未翻译 token）
+    expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
+  });
+});
+
+// ⑥ Go/Rust 扫描引擎对照（scan-bench，ADR-262 D3 收尾）——真实载荷两面
+//
+// 这一层的价值全在「未采集」那一面：`-tags rust_backend` 下 Rust 仍可能运行期不可用，
+// 生产路径静默回退 Go。若界面把「没测到」渲染成 0.00ms，读者会得到**与事实相反**的结论
+// （「快到测不出」）。故这里用真 CLI 载荷同时锁两面：默认构建（Rust 未采集）与
+// rust_backend 构建（两端实测 + 一致性）。
+test.describe("诊断页 · 引擎对照 scan-bench 真实载荷渲染（ADR-262 D3）", () => {
+  test.beforeEach(async ({ page }) => {
+    await gotoApp(page);
+    await navItem(page, "diagnostics").click();
+    await page.waitForFunction(
+      () => {
+        const root = document.querySelector("app-content")?.shadowRoot;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 8;
+      },
+      undefined,
+      { timeout: 10000, polling: 200 },
+    );
+    // 引擎对照按钮在「单模型」tab 的控制条上，先切过去
+    await clickBySelector(page, '.repo-tab[data-tab="single"]');
+  });
+
+  /**
+   * 载荷字段 → 期望文案。字段缺席即失败：静默当 0 正是被测代码明令禁止的事
+   * （未采集不得填 0.00ms），测试自己更不能先犯。
+   */
+  function expectedMs(v: number | undefined, where: string): string {
+    expect(typeof v, `${where} 的载荷字段应存在`).toBe("number");
+    return `${(v as number).toFixed(2)}ms`;
+  }
+
+  /** 读引擎对照容器：表格行、逐列文本、一致性结论类别、原始样本 title */
+  function readScanBenchOut(page: Page) {
+    return page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const out = root?.querySelector(
+        '[data-testid="diag-perf-scan-bench-out"]',
+      ) as HTMLElement | null;
+      const q = (sel: string): HTMLElement[] =>
+        [...(out?.querySelectorAll(sel) ?? [])] as HTMLElement[];
+      const cells = (sel: string): string[] => q(sel).map((e) => e.textContent ?? "");
+      return {
+        text: out?.textContent ?? "",
+        engines: cells(".perf-sb-engine"),
+        // 每行三列（中位 / p95 / 条目），按行顺序展平
+        ms: cells(".perf-sb-ms"),
+        status: cells(".perf-sb-status"),
+        skipped: cells(".perf-sb-skipped"),
+        sampleTitles: q(".perf-sb-ms[title]").map((e) => e.getAttribute("title") ?? ""),
+        // 一致性结论三态互斥：三者同时只该有一个命中（不画假结论）
+        parityOk: q(".perf-sb-parity-ok").length,
+        parityWarn: q(".perf-sb-parity-warn").length,
+        parityBad: q(".perf-sb-parity-bad").length,
+        echo: cells(".perf-total"),
+      };
+    });
+  }
+
+  test("默认构建：Go 实测 + Rust「未采集 + 原因」，三列留空且全页无 0.00ms", async ({ page }) => {
+    await installCliMock(page, { "scan-bench": { data: SCAN_BENCH_REAL } });
+    await clickBySelector(page, '[data-testid="diag-perf-scan-bench"]');
+    await waitForCount(page, ".perf-sb-table tbody tr", SCAN_BENCH_REAL.engines.length);
+
+    const got = await readScanBenchOut(page);
+    const [go, rust] = SCAN_BENCH_REAL.engines;
+
+    // ① 两端都上屏，顺序 = 载荷顺序（Go 已定序，前端不重排）
+    expect(got.engines).toEqual(SCAN_BENCH_REAL.engines.map((e) => e.engine));
+    // ② 实测端：分位数与条目数逐字来自载荷（前端不自算分位数）
+    expect(got.ms.slice(0, 3)).toEqual([
+      expectedMs(go.median_ms, "go.median_ms"),
+      expectedMs(go.p95_ms, "go.p95_ms"),
+      String(go.entries),
+    ]);
+    expect(got.status[0]).toContain("Measured");
+    // ③ 未采集端：三列「—」+ 原因人话——0.00ms 或 0 条都会被读成事实
+    expect(got.ms.slice(3, 6)).toEqual(["—", "—", "—"]);
+    expect(got.status[1]).toContain("Not measured");
+    expect(got.status[1]).toContain("rust_backend is not enabled in this build");
+    expect(got.text).not.toContain("0.00");
+    // ④ skipped 如实回报（默认构建 rust skipped=2：请求了 Rust 却一次都没归它）
+    expect(got.skipped).toHaveLength(1);
+    expect(got.skipped[0]).toContain(String(rust.skipped));
+    // ⑤ 单侧采集不画一致性结论：只允许 warn，不得出现 ok/bad
+    expect(got.parityWarn).toBe(1);
+    expect(got.parityOk).toBe(0);
+    expect(got.parityBad).toBe(0);
+    // ⑥ 原始样本进 title（抖动可见 = 可复核），正文只放分位数
+    expect(got.sampleTitles[0]).toContain("Per-run samples (2 runs)");
+    for (const ms of go.runs_ms ?? []) expect(got.sampleTitles[0]).toContain(`${ms.toFixed(2)}ms`);
+    // ⑦ 规格回显：构建期后端与迭代次数（「量的是几次、什么构建」必须能看出来）
+    const echo = got.echo.join(" ");
+    expect(echo).toContain(`Build backend ${SCAN_BENCH_REAL.spec.build_backend}`);
+    expect(echo).toContain(String(SCAN_BENCH_REAL.spec.iterations));
+    // ⑧ 通用残留守卫（占位符 / 未翻译 token）
+    expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
+  });
+
+  test("rust_backend 构建：两端皆实测 + 一致性 ✅（不出现 warn/bad）", async ({ page }) => {
+    await installCliMock(page, { "scan-bench": { data: SCAN_BENCH_RUST_REAL } });
+    await clickBySelector(page, '[data-testid="diag-perf-scan-bench"]');
+    await waitForCount(page, ".perf-sb-table tbody tr", SCAN_BENCH_RUST_REAL.engines.length);
+
+    const got = await readScanBenchOut(page);
+    const rust = SCAN_BENCH_RUST_REAL.engines[1];
+
+    expect(got.engines).toEqual(SCAN_BENCH_RUST_REAL.engines.map((e) => e.engine));
+    // Rust 端的数值同样逐字来自载荷（这一面才是「对照真的对起来了」的证据）
+    expect(got.ms.slice(3, 6)).toEqual([
+      expectedMs(rust.median_ms, "rust.median_ms"),
+      expectedMs(rust.p95_ms, "rust.p95_ms"),
+      String(rust.entries),
+    ]);
+    expect(got.status[1]).toContain("Measured");
+    expect(got.skipped).toHaveLength(0);
+    expect(got.parityOk).toBe(1);
+    expect(got.parityWarn).toBe(0);
+    expect(got.parityBad).toBe(0);
+    expect(got.text).toContain("Entry set and key fields match one by one");
     expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
   });
 });

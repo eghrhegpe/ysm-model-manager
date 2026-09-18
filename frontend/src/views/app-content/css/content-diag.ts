@@ -120,6 +120,20 @@ export const contentDiagCSS: string = `
 .perf-conc-good { color:var(--status-ok, #2e7d32); }
 .perf-conc-warn { color:var(--warning, #b8860b); }
 .perf-conc-bad { color:var(--status-error); }
+/* 扫描引擎对照（ADR-262 D3）：实测行与未采集行必须视觉可分——0ms 假象的源头就是两者长得一样 */
+.perf-sb-table td { vertical-align:top; }
+.perf-sb-engine { font-weight:600; }
+.perf-sb-ms { font-variant-numeric:tabular-nums; }
+.perf-sb-ok { color:var(--status-ok, #2e7d32); }
+.perf-sb-skip { color:var(--warning, #b8860b); }
+.perf-sb-reason { color:var(--muted); font-size:var(--fs-micro); }
+.perf-sb-skipped { color:var(--muted); font-size:var(--fs-micro); margin-top:2px; }
+.perf-sb-parity { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:4px 2px; font-size:var(--fs-sm); }
+.perf-sb-parity-label { font-weight:600; }
+.perf-sb-parity-ok { color:var(--status-ok, #2e7d32); font-weight:600; }
+.perf-sb-parity-warn { color:var(--warning, #b8860b); font-weight:600; }
+.perf-sb-parity-bad { color:var(--status-error); font-weight:600; }
+.perf-sb-diff { font-size:var(--fs-xs); color:var(--muted); word-break:break-all; padding-left:10px; }
 .perf-gui-stage { display:flex; align-items:center; gap:8px; font-size:var(--fs-sm); color:var(--txt); padding:3px 2px; flex-wrap:wrap; }
 .perf-gui-stage .perf-gui-status { font-size:var(--fs-base); }
 .perf-gui-stage .perf-gui-name { font-weight:600; }

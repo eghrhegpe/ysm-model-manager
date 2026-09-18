@@ -3,8 +3,8 @@
 // 网页版（browserAdapter）走 web 降级实现，桌面/Android 走 Wails 原逻辑。
 //
 // 三层兜链（命令白名单判定）：
-//   ① 动态拉取：getApp().GetAllowedCLICommands()（桌面端 Go 注册表 39 命令）
-//   ② 硬编码兜底：CLI_ALLOWLIST（web 模式 + 桌面端拉取失败时的 curated 子集 20 项）
+//   ① 动态拉取：getApp().GetAllowedCLICommands()（桌面端 Go 注册表 40 命令）
+//   ② 硬编码兜底：CLI_ALLOWLIST（web 模式 + 桌面端拉取失败时的 curated 子集 21 项）
 //   ③ web-only 短路：isWebPlatform() 直接走硬编码列表
 //
 // CLI_ALLOWLIST 是 curated 子集（有意排除需 Go 进程/落盘依赖的命令），数量差异是设计意图。
@@ -74,7 +74,7 @@ async function fetchDynamicCommands(): Promise<Set<string>> {
       const raw = await app.GetAllowedCLICommands();
       const list: string[] = JSON.parse(raw);
       if (!list.length) {
-        // 后端返回空列表 = 注册表异常（正常 39 命令，空集只可能来自故障/版本漂移）：
+        // 后端返回空列表 = 注册表异常（正常 40 命令，空集只可能来自故障/版本漂移）：
         // 不缓存空集——否则 isCommandAllowed 对所有命令恒 false，整会话 CLI 锁死
         //（not_supported）。与 catch 分支同语义：回退硬编码列表，下次调用重新拉取。
         dynamicFetchPromise = null;

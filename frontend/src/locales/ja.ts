@@ -440,6 +440,38 @@ export const ja: Record<string, string> = {
     "worker 数は 1~256、タイプ毎の上限は 1 以上にしてください",
   "diagnostics.perfConcurrentEmpty":
     "並列ベンチの結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
+  // ADR-262 D3 スキャンエンジン比較（Go / Rust）：未計測のエンジンは理由を表示し、0.00ms は出さない
+  "diagnostics.perfScanBenchRun": "エンジン比較（Go/Rust）",
+  "diagnostics.perfScanBenchHint":
+    "同じリポジトリルートを Go / Rust でスキャンし中央値と p95 を計測。未計測のエンジンは理由を表示（0ms ではない）",
+  "diagnostics.perfScanBenchTitle": "スキャンエンジン比較結果",
+  "diagnostics.perfScanBenchSpec": "ビルドバックエンド {backend} · {n} 回反復",
+  "diagnostics.perfScanBenchColEngine": "エンジン",
+  "diagnostics.perfScanBenchColMedian": "中央値",
+  "diagnostics.perfScanBenchColP95": "p95",
+  "diagnostics.perfScanBenchColEntries": "件数",
+  "diagnostics.perfScanBenchColStatus": "状態",
+  "diagnostics.perfScanBenchMeasured": "実測",
+  "diagnostics.perfScanBenchNotMeasured": "未計測",
+  "diagnostics.perfScanBenchSamplesHint": "各回サンプル（{n} 回）：{runs}",
+  "diagnostics.perfScanBenchSkipped":
+    "他に {n} 回がサンプルに含まれていません（キャッシュヒット / 帰属判定不能）",
+  "diagnostics.perfScanBenchReasonUnavailable": "このビルドでは rust_backend が無効です",
+  "diagnostics.perfScanBenchReasonFellBack":
+    "Rust バックエンドは今回処理していません（実行時に利用不可、Go にフォールバック）",
+  "diagnostics.perfScanBenchReasonCacheHit":
+    "スキャンキャッシュにヒットし、エンジンを通っていません",
+  "diagnostics.perfScanBenchReasonInterfered": "並列スキャンが交差し、帰属を判定できません",
+  "diagnostics.perfScanBenchReasonUnknown": "未計測（理由 {reason}）",
+  "diagnostics.perfScanBenchParity": "エンジン間の一致性",
+  "diagnostics.perfScanBenchParityMatch": "エントリ集合と主要フィールドが一致",
+  "diagnostics.perfScanBenchParityMismatch": "分岐あり",
+  "diagnostics.perfScanBenchParityNotComparable": "比較できません（両エンジン未計測）",
+  "diagnostics.perfScanBenchOnlyGo": "Go のみ検出",
+  "diagnostics.perfScanBenchOnlyRust": "Rust のみ検出",
+  "diagnostics.perfScanBenchFieldDiff": "フィールド不一致",
+  "diagnostics.perfScanBenchEmpty":
+    "エンジン比較結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
   "diagnostics.perfRtypeSingle": "（単一モデル：パス指定）",
   "diagnostics.perfRtypeAll": "全タイプのマトリクス",
   "diagnostics.perfRtypeTop": "リポジトリ全体の上位 N 件",

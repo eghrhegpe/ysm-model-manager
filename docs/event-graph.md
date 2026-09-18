@@ -36,7 +36,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 179 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 180 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -458,9 +458,10 @@
 | dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 107 |
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 124 |
 | dgInCopyRowLog | `frontend/src/views/app-content/diagnostics/init.ts` | 132 |
-| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 74 |
+| bindPerfCopyHandlers | `frontend/src/views/app-content/diagnostics/perf-common.ts` | 79 |
 | concWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-concurrent.ts` | 118 |
 | guiFlowWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-gui-flow.ts` | 41 |
+| scanBenchWebModeCheck | `frontend/src/views/app-content/diagnostics/perf-scan-bench.ts` | 242 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 203 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 341 |

@@ -10,6 +10,7 @@
 
 import * as THREE from "three";
 import { t } from "@/core/i18n/t.ts";
+import { requireSharedInfra } from "@/preview-3d/adapters/shared/shared-infra.ts";
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { getTintColorSync, loadMcTints } from "@/preview-3d/materials/mc-tints.ts";
@@ -275,9 +276,7 @@ async function buildPackScene(
   zipPath: string, // 容器路径（.zip 文件路径）
   opts?: PackAdapterOpts,
 ): Promise<CameraControlScene & ScreenshotScene> {
-  if (!ctx.scene || !ctx.camera || !ctx.controls || !ctx.renderer) {
-    throw new Error("pack-model shared 模式需要核心提供 scene/camera/controls/renderer");
-  }
+  const infra = requireSharedInfra(ctx);
 
   const state: PackState = { group: null, disposables: [], usedTextures: new Set() };
 
@@ -308,7 +307,7 @@ async function buildPackScene(
   // 核心在 switchTo 内已移除 sceneBaseline 之外的子节点（line 724-727），此处只需释放 GPU 资源。
   if (state.group?.parent) {
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    ctx.scene!.remove(state.group);
+    infra.scene.remove(state.group);
   }
 
   let group: THREE.Group;
@@ -325,7 +324,7 @@ async function buildPackScene(
   state.group = group;
   state.disposables = disposables;
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  ctx.scene!.add(group);
+  infra.scene.add(group);
   frameCamera(ctx, group);
   ctx.loadingEl.remove();
 
@@ -352,7 +351,7 @@ async function buildPackScene(
   return {
     menuItems,
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    dispose: () => disposeContent(state, ctx.scene!),
+    dispose: () => disposeContent(state, infra.scene),
     resetCamera: () => {
       if (ctx.camera && state.group) {
         frameCamera(ctx, state.group);

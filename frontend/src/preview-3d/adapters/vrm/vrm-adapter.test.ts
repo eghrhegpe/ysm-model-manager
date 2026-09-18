@@ -8,6 +8,7 @@ import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts"
 import type { MmdPlayBridge } from "@/preview-3d/infra/content-bridges.ts"
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { PreviewBuildCtx } from "@/preview-3d/adapters/mount-preview-core.ts";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
@@ -404,6 +405,13 @@ describe("buildVrmScene 主路径", () => {
     ).rejects.toThrow("VRM 实例解析失败");
   });
 
+  it("ctx 缺 renderer → shared 模式前置守卫抛错（对齐 ysm/pack-model）", async () => {
+    const { ctx } = makeCtx();
+    const badCtx = { ...ctx, renderer: undefined } as unknown as PreviewBuildCtx;
+    await expect(
+      buildVrmScene(badCtx, "/vrm/test.vrm", makePort(), hoisted.readBytesMock),
+    ).rejects.toThrow(/需要核心提供/);
+  });
   // 刀⑳ 回归：load-trace 的 bones 必须报**骨骼总数**（byId.size），不是 roots.length
   // （无父骨根节点 ≈1）。同函数 :513 早修过同一 bug（面板显示「1 骨骼」），此处曾漏改。
   // 用「多骨骼 + 单根」的树把两口径彻底分开：roots.length=1 而 byId.size=3。

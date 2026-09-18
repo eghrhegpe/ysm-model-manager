@@ -6,6 +6,7 @@
 import * as THREE from "three";
 import { t } from "@/core/i18n/t.ts";
 import type { VoxelData } from "@/parsers/voxel-types.ts";
+import { requireSharedInfra } from "@/preview-3d/adapters/shared/shared-infra.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
@@ -108,9 +109,9 @@ function setupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): SizeInfo {
   ctx.camera?.lookAt(centerX, centerY, centerZ);
   ctx.controls?.target.set(centerX, centerY, centerZ);
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  ctx.controls!.minDistance = 1;
+  requireSharedInfra(ctx).controls.minDistance = 1;
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  ctx.controls!.maxDistance = maxDim * 8;
+  requireSharedInfra(ctx).controls.maxDistance = maxDim * 8;
   ctx.controls?.update();
   const gridSize = Math.ceil(maxDim / 10) * 10;
   const grid = new THREE.GridHelper(gridSize, Math.min(gridSize, 50), 0x6666aa, 0x444488);
@@ -457,7 +458,10 @@ function buildResult(
       safeDispose(meshSet.grid);
     },
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
+    screenshot: () =>
+      Promise.resolve(
+        screenshotFromRenderer(requireSharedInfra(ctx).renderer, ctx.scene, ctx.camera),
+      ),
   };
 }
 
@@ -480,6 +484,7 @@ export async function buildLitematicScene(
   voxelCall: (path: string) => Promise<VoxelData | null>,
   opts?: LitematicBuildOpts,
 ): Promise<PreviewScene> {
+  requireSharedInfra(ctx);
   const tStart = performance.now();
   showLoading(ctx);
 

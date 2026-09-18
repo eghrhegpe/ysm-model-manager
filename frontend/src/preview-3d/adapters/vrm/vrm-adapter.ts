@@ -30,6 +30,7 @@ import {
   type PerceptionPauseRef,
 } from "@/preview-3d/adapters/shared/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
 import { createGazeController } from "@/preview-3d/adapters/shared/perception/gaze.ts"; // 语义骨骼消费方：程序化生命力 L2
+import { requireSharedInfra } from "@/preview-3d/adapters/shared/shared-infra.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { createFootIKController } from "@/preview-3d/bone/mmd-foot-ik.ts"; // 程序化足部锚地（待机态 IK，格式无关）
 import { vrmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
@@ -353,7 +354,7 @@ async function Stage1ReadParse(
   if (metaVersion === "0") ParseGlbVrm0(vrm, gltf);
   else ParseGlbVrm1(vrm, gltf);
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  ctx.scene!.add(vrm.scene);
+  requireSharedInfra(ctx).scene.add(vrm.scene);
   registerModelRoot(vrm.scene);
   ctx.loadingEl.remove();
   const tParseEnd = performance.now();
@@ -622,7 +623,10 @@ function Stage4MenuPanels(
     modelInfo,
     modelPath: path,
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
+    screenshot: () =>
+      Promise.resolve(
+        screenshotFromRenderer(requireSharedInfra(ctx).renderer, ctx.scene, ctx.camera),
+      ),
     bonePanel: {
       tree: boneTree,
       viewContainer: ctx.viewContainer,
@@ -736,7 +740,7 @@ function Stage5BuildResult(
         // gaze 不挂全局暂停标志（摄像机追踪，非动画优先级）——保留本层 !animActive 守卫
         if (!animActive && !useNativeLookAt && perceptionState.gaze)
           // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          gaze!.apply(dt, semanticBones, ctx.camera!.position);
+          gaze!.apply(dt, semanticBones, requireSharedInfra(ctx).camera.position);
       }
       footIK.apply(dt, !animActive);
       // VMD 足 IK：与上面的待机锚地以 animActive 互斥（待机走锚地、动画走 VMD 目标）。
@@ -803,7 +807,10 @@ function Stage5BuildResult(
       void vrmDiag(port, "gpu-release", path, "ok", `tex=${texCount}`);
     },
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    screenshot: () => Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene, ctx.camera)),
+    screenshot: () =>
+      Promise.resolve(
+        screenshotFromRenderer(requireSharedInfra(ctx).renderer, ctx.scene, ctx.camera),
+      ),
     semanticBones,
   };
 }
@@ -816,6 +823,7 @@ export async function buildVrmScene(
   panels?: VrmPanelHooks,
   listAllFilePaths?: (dir: string) => Promise<string[] | null>,
 ): Promise<UpdateableScene & ScreenshotScene & SemanticScene> {
+  requireSharedInfra(ctx);
   const parseRes = await Stage1ReadParse(ctx, path, port, readFn);
   const { vrm } = parseRes;
   const motion = await loadMotionClips(vrm, path, readFn, listAllFilePaths);

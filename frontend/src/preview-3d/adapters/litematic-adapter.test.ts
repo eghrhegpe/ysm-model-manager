@@ -69,6 +69,15 @@ describe("buildLitematicScene 裸文件回归（无 containerPath）", () => {
   });
 });
 
+  it("ctx 缺 renderer → shared 模式前置守卫抛错（对齐 ysm/pack-model）", async () => {
+    const voxelCall = vi.fn().mockResolvedValue(VALID_JSON);
+    const ctx = makeCtx();
+    const badCtx = { ...ctx, renderer: undefined } as unknown as PreviewBuildCtx;
+    await expect(buildLitematicScene(badCtx, "/lib/a.litematic", voxelCall)).rejects.toThrow(
+      /需要核心提供/,
+    );
+  });
+
 describe("buildLitematicScene 容器内多模型（ADR-132）", () => {
   it("modelEntries 多候选 → menuItems 含 litematic-model-select 节点（kind:select，options 含全部 entry）", async () => {
     const voxelCall = vi.fn().mockResolvedValue(VALID_JSON);

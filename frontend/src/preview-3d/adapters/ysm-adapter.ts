@@ -20,6 +20,7 @@ import {
   createPerceptionPauseRef,
   type PerceptionPauseRef,
 } from "@/preview-3d/adapters/shared/perception/core.ts"; // #9 per-instance 暂停引用（取代全局单例）
+import { requireSharedInfra, type SharedInfra } from "@/preview-3d/adapters/shared/shared-infra.ts";
 import { buildBoneHierarchy, registerBoneRaycast } from "@/preview-3d/bone/bone-raycast.ts";
 import { type BoneNode, type BoneTree, buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { ysmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
@@ -161,6 +162,7 @@ function makeRayState(): {
 /** 类型提级：buildYsmScene 多阶段共享基础上下文（包级非导出） */
 interface YsmSceneCtx {
   ctx: PreviewBuildCtx;
+  infra: SharedInfra;
   path: string;
   opts: YsmAdapterOptions;
   /** 当前 3D 会话稳定 id（mount 层生成，per-mount 唯一）——per-scene schema key 来源 */
@@ -238,7 +240,7 @@ async function loadAndBuild(sc: YsmSceneCtx): Promise<YsmBuildCore> {
     obj = buildYsmObject(spec as Spec3D, texArr, componentTexMap, texIdx);
     sc.tBuildEnd = performance.now();
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    sc.ctx.scene!.add(obj.rootGroup);
+    sc.infra.scene.add(obj.rootGroup);
     registerModelRoot(obj.rootGroup);
   } catch (e) {
     // 失败路径释放（对齐 pack-model-adapter:265-267）：preload 已 acquire 全部纹理引用，
@@ -253,15 +255,14 @@ async function loadAndBuild(sc: YsmSceneCtx): Promise<YsmBuildCore> {
 
 /** 阶段②：相机取景 + 骨骼拾取系统 + content 句柄 */
 function setupCameraAndBones(sc: YsmSceneCtx, core: YsmBuildCore): YsmCameraBones {
-  const { ctx } = sc;
   const { obj, spec } = core;
 
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  fitCameraToScene(obj.rootGroup, ctx.camera!, ctx.controls!);
+  fitCameraToScene(obj.rootGroup, sc.infra.camera, sc.infra.controls);
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  const initCamPos = ctx.camera!.position.clone();
+  const initCamPos = sc.infra.camera.position.clone();
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-  const initCamTarget = ctx.controls!.target.clone();
+  const initCamTarget = sc.infra.controls.target.clone();
 
   const rayState = makeRayState();
   const { nameMap, parentMap, childrenMap } = buildBoneHierarchy(spec);
@@ -270,11 +271,11 @@ function setupCameraAndBones(sc: YsmSceneCtx, core: YsmBuildCore): YsmCameraBone
     ? () => {}
     : registerBoneRaycast(
         // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        ctx.renderer!,
+        sc.infra.renderer,
         // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        ctx.camera!,
+        sc.infra.camera,
         // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        ctx.scene!,
+        sc.infra.scene,
         obj.boneGroupMap,
         nameMap,
         parentMap,
@@ -474,7 +475,7 @@ function buildMenuAndDebug(
     ...(opts.onTextureChange ? { onTextureChange: opts.onTextureChange } : {}),
     screenshot: () =>
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene!, ctx.camera!)),
+      Promise.resolve(screenshotFromRenderer(sc.infra.renderer, sc.infra.scene, sc.infra.camera)),
   };
   const perceptionState: PerceptionState = {
     breath: true,
@@ -605,18 +606,18 @@ function makeSceneHandle(
     },
     resetCamera(): void {
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      ctx.camera!.position.copy(initCamPos);
+      sc.infra.camera.position.copy(initCamPos);
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      ctx.controls!.target.copy(initCamTarget);
+      sc.infra.controls.target.copy(initCamTarget);
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      ctx.controls!.update();
+      sc.infra.controls.update();
     },
     setRotationMode: (orbit: boolean) => ctx.cameraControls?.setOrbit(orbit),
     setSpeed: (n: number) => ctx.cameraControls?.setSpeed(n),
     showModelGroup: (i: number) => obj.showModelGroup(i),
     screenshot: () =>
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      Promise.resolve(screenshotFromRenderer(ctx.renderer!, ctx.scene!, ctx.camera!)),
+      Promise.resolve(screenshotFromRenderer(sc.infra.renderer, sc.infra.scene, sc.infra.camera)),
     boneMaps,
     menuItems,
     onBonePick: (id: string) => ctx.menu.openPanel(id),
@@ -648,13 +649,12 @@ export async function buildYsmScene(
   path: string,
   opts: YsmAdapterOptions,
 ): Promise<UpdateableScene & CameraControlScene & GroupedScene & ScreenshotScene> {
-  if (!ctx.scene || !ctx.camera || !ctx.controls || !ctx.renderer) {
-    throw new Error("YSM shared 模式需要核心提供 scene/camera/controls/renderer");
-  }
+  const infra = requireSharedInfra(ctx);
 
   const now = () => performance.now();
   const sc: YsmSceneCtx = {
     ctx,
+    infra,
     path,
     opts,
     sessionId: ctx.sessionId ?? "",

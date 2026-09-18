@@ -27,6 +27,7 @@ function makeMockCtx(): PreviewBuildCtx {
       target: new THREE.Vector3(),
       update: vi.fn(),
     },
+    renderer: { domElement: document.createElement("div") } as unknown as THREE.WebGLRenderer,
     loadingEl: document.createElement("div"),
     menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), refreshDock: vi.fn(), dispose: vi.fn() },
   } as unknown as PreviewBuildCtx;

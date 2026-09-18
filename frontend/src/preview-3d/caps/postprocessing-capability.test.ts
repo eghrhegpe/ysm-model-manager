@@ -906,6 +906,31 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     // ppExposure(1.8) 不再是 renderer 上的直写值——由 sky 侧乘算 skyExposure × ppExposure
     expect(renderer.toneMappingExposure).not.toBe(1.8);
   });
+  it("[归属判定] outputColorSpace 被他人接管时不得盲还原（对齐 toneMapping 范式）", () => {
+    const { cap, renderer } = newRealCap({ enabled: true });
+    const r = renderer as unknown as { outputColorSpace: THREE.ColorSpace };
+    expect(r.outputColorSpace).toBe(THREE.SRGBColorSpace); // 本 cap 在 applyToneMapping 写入
+    r.outputColorSpace = THREE.LinearSRGBColorSpace; // 模拟他处（适配器/其它 cap）接管
+    cap.setEnabled(false);
+    // 漏判时会把别人的值盲打回构造期快照 → 他人持有的色彩空间被本 cap 停用连带打回
+    expect(r.outputColorSpace).toBe(THREE.LinearSRGBColorSpace);
+  });
+
+  it("[归属判定] renderer 上仍是本 cap 写入的 SRGB 时正常归还构造期快照", () => {
+    const raw = makeFakeRenderer();
+    (raw as unknown as { outputColorSpace: THREE.ColorSpace }).outputColorSpace =
+      THREE.LinearSRGBColorSpace; // 构造期快照 ≠ SRGB，便于观察是否真的归还
+    const { cap, renderer } = newRealCap({
+      enabled: true,
+      renderer: raw as unknown as THREE.WebGLRenderer,
+    });
+    const r = renderer as unknown as { outputColorSpace: THREE.ColorSpace };
+    expect(r.outputColorSpace).toBe(THREE.SRGBColorSpace);
+    cap.setEnabled(false);
+    expect(r.outputColorSpace).toBe(THREE.LinearSRGBColorSpace);
+  });
+
+
 
   it("setSSAOEnabled(true) 重建 composer 挂 SSAO；setSSAORadius/MinDist/MaxDist 直改 pass", () => {
     const { cap } = newRealCap();

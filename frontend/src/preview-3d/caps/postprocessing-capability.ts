@@ -465,7 +465,13 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (this.renderer.toneMapping === toneMappingValue(envState.ppToneMapping)) {
       this.renderer.toneMapping = this.prevToneMapping;
     }
-    this.renderer.outputColorSpace = this.prevOutputColorSpace as THREE.ColorSpace;
+    // outputColorSpace 同样按**字段各自的归属**归还——本 cap 在 applyToneMapping 里写的是
+    // 常量 `THREE.SRGBColorSpace`，故「renderer 上仍是 SRGB」才说明我们仍是持有者。
+    // 缺此判定时，若他处（适配器自建流程 / 其它 cap）已把色彩空间改成别的值，本 cap 停用
+    // 会把别人的值盲打回构造期快照——与上面 toneMapping 的范式不对称，属漏判。
+    if (this.renderer.outputColorSpace === THREE.SRGBColorSpace) {
+      this.renderer.outputColorSpace = this.prevOutputColorSpace as THREE.ColorSpace;
+    }
   }
 
   private syncBloomPass(lightCap: LightCapability | null): void {

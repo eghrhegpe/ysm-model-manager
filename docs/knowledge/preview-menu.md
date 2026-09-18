@@ -50,6 +50,7 @@ auto_fields:
     - disposeCustomCleanups
     - disposeEnvSubscriptions
     - formatCapSliderValue
+    - getEnvSectionCapIds
     - hasSceneStats
     - isPreviewFolderNode
     - makeSwitchState

@@ -17,17 +17,16 @@ import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./no
 import { renderMenu } from "./render.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 
-const ORDERED_IDS = ["sky", "ground", "water", "environment", "fog", "reflector"] as const;
-const ENV_IDS = new Set<string>(ORDERED_IDS);
-
 /**
- * 环境面板 cap 分段（卡牌外壳单一事实源）。
+ * 环境面板 cap 分段——成员与顺序的**单一事实源**。
  *
  * 背景：envCapRow 产出的都是「点击 navigate 下钻参数页」的一级导航行
  * （天空/地面/水面/环境/雾/反射），本身不收纳参数——原先平铺一长列，语义相邻的
  * 项之间没有视觉边界。现按语义聚拢成卡：卡壳＝顶行标题 + 分隔线 + 内容区。
  *
- * 新增环境 cap 时在此登记归属；未登记的落末尾「其它」卡（不静默丢失）。
+ * 新增环境 cap 只需在此登记归属：准入闸（ENV_IDS）、下钻序（ORDERED_IDS）、
+ * 卡牌分段三处同源于此表，杜绝旧「独立 ORDERED_IDS 硬编码」与本表漂移导致的
+ * 「只登记进本表却被 resolveCaps 静默滤除」的隐身 cap。
  */
 const ENV_SECTIONS: ReadonlyArray<{
   id: string;
@@ -45,6 +44,15 @@ const ENV_SECTIONS: ReadonlyArray<{
     caps: ["environment", "fog", "reflector"],
   },
 ];
+
+/** 环境 cap 准入闸 + 下钻序：由 ENV_SECTIONS 派生，非另立清单（漂移在构造上不可能） */
+const ORDERED_IDS: readonly string[] = ENV_SECTIONS.flatMap((sec) => sec.caps);
+const ENV_IDS = new Set<string>(ORDERED_IDS);
+
+/** 测试/诊断出口：环境成员（展平后的登记序），供守护用例锁定单一事实源不漂移 */
+export function getEnvSectionCapIds(): string[] {
+  return [...ORDERED_IDS];
+}
 
 // ── 环境面板局部刷新：订阅 cap 参数变更触发 menu.refresh()（重渲染栈顶 = 当前子视图）──
 // 按 menu 句柄隔离订阅：每个 mountPreviewRootMenu 实例持有各自的订阅列表，
@@ -67,10 +75,9 @@ export function disposeEnvSubscriptions(menu: SlideMenuHandle): void {
     for (const u of subs) u();
     _envCapUnsubsByMenu.delete(menu);
   }
-  // 重置预设 select 模块缓存——cap 真值源在
-  // environment cap 的 params.preset，本变量仅作无 cap 时的回退，跨会话残留
-  // 会让新会话 select 显示上一会话的选中态
-  _lastEnvPreset = "studio";
+  // 清除本 menu 的预设回退缓存——cap 真值源在 environment cap 的 params.preset，
+  // 本缓存仅作无 cap 时的回退；per-mount 隔离下随会话卸载清除，新会话同句柄回默认
+  _lastEnvPresetByMenu.delete(menu);
 }
 // 快捷环境预设：`icon` 是**文本槽**装饰，非结构槽图标——它被拼进下方 options 的 `label`
 // 喂给 `<select>` 的 `<option>`，而 `renderCapSelect` 用 `o.textContent` 落位；`<option>`
@@ -118,8 +125,17 @@ function applyPreset(
   menu?.refresh();
 }
 
-/** 预设 select 当前值（模块级：预设无状态层路径，applyPreset 写入；旧 UI 按钮本就无选中态显示） */
-let _lastEnvPreset: Exclude<EnvPresetId, "custom"> = "studio";
+/**
+ * 预设 select 回退缓存（per-mount，按 menu 句柄隔离）：cap 真值源在 environment cap
+ * 的 params.preset（select.get 优先读它）；本缓存仅在该 cap 缺席/custom 时作快预设回退。
+ * 旧实现用模块级单值，多挂载/新会话共用模块时 A 实例选中的预设会串到 B 实例（跨会话污染）
+ * ——收口为 WeakMap 后各 menu 独立，menu 句柄回收即随键消散。
+ */
+const DEFAULT_ENV_PRESET: Exclude<EnvPresetId, "custom"> = "studio";
+const _lastEnvPresetByMenu = new WeakMap<SlideMenuHandle, Exclude<EnvPresetId, "custom">>();
+function getLastEnvPreset(menu: SlideMenuHandle | undefined): Exclude<EnvPresetId, "custom"> {
+  return (menu && _lastEnvPresetByMenu.get(menu)) || DEFAULT_ENV_PRESET;
+}
 
 /** 从 cap 节点树提取 master 节点（getMasterNodeId 已升一级行 headerToggle 时） */
 function capMasterNode(cap: SceneCapability): PreviewMenuNode | null {
@@ -203,7 +219,8 @@ function envCapRow(cap: SceneCapability): PreviewMenuNode {
 
 /**
  * cap 导航行按 ENV_SECTIONS 聚拢成卡牌节点（kind:"card"）。
- * 空段不建卡壳（rmAppendCard 亦有一次 visibleWhen 兜底）；未登记 cap 落末尾「其它」。
+ * 空段不建卡壳（rmAppendCard 亦有一次 visibleWhen 兜底）。成员既由 ENV_SECTIONS 派生，
+ * 「其它」卡当前构造下恒空，仅作分段误配（cap 进了 ENV_IDS 却漏归段）的最后防线。
  */
 function buildEnvCards(caps: SceneCapability[]): PreviewMenuNode[] {
   const claimed = new Set<string>();
@@ -266,17 +283,17 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
         })),
         // 显示值读 environment cap 实际 preset
         // （applyPreset/预设 thumb/loadState 都经 envCap.setPresetId 写 params.preset，
-        // 是单一真值源）——旧实现只读 _lastEnvPreset 模块级 last-write 缓存，
-        // 其它路径改 preset 后 select 显示 stale 值误导；custom（自定义 HDR）
-        // 不在快预设 options 内时回退最近快预设
+        // 是单一真值源）——无该 cap 时回退本 menu 的 per-mount 快预设缓存
+        // （custom 不在快预设 options 内时也回退到最近快预设）
         get: () => {
           const envCap = sceneCapabilityRegistry.getById("environment");
           const cur = envCap?.getPresetId?.();
-          return cur && cur !== "custom" ? cur : _lastEnvPreset;
+          return cur && cur !== "custom" ? cur : getLastEnvPreset(menu);
         },
         set: (v) => {
-          _lastEnvPreset = v as Exclude<EnvPresetId, "custom">;
-          applyPreset(ctx, _lastEnvPreset, menu);
+          const preset = v as Exclude<EnvPresetId, "custom">;
+          if (menu) _lastEnvPresetByMenu.set(menu, preset);
+          applyPreset(ctx, preset, menu);
         },
       },
     },

@@ -300,6 +300,7 @@ auto_fields:
     - getBonePosition
     - getCustomAnimPath
     - getEnvCallbackCount
+    - getEnvSectionCapIds
     - getFrameIntervalMs
     - getLastSceneTextureBytes
     - getLoadTraces

@@ -1,6 +1,6 @@
 // ===== 环境菜单声明式 Schema 测试（2026 收口：行 + navigate 下钻，folder 手风琴退役）=====
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
+import { buildEnvSchema, disposeEnvSubscriptions, getEnvSectionCapIds } from "./env.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { resetEnvState, envState } from "@/preview-3d/state/env-state.ts";
@@ -130,7 +130,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(schema.every((n) => n.renderCustom === undefined)).toBe(true);
   });
 
-  it("产出 预设 select + 按 ORDERED_IDS 排序的 cap row，全部声明式", () => {
+  it("产出 预设 select + 按 ENV_SECTIONS 派生序排序的 cap row，全部声明式", () => {
     const sky = makeCap("sky", "preview.sky", [
       {
         id: "sky-time",
@@ -380,6 +380,53 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(row.headerToggle).toBeUndefined();
     const { container } = navigateAndRender(row);
     expect(container.querySelector('[data-testid="cap-sky-time"]')).not.toBeNull();
+  });
+
+  // [A 隐身 cap] 成员/顺序单一事实源：ORDERED_IDS / ENV_IDS 必须由 ENV_SECTIONS 派生，
+  // 而非另立一份硬编码清单——旧写法下注释明示「新增环境 cap 在 ENV_SECTIONS 登记」，
+  // 但真正的准入闸是 ENV_IDS(=ORDERED_IDS)，只登记进 ENV_SECTIONS 的 cap 会被 resolveCaps
+  // 静默滤除（隐身）。派生后两表合一，漂移在构造上不可能。
+  it("A：环境成员/顺序由 ENV_SECTIONS 派生（单一事实源，无独立 ORDERED_IDS 可漂移）", () => {
+    const ids = getEnvSectionCapIds();
+    // 展平后恰为 6 环境 cap、无重复、顺序即卡内登记序
+    expect(ids).toEqual(["sky", "ground", "water", "environment", "fog", "reflector"]);
+    expect(new Set(ids).size).toBe(ids.length);
+    // 行为：注册全部 6 段 cap（乱序注入）→ 每个都渲染成一级行，无一隐身
+    const caps = ids.map((id) => makeCap(id, `preview.${id}`, []));
+    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue(
+      [...caps].sort(() => -1), // 逆序，验证面板按派生序而非注入序
+    );
+    const menu = makeMenu();
+    menusToDispose.add(menu);
+    const rows = capRows(buildEnvSchema(makeCtx(), menu));
+    expect(rows.map((r) => r.id)).toEqual(ids.map((id) => `env-cap-${id}`));
+  });
+
+  // [B 跨会话预设] 预设 select 回退缓存必须 per-mount 隔离：menu A 选中的快预设
+  // 不得串到 menu B（多挂载/新会话共用模块时旧实现的模块级 _lastEnvPreset 会污染）。
+  it("B：两个 menu 实例的预设 select 各自独立，切换不跨会话串味", () => {
+    resetEnvState();
+    const sky = makeCap("sky", "preview.sky", []);
+    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky]);
+    // getById("environment") 在测试注册表未挂 environment cap → undefined，
+    // select.get 走 per-menu 回退缓存路径，正是污染发生处
+    const menuA = makeMenu();
+    const menuB = makeMenu();
+    menusToDispose.add(menuA);
+    menusToDispose.add(menuB);
+    const selA = buildEnvSchema(makeCtx(), menuA)[0]!;
+    const selB = buildEnvSchema(makeCtx(), menuB)[0]!;
+    expect(selA.control!.get!(undefined)).toBe("studio");
+    expect(selB.control!.get!(undefined)).toBe("studio");
+    // A 切到 sunset
+    selA.control!.set!("sunset");
+    // A 反映自身选择；B 不受 A 污染
+    expect(selA.control!.get!(undefined)).toBe("sunset");
+    expect(selB.control!.get!(undefined)).toBe("studio");
+    // 卸载 A：其 per-menu 缓存随之清除，重建同 menu 回默认（不残留 sunset）
+    disposeEnvSubscriptions(menuA);
+    const selA2 = buildEnvSchema(makeCtx(), menuA)[0]!;
+    expect(selA2.control!.get!(undefined)).toBe("studio");
   });
 });
 

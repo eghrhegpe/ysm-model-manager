@@ -82,9 +82,9 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .fh .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
 .fh .ar.open { transform: rotate(90deg); }
 .fh .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
-/* .tag-author/.tag-work/.tag-date 外观由共享 metaTagCSS 承载（本串在下方插值）；
-   此处只留本域特有的行内排布 */
-.fh .nm .tag-author,.fh .nm .tag-work,.fh .nm .tag-date { display:inline-block;padding:0 5px;border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+/* .tag-author/.tag-work/.tag-date 的外观与色标全部由共享 metaTagCSS 承载（本串在下方插值）；
+   本处不再另立 scoped 基础规则（旧 .fh .nm .tag-* 的 base 行与 metaTagCSS L115 逐值相同，
+   已冗余删除）。域特有仅剩 .tag-ext（扩展名灰标）与 .nm mark 高亮。 */
 .fh .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
 .fh.locked { opacity: .5; }
 .fh.locked .nm { color: var(--muted); }
@@ -126,9 +126,9 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .fh .ck.partial { background: var(--sm-optional); }
 .fh .ck.partial::after { left: 7px; }
 .fl .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* .fl 与 .fh 同：外观走共享 metaTagCSS（本串在下方插值）。
-   原 .nm-tag/.nm-bracket 别名选择器为死代码（renderDisplayName 只产出 .tag-*），2026-09 删除 */
-.fl .nm .tag-author,.fl .nm .tag-work,.fl .nm .tag-date { display:inline-block;padding:0 5px;border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+/* .fl 与 .fh 同：.tag-author/.tag-work/.tag-date 外观与色标走共享 metaTagCSS（本串在下方插值），
+   原 .nm-tag/.nm-bracket 别名选择器为死代码（renderDisplayName 只产出 .tag-*），2026-09 删除；
+   scoped base 行同 .fh 侧冗余删除。域特有仅剩 .tag-ext（扩展名灰标）。 */
 .fl .nm .tag-ext { color: var(--muted); font-size: 0.85em; }
 .fl .nm.ysm { color: var(--txt); }
 .fl .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; text-shadow:0 1px 2px rgba(0,0,0,.12); }

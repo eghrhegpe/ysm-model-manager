@@ -59,6 +59,7 @@ export interface GateTool {
 export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-doc-drift.ts", blockPolicy: "hard" },
   { tool: "check-adr-health.ts", blockPolicy: "hard" },
+  { tool: "check-resource-manifest.ts", blockPolicy: "hard" },
   { tool: "check-boolean-naming.ts", blockPolicy: "debt" },
   { tool: "check-circular.ts", blockPolicy: "debt" },
   { tool: "check-orphan-exports.ts", blockPolicy: "debt" },
@@ -102,6 +103,7 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
 export const DOC_STATIC_TOOLS: GateTool[] = [
   { tool: "check-doc-drift.ts", blockPolicy: "hard" },
   { tool: "check-adr-health.ts", blockPolicy: "hard" },
+  { tool: "check-resource-manifest.ts", blockPolicy: "hard" },
   { tool: "event-graph.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
   { tool: "build-novel-index.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
   { tool: "gen-routes.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },

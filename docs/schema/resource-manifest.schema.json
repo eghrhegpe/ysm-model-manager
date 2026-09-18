@@ -3,9 +3,9 @@
   "$id": "https://ysm-model-manager/schemas/resource-manifest/v1.json",
   "manifestSchemaVersion": 1,
   "title": "resource-manifest",
-  "description": "ADR-269 D1 候选单一事实源：pack.mcmeta 的形状 + 归一化视图。由 scripts/probe-resource-manifest.ts 从真实源码（Go PackMeta/PackMetaView + TS parsePackMetaJson/PackMeta）无损对账提炼，B2 生成器据此派生四份消费端。",
+  "description": "ADR-269 D1 候选单一事实源：pack.mcmeta 的形状 + 归一化视图。由 scripts/check-resource-manifest.ts 从真实源码（Go PackMeta/PackMetaView + TS parsePackMetaJson/PackMeta）无损对账钉死（漂移即 exit 1），B2-3 消费端据此对齐。",
   "x-canonical-fieldsets": {
-    "_note": "探针对账所用的两个字段集；SOURCE=mcmeta 盘上信封内字段，VIEW=归一化后发给前端的字段（SOURCE + thumbnail）。schema 交叉校验以此为准，与源码投影一旦漂移探针即 fail。",
+    "_note": "门禁对账所用的两个字段集；SOURCE=mcmeta 盘上信封内字段，VIEW=归一化后发给前端的字段（SOURCE + thumbnail）。schema 交叉校验以此为准，与源码投影一旦漂移 check-resource-manifest 即 fail。",
     "envelope": "pack",
     "SOURCE": ["pack_format", "description", "supported_formats", "min_format", "max_format"],
     "VIEW": ["pack_format", "description", "supported_formats", "min_format", "max_format", "thumbnail"]

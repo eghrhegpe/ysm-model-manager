@@ -662,6 +662,61 @@ describe("initDiagnostics — 复制面板与行内复制", () => {
     );
   });
 
+  // ===== 复制回执诚实性墓碑（诊断页重复实现审计 C5）=====
+  // 立因：本页曾自写 textarea 降级（返回 void）并无条件弹「已复制」——剪贴板被拒且 execCommand
+  // 也失败时界面在撒谎。这两条把「失败就说失败」钉在**入口层**（单点测试只盖得住 copyWithToast，
+  // 盖不住「入口有没有去消费它的结果」）。任何退回「不看 copyText 返回值」的写法都会立刻红。
+
+  it("diag-copy：写入与降级全失败 → ❌ 复制失败，绝不弹「已复制」", async () => {
+    stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
+    const restore = overrideExecCommand(vi.fn(() => false)); // 降级也失败
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await waitFor(() =>
+      expect((root.getElementById("diag-log-list") as HTMLElement).textContent).toContain("暂无日志"),
+    );
+    (root.getElementById("diag-copy") as HTMLElement).click();
+    await waitFor(() =>
+      expect(busEmit).toHaveBeenCalledWith(
+        "toast:show",
+        expect.objectContaining({ msg: expect.stringContaining("复制失败") }),
+      ),
+    );
+    restore();
+    const copyToasts = busEmit.mock.calls.filter(
+      (c) => c[0] === "toast:show" && (c[1] as { msg?: string }).msg?.includes("复制"),
+    );
+    for (const [, payload] of copyToasts) {
+      expect((payload as { msg: string }).msg).not.toContain("已复制");
+    }
+  });
+
+  it(".log-copy 行点击：写入与降级全失败 → ❌ 复制失败，绝不弹「已复制」", async () => {
+    stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
+    const restore = overrideExecCommand(vi.fn(() => false));
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Status: "success", Operation: "import", ModelName: "ok.ysm" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    await waitFor(() => expect(list.querySelector(".log-copy")).toBeTruthy());
+    (list.querySelector(".log-copy") as HTMLElement).click();
+    await waitFor(() =>
+      expect(busEmit).toHaveBeenCalledWith(
+        "toast:show",
+        expect.objectContaining({ msg: expect.stringContaining("复制失败") }),
+      ),
+    );
+    restore();
+    const failed = busEmit.mock.calls.find(
+      (c) => c[0] === "toast:show" && (c[1] as { msg?: string }).msg?.includes("复制失败"),
+    );
+    expect((failed?.[1] as { type?: string }).type).toBe("error"); // 失败不许标成 success
+  });
+
   it(".log-copy 行点击：行内无文本 → 早退不碰剪贴板", async () => {
     const writeText = vi.fn(() => Promise.resolve());
     stubClipboard(writeText);

@@ -10,23 +10,13 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
+import { copyWithToast } from "./copy-toast.ts";
 import { runHealthAudit } from "./health.ts";
 import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
 import { initPerfPanel } from "./perf.ts";
 
 // 对外 API 兼容：createDedupSession 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）
 export { createDedupSession } from "./dedup.ts";
-
-function dgInCopyTextFallback(text: string): void {
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  ta.style.position = "fixed";
-  ta.style.opacity = "0";
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand("copy");
-  document.body.removeChild(ta);
-}
 
 function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
   root.getElementById("diag-refresh")?.addEventListener("click", () => {
@@ -103,12 +93,9 @@ function dgInCopyActiveLog(root: ShadowRoot): void {
     });
     return;
   }
-  navigator.clipboard.writeText(text).catch(() => dgInCopyTextFallback(text));
-  bus.emit("toast:show", {
-    msg: `📋 ${t("diagnostics.copiedLogPrivacy")}`,
-    duration: TOAST_MS.normal,
-    type: "info",
-  });
+  // 曾经这里无条件弹「已复制」，而 catch 里的降级本身也会失败——失败时界面在撒谎。
+  // 现在回执由 copyWithToast 按 copyText 的真实结果给（整份日志带隐私提示）。
+  void copyWithToast(text, "diagnostics.copiedLogPrivacy");
 }
 function dgInBindCopyPanel(root: ShadowRoot): void {
   root.getElementById("diag-copy")?.addEventListener("click", () => dgInCopyActiveLog(root));
@@ -118,23 +105,9 @@ function dgInCopyRowLog(row: HTMLElement): void {
   const msgEl = row.querySelector<HTMLElement>(".log-msg");
   const text = (msgEl?.textContent ?? "").trim();
   if (!text) return;
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      bus.emit("toast:show", {
-        msg: `📋 ${t("diagnostics.copiedLogPrivacy")}`,
-        duration: TOAST_MS.normal,
-        type: "info",
-      });
-    })
-    .catch(() => {
-      dgInCopyTextFallback(text);
-      bus.emit("toast:show", {
-        msg: `📋 ${t("diagnostics.copiedLog")}`,
-        duration: TOAST_MS.success,
-        type: "success",
-      });
-    });
+  // 单行日志仍用不带隐私提示的文案（复制一行与复制整份日志的暴露面不同，保持既有措辞）；
+  // 失败分支原先还标成 success 类型——那是把失败画成成功，现已随单点消失。
+  void copyWithToast(text, "diagnostics.copiedLog");
 }
 
 function dgInBindCopyRows(root: ShadowRoot): void {

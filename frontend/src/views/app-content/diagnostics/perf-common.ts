@@ -2,12 +2,12 @@
 // 三个命令模块（single-bench / gui-flow / perf-log）与 perf-trace 共用的渲染/守卫/错误辅助。
 // 纯前端逻辑，零 Go 改动。
 
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { executeCLI } from "@/services/cli-bridge.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { copyWithToast } from "./copy-toast.ts";
 import type { EscFn } from "./logs.ts";
 
 // ===== 区段头（带可选复制按钮）=====
@@ -24,31 +24,6 @@ export function sectionHeader(icon: string, label: string, rawText?: string): st
 }
 
 // ===== 复制按钮事件委托 =====
-
-/** 统一复制：优先 navigator.clipboard，降级 textarea + execCommand */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    /* 兜底到下方 textarea */
-  }
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * 为三个结果容器注册复制按钮事件委托。
@@ -75,12 +50,8 @@ export function bindPerfCopyHandlers(root: ShadowRoot): void {
       const raw = section?.dataset.perfRaw;
       if (raw === undefined) return;
       const text = decodeURIComponent(raw);
-      const ok = await copyText(text);
-      bus.emit("toast:show", {
-        msg: ok ? `✅ ${t("diagnostics.perfCopied")}` : `❌ ${t("diagnostics.perfCopyFail")}`,
-        duration: ok ? 2000 : 3000,
-        ...(ok ? {} : { type: "error" as const }),
-      });
+      // 回执（含失败分支）统一由 copyWithToast 负责，本处只声明成功文案
+      await copyWithToast(text, "diagnostics.perfCopied");
     });
   }
 }

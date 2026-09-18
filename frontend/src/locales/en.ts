@@ -363,7 +363,7 @@ export const en: Record<string, string> = {
   "diagnostics.webNoClearLogs": "Clearing logs is not supported on web",
   "diagnostics.noLogsToCopy": "No logs to copy",
   "diagnostics.perfCopied": "Raw output copied to clipboard",
-  "diagnostics.perfCopyFail": "Copy failed, please select and copy manually",
+  "diagnostics.copyFail": "Copy failed, please select and copy manually",
   "diagnostics.webNoPerf": "Performance diagnostics are not supported on web",
   "diagnostics.opImportFallback": "Import",
   "diagnostics.perfModelRequired": "Please enter a model path",

@@ -366,7 +366,7 @@ export const ja: Record<string, string> = {
   "diagnostics.webNoClearLogs": "ウェブ版ではログの消去はサポートされていません",
   "diagnostics.noLogsToCopy": "コピーするログがありません",
   "diagnostics.perfCopied": "生の出力をクリップボードにコピーしました",
-  "diagnostics.perfCopyFail": "コピーに失敗しました。手動で範囲選択してコピーしてください",
+  "diagnostics.copyFail": "コピーに失敗しました。手動で範囲選択してコピーしてください",
   "diagnostics.webNoPerf": "ウェブ版では性能診断はサポートされていません",
   "diagnostics.opImportFallback": "インポート",
   "diagnostics.perfModelRequired": "モデルのパスを入力してください",

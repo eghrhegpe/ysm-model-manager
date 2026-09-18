@@ -936,6 +936,14 @@ async function runBuild(
     runFullCleanup(ctx);
     return null;
   }
+  // [P1 修复] 登记提前到「build 成功后的第一时刻」，使「content 已在 allContent 中」这一
+  // 不变量在任何后续步骤之前成立。recoverMountFailure 正是据此前提**刻意不调**
+  // session.content?.dispose()（注释自述「content 已在 allContent 中」）；原实现把 push 放在
+  // 末尾，若下方 syncLightTargetFromContent / applyMeshCasts / syncMeshIntensity / setPerFrame
+  // 任一步抛错，已 build 成功的 content 就落在 dispose 列表之外 → GPU 资源泄漏（窗口窄但真实）。
+  if (session.content && !session.allContent.includes(session.content)) {
+    session.allContent.push(session.content);
+  }
   // 注意：loadingEl 的移除交由适配器在成功路径自行处理（旧 vrm/litematic 即在
   // build 内 loadingEl.remove()）；空数据/错误等场景适配器会把提示写在 loadingEl
   // 并保留它，核心不在此强制移除。
@@ -965,8 +973,8 @@ async function runBuild(
   }
   switchCtx.setPerFrame(session.content.update ?? null);
   // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
-  // 记录初始模型到追加列表（cooperate 模式下 fullCleanup 需逐一 dispose）
-  if (session.content) session.allContent.push(session.content);
+  // 初始模型的 allContent 登记已上移到 build 成功后的第一时刻（见上方 [P1 修复]）——
+  // 此处不再重复 push（allContent 无去重，重复登记会让 fullCleanup 对同一 content dispose 两次）。
   // ADR-093 T2：首模型注册进场景注册表（差量捕获→统计合并→注册，与 switchTo 共用
   if (session.content) {
     const menuItems = registerBuiltScene({

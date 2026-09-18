@@ -368,6 +368,38 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     expect(adapter.onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("[P1] build 成功后中间步骤抛错：content 仍须被 dispose（登记不变量）", async () => {
+    const content = makeContent();
+    // 制造一个位于「登记之后、旧实现 push 之前」的中间步骤抛错：
+    // runBuild 里 `switchCtx.setPerFrame(session.content.update ?? null)` 会读 update getter。
+    // 旧实现把 allContent.push 放在这些步骤之后 → content 不在 dispose 列表 → GPU 资源泄漏；
+    // 修复后登记提前到 build 成功的第一时刻，recoverMountFailure 才能 dispose 到它。
+    Object.defineProperty(content, "update", {
+      get() {
+        throw new Error("setPerFrame boom");
+      },
+    });
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => content) };
+      await mount3D(adapter, "/m/mid-throw.vrm");
+      expect(content.dispose).toHaveBeenCalledTimes(1);
+      expect(errSpy).toHaveBeenCalled();
+      expect(hasActivePreview()).toBe(false);
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
+  it("[P1] 正常挂载后关闭：content 只被 dispose 一次（登记上移后不得重复 push）", async () => {
+    const content = makeContent();
+    const adapter: PreviewAdapter = { id: "vrm", build: vi.fn(async () => content) };
+    await mount3D(adapter, "/m/one-push.vrm");
+    cleanupPreview();
+    // 若登记重复（allContent 无去重），fullCleanup 会 safeDispose 同一 content 两次 → 计数变 2
+    expect(content.dispose).toHaveBeenCalledTimes(1);
+  });
+
   it("build 期间 invalidatePreview（代际失效）→ 会话不注册不泄漏", async () => {
     const content = makeContent();
     let resolveBuild!: (v: PreviewScene) => void;

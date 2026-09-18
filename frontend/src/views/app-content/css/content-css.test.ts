@@ -132,13 +132,49 @@ describe("设置页组间距契约（content-stg）", () => {
 });
 
 describe("居中空态块单一原语（A 族收敛，2026-09 体检）", () => {
-  /** 剔注释后逐规则扫描（注释里的说明文字含花括号会干扰扁平正则） */
+  /** 剔注释后逐规则扫描（花括号深度感知：`@keyframes` / `@media` 嵌套块的内层
+      selector 单独归因，不被外层头吞成噪声行——旧扁平正则会误归 `sel="to"` 之类）。 */
   function rules(css: string): Array<{ sel: string; body: string }> {
     const clean = css.replace(/\/\*[\s\S]*?\*\//g, "");
-    return [...clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
-      sel: (m[1] ?? "").trim().split("\n").pop()?.trim() ?? "",
-      body: m[2] ?? "",
-    }));
+    const out: Array<{ sel: string; body: string }> = [];
+    // 深度 0 的 selector 缓冲：遇到顶层 `{` 落一条规则；@media/@keyframes 头自身不入规则
+    // （它们是块，不是选择器），其内层 selector 在 depth===1 时正常缓冲。
+    let depth = 0;
+    let buf = "";
+    for (let i = 0; i < clean.length; i++) {
+      const c = clean[i];
+      if (c === "{") {
+        depth += 1;
+        if (depth === 1) {
+          const sel = buf.trim();
+          // @media / @keyframes 等 at-rule 头不算「选择器规则」，跳过
+          if (!/^@media|^@keyframes|^@supports|^@font-face/.test(sel)) {
+            const bodyStart = i + 1;
+            // 取到匹配的顶层 } 之间的 body（再扫一次深度）
+            let d = 1;
+            let j = bodyStart;
+            while (j < clean.length && d > 0) {
+              if (clean[j] === "{") d += 1;
+              else if (clean[j] === "}") d -= 1;
+              j += 1;
+            }
+            out.push({ sel, body: clean.slice(bodyStart, j - 1) });
+            i = j - 1; // 跳到匹配的 }
+          }
+          buf = "";
+        } else {
+          buf = ""; // 嵌套块（@media/@keyframes 内）selector 重新起缓冲
+        }
+        continue;
+      }
+      if (c === "}") {
+        depth -= 1;
+        buf = "";
+        continue;
+      }
+      buf += c;
+    }
+    return out;
   }
   const SCANNED: Array<[string, string]> = [
     ["layout", contentLayoutCSS],

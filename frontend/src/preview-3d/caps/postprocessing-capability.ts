@@ -85,6 +85,9 @@ function toneMappingValue(key: PostprocessingParams["toneMapping"]): THREE.ToneM
 /** SSRPass.OUTPUT 枚举（0=Default 正常显示反射混合），其他调试项 1=Beauty 2=SSR 仅深度 3=Blur 4=Normal 5=Metalness 先不暴露 */
 const SSRPASS_OUTPUT_DEFAULT = 0;
 
+/** composer 读/写缓冲的 MSAA 采样数（与 renderer 的 antialias 意图对齐；WebGL2 下才生效） */
+const POSTPROC_MSAA_SAMPLES = 4;
+
 export class PostprocessingCapability implements SceneCapability, PostprocessingLike {
   readonly id = "postprocessing";
   readonly labelKey = "preview.postprocessing";
@@ -258,8 +261,23 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     const logicalSize = this.renderer.getSize(new THREE.Vector2());
     const w = Math.max(logicalSize.x, 1);
     const h = Math.max(logicalSize.y, 1);
-    const composer = new EffectComposer(this.renderer);
-    composer.setPixelRatio(previewPixelRatio(window.devicePixelRatio));
+    const pixelRatio = previewPixelRatio(window.devicePixelRatio);
+    // [P2 修复] EffectComposer 自建读/写缓冲时不带 samples（three r185 构造器：
+    // `new WebGLRenderTarget(w, h, { type: HalfFloatType })`，samples 默认 0），而共享 renderer
+    // 是 `antialias: true` 建的——后期一开，整链改画进非 MSAA 离屏缓冲 → 抗锯齿被静默旁路，
+    // 边缘锯齿回归。此处显式给 composer 的缓冲开 MSAA，与 renderer 的抗锯齿意图对齐
+    // （构造器会 `renderTarget.clone()` 作 renderTarget2，samples 随 copy() 一并带上；
+    //  后续 setSize 只改尺寸，不丢 samples）。
+    // 采样数按 renderer **实际**拿到的 antialias 属性决定：浏览器未授予时给 0，避免白付带宽。
+    const gl = this.renderer.getContext() as WebGLRenderingContext | null | undefined;
+    const antialiasGranted = gl?.getContextAttributes?.()?.antialias === true;
+    const renderTarget = new THREE.WebGLRenderTarget(
+      Math.max(1, Math.round(w * pixelRatio)),
+      Math.max(1, Math.round(h * pixelRatio)),
+      { type: THREE.HalfFloatType, samples: antialiasGranted ? POSTPROC_MSAA_SAMPLES : 0 },
+    );
+    const composer = new EffectComposer(this.renderer, renderTarget);
+    composer.setPixelRatio(pixelRatio);
     composer.setSize(w, h);
 
     this.renderPass = new RenderPass(this.scene, this.camera);

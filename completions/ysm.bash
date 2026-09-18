@@ -40,7 +40,7 @@ _ysm_complete() {
     cache-diag) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     cache-status) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     cache-verify) COMPREPLY=( $(compgen -W "--help --dir --verbose" -- "$cur") ); return ;;
-    concurrent-bench) COMPREPLY=( $(compgen -W "--help --workers --max-models" -- "$cur") ); return ;;
+    concurrent-bench) COMPREPLY=( $(compgen -W "--help --workers --max-models --format" -- "$cur") ); return ;;
     config) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     config-show) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     copy) COMPREPLY=( $(compgen -W "--help --src --dst" -- "$cur") ); return ;;

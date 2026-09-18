@@ -32,7 +32,8 @@ afterEach(() => {
 // 均为纯数据构造（WebGLRenderTarget 不依赖 GL context），happy-dom 下可真实构建；
 // 仅 composer.render()（逐 pass 真渲染）在测试中以 spy 拦截。
 
-function makeFakeRenderer() {
+function makeFakeRenderer(opts: { antialiasGranted?: boolean } = {}) {
+  const antialiasGranted = opts.antialiasGranted ?? true;
   return {
     toneMapping: THREE.ACESFilmicToneMapping,
     toneMappingExposure: 1,
@@ -43,7 +44,8 @@ function makeFakeRenderer() {
     capabilities: { isWebGL2: true, maxTextures: 16 },
     properties: new Map(),
     info: { autoReset: true, memory: { textures: 0, geometries: 0 }, render: { calls: 0, triangles: 0, points: 0, frame: 0 }, reset: () => {} },
-    getContext: () => null,
+    // [P2] 反映真实共享 renderer：antialias 已获授予（EffectComposer 的 MSAA 采样数据此决定）
+    getContext: () => ({ getContextAttributes: () => ({ antialias: antialiasGranted }) }),
   } as unknown as THREE.WebGLRenderer;
 }
 
@@ -772,9 +774,9 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     vi.restoreAllMocks();
   });
 
-  function newRealCap(opts: { enabled?: boolean; params?: Partial<import("./postprocessing-capability.ts").PostprocessingParams>; reflectorCap?: ReflectorCapability | null } = {}) {
+  function newRealCap(opts: { enabled?: boolean; params?: Partial<import("./postprocessing-capability.ts").PostprocessingParams>; reflectorCap?: ReflectorCapability | null; renderer?: THREE.WebGLRenderer } = {}) {
     const scene = new THREE.Scene();
-    const renderer = makeFakeRenderer();
+    const renderer = opts.renderer ?? makeFakeRenderer();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     // ADR-196：构造不再收 params，覆盖走 envState seed
     if (opts.params) {
@@ -821,6 +823,22 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(passes.indexOf(x.renderPass)).toBe(0);
     expect(passes.indexOf(x.bloomPass)).toBe(1);
     expect(passes.indexOf(x.outputPass)).toBe(2);
+  });
+
+  it("[P2] composer 读/写缓冲带 MSAA samples——对齐 renderer 已授予的 antialias", () => {
+    const { cap } = newRealCap();
+    cap.setEnabled(true);
+    const x = internalsOf(cap);
+    // 修复前 EffectComposer 自建缓冲 samples=0 → 后期一开抗锯齿被旁路、边缘锯齿回归
+    expect(x.composer.renderTarget1.samples).toBe(4);
+    // renderTarget2 是 renderTarget1.clone()，samples 随 copy() 一并带上
+    expect(x.composer.renderTarget2.samples).toBe(4);
+  });
+
+  it("[P2] 浏览器未授予 antialias 时不给 samples（不白付 MSAA 带宽）", () => {
+    const { cap } = newRealCap({ renderer: makeFakeRenderer({ antialiasGranted: false }) });
+    cap.setEnabled(true);
+    expect(internalsOf(cap).composer.renderTarget1.samples).toBe(0);
   });
 
   it("ssaoEnabled=true 时 SSAOPass 插在 renderPass 之后、bloom 之前", () => {

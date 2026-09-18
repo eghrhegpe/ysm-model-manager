@@ -195,6 +195,7 @@ app --cli --files-root <路径> concurrent-bench [选项...]
 |------|------|------|
 | `--workers` | int — 并发 worker 数量 |
 | `--max-models` | int — 最多测试的模型数量 |
+| `--format` | string （默认: text）— 输出格式: text（人类可读，流式打印）/ json（AI 友好，结构化载荷） |
 
 
 ### `file-bench`

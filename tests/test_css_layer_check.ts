@@ -140,6 +140,17 @@ assert.equal(
   -1,
   "`//` 行注释内的闭合符组合不得误报（不在 CSS 上下文）",
 );
-console.log("  ✓ 检查 5 判定：注释完整性（破注释检出 + 正常注释/`//` 不误报）");
+// 字符串字面量感知：字面量正文里的 `*` 紧接 `/`（CSS 选择器、glob 等合法内容）不得误报；
+// 注释体内破注释仍须检出（字面量与注释体不混淆）
+assert.equal(
+  findStrayCommentClose('const sel = ".dlg-*/.afv-*";\nexport const x = 1;'),
+  -1,
+  "字符串字面量正文的 `*/` 不得误报（检查 5 假阳性回归锁）",
+);
+assert.ok(
+  findStrayCommentClose('/* fadeSlide*/body */\nexport const y = "a*/b";') >= 0,
+  "注释体内破注释仍须检出（字符串感知不掩盖真缺陷）",
+);
+console.log("  ✓ 检查 5 判定：注释完整性（破注释检出 + 正常注释/`//`/字符串字面量不误报）");
 
 console.log("\nOK: css-layer-check 插值展开契约（回归锁 7 条）");

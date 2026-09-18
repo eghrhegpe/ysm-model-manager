@@ -116,18 +116,114 @@ export function hasNoAnimationsBridge(cssText: string): boolean {
 }
 
 /**
- * 注释完整性探测：返回「注释体内误写星号+斜杠（即块注释闭合符）导致提前闭合」后
+ * 注释完整性探测：返回「注释体内误写星号加斜杠（即块注释闭合符）导致提前闭合」后
  * 残留的游离闭合符下标（无则 -1）。
  *
- * 原理：先按 TS/CSS 语义剥注释——`//` 行注释 + 块注释（块注释按「首个闭合符」结束）。
- * 若注释体里再写闭合符（如 `fadeSlide*` 紧跟 `/breathe-subtle`、`.dlg-*` 紧跟 `/.afv-*`），
+ * 原理：字符串感知扫描——先识别字符串 / 模板字面量区间（字面量内的行注释符、块注释符
+ * 不参与判定），再线性扫字面量外的块注释开启，按「首个闭合符」结束。
+ * 若注释体里再写闭合符（历史病例：keyframe 名与斜杠连写、CSS 选择器通配符连写），
  * 注释提前结束，其后文本成为裸 CSS，剥完后仍残留游离闭合符。
  *
- * 为何严重：解析器会把裸文本当选择器、并吞掉紧随的第一个 `{...}` 块——2026 实测吞掉
- * `@keyframes fadeSlideUp`，使 app-content 全 shadow 的入场动画静默失效（无报错，
+ * 为何严重：解析器会把裸文本当选择器、并吞掉紧随的第一个花括号块——2026 实测吞掉
+ * fadeSlideUp 的 @keyframes，使 app-content 全 shadow 的入场动画静默失效（无报错，
  * getComputedStyle().animationName 仍显示名字，但 getAnimations() 为 0）。
+ *
+ * 为何必须字符串感知：本函数消费方是承载 CSS 的 TS 源文件（检查 5 扫 shadow 域全量 .ts），
+ * 字符串 / 模板正文合法含星号紧接斜杠（CSS 文本的选择器通配、glob 模式等）——不跳过字面量
+ * 会把正文里的连写误判为破注释残留，假阳性阻断 pre-push。
  */
 export function findStrayCommentClose(src: string): number {
-  const stripped = src.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
-  return stripped.indexOf("*/");
+  // 单次线性扫描：字符串/模板字面量、`//` 行注释、`/* */` 块注释三态交替。
+  // 字符串/模板**原文保留**（正文合法含星号斜杠连写，如 CSS 选择器通配 `.dlg-*/`、glob），
+  // `//` 行注释剥除（保留换行），`/* */` 块注释体剥除。
+  // 剥完后**字面量外**残留的 `*/` 即游离闭合符（注释提前闭合 → 其后裸 CSS 被解析器吞掉）。
+  // 判定面：先剥除字符串区间再找 `*/`——字面量正文的合法连写不参与判定（检查 5 假阳性防线）。
+  const TICK = String.fromCharCode(96);
+  let out = "";
+  let i = 0;
+  const n = src.length;
+  while (i < n) {
+    const c = src[i];
+    if (c === '"' || c === "'" || c === TICK) {
+      // 字面量原文保留（正文合法，不剥除）
+      const quote = c;
+      let j = i + 1;
+      if (quote === TICK) {
+        // 模板字面量：按「未展开的原源码」扫描——${ 插值体整体当字面量正文（不递归进内部），
+        // 嵌套引号、内部花括号都不参与终止判定
+        let depth = 0;
+        while (j < n) {
+          if (src[j] === "\\") j += 2;
+          else if (src[j] === "$" && src[j + 1] === "{") {
+            depth += 1;
+            j += 2;
+          } else if (src[j] === "{" && depth > 0) {
+            depth += 1;
+            j += 1;
+          } else if (src[j] === "}" && depth > 0) {
+            depth -= 1;
+            j += 1;
+          } else if (src[j] === quote && depth === 0) {
+            j += 1;
+            break;
+          } else j += 1;
+        }
+      } else {
+        while (j < n) {
+          if (src[j] === "\\") j += 2;
+          else if (src[j] === quote) {
+            j += 1;
+            break;
+          } else if (src[j] === "\n")
+            break; // 单行字符串（TS 语义，防未终止引号吞掉整文件）
+          else j += 1;
+        }
+      }
+      out += src.slice(i, j);
+      i = j;
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "/") {
+      // 行注释整段剥除（保留换行）
+      while (i < n && src[i] !== "\n") i += 1;
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "*") {
+      i += 2;
+      // 块注释按「首个闭合符」结束（与解析器同语义）；闭合符本身剥除
+      while (i < n - 1 && !(src[i] === "*" && src[i + 1] === "/")) i += 1;
+      if (i < n - 1) i += 2;
+      continue;
+    }
+    out += c;
+    i += 1;
+  }
+  // 判定面：剥除字符串区间后再找 `*/`——字面量正文的合法星号斜杠连写不参与判定
+  let idx = -1;
+  for (let k = 0; k < out.length - 1; k++) {
+    const ch = out[k];
+    if (ch === '"' || ch === "'" || ch === TICK) {
+      const quote = ch;
+      let m = k + 1;
+      while (m < out.length) {
+        if (out[m] === "\\") {
+          m += 2;
+          continue;
+        }
+        if (out[m] === quote) {
+          m += 1;
+          break;
+        }
+        if (quote !== TICK && out[m] === "\n") break;
+        m += 1;
+      }
+      k = m - 1;
+      continue;
+    }
+    if (ch === "*" && out[k + 1] === "/") {
+      idx = k;
+      break;
+    }
+  }
+  return idx;
 }

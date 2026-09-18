@@ -198,7 +198,11 @@ function finishSession(ctx: MountCtx): void {
 /**
  * 会话清理单出口（ADR-233：原 closeOverlay / runFailedMountCleanup / runFullCleanup
  * 三函数共用段 ②③④⑦ 收敛于此，按 level 差异展开）。行为与原三函数逐段等价：
- * - early：原 closeOverlay（早期 ESC，cleanupFn 未赋值；不含 ⑦ 输入解绑；保留 ⑤ overlay + finishSession）
+ * - early：原 closeOverlay（早期 ESC，cleanupFn 未赋值；保留 ⑤ overlay + finishSession）。
+ *   2026-09 修正：原实现（及 ADR-233 迁移时「逐段等价」的搬运）不含 ⑦ 输入解绑，但
+ *   buildInfra 在 await build 之前就已绑定 escH/输入/拾取/rAF——加载中按 ESC 放弃这条
+ *   真实路径会漏解绑（跨会话累积监听器 + render-loop 继续驱动已终结会话）。现补齐 ⑦ 与
+ *   unregisterActiveInputSession；两者幂等，与 abort 后迟到 resolve 触发的 full 档叠加无副作用。
  * - failed：原 runFailedMountCleanup（build 失败；保留 overlay 与场景能力/纹理缓存；不调 finishSession）
  * - full：原 runFullCleanup（完整关闭；④⑤⑥⑧⑨ + finishSession）
  */
@@ -222,6 +226,8 @@ export function teardown(ctx: MountCtx, level: TeardownLevel): void {
     session.aborted.v = true;
     clearTipTimer(session); // ②
     ctx.menuHandle.dispose(); // ③
+    unbindInputsAndStopLoop(ctx); // ⑦：buildInfra 早于 await build 绑输入，早期 ESC 须同样解绑
+    unregisterActiveInputSession(session); // 会话已终结，render-loop 不再驱动其相机状态
     if (ctx.overlay?.parentNode) ctx.overlay.parentNode.removeChild(ctx.overlay); // ⑤
     finishSession(ctx);
     return;

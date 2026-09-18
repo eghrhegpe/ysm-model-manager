@@ -401,6 +401,46 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     cleanupPreview();
   });
 
+  it("build 完成前 ESC（早期路径）：输入监听须同样解绑（⑦ 补齐契约）", async () => {
+    let resolveBuild!: (v: PreviewScene) => void;
+    const adapter: PreviewAdapter = {
+      id: "vrm",
+      onClose: vi.fn(),
+      build: vi.fn(() => new Promise<PreviewScene>((res) => { resolveBuild = res; })),
+    };
+    const docRemove = vi.spyOn(document, "removeEventListener");
+    const winRemove = vi.spyOn(window, "removeEventListener");
+    try {
+      const p = mount3D(adapter, "/m/early.vrm");
+      // stage 2（buildInfra）在 await build 之前同步执行 → bindInputHandlers 已调用，handler 可捕获。
+      // mock 版 bindInputHandlers 只返回 vi.fn、不真正 addEventListener，故不能数「监听器存活」；
+      // 直接锁「removeEventListener 收到了这些 handler」这一解绑契约。
+      const handlers = h.bindInput.mock.results[0]!.value as {
+        onKeyDown: EventListener;
+        onKeyUp: EventListener;
+        onDragPointerUp: EventListener;
+        onDragPointerMove: EventListener;
+        onResize: EventListener;
+      };
+      // cleanupFn 尚空 → 初始 escH 走 closeOverlay（early 档），teardown 同步执行
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      // 断言必须在此刻（build 尚未 resolve）：resolve 后 abort 守卫会补跑 fullCleanup，
+      // 其中的 ⑦ 会把早期档的缺口一并掩盖——断言放到 await 之后就锁不住 early 档。
+      expect(docRemove).toHaveBeenCalledWith("keydown", handlers.onKeyDown);
+      expect(docRemove).toHaveBeenCalledWith("keyup", handlers.onKeyUp);
+      expect(winRemove).toHaveBeenCalledWith("pointerup", handlers.onDragPointerUp);
+      expect(winRemove).toHaveBeenCalledWith("pointercancel", handlers.onDragPointerUp);
+      expect(winRemove).toHaveBeenCalledWith("pointermove", handlers.onDragPointerMove);
+      expect(winRemove).toHaveBeenCalledWith("resize", handlers.onResize);
+      // 收尾：让 build resolve 走 abort 守卫的 fullCleanup，避免悬挂 promise
+      resolveBuild(makeContent());
+      await p;
+    } finally {
+      docRemove.mockRestore();
+      winRemove.mockRestore();
+    }
+  });
+
   it("快速连续 mount 两次：第一次代际失效走 fullCleanup，第二个会话保持活跃", async () => {
     const firstContent = makeContent();
     let resolveFirst!: (b: PreviewScene) => void;

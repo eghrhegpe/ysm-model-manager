@@ -12,6 +12,7 @@ import { t } from "@/core/i18n/t.ts";
 import type { CLIArgs } from "@/services/cli-bridge.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import { isNum } from "@/utils/base/pure/guards.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
@@ -142,10 +143,6 @@ function concVerdict(v: string | undefined): ConcVerdict {
   return CONC_VERDICTS.includes(v as ConcVerdict) ? (v as ConcVerdict) : "none";
 }
 
-function isFiniteNumber(v: unknown): v is number {
-  return typeof v === "number" && Number.isFinite(v);
-}
-
 /**
  * 载荷守卫：显式校验形状（桥数据禁 `as` 断言穿透）。
  * 与 single-bench 同口径：**不要求 status === "success"**——Go 在错误分支同样先 SetResult
@@ -157,9 +154,9 @@ export function concParsePayload(resp: { status?: string; data?: unknown }): Con
   if (!data || typeof data !== "object") return null;
   // 串行段是结果主体；并行档位为空 = 没测到任何东西，不渲染假表
   if (!data.serial || typeof data.serial !== "object") return null;
-  if (!isFiniteNumber(data.serial.total_ms)) return null;
+  if (!isNum(data.serial.total_ms)) return null;
   if (!Array.isArray(data.parallel) || data.parallel.length === 0) return null;
-  if (!data.parallel.every((p) => p && typeof p === "object" && isFiniteNumber(p.workers))) {
+  if (!data.parallel.every((p) => p && typeof p === "object" && isNum(p.workers))) {
     return null;
   }
   return data;
@@ -168,10 +165,10 @@ export function concParsePayload(resp: { status?: string; data?: unknown }): Con
 /** 参数行：workers / 上限 / 实测模型数（三个口径都来自 Go，前端不数） */
 function concParamsHTML(payload: ConcPayload, esc: EscFn): string {
   const parts: string[] = [];
-  if (isFiniteNumber(payload.workers)) {
+  if (isNum(payload.workers)) {
     parts.push(t("diagnostics.perfConcurrentWorkersN", { n: String(payload.workers) }));
   }
-  if (isFiniteNumber(payload.model_count)) {
+  if (isNum(payload.model_count)) {
     parts.push(t("diagnostics.perfConcurrentModelCount", { n: String(payload.model_count) }));
   }
   if (parts.length === 0) return "";
@@ -180,8 +177,8 @@ function concParamsHTML(payload: ConcPayload, esc: EscFn): string {
 
 function concFileReadHTML(fr: ConcFileRead, esc: EscFn): string {
   // 块缺失即「没测」（Go 侧 omitempty 的诚实性），此处不补 0 占位
-  if (!isFiniteNumber(fr.file_count) || !isFiniteNumber(fr.serial_ms)) return "";
-  const speedup = isFiniteNumber(fr.speedup)
+  if (!isNum(fr.file_count) || !isNum(fr.serial_ms)) return "";
+  const speedup = isNum(fr.speedup)
     ? `<span class="perf-conc-speedup">${esc(t("diagnostics.perfConcurrentSpeedup", { speedup: fr.speedup.toFixed(2) }))}</span>`
     : "";
   return `<div class="perf-conc-filerow">
@@ -190,7 +187,7 @@ function concFileReadHTML(fr: ConcFileRead, esc: EscFn): string {
     t("diagnostics.perfConcurrentFileDetail", {
       count: String(fr.file_count),
       serial: fr.serial_ms.toFixed(2),
-      parallel: isFiniteNumber(fr.parallel_ms) ? fr.parallel_ms.toFixed(2) : "-",
+      parallel: isNum(fr.parallel_ms) ? fr.parallel_ms.toFixed(2) : "-",
     }),
   )}</span>${speedup}
 </div>`;
@@ -211,7 +208,7 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn): string {
     esc,
   );
   const serial = payload.serial ?? {};
-  const perModel = isFiniteNumber(serial.per_model_ms)
+  const perModel = isNum(serial.per_model_ms)
     ? `<span class="perf-conc-detail">${esc(
         t("diagnostics.perfConcurrentPerModel", { ms: serial.per_model_ms.toFixed(2) }),
       )}</span>`
@@ -221,12 +218,12 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn): string {
     .map((p) => {
       const v = concVerdict(p.verdict);
       const style = CONC_VERDICT_STYLE[v];
-      const speedup = isFiniteNumber(p.speedup)
+      const speedup = isNum(p.speedup)
         ? t("diagnostics.perfConcurrentSpeedup", { speedup: p.speedup.toFixed(2) })
         : "-";
       return `<div class="perf-conc-row">
 <span class="perf-conc-label">${esc(t("diagnostics.perfConcurrentRow", { workers: String(p.workers ?? "?") }))}</span>
-<span class="perf-conc-ms">${isFiniteNumber(p.total_ms) ? `${p.total_ms.toFixed(2)}ms` : "-"}</span>
+<span class="perf-conc-ms">${isNum(p.total_ms) ? `${p.total_ms.toFixed(2)}ms` : "-"}</span>
 <span class="perf-conc-speedup">${esc(speedup)}</span>
 <span class="perf-conc-verdict ${style.cls}" title="${esc(t("diagnostics.perfConcurrentJudgeHint"))}">${style.icon} ${esc(t(style.key))}</span>
 </div>`;
@@ -245,7 +242,7 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn): string {
     concParamsHTML(payload, esc) +
     `<div class="perf-conc-row perf-conc-serial">
 <span class="perf-conc-label">${esc(t("diagnostics.perfConcurrentSerial"))}</span>
-<span class="perf-conc-ms">${isFiniteNumber(serial.total_ms) ? `${serial.total_ms.toFixed(2)}ms` : "-"}</span>${perModel}
+<span class="perf-conc-ms">${isNum(serial.total_ms) ? `${serial.total_ms.toFixed(2)}ms` : "-"}</span>${perModel}
 </div>` +
     rows +
     concFileReadHTML(payload.file_read ?? {}, esc) +

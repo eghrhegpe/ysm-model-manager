@@ -62,4 +62,34 @@
 3. **`init.ts` 复制通路的三态 toast 设计**：现实现「execCommand 也失败仍报已复制」（`init.ts:128-136`）——我判断这是缺陷，但改它需要确定降级成功 / 彻底失败两种文案（现有 `diagnostics.copiedLog` / `copiedLogPrivacy` 是否有失败态键，我未逐键核对三语包）。
 4. **e2e 是否直接依赖两族状态行 class**：我只核到单元测试锚点（`conflicts.test.ts:284,452`、`perf.test.ts:238,306,459,582,605`）。`e2e/diagnostics.spec.ts` 有 20+ 用例，我按关键字检索未见 `diag-msg-*` / `.diag-stat-error` 选择器，但**未逐行通读**；动 C13 前需要完整核一遍。
 5. **`webGate` 单点归属**：~~`perf-common.ts` 是事实共享层但文件名带 perf 语义，`conflicts.ts` 从它 import 一个「网页版门禁」有命名异味。备选：新建 `diagnostics/ui-common.ts`，或放已托管 `EscFn` 的 `logs.ts`。属归属决策（ADR-040 的切文件线怎么续），需你定。~~ **已关闭（2026-09-18）**：落定为独立叶模块 `web-gate.ts`，与 `copy-toast.ts`（C5）/ `status-row.ts`（C13）共同构成「跨子域页级共享原语一律单独立叶」体系；`perf-common.ts` 仍稳守 perf 面板内部共享，`logs.ts` 仍守 `EscFn`。消费端实证：`webGate` 被 perf 族 3 处 + conflicts 2 处共用（跨域必要，放 perf-common 反成跨域异味）。三个叶模块互为佐证、头注互相引用同一取舍，命名体系自洽。判据满足，无残留改动。
-6. **C7 的取舍**：三个 busy 布尔的 `【范式豁免】` 注释是 2026-09-12 的显式决策，我判它「未针对 `createBusyLock`」但不宜自称推翻。若你认为豁免有效，C7 可整条降级为「不动」。
+6. **C7 的取舍**：~~三个 busy 布尔的 `【范式豁免】` 注释是 2026-09-12 的显式决策，我判它「未针对 `createBusyLock`」但不宜自称推翻。若你认为豁免有效，C7 可整条降级为「不动」。~~ → **已关闭（2026-09-18）：豁免成立，C7 降级「不动」。** 三处（conflicts `diagScanning`/`diagSyncBusy`、health `_healthBusy`）皆为模块级一次性 guard、try/finally 兜底复位、无跨调用配置状态，锁化 ROI 低。
+
+## 六、落地状态回填（2026-09-18 子代理核验）
+
+> 判据：某 C 项落地 = 收敛方案点名的叶模块/单点函数存在，且点名的消费方已改调它（`createBusyLock`/`webGate`/`isNum`/`formatClock`/`RESOLVE_STRATEGIES`/`copyWithToast`/`msgRowHTML`/`statRowHTML`/`renderLoadFailure`/`setErrorMsg` 等符号 + 残留旧函数 grep）。
+
+| 项 | 状态 | 证据 |
+|---|---|---|
+| C1 web 门禁 | ✅ 已落地 | `web-gate.ts|webGate` 独立叶，perf 族 3 + conflicts 2 全改调；旧 `concWebModeCheck` 等五名无残留 |
+| C2 手写错误横幅 | ✅ 已落地 | perf-concurrent 已走 `setErrorMsg`/`renderLoadFailure`（perf-common），不再手写 `diag-stat-error` 横幅 |
+| C3 setErrorMsg/errorHTML | ✅ 已落地 | perf-common `setErrorMsg` 已委托 `errorHTML`，两导出名保留 |
+| C4 renderLoadFailure | ✅ 已落地 | perf-common 单点，perf-log/gui-flow/concurrent/single-bench/scan-bench 5 处改调 |
+| C5 clipboard 单点 | ✅ 已落地 | `copy-toast.ts|copyWithToast` 消费 `copyText` 布尔结果 |
+| C6 init 复制三态 | ⚠️ 部分 | init.ts 整份/单行已走 `copyWithToast`；但 `dgInCopyActiveLog`/`dgInCopyRowLog` 函数名仍在（`init.ts:81/104`），内部是否全走 `copyWithToast` 未逐行核实 |
+| C7 busy 锁 | ✅ 已降级「不动」 | 豁免成立（#6 已关闭）：三处模块级一次性 guard + try/finally 复位，不锁化 |
+| C8 isNum | ✅ 已落地 | `guards.ts|isNum` 单点；perf-scan-bench 删本地 `isNum`、perf-concurrent 弃本地 `isFiniteNumber` 全数改名 `isNum`（残留仅 guards.ts 注释） |
+| C9 雷达占位 | ✅ 已落地 | conflicts 内联 `scan-radar-wrap`（原 :200）改调 `dgCfRenderRadarPlaceholder`，两处逐字复制消除 |
+| C10 strategyLabels | ✅ 已落地 | `RESOLVE_STRATEGIES` 单一事实源（token→labelKey）+ `resolveStrategyLabel` 兜底 + 下拉 option 与默认值三者同源 |
+| C11 formatBytes | ⏳ 待核实 | `format.ts|formatBytes` 存在；dedup-render.ts:36 是否已改用未核 |
+| C12 formatClock | ⛔ 未落地 | 无 `formatClock`；logs 与 perf-trace 两份 `{hour,minute,second}` 仍在 |
+| C13 status-row | ⚠️ 部分 | `status-row.ts|msgRowHTML/statRowHTML` 已建并被 logs/health/dedup/dedup-scan/conflicts 大量调用；但 conflicts.ts:363-405 解决结果行仍手写 `document.createElement` + `stat-row diag-msg success/error` |
+
+### 待确认补录（本轮）
+- **#4 e2e 状态行 class —— 有依赖但闭环安全**：`e2e/diagnostics.spec.ts:505` 确有 `q(".diag-stat-error")` 读 `textContent`。命中的是 perf 面板 `errorHTML`/`renderLoadFailure` 出口（class=`diag-stat diag-stat-error`，**无 `stat-row`**）。C13 明确排除这 4 处无 `stat-row` 的 perf 站点，且 `statRowHTML` 保留 class 字符串原样（不统一字号/对齐/不改 class），故 e2e 选择器与其 textContent 断言不受影响。**关闭-安全**。护栏建议：`q(".diag-stat-error")[0]` 是「首个命中」，若未来把 perf 某站点迁到 `statRowHTML("error")`（会再产一个 `.diag-stat-error` 节点），:505 的 `[0]` 可能漂移——动它前应把此 e2e 锚点收得更具体。
+- **#3 三态 toast —— 大部分已被 C6 消化**：`copyWithToast` 已按 `copyText.ok` 分成功/失败，失败走 `diagnostics.copyFail`（不再谎报）；「降级成功 vs 彻底失败」两态是否再细分成文案，可视为独立微调，优先级低。
+
+### 剩余动作（按优先级）
+1. ✅ **#6 → C7 降级「不动」**（已关闭）+ ✅ **C8/C9/C10 已收敛落地**（2026-09-18）。
+2. **#2 拍板 + C11**：`dedup-render.ts:36` 是否接受「`formatBytes` 空串时回落 `<size> B`」（荐）或空白。定后一起做 C11。
+3. **C12 / C13 残余 / C6 收尾**：`formatClock` 单点、conflicts:363-405 解决行改走 `msgRowHTML`、init 两函数内部核实收尾 — 均为零风险纯重构，次批执行。
+4. **C11/C2/C6 待核实项**：如需全量闭环，补一次精确 grep 定案。

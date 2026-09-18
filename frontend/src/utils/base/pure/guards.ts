@@ -17,3 +17,11 @@ export function asRecord(v: unknown): Record<string, unknown> | undefined {
 export function toInt(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : 0;
 }
+
+/**
+ * 是否为有限 number 的类型谓词。收敛自 diagnostics 页两份逐字实现
+ *（perf-scan-bench `isNum` / perf-concurrent `isFiniteNumber`，诊断页审计 C8）。
+ */
+export function isNum(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v);
+}

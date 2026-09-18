@@ -17,6 +17,7 @@ import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import type { CLIArgs } from "@/services/cli-bridge.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import { isNum } from "@/utils/base/pure/guards.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
@@ -94,10 +95,6 @@ export const SCAN_BENCH_REASON_KEYS: Record<string, LocaleKey> = {
   cache_hit: "diagnostics.perfScanBenchReasonCacheHit",
   interfered: "diagnostics.perfScanBenchReasonInterfered",
 };
-
-function isNum(v: unknown): v is number {
-  return typeof v === "number" && Number.isFinite(v);
-}
 
 /**
  * 载荷守卫：形状不对即返回 null，由调用方走错误分支（与 concurrent-bench 同口径，

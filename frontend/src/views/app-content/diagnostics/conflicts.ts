@@ -1,7 +1,7 @@
 // ===== 诊断页：冲突扫描（scanConflicts） =====
 // ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（本文件）
 
-import { t } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
@@ -196,10 +196,7 @@ async function dgCfRunSyncDetection(
   instanceName: string,
 ): Promise<void> {
   const { DetectConflicts } = await backendGetApp();
-  list.innerHTML =
-    '<div class="scan-radar-wrap"><div class="scan-radar"></div><div class="scan-radar-dot"></div></div><div class="stat-row diag-msg diag-msg-muted" style="text-align:center">' +
-    t("diagnostics.scanningConflicts") +
-    "</div>";
+  dgCfRenderRadarPlaceholder(list);
   const result = await DetectConflicts(rtype, instanceName);
   if (!result) {
     list.innerHTML = msgRowHTML("error", t("diagnostics.conflictDetectionFailed"), undefined, {
@@ -321,19 +318,33 @@ function renderSyncConfigPanel(list: HTMLElement, esc: EscFn, instances: string[
 
 // ===== renderSyncConflictsResult 子函数 =====
 
+/**
+ * 解决策略单一事实源：token → 文案 key 一一对应，
+ * 冲突行标签 / 下拉 option / 默认值三方都从这里取（诊断页审计 C10）。
+ */
+const RESOLVE_STRATEGIES = [
+  { value: "force_remote", labelKey: "diagnostics.resolveForceRemote" satisfies LocaleKey },
+  { value: "force_local", labelKey: "diagnostics.resolveForceLocal" satisfies LocaleKey },
+  { value: "manual", labelKey: "diagnostics.resolveManual" satisfies LocaleKey },
+] as const;
+
+const DEFAULT_RESOLVE_STRATEGY = RESOLVE_STRATEGIES[0];
+
+/** 未知 token 兜底到 manual 文案（与旧 `strategyLabels[x] ?? manual` 同口径）。 */
+function resolveStrategyLabel(value: string | undefined): string {
+  return t(
+    RESOLVE_STRATEGIES.find((s) => s.value === value)?.labelKey ?? "diagnostics.resolveManual",
+  );
+}
+
 function dgCfBuildSyncConflictRows(conflicts: DgCfFileConflict[], esc: EscFn): string {
   let html = "";
-  const strategyLabels: Record<string, string> = {
-    force_remote: t("diagnostics.resolveForceRemote"),
-    force_local: t("diagnostics.resolveForceLocal"),
-    manual: t("diagnostics.resolveManual"),
-  };
   conflicts.forEach((c, i) => {
     const conflictTypeLabel =
       c.type === "content_modified"
         ? t("diagnostics.conflictTypeContent")
         : t("diagnostics.conflictTypeBoth");
-    const suggestedLabel = strategyLabels[c.suggestedStrategy] ?? t("diagnostics.resolveManual");
+    const suggestedLabel = resolveStrategyLabel(c.suggestedStrategy);
     const delay = stagger(i, 30, 600);
     html += `<div class="conflict-row" style="animation-delay:${delay}ms">
 <span class="conflict-name">${esc(c.path)}</span>
@@ -351,9 +362,7 @@ function dgCfBuildResolveSectionHtml(): string {
 <div class="diag-config-item">
   <label for="resolve-strategy">${UI_ICONS.target} ${t("diagnostics.resolveConflicts")}:</label>
   <select id="resolve-strategy" class="diag-config-select">
-    <option value="force_remote">${t("diagnostics.resolveForceRemote")}</option>
-    <option value="force_local">${t("diagnostics.resolveForceLocal")}</option>
-    <option value="manual">${t("diagnostics.resolveManual")}</option>
+    ${RESOLVE_STRATEGIES.map((s) => `<option value="${s.value}">${t(s.labelKey)}</option>`).join("")}
   </select>
 </div>
 <button id="do-resolve-btn" class="diag-dedup-exec" style="margin-top:8px">${UI_ICONS.success} ${t("diagnostics.resolveConflicts")}</button>
@@ -368,7 +377,7 @@ async function dgCfExecuteResolve(
   instanceName: string,
 ): Promise<void> {
   const strategyEl = list.querySelector("#resolve-strategy") as HTMLSelectElement;
-  const strategy = strategyEl?.value || "force_remote";
+  const strategy = strategyEl?.value || DEFAULT_RESOLVE_STRATEGY.value;
   try {
     const { ResolveConflicts } = await backendGetApp();
     const conflictsJSON = JSON.stringify(conflicts);

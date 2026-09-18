@@ -382,6 +382,7 @@
   "diagnostics.perfRtypeTop": "Top N largest (whole repo)",
   "diagnostics.perfRtypeTopHint": "Rank every model in the repo by footprint (directory models by total directory content, others by file size) and take the top N; N comes from the Max per type field; JSON payload only",
   "diagnostics.perfMaxModels": "Max per type",
+  "diagnostics.perfTopLargestCount": "Top N",
   "diagnostics.perfMatrixResult": "Type matrix result",
   "diagnostics.perfMatrixColType": "Type",
   "diagnostics.perfMatrixColFound": "Found",

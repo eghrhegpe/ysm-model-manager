@@ -442,7 +442,13 @@ export const en: Record<string, string> = {
     "No concurrent bench result (the repo may have no CLI-analyzable model)",
   "diagnostics.perfRtypeSingle": "(single model by path)",
   "diagnostics.perfRtypeAll": "All types (matrix)",
+  "diagnostics.perfRtypeTop": "Top N largest (whole repo)",
+  "diagnostics.perfRtypeTopHint":
+    "Rank every model in the repo by footprint (directory models by total directory content, others by file size) and take the top N; N comes from the Max per type field; JSON payload only",
   "diagnostics.perfMaxModels": "Max per type",
+  // Same control (#diag-perf-max) means N in top-N mode; the label switches with the mode
+  // (syncPerfCountLabel) so the UI never names a control something it is not.
+  "diagnostics.perfTopLargestCount": "Top N",
   "diagnostics.perfMatrixResult": "Type matrix result",
   "diagnostics.perfMatrixColType": "Type",
   "diagnostics.perfMatrixColFound": "Found",
@@ -452,6 +458,12 @@ export const en: Record<string, string> = {
   "diagnostics.perfMatrixEmpty": "No model of this type found in the repo",
   "diagnostics.perfMatrixColUnsupported": "Not collected",
   "diagnostics.perfMatrixColStages": "Stages",
+  "diagnostics.perfTopLargestEcho": "Top {n} largest in the repo · size basis {source} ({desc})",
+  "diagnostics.perfSizeSourceDirTotal":
+    "directory models summed over directory content, others by file size",
+  "diagnostics.perfSizeSourceUnknown": "this size basis is not registered in the UI",
+  "diagnostics.perfModelFootprintHint":
+    "Footprint used for ranking (directory models summed over directory content, others by file size)",
   "diagnostics.perfTrendTitle": "Performance trend (stage time)",
   "diagnostics.perfTrendNoData": "No trend yet — run single-bench twice or more to show the chart",
   "diagnostics.perfRunning": "Running…",

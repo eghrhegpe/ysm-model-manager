@@ -382,6 +382,7 @@
   "diagnostics.perfRtypeTop": "全库前 N 大",
   "diagnostics.perfRtypeTopHint": "按模型占用排名取全库前 N 大（目录式按目录内容合计、其余按文件大小）；N 取「每类上限」的数值；仅结构化 JSON 载荷",
   "diagnostics.perfMaxModels": "每类上限",
+  "diagnostics.perfTopLargestCount": "前 N 大",
   "diagnostics.perfMatrixResult": "类型矩阵结果",
   "diagnostics.perfMatrixColType": "类型",
   "diagnostics.perfMatrixColFound": "命中",

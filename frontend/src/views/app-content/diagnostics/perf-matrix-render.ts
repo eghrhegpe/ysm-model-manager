@@ -9,6 +9,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { loadResourceRegistry } from "@/services/resource-registry.ts";
+import { formatBytes } from "@/utils/format/format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import { sectionHeader } from "./perf-common.ts";
@@ -34,6 +35,10 @@ export interface PerfMatrixSpec {
   analyzed: number;
   unsupported: number;
   cli_analyzable: boolean;
+  /** 前 N 大目标集的 N（缺席 = 非该模式）；与 rtype/all_types/max_models 互不同现 */
+  top_largest?: number;
+  /** 体量口径 token（仅前 N 大回显）：dir_total = 目录式按目录内容合计、其余按文件大小 */
+  size_source?: string;
   types: PerfTypeSummary[];
 }
 
@@ -51,6 +56,11 @@ export interface PerfMatrixModel {
   total_ms?: number;
   stages?: { name: string; ms: number; status: string }[];
   hints?: string[];
+  /**
+   * 参与排名的模型占用（仅前 N 大模式）。
+   * 不能拿 size_bytes 代替：目录式模型按 identity 口径在那儿恒为 0，用它排序等于没排序。
+   */
+  footprint_bytes?: number;
 }
 
 export interface PerfMatrixPayload {
@@ -61,6 +71,14 @@ export interface PerfMatrixPayload {
 
 /** 类型选择器的「全部类型」哨兵值（与 tpl 的 select 约定，非 registry 类型 id） */
 export const PERF_RTYPE_ALL = "__all__";
+
+/** 类型选择器的「全库前 N 大」哨兵（ADR-262 D3 第三种目标集）；同样不是 registry 类型 id */
+export const PERF_RTYPE_TOP = "__top__";
+
+/** 体量口径 token → i18n 描述；token 由 Go 单点给出，前端只映射不重算排名 */
+const SIZE_SOURCE_KEYS: Record<string, string> = {
+  dir_total: "diagnostics.perfSizeSourceDirTotal",
+};
 
 function typeLabel(s: PerfTypeSummary, esc: EscFn): string {
   const label = s.rtype_label ? esc(s.rtype_label) : esc(s.rtype);
@@ -89,6 +107,12 @@ function modelRow(m: PerfMatrixModel, esc: EscFn): string {
   const id = m.identity;
   const name = id ? `${esc(id.rtype_label ?? id.rtype)} · ${esc(id.relPath)}` : esc(m.model);
   const formTag = id?.form === "dir" ? ` <span class="perf-matrix-tag">dir</span>` : "";
+  // 体量回显（ADR-262 D3）：前 N 大模式要能看出「它凭什么排第一」的数值；
+  // 0/缺席渲染空串——其他模式没这个字段，且 0 在 Go 口径里是「未知」不是「零字节」
+  const footprint = formatBytes(m.footprint_bytes ?? 0);
+  const footprintTag = footprint
+    ? ` <span class="perf-matrix-tag" title="${esc(t("diagnostics.perfModelFootprintHint"))}">${esc(footprint)}</span>`
+    : "";
   const stageCount = m.stages?.length ?? 0;
   const detail =
     stageCount > 0
@@ -97,17 +121,35 @@ function modelRow(m: PerfMatrixModel, esc: EscFn): string {
   const detailCls =
     stageCount > 0 ? "perf-matrix-model-detail" : "perf-matrix-model-detail perf-matrix-warn";
   return `<div class="perf-matrix-model">
-<span class="perf-matrix-model-name">${name}${formTag}</span>
+<span class="perf-matrix-model-name">${name}${formTag}${footprintTag}</span>
 <span class="${detailCls}">${esc(detail)}</span>
 </div>`;
+}
+
+/**
+ * 前 N 大规格回显（ADR-262 D3）：N 与体量口径都摆到界面上。
+ * 排序依据不可见 = 结果不可复核——用户至少要能看出「这个 N 是按什么排的」。
+ * 非该模式（无 top_largest）返回空串，零存在感。
+ */
+function topLargestLine(spec: PerfMatrixSpec, esc: EscFn): string {
+  const n = spec.top_largest;
+  if (typeof n !== "number" || n <= 0) return "";
+  const token = spec.size_source ?? "";
+  const key = SIZE_SOURCE_KEYS[token] as Parameters<typeof t>[0] | undefined;
+  const desc = key ? t(key) : t("diagnostics.perfSizeSourceUnknown");
+  return `<div class="perf-total" title="${esc(t("diagnostics.perfRtypeTopHint"))}">${UI_ICONS.performance} ${esc(
+    t("diagnostics.perfTopLargestEcho", { n: String(n), source: token, desc }),
+  )}</div>`;
 }
 
 /** 渲染类型矩阵（表格 + 逐模型明细）。空结果走显式空态，不画空表。 */
 export function renderPerfMatrix(payload: PerfMatrixPayload, esc: EscFn): string {
   const rawOutput = payload.output ?? JSON.stringify(payload, null, 2);
   const head = sectionHeader(UI_ICONS.performance, t("diagnostics.perfMatrixResult"), rawOutput);
+  // 口径回显先于空态判断：一条样本都没采到，也要说清「这次是按什么挑的」
+  const specEcho = topLargestLine(payload.spec, esc);
   if (!payload.models.length) {
-    return `${head}<div class="diag-stat diag-stat-muted">${UI_ICONS.search} ${t("diagnostics.perfMatrixEmpty")}</div>`;
+    return `${head}${specEcho}<div class="diag-stat diag-stat-muted">${UI_ICONS.search} ${t("diagnostics.perfMatrixEmpty")}</div>`;
   }
   const rows = payload.spec.types.map((s) => typeRow(s, esc)).join("");
   const table = `<table class="perf-matrix">
@@ -121,7 +163,7 @@ export function renderPerfMatrix(payload: PerfMatrixPayload, esc: EscFn): string
 <tbody>${rows}</tbody>
 </table>`;
   const models = payload.models.map((m) => modelRow(m, esc)).join("");
-  return `${head}${table}<div class="perf-matrix-models">${models}</div>`;
+  return `${head}${specEcho}${table}<div class="perf-matrix-models">${models}</div>`;
 }
 
 /**
@@ -141,6 +183,14 @@ export async function populatePerfRtypeOptions(root: ShadowRoot): Promise<void> 
   all.value = PERF_RTYPE_ALL;
   all.textContent = t("diagnostics.perfRtypeAll");
   select.appendChild(all);
+
+  // 全库前 N 大（ADR-262 D3 第三种目标集）：N 复用「每类上限」输入框；
+  // Go 侧同样拒绝基准参数，故它与其他矩阵模式一样被 syncPerfBaselineControls 禁用三件套
+  const top = document.createElement("option");
+  top.value = PERF_RTYPE_TOP;
+  top.textContent = t("diagnostics.perfRtypeTop");
+  top.title = t("diagnostics.perfRtypeTopHint");
+  select.appendChild(top);
 
   for (const ty of types) {
     const opt = document.createElement("option");

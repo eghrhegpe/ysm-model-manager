@@ -36,6 +36,7 @@ function makeRoot(): ShadowRoot {
     <input id="diag-perf-model">
     <input id="diag-perf-iter" value="2">
     <select id="diag-perf-rtype"><option value="">（单模型，按路径）</option></select>
+    <label for="diag-perf-max" id="diag-perf-max-label">每类上限</label>
     <input id="diag-perf-max" value="3">
     <div id="diag-perf-single"></div>
     <div id="diag-perf-gui-out"></div>
@@ -84,6 +85,64 @@ const MATRIX_JSON = {
       per_iteration_ms: 12.5,
       total_ms: 25,
       stages: [{ name: "① 清单读取", ms: 1, status: "ok" }],
+    },
+  ],
+  output: "{}",
+};
+
+// 全库前 N 大（ADR-262 D3 第三种目标集）载荷：与矩阵同形 + spec.top_largest/size_source，
+// 且每条 models[] 带参与排名的 footprint_bytes（目录式模型的 size_bytes 恒为 0，拿它排不了序）
+const TOP_LARGEST_JSON = {
+  spec: {
+    all_types: false,
+    max_models: 0,
+    iterations: 2,
+    analyzed: 2,
+    unsupported: 0,
+    cli_analyzable: false,
+    top_largest: 3,
+    size_source: "dir_total",
+    types: [
+      {
+        rtype: "ysm",
+        rtype_label: "YSM 模型",
+        cli_analyzable: true,
+        found: 5,
+        analyzed: 2,
+        unsupported: 0,
+        expected_stages: 7,
+        stage_mismatch: false,
+      },
+    ],
+  },
+  models: [
+    {
+      model: "/repo/ysm/big",
+      identity: {
+        rtype: "ysm",
+        rtype_label: "YSM 模型",
+        rtype_source: "location",
+        form: "dir",
+        relPath: "ysm/big/ysm.json",
+      },
+      footprint_bytes: 2792158,
+      per_iteration_ms: 6.45,
+      total_ms: 19.34,
+      stages: [{ name: "① 清单读取", ms: 1, status: "ok" }],
+    },
+    {
+      model: "/repo/ysm/small.ysm",
+      identity: {
+        rtype: "ysm",
+        rtype_label: "YSM 模型",
+        rtype_source: "extension",
+        form: "file",
+        relPath: "ysm/small.ysm",
+      },
+      footprint_bytes: 1024,
+      per_iteration_ms: 1.9,
+      total_ms: 5.7,
+      stages: [{ name: "① 文件读取", ms: 1, status: "ok" }],
     },
   ],
   output: "{}",
@@ -241,7 +300,82 @@ describe("类型选择器选项来自 registry（前端不写死类型表）", (
 
     const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
     const values = [...select.options].map((o) => o.value);
-    expect(values).toEqual(["", "__all__", "EntityPlayer", "ysm"]);
+    // 顺序 = 「单模型」占位 → 两个哨兵（全部类型 / 前 N 大）→ registry 类型（前端不写死类型表）
+    expect(values).toEqual(["", "__all__", "__top__", "EntityPlayer", "ysm"]);
     expect(select.textContent).toContain("YSM 模型");
+    expect(select.textContent).toContain("全库前 N 大");
+  });
+});
+
+describe("全库前 N 大（ADR-262 D3 第三种目标集）", () => {
+  it("选中「全库前 N 大」→ 只发 --top-largest + iterations + format", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: TOP_LARGEST_JSON });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    setRtype(root, "__top__");
+    await run(root);
+
+    // 三种矩阵类目标集在 Go 侧互斥：混入 rtype/all-types/max-models 会被判参数冲突。
+    // 故这里锁**精确**参数集（不用 objectContaining）——多带一个键正是要防的回归。
+    expect(executeCLI).toHaveBeenCalledWith("single-bench", {
+      "top-largest": 3,
+      iterations: 2,
+      format: "json",
+    });
+  });
+
+  it("回显 N 与体量口径，并逐条给出参与排名的体量", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: TOP_LARGEST_JSON });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    setRtype(root, "__top__");
+    const out = await run(root);
+
+    // 排名依据可见 = 可复核：N、口径 token、口径人话三者都要在
+    expect(out.textContent).toContain("全库前 3 大目标集");
+    expect(out.textContent).toContain("dir_total");
+    expect(out.textContent).toContain("目录式按目录内容合计");
+    // 目录式模型的 size_bytes 是 0（identity 口径），排名体量只能来自 footprint_bytes
+    expect(out.textContent).toContain("2.7 MB");
+    expect(out.textContent).toContain("1.0 KB");
+    // 顺序即载荷顺序（Go 已排好名，前端不重排）
+    const names = [...out.querySelectorAll(".perf-matrix-model-name")].map((e) => e.textContent);
+    expect(names[0]).toContain("ysm/big/ysm.json");
+  });
+
+  it("无 footprint_bytes 的载荷不显示体量（其他模式不凭空多一行）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: MATRIX_JSON });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    setRtype(root, "ysm");
+    const out = await run(root);
+
+    expect(out.textContent).not.toContain("MB");
+    expect(out.textContent).not.toContain("KB");
+  });
+});
+
+// 标签语义随模式切换（2026-09-18 主模型补）：同一个 `#diag-perf-max` 在矩阵模式是「每类上限」、
+// 在前 N 大模式是 N。控件复用没问题，但**标签不跟着换就是界面撒谎**——用户看到「每类上限 3」
+// 在前 N 大下会理解为「每种类型取 3 个」，而实际是「全库取 3 个」。
+describe("条数控件的标签随模式切换", () => {
+  it("切到前 N 大 → 标签变「前 N 大」，切回 → 变回「每类上限」", async () => {
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    const label = root.getElementById("diag-perf-max-label") as HTMLElement;
+    const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
+
+    // 初始（单模型模式）：标签是「每类上限」
+    expect(label.textContent).toBe("每类上限");
+
+    // 切到前 N 大 → 派发真实 change（走 perf.ts 的绑定，而不是直调内部函数）
+    setRtype(root, "__top__");
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(label.textContent).toBe("前 N 大");
+
+    // 切回单模型 → 必须还原，不能留在上一次的文案
+    setRtype(root, "");
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(label.textContent).toBe("每类上限");
   });
 });

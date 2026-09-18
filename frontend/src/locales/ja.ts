@@ -442,7 +442,13 @@ export const ja: Record<string, string> = {
     "並列ベンチの結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
   "diagnostics.perfRtypeSingle": "（単一モデル：パス指定）",
   "diagnostics.perfRtypeAll": "全タイプのマトリクス",
+  "diagnostics.perfRtypeTop": "リポジトリ全体の上位 N 件",
+  "diagnostics.perfRtypeTopHint":
+    "リポジトリ全体のモデルを占有量で順位付け（ディレクトリ型は中身の合計、それ以外はファイルサイズ）し上位 N 件を取得。N は「タイプ毎の上限」の値。JSON 構造化ペイロードのみ",
   "diagnostics.perfMaxModels": "タイプ毎の上限",
+  // 同一コントロール（#diag-perf-max）は上位 N 件モードでは N を意味する——
+  // ラベルはモードで切り替える（syncPerfCountLabel）。切り替えないと UI が名前と実態の食い違いを生む。
+  "diagnostics.perfTopLargestCount": "上位 N 件",
   "diagnostics.perfMatrixResult": "タイプ別マトリクス結果",
   "diagnostics.perfMatrixColType": "タイプ",
   "diagnostics.perfMatrixColFound": "該当",
@@ -452,6 +458,11 @@ export const ja: Record<string, string> = {
   "diagnostics.perfMatrixEmpty": "リポジトリに該当タイプのモデルがありません",
   "diagnostics.perfMatrixColUnsupported": "未収集",
   "diagnostics.perfMatrixColStages": "段階数",
+  "diagnostics.perfTopLargestEcho": "リポジトリ全体の上位 {n} 件 · サイズ基準 {source}（{desc}）",
+  "diagnostics.perfSizeSourceDirTotal": "ディレクトリ型は中身の合計、それ以外はファイルサイズ",
+  "diagnostics.perfSizeSourceUnknown": "このサイズ基準は UI に未登録",
+  "diagnostics.perfModelFootprintHint":
+    "順位付けに使う占有量（ディレクトリ型は中身の合計、それ以外はファイルサイズ）",
   "diagnostics.perfTrendTitle": "パフォーマンス傾向（段階ごとの所要時間）",
   "diagnostics.perfTrendNoData":
     "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",

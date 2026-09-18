@@ -2,7 +2,7 @@
 // 职责：事件接线 + 对外 API re-export，业务逻辑已拆至：
 //   - perf-common.ts      ：共享工具层（sectionHeader / 守卫 / 错误辅助 / 复制委托）
 //   - perf-single-bench.ts：single-bench（结构化载荷消费 + 柱状图 + 趋势图 + 矩阵分发）
-//   - perf-matrix-render.ts：类型矩阵渲染（--rtype / --all-types 载荷）
+//   - perf-matrix-render.ts：目标集渲染（--rtype / --all-types / --top-largest 三种载荷同形）
 //   - perf-gui-flow.ts    ：gui-flow（6 阶段结构化消费，实测/估算分离）
 //   - perf-log.ts         ：perf-log（优化历史卡片）
 //   - perf-trace.ts       ：加载剖析（load-trace store 消费）

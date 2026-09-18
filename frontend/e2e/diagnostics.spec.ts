@@ -16,6 +16,7 @@ import {
   GUI_FLOW_REAL,
   SINGLE_BENCH_BASELINE_MISSING,
   SINGLE_BENCH_SAVED,
+  TOP_LARGEST_REAL,
 } from "./perf-fixtures.ts";
 
 /** 顶部 repo-tab 的 data-tab 全集（与 tpl.ts diagnosticsHTML 一一对应） */
@@ -402,7 +403,6 @@ async function installCliMock(
   );
 }
 
-/** 在 shadowRoot 内设置输入值并派发 input/change（原生 setter，绕过 React 类受控拦截不适用，此处仅原生控件） */
 async function setShadowValue(page: Page, testid: string, value: string): Promise<void> {
   await page.evaluate(
     ({ id, v }: { id: string; v: string }) => {
@@ -411,6 +411,20 @@ async function setShadowValue(page: Page, testid: string, value: string): Promis
       if (!el) return;
       el.value = v;
       el.dispatchEvent(new Event("input", { bubbles: true }));
+    },
+    { id: testid, v: value },
+  );
+}
+
+/** 设置 shadowRoot 内 <select> 的值并派发 change（模式判定在运行时读值，故需 change 让联动生效） */
+async function setShadowSelect(page: Page, testid: string, value: string): Promise<void> {
+  await page.evaluate(
+    ({ id, v }: { id: string; v: string }) => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const el = root?.querySelector(`[data-testid="${id}"]`) as HTMLSelectElement | null;
+      if (!el) return;
+      el.value = v;
+      el.dispatchEvent(new Event("change", { bubbles: true }));
     },
     { id: testid, v: value },
   );
@@ -588,5 +602,41 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     expect(got.titles.some((t) => t.includes("未找到基准文件"))).toBe(true);
     // ③ 基准缺失不吞结果：阶段条照旧
     expect(got.barRows).toBe(SINGLE_BENCH_BASELINE_MISSING.stages.length);
+  });
+
+  // ⑤ 全库前 N 大（ADR-262 D3 第三种目标集）：排名依据必须在界面上可见
+  test("前 N 大：N 与体量口径回显、体量逐条可见、models 按排名顺序", async ({ page }) => {
+    await installCliMock(page, { "single-bench": { data: TOP_LARGEST_REAL } });
+    await setShadowSelect(page, "diag-perf-rtype", "__top__");
+    await setShadowValue(page, "diag-perf-max", String(TOP_LARGEST_REAL.spec.top_largest));
+    await clickBySelector(page, '[data-testid="diag-perf-run"]');
+
+    await waitForCount(page, ".perf-matrix-model", TOP_LARGEST_REAL.models.length);
+    const got = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const out = root?.querySelector('[data-testid="diag-perf-single"]') as HTMLElement | null;
+      const q = (sel: string): HTMLElement[] =>
+        [...(out?.querySelectorAll(sel) ?? [])] as HTMLElement[];
+      return {
+        text: out?.textContent ?? "",
+        names: q(".perf-matrix-model-name").map((e) => e.textContent ?? ""),
+        // 体量角标带 title（口径提示），`dir` 角标没有——据此把两者分开
+        footprints: q(".perf-matrix-tag[title]").map((e) => e.textContent ?? ""),
+        echo: q(".perf-total").map((e) => e.textContent ?? ""),
+      };
+    });
+
+    // ① 每条模型的体量可见（size_bytes 在目录式下是 0，只给规则不给数值就无法复核「凭什么排第一」）
+    expect(got.footprints).toHaveLength(TOP_LARGEST_REAL.models.length);
+    for (const f of got.footprints) expect(f.trim().length).toBeGreaterThan(0);
+    // ② 排名顺序保留到 DOM：与载荷的 models[] 逐条同名（按类型归并就会丢这个信息）
+    for (const [i, m] of TOP_LARGEST_REAL.models.entries()) {
+      expect(got.names[i]).toContain(m.identity.relPath);
+    }
+    // ③ N 与口径回显（「这个 N 是按什么排的」必须能看出来）
+    expect(got.echo.join(" ")).toContain(String(TOP_LARGEST_REAL.spec.top_largest));
+    expect(got.echo.join(" ")).toContain(TOP_LARGEST_REAL.spec.size_source);
+    // ④ 通用残留守卫（占位符 / 未翻译 token）
+    expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
   });
 });

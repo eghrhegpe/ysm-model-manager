@@ -21,6 +21,8 @@ export const VIEW_TESTIDS: readonly string[] = [
   "ws-search-results",
   // ADR-262 D3：性能 tab 的类型选择器（矩阵入口，e2e 用它断言选项来自 registry）
   "diag-perf-rtype",
+  // ADR-262 D3：目标集条数入口——矩阵模式下是「每类上限」，前 N 大模式下是「N」（同一控件，语义随模式变）
+  "diag-perf-max",
   // ADR-262 D8：基准入口三件套（记录 / 对比 / 阈值）——矩阵模式下被禁用
   "diag-perf-baseline-save",
   "diag-perf-baseline-compare",
@@ -167,8 +169,8 @@ export function diagnosticsHTML(): string {
       <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
         <option value="">${t("diagnostics.perfRtypeSingle")}</option>
       </select>
-      <label for="diag-perf-max">${t("diagnostics.perfMaxModels")}</label>
-      <input id="diag-perf-max" type="number" min="1" step="1" value="5">
+      <label for="diag-perf-max" id="diag-perf-max-label">${t("diagnostics.perfMaxModels")}</label>
+      <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max">
       <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
       <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
       <label for="diag-perf-baseline-compare">${t("diagnostics.perfBaselineCompare")}</label>

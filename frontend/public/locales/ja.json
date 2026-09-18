@@ -382,6 +382,7 @@
   "diagnostics.perfRtypeTop": "リポジトリ全体の上位 N 件",
   "diagnostics.perfRtypeTopHint": "リポジトリ全体のモデルを占有量で順位付け（ディレクトリ型は中身の合計、それ以外はファイルサイズ）し上位 N 件を取得。N は「タイプ毎の上限」の値。JSON 構造化ペイロードのみ",
   "diagnostics.perfMaxModels": "タイプ毎の上限",
+  "diagnostics.perfTopLargestCount": "上位 N 件",
   "diagnostics.perfMatrixResult": "タイプ別マトリクス結果",
   "diagnostics.perfMatrixColType": "タイプ",
   "diagnostics.perfMatrixColFound": "該当",

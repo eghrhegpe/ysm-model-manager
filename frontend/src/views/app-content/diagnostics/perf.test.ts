@@ -670,6 +670,37 @@ describe("gui-flow 面板", () => {
     expect(out.textContent).toContain("其中估算 120.50ms（不计入总耗时）");
   });
 
+  // 回归（2026-09-18，e2e 真实渲染抓出）：多行描述曾被 esc(join("<br>")) 连 <br> 一起转义，
+  // 界面显示字面量「<br>」。正确写法 = 先逐行 esc 再拼 <br>（同目录 perf-log.ts 的既有模式）。
+  // 单元层子串断言对此失明（textContent 里两种写法都含「<br>」字符），故这里断言 **DOM 结构**。
+  it("多行描述渲染成真 <br> 元素，而不是被转义的字面量", async () => {
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "gui-flow",
+      data: {
+        ...GUI_STRUCTURED,
+        stages: [
+          {
+            status: "✅",
+            name: "① 配置加载",
+            ms: 1,
+            kind: "measured",
+            desc: ["仓库根: /models", "模型根: /models"],
+          },
+        ],
+      },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-gui") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const out = root.getElementById("diag-perf-gui-out") as HTMLElement;
+    const desc = out.querySelector(".perf-gui-desc") as HTMLElement;
+    expect(desc.querySelectorAll("br").length).toBe(1);
+    expect(desc.textContent).not.toContain("<br>");
+    expect(desc.textContent).toContain("仓库根: /models");
+  });
+
   it("阶段渲染 runtime 归属（ADR-262 D2）：扫描段如实显示 rust，不说想当然的 go", async () => {
     executeCLI.mockResolvedValue({
       status: "success",

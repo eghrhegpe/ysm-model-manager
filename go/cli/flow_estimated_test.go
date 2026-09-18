@@ -167,3 +167,38 @@ func TestBuildGuiFlowStructured_EstimatedTotal(t *testing.T) {
 		t.Errorf("⑥ 应保留 kind/estimated_ms: %+v", g.Stages[2])
 	}
 }
+
+// TestScanRateSuffix 诚实红线（与 singleBenchReadNote 同族）：
+// 小仓库扫描常在时钟粒度内完成（time.Since = 0），n/0s 会打成「+Inf models/sec」。
+// 立因（2026-09-18，e2e 真实渲染抓出）：GUI ② 阶段描述里真的出现了「发现 1 个模型 (+Inf models/sec)」。
+func TestScanRateSuffix(t *testing.T) {
+	t.Parallel()
+	if got := scanRateSuffix(5, 0); got != "" {
+		t.Errorf("零时长不得报速率, got %q", got)
+	}
+	if got := scanRateSuffix(5, -time.Millisecond); got != "" {
+		t.Errorf("负时长不得报速率, got %q", got)
+	}
+	if got := scanRateSuffix(100, time.Second); !strings.Contains(got, "100 models/sec") {
+		t.Errorf("100/1s 应为 100 models/sec, got %q", got)
+	}
+}
+
+// TestGUIFlow_StructuredNoNonFinite 真实链路的粗保护：结构化载荷的任何阶段描述都不得出现
+// Inf/NaN（估算公式与速率若被 0 除，会原样进 GUI 与 AI 复盘）。
+func TestGUIFlow_StructuredNoNonFinite(t *testing.T) {
+	ctx, _ := runGUIFlowForTest(t)
+	g, ok := ctx.result.(*guiFlowStructured)
+	if !ok {
+		t.Fatalf("gui-flow 应设置结构化载荷, got %T", ctx.result)
+	}
+	for _, s := range g.Stages {
+		for _, line := range s.Desc {
+			for _, bad := range []string{"Inf", "NaN"} {
+				if strings.Contains(line, bad) {
+					t.Errorf("阶段 %q 描述不得出现 %q: %q", s.Name, bad, line)
+				}
+			}
+		}
+	}
+}

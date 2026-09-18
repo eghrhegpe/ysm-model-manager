@@ -13,6 +13,7 @@ import { expect, type Page, test } from "./fixture.ts";
 import { gotoApp, navItem } from "./helpers.ts";
 import {
   CONC_BENCH_REAL,
+  GUI_FLOW_REAL,
   SINGLE_BENCH_BASELINE_MISSING,
   SINGLE_BENCH_SAVED,
 } from "./perf-fixtures.ts";
@@ -296,6 +297,66 @@ test.describe("诊断页", () => {
       return root?.querySelector('[data-testid="diag-log-list"]')?.textContent ?? "";
     });
     expect(listText).toContain("No logs yet");
+  });
+});
+
+// ⑤ 性能面板 · gui-flow 真实载荷渲染（同族守卫：ADR-262 D2 实测/估算分离 + 占位符残留）
+test.describe("诊断页 · gui-flow 真实载荷渲染（ADR-262 D5）", () => {
+  test.beforeEach(async ({ page }) => {
+    await gotoApp(page);
+    await navItem(page, "diagnostics").click();
+    await page.waitForFunction(
+      () => {
+        const root = document.querySelector("app-content")?.shadowRoot;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 8;
+      },
+      undefined,
+      { timeout: 10000, polling: 200 },
+    );
+    await clickBySelector(page, '.repo-tab[data-tab="gui"]');
+  });
+
+  test("阶段行/估算标记/汇总分离渲染，描述换行是真 <br> 而不是字面量", async ({ page }) => {
+    await installCliMock(page, { "gui-flow": { data: GUI_FLOW_REAL } });
+    await clickBySelector(page, '[data-testid="diag-perf-gui-run"]');
+
+    await waitForCount(page, ".perf-gui-stage", GUI_FLOW_REAL.stages.length);
+    const got = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const out = root?.querySelector('[data-testid="diag-perf-gui-out"]') as HTMLElement | null;
+      const q = (sel: string): HTMLElement[] =>
+        [...(out?.querySelectorAll(sel) ?? [])] as HTMLElement[];
+      return {
+        text: out?.textContent ?? "",
+        stageRows: q(".perf-gui-stage").length,
+        estTags: q(".perf-gui-est").length,
+        descLines: q(".perf-gui-desc")[0]?.querySelectorAll("br").length ?? 0,
+      };
+    });
+
+    // ① 阶段行数与载荷一致
+    expect(got.stageRows).toBe(GUI_FLOW_REAL.stages.length);
+    // ② 估算标记数 = 载荷里「估算成分 > 0」的阶段数（实测/估算必须人眼可辨，ADR-262 D2）
+    const expectedEst = GUI_FLOW_REAL.stages.filter(
+      (s) => s.kind === "estimated" || (s.estimated_ms ?? 0) > 0,
+    ).length;
+    expect(got.estTags).toBe(expectedEst);
+    // ③ 估算是**分列**呈现（实测 + 估算），不是把估算悄悄加进实测
+    const five = GUI_FLOW_REAL.stages.find((s) => s.name.startsWith("⑤"));
+    if (!five) throw new Error("夹具应含 ⑤ 数据准备阶段（否则本断言测的是空气）");
+    expect(got.text).toContain(
+      `${five.ms.toFixed(2)}ms + ${(five.estimated_ms ?? 0).toFixed(2)}ms`,
+    );
+    // ④ 汇总不得把估算计入总耗时（D2 硬判据）
+    expect(got.text).toContain(`${GUI_FLOW_REAL.total_ms.toFixed(2)}ms`);
+    const inflated = GUI_FLOW_REAL.total_ms + (GUI_FLOW_REAL.estimated_ms ?? 0);
+    expect(got.text).not.toContain(`${inflated.toFixed(2)}ms`);
+    // ⑤ 描述里的多行必须渲染成真换行：esc 先转义再拼 <br>，否则界面显示字面量「<br>」
+    //（同目录 perf-log.ts 用的是正确写法 .map(esc).join("<br>")——本用例锁住 gui-flow 对齐它）
+    expect(got.descLines).toBeGreaterThan(0);
+    expect(got.text).not.toContain("<br>");
+    // ⑥ 通用残留守卫
+    expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
   });
 });
 

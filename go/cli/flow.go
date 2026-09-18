@@ -305,6 +305,16 @@ func classifyForScanWithSource(path, ext string, reg *registry.ResourceTypeRegis
 	return "container", "container"
 }
 
+// scanRateSuffix 扫描速率后缀：计时走字才报速率。
+// ⚠️ 诚实红线：小仓库扫描常在时钟粒度内完成（`time.Since` = 0），`n/0s` 会打出
+// 「+Inf models/sec」——测不出来的速率宁可不报（2026-09-18 由 e2e 真实渲染抓出）。
+func scanRateSuffix(count int, d time.Duration) string {
+	if d <= 0 {
+		return ""
+	}
+	return fmt.Sprintf(" (%.0f models/sec)", float64(count)/d.Seconds())
+}
+
 // runPhaseModelScan 模拟模型扫描
 func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 	start := time.Now()
@@ -341,10 +351,13 @@ func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 		Duration:   elapsed,
 		Success:    true,
 		FirstModel: firstModel,
+		// ⚠️ 诚实红线（与 singleBenchReadNote 同族，2026-09-18 由 e2e 真实渲染抓出）：
+		// 扫描几个小模型时 `time.Since` 常为 0 → 除以 0 秒把速率打成「+Inf models/sec」。
+		// 测不出的速率宁可不报：计时没走字就只说数量。
 		Description: fmt.Sprintf(
-			"✅ 发现 %d 个模型 (%.0f models/sec)\n   类型分布: %s [YAML: %d, YSM: %d]\n   首个模型: %s",
+			"✅ 发现 %d 个模型%s\n   类型分布: %s [YAML: %d, YSM: %d]\n   首个模型: %s",
 			len(entries),
-			float64(len(entries))/elapsed.Seconds(),
+			scanRateSuffix(len(entries), elapsed),
 			dist,
 			yamlCount,
 			ysmCount,

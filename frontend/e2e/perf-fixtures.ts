@@ -112,7 +112,7 @@ export const SINGLE_BENCH_SAVED = {
   ],
   baseline: {
     diff: {
-      path: "C:\\Users\\ZHUJIE~1\\AppData\\Local\\Temp\\e2e-base2.json",
+      path: "<repo>\\e2e-base2.json",
       threshold_pct: 50,
       noise_floor_ms: 1,
       verdict: "ok",
@@ -280,8 +280,7 @@ export const SINGLE_BENCH_BASELINE_MISSING = {
   ],
   baseline: {
     error: "missing",
-    detail:
-      "未找到基准文件 C:\\Users\\ZHUJIE~1\\AppData\\Local\\Temp\\e2e-none.json：请先用 --save-baseline 记录一次基准",
+    detail: "未找到基准文件 <repo>\\e2e-none.json：请先用 --save-baseline 记录一次基准",
   },
 };
 
@@ -314,4 +313,85 @@ export const CONC_BENCH_REAL = {
     speedup: 3.0957516036069537,
   },
   hints: ["✅ 推荐使用 4 workers，可获得 10.9x 加速", "💡 适合场景: 批量模型分析、并行文件处理"],
+};
+
+// gui-flow：由 `go test ./go/cli/ -run TestZZDumpGuiFlowPayload` 经真实代码路径
+// （runGUIFlow 内部组装 + ctx.SetResult）落盘后原样搬运；唯一改动是把本机仓库绝对路径前缀
+// 换成 <repo>（换机器必然不同的部分），数值与文案逐字未动。
+export const GUI_FLOW_REAL = {
+  stages: [
+    {
+      status: "✅",
+      name: "① 配置加载",
+      ms: 0,
+      kind: "measured",
+      desc: [
+        "✅ 配置已加载",
+        "仓库根: <repo>\\tests\\fixtures\\ysm",
+        "模型根: <repo>\\tests\\fixtures\\ysm",
+      ],
+      runtime: "go",
+    },
+    {
+      status: "✅",
+      name: "② 模型扫描",
+      ms: 0,
+      kind: "measured",
+      desc: [
+        "✅ 发现 1 个模型",
+        "类型分布: ysm: 1 [YAML: 0, YSM: 1]",
+        "首个模型: <repo>\\tests\\fixtures\\ysm\\shen-fengling\\ysm.json",
+      ],
+      runtime: "go",
+    },
+    {
+      status: "✅",
+      name: "③ 模型分析",
+      ms: 0,
+      kind: "measured",
+      desc: ["✅ 分析完成", "文件: ysm.json", "骨骼: 1", "纹理: 1", "预估几何: 36B"],
+      runtime: "go",
+    },
+    {
+      status: "✅",
+      name: "④ 纹理缓存",
+      ms: 0.522,
+      kind: "measured",
+      desc: ["⚠️  缓存未命中（首次加载会编码生成）", "哈希: cbc1f3094cca9865..."],
+      runtime: "go",
+    },
+    {
+      status: "✅",
+      name: "⑤ 数据准备",
+      ms: 0,
+      kind: "measured",
+      desc: [
+        "📦 数据就绪",
+        "载荷(实测 JSON): 118B",
+        "序列化(实测): 0.00ms",
+        "预计传输: 0ms (假设 50MB/s，估算)",
+      ],
+      estimated_ms: 0.00225,
+      note: "载荷与序列化耗时为实测（118B / 0.00ms）；仅传输时间按 50MB/s 假设外推（CLI 观测不到 Wails IPC 通道），估算不计入总耗时",
+      runtime: "go",
+    },
+    {
+      status: "✅",
+      name: "⑥ 渲染预估",
+      ms: 0,
+      kind: "estimated",
+      desc: [
+        "🟢 轻量负载 — 可流畅渲染",
+        "⚠️ CLI 估算值（无渲染管线，仅按骨骼/纹理数粗估；真实首帧须在 GUI 验证）",
+        "骨骼: 1, 纹理: 1",
+        "预估首帧: 50-100ms（估算，不计入总耗时）",
+      ],
+      estimated_ms: 75.015,
+      note: "无渲染管线：首帧按 boneCount*0.01+50 ~ *0.02+100 粗估（区间 50-100ms，此处取中值），真实首帧须在 GUI 验证",
+      runtime: "three",
+    },
+  ],
+  total_ms: 1.027,
+  estimated_ms: 75.017,
+  failed: false,
 };

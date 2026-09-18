@@ -22,7 +22,13 @@ import (
 )
 
 func init() {
-	RegisterCommandC("concurrent-bench", CatPerf, "并发能力基准测试（串行 vs 并行对比，建议先优化单模型）", runConcurrentBench)
+	RegisterCommandC("concurrent-bench", CatPerf, "并发能力基准测试（串行 vs 并行对比，建议先优化单模型）", runConcurrentBench,
+		// ADR-173：登记后桥才走 ParamSpec 通道；此前无 spec → 走 legacy 告警路径。
+		// 与 flag 定义序一致（workers / max-models / format）。
+		ParamSpec{Key: "workers", Type: ParamNumber},
+		ParamSpec{Key: "max-models", Type: ParamNumber},
+		ParamSpec{Key: "format", Type: ParamString},
+	)
 	RegisterCommandC("single-bench", CatPerf, "单模型加载基准测试（优化基础，单模型快=所有场景快）", runSingleBench,
 		ParamSpec{Key: "model", Type: ParamString},
 		ParamSpec{Key: "iterations", Type: ParamNumber},
@@ -45,11 +51,13 @@ type concurrentBenchResult struct {
 	Speedup     float64
 }
 
-// runConcurrentBench 运行并发基准测试
+// runConcurrentBench 运行并发基准测试：text 流式打印 / json 静默出结构化载荷（ADR-262 D1）。
+// 两条线共用同一批底层采集函数与同一份判据（bench_concurrent_json.go），只有呈现方式不同。
 func runConcurrentBench(ctx *CmdContext) error {
 	fs := newCmdFlagSet("concurrent-bench")
 	workers := fs.Int("workers", 4, "并发 worker 数量")
 	maxModels := fs.Int("max-models", 20, "最多测试的模型数量")
+	format := fs.String("format", "text", "输出格式: text（人类可读，流式打印）/ json（AI 友好，结构化载荷）")
 	_, err := parseFlags(fs, ctx.Args)
 	if err != nil {
 		return err
@@ -64,6 +72,18 @@ func runConcurrentBench(ctx *CmdContext) error {
 	if *maxModels < 1 {
 		return newParamErrf("max-models 必须 >= 1，当前: %d", *maxModels)
 	}
+	if *format != "text" && *format != "json" {
+		return newParamErrf("--format 必须是 text 或 json")
+	}
+
+	// 目标集（含空集报错）在两条线之前算好：JSON 模式不打印任何进度，故不能把选样本埋进打印流程
+	benchModels, err := pickConcurrentBenchModels(ctx, *maxModels)
+	if err != nil {
+		return err
+	}
+	if *format == "json" {
+		return runConcurrentBenchJSON(ctx, benchModels, *workers, *maxModels)
+	}
 
 	fmt.Println("⚡ 并发能力基准测试")
 	fmt.Println(strings.Repeat("=", 70))
@@ -71,27 +91,9 @@ func runConcurrentBench(ctx *CmdContext) error {
 	fmt.Printf("   最大模型数:   %d\n", *maxModels)
 	fmt.Println(strings.Repeat("=", 70))
 
-	// 1. 扫描模型
+	// Phase 0 的“准备”在两条线之前已完成（JSON 模式不打印进度，故样本集先算好）；
+	// 这里按旧版顺序补回标题行，保证 text 输出逐字一致。
 	fmt.Println("\n📊 Phase 0: 准备测试数据...")
-	entries := ctx.App.ScanModelEntries(ctx.FilesRoot)
-	if len(entries) == 0 {
-		return newRuntimeErrf("未找到任何模型")
-	}
-
-	// 只取 CLI 可分析的模型（归属归 classifyForScan、可分析性归 perfTypeManifest，单点在 perf_targets.go）：
-	// 本命令调 AnalyzeBedrockModel，类型不在分析链路上时拿到空模型、各阶段耗时全是空数据。
-	//
-	// 2026-09-18 收编（ADR-262 D3）：原实现取 `ext == ".ysm"`（ADR 漏记的又一张表），
-	// 且无 .ysm 命中时**退化为取任意条目**——把 PMX/VRM 喂进分析链路。
-	// 现在无可用模型时如实报错，不用空数据凑出一份看起来成功的报告。
-	benchModels := pickCliAnalyzable(entries)
-	if len(benchModels) == 0 {
-		return newRuntimeErrf("未找到 CLI 可分析的模型（仅 .ysm 及其容器/解包目录形态在 CLI 分析链路上）")
-	}
-	if len(benchModels) > *maxModels {
-		benchModels = benchModels[:*maxModels]
-	}
-
 	fmt.Printf("   测试模型数: %d\n", len(benchModels))
 	fmt.Println()
 
@@ -101,8 +103,10 @@ func runConcurrentBench(ctx *CmdContext) error {
 	fmt.Println(strings.Repeat("-", 70))
 
 	serialResult := benchSerialAnalyze(ctx.App, benchModels)
-	fmt.Printf("   串行耗时: %.2fms\n", float64(serialResult.Duration.Microseconds())/1000)
-	fmt.Printf("   平均/模型: %.2fms\n", float64(serialResult.Duration.Microseconds())/1000/float64(len(benchModels)))
+	// 耗时一律走 durationMs（纳秒精度）：`Microseconds()/1000` 会把亚毫秒截断成 0.00ms，
+	// 进而把「并行快得多」显示成 `加速比: 0.0x 🔴 无提升`——截断制造的假结论（ADR-262 D2 同款教训）。
+	fmt.Printf("   串行耗时: %.2fms\n", durationMs(serialResult.Duration))
+	fmt.Printf("   平均/模型: %.2fms\n", durationMs(serialResult.Duration)/float64(len(benchModels)))
 
 	// 3. 并行测试
 	fmt.Println()
@@ -111,10 +115,8 @@ func runConcurrentBench(ctx *CmdContext) error {
 	fmt.Println(strings.Repeat("-", 70))
 
 	var parallelResults []concurrentBenchResult
-	workerCounts := []int{2, 4, *workers}
-	if *workers < 4 {
-		workerCounts = []int{2, *workers}
-	}
+	// 档位选择与 JSON 线共用（concurrentWorkerCounts）：报告与载荷必须是同一件事
+	workerCounts := concurrentWorkerCounts(*workers)
 
 	for _, wc := range workerCounts {
 		result := benchParallelAnalyze(ctx.App, benchModels, wc)
@@ -128,7 +130,7 @@ func runConcurrentBench(ctx *CmdContext) error {
 
 		fmt.Printf("   Workers=%d: %.2fms (加速比: %s)\n",
 			result.WorkerCount,
-			float64(result.Duration.Microseconds())/1000,
+			durationMs(result.Duration),
 			speedupStr)
 	}
 
@@ -138,15 +140,20 @@ func runConcurrentBench(ctx *CmdContext) error {
 	fmt.Println("📊 Phase 3: 并发文件读取")
 	fmt.Println(strings.Repeat("-", 70))
 
-	collectFiles := collectTestFiles(ctx.FilesRoot, 50)
+	collectFiles := collectTestFiles(ctx.FilesRoot, benchFileMaxSizeMB)
 	if len(collectFiles) > 0 {
 		fileResult := benchParallelRead(collectFiles, *workers)
 		serialFileResult := benchSerialRead(collectFiles)
 
 		fmt.Printf("   文件数: %d\n", len(collectFiles))
-		fmt.Printf("   串行: %.2fms\n", float64(serialFileResult.Microseconds())/1000)
-		fmt.Printf("   并行(%d workers): %.2fms\n", *workers, float64(fileResult.Microseconds())/1000)
-		fmt.Printf("   加速比: %.1fx\n", float64(serialFileResult)/float64(fileResult))
+		fmt.Printf("   串行: %.2fms\n", durationMs(serialFileResult))
+		fmt.Printf("   并行(%d workers): %.2fms\n", *workers, durationMs(fileResult))
+		// 除零守卫：并行读取耗时理论上可为 0（空文件集/极快），直接相除会打出 `+Infx`（旧实现实测踩到）
+		fileSpeedup := 0.0
+		if fileResult > 0 {
+			fileSpeedup = float64(serialFileResult) / float64(fileResult)
+		}
+		fmt.Printf("   加速比: %.1fx\n", fileSpeedup)
 	}
 
 	// 5. 汇总报告
@@ -158,6 +165,29 @@ func runConcurrentBench(ctx *CmdContext) error {
 	printConcurrentReport(serialResult, parallelResults)
 
 	return nil
+}
+
+// pickConcurrentBenchModels 选出参与并发基准的模型（text / json 两条线共用）。
+//
+// 只取 CLI 可分析的模型（归属归 classifyForScan、可分析性归 perfTypeManifest，单点在 perf_targets.go）：
+// 本命令调 AnalyzeBedrockModel，类型不在分析链路上时拿到空模型、各阶段耗时全是空数据。
+//
+// 2026-09-18 收编（ADR-262 D3）：原实现取 `ext == ".ysm"`（ADR 漏记的又一张表），
+// 且无 .ysm 命中时**退化为取任意条目**——把 PMX/VRM 喂进分析链路。
+// 现在无可用模型时如实报错，不用空数据凑出一份看起来成功的报告。
+func pickConcurrentBenchModels(ctx *CmdContext, maxModels int) ([]string, error) {
+	entries := ctx.App.ScanModelEntries(ctx.FilesRoot)
+	if len(entries) == 0 {
+		return nil, newRuntimeErrf("未找到任何模型")
+	}
+	models := pickCliAnalyzable(entries)
+	if len(models) == 0 {
+		return nil, newRuntimeErrf("未找到 CLI 可分析的模型（仅 .ysm 及其容器/解包目录形态在 CLI 分析链路上）")
+	}
+	if len(models) > maxModels {
+		models = models[:maxModels]
+	}
+	return models, nil
 }
 
 // benchSerialAnalyze 串行分析模型
@@ -225,6 +255,10 @@ func benchParallelAnalyze(a AppService, models []string, workers int) concurrent
 		WorkerCount: workers,
 	}
 }
+
+// benchFileMaxSizeMB 参与并发读基准的单文件上限（MB）：超大文件会把「读吞吐」测成「单文件等待」。
+// text 与 JSON 两条线共用，避免一处改了另一处还用旧值。
+const benchFileMaxSizeMB = 50
 
 // benchFileLimit 文件读取基准的候选数上限——准备阶段是诊断前置步骤，不应被海量目录拖垮。
 const benchFileLimit = 30
@@ -294,7 +328,9 @@ func benchParallelRead(files []string, workers int) time.Duration {
 	return time.Since(start)
 }
 
-// printConcurrentReport 打印并发测试报告
+// printConcurrentReport 打印并发测试报告。
+// 判决（concurrentSpeedVerdict）与建议（concurrentHints）都取自 JSON 侧的单点，
+// 阈值/文案只写一份——text 与载荷不可能给出互相矛盾的结论。
 func printConcurrentReport(serial concurrentBenchResult, parallel []concurrentBenchResult) {
 	fmt.Println()
 	fmt.Println("📈 性能对比表:")
@@ -302,53 +338,27 @@ func printConcurrentReport(serial concurrentBenchResult, parallel []concurrentBe
 	fmt.Println("   " + strings.Repeat("-", 60))
 	fmt.Printf("   %-20s %-15s %-12s %s\n",
 		"串行",
-		fmt.Sprintf("%.2fms", float64(serial.Duration.Microseconds())/1000),
+		fmt.Sprintf("%.2fms", durationMs(serial.Duration)),
 		"1.00x",
 		"🟢 基准")
 
+	samples := make([]concurrentSpeedSample, 0, len(parallel))
 	for _, p := range parallel {
-		var label string
-		switch {
-		case p.Speedup >= 2.0:
-			label = "优秀"
-		case p.Speedup >= 1.5:
-			label = "良好"
-		case p.Speedup >= 1.2:
-			label = "一般"
-		default:
-			label = "无提升"
-		}
-		status := speedEmoji(p.Speedup) + " " + label
+		verdict := concurrentSpeedVerdict(p.Speedup)
+		samples = append(samples, concurrentSpeedSample{Workers: p.WorkerCount, Speedup: p.Speedup})
+		status := speedEmoji(p.Speedup) + " " + concurrentVerdictLabel(verdict)
 
 		fmt.Printf("   %-20s %-15s %-12s %s\n",
 			fmt.Sprintf("并行(%d workers)", p.WorkerCount),
-			fmt.Sprintf("%.2fms", float64(p.Duration.Microseconds())/1000),
+			fmt.Sprintf("%.2fms", durationMs(p.Duration)),
 			fmt.Sprintf("%.2fx", p.Speedup),
 			status)
 	}
 
 	fmt.Println()
 	fmt.Println("💡 并发建议:")
-	if len(parallel) == 0 {
-		fmt.Println("   ⚠️ 无并行测试结果，无法给出建议")
-		return
-	}
-	best := parallel[0]
-	for _, p := range parallel {
-		if p.Speedup > best.Speedup {
-			best = p
-		}
-	}
-
-	if best.Speedup >= 1.5 {
-		fmt.Printf("   ✅ 推荐使用 %d workers，可获得 %.1fx 加速\n", best.WorkerCount, best.Speedup)
-		fmt.Println("   💡 适合场景: 批量模型分析、并行文件处理")
-	} else if best.Speedup >= 1.2 {
-		fmt.Printf("   ⚠️  并发提升有限（%.1fx），当前 I/O 可能是瓶颈\n", best.Speedup)
-		fmt.Println("   💡 建议: 检查磁盘 I/O，可能需要 SSD")
-	} else {
-		fmt.Println("   🔴 并发无明显提升")
-		fmt.Println("   💡 原因: 单线程已能跑满，或 I/O 成为瓶颈")
+	for _, hint := range concurrentHints(samples) {
+		fmt.Println("   " + hint)
 	}
 }
 
@@ -975,6 +985,14 @@ func avgBenchStages(allStages [][]singleBenchStage) []singleBenchStage {
 // msOf 阶段耗时转毫秒
 func msOf(s singleBenchStage) float64 {
 	return float64(s.Duration.Microseconds()) / 1000
+}
+
+// durationMs 裸 duration → 毫秒（纳秒精度）。
+// ⚠️ 与 msOf(singleBenchStage) 的区别不只是入参：那个走 Microseconds() 会**截断亚毫秒**，
+// 并发基准的串行/并行耗时经常在 1ms 以下（空仓库 + 假 app 时是几十微秒），
+// 用截断值会让 speedup = 0/0 或 0/x 退化成 0。ADR-262 D2 同款教训（估算被截断成 0 后遭 omitempty 吞掉）。
+func durationMs(d time.Duration) float64 {
+	return float64(d.Nanoseconds()) / 1e6
 }
 
 // stageMark 阶段耗时的 emoji 分级单一实现：>100ms 瓶颈 / >50 注意 / >10 偏慢 / 其余健康。

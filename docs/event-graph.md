@@ -436,13 +436,13 @@
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 189 |
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 268 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 145 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 154 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 180 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 189 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 210 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 245 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 255 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 146 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 155 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 181 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 190 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 211 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 246 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 256 |
 | mountRootMenu | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 692 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 169 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
@@ -572,14 +572,14 @@
 | atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 318 |
 | atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 324 |
 | atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 335 |
-| advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 162 |
-| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 181 |
-| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 211 |
-| advFilterWarnWebDegraded | `frontend/src/views/app-tree/toolbar-search.ts` | 227 |
-| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 256 |
-| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 262 |
-| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 324 |
-| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 333 |
+| advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 166 |
+| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 185 |
+| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 215 |
+| advFilterWarnWebDegraded | `frontend/src/views/app-tree/toolbar-search.ts` | 231 |
+| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 260 |
+| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 266 |
+| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 328 |
+| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 337 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

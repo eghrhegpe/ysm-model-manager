@@ -167,7 +167,8 @@ describe("openAdvFilterDialog — 网页版统计角标 + Worker 降级提示", 
     await vi.waitFor(() => expect(progressCbs.length).toBeGreaterThan(0));
     const badge = document.getElementById("web-stats-badge")!;
     badgeEl = badge;
-    expect(badge.innerHTML).toContain("🧵×2");
+    expect(badge.innerHTML).toContain("×2"); // worker 池数（ADR-238：emoji→语义图标 + 纯文本）
+    expect(badge.querySelector(".ws-icon")).not.toBeNull(); // 语义图标渲染为 SVG
     // 统计进行中触发进度 → 角标刷新为 done/total
     progressCbs[0]!(3, 9);
     expect(badge.innerHTML).toContain("3/9");

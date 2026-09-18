@@ -15,6 +15,9 @@ import { type AdvFilterValue, modalAdvFilter } from "@/features/dialogs/adv-filt
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { esc } from "@/utils/html/html.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
+import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { getExts } from "@/utils/resource/extensions.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AppTree } from "./index.ts";
@@ -42,7 +45,7 @@ type $Id = (id: string) => HTMLElement | null;
 // （对照红线要求：模块级可变 let 须有 reset 或注释豁免——此处为注释豁免）。
 let statsBadge: HTMLElement | null = null;
 
-function showStatsBadge(html: string): void {
+function showStatsBadge(text: string, icon?: UiIconName): void {
   if (!statsBadge) {
     statsBadge = document.createElement("div");
     statsBadge.id = "web-stats-badge";
@@ -50,7 +53,8 @@ function showStatsBadge(html: string): void {
     statsBadge.className = "ts-badge"; // 规则在文件头 tsCss;show/hide 的 style.display 属性级保留
     document.body.appendChild(statsBadge);
   }
-  statsBadge.innerHTML = html;
+  // 图标只喂 resolveIcon 产物（内部常量 SVG），永不是用户数据；文本走 esc() 文本槽
+  statsBadge.innerHTML = `${icon ? `${resolveIcon(icon)} ` : ""}${esc(text)}`;
   statsBadge.style.display = "";
 }
 
@@ -188,9 +192,9 @@ async function advFilterSearchModelPaths(
   const isWebNum = isWebPlatform() && hasNumRange;
   const poolN = getStatsPoolSize();
   if (isWebNum) {
-    showStatsBadge(t("tree.statsBadgePreparing", { n: poolN }));
+    showStatsBadge(t("tree.statsBadgePreparing", { n: poolN }), "diagnose");
     onStatsProgress((done, total) => {
-      showStatsBadge(`🧵×${poolN} ⚙️ ${done}/${total}`);
+      showStatsBadge(`${t("tree.statsBadgeWorkers", { n: poolN })} · ${done}/${total}`, "diagnose");
     });
   }
   try {
@@ -229,7 +233,7 @@ function advFilterWarnWebDegraded(hasNumRange: boolean): void {
       duration: TOAST_MS.normal,
       type: "warn",
     });
-    showStatsBadge(t("tree.statsBadgeDegraded"));
+    showStatsBadge(t("tree.statsBadgeDegraded"), "warning");
     setTimeout(hideStatsBadge, 3000);
   }
 }

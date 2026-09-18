@@ -152,7 +152,7 @@ describe("checkUpdateSilent", () => {
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(mocks.modalConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "发现新版本", okText: "⬇️ 下载更新" }));
+    expect(mocks.modalConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: "发现新版本", okText: "下载更新", okIcon: "download" }));
     expect(mocks.DoUpdate).toHaveBeenCalled();
     expect(mocks.RestartApplication).toHaveBeenCalled();
   });

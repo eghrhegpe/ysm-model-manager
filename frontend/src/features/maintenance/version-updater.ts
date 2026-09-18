@@ -133,7 +133,8 @@ async function promptUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Pro
     title: t("update.newVersionTitle"),
     titleIcon: "package",
     message: `${t("update.newVersionPrompt", { latest: info.latest, current: info.current })}\n`,
-    okText: `⬇️ ${t("update.download")}`,
+    okText: t("update.download"),
+    okIcon: "download",
     width: "480px",
     bodyHTML,
   });

@@ -1572,8 +1572,9 @@ export const ja: Record<string, string> = {
   "tree.needRepoDir": "リポジトリディレクトリを設定してください",
   "tree.webStatsDegraded":
     "⚠️ ウェブ版統計エンジンが利用できません。骨格/キューブ数値条件は無視されました（キーワードのみ）",
-  "tree.statsBadgePreparing": "🧵×{n} 統計を準備中…",
-  "tree.statsBadgeDegraded": "⚠️ Worker 降格 · 数値条件は無視",
+  "tree.statsBadgePreparing": "×{n} 統計を準備中…",
+  "tree.statsBadgeWorkers": "×{n} worker",
+  "tree.statsBadgeDegraded": "Worker 降格 · 数値条件は無視",
   "tree.filterFound": "🔍 {n} 件の一致",
   "tree.filterNone": "🔍 一致するモデルがありません（フィルター適用済み）",
   "tree.webImportPartial": "✅ {imported} 件インポート、{failed} 件失敗",

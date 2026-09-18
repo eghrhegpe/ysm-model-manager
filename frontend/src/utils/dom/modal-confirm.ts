@@ -4,6 +4,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
 import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { createDialog, type ModalLabels } from "./modal-core.ts";
 
@@ -13,6 +14,8 @@ export interface ModalConfirmOptions {
   titleIcon?: UiIconName;
   message: string;
   okText?: string;
+  /** 确认按钮图标语义名（UI_ICONS 的 key，ADR-238；经 resolveIcon 渲染内联 SVG） */
+  okIcon?: UiIconName;
   danger?: boolean;
   width?: string;
   /** 文案覆盖（优先级：okText > labels > i18n 默认） */
@@ -29,19 +32,22 @@ export interface ModalConfirmOptions {
 function confirmBoxBuilder(
   message: string,
   okText: string | undefined,
+  okIcon: UiIconName | undefined,
   danger: boolean | undefined,
   bodyHTML: string | undefined,
   labels: ModalLabels | undefined,
 ): (box: HTMLElement) => void {
   const ok = okText || labels?.ok || t("dialog.ok");
   const cancel = labels?.cancel || t("dialog.cancelEsc");
+  const okIconSvg = okIcon ? resolveIcon(okIcon) : "";
   return (box): void => {
     // 标题行由 createDialog 统一渲染（ADR-190 D3），本 builder 只管内容区与 footer
+    // okIcon 只喂 resolveIcon 产物（内部常量 SVG），永不是用户数据；按钮文案仍走 esc() 文本槽。
     box.innerHTML = `
       ${bodyHTML ?? `<div class="dlg-msg">${esc(message)}</div>`}
       <div class="dlg-footer dlg-footer-flush">
         <button id="mc-cancel" data-testid="dlg-cancel" class="dlg-btn">${cancel}</button>
-        <button id="mc-ok" data-testid="dlg-ok" class="dlg-btn ${danger ? "dlg-btn-danger" : "dlg-btn-primary"}">${esc(ok)} (Enter)</button>
+        <button id="mc-ok" data-testid="dlg-ok" class="dlg-btn ${danger ? "dlg-btn-danger" : "dlg-btn-primary"}">${okIconSvg ? `${okIconSvg} ` : ""}${esc(ok)} (Enter)</button>
       </div>
     `;
   };
@@ -54,7 +60,7 @@ function confirmBoxBuilder(
  */
 export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
-    const { title, titleIcon, message, okText, danger, width, bodyHTML, labels } = opts;
+    const { title, titleIcon, message, okText, okIcon, danger, width, bodyHTML, labels } = opts;
     const { box, close } = createDialog<boolean>({
       title,
       titleIcon,
@@ -62,7 +68,7 @@ export function modalConfirm(opts: ModalConfirmOptions): Promise<boolean> {
       tabIndex: 0,
       cancelValue: false,
       resolve,
-      buildBox: confirmBoxBuilder(message, okText, danger, bodyHTML, labels),
+      buildBox: confirmBoxBuilder(message, okText, okIcon, danger, bodyHTML, labels),
     });
     (box.querySelector("#mc-cancel") as HTMLElement).onclick = (): void => close(false);
     (box.querySelector("#mc-ok") as HTMLElement).onclick = (): void => close(true);

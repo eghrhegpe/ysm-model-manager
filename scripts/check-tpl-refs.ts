@@ -58,18 +58,24 @@ function collectRefs(text: string) {
 }
 
 /**
- * 收集本文件声明的「工厂 tab 坐标」：renderTabs(spec) 以 `prefix` + 各 tab 的 `id` 组合
- * 出面板 id（`${prefix}-tab-${id}`，ADR-259），模板里是表达式而非字面量，静态扫描不可见。
- * 取前缀与该文件内全部 `id:` 字面量（tpl.ts 里只用于 tab 声明，无杂项）作为白名单——
- * 这比「放行任意 `*-tab-*`」紧得多：后缀仍须是**已声明的 tab id**，断链依旧能红。
+ * 收集本文件「同文件配对」的工厂 tab 面板 id：renderTabs(spec) 按 `${prefix}-tab-${id}`
+ * 产出面板 id（ADR-259），模板里是表达式而非字面量，静态扫描不可见。
+ * 按**同文件内** prefix 字面量 × 该文件 tab 声明 id 字面量的配对放行——
+ * 不放行「文件 A 的 prefix + 文件 B 的 tabId」跨文件笛卡尔积（假阴性：
+ * 某组合从未被任何 renderTabs 产出却被放行）。
+ * 返回的是具体面板 id 字符串集合（非 prefix/tabId 两个独立池）。
  */
 function collectFactoryTabIds(text: string) {
-  const prefixes = new Set<string>();
-  const tabIds = new Set<string>();
-  if (!text.includes("renderTabs(")) return { prefixes, tabIds };
-  for (const m of text.matchAll(/\bprefix\s*:\s*"([a-z0-9-]+)"/g)) prefixes.add(m[1] as string);
-  for (const m of text.matchAll(/^\s*id\s*:\s*"([a-z0-9-]+)"/gm)) tabIds.add(m[1] as string);
-  return { prefixes, tabIds };
+  const out = new Set<string>();
+  if (!text.includes("renderTabs(")) return out;
+  const prefixes: string[] = [];
+  const tabIds: string[] = [];
+  for (const m of text.matchAll(/\bprefix\s*:\s*"([a-z0-9-]+)"/g)) prefixes.push(m[1] as string);
+  // tab 声明形态：`id: "..."` 出现在 tabs 数组元素内（tpl.ts 里 id 字面量仅用于 tab 声明，
+  // 无其他对象字段——见 renderTabs 消费契约；若未来新增非 tab 的 id 字段，须在此收紧）
+  for (const m of text.matchAll(/^\s*id\s*:\s*"([a-z0-9-]+)"/gm)) tabIds.push(m[1] as string);
+  for (const p of prefixes) for (const t of tabIds) out.add(`${p}-tab-${t}`);
+  return out;
 }
 
 function main() {
@@ -102,15 +108,12 @@ function main() {
     }
   }
 
-  // 汇总所有引用 + 收集工厂产出 id 的「前缀」
+  // 汇总所有引用 + 收集同文件配对的工厂产出面板 id
   const refs = new Map(); // id -> [{ file, line }]
-  const factoryPrefixes = new Set<string>();
-  const factoryTabIds = new Set<string>();
+  const factoryPanelIds = new Set<string>();
   for (const f of files) {
     const text = fs.readFileSync(f as string, "utf8");
-    const fac = collectFactoryTabIds(text);
-    for (const p of fac.prefixes) factoryPrefixes.add(p);
-    for (const t of fac.tabIds) factoryTabIds.add(t);
+    for (const pid of collectFactoryTabIds(text)) factoryPanelIds.add(pid);
     for (const [id, line] of collectRefs(text)) {
       if (!refs.has(id)) refs.set(id, []);
       refs.get(id).push({ file: f, line });
@@ -119,12 +122,9 @@ function main() {
 
   // 交叉核对：引用但无定义 → 断链。
   // 例外（工厂产出 id）：renderTabs 按 `${prefix}-tab-${tab.id}` 产出面板 id（ADR-259），
-  // 模板里是表达式而非字面量，静态扫描看不见。此处按**已声明的 prefix + tab id 对**放行：
-  // 两者都取自各文件 renderTabs(...) 的字面量，未声明的后缀仍判断链（保留本闸的牙）。
-  const isFactoryTabId = (id: string): boolean => {
-    const m = /^([a-z0-9-]+)-tab-([a-z0-9-]+)$/.exec(id);
-    return !!m && factoryPrefixes.has(m[1] as string) && factoryTabIds.has(m[2] as string);
-  };
+  // 模板里是表达式而非字面量，静态扫描看不见。此处按**同文件内 prefix × tab id 的具体配对**
+  // 放行（不放行跨文件笛卡尔积），未配对的引用仍判断链（保留本闸的牙）。
+  const isFactoryTabId = (id: string): boolean => factoryPanelIds.has(id);
   const broken: any[] = [];
   for (const [id, occ] of refs) {
     if (!defined.has(id) && !isFactoryTabId(id)) {

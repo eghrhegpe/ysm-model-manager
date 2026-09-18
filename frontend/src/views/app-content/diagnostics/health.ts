@@ -129,7 +129,9 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     t("diagnostics.healthValid") +
     ": " +
     esc(r.completeness.valid) +
-    " · ❌ " +
+    " · " +
+    UI_ICONS.error +
+    " " +
     t("diagnostics.healthInvalid") +
     ": " +
     esc(r.completeness.invalid) +

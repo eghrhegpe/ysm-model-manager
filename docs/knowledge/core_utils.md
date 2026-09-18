@@ -26,6 +26,7 @@ auto_fields:
     - GH_RELEASES
     - GH_REPO
     - hasRecycleSegment
+    - isNum
     - isObj
     - isStorageAccessible
     - isWebPath

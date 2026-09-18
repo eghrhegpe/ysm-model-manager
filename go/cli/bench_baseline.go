@@ -426,16 +426,22 @@ func buildBaselineJSON(baseline, saveBaseline string, thresholdPct float64, avg 
 	return block, reconcileBaselineErrors(compareErr, savedPath)
 }
 
-// explicitMatrixBaselineFlags 判断本次调用是否**显式**传入了基准类参数。
-// fs.Visit 只遍历被显式设置的 flag，故不会把 --threshold 的默认值 50 误判成「用户用过」——
-// 这比比对默认值精确（默认值可能被用户手工写成同一个数）。
-func explicitMatrixBaselineFlags(fs *flag.FlagSet) bool {
+// explicitFlagSet 判断本次调用是否**显式**传入了列出的某个 flag。
+// fs.Visit 只遍历被显式设置的 flag，故不会把默认值误判成「用户用过」——
+// 这比比对默认值精确（默认值可能被用户手工写成同一个数，如 `--threshold 50` / `--max-models 5`）。
+func explicitFlagSet(fs *flag.FlagSet, names ...string) bool {
 	found := false
 	fs.Visit(func(f *flag.Flag) {
-		switch f.Name {
-		case "baseline", "save-baseline", "threshold":
-			found = true
+		for _, n := range names {
+			if f.Name == n {
+				found = true
+			}
 		}
 	})
 	return found
+}
+
+// explicitMatrixBaselineFlags 判断本次调用是否显式传入了基准类参数。
+func explicitMatrixBaselineFlags(fs *flag.FlagSet) bool {
+	return explicitFlagSet(fs, "baseline", "save-baseline", "threshold")
 }

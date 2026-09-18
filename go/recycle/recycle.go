@@ -279,18 +279,10 @@ func (tm *TrashManager) countEntries() int {
 	return n
 }
 
-// dirSize 递归统计目录总大小（文件夹模型整组条目显示用）
+// dirSize 递归统计目录总大小（文件夹模型整组条目显示用）。
+// 实现已收敛到 `fsutil.DirSize`（唯一出口）——同一语义不在两处各写一遍。
 func dirSize(dir string) int64 {
-	var total int64
-	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return nil
-		}
-		if info, err := d.Info(); err == nil {
-			total += info.Size()
-		}
-		return nil
-	})
+	total, _ := fsutil.DirSize(dir)
 	return total
 }
 

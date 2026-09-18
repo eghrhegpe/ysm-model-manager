@@ -36,6 +36,8 @@ func init() {
 		ParamSpec{Key: "rtype", Type: ParamString},
 		ParamSpec{Key: "all-types", Type: ParamBool},
 		ParamSpec{Key: "max-models", Type: ParamNumber},
+		// ADR-262 D3 第三种目标集：全库前 N 大（按模型占用排名，与按类型取样互斥）
+		ParamSpec{Key: "top-largest", Type: ParamNumber},
 		ParamSpec{Key: "baseline", Type: ParamString},
 		ParamSpec{Key: "save-baseline", Type: ParamString},
 		ParamSpec{Key: "threshold", Type: ParamNumber},
@@ -384,6 +386,7 @@ func runSingleBench(ctx *CmdContext) error {
 	rtype := fs.String("rtype", "", "按资源类型跑矩阵（registry 类型 id，如 ysm；仅 --format json）")
 	allTypes := fs.Bool("all-types", false, "跑仓库中全部资源类型的矩阵（每类型各取 --max-models 条；仅 --format json）")
 	maxModels := fs.Int("max-models", 5, "矩阵模式每类型最多测试的模型数（按路径字典序确定性取样）")
+	topLargest := fs.Int("top-largest", 0, "全库前 N 大目标集（N>0 启用；按模型占用排名，目录式模型按目录内容合计；仅 --format json）")
 	baseline := fs.String("baseline", "", "对比基准：显式 JSON 文件路径（[{name,ms}]），或哨兵 default = 标准基准槽 <用户配置根>/YSM-Model-Manager/perf-baseline.json；任一阶段退化超 --threshold 时返回失败")
 	saveBaseline := fs.String("save-baseline", "", "记录基准：显式 JSON 文件路径，或哨兵 default = 标准基准槽（供后续 --baseline 对比）；与 --baseline 同用时先比后存")
 	thresholdPct := fs.Float64("threshold", 50, "退化阈值百分比（默认 50），配合 --baseline 使用")
@@ -393,11 +396,21 @@ func runSingleBench(ctx *CmdContext) error {
 		return err
 	}
 
-	if *modelPath == "" && *rtype == "" && !*allTypes {
-		return newParamErrf("必须指定 --model 参数，或用 --rtype <类型> / --all-types 跑类型矩阵")
+	topRequested := *topLargest > 0
+	if *modelPath == "" && *rtype == "" && !*allTypes && !topRequested {
+		return newParamErrf("必须指定 --model 参数，或用 --rtype <类型> / --all-types / --top-largest <N> 跑目标集")
 	}
-	if *modelPath != "" && (*rtype != "" || *allTypes) {
-		return newParamErrf("--model 与 --rtype/--all-types 互斥：单模型基准传 --model，类型矩阵传后者")
+	if *modelPath != "" && (*rtype != "" || *allTypes || topRequested) {
+		return newParamErrf("--model 与 --rtype/--all-types/--top-largest 互斥：单模型基准传 --model，目标集传后者")
+	}
+	if *topLargest < 0 {
+		return newParamErrf("--top-largest 不能为负（0 表示不启用）")
+	}
+	if topRequested && (*rtype != "" || *allTypes) {
+		return newParamErrf("--top-largest 与 --rtype/--all-types 互斥：前者是全库统一排名，后者按类型取样")
+	}
+	if topRequested && explicitFlagSet(fs, "max-models") {
+		return newParamErrf("--max-models 与 --top-largest 互斥：两者都表示取几条（前 N 大用 --top-largest 的 N）")
 	}
 	if *rtype != "" && *allTypes {
 		return newParamErrf("--rtype 与 --all-types 互斥：指定类型用 --rtype，全类型用 --all-types")
@@ -410,6 +423,17 @@ func runSingleBench(ctx *CmdContext) error {
 	}
 	if *maxModels <= 0 {
 		return newParamErrf("--max-models 必须大于 0")
+	}
+	// 全库前 N 大（ADR-262 D3 第三种目标集）：与矩阵同族——只出结构化载荷，且同样拒基准参数
+	// （基准是单模型概念，matrix 的静默吞参教训在此复用同一道门）。
+	if topRequested {
+		if *format != "json" {
+			return newParamErrf("--top-largest 仅支持 --format json（text 模式无目标集呈现口径）")
+		}
+		if explicitMatrixBaselineFlags(fs) {
+			return newParamErrf("--top-largest 模式不支持基准参数（--baseline / --save-baseline / --threshold）：基准是单模型概念，请用 --model 跑单模型基准")
+		}
+		return runSingleBenchTopLargestJSON(ctx, *topLargest, *iterations)
 	}
 
 	// 类型矩阵（ADR-262 D3）：目标集由 Go 侧按 registry 类型扫描，仅结构化输出（text 模式无矩阵呈现口径）
@@ -741,6 +765,12 @@ type perfMatrixSpec struct {
 	Unsupported int `json:"unsupported"`
 	// CliAnalyzable 单类型矩阵下该类型是否具备 CLI 分析链路（--all-types 看 types[].cli_analyzable）
 	CliAnalyzable bool `json:"cli_analyzable"`
+	// TopLargest 全库前 N 大模式的 N（0 = 未启用）。三种目标集互斥，故与 Rtype/AllTypes 互不同现
+	TopLargest int `json:"top_largest,omitempty"`
+	// SizeSource 目标集体量口径 token（仅前 N 大模式回显）：
+	// dir_total = 目录式模型按目录内容合计、其余按文件大小（见 perfSizeSourceDirTotal）。
+	// 回显口径而不是让消费者猜「这个 N 大是按什么排的」——排序不可见就等于不可复核
+	SizeSource string `json:"size_source,omitempty"`
 	// Types 逐类型汇总（单类型矩阵也有一项，形状统一）
 	Types []perfTypeSummary `json:"types"`
 }
@@ -776,6 +806,19 @@ func matrixGroups(filesRoot, rtype string, maxModels int) []perfTypeGroup {
 	return nil
 }
 
+// collectBenchTarget 采集单个目标：可分析 → 真跑分析并核阶段链；不可分析 → 只出身份（不伪造阶段耗时）。
+//
+// 单类型矩阵 / --all-types / --top-largest 三种目标集共用这一条采集路径——三者的差异只在
+// **选谁、按什么顺序**，不在「怎么采」。返回值：载荷、是否 unsupported、阶段链是否与清单声明不符。
+func collectBenchTarget(ctx *CmdContext, path, rtype string, iterations int, entry perfTypeManifestEntry) (singleBenchJSON, bool, bool) {
+	if !entry.CliAnalyzable {
+		return identityOnlyPayload(path, ctx.FilesRoot, rtype), true, false
+	}
+	payload, _ := benchOneModel(ctx.App, path, ctx.FilesRoot, iterations)
+	mismatch := entry.ExpectedStages > 0 && len(payload.Stages) != entry.ExpectedStages
+	return payload, false, mismatch
+}
+
 // buildMatrixPayload 把类型分组采集为矩阵载荷（单类型与 --all-types 共用同一形状）。
 func buildMatrixPayload(ctx *CmdContext, groups []perfTypeGroup, iterations int, allTypes bool, maxModels int) singleBenchMatrixJSON {
 	out := singleBenchMatrixJSON{
@@ -792,17 +835,16 @@ func buildMatrixPayload(ctx *CmdContext, groups []perfTypeGroup, iterations int,
 			ExpectedStages: entry.ExpectedStages,
 		}
 		for _, t := range g.Targets {
-			if !entry.CliAnalyzable {
-				out.Models = append(out.Models, identityOnlyPayload(t, ctx.FilesRoot, g.Rtype))
-				sum.Unsupported++
-				continue
-			}
-			payload, _ := benchOneModel(ctx.App, t, ctx.FilesRoot, iterations)
-			if entry.ExpectedStages > 0 && len(payload.Stages) != entry.ExpectedStages {
+			payload, unsupported, mismatch := collectBenchTarget(ctx, t, g.Rtype, iterations, entry)
+			if mismatch {
 				sum.StageMismatch = true
 			}
 			out.Models = append(out.Models, payload)
-			sum.Analyzed++
+			if unsupported {
+				sum.Unsupported++
+			} else {
+				sum.Analyzed++
+			}
 		}
 		out.Spec.Analyzed += sum.Analyzed
 		out.Spec.Unsupported += sum.Unsupported
@@ -813,6 +855,68 @@ func buildMatrixPayload(ctx *CmdContext, groups []perfTypeGroup, iterations int,
 		out.Spec.CliAnalyzable = cliAnalyzable(groups[0].Rtype)
 	}
 	return out
+}
+
+// buildTopLargestPayload 前 N 大目标集载荷：models[] 严格按**排名顺序**（前 N 大的意义就在「谁最大」，
+// 按类型归并会把这个信息弄丢），types[] 仍给逐类型汇总（含全库未截断的 found）。
+func buildTopLargestPayload(ctx *CmdContext, ranked []perfTopTarget, foundByType map[string]int, iterations, n int) singleBenchMatrixJSON {
+	out := singleBenchMatrixJSON{
+		Spec: perfMatrixSpec{
+			TopLargest: n,
+			SizeSource: perfSizeSourceDirTotal,
+			Iterations: iterations,
+			Types:      []perfTypeSummary{},
+		},
+		Models: make([]singleBenchJSON, 0, len(ranked)),
+	}
+	sums := make(map[string]*perfTypeSummary)
+	order := make([]string, 0, len(ranked))
+	for _, t := range ranked {
+		entry := perfTypeManifest[t.Rtype]
+		sum, seen := sums[t.Rtype]
+		if !seen {
+			sum = &perfTypeSummary{
+				Rtype:          t.Rtype,
+				RtypeLabel:     rtypeDisplayName(t.Rtype),
+				CliAnalyzable:  entry.CliAnalyzable,
+				Found:          foundByType[t.Rtype],
+				ExpectedStages: entry.ExpectedStages,
+			}
+			sums[t.Rtype] = sum
+			order = append(order, t.Rtype)
+		}
+		payload, unsupported, mismatch := collectBenchTarget(ctx, t.Path, t.Rtype, iterations, entry)
+		if mismatch {
+			sum.StageMismatch = true
+		}
+		out.Models = append(out.Models, payload)
+		if unsupported {
+			sum.Unsupported++
+		} else {
+			sum.Analyzed++
+		}
+	}
+	// types[] 按类型名升序（与矩阵同约定）：确定性不依赖入选顺序
+	sort.Strings(order)
+	for _, rt := range order {
+		sum := sums[rt]
+		out.Spec.Types = append(out.Spec.Types, *sum)
+		out.Spec.Analyzed += sum.Analyzed
+		out.Spec.Unsupported += sum.Unsupported
+	}
+	return out
+}
+
+// runSingleBenchTopLargestJSON 全库前 N 大：扫全库算占用 → 排名 → 取前 N → 逐个采集。
+func runSingleBenchTopLargestJSON(ctx *CmdContext, n, iterations int) error {
+	if ctx.FilesRoot == "" {
+		return newParamErrf("--top-largest 需要 --files-root 指定仓库根")
+	}
+	ranked, foundByType := scanTopLargestTargets(ctx.FilesRoot, n)
+	if len(ranked) == 0 {
+		return newRuntimeErrf("仓库中未发现任何模型（root=%s）", ctx.FilesRoot)
+	}
+	return emitMatrix(ctx, buildTopLargestPayload(ctx, ranked, foundByType, iterations, n))
 }
 
 // emitMatrix 打印矩阵载荷并走双出口（ADR-200 D1/D5）。

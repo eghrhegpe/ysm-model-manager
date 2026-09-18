@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -168,4 +169,66 @@ func scanTargetsGrouped(filesRoot string, maxPerType int) []perfTypeGroup {
 		out = append(out, perfTypeGroup{Rtype: t, Found: len(paths), Targets: targets})
 	}
 	return out
+}
+
+// perfTopTarget 「全库前 N 大」目标集的一项：路径 + 类型 + 参与排序的**体量**。
+//
+// 体量单独回显而不是回读 ModelEntry.Size：目录式模型的 Size 是入口清单大小（见 targetFootprint），
+// 拿它当「占用」正是本功能要修的那个坑。
+type perfTopTarget struct {
+	Path      string
+	Rtype     string
+	Footprint int64
+}
+
+// perfSizeSourceDirTotal 体量口径 token（回显进 spec.size_source）：
+// 目录式模型按**目录内容合计**参与排序，其余形态按文件字节数。
+//
+// 为什么不按 ModelEntry.Size 一把梭：`scanner.ScanEntries` 给解包目录式模型的 Size 是
+// `<dir>/ysm.json` 清单本身（fixture 实测 115B），按它排名会把最大的解包模型排到最后——
+// 那等于「按入口文件大小找最大的模型」，与用户问的问题不是同一个。此口径与 web 适配器
+// 填同一字段的既有约定（`frontend/src/backend/web-fs.ts` 目录求和）一致。
+const perfSizeSourceDirTotal = "dir_total"
+
+// targetFootprint 单个目标的体量：目录式模型（入口是 ysm.json 清单）→ 目录内容合计；
+// 其余形态 → 文件字节数。目录统计失败时回落到清单大小（不假装 0，0 会让它排到最后而不留痕）。
+func targetFootprint(e types.ModelEntry) int64 {
+	if registry.IsYsmEntryJSON(filepath.Base(e.Path)) {
+		if size, err := fsutil.DirSize(filepath.Dir(e.Path)); err == nil {
+			return size
+		}
+	}
+	return e.Size
+}
+
+// scanTopLargestTargets 扫全库 → 算每条体量 → 体量降序、同体量路径升序 → 取前 n。
+//
+// 返回第二个值是**全库未截断**的逐类型计数（供 spec.types[].found 沿用「一共有几条」的既有语义，
+// 而不是「入选了几条」——后者会让「跑了 3 个 / 一共 300 个」这种信息消失）。
+//
+// 候选池是**全库**（含 CLI 不可分析的类型）：ADR 问的是「最大的模型是谁」，PMX 恰好最大时把它
+// 静默剔掉，用户看到的是一份空报告而没有任何解释——入选后由载荷标 unsupported 才是诚实的答法。
+// 顺序即排名（前 N 大的意义就在「谁最大」），不按类型归并。
+func scanTopLargestTargets(filesRoot string, n int) ([]perfTopTarget, map[string]int) {
+	if filesRoot == "" || n < 1 {
+		return nil, nil
+	}
+	reg := registry.LoadRegistry()
+	found := make(map[string]int)
+	all := make([]perfTopTarget, 0)
+	for _, e := range scanner.ScanEntries(filesRoot) {
+		rtype := classifyForScan(e.Path, strings.ToLower(filepath.Ext(e.Path)), reg)
+		found[rtype]++
+		all = append(all, perfTopTarget{Path: e.Path, Rtype: rtype, Footprint: targetFootprint(e)})
+	}
+	sort.Slice(all, func(i, j int) bool {
+		if all[i].Footprint != all[j].Footprint {
+			return all[i].Footprint > all[j].Footprint
+		}
+		return all[i].Path < all[j].Path
+	})
+	if len(all) > n {
+		all = all[:n]
+	}
+	return all, found
 }

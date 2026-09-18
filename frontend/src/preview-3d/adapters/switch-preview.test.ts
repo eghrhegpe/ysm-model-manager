@@ -67,6 +67,7 @@ function makeMockCtx(): {
     overlay,
     menuHandle: { dispose: vi.fn(), setAdapterItems: vi.fn(), openPanel: vi.fn(), refreshDock: vi.fn() } as any,
     adapter: mockAdapter,
+    adapterId: "match-adapter",
     camBridge: undefined,
     selfMode: false,
     renderer: undefined,

@@ -33,7 +33,7 @@ import type {
 } from "@/preview-3d/infra/content-bridges.ts";
 import { rebuildDebug } from "@/preview-3d/infra/debug-render.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
-import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import {
   makeYsmModelSchemaId,
@@ -532,7 +532,7 @@ function buildMenuAndDebug(
     const texCount = texArr.filter(Boolean).length;
     recordLoadTrace({
       ts: Date.now(),
-      format: "ysm",
+      format: ctx.adapterId ?? TRACE_FORMAT_OTHER,
       path: sc.path,
       stages: [
         { name: "读取", ms: Math.round(sc.tLoadStart - sc.tStart), status: "ok" },

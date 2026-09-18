@@ -22,7 +22,7 @@ import { buildBoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import { fbxBonesToBoneNodes } from "@/preview-3d/bone/fbx-bones.ts";
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
-import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { disposeObject3D } from "@/preview-3d/infra/safe-dispose.ts";
 import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
 import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
@@ -265,7 +265,7 @@ export async function buildFbxScene(
   const { texCount } = countFbxStats(group);
   recordLoadTrace({
     ts: Date.now(),
-    format: "fbx",
+    format: ctx.adapterId ?? TRACE_FORMAT_OTHER,
     path,
     stages: [{ name: "加载", ms: Math.round(tLoadEnd - tStart), status: "ok" }],
     assets: {

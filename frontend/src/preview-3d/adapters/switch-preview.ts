@@ -16,6 +16,7 @@ import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
 import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 import { fitCameraToRoots } from "@/preview-3d/infra/camera-setup.ts";
 import { guardGpuBudget } from "@/preview-3d/infra/gpu-budget.ts";
+import { TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { showLoadFailure } from "@/preview-3d/infra/preview-loading.ts";
 import { registerBuiltScene } from "@/preview-3d/infra/register-built-scene.ts";
 import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
@@ -52,6 +53,8 @@ export interface SwitchContext {
   overlay: HTMLElement | ShadowRoot;
   menuHandle: PreviewMenuHandle;
   adapter: { build(ctx: PreviewBuildCtx, path: string): Promise<PreviewScene> };
+  /** 适配器身份标识（rtype / preview-key 契约镜像）：LoadTrace.format 单一事实（ADR-262 D3） */
+  adapterId: string;
   camBridge: CameraControlBridge | undefined;
   selfMode: boolean;
   renderer: THREE.WebGLRenderer | undefined;
@@ -235,6 +238,7 @@ async function buildSwitchContent(
         ownHandle(ctx)?.switchTo?.(p, options) ??
         ctx.getHandle()?.switchTo?.(p, options) ??
         Promise.resolve(),
+      adapterId: ctx.adapterId ?? TRACE_FORMAT_OTHER,
     };
     // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——
     // exactOptional 收紧后仅真实存在时赋值（shared 模式有值，self 模式缺省）

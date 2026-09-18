@@ -41,8 +41,10 @@ function makeCtx() {
     menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), refreshDock: vi.fn(), dispose: vi.fn() },
     renderer: { domElement: document.createElement("div") } as unknown as THREE.WebGLRenderer,
     cameraControls: { setOrbit: vi.fn(), setSpeed: vi.fn() },
+    adapterId: "litematic",
   } as unknown as PreviewBuildCtx;
 }
+
 
 /** 分层切片 schema builder 取节点（menuItems 含 slice panel 节点 + select） */
 function menuNodes(preview: PreviewScene): NonNullable<PreviewScene["menuItems"]> {

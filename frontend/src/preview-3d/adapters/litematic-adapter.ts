@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { t } from "@/core/i18n/t.ts";
 import type { VoxelData } from "@/parsers/voxel-types.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
-import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { renderLoadingState } from "@/preview-3d/infra/preview-loading.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
@@ -401,11 +401,11 @@ function registerSliceSchema(
 
 // ===== 辅助：perf trace + truncated 警告 =====
 
-function recordPerfTrace(path: string, tStart: number, data: VoxelData): void {
+function recordPerfTrace(path: string, tStart: number, data: VoxelData, format: string): void {
   try {
     recordLoadTrace({
       ts: Date.now(),
-      format: "litematic",
+      format,
       path,
       stages: [{ name: "读取+构建", ms: Math.round(performance.now() - tStart), status: "ok" }],
       assets: { files: 1, textures: 0, materials: data.groups?.length ?? 0, animations: 0 },
@@ -491,7 +491,7 @@ export async function buildLitematicScene(
   const meshSet = buildBlockMesh(ctx, data, sizeInfo);
 
   ctx.loadingEl.remove();
-  recordPerfTrace(path, tStart, data);
+  recordPerfTrace(path, tStart, data, ctx.adapterId ?? TRACE_FORMAT_OTHER);
 
   // [Bug A 收敛] per-scene key 以 sessionLedger 的 sessionId 为准（mount 层生成，per-mount
   // 稳定；switchTo 复用外壳不重新 mount，key 不变）——替代原模块级 SliceInstance 递增，

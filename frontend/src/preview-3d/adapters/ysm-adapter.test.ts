@@ -194,6 +194,7 @@ function makeCtx(over: Partial<PreviewBuildCtx> = {}) {
       overlay: document.createElement("div"),
       menu,
       sessionId: "s1",
+      adapterId: "ysm",
       ...over,
     } as PreviewBuildCtx,
     scene,

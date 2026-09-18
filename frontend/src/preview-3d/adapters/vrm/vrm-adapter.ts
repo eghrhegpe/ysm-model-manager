@@ -36,7 +36,7 @@ import { vrmSemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { createVrmFootIKController } from "@/preview-3d/bone/vrm-foot-ik.ts"; // VMD 足ＩＫ 驱动（ADR-243 §2.8 方案 A）
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
-import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { renderLoadingState } from "@/preview-3d/infra/preview-loading.ts";
 import { collectSceneStats, type SceneStats } from "@/preview-3d/infra/scene-stats.ts";
 import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
@@ -700,7 +700,7 @@ function Stage5BuildResult(
   const vrmFootIK = createVrmFootIKController(boneAssy.boneTree, semanticBones);
   recordLoadTrace({
     ts: Date.now(),
-    format: "vrm",
+    format: ctx.adapterId ?? TRACE_FORMAT_OTHER,
     path,
     stages: [
       { name: "读取", ms: Math.round(parseRes.tParseStart - parseRes.tStart), status: "ok" },

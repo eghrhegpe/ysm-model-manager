@@ -7,7 +7,7 @@ import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import type { Model3DSpec } from "@/bindings/ysm-model-manager/go/threejs/models.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
-import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
 import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture/texture-loader.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
@@ -247,7 +247,7 @@ export async function preloadModel(model: ModelLike): Promise<{
     const tLoadEnd = performance.now();
     recordLoadTrace({
       ts: Date.now(),
-      format: "other",
+      format: TRACE_FORMAT_OTHER,
       path: model._modelPath ?? "",
       stages: [
         { name: "读取", ms: Math.round(tParseStart - tStart), status: "ok" },

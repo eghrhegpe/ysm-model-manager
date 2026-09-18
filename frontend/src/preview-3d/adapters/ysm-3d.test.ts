@@ -111,6 +111,7 @@ function makeCtx() {
     loadingEl: document.createElement("div"),
     overlay,
     menu: { setAdapterItems: vi.fn(), openPanel: vi.fn() } as unknown as PreviewMenuHandle,
+    adapterId: "ysm",
   };
 }
 

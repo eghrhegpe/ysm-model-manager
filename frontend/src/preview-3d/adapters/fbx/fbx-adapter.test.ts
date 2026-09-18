@@ -116,7 +116,7 @@ function makeCtx(): PreviewBuildCtx {
     maxDistance: 0,
     update: vi.fn(),
   } as unknown as NonNullable<PreviewBuildCtx["controls"]>;
-  return { scene, camera, controls, renderer: null } as unknown as PreviewBuildCtx;
+  return { scene, camera, controls, renderer: null, adapterId: "fbx" } as unknown as PreviewBuildCtx;
 }
 
 describe("fbx-adapter", () => {

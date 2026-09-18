@@ -421,6 +421,7 @@ auto_fields:
     - loadTextures
     - LoadTrace
     - LoadTraceAssets
+    - LoadTraceFormat
     - LoadTraceStage
     - LoadTraceTexture
     - lowFreqMask
@@ -814,6 +815,8 @@ auto_fields:
     - TONE_MAPPING_KEYS
     - toScreenshotLights
     - toStatePath
+    - TRACE_FORMAT_ADAPTERS
+    - TRACE_FORMAT_OTHER
     - trackAlloc
     - UnloadCtx
     - unloadModel

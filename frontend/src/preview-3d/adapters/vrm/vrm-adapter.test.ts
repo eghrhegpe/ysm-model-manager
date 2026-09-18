@@ -301,12 +301,14 @@ function makeCtx() {
       overlay,
       menu: { setAdapterItems: vi.fn(), openPanel: vi.fn() } as unknown as PreviewMenuHandle,
       renderer: { domElement: document.createElement("div") } as unknown as THREE.WebGLRenderer,
+      adapterId: "vrm",
     },
     scene,
     camera,
     loadingEl,
   };
 }
+
 
 /** 从 content 对象读取注入的菜单项（renderCustom 双参对齐声明式节点逃生舱） */
 function registeredItems(content: { menuItems?: Array<{ id: string; kind: string; dockGroup?: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void }> | null }): Array<{

@@ -35,9 +35,31 @@ export interface LoadTraceAssets {
   fbxAnimations?: number;
 }
 
+/**
+ * 加载 trace 的身份标识：值为 registry preview-key / rtype 契约字符串
+ * （全体 adapter 经 core 注入的 ctx.adapterId 派生，ADR-262 D3 收编：
+ * 前端不再维护"mmd|vrm|fbx|ysm|litematic|other"闭门字面量表）。
+ * 无法归类的加载（model3d-loader 兜底路径）记为 TRACE_FORMAT_OTHER。
+ */
+export type LoadTraceFormat = string;
+
+/** 兜底哨兵：无法归类的加载（非注册表身份）。 */
+export const TRACE_FORMAT_OTHER: LoadTraceFormat = "other";
+
+/** 全部 adapter 产生的身份样本（仅文档用途，非类型约束——单一事实源 = registry 契约）。 */
+export const TRACE_FORMAT_ADAPTERS = [
+  "ysm",
+  "EntityPlayer",
+  "mmd",
+  "mmd-scene",
+  "vrm",
+  "fbx",
+  "litematic",
+] as const;
+
 export interface LoadTrace {
   ts: number;
-  format: "mmd" | "vrm" | "fbx" | "ysm" | "litematic" | "other";
+  format: LoadTraceFormat;
   path: string;
   stages: LoadTraceStage[];
   assets?: LoadTraceAssets;

@@ -109,6 +109,13 @@ export interface PreviewBuildCtx {
   switchTo?(path: string, options?: { keepInScene?: boolean }): Promise<void>;
   /** 声明式根菜单注册通道（ADR-076 v2 Phase 2）：适配器 build 内经 setAdapterItems 注入专属菜单项、openPanel 打开面板（骨骼拾取联动） */
   menu: PreviewMenuHandle;
+  /**
+   * 适配器身份标识（rtype / preview-key 契约的镜像，见本文件 PreviewAdapter.id 文档）。
+   * core 构造 buildCtx 时注入，内容层据此写 LoadTrace.format（ADR-262 D3）：
+   * 6 个 adapter 不再各自硬编码字面量，而消费 core 交付的单一身份——
+   * 前端类型表单一事实源 = registry preview-key / rtype 契约。
+   */
+  adapterId: string;
 }
 
 /**
@@ -831,6 +838,7 @@ function buildInfra(ctx: MountCtx, shell: AssembledShell): InstalledPreviewInfra
     overlay,
     menuHandle,
     adapter: { build: adapter.build.bind(adapter) },
+    adapterId: adapter.id,
     camBridge,
     selfMode,
     sessionId,
@@ -904,6 +912,8 @@ async function runBuild(
       // gen-scoped 查找收敛到 ownHandle（不再各处手写 find）
       return ownHandle(ctx)?.switchTo?.(p, options) ?? Promise.resolve();
     },
+    // 适配器身份单一事实：LoadTrace.format 由它派生（ADR-262 D3）
+    adapterId: ctx.adapter.id,
   };
   // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——
   // exactOptional 收紧后仅真实存在时赋值（shared 模式有值，self 模式缺省）

@@ -8,7 +8,7 @@ import type {
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { cancelPendingEncodings } from "@/preview-3d/decoder/mmd-ktx2-encoder.ts";
 import { unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
-import { recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -134,7 +134,7 @@ export function Stage6Result(
           }
         : undefined,
   };
-  Stage6bTrace(c, tStart);
+  Stage6bTrace(c, tStart, c.ctx.adapterId ?? TRACE_FORMAT_OTHER);
   return result;
 }
 
@@ -192,7 +192,7 @@ function Stage6Dispose(c: Stage6Ctx, s5: ReturnType<typeof Stage5Menu>): void {
   }
 }
 
-function Stage6bTrace(c: Stage6bCtx, tStart: number): void {
+function Stage6bTrace(c: Stage6bCtx, tStart: number, format: string): void {
   c.tBuildEnd = performance.now();
   c.buildSucceeded = true;
   const _stages: import("@/preview-3d/infra/load-trace.ts").LoadTraceStage[] = [];
@@ -226,7 +226,7 @@ function Stage6bTrace(c: Stage6bCtx, tStart: number): void {
   }
   recordLoadTrace({
     ts: Date.now(),
-    format: "mmd",
+    format,
     path: c.origPath,
     stages: _stages,
     assets: {

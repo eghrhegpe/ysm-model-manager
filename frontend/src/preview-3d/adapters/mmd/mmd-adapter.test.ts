@@ -251,12 +251,14 @@ function makeCtx() {
       menu: { setAdapterItems: vi.fn(), openPanel: vi.fn(), refreshDock: vi.fn() } as unknown as PreviewMenuHandle,
       // KTX2 直载/gpu-leak 用例会注入 fake renderer（happy-dom 无 WebGL）
       renderer: undefined as unknown as THREE.WebGLRenderer,
+      adapterId: "mmd",
     },
     scene,
     camera,
     loadingEl,
   };
 }
+
 
 /** 最近一次 setAdapterItems 收到的适配器项 */
 function registeredItems(content: { menuItems?: Array<{ id: string; kind: string; render?: (list: HTMLElement, close: () => void) => void; renderCustom?: (list: HTMLElement, close?: () => void) => void; children?: Array<{ id: string; kind: string; control?: { get?: (v?: unknown) => unknown; set?: (v: unknown) => void } }> }> | null }): Array<{

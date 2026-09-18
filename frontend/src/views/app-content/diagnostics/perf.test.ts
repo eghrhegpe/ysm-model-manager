@@ -301,6 +301,39 @@ describe("single-bench 面板", () => {
     expect(val.textContent).toContain("❌");
     expect(val.className).toContain("perf-bar-danger");
   });
+
+  it("阶段带 runtime 归属与样本统计（ADR-262 D2）：n>1 才渲染分布，n=1 不包装成分布", async () => {
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "single-bench",
+      data: {
+        ...SINGLE_STRUCTURED,
+        stages: [
+          // n=3 → 渲染 p95
+          { name: "① 文件读取", ms: 10, status: "ok", bottleneck: false, runtime: "go", stats: { n: 3, median_ms: 9, p95_ms: 12 } },
+          // n=1 → p95 就是那个唯一样本，渲染它等于把单样本包装成分布
+          { name: "② 模型扫描", ms: 20, status: "ok", bottleneck: false, runtime: "rust", stats: { n: 1, median_ms: 20, p95_ms: 20 } },
+        ],
+        bottleneck: "",
+      },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./z.ysm";
+    (root.getElementById("diag-perf-run") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const out = root.getElementById("diag-perf-single") as HTMLElement;
+
+    // 归属徽标逐阶段如实展示（Go / Rust / WASM / Three 不再是黑箱）
+    const tags = [...out.querySelectorAll(".perf-rt-tag")].map((e) => e.textContent);
+    expect(tags).toEqual(["go", "rust"]);
+
+    // 样本分布只在 n>1 时渲染——单样本不是分布
+    const stats = [...out.querySelectorAll(".perf-stats")].map((e) => e.textContent);
+    expect(stats).toHaveLength(1);
+    expect(stats[0]).toContain("12.00");
+    expect(stats[0]).toContain("n=3");
+  });
 });
 
 describe("gui-flow 面板", () => {
@@ -341,6 +374,30 @@ describe("gui-flow 面板", () => {
     // 总耗时只含实测；估算单独一行并声明不计入
     expect(out.textContent).toContain("总耗时: 231.73ms");
     expect(out.textContent).toContain("其中估算 120.50ms（不计入总耗时）");
+  });
+
+  it("阶段渲染 runtime 归属（ADR-262 D2）：扫描段如实显示 rust，不说想当然的 go", async () => {
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "gui-flow",
+      data: {
+        ...GUI_STRUCTURED,
+        stages: [
+          { status: "✅", name: "② 模型扫描", ms: 30, kind: "measured", desc: ["ok"], runtime: "rust" },
+          { status: "✅", name: "⑥ 渲染预估", ms: 0, kind: "estimated", estimated_ms: 120, desc: ["ok"], runtime: "three" },
+        ],
+      },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-gui") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    const out = root.getElementById("diag-perf-gui-out") as HTMLElement;
+
+    const tags = [...out.querySelectorAll(".perf-rt-tag")].map((e) => e.textContent);
+    expect(tags).toEqual(["rust", "three"]);
+    // 归属徽标与既有估算标记共存（runtime 是叠加信息，不取代 kind 口径）
+    expect(out.querySelector(".perf-gui-est")).toBeTruthy();
   });
 
   it("status=error（阶段失败）时仍渲染结构化阶段明细（规律六）", async () => {

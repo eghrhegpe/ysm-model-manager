@@ -32,6 +32,8 @@ interface GuiFlowStage {
   estimated_ms?: number;
   /** 估算假设/公式 */
   note?: string;
+  /** 阶段运行归属（go|rust|wasm|js|three，ADR-262 D2）；旧版 Go 载荷缺省，按可选处理 */
+  runtime?: string;
 }
 
 function guiFlowWebModeCheck(): boolean {
@@ -82,7 +84,11 @@ function guiFlowRenderStages(
         : `${e.ms.toFixed(2)}ms`;
       return `<div class="perf-gui-stage ${cls}">
 <span class="perf-gui-status">${e.status}</span>
-<span class="perf-gui-name">${esc(e.name)}</span>
+<span class="perf-gui-name">${esc(e.name)}</span>${
+        e.runtime
+          ? `<span class="perf-rt-tag" title="${esc(t("diagnostics.perfStageRuntimeHint"))}">${esc(e.runtime)}</span>`
+          : ""
+      }
 <span class="perf-gui-ms">${msText}${estTag}</span>${desc}
 </div>`;
     })

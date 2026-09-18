@@ -54,7 +54,7 @@ func TestStagesToJSON_FailedStageBeatsMsGrading(t *testing.T) {
 	avg := []singleBenchStage{
 		{Name: "① 文件读取", Duration: 0, Notes: "❌ 失败: boom", Failed: true},
 	}
-	stages, _ := stagesToJSON(avg)
+	stages, _ := stagesToJSON(avg, nil)
 	if len(stages) != 1 {
 		t.Fatalf("应输出 1 条, got %d", len(stages))
 	}

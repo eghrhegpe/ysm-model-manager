@@ -10,6 +10,14 @@ import (
 	"ysm-model-manager/go/types/registry"
 )
 
+// ScanBackend 本次构建实际使用的扫描后端（"rust" | "go"），供性能报告填 runtime 归属
+// （ADR-262 D2）：Rust 扫描器的收益只有在报告里说得出「这段跑在谁身上」时才可度量。
+//
+// 边界：这是**构建期事实**，不是单次调用的实际处理方——rust_backend 构建下 Rust 仍可能
+// 运行时不可用而由 rust_backend.go 静默回退 Go（scanEntriesWithRust 返回 handled=false）。
+// 报告口径以构建为准（生产四端构建均带 -tags rust_backend，回退属异常路径）。
+const ScanBackend = "rust"
+
 // scanEntriesWithRust 调用 Rust 扫描后端；不可用时返回 ok=false，由 Go 端兜底。
 //
 // 本实现覆盖 windows / linux / darwin / android 全部平台。历史上存在四份

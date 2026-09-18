@@ -10,6 +10,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/packs"
+	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -38,6 +39,10 @@ type guiFlowResult struct {
 	Estimated time.Duration
 	// Note 估算依赖的假设/公式（D2 要求估算显式标注来源），实测阶段留空
 	Note string
+	// Runtime 阶段运行归属（go|rust|wasm|js|three，ADR-262 D2）。由装配点打上（withRuntime），
+	// 不逐个 return 字面量重复书写。② 模型扫描填**实际扫描后端**（scanner.ScanBackend），
+	// ⑥ 渲染预估归 three（它是 Three.js 首帧的估算，估算性质由 Kind 承载）。
+	Runtime string
 }
 
 // guiFlowStageItem 单阶段结构化结果（ADR-200 D2：gui-flow 为首批结构化命令）。
@@ -53,6 +58,8 @@ type guiFlowStageItem struct {
 	EstimatedMs float64 `json:"estimated_ms,omitempty"`
 	// Note 估算假设/公式
 	Note string `json:"note,omitempty"`
+	// Runtime 阶段运行归属（go|rust|wasm|js|three，ADR-262 D2）
+	Runtime string `json:"runtime"`
 }
 
 // guiFlowStructured gui-flow --json 结构化载荷（ADR-200 D1/D5）：
@@ -99,6 +106,7 @@ func buildGuiFlowStructured(results []guiFlowResult, totalDuration time.Duration
 			Desc:        splitDescLines(r.Description),
 			EstimatedMs: float64(r.Estimated.Nanoseconds()) / 1e6,
 			Note:        r.Note,
+			Runtime:     r.Runtime,
 		})
 	}
 	return &guiFlowStructured{
@@ -118,6 +126,23 @@ func splitDescLines(desc string) []string {
 		}
 	}
 	return lines
+}
+
+// 阶段运行归属常量（ADR-262 D2）。
+//
+// gui-flow 的每个阶段归属由**装配点**按“它调了哪个阶段函数”确定，而不是让各阶段函数
+// 在自己每个 return 字面量里重复书写（漏一个就是一个无归属阶段——归属缺失比归属错更难发现）。
+const (
+	// guiFlowRuntimeGo Go 侧阶段：配置加载 / 模型分析 / 纹理缓存 / 数据准备
+	guiFlowRuntimeGo = "go"
+	// guiFlowRuntimeThree ⑥ 渲染预估：它估的是 Three.js 首帧（无渲染管线，估的性质由 Kind 承载）
+	guiFlowRuntimeThree = "three"
+)
+
+// withRuntime 给阶段结果打上运行归属（ADR-262 D2）。
+func withRuntime(r guiFlowResult, runtime string) guiFlowResult {
+	r.Runtime = runtime
+	return r
 }
 
 // runGUIFlow 模拟 GUI 完整加载流程
@@ -141,10 +166,12 @@ func runGUIFlow(ctx *CmdContext) error {
 	totalStart := time.Now()
 
 	// ============ Phase 1: 配置加载 ============
-	results = append(results, runPhaseConfigLoad(ctx.App))
+	results = append(results, withRuntime(runPhaseConfigLoad(ctx.App), guiFlowRuntimeGo))
 
 	// ============ Phase 2: 模型扫描 ============
-	results = append(results, runPhaseModelScan(ctx.App, filesRoot))
+	// 扫描归属取 scanner 的构建期事实（rust_backend 构建下是 Rust），不硬编码 go——
+	// 这正是「Rust 扫描器收益可被度量」的落点（ADR-262 D2）。
+	results = append(results, withRuntime(runPhaseModelScan(ctx.App, filesRoot), scanner.ScanBackend))
 
 	// 如果指定了模型，使用它；否则用扫描阶段的结构化 FirstModel
 	// （不再从 Description 文案反解析「首个模型:」token——人类可读
@@ -161,7 +188,7 @@ func runGUIFlow(ctx *CmdContext) error {
 	// 同一份分析被计 3 次耗时——⑤⑥ 的阶段耗时因此不是自己的工作量的度量）
 	if targetModel != "" {
 		analyzeResult, model := runPhaseModelAnalyze(ctx.App, targetModel)
-		results = append(results, analyzeResult)
+		results = append(results, withRuntime(analyzeResult, guiFlowRuntimeGo))
 
 		// PMX/PMD 加载链路在 Three.js 前端（@moeru/three-mmd），CLI 无解析器，
 		// ④⑤⑥ 阶段（纹理缓存/数据准备/渲染预估）依赖 AnalyzeBedrockModel（仅 Bedrock geometry），
@@ -169,22 +196,22 @@ func runGUIFlow(ctx *CmdContext) error {
 		ext := strings.ToLower(filepath.Ext(targetModel))
 		if ext != ".pmx" && ext != ".pmd" {
 			// ============ Phase 4: 纹理缓存检查 ============
-			results = append(results, runPhaseTextureCache(targetModel))
+			results = append(results, withRuntime(runPhaseTextureCache(targetModel), guiFlowRuntimeGo))
 
 			// ============ Phase 5: 数据准备（IPC 传输估算）============
-			results = append(results, runPhaseDataPrep(model, targetModel))
+			results = append(results, withRuntime(runPhaseDataPrep(model, targetModel), guiFlowRuntimeGo))
 
 			// ============ Phase 6: 渲染预估（无渲染管线，纯估算）============
 			if *verbose {
-				results = append(results, runPhaseRenderEstimate(model, targetModel))
+				results = append(results, withRuntime(runPhaseRenderEstimate(model, targetModel), guiFlowRuntimeThree))
 			}
 		}
 	} else {
-		results = append(results, guiFlowResult{
+		results = append(results, withRuntime(guiFlowResult{
 			Stage:       "模型分析",
 			Success:     false,
 			Description: "未找到可分析的模型",
-		})
+		}, guiFlowRuntimeGo))
 	}
 
 	// ============ 汇总报告 ============

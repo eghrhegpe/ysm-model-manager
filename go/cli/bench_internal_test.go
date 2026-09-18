@@ -28,7 +28,8 @@ func TestSingleBenchJSON_JSONShape(t *testing.T) {
 		TotalMs:        6554.7,
 		PerIterationMs: 2184.9,
 		Stages: []benchStageJSON{
-			{Name: "② JSON 解析", Ms: 1993.66, Status: "bottleneck", Bottleneck: true},
+			{Name: "② JSON 解析", Ms: 1993.66, Status: "bottleneck", Bottleneck: true,
+				Runtime: "go", Stats: &benchStageStats{N: 3, Median: 1900, P95: 2200}},
 		},
 		Bottleneck: "② JSON 解析",
 		Hints:      []string{"🔴 瓶颈: JSON 解析"},
@@ -57,6 +58,8 @@ func TestSingleBenchJSON_JSONShape(t *testing.T) {
 		`"model"`, `"iterations"`, `"total_ms"`, `"per_iteration_ms"`,
 		`"stages"`, `"name"`, `"ms"`, `"status"`, `"bottleneck"`,
 		`"hints"`, `"format"`, `"size_bytes"`,
+		// 阶段归属与样本统计（ADR-262 D2）
+		`"runtime"`, `"stats"`, `"n"`, `"median_ms"`, `"p95_ms"`,
 		// 身份块（ADR-262 D2）
 		`"identity"`, `"rtype"`, `"rtype_source"`, `"rtype_label"`, `"relPath"`, `"absPath"`,
 	} {

@@ -89,6 +89,10 @@ export const contentDiagCSS: string = `
 .perf-bar-val { flex:0 0 auto; min-width:130px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .perf-bar-val.perf-bar-warn { color: var(--warning, #b8860b); }
 .perf-bar-val.perf-bar-danger { color: var(--status-error); }
+/* 阶段运行归属徽标（ADR-262 D2）：single-bench 与 gui-flow 共用同一概念，同一类名 */
+.perf-rt-tag { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--muted, #888) 18%, transparent); color:var(--muted); flex-shrink:0; }
+/* 阶段样本统计（n / median / p95，ADR-262 D2）：等宽数字避免列跳动 */
+.perf-stats { font-size:var(--fs-micro); color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; flex-shrink:0; }
 .perf-total { padding:6px 2px; font-size:var(--fs-base); font-weight:600; color:var(--txt); border-top:1px solid var(--bd); margin-top:8px; }
 .perf-gui-stage { display:flex; align-items:center; gap:8px; font-size:var(--fs-sm); color:var(--txt); padding:3px 2px; flex-wrap:wrap; }
 .perf-gui-stage .perf-gui-status { font-size:var(--fs-base); }

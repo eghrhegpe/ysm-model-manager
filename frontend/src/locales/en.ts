@@ -380,6 +380,12 @@ export const en: Record<string, string> = {
   "diagnostics.perfEstimatedHint":
     "Estimated (no render pipeline / derived from assumptions; not counted in total)",
   "diagnostics.perfEstimatedTotal": "of which estimated {ms}ms (not counted in total)",
+  // Stage runtime attribution and sample stats (ADR-262 D2)
+  "diagnostics.perfStageRuntimeHint":
+    "Runtime this stage executes in (Go / Rust / WASM / JS / Three)",
+  "diagnostics.perfStageStats": "p95 {p95}ms (n={n})",
+  "diagnostics.perfStageStatsHint":
+    "median {median}ms / p95 {p95}ms; n = times this stage actually ran",
   "diagnostics.perfRtype": "Resource type",
   "diagnostics.perfRtypeSingle": "(single model by path)",
   "diagnostics.perfRtypeAll": "All types (matrix)",

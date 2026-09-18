@@ -80,11 +80,12 @@ const GUI_FIELDS = [
   '"kind"', // measured | estimated（ADR-262 D2）
   '"estimated_ms"',
   '"note"',
+  '"runtime"', // 阶段运行归属 go|rust|wasm|js|three（ADR-262 D2）
 ];
 for (const field of GUI_FIELDS) {
   must(hasJSONTag(flowGo, field.replaceAll('"', "")), `gui-flow 结构化载荷缺少字段 json:${field}（go/cli/flow.go）`);
 }
-for (const field of ["total_ms", "estimated_ms", "failed", "kind", "estimated_ms"]) {
+for (const field of ["total_ms", "estimated_ms", "failed", "kind", "estimated_ms", "runtime"]) {
   must(guiTs.includes(field), `前端 GuiFlowStructured/GuiFlowStage 未声明 ${field}（perf-gui-flow.ts）`);
 }
 must(
@@ -110,6 +111,17 @@ for (const field of SB_FIELDS) {
     hasJSONTag(concurrentGo, field.replaceAll('"', "")),
     `single-bench 结构化载荷缺少字段 json:${field}（go/cli/bench_concurrent.go）`,
   );
+}
+// 阶段子结构 benchStageJSON（ADR-262 D2）：运行归属 + 样本统计（n/median_ms/p95_ms 在 benchStageStats）。
+const SB_STAGE_FIELDS = ['"runtime"', '"stats"', '"n"', '"median_ms"', '"p95_ms"'];
+for (const field of SB_STAGE_FIELDS) {
+  must(
+    hasJSONTag(concurrentGo, field.replaceAll('"', "")),
+    `single-bench 阶段结构缺少字段 json:${field}（go/cli/bench_concurrent.go）`,
+  );
+}
+for (const field of ["runtime", "stats", "median_ms", "p95_ms"]) {
+  must(singleTs.includes(field), `前端 SingleBenchStage 未声明 ${field}（perf-single-bench.ts）`);
 }
 const IDENTITY_FIELDS = ['"rtype"', '"rtype_source"', '"rtype_label"', '"form"', '"relPath"', '"absPath"'];
 for (const field of IDENTITY_FIELDS) {

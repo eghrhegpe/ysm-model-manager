@@ -53,7 +53,7 @@ func TestStagesToJSON_IdentifiesBottleneck(t *testing.T) {
 		{Name: "② JSON 解析", Duration: d(120)},
 		{Name: "③ 数据验证", Duration: d(3)},
 	}
-	stages, bottleneck := stagesToJSON(avg)
+	stages, bottleneck := stagesToJSON(avg, nil)
 	if bottleneck != "② JSON 解析" {
 		t.Errorf("最慢阶段应识别为瓶颈, got %q", bottleneck)
 	}
@@ -81,7 +81,7 @@ func TestStagesToJSON_OnlySlowestIsBottleneck(t *testing.T) {
 		{Name: "② JSON 解析", Duration: d(5)},
 		{Name: "③ 数据验证", Duration: d(200)},
 	}
-	stages, bottleneck := stagesToJSON(avg)
+	stages, bottleneck := stagesToJSON(avg, nil)
 	if bottleneck != "③ 数据验证" {
 		t.Errorf("最慢阶段应为瓶颈, got %q", bottleneck)
 	}

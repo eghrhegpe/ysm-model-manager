@@ -383,6 +383,10 @@ export const ja: Record<string, string> = {
   "diagnostics.perfEstimatedHint":
     "推定値（レンダリングパイプライン無し／仮定からの概算、合計に含まず）",
   "diagnostics.perfEstimatedTotal": "うち推定 {ms}ms（合計に含まず）",
+  // 段階の実行層とサンプル統計（ADR-262 D2）
+  "diagnostics.perfStageRuntimeHint": "この段階の実行層（Go / Rust / WASM / JS / Three）",
+  "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
+  "diagnostics.perfStageStatsHint": "中央値 {median}ms / p95 {p95}ms；n = この段階の実際の出現回数",
   "diagnostics.perfRtype": "リソース種別",
   "diagnostics.perfRtypeSingle": "（単一モデル：パス指定）",
   "diagnostics.perfRtypeAll": "全タイプのマトリクス",

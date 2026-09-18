@@ -378,6 +378,10 @@ export const zhCN = {
   "diagnostics.perfEstimated": "估算",
   "diagnostics.perfEstimatedHint": "估算（无渲染管线/按假设推算，不计入总耗时）",
   "diagnostics.perfEstimatedTotal": "其中估算 {ms}ms（不计入总耗时）",
+  // 阶段运行归属与样本统计（ADR-262 D2）：没有归属就看不出这段跑在 Go / Rust / WASM / Three 上
+  "diagnostics.perfStageRuntimeHint": "该阶段的运行归属（Go / Rust / WASM / JS / Three）",
+  "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
+  "diagnostics.perfStageStatsHint": "中位 {median}ms / p95 {p95}ms；n = 该阶段实际出现次数",
   "diagnostics.perfRtype": "资源类型",
   "diagnostics.perfRtypeSingle": "（单模型，按路径）",
   "diagnostics.perfRtypeAll": "全部类型矩阵",

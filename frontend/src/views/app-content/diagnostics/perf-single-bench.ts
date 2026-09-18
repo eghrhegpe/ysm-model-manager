@@ -38,6 +38,10 @@ interface SingleBenchStage {
   status: string;
   bottleneck: boolean;
   note?: string;
+  /** 阶段运行归属（go|rust|wasm|js|three，ADR-262 D2）；旧版 Go 载荷缺省，按可选处理 */
+  runtime?: string;
+  /** 样本统计（ADR-262 D2）：n = 该阶段实际出现次数（阶段可因失败缺席某轮），非迭代轮数 */
+  stats?: { n: number; median_ms: number; p95_ms: number };
 }
 
 /** 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定 —— 报告靠它分辨真实场景类别 */
@@ -170,10 +174,27 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
       const pct = maxMs > 0 ? Math.max(3, Math.round((s.ms / maxMs) * 100)) : 3;
       const meta = singleBenchStageMeta(s.status);
       const noteAttr = s.note ? ` title="${esc(s.note)}"` : "";
+      // 运行归属徽标（ADR-262 D2）：没有它就看不出这段跑在 Go 还是 Rust/WASM/Three 上
+      const rtTag = s.runtime
+        ? `<span class="perf-rt-tag" title="${esc(t("diagnostics.perfStageRuntimeHint"))}">${esc(s.runtime)}</span>`
+        : "";
+      // 样本统计（ADR-262 D2）：n=1 时 p95 就是那个唯一样本（退化），展示它等于把单样本包装成分布，
+      // 故仅在 n>1 时渲染分布；n 始终保留在 title 里供追问「几个样本」。
+      const st = s.stats;
+      const statsTag =
+        st && st.n > 1
+          ? `<span class="perf-stats" title="${esc(
+              t("diagnostics.perfStageStatsHint", {
+                median: st.median_ms.toFixed(2),
+                p95: st.p95_ms.toFixed(2),
+                n: String(st.n),
+              }),
+            )}">${esc(t("diagnostics.perfStageStats", { p95: st.p95_ms.toFixed(2), n: String(st.n) }))}</span>`
+          : "";
       return `<div class="perf-bar-row"${noteAttr}>
-<span class="perf-bar-name" title="${esc(s.name)}">${esc(s.name)}</span>
+<span class="perf-bar-name" title="${esc(s.name)}">${esc(s.name)}</span>${rtTag}
 <span class="perf-bar-track"><span class="perf-bar-fill ${meta.cls}" style="width:${pct}%"></span></span>
-<span class="perf-bar-val ${meta.cls}">${s.ms.toFixed(2)}ms ${meta.icon}</span>
+<span class="perf-bar-val ${meta.cls}">${s.ms.toFixed(2)}ms ${meta.icon}</span>${statsTag}
 </div>`;
     })
     .join("");

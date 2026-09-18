@@ -7,8 +7,10 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -362,6 +364,9 @@ type singleBenchStage struct {
 	Duration time.Duration
 	Bytes    int64
 	Notes    string
+	// Runtime 阶段运行归属（go|rust|wasm|js|three，ADR-262 D2）：没有归属字段，
+	// 「Go / Rust / WASM / Three 的耗时构成」就是黑箱，Rust 扫描器与 WASM 解析器的收益无从度量。
+	Runtime string
 	// Failed 阶段失败标记（如 ① 读盘失败）：耗时分级（stageStatus）只看 ms，失败必须独立成字段，
 	// 否则失败阶段会因 0ms 被判为 ok —— 全链路失败的 bench 在载荷里看起来全绿（2026-09-17 实测）。
 	Failed bool
@@ -510,12 +515,29 @@ type benchStageJSON struct {
 	Status     string  `json:"status"`
 	Bottleneck bool    `json:"bottleneck"`
 	Note       string  `json:"note,omitempty"`
+	// Runtime 阶段运行归属（go|rust|wasm|js|three，ADR-262 D2）
+	Runtime string `json:"runtime"`
+	// Stats 样本统计（ADR-262 D2）：n / median_ms / p95_ms。
+	// 仅实测阶段有；无样本（纯汇总路径）时为 nil —— 不伪造 n=0 的统计。
+	Stats *benchStageStats `json:"stats,omitempty"`
 }
 
-// stagesToJSON 将平均阶段列表转换为 JSON 结构，同时识别瓶颈。
+// benchStageStats 阶段在多轮迭代中的样本分布（ADR-262 D2）。
+//
+// 此前 `stages` 只有 N 轮均值：数据其实已在手里（runSingleBenchSamples 保留全部样本），
+// 却由 avgBenchStages 当场平均掉 —— 「无样本统计、无方差可言」（ADR-262 §背景 #6）。
+// n 是**该阶段实际出现的次数**（阶段可因失败提前返回而缺席某轮），非迭代轮数。
+type benchStageStats struct {
+	N      int     `json:"n"`
+	Median float64 `json:"median_ms"`
+	P95    float64 `json:"p95_ms"`
+}
+
+// stagesToJSON 将平均阶段列表转换为 JSON 结构，同时识别瓶颈，并从原始样本附上分布统计。
 // 两趟：先定唯一最大阶段，再单点打标——旧实现「每超过当前最大值即置 true」，
 // 会把先出现的次大阶段也标成 bottleneck（可产出多个 bottleneck=true）。
-func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
+// allStages 为 nil（纯汇总调用方无原始样本）时不附 stats。
+func stagesToJSON(avg []singleBenchStage, allStages [][]singleBenchStage) ([]benchStageJSON, string) {
 	var maxMs float64
 	var bottleneckName string
 	for _, s := range avg {
@@ -525,6 +547,7 @@ func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
 		}
 	}
 
+	stats := collectStageStats(allStages)
 	stageJSON := make([]benchStageJSON, 0, len(avg))
 	for _, s := range avg {
 		ms := msOf(s)
@@ -532,6 +555,11 @@ func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
 		status := stageStatus(ms)
 		if s.Failed {
 			status = "failed"
+		}
+		var st *benchStageStats
+		if got, ok := stats[s.Name]; ok {
+			copy := got
+			st = &copy
 		}
 		stageJSON = append(stageJSON, benchStageJSON{
 			Name:   s.Name,
@@ -541,9 +569,53 @@ func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
 			// 唯一瓶颈且超过「偏慢」阈值（10ms）；并列时首者胜，保证确定性
 			Bottleneck: s.Name == bottleneckName && ms > 10,
 			Note:       s.Notes,
+			Runtime:    s.Runtime,
+			Stats:      st,
 		})
 	}
 	return stageJSON, bottleneckName
+}
+
+// collectStageStats 汇总各阶段在 N 轮迭代中的样本分布（ADR-262 D2）。
+// 与 avgBenchStages 同源（同一份 allStages），不额外采集。
+func collectStageStats(allStages [][]singleBenchStage) map[string]benchStageStats {
+	samples := map[string][]float64{}
+	for _, stages := range allStages {
+		for _, s := range stages {
+			samples[s.Name] = append(samples[s.Name], msOf(s))
+		}
+	}
+	out := make(map[string]benchStageStats, len(samples))
+	for name, xs := range samples {
+		out[name] = benchStageStats{
+			N:      len(xs),
+			Median: percentileNearestRank(xs, 0.5),
+			P95:    percentileNearestRank(xs, 0.95),
+		}
+	}
+	return out
+}
+
+// percentileNearestRank 最近秩法取分位数：升序后取 ceil(p*n)-1 号样本。
+//
+// 选最近秩而非线性插值：默认只跑 3 轮，插值会产出「不存在的样本」（如 n=3 的 p95 内插出
+// 从未实测到的值），与「数字必须来自实测」的口径冲突；最近秩保证结果必是某次真实样本。
+// 副作用是它对 p 单调（两分位下标不递降）→ 结构不变量 p95 >= median 对任意 n 恒成立
+// （ADR-262 D6：断言只锁结构不变量）。
+func percentileNearestRank(xs []float64, p float64) float64 {
+	if len(xs) == 0 {
+		return 0
+	}
+	cp := append([]float64(nil), xs...)
+	sort.Float64s(cp)
+	idx := int(math.Ceil(p*float64(len(cp)))) - 1
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= len(cp) {
+		idx = len(cp) - 1
+	}
+	return cp[idx]
 }
 
 // benchOneModel 跑一个模型的 N 次迭代并组装单模型载荷（单模型命令与类型矩阵共用，不打印）。
@@ -551,7 +623,7 @@ func stagesToJSON(avg []singleBenchStage) ([]benchStageJSON, string) {
 func benchOneModel(a AppService, modelPath, filesRoot string, iterations int) (singleBenchJSON, []singleBenchStage) {
 	allStages, totalDuration := runSingleBenchSamples(a, modelPath, filesRoot, iterations, nil)
 	avg := avgBenchStages(allStages)
-	stageJSON, bottleneckName := stagesToJSON(avg)
+	stageJSON, bottleneckName := stagesToJSON(avg, allStages)
 
 	totalMs := float64(totalDuration.Microseconds()) / 1000
 	// 单次平均：AI/前端问「这个模型加载一次多久」时要的是它，而非 N 次累计
@@ -846,6 +918,7 @@ func avgBenchStages(allStages [][]singleBenchStage) []singleBenchStage {
 	counts := map[string]int{}
 	bytes := map[string]int64{}
 	notes := map[string]string{}
+	runtimes := map[string]string{}
 	failed := map[string]bool{}
 	for _, stages := range allStages {
 		for _, s := range stages {
@@ -860,6 +933,10 @@ func avgBenchStages(allStages [][]singleBenchStage) []singleBenchStage {
 			if notes[s.Name] == "" && s.Notes != "" {
 				notes[s.Name] = s.Notes
 			}
+			// runtime 同 Notes：归属是阶段事实，平均环节不得丢（首轮非空优先）
+			if runtimes[s.Name] == "" && s.Runtime != "" {
+				runtimes[s.Name] = s.Runtime
+			}
 			if s.Failed {
 				failed[s.Name] = true
 			}
@@ -872,6 +949,7 @@ func avgBenchStages(allStages [][]singleBenchStage) []singleBenchStage {
 			Duration: totals[name] / time.Duration(counts[name]),
 			Bytes:    bytes[name] / int64(counts[name]),
 			Notes:    notes[name],
+			Runtime:  runtimes[name],
 			Failed:   failed[name],
 		})
 	}
@@ -1048,6 +1126,11 @@ func applyBenchBaseline(baseline, saveBaseline string, thresholdPct float64, avg
 	return nil
 }
 
+// singleBenchRuntime 单模型基准的运行归属恒为 Go：全链路调用的都是 Go 实现
+// （os.ReadFile / AnalyzeBedrockModel / 校验 / 几何准备 / 纹理准备 / json.Marshal / 缓存查询），
+// 没有任何 WASM / Rust / Three 环节——归属如实报 go，不为好看编造分层（ADR-262 D2）。
+const singleBenchRuntime = "go"
+
 // runSingleModelBench 执行单次单模型测试
 func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenchStage {
 	var stages []singleBenchStage
@@ -1068,6 +1151,7 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 			Name:     readStageName,
 			Duration: readDuration,
 			Notes:    fmt.Sprintf("❌ 失败: %v", err),
+			Runtime:  singleBenchRuntime,
 			Failed:   true,
 		})
 	}
@@ -1167,6 +1251,11 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 		Notes:    cacheNotes,
 	})
 
+	// 归属单一事实：本条链路全部阶段同属 singleBenchRuntime，在出口统一打上，
+	// 避免每个阶段字面量各写一次（漏一个就是一个无归属阶段）。
+	for i := range stages {
+		stages[i].Runtime = singleBenchRuntime
+	}
 	return stages
 }
 

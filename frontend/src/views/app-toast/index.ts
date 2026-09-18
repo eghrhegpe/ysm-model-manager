@@ -9,7 +9,7 @@ import { noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { UI_ICONS, type UiIconName } from "@/utils/icon/ui-icons.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -32,6 +32,15 @@ const DEFAULT_DURATION = TOAST_MS.verbose; // 默认展示时长 ms
 const SLIDE_OUT_MS = 200; // 退出动画时长 ms（与 CSS slideOut 同步）
 const OK_TOAST_MS = TOAST_MS.success; // 成功反馈 toast 展示时长 ms
 const ERR_TOAST_MS = TOAST_MS.normal; // 失败反馈 toast 展示时长 ms
+
+// ── type→语义图标（ADR-267：msg 载荷去 emoji 后，状态视觉交给 type 驱动图标 + 左边框）──
+// type 名与 UI_ICONS key 不一致处需手映射；warn→warning（UI_ICONS 语义名为 warning）
+const TYPE_ICON: Record<string, UiIconName> = {
+  error: "error",
+  success: "success",
+  warn: "warning",
+  info: "info",
+};
 
 class AppToast extends WebComponentBase {
   /** 构造期挂载的 open shadow 根（组件生命周期内恒非空，免 shadowRoot! 断言） */
@@ -59,6 +68,8 @@ class AppToast extends WebComponentBase {
         .toast.warn { border-left: 3px solid var(--status-error); }
         .toast.info { border-left: 3px solid var(--accent); }
         .toast .msg { flex: 1; white-space: pre-line; }
+        /* ADR-267：type 驱动语义图标（.toast-icon 承载）——图标不含色，状态色由 type 左边框承担 */
+        .toast .toast-icon { display: inline-flex; align-items: center; flex: 0 0 auto; }
         /* 常态=容器色（隐形）→ 悬停 --hover 浮现，与设置页 .stg-path-* / 导航选中态同口径
            （原常态 --hover → 悬停 --act，起手高一档故需第二级色；2026-09 反向取值对齐全站） */
         .toast .undo-btn { padding: 4px 10px; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--accent); cursor: pointer; font-size: var(--fs-sm); font-family: inherit; transition: background var(--tr-fast); }
@@ -126,7 +137,11 @@ class AppToast extends WebComponentBase {
     if (type) t.dataset.toastType = type;
     if (clickCallback) t.style.cursor = "pointer";
     // G-1 稳定钩子：undo/close 按钮同时挂 data-testid，e2e 不再依赖 .undo-btn/.close-btn class
-    t.innerHTML = `<span class="msg">${esc(msg)}</span>${undoCallback ? `<button class="undo-btn" data-testid="toast-undo">↩ ${translate("toast.undo")}</button>` : ""}<button class="close-btn" data-testid="toast-close">${UI_ICONS.close}</button>`;
+    // ADR-267：type 有语义图标时前置一枚 SVG（.toast-icon）承载状态；msg 槽保持 esc() 纯文本——
+    // 载荷 emoji 前缀（✅/❌/⚠️）已清，状态视觉交给 type 驱动图标 + 左边框（冗余消除）
+    const typeIcon = type ? TYPE_ICON[type] : undefined;
+    const typeIconHtml = typeIcon ? `<span class="toast-icon">${UI_ICONS[typeIcon]}</span>` : "";
+    t.innerHTML = `${typeIconHtml}<span class="msg">${esc(msg)}</span>${undoCallback ? `<button class="undo-btn" data-testid="toast-undo">${UI_ICONS.undo} ${translate("toast.undo")}</button>` : ""}<button class="close-btn" data-testid="toast-close">${UI_ICONS.close}</button>`;
     c.appendChild(t);
     if (clickCallback) {
       (t.querySelector(".msg") as HTMLElement).onclick = (e: MouseEvent) => {
@@ -143,7 +158,7 @@ class AppToast extends WebComponentBase {
           // 对齐 undo：记录并反馈，不静默
           logError("toast", "点击回调失败:", e);
           bus.emit("toast:show", {
-            msg: `❌ ${translate("error.fallback")}`,
+            msg: translate("error.fallback"),
             duration: ERR_TOAST_MS,
             type: "error",
           });
@@ -171,7 +186,7 @@ class AppToast extends WebComponentBase {
           // 异常传播跳过「已撤销」确认且冒泡控制台无用户反馈
           logError("toast", "撤销回调失败:", e);
           bus.emit("toast:show", {
-            msg: `❌ ${translate("toast.undoFailed")}`,
+            msg: translate("toast.undoFailed"),
             duration: ERR_TOAST_MS,
             type: "error",
           });

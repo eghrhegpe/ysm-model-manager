@@ -504,6 +504,12 @@ func tryRustScan(
 	if ctx.Err() != nil {
 		return nil, false
 	}
+	// 基准专用强制开关（ADR-262 D3 跨引擎对照）：跳过 Rust 快路径，让对照的另一端跑同一条
+	// 生产 Go walk。置于钩子**之前**——钩子是测试注入的引擎替身，能被它压制，基准才测得到「纯 Go」。
+	// 生产恒 false，故本分支对生产不可达（它只是把「Rust 不可用时的既有兜底」变成可控）。
+	if forceGoEngine.Load() {
+		return nil, false
+	}
 	// 测试注入优先：rustScanHook 非空时替代真实后端（普通单测走 stub 恒 handled=false，
 	// 无法触达 Rust handled 分支，故用钩子制造该路径）。
 	var rustEntries []types.ModelEntry
@@ -516,6 +522,9 @@ func tryRustScan(
 	if !handled {
 		return nil, false
 	}
+	// 引擎归属记账（ADR-262 D3）：只有**真正**由 Rust 处理完才计数——报告据此区分
+	// 「Rust 在跑」与「静默回退 Go」，否则会把 Go 的耗时记在 Rust 头上。
+	rustHandledCount.Add(1)
 	stored := append([]types.ModelEntry(nil), rustEntries...)
 	kvNow, _ := keyVersions.LoadOrStore(dir, &atomic.Uint64{})
 	if cacheable && cacheGen.Load() == gen && kvNow.(*atomic.Uint64).Load() == keyVersion {

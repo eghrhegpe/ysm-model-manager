@@ -1,5 +1,5 @@
 # ysm CLI — bash 补全（自动生成，勿手改；来源：go/cli 注册表）
-# 生成：node scripts/gen-cli-completion.ts（顶层命令 39 个）
+# 生成：node scripts/gen-cli-completion.ts（顶层命令 40 个）
 # 启用：echo "source $(pwd)/completions/ysm.bash" >> ~/.bashrc
 _ysm_complete() {
   local cur prev words cword
@@ -9,7 +9,7 @@ _ysm_complete() {
 
   # 第一参数：顶层命令
   if [ "$COMP_CWORD" -eq 1 ]; then
-    COMPREPLY=( $(compgen -W "analyze analyze-mmd avatar benchmark cache-clear cache-diag cache-status cache-verify concurrent-bench config config-show copy creator dedup download export file-bench gui-flow health-report install instance link-mode list move perf-log perf-snapshot recycle rename repo-audit resource-scan resource-types scan scan-dir search single-bench tags toggle verify workshop" -- "$cur") )
+    COMPREPLY=( $(compgen -W "analyze analyze-mmd avatar benchmark cache-clear cache-diag cache-status cache-verify concurrent-bench config config-show copy creator dedup download export file-bench gui-flow health-report install instance link-mode list move perf-log perf-snapshot recycle rename repo-audit resource-scan resource-types scan scan-bench scan-dir search single-bench tags toggle verify workshop" -- "$cur") )
     return
   fi
 
@@ -64,6 +64,7 @@ _ysm_complete() {
     resource-scan) COMPREPLY=( $(compgen -W "--help --dir --output" -- "$cur") ); return ;;
     resource-types) COMPREPLY=( $(compgen -W "--help --type --format" -- "$cur") ); return ;;
     scan) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
+    scan-bench) COMPREPLY=( $(compgen -W "--help --iterations --format" -- "$cur") ); return ;;
     scan-dir) COMPREPLY=( $(compgen -W "--help --dir --detail --output" -- "$cur") ); return ;;
     search) COMPREPLY=( $(compgen -W "--help --keyword --min-bones --max-bones --min-cubes --max-cubes --min-tex --max-tex --format" -- "$cur") ); return ;;
     single-bench) COMPREPLY=( $(compgen -W "--help --model --iterations --rtype --all-types --max-models --top-largest --baseline --save-baseline --threshold --format" -- "$cur") ); return ;;

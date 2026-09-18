@@ -9,12 +9,16 @@ auto_fields:
   symbols_with_lines:
     - ComputeFileHash
     - EffectiveCacheTTL
+    - ForceGoEngine
     - GenerateRepoIndex
     - InvalidateCache
     - InvalidatePath
     - ListModelAuthors
     - OnCacheInvalidated
+    - ResetScanEngineStats
     - ScanBackend
+    - ScanEngineStat
+    - ScanEngineStats
     - ScanEntries
     - ScanEntriesCtx
     - ScanEntriesLite
@@ -23,6 +27,7 @@ auto_fields:
     - ScanEntriesWithHitCtx
     - ScanLocalAuthors
     - SetErrorSink
+    - SetForceGoEngine
 use_when:
   - 扫描
   - 文件树
@@ -98,6 +103,7 @@ status: active
 - **Rust 回源 `scanEntriesWithRust(dir)`（ADR-120）**：`ScanEntriesWithHit` 缓存未命中时回源调 Rust（全平台 + `rust_backend` tag；历史四份 rust_backend_<os>.go 已合并为单一 `rust_backend.go`，`//go:build rust_backend` 无 OS 约束——非仅 Windows）。该函数**仅**转发 `rustbridge.Scan(dir, registryJSON)`（jwalk 全树发现），不再内读 `scanCache`。
   - ⚠️ **死代码清除（2026-08-24）**：原实现在 `scanEntriesWithRust` 内先 `scanCache.Load(dir)`、命中未过期则走 `rustbridge.ScanManifest` 隐式快路径——经审核该分支**逻辑不可达**：`ScanEntriesWithHit` 仅在「缓存未命中」时成为 owner 调本函数（`scanner.go`），且未命中进入前已 `scanCache.Delete(dir)`（同文件 Delete 段），故本函数内部再 `Load` 永远拿到过期/缺失条目；而缓存命中时 `ScanEntriesWithHit` 直接 return 不经 Rust。两者时间互斥，「有 Go 缓存但仍需 Rust 结果」在现有架构下不存在。该隐式分支已删除，`scanEntriesWithRust` 收敛为纯 `rustbridge.Scan` 转发。
   - **`rustbridge.ScanManifest` 调用纪律（显式独立出口）**：Rust 侧 `ysm_scan_manifest` 保留，但**只作显式 API**，由业务代码在「已持有一份 Go `[]ModelEntry`、想让 Rust 在其上深加工（Go 算不了的重模型解析等）」时主动调用。**禁止**在 `scanEntriesWithRust` 内以隐式快路径形式回读 `scanCache` 调用它（既不可达，又曾因递归 `ScanEntriesWithHit` 触发 single-flight 死锁隐患）。触发前提 = 未来做 Go/Rust 扫描分工（Go 轻扫探路 + Rust 深加工流水线）之日；在那之前它是休眠的 ABI 守门出口（测试 `TestScanManifest_ABI_MatchesJwalk` 已锁 P2/P3 契约）。详见 ADR-120 §3。
+- **引擎归属记账 + 强制 Go 开关（`scan_engine.go`，2026-09-18，ADR-262 D3）**：`ScanEngineStats()` 给出 `{Rust, GoWalk}` 两项**只增不减**的计数（`walkCount` 复用既有诊断计数，`rustHandledCount` 为本轮新增、只在 `tryRustScan` 的 `handled=true` 分支递增），调用方取**前后差**即得「这一次扫描是谁处理的」。立因：`-tags rust_backend` 下 Rust 仍可能运行期不可用（DLL 缺失/版本不符），生产路径此时**静默回退 Go**——不记账就会把 Go 的耗时记在 Rust 头上。`SetForceGoEngine(bool)` 是**基准专用**开关（生产恒 false）：true 时 `tryRustScan` 在 ctx 检查后、**钩子之前**直接 `return nil,false`，让对照的另一端跑同一条生产 Go walk（置于钩子之前是因为钩子是测试注入的引擎替身，能被它压制才测得到「纯 Go」）。不做成返回值：`ScanEntries*` 有十几个调用方，为观测改签名是反向收益；计数器 + 前后差同样精确且零调用方改动。消费方 = `go/cli/scan_bench.go`（`scan-bench` 命令）。测试 `go/scanner/scan_engine_test.go`（用既有 `setRustScanHook` 制造 handled 分支，默认构建即可跑）+ `go/cli/scan_bench_rust_test.go`（`rust_backend`，真 DLL 两端对照）。
 - `ComputeFileHash(path)` — SHA256
 - `ScanEntriesLite(dir)` — 轻量遍历（2026-08-26，作者提取专用）：与 `ScanEntries` 同过滤口径（recycle/.github/禁用目录跳过、扩展名白名单、ysm.json 判定、`.ban` 恢复），但**不读文件信息（Size/ModTime/Hash 恒零值）、不读不写共享 scanCache**——无哈希条目入缓存会被同步系统当「哈希为空」静默跳过。实现为 `processScanDirEntry(wantMeta=false)`；测试 `scanner_lite_test.go`（过滤同口径 + 双向缓存隔离）。作者路径跳过逐文件 open+hash 后冷扫成本降为纯目录枚举
 - `ListModelAuthors` / `ScanLocalAuthors` — 作者统计：均走 `ScanEntriesLite` 轻量遍历（原走全量扫描陪绑 SHA256，大库下拖慢创作者频道首屏）。`ScanLocalAuthors` 的 `mergeOrAppendCreator` 用 `nameIndex map[string]int` 做 O(1) 同名 author 定位（2026-09-14 落地：原线性扫描导致大库首屏作者提取 O(作者数×文件数) 二次放大，加索引后纯行为保持重构）

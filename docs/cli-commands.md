@@ -4,7 +4,7 @@
 > 静态提取生成，**单一事实来源 = 源码注册**。新增命令/子命令/选项只改 `go/cli/` 源码，
 > 重跑本脚本即同步；`--check` 已接入 `doctor.ts` 防漂移。
 >
-> 顶层命令共 **39** 个。入口姿势与常用场景见根 `AGENTS.md`「CLI 模式使用说明」。
+> 顶层命令共 **40** 个。入口姿势与常用场景见根 `AGENTS.md`「CLI 模式使用说明」。
 
 <!-- GEN: cli-commands -->
 ## 模型管理
@@ -250,6 +250,20 @@ app --cli --files-root <路径> perf-snapshot [选项...]
 |------|------|------|
 | `--model` | string — 指定模型路径（可选，不填则用第一个） |
 | `--iterations` | int — 基准测试迭代次数 |
+
+
+### `scan-bench`
+扫描引擎基准（Go / Rust 对照，ADR-262 D3）
+
+```bash
+app --cli --files-root <路径> scan-bench [选项...]
+```
+
+
+| 选项 | 类型 | 说明 |
+|------|------|------|
+| `--iterations` | int — 每个引擎重复扫描次数（取中位/p95） |
+| `--format` | string （默认: text）— 输出格式: text（人类可读）/ json（AI 友好） |
 
 
 ### `single-bench`

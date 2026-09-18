@@ -8,16 +8,14 @@
 //  - 载荷里的 `hints` 是 Go 侧中文散文（未 i18n），**不在界面渲染**（英文/日文界面会出现
 //    未翻译中文）；它与 single-bench 的 hints 同口径：结构化保留供 CLI/AI 消费。
 
-import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { CLIArgs } from "@/services/cli-bridge.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
+  errorHTML,
   getOutBox,
   sectionHeader,
   setBusy,
@@ -32,6 +30,7 @@ import {
   perfTargetEchoHTML,
   readPerfOrder,
 } from "./perf-matrix-render.ts";
+import { webGate } from "./web-gate.ts";
 
 // 代际守卫（ADR-230）：快速连点「运行」时旧响应不得覆盖新结果
 const perfConcGuard = createLoadGuard();
@@ -108,6 +107,13 @@ interface ConcPayload {
   order?: string;
   /** 体量口径 token（**仅 order=size 时出现**）：dir_total = 目录式按目录内容合计、其余按文件大小 */
   size_source?: string;
+  /**
+   * target=rtype 时回显的**请求类型 id**（与 single-bench 的 `spec.rtype` 对称，Go 顶层字段）。
+   *
+   * 注意与请求侧的 `ConcParams.rtype` 不是一个方向：这里读的是 Go 交回的事实，界面不许从
+   * `models[0].rtype` 反推（空集推不出来，且类型判定的事实源只有 Go / resource_types.json）。
+   */
+  rtype?: string;
   model_count?: number;
   models?: ConcIdentity[];
   serial?: ConcPhase;
@@ -130,18 +136,6 @@ type ConcParams = CLIArgs & {
   rtype?: string;
   format: "json";
 };
-
-function concWebModeCheck(): boolean {
-  if (isWebPlatform()) {
-    bus.emit("toast:show", {
-      msg: t("diagnostics.webNoPerf"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
-    return true;
-  }
-  return false;
-}
 
 function concVerdict(v: string | undefined): ConcVerdict {
   // 未知 token 按最保守的「无提升」呈现——宁可显示保守结论，也不假装是优秀（诚实红线）
@@ -297,7 +291,7 @@ export async function runConcurrentBench(root: ShadowRoot, esc: EscFn): Promise<
     setErrorMsg(out, t("diagnostics.perfConcurrentParamInvalid"), esc);
     return;
   }
-  if (concWebModeCheck()) return;
+  if (webGate("diagnostics.webNoPerf")) return;
   setBusy(out);
   try {
     const resp = await executeCLI("concurrent-bench", params);
@@ -314,9 +308,7 @@ export async function runConcurrentBench(root: ShadowRoot, esc: EscFn): Promise<
     }
     const banner =
       resp.status === "error"
-        ? `<div class="diag-stat diag-stat-error">${UI_ICONS.error} ${esc(
-            resp.error?.message ?? t("diagnostics.perfFail"),
-          )}</div>`
+        ? errorHTML(resp.error?.message ?? t("diagnostics.perfFail"), esc)
         : "";
     out.innerHTML = concRender(payload, banner, esc);
   } catch (e) {

@@ -98,7 +98,8 @@ function setBusy(out: HTMLElement): void {
 }
 
 function setErrorMsg(out: HTMLElement, msg: string, esc: EscFn): void {
-  out.innerHTML = `<div class="diag-stat diag-stat-error">${UI_ICONS.error} ${esc(msg)}</div>`;
+  // 与 errorHTML 曾是同一字面量的两份实现（诊断页重复实现审计 C3）：横幅只留一个出处，改样式只改一处
+  out.innerHTML = errorHTML(msg, esc);
 }
 
 function setErrorResp(out: HTMLElement, resp: CLIResp, esc: EscFn): void {

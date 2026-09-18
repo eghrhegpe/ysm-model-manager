@@ -13,13 +13,10 @@
 // 与 single-bench 的关系：同为「跑在仓库根上的基准」，但量的是两个不同对象（一次解析 vs 整库扫描），
 // 故结果分容器渲染（各自整块 innerHTML 替换，共用容器会互相冲掉结果）。
 
-import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import type { CLIArgs } from "@/services/cli-bridge.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
@@ -32,6 +29,7 @@ import {
   setErrorResp,
 } from "./perf-common.ts";
 import { singleBenchReadIterations } from "./perf-single-bench.ts";
+import { webGate } from "./web-gate.ts";
 
 // 代际守卫（ADR-230）：可连点触发，旧响应后到不得覆盖新结果
 const scanBenchGuard = createLoadGuard();
@@ -236,24 +234,11 @@ export function renderScanBench(payload: ScanBenchPayload, esc: EscFn): string {
   return `${head}${specLine}${table}${parityHTML(payload.parity, esc)}`;
 }
 
-/** 网页版没有 Go 扫描引擎：走 toast 提示，不提交必然失败的 CLI */
-function scanBenchWebModeCheck(): boolean {
-  if (isWebPlatform()) {
-    bus.emit("toast:show", {
-      msg: t("diagnostics.webNoPerf"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
-    return true;
-  }
-  return false;
-}
-
 export async function runScanBench(root: ShadowRoot, esc: EscFn): Promise<void> {
   const gen = scanBenchGuard.next();
   const out = getOutBox(root, "diag-perf-scan-bench-out");
   if (!out) return;
-  if (scanBenchWebModeCheck()) return;
+  if (webGate("diagnostics.webNoPerf")) return;
   // 迭代次数复用面板既有控件（同一语义：同一基准重复几次），默认值也与 Go 的 3 对齐
   const params: ScanBenchParams = {
     iterations: singleBenchReadIterations(root),

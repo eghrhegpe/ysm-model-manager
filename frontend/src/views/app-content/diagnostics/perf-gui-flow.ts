@@ -1,12 +1,9 @@
 // ===== 诊断页：性能面板 — gui-flow（6 阶段状态 ✅/❌ + 耗时）=====
 // 数据来源：Go CLI gui-flow 结构化输出（ADR-200 D2），直接读 data.stages，禁止正则反解析。
 
-import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
@@ -17,6 +14,7 @@ import {
   setErrorMsg,
   setErrorResp,
 } from "./perf-common.ts";
+import { webGate } from "./web-gate.ts";
 
 // 代际守卫（ADR-230）
 const perfGuiGuard = createLoadGuard();
@@ -34,18 +32,6 @@ interface GuiFlowStage {
   note?: string;
   /** 阶段运行归属（go|rust|wasm|js|three，ADR-262 D2）；旧版 Go 载荷缺省，按可选处理 */
   runtime?: string;
-}
-
-function guiFlowWebModeCheck(): boolean {
-  if (isWebPlatform()) {
-    bus.emit("toast:show", {
-      msg: t("diagnostics.webNoPerf"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
-    return true;
-  }
-  return false;
 }
 
 // 结构化载荷（ADR-200 D2：gui-flow 首批结构化命令，字段与 Go guiFlowStructured 逐字对齐）
@@ -131,7 +117,7 @@ export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
   const gen = perfGuiGuard.next();
   const out = getOutBox(root, "diag-perf-gui-out");
   if (!out) return;
-  if (guiFlowWebModeCheck()) return;
+  if (webGate("diagnostics.webNoPerf")) return;
   setBusy(out);
   try {
     const resp = await executeCLI("gui-flow", { verbose: true });

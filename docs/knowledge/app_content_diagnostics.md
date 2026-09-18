@@ -95,6 +95,7 @@ status: active
 ## 核心职责
 
 - `init.ts` — 诊断页 `initDiagnostics`；去重会话 `createDedupSession`（由 `init-pages.ts` 持有会话实例，`session.start` 派发 `model:select` / `stats:refresh` / `tree:reload`）
+- `web-gate.ts` — **web 模式能力门禁单点**（`webGate(key)`，2026-09-18 诊断页重复实现审计 C1）：`isWebPlatform()` 为真则弹 warn toast 并返回 `true`，调用方 `if (webGate("diagnostics.xxx")) return;` 中止。此前同一段 8 行样板在本页抄了 **5 份**且各起名字（`concWebModeCheck` / `guiFlowWebModeCheck` / `scanBenchWebModeCheck` / `dgCfWebGate` / `dgCfSyncWebGate`），唯一差异是文案键。**新增需要 web 门禁的入口一律调它**，不再照抄——照抄哪一份都不能保证提示级别与中止行为一致。键类型是 `LocaleKey`（`@/core/i18n/t.ts`），故键名由调用方给；本页不止性能面板需要（conflicts 两种扫描同样要拦），所以不放进 `perf-common.ts`（那是性能面板共享层，冲突扫描 import 它是跨域依赖）
 - `health.ts` — 仓库体检面板：调 Go 端 `RepoHealthAudit`（go/repoaudit 同源，GUI/CLI 消双轨），渲染分数环/完整性/缓存/资源/去重/警告
 - `dedup.ts` — 去重检测（读 `services/resource-registry.ts` 资源类型注册表 + Go 绑定）；`createDedupSession()` 会话工厂把 busy/exec 重入守卫与去重配置收进闭包，经 `init.ts` re-export 接线。keep 保留策略纯函数于 2026-09-03 抽至 `dedup-policy.ts`（策略决策零 DOM/会话依赖，渲染默认保留索引与 exec 删除共用同一决策源，防规则漂移）
 - `dedup-policy.ts` — keep 保留策略纯函数层（`getDefaultKeepIdx` + `pickByTime` 共享 pick 辅助 + `DedupFileLike`），自 `dedup.ts` 抽出（2026-09-03，ADR-040 拆分线延续）；零 mock 单测聚焦策略分支

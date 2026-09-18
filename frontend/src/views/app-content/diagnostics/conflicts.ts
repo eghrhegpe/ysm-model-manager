@@ -1,17 +1,15 @@
 // ===== 诊断页：冲突扫描（scanConflicts） =====
 // ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（本文件）
 
-import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { AppConfig, FileConflict, VersionInstance } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
+import { webGate } from "./web-gate.ts";
 
 // P3 修复（子代理审计，重入守卫）：scanConflicts 并发标志——快速 3 连点会并发扫描
 // 同一 list 互相覆盖（结果写 innerHTML 竞争）；busy 命中直接返回。
@@ -33,18 +31,6 @@ interface DgCfInstanceFile {
 type DgCfFileConflict = FileConflict;
 
 // ===== scanConflicts 子函数 =====
-
-function dgCfWebGate(): boolean {
-  if (isWebPlatform()) {
-    bus.emit("toast:show", {
-      msg: t("diagnostics.webNoConflictScan"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
-    return true;
-  }
-  return false;
-}
 
 function dgCfSetScanBtnState(scanBtn: HTMLElement | null, scanning: boolean): void {
   if (!scanBtn) return;
@@ -156,7 +142,7 @@ function dgCfRenderConflictList(conflicts: [string, string[]][], esc: EscFn): st
 }
 
 export async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void> {
-  if (dgCfWebGate()) return;
+  if (webGate("diagnostics.webNoConflictScan")) return;
   const list = root.getElementById("diag-conflict-list");
   if (!list) return;
   if (diagScanning) return;
@@ -187,18 +173,6 @@ export async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void>
 // ===== 同步冲突检测与解决（P1 优先级） =====
 
 // ===== scanSyncConflicts 子函数 =====
-
-function dgCfSyncWebGate(): boolean {
-  if (isWebPlatform()) {
-    bus.emit("toast:show", {
-      msg: t("diagnostics.webNoSyncConflictScan"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
-    return true;
-  }
-  return false;
-}
 
 async function dgCfLoadSyncContext(): Promise<{
   mcRoot: string;
@@ -263,7 +237,7 @@ export async function scanSyncConflicts(
   rtype?: string,
   instanceName?: string,
 ): Promise<void> {
-  if (dgCfSyncWebGate()) return;
+  if (webGate("diagnostics.webNoSyncConflictScan")) return;
   if (diagSyncBusy) return;
   diagSyncBusy = true;
 

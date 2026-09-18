@@ -337,13 +337,11 @@ func resolveTargetModel(modelPath, filesRoot string) (string, error) {
 		switch {
 		case err == nil:
 			return entry, nil
-		case os.IsNotExist(err):
-			// 路径不存在 → 保持既有契约：显式 --model 直返（TestResolveTargetModel_ExplicitWins），
-			// 让 ① 阶段如实报读盘失败（D8 保证失败在载荷里可见，不再静默假绿）。
-			return modelPath, nil
 		default:
-			// 路径存在但形态不可用（如目录内缺 ysm.json）→ 明确报错，不静默降级
-			return "", newParamErrf("模型路径不可用: %v", err)
+			// 归一化失败（不存在 / 形态不可用）→ 保持既有契约：显式 --model 直返
+			// （TestResolveTargetModel_ExplicitWins），让 ① 阶段如实报读盘失败
+			// （D8 保证失败在载荷里可见，不再静默假绿），不在命令层拦截。
+			return modelPath, nil
 		}
 	}
 	if m := scanFirstModel(filesRoot); m != "" {

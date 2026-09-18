@@ -10,6 +10,7 @@
 
 import type { EscFn } from "./logs.ts";
 import { bindPerfCopyHandlers } from "./perf-common.ts";
+import { runConcurrentBench } from "./perf-concurrent.ts";
 import { runGuiFlow } from "./perf-gui-flow.ts";
 import { runPerfLog } from "./perf-log.ts";
 import { populatePerfRtypeOptions } from "./perf-matrix-render.ts";
@@ -32,6 +33,10 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
     ?.addEventListener("change", () => syncPerfBaselineControls(root));
   syncPerfBaselineControls(root);
   root.getElementById("diag-perf-gui")?.addEventListener("click", () => runGuiFlow(root, esc));
+  // 并发基准（ADR-262 D5）：加速比只有 Go 量得到，前端只提交参数 + 渲染结构化载荷
+  root
+    .getElementById("diag-perf-conc-run")
+    ?.addEventListener("click", () => void runConcurrentBench(root, esc));
   root.getElementById("diag-perf-log")?.addEventListener("click", () => runPerfLog(root, esc));
   root
     .getElementById("diag-perf-refresh-trace")

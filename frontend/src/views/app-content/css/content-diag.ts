@@ -107,6 +107,19 @@ export const contentDiagCSS: string = `
 .perf-bl-detail { flex:0 0 auto; font-variant-numeric:tabular-nums; color:var(--muted); }
 .perf-bl-delta { flex:0 0 auto; min-width:96px; text-align:right; font-variant-numeric:tabular-nums; }
 .perf-bl-mark { flex:0 0 auto; }
+/* 并发基准（ADR-262 D5）：加速比与判决 token 由 Go 给出，前端只映射配色 */
+.perf-conc { display:flex; flex-direction:column; }
+.perf-conc-params { color:var(--muted); font-size:var(--fs-xs); padding:0 2px 4px 2px; }
+.perf-conc-row { display:flex; align-items:center; gap:8px; padding:3px 2px; font-size:var(--fs-sm); color:var(--txt); border-bottom:1px dotted var(--bd); flex-wrap:wrap; }
+.perf-conc-serial { font-weight:600; }
+.perf-conc-label { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.perf-conc-ms { flex:0 0 auto; min-width:88px; text-align:right; font-variant-numeric:tabular-nums; }
+.perf-conc-speedup { flex:0 0 auto; min-width:64px; text-align:right; font-variant-numeric:tabular-nums; }
+.perf-conc-detail { flex:0 0 auto; color:var(--muted); font-variant-numeric:tabular-nums; }
+.perf-conc-verdict { flex:0 0 auto; min-width:72px; }
+.perf-conc-good { color:var(--status-ok, #2e7d32); }
+.perf-conc-warn { color:var(--warning, #b8860b); }
+.perf-conc-bad { color:var(--status-error); }
 .perf-gui-stage { display:flex; align-items:center; gap:8px; font-size:var(--fs-sm); color:var(--txt); padding:3px 2px; flex-wrap:wrap; }
 .perf-gui-stage .perf-gui-status { font-size:var(--fs-base); }
 .perf-gui-stage .perf-gui-name { font-weight:600; }

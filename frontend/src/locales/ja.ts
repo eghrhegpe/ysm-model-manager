@@ -404,6 +404,30 @@ export const ja: Record<string, string> = {
   "diagnostics.perfBaselineDelta": "{delta}%",
   "diagnostics.perfBaselineNoiseHint": "ノイズ下限内のため退行と判定しません",
   "diagnostics.perfBaselineNewHint": "基準に存在しない段階",
+  // ADR-262 D5 並列ベンチ：加速比と判定トークンは Go が単一の出所。UI は描画のみ
+  "diagnostics.perfRunConcurrent": "並列ベンチ",
+  "diagnostics.perfConcurrentWorkers": "並列 worker 数",
+  "diagnostics.perfConcurrentHint":
+    "直列と並列の実測加速比（2 / 4 / 指定値の段階）。加速比と判定は Go が決定します",
+  "diagnostics.perfConcurrentResult": "並列ベンチ結果",
+  "diagnostics.perfConcurrentWorkersN": "{n} workers",
+  "diagnostics.perfConcurrentModelCount": "実測 {n} モデル",
+  "diagnostics.perfConcurrentSerial": "直列",
+  "diagnostics.perfConcurrentPerModel": "平均/モデル {ms}ms",
+  "diagnostics.perfConcurrentRow": "並列 {workers} workers",
+  "diagnostics.perfConcurrentSpeedup": "{speedup}x",
+  "diagnostics.perfConcurrentJudgeHint":
+    "加速比の判定は Go が単一の出所として算出します。UI は描画のみで閾値を再計算しません",
+  "diagnostics.perfConcurrentVerdictExcellent": "優秀",
+  "diagnostics.perfConcurrentVerdictGood": "良好",
+  "diagnostics.perfConcurrentVerdictFair": "普通",
+  "diagnostics.perfConcurrentVerdictNone": "向上なし",
+  "diagnostics.perfConcurrentFileRead": "並列ファイル読み込み",
+  "diagnostics.perfConcurrentFileDetail": "{count} ファイル：直列 {serial}ms / 並列 {parallel}ms",
+  "diagnostics.perfConcurrentParamInvalid":
+    "worker 数は 1~256、タイプ毎の上限は 1 以上にしてください",
+  "diagnostics.perfConcurrentEmpty":
+    "並列ベンチの結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
   "diagnostics.perfRtypeSingle": "（単一モデル：パス指定）",
   "diagnostics.perfRtypeAll": "全タイプのマトリクス",
   "diagnostics.perfMaxModels": "タイプ毎の上限",

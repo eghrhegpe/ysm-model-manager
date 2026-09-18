@@ -403,6 +403,30 @@ export const en: Record<string, string> = {
   "diagnostics.perfBaselineDelta": "{delta}%",
   "diagnostics.perfBaselineNoiseHint": "within the noise floor — not judged a regression",
   "diagnostics.perfBaselineNewHint": "not present in the baseline",
+  // ADR-262 D5 concurrent bench: speedup + verdict token come from Go; the UI only renders them
+  "diagnostics.perfRunConcurrent": "Concurrent bench",
+  "diagnostics.perfConcurrentWorkers": "Concurrent workers",
+  "diagnostics.perfConcurrentHint":
+    "Measured serial-vs-parallel speedup (tiers 2 / 4 / target); speedup and verdict are decided in Go",
+  "diagnostics.perfConcurrentResult": "Concurrent bench result",
+  "diagnostics.perfConcurrentWorkersN": "{n} workers",
+  "diagnostics.perfConcurrentModelCount": "{n} models measured",
+  "diagnostics.perfConcurrentSerial": "Serial",
+  "diagnostics.perfConcurrentPerModel": "avg/model {ms}ms",
+  "diagnostics.perfConcurrentRow": "Parallel {workers} workers",
+  "diagnostics.perfConcurrentSpeedup": "{speedup}x",
+  "diagnostics.perfConcurrentJudgeHint":
+    "The speedup verdict is decided in Go; the UI only renders it and never recomputes thresholds",
+  "diagnostics.perfConcurrentVerdictExcellent": "Excellent",
+  "diagnostics.perfConcurrentVerdictGood": "Good",
+  "diagnostics.perfConcurrentVerdictFair": "Modest",
+  "diagnostics.perfConcurrentVerdictNone": "No gain",
+  "diagnostics.perfConcurrentFileRead": "Concurrent file read",
+  "diagnostics.perfConcurrentFileDetail":
+    "{count} files: serial {serial}ms / parallel {parallel}ms",
+  "diagnostics.perfConcurrentParamInvalid": "Workers must be 1~256 and max per type must be >= 1",
+  "diagnostics.perfConcurrentEmpty":
+    "No concurrent bench result (the repo may have no CLI-analyzable model)",
   "diagnostics.perfRtypeSingle": "(single model by path)",
   "diagnostics.perfRtypeAll": "All types (matrix)",
   "diagnostics.perfMaxModels": "Max per type",

@@ -25,6 +25,11 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-baseline-save",
   "diag-perf-baseline-compare",
   "diag-perf-baseline-th",
+  // ADR-262 D5：并发基准入口（并发度 / 每类上限 / 运行）
+  "diag-perf-conc-workers",
+  "diag-perf-conc-max",
+  "diag-perf-conc-run",
+  "diag-perf-conc-out",
 ];
 
 // settingsHTML 已拆至 settings/tpl-settings.ts，消费者直接 import 叶文件（P1-6）
@@ -176,6 +181,21 @@ export function diagnosticsHTML(): string {
       <button class="btn-base" id="diag-perf-gui">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
     </div>
     <div id="diag-perf-gui-out"></div>
+  </div>`,
+      },
+      {
+        // ADR-262 D5：串行 vs 并行的加速比（第一手压测数据）——判决由 Go 单点给出，前端只渲染
+        id: "conc",
+        label: `${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}`,
+        body: `  <div class="perf-wrap">
+    <div class="perf-controls">
+      <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
+      <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
+      <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
+      <label for="diag-perf-conc-max">${t("diagnostics.perfMaxModels")}</label>
+      <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfConcurrentHint")}">
+    </div>
+    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out"></div>
   </div>`,
       },
       {

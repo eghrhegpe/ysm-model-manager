@@ -212,6 +212,53 @@ must(
   "single-bench 前端仍存在中文标签作为解析锚点（BENCH_TOTAL_LABEL）——违反 ADR-262 D1",
 );
 
+// ── 3.5) 并发基准（ADR-262 D1/D5）：structured 出口 + GUI 消费 ────────────
+// 立因：concurrent-bench 此前**只有文本**，GUI 只能正则解析中文表格（或干脆没有入口）。
+const concGo = readOrDie("go/cli/bench_concurrent_json.go");
+const concTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-concurrent.ts");
+const CONC_FIELDS = [
+  '"workers"',
+  '"max_models"',
+  '"model_count"',
+  '"models"',
+  '"serial"',
+  '"per_model_ms"',
+  '"parallel"',
+  '"speedup"',
+  '"verdict"',
+  '"file_read"',
+  '"file_count"',
+];
+for (const field of CONC_FIELDS) {
+  must(
+    hasJSONTag(concGo, field.replaceAll('"', "")),
+    `并发基准载荷缺少字段 json:${field}（go/cli/bench_concurrent_json.go）`,
+  );
+}
+for (const field of [
+  "max_models",
+  "model_count",
+  "per_model_ms",
+  "file_read",
+  "speedup",
+  "verdict",
+]) {
+  must(concTs.includes(field), `前端并发基准接口未声明 ${field}（perf-concurrent.ts）`);
+}
+// 判决 token 的取值域必须两端一致：Go 给四个 token，前端只映射（不得自算阈值）
+for (const token of ["excellent", "good", "fair", "none"]) {
+  must(concGo.includes(`"${token}"`), `Go 判决 token 缺 ${token}（concurrentSpeedVerdict）`);
+  must(concTs.includes(`"${token}"`), `前端判决映射缺 ${token}（perf-concurrent.ts）`);
+}
+// 组装点断言（同基准一节的教训：只查字段名子串的话，删掉组装分支断言仍绿）
+must(concTs.includes('"max-models"'), "前端未把 --max-models 写进参数组装点（GUI 发不出样本上限）");
+must(/format:\s*"json"/.test(concTs), "前端未在组装点写 format=json（会退化成解析人类文案）");
+// 反回退：不得出现文本解析痕迹（并发基准的文本是流式报告，不是契约）
+must(
+  !/性能对比表|并发建议/.test(concTs),
+  "并发基准前端出现文本解析痕迹——结构化出口已就位，禁止回退到文案解析（ADR-262 D1）",
+);
+
 // ── 汇总结论 ─────────────────────────────────────────────────────
 if (errors.length) {
   console.error("❌ 契约测试失败（CLI 性能命令结构化载荷 ↔ 前端消费）：");

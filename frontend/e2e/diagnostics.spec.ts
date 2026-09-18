@@ -17,6 +17,8 @@ const DIAG_TABS = [
   "log",
   "single",
   "gui",
+  // ADR-262 D5：并发基准（串行 vs 并行加速比）
+  "conc",
   "hist",
   "trace",
   "conflict",
@@ -234,6 +236,44 @@ test.describe("诊断页", () => {
     const after = await probe();
     expect(after.rtype).toBe("__all__");
     expect(after.disabledAtStart).toBe(true);
+  });
+
+  test("并发基准 tab：入口就位（并发度 / 每类上限 / 运行）（ADR-262 D5）", async ({ page }) => {
+    // 背景缺陷：concurrent-bench 此前**只有文本**，GUI 里连入口都没有——
+    // 「串行 vs 并行的实测加速比」是主动压测的第一手数据，必须能从界面取到。
+    await clickBySelector(page, '.repo-tab[data-tab="conc"]');
+    const probe = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const pick = (id: string) =>
+        root?.querySelector(`[data-testid="${id}"]`) as HTMLElement | null;
+      const run = pick("diag-perf-conc-run");
+      const workers = pick("diag-perf-conc-workers") as HTMLInputElement | null;
+      const max = pick("diag-perf-conc-max") as HTMLInputElement | null;
+      const out = pick("diag-perf-conc-out");
+      const visible = (el: Element | null) =>
+        Boolean(el && (el as HTMLElement).offsetParent !== null);
+      return {
+        present: Boolean(run && workers && max),
+        runVisible: visible(run),
+        workers: workers?.value ?? "",
+        max: max?.value ?? "",
+        outVisible: visible(out),
+      };
+    });
+    if (!probe.present) throw new Error("未找到并发基准入口（diag-perf-conc-*）");
+    // tab 真的切过去了（面板可见，不是被吞进别的 tab）
+    expect(probe.runVisible).toBe(true);
+    expect(probe.workers).toBe("4");
+    expect(probe.max).toBe("20");
+    // 尚未运行时结果区为空容器（不预置假数据）
+    expect(probe.outVisible).toBe(true);
+    expect(
+      await page.evaluate(() => {
+        const root = document.querySelector("app-content")?.shadowRoot;
+        return (root?.querySelector('[data-testid="diag-perf-conc-out"]')?.textContent ?? "").trim()
+          .length;
+      }),
+    ).toBe(0);
   });
 
   test("日志子 tab：操作日志与运行时日志互斥可见", async ({ page }) => {

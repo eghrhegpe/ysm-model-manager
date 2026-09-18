@@ -39,6 +39,14 @@ function makeRoot(savedTheme = "cyber", savedAuto = "off") {
   const card2 = document.createElement("div");
   card2.className = "theme-card";
   card2.dataset.theme = "warm";
+  // 每卡三个色点（data-var 声明）——供色点回填回归测试断言
+  for (const card of [card1, card2]) {
+    for (const v of ["bg", "accent", "bd"]) {
+      const dot = document.createElement("span");
+      dot.dataset["var"] = v;
+      card.appendChild(dot);
+    }
+  }
   picker.append(card1, card2);
 
   const autoSelect = document.createElement("select");
@@ -131,5 +139,50 @@ describe("initThemeSection", () => {
     safeGet.mockReturnValue("");
     initThemeSection(root);
     expect(applyTheme).toHaveBeenCalledWith("cyber");
+  });
+
+  it("卡片色点按各自主题回填真实色（Shadow DOM 同色缺陷回归）", () => {
+    // 关键修复回归（2026-09）：设置页在 Shadow DOM 内，卡片 .theme-x 类解析不到
+    // document 层 variables.css，var() 只会拿到当前主题 → 六卡同色。
+    // initThemeSection 用 document 探针逐主题取 --bg/--accent/--bd 回填 inline。
+    // 这里以 spy 模拟「document 层已解析出各主题真实值」，验证回填按卡片归属生效。
+    const cssByTheme: Record<string, Record<string, string>> = {
+      "theme-cyber": {
+        "--bg": "#11111b",
+        "--accent": "#9575cd",
+        "--bd": "color-mix(in srgb, rgb(149, 117, 205) 10%, transparent)",
+      },
+      "theme-warm": {
+        "--bg": "#f5f0e1",
+        "--accent": "#8b4513",
+        "--bd": "color-mix(in srgb, rgb(139, 69, 19) 12%, transparent)",
+      },
+    };
+    const getCS = vi
+      .spyOn(globalThis, "getComputedStyle")
+      .mockImplementation((el: Element) => {
+        const key = (el as HTMLElement).className;
+        return {
+          getPropertyValue: (prop: string) => cssByTheme[key]?.[prop] ?? "",
+        } as CSSStyleDeclaration;
+      });
+    const { root, picker } = makeRoot("cyber");
+    initThemeSection(root);
+    expect(picker.querySelectorAll(".theme-card [data-var]").length).toBe(6);
+    // cyber 卡回填 cyber 色
+    expect(
+      (picker.querySelector('.theme-card[data-theme="cyber"] [data-var="bg"]') as HTMLElement).style.background,
+    ).toBe("#11111b");
+    expect(
+      (picker.querySelector('.theme-card[data-theme="cyber"] [data-var="accent"]') as HTMLElement).style.background,
+    ).toBe("#9575cd");
+    // warm 卡回填 warm 色——与 cyber 不同，六卡不再同色
+    expect(
+      (picker.querySelector('.theme-card[data-theme="warm"] [data-var="bg"]') as HTMLElement).style.background,
+    ).toBe("#f5f0e1");
+    expect(
+      (picker.querySelector('.theme-card[data-theme="warm"] [data-var="accent"]') as HTMLElement).style.background,
+    ).toBe("#8b4513");
+    getCS.mockRestore();
   });
 });

@@ -56,7 +56,7 @@ status: active
 - `initTheme()`：动态 import `LoadAppConfig` 读取 Go 配置，取 `localStorage.getItem("theme") || cfg.theme || THEME_DARK`（THEME_DARK = "cyber"）并回写 localStorage；`LoadAppConfig` 失败时 catch 回退 localStorage 或默认暗色，不阻塞启动
 - 系统主题监听：`matchMedia` change 事件仅在 localStorage 主题为 `system` 时重应用，并 toast 提示「已跟随系统切换至深/浅色主题」
 - `applyUIPrefs()`：应用 UI 偏好——`ui-font-size`（**五档** xsmall/small/normal/medium/large = −2/−1/0/+1/+2px，写入 `--fs-scale` 偏移）、`ui-display-font`（`--font-display` 楷体/系统）、`ui-card-density`（`--card-padding`/`--card-gap`）、`ui-animations`（off 时给 `<html>` 加 `no-animations` 类全局关动画）；真基准 `--fs-base-size`（13px）单点定义于 variables.css `:root`，此处不再内联覆盖（旧版曾写死 12px）
-- 设置页入口（frontend/src/views/app-content/settings/init.ts）：主题卡片点选 → `window.applyTheme(themeName)` + 写 localStorage；`theme-auto` 下拉支持 off/系统跟随/按时间（白天 warm、夜晚 cyber）三种自动模式
+- 设置页入口（frontend/src/views/app-content/settings/init.ts）：主题卡片点选 → `window.applyTheme(themeName)` + 写 localStorage；主题卡片色点（--bg/--accent/--bd 预览）经 theme.ts 探针从 variables.css 逐主题取真实色回填 inline——Shadow DOM 内卡片 `.theme-x` 类匹配不到 document 规则，var() 只会拿到当前主题（六卡同色历史缺陷，2026-09 修）；`theme-auto` 下拉支持 off/系统跟随/按时间（白天 warm、夜晚 cyber）三种自动模式
 - `variables.css`：定义 `.theme-cyber`/`.theme-warm`/`.theme-pro`/`.theme-sakura`/`.theme-ocean`/`.theme-mint` 六组变量与 `.no-animations` 双层通配规则（文档层 `.no-animations *` 覆盖光 DOM；shadow 域另 adopt `utils/dom/css.ts` 的 `noAnimationsCSS`）
 
 ## 对外 API / 入口
@@ -76,7 +76,7 @@ status: active
 
 ## 不变量
 
-- 主题切换只允许经 body 的 `theme-*` class，全部视觉值走 CSS 变量，禁止组件内硬编码主题颜色（治理红线 §3.3；主题卡片预览 swatch 的硬编码 hex 属装饰豁免，表述已加限定）
+- 主题切换只允许经 body 的 `theme-*` class，全部视觉值走 CSS 变量，禁止组件内硬编码主题颜色（治理红线 §3.3；设置页主题卡片色点由 theme.ts 探针从 variables.css 取真实色回填 inline，同样零硬编码）
 - 变量取值口径（`variables.css` 头注释已同步）：**亮色主题 `--accent` 取深色系**（文字对比度 ≥4.5:1 on `--bg`）；**深色主题取亮色系**；`--txt`/`--muted` 的色相必须与 `--accent` 同色系（禁止冷灰混入暖色主题等色相脱节）；`--bd` 一律 `color-mix` 派生自 `--accent`（改 accent 无需同步边框）
 - 合法模式仅 6 套皮肤 + `system`，非法值一律回落 `system`，不产生无主题状态
 - `LoadAppConfig` 失败必须回退 localStorage/默认值，主题初始化失败不得阻塞启动序列

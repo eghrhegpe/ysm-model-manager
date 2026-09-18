@@ -144,11 +144,14 @@ function renderStgLangSelect(): string {
   );
 }
 
-// ===== 主题卡片数据：三态色点绑定 + 图标键（单一事实源 = THEME_VALID）=====
-// 色点绑定全仓 var 使用最高频的 3 个主题变量：
+// ===== 主题卡片数据：三态色点声明 + 图标键（单一事实源 = THEME_VALID）=====
+// 色点经 data-var 声明要取的 3 个主题变量（全仓 var 使用最高频）：
 //   --bg(72) 常态基调 / --accent(245) 选中态强调 / --bd(212) 边框选中态
-// 经每张卡 .theme-${t} 作用域类就地解析（CSS 变量跨 Shadow DOM 靠继承穿透），
-// 零硬编码、零运行期 IO、加主题只需 variables.css 加块 + THEME_VALID 加名。
+// 实际色值不在模板内联：主题色只定义在 document 层 variables.css（.theme-x 块），
+// 而设置页处于 Shadow DOM——document 规则不匹配 shadow 内元素，卡片上的 .theme-x
+// 类解析不到，var() 只会落回宿主（当前主题）继承值，导致六卡同色（2026-09 修）。
+// 真实色由 theme.ts initThemeSection 用 document 探针逐主题取回填 inline；
+// 此处 var(--${v}) 仅作回退底色（探针不可用时仍有三点不裸奔）。
 const THEME_SWATCH_VARS = ["bg", "accent", "bd"] as const;
 const THEME_ICON: Record<string, string> = {
   warm: "sun",
@@ -163,11 +166,11 @@ function renderStgThemePicker(): string {
   const cards = THEME_VALID.filter((theme) => theme !== "system")
     .map((theme) => {
       const icon = UI_ICONS[THEME_ICON[theme] as keyof typeof UI_ICONS] ?? UI_ICONS.dot;
-      const label = t(("settings.theme." + theme) as Parameters<typeof t>[0]);
+      const label = t(`settings.theme.${theme}` as Parameters<typeof t>[0]);
       // --bd 是 10-12% 透明 color-mix，直接作底色会隐没在卡片上——统一加 muted 描边保证三点半可辨
       const swatches = THEME_SWATCH_VARS.map(
         (v) =>
-          `<span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--muted);background:var(--${v})"></span>`,
+          `<span data-var="${v}" style="width:8px;height:8px;border-radius:50%;border:1px solid var(--muted);background:var(--${v})"></span>`,
       ).join("");
       return `<div class="theme-card theme-${theme}" data-theme="${theme}">
         <div style="display:flex;gap:2px;margin-bottom:2px">${swatches}</div>

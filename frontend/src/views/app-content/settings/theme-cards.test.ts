@@ -1,14 +1,17 @@
 // @vitest-environment node
-// ===== 主题卡片契约测试（2026-09 立）=====
+// ===== 主题卡片契约测试（2026-09 立，2026-09 修）=====
 //
 // 锁定两件事：
 //   1) 卡片集合与 THEME_VALID 一致 —— 新增主题必须同步加卡片（防「加主题忘加卡片」）
-//   2) 每张卡片三色点绑定 --bg/--accent/--bd 三个变量名 —— 防绑错/漏绑（变量名级契约）
+//   2) 每张卡片三色点以 data-var 声明 --bg/--accent/--bd 三个变量名 —— 防绑错/漏绑（变量名级契约）
 //
-// ⚠️ 本测试**锁定**色点与主题变量的映射关系（非「无映射」）：
-//    每张卡片三色点绑定 --bg / --accent / --bd（全仓 var 使用 72/245/212，
-//    对应常态基调 / 选中态强调 / 边框选中态），经 .theme-x 作用域类就地解析。
-//    因此色点 = 主题实际三态色，无硬编码 hex；加主题忘加卡片 / 改了映射会立刻红。
+// ⚠️ 色点**声明**绑定（非无映射）：
+//    每张卡片三色点声明 --bg / --accent / --bd（全仓 var 使用 72/245/212，
+//    对应常态基调 / 选中态强调 / 边框选中态）。
+//    注意：模板里的 `background:var(--x)` 只是**回退底色**——设置页在 Shadow DOM 内，
+//    document 层 variables.css 的 .theme-x 块匹配不到卡片，var() 只会落回宿主当前主题，
+//    真实色由 theme.ts initThemeSection 的 document 探针逐主题取回填 inline（零硬编码，
+//    值仍以 variables.css 为唯一事实源）。故本契约只锁「声明」，不锁渲染值。
 import { describe, it, expect, vi } from "vitest";
 import { THEME_VALID } from "@/theme-core";
 import { settingsHTML } from "./tpl-settings.ts";
@@ -22,15 +25,15 @@ vi.mock("@/backend/platform-web.ts", () => ({
   canBinding: vi.fn().mockReturnValue(true),
 }));
 
-/** 从设置页 HTML 中抽出每张主题卡片的 data-theme 与三个色点 */
+/** 从设置页 HTML 中抽出每张主题卡片的 data-theme 与三个色点的 data-var 声明 */
 function parseCards(html: string): { theme: string; vars: string[] }[] {
   const cards: { theme: string; vars: string[] }[] = [];
   // 以 .theme-card + data-theme="x" 联合锚切卡片壳（防页面其他 data-theme 元素混入），
-  // 取其首个内层 div（色点容器）里的 var(--xxx)
+  // 取其首个内层 div（色点容器）里的 data-var 声明
   const cardRe = /class="theme-card[^"]*"\s+data-theme="([^"]+)"[^>]*>\s*<div[^>]*>([\s\S]*?)<\/div>/g;
   let m: RegExpExecArray | null;
   while ((m = cardRe.exec(html)) !== null) {
-    const vars = [...m[2].matchAll(/background:\s*var\(--([a-z-]+)\)/g)].map((c) => c[1]);
+    const vars = [...m[2].matchAll(/data-var="([a-z-]+)"/g)].map((c) => c[1]);
     cards.push({ theme: m[1], vars });
   }
   return cards;
@@ -52,7 +55,7 @@ describe("主题卡片契约（THEME_VALID 是唯一事实源）", () => {
     const actual = cards.map((c) => c.theme).sort();
     expect(actual).toEqual(expected);
   });
-  it("每张卡片三色点绑定 --bg/--accent/--bd（常态/选中态/边框三态变量，零硬编码）", () => {
+  it("每张卡片三色点声明 --bg/--accent/--bd（常态/选中态/边框三态变量，零硬编码）", () => {
     for (const card of cards) {
       expect(card.vars).toHaveLength(3);
       // 三态变量完整且无误：防「绑错变量 / 漏绑」

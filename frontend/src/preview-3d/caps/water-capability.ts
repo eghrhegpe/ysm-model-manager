@@ -22,6 +22,7 @@ import {
 // ADR-257：形态「如何组装渲染体 / 如何解释尺寸与水位」已下沉到可注册的策略表，
 // cap 只持有 WaterBody 并按语义 role 取用部件，不再出现 `mode ===` 判别联合。
 import {
+  clampPoolRoundness,
   getWaterBodyStrategy,
   INNER_WALL_OPACITY_FACTOR,
   type WaterBody,
@@ -35,8 +36,10 @@ import { WATER_MODES } from "./water-state.ts";
 
 export type { WaterMode };
 
-/** [shader-patch 守卫] water REVISION 断言 once guard（onBeforeCompile 每帧触发，断言只跑首次） */
-let waterRevisionChecked = false;
+// [shader-patch 守卫] water 的 REVISION 断言在**材质构造期**执行（见 buildWaveWaterMaterial）。
+// 原实现挂在 onBeforeCompile + 模块级 once flag：`waterRevisionChecked` 是进程级单例，
+// 多实例（多 tab / 场景重建）下只有首个实例真正被审计，语义也难推理——现每实例每次构造断言，
+// 构造频率是用户操作级（模式切换 / pool 结构字段变更），开销可忽略。
 
 export class WaterCapability implements SceneCapability {
   readonly id = "water";
@@ -99,6 +102,12 @@ export class WaterCapability implements SceneCapability {
 
   // ── 水材质（波浪 shader + 法线贴图）：film 顶 / pool 顶 共用，避免技术分叉 ──
   private buildWaveWaterMaterial(opts: { forPool: boolean }): THREE.MeshPhysicalMaterial {
+    // [shader-patch 守卫] REVISION 断言：water 锚点是渲染管线稳定 chunk 标记，给宽松范围
+    // [185,190)，升级审计后再收窄。失配即 throw → registry 工厂兜底使本 cap 缺失，拒绝静默降级。
+    assertRevisionRange({
+      module: "water-patch",
+      allowed: ["185", "186", "187", "188", "189"],
+    });
     // 升级到 MeshPhysicalMaterial：pool 模式用 transmission/thickness 体现「水体厚度感」，film 仍降级为原视觉
     const mat = new THREE.MeshPhysicalMaterial({
       color: envState.waterColor,
@@ -116,20 +125,11 @@ export class WaterCapability implements SceneCapability {
     });
 
     mat.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms): void => {
-      // [shader-patch 守卫] 版本断言 once guard：onBeforeCompile 随材质编译每帧触发，
-      // 断言只跑首次（热路径零开销）；water 锚点是渲染管线稳定 chunk 标记，给宽松范围
-      // [185,190)，升级审计后再收窄
-      if (!waterRevisionChecked) {
-        waterRevisionChecked = true;
-        assertRevisionRange({
-          module: "water-patch",
-          allowed: ["185", "186", "187", "188", "189"],
-        });
-      }
       mat.userData.shader = shader;
       shader.uniforms.uTime = this.waterTime;
-      const round = Math.max(0, Math.min(0.5, envState.waterPoolRoundness));
-      shader.uniforms.uRoundness = { value: opts.forPool ? round : 0 };
+      shader.uniforms.uRoundness = {
+        value: opts.forPool ? clampPoolRoundness(envState.waterPoolRoundness) : 0,
+      };
       shader.uniforms.uHalfSize = { value: envState.waterSize / 2 };
       shader.uniforms.uSize = { value: envState.waterSize };
       shader.uniforms.uChoppiness = { value: envState.waterChoppiness };
@@ -147,14 +147,16 @@ export class WaterCapability implements SceneCapability {
          varying float vFoam;
          const int GERSTNER_COUNT = 6;
          float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-         // Gerstner 余摆线：返回 (水平X, 水平Y, 高度)；out 碎波泡沫。
+         // Gerstner 余摆线：返回 (水平X, 水平Y, 高度)；out 碎波泡沫 + out 解析法线。
          // 方向/相位由 wave index hash 播种，freq*=1.19 amp*=0.82 几何级数；
          // 陡度钳制 per-wave σ·k ≤ 0.8/N → Σ ≤ 0.8 防自交。
-         // 注：解析法线注入 objectNormal 为 ADR-255 遗留项（微细节仍由 CPU 法线贴图承担），
-         // 本 pass 只交付位移 + 泡沫掩码。
-         vec3 gerstner(vec2 p, out float foam) {
+         // 解析法线（GPU Gems 1 ch.1）：N = (-Σ D.x·WA·C, -Σ D.y·WA·C, 1 - Σ Q·WA·S)，
+         // 在**物体空间**交付（局部 z 即高度轴），由 beginnormal_vertex 注入覆盖 objectNormal
+         // ——ADR-255 §2.1 于 2026-09-18 落地；CPU 法线贴图自此只承担微细节叠加。
+         vec3 gerstner(vec2 p, out float foam, out vec3 nrm) {
            vec3 disp = vec3(0.0);
            float jxx = 0.0, jzz = 0.0, jxz = 0.0;
+           nrm = vec3(0.0);
            for (int i = 0; i < GERSTNER_COUNT; i++) {
              float fi = float(i);
              float ang = hash11(fi + 1.0) * 6.2831853;
@@ -173,10 +175,29 @@ export class WaterCapability implements SceneCapability {
              jxx += steep * wa * dir.x * dir.x * c;
              jzz += steep * wa * dir.y * dir.y * c;
              jxz += steep * wa * dir.x * dir.y * c;
+             // 法线偏导：水平面内 -Σ D·WA·C，高度轴 -Σ Q·WA·S
+             nrm.x -= dir.x * wa * c;
+             nrm.y -= dir.y * wa * c;
+             nrm.z -= steep * wa * s;
            }
+           nrm.z += 1.0;
+           nrm = normalize(nrm);
            float J = (1.0 + jxx) * (1.0 + jzz) - jxz * jxz;
            foam = smoothstep(0.0, -0.25, J);
            return disp;
+         }`,
+      );
+      // 解析法线覆盖：必须在 beginnormal_vertex **之后**（objectNormal 由该 chunk 声明）、
+      // defaultnormal_vertex **之前**（后者经 normalMatrix 变换并对背面翻转）。
+      // 此处只能用 position 属性——transformed 尚未在 begin_vertex 定义。
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <beginnormal_vertex>",
+        `#include <beginnormal_vertex>
+         {
+           float gnf;
+           vec3 ysmWaveNormal;
+           gerstner(position.xy * uSize, gnf, ysmWaveNormal);
+           objectNormal = ysmWaveNormal;
          }`,
       );
       shader.vertexShader = shader.vertexShader.replace(
@@ -184,7 +205,8 @@ export class WaterCapability implements SceneCapability {
         `#include <begin_vertex>
          vec2 wpos = transformed.xy * uSize;
          float gf;
-         vec3 gdisp = gerstner(wpos, gf);
+         vec3 gWaveNormalUnused;
+         vec3 gdisp = gerstner(wpos, gf, gWaveNormalUnused);
          transformed.x += gdisp.x;
          transformed.y += gdisp.y;
          transformed.z += gdisp.z;
@@ -216,15 +238,16 @@ export class WaterCapability implements SceneCapability {
          gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.92, 0.95, 0.98), vFoam * 0.55);
          gl_FragColor.a = min(gl_FragColor.a, uBaseOpacity);`,
       );
-      // [shader-patch 守卫] 注入检测：5 次无条件 replace 原本零检测（失配全静默）。
-      // 现检查关键符号是否落地——vertex 的 wave 函数 / fragment 的 uRoundness 裁剪段，
-      // 任一缺失即告警（console 兜底），不再静默降级
+      // [shader-patch 守卫] 注入检测：多次无条件 replace 原本零检测（失配全静默）。
+      // 现检查三处关键符号是否落地——vertex 的 wave 函数 / beginnormal 的法线覆盖 /
+      // fragment 的 uRoundness 裁剪段，任一缺失即告警（console 兜底），不再静默降级
       const vertexOk = shader.vertexShader.includes("vec3 gerstner(");
+      const normalOk = shader.vertexShader.includes("objectNormal = ysmWaveNormal;");
       const fragOk = shader.fragmentShader.includes("uRoundness");
-      if (!vertexOk || !fragOk) {
+      if (!vertexOk || !normalOk || !fragOk) {
         reportPatchIssue(
           "water",
-          `water onBeforeCompile 锚点失配（vertex=${vertexOk ? "ok" : "miss"} fragment=${fragOk ? "ok" : "miss"}），水面波纹/圆角/透明度 clamp 可能失效。请检查 three 渲染管线 chunk 标记是否变更。`,
+          `water onBeforeCompile 锚点失配（vertex=${vertexOk ? "ok" : "miss"} normal=${normalOk ? "ok" : "miss"} fragment=${fragOk ? "ok" : "miss"}），水面波浪法线 / 波纹 / 圆角 / 透明度 clamp 可能失效。请检查 three 渲染管线 chunk 标记是否变更。`,
           "warn",
         );
       }
@@ -405,7 +428,8 @@ export class WaterCapability implements SceneCapability {
         (m.material as THREE.MeshStandardMaterial).color.setHex(s.waterPoolWallColor);
       }
     }
-    // poolRoundness → top uRoundness uniform
+    // poolRoundness → top uRoundness uniform（经 clampPoolRoundness——与构造期同一钳制，
+    // 防存档恢复/其他 cap 直写 envState 时越界值从这条路径漏进 uniform）
     if (changed.has("waterPoolRoundness")) {
       const top = this.findTopWater();
       if (top) {
@@ -414,7 +438,9 @@ export class WaterCapability implements SceneCapability {
             userData: { shader?: { uniforms: { uRoundness?: { value: number } } } };
           }
         ).userData?.shader;
-        if (shader?.uniforms?.uRoundness) shader.uniforms.uRoundness.value = s.waterPoolRoundness;
+        if (shader?.uniforms?.uRoundness) {
+          shader.uniforms.uRoundness.value = clampPoolRoundness(s.waterPoolRoundness);
+        }
       }
     }
     // clarity → 水面 + 内壁 transmission（仅启用体积光学的形态，避免把 film 水膜变透光体）
@@ -523,7 +549,7 @@ export class WaterCapability implements SceneCapability {
   }
 
   setPoolRoundness(v: number): void {
-    setEnvState({ waterPoolRoundness: Math.max(0, Math.min(0.5, v)) }, { source: "manual" });
+    setEnvState({ waterPoolRoundness: clampPoolRoundness(v) }, { source: "manual" });
   }
   getPoolRoundness(): number {
     return envState.waterPoolRoundness;

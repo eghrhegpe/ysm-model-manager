@@ -34,6 +34,7 @@ auto_fields:
     - buildWaterNodes
     - CapabilityId
     - CapabilityMap
+    - clampPoolRoundness
     - customHdrThumbnail
     - DeepPartial
     - DEFAULT_GROUND_SURFACE_PARAMS
@@ -115,6 +116,7 @@ auto_fields:
     - paramIsEffective
     - persistState
     - pickPersistFields
+    - POOL_ROUNDNESS_MAX
     - poolStrategy
     - POSTPROC_PERSIST_FIELDS
     - PostprocessingCapability

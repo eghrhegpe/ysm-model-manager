@@ -12,6 +12,12 @@
 // 为何 getTargets 用语义 role 而非 mesh name：role 是可枚举的联合类型，
 // 且在不支持该部件的形态下自然返回空数组——正因如此，
 // cap 里「颜色要作用于水面与内壁」这类逻辑才能写成一行同时适配两种形态的表达式。
+//
+// 2026-09-18 收口（ADR-257 勘误）：原实现把 name 字符串寻址从 cap 搬进本文件
+// （`m.name === "ysm-water-top"` / `endsWith("-inner")`）——字符串契约并未消除，
+// 且每次参数变更都要 traverse 全树做字符串比较。现改为 **build 期预捕获**：
+// 形态在装配时就把各 role 的 mesh 引用塞进 `WaterBody.parts`，运行时 getTargets 纯查表，
+// 与 mesh.name 彻底解耦（测试以「全树改名后仍能取出」为反证）。
 
 import * as THREE from "three";
 import { envState } from "@/preview-3d/state/env-state.ts";
@@ -21,6 +27,15 @@ import type { WaterMode } from "./water-state.ts";
 /** 池内壁相对水面不透明度的衰减因子（池壁比水面更实，观感更稳）。
  *  构建（build）与运行期（waterOpacity 变更）必须共用同一因子，否则内壁透明度会脱节。 */
 export const INNER_WALL_OPACITY_FACTOR = 0.85;
+
+/** 圆角参数合法域（与菜单 slider 的 min/max 一致）。
+ *  构建期与运行期必须共用同一钳制——只钳一处会让越界值从另一条路径漏进 uniform。 */
+export const POOL_ROUNDNESS_MAX = 0.5;
+
+/** 把任意来源的 roundness 钳到合法域（setter 之外还有存档恢复/其他 cap 直写两条路径） */
+export function clampPoolRoundness(v: number): number {
+  return Math.max(0, Math.min(POOL_ROUNDNESS_MAX, v));
+}
 
 /** 承载波浪材质的顶水面 */
 export type WaterTopMesh = THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhysicalMaterial>;
@@ -33,6 +48,9 @@ export interface WaterBuildContext {
   getNormalMap(): THREE.DataTexture;
 }
 
+/** 部件语义角色——取代旧的 mesh-name 字符串寻址 */
+export type WaterPartRole = "surface" | "floor" | "wallInner" | "wallOuter";
+
 /** 组装完成的渲染体 */
 export interface WaterBody {
   /** 形态标识——保留给既有断言与排错可读性 */
@@ -40,10 +58,12 @@ export interface WaterBody {
   root: THREE.Object3D;
   /** 承载波浪材质的顶水面：film 即 root 本体，pool 为 group 内预捕获引用 */
   top: WaterTopMesh;
+  /**
+   * 各语义角色在 build 期预捕获的 mesh 引用（YSM-2026-09-18）。
+   * 不支持该部件的形态给空数组——「颜色作用于 surface + wallInner」才能一行适配两形态。
+   */
+  readonly parts: Record<WaterPartRole, THREE.Mesh[]>;
 }
-
-/** 部件语义角色——取代旧的 mesh-name 字符串寻址 */
-export type WaterPartRole = "surface" | "floor" | "wallInner" | "wallOuter";
 
 export interface WaterBodyStrategy {
   readonly id: WaterMode;
@@ -65,15 +85,6 @@ export interface WaterBodyStrategy {
   needsRebuild(changed: Set<string>): boolean;
 }
 
-/** 收集 body 下所有 mesh（抹平 Mesh / Group 差异） */
-function meshesOf(root: THREE.Object3D): THREE.Mesh[] {
-  const out: THREE.Mesh[] = [];
-  root.traverse((o) => {
-    if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh);
-  });
-  return out;
-}
-
 /* ============ film：贴地薄水膜（单位平面 + scale 驱动尺寸）============ */
 
 const filmStrategy: WaterBodyStrategy = {
@@ -88,10 +99,16 @@ const filmStrategy: WaterBodyStrategy = {
     root.position.y = envState.waterLevel;
     root.scale.set(envState.waterSize, envState.waterSize, 1);
     root.name = "ysm-ground-water";
-    return { mode: "film", root, top: root };
+    return {
+      mode: "film",
+      root,
+      top: root,
+      // 薄水膜无容器部件：容器类 role 恒为空数组（cap 侧的一行表达式正依赖此约定）
+      parts: { surface: [root], floor: [], wallInner: [], wallOuter: [] },
+    };
   },
   getTargets(body, role) {
-    return role === "surface" ? [body.top] : [];
+    return body.parts[role];
   },
   applyLevel(body, level) {
     body.top.position.y = level;
@@ -164,6 +181,10 @@ const poolStrategy: WaterBodyStrategy = {
       metalness: 0,
     });
 
+    // 预捕获容器：内 / 外壁按 role 分组，运行时零遍历取件
+    const wallInner: THREE.Mesh[] = [];
+    const wallOuter: THREE.Mesh[] = [];
+
     const wallPairs: Array<{
       name: string;
       axis: "ns" | "ew";
@@ -218,22 +239,20 @@ const poolStrategy: WaterBodyStrategy = {
       outer.position.copy(pair.outerPos);
       if (pair.rotY) outer.rotation.y = pair.rotY;
       group.add(inner, outer);
+      // 预捕获：运行时按 role 取件不再遍历 + name 匹配（name 仅保留给调试可读性）
+      wallInner.push(inner);
+      wallOuter.push(outer);
     }
 
-    return { mode: "pool", root: group, top };
+    return {
+      mode: "pool",
+      root: group,
+      top,
+      parts: { surface: [top], floor: [bottom], wallInner, wallOuter },
+    };
   },
   getTargets(body, role) {
-    const all = meshesOf(body.root);
-    switch (role) {
-      case "surface":
-        return all.filter((m) => m.name === "ysm-water-top");
-      case "floor":
-        return all.filter((m) => m.name === "ysm-water-bottom");
-      case "wallInner":
-        return all.filter((m) => m.name.endsWith("-inner"));
-      case "wallOuter":
-        return all.filter((m) => m.name.endsWith("-outer"));
-    }
+    return body.parts[role];
   },
   applyLevel(body, level) {
     body.top.position.y = level;

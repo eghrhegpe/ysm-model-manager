@@ -137,6 +137,7 @@ auto_fields:
     - CapControlView
     - captureTextureName
     - checkRevision
+    - clampPoolRoundness
     - cleanupPreview
     - clearEnvCallbacks
     - clearEnvStateMiddlewares
@@ -572,6 +573,7 @@ auto_fields:
     - PmxReader
     - PmxRigidBodyData
     - PmxVertexData
+    - POOL_ROUNDNESS_MAX
     - poolStrategy
     - PoseScene
     - POSTPROC_PERSIST_FIELDS

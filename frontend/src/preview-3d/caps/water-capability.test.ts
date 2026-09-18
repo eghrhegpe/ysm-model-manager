@@ -1,8 +1,9 @@
 // @vitest-environment node
 // ===== WaterCapability 测试（ADR-196 迁移至 envState）=====
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
 import {
+  clampPoolRoundness,
   filmStrategy,
   poolStrategy,
   type WaterBody,
@@ -256,7 +257,10 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
   function fakeShader() {
     return {
       uniforms: {} as Record<string, { value: number }>,
-      vertexShader: "#include <common>\nvoid main() {\n#include <begin_vertex>\n}",
+      // 锚点顺序对齐 three 官方 meshphysical_vert：beginnormal_vertex 先于 begin_vertex
+      // （法线解析要用 position、位移要用 transformed，二者不可互换）
+      vertexShader:
+        "#include <common>\nvoid main() {\n#include <beginnormal_vertex>\n#include <begin_vertex>\n}",
       fragmentShader: "#include <common>\nvoid main() {\n#include <dithering_fragment>\n}",
     };
   }
@@ -281,6 +285,75 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     expect(shader.fragmentShader).toContain("vWorldPos_wave");
     expect(shader.fragmentShader).toContain("vFoam");
     expect(shader.fragmentShader).toContain("gl_FragColor.a *= fade;");
+  });
+
+  it("解析法线：beginnormal_vertex 后注入 objectNormal 覆盖（ADR-255 §2.1 落地）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    // gerstner 以 out 参数交付解析法线（GPU Gems 1 ch.1）
+    expect(shader.vertexShader).toContain("out vec3 nrm");
+    // 锚点顺序：覆盖必须发生在 beginnormal_vertex 之后，否则 objectNormal 尚未声明
+    const anchor = shader.vertexShader.indexOf("#include <beginnormal_vertex>");
+    const assign = shader.vertexShader.indexOf("objectNormal = ysmWaveNormal;");
+    expect(anchor).toBeGreaterThanOrEqual(0);
+    expect(assign).toBeGreaterThan(anchor);
+    // 三项偏导累加：nz 以高度项 1.0 起算（GPU Gems 的 1 - ΣQ·WA·S）
+    expect(shader.vertexShader).toContain("nrm.x -= dir.x * wa * c;");
+    expect(shader.vertexShader).toContain("nrm.y -= dir.y * wa * c;");
+    expect(shader.vertexShader).toContain("nrm.z -= steep * wa * s;");
+    expect(shader.vertexShader).toContain("nrm.z += 1.0;");
+  });
+
+  it("锚点失配不再静默：缺 beginnormal_vertex 锚点时 reportPatchIssue 告警", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const broken = fakeShader();
+    broken.vertexShader = broken.vertexShader.replace("#include <beginnormal_vertex>\n", "");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      mat.onBeforeCompile(
+        broken as unknown as THREE.WebGLProgramParametersWithUniforms,
+        undefined as unknown as THREE.WebGLRenderer,
+      );
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("uRoundness 运行期越界值被 clamp 到 [0, 0.5]（绕过 setter 的路径不再漏网）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.setWaterMode("pool");
+    cap.apply();
+    const top = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh).getObjectByName(
+      "ysm-water-top",
+    ) as THREE.Mesh;
+    const mat = top.material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    // 直写 envState（模拟存档恢复/其他 cap 写入，绕开 setPoolRoundness 的入口 clamp）
+    setEnvState({ waterPoolRoundness: 9 }, { source: "manual" });
+    const live = (
+      mat as unknown as {
+        userData: { shader: { uniforms: { uRoundness: { value: number } } } };
+      }
+    ).userData.shader;
+    expect(live.uniforms.uRoundness.value).toBeCloseTo(0.5, 5);
   });
 
   it("film 模式 waterSize 变更不重建 mesh（scale 驱动，ADR-255 改造 A）", () => {
@@ -735,7 +808,7 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
 describe("WaterCapability — 水面/容器解耦：waterLevel（ADR-257 A 档）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  /** schema 默认值，与 scene-capability.ts|GROUND_LAYER_OFFSETS.waterFilm 同源（0.01） */
+  /** schema 默认值 = 0.01（历史 film 水膜微抬量；原 GROUND_LAYER_OFFSETS.waterFilm 已于 ADR-257 后删除） */
   const DEFAULT_LEVEL = 0.01;
 
   it("film：改 waterLevel 不重建 mesh 且 root.position.y 跟随", () => {
@@ -809,30 +882,30 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
 
   const bodyOf = (cap: WaterCapability) => (cap as unknown as { water: WaterBody }).water;
 
-  it("pool：getTargets(role) 与旧 mesh-name 寻址口径完全等价（防重构行为漂移）", () => {
+  it("pool：getTargets(role) 直出 build 期预捕获引用（零遍历、零字符串匹配）", () => {
     const cap = new WaterCapability({ scene: new THREE.Scene() });
     cap.apply();
     cap.setWaterMode("pool");
     const body = bodyOf(cap);
-    const cases: Array<[WaterPartRole, (m: THREE.Mesh) => boolean]> = [
-      ["surface", (m) => m.name === "ysm-water-top"],
-      ["floor", (m) => m.name === "ysm-water-bottom"],
-      ["wallInner", (m) => m.name.endsWith("-inner")],
-      ["wallOuter", (m) => m.name.endsWith("-outer")],
-    ];
-    for (const [role, pick] of cases) {
-      expect(poolStrategy.getTargets(body, role)).toEqual(collect(body.root).filter(pick));
+    const roles: WaterPartRole[] = ["surface", "floor", "wallInner", "wallOuter"];
+    for (const role of roles) {
+      expect(poolStrategy.getTargets(body, role)).toBe(body.parts[role]); // 引用恒等 = 查表直出
     }
     // 四个内壁 + 四个外壁都取得到，确保 role 覆盖完整而非部分匹配
     expect(poolStrategy.getTargets(body, "wallInner")).toHaveLength(4);
     expect(poolStrategy.getTargets(body, "wallOuter")).toHaveLength(4);
+    // 反证：全树改名后仍能取出——mesh-name 字符串契约已彻底消除（旧实现此断言必红）
+    for (const m of collect(body.root)) m.name = `renamed-${m.name}`;
+    expect(poolStrategy.getTargets(body, "wallInner")).toHaveLength(4);
+    expect(poolStrategy.getTargets(body, "wallOuter")).toHaveLength(4);
+    expect(poolStrategy.getTargets(body, "surface")).toHaveLength(1);
   });
 
   it("film：容器类 role 一律为空数组——这是「一行表达式同时适配两种形态」的机理", () => {
     const cap = new WaterCapability({ scene: new THREE.Scene() });
     cap.apply();
     const body = bodyOf(cap);
-    expect(filmStrategy.getTargets(body, "surface")).toEqual([body.top]);
+    expect(filmStrategy.getTargets(body, "surface")).toBe(body.parts.surface);
     expect(filmStrategy.getTargets(body, "floor")).toEqual([]);
     expect(filmStrategy.getTargets(body, "wallInner")).toEqual([]);
     expect(filmStrategy.getTargets(body, "wallOuter")).toEqual([]);
@@ -843,6 +916,14 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     expect(filmStrategy.supportsVolumeOptics).toBe(false);
     expect(poolStrategy.wetnessGated).toBe(false);
     expect(poolStrategy.supportsVolumeOptics).toBe(true);
+  });
+
+  it("clampPoolRoundness 边界：负值归零、超上限取 0.5（构造期与运行期共用同一域）", () => {
+    expect(clampPoolRoundness(-1)).toBe(0);
+    expect(clampPoolRoundness(0)).toBe(0);
+    expect(clampPoolRoundness(0.25)).toBeCloseTo(0.25, 5);
+    expect(clampPoolRoundness(0.5)).toBeCloseTo(0.5, 5);
+    expect(clampPoolRoundness(9)).toBeCloseTo(0.5, 5);
   });
 
   it("needsRebuild 由形态自行声明：film 永不重建；pool 因结构字段重建、但不因 waterLevel 重建", () => {

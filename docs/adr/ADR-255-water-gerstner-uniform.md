@@ -61,6 +61,19 @@
 - pool `transmission` RT 成本 / 透明排序（改造 C）未纳入本次，列为可选后续。
 - 未引入 Planar/SSR 反射（对模型预览器收益低、抢帧预算），与行业"互补叠加"路线在本项目刻意取舍。
 
+### 补记（2026-09-18）：解析法线**当时未落地**，本次才补齐
+- 事实核对：本 ADR 采纳时，§2.1/§2.3 承诺的「解析法线覆盖 `objectNormal`」**并未实现**——代码内注释
+  自认为遗留项（"解析法线注入 objectNormal 为 ADR-255 遗留项"），实际只交付了顶点位移 + Jacobian 泡沫，
+  而 `gerstner()` 里为算泡沫累加的三个偏导（jxx/jzz/jxz）没有一处在法线上。
+- 后果（静默的视觉债）：波峰位移是真的、明暗是假的。光照法线仍来自 256² CPU 法线贴图，
+  与 Gerstner 波形无关 → 波峰高光与波峰错位；改 `choppiness` 时位移变化而高光不变。
+- 本次收口：`gerstner()` 增设 `out vec3 nrm`，按 GPU Gems 1 ch.1 三项偏导累加
+  （`nrm.x -= dir.x·wa·c` / `nrm.y -= dir.y·wa·c` / `nrm.z -= steep·wa·s`，终值 `nrm.z += 1.0` 后归一化），
+  于 `#include <beginnormal_vertex>` 之后注入 `objectNormal = ysmWaveNormal`（物体空间，局部 z 即高度轴）。
+  至此本文档 §2.3「解析法线为主，CPU 法线贴图降级微细节」与实现一致。
+- 守卫同步：注入检测新增 `normalOk`（`objectNormal = ysmWaveNormal` 落地检查），三处锚点任一失配即告警。
+
+
 ## 4. 数据溯源
 
 - 用户需求"three 水面设计如何 / 行业内如何解决"→ 网页搜索行业实践（three.js WaterThreeJS Gerstner spectrum + SSR / Unity HDRP Gerstner+FFT / Crest Planar+SSR+Probe / Stylized Water 3 反射路线对比 / 移动端 Tier 分级）→ 锐评定位 YSM 为模型预览器，"伪水"可接受、真正要命是两块工程债 → 出方案拍板 A+B → TDD 改造（同步测试 L263/L265/L532 契约）。

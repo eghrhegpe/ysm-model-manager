@@ -142,3 +142,36 @@ interface WaterBodyStrategy {
 | **把 pool 也改成 scale 驱动高度（墙体用 texture/顶点位移）** | 过度设计。墙几何本就低频变更，为省一次重建引入 shader 复杂度不划算；且 pool 用户本就需要真几何来界定容器。 |
 | **直接上 C 档（surface/vessel 完全正交）** | 无第三种形态验证接口，凭空建模。`YAGNI`——见 §2.5。 |
 | **保留 name 字符串寻址，仅加注释约束** | 字符串契约无法被类型系统或 lint 校验，历史已证明属于「能跑但脆」的债。本次随 B 档一并消除。 |
+
+---
+
+## 6. 补记（2026-09-18）：§2.3 的两处「声称已达成、实际未达成」收口
+
+### 6.1 `getTargets` 的字符串寻址只搬了家，未消除（本次修复）
+
+- 事实核对：落地后 `poolStrategy.getTargets` 内部仍是 `m.name === "ysm-water-top"` /
+  `m.name.endsWith("-inner" | "-outer")` 过滤——mesh-name 契约从 cap 搬进 strategy，脆弱性原样保留；
+  且每次参数变更（拖滑块）都要 `traverse` 整棵树做 9 次字符串比较。测试当时以
+  「与旧 name 寻址口径完全等价」为断言，等于把这个契约**固化**下来而非消除。
+- 本次收口：`WaterBody` 新增 `parts: Record<WaterPartRole, THREE.Mesh[]>`，形态在 **build 期预捕获**
+  各 role 的 mesh 引用（`top` 早已预捕获，floor/内壁/外壁补齐同款待遇）；`getTargets` 退化为
+  `return body.parts[role]` —— 运行时零遍历、零字符串匹配（`name` 现在只服务调试可读性）。
+  不支持的 role 由形态给空数组，cap 侧「颜色作用于 surface + wallInner」的一行表达式语义保持不变。
+- 测试反证改写为「把全树 mesh 改名后仍能取出」，使该契约**无法**再退化回 name 依赖。
+
+### 6.2 `GROUND_LAYER_OFFSETS.waterFilm` 成为零消费者常量（本次删除）
+
+- film 水膜 y 改由 `envState.waterLevel` 驱动后，`waterFilm: 0.01` 再无任何渲染消费者，
+  只剩注释声称「与 schema 默认值同源」。本次按不变量「零消费者字段即时删除」移除，
+  schema 的 `waterLevel: 0.01` 就此成为唯一事实源（知识卡 `ground_surface_spec.md` 同步改口径）。
+
+### 6.3 登记遗留（本次未处理）
+
+- **`waterSize` 在 UI 无入口**：全仓唯一写入点是 `loadState` 的 `size` 恢复（+ 测试直写）。
+  即 ADR-255 改造 A 的「size 零重建」优化目前服务的是一条用户不可达路径。
+- **放开 size 入口前须先解决法线重算**：film 改 size 会同步触发 `getNormalMap()` 全量重算
+  256²（65536 像素 × 每像素 3 个 `Vector2` + 3 次 `cos` + 归一化）并阻塞主线程——拖滑块必掉帧。
+  可选方向：降采样、按 tile 生成、或把微细节法线整体搬到 shader 程序化（省掉 CPU 侧整条链路）。
+- **`max(0.5)` 自由度**：`waterLevel` 与容器参数解耦后的自由组合仍可产生「水面高于墙顶」等异常观感，
+  维持 §3「刻意保留自由度，如需约束应走 preset」的既有结论。
+

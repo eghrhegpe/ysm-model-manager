@@ -157,16 +157,17 @@ export function ringLog(
 
 /**
  * 贴地平面分层偏移（世界单位；Minecraft 1 单位 = 1 方块，0.01 即厘米级）。
- * z-fighting 防御的唯一口径（2026-09 锐评 P4 收敛）：ground 承接面最上、water 水膜再上、
- * pool 底微抬、reflector 平面下沉让位——各层方向与量级语义各异，取用时按名引用，禁止互相推导。
+ * z-fighting 防御的唯一口径（2026-09 锐评 P4 收敛）：ground 承接面最上、pool 底微抬、
+ * reflector 平面下沉让位——各层方向与量级语义各异，取用时按名引用，禁止互相推导。
+ *
+ * 注：原 `waterFilm: 0.01`（film 水膜写死高度）已随 ADR-257 删除——film 的水面 y 现由
+ * `envState.waterLevel`（默认同为 0.01）驱动，是唯一事实源，不再是本分层的常量成员。
  */
 export const GROUND_LAYER_OFFSETS = {
   /** ground 承接面（SurfaceMesh）相对 y=0 的微抬 */
   groundSurface: 0.005,
-  /** ADR-249 §2.3 装饰叠加层（透明格线，位于 surface 之上、water 之下） */
+  /** ADR-249 §2.3 装饰叠加层（透明格线，位于 surface 之上） */
   groundOverlay: 0.007,
-  /** water film 模式水膜高度（高于 groundSurface，避免与地面闪面） */
-  waterFilm: 0.01,
   /** water pool 池底相对 y=0 的微抬（贴 GridHelper 基准面） */
   waterPoolBottom: 0.0001,
   /** reflector 平面下沉（位于 ground 承接面之下，两层不相交即无 z-fighting） */

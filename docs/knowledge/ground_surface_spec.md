@@ -135,7 +135,7 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 ## 已知遗留（ADR-249 §2.7 登记）
 
 1. **旧网格层与表面层字段语义重叠（病例 C）**：`env-state-schema.ts` 同时存在两套语义重叠的地面字段——旧网格层（y=0，`groundType` plain/grid/checker/lines/dots + `groundColor` tuple3 + `groundLineColor` tuple3，即 GridHelper）与表面层（y=0.005，`groundSourceKind`/`groundCanvasStyle` + `groundMatColor` hex + `groundMatLineColor` hex + …）。两套都表达「底色/线色/样式」，是历史层叠的双重实现。**未合并**（ADR-249 显式排除以避免范围蔓延）；合并是独立议题。
-2. **地面 y 位置固定**：承接面/叠加层/水膜高度均取 `GROUND_LAYER_OFFSETS` 常量，不可调（与菜单拆轴无关）。
+2. **地面 y 位置固定（水膜已豁免）**：承接面 / 叠加层 y 取 `GROUND_LAYER_OFFSETS` 常量，不可调（与菜单拆轴无关）；**水面高度自 ADR-257 起改由 `envState.waterLevel` 驱动**（默认 0.01，菜单 `ground-water-level` 可调，film/pool 共用），原 `GROUND_LAYER_OFFSETS.waterFilm` 常量因零消费者已于 2026-09-18 删除（见不变量 1c）。
 3. **叠加层样式集可扩展**（ADR-249/251）：已落地 grid/checker/stripes/diamond；scan/glowEdge 等待扩展（只需改 `GROUND_OVERLAY_STYLES` + `generateOverlayPixels` 分支）。
 4. **噪声材质重建开销**（ADR-252 未知遗留）：`density` 属 structural，每次变更触发 512² × 3 次 `valueNoise` 重建；拖拽密度滑杆可能卡顿（测试已因此触及 5s 超时，用例改用廉价材质规避）。优化方向：降采样或重建节流。
 

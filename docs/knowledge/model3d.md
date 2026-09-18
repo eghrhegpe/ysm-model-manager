@@ -615,6 +615,7 @@ auto_fields:
     - readVrmMeta
     - rebuildDebug
     - recordLoadTrace
+    - recoverMountFailure
     - REFLECTION_MODES
     - ReflectionMode
     - ReflectorCapability

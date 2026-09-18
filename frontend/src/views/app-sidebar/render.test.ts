@@ -83,23 +83,23 @@ describe("instanceCardHeaderHTML 徽章 chips（真实实现）", () => {
   it("missing>0 && !hasMod → 不显示 red 标签，改显 noMods 灰标签（带 rtype 标签）", () => {
     const html = instanceCardHeaderHTML("P", 0, 5, 0, "missing", 0, false, "ysm");
     expect(html).not.toContain('class="tag red"');
-    expect(html).toContain('<span class="tag gray" data-role="no-mods">🚫 无YSM</span>');
+    expect(html).toContain('<span class="tag gray" data-role="no-mods">无YSM</span>');
   });
 
   it("rtype 无展示配置 → noMods 灰标签回落为 rtype 原始 id", () => {
     const html = instanceCardHeaderHTML("P", 0, 5, 0, "missing", 0, false, "custom-type");
-    expect(html).toContain('<span class="tag gray" data-role="no-mods">🚫 无custom-type</span>');
+    expect(html).toContain('<span class="tag gray" data-role="no-mods">无custom-type</span>');
   });
 
   it("MMD 子类型（场景模型）无模组 → 统一显示 无MMD，不显 无场景模型", () => {
     const html = instanceCardHeaderHTML("P", 0, 5, 0, "missing", 0, false, "SceneModel");
-    expect(html).toContain('<span class="tag gray" data-role="no-mods">🚫 无MMD</span>');
+    expect(html).toContain('<span class="tag gray" data-role="no-mods">无MMD</span>');
     expect(html).not.toContain("无场景模型");
   });
 
   it("vrm 虽在 mmd 组但保持独立 VRM 标签", () => {
     const html = instanceCardHeaderHTML("P", 0, 5, 0, "missing", 0, false, "vrm");
-    expect(html).toContain('<span class="tag gray" data-role="no-mods">🚫 无VRM</span>');
+    expect(html).toContain('<span class="tag gray" data-role="no-mods">无VRM</span>');
   });
 
   it("hasMod && 全零 → 显 '0' 标签（带 data-role）", () => {

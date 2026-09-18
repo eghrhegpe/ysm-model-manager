@@ -474,10 +474,13 @@ describe("失败路径补强（batch.move 部分失败 / getApp reject 兜底）
     expect(item).toBeTruthy();
     return item!.onClick!();
   }
-  function allToasts(): string[] {
+  function toastObjs(): ToastPayload[] {
     return emitted
       .filter((e) => e.e === "toast:show")
-      .map((e) => (e.p as ToastPayload).msg);
+      .map((e) => e.p as ToastPayload);
+  }
+  function allToasts(): string[] {
+    return toastObjs().map((p) => p.msg);
   }
 
   it("batch.move 部分失败 → toast 同时报告成功与失败数", async () => {
@@ -489,12 +492,15 @@ describe("失败路径补强（batch.move 部分失败 / getApp reject 兜底）
     expect(allToasts().some((m) => m.includes("1 个已移动") && m.includes("1 失败"))).toBe(true);
   });
 
+  // ADR-267：error toast 由 type 驱动图标，msg 载荷不再带 ❌ 前缀
   it("batch.move 全部失败 → error toast", async () => {
     modalPromptMock.mockResolvedValue("作者A");
     GetRepoRootMock.mockResolvedValue("/repo/models");
     MoveModelFileMock.mockRejectedValue(new Error("EACCES"));
     await clickMove(["/a.ysm"]);
-    expect(allToasts().some((m) => m.includes("❌ 移动失败"))).toBe(true);
+    expect(
+      toastObjs().some((p) => p.type === "error" && p.msg.includes("移动失败")),
+    ).toBe(true);
   });
 
   it("batch.move getApp 拒绝 → error toast 且 handler 不抛（P2 兜底）", async () => {
@@ -502,6 +508,6 @@ describe("失败路径补强（batch.move 部分失败 / getApp reject 兜底）
     const { getApp } = await import("@/backend/app.ts");
     vi.mocked(getApp).mockRejectedValueOnce(new Error("boom"));
     await clickMove(["/a.ysm"]);
-    expect(allToasts().some((m) => m.includes("❌"))).toBe(true);
+    expect(toastObjs().some((p) => p.type === "error")).toBe(true);
   });
 });

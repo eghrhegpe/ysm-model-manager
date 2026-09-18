@@ -124,7 +124,7 @@ describe("bindDragEvents 拖拽 JSON 导入", () => {
     expect(allCreators.map((c) => c.name)).toEqual(["新A", "新B"]);
     const toast = await toastP;
     expect(toast.type).toBe("success");
-    expect(toast.msg).toBe("✅ 创作者: 新增 2，更新 1");
+    expect(toast.msg).toBe("创作者: 新增 2，更新 1");
     expect(refresh).toHaveBeenCalled();
   });
 
@@ -158,7 +158,7 @@ describe("bindDragEvents 拖拽 JSON 导入", () => {
     expect(allSites.find((s) => s.id === "s1")?.label).toBe("站点1新");
     expect(allSites.find((s) => s.id === "s2")?.label).toBe("新站");
     const toast = await toastP;
-    expect(toast.msg).toBe("✅ 站点: 新增 1，更新 1"); // 计数以 Go 返回为准
+    expect(toast.msg).toBe("站点: 新增 1，更新 1"); // 计数以 Go 返回为准
     expect(refresh).toHaveBeenCalled();
   });
 

@@ -188,6 +188,7 @@ auto_fields:
     - readPmxStats
     - readVrmMeta
     - readWebFile
+    - recoverMountFailure
     - removeOwnHandle
     - RenderVrmBonePanel
     - requireSharedInfra

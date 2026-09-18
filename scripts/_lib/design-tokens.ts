@@ -47,7 +47,9 @@ export type DesignViolationKind =
   | "css-color"
   | "css-shadow"
   | "css-transition"
-  | "emoji-icon";
+  | "emoji-icon"
+  | "toast-emoji-prefix"
+  | "locale-emoji-prefix";
 
 /** 单条命中。 */
 export interface DesignViolation {
@@ -417,6 +419,49 @@ export function isCommentLine(line: string): boolean {
 function clip(s: string, max = 120): string {
   const t = s.trim();
   return t.length <= max ? t : `${t.slice(0, max)}…`;
+}
+
+/**
+ * emoji 图形字符 + 尾部组合符（变体选择符 / ZWJ）——供各 emoji 判定复用。
+ *
+ * ⚠️ 关于 \uFE0F 与 ZWJ：它们是**组合字符**，写进 `+` 字符类会让正则语义模糊
+ * （biome noMisleadingCharacterClass 实测告警），且会把 `♻️` 匹配成孤立的 `♻`
+ * （丢失变体，显示成与源码不同的字形）。改为「图形字符 + 尾部组合符*」序列。
+ */
+const GRAPHIC_EMOJI =
+  "[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{2190}-\\u{21FF}]";
+const COMBINING_MARKS = "[\\u{FE0F}\\u{200D}]";
+/** 单个字形簇（一捕获组），供 `["'\x60]` 开头的字面量前缀检测复用。 */
+const GLYPH_CLUSTER = `(${GRAPHIC_EMOJI}${COMBINING_MARKS}*(?:${GRAPHIC_EMOJI}${COMBINING_MARKS}*)*)`;
+
+/**
+ * 「前缀型状态符号」语义名集合（ADR-267 决策 #4）。
+ *
+ * 判定口径：仅当某 emoji 的 icon-map 语义名落在本集合内，它**作为字符串左前缀**（toast
+ * 载荷 / locale 值 / `/` 子句前）出现时，才判为「冗余的状态符号」：
+ *   - toast 载荷前导 → type 已驱动语义图标（success/error/warning/info…），去 emoji 不丢语义；
+ *   - locale 值前导 / `/` 子句前导 → 同 toast 语义，属状态反馈，非内容。
+ *
+ * 刻意**不含**动作/内容类语义（delete/folder/open/search/tag/hint/recycle…）——它们是按钮/
+ * 面板的**可操作图标**，无 type 图标承托，去掉即丢视觉（ADR-238 结构图标域另论）。故
+ * 保留的按钮图标（如 `🗑️ 删除`、`📂 浏览本地模型`）与提示正文（`💡 如果…`）不会被误报。
+ */
+export const STATUS_ICON_NAMES: ReadonlySet<string> = new Set([
+  "success",
+  "error",
+  "warning",
+  "info",
+  "fatal",
+  "skip",
+  "blocked",
+  "stop",
+  "restricted",
+]);
+
+/** 若字形是「前缀型状态符号」（icon-map 语义名 ∈ STATUS_ICON_NAMES），返回建议语义名；否则 null。 */
+function statusSuggestionOf(glyph: string): string | null {
+  const name = suggestIconName(glyph);
+  return name && STATUS_ICON_NAMES.has(name) ? `UI_ICONS.${name}` : null;
 }
 
 /**
@@ -887,16 +932,8 @@ export function findEmojiIconViolations(line: string, lineNo: number): DesignVio
   //      曾只认「引号后紧跟 emoji」，漏掉 emoji 后带空格再闭合引号的写法（`>📁 ' +`），
   //      造成整类真阳性漏报——由探针实测发现。
   //
-  // 关于 `\uFE0F`（变体选择符）与 ZWJ：它们是**组合字符**，写进 `+` 字符类会让正则
-  // 语义模糊（biome noMisleadingCharacterClass 实测告警），且会把 `♻️` 匹配成孤立的
-  // `♻`（丢失变体，显示成与源码不同的字形）。改为「图形字符 + 尾部组合符*」序列。
-  const GRAPHIC =
-    "[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{2190}-\\u{21FF}]";
-  const COMBINING = "[\\u{FE0F}\\u{200D}]";
-  const re = new RegExp(
-    `(?:>|["'\`])\\s?(${GRAPHIC}${COMBINING}*(?:${GRAPHIC}${COMBINING}*)*)(?=\\s*["'\`]|\\s*<|\\s|$)`,
-    "gu",
-  );
+  // 字形序列用模块级 GRAPHIC_EMOJI/COMBINING_MARKS（逻辑见上方模块常量注释）。
+  const re = new RegExp(`(?:>|["'\x60])\\s?${GLYPH_CLUSTER}(?=\\s*["'\x60]|\\s*<|\\s|$)`, "gu");
   let m: RegExpExecArray | null;
   while ((m = re.exec(line)) !== null) {
     const glyph = m[1] ?? "";
@@ -916,9 +953,84 @@ export function findEmojiIconViolations(line: string, lineNo: number): DesignVio
 }
 
 /**
+ * toast 载荷「前缀型状态符号」检测（ADR-267 门禁补盲）。
+ *
+ * 背景：`findEmojiIconViolations` 只认「HTML 标签图标位 + 字面量 emoji」，扫不到运行时
+ * toast 载荷——`check-design-tokens` 对 `toast("❌ …")` / `bus.emit("toast:show", { msg: "⚠️ …" })`
+ * 这类**经变量/参数传进渲染层**的前缀 emoji 完全失明（toast 渲染层走 `esc()` 文本槽，
+ * 无字面量可被该函数命中）。本 ADR 清理后需防「再引入」，故在此收口。
+ *
+ * 判定口径（收紧以防误报）：
+ *   - 只认 toast 载荷构造行：`toast(` / `toastError(` / `bus.emit("toast:show", …)`。
+ *   - 只报「字符串字面量**开头**紧跟的状态符号」（引号/反引号 + 空白 + 状态 emoji）。
+ *   - 语义名须 ∈ STATUS_ICON_NAMES（success/error/warning/…）——toast 的 type 已驱动同款
+ *     状态图标，这类前缀纯属信息冗余；动作/内容字形（如 `📦 打包完成`）无 type 图标承托，
+ *     不是「前缀型状态符号」，不碰。
+ */
+export function findToastEmojiPrefixViolations(line: string, lineNo: number): DesignViolation[] {
+  if (isCommentLine(line)) return [];
+  // 只认 toast 载荷构造行的特征；无 toast 特征的行一律不参与（防普通字符串误报）
+  if (!/toast\(|toastError\(|bus\.emit\(\s*["'\x60]toast:show["'\x60]/.test(line)) return [];
+  const out: DesignViolation[] = [];
+  const re = new RegExp(`["'\x60]\\s*${GLYPH_CLUSTER}`, "gu");
+  for (const m of line.matchAll(re)) {
+    const glyph = m[1] ?? "";
+    const suggestion = statusSuggestionOf(glyph);
+    if (!suggestion) continue;
+    out.push({
+      kind: "toast-emoji-prefix",
+      line: lineNo,
+      snippet: clip(glyph),
+      suggestion,
+    });
+  }
+  return out;
+}
+
+/**
+ * locale 值「前缀型状态符号」检测（ADR-267 门禁补盲）。
+ *
+ * 背景：locale 源（frontend/src/locales/*.ts）的**值**里若再注入 `"❌ …"` / `"✅ …"` 前缀，
+ * 经 `t()` 产出的 msg 会带进 toast 载荷，同样逃过 `findEmojiIconViolations`（无标签图标位）。
+ * 本函数只在 locale 文件域调用（见 check-design-tokens.ts），覆盖三种形态：
+ *   ① 叶子值行：`"key": "✅ 值…"`（状态 emoji 在值首）；
+ *   ② 多行值续行：`  "✅ 值…"`（值跨行时状态 emoji 落在续行首）；
+ *   ③ 值内 `/` 子句：`"{ok} 已移动 / ❌ {fail} 失败"`（ctx.moveOkPartial 形态）。
+ * 语义名须 ∈ STATUS_ICON_NAMES；动作/内容字形（🗑️删除/📂浏览/💡提示…）不在此列，不误报。
+ */
+export function findLocaleEmojiPrefixViolations(line: string, lineNo: number): DesignViolation[] {
+  if (isCommentLine(line)) return [];
+  const out: DesignViolation[] = [];
+  const push = (glyph: string): void => {
+    const suggestion = statusSuggestionOf(glyph);
+    if (!suggestion) return;
+    out.push({
+      kind: "locale-emoji-prefix",
+      line: lineNo,
+      snippet: clip(glyph),
+      suggestion,
+    });
+  };
+  // ① 叶子值行：`"key": "值"` —— 值首状态 emoji
+  const leaf = new RegExp(`^\\s*"(?:[^"\\\\]|\\\\.)+":\\s*["'\x60]\\s*${GLYPH_CLUSTER}`, "u").exec(
+    line,
+  );
+  if (leaf) push(leaf[1] ?? "");
+  // ② 多行值续行：`  "值…"` —— 续行首状态 emoji（与 ① 互斥，防同一字面量重复计数）
+  if (!leaf) {
+    const cont = new RegExp(`^\\s*["'\x60]\\s*${GLYPH_CLUSTER}`, "u").exec(line);
+    if (cont) push(cont[1] ?? "");
+  }
+  // ③ `/` 子句分隔：值内 ` / ❌ …`（ctx.moveOkPartial 形态）
+  const slash = new RegExp(`\\/\\s*${GLYPH_CLUSTER}`, "gu");
+  for (const m of line.matchAll(slash)) push(m[1] ?? "");
+  return out;
+}
+
+/**
  * 行级判定：只判「指定行号集合」上的违规——「只对自己动过的行负责」（ADR-256）。
  *
- * 与逐行扫全文件的区别**只在判哪些行**：两个判定函数与建议逻辑完全复用，
+ * 与逐行扫全文件的区别**只在判哪些行**：判定函数与建议逻辑完全复用，
  * 保证「同一行、同函数、同结论」；输出按行号升序，便于对照 diff 人工核对。
  *
  * 为何需要它：基线文件级判定（键 = `file:line:kind`）在 116 提交窗实测中，added 330 条里
@@ -928,11 +1040,13 @@ export function findEmojiIconViolations(line: string, lineNo: number): DesignVio
  * @param text     文件全文（**提交侧 blob**，不是工作区内容）
  * @param lines    新增行号集合（1-based，来自 git diff --unified=0）
  * @param tokenMap 令牌映射（供 suggestToken 校验存在性）；可空
+ * @param opts     可选项：`locale` = 该文件属 locale 源域（额外跑 locale 值前缀检测）
  */
 export function findViolationsOnLines(
   text: string,
   lines: Iterable<number>,
   tokenMap?: TokenRawMap | null,
+  opts?: { locale?: boolean },
 ): DesignViolation[] {
   const all = text.split("\n");
   const wanted = [...new Set(lines)].filter((n) => Number.isInteger(n)).sort((a, b) => a - b);
@@ -940,7 +1054,12 @@ export function findViolationsOnLines(
   for (const ln of wanted) {
     if (ln < 1 || ln > all.length) continue;
     const line = all[ln - 1] ?? "";
-    out.push(...findStyleAttrViolations(line, ln, tokenMap), ...findEmojiIconViolations(line, ln));
+    out.push(
+      ...findStyleAttrViolations(line, ln, tokenMap),
+      ...findEmojiIconViolations(line, ln),
+      ...findToastEmojiPrefixViolations(line, ln),
+      ...(opts?.locale ? findLocaleEmojiPrefixViolations(line, ln) : []),
+    );
   }
   return out;
 }

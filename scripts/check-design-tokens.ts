@@ -99,7 +99,9 @@ import {
   type DesignViolation,
   type DesignViolationKind,
   findEmojiIconViolations,
+  findLocaleEmojiPrefixViolations,
   findStyleAttrViolations,
+  findToastEmojiPrefixViolations,
   findViolationsOnLines,
   fixLineTokens,
   parseTokenMap,
@@ -282,28 +284,26 @@ if (DOCS_ONLY) {
 // ── 扫描范围：前端生产 TS + 文档层 CSS（排除测试 / 构建产物 / vendor）──
 const FRONTEND_SRC = path.join(ROOT, "frontend/src");
 const FRONTEND_CSS = path.join(ROOT, "frontend/css");
-let files = (
-  [
-    ...(walk(FRONTEND_SRC, {
-      exts: [".ts"],
-      skipTest: true, // 测试文件里的样式样本不是产品 UI，误报源
-      // ⚠️ 必须覆盖 walk 的默认 skipDir（默认会跳过**任何名为 css 的目录**）：
-      // 本仓的样式常量恰恰住在 `views/app-content/css/`（content-creator/layout/gh/…）
-      // ——那是设计令牌债最密集的地方。曾因沿用默认值而整目录漏扫（8 文件），
-      // 导致报告数字系统性偏低、--fix 对该目录完全无效（实测发现）。
-      // 此处只排除真正的构建产物/vendor，保留 `css` 目录。
-      skipDir: (n: string) => n.startsWith(".") || n === "node_modules",
-    }) as string[]),
-    // [范围补齐 2026-09] 文档层 CSS（`frontend/css/*.css`，5 个手写样式表）此前**不在扫描域**：
-    // 闸只 `walk(frontend/src, { exts: [".ts"] })`，于是文档层样式债从未被任何闸看过——
-    // 实测 60 条（46 硬编码字号 + 13 圆角 + 1 过渡），其中 `components.css` 单文件 49 条。
-    // 该目录平铺无子目录，故 skipDir 恒 false；exts 只认 .css（目录内本就只有 .css）。
-    ...(walk(FRONTEND_CSS, {
-      exts: [".css"],
-      skipDir: () => false,
-    }) as string[]),
-  ]
-)
+let files = [
+  ...(walk(FRONTEND_SRC, {
+    exts: [".ts"],
+    skipTest: true, // 测试文件里的样式样本不是产品 UI，误报源
+    // ⚠️ 必须覆盖 walk 的默认 skipDir（默认会跳过**任何名为 css 的目录**）：
+    // 本仓的样式常量恰恰住在 `views/app-content/css/`（content-creator/layout/gh/…）
+    // ——那是设计令牌债最密集的地方。曾因沿用默认值而整目录漏扫（8 文件），
+    // 导致报告数字系统性偏低、--fix 对该目录完全无效（实测发现）。
+    // 此处只排除真正的构建产物/vendor，保留 `css` 目录。
+    skipDir: (n: string) => n.startsWith(".") || n === "node_modules",
+  }) as string[]),
+  // [范围补齐 2026-09] 文档层 CSS（`frontend/css/*.css`，5 个手写样式表）此前**不在扫描域**：
+  // 闸只 `walk(frontend/src, { exts: [".ts"] })`，于是文档层样式债从未被任何闸看过——
+  // 实测 60 条（46 硬编码字号 + 13 圆角 + 1 过渡），其中 `components.css` 单文件 49 条。
+  // 该目录平铺无子目录，故 skipDir 恒 false；exts 只认 .css（目录内本就只有 .css）。
+  ...(walk(FRONTEND_CSS, {
+    exts: [".css"],
+    skipDir: () => false,
+  }) as string[]),
+]
   .map((abs) => ({ abs, rel: relPosix(abs) }))
   .filter((f) => inChangedScope(f.rel, scope));
 
@@ -348,7 +348,9 @@ if (files.length === 0) {
       `[check-design-tokens] ⚠️  本次提交的 ${unstagedSkipped.length} 个本域文件均含未暂存编辑，已全部跳过——本闸本次未判定`,
     );
   }
-  log("[check-design-tokens] 扫描域内无文件（--files/--staged/--changed 裁剪后为空）——无违规可报 ✅");
+  log(
+    "[check-design-tokens] 扫描域内无文件（--files/--staged/--changed 裁剪后为空）——无违规可报 ✅",
+  );
   jsonExit(0, {
     _summary: {
       ok: true,
@@ -402,7 +404,8 @@ if (ADDED_LINES) {
     const text = content(src, f.rel);
     if (text === null) continue; // 该 revision 无此文件（改名残留 / 删除）
     addedLineTotal += lines.size;
-    const hits = findViolationsOnLines(text, lines, tokenMap).filter(
+    const isLocale = /\/locales\//.test(f.rel);
+    const hits = findViolationsOnLines(text, lines, tokenMap, { locale: isLocale }).filter(
       (v) => !ONLY_KIND || v.kind === ONLY_KIND,
     );
     if (hits.length > 0) {
@@ -452,17 +455,23 @@ if (ADDED_LINES) {
   console.log("══════════════════════════════════════════════════");
   console.log(" 设计令牌行级判定 (check-design-tokens --added-lines)");
   console.log("══════════════════════════════════════════════════");
-  console.log(`判定域      : ${scopeFilter} / ${src.kind}（新增行 ${addedLineTotal} 行，覆盖 ${files.length} 文件）`);
+  console.log(
+    `判定域      : ${scopeFilter} / ${src.kind}（新增行 ${addedLineTotal} 行，覆盖 ${files.length} 文件）`,
+  );
   console.log(`命中文件    : ${addedReports.length}`);
   console.log(`新增行违规  : ${addedViolationTotal}（存量债不拦——只对自己动过的行负责）`);
   if (addedViolationTotal === 0) {
     console.log("✅ 本次变更的新增行无设计令牌违规。");
     process.exit(0);
   }
-  console.error(`\n❌ 本次变更新增 ${addedViolationTotal} 处设计令牌违规（行级判定，存量债不拦）：`);
+  console.error(
+    `\n❌ 本次变更新增 ${addedViolationTotal} 处设计令牌违规（行级判定，存量债不拦）：`,
+  );
   for (const r of addedReports) {
     for (const v of r.violations) {
-      console.error(`   ${r.rel}:${v.line}  ${v.kind}${v.suggestion ? ` → 建议 ${v.suggestion}` : ""}`);
+      console.error(
+        `   ${r.rel}:${v.line}  ${v.kind}${v.suggestion ? ` → 建议 ${v.suggestion}` : ""}`,
+      );
     }
   }
   console.error(
@@ -533,6 +542,8 @@ for (const f of files) {
     const hit = [
       ...findStyleAttrViolations(line, lineNo, tokenMap),
       ...findEmojiIconViolations(line, lineNo),
+      ...findToastEmojiPrefixViolations(line, lineNo),
+      ...(/\/locales\//.test(f.rel) ? findLocaleEmojiPrefixViolations(line, lineNo) : []),
     ];
     for (const v of hit) {
       if (ONLY_KIND && v.kind !== ONLY_KIND) continue;
@@ -676,6 +687,8 @@ const KIND_LABEL: Record<string, string> = {
   "css-shadow": "硬编码阴影（同 --shadow-* 值）",
   "css-transition": "硬编码过渡时长",
   "emoji-icon": "emoji 当图标",
+  "toast-emoji-prefix": "toast 载荷前缀状态 emoji",
+  "locale-emoji-prefix": "locale 值前缀状态 emoji",
 };
 
 if (JSON_OUT) {

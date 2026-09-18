@@ -29,7 +29,9 @@ import { fileURLToPath } from "node:url";
 import {
   checkLayoutDocDrift,
   findEmojiIconViolations,
+  findLocaleEmojiPrefixViolations,
   findStyleAttrViolations,
+  findToastEmojiPrefixViolations,
   findViolationsOnLines,
   fixLineTokens,
   isCommentLine,
@@ -304,6 +306,103 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   const e = findEmojiIconViolations('<div class="x">plain text</div>', 5);
   assert.deepEqual(e, [], "无 emoji 不应命中");
   console.log("  ✓ findEmojiIconViolations: 图标位命中（含真实形态/VS16）+ 豁免");
+}
+
+// ── 6a. findToastEmojiPrefixViolations：toast 载荷前缀状态 emoji（ADR-267 门禁补盲）──
+{
+  // toast 字面量里的前缀状态 emoji → 命中并附图标建议
+  const t1 = findToastEmojiPrefixViolations('toast("✅ 已保存", 2000, "success")', 1);
+  assert.equal(t1.length, 1, "toast 载荷前缀 ✅ 应命中");
+  assert.equal(t1[0]!.kind, "toast-emoji-prefix");
+  assert.equal(t1[0]!.suggestion, "UI_ICONS.success");
+  assert.equal(t1[0]!.line, 1);
+
+  // bus.emit("toast:show", …) 形态的 msg 载荷
+  const t2 = findToastEmojiPrefixViolations('bus.emit("toast:show", { msg: "⚠️ 同步失败" })', 2);
+  assert.equal(t2.length, 1, "bus.emit toast msg 前缀 ⚠️ 应命中");
+  assert.equal(t2[0]!.suggestion, "UI_ICONS.warning");
+
+  // toastError helper
+  const t3 = findToastEmojiPrefixViolations('toastError("❌ 统计失败")', 3);
+  assert.equal(t3.length, 1, "toastError 载荷前缀 ❌ 应命中");
+  assert.equal(t3[0]!.suggestion, "UI_ICONS.error");
+
+  // 动作/内容字形（无 type 图标承托）作为前缀 → 不命中（防误报）
+  const t4 = findToastEmojiPrefixViolations('toast("📦 打包完成")', 4);
+  assert.deepEqual(t4, [], "内容字形 📦 前缀不应命中");
+
+  // 非 toast 构造行里的字符串 → 完全不参与（防普通字符串误报）
+  const t5 = findToastEmojiPrefixViolations('const msg = "❌ 加载失败";', 5);
+  assert.deepEqual(t5, [], "非 toast 调点行不应命中");
+
+  // 无前缀（已清理）→ 零命中
+  const t6 = findToastEmojiPrefixViolations('toast("已保存", 2000, "success")', 6);
+  assert.deepEqual(t6, [], "已清理（无前缀）不应命中");
+
+  // 注释行豁免
+  const t7 = findToastEmojiPrefixViolations('// toast("✅ 已保存")', 7);
+  assert.deepEqual(t7, [], "注释行应豁免");
+  console.log("  ✓ findToastEmojiPrefixViolations: toast 载荷前缀状态 emoji 命中/豁免");
+}
+
+// ── 6b. findLocaleEmojiPrefixViolations：locale 值前缀状态 emoji（ADR-267 门禁补盲）──
+{
+  // ① 叶子值行值首状态 emoji → 命中 + 图标建议
+  const l1 = findLocaleEmojiPrefixViolations('  "tree.indexGenerated": "✅ index.json 已生成",', 1);
+  assert.equal(l1.length, 1, "locale 值首 ✅ 应命中");
+  assert.equal(l1[0]!.kind, "locale-emoji-prefix");
+  assert.equal(l1[0]!.suggestion, "UI_ICONS.success");
+
+  // ② 多行值续行首状态 emoji（syncManager.scanDirWide 形态）
+  const l2 = findLocaleEmojiPrefixViolations(
+    '    "⚠️ {label} 仓库基准目录过大，建议指向子目录",',
+    2,
+  );
+  assert.equal(l2.length, 1, "多行值续行首 ⚠️ 应命中");
+  assert.equal(l2[0]!.suggestion, "UI_ICONS.warning");
+
+  // ③ 值内 `/` 子句分隔后的状态 emoji（ctx.moveOkPartial 形态）
+  const l3 = findLocaleEmojiPrefixViolations(
+    '  "ctx.moveOkPartial": "{ok} 个已移动 / ❌ {fail} 失败",',
+    3,
+  );
+  assert.equal(l3.length, 1, "值内 / 子句后 ❌ 应命中");
+  assert.equal(l3[0]!.suggestion, "UI_ICONS.error");
+
+  // 动作/内容字形前缀（保留的按钮/提示图标）→ 不命中
+  const l4 = findLocaleEmojiPrefixViolations('  "recycle.deleteOk": "🗑️ 删除",', 4);
+  assert.deepEqual(l4, [], "动作图标 🗑️ 前缀不应命中");
+  const l5 = findLocaleEmojiPrefixViolations('  "content.noMcDirHint": "💡 如果装了启动器…",', 5);
+  assert.deepEqual(l5, [], "提示字形 💡 前缀不应命中");
+
+  // 已清理（无前缀）→ 零命中
+  const l6 = findLocaleEmojiPrefixViolations('  "tree.indexGenerated": "index.json 已生成",', 6);
+  assert.deepEqual(l6, [], "已清理的 locale 值不应命中");
+
+  // 非 locale 源（普通 TS 字符串，无引号值前缀形态）→ 不命中
+  const l7 = findLocaleEmojiPrefixViolations('const s = "❌ 加载失败";', 7);
+  assert.deepEqual(l7, [], "非 locale 值行不应命中");
+
+  // 注释行豁免
+  const l8 = findLocaleEmojiPrefixViolations('  // "tree.indexGenerated": "✅ 已生成"', 8);
+  assert.deepEqual(l8, [], "注释行应豁免");
+  console.log("  ✓ findLocaleEmojiPrefixViolations: locale 值前缀状态 emoji 命中/豁免");
+}
+
+// ── 6c. findViolationsOnLines：locale 域开关只对 locale 文件生效 ──
+{
+  const text = '  "tree.indexGenerated": "✅ index.json 已生成",\ntoast("已保存")';
+  const hitsLocale = findViolationsOnLines(text, [1, 2], undefined, { locale: true });
+  assert.ok(
+    hitsLocale.some((v) => v.kind === "locale-emoji-prefix"),
+    "locale 域开启时应命中 locale 值前缀",
+  );
+  const hitsNonLocale = findViolationsOnLines(text, [1, 2], undefined, { locale: false });
+  assert.ok(
+    !hitsNonLocale.some((v) => v.kind === "locale-emoji-prefix"),
+    "locale 域关闭时不命中 locale 值前缀（它在非 locale 文件里可能只是普通字符串）",
+  );
+  console.log("  ✓ findViolationsOnLines: locale 域按文件开关生效");
 }
 
 // ── 7. checkLayoutDocDrift：文档数值 vs 代码权威值 ───────

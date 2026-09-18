@@ -126,7 +126,7 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 
 | 文件 | 职责 |
 |------|------|
-| `screenshot.ts` | 纯函数 `screenshotFromRenderer`：对任意活跃 renderer/scene/camera 截图（PNG/JPEG base64），临时开 `preserveDrawingBuffer`，空/异常静默返回 null |
+| `screenshot.ts` | 纯函数 `screenshotFromRenderer`：对任意活跃 renderer/scene/camera 截图（PNG/JPEG base64）——`render` 后须在同一同步任务内 `toDataURL`（缓冲下一帧被清空）；`preserveDrawingBuffer` 自 r185 起不可运行时切换（幽灵 API，2026-09 P0 修复），透明背景改由「渲染前临时置全透明清屏色、读后还原」实现；空/异常静默返回 null |
 | `screenshot-render.ts` | 离屏多角度渲染器：`renderMultiAngle` 自建 WebGLRenderer（透明背景）+ 四角度循环 + 灯光/纹理/YSM 对象构建 + finally 释放 |
 | `screenshot-lights.ts` | `toScreenshotLights()` 从 `LightCapability` 读三点布光 + PMREM 环境光衰减，缺 cap 回退标准灯 |
 | `texture-loader.ts` | `loadTextures(urls)` 并行从 `textureCache` acquire，polling 等图片 complete（P2 修复 2026-09：轮询加 15s 超时兜底，悬挂 URL 不再永久 pending；超时视同失败 invalidate），失败 invalidate 缓存 |
@@ -151,6 +151,12 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 **Go binding**：`GetModel3DSpec(modelPath)`（取 Spec3D，web 端桩无效时需 WASM 兜底）、`SaveScreenshotFile(filename, base64)`（落盘，web 模式走浏览器下载）
 
 ## 链路细节
+
+### ⚠️ 后期效果不参与截图（已知差异，2026-09 记录，暂不修）
+- **现象**：开启后期（Bloom / SSAO / SSR）时，**预览画面有效果，但截图与多角度导出的图没有**。
+- **成因**：预览渲染走 `render-host.ts` → `postProcCap.render()`（启用后期时为 `composer.render()` 画到 canvas）；而截图走 `screenshot.ts` 的 `screenshotFromRenderer` → 直接 `renderer.render(scene, camera)`。整个 `preview-3d/screenshot/` 目录对 postProc / composer **零引用**。
+- **决策（用户拍板 2026-09）**：暂不改。三条候选路径已评估——(a) 截图改走 composer：语义最一致，但需把 postProc 注入 `screenshotFromRenderer`（破坏其「不依赖后期」的纯函数契约），且多角度 4 张每张 SSR 会多 2 次整场渲染，导出明显变慢；(b) 仅在导出处加提示；(c) 新增「导出套用后期」toggle。**选定：保持现状 + 本记录**。
+- **同时确立**：**不为渲染选项新增互斥下拉**。渲染选项之间的关系是「链序依赖 + 自动抑制」，不是互斥——见 `model3d.md` 的「后处理 Pass 链序硬约束」条（SSR 独占链首后，SSAO/Bloom/SSR 可同时开；MSAA 是 renderer 构造期属性，运行期不可切换，故根本不具备做菜单项的前提）。
 
 ### 透明背景多角度截图
 - `WebGLRenderer({alpha:true, preserveDrawingBuffer:true, antialias:true})` + `setClearColor(0x000000, 0)`

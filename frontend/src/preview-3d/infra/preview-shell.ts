@@ -18,8 +18,8 @@ const mpcCss = `
 :host, .mpc-overlay { position:fixed; inset:0; z-index:var(--z-fullscreen); background:var(--bg); display:flex; flex-direction:column; }
 .mpc-body { flex:1; display:flex; position:relative; overflow:hidden; }
 .preview-view-container.mpc-view { flex:1; position:relative; overflow:hidden; }
-.mpc-loading { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:rgba(255,255,255,0.6); font-size:var(--fs-lg); gap:12px; z-index:10; }
-.mpc-tip { padding:5px 12px; background:var(--surf); border-bottom:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.7); font-size:var(--fs-sm); text-align:center; flex-shrink:0; }
+.mpc-loading { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); font-size:var(--fs-lg); gap:12px; z-index:10; }
+.mpc-tip { padding:5px 12px; background:var(--surf); border-bottom:1px solid var(--bd); color:var(--txt); font-size:var(--fs-sm); text-align:center; flex-shrink:0; }
 `;
 
 /**

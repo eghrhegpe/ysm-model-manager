@@ -14,7 +14,8 @@
 // 设计要点（对齐 SkyCapability / GroundCapability 的能力模式）：
 //   - 默认经典三点布光（key/fill/rim DirectionalLight）+ AmbientLight
 //   - Spotlight 从对象正上方打下（聚光灯），cone + penumbra 可调 + SpotLightHelper 线框可视（ADR-246 D3）
-//   - 体积光锥：两交叉 PlaneGeometry + Cone 遮罩 shader（轻量，无 post-process 管线）
+//   - 体积光锥：真锥体网格 + Fresnel 视角边缘辉光（轻量，无 post-process 管线），
+//     朝向由 spotlight → 靶点方向驱动（默认俯视灯下恒垂直向下）
 //   - 按模型类别预设（对齐 SkyCapability.setPreset 模式）
 //   - 本类不持有 backend 引用，纯 Three.js 侧逻辑
 //   - target（对象中心）可动态更新，聚光灯 + 体积光锥随之重新定位
@@ -178,6 +179,9 @@ const SPOT_CHANGES = new Set([
   "lightSpotDistance",
   "lightSpotDecay",
 ]);
+/** SPOT_CHANGES 子集：真正影响锥组几何（锥形/高度/存在性）的字段。
+ *  颜色/强度/距离/衰减只动 uniforms——旧实现对这些字段也整组 dispose + 重建，拖滑块即 GC 抖动。 */
+const SPOT_GEO_CHANGES = new Set(["lightSpotEnabled", "lightSpotAngle", "lightSpotPenumbra"]);
 const VOL_PARAM_CHANGES = new Set([
   "lightVolumetricOpacity",
   "lightVolumetricFogPower",
@@ -221,6 +225,9 @@ export class LightCapability implements SceneCapability {
 
   // 体积光锥（ADR-177：实现下沉 VolumetricCone，本类仅委派）
   private cone: VolumetricCone;
+  /** 射束方向暂存（世界，光源 → 靶点）——锥体朝向锚；避免各处调用各分配一个 Vector3。
+   *  VolumetricCone 内部立即拷贝，外部不得长期持有。 */
+  private spotDir = new THREE.Vector3(0, -1, 0);
 
   // [ADR-246 D3] 聚光灯线框 helper（空间参照：锥角/朝向/位置一眼可见）
   private spotHelper: THREE.SpotLightHelper;
@@ -300,7 +307,13 @@ export class LightCapability implements SceneCapability {
 
     // 初始化体积光锥（ADR-177：委派 VolumetricCone；未同时启用则不产出锥组）
     this.cone = new VolumetricCone(this.scene);
-    this.cone.rebuild(this.targetHeight, sp, readVolParams(), this.spotlight.position);
+    this.cone.rebuild(
+      this.targetHeight,
+      sp,
+      readVolParams(),
+      this.spotlight.position,
+      this.getSpotDir(),
+    );
 
     // [ADR-246 D3] 聚光灯线框 helper：空间参照（调锥角时看得见锥在哪）。
     // 初始按 envState 的聚光灯开关定显隐；apply() 时挂场景，detach() 时移除。
@@ -338,36 +351,39 @@ export class LightCapability implements SceneCapability {
     // ambient：总是刷新（依赖 caps 查询器的 sky 环境开关，非纯 envState 派生）
     this.refreshAmbientFromSky(state);
 
-    // spotlight → 应用属性 + rebuild 锥组 + 挂载态
-    if (hasAny(changed, SPOT_CHANGES)) {
+    // spotlight → 应用属性 +（仅在几何相关字段变更时）重建锥组 + 挂载态
+    const spotTouched = hasAny(changed, SPOT_CHANGES);
+    const spotGeo = hasAny(changed, SPOT_GEO_CHANGES);
+    const volToggled = changed.has("lightVolumetricEnabled");
+    if (spotTouched) {
       this.applySpotlightToThree(state);
-      this.cone.rebuild(
-        this.targetHeight,
-        readSpotParams(state),
-        readVolParams(state),
-        this.spotlight.position,
-      );
-      if (state.lightVolumetricEnabled && state.lightSpotEnabled) {
-        if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
-      }
     }
 
-    // volumetric → rebuild（若 volumetric 刚启用且 spotlight 已开）+ 更新 uniforms + 挂载态
-    const volEnabledChanged = changed.has("lightVolumetricEnabled");
-    if (volEnabledChanged && state.lightVolumetricEnabled && state.lightSpotEnabled) {
-      // volumetric 从关到开且 spotlight 已开 → 需要 rebuild 锥组（spotlight 之前的 rebuild 因 volumetric 关跳过）
+    // 锥组几何重建收窄至 SPOT_GEO_CHANGES ∪（volumetric 由关转开）；单批只重建一次
+    // （旧实现：任意 spotlight 字段变更都重建一遍，且 spot/vol 同批变更时重建两遍）。
+    const needConeRebuild =
+      (spotTouched && spotGeo) ||
+      (volToggled && state.lightVolumetricEnabled && state.lightSpotEnabled);
+    if (needConeRebuild) {
       this.cone.rebuild(
         this.targetHeight,
         readSpotParams(state),
         readVolParams(state),
         this.spotlight.position,
+        this.getSpotDir(),
       );
-    } else if (volEnabledChanged || hasAny(changed, VOL_PARAM_CHANGES)) {
+      if (state.lightVolumetricEnabled && state.lightSpotEnabled && !this.cone.isMounted()) {
+        this.cone.attach(this.spotlight.position, this.spotDir);
+      }
+    } else if (spotTouched || volToggled || hasAny(changed, VOL_PARAM_CHANGES)) {
+      // 颜色/强度/距离/衰减/体积光参数：只刷 uniforms（几何与挂载态原地不动）
       this.cone.updateUniforms(readSpotParams(state), readVolParams(state));
     }
-    if (volEnabledChanged) {
+
+    // volumetric 开关 → 挂载态同步（开：锥组已由上方重建路径产出；关：卸载）
+    if (volToggled) {
       if (state.lightVolumetricEnabled && state.lightSpotEnabled && this.cone.hasGroup()) {
-        if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
+        if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position, this.spotDir);
       } else {
         if (this.cone.isMounted()) this.cone.detach();
       }
@@ -441,7 +457,7 @@ export class LightCapability implements SceneCapability {
     this.fillHelper.update();
     this.rimHelper.update();
     if (envState.lightVolumetricEnabled && envState.lightSpotEnabled && this.cone.hasGroup()) {
-      if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position);
+      if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position, this.getSpotDir());
     }
   }
 
@@ -460,7 +476,7 @@ export class LightCapability implements SceneCapability {
     this.spotlightTarget.position.copy(this.target);
     this.spotlight.position.set(this.target.x, this.target.y + this.targetHeight, this.target.z);
     if (this.cone.hasGroup()) {
-      this.cone.syncPosition(this.spotlight.position);
+      this.cone.syncPosition(this.spotlight.position, this.getSpotDir());
     }
     // [ADR-246 D3] 聚光灯移位后线框同步（否则 helper 停在旧位置误导）
     this.spotHelper.update();
@@ -491,8 +507,11 @@ export class LightCapability implements SceneCapability {
       readSpotParams(),
       readVolParams(),
       this.spotlight.position,
+      this.getSpotDir(),
     );
-    if (wasMounted && this.cone.hasGroup()) this.cone.attach(this.spotlight.position);
+    if (wasMounted && this.cone.hasGroup()) {
+      this.cone.attach(this.spotlight.position, this.spotDir);
+    }
     // [ADR-246 D3] 高度变化 → 聚光灯移位 → 线框同步
     this.spotHelper.update();
     // 聚光灯移位后到目标的物理距离变化 → 重算 candela 补偿（否则目标处照度随高度漂移）
@@ -558,7 +577,7 @@ export class LightCapability implements SceneCapability {
       if (!envState.lightVolumetricEnabled || !envState.lightSpotEnabled) {
         this.cone.detach();
       }
-      this.cone.syncPosition(this.spotlight.position);
+      this.cone.syncPosition(this.spotlight.position, this.getSpotDir());
     }
   }
 
@@ -660,9 +679,10 @@ export class LightCapability implements SceneCapability {
         readSpotParams(),
         readVolParams(),
         this.spotlight.position,
+        this.getSpotDir(),
       );
       if (this.cone.hasGroup() && !this.cone.isMounted()) {
-        this.cone.attach(this.spotlight.position);
+        this.cone.attach(this.spotlight.position, this.spotDir);
       }
     }
     // ⑤ helper 挂场景 + 显隐随恢复后的聚光灯开关。
@@ -691,6 +711,14 @@ export class LightCapability implements SceneCapability {
     const skyEnvOn = getTypedCap(this.caps, "sky")?.isEnvironmentEnabled() ?? false;
     this.ambientLight.color.setHex(state.lightAmbientColor);
     this.ambientLight.intensity = attenuateAmbientForSky(state.lightAmbientIntensity, skyEnvOn);
+  }
+
+  /** 射束方向（世界，光源 → 靶点）——体积光锥朝向锚。
+   *  旧实现把「恒垂直向下」写死进锥体几何，聚光灯一旦可倾斜锥体即与真实光锥脱钩；
+   *  统一从 spotlight/靶点算方向后，默认俯视灯下恒为 (0,-1,0)（旧行为不变），倾斜灯自动跟随。
+   *  返回内部暂存向量（未归一化；VolumetricCone 内部归一化并对退化情形兜底）。 */
+  private getSpotDir(): THREE.Vector3 {
+    return this.spotDir.copy(this.spotlightTarget.position).sub(this.spotlight.position);
   }
 
   private applySpotlightToThree(state: EnvState = envState): void {

@@ -187,7 +187,9 @@ describe("LightCapability — 体积光锥 setVolumetric", () => {
     cap.apply();
     const cone = scene.getObjectByName("ysm-light-volumetric-cone");
     expect(cone).toBeDefined();
-    expect(cone!.children.length).toBe(2); // 两交叉 PlaneGeometry
+    // 真锥体：单个 ConeGeometry 网格（原两交叉 PlaneGeometry 在侧面视角穿帮，见 light-cone.test.ts）
+    expect(cone!.children.length).toBe(1);
+    expect((cone!.children[0] as THREE.Mesh).geometry.type).toBe("ConeGeometry");
   });
 
   it("仅 volumetric 启用但 spotlight 关闭 → 锥组不挂载", () => {
@@ -751,6 +753,36 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     // （默认 distance=30, decay=1.5, targetHeight=8 → 衰减约 0.0438）。
     const falloff = spotDistanceAttenuation(8, 30, 1.5);
     expect(cap.getSpotLight().intensity).toBeCloseTo(3 / falloff, 5);
+  });
+
+  it("spotlight 非几何字段（颜色/强度）走 uniforms 快路径，不重建 GPU 几何", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    const meshBefore = scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh;
+    const uuidBefore = meshBefore.geometry.uuid;
+
+    cap.setSpotlight({ color: 0xff8800, intensity: 1.5, distance: 40, decay: 2 });
+
+    const meshAfter = scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh;
+    // 同一几何实例 → 未 dispose/重建（旧实现对任意 spotlight 字段都整组 dispose + build，
+    // 拖一次强度滑块即触发 GPU 几何重建与 GC 抖动）
+    expect(meshAfter.geometry.uuid).toBe(uuidBefore);
+    const u = (meshAfter.material as THREE.ShaderMaterial).uniforms;
+    expect((u.uColor.value as THREE.Color).getHex()).toBe(0xff8800);
+  });
+
+  it("spotlight 几何字段（锥角）变更时重建几何", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    const uuidBefore = (
+      scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh
+    ).geometry.uuid;
+    cap.setSpotlight({ angle: 40 });
+    const uuidAfter = (
+      scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh
+    ).geometry.uuid;
+    // 锥形变了，uniforms 无能为力 → 必须重建
+    expect(uuidAfter).not.toBe(uuidBefore);
   });
 
   it("setVolumetric({enabled:false}) 移除已挂载锥组", () => {

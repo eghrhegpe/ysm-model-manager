@@ -238,6 +238,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-267：toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区",
+        "link": "/adr/ADR-267-toast-emoji-esc"
+      },
+      {
+        "text": "ADR-266：体积光锥改真锥体几何 + Fresnel 边缘辉光；修 ACES 旁路与过度重建",
+        "link": "/adr/ADR-266-volumetric-cone-true-geometry"
+      },
+      {
         "text": "ADR-265：site 子模块收窄为最小依赖——root 直传 + 定时器登记函数，host 不再进 site 层",
         "link": "/adr/ADR-265-site-root-host-site"
       },
@@ -1901,6 +1909,10 @@ export const autoSidebar = [
           {
             "text": "VMD→VRM 动作重定向 vmd-retarget",
             "link": "/knowledge/vmd_vrm_retarget"
+          },
+          {
+            "text": "体积光锥 VolumetricCone（真锥体网格 + Fresnel）",
+            "link": "/knowledge/volumetric_cone"
           }
         ]
       },

@@ -645,6 +645,13 @@
 |----------|--------|----------|----------|
 | sleep 替换为 waitFor / 负向定时器窗口断言 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 
+## 🎯 preview-3d
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 改体积光外观 / 加锥体参数 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | frontend/src/preview-3d/caps/light-cone.ts\|applyTransform | ADR-266, ADR-177, ADR-246 |
+| 排查光柱穿帮、过曝、开关不生效 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | frontend/src/preview-3d/caps/light-cone.ts\|VOLUMETRIC_CONE_FRAG | ADR-266, ADR-177, ADR-246 |
+
 ## 🎯 后端桥接与平台路由
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -1075,6 +1082,11 @@
 | check 未 markChecked | - | 重启后重复检查；必须在检查完成后 markChecked 记录时间戳 |
 | DOM 测试切 node 环境 | - | window/document 报错；必须保持 happy-dom 或治理源码副作用 |
 | 用 vi.mock 硬扛源码副作用 | - | 治标不治本；必须先做惰性化守卫/神桶拆分 |
+| 符号陷阱：ConeGeometry 锥顶在局部 +Y，射束向下延伸 | - | 几何中心 = 锥顶 + 半高·方向（写成 -半高 会让锥顶飘到光源上方一个锥高；垂直灯下看不出，斜射才穿帮） |
+| 平面剪影回归：任何的写法都会在侧视角双 edge-on 变薄消失、相机穿入时中轴亮缝 | `两片交叉 Plane + discard 抠锥` | - |
+| ACES 旁路回归：自定义 ShaderMaterial 不会自动注入 tonemapping/色彩空间转换，片元必须显式 include 两个 three chunk（tonemapping_fragment + colorspace_fragment），否则加色硬裁并异常喂 bloom | - | - |
+| edgeFade 语义已改：0=均匀壳，1=边缘辉光主导（旧版是），中间段观感整体约暗 20%，用 opacity 补偿 | `压暗边缘` | - |
+| 重建成本：只有 enabled/angle/penumbra 影响几何；color/intensity/distance/decay 走 updateUniforms，误加回会恢复拖滑块抖动 | `任意 spotlight 变更即 rebuild` | - |
 | 直调 window.go 方法 | - | Wails 启动时序不确定、方法未就绪时调用失败；必须经 getApp() 代理 |
 | 在 web 模式直调 wails binding | - | window.go 不存在；必须走 backend-web 的 browser-adapter |
 | 解构直连 | `const { SomeBinding } = window.go.main.App` | 绕过 getApp 缓存/路由，违反红线 §3.2 |

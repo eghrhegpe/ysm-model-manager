@@ -88,10 +88,13 @@ function dgLsReadSearch(root: ShadowRoot): string {
 /**
  * 操作日志搜索命中域：模型名 / 报错内容 / 目标路径 / 源路径 / 操作类型。
  * 2026-09-17 收口：此前只匹配 ModelName，placeholder 写着「搜索模型名」——用户搜报错文本必然空手。
+ * 2026-09-18 扩展：Operation 同时匹配原始 key 与本地化标签（opMeta 同源），
+ * 搜「导入」/「import」都能命中——搜索框与分组标题共用 OP_META，标签即用户所见。
  */
 function dgLsMatchDiagSearch(l: ImportLogLike, search: string): boolean {
   if (!search) return true;
-  return [l.ModelName, l.ErrorMsg, l.TargetDir, l.SourcePath, l.Operation]
+  const op = l.Operation || "import";
+  return [l.ModelName, l.ErrorMsg, l.TargetDir, l.SourcePath, op, opMeta(op).label]
     .map((v) => String(v ?? ""))
     .join("\n")
     .toLowerCase()

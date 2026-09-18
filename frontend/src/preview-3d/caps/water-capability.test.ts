@@ -11,7 +11,7 @@ import {
 } from "./water-body-strategies.ts";
 import { WaterCapability } from "./water-capability.ts";
 import { persistState } from "./scene-capability.ts";
-import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 
 afterEach(() => {
@@ -306,10 +306,36 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     expect(anchor).toBeGreaterThanOrEqual(0);
     expect(assign).toBeGreaterThan(anchor);
     // 三项偏导累加：nz 以高度项 1.0 起算（GPU Gems 的 1 - ΣQ·WA·S）
-    expect(shader.vertexShader).toContain("nrm.x -= dir.x * wa * c;");
-    expect(shader.vertexShader).toContain("nrm.y -= dir.y * wa * c;");
+    // 水平分量须 ×size —— objectNormal 是物体空间量，各向异性 scale 由 normalMatrix 逆缩放还原
+    expect(shader.vertexShader).toContain("nrm.x -= dir.x * wa * c * sizeSafe;");
+    expect(shader.vertexShader).toContain("nrm.y -= dir.y * wa * c * sizeSafe;");
     expect(shader.vertexShader).toContain("nrm.z -= steep * wa * s;");
     expect(shader.vertexShader).toContain("nrm.z += 1.0;");
+  });
+
+  it("尺度自洽：位移 /size 与法线 ×size 成对出现（水面 mesh 为各向异性缩放，缺一即畸变）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    // 防除零：尺寸经 max(uSize, 0.001) 下界，脏存档不会产出 NaN 几何
+    expect(shader.vertexShader).toContain("float sizeSafe = max(uSize, 0.001);");
+    // 位移：世界量 → 局部须 /size（原来漏了，几何法线偏离解析值平均 ~94°、最大 179°＝翻面）
+    expect(shader.vertexShader).toContain("disp.x += steep * amp * dir.x * c / sizeSafe;");
+    expect(shader.vertexShader).toContain("disp.y += steep * amp * dir.y * c / sizeSafe;");
+    // 高度分量 scale.z=1，与局部同尺度，不得被换算
+    expect(shader.vertexShader).toContain("disp.z += amp * s;");
+    // 法线与位移必须同处物体空间——两者同时引用同一尺寸变量是"成对"的结构证据
+    const dispU = shader.vertexShader.match(/dir\.[xy] \* c \/ sizeSafe;/g) ?? [];
+    const nrmU = shader.vertexShader.match(/dir\.[xy] \* wa \* c \* sizeSafe;/g) ?? [];
+    expect(dispU).toHaveLength(2);
+    expect(nrmU).toHaveLength(2);
   });
 
   it("锚点失配不再静默：缺 beginnormal_vertex 锚点时 reportPatchIssue 告警", () => {
@@ -545,6 +571,14 @@ describe("WaterCapability — loadState 多分支", () => {
     expect(cap.getWaterMode()).toBe("pool");
     expect(cap.getWetness()).toBeCloseTo(0.4, 5);
     expect(cap.getWaterColor()).toBe(0xabcdef);
+  });
+
+  it("脏 waterSize 在入口钳到 ≥1（无 UI 入口，只可能来自存档；shader 侧 /sizeSafe 再兜一层）", () => {
+    const scene = new THREE.Scene();
+    persistState("water", { size: 0, enabled: true });
+    const cap = new WaterCapability({ scene });
+    cap.loadState();
+    expect(envState.waterSize).toBeGreaterThanOrEqual(1);
   });
 
   it("类型不匹配字段全部跳过（保持默认）", () => {

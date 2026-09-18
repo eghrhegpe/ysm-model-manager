@@ -147,16 +147,25 @@ export class WaterCapability implements SceneCapability {
          varying float vFoam;
          const int GERSTNER_COUNT = 6;
          float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-         // Gerstner 余摆线：返回 (水平X, 水平Y, 高度)；out 碎波泡沫 + out 解析法线。
+         // Gerstner 余摆线：返回**物体空间位移**；out 碎波泡沫 + out 物体空间法线。
          // 方向/相位由 wave index hash 播种，freq*=1.19 amp*=0.82 几何级数；
          // 陡度钳制 per-wave σ·k ≤ 0.8/N → Σ ≤ 0.8 防自交。
-         // 解析法线（GPU Gems 1 ch.1）：N = (-Σ D.x·WA·C, -Σ D.y·WA·C, 1 - Σ Q·WA·S)，
-         // 在**物体空间**交付（局部 z 即高度轴），由 beginnormal_vertex 注入覆盖 objectNormal
-         // ——ADR-255 §2.1 于 2026-09-18 落地；CPU 法线贴图自此只承担微细节叠加。
+         //
+         // ⚠️ 尺度约定（2026-09-18 实证修正，两处换算缺一不可）：
+         // 波场定义在世界水平尺度上——p = position.xy * uSize 即世界水平坐标（水面 mesh 为
+         // 单位平面 × scale(uSize,uSize,1)，故局部 1 单位 = 世界 uSize 单位；高度轴 scale.z=1 同尺度）。
+         //   · 位移：水平分量是**世界量**，加进局部坐标前须 /sizeSafe；高度分量 scale.z=1 无需换算。
+         //   · 法线：解析式给出的是「世界水平偏导」，而 objectNormal 必须是**物体空间法线**——
+         //     各向异性缩放经 normalMatrix（逆缩放）还原，故水平分量须 ×sizeSafe。
+         // 修正前二者同时漏换算（几何法线偏离解析值平均 94°、最大 179°＝大面积翻面；
+         // 修正后 2.4°/7.0°，仅剩一阶近似残差）——数值实证脚本与结论见 ADR-257 §6.4。
          vec3 gerstner(vec2 p, out float foam, out vec3 nrm) {
            vec3 disp = vec3(0.0);
            float jxx = 0.0, jzz = 0.0, jxz = 0.0;
            nrm = vec3(0.0);
+           // 防除零：waterSize 只能来自存档（无 UI 入口），脏数据 0 会让 /uSize 产生 NaN 几何，
+           // 故取正下界；上方 loadState 另有 ≥1 的入口钳制（两道防线，语义不同：此处只求非零）。
+           float sizeSafe = max(uSize, 0.001);
            for (int i = 0; i < GERSTNER_COUNT; i++) {
              float fi = float(i);
              float ang = hash11(fi + 1.0) * 6.2831853;
@@ -168,16 +177,16 @@ export class WaterCapability implements SceneCapability {
              float steep = clamp(uChoppiness * 0.8 / (wa * float(GERSTNER_COUNT)), 0.0, 0.8 / (wa * float(GERSTNER_COUNT)));
              float phase = freq * dot(dir, p) - speed * uTime;
              float c = cos(phase), s = sin(phase);
-             disp.x += steep * amp * dir.x * c;
-             disp.y += steep * amp * dir.y * c;
+             disp.x += steep * amp * dir.x * c / sizeSafe;
+             disp.y += steep * amp * dir.y * c / sizeSafe;
              disp.z += amp * s;
              // 泡沫掩码 = 水平压缩量：偏导按位移项逐项取（Jacobian 启发式）
              jxx += steep * wa * dir.x * dir.x * c;
              jzz += steep * wa * dir.y * dir.y * c;
              jxz += steep * wa * dir.x * dir.y * c;
-             // 法线偏导：水平面内 -Σ D·WA·C，高度轴 -Σ Q·WA·S
-             nrm.x -= dir.x * wa * c;
-             nrm.y -= dir.y * wa * c;
+             // 法线偏导：世界水平偏导 -Σ D·WA·C → 物体空间须 ×size；高度轴 -Σ Q·WA·S 同尺度
+             nrm.x -= dir.x * wa * c * sizeSafe;
+             nrm.y -= dir.y * wa * c * sizeSafe;
              nrm.z -= steep * wa * s;
            }
            nrm.z += 1.0;
@@ -190,6 +199,7 @@ export class WaterCapability implements SceneCapability {
       // 解析法线覆盖：必须在 beginnormal_vertex **之后**（objectNormal 由该 chunk 声明）、
       // defaultnormal_vertex **之前**（后者经 normalMatrix 变换并对背面翻转）。
       // 此处只能用 position 属性——transformed 尚未在 begin_vertex 定义。
+      // gerstner 交付的 nrm 已是物体空间法线（尺度换算见其头注），可直接赋给 objectNormal。
       shader.vertexShader = shader.vertexShader.replace(
         "#include <beginnormal_vertex>",
         `#include <beginnormal_vertex>
@@ -709,7 +719,9 @@ export class WaterCapability implements SceneCapability {
     if (!state) return;
     restoreFields(state, {
       enabled: { boolean: (v) => (this.enabled = v) },
-      size: { number: (v) => setEnvState({ waterSize: v }, { source: "manual" }) },
+      // waterSize 无 UI 入口、只能来自存档：脏数据 0/负数会让水面退化成一个点，
+      // 且 shader 侧位移换算需要正的尺寸（/sizeSafe），故在入口钳到 ≥1（与 shader 的 0.001 下界双保险）
+      size: { number: (v) => setEnvState({ waterSize: Math.max(1, v) }, { source: "manual" }) },
     });
     // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。
     // 子域开关键随格式不同：V2 嵌套用 enabled；flat 用顶层 waterEnabled。

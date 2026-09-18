@@ -1017,9 +1017,14 @@ export function findLocaleEmojiPrefixViolations(line: string, lineNo: number): D
   );
   if (leaf) push(leaf[1] ?? "");
   // ② 多行值续行：`  "值…"` —— 续行首状态 emoji（与 ① 互斥，防同一字面量重复计数）
+  // 排除对象键名行（`"✅ key": "值"`）：键名以 emoji 开头是合法的 key 命名（非值前缀），
+  // 须以 `^\s*"[^"]*"\s*:` 识别并跳过，避免 ② 把 key 误当 value 续行而误报
   if (!leaf) {
-    const cont = new RegExp(`^\\s*["'\x60]\\s*${GLYPH_CLUSTER}`, "u").exec(line);
-    if (cont) push(cont[1] ?? "");
+    const isKeyLine = /^\s*"(?:[^"\\]|\\.)*"\s*:/.test(line);
+    if (!isKeyLine) {
+      const cont = new RegExp(`^\\s*["'\x60]\\s*${GLYPH_CLUSTER}`, "u").exec(line);
+      if (cont) push(cont[1] ?? "");
+    }
   }
   // ③ `/` 子句分隔：值内 ` / ❌ …`（ctx.moveOkPartial 形态）
   const slash = new RegExp(`\\/\\s*${GLYPH_CLUSTER}`, "gu");

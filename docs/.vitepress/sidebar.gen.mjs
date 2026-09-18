@@ -242,6 +242,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-269：资源清单单一事实源化：mcmeta 四份手抄收敛 + pack provenance 维度",
+        "link": "/adr/ADR-269-resource-manifest-single-source"
+      },
+      {
         "text": "ADR-268：环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单",
         "link": "/adr/ADR-268-env-cap-self-placement"
       },

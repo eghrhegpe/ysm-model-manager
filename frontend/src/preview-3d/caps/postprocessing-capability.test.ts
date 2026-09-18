@@ -853,15 +853,30 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(ssao.kernelRadius).toBe(DEFAULT_POSTPROC_PARAMS.ssaoRadius);
   });
 
-  it("reflectionMode=envmap+ssr 时 SSRPass 插在 bloomPass 之后", () => {
+  it("[顺序修复] reflectionMode=envmap+ssr 时 SSRPass 独占链首（renderPass 之后、bloom 之前）", () => {
     const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
     cap.setEnabled(true);
     const x = internalsOf(cap);
     const passes = x.composer.passes;
-    expect(passes.indexOf(x.ssrPass!)).toBe(2);
+    // SSRPass 忽略 readBuffer、整片覆写 writeBuffer（three r185 源码核实）→ 必须最先，
+    // 否则排在其前的 SSAO/Bloom 成果被无声吃掉
+    expect(passes.indexOf(x.ssrPass!)).toBe(1);
+    expect(passes.indexOf(x.bloomPass!)).toBe(2);
     expect(passes.indexOf(x.outputPass!)).toBe(3);
     const ssr = x.ssrPass as unknown as { opacity: number; maxDistance: number; thickness: number; blur: boolean };
     expect(ssr.opacity).toBe(DEFAULT_POSTPROC_PARAMS.ssrOpacity);
+  });
+
+  it("[顺序修复] SSR + SSAO 同时开启：renderPass → ssr → ssao → bloom → output 全序", () => {
+    const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr", ssaoEnabled: true } });
+    cap.setEnabled(true);
+    const x = internalsOf(cap);
+    const passes = x.composer.passes;
+    expect(passes.indexOf(x.renderPass!)).toBe(0);
+    expect(passes.indexOf(x.ssrPass!)).toBe(1);
+    expect(passes.indexOf(x.ssaoPass!)).toBe(2);
+    expect(passes.indexOf(x.bloomPass!)).toBe(3);
+    expect(passes.indexOf(x.outputPass!)).toBe(4);
   });
 
   it("reflectionMode=ssr-only 时 ssrPass.opacity 恒 1", () => {

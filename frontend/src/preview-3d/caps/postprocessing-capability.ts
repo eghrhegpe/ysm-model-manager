@@ -6,7 +6,8 @@
 //   - 兼容旧 PostprocessingManager 外部接口：render(dt, lightCap): boolean，setSize，dispose
 //   - [ADR-250 §2.2] composer 常驻：构造即建、dispose 才拆（会话轴）。启用意图翻转走 pass
 //     旁路（不 allocate、不 dispose），故「换模型」不再触发整组 GPU 资源重建（缓存失效根治）。
-//   - Pass 顺序：RenderPass → (SSAOPass 可选) → UnrealBloomPass → (SSRPass 可选，reflectionMode 控制) → OutputPass
+//   - Pass 顺序：RenderPass → (SSRPass 可选，reflectionMode 控制) → (SSAOPass 可选) → UnrealBloomPass → OutputPass
+//     （SSR 独占链首：它忽略 readBuffer、把自身 beauty 整片覆写进 writeBuffer，排前面才能让 SSAO/Bloom 叠加而非被吃掉）
 //   - dispose 还原构造前 renderer.toneMapping 等输出设置，不泄漏
 //   - SceneCapability 接口 + 注册表驱动：菜单自动渲染所有控件
 //   - reflectionMode 三档：envmap-only (SSR off) / envmap+ssr (默认，SSR 叠上 envmap 反射当屏外 fallback) / ssr-only (SSR 无屏外补全)
@@ -349,9 +350,15 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       this.ssrPass.distanceAttenuation = envState.ppSsrDistanceAttenuation;
       this.ssrPass.fresnel = envState.ppSsrFresnel;
       if (envState.ppReflectionMode === "ssr-only") this.ssrPass.opacity = 1;
+      // [顺序修复] SSR 必须独占链首（紧跟 RenderPass）：读 three r185 SSRPass.js 核实，
+      // OUTPUT.Default 分支把**自己的** beautyRenderTarget.texture 以 NoBlending 整片写入
+      // writeBuffer（`readBuffer` 形参在 render() 里被注释忽略），因此任何排在它之前的 pass
+      // （SSAO/Bloom）成果都会被覆盖——原顺序「Bloom → SSR」导致一开 SSR 就静默吃掉 Bloom/SSAO。
+      // 插在 renderPass 之后即位于 SSAO 之前；SSAO 用 CustomBlending 叠在 readBuffer 上、
+      // Bloom 也读 readBuffer，二者排在其后即可全保。
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      const bloomIndex = composer.passes.indexOf(this.bloomPass!);
-      composer.passes.splice(bloomIndex + 1, 0, this.ssrPass);
+      const renderPassIndex = composer.passes.indexOf(this.renderPass!);
+      composer.passes.splice(renderPassIndex + 1, 0, this.ssrPass);
     }
   }
 

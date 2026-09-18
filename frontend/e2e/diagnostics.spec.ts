@@ -11,6 +11,11 @@
 
 import { expect, type Page, test } from "./fixture.ts";
 import { gotoApp, navItem } from "./helpers.ts";
+import {
+  CONC_BENCH_REAL,
+  SINGLE_BENCH_BASELINE_MISSING,
+  SINGLE_BENCH_SAVED,
+} from "./perf-fixtures.ts";
 
 /** 顶部 repo-tab 的 data-tab 全集（与 tpl.ts diagnosticsHTML 一一对应） */
 const DIAG_TABS = [
@@ -291,5 +296,236 @@ test.describe("诊断页", () => {
       return root?.querySelector('[data-testid="diag-log-list"]')?.textContent ?? "";
     });
     expect(listText).toContain("No logs yet");
+  });
+});
+
+// ===== 性能面板 · 真实载荷渲染（ADR-262 D5）=====
+// 立因：性能面板的渲染断言此前只在 vitest（jsdom + mock executeCLI）——jsdom 不跑布局/CSS，
+// 抓不到「元素被 display:none 吞掉」「i18n 占位符原样上屏」这类只在真实浏览器暴露的缺陷。
+// 载荷取自真实 CLI 输出（perf-fixtures.ts），数值原样，不手编数字。
+
+/**
+ * 注入 CLI 分发器：按命令名返回**完整 CLI 响应信封**（`{status, command, data}`）。
+ * ⚠️ 两条真实浏览器才暴露的坑（本用例第一版都踩了）：
+ *   ① 必须**页面加载后**注入（page.evaluate）——fixture 的 mock bridge 脚本整体重建
+ *      window.go.main.App，若后加的 init script 先执行就被覆盖，ExecuteCLI 退回 undefined，
+ *      parseCLIResponse 拿 undefined 去 .slice 抛 TypeError（面板只显示一句无信息量的报错）。
+ *   ② 必须给**信封**而不是裸 data：桥侧契约是 status/command/data，裸载荷会被判
+ *      「CLI 响应 status 非字符串」——载荷正确但被信封挡在门外，界面同样空白。
+ */
+async function installCliMock(
+  page: Page,
+  table: Record<string, { data: unknown; status?: "success" | "error" }>,
+): Promise<void> {
+  await page.evaluate(
+    (payloads: Record<string, { data: unknown; status?: "success" | "error" }>) => {
+      const app = (window as unknown as { go: { main: { App: Record<string, unknown> } } }).go.main
+        .App;
+      app.ExecuteCLI = async (cmd: string) => {
+        const entry = payloads[cmd];
+        if (!entry) {
+          return JSON.stringify({
+            status: "error",
+            command: cmd,
+            error: { code: "runtime_error", message: `e2e 未准备 ${cmd} 的载荷` },
+          });
+        }
+        return JSON.stringify({
+          status: entry.status ?? "success",
+          command: cmd,
+          data: entry.data,
+        });
+      };
+    },
+    table,
+  );
+}
+
+/** 在 shadowRoot 内设置输入值并派发 input/change（原生 setter，绕过 React 类受控拦截不适用，此处仅原生控件） */
+async function setShadowValue(page: Page, testid: string, value: string): Promise<void> {
+  await page.evaluate(
+    ({ id, v }: { id: string; v: string }) => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const el = root?.querySelector(`[data-testid="${id}"]`) as HTMLInputElement | null;
+      if (!el) return;
+      el.value = v;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    },
+    { id: testid, v: value },
+  );
+}
+
+/** 等结果容器内出现期望数量的选择器命中（真实渲染完成） */
+async function waitForCount(page: Page, selector: string, count: number): Promise<void> {
+  await page.waitForFunction(
+    ({ sel, n }: { sel: string; n: number }) => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      return root?.querySelectorAll(sel).length === n;
+    },
+    { sel: selector, n: count },
+    { timeout: 10000, polling: 100 },
+  );
+}
+
+/** 结果容器可见文本 + 标题属性 + 选择器命中数（一次 evaluate 取全，避免多次穿透） */
+function readSingleOut(page: Page) {
+  return page.evaluate(() => {
+    const root = document.querySelector("app-content")?.shadowRoot;
+    const out = root?.querySelector('[data-testid="diag-perf-single"]') as HTMLElement | null;
+    const q = (sel: string): HTMLElement[] =>
+      [...(out?.querySelectorAll(sel) ?? [])] as HTMLElement[];
+    return {
+      text: out?.textContent ?? "",
+      barRows: q(".perf-bar-row").length,
+      dangerBars: q(".perf-bar-danger").length,
+      blRows: q(".perf-bl-row").length,
+      titles: q("[title]").map((n) => n.getAttribute("title") ?? ""),
+      bannerText: (q(".diag-stat-error")[0]?.textContent ?? "").trim(),
+    };
+  });
+}
+
+const PLACEHOLDER_LEAK = /\{[a-zA-Z_][a-zA-Z0-9_]*\}/;
+
+test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () => {
+  test.beforeEach(async ({ page }) => {
+    await gotoApp(page);
+    await navItem(page, "diagnostics").click();
+    await page.waitForFunction(
+      () => {
+        const root = document.querySelector("app-content")?.shadowRoot;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 8;
+      },
+      undefined,
+      { timeout: 10000, polling: 200 },
+    );
+    await clickBySelector(page, '.repo-tab[data-tab="single"]');
+  });
+
+  test("单模型 tab：阶段条 + 基准判决行按载荷渲染，无 i18n 占位符残留", async ({ page }) => {
+    await installCliMock(page, { "single-bench": { data: SINGLE_BENCH_SAVED } });
+    await setShadowValue(page, "diag-perf-model", "./ysm/player.ysm");
+    await clickBySelector(page, '[data-testid="diag-perf-run"]');
+
+    await waitForCount(page, ".perf-bar-row", SINGLE_BENCH_SAVED.stages.length);
+    const got = await readSingleOut(page);
+
+    // ① 每个阶段一行（真实布局下可见）
+    expect(got.barRows).toBe(SINGLE_BENCH_SAVED.stages.length);
+    // ② 基准判决逐阶段成行，行数与 Go 载荷一致
+    expect(got.blRows).toBe(SINGLE_BENCH_SAVED.baseline.diff.stages.length);
+    // ③ 红条数 = 载荷里 status 判失败/瓶颈的阶段数（映射一致，不在前端重算阈值）
+    // 注：真实夹具太小，Go 侧没把任何阶段标成 bottleneck（时间全在噪声区内）→ 期望 0；
+    // 红条**渲染**由下一条「退化判决」用例以合成超阈值样本覆盖。
+    const expectedDanger = SINGLE_BENCH_SAVED.stages.filter(
+      (s) => s.status === "bottleneck" || s.status === "failed",
+    ).length;
+    expect(got.dangerBars).toBe(expectedDanger);
+    // Go 标出的最慢阶段必须真实出现在条形里（名字来自载荷，不是前端猜的）
+    expect(got.text).toContain(SINGLE_BENCH_SAVED.bottleneck);
+    // ④ 实测总耗时按 Go 给的数字渲染（不四舍五入成别的量级）
+    expect(got.text).toContain(`${SINGLE_BENCH_SAVED.total_ms.toFixed(2)}ms`);
+    // ⑤ 判决标题带对比对象与噪声下限（用户在 GUI 里能看到「跟谁比、怎么判」）
+    expect(got.titles.some((t) => t.includes(SINGLE_BENCH_SAVED.baseline.diff.path))).toBe(true);
+    expect(
+      got.titles.some((t) => t.includes(String(SINGLE_BENCH_SAVED.baseline.diff.noise_floor_ms))),
+    ).toBe(true);
+    // ⑥ 反回退：i18n 占位符 / Go 的中文建议散文都不得原样上屏
+    expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
+    for (const hint of SINGLE_BENCH_SAVED.hints) expect(got.text).not.toContain(hint);
+  });
+
+  test("单模型 tab：退化判决在真实浏览器里渲染红条与逐阶段明细", async ({ page }) => {
+    // 合成退化样本：结构取自真实载荷，数字为构造的「超阈值退化」（真实夹具太小，落在噪声下限内）
+    const regressed = {
+      ...SINGLE_BENCH_SAVED,
+      total_ms: 47,
+      per_iteration_ms: 47,
+      stages: SINGLE_BENCH_SAVED.stages.map((s) =>
+        s.name === "② JSON 解析" ? { ...s, ms: 40, status: "bottleneck", bottleneck: true } : s,
+      ),
+      baseline: {
+        diff: {
+          ...SINGLE_BENCH_SAVED.baseline.diff,
+          verdict: "regressed",
+          degraded: 1,
+          stages: SINGLE_BENCH_SAVED.baseline.diff.stages.map((s) =>
+            s.name === "② JSON 解析"
+              ? { ...s, base_ms: 1, now_ms: 40, delta_pct: 3900, verdict: "regressed" }
+              : s,
+          ),
+        },
+      },
+    };
+    await installCliMock(page, { "single-bench": { data: regressed } });
+    await setShadowValue(page, "diag-perf-model", "./ysm/player.ysm");
+    await clickBySelector(page, '[data-testid="diag-perf-run"]');
+
+    await waitForCount(page, ".perf-bl-row", regressed.baseline.diff.stages.length);
+    const got = await readSingleOut(page);
+    // 退化判决摘要行（含退化阶段数与阈值）与红条
+    expect(got.text).toContain("1");
+    expect(got.text).toContain(String(regressed.baseline.diff.threshold_pct));
+    expect(got.dangerBars).toBeGreaterThan(0);
+    expect(got.text).toContain("+3900.0%");
+    expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
+  });
+
+  test("并发基准 tab：档位表与判决徽标按载荷渲染，Go 中文建议不上屏", async ({ page }) => {
+    await installCliMock(page, { "concurrent-bench": { data: CONC_BENCH_REAL } });
+    await clickBySelector(page, '.repo-tab[data-tab="conc"]');
+    await clickBySelector(page, '[data-testid="diag-perf-conc-run"]');
+
+    await waitForCount(page, ".perf-conc-verdict", CONC_BENCH_REAL.parallel.length);
+    const got = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const out = root?.querySelector('[data-testid="diag-perf-conc-out"]') as HTMLElement | null;
+      return {
+        text: out?.textContent ?? "",
+        verdicts: [...(out?.querySelectorAll(".perf-conc-verdict") ?? [])].map((n) =>
+          (n.textContent ?? "").trim(),
+        ),
+        detailRows: out?.querySelectorAll(".perf-conc-row").length ?? 0,
+      };
+    });
+    // ① 每个并发档位一行 + 判决徽标，数字取 Go：加速比与档位数
+    expect(got.verdicts.length).toBe(CONC_BENCH_REAL.parallel.length);
+    for (const tier of CONC_BENCH_REAL.parallel) {
+      expect(got.text).toContain(`${tier.speedup.toFixed(2)}x`);
+      expect(got.text).toContain(`${tier.workers}`);
+    }
+    // ② 串行基准 + 文件读取块（真给了就必须渲染）
+    expect(got.detailRows).toBeGreaterThanOrEqual(CONC_BENCH_REAL.parallel.length + 1);
+    expect(got.text).toContain(String(CONC_BENCH_REAL.file_read.file_count));
+    // ③ 反回退：Go 的中文建议（hints）与占位符都不得上屏
+    for (const hint of CONC_BENCH_REAL.hints) expect(got.text).not.toContain(hint);
+    expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
+  });
+
+  test("D-7：基准不可用 → 本地化横幅，中文细节与绝对路径只进 title", async ({ page }) => {
+    await installCliMock(page, {
+      "single-bench": { data: SINGLE_BENCH_BASELINE_MISSING, status: "error" },
+    });
+    await setShadowValue(page, "diag-perf-model", "./ysm/player.ysm");
+    await clickBySelector(page, '[data-testid="diag-perf-run"]');
+
+    await waitForCount(page, ".perf-bar-row", SINGLE_BENCH_BASELINE_MISSING.stages.length);
+    const got = await readSingleOut(page);
+    // ① 横幅按**界面当前语言**说人话（e2e 默认英文界面；三条文案都列上，防语种漂移后静默漏断言）
+    const lang = await page.evaluate(() => document.documentElement.lang || "en");
+    const EXPECTED_BY_LANG: Record<string, string> = {
+      en: "No baseline recorded yet",
+      "zh-CN": "还没有记录过基准",
+      ja: "基準がまだ記録されていません",
+    };
+    expect(EXPECTED_BY_LANG[lang] ?? EXPECTED_BY_LANG.en).toBeTruthy();
+    expect(got.bannerText).toContain(EXPECTED_BY_LANG[lang] ?? EXPECTED_BY_LANG.en);
+    expect(PLACEHOLDER_LEAK.test(got.bannerText)).toBe(false);
+    // ② Go 的中文散文与机器路径不上屏，但细节没丢（进 title）
+    expect(got.text).not.toContain("未找到基准文件");
+    expect(got.text).not.toContain("--save-baseline");
+    expect(got.titles.some((t) => t.includes("未找到基准文件"))).toBe(true);
+    // ③ 基准缺失不吞结果：阶段条照旧
+    expect(got.barRows).toBe(SINGLE_BENCH_BASELINE_MISSING.stages.length);
   });
 });

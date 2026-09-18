@@ -27,6 +27,10 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-baseline-th",
   // ADR-262 D5：并发基准入口（并发度 / 每类上限 / 运行）
   "diag-perf-conc-workers",
+  // ADR-262 D5：性能面板真实载荷渲染断言要能点到运行按钮与结果容器
+  "diag-perf-run",
+  "diag-perf-model",
+  "diag-perf-single",
   "diag-perf-conc-max",
   "diag-perf-conc-run",
   "diag-perf-conc-out",
@@ -153,8 +157,8 @@ export function diagnosticsHTML(): string {
         label: `${UI_ICONS.clock} ${t("diagnostics.perfRunSingle")}`,
         body: `  <div class="perf-wrap">
     <div class="perf-controls">
-      <button class="btn-base accent" id="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
-      <input id="diag-perf-model" type="text" placeholder="${t("diagnostics.perfModelPlaceholder")}">
+      <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
+      <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
       <label for="diag-perf-iter">${t("diagnostics.perfIterations")}</label>
       <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
       <label for="diag-perf-rtype">${t("diagnostics.perfRtype")}</label>
@@ -170,7 +174,7 @@ export function diagnosticsHTML(): string {
       <label for="diag-perf-baseline-th">${t("diagnostics.perfBaselineThreshold")}</label>
       <input id="diag-perf-baseline-th" type="number" min="1" step="1" value="50" data-testid="diag-perf-baseline-th">
     </div>
-    <div id="diag-perf-single"></div>
+    <div id="diag-perf-single" data-testid="diag-perf-single"></div>
   </div>`,
       },
       {

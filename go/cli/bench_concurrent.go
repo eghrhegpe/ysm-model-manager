@@ -1068,6 +1068,17 @@ func runSingleBenchSamples(a AppService, modelPath, filesRoot string, iterations
 // 没有任何 WASM / Rust / Three 环节——归属如实报 go，不为好看编造分层（ADR-262 D2）。
 const singleBenchRuntime = "go"
 
+// singleBenchReadNote ① 阶段的文案：体量 + 实测读取速率。
+// ⚠️ 诚实红线：读几百字节时 `time.Since` 常返回 0（时钟粒度），`float64(bytes)/0s` 会打出
+// 「+Inf MB/s」——测不出来的速率宁可不报（2026-09-18 由 e2e 真实渲染抓出）。
+func singleBenchReadNote(bytes int64, d time.Duration) string {
+	size := fsutil.FormatSize(bytes)
+	if d <= 0 {
+		return fmt.Sprintf("✅ %s", size)
+	}
+	return fmt.Sprintf("✅ %s, %.0f MB/s", size, float64(bytes)/d.Seconds()/1024/1024)
+}
+
 // runSingleModelBench 执行单次单模型测试
 func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenchStage {
 	var stages []singleBenchStage
@@ -1097,7 +1108,7 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 		Name:     readStageName,
 		Duration: readDuration,
 		Bytes:    int64(len(data)),
-		Notes:    fmt.Sprintf("✅ %s, %.0f MB/s", fsutil.FormatSize(int64(len(data))), float64(len(data))/readDuration.Seconds()/1024/1024),
+		Notes:    singleBenchReadNote(int64(len(data)), readDuration),
 	})
 
 	start = time.Now()

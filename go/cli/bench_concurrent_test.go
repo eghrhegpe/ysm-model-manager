@@ -224,6 +224,57 @@ func TestRunSingleModelBench_StagesAndFailureBranch(t *testing.T) {
 	}
 }
 
+// TestRunSingleModelBench_ZeroDurationNoFakeThroughput 诚实红线：
+// 读几百字节时 `time.Since` 常返回 0（时钟粒度）→ `float64(bytes)/0s` 会把速率打成「+Inf MB/s」。
+// 立因（2026-09-18，e2e 真实渲染抓出）：GUI 阶段条上真的出现了「✅ 115B, +Inf MB/s」——
+// 测不出来的速率宁可不报，也不能报一个无限大。
+// 判据由**纯函数** singleBenchReadNote 确定性锁定（真实计时不可控，不在集成层赌 0 时长）；
+// 本用例只加一层粗保护：真实链路上任何阶段都不得出现 Inf/NaN。
+func TestRunSingleModelBench_ZeroDurationNoFakeThroughput(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	modelPath := filepath.Join(root, "m.ysm")
+	if err := os.WriteFile(modelPath, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stages := runSingleModelBench(&benchFakeApp{}, modelPath, root)
+	if len(stages) == 0 {
+		t.Fatal("应产出阶段")
+	}
+	for _, s := range stages {
+		for _, bad := range []string{"Inf", "NaN"} {
+			if strings.Contains(s.Notes, bad) {
+				t.Errorf("阶段 %q 文案不得出现 %q（时长 %v）: %q", s.Name, bad, s.Duration, s.Notes)
+			}
+		}
+	}
+}
+
+// TestSingleBenchReadNote 纯函数判据：时长 > 0 才报速率；为 0 时只报体量（不编造、不 Inf）。
+func TestSingleBenchReadNote(t *testing.T) {
+	t.Parallel()
+	t.Run("零时长只报体量", func(t *testing.T) {
+		got := singleBenchReadNote(115, 0)
+		if strings.Contains(got, "MB/s") || strings.Contains(got, "Inf") {
+			t.Errorf("时长为 0 不得报速率: %q", got)
+		}
+		if !strings.Contains(got, "115") {
+			t.Errorf("体量应保留: %q", got)
+		}
+	})
+	t.Run("负时长按零处理", func(t *testing.T) {
+		if got := singleBenchReadNote(115, -time.Millisecond); strings.Contains(got, "MB/s") {
+			t.Errorf("负时长同样不得报速率: %q", got)
+		}
+	})
+	t.Run("有时长报有限速率", func(t *testing.T) {
+		got := singleBenchReadNote(2*1024*1024, time.Second)
+		if !strings.Contains(got, "2 MB/s") {
+			t.Errorf("2MB/1s 应为 2 MB/s, got %q", got)
+		}
+	})
+}
+
 func TestRunPerfSnapshot_EndToEnd(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()

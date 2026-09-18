@@ -333,8 +333,8 @@ func resolveTargetModel(modelPath, filesRoot string) (string, error) {
 		// 目录式模型归一化（增强）：折叠为 <dir>/ysm.json —— 与 scanner 条目约定一致，
 		// 见 resolveBenchModelTarget。
 		entry, _, err := resolveBenchModelTarget(modelPath)
-		switch {
-		case err == nil:
+		switch err {
+		case nil:
 			return entry, nil
 		default:
 			// 归一化失败（不存在 / 形态不可用）→ 保持既有契约：显式 --model 直返

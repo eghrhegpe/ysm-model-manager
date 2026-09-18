@@ -25,7 +25,6 @@ import type { TdKeyAction } from "./keymap.ts";
 import {
   createAdaptiveRenderBudget,
   getFrameIntervalMs,
-  PREVIEW_FRAME_INTERVAL_MS,
   previewPixelRatio,
   sampleAdaptivePixelRatio,
   shouldRenderAtFps,
@@ -205,13 +204,13 @@ export class RendererHost {
    * 的 WASD 键位与相机偏好均可在激活时生效。
    */
   start(viewContainer: HTMLElement, infra: SharedInfra): void {
-    if (this._animId !== 0) return;
     this._viewContainer = viewContainer;
     this._infra = infra;
     this._cam = infra.camera;
     this._ctr = infra.controls;
     this._ot = infra.orbitTarget;
-    this._lastTime = performance.now() - PREVIEW_FRAME_INTERVAL_MS;
+    if (this._animId !== 0) return; // 已运行：仅刷新上述局部态（_viewContainer/_cam/_ot 跨 session 复用），不二次启动 rAF
+    this._lastTime = performance.now();
     this._nextFrameTime = performance.now();
     this._adaptiveBudget = createAdaptiveRenderBudget(
       previewPixelRatio(window.devicePixelRatio),

@@ -121,9 +121,12 @@ export class SceneInfraHost {
       disposeSceneObjectResources(this.scene);
     }
     this.scene = null;
-    this.camera = null;
-    this.renderer = null;
-    this.controls = null;
+    // [P0 修复·保留复用语义] camera/renderer/controls 不再置 null：cleanupPreview 是
+    // 「全部关闭」语义，但按 ADR-227 硬约束「renderer 应保留单例（WebGL context 数量上限）」，
+    // 关预览→再开本应复用旧 renderer，而非丢弃不释放（旧实现 = 既不复用也不释放，
+    // 每次开关泄漏一个 WebGL context）。内容层 geometry/material 已在上方释放；纹理归
+    // textureCache 引用计数管，不在本处释放（防双重释放打穿计数）。确要彻底释放走 teardown()。
+    // this.camera / this.renderer / this.controls 保留引用，下次 buildSharedInfra 直接复用。
   }
 
   // ===== 终局拆除（code review #1）=====
@@ -244,6 +247,7 @@ export function buildSharedInfra(
   }
   const camera = sceneInfraHost.camera;
   // 复用单例 renderer（唯一 WebGL context）
+  // 复用单例 renderer（唯一 WebGL context）
   if (!sceneInfraHost.renderer) {
     sceneInfraHost.renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -253,6 +257,16 @@ export function buildSharedInfra(
     sceneInfraHost.renderer.setPixelRatio(previewPixelRatio(window.devicePixelRatio));
     sceneInfraHost.renderer.domElement.style.touchAction = "none";
     viewContainer.appendChild(sceneInfraHost.renderer.domElement);
+  } else {
+    // [P0 联动·P2 修复] renderer 跨 session 复用，须每次重新对齐像素比与画布尺寸——
+    // 否则自适应降采样把 pixelRatio 钉在低档后，关预览→再开仍停低分辨率（render-host
+    // 的 budget 已复位 1.5，但 renderer 停在 0.75，二者脱钩）。同时重建场景下相机/控制
+    // 已复用，renderer 也须把尺寸对齐新容器。
+    sceneInfraHost.renderer.setPixelRatio(previewPixelRatio(window.devicePixelRatio));
+    sceneInfraHost.renderer.setSize(viewContainer.clientWidth, viewContainer.clientHeight);
+    if (sceneInfraHost.renderer.domElement.parentNode !== viewContainer) {
+      viewContainer.appendChild(sceneInfraHost.renderer.domElement);
+    }
   }
   const renderer = sceneInfraHost.renderer;
   // 修复：fullCleanup（ESC/关闭按钮）会移除旧 viewContainer（连同 canvas），但

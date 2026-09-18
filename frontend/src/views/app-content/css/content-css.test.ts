@@ -66,10 +66,11 @@ describe("设置页组间距契约（content-stg）", () => {
     expect(titlePadTop?.[1]).toBe(sectionMargin?.[1]);
   });
 
-  it(".section-title 纳入入场动画（与卡片同 keyframe，只靠 delay 分先后）", () => {
-    // 2026：切 tab 时标题瞬时出现、内容再滑入（观感割裂）。标题改用与卡片同源的 fadeSlideUp；
+  it(".section-title 纳入入场动画（与卡片同 keyframe；标题恒定 0ms，卡片经内联 delay 错峰）", () => {
+    // 2026：切 tab 时标题瞬时出现、内容再滑入（观感割裂）。标题改用与卡片同源的 fadeSlideUp，
+    // class 内显式 animation-delay:0ms——卡片档从 0/60/120ms 起步，标题永不晚于其下方卡片。
     // 本断言防其被静默移除（keyframe 名被注释吞掉的教训见本文件「注释体内不得出现闭合符」用例）。
-    expect(contentLayoutCSS).toMatch(/\.section-title\s*\{[^}]*animation:\s*fadeSlideUp/);
+    expect(contentLayoutCSS).toMatch(/\.section-title\s*\{[^}]*animation:\s*fadeSlideUp[^}]*animation-delay:\s*0ms/);
   });
 
   it(".stg-desc 为正文段落唯一原语（字号/行高/颜色单点，不带 margin/动画）", () => {

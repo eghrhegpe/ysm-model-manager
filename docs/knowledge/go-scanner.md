@@ -14,6 +14,7 @@ auto_fields:
     - InvalidatePath
     - ListModelAuthors
     - OnCacheInvalidated
+    - ScanBackend
     - ScanEntries
     - ScanEntriesCtx
     - ScanEntriesLite

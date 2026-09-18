@@ -16,6 +16,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - Scan
+    - ScanBackend
     - ScanManifest
   tests:
     - tests/test_rust_bridge_tags.ts

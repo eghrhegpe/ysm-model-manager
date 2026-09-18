@@ -124,7 +124,7 @@ status: active
 
 ### 入场动画（单一 keyframe）
 
-设置页三类范式的入场动画**统一用 `fadeSlideUp var(--tr-enter) both`**（`.stg-card` / `.settings-group` / `.setting-row` 同一节奏，错峰只靠内联 `animation-delay`）；**节标题 `.section-title`（全 app-content 共享原语）也已纳入**——否则切 tab 时标题瞬时出现、内容再滑入，观感割裂（2026-09 补）。
+设置页三类范式的入场动画**统一用 `fadeSlideUp var(--tr-enter) both`**（`.stg-card` / `.settings-group` / `.setting-row` 同一节奏，卡片错峰靠内联 `animation-delay`）；**节标题 `.section-title`（全 app-content 共享原语）也已纳入**——class 内显式 `animation-delay:0ms`，标题恒定 0ms 起播、永不晚于其下方卡片（卡片档 0/60/120ms… 起步），切 tab 观感连贯（2026-09 补）。
 
 - `card-in`（`scale(.95)` 弹出）是 v1.7.6「Keyframe 合并 13→3」明确并入 `fadeSlideUp` 的**旧动画**，其唯一 shadow 层定义已删除；新增卡片/行组/行**不得再引用 `card-in`**（引用已删 keyframe 会静默失效，`css-layer-check` 检查 1/1b 阻断）。
 - 内联 `style="animation:..."` 的 keyframe 名必须在同 shadow 层有 `@keyframes` 定义（@keyframes 不穿 shadow，CSS 变量可穿）。

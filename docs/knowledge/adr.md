@@ -22,7 +22,7 @@ use_when:
   - toast undo 按钮图标迁移
   - ADR-238 emoji→SVG 收债的 toast 盲区量不到不拦
 pitfalls:
-  - app-toast msg 槽走 esc() 转义，塞 SVG 会以字面 <svg> 文本显示，不能直接承载图标（ADR-267 盲区根因）
+  - app-toast msg 槽走 esc() 转义，塞 SVG 会以字面 svg 标签文本显示，不能直接承载图标（ADR-267 盲区根因）
   - .toast 已按 type 左边框着色，msg 载荷 emoji 前缀是信息冗余，应交给 type 驱动
 quick_groups:
   - toast 收债

@@ -229,6 +229,10 @@ export const autoSidebar = [
       {
         "text": "Bus 事件契约报告",
         "link": "/event-graph"
+      },
+      {
+        "text": "3D 预览菜单系统全景图",
+        "link": "/preview-menu-overview"
       }
     ]
   },

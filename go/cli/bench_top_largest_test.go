@@ -156,6 +156,15 @@ func TestRunSingleBenchTopLargest_JSONShape(t *testing.T) {
 	if m.Spec.Types[0].Found < 2 {
 		t.Errorf("found 应是全库该类型总数（未截断）, got %d", m.Spec.Types[0].Found)
 	}
+	// 排名依据必须可见：体量回显且逐条递减（读者据此验「凭什么排第一」——SizeBytes 在目录式下是 0）
+	for i, p := range m.Models {
+		if p.FootprintBytes <= 0 {
+			t.Errorf("前 N 大载荷应回填体量: %s → %d", p.Model, p.FootprintBytes)
+		}
+		if i > 0 && m.Models[i-1].FootprintBytes < p.FootprintBytes {
+			t.Errorf("models[] 应按体量降序: %d < %d", m.Models[i-1].FootprintBytes, p.FootprintBytes)
+		}
+	}
 }
 
 // 载荷里的 models[] 必须按排名顺序（前 N 大的意义就在「谁最大」，

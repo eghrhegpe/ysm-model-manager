@@ -525,6 +525,10 @@ type singleBenchJSON struct {
 	Hints          []string         `json:"hints"`
 	Format         string           `json:"format"`
 	SizeBytes      int64            `json:"size_bytes"`
+	// FootprintBytes 参与「全库前 N 大」排名的**模型占用**（仅该模式填；其余模式 omitempty 缺席）。
+	// 为什么不能拿 SizeBytes 顶替：目录式模型的 SizeBytes 是 0（identity 口径），排名依据看不见
+	// 就等于不可复核——回显体量才能让读者自己验「它凭什么排第一」。
+	FootprintBytes int64 `json:"footprint_bytes,omitempty"`
 	// Identity 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定。
 	// format/size_bytes 保留在原处不动（既有消费者），rtype 才是判定口径。
 	Identity perfIdentity `json:"identity"`
@@ -886,6 +890,8 @@ func buildTopLargestPayload(ctx *CmdContext, ranked []perfTopTarget, foundByType
 			order = append(order, t.Rtype)
 		}
 		payload, unsupported, mismatch := collectBenchTarget(ctx, t.Path, t.Rtype, iterations, entry)
+		// 回填体量：报告里看得见排名依据，读者才能自己验「它凭什么排第一」
+		payload.FootprintBytes = t.Footprint
 		if mismatch {
 			sum.StageMismatch = true
 		}

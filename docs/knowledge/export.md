@@ -126,7 +126,7 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 
 | 文件 | 职责 |
 |------|------|
-| `screenshot.ts` | 纯函数 `screenshotFromRenderer`：对任意活跃 renderer/scene/camera 截图（PNG/JPEG base64）——`render` 后须在同一同步任务内 `toDataURL`（缓冲下一帧被清空）；`preserveDrawingBuffer` 自 r185 起不可运行时切换（幽灵 API，2026-09 P0 修复），透明背景改由「渲染前临时置全透明清屏色、读后还原」实现；空/异常静默返回 null |
+| `screenshot.ts` | 纯函数 `screenshotFromRenderer`：对任意活跃 renderer/scene/camera 截图（PNG/JPEG base64）——`render` 后须在同一同步任务内 `toDataURL`（缓冲下一帧被清空）；`preserveDrawingBuffer` 自 r185 起不可运行时切换（幽灵 API，2026-09 P0 修复）。**透明捕获的两个前提（2026-09 补齐，此前「只置清屏色」是双重失效的死代码）**：① renderer 须以 `alpha: true` 构造（见 `shared-infra.ts`，否则画布无 α 通道、α 恒 255）；② 渲染期须把 `scene.background` 临时置 `null`——three 对 `background.isColor` 走 `setClear(bg, 1)`（alpha 硬编码 1）+ forceClear，会**覆盖** `setClearColor(0,0,0,0)`。背景/画布尺寸/清屏色三者一律记录并在 `finally` 还原（渲染抛错也不把共享 renderer/scene 留污染）；空/异常静默返回 null |
 | `screenshot-render.ts` | 离屏多角度渲染器：`renderMultiAngle` 自建 WebGLRenderer（透明背景）+ 四角度循环 + 灯光/纹理/YSM 对象构建 + finally 释放 |
 | `screenshot-lights.ts` | `toScreenshotLights()` 从 `LightCapability` 读三点布光 + PMREM 环境光衰减，缺 cap 回退标准灯 |
 | `texture-loader.ts` | `loadTextures(urls)` 并行从 `textureCache` acquire，polling 等图片 complete（P2 修复 2026-09：轮询加 15s 超时兜底，悬挂 URL 不再永久 pending；超时视同失败 invalidate），失败 invalidate 缓存 |
@@ -162,6 +162,11 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 - `WebGLRenderer({alpha:true, preserveDrawingBuffer:true, antialias:true})` + `setClearColor(0x000000, 0)`
 - 四角度 `theta ∈ [0, π/4, π/2, -π/4]`，相机在 `center + [sinθ·dist, 0, -cosθ·dist]`
 - `dist = (maxDim / (2·tan(22.5°)) / 0.85) · 1.2`（Box3 最大维度算出）
+- **单帧（`current`）路径自 2026-09 起与多角度对齐，同样输出透明底**：该路径复用共享 renderer
+  （`screenshotFromRenderer`），故透明度依赖两处——`shared-infra.ts` 的 renderer 以 `alpha: true`
+  构造，且截图期把共享 scene 的 `background`（不透明 `#171820`）临时置 `null` 再还原。
+  预览观感不受影响（还原后仍是深色底），但**「环境贴图作背景」在截图里也不再出现**（有意：
+  导出的即抠掉背景的模型，与离屏路径一致）。
 - FOV=45°，纵横比 1，近/远 0.1/1000，`lookAt(center)`
 
 ### 灯光提取

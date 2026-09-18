@@ -20,6 +20,7 @@ auto_fields:
     - CmdContext.SetResult
     - CommandSpec
     - DispatchCommand
+    - Error
     - ErrParam
     - ErrParam.Error
     - ErrParam.Unwrap
@@ -57,6 +58,7 @@ auto_fields:
     - SidecarOutput
     - String
     - TimingInfo
+    - Unwrap
 use_when:
   - FBX
   - CLI

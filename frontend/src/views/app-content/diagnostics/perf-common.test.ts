@@ -8,7 +8,7 @@ vi.mock("@/bus", () => ({
   bus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
 }));
 
-import { sectionHeader, bindPerfCopyHandlers, getOutBox, setBusy, setErrorMsg, setErrorResp, setErrorCatch, respHasOutput } from "./perf-common.ts";
+import { sectionHeader, bindPerfCopyHandlers, getOutBox, setBusy, setErrorMsg, setErrorResp, setErrorCatch, respHasOutput, renderLoadFailure } from "./perf-common.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 describe("sectionHeader", () => {
@@ -103,5 +103,41 @@ describe("bindPerfCopyHandlers", () => {
   it("无对应容器 → 不抛错", () => {
     const root = { getElementById: vi.fn(() => null) } as unknown as ShadowRoot;
     expect(() => bindPerfCopyHandlers(root)).not.toThrow();
+  });
+});
+
+// ===== renderLoadFailure：载荷不可用时的统一失败渲染（诊断页重复实现审计 C4）=====
+// 立因：同一段「命令成功但载荷形状不对 / 命令失败」的三元分支曾在 5 个模块各写一遍
+//（perf-single-bench 的 renderBenchFailure、perf-concurrent、perf-scan-bench、perf-gui-flow、
+// perf-log），唯一差异是空载荷文案键。收敛后**判据唯一**：status=success 即契约漂移（比"执行失败"
+// 更值得暴露），否则转述 Go 原话。
+describe("renderLoadFailure", () => {
+  const esc = ((s: string) => s) as unknown as Parameters<typeof renderLoadFailure>[2];
+  // node 环境（本文件首行 @vitest-environment node）没有 document：只需 innerHTML 可赋值的桩
+  const makeOut = () => ({ innerHTML: "" }) as unknown as HTMLElement;
+
+  it("status=success（命令成功但载荷形状不对）→ 渲染该模块的空载荷文案", () => {
+    const out = makeOut();
+    renderLoadFailure(out, { status: "success", data: {} } as never, esc, "diagnostics.perfScanBenchEmpty");
+    expect(out.innerHTML).toContain("diag-stat-error");
+    // 文案键由调用点给：契约测试按源码子串锚定 perfScanBenchEmpty 出现在 perf-scan-bench.ts
+    expect(out.innerHTML.length).toBeGreaterThan(0);
+  });
+
+  it("status=error → 转述 Go 原话（优先 error.message）", () => {
+    const out = makeOut();
+    renderLoadFailure(
+      out,
+      { status: "error", error: { code: "param_error", message: "磁盘已满" } } as never,
+      esc,
+      "diagnostics.perfFail",
+    );
+    expect(out.innerHTML).toContain("磁盘已满");
+  });
+
+  it("status=error 但 Go 没给 message → 退回通用失败文案（不渲染空横幅）", () => {
+    const out = makeOut();
+    renderLoadFailure(out, { status: "error" } as never, esc, "diagnostics.perfFail");
+    expect(out.innerHTML).toContain("diag-stat-error");
   });
 });

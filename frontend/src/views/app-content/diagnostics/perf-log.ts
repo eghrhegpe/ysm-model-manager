@@ -9,12 +9,11 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,
+  renderLoadFailure,
   respHasOutput,
   sectionHeader,
   setBusy,
   setErrorCatch,
-  setErrorMsg,
-  setErrorResp,
 } from "./perf-common.ts";
 
 // 代际守卫（ADR-230）
@@ -77,12 +76,14 @@ export async function runPerfLog(root: ShadowRoot, esc: EscFn): Promise<void> {
     const resp = await executeCLI("perf-log", {});
     if (perfHistGuard.stale(gen)) return;
     if (!respHasOutput(resp)) {
-      setErrorResp(out, resp, esc);
+      renderLoadFailure(out, resp, esc, "diagnostics.perfFail");
       return;
     }
     const parsed = perfLogParseEntries(resp.data.output);
     if (!parsed) {
-      setErrorMsg(out, t("diagnostics.perfFail"), esc);
+      // 解析不出条目也算载荷不可用：status=error 时改为转述 Go 原话（原先一律通用文案，
+      // 会吞掉 Go 已给出的原因）——本单点带来的唯一行为变化，属改善
+      renderLoadFailure(out, resp, esc, "diagnostics.perfFail");
       return;
     }
     out.innerHTML = perfLogRenderCards(parsed, resp.data.output, esc);

@@ -18,11 +18,11 @@ import {
   type CLIResp,
   errorHTML,
   getOutBox,
+  renderLoadFailure,
   sectionHeader,
   setBusy,
   setErrorCatch,
   setErrorMsg,
-  setErrorResp,
 } from "./perf-common.ts";
 import {
   type PerfMatrixPayload,
@@ -498,7 +498,7 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
       if (perfSingleGuard.stale(gen)) return;
       const payload = singleBenchParsePayload(resp);
       if (!payload) {
-        renderBenchFailure(out, resp, esc);
+        renderLoadFailure(out, resp, esc, "diagnostics.perfFail");
         return;
       }
       // 载荷 + 错误横幅叠加（规律六）：基准对比判「退化」时 Go 返回 error 状态，
@@ -526,7 +526,7 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
     if (perfSingleGuard.stale(gen)) return;
     const matrix = singleBenchParseMatrix(resp);
     if (!matrix) {
-      renderBenchFailure(out, resp, esc);
+      renderLoadFailure(out, resp, esc, "diagnostics.perfFail");
       return;
     }
     out.innerHTML = renderPerfMatrix(matrix, esc);
@@ -534,13 +534,4 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
     if (perfSingleGuard.stale(gen)) return;
     setErrorCatch(out, e, esc);
   }
-}
-
-/** 载荷不可用时的统一失败渲染：命令成功但形状不对 = 契约漂移，比"执行失败"更值得暴露。 */
-function renderBenchFailure(out: HTMLElement, resp: CLIResp, esc: EscFn): void {
-  if (resp.status === "success") {
-    setErrorMsg(out, t("diagnostics.perfFail"), esc);
-    return;
-  }
-  setErrorResp(out, resp, esc);
 }

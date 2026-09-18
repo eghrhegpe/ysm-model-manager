@@ -22,11 +22,10 @@ import type { EscFn } from "./logs.ts";
 import {
   errorHTML,
   getOutBox,
+  renderLoadFailure,
   sectionHeader,
   setBusy,
   setErrorCatch,
-  setErrorMsg,
-  setErrorResp,
 } from "./perf-common.ts";
 import { singleBenchReadIterations } from "./perf-single-bench.ts";
 import { webGate } from "./web-gate.ts";
@@ -251,11 +250,7 @@ export async function runScanBench(root: ShadowRoot, esc: EscFn): Promise<void> 
     const payload = scanBenchParsePayload(resp);
     if (!payload) {
       // 命令成功但形状不对 = 契约漂移（比"执行失败"更值得暴露）；命令失败则转述 Go 原话
-      if (resp.status === "success") {
-        setErrorMsg(out, t("diagnostics.perfScanBenchEmpty"), esc);
-      } else {
-        setErrorResp(out, resp, esc);
-      }
+      renderLoadFailure(out, resp, esc, "diagnostics.perfScanBenchEmpty");
       return;
     }
     const banner =

@@ -2,7 +2,7 @@
 // 三个命令模块（single-bench / gui-flow / perf-log）与 perf-trace 共用的渲染/守卫/错误辅助。
 // 纯前端逻辑，零 Go 改动。
 
-import { t } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import type { executeCLI } from "@/services/cli-bridge.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
@@ -100,10 +100,38 @@ function respHasOutput(
   );
 }
 
+/**
+ * 载荷不可用时的统一失败渲染（诊断页重复实现审计 C4，2026-09-18）。
+ *
+ * 立因：同一段三元分支曾在 **5 个模块**各写一遍——`perf-single-bench`（原 `renderBenchFailure`）、
+ * `perf-concurrent`、`perf-scan-bench`、`perf-gui-flow`、`perf-log`——唯一差异是空载荷文案键。
+ * 判据收敛在这里，各模块只回答「我这块的空载荷该怎么说」：
+ *   · `status === "success"` 却拿不到载荷 = **契约漂移**，比「执行失败」更值得暴露（要人去修契约）；
+ *   · 其余（error / 部分失败）= 转述 Go 原话（`error.message`，没有则退回通用失败文案）。
+ *
+ * @param emptyKey 本模块的空载荷文案键——由调用点给，契约测试按源码子串锚定各文件自己的键
+ */
+function renderLoadFailure(out: HTMLElement, resp: CLIResp, esc: EscFn, emptyKey: LocaleKey): void {
+  if (resp.status === "success") {
+    setErrorMsg(out, t(emptyKey), esc);
+    return;
+  }
+  setErrorResp(out, resp, esc);
+}
+
 // ===== 导出命令模块用的辅助 =====
 
 export type { CLIResp };
 // errorHTML 导出（2026-09-18）：基准对比判「退化」时 Go 返回 error 状态但载荷有效，
 // 消费方需要「载荷 + 错误横幅」**同时**渲染（规律六：错误分支也要交出结构化数据），
 // 而 setErrorResp 是整块替换 innerHTML 的，无法叠加——故把字符串版放出来组合。
-export { errorHTML, getOutBox, respHasOutput, setBusy, setErrorCatch, setErrorMsg, setErrorResp };
+export {
+  errorHTML,
+  getOutBox,
+  renderLoadFailure,
+  respHasOutput,
+  setBusy,
+  setErrorCatch,
+  setErrorMsg,
+  setErrorResp,
+};

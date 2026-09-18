@@ -8,10 +8,10 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
   getOutBox,
+  renderLoadFailure,
   sectionHeader,
   setBusy,
   setErrorCatch,
-  setErrorMsg,
   setErrorResp,
 } from "./perf-common.ts";
 import { webGate } from "./web-gate.ts";
@@ -131,11 +131,7 @@ export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
       return;
     }
     if (!data?.stages || !Array.isArray(data.stages) || data.stages.length === 0) {
-      if (resp.status === "success") {
-        setErrorMsg(out, t("diagnostics.perfFail"), esc);
-      } else {
-        setErrorResp(out, resp, esc);
-      }
+      renderLoadFailure(out, resp, esc, "diagnostics.perfFail");
       return;
     }
     out.innerHTML = guiFlowRenderStages(

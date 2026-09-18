@@ -17,11 +17,11 @@ import type { EscFn } from "./logs.ts";
 import {
   errorHTML,
   getOutBox,
+  renderLoadFailure,
   sectionHeader,
   setBusy,
   setErrorCatch,
   setErrorMsg,
-  setErrorResp,
 } from "./perf-common.ts";
 import {
   PERF_TARGET_REPO,
@@ -299,11 +299,7 @@ export async function runConcurrentBench(root: ShadowRoot, esc: EscFn): Promise<
     const payload = concParsePayload(resp);
     if (!payload) {
       // 参数错/未找到模型等：Go 在 SetResult 之前就返回了，此时没有载荷可渲染，如实报错
-      if (resp.status === "success") {
-        setErrorMsg(out, t("diagnostics.perfConcurrentEmpty"), esc);
-      } else {
-        setErrorResp(out, resp, esc);
-      }
+      renderLoadFailure(out, resp, esc, "diagnostics.perfConcurrentEmpty");
       return;
     }
     const banner =

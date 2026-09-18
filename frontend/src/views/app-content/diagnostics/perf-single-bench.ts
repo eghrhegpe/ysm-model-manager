@@ -140,6 +140,10 @@ function singleBenchParsePayload(resp: CLIResp): SingleBenchPayload | null {
   const data = resp.data as Partial<SingleBenchPayload> | undefined;
   if (!data || !Array.isArray(data.stages) || typeof data.total_ms !== "number") return null;
   if (typeof data.per_iteration_ms !== "number") return null;
+  if (typeof data.iterations !== "number") return null;
+  for (const s of data.stages) {
+    if (typeof s?.ms !== "number" || typeof s?.name !== "string") return null;
+  }
   return data as SingleBenchPayload;
 }
 

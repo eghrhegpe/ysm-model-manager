@@ -3,7 +3,7 @@
 //
 // 锁定两件事：
 //   1) 卡片集合与 THEME_VALID 一致 —— 新增主题必须同步加卡片（防「加主题忘加卡片」）
-//   2) 每张三色互异且为合法 hex —— 防手抄笔误
+//   2) 每张卡片三色点绑定 --bg/--accent/--bd 三个变量名 —— 防绑错/漏绑（变量名级契约）
 //
 // ⚠️ 本测试**锁定**色点与主题变量的映射关系（非「无映射」）：
 //    每张卡片三色点绑定 --bg / --accent / --bd（全仓 var 使用 72/245/212，
@@ -25,9 +25,9 @@ vi.mock("@/backend/platform-web.ts", () => ({
 /** 从设置页 HTML 中抽出每张主题卡片的 data-theme 与三个色点 */
 function parseCards(html: string): { theme: string; vars: string[] }[] {
   const cards: { theme: string; vars: string[] }[] = [];
-  // 以 data-theme="x" 为锚切块：每块含其后三个 background:var(--xxx)
-  // 以 data-theme="x" 切出卡片壳，取其首个内层 div（色点容器）里的 var(--xxx)
-  const cardRe = /data-theme="([^"]+)"[^>]*>\s*<div[^>]*>([\s\S]*?)<\/div>/g;
+  // 以 .theme-card + data-theme="x" 联合锚切卡片壳（防页面其他 data-theme 元素混入），
+  // 取其首个内层 div（色点容器）里的 var(--xxx)
+  const cardRe = /class="theme-card[^"]*"\s+data-theme="([^"]+)"[^>]*>\s*<div[^>]*>([\s\S]*?)<\/div>/g;
   let m: RegExpExecArray | null;
   while ((m = cardRe.exec(html)) !== null) {
     const vars = [...m[2].matchAll(/background:\s*var\(--([a-z-]+)\)/g)].map((c) => c[1]);

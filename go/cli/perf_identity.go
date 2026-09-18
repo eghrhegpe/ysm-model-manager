@@ -78,18 +78,9 @@ func buildPerfIdentity(path, filesRoot string, reg *registry.ResourceTypeRegistr
 	}
 	ext := strings.ToLower(filepath.Ext(path))
 
-	// 来源判定与 classifyForScan 的分支一一对应（顺序不可换：目录归属优先）
-	source := "extension"
-	rtype := ""
-	if id := registry.TypeByLocation(path, reg); id != "" {
-		source = "location"
-		rtype = id
-	} else if registry.IsContainerExt(ext) {
-		source = "container"
-	}
-	if rtype == "" {
-		rtype = classifyForScan(path, ext, reg)
-	}
+	// 三段判定复用 classifyForScanWithSource（flow.go）——分支顺序只存在那一份，
+	// 此处不得复制分支，否则 classifyForScan 变更时 rtype_source 会静默漂移
+	rtype, source := classifyForScanWithSource(path, ext, reg)
 	// 显示名取自 registry（类型命名单一事实源；前端不得自建映射）
 	rtypeLabel := rtypeDisplayName(rtype)
 

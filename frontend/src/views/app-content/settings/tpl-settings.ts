@@ -164,9 +164,10 @@ function renderStgThemePicker(): string {
     .map((theme) => {
       const icon = UI_ICONS[THEME_ICON[theme] as keyof typeof UI_ICONS] ?? UI_ICONS.dot;
       const label = t(("settings.theme." + theme) as Parameters<typeof t>[0]);
+      // --bd 是 10-12% 透明 color-mix，直接作底色会隐没在卡片上——统一加 muted 描边保证三点半可辨
       const swatches = THEME_SWATCH_VARS.map(
         (v) =>
-          `<span style="width:8px;height:8px;border-radius:50%;background:var(--${v})"></span>`,
+          `<span style="width:8px;height:8px;border-radius:50%;border:1px solid var(--muted);background:var(--${v})"></span>`,
       ).join("");
       return `<div class="theme-card theme-${theme}" data-theme="${theme}">
         <div style="display:flex;gap:2px;margin-bottom:2px">${swatches}</div>

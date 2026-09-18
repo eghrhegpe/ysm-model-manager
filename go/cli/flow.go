@@ -251,19 +251,26 @@ func scanSummaryByType(entries []types.ModelEntry) (map[string]int, string) {
 //  3. 容器兜底（目录消歧未命中）→ 诚实标 "container"（不归任意类型——共享扩展名
 //     .zip 被 14 类型声明，last-wins 归任意类型会误导分布）。
 func classifyForScan(path, ext string, reg *registry.ResourceTypeRegistry) string {
+	id, _ := classifyForScanWithSource(path, ext, reg)
+	return id
+}
+
+// classifyForScanWithSource = classifyForScan + 命中来源（location | extension | container），
+// 供身份块 rtype_source 使用——三段分支顺序**只存在这一份**，消费方不得自行复制分支。
+func classifyForScanWithSource(path, ext string, reg *registry.ResourceTypeRegistry) (string, string) {
 	if id := registry.TypeByLocation(path, reg); id != "" {
-		return id
+		return id, "location"
 	}
 	if !registry.IsContainerExt(ext) {
 		if id := packs.DetectResourceType(path, reg); id != "" {
-			return id
+			return id, "extension"
 		}
-		return "other"
+		return "other", "extension"
 	}
 	// 容器兜底诚实标 "container"——repoaudit.Classify(ext) 对共享
 	// 扩展名 .zip（14 类型声明）last-wins 归任意类型（与内容无关——误导分布）；
 	// Classify 也不返回 ""（miss 归 other）——死代码 `if id == ""` 一并删除
-	return "container"
+	return "container", "container"
 }
 
 // runPhaseModelScan 模拟模型扫描

@@ -48,8 +48,9 @@ export class SubscriptionBucket {
    */
   addGlobalOnce(key: string, subscribe: () => () => void): void {
     if (this.globalKeys.has(key)) return;
+    const unsub = subscribe(); // 工厂先执行：抛错时不占 key，同 key 可重试（见下注）
     this.globalKeys.add(key);
-    this.globalUnsubs.push(subscribe());
+    this.globalUnsubs.push(unsub);
   }
 
   /**
@@ -75,8 +76,9 @@ export class SubscriptionBucket {
    */
   addPageOnce(key: string, subscribe: () => () => void | Promise<void>): void {
     if (this.pageKeys.has(key)) return;
+    const unsub = subscribe(); // 工厂先执行：抛错时不占 key，同 key 可重试（与 addGlobalOnce 对称）
     this.pageKeys.add(key);
-    this.pageUnsubs.push(subscribe());
+    this.pageUnsubs.push(unsub);
   }
 
   /** 清理页面级订阅（**仅** lang:changed 全量重建 / 卸载调用；切页不调，理由见文件头 ⚠️） */

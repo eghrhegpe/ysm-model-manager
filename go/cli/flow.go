@@ -190,11 +190,13 @@ func runGUIFlow(ctx *CmdContext) error {
 		analyzeResult, model := runPhaseModelAnalyze(ctx.App, targetModel)
 		results = append(results, withRuntime(analyzeResult, guiFlowRuntimeGo))
 
-		// PMX/PMD 加载链路在 Three.js 前端（@moeru/three-mmd），CLI 无解析器，
-		// ④⑤⑥ 阶段（纹理缓存/数据准备/渲染预估）依赖 AnalyzeBedrockModel（仅 Bedrock geometry），
-		// 对 PMX 会产出假数据——跳过并在③阶段已明确告知限制。
-		ext := strings.ToLower(filepath.Ext(targetModel))
-		if ext != ".pmx" && ext != ".pmd" {
+		// ④⑤⑥（纹理缓存/数据准备/渲染预估）全部从**分析出来的模型**派生，
+		// 故门控依据是「③ 有没有真产出模型」，而不是扩展名。
+		// 原实现按 `ext != ".pmx" && ext != ".pmd"` 门控，使 VRM/FBX/GLTF/litematic
+		// 与损坏的 `.ysm` 在一份空 `types.BedrockModel{}` 上跑出三个阶段——
+		// 那是**空模型数据当实测**（ADR-262 D3/D8）。③ 已如实告知限制或失败，
+		// 此处不再产出派生阶段（按类型门控挡不住「损坏的 ysm」那一类）。
+		if len(model.Bones) > 0 {
 			// ============ Phase 4: 纹理缓存检查 ============
 			results = append(results, withRuntime(runPhaseTextureCache(targetModel), guiFlowRuntimeGo))
 
@@ -360,16 +362,24 @@ func runPhaseModelAnalyze(a AppService, modelPath string) (guiFlowResult, types.
 	start := time.Now()
 	ext := strings.ToLower(filepath.Ext(modelPath))
 
-	// PMX/PMD 分派：Go 端无 PMX 骨骼/纹理解析器（MMD 加载链路在 Three.js 前端
-	// @moeru/three-mmd），AnalyzeBedrockModel 对 PMX 必然失败/假数据——明确告知
-	// 限制并引导 GUI 3D 预览实测，不再硬跑（此前对 PMX 输出「分析失败」误导用户）。
-	if ext == ".pmx" || ext == ".pmd" {
+	// ③ 的分派依据 = 「CLI 有没有该类型的解析链路」（cliAnalyzable，perf_targets.go），
+	// 而不再是扩展名白名单（2026-09-18 收编，ADR-262 D3）：MMD 链路在 Three.js 前端
+	// （@moeru/three-mmd），VRM/FBX/GLTF/litematic 的解析器同样只在前端 3D adapter——
+	// CLI 拿到都是空模型。明确告知限制并引导 GUI 3D 预览实测，不再硬跑
+	// （此前对 PMX 输出「分析失败」误导用户，对 VRM 等则连提示都没有）。
+	if !cliAnalyzablePath(modelPath, ext, registry.LoadRegistry()) {
+		// PMX/PMD 的链路有专属名字，人话更准；其余类型用注册表显示名兜底
+		reason := "该类型不在 CLI 的分析链路上（解析器只在前端 3D adapter），CLI 不模拟"
+		if ext == ".pmx" || ext == ".pmd" {
+			reason = "PMX/PMD 加载链路在 Three.js 前端（@moeru/three-mmd），CLI 不模拟"
+		}
 		return guiFlowResult{
 			Stage:    "③ 模型分析",
 			Duration: time.Since(start),
 			Success:  true,
 			Description: fmt.Sprintf(
-				"ℹ️ PMX/PMD 加载链路在 Three.js 前端（@moeru/three-mmd），CLI 不模拟\n   文件: %s\n   请在 GUI 3D 预览实测首帧耗时",
+				"ℹ️ %s\n   文件: %s\n   请在 GUI 3D 预览实测首帧耗时",
+				reason,
 				filepath.Base(modelPath),
 			),
 		}, types.BedrockModel{}

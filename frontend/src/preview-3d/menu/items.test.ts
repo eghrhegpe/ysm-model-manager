@@ -531,8 +531,17 @@ describe("渲染失败兜底（render 抛错不崩）", () => {
       // 内联 style 属性选择器探测不可用 → 类 + 样式表原文两级
       // 注：断言从硬编码 #ff7b7b 改为 token —— 该色已收编 --status-error（硬编码色债收口）
       expect(overlay.querySelector(".cm-error-note")).not.toBeNull();
-      const errSheet = [...document.querySelectorAll("style")].find((s) => s.textContent?.includes(".cm-error-note"));
-      expect(errSheet?.textContent ?? "").toContain("var(--status-error)");
+      // 断言所有含 .cm-error-note 的 sheet 都含 token：该规则由 core.ts ensureCoreStyles
+      // （mountWith 构建 dock 时经 installOnceStyles 注入）与 roles-views.ts 共享 MENU_ERROR_NOTE_CSS
+      // 常量。若任一残留/新 sheet 缺 token（回归），全部断言失败；不依赖 openPanel 是否注入
+      // 新 sheet（openPanel 不注入——ensureCoreStyles 已幂等去重），避免绑定到错误 sheet。
+      const errSheets = [...document.querySelectorAll("style")].filter((s) =>
+        s.textContent?.includes(".cm-error-note"),
+      );
+      expect(errSheets.length).toBeGreaterThan(0);
+      for (const sheet of errSheets) {
+        expect(sheet.textContent).toContain("var(--status-error)");
+      }
       expect(errSpy).toHaveBeenCalled();
       expect(boom).toHaveBeenCalled();
       handle.dispose();

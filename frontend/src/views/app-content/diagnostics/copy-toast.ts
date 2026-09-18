@@ -24,10 +24,11 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 export async function copyWithToast(text: string, okKey: LocaleKey): Promise<boolean> {
   const result = await copyText(text);
   bus.emit("toast:show", {
-    msg: result.ok ? `✅ ${t(okKey)}` : `❌ ${t("diagnostics.copyFail")}`,
+    // 去 emoji 前缀（ADR-238 债务）：视觉反馈由 type 驱动（成功绿/失败红左边框），文案只放纯文本
+    msg: result.ok ? t(okKey) : t("diagnostics.copyFail"),
     // 失败消息要留够阅读时间（用户得知道要手动框选），成功可以更快收走
     duration: result.ok ? TOAST_MS.success : TOAST_MS.normal,
-    ...(result.ok ? {} : { type: "error" as const }),
+    type: result.ok ? "success" : "error",
   });
   return result.ok;
 }

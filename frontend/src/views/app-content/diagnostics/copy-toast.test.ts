@@ -27,23 +27,25 @@ describe("copyWithToast：复制回执如实", () => {
     copyText.mockReset();
   });
 
-  it("写入成功 → ✅ + 成功文案，且不带 error 类型", async () => {
+  it("写入成功 → 纯文本成功文案 + success 类型，不带 emoji 前缀", async () => {
     copyText.mockResolvedValue({ ok: true });
     const ok = await copyWithToast("文本", "diagnostics.copiedLog");
     expect(ok).toBe(true);
     const toast = lastToast();
     expect(toast.msg).toContain("已复制");
-    expect(toast.type).toBeUndefined();
+    expect(toast.msg).not.toMatch(/[✅❌]/);
+    expect(toast.type).toBe("success");
     expect(copyText).toHaveBeenCalledWith("文本");
   });
 
-  it("写入与降级全失败 → ❌ 复制失败 + error 类型，**绝不**出现「已复制」", async () => {
+  it("写入与降级全失败 → 复制失败 + error 类型，**绝不**出现「已复制」", async () => {
     copyText.mockResolvedValue({ ok: false, reason: "exec-failed" });
     const ok = await copyWithToast("文本", "diagnostics.copiedLog");
     expect(ok).toBe(false);
     const toast = lastToast();
     expect(toast.msg).not.toContain("已复制");
     expect(toast.msg).toContain("复制失败");
+    expect(toast.msg).not.toMatch(/[✅❌]/);
     expect(toast.type).toBe("error");
   });
 

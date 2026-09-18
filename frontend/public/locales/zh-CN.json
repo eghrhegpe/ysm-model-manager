@@ -1372,7 +1372,7 @@
   "skeleton.slots": "槽 {slots}",
   "android.backExit": "再按一次返回退出应用",
   "android.networkOffline": "⚠️ 网络已断开",
-  "tree.searchPlaceholder": "🔍 搜索模型名称...",
+  "tree.searchPlaceholder": "搜索模型名称...",
   "tree.filter": "⚙️ 筛选",
   "tree.authors": "🎨 作者 ▾",
   "tree.batch": "⚡ 批量 ▾",

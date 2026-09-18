@@ -1535,7 +1535,7 @@ export const ja: Record<string, string> = {
   "android.networkOffline": "⚠️ ネットワークが切断されました",
 
   // ── 模型树（app-tree）──
-  "tree.searchPlaceholder": "🔍 モデル名を検索...",
+  "tree.searchPlaceholder": "モデル名を検索...",
   "tree.filter": "⚙️ フィルター",
   "tree.authors": "🎨 作者 ▾",
   "tree.batch": "⚡ 一括 ▾",

@@ -1530,7 +1530,7 @@ export const en: Record<string, string> = {
   "android.networkOffline": "⚠️ Network disconnected",
 
   // ── 模型树（app-tree）──
-  "tree.searchPlaceholder": "🔍 Search model name...",
+  "tree.searchPlaceholder": "Search model name...",
   "tree.filter": "⚙️ Filter",
   "tree.authors": "🎨 Authors ▾",
   "tree.batch": "⚡ Batch ▾",

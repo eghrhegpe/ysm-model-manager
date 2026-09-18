@@ -1372,7 +1372,7 @@
   "skeleton.slots": "Slots {slots}",
   "android.backExit": "Press back again to exit",
   "android.networkOffline": "⚠️ Network disconnected",
-  "tree.searchPlaceholder": "🔍 Search model name...",
+  "tree.searchPlaceholder": "Search model name...",
   "tree.filter": "⚙️ Filter",
   "tree.authors": "🎨 Authors ▾",
   "tree.batch": "⚡ Batch ▾",

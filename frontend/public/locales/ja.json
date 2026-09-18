@@ -1372,7 +1372,7 @@
   "skeleton.slots": "スロット {slots}",
   "android.backExit": "もう一度戻るキーで終了します",
   "android.networkOffline": "⚠️ ネットワークが切断されました",
-  "tree.searchPlaceholder": "🔍 モデル名を検索...",
+  "tree.searchPlaceholder": "モデル名を検索...",
   "tree.filter": "⚙️ フィルター",
   "tree.authors": "🎨 作者 ▾",
   "tree.batch": "⚡ 一括 ▾",

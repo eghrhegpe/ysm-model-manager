@@ -213,9 +213,9 @@ export function renderRepoHeaderHTML(params: {
     // sourceLabel 由本地三元链构建（raw/jsdelivr/githubapi），不含用户数据，直接注入 HTML
     sourceLabel +
     "</div>" +
-    // 行3: 搜索
+    // 行3: 搜索（placeholder 为纯文本提示——emoji 装饰跨平台渲染不一致，且是 ADR-238 债，不塞）
     '<div class="gh-search-wrap">' +
-    '<input id="gh-repo-srch" class="gh-search" type="text" data-testid="gh-srch" placeholder="🔍 ' +
+    '<input id="gh-repo-srch" class="gh-search" type="text" data-testid="gh-srch" placeholder="' +
     t("gh.searchPlaceholder") +
     '">' +
     "</div>" +

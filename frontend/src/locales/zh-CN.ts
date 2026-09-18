@@ -1490,7 +1490,7 @@ export const zhCN = {
   "android.networkOffline": "⚠️ 网络已断开",
 
   // ── 模型树（app-tree）──
-  "tree.searchPlaceholder": "🔍 搜索模型名称...",
+  "tree.searchPlaceholder": "搜索模型名称...",
   "tree.filter": "⚙️ 筛选",
   "tree.authors": "🎨 作者 ▾",
   "tree.batch": "⚡ 批量 ▾",

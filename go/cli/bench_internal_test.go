@@ -75,7 +75,9 @@ func TestSingleBenchJSON_JSONShape(t *testing.T) {
 		`"runtime"`, `"stats"`, `"n"`, `"median_ms"`, `"p95_ms"`,
 		// 身份块（ADR-262 D2）
 		`"identity"`, `"rtype"`, `"rtype_source"`, `"rtype_label"`, `"relPath"`, `"absPath"`,
-		// 基准判决（ADR-262 D8）——degraded 带 omitempty，非退化时缺席（缺席即缺席）
+		// 基准判决（ADR-262 D8）。⚠️ `degraded` **没有** omitempty——非退化时照常出现为 0
+		// （契约测试与前端 `PerfBaselineDiff.degraded: number` 都按必填对待），
+		// 故此处不断言它的出现与否；真正的「缺席即缺席」只针对可选的 `saved_to` / `diff`。
 		`"baseline"`, `"saved_to"`, `"diff"`, `"threshold_pct"`, `"noise_floor_ms"`,
 		`"verdict"`, `"base_ms"`, `"now_ms"`, `"delta_pct"`,
 	} {

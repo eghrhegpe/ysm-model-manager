@@ -236,9 +236,19 @@ function singleBenchParsePayload(resp: CLIResp): SingleBenchPayload | null {
   const data = resp.data as Partial<SingleBenchPayload> | undefined;
   if (!data || !Array.isArray(data.stages) || typeof data.total_ms !== "number") return null;
   if (typeof data.per_iteration_ms !== "number") return null;
-  if (typeof data.iterations !== "number") return null;
+  // iterations >= 1：全零空载荷（stages=[] / total_ms=0 / iterations=0）不得被当成实测
+  // （诚实红线「空模型数据不得当实测」；identityOnlyPayload 正是这个形状）。
+  if (typeof data.iterations !== "number" || data.iterations < 1) return null;
   for (const s of data.stages) {
     if (typeof s?.ms !== "number" || typeof s?.name !== "string") return null;
+  }
+  // 基准块是**嵌套**结构，形状校验得下探一层：畸形 `diff.stages` 会在渲染期的 .map 抛错，
+  // 整块结果被 setErrorCatch 的兜底文案覆盖——数字明明已经拿到了。
+  // Go 当前恒给数组，但桥另一侧不可信是本文件的一贯口径（宁可拒绝，不 `as` 穿透）。
+  const bl = data.baseline as { saved_to?: unknown; diff?: { stages?: unknown } } | undefined;
+  if (bl !== undefined) {
+    if (bl === null || typeof bl !== "object") return null;
+    if (bl.diff !== undefined && !Array.isArray(bl.diff.stages)) return null;
   }
   return data as SingleBenchPayload;
 }
@@ -292,8 +302,13 @@ function singleBenchRenderBaseline(bl: PerfBaselineBlock | undefined, esc: EscFn
         threshold: String(diff.threshold_pct),
       })
     : t("diagnostics.perfBaselineSummaryOk", { threshold: String(diff.threshold_pct) });
+  // title 里带上「跟哪个文件比的」：saved_to 有 title 呈现，判决侧缺失会口径不对称
+  // （用户在 GUI 里看不到对比对象，只能用命令行才知道）。
+  const judgeHint = `${diff.path}\n${t("diagnostics.perfBaselineJudgeHint", {
+    noise: diff.noise_floor_ms.toFixed(1),
+  })}`;
   const summaryLine = `<div class="perf-total ${regressed ? "perf-bar-danger" : ""}" title="${esc(
-    t("diagnostics.perfBaselineJudgeHint", { noise: diff.noise_floor_ms.toFixed(1) }),
+    judgeHint,
   )}">${regressed ? UI_ICONS.warning : UI_ICONS.success} ${esc(summary)}</div>`;
 
   const rows = diff.stages

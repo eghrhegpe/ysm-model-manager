@@ -212,7 +212,16 @@ test.describe("诊断页", () => {
     expect(before.disabledAtStart).toBe(false);
     expect(before.threshold).toBe("50");
 
-    // 切到全类型矩阵 → 三件套禁用（「被禁用」比「勾了却没生效」诚实）
+    // 切到全类型矩阵 → 三件套禁用（「被禁用」比「勾了却没生效」诚实）。
+    // ⚠️ 先等 `__all__` 选项真的出现：类型选项由 populatePerfRtypeOptions 异步走桥填充，
+    // 未到位时给 select.value 赋「不存在的 option」会**静默变空**，用例随即假红。
+    await page.waitForFunction(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const select = root?.querySelector(
+        '[data-testid="diag-perf-rtype"]',
+      ) as HTMLSelectElement | null;
+      return Boolean(select && [...select.options].some((o) => o.value === "__all__"));
+    });
     await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
       const select = root?.querySelector(

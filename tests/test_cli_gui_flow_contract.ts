@@ -168,18 +168,20 @@ for (const field of [
 ]) {
   must(singleTs.includes(field), `前端基准载荷接口未声明 ${field}（perf-single-bench.ts）`);
 }
-// GUI 必须真的能发出基准参数（只声明接口不传参 = 功能不可达，缺陷依旧）
+// GUI 必须真的能发出基准参数（只声明接口不传参 = 功能不可达，缺陷依旧）。
+// ⚠️ 断言**组装点**而非字段名子串：类型声明里本来就有 `baseline?: BaselineSlot;` 与
+// `"save-baseline"?: BaselineSlot;`，用 includes 匹配的话——把整个组装分支删掉，断言仍绿。
 must(
-  singleCode.includes('"save-baseline"'),
-  "前端未传 --save-baseline（GUI 无记录基准入口，退化门禁仍然不可达）",
+  /\[\s*"save-baseline"\s*\]\s*=/.test(singleCode),
+  "前端未在参数组装点写 --save-baseline（GUI 无记录基准入口，退化门禁仍然不可达）",
 );
 must(
-  singleCode.includes('"baseline"') || singleCode.includes(".baseline"),
-  "前端未传 --baseline（GUI 无对比基准入口，退化门禁仍然不可达）",
+  /\.baseline\s*=\s*"default"/.test(singleCode),
+  '前端未在参数组装点写 --baseline = "default"（路径策略应归 Go，前端不编基准文件路径）',
 );
 must(
-  singleCode.includes('"default"'),
-  "前端基准参数应传哨兵 default：路径策略归 Go，前端不编基准文件路径",
+  /\.threshold\s*=/.test(singleCode),
+  "前端未在参数组装点写 --threshold（退化阈值不可调 = 判据对用户不可见）",
 );
 const IDENTITY_FIELDS = [
   '"rtype"',

@@ -482,6 +482,49 @@ describe("single-bench 基准入口与判决（ADR-262 D8）", () => {
     expect(out.querySelector(".perf-bl-rows")).toBeNull();
   });
 
+  it("畸形基准载荷（diff.stages 非数组）被守卫拒绝，不冒泡成 TypeError 覆盖结果", async () => {
+    // 基准块是嵌套结构，形状校验必须下探——否则渲染期 .map 抛错会被外层 catch 接住，
+    // 整块结果（含已拿到的实测数字）被 setErrorCatch 的兜底文案替换。
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "single-bench",
+      data: {
+        ...SINGLE_STRUCTURED,
+        baseline: {
+          diff: { path: "/cfg/b.json", threshold_pct: 50, noise_floor_ms: 1, verdict: "ok", degraded: 0, stages: null },
+        },
+      },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    const out = await run(root);
+    expect(out.querySelector(".diag-stat-error")).toBeTruthy();
+    expect(out.querySelector(".perf-bl-row")).toBeNull();
+  });
+
+  it("全零空载荷（iterations=0）不得当实测：守卫拒绝", async () => {
+    // 诚实红线「空模型数据不得当实测」：stages=[]/total_ms=0/iterations=0 曾是守卫的残留口子
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "single-bench",
+      data: {
+        model: "./ysm/player.ysm",
+        iterations: 0,
+        total_ms: 0,
+        per_iteration_ms: 0,
+        stages: [],
+        bottleneck: "",
+        format: "YSM",
+      },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    const out = await run(root);
+    expect(out.querySelector(".diag-stat-error")).toBeTruthy();
+  });
+
   it("矩阵模式禁用基准三件套且不传基准参数（Go 侧明确拒绝，被禁比被吞诚实）", async () => {
     executeCLI.mockResolvedValue({
       status: "success",

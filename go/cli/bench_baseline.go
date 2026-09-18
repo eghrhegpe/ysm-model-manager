@@ -16,6 +16,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -253,6 +254,8 @@ func saveBenchBaseline(path string, stages []singleBenchStage) error {
 
 // applyBenchBaseline text 模式的基准后处理：解析路径 → 对比（人类可读输出）→ 保存。
 // 顺序有意为「先对比后保存」：两者指向同一槽时（GUI「记录并对比」）应先比旧基准再覆盖它。
+// ⚠️ 但「对比失败」**不得中断保存**：首次勾「记录 + 对比」时基准文件本来就不存在，
+// 早退等于「点了记录却什么都没记」，还把用户指引去「请先用 --save-baseline 记录一次基准」。
 func applyBenchBaseline(baseline, saveBaseline string, thresholdPct float64, avg []singleBenchStage) error {
 	basePath, err := resolveBaselinePath(baseline)
 	if err != nil {
@@ -262,19 +265,40 @@ func applyBenchBaseline(baseline, saveBaseline string, thresholdPct float64, avg
 	if err != nil {
 		return err
 	}
+	var compareErr error
 	if basePath != "" {
-		if err := compareSingleBenchBaseline(basePath, avg, thresholdPct); err != nil {
-			return err
-		}
+		compareErr = compareSingleBenchBaseline(basePath, avg, thresholdPct)
 	}
+	savedPath := ""
 	if savePath != "" {
 		if err := saveBenchBaseline(savePath, avg); err != nil {
 			return err
 		}
 		// 人话由这里宣布（写入者静默，见 saveBenchBaseline 注释）：JSON 模式不走本函数。
 		fmt.Printf("\n💾 基准已保存到: %s\n", savePath)
+		savedPath = savePath
 	}
-	return nil
+	return reconcileBaselineErrors(compareErr, savedPath)
+}
+
+// reconcileBaselineErrors 处理「对比失败」与「记录成功」在同一次调用里并存的情形。
+// 顺序仍是先比后存（先比旧基准再覆盖），只是失败不再中断那笔写入。
+// 记录确实发生了就必须说出来——否则错误文案会指引用户去做他刚做完的事。
+func reconcileBaselineErrors(compareErr error, savedPath string) error {
+	if compareErr == nil {
+		return nil
+	}
+	if savedPath == "" {
+		return compareErr
+	}
+	// 说明「记录已发生」必须用**内层原因**：`ErrRuntime.Error()` 自带「运行时错误: 」前缀，
+	// 直接 %v 会打成「运行时错误: 运行时错误: 未找到基准文件…」（实测）。errors.Unwrap 一层即可，
+	// 且对本包 ErrParam/ErrRuntime 都适用；不包裹的错误保持原样。
+	cause := compareErr
+	if inner := errors.Unwrap(compareErr); inner != nil {
+		cause = inner
+	}
+	return newRuntimeErrf("%v（本次已记录新基准到 %s，下次运行即可对比）", cause, savedPath)
 }
 
 // buildBaselineJSON JSON 模式的基准后处理：把判决与保存去向装进载荷，stdout 保持纯 JSON。
@@ -295,26 +319,38 @@ func buildBaselineJSON(baseline, saveBaseline string, thresholdPct float64, avg 
 	}
 
 	block := &benchBaselineJSON{}
-	var degradeErr error
+	var degradeErr, compareErr error
 	if basePath != "" {
 		diff, err := evaluateBaseline(basePath, avg, thresholdPct)
 		if err != nil {
-			return nil, err
-		}
-		block.Diff = diff
-		if diff.Verdict == baselineVerdictRegressed {
-			// D8 失败优先：退化即失败（CI 靠退出码判定）；载荷照样交出（规律六），
-			// 由调用方在 SetResult 之后再返回本错误。
-			degradeErr = newRuntimeErrf("%d 个阶段相对基准退化超过 %.0f%%", diff.Degraded, diff.ThresholdPct)
+			// 不早退：同一次调用可能同时要求「记录」，那笔写入必须发生（见 reconcileBaselineErrors）。
+			compareErr = err
+		} else {
+			block.Diff = diff
+			if diff.Verdict == baselineVerdictRegressed {
+				// D8 失败优先：退化即失败（CI 靠退出码判定）；载荷照样交出（规律六），
+				// 由调用方在 SetResult 之后再返回本错误。
+				degradeErr = newRuntimeErrf("%d 个阶段相对基准退化超过 %.0f%%", diff.Degraded, diff.ThresholdPct)
+			}
 		}
 	}
+	savedPath := ""
 	if savePath != "" {
 		if err := saveBenchBaseline(savePath, avg); err != nil {
-			return nil, err
+			// 写盘失败也要把已算出的判决交出去（规律六）；但一片空白就不装空壳
+			// （`"baseline": {}` 与「缺席」语义不同，omitempty 的诚实性要求缺席就是缺席）。
+			if block.Diff == nil {
+				return nil, err
+			}
+			return block, err
 		}
 		block.SavedTo = savePath
+		savedPath = savePath
 	}
-	return block, degradeErr
+	if degradeErr != nil {
+		return block, degradeErr
+	}
+	return block, reconcileBaselineErrors(compareErr, savedPath)
 }
 
 // explicitMatrixBaselineFlags 判断本次调用是否**显式**传入了基准类参数。

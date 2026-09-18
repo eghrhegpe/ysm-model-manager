@@ -375,3 +375,56 @@ func TestSingleBench_BaselineRejectedInMatrixMode(t *testing.T) {
 		t.Errorf("矩阵模式 + --threshold 应明确拒绝, got %v", err)
 	}
 }
+
+// TestBuildBaselineJSON_SaveSurvivesCompareFailure 「记录 + 对比」是 GUI 最自然的首次用法
+// （两个勾同时打上），而此刻基准文件**本来就不存在**。
+// 原实现在对比出错时早退，于是 save 分支永不执行 → 用户点了「记录基准」，盘上什么都没有，
+// 还被指引去「请先用 --save-baseline 记录一次基准」（他刚点过）——属「参数被吞」的内部违例：
+// 参数没被拒，而是被静默丢弃。顺序仍是先比后存（先比旧基准再覆盖），只是失败不再中断记录。
+func TestBuildBaselineJSON_SaveSurvivesCompareFailure(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "no-such-baseline.json")
+	savePath := filepath.Join(dir, "recorded.json")
+	stages := []singleBenchStage{{Name: "① 文件读取", Duration: 5 * time.Millisecond}}
+
+	block, err := buildBaselineJSON(missing, savePath, 50, stages)
+	if err == nil {
+		t.Fatal("对比失败必须回传错误，否则 CI 会把「没比成」当成功")
+	}
+	if _, statErr := os.Stat(savePath); statErr != nil {
+		t.Fatalf("对比失败不得吞掉记录动作，基准文件应已写出: %v", statErr)
+	}
+	if block == nil {
+		t.Fatal("载荷仍应交出（规律六）：本次记录的去向就在里面")
+	}
+	if block.SavedTo != savePath {
+		t.Errorf("载荷应回显本次记录的去向 %q, got %q", savePath, block.SavedTo)
+	}
+	if block.Diff != nil {
+		t.Errorf("对比失败不得凭空给出判决: %+v", block.Diff)
+	}
+	if !strings.Contains(err.Error(), "已记录") {
+		t.Errorf("错误应说明本次已记录新基准（否则指引用户去做刚做完的事）, got %v", err)
+	}
+}
+
+// TestApplyBenchBaseline_SaveSurvivesCompareFailure text 路径同病同修。
+// ⚠️ 本用例会写 stdout（💾 基准已保存到），故**不并行**（stdout 是进程级共享，见文件头）。
+func TestApplyBenchBaseline_SaveSurvivesCompareFailure(t *testing.T) {
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "no-such-baseline.json")
+	savePath := filepath.Join(dir, "recorded.json")
+	stages := []singleBenchStage{{Name: "① 文件读取", Duration: 5 * time.Millisecond}}
+
+	err := applyBenchBaseline(missing, savePath, 50, stages)
+	if err == nil {
+		t.Fatal("对比失败必须回传错误")
+	}
+	if _, statErr := os.Stat(savePath); statErr != nil {
+		t.Fatalf("text 路径同样不得吞掉记录动作: %v", statErr)
+	}
+	if !strings.Contains(err.Error(), "已记录") {
+		t.Errorf("错误应说明本次已记录新基准, got %v", err)
+	}
+}

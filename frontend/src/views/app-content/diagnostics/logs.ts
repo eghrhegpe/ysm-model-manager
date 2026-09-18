@@ -8,6 +8,7 @@ import { logError } from "@/utils/base/primitives/log.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { statRowHTML } from "./status-row.ts";
 
 /** 转义函数签名（单一事实源 = utils/html/html.ts 的 esc；调用方以 (s) => esc(String(s || "")) 包装适配） */
 export type EscFn = (s: unknown) => string;
@@ -63,8 +64,7 @@ function dgLsCheckStale(gen: number): boolean {
 }
 
 function dgLsSetEmpty(list: HTMLElement, key: LocaleKey, type: "muted" | "error" = "muted"): void {
-  const cls = type === "error" ? "diag-stat-error" : "diag-stat-muted";
-  list.innerHTML = `<div class="stat-row diag-stat ${cls}">${t(key)}</div>`;
+  list.innerHTML = statRowHTML(type === "error" ? "error" : "muted", t(key));
 }
 
 function dgLsFormatTime(ts: string | number | undefined): string {

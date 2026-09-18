@@ -11,6 +11,7 @@ import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
+import { msgRowHTML, statRowHTML } from "./status-row.ts";
 
 // 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML。
 // 【范式豁免】本模块无跨调用配置状态（不像 dedup.ts 的 keepPolicy/priorityPath 需跨调用保持），
@@ -28,23 +29,17 @@ export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<voi
   if (_healthBusy) return;
   _healthBusy = true;
   try {
-    list.innerHTML =
-      '<div class="stat-row diag-stat diag-stat-muted">' +
-      UI_ICONS.refresh +
-      " " +
-      t("diagnostics.healthScanning") +
-      "</div>";
+    list.innerHTML = statRowHTML("muted", t("diagnostics.healthScanning"), undefined, {
+      icon: UI_ICONS.refresh,
+    });
 
     const { RepoHealthAudit, GetRepoRoot } = await backendGetApp();
     const filesRoot = await GetRepoRoot(currentRepoType());
     const report = parseHealthReport(await RepoHealthAudit(filesRoot));
     if (!report) {
-      list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error">' +
-        UI_ICONS.error +
-        " " +
-        esc(t("diagnostics.healthParseFailed")) +
-        "</div>";
+      list.innerHTML = msgRowHTML("error", t("diagnostics.healthParseFailed"), esc, {
+        icon: UI_ICONS.error,
+      });
       return;
     }
 
@@ -52,7 +47,7 @@ export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<voi
   } catch (e) {
     // Go error 通道（路径校验等业务错误）或调用失败：统一展示
     const msg = friendlyError(e, t("diagnostics.healthFailed"));
-    list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">${UI_ICONS.error} ${esc(msg)}</div>`;
+    list.innerHTML = msgRowHTML("error", msg, esc, { icon: UI_ICONS.error });
   } finally {
     _healthBusy = false;
   }

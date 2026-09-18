@@ -10,6 +10,7 @@ import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 import type { DedupConfigShape, ScanFile, ScanGroupResult } from "./dedup-types.ts";
 import type { EscFn } from "./logs.ts";
+import { msgRowHTML } from "./status-row.ts";
 
 // ===== 结果渲染 =====
 
@@ -110,7 +111,7 @@ export function bindPreviewClicks(list: HTMLElement): void {
 // ④ cancel 按钮绑定
 export function bindCancelButton(list: HTMLElement): void {
   list.querySelector("#diag-dedup-cancel")?.addEventListener("click", () => {
-    list.innerHTML = `<div class="stat-row diag-msg diag-msg-muted">${t("diagnostics.dedupCancelled")}</div>`;
+    list.innerHTML = msgRowHTML("muted", t("diagnostics.dedupCancelled"));
   });
 }
 

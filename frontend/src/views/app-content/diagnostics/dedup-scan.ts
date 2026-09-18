@@ -13,6 +13,7 @@ import type {
   ScanTarget,
 } from "./dedup-types.ts";
 import type { EscFn } from "./logs.ts";
+import { statRowHTML } from "./status-row.ts";
 
 /** ② targets收集(rtype单目录/全类型遍历)（依赖注入，无会话状态） */
 export async function collectTargets(
@@ -50,15 +51,15 @@ export async function scanEachDirectory(
   const allResults: ScanGroupResult[] = [];
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
-    list.innerHTML =
-      '<div class="stat-row diag-stat diag-stat-muted">' +
+    list.innerHTML = statRowHTML(
+      "muted",
       t("diagnostics.scanningProgress", {
         cur: i + 1,
         total: targets.length,
         icon: esc(target.icon),
         label: esc(target.label),
-      }) +
-      "</div>";
+      }),
+    );
     await new Promise((r) => setTimeout(r, 10));
     const configStr = JSON.stringify(getConfig());
     const groups = await FindDuplicateFiles(target.dir, configStr);

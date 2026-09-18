@@ -30,6 +30,7 @@ import type {
 } from "./dedup-types.ts";
 import { DEDUP_DEFAULTS } from "./dedup-types.ts";
 import type { EscFn } from "./logs.ts";
+import { msgRowHTML, statRowHTML } from "./status-row.ts";
 
 export type { DedupConfigShape } from "./dedup-types.ts";
 
@@ -110,21 +111,14 @@ export function createDedupSession(): DedupSession {
         bus.emit("stats:refresh");
         bus.emit("tree:reload");
       }
-      list.innerHTML =
-        '<div class="stat-row diag-msg ' +
-        (fail > 0 ? "diag-msg-warn" : "diag-msg-success") +
-        '">' +
-        UI_ICONS.success +
-        " " +
-        t("diagnostics.dedupDone", { del, fail }) +
-        "</div>";
+      list.innerHTML = msgRowHTML(
+        fail > 0 ? "warn" : "success",
+        t("diagnostics.dedupDone", { del, fail }),
+        undefined,
+        { icon: UI_ICONS.success },
+      );
     } catch (err) {
-      list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error">' +
-        t("diagnostics.dedupFailed") +
-        ": " +
-        esc(String(err)) +
-        "</div>";
+      list.innerHTML = msgRowHTML("error", `${t("diagnostics.dedupFailed")}: ${esc(String(err))}`);
     } finally {
       state.execBusy = false;
     }
@@ -157,10 +151,7 @@ export function createDedupSession(): DedupSession {
     // ② targets 收集
     const targets = await collectTargets(rtype, reg, typeIcon, typeLabel, GetRepoRoot);
     if (!targets.length) {
-      list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error">' +
-        t("diagnostics.configResourceDir") +
-        "</div>";
+      list.innerHTML = msgRowHTML("error", t("diagnostics.configResourceDir"));
       return;
     }
 
@@ -219,12 +210,7 @@ export function createDedupSession(): DedupSession {
         MoveToRecycle,
       );
     } catch (err) {
-      list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error">' +
-        t("diagnostics.dedupFailed") +
-        ": " +
-        esc(String(err)) +
-        "</div>";
+      list.innerHTML = msgRowHTML("error", `${t("diagnostics.dedupFailed")}: ${esc(String(err))}`);
     }
   }
 
@@ -247,17 +233,17 @@ export function createDedupSession(): DedupSession {
         const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
         typeLabel = rtype ? entryName || rtype : t("diagnostics.all");
         typeIcon = rtype ? entryIcon || "📦" : "📦";
-        list.innerHTML =
-          '<div class="stat-row diag-stat diag-stat-muted">' +
-          t("diagnostics.scanHash", { icon: esc(typeIcon), label: esc(typeLabel) }) +
-          "</div>";
+        list.innerHTML = statRowHTML(
+          "muted",
+          t("diagnostics.scanHash", { icon: esc(typeIcon), label: esc(typeLabel) }),
+        );
       } catch (e) {
-        list.innerHTML =
-          '<div class="stat-row diag-stat diag-stat-muted">' +
-          UI_ICONS.error +
-          " " +
-          esc(friendlyError(e, t("diagnostics.loadResourceTypesFailed"))) +
-          "</div>";
+        list.innerHTML = statRowHTML(
+          "muted",
+          friendlyError(e, t("diagnostics.loadResourceTypesFailed")),
+          esc,
+          { icon: UI_ICONS.error },
+        );
         return;
       }
 
@@ -275,12 +261,12 @@ export function createDedupSession(): DedupSession {
           MoveToRecycle,
         );
       } catch (e) {
-        list.innerHTML =
-          '<div class="stat-row diag-stat diag-stat-muted">' +
-          UI_ICONS.error +
-          " " +
-          esc(friendlyError(e, t("diagnostics.loadDedupConfigFailed"))) +
-          "</div>";
+        list.innerHTML = statRowHTML(
+          "muted",
+          friendlyError(e, t("diagnostics.loadDedupConfigFailed")),
+          esc,
+          { icon: UI_ICONS.error },
+        );
       }
     } finally {
       state.busy = false;

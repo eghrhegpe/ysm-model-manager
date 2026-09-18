@@ -9,6 +9,7 @@ import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts"
 import type { AppConfig, FileConflict, VersionInstance } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
+import { msgRowHTML } from "./status-row.ts";
 import { webGate } from "./web-gate.ts";
 
 // P3 修复（子代理审计，重入守卫）：scanConflicts 并发标志——快速 3 连点会并发扫描
@@ -64,10 +65,7 @@ async function dgCfLoadCfgAndInstances(): Promise<{
       cfg,
       mcRoot: "",
       instances: [],
-      errorHtml:
-        '<div class="stat-row diag-msg diag-msg-error">' +
-        t("diagnostics.configGameDir") +
-        "</div>",
+      errorHtml: msgRowHTML("error", t("diagnostics.configGameDir")),
     };
   }
   const instances = (await ListVersionInstances(mcRoot)) || [];
@@ -76,7 +74,7 @@ async function dgCfLoadCfgAndInstances(): Promise<{
       cfg,
       mcRoot,
       instances: [],
-      errorHtml: `<div class="stat-row diag-msg diag-msg-muted">${t("diagnostics.noModpacks")}</div>`,
+      errorHtml: msgRowHTML("muted", t("diagnostics.noModpacks")),
     };
   }
   return { cfg, mcRoot, instances, errorHtml: null };
@@ -116,13 +114,9 @@ function dgCfBuildNameConflictMap(
 
 function dgCfRenderConflictList(conflicts: [string, string[]][], esc: EscFn): string {
   if (!conflicts.length) {
-    return (
-      '<div class="stat-row diag-msg diag-msg-success">' +
-      UI_ICONS.success +
-      " " +
-      t("diagnostics.noNameConflict") +
-      "</div>"
-    );
+    return msgRowHTML("success", t("diagnostics.noNameConflict"), undefined, {
+      icon: UI_ICONS.success,
+    });
   }
   let html = `<div class="stat-row diag-msg diag-msg-error" style="animation:conflictRowIn .3s ease">${UI_ICONS.warning} ${t("diagnostics.conflictsFound", { n: conflicts.length })}</div>`;
   conflicts.slice(0, 50).forEach(([name, insNames], i) => {
@@ -163,7 +157,7 @@ export async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void>
     const conflicts = dgCfBuildNameConflictMap(instanceFiles);
     list.innerHTML = dgCfRenderConflictList(conflicts, esc);
   } catch (err) {
-    list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">${t("diagnostics.scanFailed")}: ${esc(String(err))}</div>`;
+    list.innerHTML = msgRowHTML("error", `${t("diagnostics.scanFailed")}: ${esc(String(err))}`);
   } finally {
     dgCfSetScanBtnState(scanBtn, false);
     diagScanning = false;
@@ -186,10 +180,7 @@ async function dgCfLoadSyncContext(): Promise<{
     return {
       mcRoot: "",
       availableInstances: [],
-      errorHtml:
-        '<div class="stat-row diag-msg diag-msg-error">' +
-        t("diagnostics.configGameDir") +
-        "</div>",
+      errorHtml: msgRowHTML("error", t("diagnostics.configGameDir")),
     };
   }
   const instances = (await ListVersionInstances(mcRoot)) || [];
@@ -210,22 +201,16 @@ async function dgCfRunSyncDetection(
     "</div>";
   const result = await DetectConflicts(rtype, instanceName);
   if (!result) {
-    list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-error">' +
-      UI_ICONS.error +
-      " " +
-      t("diagnostics.conflictDetectionFailed") +
-      "</div>";
+    list.innerHTML = msgRowHTML("error", t("diagnostics.conflictDetectionFailed"), undefined, {
+      icon: UI_ICONS.error,
+    });
     return;
   }
   const conflicts = result.conflicts || [];
   if (conflicts.length === 0) {
-    list.innerHTML =
-      '<div class="stat-row diag-msg diag-msg-success">' +
-      UI_ICONS.success +
-      " " +
-      t("diagnostics.noSyncConflict") +
-      "</div>";
+    list.innerHTML = msgRowHTML("success", t("diagnostics.noSyncConflict"), undefined, {
+      icon: UI_ICONS.success,
+    });
     return;
   }
   renderSyncConflictsResult(list, esc, conflicts, rtype, instanceName);
@@ -253,7 +238,7 @@ export async function scanSyncConflicts(
     }
     await dgCfRunSyncDetection(list, esc, rtype, instanceName);
   } catch (err) {
-    list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">${t("diagnostics.scanFailed")}: ${esc(String(err))}</div>`;
+    list.innerHTML = msgRowHTML("error", `${t("diagnostics.scanFailed")}: ${esc(String(err))}`);
   } finally {
     diagSyncBusy = false;
   }
@@ -384,7 +369,9 @@ async function dgCfExecuteResolve(
     const conflictsJSON = JSON.stringify(conflicts);
     const result = await ResolveConflicts(conflictsJSON, strategy, rtype, instanceName);
     if (!result) {
-      list.innerHTML = `<div class="stat-row diag-msg diag-msg-error">${UI_ICONS.error} ${t("diagnostics.resolveFailed")}</div>`;
+      list.innerHTML = msgRowHTML("error", t("diagnostics.resolveFailed"), undefined, {
+        icon: UI_ICONS.error,
+      });
       return;
     }
     let resultMsg = `✅ ${t("diagnostics.resolvedCount", { n: result.resolved || 0 })}`;
@@ -420,7 +407,12 @@ function renderSyncConflictsResult(
   rtype: string,
   instanceName: string,
 ): void {
-  const header = `<div class="stat-row diag-msg diag-msg-error">${UI_ICONS.warning} ${t("diagnostics.syncConflictFound", { n: conflicts.length })}</div>`;
+  const header = msgRowHTML(
+    "error",
+    t("diagnostics.syncConflictFound", { n: conflicts.length }),
+    undefined,
+    { icon: UI_ICONS.warning },
+  );
   const rowsHtml = dgCfBuildSyncConflictRows(conflicts, esc);
   const resolveHtml = dgCfBuildResolveSectionHtml();
   const html = header + rowsHtml + resolveHtml;

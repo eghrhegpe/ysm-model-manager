@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ysm-model-manager/schemas/resource-manifest/v1.json",
+  "manifestSchemaVersion": 1,
+  "title": "resource-manifest",
+  "description": "ADR-269 D1 候选单一事实源：pack.mcmeta 的形状 + 归一化视图。由 scripts/probe-resource-manifest.ts 从真实源码（Go PackMeta/PackMetaView + TS parsePackMetaJson/PackMeta）无损对账提炼，B2 生成器据此派生四份消费端。",
+  "x-canonical-fieldsets": {
+    "_note": "探针对账所用的两个字段集；SOURCE=mcmeta 盘上信封内字段，VIEW=归一化后发给前端的字段（SOURCE + thumbnail）。schema 交叉校验以此为准，与源码投影一旦漂移探针即 fail。",
+    "envelope": "pack",
+    "SOURCE": ["pack_format", "description", "supported_formats", "min_format", "max_format"],
+    "VIEW": ["pack_format", "description", "supported_formats", "min_format", "max_format", "thumbnail"]
+  },
+  "$defs": {
+    "FormatRange": {
+      "description": "mcmeta 格式范围，接受四种书写形态（对齐 Go FormatRange.UnmarshalJSON ≡ TS formatRangeToPair，两者为行为镜像的重复实现——D1 收敛目标之一）。",
+      "oneOf": [
+        { "type": "integer" },
+        { "type": "array", "items": { "type": "integer" }, "minItems": 1, "maxItems": 2 },
+        {
+          "type": "object",
+          "properties": {
+            "min_inclusive": { "type": "integer" },
+            "max_inclusive": { "type": "integer" }
+          },
+          "required": ["min_inclusive", "max_inclusive"]
+        }
+      ]
+    },
+    "TextComponent": {
+      "description": "Minecraft JSON text component（递归）。",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "extra": { "type": "array", "items": { "$ref": "#/$defs/TextComponent" } }
+      },
+      "additionalProperties": true
+    },
+    "Description": {
+      "description": "description 字段：string / text component 对象 / 数组三态（对齐 descString 的三形状处理）。",
+      "oneOf": [
+        { "type": "string" },
+        { "$ref": "#/$defs/TextComponent" },
+        { "type": "array", "items": { "$ref": "#/$defs/TextComponent" } }
+      ]
+    },
+    "PackMetaSource": {
+      "description": "pack.mcmeta 盘上真实结构 = 根对象含单个 `pack` 信封，信封内为 SOURCE 字段集。",
+      "type": "object",
+      "properties": {
+        "pack": {
+          "type": "object",
+          "properties": {
+            "pack_format": { "type": "integer" },
+            "description": { "$ref": "#/$defs/Description" },
+            "supported_formats": { "$ref": "#/$defs/FormatRange" },
+            "min_format": { "$ref": "#/$defs/FormatRange" },
+            "max_format": { "$ref": "#/$defs/FormatRange" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["pack"]
+    },
+    "PackMetaView": {
+      "description": "ReadPackMeta 归一化后发给前端的扁平视图 = SOURCE 归一化 + thumbnail。description 归一为 string，FormatRange 归一为 [min,max]。",
+      "type": "object",
+      "properties": {
+        "pack_format": { "type": "integer" },
+        "description": { "type": "string" },
+        "thumbnail": { "type": "string", "description": "data:image/png;base64 或空串；源文件 pack.png（非 mcmeta），见 x-normalization。" },
+        "supported_formats": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "min_format": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+        "max_format": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 }
+      },
+      "required": ["pack_format", "description"],
+      "additionalProperties": false
+    }
+  },
+  "x-normalization": [
+    {
+      "field": "description",
+      "from": "Description (raw string/text component)",
+      "to": "string",
+      "impl": "Go types.descString ≡ TS pack-meta.descText（两份行为镜像实现，D1 收敛目标）"
+    },
+    {
+      "field": "supported_formats | min_format | max_format",
+      "from": "FormatRange (int|[n]|[n,n]|{min_inclusive,max_inclusive})",
+      "to": "[min, max]",
+      "impl": "Go FormatRange.UnmarshalJSON ≡ TS pack-meta.formatRangeToPair（两份行为镜像实现，D1 收敛目标）"
+    },
+    {
+      "field": "thumbnail",
+      "from": "pack.png 二进制（非 mcmeta）",
+      "to": "data:image/png;base64",
+      "impl": "Go ReadPackMeta 装 pack.png；TS packPngToThumbnail。属视图增量，不并入 SOURCE。"
+    }
+  ]
+}

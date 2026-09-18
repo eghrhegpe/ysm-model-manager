@@ -138,6 +138,36 @@ for (const layer of LAYERS) {
   console.log("");
 }
 
+// ── B1 交叉校验：候选 schema 与本探针已验证的 canonical 必须一致 ──────────
+// schema 是 D1 的候选事实源；此处把 schema 声明的字段集钉回探针的 SOURCE/VIEW/ENVELOPE，
+// 任一漂移（schema 增删字段 / 与真实源码投影不符）即 exit 1——就地 dogfood「单一事实源」。
+const SCHEMA_PATH = "docs/schema/resource-manifest.schema.json";
+const sameSet = (a: string[], b: string[]) =>
+  a.length === new Set([...a, ...b]).size && new Set(a).size === a.length;
+
+console.log("--- B1 候选 schema ↔ 探针 canonical 交叉校验 ---");
+try {
+  const schema = JSON.parse(read(SCHEMA_PATH));
+  const cf = schema["x-canonical-fieldsets"];
+  const srcKeys = Object.keys(schema.$defs.PackMetaSource.properties.pack.properties);
+  const viewKeys = Object.keys(schema.$defs.PackMetaView.properties);
+  const checks: [string, boolean][] = [
+    [`schema.envelope == "${ENVELOPE}"`, cf.envelope === ENVELOPE],
+    ["schema.SOURCE == probe SOURCE", sameSet(cf.SOURCE, SOURCE)],
+    ["schema.VIEW == probe VIEW", sameSet(cf.VIEW, VIEW)],
+    ["PackMetaSource.pack 属性 == schema.SOURCE", sameSet(srcKeys, cf.SOURCE)],
+    ["PackMetaView 属性 == schema.VIEW", sameSet(viewKeys, cf.VIEW)],
+  ];
+  for (const [name, ok] of checks) {
+    if (!ok) failures++;
+    console.log(`  ${ok ? "✅" : "❌"} ${name}`);
+  }
+} catch (e) {
+  failures++;
+  console.log(`  ❌ 读取/校验 ${SCHEMA_PATH} 失败：${(e as Error).message}`);
+}
+console.log("");
+
 // 归一化登记：类型分歧不是字段损失，显式列出以免对账器误判。
 console.log("--- 类型归一化（非信息损失，D1 由生成器统一实现）---");
 console.log("  description : SOURCE=JSON text component → VIEW=string（Go Desc()/TS descText 同构）");

@@ -52,9 +52,11 @@ export const contentDiagCSS: string = `
 .diag-sub-tab { padding:3px 10px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-sm); font-family:inherit; transition:var(--tr-fast); }
 .diag-sub-tab:hover { background:var(--hover); color:var(--txt); }
 .diag-sub-tab.active { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }
-/* 筛选按钮：复用 .cr-tag-filter-btn 的规则（同 shadow 根 contentCSS，无需另立一份）。
+/* 筛选按钮：基础/hover/active 三条规则归 content-creator.ts 的共享选择器
+   （.cr-tag-filter-btn, .diag-log-fbtn 同 shadow 根 contentCSS，本文件不再复制），
+   本处仅覆盖字号为 --fs-sm（筛选按钮比创作者标签筛选稍大，见 .diag-sub-tab 同档）。
    ⚠️ 本类三条规则曾在 ADR-258 重构中被误删（随 .diag-btn* 左栏残留清掉，但按钮仍在使用）
-   → 裸渲染。现恢复为「复用 + 仅覆盖字号」，不再复制一份同构样式。 */
+   → 裸渲染；3f0389c70 在 content-creator.ts 恢复共享规则 + 本处保留字号覆盖。 */
 .diag-log-fbtn { font-size:var(--fs-sm); }
 .diag-log-filter { display:flex; align-items:center; gap:4px; overflow:hidden; flex:1; min-width:0; }
 .diag-log-filter input { flex:1; min-width:110px; max-width:320px; font-size:var(--fs-sm); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }

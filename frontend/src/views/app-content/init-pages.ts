@@ -116,13 +116,25 @@ export function bindTabs(host: AppContentHost, tabSelector: string, prefix: stri
 
   // 真值源 = 按钮自身的 data-tab（由 renderTabs 工厂保证与面板 id 同源）。
   // 无 data-tab 的按钮切不出任何面板——静默跳过等于埋一个「点了没反应」的哑按钮，故响亮告警。
+  // 重复 data-tab 违反「一个面板只由一个 tab 控制」的 WAI-ARIA Tabs 契约（双 aria-controls），
+  // 且激活循环会双处理同一面板——响亮告警（与 ADR-259 契约违规告警同口径）并去重。
   const ids: string[] = [];
+  const seenIds = new Set<string>();
   for (const btn of tabs) {
     const id = btn.dataset.tab ?? "";
     if (!id) {
       logWarn("tabs", `${prefix}: tab 按钮缺 data-tab，已跳过（该按钮不可切换）`, btn);
       continue;
     }
+    if (seenIds.has(id)) {
+      logWarn(
+        "tabs",
+        `${prefix}: 重复 data-tab="${id}"（两个按钮控制同一面板，违反 ARIA Tabs，已去重）`,
+        btn,
+      );
+      continue;
+    }
+    seenIds.add(id);
     ids.push(id);
     if (!host.state.root.getElementById(`${prefix}-tab-${id}`)) {
       logWarn("tabs", `${prefix}: 缺面板 #${prefix}-tab-${id}（按钮在但内容区将空白）`);

@@ -67,7 +67,13 @@ type concurrentBenchJSON struct {
 	// SizeSource 体量口径 token（**仅 order=size 时出现**）：dir_total = 目录式按目录内容合计，
 	// 其余按文件大小。缺席即「这次选取与体量无关」——不填一个用不上的口径。
 	SizeSource string `json:"size_source,omitempty"`
-	Workers    int    `json:"workers"`
+	// Rtype target=rtype 时的类型 id（**仅该 selector 下出现**）。
+	//
+	// 与 single-bench 的 `spec.rtype` 对称：让界面回显「用户要的是哪个类型」这个**请求事实**，
+	// 而不是让它从 `models[0].rtype` 反推——类型判定的事实源是 Go（registry 单点），
+	// 前端拿入选样本反推目标类型是在臆断（空集时还推不出来）。
+	Rtype   string `json:"rtype,omitempty"`
+	Workers int    `json:"workers"`
 	// MaxModels 上限，**单位 = target 的展开单位**（repo=全库几条 / rtype=该类型几条 / all=每类型各几条）；
 	// target=model 时为 0（单模型没有上限这回事）
 	MaxModels int `json:"max_models"`
@@ -181,6 +187,7 @@ func collectConcurrentBenchJSON(app AppService, models []string, spec perfTarget
 	out := &concurrentBenchJSON{
 		Target:     spec.Target,
 		Order:      spec.Order,
+		Rtype:      spec.Rtype,
 		Workers:    workers,
 		MaxModels:  spec.MaxModels,
 		ModelCount: len(models),

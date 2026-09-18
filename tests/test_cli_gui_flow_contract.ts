@@ -247,6 +247,28 @@ for (const field of CONC_FIELDS) {
     `并发基准载荷缺少字段 json:${field}（go/cli/bench_concurrent_json.go）`,
   );
 }
+// 三旋钮在并发载荷里是**顶层字段**（该载荷无 spec 包装）：Go tag 与前端读取位置双向锚定。
+// 「扁平 → spec 包装」是最容易被顺手统一掉的东西，而统一它必须同时改两端契约，故钉住。
+for (const field of ["target", "order", "size_source", "rtype"]) {
+  must(
+    hasJSONTag(concGo, field),
+    `并发基准载荷缺少顶层 json:${field}（三旋钮回显 / 请求类型，见 bench_concurrent_json.go）`,
+  );
+  must(
+    stripComments(concTs).includes(`payload.${field}`),
+    `并发基准前端未消费顶层 ${field}（perf-concurrent.ts）`,
+  );
+}
+must(
+  !stripComments(concTs).includes("payload.spec"),
+  "并发基准前端不得读 payload.spec（该载荷是扁平的，没有 spec 包装）",
+);
+// rtype 回显的必须是**请求事实**（Go 顶层），不许从入选样本 `models[0].rtype` 反推：
+// 空集时推不出来，且类型判定的事实源只有 Go / `resource_types.json` 单点。
+must(
+  !stripComments(concTs).includes("[0]?.rtype"),
+  "并发基准前端不得从 models[0].rtype 反推目标类型（前端不臆断类型）",
+);
 for (const field of [
   "max_models",
   "model_count",

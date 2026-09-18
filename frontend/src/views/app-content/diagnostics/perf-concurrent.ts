@@ -210,9 +210,9 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn): string {
       order: payload.order,
       size_source: payload.size_source,
       max_models: payload.max_models,
-      // 并发载荷没有顶层 rtype（只有 models[].rtype 身份块）：target=rtype 时全部入选模型同类型，
-      // 取首条身份即可；这是读 Go 交出的身份块，不是前端判类型
-      rtype: payload.models?.[0]?.rtype,
+      // rtype 由 Go 顶层回显（与 single-bench 的 spec.rtype 对称）：模板里那个 `models[0].rtype`
+      // 兜底已撤——拿入选样本反推目标类型是臆断（空集时推不出来），类型判定的事实源只有 Go。
+      rtype: payload.rtype,
     },
     esc,
   );

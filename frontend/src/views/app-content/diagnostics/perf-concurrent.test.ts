@@ -223,13 +223,14 @@ describe("并发基准面板（ADR-262 D5）", () => {
     expect(text).toContain("目录式按目录内容合计");
   });
 
-  it("target=rtype 时回显类型 id（并发载荷无顶层 rtype，取身份块首条）", async () => {
-    // 载荷不带 rtype 字段：只有 models[].rtype。回显取首条身份，避免「目标集  类型」的空标题
-    // 载荷的 target 是 rtype，且**不带** rtype 字段（只有 models[].rtype）——回显取身份块首条
+  it("target=rtype 时回显类型 id（由 Go 顶层 rtype 给出，不从入选样本反推）", async () => {
+    // ADR-262 D3 修订：并发载荷的顶层 rtype 与 single-bench 的 `spec.rtype` 对称，回显的是
+    // **用户请求的类型**（Go 事实源），不是从 `models[0].rtype` 反推——反推在空集时推不出来，
+    // 且类型判定的事实源只有 Go（registry 单点）。
     executeCLI.mockResolvedValue({
       status: "success",
       command: "concurrent-bench",
-      data: { ...CONC_PAYLOAD, target: "rtype" },
+      data: { ...CONC_PAYLOAD, target: "rtype", rtype: "ysm" },
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
@@ -243,6 +244,22 @@ describe("并发基准面板（ADR-262 D5）", () => {
     const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
     expect(text).toContain("目标集 ysm 类型");
     expect(text).not.toContain("目标集  类型");
+  });
+
+  it("并发载荷缺顶层 rtype 时不得从入选样本反推类型（前端不臆断）", async () => {
+    // 反向断言：Go 若没回显请求类型，界面宁可显示原始 token，也不许拿 `models[0].rtype` 充数——
+    // 「看起来对了」的标题比空标题更坏，它掩盖了「契约缺字段」这件事。
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "concurrent-bench",
+      data: { ...CONC_PAYLOAD, target: "rtype" },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    await clickAndFlush(root);
+
+    const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
+    expect(text).not.toContain("目标集 ysm 类型");
   });
 
   it("web 平台不发 CLI（走 toast 提示）", async () => {

@@ -256,12 +256,10 @@ export class VolumetricCone {
     _beamDir.normalize();
     this.beamDir.copy(_beamDir);
 
-    // 局部 +Y（锥顶指向）对齐射束反向；垂直向下时 -dir = +Y → 单位四元数（旧行为逐像素等价）
+    // 局部 +Y（锥顶指向）对齐射束反向；垂直向下时 -dir = +Y → 单位四元数（旧行为逐像素等价）。
+    // 同向分支的退化处理由 three 内部负责（setFromUnitVectors 结尾自带 normalize，r<1e-8 分支兜反向）
     _beamUp.copy(_beamDir).negate();
     group.quaternion.setFromUnitVectors(LOCAL_UP, _beamUp);
-    // 半向量法在「同向」分支产出 |q| = √2/2（矩阵仍是单位阵，但不满足单位四元数不变量）——
-    // 显式归一化，避免下游依赖 |q| = 1 的假设（如手动 applyQuaternion）踩坑
-    group.quaternion.normalize();
     // 几何中心 = 锥顶 + 半高 · 射束方向。
     // 注意符号：ConeGeometry 的锥顶在局部 +Y（向上），而射束向下延伸，故中心须落在
     // 锥顶沿射束「正向」半高处（垂直向下时即 spotlightPos.y - height/2，与旧实现等价）。

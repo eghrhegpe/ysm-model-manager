@@ -785,6 +785,43 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     expect(uuidAfter).not.toBe(uuidBefore);
   });
 
+  it("体积光参数变更走 uniforms 快路径，不重建几何", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    const meshBefore = scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh;
+    const uuidBefore = meshBefore.geometry.uuid;
+
+    cap.setVolumetric({ opacity: 0.8, edgeFade: 0.7, fogPower: 2.4 });
+
+    const meshAfter = scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh;
+    expect(meshAfter.geometry.uuid).toBe(uuidBefore);
+    const u = (meshAfter.material as THREE.ShaderMaterial).uniforms;
+    expect(u.uMaxAlpha.value).toBe(0.8);
+    expect(u.uEdgeFade.value).toBe(0.7);
+    expect(u.uFogPower.value).toBe(2.4);
+  });
+
+  it("setTargetHeight 重建几何并同步 uHeight（避免几何/uniform 不同步）", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    cap.setTargetHeight(12);
+    const mesh = scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh;
+    expect((mesh.geometry as THREE.ConeGeometry).parameters.height).toBe(12);
+    expect((mesh.material as THREE.ShaderMaterial).uniforms.uHeight.value).toBe(12);
+  });
+
+  it("锥组挂载态随聚光灯开关往返（体积光保持开启）", () => {
+    const scene = new THREE.Scene();
+    const cap = coneCap(scene);
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+    // 关聚光灯 → 锥组不再产出（既不挂载也不残留）
+    cap.setSpotlight({ enabled: false });
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+    // 再开聚光灯 → 重建 + 回挂（volumetric 无需重新打开）
+    cap.setSpotlight({ enabled: true });
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+  });
+
   it("setVolumetric({enabled:false}) 移除已挂载锥组", () => {
     const scene = new THREE.Scene();
     const cap = coneCap(scene);

@@ -210,7 +210,9 @@ describe("single-bench 面板", () => {
     executeCLI.mockResolvedValue({
       status: "error",
       command: "single-bench",
-      error: { code: "param_error", message: "必须指定 --model 参数" },
+      // 用**现行** Go 报错文案（旧串「必须指定 --model 参数」已随三旋钮改造退役）：
+      // mock 引用退役契约会让测试看着绿、却在对一个 CLI 不再产生的错误做断言。
+      error: { code: "param_error", message: "--target model 需要 --model <路径> 指定目标模型" },
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
@@ -218,7 +220,7 @@ describe("single-bench 面板", () => {
     (root.getElementById("diag-perf-run") as HTMLElement).click();
     await new Promise((r) => setTimeout(r, 10));
     const out = root.getElementById("diag-perf-single") as HTMLElement;
-    expect(out.textContent).toContain("必须指定"); // 展示后端错误 message
+    expect(out.textContent).toContain("需要 --model"); // 展示后端错误 message
   });
 
   it("结构化载荷缺失（Go 契约漂移）时兜底显示失败占位", async () => {

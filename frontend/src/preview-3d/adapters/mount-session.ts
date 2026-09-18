@@ -7,17 +7,19 @@ import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-regi
 import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 import { clearModelRoots } from "@/preview-3d/infra/frustum-cull.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
+import { showLoadFailure } from "@/preview-3d/infra/preview-loading.ts";
 import {
   removePerFrame,
   stopIfIdle,
   unregisterActiveInputSession,
 } from "@/preview-3d/infra/render-loop.ts";
-import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
+import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import { resetSceneTextureBytes } from "@/preview-3d/infra/texture-bytes.ts";
 import { unloadModel } from "@/preview-3d/infra/unload-model.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
 import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
+import { logError } from "@/utils/base/primitives/log.ts";
 import { returnFocus } from "@/utils/dom/focus-restore.ts";
 import type {
   Mount3DOptions,
@@ -360,6 +362,40 @@ export function runFailedMountCleanup(ctx: MountCtx): void {
  */
 export function runFullCleanup(ctx: MountCtx): void {
   teardown(ctx, "full");
+}
+
+/**
+ * mount3D 失败路径恢复（catch 体抽为叶函数）。adapter.build 抛错时 session.content 为
+ * null，session.content?.dispose() 是 no-op，half-built mesh 留在 scene 中成为幽灵基线
+ * ——下次 mount 把垃圾快照进 baseline。此处不移除 overlay/DOM（保留 showLoadFailure 错误
+ * 提示），只清场景中的半成品 + dispose 已注册 content + 解绑输入监听/停 rAF/拆菜单。
+ */
+export function recoverMountFailure(ctx: MountCtx, loadingEl: HTMLElement, e: unknown): void {
+  const session = ctx.session;
+  // escH 解绑已归位 teardown 共用区（本文件 teardown ①b）——三档统一，本处不再手动补。
+  runFailedMountCleanup(ctx);
+  const infra = ctx.getInfra();
+  if (infra && session.sceneBaseline) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+    const stale = infra.scene.children.filter((c): boolean => !session.sceneBaseline!.has(c));
+    // [P1 对齐] 与 switch-preview 的 keep 失败分支（switch-preview.ts:289-290）保持一致：
+    // 半成品子树只从 scene 摘除而不释放 → geometry/material 常驻 GPU。`adapter.build` 在
+    // `scene.add` 之后才抛错的形态（如 MMD alloc 失败）必然命中此路径，且它没有自愈机会
+    // （内容层未生成、不会重建同内容），故必须在此把资源一并收走。
+    for (const c of stale) {
+      infra.scene.remove(c);
+      disposeObject3D(c);
+    }
+  }
+  for (const b of session.allContent) safeDispose(b);
+  session.allContent.length = 0;
+  // 不单独调 session.content?.dispose()——content 已在 allContent 中，
+  // P2 守卫（对齐旧 skeleton close3D 语义）：加载期间被 ESC/切模型/invalidate
+  // 打断后迟到的失败不得再弹错——否则关闭后 1~2s 突然冒「加载失败」toast，
+  // 掩盖用户主动关闭的意图（旧实现 skeleton.ts 的 gen 守卫，迁移到核心统一承担）。
+  if (session.aborted.v || ctx.myGen !== ctx.getGen()) return;
+  logError("preview 3D", "加载失败", e);
+  showLoadFailure(loadingEl, e);
 }
 
 /**

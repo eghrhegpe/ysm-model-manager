@@ -142,13 +142,20 @@ func measureScanEngine(root, engine string, iterations int) (scanBenchEngineJSON
 
 		handled, reason, ok := scanEngineDelta(before, after)
 		if !ok {
-			out.Reason = reason
+			// 已定 Used=true（前序迭代成功）时不再覆写 Reason——「used=true 时 reason 缺席」是
+			// 载荷契约（前端据此判「未采集说原因」），后续失败迭代不得把成功态的 Reason 写回
+			if !out.Used {
+				out.Reason = reason
+			}
 			out.Skipped++
 			continue
 		}
 		if handled != engine {
 			// 请求 Rust 却由 Go 处理 = 生产路径的静默回退：如实记为「未参与」，不计样本
-			out.Reason = scanBenchReasonFellBack
+			// 同上不覆写已成功的 Used 态（后续回退不得抹掉前序迭代的 Used=true）
+			if !out.Used {
+				out.Reason = scanBenchReasonFellBack
+			}
 			out.Skipped++
 			continue
 		}

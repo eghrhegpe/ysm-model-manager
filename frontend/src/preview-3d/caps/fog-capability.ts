@@ -15,6 +15,7 @@ import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { buildFogNodes } from "./fog-menu.ts";
 import {
+  type EnvPlacement,
   oneOf,
   persistState,
   restoreFields,
@@ -198,6 +199,11 @@ export class FogCapability implements SceneCapability {
   /** 能力总开关节点 id：env 面板据此升 header + body 剔除同源 */
   getMasterNodeId(): string {
     return "fog-enabled";
+  }
+
+  /** 环境面板归属（ADR-268）：氛围卡次位 */
+  getEnvPlacement(): EnvPlacement {
+    return { section: "atmosphere", order: 20 };
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

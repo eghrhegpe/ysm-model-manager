@@ -44,6 +44,7 @@ import {
   textureRepeat,
 } from "./ground-surface-spec.ts";
 import {
+  type EnvPlacement,
   GROUND_LAYER_OFFSETS,
   oneOf,
   persistState,
@@ -583,6 +584,11 @@ export class GroundCapability implements SceneCapability {
   /** 能力主开关节点 id：env 面板据此升 headerToggle + body 剔除同源 */
   getMasterNodeId(): string {
     return "ground-visible";
+  }
+
+  /** 环境面板归属（ADR-268）：基础卡次位 */
+  getEnvPlacement(): EnvPlacement {
+    return { section: "basic", order: 20 };
   }
 
   /** 保存状态到 localStorage（mat 字段纯数据可持久化；texture 二进制不存） */

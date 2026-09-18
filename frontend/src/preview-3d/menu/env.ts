@@ -9,7 +9,11 @@
 
 import { tOf } from "@/core/i18n/t.ts";
 import type { EnvPresetId } from "@/preview-3d/caps/environment-capability.ts";
-import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+import type {
+  EnvPlacement,
+  EnvSectionId,
+  SceneCapability,
+} from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import { setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -18,41 +22,36 @@ import { renderMenu } from "./render.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 
 /**
- * 环境面板 cap 分段——成员与顺序的**单一事实源**。
- *
- * 背景：envCapRow 产出的都是「点击 navigate 下钻参数页」的一级导航行
- * （天空/地面/水面/环境/雾/反射），本身不收纳参数——原先平铺一长列，语义相邻的
- * 项之间没有视觉边界。现按语义聚拢成卡：卡壳＝顶行标题 + 分隔线 + 内容区。
- *
- * 新增环境 cap 只需在此登记归属：准入闸（ENV_IDS）、下钻序（ORDERED_IDS）、
- * 卡牌分段三处同源于此表，杜绝旧「独立 ORDERED_IDS 硬编码」与本表漂移导致的
- * 「只登记进本表却被 resolveCaps 静默滤除」的隐身 cap。
+ * 环境面板卡壳描述符（ADR-268）：只定义「有哪几张卡、卡的标题与展示序」——这是
+ * UI 分组语义，归菜单域。**成员与成员在卡内的序不再在此登记**：由各 env cap 经
+ * `getEnvPlacement()` 自报（对齐设置面板节点级 `settingsOrder` 的插件范式）。
+ * 新增环境 cap = 只改该 cap 一个文件，本文件零改动；新增/调整卡壳才动此处。
  */
-const ENV_SECTIONS: ReadonlyArray<{
+const ENV_SECTION_DESCRIPTORS: ReadonlyArray<{
+  section: EnvSectionId;
   id: string;
   labelKey: string;
-  caps: readonly string[];
 }> = [
+  { section: "basic", id: "env-card-basic", labelKey: "preview.envSectionBasic" },
   {
-    id: "env-card-basic",
-    labelKey: "preview.envSectionBasic",
-    caps: ["sky", "ground", "water"],
-  },
-  {
+    section: "atmosphere",
     id: "env-card-atmosphere",
     labelKey: "preview.envSectionAtmosphere",
-    caps: ["environment", "fog", "reflector"],
   },
 ];
 
-/** 环境 cap 准入闸 + 下钻序：由 ENV_SECTIONS 派生，非另立清单（漂移在构造上不可能） */
-const ORDERED_IDS: readonly string[] = ENV_SECTIONS.flatMap((sec) => sec.caps);
-const ENV_IDS = new Set<string>(ORDERED_IDS);
+/** 注册表遍历结果：一个入选环境面板的 cap 及其自报归属 */
+type EnvEntry = { cap: SceneCapability; placement: EnvPlacement };
 
-/** 测试/诊断出口：环境成员（展平后的登记序），供守护用例锁定单一事实源不漂移 */
-export function getEnvSectionCapIds(): string[] {
-  return [...ORDERED_IDS];
-}
+/**
+ * 兜底归属表：仅当注册表无任何自报 env cap（旧挂载/未注册态）时，用 `ctx.getCap`
+ * 合成 sky/ground/water 三行的归属（生产注册表恒带 `getEnvPlacement`，此处防御性回退）。
+ */
+const FALLBACK_PLACEMENT: Readonly<Record<string, EnvPlacement>> = {
+  sky: { section: "basic", order: 10 },
+  ground: { section: "basic", order: 20 },
+  water: { section: "basic", order: 30 },
+};
 
 // ── 环境面板局部刷新：订阅 cap 参数变更触发 menu.refresh()（重渲染栈顶 = 当前子视图）──
 // 按 menu 句柄隔离订阅：每个 mountPreviewRootMenu 实例持有各自的订阅列表，
@@ -91,24 +90,29 @@ const PRESET_ORDER = [
   { id: "forest", icon: "\uD83C\uDF33", labelKey: "preview.presetQuickForest" },
   { id: "sky", icon: "\uD83C\uDF24\uFE0F", labelKey: "preview.presetQuickSky" },
 ];
-function resolveCaps(ctx: PreviewMenuCtx): SceneCapability[] {
-  let allCaps = sceneCapabilityRegistry.getAll().filter((cap) => ENV_IDS.has(cap.id));
-  if (allCaps.length === 0) {
-    const fb: SceneCapability[] = [];
-    const skyCap = ctx.getCap("sky");
-    const groundCap = ctx.getCap("ground");
-    if (skyCap) fb.push(Object.assign({ id: "sky" }, skyCap) as SceneCapability);
-    if (groundCap) fb.push(Object.assign({ id: "ground" }, groundCap) as SceneCapability);
-    const waterCapFb = ctx.getCap("water");
-    if (waterCapFb) fb.push(Object.assign({ id: "water" }, waterCapFb) as SceneCapability);
-    allCaps = fb;
+/**
+ * 遍历注册表收集环境面板成员（ADR-268 插件式发现）：凡实现 `getEnvPlacement()` 的 cap
+ * 即入选，无需在此登记 id。非环境 cap（light/shadow/postproc/renderMode 等）不实现该方法
+ * → 天然被排除。注册表为空（旧挂载/未注册态）时回退 `ctx.getCap` 合成 sky/ground/water。
+ */
+function collectEnvEntries(ctx: PreviewMenuCtx): EnvEntry[] {
+  const fromRegistry: EnvEntry[] = [];
+  for (const cap of sceneCapabilityRegistry.getAll()) {
+    const placement = cap.getEnvPlacement?.();
+    if (placement) fromRegistry.push({ cap, placement });
   }
-  return allCaps;
-}
-function orderedCaps(allCaps: SceneCapability[]): SceneCapability[] {
-  return ORDERED_IDS.map((id) => allCaps.find((c) => c.id === id)).filter(
-    (c): c is SceneCapability => Boolean(c),
-  );
+  if (fromRegistry.length > 0) return fromRegistry;
+  const fb: EnvEntry[] = [];
+  for (const id of ["sky", "ground", "water"] as const) {
+    const capLike = ctx.getCap(id);
+    if (capLike) {
+      fb.push({
+        cap: Object.assign({ id }, capLike) as SceneCapability,
+        placement: FALLBACK_PLACEMENT[id],
+      });
+    }
+  }
+  return fb;
 }
 function applyPreset(
   _ctx: PreviewMenuCtx,
@@ -218,36 +222,47 @@ function envCapRow(cap: SceneCapability): PreviewMenuNode {
 }
 
 /**
- * cap 导航行按 ENV_SECTIONS 聚拢成卡牌节点（kind:"card"）。
- * 空段不建卡壳（rmAppendCard 亦有一次 visibleWhen 兜底）。成员既由 ENV_SECTIONS 派生，
- * 「其它」卡当前构造下恒空，仅作分段误配（cap 进了 ENV_IDS 却漏归段）的最后防线。
+ * cap 导航行按自报 `section` 聚拢进卡壳，卡内按 `order` 升序（ADR-268）。
+ * 卡壳顺序 = ENV_SECTION_DESCRIPTORS 声明序；空段不建卡壳。
+ * `EnvSectionId` 联合类型保证 cap 只可能报已定义的段，「未知段」分支仅防 JS/测试伪造，
+ * 命中时落末尾「其它」卡（不静默丢失）。
  */
-function buildEnvCards(caps: SceneCapability[]): PreviewMenuNode[] {
-  const claimed = new Set<string>();
+function buildEnvCards(entries: EnvEntry[]): PreviewMenuNode[] {
+  const bySection = new Map<EnvSectionId, EnvEntry[]>();
+  for (const e of entries) {
+    const group = bySection.get(e.placement.section);
+    if (group) group.push(e);
+    else bySection.set(e.placement.section, [e]);
+  }
+  const known = new Set<EnvSectionId>();
   const out: PreviewMenuNode[] = [];
-  for (const sec of ENV_SECTIONS) {
-    const rows = caps.filter((c) => sec.caps.includes(c.id));
-    if (rows.length === 0) continue;
-    for (const c of rows) claimed.add(c.id);
+  for (const desc of ENV_SECTION_DESCRIPTORS) {
+    known.add(desc.section);
+    const group = (bySection.get(desc.section) ?? [])
+      .slice()
+      .sort((a, b) => a.placement.order - b.placement.order);
+    if (group.length === 0) continue;
     out.push({
-      id: sec.id,
+      id: desc.id,
       kind: "card",
-      labelKey: sec.labelKey,
+      labelKey: desc.labelKey,
       // [可折叠卡] 顶行标题可点击折叠内容区（collapsible 卡统一盒式折叠视觉，
       // 与子视图分组折叠同一形态；折叠态跨 refresh 记忆）
       collapsible: true,
-      children: rows.map(envCapRow),
+      children: group.map((e) => envCapRow(e.cap)),
     });
   }
-  const rest = caps.filter((c) => !claimed.has(c.id));
+  const rest = entries
+    .filter((e) => !known.has(e.placement.section))
+    .sort((a, b) => a.placement.order - b.placement.order);
   if (rest.length > 0) {
     out.push({
       id: "env-card-other",
       kind: "card",
       labelKey: "preview.envSectionOther",
-      // [可折叠卡] 与基础/氛围卡同款可折叠（未登记 cap 归此处，折叠保语义聚拢不遮挡其余行）
+      // [可折叠卡] 与其它卡同款可折叠（未知段 cap 归此处，折叠保语义聚拢不遮挡其余行）
       collapsible: true,
-      children: rest.map(envCapRow),
+      children: rest.map((e) => envCapRow(e.cap)),
     });
   }
   return out;
@@ -260,9 +275,13 @@ function buildEnvCards(caps: SceneCapability[]): PreviewMenuNode[] {
  * 面板重渲染 → 本函数重跑 → 行/headerToggle 实时）。
  */
 export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
-  const caps = orderedCaps(resolveCaps(ctx));
-  if (menu) rebuildEnvSubs(caps, menu);
-  if (caps.length === 0) {
+  const entries = collectEnvEntries(ctx);
+  if (menu)
+    rebuildEnvSubs(
+      entries.map((e) => e.cap),
+      menu,
+    );
+  if (entries.length === 0) {
     return [
       {
         id: "env-empty",
@@ -297,6 +316,6 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
         },
       },
     },
-    ...buildEnvCards(caps),
+    ...buildEnvCards(entries),
   ];
 }

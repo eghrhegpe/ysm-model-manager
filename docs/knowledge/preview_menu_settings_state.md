@@ -24,6 +24,8 @@ auto_fields:
     - CapControlView
     - collectSettingsCapControls
     - collectVisiblePredicates
+    - EnvPlacement
+    - EnvSectionId
     - FieldKind
     - FieldRestorer
     - formatCapSliderValue

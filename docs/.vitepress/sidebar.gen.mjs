@@ -242,6 +242,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-268：环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单",
+        "link": "/adr/ADR-268-env-cap-self-placement"
+      },
+      {
         "text": "ADR-267：toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区",
         "link": "/adr/ADR-267-toast-emoji-esc"
       },

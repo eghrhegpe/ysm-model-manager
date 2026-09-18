@@ -12,6 +12,7 @@ import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { type ModelType, pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import { buildReflectorNodes } from "./reflector-menu.ts";
 import {
+  type EnvPlacement,
   GROUND_LAYER_OFFSETS,
   persistState,
   restoreFields,
@@ -243,6 +244,11 @@ export class ReflectorCapability implements SceneCapability {
   /** 能力总开关节点 id：env 面板据此升 header + body 剔除同源 */
   getMasterNodeId(): string {
     return "reflector-enabled";
+  }
+
+  /** 环境面板归属（ADR-268）：氛围卡末位 */
+  getEnvPlacement(): EnvPlacement {
+    return { section: "atmosphere", order: 30 };
   }
 
   /* -------- ADR-195 刀2 试点：cap 直产节点（getMenuNodes）-------- */

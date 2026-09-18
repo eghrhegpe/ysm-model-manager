@@ -13,6 +13,7 @@ import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import {
+  type EnvPlacement,
   oneOf,
   persistState,
   restoreFields,
@@ -663,6 +664,11 @@ export class WaterCapability implements SceneCapability {
   /** 能力主开关节点 id：env 面板据此升 headerToggle + body 剔除同源 */
   getMasterNodeId(): string {
     return "ground-water-enabled";
+  }
+
+  /** 环境面板归属（ADR-268）：基础卡末位 */
+  getEnvPlacement(): EnvPlacement {
+    return { section: "basic", order: 30 };
   }
 
   /** 保存状态到 localStorage */

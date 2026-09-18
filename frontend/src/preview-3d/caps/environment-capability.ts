@@ -28,7 +28,13 @@ import { buildEnvironmentNodes } from "./environment-menu.ts";
 import type { EnvPreset, EnvPresetId } from "./environment-state.ts";
 // ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
 import { ENV_PRESETS } from "./environment-state.ts";
-import { persistState, restoreState, ringLog, type SceneCapability } from "./scene-capability.ts";
+import {
+  type EnvPlacement,
+  persistState,
+  restoreState,
+  ringLog,
+  type SceneCapability,
+} from "./scene-capability.ts";
 
 // P2 抽取：drawEnvEquirect 已下沉 env-pixels.ts，保留透传导出（测试/调用方仍从 cap 文件导入）。
 export { drawEnvEquirect } from "./env-pixels.ts";
@@ -463,6 +469,11 @@ export class EnvironmentCapability implements SceneCapability {
   /** 能力总开关节点 id：env 面板据此升 header + body 剔除同源 */
   getMasterNodeId(): string {
     return "env-enabled";
+  }
+
+  /** 环境面板归属（ADR-268）：氛围卡首位 */
+  getEnvPlacement(): EnvPlacement {
+    return { section: "atmosphere", order: 10 };
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

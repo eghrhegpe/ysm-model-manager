@@ -238,8 +238,10 @@ auto_fields:
     - EnvCallback
     - EnvironmentCapability
     - EnvironmentParams
+    - EnvPlacement
     - EnvPreset
     - EnvPresetId
+    - EnvSectionId
     - envState
     - EnvState
     - EnvStateMiddleware
@@ -300,7 +302,6 @@ auto_fields:
     - getBonePosition
     - getCustomAnimPath
     - getEnvCallbackCount
-    - getEnvSectionCapIds
     - getFrameIntervalMs
     - getLastSceneTextureBytes
     - getLoadTraces

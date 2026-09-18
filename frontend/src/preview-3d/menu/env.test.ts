@@ -1,8 +1,8 @@
 // ===== 环境菜单声明式 Schema 测试（2026 收口：行 + navigate 下钻，folder 手风琴退役）=====
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { buildEnvSchema, disposeEnvSubscriptions, getEnvSectionCapIds } from "./env.ts";
+import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
-import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+import type { EnvPlacement, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { resetEnvState, envState } from "@/preview-3d/state/env-state.ts";
 import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
@@ -49,7 +49,19 @@ function makeMenu(): SlideMenuHandle {
   } as unknown as SlideMenuHandle;
 }
 
-/** 测试用 cap 工厂：控件组可注入 */
+/** 6 环境 cap 的自报归属（ADR-268）：测试 fake cap 据此入选环境面板。
+ *  不在表内的 id（如非环境 cap fake）getEnvPlacement 返回 undefined → 不入选。 */
+const ENV_PLACE: Record<string, EnvPlacement> = {
+  sky: { section: "basic", order: 10 },
+  ground: { section: "basic", order: 20 },
+  water: { section: "basic", order: 30 },
+  environment: { section: "atmosphere", order: 10 },
+  fog: { section: "atmosphere", order: 20 },
+  reflector: { section: "atmosphere", order: 30 },
+};
+
+/** 测试用 cap 工厂：控件组可注入。默认按 id 自报环境归属（模拟真实 env cap），
+ *  extra 可覆盖 getEnvPlacement（如伪造未知段 / 非环境 cap 排除）。 */
 function makeCap(
   id: string,
   labelKey: string,
@@ -62,6 +74,7 @@ function makeCap(
     icon: "sky" as const,
     descKey: "",
     getMenuNodes: () => nodes,
+    getEnvPlacement: () => ENV_PLACE[id],
     apply: vi.fn(),
     dispose: vi.fn(),
     setEnabled: vi.fn(),
@@ -130,7 +143,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(schema.every((n) => n.renderCustom === undefined)).toBe(true);
   });
 
-  it("产出 预设 select + 按 ENV_SECTIONS 派生序排序的 cap row，全部声明式", () => {
+  it("产出 预设 select + 按 cap 自报 order/section 归段排序的 cap row，全部声明式", () => {
     const sky = makeCap("sky", "preview.sky", [
       {
         id: "sky-time",
@@ -162,7 +175,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     const schema = buildEnvSchema(makeCtx(), menu);
     expect(schema[0]!.id).toBe("env-preset-bar");
     expect(schema[0]!.kind).toBe("select");
-    // 卡壳层：sky 归「基础」、fog 归「氛围」（ENV_SECTIONS 分段表单一事实源）
+    // 卡壳层：sky 归「基础」、fog 归「氛围」（各 cap 自报 getEnvPlacement.section，env.ts 不指派）
     expect(schema.slice(1).map((n) => n.id)).toEqual(["env-card-basic", "env-card-atmosphere"]);
     expect(schema.slice(1).every((n) => n.kind === "card")).toBe(true);
     expect(schema.slice(1).map((n) => n.labelKey)).toEqual([
@@ -382,24 +395,40 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(container.querySelector('[data-testid="cap-sky-time"]')).not.toBeNull();
   });
 
-  // [A 隐身 cap] 成员/顺序单一事实源：ORDERED_IDS / ENV_IDS 必须由 ENV_SECTIONS 派生，
-  // 而非另立一份硬编码清单——旧写法下注释明示「新增环境 cap 在 ENV_SECTIONS 登记」，
-  // 但真正的准入闸是 ENV_IDS(=ORDERED_IDS)，只登记进 ENV_SECTIONS 的 cap 会被 resolveCaps
-  // 静默滤除（隐身）。派生后两表合一，漂移在构造上不可能。
-  it("A：环境成员/顺序由 ENV_SECTIONS 派生（单一事实源，无独立 ORDERED_IDS 可漂移）", () => {
-    const ids = getEnvSectionCapIds();
-    // 展平后恰为 6 环境 cap、无重复、顺序即卡内登记序
-    expect(ids).toEqual(["sky", "ground", "water", "environment", "fog", "reflector"]);
-    expect(new Set(ids).size).toBe(ids.length);
-    // 行为：注册全部 6 段 cap（乱序注入）→ 每个都渲染成一级行，无一隐身
-    const caps = ids.map((id) => makeCap(id, `preview.${id}`, []));
-    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue(
-      [...caps].sort(() => -1), // 逆序，验证面板按派生序而非注入序
-    );
+  // [A 隐身 cap / 万物即插件] 环境成员改由 cap 自报 getEnvPlacement（ADR-268），env.ts 不再
+  // 持有成员清单：① 凡自报归属者入选、未报者排除；② 卡内按自报 order 排序；③ 新增 env cap
+  // 无需改 env.ts 即自动出现（本用例注入一个 env.ts 从未听说过的 "aurora"）。
+  it("A：环境成员由 cap 自报 getEnvPlacement 发现（自报即入选、未报即排除、env.ts 零登记）", () => {
+    const ids = ["sky", "ground", "water", "environment", "fog", "reflector"];
+    // 一个 env.ts 硬编码清单里从未出现过的「新」环境 cap，仅靠自报归属入选
+    const aurora = makeCap("aurora", "preview.aurora", [], {
+      getEnvPlacement: () => ({ section: "basic", order: 15 }),
+    });
+    // 一个非环境 cap（light）：不实现归属声明 → 不得混入环境面板
+    const light = makeCap("light", "preview.light", [], {
+      getEnvPlacement: () => undefined,
+    });
+    const caps = [...ids.map((id) => makeCap(id, `preview.${id}`, [])), aurora, light];
+    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue(caps.slice().reverse());
     const menu = makeMenu();
     menusToDispose.add(menu);
-    const rows = capRows(buildEnvSchema(makeCtx(), menu));
-    expect(rows.map((r) => r.id)).toEqual(ids.map((id) => `env-cap-${id}`));
+    const schema = buildEnvSchema(makeCtx(), menu);
+    const rows = capRows(schema);
+    // light 被排除；其余 7 个（含未登记的 aurora）全入选
+    expect(rows.map((r) => r.id)).not.toContain("env-cap-light");
+    // 基础卡按 order：sky10 < aurora15 < ground20 < water30；氛围卡：environment10<fog20<reflector30
+    expect(rows.map((r) => r.id)).toEqual([
+      "env-cap-sky",
+      "env-cap-aurora",
+      "env-cap-ground",
+      "env-cap-water",
+      "env-cap-environment",
+      "env-cap-fog",
+      "env-cap-reflector",
+    ]);
+    // aurora 归入它自报的「基础」卡（分组亦由自报 section 决定，非 env.ts 指派）
+    const basicCard = schema.find((n) => n.id === "env-card-basic")!;
+    expect((basicCard.children ?? []).map((c) => c.id)).toContain("env-cap-aurora");
   });
 
   // [B 跨会话预设] 预设 select 回退缓存必须 per-mount 隔离：menu A 选中的快预设
@@ -431,12 +460,11 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
 });
 
 // ===== 守护测试（用户关切：隐式契约不可靠）=====
-// 环境面板（🌍）一级行 headerToggle 依赖 cap 自报 getMasterNodeId()——漏声明则
-// 行首默默无开关（静默回归）。本守护断言：环境面板 6 个 cap（ENV_IDS：
-// sky/ground/water/environment/fog/reflector）生产类 prototype 必须声明
-// getMasterNodeId，且其返回值在该 cap 的 getMenuNodes() 顶层树中确实存在
-// 为 toggle 节点（编译/测试期把「漏实现」从静默无开关变成红）。
-describe("守护：环境面板 6 cap 必须声明 getMasterNodeId（一级行开关的契约）", () => {
+// 环境面板（🌍）一级行依赖 cap 两处自报契约：getMasterNodeId()（升 headerToggle，漏则
+// 行首默默无开关）与 getEnvPlacement()（入选环境面板 + 归哪张卡，漏则整个 cap 不显）。
+// 二者皆「漏声明即静默消失」型回归，本守护遍历 6 个环境 cap 生产类 prototype，把漏实现
+// 从静默变成编译/测试期红。
+describe("守护：环境面板 6 cap 必须声明 getMasterNodeId + getEnvPlacement", () => {
   const ENV_CAP_CLASSES = [
     SkyCapability,
     GroundCapability,
@@ -454,6 +482,46 @@ describe("守护：环境面板 6 cap 必须声明 getMasterNodeId（一级行�
         `${Cap.name} 应声明 getMasterNodeId`,
       ).toBe("function");
     }
+  });
+
+  it("每个环境 cap 的 prototype 都声明 getEnvPlacement（防漏声明→整个 cap 从环境面板隐身）", () => {
+    for (const Cap of ENV_CAP_CLASSES) {
+      expect(
+        typeof (Cap as unknown as { prototype: Record<string, unknown> }).prototype
+          .getEnvPlacement,
+        `${Cap.name} 应声明 getEnvPlacement`,
+      ).toBe("function");
+    }
+  });
+
+  it("6 cap 的 getEnvPlacement 自报分段/序与既定分组一致（basic=天/地/水，atmosphere=环境/雾/反射）", () => {
+    // getEnvPlacement 实现为纯字面量（不引用 this），故可脱实例 .call({}) 求值
+    const read = (Cap: (typeof ENV_CAP_CLASSES)[number]) =>
+      (
+        Cap as unknown as {
+          prototype: { getEnvPlacement(this: unknown): EnvPlacement };
+        }
+      ).prototype.getEnvPlacement.call({});
+    const expectSection: Record<string, string> = {
+      SkyCapability: "basic",
+      GroundCapability: "basic",
+      WaterCapability: "basic",
+      EnvironmentCapability: "atmosphere",
+      FogCapability: "atmosphere",
+      ReflectorCapability: "atmosphere",
+    };
+    const orders = new Map<string, number>();
+    for (const Cap of ENV_CAP_CLASSES) {
+      const p = read(Cap);
+      expect(p.section, `${Cap.name}.section`).toBe(expectSection[Cap.name]);
+      expect(Number.isFinite(p.order), `${Cap.name}.order 应为有限数`).toBe(true);
+      orders.set(Cap.name, p.order);
+    }
+    // 段内序两两不同（保证面板顺序确定，不依赖注册序）
+    const basic = ENV_CAP_CLASSES.filter((C) => expectSection[C.name] === "basic");
+    expect(new Set(basic.map((C) => orders.get(C.name))).size).toBe(basic.length);
+    const atmo = ENV_CAP_CLASSES.filter((C) => expectSection[C.name] === "atmosphere");
+    expect(new Set(atmo.map((C) => orders.get(C.name))).size).toBe(atmo.length);
   });
 
   it("6 个环境 cap 的 master id 集合完整且无重复（新 cap 加入环境面板须在此登记）", () => {

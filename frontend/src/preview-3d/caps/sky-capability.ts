@@ -25,6 +25,7 @@ import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import {
+  type EnvPlacement,
   getTypedCap,
   persistState,
   restoreFields,
@@ -700,6 +701,11 @@ export class SkyCapability implements SceneCapability {
   /** 能力主开关节点 id：env 面板据此升 headerToggle + body 剔除同源 */
   getMasterNodeId(): string {
     return "sky-enabled";
+  }
+
+  /** 环境面板归属（ADR-268）：基础卡首位 */
+  getEnvPlacement(): EnvPlacement {
+    return { section: "basic", order: 10 };
   }
 
   /** 保存状态到 localStorage */

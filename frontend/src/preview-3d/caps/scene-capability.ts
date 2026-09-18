@@ -79,6 +79,19 @@ export function getTypedCap<K extends CapabilityId>(
   return lookup?.getById(id) as CapabilityMap[K] | undefined;
 }
 
+/**
+ * 环境面板分段 id（ADR-268）：cap 经 `getEnvPlacement().section` 自报归入哪张卡。
+ * 集中在此与 `env.ts` 的段外壳描述符共享同一联合类型——新增/改名分段编译期即漂移报错。
+ * 值对应「基础」（天空/地面/水面）与「氛围」（环境/雾/反射）两张语义卡。
+ */
+export type EnvSectionId = "basic" | "atmosphere";
+
+/** 环境面板归属声明（ADR-268）：段 + 段内展示序（order 升序，间隔取值便于后续插入） */
+export interface EnvPlacement {
+  section: EnvSectionId;
+  order: number;
+}
+
 export interface SceneCapability {
   /** 唯一标识（如 "sky" / "ground" / "light" / "fog"） */
   readonly id: string;
@@ -125,6 +138,17 @@ export interface SceneCapability {
    *  cap 自身测试断言 getMasterNodeId 声明 + 面板渲染 filter 契约。
    */
   getMasterNodeId?(): string;
+
+  /**
+   * 环境面板归属声明（可选，ADR-268）：**「此 cap 是否属于环境面板、归哪张卡、卡内序」的
+   * 唯一真值源**——对齐设置面板节点级 `settingsOrder` 的插件范式（`settings.ts`
+   * `collectSettingsCapControls` 遍历 registry 自动聚合）。
+   * 实现本方法即入选环境面板；不实现（light/shadow/postproc/renderMode 等非环境 cap）
+   * 天然被 `buildEnvSchema` 过滤。新增环境 cap 只在自己文件加一行本声明，`env.ts` 零改动。
+   * `section` 取 `EnvSectionId`（与 env.ts 段外壳共享），`order` 段内升序（间隔取值）。
+   * 守护：env.test.ts 遍历 6 环境 cap 断言必声明本方法。
+   */
+  getEnvPlacement?(): EnvPlacement;
 
   /** 持久化：保存当前状态到 localStorage */
   saveState(): void;

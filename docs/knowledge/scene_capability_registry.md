@@ -48,8 +48,10 @@ auto_fields:
     - ENV_PRESETS
     - EnvironmentCapability
     - EnvironmentParams
+    - EnvPlacement
     - EnvPreset
     - EnvPresetId
+    - EnvSectionId
     - fbm2
     - fcMasterToggleNode
     - FieldKind

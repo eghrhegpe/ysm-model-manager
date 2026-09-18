@@ -107,7 +107,7 @@ async function handleSyncDownloadMissing(
       } catch (e) {
         failed = true;
         skipReason = "error";
-        toast(`❌ ${friendlyError(e)}`, TOAST_MS.long, "error");
+        toast(friendlyError(e), TOAST_MS.long, "error");
       }
     }
     return { failed, skipReason };

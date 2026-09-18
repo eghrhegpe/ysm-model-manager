@@ -59,7 +59,7 @@ export async function handleInstanceDrop(
   if (isEditableTarget(e.target)) return;
 
   if (busy.isBusy()) {
-    toast(`⏳ ${t("import.busyImporting")}`, "info", TOAST_MS.success);
+    toast(t("import.busyImporting"), "info", TOAST_MS.success);
     return;
   }
   busy.setBusy(true);
@@ -70,7 +70,7 @@ export async function handleInstanceDrop(
 
   try {
     if (isWebPlatform()) {
-      toast("⚠️ 网页版暂不支持拖入整合包，请在桌面端操作", "warn", TOAST_MS.verbose);
+      toast("网页版暂不支持拖入整合包，请在桌面端操作", "warn", TOAST_MS.verbose);
       return;
     }
     logDrop(`pack-drop: 目标实例 ${instanceName}`);
@@ -80,7 +80,7 @@ export async function handleInstanceDrop(
     // 仅提示超限（与仓库页拖拽同口径，避免误导性「未检测到支持文件」）
     if (collected0.length === 0) {
       logDrop("pack-drop: 收集 0 文件");
-      toast(`📂 ${t("import.noSupportedFiles")}`, "info");
+      toast(t("import.noSupportedFiles"), "info");
       return;
     }
     // oversize 逐文件过滤（与仓库页拖拽同口径）
@@ -153,10 +153,10 @@ export async function handleInstanceDrop(
 
     // 反馈：成功/部分失败/全失败三分；只要有调用即刷新（导入可能已落仓库，防陈旧）
     if (okUnits > 0 && failures.length === 0) {
-      toast(`✅ 已导入仓库并推送到 ${instanceName}（${okUnits} 项）`, "success", TOAST_MS.success);
+      toast(`已导入仓库并推送到 ${instanceName}（${okUnits} 项）`, "success", TOAST_MS.success);
     } else if (okUnits > 0 && failures.length > 0) {
       toast(
-        `⚠️ 推送完成 ${okUnits} 项，${failures.length} 项失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`,
+        `推送完成 ${okUnits} 项，${failures.length} 项失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`,
         "warn",
         TOAST_MS.verbose,
       );
@@ -173,7 +173,7 @@ export async function handleInstanceDrop(
     }
   } catch (err) {
     logError("pack-dnd", "拖放处理失败", err);
-    toast(`❌ ${t("import.processError")}: ${friendlyError(err)}`, "error", TOAST_MS.verbose);
+    toast(`${t("import.processError")}: ${friendlyError(err)}`, "error", TOAST_MS.verbose);
   } finally {
     busy.setBusy(false);
   }
@@ -256,7 +256,7 @@ export function bindPackCardDnD(
     dbg("pack-dnd", "drop on instance card", { idx, name: ins.name });
     void handleInstanceDrop(e, ins.name, busy).catch((err) => {
       logError("pack-dnd", "拖放处理失败", err);
-      toast(`❌ ${t("import.processError")}: ${friendlyError(err)}`, "error", TOAST_MS.verbose);
+      toast(`${t("import.processError")}: ${friendlyError(err)}`, "error", TOAST_MS.verbose);
     });
   };
 

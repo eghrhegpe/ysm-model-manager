@@ -95,7 +95,7 @@ export function createImportSession(): ImportSession {
       refreshRepo();
       toast(`${t("import.success")}: ${file.name}`, "success", TOAST_MS.success);
     } catch (e) {
-      toast(`❌ ${t("import.failed")}: ${friendlyError(e)}`, "error", TOAST_MS.verbose);
+      toast(`${t("import.failed")}: ${friendlyError(e)}`, "error", TOAST_MS.verbose);
     } finally {
       inFlight.delete(key);
     }
@@ -116,7 +116,7 @@ export function createImportSession(): ImportSession {
     try {
       const { items, skipped } = await buildFolderItems(dir, files);
       if (!items.length) {
-        toast(`❌ ${t("import.emptyFolder")}`, "error", TOAST_MS.verbose);
+        toast(t("import.emptyFolder"), "error", TOAST_MS.verbose);
         return;
       }
       const App = await importGetApp();
@@ -136,9 +136,9 @@ export function createImportSession(): ImportSession {
       toast(`${t("import.success")}: ${folderName}${skipHint}`, "success", TOAST_MS.info);
     } catch (e) {
       if (isFileExistsError(e)) {
-        toast(`❌ ${folderName} ${t("import.alreadyExists")}`, "error", TOAST_MS.verbose);
+        toast(`${folderName} ${t("import.alreadyExists")}`, "error", TOAST_MS.verbose);
       } else {
-        toast(`❌ ${t("import.failed")}: ${friendlyError(e)}`, "error", TOAST_MS.verbose);
+        toast(`${t("import.failed")}: ${friendlyError(e)}`, "error", TOAST_MS.verbose);
       }
     } finally {
       inFlight.delete(dirKey);

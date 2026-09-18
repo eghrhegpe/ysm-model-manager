@@ -60,7 +60,7 @@ describe("toastError", () => {
     const err = new Error("quantum flux");
     toastError(err);
     expect(mockEmit).toHaveBeenCalledWith("toast:show", {
-      msg: expect.stringContaining("❌"),
+      msg: expect.stringContaining("quantum flux"), // ADR-267：type 驱动 error 图标，msg 无 ❌ 前缀
       duration: 5000,
       type: "error",
     });
@@ -70,7 +70,7 @@ describe("toastError", () => {
     const err = new Error("test");
     toastError(err, undefined, "统计失败");
     const call = mockEmit.mock.calls[0][1] as { msg: string };
-    expect(call.msg).toMatch(/^❌ 统计失败:/);
+    expect(call.msg).toMatch(/^统计失败:/); // ADR-267：无 ❌ 前缀
   });
 
   it("toastError 自定义 fallback 生效", () => {

@@ -18,12 +18,17 @@ export function toast(
   bus.emit("toast:show", { msg, duration, type });
 }
 
-/** 错误 toast（`❌ ${friendlyError(e)}` 模板收敛——instance-ops / settings/init 等 catch 块共用）。
+/** 错误 toast（`friendlyError(e)` 模板收敛——instance-ops / settings/init 等 catch 块共用；
+ *  ADR-267：type 驱动 error 图标，msg 载荷不再带 `❌` 前缀）。
  *  @param err       错误对象
  *  @param fallback  friendlyError 未匹配时的回退文案（仅错误无中文时生效）
- *  @param prefix    操作名前缀（如 "统计失败"），拼在 friendlyError 前：`❌ ${prefix}: ${msg}` */
+ *  @param prefix    操作名前缀（如 "统计失败"），拼在 friendlyError 前：`${prefix}: ${msg}` */
 export function toastError(err: unknown, fallback?: string, prefix?: string): void {
-  toast(`❌ ${prefix ? `${prefix}: ` : ""}${friendlyError(err, fallback)}`, TOAST_MS.long, "error");
+  toast(
+    prefix ? `${prefix}: ${friendlyError(err, fallback)}` : friendlyError(err, fallback),
+    TOAST_MS.long,
+    "error",
+  );
 }
 
 /** rtype 契约缺失守卫 toast（context-menu / pack-ops / app-sidebar 等多处重复，收口于此） */

@@ -51,12 +51,76 @@ const (
 	stageVerdictRegressed = "regressed"
 )
 
+// 基准不可用的结构化原因 token（D-7）：前端据此渲染**本地化**文案。
+// 立因（2026-09-18）：JSON 模式下这些原因原本只以中文散文出现在 error 串里——
+// `未找到基准文件 C:\Users\…\perf-baseline.json：请先用 --save-baseline 记录一次基准`。
+// GUI 原样上屏 → 英文/日文界面出现未翻译中文，且**泄露本机绝对路径与 CLI 口令**。
+// 注意：token 只描述「为什么不可用」，不说「本次是否已记录」——后者由 `saved_to` 承载，
+// 前端把两个事实组合成句子，避免同一事实在 token 与字段里各存一份（必然漂移）。
+const (
+	// baselineErrMissing 还没记录过基准（首次使用最常见的路径）
+	baselineErrMissing = "missing"
+	// baselineErrUnreadable 文件在但读不了（被占用 / 无权限 / 路径是目录）
+	baselineErrUnreadable = "unreadable"
+	// baselineErrInvalid 文件能读但不是基准格式（损坏 / 误传别的 JSON）
+	baselineErrInvalid = "invalid"
+	// baselineErrSlotUnavailable 标准基准槽定位不到（平台配置根不可用）
+	baselineErrSlotUnavailable = "slot_unavailable"
+)
+
+// baselineUnavailable 基准不可用：Token 给前端做 i18n，Err 仍是 *ErrRuntime
+// （退出码 1 与「运行时错误: 」前缀的文本观感逐字不变——D-7 只**增加**结构化出口）。
+type baselineUnavailable struct {
+	Token string
+	Err   error
+}
+
+func (e *baselineUnavailable) Error() string { return e.Err.Error() }
+
+// Unwrap 让 errors.As(*ErrRuntime) 继续成立（ExitCodeOf 依赖它）。
+func (e *baselineUnavailable) Unwrap() error { return e.Err }
+
+// newBaselineUnavailablef 构造基准不可用错误：人话文案与 D-7 之前逐字一致。
+func newBaselineUnavailablef(token, format string, args ...any) error {
+	return &baselineUnavailable{Token: token, Err: newRuntimeErrf(format, args...)}
+}
+
+// baselineTokenOf 取基准不可用错误的 token；不是本类错误时返回空串（不猜）。
+func baselineTokenOf(err error) string {
+	var bu *baselineUnavailable
+	if errors.As(err, &bu) {
+		return bu.Token
+	}
+	return ""
+}
+
+// unwrapCliPrefix 剥掉本包错误类型自带的「参数错误: / 运行时错误: 」前缀，取内层原因。
+// ⚠️ 说明「已发生什么」时若直接用外层 Error()，会打出「运行时错误: 运行时错误: …」（实测）。
+// 用 errors.As 而非 errors.Unwrap：对**多层包装**（如 baselineUnavailable → ErrRuntime）同样成立。
+func unwrapCliPrefix(err error) error {
+	var pe *ErrParam
+	if errors.As(err, &pe) {
+		return pe.Err
+	}
+	var re *ErrRuntime
+	if errors.As(err, &re) {
+		return re.Err
+	}
+	return err
+}
+
 // benchBaselineJSON 载荷里的基准块：保存去向与对比判决各自独立，可只出现其一。
 type benchBaselineJSON struct {
 	// SavedTo 本次写入的基准文件（--save-baseline）；空 = 未保存
 	SavedTo string `json:"saved_to,omitempty"`
-	// Diff 本次对比判决（--baseline）；nil = 未对比
+	// Diff 本次对比判决（--baseline）；nil = 未对比（含**没比成**：此时看 Error）
 	Diff *perfBaselineDiff `json:"diff,omitempty"`
+	// Error 基准不可用的结构化原因 token（missing / unreadable / invalid / slot_unavailable）。
+	// 前端据此渲染本地化文案；`saved_to` 同时存在时说明「本次已记录、下次可对比」。
+	Error string `json:"error,omitempty"`
+	// Detail 中文细节（含本机绝对路径与 CLI 口令）：给 CLI/AI 追问用，
+	// **不上屏**（进 title），否则本地化界面里会冒出未翻译中文与用户机器路径。
+	Detail string `json:"detail,omitempty"`
 }
 
 // perfBaselineDiff 一次基准对比的判决：回显判据 + 逐阶段明细（供 GUI 展示与 AI 复盘）。
@@ -104,7 +168,7 @@ func resolveBaselinePath(v string) (string, error) {
 	case baselineSlotSentinel:
 		p := defaultBaselinePath()
 		if p == "" {
-			return "", newRuntimeErrf("平台配置根不可用，无法定位标准基准槽；请显式传 --baseline <文件路径>")
+			return "", newBaselineUnavailablef(baselineErrSlotUnavailable, "平台配置根不可用，无法定位标准基准槽；请显式传 --baseline <文件路径>")
 		}
 		return p, nil
 	default:
@@ -118,13 +182,13 @@ func evaluateBaseline(baselinePath string, stages []singleBenchStage, thresholdP
 	if err != nil {
 		if os.IsNotExist(err) {
 			// 首次使用（还没记过基准）是最常见的路径：直接给动作，别让用户猜「文件哪去了」
-			return nil, newRuntimeErrf("未找到基准文件 %s：请先用 --save-baseline 记录一次基准", baselinePath)
+			return nil, newBaselineUnavailablef(baselineErrMissing, "未找到基准文件 %s：请先用 --save-baseline 记录一次基准", baselinePath)
 		}
-		return nil, newRuntimeErrf("无法读取基准文件 %s: %v", baselinePath, err)
+		return nil, newBaselineUnavailablef(baselineErrUnreadable, "无法读取基准文件 %s: %v", baselinePath, err)
 	}
 	var base []benchStageMs
 	if err := json.Unmarshal(data, &base); err != nil {
-		return nil, newRuntimeErrf("基准文件格式错误: %s: %v", baselinePath, err)
+		return nil, newBaselineUnavailablef(baselineErrInvalid, "基准文件格式错误: %s: %v", baselinePath, err)
 	}
 	baseMap := map[string]float64{}
 	for _, b := range base {
@@ -292,13 +356,18 @@ func reconcileBaselineErrors(compareErr error, savedPath string) error {
 		return compareErr
 	}
 	// 说明「记录已发生」必须用**内层原因**：`ErrRuntime.Error()` 自带「运行时错误: 」前缀，
-	// 直接 %v 会打成「运行时错误: 运行时错误: 未找到基准文件…」（实测）。errors.Unwrap 一层即可，
-	// 且对本包 ErrParam/ErrRuntime 都适用；不包裹的错误保持原样。
-	cause := compareErr
-	if inner := errors.Unwrap(compareErr); inner != nil {
-		cause = inner
-	}
+	// 直接 %v 会打成「运行时错误: 运行时错误: 未找到基准文件…」（实测）。
+	// ⚠️ 这里改用 unwrapCliPrefix（errors.As）而非 errors.Unwrap 一层：D-7 之后错误可能被
+	// baselineUnavailable 包一层，Unwrap 一次只会拿到 ErrRuntime 本身 → 前缀立刻复发。
+	cause := unwrapCliPrefix(compareErr)
 	return newRuntimeErrf("%v（本次已记录新基准到 %s，下次运行即可对比）", cause, savedPath)
+}
+
+// unavailableBaselineBlock 把「基准不可用」错误装配成只含结构化原因的载荷块。
+// ⚠️ Detail 用 unwrapCliPrefix 剥掉「运行时错误: 」前缀——那是给终端看的章节标题，
+// 不是原因本身；带进载荷会让 GUI 的 tooltip 也顶着它。
+func unavailableBaselineBlock(err error) *benchBaselineJSON {
+	return &benchBaselineJSON{Error: baselineTokenOf(err), Detail: unwrapCliPrefix(err).Error()}
 }
 
 // buildBaselineJSON JSON 模式的基准后处理：把判决与保存去向装进载荷，stdout 保持纯 JSON。
@@ -308,11 +377,12 @@ func reconcileBaselineErrors(compareErr error, savedPath string) error {
 func buildBaselineJSON(baseline, saveBaseline string, thresholdPct float64, avg []singleBenchStage) (*benchBaselineJSON, error) {
 	basePath, err := resolveBaselinePath(baseline)
 	if err != nil {
-		return nil, err
+		// 槽位不可用也要交结构化原因（与对比失败同口径），否则前端只能转述中文散文
+		return unavailableBaselineBlock(err), err
 	}
 	savePath, err := resolveBaselinePath(saveBaseline)
 	if err != nil {
-		return nil, err
+		return unavailableBaselineBlock(err), err
 	}
 	if basePath == "" && savePath == "" {
 		return nil, nil
@@ -324,7 +394,10 @@ func buildBaselineJSON(baseline, saveBaseline string, thresholdPct float64, avg 
 		diff, err := evaluateBaseline(basePath, avg, thresholdPct)
 		if err != nil {
 			// 不早退：同一次调用可能同时要求「记录」，那笔写入必须发生（见 reconcileBaselineErrors）。
+			// D-7：把「为什么不可用」以 token 交出去（前端本地化），人话细节只进 detail。
 			compareErr = err
+			extra := unavailableBaselineBlock(err)
+			block.Error, block.Detail = extra.Error, extra.Detail
 		} else {
 			block.Diff = diff
 			if diff.Verdict == baselineVerdictRegressed {
@@ -337,9 +410,9 @@ func buildBaselineJSON(baseline, saveBaseline string, thresholdPct float64, avg 
 	savedPath := ""
 	if savePath != "" {
 		if err := saveBenchBaseline(savePath, avg); err != nil {
-			// 写盘失败也要把已算出的判决交出去（规律六）；但一片空白就不装空壳
-			// （`"baseline": {}` 与「缺席」语义不同，omitempty 的诚实性要求缺席就是缺席）。
-			if block.Diff == nil {
+			// 写盘失败也要把已算出的判决（或不可用 token）交出去（规律六）；
+			// 一片空白就不装空壳——`"baseline": {}` 与「缺席」语义不同，omitempty 的诚实性要求缺席就是缺席。
+			if block.Diff == nil && block.Error == "" {
 				return nil, err
 			}
 			return block, err

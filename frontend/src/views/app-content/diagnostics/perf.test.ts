@@ -466,6 +466,83 @@ describe("single-bench 基准入口与判决（ADR-262 D8）", () => {
     expect(out.querySelector(".perf-bl-row")).toBeNull();
   });
 
+  // ── D-7：基准不可用的结构化原因 → 本地化文案（不上屏 Go 中文散文与绝对路径）──
+  it("基准不存在（token=missing）→ 横幅说本地化人话，Go 中文细节只进 title", async () => {
+    const detail = "未找到基准文件 C:/Users/me/AppData/Roaming/YSM-Model-Manager/perf-baseline.json：请先用 --save-baseline 记录一次基准";
+    executeCLI.mockResolvedValue({
+      status: "error",
+      command: "single-bench",
+      error: { code: "runtime_error", message: `运行时错误: ${detail}` },
+      data: { ...SINGLE_STRUCTURED, baseline: { error: "missing", detail } },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    const out = await run(root);
+
+    // ① 正文是本地化句子（测试环境语种为 zh-CN）
+    expect(out.textContent).toContain("还没有记录过基准");
+    // ② Go 的中文散文不上屏：既含未翻译内容，也泄露本机绝对路径与 CLI 口令
+    expect(out.textContent).not.toContain("未找到基准文件");
+    expect(out.textContent).not.toContain("C:/Users/me");
+    expect(out.textContent).not.toContain("--save-baseline");
+    // ③ 但细节没丢：进 title 供追问
+    expect(out.querySelector(`[title="${detail}"]`)).toBeTruthy();
+    // ④ 结果本体照旧渲染（数字是实测的，不因基准缺失而丢）
+    expect(out.querySelector(".perf-bar-row")).toBeTruthy();
+  });
+
+  it("基准不存在但本次已记录 → 同一句里带上「已记录」说明（不指引用户重做）", async () => {
+    executeCLI.mockResolvedValue({
+      status: "error",
+      command: "single-bench",
+      error: { code: "runtime_error", message: "运行时错误: 未找到基准文件 /cfg/perf-baseline.json" },
+      data: {
+        ...SINGLE_STRUCTURED,
+        baseline: { error: "missing", detail: "未找到基准文件 /cfg/perf-baseline.json", saved_to: "/cfg/perf-baseline.json" },
+      },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    const out = await run(root);
+    expect(out.textContent).toContain("还没有记录过基准");
+    expect(out.textContent).toContain("本次已记录新基准");
+    // 记录动作的成果也要回显（「基准已记录」块），否则用户以为没记上
+    expect(out.textContent).toContain("基准已记录");
+  });
+
+  it("未知 token → 通用兜底句 + title 留原因，不得把中文散文当兜底文案上屏", async () => {
+    executeCLI.mockResolvedValue({
+      status: "error",
+      command: "single-bench",
+      error: { code: "runtime_error", message: "运行时错误: 未来的新原因" },
+      data: { ...SINGLE_STRUCTURED, baseline: { error: "future_reason", detail: "未来的新原因" } },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    const out = await run(root);
+    expect(out.textContent).toContain("基准不可用");
+    expect(out.textContent).not.toContain("未来的新原因");
+    expect(out.querySelector('[title="未来的新原因"]')).toBeTruthy();
+  });
+
+  it("非基准类错误仍转述 Go 原话（前端不臆造原因）", async () => {
+    executeCLI.mockResolvedValue({
+      status: "error",
+      command: "single-bench",
+      error: { code: "runtime_error", message: "运行时错误: 未找到 CLI 可分析的模型" },
+      data: SINGLE_STRUCTURED,
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    const out = await run(root);
+    expect(out.textContent).toContain("未找到 CLI 可分析的模型");
+  });
+
+
   it("只记录基准（无 diff）→ 只回显「基准已记录」，路径进 title 不占正文", async () => {
     executeCLI.mockResolvedValue({
       status: "success",

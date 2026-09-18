@@ -395,6 +395,14 @@ export const zhCN = {
   "diagnostics.perfBaselineDelta": "{delta}%",
   "diagnostics.perfBaselineNoiseHint": "噪声区间，不判退化",
   "diagnostics.perfBaselineNewHint": "基准里没有该阶段",
+  // D-7：基准不可用的**结构化原因** → 本地化文案（Go 的中文细节只进 title，不上屏）
+  "diagnostics.perfBaselineErrMissing": "还没有记录过基准：勾上「记录基准」跑一次即可建立基准",
+  "diagnostics.perfBaselineErrSavedNote": "（本次已记录新基准，下次运行即可对比）",
+  "diagnostics.perfBaselineErrUnreadable": "基准文件读不出来（可能被占用、无权限，或路径指向目录）",
+  "diagnostics.perfBaselineErrInvalid": "基准文件格式无法识别（可能已损坏，或不是基准文件）",
+  "diagnostics.perfBaselineErrSlotUnavailable":
+    "无法定位标准基准槽（用户配置根不可用）：请改用显式的基准文件路径",
+  "diagnostics.perfBaselineErrUnknown": "基准不可用（原因见悬停提示）",
   // ADR-262 D5 并发基准：加速比与判决 token 均由 Go 单点给出，前端只渲染
   "diagnostics.perfRunConcurrent": "并发基准",
   "diagnostics.perfConcurrentWorkers": "并发 worker 数",

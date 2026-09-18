@@ -403,6 +403,19 @@ export const en: Record<string, string> = {
   "diagnostics.perfBaselineDelta": "{delta}%",
   "diagnostics.perfBaselineNoiseHint": "within the noise floor — not judged a regression",
   "diagnostics.perfBaselineNewHint": "not present in the baseline",
+  // D-7: structured reason for an unusable baseline → localized sentence.
+  // Go's Chinese detail (with the machine's absolute path) goes into the title only.
+  "diagnostics.perfBaselineErrMissing":
+    'No baseline recorded yet: tick "record baseline" and run once to create one',
+  "diagnostics.perfBaselineErrSavedNote":
+    " (recorded a new baseline this run; compare from the next run)",
+  "diagnostics.perfBaselineErrUnreadable":
+    "The baseline file cannot be read (in use, no permission, or it is a directory)",
+  "diagnostics.perfBaselineErrInvalid":
+    "The baseline file is not a recognizable baseline (corrupted, or the wrong file)",
+  "diagnostics.perfBaselineErrSlotUnavailable":
+    "The standard baseline slot cannot be located (user config root unavailable): pass an explicit baseline file path",
+  "diagnostics.perfBaselineErrUnknown": "Baseline unavailable (see the tooltip for the reason)",
   // ADR-262 D5 concurrent bench: speedup + verdict token come from Go; the UI only renders them
   "diagnostics.perfRunConcurrent": "Concurrent bench",
   "diagnostics.perfConcurrentWorkers": "Concurrent workers",

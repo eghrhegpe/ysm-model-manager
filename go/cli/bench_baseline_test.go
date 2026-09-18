@@ -428,3 +428,120 @@ func TestApplyBenchBaseline_SaveSurvivesCompareFailure(t *testing.T) {
 		t.Errorf("错误应说明本次已记录新基准, got %v", err)
 	}
 }
+
+// ── D-7：基准不可用要给**结构化原因**，不能让 GUI 只能转述中文散文 ──────────
+// 立因（2026-09-18）：JSON 模式下「基准不存在」只以中文散文出现在 load 的 error 串里
+// （`未找到基准文件 C:\Users\...\perf-baseline.json：请先用 --save-baseline 记录一次基准`），
+// GUI 原样上屏 → 英文/日文界面出现未翻译中文，且泄露本机绝对路径与 CLI 口令。
+// 修法：载荷带 `baseline.error`（token）+ `baseline.detail`（人话，含路径，只进 title/CLI）。
+func TestBuildBaselineJSON_UnavailableCarriesToken(t *testing.T) {
+	// ⚠️ 不并行：slot_unavailable 子用例覆盖包级变量 defaultBaselinePath，
+	// 与同样覆盖它的 TestRunSingleBenchJSON_SaveBaselineSlot 并发跑即 data race
+	// （见 stubBaselineSlot 的文件头约定）。
+	root := t.TempDir()
+	stages := []singleBenchStage{{Name: "① 文件读取", Duration: 2 * time.Millisecond}}
+
+	t.Run("文件不存在 → missing", func(t *testing.T) {
+		missing := filepath.Join(root, "no-such.json")
+		block, err := buildBaselineJSON(missing, "", 50, stages)
+		if err == nil {
+			t.Fatal("基准不可用必须回传错误（退出码是 CI 的判据）")
+		}
+		if block == nil {
+			t.Fatal("不可用时也要交载荷（规律六），否则前端只能转述中文散文")
+		}
+		if block.Error != baselineErrMissing {
+			t.Errorf("应给 token %q, got %q", baselineErrMissing, block.Error)
+		}
+		if block.Diff != nil {
+			t.Errorf("没比成就不该有判决: %+v", block.Diff)
+		}
+		if !strings.Contains(block.Detail, missing) {
+			t.Errorf("detail 应含路径（供 CLI/AI 追问）, got %q", block.Detail)
+		}
+	})
+
+	t.Run("文件损坏 → invalid", func(t *testing.T) {
+		broken := filepath.Join(root, "broken.json")
+		if err := os.WriteFile(broken, []byte("{ not json"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		block, err := buildBaselineJSON(broken, "", 50, stages)
+		if err == nil || block == nil {
+			t.Fatalf("损坏基准应回传错误且带载荷, got block=%+v err=%v", block, err)
+		}
+		if block.Error != baselineErrInvalid {
+			t.Errorf("应给 token %q, got %q", baselineErrInvalid, block.Error)
+		}
+	})
+
+	t.Run("路径是目录/读不了 → unreadable", func(t *testing.T) {
+		// 目录不是合法基准文件，读它必然失败且**不是** IsNotExist
+		block, err := buildBaselineJSON(root, "", 50, stages)
+		if err == nil || block == nil {
+			t.Fatalf("不可读应回传错误且带载荷, got block=%+v err=%v", block, err)
+		}
+		if block.Error != baselineErrUnreadable {
+			t.Errorf("应给 token %q, got %q", baselineErrUnreadable, block.Error)
+		}
+	})
+
+	t.Run("槽位不可用 → slot_unavailable", func(t *testing.T) {
+		// ⚠️ 覆盖包级变量 → 本子用例不得并行（父用例已 t.Parallel 亦不可再并行子用例）
+		prev := defaultBaselinePath
+		defaultBaselinePath = func() string { return "" }
+		t.Cleanup(func() { defaultBaselinePath = prev })
+
+		block, err := buildBaselineJSON(baselineSlotSentinel, "", 50, stages)
+		if err == nil || block == nil {
+			t.Fatalf("槽位不可用应回传错误且带载荷, got block=%+v err=%v", block, err)
+		}
+		if block.Error != baselineErrSlotUnavailable {
+			t.Errorf("应给 token %q, got %q", baselineErrSlotUnavailable, block.Error)
+		}
+	})
+}
+
+// TestReconcileBaselineErrors_NoDoublePrefix 包错误的二次包装陷阱回归：
+// `ErrRuntime.Error()` 自带「运行时错误: 」前缀，说明「已记录」时必须取内层原因。
+// 本用例在 D-7 引入 baselineUnavailable 包装层后尤其重要——多一层 Unwrap 就会复发。
+func TestReconcileBaselineErrors_NoDoublePrefix(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "no-such.json")
+	saved := filepath.Join(dir, "saved.json")
+
+	_, compareErr := evaluateBaseline(missing, nil, 50)
+	if compareErr == nil {
+		t.Fatal("缺基准文件应报错")
+	}
+	got := reconcileBaselineErrors(compareErr, saved)
+	if got == nil {
+		t.Fatal("对比失败必须回传错误")
+	}
+	if strings.Count(got.Error(), "运行时错误") != 1 {
+		t.Errorf("错误前缀只应出现一次（二次包装陷阱）, got %q", got.Error())
+	}
+	if !strings.Contains(got.Error(), "已记录") {
+		t.Errorf("应说明本次已记录新基准, got %q", got.Error())
+	}
+	if !strings.Contains(got.Error(), "no-such.json") {
+		t.Errorf("内层原因（含路径）不应被吞掉, got %q", got.Error())
+	}
+}
+
+// TestEvaluateBaseline_TextProseUnchanged text 模式的人话**不变**（D-7 只加结构化出口，
+// 不改 CLI 观感）：引导动作的句子与路径都要还在。
+func TestEvaluateBaseline_TextProseUnchanged(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "nope.json")
+	_, err := evaluateBaseline(path, nil, 50)
+	if err == nil {
+		t.Fatal("应报错")
+	}
+	for _, want := range []string{"运行时错误", "未找到基准文件", path, "--save-baseline"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("text 模式人话不应改变，缺 %q: %q", want, err.Error())
+		}
+	}
+}

@@ -259,6 +259,42 @@ must(
   "并发基准前端出现文本解析痕迹——结构化出口已就位，禁止回退到文案解析（ADR-262 D1）",
 );
 
+// ── 3.6) D-7：基准不可用要给结构化原因，且每个 token 都有三语 i18n 落点 ──────────
+// 立因：这些原因此前只以中文散文出现在 error 串里（含本机绝对路径与 --save-baseline 口令），
+// GUI 原样上屏 → 英文/日文界面冒出未翻译中文 + 泄露用户机器路径。
+for (const field of ['"error"', '"detail"']) {
+  must(
+    hasJSONTag(baselineGo, field.replaceAll('"', "")),
+    `基准块缺少字段 json:${field}（go/cli/bench_baseline.go）`,
+  );
+}
+const BASELINE_ERR_TOKENS = ["missing", "unreadable", "invalid", "slot_unavailable"];
+const BASELINE_ERR_I18N_KEYS = [
+  "perfBaselineErrMissing",
+  "perfBaselineErrSavedNote",
+  "perfBaselineErrUnreadable",
+  "perfBaselineErrInvalid",
+  "perfBaselineErrSlotUnavailable",
+  "perfBaselineErrUnknown",
+];
+for (const token of BASELINE_ERR_TOKENS) {
+  must(baselineGo.includes(`"${token}"`), `Go 基准不可用 token 缺 ${token}（bench_baseline.go）`);
+  must(singleTs.includes(token), `前端基准不可用映射缺 ${token}（perf-single-bench.ts）`);
+}
+for (const key of BASELINE_ERR_I18N_KEYS) {
+  // 三语都要有：漏一个语种就回落到「显示 key 名」或未翻译中文
+  for (const lang of ["zh-CN", "en", "ja"]) {
+    must(
+      readOrDie(`frontend/src/locales/${lang}.ts`).includes(`"diagnostics.${key}"`),
+      `基准不可用文案缺 ${lang} 落点（diagnostics.${key}）`,
+    );
+  }
+  must(
+    singleTs.includes(`diagnostics.${key}`),
+    `基准不可用文案 ${key} 未在 perf-single-bench.ts 的映射里使用（加了键却没接线）`,
+  );
+}
+
 // ── 汇总结论 ─────────────────────────────────────────────────────
 if (errors.length) {
   console.error("❌ 契约测试失败（CLI 性能命令结构化载荷 ↔ 前端消费）：");

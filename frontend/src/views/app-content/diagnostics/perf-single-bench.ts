@@ -107,12 +107,16 @@ interface PerfBaselineDiff {
   stages: PerfBaselineStageDiff[];
 }
 
-/** 载荷里的基准块：保存去向与对比判决各自独立，可只出现其一 */
+/** 载荷里的基准块：保存去向 / 对比判决 / 不可用原因，三者各自独立 */
 interface PerfBaselineBlock {
   /** 本次写入的基准文件；缺席 = 未保存 */
   saved_to?: string;
-  /** 本次对比判决；缺席 = 未对比 */
+  /** 本次对比判决；缺席 = 未对比（含**没比成**：此时看 error） */
   diff?: PerfBaselineDiff;
+  /** 基准不可用的结构化原因 token（D-7）：missing / unreadable / invalid / slot_unavailable */
+  error?: string;
+  /** 中文细节（含本机绝对路径与 CLI 口令）：**只进 title**，不上屏（本地化界面不该出现未翻译中文） */
+  detail?: string;
 }
 
 /** 基准参数（仅单模型模式有意义）：路径策略归 Go，前端只传基准槽哨兵 */
@@ -284,8 +288,39 @@ const BASELINE_VERDICT_META: Record<string, { icon: string; cls: string }> = {
 /**
  * 渲染基准块（保存去向 + 逐阶段判决）。
  * 未用基准参数时 `bl` 为 undefined → 返回空串（零存在感，不凭空出现空框）。
- * 两个子块各自独立：可以只保存（saved_to）、只对比（diff），也可先比后存（GUI 勾两个）。
+ * 三个子块各自独立：只保存（saved_to）、只对比（diff）、先比后存（GUI 勾两个），
+ * 或**比不成**（error token，D-7：本地化文案由横幅说，块内不重复）。
  */
+
+/** 基准不可用 token → i18n 键（D-7）。未知 token 落到通用句，绝不把 Go 中文散文当兜底文案上屏 */
+const BASELINE_ERR_KEYS: Record<string, string> = {
+  missing: "diagnostics.perfBaselineErrMissing",
+  unreadable: "diagnostics.perfBaselineErrUnreadable",
+  invalid: "diagnostics.perfBaselineErrInvalid",
+  slot_unavailable: "diagnostics.perfBaselineErrSlotUnavailable",
+};
+
+/**
+ * 基准不可用时的错误横幅（D-7）。
+ * 立因：这些原因此前只以中文散文出现在 `resp.error.message` 里（含本机绝对路径与
+ * `--save-baseline` 口令），GUI 原样上屏 → 英文/日文界面出现未翻译中文 + 泄露用户机器路径。
+ * 现在：token → 本地化句子；Go 给的中文细节只进 `title`（想看细节的人还能看到，但不占版面）。
+ * `saved_to` 同时存在说明「本次已记录、下次即可对比」——同一句里带上，避免指引用户去做刚做完的事。
+ */
+function baselineBannerHTML(bl: PerfBaselineBlock | undefined, resp: CLIResp, esc: EscFn): string {
+  const token = bl?.error;
+  if (!token) {
+    // 非基准类错误（参数错 / 模型不存在等）仍由 Go 的原话负责，前端不臆造
+    return errorHTML(resp.error?.message ?? t("diagnostics.perfFail"), esc);
+  }
+  const key = BASELINE_ERR_KEYS[token] as Parameters<typeof t>[0] | undefined;
+  const msg = key ? t(key) : t("diagnostics.perfBaselineErrUnknown");
+  const savedNote = bl?.saved_to ? ` ${t("diagnostics.perfBaselineErrSavedNote")}` : "";
+  // detail 进 title：中文细节（含路径）供追问，正文保持本地化
+  const title = bl?.detail ? ` title="${esc(bl.detail)}"` : "";
+  return `<div class="diag-stat diag-stat-error"${title}>${UI_ICONS.error} ${esc(msg + savedNote)}</div>`;
+}
+// singleBenchRenderBaseline 渲染基准块（保存去向 + 逐阶段判决；比不成时只有横幅说话）。
 function singleBenchRenderBaseline(bl: PerfBaselineBlock | undefined, esc: EscFn): string {
   if (!bl) return "";
   // 保存去向：注意路径可能很长（用户配置根）→ 正文只说「已记录」，路径进 title
@@ -451,10 +486,9 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
       // 载荷 + 错误横幅叠加（规律六）：基准对比判「退化」时 Go 返回 error 状态，
       // 但数字是实测的、判决是结构化的——两者都要给，不能因为状态是 error 就把结果丢掉。
       // 另一类 error（基准文件还没记录过）同样如此：载荷照显，另加一句说明缺什么。
-      const banner =
-        resp.status === "error"
-          ? errorHTML(resp.error?.message ?? t("diagnostics.perfFail"), esc)
-          : "";
+      // 基准不可用时（D-7）横幅说**本地化**的人话：token → i18n，Go 的中文细节只进 title。
+      // 非基准类错误仍照原样转述 Go 原话（前端不臆造原因）。
+      const banner = resp.status === "error" ? baselineBannerHTML(payload.baseline, resp, esc) : "";
       out.innerHTML = singleBenchRenderResult(payload, banner, esc);
       return;
     }

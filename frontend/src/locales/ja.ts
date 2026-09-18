@@ -404,6 +404,18 @@ export const ja: Record<string, string> = {
   "diagnostics.perfBaselineDelta": "{delta}%",
   "diagnostics.perfBaselineNoiseHint": "ノイズ下限内のため退行と判定しません",
   "diagnostics.perfBaselineNewHint": "基準に存在しない段階",
+  // D-7：基準が使えない**構造化された理由** → ローカライズ文言（Go の中国語詳細は title のみ）
+  "diagnostics.perfBaselineErrMissing":
+    "基準がまだ記録されていません：「基準を記録」を有効にして一度実行してください",
+  "diagnostics.perfBaselineErrSavedNote":
+    "（今回新しい基準を記録しました。次回の実行から比較できます）",
+  "diagnostics.perfBaselineErrUnreadable":
+    "基準ファイルを読み込めません（使用中・権限なし・ディレクトリの可能性）",
+  "diagnostics.perfBaselineErrInvalid":
+    "基準ファイルの形式を判別できません（破損、または基準ファイルではない）",
+  "diagnostics.perfBaselineErrSlotUnavailable":
+    "標準の基準スロットを特定できません（ユーザー設定ルートが利用不可）：基準ファイルのパスを明示してください",
+  "diagnostics.perfBaselineErrUnknown": "基準を利用できません（理由はツールチップをご覧ください）",
   // ADR-262 D5 並列ベンチ：加速比と判定トークンは Go が単一の出所。UI は描画のみ
   "diagnostics.perfRunConcurrent": "並列ベンチ",
   "diagnostics.perfConcurrentWorkers": "並列 worker 数",

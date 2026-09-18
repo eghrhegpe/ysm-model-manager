@@ -93,16 +93,18 @@ function disposeSceneObjectResources(scene: THREE.Scene): void {
 /**
  * 共享基础设施宿主（[ADR-227] P1 单例收敛：原模块级 let 集群 → 实例字段）。
  *
- * 设计边界：WebGLRenderer/scene/camera/controls 跨 session **复用**（单 WebGL context，
- * 避免重建黑屏——性能取舍，非缺陷），故本宿主为**单例实例**（sceneInfraHost），但状态
- * 均为实例字段，不再散落模块级 let；未来 PreviewSession 组合时只需持有 host 引用。
+ * 设计边界：WebGLRenderer 跨 session **复用**（单 WebGL context，避免重建黑屏——性能取舍，
+ * 非缺陷）；scene / camera / controls 每 session 重建（各适配器每次 mount 由
+ * fitCameraToScene / fitCameraToRoots 重新取景）。故本宿主为**单例实例**
+ * （sceneInfraHost），但状态均为实例字段，不再散落模块级 let；未来 PreviewSession 组合时
+ * 只需持有 host 引用。
  * 生命周期：reset = session 级（保留 renderer 复用）；teardown = 应用终点（全量释放 +
  * forceContextLoss）。
  */
 export class SceneInfraHost {
   /** 共享 scene（所有模型共用一个 scene，不同格式模型叠加在同一 WebGL context） */
   scene: THREE.Scene | null = null;
-  /** 共享 camera / renderer / controls（第一次 mount3D 创建，后续复用） */
+  /** renderer 跨 session 复用（唯一 WebGL context，ADR-227）；camera/controls 每 session 重建 */
   camera: THREE.PerspectiveCamera | null = null;
   renderer: THREE.WebGLRenderer | null = null;
   controls: OrbitControls | null = null;
@@ -112,21 +114,36 @@ export class SceneInfraHost {
   /** unload 钩子是否已安装（惰性一次性，首次 buildSharedInfra 时注册） */
   unloadHookInstalled = false;
 
-  /** 置空场景级单例（cleanupPreview / _resetSingletons 调用；renderer/canvas 保留语义由调用方承担）。
-   *  P0 修复：单例归零前主动遍历 scene 树释放 geometry/material GPU 资源——否则后续 session
+  /** 置空场景级单例（cleanupPreview / _resetSingletons 调用）。
+   *  P0 修复①：归零前主动遍历 scene 树释放 geometry/material GPU 资源——否则后续 session
    *  的闭包可能引用已离但 GPU 未释放的旧 scene 子树（跨 session 资源泄漏）。纹理归 textureCache
-   *  引用计数管，不在此释放（防双重释放打穿计数）。 */
+   *  引用计数管，不在此释放（防双重释放打穿计数）。
+   *  P0 修复②：renderer 保留（唯一 WebGL context 跨 session 复用，ADR-227）；camera/controls
+   *  按 session 重建（fitCameraToScene 每次 mount 重新取景，且 controls 须 dispose 摘监听器）。 */
   reset(): void {
     if (this.scene) {
       disposeSceneObjectResources(this.scene);
     }
     this.scene = null;
-    // [P0 修复·保留复用语义] camera/renderer/controls 不再置 null：cleanupPreview 是
-    // 「全部关闭」语义，但按 ADR-227 硬约束「renderer 应保留单例（WebGL context 数量上限）」，
-    // 关预览→再开本应复用旧 renderer，而非丢弃不释放（旧实现 = 既不复用也不释放，
-    // 每次开关泄漏一个 WebGL context）。内容层 geometry/material 已在上方释放；纹理归
-    // textureCache 引用计数管，不在本处释放（防双重释放打穿计数）。确要彻底释放走 teardown()。
-    // this.camera / this.renderer / this.controls 保留引用，下次 buildSharedInfra 直接复用。
+    // [P0 修复] 仅 renderer 跨 session 复用（ADR-227 硬约束：WebGL context 数量有上限）。
+    // 旧实现 reset 把 renderer 置 null 却从不 dispose → 每次「关预览→再开」泄漏一个 WebGL
+    // context，累积到浏览器上限后新建 renderer 拿不到 context（黑屏）。
+    // 内容层 geometry/material 已在上方释放；纹理归 textureCache 引用计数管，不在本处释放
+    // （防双重释放打穿计数）。确要彻底释放走 teardown()。
+    //
+    // camera/controls 仍按 session 重建（不保留）：真实适配器每次 mount 都由
+    // fitCameraToScene / fitCameraToRoots 重新取景（ysm-adapter / unload-model / switch-preview），
+    // 复用相机没有额外收益，反而让上一会话的机位/朝向跨会话残留。
+    //
+    // 但 renderer 的 canvas 现在跨会话存活 → controls 必须 dispose 才能摘掉绑在
+    // renderer.domElement 上的监听器（旧实现每次换新 canvas，监听器随旧 canvas 一并被丢弃，
+    // 故此前漏掉 dispose 也不会累积）。
+    if (this.controls) {
+      // 防御：测试替身 OrbitControls 可能未实现 dispose（真实 OrbitControls 必有）
+      if (typeof this.controls.dispose === "function") this.controls.dispose();
+      this.controls = null;
+    }
+    this.camera = null;
   }
 
   // ===== 终局拆除（code review #1）=====

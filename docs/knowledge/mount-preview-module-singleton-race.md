@@ -65,11 +65,11 @@ last_verified: 2026-09-11
 > `SceneInfraHost`（`sceneInfraHost`：scene/camera/renderer/controls/caps，`shared-infra.ts`）、
 > `RendererHost`（`rendererHost`：rAF loop/perFrame/活跃输入会话，`render-host.ts`）、
 > `SessionLedgerHost`（`sessionLedger`：代际 / 会话序号 / 存活句柄表，`session-ledger.ts`）。
-> 「复用单例」语义不变（单 WebGL context 硬约束），但状态不再散落模块级全局，`_resetSingletons` 降为 host 的 reset 门面。
+> 「单 WebGL context」硬约束不变：**renderer 跨 session 复用**（`reset` 不再置 null，旧实现每次开关泄漏一个 context）；scene/camera/controls 由 `reset` 每 session 重建——`controls.dispose()` 摘掉绑在常驻 canvas 上的监听器、`camera` 置 null 后由各适配器 `fitCameraToScene` / `fitCameraToRoots` 重新取景。状态不再散落模块级全局，`_resetSingletons` 降为 host 的 reset 门面。
 
 ## 与其他子系统关系
 
-- `buildSharedInfra`（已外置 `shared-infra.ts`）复用四个单例（scene/camera/renderer/controls），现经 `sceneInfraHost` 实例字段持有（ADR-227）
+- `buildSharedInfra`（已外置 `shared-infra.ts`）**只复用 `renderer` 一个单例**（唯一 WebGL context，ADR-227）；`scene`/`camera`/`controls` 每 session 重建，经 `sceneInfraHost` 实例字段持有
 - `runFullCleanup`（已外置 `mount-session.ts`，旧行号 mount3D 内 L771-832）统一释放内容层 + 句柄 + 菜单 + rAF，原 cleanup-3d.ts 僵尸实现已删除
 - `switch-preview.ts`（`switchToSession`）复用外壳切换模型，不重新 mount
 

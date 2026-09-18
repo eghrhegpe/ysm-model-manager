@@ -21,6 +21,10 @@ export const VIEW_TESTIDS: readonly string[] = [
   "ws-search-results",
   // ADR-262 D3：性能 tab 的类型选择器（矩阵入口，e2e 用它断言选项来自 registry）
   "diag-perf-rtype",
+  // ADR-262 D8：基准入口三件套（记录 / 对比 / 阈值）——矩阵模式下被禁用
+  "diag-perf-baseline-save",
+  "diag-perf-baseline-compare",
+  "diag-perf-baseline-th",
 ];
 
 // settingsHTML 已拆至 settings/tpl-settings.ts，消费者直接 import 叶文件（P1-6）
@@ -154,6 +158,12 @@ export function diagnosticsHTML(): string {
       </select>
       <label for="diag-perf-max">${t("diagnostics.perfMaxModels")}</label>
       <input id="diag-perf-max" type="number" min="1" step="1" value="5">
+      <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
+      <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
+      <label for="diag-perf-baseline-compare">${t("diagnostics.perfBaselineCompare")}</label>
+      <input id="diag-perf-baseline-compare" type="checkbox" data-testid="diag-perf-baseline-compare" title="${t("diagnostics.perfBaselineHint")}">
+      <label for="diag-perf-baseline-th">${t("diagnostics.perfBaselineThreshold")}</label>
+      <input id="diag-perf-baseline-th" type="number" min="1" step="1" value="50" data-testid="diag-perf-baseline-th">
     </div>
     <div id="diag-perf-single"></div>
   </div>`,

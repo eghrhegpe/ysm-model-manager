@@ -126,4 +126,7 @@ function respHasOutput(
 // ===== 导出命令模块用的辅助 =====
 
 export type { CLIResp };
-export { getOutBox, respHasOutput, setBusy, setErrorCatch, setErrorMsg, setErrorResp };
+// errorHTML 导出（2026-09-18）：基准对比判「退化」时 Go 返回 error 状态但载荷有效，
+// 消费方需要「载荷 + 错误横幅」**同时**渲染（规律六：错误分支也要交出结构化数据），
+// 而 setErrorResp 是整块替换 innerHTML 的，无法叠加——故把字符串版放出来组合。
+export { errorHTML, getOutBox, respHasOutput, setBusy, setErrorCatch, setErrorMsg, setErrorResp };

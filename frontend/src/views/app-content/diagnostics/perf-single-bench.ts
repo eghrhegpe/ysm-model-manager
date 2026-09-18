@@ -16,6 +16,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import {
   type CLIResp,
+  errorHTML,
   getOutBox,
   sectionHeader,
   setBusy,
@@ -74,21 +75,73 @@ interface SingleBenchPayload {
   size_bytes?: number;
   /** 身份块；旧版 Go 载荷缺省（前端按可选处理并回落 format 标签） */
   identity?: PerfIdentity;
+  /** 基准对比/保存结果（ADR-262 D8）；旧版 Go 载荷缺省，按可选处理 */
+  baseline?: PerfBaselineBlock;
   /** 人类可读原文（复制/AI 直读用） */
   output?: string;
 }
 
-/** 单模型基准参数 */
+/** 单阶段对比明细（字段与 go/cli/bench_baseline.go 的 perfBaselineStageDiff 逐字对齐） */
+interface PerfBaselineStageDiff {
+  name: string;
+  /** 基准侧耗时；无基准（verdict=new）时为 0 */
+  base_ms: number;
+  now_ms: number;
+  /** 相对变化百分比；noise/new 时为 0（Go 不编造无意义的百分比） */
+  delta_pct: number;
+  /** regressed | slower | ok | faster | noise | new（）——判据全在 Go，前端只映射 emoji/配色 */
+  verdict: string;
+}
+
+/** 一次基准对比的判决（字段与 go/cli/bench_baseline.go 的 perfBaselineDiff 逐字对齐） */
+interface PerfBaselineDiff {
+  /** 基准文件路径（显式路径或标准基准槽） */
+  path: string;
+  threshold_pct: number;
+  /** 噪声下限（ms）：低于它的抖动不判退化——两层保护里的绝对量标准 */
+  noise_floor_ms: number;
+  /** ok | regressed（整体判决） */
+  verdict: string;
+  /** 退化超阈值的阶段数（Verdict=regressed 的唯一判据） */
+  degraded: number;
+  stages: PerfBaselineStageDiff[];
+}
+
+/** 载荷里的基准块：保存去向与对比判决各自独立，可只出现其一 */
+interface PerfBaselineBlock {
+  /** 本次写入的基准文件；缺席 = 未保存 */
+  saved_to?: string;
+  /** 本次对比判决；缺席 = 未对比 */
+  diff?: PerfBaselineDiff;
+}
+
+/** 基准参数（仅单模型模式有意义）：路径策略归 Go，前端只传基准槽哨兵 */
+type BaselineSlot = "default";
+
+/** 单模型基准参数（键名与 Go ParamSpec 逐字对齐） */
 type SingleBenchParams = CLIArgs & {
   model: string;
   iterations: number;
   /** 结构化载荷开关；Go 侧 text/json 双模式共用同一采集路径 */
   format: "json";
+  /** 对比基准（值 = 基准槽哨兵，实际文件路径由 Go 解析） */
+  baseline?: BaselineSlot;
+  /** 记录基准（值 = 基准槽哨兵） */
+  "save-baseline"?: BaselineSlot;
+  /** 退化阈值百分比；仅在对比时传（Go 侧矩阵模式明确拒绝基准参数） */
+  threshold?: number;
 };
+
+/** 基准入口三件套（勾选状态）；矩阵模式下控件被禁用，这三个值不参与参数 */
+interface BenchBaselineOpts {
+  save: boolean;
+  compare: boolean;
+  threshold: number;
+}
 
 /** 运行模式：单模型（按路径）/ 单类型矩阵 / 全类型矩阵（ADR-262 D3） */
 type BenchMode =
-  | { kind: "model"; model: string; iterations: number }
+  | { kind: "model"; model: string; iterations: number; baseline: BenchBaselineOpts }
   | { kind: "rtype"; rtype: string; maxModels: number; iterations: number }
   | { kind: "all"; maxModels: number; iterations: number };
 
@@ -100,6 +153,40 @@ function singleBenchReadIterations(root: ShadowRoot): number {
 function singleBenchReadMaxModels(root: ShadowRoot): number {
   const raw = (root.getElementById("diag-perf-max") as HTMLInputElement | null)?.value ?? "5";
   return Math.max(1, parseInt(raw, 10) || 5);
+}
+
+/**
+ * 读取基准勾选状态（ADR-262 D8）。控件缺席时按「未启用」处理（旧版 DOM/测试夹具宽容）。
+ * 阈值下限 1%——0 或负数会把任何抖动都判成退化（Go 侧虽然只判 `ratio > threshold`，
+ * 前端仍应在入口拦住手输的 0，避免「一跑就红」的假失败）。
+ */
+function singleBenchReadBaseline(root: ShadowRoot): BenchBaselineOpts {
+  const save =
+    (root.getElementById("diag-perf-baseline-save") as HTMLInputElement | null)?.checked ?? false;
+  const compare =
+    (root.getElementById("diag-perf-baseline-compare") as HTMLInputElement | null)?.checked ??
+    false;
+  const raw =
+    (root.getElementById("diag-perf-baseline-th") as HTMLInputElement | null)?.value ?? "50";
+  return { save, compare, threshold: Math.max(1, parseInt(raw, 10) || 50) };
+}
+
+/**
+ * 基准控件与矩阵模式互斥（ADR-262 D8）：Go 侧矩阵模式**明确拒绝**基准参数（基准是单模型概念）。
+ * 选中类型/全部类型时禁用三件套——「被禁用」比「勾了却没生效」诚实（后者是被吞参数）。
+ */
+export function syncPerfBaselineControls(root: ShadowRoot): void {
+  const rtype =
+    (root.getElementById("diag-perf-rtype") as HTMLSelectElement | null)?.value.trim() ?? "";
+  const isMatrix = rtype !== "";
+  for (const id of [
+    "diag-perf-baseline-save",
+    "diag-perf-baseline-compare",
+    "diag-perf-baseline-th",
+  ]) {
+    const el = root.getElementById(id) as HTMLInputElement | null;
+    if (el) el.disabled = isMatrix;
+  }
 }
 
 /**
@@ -119,7 +206,7 @@ function singleBenchReadMode(root: ShadowRoot): BenchMode | null {
   const model =
     (root.getElementById("diag-perf-model") as HTMLInputElement | null)?.value.trim() ?? "";
   if (!model) return null;
-  return { kind: "model", model, iterations };
+  return { kind: "model", model, iterations, baseline: singleBenchReadBaseline(root) };
 }
 
 /**
@@ -138,9 +225,14 @@ function singleBenchParseMatrix(resp: CLIResp): PerfMatrixPayload | null {
 /**
  * 结构化载荷守卫：形状不对即返回 null，由调用方走错误分支。
  * 不做 `as` 断言穿透——桥另一侧是不可信字符串，形状必须显式校验（同 cli-bridge 协议边界口径）。
+ *
+ * ⚠️ **不要求 `status === "success"`**（ADR-262 D8，2026-09-18）：基准对比判「退化」时
+ * Go 返回 error 状态，但载荷已随 SetResult 交出（规律六）。若在此拦掉，UI 上「退化」只剩
+ * 一句错误文案，用户看不到哪个阶段变慢——「永远没有好还是坏的判定」等于没修。
+ * 非基准类错误（命令失败/绑定错误）的 data 形状不成立，下面的显式校验自然会拒绝它。
+ * 调用方在 status=error 时额外渲染错误横幅，两者叠加（见 runSingleBench）。
  */
 function singleBenchParsePayload(resp: CLIResp): SingleBenchPayload | null {
-  if (resp.status !== "success") return null;
   const data = resp.data as Partial<SingleBenchPayload> | undefined;
   if (!data || !Array.isArray(data.stages) || typeof data.total_ms !== "number") return null;
   if (typeof data.per_iteration_ms !== "number") return null;
@@ -165,6 +257,76 @@ function singleBenchStageMeta(status: string): { icon: string; cls: string } {
   return STAGE_STATUS_META[status] ?? { icon: "⚪", cls: "" };
 }
 
+/**
+ * 基准对比判决 token → 展示（ADR-262 D8）。判据（阈值/两层噪声下限）全在 Go，
+ * 前端只做 emoji/配色映射——同 STAGE_STATUS_META 口径，**不得重算阈值**。
+ * noise/new 在 Go 侧就不是「判退化」，故标灰、压低视觉权重。
+ */
+const BASELINE_VERDICT_META: Record<string, { icon: string; cls: string }> = {
+  regressed: { icon: "🔴", cls: "perf-bar-danger" },
+  slower: { icon: "🟡", cls: "perf-bar-warn" },
+  ok: { icon: "✅", cls: "" },
+  faster: { icon: "🟢", cls: "" },
+  noise: { icon: "⚪", cls: "perf-bl-muted" },
+  new: { icon: "🆕", cls: "perf-bl-muted" },
+};
+
+/**
+ * 渲染基准块（保存去向 + 逐阶段判决）。
+ * 未用基准参数时 `bl` 为 undefined → 返回空串（零存在感，不凭空出现空框）。
+ * 两个子块各自独立：可以只保存（saved_to）、只对比（diff），也可先比后存（GUI 勾两个）。
+ */
+function singleBenchRenderBaseline(bl: PerfBaselineBlock | undefined, esc: EscFn): string {
+  if (!bl) return "";
+  // 保存去向：注意路径可能很长（用户配置根）→ 正文只说「已记录」，路径进 title
+  const saved = bl.saved_to
+    ? `<div class="perf-total" title="${esc(bl.saved_to)}">${UI_ICONS.clipboard} ${esc(t("diagnostics.perfBaselineSavedTo"))}</div>`
+    : "";
+  const diff = bl.diff;
+  if (!diff) return saved;
+
+  const regressed = diff.verdict === "regressed";
+  const summary = regressed
+    ? t("diagnostics.perfBaselineSummaryRegressed", {
+        count: String(diff.degraded),
+        threshold: String(diff.threshold_pct),
+      })
+    : t("diagnostics.perfBaselineSummaryOk", { threshold: String(diff.threshold_pct) });
+  const summaryLine = `<div class="perf-total ${regressed ? "perf-bar-danger" : ""}" title="${esc(
+    t("diagnostics.perfBaselineJudgeHint", { noise: diff.noise_floor_ms.toFixed(1) }),
+  )}">${regressed ? UI_ICONS.warning : UI_ICONS.success} ${esc(summary)}</div>`;
+
+  const rows = diff.stages
+    .map((s) => {
+      const meta = BASELINE_VERDICT_META[s.verdict] ?? { icon: "⚪", cls: "" };
+      // noise/new 的 delta_pct 恒为 0（Go 不编造无意义的百分比）——此时改说原因，不说 0.0%
+      const reason =
+        s.verdict === "noise"
+          ? t("diagnostics.perfBaselineNoiseHint")
+          : s.verdict === "new"
+            ? t("diagnostics.perfBaselineNewHint")
+            : "";
+      const deltaText = reason
+        ? reason
+        : t("diagnostics.perfBaselineDelta", {
+            delta: `${s.delta_pct >= 0 ? "+" : ""}${s.delta_pct.toFixed(1)}`,
+          });
+      return `<div class="perf-bl-row ${meta.cls}">
+<span class="perf-bl-name" title="${esc(s.name)}">${esc(s.name)}</span>
+<span class="perf-bl-detail">${esc(
+        t("diagnostics.perfBaselineBaseToNow", {
+          base: s.base_ms.toFixed(2),
+          now: s.now_ms.toFixed(2),
+        }),
+      )}</span>
+<span class="perf-bl-delta">${esc(deltaText)}</span>
+<span class="perf-bl-mark">${meta.icon}</span>
+</div>`;
+    })
+    .join("");
+
+  return `${saved}${summaryLine}<div class="perf-bl-rows">${rows}</div>`;
+}
 function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string {
   const stages = payload.stages;
   let maxMs = 0;
@@ -224,8 +386,20 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
     `<div class="perf-bars" style="padding:8px 2px;user-select:text;-webkit-user-select:text">${bars}</div>` +
     totalLine +
     bottleneckLine +
+    // 基准判决（ADR-262 D8）：放在瓶颈之后、趋势图之前——「与上次比好还是坏」是结果的一部分
+    singleBenchRenderBaseline(payload.baseline, esc) +
     renderPerfTrendSection(esc)
   );
+}
+
+/**
+ * 结果区整块 HTML = 柱状图 + 基准判决 + （必要时）错误横幅。
+ * 单表达式出口的两个理由：① 调用点一处收敛，未知状态分支不会再漏渲染判决；
+ * ② 避开 R8「innerHTML 拼接非字面量」启发式——两个操作数**都已转义**
+ *   （bars 内部逐值 esc，banner 由 errorHTML 转义），拼接不是漏洞。
+ */
+function singleBenchRenderResult(payload: SingleBenchPayload, banner: string, esc: EscFn): string {
+  return singleBenchRenderBars(payload, esc) + banner;
 }
 
 export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void> {
@@ -240,18 +414,33 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
   setBusy(out);
   try {
     if (mode.kind === "model") {
-      const resp = await executeCLI("single-bench", {
+      // 基准参数只组装「勾了的」（ADR-262 D8）：路径传哨兵 default，实际文件由 Go 解析
+      // （前端不编路径——与「类型判定唯一事实源在 Go」同一条职责红线）。
+      const baseArgs: SingleBenchParams = {
         model: mode.model,
         iterations: mode.iterations,
         format: "json",
-      } satisfies SingleBenchParams);
+      };
+      if (mode.baseline.compare) {
+        baseArgs.baseline = "default";
+        baseArgs.threshold = mode.baseline.threshold;
+      }
+      if (mode.baseline.save) baseArgs["save-baseline"] = "default";
+      const resp = await executeCLI("single-bench", baseArgs);
       if (perfSingleGuard.stale(gen)) return;
       const payload = singleBenchParsePayload(resp);
       if (!payload) {
         renderBenchFailure(out, resp, esc);
         return;
       }
-      out.innerHTML = singleBenchRenderBars(payload, esc);
+      // 载荷 + 错误横幅叠加（规律六）：基准对比判「退化」时 Go 返回 error 状态，
+      // 但数字是实测的、判决是结构化的——两者都要给，不能因为状态是 error 就把结果丢掉。
+      // 另一类 error（基准文件还没记录过）同样如此：载荷照显，另加一句说明缺什么。
+      const banner =
+        resp.status === "error"
+          ? errorHTML(resp.error?.message ?? t("diagnostics.perfFail"), esc)
+          : "";
+      out.innerHTML = singleBenchRenderResult(payload, banner, esc);
       return;
     }
 

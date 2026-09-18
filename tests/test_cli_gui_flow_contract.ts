@@ -13,8 +13,9 @@
  * 断言四件事：
  *  1. 性能命令（gui-flow / single-bench / perf-log / concurrent-bench / benchmark）在前端白名单内
  *  2. Go 侧 gui-flow 结构化字段名齐备，且前端 GuiFlowStage/GuiFlowStructured 同名同义
- *  3. Go 侧 single-bench 结构化字段名齐备（含 identity 身份块），且前端载荷接口同名同义
+ *  3. Go 侧 single-bench 结构化字段名齐备（含 identity 身份块与基准判决），且前端载荷接口同名同义
  *  4. 前端**不得**回退到文本正则解析（防「文案当 API」范式回流）
+ *  5. 基准判决字段双端锚定，且前端**真的传**基准参数（只声明接口不传参 = 功能不可达）
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -83,10 +84,16 @@ const GUI_FIELDS = [
   '"runtime"', // 阶段运行归属 go|rust|wasm|js|three（ADR-262 D2）
 ];
 for (const field of GUI_FIELDS) {
-  must(hasJSONTag(flowGo, field.replaceAll('"', "")), `gui-flow 结构化载荷缺少字段 json:${field}（go/cli/flow.go）`);
+  must(
+    hasJSONTag(flowGo, field.replaceAll('"', "")),
+    `gui-flow 结构化载荷缺少字段 json:${field}（go/cli/flow.go）`,
+  );
 }
 for (const field of ["total_ms", "estimated_ms", "failed", "kind", "estimated_ms", "runtime"]) {
-  must(guiTs.includes(field), `前端 GuiFlowStructured/GuiFlowStage 未声明 ${field}（perf-gui-flow.ts）`);
+  must(
+    guiTs.includes(field),
+    `前端 GuiFlowStructured/GuiFlowStage 未声明 ${field}（perf-gui-flow.ts）`,
+  );
 }
 must(
   guiTs.includes("perf-gui-est"),
@@ -123,7 +130,65 @@ for (const field of SB_STAGE_FIELDS) {
 for (const field of ["runtime", "stats", "median_ms", "p95_ms"]) {
   must(singleTs.includes(field), `前端 SingleBenchStage 未声明 ${field}（perf-single-bench.ts）`);
 }
-const IDENTITY_FIELDS = ['"rtype"', '"rtype_source"', '"rtype_label"', '"form"', '"relPath"', '"absPath"'];
+// 基准判决（ADR-262 D8）：判决入载荷后 GUI 才能说「哪个阶段退化、退了多少」
+// （此前只在 stdout 文言与 error 字符串里 —— 背景缺陷「永远没有好还是坏的判定」）。
+// 顶层 baseline 键在 bench_concurrent.go，判决结构在 bench_baseline.go。
+must(
+  hasJSONTag(concurrentGo, "baseline"),
+  "single-bench 载荷缺少顶层 json:baseline（go/cli/bench_concurrent.go）",
+);
+const baselineGo = readOrDie("go/cli/bench_baseline.go");
+const BL_FIELDS = [
+  '"saved_to"',
+  '"diff"',
+  '"path"',
+  '"threshold_pct"',
+  '"noise_floor_ms"',
+  '"verdict"',
+  '"degraded"',
+  '"base_ms"',
+  '"now_ms"',
+  '"delta_pct"',
+];
+for (const field of BL_FIELDS) {
+  must(
+    hasJSONTag(baselineGo, field.replaceAll('"', "")),
+    `基准判决载荷缺少字段 json:${field}（go/cli/bench_baseline.go）`,
+  );
+}
+for (const field of [
+  "saved_to",
+  "diff",
+  "threshold_pct",
+  "noise_floor_ms",
+  "degraded",
+  "base_ms",
+  "now_ms",
+  "delta_pct",
+]) {
+  must(singleTs.includes(field), `前端基准载荷接口未声明 ${field}（perf-single-bench.ts）`);
+}
+// GUI 必须真的能发出基准参数（只声明接口不传参 = 功能不可达，缺陷依旧）
+must(
+  singleCode.includes('"save-baseline"'),
+  "前端未传 --save-baseline（GUI 无记录基准入口，退化门禁仍然不可达）",
+);
+must(
+  singleCode.includes('"baseline"') || singleCode.includes(".baseline"),
+  "前端未传 --baseline（GUI 无对比基准入口，退化门禁仍然不可达）",
+);
+must(
+  singleCode.includes('"default"'),
+  "前端基准参数应传哨兵 default：路径策略归 Go，前端不编基准文件路径",
+);
+const IDENTITY_FIELDS = [
+  '"rtype"',
+  '"rtype_source"',
+  '"rtype_label"',
+  '"form"',
+  '"relPath"',
+  '"absPath"',
+];
 for (const field of IDENTITY_FIELDS) {
   must(
     hasJSONTag(identityGo, field.replaceAll('"', "")),

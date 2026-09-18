@@ -183,6 +183,50 @@ test.describe("诊断页", () => {
     expect(info.text).toContain("YSM 模型");
   });
 
+  test("单模型 tab：基准三件套就位，且切到矩阵模式即禁用（ADR-262 D8）", async ({ page }) => {
+    // 背景缺陷「永远没有好还是坏的判定」的最后一环：退化门禁早已实现、ParamSpec 也已登记，
+    // 但 GUI 从未传过 --baseline/--save-baseline，用户看不到「比上次好还是坏」。
+    // 这里断言入口真实可交互，且与矩阵模式互斥（Go 侧对矩阵模式的基准参数是明确拒绝的）。
+    await clickBySelector(page, '.repo-tab[data-tab="single"]');
+    const probe = async () =>
+      page.evaluate(() => {
+        const root = document.querySelector("app-content")?.shadowRoot;
+        const pick = (id: string) =>
+          root?.querySelector(`[data-testid="${id}"]`) as HTMLInputElement | null;
+        const save = pick("diag-perf-baseline-save");
+        const compare = pick("diag-perf-baseline-compare");
+        const th = pick("diag-perf-baseline-th");
+        const select = root?.querySelector(
+          '[data-testid="diag-perf-rtype"]',
+        ) as HTMLSelectElement | null;
+        return {
+          present: Boolean(save && compare && th),
+          disabledAtStart: Boolean(save?.disabled || compare?.disabled || th?.disabled),
+          threshold: th?.value ?? "",
+          rtype: select?.value ?? "",
+        };
+      });
+
+    const before = await probe();
+    if (!before.present) throw new Error("未找到基准三件套（diag-perf-baseline-*）");
+    expect(before.disabledAtStart).toBe(false);
+    expect(before.threshold).toBe("50");
+
+    // 切到全类型矩阵 → 三件套禁用（「被禁用」比「勾了却没生效」诚实）
+    await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const select = root?.querySelector(
+        '[data-testid="diag-perf-rtype"]',
+      ) as HTMLSelectElement | null;
+      if (!select) return;
+      select.value = "__all__";
+      select.dispatchEvent(new Event("change"));
+    });
+    const after = await probe();
+    expect(after.rtype).toBe("__all__");
+    expect(after.disabledAtStart).toBe(true);
+  });
+
   test("日志子 tab：操作日志与运行时日志互斥可见", async ({ page }) => {
     // 默认：操作日志可见、运行时隐藏
     expect(await panelDisplay(page)).toEqual({ op: true, runtime: false });

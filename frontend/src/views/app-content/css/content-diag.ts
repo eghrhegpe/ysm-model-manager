@@ -94,6 +94,17 @@ export const contentDiagCSS: string = `
 /* 阶段样本统计（n / median / p95，ADR-262 D2）：等宽数字避免列跳动 */
 .perf-stats { font-size:var(--fs-micro); color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; flex-shrink:0; }
 .perf-total { padding:6px 2px; font-size:var(--fs-base); font-weight:600; color:var(--txt); border-top:1px solid var(--bd); margin-top:8px; }
+/* 基准对比判决行（ADR-262 D8）：Go 给 base→now 与 delta，前端只映射配色/emoji */
+.perf-bl-rows { margin:2px 0 0 0; }
+.perf-bl-row { display:flex; align-items:center; gap:8px; padding:2px 2px; font-size:var(--fs-sm); color:var(--txt); border-bottom:1px dotted var(--bd); }
+.perf-bl-row.perf-bar-danger { color:var(--status-error); font-weight:600; }
+.perf-bl-row.perf-bar-warn { color:var(--warning, #b8860b); }
+/* noise/new 不是「判退化」——压低权重，避免被误读成结论 */
+.perf-bl-row.perf-bl-muted { color:var(--muted); }
+.perf-bl-name { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.perf-bl-detail { flex:0 0 auto; font-variant-numeric:tabular-nums; color:var(--muted); }
+.perf-bl-delta { flex:0 0 auto; min-width:96px; text-align:right; font-variant-numeric:tabular-nums; }
+.perf-bl-mark { flex:0 0 auto; }
 .perf-gui-stage { display:flex; align-items:center; gap:8px; font-size:var(--fs-sm); color:var(--txt); padding:3px 2px; flex-wrap:wrap; }
 .perf-gui-stage .perf-gui-status { font-size:var(--fs-base); }
 .perf-gui-stage .perf-gui-name { font-weight:600; }

@@ -13,7 +13,7 @@ import { bindPerfCopyHandlers } from "./perf-common.ts";
 import { runGuiFlow } from "./perf-gui-flow.ts";
 import { runPerfLog } from "./perf-log.ts";
 import { populatePerfRtypeOptions } from "./perf-matrix-render.ts";
-import { runSingleBench } from "./perf-single-bench.ts";
+import { runSingleBench, syncPerfBaselineControls } from "./perf-single-bench.ts";
 import { renderLoadTraceSection } from "./perf-trace.ts";
 
 export { renderLoadTraceSection } from "./perf-trace.ts";
@@ -23,7 +23,14 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   bindPerfCopyHandlers(root);
   root.getElementById("diag-perf-run")?.addEventListener("click", () => runSingleBench(root, esc));
   // 类型选择器选项来自 Go/registry（前端不写死类型表）；注册表不可用时静默回落「单模型」旧行为
-  void populatePerfRtypeOptions(root);
+  // 填充后同步基准控件可用性（选项变化不影响当前值，但仍以填充后的值为准）
+  void populatePerfRtypeOptions(root).then(() => syncPerfBaselineControls(root));
+  // 基准三件套与矩阵模式互斥（ADR-262 D8）：切到类型/全部类型即禁用，
+  // 避免「勾了却没生效」——Go 侧对矩阵模式的基准参数是**明确拒绝**的
+  root
+    .getElementById("diag-perf-rtype")
+    ?.addEventListener("change", () => syncPerfBaselineControls(root));
+  syncPerfBaselineControls(root);
   root.getElementById("diag-perf-gui")?.addEventListener("click", () => runGuiFlow(root, esc));
   root.getElementById("diag-perf-log")?.addEventListener("click", () => runPerfLog(root, esc));
   root

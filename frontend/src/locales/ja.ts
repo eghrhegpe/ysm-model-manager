@@ -388,6 +388,22 @@ export const ja: Record<string, string> = {
   "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
   "diagnostics.perfStageStatsHint": "中央値 {median}ms / p95 {p95}ms；n = この段階の実際の出現回数",
   "diagnostics.perfRtype": "リソース種別",
+  // 基準の入口と判定（ADR-262 D8）：パスと判定基準は Go 側、UI は文言のみ
+  "diagnostics.perfBaselineSave": "基準を記録",
+  "diagnostics.perfBaselineCompare": "基準と比較",
+  "diagnostics.perfBaselineThreshold": "退行しきい値 %",
+  "diagnostics.perfBaselineHint":
+    "前回記録した基準と比較します。しきい値とノイズ下限による判定は Go 側で、下限未満の揺らぎは退行と判定しません",
+  "diagnostics.perfBaselineJudgeHint":
+    "ノイズ下限 {noise}ms：これを下回る揺らぎは退行と判定しません。しきい値と判定は Go 側",
+  "diagnostics.perfBaselineSavedTo": "基準を記録しました",
+  "diagnostics.perfBaselineSummaryOk": "基準との比較：{threshold}% を超える退行はありません",
+  "diagnostics.perfBaselineSummaryRegressed":
+    "基準との比較：{count} 個の段階が {threshold}% を超えて退行",
+  "diagnostics.perfBaselineBaseToNow": "{base} → {now}ms",
+  "diagnostics.perfBaselineDelta": "{delta}%",
+  "diagnostics.perfBaselineNoiseHint": "ノイズ下限内のため退行と判定しません",
+  "diagnostics.perfBaselineNewHint": "基準に存在しない段階",
   "diagnostics.perfRtypeSingle": "（単一モデル：パス指定）",
   "diagnostics.perfRtypeAll": "全タイプのマトリクス",
   "diagnostics.perfMaxModels": "タイプ毎の上限",

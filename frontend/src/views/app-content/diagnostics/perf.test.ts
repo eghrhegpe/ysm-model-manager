@@ -55,6 +55,29 @@ const SINGLE_STRUCTURED = {
   output: "（--format json 时 Go 打印的 JSON 原文，经 AttachSidecar 注入 data.output）",
 };
 
+// 带基准判决的载荷（对齐 go/cli/bench_baseline.go 的 perfBaselineDiff / perfBaselineStageDiff）：
+// 覆盖四类阶段判决（regressed / slower / noise / new），并同时带 saved_to 与 diff
+// （GUI 勾「记录」+「对比」时 Go 先比后存，两个子块可同时出现）
+const SINGLE_STRUCTURED_BASELINE = {
+  ...SINGLE_STRUCTURED,
+  baseline: {
+    saved_to: "/cfg/YSM-Model-Manager/perf-baseline.json",
+    diff: {
+      path: "/cfg/YSM-Model-Manager/perf-baseline.json",
+      threshold_pct: 50,
+      noise_floor_ms: 1,
+      verdict: "regressed",
+      degraded: 1,
+      stages: [
+        { name: "① 文件读取", base_ms: 10, now_ms: 12.34, delta_pct: 23.4, verdict: "slower" },
+        { name: "② JSON 解析", base_ms: 1000, now_ms: 1993.66, delta_pct: 99.4, verdict: "regressed" },
+        { name: "③ 数据验证", base_ms: 0.2, now_ms: 0.3, delta_pct: 0, verdict: "noise" },
+        { name: "⑧ 新增阶段", base_ms: 0, now_ms: 5, delta_pct: 0, verdict: "new" },
+      ],
+    },
+  },
+};
+
 // 对齐 Go gui-flow printFlowReport 真实输出
 const GUI_OUTPUT = `🎮 GUI 流程模拟器
 ======================================================================
@@ -123,6 +146,9 @@ function makeRoot(): ShadowRoot {
     <input id="diag-perf-iter">
     <select id="diag-perf-rtype"><option value="">（单模型，按路径）</option></select>
     <input id="diag-perf-max" value="5">
+    <input id="diag-perf-baseline-save" type="checkbox">
+    <input id="diag-perf-baseline-compare" type="checkbox">
+    <input id="diag-perf-baseline-th" value="50">
     <div id="diag-perf-single"></div>
     <div id="diag-perf-gui-out"></div>
     <div id="diag-perf-hist"></div>
@@ -333,6 +359,154 @@ describe("single-bench 面板", () => {
     expect(stats).toHaveLength(1);
     expect(stats[0]).toContain("12.00");
     expect(stats[0]).toContain("n=3");
+  });
+});
+
+describe("single-bench 基准入口与判决（ADR-262 D8）", () => {
+  /** 补 option 再赋 select.value——makeRoot 只放固定首项，赋不存在的值会静默变空 */
+  function setRtype(root: ShadowRoot, value: string): void {
+    const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
+    if (![...select.options].some((o) => o.value === value)) {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = value;
+      select.appendChild(opt);
+    }
+    select.value = value;
+  }
+
+  async function run(root: ShadowRoot): Promise<HTMLElement> {
+    (root.getElementById("diag-perf-run") as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 10));
+    return root.getElementById("diag-perf-single") as HTMLElement;
+  }
+
+  it("只组装勾选的基准参数，路径一律传哨兵 default（路径策略归 Go）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: SINGLE_STRUCTURED });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+
+    // 都不勾 → 三个基准键一个都不出现（旧行为不变）
+    await run(root);
+    expect(executeCLI).toHaveBeenLastCalledWith("single-bench", {
+      model: "./ysm/player.ysm",
+      iterations: 3,
+      format: "json",
+    });
+
+    // 勾「记录基准」→ 只加 save-baseline
+    (root.getElementById("diag-perf-baseline-save") as HTMLInputElement).checked = true;
+    await run(root);
+    expect(executeCLI).toHaveBeenLastCalledWith(
+      "single-bench",
+      expect.objectContaining({ "save-baseline": "default" }),
+    );
+    expect(executeCLI).not.toHaveBeenLastCalledWith(
+      "single-bench",
+      expect.objectContaining({ baseline: "default" }),
+    );
+
+    // 再勾「对比基准」+ 阈值 25 → baseline/threshold 一并带上（前端不编文件路径）
+    (root.getElementById("diag-perf-baseline-compare") as HTMLInputElement).checked = true;
+    (root.getElementById("diag-perf-baseline-th") as HTMLInputElement).value = "25";
+    await run(root);
+    expect(executeCLI).toHaveBeenLastCalledWith(
+      "single-bench",
+      expect.objectContaining({
+        baseline: "default",
+        "save-baseline": "default",
+        threshold: 25,
+      }),
+    );
+  });
+
+  it("退化（status=error 但载荷有效）→ 结果照常渲染 + 逐阶段判决 + 错误横幅", async () => {
+    executeCLI.mockResolvedValue({
+      status: "error",
+      command: "single-bench",
+      error: { code: "runtime_error", message: "1 个阶段相对基准退化超过 50%" },
+      data: SINGLE_STRUCTURED_BASELINE,
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    const out = await run(root);
+
+    // ① 实测数字不得因「状态是 error」被丢弃（规律六：错误分支也要交结构化数据）
+    expect(out.textContent).toContain("① 文件读取");
+    expect(out.textContent).toContain("2184.90ms");
+
+    // ② 判决逐阶段可读：哪个阶段、退了多少
+    const rows = out.querySelectorAll(".perf-bl-row");
+    expect(rows).toHaveLength(4);
+    const worst = out.querySelector(".perf-bl-row.perf-bar-danger .perf-bl-name");
+    expect(worst?.textContent).toContain("② JSON 解析");
+    expect(out.textContent).toContain("+99.4%");
+    expect(out.querySelector(".perf-bl-row.perf-bar-warn")).toBeTruthy();
+
+    // ③ noise/new 说原因，不说「0.0%」这个无意义数字
+    expect(out.textContent).toContain("噪声区间，不判退化");
+    expect(out.textContent).toContain("基准里没有该阶段");
+    expect(out.textContent).not.toContain("+0.0%");
+
+    // ④ 整体判决 + 保存去向 + 错误横幅三者同时在
+    expect(out.textContent).toContain("1 个阶段退化超过 50%");
+    expect(out.textContent).toContain("基准已记录");
+    expect(out.querySelector(".diag-stat-error")?.textContent).toContain("退化超过 50%");
+  });
+
+  it("未用基准 → 不渲染任何基准元素（缺席即缺席）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: SINGLE_STRUCTURED });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    const out = await run(root);
+    expect(out.querySelector(".perf-bl-rows")).toBeNull();
+    expect(out.querySelector(".perf-bl-row")).toBeNull();
+  });
+
+  it("只记录基准（无 diff）→ 只回显「基准已记录」，路径进 title 不占正文", async () => {
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "single-bench",
+      data: { ...SINGLE_STRUCTURED, baseline: { saved_to: "/cfg/perf-baseline.json" } },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    const out = await run(root);
+    expect(out.textContent).toContain("基准已记录");
+    expect(out.textContent).not.toContain("/cfg/perf-baseline.json");
+    expect(out.querySelector('[title="/cfg/perf-baseline.json"]')).toBeTruthy();
+    expect(out.querySelector(".perf-bl-rows")).toBeNull();
+  });
+
+  it("矩阵模式禁用基准三件套且不传基准参数（Go 侧明确拒绝，被禁比被吞诚实）", async () => {
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "single-bench",
+      data: { spec: { rtype: "ysm", all_types: false, max_models: 5, iterations: 3, analyzed: 0, unsupported: 0, cli_analyzable: true, types: [] }, models: [] },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    // 单模型模式下可用
+    expect((root.getElementById("diag-perf-baseline-compare") as HTMLInputElement).disabled).toBe(false);
+
+    setRtype(root, "__all__");
+    (root.getElementById("diag-perf-rtype") as HTMLSelectElement).dispatchEvent(new Event("change"));
+    for (const id of ["diag-perf-baseline-save", "diag-perf-baseline-compare", "diag-perf-baseline-th"]) {
+      expect((root.getElementById(id) as HTMLInputElement).disabled).toBe(true);
+    }
+
+    const out = await run(root);
+    expect(out.textContent.length).toBeGreaterThan(0);
+    expect(executeCLI).toHaveBeenLastCalledWith("single-bench", {
+      "all-types": true,
+      "max-models": 5,
+      iterations: 3,
+      format: "json",
+    });
   });
 });
 

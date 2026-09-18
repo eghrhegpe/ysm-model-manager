@@ -24,6 +24,7 @@ auto_fields:
     - DedupConfigShape
     - DedupFileLike
     - DedupSession
+    - errorHTML
     - EscFn
     - formatSize
     - getDefaultKeepIdx
@@ -47,6 +48,7 @@ auto_fields:
     - setErrorCatch
     - setErrorMsg
     - setErrorResp
+    - syncPerfBaselineControls
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts
@@ -154,6 +156,11 @@ status: active
   - **「基准放哪里」的策略留在 Go**：哨兵值 `default`（`--baseline default` / `--save-baseline default`）解析到标准基准槽 `os.UserConfigDir()/YSM-Model-Manager/perf-baseline.json`（与 `avatar`/`texture_cache` 同根，ADR-046 P2，避免多套基准目录分叉）；平台配置根不可用时**报错而非静默**。前端只说「要基准」，不编路径——与「类型判定唯一事实源在 Go」同一条职责红线。CI/高级用法仍可传显式路径。
   - **矩阵模式拒绝基准参数**：基准是**单模型**概念，而 `--rtype`/`--all-types` 的载荷是 `models[]`——原先这三个参数被**静默吞掉**（用户以为在跟基准比，其实没有）。现用 `fs.Visit` 精确判断「显式传入」并报 param 错误（对比默认值更准：用户可能手写同一个数）。
   - 测试：`go/cli/bench_baseline_test.go`。判据数学用**合成 stages** 锁（确定性）；集成用例只锁「stdout 纯 JSON」与「判决装配进载荷」——**不锁判决取值**，因为 fake app 的真实采集只耗几十微秒、正确落进 1ms 噪声下限判 noise（那是判据在起作用），且自对比在整包负载下可能偶发误判（既有 flake，见 `pre_push_gate`）。⚠️ **本仓测试坑**：`captureOutput` 接管的是**进程级** stdout，并行用例的打印会漏进另一用例的捕获 → 「单跑必绿、并跑偶红」；故凡抓/写 stdout 的用例一律**不并行**（Go 顶层并行用例在串行用例结束后才启动，串行即 stdout 独占），覆盖包级变量（`defaultBaselinePath`）的用例同理。
+- **基准的 GUI 入口与判决渲染**（ADR-262 D8，2026-09-18，同一切片的前端半）：单模型 tab 控制条新增「记录基准 / 对比基准 / 退化阈值 %」三件套（`#diag-perf-baseline-save|compare|th`，testid 同名并登记 `VIEW_TESTIDS`）；`perf-single-bench.ts|singleBenchReadMode` 只在**单模型**模式读它们，勾了就传 `--save-baseline default` / `--baseline default` / `--threshold N`——**值传哨兵 `default`，路径由 Go 解析**（与「类型判定唯一事实源在 Go」同一条职责红线：前端不编文件路径）。
+  - **⚠️ 载荷守卫必须放宽 `status === "success"`**（本切片最容易踩空的一步）：基准判「退化」时 Go 返回 **error 状态**，但载荷已随 `SetResult` 交出（规律六）。而 `singleBenchParsePayload` 原本第一句就是 `if (resp.status !== "success") return null;`——判决会被**整块丢弃**，UI 上「退化」只剩一句错误文案，「永远没有好还是坏的判定」等于没修。现改为「形状校验通过即可消费」，并在 status=error 时**额外叠加**错误横幅（`out.innerHTML = 柱状图 + banner`）——数字是实测的、判决是结构化的、错误原因是必要的，三者都要给。为此把 `perf-common.ts|errorHTML` 导出（`setErrorResp` 是整块替换 innerHTML，无法叠加）。
+  - **判决渲染只做映射，不重算**（同 `STAGE_STATUS_META` 口径）：`BASELINE_VERDICT_META` 把 Go 的六类 token（regressed/slower/ok/faster/noise/new）映射成 emoji + 既有配色类；`base_ms`/`now_ms`/`delta_pct` 全部**直接展示**，前端不做除法、不判阈值。`noise`/`new` 的 `delta_pct` 在 Go 侧恒为 0（不编造无意义百分比），故这两类**改说原因**（「噪声区间，不判退化」/「基准里没有该阶段」）而非显示 `+0.0%`。`saved_to` 正文只说「基准已记录」，长路径进 `title` 不占版面。未用基准参数时 `baseline` 键缺席 → 整个基准块零存在感（不渲染空框）。
+  - **矩阵模式禁用而非吞参**：`perf.ts` 在 `#diag-perf-rtype` 的 `change` 上同步 `syncPerfBaselineControls`（切到类型/全部类型即 `disabled` 三件套）——Go 侧对矩阵模式的基准参数是**明确拒绝**的，「被禁用」比「勾了却没生效」诚实。
+  - 测试：`perf.test.ts` 新增 5 例（参数只组装勾选项且传哨兵 / 退化时结果+判决+错误横幅三者并存 / 未用基准零元素 / 只保存不回显路径 / 矩阵模式禁用且不传参）；契约测试加第 5 条断言面（基准字段双端锚定 + **前端真的传** `--baseline`/`--save-baseline`——只声明接口不传参 = 功能不可达）；e2e `diagnostics.spec.ts` 断言三件套就位 + 切矩阵即禁用。**e2e 抓到一个静态门禁抓不到的缺陷**：`perfBaselineHint` 带 `{noise}` 占位符却在模板期（拿不到载荷）被 `tpl.ts` 使用，页面残留字面量 `{noise}` 并触发 i18n 运行时告警——占位符键只允许在能拿到数据的渲染路径用，模板期文案另立无占位符键（`perfBaselineHint` vs `perfBaselineJudgeHint`）。
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

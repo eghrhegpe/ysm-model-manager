@@ -387,6 +387,22 @@ export const en: Record<string, string> = {
   "diagnostics.perfStageStatsHint":
     "median {median}ms / p95 {p95}ms; n = times this stage actually ran",
   "diagnostics.perfRtype": "Resource type",
+  // Baseline entry + verdict (ADR-262 D8): paths and criteria live in Go; the UI only phrases it
+  "diagnostics.perfBaselineSave": "Record baseline",
+  "diagnostics.perfBaselineCompare": "Compare baseline",
+  "diagnostics.perfBaselineThreshold": "Regression threshold %",
+  "diagnostics.perfBaselineHint":
+    "Compare against the last recorded baseline; the threshold and the noise floor are applied in Go, jitter below the floor is not a regression",
+  "diagnostics.perfBaselineJudgeHint":
+    "Noise floor {noise}ms: jitter below it is not judged a regression; threshold and criteria live in Go",
+  "diagnostics.perfBaselineSavedTo": "Baseline recorded",
+  "diagnostics.perfBaselineSummaryOk": "vs baseline: no stage regressed beyond {threshold}%",
+  "diagnostics.perfBaselineSummaryRegressed":
+    "vs baseline: {count} stage(s) regressed beyond {threshold}%",
+  "diagnostics.perfBaselineBaseToNow": "{base} → {now}ms",
+  "diagnostics.perfBaselineDelta": "{delta}%",
+  "diagnostics.perfBaselineNoiseHint": "within the noise floor — not judged a regression",
+  "diagnostics.perfBaselineNewHint": "not present in the baseline",
   "diagnostics.perfRtypeSingle": "(single model by path)",
   "diagnostics.perfRtypeAll": "All types (matrix)",
   "diagnostics.perfMaxModels": "Max per type",

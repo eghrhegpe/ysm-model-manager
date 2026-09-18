@@ -380,6 +380,21 @@ export const zhCN = {
   "diagnostics.perfEstimatedTotal": "其中估算 {ms}ms（不计入总耗时）",
   // 阶段运行归属与样本统计（ADR-262 D2）：没有归属就看不出这段跑在 Go / Rust / WASM / Three 上
   "diagnostics.perfStageRuntimeHint": "该阶段的运行归属（Go / Rust / WASM / JS / Three）",
+  // 基准入口与判决（ADR-262 D8）：路径与判据全在 Go，前端只说人话
+  "diagnostics.perfBaselineSave": "记录基准",
+  "diagnostics.perfBaselineCompare": "对比基准",
+  "diagnostics.perfBaselineThreshold": "退化阈值 %",
+  "diagnostics.perfBaselineHint":
+    "与上次记录的基准对比；阈值与噪声下限的判据在 Go，低于下限的抖动不判退化",
+  "diagnostics.perfBaselineJudgeHint":
+    "噪声下限 {noise}ms：低于它的抖动不判退化；阈值与判据均在 Go",
+  "diagnostics.perfBaselineSavedTo": "基准已记录",
+  "diagnostics.perfBaselineSummaryOk": "与基准对比：无阶段退化超过 {threshold}%",
+  "diagnostics.perfBaselineSummaryRegressed": "与基准对比：{count} 个阶段退化超过 {threshold}%",
+  "diagnostics.perfBaselineBaseToNow": "{base} → {now}ms",
+  "diagnostics.perfBaselineDelta": "{delta}%",
+  "diagnostics.perfBaselineNoiseHint": "噪声区间，不判退化",
+  "diagnostics.perfBaselineNewHint": "基准里没有该阶段",
   "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
   "diagnostics.perfStageStatsHint": "中位 {median}ms / p95 {p95}ms；n = 该阶段实际出现次数",
   "diagnostics.perfRtype": "资源类型",

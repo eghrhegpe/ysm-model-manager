@@ -94,7 +94,7 @@ function checkStatus() {
     if (statusMissing) warns.push(`[状态机] ${f} 缺少 '- **状态**：' 字段`);
     else if (key === "unknown")
       errors.push(
-        `[状态机] ${f} 状态值非法: 「${raw}」（应为 已采纳/部分采纳/已废弃/已取代 之一）`,
+        `[状态机] ${f} 状态值非法: 「${raw}」（应为 提议中/已采纳/部分采纳/已废弃/已取代 之一）`,
       );
 
     extractDebt(num, title, raw);

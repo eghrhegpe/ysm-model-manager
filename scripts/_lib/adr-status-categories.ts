@@ -4,8 +4,8 @@
  * 单一事实源 + 唯一分类入口 classifyStatus / normalizeState。
  * 使用方：gen-docs-index / check-adr-health / check-adr-status（待新增）。
  *
- * YSM 使用 5 状态值域（与 BABY MikuMikuAR 的 5 桶不同，此处为 YSM 定制）：
- *   ✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代 / ⚠️ 已采纳（违规或未修复）
+ * YSM 使用 6 状态值域（与 BABY MikuMikuAR 的 5 桶不同，此处为 YSM 定制）：
+ *   📝 提议中 / ✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代 / ⚠️ 已采纳（违规或未修复）
  *   + 兜底 unknown
  *
  * BABY 版（5 桶：推进中/规划中/已落地/已归档/其他）为执行状态分类；
@@ -20,11 +20,12 @@
 const _RE_PARTIAL = /部分采纳|部分|Partially Accepted|partially|🔄/;
 const _RE_DEPRECATED = /已废弃|废弃|Deprecated|deprecated|🧊/;
 const _RE_SUPERSEDED = /已取代|取代|Superseded|superseded|❌/;
+const _RE_PROPOSED = /提议中|提案中|草案|未定稿|Proposed|proposed|Draft|draft|📝/;
 const _RE_ACCEPTED = /已采纳|采纳|Accepted|accepted|✅/;
 
 /**
  * 状态归一化（check-adr-health 兼容入口）。
- * 返回 { key, raw }；key ∈ 'accepted'|'partial'|'deprecated'|'superseded'|'unknown'。
+ * 返回 { key, raw }；key ∈ 'proposed'|'accepted'|'partial'|'deprecated'|'superseded'|'unknown'。
  */
 export function normalizeState(raw: string): { key: string; raw: string } {
   if (!raw) return { key: "unknown", raw: "(未标注状态)" };
@@ -33,6 +34,8 @@ export function normalizeState(raw: string): { key: string; raw: string } {
   // 非状态标识，不能被 _RE_DEPRECATED 的「废弃」子串误抢（ADR-050 回归用例）
   if (/^❌/.test(s)) return { key: "superseded", raw: s };
   if (/^🧊/.test(s)) return { key: "deprecated", raw: s };
+  if (/^📝/.test(s)) return { key: "proposed", raw: s };
+  if (_RE_PROPOSED.test(s)) return { key: "proposed", raw: s };
   if (_RE_PARTIAL.test(s)) return { key: "partial", raw: s };
   if (_RE_DEPRECATED.test(s)) return { key: "deprecated", raw: s };
   if (_RE_SUPERSEDED.test(s) && !_RE_ACCEPTED.test(s)) return { key: "superseded", raw: s };
@@ -41,6 +44,7 @@ export function normalizeState(raw: string): { key: string; raw: string } {
 }
 
 export const STATE_LABEL: Record<string, string> = {
+  proposed: "📝 提议中",
   accepted: "✅ 已采纳",
   partial: "🔄 部分采纳",
   deprecated: "🧊 已废弃",
@@ -51,8 +55,9 @@ export const STATE_LABEL: Record<string, string> = {
 };
 
 // ── 规范索引分组（gen-docs-index 用）──
-// 5 个索引桶 + unknown 兜底；顺序与 INDEX_GROUPS 常量同步。
+// 6 个索引桶 + unknown 兜底；顺序与 classifyStatus 返回值一一对应。
 export const DISPLAY_GROUPS = [
+  { key: "proposed", label: "📝 提议中", anchor: "提议中" },
   { key: "unfixed", label: "⚠️ 已采纳但遗留未修复", anchor: "已采纳但遗留未修复" },
   { key: "partial", label: "🔄 部分采纳", anchor: "部分采纳" },
   { key: "accepted", label: "✅ 已采纳", anchor: "已采纳" },
@@ -73,8 +78,10 @@ export function classifyStatus(raw: string) {
   if (/^❌/.test(s)) return "replaced";
   if (/^🧊/.test(s)) return "deprecated";
   if (/^🔄/.test(s)) return "partial";
+  if (/^📝/.test(s)) return "proposed";
   if (/^⚠️/.test(s)) return "unfixed";
   const { key } = normalizeState(raw);
+  if (key === "proposed") return "proposed";
   if (key === "accepted" && /违规|不一致|未修复/.test(s) && !/已修复/.test(s)) return "unfixed";
   if (key === "accepted") return "accepted";
   if (key === "partial") return "partial";

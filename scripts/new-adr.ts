@@ -90,7 +90,7 @@ function buildTemplate(num: number, title: string, slug: string, related: string
   const rel = related ? `**相关**：\`${related}\`` : "**相关**：待补（`docs/adr/` / 关联代码路径）";
   return `# ADR-${n}：${title}
 
-- **状态**：已采纳（Accepted）
+- **状态**：📝 提议中（Proposed）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：${today()}
 - **决策人**：Jieling（人类首席架构师）、AI 代理
@@ -122,7 +122,7 @@ function buildTemplate(num: number, title: string, slug: string, related: string
 
 function registerLine(regText: string, num: number, title: string) {
   const n = pad(num);
-  const newLine = `| ADR-${n} | ${title.replace(/\|/g, "\\|")} | ✅ 已采纳 | ${today()} |`;
+  const newLine = `| ADR-${n} | ${title.replace(/\|/g, "\\|")} | 📝 提议中 | ${today()} |`;
   // 定位登记表最后一行 `| ADR-xxx |`
   const matches = [...regText.matchAll(/^\|\s*ADR-\d{3}\s*\|.*$/gm)];
   if (!matches.length) return null;

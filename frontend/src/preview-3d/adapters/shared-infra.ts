@@ -264,10 +264,14 @@ export function buildSharedInfra(
   }
   const camera = sceneInfraHost.camera;
   // 复用单例 renderer（唯一 WebGL context）
-  // 复用单例 renderer（唯一 WebGL context）
   if (!sceneInfraHost.renderer) {
+    // [P1 修复] `alpha: true` 是「透明背景截图」的前置条件：three 默认 `alpha: false`
+    //（r185 WebGLRenderer.js:77）→ 画布无 α 通道，`screenshot.ts` 即便把清屏色置全透明、
+    // 把 scene.background 置 null 也仍拿不到透明像素。开启后预览观感不变
+    //（场景 background 是不透明 #171820，见下方场景创建），只让截图期的透明捕获生效。
     sceneInfraHost.renderer = new THREE.WebGLRenderer({
       antialias: true,
+      alpha: true,
       powerPreference: "high-performance",
     });
     sceneInfraHost.renderer.setSize(viewContainer.clientWidth, viewContainer.clientHeight);

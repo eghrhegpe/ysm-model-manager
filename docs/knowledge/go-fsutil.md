@@ -23,6 +23,7 @@ auto_fields:
     - CountFiles
     - DecodeBase64Limited
     - DirPerms
+    - DirSize
     - ErrB64TooLarge
     - ErrChmodFailed
     - ErrCloseFailed

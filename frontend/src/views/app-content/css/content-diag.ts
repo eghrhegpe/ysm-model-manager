@@ -6,6 +6,13 @@ export const contentDiagCSS: string = `
 /* ===== 诊断页面：左栏按钮 + 右栏信息 ===== */
 .log-row { padding:3px 16px; display:flex; gap:6px; font-size:var(--fs-base); align-items:center; border-bottom:1px solid var(--bd); }
 .log-row .log-status { font-size:var(--fs-sm); width:20px; text-align:center; }
+/* 状态色（ADR-238 收债，2026-09-18）：状态图标从 emoji 自带色迁到 SVG currentColor 后，
+   颜色由本行 class 按状态驱动——成功绿/失败红/警告黄走 --status-* 语义变量；
+   debug/skip 属次级信息用 muted，fatal 复用 error 红（级别差由图标形状区分）。 */
+.log-row .log-status.success { color:var(--status-success); }
+.log-row .log-status.failed, .log-row .log-status.error, .log-row .log-status.fatal { color:var(--status-error); }
+.log-row .log-status.warn { color:var(--status-warning, #e6b800); }
+.log-row .log-status.debug, .log-row .log-status.skipped { color:var(--muted); }
 .log-row .log-op { font-size:var(--fs-xs); padding:0 4px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); flex-shrink:0; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
 .log-row .log-time { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }

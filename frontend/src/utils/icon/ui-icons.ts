@@ -61,6 +61,13 @@ export const UI_ICONS = {
   restricted: svg(
     '<circle cx="12" cy="12" r="10"/><path d="M12 8v5"/><circle cx="12" cy="16" r=".5" fill="currentColor" stroke="none"/>',
   ),
+  // 致命错误（日志 Level=fatal，2026-09 收债补）：八边形比 error 的圆更「硬」——语义上是
+  // 「必须停止」级错误，与 warning 三角 / error 圆叉形成三级递进。
+  fatal: svg(
+    '<path d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  ),
+  // 跳过（日志 Status=skip，2026-09 收债补）：快进跳过语义。
+  skip: svg('<polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>'),
 
   // ── 操作语义 ──
   search: svg('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),

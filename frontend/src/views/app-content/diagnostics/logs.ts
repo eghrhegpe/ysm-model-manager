@@ -125,33 +125,31 @@ function dgLsGroupByOp(filtered: ImportLogLike[]): Map<string, ImportLogLike[]> 
   return groups;
 }
 
-// 状态 emoji → SVG 收债定位（ADR-238 遗留专项，2026-09-18 记账）：
-//   这 6 枚 emoji 由本函数在**运行时**产出，源码只写 `${statusLabel}` 模板插值，
-//   故 `check-design-tokens` 的 findEmojiIconViolations（只认「HTML 图标位 + 字面量」
-//   的 emoji-icon 判定）**结构性量不到**——与 toast `msg` 载荷 emoji 同属盲区债。
-//   部分已有现成 SVG：✅→UI_ICONS.success、❌→UI_ICONS.error、⚠️→UI_ICONS.warning、
-//   🔍→UI_ICONS.search；但 💀(fatal) / ⏭️(skip) **缺语义图标**（icon-map 曾误把 ⏭️ 记
-//   成 performance=闪电，💀 无登记），按 ADR-238 D2「语义名缺失不硬塞」纪律，需先在
-//   utils/icon/ui-icons.ts 补齐 fatal/skip 两个 SVG 再整函数迁移，勿拿性能/其他图标冒充。
+// 状态 emoji → SVG 收债完成（ADR-238 专项，2026-09-18）：
+//   本函数此前产出 6 枚 emoji（✅❌⚠️🔍💀⏭️）当状态图标；因源码只写 `${statusLabel}`
+//   模板插值，`check-design-tokens` 的 findEmojiIconViolations（只认「HTML 图标位 + 字面量」
+//   的 emoji-icon 判定）结构性量不到——与 toast `msg` 载荷 emoji 同属盲区债。
+//   现已全转 UI_ICONS 语义 SVG；💀/⏭️ 对应的 fatal/skip 图标已补进 ui-icons.ts，
+//   icon-map 误把 ⏭️ 记成 performance 的串味映射也已纠正为 skip。
 function dgLsMakeStatusLabel(l: ImportLogLike): string {
   if (l.Level) {
     return l.Level === "error"
-      ? "❌"
+      ? UI_ICONS.error
       : l.Level === "warn"
-        ? "⚠️"
+        ? UI_ICONS.warning
         : l.Level === "debug"
-          ? "🔍"
+          ? UI_ICONS.search
           : l.Level === "fatal"
-            ? "💀"
-            : "✅";
+            ? UI_ICONS.fatal
+            : UI_ICONS.success;
   }
   return l.Status === "success"
-    ? "✅"
+    ? UI_ICONS.success
     : l.Status === "failed"
-      ? "❌"
+      ? UI_ICONS.error
       : l.Status === "warn"
-        ? "⚠️"
-        : "⏭️";
+        ? UI_ICONS.warning
+        : UI_ICONS.skip;
 }
 
 function dgLsBuildDiagMsg(l: ImportLogLike, esc: EscFn): string {
@@ -190,7 +188,7 @@ function dgLsRenderDiagGroups(
       const msg = dgLsBuildDiagMsg(l, esc);
       parts.push(
         `<div class="log-row" style="animation-delay:${stagger(i, 20, 400)}ms">
-<span class="log-status ${l.Status || ""}">${statusLabel}</span>
+<span class="log-status ${l.Level || l.Status || ""}">${statusLabel}</span>
 <span class="log-msg">${msg}</span>
 <span class="log-time">${timeStr}</span>
 <button class="log-copy" title="${copyLogTitle}">${UI_ICONS.clipboard}</button>

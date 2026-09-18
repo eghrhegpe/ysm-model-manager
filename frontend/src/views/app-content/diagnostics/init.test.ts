@@ -163,8 +163,9 @@ describe("initDiagnostics — 日志面板", () => {
     await waitFor(() => list.textContent!.includes("权限不足"));
     expect(list.textContent).toContain("a");
     expect(list.textContent).toContain("b");
-    expect(list.innerHTML).toContain("❌");
-    expect(list.innerHTML).toContain("✅");
+    // ADR-238 收债：状态图标为 UI_ICONS SVG（.log-status 下 .ws-icon），不再是 emoji 文本
+    expect(list.querySelector(".log-status.failed .ws-icon")).not.toBeNull();
+    expect(list.querySelector(".log-status.success .ws-icon")).not.toBeNull();
     expect(list.textContent).toContain("解决建议"); // 错误信息换行格式化
   });
 

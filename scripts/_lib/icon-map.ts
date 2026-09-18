@@ -34,6 +34,10 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   ℹ️: "info",
   "💡": "hint",
   "🔞": "restricted",
+  // 日志状态收债（2026-09-18）：💀=致命错误、⏭️=跳过。⏭️ 曾被误记成 performance（闪电，
+  // 语义串味——「跳过」与「性能」毫无关系，是历史手滑），此处纠正为 skip。
+  "💀": "fatal",
+  "⏭️": "skip",
 
   // ── 操作语义 ──
   "🔍": "search",
@@ -181,7 +185,6 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "⏰": "clock",
   "🕒": "clock",
   "⏳": "refresh",
-  "⏭️": "performance",
 } as const;
 
 /**

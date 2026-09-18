@@ -144,10 +144,12 @@ export function containerHTML(): string {
     // 行内样式绕开样式表，主题切换 / 媒体查询 / 复用都够不着；且与既有 transition 规则分裂成两处。
     // 12px 横向内边距走 --btn-padding-filter（沿用 --btn-padding-* 既有简写约定）。
     ".sm-status-tab{padding:var(--btn-padding-filter);border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap;transition:background var(--tr-fast),color var(--tr-fast),border-color var(--tr-fast)}" +
-    // 选中态判据（2026-09 修订）：**同一条工具栏内选中态必须一致**，优先于「数按钮个数」。
-    // 本栏 6 个筛选并排（all/synced/missing/disabled/optional/legacy），实心会是视觉噪音。
-    // 统一范式 = accent 18% 淡化底 + accent 字 + accent 边框，与 .cr-tag-filter-btn.active、
-    // .diag-log-fbtn.active、.diag-sub-tab.active 逐值同款。
+    // 选中态用「accent 18% 淡化」而非实心 accent：本栏 6 个筛选并排（all/synced/missing/
+    // disabled/optional/legacy），实心会成视觉噪音。与 .cr-tag-filter-btn.active 逐值同款——
+    // 判据：**并排 4+ 个的筛选组用 18% 淡化**（.cr-tag-filter-btn / .diag-log-fbtn /
+    // .diag-sub-tab / .sm-status-tab 逐值同款）；**2 个的切换组用实心 accent**（仅 .pv-tab，
+    // 见 app-preview/css.ts .pv-tab-active）——实心底 + accent 字在「二选一」场景才是强反馈，
+    // 在「多并排筛选」场景则成噪音。
     ".sm-status-tab.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent)}" +
     // 当前类型只读指示（原同样是行内 style=）
     ".sm-cur-type{display:inline-flex;align-items:center;gap:4px;padding:0 8px;color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;border-right:1px solid var(--bd);margin-right:6px}" +

@@ -467,9 +467,9 @@
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 159 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 168 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 196 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 106 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 117 |
-| initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 136 |
+| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 109 |
+| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 120 |
+| initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 259 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 265 |

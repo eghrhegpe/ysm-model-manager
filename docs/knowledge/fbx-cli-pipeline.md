@@ -37,6 +37,7 @@ auto_fields:
     - GetAllowedCommandSpecs
     - GetCommand
     - IsCommandAllowed
+    - IsMatrix
     - JsonError
     - JsonResponse
     - JsonResponse.ToJson
@@ -56,6 +57,7 @@ auto_fields:
     - RunCLI
     - RunCLIInProcess
     - SidecarOutput
+    - SizeOrdered
     - String
     - TimingInfo
     - Unwrap

@@ -40,7 +40,7 @@ _ysm_complete() {
     cache-diag) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     cache-status) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     cache-verify) COMPREPLY=( $(compgen -W "--help --dir --verbose" -- "$cur") ); return ;;
-    concurrent-bench) COMPREPLY=( $(compgen -W "--help --workers --max-models --format" -- "$cur") ); return ;;
+    concurrent-bench) COMPREPLY=( $(compgen -W "--help --workers --format" -- "$cur") ); return ;;
     config) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     config-show) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     copy) COMPREPLY=( $(compgen -W "--help --src --dst" -- "$cur") ); return ;;
@@ -67,7 +67,7 @@ _ysm_complete() {
     scan-bench) COMPREPLY=( $(compgen -W "--help --iterations --format" -- "$cur") ); return ;;
     scan-dir) COMPREPLY=( $(compgen -W "--help --dir --detail --output" -- "$cur") ); return ;;
     search) COMPREPLY=( $(compgen -W "--help --keyword --min-bones --max-bones --min-cubes --max-cubes --min-tex --max-tex --format" -- "$cur") ); return ;;
-    single-bench) COMPREPLY=( $(compgen -W "--help --model --iterations --rtype --all-types --max-models --top-largest --baseline --save-baseline --threshold --format" -- "$cur") ); return ;;
+    single-bench) COMPREPLY=( $(compgen -W "--help --iterations --baseline --save-baseline --threshold --format" -- "$cur") ); return ;;
     tags) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     toggle) COMPREPLY=( $(compgen -W "--help --path" -- "$cur") ); return ;;
     verify) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;

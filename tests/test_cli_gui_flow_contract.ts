@@ -16,8 +16,9 @@
  *  3. Go 侧 single-bench 结构化字段名齐备（含 identity 身份块与基准判决），且前端载荷接口同名同义
  *  4. 前端**不得**回退到文本正则解析（防「文案当 API」范式回流）
  *  5. 基准判决字段双端锚定，且前端**真的传**基准参数（只声明接口不传参 = 功能不可达）
- *  6. 前 N 大目标集的「排名依据」三件套（spec.top_largest / spec.size_source / models[].footprint_bytes）
- *     双端锚定——排名依据不可见就等于不可复核
+ *  6. 目标集三旋钮（ADR-262 D3 修订：`--target` × `--order` × `--max-models`）双端锚定：
+ *     selector/order 取值域 + 载荷字段 + 「排序依据必须可见」（size_source / footprint_bytes），
+ *     并**反向断言**旧契约（all_types / top_largest / syncPerfCountLabel）已消失——残留即回归
  *  7. 扫描引擎对照（scan-bench，ADR-262 D3）：载荷字段名 + 4 个「未参与原因」token 双端锚定，
  *     且前端**以 used 为渲染分叉依据**（未采集不得渲染成 0.00ms）
  */
@@ -306,22 +307,41 @@ for (const key of BASELINE_ERR_I18N_KEYS) {
   );
 }
 
-// ── 3.7) 全库前 N 大（ADR-262 D3 第三种目标集）：排名依据三件套必须可见 ────────
-// 立因：矩阵侧只回显「选了哪些类型」，而前 N 大是按**体量**排的——不把「取几个（top_largest）、
-// 按什么排（size_source）、每条多大（footprint_bytes）」摆出来，界面就答不出「它凭什么排第一」。
-// 目录式模型的 size_bytes（identity 口径）恒为 0，拿它排序等于没排序，故体量必须有独立字段。
+// ── 3.7) 目标集三旋钮（ADR-262 D3 修订）：selector × order × 取样上限 ──────────
+// 立因：旧面把「选谁 / 排序 / 取几条」三个**正交维度**压进 4 个互斥 flag，代价最终由界面支付——
+// 一个数字控件承载两种含义（每类上限 / 前 N 大），标签只能跟着模式改义（`syncPerfCountLabel` 即该账单）。
+// 修订后跨命令同名同义，故本节锚在**新** tag 上，并反向断言旧 tag / 旧函数**已不存在**。
 const matrixTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-matrix-render.ts");
 const matrixCode = stripComments(matrixTs);
 const targetsGo = readOrDie("go/cli/perf_targets.go");
+const targetSetGo = readOrDie("go/cli/perf_target_set.go");
+const perfTplTs = readOrDie("frontend/src/views/app-content/tpl.ts");
 must(
   targetsGo.includes('perfSizeSourceDirTotal = "dir_total"'),
   '体量口径 token 常量失守（go/cli/perf_targets.go 的 perfSizeSourceDirTotal 应为 "dir_total"）',
 );
-for (const field of ["top_largest", "size_source"]) {
+// selector / order 的**取值域**是 Go 单点事实源：前端哨兵与 i18n 都靠它对齐
+const TARGET_ORDER_CONSTS = {
+  perfTargetModel: "model",
+  perfTargetRtype: "rtype",
+  perfTargetAll: "all",
+  perfTargetRepo: "repo",
+  perfOrderPath: "path",
+  perfOrderSize: "size",
+};
+for (const [constName, value] of Object.entries(TARGET_ORDER_CONSTS)) {
+  must(
+    targetSetGo.includes(`${constName} = "${value}"`),
+    `目标集取值域失守（go/cli/perf_target_set.go 的 ${constName} 应为 "${value}"）`,
+  );
+}
+for (const field of ["target", "order", "size_source", "max_models"]) {
   must(
     hasJSONTag(concurrentGo, field),
-    `前 N 大载荷缺少 spec 字段 json:${field}（go/cli/bench_concurrent.go 的 perfMatrixSpec）`,
+    `目标集载荷缺少 spec 字段 json:${field}（go/cli/bench_concurrent.go 的 perfMatrixSpec）`,
   );
+}
+for (const field of ["target", "order", "size_source"]) {
   must(
     matrixCode.includes(field),
     `前端 PerfMatrixSpec 未声明或未消费 ${field}（perf-matrix-render.ts）`,
@@ -329,7 +349,7 @@ for (const field of ["top_largest", "size_source"]) {
 }
 must(
   hasJSONTag(concurrentGo, "footprint_bytes"),
-  "前 N 大载荷缺少 models[].footprint_bytes（目录式模型 size_bytes 恒 0，无它则排名依据不可见）",
+  "载荷缺少 models[].footprint_bytes（目录式模型 size_bytes 恒 0，无它则 order=size 的排名依据不可见）",
 );
 must(
   matrixCode.includes("footprint_bytes"),
@@ -339,39 +359,92 @@ must(
   matrixCode.includes("dir_total"),
   "前端未把体量口径 token dir_total 映射成可读人话（口径不可读 = 不可复核）",
 );
-// 组装点断言（同基准/并发两节的教训：只查字段名子串，删掉组装分支断言仍绿）
+// 旧契约残留即回归：两个字段已删、两个 flag 不得再出现在组装点、改义函数必须消失
+for (const dead of ["all_types", "top_largest"]) {
+  must(
+    !hasJSONTag(concurrentGo, dead),
+    `载荷仍带已废弃字段 json:${dead}（旧目标集契约残留即回归，ADR-262 D3 修订）`,
+  );
+  must(!matrixCode.includes(dead), `前端仍声明已废弃字段 ${dead}（perf-matrix-render.ts）`);
+}
+for (const dead of ['"all-types"', '"top-largest"']) {
+  must(!singleCode.includes(dead), `前端仍组装已废弃参数 ${dead}（perf-single-bench.ts）`);
+}
 must(
-  /["']top-largest["']\s*:\s*mode\.topLargest/.test(singleCode),
-  "前端未在参数组装点写 --top-largest（GUI 发不出「全库前 N 大」目标集）",
+  !singleCode.includes("syncPerfCountLabel"),
+  "前端仍存在 syncPerfCountLabel（标签随模式改义 = 一个控件两种含义，ADR-262 D3 修订已废）",
+);
+// 组装点断言（同基准/并发两节的教训：只查字段名子串的话，删掉组装分支断言仍绿）
+must(
+  /target:\s*mode\.kind/.test(singleCode),
+  "前端未在参数组装点写 --target（GUI 发不出目标集 selector）",
 );
 must(
-  singleCode.includes("PERF_RTYPE_TOP"),
-  "前端未接「全库前 N 大」哨兵 PERF_RTYPE_TOP（perf-single-bench.ts 的模式判定）",
+  /order:\s*mode\.order/.test(singleCode),
+  "前端未在参数组装点写 --order（排序不可提交 = 不可复核）",
 );
 must(
-  matrixCode.includes("PERF_RTYPE_TOP"),
-  "前端未把「全库前 N 大」选项加进类型选择器（perf-matrix-render.ts）",
+  /"max-models":\s*mode\.maxModels/.test(singleCode),
+  "前端未在参数组装点写 --max-models（GUI 发不出取样上限）",
 );
-const TOP_I18N_KEYS = [
-  "perfRtypeTop",
-  "perfRtypeTopHint",
-  "perfTopLargestEcho",
+must(
+  /target:\s*choice\.target/.test(concTs),
+  "并发基准未在组装点写 --target（两 tab 必须同一套目标集面）",
+);
+must(/order:\s*readPerfOrder/.test(concTs), "并发基准未在组装点写 --order");
+must(
+  concTs.includes("populatePerfTargetOptions"),
+  "并发基准未复用同一套目标集填充函数（写第二份 ⇒ 两 tab 的目标集面必然漂移）",
+);
+const TARGET_SET_I18N_KEYS = [
+  "perfTarget",
+  "perfTargetModel",
+  "perfTargetAll",
+  "perfTargetRepo",
+  "perfTargetRepoHint",
+  "perfTargetNameRtype",
+  "perfTargetSetEcho",
+  "perfOrder",
+  "perfOrderPath",
+  "perfOrderSize",
+  "perfMaxModels",
+  "perfMaxModelsHint",
+  "perfSizeSourceSuffix",
   "perfSizeSourceDirTotal",
   "perfSizeSourceUnknown",
   "perfModelFootprintHint",
 ];
-for (const key of TOP_I18N_KEYS) {
+// 引用侧三处：矩阵渲染 / 模板（排序选项与两个控制条）/ 并发消费
+const targetSetUsages = matrixCode + stripComments(perfTplTs) + concTs;
+for (const key of TARGET_SET_I18N_KEYS) {
   // 三语都要有：漏一个语种就回落到「显示 key 名」或未翻译中文
   for (const lang of ["zh-CN", "en", "ja"]) {
     must(
       readOrDie(`frontend/src/locales/${lang}.ts`).includes(`"diagnostics.${key}"`),
-      `前 N 大文案缺 ${lang} 落点（diagnostics.${key}）`,
+      `目标集文案缺 ${lang} 落点（diagnostics.${key}）`,
     );
   }
   must(
-    matrixCode.includes(`diagnostics.${key}`),
-    `前 N 大文案 ${key} 未在 perf-matrix-render.ts 里使用（加了键却没接线）`,
+    targetSetUsages.includes(`diagnostics.${key}`),
+    `目标集文案 ${key} 未被 perf-matrix-render.ts / tpl.ts / perf-concurrent.ts 引用（加了键却没接线）`,
   );
+}
+// 已死键不得复活（旧文案是旧契约的化石：留着它，下一个人会以为还有前 N 大模式）
+for (const dead of [
+  "perfRtype",
+  "perfRtypeSingle",
+  "perfRtypeAll",
+  "perfRtypeTop",
+  "perfRtypeTopHint",
+  "perfTopLargestCount",
+  "perfTopLargestEcho",
+]) {
+  for (const lang of ["zh-CN", "en", "ja"]) {
+    must(
+      !readOrDie(`frontend/src/locales/${lang}.ts`).includes(`"diagnostics.${dead}"`),
+      `已废弃文案键复活：diagnostics.${dead}（${lang}）`,
+    );
+  }
 }
 
 // ── 3.8) 扫描引擎对照（ADR-262 D3）：Go/Rust 对照载荷 + 未采集原因 token 双端锚定 ──
@@ -381,7 +454,7 @@ for (const key of TOP_I18N_KEYS) {
 const scanBenchGo = readOrDie("go/cli/scan_bench.go");
 const scanBenchTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-scan-bench.ts");
 const scanBenchCode = stripComments(scanBenchTs);
-const perfTplTs = readOrDie("frontend/src/views/app-content/tpl.ts");
+// perfTplTs 于 §3.7 读取（同一常量复用，不重复读盘）
 // 入口（按钮/testid）声明在 tpl.ts，消费在 perf-scan-bench.ts——两文件的代码合并后查引用
 const scanBenchUsages = scanBenchCode + stripComments(perfTplTs);
 
@@ -530,6 +603,6 @@ if (errors.length) {
   process.exit(1);
 }
 console.log(
-  "✅ 契约测试通过：CLI 性能命令结构化载荷字段与前端消费锚定一致（白名单 + gui-flow + single-bench + 前 N 大 + 引擎对照 + 反文本解析）",
+  "✅ 契约测试通过：CLI 性能命令结构化载荷字段与前端消费锚定一致（白名单 + gui-flow + single-bench + 目标集三旋钮 + 引擎对照 + 反文本解析）",
 );
 process.exit(0);

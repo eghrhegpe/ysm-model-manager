@@ -422,7 +422,7 @@ export const zhCN = {
   "diagnostics.perfConcurrentVerdictNone": "无提升",
   "diagnostics.perfConcurrentFileRead": "并发文件读取",
   "diagnostics.perfConcurrentFileDetail": "{count} 个文件：串行 {serial}ms / 并行 {parallel}ms",
-  "diagnostics.perfConcurrentParamInvalid": "并发 worker 数须为 1~256，每类上限须 ≥ 1",
+  "diagnostics.perfConcurrentParamInvalid": "并发 worker 数须为 1~256，取样上限须 ≥ 1",
   "diagnostics.perfConcurrentEmpty": "未取得并发基准结果（仓库里可能没有 CLI 可分析的模型）",
   // ADR-262 D3 扫描引擎对照（Go / Rust）：未采集的引擎显示原因，不显示 0.00ms
   "diagnostics.perfScanBenchRun": "引擎对照（Go/Rust）",
@@ -454,16 +454,22 @@ export const zhCN = {
   "diagnostics.perfScanBenchEmpty": "未取得引擎对照结果（仓库里可能没有 CLI 可分析的模型）",
   "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
   "diagnostics.perfStageStatsHint": "中位 {median}ms / p95 {p95}ms；n = 该阶段实际出现次数",
-  "diagnostics.perfRtype": "资源类型",
-  "diagnostics.perfRtypeSingle": "（单模型，按路径）",
-  "diagnostics.perfRtypeAll": "全部类型矩阵",
-  "diagnostics.perfRtypeTop": "全库前 N 大",
-  "diagnostics.perfRtypeTopHint":
-    "按模型占用排名取全库前 N 大（目录式按目录内容合计、其余按文件大小）；N 取「每类上限」的数值；仅结构化 JSON 载荷",
-  "diagnostics.perfMaxModels": "每类上限",
-  // 同一控件（#diag-perf-max）在前 N 大模式下语义是 N——标签由 syncPerfCountLabel 按模式切换，
-  // 不换标签就等于界面撒谎（控件名与它实际含义不符）
-  "diagnostics.perfTopLargestCount": "前 N 大",
+  "diagnostics.perfTarget": "目标集",
+  "diagnostics.perfTargetModel": "（单模型，按路径）",
+  "diagnostics.perfTargetAll": "全部类型",
+  "diagnostics.perfTargetRepo": "全库扁平",
+  "diagnostics.perfTargetRepoHint":
+    "全库扁平：不按类型分组，全库按排序取前 N 条；仅结构化 JSON 载荷",
+  "diagnostics.perfTargetNameRtype": "{rtype} 类型",
+  "diagnostics.perfTargetSetEcho": "目标集 {target} · 排序 {order} · 上限 {n}",
+  "diagnostics.perfOrder": "排序",
+  "diagnostics.perfOrderPath": "路径升序",
+  "diagnostics.perfOrderSize": "体量降序",
+  "diagnostics.perfMaxModels": "取样上限",
+  // 上限控件的**单位随目标集选择器变**（rtype = 该类型 N 条 / all = 每类各 N 条 / repo = 全库 N 条）——
+  // 这条规则只进 title 提示，标签正文恒为「取样上限」：标签跟着模式改义正是本次要清的账
+  "diagnostics.perfMaxModelsHint":
+    "单位随目标集变：某类型 = 该类型 N 条；全部类型 = 每类各 N 条；全库扁平 = 全库 N 条",
   "diagnostics.perfMatrixResult": "类型矩阵结果",
   "diagnostics.perfMatrixColType": "类型",
   "diagnostics.perfMatrixColFound": "命中",
@@ -473,7 +479,7 @@ export const zhCN = {
   "diagnostics.perfMatrixEmpty": "仓库中未找到该类型的模型",
   "diagnostics.perfMatrixColUnsupported": "未采集",
   "diagnostics.perfMatrixColStages": "阶段数",
-  "diagnostics.perfTopLargestEcho": "全库前 {n} 大目标集 · 体量口径 {source}（{desc}）",
+  "diagnostics.perfSizeSourceSuffix": "体量口径 {source}（{desc}）",
   "diagnostics.perfSizeSourceDirTotal": "目录式按目录内容合计，其余按文件大小",
   "diagnostics.perfSizeSourceUnknown": "该体量口径未在界面登记",
   "diagnostics.perfModelFootprintHint":

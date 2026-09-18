@@ -1,14 +1,15 @@
 // @vitest-environment happy-dom
-// ===== 诊断页：类型矩阵（ADR-262 D3）前端契约 =====
+// ===== 诊断页：目标集矩阵（ADR-262 D3 修订）前端契约 =====
 //
-// 锁四件事：
-//  1. 分发：类型选择器 → `--rtype` / `--all-types` 参数（前端只提交规格，目标集归 Go）；
+// 锁五件事：
+//  1. 分发：目标集选择器 × 排序控件 → `--target` / `--order` / `--max-models`（前端只提交规格，目标集归 Go）；
 //  2. 渲染：类型汇总表 + 逐模型身份行（rtype/relPath/form 来自 Go identity 块）；
 //  3. 诚实：`cli_analyzable=false` 的类型显示「未采集」而不是 0.00ms（空模型数据不得当实测）；
-//  4. 空态：`models` 为空时给显式空态，不画空表。
+//  4. 空态：`models` 为空时给显式空态，不画空表；
+//  5. 本次要清的账：取样上限的标签在**任何目标集下逐字相同**——单位只进 title 提示，不随模式改义。
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { initPerfPanel, populatePerfRtypeOptions } from "./perf.ts";
+import { initPerfPanel, populatePerfTargetOptions } from "./perf.ts";
 
 const { executeCLI, isWebPlatform, loadResourceRegistry } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
@@ -36,12 +37,17 @@ function makeRoot(): ShadowRoot {
     <input id="diag-perf-model">
     <input id="diag-perf-iter" value="2">
     <select id="diag-perf-rtype"><option value="">（单模型，按路径）</option></select>
-    <label for="diag-perf-max" id="diag-perf-max-label">每类上限</label>
+    <select id="diag-perf-order">
+      <option value="path">路径升序</option>
+      <option value="size">体量降序</option>
+    </select>
+    <label for="diag-perf-max" id="diag-perf-max-label" title="单位随目标集变：某类型 = 该类型 N 条；全部类型 = 每类各 N 条；全库扁平 = 全库 N 条">取样上限</label>
     <input id="diag-perf-max" value="3">
     <div id="diag-perf-single"></div>
     <div id="diag-perf-gui-out"></div>
     <div id="diag-perf-hist"></div>
     <div id="diag-load-trace"></div>
+    <select id="diag-perf-conc-target"><option value="__repo__">全库扁平</option></select>
   `;
   (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById = (
     id: string,
@@ -49,11 +55,12 @@ function makeRoot(): ShadowRoot {
   return el as unknown as ShadowRoot;
 }
 
-/** 对齐 Go perfMatrixSpec/perfTypeSummary + singleBenchJSON（矩阵 models[]） */
+/** 对齐 Go perfMatrixSpec / perfTypeSummary + singleBenchJSON（矩阵 models[]） */
 const MATRIX_JSON = {
   spec: {
+    target: "rtype",
+    order: "path",
     rtype: "ysm",
-    all_types: false,
     max_models: 3,
     iterations: 2,
     analyzed: 1,
@@ -90,18 +97,19 @@ const MATRIX_JSON = {
   output: "{}",
 };
 
-// 全库前 N 大（ADR-262 D3 第三种目标集）载荷：与矩阵同形 + spec.top_largest/size_source，
-// 且每条 models[] 带参与排名的 footprint_bytes（目录式模型的 size_bytes 恒为 0，拿它排不了序）
-const TOP_LARGEST_JSON = {
+// `--target repo --order size`（= 旧「全库前 N 大」）载荷：与矩阵同形，
+// 但 spec.order=size 时带 size_source，且每条 models[] 带参与排名的 footprint_bytes
+// （目录式模型的 size_bytes 恒为 0，拿它排不了序）。
+const REPO_SIZE_JSON = {
   spec: {
-    all_types: false,
-    max_models: 0,
+    target: "repo",
+    order: "size",
+    size_source: "dir_total",
+    max_models: 2,
     iterations: 2,
     analyzed: 2,
     unsupported: 0,
     cli_analyzable: false,
-    top_largest: 3,
-    size_source: "dir_total",
     types: [
       {
         rtype: "ysm",
@@ -150,8 +158,9 @@ const TOP_LARGEST_JSON = {
 
 const UNSUPPORTED_JSON = {
   spec: {
+    target: "rtype",
+    order: "path",
     rtype: "EntityPlayer",
-    all_types: false,
     max_models: 3,
     iterations: 1,
     analyzed: 0,
@@ -173,7 +182,12 @@ const UNSUPPORTED_JSON = {
   models: [
     {
       model: "/repo/mmd/PMX/角色.pmx",
-      identity: { rtype: "EntityPlayer", rtype_label: "MMD 模型", form: "file", relPath: "mmd/PMX/角色.pmx" },
+      identity: {
+        rtype: "EntityPlayer",
+        rtype_label: "MMD 模型",
+        form: "file",
+        relPath: "mmd/PMX/角色.pmx",
+      },
       stages: [],
       hints: ["CLI 无解析器"],
     },
@@ -181,9 +195,21 @@ const UNSUPPORTED_JSON = {
   output: "{}",
 };
 
-function setRtype(root: ShadowRoot, value: string): void {
+/** DOM id 沿用 `#diag-perf-rtype`（e2e / testid 契约不动）；它现在承载的是 target selector */
+function setTarget(root: ShadowRoot, value: string): void {
   const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
   // makeRoot 只放固定首项：测试里按需补上目标 option，否则 select.value 赋不存在的值会静默变空
+  if (![...select.options].some((o) => o.value === value)) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = value;
+    select.appendChild(opt);
+  }
+  select.value = value;
+}
+
+function setOrder(root: ShadowRoot, value: string): void {
+  const select = root.getElementById("diag-perf-order") as HTMLSelectElement;
   if (![...select.options].some((o) => o.value === value)) {
     const opt = document.createElement("option");
     opt.value = value;
@@ -205,32 +231,86 @@ beforeEach(() => {
   isWebPlatform.mockReturnValue(false);
 });
 
-describe("类型矩阵 — 分发（规格归前端，目标集归 Go）", () => {
-  it("选中某类型 → 发 --rtype + --max-models + --format json", async () => {
+describe("目标集分发（选谁 / 怎么排 / 取几条，目标集归 Go）", () => {
+  it("选中某类型 → --target rtype + --rtype + --order + --max-models + format json", async () => {
     executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: MATRIX_JSON });
     const root = makeRoot();
     initPerfPanel(root, esc);
-    setRtype(root, "ysm");
+    setTarget(root, "ysm");
     await run(root);
 
+    // 三旋钮正交：种 selector 各自独立带参，不再用互斥 flag 拼目标集。
+    // 锁**精确**键集（不用 objectContaining）——多带一个键正是要防的回归。
     expect(executeCLI).toHaveBeenCalledWith("single-bench", {
+      target: "rtype",
       rtype: "ysm",
+      order: "path",
       "max-models": 3,
       iterations: 2,
       format: "json",
     });
   });
 
-  it("选中「全部类型」→ 发 --all-types（不带 rtype）", async () => {
+  it("选中「全部类型」→ --target all（不带 rtype）", async () => {
     executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: MATRIX_JSON });
     const root = makeRoot();
     initPerfPanel(root, esc);
-    setRtype(root, "__all__");
+    setTarget(root, "__all__");
     await run(root);
 
     expect(executeCLI).toHaveBeenCalledWith("single-bench", {
-      "all-types": true,
+      target: "all",
+      order: "path",
       "max-models": 3,
+      iterations: 2,
+      format: "json",
+    });
+  });
+
+  it("选中「全库扁平」+ 体量降序 → --target repo --order size（= 旧 --top-largest N）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: REPO_SIZE_JSON });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    setTarget(root, "__repo__");
+    setOrder(root, "size");
+    await run(root);
+
+    expect(executeCLI).toHaveBeenCalledWith("single-bench", {
+      target: "repo",
+      order: "size",
+      "max-models": 3,
+      iterations: 2,
+      format: "json",
+    });
+  });
+
+  it("切排序控件会改变提交参数（排序是与「选谁」正交的真实维度）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: MATRIX_JSON });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    setTarget(root, "ysm");
+    setOrder(root, "size");
+    await run(root);
+
+    const args = executeCLI.mock.calls.at(-1)?.[1] as { order?: string; target?: string };
+    expect(args.order).toBe("size");
+    expect(args.target).toBe("rtype");
+  });
+
+  it("单模型模式绝不带 --max-models（Go 侧显式传上限即报错，不静默吞参）", async () => {
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "single-bench",
+      data: { model: "./ysm/player.ysm", iterations: 2, total_ms: 1, per_iteration_ms: 0.5, stages: [] },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    await run(root);
+
+    // 目标集缺省即 model；上限对单条无意义，故连 target/order 都不提交（Go 的默认值就是 model）
+    expect(executeCLI).toHaveBeenCalledWith("single-bench", {
+      model: "./ysm/player.ysm",
       iterations: 2,
       format: "json",
     });
@@ -251,7 +331,7 @@ describe("类型矩阵 — 渲染", () => {
     executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: MATRIX_JSON });
     const root = makeRoot();
     initPerfPanel(root, esc);
-    setRtype(root, "ysm");
+    setTarget(root, "ysm");
     const out = await run(root);
 
     expect(out.querySelector(".perf-matrix")).toBeTruthy();
@@ -269,7 +349,7 @@ describe("类型矩阵 — 渲染", () => {
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
-    setRtype(root, "EntityPlayer");
+    setTarget(root, "EntityPlayer");
     const out = await run(root);
 
     expect(out.textContent).toContain("未采集");
@@ -285,7 +365,7 @@ describe("类型矩阵 — 渲染", () => {
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
-    setRtype(root, "ysm");
+    setTarget(root, "ysm");
     const out = await run(root);
 
     expect(out.textContent).toContain("未找到");
@@ -293,46 +373,18 @@ describe("类型矩阵 — 渲染", () => {
   });
 });
 
-describe("类型选择器选项来自 registry（前端不写死类型表）", () => {
-  it("populatePerfRtypeOptions 生成「全部类型」+ registry 各类型", async () => {
-    const root = makeRoot();
-    await populatePerfRtypeOptions(root);
-
-    const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
-    const values = [...select.options].map((o) => o.value);
-    // 顺序 = 「单模型」占位 → 两个哨兵（全部类型 / 前 N 大）→ registry 类型（前端不写死类型表）
-    expect(values).toEqual(["", "__all__", "__top__", "EntityPlayer", "ysm"]);
-    expect(select.textContent).toContain("YSM 模型");
-    expect(select.textContent).toContain("全库前 N 大");
-  });
-});
-
-describe("全库前 N 大（ADR-262 D3 第三种目标集）", () => {
-  it("选中「全库前 N 大」→ 只发 --top-largest + iterations + format", async () => {
-    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: TOP_LARGEST_JSON });
+describe("目标集回显与体量徽标（排序依据不可见 = 不可复核）", () => {
+  it("回显目标集 / 排序 / 上限，并在 order=size 时给出体量口径人话与逐条体量", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: REPO_SIZE_JSON });
     const root = makeRoot();
     initPerfPanel(root, esc);
-    setRtype(root, "__top__");
-    await run(root);
-
-    // 三种矩阵类目标集在 Go 侧互斥：混入 rtype/all-types/max-models 会被判参数冲突。
-    // 故这里锁**精确**参数集（不用 objectContaining）——多带一个键正是要防的回归。
-    expect(executeCLI).toHaveBeenCalledWith("single-bench", {
-      "top-largest": 3,
-      iterations: 2,
-      format: "json",
-    });
-  });
-
-  it("回显 N 与体量口径，并逐条给出参与排名的体量", async () => {
-    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: TOP_LARGEST_JSON });
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    setRtype(root, "__top__");
+    setTarget(root, "__repo__");
+    setOrder(root, "size");
     const out = await run(root);
 
-    // 排名依据可见 = 可复核：N、口径 token、口径人话三者都要在
-    expect(out.textContent).toContain("全库前 3 大目标集");
+    expect(out.textContent).toContain("目标集 全库扁平");
+    expect(out.textContent).toContain("排序 体量降序");
+    expect(out.textContent).toContain("上限 2");
     expect(out.textContent).toContain("dir_total");
     expect(out.textContent).toContain("目录式按目录内容合计");
     // 目录式模型的 size_bytes 是 0（identity 口径），排名体量只能来自 footprint_bytes
@@ -343,39 +395,60 @@ describe("全库前 N 大（ADR-262 D3 第三种目标集）", () => {
     expect(names[0]).toContain("ysm/big/ysm.json");
   });
 
-  it("无 footprint_bytes 的载荷不显示体量（其他模式不凭空多一行）", async () => {
+  it("order=path 不渲染体量口径，也不凭空多出逐条体量", async () => {
     executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: MATRIX_JSON });
     const root = makeRoot();
     initPerfPanel(root, esc);
-    setRtype(root, "ysm");
+    setTarget(root, "ysm");
     const out = await run(root);
 
+    expect(out.textContent).toContain("目标集 ysm 类型");
+    expect(out.textContent).toContain("排序 路径升序");
+    expect(out.textContent).not.toContain("dir_total");
     expect(out.textContent).not.toContain("MB");
     expect(out.textContent).not.toContain("KB");
   });
 });
 
-// 标签语义随模式切换（2026-09-18 主模型补）：同一个 `#diag-perf-max` 在矩阵模式是「每类上限」、
-// 在前 N 大模式是 N。控件复用没问题，但**标签不跟着换就是界面撒谎**——用户看到「每类上限 3」
-// 在前 N 大下会理解为「每种类型取 3 个」，而实际是「全库取 3 个」。
-describe("条数控件的标签随模式切换", () => {
-  it("切到前 N 大 → 标签变「前 N 大」，切回 → 变回「每类上限」", async () => {
+describe("目标集选择器选项来自 registry（前端不写死类型表）", () => {
+  it("populatePerfTargetOptions 生成「单模型」+「全部类型」+「全库扁平」+ registry 各类型", async () => {
+    const root = makeRoot();
+    await populatePerfTargetOptions(root, "diag-perf-rtype", true);
+
+    const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
+    const values = [...select.options].map((o) => o.value);
+    // 顺序 = 「单模型」占位 → 两个哨兵（全部类型 / 全库扁平）→ registry 类型（前端不写死类型表）
+    expect(values).toEqual(["", "__all__", "__repo__", "EntityPlayer", "ysm"]);
+    expect(select.textContent).toContain("YSM 模型");
+    expect(select.textContent).toContain("全库扁平");
+  });
+
+  it("includeModel=false（并发 tab）不提供「单模型」项——那个 tab 没有路径输入框", async () => {
+    const root = makeRoot();
+    await populatePerfTargetOptions(root, "diag-perf-conc-target", false);
+
+    const select = root.getElementById("diag-perf-conc-target") as HTMLSelectElement;
+    expect([...select.options].map((o) => o.value)).toEqual(["__all__", "__repo__", "EntityPlayer", "ysm"]);
+  });
+});
+
+// 本次要清的账（ADR-262 D3 修订）：同一个 `#diag-perf-max` 承载三种目标集的取样上限，
+// 但**标签一律叫「取样上限」**——单位随目标集变这件事只进 title 提示。
+// 旧实现按模式换标签（`syncPerfCountLabel`）修的是症状：标签改义 = 控件在骗人。
+describe("取样上限的标签不随目标集改义", () => {
+  it("三种目标集下标签逐字相同，且单位规则只在 title 里", async () => {
     const root = makeRoot();
     initPerfPanel(root, esc);
     const label = root.getElementById("diag-perf-max-label") as HTMLElement;
     const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
 
-    // 初始（单模型模式）：标签是「每类上限」
-    expect(label.textContent).toBe("每类上限");
+    expect(label.textContent).toBe("取样上限");
 
-    // 切到前 N 大 → 派发真实 change（走 perf.ts 的绑定，而不是直调内部函数）
-    setRtype(root, "__top__");
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(label.textContent).toBe("前 N 大");
-
-    // 切回单模型 → 必须还原，不能留在上一次的文案
-    setRtype(root, "");
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(label.textContent).toBe("每类上限");
+    for (const target of ["__all__", "__repo__", "ysm"]) {
+      setTarget(root, target);
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      expect(label.textContent).toBe("取样上限");
+      expect(label.title).toContain("单位随目标集变");
+    }
   });
 });

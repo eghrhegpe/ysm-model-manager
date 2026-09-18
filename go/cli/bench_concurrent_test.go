@@ -132,7 +132,13 @@ func TestRunConcurrentBench_ParamValidation(t *testing.T) {
 	}{
 		{[]string{"--workers", "0"}, "workers 必须 >= 1"},
 		{[]string{"--workers", "257"}, "workers 必须 <= 256"},
-		{[]string{"--workers", "4", "--max-models", "0"}, "max-models 必须 >= 1"},
+		// 上限文案随三旋钮重写（“>= 1” → “大于 0”）：同一个数字在四种 selector 下含义不同，
+		// 旧文案漏了它的单位。
+		{[]string{"--workers", "4", "--max-models", "0"}, "--max-models 必须大于 0"},
+		{[]string{"--order", "bogus"}, "--order 必须是"},
+		{[]string{"--target", "bogus"}, "--target 必须是"},
+		{[]string{"--target", "model"}, "需要 --model"},
+		{[]string{"--target", "rtype"}, "需要 --rtype"},
 	}
 	for _, c := range cases {
 		err := runConcurrentBench(&CmdContext{App: &benchFakeApp{}, Args: c.args})

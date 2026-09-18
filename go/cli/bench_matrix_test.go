@@ -86,9 +86,10 @@ func TestScanFirstModel_DirForm(t *testing.T) {
 func TestSingleBench_MatrixByRtype_YsmFixtures(t *testing.T) {
 	root := filepath.Join("..", "..", "tests", "fixtures", "ysm")
 	ctx := &CmdContext{App: &app.App{}, FilesRoot: root}
+	spec := perfTargetSpec{Target: perfTargetRtype, Order: perfOrderPath, Rtype: "ysm", MaxModels: 2, Iterations: 1}
 
 	var err error
-	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, "ysm", 2, 1) })
+	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, spec) })
 	if err != nil {
 		t.Fatalf("矩阵模式报错: %v", err)
 	}
@@ -98,6 +99,9 @@ func TestSingleBench_MatrixByRtype_YsmFixtures(t *testing.T) {
 	}
 	if m.Spec.Rtype != "ysm" || !m.Spec.CliAnalyzable {
 		t.Errorf("spec 应回显 ysm 且 cli_analyzable=true: %+v", m.Spec)
+	}
+	if m.Spec.Target != perfTargetRtype || m.Spec.Order != perfOrderPath || m.Spec.SizeSource != "" {
+		t.Errorf("spec 应回显 target=rtype / order=path（path 序不填 size_source）: %+v", m.Spec)
 	}
 	if m.Spec.MaxModels != 2 || m.Spec.Iterations != 1 {
 		t.Errorf("spec 应回显实验规格: %+v", m.Spec)
@@ -128,15 +132,19 @@ func TestSingleBench_Matrix_UnsupportedTypeNotFaked(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := &CmdContext{App: &app.App{}, FilesRoot: root}
+	spec := perfTargetSpec{Target: perfTargetRtype, Order: perfOrderPath, Rtype: "EntityPlayer", MaxModels: 5, Iterations: 1}
 
 	var err error
-	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, "EntityPlayer", 5, 1) })
+	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, spec) })
 	if err != nil {
 		t.Fatalf("矩阵模式报错: %v", err)
 	}
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
+	}
+	if m.Spec.Target != perfTargetRtype || m.Spec.Rtype != "EntityPlayer" {
+		t.Errorf("spec 应回显 target=rtype 与目标类型: %+v", m.Spec)
 	}
 	if m.Spec.CliAnalyzable || m.Spec.Unsupported != 1 || m.Spec.Analyzed != 0 {
 		t.Errorf("CLI 无解析器的类型应标 unsupported 且不采集: %+v", m.Spec)
@@ -159,22 +167,24 @@ func TestSingleBench_Matrix_UnsupportedTypeNotFaked(t *testing.T) {
 func TestSingleBench_Matrix_TextModeRejected(t *testing.T) {
 	root := t.TempDir()
 	writeDirFormYsm(t, root, "a_model")
-	ctx := &CmdContext{App: &app.App{}, FilesRoot: root, Args: []string{"--rtype", "ysm"}}
+	ctx := &CmdContext{App: &app.App{}, FilesRoot: root, Args: []string{"--target", "rtype", "--rtype", "ysm"}}
 	err := runSingleBench(ctx)
 	if err == nil || !strings.Contains(err.Error(), "仅支持 --format json") {
 		t.Errorf("矩阵模式在 text 输出下应明确拒绝, got %v", err)
 	}
 }
 
-func TestSingleBench_ModelAndRtypeMutuallyExclusive(t *testing.T) {
+// TestSingleBench_ModelAndRtypePairingGuarded 载荷参数的归属守卫：旧面叫「--model 与 --rtype 互斥」，
+// 三旋钮面下两者的冲突改成「--rtype 不属于当前 selector」——报错必须说清该把类型写进 --target。
+func TestSingleBench_ModelAndRtypePairingGuarded(t *testing.T) {
 	ctx := &CmdContext{
 		App:       &app.App{},
 		FilesRoot: t.TempDir(),
 		Args:      []string{"--model", "x.ysm", "--rtype", "ysm", "--format", "json"},
 	}
 	err := runSingleBench(ctx)
-	if err == nil || !strings.Contains(err.Error(), "互斥") {
-		t.Errorf("--model 与 --rtype 应互斥, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "--rtype 只在 --target rtype") {
+		t.Errorf("--rtype 在 target=model 下应报配对错误, got %v", err)
 	}
 }
 
@@ -208,21 +218,26 @@ func TestPerfTypeManifest_Consistent(t *testing.T) {
 	}
 }
 
-func TestSingleBench_AllTypes_Fixtures(t *testing.T) {
+func TestSingleBench_TargetAll_Fixtures(t *testing.T) {
 	root := filepath.Join("..", "..", "tests", "fixtures", "ysm")
 	ctx := &CmdContext{App: &app.App{}, FilesRoot: root}
+	spec := perfTargetSpec{Target: perfTargetAll, Order: perfOrderPath, MaxModels: 2, Iterations: 1}
 
 	var err error
-	out := captureOutput(t, func() { err = runSingleBenchAllTypesJSON(ctx, 2, 1) })
+	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, spec) })
 	if err != nil {
-		t.Fatalf("--all-types 报错: %v", err)
+		t.Fatalf("--target all 报错: %v", err)
 	}
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
 	}
-	if !m.Spec.AllTypes || m.Spec.Rtype != "" {
-		t.Errorf("--all-types 应置 all_types 且不填单类型 rtype: %+v", m.Spec)
+	if m.Spec.Target != perfTargetAll || m.Spec.Rtype != "" {
+		t.Errorf("--target all 应回显 target=all 且不填单类型 rtype: %+v", m.Spec)
+	}
+	// path 序不统计体量 → size_source 与 footprint_bytes 都不该凭空出现
+	if m.Spec.Order != perfOrderPath || m.Spec.SizeSource != "" {
+		t.Errorf("path 序不应回显 size_source: %+v", m.Spec)
 	}
 	if len(m.Spec.Types) != 1 {
 		t.Fatalf("fixtures 只有 ysm 类型, types 应为 1 项: %+v", m.Spec.Types)
@@ -241,10 +256,13 @@ func TestSingleBench_AllTypes_Fixtures(t *testing.T) {
 		if len(p.Stages) != 7 {
 			t.Errorf("目录式 ysm 应产出 7 阶段: %d %+v", len(p.Stages), p.Stages)
 		}
+		if p.FootprintBytes != 0 {
+			t.Errorf("path 序不得回填体量（omitempty 缺席）: %s → %d", p.Model, p.FootprintBytes)
+		}
 	}
 }
 
-func TestSingleBench_AllTypes_MutualExclusion(t *testing.T) {
+func TestSingleBench_TargetAll_GuardsAndTextRejection(t *testing.T) {
 	root := t.TempDir()
 	writeDirFormYsm(t, root, "a_model")
 	cases := []struct {
@@ -252,9 +270,10 @@ func TestSingleBench_AllTypes_MutualExclusion(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"--model 与 --all-types 互斥", []string{"--model", "x.ysm", "--all-types", "--format", "json"}, "互斥"},
-		{"--rtype 与 --all-types 互斥", []string{"--rtype", "ysm", "--all-types", "--format", "json"}, "互斥"},
-		{"矩阵模式拒绝 text 输出", []string{"--all-types"}, "仅支持 --format json"},
+		// 旧面的「互斥」已改写成配对校验：载荷参数（--model/--rtype）只在自己的 selector 下有义
+		{"--target all 下不给 --model", []string{"--model", "x.ysm", "--target", "all", "--format", "json"}, "--model 只在 --target model"},
+		{"--target all 下不给 --rtype", []string{"--rtype", "ysm", "--target", "all", "--format", "json"}, "--rtype 只在 --target rtype"},
+		{"矩阵模式拒绝 text 输出", []string{"--target", "all"}, "仅支持 --format json"},
 	}
 	for _, tc := range cases {
 		ctx := &CmdContext{App: &app.App{}, FilesRoot: root, Args: tc.args}

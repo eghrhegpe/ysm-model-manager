@@ -9,12 +9,8 @@ package cli
 
 import (
 	"path/filepath"
-	"sort"
-	"strings"
 
 	"ysm-model-manager/go/fsutil"
-	"ysm-model-manager/go/scanner"
-	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -85,18 +81,9 @@ func cliAnalyzablePath(path, ext string, reg *registry.ResourceTypeRegistry) boo
 	return cliAnalyzable(classifyForScan(path, ext, reg))
 }
 
-// pickCliAnalyzable 从已扫描条目里挑出 CLI 可分析的模型路径：
-// 保持扫描序（排序/截断由调用方决定，本函数不做隐式重排，也不臆断「首选什么类型」）。
-func pickCliAnalyzable(entries []types.ModelEntry) []string {
-	reg := registry.LoadRegistry()
-	out := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if cliAnalyzablePath(e.Path, strings.ToLower(filepath.Ext(e.Path)), reg) {
-			out = append(out, e.Path)
-		}
-	}
-	return out
-}
+// 注：条目形状的挑选器 `pickCliAnalyzable(entries)` 已退役（2026-09-18，ADR-262 D3 修订）——
+// 「从候选池里挑出 CLI 可分析的」现在只有 `filterAnalyzable([]perfTarget)` 一个出口（perf_target_set.go），
+// 它与 `collectPerfTargets` 同处一条数据流；再留一份同语义的挑选器就是第二条路径。
 
 // scanBenchTargets 按资源类型扫描基准目标集：发现 → 类型过滤 → 确定性排序 → 取前 N。
 //
@@ -105,81 +92,28 @@ func pickCliAnalyzable(entries []types.ModelEntry) []string {
 // 而不是静默丢掉，否则「按类型跑矩阵」会得到空结果而无任何解释）。
 //
 // 排序用路径字典序而非扫描序：Walk 顺序依文件系统而变，测试与 AI 断言需要可复现的目标集。
+//
+// ADR-262 D3 修订（2026-09-18）：本函数是 `--target rtype/all --order path` 的具名形态，
+// 实现已收敛到 `collectPerfTargets` / `orderPerfTargets` / `capFlat` 三个原语——旧面这里
+// 曾自扫一遍仓库（与 scanTargetsGrouped / scanTopLargestTargets 各扫一遍），三旋钮若照旧
+// 各写一份就会变成第四、第五份。行为逐字不变（既有测试即回归证明）。
 func scanBenchTargets(filesRoot, rtype string, maxModels int) []string {
 	if filesRoot == "" || maxModels < 1 {
 		return nil
 	}
-	reg := registry.LoadRegistry()
-	var out []string
-	for _, e := range scanner.ScanEntries(filesRoot) {
-		got := classifyForScan(e.Path, strings.ToLower(filepath.Ext(e.Path)), reg)
-		if rtype != "" {
-			if got != rtype {
-				continue
-			}
-		} else if !cliAnalyzable(got) {
-			continue
-		}
-		out = append(out, e.Path)
+	ts, _ := collectPerfTargets(filesRoot)
+	if rtype != "" {
+		ts = filterRtype(ts, rtype)
+	} else {
+		ts = filterAnalyzable(ts)
 	}
-	sort.Strings(out)
-	if len(out) > maxModels {
-		out = out[:maxModels]
-	}
-	return out
+	return pathsOf(capFlat(orderPerfTargets(ts, perfOrderPath), maxModels))
 }
 
-// perfTypeGroup 按类型归并后的目标集（--all-types 用）。
-type perfTypeGroup struct {
-	Rtype string
-	// Found 仓库中该类型条目总数（未截断），供矩阵回显「跑了几个 / 一共有几个」
-	Found int
-	// Targets 实际取样（路径字典序前 N）
-	Targets []string
-}
-
-// scanTargetsGrouped 扫描整个仓库并按类型归并（类型字典序，组内路径字典序，各组取前 maxPerType）。
-//
-// 只收录**仓库里真实存在**的类型：空跑一堆 0 计数的类型对用户/AI 都是噪声。
-// 组内包含 CLI 不可分析的类型（由调用方标 unsupported），保证「仓库里有什么」如实可见。
-func scanTargetsGrouped(filesRoot string, maxPerType int) []perfTypeGroup {
-	if filesRoot == "" || maxPerType < 1 {
-		return nil
-	}
-	reg := registry.LoadRegistry()
-	byType := map[string][]string{}
-	for _, e := range scanner.ScanEntries(filesRoot) {
-		got := classifyForScan(e.Path, strings.ToLower(filepath.Ext(e.Path)), reg)
-		byType[got] = append(byType[got], e.Path)
-	}
-	types := make([]string, 0, len(byType))
-	for t := range byType {
-		types = append(types, t)
-	}
-	sort.Strings(types)
-
-	out := make([]perfTypeGroup, 0, len(types))
-	for _, t := range types {
-		paths := byType[t]
-		sort.Strings(paths)
-		targets := paths
-		if len(targets) > maxPerType {
-			targets = targets[:maxPerType]
-		}
-		out = append(out, perfTypeGroup{Rtype: t, Found: len(paths), Targets: targets})
-	}
-	return out
-}
-
-// perfTopTarget 「全库前 N 大」目标集的一项：路径 + 类型 + 参与排序的**体量**。
-//
-// 体量单独回显而不是回读 ModelEntry.Size：目录式模型的 Size 是入口清单大小（见 targetFootprint），
-// 拿它当「占用」正是本功能要修的那个坑。
-type perfTopTarget struct {
-	Path      string
-	Rtype     string
-	Footprint int64
-}
+// matrixGroups（bench_concurrent.go）取代了原 scanTargetsGrouped：它把「= --target all --order path」
+// 的具名形态泛化为「按 spec 收窄 → 排序 → 分组」三步，rtype/all 与两种排序共用同一条路径。
+// 保留具名形态会让同一件事留下两份实现，故删除——需路径序全类型分组时用
+// matrixGroups(root, perfTargetSpec{Target: perfTargetAll, Order: perfOrderPath, MaxModels: n})。
 
 // perfSizeSourceDirTotal 体量口径 token（回显进 spec.size_source）：
 // 目录式模型按**目录内容合计**参与排序，其余形态按文件字节数。
@@ -192,43 +126,19 @@ const perfSizeSourceDirTotal = "dir_total"
 
 // targetFootprint 单个目标的体量：目录式模型（入口是 ysm.json 清单）→ 目录内容合计；
 // 其余形态 → 文件字节数。目录统计失败时回落到清单大小（不假装 0，0 会让它排到最后而不留痕）。
-func targetFootprint(e types.ModelEntry) int64 {
-	if registry.IsYsmEntryJSON(filepath.Base(e.Path)) {
-		if size, err := fsutil.DirSize(filepath.Dir(e.Path)); err == nil {
+//
+// 入参是 (路径, 字节数) 而非 `types.ModelEntry`（2026-09-18，ADR-262 D3 修订）：体量与排序
+// 现在由 `perfTarget` 承载，取 ModelEntry 会让 perfTarget 不得不反向伪造一个条目。
+func targetFootprint(path string, entrySize int64) int64 {
+	if registry.IsYsmEntryJSON(filepath.Base(path)) {
+		if size, err := fsutil.DirSize(filepath.Dir(path)); err == nil {
 			return size
 		}
 	}
-	return e.Size
+	return entrySize
 }
 
-// scanTopLargestTargets 扫全库 → 算每条体量 → 体量降序、同体量路径升序 → 取前 n。
-//
-// 返回第二个值是**全库未截断**的逐类型计数（供 spec.types[].found 沿用「一共有几条」的既有语义，
-// 而不是「入选了几条」——后者会让「跑了 3 个 / 一共 300 个」这种信息消失）。
-//
-// 候选池是**全库**（含 CLI 不可分析的类型）：ADR 问的是「最大的模型是谁」，PMX 恰好最大时把它
-// 静默剔掉，用户看到的是一份空报告而没有任何解释——入选后由载荷标 unsupported 才是诚实的答法。
-// 顺序即排名（前 N 大的意义就在「谁最大」），不按类型归并。
-func scanTopLargestTargets(filesRoot string, n int) ([]perfTopTarget, map[string]int) {
-	if filesRoot == "" || n < 1 {
-		return nil, nil
-	}
-	reg := registry.LoadRegistry()
-	found := make(map[string]int)
-	all := make([]perfTopTarget, 0)
-	for _, e := range scanner.ScanEntries(filesRoot) {
-		rtype := classifyForScan(e.Path, strings.ToLower(filepath.Ext(e.Path)), reg)
-		found[rtype]++
-		all = append(all, perfTopTarget{Path: e.Path, Rtype: rtype, Footprint: targetFootprint(e)})
-	}
-	sort.Slice(all, func(i, j int) bool {
-		if all[i].Footprint != all[j].Footprint {
-			return all[i].Footprint > all[j].Footprint
-		}
-		return all[i].Path < all[j].Path
-	})
-	if len(all) > n {
-		all = all[:n]
-	}
-	return all, found
-}
+// 注：`scanTopLargestTargets(filesRoot, n)` 已退役（2026-09-18，ADR-262 D3 修订）——它曾是
+// `--target repo --order size --max-models n` 的具名形态，现由 `repoPerfTargets(filesRoot, order, n)`
+// 承担：**同一个组合同时服务生产与测试**（旧写法里测试打具名函数、生产直接拼三原语，测试便证明
+// 不了生产在跑什么）。体量口径仍由 `targetFootprint` 单点给出，同体量路径升序由 `orderPerfTargets` 定。

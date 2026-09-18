@@ -83,7 +83,7 @@ func TestRunConcurrentBenchJSON_ShapeAndPurity(t *testing.T) {
 
 	// ② 字段齐备（前端契约靠这些键名；顺序无所谓）
 	for _, want := range []string{
-		`"workers"`, `"max_models"`, `"model_count"`, `"models"`,
+		`"target"`, `"order"`, `"workers"`, `"max_models"`, `"model_count"`, `"models"`,
 		`"serial"`, `"total_ms"`, `"per_model_ms"`,
 		`"parallel"`, `"speedup"`, `"verdict"`,
 	} {
@@ -91,7 +91,14 @@ func TestRunConcurrentBenchJSON_ShapeAndPurity(t *testing.T) {
 			t.Errorf("载荷缺少字段 %s: %s", want, console)
 		}
 	}
-
+	// ②′ 三旋钮回显（ADR-262 D3 修订）：本载荷是扁平的（无 spec 包装），与 max_models 并列
+	if out.Target != perfTargetRepo || out.Order != perfOrderPath || out.MaxModels != 5 {
+		t.Errorf("默认目标集应回显 target=repo / order=path / max_models=5: %+v", out)
+	}
+	// path 序不统计体量：size_source 不该凭空出现（omitempty 的诚实性）
+	if strings.Contains(console, "size_source") {
+		t.Errorf("path 序不得回显 size_source: %s", console)
+	}
 	// ③ 实测而非占位：串行耗时是真实计时（>0），模型身份块给 relPath 而非绝对路径
 	if out.Serial.TotalMs <= 0 {
 		t.Errorf("串行耗时应为实测正值, got %v", out.Serial.TotalMs)
@@ -155,7 +162,8 @@ func TestRunConcurrentBenchJSON_FileReadAbsentWhenNoCandidate(t *testing.T) {
 	model := filepath.Join(root, "m00.ysm")
 
 	// 有候选文件 → file_read 块存在且是实测正值
-	out := collectConcurrentBenchJSON(&benchScanFakeApp{paths: []string{model}}, []string{model}, 4, 5, root)
+	out := collectConcurrentBenchJSON(&benchScanFakeApp{paths: []string{model}}, []string{model},
+		perfTargetSpec{Target: perfTargetRepo, Order: perfOrderPath, MaxModels: 5}, 4, root)
 	if out.FileRead == nil {
 		t.Fatal(".ysm 是合格候选文件，file_read 应存在")
 	}
@@ -168,7 +176,8 @@ func TestRunConcurrentBenchJSON_FileReadAbsentWhenNoCandidate(t *testing.T) {
 
 	// 无候选文件 → 整块缺席（不是填 0 假装测过）
 	empty := t.TempDir()
-	out2 := collectConcurrentBenchJSON(&benchScanFakeApp{paths: []string{model}}, []string{model}, 4, 5, empty)
+	out2 := collectConcurrentBenchJSON(&benchScanFakeApp{paths: []string{model}}, []string{model},
+		perfTargetSpec{Target: perfTargetRepo, Order: perfOrderPath, MaxModels: 5}, 4, empty)
 	raw, _ := json.Marshal(out2)
 	if strings.Contains(string(raw), "file_read") {
 		t.Errorf("无候选文件时应整块缺席（omitempty 的诚实性）, got %s", raw)

@@ -194,7 +194,6 @@ app --cli --files-root <路径> concurrent-bench [选项...]
 | 选项 | 类型 | 说明 |
 |------|------|------|
 | `--workers` | int — 并发 worker 数量 |
-| `--max-models` | int — 最多测试的模型数量 |
 | `--format` | string （默认: text）— 输出格式: text（人类可读，流式打印）/ json（AI 友好，结构化载荷） |
 
 
@@ -276,12 +275,7 @@ app --cli --files-root <路径> single-bench [选项...]
 
 | 选项 | 类型 | 说明 |
 |------|------|------|
-| `--model` | string — 指定模型路径（与 --rtype 二选一；目录式模型可传解包目录或 <dir>/ysm.json） |
 | `--iterations` | int — 重复测试次数 |
-| `--rtype` | string — 按资源类型跑矩阵（registry 类型 id，如 ysm；仅 --format json） |
-| `--all-types` | bool — 跑仓库中全部资源类型的矩阵（每类型各取 --max-models 条；仅 --format json） |
-| `--max-models` | int — 矩阵模式每类型最多测试的模型数（按路径字典序确定性取样） |
-| `--top-largest` | int — 全库前 N 大目标集（N>0 启用；按模型占用排名，目录式模型按目录内容合计；仅 --format json） |
 | `--baseline` | string — 对比基准：显式 JSON 文件路径（[{name,ms}]），或哨兵 default = 标准基准槽 <用户配置根>/YSM-Model-Manager/perf-baseline.json；任一阶段退化超 --threshold 时返回失败 |
 | `--save-baseline` | string — 记录基准：显式 JSON 文件路径，或哨兵 default = 标准基准槽（供后续 --baseline 对比）；与 --baseline 同用时先比后存 |
 | `--threshold` | float — 退化阈值百分比（默认 50），配合 --baseline 使用 |

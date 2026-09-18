@@ -25,9 +25,10 @@ import {
   setErrorResp,
 } from "./perf-common.ts";
 import {
-  PERF_RTYPE_ALL,
-  PERF_RTYPE_TOP,
   type PerfMatrixPayload,
+  type PerfOrder,
+  parsePerfTargetValue,
+  readPerfOrder,
   renderPerfMatrix,
 } from "./perf-matrix-render.ts";
 import { renderPerfTrendSection, savePerfRecord } from "./perf-trend.ts";
@@ -148,12 +149,12 @@ interface BenchBaselineOpts {
   threshold: number;
 }
 
-/** 运行模式：单模型（按路径）/ 单类型矩阵 / 全类型矩阵 / 全库前 N 大（ADR-262 D3 三种目标集） */
+/** 运行模式：单模型（按路径）/ 三种目标集（rtype 某类型 · all 每类各 N · repo 全库扁平），排序与上限正交 */
 type BenchMode =
   | { kind: "model"; model: string; iterations: number; baseline: BenchBaselineOpts }
-  | { kind: "rtype"; rtype: string; maxModels: number; iterations: number }
-  | { kind: "all"; maxModels: number; iterations: number }
-  | { kind: "top"; topLargest: number; iterations: number };
+  | { kind: "rtype"; rtype: string; order: PerfOrder; maxModels: number; iterations: number }
+  | { kind: "all"; order: PerfOrder; maxModels: number; iterations: number }
+  | { kind: "repo"; order: PerfOrder; maxModels: number; iterations: number };
 
 /** 读取面板既有的「迭代次数」（single-bench 与 scan-bench 共用：同一语义同一控件，默认与 Go 的 3 对齐） */
 export function singleBenchReadIterations(root: ShadowRoot): number {
@@ -183,58 +184,51 @@ function singleBenchReadBaseline(root: ShadowRoot): BenchBaselineOpts {
 }
 
 /**
- * 基准控件与矩阵模式互斥（ADR-262 D8）：Go 侧矩阵模式**明确拒绝**基准参数（基准是单模型概念）。
- * 选中类型/全部类型时禁用三件套——「被禁用」比「勾了却没生效」诚实（后者是被吞参数）。
+ * 基准控件只在单模型目标集可用（ADR-262 D8）：Go 侧对 target≠model **明确拒绝**基准参数
+ * （基准是单模型概念）。「被禁用」比「勾了却没生效」诚实（后者是被吞参数）。
  *
- * 同一入口顺带同步「条数」控件的**标签语义**：`#diag-perf-max` 在矩阵模式下是「每类上限」、
- * 在前 N 大模式下是 N。标签不跟着换，界面就在骗人（控件名与它实际含义不符）。
+ * ⚠️ 这里**不再**顺带改上限控件的标签（旧 `syncPerfCountLabel` 已删）：上限一律叫「取样上限」，
+ * 「单位随目标集变」只进 title 提示——「一个数字控件两种含义、标签跟着模式改义」正是本次要清的账。
  */
 export function syncPerfBaselineControls(root: ShadowRoot): void {
-  const rtype =
+  const raw =
     (root.getElementById("diag-perf-rtype") as HTMLSelectElement | null)?.value.trim() ?? "";
-  const isMatrix = rtype !== "";
+  const isModel = parsePerfTargetValue(raw)?.target === "model";
   for (const id of [
     "diag-perf-baseline-save",
     "diag-perf-baseline-compare",
     "diag-perf-baseline-th",
   ]) {
     const el = root.getElementById(id) as HTMLInputElement | null;
-    if (el) el.disabled = isMatrix;
+    if (el) el.disabled = !isModel;
   }
-  syncPerfCountLabel(root, rtype);
-}
-
-/** 条数控件的标签按模式切换：前 N 大 → 「前 N 大」，其余（单模型 / 矩阵）→ 「每类上限」。 */
-function syncPerfCountLabel(root: ShadowRoot, rtype: string): void {
-  const label = root.getElementById("diag-perf-max-label");
-  if (!label) return;
-  label.textContent = t(
-    rtype === PERF_RTYPE_TOP ? "diagnostics.perfTopLargestCount" : "diagnostics.perfMaxModels",
-  );
 }
 
 /**
- * 读取运行模式：类型选择器为空 → 单模型（需路径）；`__all__` → 全类型矩阵；`__top__` → 全库前 N 大；其余 → 该类型矩阵。
+ * 读取运行模式（ADR-262 D3 修订的三旋钮）：selector 决定「选谁」，`--order` 决定排序，
+ * 上限单位随 selector 变（由 Go 解释：rtype=该类型 N 条 / all=每类各 N 条 / repo=全库 N 条）。
  * 返回 null 表示参数不合法（调用方渲染提示），不在此处静默取默认值。
  */
 function singleBenchReadMode(root: ShadowRoot): BenchMode | null {
   const iterations = singleBenchReadIterations(root);
-  const rtype =
+  const raw =
     (root.getElementById("diag-perf-rtype") as HTMLSelectElement | null)?.value.trim() ?? "";
-  if (rtype === PERF_RTYPE_ALL) {
-    return { kind: "all", maxModels: singleBenchReadMaxModels(root), iterations };
+  const choice = parsePerfTargetValue(raw);
+  if (choice.target === "model") {
+    const model =
+      (root.getElementById("diag-perf-model") as HTMLInputElement | null)?.value.trim() ?? "";
+    if (!model) return null;
+    return { kind: "model", model, iterations, baseline: singleBenchReadBaseline(root) };
   }
-  if (rtype === PERF_RTYPE_TOP) {
-    // 「每类上限」输入框在此模式下语义是「前 N 大」的 N——复用同一控件，不另开数字输入
-    return { kind: "top", topLargest: singleBenchReadMaxModels(root), iterations };
-  }
-  if (rtype) {
-    return { kind: "rtype", rtype, maxModels: singleBenchReadMaxModels(root), iterations };
-  }
-  const model =
-    (root.getElementById("diag-perf-model") as HTMLInputElement | null)?.value.trim() ?? "";
-  if (!model) return null;
-  return { kind: "model", model, iterations, baseline: singleBenchReadBaseline(root) };
+  // 三种目标集共用同一组旋钮（order + 上限 + 迭代），差异只在 selector——参数绝不叠加互斥 flag
+  const base = {
+    order: readPerfOrder(root),
+    maxModels: singleBenchReadMaxModels(root),
+    iterations,
+  };
+  return choice.target === "rtype"
+    ? { kind: "rtype", rtype: choice.rtype, ...base }
+    : { kind: choice.target, ...base };
 }
 
 /**
@@ -517,29 +511,17 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
       return;
     }
 
-    // 目标集四选一（ADR-262 D3）：目标集归 Go；前端只提交「选谁 + 几条 + 迭代」。
-    // 三种矩阵类模式互斥（Go 对组合直接报错），故参数各自独立、绝不叠加：前 N 大带
-    // rtype/all-types 是 Go 明确的互斥参数，带 max-models 则与「N 就是条数」自相矛盾。
-    const args =
-      mode.kind === "all"
-        ? {
-            "all-types": true,
-            "max-models": mode.maxModels,
-            iterations: mode.iterations,
-            format: "json",
-          }
-        : mode.kind === "top"
-          ? {
-              "top-largest": mode.topLargest,
-              iterations: mode.iterations,
-              format: "json",
-            }
-          : {
-              rtype: mode.rtype,
-              "max-models": mode.maxModels,
-              iterations: mode.iterations,
-              format: "json",
-            };
+    // 目标集三旋钮（ADR-262 D3 修订）：selector × order × 上限。上限单位 = selector 的展开单位，
+    // 由 Go 解释；前端只如实提交「选谁 / 怎么排 / 取几条」，目标集运算一律不下沉到前端。
+    const spec: CLIArgs = {
+      target: mode.kind,
+      order: mode.order,
+      "max-models": mode.maxModels,
+      iterations: mode.iterations,
+      format: "json",
+    };
+    // --rtype 是 target=rtype 的载荷参数，只在那个 selector 下带（错配的 payload 参数 Go 直接报错）
+    const args: CLIArgs = mode.kind === "rtype" ? { ...spec, rtype: mode.rtype } : spec;
     const resp = await executeCLI("single-bench", args);
     if (perfSingleGuard.stale(gen)) return;
     const matrix = singleBenchParseMatrix(resp);

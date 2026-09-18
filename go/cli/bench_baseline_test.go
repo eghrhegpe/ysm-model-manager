@@ -357,10 +357,10 @@ func TestRunSingleBenchJSON_SaveBaselineSlot(t *testing.T) {
 func TestSingleBench_BaselineRejectedInMatrixMode(t *testing.T) {
 	t.Parallel()
 	cases := [][]string{
-		{"--all-types", "--format", "json", "--baseline", "x.json"},
-		{"--all-types", "--format", "json", "--save-baseline", "x.json"},
-		{"--rtype", "ysm", "--format", "json", "--baseline", "x.json"},
-		{"--rtype", "ysm", "--format", "json", "--save-baseline", "x.json"},
+		{"--target", "all", "--format", "json", "--baseline", "x.json"},
+		{"--target", "all", "--format", "json", "--save-baseline", "x.json"},
+		{"--target", "rtype", "--rtype", "ysm", "--format", "json", "--baseline", "x.json"},
+		{"--target", "rtype", "--rtype", "ysm", "--format", "json", "--save-baseline", "x.json"},
 	}
 	for _, args := range cases {
 		err := runSingleBench(&CmdContext{App: &benchFakeApp{}, FilesRoot: t.TempDir(), Args: args})
@@ -370,7 +370,7 @@ func TestSingleBench_BaselineRejectedInMatrixMode(t *testing.T) {
 	}
 	// 阈值单独出现时也应拒绝（它只对 --baseline 有意义）
 	err := runSingleBench(&CmdContext{App: &benchFakeApp{}, FilesRoot: t.TempDir(),
-		Args: []string{"--all-types", "--format", "json", "--threshold", "10"}})
+		Args: []string{"--target", "all", "--format", "json", "--threshold", "10"}})
 	if err == nil || !strings.Contains(err.Error(), "基准") {
 		t.Errorf("矩阵模式 + --threshold 应明确拒绝, got %v", err)
 	}

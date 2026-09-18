@@ -387,7 +387,6 @@ export const ja: Record<string, string> = {
   "diagnostics.perfStageRuntimeHint": "この段階の実行層（Go / Rust / WASM / JS / Three）",
   "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
   "diagnostics.perfStageStatsHint": "中央値 {median}ms / p95 {p95}ms；n = この段階の実際の出現回数",
-  "diagnostics.perfRtype": "リソース種別",
   // 基準の入口と判定（ADR-262 D8）：パスと判定基準は Go 側、UI は文言のみ
   "diagnostics.perfBaselineSave": "基準を記録",
   "diagnostics.perfBaselineCompare": "基準と比較",
@@ -437,7 +436,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfConcurrentFileRead": "並列ファイル読み込み",
   "diagnostics.perfConcurrentFileDetail": "{count} ファイル：直列 {serial}ms / 並列 {parallel}ms",
   "diagnostics.perfConcurrentParamInvalid":
-    "worker 数は 1~256、タイプ毎の上限は 1 以上にしてください",
+    "worker 数は 1~256、サンプル上限は 1 以上にしてください",
   "diagnostics.perfConcurrentEmpty":
     "並列ベンチの結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
   // ADR-262 D3 スキャンエンジン比較（Go / Rust）：未計測のエンジンは理由を表示し、0.00ms は出さない
@@ -472,15 +471,23 @@ export const ja: Record<string, string> = {
   "diagnostics.perfScanBenchFieldDiff": "フィールド不一致",
   "diagnostics.perfScanBenchEmpty":
     "エンジン比較結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
-  "diagnostics.perfRtypeSingle": "（単一モデル：パス指定）",
-  "diagnostics.perfRtypeAll": "全タイプのマトリクス",
-  "diagnostics.perfRtypeTop": "リポジトリ全体の上位 N 件",
-  "diagnostics.perfRtypeTopHint":
-    "リポジトリ全体のモデルを占有量で順位付け（ディレクトリ型は中身の合計、それ以外はファイルサイズ）し上位 N 件を取得。N は「タイプ毎の上限」の値。JSON 構造化ペイロードのみ",
-  "diagnostics.perfMaxModels": "タイプ毎の上限",
-  // 同一コントロール（#diag-perf-max）は上位 N 件モードでは N を意味する——
-  // ラベルはモードで切り替える（syncPerfCountLabel）。切り替えないと UI が名前と実態の食い違いを生む。
-  "diagnostics.perfTopLargestCount": "上位 N 件",
+  "diagnostics.perfTarget": "対象セット",
+  "diagnostics.perfTargetModel": "（単一モデル：パス指定）",
+  "diagnostics.perfTargetAll": "全タイプ",
+  "diagnostics.perfTargetRepo": "リポジトリ全体（フラット）",
+  "diagnostics.perfTargetRepoHint":
+    "リポジトリ全体（フラット）：タイプでグループ化せず、全体を並び順どおりに上位 N 件取得。JSON 構造化ペイロードのみ",
+  "diagnostics.perfTargetNameRtype": "{rtype} タイプ",
+  "diagnostics.perfTargetSetEcho": "対象セット {target} · 並び順 {order} · 上限 {n}",
+  "diagnostics.perfOrder": "並び順",
+  "diagnostics.perfOrderPath": "パス昇順",
+  "diagnostics.perfOrderSize": "サイズ降順",
+  "diagnostics.perfMaxModels": "サンプル上限",
+  // 上限の**単位は対象セットのセレクタで変わる**（rtype = そのタイプ N 件 / all = タイプ毎に N 件 /
+  // repo = 全体で N 件）。この規則は title ヒントにのみ置き、ラベル本文は変えない——
+  // モードでラベルの意味が変わること自体が、今回清算する負債。
+  "diagnostics.perfMaxModelsHint":
+    "単位は対象セットで変わります：あるタイプ = そのタイプ N 件；全タイプ = タイプ毎に N 件；全体 = 全体で N 件",
   "diagnostics.perfMatrixResult": "タイプ別マトリクス結果",
   "diagnostics.perfMatrixColType": "タイプ",
   "diagnostics.perfMatrixColFound": "該当",
@@ -490,7 +497,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfMatrixEmpty": "リポジトリに該当タイプのモデルがありません",
   "diagnostics.perfMatrixColUnsupported": "未収集",
   "diagnostics.perfMatrixColStages": "段階数",
-  "diagnostics.perfTopLargestEcho": "リポジトリ全体の上位 {n} 件 · サイズ基準 {source}（{desc}）",
+  "diagnostics.perfSizeSourceSuffix": "サイズ基準 {source}（{desc}）",
   "diagnostics.perfSizeSourceDirTotal": "ディレクトリ型は中身の合計、それ以外はファイルサイズ",
   "diagnostics.perfSizeSourceUnknown": "このサイズ基準は UI に未登録",
   "diagnostics.perfModelFootprintHint":

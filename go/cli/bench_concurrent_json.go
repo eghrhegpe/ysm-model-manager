@@ -60,7 +60,16 @@ type concurrentFileReadJSON struct {
 
 // concurrentBenchJSON concurrent-bench 结构化载荷（附 AttachSidecar 注入的 output/filesRoot）。
 type concurrentBenchJSON struct {
-	Workers   int `json:"workers"`
+	// Target / Order 三旋钮回显（ADR-262 D3 修订）：本载荷**不使用** single-bench 的 `spec` 包装
+	// （原形状就是扁平的），二者作为顶层字段与 max_models 并列。恒有值。
+	Target string `json:"target"`
+	Order  string `json:"order"`
+	// SizeSource 体量口径 token（**仅 order=size 时出现**）：dir_total = 目录式按目录内容合计，
+	// 其余按文件大小。缺席即「这次选取与体量无关」——不填一个用不上的口径。
+	SizeSource string `json:"size_source,omitempty"`
+	Workers    int    `json:"workers"`
+	// MaxModels 上限，**单位 = target 的展开单位**（repo=全库几条 / rtype=该类型几条 / all=每类型各几条）；
+	// target=model 时为 0（单模型没有上限这回事）
 	MaxModels int `json:"max_models"`
 	// ModelCount 参与测试的模型数（聚合口径归 Go，前端不数数组长度）
 	ModelCount int `json:"model_count"`
@@ -166,12 +175,20 @@ func concurrentHints(samples []concurrentSpeedSample) []string {
 // 否则「载荷里的 ms」与「报告里的 ms」会各用一套精度。
 
 // collectConcurrentBenchJSON 静默采集（**零 stdout 副作用**）：与 text 路径共用同一批底层函数。
-func collectConcurrentBenchJSON(app AppService, models []string, workers, maxModels int, filesRoot string) *concurrentBenchJSON {
+// spec 只用于载荷回显（选谁 / 怎么排 / 取几条）：样本已在 pickConcurrentBenchModels 定下，此处不重选。
+func collectConcurrentBenchJSON(app AppService, models []string, spec perfTargetSpec, workers int, filesRoot string) *concurrentBenchJSON {
+	// spec.MaxModels 已在 parse 阶段归一化（target=model 恒为 0），此处直接回显，不再复判 selector。
 	out := &concurrentBenchJSON{
+		Target:     spec.Target,
+		Order:      spec.Order,
 		Workers:    workers,
-		MaxModels:  maxModels,
+		MaxModels:  spec.MaxModels,
 		ModelCount: len(models),
 		Models:     make([]perfIdentity, 0, len(models)),
+	}
+	// 排序口径只在按体量排时回显（它只为「这个顺序是怎么来的」存在）
+	if spec.SizeOrdered() {
+		out.SizeSource = perfSizeSourceDirTotal
 	}
 	// 身份块：relPath 跨机器可比 + rtype 由 registry 单点判定（不在这里另立类型表）
 	for _, p := range models {
@@ -218,8 +235,8 @@ func collectConcurrentBenchJSON(app AppService, models []string, workers, maxMod
 
 // runConcurrentBenchJSON concurrent-bench 的 JSON 模式：静默运行，输出结构化数据。
 // stdout 必须能被 json.Unmarshal 直接吃掉——人类文案一律不进 stdout（同 single-bench 契约）。
-func runConcurrentBenchJSON(ctx *CmdContext, models []string, workers, maxModels int) error {
-	out := collectConcurrentBenchJSON(ctx.App, models, workers, maxModels, ctx.FilesRoot)
+func runConcurrentBenchJSON(ctx *CmdContext, models []string, workers int, spec perfTargetSpec) error {
+	out := collectConcurrentBenchJSON(ctx.App, models, spec, workers, ctx.FilesRoot)
 	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return newRuntimeErrf("JSON 序列化失败: %v", err)

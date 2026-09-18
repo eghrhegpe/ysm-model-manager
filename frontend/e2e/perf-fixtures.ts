@@ -396,17 +396,20 @@ export const GUI_FLOW_REAL = {
   failed: false,
 };
 
-// 全库前 N 大（--top-largest 2）：真实 CLI 输出（2026-09-18），只保留界面读的键，数值文案逐字未动。
-// 注：目录式模型的 size_bytes 是 0（identity 口径），排名依据看 footprint_bytes。
-export const TOP_LARGEST_REAL = {
+// 目标集「全库扁平 + 体量降序」= `--target repo --order size --max-models 2`（旧 --top-largest 2 的正交写法）：
+// 真实 CLI 输出（2026-09-18），数值文案逐字未动。
+// 注：目录式模型的 size_bytes 是 0（identity 口径），排名依据看 footprint_bytes——排序依据必须可见，
+// 否则「凭什么它排第一」在界面上无从复核。
+
+export const TARGET_REPO_SIZE_REAL = {
   spec: {
-    all_types: false,
-    max_models: 0,
+    target: "repo",
+    order: "size",
+    max_models: 2,
     iterations: 3,
     analyzed: 2,
     unsupported: 0,
     cli_analyzable: false,
-    top_largest: 2,
     size_source: "dir_total",
     types: [
       {
@@ -423,8 +426,9 @@ export const TOP_LARGEST_REAL = {
   models: [
     {
       model: "tests\\fixtures\\ysm\\博丽灵梦Hakurei_Reimu\\ysm.json",
-      per_iteration_ms: 6.408666666666666,
-      total_ms: 19.226,
+      iterations: 3,
+      total_ms: 19.57,
+      per_iteration_ms: 6.523333333333333,
       stages: [
         {
           name: "① 清单读取",
@@ -442,7 +446,7 @@ export const TOP_LARGEST_REAL = {
         },
         {
           name: "② JSON 解析",
-          ms: 4.49,
+          ms: 4.486,
           status: "ok",
           bottleneck: false,
           note: "✅ 340 bones, 0 textures (YSM)",
@@ -450,7 +454,7 @@ export const TOP_LARGEST_REAL = {
           stats: {
             n: 3,
             median_ms: 0,
-            p95_ms: 13.47,
+            p95_ms: 13.458,
           },
         },
         {
@@ -495,7 +499,7 @@ export const TOP_LARGEST_REAL = {
         },
         {
           name: "⑥ 序列化模拟",
-          ms: 1.918,
+          ms: 1.503,
           bytes: 441260,
           status: "ok",
           bottleneck: false,
@@ -503,21 +507,21 @@ export const TOP_LARGEST_REAL = {
           runtime: "go",
           stats: {
             n: 3,
-            median_ms: 1.673,
-            p95_ms: 2.474,
+            median_ms: 1.53,
+            p95_ms: 1.921,
           },
         },
         {
           name: "⑦ 缓存检查",
-          ms: 0,
+          ms: 0.534,
           status: "ok",
           bottleneck: false,
           note: "⚠️ 缓存未命中（总缓存: 64 个文件, 10.1MB）",
           runtime: "go",
           stats: {
             n: 3,
-            median_ms: 0,
-            p95_ms: 0,
+            median_ms: 0.594,
+            p95_ms: 1.009,
           },
         },
       ],
@@ -533,31 +537,33 @@ export const TOP_LARGEST_REAL = {
         form: "dir",
         filesRoot: "tests/fixtures/ysm",
         relPath: "博丽灵梦Hakurei_Reimu/ysm.json",
-        absPath: "<repo>\\tests\\fixtures\\ysm\\博丽灵梦Hakurei_Reimu\\ysm.json",
+        absPath:
+          "C:\\Users\\zhujieling11\\ysm-model-manager\\tests\\fixtures\\ysm\\博丽灵梦Hakurei_Reimu\\ysm.json",
       },
     },
     {
       model: "tests\\fixtures\\ysm\\01_taisho_maid\\ysm.json",
-      per_iteration_ms: 2.3943333333333334,
-      total_ms: 7.183,
+      iterations: 3,
+      total_ms: 4.738,
+      per_iteration_ms: 1.5793333333333335,
       stages: [
         {
           name: "① 清单读取",
-          ms: 0.363,
+          ms: 0,
           bytes: 5303,
           status: "ok",
           bottleneck: false,
-          note: "✅ 5.2KB, 5 MB/s",
+          note: "✅ 5.2KB",
           runtime: "go",
           stats: {
             n: 3,
             median_ms: 0,
-            p95_ms: 1.09,
+            p95_ms: 0,
           },
         },
         {
           name: "② JSON 解析",
-          ms: 0.972,
+          ms: 0.878,
           status: "ok",
           bottleneck: false,
           note: "✅ 192 bones, 7 textures (YSM)",
@@ -565,7 +571,7 @@ export const TOP_LARGEST_REAL = {
           stats: {
             n: 3,
             median_ms: 0,
-            p95_ms: 2.917,
+            p95_ms: 2.634,
           },
         },
         {
@@ -611,7 +617,7 @@ export const TOP_LARGEST_REAL = {
         },
         {
           name: "⑥ 序列化模拟",
-          ms: 0.723,
+          ms: 0.701,
           bytes: 93015,
           status: "ok",
           bottleneck: false,
@@ -619,13 +625,13 @@ export const TOP_LARGEST_REAL = {
           runtime: "go",
           stats: {
             n: 3,
-            median_ms: 0.962,
-            p95_ms: 1.207,
+            median_ms: 0.544,
+            p95_ms: 1.558,
           },
         },
         {
           name: "⑦ 缓存检查",
-          ms: 0.335,
+          ms: 0,
           status: "ok",
           bottleneck: false,
           note: "⚠️ 缓存未命中（总缓存: 64 个文件, 10.1MB）",
@@ -633,7 +639,7 @@ export const TOP_LARGEST_REAL = {
           stats: {
             n: 3,
             median_ms: 0,
-            p95_ms: 1.005,
+            p95_ms: 0,
           },
         },
       ],
@@ -649,7 +655,272 @@ export const TOP_LARGEST_REAL = {
         form: "dir",
         filesRoot: "tests/fixtures/ysm",
         relPath: "01_taisho_maid/ysm.json",
-        absPath: "<repo>\\tests\\fixtures\\ysm\\01_taisho_maid\\ysm.json",
+        absPath:
+          "C:\\Users\\zhujieling11\\ysm-model-manager\\tests\\fixtures\\ysm\\01_taisho_maid\\ysm.json",
+      },
+    },
+  ],
+};
+
+// 目标集「每类型各取 N 条 + 体量降序」= `--target all --order size --max-models 2`：
+// 旧面表达不出的新组合（旧 --top-largest 把「体量降序」与「取 N 条」焊死，只能全库扁平）。
+// 与上面对照读：同样 2 是上限，但 target=all 时单位是**每个类型**，target=repo 时单位是**全库**。
+export const TARGET_ALL_SIZE_REAL = {
+  spec: {
+    target: "all",
+    order: "size",
+    max_models: 2,
+    iterations: 3,
+    analyzed: 2,
+    unsupported: 0,
+    cli_analyzable: false,
+    size_source: "dir_total",
+    types: [
+      {
+        rtype: "ysm",
+        rtype_label: "YSM 模型",
+        cli_analyzable: true,
+        found: 5,
+        analyzed: 2,
+        unsupported: 0,
+        expected_stages: 7,
+      },
+    ],
+  },
+  models: [
+    {
+      model: "tests\\fixtures\\ysm\\博丽灵梦Hakurei_Reimu\\ysm.json",
+      iterations: 3,
+      total_ms: 20.29,
+      per_iteration_ms: 6.763333333333333,
+      stages: [
+        {
+          name: "① 清单读取",
+          ms: 0,
+          bytes: 42420,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 41.4KB",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 0,
+          },
+        },
+        {
+          name: "② JSON 解析",
+          ms: 5.241,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 340 bones, 0 textures (YSM)",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 1.544,
+            p95_ms: 14.178,
+          },
+        },
+        {
+          name: "③ 数据验证",
+          ms: 0,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ ✅ 结构校验通过: 340 骨骼, 723 立方块, 0 纹理",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 0,
+          },
+        },
+        {
+          name: "④ 几何数据准备",
+          ms: 0,
+          bytes: 102048,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 99.7KB",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 0,
+          },
+        },
+        {
+          name: "⑤ 纹理数据准备",
+          ms: 0,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 0B",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 0,
+          },
+        },
+        {
+          name: "⑥ 序列化模拟",
+          ms: 1.013,
+          bytes: 441260,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 实测载荷 430.9KB（Wails binding 走 JSON 序列化）",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 1.503,
+            p95_ms: 1.537,
+          },
+        },
+        {
+          name: "⑦ 缓存检查",
+          ms: 0.508,
+          status: "ok",
+          bottleneck: false,
+          note: "⚠️ 缓存未命中（总缓存: 64 个文件, 10.1MB）",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 1.526,
+          },
+        },
+      ],
+      bottleneck: "② JSON 解析",
+      hints: ["所有阶段 <10ms，性能良好"],
+      format: "YSM",
+      size_bytes: 0,
+      footprint_bytes: 2792158,
+      identity: {
+        rtype: "ysm",
+        rtype_source: "extension",
+        rtype_label: "YSM 模型",
+        form: "dir",
+        filesRoot: "tests/fixtures/ysm",
+        relPath: "博丽灵梦Hakurei_Reimu/ysm.json",
+        absPath:
+          "C:\\Users\\zhujieling11\\ysm-model-manager\\tests\\fixtures\\ysm\\博丽灵梦Hakurei_Reimu\\ysm.json",
+      },
+    },
+    {
+      model: "tests\\fixtures\\ysm\\01_taisho_maid\\ysm.json",
+      iterations: 3,
+      total_ms: 6.547,
+      per_iteration_ms: 2.1823333333333332,
+      stages: [
+        {
+          name: "① 清单读取",
+          ms: 0,
+          bytes: 5303,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 5.2KB",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 0,
+          },
+        },
+        {
+          name: "② JSON 解析",
+          ms: 1.849,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 192 bones, 7 textures (YSM)",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 1.078,
+            p95_ms: 3.963,
+          },
+        },
+        {
+          name: "③ 数据验证",
+          ms: 0,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ ✅ 结构校验通过: 192 骨骼, 490 立方块, 7 纹理",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 0,
+          },
+        },
+        {
+          name: "④ 几何数据准备",
+          ms: 0,
+          bytes: 65472,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 63.9KB",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 0,
+          },
+        },
+        {
+          name: "⑤ 纹理数据准备",
+          ms: 0,
+          bytes: 680,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 680B",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 0,
+          },
+        },
+        {
+          name: "⑥ 序列化模拟",
+          ms: 0,
+          bytes: 93015,
+          status: "ok",
+          bottleneck: false,
+          note: "✅ 实测载荷 90.8KB（Wails binding 走 JSON 序列化）",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 0,
+          },
+        },
+        {
+          name: "⑦ 缓存检查",
+          ms: 0.333,
+          status: "ok",
+          bottleneck: false,
+          note: "⚠️ 缓存未命中（总缓存: 64 个文件, 10.1MB）",
+          runtime: "go",
+          stats: {
+            n: 3,
+            median_ms: 0,
+            p95_ms: 1,
+          },
+        },
+      ],
+      bottleneck: "② JSON 解析",
+      hints: ["所有阶段 <10ms，性能良好"],
+      format: "YSM",
+      size_bytes: 0,
+      footprint_bytes: 1891138,
+      identity: {
+        rtype: "ysm",
+        rtype_source: "extension",
+        rtype_label: "YSM 模型",
+        form: "dir",
+        filesRoot: "tests/fixtures/ysm",
+        relPath: "01_taisho_maid/ysm.json",
+        absPath:
+          "C:\\Users\\zhujieling11\\ysm-model-manager\\tests\\fixtures\\ysm\\01_taisho_maid\\ysm.json",
       },
     },
   ],

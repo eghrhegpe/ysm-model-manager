@@ -386,7 +386,6 @@ export const en: Record<string, string> = {
   "diagnostics.perfStageStats": "p95 {p95}ms (n={n})",
   "diagnostics.perfStageStatsHint":
     "median {median}ms / p95 {p95}ms; n = times this stage actually ran",
-  "diagnostics.perfRtype": "Resource type",
   // Baseline entry + verdict (ADR-262 D8): paths and criteria live in Go; the UI only phrases it
   "diagnostics.perfBaselineSave": "Record baseline",
   "diagnostics.perfBaselineCompare": "Compare baseline",
@@ -437,7 +436,7 @@ export const en: Record<string, string> = {
   "diagnostics.perfConcurrentFileRead": "Concurrent file read",
   "diagnostics.perfConcurrentFileDetail":
     "{count} files: serial {serial}ms / parallel {parallel}ms",
-  "diagnostics.perfConcurrentParamInvalid": "Workers must be 1~256 and max per type must be >= 1",
+  "diagnostics.perfConcurrentParamInvalid": "Workers must be 1~256 and the sample cap must be >= 1",
   "diagnostics.perfConcurrentEmpty":
     "No concurrent bench result (the repo may have no CLI-analyzable model)",
   // ADR-262 D3 scan engine comparison (Go / Rust): an engine that was not measured shows the
@@ -473,15 +472,23 @@ export const en: Record<string, string> = {
   "diagnostics.perfScanBenchFieldDiff": "Field mismatch",
   "diagnostics.perfScanBenchEmpty":
     "No engine comparison result (the repo may have no CLI-analyzable model)",
-  "diagnostics.perfRtypeSingle": "(single model by path)",
-  "diagnostics.perfRtypeAll": "All types (matrix)",
-  "diagnostics.perfRtypeTop": "Top N largest (whole repo)",
-  "diagnostics.perfRtypeTopHint":
-    "Rank every model in the repo by footprint (directory models by total directory content, others by file size) and take the top N; N comes from the Max per type field; JSON payload only",
-  "diagnostics.perfMaxModels": "Max per type",
-  // Same control (#diag-perf-max) means N in top-N mode; the label switches with the mode
-  // (syncPerfCountLabel) so the UI never names a control something it is not.
-  "diagnostics.perfTopLargestCount": "Top N",
+  "diagnostics.perfTarget": "Target set",
+  "diagnostics.perfTargetModel": "(single model by path)",
+  "diagnostics.perfTargetAll": "All types",
+  "diagnostics.perfTargetRepo": "Whole repo (flat)",
+  "diagnostics.perfTargetRepoHint":
+    "Whole repo (flat): no grouping by type — take the top N of the whole repo by the chosen order; JSON payload only",
+  "diagnostics.perfTargetNameRtype": "{rtype} type",
+  "diagnostics.perfTargetSetEcho": "Target set {target} · order {order} · cap {n}",
+  "diagnostics.perfOrder": "Order",
+  "diagnostics.perfOrderPath": "Path ascending",
+  "diagnostics.perfOrderSize": "Size descending",
+  "diagnostics.perfMaxModels": "Sample cap",
+  // The cap's **unit follows the target-set selector** (rtype = N of that type / all = N per type /
+  // repo = N of the whole repo). That rule lives in the title hint only — the label text stays put,
+  // because a label that changes meaning with the mode is exactly the debt this change pays off.
+  "diagnostics.perfMaxModelsHint":
+    "Unit follows the target set: one type = N of that type; all types = N per type; whole repo = N of the repo",
   "diagnostics.perfMatrixResult": "Type matrix result",
   "diagnostics.perfMatrixColType": "Type",
   "diagnostics.perfMatrixColFound": "Found",
@@ -491,7 +498,7 @@ export const en: Record<string, string> = {
   "diagnostics.perfMatrixEmpty": "No model of this type found in the repo",
   "diagnostics.perfMatrixColUnsupported": "Not collected",
   "diagnostics.perfMatrixColStages": "Stages",
-  "diagnostics.perfTopLargestEcho": "Top {n} largest in the repo · size basis {source} ({desc})",
+  "diagnostics.perfSizeSourceSuffix": "size basis {source} ({desc})",
   "diagnostics.perfSizeSourceDirTotal":
     "directory models summed over directory content, others by file size",
   "diagnostics.perfSizeSourceUnknown": "this size basis is not registered in the UI",

@@ -25,6 +25,13 @@ import {
   setErrorMsg,
   setErrorResp,
 } from "./perf-common.ts";
+import {
+  PERF_TARGET_REPO,
+  type PerfOrder,
+  parsePerfTargetValue,
+  perfTargetEchoHTML,
+  readPerfOrder,
+} from "./perf-matrix-render.ts";
 
 // 代际守卫（ADR-230）：快速连点「运行」时旧响应不得覆盖新结果
 const perfConcGuard = createLoadGuard();
@@ -95,6 +102,12 @@ interface ConcFileRead {
 interface ConcPayload {
   workers?: number;
   max_models?: number;
+  /** 目标集 selector（ADR-262 D3 修订）：model/rtype/all/repo——与 single-bench 同名同义 */
+  target?: string;
+  /** 排序键：path（路径升序）/ size（体量降序） */
+  order?: string;
+  /** 体量口径 token（**仅 order=size 时出现**）：dir_total = 目录式按目录内容合计、其余按文件大小 */
+  size_source?: string;
   model_count?: number;
   models?: ConcIdentity[];
   serial?: ConcPhase;
@@ -109,7 +122,12 @@ interface ConcPayload {
 
 type ConcParams = CLIArgs & {
   workers: number;
+  /** 目标集 selector（model/rtype/all/repo）：与 single-bench 同一套三旋钮，跨命令同名同义 */
+  target: string;
+  order: PerfOrder;
   "max-models": number;
+  /** target=rtype 时的类型 id（错配的载荷参数 Go 直接报错，故只在那个 selector 下带） */
+  rtype?: string;
   format: "json";
 };
 
@@ -185,6 +203,19 @@ function concFileReadHTML(fr: ConcFileRead, esc: EscFn): string {
 }
 
 function concRender(payload: ConcPayload, banner: string, esc: EscFn): string {
+  // 目标集回显（ADR-262 D3 修订）：并发载荷是**扁平**的（无 spec 对象），三旋钮与 max_models 同层
+  const echo = perfTargetEchoHTML(
+    {
+      target: payload.target,
+      order: payload.order,
+      size_source: payload.size_source,
+      max_models: payload.max_models,
+      // 并发载荷没有顶层 rtype（只有 models[].rtype 身份块）：target=rtype 时全部入选模型同类型，
+      // 取首条身份即可；这是读 Go 交出的身份块，不是前端判类型
+      rtype: payload.models?.[0]?.rtype,
+    },
+    esc,
+  );
   const serial = payload.serial ?? {};
   const perModel = isFiniteNumber(serial.per_model_ms)
     ? `<span class="perf-conc-detail">${esc(
@@ -215,6 +246,7 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn): string {
       payload.output ?? "",
     ) +
     banner +
+    echo +
     `<div class="perf-conc" style="padding:8px 2px;user-select:text;-webkit-user-select:text">` +
     concParamsHTML(payload, esc) +
     `<div class="perf-conc-row perf-conc-serial">
@@ -227,7 +259,12 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn): string {
   );
 }
 
-/** 读并发度与每类上限（表单值在前端是交互输入，不在职责红线范围内） */
+/**
+ * 读并发度 + 目标集三旋钮（target / order / 取样上限）。
+ * 目标集控件与 single-bench **同一套填充与判定函数**（populatePerfTargetOptions /
+ * parsePerfTargetValue）——跨命令同名同义，界面不另立第二套。
+ * 默认 target=repo（与 Go 的 concurrent-bench 默认一致：全库扁平取前 N 个可分析模型）。
+ */
 function concReadParams(root: ShadowRoot): ConcParams | null {
   const workersEl = root.getElementById("diag-perf-conc-workers") as HTMLInputElement | null;
   const maxEl = root.getElementById("diag-perf-conc-max") as HTMLInputElement | null;
@@ -236,7 +273,19 @@ function concReadParams(root: ShadowRoot): ConcParams | null {
   // 非法输入不提交给 Go（Go 侧还会再校验一次，但报错前就拦掉更省事）
   if (!Number.isFinite(workers) || workers < 1 || workers > 256) return null;
   if (!Number.isFinite(maxModels) || maxModels < 1) return null;
-  return { workers, "max-models": maxModels, format: "json" };
+  const targetEl = root.getElementById("diag-perf-conc-target") as HTMLSelectElement | null;
+  // 控件缺席（旧 DOM / 测试夹具）按 Go 默认 repo 处理
+  const choice = parsePerfTargetValue(targetEl ? targetEl.value.trim() : PERF_TARGET_REPO);
+  // 本 tab 没有单模型路径输入框：target=model 必然缺载荷参数，本地拦掉而不是换 Go 一句报错
+  if (choice.target === "model") return null;
+  const base = {
+    target: choice.target,
+    order: readPerfOrder(root, "diag-perf-conc-order"),
+    "max-models": maxModels,
+    workers,
+    format: "json" as const,
+  };
+  return choice.target === "rtype" ? { ...base, rtype: choice.rtype } : base;
 }
 
 export async function runConcurrentBench(root: ShadowRoot, esc: EscFn): Promise<void> {

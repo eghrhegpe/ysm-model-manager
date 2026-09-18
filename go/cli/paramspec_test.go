@@ -36,25 +36,33 @@ func TestParamSpecRegistration(t *testing.T) {
 		assertSpecKeys(t, spec, []string{"limit", "format"})
 	})
 
-	t.Run("single-bench 十参数（含 ADR-262 D3 目标集四参）", func(t *testing.T) {
+	t.Run("single-bench 十参数（ADR-262 D3 修订：三旋钮正交面）", func(t *testing.T) {
 		spec, ok := specs["single-bench"]
 		if !ok {
 			t.Fatal("single-bench 未登记 ParamSpec")
 		}
+		// 声明序 = flag 定义序（iterations → registerPerfTargetFlags 的 target/order/rtype/model/max-models
+		// → 基准三参 → format）。三旋钮的 string/number 决定桥的序列化形态，错一个 GUI 就发不出参数。
 		assertSpecKeys(t, spec, []string{
-			"model", "iterations", "rtype", "all-types", "max-models", "top-largest",
+			"iterations", "target", "order", "rtype", "model", "max-models",
 			"baseline", "save-baseline", "threshold", "format",
 		})
-		// 目标集四参的类型必须与 flag 语义一致（bool/number 决定桥的序列化形态）
-		if spec[3].Type != ParamBool {
-			t.Errorf("single-bench.all-types 应为 bool, 实际 %s", spec[3].Type)
-		}
-		if spec[4].Type != ParamNumber {
-			t.Errorf("single-bench.max-models 应为 number, 实际 %s", spec[4].Type)
+		for i, want := range map[int]string{1: "target", 2: "order", 3: "rtype", 4: "model"} {
+			if spec[i].Type != ParamString {
+				t.Errorf("single-bench.%s 应为 string, 实际 %s", want, spec[i].Type)
+			}
 		}
 		if spec[5].Type != ParamNumber {
-			t.Errorf("single-bench.top-largest 应为 number, 实际 %s", spec[5].Type)
+			t.Errorf("single-bench.max-models 应为 number, 实际 %s", spec[5].Type)
 		}
+	})
+
+	t.Run("concurrent-bench 与 single-bench 同面（同名同义，默认值不同）", func(t *testing.T) {
+		spec, ok := specs["concurrent-bench"]
+		if !ok {
+			t.Fatal("concurrent-bench 未登记 ParamSpec")
+		}
+		assertSpecKeys(t, spec, []string{"workers", "target", "order", "rtype", "model", "max-models", "format"})
 	})
 
 	t.Run("gui-flow model/verbose", func(t *testing.T) {

@@ -23,6 +23,9 @@ const esc = (s: unknown): string =>
 /** 对齐 Go concurrentBenchJSON（concurrent-bench --format json）的真实载荷 */
 const CONC_PAYLOAD = {
   workers: 4,
+  // 三旋钮与 max_models **同层**（ADR-262 D3 修订：并发载荷没有 spec 对象，是扁平的）
+  target: "repo",
+  order: "path",
   max_models: 20,
   model_count: 3,
   models: [{ relPath: "ysm/a/ysm.json", rtype: "ysm", rtype_label: "YSM 模型" }],
@@ -54,6 +57,8 @@ function makeRoot(): ShadowRoot {
     <button id="diag-perf-conc-run"></button>
     <input id="diag-perf-conc-workers" type="number" value="4">
     <input id="diag-perf-conc-max" type="number" value="20">
+    <select id="diag-perf-conc-target"><option value="__repo__">全库扁平</option></select>
+    <select id="diag-perf-conc-order"><option value="path">路径升序</option><option value="size">体量降序</option></select>
     <div id="diag-perf-conc-out"></div>
     <div id="diag-perf-hist"></div>
     <div id="diag-load-trace"></div>
@@ -113,6 +118,8 @@ describe("并发基准面板（ADR-262 D5）", () => {
 
     // 参数键 = Go flag 名（ParamSpec 契约）；format 必须 json（结构化出口）
     expect(executeCLI).toHaveBeenLastCalledWith("concurrent-bench", {
+      target: "repo",
+      order: "path",
       workers: 4,
       "max-models": 20,
       format: "json",
@@ -172,6 +179,70 @@ describe("并发基准面板（ADR-262 D5）", () => {
     expect(executeCLI).not.toHaveBeenCalled();
     const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
     expect(text).toContain("1~256");
+  });
+
+  it("目标集与排序走同一套三旋钮（切类型 + 体量降序 → --target rtype + --rtype + --order size）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "concurrent-bench", data: CONC_PAYLOAD });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    const target = root.getElementById("diag-perf-conc-target") as HTMLSelectElement;
+    const typeOpt = document.createElement("option");
+    typeOpt.value = "ysm";
+    target.appendChild(typeOpt);
+    target.value = "ysm";
+    (root.getElementById("diag-perf-conc-order") as HTMLSelectElement).value = "size";
+    await clickAndFlush(root);
+
+    // 目标集归 Go：前端只把 selector / 排序 / 上限如实交出去（rtype 是 target=rtype 的载荷参数）
+    expect(executeCLI).toHaveBeenLastCalledWith("concurrent-bench", {
+      target: "rtype",
+      rtype: "ysm",
+      order: "size",
+      workers: 4,
+      "max-models": 20,
+      format: "json",
+    });
+  });
+
+  it("回显目标集与排序；order=size 时才带体量口径", async () => {
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "concurrent-bench",
+      data: { ...CONC_PAYLOAD, order: "size", size_source: "dir_total" },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    await clickAndFlush(root);
+
+    const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
+    expect(text).toContain("目标集 全库扁平");
+    expect(text).toContain("排序 体量降序");
+    expect(text).toContain("上限 20");
+    // 排序依据不可见 = 不可复核：口径 token 与人话一起给
+    expect(text).toContain("dir_total");
+    expect(text).toContain("目录式按目录内容合计");
+  });
+
+  it("target=rtype 时回显类型 id（并发载荷无顶层 rtype，取身份块首条）", async () => {
+    // 载荷不带 rtype 字段：只有 models[].rtype。回显取首条身份，避免「目标集  类型」的空标题
+    // 载荷的 target 是 rtype，且**不带** rtype 字段（只有 models[].rtype）——回显取身份块首条
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "concurrent-bench",
+      data: { ...CONC_PAYLOAD, target: "rtype" },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    const target = root.getElementById("diag-perf-conc-target") as HTMLSelectElement;
+    const typeOpt = document.createElement("option");
+    typeOpt.value = "ysm";
+    target.appendChild(typeOpt);
+    target.value = "ysm";
+    await clickAndFlush(root);
+
+    const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
+    expect(text).toContain("目标集 ysm 类型");
+    expect(text).not.toContain("目标集  类型");
   });
 
   it("web 平台不发 CLI（走 toast 提示）", async () => {

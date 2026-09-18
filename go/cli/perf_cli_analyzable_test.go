@@ -67,17 +67,23 @@ func TestCliAnalyzablePath_RegistryDriven(t *testing.T) {
 	}
 }
 
-func TestPickCliAnalyzable_FiltersEntries(t *testing.T) {
+// TestFilterAnalyzable_FiltersTargets 谓词单点：`filterAnalyzable` 是「命令能力过滤」的唯一出口。
+//
+// 原 `pickCliAnalyzable(entries)` 已退役（2026-09-18，ADR-262 D3 修订）——同语义留两份就是
+// 第二条路径，故本用例改打新出口，并保留原有两条断言强度：只留 CLI 可分析者、**保持扫描序**
+// （排序/截断由调用方定，本函数不做隐式重排，也不臆断「首选什么类型」）。
+func TestFilterAnalyzable_FiltersTargets(t *testing.T) {
 	t.Parallel()
+	reg := registry.LoadRegistry()
 	dir := t.TempDir()
-	entries := []types.ModelEntry{
-		{Path: filepath.Join(dir, "a.vrm"), Name: "a.vrm", Ext: ".vrm"},
-		{Path: filepath.Join(dir, "b.ysm"), Name: "b.ysm", Ext: ".ysm"},
-		{Path: filepath.Join(dir, "c.gltf"), Name: "c.gltf", Ext: ".gltf"},
-		{Path: filepath.Join(dir, "d.ysm"), Name: "d.ysm", Ext: ".ysm"},
+	mk := func(name string) perfTarget {
+		path := filepath.Join(dir, name)
+		ext := strings.ToLower(filepath.Ext(path))
+		return perfTarget{Path: path, Rtype: classifyForScan(path, ext, reg)}
 	}
-	got := pickCliAnalyzable(entries)
-	want := []string{entries[1].Path, entries[3].Path}
+	ts := []perfTarget{mk("a.vrm"), mk("b.ysm"), mk("c.gltf"), mk("d.ysm")}
+	got := pathsOf(filterAnalyzable(ts))
+	want := []string{ts[1].Path, ts[3].Path}
 	if len(got) != len(want) {
 		t.Fatalf("应只留 CLI 可分析条目 %v, got %v", want, got)
 	}

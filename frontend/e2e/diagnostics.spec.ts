@@ -18,7 +18,8 @@ import {
   SCAN_BENCH_RUST_REAL,
   SINGLE_BENCH_BASELINE_MISSING,
   SINGLE_BENCH_SAVED,
-  TOP_LARGEST_REAL,
+  TARGET_ALL_SIZE_REAL,
+  TARGET_REPO_SIZE_REAL,
 } from "./perf-fixtures.ts";
 
 /** 顶部 repo-tab 的 data-tab 全集（与 tpl.ts diagnosticsHTML 一一对应） */
@@ -432,6 +433,50 @@ async function setShadowSelect(page: Page, testid: string, value: string): Promi
   );
 }
 
+/**
+ * 读目标集矩阵结果的四类可断言面（矩阵/全库目标集载荷同形，故两处用例共用）：
+ * names = 逐条模型名（顺序即排名）、footprints = 带 title 的体量角标、
+ * echo = `.perf-total` 回显行（目标集/排序/上限/口径）、text = 全文（供占位符残留守卫）。
+ */
+async function readMatrixOut(page: Page): Promise<{
+  text: string;
+  names: string[];
+  footprints: string[];
+  echo: string[];
+}> {
+  return page.evaluate(() => {
+    const root = document.querySelector("app-content")?.shadowRoot;
+    const out = root?.querySelector('[data-testid="diag-perf-single"]') as HTMLElement | null;
+    const q = (sel: string): HTMLElement[] =>
+      [...(out?.querySelectorAll(sel) ?? [])] as HTMLElement[];
+    return {
+      text: out?.textContent ?? "",
+      names: q(".perf-matrix-model-name").map((e) => e.textContent ?? ""),
+      // 体量角标带 title（口径提示），`dir` 角标没有——据此把两者分开
+      footprints: q(".perf-matrix-tag[title]").map((e) => e.textContent ?? ""),
+      echo: q(".perf-total").map((e) => e.textContent ?? ""),
+    };
+  });
+}
+
+/** 读「取样上限」控件的标签正文：它**不随目标集改义**是被删掉的 syncPerfCountLabel 留下的契约 */
+async function readMaxLabelText(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const root = document.querySelector("app-content")?.shadowRoot;
+    const el = root?.querySelector('[data-testid="diag-perf-max-label"]');
+    return el?.textContent?.trim() ?? "";
+  });
+}
+
+/** 读「取样上限」控件的 title：单位（每类 / 全库）差异只许落在这里，不许进标签正文 */
+async function readMaxLabelTitle(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const root = document.querySelector("app-content")?.shadowRoot;
+    const el = root?.querySelector('[data-testid="diag-perf-max-label"]');
+    return el?.getAttribute("title")?.trim() ?? "";
+  });
+}
+
 /** 等结果容器内出现期望数量的选择器命中（真实渲染完成） */
 async function waitForCount(page: Page, selector: string, count: number): Promise<void> {
   await page.waitForFunction(
@@ -606,40 +651,67 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     expect(got.barRows).toBe(SINGLE_BENCH_BASELINE_MISSING.stages.length);
   });
 
-  // ⑤ 全库前 N 大（ADR-262 D3 第三种目标集）：排名依据必须在界面上可见
-  test("前 N 大：N 与体量口径回显、体量逐条可见、models 按排名顺序", async ({ page }) => {
-    await installCliMock(page, { "single-bench": { data: TOP_LARGEST_REAL } });
-    await setShadowSelect(page, "diag-perf-rtype", "__top__");
-    await setShadowValue(page, "diag-perf-max", String(TOP_LARGEST_REAL.spec.top_largest));
+  // ⑤ 目标集「全库扁平 + 体量降序」：ADR-262 D3 修订后 = --target repo --order size --max-models N
+  test("全库扁平 + 体量降序：排名依据可见、顺序保留、目标集/排序/上限/口径四项回显", async ({
+    page,
+  }) => {
+    await installCliMock(page, { "single-bench": { data: TARGET_REPO_SIZE_REAL } });
+    await setShadowSelect(page, "diag-perf-rtype", "__repo__");
+    await setShadowSelect(page, "diag-perf-order", "size");
+    await setShadowValue(page, "diag-perf-max", String(TARGET_REPO_SIZE_REAL.spec.max_models));
     await clickBySelector(page, '[data-testid="diag-perf-run"]');
 
-    await waitForCount(page, ".perf-matrix-model", TOP_LARGEST_REAL.models.length);
-    const got = await page.evaluate(() => {
-      const root = document.querySelector("app-content")?.shadowRoot;
-      const out = root?.querySelector('[data-testid="diag-perf-single"]') as HTMLElement | null;
-      const q = (sel: string): HTMLElement[] =>
-        [...(out?.querySelectorAll(sel) ?? [])] as HTMLElement[];
-      return {
-        text: out?.textContent ?? "",
-        names: q(".perf-matrix-model-name").map((e) => e.textContent ?? ""),
-        // 体量角标带 title（口径提示），`dir` 角标没有——据此把两者分开
-        footprints: q(".perf-matrix-tag[title]").map((e) => e.textContent ?? ""),
-        echo: q(".perf-total").map((e) => e.textContent ?? ""),
-      };
-    });
+    await waitForCount(page, ".perf-matrix-model", TARGET_REPO_SIZE_REAL.models.length);
+    const got = await readMatrixOut(page);
 
-    // ① 每条模型的体量可见（size_bytes 在目录式下是 0，只给规则不给数值就无法复核「凭什么排第一」）
-    expect(got.footprints).toHaveLength(TOP_LARGEST_REAL.models.length);
+    // ① 每条模型的体量可见（目录式下 size_bytes 是 0，只给规则不给数值就无法复核「凭什么排第一」）
+    expect(got.footprints).toHaveLength(TARGET_REPO_SIZE_REAL.models.length);
     for (const f of got.footprints) expect(f.trim().length).toBeGreaterThan(0);
-    // ② 排名顺序保留到 DOM：与载荷的 models[] 逐条同名（按类型归并就会丢这个信息）
-    for (const [i, m] of TOP_LARGEST_REAL.models.entries()) {
+    // ② 排名顺序保留到 DOM：与载荷 models[] 逐条同名（按类型归并就会丢这个信息）
+    for (const [i, m] of TARGET_REPO_SIZE_REAL.models.entries()) {
       expect(got.names[i]).toContain(m.identity.relPath);
     }
-    // ③ N 与口径回显（「这个 N 是按什么排的」必须能看出来）
-    expect(got.echo.join(" ")).toContain(String(TOP_LARGEST_REAL.spec.top_largest));
-    expect(got.echo.join(" ")).toContain(TOP_LARGEST_REAL.spec.size_source);
+    // ③ 四项回显：目标集 / 排序 / 上限 / 体量口径（「这个 N 是按什么排的」必须能看出来）
+    const echo = got.echo.join(" ");
+    expect(echo).toContain(String(TARGET_REPO_SIZE_REAL.spec.max_models));
+    expect(echo).toContain(TARGET_REPO_SIZE_REAL.spec.size_source);
     // ④ 通用残留守卫（占位符 / 未翻译 token）
     expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
+  });
+
+  // ⑥ 目标集「每类型各取 N 条 + 体量降序」：旧面表达不出的新组合（旧 --top-largest 把排序与条数焊死）
+  test("每类型各取 N 条 + 体量降序：新组合可表达且逐条体量可见", async ({ page }) => {
+    await installCliMock(page, { "single-bench": { data: TARGET_ALL_SIZE_REAL } });
+    await setShadowSelect(page, "diag-perf-rtype", "__all__");
+    await setShadowSelect(page, "diag-perf-order", "size");
+    await setShadowValue(page, "diag-perf-max", String(TARGET_ALL_SIZE_REAL.spec.max_models));
+    await clickBySelector(page, '[data-testid="diag-perf-run"]');
+
+    await waitForCount(page, ".perf-matrix-model", TARGET_ALL_SIZE_REAL.models.length);
+    const got = await readMatrixOut(page);
+
+    // 上限单位是**每个类型**（载荷 target=all），体量依据同样逐条可见
+    expect(got.footprints).toHaveLength(TARGET_ALL_SIZE_REAL.models.length);
+    for (const [i, m] of TARGET_ALL_SIZE_REAL.models.entries()) {
+      expect(got.names[i]).toContain(m.identity.relPath);
+    }
+    expect(got.echo.join(" ")).toContain(TARGET_ALL_SIZE_REAL.spec.size_source);
+    expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
+  });
+
+  // ⑦ ADR-262 D3 修订的红线：上限标签**不得随目标集改义**。
+  // 旧面把「每类上限」与「全库前 N」压进同一个数字控件，标签只能跟着模式改义
+  //（syncPerfCountLabel 即那张账单）；三旋钮正交后该函数已删，本用例就是它的墓碑。
+  test("取样上限标签在三种目标集下逐字相同（改义即回归）", async ({ page }) => {
+    const texts: string[] = [];
+    for (const value of ["", "__all__", "__repo__"]) {
+      await setShadowSelect(page, "diag-perf-rtype", value);
+      texts.push(await readMaxLabelText(page));
+    }
+    expect(texts[0].length).toBeGreaterThan(0);
+    expect(texts).toEqual([texts[0], texts[0], texts[0]]);
+    // 单位差异只许进 title 提示（用户仍能查到口径），不许进标签正文
+    expect(await readMaxLabelTitle(page)).not.toBe("");
   });
 });
 

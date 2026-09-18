@@ -145,6 +145,7 @@ function makeRoot(): ShadowRoot {
     <input id="diag-perf-model">
     <input id="diag-perf-iter">
     <select id="diag-perf-rtype"><option value="">（单模型，按路径）</option></select>
+    <select id="diag-perf-order"><option value="path">路径升序</option><option value="size">体量降序</option></select>
     <input id="diag-perf-max" value="5">
     <input id="diag-perf-baseline-save" type="checkbox">
     <input id="diag-perf-baseline-compare" type="checkbox">
@@ -606,7 +607,7 @@ describe("single-bench 基准入口与判决（ADR-262 D8）", () => {
     executeCLI.mockResolvedValue({
       status: "success",
       command: "single-bench",
-      data: { spec: { rtype: "ysm", all_types: false, max_models: 5, iterations: 3, analyzed: 0, unsupported: 0, cli_analyzable: true, types: [] }, models: [] },
+      data: { spec: { target: "all", order: "path", max_models: 5, iterations: 3, analyzed: 0, unsupported: 0, cli_analyzable: true, types: [] }, models: [] },
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
@@ -622,7 +623,8 @@ describe("single-bench 基准入口与判决（ADR-262 D8）", () => {
     const out = await run(root);
     expect(out.textContent.length).toBeGreaterThan(0);
     expect(executeCLI).toHaveBeenLastCalledWith("single-bench", {
-      "all-types": true,
+      target: "all",
+      order: "path",
       "max-models": 5,
       iterations: 3,
       format: "json",

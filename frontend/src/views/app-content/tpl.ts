@@ -19,16 +19,23 @@ export const VIEW_TESTIDS: readonly string[] = [
   "ws-tabs",
   "ws-search-view",
   "ws-search-results",
-  // ADR-262 D3：性能 tab 的类型选择器（矩阵入口，e2e 用它断言选项来自 registry）
+  // ADR-262 D3 修订：目标集选择器（单模型 / 全部类型 / 全库扁平 / registry 各类型）——e2e 用它断言选项来自 registry
   "diag-perf-rtype",
-  // ADR-262 D3：目标集条数入口——矩阵模式下是「每类上限」，前 N 大模式下是「N」（同一控件，语义随模式变）
+  // ADR-262 D3 修订：排序控件（路径升序 / 体量降序）——与「选谁」正交，故独立成控件而非塞进选择器哨兵
+  "diag-perf-order",
+  // ADR-262 D3 修订：取样上限——单位 = 目标集的展开单位（标签恒为「取样上限」，单位只进 title）
+  // 标签本身也是 e2e 契约（读它的正文证明「不随模式改义」），故同样给稳定钩子
+  "diag-perf-max-label",
   "diag-perf-max",
   // ADR-262 D8：基准入口三件套（记录 / 对比 / 阈值）——矩阵模式下被禁用
   "diag-perf-baseline-save",
   "diag-perf-baseline-compare",
   "diag-perf-baseline-th",
-  // ADR-262 D5：并发基准入口（并发度 / 每类上限 / 运行）
+  // ADR-262 D5：并发基准入口（并发度 / 目标集 / 排序 / 取样上限 / 运行）
   "diag-perf-conc-workers",
+  // ADR-262 D3 修订：并发 tab 复用同一套目标集 / 排序控件（跨命令同名同义，故不写第二份）
+  "diag-perf-conc-target",
+  "diag-perf-conc-order",
   // ADR-262 D5：性能面板真实载荷渲染断言要能点到运行按钮与结果容器
   "diag-perf-run",
   "diag-perf-model",
@@ -122,6 +129,17 @@ export function instancesHTML(): string {
 }
 // recycleHTML 已拆至 tpl-recycle.ts，消费者直接 import 叶文件（P1-6）
 
+/**
+ * 排序选项（ADR-262 D3 修订）：收敛在一个定义里，single / conc 两个控制条共用。
+ * 取值域由 Go 冻结（path|size）——第二个副本必然是漂移的起点。
+ */
+function perfOrderOptionsHTML(): string {
+  return (
+    `<option value="path">${t("diagnostics.perfOrderPath")}</option>` +
+    `<option value="size">${t("diagnostics.perfOrderSize")}</option>`
+  );
+}
+
 export function diagnosticsHTML(): string {
   // ADR-259：tab 结构改由 renderTabs 单点产出。此前这里是全仓唯一的例外范式——
   // 「一个共享 .tab-body 包 8 个 .diag-panel」，2026-09-17 因漏一个 </div> 使面板被
@@ -168,11 +186,15 @@ export function diagnosticsHTML(): string {
       <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
       <label for="diag-perf-iter">${t("diagnostics.perfIterations")}</label>
       <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
-      <label for="diag-perf-rtype">${t("diagnostics.perfRtype")}</label>
+      <label for="diag-perf-rtype">${t("diagnostics.perfTarget")}</label>
       <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
-        <option value="">${t("diagnostics.perfRtypeSingle")}</option>
+        <option value="">${t("diagnostics.perfTargetModel")}</option>
       </select>
-      <label for="diag-perf-max" id="diag-perf-max-label">${t("diagnostics.perfMaxModels")}</label>
+      <label for="diag-perf-order">${t("diagnostics.perfOrder")}</label>
+      <select id="diag-perf-order" class="diag-config-select" data-testid="diag-perf-order">
+        ${perfOrderOptionsHTML()}
+      </select>
+      <label for="diag-perf-max" id="diag-perf-max-label" data-testid="diag-perf-max-label" title="${t("diagnostics.perfMaxModelsHint")}">${t("diagnostics.perfMaxModels")}</label>
       <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max">
       <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
       <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
@@ -202,11 +224,19 @@ export function diagnosticsHTML(): string {
         label: `${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}`,
         body: `  <div class="perf-wrap">
     <div class="perf-controls">
-      <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
+      <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run" title="${t("diagnostics.perfConcurrentHint")}">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
       <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
       <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
+      <label for="diag-perf-conc-target">${t("diagnostics.perfTarget")}</label>
+      <select id="diag-perf-conc-target" class="diag-config-select" data-testid="diag-perf-conc-target">
+        <option value="__repo__">${t("diagnostics.perfTargetRepo")}</option>
+      </select>
+      <label for="diag-perf-conc-order">${t("diagnostics.perfOrder")}</label>
+      <select id="diag-perf-conc-order" class="diag-config-select" data-testid="diag-perf-conc-order">
+        ${perfOrderOptionsHTML()}
+      </select>
       <label for="diag-perf-conc-max">${t("diagnostics.perfMaxModels")}</label>
-      <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfConcurrentHint")}">
+      <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfMaxModelsHint")}">
     </div>
     <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out"></div>
   </div>`,

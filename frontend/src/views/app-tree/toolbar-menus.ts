@@ -42,6 +42,8 @@ interface ToolbarMenuDef {
   menuId: string;
   /** 触发按钮文案 key（渲染时经 t() 解析） */
   buttonLabelKey: LocaleKey;
+  /** 触发按钮图标语义名（UI_ICONS 的 key，经 resolveIcon 解析）；缺省无图标 */
+  buttonIcon?: UiIconName;
   /** 全部菜单项（data-<key> 委托到 toolbar-events.ts） */
   items: readonly ToolbarMenuItem[];
 }
@@ -52,6 +54,7 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
     id: "btn-batch",
     menuId: "menu-batch",
     buttonLabelKey: "tree.batch",
+    buttonIcon: "performance",
     items: [
       {
         action: "enable-all",
@@ -125,7 +128,7 @@ export function renderDropdown(key: ToolbarMenuKey): string {
     .join("");
   return (
     `<div class="dd-wrap" id="dd-${attr}">` +
-    `<button class="btn-base sm" id="${def.id}" data-testid="tree-${attr}">${t(def.buttonLabelKey)}</button>` +
+    `<button class="btn-base sm" id="${def.id}" data-testid="tree-${attr}">${def.buttonIcon ? `${resolveIcon(def.buttonIcon)} ` : ""}${t(def.buttonLabelKey)}</button>` +
     `<div class="dd-menu" id="${def.menuId}">${itemsHtml}</div></div>`
   );
 }

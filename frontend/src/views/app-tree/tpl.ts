@@ -33,8 +33,8 @@ export function headerHTML(): string {
   <input class="srch-inp" id="srch" data-testid="tree-srch" type="text" placeholder="${t("tree.searchPlaceholder")}" autocomplete="off">
 </div>
 <div class="hdr-row hdr-btn-row">
-  <button class="btn-base sm" id="btn-adv-filter" data-testid="tree-adv-filter" title="${t("dialog.advFilter")}">${t("tree.filter")}</button>
-  <div class="dd-wrap" id="dd-authors"><button class="btn-base sm" id="btn-authors" data-testid="tree-authors">${t("tree.authors")}</button><div class="dd-menu" id="menu-authors"></div></div>
+  <button class="btn-base sm" id="btn-adv-filter" data-testid="tree-adv-filter" title="${t("dialog.advFilter")}">${UI_ICONS.settings} ${t("tree.filter")}</button>
+  <div class="dd-wrap" id="dd-authors"><button class="btn-base sm" id="btn-authors" data-testid="tree-authors">${UI_ICONS.brush} ${t("tree.authors")}</button><div class="dd-menu" id="menu-authors"></div></div>
   ${renderDropdown("batch")}
   <button class="btn-base sm" id="sel-all" data-testid="tree-sel-all" title="${t("tree.selectAll")}">${t("tree.selectAll")}</button>
   ${renderDropdown("more")}

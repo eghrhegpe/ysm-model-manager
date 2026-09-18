@@ -1531,9 +1531,9 @@ export const en: Record<string, string> = {
 
   // ── 模型树（app-tree）──
   "tree.searchPlaceholder": "Search model name...",
-  "tree.filter": "⚙️ Filter",
-  "tree.authors": "🎨 Authors ▾",
-  "tree.batch": "⚡ Batch ▾",
+  "tree.filter": "Filter",
+  "tree.authors": "Authors ▾",
+  "tree.batch": "Batch ▾",
   "tree.batchEnableAll": "Enable all",
   "tree.batchDisableAll": "Disable all",
   "tree.more": "⋮ More ▾",

@@ -1536,9 +1536,9 @@ export const ja: Record<string, string> = {
 
   // ── 模型树（app-tree）──
   "tree.searchPlaceholder": "モデル名を検索...",
-  "tree.filter": "⚙️ フィルター",
-  "tree.authors": "🎨 作者 ▾",
-  "tree.batch": "⚡ 一括 ▾",
+  "tree.filter": "フィルター",
+  "tree.authors": "作者 ▾",
+  "tree.batch": "一括 ▾",
   "tree.batchEnableAll": "すべて有効",
   "tree.batchDisableAll": "すべて無効",
   "tree.more": "⋮ その他 ▾",

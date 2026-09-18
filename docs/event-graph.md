@@ -224,7 +224,7 @@
 |------|------|----|
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 42 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 193 |
-| bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 106 |
+| bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 246 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 332 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |

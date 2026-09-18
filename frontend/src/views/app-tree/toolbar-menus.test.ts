@@ -17,8 +17,8 @@ describe("toolbar-menus 声明式菜单（icon 语义名声明式）", () => {
     expect(html).toContain('data-testid="tree-batch-enable"');
     expect(html).toContain('data-batch="disable-all"');
     expect(html).toContain('data-testid="tree-batch-disable"');
-    // 图标由语义名解析为 SVG（.ws-icon）——两图标
-    expect(html.match(/class="ws-icon"/g)).toHaveLength(2);
+    // 图标由语义名解析为 SVG（.ws-icon）——触发按钮 performance + 两菜单项 = 3
+    expect(html.match(/class="ws-icon"/g)).toHaveLength(3);
     // 无多余分隔线
     expect(html).not.toContain("border-top:");
   });

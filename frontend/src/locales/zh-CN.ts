@@ -1491,9 +1491,9 @@ export const zhCN = {
 
   // ── 模型树（app-tree）──
   "tree.searchPlaceholder": "搜索模型名称...",
-  "tree.filter": "⚙️ 筛选",
-  "tree.authors": "🎨 作者 ▾",
-  "tree.batch": "⚡ 批量 ▾",
+  "tree.filter": "筛选",
+  "tree.authors": "作者 ▾",
+  "tree.batch": "批量 ▾",
   "tree.batchEnableAll": "全部启用",
   "tree.batchDisableAll": "全部禁用",
   "tree.more": "⋮ 更多 ▾",

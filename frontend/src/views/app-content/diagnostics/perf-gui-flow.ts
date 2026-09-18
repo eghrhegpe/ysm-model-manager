@@ -60,11 +60,21 @@ interface GuiFlowStructured {
   filesRoot?: string;
 }
 
+/**
+ * 汇总块（ADR-262 D2）：实测总耗时 / 估算合计 / 是否有阶段失败。
+ * 三者同源同现（同一个载荷的三个汇总口径），成组传递——避免逐项平铺撑爆参数表。
+ */
+interface GuiFlowSummary {
+  /** 实测墙钟总耗时；非 number 时（旧载荷）不渲染该行 */
+  total: number | null;
+  /** 各阶段估算合计；不计入 total */
+  estimated: number | null;
+  failed: boolean;
+}
+
 function guiFlowRenderStages(
   entries: GuiFlowStage[],
-  flowTotal: number | null,
-  flowEstimated: number | null,
-  failed: boolean,
+  summary: GuiFlowSummary,
   rawOutput: string,
   esc: EscFn,
 ): string {
@@ -94,15 +104,15 @@ function guiFlowRenderStages(
     })
     .join("");
   const totalLine =
-    flowTotal !== null
-      ? `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${flowTotal.toFixed(2)}ms</div>`
+    summary.total !== null
+      ? `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${summary.total.toFixed(2)}ms</div>`
       : "";
   // 估算单独一行且明确「不计入总耗时」——混在一起就是「数字不可信」的来源
   const estimatedLine =
-    flowEstimated !== null && flowEstimated > 0
-      ? `<div class="perf-total">${UI_ICONS.performance} ${t("diagnostics.perfEstimatedTotal", { ms: flowEstimated.toFixed(2) })}</div>`
+    summary.estimated !== null && summary.estimated > 0
+      ? `<div class="perf-total">${UI_ICONS.performance} ${t("diagnostics.perfEstimatedTotal", { ms: summary.estimated.toFixed(2) })}</div>`
       : "";
-  const failLine = failed
+  const failLine = summary.failed
     ? `<div class="diag-stat diag-stat-error">${UI_ICONS.error} ${t("diagnostics.perfGuiFailed")}</div>`
     : "";
   return (
@@ -141,9 +151,12 @@ export async function runGuiFlow(root: ShadowRoot, esc: EscFn): Promise<void> {
     }
     out.innerHTML = guiFlowRenderStages(
       data.stages,
-      typeof data.total_ms === "number" ? data.total_ms : null,
-      typeof data.estimated_ms === "number" ? data.estimated_ms : null,
-      !!data.failed,
+      {
+        // 旧载荷缺 total_ms/estimated_ms 时给 null（不渲染该行），不用 0 冒充实测
+        total: typeof data.total_ms === "number" ? data.total_ms : null,
+        estimated: typeof data.estimated_ms === "number" ? data.estimated_ms : null,
+        failed: !!data.failed,
+      },
       data.output ?? "",
       esc,
     );

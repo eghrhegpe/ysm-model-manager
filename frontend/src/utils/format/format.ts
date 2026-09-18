@@ -52,3 +52,19 @@ export function fmtDate(ts: number): string {
   }
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }
+
+/**
+ * 时间戳 → HH:MM:SS 本地时刻串（hour/minute/second 全部 2-digit）。
+ * falsy → 空串。收敛自 diagnostics 页两份逐字实现的同一选项对象
+ *（logs `dgLsFormatTime` / perf-trace 内联，诊断页审计 C12）。
+ * 注：与 fmtDate 不同，本函数沿用 toLocaleTimeString 语义不做手写 padStart，
+ * 保持与两处原实现的输出逐字一致（C12 是去重，不是格式重设计）。
+ */
+export function formatClock(ts: string | number | undefined): string {
+  if (!ts) return "";
+  return new Date(ts).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}

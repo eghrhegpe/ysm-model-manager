@@ -2,7 +2,7 @@
 // ===== formatBytes / sizeColor / fmtDate 格式化工具测试 =====
 // 覆盖：formatBytes 边界（NaN/0/各量级）、sizeColor 三分区、fmtDate 的 NaN 守卫与三种日期形态
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { formatBytes, sizeColor, fmtDate } from "./format.ts";
+import { formatBytes, sizeColor, fmtDate, formatClock } from "./format.ts";
 
 describe("formatBytes — 文件大小格式化", () => {
   it("NaN / undefined / null → 空串", () => {
@@ -129,5 +129,27 @@ describe("fmtDate — 友好日期", () => {
     vi.setSystemTime(now);
     const old = new Date(2024, 11, 25, 9, 0, 0).getTime(); // 2024-12-25
     expect(fmtDate(old)).toBe("2024/12/25");
+  });
+});
+
+describe("formatClock — HH:MM:SS 时刻（诊断页审计 C12 单点）", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("falsy → 空串", () => {
+    expect(formatClock(0)).toBe("");
+    expect(formatClock(undefined)).toBe("");
+    expect(formatClock("")).toBe("");
+  });
+
+  // 不锁死完整串——toLocaleTimeString 的 AM/PM 与分隔符随运行环境 locale 漂移，
+  // 只断言「秒」形态存在（:HH:MM）即可，跨 CI/本地稳定
+  it("有效时间戳 → 含秒的时钟形态", () => {
+    const now = new Date(2026, 8, 18, 9, 5, 7); // 09:05:07
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    const out = formatClock(now.getTime());
+    expect(out).toMatch(/:\d{2}:\d{2}$/);
   });
 });

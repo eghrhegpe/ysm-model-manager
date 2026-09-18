@@ -5,6 +5,7 @@ import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
+import { formatClock } from "@/utils/format/format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -65,15 +66,6 @@ function dgLsCheckStale(gen: number): boolean {
 
 function dgLsSetEmpty(list: HTMLElement, key: LocaleKey, type: "muted" | "error" = "muted"): void {
   list.innerHTML = statRowHTML(type === "error" ? "error" : "muted", t(key));
-}
-
-function dgLsFormatTime(ts: string | number | undefined): string {
-  if (!ts) return "";
-  return new Date(ts).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
 }
 
 /** 读取搜索框当前值（小写去空白）——操作日志与运行时日志共用同一个输入框 */
@@ -184,7 +176,7 @@ function dgLsRenderDiagGroups(
     );
     items.forEach((l, i) => {
       const statusLabel = dgLsMakeStatusLabel(l);
-      const timeStr = dgLsFormatTime(l.Timestamp);
+      const timeStr = formatClock(l.Timestamp);
       const msg = dgLsBuildDiagMsg(l, esc);
       parts.push(
         `<div class="log-row" style="animation-delay:${stagger(i, 20, 400)}ms">
@@ -226,7 +218,7 @@ function dgLsFilterRuntimeLogs(logs: RuntimeLogLike[], root: ShadowRoot): Runtim
 function dgLsRenderRuntimeRows(logs: RuntimeLogLike[], esc: EscFn, copyLogTitle: string): string {
   return logs
     .map((l, i) => {
-      const timeStr = dgLsFormatTime(l.Timestamp);
+      const timeStr = formatClock(l.Timestamp);
       return `<div class="log-row" style="animation-delay:${stagger(i, 20, 400)}ms">
 <span class="log-status">${UI_ICONS.joystick}</span>
 <span class="log-msg" style="white-space:pre-wrap">${esc(l.Message || "")}</span>

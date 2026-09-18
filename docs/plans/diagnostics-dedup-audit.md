@@ -75,21 +75,20 @@
 | C3 setErrorMsg/errorHTML | ✅ 已落地 | perf-common `setErrorMsg` 已委托 `errorHTML`，两导出名保留 |
 | C4 renderLoadFailure | ✅ 已落地 | perf-common 单点，perf-log/gui-flow/concurrent/single-bench/scan-bench 5 处改调 |
 | C5 clipboard 单点 | ✅ 已落地 | `copy-toast.ts|copyWithToast` 消费 `copyText` 布尔结果 |
-| C6 init 复制三态 | ⚠️ 部分 | init.ts 整份/单行已走 `copyWithToast`；但 `dgInCopyActiveLog`/`dgInCopyRowLog` 函数名仍在（`init.ts:81/104`），内部是否全走 `copyWithToast` 未逐行核实 |
+| C6 init 复制三态 | ✅ 已落地 | `dgInCopyActiveLog`/`dgInCopyRowLog` 均已改走 `copyWithToast`（init.ts:97/109），失败回执按 `copyText.ok` 如实给；「execCommand 也失败仍报成功」谎报已随单点消失 |
 | C7 busy 锁 | ✅ 已降级「不动」 | 豁免成立（#6 已关闭）：三处模块级一次性 guard + try/finally 复位，不锁化 |
 | C8 isNum | ✅ 已落地 | `guards.ts|isNum` 单点；perf-scan-bench 删本地 `isNum`、perf-concurrent 弃本地 `isFiniteNumber` 全数改名 `isNum`（残留仅 guards.ts 注释） |
 | C9 雷达占位 | ✅ 已落地 | conflicts 内联 `scan-radar-wrap`（原 :200）改调 `dgCfRenderRadarPlaceholder`，两处逐字复制消除 |
 | C10 strategyLabels | ✅ 已落地 | `RESOLVE_STRATEGIES` 单一事实源（token→labelKey）+ `resolveStrategyLabel` 兜底 + 下拉 option 与默认值三者同源 |
 | C11 formatBytes | ✅ 已落地（含 0 字节兜底） | dedup-render.ts per-file 大小行改 `formatBytes(e.size) || `${e.size} B``；0 字节回落 `0 B`（#2 拍板）；500B 由误显「0KB」更正为「500 B」 |
-| C12 formatClock | ⛔ 未落地 | 无 `formatClock`；logs 与 perf-trace 两份 `{hour,minute,second}` 仍在 |
-| C13 status-row | ⚠️ 部分 | `status-row.ts|msgRowHTML/statRowHTML` 已建并被 logs/health/dedup/dedup-scan/conflicts 大量调用；但 conflicts.ts:363-405 解决结果行仍手写 `document.createElement` + `stat-row diag-msg success/error` |
+| C12 formatClock | ✅ 已落地 | `format.ts|formatClock` 单点（falsy→空串）；logs 删 `dgLsFormatTime` 两调用点改 `formatClock`，perf-trace 内联改 `formatClock`；format.test.ts 补 2 用例 |
+| C13 status-row | ✅ 已落地（完成） | `status-row.ts|msgRowHTML/statRowHTML` 单点广泛消费。conflicts 解决结果行仍手写是**契约内豁免**非残余债：那两行带 `style.marginTop` 且用 `textContent`，而 status-row.ts 头注声明「**不产出属性位（style=…），带额外属性的站点保持原样**」（:19、:64-68）；perf 下 4 处无 `stat-row` 的站点同理豁免 |
 
 ### 待确认补录（本轮）
 - **#4 e2e 状态行 class —— 有依赖但闭环安全**：`e2e/diagnostics.spec.ts:505` 确有 `q(".diag-stat-error")` 读 `textContent`。命中的是 perf 面板 `errorHTML`/`renderLoadFailure` 出口（class=`diag-stat diag-stat-error`，**无 `stat-row`**）。C13 明确排除这 4 处无 `stat-row` 的 perf 站点，且 `statRowHTML` 保留 class 字符串原样（不统一字号/对齐/不改 class），故 e2e 选择器与其 textContent 断言不受影响。**关闭-安全**。护栏建议：`q(".diag-stat-error")[0]` 是「首个命中」，若未来把 perf 某站点迁到 `statRowHTML("error")`（会再产一个 `.diag-stat-error` 节点），:505 的 `[0]` 可能漂移——动它前应把此 e2e 锚点收得更具体。
 - **#3 三态 toast —— 大部分已被 C6 消化**：`copyWithToast` 已按 `copyText.ok` 分成功/失败，失败走 `diagnostics.copyFail`（不再谎报）；「降级成功 vs 彻底失败」两态是否再细分成文案，可视为独立微调，优先级低。
 
 ### 剩余动作（按优先级）
-1. ✅ **#6 → C7 降级「不动」**（已关闭）+ ✅ **C8/C9/C10 已收敛落地** + ✅ **#2 拍板 + C11 已落地**（2026-09-18）。
-2. **C12 / C13 残余 / C6 收尾**：`formatClock` 单点、conflicts:363-405 解决行改走 `msgRowHTML`、init 两函数内部核实收尾 — 均为零风险纯重构，次批执行。
-3. **#3 / C6 文案微调**：`copyWithToast` 失败态文案是否再细分「降级成功 vs 彻底失败」，优先级低。
-4. **C11/C2/C6 待核实项**：如需全量闭环，补一次精确 grep 定案。
+1. ✅ **C1–C13 全部收敛落地**（C7 为豁免降级「不动」）✅ **待确认 1/2/4/5/6 已关闭**（#3 由 C6 消化，仅剩降级/彻底两态文案微调）。2026-09-18 全量闭环，**C 清单已终态**。
+2. **可选微调 #3**：`copyWithToast` 失败态是否再细分「降级成功 vs 彻底失败」文案——非债，优先级低。
+3. **并行会话注意项**：typecheck 当前被 `UI_ICONS` 联合类型破坏（features/context-menu、features/dialogs、utils/dom、app-tree 等 15 处报错），为另一会话进行中改动，非本审计引入；本批改动文件均不在错误列表。

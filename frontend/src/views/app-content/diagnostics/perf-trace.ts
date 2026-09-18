@@ -5,6 +5,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { getLoadTraces } from "@/preview-3d/infra/load-trace.ts";
+import { formatClock } from "@/utils/format/format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
 import { sectionHeader } from "./perf-common.ts";
@@ -100,11 +101,7 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
     texDetailHtml = `<div class="perf-tex-section">${t("diagnostics.loadTraceTexDetail")}:<br>${rows}${more}</div>`;
   }
 
-  const fmtTs = new Date(latest.ts).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const fmtTs = formatClock(latest.ts);
   container.innerHTML =
     sectionHeader(UI_ICONS.search, t("diagnostics.loadTraceTitle")) +
     `<div class="perf-trace-meta" style="padding:6px 2px;font-size:var(--fs-xs);color:var(--muted)">${esc(latest.path)} · ${fmtTs} · ${latest.format.toUpperCase()}</div>` +

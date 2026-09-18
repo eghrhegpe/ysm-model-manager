@@ -9,6 +9,7 @@ auto_fields:
   symbols_with_lines:
     - fmtDate
     - formatBytes
+    - formatClock
     - sizeColor
 quick_groups:
   - 跨组件通信与页面

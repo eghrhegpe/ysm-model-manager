@@ -92,6 +92,7 @@ auto_fields:
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
     - injectSkySunScalePatch
+    - INNER_WALL_OPACITY_FACTOR
     - isSkyEnvironmentOn
     - LEGACY_CANVAS_PATTERNS
     - LEGACY_GROUND_MAT_SOURCES

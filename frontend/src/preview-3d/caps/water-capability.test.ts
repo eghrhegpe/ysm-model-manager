@@ -271,7 +271,7 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     expect(shader.uniforms.uTime).toBeDefined();
     expect(shader.uniforms.uHalfSize.value).toBeCloseTo(40, 5);
     expect(shader.uniforms.uSize.value).toBeCloseTo(80, 5);
-    expect(shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.25 * 0.15, 5);
+    expect(shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.25 * 0.5, 5);
     expect(shader.uniforms.uRoundness.value).toBe(0);
     expect(shader.uniforms.uChoppiness.value).toBeCloseTo(0.5, 5);
     expect(shader.vertexShader).toContain("vec3 gerstner(");
@@ -369,6 +369,16 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
     cap.setWaterOpacity(0.9);
     const top = scene.getObjectByName("ysm-water-top") as THREE.Mesh;
     expect((top.material as THREE.MeshPhysicalMaterial).opacity).toBeCloseTo(0.9, 5);
+  });
+
+  it("setWaterOpacity（pool）→ 内壁 opacity 同步 = waterOpacity×0.85（修复运行时脱节，ADR-257 审核 Item 6）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.setWaterMode("pool");
+    cap.apply();
+    cap.setWaterOpacity(0.9);
+    const inner = scene.getObjectByName("ysm-water-wall-n-inner") as THREE.Mesh;
+    expect((inner.material as THREE.MeshPhysicalMaterial).opacity).toBeCloseTo(0.9 * 0.85, 5);
   });
 
   it("setClarity（pool）→ top.transmission = clarity，inner.transmission = clarity*0.5", () => {
@@ -474,7 +484,7 @@ describe("WaterCapability — loadState 多分支", () => {
     cap.loadState();
     expect(cap.getWaterEnabled()).toBe(true);
     expect(cap.getWaterMode()).toBe("film");
-    expect(cap.getWetness()).toBeCloseTo(0.15, 5);
+    expect(cap.getWetness()).toBeCloseTo(0.5, 5);
   });
 
   it("flat 键轨（saveState 拍平）roundtrip：子域开关/全部参数还原", () => {
@@ -696,6 +706,16 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const height = pool.children!.find((c) => c.id === "ground-pool-height")!;
     expect(height.visibleWhen?.({ "env.waterMode": "pool" })).toBe(true);
     expect(height.visibleWhen?.({ "env.waterMode": "film" })).toBe(false);
+  });
+
+  it("clarity 滑块仅 pool 模式可见（film 下 inert，ADR-257 审核 Item 7 消歧义）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    const look = nodes[2]!;
+    const clarity = look.children!.find((c) => c.id === "ground-water-clarity")!;
+    expect(clarity.visibleWhen).toBeDefined();
+    expect(clarity.visibleWhen?.({ "env.waterMode": "pool" })).toBe(true);
+    expect(clarity.visibleWhen?.({ "env.waterMode": "film" })).toBe(false);
   });
 
   it("color/slider 节点读写闭包直连 cap", () => {

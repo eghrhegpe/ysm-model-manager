@@ -23,6 +23,7 @@ import {
 // cap 只持有 WaterBody 并按语义 role 取用部件，不再出现 `mode ===` 判别联合。
 import {
   getWaterBodyStrategy,
+  INNER_WALL_OPACITY_FACTOR,
   type WaterBody,
   type WaterBuildContext,
   type WaterPartRole,
@@ -376,10 +377,15 @@ export class WaterCapability implements SceneCapability {
       mat.opacity = effectiveOpacity;
       this.syncBaseOpacityUniform(mat, mat.opacity);
     }
-    // opacity → 顶水面
+    // opacity → 顶水面 + 池内壁（ADR-257 审核 Item 6：内壁透明度必须随 waterOpacity 跟随，
+    // 否则拖透明度滑块时水面与池壁脱节；内壁套 INNER_WALL_OPACITY_FACTOR 与构建期一致）
     if (changed.has("waterOpacity")) {
       const top = this.findTopWater();
       if (top) top.material.opacity = effectiveOpacity;
+      for (const m of targets("wallInner")) {
+        (m.material as THREE.MeshPhysicalMaterial).opacity =
+          s.waterOpacity * INNER_WALL_OPACITY_FACTOR;
+      }
     }
     // color → 水面 + 内壁
     if (changed.has("waterColor")) {

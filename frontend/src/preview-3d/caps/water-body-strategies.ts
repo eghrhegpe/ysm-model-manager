@@ -18,6 +18,10 @@ import { envState } from "@/preview-3d/state/env-state.ts";
 import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
 import type { WaterMode } from "./water-state.ts";
 
+/** 池内壁相对水面不透明度的衰减因子（池壁比水面更实，观感更稳）。
+ *  构建（build）与运行期（waterOpacity 变更）必须共用同一因子，否则内壁透明度会脱节。 */
+export const INNER_WALL_OPACITY_FACTOR = 0.85;
+
 /** 承载波浪材质的顶水面 */
 export type WaterTopMesh = THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhysicalMaterial>;
 
@@ -145,7 +149,7 @@ const poolStrategy: WaterBodyStrategy = {
     const innerMat = new THREE.MeshPhysicalMaterial({
       color: envState.waterColor,
       transparent: true,
-      opacity: envState.waterOpacity * 0.85,
+      opacity: envState.waterOpacity * INNER_WALL_OPACITY_FACTOR,
       side: THREE.BackSide,
       roughness: 0.1,
       metalness: 0,

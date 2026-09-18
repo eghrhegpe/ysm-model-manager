@@ -368,6 +368,7 @@ auto_fields:
     - IKConfig
     - IKResult
     - injectSkySunScalePatch
+    - INNER_WALL_OPACITY_FACTOR
     - InputHandlers
     - InputOptions
     - InstallableStyles

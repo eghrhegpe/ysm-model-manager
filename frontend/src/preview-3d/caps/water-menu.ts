@@ -147,6 +147,7 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           { min: 0, max: 1, step: 0.05 },
           () => cap.getClarity(),
           (v) => cap.setClarity(v),
+          waterPoolOn, // 仅 pool 生效（film 无体积光学，supportsVolumeOptics=false 已拦截），消歧义
         ),
         wSliderNode(
           "ground-water-choppiness",

@@ -52,7 +52,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 184 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 189 |
 
 ### `batch:disable-all`
 

@@ -292,6 +292,10 @@ export function initGithubPage(host: AppContentHost): void {
   let _currentRepo = "";
   // 页内「可替换清理槽」（同 _currentRepo 范式）：重绑前清旧、绑完存新。
   // 经订阅桶登记拆除（ADR-260）——不再借宿 AppContentState 字段，也不需注入链。
+  // ⚠️ drain 闭包「读槽位 → 置 null → await」与 re-bind 路径「await 旧 cleanup → 写新 cleanup」
+  // 存在既有竞态：lang:changed 的 cleanupPage() 落在 re-bind 的 await 挂起期间时，旧 cleanup
+  // 会被 drain 与 re-bind 各跑一次（双跑）。bindRepoEvents 的 cleanup（退订 bus 监听 + 取消
+  // 下载队列定时器）幂等无害，双跑安全；若未来 cleanup 引入非幂等副作用，须在此处加代际守卫。
   let _repoEventsCleanup: (() => Promise<void>) | null = null;
   host.subs.addPage(async () => {
     const prev = _repoEventsCleanup;

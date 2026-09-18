@@ -46,6 +46,8 @@
 
 已落地的形态：`--rtype <id>`（单类型）与 `--all-types`（仓库里有什么类型就跑什么，每类型各取 `--max-models` 条），均仅 `--format json`、与 `--model` 互斥；目标集由 `perf_targets.go|scanTargetsGrouped` 从 `scanner.ScanEntries` + `classifyForScan` 派生（发现权与类型判定各自单点，类型与组内路径均按字典序，保证可复现），载荷为 `{spec{all_types,max_models,iterations,analyzed,unsupported,types[]}, models[]}`。
 
+**第三种目标集「全库前 N 大」`--top-largest N` 的决策**（2026-09-18）：既然目标是「找最大的模型」，排名口径就不能用 `ModelEntry.Size`——`scanner` 给目录式模型（解包 YSM 目录）的 Size 是入口清单 `ysm.json` 本身（115B 级），按它排等于「按入口文件大小找最大的模型」，会把最大的解包模型排到最后。故**体量 = 目录式取目录内容合计、其余取文件大小**（`fsutil.DirSize` 为唯一出口，回收站同语义实现已收敛过去），并用 `spec.size_source` 回显口径、`models[].footprint_bytes` 回显每条依据——**排序依据不可见就等于不可复核**。ADR 未定义同体量次序，补定为**路径升序**（Walk 顺序不可依赖）。候选池是**全库含 CLI 不可分析类型**：问的是「最大的模型是谁」，把恰好最大的 PMX 静默剔除只会得到一份无人解释的空报告——入选后照实标 `unsupported` 才是诚实的答法。与 `--model`/`--rtype`/`--all-types`/`--max-models` 互斥（都表示「取几条」的参数不该同时给），仅 `--format json`，并复用矩阵的「拒基准参数」同一道门。`models[]` 严格按**排名顺序**——按类型归并会丢掉这个目标集唯一的信息。
+
 **样本清单**（`perfTypeManifest`，Go 表）是「CLI 侧性能采集能力」的单一登记处，登记 `{cli_analyzable, expected_stages, note}`：**发现白名单 ≠ 可分析白名单**——解析器只存在于前端 3D adapter 的类型（PMX/PMD/VRM/FBX 等）在矩阵里**只出身份、不采集阶段耗时**并给出解释性 hint（拿空模型的阶段数据冒充实测正是「数字不可信」的来源之一）。清单里的 `expected_stages` 不只是文档：矩阵运行时会比对实际阶段链长度并置 `types[].stage_mismatch`，**清单因此是运行期自检依据**（阶段链断裂——如 MMD 缺 ④⑤⑥——会被显式标出而不是静默通过）。清单 key 必须存在于 registry、可分析类型必须声明阶段链长度，由 `bench_matrix_test.go` 断言。新增类型的 CLI 分析链路时同步登记该表。
 
 **D4 · 阈值分级单一来源。**

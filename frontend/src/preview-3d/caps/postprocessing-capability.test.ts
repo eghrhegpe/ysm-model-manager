@@ -931,7 +931,6 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
   });
 
 
-
   it("setSSAOEnabled(true) 重建 composer 挂 SSAO；setSSAORadius/MinDist/MaxDist 直改 pass", () => {
     const { cap } = newRealCap();
     cap.setEnabled(true);

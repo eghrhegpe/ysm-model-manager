@@ -558,8 +558,9 @@ func stagesToJSON(avg []singleBenchStage, allStages [][]singleBenchStage) ([]ben
 		}
 		var st *benchStageStats
 		if got, ok := stats[s.Name]; ok {
-			copy := got
-			st = &copy
+			// 取地址前必须先拷一份：st 是 *benchStageStats，直接 &got 会指向 map 迭代变量
+			snapshot := got
+			st = &snapshot
 		}
 		stageJSON = append(stageJSON, benchStageJSON{
 			Name:   s.Name,

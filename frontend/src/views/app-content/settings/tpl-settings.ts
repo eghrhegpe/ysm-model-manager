@@ -235,7 +235,7 @@ function renderStgFontFamily(): string {
       <span>${t("settings.ui.buttonGap")} <b id="sz-space" style="color:var(--txt)">5px</b></span>
       <span>${t("settings.ui.buttonHeight")} <b id="sz-btn-h" style="color:var(--txt)">25px</b></span>
     </div>
-    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontSizeHint")}</div>`,
+    <div class="stg-desc">${t("settings.fontSizeHint")}</div>`,
     {
       header: { forId: "set-font-size", titleSize: "md" },
       cardId: "stg-font-size-card",
@@ -249,7 +249,7 @@ function renderStgFontFamily(): string {
       <option value="kaiti" selected>${UI_ICONS.brush} ${t("settings.font.kaiti")}</option>
       <option value="system">${UI_ICONS.note} ${t("settings.font.systemFont")}</option>
     </select>
-    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.fontHint")}</div>`,
+    <div class="stg-desc">${t("settings.fontHint")}</div>`,
     {
       header: { forId: "set-display-font", titleSize: "md" },
       cardId: "stg-font-display-card",
@@ -263,7 +263,7 @@ function renderStgFontFamily(): string {
       <option value="compact" selected>${UI_ICONS.package} ${t("settings.density.compact")}</option>
       <option value="normal">${UI_ICONS.package} ${t("settings.density.normal")}</option>
     </select>
-    <div class="stg-hint" style="font-size:var(--fs-sm);color:var(--muted);padding:0">${t("settings.densityHint")}</div>`,
+    <div class="stg-desc">${t("settings.densityHint")}</div>`,
     {
       header: { forId: "set-card-density", titleSize: "md" },
       cardId: "stg-font-density-card",
@@ -340,7 +340,7 @@ function renderStgPreview3d(): string {
     <input type="range" id="td-camspeed" min="2" max="200" value="20" style="flex:1;accent-color:var(--accent,#7c83ff)">
     <span id="td-camspeed-val" style="min-width:28px;text-align:right;color:var(--txt)">20</span>
   </div>
-  <div class="stg-hint">${t("settings.preview3d.camSpeedHint")}</div>
+  <div class="stg-desc">${t("settings.preview3d.camSpeedHint")}</div>
 </div>
 
 <div class="settings-group" style="animation-delay:270ms">
@@ -351,7 +351,7 @@ function renderStgPreview3d(): string {
       <option value="free">${t("settings.preview3d.free")}</option>
     </select>
   </div>
-  <div class="stg-hint">${t("settings.preview3d.rotModeHint")}</div>
+  <div class="stg-desc">${t("settings.preview3d.rotModeHint")}</div>
 </div>
 
 <div class="settings-group" style="animation-delay:300ms">
@@ -359,7 +359,7 @@ function renderStgPreview3d(): string {
     <span class="label">${UI_ICONS.game} ${t("settings.preview3d.keymap")}</span>
     <div id="td-keymap-grid" class="stg-grid" style="gap:8px"></div>
   </div>
-  <div class="stg-hint">${t("settings.preview3d.keymapHint")}</div>
+  <div class="stg-desc">${t("settings.preview3d.keymapHint")}</div>
   <div style="margin-top:8px"><button class="btn-base sm" id="td-keymap-reset">${UI_ICONS.undo} ${t("settings.preview3d.resetKeys")}</button></div>
 </div>`;
 }
@@ -377,7 +377,7 @@ function renderStgParserWorkers(): string {
       <input type="checkbox" id="set-fbx-worker"> ${t("settings.preview3d.workerCheck")}
     </label>
   </div>
-  <div class="stg-hint">${t("settings.preview3d.fbxWorkerHint")}</div>
+  <div class="stg-desc">${t("settings.preview3d.fbxWorkerHint")}</div>
 </div>
 
 <div class="settings-group" style="animation-delay:120ms">
@@ -387,7 +387,7 @@ function renderStgParserWorkers(): string {
       <input type="checkbox" id="set-mmd-worker"> ${t("settings.preview3d.workerCheck")}
     </label>
   </div>
-  <div class="stg-hint">${t("settings.preview3d.mmdWorkerHint")}</div>
+  <div class="stg-desc">${t("settings.preview3d.mmdWorkerHint")}</div>
 </div>`;
 }
 

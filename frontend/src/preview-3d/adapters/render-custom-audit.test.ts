@@ -60,7 +60,12 @@ describe("renderCustom 构造点白名单（逃生舱审计门）", () => {
 
   it("豁免条目必自证三件（ADR 依据 + 具体理由 + 假释条件），防「裸加白名单」", () => {
     // 名单被清空 → 本门空转恒绿，故先钉非空
-    expect(SANCTIONED_PROCEDURAL_PANELS.length).toBeGreaterThan(0);
+    // 名单一增长即说明「第二个需外部回流的声明式面板」出现，触发选项① 抽象提取（两次法则）。
+    // 断言变红时不要改这个数字：应按 ADR-276 §2.3 先拍板抽象方案，而非再挂一个例外。
+    expect(
+      SANCTIONED_PROCEDURAL_PANELS.length,
+      "豁免名单增长 → 触发 ADR-276 §2.3 选项① 抽象提取复查（勿直接放宽本断言）",
+    ).toBe(1);
     for (const p of SANCTIONED_PROCEDURAL_PANELS) {
       expect(p.id, "条目缺 id").toBeTruthy();
       expect(p.decidedBy, `"${p.id}" 缺 ADR 依据`).toMatch(/ADR-\d+/);

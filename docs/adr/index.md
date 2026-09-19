@@ -16,21 +16,15 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 1 |
+| [📝 提议中](#提议中) | 0 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 12 |
-| [✅ 已采纳](#已采纳) | 251 |
+| [✅ 已采纳](#已采纳) | 252 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
-
-### 📝 提议中（1）
-
-| ADR | 标题 | 状态 |
-|-----|------|------|
-| [ADR-276](./ADR-276-preview-menu-subscribe-tree.md) | Preview 菜单 schema 补跨域订阅与树形行抽象评估 | 📝 提议中 |
 
 ### 🔄 部分采纳（12）
 
@@ -49,10 +43,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（251）
+### ✅ 已采纳（252）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-276](./ADR-276-preview-menu-subscribe-tree.md) | Preview 菜单 schema 补跨域订阅与树形行抽象评估 | ✅ 已采纳 |
 | [ADR-275](./ADR-275-css-layer-check-6.md) | css-layer-check 检查 6：跨层存在性——收口命名空间盲区 | ✅ 已采纳 |
 | [ADR-274](./ADR-274-css-layer-check.md) | css-layer-check 类归属判定：手写前缀表改为自推导命名空间 | ✅ 已采纳 |
 | [ADR-273](./ADR-273-download-queue-ledger.md) | 下载队列落盘账本（借鉴 .dsh durable ledger） | ✅ 已采纳 |
@@ -329,7 +324,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-276 | Preview 菜单 schema 补跨域订阅与树形行抽象评估 | 📝 提议中 | 2026-09-19 |
+| ADR-276 | Preview 菜单 schema 补跨域订阅与树形行抽象评估 | ✅ 已采纳 | 2026-09-19 |
 | ADR-275 | css-layer-check 检查 6：跨层存在性——收口命名空间盲区 | ✅ 已采纳 | 2026-09-19 |
 | ADR-274 | css-layer-check 类归属判定：手写前缀表改为自推导命名空间 | ✅ 已采纳 | 2026-09-19 |
 | ADR-273 | 下载队列落盘账本（借鉴 .dsh durable ledger） | ✅ 已采纳 | 2026-09-19 |

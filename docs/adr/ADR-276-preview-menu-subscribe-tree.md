@@ -1,6 +1,6 @@
 # ADR-276：Preview 菜单 schema 补跨域订阅与树形行抽象评估
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（ADR-193 §2.2② 的收尾）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
@@ -37,7 +37,7 @@
 
 豁免条目 `SanctionedProceduralPanel` 增加必填字段 `exitWhen`（假释条件）：写明「什么情况下本例外不再成立」，满足即触发抽象提取、条目应从名单移除。**永久例外 ≠ 永久特权**。
 
-已落地：`sanctioned.ts` 接口 + bones 条目补 `exitWhen`；审计门 `adapters/render-custom-audit.test.ts` 扩展为**自证三件**——`decidedBy`（ADR 依据）+ `rationale`（具体性质，非套话）+ `exitWhen`（假释条件），缺一即红。缺此字段的豁免从此无法裸加。
+落地形态（决策要求，非进度记录）：`SanctionedProceduralPanel` 增必填 `exitWhen`；审计门 `adapters/render-custom-audit.test.ts` 断言**自证三件**——`decidedBy`（ADR 依据）+ `rationale`（具体性质，非套话）+ `exitWhen`（假释条件），缺一即红，并锁定名单长度恒为 1（增长即触发 §2.3）。缺此字段的豁免从此无法裸加。
 
 ### 2.2 豁免判据收敛为「能力面缺口」，并给出可操作的三条
 

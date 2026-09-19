@@ -271,12 +271,28 @@ test.describe("诊断页", () => {
       };
     });
     if (!probe.present) throw new Error("未找到并发基准入口（diag-perf-conc-*）");
-    // tab 真的切过去了（面板可见，不是被吞进别的 tab）
-    expect(probe.runVisible).toBe(true);
+    // tab 真的切过去了（面板可见，不是被吞进别的 tab）——可见性走 expect.poll：
+    // clickBySelector 是同步点击，display 翻转可能滞后，同文件日志子 tab 互斥可见用例
+    // （L293-295）即此范式，慢 runner 下同步探测会读到切换前的 DOM 态造成 flaky。
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const root = document.querySelector("app-content")?.shadowRoot;
+            const pick = (id: string) =>
+              root?.querySelector(`[data-testid="${id}"]`) as HTMLElement | null;
+            const visible = (el: Element | null) =>
+              Boolean(el && (el as HTMLElement).offsetParent !== null);
+            return {
+              runVisible: visible(pick("diag-perf-conc-run")),
+              outVisible: visible(pick("diag-perf-conc-out")),
+            };
+          }),
+        { timeout: 5000 },
+      )
+      .toEqual({ runVisible: true, outVisible: true });
     expect(probe.workers).toBe("4");
     expect(probe.max).toBe("20");
-    // 尚未运行时结果区为空容器（不预置假数据）
-    expect(probe.outVisible).toBe(true);
     expect(
       await page.evaluate(() => {
         const root = document.querySelector("app-content")?.shadowRoot;

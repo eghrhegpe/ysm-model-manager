@@ -45,11 +45,13 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="diag-scan-health"></div>
     <button id="diag-perf-refresh-trace"></button>
     <div id="diag-load-trace"></div>
+    <button id="diag-perf-log"></button>
+    <div id="diag-perf-hist-row"></div>
+    <div id="diag-perf-hist"></div>
     <button class="repo-tab" data-tab="log">日志</button>
-    <button class="repo-tab" data-tab="single">单一</button>
+    <button class="repo-tab" data-tab="bench">基准</button>
     <button class="repo-tab" data-tab="gui">GUI</button>
-    <button class="repo-tab" data-tab="hist">历史</button>
-    <button class="repo-tab" data-tab="trace">剖析</button>
+    <button class="repo-tab" data-tab="record">记录</button>
     <button class="repo-tab" data-tab="conflict">冲突</button>
     <button class="repo-tab" data-tab="health">体检</button>
     <button class="repo-tab" data-tab="sync-conflict">同步</button>
@@ -828,20 +830,32 @@ describe("initDiagnostics — 同步冲突与体检扫描入口", () => {
 });
 
 describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
-  it("查看器模式（isViewerMode=true）→ 隐藏桌面专属 top tab 与扫描入口", () => {
+  it("查看器模式（isViewerMode=true）→ 隐藏桌面专属 top tab 与扫描 / 基准入口", () => {
     isViewerMode.mockReturnValue(true);
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    // 桌面专属 top tab
-    for (const name of ["conflict", "health", "sync-conflict"]) {
+    // 桌面专属 top tab：三个只读扫描 + bench（跑基准）+ gui（端到端）——后两者每个入口都是桌面专属 CLI，
+    // 只藏按钮会留下「满屏引导空态却点不着任何东西」的空壳 tab（ADR-278 §2.5）
+    for (const name of ["conflict", "health", "sync-conflict", "bench", "gui"]) {
       expect(
         (root.querySelector(`.repo-tab[data-tab="${name}"]`) as HTMLElement).style.display,
       ).toBe("none");
     }
-    // 扫描与 perf 桌面按钮
-    for (const id of ["diag-scan-conflict", "diag-scan-health", "diag-scan-sync-conflict"]) {
+    // 扫描入口 + 记录 tab 里唯一靠 CLI 的那一段（基准历史，含其控制行）
+    for (const id of [
+      "diag-scan-conflict",
+      "diag-scan-health",
+      "diag-scan-sync-conflict",
+      "diag-perf-log",
+      "diag-perf-hist-row",
+      "diag-perf-hist",
+    ]) {
       expect((root.getElementById(id) as HTMLElement).style.display).toBe("none");
     }
+    // 加载剖析读内存 store、零 Go/CLI 依赖 → 跨模式可用，入口不得隐藏（ADR-278 §2.5）
+    expect(
+      (root.getElementById("diag-perf-refresh-trace") as HTMLElement).style.display,
+    ).not.toBe("none");
   });
 
   it("桌面模式（isViewerMode=false）→ 桌面专属入口保持可见", () => {
@@ -869,7 +883,7 @@ describe("initDiagnostics — trace 面板进入语义（2026-09）", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     const out = root.getElementById("diag-load-trace") as HTMLElement;
-    (root.querySelector('.repo-tab[data-tab="trace"]') as HTMLElement).click();
+    (root.querySelector('.repo-tab[data-tab="record"]') as HTMLElement).click();
     await waitFor(() => expect(out.textContent).toContain("player.ysm"));
   });
 

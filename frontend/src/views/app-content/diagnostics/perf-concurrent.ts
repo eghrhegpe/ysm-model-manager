@@ -264,14 +264,16 @@ function concReadParams(root: ShadowRoot): ConcParams | null {
   // 非法输入不提交给 Go（Go 侧还会再校验一次，但报错前就拦掉更省事）
   if (!Number.isFinite(workers) || workers < 1 || workers > 256) return null;
   if (!Number.isFinite(maxModels) || maxModels < 1) return null;
-  const targetEl = root.getElementById("diag-perf-conc-target") as HTMLSelectElement | null;
+  // 目标集 / 排序读**共用控件**（ADR-278 §2.2）：与 single-bench 是同一个 #diag-perf-rtype / #diag-perf-order
+  const targetEl = root.getElementById("diag-perf-rtype") as HTMLSelectElement | null;
   // 控件缺席（旧 DOM / 测试夹具）按 Go 默认 repo 处理
   const choice = parsePerfTargetValue(targetEl ? targetEl.value.trim() : PERF_TARGET_REPO);
-  // 本 tab 没有单模型路径输入框：target=model 必然缺载荷参数，本地拦掉而不是换 Go 一句报错
+  // 安全网（正常路径选不出来）：切到并发时目标集的「单模型」选项已被 initPerfMode 禁用；
+  // 缺模型路径必然缺载荷参数，本地拦掉而不是换 Go 一句报错
   if (choice.target === "model") return null;
   const base = {
     target: choice.target,
-    order: readPerfOrder(root, "diag-perf-conc-order"),
+    order: readPerfOrder(root, "diag-perf-order"),
     "max-models": maxModels,
     workers,
     format: "json" as const,

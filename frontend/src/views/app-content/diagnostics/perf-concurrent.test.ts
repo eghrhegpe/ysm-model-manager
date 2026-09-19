@@ -47,7 +47,8 @@ function makeRoot(): ShadowRoot {
     <button id="diag-perf-run"></button>
     <input id="diag-perf-model" value="">
     <input id="diag-perf-iter" value="3">
-    <select id="diag-perf-rtype"><option value=""></option></select>
+    <select id="diag-perf-mode"><option value="conc">并发基准</option></select>
+    <select id="diag-perf-rtype"><option value="">单模型</option><option value="__repo__">全库扁平</option></select>
     <input id="diag-perf-max" value="5">
     <input id="diag-perf-baseline-save" type="checkbox">
     <input id="diag-perf-baseline-compare" type="checkbox">
@@ -57,8 +58,7 @@ function makeRoot(): ShadowRoot {
     <button id="diag-perf-conc-run"></button>
     <input id="diag-perf-conc-workers" type="number" value="4">
     <input id="diag-perf-conc-max" type="number" value="20">
-    <select id="diag-perf-conc-target"><option value="__repo__">全库扁平</option></select>
-    <select id="diag-perf-conc-order"><option value="path">路径升序</option><option value="size">体量降序</option></select>
+    <select id="diag-perf-order"><option value="path">路径升序</option><option value="size">体量降序</option></select>
     <div id="diag-perf-conc-out"></div>
     <div id="diag-perf-hist"></div>
     <div id="diag-load-trace"></div>
@@ -185,12 +185,12 @@ describe("并发基准面板（ADR-262 D5）", () => {
     executeCLI.mockResolvedValue({ status: "success", command: "concurrent-bench", data: CONC_PAYLOAD });
     const root = makeRoot();
     initPerfPanel(root, esc);
-    const target = root.getElementById("diag-perf-conc-target") as HTMLSelectElement;
+    const target = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
     const typeOpt = document.createElement("option");
     typeOpt.value = "ysm";
     target.appendChild(typeOpt);
     target.value = "ysm";
-    (root.getElementById("diag-perf-conc-order") as HTMLSelectElement).value = "size";
+    (root.getElementById("diag-perf-order") as HTMLSelectElement).value = "size";
     await clickAndFlush(root);
 
     // 目标集归 Go：前端只把 selector / 排序 / 上限如实交出去（rtype 是 target=rtype 的载荷参数）
@@ -234,7 +234,7 @@ describe("并发基准面板（ADR-262 D5）", () => {
     });
     const root = makeRoot();
     initPerfPanel(root, esc);
-    const target = root.getElementById("diag-perf-conc-target") as HTMLSelectElement;
+    const target = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
     const typeOpt = document.createElement("option");
     typeOpt.value = "ysm";
     target.appendChild(typeOpt);

@@ -415,7 +415,8 @@ export const zhCN = {
   "diagnostics.perfConcurrentVerdictNone": "无提升",
   "diagnostics.perfConcurrentFileRead": "并发文件读取",
   "diagnostics.perfConcurrentFileDetail": "{count} 个文件：串行 {serial}ms / 并行 {parallel}ms",
-  "diagnostics.perfConcurrentParamInvalid": "并发 worker 数须为 1~256，取样上限须 ≥ 1",
+  "diagnostics.perfConcurrentParamInvalid":
+    "并发参数无效：worker 数须为 1~256、取样上限须 ≥ 1，且目标集不能选「单模型」（并发没有模型路径输入）",
   "diagnostics.perfConcurrentEmpty": "未取得并发基准结果（仓库里可能没有 CLI 可分析的模型）",
   // ADR-262 D3 扫描引擎对照（Go / Rust）：未采集的引擎显示原因，不显示 0.00ms
   "diagnostics.perfScanBenchRun": "引擎对照（Go/Rust）",
@@ -481,6 +482,9 @@ export const zhCN = {
   "diagnostics.perfTrendNoData": "暂无趋势数据——运行两次以上 single-bench 后展示折线图",
   "diagnostics.perfRunning": "运行中…",
   "diagnostics.perfIdle": "点上方按钮开始；结果将显示在此处",
+  "diagnostics.perfMode": "基准模式",
+  "diagnostics.perfRunBench": "跑基准",
+  "diagnostics.perfRecord": "性能记录",
   "diagnostics.perfFail": "执行失败",
   "diagnostics.perfGuiFailed": "有阶段失败",
   "diagnostics.loadTraceRefresh": "刷新加载剖析",

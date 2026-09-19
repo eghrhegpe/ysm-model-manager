@@ -25,12 +25,10 @@ import {
 /** 顶部 repo-tab 的 data-tab 全集（与 tpl.ts diagnosticsHTML 一一对应） */
 const DIAG_TABS = [
   "log",
-  "single",
+  // ADR-278 §2.1：single / conc 两态合并为 bench（模式选择器切三态），hist / trace 合并为 record
+  "bench",
   "gui",
-  // ADR-262 D5：并发基准（串行 vs 并行加速比）
-  "conc",
-  "hist",
-  "trace",
+  "record",
   "conflict",
   "health",
   "sync-conflict",
@@ -75,14 +73,14 @@ test.describe("诊断页", () => {
     await page.waitForFunction(
       () => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 8;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
       },
       undefined,
       { timeout: 10000, polling: 200 },
     );
   });
 
-  test("顶部 8 个 repo-tab 渲染，默认激活「日志」", async ({ page }) => {
+  test("顶部 7 个 repo-tab 渲染，默认激活「日志」", async ({ page }) => {
     const info = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
       const tabs = [...(root?.querySelectorAll(".repo-tab") ?? [])] as HTMLElement[];
@@ -173,7 +171,7 @@ test.describe("诊断页", () => {
   test("单模型 tab：类型选择器选项来自 registry（前端不写死类型表）", async ({ page }) => {
     // ADR-262 D3：矩阵的类型选项必须来自 Go/registry（resource_types.json 单一事实源），
     // 前端只读不判。选择器除固定的「单模型」「全部类型」外，应出现 mock 注册表里的类型。
-    await clickBySelector(page, '.repo-tab[data-tab="single"]');
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
     const info = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
       const select = root?.querySelector(
@@ -199,7 +197,7 @@ test.describe("诊断页", () => {
     // 背景缺陷「永远没有好还是坏的判定」的最后一环：退化门禁早已实现、ParamSpec 也已登记，
     // 但 GUI 从未传过 --baseline/--save-baseline，用户看不到「比上次好还是坏」。
     // 这里断言入口真实可交互，且与矩阵模式互斥（Go 侧对矩阵模式的基准参数是明确拒绝的）。
-    await clickBySelector(page, '.repo-tab[data-tab="single"]');
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
     const probe = async () =>
       page.evaluate(() => {
         const root = document.querySelector("app-content")?.shadowRoot;
@@ -251,7 +249,9 @@ test.describe("诊断页", () => {
   test("并发基准 tab：入口就位（并发度 / 每类上限 / 运行）（ADR-262 D5）", async ({ page }) => {
     // 背景缺陷：concurrent-bench 此前**只有文本**，GUI 里连入口都没有——
     // 「串行 vs 并行的实测加速比」是主动压测的第一手数据，必须能从界面取到。
-    await clickBySelector(page, '.repo-tab[data-tab="conc"]');
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
+    // ADR-278 §2.1：并发控件不再独占 tab——切「跑基准」后把模式选择器拨到 conc（控件随模式显隐）
+    await setShadowSelect(page, "diag-perf-mode", "conc");
     const probe = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
       const pick = (id: string) =>
@@ -333,7 +333,7 @@ test.describe("诊断页 · gui-flow 真实载荷渲染（ADR-262 D5）", () => 
     await page.waitForFunction(
       () => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 8;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
       },
       undefined,
       { timeout: 10000, polling: 200 },
@@ -537,12 +537,12 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     await page.waitForFunction(
       () => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 8;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
       },
       undefined,
       { timeout: 10000, polling: 200 },
     );
-    await clickBySelector(page, '.repo-tab[data-tab="single"]');
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
   });
 
   test("单模型 tab：阶段条 + 基准判决行按载荷渲染，无 i18n 占位符残留", async ({ page }) => {
@@ -616,7 +616,8 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
 
   test("并发基准 tab：档位表与判决徽标按载荷渲染，Go 中文建议不上屏", async ({ page }) => {
     await installCliMock(page, { "concurrent-bench": { data: CONC_BENCH_REAL } });
-    await clickBySelector(page, '.repo-tab[data-tab="conc"]');
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
+    await setShadowSelect(page, "diag-perf-mode", "conc");
     await clickBySelector(page, '[data-testid="diag-perf-conc-run"]');
 
     await waitForCount(page, ".perf-conc-verdict", CONC_BENCH_REAL.parallel.length);
@@ -749,13 +750,14 @@ test.describe("诊断页 · 引擎对照 scan-bench 真实载荷渲染（ADR-262
     await page.waitForFunction(
       () => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 8;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
       },
       undefined,
       { timeout: 10000, polling: 200 },
     );
-    // 引擎对照按钮在「单模型」tab 的控制条上，先切过去
-    await clickBySelector(page, '.repo-tab[data-tab="single"]');
+    // 引擎对照按钮在「跑基准」tab 的 scan 模式控制条上（ADR-278 §2.1），先切 tab 再拨模式
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
+    await setShadowSelect(page, "diag-perf-mode", "scan");
   });
 
   /**

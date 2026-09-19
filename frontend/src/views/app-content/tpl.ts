@@ -31,11 +31,12 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-baseline-save",
   "diag-perf-baseline-compare",
   "diag-perf-baseline-th",
-  // ADR-262 D5：并发基准入口（并发度 / 目标集 / 排序 / 取样上限 / 运行）
+  // ADR-262 D5：并发基准入口（并发度 / 取样上限 / 运行）——目标集与排序共用上方那一套（ADR-278 §2.2）
   "diag-perf-conc-workers",
-  // ADR-262 D3 修订：并发 tab 复用同一套目标集 / 排序控件（跨命令同名同义，故不写第二份）
-  "diag-perf-conc-target",
-  "diag-perf-conc-order",
+  // ADR-278 §2.2：单模型 / 并发**共用**同一套目标集 / 排序控件（即上方登记的 #diag-perf-rtype /
+  // #diag-perf-order）——原 diag-perf-conc-target / diag-perf-conc-order 两份 DOM 已删除
+  // ADR-278 §2.1：基准模式选择器（单模型 / 并发 / 引擎对照），e2e 靠它切模式
+  "diag-perf-mode",
   // ADR-262 D5：性能面板真实载荷渲染断言要能点到运行按钮与结果容器
   "diag-perf-run",
   "diag-perf-model",
@@ -178,17 +179,37 @@ export function diagnosticsHTML(): string {
   <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>`,
       },
       {
-        id: "single",
-        label: `${UI_ICONS.clock} ${t("diagnostics.perfRunSingle")}`,
+        id: "bench",
+        label: `${UI_ICONS.performance} ${t("diagnostics.perfRunBench")}`,
+        // ADR-278 §2.2：目标集 / 排序 single 与 conc **共用同一份**（落实 ADR-262「跨命令同名同义，不写第二份」）
+        // ADR-278 §2.3：取样上限**有意不合并**——单模型深测默认 5 / 并发广度扫默认 20 是两个真实口径
         body: `  <div class="perf-wrap">
     <div class="perf-controls">
       <div class="perf-row">
+        <label for="diag-perf-mode">${t("diagnostics.perfMode")}</label>
+        <select id="diag-perf-mode" class="diag-config-select" data-testid="diag-perf-mode">
+          <option value="single">${t("diagnostics.perfRunSingle")}</option>
+          <option value="conc">${t("diagnostics.perfRunConcurrent")}</option>
+          <option value="scan">${t("diagnostics.perfScanBenchRun")}</option>
+        </select>
+      </div>
+      <div class="perf-row" data-perf-mode="single">
         <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
         <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
+      </div>
+      <div class="perf-row" data-perf-mode="single scan">
         <label for="diag-perf-iter">${t("diagnostics.perfIterations")}</label>
         <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
       </div>
-      <div class="perf-row">
+      <div class="perf-row" data-perf-mode="scan">
+        <button class="btn-base" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench" title="${t("diagnostics.perfScanBenchHint")}">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
+      </div>
+      <div class="perf-row" data-perf-mode="conc">
+        <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run" title="${t("diagnostics.perfConcurrentHint")}">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
+        <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
+        <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
+      </div>
+      <div class="perf-row" data-perf-mode="single conc">
         <label for="diag-perf-rtype">${t("diagnostics.perfTarget")}</label>
         <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
           <option value="">${t("diagnostics.perfTargetModel")}</option>
@@ -197,10 +218,16 @@ export function diagnosticsHTML(): string {
         <select id="diag-perf-order" class="diag-config-select" data-testid="diag-perf-order">
           ${perfOrderOptionsHTML()}
         </select>
+      </div>
+      <div class="perf-row" data-perf-mode="single">
         <label for="diag-perf-max" id="diag-perf-max-label" data-testid="diag-perf-max-label" title="${t("diagnostics.perfMaxModelsHint")}">${t("diagnostics.perfMaxModels")}</label>
         <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max">
       </div>
-      <div class="perf-row">
+      <div class="perf-row" data-perf-mode="conc">
+        <label for="diag-perf-conc-max">${t("diagnostics.perfMaxModels")}</label>
+        <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfMaxModelsHint")}">
+      </div>
+      <div class="perf-row" data-perf-mode="single">
         <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
         <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
         <label for="diag-perf-baseline-compare">${t("diagnostics.perfBaselineCompare")}</label>
@@ -208,12 +235,10 @@ export function diagnosticsHTML(): string {
         <label for="diag-perf-baseline-th">${t("diagnostics.perfBaselineThreshold")}</label>
         <input id="diag-perf-baseline-th" type="number" min="1" step="1" value="50" data-testid="diag-perf-baseline-th">
       </div>
-      <div class="perf-row">
-        <button class="btn-base" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench" title="${t("diagnostics.perfScanBenchHint")}">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
-      </div>
     </div>
-    <div id="diag-perf-single" data-testid="diag-perf-single"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out" data-perf-mode="scan"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
@@ -229,48 +254,16 @@ export function diagnosticsHTML(): string {
   </div>`,
       },
       {
-        // ADR-262 D5：串行 vs 并行的加速比（第一手压测数据）——判决由 Go 单点给出，前端只渲染
-        id: "conc",
-        label: `${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}`,
+        id: "record",
+        label: `${UI_ICONS.note} ${t("diagnostics.perfRecord")}`,
+        // 产物组（ADR-278 §2.1）：基准历史（CLI 支撑 → 引导空态 + 按钮）与加载剖析（内存 store → 进即渲染）
         body: `  <div class="perf-wrap">
-    <div class="perf-controls">
-      <div class="perf-row">
-        <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run" title="${t("diagnostics.perfConcurrentHint")}">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
-        <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
-        <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
-      </div>
-      <div class="perf-row">
-        <label for="diag-perf-conc-target">${t("diagnostics.perfTarget")}</label>
-        <select id="diag-perf-conc-target" class="diag-config-select" data-testid="diag-perf-conc-target">
-          <option value="__repo__">${t("diagnostics.perfTargetRepo")}</option>
-        </select>
-        <label for="diag-perf-conc-order">${t("diagnostics.perfOrder")}</label>
-        <select id="diag-perf-conc-order" class="diag-config-select" data-testid="diag-perf-conc-order">
-          ${perfOrderOptionsHTML()}
-        </select>
-        <label for="diag-perf-conc-max">${t("diagnostics.perfMaxModels")}</label>
-        <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfMaxModelsHint")}">
-      </div>
-    </div>
-    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-  </div>`,
-      },
-      {
-        id: "hist",
-        label: `${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}`,
-        body: `  <div class="perf-wrap">
-    <div class="perf-controls">
+    <div class="perf-controls" id="diag-perf-hist-row">
       <div class="perf-row">
         <button class="btn-base" id="diag-perf-log">${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}</button>
       </div>
     </div>
     <div id="diag-perf-hist"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-  </div>`,
-      },
-      {
-        id: "trace",
-        label: `${UI_ICONS.search} ${t("diagnostics.loadTraceTitle")}`,
-        body: `  <div class="perf-wrap">
     <div class="perf-controls">
       <div class="perf-row">
         <button class="btn-base" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>

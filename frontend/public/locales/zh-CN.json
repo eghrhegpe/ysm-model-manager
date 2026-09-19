@@ -365,7 +365,7 @@
   "diagnostics.perfConcurrentVerdictNone": "无提升",
   "diagnostics.perfConcurrentFileRead": "并发文件读取",
   "diagnostics.perfConcurrentFileDetail": "{count} 个文件：串行 {serial}ms / 并行 {parallel}ms",
-  "diagnostics.perfConcurrentParamInvalid": "并发 worker 数须为 1~256，取样上限须 ≥ 1",
+  "diagnostics.perfConcurrentParamInvalid": "并发参数无效：worker 数须为 1~256、取样上限须 ≥ 1，且目标集不能选「单模型」（并发没有模型路径输入）",
   "diagnostics.perfConcurrentEmpty": "未取得并发基准结果（仓库里可能没有 CLI 可分析的模型）",
   "diagnostics.perfScanBenchRun": "引擎对照（Go/Rust）",
   "diagnostics.perfScanBenchHint": "同一仓库根分别用 Go / Rust 扫描并取中位与 p95；未采集的引擎显示原因，而不是 0ms",

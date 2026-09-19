@@ -99,6 +99,8 @@ export const contentDiagCSS: string = `
 .perf-controls { display:flex; flex-direction:column; gap:4px; padding:0 0 6px; border-bottom:1px solid var(--bd); flex-shrink:0; }
 .perf-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .perf-row > input[type="text"] { flex:1; min-width:180px; }
+/* ADR-278 §2.4：基准模式显隐走 class，与查看器降级的 inline display:none 分工不冲突（inline 胜过 class） */
+.perf-mode-off { display: none; }
 
 /* ===== 性能面板（single-bench / gui-flow / perf-log） ===== */
 .perf-section { font-size:var(--fs-sm); font-weight:600; color:var(--txt); display:flex; align-items:center; gap:6px; }

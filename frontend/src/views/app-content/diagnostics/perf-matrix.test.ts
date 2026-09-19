@@ -52,7 +52,7 @@ function makeRoot(): ShadowRoot {
     <div id="diag-perf-gui-out"></div>
     <div id="diag-perf-hist"></div>
     <div id="diag-load-trace"></div>
-    <select id="diag-perf-conc-target"><option value="__repo__">全库扁平</option></select>
+    <select id="diag-perf-alt-target"><option value="__repo__">全库扁平</option></select>
   `;
   (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById = (
     id: string,
@@ -428,11 +428,11 @@ describe("目标集选择器选项来自 registry（前端不写死类型表）"
     expect(select.textContent).toContain("全库扁平");
   });
 
-  it("includeModel=false（并发 tab）不提供「单模型」项——那个 tab 没有路径输入框", async () => {
+  it("includeModel=false 不提供「单模型」项（helper 契约；并发已改用共享选择器，见 ADR-278 §2.2）", async () => {
     const root = makeRoot();
-    await populatePerfTargetOptions(root, "diag-perf-conc-target", false);
+    await populatePerfTargetOptions(root, "diag-perf-alt-target", false);
 
-    const select = root.getElementById("diag-perf-conc-target") as HTMLSelectElement;
+    const select = root.getElementById("diag-perf-alt-target") as HTMLSelectElement;
     expect([...select.options].map((o) => o.value)).toEqual(["__all__", "__repo__", "EntityPlayer", "ysm"]);
   });
 });

@@ -429,7 +429,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfConcurrentFileRead": "並列ファイル読み込み",
   "diagnostics.perfConcurrentFileDetail": "{count} ファイル：直列 {serial}ms / 並列 {parallel}ms",
   "diagnostics.perfConcurrentParamInvalid":
-    "worker 数は 1~256、サンプル上限は 1 以上にしてください",
+    "同時実行パラメータが不正です：worker 数は 1~256、サンプル上限は 1 以上、目標セットに「単一モデル」は選べません（同時実行にはモデルパスの入力欄がありません）",
   "diagnostics.perfConcurrentEmpty":
     "並列ベンチの結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
   // ADR-262 D3 スキャンエンジン比較（Go / Rust）：未計測のエンジンは理由を表示し、0.00ms は出さない
@@ -500,6 +500,9 @@ export const ja: Record<string, string> = {
     "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",
   "diagnostics.perfRunning": "実行中…",
   "diagnostics.perfIdle": "上のボタンで開始；結果はここに表示されます",
+  "diagnostics.perfMode": "ベンチマーク",
+  "diagnostics.perfRunBench": "ベンチ実行",
+  "diagnostics.perfRecord": "パフォーマンス記録",
   "diagnostics.perfFail": "実行に失敗しました",
   "diagnostics.perfGuiFailed": "失敗したステージがあります",
   "diagnostics.loadTraceRefresh": "ロード解析を更新",

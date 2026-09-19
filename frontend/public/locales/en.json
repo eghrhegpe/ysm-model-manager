@@ -367,7 +367,7 @@
   "diagnostics.perfConcurrentVerdictNone": "No gain",
   "diagnostics.perfConcurrentFileRead": "Concurrent file read",
   "diagnostics.perfConcurrentFileDetail": "{count} files: serial {serial}ms / parallel {parallel}ms",
-  "diagnostics.perfConcurrentParamInvalid": "Workers must be 1~256 and the sample cap must be >= 1",
+  "diagnostics.perfConcurrentParamInvalid": "Invalid concurrent parameters: workers must be 1~256, the sample cap must be >= 1, and the target set cannot be the single-model option (concurrent runs have no model path input)",
   "diagnostics.perfConcurrentEmpty": "No concurrent bench result (the repo may have no CLI-analyzable model)",
   "diagnostics.perfScanBenchRun": "Engine comparison (Go/Rust)",
   "diagnostics.perfScanBenchHint": "Scan the same repo root with both Go and Rust and report median/p95; an engine that was not measured shows the reason, not 0ms",

@@ -429,7 +429,8 @@ export const en: Record<string, string> = {
   "diagnostics.perfConcurrentFileRead": "Concurrent file read",
   "diagnostics.perfConcurrentFileDetail":
     "{count} files: serial {serial}ms / parallel {parallel}ms",
-  "diagnostics.perfConcurrentParamInvalid": "Workers must be 1~256 and the sample cap must be >= 1",
+  "diagnostics.perfConcurrentParamInvalid":
+    "Invalid concurrent parameters: workers must be 1~256, the sample cap must be >= 1, and the target set cannot be the single-model option (concurrent runs have no model path input)",
   "diagnostics.perfConcurrentEmpty":
     "No concurrent bench result (the repo may have no CLI-analyzable model)",
   // ADR-262 D3 scan engine comparison (Go / Rust): an engine that was not measured shows the
@@ -501,6 +502,9 @@ export const en: Record<string, string> = {
   "diagnostics.perfTrendNoData": "No trend yet — run single-bench twice or more to show the chart",
   "diagnostics.perfRunning": "Running…",
   "diagnostics.perfIdle": "Click the button above to start; results will appear here",
+  "diagnostics.perfMode": "Benchmark",
+  "diagnostics.perfRunBench": "Benchmark",
+  "diagnostics.perfRecord": "Perf Records",
   "diagnostics.perfFail": "Execution failed",
   "diagnostics.perfGuiFailed": "Some stages failed",
   "diagnostics.loadTraceRefresh": "Refresh Load Trace",

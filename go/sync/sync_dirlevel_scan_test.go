@@ -99,7 +99,7 @@ func TestCollectFolderFilesFromScanEqualsWalk(t *testing.T) {
 	if !hit || len(allEntries) == 0 {
 		t.Fatalf("scanner 未返回组根条目（hit=%v, len=%d），反推路径无法验证", hit, len(allEntries))
 	}
-	scanMap := collectFolderFilesFromScan(container, rtype, allEntries)
+	scanMap, _ := collectFolderFilesFromScan(container, rtype, allEntries)
 	if !cmp.Equal(walkMap, scanMap) {
 		t.Errorf("collectFolderFilesFromScan 与 Walk 结果不一致\nWalk: %v\nScan: %v", walkMap, scanMap)
 	}

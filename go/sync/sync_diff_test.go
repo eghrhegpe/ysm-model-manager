@@ -126,3 +126,81 @@ func containsPath(list []string, p string) bool {
 	}
 	return false
 }
+
+// TestDiffFolderContentsScan_HashDetectsDivergence 锁定 D2′-c 盲区③修复：
+// 夹内同名同大小、内容不同的模型文件，经 scanner 旁挂哈希后判 Diverged
+// （消除「存在即 Synced」假绿）；单侧缺哈希 → 回退 Size 判 Synced（现状不回归）；
+// 无 scanFn 的公共入口 DiffFolderContents（两侧 Walk 无哈希）→ 恒 Size 判定不误升 Diverged。
+func TestDiffFolderContentsScan_HashDetectsDivergence(t *testing.T) {
+	root := t.TempDir()
+	globalFolder := filepath.Join(root, "gpkg")
+	instRoot := t.TempDir()
+	instFolder := filepath.Join(instRoot, "ipkg")
+	if err := os.MkdirAll(globalFolder, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(instFolder, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// 三文件同名同大小（4 字节），内容各异——纯 Size 对比全判 Synced（假绿）。
+	for _, name := range []string{"a.pmx", "b.pmx", "d.pmx"} {
+		if err := os.WriteFile(filepath.Join(globalFolder, name), []byte("AAAA"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(instFolder, name), []byte("BBBB"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rtype := "EntityPlayer" // 无嵌套模式，走 scan 反推路径
+
+	// scanFn：dir==instFolder 返回实例侧条目，否则返回组根（全局侧）条目。
+	// a：两侧异哈希 → Diverged；b：两侧同哈希 → Synced；d：实例侧空哈希 → 回退 Size → Synced。
+	scanFn := func(dir string) ([]types.ModelEntry, bool) {
+		base := globalFolder
+		gh := map[string]string{"a.pmx": "AG", "b.pmx": "BB", "d.pmx": "DG"}
+		ih := map[string]string{"a.pmx": "AI", "b.pmx": "BB", "d.pmx": ""}
+		if dir == instFolder {
+			base = instFolder
+		}
+		hm := gh
+		if dir == instFolder {
+			hm = ih
+		}
+		entries := make([]types.ModelEntry, 0, 3)
+		for _, name := range []string{"a.pmx", "b.pmx", "d.pmx"} {
+			entries = append(entries, types.ModelEntry{
+				Name: name,
+				Path: filepath.Join(base, name),
+				Hash: hm[name],
+			})
+		}
+		return entries, true
+	}
+
+	diffs := DiffFolderContentsScan(globalFolder, instFolder, rtype, scanFn, root)
+	statusOf := func(rel string) (types.SyncStatus, bool) {
+		for _, d := range diffs {
+			if d.RelPath == rel {
+				return d.Status, true
+			}
+		}
+		return "", false
+	}
+	if s, ok := statusOf("a.pmx"); !ok || s != types.SyncStatusDiverged {
+		t.Errorf("a.pmx 异哈希应判 Diverged, got %v ok=%v", s, ok)
+	}
+	if s, ok := statusOf("b.pmx"); !ok || s != types.SyncStatusSynced {
+		t.Errorf("b.pmx 同哈希应判 Synced, got %v ok=%v", s, ok)
+	}
+	if s, ok := statusOf("d.pmx"); !ok || s != types.SyncStatusSynced {
+		t.Errorf("d.pmx 实例侧空哈希应回退 Size 判 Synced, got %v ok=%v", s, ok)
+	}
+
+	// 公共入口无 scanFn：两侧 Walk 无哈希 → Size 相等 → 全 Synced（现状不回归）
+	plain := DiffFolderContents(globalFolder, instFolder, rtype)
+	for _, d := range plain {
+		if d.Status != types.SyncStatusSynced {
+			t.Errorf("DiffFolderContents 无哈希应恒 Size 判定 Synced, got %+v", d)
+		}
+	}
+}

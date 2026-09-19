@@ -542,20 +542,40 @@ type FileDiffEntry struct {
 // diffFolderContentsCore 以全局/实例两侧文件映射计算子文件级同步 diff。
 // 收集方式（Walk 走盘 / scanner 反推）由调用方决定，本函数只做差异聚合，
 // 故 DiffFolderContents 与 DiffFolderContentsScan 共用、零行为漂移（ADR-140 L3）。
-func diffFolderContentsCore(globalFiles, instanceFiles map[string]string) []FileDiffEntry {
+//
+// globalHash/instanceHash 为 relKey→摘要（可 nil）：两侧均命中哈希时比哈希，
+// 异哈希 → Diverged（消除「改内容不改大小」假绿，D2′-c 盲区③）；
+// 任一侧缺哈希（Walk 侧无摘要）→ 回退比 Size，Size 异亦 → Diverged；
+// 均无差异 → Synced。nil,nil 时退化为纯 Size 对比，与原「存在即 Synced」相比
+// 收紧了大小口径，但 DiffFolderContents（无 scanFn 公共入口）两侧均走 Walk，
+// Size 相等即 Synced，行为等价无回归。
+func diffFolderContentsCore(globalFiles, instanceFiles map[string]string, globalHash, instanceHash map[string]string) []FileDiffEntry {
+	// contentStatus 判定两侧均存在的同名文件：哈希优先、Size 兜底。
+	contentStatus := func(relKey, gPath, iPath string) types.SyncStatus {
+		if gh, ih := globalHash[relKey], instanceHash[relKey]; gh != "" && ih != "" {
+			if gh != ih {
+				return types.SyncStatusDiverged
+			}
+			return types.SyncStatusSynced
+		}
+		if gSize, iSize := fsutil.FileSize(gPath), fsutil.FileSize(iPath); gSize != iSize {
+			return types.SyncStatusDiverged
+		}
+		return types.SyncStatusSynced
+	}
 	var diffs []FileDiffEntry
 	seen := make(map[string]bool)
 
 	// 检查全局有但实例没有的文件（missing，可推送）
 	for relKey, gEntry := range globalFiles {
 		seen[relKey] = true
-		if _, exists := instanceFiles[relKey]; exists {
-			// 两侧都有，视为 synced（当前不做内容哈希对比）
+		if iEntry, exists := instanceFiles[relKey]; exists {
+			// 两侧都有 → 内容级判定（哈希优先/Size 兜底），异则 Diverged
 			diffs = append(diffs, FileDiffEntry{
 				RelPath: relKey,
 				AbsPath: gEntry,
 				Size:    fsutil.FileSize(gEntry),
-				Status:  types.SyncStatusSynced,
+				Status:  contentStatus(relKey, gEntry, iEntry),
 			})
 		} else {
 			// 全局有、实例没有 → missing
@@ -610,7 +630,7 @@ func DiffFolderContents(globalFolder, instanceFolder, rtype string) []FileDiffEn
 	globalFiles := collectFolderFiles(globalFolder, rtype)
 	// 扫描实例文件夹内的模型文件
 	instanceFiles := collectFolderFiles(instanceFolder, rtype)
-	return diffFolderContentsCore(globalFiles, instanceFiles)
+	return diffFolderContentsCore(globalFiles, instanceFiles, nil, nil)
 }
 
 // DiffFolderContentsScan 同 DiffFolderContents，但全局侧文件收集复用 scanner 已缓存的
@@ -629,20 +649,29 @@ func DiffFolderContentsScan(globalFolder, instanceFolder, rtype string, scanFn S
 	if !hit || len(entries) == 0 {
 		return DiffFolderContents(globalFolder, instanceFolder, rtype)
 	}
-	// 全局侧：从组根全量条目按 globalFolder 前缀过滤（零 Walk）
-	globalFiles := collectFolderFilesFromScan(globalFolder, rtype, entries)
-	// 实例侧：collectFolderFiles 内部已叠 30s sync 目录扫描缓存，不再每次实走
-	instanceFiles := collectFolderFiles(instanceFolder, rtype)
-	return diffFolderContentsCore(globalFiles, instanceFiles)
+	// 全局侧：从组根全量条目按 globalFolder 前缀过滤（零 Walk），并旁挂哈希
+	globalFiles, globalHash := collectFolderFilesFromScan(globalFolder, rtype, entries)
+	// 实例侧：优先尝试 scanner 反推（拿到哈希）；实例夹通常不在 globalRoot 下，
+	// scanFn 未命中时回退 collectFolderFiles（Walk，无哈希 → contentStatus 比 Size）。
+	var instanceFiles, instanceHash map[string]string
+	if instEntries, instHit := scanFn(instanceFolder); instHit && len(instEntries) > 0 {
+		instanceFiles, instanceHash = collectFolderFilesFromScan(instanceFolder, rtype, instEntries)
+	} else {
+		instanceFiles = collectFolderFiles(instanceFolder, rtype)
+	}
+	return diffFolderContentsCore(globalFiles, instanceFiles, globalHash, instanceHash)
 }
 
 // collectFolderFilesFromScan 从 scanner 已缓存的组根全量条目中，过滤出 folder 下的
 // 模型文件（相对 folder 的 slash 路径为 key）。与 collectFolderFiles（Walk）语义等价：
 // 仅收集 IsTypeModelFile 命中的文件，跳过回收站目录。
-func collectFolderFilesFromScan(folder, rtype string, entries []types.ModelEntry) map[string]string {
+// 第二返回值 relKey→哈希：仅当条目携带非空摘要（e.Hash != ""）时填充，
+// 供 diffFolderContentsCore 做 D2′-c 内容级判定；无摘要侧留空 → 上层回退 Size。
+func collectFolderFilesFromScan(folder, rtype string, entries []types.ModelEntry) (map[string]string, map[string]string) {
 	result := make(map[string]string)
+	hashes := make(map[string]string)
 	if folder == "" {
-		return result
+		return result, hashes
 	}
 	prefix := folder + string(os.PathSeparator)
 	for _, e := range entries {
@@ -661,9 +690,13 @@ func collectFolderFilesFromScan(folder, rtype string, entries []types.ModelEntry
 		if err != nil {
 			continue
 		}
-		result[filepath.ToSlash(rel)] = p
+		key := filepath.ToSlash(rel)
+		result[key] = p
+		if e.Hash != "" {
+			hashes[key] = e.Hash
+		}
 	}
-	return result
+	return result, hashes
 }
 
 // collectFolderFiles 扫描文件夹内的所有模型文件

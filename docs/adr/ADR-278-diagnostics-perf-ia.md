@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：[ADR-262](./ADR-262-perf-diagnostics-payload.md)（性能载荷与目标集选择器；本 ADR 落实其**未落地**的「复用同一套控件」意图）、`views/app-content/tpl.ts`（tab 定义）、`diagnostics/perf.ts`（模式接线）、`diagnostics/perf-concurrent.ts`、`docs/knowledge/app_content_diagnostics.md`
+- **相关**：[ADR-262](./ADR-262-perf-observability-model.md)（性能载荷与目标集选择器；本 ADR 落实其**未落地**的「复用同一套控件」意图）、`views/app-content/tpl.ts`（tab 定义）、`diagnostics/perf.ts`（模式接线）、`diagnostics/perf-concurrent.ts`、`docs/knowledge/app_content_diagnostics.md`
 
 ---
 

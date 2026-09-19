@@ -47,8 +47,9 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 构建「地面」参数面板的完整节点树：
 
 - `ground-visible`：平铺 toggle（地面总开关，`GroundCapability.getMasterNodeId()="ground-visible"` 升级为 env 面板一级行 headerToggle）
+- `ground-grid-visible`：平铺 toggle（参考网格 / GridHelper 层独立开关，2026-09-19；与总开关、材质层正交，`labelKey=preview.groundGridVisible`）
 - 材质组 folder（`preview.groundGroupMaterial`）：来源轴 select + 样式轴 select（仅来源=canvas 显示）+ 3 color + 9 slider + 2 button（texture/clear，走 controls 通道节点）
-- 叠加层 folder（`preview.groundGroupOverlay`，ADR-249 §2.3）：叠加样式 select（none/grid/checker）+ color/size/opacity（仅叠加 ≠ none 显示）
+- 叠加层 folder（`preview.groundGroupOverlay`，ADR-249 §2.3）：叠加样式 select（none/grid/checker/stripes/diamond）+ color/size/opacity（仅叠加 ≠ none 显示）
 
 ## 对外 API / 入口
 

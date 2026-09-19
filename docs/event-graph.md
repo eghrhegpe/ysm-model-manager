@@ -285,8 +285,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 262 |
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 284 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 260 |
+| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 282 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -342,7 +342,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 149 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 147 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 77 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 340 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
@@ -462,11 +462,11 @@
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
 | stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 87 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 128 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 151 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 159 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 168 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 196 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 126 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 149 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 157 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 166 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 194 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 109 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 120 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |

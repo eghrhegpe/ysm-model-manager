@@ -18,19 +18,18 @@ permalink: /adr/
 |------|------|
 | [📝 提议中](#提议中) | 0 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 247 |
+| [🔄 部分采纳](#部分采纳) | 12 |
+| [✅ 已采纳](#已采纳) | 248 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 🔄 部分采纳（13）
+### 🔄 部分采纳（12）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-269](./ADR-269-resource-manifest-single-source.md) | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定 | 🔄 部分采纳 |
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
 | [ADR-249](./ADR-249-ground-material-axis-split-layer-overlay.md) | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | 🔄 部分采纳 |
 | [ADR-247](./ADR-247-postproc-linkage-gate.md) | 后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移 | 🔄 部分采纳 |
@@ -44,13 +43,14 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（247）
+### ✅ 已采纳（248）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-272](./ADR-272-water-size-ui-entry.md) | waterSize 放开 UI 入口 + pool 尺寸零重建（sizeLinks） | ✅ 已采纳 |
 | [ADR-271](./ADR-271-water-detail-normal-gpu.md) | 水面微细节法线 GPU 化（移除 CPU DataTexture 链路） | ✅ 已采纳 |
 | [ADR-270](./ADR-270-menu-directory-layering.md) | preview-3d/menu 目录物理分层（七层隐式收敛为显式子目录） | ✅ 已采纳 |
+| [ADR-269](./ADR-269-resource-manifest-single-source.md) | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定 | ✅ 已采纳 |
 | [ADR-268](./ADR-268-env-cap-self-placement.md) | 环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单 | ✅ 已采纳 |
 | [ADR-267](./ADR-267-toast-emoji-esc.md) | toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区 | ✅ 已采纳 |
 | [ADR-266](./ADR-266-volumetric-cone-true-geometry.md) | 体积光锥改真锥体几何 + Fresnel 边缘辉光；修 ACES 旁路与过度重建 | ✅ 已采纳 |
@@ -323,7 +323,7 @@ permalink: /adr/
 | ADR-272 | waterSize 放开 UI 入口 + pool 尺寸零重建（sizeLinks） | ✅ 已采纳 | 2026-09-19 |
 | ADR-271 | 水面微细节法线 GPU 化（移除 CPU DataTexture 链路） | ✅ 已采纳 | 2026-09-19 |
 | ADR-270 | preview-3d/menu 目录物理分层（七层隐式收敛为显式子目录） | ✅ 已采纳 | 2026-09-19 |
-| ADR-269 | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定 | 🔄 部分采纳 | 2026-09-19 |
+| ADR-269 | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定 | ✅ 已采纳 | 2026-09-19 |
 | ADR-268 | 环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单 | ✅ 已采纳 | 2026-09-19 |
 | ADR-267 | toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区 | ✅ 已采纳 | 2026-09-18 |
 | ADR-266 | 体积光锥改真锥体几何 + Fresnel 边缘辉光；修 ACES 旁路与过度重建 | ✅ 已采纳 | 2026-09-18 |

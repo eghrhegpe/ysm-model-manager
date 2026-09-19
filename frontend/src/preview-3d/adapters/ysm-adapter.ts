@@ -41,14 +41,14 @@ import {
   unregisterSchema,
   YSM_MODEL_SCHEMA_ID,
 } from "@/preview-3d/infra/schema-registry.ts";
-import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
-import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
+import type { BonePanelCleanupRef } from "@/preview-3d/menu/panels/bones-panel-node.ts";
+import { makeBonesPanelItem } from "@/preview-3d/menu/panels/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import {
   type PerceptionCapability,
   type PerceptionState,
   perceptionNodes,
   pickPerceptionCaps,
-} from "@/preview-3d/menu/perception-controls.ts";
+} from "@/preview-3d/menu/panels/perception-controls.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { BoneMaps, BoneSelectInfo, Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import {

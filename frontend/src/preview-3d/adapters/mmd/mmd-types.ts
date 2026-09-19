@@ -15,11 +15,11 @@ import type {
   MmdBottomNavCtx,
   MmdPlayBridge,
 } from "@/preview-3d/infra/content-bridges.ts";
-import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
+import type { BonePanelCleanupRef } from "@/preview-3d/menu/panels/bones-panel-node.ts";
 import type {
   PerceptionCapability,
   PerceptionState,
-} from "@/preview-3d/menu/perception-controls.ts";
+} from "@/preview-3d/menu/panels/perception-controls.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { PmxBuildResult, PmxParser } from "./mmd-pmx-parser.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";

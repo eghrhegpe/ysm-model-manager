@@ -14,7 +14,7 @@ import { renderLoadingState } from "@/preview-3d/infra/preview-loading.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { SchemaBuilder } from "@/preview-3d/infra/schema-registry.ts";
 import { registerSchema, unregisterSchema } from "@/preview-3d/infra/schema-registry.ts";
-import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
+import { multiModelSelectNode } from "@/preview-3d/menu/panels/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";

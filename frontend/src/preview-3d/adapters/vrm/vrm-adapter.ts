@@ -40,15 +40,15 @@ import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frust
 import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { renderLoadingState } from "@/preview-3d/infra/preview-loading.ts";
 import { collectSceneStats, type SceneStats } from "@/preview-3d/infra/scene-stats.ts";
-import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
-import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
-import { materialNodes } from "@/preview-3d/menu/material-controls.ts";
+import type { BonePanelCleanupRef } from "@/preview-3d/menu/panels/bones-panel-node.ts";
+import { makeBonesPanelItem } from "@/preview-3d/menu/panels/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
+import { materialNodes } from "@/preview-3d/menu/panels/material-controls.ts";
 import {
   type PerceptionCapability,
   type PerceptionState,
   perceptionNodes,
   pickPerceptionCaps,
-} from "@/preview-3d/menu/perception-controls.ts";
+} from "@/preview-3d/menu/panels/perception-controls.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";

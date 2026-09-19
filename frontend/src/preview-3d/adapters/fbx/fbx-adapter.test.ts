@@ -74,8 +74,8 @@ vi.mock("three/addons/loaders/FBXLoader.js", () => ({
   },
 }));
 
-vi.mock("@/preview-3d/menu/bones-panel-node.ts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/preview-3d/menu/bones-panel-node.ts")>();
+vi.mock("@/preview-3d/menu/panels/bones-panel-node.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/preview-3d/menu/panels/bones-panel-node.ts")>();
   return {
     ...actual,
     makeBonesPanelItem: (

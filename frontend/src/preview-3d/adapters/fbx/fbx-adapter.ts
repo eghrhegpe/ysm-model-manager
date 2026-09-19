@@ -24,8 +24,8 @@ import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { disposeObject3D } from "@/preview-3d/infra/safe-dispose.ts";
-import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
-import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
+import type { BonePanelCleanupRef } from "@/preview-3d/menu/panels/bones-panel-node.ts";
+import { makeBonesPanelItem } from "@/preview-3d/menu/panels/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { disposeMaterial } from "@/preview-3d/mesh/mesh.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";

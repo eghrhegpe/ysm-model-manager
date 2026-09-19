@@ -10,7 +10,7 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.t
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import type { PreviewBuildCtx, PreviewScene, PreviewHandle } from "./mount-preview-core.ts";
 import { collectSceneStats } from "@/preview-3d/infra/scene-stats.ts";
-import { mergeStatsMenuItems } from "@/preview-3d/menu/stats.ts";
+import { mergeStatsMenuItems } from "@/preview-3d/menu/panels/stats.ts";
 import { sceneRegistry, MAX_MODELS } from "@/preview-3d/infra/scene-registry.ts";
 import { bus } from "@/bus";
 

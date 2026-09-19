@@ -40,7 +40,7 @@ export interface SanctionedProceduralPanel {
 export const SANCTIONED_PROCEDURAL_PANELS: readonly SanctionedProceduralPanel[] = [
   {
     id: "bones",
-    sourceFile: "preview-3d/menu/bones-panel-node.ts",
+    sourceFile: "preview-3d/menu/panels/bones-panel-node.ts",
     decidedBy: "ADR-193 §2.2②",
     rationale:
       "骨骼树浏览器：动态树形列表（骨骼数随模型变）+ 跨域拾取联动（viewContainer click → 写 activeId），" +

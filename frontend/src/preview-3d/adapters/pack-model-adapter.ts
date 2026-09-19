@@ -14,7 +14,7 @@ import { requireSharedInfra } from "@/preview-3d/adapters/shared/shared-infra.ts
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { getTintColorSync, loadMcTints } from "@/preview-3d/materials/mc-tints.ts";
-import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
+import { multiModelSelectNode } from "@/preview-3d/menu/panels/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import {
   isRenderableModel,

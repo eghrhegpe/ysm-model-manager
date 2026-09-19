@@ -120,7 +120,9 @@ beforeEach(() => {
   renderModel2D.mockReset(); // 清 mockImplementation 防跨测试泄漏
   localStorage.clear();
   document.body.innerHTML = "";
-  loadModelData.mockResolvedValue({ model: makeModel(), decodedBy: "go" });
+  // ⚠️ 112d00d2f 把 loadModelData 契约从 {model, decodedBy} 包络收窄为裸 model（decodedBy 改走
+  // opts 回调），本文件桩没跟着改 → 成功路径 7 条集体红。形状已按新契约修回。
+  loadModelData.mockResolvedValue(makeModel());
   getApp.mockResolvedValue({
     SaveScreenshotFile: vi.fn(),
     GetModel3DSpec: vi.fn().mockResolvedValue(JSON.stringify({ models: [{ name: "main", bones: [{}, {}], meshGroups: [] }] })),
@@ -157,7 +159,7 @@ describe("loadModel2D — 防御路径", () => {
   });
 
   it("model 无 bones → 未找到几何数据提示", async () => {
-    loadModelData.mockResolvedValue({ model: { bones: [] }, decodedBy: "go" });
+    loadModelData.mockResolvedValue({ bones: [] });
     const ctx = makeCtx();
     const container = document.createElement("div");
     document.body.appendChild(container); // 挂载以符合真实场景（loadModel2D 的 isConnected 守卫）
@@ -179,7 +181,7 @@ describe("loadModel2D — 防御路径", () => {
     // 模拟用户切到 B：showModelDetail 重建 ctx.root.innerHTML，A 的 container 被移除
     ctx.root.innerHTML = `<div id="preview-content"></div>`;
     container.remove();
-    resolveData({ model: makeModel(), decodedBy: "go" });
+    resolveData(makeModel());
     await p;
     // A 的迟到回写不落地到 B 的详情页。
     // ⚠️ 局限（变异测试实证 2026-09-16）：本用例**无法**捕获 `isConnected` 守卫的删除——

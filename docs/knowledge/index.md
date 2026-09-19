@@ -2,11 +2,11 @@
 
 # 知识卡索引
 
-> 总计: 189 张知识卡
+> 总计: 190 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（13 张）
+## config（14 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
@@ -14,6 +14,7 @@
 |------|------|------|------|--------|
 | 🏗 audit-drift-report-2026 | 知识卡 vs 代码 语义审计报告 | architecture | — | 知识卡审计, 文档-代码脱节审计 |
 | 🏗 auto_import_split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
+| 🍃 check_threshold_scanners | 三档阈值扫描器（复杂度/参数/类型安全） | leaf | — | check-complexity, check-params, 认知复杂度, 参数陷阱, 阈值扫描器, gate debt 档, --files 传参 |
 | 🏗 extensibility-index-reconciliation | 可拓展点索引对账（vs HEAD @ d517113c…） | architecture | — | 拓展点对账, 落地状态, ADR 闭环 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单, 拓展点探索 |
@@ -29,6 +30,7 @@
 ### 摘要
 
 - **auto_import_split**（auto-import 拆分与缺失 import 检测）：`scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆…
+- **check_threshold_scanners**（三档阈值扫描器（复杂度/参数/类型安全））：`check-complexity`（认知复杂度 + 最大嵌套）、`check-params`（长参数列表 / 布尔陷阱）、
 - **orphan_export_scanner**（孤儿导出检测器（扫描盲区））：`scripts/check-orphan-exports.ts` 审计 `frontend/src/` 下零消费者的导出符号。它同时扫描 `.ts` 与 `.js`（ADR-014 后并存），用文本正则（零依赖，不建 AST）解析导出与消…
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
 - **scripts_argv**（脚本 argv 规范与已知豁免 parse-args.ts）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30…

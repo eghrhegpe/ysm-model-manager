@@ -2099,6 +2099,10 @@ export const autoSidebar = [
             "link": "/knowledge/auto_import_split"
           },
           {
+            "text": "三档阈值扫描器（复杂度/参数/类型安全）",
+            "link": "/knowledge/check_threshold_scanners"
+          },
+          {
             "text": "可拓展点索引对账（vs HEAD @ d517113c…）",
             "link": "/knowledge/extensibility-index-reconciliation"
           },

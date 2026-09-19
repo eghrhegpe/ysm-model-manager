@@ -11,11 +11,13 @@ package sync
 import (
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -505,6 +507,18 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 				}
 			}
 		}
+		// D2′-b：pack 文件夹「结构折叠指纹」累积器（ADR-269，闭盲区②）。
+		// 注册 pack 目录时记其绝对路径（子文件前缀匹配）+ 累积器；Walk 每个文件（在
+		// IsResourceAllowed 过滤前）按所属 pack 前缀累积顺序无关的 fnv64a("<rel>:<size>")
+		// 之和 + 计数。零新 I/O（info 已由目录枚举给出、无额外 stat）、与 scanFn 无关
+		// （UI nil 路径亦生效）。Walk 结束回填 entries[dirKey].FoldDigest。
+		type foldAcc struct {
+			sum   uint64
+			count int
+		}
+		packFold := make(map[string]*foldAcc) // pack 目录 relKey -> 累积器
+		packDirAbs := make(map[string]string) // pack 目录 relKey -> 绝对路径 + 分隔符
+		foldPrefix := string(os.PathSeparator)
 		filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				log.Printf("[sync] Walk 错误 %s: %v", path, err)
@@ -524,9 +538,25 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 				if path != rootDir && isPackFolderType && fsutil.IsResourcePackFolder(path) {
 					if key := relKey(rootDir, path); key != "" {
 						entries[key] = DiffEntry{Path: path, IsDir: true}
+						packFold[key] = &foldAcc{}
+						packDirAbs[key] = path + foldPrefix
 					}
 				}
 				return nil
+			}
+			// 折叠指纹累积（D2′-b）：须在 IsResourceAllowed 过滤之前，令被过滤的
+			// 纹理/mcmeta 等子文件也计入所属 pack 目录——这正是盲区②的载荷。
+			for k, dirPrefix := range packDirAbs {
+				if strings.HasPrefix(path, dirPrefix) {
+					rel := filepath.ToSlash(strings.ToLower(strings.TrimPrefix(path, dirPrefix)))
+					h := fnv.New64a()
+					h.Write([]byte(rel))
+					h.Write([]byte{':'})
+					h.Write([]byte(strconv.FormatInt(info.Size(), 10)))
+					acc := packFold[k]
+					acc.sum += h.Sum64()
+					acc.count++
+				}
 			}
 			if !registry.IsResourceAllowed(info.Name()) {
 				return nil
@@ -536,6 +566,13 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 			}
 			return nil
 		})
+		// Walk 结束：把每个 pack 目录的折叠指纹回填到其 IsDir 条目（D2′-b）。
+		for k, acc := range packFold {
+			if e, ok := entries[k]; ok {
+				e.FoldDigest = fmt.Sprintf("%x:%d", acc.sum, acc.count)
+				entries[k] = e
+			}
+		}
 		// 完整 Walk 才入缓存：rootFailed 已短路，partialFail 时残缺 entries 不入缓存，
 		// 避免后续 30s 内调用方拿到不完整结果
 		if !rootFailed && !partialFail {

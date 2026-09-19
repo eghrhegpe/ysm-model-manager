@@ -19,15 +19,24 @@ type DiffEntry struct {
 	Size  int64
 	IsDir bool
 	// Hash 文件级 SHA256，由 collect 旁挂 scanner 缓存哈希回填（D2′-a / ADR-269）。
-	// 空=未知（>500MB 跳过大 zip、非 hashable、无 scanFn 旧调用），ResourceDiff 回退 Size 对比；
-	// 目录型 pack 条目恒空（scanner 不逐条目哈希，其内容盲区属 D2′-b/c，本字段不覆盖）。
+	// 空=未知（>500MB 跳过大 zip、非 hashable、无 scanFn 旧调用），ResourceDiff 回退 Size 对比。
+	// 目录型 pack 条目恒空（scanner 不逐条目哈希；其内容级判定见 FoldDigest）。
 	Hash string
+	// FoldDigest 目录条目的「结构折叠指纹」（D2′-b / ADR-269，闭盲区②）：
+	// collect 在 Walk 内对该 pack 文件夹下的全部子文件（含被 IsResourceAllowed 过滤、
+	// 不成独立条目的 .png/.mcmeta 等）以「相对路径 + 大小」做顺序无关的 FNV 累积，
+	// 形如 "hex(sum):count"。纹理/子文件的增删、改名、改大小都会翻转指纹 →
+	// contentDiffers 判 Missing。零新 I/O（复用 Walk 已得 os.FileInfo）、不依赖哈希
+	// （scanFn=nil 的 UI 路径亦生效）。诚实局限：仅改字节不改大小（同尺寸重编码纹理）
+	// 不在指纹内——逐文件哈希属热路径现算，触 hashlock 红线，故 D2′-b 不覆盖。
+	// 空=文件条目 / 未折叠目录（回退恒 Synced，不回归）。
+	FoldDigest string
 }
 
 // ResourceDiff 按调用方提供的 key（文件名或相对路径，ADR-064 阶段二统一为
 // relKey 相对路径）对比两侧条目：
-//   - 内容一致（比哈希，无哈希时回退比大小；或含目录条目）→ Synced
-//   - 内容已变化（异哈希，或无哈希时异大小）→ Missing（待推送更新）
+//   - 内容一致（文件：比哈希、无哈希回退比大小；目录：两侧折叠指纹一致）→ Synced
+//   - 内容已变化（文件异哈希或无哈希时异大小 / 目录异折叠指纹）→ Missing（待推送更新）
 //   - 仅全局有 → Missing
 //   - 仅实例有 → Extra
 //
@@ -56,12 +65,16 @@ func ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResul
 	return result
 }
 
-// contentDiffers 判定两侧同名条目内容是否不同（D2′-a / ADR-269）：
-//   - 任一侧目录条目 → 视为相同（目录型 pack 内容盲区属 D2′-b/c，本切片不收紧，恒 Synced 保留现状）；
-//   - 两侧均算出哈希 → 比哈希（异哈希即不同，即便 Size 相同——消除「改内容不改大小」的假绿）；
+// contentDiffers 判定两侧同名条目内容是否不同（D2′-a/b / ADR-269）：
+//   - 目录条目：两侧均带折叠指纹（D2′-b）→ 比指纹（异即不同，闭盲区②）；
+//     任一侧指纹空（未折叠）→ 视为相同（回退恒 Synced，不回归旧态）；
+//   - 文件两侧均算出哈希 → 比哈希（异哈希即不同，即便 Size 相同——消除「改内容不改大小」的假绿）；
 //   - 否则回退比 Size（空哈希：>500MB 大 zip / 非 hashable / 无 scanFn 旧调用 → 现状语义不回归）。
 func contentDiffers(g, i DiffEntry) bool {
 	if g.IsDir || i.IsDir {
+		if g.FoldDigest != "" && i.FoldDigest != "" {
+			return g.FoldDigest != i.FoldDigest
+		}
 		return false
 	}
 	if g.Hash != "" && i.Hash != "" {

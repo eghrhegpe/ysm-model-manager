@@ -204,3 +204,105 @@ func TestDiffFolderContentsScan_HashDetectsDivergence(t *testing.T) {
 		}
 	}
 }
+
+// TestResourceDiff_DirFoldComparison 锁定 D2′-b 判据（contentDiffers 的 IsDir 分支）：
+//   - 两侧目录条目均带折叠指纹 → 比指纹（异→Missing，消除「目录恒 Synced」盲区②）；
+//   - 指纹同 → Synced；
+//   - 任一侧指纹空（未折叠/旧数据）→ 回退恒 Synced（现状不回归）。
+func TestResourceDiff_DirFoldComparison(t *testing.T) {
+	cases := []struct {
+		name        string
+		g, i        DiffEntry
+		wantSynced  bool
+		wantMissing bool
+	}{
+		{
+			name:        "异指纹_同大小→Missing（D2′-b 核心，盲区②闭）",
+			g:           DiffEntry{Path: "packA", IsDir: true, FoldDigest: "ff:3"},
+			i:           DiffEntry{Path: "packA", IsDir: true, FoldDigest: "aa:3"},
+			wantSynced:  false,
+			wantMissing: true,
+		},
+		{
+			name:        "同指纹→Synced",
+			g:           DiffEntry{Path: "packA", IsDir: true, FoldDigest: "ff:3"},
+			i:           DiffEntry{Path: "packA", IsDir: true, FoldDigest: "ff:3"},
+			wantSynced:  true,
+			wantMissing: false,
+		},
+		{
+			name:        "一侧空指纹→Synced（回退，不误判）",
+			g:           DiffEntry{Path: "packA", IsDir: true, FoldDigest: "ff:3"},
+			i:           DiffEntry{Path: "packA", IsDir: true},
+			wantSynced:  true,
+			wantMissing: false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := ResourceDiff(
+				map[string]DiffEntry{"k": tc.g},
+				map[string]DiffEntry{"k": tc.i},
+			)
+			if got := containsPath(r.Synced, tc.g.Path); got != tc.wantSynced {
+				t.Errorf("Synced 含 %q = %v, want %v (result=%+v)", tc.g.Path, got, tc.wantSynced, r)
+			}
+			if got := containsPath(r.Missing, tc.g.Path); got != tc.wantMissing {
+				t.Errorf("Missing 含 %q = %v, want %v (result=%+v)", tc.g.Path, got, tc.wantMissing, r)
+			}
+		})
+	}
+}
+
+// TestSyncResourcesWithConfig_PackFoldDetectsContentChange 端到端验证 D2′-b 接线：
+// resourcepack 为文件级类型、其子文件（.png/.mcmeta）被 IsResourceAllowed 过滤丢弃，
+// 目录条目此前恒 Synced。collect 在 Walk 内对 pack 子文件累积结构折叠指纹（复用已得
+// info、零新 I/O、与 scanFn 无关），使「纹理增删/改大小」经指纹判 Missing；
+// 两包结构一致 → Synced；scanFn=nil（UI 路径）亦生效（指纹不依赖哈希）。
+func TestSyncResourcesWithConfig_PackFoldDetectsContentChange(t *testing.T) {
+	global := t.TempDir()
+	inst := t.TempDir()
+	gPack := filepath.Join(global, "packA")
+	iPack := filepath.Join(inst, "packA")
+	if err := os.MkdirAll(filepath.Join(gPack, "assets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(iPack, "assets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// pack.mcmeta 令两侧被识别为资源包夹
+	if err := os.WriteFile(filepath.Join(gPack, "pack.mcmeta"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(iPack, "pack.mcmeta"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// 同名纹理、大小不同（.png 被过滤不入条目，仅经目录折叠指纹暴露）
+	if err := os.WriteFile(filepath.Join(gPack, "assets", "t.png"), []byte("AAAA"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(iPack, "assets", "t.png"), []byte("BBBBB"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	wantDir := gPack
+
+	// 异大小 → 折叠指纹不同 → Missing（scanFn=nil，证明不依赖哈希）
+	r := SyncResourcesWithConfig(global, inst, nil, nil, "resourcepack")
+	if !containsPath(r.Missing, wantDir) {
+		t.Fatalf("纹理异大小应经折叠指纹判 pack 目录 Missing, got %+v", r)
+	}
+	if containsPath(r.Synced, wantDir) {
+		t.Errorf("不应误判 Synced, got %+v", r)
+	}
+
+	// 两侧纹理改成同大小同内容 → 折叠指纹一致 → Synced
+	if err := os.WriteFile(filepath.Join(iPack, "assets", "t.png"), []byte("AAAA"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// 清缓存：30s TTL 内 collect 会命中旧结果，改盘后需失效（生产靠 scanner 联动；测试手动清）
+	InvalidateSyncScanCaches()
+	r2 := SyncResourcesWithConfig(global, inst, nil, nil, "resourcepack")
+	if !containsPath(r2.Synced, wantDir) {
+		t.Errorf("结构一致应判 Synced, got %+v", r2)
+	}
+}

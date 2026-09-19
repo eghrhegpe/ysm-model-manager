@@ -307,8 +307,10 @@ func (a *App) SyncResources(rtype, instanceName string) (types.ResourceSyncResul
 	}
 
 	// ADR-064 审核修复：原未传 rtype → IsResourceAllowed 全扩展集过滤返回跨类型条目；
-	// 传 rtype 保持与同步管理器同口径（虽然前端当前不消费此 binding，防未来埋雷）
-	result := ysmsync.SyncResources(globalDir, targetDir, rtype)
+	// 传 rtype 保持与同步管理器同口径（虽然前端当前不消费此 binding，防未来埋雷）。
+	// D2′-a：注入 a.scanModelEntries（scanner 缓存哈希）旁挂到同步条目 → 文件型 pack 走内容级
+	// 对比，消除「改内容不改大小」假绿；scanFn 命中缓存非现算，不触 hashlock 红线。
+	result := ysmsync.SyncResourcesWithConfig(globalDir, targetDir, nil, a.scanModelEntries, rtype)
 	return result, nil
 }
 

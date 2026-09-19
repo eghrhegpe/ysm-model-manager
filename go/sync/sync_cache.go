@@ -42,6 +42,11 @@ type syncDirectoryScanKey struct {
 	kind  string
 	root  string
 	rtype string
+	// hashed 区分「带哈希的 resources 扫描」与「纯 Size 扫描」两种 collect 结果，
+	// 防 D2′-a 注入版（scanFn≠nil，条目附 Hash）与 nil 版（Size-only）互相污染缓存：
+	// 否则 nil 调用先 populate 无哈希缓存 → App.SyncResources 命中它 → 内容级判定静默失效 30s。
+	// 仅 "resources" 用；其余 kind 恒 false（字段名构造默认零值）。
+	hashed bool
 }
 
 type syncDirectoryScanEntry struct {

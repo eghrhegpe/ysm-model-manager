@@ -463,11 +463,13 @@ func relKey(root, path string) string {
 }
 
 func SyncResources(globalDir, instanceDir string, rtype ...string) types.ResourceSyncResult {
-	return SyncResourcesWithConfig(globalDir, instanceDir, nil, rtype...)
+	return SyncResourcesWithConfig(globalDir, instanceDir, nil, nil, rtype...)
 }
 
-// SyncResourcesWithConfig 同步资源，支持配置化（含冲突检测）
-func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncConfig, rtype ...string) types.ResourceSyncResult {
+// SyncResourcesWithConfig 同步资源，支持配置化（含冲突检测）。
+// scanFn 提供 scanner 缓存化的文件哈希，旁挂到 DiffEntry.Hash 做内容级对比（D2′-a / ADR-269）；
+// 传 nil → 条目恒无哈希 → 回退 Size 对比（现状，旧调用 / push / pull 沿用）。
+func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncConfig, scanFn ScanFunc, rtype ...string) types.ResourceSyncResult {
 	rtypeID := ""
 	if len(rtype) > 0 {
 		rtypeID = rtype[0]
@@ -483,13 +485,26 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 	// ResourceDiff（ADR-064：scanner 口径 + 单点对比，消除手工对齐漂移）。
 	// 结果叠 30s sync 目录扫描缓存：同一 root+rtype 在 TTL 内只真正 Walk 一次。
 	collect := func(rootDir string) map[string]DiffEntry {
-		cacheKey := syncDirectoryScanKey{kind: "resources", root: rootDir, rtype: rtypeID}
+		cacheKey := syncDirectoryScanKey{kind: "resources", root: rootDir, rtype: rtypeID, hashed: scanFn != nil}
 		if cached, ok := loadSyncScanCache[map[string]DiffEntry](&syncResourcesScanCache, cacheKey); ok {
 			return cached
 		}
 		rootFailed := false
 		partialFail := false // Walk 部分子树失败时设 true，失败结果不入缓存
 		entries := make(map[string]DiffEntry)
+		// 旁挂 scanner 哈希：以 relKey(rootDir, e.Path) 归一为键，与 entries 的 key 同源，
+		// 规避 scanner 与裸 Walk 两套 path 字面不一致。scanFn 命中 scanner 30s 缓存、哈希在其侧
+		// 并行预算——非 sync 热路径现算（不触 hashlock 红线）。nil → 空表 → 条目无哈希 → 回退 Size。
+		hashByKey := make(map[string]string)
+		if scanFn != nil {
+			for _, e := range scanFn(rootDir) {
+				if e.Hash != "" {
+					if rk := relKey(rootDir, e.Path); rk != "" {
+						hashByKey[rk] = e.Hash
+					}
+				}
+			}
+		}
 		filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				log.Printf("[sync] Walk 错误 %s: %v", path, err)
@@ -517,7 +532,7 @@ func SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncCo
 				return nil
 			}
 			if key := relKey(rootDir, path); key != "" {
-				entries[key] = DiffEntry{Path: path, Size: info.Size()}
+				entries[key] = DiffEntry{Path: path, Size: info.Size(), Hash: hashByKey[key]}
 			}
 			return nil
 		})

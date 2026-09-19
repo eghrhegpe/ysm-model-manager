@@ -30,7 +30,7 @@ func TestSyncResourcesWithConfig_ConflictPolicyRequiresLock(t *testing.T) {
 	t.Run("unlocked_soft_pass", func(t *testing.T) {
 		// 未持锁调用——软断言记日志但不 panic，函数正常完成
 		cfg := &types.SyncConfig{ConflictPolicy: string(ResolveForceRemote)}
-		_ = SyncResourcesWithConfig(globalDir, instanceDir, cfg, "ysm")
+		_ = SyncResourcesWithConfig(globalDir, instanceDir, cfg, nil, "ysm")
 	})
 
 	// 子测试 2：持锁 + ConflictPolicy 非空 → 静默通过
@@ -38,7 +38,7 @@ func TestSyncResourcesWithConfig_ConflictPolicyRequiresLock(t *testing.T) {
 		installer.InstallLocker.Lock()
 		defer installer.InstallLocker.Unlock()
 		cfg := &types.SyncConfig{ConflictPolicy: string(ResolveForceRemote)}
-		_ = SyncResourcesWithConfig(globalDir, instanceDir, cfg, "ysm")
+		_ = SyncResourcesWithConfig(globalDir, instanceDir, cfg, nil, "ysm")
 	})
 }
 

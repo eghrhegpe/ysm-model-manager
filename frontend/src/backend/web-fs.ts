@@ -336,13 +336,23 @@ function webDegradedMatches(matched: ModelEntry[]): WebSearchResult[] {
 async function searchWebModels(
   filesRoot: string,
   keyword: string,
-  minBones = 0,
-  maxBones = 0,
-  minCubes = 0,
-  maxCubes = 0,
-  minTex = 0,
-  maxTex = 0,
+  filters?: {
+    minBones?: number;
+    maxBones?: number;
+    minCubes?: number;
+    maxCubes?: number;
+    minTex?: number;
+    maxTex?: number;
+  },
 ): Promise<WebSearchResult[]> {
+  const {
+    minBones = 0,
+    maxBones = 0,
+    minCubes = 0,
+    maxCubes = 0,
+    minTex = 0,
+    maxTex = 0,
+  } = filters ?? {};
   const type = typeFromWebDir(filesRoot);
   const entries = await scanWebModels(`${WEB_ROOT}/${type}`);
   // 对齐桌面 app_scan.go SearchModels：kw = strings.ToLower(strings.TrimSpace(keyword))
@@ -872,7 +882,15 @@ export const webFsBindings = {
     maxCubes = 0,
     minTex = 0,
     maxTex = 0,
-  ) => searchWebModels(filesRoot, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex),
+  ) =>
+    searchWebModels(filesRoot, keyword, {
+      minBones,
+      maxBones,
+      minCubes,
+      maxCubes,
+      minTex,
+      maxTex,
+    }),
   // ADR-111 统一删除入口（web 侧）：接收 rtype 参数但 web 模式按模型粒度删除
   DeleteResourcePack: async (path: string, _rtype: string) => {
     if (!isWebPath(path)) {

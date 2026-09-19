@@ -68,13 +68,12 @@ function switchSameTypeOf(
 /** [子函数 4/6] 行点击替换/追加语义。失败已由 mount 层 catch(logWarn) 记录，此处吞 unhandled rejection。 */
 function applySwitchRowClick(
   p: string,
-  sameType: boolean,
   ctx: PreviewMenuCtx,
-  keepInScene: boolean,
+  opts: { sameType: boolean; keepInScene: boolean },
 ): void {
-  const extra: [{ keepInScene?: boolean }?] = keepInScene ? [{ keepInScene: true }] : [];
+  const extra: [{ keepInScene?: boolean }?] = opts.keepInScene ? [{ keepInScene: true }] : [];
   const r =
-    !sameType && ctx.switchExternal
+    !opts.sameType && ctx.switchExternal
       ? ctx.switchExternal(p, ctx.getSiblings(), ...extra)
       : ctx.switchTo(p, ...extra);
   if (r && typeof (r as Promise<void>).then === "function") swallowError(r as Promise<void>);
@@ -124,14 +123,14 @@ function switchCandidateRows(
       id: `switch-cand-${i}`,
       kind: "row",
       label: `${isCur ? "✓" : "📦"} ${p.split(/[/\\]/).pop() || p}`,
-      action: () => applySwitchRowClick(p, sameType, ctx, false),
+      action: () => applySwitchRowClick(p, ctx, { sameType, keepInScene: false }),
       ...(isCur
         ? {}
         : {
             badge: {
               icon: "add",
               title: t("preview.appendModel"),
-              onClick: () => applySwitchRowClick(p, sameType, ctx, true),
+              onClick: () => applySwitchRowClick(p, ctx, { sameType, keepInScene: true }),
             },
           }),
     };

@@ -160,9 +160,16 @@ export function scanCapDecision(
 }
 
 // ─── 参数提取（ts-morph 参数节点 → {个数, 布尔个数}）─────────
-/** 判一个参数是否布尔型（裸 boolean / 联合含 boolean）。未标注的按初始值兜底（ts-morph 已并入）。 */
+/** 判一个参数是否布尔型（裸 boolean / 联合含 boolean）。
+ *  未标注的按初始值兜底（ts-morph 已并入）。
+ *
+ *  ⚠️ 必须排除**函数类型**：`() => boolean` / `(v: boolean) => void` 里的 boolean 属于
+ *  签名本身，不是「调用位真/假难辨」的布尔陷阱。旧实现按子串匹配把它们一并计入——
+ *  2026-09-19 修：`stgBindLinkMode(isBusyLocal: typeof isBusy, setBusyLocal: typeof setBusy)`
+ *  即被误报 `bool×2`（两者实为函数；ts-morph 会把 `typeof` 展开成含 `=>` 的签名文本）。 */
 function isBoolParam(p: any): boolean {
   const t = (p?.getType?.()?.getText?.() ?? "").toLowerCase();
+  if (t.includes("=>")) return false;
   return t.includes("boolean");
 }
 

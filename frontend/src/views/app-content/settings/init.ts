@@ -102,9 +102,7 @@ function stgBindLinkMode(
   isBusyLocal: typeof isBusy,
   setBusyLocal: typeof setBusy,
   toastErrorLocal: typeof toastError,
-  advCollapseMs: number,
 ): void {
-  void advCollapseMs;
   const linkMode = cfgLocal.linkMode || "copy";
 
   const updateLinkHint = (mode: string): void => {
@@ -357,7 +355,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   stgBindMirrorSelect(root, getCfg(), toastError);
   stgBindUpdateInterval(root, getCfg(), toastError);
-  stgBindLinkMode(root, getCfg(), isBusy, setBusy, toastError, ADV_COLLAPSE_MS);
+  stgBindLinkMode(root, getCfg(), isBusy, setBusy, toastError);
 
   void stgBindShowVersion(root);
   initVersionUpdater(root);

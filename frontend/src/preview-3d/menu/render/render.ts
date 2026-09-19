@@ -9,7 +9,12 @@
 import { t, tOf } from "@/core/i18n/t.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { getSchema } from "@/preview-3d/infra/schema-registry.ts";
-import type { PreviewActionMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
+import {
+  isPreviewFolderNode,
+  type PreviewActionMenuCtx,
+  type PreviewMenuNode,
+  type PreviewMenuNodeKind,
+} from "@/preview-3d/menu/schema/node-types.ts";
 import { createHeaderToggle } from "@/preview-3d/menu/shell/header-toggle.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import {
@@ -688,6 +693,72 @@ export function disposeCustomCleanups(): void {
   }
 }
 
+/** 形状前置：card / folder / 带 children / 带折叠体(renderCustom) 的节点须先于 kind 分派
+ *  判定（kind 判不了「声明了 children」）。返回 true 表示已按可折叠形态渲染、调用方跳过分派。 */
+function appendFoldedShape(
+  container: HTMLElement,
+  node: PreviewMenuNode,
+  deps: RenderMenuDeps,
+): boolean {
+  // card 先于 folder：card 也带 children，否则被下方 folder 判定吞掉、卡牌外壳丢失。
+  if (node.kind === "card") {
+    rmAppendCard(container, node, deps);
+    return true;
+  }
+  // folder 或「带 children」经 isPreviewFolderNode；panel 带 children（shot 工具面板 folder 形态，
+  // roles.test.ts 三通道回归锁）与 panel 带 renderCustom 折叠体（hasFoldedBody）走此路。
+  if (isPreviewFolderNode(node) || hasFoldedBody(node)) {
+    rmAppendFolder(container, node, deps);
+    return true;
+  }
+  return false;
+}
+
+/** kind → 渲染分派签名（与 renderMenu 循环共用 container/node/deps/snapshot 四入参）。 */
+type MenuHandler = (
+  container: HTMLElement,
+  node: PreviewMenuNode,
+  deps: RenderMenuDeps,
+  snapshot: ReturnType<typeof previewSnapshot>,
+) => void;
+
+// [ADR-195 复杂度收口] 表驱动分派取代 renderMenu 内 14 段 switch——认知复杂度 73→个位数。
+// 非 Partial Record 令 PreviewMenuNodeKind 联合新增而此处漏写即在编译期报错（TS2741），
+// 保留原 switch `default: never` 的穷尽守卫语义。card/folder 由 appendFoldedShape 前置接管，
+// 此二臂通常不可达（include 仅为满足联合穷尽，语义仍正确）。
+const MENU_HANDLERS: Record<PreviewMenuNodeKind, MenuHandler> = {
+  field: (c, n) => rmAppendField(c, n),
+  button: (c, n, d) => rmAppendButton(c, n, d.actionCtx),
+  row: (c, n, d) => rmAppendDynamicRow(c, n, d.actionCtx),
+  // [控件原语归一 · ADR-195 刀 2.5] 节点控件经 nodeControlToView 适配为 CapControlView
+  // 直供 cap 栈渲染器（rmAppendSelect/Slider/Toggle 已退役）。
+  select: (c, n, d) => CAP_CONTROL_RENDERERS.select(c, nodeControlToView(n, d.menu)),
+  slider: (c, n, d) => CAP_CONTROL_RENDERERS.slider(c, nodeControlToView(n, d.menu)),
+  toggle: (c, n, d) => CAP_CONTROL_RENDERERS.toggle(c, nodeControlToView(n, d.menu)),
+  color: (c, n, d) => CAP_CONTROL_RENDERERS.color(c, nodeControlToView(n, d.menu)),
+  "material-row": (c, n) => rmAppendMaterialRow(c, n),
+  // 声明式节点直持 cap 控件组：委托 renderCapControls（唯一控件渲染器）。
+  // 惰性：controls 为函数时每次渲染重取（cap 后创建/参数变更后重渲染可见最新全量）。
+  controls: (c, n, _d, snap) => {
+    const ctrls = typeof n.controls === "function" ? n.controls() : n.controls;
+    if (ctrls?.length) renderCapControls(c, ctrls, snap);
+  },
+  divider: (c, n) => rmAppendDecor(c, n),
+  sectionTitle: (c, n) => rmAppendDecor(c, n),
+  custom: (c, n, d) => {
+    if (d.renderCustomDirect && n.renderCustom) {
+      dbg("preview-menu-render", "rendering custom node", { id: n.id });
+      runCustomMount(c, n.renderCustom);
+    } else {
+      rmAppendLeaf(c, n, d);
+    }
+  },
+  panel: (c, n, d) => rmAppendLeaf(c, n, d),
+  action: (c, n, d) => rmAppendLeaf(c, n, d),
+  card: (c, n, d) => rmAppendCard(c, n, d),
+  folder: (c, n, d) => rmAppendFolder(c, n, d),
+};
+
 export function renderMenu(
   container: HTMLElement,
   nodes: PreviewMenuNode[],
@@ -700,73 +771,15 @@ export function renderMenu(
   for (const node of nodes) {
     if (node.visibleWhen && !node.visibleWhen(snapshot)) continue;
     dbg("preview-menu-render", "rendering node", { id: node.id, kind: node.kind });
-    // 形状前置（2026-09 分派穷举化保留）：folder 或「带 children 的节点」都按可折叠 section
-    // 渲染——panel 带 children（如 shot 工具面板在 modelDetailView 里的 folder 形态，
-    // roles.test.ts 三通道回归锁）走此路。kind 判不了「声明了 children」，故先于 switch。
-    // card 先于 folder 判定：card 同样带 children，否则会被下方
-    // 「带 children 即按可折叠 section 渲染」吞掉，卡牌外壳丢失。
-    if (node.kind === "card") {
-      rmAppendCard(container, node, deps);
-      continue;
-    }
-    if (node.kind === "folder" || Array.isArray(node.children) || hasFoldedBody(node)) {
-      rmAppendFolder(container, node, deps);
-      continue;
-    }
-    switch (node.kind) {
-      case "field":
-        rmAppendField(container, node);
-        break;
-      case "button":
-        rmAppendButton(container, node, deps.actionCtx);
-        break;
-      case "row":
-        rmAppendDynamicRow(container, node, deps.actionCtx);
-        break;
-      case "select":
-      case "slider":
-      case "toggle":
-      case "color": {
-        // [控件原语归一 · ADR-195 刀 2.5 投影反转] 节点控件经 nodeControlToView 适配为
-        // CapControlView 直供 cap 栈渲染器（renderCapToggle/Slider/Select/Color）——
-        // 不再构造控件中间对象（rmAppendSelect/Slider/Toggle 已退役）。
-        const view = nodeControlToView(node, deps.menu);
-        CAP_CONTROL_RENDERERS[node.kind](container, view);
-        break;
-      }
-      case "material-row":
-        rmAppendMaterialRow(container, node);
-        break;
-      case "controls": {
-        // 声明式节点直持 cap 控件组：委托 renderCapControls（唯一控件渲染器）。
-        // 惰性：controls 为函数时每次渲染重取（cap 后创建/参数变更后重渲染可见最新全量）。
-        const ctrls = typeof node.controls === "function" ? node.controls() : node.controls;
-        if (ctrls?.length) renderCapControls(container, ctrls, snapshot);
-        break;
-      }
-      case "divider":
-      case "sectionTitle":
-        rmAppendDecor(container, node);
-        break;
-      case "custom":
-        if (deps.renderCustomDirect && node.renderCustom) {
-          dbg("preview-menu-render", "rendering custom node", { id: node.id });
-          runCustomMount(container, node.renderCustom);
-        } else {
-          rmAppendLeaf(container, node, deps);
-        }
-        break;
-      case "panel":
-      case "action":
-        rmAppendLeaf(container, node, deps);
-        break;
-      default: {
-        // 穷举兜底：kind 联合新增未在此处理 → 编译期 never 报错（对照 cap-controls.ts
-        // renderCapControls 同款纪律）；运行期 warn 防「拼错 kind 静默渲染成死行」。
-        const _unhandled: never = node.kind;
-        console.warn(`[preview-menu] 未处理的菜单节点 kind: ${_unhandled as string}`);
-        rmAppendLeaf(container, node, deps);
-      }
+    if (appendFoldedShape(container, node, deps)) continue;
+    // 运行期 undefined 兜底：伪造 kind（as unknown as PreviewMenuNode，如 env.ts 节点）
+    // 不在表内 → warn + 落叶行壳，防「拼错 kind 静默渲染成死行」，亦防 TypeError。
+    const handler: MenuHandler | undefined = MENU_HANDLERS[node.kind];
+    if (handler) {
+      handler(container, node, deps, snapshot);
+    } else {
+      console.warn(`[preview-menu] 未处理的菜单节点 kind: ${node.kind}`);
+      rmAppendLeaf(container, node, deps);
     }
   }
   dbg("preview-menu-render", "complete", { totalNodes: nodes.length });

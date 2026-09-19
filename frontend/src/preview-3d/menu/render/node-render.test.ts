@@ -1,5 +1,5 @@
 // ===== renderMenu 新 kind 测试：field / button / row / sectionTitle =====
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   clearFolderCollapsedState,
   disposeCustomCleanups,
@@ -86,6 +86,31 @@ describe("renderMenu 新 kind", () => {
     expect(on).toBe(true);
     toggle.click();
     expect(on).toBe(false);
+  });
+
+  it("color: 渲染取色行（nodeControlToView → renderCapColor），值 0xRRGGBB ↔ #rrggbb 双向", () => {
+    // 锁定 color 原生 kind 的分派通路（重构前无测试覆盖，防 handler-map 化误删此臂）
+    let val = 0xff8800;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "water-color",
+        kind: "color",
+        label: "水色",
+        control: { get: () => val, set: (v: unknown) => { val = Number(v); } },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="cap-water-color"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(row.textContent).toContain("水色");
+    const picker = row.querySelector('input[type="color"]') as HTMLInputElement;
+    expect(picker).not.toBeNull();
+    expect(picker.value).toBe("#ff8800");
+    // 取色输入 → spec.set 收到解析后的数值
+    picker.value = "#00ff00";
+    picker.dispatchEvent(new Event("input"));
+    expect(val).toBe(0x00ff00);
   });
 
   it("material-row: 渲染组合控件行（label + eye + slider），eye 点击翻转 / slider 触发 set", () => {
@@ -741,6 +766,22 @@ describe("renderMenu 新 kind", () => {
     // 幂等：表已清空，二次全清不再触发（dispose 与 overlay 兜底双调无害）
     disposeCustomCleanups();
     expect([...calls].sort()).toEqual(["a", "b"]);
+  });
+
+  it("未知 kind（伪造节点）：兜底渲染为叶行并 warn，不抛错", () => {
+    // 锁定穷举分派的运行期兜底臂：as-unknown 伪造的未知 kind（env.ts / schema-registry.test.ts
+    // 有此类节点）不得 TypeError；须 warn + 落 rmAppendLeaf 行壳（重构后此语义须保持）
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const forged = { id: "forged-x", kind: "totally-unknown" } as unknown as PreviewMenuNode;
+      const container = document.createElement("div");
+      expect(() => renderMenu(container, [forged], makeDeps() as any)).not.toThrow();
+      // 兜底走叶行：testid = preview-<id>
+      expect(container.querySelector('[data-testid="preview-forged-x"]')).not.toBeNull();
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 

@@ -31,6 +31,20 @@ const PERF_MODE_NAMES: Record<string, LocaleKey> = {
   scan: "diagnostics.perfModeNameScan",
 };
 
+/** 控件 id → **不读它**的模式集（真相源 = 各命令模块的 read*：perf-single-bench / perf-concurrent /
+ * perf-scan-bench）。未登记 = 所有模式都读；登记了则在列出的模式下置 disabled——
+ * 「可见但被忽略」与「同控件跨模式改义」是 §2.6 要清的同一笔账的两面。 */
+export const PERF_UNREAD_MODES: Record<string, readonly string[]> = {
+  "diag-perf-model": ["conc", "scan"],
+  "diag-perf-order": ["scan"],
+  "diag-perf-max": ["conc", "scan"],
+  "diag-perf-baseline-save": ["conc", "scan"],
+  "diag-perf-baseline-compare": ["conc", "scan"],
+  "diag-perf-baseline-th": ["conc", "scan"],
+  "diag-perf-conc-workers": ["single", "scan"],
+  "diag-perf-conc-max": ["single", "scan"],
+};
+
 /** 运行按钮 id → 其所属模式（scope hint 随此派生，不另写第二份） */
 export const PERF_RUN_BUTTON_MODE_KEYS: Record<string, string> = {
   "diag-perf-run": "single",
@@ -107,6 +121,12 @@ function initPerfMode(root: ShadowRoot): () => void {
     for (const [id, modeKey] of Object.entries(PERF_RUN_BUTTON_MODE_KEYS)) {
       const el = root.getElementById(id);
       if (el) el.title = perfScopeHint(modeKey);
+    }
+    // 载荷不读的控件当场禁用（ADR-278 §2.6 反向半边）：整行隐藏的碰不到，三模式共用行里
+    // 「能改却不被读」（如 scan 下的排序）才是欺骗——按 PERF_UNREAD_MODES 单点表置灰。
+    for (const [id, unread] of Object.entries(PERF_UNREAD_MODES)) {
+      const el = root.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (el) el.disabled = unread.includes(mode);
     }
 
     const modelOpt = Array.from(targetEl?.options ?? []).find((o) => o.value === "");

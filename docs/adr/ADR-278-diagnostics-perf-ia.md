@@ -75,6 +75,8 @@
 
 **维护成本约束（同日二修）**：首版每模式一套平行键（`perfScopeHint{Single,Conc,Scan}` / `perfIterations{Single,Scan}`）+ 拼接写死在 apply 里，加一个模式要改 ≈3N 处（N = 语言数）。收敛为接线面单点：**`perf.ts` 三张表（`PERF_MODE_NAMES` / `PERF_RUN_BUTTON_MODE_KEYS` / `PERF_ITER_SUFFIX_KEYS`）+ `perfScopeHint()` 组装函数**；文案本体去模式分叉（`perfScopeHint` 带 `{mode}` 插值、迭代标签 = 中性基词 + 后缀）。新增模式 = 表里各加一行 + 一个 `perfModeName*`，成本 O(模式数) → O(1)。测试同步降噪：断言只锁语义关键词（重复解析/全库重扫/一个模型…）不锁拼接形态——改措辞不应红测试；另钉一条接线表单点性（每个运行按钮 id 都有派生 hint，未知模式不编造机制句）；真实浏览器链路补 e2e（拨选择器→当场改口 / conc 回落 toast 上屏 / 三按钮 hint 无 `{mode}` 残留）。
 
+**反向半边（同日三修）：「可见但不被读」也是欺骗**。首版只管了「同控件跨模式改义要改名」，漏了对偶问题：控件在当前模式下**根本不进载荷**却仍可交互。排序行原登记 `single conc`，scan 下整行隐藏（碰不到，诚实）；但基准三件套与并发控件的「不可用」靠行隐藏兼任，一旦共用行拆分（排序行改为三模式常驻以承载 scan 置灰），这层兼任就碎了。收口为第四张表 **`PERF_UNREAD_MODES`（控件 id → 不读它的模式集，真相源 = 各命令模块 read\*）**：apply 内按表置 disabled，隐藏行不管、可见行必判；`perf-matrix.test.ts` 的双维门禁（目标集≠model 禁基准）与本表（模式≠single 禁基准）正交共存。护栏测试逐模式×逐控件扫一遍「可见即可用可用性 = 载荷读不读」，新控件忘登记 = 所有模式可读（宽容），错登 = 当场红。
+
 ## 3. 后果（Consequences）
 
 **正面**

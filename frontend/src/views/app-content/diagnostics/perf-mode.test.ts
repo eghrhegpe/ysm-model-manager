@@ -11,7 +11,7 @@
 //    每个运行按钮挂本模式「测什么对象」hint、并发回落不再静默改用户的选择
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
-import { initPerfPanel, perfScopeHint, PERF_RUN_BUTTON_MODE_KEYS } from "./perf.ts";
+import { initPerfPanel, perfScopeHint, PERF_RUN_BUTTON_MODE_KEYS, PERF_UNREAD_MODES } from "./perf.ts";
 
 const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
@@ -39,13 +39,11 @@ function makeRoot(mode = "single"): ShadowRoot {
       <option value="">单模型</option>
       <option value="__repo__">全库扁平</option>
     </select>
-    <select id="diag-perf-order" data-testid="diag-perf-order">
-      <option value="path">路径升序</option>
-    </select>
-    <input id="diag-perf-max" value="5">
-    <input id="diag-perf-baseline-save" type="checkbox">
-    <input id="diag-perf-baseline-compare" type="checkbox">
-    <input id="diag-perf-baseline-th" value="50">
+    <div class="perf-row" data-perf-mode="single conc scan">
+      <select id="diag-perf-order" data-testid="diag-perf-order">
+        <option value="path">路径升序</option>
+      </select>
+    </div>
     <div class="perf-row" data-perf-mode="single" id="row-single"></div>
     <div class="perf-row" data-perf-mode="single scan" id="row-iter">
       <label for="diag-perf-iter" id="diag-perf-iter-label">迭代次数</label>
@@ -53,6 +51,21 @@ function makeRoot(mode = "single"): ShadowRoot {
     </div>
     <div class="perf-row" data-perf-mode="single conc" id="row-target">
       <label for="diag-perf-rtype" id="diag-perf-target-label">目标集</label>
+    </div>
+    <div class="perf-row" data-perf-mode="conc" id="row-conc-inputs">
+      <input id="diag-perf-conc-workers" value="4">
+      <input id="diag-perf-conc-max" value="20">
+    </div>
+    <div class="perf-row" data-perf-mode="single" id="row-single-model">
+      <input id="diag-perf-model" value="/m/a.ysm">
+    </div>
+    <div class="perf-row" data-perf-mode="single" id="row-single-max">
+      <input id="diag-perf-max" value="5">
+    </div>
+    <div class="perf-row" data-perf-mode="single" id="row-baseline">
+      <input id="diag-perf-baseline-save" type="checkbox">
+      <input id="diag-perf-baseline-compare" type="checkbox">
+      <input id="diag-perf-baseline-th" value="50">
     </div>
     <button id="diag-perf-run"></button>
     <button id="diag-perf-conc-run"></button>
@@ -213,5 +226,40 @@ describe("基准模式接线（ADR-278）", () => {
     // 重放路径：填充完成后再次 apply()，值已是 __repo__ → 不重复弹
     await Promise.resolve();
     expect(concFallbackToastMsgs().length).toBe(1);
+  });
+
+  // ===== ADR-262 D8 的半边账：「被禁用」比「勾了却没生效」诚实——但门禁只管到目标集维度，
+  // 没管到模式维度：基准三件套只登记在 single 行（tpl.ts data-perf-mode="single"），scan/conc
+  // 下整行被 .perf-mode-off 隐藏（不可交互，诚实）；真正要钉的是反向：**当前模式可见却不被
+  // 载荷读取**的控件必须 disabled——基准三件套在 conc/scan 下、并发控件在 single/scan 下。
+  it("非 single 模式下可见但载荷不读的控件必已禁用（隐藏的不用禁，可见的可改就必须拒）", () => {
+    // 按 data-perf-mode 可见性判定：整行被 .perf-mode-off 隐藏的无需禁（用户碰不到）；
+    const baselineIds = [
+      "diag-perf-baseline-save",
+      "diag-perf-baseline-compare",
+      "diag-perf-baseline-th",
+    ];
+    for (const mode of ["single", "conc", "scan"]) {
+      const root = makeRoot(mode);
+      initPerfPanel(root, esc);
+      const visibleRows = [...root.querySelectorAll<HTMLElement>("[data-perf-mode]")].filter(
+        (el) => !el.classList.contains("perf-mode-off"),
+      );
+      for (const id of [...baselineIds, "diag-perf-conc-workers", "diag-perf-conc-max"]) {
+        const el = root.getElementById(id) as HTMLInputElement | null;
+        if (!el) continue; // 夹具未放的控件不判（宽容旧 DOM）
+        const inVisibleRow = visibleRows.some((row) => row.contains(el));
+        if (!inVisibleRow) continue; // 整行已隐藏 → 不可交互，无需禁
+        // 基准三件套是双维门禁：模式=single **且**目标集=model 才可用（ADR-262 D8，
+        // syncPerfBaselineControls 管目标集维、本表管模式维）。夹具 rtype 默认 ""=单模型，
+        // single 下基准就该可用——期望值随「当前选中目标集」算，不写死。
+        const isModelTarget =
+          (root.getElementById("diag-perf-rtype") as HTMLSelectElement).value === "";
+        const live = id.startsWith("diag-perf-baseline-")
+          ? mode === "single" && isModelTarget
+          : !PERF_UNREAD_MODES[id]?.includes(mode); // 未登记 = 所有模式都读（如迭代框）
+        expect({ mode, id, disabled: el.disabled }).toEqual({ mode, id, disabled: !live });
+      }
+    }
   });
 });

@@ -215,7 +215,9 @@ export function diagnosticsHTML(): string {
         <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
           <option value="">${t("diagnostics.perfTargetModel")}</option>
         </select>
-        <label for="diag-perf-order">${t("diagnostics.perfOrder")}</label>
+      </div>
+      <div class="perf-row" data-perf-mode="single conc scan">
+        <label for="diag-perf-order" id="diag-perf-order-label">${t("diagnostics.perfOrder")}</label>
         <select id="diag-perf-order" class="diag-config-select" data-testid="diag-perf-order">
           ${perfOrderOptionsHTML()}
         </select>

@@ -83,8 +83,9 @@ func TestNestDirLevelTree_SameSegmentLeafAndContainer(t *testing.T) {
 		t.Fatal(err)
 	}
 	flat := []types.ResourceSyncItem{
-		// 先插容器 a（来自全局侧 a/b.ysm）
+		// 先插容器 a（来自全局侧 a/b.ysm + a/c.ysm）
 		{Path: filepath.Join(a, "b.ysm"), Name: "b.ysm", Status: types.SyncStatusSynced, Type: "ysm"},
+		{Path: filepath.Join(a, "c.ysm"), Name: "c.ysm", Status: types.SyncStatusMissing, Type: "ysm"},
 		// 再插叶子 a 自身（来自实例侧 Extra）
 		{Path: instDir + string(filepath.Separator) + "a", Name: "a", Status: types.SyncStatusOptional, Type: "ysm"},
 	}
@@ -94,18 +95,25 @@ func TestNestDirLevelTree_SameSegmentLeafAndContainer(t *testing.T) {
 	}
 	// __self 防御：同段名既是叶子（实例侧 Extra 的 instDir/a）又是中间容器（全局侧 a/b.ysm）。
 	// 叶子被收进容器的 __self 内部槽位，展示时仍以其原名 "a" 出现（内部 map 键 __self 不外显）。
+	// 本例容器含 missing 子项 → 聚合 diverged → 容器 Path 取全局根（globalDir/a），与实例叶子的
+	// instDir/a 不同：属「两侧各有一个同名夹」的真实对象，故保留 __self 行。
+	// 同路径的自身 marker（混合夹：既有平铺模型文件又有子模型夹）不属此列，由 absorbSelfMarker
+	// 吸收——见 TestNestDirLevelTree_SamePathSelfMarkerMerged。
 	foundLeafA := false
 	foundB := false
+	foundC := false
 	for _, c := range out[0].Children {
 		switch {
 		case c.Name == "a" && !c.IsDir && c.Path == filepath.Join(instDir, "a"):
 			foundLeafA = true
 		case c.Name == "b.ysm":
 			foundB = true
+		case c.Name == "c.ysm":
+			foundC = true
 		}
 	}
-	if !foundLeafA || !foundB {
-		t.Fatalf("容器 a 应同时含叶子 a(实例侧) 与 b.ysm, got %+v", out[0].Children)
+	if !foundLeafA || !foundB || !foundC {
+		t.Fatalf("容器 a 应含叶子 a(实例侧) 与 b.ysm/c.ysm, got %+v", out[0].Children)
 	}
 }
 
@@ -130,5 +138,64 @@ func TestBuildDirLevelChildren_MissingGlobalDir(t *testing.T) {
 	out := buildDirLevelChildren(filepath.Join(base, "no-such"), filepath.Join(base, "inst"), "ysm", "📦", filepath.Join(base, "no-such"))
 	if out != nil {
 		t.Fatalf("全局夹缺失应返回 nil, got %d", len(out))
+	}
+}
+
+// 同路径目录 marker（混合夹：既含平铺模型文件、又含子模型夹）必须并入容器，
+// 不得渲染成「同名目录嵌在自己里面」——扫描侧为与对侧键集对齐会把容器自身也登记成条目
+// （sync_dirlevel.go 的目录 marker），展示层原样吐行就多出一行同名影子目录；且其 Path 与
+// 容器 Path 相同 → 前端 dirOpen 共用一个 key，点一次容器会连带展开影子行。
+// 2026-09 实测：整合包同步页出现 `2.大学学姐 > 2.大学学姐`（真实仓库混合夹布局）。
+func TestNestDirLevelTree_SamePathSelfMarkerMerged(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	instDir := filepath.Join(base, "inst")
+	a := filepath.Join(globalDir, "a")
+	sub := filepath.Join(a, "sub")
+	if err := os.MkdirAll(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+	marker := types.ResourceSyncItem{
+		Path: a, Name: "a", Status: types.SyncStatusSynced, Type: "ysm", IsDir: true,
+		// 容器的子项：直接文件（Name 无 "/"）+ 子夹内文件（RelPath 形态，带 "/"）
+		Children: []types.ResourceSyncItem{
+			{Path: filepath.Join(a, "loose.ysm"), Name: "loose.ysm", Status: types.SyncStatusSynced, Type: "ysm"},
+			{Path: filepath.Join(sub, "in.ysm"), Name: "sub/in.ysm", Status: types.SyncStatusSynced, Type: "ysm"},
+		},
+	}
+	flat := []types.ResourceSyncItem{
+		marker,
+		{Path: sub, Name: "sub", Status: types.SyncStatusSynced, Type: "ysm", IsDir: true},
+	}
+	out := nestDirLevelTree(flat, globalDir, instDir, "ysm")
+	if len(out) != 1 || !out[0].IsDir || out[0].Name != "a" {
+		t.Fatalf("应只剩一个容器 a: %+v", out)
+	}
+	names := make([]string, 0, len(out[0].Children))
+	for _, c := range out[0].Children {
+		names = append(names, c.Name)
+	}
+	want := map[string]bool{"loose.ysm": false, "sub": false}
+	for _, n := range names {
+		if n == "a" {
+			t.Fatalf("容器 a 不应含自身 marker 的影子行「a」: %v", names)
+		}
+		if n == "sub/in.ysm" {
+			t.Fatalf("子夹内文件应由子夹节点展示，不应上提到容器: %v", names)
+		}
+		if _, ok := want[n]; ok {
+			want[n] = true
+		}
+	}
+	for n, hit := range want {
+		if !hit {
+			t.Fatalf("容器 a 应含 %q, got %v", n, names)
+		}
+	}
+	// marker 行被吸收后，容器不得再含 Path 等于自身的子项（前端 dirOpen key 冲突的根因）
+	for _, c := range out[0].Children {
+		if c.Path == out[0].Path {
+			t.Fatalf("容器子项 Path 不得等于容器 Path: %+v", c)
+		}
 	}
 }

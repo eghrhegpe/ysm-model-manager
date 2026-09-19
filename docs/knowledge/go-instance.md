@@ -68,6 +68,7 @@ status: active
 - **disabled 归入聚合「中立」而非 hasPush**：禁用项是用户刻意 .ban 的内容，不应驱动容器级 push（防整夹 InstallDir 覆盖 .ban）；含 synced+disabled 无 missing/optional 的容器聚合为 synced、不出现 push。`relOf` 前缀归属带分隔符守卫（`p == basedir || HasPrefix(p, basedir+sep)`），防两根呈前缀嵌套（`D:\repo` vs `D:\repo-instance`）误归属
 - **容器 Path 按聚合状态选源侧**：`dirLevelContainerPath`——optional（可拉取）→ 实例根（pull 源），其余（可推送/同步）→ 全局根（push 源），避免混合夹锁错源侧
 - **同段名叶子/容器冲突防御**：`nestDirLevelTree.insert` 对「同段名先是叶子、又作容器段下钻」用 `__self` 子项收容，防覆盖容器与 nil map 写入 panic
+- **同路径自引用 marker 必须并入容器（`absorbSelfMarker`，2026-09 修）**：混合夹（自身直接含平铺模型文件、又含子模型夹）在 `sync_dirlevel.go` 会被登记**两条**——除容器身份外还把自身登记成一条目录条目（目录 marker，用于与对侧同名叶子目录对齐键集，防幻影 Missing+Extra）。展示层若原样吐行就渲染成「同名目录嵌在自己里面」（实测 `2.大学学姐 > 2.大学学姐`）；更糟的是该 marker 的 `Path` 与容器 `Path` 相同，而前端 `dirOpen` 以 `data-path` 为 key —— 点一次容器会**连带展开影子行**。故 `treeChildren` 在算出 `containerPath` 后调 `absorbSelfMarker(children, containerPath)`：`Path == containerPath` 的子项不吐行，把它的**直接子文件**（`Name` 不含 `/`）并入容器（含 `/` 的属子夹，由子夹节点负责展示，上提会把同一批文件列两遍）。**判别式就是 Path 相等**：子夹下的叶子路径必然更深不会误伤；容器聚合为 optional 时 `containerPath` 取实例根、与实例侧同名叶子路径重合 → 同属「同一个夹」，也并入。跨侧同名但**路径不同**的（容器 `globalDir/a` + 实例独有 `instDir/a`）是真实两个对象，`__self` 行保留
 
 ## 已知限制 / 待治理（2026-08-24 审计）
 

@@ -445,6 +445,8 @@ func treeChildren(node *nestTreeNode, baseRel, globalDir, instDir, rtype string)
 		// 容器绝对路径：按聚合 status 选根——optional(可拉取) 源在实例侧，其余(可推送/同步) 源在
 		// 全局侧。作为前端展开 key 与容器级 push/pull 的 data-path；避免混合夹锁错源侧
 		containerPath := dirLevelContainerPath(status, childRel, globalDir, instDir)
+		// 混合夹的目录 marker（其 Path == containerPath）不吐行，直接文件并入容器
+		children = absorbSelfMarker(children, containerPath)
 		// Type 必填：前端 applyFilter 按 i.type === 选中类型过滤，容器若缺 Type(=空串)
 		// 会被整体丢弃，导致整棵嵌套子树消失（嵌套1→嵌套2→动力臂 不显示的根因）
 		out = append(out, types.ResourceSyncItem{
@@ -458,6 +460,34 @@ func treeChildren(node *nestTreeNode, baseRel, globalDir, instDir, rtype string)
 		})
 	}
 	return out
+}
+
+// absorbSelfMarker 吸收「容器自身的目录 marker」行，返回容器的实际子项。
+//
+// 背景：混合夹（自身直接含平铺模型文件、又含子模型夹）在扫描侧会被登记两条——除容器身份外，
+// 还把自身登记成一条目录条目（sync_dirlevel.go 的目录 marker，用于与对侧同名叶子目录对齐键集，
+// 防「内容相同却显示分歧」的幻影 Missing+Extra）。展示层若原样吐行，会渲染成
+// 「同名目录嵌在自己里面」（如 `2.大学学姐 > 2.大学学姐`）；更糟的是该 marker 的 Path 与容器
+// Path 相同，而前端 dirOpen 以 data-path 为 key —— 点一次容器会连带展开这个影子行。
+//
+// 处置：marker 行不吐，把它的**直接子文件**（Name 不含 "/"）并入容器；子夹内的文件已由各子夹
+// 节点负责展示（marker 的 children 是 buildDirLevelChildren 的递归 RelPath 列表，含 "/" 的
+// 属于子夹），上提会同一批文件列两遍。判定用 Path 相等：子夹下的叶子路径必然更深，不会误伤。
+func absorbSelfMarker(children []types.ResourceSyncItem, containerPath string) []types.ResourceSyncItem {
+	merged := make([]types.ResourceSyncItem, 0, len(children))
+	for i := range children {
+		ch := children[i]
+		if ch.Path != containerPath {
+			merged = append(merged, ch)
+			continue
+		}
+		for j := range ch.Children {
+			if direct := ch.Children[j]; !strings.Contains(direct.Name, "/") {
+				merged = append(merged, direct)
+			}
+		}
+	}
+	return merged
 }
 
 // dirLevelContainerPath 按容器聚合状态还原目录绝对路径。

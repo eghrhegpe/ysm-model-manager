@@ -1074,7 +1074,6 @@ auto_fields:
     - roleBaseName
     - ROW_H_GRID
     - ROW_H_LIST
-    - runGuiFlow
     - runHealthAudit
     - runLauncherDetect
     - runMcSearch

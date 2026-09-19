@@ -13,7 +13,6 @@ import { expect, type Page, test } from "./fixture.ts";
 import { gotoApp, navItem } from "./helpers.ts";
 import {
   CONC_BENCH_REAL,
-  GUI_FLOW_REAL,
   SCAN_BENCH_REAL,
   SCAN_BENCH_RUST_REAL,
   SINGLE_BENCH_BASELINE_MISSING,
@@ -103,6 +102,51 @@ test.describe("诊断页", () => {
         })
         .toBe(true);
     }
+  });
+
+  test("record tab 引导空态：未加载模型时展示「暂无加载记录」+ 引导提示（内容回归防线）", async ({
+    page,
+  }) => {
+    // f8b70b360 核心卖点「trace 进即渲染 + 引导空态」在真实浏览器无防回归防线：
+    // 单元层 jsdom 可覆盖逻辑，但 i18n 键缺失/占位符残留/嵌套吞并这类真实渲染缺陷单元层失明
+    //（tpl-structure.test.ts:4-9 自白过同一教训）。可断言选择器来自 perf-trace.ts 空态分支：
+    //   #diag-load-trace > .perf-no-data（t("diagnostics.loadTraceNoData")）
+    //   #diag-load-trace > .perf-no-hint（t("diagnostics.loadTraceHint")）
+    await clickBySelector(page, `.repo-tab[data-tab="record"]`);
+    // 空态文案（zh-CN）——按 lang 渲染结果断言一次，锁「键存在 + 无 {{ 占位符残留 + 非嵌套吞并」
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() =>
+            document
+              .querySelector("app-content")
+              ?.shadowRoot?.querySelector("#diag-load-trace .perf-no-data")
+              ?.textContent?.trim(),
+          ),
+        {
+          timeout: 5000,
+          message: "record tab 空态「暂无加载记录」未渲染（疑 i18n 键缺失或面板被吞并）",
+        },
+      )
+      .toBe("暂无加载记录");
+    // 引导提示文案同锁（防「有数据态提示键误用到空态」的措辞漂移）
+    await expect(
+      page.evaluate(() =>
+        document
+          .querySelector("app-content")
+          ?.shadowRoot?.querySelector("#diag-load-trace .perf-no-hint")
+          ?.textContent?.trim(),
+      ),
+    ).toBe("加载模型后自动记录，点击刷新查看");
+    // 有数据态不混入：无记录时不应出现卡片（renderTraceRecord 的 .perf-hist-card）
+    await expect(
+      page.evaluate(
+        () =>
+          document
+            .querySelector("app-content")
+            ?.shadowRoot?.querySelectorAll("#diag-load-trace .perf-hist-card").length,
+      ),
+    ).toBe(0);
   });
 
   test("日志工具栏两行语义分组：行1=子tab+动作，行2=筛选+搜索", async ({ page }) => {
@@ -322,65 +366,6 @@ test.describe("诊断页", () => {
       return root?.querySelector('[data-testid="diag-log-list"]')?.textContent ?? "";
     });
     expect(listText).toContain("No logs yet");
-  });
-});
-
-// ⑤ 性能面板 · gui-flow 真实载荷渲染（同族守卫：ADR-262 D2 实测/估算分离 + 占位符残留）
-test.describe("诊断页 · gui-flow 真实载荷渲染（ADR-262 D5）", () => {
-  test.beforeEach(async ({ page }) => {
-    await gotoApp(page);
-    await navItem(page, "diagnostics").click();
-    await page.waitForFunction(
-      () => {
-        const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
-      },
-      undefined,
-      { timeout: 10000, polling: 200 },
-    );
-    await clickBySelector(page, '.repo-tab[data-tab="gui"]');
-  });
-
-  test("阶段行/估算标记/汇总分离渲染，描述换行是真 <br> 而不是字面量", async ({ page }) => {
-    await installCliMock(page, { "gui-flow": { data: GUI_FLOW_REAL } });
-    await clickBySelector(page, '[data-testid="diag-perf-gui-run"]');
-
-    await waitForCount(page, ".perf-gui-stage", GUI_FLOW_REAL.stages.length);
-    const got = await page.evaluate(() => {
-      const root = document.querySelector("app-content")?.shadowRoot;
-      const out = root?.querySelector('[data-testid="diag-perf-gui-out"]') as HTMLElement | null;
-      const q = (sel: string): HTMLElement[] =>
-        [...(out?.querySelectorAll(sel) ?? [])] as HTMLElement[];
-      return {
-        text: out?.textContent ?? "",
-        stageRows: q(".perf-gui-stage").length,
-        estTags: q(".perf-gui-est").length,
-        descLines: q(".perf-gui-desc")[0]?.querySelectorAll("br").length ?? 0,
-      };
-    });
-
-    // ① 阶段行数与载荷一致
-    expect(got.stageRows).toBe(GUI_FLOW_REAL.stages.length);
-    // ② 估算标记数 = 载荷里「估算成分 > 0」的阶段数（实测/估算必须人眼可辨，ADR-262 D2）
-    const expectedEst = GUI_FLOW_REAL.stages.filter(
-      (s) => s.kind === "estimated" || (s.estimated_ms ?? 0) > 0,
-    ).length;
-    expect(got.estTags).toBe(expectedEst);
-    // ③ 估算是**分列**呈现（实测 + 估算），不是把估算悄悄加进实测
-    const five = GUI_FLOW_REAL.stages.find((s) => s.name.startsWith("⑤"));
-    if (!five) throw new Error("夹具应含 ⑤ 数据准备阶段（否则本断言测的是空气）");
-    expect(got.text).toContain(
-      `${five.ms.toFixed(2)}ms + ${(five.estimated_ms ?? 0).toFixed(2)}ms`,
-    );
-    // ④ 汇总不得把估算计入总耗时（D2 硬判据）
-    expect(got.text).toContain(`${GUI_FLOW_REAL.total_ms.toFixed(2)}ms`);
-    const inflated = GUI_FLOW_REAL.total_ms + (GUI_FLOW_REAL.estimated_ms ?? 0);
-    expect(got.text).not.toContain(`${inflated.toFixed(2)}ms`);
-    // ⑤ 描述里的多行必须渲染成真换行：esc 先转义再拼 <br>，否则界面显示字面量「<br>」
-    expect(got.descLines).toBeGreaterThan(0);
-    expect(got.text).not.toContain("<br>");
-    // ⑥ 通用残留守卫
-    expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
   });
 });
 

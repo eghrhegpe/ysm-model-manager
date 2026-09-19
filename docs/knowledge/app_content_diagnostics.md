@@ -33,7 +33,6 @@ auto_fields:
     - populatePerfTargetOptions
     - renderHealthReport
     - renderLoadTraceSection
-    - runGuiFlow
     - runHealthAudit
     - runSingleBench
     - scanConflicts

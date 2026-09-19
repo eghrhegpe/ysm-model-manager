@@ -49,7 +49,6 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="diag-perf-hist"></div>
     <button class="repo-tab" data-tab="log">日志</button>
     <button class="repo-tab" data-tab="bench">基准</button>
-    <button class="repo-tab" data-tab="gui">GUI</button>
     <button class="repo-tab" data-tab="record">记录</button>
     <button class="repo-tab" data-tab="conflict">冲突</button>
     <button class="repo-tab" data-tab="health">体检</button>
@@ -833,9 +832,9 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     isViewerMode.mockReturnValue(true);
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    // 桌面专属 top tab：三个只读扫描 + bench（跑基准）+ gui（端到端）——后两者每个入口都是桌面专属 CLI，
+    // 桌面专属 top tab：三个只读扫描 + bench（跑基准）——每个入口都是桌面专属 CLI，
     // 只藏按钮会留下「满屏引导空态却点不着任何东西」的空壳 tab（ADR-278 §2.5）
-    for (const name of ["conflict", "health", "sync-conflict", "bench", "gui"]) {
+    for (const name of ["conflict", "health", "sync-conflict", "bench"]) {
       expect(
         (root.querySelector(`.repo-tab[data-tab="${name}"]`) as HTMLElement).style.display,
       ).toBe("none");
@@ -868,7 +867,8 @@ describe("initDiagnostics — trace 面板进入语义（2026-09）", () => {
     clearLoadTraces();
   });
 
-  it("激活 trace tab → 即渲染内存 store（无需先手点刷新）", async () => {
+  it("init 即渲染：有记录时渲染进 #diag-load-trace，未记录时呈现引导空态", async () => {
+    // 前半：有记录 → renderLoadTraceSection 渲染卡片
     recordLoadTrace({
       ts: Date.now(),
       format: "mmd",
@@ -879,8 +879,34 @@ describe("initDiagnostics — trace 面板进入语义（2026-09）", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     const out = root.getElementById("diag-load-trace") as HTMLElement;
-    (root.querySelector('.repo-tab[data-tab="record"]') as HTMLElement).click();
     await waitFor(() => expect(out.textContent).toContain("player.ysm"));
+    clearLoadTraces();
+    // 后半：记录清空 → 同函数重渲出引导空态（进即渲染是渲染调用，不是状态缓存）
+    (root.querySelector('.repo-tab[data-tab="record"]') as HTMLElement).click();
+    await waitFor(() =>
+      expect(out.textContent).toContain("暂无加载记录"),
+    );
+  });
+
+  it("进 record tab 取最新快照：后写入的记录在 tab 再次渲染时可见", async () => {
+    // 锁 click handler 的「每次进 tab 取最新快照」半语义——这是 init.ts:199-200 注释
+    // 明确写的与 TAB_INIT 懒加载表的核心区别，此前无测试锁定
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const out = root.getElementById("diag-load-trace") as HTMLElement;
+    // 此刻 store 为空：先确认渲染的是空态（非「init 后未渲染」）
+    await waitFor(() => expect(out.textContent).toContain("暂无加载记录"));
+    // 模拟「先 init、后加载、再进 tab」：3D 适配器在 init 之后才写入 store
+    recordLoadTrace({
+      ts: Date.now(),
+      format: "vrm",
+      path: "./vrmodel/test.vrm",
+      stages: [{ name: "加载", ms: 8, status: "ok" }],
+      ok: true,
+    });
+    // 再次进 tab（click 触发 handler）→ 取到最新快照，渲染出 vrm 卡片
+    (root.querySelector('.repo-tab[data-tab="record"]') as HTMLElement).click();
+    await waitFor(() => expect(out.textContent).toContain("test.vrm"));
   });
 
   it("查看器模式：trace 刷新入口不隐藏（纯内存 store，不依赖 Go/CLI）", () => {

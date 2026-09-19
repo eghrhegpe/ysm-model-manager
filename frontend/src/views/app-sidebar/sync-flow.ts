@@ -6,6 +6,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { ALL_RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SidebarInstance } from "./data.ts";
@@ -119,7 +120,7 @@ function beginSync(
   if (syncInProgress.val) return null;
   syncInProgress.val = true;
   closeAll();
-  btn.textContent = "⏳";
+  btn.innerHTML = UI_ICONS.refresh;
   btn.disabled = true;
   return selected;
 }
@@ -188,9 +189,9 @@ type SyncVerb = "push" | "pull";
 
 /** 按钮复位（push/pull finally 块共用） */
 function resetButton(btn: HTMLButtonElement, verb: SyncVerb): void {
-  const arrow = verb === "push" ? "⬆️" : "⬇️";
+  const icon = verb === "push" ? UI_ICONS.upload : UI_ICONS.download;
   const key = verb === "push" ? "sidebar.pushSelected" : "sidebar.pullSelected";
-  btn.textContent = `${arrow} ${t(key)} ▾`;
+  btn.innerHTML = `${icon} ${t(key)} ▾`;
   btn.disabled = false;
 }
 

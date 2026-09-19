@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-278：诊断页按「动作 / 产物」重划性能分组",
+        "link": "/adr/ADR-278-diagnostics-perf-ia"
+      },
+      {
         "text": "ADR-277：preview 菜单 labelKey 全链钉死为 LocaleKey",
         "link": "/adr/ADR-277-preview-labelkey-localekey"
       },

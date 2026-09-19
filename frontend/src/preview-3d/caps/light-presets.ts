@@ -131,116 +131,69 @@ export const DEFAULT_LIGHT_PARAMS: LightParams = {
 
 /* ============ 嵌套 ↔ 扁平映射（ADR-196，P3 下沉自 light-capability.ts） ============ */
 
+type LightGroupKey = keyof LightParams;
+
+// 「分组 → (子字段 → 扁平 EnvState 键)」映射表。取代手写 30 段 `if (x !== undefined)` 扇出
+// （认知 66🟥）。值取 `keyof EnvState`：目标键拼写经编译期校验（原实现经 Record<string,unknown>
+// 增量构建 + 末尾 cast，目标键拼写零守卫——cast 掩盖了它）；映射对各分组子字段穷尽（`-?` 必填），
+// 某组新增字段而此处漏配即编译报错，与 renderMenu MENU_HANDLERS 非 Partial Record 同款「并行结构编译期锁死」纪律。
+const FLATTEN_MAP = {
+  key: {
+    enabled: "lightKeyEnabled",
+    color: "lightKeyColor",
+    intensity: "lightKeyIntensity",
+    azimuth: "lightKeyAzimuth",
+    elevation: "lightKeyElevation",
+  },
+  fill: {
+    enabled: "lightFillEnabled",
+    color: "lightFillColor",
+    intensity: "lightFillIntensity",
+    azimuth: "lightFillAzimuth",
+    elevation: "lightFillElevation",
+  },
+  rim: {
+    enabled: "lightRimEnabled",
+    color: "lightRimColor",
+    intensity: "lightRimIntensity",
+    azimuth: "lightRimAzimuth",
+    elevation: "lightRimElevation",
+  },
+  ambient: {
+    color: "lightAmbientColor",
+    intensity: "lightAmbientIntensity",
+  },
+  spotlight: {
+    enabled: "lightSpotEnabled",
+    color: "lightSpotColor",
+    intensity: "lightSpotIntensity",
+    angle: "lightSpotAngle",
+    penumbra: "lightSpotPenumbra",
+    distance: "lightSpotDistance",
+    decay: "lightSpotDecay",
+  },
+  volumetric: {
+    enabled: "lightVolumetricEnabled",
+    opacity: "lightVolumetricOpacity",
+    fogPower: "lightVolumetricFogPower",
+    edgeFade: "lightVolumetricEdgeFade",
+    baseStrength: "lightVolumetricBaseStrength",
+    tipStrength: "lightVolumetricTipStrength",
+  },
+} as const satisfies {
+  [G in LightGroupKey]: { [F in keyof LightParams[G]]-?: keyof EnvState };
+};
+
 export function flattenLightParams(p: DeepPartial<LightParams>): Partial<EnvState> {
-  // 用 Record<string, unknown> 收集中间态，最后一次性 cast 为 Partial<EnvState>。
-  // 原因：EnvState 各 key 类型各异（number/boolean/string），增量构建时 TS 无法从 keyof EnvState + unknown
-  // 推导出具体值类型；中间态用宽松类型承载，最终 cast 的安全性由上方 if 守卫保证（类型与 key 恒等）。
   const out: Record<string, unknown> = {};
-  if (p.key) {
-    const k = p.key;
-    if (k.enabled !== undefined) {
-      out.lightKeyEnabled = k.enabled;
-    }
-    if (k.color !== undefined) {
-      out.lightKeyColor = k.color;
-    }
-    if (k.intensity !== undefined) {
-      out.lightKeyIntensity = k.intensity;
-    }
-    if (k.azimuth !== undefined) {
-      out.lightKeyAzimuth = k.azimuth;
-    }
-    if (k.elevation !== undefined) {
-      out.lightKeyElevation = k.elevation;
-    }
-  }
-  if (p.fill) {
-    const k = p.fill;
-    if (k.enabled !== undefined) {
-      out.lightFillEnabled = k.enabled;
-    }
-    if (k.color !== undefined) {
-      out.lightFillColor = k.color;
-    }
-    if (k.intensity !== undefined) {
-      out.lightFillIntensity = k.intensity;
-    }
-    if (k.azimuth !== undefined) {
-      out.lightFillAzimuth = k.azimuth;
-    }
-    if (k.elevation !== undefined) {
-      out.lightFillElevation = k.elevation;
-    }
-  }
-  if (p.rim) {
-    const k = p.rim;
-    if (k.enabled !== undefined) {
-      out.lightRimEnabled = k.enabled;
-    }
-    if (k.color !== undefined) {
-      out.lightRimColor = k.color;
-    }
-    if (k.intensity !== undefined) {
-      out.lightRimIntensity = k.intensity;
-    }
-    if (k.azimuth !== undefined) {
-      out.lightRimAzimuth = k.azimuth;
-    }
-    if (k.elevation !== undefined) {
-      out.lightRimElevation = k.elevation;
-    }
-  }
-  if (p.ambient) {
-    if (p.ambient.color !== undefined) {
-      out.lightAmbientColor = p.ambient.color;
-    }
-    if (p.ambient.intensity !== undefined) {
-      out.lightAmbientIntensity = p.ambient.intensity;
-    }
-  }
-  if (p.spotlight) {
-    const k = p.spotlight;
-    if (k.enabled !== undefined) {
-      out.lightSpotEnabled = k.enabled;
-    }
-    if (k.color !== undefined) {
-      out.lightSpotColor = k.color;
-    }
-    if (k.intensity !== undefined) {
-      out.lightSpotIntensity = k.intensity;
-    }
-    if (k.angle !== undefined) {
-      out.lightSpotAngle = k.angle;
-    }
-    if (k.penumbra !== undefined) {
-      out.lightSpotPenumbra = k.penumbra;
-    }
-    if (k.distance !== undefined) {
-      out.lightSpotDistance = k.distance;
-    }
-    if (k.decay !== undefined) {
-      out.lightSpotDecay = k.decay;
-    }
-  }
-  if (p.volumetric) {
-    const k = p.volumetric;
-    if (k.enabled !== undefined) {
-      out.lightVolumetricEnabled = k.enabled;
-    }
-    if (k.opacity !== undefined) {
-      out.lightVolumetricOpacity = k.opacity;
-    }
-    if (k.fogPower !== undefined) {
-      out.lightVolumetricFogPower = k.fogPower;
-    }
-    if (k.edgeFade !== undefined) {
-      out.lightVolumetricEdgeFade = k.edgeFade;
-    }
-    if (k.baseStrength !== undefined) {
-      out.lightVolumetricBaseStrength = k.baseStrength;
-    }
-    if (k.tipStrength !== undefined) {
-      out.lightVolumetricTipStrength = k.tipStrength;
+  for (const group of Object.keys(FLATTEN_MAP) as LightGroupKey[]) {
+    const src = p[group] as Record<string, unknown> | undefined;
+    if (!src) continue;
+    const map = FLATTEN_MAP[group];
+    for (const field of Object.keys(map)) {
+      const v = src[field];
+      // 守卫用 `!== undefined` 而非真值判断：false / 0 是合法值，必须写出。
+      if (v !== undefined) out[map[field as keyof typeof map] as string] = v;
     }
   }
   return out as Partial<EnvState>;

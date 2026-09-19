@@ -81,7 +81,6 @@ auto_fields:
     - App.ListVersionInstances
     - App.LoadAppConfig
     - App.LoadGitHubRepos
-    - App.LoadResourceTypes
     - App.LoadWorkshopCreators
     - App.MergeCommunityCreatorsFromJSON
     - App.MergeCommunitySitesFromJSON

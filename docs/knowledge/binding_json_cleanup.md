@@ -45,7 +45,6 @@ auto_fields:
     - App.ListContainerEntries
     - App.ListPackModels
     - App.ListPackModelsDetail
-    - App.LoadResourceTypes
     - App.PullResourceFromInstance
     - App.PullSingleResourceFromInstance
     - App.PushResourceToInstance

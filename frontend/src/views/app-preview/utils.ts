@@ -65,7 +65,7 @@ export interface PreviewCtx
 
 /**
  * 路由层上下文：preview-router.ts 消费的最小面接口。
- * 包含渲染容器 + 预览守卫（代际校验）+ 类型元数据懒加载缓存，
+ * 包含渲染容器 + 预览守卫（代际校验），
  * 使路由纯函数脱离 AppPreview 类实例独立可测。
  * 注：PREVIEW_HANDLERS 的 show 函数签名要求 PreviewCtx（含 detailGen），
  * 调用方需将 ctx as unknown as PreviewCtx 转型（AppPreview 实例运行时满足）。

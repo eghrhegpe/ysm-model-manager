@@ -1,10 +1,10 @@
 // ===== renderMenu 新 kind 测试：field / button / row / sectionTitle =====
 import { describe, it, expect, beforeEach } from "vitest";
-import { renderMenu } from "@/preview-3d/menu/engine/core.ts";
 import {
   clearFolderCollapsedState,
   disposeCustomCleanups,
   nodeControlToView,
+  renderMenu,
 } from "./render.ts";
 import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";

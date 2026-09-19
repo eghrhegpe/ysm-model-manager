@@ -157,6 +157,38 @@ export function matchImports(text: string) {
   return out;
 }
 
+/* ---------- R7 内核（模块级导出，供契约测试直测「非空转」）----------
+ * menu 目录物理分层为四子层，rank 自顶向下：
+ *   engine(4) > panels(3) > render(2) > {shell(1), schema(0), style(0)}
+ * 违规 = 生产文件运行时 import 目标 rank 严格高于自身（向上依赖）。同层/下行合法。
+ * render 单列为 panels 之下、叶之上的运行时层：env/roles-views(panel)→render、
+ *   core(engine)→render 实测存在，是 render 被向上依赖的铰链（见 ADR-270 §2 拍板）。
+ * 导出纯函数而非把逻辑闷在 main() 里：契约测试须能直接断言 panels→engine 被判违规、
+ *   panels→render 放行——否则「assert 当前仓库 0 违规」在 rank 表被误清空时空转假绿
+ *   （与 matchImports 同属「纯核导出供测」惯例）。 */
+export const MENU_SUB_RANK: Record<string, number> = {
+  engine: 4,
+  panels: 3,
+  render: 2,
+  shell: 1,
+  schema: 0,
+  style: 0,
+};
+const MENU_PREFIX = "preview-3d/menu/";
+/** 文件（相对 src 正斜杠路径）所属 menu 子层；非 menu/ 或 menu 根散文件返回 null */
+export function menuSubOf(rel: string): string | null {
+  if (!rel.startsWith(MENU_PREFIX)) return null;
+  const seg = rel.slice(MENU_PREFIX.length).split("/")[0];
+  return seg && seg in MENU_SUB_RANK ? seg : null;
+}
+/** R7 一条边（from 子层 → to 子层）是否违规：向上（严格高 rank）依赖即违规 */
+export function r7EdgeViolates(fromSub: string, toSub: string): boolean {
+  const fromRank = MENU_SUB_RANK[fromSub];
+  const toRank = MENU_SUB_RANK[toSub];
+  if (fromRank === undefined || toRank === undefined) return false;
+  return fromRank < toRank;
+}
+
 /* ---------- 主流程 ---------- */
 function main() {
   const parsed = parseArgs(process.argv.slice(2), { bools: ["json", "update"] });
@@ -270,32 +302,13 @@ function main() {
   }
 
   /* ---------- R7 专用扫描：preview-3d/menu/ 子目录内部分层（ADR-270）----------
-   * menu 目录物理分层为四子层，rank 自顶向下：
-   *   engine(4) > panels(3) > render(2) > {shell(1), schema(0), style(0)}
-   * 违规 = 生产文件运行时 import 目标 rank 严格高于自身（向上依赖）。同层/下行合法。
-   * render 单列为 panels 之下、叶之上的运行时层：env/roles-views(panel)→render、
-   *   core(engine)→render 实测存在，是 render 被向上依赖的铰链（见 ADR-270 §2 拍板）。
-   * 豁免：测试文件（panels 测试装配 engine core 合法）、type-only（不建运行时耦合）、
-   *   menu/ 根散文件（menu-test-fixtures.ts 无子层归属）。 */
-  const MENU_SUB_RANK: Record<string, number> = {
-    engine: 4,
-    panels: 3,
-    render: 2,
-    shell: 1,
-    schema: 0,
-    style: 0,
-  };
-  const MENU_PREFIX = "preview-3d/menu/";
-  const menuSubOf = (rel: string): string | null => {
-    if (!rel.startsWith(MENU_PREFIX)) return null;
-    const seg = rel.slice(MENU_PREFIX.length).split("/")[0];
-    return seg && seg in MENU_SUB_RANK ? seg : null;
-  };
+   * 内核（rank 表 / menuSubOf / r7EdgeViolates）在模块级导出，此处仅跑循环收集违规。
+   * 豁免：测试文件（panels 测试装配 engine core 合法，由 SCAN_OPTS.skipFile 挡）、
+   *   type-only（不建运行时耦合）、menu/ 根散文件（menuSubOf 返回 null）。 */
   for (const abs of walk(SRC_ROOT, SCAN_OPTS) as string[]) {
     const srcRel = toPosix(relative(SRC_ROOT, abs));
     const fromSub = menuSubOf(srcRel);
     if (!fromSub) continue;
-    const fromRank = MENU_SUB_RANK[fromSub]!;
     const text = readFileSync(abs, "utf8");
     for (const { spec, typeOnly, line } of matchImports(text)) {
       if (typeOnly) continue;
@@ -303,7 +316,7 @@ function main() {
       if (!target) continue;
       const toSub = menuSubOf(target);
       if (!toSub) continue;
-      if (fromRank >= MENU_SUB_RANK[toSub]!) continue; // 下行 / 同层合法
+      if (!r7EdgeViolates(fromSub, toSub)) continue; // 下行 / 同层合法
       violations.push({
         rule: "R7",
         from: srcRel,

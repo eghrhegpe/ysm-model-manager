@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 // 静态 import：check-layering.mjs 带 invokedDirectly 守卫，被 import 时不执行 main()
-import { matchImports } from "../scripts/check-layering.ts";
+import { matchImports, menuSubOf, r7EdgeViolates } from "../scripts/check-layering.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fails = [];
@@ -95,6 +95,48 @@ check("R6 零 R6 违规（core 测试文件→backend/*，引擎无关对 type �
     0,
     `R6 违规 ${r6.length} 条：${r6.map((v) => `${v.from}:${v.line} → ${v.to}`).join(", ")}`,
   );
+});
+
+// R7（ADR-270 menu 目录物理分层）：preview-3d/menu/ 子目录内部分层守护。
+// 两层断言，缺一不可：
+//   1. 集成——当前仓库应零 R7 违规（任何 panels→engine / render→engine|panels / 叶→上层 即 rc 非 0）。
+//   2. 非空转（纯核）——r7EdgeViolates/menuSubOf 直测，证明 rank 表真会判违规；
+//      否则「assert 0 违规」在 MENU_SUB_RANK 被误清空时永远空转假绿（这正是锐评指出的缺口）。
+check("R7 零 R7 违规（menu 子目录禁运行时向上依赖，ADR-270）", () => {
+  const { out } = runLayering(["--json"]);
+  const data = JSON.parse(out);
+  const r7 = (data.zero_tolerance_violations ?? []).filter((v) => v.rule === "R7");
+  assert.equal(
+    r7.length,
+    0,
+    `R7 违规 ${r7.length} 条：${r7.map((v) => `${v.from}:${v.line} → ${v.to}`).join(", ")}`,
+  );
+});
+
+check("R7 纯核非空转：向上边判违规、下行/同层放行", () => {
+  // 向上（严格高 rank）= 违规
+  assert.equal(r7EdgeViolates("panels", "engine"), true, "panels→engine 必须判违规");
+  assert.equal(r7EdgeViolates("render", "engine"), true, "render→engine 必须判违规");
+  assert.equal(r7EdgeViolates("render", "panels"), true, "render→panels 必须判违规");
+  assert.equal(r7EdgeViolates("schema", "panels"), true, "叶 schema→panels 必须判违规");
+  // 下行 / 同层 = 合法（铰链 render 被 panels/engine 向下依赖正是设计内）
+  assert.equal(r7EdgeViolates("engine", "panels"), false, "engine→panels 下行放行");
+  assert.equal(r7EdgeViolates("engine", "render"), false, "engine→render 下行放行（铰链）");
+  assert.equal(r7EdgeViolates("panels", "render"), false, "panels→render 下行放行");
+  assert.equal(r7EdgeViolates("schema", "style"), false, "schema↔style 同 rank(0) 放行");
+  assert.equal(r7EdgeViolates("panels", "panels"), false, "同层放行");
+  // 未知子层不参与判定（返回 false，交由 menuSubOf 过滤）
+  assert.equal(r7EdgeViolates("panels", "nonexistent"), false, "未知目标不判违规");
+});
+
+check("R7 menuSubOf：子层归属解析 + 根散文件/非 menu 返回 null", () => {
+  assert.equal(menuSubOf("preview-3d/menu/panels/env.ts"), "panels");
+  assert.equal(menuSubOf("preview-3d/menu/engine/core.ts"), "engine");
+  assert.equal(menuSubOf("preview-3d/menu/render/render.ts"), "render");
+  // menu 根散文件（如 fixtures）无子层归属 → null（R7 双向隐形，符合设计）
+  assert.equal(menuSubOf("preview-3d/menu/menu-test-fixtures.ts"), null);
+  // 非 menu 路径 → null
+  assert.equal(menuSubOf("core/i18n/t.ts"), null);
 });
 
 check("基线文件存在且 tracked 与基线一致（防漂移）", () => {

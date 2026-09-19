@@ -5,12 +5,18 @@ tier: leaf
 category: ui
 source_files:
   - frontend/src/preview-3d/menu/slide-menu.ts
-  - frontend/src/preview-3d/menu/slide-menu-styles.ts
-  - frontend/src/preview-3d/menu/components-styles.ts
+  - frontend/src/preview-3d/menu/style/slide-menu-styles.ts
+  - frontend/src/preview-3d/menu/style/components-styles.ts
 auto_fields:
   symbols_with_lines:
+    - componentsCss
+    - componentsStyleSheet
     - createSlideMenu
+    - installComponentsStyles
+    - installSlideMenuStyles
+    - slideMenuCss
     - SlideMenuHandle
+    - slideMenuStyleSheet
     - SlideMenuView
 quick_groups:
   - UI 交互与弹窗

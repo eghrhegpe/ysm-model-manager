@@ -7,32 +7,40 @@ source_files:
   - frontend/src/preview-3d/menu/slide-menu.ts
   - frontend/src/preview-3d/menu/header-toggle.ts
   - frontend/src/preview-3d/menu/slider-controller.ts
-  - frontend/src/preview-3d/menu/components-styles.ts
-  - frontend/src/preview-3d/menu/slide-menu-styles.ts
-  - frontend/src/preview-3d/menu/style-install.ts
+  - frontend/src/preview-3d/menu/style/components-styles.ts
+  - frontend/src/preview-3d/menu/style/slide-menu-styles.ts
+  - frontend/src/preview-3d/menu/style/style-install.ts
   - frontend/src/preview-3d/menu/dom-contract.ts
   - frontend/src/preview-3d/infra/ui-constants.ts
   - frontend/src/preview-3d/infra/overlay-active.ts
 tests:
   - frontend/src/preview-3d/infra/overlay-active.test.ts
-  - frontend/src/preview-3d/menu/components-styles.test.ts
+  - frontend/src/preview-3d/menu/style/components-styles.test.ts
   - frontend/src/preview-3d/menu/header-toggle.test.ts
-  - frontend/src/preview-3d/menu/slide-menu-styles.test.ts
+  - frontend/src/preview-3d/menu/style/slide-menu-styles.test.ts
   - frontend/src/preview-3d/menu/slide-menu.test.ts
   - frontend/src/preview-3d/menu/slider-controller.test.ts
 auto_fields:
   symbols_with_lines:
     - ARIA_ATTR
+    - componentsCss
+    - componentsStyleSheet
     - createHeaderToggle
+    - createInstallableStyles
     - createSlideMenu
     - DragSliderController
     - DragSliderOptions
     - HeaderToggleConfig
     - HeaderToggleElement
+    - InstallableStyles
+    - installComponentsStyles
+    - installSlideMenuStyles
     - isPreviewOverlayActive
     - PREVIEW_OVERLAY_ID
     - ROLE
+    - slideMenuCss
     - SlideMenuHandle
+    - slideMenuStyleSheet
     - SlideMenuView
     - SLIDER_BAR_CLASS
 quick_groups:
@@ -80,11 +88,11 @@ status: active
 | 顶部切换 | `preview-3d/menu/header-toggle.ts` | `createHeaderToggle` 紧凑 toggle（返回 `HeaderToggleElement`，含 `forceToggle` 程序化翻转出口——整行点击等外部触发语义自 addToggleRow 下沉）；纯创建函数，无注册表自更新（bind 注册链 + control-registry 2026-09 拔除，见 ADR-085） |
 | 滑块 | `preview-3d/menu/slider-controller.ts` | `DragSliderController` 数值范围滑块（pointer 主 + mouse 兜底互斥；cap 栈 `preview-3d/menu/cap-controls\|renderCapSlider` 生产消费） |
 | 图标 | （已拔管） | `icons.ts`（`createIcon`/`createIconBox`，iconify 兼容层）已删除——**现行入口 = `utils/icon/resolve.ts\|applyIcon`**：语义名 → `UI_ICONS` 的 SVG（`class="ws-icon"`，着色/定尺靠 `.ws-icon` 规则）；数据图标（`resource_types.json` 的 emoji/字形）→ `textContent` 兜底（ADR-238 D1 不可动） |
-| 样式 | `preview-3d/menu/components-styles.ts` | `componentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installComponentsStyles()`（light-DOM 注入，幂等，仅一次）。**本串必须自带 `.ws-icon` 规则**（经 `@/utils/dom/css.ts\|wsIconCSS` 插值，勿就地重写规则本体）——3D overlay 是 adopt 本串的唯一 shadow 根，`UI_ICONS` 的 SVG 靠它着色/定尺；漏带时在 `.slide-icon`（flex 容器）里自动尺寸为 0 → **图标 0×0 不可见**（2026-09-16 实测），非「巨块」 |
-| 外壳样式 | `preview-3d/menu/slide-menu-styles.ts` | `slideMenuCss` → `slideMenuStyleSheet` + `installSlideMenuStyles()`。2026-09 收敛：8 个 token 内联 7 个单次消费项，仅留 `--uih-slide-card-bg`（语义独立）+ 补回历史悬空的 `--uih-slide-divider` |
-| token 层 | `preview-3d/menu/components-styles.ts` 的 `:root` | `--uih-*` 设计令牌（2026-09 收敛 **70 → 21**）。**字号/尺寸类一律经 `calc(... + var(--fs-scale))` 派生**，随主设置页「基准字号」缩放；默认 `--fs-scale: 0px` ⇒ 默认态像素零变化。系数：字号 1 / 图标 1.2 / 行高 1（**刻意差异化——图标 1.2 而行高 1 会撑破行**）。判据「只被 `var()` 引用一次即内联」。契约见 [ui-slide-menu](./ui-slide-menu.md)#token-层与字号缩放 |
-| 共享样式常量 | `preview-3d/menu/menu-styles.ts` | 跨文件同值类的**单一事实源**（`MENU_SECTION_CSS` / `MENU_BTN_CSS` / `MENU_ROW_DENSITY_CSS` / `MENU_DIVIDER_CSS` / `MENU_CARD_CSS` / `MENU_ERROR_NOTE_CSS`），消费方各自插值；`MENU_BTN_CSS`（`.cc-btn` 族）被 cap 控件与 `render.ts` 行内按钮（radio/badge）**双路径**消费——只让 cap 栈注入会让纯 row 面板回落 UA 默认不透明按钮（2026-09-16 事故，守卫 `menu-styles.test.ts`） |
-| 样式脚手架 | `preview-3d/menu/style-install.ts` | `createInstallableStyles`——上面两样式文件共用的「CSSStyleSheet + 幂等 light-DOM 注入」脚手架 |
+| 样式 | `preview-3d/menu/style/components-styles.ts` | `componentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installComponentsStyles()`（light-DOM 注入，幂等，仅一次）。**本串必须自带 `.ws-icon` 规则**（经 `@/utils/dom/css.ts\|wsIconCSS` 插值，勿就地重写规则本体）——3D overlay 是 adopt 本串的唯一 shadow 根，`UI_ICONS` 的 SVG 靠它着色/定尺；漏带时在 `.slide-icon`（flex 容器）里自动尺寸为 0 → **图标 0×0 不可见**（2026-09-16 实测），非「巨块」 |
+| 外壳样式 | `preview-3d/menu/style/slide-menu-styles.ts` | `slideMenuCss` → `slideMenuStyleSheet` + `installSlideMenuStyles()`。2026-09 收敛：8 个 token 内联 7 个单次消费项，仅留 `--uih-slide-card-bg`（语义独立）+ 补回历史悬空的 `--uih-slide-divider` |
+| token 层 | `preview-3d/menu/style/components-styles.ts` 的 `:root` | `--uih-*` 设计令牌（2026-09 收敛 **70 → 21**）。**字号/尺寸类一律经 `calc(... + var(--fs-scale))` 派生**，随主设置页「基准字号」缩放；默认 `--fs-scale: 0px` ⇒ 默认态像素零变化。系数：字号 1 / 图标 1.2 / 行高 1（**刻意差异化——图标 1.2 而行高 1 会撑破行**）。判据「只被 `var()` 引用一次即内联」。契约见 [ui-slide-menu](./ui-slide-menu.md)#token-层与字号缩放 |
+| 共享样式常量 | `preview-3d/menu/style/menu-styles.ts` | 跨文件同值类的**单一事实源**（`MENU_SECTION_CSS` / `MENU_BTN_CSS` / `MENU_ROW_DENSITY_CSS` / `MENU_DIVIDER_CSS` / `MENU_CARD_CSS` / `MENU_ERROR_NOTE_CSS`），消费方各自插值；`MENU_BTN_CSS`（`.cc-btn` 族）被 cap 控件与 `render.ts` 行内按钮（radio/badge）**双路径**消费——只让 cap 栈注入会让纯 row 面板回落 UA 默认不透明按钮（2026-09-16 事故，守卫 `menu-styles.test.ts`） |
+| 样式脚手架 | `preview-3d/menu/style/style-install.ts` | `createInstallableStyles`——上面两样式文件共用的「CSSStyleSheet + 幂等 light-DOM 注入」脚手架 |
 | 常量 | `preview-3d/infra/ui-constants.ts` | `PREVIEW_OVERLAY_ID`（3D overlay 根容器 ID）——**仅 `mount-preview-core` 建、`preview-3d/infra/overlay-active\|isPreviewOverlayActive` 查**两个出口，其它模块不得直接引用该常量裸查 DOM；滑块四分位常量 `SLIDER_QUARTER_*` 已随 ui-rows 拔管删除 |
 | 契约查询 | `preview-3d/infra/overlay-active.ts` | `isPreviewOverlayActive()` —— 3D 全屏模态会话是否激活（查 overlay host 是否在 document，零状态漂移）。ADR-220 归位挂载核心旁（与唯一生产者同目录），app-tree 键盘门禁经 `@/preview-3d/infra/overlay-active.ts` 查询；原「勿因单消费者下沉」辩护随归位失效 |
 | 类型 | （已拔管） | `ui-types.ts`（`ControlOptions`）已删除——消费方为已拔管行 builder 簇 |

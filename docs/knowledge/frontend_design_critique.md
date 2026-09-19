@@ -20,7 +20,7 @@ source_files:
   - frontend/src/utils/dom/modal-core.ts
   - frontend/src/features/dialogs/adv-filter.ts
   - frontend/src/features/dialogs/batch-rename.ts
-  - frontend/src/preview-3d/menu/components-styles.ts
+  - frontend/src/preview-3d/menu/style/components-styles.ts
   - frontend/src/views/app-content/settings/path-cards.ts
   - frontend/src/views/app-content/settings/theme.ts
   - frontend/src/views/app-preview/detail-3d.ts

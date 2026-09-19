@@ -200,12 +200,12 @@ interface RecycleShell {
 
 function buildLoadRecycleBin(
   root: ShadowRoot,
-  getCurrentType: GetCurrentTypeFn,
-  guard: LoadGuard,
+  loadCtx: { getCurrentType: GetCurrentTypeFn; guard: LoadGuard },
   shell: RecycleShell,
   onShowToast: ToastFn,
   deps: RecycleDeps,
 ): () => Promise<void> {
+  const { getCurrentType, guard } = loadCtx;
   const { getApp, t } = deps;
   return async function loadRecycleBin(): Promise<void> {
     const gen = guard.next();
@@ -275,7 +275,13 @@ export function initRecycleBin(app: RecycleHost, depsOverrides?: Partial<Recycle
   const listEl = root.getElementById("recy-list");
   if (listEl) listEl.addEventListener("click", onRecycleListClick);
 
-  shell.loadRecycleBin = buildLoadRecycleBin(root, getCurrentType, guard, shell, onShowToast, deps);
+  shell.loadRecycleBin = buildLoadRecycleBin(
+    root,
+    { getCurrentType, guard },
+    shell,
+    onShowToast,
+    deps,
+  );
 
   const onRefreshClick = onRecycleRefreshClick(() => shell.loadRecycleBin());
   root.getElementById("recy-refresh")?.addEventListener("click", onRefreshClick);

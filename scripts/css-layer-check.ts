@@ -198,17 +198,22 @@ const KNOWN_NO_CSS_CLASSES = new Set([
 ]);
 
 // 提取 CSS 文本中的类名（.foo / .foo-bar）。
-// ⚠️ 先剥注释：注释里出现的 `.btn-base` 会被当成「已定义」——而真正定义该类的是运行期
-// 注入的常量（utils/dom/css.ts|btnBaseCSS，本脚本刻意不展开它以免扰动判定基线），
-// 于是「有没有那句注释」成了判定开关（2026-09 实测：content-layout.ts 一句说明注释让 .btn-base 隐身）。
-function stripCssComments(cssText: string): string {
-  // CSS 注释按「首个 */ 闭合」解析，故朴素非贪婪剥离与浏览器语义一致
-  return cssText.replace(/\/\*[\s\S]*?\*\//g, "");
+// ⚠️ 先剥注释：闸的输入是**整份 .ts 源文件**（CSS 以模板串承载，同文件还有 TS 代码与注释），
+// 不只是 CSS 片段。注释里出现的 `.btn-base` / `.dlg-*` 会被当成「已定义」——
+// 于是「有没有那句注释」成了判定开关（2026-09 实测：content-layout.ts 一句块注释让 .btn-base 隐身；
+// content-diag.ts 的 `// …（.dlg-*/.afv-*/.mc-pick-*/.br-* 等）` 行注释又凭空造出 6 个伪类名）。
+// 故块注释与行注释**都要剥**（`(?<![:/])` 避开 `https://` 与 `///`）。
+function stripComments(src: string): string {
+  // 块注释按「首个 */ 闭合」解析，故朴素非贪婪剥离与浏览器语义一致
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(?<![:/])\/\/[^\n]*/g, "");
 }
-function extractClasses(cssText: string) {
+function extractClasses(src: string) {
   const classes = new Set<string>();
   const re = /\.([a-zA-Z][a-zA-Z0-9-]*)/g;
-  for (const m of stripCssComments(cssText).matchAll(re)) if (m[1]) classes.add(m[1]);
+  for (const m of stripComments(src).matchAll(re)) {
+    // 尾随连字符只出现在 `.ws-*` 这类注释/通配写法里，不可能是真类名
+    if (m[1] && !m[1].endsWith("-")) classes.add(m[1]);
+  }
   return classes;
 }
 function extractKeyframes(cssText: string) {

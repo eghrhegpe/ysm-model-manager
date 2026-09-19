@@ -196,4 +196,45 @@ describe("app-sync-manager — 行级虚拟滚动", () => {
     expect(listOf(el).style.paddingTop).toBe("0px");
     unmountElement(el);
   });
+
+  it("⑦ teardown 契约：unmount 后 ResizeObserver disconnect，重挂载不残留旧观察者", async () => {
+    const roDisconnect = vi.spyOn(ResizeObserver.prototype, "disconnect");
+    const el = await mountWith(200);
+    expect(listOf(el)).toBeTruthy();
+
+    // 卸载：旧 .sm-list 的观察者必须被断开（ResizeObserver 强引用被观察元素，
+    // 不断开 = 被丢弃的组件跨 re-init/卸载存活——本次虚拟滚动改造要防的核心回归）
+    unmountElement(el);
+    expect(roDisconnect).toHaveBeenCalled();
+
+    // 重挂载（instance 属性变化触发 re-init 路径的同款卸载→重建）：新元素新状态，不串
+    roDisconnect.mockClear();
+    const el2 = await mountWith(50);
+    unmountElement(el2);
+    expect(roDisconnect).toHaveBeenCalled();
+  });
+
+  it("⑧ 零高 rAF 去重：隐藏容器内反复重渲染只排一个待执行 rAF", async () => {
+    clientHeightSpy.mockReturnValue(0);
+    const rafSpy = vi.spyOn(window, "requestAnimationFrame");
+    const el = await mountWith(200);
+    const baseline = rafSpy.mock.calls.length;
+
+    // 隐藏容器内（clientHeight 恒 0）连续多次重渲染——若不去重，每次 render 都排一个
+    // 新 rAF 全量渲染；去重后新增调度数与渲染次数解耦
+    el._doRender();
+    await nextFrames(2);
+    el._doRender();
+    await nextFrames(2);
+    const afterTwoRenders = rafSpy.mock.calls.length;
+    expect(afterTwoRenders).toBeGreaterThan(baseline);
+
+    // 同一时刻最多一个待执行句柄：渲染后又立刻渲染（rAF 未执行间隙），不叠加
+    el._doRender();
+    el._doRender();
+    el._doRender();
+    const pendingBurst = rafSpy.mock.calls.length - afterTwoRenders;
+    expect(pendingBurst).toBeLessThanOrEqual(1);
+    unmountElement(el);
+  });
 });

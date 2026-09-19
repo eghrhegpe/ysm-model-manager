@@ -314,7 +314,7 @@ export class AppSyncManager extends WebComponentBase {
   /** 渲染统一入口（供 _init 和 stats:refresh 复用） */
   private _doRender(): void {
     const self = this as SyncManagerSelf;
-    // render 是 async（内部 await renderList）；事件已由 _init 一次性委托绑定，
+    // renderList 已是同步（数据展平后当帧窗口化切片）；事件由 _init 一次性委托绑定，
     // render 重建 DOM 后无需重绑（原在此 .then 全量重绑，并发 _doRender 会双绑竞态）
     render(self).catch((e) => logError("sync-manager", "render 失败:", e));
   }

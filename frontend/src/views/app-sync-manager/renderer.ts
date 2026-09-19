@@ -251,6 +251,8 @@ interface SmVsState {
   rows: SmRow[];
   /** 实测行高（0 = 未测，暂用回退值） */
   rowH: number;
+  /** 待执行的零高重排 rAF 句柄（去重：隐藏容器内反复重渲染只排一个，cleanup 时取消） */
+  pendingRaf: number | null;
 }
 
 /** 容器虚拟滚动状态表（WeakMap——listEl 为 key，元素 GC 自动回收） */
@@ -259,7 +261,7 @@ const vsStates = new WeakMap<HTMLElement, SmVsState>();
 function vsOf(listEl: HTMLElement): SmVsState {
   let st = vsStates.get(listEl);
   if (!st) {
-    st = { cleanup: null, resizeObserver: null, rows: [], rowH: 0 };
+    st = { cleanup: null, resizeObserver: null, rows: [], rowH: 0, pendingRaf: null };
     vsStates.set(listEl, st);
   }
   return st;
@@ -273,6 +275,11 @@ export function cleanupSyncVirtualScroll(listEl: HTMLElement): void {
   st.cleanup = null;
   st.resizeObserver?.disconnect();
   st.resizeObserver = null;
+  // 取消待执行的零高重排 rAF，防组件卸载/重 init 后回调打在已重建的 DOM 上
+  if (st.pendingRaf !== null) {
+    cancelAnimationFrame(st.pendingRaf);
+    st.pendingRaf = null;
+  }
   st.rows = [];
   st.rowH = 0;
 }
@@ -374,6 +381,12 @@ function renderList(self: SyncRenderSelf, listEl: HTMLElement): void {
     st.rows = [];
     st.cleanup?.();
     st.cleanup = null;
+    st.resizeObserver?.disconnect();
+    st.resizeObserver = null;
+    if (st.pendingRaf !== null) {
+      cancelAnimationFrame(st.pendingRaf);
+      st.pendingRaf = null;
+    }
     return;
   }
 
@@ -382,10 +395,14 @@ function renderList(self: SyncRenderSelf, listEl: HTMLElement): void {
   if (!st.cleanup) st.cleanup = installScrollSync(listEl, () => renderSlice(listEl));
   renderSlice(listEl);
 
-  // 首帧容器尚未布局（clientHeight=0 → 上一步已全量渲染）→ 等 layout 后按真实视口重算
-  if (listEl.clientHeight === 0) {
-    requestAnimationFrame(() => {
-      if (vsOf(listEl).rows.length) renderSlice(listEl);
+  // 首帧容器尚未布局（clientHeight=0 → 上一步已全量渲染）→ 等 layout 后按真实视口重算。
+  // 句柄入 state 去重：隐藏容器（display:none 祖先）内 clientHeight 恒 0，bus 驱动的
+  // 反复重渲染只保留一个待执行 rAF，且 cleanupSyncVirtualScroll 时统一取消。
+  if (listEl.clientHeight === 0 && st.pendingRaf === null) {
+    st.pendingRaf = requestAnimationFrame(() => {
+      const cur = vsOf(listEl);
+      cur.pendingRaf = null;
+      if (cur.rows.length) renderSlice(listEl);
     });
   }
 

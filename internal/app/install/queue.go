@@ -47,6 +47,12 @@ type DownloadQueue struct {
 	downloadFn func(ctx context.Context, url, saveDir string) (string, error)
 	emitFn     func(name string, args ...interface{})
 	logFn      func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string)
+
+	// 落盘账本（借鉴隔壁 .dsh 的 durable ledger 范式；wake 驱动故不借 scheduler/tick，单进程
+	// 故不借 .lock/乐观并发）：ledgerPath 为空即禁用持久化。ledgerMu 串行化 Enqueue/consume/
+	// Cancel 三处并发写，last-writer-wins 对「续排 pending」账本可接受（详见 queue_ledger.go）。
+	ledgerPath string
+	ledgerMu   sync.Mutex
 }
 
 // NewDownloadQueue 创建串行下载队列（回调由 App 初始化时注入）。
@@ -110,6 +116,7 @@ func (q *DownloadQueue) Enqueue(tasks []types.DownloadTask) error {
 	}
 	log.Printf("[queue] emit queue:status enqueued total=%d", total)
 	q.emitFn("queue:status", "enqueued", total, "")
+	q.persist()
 	return nil
 }
 
@@ -136,6 +143,7 @@ func (q *DownloadQueue) Cancel() {
 	}
 	log.Printf("[queue] emit queue:status cancelled")
 	q.emitFn("queue:status", "cancelled", 0, "")
+	q.persist() // 取消即清空账本：重启不应续排被用户主动取消的批
 }
 
 // Status 返回队列结构化状态（ADR-145：types.QueueStatusInfo 为跨包 DTO，JSON 契约不变）。
@@ -238,6 +246,10 @@ func (q *DownloadQueue) consume() {
 		// 锁内快照 ctx：Cancel 会替换 q.ctx，必须用本任务发起时的 ctx 做请求取消
 		ctx := q.ctx
 		q.mu.Unlock()
+
+		// 落盘「尚未开始」的剩余任务：本任务出队后即视为已启动，不写进 pending——
+		// 崩溃时仅续排未开始的下载，在途那一个的重启续传属「续传 ADR」范畴（见 download.go）。
+		q.persist()
 
 		log.Printf("[queue] emit queue:file-start name=%s pos=%d left=%d", task.Name, remaining+1, remaining)
 		q.emitFn("queue:file-start", task.Name, remaining+1, remaining)

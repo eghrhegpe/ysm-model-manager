@@ -592,7 +592,9 @@ function runChecks() {
         // 启动期迁移/探测代码（非绑定层），豁免
         if (hasContext(f, line, /migrate|probe\./, 15, cache)) return false;
         // 配置/工具文件操作（非模型资源缓存相关），豁免
-        if (hasContext(f, line, /workshopSitesPath|creatorsPath|configPath\(\)/, 10, cache))
+        if (
+          hasContext(f, line, /workshopSitesPath|creatorsPath|configPath\(\)|ledgerPath|removeLedger/, 10, cache)
+        )
           return false;
         // 预览临时目录清扫（os.TempDir()/ysm-preview，非 scanner 跟踪范围），豁免
         if (hasContext(f, line, /sweepPreviewTemp|ysm-preview|os\.TempDir\(\)/, 15, cache))

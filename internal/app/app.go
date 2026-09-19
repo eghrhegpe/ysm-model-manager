@@ -117,13 +117,19 @@ func NewApp() *App {
 	}
 	// 回调注入：打破 DownloadQueue ↔ App 循环（ADR-002 P1）
 	// emitFn 闭包延迟解析 a.app（SetApp 在应用启动时注入）
+	downloadQueue := install.NewDownloadQueue(
+		a.appCtx,
+		a.downloadFileWithQueue,
+		func(name string, args ...interface{}) { a.app.Event.Emit(name, args...) },
+		a.AddOpLog,
+	)
+	// 落盘账本：把未开始的排队下载持久化到配置目录，崩溃/重启后自动续排（借鉴 .dsh durable ledger）。
+	// configDir 为空（平台数据根缺失，见 app_config）时禁用持久化，行为零漂移。
+	if dir := configDir(); dir != "" {
+		downloadQueue.UseLedger(filepath.Join(dir, "download-queue.json"))
+	}
 	a.install = install.NewManager(
-		install.NewDownloadQueue(
-			a.appCtx,
-			a.downloadFileWithQueue,
-			func(name string, args ...interface{}) { a.app.Event.Emit(name, args...) },
-			a.AddOpLog,
-		),
+		downloadQueue,
 		install.ConfigDeps{
 			LoadAppConfig: a.LoadAppConfig,
 			SaveAppConfig: a.saveConfig,

@@ -29,9 +29,9 @@
 | L3 装配根 | `menu/engine/` | `core` · `menu-graph` · `defs` · `sanctioned` | 唯一装配根，可向下引全部 |
 | L2 面板 | `menu/panels/` | `env` `roles` `roles-views` `settings` `stats` `material-controls` `morph-controls` `perception-controls` `bones-panel-node` `multi-model` | → `render` / `schema` / `shell` / `style`，**禁引 `engine`**（面板经 `registerSchema` 注册、由 engine 读表装配，依赖反转） |
 | L1 渲染运行时 | `menu/render/` | `render` · `cap-controls` · `cap-to-node` | → `schema` / `shell` / `style`，**禁引 `engine` / `panels`**（render 是被 panels 与 core 共用的铰链，单列一层使 panels 可下行依赖它而不破「panels 不依赖 engine」墙） |
-| L0 叶 | `menu/schema/` | `menu-node-types` · `node-types` · `dom-contract` | 零依赖叶，仅引 `state/preview-paths` `utils/icon` |
+| L0 叶 | `menu/schema/` | `menu-node-types` · `node-types` · `dom-contract` | menu 内最底叶（rank 0）：**不引 menu 内任何子层**；对外引 `state/preview-paths` `utils/icon` 等 menu 外依赖，且含 `import type`（R7 豁免 type-only）——故是「零上行运行时 import」而非「零 import」 |
 | L0 叶 | `menu/shell/` | `slide-menu` `fab` `header-toggle` `slider-controller` `switch` | → `schema` |
-| L0 叶 | `menu/style/` | `menu-styles` `components-styles` `slide-menu-styles` `style-install` | 零依赖叶 |
+| L0 叶 | `menu/style/` | `menu-styles` `components-styles` `slide-menu-styles` `style-install` | 真·零依赖叶（纯 CSS 常量，menu 内外皆不 import） |
 
 **方向规则（写入 check-layering 门禁）**：
 1. `schema/` `shell/` `style/` 为叶——禁止引 `engine/` `panels/` `render/`（`shell/style` 可引 `schema`）。
@@ -41,6 +41,11 @@
 5. 跨子目录 import 一律 `@/preview-3d/menu/<子目录>/<file>`（ADR-146，禁 `../` 上跳、禁目录桶入口）。
 
 > **为何补 `render/` 一层（拍板记录）**：初稿曾把 `render` 归 `engine`、把 `env`/`roles-views` 归 `panels`，立规「panels 只依赖 schema」。但 `env → render`、`roles-views → render` 实测存在——`render` 是**被 panels 向上依赖的铰链**，硬塞进 engine 会直接违反 panels↛engine 墙。故把 `render` 及其唯一下行依赖 `cap-controls`、被 settings 依赖的 `cap-to-node` 单列为 L1 运行时层，令分层严格无环、墙不破。
+
+> **门禁覆盖面边界（R7 只卡静态 import 边）**：R7 扫描的是 `import`/`export-from` 语句构成的**静态依赖方向**。两类暗道**不在其射程**，各有把守者，勿误以为「R7 全绿 = menu 分层万无一失」：
+> 1. **运行时装配回调**：panels 经 `registerSchema` 把自身注册进 registry、由 engine 读表反向装配——这是**数据流**（运行时回调），不是 panels→engine 的 import 边，R7 看不见。该暗道由 `sanctioned.ts` 白名单 + `render-custom-audit` 审计门把守（ADR-193 §3）。
+> 2. **外部 → menu 的消费方向**：`adapters/*`、`views/*` 引 menu 子层不受 R7 约束（R7 只管 `menu/` **内部**子层之间的方向）。外部如何拿到 menu 能力，由 ADR-146 路径别名 + ADR-190/208 seam 规则把守。
+> 另：动态 `import()` 亦不被 R7 捕获（当前 menu 目录无此用法，留此备忘）。
 
 **取代关系**：本 ADR 不改 ADR-195 的控件/节点同构与 `cap-to-node` 零接线，仅在其之下补目录维度。与 ADR-146 路径别名互补（别名已就位，本 ADR 是其「按目录卡方向」的下一刀）。
 

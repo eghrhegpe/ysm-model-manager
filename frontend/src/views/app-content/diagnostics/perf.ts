@@ -5,8 +5,9 @@
 //   - perf-matrix-render.ts：目标集渲染（--target rtype/all/repo 三种目标集载荷同形 + 体量口径回显）
 //   - perf-scan-bench.ts  ：scan-bench（Go/Rust 扫描引擎对照，未采集不填 0ms）
 //   - perf-trace.ts       ：加载剖析（load-trace store 消费）
-// ADR-040 拆分后每文件 ≤400 行红线；本文件仅 ~45 行。
+// ADR-040 拆分后每文件 ≤400 行红线；本文件为薄接线层。
 
+import { getLastModelPath } from "@/core/model-path-store.ts";
 import type { EscFn } from "./logs.ts";
 import { bindPerfCopyHandlers } from "./perf-common.ts";
 import { runConcurrentBench } from "./perf-concurrent.ts";
@@ -56,6 +57,12 @@ function initPerfMode(root: ShadowRoot): () => void {
 /** 初始化性能面板（基准三模式 / 加载剖析） */
 export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   bindPerfCopyHandlers(root);
+  // 预填「最近选中模型」（ADR-221 model-path-store）：消除小白手输绝对路径的劝退门槛——
+  // 树里点过的模型直接进输入框，一键 Run。仅在框为空时填，不覆盖用户已输入/已回填的值；
+  // 无选中（null）不动。路径为树 data-fullpath 的磁盘绝对路径，正是 Go single-bench 期望的 --model 口径。
+  const modelInput = root.getElementById("diag-perf-model") as HTMLInputElement | null;
+  const lastModel = getLastModelPath();
+  if (modelInput && !modelInput.value.trim() && lastModel) modelInput.value = lastModel;
   root.getElementById("diag-perf-run")?.addEventListener("click", () => runSingleBench(root, esc));
   // 目标集选择器选项来自 Go/registry（前端不写死类型表）；注册表不可用时静默回落静态首项旧行为
   // 填充后同步基准控件可用性（选项变化不影响当前值，但仍以填充后的值为准）

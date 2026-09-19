@@ -7,6 +7,7 @@
 // 本测试通过 facade initPerfPanel / renderLoadTraceSection 集成验证，保证接口契约不变。
 // mock cli-bridge.executeCLI（web 模式在测试环境视为 native，isWebPlatform=false）
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { rememberModelPath, __resetLastModelPathForTest } from "@/core/model-path-store.ts";
 import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 import { recordLoadTrace, clearLoadTraces } from "@/preview-3d/infra/load-trace.ts";
 
@@ -101,6 +102,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   document.body.innerHTML = "";
   isWebPlatform.mockReturnValue(false);
+  // 跨用例隔离：model-path-store 是模块级共享态，预填逻辑读它——不重置会让上一用例
+  // rememberModelPath 的残值泄漏进「缺 model」用例（本文件首个用例即断言空输入不触发 CLI）
+  __resetLastModelPathForTest();
 });
 
 describe("single-bench 面板", () => {
@@ -568,6 +572,31 @@ describe("single-bench 基准入口与判决（ADR-262 D8）", () => {
       iterations: 3,
       format: "json",
     });
+  });
+});
+
+describe("diag-perf-model 预填最近选中模型路径（ADR-221 消除手输路径劝退）", () => {
+  it("有最近模型 + 输入框为空 → initPerfPanel 预填为磁盘绝对路径", () => {
+    rememberModelPath("D:\\repo\\ysm\\player.ysm");
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    expect((root.getElementById("diag-perf-model") as HTMLInputElement).value).toBe(
+      "D:\\repo\\ysm\\player.ysm",
+    );
+  });
+
+  it("无最近模型（null）→ 不预填，输入框保持空", () => {
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    expect((root.getElementById("diag-perf-model") as HTMLInputElement).value).toBe("");
+  });
+
+  it("输入框已有用户输入 → 预填绝不覆盖", () => {
+    rememberModelPath("D:\\repo\\other.ysm");
+    const root = makeRoot();
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./mine.ysm";
+    initPerfPanel(root, esc);
+    expect((root.getElementById("diag-perf-model") as HTMLInputElement).value).toBe("./mine.ysm");
   });
 });
 

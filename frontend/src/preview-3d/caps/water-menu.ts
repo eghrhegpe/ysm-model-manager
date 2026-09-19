@@ -106,6 +106,17 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           () => cap.getLevel(),
           (v) => cap.setLevel(v),
         ),
+        // ADR-272：尺寸与水位同属性——跨形态通用、且两形态都零重建（策略表 sizeLinks：
+        // film 单件 scale、pool 逐件 scale + 定位），故同理**不带 visibleWhen**。
+        // 范围 10–300 覆盖默认 80（与 groundSize 同值，即「水膜刚好铺满地面」）两侧各留余量；
+        // step=1 足够细（拖满全程 290 步），且避开小数累加误差。
+        wSliderNode(
+          "ground-water-size",
+          "preview.groundWaterSize",
+          { min: 10, max: 300, step: 1, unit: "m" },
+          () => cap.getWaterSize(),
+          (v) => cap.setWaterSize(v),
+        ),
       ],
     },
     {

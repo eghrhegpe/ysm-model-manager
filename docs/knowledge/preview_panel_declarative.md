@@ -16,14 +16,9 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - buildMmdScene
-    - buildPreviewMenuRouters
     - buildYsmScene
-    - clearFolderCollapsedState
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
-    - corePanelBuilder
-    - CorePanelId
-    - disposeCustomCleanups
     - isPreviewFolderNode
     - makeMmdAdapter
     - makeYsmAdapter
@@ -38,20 +33,10 @@ auto_fields:
     - mmdShotNodes
     - MorphMeshLike
     - morphNodes
-    - mountPreviewRootMenu
-    - nodeControlToView
     - playNodes
     - PreviewMenuCtx
-    - PreviewMenuHandle
-    - PreviewMenuRouters
     - registerYsmModelSchema
-    - renderAdapterPanelContent
-    - renderCapControls
-    - renderMenu
-    - renderPreviewPanel
-    - roleBaseName
     - shotButtonNodes
-    - unregisterCorePanelSchemas
     - YsmAdapterOptions
     - YsmControlsContext
     - ysmMenuItems

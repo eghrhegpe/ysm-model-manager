@@ -1423,6 +1423,7 @@ export const en: Record<string, string> = {
   "preview.groundOverlayDiamond": "Diamond",
   "preview.groundWaterModeFilm": "Thin Film",
   "preview.groundWaterLevel": "Water Level",
+  "preview.groundWaterSize": "Water Size",
   "preview.groundWaterModePool": "Pool",
   "preview.toneMappingNone": "None",
   "preview.toneMappingLinear": "Linear",

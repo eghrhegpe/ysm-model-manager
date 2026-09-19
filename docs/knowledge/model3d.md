@@ -575,7 +575,6 @@ auto_fields:
     - PmxReader
     - PmxRigidBodyData
     - PmxVertexData
-    - POOL_ROUNDNESS_MAX
     - poolStrategy
     - PoseScene
     - POSTPROC_PERSIST_FIELDS

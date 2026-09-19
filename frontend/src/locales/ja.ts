@@ -1426,6 +1426,7 @@ export const ja: Record<string, string> = {
   "preview.groundOverlayDiamond": "菱形",
   "preview.groundWaterModeFilm": "薄膜",
   "preview.groundWaterLevel": "水位",
+  "preview.groundWaterSize": "水面サイズ",
   "preview.groundWaterModePool": "プール",
   "preview.toneMappingNone": "なし",
   "preview.toneMappingLinear": "線形",

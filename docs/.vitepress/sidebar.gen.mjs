@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-272：waterSize 放开 UI 入口 + pool 尺寸零重建（sizeLinks）",
+        "link": "/adr/ADR-272-water-size-ui-entry"
+      },
+      {
         "text": "ADR-271：水面微细节法线 GPU 化（移除 CPU DataTexture 链路）",
         "link": "/adr/ADR-271-water-detail-normal-gpu"
       },

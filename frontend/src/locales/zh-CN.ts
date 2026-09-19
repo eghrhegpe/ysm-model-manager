@@ -1382,6 +1382,7 @@ export const zhCN = {
   "preview.groundOverlayDiamond": "菱格",
   "preview.groundWaterModeFilm": "薄膜",
   "preview.groundWaterLevel": "水位",
+  "preview.groundWaterSize": "水面尺寸",
   "preview.groundWaterModePool": "水池",
   "preview.toneMappingNone": "无",
   "preview.toneMappingLinear": "线性",

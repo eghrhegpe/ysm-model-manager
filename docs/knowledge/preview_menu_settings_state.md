@@ -11,24 +11,12 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - bindFieldRestorers
-    - buildCameraSchema
-    - buildCrossCuttingControls
-    - buildLightingSchema
-    - buildPostprocessingSchema
-    - buildSettingsControls
-    - buildSettingsSchema
-    - buildShadowSchema
     - CapabilityId
     - CapabilityMap
-    - capControlToView
-    - CapControlView
-    - collectSettingsCapControls
-    - collectVisiblePredicates
     - EnvPlacement
     - EnvSectionId
     - FieldKind
     - FieldRestorer
-    - formatCapSliderValue
     - getStateValue
     - getTypedCap
     - GROUND_LAYER_OFFSETS
@@ -42,12 +30,6 @@ auto_fields:
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath
-    - renderCapColor
-    - renderCapControls
-    - renderCapDivider
-    - renderCapSelect
-    - renderCapSlider
-    - renderCapToggle
     - resetSettingsListeners
     - restoreFields
     - restoreState

@@ -3,10 +3,14 @@
 // 波浪 shader 注入（onBeforeCompile）+ 程序化法线（Gerstner 解析法线 + fragment 微细节）仍为水面
 // 专属技术基盘，不与他人共享，故不另抽共享模块（YAGNI）。
 //
-// 2026-09-19（微细节法线 GPU 化）：原 CPU 256² DataTexture + normalMap 槽整条链路已移除，
+// 2026-09-19（微细节法线 GPU 化，ADR-271）：原 CPU 256² DataTexture + normalMap 槽整条链路已移除，
 // fragment 改按世界水平坐标程序化求三组方向沟槽的偏导。收益有二：
-//   ① 改 waterSize 不再重算 65536 像素（主线程零开销）——这是放开 size UI 入口的前置条件；
+//   ① 改 waterSize 不再重算 65536 像素（主线程零开销）；
 //   ② 微细节不再受贴图分辨率与插值的限制，getNormalMap/generateNormalMap/缓存字段全部退场。
+//
+// 2026-09-19（ADR-272）：size 入口放开的第二道前置同时解除——pool 的 size 变更不再重建容器
+// （形态策略表新增 `sizeLinks`，逐件 scale/定位），于是 `ground-water-size` 滑块落地。
+// 至此「改 size 要重建几何 + 重算法线」两条卡点全消，`waterSize` 不再是只服务存档的死路径。
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
@@ -167,8 +171,8 @@ export class WaterCapability implements SceneCapability {
            vec3 disp = vec3(0.0);
            float jxx = 0.0, jzz = 0.0, jxz = 0.0;
            nrm = vec3(0.0);
-           // 防除零：waterSize 只能来自存档（无 UI 入口），脏数据 0 会让 /uSize 产生 NaN 几何，
-           // 故取正下界；上方 loadState 另有 ≥1 的入口钳制（两道防线，语义不同：此处只求非零）。
+           // 防除零：/uSize 遇 0 会产生 NaN 几何，故取正下界；setter（≥1）与 loadState 恢复
+           // 另有入口钳制（两道防线，语义不同：此处只求非零）。
            float sizeSafe = max(uSize, 0.001);
            for (int i = 0; i < GERSTNER_COUNT; i++) {
              float fi = float(i);
@@ -522,7 +526,7 @@ export class WaterCapability implements SceneCapability {
         topShader.uniforms.uChoppiness.value = s.waterChoppiness;
     }
     // ADR-257：waterLevel → 水面 position.y（film/pool 通用，零重建）。
-    // 解耦的全部收益在此：旧语义下抬水面必须走 pool 并重建 9 个 mesh，如今只改一个标量。
+    // 解耦的全部收益在此：旧语义下抬水面必须走 pool 并重建 10 个 mesh，如今只改一个标量。
     if (changed.has("waterLevel")) {
       strategy.applyLevel(this.water, s.waterLevel);
     }
@@ -617,6 +621,16 @@ export class WaterCapability implements SceneCapability {
   getLevel(): number {
     return envState.waterLevel;
   }
+
+  // ── 水面尺寸（ADR-272：两形态均零重建，故与 waterLevel 同列 form 组）──
+  // 下界钳到 ≥1 与 loadState 恢复同口径（0/负数会让水面退化成一个点；shader 侧 /sizeSafe 再兜一层）。
+  setWaterSize(v: number): void {
+    setEnvState({ waterSize: Math.max(1, v) }, { source: "manual" });
+  }
+  getWaterSize(): number {
+    return envState.waterSize;
+  }
+
   setClarity(v: number): void {
     setEnvState({ waterClarity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
   }
@@ -696,8 +710,8 @@ export class WaterCapability implements SceneCapability {
     if (!state) return;
     restoreFields(state, {
       enabled: { boolean: (v) => (this.enabled = v) },
-      // waterSize 无 UI 入口、只能来自存档：脏数据 0/负数会让水面退化成一个点，
-      // 且 shader 侧位移换算需要正的尺寸（/sizeSafe），故在入口钳到 ≥1（与 shader 的 0.001 下界双保险）
+      // 存档脏数据 0/负数会让水面退化成一个点，故在入口钳到 ≥1
+      //（与 setWaterSize 同下界，shader 侧 max(uSize, 0.001) 再兜一层）
       size: { number: (v) => setEnvState({ waterSize: Math.max(1, v) }, { source: "manual" }) },
     });
     // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。

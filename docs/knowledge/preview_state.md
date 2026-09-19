@@ -9,16 +9,8 @@ source_files:
   - frontend/src/preview-3d/menu/schema/node-types.ts
 auto_fields:
   symbols_with_lines:
-    - buildCameraSchema
-    - buildCrossCuttingControls
-    - buildLightingSchema
-    - buildPostprocessingSchema
-    - buildSettingsControls
-    - buildSettingsSchema
-    - buildShadowSchema
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
-    - collectSettingsCapControls
     - getStateValue
     - isPathAvailable
     - isPreviewFolderNode

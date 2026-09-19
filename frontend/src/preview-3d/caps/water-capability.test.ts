@@ -13,6 +13,7 @@ import { WaterCapability } from "./water-capability.ts";
 import { persistState } from "./scene-capability.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 
 afterEach(() => {
   try { localStorage.clear(); } catch { /* noop */ }
@@ -785,10 +786,16 @@ describe("WaterCapability — 微细节法线（fragment 程序化，无 CPU 贴
 describe("WaterCapability — 菜单控件全联动", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("13 项控件 setValue/getValue 双向读写联动", () => {
+  /** 树内控件总数（含各层 children）——与下方逐项断言互为兜底：
+   *  树里新增控件却漏加断言时，这里的数字先红（旧标题「13 项」正因漏了 waterLevel 而长期失真）。 */
+  const countControls = (arr: readonly PreviewMenuNode[]): number =>
+    arr.reduce((n, c) => n + (c.children ? countControls(c.children) : 1), 0);
+
+  it("15 项控件 setValue/getValue 双向读写联动（数量与树一致）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
+    expect(countControls(nodes)).toBe(15);
     const form = nodes[1]!;
     const look = nodes[2]!;
     const pool = nodes[3]!;
@@ -804,6 +811,10 @@ describe("WaterCapability — 菜单控件全联动", () => {
     expect(nodes[0]!.control!.get!(undefined)).toBe(false);
     by("ground-water-mode").control!.set!("pool");
     expect(by("ground-water-mode").control!.get!(undefined)).toBe("pool");
+    by("ground-water-size").control!.set!(140);
+    expect(by("ground-water-size").control!.get!(undefined)).toBeCloseTo(140, 5);
+    by("ground-water-level").control!.set!(1.2);
+    expect(by("ground-water-level").control!.get!(undefined)).toBeCloseTo(1.2, 5);
     by("ground-wetness").control!.set!(0.45);
     expect(by("ground-wetness").control!.get!(undefined)).toBeCloseTo(0.45, 5);
     by("ground-water-color").control!.set!(0x0a0b0c);
@@ -1019,11 +1030,139 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     expect(clampPoolRoundness(9)).toBeCloseTo(0.5, 5);
   });
 
-  it("needsRebuild 由形态自行声明：film 永不重建；pool 因结构字段重建、但不因 waterLevel 重建", () => {
+  it("needsRebuild 由形态自行声明：film 永不重建；pool 也不因 waterSize 重建（ADR-272），墙高/壁厚仍重建", () => {
     expect(filmStrategy.needsRebuild(new Set(["waterLevel", "waterSize"]))).toBe(false);
     expect(poolStrategy.needsRebuild(new Set(["waterLevel"]))).toBe(false);
-    expect(poolStrategy.needsRebuild(new Set(["waterSize"]))).toBe(true);
+    // ADR-272：pool 的 size 改走 sizeLinks（逐件 scale + 定位），不再全量重建容器——
+    // 这是 waterSize 得以放开 UI 入口的前提：拖动是高频事件，ADR-255 §2.2 的「低频接受」前提已失效
+    expect(poolStrategy.needsRebuild(new Set(["waterSize"])), "pool size 零重建").toBe(false);
+    // 墙高 / 壁厚仍烘焙进壁几何（y 尺寸与外壁偏移），故保留重建
     expect(poolStrategy.needsRebuild(new Set(["waterPoolHeight"]))).toBe(true);
     expect(poolStrategy.needsRebuild(new Set(["waterPoolWallThickness"]))).toBe(true);
+  });
+});
+
+describe("WaterCapability — waterSize UI 入口与零重建（ADR-272）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  /** 收集 root 子树全部 mesh（池体恒 10 件：顶 + 底 + 4 组内外壁） */
+  const collectMeshes = (scene: THREE.Scene): THREE.Mesh[] => {
+    const out: THREE.Mesh[] = [];
+    scene.getObjectByName("ysm-ground-water")!.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh);
+    });
+    return out;
+  };
+
+  it("setWaterSize 写 envState；入口钳到 ≥1（与 loadState 恢复同一下界，shader /sizeSafe 再兜一层）", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    cap.apply();
+    expect(cap.getWaterSize()).toBe(80);
+    cap.setWaterSize(140);
+    expect(cap.getWaterSize()).toBe(140);
+    cap.setWaterSize(0);
+    expect(cap.getWaterSize(), "脏数据 0 会让水面退化成一个点").toBe(1);
+  });
+
+  it("菜单 ground-water-size：form 组、跨形态无 visibleWhen、双向直连 cap", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    const form = cap.getMenuNodes()[1]!;
+    const size = form.children!.find((c) => c.id === "ground-water-size");
+    expect(size).toBeDefined();
+    expect(size!.kind).toBe("slider");
+    expect(size!.labelKey).toBe("preview.groundWaterSize");
+    expect(size!.visibleWhen, "与 ground-water-level 同款：film/pool 通用").toBeUndefined();
+    size!.control!.set!(140);
+    expect(cap.getWaterSize()).toBe(140);
+    expect(size!.control!.get!(undefined)).toBe(140);
+  });
+
+  it("pool：size 变更零重建——10 个 mesh 与各自 geometry 全部同一实例，仅 transform 更新", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("pool");
+    const meshesBefore = collectMeshes(scene);
+    const geosBefore = meshesBefore.map((m) => m.geometry);
+    expect(meshesBefore).toHaveLength(10);
+
+    cap.setWaterSize(40);
+    const meshesAfter = collectMeshes(scene);
+    expect(meshesAfter).toHaveLength(10);
+    meshesAfter.forEach((m, i) => {
+      expect(m, `第 ${i} 件 mesh 不应被重建`).toBe(meshesBefore[i]);
+      expect(m.geometry, `第 ${i} 件 geometry 不应被重建`).toBe(geosBefore[i]);
+    });
+
+    // 连续改尺寸仍不重建（拖滑块 = 高频，这是入口得以放开的前提）
+    cap.setWaterSize(300);
+    collectMeshes(scene).forEach((m, i) => expect(m).toBe(meshesBefore[i]));
+  });
+
+  it("pool：尺寸几何按新边长落地——顶/底等比铺满，四壁缩放 + 外壁含壁厚偏移", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("pool");
+    cap.setWaterSize(120);
+    const half = 60;
+    const thickness = cap.getPoolWallThickness();
+
+    const top = scene.getObjectByName("ysm-water-top") as THREE.Mesh;
+    expect(top.scale.x).toBeCloseTo(120, 5);
+    expect(top.scale.y).toBeCloseTo(120, 5);
+
+    const bottom = scene.getObjectByName("ysm-water-bottom") as THREE.Mesh;
+    expect(bottom.scale.x).toBeCloseTo(120, 5);
+    expect(bottom.scale.y).toBeCloseTo(120, 5);
+
+    // n 壁：法向轴 z、符号 -1；内壁 |位置| = size/2，外壁再加一个壁厚（壁厚是绝对量，不随 size 缩放）
+    const innerN = scene.getObjectByName("ysm-water-wall-n-inner") as THREE.Mesh;
+    expect(innerN.scale.x).toBeCloseTo(120, 5);
+    expect(innerN.scale.y, "壁高不随 size 缩放").toBeCloseTo(1, 5);
+    expect(innerN.position.z).toBeCloseTo(-half, 5);
+    const outerN = scene.getObjectByName("ysm-water-wall-n-outer") as THREE.Mesh;
+    expect(outerN.position.z).toBeCloseTo(-(half + thickness), 5);
+
+    // e 壁：法向轴 x（与 n/s 正交，符号 +1）
+    const innerE = scene.getObjectByName("ysm-water-wall-e-inner") as THREE.Mesh;
+    expect(innerE.position.x).toBeCloseTo(half, 5);
+    expect(innerE.position.z).toBeCloseTo(0, 5);
+  });
+
+  it("film：size 变更走 scale，mesh 与 geometry 同一性保持（ADR-255 改造 A 回归）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const before = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    const geoBefore = before.geometry;
+    cap.setWaterSize(140);
+    const after = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    expect(after).toBe(before);
+    expect(after.geometry).toBe(geoBefore);
+    expect(after.scale.x).toBeCloseTo(140, 5);
+    expect(after.scale.y).toBeCloseTo(140, 5);
+  });
+
+  it("size 经菜单入口落地后，波浪 uniform 的 uSize/uHalfSize 同步（波频随世界尺寸）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const top = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    const mat = top.material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    const live = (
+      mat as unknown as {
+        userData: { shader: { uniforms: { uSize: { value: number }; uHalfSize: { value: number } } } };
+      }
+    ).userData.shader;
+    expect(live.uniforms.uSize.value).toBe(80);
+    cap.setWaterSize(140);
+    expect(live.uniforms.uSize.value).toBe(140);
+    expect(live.uniforms.uHalfSize.value).toBe(70);
   });
 });

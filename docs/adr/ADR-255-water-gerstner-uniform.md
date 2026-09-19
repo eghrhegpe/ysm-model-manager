@@ -88,6 +88,19 @@
 - 谱线参数（`0.08/0.8`、`0.05/1.1`、`0.03/1.6`）**逐项沿用**，搬迁只换执行位置、不换谱线，故观感连续。
 - 动机、实证与取舍详见 **ADR-271**。
 
+### 补记（2026-09-19）：§2.2「pool 全量重建、低频接受」的前提已失效（ADR-272）
+
+- 本文档 §2.2 原文：「pool 的 `waterSize` 变更走**全量 `rebuildWaterContainer`**……与 §3 已知遗留
+  一致，**低频接受**」；§3 负面亦记「pool 模式 `waterSize` 变更仍全量重建……属接受项（低频拖动）」。
+- 该判断的唯一依据是 **`waterSize` 没有 UI 入口、只可能来自存档恢复**。ADR-272 放开 `ground-water-size`
+  滑块后，该前提立刻失效：拖动是 pointermove 级高频事件，全量重建（dispose 10 个 geometry + 5 个材质
+  + transmission RT，再重建 10 个 mesh）会在拖动全程持续发生。
+- 本次处置：`WaterBody` 新增 build 期预捕获的 `sizeLinks`（`square` / `wall` 两类），pool 几何改为
+  **单位宽 + scale/position 表达尺寸**，`needsRebuild` 移除 `waterSize` → **pool 尺寸零重建**。
+  故本文档 §2.2 的「pool 走全量重建」与 §3 对应负面条目**自此失效**，以 ADR-272 为准。
+- 仍属重建范围：`waterPoolHeight` / `waterPoolWallThickness`（墙高烘焙进壁几何 y 尺寸、壁厚进外壁偏移），
+  ADR-272 已登记为同族待办。
+
 ## 4. 数据溯源
 
 - 用户需求"three 水面设计如何 / 行业内如何解决"→ 网页搜索行业实践（three.js WaterThreeJS Gerstner spectrum + SSR / Unity HDRP Gerstner+FFT / Crest Planar+SSR+Probe / Stylized Water 3 反射路线对比 / 移动端 Tier 分级）→ 锐评定位 YSM 为模型预览器，"伪水"可接受、真正要命是两块工程债 → 出方案拍板 A+B → TDD 改造（同步测试 L263/L265/L532 契约）。

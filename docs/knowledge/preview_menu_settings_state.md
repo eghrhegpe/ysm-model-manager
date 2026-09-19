@@ -20,7 +20,6 @@ auto_fields:
     - buildShadowSchema
     - CapabilityId
     - CapabilityMap
-    - capControlToView
     - CapControlView
     - collectSettingsCapControls
     - collectVisiblePredicates
@@ -44,7 +43,6 @@ auto_fields:
     - PreviewStatePath
     - renderCapColor
     - renderCapControls
-    - renderCapDivider
     - renderCapSelect
     - renderCapSlider
     - renderCapToggle

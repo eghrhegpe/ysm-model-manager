@@ -28,6 +28,7 @@ auto_fields:
     - bindFooter
     - bindSelectAll
     - bindSyncSelected
+    - cleanupSyncVirtualScroll
     - containerHTML
     - EmitDedupe
     - emptyHintHTML
@@ -65,6 +66,7 @@ auto_fields:
   tests:
     - frontend/src/views/app-sync-manager/index.test.ts
     - frontend/src/views/app-sync-manager/index.branches.test.ts
+    - frontend/src/views/app-sync-manager/renderer.virtual.test.ts
     - frontend/src/views/app-sync-manager/tpl.test.ts
     - frontend/src/views/app-sidebar/app-sidebar.sync.test.ts
     - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
@@ -117,7 +119,7 @@ status: active
 ## 核心职责
 
 ### `app-sync-manager`（逐文件级）
-- **状态呈现**：`loadData` 拉取 `SyncItem[]` → `applyFilter`（`tabStatus` 把 `diverged` 折叠进 `missing` tab）→ `renderNode` 递归渲染
+- **状态呈现**：`loadData` 拉取 `SyncItem[]` → `applyFilter`（`tabStatus` 把 `diverged` 折叠进 `missing` tab）→ `flattenRows` 展平为定高行数组 → `renderSlice` 窗口化渲染（只注入可见行 ± 缓冲）
 - **单文件 push/pull**：`performSingleOp` 顺序守卫 + `_singleBusy` 按钮视觉
 - **摘要栏**：`GetSyncScanDirs` 显示实际扫描目录 + `scan_dir_wide` 告警
 
@@ -140,9 +142,9 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
     → self._scanDirs[type] = { global, instance, warningCode?, warningParams? }
   → renderer.render(self)
     → applyFilter(self)     // 递归 filterNode → _filteredItems + _forceOpenPaths
-    → 递归 renderNode       // dir 走 syncDirRowHTML(可展开) / file 走 itemHTML
-    → statusTabsEl.innerHTML + listEl.innerHTML
-  → bindEvents(...)          // 状态标签 / 单行按钮 / 目录展开折叠
+    → flattenRows(self)     // 可见树（展开态 + _forceOpenPaths）压平为定高行数组
+    → renderSlice(listEl)   // 窗口化：只注入可见窗口 ± 缓冲行，paddingTop/Bottom 撑出滚动总高
+  → bindDelegatedEvents(...)  // 一次性委托（_init 单次绑定，render 重建 DOM 不影响）
 ```
 
 **sidebar 整包推送链**：

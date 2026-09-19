@@ -130,7 +130,6 @@ auto_fields:
     - cancelPendingEncodings
     - CapabilityId
     - CapabilityMap
-    - capControlToView
     - CapControlView
     - captureTextureName
     - checkRevision
@@ -632,7 +631,6 @@ auto_fields:
     - renderAdapterPanelContent
     - renderCapColor
     - renderCapControls
-    - renderCapDivider
     - renderCapSelect
     - renderCapSlider
     - renderCapToggle

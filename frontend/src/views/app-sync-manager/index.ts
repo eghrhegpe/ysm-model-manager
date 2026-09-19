@@ -26,7 +26,7 @@ export type { SyncManagerFields, SyncManagerSelf } from "./self-type.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { bindDelegatedEvents } from "./events.ts";
 import { performSingleOp } from "./network.ts";
-import { render } from "./renderer.ts";
+import { cleanupSyncVirtualScroll, render } from "./renderer.ts";
 import { getLastSelectedType, setLastSelectedType } from "./state.ts";
 
 // P3 修复（子代理审计）：共享状态（LAST_TYPE_KEY / lastSelectedType / setLastSelectedType）
@@ -116,6 +116,9 @@ export class AppSyncManager extends WebComponentBase {
   }
 
   disconnectedCallback(): void {
+    // 虚拟滚动监听（scroll + ResizeObserver）随卸载断开——同 _init 前置清理口径
+    const vsListEl = this.querySelector<HTMLElement>(".sm-list");
+    if (vsListEl) cleanupSyncVirtualScroll(vsListEl);
     if (this._unsubs) {
       this._unsubs.forEach((fn) => {
         fn();
@@ -139,6 +142,10 @@ export class AppSyncManager extends WebComponentBase {
     const initGen = ++this._initGen;
     const gen = this._guard.next();
     this._loading = true;
+    // 重建骨架前先摘掉旧 .sm-list 的虚拟滚动监听（_init 可被 instance 变更二次触发；
+    // ResizeObserver 强引用被观察元素，不显式 disconnect 会吊着已废弃的旧容器）
+    const prevListEl = this.querySelector<HTMLElement>(".sm-list");
+    if (prevListEl) cleanupSyncVirtualScroll(prevListEl);
     this.innerHTML = containerHTML();
     const listEl = this.querySelector(".sm-list");
     if (listEl) listEl.innerHTML = loadingHTML();

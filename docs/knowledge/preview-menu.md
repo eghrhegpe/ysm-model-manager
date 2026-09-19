@@ -33,7 +33,6 @@ auto_fields:
     - buildShadowSchema
     - buildStatsPanel
     - buildSwitchNodes
-    - capControlToView
     - CapControlView
     - clearFolderCollapsedState
     - collectPreviewLeafNodes
@@ -70,7 +69,6 @@ auto_fields:
     - renderAdapterPanelContent
     - renderCapColor
     - renderCapControls
-    - renderCapDivider
     - renderCapSelect
     - renderCapSlider
     - renderCapToggle

@@ -1,7 +1,6 @@
 // ===== app-sync-manager 模板 =====
 
 import { t } from "@/core/i18n/t.ts";
-import { stagger } from "@/utils/animation/stagger.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
@@ -88,13 +87,16 @@ export function actionBtnHTML(status: string): string {
 
 /** 文件夹行 HTML（dir-level 层级展示：箭头 + 图标 + 名称 + 大小 + 操作按钮）
  * 点击整行切换展开/折叠；push/pull 按钮冒泡到文件行层，由 events 处理。
+ * ⚠️ 不得为本行加 `animation` 入场动画：行由 renderer 窗口化注入 DOM，滚动即反复新增节点，
+ * `animation-fill-mode: both` 会持续重播 → 滚动闪烁（ADR-015 §2.4 约束 3 及其「已知例外」）。
  * @param path 展示路径 key（用于展开状态与树形展示）
+ * @param indent 缩进像素（padding-left，由渲染层按树深算出——虚拟滚动下行自带缩进，不再套嵌套 wrapper）
  * @param opPath 后端可用的绝对路径（data-path，push/pull 直接消费） */
 export function syncDirRowHTML(
   path: string,
   syncItem: SyncItem,
   shouldOpen: boolean,
-  index: number,
+  indent: number,
   opPath?: string,
 ): string {
   const sizeStr = syncItem.size > 0 ? formatBytes(syncItem.size) : "";
@@ -107,9 +109,9 @@ export function syncDirRowHTML(
     esc(syncItem.status) +
     '" data-type="' +
     esc(syncItem.type) +
-    '" style="animation:fadeSlideUp .2s ease both;animation-delay:' +
-    stagger(index || 0, 30, 300) +
-    'ms">' +
+    '" style="padding-left:' +
+    indent +
+    'px">' +
     '<span class="sm-dir-arrow" style="flex-shrink:0;width:14px;text-align:center;cursor:pointer;color:var(--muted)">' +
     arrow +
     "</span>" +
@@ -135,7 +137,13 @@ export function syncDirRowHTML(
 export function containerHTML(): string {
   return (
     "<style>" +
-    ".sm-item{display:flex;align-items:center;gap:4px;padding:4px 10px;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}" +
+    // 定高行：虚拟滚动要求同行等高，且行高必须随用户 --fs-scale（设置页可调）缩放——
+    // 故用 calc 从 --fs-sm 派生（12px 基准 → 25.8px），TS 侧首帧实测取整（见 renderer 行高实测）。
+    // 注意：这里是**静态** height，非 height 过渡——ADR-015 §2.4 约束 3 禁的是虚拟滚动组件上的
+    // height/max-height **transition**（与 innerHTML 替换冲突触发闪烁）；定高恰是窗口化的前提，
+    // 且本行 transition 只列 background。另：行不再挂入场动画，理由同该 ADR「已知例外」
+    // （模型树子行淡入即因此禁用：animation-fill-mode:both 叠加窗口化替换会滚动闪烁）。
+    ".sm-item{display:flex;align-items:center;gap:4px;padding:4px 10px;height:calc(var(--fs-sm) * 1.4 + 9px);box-sizing:border-box;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}" +
     ".sm-item:hover{background:var(--hover)}" +
     ".sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background var(--tr-fast),border-color var(--tr-fast),color var(--tr-fast)}" +
     ".sm-item-btn:hover{background:var(--hover)}" +
@@ -169,7 +177,6 @@ export function containerHTML(): string {
     ".sm-shimmer-w80{width:80%}" +
     ".sm-shimmer-w60{width:60%}" +
     ".sm-shimmer-w70{width:70%}" +
-    "@keyframes sm-item-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}" +
     "@keyframes fade-in{from{opacity:0}to{opacity:1}}" +
     "@keyframes sk-shimmer{from{background-position:-200% 0}to{background-position:200% 0}}" +
     "</style>" +
@@ -208,8 +215,9 @@ export function statusTabHTML(id: string, label: string, count: number, active: 
 
 /**
  * 列表项 HTML（扁平文件行，按 isDir 为 false 渲染）
+ * @param indent 缩进像素（padding-left，同 syncDirRowHTML）
  */
-export function itemHTML(item: SyncItem, index: number): string {
+export function itemHTML(item: SyncItem, indent: number): string {
   const statusIcon = statusIconOf(item.status);
   const statusColor = statusColorOf(item.status);
   const sizeStr = item.size > 0 ? formatBytes(item.size) : "";
@@ -224,9 +232,9 @@ export function itemHTML(item: SyncItem, index: number): string {
     esc(item.status) +
     '" data-type="' +
     esc(item.type) +
-    '" style="animation:fadeSlideUp .2s ease both;animation-delay:' +
-    stagger(index || 0, 30, 300) +
-    'ms">' +
+    '" style="padding-left:' +
+    indent +
+    'px">' +
     '<span style="flex-shrink:0;width:14px;text-align:center;color:' +
     statusColor +
     '">' +

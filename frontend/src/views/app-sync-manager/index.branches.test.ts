@@ -32,7 +32,10 @@ vi.mock("@/backend/app.ts", () => ({
     GetSyncScanDirs: mocks.GetSyncScanDirs,
   }),
 }));
-vi.mock("./renderer.ts", () => ({ render: renderMock }));
+// cleanupSyncVirtualScroll 是 index.ts 卸载/重建骨架时调用的监听清理出口
+// （与 app-tree 的 cleanupVirtualScroll 同款范式）；本文件只锁 index 生命周期，
+// renderer 本体不参与，故给 no-op。
+vi.mock("./renderer.ts", () => ({ render: renderMock, cleanupSyncVirtualScroll: vi.fn() }));
 
 type SelfView = {
   _instance: string;

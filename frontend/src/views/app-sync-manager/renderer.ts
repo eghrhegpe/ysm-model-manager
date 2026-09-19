@@ -5,6 +5,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
+import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.ts";
 import { esc } from "@/utils/html/html.ts";
 import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import type { SyncManagerSelf } from "./self-type.ts";
@@ -33,11 +34,16 @@ interface TypeCounts {
 
 /** 主渲染入口：设置骨架 → 类型标签 → 状态标签 → 列表 */
 export async function render(self: SyncRenderSelf): Promise<void> {
-  try {
-    self.innerHTML = containerHTML();
-  } catch (e) {
-    logError("sync-manager", "_render 设置 innerHTML 失败:", e);
-    return;
+  // 骨架幂等：已存在则不重建——重建会丢 .sm-list 滚动位置（目录行点击/筛选切换时
+  // 用户正停在中段，原实现每次 render 全量重建导致列表「弹回顶部」），且白白重解析
+  // 内联 <style>。_init 首帧已注入骨架，此处只补骨架缺失场景。
+  if (!self.querySelector(".sm-list")) {
+    try {
+      self.innerHTML = containerHTML();
+    } catch (e) {
+      logError("sync-manager", "_render 设置 innerHTML 失败:", e);
+      return;
+    }
   }
 
   const statusTabsEl = self.querySelector(".sm-status-tabs");
@@ -139,7 +145,11 @@ export async function render(self: SyncRenderSelf): Promise<void> {
 
   // — 列表 —
   applyFilter(self);
-  await renderList(self, listEl).catch((e) => logError("sync-manager", "renderList 失败:", e));
+  try {
+    renderList(self, listEl);
+  } catch (e) {
+    logError("sync-manager", "renderList 失败:", e);
+  }
 }
 
 /** 渲染 `.sm-summary`：显示仓库基准目录与实例实际扫描目录，兜底路径一目了然。 */
@@ -178,10 +188,146 @@ function renderScanDirs(self: SyncRenderSelf): void {
     cell(t("syncManager.scanInstance", { dir: dirs.instance || "—" }), dirs.instance);
 }
 
-/** 渲染列表行（含空态）——按 isDir 分流 */
-async function renderList(self: SyncRenderSelf, listEl: HTMLElement): Promise<void> {
-  if (!listEl) return;
-  if (self._filteredItems.length === 0) {
+// ===== 行级虚拟滚动（对齐 app-tree 窗口化范式）=====
+// 背景：原实现把全部 SyncItem 递归拼串后一次 `innerHTML` 注入——整合包页 MMD 模型
+// 上百时 DOM 行数 = 条目数 × 展开层级，滚动卡顿、内存膨胀（仓库树 app-tree 早已
+// 窗口化，故同数据量下只有本页出事）。现补齐 DOM 层窗口化：数据侧展平为定高行数组，
+// 只把可见窗口 ± 缓冲注入 DOM，用 padding 撑出滚动高度。
+//
+// 三条不能回退的约束：
+//   ① 定高行——行不等高则窗口范围算不准（行高 CSS 在 tpl 定，TS 首帧实测取整）；
+//   ② 行不得挂入场动画——窗口化会随滚动反复注入节点，`animation-fill-mode: both` 会
+//      持续重播成滚动闪烁（ADR-015 §2.4 约束 3 及其「已知例外」，模型树当年同因禁用）；
+//   ③ 骨架幂等——`render` 不得重建 `.sm-list`，否则每次目录点击/筛选都丢滚动位置。
+
+/** 每级缩进像素（与原 renderNode 逐级套 26px wrapper 的观感等价） */
+const INDENT_PER_LEVEL = 26;
+/** 行基础左内边距（与 .sm-item 的 padding 左值同源） */
+const ROW_PAD_LEFT = 10;
+/** 行高回退值（--fs-sm 基准 12px 派生 ≈ 25.8px 取整）。真实值由首帧实测校正。 */
+const SM_ROW_H_FALLBACK = 26;
+
+/** 扁平化行（虚拟滚动数据单元） */
+interface SmRow {
+  /** 行键 = item.path（Go 侧树保证同层唯一） */
+  key: string;
+  html: string;
+}
+
+/** 行模板缓存（WeakMap——row 对象为 key；滚动帧复用同一 rows 数组即命中，
+ *  数据变化重建 rows 后旧条目随数组 GC 自动回收，无手工失效负担） */
+const rowTplCache = new WeakMap<SmRow, HTMLTemplateElement>();
+
+/** 单容器虚拟滚动状态 */
+interface SmVsState {
+  cleanup: (() => void) | null;
+  resizeObserver: ResizeObserver | null;
+  rows: SmRow[];
+  /** 实测行高（0 = 未测，暂用回退值） */
+  rowH: number;
+}
+
+/** 容器虚拟滚动状态表（WeakMap——listEl 为 key，元素 GC 自动回收） */
+const vsStates = new WeakMap<HTMLElement, SmVsState>();
+
+function vsOf(listEl: HTMLElement): SmVsState {
+  let st = vsStates.get(listEl);
+  if (!st) {
+    st = { cleanup: null, resizeObserver: null, rows: [], rowH: 0 };
+    vsStates.set(listEl, st);
+  }
+  return st;
+}
+
+/** 断开虚拟滚动监听（容器重建 / 组件卸载时调用，防 ResizeObserver 吊着旧容器） */
+export function cleanupSyncVirtualScroll(listEl: HTMLElement): void {
+  const st = vsStates.get(listEl);
+  if (!st) return;
+  st.cleanup?.();
+  st.cleanup = null;
+  st.resizeObserver?.disconnect();
+  st.resizeObserver = null;
+  st.rows = [];
+  st.rowH = 0;
+}
+
+/** 行 DOM 节点：row.html 解析一次后按 row 对象缓存（克隆插入，防缓存模板被搬移） */
+function rowElOf(row: SmRow): HTMLElement {
+  let tpl = rowTplCache.get(row);
+  if (!tpl) {
+    tpl = document.createElement("template");
+    tpl.innerHTML = row.html;
+    rowTplCache.set(row, tpl);
+  }
+  const el = tpl.content.firstElementChild as HTMLElement | null;
+  if (!el) throw new Error(`rowElOf: row.html 未产出元素（key=${row.key}）`);
+  return el.cloneNode(true) as HTMLElement;
+}
+
+/**
+ * 把可见树压平成定高行数组（虚拟滚动数据源）。
+ * 展开判定与原 renderNode 逐字同口径：dirOpen 手动优先（显式 false 也尊重），
+ * 未点过（undefined）才允许 status 筛选的 _forceOpenPaths 强开。
+ */
+function flattenRows(self: SyncRenderSelf, out: SmRow[]): void {
+  const dirOpen = self._dirOpen || {};
+  const forceOpen = self._forceOpenPaths;
+  const walk = (items: SyncItem[], depth: number): void => {
+    const indent = ROW_PAD_LEFT + depth * INDENT_PER_LEVEL;
+    for (const item of items) {
+      if (!item.isDir) {
+        out.push({ key: item.path, html: itemHTML(item, indent) });
+        continue;
+      }
+      const hasChildren = !!item.children?.length;
+      const isOpen = hasChildren && (dirOpen[item.path] ?? !!forceOpen?.has(item.path));
+      out.push({
+        key: item.path,
+        html: syncDirRowHTML(item.path, item, isOpen, indent, item.path),
+      });
+      if (isOpen && item.children) walk(item.children, depth + 1);
+    }
+  };
+  walk(self._filteredItems, 0);
+}
+
+/** 窗口化切片渲染：只把可见行 ± 缓冲注入 DOM，padding 撑出总高。 */
+function renderSlice(listEl: HTMLElement): void {
+  const st = vsOf(listEl);
+  const total = st.rows.length;
+  if (!total) return;
+  // 零高度（jsdom / 首帧布局未就绪）→ 全量渲染降级（同 community/virtual-list 口径），
+  // 保证既有测试与首帧可见性不因窗口化而空白
+  const rowH = st.rowH || SM_ROW_H_FALLBACK;
+  const range =
+    listEl.clientHeight > 0
+      ? calcVisibleRange(listEl, total, rowH)
+      : { startIdx: 0, endIdx: total };
+
+  const frag = document.createDocumentFragment();
+  for (let i = range.startIdx; i < range.endIdx; i++) frag.appendChild(rowElOf(st.rows[i]));
+  listEl.replaceChildren(frag);
+  listEl.style.paddingTop = `${range.startIdx * rowH}px`;
+  listEl.style.paddingBottom = `${(total - range.endIdx) * rowH}px`;
+
+  // 首帧实测行高：CSS 用 calc(var(--fs-sm) * 1.4 + 9px) 保证同行等高，但 --fs-scale
+  // 是用户可调设置（设置页 ±2px），TS 侧拿不到解析值——按实测值重渲一次（置位后
+  // 递归即收敛）。否则 padding 撑出的滚动高度与实际行高漂移，末行可能滚不到。
+  if (!st.rowH) {
+    const measured = (listEl.firstElementChild as HTMLElement | null)?.offsetHeight || 0;
+    if (measured > 0) {
+      st.rowH = measured;
+      if (measured !== rowH) renderSlice(listEl);
+    }
+  }
+}
+
+/** 渲染列表（含空态）——数据展平后交给窗口化切片 */
+function renderList(self: SyncRenderSelf, listEl: HTMLElement): void {
+  const rows: SmRow[] = [];
+  flattenRows(self, rows);
+
+  if (!rows.length) {
     const statusLabels: Record<string, string> = {
       all: "",
       synced: t("syncManager.status.synced"),
@@ -195,62 +341,33 @@ async function renderList(self: SyncRenderSelf, listEl: HTMLElement): Promise<vo
         ? t("syncManager.emptyFiltered", { status: statusLabels[self._statusFilter] || "" })
         : t("syncManager.emptyType");
     listEl.innerHTML = emptyHintHTML(hint);
+    // 空态无行可滚：摘监听 + 清占位 padding，防上次窗口化的撑高残留
+    listEl.style.paddingTop = "";
+    listEl.style.paddingBottom = "";
+    const st = vsOf(listEl);
+    st.rows = [];
+    st.cleanup?.();
+    st.cleanup = null;
     return;
   }
 
-  const htmlParts: string[] = [];
+  const st = vsOf(listEl);
+  st.rows = rows;
+  if (!st.cleanup) st.cleanup = installScrollSync(listEl, () => renderSlice(listEl));
+  renderSlice(listEl);
 
-  self._filteredItems.forEach((item, i) => {
-    renderNode(self, item, "", htmlParts, i);
-  });
-
-  listEl.innerHTML = htmlParts.join("");
-}
-
-/**
- * 递归渲染一个同步节点及其 children。
- * 镜像磁盘层级：中间目录（isDir 且含 children）渲染为可展开 sm-dir，
- * 其子项递归下沉；扁平文件渲染为 sm-item。
- * @param self 组件实例
- * @param item 当前节点
- * @param indentPadding 继承缩进（px），递归层层累加
- * @param htmlParts 输出缓冲
- * @param index 动画错峰基准
- */
-function renderNode(
-  self: SyncRenderSelf,
-  item: SyncItem,
-  indentPadding: string,
-  htmlParts: string[],
-  index: number,
-): void {
-  const dirOpen = self._dirOpen || {};
-  const isDir = item.isDir;
-  const hasChildren = !!(item.children && item.children.length > 0);
-  // 目录且未展开，或本无 children → 该子树的叶子/子树到此为止不再下钻
-  // 展开判定：dirOpen 手动折叠优先（用户点过即尊重）；未点过的目录在 status
-  // 筛选激活且「有命中后代」时由 _forceOpenPaths 强制展开（点1——折叠目录下
-  // 的命中子项无需手动展开即可见）。
-  const forceOpen = !!self._forceOpenPaths?.has(item.path);
-  // ?? 而非 ||：显式折叠（false）必须优先于 forceOpen——用户点过折叠即尊重，
-  // 只有「未点过」（undefined）才允许 status 筛选强制展开；原 `||` 会让
-  // 折叠过的命中目录在下次渲染被强开，折叠无效（code_review P2）。
-  const isOpen = isDir && hasChildren && (dirOpen[item.path] ?? forceOpen);
-
-  const wrapped = (contentHTML: string): string =>
-    indentPadding ? `<div style="padding-left:26px">${contentHTML}</div>` : contentHTML;
-
-  if (!isDir) {
-    // 扁平文件行
-    htmlParts.push(wrapped(itemHTML(item, index)));
-    return;
-  }
-
-  // 目录行：可展开 sm-dir
-  htmlParts.push(wrapped(syncDirRowHTML(item.path, item, isOpen, index, item.path)));
-  if (isOpen && item.children) {
-    item.children.forEach((child, ci) => {
-      renderNode(self, child, "  ", htmlParts, index + ci + 1);
+  // 首帧容器尚未布局（clientHeight=0 → 上一步已全量渲染）→ 等 layout 后按真实视口重算
+  if (listEl.clientHeight === 0) {
+    requestAnimationFrame(() => {
+      if (vsOf(listEl).rows.length) renderSlice(listEl);
     });
+  }
+
+  // 容器尺寸变化（侧栏折叠 / 窗口 resize）重算可见窗口
+  if (!st.resizeObserver) {
+    st.resizeObserver = new ResizeObserver(() => {
+      if (vsOf(listEl).rows.length) renderSlice(listEl);
+    });
+    st.resizeObserver.observe(listEl);
   }
 }

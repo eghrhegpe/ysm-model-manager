@@ -5,6 +5,7 @@ tier: architecture
 adr:
   - ADR-132
   - ADR-195
+  - ADR-276
 category: rendering
 source_files:
   - frontend/src/preview-3d/menu/schema/menu-node-types.ts
@@ -13,6 +14,8 @@ source_files:
   - frontend/src/preview-3d/menu/schema/node-types.ts
   - frontend/src/preview-3d/menu/engine/defs.ts
   - frontend/src/preview-3d/menu/render/cap-controls.ts
+  - frontend/src/preview-3d/menu/engine/sanctioned.ts
+  - frontend/src/utils/base/pure/label.ts
   - frontend/src/preview-3d/menu/panels/env.ts
   - frontend/src/preview-3d/menu/panels/roles.ts
   - frontend/src/preview-3d/menu/panels/settings.ts
@@ -48,6 +51,7 @@ auto_fields:
     - formatCapSliderValue
     - hasSceneStats
     - isPreviewFolderNode
+    - LabelSource
     - makeSwitchState
     - mergeStatsMenuItems
     - mountPreviewRootMenu
@@ -75,8 +79,11 @@ auto_fields:
     - renderCapToggle
     - renderMenu
     - renderPreviewPanel
+    - resolveLabel
     - roleBaseName
     - RolesSchemaDeps
+    - SANCTIONED_PROCEDURAL_PANELS
+    - SanctionedProceduralPanel
     - STATS_PANEL_ID
     - switchNormPath
     - SwitchState
@@ -154,6 +161,7 @@ status: active
 - **环境面板「成员发现」的测试注入范式（2026-09-19 补齐）**：`buildEnvSchema` 的成员集**只**来自 `sceneCapabilityRegistry.getAll()`（`env.ts | collectEnvEntries()`），故面板测试的唯一注入口 = `vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([...])`（`env.test.ts` 10 处；经 `mountPreviewRootMenu` 间接开面板的 `items.test.ts` / `core.test.ts` 同款）。⚠️ `ctx.getCap` **不能替代**——它只承担「按 id 取值」（dock 谓词 `env.skyGroundCap` / 一级行 headerToggle），无从枚举全集。ADR-270 menu 分层重构时这两个间接测试文件漏跟进，3 个用例（`core 拆组契约` / `core environment 面板` / `dispose 清环境订阅`）长期常红且被误判为「无关既有失败」，直至 2026-09-19 定性修复（`803c6cc7b`）。**cap 桩四件套**：`id`（行 id = `env-cap-${cap.id}`，缺则退化成 `env-cap-undefined`）+ `labelKey` + `icon` + `getEnvPlacement()`（入选守卫，返回 undefined 即被排除）——缺任一都会让行「静默不出现」，比抛错更难查。
 - **cap 控件单类型化（ADR-195，2026-09-06 刀1 落地、刀2 完成）**：架构真相——渲染层早已单源：节点 select/slider/toggle 经 `nodeControlToCapControl` 投影进 `renderCapControls`（rmAppendSelect/Slider/Toggle 已退役），唯一控件渲染器即 cap 栈；真正分裂的是**声明入口**（cap 的 `getMenuControls(): MenuControlDef[]` 平行数组 vs 节点树）。单类型终局 = 一个 schema（MenuNode[]）+ 一条渲染链（renderMenu → renderCapControls），MenuControlDef 字段并入 PreviewControlSpec 后类型名作废。刀序：刀0 渲染归属复位（button 收编 cap 渲染器、节点行/参数行视觉 token 统一）；刀1 `cap-to-node` 桥接：简单控件（toggle/slider/select/divider/color）映射原生节点（spec 同构），复杂控件（timeline/histogram/image/preset-thumb/button）走 controls 节点通道（受控委托，不触发 renderCustom 审计门），group → folder。**刀刃边界：桥接层不得产 renderCustom 构造点**（render-custom-audit 白名单唯余 bones——controls 通道是树内嵌 MenuControlDef 的受控委托，非手写 DOM 逃生舱）。**刀2（完成）逐 cap 直产节点**：全部 SceneCapability 实现 `getMenuNodes(): PreviewMenuNode[]`——纯声明层抽 `caps/*-menu.ts`（reflector/fog/shadow/render-mode/light/ground/water/sky/postprocessing/environment），复杂控件 cap 用 controls 通道节点（ground button / sky timeline / environment preset-thumb+image+histogram+button），settingsOrder 挂节点（PreviewMenuNode 增 `settingsOrder` 字段，settings 聚合双轨收集）；env/settings 消费者双轨（已迁移 cap 优先 getMenuNodes，未迁移 fallback 桥接）。getMenuControls 保留兼容待刀3 删。**刀2.5（完成）投影反转**：删 `nodeControlToCapControl`（MenuControlDef 在 renderMenu 的最后硬依赖）——cap-controls 五简单控件渲染（Divider/Toggle/Slider/Select/Color）改吃统一 `CapControlView`（MenuControlDef 读取子集），render.ts 四分支经内部 `nodeControlToView`（spec→view，bind/get/set/onChange/refreshOnChange/numeric/unit/onCommit 全保留）直调 cap 渲染器；settings 聚合全节点化（collectSettingsCapControls/buildSettingsControls 返回 `PreviewMenuNode[]`，schema 展开节点，controls 通道于 settings 退役）。`renderCapControls`/`renderCapControlSingle` 的 switch 暂保留简单 kind（经 view 适配）。**刀3（完成，2026-09-07 走法乙）类型更名收敛**：`MenuControlDef`→`PreviewControlDef`、`MenuControlKind`→`PreviewControlKind`（字段原样，渲染形态零变、不碰 render-custom 审计门）——两类型名全仓归零，控件声明单类型化（简单控件走 PreviewMenuNode.control/PreviewControlSpec，复杂控件走 controls 通道/PreviewControlDef，同一 cap 栈渲染）；`getMenuControls` 接口同时退役。判据：`grep MenuControlDef` 零命中（仅历史注释）。ADR-194（判别联合）已标被本 ADR 取代。**桥接层退役（增量1，2026-09-19）**：settings 横切项 `buildCrossCuttingControls(): PreviewControlDef[]` 改直产 `buildCrossCuttingNodes(): PreviewMenuNode[]`、preview-state.test.ts fake cap 改直产 `getMenuNodes` 节点树后，`cap-to-node.ts`（`canNodeRepresent`/`capControlToNode`/`capControlsToNodes`）及其测试全仓零引用，已 `git rm`。注：`PreviewControlDef` 类型本身仍在（复杂控件 controls 通道 + `collectVisiblePredicates` 消费）。**增量2a（2026-09-19，通道收窄为复杂件专用）**：`PreviewControlKind` 砍至 `button|image|timeline|histogram|preset-thumb` 五件，`PreviewControlDef` 删 `slider/select/hintKey/onChange` 四简单字段，`renderCapControlSingle` 的简单臂（divider/toggle/slider/select/color）整体移除，`capControlToView`（def→view 恒等适配）与 `renderCapDivider`（仅该臂消费、node divider 走 `rmAppendDecor`）随之退役。至此简单件在声明层只剩一条路（节点原生 kind + `PreviewControlSpec` → render.ts `nodeControlToView` → `CapControlView` → `renderCap*` 渲染器），刀2.5「switch 暂保留简单 kind」的过渡态被反转清零；`PreviewControlSpec`/`PreviewControlDef` 的字段级统一（增量2b）仍待。守卫随能力收缩：cap-controls.test.ts 简单件用例改直调 `renderCapToggle/Slider`（喂 `CapControlView`），preview-menu.test.ts 通道分组探针与复杂件 testid 用例改用 button/image/timeline/histogram/preset-thumb，divider-through-通道用例删除。
 - **`PreviewMenuNode.fallback` 退役 → `label`（回退标准统一归 i18n）**：原 `fallback` 字段被删，回退标准**只允许 i18n `tOf` 制定**（当前语言包 → FALLBACK_LANG=en → 裸 key + warnMissingKey 三级兜底）；动态节点的明文显示名改走显式 `label` 字段（无 i18n 键、值即运行期数据，如形态名/材质名/角色名/switch 候选文件名）。根源腐蚀点 `rmLabel`（render.ts）统一为 `labelKey ? tOf(labelKey) : (label ?? node.id)`。分类迁移：① 有真实 i18n labelKey 的确定性节点 → 删冗余 fallback；② 无 labelKey 的运行时数据节点 → `fallback` 改 `label`。`PreviewControlDef.fallback`（cap-controls 层 Schema 必填字段）**保留不动**——与 MenuNode 层隔离（原 `cap-to-node.ts | capControlToNode` 桥接把 `c.fallback` 落在 `node.label`，桥接层退役后 cap 直产节点时自行落 `label`）。守卫：`core.test.ts` 断言 CORE_MENU_ITEMS 不得再含 fallback 字段；`items.test.ts` 非 divider 项断言 `labelKey || label` 有值。
+- **★ 2026-09 收口：回退决策唯一出口 `resolveLabel`（表情整列空白行事故）**：`frontend/src/utils/base/pure/label.ts|resolveLabel({labelKey, plain}, translate, valueOverride?)`——**唯一**回退决策纯函数（翻译器注入式，本层零 i18n 依赖）：① `labelKey` 非空 → `translate(labelKey)`；② 无 labelKey 且有 `valueOverride` → `String(valueOverride)`（field 行「显示值优先」，顺序不可换）；③ 其余 → `plain` 明文。`rmLabel`（render.ts）与 `capLabel`（cap-controls.ts）**双双委托它**，杜绝「同一契约两栈两种读法」。**事故根因**：cap 栈各渲染器此前只读 `labelKey`，而 `nodeControlToView` 把动态名装进 `fallback`（=`node.label ?? node.id`）、把 `labelKey` **置为空串**，`tOf("")` 三级回退全 miss → 原样返回空串 → `morphNodes` 表情开关整列**有控件无文字**；骨骼面板不受影响（sanctioned `renderCustom` 直写 `textContent = item.name`，不经 tOf）。⚠️ **空 labelKey 不得送进 tOf**——`resolveLabel` 以真值判断短路，`label.test.ts` 已钉「空 labelKey 不触碰翻译器」。守卫：`cap-controls.test.ts`（capLabel 两分支 + 只声明 fallback 的 toggle/slider 上屏，含 aria-label）+ `morph-controls.test.ts`（`morphNodes → nodeControlToView → renderCapToggle` 端到端三行文本）。
 - **[2026-09 雾气锐评收口] select 选项支持 `labelKey`（i18n，取代硬编码中文）**：`PreviewControlSpec.options` / `CapControlView.select` 的选项类型由 `{value,label}` 扩为 `{value,label,labelKey?}`（options 直透传，故类型加字段即全链路生效；增量2a 前第三处 `PreviewControlDef.select` 已随 controls 通道收窄为复杂件专用而移除，select 声明现只存于节点 `PreviewControlSpec`）；`renderCapSelect` 落位改 `opt.labelKey ? tOf(opt.labelKey) : opt.label`——`label` 降级为「i18n 缺键 / 动态项」回退。首用例 = fog 雾型选项（`preview.fogModeLinear` / `preview.fogModeExp2`）。**遗留债**：water / ground / postprocessing 的 options 仍硬编码中文（`{value:"film",label:"薄膜"}` 等），该债已于同日清零——water / ground（来源·样式·叠加三轴）/ postprocessing（色彩映射 + 反射模式）/ render-mode（混合 + 面剔除）/ shadow（贴图尺寸）/ light（模型预设）/ camera（旋转模式）/ litematic（切片模式）全部 select options 已带 `labelKey`（各自显式注解的常量类型同步加 `labelKey?: string`）；`preset-thumb` 的 `thumb.options` 同批扩 `labelKey`（`renderCapPresetThumb` 的 `img.alt` / `span.textContent` 同口径），环境预设缩略图复用 `preview.presetQuick*`（与 env 面板快捷预设文案恒等）。
 - **`CORE_MENU_ITEMS` / `PREVIEW_MENU_GROUPS`**（defs.ts）— 核心菜单项（roles/environment/camera/lighting/shadow/postproc/settings）+ 底栏分组定义（model/motion/env/scene/settings）。
 - **`renderAdapterPanelContent(list, node, deps)`**（render.ts）— adapter 面板内容三通道衰退：`schema-registry(schemaId)` → `children` → `renderCustom`。
@@ -186,7 +194,8 @@ status: active
 - **visibleWhen 谓词统一**：dock 组过滤（`dockGroupItemsFor`）与内容级渲染（`renderMenu`）共用同一求值器，谓词吃 `previewSnapshot()` 状态层快照。
 - **schemaId 必显式**：panel id 不再隐式兜底作 schema key（P5 复盘：id 撞注册键渲染错内容且无告警）。
 - **fillers 通道已退役**（ADR-193 第四刀）：roles 迁 `schemaBuilders` 声明式后 filler 过程式臂删除，`routers` 上不再有 `fillers` 字段，`proceduralPanels` 恒空。新增面板只有 schemaBuilders / schema-registry / children 三条声明式通道（旧「schema / fillers / runners 三级衰退链」表述已过期）。
-- **renderCustom 末段逃生舱**：schemaId 未注册时走 renderCustom 会 console.warn 提示。**唯一在册构造点 = bones**（ADR-193 §2.2② 拍板的永久例外，camera/env 退役后唯余此项）——名单**单一事实源 = `menu/sanctioned.ts|SANCTIONED_PROCEDURAL_PANELS`**，由两处共同消费：审计门（`adapters/render-custom-audit.test.ts`，生产源码「`renderCustom`+冒号」构造点须与名单**逐一相等**）与导航图报告（`collectMenuGraph().sanctionedProcedural`，兑现 §3「不可静默」——报告不再一边宣称 `coverage:"full"` 一边对已豁免的手写 DOM 面板只字不提）。**新增例外须先 code review 拍板并把条目（id/decidedBy/rationale）写进该表**，不得只在测试白名单或注释里挂单（审计门会抓裸加）。⚠️ bones 由 adapter 注入 `menuItems`，不经 collectMenuGraph 的三通道枚举，故 `escapeHatch` 标记对它永不触发——`sanctionedProcedural` 是它唯一的显式曝光面。
+- **renderCustom 末段逃生舱**：schemaId 未注册时走 renderCustom 会 console.warn 提示。**唯一在册构造点 = bones**（ADR-193 §2.2② 拍板的永久例外，camera/env 退役后唯余此项）——名单**单一事实源 = `menu/sanctioned.ts|SANCTIONED_PROCEDURAL_PANELS`**，由两处共同消费：审计门（`adapters/render-custom-audit.test.ts`，生产源码「`renderCustom`+冒号」构造点须与名单**逐一相等**）与导航图报告（`collectMenuGraph().sanctionedProcedural`，兑现 §3「不可静默」——报告不再一边宣称 `coverage:"full"` 一边对已豁免的手写 DOM 面板只字不提）。**新增例外须先 code review 拍板并把条目写进该表**，不得只在测试白名单或注释里挂单（审计门会抓裸加）。⚠️ bones 由 adapter 注入 `menuItems`，不经 collectMenuGraph 的三通道枚举，故 `escapeHatch` 标记对它永不触发——`sanctionedProcedural` 是它唯一的显式曝光面。
+- **[2026-09 追加] 豁免条目须自证三件 + 判据收敛为能力面（ADR-276）**：条目字段 = `decidedBy`（ADR 依据）+ `rationale`（真·无法数据化的具体性质）+ **`exitWhen`（假释条件）**，审计门逐一断言，缺一即红——永久例外 ≠ 永久特权（ADR-193 §2.2「拒绍挂着不动」的可执行化）。**豁免判据只认能力面缺口三条、需满两条**：① 活对象注入（相机/场景/容器实时引用）② 副作用注册 + 生命周期（外部事件监听 + cleanup 归属）③ DOM 位置依赖运行时选中态（选中行下方内联详情 / 深度缩进）；bones 三条全中（`VrmBonePanelCtx{viewContainer,camera,scene}` / click 监听 + cleanup / `activeId` 详情块 + `paddingLeft=depth*12+6`）。⚠️ **「数据动态」「名字进不了语言包」「列表项数不定」不是豁免理由**——动态名走 `label` 明文通道（见下条）、动态列表走 `row` kind（`menu-node-types.ts|PreviewMenuNodeKind` 注释即点名 bone）；以动态为由申请豁免即为误读。**触发条件（两次法则）**：出现**第二个**需①②③中至少两条的面板时，本例外升级为模式提取（选项①：给 node 模型补 `subscribe` 订阅通道 + 树形 row），届时条目须从名单移除——契约预定义见 ADR-276。
 - **renderCustom cleanup 双持有者**（2026-09 生命周期收编）：`renderCustom` 返回 cleanup 后同时交给两方——① 渲染器（render.ts `runCustomMount` 按容器持有，重渲染前先清旧 / `disposeCustomCleanups` 菜单 dispose 全清）；② bones 的 `cleanupRef`（adapter.dispose 模型级兜底，摘挂 viewContainer 的 raycaster listener——模型卸载而菜单存活时唯一防线）。两者持同一函数，renderer 实现幂等，双清无害。**新增 renderCustom 逃生舱自动获得面板级生命周期，勿自搓 cleanupRef**；仅当 cleanup 跨面板存活（引用模型资源）时才需模型级兜底通道。
 - **disposeCustomCleanups 只挂 dispose**：不可挂 `onOverlayStyleTargetReset`——该钩子每次 mount 都触发，而 cleanup 表是模块级共享，全清会误伤并行挂载会话仍存活的骨骼面板（listener 被摘而 DOM 仍在 → 拾取静默失效）。
 - **setAdapterItems id 冲突守卫**（ADR-085 S1）：重复 id 或与 CORE_MENU_ITEMS 冲突时抛错阻断。

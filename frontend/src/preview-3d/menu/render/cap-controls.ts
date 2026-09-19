@@ -16,6 +16,7 @@ import { DragSliderController } from "@/preview-3d/menu/shell/slider-controller.
 import { MENU_BTN_CSS, MENU_SECTION_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { clampPct } from "@/utils/base/pure/clamp.ts";
+import { resolveLabel } from "@/utils/base/pure/label.ts";
 
 /**
  * [ADR-195 刀 2.5] 控件渲染统一视图：五个简单控件（divider/toggle/slider/select/color）
@@ -45,18 +46,19 @@ export interface CapControlView {
 }
 
 /**
- * 控件 label 统一取值（与 render.ts 的 rmLabel 同构——回退标准全仓唯一）：
- *   labelKey 非空 → tOf 三级回退（当前包 → 兜底包 → 裸 key）；
- *   labelKey 为空 → fallback 明文（动态数据名：表情名 / 材质名 / 角色名）。
+ * 控件 label 统一取值（**与 render.ts 的 rmLabel 同一实现**）：委托 pure 层唯一决策
+ * `resolveLabel`（utils/base/pure/label.ts）——两级：
+ *   ① labelKey 非空 → tOf 三级回退（当前包 → 兜底包 → 裸 key）；
+ *   ② labelKey 为空 → fallback 明文（动态数据名：表情名 / 材质名 / 角色名）。
  * 入参取最小结构面（labelKey + fallback），简单件（CapControlView）与复杂件
  * （PreviewControlDef）通吃。
  * ⚠️ fallback 由 nodeControlToView 从 `node.label ?? node.id` 装入（menu-node-types
- * 「label 只装动态数据明文」条款的唯一消费者），**必须在渲染层读**：此前各渲染器只读
+ * 「label 只装动态数据明文」条款的消费者），**必须在渲染层读**：此前各渲染器只读
  * labelKey，只写 label 的声明式节点（morphNodes 表情开关）拿到空 key → tOf("") 原样
  * 回退成空串 → 整列表情有开关无文字（2026-09 修复）。
  */
 export function capLabel(v: { labelKey: string; fallback: string }): string {
-  return v.labelKey ? tOf(v.labelKey) : v.fallback;
+  return resolveLabel({ labelKey: v.labelKey, plain: v.fallback }, tOf);
 }
 
 /** i18n 安全取值走 tOf（ADR-207 D3）：PreviewControlDef.labelKey/group/hintKey 为

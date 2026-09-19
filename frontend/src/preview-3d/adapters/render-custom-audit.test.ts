@@ -12,6 +12,7 @@
 //
 // 豁免流程：真·无法数据化才可新增构造点 —— 白名单追加路径 + 构造点处注明豁免理由，
 // 且先经 code review（防「图省事走逃生舱」回归）。测试/类型声明/渲染器读字段不在此列
+// 豁免须自证三件：decidedBy（ADR 依据）+ rationale（真·无法数据化的具体性质）+ exitWhen（假释条件）。
 // （*.test.ts 排除；node-types.ts 类型声明与 render.ts 读取处无 `renderCustom:` 字面量）。
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -57,7 +58,7 @@ describe("renderCustom 构造点白名单（逃生舱审计门）", () => {
     }
   });
 
-  it("豁免条目必须自证依据（ADR 编号 + 具体理由），防「裸加白名单」", () => {
+  it("豁免条目必自证三件（ADR 依据 + 具体理由 + 假释条件），防「裸加白名单」", () => {
     // 名单被清空 → 本门空转恒绿，故先钉非空
     expect(SANCTIONED_PROCEDURAL_PANELS.length).toBeGreaterThan(0);
     for (const p of SANCTIONED_PROCEDURAL_PANELS) {
@@ -65,6 +66,10 @@ describe("renderCustom 构造点白名单（逃生舱审计门）", () => {
       expect(p.decidedBy, `"${p.id}" 缺 ADR 依据`).toMatch(/ADR-\d+/);
       // 理由须写「真·无法数据化的具体性质」而非「很复杂」套话（ADR-193 §2.2 豁免流程）
       expect(p.rationale.length, `"${p.id}" 豁免理由过短，疑为套话`).toBeGreaterThan(40);
+      // 假释条件（exitWhen）：永久例外 ≠ 永久特权（ADR-193 §2.2「拒绍挂着不动」）——
+      // 缺「什么情况下本例外不再成立」的豁免是无到期日的债，故同样机器守护。
+      expect(p.exitWhen, `"${p.id}" 缺假释条件（exitWhen）`).toBeTruthy();
+      expect(p.exitWhen.length, `"${p.id}" 假释条件过短，疑为套话`).toBeGreaterThan(20);
     }
   });
 });

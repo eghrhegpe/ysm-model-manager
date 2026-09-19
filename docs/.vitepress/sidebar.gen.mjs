@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-276：Preview 菜单 schema 补跨域订阅与树形行抽象评估",
+        "link": "/adr/ADR-276-preview-menu-subscribe-tree"
+      },
+      {
         "text": "ADR-275：css-layer-check 检查 6：跨层存在性——收口命名空间盲区",
         "link": "/adr/ADR-275-css-layer-check-6"
       },

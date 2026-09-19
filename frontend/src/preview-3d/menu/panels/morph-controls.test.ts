@@ -2,6 +2,8 @@
 // 覆盖：toggle 节点结构 / get-set 闭包读写 mesh / 空态 / 缺 morphTargetInfluences 静默。
 
 import { describe, it, expect } from "vitest";
+import { renderCapToggle } from "@/preview-3d/menu/render/cap-controls.ts";
+import { nodeControlToView } from "@/preview-3d/menu/render/render.ts";
 import { morphNodes, type MorphMeshLike } from "./morph-controls.ts";
 
 /** 三表情 mesh：微笑(0)/怒(1)/哀(2)，怒已激活（1），其余 0 */
@@ -52,5 +54,25 @@ describe("morphNodes（声明式 toggle 节点）", () => {
     expect(() => nodes[0].control?.set?.(true)).not.toThrow();
     // get 安全缺省 false
     expect(nodes[0].control?.get?.(undefined)).toBe(false);
+  });
+});
+
+describe("morphNodes → cap 栈渲染：表情名必须上屏（2026-09 空白行回归锁）", () => {
+  // 链路 = renderMenu 的 toggle 分支：nodeControlToView（labelKey 空 / fallback = 表情名）
+  // → renderCapToggle。渲染器曾只读 labelKey → tOf("") = "" → 整列无文字。
+  it("三行 toggle 的 .slide-label 依次为 微笑 / 怒 / 哀", () => {
+    const list = document.createElement("div");
+    for (const n of morphNodes(makeMesh())) renderCapToggle(list, nodeControlToView(n));
+    const labels = [...list.querySelectorAll(".slide-label")].map((el) => el.textContent);
+    expect(labels).toEqual(["微笑", "怒", "哀"]);
+  });
+
+  it("开关行为不因取文本而失（点 label 区→ set 写回权重）", () => {
+    const mesh = makeMesh();
+    const list = document.createElement("div");
+    const nodes = morphNodes(mesh);
+    renderCapToggle(list, nodeControlToView(nodes[0]));
+    (list.querySelector(".cc-labelbox") as HTMLElement).click();
+    expect(mesh.morphTargetInfluences?.[0]).toBe(1);
   });
 });

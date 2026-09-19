@@ -30,6 +30,7 @@ auto_fields:
     - isObj
     - isStorageAccessible
     - isWebPath
+    - LabelSource
     - ListenerSet
     - logError
     - LogSink
@@ -38,6 +39,7 @@ auto_fields:
     - moveItemMut
     - parseWebDirPath
     - parseWebPath
+    - resolveLabel
     - safeErrorMessage
     - safeGet
     - safeGetJSON

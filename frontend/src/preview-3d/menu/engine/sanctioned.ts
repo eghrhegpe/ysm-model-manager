@@ -29,6 +29,11 @@ export interface SanctionedProceduralPanel {
   decidedBy: string;
   /** 豁免理由——须写明「真·无法数据化的具体性质」，非「很复杂」套话 */
   rationale: string;
+  /** 假释条件（exit criteria，ADR-193 §2.2「拒绝挂着不动」的可执行化）：写明「什么情况下本例外
+   *  不再成立」——满足即触发抽象提取、本条目应从名单移除。
+   *  永久例外 ≠ 永久特权：判据用两次法则——第一个消费者手写算例外，第二个同构消费者出现即
+   *  说明它是个待抽象的模式。缺此字段的豁免是无到期日的债，审计门会拦。 */
+  exitWhen: string;
 }
 
 /**
@@ -44,7 +49,10 @@ export const SANCTIONED_PROCEDURAL_PANELS: readonly SanctionedProceduralPanel[] 
     decidedBy: "ADR-193 §2.2②",
     rationale:
       "骨骼树浏览器：动态树形列表（骨骼数随模型变）+ 跨域拾取联动（viewContainer click → 写 activeId），" +
-      "schema 化须新增「动态 row」「跨域 state 绑定」两类抽象，ROI 为负；" +
-      "本体 makeBonePanelRenderer 已是 ADR-074 S2 抽取的通用组件，本工厂仅是其菜单项胶水。",
+      "schema 化须新增「树形 row（深度缩进 + 选中态内联详情）」与「跨域 state 绑定」两类抽象，" +
+      "ROI 为负；本体 makeBonePanelRenderer 已是 ADR-074 S2 抽取的通用组件，本工厂仅是其菜单项胶水。",
+    exitWhen:
+      "出现第二个需要「外部事件 → 状态 → 重绘 + cleanup 生命周期」的声明式面板时，本例外升级为模式提取，" +
+      "触发 ADR-193 §2.2 选项①（给 node 模型补 tree / subscribe 抽象）；届时本条目须从本名单移除。",
   },
 ];

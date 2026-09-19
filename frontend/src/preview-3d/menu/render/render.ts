@@ -20,6 +20,7 @@ import {
   MENU_SECTION_CSS,
 } from "@/preview-3d/menu/style/menu-styles.ts";
 import { previewSnapshot } from "@/preview-3d/state/preview-state.ts";
+import { resolveLabel } from "@/utils/base/pure/label.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { applyIcon } from "@/utils/icon/resolve.ts";
 import {
@@ -169,12 +170,15 @@ interface RenderMenuDeps {
   renderCustomDirect?: boolean;
 }
 
-/** 统一 label 取值：labelKey→tOf（i18n 三级回退）；无 labelKey → node.label（明文）/ node.id。
- *  回退标准唯一 = i18n tOf；node.label 只装动态数据明文，非 i18n 回退概念（ADR-207 D3）。 */
+/** 统一 label 取值：委托 pure 层唯一决策 `resolveLabel`（utils/base/pure/label.ts）——
+ *  labelKey→tOf（i18n 三级回退）；无 labelKey → valueOverride → node.label（明文）→ node.id。
+ *  回退标准唯一 = resolveLabel；node.label 只装动态数据明文，非 i18n 回退概念（ADR-207 D3）。 */
 function rmLabel(node: PreviewMenuNode, valueOverride?: unknown): string {
-  if (node.labelKey) return tOf(node.labelKey);
-  if (valueOverride !== undefined) return String(valueOverride);
-  return node.label ?? node.id;
+  return resolveLabel(
+    { labelKey: node.labelKey, plain: node.label ?? node.id },
+    tOf,
+    valueOverride,
+  );
 }
 
 /** [模式⑥·提纯 1/2] 通用 action click：ev.stopPropagation + void action?(actionCtx)，button/row 两段同构共用 */

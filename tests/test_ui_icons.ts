@@ -200,7 +200,7 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
     "views/app-nav",
     "views/app-content",
     // 2026-09-16 复盘补漏：3D overlay 是第 13 个漏网 shadow 根——adopt 的是
-    // preview-3d/menu/components-styles.ts 的 componentsCss（曾整串无 .ws-icon 规则，
+    // preview-3d/menu/style/components-styles.ts 的 componentsCss（曾整串无 .ws-icon 规则，
     // 且导出名小写 Css / 样式另走 installOnceStyles 内联串，双重逃过本组扫描）。
     "preview-3d",
   ];

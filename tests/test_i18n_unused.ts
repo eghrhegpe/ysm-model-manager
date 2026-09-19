@@ -162,7 +162,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   // 与 check-i18n-unused.ts 的实际配置一致的「生产语料」定义；断言其中确有几个
   // 已知在用的键，防「语料配置写错导致全判死」这类静默失效。
   const src = path.join(ROOT, "frontend/src");
-  const FILES = ["preview-3d/menu/roles-views.ts", "views/app-nav/index.ts", "core/i18n/t.ts"];
+  const FILES = [
+    "preview-3d/menu/panels/roles-views.ts",
+    "views/app-nav/index.ts",
+    "core/i18n/t.ts",
+  ];
   let corpus = "";
   for (const rel of FILES) {
     const f = path.join(src, rel);

@@ -16,10 +16,10 @@ source_files:
 tests:
   - frontend/src/preview-3d/infra/overlay-active.test.ts
   - frontend/src/preview-3d/menu/style/components-styles.test.ts
-  - frontend/src/preview-3d/menu/header-toggle.test.ts
+  - frontend/src/preview-3d/menu/shell/header-toggle.test.ts
   - frontend/src/preview-3d/menu/style/slide-menu-styles.test.ts
-  - frontend/src/preview-3d/menu/slide-menu.test.ts
-  - frontend/src/preview-3d/menu/slider-controller.test.ts
+  - frontend/src/preview-3d/menu/shell/slide-menu.test.ts
+  - frontend/src/preview-3d/menu/shell/slider-controller.test.ts
 auto_fields:
   symbols_with_lines:
     - ARIA_ATTR

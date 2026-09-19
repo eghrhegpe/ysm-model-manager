@@ -22,21 +22,25 @@
 
 ## 2. 决策（Decision）
 
-将 `menu/` 按隐式职责收敛为显式子目录，映射关系：
+将 `menu/` 按隐式职责收敛为显式子目录。**实测依赖 DAG 无环**，据此定四层（自顶向下，箭头 = 允许的下行 import）：`engine → panels → render → {schema, shell, style}`。映射关系：
 
-| 子目录 | 承载文件 | 依赖方向（只能引下层，禁引上层） |
-|--------|----------|-----------------------------------|
-| `menu/schema/` | `menu-node-types` · `node-types` · `dom-contract` | 零依赖叶，仅引 `state/preview-paths` `utils/icon` |
-| `menu/engine/` | `core` · `render` · `menu-graph` · `defs` | → schema / panels / shell / style |
-| `menu/panels/` | `env` `roles` `roles-views` `settings` `stats` `material-controls` `morph-controls` `perception-controls` `cap-controls` `cap-to-node` `bones-panel-node` `multi-model` `camera-schema` | → schema（不反向引 engine，经 registry 注册） |
-| `menu/shell/` | `slide-menu` `fab` `header-toggle` `slider-controller` `switch` | → schema |
-| `menu/style/` | `menu-styles` `components-styles` `slide-menu-styles` `style-install` | 零依赖叶 |
+| 层（顶→底） | 子目录 | 承载文件 | 依赖方向 |
+|--------|--------|----------|-----------------------------------|
+| L3 装配根 | `menu/engine/` | `core` · `menu-graph` · `defs` · `sanctioned` | 唯一装配根，可向下引全部 |
+| L2 面板 | `menu/panels/` | `env` `roles` `roles-views` `settings` `stats` `material-controls` `morph-controls` `perception-controls` `bones-panel-node` `multi-model` | → `render` / `schema` / `shell` / `style`，**禁引 `engine`**（面板经 `registerSchema` 注册、由 engine 读表装配，依赖反转） |
+| L1 渲染运行时 | `menu/render/` | `render` · `cap-controls` · `cap-to-node` | → `schema` / `shell` / `style`，**禁引 `engine` / `panels`**（render 是被 panels 与 core 共用的铰链，单列一层使 panels 可下行依赖它而不破「panels 不依赖 engine」墙） |
+| L0 叶 | `menu/schema/` | `menu-node-types` · `node-types` · `dom-contract` | 零依赖叶，仅引 `state/preview-paths` `utils/icon` |
+| L0 叶 | `menu/shell/` | `slide-menu` `fab` `header-toggle` `slider-controller` `switch` | → `schema` |
+| L0 叶 | `menu/style/` | `menu-styles` `components-styles` `slide-menu-styles` `style-install` | 零依赖叶 |
 
 **方向规则（写入 check-layering 门禁）**：
-1. `schema/` 与 `style/` 为叶子——禁止引本目录内其它子目录。
-2. `panels/` **只依赖 `schema/`**，不得 `import engine/`（面板经 `registerSchema` 注册、由 engine 读表装配，反转依赖）。
-3. `engine/` 是唯一装配根，可向下引全部。
-4. 跨子目录 import 一律 `@/preview-3d/menu/<子目录>/<file>`（ADR-146，禁 `../` 上跳、禁目录桶入口）。
+1. `schema/` `shell/` `style/` 为叶——禁止引 `engine/` `panels/` `render/`（`shell/style` 可引 `schema`）。
+2. `render/` 禁止引 `engine/` 与 `panels/`（只可下行引叶）。
+3. `panels/` 禁止引 `engine/`（可下行引 `render/` 与各叶）。
+4. `engine/` 是唯一装配根，可向下引全部。
+5. 跨子目录 import 一律 `@/preview-3d/menu/<子目录>/<file>`（ADR-146，禁 `../` 上跳、禁目录桶入口）。
+
+> **为何补 `render/` 一层（拍板记录）**：初稿曾把 `render` 归 `engine`、把 `env`/`roles-views` 归 `panels`，立规「panels 只依赖 schema」。但 `env → render`、`roles-views → render` 实测存在——`render` 是**被 panels 向上依赖的铰链**，硬塞进 engine 会直接违反 panels↛engine 墙。故把 `render` 及其唯一下行依赖 `cap-controls`、被 settings 依赖的 `cap-to-node` 单列为 L1 运行时层，令分层严格无环、墙不破。
 
 **取代关系**：本 ADR 不改 ADR-195 的控件/节点同构与 `cap-to-node` 零接线，仅在其之下补目录维度。与 ADR-146 路径别名互补（别名已就位，本 ADR 是其「按目录卡方向」的下一刀）。
 

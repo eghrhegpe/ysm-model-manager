@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 /**
- * check-type-safety.ts — 前端类型安全侵蚀扫描（any / @ts-ignore / 非空断言）。
+ * check-type-safety.ts — 前端类型安全侵蚀扫描（any / @ts-expect-error / 非空断言）。
  *
  * 设计意图：tsc / typecheck 回答「类型下限能不能过」，本脚本回答「类型上限怎么漏」——
- * 追踪 `any`、`@ts-ignore`、非空断言 `!` 这些逃离类型系统的信号随时间的聚集。
+ * 追踪 `any`、`@ts-expect-error`、非空断言 `!` 这些逃离类型系统的信号随时间的聚集。
  * 与 line-counter（多长）/ check-complexity（多绕）/ check-deadcode（冗余）互补，
  * 构成「可否维护」里的类型安全维度；接入方式是把本脚本跑成可审查的侵蚀趋势报告。
  *
  * 设计取舍：
  *   1. 只扫生产文件（walk skipTest，排除 .test/.spec/__tests__），测试里的大量
  *      `!`/`as any` 是合理逃逸（构造桩数据），计入只会制造噪音。还排除 vendor/、.d.ts。
- *   2. 加权侵蚀分（EROSION_WEIGHTS）：@ts-ignore(4) > @ts-expect-error(3) > asc any(2)
+ *   2. 加权侵蚀分（EROSION_WEIGHTS）：@ts-expect-error(4) > @ts-expect-error(3) > asc any(2)
  *      > :any(2) > <any>(1) > 非空断言 !(0.2，情报位——前端 DOM 访问大多合法，故极轻权）。
  *      一文件分数 = Σ weight×count，越重信号占比越高。
  *   3. 三档清单对齐 lain：🟨(≥threshold) / 🟧(≥2×) / 🟥(≥3×)。默认 threshold=8。
  *
- * 依据（实测 2026-09-10）：@ts-ignore/@ts-expect-error 全仓仅 3 处（设计干净）；
+ * 依据（实测 2026-09-10）：@ts-expect-error/@ts-expect-error 全仓仅 3 处（设计干净）；
  * as any/:any/<any> 182 处但几乎全在测试（生产仅个位数）；非空断言 1143 处也几乎全测试。
  * 故本扫描默认生产域应是「晃尖近零」，新逃逸一出现即被点亮——正是侵蚀追踪的用途。
  *
@@ -100,7 +100,7 @@ export type TypeErosionSignal =
   | "anyGeneric"
   | "nonNull";
 
-/** 各信号权重：分越高该逃逸越危险。 @ts-ignore 最重（静默压制），非空断言最轻（DOM 常用合法）。 */
+/** 各信号权重：分越高该逃逸越危险。 @ts-expect-error 最重（静默压制），非空断言最轻（DOM 常用合法）。 */
 export const EROSION_WEIGHTS: Record<TypeErosionSignal, number> = {
   tsIgnore: 4,
   tsExpectError: 3,
@@ -175,7 +175,7 @@ function signalBrief(counts: Record<TypeErosionSignal, number>): string {
 
 /**
  * 生产源文件判定：排除测试、vendor、声明文件。纯谓词，供 walk 过滤 + 契约测试复用。
- * rel = 相对 frontend/src 的正斜杠路径（如 preview-3d/menu/env.ts）。
+ * rel = 相对 frontend/src 的正斜杠路径（如 preview-3d/menu/panels/env.ts）。
  */
 export function isProdSourceFile(rel: string): boolean {
   if (/(^|\/)vendor\//.test(rel)) return false; // 三方 vendor（babylon-mmd 等）
@@ -211,10 +211,11 @@ function scanSingle(abs: string, rel: string, threshold: number): FileErosion | 
   const lines = text.split("\n");
   lines.forEach((ln) => {
     const lc = countLineSignals(ln);
-    // 注释行：`// @ts-ignore` 这类指令本就写在注释行上，必须保留 tsIgnore/tsExpectError；
+    // 注释行：`// @ts-expect-error` 这类指令本就写在注释行上，必须保留 tsIgnore/tsExpectError；
     // 但注释正文里的 "as any"/"<any>"/"!" 是说明文字非真实侵蚀，剔除。
     const t = ln.trim();
-    const isCommentLine = t.startsWith("//") || t.startsWith("/*") || t.startsWith("*") || t.startsWith("*/");
+    const isCommentLine =
+      t.startsWith("//") || t.startsWith("/*") || t.startsWith("*") || t.startsWith("*/");
     if (isCommentLine) {
       lc.asAny = 0;
       lc.colonAny = 0;
@@ -251,11 +252,15 @@ function main(): void {
 
   const results: FileErosion[] = [];
   const relBase = path.relative(ROOT, target);
-  const walked = walk(target, { skipDir: (n) => n.startsWith(".") || n === "node_modules" || n === "css" });
+  const walked = walk(target, {
+    skipDir: (n) => n.startsWith(".") || n === "node_modules" || n === "css",
+  });
   // 变更域裁剪：过滤在 walk 之后（先证明 scope 本身有效，避免「scope 拼错」被
   // 「过滤后为空」掩盖成 PASS）。过滤后为空 = 本次变更文件不在扫描范围 → 合法 PASS。
   const files = changedScope
-    ? walked.filter((fp) => inChangedScope(relPosix(typeof fp === "string" ? fp : fp.abs), changedScope))
+    ? walked.filter((fp) =>
+        inChangedScope(relPosix(typeof fp === "string" ? fp : fp.abs), changedScope),
+      )
     : walked;
   const scopeFilter = {
     mode: scopeMode,
@@ -275,12 +280,19 @@ function main(): void {
   const active = results.filter((r) => r.tier !== "clean");
   // 重点一览：含任一重信号（as any / @ts-* / <any>）的文件，不等阈值也亮——让仅有的几处
   // 真实侵蚀点可见（数值化债务），分级清单留给 --strict 门禁。
-  const heavy = (r: FileErosion) => r.counts.tsIgnore + r.counts.tsExpectError + r.counts.asAny + r.counts.colonAny + r.counts.anyGeneric > 0;
+  const heavy = (r: FileErosion) =>
+    r.counts.tsIgnore +
+      r.counts.tsExpectError +
+      r.counts.asAny +
+      r.counts.colonAny +
+      r.counts.anyGeneric >
+    0;
   const heavyActive = results.filter((r) => r.tier === "clean" && heavy(r));
 
   // ── 聚合 ──
   const totals: Record<TypeErosionSignal, number> = EMPTY_COUNTS();
-  for (const r of results) for (const k of Object.keys(totals) as TypeErosionSignal[]) totals[k] += r.counts[k];
+  for (const r of results)
+    for (const k of Object.keys(totals) as TypeErosionSignal[]) totals[k] += r.counts[k];
 
   const filesByTier = {
     red: results.filter((r) => r.tier === "red").length,
@@ -291,7 +303,8 @@ function main(): void {
   const verdict = buildScanVerdict(
     active.length,
     active.map(
-      (r) => `${r.file} 侵蚀${(Math.round(r.score * 10) / 10).toFixed(1)} (${signalBrief(r.counts)})`,
+      (r) =>
+        `${r.file} 侵蚀${(Math.round(r.score * 10) / 10).toFixed(1)} (${signalBrief(r.counts)})`,
     ),
   );
 
@@ -313,8 +326,17 @@ function main(): void {
             scopeFilter,
           },
           totals,
-          active: active.map((r) => ({ file: r.file, score: Math.round(r.score * 10) / 10, tier: r.tier, counts: r.counts })),
-          heavyActive: heavyActive.map((r) => ({ file: r.file, score: Math.round(r.score * 10) / 10, counts: r.counts })),
+          active: active.map((r) => ({
+            file: r.file,
+            score: Math.round(r.score * 10) / 10,
+            tier: r.tier,
+            counts: r.counts,
+          })),
+          heavyActive: heavyActive.map((r) => ({
+            file: r.file,
+            score: Math.round(r.score * 10) / 10,
+            counts: r.counts,
+          })),
         },
         null,
         2,
@@ -333,7 +355,8 @@ function main(): void {
     console.log(`聚合: ${sigLine}`);
     console.log("");
     for (const r of [...active, ...heavyActive]) {
-      const mark = r.tier === "red" ? "🟥" : r.tier === "orange" ? "🟧" : r.tier === "yellow" ? "🟨" : "◽";
+      const mark =
+        r.tier === "red" ? "🟥" : r.tier === "orange" ? "🟧" : r.tier === "yellow" ? "🟨" : "◽";
       console.log(`${mark} ${r.score.toFixed(1)}  ${r.file}`);
       for (const h of r.hotspots) console.log(`     ${h}`);
     }
@@ -346,7 +369,8 @@ function main(): void {
   if (args.strict && active.length > 0) {
     // JSON 模式不再另发 stderr：gate 合并 stdout+stderr，混入文本会让 JSON.parse 失败
     // 退化为 rc 判定（阻断理由已在 _summary.ok/errors/warns_list）。
-    if (!args.json) console.error(`[check-type-safety] --strict: ${active.length} 文件落入 🟨+，阻断`);
+    if (!args.json)
+      console.error(`[check-type-safety] --strict: ${active.length} 文件落入 🟨+，阻断`);
     process.exit(1);
   }
 }

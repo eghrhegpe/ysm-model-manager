@@ -16,12 +16,12 @@
  */
 import assert from "node:assert/strict";
 import {
-  type TypeErosionSignal,
   countLineSignals,
-  erosionOf,
-  tierOf,
   EROSION_WEIGHTS,
+  erosionOf,
   isProdSourceFile,
+  type TypeErosionSignal,
+  tierOf,
 } from "../scripts/check-type-safety.ts";
 
 const ZERO = { tsIgnore: 0, tsExpectError: 0, asAny: 0, colonAny: 0, anyGeneric: 0, nonNull: 0 };
@@ -42,7 +42,7 @@ const ZERO = { tsIgnore: 0, tsExpectError: 0, asAny: 0, colonAny: 0, anyGeneric:
 
 // ─── 2) countLineSignals：各类信号各行命中 ────────────────
 {
-  // `as any`/`Promise<any>` 计入；块注释 Mid-line 的 @ts-ignore 非「行首指令」不计（指令必整行）。
+  // `as any`/`Promise<any>` 计入；块注释 Mid-line 的 @ts-expect-error 非「行首指令」不计（指令必整行）。
   const c = countLineSignals(
     "function f(x: any, y: Promise<any>) { const a = b as any; /* @ts-ignore */ c! ; }",
   );
@@ -89,9 +89,13 @@ const ZERO = { tsIgnore: 0, tsExpectError: 0, asAny: 0, colonAny: 0, anyGeneric:
 
 // ─── 6) isProdSourceFile：生产/非生产过滤 ────────────────
 {
-  assert.equal(isProdSourceFile("preview-3d/menu/env.ts"), true, "普通 ts 保留");
+  assert.equal(isProdSourceFile("preview-3d/menu/panels/env.ts"), true, "普通 ts 保留");
   assert.equal(isProdSourceFile("views/app-tree/render.ts"), true, "views ts 保留");
-  assert.equal(isProdSourceFile("preview-3d/vendor/babylon-mmd/pmxReader.d.ts"), false, "vendor 排除");
+  assert.equal(
+    isProdSourceFile("preview-3d/vendor/babylon-mmd/pmxReader.d.ts"),
+    false,
+    "vendor 排除",
+  );
   assert.equal(isProdSourceFile("utils/dom/foo.d.ts"), false, ".d.ts 排除");
   assert.equal(isProdSourceFile("views/__tests__/x.ts"), false, "__tests__ 目录排除");
   assert.equal(isProdSourceFile("views/app-tree/render.test.ts"), false, ".test.ts 排除");
@@ -100,9 +104,9 @@ const ZERO = { tsIgnore: 0, tsExpectError: 0, asAny: 0, colonAny: 0, anyGeneric:
 
 // ─── 7) isProdSourceFile：comment 行指令语义由调用方归约，此处锁 countLineSignals 根基 ──
 {
-  // countLineSignals 是纯正则翻译层：`// @ts-ignore` 指令所在行照常命中指令信号，
+  // countLineSignals 是纯正则翻译层：`// @ts-expect-error` 指令所在行照常命中指令信号，
   // 说明文字 "as any" 也会命中（剔除伪信号归 scanSingle 的注释判断，属调用层）。
-  const c = countLineSignals("// @ts-ignore: 相邻 is any"); 
+  const c = countLineSignals("// @ts-ignore: 相邻 is any");
   assert.equal(c.tsIgnore, 1, "指令 @ts-ignore 计入");
 }
 

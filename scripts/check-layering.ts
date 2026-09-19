@@ -29,6 +29,11 @@
  *                             主循环 SCAN_OPTS.skipFile 豁免所有测试文件（防 R5 误伤
  *                             features/views 测试合法 import backend），故 R6 单独扫
  *                             core/** 下的测试文件——不经 skipFile 豁免。
+ *   R7（零容忍）  preview-3d/menu/ 子目录内部分层（ADR-270 目录物理分层）：rank 自顶向下
+ *                             engine(4) > panels(3) > render(2) > {shell(1), schema(0),
+ *                             style(0)}；生产文件运行时 import 严格高 rank 子层 = 违规
+ *                             （禁 panels→engine、render→engine/panels、叶→上层）。
+ *                             测试文件/type-only/menu 根散文件（menu-test-fixtures.ts）豁免。
  *
  *   skipFile 豁免测试文件的设计意图（2026-09 R6 摸排）：features/views 测试 import
  *   views 模板（如 batch-rename.test.ts → views/app-tree/tpl-batch-rename.ts）是
@@ -264,10 +269,62 @@ function main() {
     }
   }
 
+  /* ---------- R7 专用扫描：preview-3d/menu/ 子目录内部分层（ADR-270）----------
+   * menu 目录物理分层为四子层，rank 自顶向下：
+   *   engine(4) > panels(3) > render(2) > {shell(1), schema(0), style(0)}
+   * 违规 = 生产文件运行时 import 目标 rank 严格高于自身（向上依赖）。同层/下行合法。
+   * render 单列为 panels 之下、叶之上的运行时层：env/roles-views(panel)→render、
+   *   core(engine)→render 实测存在，是 render 被向上依赖的铰链（见 ADR-270 §2 拍板）。
+   * 豁免：测试文件（panels 测试装配 engine core 合法）、type-only（不建运行时耦合）、
+   *   menu/ 根散文件（menu-test-fixtures.ts 无子层归属）。 */
+  const MENU_SUB_RANK: Record<string, number> = {
+    engine: 4,
+    panels: 3,
+    render: 2,
+    shell: 1,
+    schema: 0,
+    style: 0,
+  };
+  const MENU_PREFIX = "preview-3d/menu/";
+  const menuSubOf = (rel: string): string | null => {
+    if (!rel.startsWith(MENU_PREFIX)) return null;
+    const seg = rel.slice(MENU_PREFIX.length).split("/")[0];
+    return seg && seg in MENU_SUB_RANK ? seg : null;
+  };
+  for (const abs of walk(SRC_ROOT, SCAN_OPTS) as string[]) {
+    const srcRel = toPosix(relative(SRC_ROOT, abs));
+    const fromSub = menuSubOf(srcRel);
+    if (!fromSub) continue;
+    const fromRank = MENU_SUB_RANK[fromSub]!;
+    const text = readFileSync(abs, "utf8");
+    for (const { spec, typeOnly, line } of matchImports(text)) {
+      if (typeOnly) continue;
+      const target = resolveTarget(spec, srcRel);
+      if (!target) continue;
+      const toSub = menuSubOf(target);
+      if (!toSub) continue;
+      if (fromRank >= MENU_SUB_RANK[toSub]!) continue; // 下行 / 同层合法
+      violations.push({
+        rule: "R7",
+        from: srcRel,
+        line,
+        to: target,
+        fromLayer: `menu/${fromSub}`,
+        toLayer: `menu/${toSub}`,
+      });
+    }
+  }
+
   /* ---------- 基线比对 ---------- */
   const key = (v: any) => `${v.from}:${v.to}`;
   const rZero = violations.filter(
-    (v) => v.rule === "R1" || v.rule === "R2" || v.rule === "R0" || v.rule === "R5" || v.rule === "R6",
+    (v) =>
+      v.rule === "R1" ||
+      v.rule === "R2" ||
+      v.rule === "R0" ||
+      v.rule === "R5" ||
+      v.rule === "R6" ||
+      v.rule === "R7",
   );
   const tracked = violations.filter((v) => v.rule === "R3" || v.rule === "R4");
 
@@ -344,12 +401,12 @@ function main() {
 
   if (rZero.length) {
     console.error(
-      `❌ R1/R2/R0/R5/R6 违规（零容忍：utils/services 向上依赖、core→utils/dom、features/views→backend/app.ts 非 seam、core 测试→backend）${rZero.length} 条：`,
+      `❌ R1/R2/R0/R5/R6/R7 违规（零容忍：utils/services 向上依赖、core→utils/dom、features/views→backend/app.ts 非 seam、core 测试→backend、menu 子目录向上依赖）${rZero.length} 条：`,
     );
     for (const v of rZero) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
   } else {
     console.log(
-      "✅ R1/R2/R0/R5/R6 utils/services → 上层、core→utils/dom、features/views→backend/app 非 seam、core 测试→backend：0 条",
+      "✅ R1/R2/R0/R5/R6/R7 utils/services → 上层、core→utils/dom、features/views→backend/app 非 seam、core 测试→backend、menu 子目录向上依赖：0 条",
     );
   }
 

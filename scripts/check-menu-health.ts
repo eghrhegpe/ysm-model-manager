@@ -53,7 +53,7 @@ if (ARGS.unknown.length) {
 
 // ── 菜单表文件（相对 ROOT）──
 const MENU_FILES = [
-  "frontend/src/preview-3d/menu/defs.ts",
+  "frontend/src/preview-3d/menu/engine/defs.ts",
   "frontend/src/preview-3d/adapters/ysm-adapter.ts",
   "frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts",
   "frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts",
@@ -73,7 +73,7 @@ const LEGAL_GROUPS = deriveLegalGroups();
 function deriveLegalGroups() {
   // PreviewMenuGroupId 联合本体已归位共享叶 menu-node-types.ts（[ADR-195 刀2] 下沉：
   // menu/node-types.ts 只 re-export），推导须跟类型本体走——同 [2026-09 锐评收口] 精神。
-  const leaf = readRel("frontend/src/preview-3d/menu/menu-node-types.ts");
+  const leaf = readRel("frontend/src/preview-3d/menu/schema/menu-node-types.ts");
   const m = leaf.match(/type\s+PreviewMenuGroupId\s*=\s*([^;]+);/);
   const ids = m ? [...(m[1]?.matchAll(/"([a-z0-9-]+)"/g) ?? [])].map((x) => x[1]) : [];
   if (!ids.length) {
@@ -88,7 +88,7 @@ function deriveLegalGroups() {
  *  类型新增一种控件（field/row/card/controls…）时闸门自动跟随，不制造第二份硬编码清单漂移）。
  *  惰性求值：契约测试与门禁都 import 本模块，顶层读盘会拖慢测试启动。 */
 export function deriveLegalLeafKinds(): Set<string> {
-  const leaf = readRel("frontend/src/preview-3d/menu/menu-node-types.ts");
+  const leaf = readRel("frontend/src/preview-3d/menu/schema/menu-node-types.ts");
   const m = leaf.match(/type\s+PreviewMenuNodeKind\s*=\s*([\s\S]+?);/);
   // 含驼峰（sectionTitle）——故字符类不能限小写
   const kinds = [...(m?.[1] ?? "").matchAll(/"([A-Za-z][A-Za-z0-9-]*)"/g)]
@@ -429,7 +429,7 @@ export function itemViolations(it: any, zhCNKeys: Set<string>) {
     });
   }
   // 6. panel 有 render / action 有 run（CORE 文件走 preview-menu.ts fillers 映射渲染，不写 render，豁免）
-  const isCoreFile = (it.file ?? "").endsWith("menu/defs.ts");
+  const isCoreFile = (it.file ?? "").endsWith("menu/engine/defs.ts");
   if (it.kind === "panel" && !isCoreFile && !it.hasRender) {
     v.push({ rule: "panel-has-render", item: it.id, file: it.file, detail: "panel 项缺 render" });
   }
@@ -477,7 +477,7 @@ function main() {
   // ── id 唯一性校验（独立段：每文件内部唯一 + core∩适配器无交集）──
   // 适配器按次挂载互斥（一次预览只加载一种模型），故 ysm/mmd/vrm 可共享 id（model/shot/bones）；
   // 仅「同一文件内重复」与「适配器 id 与 core 撞车」才报违规。
-  const coreFile = "frontend/src/preview-3d/menu/defs.ts";
+  const coreFile = "frontend/src/preview-3d/menu/engine/defs.ts";
   const coreIds = new Set(byFile.get(coreFile) || []);
   const sharedIds: string[] = []; // 跨适配器同名的 id（不违规，仅报告）
   for (const [file, ids] of byFile) {

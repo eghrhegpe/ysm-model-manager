@@ -857,7 +857,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   // 该文件原为「单行字符串字面量 + \n 转义」（MikuMikuAR 迁移脚本产物），
   // 全 CSS 挤在 1 行 23KB：diff 不可读、行号无意义、基线 key 退化（一行塌缩成一个 key）。
   // 2026-09 转为模板字面量。此锁防「哪天重跑迁移脚本又被压回单行」。
-  const SRC = path.join(ROOT, "frontend/src/preview-3d/menu/components-styles.ts");
+  const SRC = path.join(ROOT, "frontend/src/preview-3d/menu/style/components-styles.ts");
   const text = fs.readFileSync(SRC, "utf8");
   assert.ok(
     text.includes("`"),

@@ -364,7 +364,7 @@ describe("buildVrmScene 主路径", () => {
 
     const { ctx, scene, camera, loadingEl } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(ctx, "/vrm/test.vrm", port, hoisted.readBytesMock, makePanels(), hoisted.listPathsMock);
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // readFn 被调用
     expect(hoisted.readBytesMock).toHaveBeenCalledWith("/vrm/test.vrm");
@@ -392,7 +392,7 @@ describe("buildVrmScene 主路径", () => {
     hoisted.readBytesMock.mockResolvedValue(null);
     const { ctx } = makeCtx();
     await expect(
-      buildVrmScene(ctx, "/vrm/missing.vrm", makePort(), hoisted.readBytesMock),
+      buildVrmScene(ctx, "/vrm/missing.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock }),
     ).rejects.toThrow("ReadFileBytes 返回空");
   });
 
@@ -401,7 +401,7 @@ describe("buildVrmScene 主路径", () => {
     hoisted.readBytesMock.mockResolvedValue(btoa("FAKE"));
     const { ctx } = makeCtx();
     await expect(
-      buildVrmScene(ctx, "/vrm/fake.vrm", makePort(), hoisted.readBytesMock),
+      buildVrmScene(ctx, "/vrm/fake.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock }),
     ).rejects.toThrow("VRM 实例解析失败");
   });
 
@@ -409,7 +409,7 @@ describe("buildVrmScene 主路径", () => {
     const { ctx } = makeCtx();
     const badCtx = { ...ctx, renderer: undefined } as unknown as PreviewBuildCtx;
     await expect(
-      buildVrmScene(badCtx, "/vrm/test.vrm", makePort(), hoisted.readBytesMock),
+      buildVrmScene(badCtx, "/vrm/test.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock }),
     ).rejects.toThrow(/需要核心提供/);
   });
   // 刀⑳ 回归：load-trace 的 bones 必须报**骨骼总数**（byId.size），不是 roots.length
@@ -432,14 +432,7 @@ describe("buildVrmScene 主路径", () => {
     } as unknown as ReturnType<typeof hoisted.buildVrmBoneTreeMock>);
 
     const { ctx } = makeCtx();
-    await buildVrmScene(
-      ctx,
-      "/vrm/test.vrm",
-      makePort(),
-      hoisted.readBytesMock,
-      makePanels(),
-      hoisted.listPathsMock,
-    );
+    await buildVrmScene(ctx, "/vrm/test.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     const traces = getLoadTraces().filter((t) => t.format === "vrm");
     expect(traces.length).toBeGreaterThan(0);
@@ -476,14 +469,7 @@ describe("VRMA 动作加载", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(
-      ctx,
-      "/vrm/test.vrm",
-      port,
-      hoisted.readBytesMock,
-      makePanels(),
-      hoisted.listPathsMock,
-    );
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // VRMA 被解析 + 动画 clip 被创建
     expect(hoisted.readBytesMock).toHaveBeenCalledWith("/vrm/dance.vrma");
@@ -517,14 +503,7 @@ describe("VRMA 动作加载", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(
-      ctx,
-      "/vrm/test.vrm",
-      port,
-      hoisted.readBytesMock,
-      makePanels(),
-      hoisted.listPathsMock,
-    );
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // 模型仍加载
     expect(content.update).toBeDefined();
@@ -541,14 +520,7 @@ describe("VRMA 动作加载", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(
-      ctx,
-      "/vrm/test.vrm",
-      port,
-      hoisted.readBytesMock,
-      makePanels(),
-      hoisted.listPathsMock,
-    );
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // [ADR-242 后续] .vrma 稀少是常态，面板不得凭空消失——显示播放项（空态引导由
     // playNodes 渲染；此处 makePanels 是桩，故只断言项存在 + 收到空 clips 的桥）
@@ -617,14 +589,7 @@ async function buildWithMotion(opts: {
   };
 
   const { ctx } = makeCtx();
-  const content = await buildVrmScene(
-    ctx,
-    "/vrm/test.vrm",
-    makePort(),
-    hoisted.readBytesMock,
-    panels,
-    hoisted.listPathsMock,
-  );
+  const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock, panels: panels, listAllFilePaths: hoisted.listPathsMock });
   return { content, play: captured.play };
 }
 
@@ -798,14 +763,7 @@ describe("GPU 内存释放", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(
-      ctx,
-      "/vrm/test.vrm",
-      port,
-      hoisted.readBytesMock,
-      makePanels(),
-      hoisted.listPathsMock,
-    );
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     content.dispose();
     expect(hoisted.deepDispose).toHaveBeenCalledWith(vrm.scene);
@@ -819,7 +777,7 @@ describe("GPU 内存释放", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(ctx, "/vrm/test.vrm", port, hoisted.readBytesMock);
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock });
 
     // lookAt target 被设置为 camera
     expect(vrm.lookAt.target).not.toBeNull();
@@ -856,14 +814,7 @@ describe("VRMA 多动作切换", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(
-      ctx,
-      "/vrm/test.vrm",
-      port,
-      hoisted.readBytesMock,
-      makePanels(),
-      hoisted.listPathsMock,
-    );
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // 菜单项含 vrma-play
     const items = registeredItems(content);
@@ -891,14 +842,7 @@ describe("VRMA 多动作切换", () => {
 
     const { ctx: ctx2 } = makeCtx();
     const port2 = makePort();
-    const content2 = await buildVrmScene(
-      ctx2,
-      "/vrm/test.vrm",
-      port2,
-      hoisted.readBytesMock,
-      panelsWithPlay,
-      hoisted.listPathsMock,
-    );
+    const content2 = await buildVrmScene(ctx2, "/vrm/test.vrm", { port: port2, readFileBytes: hoisted.readBytesMock, panels: panelsWithPlay, listAllFilePaths: hoisted.listPathsMock });
 
     // 菜单项含 vrma-play，且 playNodes 被调用（bridge 传对）
     const items2 = registeredItems(content2);
@@ -919,14 +863,7 @@ describe("VRMA 多动作切换", () => {
 
     const { ctx, scene } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(
-      ctx,
-      "/vrm/test.vrm",
-      port,
-      hoisted.readBytesMock,
-      makePanels(),
-      hoisted.listPathsMock,
-    );
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // 模型仍加载
     expect(scene.children).toContain(vrm.scene);
@@ -958,14 +895,7 @@ describe("GPU 内存释放边界", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(
-      ctx,
-      "/vrm/test.vrm",
-      port,
-      hoisted.readBytesMock,
-      makePanels(),
-      hoisted.listPathsMock,
-    );
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // dispose 不应向外抛错
     expect(() => content.dispose()).not.toThrow();
@@ -979,14 +909,7 @@ describe("GPU 内存释放边界", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(
-      ctx,
-      "/vrm/test.vrm",
-      port,
-      hoisted.readBytesMock,
-      makePanels(),
-      hoisted.listPathsMock,
-    );
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // 无 VRMA → motionMixer 为 null → dispose 时 uncacheRoot 不触发
     expect(() => content.dispose()).not.toThrow();
@@ -1002,7 +925,7 @@ describe("vrmDiag 诊断日志", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    await buildVrmScene(ctx, "/vrm/test.vrm", port, hoisted.readBytesMock, makePanels(), hoisted.listPathsMock);
+    await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // read-model op 被调用，status=ok，msg 含字节数信息
     expect(port.addOpLog).toHaveBeenCalledWith(
@@ -1018,7 +941,7 @@ describe("vrmDiag 诊断日志", () => {
     const { ctx } = makeCtx();
     const port = makePort();
     await expect(
-      buildVrmScene(ctx, "/vrm/missing.vrm", port, hoisted.readBytesMock),
+      buildVrmScene(ctx, "/vrm/missing.vrm", { port: port, readFileBytes: hoisted.readBytesMock }),
     ).rejects.toThrow("ReadFileBytes 返回空");
 
     // read-model op 被调用，status=fail
@@ -1041,7 +964,7 @@ describe("vrmDiag 诊断日志", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    await buildVrmScene(ctx, "/vrm/test.vrm", port, hoisted.readBytesMock, makePanels(), hoisted.listPathsMock);
+    await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
 
     // parse op 被调用，msg 含 gltf-children 信息
     expect(port.addOpLog).toHaveBeenCalledWith(
@@ -1060,7 +983,7 @@ describe("vrmDiag 诊断日志", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(ctx, "/vrm/test.vrm", port, hoisted.readBytesMock, makePanels(), hoisted.listPathsMock);
+    const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock });
     content.dispose();
 
     // gpu-release op 被调用，msg 含 tex= 信息
@@ -1084,7 +1007,7 @@ describe("vrmDiag 诊断日志", () => {
     const { ctx } = makeCtx();
     // 不应向外抛错
     await expect(
-      buildVrmScene(ctx, "/vrm/test.vrm", port, hoisted.readBytesMock, makePanels(), hoisted.listPathsMock),
+      buildVrmScene(ctx, "/vrm/test.vrm", { port: port, readFileBytes: hoisted.readBytesMock, panels: makePanels(), listAllFilePaths: hoisted.listPathsMock }),
     ).resolves.toBeDefined();
   });
 });
@@ -1378,7 +1301,7 @@ describe("buildVrmScene metaVersion 0", () => {
     hoisted.listPathsMock.mockResolvedValue([]);
 
     const { ctx } = makeCtx();
-    const content = await buildVrmScene(ctx, "/vrm/v0.vrm", makePort(), hoisted.readBytesMock);
+    const content = await buildVrmScene(ctx, "/vrm/v0.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock });
     // rotateVRM0 是 vi.mock 工厂里的 vi.fn → 经 hoisted.vrmUtilsMock 不存在，直接断言调用过
     expect(hoisted.rotateVRM0).toHaveBeenCalledWith(vrm);
     content.dispose();
@@ -1414,7 +1337,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     );
 
     const { ctx } = makeCtx();
-    const content = await buildVrmScene(ctx, "/vrm/mat.vrm", makePort(), hoisted.readBytesMock);
+    const content = await buildVrmScene(ctx, "/vrm/mat.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock });
     const matItem = content.menuItems?.find((i) => i.id === "material") as {
       children?: Array<{ eye?: { get: () => boolean; set: (v: boolean) => void }; opacity?: { get: () => number; set: (v: number) => void } }>;
     };
@@ -1437,7 +1360,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     hoisted.listPathsMock.mockResolvedValue([]);
 
     const { ctx, camera } = makeCtx();
-    const content = await buildVrmScene(ctx, "/vrm/gaze.vrm", makePort(), hoisted.readBytesMock);
+    const content = await buildVrmScene(ctx, "/vrm/gaze.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock });
     content.update!(0.016);
     const { createGazeController } = await import("@/preview-3d/adapters/shared/perception/gaze.ts");
     const gaze = (createGazeController as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
@@ -1453,7 +1376,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     hoisted.listPathsMock.mockResolvedValue([]);
 
     const { ctx } = makeCtx();
-    const content = await buildVrmScene(ctx, "/vrm/blink.vrm", makePort(), hoisted.readBytesMock);
+    const content = await buildVrmScene(ctx, "/vrm/blink.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock });
     content.update!(0.016);
     const { createBlinkController } = await import("@/preview-3d/adapters/shared/perception/blink.ts");
     const blink = (createBlinkController as ReturnType<typeof vi.fn>).mock.results.at(-1)!.value;
@@ -1492,7 +1415,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
       return [];
     };
     const { ctx } = makeCtx();
-    const content = await buildVrmScene(ctx, "/vrm/t.vrm", makePort(), hoisted.readBytesMock, panels, hoisted.listPathsMock);
+    const content = await buildVrmScene(ctx, "/vrm/t.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock, panels: panels, listAllFilePaths: hoisted.listPathsMock });
     expect(bridge).not.toBeNull();
 
     // toggle 翻转
@@ -1521,7 +1444,7 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
       return [];
     };
     const { ctx } = makeCtx();
-    const content = await buildVrmScene(ctx, "/vrm/shot.vrm", makePort(), hoisted.readBytesMock, panels);
+    const content = await buildVrmScene(ctx, "/vrm/shot.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock, panels: panels });
     await expect(gotShot!()).resolves.toBe("screenshot-url");
     await expect(content.screenshot!()).resolves.toBe("screenshot-url");
     content.dispose();
@@ -1542,7 +1465,7 @@ describe("dispose 纹理统计（gpu-release diag）", () => {
 
     const { ctx } = makeCtx();
     const port = makePort();
-    const content = await buildVrmScene(ctx, "/vrm/tex.vrm", port, hoisted.readBytesMock);
+    const content = await buildVrmScene(ctx, "/vrm/tex.vrm", { port: port, readFileBytes: hoisted.readBytesMock });
     content.dispose();
     expect(port.addOpLog).toHaveBeenCalledWith(
       "gpu-release",

@@ -913,18 +913,20 @@ function Stage5BuildResult(
   };
 }
 
+/**
+ * VRM 构建主入口。依赖复用 `VrmAdapterDeps`（IO + 视图钩子）——原 6 形参
+ * （ctx/path/port/readFn/panels/listAllFilePaths）收进单一依赖对象，消参数陷阱
+ * （check-params p6→p3），且与 makeVrmAdapter 的注入形态同源（同一个 deps 直接透传）。
+ */
 export async function buildVrmScene(
   ctx: PreviewBuildCtx,
   path: string,
-  port: VrmDataPort | undefined,
-  readFn: (p: string) => Promise<string | null>,
-  panels?: VrmPanelHooks,
-  listAllFilePaths?: (dir: string) => Promise<string[] | null>,
+  deps: VrmAdapterDeps,
 ): Promise<UpdateableScene & ScreenshotScene & SemanticScene> {
   requireSharedInfra(ctx);
-  const parseRes = await Stage1ReadParse(ctx, path, port, readFn);
+  const parseRes = await Stage1ReadParse(ctx, path, deps.port, deps.readFileBytes);
   const { vrm } = parseRes;
-  const motion = await loadMotionClips(vrm, path, readFn, listAllFilePaths);
+  const motion = await loadMotionClips(vrm, path, deps.readFileBytes, deps.listAllFilePaths);
   setupCameraBounds(ctx, vrm);
   const boneAssy = Stage2BonesHumanoid(vrm);
   const vrmMaterials = Stage3Materials(vrm);
@@ -940,8 +942,8 @@ export async function buildVrmScene(
     perception,
     meta,
   };
-  const menuItems = Stage4MenuPanels(path, panels, ctx, artifacts);
-  return Stage5BuildResult(ctx, path, port, artifacts, menuItems);
+  const menuItems = Stage4MenuPanels(path, deps.panels, ctx, artifacts);
+  return Stage5BuildResult(ctx, path, deps.port, artifacts, menuItems);
 }
 
 /** vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 */
@@ -997,8 +999,7 @@ export interface VrmAdapterDeps {
 export function makeVrmAdapter(deps: VrmAdapterDeps): PreviewAdapter {
   return {
     id: "vrm",
-    build: (ctx, path) =>
-      buildVrmScene(ctx, path, deps.port, deps.readFileBytes, deps.panels, deps.listAllFilePaths),
+    build: (ctx, path) => buildVrmScene(ctx, path, deps),
   };
 }
 

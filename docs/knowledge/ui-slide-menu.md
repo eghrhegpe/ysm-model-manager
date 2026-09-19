@@ -4,17 +4,20 @@ name: ADR 去桶化 slide-menu 外壳组件
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/preview-3d/menu/slide-menu.ts
+  - frontend/src/preview-3d/menu/shell/slide-menu.ts
   - frontend/src/preview-3d/menu/style/slide-menu-styles.ts
   - frontend/src/preview-3d/menu/style/components-styles.ts
 auto_fields:
   symbols_with_lines:
     - componentsCss
     - componentsStyleSheet
+    - createSlideMenu
     - installComponentsStyles
     - installSlideMenuStyles
     - slideMenuCss
+    - SlideMenuHandle
     - slideMenuStyleSheet
+    - SlideMenuView
 quick_groups:
   - UI 交互与弹窗
 quick_intents:
@@ -34,8 +37,8 @@ use_when:
   - 轻量导航栈
   - createSlideMenu
 invariant_anchors:
-  - frontend/src/preview-3d/menu/slide-menu.ts|createSlideMenu
-  - frontend/src/preview-3d/menu/slide-menu.ts|home
+  - frontend/src/preview-3d/menu/shell/slide-menu.ts|createSlideMenu
+  - frontend/src/preview-3d/menu/shell/slide-menu.ts|home
 status: active
 ---
 
@@ -43,7 +46,7 @@ status: active
 
 ## 概览
 
-`frontend/src/preview-3d/menu/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-menu 视觉卡片（menu-wrapper / slide-viewport / slide-panel / slide-list / slide-header），但不搬其菜单导航引擎（registry/schema/stack 等业务层）。在外壳层提供一组**轻量导航栈**能力（`home`/`navigate`/`back`/`refresh`/`isShowing`/`reset`/`isAtRoot`），供调用方以最小成本组织多级菜单（如 YSM 的「模型信息 → 表情 / 切换模型」两级）。
+`frontend/src/preview-3d/menu/shell/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-menu 视觉卡片（menu-wrapper / slide-viewport / slide-panel / slide-list / slide-header），但不搬其菜单导航引擎（registry/schema/stack 等业务层）。在外壳层提供一组**轻量导航栈**能力（`home`/`navigate`/`back`/`refresh`/`isShowing`/`reset`/`isAtRoot`），供调用方以最小成本组织多级菜单（如 YSM 的「模型信息 → 表情 / 切换模型」两级）。
 
 > **路径沿革（ADR-220，2026-09-10）**：原 `frontend/src/ui/ui-slide-menu.ts`；`ui/` 收容所解散后归位 3D 菜单子系统，符号去 `ui-` 前缀。`ui/` 目录已不存在，勿再按旧路径检索。
 

@@ -4,9 +4,9 @@ name: UI 组件簇（原 ui 收容所，已归位）
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/preview-3d/menu/slide-menu.ts
-  - frontend/src/preview-3d/menu/header-toggle.ts
-  - frontend/src/preview-3d/menu/slider-controller.ts
+  - frontend/src/preview-3d/menu/shell/slide-menu.ts
+  - frontend/src/preview-3d/menu/shell/header-toggle.ts
+  - frontend/src/preview-3d/menu/shell/slider-controller.ts
   - frontend/src/preview-3d/menu/style/components-styles.ts
   - frontend/src/preview-3d/menu/style/slide-menu-styles.ts
   - frontend/src/preview-3d/menu/style/style-install.ts
@@ -25,7 +25,13 @@ auto_fields:
     - ARIA_ATTR
     - componentsCss
     - componentsStyleSheet
+    - createHeaderToggle
     - createInstallableStyles
+    - createSlideMenu
+    - DragSliderController
+    - DragSliderOptions
+    - HeaderToggleConfig
+    - HeaderToggleElement
     - InstallableStyles
     - installComponentsStyles
     - installSlideMenuStyles
@@ -33,7 +39,9 @@ auto_fields:
     - PREVIEW_OVERLAY_ID
     - ROLE
     - slideMenuCss
+    - SlideMenuHandle
     - slideMenuStyleSheet
+    - SlideMenuView
     - SLIDER_BAR_CLASS
 quick_groups:
   - UI 交互与弹窗
@@ -55,8 +63,8 @@ use_when:
   - 滑块
   - 幻灯片菜单
 invariant_anchors:
-  - frontend/src/preview-3d/menu/slide-menu.ts|createSlideMenu
-  - frontend/src/preview-3d/menu/header-toggle.ts|createHeaderToggle
+  - frontend/src/preview-3d/menu/shell/slide-menu.ts|createSlideMenu
+  - frontend/src/preview-3d/menu/shell/header-toggle.ts|createHeaderToggle
 status: active
 ---
 
@@ -74,11 +82,11 @@ status: active
 |------|------|------|
 | 行排列 | （已拔管） | `ui-rows.ts`/`ui-advanced-rows.ts`/`ui-slide-row.ts` 已删除（`addSliderRow`/`addModeRow`/`addFieldRow`/`initControl`/`addColorSliderRow`/`addVector3SliderRow`/`addModeSlider`/`slideRow` 等 15 个命令式行 builder 生产零消费）；滑块能力下沉 cap 栈 `preview-3d/menu/cap-controls\|renderCapSlider`，toggle 能力下沉 `preview-3d/menu/header-toggle\|createHeaderToggle.forceToggle` |
 | 折叠面板 | （已拔管） | `ui-collapsible.ts`（`addCollapsible`/`addSectionTitle`/`addPresetChip`）已删除——生产折叠组归 `preview-3d/menu/render` 的 `rmAppendFolder` cap-section 类体系（inert 移出 Tab 序语义保留在 cap-section 上） |
-| 幻灯片菜单 | `preview-3d/menu/slide-menu.ts` | `createSlideMenu` → `SlideMenuHandle`（轻量导航栈外壳，见 [ui_slide_menu](./ui-slide-menu.md)） |
+| 幻灯片菜单 | `preview-3d/menu/shell/slide-menu.ts` | `createSlideMenu` → `SlideMenuHandle`（轻量导航栈外壳，见 [ui_slide_menu](./ui-slide-menu.md)） |
 | 卡片 | （已拔管） | `ui-card.ts`（`cardContainer` 包一层 `.lcard`）2026-09-10 删除——生产零消费者，`.lcard` DOM 全仓无产出方；其 orphan 样式（`:root` 的 `--uih-lcard-*` token + `.lcard`/`.lcard > .slide-item:*` 规则，散在 `components-styles.ts` 与 `slide-menu-styles.ts`）同批清空。**3D 菜单的卡片分组走 `kind:"card"` + `MENU_CARD_CSS`（见 [preview_menu](./preview-menu.md)），勿复活 `.lcard`** |
 | 加载 | （已拔管） | `ui-loading.ts`（`withLoadingIndicator` 自包含加载遮罩）2026-09-10 删除——生产零消费者；其 orphan 样式 `.loading-overlay*`（`components-styles.ts`）同批清空 |
-| 顶部切换 | `preview-3d/menu/header-toggle.ts` | `createHeaderToggle` 紧凑 toggle（返回 `HeaderToggleElement`，含 `forceToggle` 程序化翻转出口——整行点击等外部触发语义自 addToggleRow 下沉）；纯创建函数，无注册表自更新（bind 注册链 + control-registry 2026-09 拔除，见 ADR-085） |
-| 滑块 | `preview-3d/menu/slider-controller.ts` | `DragSliderController` 数值范围滑块（pointer 主 + mouse 兜底互斥；cap 栈 `preview-3d/menu/cap-controls\|renderCapSlider` 生产消费） |
+| 顶部切换 | `preview-3d/menu/shell/header-toggle.ts` | `createHeaderToggle` 紧凑 toggle（返回 `HeaderToggleElement`，含 `forceToggle` 程序化翻转出口——整行点击等外部触发语义自 addToggleRow 下沉）；纯创建函数，无注册表自更新（bind 注册链 + control-registry 2026-09 拔除，见 ADR-085） |
+| 滑块 | `preview-3d/menu/shell/slider-controller.ts` | `DragSliderController` 数值范围滑块（pointer 主 + mouse 兜底互斥；cap 栈 `preview-3d/menu/cap-controls\|renderCapSlider` 生产消费） |
 | 图标 | （已拔管） | `icons.ts`（`createIcon`/`createIconBox`，iconify 兼容层）已删除——**现行入口 = `utils/icon/resolve.ts\|applyIcon`**：语义名 → `UI_ICONS` 的 SVG（`class="ws-icon"`，着色/定尺靠 `.ws-icon` 规则）；数据图标（`resource_types.json` 的 emoji/字形）→ `textContent` 兜底（ADR-238 D1 不可动） |
 | 样式 | `preview-3d/menu/style/components-styles.ts` | `componentsCss` → `CSSStyleSheet`（供 Shadow 组件 `adoptedStyleSheets` 消费）+ `installComponentsStyles()`（light-DOM 注入，幂等，仅一次）。**本串必须自带 `.ws-icon` 规则**（经 `@/utils/dom/css.ts\|wsIconCSS` 插值，勿就地重写规则本体）——3D overlay 是 adopt 本串的唯一 shadow 根，`UI_ICONS` 的 SVG 靠它着色/定尺；漏带时在 `.slide-icon`（flex 容器）里自动尺寸为 0 → **图标 0×0 不可见**（2026-09-16 实测），非「巨块」 |
 | 外壳样式 | `preview-3d/menu/style/slide-menu-styles.ts` | `slideMenuCss` → `slideMenuStyleSheet` + `installSlideMenuStyles()`。2026-09 收敛：8 个 token 内联 7 个单次消费项，仅留 `--uih-slide-card-bg`（语义独立）+ 补回历史悬空的 `--uih-slide-divider` |
@@ -93,7 +101,7 @@ status: active
 
 ## 对外 API / 入口
 
-- **无 barrel**：ADR-146 反桶运动后 `ui-helpers.ts` 已删除；全部消费方**直接从具体叶模块 import**（`createSlideMenu` 从 `preview-3d/menu/slide-menu.ts`、`DragSliderController` 从 `preview-3d/menu/slider-controller.ts` 等）
+- **无 barrel**：ADR-146 反桶运动后 `ui-helpers.ts` 已删除；全部消费方**直接从具体叶模块 import**（`createSlideMenu` 从 `preview-3d/menu/shell/slide-menu.ts`、`DragSliderController` 从 `preview-3d/menu/shell/slider-controller.ts` 等）
 - **不注册自定义元素**：本簇无 `customElements.define`，消费方自行挂载返回值；不依赖 app-modules 装配（旧卡「经 app-modules.ts 统一注册为 Web Components」描述失真已修正）
 - **同目录优先**：`preview-3d/menu/*` 内的消费方用 `./<name>.ts` 直引（符号已去 `ui-` 前缀）；跨目录（如 adapters）走 `@/preview-3d/menu/<name>.ts`
 

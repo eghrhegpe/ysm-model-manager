@@ -80,6 +80,13 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-lib-adoption.ts", blockPolicy: "debt" },
   { tool: "check-workflow-refs.ts", blockPolicy: "hard" },
   { tool: "check-readme-index.ts", blockPolicy: "hard" },
+  // docs markdown 裸标签（2026-09-19 接线）：VitePress 用 Vue 编译器解析 md，
+  // 行内代码之外的裸 `<tag>` 会让整站构建抛「Element is missing end tag」——
+  // Pages 曾因此静默连挂 6 次（go-scanner 知识卡漏反引号），而断链检查 / 测试 / CI 全绿。
+  // hard 的依据：判定经 VitePress 真实 markdown-it 逐例实测 + 真实构建探针裁决
+  // （见脚本头「实证依据」），全 docs 语料 0 命中 → 无存量债冒充，属确定性规则
+  // 而非启发式（同 check-workflow-refs 的引用守规定位）。配套 tests/test_check_doc_markup.ts。
+  { tool: "check-doc-markup.ts", blockPolicy: "hard" },
   { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
   { tool: "css-layer-check.ts", args: ["--strict"], blockPolicy: "hard" },
@@ -115,6 +122,8 @@ export const DOC_STATIC_TOOLS: GateTool[] = [
   { tool: "check-proc-adoption.ts", blockPolicy: "debt" },
   { tool: "check-workflow-refs.ts", blockPolicy: "hard" },
   { tool: "check-readme-index.ts", blockPolicy: "hard" },
+  // docs markdown 裸标签：见 ALL_STATIC_TOOLS 同项注释（整站构建断裂前移为提交期判定）
+  { tool: "check-doc-markup.ts", blockPolicy: "hard" },
 ];
 
 /**

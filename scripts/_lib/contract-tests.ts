@@ -113,6 +113,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_check_complexity.ts": ["tests"],
   "test_check_type_safety.ts": ["tests"],
   "test_check_params.ts": ["tests"],
+  // 裸标签规则对象是 docs/ markdown → docs 域变更同样触发（同 test_gen_routes_quick_pitfall 口径）
+  "test_check_doc_markup.ts": ["docs", "tests"],
   "test_complexity_parity.ts": ["tests", "go"],
   "test_codemod_guards.ts": ["tests"],
   "test_collect_scripts_lib.ts": ["tests"],
@@ -272,6 +274,8 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_check_complexity.ts": ["scripts/check-complexity.ts"],
   "test_check_type_safety.ts": ["scripts/check-type-safety.ts"],
   "test_check_params.ts": ["scripts/check-params.ts"],
+  // 裸标签规则锁死：判定口径来自 VitePress 真实 markdown-it 逐例实测，改脚本即须复验
+  "test_check_doc_markup.ts": ["scripts/check-doc-markup.ts"],
   "test_complexity_parity.ts": ["scripts/check-complexity.ts", "go/ccheck/", "tests/parity/"],
   "test_collect_scripts_lib.ts": ["scripts/_lib/collect-scripts.ts"],
   "test_commit_check_gate.ts": ["scripts/_lib/commit-check.ts", "scripts/commit-with-check.ts"],

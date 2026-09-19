@@ -41,21 +41,29 @@ npm run dev    # 本地预览开发
 
 ### ⚠️ 裸 `<tag>` 会炸掉整站构建
 
-VitePress 把 markdown 编译成 Vue SFC，**行内反引号之外的 `<xxx>` 会被 Vue 模板编译器当成元素标签**。
-凑巧形如完整标签时（如 `<os>`）报 `Element is missing end tag` 并**中断整个 build** → Pages 部署连续失败。
+VitePress 把 markdown 编译成 Vue SFC。**只有 markdown-it 认可的合法 HTML 标签**会被原样放行
+（其余尖括号一律被转义成 `&lt;`，Vue 根本看不到）；而放行进来的标签里，**非 void 又找不到配对闭合**的
+那些会让 Vue 报 `Element is missing end tag`，**中断整个 build** → Pages 部署静默连挂。
 
-- **触发条件**（Vue `compiler-core` 报错码 24）：某标签未闭合，而它的**外层**元素先遇到了配对闭合标签。
+- **触发条件**（Vue `compiler-core` 报错码 24）：该标签未闭合，而它的**外层**元素先遇到了配对闭合标签。
   报错坐标是**渲染后 HTML** 的行列，**不是 md 原文坐标**（frontmatter 被剥离、`**` / 反引号 / 列表标记
   都会贡献列偏移）——排查时别按报错行号直接去读 md。
-- **反直觉之处**：只有「未闭合 + 外层先闭合」会炸。**EOF 前始终未闭合**的裸尖括号
-  （`Map<url, Texture>`、`<ISO时间>`、占位符 `<commit hash>`）与 HTML void 标签（`<br>`）**都不报错**。
-  所以别指望构建替你发现它们——**新增的裸尖括号要自己盯**。
-- **定位手法**：逐字符扫 `docs/` 下的 `<`，筛紧跟 `[A-Za-z/]` 的，并跟踪该行此前反引号奇偶
-  （奇 = 落在行内代码内，安全）。可复现验证：`cd docs && npx vitepress build`（约 50s，报错即中断）。
+- **「长得像尖括号」≠ 危险**，判定要过两道关：
+  ① **markdown-it 放行吗**——`Map<url, Texture>`、`<ISO时间>`、`<commit hash 或 "…">`、`<tag/data-testid)`
+     都不符 HTML 标签文法，会被**转义**，天然安全；
+  ② **放行后成对吗**——`<br>` / `<hr>` / `<img src="x">` 是 void 标签、`<MyComponent />` 自闭合、
+     `<div>x</div>` 有配对，同样安全。
+  危险面既然如此狭窄，**别指望肉眼盯住**——交给闸门（下条）。
+- **定位手法**：直接跑 `node scripts/check-doc-markup.ts`（秒级——已接入 `doctor --docs` 与
+  pre-push 文档域，`hard` 档**阻断**推送）。它把上述规则做成了确定性检查，按 `文件:行:列` 报出裸标签，
+  判定对齐 VitePress 真实 markdown-it：**合法开标签 + 非 void + 无配对 `</name>` → ERROR**；
+  `Map<url,Texture>` / `<ISO时间>` / `<commit hash …>` 这类会被转义的形态**不报**（全 docs 语料 0 命中，
+  故无存量债、无需 baseline）。要独立复核可用真实构建：`cd docs && npx vitepress build`（约 50s，报错即中断）。
 - **修法**：把尖括号内容**包进行内反引号**（最自然——多数场景本就是文件名 / 类型 / 占位符），或写 `&lt;`。
 
 **典型事故**：`docs/knowledge/go-scanner.md` 中文件名 `rust_backend_<os>.go` **漏了反引号**而裸露成文本，
-Pages 自 2026-09-18 起连续失败 6 次才被定位（2026-09-19 修）。
+Pages 自 2026-09-18 起连续失败 6 次才被定位（2026-09-19 修）。事故后补了闸门 `check-doc-markup.ts`
+（`hard` 档）——这类断裂此后在**提交 / 推送期**就被拦下，不必等部署失败。
 
 ---
 

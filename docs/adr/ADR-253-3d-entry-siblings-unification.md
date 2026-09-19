@@ -49,7 +49,7 @@
 ### 1.4 边界申明：容器内多模型选择**已由 ADR-132 决策并落地**，本 ADR 不碰
 
 调查中曾误判「只有资源包能浏览容器内部条目」。实测更正——**三处**均已具备，且都走
-ADR-132 的统一原语 `multiModelSelectNode`（`preview-3d/menu/multi-model.ts`）：
+ADR-132 的统一原语 `multiModelSelectNode`（`preview-3d/menu/panels/multi-model.ts`）：
 
 | 容器 | 位置 | 节点 id |
 |---|---|---|

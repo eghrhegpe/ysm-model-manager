@@ -8,7 +8,7 @@ category: ui
 perf:
   - gpu-bound
 source_files:
-  - frontend/src/preview-3d/menu/multi-model.ts
+  - frontend/src/preview-3d/menu/panels/multi-model.ts
   - frontend/src/views/app-preview/mmd-controls.ts
   - frontend/src/preview-3d/adapters/pack-model-adapter.ts
   - frontend/src/preview-3d/adapters/litematic-adapter.ts
@@ -40,6 +40,8 @@ auto_fields:
     - mmdModelInfoNodes
     - MmdPlayBridge
     - mmdShotNodes
+    - multiModelSelectNode
+    - MultiModelSelectOpts
     - OpenGzRootFromBytes
     - PackAdapterOpts
     - PackDeps
@@ -75,7 +77,7 @@ use_when:
   - ADR-132
 status: active
 invariant_anchors:
-  - frontend/src/preview-3d/menu/multi-model.ts|multiModelSelectNode
+  - frontend/src/preview-3d/menu/panels/multi-model.ts|multiModelSelectNode
   - frontend/src/views/app-preview/mmd-controls.ts|MmdBottomNavCtx
   - frontend/src/preview-3d/adapters/pack-model-adapter.ts|buildPackScene
 ---

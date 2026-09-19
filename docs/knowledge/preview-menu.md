@@ -17,9 +17,9 @@ source_files:
   - frontend/src/preview-3d/menu/env.ts
   - frontend/src/preview-3d/menu/roles.ts
   - frontend/src/preview-3d/menu/settings.ts
-  - frontend/src/preview-3d/menu/stats.ts
+  - frontend/src/preview-3d/menu/panels/stats.ts
   - frontend/src/preview-3d/menu/shell/switch.ts
-  - frontend/src/preview-3d/menu/multi-model.ts
+  - frontend/src/preview-3d/menu/panels/multi-model.ts
 auto_fields:
   symbols_with_lines:
     - buildCameraSchema
@@ -32,6 +32,7 @@ auto_fields:
     - buildSettingsControls
     - buildSettingsSchema
     - buildShadowSchema
+    - buildStatsPanel
     - buildSwitchNodes
     - canNodeRepresent
     - capControlsToNodes
@@ -49,9 +50,13 @@ auto_fields:
     - disposeCustomCleanups
     - disposeEnvSubscriptions
     - formatCapSliderValue
+    - hasSceneStats
     - isPreviewFolderNode
     - makeSwitchState
+    - mergeStatsMenuItems
     - mountPreviewRootMenu
+    - multiModelSelectNode
+    - MultiModelSelectOpts
     - nodeControlToView
     - PREVIEW_MENU_GROUPS
     - PreviewActionMenuCtx
@@ -77,6 +82,7 @@ auto_fields:
     - renderPreviewPanel
     - roleBaseName
     - RolesSchemaDeps
+    - STATS_PANEL_ID
     - switchNormPath
     - SwitchState
     - switchTabHighlightBg

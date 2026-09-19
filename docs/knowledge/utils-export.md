@@ -78,7 +78,7 @@ status: active
 `preview-3d/decoder/model-cache.ts`（preview-cache）：
 - `cacheGet(path: string): CacheValue | null` / `cacheSet(path, data)` — key 为模型绝对路径；上限 MAX_CACHE=50，超出时 FIFO 淘汰最旧条目并触发 evict 回调
 - `cacheSetEvictHandler(fn)` — 注册淘汰回调（释放 blob URL 等资源）
-- `CacheValue` 接口：texture/geometry/animations/authors/avatars/_decodedBy 等
+- `CacheValue` 接口：texture/geometry/animations/authors/avatars/_decodedBy 等。⚠️ `_decodedBy` 存**来源码**（`DECODE_SOURCE`：`wasm`/`json`/`go`/`go-single`），非展示文案——展示（SVG 图标 + i18n 文案）由 `views/app-preview/tpl.ts` 映射，缓存层只是哑容器（2026-09-18 改；此前存过中文文案）
 
 ## 与其他子系统关系
 

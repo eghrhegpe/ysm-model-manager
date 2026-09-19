@@ -207,7 +207,7 @@ status: active
 - `maid-3d.ts` — 车万女仆详情 + 3D 预览（Bedrock generic 模式），详情卡复用 YSM `statsCardHTML` 彩色分区。**GetModel3DSpec 单视图（ADR-160）**：详情数据 = `AnalyzeBedrockModel`（聚合纹理/尺寸/metadata/格式）+ `GetModel3DSpec`（逐组件统计唯一源）；蓝卡逐组件行 = `componentCountsFromSpec(spec)` 投影（与 YSM 详情、3D「组件」下拉同构），纯静态无选中态；大字 = 组件合计，spec 失败回落聚合口径；FAB = 整包 3D（不再传 `subModelIdx`/`subPath`，角色切换收敛在 3D 组件下拉）。交互式 L0 清单（dp-submodels/chip）与 `AnalyzeBedrockModelEntry` 逐角色预取已退役。
 - `utils.ts` — 共享类型与工具：`PreviewCtx`、`getPrefer3D` / `setPrefer3D`、`stripYsgpTextHeader`。
 - `decoder/geometry.ts`（`preview-3d/decoder/`）— `BedrockCube` / `BedrockBone` / `BedrockGeometry` 类型 + `parseBedrockGeometryFromJSON`。
-- `tpl.ts` — `modelDetailHTML`（详情面板）/ `statsCardHTML`（统计卡：彩色分区 + 逐组件行 componentCounts + 纹理分类）。
+- `tpl.ts` — `modelDetailHTML`（详情面板）/ `statsCardHTML`（统计卡：彩色分区 + 逐组件行 componentCounts + 纹理分类）。「文件信息」橙卡 = 格式后缀（`extOf` 派生）+ 解码器来源徽标 `ysm-badge`：值取 `model._decodedBy`（`DECODE_SOURCE` 来源码），`decodeBadgeHTML()` 映射 SVG 图标（`parser`/`package`）+ i18n 文案（`preview.decodedBy.*`），未识别的码不渲染（2026-09-18，徽标从 `summaryCardHTML` 的 `h3` 标题行迁入）。
 - `decoder/texture-order.ts`（`preview-3d/decoder/`）— `buildOrderedTexKeys`：纹理有序列表计算，与 Go `internal/app/texture_order.go` 口径严格对称。
 - `decoder/parse-ysm-json.ts`（`preview-3d/decoder/`）— `parseYsmJsonDirect(json)`：解压后 YSM 的 `ysm.json` 直接解析，双格式分支（YSM 专属 / 标准 Bedrock）。
 - `decoder/cache.ts`（`preview-3d/decoder/`）— 模块级预览缓存（FIFO 上限 50，与 `export.md` 口径一致）。

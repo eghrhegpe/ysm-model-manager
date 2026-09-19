@@ -351,6 +351,18 @@ export const ja: Record<string, string> = {
   "diagnostics.startScan": "⚡ スキャン開始",
   "diagnostics.clearFailed": "ログのクリアに失敗しました",
   "diagnostics.perfRunSingle": "単一モデルベンチマークを実行",
+  // ADR-278 §2.6：3 モードが同一控件を共有するが、各数値／選択肢が「測る対象」が違う——
+  // その場で明示する（エンジン比較の「反復」はモデル再測定ではなくリポジトリ全体再スキャン）。
+  "diagnostics.perfScopeHintSingle": "1 つのモデルの読込時間を測定",
+  "diagnostics.perfScopeHintConc": "複数モデルの逐次 vs 並列を測定",
+  "diagnostics.perfScopeHintScan": "リポジトリ全体のディレクトリスキャンを測定（モデル解析なし）",
+  "diagnostics.perfIterationsSingle": "解析繰り返し回数",
+  "diagnostics.perfIterationsScan": "リポジトリ再スキャン回数",
+  "diagnostics.perfIterationsHint":
+    "同一対象を何回繰り返すか（中央値採用）；エンジン比較ではリポジトリ全体再スキャン回数",
+  "diagnostics.perfTargetSampleRange": "サンプル範囲",
+  "diagnostics.perfConcTargetFallback":
+    "並列ベンチに単一モデル対象はない：フラット全ライブラリに回落しました",
   "diagnostics.perfModelPlaceholder":
     ".ysm モデルパスを入力（YSM のみシミュレート可；PMX は GUI 3D プレビューで実測）",
   "diagnostics.webNoConflictScan": "ウェブ版では競合スキャンはサポートされていません",
@@ -404,7 +416,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfRunConcurrent": "並列ベンチ",
   "diagnostics.perfConcurrentWorkers": "並列 worker 数",
   "diagnostics.perfConcurrentHint":
-    "直列と並列の実測加速比（2 / 4 / 指定値の段階）。加速比と判定は Go が決定します",
+    "直列と並列の実測加速比（2 / 4 / 指定値の段階）。加速比と判定は Go が決定します；対象 = 複数モデル",
   "diagnostics.perfConcurrentResult": "並列ベンチ結果",
   "diagnostics.perfConcurrentWorkersN": "{n} workers",
   "diagnostics.perfConcurrentModelCount": "実測 {n} モデル",
@@ -427,7 +439,7 @@ export const ja: Record<string, string> = {
   // ADR-262 D3 スキャンエンジン比較（Go / Rust）：未計測のエンジンは理由を表示し、0.00ms は出さない
   "diagnostics.perfScanBenchRun": "エンジン比較（Go/Rust）",
   "diagnostics.perfScanBenchHint":
-    "同じリポジトリルートを Go / Rust でスキャンし中央値と p95 を計測。未計測のエンジンは理由を表示（0ms ではない）",
+    "同じリポジトリルートを Go / Rust でスキャンし中央値と p95 を計測。未計測のエンジンは理由を表示（0ms ではない）；対象 = リポジトリ全体のディレクトリツリー、モデル解析なし",
   "diagnostics.perfScanBenchTitle": "スキャンエンジン比較結果",
   "diagnostics.perfScanBenchSpec": "ビルドバックエンド {backend} · {n} 回反復",
   "diagnostics.perfScanBenchColEngine": "エンジン",

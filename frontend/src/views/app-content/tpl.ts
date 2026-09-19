@@ -26,6 +26,9 @@ export const VIEW_TESTIDS: readonly string[] = [
   // ADR-262 D3 修订：取样上限——单位 = 目标集的展开单位（标签恒为「取样上限」，单位只进 title）
   // 标签本身也是 e2e 契约（读它的正文证明「不随模式改义」），故同样给稳定钩子
   "diag-perf-max-label",
+  // ADR-278 §2.6：随基准模式改义的标签（迭代次数 / 目标集）——e2e 读它们的正文验证「改义当场说清」
+  "diag-perf-iter-label",
+  "diag-perf-target-label",
   "diag-perf-max",
   // ADR-262 D8：基准入口三件套（记录 / 对比 / 阈值）——矩阵模式下被禁用
   "diag-perf-baseline-save",
@@ -196,19 +199,19 @@ export function diagnosticsHTML(): string {
         <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
       </div>
       <div class="perf-row" data-perf-mode="single scan">
-        <label for="diag-perf-iter">${t("diagnostics.perfIterations")}</label>
+        <label for="diag-perf-iter" id="diag-perf-iter-label" data-testid="diag-perf-iter-label">${t("diagnostics.perfIterations")}</label>
         <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
       </div>
       <div class="perf-row" data-perf-mode="scan">
-        <button class="btn-base" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench" title="${t("diagnostics.perfScanBenchHint")}">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
+        <button class="btn-base" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
       </div>
       <div class="perf-row" data-perf-mode="conc">
-        <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run" title="${t("diagnostics.perfConcurrentHint")}">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
+        <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
         <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
         <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
       </div>
       <div class="perf-row" data-perf-mode="single conc">
-        <label for="diag-perf-rtype">${t("diagnostics.perfTarget")}</label>
+        <label for="diag-perf-rtype" id="diag-perf-target-label" data-testid="diag-perf-target-label">${t("diagnostics.perfTarget")}</label>
         <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
           <option value="">${t("diagnostics.perfTargetModel")}</option>
         </select>

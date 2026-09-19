@@ -63,7 +63,8 @@ const allowlist = readOrDie("frontend/src/backend/cli-allowlist.ts");
 const flowGo = readOrDie("go/cli/flow.go");
 const concurrentGo = readOrDie("go/cli/bench_concurrent.go");
 const identityGo = readOrDie("go/cli/perf_identity.go");
-const guiTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-gui-flow.ts");
+// perf-gui-flow.ts 已随 gui-flow 面板下线（a1e26419d，ADR-278：UI 层拆除、Go 命令保留）；
+// 前端消费契约退役，Go 侧载荷字段（GUI_FIELDS 上方）继续钉住 CLI 形状。
 const singleTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-single-bench.ts");
 /** 反回退断言只看**代码**：注释里为说明历史缺陷会引用旧正则/旧锚点原文 */
 const singleCode = stripComments(singleTs);
@@ -101,16 +102,6 @@ for (const field of GUI_FIELDS) {
     `gui-flow 结构化载荷缺少字段 json:${field}（go/cli/flow.go）`,
   );
 }
-for (const field of ["total_ms", "estimated_ms", "failed", "kind", "estimated_ms", "runtime"]) {
-  must(
-    guiTs.includes(field),
-    `前端 GuiFlowStructured/GuiFlowStage 未声明 ${field}（perf-gui-flow.ts）`,
-  );
-}
-must(
-  guiTs.includes("perf-gui-est"),
-  "前端未渲染估算标记（.perf-gui-est）——估算与实测必须在展示层可区分（ADR-262 D2）",
-);
 
 // ── 3) single-bench 结构化载荷契约（含身份块）─────────────────────
 // 前 9 个字段在 singleBenchJSON（bench_concurrent.go）；identity 块在 perf_identity.go。
@@ -477,8 +468,17 @@ const scanBenchGo = readOrDie("go/cli/scan_bench.go");
 const scanBenchTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-scan-bench.ts");
 const scanBenchCode = stripComments(scanBenchTs);
 // perfTplTs 于 §3.7 读取（同一常量复用，不重复读盘）
-// 入口（按钮/testid）声明在 tpl.ts，消费在 perf-scan-bench.ts——两文件的代码合并后查引用
-const scanBenchUsages = scanBenchCode + stripComments(perfTplTs);
+// 入口（按钮/testid）声明在 tpl.ts，消费在 perf-scan-bench.ts——两文件的代码合并后查引用。
+// ADR-278 §2.6：scope hint 单点收进 perf.ts|initPerfMode，接线扫描面并入 facade + 同面板消费链
+//（perf-single-bench.ts / perf-common.ts 与本面板同属一条 import 链，文案引用视为已接线）。
+const perfFacadeTs = readOrDie("frontend/src/views/app-content/diagnostics/perf.ts");
+const perfCommonTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-common.ts");
+const scanBenchUsages =
+  scanBenchCode +
+  stripComments(perfTplTs) +
+  stripComments(singleTs) +
+  stripComments(perfFacadeTs) +
+  stripComments(perfCommonTs);
 
 const SCAN_BENCH_FIELDS = [
   '"spec"',

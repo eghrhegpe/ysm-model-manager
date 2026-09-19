@@ -349,6 +349,18 @@ export const en: Record<string, string> = {
   "diagnostics.startScan": "⚡ Start Scan",
   "diagnostics.clearFailed": "Failed to clear logs",
   "diagnostics.perfRunSingle": "Run single-model benchmark",
+  // ADR-278 §2.6 honesty layer: three modes share one control set, but each number/option measures
+  // a different object — say it in place (scan's "iterations" re-scan the whole repo tree, not one model).
+  "diagnostics.perfScopeHintSingle": "Measures load time of one model",
+  "diagnostics.perfScopeHintConc": "Measures serial vs parallel across a batch of models",
+  "diagnostics.perfScopeHintScan": "Measures whole-repo directory scan; no model parsing",
+  "diagnostics.perfIterationsSingle": "Parse repeats",
+  "diagnostics.perfIterationsScan": "Repo rescan passes",
+  "diagnostics.perfIterationsHint":
+    "Rounds over the same target (median taken); in engine comparison = full repo rescans",
+  "diagnostics.perfTargetSampleRange": "Sample range",
+  "diagnostics.perfConcTargetFallback":
+    "Concurrent bench has no single-model target: fell back to flat repo",
   "diagnostics.perfModelPlaceholder": "Enter .ysm path (YSM only; PMX: use GUI 3D preview)",
   "diagnostics.webNoConflictScan": "Conflict scanning is not supported on web",
   "diagnostics.webNoSyncConflictScan": "Sync conflict scanning is not supported on web",
@@ -404,7 +416,8 @@ export const en: Record<string, string> = {
   "diagnostics.perfRunConcurrent": "Concurrent bench",
   "diagnostics.perfConcurrentWorkers": "Concurrent workers",
   "diagnostics.perfConcurrentHint":
-    "Measured serial-vs-parallel speedup (tiers 2 / 4 / target); speedup and verdict are decided in Go",
+    "Measured serial-vs-parallel speedup (tiers 2 / 4 / target); speedup and verdict are decided in Go; scope = a batch of models",
+  // ADR-278 §2.6: button titles now come from initPerfMode's single scope-hint source (tpl no longer hardcodes).
   "diagnostics.perfConcurrentResult": "Concurrent bench result",
   "diagnostics.perfConcurrentWorkersN": "{n} workers",
   "diagnostics.perfConcurrentModelCount": "{n} models measured",
@@ -429,7 +442,7 @@ export const en: Record<string, string> = {
   // reason, never 0.00ms (0ms reads as "too fast to measure", which is the opposite of the truth)
   "diagnostics.perfScanBenchRun": "Engine comparison (Go/Rust)",
   "diagnostics.perfScanBenchHint":
-    "Scan the same repo root with both Go and Rust and report median/p95; an engine that was not measured shows the reason, not 0ms",
+    "Scan the same repo root with both Go and Rust and report median/p95; an engine that was not measured shows the reason, not 0ms; scope = the whole repo directory tree, no model parsing",
   "diagnostics.perfScanBenchTitle": "Scan engine comparison result",
   "diagnostics.perfScanBenchSpec": "Build backend {backend} · {n} iterations",
   "diagnostics.perfScanBenchColEngine": "Engine",

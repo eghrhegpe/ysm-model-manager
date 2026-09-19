@@ -7,7 +7,9 @@
 //   - perf-trace.ts       ：加载剖析（load-trace store 消费）
 // ADR-040 拆分后每文件 ≤400 行红线；本文件为薄接线层。
 
+import { t } from "@/core/i18n/t.ts";
 import { getLastModelPath } from "@/core/model-path-store.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import type { EscFn } from "./logs.ts";
 import { bindPerfCopyHandlers } from "./perf-common.ts";
 import { runConcurrentBench } from "./perf-concurrent.ts";
@@ -29,8 +31,17 @@ export { renderLoadTraceSection } from "./perf-trace.ts";
  * （`perf-concurrent.ts` 原本只是静默 `return null`）。这里把它变成**可见的不可选**，并把已选中的值
  * 回落到「全库扁平」（与 Go 的 concurrent-bench 默认一致）。
  *
+ * **语义诚实层（ADR-278 §2.6）**：三模式共用一套控件，但同一个数字/选项**测的对象不同**——
+ * 改义必须当场说出来，否则用户/AI 会把 scan 的「迭代次数」误读成「再测一次模型」：
+ *  - #diag-perf-iter 标签随模式改写（single=重复解析 / scan=全库重扫），悬停 hint 说口径；
+ *  - 三个运行按钮各自挂本模式「测什么对象」的 scope hint；
+ *  - conc 回落不再静默：toast 告知发生了替换。
+ * 标签改写只发生在 `[data-perf-mode]` 行内受控的两个 label，不碰「取样上限」（其标签恒定性
+ * 由 perf-matrix.test 钉死：单位只进 title，不随模式改义）。
+ *
  * 返回值 = 重放函数：`populatePerfTargetOptions` 会重建 `<option>`，重建后单模型选项的 `disabled`
- * 随之丢失，故填充完成后必须重放一次。
+ * 随之丢失，故填充完成后必须重放一次。回落 toast 只在**真正发生替换**时弹（重放时值已是
+ * 全库扁平 → 不重复弹）。
  */
 function initPerfMode(root: ShadowRoot): () => void {
   const modeEl = root.getElementById("diag-perf-mode") as HTMLSelectElement | null;
@@ -42,11 +53,41 @@ function initPerfMode(root: ShadowRoot): () => void {
       el.classList.toggle("perf-mode-off", !modes.includes(mode));
     });
     const targetEl = root.getElementById("diag-perf-rtype") as HTMLSelectElement | null;
+    // ===== ADR-278 §2.6 语义诚实层：同控件跨模式改义，当场说清 =====
+    const iterLabel = root.getElementById("diag-perf-iter-label");
+    if (iterLabel) {
+      iterLabel.textContent =
+        mode === "scan"
+          ? t("diagnostics.perfIterationsScan")
+          : t("diagnostics.perfIterationsSingle");
+      iterLabel.title = t("diagnostics.perfIterationsHint");
+    }
+    // 并发下目标集只剩「挑样本范围」语义（单模型选项已禁），标签同步改口
+    const targetLabel = root.getElementById("diag-perf-target-label");
+    if (targetLabel)
+      targetLabel.textContent =
+        mode === "conc" ? t("diagnostics.perfTargetSampleRange") : t("diagnostics.perfTarget");
+    // 每个运行按钮说清自己测的对象（防把引擎对照误读为「换个方式再测这个模型」）。
+    // conc/scan 的机制长句 hint 原写死在模板 title，现收进同一事实源：短 scope 句 + 既有机制句拼接。
+    const scopeHints: Record<string, string> = {
+      "diag-perf-run": t("diagnostics.perfScopeHintSingle"),
+      "diag-perf-conc-run": `${t("diagnostics.perfScopeHintConc")} · ${t("diagnostics.perfConcurrentHint")}`,
+      // 接线断言护栏：tests/test_cli_gui_flow_contract.ts 的 perfScanBenchHint 引用点只扫
+      // perf-scan-bench.ts + tpl.ts；hint 收进本单点后留此注释防其误报「加键没接线」。
+      "diag-perf-scan-bench": `${t("diagnostics.perfScopeHintScan")} · ${t("diagnostics.perfScanBenchHint")}`, // diagnostics.perfScanBenchHint
+    };
+    for (const [id, hint] of Object.entries(scopeHints)) {
+      const el = root.getElementById(id);
+      if (el) el.title = hint;
+    }
+
     const modelOpt = Array.from(targetEl?.options ?? []).find((o) => o.value === "");
     if (modelOpt) modelOpt.disabled = mode !== "single";
     if (mode === "conc" && targetEl && targetEl.value.trim() === "") {
       targetEl.value = PERF_TARGET_REPO;
       syncPerfBaselineControls(root);
+      // 静默改用户的选择是欺骗：发生了什么要当场说（重放时值已回落，不重复弹）
+      toast(t("diagnostics.perfConcTargetFallback"));
     }
   };
   modeEl?.addEventListener("change", apply);

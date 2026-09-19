@@ -63,6 +63,15 @@
 - **零成本可渲染的 → 进即渲染**：`trace` 读的是内存 store（`getLoadTraces()`，零 I/O、零 Go/CLI）→ 初始化 + 每次激活都渲染。
 - **需要跑进程/CLI 的 → 引导空态 + 显式按钮**：`bench` 各模式的结果容器与 `record` 的历史区预置引导空态；**不做「进 tab 自动 spawn CLI」**（与扫描三兄弟同口径：进 tab 不跑进程）。
 - 查看器模式下 `bench` tab **整体隐藏**（其全部入口都依赖 Go/CLI），而 `record` **保留**——`trace` 是性能组里唯一跨模式可用的面板（网页版的 3D 适配器同样在写这个 store），故其入口**不再**随其它桌面按钮一起隐藏。
+### 2.6 语义诚实层：同控件跨模式**改义必须当场说清**（2026-09-20 补）
+
+三模式共用一套控件后，审计发现两处「同名不同义」的前后端对接缝隙（正确性归 Go，但界面不得骗人）：
+
+- **`#diag-perf-iter` 一个框两种物理量**：single/conc 下 = 同一模型重复解析几次；scan 下 = 整库目录树重扫几遍（`scan_bench.go --iterations`）。标签随模式改写（`perfIterationsSingle`/`perfIterationsScan`），口径进悬停 hint。
+- **目标集在 conc 下只剩「挑样本范围」语义**（单模型选项已禁）且原选值会被静默回落：标签同步改口（`perfTargetSampleRange`），回落时 toast 告知（`perfConcTargetFallback`）——与 §2.3「被禁用比勾了却没生效诚实」同一条线：**静默改用户的选择是欺骗**。
+- **三个运行按钮各自挂本模式「测什么对象」的 scope hint**（`perfScopeHint*`，单点归 `initPerfMode`，模板不再写死 title）：防把引擎对照误读为「换个方式再测这个模型」（它根本不碰模型文件，只遍历目录树）。
+
+反例护栏：本次**不碰**「取样上限」标签——它的单位随 selector 变但语义不变（永远 = 目标集展开单位的 N 条），恒定性由 `perf-matrix.test.ts` 钉死；改义才改标签，不改义只改 hint。落地点全在 `perf.ts|initPerfMode`（apply 内，重放幂等：回落 toast 只在真发生替换时弹）。
 
 ## 3. 后果（Consequences）
 

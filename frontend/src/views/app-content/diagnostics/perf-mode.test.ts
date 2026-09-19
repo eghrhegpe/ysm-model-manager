@@ -1,13 +1,16 @@
 // @vitest-environment happy-dom
-// ===== 诊断页：基准模式接线测试（ADR-278 §2.1 / §2.3 / §2.4）=====
+// ===== 诊断页：基准模式接线测试（ADR-278 §2.1 / §2.3 / §2.4 / §2.6）=====
 // 覆盖：
-//  - 默认 single：非当前模式的 `[data-perf-mode]` 行被加 `.perf-mode-off`，且**不写 inline style**
-//    （查看器降级用的是 inline `display:none`，两种机制不能互相覆盖——ADR-278 §2.4）
 //  - 切 conc：单模型那套隐藏、并发那套显示；目标集「单模型」选项被禁用 + 已选中值回落到全库扁平
 //  - 切回 single：选项恢复可选（disable 是模式态，不是一次性改动）
+//  - 默认 single：非当前模式的 `[data-perf-mode]` 行被加 `.perf-mode-off`，且**不写 inline style**
+//    （查看器降级用的是 inline `display:none`，两种机制不能互相覆盖——ADR-278 §2.4）
 //  - 引擎对照模式：迭代行可见（single 与 scan 共用同一迭代次数）
 //  - 目标集填充（async，会重建 <option>）之后模式态被重放，disabled 不丢
+//  - ADR-278 §2.6 语义诚实层：同一个控件跨模式**改义必须当场说明**——迭代/目标集标签随模式改写、
+//    每个运行按钮挂本模式「测什么对象」hint、并发回落不再静默改用户的选择
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { bus } from "@/bus";
 import { initPerfPanel } from "./perf.ts";
 
 const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
@@ -17,6 +20,8 @@ const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
 
 vi.mock("@/services/cli-bridge.ts", () => ({ executeCLI }));
 vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
+// toast 原语走 bus.emit("toast:show")；本文件锁「并发回落有提示」，mock bus 以免真弹
+vi.mock("@/bus", () => ({ bus: { emit: vi.fn(), on: vi.fn() } }));
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -42,7 +47,16 @@ function makeRoot(mode = "single"): ShadowRoot {
     <input id="diag-perf-baseline-compare" type="checkbox">
     <input id="diag-perf-baseline-th" value="50">
     <div class="perf-row" data-perf-mode="single" id="row-single"></div>
-    <div class="perf-row" data-perf-mode="single scan" id="row-iter"></div>
+    <div class="perf-row" data-perf-mode="single scan" id="row-iter">
+      <label for="diag-perf-iter" id="diag-perf-iter-label">迭代次数</label>
+      <input id="diag-perf-iter" value="3">
+    </div>
+    <div class="perf-row" data-perf-mode="single conc" id="row-target">
+      <label for="diag-perf-rtype" id="diag-perf-target-label">目标集</label>
+    </div>
+    <button id="diag-perf-run"></button>
+    <button id="diag-perf-conc-run"></button>
+    <button id="diag-perf-scan-bench"></button>
     <div class="perf-row" data-perf-mode="conc" id="row-conc"></div>
     <div class="perf-row" data-perf-mode="scan" id="row-scan"></div>
     <div id="diag-perf-single" data-perf-mode="single"></div>
@@ -70,11 +84,20 @@ const modelOption = (root: ShadowRoot): HTMLOptionElement | undefined =>
   [...(root.getElementById("diag-perf-rtype") as HTMLSelectElement).options].find(
     (o) => o.value === "",
   );
+const iterLabel = (root: ShadowRoot): HTMLElement | null =>
+  root.getElementById("diag-perf-iter-label");
+const targetLabel = (root: ShadowRoot): HTMLElement | null =>
+  root.getElementById("diag-perf-target-label");
+
+/** 并发模式下「单模型」选项被禁用且值回落到全库扁平 → 应有一次 toast 说明 */
+const concFallbackToastMsgs = (): string[] =>
+  (vi.mocked(bus.emit) as unknown as ReturnType<typeof vi.fn>).mock.calls
+    .filter(([evt]) => evt === "toast:show")
+    .map(([, payload]) => (payload as { msg?: string })?.msg ?? "");
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
-
 describe("基准模式接线（ADR-278）", () => {
   it("默认 single：只显示单模型那一套，且显隐走 class 而非 inline style", () => {
     const root = makeRoot("single");
@@ -130,5 +153,52 @@ describe("基准模式接线（ADR-278）", () => {
     await Promise.resolve();
     expect(modelOption(root)?.disabled).toBe(true);
     expect((root.getElementById("diag-perf-rtype") as HTMLSelectElement).value).toBe("__repo__");
+  });
+
+  // ===== ADR-278 §2.6 语义诚实层 =====
+  // 同一个控件跨模式改义，界面必须当场说清——三件事各钉一条：
+  it("迭代标签随模式改写：single=重复解析 / scan=全库重扫（同一 #diag-perf-iter 两种物理含义）", () => {
+    const root = makeRoot("single");
+    initPerfPanel(root, esc);
+    expect(iterLabel(root)?.textContent).toContain("重复解析");
+    switchMode(root, "scan");
+    expect(iterLabel(root)?.textContent).toContain("全库重扫");
+    switchMode(root, "single");
+    expect(iterLabel(root)?.textContent).toContain("重复解析");
+  });
+
+  it("目标集标签在并发模式改为「取样范围」（并发没有单模型，同控件在 conc 下只剩选样本语义）", () => {
+    const root = makeRoot("single");
+    initPerfPanel(root, esc);
+    expect(targetLabel(root)?.textContent).toBe("目标集");
+    switchMode(root, "conc");
+    expect(targetLabel(root)?.textContent).toBe("取样范围");
+    switchMode(root, "single");
+    expect(targetLabel(root)?.textContent).toBe("目标集");
+  });
+
+  it("三个运行按钮各自挂本模式「测什么对象」的 hint（防把引擎对照误读为再测一次模型）", () => {
+    const root = makeRoot("single");
+    initPerfPanel(root, esc);
+    const run = root.getElementById("diag-perf-run") as HTMLElement;
+    const concRun = root.getElementById("diag-perf-conc-run") as HTMLElement;
+    const scanRun = root.getElementById("diag-perf-scan-bench") as HTMLElement;
+    expect(run.title).toContain("一个模型");
+    expect(concRun.title).toContain("一批模型");
+    expect(scanRun.title).toContain("目录树");
+  });
+
+  it("并发回落不再静默：从 single 切到 conc 且原选「单模型」→ toast 说明回落到全库扁平", async () => {
+    const root = makeRoot("single");
+    initPerfPanel(root, esc);
+    await Promise.resolve(); // 等目标集填充落地（它会重放模式态，不得多弹一次）
+    expect(concFallbackToastMsgs().length).toBe(0); // 初始化不弹
+    switchMode(root, "conc");
+    const msgs = concFallbackToastMsgs();
+    expect(msgs.length).toBe(1);
+    expect(msgs[0]).toContain("全库扁平");
+    // 重放路径：填充完成后再次 apply()，值已是 __repo__ → 不重复弹
+    await Promise.resolve();
+    expect(concFallbackToastMsgs().length).toBe(1);
   });
 });

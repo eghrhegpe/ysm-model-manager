@@ -348,6 +348,19 @@ export const zhCN = {
   "diagnostics.startScan": "⚡ 开始扫描",
   "diagnostics.clearFailed": "清除日志失败",
   "diagnostics.perfRunSingle": "运行单一模型基准",
+  // ADR-278 §2.6 语义诚实层：三模式共用一套控件，但每个数字/选项**测的对象不同**——
+  // 不当场说清就会被误读（scan 的「迭代」不是再测一次模型，而是重扫整库目录树）。
+  // 按钮 hint 只说「测什么对象」，机制细节（串行 vs 并行、中位/p95）留在既有 perfScanBenchHint 等长句里。
+  "diagnostics.perfScopeHintSingle": "测一个模型的加载耗时",
+  "diagnostics.perfScopeHintConc": "测一批模型的串行 vs 并行",
+  "diagnostics.perfScopeHintScan": "测整库目录树扫描，不解析模型文件",
+  // 同一 #diag-perf-iter 在 single 与 scan 下是两种物理量：标签随模式改写，悬停说人话
+  "diagnostics.perfIterationsSingle": "重复解析次数",
+  "diagnostics.perfIterationsScan": "全库重扫次数",
+  "diagnostics.perfIterationsHint": "同一目标重复几轮取中位；引擎对照下 = 整库目录树重扫几遍",
+  // 并发没有单模型目标集：同控件在 conc 下只剩「挑样本范围」语义，且原选「单模型」会被回落
+  "diagnostics.perfTargetSampleRange": "取样范围",
+  "diagnostics.perfConcTargetFallback": "并发基准没有单模型目标：已回落到全库扁平",
   "diagnostics.perfModelPlaceholder": "填 .ysm 模型路径（仅 YSM 可模拟；PMX 请用 GUI 3D 预览实测）",
   "diagnostics.webNoConflictScan": "网页版不支持冲突扫描",
   "diagnostics.webNoSyncConflictScan": "网页版不支持同步冲突扫描",
@@ -393,7 +406,9 @@ export const zhCN = {
   "diagnostics.perfRunConcurrent": "并发基准",
   "diagnostics.perfConcurrentWorkers": "并发 worker 数",
   "diagnostics.perfConcurrentHint":
-    "串行 vs 并行的实测加速比（含 2 / 4 / 目标值三档）；加速比与判决由 Go 判定",
+    "串行 vs 并行的实测加速比（含 2 / 4 / 目标值三档）；加速比与判决由 Go 判定；测的对象 = 一批模型",
+  // ADR-278 §2.6：按钮 title 单点归 initPerfMode 的 scope hint（模板不再写死），
+  // 本键暂留供回显/参考；若日后 gen-i18n 报孤儿再删，不手动预删。
   "diagnostics.perfConcurrentResult": "并发基准结果",
   "diagnostics.perfConcurrentWorkersN": "{n} workers",
   "diagnostics.perfConcurrentModelCount": "实测 {n} 个模型",
@@ -414,7 +429,7 @@ export const zhCN = {
   // ADR-262 D3 扫描引擎对照（Go / Rust）：未采集的引擎显示原因，不显示 0.00ms
   "diagnostics.perfScanBenchRun": "引擎对照（Go/Rust）",
   "diagnostics.perfScanBenchHint":
-    "同一仓库根分别用 Go / Rust 扫描并取中位与 p95；未采集的引擎显示原因，而不是 0ms",
+    "同一仓库根分别用 Go / Rust 扫描并取中位与 p95；未采集的引擎显示原因，而不是 0ms；测的对象 = 整库目录树，不解析模型文件",
   "diagnostics.perfScanBenchTitle": "扫描引擎对照结果",
   "diagnostics.perfScanBenchSpec": "构建后端 {backend} · 迭代 {n} 次",
   "diagnostics.perfScanBenchColEngine": "引擎",

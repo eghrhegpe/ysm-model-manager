@@ -250,7 +250,7 @@ export const autoSidebar = [
         "link": "/adr/ADR-270-menu-directory-layering"
       },
       {
-        "text": "ADR-269：资源清单单一事实源化：mcmeta 四份手抄收敛 + pack provenance 维度",
+        "text": "ADR-269：资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定",
         "link": "/adr/ADR-269-resource-manifest-single-source"
       },
       {

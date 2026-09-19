@@ -11,11 +11,11 @@ import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "@/preview-3d/menu/schema/dom-contract.ts";
+import { createHeaderToggle } from "@/preview-3d/menu/shell/header-toggle.ts";
+import { DragSliderController } from "@/preview-3d/menu/shell/slider-controller.ts";
 import { MENU_BTN_CSS, MENU_SECTION_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { clampPct } from "@/utils/base/pure/clamp.ts";
-import { createHeaderToggle } from "./header-toggle.ts";
-import { DragSliderController } from "./slider-controller.ts";
 
 /**
  * [ADR-195 刀 2.5] 控件渲染统一视图：五个简单控件（divider/toggle/slider/select/color）

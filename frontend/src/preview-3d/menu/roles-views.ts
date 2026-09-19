@@ -12,13 +12,13 @@ import { t } from "@/core/i18n/t.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { type ModelEntry, sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
+import { switchNormPath } from "@/preview-3d/menu/shell/switch.ts";
 import { MENU_ERROR_NOTE_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderAdapterPanelContent, renderMenu } from "./render.ts";
-import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
-import { switchNormPath } from "./switch.ts";
 
 /** 角色路径 basename：角色详情/工具面板标题复用（fillRoles 与 dock 🧍 捷径共享，防两处漂移）。
  *  [ADR-159] 容器语义：entry 有 displayName（容器实体名，如 zip 名剥扩展名）时优先展示——

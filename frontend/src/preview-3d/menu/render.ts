@@ -10,6 +10,8 @@ import { t, tOf } from "@/core/i18n/t.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { getSchema } from "@/preview-3d/infra/schema-registry.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
+import { createHeaderToggle } from "@/preview-3d/menu/shell/header-toggle.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import {
   MENU_BTN_CSS,
   MENU_CARD_CSS,
@@ -33,8 +35,6 @@ import {
   renderCapSlider,
   renderCapToggle,
 } from "./cap-controls.ts";
-import { createHeaderToggle } from "./header-toggle.ts";
-import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 
 // 控件原语（select/slider/toggle/color）渲染器映射表（ADR-195 刀 2.5 投影反转：
 // 节点控件经 nodeControlToView 适配为 CapControlView 后，由各自 renderCap* 渲染器输出）。

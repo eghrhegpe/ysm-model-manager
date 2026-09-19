@@ -20,6 +20,13 @@ import type {
   PreviewMenuCtx,
   PreviewMenuNode,
 } from "@/preview-3d/menu/schema/node-types.ts";
+import { ensureFabStyles } from "@/preview-3d/menu/shell/fab.ts";
+import {
+  createSlideMenu,
+  type SlideMenuHandle,
+  type SlideMenuView,
+} from "@/preview-3d/menu/shell/slide-menu.ts";
+import { makeSwitchState } from "@/preview-3d/menu/shell/switch.ts";
 import { MENU_ERROR_NOTE_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
@@ -28,7 +35,6 @@ import { applyIcon, resolveIcon } from "@/utils/icon/resolve.ts";
 import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
-import { ensureFabStyles } from "./fab.ts";
 import {
   clearFolderCollapsedState,
   disposeCustomCleanups,
@@ -44,8 +50,6 @@ import {
   buildSettingsSchema,
   buildShadowSchema,
 } from "./settings.ts";
-import { createSlideMenu, type SlideMenuHandle, type SlideMenuView } from "./slide-menu.ts";
-import { makeSwitchState } from "./switch.ts";
 
 // [ADR-169] PreviewMenuCtx 已下沉 node-types.ts（类型叶）——断 core ⇄ env/roles/switch/settings
 // 纯 type 环（子模块原 type import 本文件 ctx，而本文件值 import 它们）。原位 re-export 保公共面，

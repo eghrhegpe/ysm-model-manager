@@ -23,7 +23,7 @@ import type {
 import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import { setEnvState } from "@/preview-3d/state/env-state.ts";
 import { renderMenu } from "./render.ts";
-import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 
 /**
  * 环境面板卡壳描述符（ADR-268）：只定义「有哪几张卡、卡的标题与展示序」——这是

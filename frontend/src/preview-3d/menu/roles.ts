@@ -17,9 +17,9 @@ import type {
   PreviewMenuCtx,
   PreviewMenuNode,
 } from "@/preview-3d/menu/schema/node-types.ts";
+import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
+import { buildSwitchNodes, type SwitchState } from "@/preview-3d/menu/shell/switch.ts";
 import { frBuildToolsView, modelDetailView, roleBaseName } from "./roles-views.ts";
-import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
-import { buildSwitchNodes, type SwitchState } from "./switch.ts";
 
 // 迁出兼容：roleBaseName 仍从本文件 re-export（core.ts 原位 import；实现单源 roles-views.ts）
 export { roleBaseName } from "./roles-views.ts";

@@ -25,13 +25,7 @@ auto_fields:
     - ARIA_ATTR
     - componentsCss
     - componentsStyleSheet
-    - createHeaderToggle
     - createInstallableStyles
-    - createSlideMenu
-    - DragSliderController
-    - DragSliderOptions
-    - HeaderToggleConfig
-    - HeaderToggleElement
     - InstallableStyles
     - installComponentsStyles
     - installSlideMenuStyles
@@ -39,9 +33,7 @@ auto_fields:
     - PREVIEW_OVERLAY_ID
     - ROLE
     - slideMenuCss
-    - SlideMenuHandle
     - slideMenuStyleSheet
-    - SlideMenuView
     - SLIDER_BAR_CLASS
 quick_groups:
   - UI 交互与弹窗

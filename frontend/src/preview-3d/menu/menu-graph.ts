@@ -15,11 +15,11 @@
 
 import { getSchema, listSchemas } from "@/preview-3d/infra/schema-registry.ts";
 import type { PreviewMenuNode, PreviewMenuNodeKind } from "@/preview-3d/menu/schema/node-types.ts";
+import type { SlideMenuHandle } from "@/preview-3d/menu/shell/slide-menu.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewMenuRouters } from "./core.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
 import { SANCTIONED_PROCEDURAL_PANELS, type SanctionedProceduralPanel } from "./sanctioned.ts";
-import type { SlideMenuHandle } from "./slide-menu.ts";
 
 /** 代表性快照：命名 + 状态层快照（ADR-128 §2.1 四档约定：default / roleLoaded / motionActive / envOn）。
  *  2026-09 收紧：Partial<PreviewSnapshot>——键位必须是已落地路径（写 ui.mode 等未落地键编译报错），

@@ -33,7 +33,6 @@ auto_fields:
     - buildSettingsSchema
     - buildShadowSchema
     - buildStatsPanel
-    - buildSwitchNodes
     - canNodeRepresent
     - capControlsToNodes
     - capControlToNode
@@ -52,7 +51,6 @@ auto_fields:
     - formatCapSliderValue
     - hasSceneStats
     - isPreviewFolderNode
-    - makeSwitchState
     - mergeStatsMenuItems
     - mountPreviewRootMenu
     - multiModelSelectNode
@@ -83,9 +81,6 @@ auto_fields:
     - roleBaseName
     - RolesSchemaDeps
     - STATS_PANEL_ID
-    - switchNormPath
-    - SwitchState
-    - switchTabHighlightBg
     - unregisterCorePanelSchemas
 tests:
   - frontend/src/features/community/render.test.ts

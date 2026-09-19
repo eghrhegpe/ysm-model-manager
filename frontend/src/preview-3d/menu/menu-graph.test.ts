@@ -11,7 +11,7 @@ import { registerSchema, resetSchemas, listSchemas, getSchema } from "@/preview-
 import { unregisterCorePanelSchemas } from "./core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
-import type { SlideMenuHandle } from "./slide-menu.ts";
+import type { SlideMenuHandle } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { SANCTIONED_PROCEDURAL_PANELS } from "./sanctioned.ts";
 
 /** 默认代表性快照：空记录（无状态守卫激活）→ 非守卫节点可达，守卫节点隐藏 */

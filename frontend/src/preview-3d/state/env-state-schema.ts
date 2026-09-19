@@ -60,6 +60,10 @@ export const ENV_STATE_SCHEMA = {
 
   // --- Ground ---
   groundVisible: { type: "boolean", default: true, group: "ground" },
+  // 2026-09-19：参考网格（GridHelper 层）独立开关——历史遗留（知识卡「已知遗留 1」）是
+  // 网格层与表面材质层共用 groundVisible，用户选了纯色/贴图材质也关不掉底下那张 y=0 参考网格，
+  // 且菜单无任何网格参数出口。现拆出单轴：网格显隐 = enabled && groundVisible && groundGridVisible。
+  groundGridVisible: { type: "boolean", default: true, group: "ground" },
   groundType: {
     type: "enum",
     values: ["plain", "grid", "checker", "lines", "dots"] as const,

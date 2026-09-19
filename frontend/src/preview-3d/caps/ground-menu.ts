@@ -2,6 +2,7 @@
 // 纯声明层：仅构造 PreviewMenuNode 供 cap.getMenuNodes()。
 // ground 结构：
 //   - ground-visible：平铺 toggle（ground 无 getMasterToggle——visible 是 params 级）
+//   - ground-grid-visible：参考网格（GridHelper 层）平铺 toggle，与总开关/材质层正交
 //   - 材质组 folder（preview.groundGroupMaterial）：mat-source select + 3 color +
 //     9 slider 原生节点；2 button（texture/clear，variant/getHint）→ controls 通道节点
 //     （PreviewControlDef 树内嵌，保 variant/disabled/getHint 语义——节点 button 不承载）
@@ -323,8 +324,10 @@ function groundBuildOverlayFolder(cap: GroundCapability): PreviewMenuNode {
   };
 }
 
-/** 完整参数面板节点树：ground-visible 平铺 + 材质组 folder + 叠加层 folder。
- *  ground 无能力总开关（visible 是 params 级，非 getMasterToggle 语义）。 */
+/** 完整参数面板节点树：ground-visible + ground-grid-visible 平铺 + 材质组 folder + 叠加层 folder。
+ *  ground 无能力总开关（visible 是 params 级，非 getMasterToggle 语义）。
+ *  ground-grid-visible（2026-09-19 新增）：参考网格（GridHelper 层）独立开关——与
+ *  表面材质/叠加层正交，补上旧网格层长期缺失的出口（知识卡「已知遗留 1」）。 */
 export function buildGroundNodes(cap: GroundCapability): PreviewMenuNode[] {
   return [
     {
@@ -334,6 +337,15 @@ export function buildGroundNodes(cap: GroundCapability): PreviewMenuNode[] {
       control: {
         get: () => cap.getVisible(),
         set: (v) => cap.setVisible(v as boolean),
+      },
+    },
+    {
+      id: "ground-grid-visible",
+      kind: "toggle",
+      labelKey: "preview.groundGridVisible",
+      control: {
+        get: () => cap.getGridVisible(),
+        set: (v) => cap.setGridVisible(v as boolean),
       },
     },
     groundBuildMatFolder(cap),

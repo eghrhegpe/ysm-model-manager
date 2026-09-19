@@ -60,6 +60,7 @@ quick_intents:
   - 程序化纹理生成
   - 自定义图片上传到地面
   - GroundMaterialSpec/specKey/textureToken
+  - 参考网格显隐 / 关不掉自带网格（groundGridVisible）
 quick_risk_lines:
   - 地面材质必须走 ground-surface-spec 的 buildGroundSurfaceSpec，spec 是唯一数据源
 pitfalls:
@@ -75,6 +76,7 @@ use_when:
   - 程序化纹理生成（噪声材质 plain/marble/sand/grass + 几何图案 grid/checker/stripes/diamond）
   - 自定义图片上传到地面（TextureLoader）
   - GroundMaterialSpec / specKey / textureToken
+  - 参考网格（GridHelper 层）显隐 / 关不掉自带网格
 perf:
   - cpu-bound
 invariant_anchors:
@@ -116,6 +118,9 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 - **generateSurfacePixels(st,sizePx)**：纯函数像素生成（solid/plain 均匀、checker 奇偶交替、grid 首行首列画线、stripes/diamond/marble 种子化噪声；matColor2 仅 stripes/marble 参与）。**ADR-249 §2.2：`none` 与 `texture` 均返回空数组**——`none` = 真的关闭表面层（历史行为：与 solid/plain 同支返回不透明纯色，造成「控件隐了却仍盖实色」的语义矛盾）；`texture` = 表面来自用户贴图，程序化像素本是死计算（历史未短路，落进尾部 grid 分支画出格线但永不被使用）。消费方判据：空数组 ⇒ 不创建/不显示表面贴图。
 - **参数 × 模式生效矩阵（ADR-249 §2.4）**：`GROUND_SURFACE_MODES` / `GROUND_MAT_PARAMS` / `paramIsEffective(mode, param)` / `effectiveParamsOf(mode)`——菜单控件可见性与渲染参数读取的**共同单一事实源**（菜单可见 ⇔ `paramIsEffective` 为真），禁止菜单与渲染各写一份 if。历史缺陷：全部材质控件共用一条粗谓词（仅判 `matSource !== "none"`），致 solid/plain/grid 下「线色/副色/格数」可见可拖可写、渲染却不读——零反馈死控件（用户实测「选纯色还显示线色」）。⚠️ `matScale`/`matRotationDeg` 作用于 `mat.map`：凡产出**或消费**贴图的模式均生效——plain 起的程序化贴图（generateSurfacePixels 产出）+ **texture 的用户自定义贴图**（`mat.map = customTex`，`applyGroundSurfaceAppearance` 对其应用 repeat/rotation，`acceptLoadedTexture` 设 RepeatWrapping 即为此）。ADR-249 矩阵 texture 列对这两项标 ✔，不得被 `if (mode === "texture") return false` 早退一并吞掉（review 1a9517465 P2 回归，34db0ac 修复）。
 - GroundCapability 侧：`refreshSurface()` 唯一变更入口（needsRebuild→rebuild 否则 applyAppearance）；自定义贴图照抄 EnvironmentCapability customHdrTex 模式（缓存独立于材质、不随 dispose、不持久化二进制）。**ADR-249 §2.5 第 2 条：loadState 不再静默降级**——历史行为 `v === "texture" && !customTex ? "plain" : v`（因贴图二进制不持久化，重启后 customTex 必空），致用户存档里选的「自定义贴图」重启后变成看似无关的纯色地面；现保留用户来源选择，无贴图的渲染兜底归 `rebuildSurface` 的 `customTex ?? makeGeneratedTexture({...st, mode:"solid"})`（材质层）。
+- **参考网格独立开关（2026-09-19，`groundGridVisible`）**：三层 mesh 各有显隐判据、各由单一出口落地——`updateGridVisible()`（`enabled && groundVisible && groundGridVisible`）、`updateSurfaceVisible()`（`enabled && groundVisible && groundSourceKind !== "none"`）、`refreshOverlay` 内的 `overlay.visible = enabled && groundVisible`（style=none 另走销毁分支）。新字段**只**进网格判据，与材质/叠加两层正交——补的是「选了纯色/贴图材质也关不掉底下 y=0 参考网格」的长期缺口（用户实测提问触发）。
+  - ⚠️ **必须走 `setGridVisible()` 落地 + 进 `saveState`/`loadState`**：`groundVisible` 的覆辙在眼前——`loadState` 若只写 envState 不走 setter，`grid.visible` 会停在构造默认，「隐藏地面」存档重启即重现（本文件「半隐形地面」旧病例同形）。故 env 回调里也补 `updateGridVisible()`，让 `setEnvState` 直写路径（存档恢复/预设快照/外部调用）同样落地。
+  - ⚠️ `getVisible()` 现读 `envState.groundVisible`，**不再读 `this.grid.visible`**——网格显隐已是三层合取，读它会把「参考网格关掉」误报成「地面关掉」。
 - **拆轴映射（ADR-249 §2.1/§2.5 + ADR-252）**：`GroundSourceKind`（来源轴 none/solid/canvas/texture）× `GroundCanvasStyle`（**材质轴** plain/marble/sand/grass）× `GroundOverlayStyle`（装饰轴 none/grid/checker/stripes/diamond）。`migrateGroundMatSource(old: LegacyGroundMatSource | GroundCanvasStyle)` → `GroundAxisMapping { sourceKind, canvasStyle?, overlayStyle? }`——**不再互逆**：旧图案值拆为 plain 底座 + 叠加层（并须搬运 `matLineColor→overlayColor`、`matGridSize→overlaySize`）。`groundMatSourceFromAxes(sourceKind, canvasStyle)` 派生当前 `GroundSurfaceMode`。`LegacyGroundMatSource`（旧 9 值）+ `LEGACY_CANVAS_PATTERNS`（旧 canvasStyle 里的 4 个图案值）**仅作迁移输入**；`loadState` 两条路径（扁平枚举 / ADR-249 时代图案）均有契约测试。脏数据回退 none。
 - **叠加层（ADR-249 §2.3 架构 / ADR-251 补齐图案集）**：第三个正交层——独立透明格线 mesh（`ysm-ground-overlay`，y 取 `GROUND_LAYER_OFFSETS.groundOverlay`，介于 surface 与 water 之间），可叠加在任意底层（solid/canvas/texture）之上，实现旧互斥枚举下不可达的「纯色 + 格线」。`GroundOverlayStyle`（none/grid/checker/stripes/diamond）+ `buildGroundOverlaySpec` / `overlaySpecKey`（style/color/size 入 key，opacity 属外观走原地）/ `overlayNeedsRebuild` / `generateOverlayPixels`（透明底 + alpha 二值化线色，none → 空数组；**`cells` 参数驱动格数且必须参与像素生成**——初版硬编码 `sizePx/8` 致「叠加格数」滑杆成死控件，回归修复见 `24be598e8`）/ `applyOverlayMaterial`。**资源所有权**：`overlayTex`/`overlayMat`/`overlay.geometry` 均属 GroundCapability（非 customTex），`dispose` 与切换到 none 时释放（§1.4 第 2 条"谁拥有纹理"的落实）。纹理构造在 capability（`makeOverlayTexture`）而非 spec——spec 保持 `import type * as THREE` 的零运行时依赖（node 可测）。
   - **叠加倍率口径**（review 268cc3c21 P2-3）：`makeOverlayTexture` 设 `tex.repeat = textureRepeat(groundSize, max(1, spec.size))`，与 surface 的 `applyGroundSurfaceAppearance` 同口径（`meshSize/TILE_WORLD_SIZE/scale`）——「叠加格数」滑杆除改贴图像素外，还经 repeat 真实驱动世界格密度（只设 `RepeatWrapping` 而不写 repeat 是无效 wrap，密度恒定）。
@@ -124,7 +129,7 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 
 ## 对外 API / 入口
 
-见上「核心职责」；消费入口 = `GroundCapability.setMat*()` / `setSourceKind`/`setCanvasStyle` / `setOverlay*` 各组 setter/getter + 菜单控件（材质组 `preview.groundGroupMaterial` + 叠加层组 `preview.groundGroupOverlay`）。
+见上「核心职责」；消费入口 = `GroundCapability.setMat*()` / `setSourceKind`/`setCanvasStyle` / `setOverlay*` / `setGridVisible` 各组 setter/getter + 菜单控件（平铺 `ground-visible` + `ground-grid-visible`，材质组 `preview.groundGroupMaterial`，叠加层组 `preview.groundGroupOverlay`）。
 
 ## 与其他子系统关系
 
@@ -135,6 +140,7 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 ## 已知遗留（ADR-249 §2.7 登记）
 
 1. **旧网格层与表面层字段语义重叠（病例 C）**：`env-state-schema.ts` 同时存在两套语义重叠的地面字段——旧网格层（y=0，`groundType` plain/grid/checker/lines/dots + `groundColor` tuple3 + `groundLineColor` tuple3，即 GridHelper）与表面层（y=0.005，`groundSourceKind`/`groundCanvasStyle` + `groundMatColor` hex + `groundMatLineColor` hex + …）。两套都表达「底色/线色/样式」，是历史层叠的双重实现。**未合并**（ADR-249 显式排除以避免范围蔓延）；合并是独立议题。
+   - **2026-09-19 进展 = 只补出口、不合并**：新增 `groundGridVisible` + 菜单 `ground-grid-visible`，让网格层可独立关闭（用户实测痛点：选材质后仍关不掉自带网格）。**字段合并、死字段清理仍待做**：`groundType`/`groundColor`/`groundLineColor` 至今**零消费者**（违「零消费者字段即时删除」不变量 1c，是 ADR-252 清理的漏网）；GridHelper 真消费的 `groundDivisions`/`groundColorCenter`/`groundColorGrid`/`groundSize` 仍**无菜单出口**，且 `groundSize` 只在构造期被 `PlaneGeometry` 读一次（不随重建刷新，而 `applyGroundSurfaceAppearance` 每次都用它算 repeat）——一旦给这些加 UI 就会撞「几何尺寸不跟、贴图密度跟」的错位。
 2. **地面 y 位置固定（水膜已豁免）**：承接面 / 叠加层 y 取 `GROUND_LAYER_OFFSETS` 常量，不可调（与菜单拆轴无关）；**水面高度自 ADR-257 起改由 `envState.waterLevel` 驱动**（默认 0.01，菜单 `ground-water-level` 可调，film/pool 共用），原 `GROUND_LAYER_OFFSETS.waterFilm` 常量因零消费者已于 2026-09-18 删除（见不变量 1c）。
 3. **叠加层样式集可扩展**（ADR-249/251）：已落地 grid/checker/stripes/diamond；scan/glowEdge 等待扩展（只需改 `GROUND_OVERLAY_STYLES` + `generateOverlayPixels` 分支）。
 4. **噪声材质重建开销**（ADR-252 未知遗留）：`density` 属 structural，每次变更触发 512² × 3 次 `valueNoise` 重建；拖拽密度滑杆可能卡顿（测试已因此触及 5s 超时，用例改用廉价材质规避）。优化方向：降采样或重建节流。
@@ -155,6 +161,7 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 10. **预设白名单精确匹配（ADR-254）**：`GROUND_MATERIAL_PRESET_KEYS`（定义在 `ground-capability.ts`）必须与 `setMaterialPreset` 写入的 envState 键**一一对应**（有一致性断言测试）。**严禁前缀匹配**——否则改 groundSize/groundVisible/groundOverlay 系列会误清预设标记（邻座 `_WATER_KEYS` 精确清单教训）。
 11. **预设状态由中间件收口置位（ADR-254）**：`custom` 的置位只发生在 `env-state.ts` 的写入中间件（`registerEnvStateMiddleware`）一處，**不靠每个 setter 自觉**（防漏）。预设点击自带 `groundMaterialPreset`，故不会被误清。
 12. **plain 与 solid 同路径（ADR-254 §2.5）**：两者均为平坦 matColor，`plain` 走 `tex = null`（材质直出 color），**不再生成均匀贴图**——同一输出不留两条实现路径。
+13. **网格显隐单点判据（2026-09-19）**：参考网格可见性只由 `updateGridVisible()`（`enabled × groundVisible × groundGridVisible`）写入——构造期、env 回调、setter、loadState 四路皆经它；`getVisible()` 语义 = 总开关，禁止改回读 `this.grid.visible`。
 
 ## 相关
 

@@ -169,7 +169,7 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const mat = surf.material as THREE.MeshStandardMaterial;
     expect(surf.visible).toBe(true);
     expect(mat.map).toBe(tex);
-    const btnNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+    const btnNode = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
     const btn = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)![0]!;
     expect(btn!.button!.getHint!()).toContain("wood.png");
   });
@@ -440,7 +440,7 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
     expect(disposeSpy).toHaveBeenCalled();
     const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.map).toBe(tex2);
-    const hintNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+    const hintNode = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
     const hint = (typeof hintNode.controls === "function" ? hintNode.controls() : hintNode.controls)![0]!.button!.getHint!();
     expect(hint).toContain("b.png");
   });
@@ -469,12 +469,12 @@ describe("GroundCapability — 菜单控件联动", () => {
     visibleNode.control!.set!(false);
     expect(cap.getVisible()).toBe(false);
     expect(visibleNode.control!.get!(undefined)).toBe(false);
-    const sourceNode = nodes[1]!.children!.find((c) => c.id === "ground-mat-source")!;
+    const sourceNode = nodes.find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "ground-mat-source")!;
     sourceNode.control!.set!("canvas");
     expect(cap.getSourceKind()).toBe("canvas");
     expect(sourceNode.control!.get!(undefined)).toBe("canvas");
     // ADR-254：样式 select 的值 = **材质预设**；选它会一次性套用形状 + 配色
-    const styleNode = nodes[1]!.children!.find((c) => c.id === "ground-mat-canvas-style")!;
+    const styleNode = nodes.find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "ground-mat-canvas-style")!;
     styleNode.control!.set!("grass");
     expect(cap.getMaterialPreset()).toBe("grass");
     expect(cap.getCanvasStyle()).toBe("grass");
@@ -486,7 +486,7 @@ describe("GroundCapability — 菜单控件联动", () => {
     // 同前：用廉价材质，避免噪声重建拖爆超时（本用例只验控件闭包读写）
     setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "plain" }, { source: 'manual' });
     const cap = new GroundCapability({ scene });
-    const folder = cap.getMenuNodes()[1]!;
+    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
     const by = (id: string) => folder.children!.find((c) => c.id === id)!;
     by("ground-mat-color").control!.set!(0xff8800);
     by("ground-mat-color2").control!.set!(0x00ff88);
@@ -513,7 +513,7 @@ describe("GroundCapability — 菜单控件联动", () => {
   it("button 控件：getValue null、setValue no-op、visibleWhen 随来源切换（controls 通道节点）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const btnNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+    const btnNode = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
     const btnControls = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)!;
     const pick = btnControls[0]!;
     const clear = btnControls[1]!;
@@ -545,7 +545,7 @@ describe("GroundCapability — 菜单控件联动", () => {
       const scene = new THREE.Scene();
       setEnvState({ groundSourceKind: "texture" }, { source: 'manual' });
       const cap = new GroundCapability({ scene });
-      const btnNode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
+      const btnNode = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
       const pick = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)![0]!;
       expect(() => pick.button!.action!()).not.toThrow();
       expect(fakeInput.type).toBe("file");
@@ -559,20 +559,23 @@ describe("GroundCapability — 菜单控件联动", () => {
 describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("完整树 = ground-visible 平铺 toggle + 材质组 folder + 叠加层 folder", () => {
+  it("完整树 = 两个平铺 toggle（地面 / 参考网格）+ 材质组 folder + 叠加层 folder", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(3);
+    expect(nodes).toHaveLength(4);
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("ground-visible");
     nodes[0]!.control!.set!(false);
     expect(cap.getVisible()).toBe(false);
-    const folder = nodes[1]!;
+    // 2026-09-19：参考网格（GridHelper 层）独立开关——旧网格层长期无出口的补齐
+    expect(nodes[1]!.kind).toBe("toggle");
+    expect(nodes[1]!.id).toBe("ground-grid-visible");
+    const folder = nodes.find((n) => n.id === "cap-group-ground-material")!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.groundGroupMaterial");
     // ADR-249 §2.3 叠加层 folder（独立于材质组）
-    const overlayFolder = nodes[2]!;
+    const overlayFolder = nodes.find((n) => n.id === "cap-group-ground-overlay")!;
     expect(overlayFolder.kind).toBe("folder");
     expect(overlayFolder.id).toBe("cap-group-ground-overlay");
     expect(overlayFolder.labelKey).toBe("preview.groundGroupOverlay");
@@ -581,7 +584,7 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
   it("材质 folder 混排原生节点 + controls 通道（texture/clear button）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const folder = cap.getMenuNodes()[1]!;
+    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
     const source = folder.children!.find((c) => c.id === "ground-mat-source")!;
     expect(source.kind).toBe("select");
     source.control!.set!("canvas");
@@ -600,7 +603,7 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
   it("原生 color/slider 节点读写闭包直连 cap", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const folder = cap.getMenuNodes()[1]!;
+    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
     const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
     expect(color.kind).toBe("color");
     color.control!.set!(0xff8800);
@@ -613,7 +616,7 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
   it("visibleWhen 谓词挂原生节点（canvas 模式下材质控件可见；none 隐藏）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const folder = cap.getMenuNodes()[1]!;
+    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
     const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
     // ADR-252：由两轴派生模式，canvas/marble 下可见
     expect(color.visibleWhen?.({ "env.groundSourceKind": "canvas", "env.groundCanvasStyle": "marble" })).toBe(true);
@@ -889,5 +892,104 @@ describe("GroundCapability — 材质预设（ADR-254 材质名兑现配色）",
     localStorage.removeItem("ysm-scene-cap-ground");
     expect(cap.getMaterialPreset()).toBe("plain");
     expect(cap.getCanvasStyle()).toBe("marble");
+  });
+});
+
+describe("GroundCapability — 参考网格独立开关（groundGridVisible）", () => {
+  beforeEach(() => {
+    resetEnvState();
+    localStorage.removeItem("ysm-scene-cap-ground");
+  });
+  afterEach(() => {
+    localStorage.removeItem("ysm-scene-cap-ground");
+  });
+
+  it("菜单含 ground-grid-visible 平铺 toggle：读写闭包直连 cap", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    const node = cap.getMenuNodes().find((n) => n.id === "ground-grid-visible");
+    expect(node?.kind).toBe("toggle");
+    expect(node?.labelKey).toBe("preview.groundGridVisible");
+    node?.control?.set?.(false);
+    expect(cap.getGridVisible()).toBe(false);
+  });
+
+  it("默认开启：参考网格可见（与历史行为一致，开关只增不减）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    expect(cap.getGridVisible()).toBe(true);
+    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(true);
+  });
+
+  it("setGridVisible(false) 只隐参考网格：表面材质层与叠加层不受影响", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    setMode(cap, "plain");
+    cap.setOverlayStyle("grid");
+    cap.setGridVisible(false);
+
+    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(false);
+    expect((scene.getObjectByName("ysm-ground-surface") as THREE.Object3D).visible).toBe(true);
+    expect((scene.getObjectByName("ysm-ground-overlay") as THREE.Object3D).visible).toBe(true);
+    expect(cap.getVisible(), "总开关不受参考网格开关影响").toBe(true);
+  });
+
+  it("总开关关→开：参考网格按自身开关恢复，不被总开关强行打开", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    setMode(cap, "plain");
+    const grid = scene.getObjectByName("ysm-ground") as THREE.Object3D;
+    const surface = scene.getObjectByName("ysm-ground-surface") as THREE.Object3D;
+
+    cap.setGridVisible(false);
+    cap.setVisible(false);
+    expect(grid.visible).toBe(false);
+    expect(surface.visible).toBe(false);
+
+    cap.setVisible(true);
+    expect(surface.visible).toBe(true);
+    expect(grid.visible, "总开关只回总开关的语义").toBe(false);
+  });
+
+  it("直接 setEnvState 写 groundGridVisible 也落地渲染（回调同步，防半隐形残影）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    setEnvState({ groundGridVisible: false }, { source: "manual" });
+    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(false);
+
+    setEnvState({ groundGridVisible: true }, { source: "manual" });
+    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(true);
+  });
+
+  it("saveState/loadState 往返 groundGridVisible（恢复走 setter，grid 同步）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setGridVisible(false);
+    cap.saveState();
+
+    resetEnvState();
+    const cap2 = new GroundCapability({ scene });
+    cap2.loadState();
+    cap2.apply();
+    expect(cap2.getGridVisible()).toBe(false);
+    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(false);
+  });
+
+  it("旧存档缺 groundGridVisible → 回退默认 true（保守兜底）", () => {
+    const scene = new THREE.Scene();
+    localStorage.setItem(
+      "ysm-scene-cap-ground",
+      JSON.stringify({ enabled: true, groundVisible: true, groundSize: 80 }),
+    );
+    const cap = new GroundCapability({ scene });
+    cap.loadState();
+    cap.apply();
+    expect(cap.getGridVisible()).toBe(true);
+    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(true);
   });
 });

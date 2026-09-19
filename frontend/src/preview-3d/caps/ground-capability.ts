@@ -114,14 +114,20 @@ export class GroundCapability implements SceneCapability {
     this.grid = this.createGridHelper();
     this.overlay = this.createOverlayMesh();
     this.surface = this.createSurfaceMesh();
+    // 参考网格显隐的首次落地（构造期读 envState：enabled × 总开关 × 网格开关）
+    this.updateGridVisible();
 
     // ADR-196：订阅 envState 变更（只接收 ground 组的键，dispatcher 前置过滤）
     this.unsubscribeEnv = registerEnvCallback(
       this,
       () => {
-        // 任何 ground 组字段变更都触发 refreshSurface + refreshOverlay
+        // 任何 ground 组字段变更都触发 refreshSurface + refreshOverlay + 网格显隐同步。
+        // 网格必须走同一回调：直接 setEnvState 写 groundGridVisible/groundVisible 的路径
+        // （存档恢复、预设快照、外部调用）不经 setter 的显式落地，漏同步即「半隐形残影」
+        // ——历史同形缺陷：loadState 只写 envState，grid.visible 停在构造默认。
         this.refreshSurface();
         this.refreshOverlay();
+        this.updateGridVisible();
       },
       "ground",
     );
@@ -134,7 +140,8 @@ export class GroundCapability implements SceneCapability {
       envState.groundColorCenter,
       envState.groundColorGrid,
     );
-    grid.visible = envState.groundVisible;
+    // visible 不在此处判定——统一归 updateGridVisible（enabled × groundVisible ×
+    // groundGridVisible 三层合取），避免构造期与运行期两套判据漂移
     grid.name = "ysm-ground";
     return grid;
   }
@@ -235,18 +242,32 @@ export class GroundCapability implements SceneCapability {
     if (!this.overlay.parent) this.scene.add(this.overlay);
   }
 
-  /** 地面显隐开关（表面层/叠加层均跟随；水面由 water.enabled 独立控制，不再跟随 grid.visible） */
+  /** 地面总显隐开关（参考网格/表面层/叠加层均跟随；水面由 water.enabled 独立控制） */
   setVisible(v: boolean): void {
     setEnvState({ groundVisible: v }, { source: "manual" });
-    this.grid.visible = v;
+    this.updateGridVisible();
     this.updateSurfaceVisible();
     // 叠加层同步跟随（无条件赋值）：不跟随会留「地面已隐、格线还漂」的半隐形残影
     // （surface 层同形历史缺陷，见本文件 L616-617 注释；review 268cc3c21 P2-2）
     this.overlay.visible = v && this.enabled;
   }
 
+  /** 总开关真值源 = envState.groundVisible。
+   *  不再读 this.grid.visible——网格显隐自 2026-09-19 起是三层合取，读它会把
+   *  「参考网格关掉」误报成「地面关掉」（本 getter 语义 = 总开关，非网格可见性）。 */
   getVisible(): boolean {
-    return this.grid.visible;
+    return envState.groundVisible;
+  }
+
+  /** 参考网格（GridHelper 层）独立开关：与表面材质层/叠加层正交——解决
+   *  「选了纯色/贴图材质仍关不掉底下 y=0 参考网格」的历史遗留（知识卡「已知遗留 1」）。 */
+  setGridVisible(v: boolean): void {
+    setEnvState({ groundGridVisible: v }, { source: "manual" });
+    this.updateGridVisible();
+  }
+
+  getGridVisible(): boolean {
+    return envState.groundGridVisible;
   }
 
   setEnabled(v: boolean): void {
@@ -257,6 +278,7 @@ export class GroundCapability implements SceneCapability {
       if (this.surface.parent) this.surface.parent.remove(this.surface);
       if (this.overlay.parent) this.overlay.parent.remove(this.overlay);
     }
+    this.updateGridVisible();
     this.updateSurfaceVisible();
     // 重挂/摘取后 overlay.visible 需重算（保留旧值会 stale：setEnabled(true) 后
     // 若 groundVisible 此前为 false，overlay 会被 apply 重挂却仍 visible=false；
@@ -336,7 +358,14 @@ export class GroundCapability implements SceneCapability {
     this.updateSurfaceVisible();
   }
 
-  /** 显隐门控：总开关 × 网格显隐 × 模式非 none（水面层独立于表面层） */
+  /** 参考网格显隐门控（三层合取，唯一判据）：能力开关 × 地面总开关 × 网格开关。
+   *  ADR-249 遗留的旧网格层原只跟随总开关、无独立出口 → 用户选了表面材质也关不掉
+   *  底下那张 y=0 参考网格；拆出 groundGridVisible 单轴后落点全在本方法。 */
+  private updateGridVisible(): void {
+    this.grid.visible = this.enabled && envState.groundVisible && envState.groundGridVisible;
+  }
+
+  /** 表面层显隐门控：能力开关 × 总开关 × 来源非 none（水面层独立于表面层） */
   private updateSurfaceVisible(): void {
     this.surface.visible =
       this.enabled && envState.groundVisible && envState.groundSourceKind !== "none";
@@ -596,6 +625,7 @@ export class GroundCapability implements SceneCapability {
     persistState(this.id, {
       enabled: this.enabled,
       groundVisible: envState.groundVisible,
+      groundGridVisible: envState.groundGridVisible,
       // ADR-249 §2.5.1 拆轴：原 groundMatSource 单键拆为两轴持久化。
       groundSourceKind: envState.groundSourceKind,
       groundCanvasStyle: envState.groundCanvasStyle,
@@ -740,6 +770,11 @@ export class GroundCapability implements SceneCapability {
         // env 回调 changed 键集不含 groundVisible → grid.visible 停在构造默认 true，
         // 「隐藏地面」存档重启后网格重现（半隐形地面：surface 隐藏 grid 仍显示）
         boolean: (v) => this.setVisible(v),
+      },
+      groundGridVisible: {
+        // 同 groundVisible：走 setter 保 grid 同步（直接写 envState 会让参考网格
+        // 显隐停在构造态，重踏「半隐形」覆辙）；旧存档缺该键 → 保持 schema 默认 true
+        boolean: (v) => this.setGridVisible(v),
       },
       groundSourceKind: oneOf(GROUND_SOURCE_KINDS, (v) =>
         setEnvState({ groundSourceKind: v }, { source: "manual", skipMiddleware: true }),

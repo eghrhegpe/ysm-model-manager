@@ -1325,6 +1325,7 @@ export const ja: Record<string, string> = {
     "方向光の正投影影カメラの一辺。大きいほど広範囲をカバー、細部は粗くなります。",
   "preview.noShadowCap": "3D プレビューに入ってから影パネルを開いてください",
   "preview.ground": "地面",
+  "preview.groundGridVisible": "参照グリッド",
   "preview.groundDesc": "グリッドヘルパー参考平面",
   "preview.groundGroupWater": "水面",
   "preview.waterFilmDensity": "水膜濃度",

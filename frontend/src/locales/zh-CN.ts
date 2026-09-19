@@ -1282,6 +1282,7 @@ export const zhCN = {
   "preview.shadowCameraSizeDesc": "方向灯正交阴影相机的边长；越大覆盖范围越广，细节越稀",
   "preview.noShadowCap": "进入 3D 后再打开阴影面板",
   "preview.ground": "地面",
+  "preview.groundGridVisible": "参考网格",
   "preview.groundDesc": "网格地面：GridHelper 辅助参考平面",
   "preview.groundGroupWater": "水面",
   "preview.waterFilmDensity": "水膜浓度",

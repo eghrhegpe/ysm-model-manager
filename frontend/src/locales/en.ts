@@ -1322,6 +1322,7 @@ export const en: Record<string, string> = {
     "Side length of the directional light orthographic shadow camera; larger = wider coverage, less detail.",
   "preview.noShadowCap": "Enter the 3D preview before opening the shadow panel",
   "preview.ground": "Ground",
+  "preview.groundGridVisible": "Reference grid",
   "preview.groundDesc": "Grid helper reference plane",
   "preview.groundGroupWater": "Water Surface",
   "preview.waterFilmDensity": "Film Density",

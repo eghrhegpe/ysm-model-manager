@@ -188,17 +188,6 @@ export type CorePanelId =
   | "environment"
   | "roles";
 
-/** core 面板 id 运行时清单（注册/注销共用，防两处漂移） */
-const CORE_PANEL_IDS: readonly CorePanelId[] = [
-  "lighting",
-  "shadow",
-  "postproc",
-  "settings",
-  "camera",
-  "environment",
-  "roles",
-];
-
 export interface PreviewMenuRouters {
   schemaBuilders: Record<CorePanelId, (menu?: SlideMenuHandle) => PreviewMenuNode[]>;
   runners: Record<string, () => void>;
@@ -268,7 +257,9 @@ export function buildPreviewMenuRouters(
   // 注册记 owner wrapper（按挂载实例），注销前身份校验——
   // 无条件删固定 key 会在重叠挂载时误删新会话条目（Bug-A 纪律，对齐 ysm-model-{sessionId} 范式）
   const coreSchemaOwners = new Map<CorePanelId, SchemaBuilder>();
-  for (const id of CORE_PANEL_IDS) {
+  // 注册清单 = schemaBuilders 实际 key（单一来源，替代 CORE_PANEL_IDS 静态清单；
+  // 加 core 面板只改 schemaBuilders + CorePanelId 联合，漏改由 Record<CorePanelId,…> 编译期兜底）
+  for (const id of Object.keys(routers.schemaBuilders) as CorePanelId[]) {
     const builder = routers.schemaBuilders[id];
     const wrapper: SchemaBuilder = () => builder(menu);
     registerSchema(id, wrapper);
@@ -278,18 +269,16 @@ export function buildPreviewMenuRouters(
   return routers;
 }
 
-/** 类型守卫：string → CorePanelId 收窄（替代 `as readonly string[]` 强转，联合收窄收益保留） */
-function isCorePanelId(id: string): id is CorePanelId {
-  return (CORE_PANEL_IDS as readonly string[]).includes(id);
-}
-
 /** 收 key 后的运行时安全取值：panel id 字符串 → core builder（非 core 面板返回 undefined）。
  *  renderPreviewPanel 的分派入口吃任意 node.id（含 adapter 面板），类型窄化后需此守卫桥接。 */
 export function corePanelBuilder(
   routers: PreviewMenuRouters,
   id: string,
 ): ((menu?: SlideMenuHandle) => PreviewMenuNode[]) | undefined {
-  return isCorePanelId(id) ? routers.schemaBuilders[id] : undefined;
+  // 单一来源：直接以 schemaBuilders 的 key 判断（替代 isCorePanelId + CORE_PANEL_IDS 静态清单）
+  return Object.hasOwn(routers.schemaBuilders, id)
+    ? routers.schemaBuilders[id as CorePanelId]
+    : undefined;
 }
 
 /** dispose 时注销 core 六面板的 registry 注册（与注册循环同 key 集）——
@@ -301,7 +290,11 @@ export function corePanelBuilder(
  *  未传 owners（测试直建 routers 场景）退化为无条件注销，保持旧语义。 */
 export function unregisterCorePanelSchemas(routers: PreviewMenuRouters): void {
   const owners = routers.coreSchemaOwners;
-  for (const id of CORE_PANEL_IDS) {
+  // 注销清单：有 owners 走「本挂载实际注册的 key」，无 owners（测试直建）兜底走 schemaBuilders key
+  const ids: CorePanelId[] = owners
+    ? [...owners.keys()]
+    : (Object.keys(routers.schemaBuilders) as CorePanelId[]);
+  for (const id of ids) {
     if (!owners) {
       unregisterSchema(id);
       continue;

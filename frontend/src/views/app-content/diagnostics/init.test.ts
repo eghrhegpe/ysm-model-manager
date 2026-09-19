@@ -45,7 +45,6 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="diag-scan-health"></div>
     <button id="diag-perf-refresh-trace"></button>
     <div id="diag-load-trace"></div>
-    <button id="diag-perf-log"></button>
     <div id="diag-perf-hist-row"></div>
     <div id="diag-perf-hist"></div>
     <button class="repo-tab" data-tab="log">日志</button>
@@ -846,9 +845,6 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
       "diag-scan-conflict",
       "diag-scan-health",
       "diag-scan-sync-conflict",
-      "diag-perf-log",
-      "diag-perf-hist-row",
-      "diag-perf-hist",
     ]) {
       expect((root.getElementById(id) as HTMLElement).style.display).toBe("none");
     }

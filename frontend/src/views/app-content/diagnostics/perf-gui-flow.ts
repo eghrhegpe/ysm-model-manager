@@ -66,7 +66,7 @@ function guiFlowRenderStages(
 ): string {
   const rows = entries
     .map((e) => {
-      // 多行描述：**先逐行转义再拼 <br>**（同目录 perf-log.ts 的既有正确写法）。
+      // 多行描述：**先逐行转义再拼 <br>**。
       // 反例：esc(desc.join("<br>")) 会把 <br> 自己也转义成 &lt;br&gt; → 界面直接显示字面量
       // 「<br>」（2026-09-18 由 e2e 真实渲染抓出；单元层的子串断言对此失明）。
       const desc = e.desc.length

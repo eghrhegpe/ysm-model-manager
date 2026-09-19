@@ -364,10 +364,8 @@ export const en: Record<string, string> = {
   "diagnostics.perfRunGui": "Single-model load pipeline",
   "diagnostics.perfGuiScopeNote":
     "Scope: the full 6-stage chain covers YSM only. Parsers for MMD / VRM / GLTF live in the frontend 3D adapter (the CLI reports it is not simulated, and points you to the 3D preview); blueprint / projection chains are not measured yet.",
-  "diagnostics.perfPerfLog": "Optimization history (perf-log)",
   "diagnostics.perfSingleResult": "Single-model benchmark result",
   "diagnostics.perfGuiResult": "Single-model load pipeline result",
-  "diagnostics.perfHistResult": "Optimization history",
   "diagnostics.perfTotal": "Total time",
   "diagnostics.perfTotalDetail": "{avg}ms (avg over {n} iterations; {total}ms total)",
   "diagnostics.perfBottleneck": "Slowest stage",

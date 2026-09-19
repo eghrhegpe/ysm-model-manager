@@ -258,14 +258,8 @@ export function diagnosticsHTML(): string {
       {
         id: "record",
         label: `${UI_ICONS.note} ${t("diagnostics.perfRecord")}`,
-        // 产物组（ADR-278 §2.1）：基准历史（CLI 支撑 → 引导空态 + 按钮）与加载剖析（内存 store → 进即渲染）
+        // 加载剖析（内存 store → 进即渲染）
         body: `  <div class="perf-wrap">
-    <div class="perf-controls" id="diag-perf-hist-row">
-      <div class="perf-row">
-        <button class="btn-base" id="diag-perf-log">${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}</button>
-      </div>
-    </div>
-    <div id="diag-perf-hist"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
     <div class="perf-controls">
       <div class="perf-row">
         <button class="btn-base" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>

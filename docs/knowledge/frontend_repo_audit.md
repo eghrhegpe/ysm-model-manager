@@ -1078,7 +1078,6 @@ auto_fields:
     - runHealthAudit
     - runLauncherDetect
     - runMcSearch
-    - runPerfLog
     - runSingleBench
     - safeDispose
     - safeErrorMessage

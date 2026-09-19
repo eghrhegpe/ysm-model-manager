@@ -36,7 +36,6 @@ auto_fields:
     - renderLoadTraceSection
     - runGuiFlow
     - runHealthAudit
-    - runPerfLog
     - runSingleBench
     - scanConflicts
     - scanSyncConflicts

@@ -5,7 +5,6 @@
 //   - perf-matrix-render.ts：目标集渲染（--target rtype/all/repo 三种目标集载荷同形 + 体量口径回显）
 //   - perf-gui-flow.ts    ：gui-flow（6 阶段结构化消费，实测/估算分离）
 //   - perf-scan-bench.ts  ：scan-bench（Go/Rust 扫描引擎对照，未采集不填 0ms）
-//   - perf-log.ts         ：perf-log（优化历史卡片）
 //   - perf-trace.ts       ：加载剖析（load-trace store 消费）
 // ADR-040 拆分后每文件 ≤400 行红线；本文件仅 ~45 行。
 
@@ -13,7 +12,6 @@ import type { EscFn } from "./logs.ts";
 import { bindPerfCopyHandlers } from "./perf-common.ts";
 import { runConcurrentBench } from "./perf-concurrent.ts";
 import { runGuiFlow } from "./perf-gui-flow.ts";
-import { runPerfLog } from "./perf-log.ts";
 import { PERF_TARGET_REPO, populatePerfTargetOptions } from "./perf-matrix-render.ts";
 import { runScanBench } from "./perf-scan-bench.ts";
 import { runSingleBench, syncPerfBaselineControls } from "./perf-single-bench.ts";
@@ -57,7 +55,7 @@ function initPerfMode(root: ShadowRoot): () => void {
   return apply;
 }
 
-/** 初始化性能面板（基准三模式 / gui-flow / 优化历史 / 加载剖析） */
+/** 初始化性能面板（基准三模式 / gui-flow / 加载剖析） */
 export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   bindPerfCopyHandlers(root);
   root.getElementById("diag-perf-run")?.addEventListener("click", () => runSingleBench(root, esc));
@@ -86,7 +84,6 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   root
     .getElementById("diag-perf-scan-bench")
     ?.addEventListener("click", () => void runScanBench(root, esc));
-  root.getElementById("diag-perf-log")?.addEventListener("click", () => runPerfLog(root, esc));
   root
     .getElementById("diag-perf-refresh-trace")
     ?.addEventListener("click", () => renderLoadTraceSection(root, esc));

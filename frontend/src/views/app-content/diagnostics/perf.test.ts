@@ -3,7 +3,6 @@
 // 覆盖：
 //  - single-bench：7 阶段柱状渲染 / 缺 model 错误 / 命令失败兜底 / 代际守卫丢弃陈旧响应
 //  - gui-flow：6 阶段状态渲染 / 失败阶段红字提示
-//  - perf-log：优化历史卡片渲染
 //  - 加载剖析：甘特图 + 资产清单渲染（通过 facade perf.ts re-export 路由）
 // 注：业务逻辑已拆至 perf-cli.ts（CLI 三块）/ perf-trace.ts（加载剖析）；
 // 本测试通过 facade initPerfPanel / renderLoadTraceSection 集成验证，保证接口契约不变。
@@ -121,26 +120,12 @@ const GUI_STRUCTURED = {
   output: GUI_OUTPUT, // deprecated（D5）：迁移期保留
 };
 
-const PERF_LOG_OUTPUT = `╔══════════════════════════════════════╗
-║             优化记录 perf-log        ║
-╚══════════════════════════════════════╝
-
-─ 2026-08-19 ─ KTX2 缓存 ─ fd068ac
-  问题: 加载时间翻倍
-  做法: ReadFileBytesBatchWithMeta 一次 RPC
-  效果: 加载 1 次 RPC 替代 N+1 次
-
-─ 2026-08-18 ─ MMD dispose ─ 80679cd7
-  问题: 切换模型 GPU 内存泄漏
-  做法: disposeMmdMesh 遍历纹理
-  效果: 切换 5 个模型不再闪退`;
 
 function makeRoot(): ShadowRoot {
   const el = document.createElement("div");
   el.innerHTML = `
     <button class="diag-btn" id="diag-perf-run">运行</button>
     <button class="diag-btn" id="diag-perf-gui">体检</button>
-    <button class="diag-btn" id="diag-perf-log">历史</button>
     <button class="diag-btn" id="diag-perf-refresh-trace">刷新</button>
     <input id="diag-perf-model">
     <input id="diag-perf-iter">
@@ -152,7 +137,6 @@ function makeRoot(): ShadowRoot {
     <input id="diag-perf-baseline-th" value="50">
     <div id="diag-perf-single"></div>
     <div id="diag-perf-gui-out"></div>
-    <div id="diag-perf-hist"></div>
     <div id="diag-load-trace"></div>
   `;
   (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
@@ -675,7 +659,7 @@ describe("gui-flow 面板", () => {
   });
 
   // 回归（2026-09-18，e2e 真实渲染抓出）：多行描述曾被 esc(join("<br>")) 连 <br> 一起转义，
-  // 界面显示字面量「<br>」。正确写法 = 先逐行 esc 再拼 <br>（同目录 perf-log.ts 的既有模式）。
+  // 界面显示字面量「<br>」。正确写法 = 先逐行 esc 再拼 <br>。
   // 单元层子串断言对此失明（textContent 里两种写法都含「<br>」字符），故这里断言 **DOM 结构**。
   it("多行描述渲染成真 <br> 元素，而不是被转义的字面量", async () => {
     executeCLI.mockResolvedValue({
@@ -760,25 +744,6 @@ describe("gui-flow 面板", () => {
     (root.getElementById("diag-perf-gui-out") as HTMLElement).click();
     await new Promise((r) => setTimeout(r, 10));
     expect(executeCLI).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("perf-log 面板", () => {
-  it("渲染优化历史卡片（日期/领域/commit/明细）", async () => {
-    executeCLI.mockResolvedValue({
-      status: "success",
-      command: "perf-log",
-      data: { output: PERF_LOG_OUTPUT },
-    });
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    (root.getElementById("diag-perf-log") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
-    const out = root.getElementById("diag-perf-hist") as HTMLElement;
-    expect(out.textContent).toContain("2026-08-19");
-    expect(out.textContent).toContain("KTX2 缓存");
-    expect(out.textContent).toContain("fd068ac");
-    expect(out.textContent).toContain("加载 1 次 RPC 替代 N+1 次");
   });
 });
 

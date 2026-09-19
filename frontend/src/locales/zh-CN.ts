@@ -363,10 +363,8 @@ export const zhCN = {
   "diagnostics.perfRunGui": "单模型加载链路模拟",
   "diagnostics.perfGuiScopeNote":
     "覆盖范围：完整 6 阶段链路仅 YSM。MMD / VRM / GLTF 的解析器只在前端 3D adapter（CLI 会如实告知「不模拟」，请到 3D 预览实测）；蓝图 / 投影的链路度量尚未纳入。",
-  "diagnostics.perfPerfLog": "优化历史(perf-log)",
   "diagnostics.perfSingleResult": "单模型基准结果",
   "diagnostics.perfGuiResult": "单模型加载链路结果",
-  "diagnostics.perfHistResult": "优化历史",
   "diagnostics.perfTotal": "总耗时",
   "diagnostics.perfTotalDetail": "{avg}ms（{n} 次迭代平均；累计 {total}ms）",
   "diagnostics.perfBottleneck": "最慢阶段",

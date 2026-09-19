@@ -37,7 +37,6 @@ function makeRoot(): ShadowRoot {
   el.innerHTML = `
     <button id="diag-perf-run">运行</button>
     <button id="diag-perf-gui">链路</button>
-    <button id="diag-perf-log">历史</button>
     <button id="diag-perf-refresh-trace">刷新</button>
     <input id="diag-perf-model">
     <input id="diag-perf-iter" value="2">

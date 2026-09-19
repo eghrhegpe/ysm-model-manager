@@ -377,7 +377,6 @@ test.describe("诊断页 · gui-flow 真实载荷渲染（ADR-262 D5）", () => 
     const inflated = GUI_FLOW_REAL.total_ms + (GUI_FLOW_REAL.estimated_ms ?? 0);
     expect(got.text).not.toContain(`${inflated.toFixed(2)}ms`);
     // ⑤ 描述里的多行必须渲染成真换行：esc 先转义再拼 <br>，否则界面显示字面量「<br>」
-    //（同目录 perf-log.ts 用的是正确写法 .map(esc).join("<br>")——本用例锁住 gui-flow 对齐它）
     expect(got.descLines).toBeGreaterThan(0);
     expect(got.text).not.toContain("<br>");
     // ⑥ 通用残留守卫

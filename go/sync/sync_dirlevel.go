@@ -635,8 +635,8 @@ func DiffFolderContents(globalFolder, instanceFolder, rtype string) []FileDiffEn
 
 // DiffFolderContentsScan 同 DiffFolderContents，但全局侧文件收集复用 scanner 已缓存的
 // 组根扫描结果（scanFn(globalRoot)），避免对每个模型夹重复 Walk 全局子树。
-// 实例侧（instanceFolder）通常不在 globalRoot 之下，且文件量远小于全局侧，
-// 保持 Walk（collectFolderFiles）不改语义。
+// 实例侧优先 scanner 反推（拿到哈希），未命中回退 Walk（collectFolderFiles，无哈希 →
+// contentStatus 比 Size）——实例夹通常不在 globalRoot 下，scanFn 未必覆盖。
 //
 // cacheHit=false（缓存未命中/含嵌套模式类型）时整体回退 DiffFolderContents，零行为漂移。
 // scanFn 签名与 SyncResourcesDirLevelScan 一致：func(dir string) ([]types.ModelEntry, bool)。

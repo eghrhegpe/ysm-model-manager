@@ -1,4 +1,6 @@
 // ===== 诊断页：冲突扫描（conflicts.ts）测试 =====
+// ⚠️ locale 前提：本文件写死 zh-CN 文案断言，依赖 test-setup 把 t() 钉在 zhCN 查表；
+// e2e（playwright.config 钉浏览器 locale=en-US）走的是 en 包，勿以本文件为 e2e 文案参照。
 // 覆盖：
 //  - scanConflicts：web 门禁 / list 缺失 / 重入守卫 / 无目录 / 无实例 /
 //    冲突渲染（Exists 过滤 + .disabled/.ban 剥离）/ >50 截断 / 异常兜底

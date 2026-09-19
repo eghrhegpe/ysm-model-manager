@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	RegisterCommandC("file-bench", CatPerf, "测试大文件读取性能（模拟 MMD/PMX/VRM 加载）", runFileBench)
+	RegisterCommandC("file-bench", CatPerf, "测试大文件读取性能（原始读取吞吐；不解析/不解码，任意类型大文件都可测）", runFileBench)
 	RegisterCommandC("scan-dir", CatResource, "扫描 MMD 目录结构并统计资产", runScanDir)
 	RegisterCommandC("analyze-mmd", CatResource, "分析 MMD 模型资产（贴图、PMX、VMD 等）", runAnalyzeMMD)
 }

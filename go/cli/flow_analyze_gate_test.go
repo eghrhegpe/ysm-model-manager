@@ -124,3 +124,70 @@ func TestGUIFlow_AnalyzableModelKeepsDerivedPhases(t *testing.T) {
 		t.Errorf("③ 应成功: %+v", s)
 	}
 }
+
+// TestGUIFlow_UnanalyzableOnlyRepoExplainsWhy 纯不可分析类型仓库（不给 --model，走自动选首模型）：
+// ③ 必须**区分两种「没有可分析模型」**并如实转述扫描到的类型分布。原实现只报「未找到可分析的
+// 模型」+ ❌：对这种情况字面不算错（确实没有可分析的），但它把**能力边界**标成了**失败**，还丢掉了
+// ② 已算好的分布——用户既看不出原因（仓库里明明有模型），也看不出下一步（3D 预览实测 / --model）。
+// 判据全部落在**结构化载荷**上（Status/Desc），不依赖人类文案渲染。
+func TestGUIFlow_UnanalyzableOnlyRepoExplainsWhy(t *testing.T) {
+	fake := &flowFakeApp{entries: []types.ModelEntry{
+		{Path: "/repo/gear.nbt", Name: "gear.nbt", Ext: ".nbt"},
+		{Path: "/repo/house.litematic", Name: "house.litematic", Ext: ".litematic"},
+	}}
+	ctx := &CmdContext{App: fake, FilesRoot: t.TempDir(), Args: []string{}}
+	var err error
+	captureOutput(t, func() { err = runGUIFlow(ctx) })
+	if err != nil {
+		t.Fatalf("「有模型但 CLI 不分析」是能力边界不是失败，不应返回 error: %v", err)
+	}
+
+	byName := flowStageNames(t, ctx)
+	s, ok := byName["③ 模型分析"]
+	if !ok {
+		t.Fatal("③ 阶段必须存在——它是唯一能解释「为什么没跑」的地方")
+	}
+	if s.Status != "✅" {
+		t.Errorf("能力边界应标 ✅/ℹ️ 而非 ❌（与 --model 指定不可分析类型的分支同口径）: %+v", s)
+	}
+	joined := strings.Join(s.Desc, "\n")
+	if strings.Contains(joined, "未找到可分析的模型") {
+		t.Errorf("仓库里有模型时不得再说「未找到可分析的模型」: %s", joined)
+	}
+	if !strings.Contains(joined, "没有一个在 CLI 的分析链路上") {
+		t.Errorf("应说明「都不在 CLI 的分析链路上」: %s", joined)
+	}
+	if !strings.Contains(joined, "2 个") {
+		t.Errorf("应转述扫描到的模型数量（用户据此判断是不是白跑）: %s", joined)
+	}
+	if !strings.Contains(joined, "blueprint: 1") || !strings.Contains(joined, "litematic: 1") {
+		t.Errorf("应点名实际类型分布（与 ② 同源，用户据此知道去 3D 预览看哪一类）: %s", joined)
+	}
+	if fake.analyzeCalls.Load() != 0 {
+		t.Errorf("没有可分析模型时不得调 AnalyzeBedrockModel（必然空模型）, 实际 %d 次", fake.analyzeCalls.Load())
+	}
+	for _, name := range derivedPhaseNames {
+		if extra, ok := byName[name]; ok {
+			t.Errorf("%s 不得产出（无真分析结果时它是空模型数据当实测）: %+v", name, extra)
+		}
+	}
+}
+
+// TestGUIFlow_NoModelsAtAllKeepsOriginalWording 反向护栏：仓库里**真的没有模型**时仍如实报
+// 「未找到可分析的模型」+ ❌——不得因为上游改了文案，就把「真的空」也说成「类型不支持」。
+func TestGUIFlow_NoModelsAtAllKeepsOriginalWording(t *testing.T) {
+	fake := &flowFakeApp{}
+	ctx := &CmdContext{App: fake, FilesRoot: t.TempDir(), Args: []string{}}
+	captureOutput(t, func() { _ = runGUIFlow(ctx) })
+
+	s, ok := flowStageNames(t, ctx)["③ 模型分析"]
+	if !ok {
+		t.Fatal("③ 阶段必须存在")
+	}
+	if s.Status != "❌" {
+		t.Errorf("仓库真的没有模型时应标 ❌（这是真失败，不是能力边界）: %+v", s)
+	}
+	if joined := strings.Join(s.Desc, "\n"); !strings.Contains(joined, "未找到可分析的模型") {
+		t.Errorf("真空仓库应保留原文案: %s", joined)
+	}
+}

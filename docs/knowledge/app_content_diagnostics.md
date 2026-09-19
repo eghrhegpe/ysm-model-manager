@@ -196,6 +196,13 @@ status: active
   - **静默 no-op → 可见的不可选**：并发不能选「单模型」（没有模型路径输入），原实现只是 `return null`；现在切到并发时**禁用该选项**并把已选值回落到全库扁平。同批修一句**会撒谎的文案**：`perfConcurrentParamInvalid` 只讲「worker / 上限」数值，而它同时是「目标集选了单模型」的出口——三语都补上了目标集原因。
   - **`record`**：基准历史（`diag-perf-log`，CLI 支撑 → 引导空态 + 按钮）+ 加载剖析（内存 store → 进即渲染）。查看器模式隐藏 `bench` / `gui` **整 tab**（每个入口都是桌面专属 CLI；只藏按钮会留下「满屏引导空态却点不着任何东西」的空壳 tab）+ 记录 tab 里唯一靠 CLI 的基准历史段（`diag-perf-hist-row` / `diag-perf-hist`），**保留** trace 入口。
   - 测试：新增 `perf-mode.test.ts` 5 例（默认只显 single / 切 conc 的「禁用 + 回落」/ 切回恢复 / scan 复用迭代行 / 填充重建 `<option>` 后模式态重放）；**变异检查**——注释掉禁用+回落两行 → **恰好 2/5 红**（证明测试绑定行为、非空转）。e2e `diagnostics.spec.ts` 同步 18 例（`DIAG_TABS` 改 7 项且仍**全量严格相等**、4 处 tab 就绪等待 `>=8`→`>=7`、并发两例与 scan 一例改用既有 `setShadowSelect(page, "diag-perf-mode", …)` 切模式）。
+- **性能域只覆盖「一条资源链路」，且这件事必须写在面板里而不是标签里**（2026-09 文案校准，承 ADR-278）：用户追问「蓝图呢」逼出的事实——性能诊断 7 个命令全部围绕「BedrockModel 加载」建成，9 种资源里只有 YSM 有完整链路；MMD/VRM/FBX/GLTF 只到「如实告知不模拟 + 引导去 3D 预览实测」；**蓝图/投影零入口**（`file-bench` 只量原始读取吞吐，`detectModelFormat` 只是**叫得出名字**）。最刺眼的不对称：`go/litematic` 是 Go 侧最成熟的解析链路之一（三层 + 中文方块名 + fuzz 测试，知识卡明令「禁止前端手写」），比 MMD/VRM 更「CLI 可测」却更没入口。落地：
+  - **`(YSM)` 后缀退休**：`diagnostics.perfRunGui` 去掉括号后缀，新增 `diagnostics.perfGuiScopeNote`（三语）作为 gui tab 的**常驻范围说明**（`.perf-scope-note` + `data-testid="diag-perf-gui-scope"`），点名「完整 6 阶段仅 YSM / MMD·VRM·GLTF 解析器只在前端 / 蓝图·投影未纳入」。判据：**该在面板里说清楚的事，不该藏在标签里**——标签是给未点进来的人看的，而误导恰恰发生在点进来之后。
+  - **`file-bench` 描述对齐实现**（`go/cli/mmd.go` 注册处）：原「测试大文件读取性能（**模拟 MMD/PMX/VRM 加载**）」而它只迭代原始读取（>1MB 文件 + 吞吐），既无解压也无解析——格式无关的能力被写成了格式专属，还顺带承诺了没做的事。
+  - **③ 的两种「没有可分析模型」分开说**（`go/cli/flow.go`）：① 仓库真没模型 → 保留 ❌ + 「未找到可分析的模型」；② 有模型但都不在 CLI 分析链路上 → **✅ + ℹ️ + 类型分布 + 下一步**（去哪测 / 用什么参数）。原实现两种共用一句只描述 ① 的话 + ❌：对 ② 字面不算错，但把**能力边界标成了失败**，还丢掉了 ② 已算好的分布（用户既看不出原因，也看不出下一步）。同源口径参照：`--model x.pmx` 的「CLI 不模拟」分支本就是 `Success: true` + ℹ️——**同一个条件，两个分支不该一个说失败一个说限制**。
+  - **结构化直传，不反解析文案**：`guiFlowResult` 新增 `ModelCount` / `ByType`（② 填充），③ 据此转述；类型分布格式化收成单点 `formatTypeDist`（② 的描述与 ③ 共用，避免两处各排一遍序）。`flow.go` 既有教训「人类可读输出不是内部 API」在此再次生效。
+  - 测试：Go 两条（`TestGUIFlow_UnanalyzableOnlyRepoExplainsWhy` 锁「✅ + 都不可分析 + 数量 + 类型分布 + 不产出 ④⑤⑥」；`TestGUIFlow_NoModelsAtAllKeepsOriginalWording` 反向护栏锁「真空仓库仍是 ❌ + 原文案」——防我改过头）；前端 `tpl.test.ts` 一条锁「范围说明在面板里 + 全页不出现 `(YSM)`」。
+  - **未做（需另立 ADR）**：`voxel-bench`（复用 `go/litematic` 四段 + `single-bench` 的阶段/瓶颈/基线范式）+ `bench` 模式选择器加第 4 模式 `voxel`。ADR-278 选「模式选择器」而非「每链路一 tab」时没料到这层红利——**「模式」的正确语义是「跑哪条链路」**，于是它能天然容纳未来的资源链路；若当初按 tab 一分到底，加一条链路就得加一个 tab（回到 9→10 的老路）。
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

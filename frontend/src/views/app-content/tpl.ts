@@ -43,6 +43,7 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-single",
   "diag-perf-gui-run",
   "diag-perf-gui-out",
+  "diag-perf-gui-scope",
   "diag-perf-conc-max",
   "diag-perf-conc-run",
   "diag-perf-conc-out",
@@ -250,6 +251,7 @@ export function diagnosticsHTML(): string {
         <button class="btn-base" id="diag-perf-gui" data-testid="diag-perf-gui-run">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
       </div>
     </div>
+    <div class="perf-scope-note" data-testid="diag-perf-gui-scope">${t("diagnostics.perfGuiScopeNote")}</div>
     <div id="diag-perf-gui-out" data-testid="diag-perf-gui-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },

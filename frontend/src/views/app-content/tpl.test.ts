@@ -194,6 +194,17 @@ describe("app-content 模板", () => {
     expect(html).toContain('id="diag-clear"');
     expect(html).toContain('data-tab="sync-conflict"');
   });
+  it("gui tab：能力范围写在面板里，而非藏在 (YSM) 标签后缀里", () => {
+    const html = diagnosticsHTML();
+    // 范围说明常驻在模板里（无论跑没跑过）——它属于面板结构，不属于某次运行结果
+    expect(html).toContain('data-testid="diag-perf-gui-scope"');
+    expect(html).toContain("完整 6 阶段链路仅 YSM");
+    // 蓝图/投影也要点名：用户问「其他资源呢」时，面板必须已经答了
+    expect(html).toContain("蓝图 / 投影的链路度量尚未纳入");
+    // 标签不再自称只覆盖 YSM：CLI 对 MMD/VRM 等有明确的「不模拟」告知分支，
+    // 把能力范围写死在标签里，等于让标签替面板说谎
+    expect(html).not.toContain("(YSM)");
+  });
   it("recycleHTML 包含清空回收站按钮", () => {
     const html = recycleHTML();
     expect(html).toContain('id="recy-empty"');

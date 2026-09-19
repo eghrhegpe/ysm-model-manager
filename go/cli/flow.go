@@ -32,6 +32,12 @@ type guiFlowResult struct {
 	// FirstModel 机器可读的首个可分析模型路径——曾塞进 Description 由下游反解析
 	// 「首个模型:」文案 token（改个 emoji 就断），结构化直传
 	FirstModel string
+	// ModelCount ② 模型扫描到的条目总数（0 = 仓库里真的没有模型）。与 ByType 同源结构化留档：
+	// ③ 的「有模型但都不在分析链路上」分支据此如实转述，**不从 Description 反解析**
+	// （「人类可读输出不是内部 API」——本文件既有教训）。
+	ModelCount int
+	// ByType ② 的类型分布（注册表类型 id → 数量，如 {"blueprint": 3}）
+	ByType map[string]int
 	// Kind 阶段性质：measured（实测，默认）| estimated（估算，如 ⑥ 渲染预估）。
 	// ADR-262 D2：估算与实测必须显式区分，不能靠描述文字里的一句「估算」来暗示。
 	Kind string
@@ -209,10 +215,27 @@ func runGUIFlow(ctx *CmdContext) error {
 			}
 		}
 	} else {
+		// 两种「没有可分析模型」必须分开说（2026-09 文案校准）：① 仓库里真没有模型；② 有模型，
+		// 但没有一个在 CLI 的分析链路上（蓝图/MMD/VRM… 的解析器只在前端 3D adapter）。
+		// 原实现两种都只报「未找到可分析的模型」+ ❌：对 ② 字面不算错，但它把**能力边界**标成了
+		// **失败**，还丢掉了 ② 已算好的类型分布——用户既看不出原因，也看不出下一步该去哪。
+		// 与「--model 指定了不可分析类型」的分支同口径：边界 ≠ 失败 → ℹ️ + Success=true。
+		// ② 就在 results 末尾（本分支在 ③ 入列之前——与上方取 FirstModel 同一写法）。
+		scan := results[len(results)-1]
+		success, desc := false, "未找到可分析的模型"
+		if scan.ModelCount > 0 {
+			success = true
+			desc = fmt.Sprintf(
+				"ℹ️ 扫描到 %d 个模型，但没有一个在 CLI 的分析链路上（解析器只在前端 3D adapter）\n"+
+					"   类型分布: %s\n"+
+					"   想看这条链路请到 GUI 3D 预览实测；或 --model 指定一个可分析模型",
+				scan.ModelCount, formatTypeDist(scan.ByType),
+			)
+		}
 		results = append(results, withRuntime(guiFlowResult{
-			Stage:       "模型分析",
-			Success:     false,
-			Description: "未找到可分析的模型",
+			Stage:       "③ 模型分析",
+			Success:     success,
+			Description: desc,
 		}, guiFlowRuntimeGo))
 	}
 
@@ -259,7 +282,8 @@ func runPhaseConfigLoad(a AppService) guiFlowResult {
 // 判据 = `cliAnalyzable(id)`（perfTypeManifest 登记，perf_targets.go），不再自持 `ext == ".ysm"`
 // 白名单（ADR-262 D3 收编，2026-09-18）——随清单自动扩展，且天然含 ysm 目录下的
 // 容器 .zip / 解包目录 ysm.json 等「非 .ysm 扩展名但确实在分析链路上」的形态。
-// 不可分析类型不提升，保持原「未找到可分析的模型」语义（用户可 --model 显式指定）。
+// 不可分析类型**不提升为首模型**（用户可 --model 显式指定）——这只关「③ 拿谁去跑」；
+// ③ 在「有模型但都不可分析」时会如实转述类型分布并标 ℹ️，不再只报「未找到可分析的模型」。
 func scanSummaryByType(entries []types.ModelEntry) (map[string]int, string) {
 	byType := make(map[string]int)
 	var firstModel string
@@ -315,6 +339,17 @@ func scanRateSuffix(count int, d time.Duration) string {
 	return fmt.Sprintf(" (%.0f models/sec)", float64(count)/d.Seconds())
 }
 
+// formatTypeDist 类型分布可读化：注册表类型 id → count，排序后拼接（map 遍历无序，展示与
+// 测试都需要确定性）。② 的阶段描述与 ③ 的「都不在分析链路上」分支共用这一处格式。
+func formatTypeDist(byType map[string]int) string {
+	parts := make([]string, 0, len(byType))
+	for id, n := range byType {
+		parts = append(parts, fmt.Sprintf("%s: %d", id, n))
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, ", ")
+}
+
 // runPhaseModelScan 模拟模型扫描
 func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 	start := time.Now()
@@ -332,14 +367,9 @@ func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 	}
 
 	byType, firstModel := scanSummaryByType(entries)
-	// 类型分布可读化：注册表类型 id（EntityPlayer/ysm/...）→ count；未命中归 other
-	parts := make([]string, 0, len(byType))
-	for id, n := range byType {
-		parts = append(parts, fmt.Sprintf("%s: %d", id, n))
-	}
-	// 稳定输出（map 遍历无序，测试/展示确定性）
-	sort.Strings(parts)
-	dist := strings.Join(parts, ", ")
+	// 类型分布可读化（注册表类型 id → count；未命中归 other）——与 ③ 的「有模型但都不可分析」
+	// 分支共用同一格式化，避免两处各排一遍序（map 遍历无序，展示/测试需确定性）
+	dist := formatTypeDist(byType)
 
 	// 保留机器可读 token（YAML: n, YSM: n）——gui-flow-gate.mjs 的
 	// hasModel 判定解析它（旧格式正则）；新"类型分布"格式（注册表 id 小写）不含
@@ -351,6 +381,8 @@ func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 		Duration:   elapsed,
 		Success:    true,
 		FirstModel: firstModel,
+		ModelCount: len(entries),
+		ByType:     byType,
 		// ⚠️ 诚实红线（与 singleBenchReadNote 同族，2026-09-18 由 e2e 真实渲染抓出）：
 		// 扫描几个小模型时 `time.Since` 常为 0 → 除以 0 秒把速率打成「+Inf models/sec」。
 		// 测不出的速率宁可不报：计时没走字就只说数量。

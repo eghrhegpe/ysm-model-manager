@@ -198,7 +198,7 @@ app --cli --files-root <路径> concurrent-bench [选项...]
 
 
 ### `file-bench`
-测试大文件读取性能（模拟 MMD/PMX/VRM 加载）
+测试大文件读取性能（原始读取吞吐；不解析/不解码，任意类型大文件都可测）
 
 ```bash
 app --cli --files-root <路径> file-bench [选项...]

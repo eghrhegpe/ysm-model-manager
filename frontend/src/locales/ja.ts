@@ -364,7 +364,9 @@ export const ja: Record<string, string> = {
   "diagnostics.opImportFallback": "インポート",
   "diagnostics.perfModelRequired": "モデルのパスを入力してください",
   "diagnostics.perfIterations": "イテレーション数",
-  "diagnostics.perfRunGui": "単一モデル読込パイプライン(YSM)",
+  "diagnostics.perfRunGui": "単一モデル読込パイプライン",
+  "diagnostics.perfGuiScopeNote":
+    "対象範囲：フル 6 段階のチェーンは YSM のみです。MMD / VRM / GLTF のパーサーはフロントエンドの 3D adapter にのみ存在します（CLI は「シミュレートしない」と正直に通知し、3D プレビューでの実測を案内します）。ブループリント / 投影のチェーン測定は未対応です。",
   "diagnostics.perfPerfLog": "最適化履歴(perf-log)",
   "diagnostics.perfSingleResult": "単一モデルベンチマーク結果",
   "diagnostics.perfGuiResult": "単一モデル読込パイプライン結果",

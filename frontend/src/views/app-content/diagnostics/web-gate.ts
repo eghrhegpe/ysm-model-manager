@@ -2,8 +2,8 @@
 //
 // 立因（2026-09-18 诊断页重复实现审计 C1，见 docs/plans/diagnostics-dedup-audit.md）：
 // 「web 模式下提示 + 拦住这次调用」这段 8 行样板在本页被抄了 5 份
-//（perf-concurrent / perf-gui-flow / perf-scan-bench 各一，conflicts 两种扫描各一），
-// 连函数名都各起一个（concWebModeCheck / guiFlowWebModeCheck / scanBenchWebModeCheck /
+//（perf-concurrent / perf-scan-bench 各一，conflicts 两种扫描各一，perf-gui-flow 已随 gui-flow 面板下线），
+// 连函数名都各起一个（concWebModeCheck / scanBenchWebModeCheck /
 // dgCfWebGate / dgCfSyncWebGate），唯一差异是提示文案键。
 //
 // 抄 5 份的真实代价不是 40 行代码，而是：**新增一个需要 web 门禁的入口时，照抄哪一份都不能

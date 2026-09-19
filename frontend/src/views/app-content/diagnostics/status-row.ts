@@ -61,11 +61,11 @@ export function msgRowHTML(
  * `diag-stat` 族（padding12 + fs-base，居中）：
  * `<div class="stat-row diag-stat diag-stat-<kind>">图标 文案</div>`
  *
- * ⚠️ 只覆盖**带 `stat-row`** 的写法。perf 面板另有 4 处是
- * `<div class="diag-stat diag-stat-<kind>">`（**无 `stat-row`**，见 perf-common.ts / perf-gui-flow.ts /
+ * ⚠️ 只覆盖**带 `stat-row`** 的写法。perf 面板另有 3 处是
+ * `<div class="diag-stat diag-stat-<kind>">`（**无 `stat-row`**，见 perf-common.ts /
  * perf-matrix-render.ts）：`stat-row` 自带 `color/padding/justify-content`（css/content-diag.ts:66），
  * 少一个类就是另一种观感（且 perf-common 的 `errorHTML` / `setBusy` 已是 perf 族单点），
- * 不属「逐字相同才可替换」的范围，故那 4 处保持原样。
+ * 不属「逐字相同才可替换」的范围，故那 3 处保持原样。
  */
 export function statRowHTML(
   kind: StatusRowKind,

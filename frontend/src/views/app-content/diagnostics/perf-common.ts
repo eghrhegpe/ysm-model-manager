@@ -1,5 +1,5 @@
 // ===== 诊断页：性能面板 — 共享工具层 =====
-// 两个命令模块（single-bench / gui-flow）与 perf-trace 共用的渲染/守卫/错误辅助。
+// 命令模块（single-bench / concurrent / scan-bench）与 perf-trace 共用的渲染/守卫/错误辅助。
 // 纯前端逻辑，零 Go 改动。
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
@@ -34,7 +34,7 @@ export function sectionHeader(icon: string, label: string, rawText?: string): st
  */
 const perfCopyBoundEls = new WeakSet<Element>();
 export function bindPerfCopyHandlers(root: ShadowRoot): void {
-  for (const id of ["diag-perf-single", "diag-perf-scan-bench-out", "diag-perf-gui-out"]) {
+  for (const id of ["diag-perf-single", "diag-perf-scan-bench-out"]) {
     const el = root.getElementById(id);
     if (!el || perfCopyBoundEls.has(el)) continue;
     perfCopyBoundEls.add(el);
@@ -99,7 +99,7 @@ function respHasOutput(
  * 载荷不可用时的统一失败渲染（诊断页重复实现审计 C4，2026-09-18）。
  *
  * 立因：同一段三元分支曾在 **5 个模块**各写一遍——`perf-single-bench`（原 `renderBenchFailure`）、
- * `perf-concurrent`、`perf-scan-bench`、`perf-gui-flow`——唯一差异是空载荷文案键。
+ * `perf-concurrent`、`perf-scan-bench`、`perf-gui-flow`（已随 gui-flow 面板下线）——唯一差异是空载荷文案键。
  * 判据收敛在这里，各模块只回答「我这块的空载荷该怎么说」：
  *   · `status === "success"` 却拿不到载荷 = **契约漂移**，比「执行失败」更值得暴露（要人去修契约）；
  *   · 其余（error / 部分失败）= 转述 Go 原话（`error.message`，没有则退回通用失败文案）。

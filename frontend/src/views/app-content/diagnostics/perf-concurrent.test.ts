@@ -54,7 +54,6 @@ function makeRoot(): ShadowRoot {
     <input id="diag-perf-baseline-compare" type="checkbox">
     <input id="diag-perf-baseline-th" value="50">
     <div id="diag-perf-single"></div>
-    <div id="diag-perf-gui-out"></div>
     <button id="diag-perf-conc-run"></button>
     <input id="diag-perf-conc-workers" type="number" value="4">
     <input id="diag-perf-conc-max" type="number" value="20">

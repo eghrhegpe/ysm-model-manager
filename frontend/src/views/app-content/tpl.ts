@@ -41,9 +41,6 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-run",
   "diag-perf-model",
   "diag-perf-single",
-  "diag-perf-gui-run",
-  "diag-perf-gui-out",
-  "diag-perf-gui-scope",
   "diag-perf-conc-max",
   "diag-perf-conc-run",
   "diag-perf-conc-out",
@@ -240,19 +237,6 @@ export function diagnosticsHTML(): string {
     <div id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
     <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out" data-perf-mode="scan"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
     <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-  </div>`,
-      },
-      {
-        id: "gui",
-        label: `${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}`,
-        body: `  <div class="perf-wrap">
-    <div class="perf-controls">
-      <div class="perf-row">
-        <button class="btn-base" id="diag-perf-gui" data-testid="diag-perf-gui-run">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
-      </div>
-    </div>
-    <div class="perf-scope-note" data-testid="diag-perf-gui-scope">${t("diagnostics.perfGuiScopeNote")}</div>
-    <div id="diag-perf-gui-out" data-testid="diag-perf-gui-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {

@@ -2,7 +2,6 @@
 // ===== 诊断页：性能面板测试 =====
 // 覆盖：
 //  - single-bench：7 阶段柱状渲染 / 缺 model 错误 / 命令失败兜底 / 代际守卫丢弃陈旧响应
-//  - gui-flow：6 阶段状态渲染 / 失败阶段红字提示
 //  - 加载剖析：甘特图 + 资产清单渲染（通过 facade perf.ts re-export 路由）
 // 注：业务逻辑已拆至 perf-cli.ts（CLI 三块）/ perf-trace.ts（加载剖析）；
 // 本测试通过 facade initPerfPanel / renderLoadTraceSection 集成验证，保证接口契约不变。
@@ -77,55 +76,10 @@ const SINGLE_STRUCTURED_BASELINE = {
   },
 };
 
-// 对齐 Go gui-flow printFlowReport 真实输出
-const GUI_OUTPUT = `🎮 GUI 流程模拟器
-======================================================================
-
-📊 流程报告
-----------------------------------------------------------------------
-
-✅ [1] ① 配置加载 (1.23ms)
-   仓库根: /models
-   模型根: /models/ysm
-
-✅ [2] ② 模型扫描 (30.00ms)
-   发现 10 个模型 (333 models/sec)
-
-❌ [3] ③ 模型分析 (200.50ms)
-   分析失败: /models/ysm/player.ysm
-
-⏱️  总耗时: 231.73ms
-📈 成功: 2, 失败: 1`;
-
-// 对齐 Go guiFlowStructured（ADR-200 D2）：前端直接消费结构化 stages，不再反解析文案
-const GUI_STRUCTURED = {
-  stages: [
-    { status: "✅", name: "① 配置加载", ms: 1.23, desc: ["仓库根: /models", "模型根: /models/ysm"] },
-    { status: "✅", name: "② 模型扫描", ms: 30, desc: ["发现 10 个模型 (333 models/sec)"] },
-    { status: "❌", name: "③ 模型分析", ms: 200.5, kind: "measured", desc: ["分析失败: /models/ysm/player.ysm"] },
-    // 估算阶段（ADR-262 D2）：⑥ 无渲染管线，ms=0 + estimated_ms>0 + note（假设/公式）
-    {
-      status: "✅",
-      name: "⑥ 渲染预估",
-      ms: 0,
-      kind: "estimated",
-      estimated_ms: 120.5,
-      note: "无渲染管线：按骨骼数粗估",
-      desc: ["🟢 轻量负载"],
-    },
-  ],
-  total_ms: 231.73,
-  estimated_ms: 120.5,
-  failed: true,
-  output: GUI_OUTPUT, // deprecated（D5）：迁移期保留
-};
-
-
 function makeRoot(): ShadowRoot {
   const el = document.createElement("div");
   el.innerHTML = `
     <button class="diag-btn" id="diag-perf-run">运行</button>
-    <button class="diag-btn" id="diag-perf-gui">体检</button>
     <button class="diag-btn" id="diag-perf-refresh-trace">刷新</button>
     <input id="diag-perf-model">
     <input id="diag-perf-iter">
@@ -136,7 +90,6 @@ function makeRoot(): ShadowRoot {
     <input id="diag-perf-baseline-compare" type="checkbox">
     <input id="diag-perf-baseline-th" value="50">
     <div id="diag-perf-single"></div>
-    <div id="diag-perf-gui-out"></div>
     <div id="diag-load-trace"></div>
   `;
   (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
@@ -615,135 +568,6 @@ describe("single-bench 基准入口与判决（ADR-262 D8）", () => {
       iterations: 3,
       format: "json",
     });
-  });
-});
-
-describe("gui-flow 面板", () => {
-  it("渲染 6 阶段状态，失败阶段标红提示（结构化 stages 消费）", async () => {
-    executeCLI.mockResolvedValue({
-      status: "success",
-      command: "gui-flow",
-      data: GUI_STRUCTURED,
-    });
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    (root.getElementById("diag-perf-gui") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
-    const out = root.getElementById("diag-perf-gui-out") as HTMLElement;
-    expect(out.textContent).toContain("① 配置加载");
-    expect(out.textContent).toContain("② 模型扫描");
-    // 失败行存在 → 有红色失败提示
-    expect(out.textContent).toContain("③ 模型分析");
-    expect(out.querySelector("[class*='perf-gui-fail']")).toBeTruthy();
-  });
-
-  it("估算阶段带标记，估算合计单独呈现且不进总耗时（ADR-262 D2）", async () => {
-    executeCLI.mockResolvedValue({
-      status: "success",
-      command: "gui-flow",
-      data: GUI_STRUCTURED,
-    });
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    (root.getElementById("diag-perf-gui") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
-    const out = root.getElementById("diag-perf-gui-out") as HTMLElement;
-    // ⑥ 估算行：标记 + 实测/估算分开写（0.00ms + 120.50ms）与公式 tooltip
-    const estTag = out.querySelector(".perf-gui-est") as HTMLElement;
-    expect(estTag).toBeTruthy();
-    expect(estTag.getAttribute("title")).toContain("粗估");
-    expect(out.textContent).toContain("0.00ms + 120.50ms");
-    // 总耗时只含实测；估算单独一行并声明不计入
-    expect(out.textContent).toContain("总耗时: 231.73ms");
-    expect(out.textContent).toContain("其中估算 120.50ms（不计入总耗时）");
-  });
-
-  // 回归（2026-09-18，e2e 真实渲染抓出）：多行描述曾被 esc(join("<br>")) 连 <br> 一起转义，
-  // 界面显示字面量「<br>」。正确写法 = 先逐行 esc 再拼 <br>。
-  // 单元层子串断言对此失明（textContent 里两种写法都含「<br>」字符），故这里断言 **DOM 结构**。
-  it("多行描述渲染成真 <br> 元素，而不是被转义的字面量", async () => {
-    executeCLI.mockResolvedValue({
-      status: "success",
-      command: "gui-flow",
-      data: {
-        ...GUI_STRUCTURED,
-        stages: [
-          {
-            status: "✅",
-            name: "① 配置加载",
-            ms: 1,
-            kind: "measured",
-            desc: ["仓库根: /models", "模型根: /models"],
-          },
-        ],
-      },
-    });
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    (root.getElementById("diag-perf-gui") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
-    const out = root.getElementById("diag-perf-gui-out") as HTMLElement;
-    const desc = out.querySelector(".perf-gui-desc") as HTMLElement;
-    expect(desc.querySelectorAll("br").length).toBe(1);
-    expect(desc.textContent).not.toContain("<br>");
-    expect(desc.textContent).toContain("仓库根: /models");
-  });
-
-  it("阶段渲染 runtime 归属（ADR-262 D2）：扫描段如实显示 rust，不说想当然的 go", async () => {
-    executeCLI.mockResolvedValue({
-      status: "success",
-      command: "gui-flow",
-      data: {
-        ...GUI_STRUCTURED,
-        stages: [
-          { status: "✅", name: "② 模型扫描", ms: 30, kind: "measured", desc: ["ok"], runtime: "rust" },
-          { status: "✅", name: "⑥ 渲染预估", ms: 0, kind: "estimated", estimated_ms: 120, desc: ["ok"], runtime: "three" },
-        ],
-      },
-    });
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    (root.getElementById("diag-perf-gui") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
-    const out = root.getElementById("diag-perf-gui-out") as HTMLElement;
-
-    const tags = [...out.querySelectorAll(".perf-rt-tag")].map((e) => e.textContent);
-    expect(tags).toEqual(["rust", "three"]);
-    // 归属徽标与既有估算标记共存（runtime 是叠加信息，不取代 kind 口径）
-    expect(out.querySelector(".perf-gui-est")).toBeTruthy();
-  });
-
-  it("status=error（阶段失败）时仍渲染结构化阶段明细（规律六）", async () => {
-    executeCLI.mockResolvedValue({
-      status: "error",
-      command: "gui-flow",
-      error: { code: "runtime_error", message: "有 1 个阶段失败" },
-      data: GUI_STRUCTURED,
-    });
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    (root.getElementById("diag-perf-gui") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
-    const out = root.getElementById("diag-perf-gui-out") as HTMLElement;
-    expect(out.textContent).toContain("③ 模型分析");
-    expect(out.querySelector("[class*='perf-gui-fail']")).toBeTruthy();
-  });
-
-  it("结果容器与按钮 id 隔离：点击结果区不会触发重跑", async () => {
-    executeCLI.mockResolvedValue({
-      status: "success",
-      command: "gui-flow",
-      data: GUI_STRUCTURED,
-    });
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    (root.getElementById("diag-perf-gui") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(executeCLI).toHaveBeenCalledTimes(1);
-    // 点击结果容器本身不应再触发 executeCLI
-    (root.getElementById("diag-perf-gui-out") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(executeCLI).toHaveBeenCalledTimes(1);
   });
 });
 

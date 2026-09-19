@@ -102,7 +102,7 @@ export const contentDiagCSS: string = `
 /* ADR-278 §2.4：基准模式显隐走 class，与查看器降级的 inline display:none 分工不冲突（inline 胜过 class） */
 .perf-mode-off { display: none; }
 
-/* ===== 性能面板（single-bench / gui-flow / perf-log） ===== */
+/* ===== 性能面板（single-bench / concurrent / scan-bench / perf-log） ===== */
 .perf-section { font-size:var(--fs-sm); font-weight:600; color:var(--txt); display:flex; align-items:center; gap:6px; }
 .perf-bar-row { display:flex; align-items:center; gap:8px; margin:2px 0; font-size:var(--fs-xs); }
 .perf-bar-name { flex:0 0 118px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); }
@@ -113,7 +113,7 @@ export const contentDiagCSS: string = `
 .perf-bar-val { flex:0 0 auto; min-width:130px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .perf-bar-val.perf-bar-warn { color: var(--warning, #b8860b); }
 .perf-bar-val.perf-bar-danger { color: var(--status-error); }
-/* 阶段运行归属徽标（ADR-262 D2）：single-bench 与 gui-flow 共用同一概念，同一类名 */
+/* 阶段运行归属徽标（ADR-262 D2）：single-bench / concurrent / scan-bench 共用同一概念，同一类名 */
 .perf-rt-tag { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--muted, #888) 18%, transparent); color:var(--muted); flex-shrink:0; }
 /* 阶段样本统计（n / median / p95，ADR-262 D2）：等宽数字避免列跳动 */
 .perf-stats { font-size:var(--fs-micro); color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; flex-shrink:0; }
@@ -156,13 +156,6 @@ export const contentDiagCSS: string = `
 .perf-sb-parity-warn { color:var(--warning, #b8860b); font-weight:600; }
 .perf-sb-parity-bad { color:var(--status-error); font-weight:600; }
 .perf-sb-diff { font-size:var(--fs-xs); color:var(--muted); word-break:break-all; padding-left:10px; }
-.perf-gui-stage { display:flex; align-items:center; gap:8px; font-size:var(--fs-sm); color:var(--txt); padding:3px 2px; flex-wrap:wrap; }
-.perf-gui-stage .perf-gui-status { font-size:var(--fs-base); }
-.perf-gui-stage .perf-gui-name { font-weight:600; }
-.perf-gui-stage .perf-gui-ms { flex:1; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; }
-.perf-gui-desc { flex-basis:100%; display:block; font-size:var(--fs-xs); color:var(--muted); padding-left:10px; white-space:pre-wrap; }
-.perf-gui-stage.perf-gui-fail { color: var(--status-error); }
-.perf-gui-stage.perf-gui-fail .perf-gui-ms { color: var(--status-error); }
 .perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-md); background:var(--surf); padding:6px 10px; margin:4px 0; animation: conflictRowIn .3s ease both; }
 .perf-hist-head { display:block; font-size:var(--fs-sm); color:var(--txt); margin-bottom:2px; }
 .perf-hist-head code { background:var(--bg); padding:0 4px; border-radius:var(--radius-xs); font-size:var(--fs-xs); }

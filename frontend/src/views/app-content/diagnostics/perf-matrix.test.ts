@@ -36,7 +36,6 @@ function makeRoot(): ShadowRoot {
   const el = document.createElement("div");
   el.innerHTML = `
     <button id="diag-perf-run">运行</button>
-    <button id="diag-perf-gui">链路</button>
     <button id="diag-perf-refresh-trace">刷新</button>
     <input id="diag-perf-model">
     <input id="diag-perf-iter" value="2">
@@ -48,7 +47,6 @@ function makeRoot(): ShadowRoot {
     <label for="diag-perf-max" id="diag-perf-max-label" title="单位随目标集变：某类型 = 该类型 N 条；全部类型 = 每类各 N 条；全库扁平 = 全库 N 条">取样上限</label>
     <input id="diag-perf-max" value="3">
     <div id="diag-perf-single"></div>
-    <div id="diag-perf-gui-out"></div>
     <div id="diag-perf-hist"></div>
     <div id="diag-load-trace"></div>
     <select id="diag-perf-alt-target"><option value="__repo__">全库扁平</option></select>

@@ -108,7 +108,7 @@ describe("bindPerfCopyHandlers", () => {
 
 // ===== renderLoadFailure：载荷不可用时的统一失败渲染（诊断页重复实现审计 C4）=====
 // 立因：同一段「命令成功但载荷形状不对 / 命令失败」的三元分支曾在 5 个模块各写一遍
-//（perf-single-bench 的 renderBenchFailure、perf-concurrent、perf-scan-bench、perf-gui-flow），
+//（perf-single-bench 的 renderBenchFailure、perf-concurrent、perf-scan-bench、perf-gui-flow（已下线）），
 // 唯一差异是空载荷文案键。收敛后**判据唯一**：status=success 即契约漂移（比"执行失败"
 // 更值得暴露），否则转述 Go 原话。
 describe("renderLoadFailure", () => {

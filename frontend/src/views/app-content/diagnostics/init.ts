@@ -144,9 +144,9 @@ function dgInBindScanBtns(root: ShadowRoot, esc: EscFn): void {
 function dgInHideDesktopOnly(root: ShadowRoot): void {
   if (!isViewerMode()) return;
   for (const tab of root.querySelectorAll<HTMLElement>(
-    // ADR-278 §2.5：bench（跑基准）与 gui（端到端）**整 tab** 隐藏——它们每个入口都是桌面专属
+    // ADR-278 §2.5：bench（跑基准）整 tab 隐藏——它的每个入口都是桌面专属
     // CLI；只藏按钮会留下「满屏引导空态却点不着任何东西」的空壳 tab。
-    '.repo-tab[data-tab="conflict"], .repo-tab[data-tab="health"], .repo-tab[data-tab="sync-conflict"], .repo-tab[data-tab="bench"], .repo-tab[data-tab="gui"]',
+    '.repo-tab[data-tab="conflict"], .repo-tab[data-tab="health"], .repo-tab[data-tab="sync-conflict"], .repo-tab[data-tab="bench"]',
   )) {
     tab.style.display = "none";
   }
@@ -154,7 +154,6 @@ function dgInHideDesktopOnly(root: ShadowRoot): void {
     "diag-scan-conflict",
     "diag-scan-health",
     "diag-scan-sync-conflict",
-    "diag-perf-gui",
     // 加载剖析**不**隐藏（2026-09 修正）：它的数据是 3D 适配器写进内存 store 的
     // （getLoadTraces()，零 Go/CLI 依赖），网页/查看器模式下同样可用——原先连它一起藏，
     // 等于把「唯一跨模式可用」的面板的唯一入口藏掉，与本函数「避免可见但不可用」的本意反向成立。

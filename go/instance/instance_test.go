@@ -473,6 +473,59 @@ func TestBuildSyncItems_DirLevelChildren(t *testing.T) {
 	}
 }
 
+// TestBuildSyncItems_DirEntrySizeIsContentTotal：目录条目的 Size 必须是**子树内容总量**，
+// 而不是 os.Stat(dir) 的目录项自身占用（NTFS 通常 0/4096/8192，与内容无关）。
+// 实测事故：仓库里装着 206 MB 的模型夹，同步页显示 4.0 KB —— 纯属误导。
+// 总量不需要额外 IO：buildDirLevelChildren 已把子项清单（含 synced）算出来了，求和即可。
+func TestBuildSyncItems_DirEntrySizeIsContentTotal(t *testing.T) {
+	sub := registry.SubDirMap("ysm")
+	if sub == "" {
+		t.Skip("ysm 无 InstanceDir 配置，跳过")
+	}
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
+
+	// packA：仓库侧 100+200+300=600 字节，实例侧同款（全 synced，排除差异干扰）
+	globalPack := filepath.Join(globalDir, "packA")
+	_ = os.MkdirAll(globalPack, 0755)
+	_ = os.WriteFile(filepath.Join(globalPack, "a.ysm"), make([]byte, 100), 0644)
+	_ = os.WriteFile(filepath.Join(globalPack, "b.ysm"), make([]byte, 200), 0644)
+	_ = os.WriteFile(filepath.Join(globalPack, "c.ysm"), make([]byte, 300), 0644)
+	instPack := filepath.Join(instDir, "packA")
+	_ = os.MkdirAll(instPack, 0755)
+	_ = os.WriteFile(filepath.Join(instPack, "a.ysm"), make([]byte, 100), 0644)
+	_ = os.WriteFile(filepath.Join(instPack, "b.ysm"), make([]byte, 200), 0644)
+	_ = os.WriteFile(filepath.Join(instPack, "c.ysm"), make([]byte, 300), 0644)
+
+	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+
+	byName := map[string]types.ResourceSyncItem{}
+	for _, it := range items {
+		byName[it.Name] = it
+	}
+	pack, ok := byName["packA"]
+	if !ok {
+		t.Fatalf("未找到 packA: %+v", items)
+	}
+	if !pack.IsDir {
+		t.Fatalf("packA 应为目录条目: %+v", pack)
+	}
+	if pack.Size != 600 {
+		t.Fatalf("packA 的 Size 应为子项内容总量 600（目录项元数据大小多为 0/4096），实际 %d", pack.Size)
+	}
+	// 子文件仍是各自字节数——字段语义按 IsDir 区分：文件=自身大小，目录=子树总量
+	for _, ch := range pack.Children {
+		if ch.IsDir {
+			continue
+		}
+		if ch.Size != 100 && ch.Size != 200 && ch.Size != 300 {
+			t.Fatalf("子文件 %s 的 Size 应为自身字节数，实际 %d", ch.Name, ch.Size)
+		}
+	}
+}
+
 // TestBuildSyncItems_DirLevelMissingHoldsStatus：Missing 文件夹保持 missing 状态（整体缺失，
 // 非部分差异，不降级 diverged），且从仓库侧填充 children 展示待推清单（仓库是权威源）
 func TestBuildSyncItems_DirLevelNoChildrenForMissing(t *testing.T) {

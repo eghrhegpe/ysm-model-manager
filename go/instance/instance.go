@@ -231,10 +231,28 @@ func (c *rtypeCtx) appendOneItem(typeItems *[]types.ResourceSyncItem, p string, 
 		Status:   meta.status,
 		Type:     c.rt.ID,
 		Icon:     icon,
-		Size:     fsutil.FileSize(p),
+		Size:     entrySize(meta.isDirEntry, p, children),
 		IsDir:    meta.isDirEntry,
 		Children: children,
 	})
+}
+
+// entrySize 取条目大小：文件 = 自身字节数；目录 = 子树内容总量。
+//
+// 目录不能取 os.Stat(dir).Size()——那是目录项自身占用（NTFS 通常 0/4096/8192），与内容无关：
+// 实测 600 字节的夹报 0、装着 206 MB 的模型夹在同步页显示 4.0 KB，纯属误导。
+// 总量无需额外 IO：buildDirLevelChildren 已算出子项清单（DiffFolderContents 注释明确
+// synced 条目含在结果中，供前端全量展示），求和即真实内容总量。
+// 空夹 / 子项取不到（夹在磁盘上不存在）→ 0，交由前端 `size > 0` 守卫留白，不猜。
+func entrySize(isDirEntry bool, p string, children []types.ResourceSyncItem) int64 {
+	if !isDirEntry {
+		return fsutil.FileSize(p)
+	}
+	var total int64
+	for i := range children {
+		total += children[i].Size
+	}
+	return total
 }
 
 // processOneResourceType 处理单个资源类型：

@@ -16,9 +16,9 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 1 |
+| [📝 提议中](#提议中) | 0 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 12 |
+| [🔄 部分采纳](#部分采纳) | 13 |
 | [✅ 已采纳](#已采纳) | 244 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
@@ -26,16 +26,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（1）
+### 🔄 部分采纳（13）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-269](./ADR-269-resource-manifest-single-source.md) | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack provenance 维度 | 📝 提议中 |
-
-### 🔄 部分采纳（12）
-
-| ADR | 标题 | 状态 |
-|-----|------|------|
+| [ADR-269](./ADR-269-resource-manifest-single-source.md) | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack provenance 维度 | 🔄 部分采纳 |
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
 | [ADR-249](./ADR-249-ground-material-axis-split-layer-overlay.md) | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | 🔄 部分采纳 |
 | [ADR-247](./ADR-247-postproc-linkage-gate.md) | 后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移 | 🔄 部分采纳 |
@@ -322,7 +317,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-269 | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack provenance 维度 | 📝 提议中 | 2026-09-19 |
+| ADR-269 | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack provenance 维度 | 🔄 部分采纳 | 2026-09-19 |
 | ADR-268 | 环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单 | ✅ 已采纳 | 2026-09-19 |
 | ADR-267 | toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区 | ✅ 已采纳 | 2026-09-18 |
 | ADR-266 | 体积光锥改真锥体几何 + Fresnel 边缘辉光；修 ACES 旁路与过度重建 | ✅ 已采纳 | 2026-09-18 |

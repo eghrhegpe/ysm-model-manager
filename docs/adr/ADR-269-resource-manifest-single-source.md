@@ -1,6 +1,6 @@
 # ADR-269：资源清单单一事实源化：mcmeta 四份手抄收敛 + pack provenance 维度
 
-- **状态**：📝 提议中（Proposed）— 灵感风暴取证确立的方向草案，待人类首席架构师拍板后置 ✅ 已采纳
+- **状态**：🔄 部分采纳 — D1（mcmeta 形状单一事实源）已落地：B1 canonical schema + B2 派生守卫门禁 `check-resource-manifest.ts`；D2（pack provenance）待评估排期（价值取决于第三方 pack 分发场景，人类首席架构师已确认推进方向，具体切片待拍板）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理

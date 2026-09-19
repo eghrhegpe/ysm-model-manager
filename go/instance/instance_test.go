@@ -526,6 +526,49 @@ func TestBuildSyncItems_DirEntrySizeIsContentTotal(t *testing.T) {
 	}
 }
 
+// TestBuildSyncItems_DirEntrySizeFallsBackWhenNoChildren：Extra 分支的目录条目走的是
+// 实例侧路径，而 buildDirLevelChildren 以 global 侧 Stat 为门——镜像缺失时 children 为空，
+// 不能照抄 0（否则实际存在、有内容的夹在同步页显示为空）。回退 fsutil.DirSize 对实际
+// 存在一侧递归求和。
+func TestBuildSyncItems_DirEntrySizeFallsBackWhenNoChildren(t *testing.T) {
+	sub := registry.SubDirMap("ysm")
+	if sub == "" {
+		t.Skip("ysm 无 InstanceDir 配置，跳过")
+	}
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
+
+	// packExtra 只存在于实例侧（Extra 条目，global 侧无镜像 → children 为 nil）
+	instPack := filepath.Join(instDir, "packExtra")
+	if err := os.MkdirAll(instPack, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(instPack, "x.ysm"), make([]byte, 111), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+
+	found := false
+	for _, it := range items {
+		if it.Name != "packExtra" {
+			continue
+		}
+		found = true
+		if !it.IsDir {
+			t.Fatalf("packExtra 应为目录条目: %+v", it)
+		}
+		if it.Size != 111 {
+			t.Fatalf("packExtra 的 Size 应回退为实例侧内容总量 111，实际 %d", it.Size)
+		}
+	}
+	if !found {
+		t.Fatalf("未找到 packExtra: %+v", items)
+	}
+}
+
 // TestBuildSyncItems_DirLevelMissingHoldsStatus：Missing 文件夹保持 missing 状态（整体缺失，
 // 非部分差异，不降级 diverged），且从仓库侧填充 children 展示待推清单（仓库是权威源）
 func TestBuildSyncItems_DirLevelNoChildrenForMissing(t *testing.T) {

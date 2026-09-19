@@ -243,10 +243,25 @@ func (c *rtypeCtx) appendOneItem(typeItems *[]types.ResourceSyncItem, p string, 
 // 实测 600 字节的夹报 0、装着 206 MB 的模型夹在同步页显示 4.0 KB，纯属误导。
 // 总量无需额外 IO：buildDirLevelChildren 已算出子项清单（DiffFolderContents 注释明确
 // synced 条目含在结果中，供前端全量展示），求和即真实内容总量。
-// 空夹 / 子项取不到（夹在磁盘上不存在）→ 0，交由前端 `size > 0` 守卫留白，不猜。
+// 空夹 → 0，交由前端 `size > 0` 守卫留白，不猜。
+// 子项清单取不到时（children 为空但夹在磁盘上真实存在，如 Extra 分支的实例侧路径——
+// buildDirLevelChildren 以 global 侧 Stat 为门，镜像缺失即返回 nil）不能照抄 0，
+// 否则「实际存在、有几百 MB 内容的夹」被误报为空。此时回退 fsutil.DirSize 对实际
+// 存在的一侧递归求和（DirSize 内部 Stat 失败才返回 0，口径与注释一致）。
 func entrySize(isDirEntry bool, p string, children []types.ResourceSyncItem) int64 {
 	if !isDirEntry {
 		return fsutil.FileSize(p)
+	}
+	if len(children) == 0 {
+		// 仅当夹真实存在才回退求和；不存在时 DirSize 也返回 0，直接委托即可
+		if _, err := os.Stat(p); err != nil {
+			return 0
+		}
+		total, err := fsutil.DirSize(p)
+		if err != nil {
+			return 0
+		}
+		return total
 	}
 	var total int64
 	for i := range children {
@@ -450,9 +465,14 @@ func treeChildren(node *nestTreeNode, baseRel, globalDir, instDir, rtype string)
 			out = append(out, *c.leaf)
 			continue
 		}
-		// 容器：递归构建 children，聚合状态
+		// 容器：递归构建 children
 		childRel := joinRel(baseRel, k)
 		children := treeChildren(c, childRel, globalDir, instDir, rtype)
+		// 混合夹的目录 marker（其 Path 与容器同路径）先吸收再聚合——保证 marker 直挂
+		// 文件的状态参与容器聚合，否则散文件异常（如 global 侧 Missing）时容器仍显示
+		// Synced，容器级 push/pull 决策漏掉该文件。吸收判定不依赖 containerPath
+		// （containerPath 依赖 status，status 依赖吸收，倒置会死锁），改按两侧候选根匹配。
+		children = absorbSelfMarker(children, childRel, globalDir, instDir)
 		status := aggregateStatus(children)
 		icon := "📁"
 		// 容器状态只可能是 synced/diverged/optional（aggregateStatus 聚合结果），无 missing；
@@ -463,8 +483,6 @@ func treeChildren(node *nestTreeNode, baseRel, globalDir, instDir, rtype string)
 		// 容器绝对路径：按聚合 status 选根——optional(可拉取) 源在实例侧，其余(可推送/同步) 源在
 		// 全局侧。作为前端展开 key 与容器级 push/pull 的 data-path；避免混合夹锁错源侧
 		containerPath := dirLevelContainerPath(status, childRel, globalDir, instDir)
-		// 混合夹的目录 marker（其 Path == containerPath）不吐行，直接文件并入容器
-		children = absorbSelfMarker(children, containerPath)
 		// Type 必填：前端 applyFilter 按 i.type === 选中类型过滤，容器若缺 Type(=空串)
 		// 会被整体丢弃，导致整棵嵌套子树消失（嵌套1→嵌套2→动力臂 不显示的根因）
 		out = append(out, types.ResourceSyncItem{
@@ -490,20 +508,42 @@ func treeChildren(node *nestTreeNode, baseRel, globalDir, instDir, rtype string)
 //
 // 处置：marker 行不吐，把它的**直接子文件**（Name 不含 "/"）并入容器；子夹内的文件已由各子夹
 // 节点负责展示（marker 的 children 是 buildDirLevelChildren 的递归 RelPath 列表，含 "/" 的
-// 属于子夹），上提会同一批文件列两遍。判定用 Path 相等：子夹下的叶子路径必然更深，不会误伤。
-func absorbSelfMarker(children []types.ResourceSyncItem, containerPath string) []types.ResourceSyncItem {
+// 属于子夹），上提会同一批文件列两遍。
+//
+// 判定：marker 的 Path 是「两侧候选根之一 + 容器相对路径」——status 尚未聚合（吸收必须先于
+// 聚合，否则 marker 子文件状态不参与容器状态），故不能经 dirLevelContainerPath 反推，改为
+// global/inst 两根各拼一次候选，命中即认。子夹下的叶子路径必然更深，不会误伤。
+// 另：marker 必须真有直挂子文件可并才吸收——Path 恰好等于候选根且无 Children 的行是
+// nestDirLevelTree 同段防御的 __self 叶子（真实文件条目），静默丢弃 = 显示数据丢失，原样保留。
+func absorbSelfMarker(children []types.ResourceSyncItem, childRel, globalDir, instDir string) []types.ResourceSyncItem {
+	sep := string(filepath.Separator)
+	relPath := strings.ReplaceAll(childRel, "/", sep)
+	markerPath := filepath.Join(globalDir, relPath)
+	instMarkerPath := filepath.Join(instDir, relPath)
+	// 预判是否存在 marker：无则原样返回，免掉常见路径的整表分配+拷贝
+	has := false
+	for i := range children {
+		ch := children[i]
+		if (ch.Path == markerPath || ch.Path == instMarkerPath) && len(ch.Children) > 0 {
+			has = true
+			break
+		}
+	}
+	if !has {
+		return children
+	}
 	merged := make([]types.ResourceSyncItem, 0, len(children))
 	for i := range children {
 		ch := children[i]
-		if ch.Path != containerPath {
-			merged = append(merged, ch)
+		if (ch.Path == markerPath || ch.Path == instMarkerPath) && len(ch.Children) > 0 {
+			for j := range ch.Children {
+				if direct := ch.Children[j]; !strings.Contains(direct.Name, "/") {
+					merged = append(merged, direct)
+				}
+			}
 			continue
 		}
-		for j := range ch.Children {
-			if direct := ch.Children[j]; !strings.Contains(direct.Name, "/") {
-				merged = append(merged, direct)
-			}
-		}
+		merged = append(merged, ch)
 	}
 	return merged
 }

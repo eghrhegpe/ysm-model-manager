@@ -198,6 +198,31 @@ interface RecycleShell {
   cleanupActions: { current: (() => void) | null };
 }
 
+/** 清理解除上一次的回收站条目按钮绑定（置空 current） */
+function clearCleanup(shell: RecycleShell): void {
+  if (shell.cleanupActions.current) {
+    shell.cleanupActions.current();
+    shell.cleanupActions.current = null;
+  }
+}
+
+/** 空列表渲染 */
+function renderEmptyRecycleList(list: HTMLElement, count: HTMLElement | null, t: TFn): void {
+  list.innerHTML = "";
+  if (count) count.textContent = t("recycle.emptyState");
+}
+
+/** 读取失败：错误行渲染（含 UI_ICONS.error / esc / friendlyError 兜底文案） */
+function renderRecycleError(
+  list: HTMLElement,
+  count: HTMLElement | null,
+  e: unknown,
+  t: TFn,
+): void {
+  list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--status-error);font-size:var(--fs-sm)">${UI_ICONS.error} ${esc(friendlyError(e, t("recycle.loadFailed")))}</div>`;
+  if (count) count.textContent = t("common.loadFailed");
+}
+
 function buildLoadRecycleBin(
   root: ShadowRoot,
   loadCtx: { getCurrentType: GetCurrentTypeFn; guard: LoadGuard },
@@ -220,12 +245,8 @@ function buildLoadRecycleBin(
       if (guard.stale(gen)) return;
       const entries = (allEntries as RecycleBinEntry[]).filter((e) => e.Path);
       if (!entries.length) {
-        if (shell.cleanupActions.current) {
-          shell.cleanupActions.current();
-          shell.cleanupActions.current = null;
-        }
-        list.innerHTML = "";
-        if (count) count.textContent = t("recycle.emptyState");
+        clearCleanup(shell);
+        renderEmptyRecycleList(list, count, t);
         return;
       }
       // ADR-269 D3④：图标同步派生自 resource_types.json（typeIconOf），废 Go RPC 旁路
@@ -244,12 +265,8 @@ function buildLoadRecycleBin(
       });
     } catch (e) {
       if (guard.stale(gen)) return;
-      if (shell.cleanupActions.current) {
-        shell.cleanupActions.current();
-        shell.cleanupActions.current = null;
-      }
-      list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--status-error);font-size:var(--fs-sm)">${UI_ICONS.error} ${esc(friendlyError(e, t("recycle.loadFailed")))}</div>`;
-      if (count) count.textContent = t("common.loadFailed");
+      clearCleanup(shell);
+      renderRecycleError(list, count, e, t);
     }
   };
 }

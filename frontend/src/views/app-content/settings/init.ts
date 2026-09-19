@@ -6,7 +6,7 @@
 import { getFsaAuthState, rescanFsaRoot, selectLocalRepo } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
-import { t } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { initVersionUpdater } from "@/features/maintenance/version-updater.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
@@ -27,6 +27,61 @@ import { initWorkerPrefs } from "./worker-prefs.ts";
 // 高级面板折叠动画时长（ms）——与 CSS 过渡时长一致（魔法数值收敛）
 const ADV_COLLAPSE_MS = 200;
 
+// 镜像源 / 链接模式提示条 key（与 <*-hint-<key>> 显隐、i18n 名映射一致）
+const MIRROR_KEYS = ["direct", "jsdelivr", "githubapi"] as const;
+const LINK_MODE_KEYS = ["copy", "hardlink", "symlink"] as const;
+
+// 镜像名 → i18n 键（替代三元链）
+const MIRROR_I18N_KEY: Record<string, LocaleKey> = {
+  jsdelivr: "settings.mirror.nameJsdelivr",
+  githubapi: "settings.mirror.nameGithubapi",
+  direct: "settings.mirror.nameDirect",
+};
+
+/** 切换一组提示条显隐：仅 activeKey 对应的 <prefix>-<key> 元素显示，其余隐藏 */
+function applyHintVisibility(
+  root: ShadowRoot,
+  prefix: string,
+  activeKey: string,
+  keys: readonly string[],
+): void {
+  for (const k of keys) {
+    const el = root.getElementById(`${prefix}-${k}`);
+    if (el) el.style.display = k === activeKey ? "block" : "none";
+  }
+}
+
+/** 镜像提示显隐封装 */
+function applyMirrorHints(root: ShadowRoot, activeKey: string): void {
+  applyHintVisibility(root, "mirror-hint", activeKey, MIRROR_KEYS);
+}
+
+/** 镜像名 i18n 文案（默认 direct） */
+function mirrorName(val: string): string {
+  return t(MIRROR_I18N_KEY[val] ?? "settings.mirror.nameDirect");
+}
+
+/** 镜像源切换：写回 Go 端 + success toast；失败走 toastErrorLocal；并切换提示显隐 */
+async function onMirrorChange(
+  root: ShadowRoot,
+  mirrorSelect: HTMLSelectElement,
+  toastErrorLocal: typeof toastError,
+): Promise<void> {
+  const val = mirrorSelect.value;
+  try {
+    const { SetDownloadMirror } = await backendGetApp();
+    await SetDownloadMirror(val);
+    bus.emit("toast:show", {
+      msg: t("settings.mirror.switched", { name: mirrorName(val) }),
+      duration: TOAST_MS.success,
+      type: "success",
+    });
+  } catch (e) {
+    toastErrorLocal(e);
+  }
+  applyMirrorHints(root, val || "direct");
+}
+
 function stgBindMirrorSelect(
   root: ShadowRoot,
   cfgLocal: SettingsCfg,
@@ -34,39 +89,12 @@ function stgBindMirrorSelect(
 ): void {
   const savedMirror = cfgLocal.mirror || "";
   const mirrorSelect = root.getElementById("set-mirror") as HTMLSelectElement | null;
-  if (mirrorSelect) {
-    mirrorSelect.value = savedMirror;
-    const initMirrorKey = savedMirror || "direct";
-    ["direct", "jsdelivr", "githubapi"].forEach((m) => {
-      const el = root.getElementById(`mirror-hint-${m}`);
-      if (el) el.style.display = m === initMirrorKey ? "block" : "none";
-    });
-    mirrorSelect.addEventListener("change", async () => {
-      const val = mirrorSelect.value;
-      try {
-        const { SetDownloadMirror } = await backendGetApp();
-        await SetDownloadMirror(val);
-        bus.emit("toast:show", {
-          msg: t("settings.mirror.switched", {
-            name:
-              val === "jsdelivr"
-                ? t("settings.mirror.nameJsdelivr")
-                : val === "githubapi"
-                  ? t("settings.mirror.nameGithubapi")
-                  : t("settings.mirror.nameDirect"),
-          }),
-          duration: TOAST_MS.success,
-          type: "success",
-        });
-      } catch (e) {
-        toastErrorLocal(e);
-      }
-      ["direct", "jsdelivr", "githubapi"].forEach((m) => {
-        const el = root.getElementById(`mirror-hint-${m}`);
-        if (el) el.style.display = m === (val || "direct") ? "block" : "none";
-      });
-    });
-  }
+  if (!mirrorSelect) return;
+  mirrorSelect.value = savedMirror;
+  applyMirrorHints(root, savedMirror || "direct");
+  mirrorSelect.addEventListener("change", async () => {
+    await onMirrorChange(root, mirrorSelect, toastErrorLocal);
+  });
 }
 
 function stgBindUpdateInterval(
@@ -96,6 +124,94 @@ function stgBindUpdateInterval(
   }
 }
 
+/** 整合包（relink 扫描只需 Name / Exists 两字段） */
+interface RelinkInstance {
+  Name: string;
+  Exists: boolean;
+}
+
+/** 单整合包重链接；成功返回其资源数，失败 logWarn 第三参直传 error 并返回 {count:0,failed:1} */
+async function relinkOneInstance(
+  ins: RelinkInstance,
+  relink: (name: string) => Promise<number>,
+): Promise<{ count: number; failed: number }> {
+  try {
+    return { count: await relink(ins.Name), failed: 0 };
+  } catch (e) {
+    // code_review 3413288be 段 B #2（P3）：第三参直传 error（同文件 L217/237
+    // 约定形状）——原 { name, err } 对象包装绕过 log 层错误格式化/栈保留，
+    // name 并入 message
+    logWarn("community", `重新链接失败: ${ins.Name}`, e);
+    return { count: 0, failed: 1 };
+  }
+}
+
+/** 按 total/failed 汇总 relink 结果 toast（成功 / 部分失败 / 空列表） */
+function emitRelinkToast(total: number, failed: number): void {
+  if (total === 0) {
+    bus.emit("toast:show", {
+      msg: failed > 0 ? `⚠️ ${t("settings.relinkFailed", { failed })}` : t("settings.relinkNone"),
+      duration: TOAST_MS.normal,
+      type: failed > 0 ? "error" : "info",
+    });
+    return;
+  }
+  bus.emit("toast:show", {
+    msg:
+      failed > 0
+        ? t("settings.relinkDonePartial", { total, failed })
+        : t("settings.relinkDone", { total }),
+    duration: TOAST_MS.normal,
+    type: "success",
+  });
+}
+
+/**
+ * 重链接所有整合包资源：busy 守卫 → LoadAppConfig → 空 mcRoot 提示 → 遍历实例
+ * RelinkAllInstanceResources → 汇总 toast。relink 单实例的 error 第三参直传约定见 relinkOneInstance。
+ */
+async function relinkAllInstances(
+  isBusyLocal: typeof isBusy,
+  setBusyLocal: typeof setBusy,
+): Promise<void> {
+  if (isBusyLocal()) return;
+  setBusyLocal(true);
+  let failed = 0;
+  try {
+    const { LoadAppConfig, ListVersionInstances, RelinkAllInstanceResources } =
+      await backendGetApp();
+    const cfg2 = await LoadAppConfig();
+    const mcRoot = cfg2.mcRoot || "";
+    if (!mcRoot) {
+      bus.emit("toast:show", {
+        msg: t("settings.setGameRootFirst"),
+        duration: TOAST_MS.info,
+        type: "warn",
+      });
+      return;
+    }
+    const instances = ((await ListVersionInstances(mcRoot)) || []).filter(
+      (ins) => ins.Exists && ins.Name,
+    );
+    let total = 0;
+    for (const ins of instances) {
+      const res = await relinkOneInstance(ins, RelinkAllInstanceResources);
+      total += res.count;
+      failed += res.failed;
+    }
+    bus.emit("stats:refresh");
+    emitRelinkToast(total, failed);
+  } catch (e) {
+    bus.emit("toast:show", {
+      msg: `❌ ${friendlyError(e)}`,
+      duration: TOAST_MS.long,
+      type: "error",
+    });
+  } finally {
+    setBusyLocal(false);
+  }
+}
+
 function stgBindLinkMode(
   root: ShadowRoot,
   cfgLocal: SettingsCfg,
@@ -104,81 +220,14 @@ function stgBindLinkMode(
   toastErrorLocal: typeof toastError,
 ): void {
   const linkMode = cfgLocal.linkMode || "copy";
-
-  const updateLinkHint = (mode: string): void => {
-    ["copy", "hardlink", "symlink"].forEach((m) => {
-      const el = root.getElementById(`lm-hint-${m}`);
-      if (el) el.style.display = m === mode ? "block" : "none";
-    });
-  };
-  updateLinkHint(linkMode);
-
-  const doRelink = async (): Promise<void> => {
-    if (isBusyLocal()) return;
-    setBusyLocal(true);
-    let failed = 0;
-    try {
-      const { LoadAppConfig, ListVersionInstances, RelinkAllInstanceResources } =
-        await backendGetApp();
-      const cfg2 = await LoadAppConfig();
-      const mcRoot = cfg2.mcRoot || "";
-      if (!mcRoot) {
-        bus.emit("toast:show", {
-          msg: t("settings.setGameRootFirst"),
-          duration: TOAST_MS.info,
-          type: "warn",
-        });
-        return;
-      }
-      const instances = (await ListVersionInstances(mcRoot)) || [];
-      let total = 0;
-      for (const ins of instances) {
-        if (!ins.Exists || !ins.Name) continue;
-        try {
-          total += await RelinkAllInstanceResources(ins.Name);
-        } catch (e) {
-          failed++;
-          // code_review 3413288be 段 B #2（P3）：第三参直传 error（同文件 L217/237
-          // 约定形状）——原 { name, err } 对象包装绕过 log 层错误格式化/栈保留，
-          // name 并入 message
-          logWarn("community", `重新链接失败: ${ins.Name}`, e);
-        }
-      }
-      bus.emit("stats:refresh");
-      if (total === 0) {
-        bus.emit("toast:show", {
-          msg:
-            failed > 0 ? `⚠️ ${t("settings.relinkFailed", { failed })}` : t("settings.relinkNone"),
-          duration: TOAST_MS.normal,
-          type: failed > 0 ? "error" : "info",
-        });
-        return;
-      }
-      bus.emit("toast:show", {
-        msg:
-          failed > 0
-            ? t("settings.relinkDonePartial", { total, failed })
-            : t("settings.relinkDone", { total }),
-        duration: TOAST_MS.normal,
-        type: "success",
-      });
-    } catch (e) {
-      bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e)}`,
-        duration: TOAST_MS.long,
-        type: "error",
-      });
-    } finally {
-      setBusyLocal(false);
-    }
-  };
+  applyHintVisibility(root, "lm-hint", linkMode, LINK_MODE_KEYS);
 
   const linkSelect = root.getElementById("set-link-mode") as HTMLSelectElement | null;
   if (linkSelect) {
     linkSelect.value = linkMode;
     linkSelect.addEventListener("change", async () => {
       const val = linkSelect.value;
-      updateLinkHint(val);
+      applyHintVisibility(root, "lm-hint", val, LINK_MODE_KEYS);
       try {
         const { SaveAppConfig, SetLinkMode } = await backendGetApp();
         const theme = safeGet("theme") || "dark";
@@ -196,7 +245,7 @@ function stgBindLinkMode(
           duration: TOAST_MS.success,
           type: "success",
         });
-        await doRelink();
+        await relinkAllInstances(isBusyLocal, setBusyLocal);
       } catch (e) {
         toastErrorLocal(e);
       }
@@ -205,7 +254,7 @@ function stgBindLinkMode(
 
   const relinkBtn = root.getElementById("set-relink");
   if (relinkBtn) {
-    relinkBtn.addEventListener("click", doRelink);
+    relinkBtn.addEventListener("click", () => relinkAllInstances(isBusyLocal, setBusyLocal));
   }
 }
 
@@ -240,51 +289,66 @@ async function stgBindLangSwitch(
   }
 }
 
+/** FSA 授权态自愈：读 getFsaAuthState → granted 自动重扫 / revoked 提示；失败静默 */
+async function applyFsaState(
+  statusEl: Element | null,
+  getFsaAuthStateFn: typeof getFsaAuthState,
+  rescanFsaRootFn: typeof rescanFsaRoot,
+): Promise<void> {
+  try {
+    const state = await getFsaAuthStateFn();
+    if (state === "revoked") {
+      if (statusEl) statusEl.textContent = t("settings.webRepo.revoked");
+    } else if (state === "granted") {
+      const r = await rescanFsaRootFn();
+      if (statusEl) {
+        statusEl.textContent = t("settings.webRepo.restored").replace(
+          "{imported}",
+          String(r.imported),
+        );
+      }
+      bus.emit("repo:rtype-changed", RESOURCE_TYPES.YSM);
+    }
+  } catch {
+    // 自愈失败静默
+  }
+}
+
+/** 网页版点击授权：能力检测 → 禁用按钮 → selectLocalRepo → 文案 → bus → finally 恢复 */
+async function onWebRepoAuthClick(
+  btn: HTMLButtonElement,
+  statusEl: Element | null,
+  selectLocalRepoFn: typeof selectLocalRepo,
+): Promise<void> {
+  if (typeof (window as { showDirectoryPicker?: unknown }).showDirectoryPicker !== "function") {
+    if (statusEl) statusEl.textContent = t("settings.webRepo.unsupported");
+    return;
+  }
+  btn.disabled = true;
+  if (statusEl) statusEl.textContent = t("settings.webRepo.scanning");
+  try {
+    const r = await selectLocalRepoFn();
+    if (statusEl) {
+      statusEl.textContent = t("settings.webRepo.done")
+        .replace("{dir}", r.dir)
+        .replace("{imported}", String(r.imported))
+        .replace("{failed}", String(r.failed));
+    }
+    bus.emit("repo:rtype-changed", RESOURCE_TYPES.YSM);
+  } catch (e) {
+    if (statusEl) statusEl.textContent = friendlyError(e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function stgBindWebFsa(root: ShadowRoot, isWebPlatformFn: typeof isWebPlatform): void {
   const webRepoBtn = root.getElementById("web-repo-auth-btn") as HTMLButtonElement | null;
   const webRepoStatus = root.getElementById("web-repo-auth-status");
   if (webRepoBtn && isWebPlatformFn()) {
-    const applyFsaState = async (): Promise<void> => {
-      try {
-        const state = await getFsaAuthState();
-        if (state === "revoked") {
-          if (webRepoStatus) webRepoStatus.textContent = t("settings.webRepo.revoked");
-        } else if (state === "granted") {
-          const r = await rescanFsaRoot();
-          if (webRepoStatus) {
-            webRepoStatus.textContent = t("settings.webRepo.restored").replace(
-              "{imported}",
-              String(r.imported),
-            );
-          }
-          bus.emit("repo:rtype-changed", RESOURCE_TYPES.YSM);
-        }
-      } catch {
-        // 自愈失败静默
-      }
-    };
-    void applyFsaState();
-    webRepoBtn.addEventListener("click", async () => {
-      if (typeof (window as { showDirectoryPicker?: unknown }).showDirectoryPicker !== "function") {
-        if (webRepoStatus) webRepoStatus.textContent = t("settings.webRepo.unsupported");
-        return;
-      }
-      webRepoBtn.disabled = true;
-      if (webRepoStatus) webRepoStatus.textContent = t("settings.webRepo.scanning");
-      try {
-        const r = await selectLocalRepo();
-        if (webRepoStatus) {
-          webRepoStatus.textContent = t("settings.webRepo.done")
-            .replace("{dir}", r.dir)
-            .replace("{imported}", String(r.imported))
-            .replace("{failed}", String(r.failed));
-        }
-        bus.emit("repo:rtype-changed", RESOURCE_TYPES.YSM);
-      } catch (e) {
-        if (webRepoStatus) webRepoStatus.textContent = friendlyError(e);
-      } finally {
-        webRepoBtn.disabled = false;
-      }
+    void applyFsaState(webRepoStatus, getFsaAuthState, rescanFsaRoot);
+    webRepoBtn.addEventListener("click", () => {
+      void onWebRepoAuthClick(webRepoBtn, webRepoStatus, selectLocalRepo);
     });
   }
 }

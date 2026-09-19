@@ -142,11 +142,11 @@ MMD 与 YSM 截图面板同构（6 角度按钮 + 截图副作用），共享 `S
 
 ### select 分支（renderMenu，[doc:adr-126-p5-c] 交互控件受控化）
 
-`PreviewMenuNodeKind` 新增 `"select"`：下拉选择控件，`control: PreviewControlSpec`（bind 到 PreviewStatePath）——renderMenu select 分支读写状态层，组件选择等交互控件不再手写 DOM 闭包。
+`PreviewMenuNodeKind` 新增 `"select"`：下拉选择控件，`control: PreviewControlSpec`（get/set 闭包读写状态层，值经 `nodeControlToView` 投影成 `CapControlView` 供 cap 栈渲染）——组件选择等交互控件走闭包，不再 bind 全局路径（`control.bind` 死字段已于 2026-09 拆除，全仓零生产者）。
 
 ### YSM 模型面板 schema 化（[doc:adr-126-p5-c]）
 
-`buildYsmModelSchema(ctx, snapshot, onComponentChange)`（skeleton-fill-panel.ts）：组件选择 select（bind `ui.activeComponent`）+ 统计 field + 纹理 row，纯数据零 DOM。组件切换走 `ui.activeComponent`（preview-state 会话态）+ `showModelGroup` 副作用（views 注册时注入）。**fill3DPanel 命令式 DOM 构建被声明式 schema 取代**（fillYsmModelPanel/fill3DPanel 保留兼容但新路径走 schema）。
+`buildYsmModelSchema(ctx, snapshot, onComponentChange)`（skeleton-fill-panel.ts）：组件选择 select（get/set 闭包读写 `ui.activeComponent` 会话态）+ 统计 field + 纹理 row，纯数据零 DOM。组件切换走 `ui.activeComponent`（preview-state 会话态）+ `showModelGroup` 副作用（views 注册时注入）。**fill3DPanel 命令式 DOM 构建被声明式 schema 取代**（fillYsmModelPanel/fill3DPanel 保留兼容但新路径走 schema）。
 
 ## 对外 API / 入口
 

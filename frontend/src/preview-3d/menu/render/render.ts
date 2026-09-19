@@ -122,6 +122,8 @@ ${MENU_CARD_CSS}
  * 不依赖样式书写顺序（同为单类时后者胜，曾把激活色吃掉） */
 .rm-radio-btn.row-radio-active { color: var(--accent, #7c83ff); }
 .rm-inline-btn { flex-shrink: 0; padding: 1px 5px; font-size:var(--fs-base); line-height: 1.2; }
+/* 行尾元素右对齐公共类（P1 抽类收尾：headerToggle/badge/chevron 三处 marginLeft:auto 归一）*/
+.rm-ml-auto { margin-left: auto; }
 /* [行内按钮归属] .cc-btn 族由 menu-styles|MENU_BTN_CSS 单源引入（radio/badge 也用），
  * 不再只搭 cap 栈 ensureCapStyles 便车——纯 row 面板（roles 角色列表）此前拿不到规则，
  * <button> 回落 UA 默认：不透明白底 + 2px 黑框（实测 background=rgb(240,240,240)）。 */
@@ -455,7 +457,7 @@ function rmAppendDynamicRow(
       value: ht.value,
       onChange: (v: boolean) => ht.onChange(v),
     });
-    if (!node.badge && !node.action) tg.style.marginLeft = "auto";
+    if (!node.badge && !node.action) tg.classList.add("rm-ml-auto");
     row.appendChild(tg);
   }
   if (node.badge) {
@@ -464,8 +466,7 @@ function rmAppendDynamicRow(
     badge.dataset.testid = "row-badge";
     applyIcon(badge, node.badge.icon);
     badge.title = node.badge.title;
-    badge.className = "cc-btn cc-btn-ghost rm-inline-btn";
-    badge.style.marginLeft = "auto";
+    badge.className = "cc-btn cc-btn-ghost rm-inline-btn rm-ml-auto";
     badge.onclick = (ev): void => {
       ev.stopPropagation();
       node.badge?.onClick();
@@ -479,8 +480,7 @@ function rmAppendDynamicRow(
     const chev = document.createElement("span");
     chev.textContent = ">";
     chev.dataset.testid = "row-chevron";
-    chev.className = "cm-row-chev";
-    chev.style.marginLeft = "auto";
+    chev.className = "cm-row-chev rm-ml-auto";
     row.appendChild(chev);
   }
   rmBindActionClick(row, node.action, actionCtx);

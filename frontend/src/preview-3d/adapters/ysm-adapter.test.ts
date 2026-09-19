@@ -16,7 +16,7 @@ import type { AnimationClip } from "@/utils/animation/animation.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
-import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import type {
   CameraControlScene,
   GroupedScene,

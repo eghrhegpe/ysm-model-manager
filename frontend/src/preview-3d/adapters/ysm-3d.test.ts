@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { YsmModel, YsmContentHandle } from "@/preview-3d/infra/content-bridges.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";

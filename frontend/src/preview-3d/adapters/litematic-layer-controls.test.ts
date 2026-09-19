@@ -10,7 +10,7 @@ import { zhCN } from "@/locales/zh-CN.ts";
 import { buildLitematicScene, LITEMATIC_SLICE_SCHEMA_ID } from "./litematic-adapter.ts";
 import { getSchema } from "@/preview-3d/infra/schema-registry.ts";
 import { previewSnapshot } from "@/preview-3d/state/preview-state.ts";
-import { renderMenu, renderPreviewPanel, type PreviewMenuRouters } from "@/preview-3d/menu/core.ts";
+import { renderMenu, renderPreviewPanel, type PreviewMenuRouters } from "@/preview-3d/menu/engine/core.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";

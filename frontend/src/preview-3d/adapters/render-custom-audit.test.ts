@@ -17,7 +17,7 @@ import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SANCTIONED_PROCEDURAL_PANELS } from "@/preview-3d/menu/sanctioned.ts";
+import { SANCTIONED_PROCEDURAL_PANELS } from "@/preview-3d/menu/engine/sanctioned.ts";
 
 /** frontend/src 根（本文件位于 src/preview-3d/adapters/） */
 const SRC_ROOT = join(fileURLToPath(new URL("../../..", import.meta.url)), "src");

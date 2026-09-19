@@ -15,6 +15,23 @@ import {
   type SchemaBuilder,
   unregisterSchema,
 } from "@/preview-3d/infra/schema-registry.ts";
+import { buildEnvSchema, disposeEnvSubscriptions } from "@/preview-3d/menu/panels/env.ts";
+import { buildRolesSchema, roleBaseName } from "@/preview-3d/menu/panels/roles.ts";
+import { motionDetailView } from "@/preview-3d/menu/panels/roles-views.ts";
+import {
+  buildCameraSchema,
+  buildLightingSchema,
+  buildPostprocessingSchema,
+  buildSettingsSchema,
+  buildShadowSchema,
+} from "@/preview-3d/menu/panels/settings.ts";
+import { renderCapControls } from "@/preview-3d/menu/render/cap-controls.ts";
+import {
+  clearFolderCollapsedState,
+  disposeCustomCleanups,
+  renderAdapterPanelContent,
+  renderMenu,
+} from "@/preview-3d/menu/render/render.ts";
 import type {
   PreviewActionMenuCtx,
   PreviewMenuCtx,
@@ -32,30 +49,13 @@ import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-st
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { applyIcon, resolveIcon } from "@/utils/icon/resolve.ts";
-import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
-import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
-import {
-  clearFolderCollapsedState,
-  disposeCustomCleanups,
-  renderAdapterPanelContent,
-  renderMenu,
-} from "./render.ts";
-import { buildRolesSchema, roleBaseName } from "./roles.ts";
-import { motionDetailView } from "./roles-views.ts";
-import {
-  buildCameraSchema,
-  buildLightingSchema,
-  buildPostprocessingSchema,
-  buildSettingsSchema,
-  buildShadowSchema,
-} from "./settings.ts";
 
+export { renderMenu } from "@/preview-3d/menu/render/render.ts";
 // [ADR-169] PreviewMenuCtx 已下沉 node-types.ts（类型叶）——断 core ⇄ env/roles/switch/settings
 // 纯 type 环（子模块原 type import 本文件 ctx，而本文件值 import 它们）。原位 re-export 保公共面，
 // 外部消费者（mount-preview-core / items.test 等）的 import 语句零改动。
 export type { PreviewMenuCtx } from "@/preview-3d/menu/schema/node-types.ts";
-export { renderMenu } from "./render.ts";
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 /** 通用控件渲染器：将控件定义渲染为 DOM 行，替代手写 fill* 函数 */
 export { renderCapControls, roleBaseName };

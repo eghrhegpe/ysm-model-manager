@@ -6,7 +6,7 @@ import { collectMenuGraph, collectNodePredicates } from "./menu-graph.ts";
 import type { MenuGraph, MenuGraphNode, RepresentativeSnapshot } from "./menu-graph.ts";
 import type { PreviewMenuRouters } from "./core.ts";
 import { buildPreviewMenuRouters } from "./core.ts";
-import { makeMenuCtx, mockMenuHandle } from "./menu-test-fixtures.ts";
+import { makeMenuCtx, mockMenuHandle } from "@/preview-3d/menu/menu-test-fixtures.ts";
 import { registerSchema, resetSchemas, listSchemas, getSchema } from "@/preview-3d/infra/schema-registry.ts";
 import { unregisterCorePanelSchemas } from "./core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";

@@ -6,7 +6,7 @@
 import type * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
-import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import { fitCameraToRoots } from "./camera-setup.ts";
 import { safeDispose } from "./safe-dispose.ts";
 import { sceneRegistry } from "./scene-registry.ts";

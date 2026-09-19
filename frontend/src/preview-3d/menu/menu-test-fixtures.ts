@@ -5,9 +5,9 @@
 // 变体差异（如 items 的 fakeCap getCap）经 overrides / 本地薄包装表达。
 import { vi } from "vitest";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+import type { PreviewMenuCtx } from "@/preview-3d/menu/engine/core.ts";
 import type { SlideMenuHandle } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
-import type { PreviewMenuCtx } from "./core.ts";
 
 /** PreviewMenuCtx 全字段 stub：能力全缺（getCap → null）、桥全 vi.fn()。
  *  需要特定能力的测试经 overrides 注入（如 items 的 fakeCap）。 */

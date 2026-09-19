@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
-import { renderCapControls } from "@/preview-3d/menu/core.ts";
+import { renderCapControls } from "@/preview-3d/menu/engine/core.ts";
 
 // 工厂：构造 PreviewControlDef，简化用例书写
 const mk = (

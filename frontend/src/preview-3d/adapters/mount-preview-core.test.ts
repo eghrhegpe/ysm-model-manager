@@ -96,7 +96,7 @@ vi.mock("@/preview-3d/caps/scene-capability-registry.ts", () => ({
 }));
 
 // ---- 菜单壳 / 输入 / 焦点 / 视锥裁剪：桩 ----
-vi.mock("@/preview-3d/menu/core.ts", () => ({
+vi.mock("@/preview-3d/menu/engine/core.ts", () => ({
   mountPreviewRootMenu: vi.fn((_overlay: unknown, ctx: Record<string, unknown>) => {
     h.menuOpts = ctx;
     h.menuHandle = {

@@ -15,6 +15,7 @@ import type {
   SceneCapability,
 } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import { renderMenu } from "@/preview-3d/menu/render/render.ts";
 import type {
   PreviewActionMenuCtx,
   PreviewMenuCtx,
@@ -23,7 +24,6 @@ import type {
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import { setEnvState } from "@/preview-3d/state/env-state.ts";
-import { renderMenu } from "./render.ts";
 
 /**
  * 环境面板卡壳描述符（ADR-268）：只定义「有哪几张卡、卡的标题与展示序」——这是

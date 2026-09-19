@@ -17,7 +17,7 @@ import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import { resetSceneTextureBytes } from "@/preview-3d/infra/texture-bytes.ts";
 import { unloadModel } from "@/preview-3d/infra/unload-model.ts";
-import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { returnFocus } from "@/utils/dom/focus-restore.ts";

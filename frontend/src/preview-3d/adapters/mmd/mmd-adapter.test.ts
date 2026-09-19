@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 import { stubBlobUrls } from "@/test-utils/blob-urls.ts";

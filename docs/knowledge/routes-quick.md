@@ -998,7 +998,7 @@
 | 用 `file:line:kind` 键做增量判定 = **高噪声**：行位移被当新增（116 提交窗实测 322/330 = 97.6% 幻影，真新增候选仅 8）→ 必须走真行级 `--added-lines`（ADR-256，`scripts/token-shift-audit.ts` 可复现）；「同行替换同类」会因键相同被判存量（机制性盲区，本窗口实测 0 次） | `只减不增` | - |
 | 无 scope 的  扫磁盘全树 | `--baseline` | 判决域 ≠ 提交域（哪怕键设计没问题，也会把并行会话未提交的新债算到本提交头上） |
 | 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件 | - | - |
-| 跨类型追加走错适配器 | `frontend/src/preview-3d/menu/core.ts` | 必须经 switchExternal → openModel3DFullscreen(cooperate) |
+| 跨类型追加走错适配器 | `frontend/src/preview-3d/menu/engine/core.ts` | 必须经 switchExternal → openModel3DFullscreen(cooperate) |
 | 异步回调写入已卸载 DOM | `skeleton.ts` | 每个 await 后检查 container.isConnected |
 | 手动调用导致 T-pose 回归 | `vrm.humanoid.update()` | 只用 vrm.update(dt) |
 | 直接改 envState 对象字段（不经 setEnvState）→ 不派发回调，cap 渲染不更新；必须走 setEnvState | - | - |

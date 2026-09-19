@@ -26,12 +26,12 @@ import {
   buildLightingSchema,
   buildShadowSchema,
   buildPostprocessingSchema,
-} from "@/preview-3d/menu/settings.ts";
-import type { PreviewMenuCtx } from "@/preview-3d/menu/core.ts";
+} from "@/preview-3d/menu/panels/settings.ts";
+import type { PreviewMenuCtx } from "@/preview-3d/menu/engine/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
-import { renderMenu } from "@/preview-3d/menu/render.ts";
-import { capControlsToNodes } from "@/preview-3d/menu/cap-to-node.ts";
-import { collectVisiblePredicates } from "@/preview-3d/menu/cap-controls.ts";
+import { renderMenu } from "@/preview-3d/menu/render/render.ts";
+import { capControlsToNodes } from "@/preview-3d/menu/render/cap-to-node.ts";
+import { collectVisiblePredicates } from "@/preview-3d/menu/render/cap-controls.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
 import type { PreviewControlDef, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";

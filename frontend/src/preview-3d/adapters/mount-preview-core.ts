@@ -44,7 +44,7 @@ import {
   mountPreviewRootMenu,
   type PreviewMenuCtx,
   type PreviewMenuHandle,
-} from "@/preview-3d/menu/core.ts";
+} from "@/preview-3d/menu/engine/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import {
   componentsStyleSheet,

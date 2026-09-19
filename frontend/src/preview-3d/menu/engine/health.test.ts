@@ -23,7 +23,7 @@ import {
 import { getSchema, listSchemas, registerSchema, resetSchemas } from "@/preview-3d/infra/schema-registry.ts";
 import { previewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
-import { makeMenuCtx as makeCtx, mockMenuHandle as mockMenu } from "./menu-test-fixtures.ts";
+import { makeMenuCtx as makeCtx, mockMenuHandle as mockMenu } from "@/preview-3d/menu/menu-test-fixtures.ts";
 
 function mockPanelDeps() {
   return {

@@ -23,7 +23,7 @@ import type { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
 import type { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
 import type { PostprocessingLike } from "@/preview-3d/infra/postprocessing.ts";
 import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
-import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
+import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import { type ModelType, toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { applyPerfPreset, getPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 // [ADR-168] 状态层 cap 查询器注入：组合根 createAll 后注入 registry，断 preview-state→registry 运行时环

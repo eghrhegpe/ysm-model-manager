@@ -1,6 +1,6 @@
 // ===== renderMenu 新 kind 测试：field / button / row / sectionTitle =====
 import { describe, it, expect, beforeEach } from "vitest";
-import { renderMenu } from "./core.ts";
+import { renderMenu } from "@/preview-3d/menu/engine/core.ts";
 import {
   clearFolderCollapsedState,
   disposeCustomCleanups,
@@ -11,7 +11,7 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { previewSnapshot, setStateValue } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { SlideMenuHandle } from "@/preview-3d/menu/shell/slide-menu.ts";
-import { mockMenuHandle } from "./menu-test-fixtures.ts";
+import { mockMenuHandle } from "@/preview-3d/menu/menu-test-fixtures.ts";
 
 function makeDeps(): {
   makeRow: (def: never) => HTMLElement;

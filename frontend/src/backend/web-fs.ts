@@ -139,6 +139,86 @@ export async function scanWebModels(dir: string): Promise<ModelEntry[]> {
   return scanWebModelFilesInDir(normalized);
 }
 
+/** 抽出降复杂度/复用：文件行按「dir name 前缀」归组（scanWebModelGroups 内层大循环）。
+ *  组名按长度降序排——首次 startsWith 命中即最长匹配（P1 性能修复）；
+ *  保留孤儿文件 continue（无对应 dir key）与 fileRel 截取语义。 */
+function groupFilesByDir(
+  fileMetaRows: ReadonlyArray<[string, { size?: number }]>,
+  filePrefix: string,
+  sortedGroups: ReadonlyArray<string>,
+): Map<string, Array<[string, { size?: number }]>> {
+  // 文件行按「dir name 前缀」归组：文件 key = file:<type>/<name>/<rel>，
+  // name 可含多段路径（目录树），故以 dir name + "/" 为前缀匹配。
+  // 组名按长度降序排——首次 startsWith 命中即最长匹配，
+  // 避免逐组全量扫描（O(文件×组) → O(文件×log组)，P1 性能修复）
+  const filesByGroup = new Map<string, Array<[string, { size?: number }]>>();
+  for (const [fk, fv] of fileMetaRows) {
+    const rel = fk.slice(filePrefix.length);
+    let bestGroup = "";
+    for (const name of sortedGroups) {
+      if (rel.startsWith(`${name}/`)) {
+        bestGroup = name;
+        break;
+      }
+    }
+    if (!bestGroup) continue; // 孤儿文件（无对应 dir key）
+    const fileRel = rel.slice(bestGroup.length + 1);
+    const arr = filesByGroup.get(bestGroup);
+    if (arr) arr.push([fileRel, fv as { size?: number }]);
+    else filesByGroup.set(bestGroup, [[fileRel, fv as { size?: number }]]);
+  }
+  return filesByGroup;
+}
+
+/** 抽出降复杂度/复用：每个模型组收敛为一条主文件 ModelEntry（scanWebModelGroups 内层收敛块）。
+ *  主文件竞争 / 大小汇总 / Ext/subdir 计算语义原样保留；mainRank < MAIN_FILE_RANK_TYPE
+ *  时返回 null（原 continue → 调用方跳过该组）。 */
+function buildGroupEntry(
+  name: string,
+  meta: { name?: string; addedAt?: number } | undefined,
+  groupRows: Array<[string, { size?: number }]>,
+  root: string,
+): ModelEntry | null {
+  // 汇总该模型全部文件大小；Path/Name 指向主文件（含扩展名，与桌面
+  // scanner.go:136 Name=filepath.Base(p) 含扩展名、Ext=原扩展名一致——
+  // 否则 loader.ts 的 name.endsWith(ext) 过滤会恒失败使列表为空）。
+  // 主文件优先选 .ysm/.zip/.json，避免多文件模型误选首文件（如 a_tex.png）
+  // 导致解码失败；孤儿 dir key（文件被删）无主文件则跳过，避免 Path 以 / 结尾。
+  let size = 0;
+  let mainRel = "";
+  let mainRank = 0;
+  for (const [fileRel, f] of groupRows) {
+    size += f?.size ?? 0;
+    // 嵌套 rel（含 /，如 tex/face.png）不参与主文件竞争：主文件必须在模型组根层
+    // （对齐桌面目录模型：组根放 ysm.json/main.json，子目录为纹理/附属资源）
+    const rank = fileRel.includes("/") ? MAIN_FILE_RANK_NONE : mainFileRank(fileRel);
+    if (rank > mainRank) {
+      mainRank = rank;
+      mainRel = fileRel;
+    }
+  }
+  // 仅 .ysm / ysm.json 可作主文件（对齐桌面 IsYsmEntryJSON 白名单）；其余（如 a.json 动作文件）
+  // 不得当主文件，避免多文件模型误选导致预览解码失败
+  if (mainRank < MAIN_FILE_RANK_TYPE) return null;
+  // Ext 与桌面一致：小写化 + 无点号保护（lastIndexOf=-1 时 slice(-1) 会取 "E" 之类的字符）
+  const dot = mainRel.lastIndexOf(".");
+  const ext = dot > 0 ? mainRel.slice(dot).toLowerCase() : "";
+  // ADR-096：subdir 仅作元数据保留，不参与 Path 拼接。
+  // 网页版 name 已含子目录路径（如 "SceneModel/角色A"），无需额外提取。
+  const nameParts = name.split("/");
+  const subDir = nameParts.length > 1 ? nameParts[0] : "";
+  return {
+    Name: mainRel,
+    Size: size,
+    Path: `${root}/${name}/${mainRel}`,
+    Ext: ext,
+    Hash: "",
+    ModTime: meta?.addedAt ?? Date.now(),
+    HasTags: false,
+    subdir: subDir,
+  };
+}
+
 /** 根目录扫描：每个模型组收敛为一条主文件 ModelEntry */
 async function scanWebModelGroups(type: string, root: string): Promise<ModelEntry[]> {
   // P0-1 优化：原本每模型组 1 次 meta get + 1 次 file 前缀扫 + N 次 file get
@@ -160,68 +240,15 @@ async function scanWebModelGroups(type: string, root: string): Promise<ModelEntr
     const name = k.slice(dirPrefix.length, -1);
     if (name) dirMeta.set(name, v as { name?: string; addedAt?: number });
   }
-  // 文件行按「dir name 前缀」归组：文件 key = file:<type>/<name>/<rel>，
-  // name 可含多段路径（目录树），故以 dir name + "/" 为前缀匹配。
-  // 组名按长度降序排——首次 startsWith 命中即最长匹配，
-  // 避免逐组全量扫描（O(文件×组) → O(文件×log组)，P1 性能修复）
-  const filesByGroup = new Map<string, Array<[string, { size?: number }]>>();
+  // 文件行按「dir name 前缀」归组（纯函数抽至 groupFilesByDir）
   const sortedGroups = [...dirMeta.keys()].sort((a, b) => b.length - a.length);
-  for (const [fk, fv] of fileMetaRows) {
-    const rel = fk.slice(filePrefix.length);
-    let bestGroup = "";
-    for (const name of sortedGroups) {
-      if (rel.startsWith(`${name}/`)) {
-        bestGroup = name;
-        break;
-      }
-    }
-    if (!bestGroup) continue; // 孤儿文件（无对应 dir key）
-    const fileRel = rel.slice(bestGroup.length + 1);
-    const arr = filesByGroup.get(bestGroup);
-    if (arr) arr.push([fileRel, fv as { size?: number }]);
-    else filesByGroup.set(bestGroup, [[fileRel, fv as { size?: number }]]);
-  }
+  const filesByGroup = groupFilesByDir(fileMetaRows, filePrefix, sortedGroups);
   const entries: ModelEntry[] = [];
   for (const [name, meta] of dirMeta) {
-    // 汇总该模型全部文件大小；Path/Name 指向主文件（含扩展名，与桌面
-    // scanner.go:136 Name=filepath.Base(p) 含扩展名、Ext=原扩展名一致——
-    // 否则 loader.ts 的 name.endsWith(ext) 过滤会恒失败使列表为空）。
-    // 主文件优先选 .ysm/.zip/.json，避免多文件模型误选首文件（如 a_tex.png）
-    // 导致解码失败；孤儿 dir key（文件被删）无主文件则跳过，避免 Path 以 / 结尾。
-    const groupRows = filesByGroup.get(name) ?? [];
-    let size = 0;
-    let mainRel = "";
-    let mainRank = 0;
-    for (const [fileRel, f] of groupRows) {
-      size += f?.size ?? 0;
-      // 嵌套 rel（含 /，如 tex/face.png）不参与主文件竞争：主文件必须在模型组根层
-      // （对齐桌面目录模型：组根放 ysm.json/main.json，子目录为纹理/附属资源）
-      const rank = fileRel.includes("/") ? MAIN_FILE_RANK_NONE : mainFileRank(fileRel);
-      if (rank > mainRank) {
-        mainRank = rank;
-        mainRel = fileRel;
-      }
-    }
-    // 仅 .ysm / ysm.json 可作主文件（对齐桌面 IsYsmEntryJSON 白名单）；其余（如 a.json 动作文件）
-    // 不得当主文件，避免多文件模型误选导致预览解码失败
-    if (mainRank < MAIN_FILE_RANK_TYPE) continue;
-    // Ext 与桌面一致：小写化 + 无点号保护（lastIndexOf=-1 时 slice(-1) 会取 "E" 之类的字符）
-    const dot = mainRel.lastIndexOf(".");
-    const ext = dot > 0 ? mainRel.slice(dot).toLowerCase() : "";
-    // ADR-096：subdir 仅作元数据保留，不参与 Path 拼接。
-    // 网页版 name 已含子目录路径（如 "SceneModel/角色A"），无需额外提取。
-    const nameParts = name.split("/");
-    const subDir = nameParts.length > 1 ? nameParts[0] : "";
-    entries.push({
-      Name: mainRel,
-      Size: size,
-      Path: `${root}/${name}/${mainRel}`,
-      Ext: ext,
-      Hash: "",
-      ModTime: meta?.addedAt ?? Date.now(),
-      HasTags: false,
-      subdir: subDir,
-    });
+    // 每个模型组收敛为一条主文件条目（纯函数抽至 buildGroupEntry；
+    // mainRank < MAIN_FILE_RANK_TYPE 的组在此跳过，对齐原 continue 语义）
+    const entry = buildGroupEntry(name, meta, filesByGroup.get(name) ?? [], root);
+    if (entry) entries.push(entry);
   }
   // 与桌面扫描一致：按名称排序，稳定输出
   entries.sort((a, b) => a.Name.localeCompare(b.Name, "zh-CN"));
@@ -333,6 +360,58 @@ function webDegradedMatches(matched: ModelEntry[]): WebSearchResult[] {
   }));
 }
 
+/** 搜索数值过滤条件（对齐桌面 SearchModels 六条数值范围；>0 才参与过滤）。 */
+interface NumericFilter {
+  minBones: number;
+  maxBones: number;
+  minCubes: number;
+  maxCubes: number;
+  minTex: number;
+  maxTex: number;
+}
+
+/** 抽出降复杂度/复用：单条模型统计是否通过数值范围过滤（对齐桌面 SearchModels 六条条件）。
+ *  与 webDegradedMatches 对称拆分——数值过滤降复杂度后语义零变化（minBones>0 && ...<... 同原序）。
+ *  六条排除条件以短路 || 合并为单一布尔，避免逐条 if 嵌套累计认知复杂度。 */
+function passesNumericFilters(s: WebModelStats, f: NumericFilter): boolean {
+  const excluded =
+    (f.minBones > 0 && s.boneCount < f.minBones) ||
+    (f.maxBones > 0 && s.boneCount > f.maxBones) ||
+    (f.minCubes > 0 && s.cubeCount < f.minCubes) ||
+    (f.maxCubes > 0 && s.cubeCount > f.maxCubes) ||
+    (f.minTex > 0 && (s.texWidth < f.minTex || s.texHeight < f.minTex)) ||
+    (f.maxTex > 0 && (s.texWidth > f.maxTex || s.texHeight > f.maxTex));
+  return !excluded;
+}
+
+/** 抽出降复杂度/复用：数值命中的 (ModelEntry, 统计) → WebSearchResult 映射（与 webDegradedMatches 对称）。 */
+function toSearchResult(e: ModelEntry, s: WebModelStats): WebSearchResult {
+  return {
+    name: e.Name,
+    path: e.Path,
+    boneCount: s.boneCount,
+    cubeCount: s.cubeCount,
+    texWidth: s.texWidth,
+    texHeight: s.texHeight,
+    hasError: false,
+  };
+}
+
+/** 抽出降复杂度/复用：单条命中条目按统计过滤后写入结果（保持 stats[i] 索引对齐与
+ *  排除/写入顺序语义：先排除 hasError，再过数值条件，最后映射入 out）。 */
+function emitWebSearchHit(
+  e: ModelEntry,
+  s: WebModelStats,
+  f: NumericFilter,
+  out: WebSearchResult[],
+): void {
+  // 对齐 Go：统计失败（BoneCount==0 等价 hasError）在数值条件下直接排除
+  if (!s || s.hasError) return;
+  // 数值条件过滤（纯函数抽至 passesNumericFilters，六条顺序与原 if 链一致）
+  if (!passesNumericFilters(s, f)) return;
+  out.push(toSearchResult(e, s));
+}
+
 async function searchWebModels(
   filesRoot: string,
   keyword: string,
@@ -382,26 +461,12 @@ async function searchWebModels(
   if (!stats) {
     return webDegradedMatches(matched);
   }
+  const f: NumericFilter = { minBones, maxBones, minCubes, maxCubes, minTex, maxTex };
   const out: WebSearchResult[] = [];
   matched.forEach((e, i) => {
     const s = stats[i];
-    // 对齐 Go：统计失败（BoneCount==0 等价 hasError）在数值条件下直接排除
-    if (!s || s.hasError) return;
-    if (minBones > 0 && s.boneCount < minBones) return;
-    if (maxBones > 0 && s.boneCount > maxBones) return;
-    if (minCubes > 0 && s.cubeCount < minCubes) return;
-    if (maxCubes > 0 && s.cubeCount > maxCubes) return;
-    if (minTex > 0 && (s.texWidth < minTex || s.texHeight < minTex)) return;
-    if (maxTex > 0 && (s.texWidth > maxTex || s.texHeight > maxTex)) return;
-    out.push({
-      name: e.Name,
-      path: e.Path,
-      boneCount: s.boneCount,
-      cubeCount: s.cubeCount,
-      texWidth: s.texWidth,
-      texHeight: s.texHeight,
-      hasError: false,
-    });
+    // stats[i] 索引对齐 matched 数组；排除/写入顺序语义由 emitWebSearchHit 保持
+    emitWebSearchHit(e, s, f, out);
   });
   return out;
 }
@@ -547,91 +612,146 @@ function webMoveTargetName(dstName: string, srcName: string): string {
  * 单个 store 内全有或全无（IDB 单事务仅限单 store；跨 files/config 仍两段，符合
  * IDB 能力上限）。原实现逐 key idbSet/idbDel 各开事务，中途崩溃会留新旧 key 并存。
  */
+
+/** 抽出降复杂度/复用：rekey 阶段一失败时的 best-effort 回滚——按 store 分桶删除新建 key。
+ *  P1-2 修复：writtenFiles/writtenCfg 分桶对号入座，否则 config store 的 ban/tags key
+ *  会被错删到 files store（no-op）→ 孤儿标记。顺序：先 files 倒序、再 config 倒序。 */
+async function rollbackWritten(writtenFiles: string[], writtenCfg: string[]): Promise<void> {
+  for (const k of writtenFiles.reverse()) {
+    try {
+      await idbDel("files", k);
+    } catch {
+      /* best-effort */
+    }
+  }
+  for (const k of writtenCfg.reverse()) {
+    try {
+      await idbDel("config", k);
+    } catch {
+      /* best-effort */
+    }
+  }
+}
+
+/** 抽出降复杂度/复用：rekey 阶段一——读旧 key 并生成「写新 key」ops，连同回滚分桶与
+ *  阶段二删旧所需数据一并返回。两阶段事务边界由调用方保持（先写全新 key，全成功后才删旧）。
+ *  P1 修复：config 扫描结果缓存到 cfgKeysCache 供阶段二复用（避免重复扫描 config store）。 */
+async function collectRekeyOps(
+  type: string,
+  oldName: string,
+  newName: string,
+): Promise<{
+  fileOps: IdbOp[];
+  cfgOps: IdbOp[];
+  writtenFiles: string[];
+  writtenCfg: string[];
+  oldFileKeys: string[];
+  cfgKeysCache: Map<string, string[]>;
+}> {
+  const fileOps: IdbOp[] = [];
+  const cfgOps: IdbOp[] = [];
+  const writtenFiles: string[] = [];
+  const writtenCfg: string[] = [];
+  const dv = await idbGet("files", dirKey(type, oldName));
+  if (dv !== undefined) {
+    fileOps.push({
+      kind: "put",
+      key: dirKey(type, newName),
+      value: { ...(dv as Record<string, unknown>), name: newName },
+    });
+    writtenFiles.push(dirKey(type, newName));
+  }
+  const oldPrefix = `file:${type}/${oldName}/`;
+  const fks = await idbKeys("files", oldPrefix);
+  for (const k of fks) {
+    const rel = k.slice(oldPrefix.length);
+    const val = await idbGet("files", k);
+    if (val !== undefined) {
+      const nk = fileKey(type, newName, rel);
+      fileOps.push({ kind: "put", key: nk, value: val });
+      writtenFiles.push(nk);
+    }
+  }
+  // P1 修复：收集 config keys 供阶段二复用（避免重复扫描 config store）
+  const cfgKeysCache = new Map<string, string[]>();
+  for (const prefix of ["ban:", "tags:"]) {
+    const scanPrefix = `${prefix}/web/${type}/${oldName}/`;
+    const keys = await idbKeys("config", scanPrefix);
+    cfgKeysCache.set(scanPrefix, keys);
+    for (const k of keys) {
+      const suffix = k.slice(scanPrefix.length);
+      const val = await idbGet("config", k);
+      if (val !== undefined) {
+        const nk = `${prefix}/web/${type}/${newName}/${suffix}`;
+        cfgOps.push({ kind: "put", key: nk, value: val });
+        writtenCfg.push(nk);
+      }
+    }
+  }
+  return { fileOps, cfgOps, writtenFiles, writtenCfg, oldFileKeys: fks, cfgKeysCache };
+}
+
+/** 抽出降复杂度/复用：rekey 阶段二——基于阶段一已扫旧 key 生成删旧 ops（move 时）。
+ *  config 删复用阶段一缓存的 cfgKeysCache（避免重复扫描 config store）。 */
+function buildRekeyDeleteOps(
+  type: string,
+  oldName: string,
+  oldFileKeys: string[],
+  cfgKeysCache: Map<string, string[]>,
+): { delFileOps: IdbOp[]; delCfgOps: IdbOp[] } {
+  const delFileOps: IdbOp[] = [{ kind: "del", key: dirKey(type, oldName) }];
+  for (const k of oldFileKeys) delFileOps.push({ kind: "del", key: k });
+  // 阶段二 config 删：复用阶段一已缓存的 keys（避免重复扫描 config store）
+  const delCfgOps: IdbOp[] = [];
+  for (const [, keys] of cfgKeysCache) {
+    delCfgOps.push(...keys.map((k) => ({ kind: "del" as const, key: k })));
+  }
+  return { delFileOps, delCfgOps };
+}
+
 async function rekeyWebModelGroup(
   type: string,
   oldName: string,
   newName: string,
   move: boolean,
 ): Promise<void> {
-  // P1-2 修复：writtenNew 按 store 分桶——回滚时必须对号入座，
+  // P1-2 修复（分桶语义见 rollbackWritten）：writtenNew 按 store 分桶——回滚时必须对号入座，
   // 否则 config store 的 ban/tags key 会被错删到 files store（no-op）→ 孤儿标记
   const writtenFiles: string[] = [];
   const writtenCfg: string[] = [];
-  const rollbackNew = async (): Promise<void> => {
-    for (const k of writtenFiles.reverse()) {
-      try {
-        await idbDel("files", k);
-      } catch {
-        /* best-effort */
-      }
-    }
-    for (const k of writtenCfg.reverse()) {
-      try {
-        await idbDel("config", k);
-      } catch {
-        /* best-effort */
-      }
-    }
-  };
   try {
     // 阶段一：写新 key（dir + file + 标记），全成功才进阶段二；按 store 单事务提交
     // ⚠️ 读-改-写窗口：idbKeys 扫旧 key + 逐个 idbGet 读旧值与下方 idbTx 写新值
     // 之间无事务包裹。若并发的 renameOrCopy 同时改写同一组 key，读到的旧值可能与
     // 写入时的新值不一致。当前 web 端单用户操作，并发概率低；多 tab 并发时可能残留。
-    const fileOps: IdbOp[] = [];
-    const cfgOps: IdbOp[] = [];
-    const dv = await idbGet("files", dirKey(type, oldName));
-    if (dv !== undefined) {
-      fileOps.push({
-        kind: "put",
-        key: dirKey(type, newName),
-        value: { ...(dv as Record<string, unknown>), name: newName },
-      });
-      writtenFiles.push(dirKey(type, newName));
-    }
-    const oldPrefix = `file:${type}/${oldName}/`;
-    const fks = await idbKeys("files", oldPrefix);
-    for (const k of fks) {
-      const rel = k.slice(oldPrefix.length);
-      const val = await idbGet("files", k);
-      if (val !== undefined) {
-        const nk = fileKey(type, newName, rel);
-        fileOps.push({ kind: "put", key: nk, value: val });
-        writtenFiles.push(nk);
-      }
-    }
-    // P1 修复：收集 config keys 供阶段二复用（避免重复扫描 config store）
-    const cfgKeysCache = new Map<string, string[]>();
-    for (const prefix of ["ban:", "tags:"]) {
-      const scanPrefix = `${prefix}/web/${type}/${oldName}/`;
-      const keys = await idbKeys("config", scanPrefix);
-      cfgKeysCache.set(scanPrefix, keys);
-      for (const k of keys) {
-        const suffix = k.slice(scanPrefix.length);
-        const val = await idbGet("config", k);
-        if (val !== undefined) {
-          const nk = `${prefix}/web/${type}/${newName}/${suffix}`;
-          cfgOps.push({ kind: "put", key: nk, value: val });
-          writtenCfg.push(nk);
-        }
-      }
-    }
+    const {
+      fileOps,
+      cfgOps,
+      writtenFiles: wf,
+      writtenCfg: wc,
+      oldFileKeys,
+      cfgKeysCache,
+    } = await collectRekeyOps(type, oldName, newName);
+    // 阶段一全部读 + 生成 ops 成功后才并入外层回滚桶（与原始「边读边 push 到
+    // writtenX」语义对齐：未提交的 key 回滚为 no-op，已提交的 key 才被真实删除）
+    writtenFiles.push(...wf);
+    writtenCfg.push(...wc);
     if (fileOps.length) await idbTx("files", fileOps);
     if (cfgOps.length) await idbTx("config", cfgOps);
     // 阶段二：全部新 key 写入成功 → 删旧 key（move 时），同样按 store 单事务
     if (move) {
-      const delFileOps: IdbOp[] = [{ kind: "del", key: dirKey(type, oldName) }];
-      for (const k of fks) delFileOps.push({ kind: "del", key: k });
+      const { delFileOps, delCfgOps } = buildRekeyDeleteOps(
+        type,
+        oldName,
+        oldFileKeys,
+        cfgKeysCache,
+      );
       await idbTx("files", delFileOps);
       // 阶段二 config 删：复用阶段一已缓存的 keys（避免重复扫描 config store）
-      const delCfgOps: IdbOp[] = [];
-      for (const [, keys] of cfgKeysCache) {
-        delCfgOps.push(...keys.map((k) => ({ kind: "del" as const, key: k })));
-      }
       if (delCfgOps.length) await idbTx("config", delCfgOps);
     }
   } catch (e) {
-    await rollbackNew();
+    await rollbackWritten(writtenFiles, writtenCfg);
     throw e;
   }
 }

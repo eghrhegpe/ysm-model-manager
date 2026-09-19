@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 189 张知识卡
+> 总计: 190 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -362,7 +362,7 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/preview-3d/menu/shell/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 s…
 - **ui_components**（UI 组件簇（原 ui 收容所，已归位））：原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front…
 
-## utils（31 张）
+## utils（32 张）
 
 *工具函数（display、fmt、dom、animation）*
 
@@ -399,6 +399,7 @@
 | 🍃 worker-bridge-settleerror-fallback | worker-bridge-settleError-fallback | leaf | concurrent | 扩展 WorkerErrorStrategy 策略, 评审 worker-bridge settleError 分支 |
 | 🏗 ysm-anim-pipeline | YSM (Bedrock) 动画管线 | architecture | cpu-bound | YSM 动画, 基岩动画, molang, 动画管线 |
 | 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM / YSMParser, ysm 解码, wasm 加载、按需加载, MEMFS, callMain, crossOriginIsolated, stats.worker / worker.format, pthread |
+| 🍃 zzz-fm-delimiter-tmp | frontmatter 分隔符测试临时卡 | leaf | — | 临时测试 |
 
 ### 摘要
 

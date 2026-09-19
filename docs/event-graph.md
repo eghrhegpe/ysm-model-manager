@@ -285,8 +285,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 260 |
-| stgBindWebFsa | `frontend/src/views/app-content/settings/init.ts` | 282 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 310 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 337 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -342,7 +342,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 147 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 202 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 77 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 340 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
@@ -435,7 +435,7 @@
 | (顶层) | `frontend/src/features/import/executor.ts` | 51 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 189 |
-| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 266 |
+| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 283 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 146 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 155 |
 | checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 181 |
@@ -460,13 +460,13 @@
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 353 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
-| stgBindMirrorSelect | `frontend/src/views/app-content/settings/init.ts` | 49 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 87 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 126 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 149 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 157 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 166 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 194 |
+| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 74 |
+| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 115 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 152 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 159 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 186 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 205 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 243 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 109 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 120 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |

@@ -41,17 +41,17 @@ import {
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import { makeUnifiedPickHandler } from "@/preview-3d/infra/unified-pick.ts";
 import {
-  componentsStyleSheet,
-  installComponentsStyles,
-} from "@/preview-3d/menu/components-styles.ts";
-import {
   mountPreviewRootMenu,
   type PreviewMenuCtx,
   type PreviewMenuHandle,
 } from "@/preview-3d/menu/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
-import { slideMenuStyleSheet } from "@/preview-3d/menu/slide-menu-styles.ts";
-import { createInstallableStyles } from "@/preview-3d/menu/style-install.ts";
+import {
+  componentsStyleSheet,
+  installComponentsStyles,
+} from "@/preview-3d/menu/style/components-styles.ts";
+import { slideMenuStyleSheet } from "@/preview-3d/menu/style/slide-menu-styles.ts";
+import { createInstallableStyles } from "@/preview-3d/menu/style/style-install.ts";
 import {
   type BoneMaps,
   type BoneSelectInfo,

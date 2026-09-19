@@ -23,24 +23,16 @@ tests:
 auto_fields:
   symbols_with_lines:
     - ARIA_ATTR
-    - componentsCss
-    - componentsStyleSheet
     - createHeaderToggle
-    - createInstallableStyles
     - createSlideMenu
     - DragSliderController
     - DragSliderOptions
     - HeaderToggleConfig
     - HeaderToggleElement
-    - InstallableStyles
-    - installComponentsStyles
-    - installSlideMenuStyles
     - isPreviewOverlayActive
     - PREVIEW_OVERLAY_ID
     - ROLE
-    - slideMenuCss
     - SlideMenuHandle
-    - slideMenuStyleSheet
     - SlideMenuView
     - SLIDER_BAR_CLASS
 quick_groups:

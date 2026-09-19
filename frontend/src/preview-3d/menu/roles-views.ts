@@ -11,10 +11,10 @@
 import { t } from "@/core/i18n/t.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { type ModelEntry, sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
+import { MENU_ERROR_NOTE_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import { renderAdapterPanelContent, renderMenu } from "./render.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";

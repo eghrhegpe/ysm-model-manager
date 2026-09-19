@@ -10,6 +10,13 @@ import { t, tOf } from "@/core/i18n/t.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { getSchema } from "@/preview-3d/infra/schema-registry.ts";
 import {
+  MENU_BTN_CSS,
+  MENU_CARD_CSS,
+  MENU_DIVIDER_CSS,
+  MENU_ROW_DENSITY_CSS,
+  MENU_SECTION_CSS,
+} from "@/preview-3d/menu/style/menu-styles.ts";
+import {
   isPathAvailable,
   type KNOWN_PATHS,
   previewSnapshot,
@@ -26,13 +33,6 @@ import {
   renderCapToggle,
 } from "./cap-controls.ts";
 import { createHeaderToggle } from "./header-toggle.ts";
-import {
-  MENU_BTN_CSS,
-  MENU_CARD_CSS,
-  MENU_DIVIDER_CSS,
-  MENU_ROW_DENSITY_CSS,
-  MENU_SECTION_CSS,
-} from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 

@@ -9,14 +9,8 @@ source_files:
   - frontend/src/preview-3d/menu/components-styles.ts
 auto_fields:
   symbols_with_lines:
-    - componentsCss
-    - componentsStyleSheet
     - createSlideMenu
-    - installComponentsStyles
-    - installSlideMenuStyles
-    - slideMenuCss
     - SlideMenuHandle
-    - slideMenuStyleSheet
     - SlideMenuView
 quick_groups:
   - UI 交互与弹窗

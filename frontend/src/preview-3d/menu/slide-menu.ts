@@ -25,10 +25,10 @@
 //    isInputBlocked()=true → input-and-animation 暂停相机 WASD/方向键）
 
 import { t } from "@/core/i18n/t.ts";
+import { installComponentsStyles } from "@/preview-3d/menu/style/components-styles.ts";
+import { installSlideMenuStyles } from "@/preview-3d/menu/style/slide-menu-styles.ts";
 import { popInputBlock, pushInputBlock } from "@/utils/dom/input-block-stack.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { installComponentsStyles } from "./components-styles.ts";
-import { installSlideMenuStyles } from "./slide-menu-styles.ts";
 
 /** 单个菜单视图：标题 + 把内容渲染进给定的 list 容器。 */
 export interface SlideMenuView {

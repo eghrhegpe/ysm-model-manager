@@ -19,7 +19,7 @@ describe("MENU_BTN_CSS（行内按钮基础样式单源）", () => {
   });
 
   // 消费方必须**真的插值**（import 语句里没有 `${`，故本判据没有「只 import 就假绿」的空间）
-  for (const consumer of ["render.ts", "cap-controls.ts"]) {
+  for (const consumer of ["../render.ts", "../cap-controls.ts"]) {
     it(`${consumer} 的样式串插值 MENU_BTN_CSS`, () => {
       const dir = path.dirname(fileURLToPath(import.meta.url));
       const src = fs.readFileSync(path.join(dir, consumer), "utf-8");

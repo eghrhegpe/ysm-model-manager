@@ -15,6 +15,7 @@ import {
   type SchemaBuilder,
   unregisterSchema,
 } from "@/preview-3d/infra/schema-registry.ts";
+import { MENU_ERROR_NOTE_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -23,7 +24,6 @@ import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
 import { ensureFabStyles } from "./fab.ts";
-import { MENU_ERROR_NOTE_CSS } from "./menu-styles.ts";
 import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import {
   clearFolderCollapsedState,

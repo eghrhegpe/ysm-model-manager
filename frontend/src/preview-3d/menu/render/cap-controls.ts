@@ -2,10 +2,10 @@
 // 独立模块只依赖 ui-header-toggle / i18n / PreviewControlDef 类型，供 preview-menu.ts 与
 // preview-menu-env.ts 共用。
 //
-// [ADR-195 刀 2.5] 投影反转：renderMenu 分派的节点控件（select/slider/toggle/color/divider）
-// 不再经 nodeControlToCapControl 构造 PreviewControlDef 中间对象——五个简单控件渲染实现改吃
-// 统一 CapControlView（PreviewControlDef 的读取子集），由 render.ts 的 spec→view 适配器直供；
-// renderCapControls 的 PreviewControlDef 走 def→view 适配。单一渲染实现，双向薄适配，无中间类型。
+// [ADR-195 刀 2.5 / 增量2a] 投影反转 + 通道收窄：简单控件（slider/toggle/select/color）渲染实现
+// 只吃统一 CapControlView（PreviewControlDef 的读取子集），由 render.ts 的 spec→view 适配器直供；
+// renderCapControls 的 controls 通道收窄为复杂件专用（button/image/timeline/histogram/preset-thumb），
+// 复杂渲染器直吃 PreviewControlDef 全字段——原 def→view 适配（capControlToView）随之退役。单一渲染实现，薄适配，无中间类型。
 
 import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
@@ -19,9 +19,9 @@ import { clampPct } from "@/utils/base/pure/clamp.ts";
 
 /**
  * [ADR-195 刀 2.5] 控件渲染统一视图：五个简单控件（divider/toggle/slider/select/color）
- * 渲染实现的读取面（PreviewControlDef 子集）。PreviewControlDef 结构化满足；node spec 经
- * specToCapControlView 适配。杜绝渲染实现直接依赖 PreviewControlDef 类型（刀 3 删类型的
- * 最后硬依赖清除）。
+ * 渲染实现的读取面（PreviewControlDef 子集）。node spec 经 render.ts 的 specToCapControlView
+ * 适配为本视图。简单控件渲染器（renderCapToggle/Slider/Select/Color）只吃本视图，
+ * 不再依赖已收窄为复杂件专用的 PreviewControlDef（增量2a）——单一渲染实现，薄适配，无中间类型。
  */
 export interface CapControlView {
   id: string;
@@ -45,17 +45,18 @@ export interface CapControlView {
 }
 
 /**
- * PreviewControlDef → CapControlView（**无需断言**：CapControlView 是 PreviewControlDef 的
- * 结构子集，赋值即通过——`getValue` 由联合类型窄化到 `unknown` 是协变放宽，
- * `onChange` 由 `(v: unknown)` 窄化到 `(v: number|string|boolean)` 是逆变收窄，
- * 两者都安全，故直接 return 即可，编译器自行校验。
- *
- * 原实现写作 `c as unknown as CapControlView`（双断言），是历史遗留的噪音：双断言会
- * **关闭编译期校验**，日后 CapControlView 新增字段或改窄签名时静默失效。2026-09 实测
- * 删除后 typecheck 零报错，证明该断言从未承担任何职责，已移除。
+ * 控件 label 统一取值（与 render.ts 的 rmLabel 同构——回退标准全仓唯一）：
+ *   labelKey 非空 → tOf 三级回退（当前包 → 兜底包 → 裸 key）；
+ *   labelKey 为空 → fallback 明文（动态数据名：表情名 / 材质名 / 角色名）。
+ * 入参取最小结构面（labelKey + fallback），简单件（CapControlView）与复杂件
+ * （PreviewControlDef）通吃。
+ * ⚠️ fallback 由 nodeControlToView 从 `node.label ?? node.id` 装入（menu-node-types
+ * 「label 只装动态数据明文」条款的唯一消费者），**必须在渲染层读**：此前各渲染器只读
+ * labelKey，只写 label 的声明式节点（morphNodes 表情开关）拿到空 key → tOf("") 原样
+ * 回退成空串 → 整列表情有开关无文字（2026-09 修复）。
  */
-export function capControlToView(c: PreviewControlDef): CapControlView {
-  return c;
+export function capLabel(v: { labelKey: string; fallback: string }): string {
+  return v.labelKey ? tOf(v.labelKey) : v.fallback;
 }
 
 /** i18n 安全取值走 tOf（ADR-207 D3）：PreviewControlDef.labelKey/group/hintKey 为
@@ -151,14 +152,6 @@ function ensureCapSection(
   return body;
 }
 
-/** divider：无 group 挂顶层作组间视觉分隔；有 group 挂 body 内作组内分隔 */
-export function renderCapDivider(parent: HTMLElement, v: CapControlView): void {
-  const hr = document.createElement("div");
-  hr.dataset.testid = `cap-${v.id}`;
-  hr.className = "cc-divider";
-  parent.appendChild(hr);
-}
-
 /** toggle：label + hint + 滑动开关 */
 export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
   const row = document.createElement("div");
@@ -168,7 +161,7 @@ export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
   labelBox.className = "cc-labelbox";
   const label = document.createElement("span");
   label.className = "slide-label cc-label-xs";
-  label.textContent = tOf(v.labelKey);
+  label.textContent = capLabel(v);
   const hint = document.createElement("span");
   hint.className = "cc-hint";
   hint.textContent = v.hintKey ? tOf(v.hintKey) : "";
@@ -218,7 +211,7 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   head.className = "cc-head";
   const name = document.createElement("span");
   name.className = "slide-label";
-  name.textContent = tOf(v.labelKey);
+  name.textContent = capLabel(v);
   const val = document.createElement("span");
   head.append(name, val);
 
@@ -233,7 +226,7 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   bar.className = SLIDER_BAR_CLASS;
   bar.tabIndex = 0;
   bar.setAttribute("role", ROLE.slider);
-  bar.setAttribute(ARIA_ATTR.label, tOf(v.labelKey));
+  bar.setAttribute(ARIA_ATTR.label, capLabel(v));
   bar.setAttribute(ARIA_ATTR.valuemin, String(min));
   bar.setAttribute(ARIA_ATTR.valuemax, String(max));
   bar.setAttribute(ARIA_ATTR.valuenow, String(numVal));
@@ -314,7 +307,7 @@ export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
   row.dataset.testid = `cap-${v.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
-  label.textContent = tOf(v.labelKey);
+  label.textContent = capLabel(v);
   const sel = document.createElement("select");
   sel.className = "setting-select cc-select";
   for (const opt of v.select ?? []) {
@@ -341,7 +334,7 @@ function renderCapButton(parent: HTMLElement, c: PreviewControlDef): void {
   row.dataset.testid = `cap-${c.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
-  label.textContent = tOf(c.labelKey);
+  label.textContent = capLabel(c);
   const btn = document.createElement("button");
   const variant = c.button?.variant ?? "ghost";
   btn.className = variant === "primary" ? "cc-btn cc-btn-primary" : "cc-btn cc-btn-ghost";
@@ -383,7 +376,7 @@ function renderCapImage(parent: HTMLElement, c: PreviewControlDef): void {
   row.dataset.testid = `cap-${c.id}`;
   const img = document.createElement("img");
   img.src = url;
-  img.alt = tOf(c.labelKey);
+  img.alt = capLabel(c);
   img.className = "cc-img-block";
   row.appendChild(img);
   parent.appendChild(row);
@@ -396,7 +389,7 @@ export function renderCapColor(parent: HTMLElement, v: CapControlView): void {
   row.dataset.testid = `cap-${v.id}`;
   const label = document.createElement("span");
   label.className = "slide-label cc-label-grow";
-  label.textContent = tOf(v.labelKey);
+  label.textContent = capLabel(v);
   const hex = v.getValue() as number;
   const toHexStr = (val: number): string => {
     const s = (val >>> 0).toString(16).padStart(6, "0").slice(-6);
@@ -425,7 +418,7 @@ function renderCapTimeline(parent: HTMLElement, c: PreviewControlDef): void {
   head.className = "cc-head-strong";
   const name = document.createElement("span");
   name.className = "slide-label";
-  name.textContent = tOf(c.labelKey);
+  name.textContent = capLabel(c);
   const val = document.createElement("span");
   const numVal = c.getValue() as number;
   const fmtTime = (h: number): string =>
@@ -520,7 +513,7 @@ function renderCapHistogram(parent: HTMLElement, c: PreviewControlDef): void {
 
   const label = document.createElement("span");
   label.className = "slide-label cc-label-body";
-  label.textContent = tOf(c.labelKey);
+  label.textContent = capLabel(c);
   row.appendChild(label);
 
   const canvas = document.createElement("canvas");
@@ -566,7 +559,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
   if (!thumb.hideLabel) {
     const label = document.createElement("span");
     label.className = "slide-label cc-label-dim";
-    label.textContent = tOf(c.labelKey);
+    label.textContent = capLabel(c);
     row.appendChild(label);
   }
   const grid = document.createElement("div");
@@ -642,31 +635,16 @@ export function collectVisiblePredicates(controls: PreviewControlDef[]): Preview
  *  故不导出；如需单控件委托再恢复 export）。
  *  与 renderCapControls 循环体共享同一分派臂（exhaustive switch 单源），
  *  保证「整组渲染」与「单控件委托渲染」视觉/行为零分歧。
- *  [ADR-195 刀 2.5] 简单 kind（divider/toggle/slider/select/color）经 capControlToView
- *  适配为统一视图渲染（不再直接吃 PreviewControlDef）；复杂 kind 保持 PreviewControlDef
- *  （button 变体、thumb 配置等全字段承载）。 */
+ *  [ADR-195 增量2a] 通道收窄为复杂件专用：仅 button/image/timeline/histogram/preset-thumb
+ *  五臂（均直吃 PreviewControlDef，全字段承载）。简单 kind（divider/toggle/slider/select/color）
+ *  已从 PreviewControlKind 移除——简单件走节点原生渲染，capControlToView 随之退役。 */
 function renderCapControlSingle(parent: HTMLElement, c: PreviewControlDef): void {
   switch (c.kind) {
-    case "divider":
-      renderCapDivider(parent, capControlToView(c));
-      break;
-    case "toggle":
-      renderCapToggle(parent, capControlToView(c));
-      break;
-    case "slider":
-      renderCapSlider(parent, capControlToView(c));
-      break;
-    case "select":
-      renderCapSelect(parent, capControlToView(c));
-      break;
     case "button":
       renderCapButton(parent, c);
       break;
     case "image":
       renderCapImage(parent, c);
-      break;
-    case "color":
-      renderCapColor(parent, capControlToView(c));
       break;
     case "timeline":
       renderCapTimeline(parent, c);

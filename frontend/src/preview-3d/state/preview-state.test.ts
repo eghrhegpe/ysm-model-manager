@@ -508,8 +508,8 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
 describe("P3 visible 规则 — 条件显隐可集中枚举（B 轨 visibleWhen 唯一）", () => {
   it("collectVisiblePredicates 只挑出带 visibleWhen 谓词的控件（纯函数）", () => {
     const plain: PreviewControlDef = {
-      id: "a", kind: "toggle", labelKey: "a", fallback: "a",
-      getValue: () => false, setValue: vi.fn(),
+      id: "a", kind: "image", labelKey: "a", fallback: "a",
+      getValue: () => null, setValue: vi.fn(),
     };
     const gated: PreviewControlDef = {
       ...plain, id: "b", visibleWhen: () => false,

@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { renderCapControls } from "@/preview-3d/menu/engine/core.ts";
 
-// 工厂：构造 PreviewControlDef，简化用例书写
+// 工厂：构造 PreviewControlDef（[增量2a] 通道收窄为复杂件专用——button/image/timeline/
+// histogram/preset-thumb），简化用例书写。简单件（slider/select/toggle/color/divider）
+// 已从 PreviewControlKind 移除、不再经本通道，其渲染改由 node 路径直供 CapControlView
+// 渲染器测（见 cap-controls.test.ts），故本文件不再覆盖简单件。
 const mk = (
   kind: PreviewControlDef["kind"],
   opts: {
@@ -10,8 +13,6 @@ const mk = (
     labelKey?: string;
     fallback?: string;
     group?: string | undefined;
-    slider?: NonNullable<PreviewControlDef["slider"]>;
-    select?: NonNullable<PreviewControlDef["select"]>;
     button?: NonNullable<PreviewControlDef["button"]>;
     thumb?: NonNullable<PreviewControlDef["thumb"]>;
     getValue?: () => number | string | boolean | null;
@@ -24,25 +25,23 @@ const mk = (
   fallback: opts.fallback ?? `test-${kind}`,
   // 可选槽位仅真实存在时附带（exactOptional 收紧后避免显式 undefined 流入 PreviewControlDef）
   ...(opts.group !== undefined ? { group: opts.group } : {}),
-  ...(opts.slider !== undefined ? { slider: opts.slider } : {}),
-  ...(opts.select !== undefined ? { select: opts.select } : {}),
   ...(opts.button !== undefined ? { button: opts.button } : {}),
   ...(opts.thumb !== undefined ? { thumb: opts.thumb } : {}),
-  getValue: opts.getValue ?? (() => (kind === "toggle" ? true : kind === "image" ? "http://x/y.png" : kind === "color" ? 0xff0000 : kind === "timeline" ? 12 : kind === "preset-thumb" ? "" : 0.5)),
+  getValue: opts.getValue ?? (() => (kind === "image" ? "http://x/y.png" : kind === "timeline" ? 12 : 0.5)),
   setValue: opts.setValue ?? (() => {}),
 });
 
 const mkList = (): HTMLElement => document.createElement("div");
 
 describe("renderCapControls", () => {
-  // ===== 分组折叠 =====
+  // ===== 分组折叠（复杂件走通道，group→section 归并逻辑 kind-agnostic）=====
 
   it("基本分组：带 group 的控件归入同一 section", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("toggle", { group: "Sky" }),
-      mk("slider", { group: "Sky" }),
-      mk("select", { group: "Sky" }),
+      mk("button", { id: "g1", group: "Sky" }),
+      mk("button", { id: "g2", group: "Sky" }),
+      mk("button", { id: "g3", group: "Sky" }),
     ]);
     // 1 个 section
     const sections = list.querySelectorAll(".cap-section");
@@ -60,8 +59,8 @@ describe("renderCapControls", () => {
   it("无 group 控件：直接挂到 list 顶层", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("toggle", { id: "t-top" }),
-      mk("slider", { id: "s-top" }),
+      mk("button", { id: "t-top" }),
+      mk("button", { id: "s-top" }),
     ]);
     // 无 section
     expect(list.querySelectorAll(".cap-section").length).toBe(0);
@@ -76,9 +75,9 @@ describe("renderCapControls", () => {
   it("交替分组（A,B,A）：相同 group 归入同一 section（非连续也归并）", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("toggle", { id: "a1", group: "A" }),
-      mk("toggle", { id: "b1", group: "B" }),
-      mk("toggle", { id: "a2", group: "A" }),
+      mk("button", { id: "a1", group: "A" }),
+      mk("button", { id: "b1", group: "B" }),
+      mk("button", { id: "a2", group: "A" }),
     ]);
     const sections = list.querySelectorAll(".cap-section");
     // 只有 2 个 section（A 和 B 各一个，A 只出现一次）
@@ -103,7 +102,7 @@ describe("renderCapControls", () => {
   it("section 折叠/展开：header 点击切换 collapsed 状态", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("toggle", { group: "Sky" }),
+      mk("button", { group: "Sky" }),
     ]);
     const header = list.querySelector(".cap-section-header") as HTMLElement;
     const body = list.querySelector(".cap-section-body") as HTMLElement;
@@ -126,135 +125,7 @@ describe("renderCapControls", () => {
     expect(arrow.textContent).toBe("▾");
   });
 
-  // ===== divider =====
-
-  it("divider：无 group 时挂 list 顶层作为组间分隔", () => {
-    const list = mkList();
-    renderCapControls(list, [
-      mk("divider"),
-      mk("toggle"),
-    ]);
-    // 顶层 dividers（cc-divider 类——P1 批次2 cssText→类后内联 margin 探测不可用）
-    const dividers = Array.from(list.children).filter(
-      (el) => (el as HTMLElement).classList.contains("cc-divider"),
-    );
-    expect(dividers.length).toBe(1);
-  });
-
-  it("divider：有 group 时挂 section body 内作为组内分隔", () => {
-    const list = mkList();
-    renderCapControls(list, [
-      mk("toggle", { group: "Sky" }),
-      mk("divider", { group: "Sky" }),
-      mk("slider", { group: "Sky" }),
-    ]);
-    const body = list.querySelector(".cap-section-body") as HTMLElement;
-    // body 内应包含一个 divider + 两个 slide-item
-    const children = Array.from(body.children);
-    const divider = children.find((el) => (el as HTMLElement).classList.contains("cc-divider"));
-    expect(divider).not.toBeUndefined();
-    expect(body.querySelectorAll(".slide-item").length).toBe(2);
-  });
-
-  // ===== 所有控件类型 smoketest =====
-
-  it("toggle：渲染出 slide-item + label + toggle", () => {
-    const list = mkList();
-    let lastValue = false;
-    renderCapControls(list, [
-      mk("toggle", {
-        getValue: () => lastValue,
-        setValue: (v: number | string | boolean) => { lastValue = v as boolean; },
-      }),
-    ]);
-    const items = list.querySelectorAll(".slide-item");
-    expect(items.length).toBe(1);
-    const item = items[0];
-    // label
-    expect(item.querySelector(".slide-label")).not.toBeNull();
-    // toggle
-    expect(item.querySelector("label.toggle")).not.toBeNull();
-    const input = item.querySelector("input[type=checkbox]") as HTMLInputElement;
-    expect(input.checked).toBe(false);
-    // 触发 onChange
-    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
-    item.querySelector("label.toggle")!.dispatchEvent(click);
-    expect(lastValue).toBe(true);
-  });
-
-  it("slider：渲染出自绘 cs-bar 且显示值", () => {
-    const list = mkList();
-    renderCapControls(list, [
-      mk("slider", {
-        slider: { min: 0, max: 10, step: 0.1 },
-        getValue: () => 3.14,
-      }),
-    ]);
-    const items = list.querySelectorAll(".slide-item");
-    expect(items.length).toBe(1);
-    const bar = items[0].querySelector(".cs-bar") as HTMLElement;
-    expect(bar).not.toBeUndefined();
-    expect(bar.getAttribute("aria-valuemin")).toBe("0");
-    expect(bar.getAttribute("aria-valuemax")).toBe("10");
-    expect(bar.dataset.step).toBe("0.1");
-    expect(bar.getAttribute("aria-valuenow")).toBe("3.14");
-    // 值显示
-    const valSpan = items[0].querySelectorAll("span")[1];
-    expect(valSpan).not.toBeNull();
-    expect(valSpan.textContent).toBe("3.14");
-  });
-
-  it("slider（unit=百分比）：显示百分比格式", () => {
-    const list = mkList();
-    renderCapControls(list, [
-      mk("slider", {
-        slider: { min: 0, max: 1, step: 0.01, unit: "%" },
-        getValue: () => 0.75,
-      }),
-    ]);
-    const items = list.querySelectorAll(".slide-item");
-    const valSpan = items[0].querySelectorAll("span")[1];
-    expect(valSpan.textContent).toBe("75%");
-  });
-
-  it("slider（unit=h）：显示时:分格式", () => {
-    const list = mkList();
-    renderCapControls(list, [
-      mk("slider", {
-        slider: { min: 0, max: 24, step: 0.01, unit: "h" },
-        getValue: () => 14.5,
-      }),
-    ]);
-    const items = list.querySelectorAll(".slide-item");
-    const valSpan = items[0].querySelectorAll("span")[1];
-    expect(valSpan.textContent).toBe("14:30");
-  });
-
-  it("select：渲染出 select 且填充 options", () => {
-    const list = mkList();
-    let lastValue = "b";
-    renderCapControls(list, [
-      mk("select", {
-        select: [
-          { value: "a", label: "Option A" },
-          { value: "b", label: "Option B" },
-          { value: "c", label: "Option C" },
-        ],
-        getValue: () => lastValue,
-        setValue: (v: number | string | boolean) => { lastValue = v as string; },
-      }),
-    ]);
-    const sel = list.querySelector("select") as HTMLSelectElement;
-    expect(sel).not.toBeNull();
-    expect(sel.options.length).toBe(3);
-    expect(sel.options[0].value).toBe("a");
-    expect(sel.options[0].textContent).toBe("Option A");
-    expect(sel.value).toBe("b");
-    // 触发 onChange
-    sel.value = "c";
-    sel.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(lastValue).toBe("c");
-  });
+  // ===== 复杂控件渲染（走通道）=====
 
   it("button：渲染出 button", () => {
     const list = mkList();
@@ -330,24 +201,6 @@ describe("renderCapControls", () => {
     expect(list.children.length).toBe(0);
   });
 
-  it("color：渲染出 color input 且显示 hex", () => {
-    const list = mkList();
-    let lastVal = 0xff0000;
-    renderCapControls(list, [
-      mk("color", {
-        getValue: () => lastVal,
-        setValue: (v: number | string | boolean) => { lastVal = v as number; },
-      }),
-    ]);
-    const picker = list.querySelector("input[type=color]") as HTMLInputElement;
-    expect(picker).not.toBeNull();
-    expect(picker.value).toBe("#ff0000");
-    // 触发 input
-    picker.value = "#00ff00";
-    picker.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(lastVal).toBe(0x00ff00);
-  });
-
   it("timeline：渲染出 canvas + marker", () => {
     const list = mkList();
     let lastHour = 12;
@@ -407,28 +260,25 @@ describe("renderCapControls", () => {
     expect(lastHour).toBe(12);
   });
 
-  // ===== 混合场景 =====
+  // ===== 混合场景（group + 无 group 共存，divider 已移出通道不再测）=====
 
-  it("混合：group + 无 group + divider 共存", () => {
+  it("混合：group + 无 group 共存", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("toggle", { id: "top", group: undefined }),
-      mk("divider", { group: undefined }),
-      mk("toggle", { id: "a1", group: "A" }),
-      mk("toggle", { id: "a2", group: "A" }),
-      mk("divider", { group: "A" }),
-      mk("slider", { id: "a3", group: "A" }),
+      mk("button", { id: "top", group: undefined }),
+      mk("button", { id: "a1", group: "A" }),
+      mk("button", { id: "a2", group: "A" }),
     ]);
-    // 顶层：1 toggle + 1 divider
+    // 顶层：1 无 group 控件
     const topItems = Array.from(list.children).filter(
       (el) => !el.classList.contains("cap-section"),
     );
-    expect(topItems.length).toBe(2); // toggle + divider
+    expect(topItems.length).toBe(1);
     // section
     expect(list.querySelectorAll(".cap-section").length).toBe(1);
     const body = list.querySelector(".cap-section-body") as HTMLElement;
-    // body 内：toggle a1 + toggle a2 + divider + slider a3 = 4
-    expect(body.children.length).toBe(4);
+    // body 内：button a1 + button a2 = 2
+    expect(body.children.length).toBe(2);
   });
 
   // ===== preset-thumb =====

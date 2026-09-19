@@ -1,16 +1,26 @@
-// preview-menu-cap-controls.test.ts — 能力控件通用渲染器纯函数测试。
-// formatCapSliderValue 是纯函数（无 DOM 依赖），node 环境直接测四分支：
-//   h（钟点 → HH:MM）/ %（百分比）/ 带单位（拼接）/ 无单位（toFixed2）。
-// 该函数由 renderCapSlider 与 renderEnvLevel 摘要行共用——防两端分叉回归。
+// preview-menu-cap-controls.test.ts — 能力控件通用渲染器测试。
+// 分两层：
+//   · 简单控件渲染器（renderCapToggle/renderCapSlider/formatCapSliderValue）吃统一 CapControlView，
+//     由 node 路径（render.ts 的 spec→view 适配器）直供——[增量2a] controls 通道已收窄为复杂件专用，
+//     简单件不再经 renderCapControls，故本组直调渲染器。formatCapSliderValue 是纯函数（无 DOM 依赖），
+//     node 环境直接测四分支：h（钟点 → HH:MM）/ %（百分比）/ 带单位（拼接）/ 无单位（toFixed2）；
+//     该函数由 renderCapSlider 与 renderEnvLevel 摘要行共用——防两端分叉回归。
+//   · 复杂控件走 renderCapControls（button/image/timeline/histogram/preset-thumb），测分组显隐与 testid。
 import { describe, it, expect, vi } from "vitest";
-import { formatCapSliderValue, renderCapControls } from "./cap-controls.ts";
+import {
+  capLabel,
+  type CapControlView,
+  formatCapSliderValue,
+  renderCapControls,
+  renderCapSlider,
+  renderCapToggle,
+} from "./cap-controls.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 
-function makeSlider(unit?: string): PreviewControlDef {
+function makeSlider(unit?: string): CapControlView {
   return {
     id: "t",
-    kind: "slider",
     labelKey: "t",
     fallback: "t",
     getValue: () => 0,
@@ -47,25 +57,37 @@ describe("formatCapSliderValue", () => {
   });
 });
 
+// 复杂件 helper：renderCapControls 通道现仅承载复杂 kind，用 button 作显隐/testid 探针
+// （button 恒渲染行 + cap- testid，不受 getValue 影响；image 空值会跳过故不适合探针）。
+function btn(id: string, extra: Partial<PreviewControlDef> = {}): PreviewControlDef {
+  return {
+    id,
+    kind: "button",
+    labelKey: id,
+    fallback: id,
+    button: { action: () => {} },
+    getValue: () => null,
+    setValue: () => {},
+    ...extra,
+  };
+}
+
 describe("renderCapControls — visibleWhen B 轨谓词", () => {
-  function toggle(id: string, extra: Partial<PreviewControlDef> = {}): PreviewControlDef {
-    return { id, kind: "toggle", labelKey: id, fallback: id, getValue: () => true, setValue: () => {}, ...extra };
-  }
   const snap = (mode: "film" | "pool"): PreviewSnapshot =>
     ({ "env.waterMode": mode } as unknown as PreviewSnapshot);
 
   it("传 snapshot 时按 visibleWhen 隐藏/显示", () => {
     const list = document.createElement("div");
     renderCapControls(list, [
-      toggle("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
-      toggle("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+      btn("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
+      btn("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
     ], snap("film"));
     expect(list.querySelector('[data-testid="cap-film-only"]')).not.toBeNull();
     expect(list.querySelector('[data-testid="cap-pool-only"]')).toBeNull();
     const list2 = document.createElement("div");
     renderCapControls(list2, [
-      toggle("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
-      toggle("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+      btn("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
+      btn("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
     ], snap("pool"));
     expect(list2.querySelector('[data-testid="cap-film-only"]')).toBeNull();
     expect(list2.querySelector('[data-testid="cap-pool-only"]')).not.toBeNull();
@@ -73,7 +95,7 @@ describe("renderCapControls — visibleWhen B 轨谓词", () => {
 
   it("无 snapshot 时 visibleWhen 被忽略，控件正常渲染（纯 B 轨容错：早期调用/DOM 冒烟不判藏）", () => {
     const list = document.createElement("div");
-    renderCapControls(list, [toggle("x", { visibleWhen: () => false })]);
+    renderCapControls(list, [btn("x", { visibleWhen: () => false })]);
     expect(list.querySelector('[data-testid="cap-x"]')).not.toBeNull();
   });
 
@@ -82,24 +104,23 @@ describe("renderCapControls — visibleWhen B 轨谓词", () => {
     // film 快照下 pool-only 隐藏（与「传 snapshot 时按 visibleWhen 隐藏/显示」同构，锁定 B 轨唯一入口）
     const list = document.createElement("div");
     renderCapControls(list, [
-      toggle("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+      btn("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
     ], snap("film"));
     expect(list.querySelector('[data-testid="cap-pool-only"]')).toBeNull();
   });
 });
 
-describe("renderCapControls — 全 kind testid 覆盖（2026-09 补齐）", () => {
-  it("color/timeline/histogram/preset-thumb/image/divider 都带 cap-<id> testid", () => {
+describe("renderCapControls — 复杂 kind testid 覆盖（增量2a 收窄后）", () => {
+  it("button/timeline/histogram/preset-thumb/image 都带 cap-<id> testid", () => {
     const list = document.createElement("div");
     renderCapControls(list, [
-      { id: "c-color", kind: "color", labelKey: "c", fallback: "c", getValue: () => 0xffffff, setValue: () => {} },
+      { id: "c-btn", kind: "button", labelKey: "c", fallback: "c", button: { action: () => {} }, getValue: () => null, setValue: () => {} },
       { id: "c-time", kind: "timeline", labelKey: "c", fallback: "c", getValue: () => 12, setValue: () => {} },
       { id: "c-hist", kind: "histogram", labelKey: "c", fallback: "c", getValue: () => [1, 2, 3], setValue: () => {} },
       { id: "c-thumb", kind: "preset-thumb", labelKey: "c", fallback: "c", getValue: () => "x", setValue: () => {}, thumb: { size: 40, options: [{ value: "a", label: "a", getThumb: () => null }], activeValue: () => "a", onSelect: () => {} } },
       { id: "c-img", kind: "image", labelKey: "c", fallback: "c", getValue: () => "https://x/y.png", setValue: () => {} },
-      { id: "c-div", kind: "divider", labelKey: "c", fallback: "c", getValue: () => false, setValue: () => {} },
     ]);
-    for (const id of ["c-color", "c-time", "c-hist", "c-thumb", "c-img", "c-div"]) {
+    for (const id of ["c-btn", "c-time", "c-hist", "c-thumb", "c-img"]) {
       expect(list.querySelector(`[data-testid="cap-${id}"]`), `${id} 应有 cap- testid`).not.toBeNull();
     }
   });
@@ -113,27 +134,26 @@ describe("renderCapControls — 全 kind testid 覆盖（2026-09 补齐）", () 
   });
 });
 
-describe("renderCapToggle — 整行点击切换（能力自 addToggleRow 下沉）", () => {
+describe("renderCapToggle — 整行点击切换（能力自 addToggleRow 下沉，简单件走 CapControlView 直渲）", () => {
   function mkToggle() {
     let val = false;
     const setValue = vi.fn((v: unknown) => { val = Boolean(v); });
     const onChange = vi.fn();
-    const def: PreviewControlDef = {
+    const view: CapControlView = {
       id: "tg",
-      kind: "toggle",
       labelKey: "tg",
       fallback: "TG",
       getValue: () => val,
       setValue,
       onChange,
     };
-    return { def, setValue, onChange };
+    return { view, setValue, onChange };
   }
 
   it("点击 label 文本区（.cc-labelbox）翻转开关并触发 setValue + onChange", () => {
-    const { def, setValue, onChange } = mkToggle();
+    const { view, setValue, onChange } = mkToggle();
     const list = document.createElement("div");
-    renderCapControls(list, [def]);
+    renderCapToggle(list, view);
     const row = list.querySelector('[data-testid="cap-tg"]') as HTMLElement;
     const labelBox = row.querySelector(".cc-labelbox") as HTMLElement;
     expect(labelBox).not.toBeNull();
@@ -144,9 +164,9 @@ describe("renderCapToggle — 整行点击切换（能力自 addToggleRow 下沉
   });
 
   it("点击 toggle 本体只触发 createHeaderToggle 原生逻辑一次（防双触发）", () => {
-    const { def, setValue } = mkToggle();
+    const { view, setValue } = mkToggle();
     const list = document.createElement("div");
-    renderCapControls(list, [def]);
+    renderCapToggle(list, view);
     const toggle = list.querySelector("label.toggle") as HTMLElement;
     expect(toggle).not.toBeNull();
 
@@ -157,9 +177,9 @@ describe("renderCapToggle — 整行点击切换（能力自 addToggleRow 下沉
   });
 
   it("连续点击 label 区：状态来回翻转", () => {
-    const { def, setValue } = mkToggle();
+    const { view, setValue } = mkToggle();
     const list = document.createElement("div");
-    renderCapControls(list, [def]);
+    renderCapToggle(list, view);
     const labelBox = list.querySelector(".cc-labelbox") as HTMLElement;
 
     labelBox.click();
@@ -169,11 +189,10 @@ describe("renderCapToggle — 整行点击切换（能力自 addToggleRow 下沉
   });
 });
 
-describe("renderCapSlider — 自绘 cs-bar 结构（能力自 ui-rows addSliderRow 下沉）", () => {
-  function mkSlider(extra: Partial<PreviewControlDef> = {}): PreviewControlDef {
+describe("renderCapSlider — 自绘 cs-bar 结构（能力自 ui-rows addSliderRow 下沉，简单件走 CapControlView 直渲）", () => {
+  function mkSlider(extra: Partial<CapControlView> = {}): CapControlView {
     return {
       id: "s",
-      kind: "slider",
       labelKey: "s",
       fallback: "S",
       getValue: () => 0.4,
@@ -185,7 +204,7 @@ describe("renderCapSlider — 自绘 cs-bar 结构（能力自 ui-rows addSlider
 
   it("渲染 .cs-bar + .cs-fill + .cs-thumb，role=slider + aria 带初始值，fill 宽度=值比例", () => {
     const list = document.createElement("div");
-    renderCapControls(list, [mkSlider()]);
+    renderCapSlider(list, mkSlider());
     const row = list.querySelector('[data-testid="cap-s"]') as HTMLElement;
     const bar = row.querySelector(".cs-bar") as HTMLElement;
     expect(bar).not.toBeNull();
@@ -206,12 +225,12 @@ describe("renderCapSlider — 自绘 cs-bar 结构（能力自 ui-rows addSlider
     const setValue = vi.fn((v: unknown) => { val = Number(v); });
     const onChange = vi.fn();
     const list = document.createElement("div");
-    renderCapControls(list, [mkSlider({
+    renderCapSlider(list, mkSlider({
       getValue: () => val,
       setValue,
       onChange,
       slider: { min: 0, max: 10, step: 1 },
-    })]);
+    }));
     const bar = list.querySelector('[data-testid="cap-s"] .cs-bar') as HTMLElement;
     bar.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     expect(val).toBe(1);
@@ -224,12 +243,12 @@ describe("renderCapSlider — 自绘 cs-bar 结构（能力自 ui-rows addSlider
     const onChange = vi.fn();
     const onCommit = vi.fn();
     const list = document.createElement("div");
-    renderCapControls(list, [mkSlider({
+    renderCapSlider(list, mkSlider({
       getValue: () => 0,
       setValue: () => {},
       onChange,
       slider: { min: 0, max: 10, step: 1, onCommit },
-    })]);
+    }));
     const bar = list.querySelector('[data-testid="cap-s"] .cs-bar') as HTMLElement;
     // mock rect 后 click 50% 位置 → 值 5
     Object.defineProperty(bar, "getBoundingClientRect", {
@@ -243,12 +262,59 @@ describe("renderCapSlider — 自绘 cs-bar 结构（能力自 ui-rows addSlider
 
   it("unit='%' 时值显示百分比（formatCapSliderValue 联动）", () => {
     const list = document.createElement("div");
-    renderCapControls(list, [mkSlider({
+    renderCapSlider(list, mkSlider({
       getValue: () => 0.42,
       slider: { min: 0, max: 1, step: 0.05, unit: "%" },
-    })]);
+    }));
     const row = list.querySelector('[data-testid="cap-s"]') as HTMLElement;
     const val = row.querySelector(".cc-head span:last-child") as HTMLElement;
     expect(val.textContent).toBe("42%");
+  });
+});
+
+// ===== 动态明文标签回退（2026-09 表情界面整列无文字修复回归锁）=====
+// morph 面板每行 = kind:"toggle" 节点，表情名只写 node.label（动态数据不进 i18n）。
+// nodeControlToView 将 labelKey 置空串、明文装入 fallback；渲染器若只读 labelKey，
+// tOf("") 三级回退仍落回裸空 key → label 被写成空串，整列表情只剩开关没有文字。
+// 骨骼面板不受影响：它是 sanctioned renderCustom（vrm-bone-ui 直接 textContent = name）。
+describe("capLabel — labelKey / fallback 回退分工", () => {
+  it("labelKey 非空 → 走 tOf（优先于 fallback 明文）", () => {
+    expect(capLabel({ labelKey: "preview.perceptionBreath", fallback: "FB" })).toBe("呼吸");
+  });
+
+  it("labelKey 空串 → 直取 fallback 明文（不进 i18n，否则回退成空白）", () => {
+    expect(capLabel({ labelKey: "", fallback: "Left Breast Squish Inwards" })).toBe(
+      "Left Breast Squish Inwards",
+    );
+  });
+});
+
+describe("renderCapToggle / renderCapSlider — 只声明 fallback 的动态名（表情名）上屏", () => {
+  const morphView = (over: Partial<CapControlView> = {}): CapControlView => ({
+    id: "morph-哀",
+    labelKey: "",
+    fallback: "哀",
+    getValue: () => false,
+    setValue: () => {},
+    ...over,
+  });
+
+  it("toggle 行 .slide-label 渲染表情名（不为空串）", () => {
+    const list = document.createElement("div");
+    renderCapToggle(list, morphView());
+    const label = list.querySelector('[data-testid="cap-morph-哀"] .slide-label') as HTMLElement;
+    expect(label).not.toBeNull();
+    expect(label.textContent).toBe("哀");
+  });
+
+  it("slider 头部标题与 aria-label 同源取 fallback", () => {
+    const list = document.createElement("div");
+    renderCapSlider(
+      list,
+      morphView({ getValue: () => 0.5, slider: { min: 0, max: 1, step: 0.01 } }),
+    );
+    const row = list.querySelector('[data-testid="cap-morph-哀"]') as HTMLElement;
+    expect(row.querySelector(".cc-head .slide-label")?.textContent).toBe("哀");
+    expect(row.querySelector(".cs-bar")?.getAttribute("aria-label")).toBe("哀");
   });
 });

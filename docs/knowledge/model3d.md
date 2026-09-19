@@ -131,6 +131,7 @@ auto_fields:
     - CapabilityId
     - CapabilityMap
     - CapControlView
+    - capLabel
     - captureTextureName
     - checkRevision
     - clampPoolRoundness

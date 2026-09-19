@@ -21,27 +21,18 @@
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { IconRef } from "@/utils/icon/resolve.ts";
 
-/** 控件种类（含简单+复杂）——controls 通道承载元素的 kind。
- *  [ADR-195 刀3] 更名收敛（终名 PreviewControlKind）：cap 控件与节点控件收敛到
- *  同一声明式类型子孙，消除"第二套控件类型"观感。简单 kind（toggle/slider/select/divider/color）可走
- *  PreviewMenuNode.control 节点原生承载，复杂 kind（button/image/timeline/histogram/
- *  preset-thumb）经 controls 通道承载——二者由同一个 cap 栈渲染器渲染。 */
-export type PreviewControlKind =
-  | "toggle"
-  | "slider"
-  | "select"
-  | "button"
-  | "divider"
-  | "image"
-  | "color"
-  | "timeline"
-  | "histogram"
-  | "preset-thumb";
+/** 控件种类——controls 通道承载元素的 kind（[ADR-195 增量2a] 收窄为复杂件专用）。
+ *  本类型只保留无法用 PreviewMenuNode 原生承载的复杂控件（button/image/timeline/
+ *  histogram/preset-thumb）。简单控件（toggle/slider/select/color/divider）一律走
+ *  节点原生 kind + PreviewControlSpec，不再经 controls 通道——消除「同一简单控件
+ *  两套声明」的冗余，为增量2b 的 Spec/Def 统一铺路。 */
+export type PreviewControlKind = "button" | "image" | "timeline" | "histogram" | "preset-thumb";
 
 /**
- * 控件定义（[ADR-195 刀3] 更名，终名 PreviewControlDef）：声明式，由 cap 栈渲染器渲染为 DOM。
- * 经 `PreviewMenuNode.controls` 通道承载（复杂可视化控件），与 `PreviewControlSpec`
- * （节点原生控件字段）同属控件声明体系——不再有并列于节点体系的第二种类型。
+ * 控件定义（[ADR-195 增量2a] 收窄为复杂件专用）：声明式，由 cap 栈渲染器渲染为 DOM，
+ * 经 `PreviewMenuNode.controls` 通道承载。简单控件字段（slider/select/onChange/hintKey）
+ * 已删除——简单件一律走节点原生 kind + `PreviewControlSpec`，本类型与 Spec 同属控件声明
+ * 体系但分工互斥（复杂件 vs 简单件），不再有「同一简单控件两套声明」。
  */
 export interface PreviewControlDef {
   /** 稳定 id（用于持久化 key） */
@@ -52,8 +43,6 @@ export interface PreviewControlDef {
   labelKey: string;
   /** i18n 回退文案 */
   fallback: string;
-  /** 控件辅助说明 i18n 键（toggle/select 展示在右侧小字，hintKey 缺省取 fallback 不显示；button 有内部 button.hintKey 优先级更高） */
-  hintKey?: string;
   /** 分组标题 i18n 键（同一 group 的连续控件归入一个可折叠 section；group 变化时插入 section header） */
   group?: string;
   /**
@@ -69,31 +58,6 @@ export interface PreviewControlDef {
    *  [铁律收口] 3d菜单只允许 visibleWhen——A 轨 visible 闭包已整体删除（2026-09，ground/water 换皮完成），
    *  谓词只吃快照不摸 cap 实例，全仓唯一条件显隐入口。 */
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean;
-  /** slider 配置 */
-  slider?: {
-    min: number;
-    max: number;
-    step: number;
-    unit?: string;
-    /**
-     * 旁挂数字输入框（与 range 双向联动，onchange 走 min/max clamp）。
-     * [控件原语归一] 自 PreviewControlSpec.numeric 收编（2026-09）——此前 node 栈
-     * 专属能力，cap 栈（litematic 分层等）调用不到；归一后所有数组类菜单共享。
-     */
-    numeric?: boolean;
-    /**
-     * slider 提交回调（拖拽松手/change 事件，离散触发）。
-     * 与 setValue 的 oninput 高频写入区分：用于「拖动时抑制、提交时通知」类语义
-     * （如 pixel-ratio 拖动不触发面板重算，松手后广播一次）。
-     */
-    onCommit?: (v: number) => void;
-  };
-  /** 控件值变更后的副作用钩子（select/toggle/slider 通用，change/input 提交后调用）。
-   *  [控件原语归一] 自 PreviewControlSpec.onChange 收编（2026-09）——适配层可在其中
-   *  注入 menu.refresh（refreshOnChange 语义）或广播副作用，renderCap* 无需持有 menu 引用。 */
-  onChange?: (v: unknown) => void;
-  /** select 配置 */
-  select?: Array<{ value: string; label: string; labelKey?: string }>;
   /** button 配置（kind=button 时生效） */
   button?: {
     /** 按钮展示文案（i18n 键），为空则取 labelKey/fallback */

@@ -564,20 +564,20 @@ describe("renderMenu 新 kind", () => {
         kind: "controls",
         controls: [
           {
-            id: "light-intensity",
-            kind: "slider",
-            labelKey: "preview.lightIntensity",
-            fallback: "强度",
-            getValue: () => 1,
+            id: "env-pick-hdr",
+            kind: "button",
+            labelKey: "preview.envPickHdr",
+            fallback: "自定义 HDR",
+            button: { textKey: "preview.envPickHdrBtn", action: () => {} },
+            getValue: () => null,
             setValue: () => {},
-            slider: { min: 0, max: 2, step: 0.01 },
           },
           {
-            id: "light-color",
-            kind: "color",
-            labelKey: "preview.lightColor",
-            fallback: "颜色",
-            getValue: () => 0xffffff,
+            id: "env-hdr-preview",
+            kind: "image",
+            labelKey: "preview.envHdrPreview",
+            fallback: "HDR 预览",
+            getValue: () => "https://x/y.png",
             setValue: () => {},
           },
         ],
@@ -585,11 +585,11 @@ describe("renderMenu 新 kind", () => {
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
-    // cap 控件 testid 前缀 cap-（renderCapControls 口径；slider/toggle/select/button 有，
-    // color/timeline/histogram/preset-thumb 为既有未覆盖，按输入类型断言）
-    expect(container.querySelector('[data-testid="cap-light-intensity"]')).not.toBeNull();
-    expect(container.querySelector(".cs-bar")).not.toBeNull();
-    expect(container.querySelector('input[type="color"]')).not.toBeNull();
+    // [增量2a] controls 通道收窄为复杂件专用（button/image/timeline/histogram/preset-thumb），
+    // testid 前缀 cap-（renderCapControls 口径）；简单件（slider/color）已移出本通道，走节点原生渲染。
+    expect(container.querySelector('[data-testid="cap-env-pick-hdr"]')).not.toBeNull();
+    expect(container.querySelector(".cc-btn")).not.toBeNull();
+    expect(container.querySelector('[data-testid="cap-env-hdr-preview"]')).not.toBeNull();
   });
 
   it("controls: 惰性函数引用每次渲染重取（cap 后挂载可见，非构建期冻结）", () => {
@@ -600,11 +600,11 @@ describe("renderMenu 新 kind", () => {
         kind: "controls",
         controls: () => (mounted
           ? [{
-              id: "pp-enabled",
-              kind: "toggle",
+              id: "pp-timeline",
+              kind: "timeline",
               labelKey: "preview.pp",
-              fallback: "后处理",
-              getValue: () => false,
+              fallback: "时间轴",
+              getValue: () => 12,
               setValue: () => {},
             }]
           : []),
@@ -612,10 +612,10 @@ describe("renderMenu 新 kind", () => {
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
-    expect(container.querySelector('[data-testid="cap-pp-enabled"]')).toBeNull();
+    expect(container.querySelector('[data-testid="cap-pp-timeline"]')).toBeNull();
     mounted = true;
     renderMenu(container, nodes, makeDeps() as any);
-    expect(container.querySelector('[data-testid="cap-pp-enabled"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="cap-pp-timeline"]')).not.toBeNull();
   });
 
   it("controls: controls 为空数组/空函数时不渲染任何行（无副作用）", () => {

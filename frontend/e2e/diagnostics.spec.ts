@@ -844,3 +844,79 @@ test.describe("诊断页 · 引擎对照 scan-bench 真实载荷渲染（ADR-262
     expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
   });
 });
+
+// ── ADR-278 §2.6 bench 语义诚实层（真实浏览器链路）──────────────────
+// jsdom 层已钉住改写逻辑；这层的增量价值 = 「用户拨选择器 → change 事件 → 界面当场改口」
+// 的完整时序（含目标集异步填充后的重放），及三语环境下只锁语义关键词、不锁拼接形态。
+test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () => {
+  test.beforeEach(async ({ page }) => {
+    await gotoApp(page);
+    await navItem(page, "diagnostics").click();
+    await page.waitForFunction(
+      () => {
+        const root = document.querySelector("app-content")?.shadowRoot;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
+      },
+      undefined,
+      { timeout: 10000, polling: 200 },
+    );
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
+  });
+
+  /** 读迭代/目标集标签文本 + 三个运行按钮 title（§2.6 的全部可断言面） */
+  function readHonesty(page: Page) {
+    return page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const txt = (id: string) =>
+        (root?.querySelector(`[data-testid="${id}"]`) as HTMLElement | null)?.textContent ?? "";
+      const title = (id: string) =>
+        (root?.querySelector(`[data-testid="${id}"]`) as HTMLElement | null)?.title ?? "";
+      return {
+        iter: txt("diag-perf-iter-label"),
+        target: txt("diag-perf-target-label"),
+        runTitle: title("diag-perf-run"),
+        concTitle: title("diag-perf-conc-run"),
+        scanTitle: title("diag-perf-scan-bench"),
+      };
+    });
+  }
+
+  test("切 scan：迭代标签当场改口为全库重扫口径；single 下为重复解析口径", async ({ page }) => {
+    const single = await readHonesty(page);
+    expect(single.iter).toContain("重复解析");
+    expect(single.target).toContain("目标集");
+    await setShadowSelect(page, "diag-perf-mode", "scan");
+    const scan = await readHonesty(page);
+    expect(scan.iter).toContain("全库重扫");
+    // scan 不读目标集行，但标签不得被串改成并发的「取样范围」（模式态互斥）
+    expect(scan.target).toContain("目标集");
+  });
+
+  test("切 conc：目标集标签改为取样范围，且单模型回落伴随可见 toast（不再静默改选择）", async ({
+    page,
+  }) => {
+    await setShadowSelect(page, "diag-perf-mode", "conc");
+    const got = await readHonesty(page);
+    expect(got.target).toContain("取样范围");
+    // toast 文案随语言变，不锁内容锁出现性：总线弹过一次就该有非空 toast 节点在屏上
+    const toastShown = await page.evaluate(() => {
+      return [...document.querySelectorAll("[class*='toast']")].some((el) =>
+        Boolean(el.textContent && el.textContent.trim().length > 0),
+      );
+    });
+    expect(toastShown).toBe(true);
+  });
+
+  test("三个运行按钮各自带「测什么对象」hint（模板不写死，initPerfMode 单点派生）", async ({
+    page,
+  }) => {
+    const got = await readHonesty(page);
+    for (const h of [got.runTitle, got.concTitle, got.scanTitle]) {
+      expect(h.length).toBeGreaterThan(0);
+      expect(PLACEHOLDER_LEAK.test(h)).toBe(false); // {mode} 插值残留 = hint 组装漏填参数
+    }
+    expect(got.runTitle).toContain("一个模型");
+    expect(got.concTitle).toContain("一批模型");
+    expect(got.scanTitle).toContain("目录树");
+  });
+});

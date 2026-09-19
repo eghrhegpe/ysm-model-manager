@@ -7,7 +7,7 @@
 //   - perf-trace.ts       ：加载剖析（load-trace store 消费）
 // ADR-040 拆分后每文件 ≤400 行红线；本文件为薄接线层。
 
-import { t } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { getLastModelPath } from "@/core/model-path-store.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import type { EscFn } from "./logs.ts";
@@ -19,6 +19,43 @@ import { runSingleBench, syncPerfBaselineControls } from "./perf-single-bench.ts
 import { renderLoadTraceSection } from "./perf-trace.ts";
 
 export { renderLoadTraceSection } from "./perf-trace.ts";
+
+/**
+ * 基准模式的 i18n 接线单点（ADR-278 §2.6）：模式 → 文案键的**唯一事实源**。
+ * 维护约定：新增模式只改下面三张表 + 补一个 `perfModeName*`，**禁止**再为某模式开平行
+ * 后缀键（如 perfScopeHintXxx）——那会把「加一个模式 = 改 N 处」的债重新养回来。
+ */
+const PERF_MODE_NAMES: Record<string, LocaleKey> = {
+  single: "diagnostics.perfModeNameSingle",
+  conc: "diagnostics.perfModeNameConc",
+  scan: "diagnostics.perfModeNameScan",
+};
+
+/** 运行按钮 id → 其所属模式（scope hint 随此派生，不另写第二份） */
+export const PERF_RUN_BUTTON_MODE_KEYS: Record<string, string> = {
+  "diag-perf-run": "single",
+  "diag-perf-conc-run": "conc",
+  "diag-perf-scan-bench": "scan",
+};
+
+/** 迭代标签的模式后缀：只有语义真变的模式才登记（conc 不读迭代框，无此行） */
+export const PERF_ITER_SUFFIX_KEYS: Record<string, LocaleKey | undefined> = {
+  single: "diagnostics.perfIterationsSuffixSingle",
+  scan: "diagnostics.perfIterationsSuffixScan",
+};
+
+/**
+ * 组装运行按钮的 scope hint：短 scope 句（模板插值 mode 名）+ 该模式的既有机制长句。
+ * 未知模式只落通用句，不编造。机制句本体仍归各自命令模块消费（perfConcurrentHint /
+ * perfScanBenchHint 的接线扫描护栏见 tests/test_cli_gui_flow_contract.ts §3.8）。
+ */
+export function perfScopeHint(mode: string): string {
+  const nameKey = PERF_MODE_NAMES[mode];
+  const scope = t("diagnostics.perfScopeHint", { mode: nameKey ? t(nameKey) : mode });
+  if (mode === "conc") return `${scope} · ${t("diagnostics.perfConcurrentHint")}`;
+  if (mode === "scan") return `${scope} · ${t("diagnostics.perfScanBenchHint")}`;
+  return scope;
+}
 
 /**
  * 基准模式接线（ADR-278 §2.1 / §2.3）：单模型 / 并发 / 引擎对照三选一，只呈现该模式那一套控件。
@@ -56,10 +93,8 @@ function initPerfMode(root: ShadowRoot): () => void {
     // ===== ADR-278 §2.6 语义诚实层：同控件跨模式改义，当场说清 =====
     const iterLabel = root.getElementById("diag-perf-iter-label");
     if (iterLabel) {
-      iterLabel.textContent =
-        mode === "scan"
-          ? t("diagnostics.perfIterationsScan")
-          : t("diagnostics.perfIterationsSingle");
+      const suffixKey = PERF_ITER_SUFFIX_KEYS[mode];
+      iterLabel.textContent = t("diagnostics.perfIterations") + (suffixKey ? t(suffixKey) : ""); // 未知模式回落中性「迭代次数」，不编造后缀
       iterLabel.title = t("diagnostics.perfIterationsHint");
     }
     // 并发下目标集只剩「挑样本范围」语义（单模型选项已禁），标签同步改口
@@ -67,18 +102,11 @@ function initPerfMode(root: ShadowRoot): () => void {
     if (targetLabel)
       targetLabel.textContent =
         mode === "conc" ? t("diagnostics.perfTargetSampleRange") : t("diagnostics.perfTarget");
-    // 每个运行按钮说清自己测的对象（防把引擎对照误读为「换个方式再测这个模型」）。
-    // conc/scan 的机制长句 hint 原写死在模板 title，现收进同一事实源：短 scope 句 + 既有机制句拼接。
-    const scopeHints: Record<string, string> = {
-      "diag-perf-run": t("diagnostics.perfScopeHintSingle"),
-      "diag-perf-conc-run": `${t("diagnostics.perfScopeHintConc")} · ${t("diagnostics.perfConcurrentHint")}`,
-      // 接线断言护栏：tests/test_cli_gui_flow_contract.ts 的 perfScanBenchHint 引用点只扫
-      // perf-scan-bench.ts + tpl.ts；hint 收进本单点后留此注释防其误报「加键没接线」。
-      "diag-perf-scan-bench": `${t("diagnostics.perfScopeHintScan")} · ${t("diagnostics.perfScanBenchHint")}`, // diagnostics.perfScanBenchHint
-    };
-    for (const [id, hint] of Object.entries(scopeHints)) {
+    // 每个运行按钮说清自己测的对象（防把引擎对照误读为「换个方式再测这个模型」）：
+    // hint = perfScopeHint 单点组装（短 scope 句 + 既有机制句），接线表见 PERF_RUN_BUTTON_MODE_KEYS。
+    for (const [id, modeKey] of Object.entries(PERF_RUN_BUTTON_MODE_KEYS)) {
       const el = root.getElementById(id);
-      if (el) el.title = hint;
+      if (el) el.title = perfScopeHint(modeKey);
     }
 
     const modelOpt = Array.from(targetEl?.options ?? []).find((o) => o.value === "");

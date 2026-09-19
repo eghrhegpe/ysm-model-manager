@@ -353,11 +353,14 @@ export const ja: Record<string, string> = {
   "diagnostics.perfRunSingle": "単一モデルベンチマークを実行",
   // ADR-278 §2.6：3 モードが同一控件を共有するが、各数値／選択肢が「測る対象」が違う——
   // その場で明示する（エンジン比較の「反復」はモデル再測定ではなくリポジトリ全体再スキャン）。
-  "diagnostics.perfScopeHintSingle": "1 つのモデルの読込時間を測定",
-  "diagnostics.perfScopeHintConc": "複数モデルの逐次 vs 並列を測定",
-  "diagnostics.perfScopeHintScan": "リポジトリ全体のディレクトリスキャンを測定（モデル解析なし）",
-  "diagnostics.perfIterationsSingle": "解析繰り返し回数",
-  "diagnostics.perfIterationsScan": "リポジトリ再スキャン回数",
+  // 配線の単一点 = perf.ts|PERF_MODE_I18N（モード → キー表）；文言本体はモード別の平行キーにしない——
+  // モード追加はその表 + モード名 1 個の修正で済み、保守コスト O(モード数) → O(1)。
+  "diagnostics.perfScopeHint": "測定対象：{mode}",
+  "diagnostics.perfModeNameSingle": "1 つのモデルの読込時間",
+  "diagnostics.perfModeNameConc": "複数モデルの逐次 vs 並列",
+  "diagnostics.perfModeNameScan": "リポジトリ全体のディレクトリスキャン（モデル解析なし）",
+  "diagnostics.perfIterationsSuffixSingle": "（解析繰り返し回数）",
+  "diagnostics.perfIterationsSuffixScan": "（リポジトリ再スキャン回数）",
   "diagnostics.perfIterationsHint":
     "同一対象を何回繰り返すか（中央値採用）；エンジン比較ではリポジトリ全体再スキャン回数",
   "diagnostics.perfTargetSampleRange": "サンプル範囲",

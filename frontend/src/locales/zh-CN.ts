@@ -350,13 +350,15 @@ export const zhCN = {
   "diagnostics.perfRunSingle": "运行单一模型基准",
   // ADR-278 §2.6 语义诚实层：三模式共用一套控件，但每个数字/选项**测的对象不同**——
   // 不当场说清就会被误读（scan 的「迭代」不是再测一次模型，而是重扫整库目录树）。
-  // 按钮 hint 只说「测什么对象」，机制细节（串行 vs 并行、中位/p95）留在既有 perfScanBenchHint 等长句里。
-  "diagnostics.perfScopeHintSingle": "测一个模型的加载耗时",
-  "diagnostics.perfScopeHintConc": "测一批模型的串行 vs 并行",
-  "diagnostics.perfScopeHintScan": "测整库目录树扫描，不解析模型文件",
-  // 同一 #diag-perf-iter 在 single 与 scan 下是两种物理量：标签随模式改写，悬停说人话
-  "diagnostics.perfIterationsSingle": "重复解析次数",
-  "diagnostics.perfIterationsScan": "全库重扫次数",
+  // 接线面单点 = perf.ts|PERF_MODE_I18N（模式 → 键表）；文案本体不随模式分平行键——
+  // 新增模式只改那张表 + 补 mode 名，维护成本 O(模式数) → O(1)。
+  "diagnostics.perfScopeHint": "测什么：{mode}",
+  "diagnostics.perfModeNameSingle": "一个模型的加载耗时",
+  "diagnostics.perfModeNameConc": "一批模型的串行 vs 并行",
+  "diagnostics.perfModeNameScan": "整库目录树扫描（不解析模型文件）",
+  // 同一 #diag-perf-iter 在 single 与 scan 下是两种物理量：标签 = 既有 perfIterations + 模式后缀
+  "diagnostics.perfIterationsSuffixSingle": "（重复解析次数）",
+  "diagnostics.perfIterationsSuffixScan": "（全库重扫次数）",
   "diagnostics.perfIterationsHint": "同一目标重复几轮取中位；引擎对照下 = 整库目录树重扫几遍",
   // 并发没有单模型目标集：同控件在 conc 下只剩「挑样本范围」语义，且原选「单模型」会被回落
   "diagnostics.perfTargetSampleRange": "取样范围",

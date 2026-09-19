@@ -351,11 +351,14 @@ export const en: Record<string, string> = {
   "diagnostics.perfRunSingle": "Run single-model benchmark",
   // ADR-278 §2.6 honesty layer: three modes share one control set, but each number/option measures
   // a different object — say it in place (scan's "iterations" re-scan the whole repo tree, not one model).
-  "diagnostics.perfScopeHintSingle": "Measures load time of one model",
-  "diagnostics.perfScopeHintConc": "Measures serial vs parallel across a batch of models",
-  "diagnostics.perfScopeHintScan": "Measures whole-repo directory scan; no model parsing",
-  "diagnostics.perfIterationsSingle": "Parse repeats",
-  "diagnostics.perfIterationsScan": "Repo rescan passes",
+  // Single wiring point = perf.ts|PERF_MODE_I18N (mode → key table); copy bodies never fork per-mode
+  // parallel keys — adding a mode edits that table + one mode name, cost O(modes) → O(1).
+  "diagnostics.perfScopeHint": "Measures: {mode}",
+  "diagnostics.perfModeNameSingle": "load time of one model",
+  "diagnostics.perfModeNameConc": "serial vs parallel across a batch of models",
+  "diagnostics.perfModeNameScan": "whole-repo directory scan (no model parsing)",
+  "diagnostics.perfIterationsSuffixSingle": " (parse repeats)",
+  "diagnostics.perfIterationsSuffixScan": " (repo rescan passes)",
   "diagnostics.perfIterationsHint":
     "Rounds over the same target (median taken); in engine comparison = full repo rescans",
   "diagnostics.perfTargetSampleRange": "Sample range",

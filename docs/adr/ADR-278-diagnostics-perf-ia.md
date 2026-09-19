@@ -67,11 +67,13 @@
 
 三模式共用一套控件后，审计发现两处「同名不同义」的前后端对接缝隙（正确性归 Go，但界面不得骗人）：
 
-- **`#diag-perf-iter` 一个框两种物理量**：single/conc 下 = 同一模型重复解析几次；scan 下 = 整库目录树重扫几遍（`scan_bench.go --iterations`）。标签随模式改写（`perfIterationsSingle`/`perfIterationsScan`），口径进悬停 hint。
+- **`#diag-perf-iter` 一个框两种物理量**：single/conc 下 = 同一模型重复解析几次；scan 下 = 整库目录树重扫几遍（`scan_bench.go --iterations`）。标签随模式改写（既有中性 `perfIterations` + 模式后缀键），口径进悬停 hint。
 - **目标集在 conc 下只剩「挑样本范围」语义**（单模型选项已禁）且原选值会被静默回落：标签同步改口（`perfTargetSampleRange`），回落时 toast 告知（`perfConcTargetFallback`）——与 §2.3「被禁用比勾了却没生效诚实」同一条线：**静默改用户的选择是欺骗**。
 - **三个运行按钮各自挂本模式「测什么对象」的 scope hint**（`perfScopeHint*`，单点归 `initPerfMode`，模板不再写死 title）：防把引擎对照误读为「换个方式再测这个模型」（它根本不碰模型文件，只遍历目录树）。
 
 反例护栏：本次**不碰**「取样上限」标签——它的单位随 selector 变但语义不变（永远 = 目标集展开单位的 N 条），恒定性由 `perf-matrix.test.ts` 钉死；改义才改标签，不改义只改 hint。落地点全在 `perf.ts|initPerfMode`（apply 内，重放幂等：回落 toast 只在真发生替换时弹）。
+
+**维护成本约束（同日二修）**：首版每模式一套平行键（`perfScopeHint{Single,Conc,Scan}` / `perfIterations{Single,Scan}`）+ 拼接写死在 apply 里，加一个模式要改 ≈3N 处（N = 语言数）。收敛为接线面单点：**`perf.ts` 三张表（`PERF_MODE_NAMES` / `PERF_RUN_BUTTON_MODE_KEYS` / `PERF_ITER_SUFFIX_KEYS`）+ `perfScopeHint()` 组装函数**；文案本体去模式分叉（`perfScopeHint` 带 `{mode}` 插值、迭代标签 = 中性基词 + 后缀）。新增模式 = 表里各加一行 + 一个 `perfModeName*`，成本 O(模式数) → O(1)。测试同步降噪：断言只锁语义关键词（重复解析/全库重扫/一个模型…）不锁拼接形态——改措辞不应红测试；另钉一条接线表单点性（每个运行按钮 id 都有派生 hint，未知模式不编造机制句）；真实浏览器链路补 e2e（拨选择器→当场改口 / conc 回落 toast 上屏 / 三按钮 hint 无 `{mode}` 残留）。
 
 ## 3. 后果（Consequences）
 

@@ -30,6 +30,9 @@ auto_fields:
     - initPerfPanel
     - loadDiagnosticsLogs
     - loadRuntimeLogs
+    - PERF_ITER_SUFFIX_KEYS
+    - PERF_RUN_BUTTON_MODE_KEYS
+    - perfScopeHint
     - populatePerfTargetOptions
     - renderHealthReport
     - renderLoadTraceSection
@@ -193,7 +196,7 @@ status: active
   - **静默 no-op → 可见的不可选**：并发不能选「单模型」（没有模型路径输入），原实现只是 `return null`；现在切到并发时**禁用该选项**并把已选值回落到全库扁平。同批修一句**会撒谎的文案**：`perfConcurrentParamInvalid` 只讲「worker / 上限」数值，而它同时是「目标集选了单模型」的出口——三语都补上了目标集原因。
   - **`record`**：加载剖析（内存 store → 进即渲染），且已是该 tab 的**唯一入口**。原「基准历史」段（`diag-perf-log` / `diag-perf-hist-row` / `diag-perf-hist`，CLI 支撑 → 引导空态 + 按钮）已由 380fa163f「remove perf-log UI section」整块移除，本行随之订正——**卡比代码晚了一步**，正是 `check-doc-drift` 该抓、而只抓得着 `source_files` 的那类半截漂移。查看器模式隐藏 `bench` / `gui` **整 tab**（每个入口都是桌面专属 CLI；只藏按钮会留下「满屏引导空态却点不着任何东西」的空壳 tab），**保留** trace 入口。
   - 测试：新增 `perf-mode.test.ts` 5 例（默认只显 single / 切 conc 的「禁用 + 回落」/ 切回恢复 / scan 复用迭代行 / 填充重建 `<option>` 后模式态重放）；**变异检查**——注释掉禁用+回落两行 → **恰好 2/5 红**（证明测试绑定行为、非空转）。e2e `diagnostics.spec.ts` 同步 18 例（`DIAG_TABS` 改 7 项且仍**全量严格相等**、4 处 tab 就绪等待 `>=8`→`>=7`、并发两例与 scan 一例改用既有 `setShadowSelect(page, "diag-perf-mode", …)` 切模式）。
-  - **§2.6 语义诚实层（2026-09-20 补）**：三模式共用控件后审计出两处「同名不同义」接缝，落地在 `initPerfMode` 的 apply 内（重放幂等）：① `#diag-perf-iter-label` 随模式改写（single=重复解析次数 / scan=全库重扫次数，悬停 hint 说口径）——同一框在 scan 下量的是整库目录树遍历而非模型解析，不改口就会被误读成「再测一次这个模型」；② conc 下目标集标签改「取样范围」（`#diag-perf-target-label`）且单模型回落不再静默（toast `perfConcTargetFallback`）；③ 三个运行按钮 title 收进单点 scope hint（`perfScopeHint*`，模板不再写死，conc/scan = 短 scope 句 + 既有机制句拼接）。反例护栏：**不碰**「取样上限」标签（单位变但语义不变，恒定性由 perf-matrix.test 钉死）。测试：`perf-mode.test.ts` +4 例（标签改写双向 / 目标集改口 / 三按钮 hint / 回落 toast 含重放不双弹）；新键入 `VIEW_TESTIDS`（diag-perf-iter-label / diag-perf-target-label），locale 三语各 +8 键经 `generate-locale-json.ts` 同步。
+  - **§2.6 语义诚实层（2026-09-20 补，同日二修收敛）**：三模式共用控件后审计出两处「同名不同义」接缝，落地在 `initPerfMode` 的 apply 内（重放幂等）：① `#diag-perf-iter-label` 随模式改写（single=重复解析 / scan=全库重扫，悬停 hint 说口径）；② conc 下目标集标签改「取样范围」（`#diag-perf-target-label`）且单模型回落不再静默（toast `perfConcTargetFallback`）；③ 三个运行按钮 title 收进单点 scope hint。**维护成本约束是二修的立因**：首版每模式一套平行键（`perfScopeHint{Single,Conc,Scan}`/`perfIterations{Single,Scan}`），加一个模式要改 ≈3N 处（N=语言数）；收敛为 `perf.ts` 三张接线表（`PERF_MODE_NAMES`/`PERF_RUN_BUTTON_MODE_KEYS`/`PERF_ITER_SUFFIX_KEYS`）+ `perfScopeHint()` 组装 + `{mode}` 插值文案本体，新增模式 = 表各加一行 + 一个 `perfModeName*`，O(模式数)→O(1)。反例护栏：**不碰**「取样上限」标签（单位变但语义不变，恒定性由 perf-matrix.test 钉死）。测试：`perf-mode.test.ts` +5 例（标签改写双向 / 目标集改口 / 三按钮 hint / 接线表单点性+未知模式不编造 / 回落 toast 含重放不双弹），断言只锁语义关键词不锁拼接形态（改措辞不应红测试）；e2e 新增 describe 3 例钉真实浏览器链路（拨选择器→当场改口 / conc 回落 toast 上屏 / 三按钮 hint 无 `{mode}` 残留）；新键入 `VIEW_TESTIDS`（diag-perf-iter-label / diag-perf-target-label），locale 三语同步经 `generate-locale-json.ts`。
 - **性能域只覆盖「一条资源链路」，且这件事必须写在面板里而不是标签里**（2026-09 文案校准，承 ADR-278）：用户追问「蓝图呢」逼出的事实——性能诊断 7 个命令全部围绕「BedrockModel 加载」建成，当时**只有 YSM 登记为有完整链路**（⚠️ 2026-09-19 订正：`maid-model` 同链、7 段齐全，是**清单漏登记**的假阴性——「只有 YSM」是**清单的声明**而非**引擎的事实**，与本卡反复出现的「闸只看得见它被写死的那一类」同源，详见下方同日条目）；MMD/VRM/FBX/GLTF 只到「如实告知不模拟 + 引导去 3D 预览实测」；**蓝图/投影零入口**（`file-bench` 只量原始读取吞吐，`detectModelFormat` 只是**叫得出名字**）。最刺眼的不对称：`go/litematic` 是 Go 侧最成熟的解析链路之一（三层 + 中文方块名 + fuzz 测试，知识卡明令「禁止前端手写」），比 MMD/VRM 更「CLI 可测」却更没入口。落地：
   - **`(YSM)` 后缀退休**：`diagnostics.perfRunGui` 去掉括号后缀，新增 `diagnostics.perfGuiScopeNote`（三语）作为 gui tab 的**常驻范围说明**（`.perf-scope-note` + `data-testid="diag-perf-gui-scope"`）。⚠️ 该说明原写「完整 6 阶段仅 YSM」——**当日即错**（见下方 2026-09-19 条：`maid-model` 同样 7 段齐全，只是清单漏登记），已订正为「完整 6 阶段链路覆盖 YSM 与车万女仆」，并补「同类型里没有几何的条目（音效包等）会自动顺延到下一个候选」一句。判据：**该在面板里说清楚的事，不该藏在标签里**——标签是给未点进来的人看的，而误导恰恰发生在点进来之后。
   - **`file-bench` 描述对齐实现**（`go/cli/mmd.go` 注册处）：原「测试大文件读取性能（**模拟 MMD/PMX/VRM 加载**）」而它只迭代原始读取（>1MB 文件 + 吞吐），既无解压也无解析——格式无关的能力被写成了格式专属，还顺带承诺了没做的事。

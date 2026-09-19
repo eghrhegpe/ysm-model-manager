@@ -11,7 +11,7 @@
 //    每个运行按钮挂本模式「测什么对象」hint、并发回落不再静默改用户的选择
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
-import { initPerfPanel } from "./perf.ts";
+import { initPerfPanel, perfScopeHint, PERF_RUN_BUTTON_MODE_KEYS } from "./perf.ts";
 
 const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
@@ -156,7 +156,9 @@ describe("基准模式接线（ADR-278）", () => {
   });
 
   // ===== ADR-278 §2.6 语义诚实层 =====
-  // 同一个控件跨模式改义，界面必须当场说清——三件事各钉一条：
+  // 同一个控件跨模式改义，界面必须当场说清。三件事各钉一条；断言只锁**语义关键词**
+  // （重复解析 / 全库重扫 / 一个模型…），不锁文案拼接形态——文案本体归 locale 三语文件，
+  // 改措辞不应红测试（维护成本约束）。
   it("迭代标签随模式改写：single=重复解析 / scan=全库重扫（同一 #diag-perf-iter 两种物理含义）", () => {
     const root = makeRoot("single");
     initPerfPanel(root, esc);
@@ -186,6 +188,17 @@ describe("基准模式接线（ADR-278）", () => {
     expect(run.title).toContain("一个模型");
     expect(concRun.title).toContain("一批模型");
     expect(scanRun.title).toContain("目录树");
+  });
+
+  it("hint 接线表是单点事实源：每个运行按钮 id 都有派生 hint，未知模式不编造机制句", () => {
+    // 新增模式忘登记 → 按钮 title 为空（界面退回沉默），这条把它变成可诊断的失败；
+    // 同时锁 perfScopeHint 对陌生 mode 只落通用句，不串到 conc/scan 的机制长句上。
+    for (const id of Object.keys(PERF_RUN_BUTTON_MODE_KEYS)) {
+      expect(PERF_RUN_BUTTON_MODE_KEYS[id]).toBeTruthy();
+    }
+    expect(perfScopeHint("single")).not.toContain("·");
+    expect(perfScopeHint("voxel")).toContain("voxel"); // 未登记模式名回落原样，不抛错不编造
+    expect(perfScopeHint("voxel")).not.toContain("·");
   });
 
   it("并发回落不再静默：从 single 切到 conc 且原选「单模型」→ toast 说明回落到全库扁平", async () => {

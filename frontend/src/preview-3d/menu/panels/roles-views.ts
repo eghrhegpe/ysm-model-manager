@@ -228,11 +228,11 @@ function panelEntryRow(
   return {
     id: `${prefix}-${item.id}`,
     kind: "row",
-    labelKey: item.labelKey ?? item.id,
+    // 有 i18n key → labelKey；动态名（模型/动作名）→ label 明文，缺则退 id（勿把 id 塞进 labelKey）
+    ...(item.labelKey ? { labelKey: item.labelKey } : { label: item.label ?? item.id }),
     rowDensity: "compact",
     // exactOptionalPropertyTypes：可选字段按存在性展开（undefined 不得显式赋值）
     ...(item.icon ? { icon: item.icon } : {}),
-    ...(item.label ? { label: item.label } : {}),
     action: (ctx) => ctx.navigate?.(deps.makePanelView(item)),
   };
 }

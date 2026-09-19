@@ -129,11 +129,11 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
     const rows = nodes.filter((n) => n.kind === "row");
     expect(rows.length).toBe(2); // 专属纹理 2 行（替代全局槽行）
     expect(rows[0].id).toBe("ysm-tex-ex-0");
-    expect(rows[0].labelKey).toBe("armor #1"); // 专属纹理 >1 个时带序号
+    expect(rows[0].label).toBe("armor #1"); // 专属纹理 >1 个时带序号
     expect(rows[0].value).toContain("专属纹理");
     expect(rows[0].value).toContain("声明 128×64");
     expect(rows[1].id).toBe("ysm-tex-ex-1");
-    expect(rows[1].labelKey).toBe("armor #2");
+    expect(rows[1].label).toBe("armor #2");
   });
 
   it("组件 select 闭包 set 后 get 读回新值（会话态写读一致，B2）", () => {

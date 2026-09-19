@@ -151,7 +151,7 @@ export function buildYsmModelSchema(
       nodes.push({
         id: `ysm-tex-ex-${k}`,
         kind: "row",
-        labelKey: `${compName}${exclusive.length > 1 ? ` #${k + 1}` : ""}`,
+        label: `${compName}${exclusive.length > 1 ? ` #${k + 1}` : ""}`,
         value: `专属纹理 声明 ${decl}`,
       });
     });
@@ -174,7 +174,7 @@ export function buildYsmModelSchema(
       nodes.push({
         id: `ysm-tex-${s}`,
         kind: "row",
-        labelKey: name,
+        label: name,
         value: `${cat ? `${cat} · ` : ""}声明 ${decl} · 加载 ${size}`,
       });
     }

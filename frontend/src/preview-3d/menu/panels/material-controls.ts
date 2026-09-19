@@ -30,7 +30,7 @@ export function materialNodes(bridge: MaterialBridgeLike): PreviewMenuNode[] {
   return items.map((it) => ({
     id: `mat-${it.index}`,
     kind: "material-row" as const,
-    labelKey: it.name,
+    label: it.name,
     eye: {
       get: () => bridge.getDetail(it.index)?.visible ?? true,
       set: (v: boolean) => bridge.setVisible(it.index, v),

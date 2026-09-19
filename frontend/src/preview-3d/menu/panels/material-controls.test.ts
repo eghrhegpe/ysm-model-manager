@@ -19,11 +19,11 @@ function makeBridge(overrides: Partial<MaterialBridgeLike> = {}): MaterialBridge
 }
 
 describe("materialNodes（组合行声明式节点）", () => {
-  it("每材质一行 material-row（id/labelKey = 材质名），eye/opacity 闭包齐备", () => {
+  it("每材质一行 material-row（id/label = 材质名），eye/opacity 闭包齐备", () => {
     const nodes = materialNodes(makeBridge());
     expect(nodes.map((n) => n.id)).toEqual(["mat-0", "mat-1"]);
     expect(nodes.every((n) => n.kind === "material-row")).toBe(true);
-    expect(nodes[0]).toMatchObject({ labelKey: "Body" });
+    expect(nodes[0]).toMatchObject({ label: "Body" });
     expect(typeof nodes[0].eye?.get).toBe("function");
     expect(typeof nodes[0].opacity?.get).toBe("function");
   });

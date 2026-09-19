@@ -46,6 +46,7 @@ import {
 import { makeSwitchState } from "@/preview-3d/menu/shell/switch.ts";
 import { MENU_ERROR_NOTE_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
+import { resolveLabel } from "@/utils/base/pure/label.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { applyIcon, resolveIcon } from "@/utils/icon/resolve.ts";
@@ -155,7 +156,7 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
   applyIcon(ic, node.icon); // 语义名 → SVG；未迁的旧字形 → 文本兜底
   ic.className = "cm-row-icon";
   const lb = document.createElement("span");
-  lb.textContent = tOf(node.labelKey ?? node.id);
+  lb.textContent = resolveLabel({ labelKey: node.labelKey, plain: node.label ?? node.id }, tOf);
   row.append(ic, lb);
   if (opts?.chevron) {
     const chev = document.createElement("span");
@@ -378,7 +379,7 @@ function previewMakePanelView(
   renderPanelFn: (list: HTMLElement, node: PreviewMenuNode) => void,
 ): SlideMenuView {
   return {
-    title: tOf(node.labelKey ?? node.id),
+    title: resolveLabel({ labelKey: node.labelKey, plain: node.label ?? node.id }, tOf),
     render: (list) => renderPanelFn(list, node),
   };
 }
@@ -503,7 +504,8 @@ function panelNodeToRow(
   return {
     id: node.id,
     icon: node.icon,
-    labelKey: node.labelKey ?? node.id,
+    // 无 labelKey 的动态面板名（switch 候选文件名等）→ 明文走 label，勿把 id 塞进 labelKey
+    ...(node.labelKey ? { labelKey: node.labelKey } : { label: node.label ?? node.id }),
     kind: "row",
     rowDensity: "compact",
     headerToggle,

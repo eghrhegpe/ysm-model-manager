@@ -431,7 +431,7 @@ export function packMenuItems(o: PackMenuItemsOpts): PreviewMenuNode[] {
       menuItems.push({
         id: `pack-tex-${texIdx++}`,
         kind: "row",
-        labelKey: label,
+        label,
         value: t("preview.pack.textureFaces", { count: faceCount, entry }),
         dockGroup: "stats",
       });

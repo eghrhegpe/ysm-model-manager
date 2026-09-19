@@ -95,7 +95,7 @@ describe("renderMenu 新 kind", () => {
       {
         id: "mat-0",
         kind: "material-row",
-        labelKey: "Body",
+        label: "Body",
         eye: { get: () => visible, set: (v: boolean) => { visible = v; } },
         opacity: { get: () => opacity, set: (v: number) => { opacity = v; } },
       },
@@ -136,13 +136,36 @@ describe("renderMenu 新 kind", () => {
 
   it("row: 渲染动态列表行", () => {
     const nodes: PreviewMenuNode[] = [
-      { id: "tex-0", kind: "row", labelKey: "skin.png", value: "64x64" },
-      { id: "tex-1", kind: "row", labelKey: "eyes.png", value: "128x128" },
+      { id: "tex-0", kind: "row", label: "skin.png", value: "64x64" },
+      { id: "tex-1", kind: "row", label: "eyes.png", value: "128x128" },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
     expect(container.querySelector('[data-testid="preview-tex-0"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="preview-tex-1"]')).not.toBeNull();
+    // 明文行（动态名）+ value = 附加信息 → 副标签照旧展示（旧滥用 labelKey 才有的 meta）
+    expect(container.querySelector('[data-testid="preview-tex-0"]')!.textContent).toContain("skin.png");
+    expect(
+      container.querySelector('[data-testid="preview-tex-0"] .slide-sublabel')!.textContent,
+    ).toBe("64x64");
+  });
+
+  it("row: 明文行 value 与行文案相同时不加副标签（防重复展示）", () => {
+    const nodes: PreviewMenuNode[] = [{ id: "dup-0", kind: "row", label: "同名", value: "同名" }];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-dup-0"]') as HTMLElement;
+    expect(row.textContent).toBe("同名");
+    expect(row.querySelector(".slide-sublabel")).toBeNull();
+  });
+
+  it("row: 无 labelKey 的动态行不落 id 原文（明文 label 优先）", () => {
+    const nodes: PreviewMenuNode[] = [{ id: "dyn-raw-id", kind: "row", label: "微笑" }];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-dyn-raw-id"]') as HTMLElement;
+    expect(row.textContent).toContain("微笑");
+    expect(row.textContent).not.toContain("dyn-raw-id");
   });
 
   it("sectionTitle: 渲染小标题行", () => {

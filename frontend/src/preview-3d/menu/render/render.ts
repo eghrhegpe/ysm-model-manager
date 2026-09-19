@@ -359,8 +359,9 @@ function rmAppendField(container: HTMLElement, node: PreviewMenuNode): void {
   row.dataset.testid = `preview-${node.id}`;
   const k = document.createElement("span");
   k.className = "field-label";
-  k.textContent = node.labelKey ? tOf(node.labelKey) : (node.label ?? node.id);
-  const displayed = node.value ?? (node.labelKey ? tOf(node.labelKey) : (node.label ?? node.id));
+  // field 行文案与显示值同口径——统一走 rmLabel（唯一回退出口），勿再手搬三元式
+  k.textContent = rmLabel(node);
+  const displayed = node.value ?? rmLabel(node);
   const v = document.createElement("span");
   v.className = "field-value";
   v.textContent = String(displayed);
@@ -421,6 +422,14 @@ function rmAppendDynamicRow(
     }
   } else {
     lb.textContent = node.label ?? node.id;
+    // 显式明文行（动态名）+ value = 附加信息 → 副标签照旧展示（「名称 + 声明/面数」类行：
+    // 纹理短名 + 引用面数、组件名 + 纹理声明）；value 与行文案相同则不加，避免重复
+    if (typeof node.value === "string" && node.value && node.value !== lb.textContent) {
+      const meta = document.createElement("span");
+      meta.className = "slide-sublabel";
+      meta.textContent = node.value;
+      row.appendChild(meta);
+    }
   }
   if (node.radio) {
     const radio = document.createElement("button");
@@ -585,10 +594,10 @@ function rmAppendDecor(container: HTMLElement, node: PreviewMenuNode): void {
     container.appendChild(hr);
     return;
   }
-  // sectionTitle（无 labelKey → fallback 直出，同 rmAppendDynamicRow 口径）
+  // sectionTitle（无 labelKey → 明文直出，同 rmAppendDynamicRow 口径，统一走 rmLabel）
   const st = document.createElement("div");
   st.dataset.testid = node.id;
-  st.textContent = node.labelKey ? rmLabel(node) : (node.label ?? node.id);
+  st.textContent = rmLabel(node);
   st.className = "section-title";
   container.appendChild(st);
 }

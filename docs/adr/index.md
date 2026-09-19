@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **268** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **269** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 1 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 244 |
+| [✅ 已采纳](#已采纳) | 245 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -50,10 +50,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（244）
+### ✅ 已采纳（245）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-271](./ADR-271-water-detail-normal-gpu.md) | 水面微细节法线 GPU 化（移除 CPU DataTexture 链路） | ✅ 已采纳 |
 | [ADR-268](./ADR-268-env-cap-self-placement.md) | 环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单 | ✅ 已采纳 |
 | [ADR-267](./ADR-267-toast-emoji-esc.md) | toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区 | ✅ 已采纳 |
 | [ADR-266](./ADR-266-volumetric-cone-true-geometry.md) | 体积光锥改真锥体几何 + Fresnel 边缘辉光；修 ACES 旁路与过度重建 | ✅ 已采纳 |
@@ -323,6 +324,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-271 | 水面微细节法线 GPU 化（移除 CPU DataTexture 链路） | ✅ 已采纳 | 2026-09-19 |
 | ADR-270 | preview-3d/menu 目录物理分层（七层隐式收敛为显式子目录） | 📝 提议中 | 2026-09-19 |
 | ADR-269 | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定 | 🔄 部分采纳 | 2026-09-19 |
 | ADR-268 | 环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单 | ✅ 已采纳 | 2026-09-19 |

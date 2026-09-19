@@ -32,7 +32,6 @@ auto_fields:
     - buildSettingsControls
     - buildSettingsSchema
     - buildShadowSchema
-    - buildStatsPanel
     - buildSwitchNodes
     - canNodeRepresent
     - capControlsToNodes
@@ -50,13 +49,9 @@ auto_fields:
     - disposeCustomCleanups
     - disposeEnvSubscriptions
     - formatCapSliderValue
-    - hasSceneStats
     - isPreviewFolderNode
     - makeSwitchState
-    - mergeStatsMenuItems
     - mountPreviewRootMenu
-    - multiModelSelectNode
-    - MultiModelSelectOpts
     - nodeControlToView
     - PREVIEW_MENU_GROUPS
     - PreviewActionMenuCtx
@@ -82,7 +77,6 @@ auto_fields:
     - renderPreviewPanel
     - roleBaseName
     - RolesSchemaDeps
-    - STATS_PANEL_ID
     - switchNormPath
     - SwitchState
     - switchTabHighlightBg

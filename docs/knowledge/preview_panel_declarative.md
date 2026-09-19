@@ -36,8 +36,6 @@ auto_fields:
     - MmdPanelHooks
     - MmdPlayBridge
     - mmdShotNodes
-    - MorphMeshLike
-    - morphNodes
     - mountPreviewRootMenu
     - nodeControlToView
     - playNodes

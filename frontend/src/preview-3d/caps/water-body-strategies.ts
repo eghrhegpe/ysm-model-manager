@@ -40,12 +40,12 @@ export function clampPoolRoundness(v: number): number {
 /** 承载波浪材质的顶水面 */
 export type WaterTopMesh = THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhysicalMaterial>;
 
-/** 装配上下文：由 WaterCapability 提供（材质构造与法线缓存都留在 cap 侧） */
+/** 装配上下文：由 WaterCapability 提供（材质构造留在 cap 侧）。
+ *  微细节法线已迁至 fragment 程序化（cap 的 uDetailStrength），ctx 不再承载法线贴图交付——
+ *  形态与法线实现就此解耦，新增形态无需关心法线从哪来。 */
 export interface WaterBuildContext {
   /** 构造带波浪 shader 注入的材质（forPool 决定是否启用 transmission 水体厚度感） */
   buildMaterial(opts: { forPool: boolean }): THREE.MeshPhysicalMaterial;
-  /** 按当前 waterSize 取法线贴图（内部持有 size 缓存，见 cap.getNormalMap） */
-  getNormalMap(): THREE.DataTexture;
 }
 
 /** 部件语义角色——取代旧的 mesh-name 字符串寻址 */
@@ -79,8 +79,9 @@ export interface WaterBodyStrategy {
   getTargets(body: WaterBody, role: WaterPartRole): THREE.Mesh[];
   /** 应用水面世界 y（契约：必须零重建） */
   applyLevel(body: WaterBody, level: number): void;
-  /** 应用尺寸（契约：仅在 needsRebuild 判为 false 时被调用） */
-  applySize(body: WaterBody, size: number, ctx: WaterBuildContext): void;
+  /** 应用尺寸（契约：仅在 needsRebuild 判为 false 时被调用）。
+   *  尺寸的世界语义由各形态自行落地（scale / LOD 半径 / …）；微细节法线 GPU 化后不再需要 ctx。 */
+  applySize(body: WaterBody, size: number): void;
   /** 本形态下哪些参数变更需要整体重建（mode 自身的切换由 cap 处理，不在此列） */
   needsRebuild(changed: Set<string>): boolean;
 }
@@ -113,14 +114,10 @@ const filmStrategy: WaterBodyStrategy = {
   applyLevel(body, level) {
     body.top.position.y = level;
   },
-  applySize(body, size, ctx) {
+  applySize(body, size) {
+    // 微细节法线取世界水平坐标（vWorldPos_wave.xz），其世界频率随尺寸自动跟随——
+    // 原先「size 变更须重取法线贴图」的约束随贴图链路一并消失（零 CPU 重算）
     body.root.scale.set(size, size, 1);
-    // 法线缓存键 = waterSize：size 变更须重取，否则微细节法线停在旧尺寸的世界频率
-    const mat = body.top.material as THREE.MeshPhysicalMaterial & {
-      normalMap?: THREE.DataTexture;
-    };
-    mat.normalMap = ctx.getNormalMap();
-    mat.needsUpdate = true;
   },
   needsRebuild() {
     // size / level 均走 scale / position.y，永不需要重建
@@ -257,7 +254,7 @@ const poolStrategy: WaterBodyStrategy = {
   applyLevel(body, level) {
     body.top.position.y = level;
   },
-  applySize(_body, _size, _ctx) {
+  applySize(_body, _size) {
     // pool 的 size 变更已被 needsRebuild 判为需要重建（池底与四壁几何依赖 size），
     // 故按契约不会走到这里——保留显式空实现，免被误读为遗漏。
   },

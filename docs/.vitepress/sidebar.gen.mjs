@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-271：水面微细节法线 GPU 化（移除 CPU DataTexture 链路）",
+        "link": "/adr/ADR-271-water-detail-normal-gpu"
+      },
+      {
         "text": "ADR-270：preview-3d/menu 目录物理分层（七层隐式收敛为显式子目录）",
         "link": "/adr/ADR-270-menu-directory-layering"
       },
@@ -1937,6 +1941,10 @@ export const autoSidebar = [
           {
             "text": "体积光锥 VolumetricCone（真锥体网格 + Fresnel）",
             "link": "/knowledge/volumetric_cone"
+          },
+          {
+            "text": "水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）",
+            "link": "/knowledge/water"
           }
         ]
       },

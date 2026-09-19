@@ -78,6 +78,16 @@
   解析法线一并修正，附 node 数值实证（几何法线相对解析值的偏差：94.05°/179.28° → 2.40°/7.02°）。
 
 
+### 补记（2026-09-19）：§2.3 的「CPU 贴图作微细节层」已被 ADR-271 移除
+
+- `generateNormalMap` 的 256² `DataTexture` 与 `normalMap` 槽整条链路已删除
+  （连同 `getNormalMap` / `normalMapCache` / `normalMapCacheSize`），微细节法线改由 **fragment
+  按世界水平坐标程序化求值**，强度由 `uDetailStrength`（原 `normalScale` 槽位的替代）驱动。
+- 因此本文档 §2.3「解析法线为主，CPU 法线贴图降级微细节」的**后半句自此失效**：
+  解析式同时承担主波浪与微细节，不再有 CPU 侧常驻贴图。
+- 谱线参数（`0.08/0.8`、`0.05/1.1`、`0.03/1.6`）**逐项沿用**，搬迁只换执行位置、不换谱线，故观感连续。
+- 动机、实证与取舍详见 **ADR-271**。
+
 ## 4. 数据溯源
 
 - 用户需求"three 水面设计如何 / 行业内如何解决"→ 网页搜索行业实践（three.js WaterThreeJS Gerstner spectrum + SSR / Unity HDRP Gerstner+FFT / Crest Planar+SSR+Probe / Stylized Water 3 反射路线对比 / 移动端 Tier 分级）→ 锐评定位 YSM 为模型预览器，"伪水"可接受、真正要命是两块工程债 → 出方案拍板 A+B → TDD 改造（同步测试 L263/L265/L532 契约）。

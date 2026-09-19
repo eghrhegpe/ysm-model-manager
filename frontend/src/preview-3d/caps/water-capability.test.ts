@@ -18,6 +18,19 @@ afterEach(() => {
   try { localStorage.clear(); } catch { /* noop */ }
 });
 
+/** 假 shader 对象：锚点与顺序对齐 three 官方 meshphysical
+ *  （vertex 的 beginnormal_vertex 先于 begin_vertex；fragment 含 normal_fragment_maps —— 微细节法线注入点）。
+ *  `normal` 声明模拟 three 在 normal_fragment_begin 中产出的视图空间法线。 */
+function fakeShader() {
+  return {
+    uniforms: {} as Record<string, { value: number }>,
+    vertexShader:
+      "#include <common>\nvoid main() {\n#include <beginnormal_vertex>\n#include <begin_vertex>\n}",
+    fragmentShader:
+      "#include <common>\nvoid main() {\n#include <normal_fragment_maps>\nvec3 normal = vec3(0.0, 0.0, 1.0);\n#include <dithering_fragment>\n}",
+  };
+}
+
 describe("WaterCapability", () => {
   beforeEach(() => { resetEnvState(); });
 
@@ -80,26 +93,40 @@ describe("WaterCapability", () => {
     expect(poolHeight.visibleWhen?.(snap("pool"))).toBe(true);
   });
 
-  it("setNormalStrength 影响顶水面 normalScale", () => {
+  it("setNormalStrength 写 envState，且 shader 编译后就地同步 uDetailStrength uniform", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
     expect(cap.getNormalStrength()).toBe(0.08);
+    const topMesh = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    const mat = topMesh.material as THREE.MeshPhysicalMaterial;
+    // 编译期取值：uniform 初值来源与 setter 同一事实源
+    mat.onBeforeCompile(
+      fakeShader() as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    const live = (
+      mat as unknown as {
+        userData: { shader: { uniforms: { uDetailStrength: { value: number } } } };
+      }
+    ).userData.shader;
+    expect(live.uniforms.uDetailStrength.value).toBeCloseTo(0.08, 5);
+    // 运行期就地更新：不重建容器，uniform 即时跟随
     cap.setNormalStrength(0.8);
     expect(cap.getNormalStrength()).toBe(0.8);
-    const topMesh = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
-    const mat = topMesh.material as THREE.MeshStandardMaterial;
-    expect(mat.normalScale.x).toBeCloseTo(0.8);
-    expect(mat.normalScale.y).toBeCloseTo(0.8);
+    expect(live.uniforms.uDetailStrength.value).toBeCloseTo(0.8, 5);
   });
 
-  it("generateNormalMap 返回 DataTexture，尺寸 256x256", () => {
+  it("微细节法线不再持有 CPU 贴图：材质 normalMap 恒为 null（已整体迁至 fragment 程序化）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
-    const tex = cap["generateNormalMap"](256) as THREE.DataTexture;
-    expect(tex).toBeInstanceOf(THREE.DataTexture);
-    expect(tex.width).toBe(256);
-    expect(tex.height).toBe(256);
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    expect(mat.normalMap).toBeNull();
+    // 反向证据：getNormalMap / generateNormalMap 已从 cap 上消失（贴图链路整体移除，非仅停止挂载）
+    expect((cap as unknown as Record<string, unknown>)["getNormalMap"]).toBeUndefined();
+    expect((cap as unknown as Record<string, unknown>)["generateNormalMap"]).toBeUndefined();
   });
 
   it("saveState/loadState 持久化 normalStrength（water 键）", () => {
@@ -254,17 +281,6 @@ describe("WaterCapability — 旧存档迁移（legacy ground 键）", () => {
 describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
   beforeEach(() => { resetEnvState(); });
 
-  function fakeShader() {
-    return {
-      uniforms: {} as Record<string, { value: number }>,
-      // 锚点顺序对齐 three 官方 meshphysical_vert：beginnormal_vertex 先于 begin_vertex
-      // （法线解析要用 position、位移要用 transformed，二者不可互换）
-      vertexShader:
-        "#include <common>\nvoid main() {\n#include <beginnormal_vertex>\n#include <begin_vertex>\n}",
-      fragmentShader: "#include <common>\nvoid main() {\n#include <dithering_fragment>\n}",
-    };
-  }
-
   it("film 材质注入 uTime/uHalfSize/uBaseOpacity 与 wave 函数/varying", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
@@ -278,6 +294,7 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     expect(shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.25 * 0.5, 5);
     expect(shader.uniforms.uRoundness.value).toBe(0);
     expect(shader.uniforms.uChoppiness.value).toBeCloseTo(0.5, 5);
+    expect(shader.uniforms.uDetailStrength.value).toBeCloseTo(0.08, 5);
     expect(shader.vertexShader).toContain("vec3 gerstner(");
     expect(shader.vertexShader).toContain("vWorldPos_wave");
     expect(shader.vertexShader).toContain("transformed.z += gdisp.z;");
@@ -336,6 +353,54 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     const nrmU = shader.vertexShader.match(/dir\.[xy] \* wa \* c \* sizeSafe;/g) ?? [];
     expect(dispU).toHaveLength(2);
     expect(nrmU).toHaveLength(2);
+  });
+
+  it("微细节法线：normal_fragment_maps 之后叠加世界空间切向扰动（GPU 程序化，替代 CPU 256² 贴图）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    // 注入锚点：必须落在 normal_fragment_maps 之后（normal 由 three 在此时才产出）
+    const anchor = shader.fragmentShader.indexOf("#include <normal_fragment_maps>");
+    const assign = shader.fragmentShader.indexOf("normal = normalize(normal +");
+    expect(anchor).toBeGreaterThanOrEqual(0);
+    expect(assign).toBeGreaterThan(anchor);
+    // 世界水平坐标直取 vWorldPos_wave.xz（水面 mesh 绕 X 旋转 -90°，世界 xz 即水平面）
+    expect(shader.fragmentShader).toContain("vWorldPos_wave.xz");
+    // 扰动在世界空间构造、经 viewMatrix 入视图空间——fragment 的 normal 是视图空间量
+    expect(shader.fragmentShader).toContain("viewMatrix * vec4(detailWorld, 0.0)");
+    // 强度由 uniform 驱动（原 normalScale 槽位已随贴图链路一并移除）
+    expect(shader.fragmentShader).toContain("* uDetailStrength;");
+    // 三组方向沟槽偏导逐项在场，与原 generateNormalMap 同参（防搬迁中悄悄改谱）
+    expect(shader.fragmentShader).toContain("0.08 * cos(dot(dp, dd1) * 0.8)");
+    expect(shader.fragmentShader).toContain("0.05 * cos(dot(dp, dd2) * 1.1)");
+    expect(shader.fragmentShader).toContain("0.03 * cos(dot(dp, dd3) * 1.6)");
+  });
+
+  it("缺 normal_fragment_maps 锚点也告警（微细节法线静默失效的防线）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const broken = fakeShader();
+    broken.fragmentShader = broken.fragmentShader.replace("#include <normal_fragment_maps>\n", "");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      mat.onBeforeCompile(
+        broken as unknown as THREE.WebGLProgramParametersWithUniforms,
+        undefined as unknown as THREE.WebGLRenderer,
+      );
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("锚点失配不再静默：缺 beginnormal_vertex 锚点时 reportPatchIssue 告警", () => {
@@ -661,65 +726,59 @@ describe("WaterCapability — dispose", () => {
   });
 });
 
-describe("WaterCapability — 法线贴图缓存", () => {
+describe("WaterCapability — 微细节法线（fragment 程序化，无 CPU 贴图）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  const topNormalMap = (scene: THREE.Scene): THREE.Texture | null => {
+  const topMatOf = (scene: THREE.Scene): THREE.MeshPhysicalMaterial | null => {
     const top = scene.getObjectByName("ysm-water-top") as THREE.Mesh | null;
-    return top ? (top.material as THREE.MeshPhysicalMaterial).normalMap : null;
+    return top ? (top.material as THREE.MeshPhysicalMaterial) : null;
   };
 
-  it("setPoolHeight/setPoolWallThickness 触发 rebuild 后 normalMap 复用同一 texture 实例", () => {
+  it("pool：结构字段重建后顶面材质仍无 CPU 法线贴图（贴图链路整体移除，非仅停止挂载）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
     cap.setWaterMode("pool");
-    const n1 = topNormalMap(scene);
-    expect(n1).not.toBeNull();
+    expect(topMatOf(scene)!.normalMap).toBeNull();
+    // 三条重建路径逐一走一遍，均不得复活贴图
     cap.setPoolHeight(2.5);
     cap.setPoolWallThickness(0.5);
-    expect(topNormalMap(scene)).toBe(n1);
+    setEnvState({ waterSize: 40 }, { source: "manual" });
+    expect(topMatOf(scene)!.normalMap).toBeNull();
   });
 
-  it("size 变化（loadState 迁移路径）→ 缓存按 size 失效重生成", () => {
-    const scene = new THREE.Scene();
-    const cap = new WaterCapability({ scene });
-    const t1 = cap["getNormalMap"]();
-    setEnvState({ waterSize: 40 }, { source: 'manual' });
-    const t2 = cap["getNormalMap"]();
-    expect(t2).not.toBe(t1);
-    expect(cap["getNormalMap"]()).toBe(t2);
-  });
-
-  it("film 模式 size 变更走 env 回调不重建几何、但法线贴图按新 size 重取（审核 6a25755c1 P1-2 回归）", () => {
+  it("film size 变更：不重建几何、且不重算任何贴图（CPU 主线程零开销路径）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
     cap.setWaterMode("film");
     const topBefore = cap["findTopWater"]() as THREE.Mesh;
-    const n1 = (topBefore.material as THREE.MeshPhysicalMaterial).normalMap as THREE.DataTexture | null;
     // 走 registerEnvCallback 的 film size 分支（applyChangedParams，非重建路径）
     setEnvState({ waterSize: 60 }, { source: "manual" });
     const topAfter = cap["findTopWater"]() as THREE.Mesh;
     expect(topAfter, "film size 变更不得重建 mesh（scale 驱动）").toBe(topBefore);
-    const n2 = (topAfter.material as THREE.MeshPhysicalMaterial).normalMap as THREE.DataTexture | null;
-    expect(n2, "法线缓存须按 size 重生成").not.toBe(n1);
-    expect(n2, "且新贴图已挂到顶面材质").not.toBeNull();
+    expect((topAfter.material as THREE.MeshPhysicalMaterial).normalMap).toBeNull();
+    // size 的世界语义改由 uniform 承担（波浪波频与圆角裁剪依赖它们），替代原先的贴图重取
+    const shader = fakeShader();
+    (topAfter.material as THREE.MeshPhysicalMaterial).onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    expect(shader.uniforms.uSize.value).toBeCloseTo(60, 5);
+    expect(shader.uniforms.uHalfSize.value).toBeCloseTo(30, 5);
   });
 
-  it("dispose 释放缓存贴图（释放责任从 disposeWater 挪到 dispose），且幂等", () => {
+  it("dispose 幂等，且实例上不再持有任何贴图缓存字段", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
     cap.setWaterMode("pool");
-    const n1 = topNormalMap(scene);
-    expect(n1).not.toBeNull();
-    let disposed = 0;
-    n1!.addEventListener("dispose", () => { disposed++; });
     cap.dispose();
-    expect(disposed).toBe(1);
+    expect(scene.getObjectByName("ysm-ground-water")).toBeUndefined();
     expect(() => cap.dispose()).not.toThrow();
-    expect(disposed).toBe(1);
+    const priv = cap as unknown as Record<string, unknown>;
+    expect(priv["normalMapCache"]).toBeUndefined();
+    expect(priv["normalMapCacheSize"]).toBeUndefined();
   });
 });
 

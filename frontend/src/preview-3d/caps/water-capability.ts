@@ -1,10 +1,14 @@
 // ===== WaterCapability：水面能力（ADR-196 迁移至 envState）=====
 // 独立前水面是 GroundCapability 的「双子域」；拆分后成为环境面板一等公民（与 sky/ground 平级）。
-// 波浪 shader 注入（onBeforeCompile）+ 程序化法线贴图（generateNormalMap）仍为水面专属技术基盘，
-// 不与他人共享，故不另抽共享模块（YAGNI）。
+// 波浪 shader 注入（onBeforeCompile）+ 程序化法线（Gerstner 解析法线 + fragment 微细节）仍为水面
+// 专属技术基盘，不与他人共享，故不另抽共享模块（YAGNI）。
+//
+// 2026-09-19（微细节法线 GPU 化）：原 CPU 256² DataTexture + normalMap 槽整条链路已移除，
+// fragment 改按世界水平坐标程序化求三组方向沟槽的偏导。收益有二：
+//   ① 改 waterSize 不再重算 65536 像素（主线程零开销）——这是放开 size UI 入口的前置条件；
+//   ② 微细节不再受贴图分辨率与插值的限制，getNormalMap/generateNormalMap/缓存字段全部退场。
 
 import * as THREE from "three";
-import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patches/patch-guard.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
@@ -54,9 +58,6 @@ export class WaterCapability implements SceneCapability {
   private enabled: boolean;
   /** 参数变更监听（menu 局部刷新用）；仅模式切换等影响分组可见性的离散操作 notify */
   private readonly listenerSet = createListenerSet();
-  /** 法线贴图实例级缓存 */
-  private normalMapCache: THREE.DataTexture | null = null;
-  private normalMapCacheSize = -1;
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
 
@@ -134,6 +135,8 @@ export class WaterCapability implements SceneCapability {
       shader.uniforms.uHalfSize = { value: envState.waterSize / 2 };
       shader.uniforms.uSize = { value: envState.waterSize };
       shader.uniforms.uChoppiness = { value: envState.waterChoppiness };
+      // 微细节法线强度（原 normalScale 槽位的替代；值域 0-1，由 ground-normal-strength 驱动）
+      shader.uniforms.uDetailStrength = { value: envState.waterNormalStrength };
       shader.uniforms.uBaseOpacity = { value: mat.opacity };
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
@@ -231,8 +234,33 @@ export class WaterCapability implements SceneCapability {
          uniform float uRoundness;
          uniform float uHalfSize;
          uniform float uBaseOpacity;
+         uniform float uDetailStrength;
          varying vec3 vWorldPos_wave;
          varying float vFoam;`,
+      );
+      // 微细节法线（GPU 程序化，替代原 256² CPU DataTexture + normalMap 槽）：
+      // 三组方向正弦沟槽求偏导，参数与原 generateNormalMap 逐项同源（0.08/0.8、0.05/1.1、0.03/1.6）——
+      // 搬迁只换执行位置，不换谱线，故观感连续。
+      // p 取世界水平坐标 ×2：复刻原贴图的世界映射（覆盖 [-uSize, uSize]，宽 2×size）。
+      // 注入点必须在 normal_fragment_maps **之后**——fragment 的 normal 是**视图空间**量，
+      // 由 three 在 normal_fragment_begin 产出、normal_fragment_maps 消费完毕后方可使用。
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <normal_fragment_maps>",
+        `#include <normal_fragment_maps>
+         {
+           vec2 dp = vWorldPos_wave.xz * 2.0;
+           vec2 dd1 = normalize(vec2(1.0, 0.3));
+           vec2 dd2 = normalize(vec2(-0.4, 1.0));
+           vec2 dd3 = normalize(vec2(0.2, -0.8));
+           float dh1 = 0.08 * cos(dot(dp, dd1) * 0.8);
+           float dh2 = 0.05 * cos(dot(dp, dd2) * 1.1);
+           float dh3 = 0.03 * cos(dot(dp, dd3) * 1.6);
+           float dhdx = dh1 * dd1.x * 0.8 + dh2 * dd2.x * 1.1 + dh3 * dd3.x * 1.6;
+           float dhdz = dh1 * dd1.y * 0.8 + dh2 * dd2.y * 1.1 + dh3 * dd3.y * 1.6;
+           // 扰动先在世界空间构造（水面朝上，切向即水平面），再经 viewMatrix 送入视图空间
+           vec3 detailWorld = vec3(-dhdx, 0.0, -dhdz) * uDetailStrength;
+           normal = normalize(normal + (viewMatrix * vec4(detailWorld, 0.0)).xyz);
+         }`,
       );
       shader.fragmentShader = shader.fragmentShader.replace("void main() {", "void main() {\n");
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -255,21 +283,16 @@ export class WaterCapability implements SceneCapability {
       const vertexOk = shader.vertexShader.includes("vec3 gerstner(");
       const normalOk = shader.vertexShader.includes("objectNormal = ysmWaveNormal;");
       const fragOk = shader.fragmentShader.includes("uRoundness");
-      if (!vertexOk || !normalOk || !fragOk) {
+      // 微细节法线落地检查：normal 覆写点在场（贴图链路已删，此处失配即是静默丢细节）
+      const detailOk = shader.fragmentShader.includes("normal = normalize(normal +");
+      if (!vertexOk || !normalOk || !fragOk || !detailOk) {
         reportPatchIssue(
           "water",
-          `water onBeforeCompile 锚点失配（vertex=${vertexOk ? "ok" : "miss"} normal=${normalOk ? "ok" : "miss"} fragment=${fragOk ? "ok" : "miss"}），水面波浪法线 / 波纹 / 圆角 / 透明度 clamp 可能失效。请检查 three 渲染管线 chunk 标记是否变更。`,
+          `water onBeforeCompile 锚点失配（vertex=${vertexOk ? "ok" : "miss"} normal=${normalOk ? "ok" : "miss"} fragment=${fragOk ? "ok" : "miss"} detail=${detailOk ? "ok" : "miss"}），水面波浪法线 / 微细节 / 波纹 / 圆角 / 透明度 clamp 可能失效。请检查 three 渲染管线 chunk 标记是否变更。`,
           "warn",
         );
       }
     };
-    mat.needsUpdate = true;
-
-    const normalMap = this.getNormalMap();
-    (mat as THREE.MeshPhysicalMaterial & { normalMap: THREE.DataTexture | null }).normalMap =
-      normalMap;
-    (mat as THREE.MeshPhysicalMaterial & { normalScale: THREE.Vector2 }).normalScale =
-      new THREE.Vector2(envState.waterNormalStrength, envState.waterNormalStrength);
     mat.needsUpdate = true;
     return mat;
   }
@@ -290,13 +313,12 @@ export class WaterCapability implements SceneCapability {
   }
 
   /**
-   * 交给形态策略的装配上下文：材质构造（含波浪 shader 注入）与法线缓存仍留在 cap 侧，
+   * 交给形态策略的装配上下文：材质构造（含波浪 shader 注入）仍留在 cap 侧，
    * strategy 只负责「用这些零件搭出什么样的水体」（ADR-257 B 档）。
    */
   private buildCtx(): WaterBuildContext {
     return {
       buildMaterial: (opts) => this.buildWaveWaterMaterial(opts),
-      getNormalMap: () => this.getNormalMap(),
     };
   }
 
@@ -428,10 +450,18 @@ export class WaterCapability implements SceneCapability {
         if ("color" in mat) mat.color.setHex(s.waterColor);
       }
     }
-    // normalStrength → top normalScale
+    // normalStrength → 顶水面 uDetailStrength uniform（微细节法线强度，GPU 侧就地生效，
+    // 无贴图重算、无 needsUpdate）
     if (changed.has("waterNormalStrength")) {
       const top = this.findTopWater();
-      if (top) top.material.normalScale?.set(s.waterNormalStrength, s.waterNormalStrength);
+      const shader = (
+        top?.material as unknown as {
+          userData?: { shader?: { uniforms?: Record<string, { value: number }> } };
+        }
+      )?.userData?.shader;
+      if (shader?.uniforms?.uDetailStrength) {
+        shader.uniforms.uDetailStrength.value = s.waterNormalStrength;
+      }
     }
     // poolWallColor → 池底 + 外壁（film 下两者皆空数组，天然 no-op）
     if (changed.has("waterPoolWallColor")) {
@@ -464,10 +494,10 @@ export class WaterCapability implements SceneCapability {
         }
       }
     }
-    // size：几何层面交由形态自行解释（film = scale + 法线重取；pool 的 size 变更已被判为重建，
+    // size：几何层面交由形态自行解释（film = 仅 scale 一档；pool 的 size 变更已被判为重建，
     // 故能走到此处的必是支持就地更新的形态）。
     if (changed.has("waterSize")) {
-      strategy.applySize(this.water, s.waterSize, this.buildCtx());
+      strategy.applySize(this.water, s.waterSize);
       // uSize / uHalfSize 属波浪 shader 的共享 uniform（跨形态一致），故仍留在 cap 而非下沉。
       const top = this.findTopWater();
       const topShader = (
@@ -592,65 +622,6 @@ export class WaterCapability implements SceneCapability {
   }
   getClarity(): number {
     return envState.waterClarity;
-  }
-
-  // ── 程序化法线贴图生成 ──
-  private getNormalMap(): THREE.DataTexture {
-    if (this.normalMapCache && this.normalMapCacheSize === envState.waterSize) {
-      return this.normalMapCache;
-    }
-    if (this.normalMapCache) safeDispose(this.normalMapCache);
-    this.normalMapCache = this.generateNormalMap(256);
-    this.normalMapCacheSize = envState.waterSize;
-    return this.normalMapCache;
-  }
-
-  private generateNormalMap(size: number): THREE.DataTexture {
-    const data = new Uint8Array(size * size * 4);
-    const sz = envState.waterSize;
-
-    for (let v = 0; v < size; v++) {
-      for (let u = 0; u < size; u++) {
-        const x = (u / size - 0.5) * sz * 2;
-        const y = (v / size - 0.5) * sz * 2;
-
-        let dhdx = 0,
-          dhdy = 0;
-
-        const d1 = new THREE.Vector2(1, 0.3).normalize();
-        const p1 = new THREE.Vector2(x, y);
-        const phase1 = p1.dot(d1) * 0.8;
-        dhdx += 0.08 * Math.cos(phase1) * d1.x * 0.8;
-        dhdy += 0.08 * Math.cos(phase1) * d1.y * 0.8;
-
-        const d2 = new THREE.Vector2(-0.4, 1).normalize();
-        const p2 = new THREE.Vector2(x, y);
-        const phase2 = p2.dot(d2) * 1.1;
-        dhdx += 0.05 * Math.cos(phase2) * d2.x * 1.1;
-        dhdy += 0.05 * Math.cos(phase2) * d2.y * 1.1;
-
-        const d3 = new THREE.Vector2(0.2, -0.8).normalize();
-        const p3 = new THREE.Vector2(x, y);
-        const phase3 = p3.dot(d3) * 1.6;
-        dhdx += 0.03 * Math.cos(phase3) * d3.x * 1.6;
-        dhdy += 0.03 * Math.cos(phase3) * d3.y * 1.6;
-
-        const nx = -dhdx;
-        const ny = -dhdy;
-        const nz = 1;
-        const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-        const nnx = nx / len;
-        const nny = ny / len;
-
-        const idx = (v * size + u) * 4;
-        data[idx] = Math.round((nnx * 0.5 + 0.5) * 255);
-        data[idx + 1] = Math.round((nny * 0.5 + 0.5) * 255);
-        data[idx + 2] = 255;
-        data[idx + 3] = 255;
-      }
-    }
-
-    return new THREE.DataTexture(data, size, size, THREE.RGBAFormat, THREE.UnsignedByteType);
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
@@ -783,10 +754,5 @@ export class WaterCapability implements SceneCapability {
     this.unsubscribeEnv();
     if (this.water.root.parent) this.water.root.parent.remove(this.water.root);
     this.disposeWater();
-    if (this.normalMapCache) {
-      safeDispose(this.normalMapCache);
-      this.normalMapCache = null;
-      this.normalMapCacheSize = -1;
-    }
   }
 }

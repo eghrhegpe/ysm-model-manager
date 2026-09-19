@@ -40,8 +40,6 @@ auto_fields:
     - mmdModelInfoNodes
     - MmdPlayBridge
     - mmdShotNodes
-    - multiModelSelectNode
-    - MultiModelSelectOpts
     - OpenGzRootFromBytes
     - PackAdapterOpts
     - PackDeps

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 188 张知识卡
+> 总计: 189 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -235,7 +235,7 @@
 - **reference**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 
-## rendering（18 张）
+## rendering（19 张）
 
 *3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）*
 
@@ -259,6 +259,7 @@
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
 | 🍃 vmd_vrm_retarget | VMD→VRM 动作重定向 vmd-retarget | leaf | — | 要把 MMD 的 .vmd 动作播到 VRM 模型上（或改对应的发现/加载逻辑）, 要增删骨骼映射（MMD 骨名 → VRM humanoid 骨名）, 排查「VMD 动作在 VRM 上腿部不动 / 轨道为空 / 动作卡点顿挫」 |
 | 🏗 volumetric_cone | 体积光锥 VolumetricCone（真锥体网格 + Fresnel） | architecture | — | 体积光, 光锥, 聚光灯可见光柱, volumetric / cone, 边缘辉光 / fresnel |
+| 🍃 water | 水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线） | leaf | — | 改水面波浪 / 颜色 / 透明度 / 水位 / 池体参数, 找不到水面的 normalMap, 新增水体形态（海洋 / 喷泉 / 大水面） |
 
 ### 摘要
 
@@ -276,6 +277,7 @@
 - **preview_env_state**（3D 预览统一状态层 envState（ADR-196））：全局可变单例 `envState` 收口全部 10 个 SceneCapability 的场景参数（sky/ground/water/environment/fog/shadow/reflector/renderMode/postproce…
 - **vmd_vrm_retarget**（VMD→VRM 动作重定向 vmd-retarget）：VRM 生态长期缺动作：MMD 圈产 `.vmd`、动捕产 FBX，几乎无人专门产 `.vrma`。本卡对应的模块把 **VMD 身体 FK 重定向到 VRM humanoid 归一化骨骼**，让 VRM 预览直接吃 MMD 动作（ADR-…
 - **volumetric_cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
+- **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），四轴分离：
 
 ## ui（38 张）
 

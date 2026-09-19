@@ -536,7 +536,7 @@ type FileDiffEntry struct {
 	RelPath string           `json:"relPath"` // 相对于文件夹根的路径
 	AbsPath string           `json:"absPath"` // 绝对路径
 	Size    int64            `json:"size"`
-	Status  types.SyncStatus `json:"status"` // synced/missing/optional
+	Status  types.SyncStatus `json:"status"` // synced/missing/optional/diverged
 }
 
 // diffFolderContentsCore 以全局/实例两侧文件映射计算子文件级同步 diff。

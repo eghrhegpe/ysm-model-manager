@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-273：下载队列落盘账本（借鉴 .dsh durable ledger）",
+        "link": "/adr/ADR-273-download-queue-ledger"
+      },
+      {
         "text": "ADR-272：waterSize 放开 UI 入口 + pool 尺寸零重建（sizeLinks）",
         "link": "/adr/ADR-272-water-size-ui-entry"
       },

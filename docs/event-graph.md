@@ -234,7 +234,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 86 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 83 |
 
 ### `nav:changed`
 
@@ -506,8 +506,8 @@
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 200 |
-| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 35 |
-| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 60 |
+| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 41 |
+| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 66 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 119 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 42 |

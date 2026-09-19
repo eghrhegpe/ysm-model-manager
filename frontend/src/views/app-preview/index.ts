@@ -1,10 +1,10 @@
 // ===== <app-preview> 入口 =====
 // 重构：God Object 拆分 — 路由分发 → preview-router.ts，注册表 → preview-registry.ts。
-// 本类仅保留 Web Component 生命周期 + WASM 代理 + 调试 + 类型缓存懒加载。
+// 本类仅保留 Web Component 生命周期 + WASM 代理 + 调试。
 
 import { bus } from "@/bus";
 import { rememberModelPath } from "@/core/model-path-store.ts";
-import { logError, logWarn } from "@/utils/base/primitives/log.ts";
+import { logError } from "@/utils/base/primitives/log.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { previewCSS } from "./css.ts";
@@ -49,8 +49,6 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   dragAbortCtrl: AbortController | null = null;
   /** P1 迁移：活跃 3D overlay 关闭钩子（原 skeleton.ts 模块级 _active3DClose） */
   active3DClose: (() => void) | null = null;
-  /** 类型元数据缓存（LoadResourceTypes 结果），路由层消费 */
-  typeCache: Array<{ id: string; name?: string; icon?: string }> = [];
   /** 预览代际守卫：快速点 A（慢）→ B（快）时，丢弃过期加载的渲染，防并发覆盖 */
   private _previewGuard = createLoadGuard();
   /** 路由层访问预览守卫（PreviewRouterCtx.previewGuard） */
@@ -79,7 +77,6 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   connectedCallback(): void {
     this._render();
 
-    this._preloadTypeRegistry();
     // 跨生命周期防累积（对齐 app-tree:107 的 connected 重置范式）
     this.unsubs = [];
     this.unsubs.push(
@@ -186,16 +183,6 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       el.appendChild(dbg);
     } catch (_) {
       /* appendDebug 仅调试辅助：失败静默，不影响预览主流程 */
-    }
-  }
-
-  private async _preloadTypeRegistry(): Promise<void> {
-    try {
-      const { LoadResourceTypes } = await backendGetApp();
-      const reg = await LoadResourceTypes();
-      this.typeCache = reg?.resourceTypes || [];
-    } catch (e) {
-      logWarn("preview", "LoadResourceTypes 失败", e);
     }
   }
 }

@@ -74,6 +74,4 @@ export interface PreviewRouterCtx {
   root: ShadowRoot;
   /** 预览代际守卫：快速点 A→B 时丢弃过期加载的渲染，防并发覆盖 */
   previewGuard: LoadGuard;
-  /** 类型元数据缓存（LoadResourceTypes 结果） */
-  typeCache: Array<{ id: string; name?: string; icon?: string }>;
 }

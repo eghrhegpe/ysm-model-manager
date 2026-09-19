@@ -18,7 +18,6 @@ const appObj = vi.hoisted(() => ({
   DetectResourceType: vi.fn(),
   FindPreviewImage: vi.fn(),
   ExtractPreviewTexture: vi.fn(),
-  LoadResourceTypes: vi.fn(),
   GetPackInfo: vi.fn(),
 }));
 
@@ -52,7 +51,7 @@ import { cacheSet, cacheGet } from "@/preview-3d/decoder/model-cache.ts";
 import "./index.ts"; // 触发 customElements.define + evict handler 注册
 import { sleep, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 
-/** 创建 app-preview 实例（connectedCallback 会调 _preloadTypeRegistry） */
+/** 创建 app-preview 实例（ADR-269 D3①：connectedCallback 不再预载类型注册表，路由元数据同步派生） */
 function mountPreview() {
   return mountCustomElement("app-preview") as unknown as {
     root: ShadowRoot;
@@ -69,7 +68,6 @@ beforeEach(() => {
   appObj.DetectResourceType.mockResolvedValue("");
   appObj.FindPreviewImage.mockResolvedValue("");
   appObj.ExtractPreviewTexture.mockResolvedValue("");
-  appObj.LoadResourceTypes.mockResolvedValue("{}");
   appObj.GetPackInfo.mockResolvedValue(null);
 });
 
@@ -82,7 +80,7 @@ describe("loadPreviewImage", () => {
     const el = mountPreview();
     cacheSet("/repo/cached.ysm", { texture: "blob:cache", _decodedBy: "" });
     expect(await el.loadPreviewImage("/repo/cached.ysm")).toBe("blob:cache");
-    // connectedCallback 已调过 getApp（_preloadTypeRegistry），这里断言 Go 兜底未被触达
+    // 缓存命中即早返回，Go 兜底路径（FindPreviewImage）与 WASM 解码均未被触达
     expect(appObj.FindPreviewImage).not.toHaveBeenCalled();
     expect(decodeYsmViaWasm).not.toHaveBeenCalled();
     unmountElement(el);
@@ -166,7 +164,7 @@ describe("_showModelDetail — 类型分流", () => {
     expect(detailSpies.showShaderpack).toHaveBeenCalledWith(
       el,
       "/repo/s.zip",
-      expect.objectContaining({ icon: "📦", label: "shaderpack" }),
+      expect.objectContaining({ icon: "☀️", label: "光影包" }),
     );
     expect(detailSpies.showSimplePreview).not.toHaveBeenCalled();
     unmountElement(el);
@@ -179,7 +177,7 @@ describe("_showModelDetail — 类型分流", () => {
     expect(detailSpies.showMmdPreview).toHaveBeenCalledWith(
       el,
       "/repo/m.pmx",
-      expect.objectContaining({ icon: "📦", label: "EntityPlayer" }),
+      expect.objectContaining({ icon: "🧍", label: "角色模型" }),
     );
     expect(detailSpies.showSimplePreview).not.toHaveBeenCalled();
     unmountElement(el);
@@ -193,7 +191,7 @@ describe("_showModelDetail — 类型分流", () => {
     expect(detailSpies.showVrmMeta).toHaveBeenCalledWith(
       el,
       "/repo/avatar.vrm",
-      expect.objectContaining({ icon: "📦", label: "EntityPlayer" }),
+      expect.objectContaining({ icon: "🧍", label: "角色模型" }),
     );
     expect(detailSpies.showSimplePreview).not.toHaveBeenCalled();
     unmountElement(el);

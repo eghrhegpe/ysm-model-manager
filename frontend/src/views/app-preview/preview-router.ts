@@ -13,7 +13,13 @@ import { logWarn } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { extOf, RESOURCE_TYPES, resolvePreviewKey } from "@/utils/resource/types.ts";
+import {
+  extOf,
+  RESOURCE_TYPE_LABELS,
+  RESOURCE_TYPES,
+  resolvePreviewKey,
+  typeIconOf,
+} from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { showSimplePreview } from "./detail.ts";
 import { PREVIEW_HANDLERS } from "./preview-registry.ts";
@@ -37,7 +43,7 @@ export async function routeModelPreview(
       duration: TOAST_MS.normal,
       type: "warn",
     });
-    showSimplePreview(ctx, path, routeTypeMeta(ctx, RESOURCE_TYPES.YSM));
+    showSimplePreview(ctx, path, routeTypeMeta(RESOURCE_TYPES.YSM));
     return;
   }
 
@@ -73,9 +79,9 @@ export async function routeModelPreview(
   const previewKey = resolvePreviewKey(path, rtype);
   const handler = PREVIEW_HANDLERS[`${rtype}:${previewKey}`] ?? PREVIEW_HANDLERS[rtype];
   if (handler) {
-    handler(ctx, path, routeTypeMeta(ctx, rtype));
+    handler(ctx, path, routeTypeMeta(rtype));
   } else {
-    showSimplePreview(ctx, path, routeTypeMeta(ctx, rtype));
+    showSimplePreview(ctx, path, routeTypeMeta(rtype));
   }
 }
 
@@ -116,17 +122,11 @@ ${pack.description ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin
 }
 
 /**
- * 类型元数据查找：从 ctx.typeCache 构建注册表，返回 { icon, label }。
- * 原 _typeMeta 逻辑，改为纯函数（无 this._typeReg 状态缓存）。
+ * 类型元数据查找：同步读 resource_types.json 派生视图（typeIconOf /
+ * RESOURCE_TYPE_LABELS），无 ctx、无异步预载窗口。
+ * ADR-269 D3 步骤①：原从 ctx.typeCache（LoadResourceTypes 异步预载）建表，
+ * 首帧空表 → 已知类型返回兜底 📦（闪帧）。现折进同步派生，同一事实源、等价兜底。
  */
-export function routeTypeMeta(
-  ctx: PreviewRouterCtx,
-  rtype: string,
-): { icon: string; label: string } {
-  const reg: Record<string, { id: string; name?: string; icon?: string }> = {};
-  for (const item of ctx.typeCache || []) {
-    reg[item.id] = item;
-  }
-  const def = reg[rtype];
-  return { icon: def?.icon || "📦", label: def?.name || rtype };
+export function routeTypeMeta(rtype: string): { icon: string; label: string } {
+  return { icon: typeIconOf(rtype), label: RESOURCE_TYPE_LABELS[rtype] || rtype };
 }

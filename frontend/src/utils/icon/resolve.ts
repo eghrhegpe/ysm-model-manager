@@ -44,7 +44,7 @@ export function resolveIcon(name: string): string {
  *
  * 为什么兜底分支不可删：`resolveIcon()` 对未知名返回 `""`（其注释明确「emoji/任意字符串
  * 由调用方按兜底路径自行处理」）。`views/app-preview/preview-router.ts|routeTypeMeta`
- * 就把 `typeCache`（资源类型注册表）的图标直接传进来，并带 `|| "📦"` 兜底——
+ * 就把 `typeIconOf()`（resource_types.json 派生的 DataGlyph 字形）直接传进来——
  * 删掉本分支 = 数据图标**整片消失**，比显示 emoji 更糟。
  *
  * ⚠️ 走 `innerHTML` 的分支只喂 `resolveIcon()` 的产物（ICON_KIT 渲染串 / UI_ICONS 常量），

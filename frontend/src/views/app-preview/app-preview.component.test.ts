@@ -69,9 +69,10 @@ describe("app-preview 生命周期配对", () => {
     await sleep(50);
     bus.emit("model:select", { path: "/repo/a.ysm", isDir: false });
     await sleep(100);
-    // DetectResourceType mock 返回 "shaderpack" → showSimplePreview 渲染 `📦 shaderpack`
+    // DetectResourceType mock 返回 "shaderpack"（RESOURCE_TYPES.SHADER）
+    // → routeTypeMeta 同步派生 `☀️ 光影包`（ADR-269 D3①：不再走空 typeCache 兜底 📦/rtype）
     const content = el.shadowRoot?.querySelector("#preview-content")?.textContent || "";
-    expect(content).toContain("shaderpack");
+    expect(content).toContain("光影包");
     unmountElement(el);
   });
 

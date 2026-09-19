@@ -515,6 +515,12 @@ export const en: Record<string, string> = {
   "diagnostics.loadTraceHint": "Records automatically after loading a model; click refresh to view",
   "diagnostics.loadTraceMore": "Showing 10 of {n} more textures…",
   "diagnostics.loadTraceTexDetail": "Texture Details",
+  "diagnostics.loadTraceCount": "{n} record(s) this session (keeps the latest {max})",
+  "diagnostics.loadTraceMoreRecords": "{n} older record(s) not shown",
+  "diagnostics.loadTraceStages": "{n} stages",
+  "diagnostics.loadTraceCoarseHint":
+    "this format records one combined stage only (adapter timer granularity differs)",
+  "diagnostics.loadTraceGpuUncollected": "not collected",
   "diagnostics.metric.assetsBones": "Bone Count",
   "diagnostics.assetsCubes": "Cubes",
   "diagnostics.assetsMats": "Materials",

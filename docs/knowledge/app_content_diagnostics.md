@@ -203,6 +203,12 @@ status: active
   - **结构化直传，不反解析文案**：`guiFlowResult` 新增 `ModelCount` / `ByType`（② 填充），③ 据此转述；类型分布格式化收成单点 `formatTypeDist`（② 的描述与 ③ 共用，避免两处各排一遍序）。`flow.go` 既有教训「人类可读输出不是内部 API」在此再次生效。
   - 测试：Go 两条（`TestGUIFlow_UnanalyzableOnlyRepoExplainsWhy` 锁「✅ + 都不可分析 + 数量 + 类型分布 + 不产出 ④⑤⑥」；`TestGUIFlow_NoModelsAtAllKeepsOriginalWording` 反向护栏锁「真空仓库仍是 ❌ + 原文案」——防我改过头）；前端 `tpl.test.ts` 一条锁「范围说明在面板里 + 全页不出现 `(YSM)`」。
   - **未做（需另立 ADR）**：`voxel-bench`（复用 `go/litematic` 四段 + `single-bench` 的阶段/瓶颈/基线范式）+ `bench` 模式选择器加第 4 模式 `voxel`。ADR-278 选「模式选择器」而非「每链路一 tab」时没料到这层红利——**「模式」的正确语义是「跑哪条链路」**，于是它能天然容纳未来的资源链路；若当初按 tab 一分到底，加一条链路就得加一个 tab（回到 9→10 的老路）。
+- **加载剖析的「全过程」是前端侧的实测，不是模拟——但此前只展示 1/50**（2026-09 展示层补全）：`load-trace` 是**跨格式**通用 trace，YSM / MMD / VRM / FBX / Litematic 五个 adapter + 兜底 loader 都在写（`LoadTraceAssets` 带格式专属字段：MMD 的 `pmxWorker`/`ktx2Hits`、YSM 的 `cubes`、VRM 的 `vrmaClips`、FBX 的 `fbxAnimations`），**YSM 与 MMD 共用同一套 4 段骨架**（读取/解析/纹理加载/build）故本就可比。这正是 `gui-flow` ③ 说「请到 GUI 3D 预览实测」所指向的载体。修的是**展示层**：
+  - **只渲染最后一条 → 最近 5 条 + 其余计数**：store 保留 50 条（`MAX_RECORDS`），而唯一消费者只取 `traces[traces.length-1]`——**存了 49 条没人看**（「定义了没人用」的同类）。现按 `TRACE_MAX_SHOWN=5` 展开、新的在前，其余报「还有 N 条更早的记录未显示」。
+  - **跨记录统一刻度**：甘特条长按**本批所有记录的最大阶段耗时**归一化，而不是每条自归一化——否则「快记录的小段」和「慢记录的大段」看起来一样长，多记录并排反而产生错觉（这是「对比」的前提）。测试对这个决策做了变异检查。
+  - **两处格式间差异写在脸上**：① 阶段粒度不同（YSM/MMD 4 段、VRM ≥2 段、**FBX/Litematic 各 1 段**）——1 段时显式说明「该格式只记了 1 段合并耗时」，而不是让人以为它只有一个阶段；② **GPU 口径只有 MMD 采集**（`gpuMb`）——缺的格式显式标「未采集」，**不省略**：省略会让「没测」和「测出来是 0」长得一模一样。
+  - 测试：`perf-trace.test.ts` 6 条（多次记录展开+计数 / 超 5 条报数 / 粒度 1 段说明 / GPU 未采集 / 跨记录刻度 / 空态回归），每条自带 `clearLoadTraces`（store 是模块级全局，不吃同文件其它用例的残留）；**变异检查**——把统一刻度改回各记录自归一化 → **恰好 1 条红**（那条刻度用例），其余 5 条不受影响。
+  - **仍未做（需 ADR）**：面板不能**驱动**加载（数据只能来自用户自己去 3D 预览点一次），Go 段与前端段仍是两次独立观测、落在两个 tab 两条时间轴——「一次加载的全过程」尚未缝成一条链。三个待拍板点：离屏是否复用当前预览 / 是否开独立 WebGL 上下文 / 纹理缓存必然命中会污染第二次测量。
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

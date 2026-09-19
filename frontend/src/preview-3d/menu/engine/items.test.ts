@@ -2,7 +2,7 @@
 // CORE_MENU_ITEMS + ysm/mmd 适配器真实注入项 = 完整菜单数组（唯一事实来源）。
 // 测试遍历本表断言：结构完整性（id 唯一、必填字段、i18n 键、组归属）、
 // dock 行全量渲染、安全面板逐个打开——加菜单项只改 menu 表，测试自动覆盖。
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { MMD } from "@moeru/three-mmd";
 import { zhCN } from "@/locales/zh-CN.ts";
@@ -15,6 +15,7 @@ import { ysmMenuItems, type YsmMenuItemsOpts } from "@/preview-3d/adapters/ysm-a
 import { mmdMenuItems, type MmdMenuItemsOpts } from "@/preview-3d/adapters/mmd/mmd-adapter.ts";
 import { vrmMenuItems, type VrmMenuItemsOpts } from "@/preview-3d/adapters/vrm/vrm-adapter.ts";
 import { mountPreviewRootMenu, type PreviewMenuCtx } from "./core.ts";
+import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import type { YsmModel, YsmContentHandle } from "@/preview-3d/infra/content-bridges.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
@@ -135,40 +136,69 @@ const fakeCapCore = {
   getVisible: () => true,
   setVisible: vi.fn(),
 };
-const fakeCap = {
-  ...fakeCapCore,
-  getMenuNodes: () => [
-    {
-      id: "sky-time",
-      kind: "slider" as const,
-      labelKey: "preview.timeOfDay",
-      control: { min: 0, max: 24, step: 0.5, get: () => fakeCapCore.getTimeOfDay(), set: (v: unknown) => fakeCapCore.setTime(v) },
-    },
-    {
-      id: "sky-cloud",
-      kind: "slider" as const,
-      labelKey: "preview.cloudCoverage",
-      control: { min: 0, max: 1, step: 0.05, get: () => fakeCapCore.getCloudCoverage(), set: (v: unknown) => fakeCapCore.setCloudCoverage(v) },
-    },
-    {
-      id: "sky-env",
-      kind: "toggle" as const,
-      labelKey: "preview.environmentMapping",
-      control: { get: () => fakeCapCore.isEnvironmentEnabled(), set: (v: unknown) => fakeCapCore.setEnvironmentEnabled(v) },
-    },
-    {
-      id: "ground-visible",
-      kind: "toggle" as const,
-      labelKey: "preview.ground",
-      control: { get: () => fakeCapCore.getVisible(), set: (v: unknown) => fakeCapCore.setVisible(v) },
-    },
-  ],
+/** 参数节点树：sky/ground 两行共用同一套自绘控件（供下钻渲染 .cs-bar 断言） */
+const fakeCapNodes: PreviewMenuNode[] = [
+  {
+    id: "sky-time",
+    kind: "slider" as const,
+    labelKey: "preview.timeOfDay",
+    control: { min: 0, max: 24, step: 0.5, get: () => fakeCapCore.getTimeOfDay(), set: (v: unknown) => fakeCapCore.setTime(v) },
+  },
+  {
+    id: "sky-cloud",
+    kind: "slider" as const,
+    labelKey: "preview.cloudCoverage",
+    control: { min: 0, max: 1, step: 0.05, get: () => fakeCapCore.getCloudCoverage(), set: (v: unknown) => fakeCapCore.setCloudCoverage(v) },
+  },
+  {
+    id: "sky-env",
+    kind: "toggle" as const,
+    labelKey: "preview.environmentMapping",
+    control: { get: () => fakeCapCore.isEnvironmentEnabled(), set: (v: unknown) => fakeCapCore.setEnvironmentEnabled(v) },
+  },
+  {
+    id: "ground-visible",
+    kind: "toggle" as const,
+    labelKey: "preview.ground",
+    control: { get: () => fakeCapCore.getVisible(), set: (v: unknown) => fakeCapCore.setVisible(v) },
+  },
+];
+
+const fakeCapBase = { ...fakeCapCore, getMenuNodes: () => fakeCapNodes };
+
+/** sky 假 cap：ADR-268 自报 basic/10——env 面板行 id 由 cap.id 派生（env-cap-sky） */
+const fakeSkyCap = {
+  ...fakeCapBase,
+  id: "sky",
+  labelKey: "preview.sky",
+  icon: "sky",
+  getEnvPlacement: () => ({ section: "basic" as const, order: 10 }),
+} as unknown as SceneCapability;
+
+/** ground 假 cap：ADR-268 自报 basic/20（与 sky 同基座，仅身份元数据不同） */
+const fakeGroundCap = {
+  ...fakeCapBase,
+  id: "ground",
+  labelKey: "preview.ground",
+  icon: "web",
+  getEnvPlacement: () => ({ section: "basic" as const, order: 20 }),
 } as unknown as SceneCapability;
 
 function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
-  // 共享夹具薄包装：本文件测能力驱动 dock，默认注入 sky/ground fakeCap
-  return makeMenuCtx({ getCap: (id) => (id === "sky" || id === "ground" ? fakeCap : null), ...overrides });
+  // 共享夹具薄包装：本文件测能力驱动 dock，默认注入 sky/ground fakeCap。
+  // 环境面板**成员发现**走 registry（ADR-268/270 插件式发现），与 env.test.ts 同范式
+  // spy getAll——ctx.getCap 只承担按 id 取值（dock 谓词 / headerToggle），无从枚举全集。
+  vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([fakeSkyCap, fakeGroundCap]);
+  return makeMenuCtx({
+    getCap: (id) => (id === "sky" ? fakeSkyCap : id === "ground" ? fakeGroundCap : null),
+    ...overrides,
+  });
 }
+
+// registry spy 用例间还原：makeCtx 每次重设，泄漏会污染后续 describe 的环境面板成员集
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function mountWith(items: PreviewMenuNode[], ctxOverrides: Partial<PreviewMenuCtx> = {}) {
   const overlay = document.createElement("div");

@@ -2,7 +2,7 @@
 // 覆盖：CORE_MENU_ITEMS 表结构、mountPreviewRootMenu 挂载 dock、能力过滤、
 // setAdapterItems/openPanel/dispose、单 panel 快捷直达、多 panel 组内下钻。
 // ★ 测试断言全部从 PREVIEW_MENU_GROUPS / CORE_MENU_ITEMS 推导，不硬编码菜单 ID。
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
 import { mountPreviewRootMenu } from "./core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
@@ -13,6 +13,7 @@ import {
   getStackDepth,
 } from "@/utils/dom/input-block-stack.ts";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
+import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { deriveTestIds } from "@/test-utils/self-healing.ts";
 import { makeMenuCtx as makeCtx } from "@/preview-3d/menu/menu-test-fixtures.ts";
@@ -55,6 +56,11 @@ describe("CORE_MENU_ITEMS 表结构", () => {
     // 独立 switch 项已撤除（2026-08-21 合并）：模型组 core 项仅 roles，面板底部内嵌加载入口
     expect(CORE_MENU_ITEMS.filter((d) => d.dockGroup === "model").map((d) => d.id)).toEqual(["roles"]);
   });
+});
+
+// registry spy 用例间还原：环境面板成员发现经 spy getAll 注入，泄漏会污染后续用例
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("mountPreviewRootMenu", () => {
@@ -410,10 +416,19 @@ describe("mountPreviewRootMenu", () => {
   });
 
   it("dispose 清环境订阅（cap 单例不持有过期 menu 引用）", () => {
-    // 进入环境面板 → rebuildEnvSubs 订阅 cap；dispose → disposeEnvSubscriptions 退订全部
+    // 进入环境面板 → rebuildEnvSubs 订阅 cap；dispose → disposeEnvSubscriptions 退订全部。
+    // 环境面板**成员发现**走 registry（ADR-268/270：cap 须自报 getEnvPlacement 才入选），
+    // 与 env.test.ts 同范式 spy getAll——ctx.getCap 只承担按 id 取值，无从枚举全集。
     const unsub = vi.fn();
     const subscribe = vi.fn(() => unsub);
-    const cap = { getMenuControls: () => [], subscribe } as unknown as SceneCapability;
+    const cap = {
+      id: "sky",
+      labelKey: "preview.sky",
+      icon: "sky",
+      getEnvPlacement: () => ({ section: "basic", order: 10 }),
+      subscribe,
+    } as unknown as SceneCapability;
+    vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([cap]);
     const handle = mountPreviewRootMenu(overlay, makeCtx({
       getCap: (id) => (id === "sky" ? cap : null),
     }));

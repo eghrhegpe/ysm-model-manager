@@ -161,12 +161,26 @@ const THEME_ICON: Record<string, string> = {
   cyber: "moon",
   ocean: "ocean",
 };
+/** 主题 → 标签 i18n 键（静态映射，与 THEME_ICON 平行）。
+ *  原为 ``t(`settings.theme.${theme}` as Parameters<typeof t>[0])`` 动态拼接，两处弊病：
+ *  ① 六个键在静态扫描里全被判死（check-i18n-unused 的 constructed 假阳性——
+ *     该脚本注释的前提是「本仓该形态为 0 处」，动态拼接即破坏它）；
+ *  ② `as` 强转绕过键名类型校验（拼错不报错）。改静态映射后两者皆消。 */
+const THEME_LABEL_KEY: Record<string, Parameters<typeof t>[0]> = {
+  warm: "settings.theme.warm",
+  sakura: "settings.theme.sakura",
+  mint: "settings.theme.mint",
+  pro: "settings.theme.pro",
+  cyber: "settings.theme.cyber",
+  ocean: "settings.theme.ocean",
+};
 
 function renderStgThemePicker(): string {
   const cards = THEME_VALID.filter((theme) => theme !== "system")
     .map((theme) => {
       const icon = UI_ICONS[THEME_ICON[theme] as keyof typeof UI_ICONS] ?? UI_ICONS.dot;
-      const label = t(`settings.theme.${theme}` as Parameters<typeof t>[0]);
+      const labelKey = THEME_LABEL_KEY[theme];
+      const label = labelKey ? t(labelKey) : theme;
       // --bd 是 10-12% 透明 color-mix，直接作底色会隐没在卡片上——统一加 muted 描边保证三点半可辨
       const swatches = THEME_SWATCH_VARS.map(
         (v) =>

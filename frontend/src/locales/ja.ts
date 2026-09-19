@@ -248,16 +248,12 @@ export const ja: Record<string, string> = {
   "settings.density.normal": "標準（ゆったり）",
   "settings.densityHint": "カードの余白と間隔を調整",
   "settings.animation.title": "動作とアニメーション",
-  "settings.animation.enable": "アニメーション",
   "settings.animation.enableCheck": "トランジションアニメーションを有効化",
   "settings.animation.hint":
     "オフにするとレイアウト遷移のみ残し、ホバーやフェードを無効化します。低スペック端末向け。",
   "settings.defaultPage": "起動時の既定ページ",
   "settings.defaultPage.rememberCheck": "前回開いていたページを記憶して復元する",
   "settings.defaultPage.fixed": "起動ページを固定",
-  "settings.defaultPage.instances": "統合パック管理",
-  "settings.defaultPage.workshop": "クリエイターチャンネル",
-  "settings.defaultPage.repository": "モデルリポジトリ",
   "settings.defaultPageHint": "記憶をオフにすると、起動時は下で選んだページを常に開きます。",
   "settings.preview3d.title": "3D プレビュー操作",
   "settings.preview3d.camSpeed": "カメラ移動速度",
@@ -336,7 +332,6 @@ export const ja: Record<string, string> = {
   "instances.emptyHint": "左の統合パックをクリックしてモデルを表示",
 
   // ── Diagnostics Page ──
-  "diagnostics.title": "診断と競合",
   "diagnostics.opsLog": "操作ログ",
   "diagnostics.runtimeLog": "ランタイムログ",
   "diagnostics.copyLog": "ログをコピー",
@@ -355,13 +350,11 @@ export const ja: Record<string, string> = {
   "diagnostics.noRuntimeLogs": "ランタイムログはまだありません",
   "diagnostics.startScan": "⚡ スキャン開始",
   "diagnostics.clearFailed": "ログのクリアに失敗しました",
-  "diagnostics.perfTitle": "パフォーマンス",
   "diagnostics.perfRunSingle": "単一モデルベンチマークを実行",
   "diagnostics.perfModelPlaceholder":
     ".ysm モデルパスを入力（YSM のみシミュレート可；PMX は GUI 3D プレビューで実測）",
   "diagnostics.webNoConflictScan": "ウェブ版では競合スキャンはサポートされていません",
   "diagnostics.webNoSyncConflictScan": "ウェブ版では同期競合スキャンはサポートされていません",
-  "diagnostics.loadResourceTypesFailed": "リソースタイプの読み込みに失敗しました",
   "diagnostics.loadDedupConfigFailed": "重複排除設定の読み込みに失敗しました",
   "diagnostics.webNoClearLogs": "ウェブ版ではログの消去はサポートされていません",
   "diagnostics.noLogsToCopy": "コピーするログがありません",
@@ -786,7 +779,6 @@ export const ja: Record<string, string> = {
   "syncManager.scanDirWide":
     "{label} リポジトリ基準ディレクトリ {dir} が広すぎます（mods/config/schematics サブディレクトリを含む）。同期に他のリソースが混入する可能性があります。専用の {subDir} サブディレクトリを指定してください",
   // P1.2 修正: sync-manager ハードコード中国語 → 全量 i18n
-  "syncManager.loadTypeConfigFailed": "リソース型設定の読み込みに失敗",
   "syncManager.loadSyncStatusFailed": "同期状況の読み込みに失敗",
   "syncManager.pushed": "送信済み",
   "syncManager.pulled": "取得済み",
@@ -1341,7 +1333,6 @@ export const ja: Record<string, string> = {
   "preview.groundOverlaySize": "オーバーレイ格子数",
   "preview.groundOverlayOpacity": "オーバーレイ不透明度",
   "preview.groundMatColor": "ベースカラー",
-  "preview.groundMatLineColor": "線の色",
   "preview.groundMatGridSize": "分割数",
   "preview.groundMatColor2": "サブカラー",
   "preview.groundMatDensity": "テクスチャ密度",
@@ -1404,11 +1395,9 @@ export const ja: Record<string, string> = {
   "preview.noOtherMorph": "他のモーフはありません",
   "preview.allMorphCount": "全 {n} モーフ",
   "preview.stagePerformanceLabel": "ステージパフォーマンスパック",
-  "preview.loadStage": "ステージを読み込む",
   "preview.stageEmpty": "ステージパックが空かディレクトリが存在しません",
   "preview.stageContents": "含む: {vmd} モーション / {audio} 音声 / {config} 設定",
   "preview.noPackPng": "pack.png なし",
-  "preview.blockItemModel3d": "ブロック/アイテムモデル 3D プレビュー",
   "preview.noBlockData": "ブロックデータなし",
   // ── 3D オプション文言（select / preset-thumb 項目；2026-09 統一、直書き禁止）──
   "preview.groundMatSourceNone": "なし",
@@ -1493,8 +1482,6 @@ export const ja: Record<string, string> = {
   "preview.sexual": "性的",
   "preview.violent": "暴力",
   "preview.fbxModel": "FBX モデル/アニメーション",
-  "preview.morphApplySent": "アプリケーションリクエストを送信しました: {name}",
-  "preview.stageLoadSent": "ステージ読み込みリクエストを送信しました: {name}",
   "preview.label.bones": "ボーン",
   "preview.texturesLabel": "テクスチャ",
   "preview.animationsLabel": "アニメーション",
@@ -1519,7 +1506,6 @@ export const ja: Record<string, string> = {
   "preview.customMorph": "カスタムモーフ",
   "preview.vpdPose": "VPD ポーズ",
   "preview.singleFrameMorph": "単フレームモーフ",
-  "preview.applyMorph": "モーフを適用",
   "preview.sceneModel": "シーン",
   "preview.stageAnim": "ステージ",
 

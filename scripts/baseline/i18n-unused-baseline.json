@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-15T16:15:12.503Z",
-  "count": 21,
+  "generated": "2026-09-19T09:42:18.901Z",
+  "count": 22,
   "note": "i18n 未使用键存量基线——门禁只拦新增；清理后重跑 --update-baseline 收缩",
   "unused": [
     "dead:common.import",
@@ -23,6 +23,7 @@
     "test-only:preview.metric.boneCount",
     "test-only:preview.roleModelSection",
     "test-only:preview.roleMotionSection",
+    "test-only:preview.timeOfDay",
     "test-only:workshop.github"
   ]
 }

@@ -760,7 +760,7 @@ func TestScanSummaryByType(t *testing.T) {
 		{Path: `/repo/ysm/模型B.ysm`},
 		{Path: `/repo/misc/说明.txt`},
 	}
-	byType, first := scanSummaryByType(entries)
+	byType, first, _ := scanSummaryByType(entries)
 
 	// PMX 目录下全部资源（.pmx/.vmd/.zip）经 location 路由归 EntityPlayer
 	if byType["EntityPlayer"] != 4 {
@@ -814,7 +814,7 @@ func TestScanSummaryByType_PmxOnly(t *testing.T) {
 		{Path: `/repo/mmd/PMX/角色A.pmx`},
 		{Path: `/repo/mmd/PMX/角色B.pmx`},
 	}
-	byType, first := scanSummaryByType(entries)
+	byType, first, _ := scanSummaryByType(entries)
 	if byType["EntityPlayer"] != 2 {
 		t.Errorf("EntityPlayer 计数 = %d, 期望 2", byType["EntityPlayer"])
 	}

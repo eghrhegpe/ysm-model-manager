@@ -319,7 +319,7 @@
   "diagnostics.perfModelRequired": "Please enter a model path",
   "diagnostics.perfIterations": "Iterations",
   "diagnostics.perfRunGui": "Single-model load pipeline",
-  "diagnostics.perfGuiScopeNote": "Scope: the full 6-stage chain covers YSM only. Parsers for MMD / VRM / GLTF live in the frontend 3D adapter (the CLI reports it is not simulated, and points you to the 3D preview); blueprint / projection chains are not measured yet.",
+  "diagnostics.perfGuiScopeNote": "Scope: the full 6-stage chain covers YSM and Touhou Little Maid (maid-model — TLM packs share the same geometry entry point as YSM containers). Parsers for MMD / VRM / GLTF live in the frontend 3D adapter (the CLI reports it is not simulated, and points you to the 3D preview); blueprint / projection chains are not measured yet. Entries without geometry (sound packs, etc.) are skipped to the next candidate, and that is said out loud.",
   "diagnostics.perfSingleResult": "Single-model benchmark result",
   "diagnostics.perfGuiResult": "Single-model load pipeline result",
   "diagnostics.perfTotal": "Total time",

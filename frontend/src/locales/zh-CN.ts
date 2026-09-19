@@ -362,7 +362,7 @@ export const zhCN = {
   "diagnostics.perfIterations": "迭代次数",
   "diagnostics.perfRunGui": "单模型加载链路模拟",
   "diagnostics.perfGuiScopeNote":
-    "覆盖范围：完整 6 阶段链路仅 YSM。MMD / VRM / GLTF 的解析器只在前端 3D adapter（CLI 会如实告知「不模拟」，请到 3D 预览实测）；蓝图 / 投影的链路度量尚未纳入。",
+    "覆盖范围：完整 6 阶段链路覆盖 YSM 与车万女仆（maid-model，TLM 包与 YSM 容器走同一 geometry 解析入口）。MMD / VRM / GLTF 的解析器只在前端 3D adapter（CLI 会如实告知「不模拟」，请到 3D 预览实测）；蓝图 / 投影的链路度量尚未纳入。同类型里没有几何的条目（音效包等）会自动顺延到下一个候选并说明。",
   "diagnostics.perfSingleResult": "单模型基准结果",
   "diagnostics.perfGuiResult": "单模型加载链路结果",
   "diagnostics.perfTotal": "总耗时",

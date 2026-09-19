@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -33,18 +34,34 @@ type perfTypeManifestEntry struct {
 
 // perfTypeManifest CLI 性能采集的类型清单（发现白名单 ≠ 可分析白名单）。
 //
-// 只有 YSM 有 CLI 分析链路：`.ysm` 走 WASM 解码、`.zip/.7z` 走 geometry 容器解析、
-// 目录式走 `ysm.FindComponentsInExtractedYSM`（`app.App.LoadModelComponents` 的 `.json` 分支），
-// 阶段链 = ① 读取/清单 ② 解析 ③ 验证 ④ 几何 ⑤ 纹理 ⑥ 序列化 ⑦ 缓存（7 段）。
-// PMX/PMD/VRM/FBX/GLTF 的解析器只在**前端 3D adapter**里（Three.js 生态），CLI 拿到是空模型，
+// ⚠️ 订正（2026-09-19）：本条此前写「只有 YSM 有 CLI 分析链路」——那是**错的**，并已实证造成
+// 用户可见假阴性：`cliAnalyzable("maid-model") == false` → 自动挑选首个模型（scanFirstModel）、
+// `--target all`、以及用户在面板里显式选「女仆」跑基准，一律被判 unsupported 并拒绝采集，
+// 提示「CLI 无解析器」——而这句是假的。
+// 依据（用户仓库 D:\YSM管理器测试文件夹 实测）：TLM 女仆包 `.zip` 走 `go/geometry` 的 maid L0
+// 清单链路（`detectMaidNs` / `collectMaidManifest` / `resolveL0`，见 go/geometry/maid_l0.go），
+// 与 YSM 容器同一个 `parseBedrockFromZip` 入口，阶段链同样是 ①读/清单 ②解析 ③验证 ④几何
+// ⑤纹理 ⑥序列化 ⑦缓存（7 段）；实测 yingbai_arknights_pack 961 bones / 7 textures / 4696 cubes。
+// 故现在是 **YSM 与 maid-model 两条链路**。
+// PMX/PMD/VRM/FBX/GLTF 的解析器仍只在**前端 3D adapter**里（Three.js 生态），CLI 拿到是空模型，
 // 阶段耗时全是空数据 —— 矩阵必须显式区分（与 gui-flow 对 PMX 跳过 ④⑤⑥ 的口径同源）。
+//
+// ⚠️ 教训（下一个人别再照抄错话）：本清单回答的是「CLI 有没有该**类型**的解析链路」，
+// **不**回答「这条**条目**是否真有几何」——同一目录归属下音效包/纯资源包与真模型同类
+// （实测 maid-model\ 下的 atri_sound_pack-1.0.0.zip 解析出 0 bones）。后一问由 `firstWithGeometry`
+// 在末端验证，不得用类型谓词冒充。
 //
 // 未登记的类型 = CLI 不可分析（默认零值），无需逐条罗列；新增 CLI 分析链路时在此登记。
 var perfTypeManifest = map[string]perfTypeManifestEntry{
 	"ysm": {
 		CliAnalyzable:  true,
 		ExpectedStages: 7,
-		Note:           "CLI 唯一完整分析链路（WASM 解码 / geometry 容器 / 解包目录三形态）",
+		Note:           "YSM 的完整分析链路（WASM 解码 / geometry 容器 / 解包目录三形态）——2026-09-19 前写作「CLI 唯一」，经 maid-model 实测订正",
+	},
+	"maid-model": {
+		CliAnalyzable:  true,
+		ExpectedStages: 7,
+		Note:           "TLM 女仆包 .zip 走 geometry 包 maid L0 清单（detectMaidNs/collectMaidManifest/resolveL0），与 YSM 容器同一 ParseFromZip 入口；实测 7 段齐全",
 	},
 }
 
@@ -84,6 +101,50 @@ func cliAnalyzablePath(path, ext string, reg *registry.ResourceTypeRegistry) boo
 // 注：条目形状的挑选器 `pickCliAnalyzable(entries)` 已退役（2026-09-18，ADR-262 D3 修订）——
 // 「从候选池里挑出 CLI 可分析的」现在只有 `filterAnalyzable([]perfTarget)` 一个出口（perf_target_set.go），
 // 它与 `collectPerfTargets` 同处一条数据流；再留一份同语义的挑选器就是第二条路径。
+
+// maxGeometryProbe 「按序挑首个真有几何」的候选探测上限。
+//
+// 上限而非全量：每探测一个候选都要走 AnalyzeBedrockModel（几何缓存命中很便宜，冷缓存却是真解析），
+// 而目录归属会把音效包/纯资源包混进同一类型（maid-model\ 下实测如此）。上限 5 与
+// `--max-models` 的默认量级一致：够越过「前几个是资源包」的常见排列，又不至于让挑首个模型变慢。
+const maxGeometryProbe = 5
+
+// hasGeometry 该分析结果里是否真有几何（Bones 或 CubeCount 非 0）。
+//
+// 「CLI 可分析」（cliAnalyzable）只保证**类型**有解析链路，不保证**条目**含几何——音效包/纯资源包
+// 按目录归属同样被判成 maid-model，解析出来是零骨骼空模型（实测 atri_sound_pack-1.0.0.zip）。
+// ③ 的派生阶段门控（④⑤⑥ 只在真产出上跑）与候选顺延（firstWithGeometry）共用本谓词：
+// 「什么叫真有几何」只留一份判定。
+func hasGeometry(model types.BedrockModel) bool {
+	return len(model.Bones) > 0 || model.CubeCount > 0
+}
+
+// firstWithGeometry 从有序候选里挑出第一个**真能解析出几何**（Bones 或 CubeCount 非 0）的条目。
+//
+// 立因：类型只保证「CLI 有该类型的解析链路」，不保证该条目含几何——音效包/纯资源包按目录归属
+// 也会被判成 maid-model，解析出来是空模型。候选由既有单点产出（gui-flow 走 scanSummaryByType、
+// 「挑首个模型」走 scanBenchTargets），本函数**不重判可分析性**（那是 cliAnalyzable 的事），
+// 只在末端加一步「验证真有几何」——不留第二份同语义的挑选器。
+//
+// 返回 (命中路径, 模型, 试过的路径[], 是否命中)。边界：maxProbe < 1 或候选为空时返回零值
+// （tried 为空）；未命中时 tried 是已探测的那些（最多 maxProbe 个），供调用方如实说明跳过了谁。
+func firstWithGeometry(a AppService, candidates []string, maxProbe int) (string, types.BedrockModel, []string, bool) {
+	if a == nil || maxProbe < 1 {
+		return "", types.BedrockModel{}, nil, false
+	}
+	tried := make([]string, 0, maxProbe)
+	for i, path := range candidates {
+		if i >= maxProbe {
+			break
+		}
+		model := a.AnalyzeBedrockModel(path)
+		tried = append(tried, path)
+		if hasGeometry(model) {
+			return path, model, tried, true
+		}
+	}
+	return "", types.BedrockModel{}, tried, false
+}
 
 // scanBenchTargets 按资源类型扫描基准目标集：发现 → 类型过滤 → 确定性排序 → 取前 N。
 //

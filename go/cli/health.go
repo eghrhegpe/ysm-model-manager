@@ -62,7 +62,7 @@ func runHealthReport(ctx *CmdContext) error {
 
 	// 2. 可选性能基线（首模型 single-bench，默认关）
 	if *bench {
-		target := scanFirstModel(scanDir)
+		target := scanFirstModel(ctx.App, scanDir)
 		if target == "" {
 			fmt.Println("⚠️  未找到模型，跳过性能基线（--bench）")
 		} else {

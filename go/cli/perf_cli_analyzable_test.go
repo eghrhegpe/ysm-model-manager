@@ -100,6 +100,8 @@ func TestFilterAnalyzable_FiltersTargets(t *testing.T) {
 
 // TestScanFirstModel_LexicographicDeterministic 目标集排序由 scanBenchTargets 单点给出
 // （路径字典序）：Walk 顺序依文件系统而变，测试/AI 断言需要可复现。
+// 同时锁定「几何验证不改变确定性」：flowFakeApp 对任何路径都返回 1 骨骼（它替真解析站台），
+// 故命中仍应是路径序首个；「几何验证真的会顺延」由 maid_geometry_test.go 用真 zip 锁定。
 func TestScanFirstModel_LexicographicDeterministic(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
@@ -109,7 +111,7 @@ func TestScanFirstModel_LexicographicDeterministic(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if got, want := scanFirstModel(root), filepath.Join(root, "a.ysm"); got != want {
+	if got, want := scanFirstModel(&flowFakeApp{}, root), filepath.Join(root, "a.ysm"); got != want {
 		t.Errorf("应为路径字典序首个, got %q want %q", got, want)
 	}
 }
@@ -141,30 +143,52 @@ func TestRunConcurrentBench_RejectsUnanalyzableOnly(t *testing.T) {
 
 // TestScanSummaryByType_FirstModelCliAnalyzable gui-flow 首模型同源：随清单与归属自动扩展，
 // 不再自持 `ext == ".ysm"` 白名单。
+//
+// 2026-09-19 起同一次调用还产出**有序候选列表**（③ 顺延的依据）：断言 candidates 与 firstModel
+// 同源（first == candidates[0]）、按路径字典序、且只含 CLI 可分析类型——不是新增口径，
+// 而是把「候选顺序就是 ③ 会尝试的顺序」变成契约。
 func TestScanSummaryByType_FirstModelCliAnalyzable(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
 	// 只按可用性排序：不可分析类型不入首模型，可分析类型入
-	_, first := scanSummaryByType([]types.ModelEntry{
+	_, first, candidates := scanSummaryByType([]types.ModelEntry{
 		{Path: filepath.Join(dir, "a.vrm"), Name: "a.vrm", Ext: ".vrm"},
 		{Path: filepath.Join(dir, "b.ysm"), Name: "b.ysm", Ext: ".ysm"},
 	})
 	if want := filepath.Join(dir, "b.ysm"); first != want {
 		t.Errorf("首模型应为 CLI 可分析的 %q, got %q", want, first)
 	}
+	if len(candidates) != 1 || candidates[0] != first {
+		t.Errorf("候选列表应只含可分析者且首项与 firstModel 同源: %v vs %q", candidates, first)
+	}
 
-	// 只有不可分析类型 → 无首模型（保持「未找到可分析的模型」语义）
-	if _, first := scanSummaryByType([]types.ModelEntry{
+	// 只有不可分析类型 → 无首模型、无候选（保持「未找到可分析的模型」语义）
+	if _, first, candidates := scanSummaryByType([]types.ModelEntry{
 		{Path: filepath.Join(dir, "a.vrm"), Name: "a.vrm", Ext: ".vrm"},
-	}); first != "" {
-		t.Errorf("无 CLI 可分析模型时首模型应为空, got %q", first)
+	}); first != "" || len(candidates) != 0 {
+		t.Errorf("无 CLI 可分析模型时首模型应为空且候选为空, got %q / %v", first, candidates)
+	}
+
+	// 候选按路径字典序（③ 的顺延顺序必须可复现，不能依扫描序）
+	_, first, candidates = scanSummaryByType([]types.ModelEntry{
+		{Path: filepath.Join(dir, "z.ysm"), Name: "z.ysm", Ext: ".ysm"},
+		{Path: filepath.Join(dir, "a.ysm"), Name: "a.ysm", Ext: ".ysm"},
+	})
+	if len(candidates) != 2 || candidates[0] != filepath.Join(dir, "a.ysm") || candidates[1] != filepath.Join(dir, "z.ysm") {
+		t.Errorf("候选应按路径字典序: %v", candidates)
+	}
+	if first != candidates[0] {
+		t.Errorf("firstModel 应恒等于 candidates[0]: %q vs %v", first, candidates)
 	}
 
 	// 泛化：ysm 目录下的容器 .zip 也在 CLI 分析链路上（原白名单漏掉它）
 	zip := ysmLocationPath(t, "pack.zip")
-	_, first = scanSummaryByType([]types.ModelEntry{{Path: zip, Name: "pack.zip", Ext: ".zip"}})
+	_, first, candidates = scanSummaryByType([]types.ModelEntry{{Path: zip, Name: "pack.zip", Ext: ".zip"}})
 	if first != zip {
 		t.Errorf("ysm 目录下的 zip 应可作首模型（容器形态在分析链路上）, got %q want %q", first, zip)
+	}
+	if len(candidates) != 1 || candidates[0] != zip {
+		t.Errorf("候选列表应含该 zip: %v", candidates)
 	}
 }

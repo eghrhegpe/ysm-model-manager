@@ -74,11 +74,14 @@ func TestScanBenchTargets_DeterministicAndTyped(t *testing.T) {
 	}
 }
 
+// TestScanFirstModel_DirForm 目录式入口照常命中。
+// flowFakeApp 替真解析站台（任何路径都给 1 骨骼）——本用例锁的是「目录式入口被认出来」，
+// 「无几何的候选会被跳过」由 maid_geometry_test.go 用真 zip 锁定。
 func TestScanFirstModel_DirForm(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	entry := writeDirFormYsm(t, root, "shen-fengling")
-	if got := scanFirstModel(root); got != entry {
+	if got := scanFirstModel(&flowFakeApp{}, root); got != entry {
 		t.Errorf("纯解包仓库应识别目录式入口 ysm.json: got %q want %q", got, entry)
 	}
 }

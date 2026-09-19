@@ -32,6 +32,9 @@ type guiFlowResult struct {
 	// FirstModel 机器可读的首个可分析模型路径——曾塞进 Description 由下游反解析
 	// 「首个模型:」文案 token（改个 emoji 就断），结构化直传
 	FirstModel string
+	// AnalyzableCandidates ② 产出的有序 CLI 可分析候选路径（与 FirstModel 同源，不再另立挑选器）；
+	// ③ 在首个候选解析不出几何时按此顺延（见 perf_targets.go|firstWithGeometry）。
+	AnalyzableCandidates []string
 	// ModelCount ② 模型扫描到的条目总数（0 = 仓库里真的没有模型）。与 ByType 同源结构化留档：
 	// ③ 的「有模型但都不在分析链路上」分支据此如实转述，**不从 Description 反解析**
 	// （「人类可读输出不是内部 API」——本文件既有教训）。
@@ -181,11 +184,18 @@ func runGUIFlow(ctx *CmdContext) error {
 
 	// 如果指定了模型，使用它；否则用扫描阶段的结构化 FirstModel
 	// （不再从 Description 文案反解析「首个模型:」token——人类可读
-	// 输出不是内部 API）
+	// 输出不是内部 API）。
+	//
+	// --model 显式指定时**不做顺延**（用户点名要那个模型，换成别的就是答非所问）；
+	// 自动挑选时按 ② 的有序候选顺延——类型只保证「CLI 有该类型的解析链路」，
+	// 不保证该条目含几何（音效包/纯资源包按目录归属与真模型同类）。
+	explicitModel := *modelPath != ""
 	targetModel := *modelPath
-	if targetModel == "" && len(results) > 0 {
-		if lastResult := results[len(results)-1]; lastResult.Success {
-			targetModel = lastResult.FirstModel
+	var scan guiFlowResult
+	if !explicitModel && len(results) > 0 {
+		scan = results[len(results)-1]
+		if scan.Success {
+			targetModel = scan.FirstModel
 		}
 	}
 
@@ -193,7 +203,10 @@ func runGUIFlow(ctx *CmdContext) error {
 	// 模型只分析一次，③⑤⑥ 共用（原实现 ⑤⑥ 各自再调 AnalyzeBedrockModel，
 	// 同一份分析被计 3 次耗时——⑤⑥ 的阶段耗时因此不是自己的工作量的度量）
 	if targetModel != "" {
-		analyzeResult, model := runPhaseModelAnalyze(ctx.App, targetModel)
+		analyzeResult, model, analyzedPath := runPhaseModelAnalyzeTarget(ctx.App, scan, targetModel, explicitModel)
+		// 顺延命中后把 targetModel 换到**真正被分析**的那个：④ 的纹理哈希按它取
+		//（`runPhaseTextureCache(targetModel)`），不回写就会「模型换了、④ 还在算旧文件」。
+		targetModel = analyzedPath
 		results = append(results, withRuntime(analyzeResult, guiFlowRuntimeGo))
 
 		// ④⑤⑥（纹理缓存/数据准备/渲染预估）全部从**分析出来的模型**派生，
@@ -202,7 +215,8 @@ func runGUIFlow(ctx *CmdContext) error {
 		// 与损坏的 `.ysm` 在一份空 `types.BedrockModel{}` 上跑出三个阶段——
 		// 那是**空模型数据当实测**（ADR-262 D3/D8）。③ 已如实告知限制或失败，
 		// 此处不再产出派生阶段（按类型门控挡不住「损坏的 ysm」那一类）。
-		if len(model.Bones) > 0 {
+		// 顺延后 targetModel 已是**真正分析成功**的那个（与 model 同一次分析），④⑤⑥ 一律跑在它上面。
+		if hasGeometry(model) {
 			// ============ Phase 4: 纹理缓存检查 ============
 			results = append(results, withRuntime(runPhaseTextureCache(targetModel), guiFlowRuntimeGo))
 
@@ -275,7 +289,7 @@ func runPhaseConfigLoad(a AppService) guiFlowResult {
 }
 
 // scanSummaryByType 按注册表类型聚合扫描结果。
-// 返回 {typeID: count} 与首个「分析阶段可处理」的模型路径（.ysm 优先）。
+// 返回 {typeID: count}、首个「分析阶段可处理」的模型路径、以及**有序候选列表**（只含 CLI 可分析类型）。
 // 原实现硬编码 yml/ysm/other 三槽，MMD 的 PMX/PMD 等注册表类型全归 "other"，
 // 导致纯 MMD 仓库统计失真（"其他: 333"）——现按注册表真实类型展示分布。
 // firstModel 只选 **CLI 可分析**的类型（分析阶段 AnalyzeBedrockModel 仅支持 Bedrock geometry）：
@@ -284,19 +298,28 @@ func runPhaseConfigLoad(a AppService) guiFlowResult {
 // 容器 .zip / 解包目录 ysm.json 等「非 .ysm 扩展名但确实在分析链路上」的形态。
 // 不可分析类型**不提升为首模型**（用户可 --model 显式指定）——这只关「③ 拿谁去跑」；
 // ③ 在「有模型但都不可分析」时会如实转述类型分布并标 ℹ️，不再只报「未找到可分析的模型」。
-func scanSummaryByType(entries []types.ModelEntry) (map[string]int, string) {
+//
+// 候选按**路径字典序**（Walk 顺序依文件系统而变，测试/AI 断言要可复现），firstModel 恒 = candidates[0]：
+// 两者同源，不另立挑选器（「条目形状的挑选器」只许有一份，见 perf_targets.go 的告诫）。
+// 候选顺序还是 ③ 顺延的依据——类型可分析 ≠ 该条目含几何（音效包/纯资源包按目录归属同类）。
+func scanSummaryByType(entries []types.ModelEntry) (map[string]int, string, []string) {
 	byType := make(map[string]int)
-	var firstModel string
+	var candidates []string
 	registry := registry.LoadRegistry()
 	for _, e := range entries {
 		ext := strings.ToLower(filepath.Ext(e.Path))
 		id := classifyForScan(e.Path, ext, registry)
 		byType[id]++
-		if firstModel == "" && cliAnalyzable(id) {
-			firstModel = e.Path
+		if cliAnalyzable(id) {
+			candidates = append(candidates, e.Path)
 		}
 	}
-	return byType, firstModel
+	sort.Strings(candidates)
+	firstModel := ""
+	if len(candidates) > 0 {
+		firstModel = candidates[0]
+	}
+	return byType, firstModel, candidates
 }
 
 // classifyForScan 轻量类型判定（gui-flow 扫描统计专用，不打开容器内容指纹）：
@@ -366,7 +389,7 @@ func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 		}
 	}
 
-	byType, firstModel := scanSummaryByType(entries)
+	byType, firstModel, candidates := scanSummaryByType(entries)
 	// 类型分布可读化（注册表类型 id → count；未命中归 other）——与 ③ 的「有模型但都不可分析」
 	// 分支共用同一格式化，避免两处各排一遍序（map 遍历无序，展示/测试需确定性）
 	dist := formatTypeDist(byType)
@@ -377,12 +400,13 @@ func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 	ysmCount := byType["ysm"]
 	yamlCount := byType["yml"] // 派生（注册表无 .yml 类型时为 0——不硬编码常量）
 	return guiFlowResult{
-		Stage:      "② 模型扫描",
-		Duration:   elapsed,
-		Success:    true,
-		FirstModel: firstModel,
-		ModelCount: len(entries),
-		ByType:     byType,
+		Stage:                "② 模型扫描",
+		Duration:             elapsed,
+		Success:              true,
+		FirstModel:           firstModel,
+		AnalyzableCandidates: candidates,
+		ModelCount:           len(entries),
+		ByType:               byType,
 		// ⚠️ 诚实红线（与 singleBenchReadNote 同族，2026-09-18 由 e2e 真实渲染抓出）：
 		// 扫描几个小模型时 `time.Since` 常为 0 → 除以 0 秒把速率打成「+Inf models/sec」。
 		// 测不出的速率宁可不报：计时没走字就只说数量。
@@ -433,30 +457,94 @@ func runPhaseModelAnalyze(a AppService, modelPath string) (guiFlowResult, types.
 	model := a.AnalyzeBedrockModel(modelPath)
 	elapsed := time.Since(start)
 
-	if len(model.Bones) == 0 {
+	if !hasGeometry(model) {
+		return modelAnalyzeNoGeometry(nil, modelPath, 0, elapsed), types.BedrockModel{}
+	}
+	return describeModelAnalysis(modelPath, model, elapsed, nil), model
+}
+
+// describeModelAnalysis 由**已分析好的**模型构造 ③ 的成功结果。
+//
+// 分析口径（骨骼/纹理/预估几何）只留这一份：单候选直测与顺延命中共用同一段文案，
+// 避免两处各写一遍而漂移。skipped 非空时如实说明「跳过了哪几个候选」——顺延不许静默换模型。
+func describeModelAnalysis(modelPath string, model types.BedrockModel, elapsed time.Duration, skipped []string) guiFlowResult {
+	desc := fmt.Sprintf(
+		"✅ 分析完成\n   文件: %s\n   骨骼: %d\n   纹理: %d\n   预估几何: %s",
+		filepath.Base(modelPath),
+		len(model.Bones), len(model.Textures),
+		fsutil.FormatSize(estimateGeometrySize(model)),
+	)
+	if len(skipped) > 0 {
+		desc += fmt.Sprintf(
+			"\n   ⚠️ 首个候选无几何（解析不出骨骼，可能是音效包/纯资源包），已改测第 %d 个候选\n   已跳过: %s",
+			len(skipped)+1, strings.Join(baseNames(skipped), ", "),
+		)
+	}
+	return guiFlowResult{Stage: "③ 模型分析", Duration: elapsed, Success: true, Description: desc}
+}
+
+// modelAnalyzeNoGeometry ③ 的失败态：候选都在 CLI 分析链路上，却没有一个解析出几何。
+//
+// 单候选时保留原文案 `❌ 分析失败: <path>`（与修复前逐字一致，不因本次改动改口径）；
+// 多候选时给出更准确的一句话，并**明确是数据问题而非能力边界**——「所有候选都没几何」
+// 不等于「CLI 没有该类型的解析链路」（后者是 ℹ️ + Success=true，见 runPhaseModelAnalyze）。
+// tried 为实际探测过的候选；total 是候选总数（用于说明还有几个没探测，不把截断藏起来）。
+func modelAnalyzeNoGeometry(tried []string, fallbackPath string, total int, elapsed time.Duration) guiFlowResult {
+	if len(tried) <= 1 {
+		path := fallbackPath
+		if len(tried) == 1 {
+			path = tried[0]
+		}
 		return guiFlowResult{
 			Stage:       "③ 模型分析",
 			Duration:    elapsed,
 			Success:     false,
-			Description: fmt.Sprintf("❌ 分析失败: %s", modelPath),
-		}, types.BedrockModel{}
+			Description: fmt.Sprintf("❌ 分析失败: %s", path),
+		}
 	}
+	desc := fmt.Sprintf(
+		"❌ %d 个候选均未解析出几何，可能是音效包/纯资源包（CLI 有该类型的解析链路，只是这些条目里没有几何）\n   已试: %s",
+		len(tried), strings.Join(baseNames(tried), ", "),
+	)
+	if total > len(tried) {
+		desc += fmt.Sprintf("\n   另有 %d 个候选未探测（单次顺延上限 %d）", total-len(tried), maxGeometryProbe)
+	}
+	return guiFlowResult{Stage: "③ 模型分析", Duration: elapsed, Success: false, Description: desc}
+}
 
-	boneCount := len(model.Bones)
-	texCount := len(model.Textures)
-	geoSize := estimateGeometrySize(model)
+// runPhaseModelAnalyzeTarget ③ 的目标选择与顺延。
+//
+// 显式 `--model`：直测它，**不换模型**（用户点名要那个；它无几何时由 ③ 如实报失败）。
+// 自动挑选：按 ② 的有序候选（scan.AnalyzableCandidates，与 FirstModel 同源）顺延到第一个
+// 真解析出几何的条目——类型可分析 ≠ 该条目含几何，只按类型提升会挑到音效包/纯资源包。
+// 计时口径：顺延的多次分析**全部计入 ③ 的耗时**（开销不藏）。
+//
+// 第三个返回值是**实际被分析**的路径：④ 的纹理哈希直接读它（`runPhaseTextureCache(targetModel)`），
+// 调用方必须把它回写到 targetModel，否则顺延后 ④ 会拿着首个候选去算哈希——换模型换了一半，
+// 比不换更难发现。
+func runPhaseModelAnalyzeTarget(a AppService, scan guiFlowResult, explicitTarget string, explicit bool) (guiFlowResult, types.BedrockModel, string) {
+	if explicit {
+		r, m := runPhaseModelAnalyze(a, explicitTarget)
+		return r, m, explicitTarget
+	}
+	start := time.Now()
+	hit, model, tried, ok := firstWithGeometry(a, scan.AnalyzableCandidates, maxGeometryProbe)
+	elapsed := time.Since(start)
+	if !ok {
+		// 未命中：③ 是失败态，④⑤⑥ 不会跑，路径保持首个候选（与单候选时的原文案一致）
+		return modelAnalyzeNoGeometry(tried, explicitTarget, len(scan.AnalyzableCandidates), elapsed), types.BedrockModel{}, explicitTarget
+	}
+	// tried 的末项就是命中的那个：它之前的才是「被跳过」的候选
+	return describeModelAnalysis(hit, model, elapsed, tried[:len(tried)-1]), model, hit
+}
 
-	return guiFlowResult{
-		Stage:    "③ 模型分析",
-		Duration: elapsed,
-		Success:  true,
-		Description: fmt.Sprintf(
-			"✅ 分析完成\n   文件: %s\n   骨骼: %d\n   纹理: %d\n   预估几何: %s",
-			filepath.Base(modelPath),
-			boneCount, texCount,
-			fsutil.FormatSize(geoSize),
-		),
-	}, model
+// baseNames 把路径列表摘要成基名（人类文案用；完整路径已在各处载荷字段里）。
+func baseNames(paths []string) []string {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		out = append(out, filepath.Base(p))
+	}
+	return out
 }
 
 // runPhaseTextureCache 检查纹理缓存状态

@@ -107,12 +107,15 @@ func TestWrapLineLength(t *testing.T) {
 
 func TestResolveTargetModel_ExplicitWins(t *testing.T) {
 	t.Parallel()
-	got, err := resolveTargetModel("/explicit/model.ysm", "/root")
+	got, err := resolveTargetModel(&flowFakeApp{}, "/explicit/model.ysm", "/root")
 	if err != nil || got != "/explicit/model.ysm" {
 		t.Errorf("显式 --model 应直返, got %q err %v", got, err)
 	}
 }
 
+// TestResolveTargetModel_ScansFirst 自动挑选：没有 --model 时选首个可分析模型。
+// flowFakeApp 替真解析站台（任何路径都给 1 骨骼）——本用例锁的是「从候选池里自动选」；
+// 「候选无几何则顺延到下一个」由 maid_geometry_test.go 用真 zip 锁定。
 func TestResolveTargetModel_ScansFirst(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
@@ -123,7 +126,7 @@ func TestResolveTargetModel_ScansFirst(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "readme.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	got, err := resolveTargetModel("", root)
+	got, err := resolveTargetModel(&flowFakeApp{}, "", root)
 	if err != nil || got != want {
 		t.Errorf("应自动选中第一个模型 %s, got %q err %v", want, got, err)
 	}
@@ -131,7 +134,7 @@ func TestResolveTargetModel_ScansFirst(t *testing.T) {
 
 func TestResolveTargetModel_EmptyRootErrors(t *testing.T) {
 	t.Parallel()
-	if _, err := resolveTargetModel("", ""); err == nil {
+	if _, err := resolveTargetModel(&flowFakeApp{}, "", ""); err == nil {
 		t.Fatal("空 filesRoot 且无 --model 应报错")
 	}
 }
@@ -240,8 +243,11 @@ func TestGenerateSnapshotSummary(t *testing.T) {
 // 原断言是「跳过 .txt 命中 .vrm」——那是**锁住了一个诚实缺陷**：.vrm 的解析器只在前端
 // 3D adapter，CLI 拿到是空模型；而本函数的两个消费方（`resolveTargetModel`、`health --bench`）
 // 都直接把返回值喂进 `runSingleModelBench` → 产出「空模型数据当实测」（D3/D8 红线）。
-// 现实现 = `scanBenchTargets` 的空 rtype 形态（发现权 scanner / 归属 classifyForScan /
-// 可分析性 perfTypeManifest），不再自持扩展名白名单。
+// 现实现 = `scanBenchTargets` 的空 rtype 形态 + `firstWithGeometry` 几何验证（发现权 scanner /
+// 归属 classifyForScan / 可分析性 perfTypeManifest / 真有几何 hasGeometry），不再自持扩展名白名单。
+// 2026-09-19 追加后半段：类型可分析 ≠ 该条目含几何（音效包/纯资源包按目录归属同类），
+// 「有没有几何」的真 zip 用例在 maid_geometry_test.go；本用例用 flowFakeApp 替真解析站台
+// （任何路径都给 1 骨骼），锁的仍是「候选池怎么挑」这一层。
 //
 // ⚠️ 随之而来的语义变化：发现权归 `scanner.ScanEntries` 后，本函数**继承其目录缓存**
 // （TTL 内同目录复用上次结果，文件变更由 `InvalidatePath` 显式失效）——原实现的直读 Walk 无缓存。
@@ -249,13 +255,14 @@ func TestGenerateSnapshotSummary(t *testing.T) {
 // 故本用例的两个场景各用独立 root（各自独立缓存键），不共享一个目录反复追加文件。
 func TestScanFirstModel(t *testing.T) {
 	t.Parallel()
-	if got := scanFirstModel(""); got != "" {
+	fake := &flowFakeApp{}
+	if got := scanFirstModel(fake, ""); got != "" {
 		t.Errorf("空 root 应返回空, got %q", got)
 	}
 
 	// 场景 1：空目录 → 空
 	inert := t.TempDir()
-	if got := scanFirstModel(inert); got != "" {
+	if got := scanFirstModel(fake, inert); got != "" {
 		t.Errorf("空目录应返回空, got %q", got)
 	}
 
@@ -266,7 +273,7 @@ func TestScanFirstModel(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if got := scanFirstModel(unanalyzable); got != "" {
+	if got := scanFirstModel(fake, unanalyzable); got != "" {
 		t.Errorf("只含 CLI 不可分析类型时应返回空, got %q", got)
 	}
 
@@ -278,7 +285,7 @@ func TestScanFirstModel(t *testing.T) {
 		}
 	}
 	want := filepath.Join(mixed, "c.ysm")
-	if got := scanFirstModel(mixed); got != want {
+	if got := scanFirstModel(fake, mixed); got != want {
 		t.Errorf("应命中 CLI 可分析的 .ysm: got %q want %q", got, want)
 	}
 }

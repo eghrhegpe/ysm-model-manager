@@ -37,7 +37,8 @@ func TestSingleModelBench_SerializedPayloadMeasured(t *testing.T) {
 	}
 
 	// benchFakeApp.AnalyzeBedrockModel 返回固定模型 → 期望字节数可精确复算
-	want, err := json.Marshal(types.BedrockModel{BoneCount: 1})
+	// （与替身逐字对齐：Bones 物化是替身的契约，见 bench_concurrent_test.go 该桩注释）
+	want, err := json.Marshal(types.BedrockModel{BoneCount: 1, Bones: []types.Bone2D{{}}})
 	if err != nil {
 		t.Fatal(err)
 	}

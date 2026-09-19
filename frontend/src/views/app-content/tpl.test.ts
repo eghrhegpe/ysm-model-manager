@@ -198,7 +198,10 @@ describe("app-content 模板", () => {
     const html = diagnosticsHTML();
     // 范围说明常驻在模板里（无论跑没跑过）——它属于面板结构，不属于某次运行结果
     expect(html).toContain('data-testid="diag-perf-gui-scope"');
-    expect(html).toContain("完整 6 阶段链路仅 YSM");
+    expect(html).toContain("完整 6 阶段链路覆盖 YSM 与车万女仆");
+    // 反向护栏：旧口径「完整链路仅 YSM」已被实测证伪（maid-model 走同一 geometry 解析入口，
+    // 实测 961 骨骼 / 7 段齐全），不许回潮
+    expect(html).not.toContain("链路仅 YSM");
     // 蓝图/投影也要点名：用户问「其他资源呢」时，面板必须已经答了
     expect(html).toContain("蓝图 / 投影的链路度量尚未纳入");
     // 标签不再自称只覆盖 YSM：CLI 对 MMD/VRM 等有明确的「不模拟」告知分支，

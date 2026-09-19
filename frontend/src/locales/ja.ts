@@ -366,7 +366,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfIterations": "イテレーション数",
   "diagnostics.perfRunGui": "単一モデル読込パイプライン",
   "diagnostics.perfGuiScopeNote":
-    "対象範囲：フル 6 段階のチェーンは YSM のみです。MMD / VRM / GLTF のパーサーはフロントエンドの 3D adapter にのみ存在します（CLI は「シミュレートしない」と正直に通知し、3D プレビューでの実測を案内します）。ブループリント / 投影のチェーン測定は未対応です。",
+    "対象範囲：フル 6 段階のチェーンは YSM と東方リトルメイド（maid-model — TLM パッケージは YSM コンテナと同じ geometry 入口）が対象です。MMD / VRM / GLTF のパーサーはフロントエンドの 3D adapter にのみ存在します（CLI は「シミュレートしない」と正直に通知し、3D プレビューでの実測を案内します）。ブループリント / 投影のチェーン測定は未対応です。ジオメトリを持たない項目（サウンドパック等）は次の候補へ送られ、その旨が明示されます。",
   "diagnostics.perfSingleResult": "単一モデルベンチマーク結果",
   "diagnostics.perfGuiResult": "単一モデル読込パイプライン結果",
   "diagnostics.perfTotal": "総所要時間",

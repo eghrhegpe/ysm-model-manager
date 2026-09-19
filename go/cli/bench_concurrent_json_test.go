@@ -33,10 +33,12 @@ type benchTimedFakeApp struct {
 	delay time.Duration
 }
 
+// 与 benchFakeApp 同口径：Bones 必须物化（只填 BoneCount 的替身在自动挑选路径上会被
+// hasGeometry 判成空模型，测的是替身失真而非被测逻辑）。
 func (f *benchTimedFakeApp) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	f.analyzeCalls.Add(1)
 	time.Sleep(f.delay)
-	return types.BedrockModel{BoneCount: 1}
+	return types.BedrockModel{BoneCount: 1, Bones: []types.Bone2D{{}}}
 }
 
 // writeConcurrentBenchFixture 造一个含 n 个 .ysm 的小仓库（内容够非空即可）。

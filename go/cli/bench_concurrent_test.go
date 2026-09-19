@@ -23,9 +23,14 @@ type benchFakeApp struct {
 	analyzeCalls atomic.Int64
 }
 
+// AnalyzeBedrockModel 返回一个「真有几何」的模型：**Bones 必须物化**，不能只给汇总计数。
+// 立因（2026-09-19）：`hasGeometry`（perf_targets.go）与 ④⑤⑥ 门控都判 `len(Bones)>0`——
+// 「解析出几何」在生产链路上就意味着 Bones 已materialize（3D 预览要吃它）。只填 BoneCount 的替身
+// 会在自动挑选路径上被判成空模型（scanFirstModel 返回空串 → 「未找到模型」），
+// 那测的是替身失真而不是被测逻辑。
 func (f *benchFakeApp) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	f.analyzeCalls.Add(1)
-	return types.BedrockModel{BoneCount: 1}
+	return types.BedrockModel{BoneCount: 1, Bones: []types.Bone2D{{}}}
 }
 
 func TestDetectModelFormat(t *testing.T) {

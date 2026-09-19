@@ -294,7 +294,7 @@ func runPerfSnapshot(ctx *CmdContext) error {
 		return err
 	}
 
-	targetModel, err := resolveTargetModel(*modelPath, ctx.FilesRoot)
+	targetModel, err := resolveTargetModel(ctx.App, *modelPath, ctx.FilesRoot)
 	if err != nil {
 		return err
 	}
@@ -327,8 +327,11 @@ func runPerfSnapshot(ctx *CmdContext) error {
 	return nil
 }
 
-// resolveTargetModel 解析 --model 参数；为空时自动选第一个模型。
-func resolveTargetModel(modelPath, filesRoot string) (string, error) {
+// resolveTargetModel 解析 --model 参数；为空时自动选「首个真能解析出几何」的模型。
+//
+// 需要 AppService 是因为自动挑选要走 firstWithGeometry（几何验证）——类型可分析不等于该条目含几何，
+// 挑到音效包/纯资源包就是「空模型数据当实测」（见 scanFirstModel）。
+func resolveTargetModel(a AppService, modelPath, filesRoot string) (string, error) {
 	if modelPath != "" {
 		// 目录式模型归一化（增强）：折叠为 <dir>/ysm.json —— 与 scanner 条目约定一致，
 		// 见 resolveBenchModelTarget。
@@ -343,7 +346,7 @@ func resolveTargetModel(modelPath, filesRoot string) (string, error) {
 			return modelPath, nil
 		}
 	}
-	if m := scanFirstModel(filesRoot); m != "" {
+	if m := scanFirstModel(a, filesRoot); m != "" {
 		return m, nil
 	}
 	return "", newRuntimeErrf("未找到模型，请指定 --model 参数")
@@ -569,10 +572,11 @@ func generateSnapshotSummary(bench *singleBenchJSON, cache *cacheStatsJSON, form
 	return strings.Join(parts, " | ")
 }
 
-// scanFirstModel 取文件根目录下「首个可基准模型」的路径；无则以空串如实告知。
+// scanFirstModel 取文件根目录下「首个**真能解析出几何**的 CLI 可分析模型」；无则以空串如实告知。
 //
-// 实现 = `scanBenchTargets` 的空 rtype 形态（"所有 CLI 可分析类型"取首个）：发现权归
-// `scanner.ScanEntries`、归属归 `classifyForScan`、可分析性归 `perfTypeManifest`。
+// 实现 = `scanBenchTargets` 的空 rtype 形态（"所有 CLI 可分析类型"取前 `maxGeometryProbe` 个）→
+// `firstWithGeometry` 验证真有几何：发现权归 `scanner.ScanEntries`、归属归 `classifyForScan`、
+// 可分析性归 `perfTypeManifest`、几何验证归 `hasGeometry`（四个既有单点，无新表）。
 //
 // ⚠️ 随发现权一并继承 `scanner.ScanEntries` 的**目录缓存**（TTL 内同目录复用，文件变更由
 // `InvalidatePath` 显式失效）：原实现的直读 Walk 无缓存，故这是本收编带来的语义变化。
@@ -585,10 +589,16 @@ func generateSnapshotSummary(bench *singleBenchJSON, cache *cacheStatsJSON, form
 // `runSingleModelBench`** → 产出「空模型数据当实测」（D3/D8 诚实红线）。
 // 顺带收益：结果改为路径字典序（原为 Walk 首命中，依文件系统而变），测试/AI 可复现；
 // 目录式入口 `<dir>/ysm.json` 由 scanner 折叠工序覆盖，不再需要单独的 IsYsmEntryJSON 分支。
-func scanFirstModel(filesRoot string) string {
-	targets := scanBenchTargets(filesRoot, "", 1)
-	if len(targets) == 0 {
+//
+// 2026-09-19 追加**几何验证**——与上面同一条红线，只是换了个来源：类型可分析只保证「CLI 有该类型的
+// 解析链路」，不保证该条目含几何。目录归属会把音效包/纯资源包与真模型归成同一类（用户仓库实测：
+// `maid-model\` 下的 atri_sound_pack-1.0.0.zip → 0 bones，且按路径序排在女仆包里最前），
+// 只按类型取首个就是又一次「空模型数据当实测」。故取前 `maxGeometryProbe` 个候选逐个验证，
+// 命中第一个真有几何的；一个都没有时如实返回空串（由调用方报「未找到模型」）。
+func scanFirstModel(a AppService, filesRoot string) string {
+	hit, _, _, ok := firstWithGeometry(a, scanBenchTargets(filesRoot, "", maxGeometryProbe), maxGeometryProbe)
+	if !ok {
 		return ""
 	}
-	return targets[0]
+	return hit
 }

@@ -230,7 +230,7 @@ func pickConcurrentBenchModels(ctx *CmdContext, spec perfTargetSpec) ([]string, 
 	switch spec.Target {
 	case perfTargetModel:
 		// 目录式模型折叠为 <dir>/ysm.json（与 single-bench 同一出口）：下游零目录分支
-		target, err := resolveTargetModel(spec.ModelPath, ctx.FilesRoot)
+		target, err := resolveTargetModel(ctx.App, spec.ModelPath, ctx.FilesRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -513,7 +513,7 @@ func runSingleBench(ctx *CmdContext) error {
 
 	// --target model：目标解析（复用 perf-snapshot 的同一出口）：目录式模型折叠为 <dir>/ysm.json，
 	// 下游零目录分支。传目录路径曾直接 ① 读盘失败（os.ReadFile 对目录报错），且失败被平均环节吞掉 → 载荷全绿。
-	modelTarget, terr := resolveTargetModel(spec.ModelPath, ctx.FilesRoot)
+	modelTarget, terr := resolveTargetModel(ctx.App, spec.ModelPath, ctx.FilesRoot)
 	if terr != nil {
 		return terr
 	}
@@ -764,7 +764,7 @@ func identityOnlyPayload(modelPath, filesRoot, rtype string) singleBenchJSON {
 // （stdout 必须可被 json.Unmarshal 直接吃掉——人类可读文案一律不进 stdout，见 bench_baseline.go）。
 func runSingleBenchJSON(ctx *CmdContext, modelPath string, iterations int, baseline, saveBaseline string, thresholdPct float64) error {
 	// 归一化（经 runSingleBench 进入时已是 entry path，此处幂等）：保证直接调用（测试/内部）同样吃目录
-	target, terr := resolveTargetModel(modelPath, ctx.FilesRoot)
+	target, terr := resolveTargetModel(ctx.App, modelPath, ctx.FilesRoot)
 	if terr != nil {
 		return terr
 	}

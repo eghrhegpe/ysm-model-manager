@@ -7,6 +7,7 @@
 // 整条链路已统一 PreviewMenuNode（方案 A 收尾）：CORE_MENU_ITEMS 与适配器注入
 // 都是 PreviewMenuNode[]，不再有 PreviewMenuItemDef 往返转换。
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuGroupId, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { IconRef } from "@/utils/icon/resolve.ts";
 
@@ -27,7 +28,7 @@ export interface PreviewMenuGroupDef {
   id: PreviewMenuGroupId;
   icon: IconRef;
   /** i18n 键（dock 按钮/组标题文案）；缺失回退标准统一归 i18n tOf（裸 key 兜底） */
-  labelKey: string;
+  labelKey: LocaleKey;
   /** [S5 收口] 静态直达面板声明：点击 dock 按钮首跳该 panel 节点 id（渲染函数数据驱动，
    *  新增「静态直达」组零改 core.ts）；缺省走通用逻辑（单 panel 直达 / 组根视图）。
    *  动态直达（如 motion 依赖活跃角色详情）无法静态声明，见 core.ts 唯一特例标注。 */

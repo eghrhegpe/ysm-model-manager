@@ -15,6 +15,7 @@ import { GroundCapability } from "@/preview-3d/caps/ground-capability.ts";
 import { ReflectorCapability } from "@/preview-3d/caps/reflector-capability.ts";
 import { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
 import { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 /** 构造最小 PreviewMenuCtx（测试用） */
 function makeCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
@@ -64,7 +65,7 @@ const ENV_PLACE: Record<string, EnvPlacement> = {
  *  extra 可覆盖 getEnvPlacement（如伪造未知段 / 非环境 cap 排除）。 */
 function makeCap(
   id: string,
-  labelKey: string,
+  labelKey: LocaleKey,
   nodes: PreviewMenuNode[],
   extra: Record<string, unknown> = {},
 ) {
@@ -162,7 +163,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
       {
         id: "fog-enabled",
         kind: "toggle",
-        labelKey: "preview.fogEnabled",
+        labelKey: "preview.fogEnabled" as LocaleKey,
         control: {
           get: () => false,
           set: () => {},
@@ -401,14 +402,14 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
   it("A：环境成员由 cap 自报 getEnvPlacement 发现（自报即入选、未报即排除、env.ts 零登记）", () => {
     const ids = ["sky", "ground", "water", "environment", "fog", "reflector"];
     // 一个 env.ts 硬编码清单里从未出现过的「新」环境 cap，仅靠自报归属入选
-    const aurora = makeCap("aurora", "preview.aurora", [], {
+    const aurora = makeCap("aurora", "preview.aurora" as LocaleKey, [], {
       getEnvPlacement: () => ({ section: "basic", order: 15 }),
     });
     // 一个非环境 cap（light）：不实现归属声明 → 不得混入环境面板
-    const light = makeCap("light", "preview.light", [], {
+    const light = makeCap("light", "preview.light" as LocaleKey, [], {
       getEnvPlacement: () => undefined,
     });
-    const caps = [...ids.map((id) => makeCap(id, `preview.${id}`, [])), aurora, light];
+    const caps = [...ids.map((id) => makeCap(id, `preview.${id}` as LocaleKey, [])), aurora, light];
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue(caps.slice().reverse());
     const menu = makeMenu();
     menusToDispose.add(menu);

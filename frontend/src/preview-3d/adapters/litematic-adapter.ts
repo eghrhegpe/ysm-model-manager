@@ -4,6 +4,7 @@
 // 通用外壳（overlay/renderer/循环/释放/相机控制）由 mount-preview-core.ts 拥有。
 
 import * as THREE from "three";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { VoxelData } from "@/parsers/voxel-types.ts";
 import { requireSharedInfra } from "@/preview-3d/adapters/shared/shared-infra.ts";
@@ -307,7 +308,7 @@ function buildSliceSchema(
   };
   const layerSlider = (
     id: string,
-    labelKey: string,
+    labelKey: LocaleKey,
     pick: "layerVal" | "layerVal2",
     visibleWhen: (s: Partial<PreviewSnapshot>) => boolean,
   ): PreviewMenuNode => ({

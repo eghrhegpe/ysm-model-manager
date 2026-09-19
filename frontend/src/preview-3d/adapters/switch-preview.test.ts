@@ -13,6 +13,7 @@ import { collectSceneStats } from "@/preview-3d/infra/scene-stats.ts";
 import { mergeStatsMenuItems } from "@/preview-3d/menu/panels/stats.ts";
 import { sceneRegistry, MAX_MODELS } from "@/preview-3d/infra/scene-registry.ts";
 import { bus } from "@/bus";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 beforeEach(() => {
   sceneRegistry.reset();
@@ -225,7 +226,7 @@ describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
     state.sceneBaseline = new Set([mesh]);
     mockScene.add(mesh);
     const firstMenuItems: PreviewMenuNode[] = [
-      { id: "model-a", kind: "panel", icon: "file", labelKey: "", label: "A" },
+      { id: "model-a", kind: "panel", icon: "file", labelKey: "" as LocaleKey, label: "A" },
     ];
     sceneRegistry.reset();
     sceneRegistry.register({
@@ -242,7 +243,7 @@ describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
       mockScene.add(newMesh);
       return {
         dispose: vi.fn(),
-        menuItems: [{ id: "model-b", kind: "panel", icon: "y", labelKey: "", label: "B" }],
+        menuItems: [{ id: "model-b", kind: "panel", icon: "y", labelKey: "" as LocaleKey, label: "B" }],
       } as unknown as PreviewScene;
     });
 
@@ -269,7 +270,7 @@ describe("switchToSession dock 菜单刷新（ADR-131 C1 修复）", () => {
       rtype: "vrm",
       roots: [mesh],
       content: { dispose: vi.fn() } as unknown as PreviewScene,
-      menuItems: [{ id: "model-a", kind: "panel", icon: "file", labelKey: "", label: "A" }],
+      menuItems: [{ id: "model-a", kind: "panel", icon: "file", labelKey: "" as LocaleKey, label: "A" }],
     });
 
     // 新模型 build 返回空 menuItems、不挂 mesh（无统计）

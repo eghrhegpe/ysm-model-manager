@@ -6,7 +6,7 @@ import {
   nodeControlToView,
   renderMenu,
 } from "./render.ts";
-import { tOf } from "@/core/i18n/t.ts";
+import { tOf, type LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { previewSnapshot, setStateValue } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
@@ -35,7 +35,7 @@ describe("renderMenu 新 kind", () => {
   it("field: 渲染键值对行，有 data-testid", () => {
     const nodes: PreviewMenuNode[] = [
       { id: "stat-bones", kind: "field", labelKey: "preview.section.bones", value: 128 },
-      { id: "stat-cubes", kind: "field", labelKey: "preview.cubes", value: 512 },
+      { id: "stat-cubes", kind: "field", labelKey: "preview.cubes" as LocaleKey, value: 512 },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
@@ -195,7 +195,7 @@ describe("renderMenu 新 kind", () => {
 
   it("sectionTitle: 渲染小标题行", () => {
     const nodes: PreviewMenuNode[] = [
-      { id: "sec-stats", kind: "sectionTitle", labelKey: "preview.statsSection" },
+      { id: "sec-stats", kind: "sectionTitle", labelKey: "preview.statsSection" as LocaleKey },
       { id: "stat-bones", kind: "field", labelKey: "preview.section.bones", value: 10 },
     ];
     const container = document.createElement("div");
@@ -212,7 +212,7 @@ describe("renderMenu 新 kind", () => {
         labelKey: "preview.folder",
         defaultOpen: true,
         children: [
-          { id: "child-1", kind: "field", labelKey: "preview.child", value: "val" },
+          { id: "child-1", kind: "field", labelKey: "preview.child" as LocaleKey, value: "val" },
         ],
       },
     ];
@@ -232,7 +232,7 @@ describe("renderMenu 新 kind", () => {
         labelKey: "preview.folder",
         defaultOpen: false,
         children: [
-          { id: "child-2", kind: "field", labelKey: "preview.child", value: "val" },
+          { id: "child-2", kind: "field", labelKey: "preview.child" as LocaleKey, value: "val" },
         ],
       },
     ];
@@ -262,7 +262,7 @@ describe("renderMenu 新 kind", () => {
             on = v;
           },
         },
-        children: [{ id: "child-tg", kind: "field", labelKey: "preview.child", value: "x" }],
+        children: [{ id: "child-tg", kind: "field", labelKey: "preview.child" as LocaleKey, value: "x" }],
       },
     ];
     const container = document.createElement("div");
@@ -342,14 +342,14 @@ describe("renderMenu 新 kind", () => {
         kind: "folder",
         labelKey: "preview.folder",
         defaultOpen: false,
-        children: [{ id: "child-a", kind: "field", labelKey: "preview.child", value: "a" }],
+        children: [{ id: "child-a", kind: "field", labelKey: "preview.child" as LocaleKey, value: "a" }],
       },
       {
         id: "folder-mem-b",
         kind: "folder",
         labelKey: "preview.folder",
         defaultOpen: false,
-        children: [{ id: "child-b", kind: "field", labelKey: "preview.child", value: "b" }],
+        children: [{ id: "child-b", kind: "field", labelKey: "preview.child" as LocaleKey, value: "b" }],
       },
     ];
     // ① 初次渲染：两 folder 默认折叠
@@ -391,8 +391,8 @@ describe("renderMenu 新 kind", () => {
   it("visibleWhen: 返回 false 时节点不渲染", () => {
     const nodes: PreviewMenuNode[] = [
       // [doc:adr-126-p4-d] 签名对齐 (s: PreviewSnapshot) => boolean（参数忽略，行为等价）
-      { id: "hidden", kind: "field", labelKey: "preview.hidden", value: "x", visibleWhen: (_s) => false },
-      { id: "visible", kind: "field", labelKey: "preview.visible", value: "y", visibleWhen: (_s) => true },
+      { id: "hidden", kind: "field", labelKey: "preview.hidden" as LocaleKey, value: "x", visibleWhen: (_s) => false },
+      { id: "visible", kind: "field", labelKey: "preview.visible" as LocaleKey, value: "y", visibleWhen: (_s) => true },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
@@ -408,7 +408,7 @@ describe("renderMenu 新 kind", () => {
       {
         id: "gated",
         kind: "field",
-        labelKey: "preview.gated",
+        labelKey: "preview.gated" as LocaleKey,
         value: "x",
         visibleWhen: (s) => {
           received = s;
@@ -445,7 +445,7 @@ describe("renderMenu 新 kind", () => {
             id: "l2",
             kind: "folder",
             children: [
-              { id: "l3-leaf", kind: "field", labelKey: "preview.leaf", value: "deep" },
+              { id: "l3-leaf", kind: "field", labelKey: "preview.leaf" as LocaleKey, value: "deep" },
             ],
           },
         ],
@@ -472,7 +472,7 @@ describe("renderMenu 新 kind", () => {
   it("action: 渲染可点击行，点击触发 action", () => {
     const clicked: string[] = [];
     const nodes: PreviewMenuNode[] = [
-      { id: "act-close", kind: "action", labelKey: "preview.close", icon: "close", action: () => { clicked.push("close"); } },
+      { id: "act-close", kind: "action", labelKey: "preview.close" as LocaleKey, icon: "close", action: () => { clicked.push("close"); } },
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
@@ -650,7 +650,7 @@ describe("renderMenu 新 kind", () => {
           ? [{
               id: "pp-timeline",
               kind: "timeline",
-              labelKey: "preview.pp",
+              labelKey: "preview.pp" as LocaleKey,
               fallback: "时间轴",
               getValue: () => 12,
               setValue: () => {},
@@ -793,7 +793,7 @@ describe("nodeControlToView", () => {
     const node: PreviewMenuNode = {
       id: "test-frustum",
       kind: "toggle",
-      labelKey: "preview.frustumCull",
+      labelKey: "preview.frustumCull" as LocaleKey,
       control: {
         get: () => Boolean(previewSnapshot()["render.frustumCull"]),
         set: (v: unknown) => { setStateValue("render.frustumCull", Boolean(v)); },
@@ -815,7 +815,7 @@ describe("nodeControlToView", () => {
     const node: PreviewMenuNode = {
       id: "test-refresh",
       kind: "toggle",
-      labelKey: "preview.frustumCull",
+      labelKey: "preview.frustumCull" as LocaleKey,
       control: {
         get: () => Boolean(previewSnapshot()["render.frustumCull"]),
         set: (v: unknown) => { setStateValue("render.frustumCull", Boolean(v)); },
@@ -836,7 +836,7 @@ describe("nodeControlToView", () => {
     const node: PreviewMenuNode = {
       id: "test-onchange",
       kind: "toggle",
-      labelKey: "preview.frustumCull",
+      labelKey: "preview.frustumCull" as LocaleKey,
       control: {
         get: () => false,
         set: () => {},
@@ -853,7 +853,7 @@ describe("nodeControlToView", () => {
     const node: PreviewMenuNode = {
       id: "test-numeric",
       kind: "slider",
-      labelKey: "preview.maxFps",
+      labelKey: "preview.maxFps" as LocaleKey,
       control: {
         min: 30,
         max: 120,
@@ -891,7 +891,7 @@ describe("nodeControlToView", () => {
     const node: PreviewMenuNode = {
       id: "labeled-control",
       kind: "toggle",
-      labelKey: "preview.frustumCull",
+      labelKey: "preview.frustumCull" as LocaleKey,
       label: "视锥剔除",
       control: { get: () => false, set: () => {} },
     };
@@ -904,7 +904,7 @@ describe("nodeControlToView", () => {
     const node: PreviewMenuNode = {
       id: "test-select",
       kind: "select",
-      labelKey: "preview.waterMode",
+      labelKey: "preview.waterMode" as LocaleKey,
       control: {
         options: [
           { value: "film", label: "薄膜" },
@@ -924,7 +924,7 @@ describe("nodeControlToView", () => {
     const node: PreviewMenuNode = {
       id: "hint-control",
       kind: "toggle",
-      labelKey: "preview.frustumCull",
+      labelKey: "preview.frustumCull" as LocaleKey,
       hintKey: "preview.frustumCullHint",
       control: { get: () => false, set: () => {} },
     };
@@ -955,7 +955,7 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-1",
         kind: "card",
         labelKey: "preview.envSectionBasic",
-        children: [{ id: "child-card-1", kind: "field", labelKey: "preview.child", value: "v" }],
+        children: [{ id: "child-card-1", kind: "field", labelKey: "preview.child" as LocaleKey, value: "v" }],
       },
     ];
     const container = document.createElement("div");
@@ -979,7 +979,7 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-2",
         kind: "card",
         labelKey: "preview.envSectionAtmosphere",
-        children: [{ id: "child-card-2", kind: "field", labelKey: "preview.child", value: "v" }],
+        children: [{ id: "child-card-2", kind: "field", labelKey: "preview.child" as LocaleKey, value: "v" }],
       },
     ];
     const container = document.createElement("div");
@@ -1014,7 +1014,7 @@ describe("renderMenu card：卡牌分组容器", () => {
           {
             id: "hidden-child",
             kind: "field",
-            labelKey: "preview.child",
+            labelKey: "preview.child" as LocaleKey,
             value: "v",
             visibleWhen: () => false,
           },
@@ -1033,7 +1033,7 @@ describe("renderMenu card：卡牌分组容器", () => {
         kind: "card",
         labelKey: "preview.envSectionBasic",
         collapsible: true,
-        children: [{ id: "child-col", kind: "field", labelKey: "preview.child", value: "v" }],
+        children: [{ id: "child-col", kind: "field", labelKey: "preview.child" as LocaleKey, value: "v" }],
       },
     ];
     // ① 初次渲染：collapsible 卡默认展开（body block + 箭头 ▾）
@@ -1068,7 +1068,7 @@ describe("renderMenu card：卡牌分组容器", () => {
         labelKey: "preview.envSectionAtmosphere",
         collapsible: true,
         defaultOpen: false,
-        children: [{ id: "child-col2", kind: "field", labelKey: "preview.child", value: "v" }],
+        children: [{ id: "child-col2", kind: "field", labelKey: "preview.child" as LocaleKey, value: "v" }],
       },
     ];
     const c1 = document.createElement("div");
@@ -1095,7 +1095,7 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "card-plain",
         kind: "card",
         labelKey: "preview.envSectionBasic",
-        children: [{ id: "child-plain", kind: "field", labelKey: "preview.child", value: "v" }],
+        children: [{ id: "child-plain", kind: "field", labelKey: "preview.child" as LocaleKey, value: "v" }],
       },
     ];
     const container = document.createElement("div");
@@ -1112,7 +1112,7 @@ describe("renderMenu card：卡牌分组容器", () => {
         id: "fld-box",
         kind: "folder",
         labelKey: "preview.skyGroupAdvanced",
-        children: [{ id: "child-box", kind: "field", labelKey: "preview.child", value: "v" }],
+        children: [{ id: "child-box", kind: "field", labelKey: "preview.child" as LocaleKey, value: "v" }],
       },
     ];
     const container = document.createElement("div");

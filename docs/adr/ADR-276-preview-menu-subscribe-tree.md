@@ -82,7 +82,7 @@
 **已知遗留**
 
 - `exitWhen` 依赖人工判断「第二个消费者是否同构」，尚无自动检测（可考虑 `render-custom-audit` 未来从菜单图统计「需外部回流的声明式面板」数量，作为预警而非阻断）。
-- 「写入侧滥用」未清理：仍有个别适配器把明文/id 塞进 `labelKey`（如 `labelKey: item.labelKey ?? item.id`），靠 `tOf` 缺失键回退裸 key 侥幸显示；会触发 `warnMissingKey` 噪音并有与真实 i18n 键撞车的隐患。方向已明（走 `label`），未纳入本次范围。
+- ~~「写入侧滥用」未清理~~ **已清理（2026-09）**：六处把明文/id 塞进 `labelKey` 的写入点已归一到 `label` 明文通道（P1，走 `resolveLabel` 唯一出口），并由 ADR-277 把 `labelKey` 全链收窄为 `LocaleKey` 作编译期守卫——滥用不可复发。动态名走 `label`、动态列表走 `row` kind，仍不构成豁免理由。
 
 ## 4. 数据溯源
 

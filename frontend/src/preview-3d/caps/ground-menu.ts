@@ -8,6 +8,7 @@
 //     （PreviewControlDef 树内嵌，保 variant/disabled/getHint 语义——节点 button 不承载）
 // visibleWhen 谓词（B 轨快照驱动）原样挂节点。
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type {
   PreviewControlDef,
   PreviewMenuNode,
@@ -24,9 +25,8 @@ import {
   paramIsEffective,
 } from "./ground-surface-spec.ts";
 
-const MAT_GROUP = "preview.groundGroupMaterial";
-const OVERLAY_GROUP = "preview.groundGroupOverlay";
-
+const MAT_GROUP: LocaleKey = "preview.groundGroupMaterial";
+const OVERLAY_GROUP: LocaleKey = "preview.groundGroupOverlay";
 /** ADR-249 §2.4：参数级显隐谓词——控件可见 ⇔ 矩阵判定该参在当前模式生效。
  *
  * 历史：全部控件共用一条粗谓词（仅判 ≠ none），导致 solid/plain/grid 等模式下
@@ -47,7 +47,7 @@ function paramVisible(param: GroundMatParam) {
 
 function colorNode(
   id: string,
-  labelKey: string,
+  labelKey: LocaleKey,
   param: GroundMatParam,
   getValue: () => number,
   setValue: (v: number) => void,
@@ -66,7 +66,7 @@ function colorNode(
 
 function sliderNode(
   id: string,
-  labelKey: string,
+  labelKey: LocaleKey,
   param: GroundMatParam,
   slider: { min: number; max: number; step: number; unit?: string },
   control: { get: () => number; set: (v: number) => void },

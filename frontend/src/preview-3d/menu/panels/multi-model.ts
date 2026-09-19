@@ -10,6 +10,7 @@
 //
 // i18n：复用 preview.component / preview.allComponents（三语言包已就位，零新增键）。
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 
 /** 多模型选择原语入参 */
@@ -21,7 +22,7 @@ export interface MultiModelSelectOpts {
   /** 切换副作用（adapter 注入：switchTo / showModelGroup 等） */
   onSelect: (id: string) => void;
   /** i18n labelKey（缺省 preview.component） */
-  labelKey?: string;
+  labelKey?: LocaleKey;
   /** 稳定节点 id（缺省 "multi-model-select"） */
   nodeId?: string;
   /** [doc:adr-132] 切档后重渲染当前面板（menu.refresh()）——YSM 组件 select 切档后

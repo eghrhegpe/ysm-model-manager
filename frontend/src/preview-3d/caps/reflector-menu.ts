@@ -7,10 +7,11 @@
 //   - reflector-enabled：toggle（能力总开关；env 一级行 headerToggle 语义由消费者抽 master）
 //   - 参数组（reflectorGroupParams）folder：opacity/resolution/size 三 slider
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { ReflectorCapability } from "./reflector-capability.ts";
 
-const REFLECTOR_PARAMS_GROUP = "preview.reflectorGroupParams";
+const REFLECTOR_PARAMS_GROUP: LocaleKey = "preview.reflectorGroupParams";
 
 /** 能力总开关节点（folder 聚合器/行 headerToggle 抽 master 用；与 getMenuNodes 同源） */
 export function rcMasterToggleNode(cap: ReflectorCapability): PreviewMenuNode {
@@ -29,7 +30,7 @@ export function rcMasterToggleNode(cap: ReflectorCapability): PreviewMenuNode {
 function rcBuildParamsFolder(cap: ReflectorCapability): PreviewMenuNode {
   const slider = (
     id: string,
-    labelKey: string,
+    labelKey: LocaleKey,
     min: number,
     max: number,
     step: number,

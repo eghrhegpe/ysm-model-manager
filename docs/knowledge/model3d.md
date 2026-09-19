@@ -110,6 +110,7 @@ auto_fields:
     - buildSkyNodes
     - buildSpecFromGeometryJSON
     - buildSpecFromModel
+    - buildStatsPanel
     - buildSwitchNodes
     - buildVmdRetargetClip
     - buildVrmBoneNodes

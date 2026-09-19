@@ -8,13 +8,14 @@
 //     首行即此开关可一键启停，故无需 getMasterNodeId 升 headerToggle）
 //   - 参数组 folder（preview.shadowGroupParams）：soft/map-size/bias/normal-bias/camera-size
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { ShadowCapability } from "./shadow-capability.ts";
 
-const SHADOW_PARAMS_GROUP = "preview.shadowGroupParams";
+const SHADOW_PARAMS_GROUP: LocaleKey = "preview.shadowGroupParams";
 
 // 与 shadow-capability.ts 源值一致（影子镜像；刀3 收口时源删除、本文件为唯一声明层）
-const MAP_SIZE_OPTIONS: Array<{ value: string; label: string; labelKey?: string }> = [
+const MAP_SIZE_OPTIONS: Array<{ value: string; label: string; labelKey?: LocaleKey }> = [
   { value: "512", label: "512（性能优先）", labelKey: "preview.shadowMapSize512" },
   { value: "1024", label: "1024（均衡）", labelKey: "preview.shadowMapSize1024" },
   { value: "2048", label: "2048（清晰）", labelKey: "preview.shadowMapSize2048" },

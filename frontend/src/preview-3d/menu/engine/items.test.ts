@@ -27,6 +27,7 @@ import {
   deriveTestIds,
   extractIds,
 } from "@/test-utils/index.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 // ── 假依赖工厂（结构/行渲染/轻面板用；重面板 fill3DPanel/截图/骨骼 不执行）──
 
@@ -43,7 +44,7 @@ function fakeYsmOpts(): YsmMenuItemsOpts {
     bonePanel: fakeBonePanel(),
     // [doc:adr-126-p4-b-2] ysmShotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）
     panels: {
-      shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x" }],
+      shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x" as LocaleKey }],
     },
   };
 }
@@ -77,11 +78,11 @@ function fakeMmdOpts(overrides: Partial<MmdMenuItemsOpts> = {}): MmdMenuItemsOpt
     bonePanel: null,
     panels: {
       playNodes: () => [
-        { id: "play-toggle", kind: "toggle" as const, labelKey: "x", control: { get: () => false, set: () => {} } },
-        { id: "play-select", kind: "select" as const, labelKey: "x", control: { options: [], get: () => "0", set: () => {} } },
+        { id: "play-toggle", kind: "toggle" as const, labelKey: "x" as LocaleKey, control: { get: () => false, set: () => {} } },
+        { id: "play-select", kind: "select" as const, labelKey: "x" as LocaleKey, control: { options: [], get: () => "0", set: () => {} } },
       ],
       // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
-      modelInfoNodes: () => [{ id: "mmd-model-name", kind: "field", labelKey: "x", value: "测试.pmx" }],
+      modelInfoNodes: () => [{ id: "mmd-model-name", kind: "field", labelKey: "x" as LocaleKey, value: "测试.pmx" }],
       shotNodes: () => [],
     },
     ...overrides,

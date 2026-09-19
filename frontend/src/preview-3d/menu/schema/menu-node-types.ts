@@ -18,9 +18,9 @@
 // menu/node-types.ts 留 PreviewMenuCtx（依赖 caps/adapters 真依赖）+ 值函数并 re-export
 // 本叶类型保 30+ 消费者 import 零改动。
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { IconRef } from "@/utils/icon/resolve.ts";
-
 /** 控件种类——controls 通道承载元素的 kind（[ADR-195 增量2a] 收窄为复杂件专用）。
  *  本类型只保留无法用 PreviewMenuNode 原生承载的复杂控件（button/image/timeline/
  *  histogram/preset-thumb）。简单控件（toggle/slider/select/color/divider）一律走
@@ -40,7 +40,7 @@ export interface PreviewControlDef {
   /** 控件类型 */
   kind: PreviewControlKind;
   /** i18n 标签键 */
-  labelKey: string;
+  labelKey: LocaleKey;
   /** i18n 回退文案 */
   fallback: string;
   /** 分组标题 i18n 键（同一 group 的连续控件归入一个可折叠 section；group 变化时插入 section header） */
@@ -79,7 +79,7 @@ export interface PreviewControlDef {
     options: Array<{
       value: string;
       label: string;
-      labelKey?: string;
+      labelKey?: LocaleKey;
       getThumb: () => string | null;
     }>;
     activeValue: () => string;
@@ -145,7 +145,7 @@ export interface PreviewControlSpec {
   max?: number;
   step?: number;
   icon?: IconRef;
-  options?: Array<{ value: string; label: string; labelKey?: string }>;
+  options?: Array<{ value: string; label: string; labelKey?: LocaleKey }>;
   /** 衍生控件：状态值 → 控件显示值 */
   get?: (v: unknown) => unknown;
   /** 衍生控件：控件值 → 状态值 */
@@ -188,7 +188,7 @@ export interface PreviewMenuNode {
   id: string;
   kind: PreviewMenuNodeKind;
   /** i18n 键（folder/divider 不需要） */
-  labelKey?: string;
+  labelKey?: LocaleKey;
   /** 明文标签（动态数据名，不经 i18n）：仅当节点无 labelKey、且显示名是运行时数据
    *  （表情名/材质名/角色名等）时承载。回退标准统一归 i18n tOf（labelKey → FALLBACK → 裸 key）；
    *  本字段不参与「i18n 缺 key 回退」，只装数据明文。 */

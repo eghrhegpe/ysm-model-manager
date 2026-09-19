@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-277：preview 菜单 labelKey 全链钉死为 LocaleKey",
+        "link": "/adr/ADR-277-preview-labelkey-localekey"
+      },
+      {
         "text": "ADR-276：Preview 菜单 schema 补跨域订阅与树形行抽象评估",
         "link": "/adr/ADR-276-preview-menu-subscribe-tree"
       },

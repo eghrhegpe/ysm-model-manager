@@ -4,6 +4,7 @@
 // buildPerceptionControls（89 行手写 DOM，三 adapter 复制同一份）已删除，
 // perceptionNodes 是纯数据工厂（零 DOM，R1 合规）。
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 
 /** 感知层状态：各模块开关（adapter build 时创建，update 循环读取，面板 UI 写入） */
@@ -18,7 +19,7 @@ export interface PerceptionState {
 /** 可用感知模块描述（由 adapter 按实际能力填写） */
 export interface PerceptionCapability {
   id: keyof PerceptionState;
-  labelKey: string;
+  labelKey: LocaleKey;
 }
 
 /** 所有可能的感知模块（id + i18n key，单一事实源）。

@@ -17,6 +17,7 @@
 //   同组折叠头重复（预设/背景/自定义HDR 三处均曾双头）。ENV_GROUP_* 常量仅供 folder
 //   labelKey 消费。凡「folder 包裹 + 控件原带同名 group」都适用此约定。
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type {
   PreviewControlDef,
   PreviewMenuNode,
@@ -25,13 +26,13 @@ import type { EnvironmentCapability } from "./environment-capability.ts";
 import type { EnvPresetId } from "./environment-state.ts";
 import { ENV_PRESETS } from "./environment-state.ts";
 
-const ENV_GROUP_PRESET = "preview.envGroupPreset";
-const ENV_GROUP_BACKGROUND = "preview.envGroupBackground";
-const ENV_GROUP_CUSTOM_HDR = "preview.envGroupCustomHdr";
+const ENV_GROUP_PRESET: LocaleKey = "preview.envGroupPreset";
+const ENV_GROUP_BACKGROUND: LocaleKey = "preview.envGroupBackground";
+const ENV_GROUP_CUSTOM_HDR: LocaleKey = "preview.envGroupCustomHdr";
 
 /** ENV_PRESETS 预设 id → i18n 键（与 env.ts 快捷预设 select 同源复用 presetQuick*，
  *  使同一预设在一级快捷选与 cap 缩略图两处文案恒等）。 */
-const ENV_PRESET_LABEL_KEY: Record<string, string> = {
+const ENV_PRESET_LABEL_KEY: Record<string, LocaleKey> = {
   sky: "preview.presetQuickSky",
   studio: "preview.presetQuickStudio",
   sunset: "preview.presetQuickSunset",

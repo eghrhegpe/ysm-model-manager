@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SceneCapabilityRegistry, sceneCapabilityRegistry, isSkyEnvironmentOn } from "./scene-capability-registry.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 /** createAll 的 ctx 参数类型（测试传空对象桩时精确断言，替代 as never） */
 type CreateAllCtx = Parameters<SceneCapabilityRegistry["createAll"]>[0];
@@ -12,7 +13,7 @@ type CreateAllCtx = Parameters<SceneCapabilityRegistry["createAll"]>[0];
 function makeFakeCap(id: string, overrides: Partial<SceneCapability> = {}): SceneCapability {
   return {
     id,
-    labelKey: `label.${id}`,
+    labelKey: `label.${id}` as LocaleKey,
     descKey: `desc.${id}`,
     icon: "tools",
     apply: vi.fn(),

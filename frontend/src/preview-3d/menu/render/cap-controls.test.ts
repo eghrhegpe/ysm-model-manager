@@ -17,11 +17,12 @@ import {
 } from "./cap-controls.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 function makeSlider(unit?: string): CapControlView {
   return {
     id: "t",
-    labelKey: "t",
+    labelKey: "t" as LocaleKey,
     fallback: "t",
     getValue: () => 0,
     setValue: () => {},
@@ -63,7 +64,7 @@ function btn(id: string, extra: Partial<PreviewControlDef> = {}): PreviewControl
   return {
     id,
     kind: "button",
-    labelKey: id,
+    labelKey: id as LocaleKey,
     fallback: id,
     button: { action: () => {} },
     getValue: () => null,
@@ -114,11 +115,11 @@ describe("renderCapControls — 复杂 kind testid 覆盖（增量2a 收窄后�
   it("button/timeline/histogram/preset-thumb/image 都带 cap-<id> testid", () => {
     const list = document.createElement("div");
     renderCapControls(list, [
-      { id: "c-btn", kind: "button", labelKey: "c", fallback: "c", button: { action: () => {} }, getValue: () => null, setValue: () => {} },
-      { id: "c-time", kind: "timeline", labelKey: "c", fallback: "c", getValue: () => 12, setValue: () => {} },
-      { id: "c-hist", kind: "histogram", labelKey: "c", fallback: "c", getValue: () => [1, 2, 3], setValue: () => {} },
-      { id: "c-thumb", kind: "preset-thumb", labelKey: "c", fallback: "c", getValue: () => "x", setValue: () => {}, thumb: { size: 40, options: [{ value: "a", label: "a", getThumb: () => null }], activeValue: () => "a", onSelect: () => {} } },
-      { id: "c-img", kind: "image", labelKey: "c", fallback: "c", getValue: () => "https://x/y.png", setValue: () => {} },
+      { id: "c-btn", kind: "button", labelKey: "c" as LocaleKey, fallback: "c", button: { action: () => {} }, getValue: () => null, setValue: () => {} },
+      { id: "c-time", kind: "timeline", labelKey: "c" as LocaleKey, fallback: "c", getValue: () => 12, setValue: () => {} },
+      { id: "c-hist", kind: "histogram", labelKey: "c" as LocaleKey, fallback: "c", getValue: () => [1, 2, 3], setValue: () => {} },
+      { id: "c-thumb", kind: "preset-thumb", labelKey: "c" as LocaleKey, fallback: "c", getValue: () => "x", setValue: () => {}, thumb: { size: 40, options: [{ value: "a", label: "a", getThumb: () => null }], activeValue: () => "a", onSelect: () => {} } },
+      { id: "c-img", kind: "image", labelKey: "c" as LocaleKey, fallback: "c", getValue: () => "https://x/y.png", setValue: () => {} },
     ]);
     for (const id of ["c-btn", "c-time", "c-hist", "c-thumb", "c-img"]) {
       expect(list.querySelector(`[data-testid="cap-${id}"]`), `${id} 应有 cap- testid`).not.toBeNull();
@@ -128,7 +129,7 @@ describe("renderCapControls — 复杂 kind testid 覆盖（增量2a 收窄后�
   it("image 无内容时跳过（不占位、无 testid）", () => {
     const list = document.createElement("div");
     renderCapControls(list, [
-      { id: "c-img-empty", kind: "image", labelKey: "c", fallback: "c", getValue: () => null, setValue: () => {} },
+      { id: "c-img-empty", kind: "image", labelKey: "c" as LocaleKey, fallback: "c", getValue: () => null, setValue: () => {} },
     ]);
     expect(list.querySelector('[data-testid="cap-c-img-empty"]')).toBeNull();
   });
@@ -141,7 +142,7 @@ describe("renderCapToggle — 整行点击切换（能力自 addToggleRow 下沉
     const onChange = vi.fn();
     const view: CapControlView = {
       id: "tg",
-      labelKey: "tg",
+      labelKey: "tg" as LocaleKey,
       fallback: "TG",
       getValue: () => val,
       setValue,
@@ -193,7 +194,7 @@ describe("renderCapSlider — 自绘 cs-bar 结构（能力自 ui-rows addSlider
   function mkSlider(extra: Partial<CapControlView> = {}): CapControlView {
     return {
       id: "s",
-      labelKey: "s",
+      labelKey: "s" as LocaleKey,
       fallback: "S",
       getValue: () => 0.4,
       setValue: () => {},
@@ -283,7 +284,7 @@ describe("capLabel — labelKey / fallback 回退分工", () => {
   });
 
   it("labelKey 空串 → 直取 fallback 明文（不进 i18n，否则回退成空白）", () => {
-    expect(capLabel({ labelKey: "", fallback: "Left Breast Squish Inwards" })).toBe(
+    expect(capLabel({ labelKey: "" as LocaleKey, fallback: "Left Breast Squish Inwards" })).toBe(
       "Left Breast Squish Inwards",
     );
   });
@@ -292,7 +293,7 @@ describe("capLabel — labelKey / fallback 回退分工", () => {
 describe("renderCapToggle / renderCapSlider — 只声明 fallback 的动态名（表情名）上屏", () => {
   const morphView = (over: Partial<CapControlView> = {}): CapControlView => ({
     id: "morph-哀",
-    labelKey: "",
+    labelKey: "" as LocaleKey,
     fallback: "哀",
     getValue: () => false,
     setValue: () => {},

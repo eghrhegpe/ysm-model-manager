@@ -7,6 +7,7 @@
 //   5. 自定义 labelKey / nodeId 生效（fallback 已随 schema 退役，回退标准统一归 i18n tOf）
 import { describe, it, expect, vi } from "vitest";
 import { multiModelSelectNode } from "./multi-model.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 const entries = [
   { id: "/a.pmx", label: "a.pmx" },
@@ -81,7 +82,7 @@ describe("multiModelSelectNode（ADR-132 多模型选择原语）", () => {
       entries,
       activeId: () => "/a.pmx",
       onSelect: () => {},
-      labelKey: "preview.multiModel",
+      labelKey: "preview.multiModel" as LocaleKey,
       nodeId: "pack-model-select",
     })!;
     expect(node.labelKey).toBe("preview.multiModel");

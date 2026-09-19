@@ -11,6 +11,7 @@ import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { registerSchema, unregisterSchema } from "@/preview-3d/infra/schema-registry.ts";
 import { makeMenuCtx as makeCtx } from "@/preview-3d/menu/menu-test-fixtures.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 /** 注册一个测试角色（真实 SceneRegistry 单例，测试间 reset） */
 function regRole(path: string, menuItems: PreviewMenuNode[] | null = null): string {
@@ -123,7 +124,7 @@ describe("角色面板（roles）", () => {
     const matPanel: PreviewMenuNode = {
       id: "material",
       icon: "appearance",
-      labelKey: "preview.material",
+      labelKey: "preview.material" as LocaleKey,
       kind: "panel",
       dockGroup: "model",
       renderCustom: (l) => {
@@ -391,7 +392,7 @@ describe("模型详情信息本体（三通道回归锁）", () => {
 
   it("schemaId 通道：模型信息本体渲染（ysm/maid 形态——统计/纹理/组件 select 载体）", () => {
     registerSchema("detail-schema-test", () => [
-      { id: "stat-tex", kind: "field", labelKey: "preview.textures", value: 4 },
+      { id: "stat-tex", kind: "field", labelKey: "preview.textures" as LocaleKey, value: 4 },
     ]);
     const { handle } = enterDetail({ id: "model", kind: "panel", dockGroup: "model", schemaId: "detail-schema-test" });
     expect(overlay.querySelector('[data-testid="preview-stat-tex"]')).not.toBeNull();

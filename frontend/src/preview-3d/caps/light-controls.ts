@@ -8,13 +8,14 @@
 //   D2 体积光 5 参数收编为 3 个语义滑块 + 1 个上下亮度比（base/tip 不再各自暴露）
 //   D3 聚光灯与体积光合并进同一可折叠卡（用户裁定：不做 visibleWhen 隐藏，只折叠）
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { DeepPartial, LightCapability, LightParams } from "./light-capability.ts";
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
-const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string; labelKey?: string }> = [
+const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string; labelKey?: LocaleKey }> = [
   { value: "default", label: "默认", labelKey: "preview.lightPresetDefault" },
   { value: RESOURCE_TYPES.YSM, label: "YSM方块", labelKey: "preview.lightPresetYsm" },
   { value: "vrm", label: "VRM角色", labelKey: "preview.lightPresetVrm" },
@@ -48,7 +49,7 @@ function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
 function dirParamSliders(
   which: "key" | "fill" | "rim",
   cap: LightCapability,
-  keys: { azimuth: string; elevation: string; intensity: string; color?: string },
+  keys: { azimuth: LocaleKey; elevation: LocaleKey; intensity: LocaleKey; color?: LocaleKey },
 ): PreviewMenuNode[] {
   const getP = () => cap.getParams()[which];
   const setField = (field: "azimuth" | "elevation" | "intensity", v: number) =>

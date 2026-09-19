@@ -6,6 +6,7 @@
 //   pp-enabled 基座 → Color 文件夹 → pp-bloom-enabled 基座 → Bloom 文件夹
 //   → pp-ssao-enabled 基座 → SSAO 文件夹 → Reflection 文件夹 → SSR 文件夹
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type {
   PostprocessingCapability,
@@ -17,7 +18,7 @@ import type {
 const TONE_MAPPING_OPTIONS: ReadonlyArray<{
   value: PostprocessingParams["toneMapping"];
   label: string;
-  labelKey?: string;
+  labelKey?: LocaleKey;
 }> = [
   { value: "none", label: "无", labelKey: "preview.toneMappingNone" },
   { value: "linear", label: "线性", labelKey: "preview.toneMappingLinear" },
@@ -30,7 +31,7 @@ const TONE_MAPPING_OPTIONS: ReadonlyArray<{
 const REFLECTION_MODE_OPTIONS: ReadonlyArray<{
   value: ReflectionMode;
   label: string;
-  labelKey?: string;
+  labelKey?: LocaleKey;
 }> = [
   { value: "envmap-only", label: "仅环境贴图", labelKey: "preview.reflectionModeEnvmapOnly" },
   {

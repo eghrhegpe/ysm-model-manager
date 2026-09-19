@@ -2,11 +2,12 @@
 // 纯声明层：零 THREE 依赖，仅构造 PreviewMenuNode 供 cap.getMenuNodes()（ADR-195 刀2）。
 // 改控件定义只动此文件，不触碰 Three 装配核。
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { PreviewControlDef } from "./scene-capability.ts";
 import type { SkyCapability } from "./sky-capability.ts";
 
-const SKY_GROUP_ADVANCED = "preview.skyGroupAdvanced"; // 高级（云量/太阳/昼夜/光束）
+const SKY_GROUP_ADVANCED: LocaleKey = "preview.skyGroupAdvanced"; // 高级（云量/太阳/昼夜/光束）
 
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
 

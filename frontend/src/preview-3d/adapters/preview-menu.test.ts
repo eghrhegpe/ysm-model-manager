@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { renderCapControls } from "@/preview-3d/menu/engine/core.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 // 工厂：构造 PreviewControlDef（[增量2a] 通道收窄为复杂件专用——button/image/timeline/
 // histogram/preset-thumb），简化用例书写。简单件（slider/select/toggle/color/divider）
@@ -10,7 +11,7 @@ const mk = (
   kind: PreviewControlDef["kind"],
   opts: {
     id?: string;
-    labelKey?: string;
+    labelKey?: LocaleKey;
     fallback?: string;
     group?: string | undefined;
     button?: NonNullable<PreviewControlDef["button"]>;
@@ -21,7 +22,7 @@ const mk = (
 ): PreviewControlDef => ({
   id: opts.id ?? `c-${kind}`,
   kind,
-  labelKey: opts.labelKey ?? "preview.test.label",
+  labelKey: (opts.labelKey ?? "preview.test.label") as LocaleKey,
   fallback: opts.fallback ?? `test-${kind}`,
   // 可选槽位仅真实存在时附带（exactOptional 收紧后避免显式 undefined 流入 PreviewControlDef）
   ...(opts.group !== undefined ? { group: opts.group } : {}),

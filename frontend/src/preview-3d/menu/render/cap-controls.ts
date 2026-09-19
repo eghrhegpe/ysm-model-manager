@@ -1,6 +1,7 @@
 // preview-menu-cap-controls.ts — 能力控件通用渲染器（从 preview-menu.ts 拆出避免 env 循环依赖）。
 // 独立模块只依赖 ui-header-toggle / i18n / PreviewControlDef 类型，供 preview-menu.ts 与
 // preview-menu-env.ts 共用。
+import type { LocaleKey } from "@/core/i18n/t.ts";
 //
 // [ADR-195 刀 2.5 / 增量2a] 投影反转 + 通道收窄：简单控件（slider/toggle/select/color）渲染实现
 // 只吃统一 CapControlView（PreviewControlDef 的读取子集），由 render.ts 的 spec→view 适配器直供；
@@ -26,7 +27,7 @@ import { resolveLabel } from "@/utils/base/pure/label.ts";
  */
 export interface CapControlView {
   id: string;
-  labelKey: string;
+  labelKey: LocaleKey | "";
   fallback: string;
   hintKey?: string;
   getValue(): unknown;
@@ -42,7 +43,7 @@ export interface CapControlView {
     onCommit?: (v: number) => void;
   };
   /** select 专属 */
-  select?: Array<{ value: string; label: string; labelKey?: string }>;
+  select?: Array<{ value: string; label: string; labelKey?: LocaleKey }>;
 }
 
 /**
@@ -57,7 +58,7 @@ export interface CapControlView {
  * labelKey，只写 label 的声明式节点（morphNodes 表情开关）拿到空 key → tOf("") 原样
  * 回退成空串 → 整列表情有开关无文字（2026-09 修复）。
  */
-export function capLabel(v: { labelKey: string; fallback: string }): string {
+export function capLabel(v: { labelKey: LocaleKey | ""; fallback: string }): string {
   return resolveLabel({ labelKey: v.labelKey, plain: v.fallback }, tOf);
 }
 

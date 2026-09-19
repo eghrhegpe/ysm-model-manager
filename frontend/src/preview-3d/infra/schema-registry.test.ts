@@ -18,6 +18,7 @@ import {
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { SchemaBuilder } from "./schema-registry.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 beforeEach(() => {
   resetSchemas();
@@ -26,7 +27,7 @@ beforeEach(() => {
 describe("schema-registry 受控注册", () => {
   it("注册后可查询 / 枚举，builder 吃快照产出节点", () => {
     const builder = (snapshot: Record<string, unknown>): PreviewMenuNode[] => [
-      { id: "field-a", kind: "field", labelKey: "preview.a", value: String(snapshot["render.maxFps"]) },
+      { id: "field-a", kind: "field", labelKey: "preview.a" as LocaleKey, value: String(snapshot["render.maxFps"]) },
     ];
     registerSchema("test-panel", builder as unknown as SchemaBuilder);
 

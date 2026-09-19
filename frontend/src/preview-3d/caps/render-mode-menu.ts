@@ -4,11 +4,12 @@
 // 无 group 无 master——5 控件平铺，各带 settingsOrder（并入 ⚙️ 设置面板聚合）。
 
 import * as THREE from "three";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { RenderModeCapability } from "./render-mode-capability.ts";
 
 /** 混合模式选项（与旧 getMenuControls 内联常量同值） */
-function blendingOptions(): Array<{ value: string; label: string; labelKey?: string }> {
+function blendingOptions(): Array<{ value: string; label: string; labelKey?: LocaleKey }> {
   return [
     {
       value: String(THREE.NormalBlending),
@@ -34,7 +35,7 @@ function blendingOptions(): Array<{ value: string; label: string; labelKey?: str
 }
 
 /** 面剔除选项（与旧 getMenuControls 内联常量同值） */
-function sideOptions(): Array<{ value: string; label: string; labelKey?: string }> {
+function sideOptions(): Array<{ value: string; label: string; labelKey?: LocaleKey }> {
   return [
     { value: String(THREE.FrontSide), label: "正面", labelKey: "preview.renderModeSideFront" },
     { value: String(THREE.BackSide), label: "背面", labelKey: "preview.renderModeSideBack" },

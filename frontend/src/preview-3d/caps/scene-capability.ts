@@ -31,6 +31,7 @@ export type {
   PreviewControlKind,
 } from "@/preview-3d/menu/schema/menu-node-types.ts";
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 // PreviewMenuNode 同自共享叶（刀2 接口 getMenuNodes? 返回类型；caps 直产节点入口）
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 
@@ -97,7 +98,7 @@ export interface SceneCapability {
   readonly id: string;
 
   /** 显示名称 i18n 键 */
-  readonly labelKey: string;
+  readonly labelKey: LocaleKey;
 
   /** 图标（emoji） */
   readonly icon: IconRef;

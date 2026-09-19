@@ -7,10 +7,11 @@
 //   - 参数组 folder（preview.fogGroupParams）：color/mode/density/near/far
 //     density 仅 exp2、near/far 仅 linear 可见（visibleWhen 吃 env.fogMode 快照，B 轨）
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { FogCapability, FogMode } from "./fog-capability.ts";
 
-const FOG_PARAMS_GROUP = "preview.fogGroupParams";
+const FOG_PARAMS_GROUP: LocaleKey = "preview.fogGroupParams";
 
 /** 能力总开关节点（folder 聚合器/行 headerToggle 抽 master 用；与 getMenuNodes 同源） */
 export function fcMasterToggleNode(cap: FogCapability): PreviewMenuNode {

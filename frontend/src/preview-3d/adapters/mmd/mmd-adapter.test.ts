@@ -133,6 +133,7 @@ vi.mock("@/preview-3d/screenshot/screenshot.ts", () => ({
 
 import { buildMmdScene, type MmdDataPort, type MmdPanelHooks } from "./mmd-adapter.ts";
 import { getApp, type AppBindings } from "@/backend/app.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 /** 构造注入端口（对齐 ADR-072：适配器 0 backend import，数据经 port 注入） */
 function makePort(): MmdDataPort {
@@ -226,7 +227,7 @@ function makeMmdPanels(): MmdPanelHooks {
       return nodes as unknown as PreviewMenuNode[];
     },
     // [doc:adr-126-p4-b-1] 声明式节点工厂经 panels 注入（R1 禁 utils→views 运行时依赖）
-    modelInfoNodes: () => [{ id: "stub-model", kind: "field", labelKey: "x", value: "测试.pmx" }],
+    modelInfoNodes: () => [{ id: "stub-model", kind: "field", labelKey: "x" as LocaleKey, value: "测试.pmx" }],
     shotNodes: () => [],
   };
 }

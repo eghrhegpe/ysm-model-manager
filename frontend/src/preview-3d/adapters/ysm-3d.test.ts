@@ -55,7 +55,7 @@ const fakePanels = {
     ["current", "front", "45", "side", "back45", "all"].map((k) => ({
       id: `ysm-shot-${k}`,
       kind: "button" as const,
-      labelKey: `preview.screenshot${k[0].toUpperCase()}${k.slice(1)}`,
+      labelKey: `preview.screenshot${k[0].toUpperCase()}${k.slice(1)}` as LocaleKey,
       fallback: k,
     })),
 };
@@ -444,7 +444,7 @@ describe("ysmMenuItems 独立菜单表测试", () => {
       },
       // [doc:adr-126-p4-b-2] shotNodes 经 panels 注入（R1 禁 utils→views 运行时依赖）——桩保证 shot 面板有渲染通道
       panels: {
-        shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x", fallback: "x" }],
+        shotNodes: () => [{ id: "ysm-shot-current", kind: "button" as const, labelKey: "x" as LocaleKey, fallback: "x" }],
       },
     };
     const items = ysmMenuItems(opts);
@@ -533,6 +533,7 @@ describe("ysmMenuItems 独立菜单表测试", () => {
 // ===== 覆盖率攻坚：守卫 / 多模型模式 / 拾取回调 / 播放桥 / F 键调试 / 生命周期方法 =====
 
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 describe("buildYsmScene 守卫与多模型模式", () => {
   beforeEach(() => {

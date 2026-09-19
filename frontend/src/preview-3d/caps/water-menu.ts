@@ -2,16 +2,18 @@
 // 纯声明层：零 THREE 依赖，仅构造 PreviewMenuNode 供 cap.getMenuNodes()（ADR-195 刀2）。
 // 改控件定义只动此文件，不触碰 Three 装配核。
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { WaterCapability } from "./water-capability.ts";
 import type { WaterMode } from "./water-state.ts";
 
 // 水面菜单分组 i18n 键（与 water-capability.ts 原常量同源）
-const WATER_GROUP_FORM = "preview.waterGroupForm"; // 形态
-const WATER_GROUP_LOOK = "preview.waterGroupLook"; // 外观
-const WATER_GROUP_POOL = "preview.waterGroupPool"; // 水池
-const WATER_GROUP_WAVE = "preview.waterGroupWave"; // 波纹
+// 水面菜单分组 i18n 键（与 water-capability.ts 原常量同源）
+const WATER_GROUP_FORM: LocaleKey = "preview.waterGroupForm"; // 形态
+const WATER_GROUP_LOOK: LocaleKey = "preview.waterGroupLook"; // 外观
+const WATER_GROUP_POOL: LocaleKey = "preview.waterGroupPool"; // 水池
+const WATER_GROUP_WAVE: LocaleKey = "preview.waterGroupWave"; // 波纹
 
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
 
@@ -23,7 +25,7 @@ const waterPoolOn = (s: Partial<PreviewSnapshot>) => s["env.waterMode"] === "poo
 /** slider 原生节点（wSlider 的节点版） */
 function wSliderNode(
   id: string,
-  labelKey: string,
+  labelKey: LocaleKey,
   slider: { min: number; max: number; step: number; unit?: string },
   control: { get: () => number; set: (v: number) => void },
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
@@ -47,7 +49,7 @@ function wSliderNode(
 /** color 原生节点（wColor 的节点版） */
 function wColorNode(
   id: string,
-  labelKey: string,
+  labelKey: LocaleKey,
   getValue: () => number,
   setValue: (v: number) => void,
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,

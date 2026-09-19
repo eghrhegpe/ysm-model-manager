@@ -36,6 +36,7 @@ import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
 import type { PreviewControlDef, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "@/preview-3d/infra/render-budget.ts";
 import { PERF_PRESETS } from "./perf-presets.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 /** renderMenu 最小 deps 桩（本文件只渲染控件节点，不触发 folder/panel 导航） */
 const renderMenuStubDeps = {
@@ -387,7 +388,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     const mk = (id: string, order: number | undefined): PreviewMenuNode => ({
       id,
       kind: "toggle",
-      labelKey: id,
+      labelKey: id as LocaleKey,
       // 仅在声明顺序时附带（order undefined → 缺省未被 collectSettingsCapControls 收编）
       ...(order !== undefined ? { settingsOrder: order } : {}),
       control: { get: () => false, set: vi.fn() },
@@ -398,7 +399,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
         {
           id: "cap-group-c-30",
           kind: "folder",
-          labelKey: "preview.someGroup",
+          labelKey: "preview.someGroup" as LocaleKey,
           children: [mk("c-30", 30), mk("c-10", 10), mk("c-hidden", undefined)],
         },
       ],
@@ -460,7 +461,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     const sliderNode: PreviewMenuNode = {
       id: "fake-slider",
       kind: "slider",
-      labelKey: "preview.fake",
+      labelKey: "preview.fake" as LocaleKey,
       label: "fake",
       control: { min: 0, max: 1, step: 0.1, get: () => 0, set: () => {} },
     };
@@ -508,7 +509,7 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
 describe("P3 visible 规则 — 条件显隐可集中枚举（B 轨 visibleWhen 唯一）", () => {
   it("collectVisiblePredicates 只挑出带 visibleWhen 谓词的控件（纯函数）", () => {
     const plain: PreviewControlDef = {
-      id: "a", kind: "image", labelKey: "a", fallback: "a",
+      id: "a", kind: "image", labelKey: "a" as LocaleKey, fallback: "a",
       getValue: () => null, setValue: vi.fn(),
     };
     const gated: PreviewControlDef = {
@@ -519,7 +520,7 @@ describe("P3 visible 规则 — 条件显隐可集中枚举（B 轨 visibleWhen 
 
   it("聚合到设置面板的控件如带 visibleWhen，谓词仍可枚举（不被抹平丢失）", () => {
     const gated: PreviewMenuNode = {
-      id: "c-gated", kind: "toggle", labelKey: "c",
+      id: "c-gated", kind: "toggle", labelKey: "c" as LocaleKey,
       settingsOrder: 5, visibleWhen: () => true,
       control: { get: () => false, set: vi.fn() },
     };

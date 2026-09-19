@@ -39,6 +39,7 @@ import {
   type YsmAdapterOptions,
   ysmMenuItems,
 } from "./ysm-adapter.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 const h = vi.hoisted(() => ({
   buildYsmObject: vi.fn(),
@@ -519,7 +520,7 @@ describe("ysmMenuItems 表契约", () => {
 
   it("shot 项 children = panels.shotNodes 注入产物；无 panels → 空 children（渲染退化 no-op 安全）", () => {
     const shotNodes = vi.fn(() => [
-      { id: "ysm-shot-current", kind: "button" as const, labelKey: "x" },
+      { id: "ysm-shot-current", kind: "button" as const, labelKey: "x" as LocaleKey },
     ]);
     const items = ysmMenuItems(directMenuOpts({ panels: { shotNodes } }));
     const shot = items.find((i) => i.id === "shot") as MenuItemShape;

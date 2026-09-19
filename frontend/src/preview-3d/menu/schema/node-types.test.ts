@@ -10,13 +10,14 @@ import {
   collectPreviewNodeIds,
   type PreviewMenuNode,
 } from "./node-types.ts";
+import type { LocaleKey } from "@/core/i18n/t.ts";
 
 /** 迁移样例：YSM 角色详情（未来目标态——详情=模型信息面板本体 + 动作折叠区） */
 const ysmDetailTree: PreviewMenuNode[] = [
   {
     id: "detail",
     kind: "folder",
-    labelKey: "preview.roleDetail",
+    labelKey: "preview.roleDetail" as LocaleKey,
     children: [
       {
         id: "model-section",
@@ -68,7 +69,7 @@ const ysmDetailTree: PreviewMenuNode[] = [
           {
             id: "ysm-play",
             kind: "action",
-            labelKey: "preview.play",
+            labelKey: "preview.play" as LocaleKey,
             icon: "play",
             dockGroup: "motion",
             action: (): void => {

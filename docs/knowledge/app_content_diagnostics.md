@@ -81,7 +81,7 @@ status: active
 
 ## 概览
 
-`diagnostics/` 是 `app-content` 的「诊断与冲突」页子域，顶部 **7 个** `repo-tab`（log / bench / gui / record / conflict / health / sync-conflict——ADR-258 由左栏分段收敛而来，ADR-278 再把「机制导向」的性能五兄弟重划为「动作（bench / gui）× 产物（record）」），由主卡 `app-content` 的 `init-pages.ts` 经 `bindTabs(host, ".repo-tab", "diag", [...])` 接入全站统一范式分发初始化。内部高内聚：`init.ts` 汇聚全部子模块，子模块之间只依赖 `logs.ts`（操作日志渲染），对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据）。
+`diagnostics/` 是 `app-content` 的「诊断与冲突」页子域，顶部 **6 个** `repo-tab`（log / bench / record / conflict / health / sync-conflict——ADR-258 由左栏分段收敛而来，ADR-278 再把「机制导向」的性能五兄弟重划为「动作（bench）× 产物（record）」；gui tab 已随 a1e26419d「砍除 gui-flow 面板」下线），由主卡 `app-content` 的 `init-pages.ts` 经 `bindTabs(host, ".repo-tab", "diag", [...])` 接入全站统一范式分发初始化。内部高内聚：`init.ts` 汇聚全部子模块，子模块之间只依赖 `logs.ts`（操作日志渲染），对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据）。
 
 > 导航结构演进（ADR-258）：原左栏 `diag-left`（6 个 `diag-btn` + 复制/刷新/清空）已删除，分段提升为顶部 `repo-tab`；日志合并为 1 个 tab（op/runtime 子 tab 切换），性能拆为 single/gui/hist/trace 4 个 tab；清空按钮归位日志面板工具栏且仅操作日志视图可见（仅 `ClearImportLogs` 生效，运行时日志无清空后端能力）。
 
@@ -102,7 +102,7 @@ status: active
 - `perf.ts` — 性能面板 facade：事件接线 + re-export，业务逻辑拆至：
   - `perf-common.ts` — 共享工具层（sectionHeader / 复制按钮 / 守卫 / 错误辅助）
   - `perf-single-bench.ts` — single-bench（CLI 文本流消费 + 柱状图 + 趋势图）
-  - `perf-gui-flow.ts` — gui-flow（6 阶段结构化消费）
+  - （`perf-gui-flow.ts` 已随 a1e26419d「砍除 gui-flow 面板」删除；Go `gui-flow` 命令保留，契约测试的前端消费断言同步退役）
   - perf-trend.ts — 性能趋势（localStorage `perf-history` + SVG 折线；原 `perf-log.ts`「优化历史卡片」区已由 380fa163f「remove perf-log UI section」移除，趋势图保留）
   - `perf-trace.ts` — 加载剖析（load-trace store 消费）
 

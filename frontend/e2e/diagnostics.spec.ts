@@ -26,7 +26,7 @@ const DIAG_TABS = [
   "log",
   // ADR-278 §2.1：single / conc 两态合并为 bench（模式选择器切三态），hist / trace 合并为 record
   "bench",
-  "gui",
+  // gui tab 已随 a1e26419d「砍除 gui-flow 面板」下线（Go 命令保留）；此处曾漂移一个提交周期
   "record",
   "conflict",
   "health",
@@ -72,14 +72,14 @@ test.describe("诊断页", () => {
     await page.waitForFunction(
       () => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 6;
       },
       undefined,
       { timeout: 10000, polling: 200 },
     );
   });
 
-  test("顶部 7 个 repo-tab 渲染，默认激活「日志」", async ({ page }) => {
+  test("顶部 repo-tab 全量渲染（DIAG_TABS 严格相等），默认激活「日志」", async ({ page }) => {
     const info = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
       const tabs = [...(root?.querySelectorAll(".repo-tab") ?? [])] as HTMLElement[];
@@ -113,7 +113,11 @@ test.describe("诊断页", () => {
     //   #diag-load-trace > .perf-no-data（t("diagnostics.loadTraceNoData")）
     //   #diag-load-trace > .perf-no-hint（t("diagnostics.loadTraceHint")）
     await clickBySelector(page, `.repo-tab[data-tab="record"]`);
-    // 空态文案（zh-CN）——按 lang 渲染结果断言一次，锁「键存在 + 无 {{ 占位符残留 + 非嵌套吞并」
+    // ⚠️ 语种前置：本仓 e2e 钉 locale: "en-US"（防 CI 系统语言翻车），文案断言必须用 en 包口径；
+    // 写死 zh-CN 文案的用例（含 8054ef324 旧版）在此环境下必红。
+    // 空态文案——断言不能写死 zh-CN（实际渲染 en 包），锁三语并集，不赌具体语种。
+    // 故断言不能写死 zh-CN 文案（8054ef324 引入时即错：实际渲染的是 en 包）。改锁三语并集 +
+    // 占位符残留/嵌套吞并防线，不赌具体语种。
     await expect
       .poll(
         () =>
@@ -125,19 +129,23 @@ test.describe("诊断页", () => {
           ),
         {
           timeout: 5000,
-          message: "record tab 空态「暂无加载记录」未渲染（疑 i18n 键缺失或面板被吞并）",
+          message: "record tab 空态未渲染（疑 i18n 键缺失或面板被吞并）",
         },
       )
-      .toBe("暂无加载记录");
-    // 引导提示文案同锁（防「有数据态提示键误用到空态」的措辞漂移）
-    await expect(
-      page.evaluate(() =>
-        document
-          .querySelector("app-content")
-          ?.shadowRoot?.querySelector("#diag-load-trace .perf-no-hint")
-          ?.textContent?.trim(),
-      ),
-    ).toBe("加载模型后自动记录，点击刷新查看");
+      .toMatch(/暂无加载记录|No load records yet|ロード記録なし/);
+    // 引导提示文案同锁（防「有数据态提示键误用到空态」的措辞漂移）；poll 而非裸 await——
+    // 面板渲染可晚于空态那一拍，同步 evaluate 会读到空串。
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            document
+              .querySelector("app-content")
+              ?.shadowRoot?.querySelector("#diag-load-trace .perf-no-hint")
+              ?.textContent?.trim() ?? "",
+        ),
+      )
+      .toMatch(/加载模型后自动记录|Records automatically after loading|モデル読み込み後に自動記録/);
     // 有数据态不混入：无记录时不应出现卡片（renderTraceRecord 的 .perf-hist-card）
     await expect(
       page.evaluate(
@@ -146,7 +154,7 @@ test.describe("诊断页", () => {
             .querySelector("app-content")
             ?.shadowRoot?.querySelectorAll("#diag-load-trace .perf-hist-card").length,
       ),
-    ).toBe(0);
+    ).resolves.toBe(0);
   });
 
   test("日志工具栏两行语义分组：行1=子tab+动作，行2=筛选+搜索", async ({ page }) => {
@@ -521,7 +529,7 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     await page.waitForFunction(
       () => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 6;
       },
       undefined,
       { timeout: 10000, polling: 200 },
@@ -734,7 +742,7 @@ test.describe("诊断页 · 引擎对照 scan-bench 真实载荷渲染（ADR-262
     await page.waitForFunction(
       () => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 6;
       },
       undefined,
       { timeout: 10000, polling: 200 },
@@ -855,7 +863,7 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
     await page.waitForFunction(
       () => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 7;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 6;
       },
       undefined,
       { timeout: 10000, polling: 200 },
@@ -881,26 +889,33 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
     });
   }
 
-  test("切 scan：迭代标签当场改口为全库重扫口径；single 下为重复解析口径", async ({ page }) => {
+  // ⚠️ 语种口径：playwright.config 把浏览器钉在 locale: "en-US"（防 CI 系统语言翻车），
+  // 文案断言一律用 en 包关键词；zh-CN 只在注释里留对照。语义关键词不锁拼接形态（同单测降噪原则）。
+  test("切 scan：迭代标签当场改口为 rescan 口径；single 下为 parse repeats 口径", async ({
+    page,
+  }) => {
     const single = await readHonesty(page);
-    expect(single.iter).toContain("重复解析");
-    expect(single.target).toContain("目标集");
+    expect(single.iter).toContain("parse repeats"); // zh：重复解析次数
+    expect(single.target).toContain("Target set");
     await setShadowSelect(page, "diag-perf-mode", "scan");
     const scan = await readHonesty(page);
-    expect(scan.iter).toContain("全库重扫");
+    expect(scan.iter).toContain("rescan passes"); // zh：全库重扫次数
     // scan 不读目标集行，但标签不得被串改成并发的「取样范围」（模式态互斥）
-    expect(scan.target).toContain("目标集");
+    expect(scan.target).toContain("Target set");
   });
 
-  test("切 conc：目标集标签改为取样范围，且单模型回落伴随可见 toast（不再静默改选择）", async ({
+  test("切 conc：目标集标签改为 Sample range，且单模型回落伴随可见 toast（不再静默改选择）", async ({
     page,
   }) => {
     await setShadowSelect(page, "diag-perf-mode", "conc");
     const got = await readHonesty(page);
-    expect(got.target).toContain("取样范围");
-    // toast 文案随语言变，不锁内容锁出现性：总线弹过一次就该有非空 toast 节点在屏上
+    expect(got.target).toContain("Sample range"); // zh：取样范围
+    // toast 用 data-testid="toast" 稳定钩子（同 toast.spec.ts）；⚠️ 它在 <app-toast> 的 **shadowRoot**
+    // 内，document.querySelectorAll 看不见——必须穿透。文案随语言变，不锁内容锁出现性：
+    // 回落发生过就该有非空 toast 节点在屏上。
     const toastShown = await page.evaluate(() => {
-      return [...document.querySelectorAll("[class*='toast']")].some((el) =>
+      const host = document.querySelector("app-toast")?.shadowRoot;
+      return [...(host?.querySelectorAll('[data-testid="toast"]') ?? [])].some((el) =>
         Boolean(el.textContent && el.textContent.trim().length > 0),
       );
     });
@@ -915,8 +930,11 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
       expect(h.length).toBeGreaterThan(0);
       expect(PLACEHOLDER_LEAK.test(h)).toBe(false); // {mode} 插值残留 = hint 组装漏填参数
     }
-    expect(got.runTitle).toContain("一个模型");
-    expect(got.concTitle).toContain("一批模型");
-    expect(got.scanTitle).toContain("目录树");
+    expect(got.runTitle).toContain("one model"); // zh：一个模型
+    expect(got.concTitle).toContain("batch of models"); // zh：一批模型
+    expect(got.scanTitle).toContain("directory scan"); // zh：目录树
   });
+
+  // ⚠️ 语种口径：e2e 浏览器被 playwright.config 钉在 locale: "en-US"（防 CI 系统语言翻车），
+  // 文案断言用 en 包关键词 + zh 对照注释；toast 在 <app-toast> shadowRoot 内，选择器必须穿透。
 });

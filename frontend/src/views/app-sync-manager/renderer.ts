@@ -32,19 +32,11 @@ interface TypeCounts {
   total: number;
 }
 
-/** 主渲染入口：设置骨架 → 类型标签 → 状态标签 → 列表 */
+/** 主渲染入口：骨架 → 类型统计 → 状态标签 → 摘要栏 → 列表 */
 export async function render(self: SyncRenderSelf): Promise<void> {
-  // 骨架幂等：已存在则不重建——重建会丢 .sm-list 滚动位置（目录行点击/筛选切换时
-  // 用户正停在中段，原实现每次 render 全量重建导致列表「弹回顶部」），且白白重解析
-  // 内联 <style>。_init 首帧已注入骨架，此处只补骨架缺失场景。
-  if (!self.querySelector(".sm-list")) {
-    try {
-      self.innerHTML = containerHTML();
-    } catch (e) {
-      logError("sync-manager", "_render 设置 innerHTML 失败:", e);
-      return;
-    }
-  }
+  // 骨架幂等：已存在则不重建——重建会丢 .sm-list 滚动位置（用户停在中段时列表弹回
+  // 顶部），且白白重解析内联 <style>。_init 首帧已注入骨架，此处只补骨架缺失场景。
+  if (!ensureSkeleton(self)) return;
 
   const statusTabsEl = self.querySelector(".sm-status-tabs");
   const listEl = self.querySelector(".sm-list");
@@ -53,7 +45,33 @@ export async function render(self: SyncRenderSelf): Promise<void> {
     return;
   }
 
-  // — 类型统计 —
+  renderStatusTabs(self, statusTabsEl, collectCounts(self));
+  renderScanDirs(self);
+  applyFilter(self);
+  renderListSafe(self, listEl);
+}
+
+/** 确保渲染骨架存在（幂等）：仅缺失时注入；注入失败已记日志，返回 false 让调用方早退。 */
+function ensureSkeleton(self: SyncRenderSelf): boolean {
+  if (self.querySelector(".sm-list")) return true;
+  try {
+    self.innerHTML = containerHTML();
+  } catch (e) {
+    logError("sync-manager", "_render 设置 innerHTML 失败:", e);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * 递归统计各类型桶与全局的状态计数。
+ * 遍历全部嵌套 children 而非仅顶层——保证徽标数 = 列表可见行数（口径与 applyFilter 一致，
+ * tabStatus 折叠 diverged→missing）。
+ */
+function collectCounts(self: SyncRenderSelf): {
+  typeCounts: Record<string, TypeCounts>;
+  globalCounts: TypeCounts;
+} {
   const typeCounts: Record<string, TypeCounts> = {};
   for (const tc of self._typeConfig) {
     typeCounts[tc.id] = {
@@ -65,36 +83,46 @@ export async function render(self: SyncRenderSelf): Promise<void> {
       total: 0,
     };
   }
-  let globalCounts: TypeCounts;
-  // ⚙️ 递归计数：与 applyFilter 同口径（tabStatus 折叠 diverged→missing），
-  // 遍历全部嵌套 children 而非仅顶层——保证徽标数 = 列表可见行数（点2）。
-  {
-    globalCounts = { synced: 0, missing: 0, disabled: 0, optional: 0, legacy: 0, total: 0 };
-    const countNode = (item: SyncItem): void => {
-      const c = typeCounts[item.type];
-      const st = tabStatus(item);
-      if (c) {
-        (c as unknown as Record<string, number>)[st]++;
-        c.total++;
-      }
-      (globalCounts as unknown as Record<string, number>)[st]++;
-      item.children?.forEach(countNode);
-    };
-    for (const item of self._allItems) countNode(item);
-  }
+  const globalCounts: TypeCounts = {
+    synced: 0,
+    missing: 0,
+    disabled: 0,
+    optional: 0,
+    legacy: 0,
+    total: 0,
+  };
+  const countNode = (item: SyncItem): void => {
+    const c = typeCounts[item.type];
+    const st = tabStatus(item);
+    if (c) {
+      (c as unknown as Record<string, number>)[st]++;
+      c.total++;
+    }
+    (globalCounts as unknown as Record<string, number>)[st]++;
+    item.children?.forEach(countNode);
+  };
+  for (const item of self._allItems) countNode(item);
+  return { typeCounts, globalCounts };
+}
 
-  // — 状态筛选标签 —
-  const curCounts: TypeCounts = self._selectedType
-    ? typeCounts[self._selectedType] || globalCounts
-    : globalCounts;
+/** 「全部」页签计数：选中类型时用该类型 total，否则用条目总数 */
+function countOfAll(self: SyncRenderSelf, curCounts: TypeCounts): number {
+  return self._selectedType ? curCounts.total || 0 : self._allItems.length;
+}
+
+/** 渲染状态筛选栏（当前类型只读指示 + 六态页签） */
+function renderStatusTabs(
+  self: SyncRenderSelf,
+  statusTabsEl: HTMLElement,
+  counts: { typeCounts: Record<string, TypeCounts>; globalCounts: TypeCounts },
+): void {
+  const curCounts = self._selectedType
+    ? counts.typeCounts[self._selectedType] || counts.globalCounts
+    : counts.globalCounts;
   // 状态 tab 定义：图标经 statusIconOf()（STATUS_ICON 表 + resolveIcon → SVG），
   // **不再内联字形**——原实现在此写死 `⛔ ${t(...)}`，与 tpl 的 STATUS_ICON 表形成两处来源。
   const statusDefs: Array<[string, string, number]> = [
-    [
-      "all",
-      `${statusIconOf("all")} ${t("syncManager.status.all")}`,
-      self._selectedType ? curCounts.total || 0 : self._allItems.length,
-    ],
+    ["all", `${statusIconOf("all")} ${t("syncManager.status.all")}`, countOfAll(self, curCounts)],
     [
       "synced",
       `${statusIconOf("synced")} ${t("syncManager.status.synced")}`,
@@ -121,10 +149,10 @@ export async function render(self: SyncRenderSelf): Promise<void> {
       curCounts.legacy || 0,
     ],
   ];
-  // 当前类型只读指示（类型选择已全局化到 nav 下拉，此处仅展示上下文）；样式在 .sm-cur-type
+  // 当前类型只读指示（类型选择已全局化到 nav 下拉，此处仅展示上下文）；样式在 .sm-cur-type。
+  // curCfg.icon 是**数据图标**（resource_types.json，ADR-238 §1.3 🚨不可动）→ 按文本 esc 输出，勿转 SVG
   const curCfg = self._typeConfig.find((c) => c.id === self._selectedType);
   const curLabel = (curCfg && (shortLabelOf(curCfg.id) || curCfg.name)) || self._selectedType || "";
-  // curCfg.icon 是**数据图标**（resource_types.json，ADR-238 §1.3 🚨不可动）→ 按文本 esc 输出，勿转 SVG
   const curIcon = curCfg?.icon || "📦";
   statusTabsEl.innerHTML =
     '<span class="sm-cur-type" data-rtype="' +
@@ -139,12 +167,10 @@ export async function render(self: SyncRenderSelf): Promise<void> {
     statusDefs
       .map(([id, label, count]) => statusTabHTML(id, label, count, self._statusFilter === id))
       .join("");
+}
 
-  // — 摘要栏（实际扫描目录可见性）—
-  renderScanDirs(self);
-
-  // — 列表 —
-  applyFilter(self);
+/** 列表渲染 + 失败兜底（renderList 抛错不得中断整页渲染） */
+function renderListSafe(self: SyncRenderSelf, listEl: HTMLElement): void {
   try {
     renderList(self, listEl);
   } catch (e) {

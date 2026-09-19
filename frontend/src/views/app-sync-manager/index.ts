@@ -142,23 +142,55 @@ export class AppSyncManager extends WebComponentBase {
     const initGen = ++this._initGen;
     const gen = this._guard.next();
     this._loading = true;
-    // 重建骨架前先摘掉旧 .sm-list 的虚拟滚动监听（_init 可被 instance 变更二次触发；
-    // ResizeObserver 强引用被观察元素，不显式 disconnect 会吊着已废弃的旧容器）
+    this._setupSkeleton();
+    this._pruneSubs();
+    this._bindDelegate(self);
+
+    // 并发代入守卫：过期代际/已卸载直接丢弃
+    // code_review 47e68917b #5（P3）：失败者 bailing 前复位 _loading——败方已置
+    // _loading=true 并渲染 spinner 容器；若胜方 loadData（ADR-269 D3③ 后 loadTypeConfig 已同步、不抛）
+    // 随后抛错，无此处复位会让 loading 旗标/转圈残留（守卫语义保留：数据一致性由胜方保证）
+    this._loading = false;
+    if (initGen !== this._initGen || !this.isConnected) return;
+
+    await loadTypeConfig(self);
+    await loadData(self);
+    await loadRepoRoots(self, this._selectedType);
+
+    if (this._guard.stale(gen) || !this.isConnected) return;
+
+    this._loading = false;
+    this._renderWithErrorFeedback();
+    this._subscribeBus(self);
+  }
+
+  /**
+   * 骨架装配：摘旧 `.sm-list` 的虚拟滚动监听 → 注入骨架 → 列表占位 spinner。
+   * ⚠️ ResizeObserver 强引用被观察元素，不显式 disconnect 会吊着已废弃的旧容器
+   * （`_init` 可被 instance 变更二次触发）。
+   */
+  private _setupSkeleton(): void {
     const prevListEl = this.querySelector<HTMLElement>(".sm-list");
     if (prevListEl) cleanupSyncVirtualScroll(prevListEl);
     this.innerHTML = containerHTML();
     const listEl = this.querySelector(".sm-list");
     if (listEl) listEl.innerHTML = loadingHTML();
+  }
 
-    if (this._unsubs) {
-      this._unsubs.forEach((fn) => {
-        fn();
-      });
-      this._unsubs = [];
-    }
+  /** 清空上一轮 bus 订阅（`_init` 可被 instance 变更二次触发，防重复订阅泄漏） */
+  private _pruneSubs(): void {
+    if (!this._unsubs) return;
+    this._unsubs.forEach((fn) => {
+      fn();
+    });
+    this._unsubs = [];
+  }
 
-    // 一次性容器级事件委托（render 重建 DOM 后无需重绑，消除并发 _doRender 双绑竞态）
-    // 并发重入防护：仅首次 _init 绑定 click handler，后续 _init 仅更新回调引用
+  /**
+   * 一次性容器级事件委托（render 重建 DOM 后无需重绑，消除并发 `_doRender` 双绑竞态）。
+   * 并发重入防护：仅首次 `_init` 绑定 click handler，后续 `_init` 仅更新回调引用。
+   */
+  private _bindDelegate(self: SyncManagerSelf): void {
     if (!this._eventsBound) {
       this._clickHandler = null;
       const unsub = bindDelegatedEvents(self, {
@@ -176,42 +208,31 @@ export class AppSyncManager extends WebComponentBase {
       // 而 _eventsBound 仍 true → else 分支 if(self._cbRef) 不命中 → 委托永不重绑，
       // 状态页签/目录行/push/pull 点击全死。委托生命周期归 disconnectedCallback 管。
       this._clickUnsub = unsub;
-    } else {
-      // 后续 _init：仅更新 cbRef 中的回调引用，不重复 addEventListener
-      if (self._cbRef) {
-        self._cbRef.cb = {
-          doRender: () => this._doRender(),
-          doPerformOp: (op, path) =>
-            performSingleOp(self, op, path, {
-              doLoadData: () => loadData(self),
-              doRender: () => this._doRender(),
-              doEmitStats: () => bus.emit("stats:refresh"),
-            }),
-        };
-      }
+      return;
     }
+    // 后续 _init：仅更新 cbRef 中的回调引用，不重复 addEventListener
+    if (self._cbRef) {
+      self._cbRef.cb = {
+        doRender: () => this._doRender(),
+        doPerformOp: (op, path) =>
+          performSingleOp(self, op, path, {
+            doLoadData: () => loadData(self),
+            doRender: () => this._doRender(),
+            doEmitStats: () => bus.emit("stats:refresh"),
+          }),
+      };
+    }
+  }
 
-    // 并发代入守卫：过期代际/已卸载直接丢弃
-    // code_review 47e68917b #5（P3）：失败者 bailing 前复位 _loading——败方已置
-    // _loading=true 并渲染 spinner 容器；若胜方 loadData（ADR-269 D3③ 后 loadTypeConfig 已同步、不抛）
-    // 随后抛错，无此处复位会让 loading 旗标/转圈残留（守卫语义保留：数据一致性由胜方保证）
-    this._loading = false;
-    if (initGen !== this._initGen || !this.isConnected) return;
-
-    await loadTypeConfig(self);
-    await loadData(self);
-    await loadRepoRoots(self, this._selectedType);
-
-    if (this._guard.stale(gen) || !this.isConnected) return;
-
-    this._loading = false;
+  /** `_doRender` 抛错兜底：错误 div + toast（不让异常冒泡出 `_init`） */
+  private _renderWithErrorFeedback(): void {
     try {
       this._doRender();
     } catch (e) {
       logError("sync-manager", "_render 出错:", e);
       // appendChild + textContent：杜绝「读改写 innerHTML +=」反模式（textContent 天然防注入，无需 esc）
       // 挂到 .sm-list（与 spinner/列表同容器），不挂组件根——脱离 .sm-container 会让错误 div
-      // 落在布局/CSS 作用域外，排版异常（containerHTML 在 134 行已注入，.sm-list 此时必存在）
+      // 落在布局/CSS 作用域外，排版异常（containerHTML 已在 _setupSkeleton 注入，.sm-list 此时必存在）
       const errDiv = document.createElement("div");
       errDiv.style.padding = "12px";
       errDiv.style.color = "var(--err)";
@@ -225,7 +246,10 @@ export class AppSyncManager extends WebComponentBase {
         type: "error",
       });
     }
+  }
 
+  /** 订阅 bus：`stats:refresh` / `repo:rtype-changed` / `repo:subdir-changed`（unsub 进 `_unsubs` 桶） */
+  private _subscribeBus(self: SyncManagerSelf): void {
     const unsub = bus.on("stats:refresh", () => {
       if (!this.isConnected) return;
       const gen = this._guard.current;

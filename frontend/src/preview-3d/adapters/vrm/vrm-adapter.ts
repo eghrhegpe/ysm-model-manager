@@ -146,29 +146,86 @@ export interface VrmMetaSummary {
   version?: string | undefined;
 }
 
+/** 授权文案归一：licenseName(+ otherLicenseUrl 以「 · 」拼接)；缺省 → undefined。
+ *  与 readVrmMeta 的 VRM0 分支同源——抽函数消重复（jscpd）+ 降两处分支复杂度。 */
+function licenseText(
+  licenseName: string | undefined,
+  otherLicenseUrl: string | undefined,
+): string | undefined {
+  return licenseName ? licenseName + (otherLicenseUrl ? ` · ${otherLicenseUrl}` : "") : undefined;
+}
+
+/** VRM0 授权枚举 → 徽章三态（Everyone / ExplicitlyLicensedPerson / 其余=仅作者） */
+function allowedUserOf(
+  allowedUserName: VRM0Meta["allowedUserName"],
+): "everyone" | "licensed" | "onlyAuthor" {
+  if (allowedUserName === "Everyone") return "everyone";
+  if (allowedUserName === "ExplicitlyLicensedPerson") return "licensed";
+  return "onlyAuthor";
+}
+
+/** VRM0 meta → 文本摘要（title/author/licenseName/version） */
+function summaryFromVrm0(m: VRM0Meta): VrmMetaSummary {
+  return {
+    title: m.title?.trim() || undefined,
+    author: m.author?.trim() || undefined,
+    license: licenseText(m.licenseName, m.otherLicenseUrl),
+    version: m.version?.trim() || undefined,
+  };
+}
+
+/** VRM1 meta → 文本摘要（name/authors 顿号拼接/licenseUrl） */
+function summaryFromVrm1(m: VRM1Meta): VrmMetaSummary {
+  return {
+    title: m.name?.trim() || undefined,
+    // VRM1 authors 运行时不保证存在（readVrmMeta 同款防御：meta.authors || []），缺字段防 TypeError
+    author: Array.isArray(m.authors) && m.authors.length > 0 ? m.authors.join("、") : undefined,
+    license: m.licenseUrl?.trim() || undefined,
+    version: m.version?.trim() || undefined,
+  };
+}
+
 /**
  * 归一化 vrm.meta → 文本摘要（纯函数零副作用；readVrmMeta 的重 parse 归一化与此同源不重构）。
  * 空字段/纯空白 → undefined（面板按「非空才补行」条件渲染，不产空串噪音）。
+ * 版本判别分支已拆 summaryFromVrm0/1——本函数退化为纯分派（认知复杂度 < 阈值）。
  */
 export function vrmMetaSummary(meta: VRM0Meta | VRM1Meta): VrmMetaSummary {
-  if (meta.metaVersion === "0") {
-    const m = meta as VRM0Meta;
-    return {
-      title: m.title?.trim() || undefined,
-      author: m.author?.trim() || undefined,
-      license: m.licenseName
-        ? m.licenseName + (m.otherLicenseUrl ? ` · ${m.otherLicenseUrl}` : "")
-        : undefined,
-      version: m.version?.trim() || undefined,
-    };
-  }
+  // VRM0Meta.metaVersion 非字面量判别类型，故保留原 cast 语义（勿删）
+  if (meta.metaVersion === "0") return summaryFromVrm0(meta as VRM0Meta);
+  return summaryFromVrm1(meta);
+}
+
+/** VRM0 meta → VrmMetaInfo（restrictions 三开关 + thumbnail dataURL）——readVrmMeta 的归一化分支 */
+function vrm0Info(m: VRM0Meta): VrmMetaInfo {
   return {
-    title: meta.name?.trim() || undefined,
-    // VRM1 authors 运行时不保证存在（readVrmMeta 同款防御：meta.authors || []），缺字段防 TypeError
-    author:
-      Array.isArray(meta.authors) && meta.authors.length > 0 ? meta.authors.join("、") : undefined,
-    license: meta.licenseUrl?.trim() || undefined,
-    version: meta.version?.trim() || undefined,
+    metaVersion: "0",
+    name: m.title || "",
+    authors: m.author ? [m.author] : [],
+    version: m.version,
+    license: licenseText(m.licenseName, m.otherLicenseUrl),
+    contact: m.contactInformation,
+    thumbnail: m.texture ? imageToDataURL(m.texture) : "",
+    restrictions: {
+      allowedUser: allowedUserOf(m.allowedUserName),
+      commercial: m.commercialUssageName === "Allow",
+      sexual: m.sexualUssageName === "Allow",
+      violent: m.violentUssageName === "Allow",
+      reference: m.reference || undefined,
+    },
+  };
+}
+
+/** VRM1 meta → VrmMetaInfo（无 restrictions：VRM1 授权走 licenseUrl）——readVrmMeta 的归一化分支 */
+function vrm1Info(m: VRM1Meta): VrmMetaInfo {
+  return {
+    metaVersion: "1",
+    name: m.name || "",
+    authors: m.authors || [],
+    version: m.version,
+    license: m.licenseUrl,
+    contact: m.contactInformation,
+    thumbnail: m.thumbnailImage ? imageToDataURL(m.thumbnailImage) : "",
   };
 }
 
@@ -200,43 +257,8 @@ export async function readVrmMeta(
       return null;
     }
     const meta = vrm.meta;
-    let info: VrmMetaInfo;
-    if (meta.metaVersion === "0") {
-      const m = meta as VRM0Meta;
-      info = {
-        metaVersion: "0",
-        name: meta.title || "",
-        authors: meta.author ? [meta.author] : [],
-        version: meta.version,
-        license: meta.licenseName
-          ? meta.licenseName + (meta.otherLicenseUrl ? ` · ${meta.otherLicenseUrl}` : "")
-          : undefined,
-        contact: meta.contactInformation,
-        thumbnail: meta.texture ? imageToDataURL(meta.texture) : "",
-        restrictions: {
-          allowedUser:
-            m.allowedUserName === "Everyone"
-              ? "everyone"
-              : m.allowedUserName === "ExplicitlyLicensedPerson"
-                ? "licensed"
-                : "onlyAuthor",
-          commercial: m.commercialUssageName === "Allow",
-          sexual: m.sexualUssageName === "Allow",
-          violent: m.violentUssageName === "Allow",
-          reference: m.reference || undefined,
-        },
-      };
-    } else {
-      info = {
-        metaVersion: "1",
-        name: meta.name || "",
-        authors: meta.authors || [],
-        version: meta.version,
-        license: meta.licenseUrl,
-        contact: meta.contactInformation,
-        thumbnail: meta.thumbnailImage ? imageToDataURL(meta.thumbnailImage) : "",
-      };
-    }
+    // 版本判别 + 字段归一化已拆 vrm0Info/vrm1Info——本函数只留编排（降认知复杂度）
+    const info = meta.metaVersion === "0" ? vrm0Info(meta as VRM0Meta) : vrm1Info(meta);
     // ADR-131 P2：复用本次 GLTF parse 的 vrm.scene 顺带采集统计（必须在 deepDispose
     // 之前 traverse——dispose 后 geometry/material 已释放，读到的是空数据）
     info.stats = vrm.scene ? collectSceneStats(vrm.scene) : undefined;
@@ -684,6 +706,154 @@ function Stage4MenuPanels(
   });
   return menuItems;
 }
+/** 待机态感知层驱动的状态依赖（Stage5 组装期一次性捕获，外提后各自可度量复杂度） */
+interface VrmIdlePerceptionDeps {
+  perception: VrmPerceptionState;
+  semanticBones: VrmBoneAssembly["semanticBones"];
+  animActive: boolean;
+  ctx: PreviewBuildCtx;
+}
+
+/**
+ * 待机态感知层驱动（呼吸/眨眼自查全局暂停标志；gaze 保留本层 !animActive 守卫）。
+ * 从 Stage5 的 update 闭包外提——原实现三层嵌套 if 使 update 认知复杂度超标。
+ */
+function applyIdlePerception(dt: number, deps: VrmIdlePerceptionDeps): void {
+  const { perception, semanticBones, animActive, ctx } = deps;
+  const { perceptionState, breath, gaze, footIK, useNativeLookAt } = perception;
+  if (semanticBones) {
+    if (perceptionState.breath) breath.apply(dt, semanticBones);
+    // gaze 不挂全局暂停标志（摄像机追踪，非动画优先级）——保留本层 !animActive 守卫
+    if (!animActive && !useNativeLookAt && perceptionState.gaze)
+      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+      gaze!.apply(dt, semanticBones, requireSharedInfra(ctx).camera.position);
+  }
+  footIK.apply(dt, !animActive);
+}
+
+/**
+ * 当前动作帧的 VMD 足 IK 驱动。按 live action 的 clip 反查 targets（非独立维护的 index）——
+ * time 源与 target 源同一对象，永不脱钩（review 64c24cf3e P1；clip 经公开 `action.getClip()`
+ * 读取，不碰 three 私有 `_clip`）。
+ */
+function applyAnimationFootIK(
+  action: THREE.AnimationAction,
+  motionClips: VrmMotionClipEntry[],
+  vrmFootIK: ReturnType<typeof createVrmFootIKController>,
+): void {
+  const current = motionClips.find((c) => c.clip === motionClipOf(action));
+  if (current?.footIK) vrmFootIK.apply(action.time, current.footIK);
+}
+
+/** 眨眼驱动：exprMgr + 表情名齐备且 blink 开启才生效（从 update 闭包外提降嵌套） */
+function applyBlinkPerception(dt: number, perception: VrmPerceptionState): void {
+  const { perceptionState, blink, blinkExpressionNames, exprMgr } = perception;
+  if (exprMgr && blinkExpressionNames.length > 0 && perceptionState.blink) {
+    const mgr = exprMgr;
+    blink.apply(dt, (weight: number) => {
+      for (const name of blinkExpressionNames) {
+        mgr.setValue(name, weight);
+      }
+    });
+  }
+}
+
+/** 每帧 update 的状态依赖（Stage5 组装期一次性捕获） */
+interface VrmUpdateDeps {
+  vrm: VRM;
+  motion: VrmMotionState;
+  perception: VrmPerceptionState;
+  semanticBones: VrmBoneAssembly["semanticBones"];
+  vrmFootIK: ReturnType<typeof createVrmFootIKController>;
+  ctx: PreviewBuildCtx;
+}
+
+/** 构建每帧 update 回调（原 Stage5 return 内的 update 闭包原样外提，行为零变更） */
+function makeVrmUpdater(deps: VrmUpdateDeps): (dt: number) => void {
+  const { vrm, motion, perception, semanticBones, vrmFootIK, ctx } = deps;
+  const { motionClips, motionMixer } = motion;
+  const { perceptionPauseRef } = perception;
+  return (dt: number): void => {
+    // 全局暂停标志先于 visible 早退写：不可见帧也要刷新标志，否则早退期间
+    // 标志停在上一帧的值，恢复可见后感知层被陈旧状态冻结
+    const animActive = !!motion.motionAction && !motion.motionAction.paused;
+    perceptionPauseRef.paused = animActive;
+    if (!vrm.scene.visible) return;
+    if (motionMixer) motionMixer.update(dt);
+    vrm.update(dt);
+    // #9 全局暂停标志：动画激活时 breath/blink 自查静默，取代散布的 `!animActive` 守卫。
+    applyIdlePerception(dt, { perception, semanticBones, animActive, ctx });
+    // VMD 足 IK：与上面的待机锚地以 animActive 互斥（待机走锚地、动画走 VMD 目标）。
+    // 写在 vrm.update(dt) 之后——归一化骨的位姿是**单向烘回**原始骨的，IK 结论要落在
+    // 原始骨上就必须晚于那一步（detail 见 vrm-foot-ik.ts 文件头）。
+    if (animActive && motion.motionAction) {
+      applyAnimationFootIK(motion.motionAction, motionClips, vrmFootIK);
+    }
+    applyBlinkPerception(dt, perception);
+  };
+}
+
+/** 逐 Mesh 材质统计纹理数（dispose 释放日志用；traverse 回调从 dispose 外提降嵌套） */
+function countSceneTextures(scene: THREE.Object3D): number {
+  let texCount = 0;
+  scene.traverse((child: THREE.Object3D) => {
+    if (!(child as THREE.Mesh).isMesh) return;
+    const mesh = child as THREE.Mesh;
+    const mats = Array.isArray(mesh.material)
+      ? mesh.material
+      : mesh.material
+        ? [mesh.material]
+        : [];
+    for (const mat of mats) {
+      const texKeys = ["map", "emissiveMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap"];
+      for (const key of texKeys) {
+        const tex = (mat as unknown as Record<string, unknown>)[key];
+        if (tex instanceof THREE.Texture) texCount++;
+      }
+    }
+  });
+  return texCount;
+}
+
+/** 构建 dispose 回调的状态依赖（Stage5 组装期一次性捕获） */
+interface VrmDisposeDeps {
+  vrm: VRM;
+  boneAssy: VrmBoneAssembly;
+  motion: VrmMotionState;
+  perception: VrmPerceptionState;
+  vrmFootIK: ReturnType<typeof createVrmFootIKController>;
+  path: string;
+  port: VrmDataPort | undefined;
+}
+
+/** 构建 dispose 回调（原 Stage5 return 内的 dispose 闭包原样外提，行为零变更） */
+function makeVrmDisposer(deps: VrmDisposeDeps): () => void {
+  const { vrm, boneAssy, motion, perception, vrmFootIK, path, port } = deps;
+  const { bonePanelRef } = boneAssy;
+  const { motionMixer } = motion;
+  const { breath, gaze, blink, footIK, useNativeLookAt } = perception;
+  return (): void => {
+    try {
+      bonePanelRef.current?.();
+    } catch {
+      /* 面板清理不阻断 dispose */
+    }
+    unregisterModelRoot(vrm.scene);
+    breath.dispose();
+    gaze?.dispose();
+    blink.dispose();
+    footIK.dispose();
+    vrmFootIK.dispose();
+    motionMixer?.stopAllAction();
+    motionMixer?.uncacheRoot(vrm.scene);
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+    if (useNativeLookAt) vrm.lookAt!.target = null;
+    const texCount = countSceneTextures(vrm.scene);
+    VRMUtils.deepDispose(vrm.scene);
+    void vrmDiag(port, "gpu-release", path, "ok", `tex=${texCount}`);
+  };
+}
+
 function Stage5BuildResult(
   ctx: PreviewBuildCtx,
   path: string,
@@ -693,19 +863,8 @@ function Stage5BuildResult(
 ): UpdateableScene & ScreenshotScene & SemanticScene {
   const { parseRes, boneAssy, vrmMaterials, motion, perception } = artifacts;
   const { vrm } = parseRes;
-  const { semanticBones, bonePanelRef } = boneAssy;
-  const { motionClips, motionMixer } = motion;
-  const {
-    perceptionState,
-    breath,
-    gaze,
-    blink,
-    footIK,
-    useNativeLookAt,
-    blinkExpressionNames,
-    exprMgr,
-    perceptionPauseRef,
-  } = perception;
+  const { semanticBones } = boneAssy;
+  const { motionClips } = motion;
   // VMD 足 IK 驱动（ADR-243 §2.8 方案 A）：内部在**创建期快照**足骨的静止世界位置，
   // 因此必须在任何 mixer.update 之前构造——本函数处于 build 阶段，天然满足。
   const vrmFootIK = createVrmFootIKController(boneAssy.boneTree, semanticBones);
@@ -731,88 +890,20 @@ function Stage5BuildResult(
     },
     ok: true,
   });
+  // update/dispose 体量大且各自含多层嵌套——外提为顶层工厂（各自独立度量复杂度），
+  // 本函数退化为纯编排。依赖经对象一次性传入，语义等价于原闭包捕获。
   return {
     menuItems,
-    update: (dt: number): void => {
-      // 全局暂停标志先于 visible 早退写：不可见帧也要刷新标志，否则早退期间
-      // 标志停在上一帧的值，恢复可见后感知层被陈旧状态冻结
-      const animActive = !!motion.motionAction && !motion.motionAction.paused;
-      perceptionPauseRef.paused = animActive;
-      if (!vrm.scene.visible) return;
-      if (motionMixer) motionMixer.update(dt);
-      vrm.update(dt);
-      // #9 全局暂停标志：动画激活时 breath/blink 自查静默，取代散布的 `!animActive` 守卫。
-      if (semanticBones) {
-        if (perceptionState.breath) breath.apply(dt, semanticBones);
-        // gaze 不挂全局暂停标志（摄像机追踪，非动画优先级）——保留本层 !animActive 守卫
-        if (!animActive && !useNativeLookAt && perceptionState.gaze)
-          // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          gaze!.apply(dt, semanticBones, requireSharedInfra(ctx).camera.position);
-      }
-      footIK.apply(dt, !animActive);
-      // VMD 足 IK：与上面的待机锚地以 animActive 互斥（待机走锚地、动画走 VMD 目标）。
-      // 写在 vrm.update(dt) 之后——归一化骨的位姿是**单向烘回**原始骨的，IK 结论要落在
-      // 原始骨上就必须晚于那一步（detail 见 vrm-foot-ik.ts 文件头）。
-      // 按 live action 的 clip 反查 targets（非独立维护的 index）——time 源与 target 源
-      // 同一对象，永不脱钩（review 64c24cf3e P1；clip 经公开 `action.getClip()` 读取，
-      // 不碰 three 私有 `_clip`）。
-      if (animActive && motion.motionAction) {
-        const action = motion.motionAction;
-        const current = motionClips.find((c) => c.clip === motionClipOf(action));
-        if (current?.footIK) vrmFootIK.apply(action.time, current.footIK);
-      }
-      if (exprMgr && blinkExpressionNames.length > 0 && perceptionState.blink) {
-        const mgr = exprMgr;
-        blink.apply(dt, (weight: number) => {
-          for (const name of blinkExpressionNames) {
-            mgr.setValue(name, weight);
-          }
-        });
-      }
-    },
-    dispose: (): void => {
-      try {
-        bonePanelRef.current?.();
-      } catch {
-        /* 面板清理不阻断 dispose */
-      }
-      unregisterModelRoot(vrm.scene);
-      breath.dispose();
-      gaze?.dispose();
-      blink.dispose();
-      footIK.dispose();
-      vrmFootIK.dispose();
-      motionMixer?.stopAllAction();
-      motionMixer?.uncacheRoot(vrm.scene);
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      if (useNativeLookAt) vrm.lookAt!.target = null;
-      let texCount = 0;
-      vrm.scene.traverse((child: THREE.Object3D) => {
-        if (!(child as THREE.Mesh).isMesh) return;
-        const mesh = child as THREE.Mesh;
-        const mats = Array.isArray(mesh.material)
-          ? mesh.material
-          : mesh.material
-            ? [mesh.material]
-            : [];
-        for (const mat of mats) {
-          const texKeys = [
-            "map",
-            "emissiveMap",
-            "normalMap",
-            "roughnessMap",
-            "metalnessMap",
-            "aoMap",
-          ];
-          for (const key of texKeys) {
-            const tex = (mat as unknown as Record<string, unknown>)[key];
-            if (tex instanceof THREE.Texture) texCount++;
-          }
-        }
-      });
-      VRMUtils.deepDispose(vrm.scene);
-      void vrmDiag(port, "gpu-release", path, "ok", `tex=${texCount}`);
-    },
+    update: makeVrmUpdater({ vrm, motion, perception, semanticBones, vrmFootIK, ctx }),
+    dispose: makeVrmDisposer({
+      vrm,
+      boneAssy,
+      motion,
+      perception,
+      vrmFootIK,
+      path,
+      port,
+    }),
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     screenshot: () =>
       Promise.resolve(

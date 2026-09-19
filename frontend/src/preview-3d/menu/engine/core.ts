@@ -439,29 +439,148 @@ const SCENE_CAP_FOR_PANEL: Readonly<Record<string, string>> = {
   postproc: "postprocessing",
 };
 
+/** dock 渲染工厂（原 renderPreviewDock 内联形参类型的命名化，供各路由子函数复用） */
+interface DockRenderFactories {
+  makeRowFn: (n: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
+  makePanelViewFn: (n: PreviewMenuNode) => SlideMenuView;
+  makeGroupViewFn: (g: PreviewMenuGroupDef, items: PreviewMenuNode[]) => SlideMenuView;
+}
+
+/** dock 菜单上下文（menu/showMenu/actionCtx/ctx 四件套） */
+interface DockMenuCtx {
+  menu: SlideMenuHandle;
+  showMenu: (view: SlideMenuView) => void;
+  actionCtx: PreviewActionMenuCtx;
+  ctx: PreviewMenuCtx;
+}
+
+/** 点击路由共享依赖（factories + menuCtx 合并后一次性传入各子路由） */
+type DockNavDeps = DockRenderFactories & DockMenuCtx;
+
+/**
+ * [ADR-241] 动态直达视图工厂：directViewKey 声明（原 if(g.id==="motion") 隐式特例）。
+ * 目标依赖 sceneRegistry 活跃角色 + 详情工厂，directToPanel 静态表达不了——key → 工厂
+ * 映射在 core.ts（多态路由表），非 id 特判：新增动态组只加声明 + 工厂映射，不改本结构。
+ * 有活跃角色+技能 → 直达动作详情（骨骼/播放/感知）；否则角色列表（onSelectRole → motionDetailView）。
+ * @returns 是否已导航（false → 调用方继续走后续路由分支）
+ */
+function tryShowMotionDetail(deps: DockNavDeps): boolean {
+  const activeId = sceneRegistry.getActiveId();
+  const active = activeId ? sceneRegistry.getAll().find((x) => x.id === activeId) : undefined;
+  if (!active?.menuItems) return false;
+  deps.showMenu(
+    motionDetailView(active, {
+      makeRow: deps.makeRowFn,
+      makePanelView: deps.makePanelViewFn,
+      menu: deps.menu,
+      actionCtx: deps.actionCtx,
+    }),
+  );
+  return true;
+}
+
+/**
+ * panel 项 → 组根列表行（`kind:"row"` + headerToggle + navigate action + compact 密度）。
+ * 单一来源：cap 声明 getMasterNodeId = 有主开关（与面板 filter / env 面板同一契约）。
+ * 非 panel 项（adapter 注入）原样透传。
+ */
+function panelNodeToRow(
+  node: PreviewMenuNode,
+  ctx: PreviewMenuCtx,
+  makePanelViewFn: DockRenderFactories["makePanelViewFn"],
+): PreviewMenuNode {
+  if (node.kind !== "panel") return node; // 兼容 adapter 注入的非-panel 项
+  const capId = SCENE_CAP_FOR_PANEL[node.id];
+  const cap = capId ? ctx.getCap(capId) : null;
+  let headerToggle: PreviewMenuNode["headerToggle"];
+  if (
+    cap?.getMasterNodeId?.() &&
+    typeof cap.isEnabled === "function" &&
+    typeof cap.setEnabled === "function"
+  ) {
+    headerToggle = { value: cap.isEnabled(), onChange: (v) => cap.setEnabled(v) };
+  }
+  return {
+    id: node.id,
+    icon: node.icon,
+    labelKey: node.labelKey ?? node.id,
+    kind: "row",
+    rowDensity: "compact",
+    headerToggle,
+    action: (actCtx) => actCtx.navigate?.(makePanelViewFn(node)),
+  } as PreviewMenuNode;
+}
+
+/** [ADR-241] rootView 显式声明：每 panel → row + headerToggle 的组根视图工厂 */
+function makeRootView(
+  g: PreviewMenuGroupDef,
+  groupItems: PreviewMenuNode[],
+  deps: DockNavDeps,
+): SlideMenuView {
+  const renderMenuDeps = {
+    menu: deps.menu,
+    actionCtx: deps.actionCtx,
+    makeRow: deps.makeRowFn,
+    makePanelView: deps.makePanelViewFn,
+  };
+  return {
+    title: tOf(g.labelKey),
+    // rows 在每次渲染时重算（与迁移前一致）：headerToggle.value 读的是当次 cap.isEnabled()
+    // 最新状态，若在工厂外一次性算好，重新渲染会拿到陈旧开关值。
+    render: (list) => {
+      const rows = groupItems.map((node) => panelNodeToRow(node, deps.ctx, deps.makePanelViewFn));
+      renderMenu(list, rows, renderMenuDeps);
+    },
+  };
+}
+
+/**
+ * [ADR-241 路由声明化] dock 组按钮点击路由：由 `PREVIEW_MENU_GROUPS` 数据表显式声明，
+ * 本函数纯查表——directToPanel（静态直达面板）→ directViewKey（动态视图工厂，motion）
+ * → rootView（renderMenu 组根视图，scene）→ 兜底 makeGroupViewFn。无任何 `g.id === ...` 字面量。
+ *
+ * ⚠️ directToPanel 查**经 visibleWhen 过滤**的 groupItems（与 dock 按钮渲染同源）而非 allItems：
+ * 声明目标带 visibleWhen 门（如 environment ← env.skyGroundCap）时，门未开则目标被滤出
+ * groupItems → 本组按钮不渲染；即便按钮渲染（他组注入项使组非空），目标也须当前可见
+ * 才导航——防 776598b7d 引入的「绕过 visibleWhen 门导航到隐藏面板」回归。
+ */
+function routeDockGroupClick(
+  g: PreviewMenuGroupDef,
+  groupItems: PreviewMenuNode[],
+  deps: DockNavDeps,
+): void {
+  // [S5 收口] 静态直达声明（组定义 directToPanel）：model 组 → roles 面板（新手第一跳）；
+  // [ADR-241] env/settings 补显式 directToPanel —— 删「单 panel 自动推断」隐式分支。
+  // 数据驱动——新增「组点击直达某面板」零改本函数；声明指向不存在的面板时回落兜底。
+  if (g.directToPanel) {
+    const direct = groupItems.find((d) => d.id === g.directToPanel && d.kind === "panel");
+    if (direct) {
+      deps.showMenu(deps.makePanelViewFn(direct));
+      return;
+    }
+  }
+  if (g.directViewKey === "motion" && tryShowMotionDetail(deps)) return;
+  if (g.rootView) {
+    deps.showMenu(makeRootView(g, groupItems, deps));
+    return;
+  }
+  // [ADR-241] 兜底：组未声明 directToPanel / directViewKey / rootView 时走旧组根视图
+  // （roles/motion detail 等自建行 cmd 兼容）。当前全 5 组都有显式路由，本分支为文档化缺省。
+  deps.showMenu(deps.makeGroupViewFn(g, groupItems));
+}
+
 /**
  * [子函数 8/9] 底部 dock 渲染（原 renderDock 闭包升格）。
- *   [ADR-241 路由声明化] 点击路由由 `PREVIEW_MENU_GROUPS` 数据表显式声明，本函数纯查表：
- *   directToPanel（静态直达面板）→ directViewKey（动态视图工厂，motion）→ rootView
- *   （renderMenu 组根视图，scene）→ 兜底 makeGroupViewFn。无任何 `g.id === ...` 字面量。
+ *   [ADR-241 路由声明化] 点击路由数据表驱动；四分支路由体已拆 routeDockGroupClick 等顶层函数，
+ *   本函数退化为「建按钮 + 接线」的纯编排（认知复杂度 < 阈值）。
  */
 function renderPreviewDock(
   dock: HTMLElement,
-  factories: {
-    makeRowFn: (n: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
-    makePanelViewFn: (n: PreviewMenuNode) => SlideMenuView;
-    makeGroupViewFn: (g: PreviewMenuGroupDef, items: PreviewMenuNode[]) => SlideMenuView;
-  },
-  menuCtx: {
-    menu: SlideMenuHandle;
-    showMenu: (view: SlideMenuView) => void;
-    actionCtx: PreviewActionMenuCtx;
-    ctx: PreviewMenuCtx;
-  },
+  factories: DockRenderFactories,
+  menuCtx: DockMenuCtx,
   adapterItemsRef: { v: PreviewMenuNode[] },
 ): void {
-  const { makeRowFn, makePanelViewFn, makeGroupViewFn } = factories;
-  const { menu, showMenu, actionCtx, ctx } = menuCtx;
+  const deps: DockNavDeps = { ...factories, ...menuCtx };
   dock.innerHTML = "";
   const allItems = [...CORE_MENU_ITEMS, ...adapterItemsRef.v];
   for (const g of PREVIEW_MENU_GROUPS) {
@@ -479,82 +598,7 @@ function renderPreviewDock(
     btn.innerHTML = `<span class="preview-ic">${resolveIcon(g.icon)}</span><span class="preview-dock-navlabel">${tOf(g.labelKey)}</span>`;
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();
-      // [S5 收口] 静态直达声明（组定义 directToPanel）：model 组 → roles 面板（新手第一跳）；
-      // [ADR-241] env/settings 补显式 directToPanel —— 删「单 panel 自动推断」隐式分支。
-      // 数据驱动——新增「组点击直达某面板」零改本函数；声明指向不存在的面板时回落兜底。
-      // ⚠️ 查**经 visibleWhen 过滤**的 groupItems（与 dock 按钮渲染同源）而非 allItems：
-      // 声明目标带 visibleWhen 门（如 environment ← env.skyGroundCap）时，门未开则目标被滤出
-      // groupItems → 本组按钮不渲染；即便按钮渲染（他组注入项使组非空），目标也须当前可见
-      // 才导航——防 776598b7d 引入的「绕过 visibleWhen 门导航到隐藏面板」回归。
-      if (g.directToPanel) {
-        const direct = groupItems.find((d) => d.id === g.directToPanel && d.kind === "panel");
-        if (direct) {
-          showMenu(makePanelViewFn(direct));
-          return;
-        }
-      }
-      // [ADR-241] 动态直达视图工厂：directViewKey 声明（原 if(g.id==="motion") 隐式特例）。
-      // 目标依赖 sceneRegistry 活跃角色 + 详情工厂，directToPanel 静态表达不了——key → 工厂
-      // 映射在 core.ts（多态路由表），非 id 特判：新增动态组只加声明 + 工厂映射，不改本结构。
-      // 有活跃角色+技能 → 直达动作详情（骨骼/播放/感知）；否则角色列表（onSelectRole → motionDetailView）
-      if (g.directViewKey === "motion") {
-        const activeId = sceneRegistry.getActiveId();
-        const active = activeId ? sceneRegistry.getAll().find((x) => x.id === activeId) : undefined;
-        if (active?.menuItems) {
-          showMenu(
-            motionDetailView(active, {
-              makeRow: makeRowFn,
-              makePanelView: makePanelViewFn,
-              menu,
-              actionCtx,
-            }),
-          );
-          return;
-        }
-      }
-      // [ADR-241] rootView 显式声明走 renderMenu 通用组根视图（原 g.id!=="scene" 反向特判）。
-      // 每 panel → `kind:"row"` + headerToggle（可启停能力）+ action navigate + compact 密度
-      if (g.rootView) {
-        const renderMenuDeps = {
-          menu,
-          actionCtx,
-          makeRow: makeRowFn,
-          makePanelView: makePanelViewFn,
-        };
-        showMenu({
-          title: tOf(g.labelKey),
-          render: (list) => {
-            const rows: PreviewMenuNode[] = groupItems.map((node) => {
-              if (node.kind !== "panel") return node; // 兼容 adapter 注入的非-panel 项
-              const capId = SCENE_CAP_FOR_PANEL[node.id];
-              const cap = capId ? ctx.getCap(capId) : null;
-              // 单一来源：cap 声明 getMasterNodeId = 有主开关（与面板 filter / env 面板同一契约）
-              let headerToggle: PreviewMenuNode["headerToggle"];
-              if (
-                cap?.getMasterNodeId?.() &&
-                typeof cap.isEnabled === "function" &&
-                typeof cap.setEnabled === "function"
-              ) {
-                headerToggle = { value: cap.isEnabled(), onChange: (v) => cap.setEnabled(v) };
-              }
-              return {
-                id: node.id,
-                icon: node.icon,
-                labelKey: node.labelKey ?? node.id,
-                kind: "row",
-                rowDensity: "compact",
-                headerToggle,
-                action: (actCtx) => actCtx.navigate?.(makePanelViewFn(node)),
-              } as PreviewMenuNode;
-            });
-            renderMenu(list, rows, renderMenuDeps);
-          },
-        });
-        return;
-      }
-      // [ADR-241] 兜底：组未声明 directToPanel / directViewKey / rootView 时走旧组根视图
-      // （roles/motion detail 等自建行 cmd 兼容）。当前全 5 组都有显式路由，本分支为文档化缺省。
-      showMenu(makeGroupViewFn(g, groupItems));
+      routeDockGroupClick(g, groupItems, deps);
     };
     dock.appendChild(btn);
   }

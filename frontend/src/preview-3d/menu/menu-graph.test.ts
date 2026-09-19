@@ -9,7 +9,7 @@ import { buildPreviewMenuRouters } from "./core.ts";
 import { makeMenuCtx, mockMenuHandle } from "./menu-test-fixtures.ts";
 import { registerSchema, resetSchemas, listSchemas, getSchema } from "@/preview-3d/infra/schema-registry.ts";
 import { unregisterCorePanelSchemas } from "./core.ts";
-import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";
 import { SANCTIONED_PROCEDURAL_PANELS } from "./sanctioned.ts";

@@ -10,7 +10,7 @@
 //
 // i18n：复用 preview.component / preview.allComponents（三语言包已就位，零新增键）。
 
-import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 
 /** 多模型选择原语入参 */
 export interface MultiModelSelectOpts {

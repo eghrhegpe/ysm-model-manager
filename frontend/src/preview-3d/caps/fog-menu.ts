@@ -7,7 +7,7 @@
 //   - 参数组 folder（preview.fogGroupParams）：color/mode/density/near/far
 //     density 仅 exp2、near/far 仅 linear 可见（visibleWhen 吃 env.fogMode 快照，B 轨）
 
-import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { FogCapability, FogMode } from "./fog-capability.ts";
 
 const FOG_PARAMS_GROUP = "preview.fogGroupParams";

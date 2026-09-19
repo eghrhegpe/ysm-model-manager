@@ -3,7 +3,7 @@
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 

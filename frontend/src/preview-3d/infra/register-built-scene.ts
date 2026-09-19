@@ -6,7 +6,7 @@
 // 不携带菜单/骨骼元数据）语义不同，不在此收编范围。
 import type * as THREE from "three";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { mergeStatsMenuItems } from "@/preview-3d/menu/stats.ts";
 import { sceneRegistry } from "./scene-registry.ts";
 import { collectSceneStats } from "./scene-stats.ts";

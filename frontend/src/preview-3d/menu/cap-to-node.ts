@@ -26,7 +26,7 @@
 // 本文件纯转换，零注册表依赖，可单测。
 
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
-import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 
 /**
  * 该 kind 是否走原生节点（true）还是 controls 通道（false）。

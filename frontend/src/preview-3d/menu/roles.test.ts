@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { CORE_MENU_ITEMS } from "./defs.ts";
-import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { mountPreviewRootMenu, roleBaseName } from "./core.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";

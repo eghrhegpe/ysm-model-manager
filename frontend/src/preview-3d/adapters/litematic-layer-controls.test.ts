@@ -13,7 +13,7 @@ import { previewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { renderMenu, renderPreviewPanel, type PreviewMenuRouters } from "@/preview-3d/menu/core.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/slide-menu.ts";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";

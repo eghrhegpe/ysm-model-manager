@@ -10,7 +10,7 @@ import {
   CORE_MENU_ITEMS,
   PREVIEW_MENU_GROUPS,
 } from "./defs.ts";
-import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { ysmMenuItems, type YsmMenuItemsOpts } from "@/preview-3d/adapters/ysm-adapter.ts";
 import { mmdMenuItems, type MmdMenuItemsOpts } from "@/preview-3d/adapters/mmd/mmd-adapter.ts";
 import { vrmMenuItems, type VrmMenuItemsOpts } from "@/preview-3d/adapters/vrm/vrm-adapter.ts";

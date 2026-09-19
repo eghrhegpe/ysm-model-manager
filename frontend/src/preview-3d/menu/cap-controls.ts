@@ -10,10 +10,10 @@
 import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "@/preview-3d/menu/schema/dom-contract.ts";
 import { MENU_BTN_CSS, MENU_SECTION_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { clampPct } from "@/utils/base/pure/clamp.ts";
-import { ARIA_ATTR, ROLE, SLIDER_BAR_CLASS } from "./dom-contract.ts";
 import { createHeaderToggle } from "./header-toggle.ts";
 import { DragSliderController } from "./slider-controller.ts";
 

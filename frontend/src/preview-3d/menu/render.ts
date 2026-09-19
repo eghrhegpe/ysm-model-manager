@@ -9,6 +9,7 @@
 import { t, tOf } from "@/core/i18n/t.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { getSchema } from "@/preview-3d/infra/schema-registry.ts";
+import type { PreviewActionMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import {
   MENU_BTN_CSS,
   MENU_CARD_CSS,
@@ -33,7 +34,6 @@ import {
   renderCapToggle,
 } from "./cap-controls.ts";
 import { createHeaderToggle } from "./header-toggle.ts";
-import type { PreviewActionMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 
 // 控件原语（select/slider/toggle/color）渲染器映射表（ADR-195 刀 2.5 投影反转：

@@ -7,7 +7,7 @@ import {
   nodeControlToView,
 } from "./render.ts";
 import { tOf } from "@/core/i18n/t.ts";
-import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { previewSnapshot, setStateValue } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";

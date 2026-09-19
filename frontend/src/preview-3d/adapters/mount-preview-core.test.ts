@@ -138,7 +138,7 @@ import {
   _resetSingletons,
 } from "./mount-preview-core.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { GPU_BUDGET_CALIBRATION_KEY } from "@/preview-3d/infra/gpu-load-calibrate.ts";
 import { resetFakeRendererStats, setFakeRendererStats } from "@/test-utils/fake-webgl-renderer.ts";
 import { bus } from "@/bus";

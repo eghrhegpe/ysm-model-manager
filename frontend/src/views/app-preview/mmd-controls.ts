@@ -10,7 +10,7 @@
 // MaterialControlBridge 消费方直连 adapters 单源，此处不再原位转发
 import type { MmdBottomNavCtx, MmdPlayBridge } from "@/preview-3d/infra/content-bridges.ts";
 import { multiModelSelectNode } from "@/preview-3d/menu/multi-model.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";
 
 export type { MmdBottomNavCtx, MmdPlayBridge };

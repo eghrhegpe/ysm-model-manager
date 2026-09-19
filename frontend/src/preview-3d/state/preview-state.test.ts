@@ -28,7 +28,7 @@ import {
   buildPostprocessingSchema,
 } from "@/preview-3d/menu/settings.ts";
 import type { PreviewMenuCtx } from "@/preview-3d/menu/core.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { renderMenu } from "@/preview-3d/menu/render.ts";
 import { capControlsToNodes } from "@/preview-3d/menu/cap-to-node.ts";
 import { collectVisiblePredicates } from "@/preview-3d/menu/cap-controls.ts";

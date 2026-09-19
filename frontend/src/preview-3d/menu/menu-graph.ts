@@ -14,10 +14,10 @@
 // 与 cap 级 collectVisiblePredicates（无参 c.visible）严格区分，不可混用（§5 死穴二）。
 
 import { getSchema, listSchemas } from "@/preview-3d/infra/schema-registry.ts";
+import type { PreviewMenuNode, PreviewMenuNodeKind } from "@/preview-3d/menu/schema/node-types.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { PreviewMenuRouters } from "./core.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
-import type { PreviewMenuNode, PreviewMenuNodeKind } from "./node-types.ts";
 import { SANCTIONED_PROCEDURAL_PANELS, type SanctionedProceduralPanel } from "./sanctioned.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";
 

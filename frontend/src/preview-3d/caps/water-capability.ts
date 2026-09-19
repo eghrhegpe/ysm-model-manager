@@ -5,7 +5,7 @@
 
 import * as THREE from "three";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patches/patch-guard.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层

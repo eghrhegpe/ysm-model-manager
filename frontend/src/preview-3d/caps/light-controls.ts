@@ -8,7 +8,7 @@
 //   D2 体积光 5 参数收编为 3 个语义滑块 + 1 个上下亮度比（base/tip 不再各自暴露）
 //   D3 聚光灯与体积光合并进同一可折叠卡（用户裁定：不做 visibleWhen 隐藏，只折叠）
 
-import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { DeepPartial, LightCapability, LightParams } from "./light-capability.ts";

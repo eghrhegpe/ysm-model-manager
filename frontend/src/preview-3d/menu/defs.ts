@@ -7,11 +7,11 @@
 // 整条链路已统一 PreviewMenuNode（方案 A 收尾）：CORE_MENU_ITEMS 与适配器注入
 // 都是 PreviewMenuNode[]，不再有 PreviewMenuItemDef 往返转换。
 
+import type { PreviewMenuGroupId, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { IconRef } from "@/utils/icon/resolve.ts";
-import type { PreviewMenuGroupId, PreviewMenuNode } from "./node-types.ts";
 
 // 原位 re-export 保公共面——既有 import defs.ts 的消费方零改动。
-export type { PreviewMenuGroupId } from "./node-types.ts";
+export type { PreviewMenuGroupId } from "@/preview-3d/menu/schema/node-types.ts";
 // PreviewMenuGroupId 归位 node-types.ts（类型叶，单一事实源）；re-export 仅保旧消费方兼容。
 //
 // 能力驱动显示（用户 2026-08-16 决策 + 2026-08-19 环境拆组）：

@@ -5,7 +5,7 @@
 // （装配顺序敏感：须 createAll 后手工接线 + 注入后补 apply；查询器构造即就绪，apply 一次到位）。
 
 import * as THREE from "three";
-import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";

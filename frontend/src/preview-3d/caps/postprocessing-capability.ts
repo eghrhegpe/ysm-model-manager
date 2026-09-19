@@ -33,7 +33,7 @@ import { SSRPass } from "three/addons/postprocessing/SSRPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import type { PostprocessingLike } from "@/preview-3d/infra/postprocessing.ts";
 import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";

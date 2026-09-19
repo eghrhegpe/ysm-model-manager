@@ -15,6 +15,11 @@ import {
   type SchemaBuilder,
   unregisterSchema,
 } from "@/preview-3d/infra/schema-registry.ts";
+import type {
+  PreviewActionMenuCtx,
+  PreviewMenuCtx,
+  PreviewMenuNode,
+} from "@/preview-3d/menu/schema/node-types.ts";
 import { MENU_ERROR_NOTE_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
@@ -24,7 +29,6 @@ import { renderCapControls } from "./cap-controls.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 import { buildEnvSchema, disposeEnvSubscriptions } from "./env.ts";
 import { ensureFabStyles } from "./fab.ts";
-import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import {
   clearFolderCollapsedState,
   disposeCustomCleanups,
@@ -46,7 +50,7 @@ import { makeSwitchState } from "./switch.ts";
 // [ADR-169] PreviewMenuCtx 已下沉 node-types.ts（类型叶）——断 core ⇄ env/roles/switch/settings
 // 纯 type 环（子模块原 type import 本文件 ctx，而本文件值 import 它们）。原位 re-export 保公共面，
 // 外部消费者（mount-preview-core / items.test 等）的 import 语句零改动。
-export type { PreviewMenuCtx } from "./node-types.ts";
+export type { PreviewMenuCtx } from "@/preview-3d/menu/schema/node-types.ts";
 export { renderMenu } from "./render.ts";
 /** 公共 API 保持稳定（ADR-076 v3 拆分后自子模块透出） */
 /** 通用控件渲染器：将控件定义渲染为 DOM 行，替代手写 fill* 函数 */

@@ -43,13 +43,13 @@ import { collectSceneStats, type SceneStats } from "@/preview-3d/infra/scene-sta
 import type { BonePanelCleanupRef } from "@/preview-3d/menu/bones-panel-node.ts";
 import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts"; // 通用骨骼菜单项工厂（4 adapter 共用，ADR-074 S2 之上）
 import { materialNodes } from "@/preview-3d/menu/material-controls.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import {
   type PerceptionCapability,
   type PerceptionState,
   perceptionNodes,
   pickPerceptionCaps,
 } from "@/preview-3d/menu/perception-controls.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";
 import { buildVmdRetargetClip, type VmdFootIKTargets } from "./vmd-retarget.ts";

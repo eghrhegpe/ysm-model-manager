@@ -15,11 +15,11 @@ import { tOf } from "@/core/i18n/t.ts";
 import type { PreviewControlDef, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/infra/keymap.ts";
+import type { PreviewMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 import { getStateValue, setStateValue } from "@/preview-3d/state/preview-state.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { capControlsToNodes } from "./cap-to-node.ts";
-import type { PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";
 
 /** i18n 安全取值：键缺失时回退，杜绝菜单项退化显示原始键名。

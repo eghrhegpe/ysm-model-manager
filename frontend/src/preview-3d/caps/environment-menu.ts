@@ -17,7 +17,10 @@
 //   同组折叠头重复（预设/背景/自定义HDR 三处均曾双头）。ENV_GROUP_* 常量仅供 folder
 //   labelKey 消费。凡「folder 包裹 + 控件原带同名 group」都适用此约定。
 
-import type { PreviewControlDef, PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type {
+  PreviewControlDef,
+  PreviewMenuNode,
+} from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
 import type { EnvPresetId } from "./environment-state.ts";
 import { ENV_PRESETS } from "./environment-state.ts";

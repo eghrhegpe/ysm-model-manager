@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import type { SceneStats } from "@/preview-3d/infra/scene-stats.ts";
 import { buildStatsPanel, mergeStatsMenuItems } from "./stats.ts";
-import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 
 function stats(overrides: Partial<SceneStats> = {}): SceneStats {

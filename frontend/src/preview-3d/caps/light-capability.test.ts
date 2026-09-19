@@ -9,7 +9,7 @@ import {
 } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 

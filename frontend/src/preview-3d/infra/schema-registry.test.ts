@@ -15,7 +15,7 @@ import {
   makeYsmModelSchemaId,
   YSM_MODEL_SCHEMA_ID,
 } from "./schema-registry.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { SchemaBuilder } from "./schema-registry.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 

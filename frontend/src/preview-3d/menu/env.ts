@@ -17,7 +17,7 @@ import type {
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import { setEnvState } from "@/preview-3d/state/env-state.ts";
-import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { renderMenu } from "./render.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 

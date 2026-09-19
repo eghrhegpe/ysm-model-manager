@@ -45,7 +45,7 @@ import {
   type PreviewMenuCtx,
   type PreviewMenuHandle,
 } from "@/preview-3d/menu/core.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import {
   componentsStyleSheet,
   installComponentsStyles,

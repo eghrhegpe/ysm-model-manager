@@ -12,7 +12,11 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
-import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "./node-types.ts";
+import type {
+  PreviewActionMenuCtx,
+  PreviewMenuCtx,
+  PreviewMenuNode,
+} from "@/preview-3d/menu/schema/node-types.ts";
 import { frBuildToolsView, modelDetailView, roleBaseName } from "./roles-views.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 import { buildSwitchNodes, type SwitchState } from "./switch.ts";

@@ -29,10 +29,10 @@ import type { WaterCapability } from "./water-capability.ts";
 export type {
   PreviewControlDef,
   PreviewControlKind,
-} from "@/preview-3d/menu/menu-node-types.ts";
+} from "@/preview-3d/menu/schema/menu-node-types.ts";
 
 // PreviewMenuNode 同自共享叶（刀2 接口 getMenuNodes? 返回类型；caps 直产节点入口）
-import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 
 /* ============ 场景能力统一接口 ============ */
 

@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 
 const storage = vi.hoisted(() => ({
   get: vi.fn((_key: string) => null as string | null),

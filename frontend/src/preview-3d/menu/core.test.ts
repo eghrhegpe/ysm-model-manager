@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS } from "./defs.ts";
 import { mountPreviewRootMenu } from "./core.ts";
-import type { PreviewMenuNode } from "./menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { switchTabHighlightBg } from "./switch.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import {

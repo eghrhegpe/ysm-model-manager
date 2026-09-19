@@ -22,7 +22,7 @@ import { registerBuiltScene } from "@/preview-3d/infra/register-built-scene.ts";
 import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { MAX_MODELS, sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/core.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";

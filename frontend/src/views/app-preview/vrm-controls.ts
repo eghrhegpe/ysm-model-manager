@@ -6,7 +6,7 @@ import type {
   VrmMaterialDetail,
   VrmMaterialListItem,
 } from "@/preview-3d/materials/vrm-materials.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";
 
 /** 材质控制桥：复用 vrm-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在本文件 */

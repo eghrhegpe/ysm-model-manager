@@ -4,7 +4,7 @@
 // 无 group 无 master——5 控件平铺，各带 settingsOrder（并入 ⚙️ 设置面板聚合）。
 
 import * as THREE from "three";
-import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { RenderModeCapability } from "./render-mode-capability.ts";
 
 /** 混合模式选项（与旧 getMenuControls 内联常量同值） */

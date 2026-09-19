@@ -8,7 +8,7 @@
 //     首行即此开关可一键启停，故无需 getMasterNodeId 升 headerToggle）
 //   - 参数组 folder（preview.shadowGroupParams）：soft/map-size/bias/normal-bias/camera-size
 
-import type { PreviewMenuNode } from "@/preview-3d/menu/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { ShadowCapability } from "./shadow-capability.ts";
 
 const SHADOW_PARAMS_GROUP = "preview.shadowGroupParams";

@@ -59,7 +59,7 @@ function stubLightCap(opts: { opacity?: number } = {}) {
 }
 
 /** 递归查找节点树中的节点（postprocessing 节点树：顶层 + folder children） */
-function findNode(nodes: import("@/preview-3d/menu/menu-node-types.ts").PreviewMenuNode[], id: string): import("@/preview-3d/menu/menu-node-types.ts").PreviewMenuNode | undefined {
+function findNode(nodes: import("@/preview-3d/menu/schema/menu-node-types.ts").PreviewMenuNode[], id: string): import("@/preview-3d/menu/schema/menu-node-types.ts").PreviewMenuNode | undefined {
   for (const n of nodes) {
     if (n.id === id) return n;
     if (n.children) {

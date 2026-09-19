@@ -4,7 +4,7 @@
 // 渲染链路级交互测试见 litematic-3d.test.ts「camera 面板」组（真实 SlideMenu 弹层）。
 import { describe, expect, it, vi } from "vitest";
 import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
-import type { PreviewMenuCtx } from "./node-types.ts";
+import type { PreviewMenuCtx } from "@/preview-3d/menu/schema/node-types.ts";
 import { buildCameraSchema } from "./settings.ts";
 
 function makeBridge(): CameraControlBridge & { orbit: boolean; speed: number; resets: number } {

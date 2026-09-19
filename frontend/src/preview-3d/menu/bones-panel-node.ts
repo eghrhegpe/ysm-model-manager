@@ -27,7 +27,7 @@
 import type * as THREE from "three";
 import { makeBonePanelRenderer } from "@/preview-3d/adapters/vrm/vrm-bone-ui.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
-import type { PreviewMenuNode } from "./node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 
 /**
  * 骨骼面板清理引用（4 adapter 共用统一接口，ADR-074 S2）。

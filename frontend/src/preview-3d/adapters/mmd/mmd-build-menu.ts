@@ -28,8 +28,8 @@ import {
 import { makeBonesPanelItem } from "@/preview-3d/menu/bones-panel-node.ts";
 import { materialNodes } from "@/preview-3d/menu/material-controls.ts";
 import { morphNodes } from "@/preview-3d/menu/morph-controls.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/node-types.ts";
 import { perceptionNodes, pickPerceptionCaps } from "@/preview-3d/menu/perception-controls.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import type { MmdMenuItemsOpts, Stage5Ctx } from "./mmd-types.ts";
 

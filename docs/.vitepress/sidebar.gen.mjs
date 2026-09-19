@@ -231,6 +231,10 @@ export const autoSidebar = [
         "link": "/event-graph"
       },
       {
+        "text": "preview-3d 巡检追踪器",
+        "link": "/preview-3d-review-tracker"
+      },
+      {
         "text": "3D 预览菜单系统全景图",
         "link": "/preview-menu-overview"
       }

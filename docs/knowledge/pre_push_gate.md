@@ -66,7 +66,7 @@ pitfalls:
   - 改 Promise.all 并行结构漏写 () → 域级检查静默不跑（8/17 起 13 项失效实证）
   - push 被拒直接 --no-verify → 绕过不留审计；应修 FAIL 项或 git pull 整合
   - 判定字段写错位置 → 门禁静默假绿：`parseToolOutput` 的 `parsed._summary || parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`）
-  - 「门禁全绿」只证明清单内检查通过——32 个 check-*.ts 与清单项非一一对应（差额走 pre-commit / CI 旁路，或只挂前端域）。三档位扫描器（complexity / params / type-safety）2026-09-13 才接 FRONTEND_STATIC_TOOLS（debt + --files），`--all` / `--docs` 路径仍不跑；审核/锐评下结论必须附「跑了哪些 + N/32」覆盖率，不可外推为「仓库无风险」
+  - 「门禁全绿」只证明清单内检查通过——37 个 check-*.ts 与清单项非一一对应（差额走 pre-commit / CI 旁路，或只挂前端域）。三档位扫描器（complexity / params / type-safety）2026-09-13 才接 FRONTEND_STATIC_TOOLS（debt + --files），`--all` / `--docs` 路径仍不跑；审核/锐评下结论必须附「跑了哪些 + N/37」覆盖率，不可外推为「仓库无风险」
   - 「只挂 pre-commit 的闸 = 单点防线」`check-design-tokens` 曾长期只挂 pre-commit 硬阻断③，pre-push / CI 均无排查项——而 pre-commit 可被 `git commit --no-verify` 一条命令绕过（CI `--static` 模式的立项目的正是补这一层）。2026-09 补进 FRONTEND/ALL_STATIC_TOOLS（`--baseline` + debt + scopedFiles），与 `css-layer-check` 同等三重防护。2026-09-16 改口径（ADR-256）：FRONTEND 侧由 `--baseline` 换成 `--added-lines`（行级：只判本次推送引入的新增行，range 源 base..head，与 pre-commit 索引源共用 `_lib/diff-source.ts`）；ALL_STATIC_TOOLS 保留 `--baseline`，但那里已是**账本漂移报告**（全库 vs `baseline/design-tokens-baseline.json`），不再参与判定。**新增「只减不增」型闸一律双挂**（pre-commit 拦提交 + gate-config 拦推送/CI），勿只挂其一；但**判定口径别用行号入键**——实测 322/330 = 97.6% 的「新增」是位移幻影（可复算：`scripts/token-shift-audit.ts --window 120`；同上 ADR）
   - record() 只把 blockPolicy 用于判定 blocked、不写进 results → gate-report.policyTag 读到 undefined，**所有 FAIL 的归属标签退化为「本次引入」**（debt 存量债冒充本次引入，AI 会去修不属于自己的问题）。2026-09-13 修复并加行为契约（test_gate_ctx.ts 第 5/9 组）
   - 「增量裁剪边界」把「过滤后为空」当错误、把空 --files 静默当全库 → 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」
@@ -89,12 +89,11 @@ pitfalls:
   - 「判定口径 A/B/C 收口」2026-09-13（重锐评 #一）：体系内三套判定口径并存——A=parseToolOutput 宽容链（静态工具段，容忍情报型 rc 恒 0 工具）；B=requireSummaryOk 严格链（域检查块专用，缺 _summary.ok 一律 FAIL）；C=认特定计数字段的真特例（type-consistency issues===0 / link-checker links_broken===0，保留手写但 fail-closed）。menu-health / ctx-menu-i18n / binding-usage 三处已全量收编进 B，**新增域块判定一律走 B，禁止手写同形判定**（test_gate_parse_output.ts 尾部源码扫描断言锁死）
   - 「goTestCmd 数组化」2026-09-13（重锐评 #二②）：go 域 go test 分段执行改数组式 procRun（-race 段 + 普通段顺序执行，任一非零即 FAIL）——otherPkgs 来自 go list 输出（运行期数据），拼进 shell 命令违反 gate-ctx「禁入运行期数据」不变式（与旧 gofmt 拼串同模式递梯子）；goTestCmd 字符串仅作 label 展示
   - 「autoFix 写盘语义」2026-09-13（重锐评 #三）：static-tools 的 autoFix 是 pre-push-gate 唯一写仓库文件的执行点（gen 产物 FAIL 时写盘刷新后重验）。刻意不受 --dry-run 限制（commit-with-check 走 --files --dry-run，不刷新会阻断提交流）；写盘发生在 pre-push 钩子内，**被推送 oid 是刷新前快照——刷新产物不进本次推送、push 后工作树 gen 产物呈脏态属预期**，钩子内严禁 amend/git add（amend 不变式）
-  - "「覆盖尾行」2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。当前 29/32，未接入 3 项均为 pre-commit/doctor/CI 旁路检查"
+  - "「覆盖尾行」2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。**2026-09-19 更新：当前 33/37**——未接入仅 1 项 `check-comment-history.ts`（注释考古，观察期 WARN 非阻断），另 3 项为**刻意旁路**（`check-biome-lines` / `check-diff-coverage` / `check-go-coverage-threshold`，由 pre-commit / CI 独立承担）"
   - 「check-deadcode-baseline 的瞬态 FAIL」~~已修复~~（2026-09-13 P0）：jscpd 报告原写**固定路径** `frontend/report/jscpd-report.json` 且读完即删、无 pid 无锁，并行会话同跑门禁互相删读（同提交第一次红第二次绿）。现改为每进程独立 `mkdtemp` 临时目录（`os.tmpdir()/jscpd-gate-*`）承载报告，扫描 pattern 用绝对路径指回 `frontend/src`，`finally` 整目录清理——报告生命周期完全私有化，与 jscpd-go.ts 的 tmpdir 先例对齐。教训留存：**工具产物落盘共享路径 = 隐性进程间耦合**，任何检查项新增落盘产物时必须私有化路径或加锁
 status: active
 invariant_anchors:
   - scripts/_lib/gate-config.ts|ALL_STATIC_TOOLS
-  - scripts/_lib/gate-blocks/schedule.ts|ALL_STATIC_TOOLS
 ---
 
 # 推送前门禁 pre-push-gate
@@ -168,7 +167,7 @@ invariant_anchors:
 
 ### 静态工具（`runTools`，串行）
 
-- 清单单一事实来源 = `_lib/gate-config.ts`（`ALL_STATIC_TOOLS` 26 项 / `DOC_STATIC_TOOLS` / `DOC_EXTRA_SCRIPTS` / `FRONTEND_STATIC_TOOLS` / `GO_STATIC_TOOLS`）；gate 只调度不改清单
+- 清单单一事实来源 = `_lib/gate-config.ts`（`ALL_STATIC_TOOLS` 31 项 / `DOC_STATIC_TOOLS` / `DOC_EXTRA_SCRIPTS` / `FRONTEND_STATIC_TOOLS` / `GO_STATIC_TOOLS`）；gate 只调度不改清单
 - 审计类工具退出码不可靠（恒 0），必须解析 `--json` 的 `_summary` 判定——**判定语义收敛到 `_lib/gate-parse.ts`**（2026-09 锐评三刀 #3）：`parseToolOutput(out, rc, tool?)` 统一实现「`_summary.ok` → `errors===0` → 退回 rc」优先级链，`tryParseSummary` / `tryParseJson` 供域检查块/特殊块取字段；契约测试 `tests/test_gate_parse_output.ts` 锁死判定与 fail-closed 回退（非 JSON 输出 note 必须明示「回退 rc 判定」，不许静默假绿）
 - 生产端配对（2026-09-13）：扫描器用同模块的 `buildScanVerdict(errors, warnLines)` 把 `ok`/`errors`/`warns_list` 写进 `_summary`。**判定字段必须落在 `_summary` 内**——`parseToolOutput` 首行 `parsed._summary || parsed` 会在 `_summary` 存在时短路，写顶层 `ok` 一律读不到（实证：三脚本顶层 `ok` + rc 恒 0 → 门禁恒判通过）。`_summary.degraded===true` 时 note 追加 `degraded`，「扫描跳过」不得与「扫描通过」同形
 - autoFix 项（如 `event-graph --check`）FAIL 时自动跑写盘版刷新后重验（重验判定同样走 `parseToolOutput`）
@@ -186,7 +185,7 @@ AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴
 
 ### 门禁覆盖边界：清单外的 check 脚本（2026-09-13 核实）
 
-`scripts/check-*.ts` 共 **32** 个，`ALL_STATIC_TOOLS` 只列 **26** 项，差额不是笔误——部分脚本走 pre-commit / commit-with-check / CI 等旁路，另有 3 个**无任何自动化入口**，只能手动跑：
+`scripts/check-*.ts` 共 **37** 个，`ALL_STATIC_TOOLS` 只列 **31** 项，差额不是笔误——部分脚本走 pre-commit / commit-with-check / CI 等旁路，或只挂前端域。**当前「未接入任何自动化入口」的只剩 1 个**：`check-comment-history.ts`（注释考古，观察期 WARN 非阻断）。2026-09-13 首查时无守护的是下面这 3 个（现已接线，表内为当前状态）：
 
 | 脚本 | 自动化入口 | 内容 |
 |------|-----------|------|
@@ -214,7 +213,7 @@ AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴
 
 **2026-09-15 浅克隆击穿「直推 main 兜底」（check-go-diff-coverage，修 main CI 同批第二处红）**：修完 TS2688 后 CI 仍在本步红，报 `fatal: ambiguous argument 'HEAD~1...HEAD': unknown revision` + `[check-go-diff-coverage] git diff 执行失败，拒绝空跑放行`（exit 2）。根因**不在该脚本自身**：`.github/workflows/test.yml` 的覆盖率步骤跑 `git fetch origin main --depth=1`，而 checkout 是 `fetch-depth: 0` 全量克隆——**`--depth=1` 抓取会把整仓退化为浅克隆**（生成 `.git/shallow`），`HEAD~1` 随即不可解析（原注释「git fetch 幂等、无害」是错的：它恰恰截断了历史）。而 `_lib/diff-coverage-core.ts|getChangedFiles` 与其同款 `getChangedLines` 的「直推 main 兜底」（`${head}~1...${head}`）依赖 `HEAD~1` 可解析，git 报错 → 返回 `null` → 调用方按「解析失败」fail-closed 硬阻断。**关键语义**：浅历史下 `base...head` 本就为空（`origin/main==HEAD`，本次范围无变更文件）⇒ 正确结果是**空数组**（谁都不该背锅），与 `null`（解析失败）必须严格区分——旧代码把「兜底不可用」误升级成「解析失败」。双层修法：① 脚本侧两处兜底先 `git rev-parse --verify --quiet ${head}~1^{commit}` 探可达，不可达即跳过兜底（不报错）；② workflow 侧改 `git fetch origin main`（去掉 `--depth=1`），保持历史完整。护栏 `tests/test_diff_coverage_shallow.ts`：临时仓库 `--depth=1` 造真浅克隆 → 断言 `HEAD~1` 确不可解析（前置条件，防完整历史下假绿）→ 直接调真实 `getChangedFiles` 断言返回 `[]` 而非 `null`（反向对照：旧代码 exit 1）。**通用教训**：`--depth=1` 不是「少拿点数据」而是**改变仓库形态**，凡与 `fetch-depth: 0` 混用即自毁历史；同理「兜底路径」必须先自证前置条件可达，否则兜底失败会被上层读成主路径失败。附带辨误：同批 `check-deadcode-baseline` 虽报 `errors=8` 但 `blockPolicy: "debt"`（非阻断，工作流继续），**不是**本次红的原因——读 CI 红须认 `blockPolicy`，别见 error 就当阻断源。
 
-**推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/32」——只跑子集（如 5/32）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，交叉复核见 `git show bf0ab60c7:deliverables/views-review-crosscheck-2026-09-13.md`——该报告已随 `deliverables/` 目录退出工作区，正文改引提交以便复核，不再依赖磁盘路径）。三档位扫描器接门禁后已在前端域被拦（debt 告警、不阻断），但 `--all` 全量路径仍不跑——覆盖率口径照旧须报告。
+**推论**：门禁全绿 = 「清单内静态工具 + 域检查 + 契约测试」全绿，**不等于**「仓库无风险」。审计/锐评下结论前须逐项确认覆盖，并报告「跑了哪些 + N/37」——只跑子集（如 5/37）极易漏掉 `check-complexity` 这类成规模问题（实证：views 域 10 个 🟥 可复现，交叉复核见 `git show bf0ab60c7:deliverables/views-review-crosscheck-2026-09-13.md`——该报告已随 `deliverables/` 目录退出工作区，正文改引提交以便复核，不再依赖磁盘路径）。三档位扫描器接门禁后已在前端域被拦（debt 告警、不阻断），但 `--all` 全量路径仍不跑——覆盖率口径照旧须报告。
 
 ### 其他
 

@@ -327,8 +327,9 @@ func validateHTTPResponse(resp *http.Response) error {
 }
 
 // atomicFile 原子写入会话：封装同目录临时文件的成功/失败路径管理。
-// 续传 ADR 落地时会新增「Resume 模式」：OpenFile(O_APPEND) 替代 CreateTemp、
-// 本地字节数读取→Range 头计算→commitAtomicWrite 验证链统一复用。
+// （备用，非排期——本包队列路径无校验和，续传刻意不做，详见 downloadTo 头【续传决策 · ADR-273】。
+// 若将来带 SHA 的调用方需 Resume 模式：OpenFile(O_APPEND) 替代 CreateTemp、
+// 本地字节数读取→Range 头计算→commitAtomicWrite 验证链统一复用。）
 type atomicFile struct {
 	tmp       *os.File
 	tmpName   string
@@ -340,7 +341,7 @@ type atomicFile struct {
 // 闭包语义：commit() 之前任何错误返回都由 defer cleanup(false) 执行 Windows 安全顺序
 // （先 Close 再 Remove——Windows 无法删打开句柄；Close 对已 Close 无害）；
 // cleanup(true) 等价 commitAtomicWrite（预留简化接口）。
-// 原 downloadTo L278-296 CreateTemp+内联 defer 升格，后续续传的 Resume 模式封装入口。
+// 原 downloadTo L278-296 CreateTemp+内联 defer 升格（拆分留档；本包续传刻意不做，见 ADR-273）。
 func prepareAtomicWrite(savePath string) (*atomicFile, func(), error) {
 	tmp, err := os.CreateTemp(filepath.Dir(savePath), filepath.Base(savePath)+".part-*")
 	if err != nil {
@@ -475,14 +476,21 @@ func commitAtomicWrite(af *atomicFile, downloaded, usedTotal int64, onProgress P
 // 错误分类用 sentinel（ErrTruncated 等）+ 类型化（HTTPStatusError / TruncationError），
 // 调用方用 errors.Is / errors.As 判断类别，不要靠英文子串 contains 匹配（#11 反模式）。
 //
-// 【ADR 断点续传接入点】：七段子函数是清晰的插槽。续传新增一条旁路：
-//  1. prepareDownloadEnv 完全复用（互斥锁、scheme 校验、目录创建、重定向守卫）
-//  2. doDownloadRequest → 注入 Range: bytes=N- 头（加 reqModifier 形参）
-//  3. validateHTTPResponse → 替换为新建 validatePartialResponse（核对 206 + bytes N-total/total 且 N=本地已收字节，新建安全校验链，不破坏现有 BUG-HTTP-2 防线）
-//  4. prepareAtomicWrite → 替换为 resumeAtomicWrite（O_APPEND 打开已有的 .part，读本地字节数填 downloaded）
-//  5. copyResponseBodyWithProgress 完全复用（续传继续往文件尾部写）
-//  6. verifyDownloadedFile 完全复用（整文件 SHA256 + 字节数一致）
-//  7. commitAtomicWrite 完全复用
+// 【续传决策 · ADR-273】本包续传**刻意不做**：唯一在产消费者是队列路径（app_download.go 的
+//
+//	 dl.File / FromGitHubAPI），它①无 expectedSHA256、②走 raw→jsdelivr→github-api 三源回退，
+//	 跨会话/跨源续传字节流未必一致且无 SHA 兜底 → 拼坏风险；而模型文件仅几 MB、重下成本远低于该风险。
+//	 ADR-273 落盘账本对队列只续排「未开始」任务、在途者重启重下，正是有意为之，非缺陷。
+//	 续传唯一**安全**落点是 updater（updater.go，带强制 SHA256，见 app_config.go 的 DownloadWithProgress）。
+//	 下面七段是 2026-08 第6刀拆分留下的复用插槽，仅作设计留档、非排期承诺；若将来确有带 SHA 的调用方接入，
+//	 旁路配方如下：
+//	1. prepareDownloadEnv 完全复用（互斥锁、scheme 校验、目录创建、重定向守卫）
+//	2. doDownloadRequest → 注入 Range: bytes=N- 头（加 reqModifier 形参）
+//	3. validateHTTPResponse → 替换为新建 validatePartialResponse（核对 206 + bytes N-total/total 且 N=本地已收字节，新建安全校验链，不破坏现有 BUG-HTTP-2 防线）
+//	4. prepareAtomicWrite → 替换为 resumeAtomicWrite（O_APPEND 打开已有的 .part，读本地字节数填 downloaded）
+//	5. copyResponseBodyWithProgress 完全复用（续传继续往文件尾部写）
+//	6. verifyDownloadedFile 完全复用（整文件 SHA256 + 字节数一致）
+//	7. commitAtomicWrite 完全复用
 func (d *Downloader) downloadTo(ctx context.Context, url, savePath, accept string, onProgress ProgressFn, expectedSHA256 []byte) error {
 	// 阶段 ①：环境准备（scheme 校验 + 互斥锁 + 目录 + 受限重定向 client）
 	client, mu, err := d.prepareDownloadEnv(url, savePath)

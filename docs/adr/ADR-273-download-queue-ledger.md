@@ -39,7 +39,13 @@
 
 - **正面**：批量下载崩溃/重启后未开始的自动续排；损坏/版本不符的账本安全降级为无账本、不阻断启动；前端零改动（仍只收 `queue:status`，归属红线不破）。
 - **负面**：多一次 JSON 落盘 IO（每任务出队一次，量级小，`ledgerMu` 串行化 last-writer-wins 可接受）。
-- **已知遗留**：在途任务的断点续传（`.part`/Range）未做，留给后续「续传 ADR」；孤儿 `.part-*` 启动清理未纳入本 ADR。
+- **已知遗留 / 续传边界（本轮实测钉死）**：在途任务的断点续传（`.part`/Range）**不在本包做**——`download.go` 的
+  唯一在产消费者是队列路径（`app_download.go` 的 `dl.File`/`FromGitHubAPI`），它**无 expectedSHA256 且走三源回退**，
+  跨会话/跨源续传字节流未必一致又无哈希兜底 → 拼坏风险；模型文件仅几 MB，重下成本远低于该风险，故账本对队列
+  **只续排「未开始」任务、在途者重启重下是有意为之**。`download.go` 的 `FileWithChecksum`/`FromGitHubAPIWithChecksum`
+  （唯一能安全续传的带校验和入口）**当前零消费者**。续传唯一安全落点是 **updater**（`updater.go`，带强制 SHA256，
+  经 `app_config.go` 的 `DownloadWithProgress` 调用），若将来要做应单开 ADR 针对 updater，而非填本包插槽。
+  `downloadTo` 头【续传决策 · ADR-273】注释即据此结论改写，防后续会话被"落地时"措辞钓走。孤儿 `.part-*` 启动清理亦未纳入。
 
 ## 4. 数据溯源
 

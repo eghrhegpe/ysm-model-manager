@@ -12,10 +12,9 @@
 //   - 新增 cap 想进设置面板：在自己文件里给控件加 settingsOrder 即可，本文件零改动
 
 import { tOf } from "@/core/i18n/t.ts";
-import type { PreviewControlDef, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/infra/keymap.ts";
-import { capControlsToNodes } from "@/preview-3d/menu/render/cap-to-node.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { SlideMenuHandle } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "@/preview-3d/state/perf-presets.ts";
@@ -150,8 +149,8 @@ export function buildSettingsSchema(
     bsBuildSectionTitle("settings-perf-header", "preview.settingsPerf"),
     // 性能档位：一键套用低/中/高（数据表驱动）；切档后 menu.refresh() 刷新兄弟控件显示
     bsBuildPerfPresetRow(menu),
-    // [ADR-195 刀 2.5] 横切控件转节点展开（原 controls 通道退役）
-    ...capControlsToNodes(buildCrossCuttingControls()),
+    // [ADR-195 刀 2.5] 横切控件直产原生节点展开（桥接层退役）
+    ...buildCrossCuttingNodes(),
     bsBuildSectionTitle("settings-quality-header", "preview.settingsQuality"),
     // [ADR-195 刀 2.5] cap 聚合节点直接展开（collectSettingsCapControls 返回节点数组）
     ...collectSettingsCapControls(),
@@ -170,46 +169,52 @@ const FPS_OPTIONS: ReadonlyArray<{ value: string; labelKey: string }> = [
 ];
 
 /**
- * 横切设置控件（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道，
+ * 横切设置节点（ADR-125 P1）：三项各自原为 20-30 行手写 DOM 闭包 + 独立读写通道，
  * 现统一为纯数据节点，读写经 `settingsState` 的 `render.*` 路径。
+ * [ADR-195 刀 1] 直产 PreviewMenuNode（简单控件原生节点 + control spec 闭包），
+ * 不再经 cap-to-node 桥接层从 PreviewControlDef 投影。
  */
-export function buildCrossCuttingControls(): PreviewControlDef[] {
+export function buildCrossCuttingNodes(): PreviewMenuNode[] {
   return [
     {
       id: "settings-frustum-cull",
       kind: "toggle",
       labelKey: "preview.settingsFrustumCull",
-      fallback: "视锥裁剪",
+      label: "视锥裁剪",
       hintKey: "preview.settingsFrustumCullHint",
-      getValue: () => getStateValue("render.frustumCull") as boolean,
-      setValue: (v) => setStateValue("render.frustumCull", v),
+      control: {
+        get: () => getStateValue("render.frustumCull") as boolean,
+        set: (v) => setStateValue("render.frustumCull", v as boolean),
+      },
     },
     {
       id: "settings-fps",
       kind: "select",
       labelKey: "preview.settingsMaxFps",
-      fallback: "帧率上限",
-      select: FPS_OPTIONS.map((o) => ({
-        value: o.value,
-        label: tOf(o.labelKey),
-      })),
-      getValue: () => String(getStateValue("render.maxFps")),
-      setValue: (v) => setStateValue("render.maxFps", v),
+      label: "帧率上限",
+      control: {
+        options: FPS_OPTIONS.map((o) => ({
+          value: o.value,
+          label: tOf(o.labelKey),
+        })),
+        get: () => String(getStateValue("render.maxFps")),
+        set: (v) => setStateValue("render.maxFps", v as string),
+      },
     },
     {
       id: "settings-pixel-ratio",
       kind: "slider",
       labelKey: "preview.settingsMaxPixelRatio",
-      fallback: "渲染分辨率上限",
-      getValue: () => getStateValue("render.maxPixelRatio") as number,
-      // 拖动是高频写入：跳过通知，避免每 0.25 步进触发面板重算
-      setValue: (v) => setStateValue("render.maxPixelRatio", v, { notify: false }),
-      // 松手提交是离散操作：广播一次，供 subscribe 驱动的面板重算/谓词响应
-      slider: {
+      label: "渲染分辨率上限",
+      control: {
         min: 0.5,
         max: 2,
         step: 0.25,
         unit: "x",
+        get: () => getStateValue("render.maxPixelRatio") as number,
+        // 拖动是高频写入：跳过通知，避免每 0.25 步进触发面板重算
+        set: (v) => setStateValue("render.maxPixelRatio", v as number, { notify: false }),
+        // 松手提交是离散操作：广播一次，供 subscribe 驱动的面板重算/谓词响应
         onCommit: (v) => setStateValue("render.maxPixelRatio", v),
       },
     },
@@ -258,10 +263,10 @@ export function collectSettingsCapControls(): PreviewMenuNode[] {
 }
 
 /** 设置面板全部控件节点（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM。
- *  [ADR-195 刀 2.5] 统一 PreviewMenuNode[]：横切控件定义（PreviewControlDef）经 capControlsToNodes
- *  桥接成节点，与聚合节点同流。 */
+ *  [ADR-195 刀 2.5] 统一 PreviewMenuNode[]：横切节点（buildCrossCuttingNodes 直产）
+ *  与聚合节点同流。 */
 export function buildSettingsControls(): PreviewMenuNode[] {
-  return [...capControlsToNodes(buildCrossCuttingControls()), ...collectSettingsCapControls()];
+  return [...buildCrossCuttingNodes(), ...collectSettingsCapControls()];
 }
 
 // ── 通用节点工厂 ──

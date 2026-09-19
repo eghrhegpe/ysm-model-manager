@@ -230,7 +230,7 @@ export interface PreviewMenuNode {
    *  本字段不参与「i18n 缺 key 回退」，只装数据明文。 */
   label?: string;
   /** 控件辅助说明 i18n 键（[ADR-195] 自 PreviewControlDef.hintKey 同构——toggle/select/slider
-   *  渲染在 label 右侧小字；capControlToNode 透传，节点渲染器经 spec/节点读取） */
+   *  渲染在 label 右侧小字；节点直产即携带，节点渲染器经 spec/节点读取） */
   hintKey?: string;
   /** [ADR-195 刀2] 设置面板聚合序号（自 PreviewControlDef.settingsOrder 同构）：定义后该
    *  节点自动并入 ⚙️ 设置面板，按本值升序排列。settings 聚合 collectSettingsCapControls

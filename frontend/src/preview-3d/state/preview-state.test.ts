@@ -19,7 +19,7 @@ import {
   toStatePath,
 } from "./preview-state.ts";
 import {
-  buildCrossCuttingControls,
+  buildCrossCuttingNodes,
   collectSettingsCapControls,
   buildSettingsControls,
   buildSettingsSchema,
@@ -30,7 +30,6 @@ import {
 import type { PreviewMenuCtx } from "@/preview-3d/menu/engine/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { renderMenu } from "@/preview-3d/menu/render/render.ts";
-import { capControlsToNodes } from "@/preview-3d/menu/render/cap-to-node.ts";
 import { collectVisiblePredicates } from "@/preview-3d/menu/render/cap-controls.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
@@ -50,11 +49,11 @@ const renderMenuStubDeps = {
   actionCtx: { toast: () => {}, closeAllOverlays: () => {} },
 };
 
-/** 最小 fake cap：仅实现状态层会探到的开关语义 + 自报控件 */
+/** 最小 fake cap：仅实现状态层会探到的开关语义 + 自报节点 */
 function makeFakeCap(
   id: string,
   opts: {
-    controls?: PreviewControlDef[];
+    nodes?: PreviewMenuNode[];
     env?: boolean;
     envMethods?: boolean;
     /** RenderModeCapability 的 wireframe 单项语义（getWireframe/setWireframe） */
@@ -76,7 +75,7 @@ function makeFakeCap(
     descKey: `cap.${id}.desc`,
     enabled: false,
     envOn: opts.env === true,
-    controls: opts.controls ?? [],
+    nodes: opts.nodes ?? [],
     apply: vi.fn(),
     dispose: vi.fn(),
     setEnabled(v: boolean) {
@@ -87,10 +86,9 @@ function makeFakeCap(
       cap.envOn = v;
     },
     isEnvironmentEnabled: () => cap.envOn,
-    // [ADR-195 刀3] fake cap 走 getMenuNodes（接口已删 getMenuControls）——
-    // controls 选项（PreviewControlDef[]）经 capControlsToNodes 桥接成节点树，
+    // [ADR-195 刀1] fake cap 直产 getMenuNodes 节点树（bridge 退役），
     // 对齐 collectSettingsCapControls 只收 getMenuNodes 分支的现状。
-    getMenuNodes: () => capControlsToNodes(cap.controls),
+    getMenuNodes: () => cap.nodes,
     saveState: vi.fn(),
     loadState: vi.fn(),
   };
@@ -349,26 +347,26 @@ describe("P1 状态层 — 订阅通知", () => {
 
 describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
   it("横切三项为数据节点，id 稳定且带绑定语义", () => {
-    const ids = buildCrossCuttingControls().map((c) => c.id);
+    const ids = buildCrossCuttingNodes().map((c) => c.id);
     expect(ids).toEqual(["settings-frustum-cull", "settings-fps", "settings-pixel-ratio"]);
   });
 
   it("横切控件读写直连状态层（改控件值 = 改状态 = 落盘）", () => {
-    const [frustum, fps] = buildCrossCuttingControls();
-    frustum.setValue(true);
+    const [frustum, fps] = buildCrossCuttingNodes();
+    frustum.control!.set!(true);
     expect(getStateValue("render.frustumCull")).toBe(true);
-    fps.setValue("30");
+    fps.control!.set!("30");
     expect(getStateValue("render.maxFps")).toBe(30);
   });
 
   it("pixel-ratio：拖拽写入不广播（notify:false 抑制高频），松手提交 onCommit 广播一次", () => {
-    const [, , ratio] = buildCrossCuttingControls();
+    const [, , ratio] = buildCrossCuttingNodes();
     const seen: (typeof KNOWN_PATHS)[number][] = [];
     const off = subscribeSettings((p) => seen.push(p));
-    ratio.setValue(1.25); // 拖拽高频写入：值落盘但不通知
+    ratio.control!.set!(1.25); // 拖拽高频写入：值落盘但不通知
     expect(localStorage.getItem(MAX_PIXEL_RATIO_KEY)).toBe("1.25");
     expect(seen).toEqual([]);
-    ratio.slider!.onCommit!(1.5); // 松手提交：离散操作，广播一次
+    ratio.control!.onCommit!(1.5); // 松手提交：离散操作，广播一次
     expect(localStorage.getItem(MAX_PIXEL_RATIO_KEY)).toBe("1.5");
     expect(seen).toEqual(["render.maxPixelRatio"]);
     off();
@@ -385,26 +383,31 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     expect(sel!.options.length).toBe(4);
   });
 
-  it("自动聚合：仅收 settingsOrder 声明项，升序且抹平 group", () => {
-    const mk = (id: string, order: number | undefined): PreviewControlDef => ({
+  it("自动聚合：仅收 settingsOrder 声明项，升序且剥 folder 壳", () => {
+    const mk = (id: string, order: number | undefined): PreviewMenuNode => ({
       id,
       kind: "toggle",
       labelKey: id,
-      fallback: id,
-      group: "preview.someGroup",
       // 仅在声明顺序时附带（order undefined → 缺省未被 collectSettingsCapControls 收编）
       ...(order !== undefined ? { settingsOrder: order } : {}),
-      getValue: () => false,
-      setValue: vi.fn(),
+      control: { get: () => false, set: vi.fn() },
     });
+    // 真实 cap 用 folder 表达分组折叠：collectSettingsCapControls 应递归展平、不收壳
     const cap = makeFakeCap("fakecap", {
-      controls: [mk("c-30", 30), mk("c-10", 10), mk("c-hidden", undefined)],
+      nodes: [
+        {
+          id: "cap-group-c-30",
+          kind: "folder",
+          labelKey: "preview.someGroup",
+          children: [mk("c-30", 30), mk("c-10", 10), mk("c-hidden", undefined)],
+        },
+      ],
     });
     mountCaps(cap);
 
     const got = collectSettingsCapControls();
     expect(got.map((c) => c.id)).toEqual(["c-10", "c-30"]);
-    // settings 扁平不收 folder 组（节点形态无 group 字段——folder 已剥）
+    // settings 扁平不收 folder 组（folder 壳被剥、其 children 递归展平）
     expect(got.every((c) => c.kind !== "folder")).toBe(true);
   });
 
@@ -417,14 +420,13 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     expect(ids()).not.toContain("pp-enabled");
 
     const cap = makeFakeCap("postprocessing", {
-      controls: [{
+      nodes: [{
         id: "pp-enabled",
         kind: "toggle",
         labelKey: "preview.postprocessing",
-        fallback: "后处理管线",
+        label: "后处理管线",
         settingsOrder: 10,
-        getValue: () => true,
-        setValue: vi.fn(),
+        control: { get: () => true, set: vi.fn() },
       }],
     });
     mountCaps(cap);
@@ -452,26 +454,24 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
 
   it("cap schema 面板为声明式节点（原生/controls，非 custom 套壳）", () => {
     // 灯光/阴影/后处理面板不再用 renderCustom 套壳手调 renderCapControls——
-    // 直接是声明式节点（AGENTS.md「禁止手写 3d 菜单」）。code_review efb8b20c2 P1：
-    // getMenuNodes 是可选成员，未迁移 fake（仅 getMenuControls）走 capControlsToNodes
-    // 回退——断言不 TypeError 且产出原生节点（此前无条件 getMenuNodes() 必炸）
-    const ctrl: PreviewControlDef = {
+    // 直接是声明式节点（AGENTS.md「禁止手写 3d 菜单」）。[ADR-195 刀1] fake cap 直产
+    // 原生 slider 节点（bridge 退役，无 getMenuControls 回退）——断言面板首节点即
+    // 声明式 slider、非 custom。
+    const sliderNode: PreviewMenuNode = {
       id: "fake-slider",
       kind: "slider",
       labelKey: "preview.fake",
-      fallback: "fake",
-      slider: { min: 0, max: 1, step: 0.1 },
-      getValue: () => 0,
-      setValue: () => {},
+      label: "fake",
+      control: { min: 0, max: 1, step: 0.1, get: () => 0, set: () => {} },
     };
     mountCaps(
-      makeFakeCap("light", { controls: [ctrl] }),
-      makeFakeCap("shadow", { controls: [ctrl] }),
-      makeFakeCap("postprocessing", { controls: [ctrl] }),
+      makeFakeCap("light", { nodes: [sliderNode] }),
+      makeFakeCap("shadow", { nodes: [sliderNode] }),
+      makeFakeCap("postprocessing", { nodes: [sliderNode] }),
     );
     const ctx = { getCap: () => null } as unknown as PreviewMenuCtx;
     const lighting = buildLightingSchema(ctx);
-    expect(lighting[0]!.kind).toBe("slider"); // 回退桥接：简单控件转原生节点
+    expect(lighting[0]!.kind).toBe("slider"); // cap 直产原生 slider 节点
     expect(lighting[0]!.kind).not.toBe("custom");
     const shadow = buildShadowSchema(ctx);
     expect(shadow[0]!.kind).toBe("slider");
@@ -518,14 +518,14 @@ describe("P3 visible 规则 — 条件显隐可集中枚举（B 轨 visibleWhen 
   });
 
   it("聚合到设置面板的控件如带 visibleWhen，谓词仍可枚举（不被抹平丢失）", () => {
-    const gated: PreviewControlDef = {
-      id: "c-gated", kind: "toggle", labelKey: "c", fallback: "c",
+    const gated: PreviewMenuNode = {
+      id: "c-gated", kind: "toggle", labelKey: "c",
       settingsOrder: 5, visibleWhen: () => true,
-      getValue: () => false, setValue: vi.fn(),
+      control: { get: () => false, set: vi.fn() },
     };
-    mountCaps(makeFakeCap("fakecap", { controls: [gated] }));
+    mountCaps(makeFakeCap("fakecap", { nodes: [gated] }));
     // [ADR-195 刀 2.5] collectSettingsCapControls 返回 PreviewMenuNode[]；
-    // 节点也带 visibleWhen，直接枚举（capControlToNode 桥接携带 visibleWhen + settingsOrder）。
+    // 节点自带 visibleWhen，直产节点即携带（bridge 退役，无投影环节）。
     const visibleNodes = collectSettingsCapControls().filter((n) => n.visibleWhen !== undefined);
     expect(visibleNodes.map((n) => n.id)).toEqual(["c-gated"]);
   });

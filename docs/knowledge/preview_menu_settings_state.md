@@ -165,7 +165,7 @@ resetSettingsListeners()                 // 测试隔离
 toStatePath(path)                        // 编译期契约守卫
 
 // 设置面板
-buildCrossCuttingControls()              // 3 个横切数据节点
+buildCrossCuttingNodes()                 // 3 个横切数据节点（直产 PreviewMenuNode，桥接层退役）
 collectSettingsCapControls()             // 自动聚合（settingsOrder 升序 + 抹平 group）
 buildSettingsControls()                  // 横切 + 聚合，供契约测试断言
 

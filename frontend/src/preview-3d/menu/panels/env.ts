@@ -2,8 +2,8 @@
 // 2026 收口：环境面板对齐 scene 组根视图 / roles / MikuMikuAR env 一级菜单——
 // 「行 + navigate 下钻」形态（推翻 ADR-193 第三刀 folder 手风琴拍板）：
 //   - 一级：氛围预设 select + 每 cap 一行（icon + label + 可选 headerToggle 能力开关）
-//   - 二级：点行 → actionCtx.navigate 下钻到该 cap 参数页（ADR-195 刀1 起经
-//     cap-to-node 桥接转 PreviewMenuNode[] 走 renderMenu，group 折叠由节点 folder 承载）
+//   - 二级：点行 → actionCtx.navigate 下钻到该 cap 参数页（ADR-195 刀1 起 cap 经
+//     getMenuNodes 直产 PreviewMenuNode[] 走 renderMenu，group 折叠由节点 folder 承载）
 // 行渲染复用 render.ts 唯一 row 生成器（slide-item + radio/badge/headerToggle 槽位），
 // 与 roles 同构，消除「env 手风琴 vs 其余面板行列表」的形态割裂。
 
@@ -158,7 +158,7 @@ function envCapSubNodes(cap: SceneCapability): PreviewMenuNode[] {
 const ENV_SUBVIEW_DEPS = {
   makeRow: (): HTMLDivElement => document.createElement("div"),
   makePanelView: (): never => {
-    throw new Error("cap 参数子视图不应含 panel/action/row 节点（cap-to-node 桥接层）");
+    throw new Error("cap 参数子视图不应含 panel/action/row 节点（cap getMenuNodes 直产）");
   },
   menu: {
     refresh: (): void => {},

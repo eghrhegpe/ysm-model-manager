@@ -638,7 +638,7 @@ export function collectVisiblePredicates(controls: PreviewControlDef[]): Preview
 }
 
 /** 单控件渲染分派（code_review ADR-195 #6：仅 renderCapControls 循环体自用——
- *  cap-to-node 桥接层走 controls 通道整组渲染而非单控件委托，无外部消费者，
+ *  复杂控件走 controls 通道由 renderCapControls 整组渲染而非单控件委托，无外部消费者，
  *  故不导出；如需单控件委托再恢复 export）。
  *  与 renderCapControls 循环体共享同一分派臂（exhaustive switch 单源），
  *  保证「整组渲染」与「单控件委托渲染」视觉/行为零分歧。

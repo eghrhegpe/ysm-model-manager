@@ -23,7 +23,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - buildCameraSchema
-    - buildCrossCuttingControls
+    - buildCrossCuttingNodes
     - buildEnvSchema
     - buildLightingSchema
     - buildPostprocessingSchema

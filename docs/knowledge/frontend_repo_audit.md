@@ -130,7 +130,6 @@ auto_fields:
     - buildBoneNamesText
     - buildBoneTree
     - buildCameraSchema
-    - buildCrossCuttingControls
     - buildCubeMeshData
     - buildDownloadTasks
     - buildEnvSchema

@@ -12,7 +12,7 @@ auto_fields:
   symbols_with_lines:
     - bindFieldRestorers
     - buildCameraSchema
-    - buildCrossCuttingControls
+    - buildCrossCuttingNodes
     - buildLightingSchema
     - buildPostprocessingSchema
     - buildSettingsControls

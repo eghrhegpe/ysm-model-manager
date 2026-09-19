@@ -21,33 +21,49 @@ import (
 	"ysm-model-manager/go/types/registry"
 )
 
+// perfTargetParamSpecs 是 registerPerfTargetFlags 所对应五参的 ParamSpec 声明
+// （target / order / rtype / model / max-models，与 flag 定义序一致）。
+// concurrent-bench 与 single-bench 在同一位置共用这一段——登记处经 perfSpecs()
+// 拼接，避免两处逐行重复（jscpd-go 门禁：原为文件内自重复对）。
+var perfTargetParamSpecs = []ParamSpec{
+	{Key: "target", Type: ParamString},
+	{Key: "order", Type: ParamString},
+	{Key: "rtype", Type: ParamString},
+	{Key: "model", Type: ParamString},
+	{Key: "max-models", Type: ParamNumber},
+}
+
+// perfSpecs 拼接登记参数序列：prefix + 共享 perfTargetParamSpecs + suffix。
+// 各命令只在 prefix/suffix 表达自己独有的参数，共享段单一事实源。
+func perfSpecs(prefix []ParamSpec, suffix ...ParamSpec) []ParamSpec {
+	out := make([]ParamSpec, 0, len(prefix)+len(perfTargetParamSpecs)+len(suffix))
+	out = append(out, prefix...)
+	out = append(out, perfTargetParamSpecs...)
+	out = append(out, suffix...)
+	return out
+}
+
 func init() {
 	RegisterCommandC("concurrent-bench", CatPerf, "并发能力基准测试（串行 vs 并行对比，建议先优化单模型）", runConcurrentBench,
 		// ADR-173：登记后桥才走 ParamSpec 通道；此前无 spec → 走 legacy 告警路径。
 		// 与 flag 定义序一致（workers → registerPerfTargetFlags 的五参 → format）。
-		ParamSpec{Key: "workers", Type: ParamNumber},
-		ParamSpec{Key: "target", Type: ParamString},
-		ParamSpec{Key: "order", Type: ParamString},
-		ParamSpec{Key: "rtype", Type: ParamString},
-		ParamSpec{Key: "model", Type: ParamString},
-		ParamSpec{Key: "max-models", Type: ParamNumber},
-		ParamSpec{Key: "format", Type: ParamString},
+		perfSpecs(
+			[]ParamSpec{{Key: "workers", Type: ParamNumber}},
+			ParamSpec{Key: "format", Type: ParamString},
+		)...,
 	)
 	RegisterCommandC("single-bench", CatPerf, "单模型加载基准测试（优化基础，单模型快=所有场景快）", runSingleBench,
 		// 与 flag 定义序一致：iterations → registerPerfTargetFlags 的 target/order/rtype/model/max-models
 		// → 基准三参 → format。
 		// ⚠️ --target 是**目标集 selector**（model/rtype/all/repo），--model 是该 selector 下的**路径载荷**，
 		// 二者不是同一个参数（旧面的 --rtype/--all-types/--top-largest 已全部并入 --target）。
-		ParamSpec{Key: "iterations", Type: ParamNumber},
-		ParamSpec{Key: "target", Type: ParamString},
-		ParamSpec{Key: "order", Type: ParamString},
-		ParamSpec{Key: "rtype", Type: ParamString},
-		ParamSpec{Key: "model", Type: ParamString},
-		ParamSpec{Key: "max-models", Type: ParamNumber},
-		ParamSpec{Key: "baseline", Type: ParamString},
-		ParamSpec{Key: "save-baseline", Type: ParamString},
-		ParamSpec{Key: "threshold", Type: ParamNumber},
-		ParamSpec{Key: "format", Type: ParamString},
+		perfSpecs(
+			[]ParamSpec{{Key: "iterations", Type: ParamNumber}},
+			ParamSpec{Key: "baseline", Type: ParamString},
+			ParamSpec{Key: "save-baseline", Type: ParamString},
+			ParamSpec{Key: "threshold", Type: ParamNumber},
+			ParamSpec{Key: "format", Type: ParamString},
+		)...,
 	)
 }
 
@@ -871,8 +887,10 @@ func collectBenchTarget(ctx *CmdContext, path, rtype string, iterations int, ent
 	return payload, false, mismatch
 }
 
-// buildMatrixPayload 把类型分组采集为矩阵载荷（--target rtype 与 all 共用同一形状，差异全在 spec）。
-func buildMatrixPayload(ctx *CmdContext, spec perfTargetSpec, groups []perfTypeGroup) singleBenchMatrixJSON {
+// newMatrixPayload 构造矩阵载荷骨架：spec 五字段回显 + size_source 判定 + models 预分配
+// （modelsCap=0 即不预分配容量）。矩阵（rtype/all）与全库（repo）两条目标集共用同一形状，
+// 差异只在下游填充——原为两处逐行重复（jscpd-go 门禁：文件内自重复对）。
+func newMatrixPayload(spec perfTargetSpec, modelsCap int) singleBenchMatrixJSON {
 	out := singleBenchMatrixJSON{
 		Spec: perfMatrixSpec{
 			Target:     spec.Target,
@@ -881,11 +899,17 @@ func buildMatrixPayload(ctx *CmdContext, spec perfTargetSpec, groups []perfTypeG
 			Iterations: spec.Iterations,
 			Types:      []perfTypeSummary{},
 		},
-		Models: make([]singleBenchJSON, 0),
+		Models: make([]singleBenchJSON, 0, modelsCap),
 	}
 	if spec.SizeOrdered() {
 		out.Spec.SizeSource = perfSizeSourceDirTotal
 	}
+	return out
+}
+
+// buildMatrixPayload 把类型分组采集为矩阵载荷（--target rtype 与 all 共用同一形状，差异全在 spec）。
+func buildMatrixPayload(ctx *CmdContext, spec perfTargetSpec, groups []perfTypeGroup) singleBenchMatrixJSON {
+	out := newMatrixPayload(spec, 0)
 	for _, g := range groups {
 		entry := perfTypeManifest[g.Rtype]
 		sum := perfTypeSummary{
@@ -925,19 +949,7 @@ func buildMatrixPayload(ctx *CmdContext, spec perfTargetSpec, groups []perfTypeG
 // （repo 的意义就在「谁最X」，按类型归并会把这个信息弄丢），types[] 仍给逐类型汇总
 // （含全库未截断的 found）。
 func buildRepoPayload(ctx *CmdContext, spec perfTargetSpec, ranked []perfTarget, foundByType map[string]int) singleBenchMatrixJSON {
-	out := singleBenchMatrixJSON{
-		Spec: perfMatrixSpec{
-			Target:     spec.Target,
-			Order:      spec.Order,
-			MaxModels:  spec.MaxModels,
-			Iterations: spec.Iterations,
-			Types:      []perfTypeSummary{},
-		},
-		Models: make([]singleBenchJSON, 0, len(ranked)),
-	}
-	if spec.SizeOrdered() {
-		out.Spec.SizeSource = perfSizeSourceDirTotal
-	}
+	out := newMatrixPayload(spec, len(ranked))
 	sums := make(map[string]*perfTypeSummary)
 	order := make([]string, 0, len(ranked))
 	for _, t := range ranked {

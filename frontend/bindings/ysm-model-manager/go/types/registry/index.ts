@@ -5,11 +5,5 @@ export type {
     LitematicBlockStat,
     LitematicMeta,
     LitematicVoxelData,
-    ModRequirement,
-    NestedPattern,
-    ResourceType,
-    ResourceTypeRegistry,
-    Variant,
-    VoxelGroup,
-    ZipEntryMatch
+    VoxelGroup
 } from "./models.js";

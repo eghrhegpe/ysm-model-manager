@@ -22,7 +22,6 @@ tests:
   - frontend/src/preview-3d/menu/slider-controller.test.ts
 auto_fields:
   symbols_with_lines:
-    - ARIA_ATTR
     - componentsCss
     - componentsStyleSheet
     - createHeaderToggle
@@ -37,12 +36,10 @@ auto_fields:
     - installSlideMenuStyles
     - isPreviewOverlayActive
     - PREVIEW_OVERLAY_ID
-    - ROLE
     - slideMenuCss
     - SlideMenuHandle
     - slideMenuStyleSheet
     - SlideMenuView
-    - SLIDER_BAR_CLASS
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

@@ -10,18 +10,6 @@ import type { SyncItem } from "./tpl.ts";
 // getApp 全绑定 mock（P1 修复：mocks 提为 vi.hoisted 可引用，原内联 vi.fn 无法精确断言）
 const { mocks } = vi.hoisted(() => {
   const mocks = {
-    LoadResourceTypes: vi.fn().mockResolvedValue({
-      resourceTypes: [
-        { id: "ysm", name: "YSM 模型", icon: "💎" },
-        { id: "EntityPlayer", name: "PMX 模型", icon: "🎭" },
-        { id: "SceneModel", name: "场景模型", icon: "🏰" },
-        { id: "vrm", name: "VRM 模型", icon: "🥽" },
-        { id: "resourcepack", name: "资源包", icon: "🎨" },
-        { id: "shaderpack", name: "光影包", icon: "☀️" },
-        { id: "blueprint", name: "蓝图", icon: "⚙️" },
-        { id: "litematic", name: "投影", icon: "📐" },
-      ],
-    }),
     GetInstanceSyncStatus: vi.fn().mockResolvedValue([
       { path: "a.ysm", name: "模型A", status: "synced", type: "ysm", size: 1024 },
       { path: "b.ysm", name: "模型B", status: "missing", type: "ysm", size: 2048 },
@@ -41,7 +29,6 @@ const { mocks } = vi.hoisted(() => {
 
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
-    LoadResourceTypes: mocks.LoadResourceTypes,
     GetInstanceSyncStatus: mocks.GetInstanceSyncStatus,
     PushSingleResourceToInstance: mocks.PushSingleResourceToInstance,
     PullSingleResourceFromInstance: mocks.PullSingleResourceFromInstance,

@@ -14,9 +14,6 @@ import "./index.ts"; // 触发 customElements.define("app-sync-manager")
 
 const { mocks, renderMock } = vi.hoisted(() => ({
   mocks: {
-    LoadResourceTypes: vi.fn().mockResolvedValue(
-      JSON.stringify({ resourceTypes: [{ id: "ysm", name: "YSM", icon: "💎" }] }),
-    ),
     GetInstanceSyncStatus: vi.fn().mockResolvedValue(
       JSON.stringify([{ path: "a.ysm", name: "模型A", status: "synced", type: "ysm", size: 1 }]),
     ),
@@ -30,7 +27,6 @@ const { mocks, renderMock } = vi.hoisted(() => ({
 
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
-    LoadResourceTypes: mocks.LoadResourceTypes,
     GetInstanceSyncStatus: mocks.GetInstanceSyncStatus,
     GetRepoRoot: mocks.GetRepoRoot,
     GetSyncScanDirs: mocks.GetSyncScanDirs,

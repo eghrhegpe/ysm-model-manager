@@ -242,7 +242,7 @@ status: active
 - 自定义元素：`<app-preview>`
 - 监听 bus：`model:select`（`{ path, isDir }`；目录走整合包信息 `GetPackInfo`，文件走类型分流）
 - 派发 bus：`toast:show`（仅子模块的加载失败路径）
-- Go 调用（经 `getApp()`）：`DetectResourceType` / `FindPreviewImage` / `ExtractPreviewTexture` / `LoadResourceTypes` / `GetPackInfo` / `AnalyzeBedrockModel` / `ExtractYsmSummary` / `ExtractYSMHeader` / `ReadPackMeta` / `ReadShaderpackLang` / `ReadFileBytes` / `ReadLitematicMeta` / `ReadNbtStructure` / `ReadSchematic` / `GetModel3DSpec` / `SaveScreenshotFile`。网页版 fallback 型 binding 已由 `web-fs.ts` 实现。
+- Go 调用（经 `getApp()`）：`DetectResourceType` / `FindPreviewImage` / `ExtractPreviewTexture` / `GetPackInfo` / `AnalyzeBedrockModel` / `ExtractYsmSummary` / `ExtractYSMHeader` / `ReadPackMeta` / `ReadShaderpackLang` / `ReadFileBytes` / `ReadLitematicMeta` / `ReadNbtStructure` / `ReadSchematic` / `GetModel3DSpec` / `SaveScreenshotFile`。网页版 fallback 型 binding 已由 `web-fs.ts` 实现。类型图标/元数据自 ADR-269 D3 起改同步读 `utils/resource/schema.ts`，不再走 `LoadResourceTypes` RPC。
 - 子模块入口：`loadModelData` / `loadModel2D` / `openFullPreview` / `decodeYsmViaWasm` / `createLitematic3D` / `cleanupVoxel3D` / `showLitematic` / `showModelDetail` / `showResourcePack` / `showShaderpack` / `showSimplePreview` / `renderMultiAngle`
 
 ## 与其他子系统关系

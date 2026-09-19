@@ -16,7 +16,6 @@ vi.mock("@/backend/app.ts", () => ({
     ExtractYSMHeader: vi.fn().mockResolvedValue(null),
     FindPreviewImage: vi.fn().mockResolvedValue(""),
     ExtractPreviewTexture: vi.fn().mockResolvedValue(""),
-    LoadResourceTypes: vi.fn().mockResolvedValue("{}"),
     ReadShaderpackLang: vi.fn().mockResolvedValue(
       JSON.stringify({ name: "光影包测试", entries: { "option.A.comment": "配置说明" } }),
     ),
@@ -33,7 +32,6 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   ExtractPreviewTexture: vi.fn().mockResolvedValue(""),
   ExtractYsmSummary: vi.fn().mockResolvedValue(null),
   ExtractYSMHeader: vi.fn().mockResolvedValue(null),
-  LoadResourceTypes: vi.fn().mockResolvedValue("{}"),
   GetPackInfo: vi.fn().mockResolvedValue(null),
   LoadAppConfig: vi.fn().mockResolvedValue({}),
   GetRepoRoot: vi.fn().mockResolvedValue(""),

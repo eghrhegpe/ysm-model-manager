@@ -735,13 +735,6 @@ export function LoadGitHubRepos(): $CancellablePromise<types$0.WorkshopCreator[]
     return $Call.ByID(555735249);
 }
 
-/**
- * LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/types/registry.LoadRegistry）
- */
-export function LoadResourceTypes(): $CancellablePromise<registry$0.ResourceTypeRegistry | null> {
-    return $Call.ByID(3636552016);
-}
-
 export function LoadWorkshopCreators(): $CancellablePromise<types$0.WorkshopCreator[] | null> {
     return $Call.ByID(3429491443);
 }

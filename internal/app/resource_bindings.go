@@ -24,15 +24,6 @@ import (
 	typereg "ysm-model-manager/go/types/registry"
 )
 
-// LoadResourceTypes 加载资源类型注册表（单一事实来源 = go/types/registry.LoadRegistry）
-func (a *App) LoadResourceTypes() (*typereg.ResourceTypeRegistry, error) {
-	reg := typereg.LoadRegistry()
-	if reg == nil || len(reg.ResourceTypes) == 0 {
-		return nil, fmt.Errorf("资源类型注册表为空")
-	}
-	return reg, nil
-}
-
 // ReadPackMeta 读取资源包信息（pack.mcmeta + pack.png）
 func (a *App) ReadPackMeta(path string) (*types.PackMetaView, error) {
 	meta, thumb, err := packs.ReadPackMeta(path)

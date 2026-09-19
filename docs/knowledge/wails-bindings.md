@@ -378,7 +378,6 @@ status: active
 
 ### 资源类型、资源包与蓝图（resource_bindings.go）
 
-- `LoadResourceTypes() → string` — 加载 resource_types.json 资源类型注册表（单一事实来源）
 - `GetRepoRoot(rtype) → (string, error)` — 按资源类型 key 返回对应仓库根目录
 - `SetResourceRoot(rtype, path) → void` — 设置指定资源类型的自定义根路径（空=恢复默认）
 - `ResetResourceRoot(rtype) → void` — 恢复指定资源类型路径为默认

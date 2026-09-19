@@ -149,21 +149,6 @@ export const MOCK_DATA = {
       HasMod: false,
     },
   ],
-  // ADR-143 P0「去 string-JSON 化」：Go binding 返回 ResourceTypeRegistry 结构体，
-  // mock 必须同形状返回对象——此前用 JSON.stringify 返回字符串（注册表驱动 UI 会恒判
-  // 「空注册表」而静默降级，含类型选择器）。前端消费方已迁 utils/resource/schema.ts
-  // 同步视图（ADR-269 D3），本键仅为 e2e 绑定面契约 parity 保留。
-  LoadResourceTypes: {
-    resourceTypes: [
-      { id: "ysm", name: "YSM 模型", icon: "💎" },
-      {
-        id: "resourcepack",
-        name: "资源包",
-        icon: "🎨",
-        actions: ["import", "toggle", "delete", "openFolder"],
-      },
-    ],
-  },
   ToggleModelEnable: true,
   // 统一启禁（方案 A）：e2e 未直接触达，补键防绑定契约守卫报错（undefined 最安全）
   ToggleEnable: undefined,
@@ -409,7 +394,7 @@ export function generateMockBridgeScript(overrides: Partial<MockData> = {}): str
   lines.push("window.go = { main: { App: {");
   for (const [key, value] of Object.entries(merged)) {
     if (typeof value === "string") {
-      // 字符串值：直接生成字符串字面量返回（如 LoadResourceTypes 的 JSON 字符串）
+      // 字符串值：直接生成字符串字面量返回（如 DetectResourceType 的类型 id 字符串）
       lines.push(`${key}: async () => ${JSON.stringify(value)},`);
     } else if (value === undefined) {
       // undefined 单独发字面量——JSON.stringify 会把顶层 undefined 序列化为

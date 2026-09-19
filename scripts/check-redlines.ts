@@ -380,7 +380,10 @@ function runChecks() {
       // - app-preview/detail-3d.ts：舞台文件类型（vmd/audio/config）点缀色，资源类别识别的数据语义色。
       .filter((l) => {
         const [f] = parseRgLine(l);
-        return !/diagnostics\/perf(-trend|-trace)?\.ts$/.test(f) && !/app-preview\/detail-3d\.ts$/.test(f);
+        return (
+          !/diagnostics\/perf(-trend|-trace)?\.ts$/.test(f) &&
+          !/app-preview\/detail-3d\.ts$/.test(f)
+        );
       })
       .filter((l) => !/style\.cssText/.test(l))
       .filter((l) => !/style\.\w+\s*=\s*["'`]/.test(l))
@@ -482,6 +485,21 @@ function runChecks() {
         return !f.includes(".test.");
       }),
     "import { esc } from utils/html/html.ts (5-replace 单点，致命陷阱 #15)",
+  );
+
+  // R11 资源类型清单单一同步源守卫（ADR-269 D3 回归红线）：rtype 表在前端只经
+  // utils/resource/schema.ts 一条同步路径进入——禁重新引入原异步 RPC 旁路
+  // （已退役的 Go 绑定 `App.LoadResourceTypes()` 调用 / 已删除的 `loadResourceRegistry`
+  // 模块）。第二条数据路径一旦复活即重开「双源漂移 + 首帧空表 📦 闪烁」旧债。
+  // 豁免：注释行（迁移说明文档合法提及旧名，如 schema.ts/edit.ts 的「废 RPC」批注）。
+  add(
+    "R11",
+    "rtype dual-source regression (ADR-269 D3)",
+    rgTracked("\\.LoadResourceTypes\\s*\\(|loadResourceRegistry", "frontend/src", [
+      "*.js",
+      "*.ts",
+    ]).filter((l) => !/:\d+:\s*(?:\/\/|\/\*|\*)/.test(l)),
+    "资源类型统一读 utils/resource/schema.ts（allResourceTypes / resourceTypesById）同步视图，禁止 RPC 旁路复活（ADR-269 D3）",
   );
 
   // W1 排除正则/转义误报：[/\] 字符类、replace(/\\/g 归一化、\n \t \. \w \d \s \b 等

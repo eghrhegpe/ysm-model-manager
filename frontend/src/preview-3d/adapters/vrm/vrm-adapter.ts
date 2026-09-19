@@ -593,16 +593,26 @@ function buildPerception(
     perceptionPauseRef,
   };
 }
+/**
+ * buildVrmScene 各 stage 产物的聚合（解参数陷阱：Stage4MenuPanels p8→p4、Stage5BuildResult p9→p5）。
+ * 由 buildVrmScene 一次性构造，Stage4/Stage5 共用——语义等价于原分散形参，无行为变更。
+ */
+interface VrmBuildArtifacts {
+  parseRes: VrmParseResult;
+  boneAssy: VrmBoneAssembly;
+  vrmMaterials: THREE.Material[];
+  motion: VrmMotionState;
+  perception: VrmPerceptionState;
+  meta: VrmMetaSummary | undefined;
+}
+
 function Stage4MenuPanels(
   path: string,
   panels: VrmPanelHooks | undefined,
   ctx: PreviewBuildCtx,
-  boneAssy: VrmBoneAssembly,
-  vrmMaterials: THREE.Material[],
-  motion: VrmMotionState,
-  perception: VrmPerceptionState,
-  meta: VrmMetaSummary | undefined,
+  artifacts: VrmBuildArtifacts,
 ): PreviewMenuNode[] {
+  const { boneAssy, vrmMaterials, motion, perception, meta } = artifacts;
   const { bonePanelRef, boneTree } = boneAssy;
   const { motionClips, motionMixer } = motion;
   // 模型信息数据源（model 面板 children；名称取文件名去扩展名）
@@ -678,13 +688,10 @@ function Stage5BuildResult(
   ctx: PreviewBuildCtx,
   path: string,
   port: VrmDataPort | undefined,
-  parseRes: VrmParseResult,
-  boneAssy: VrmBoneAssembly,
-  vrmMaterials: THREE.Material[],
-  motion: VrmMotionState,
-  perception: VrmPerceptionState,
+  artifacts: VrmBuildArtifacts,
   menuItems: PreviewMenuNode[],
 ): UpdateableScene & ScreenshotScene & SemanticScene {
+  const { parseRes, boneAssy, vrmMaterials, motion, perception } = artifacts;
   const { vrm } = parseRes;
   const { semanticBones, bonePanelRef } = boneAssy;
   const { motionClips, motionMixer } = motion;
@@ -834,27 +841,16 @@ export async function buildVrmScene(
   // meta 文本摘要随 vrm 存活期归一化（纯数据零 GPU；stage5 dispose 后 vrm.meta 仍可读，
   // 但趁 vrm 在手边一并收口，语义对齐「面板数据源一次构造」）
   const meta = vrmMetaSummary(vrm.meta);
-  const menuItems = Stage4MenuPanels(
-    path,
-    panels,
-    ctx,
-    boneAssy,
-    vrmMaterials,
-    motion,
-    perception,
-    meta,
-  );
-  return Stage5BuildResult(
-    ctx,
-    path,
-    port,
+  const artifacts: VrmBuildArtifacts = {
     parseRes,
     boneAssy,
     vrmMaterials,
     motion,
     perception,
-    menuItems,
-  );
+    meta,
+  };
+  const menuItems = Stage4MenuPanels(path, panels, ctx, artifacts);
+  return Stage5BuildResult(ctx, path, port, artifacts, menuItems);
 }
 
 /** vrmMenuItems 组装依赖：适配器 build 内组装；测试可构造假依赖遍历真实菜单表 */

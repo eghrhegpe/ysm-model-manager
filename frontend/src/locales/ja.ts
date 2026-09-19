@@ -364,18 +364,10 @@ export const ja: Record<string, string> = {
   "diagnostics.opImportFallback": "インポート",
   "diagnostics.perfModelRequired": "モデルのパスを入力してください",
   "diagnostics.perfIterations": "イテレーション数",
-  "diagnostics.perfRunGui": "単一モデル読込パイプライン",
-  "diagnostics.perfGuiScopeNote":
-    "対象範囲：フル 6 段階のチェーンは YSM と東方リトルメイド（maid-model — TLM パッケージは YSM コンテナと同じ geometry 入口）が対象です。MMD / VRM / GLTF のパーサーはフロントエンドの 3D adapter にのみ存在します（CLI は「シミュレートしない」と正直に通知し、3D プレビューでの実測を案内します）。ブループリント / 投影のチェーン測定は未対応です。ジオメトリを持たない項目（サウンドパック等）は次の候補へ送られ、その旨が明示されます。",
   "diagnostics.perfSingleResult": "単一モデルベンチマーク結果",
-  "diagnostics.perfGuiResult": "単一モデル読込パイプライン結果",
   "diagnostics.perfTotal": "総所要時間",
   "diagnostics.perfTotalDetail": "{avg}ms（{n} 回反復の平均／累計 {total}ms）",
   "diagnostics.perfBottleneck": "最遅段階",
-  "diagnostics.perfEstimated": "推定",
-  "diagnostics.perfEstimatedHint":
-    "推定値（レンダリングパイプライン無し／仮定からの概算、合計に含まず）",
-  "diagnostics.perfEstimatedTotal": "うち推定 {ms}ms（合計に含まず）",
   // 段階の実行層とサンプル統計（ADR-262 D2）
   "diagnostics.perfStageRuntimeHint": "この段階の実行層（Go / Rust / WASM / JS / Three）",
   "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
@@ -504,7 +496,6 @@ export const ja: Record<string, string> = {
   "diagnostics.perfRunBench": "ベンチ実行",
   "diagnostics.perfRecord": "パフォーマンス記録",
   "diagnostics.perfFail": "実行に失敗しました",
-  "diagnostics.perfGuiFailed": "失敗したステージがあります",
   "diagnostics.loadTraceRefresh": "ロード解析を更新",
   "diagnostics.loadTraceTitle": "ロード解析",
   "diagnostics.loadTraceNoData": "ロード記録なし",

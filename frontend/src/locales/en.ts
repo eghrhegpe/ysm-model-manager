@@ -361,18 +361,10 @@ export const en: Record<string, string> = {
   "diagnostics.opImportFallback": "Import",
   "diagnostics.perfModelRequired": "Please enter a model path",
   "diagnostics.perfIterations": "Iterations",
-  "diagnostics.perfRunGui": "Single-model load pipeline",
-  "diagnostics.perfGuiScopeNote":
-    "Scope: the full 6-stage chain covers YSM and Touhou Little Maid (maid-model — TLM packs share the same geometry entry point as YSM containers). Parsers for MMD / VRM / GLTF live in the frontend 3D adapter (the CLI reports it is not simulated, and points you to the 3D preview); blueprint / projection chains are not measured yet. Entries without geometry (sound packs, etc.) are skipped to the next candidate, and that is said out loud.",
   "diagnostics.perfSingleResult": "Single-model benchmark result",
-  "diagnostics.perfGuiResult": "Single-model load pipeline result",
   "diagnostics.perfTotal": "Total time",
   "diagnostics.perfTotalDetail": "{avg}ms (avg over {n} iterations; {total}ms total)",
   "diagnostics.perfBottleneck": "Slowest stage",
-  "diagnostics.perfEstimated": "est.",
-  "diagnostics.perfEstimatedHint":
-    "Estimated (no render pipeline / derived from assumptions; not counted in total)",
-  "diagnostics.perfEstimatedTotal": "of which estimated {ms}ms (not counted in total)",
   // Stage runtime attribution and sample stats (ADR-262 D2)
   "diagnostics.perfStageRuntimeHint":
     "Runtime this stage executes in (Go / Rust / WASM / JS / Three)",
@@ -506,7 +498,6 @@ export const en: Record<string, string> = {
   "diagnostics.perfRunBench": "Benchmark",
   "diagnostics.perfRecord": "Perf Records",
   "diagnostics.perfFail": "Execution failed",
-  "diagnostics.perfGuiFailed": "Some stages failed",
   "diagnostics.loadTraceRefresh": "Refresh Load Trace",
   "diagnostics.loadTraceTitle": "Load Analysis",
   "diagnostics.loadTraceNoData": "No load records yet",

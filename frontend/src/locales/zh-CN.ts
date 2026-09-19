@@ -360,17 +360,10 @@ export const zhCN = {
   "diagnostics.opImportFallback": "导入",
   "diagnostics.perfModelRequired": "请先填入模型路径",
   "diagnostics.perfIterations": "迭代次数",
-  "diagnostics.perfRunGui": "单模型加载链路模拟",
-  "diagnostics.perfGuiScopeNote":
-    "覆盖范围：完整 6 阶段链路覆盖 YSM 与车万女仆（maid-model，TLM 包与 YSM 容器走同一 geometry 解析入口）。MMD / VRM / GLTF 的解析器只在前端 3D adapter（CLI 会如实告知「不模拟」，请到 3D 预览实测）；蓝图 / 投影的链路度量尚未纳入。同类型里没有几何的条目（音效包等）会自动顺延到下一个候选并说明。",
   "diagnostics.perfSingleResult": "单模型基准结果",
-  "diagnostics.perfGuiResult": "单模型加载链路结果",
   "diagnostics.perfTotal": "总耗时",
   "diagnostics.perfTotalDetail": "{avg}ms（{n} 次迭代平均；累计 {total}ms）",
   "diagnostics.perfBottleneck": "最慢阶段",
-  "diagnostics.perfEstimated": "估算",
-  "diagnostics.perfEstimatedHint": "估算（无渲染管线/按假设推算，不计入总耗时）",
-  "diagnostics.perfEstimatedTotal": "其中估算 {ms}ms（不计入总耗时）",
   // 阶段运行归属与样本统计（ADR-262 D2）：没有归属就看不出这段跑在 Go / Rust / WASM / Three 上
   "diagnostics.perfStageRuntimeHint": "该阶段的运行归属（Go / Rust / WASM / JS / Three）",
   // 基准入口与判决（ADR-262 D8）：路径与判据全在 Go，前端只说人话
@@ -486,7 +479,6 @@ export const zhCN = {
   "diagnostics.perfRunBench": "跑基准",
   "diagnostics.perfRecord": "性能记录",
   "diagnostics.perfFail": "执行失败",
-  "diagnostics.perfGuiFailed": "有阶段失败",
   "diagnostics.loadTraceRefresh": "刷新加载剖析",
   "diagnostics.loadTraceTitle": "加载剖析",
   "diagnostics.loadTraceNoData": "暂无加载记录",

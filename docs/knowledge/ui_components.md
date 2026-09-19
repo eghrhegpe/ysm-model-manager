@@ -10,7 +10,7 @@ source_files:
   - frontend/src/preview-3d/menu/style/components-styles.ts
   - frontend/src/preview-3d/menu/style/slide-menu-styles.ts
   - frontend/src/preview-3d/menu/style/style-install.ts
-  - frontend/src/preview-3d/menu/dom-contract.ts
+  - frontend/src/preview-3d/menu/schema/dom-contract.ts
   - frontend/src/preview-3d/infra/ui-constants.ts
   - frontend/src/preview-3d/infra/overlay-active.ts
 tests:
@@ -22,6 +22,7 @@ tests:
   - frontend/src/preview-3d/menu/slider-controller.test.ts
 auto_fields:
   symbols_with_lines:
+    - ARIA_ATTR
     - componentsCss
     - componentsStyleSheet
     - createHeaderToggle
@@ -36,10 +37,12 @@ auto_fields:
     - installSlideMenuStyles
     - isPreviewOverlayActive
     - PREVIEW_OVERLAY_ID
+    - ROLE
     - slideMenuCss
     - SlideMenuHandle
     - slideMenuStyleSheet
     - SlideMenuView
+    - SLIDER_BAR_CLASS
 quick_groups:
   - UI 交互与弹窗
 quick_intents:
@@ -94,7 +97,7 @@ status: active
 | 契约查询 | `preview-3d/infra/overlay-active.ts` | `isPreviewOverlayActive()` —— 3D 全屏模态会话是否激活（查 overlay host 是否在 document，零状态漂移）。ADR-220 归位挂载核心旁（与唯一生产者同目录），app-tree 键盘门禁经 `@/preview-3d/infra/overlay-active.ts` 查询；原「勿因单消费者下沉」辩护随归位失效 |
 | 类型 | （已拔管） | `ui-types.ts`（`ControlOptions`）已删除——消费方为已拔管行 builder 簇 |
 | 工具 | （已删） | barrel re-export 已在 ADR-146 反桶运动中移除；全部消费方改为从具体叶模块直引 |
-| 契约 | `preview-3d/menu/dom-contract.ts` | role/class 契约单源（禁手写字符串）；`SLIDER_BAR_CLASS = "cs-bar"` |
+| 契约 | `preview-3d/menu/schema/dom-contract.ts` | role/class 契约单源（禁手写字符串）；`SLIDER_BAR_CLASS = "cs-bar"` |
 
 ## 对外 API / 入口
 
@@ -114,7 +117,7 @@ status: active
 - 纯 UI helper，零业务逻辑、零 app-state import
 - 样式串经 `adoptedStyleSheets` 注入（Shadow 组件）/ `installComponentsStyles` 注入（light-DOM，幂等 `_installed` 守卫）；改样式走 MikuMikuAR 源重跑迁移脚本，勿手改生成串
 - 控件状态回写走重建式渲染：菜单 refresh 重建行元素（toggle 初始 value 即最新态），无注册表自更新（control-registry 已删，ADR-085 的 bind 回写由重建承担）
-- 行/面板 role/class 一律取自 `preview-3d/menu/dom-contract.ts`，禁止手写字符串
+- 行/面板 role/class 一律取自 `preview-3d/menu/schema/dom-contract.ts`，禁止手写字符串
 - toggle 行能力演进：`addToggleRow`/`toggleRow`/`addInlineToggleRow` 因生产零消费已删除；「整行点击切换（target 落在 `.toggle` 内跳过、防双触发）」语义并入 `preview-3d/menu/header-toggle|createHeaderToggle.forceToggle`，由 `preview-3d/menu/cap-controls|renderCapToggle` 消费（点 label 区翻转、点开关本体走原生 label 逻辑）。3D 菜单 toggle 唯一路径 = MenuNode schema → renderCapToggle，勿再引入第二套 toggle builder（红线：双轨必杀）
 - slider 行能力演进：cap 栈滑块已从原生 `input[type=range]` 换为自绘 `.cs-bar`（fill 渐变 + thumb 细线 + 键盘 ←→/Home/End + pointer 触屏），由 `preview-3d/menu/slider-controller|DragSliderController` 驱动——控制器自 ui-rows `addSliderRow` 迁移（接入生产并补 pointer events：pointer 主 + mouse 兜底，`pointerDown` 互斥标志防真实鼠标双触发；`renderCapSlider` 补 click 跳转 onCommit 对齐原生 change 语义）。3D 菜单 slider 唯一路径 = MenuNode schema → renderCapSlider → cs-bar，勿再引入第二套滑块实现（红线：双轨必杀）。`addSliderRow` 本体（ui-rows）已随行 builder 簇拔管，能力叶保留（cs-bar 样式经 componentsStyleSheet、控制器经 cap 栈）
 - 旧世界命令式行 builder 簇全拔：`ui-rows.ts`/`ui-advanced-rows.ts`/`ui-slide-row.ts`/`ui-collapsible.ts`/`icons.ts`/`ui-types.ts`（+`utils/uid.ts`）已删除——15 个命令式行 builder（`addSliderRow`/`addModeRow`/`addColorSliderRow`/`addVector3SliderRow`/`addModeSlider`/`addCollapsible`/`addFieldRow`/`addDangerRow`/`addInfoGrid` 等）生产零消费，职责全部由 MenuNode schema 声明式路线接管（renderMenu 分派 + cap 栈渲染器 + 副作用闭包）。`ui-card`/`ui-loading` 同为「零生产消费的通用工具叶」，2026-09-10 一并删除（判据：备件若无复活排期即为负债，且 `.lcard` 的存在会让人误以为有现成卡片壳可复用）。日后任何为 3D 菜单引入第二套命令式行 builder 者，审核必杀（红线）

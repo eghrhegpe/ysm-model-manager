@@ -6,7 +6,7 @@ category: ui
 source_files:
   - frontend/src/preview-3d/menu/core.ts
   - frontend/src/preview-3d/menu/render.ts
-  - frontend/src/preview-3d/menu/node-types.ts
+  - frontend/src/preview-3d/menu/schema/node-types.ts
   - frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
   - frontend/src/preview-3d/menu/morph-controls.ts
@@ -19,9 +19,12 @@ auto_fields:
     - buildPreviewMenuRouters
     - buildYsmScene
     - clearFolderCollapsedState
+    - collectPreviewLeafNodes
+    - collectPreviewNodeIds
     - corePanelBuilder
     - CorePanelId
     - disposeCustomCleanups
+    - isPreviewFolderNode
     - makeMmdAdapter
     - makeYsmAdapter
     - MmdAdapterDeps

@@ -7,10 +7,10 @@ adr:
   - ADR-195
 category: rendering
 source_files:
-  - frontend/src/preview-3d/menu/menu-node-types.ts
+  - frontend/src/preview-3d/menu/schema/menu-node-types.ts
   - frontend/src/preview-3d/menu/core.ts
   - frontend/src/preview-3d/menu/render.ts
-  - frontend/src/preview-3d/menu/node-types.ts
+  - frontend/src/preview-3d/menu/schema/node-types.ts
   - frontend/src/preview-3d/menu/cap-to-node.ts
   - frontend/src/preview-3d/menu/defs.ts
   - frontend/src/preview-3d/menu/cap-controls.ts
@@ -40,6 +40,8 @@ auto_fields:
     - capControlToView
     - CapControlView
     - clearFolderCollapsedState
+    - collectPreviewLeafNodes
+    - collectPreviewNodeIds
     - collectSettingsCapControls
     - collectVisiblePredicates
     - CORE_MENU_ITEMS
@@ -49,6 +51,7 @@ auto_fields:
     - disposeEnvSubscriptions
     - formatCapSliderValue
     - hasSceneStats
+    - isPreviewFolderNode
     - makeSwitchState
     - mergeStatsMenuItems
     - mountPreviewRootMenu
@@ -56,10 +59,17 @@ auto_fields:
     - MultiModelSelectOpts
     - nodeControlToView
     - PREVIEW_MENU_GROUPS
+    - PreviewActionMenuCtx
+    - PreviewControlDef
+    - PreviewControlKind
+    - PreviewControlSpec
+    - PreviewDockGroup
     - PreviewMenuCtx
     - PreviewMenuGroupDef
     - PreviewMenuGroupId
     - PreviewMenuHandle
+    - PreviewMenuNode
+    - PreviewMenuNodeKind
     - PreviewMenuRouters
     - renderAdapterPanelContent
     - renderCapColor
@@ -87,7 +97,7 @@ tests:
   - frontend/src/preview-3d/menu/core.test.ts
   - frontend/src/preview-3d/menu/env.test.ts
   - frontend/src/preview-3d/menu/multi-model.test.ts
-  - frontend/src/preview-3d/menu/node-types.test.ts
+  - frontend/src/preview-3d/menu/schema/node-types.test.ts
   - frontend/src/preview-3d/menu/roles.test.ts
   - frontend/src/preview-3d/menu/stats.test.ts
   - frontend/src/preview-3d/perception/core.test.ts
@@ -122,7 +132,7 @@ invariant_anchors:
   - frontend/src/preview-3d/menu/core.ts|buildPreviewMenuRouters
   - frontend/src/preview-3d/menu/render.ts|renderMenu
   - frontend/src/preview-3d/menu/render.ts|renderAdapterPanelContent
-  - frontend/src/preview-3d/menu/node-types.ts|PreviewMenuNode
+  - frontend/src/preview-3d/menu/schema/node-types.ts|PreviewMenuNode
   - frontend/src/preview-3d/menu/defs.ts|CORE_MENU_ITEMS
   - frontend/src/preview-3d/menu/defs.ts|PREVIEW_MENU_GROUPS
 status: active

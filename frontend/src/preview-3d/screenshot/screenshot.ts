@@ -72,9 +72,12 @@ export function screenshotFromRenderer(
     scene.background = null;
 
     // 按需覆盖尺寸（仅当调用方显式传入，且与当前不同才需 setSize 以避免刷新 GL 状态）
+    // getSize 返回 THREE.Vector2（只有 .x/.y，没有 .width/.height）——误读 .width 会拿到
+    // undefined，守卫 Math.abs(w - undefined) = NaN 恒不 > 0.5 → setSize 从不生效，
+    // multi-angle 的尺寸覆盖被静默杀死（5d9d0e30e P1/P2 收口）。
     const currentSize = renderer.getSize(new THREE.Vector2());
     const w = opts.width;
-    if (w !== undefined && Math.abs(w - currentSize.width) > 0.5) {
+    if (w !== undefined && Math.abs(w - currentSize.x) > 0.5) {
       prevSize = currentSize;
       renderer.setSize(w, opts.height ?? w, false);
     }
@@ -87,7 +90,9 @@ export function screenshotFromRenderer(
     return null;
   } finally {
     // 还原顺序与设置相反；三者缺一都会污染共享 renderer / scene 的后续帧
-    if (prevSize) renderer.setSize(prevSize.width, prevSize.height, false);
+    // prevSize 同为 THREE.Vector2（getSize 返回），还原须读 .x/.y（与守卫同一坑，
+    // 误读 .width/.height 会 setSize(undefined, undefined) 污染画布尺寸）
+    if (prevSize) renderer.setSize(prevSize.x, prevSize.y, false);
     scene.background = prevBackground;
     if (clearOk && prevClear) renderer.setClearColor(prevClear, prevAlpha);
   }

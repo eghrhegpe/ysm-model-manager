@@ -15,9 +15,13 @@ import type {
   SceneCapability,
 } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import type {
+  PreviewActionMenuCtx,
+  PreviewMenuCtx,
+  PreviewMenuNode,
+} from "@/preview-3d/menu/schema/node-types.ts";
 import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import { setEnvState } from "@/preview-3d/state/env-state.ts";
-import type { PreviewActionMenuCtx, PreviewMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { renderMenu } from "./render.ts";
 import type { SlideMenuHandle, SlideMenuView } from "./slide-menu.ts";
 
@@ -42,16 +46,6 @@ const ENV_SECTION_DESCRIPTORS: ReadonlyArray<{
 
 /** 注册表遍历结果：一个入选环境面板的 cap 及其自报归属 */
 type EnvEntry = { cap: SceneCapability; placement: EnvPlacement };
-
-/**
- * 兜底归属表：仅当注册表无任何自报 env cap（旧挂载/未注册态）时，用 `ctx.getCap`
- * 合成 sky/ground/water 三行的归属（生产注册表恒带 `getEnvPlacement`，此处防御性回退）。
- */
-const FALLBACK_PLACEMENT: Readonly<Record<string, EnvPlacement>> = {
-  sky: { section: "basic", order: 10 },
-  ground: { section: "basic", order: 20 },
-  water: { section: "basic", order: 30 },
-};
 
 // ── 环境面板局部刷新：订阅 cap 参数变更触发 menu.refresh()（重渲染栈顶 = 当前子视图）──
 // 按 menu 句柄隔离订阅：每个 mountPreviewRootMenu 实例持有各自的订阅列表，
@@ -93,26 +87,16 @@ const PRESET_ORDER = [
 /**
  * 遍历注册表收集环境面板成员（ADR-268 插件式发现）：凡实现 `getEnvPlacement()` 的 cap
  * 即入选，无需在此登记 id。非环境 cap（light/shadow/postproc/renderMode 等）不实现该方法
- * → 天然被排除。注册表为空（旧挂载/未注册态）时回退 `ctx.getCap` 合成 sky/ground/water。
+ * → 天然被排除。成员唯一来源即各 env cap 的自报，无兜底合成路径；空注册表返回 []，
+ * buildEnvSchema 据此落「无环境」空态。
  */
-function collectEnvEntries(ctx: PreviewMenuCtx): EnvEntry[] {
-  const fromRegistry: EnvEntry[] = [];
+function collectEnvEntries(): EnvEntry[] {
+  const entries: EnvEntry[] = [];
   for (const cap of sceneCapabilityRegistry.getAll()) {
     const placement = cap.getEnvPlacement?.();
-    if (placement) fromRegistry.push({ cap, placement });
+    if (placement) entries.push({ cap, placement });
   }
-  if (fromRegistry.length > 0) return fromRegistry;
-  const fb: EnvEntry[] = [];
-  for (const id of ["sky", "ground", "water"] as const) {
-    const capLike = ctx.getCap(id);
-    if (capLike) {
-      fb.push({
-        cap: Object.assign({ id }, capLike) as SceneCapability,
-        placement: FALLBACK_PLACEMENT[id],
-      });
-    }
-  }
-  return fb;
+  return entries;
 }
 function applyPreset(
   _ctx: PreviewMenuCtx,
@@ -164,31 +148,38 @@ function envCapSubNodes(cap: SceneCapability): PreviewMenuNode[] {
 }
 
 /**
+ * cap 参数子视图渲染依赖桩（模块级，不引用 per-call 闭包态）：子视图内容全为控件
+ * 节点/folder/controls——renderMenu 分派对 `panel`/`action`/`custom` 才触达 makeRow/
+ * makePanelView，此路恒不达，故二者仅作「不该发生」的不变量占位（makePanelView 抛错
+ * 即断言「子视图混入了导航节点」）；menu.refresh 承 refreshOnChange 语义（cap 控件经
+ * onChange 闭包自刷新，此处少用）；actionCtx 供子视图内 button/row action 消费。
+ * 旧实现在 envCapSubview 内每次下钻点击现造——上提为常量消除重复构造与噪音强转。
+ */
+const ENV_SUBVIEW_DEPS = {
+  makeRow: (): HTMLDivElement => document.createElement("div"),
+  makePanelView: (): never => {
+    throw new Error("cap 参数子视图不应含 panel/action/row 节点（cap-to-node 桥接层）");
+  },
+  menu: {
+    refresh: (): void => {},
+  } as unknown as SlideMenuHandle,
+  actionCtx: {
+    toast: (): void => {},
+    closeAllOverlays: (): void => {},
+  } as unknown as PreviewActionMenuCtx,
+};
+
+/**
  * cap 参数子视图（navigate 落点）：把该 cap 参数节点树经 renderMenu 渲染——
  * 内容进入节点 schema 通道（刀1 桥接或刀2 直产统一出口）。
  * visibleWhen 过滤由 renderMenu 内部经 previewSnapshot() 求值（铁律收口）。
  */
 function envCapSubview(cap: SceneCapability): SlideMenuView {
-  // 子视图内容全为控件节点/folder/controls：不触达 makeRow/makePanelView/action 分支；
-  // menu.refresh 供 refreshOnChange 语义（当前 cap 控件经 onChange 闭包自刷新，少用）。
-  const subviewDeps = {
-    makeRow: (): HTMLDivElement => document.createElement("div"),
-    makePanelView: (): never => {
-      throw new Error("cap 参数子视图不应含 panel/action/row 节点（cap-to-node 桥接层）");
-    },
-    menu: {
-      refresh: (): void => {},
-    } as unknown as SlideMenuHandle,
-    actionCtx: {
-      toast: (): void => {},
-      closeAllOverlays: (): void => {},
-    } as unknown as PreviewActionMenuCtx,
-  };
   return {
     title: tOf(cap.labelKey),
     render: (list) => {
       list.replaceChildren();
-      renderMenu(list, envCapSubNodes(cap), subviewDeps);
+      renderMenu(list, envCapSubNodes(cap), ENV_SUBVIEW_DEPS);
     },
   };
 }
@@ -275,7 +266,7 @@ function buildEnvCards(entries: EnvEntry[]): PreviewMenuNode[] {
  * 面板重渲染 → 本函数重跑 → 行/headerToggle 实时）。
  */
 export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
-  const entries = collectEnvEntries(ctx);
+  const entries = collectEnvEntries();
   if (menu)
     rebuildEnvSubs(
       entries.map((e) => e.cap),

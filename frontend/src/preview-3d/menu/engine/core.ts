@@ -222,7 +222,13 @@ export function buildPreviewMenuRouters(
   const makeRow = makePreviewMenuRow;
   const makePanelView = (node: PreviewMenuNode): SlideMenuView =>
     previewMakePanelView(node, (l, n) =>
-      renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx, { makeRow, makePanelView }),
+      renderPreviewPanel(l, n, routers, {
+        menu,
+        hideMenu,
+        actionCtx,
+        makeRow,
+        makePanelView,
+      }),
     );
   // ADR-193 第四刀：switch 段状态（mount 级一次；activeTab 解析含持久化记忆）
   const rolesSwitchState = makeSwitchState(ctx);
@@ -313,14 +319,15 @@ export function renderPreviewPanel(
   list: HTMLElement,
   node: PreviewMenuNode,
   routers: PreviewMenuRouters,
-  menu: SlideMenuHandle,
-  hideMenu: () => void,
-  actionCtx: PreviewActionMenuCtx,
-  panelDeps: {
+  deps: {
+    menu: SlideMenuHandle;
+    hideMenu: () => void;
+    actionCtx: PreviewActionMenuCtx;
     makeRow: (node: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
     makePanelView: (node: PreviewMenuNode) => SlideMenuView;
   },
 ): void {
+  const { menu, hideMenu, actionCtx, makeRow, makePanelView } = deps;
   list.innerHTML = "";
   // 面板可定位（2026-08-28 反馈通道）：data-panel-id 机器可读（测试/诊断/外部工具），
   // title hover 提示人读——用户悬停面板内容即可读到内部 id，
@@ -333,16 +340,16 @@ export function renderPreviewPanel(
       // schema 面板内容统一走 renderMenu（renderCustomDirect：custom 直接填充面板，
       // 与 renderPreviewPanel 五级衰退的其余通道同源——2026-09 双轨归一，删 renderPreviewSchemaContent）
       renderMenu(list, builder(menu), {
-        makeRow: panelDeps.makeRow,
-        makePanelView: panelDeps.makePanelView,
+        makeRow,
+        makePanelView,
         menu,
         actionCtx,
         renderCustomDirect: true,
       });
     } else if (
       renderAdapterPanelContent(list, node, {
-        makeRow: panelDeps.makeRow,
-        makePanelView: panelDeps.makePanelView,
+        makeRow,
+        makePanelView,
         menu,
         actionCtx,
         hideMenu: () => hideMenu(),
@@ -380,12 +387,15 @@ function previewMakePanelView(
 function previewMakeGroupView(
   g: PreviewMenuGroupDef,
   groupItems: PreviewMenuNode[],
-  menu: SlideMenuHandle,
-  makeRowFn: (n: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement,
-  makePanelViewFn: (n: PreviewMenuNode) => SlideMenuView,
-  actionCtx: PreviewActionMenuCtx,
-  hideMenu: () => void,
+  deps: {
+    menu: SlideMenuHandle;
+    makeRowFn: (n: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
+    makePanelViewFn: (n: PreviewMenuNode) => SlideMenuView;
+    actionCtx: PreviewActionMenuCtx;
+    hideMenu: () => void;
+  },
 ): SlideMenuView {
+  const { menu, makeRowFn, makePanelViewFn, actionCtx, hideMenu } = deps;
   return {
     title: tOf(g.labelKey),
     render: (list) => {
@@ -437,15 +447,21 @@ const SCENE_CAP_FOR_PANEL: Readonly<Record<string, string>> = {
  */
 function renderPreviewDock(
   dock: HTMLElement,
-  menu: SlideMenuHandle,
-  showMenu: (view: SlideMenuView) => void,
-  makeRowFn: (n: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement,
-  makePanelViewFn: (n: PreviewMenuNode) => SlideMenuView,
-  makeGroupViewFn: (g: PreviewMenuGroupDef, items: PreviewMenuNode[]) => SlideMenuView,
-  actionCtx: PreviewActionMenuCtx,
+  factories: {
+    makeRowFn: (n: PreviewMenuNode, opts?: { chevron?: boolean }) => HTMLElement;
+    makePanelViewFn: (n: PreviewMenuNode) => SlideMenuView;
+    makeGroupViewFn: (g: PreviewMenuGroupDef, items: PreviewMenuNode[]) => SlideMenuView;
+  },
+  menuCtx: {
+    menu: SlideMenuHandle;
+    showMenu: (view: SlideMenuView) => void;
+    actionCtx: PreviewActionMenuCtx;
+    ctx: PreviewMenuCtx;
+  },
   adapterItemsRef: { v: PreviewMenuNode[] },
-  ctx: PreviewMenuCtx,
 ): void {
+  const { makeRowFn, makePanelViewFn, makeGroupViewFn } = factories;
+  const { menu, showMenu, actionCtx, ctx } = menuCtx;
   dock.innerHTML = "";
   const allItems = [...CORE_MENU_ITEMS, ...adapterItemsRef.v];
   for (const g of PREVIEW_MENU_GROUPS) {
@@ -658,7 +674,10 @@ export function mountPreviewRootMenu(
   dbg("preview-menu", "routers built", { panelCount: Object.keys(routers.schemaBuilders).length });
   // 阶段 4：面板/组视图工厂（引用 routers 做渲染）
   const renderPanelFn = (l: HTMLElement, n: PreviewMenuNode): void =>
-    renderPreviewPanel(l, n, routers, menu, hideMenu, actionCtx, {
+    renderPreviewPanel(l, n, routers, {
+      menu,
+      hideMenu,
+      actionCtx,
       makeRow: makePreviewMenuRow,
       makePanelView: makePanelViewFn,
     });
@@ -666,19 +685,20 @@ export function mountPreviewRootMenu(
     previewMakePanelView(n, renderPanelFn);
   const makeRowFn = makePreviewMenuRow;
   const makeGroupViewFn = (g: PreviewMenuGroupDef, items: PreviewMenuNode[]): SlideMenuView =>
-    previewMakeGroupView(g, items, menu, makeRowFn, makePanelViewFn, actionCtx, hideMenu);
+    previewMakeGroupView(g, items, {
+      menu,
+      makeRowFn,
+      makePanelViewFn,
+      actionCtx,
+      hideMenu,
+    });
   // 阶段 5：dock 渲染器（闭包捕获 adapterItemsRef，setAdapterItems 后自动刷新）
   const refreshDock = (): void =>
     renderPreviewDock(
       dock,
-      menu,
-      showMenu,
-      makeRowFn,
-      makePanelViewFn,
-      makeGroupViewFn,
-      actionCtx,
+      { makeRowFn, makePanelViewFn, makeGroupViewFn },
+      { menu, showMenu, actionCtx, ctx },
       adapterItemsRef,
-      ctx,
     );
   // 阶段 6：tap 识别（点击渲染器区域显隐菜单，拖拽不响应）
   const abortTap = bindPreviewTapToggle(ctx.getViewContainer(), popup, menu, hideMenu);

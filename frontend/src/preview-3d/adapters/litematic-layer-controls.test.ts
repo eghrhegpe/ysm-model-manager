@@ -282,10 +282,10 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
       list,
       panel,
       { schemaBuilders: {} } as unknown as PreviewMenuRouters, // litematic 无 schemaBuilders 条目——走 getSchema 分支
-      { refresh: vi.fn() } as unknown as SlideMenuHandle,
-      () => {},
-      { toast: vi.fn(), closeAllOverlays: vi.fn() },
       {
+        menu: { refresh: vi.fn() } as unknown as SlideMenuHandle,
+        hideMenu: () => {},
+        actionCtx: { toast: vi.fn(), closeAllOverlays: vi.fn() },
         makeRow: ((def: { id?: string }) => {
           const row = document.createElement("div");
           if (def.id) row.dataset.testid = "preview-" + def.id;

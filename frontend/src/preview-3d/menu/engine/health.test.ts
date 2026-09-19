@@ -94,7 +94,13 @@ describe("常驻 dock 面板渲染冒烟", () => {
       const node = CORE_MENU_ITEMS.find((d) => d.id === id);
       expect(node, `routers 引用了未在 CORE_MENU_ITEMS 声明的面板 "${id}"`).toBeDefined();
       const list = document.createElement("div");
-      renderPreviewPanel(list, node!, routers, menu, hideMenu, actionCtx, deps);
+      renderPreviewPanel(list, node!, routers, {
+        menu,
+        hideMenu,
+        actionCtx,
+        makeRow: deps.makeRow,
+        makePanelView: deps.makePanelView,
+      });
       expect(list.childElementCount, `面板 "${id}" 渲染为空（断渲染）`).toBeGreaterThan(0);
       expect(list.textContent ?? "", `面板 "${id}" 渲染抛错`).not.toContain("面板渲染失败");
     }

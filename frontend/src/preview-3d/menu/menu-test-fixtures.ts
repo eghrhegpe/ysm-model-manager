@@ -5,7 +5,7 @@
 // 变体差异（如 items 的 fakeCap getCap）经 overrides / 本地薄包装表达。
 import { vi } from "vitest";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
-import type { PreviewMenuCtx } from "@/preview-3d/menu/engine/core.ts";
+import type { PreviewMenuCtx } from "@/preview-3d/menu/schema/node-types.ts";
 import type { SlideMenuHandle } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
 

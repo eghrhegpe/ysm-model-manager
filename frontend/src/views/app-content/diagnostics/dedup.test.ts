@@ -7,22 +7,19 @@ import { waitFor } from "@/test-utils/index.ts";
 import { createDedupSession } from "./dedup.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 
-const { busEmit, getApp, loadResourceRegistry } = vi.hoisted(() => ({
+const { busEmit, getApp } = vi.hoisted(() => ({
   busEmit: vi.fn(),
   getApp: vi.fn(),
-  loadResourceRegistry: vi.fn(() => ({})),
 }));
 
 vi.mock("@/bus", () => ({ bus: { emit: busEmit } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
-vi.mock("@/services/resource-registry.ts", () => ({ loadResourceRegistry }));
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 
 beforeEach(() => {
   vi.resetAllMocks();
-  loadResourceRegistry.mockResolvedValue({ ysm: { id: "ysm", name: "模型", icon: "🧊" } });
 });
 
 // 两文件组：A 更老（modTime 1000）、B 更新（modTime 2000），默认 oldest → 保留 A，删 B

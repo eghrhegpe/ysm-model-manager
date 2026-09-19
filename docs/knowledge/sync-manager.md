@@ -178,7 +178,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 
 | 绑定 | 消费者 | 用途 |
 |------|--------|------|
-| `LoadResourceTypes()` | sync-manager/store.ts | 拉注册表（含 `dirLevelSync` 标记） |
+| ~~`LoadResourceTypes()`~~ | ~~sync-manager/store.ts~~ | ADR-269 D3③ 已废：store.ts 改同步读 `utils/resource/schema.ts`，前端不再调此 RPC |
 | `GetInstanceSyncStatus(instance, subtype, rtype)` | sync-manager/store.ts | 拉层级 `SyncItem[]` |
 | `GetSyncScanDirs(rtype, instance)` | sync-manager/store.ts | 摘要栏扫描目录 |
 | `GetRepoRoot(rtype)` | sync-manager/index.ts、features/sync.ts | 仓库根路径 |

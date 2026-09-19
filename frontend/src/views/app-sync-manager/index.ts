@@ -59,9 +59,10 @@ export class AppSyncManager extends WebComponentBase {
   _filteredItems: SyncItem[] = [];
   /** 筛选后强制展开的目录 path 集合（status 筛选下「有命中后代的目录」，见 store.applyFilter） */
   _forceOpenPaths?: Set<string>;
-  /** 与 self-type.ts 契约同形（dirLevelSync 为可选字段，store.loadTypeConfig 经 SyncManagerSelf 写入、
-   *  renderer 消费；类侧声明须全量对齐，缺字段会让编译守卫「同形契约」宣称与实现脱节） */
-  _typeConfig: Array<{ id: string; name?: string; icon?: string; dirLevelSync?: boolean }> = [];
+  /** 与 self-type.ts 契约同形（store.loadTypeConfig 同步投影 resource_types.json 的 id/name/icon、
+   *  renderer 消费；类侧声明须全量对齐，缺字段会让编译守卫「同形契约」宣称与实现脱节。
+   *  ADR-269 D3③：dirLevelSync 全仓零读，已随本步从形状摘除） */
+  _typeConfig: Array<{ id: string; name?: string | undefined; icon?: string | undefined }> = [];
   _loading = false;
   /** 代际守卫（ADR-230）：裸 _gen 计数退役，统一走全仓唯一出口 createLoadGuard */
   readonly _guard = createLoadGuard();
@@ -185,8 +186,8 @@ export class AppSyncManager extends WebComponentBase {
 
     // 并发代入守卫：过期代际/已卸载直接丢弃
     // code_review 47e68917b #5（P3）：失败者 bailing 前复位 _loading——败方已置
-    // _loading=true 并渲染 spinner 容器；若胜方 loadTypeConfig/loadData 随后抛错，
-    // 无此处复位会让 loading 旗标/转圈残留（守卫语义保留：数据一致性由胜方保证）
+    // _loading=true 并渲染 spinner 容器；若胜方 loadData（ADR-269 D3③ 后 loadTypeConfig 已同步、不抛）
+    // 随后抛错，无此处复位会让 loading 旗标/转圈残留（守卫语义保留：数据一致性由胜方保证）
     this._loading = false;
     if (initGen !== this._initGen || !this.isConnected) return;
 
@@ -249,8 +250,8 @@ export class AppSyncManager extends WebComponentBase {
       loadData(self)
         .then(async () => {
           if (this._guard.stale(gen)) return;
-          // 类型切换时重新加载类型配置，确保 _typeConfig 反映最新注册表（dirLevelSync 等字段生效）
-          await loadTypeConfig(self);
+          // ADR-269 D3③：_typeConfig 已同步派生自 resource_types.json（loadData 前已就绪），
+          // 类型切换无需重载——此处仅刷新仓库根后渲染。
           await loadRepoRoots(self, rt);
           this._doRender();
         })

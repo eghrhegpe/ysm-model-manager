@@ -3,7 +3,7 @@
 // 注意：显式标宽 strategy/keepPolicy/priorityPath 为 string，避免 Object.freeze
 // 泛型保留字面量类型（"deep_hash"）导致 select.value(string) 赋值失败。
 
-import type { loadResourceRegistry } from "@/services/resource-registry.ts";
+import type { ResourceType } from "@/utils/resource/schema.ts";
 import type { DedupGroup } from "@/utils/types-re-export.ts";
 
 export interface DedupConfigShape {
@@ -47,4 +47,4 @@ export interface ScanGroupResult {
 export type GetRepoRootFn = (rtype: string) => Promise<string>;
 export type FindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;
 export type MoveToRecycleFn = (path: string) => Promise<void>;
-export type DedupRegType = Awaited<ReturnType<typeof loadResourceRegistry>>;
+export type DedupRegType = Record<string, ResourceType>;

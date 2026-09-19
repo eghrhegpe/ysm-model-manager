@@ -14,7 +14,6 @@ const {
   busEmit,
   busOn,
   getApp,
-  loadResourceRegistry,
   loadTdKeymap,
   initVersionUpdater,
   friendlyError,
@@ -26,7 +25,6 @@ const {
   busEmit: vi.fn(),
   busOn: vi.fn((_event: string, _fn: (p: unknown) => void) => () => {}),
   getApp: vi.fn(),
-  loadResourceRegistry: vi.fn(() => ({})),
   // 模拟真实 loadTdKeymap（preview-3d/keymap.ts）：从 localStorage 读取并合并默认键位——
   // 固定返回 [] 会让 JSON.stringify 丢弃数组额外属性，键位保存/冲突分支无法正确断言
   loadTdKeymap: vi.fn(() => {
@@ -62,7 +60,6 @@ const {
 
 vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
-vi.mock("@/services/resource-registry.ts", () => ({ loadResourceRegistry }));
 vi.mock("@/preview-3d/mesh/model3d.ts", () => ({ loadTdKeymap }));
 vi.mock("@/features/maintenance/version-updater.ts", () => ({ initVersionUpdater }));
 vi.mock("@/utils/dom/errors.ts", () => ({ friendlyError }));
@@ -176,9 +173,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   document.body.innerHTML = "";
   localStorage.clear();
-  loadResourceRegistry.mockResolvedValue({
-    ysm: { id: "ysm", name: "模型", icon: "🧊", storageSubDir: "ysm", configField: "YsmRoot" },
-  });
+  // ADR-269 D3④：init.ts 现同步读 resourceTypesById（真 SSOT），高级面板含全部类型；
+  // 原 loadResourceRegistry 单条 mock 随之退役。
   // FSA/平台开关默认态：非 web 平台 + unsupported（与 happy-dom 真实语义一致）
   isWebPlatformMock.mockReturnValue(false);
   getFsaAuthStateMock.mockResolvedValue("unsupported");
@@ -727,7 +723,7 @@ describe("initSettings — 高级面板路径设置/重置", () => {
     const { root } = makeRoot();
     await initSettings(root);
     const grid = root.getElementById("set-advanced-grid") as HTMLElement;
-    (grid.querySelector(".stg-path-picker") as HTMLElement).click();
+    (grid.querySelector('.stg-path-picker[data-rtype="ysm"]') as HTMLElement).click();
     await waitFor(() => setRootFn.mock.calls.length > 0);
     expect(setRootFn).toHaveBeenCalledWith("ysm", "/pick");
     await waitFor(() => root.querySelector(".stg-adv-reset"));
@@ -743,7 +739,7 @@ describe("initSettings — 高级面板路径设置/重置", () => {
     const { root } = makeRoot();
     await initSettings(root);
     const grid = root.getElementById("set-advanced-grid") as HTMLElement;
-    (grid.querySelector(".stg-path-picker") as HTMLElement).click();
+    (grid.querySelector('.stg-path-picker[data-rtype="ysm"]') as HTMLElement).click();
     await waitFor(() => root.querySelector(".stg-adv-reset"));
     (root.querySelector(".stg-adv-reset") as HTMLElement).click();
     await waitFor(() => resetFn.mock.calls.length > 0);

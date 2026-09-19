@@ -392,7 +392,7 @@
 | 🍃 utils-icon | 图标映射 icon | leaf | — | 图标, emoji, 文件图标, fileIcon |
 | 🍃 utils-mc-format | MC 格式判定 mc-format | leaf | — | 分节符, § 颜色, MC 颜色码, pack_format, MC 版本, 资源包版本, renderFormattedText, 版本兼容 |
 | 🏗 utils-misc | 常量与调试 constants/debug | architecture | — | 调试日志, dbg, 调试开关, 环形日志, debugGetSpec, 全局常量 |
-| 🏗 utils-resource-types | 资源类型工具 resource-types | architecture | — | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, LoadResourceTypes, 注册表加载 |
+| 🏗 utils-resource-types | 资源类型工具 resource-types | architecture | — | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, resourceTypesById, 注册表加载 |
 | 🏗 utils-summarize | 摘要生成 summarize | architecture | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
 | 🍃 worker-bridge-settleerror-fallback | worker-bridge-settleError-fallback | leaf | concurrent | 扩展 WorkerErrorStrategy 策略, 评审 worker-bridge settleError 分支 |
 | 🏗 ysm-anim-pipeline | YSM (Bedrock) 动画管线 | architecture | cpu-bound | YSM 动画, 基岩动画, molang, 动画管线 |
@@ -425,7 +425,7 @@
 - **utils-icon**（图标映射 icon）：文件名 → 图标 emoji 的映射工具，用于列表/树行的文件类型图标展示。
 - **utils-mc-format**（MC 格式判定 mc-format）：两个 Minecraft 相关的纯工具：`mc-format.ts` 把 § 分节符颜色/格式码渲染为 HTML；`pack-format.ts` 把 pack_format 数值映射为可读的 MC 版本描述。
 - **utils-misc**（常量与调试 constants/debug）：前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。
-- **utils-resource-types**（资源类型工具 resource-types）：前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/resource-r…
+- **utils-resource-types**（资源类型工具 resource-types）：前端资源类型常量与派生工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 Go 端加载；本卡讲 `utils/resou…
 - **utils-summarize**（摘要生成 summarize）：把 Go 端解析出的模型摘要（YsmSummary）与头部信息（YSMHeader）渲染为预览面板的「模型详情」卡片 HTML。
 - **worker-bridge-settleerror-fallback**（worker-bridge-settleError-fallback）：`worker-bridge.ts` 的 `settleError` 三分支结算：`terminatePool` → reject；`makeErrorResponse` 存在 → resolve 错误响应；else → reject（P2…
 - **ysm-wasm**（WASM 解析器 ysm-parser）：YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64…

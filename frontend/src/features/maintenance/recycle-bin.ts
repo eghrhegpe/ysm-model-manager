@@ -6,14 +6,13 @@
 import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
-import { loadResourceRegistry } from "@/services/resource-registry.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import type { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { type RESOURCE_TYPES, typeIconOf } from "@/utils/resource/types.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -229,9 +228,8 @@ function buildLoadRecycleBin(
         if (count) count.textContent = t("recycle.emptyState");
         return;
       }
-      const reg = await loadResourceRegistry();
-      if (guard.stale(gen)) return;
-      const icon = (reg[getCurrentType()] && reg[getCurrentType()].icon) || "📦";
+      // ADR-269 D3④：图标同步派生自 resource_types.json（typeIconOf），废 Go RPC 旁路
+      const icon = typeIconOf(getCurrentType());
       if (count) count.textContent = `${icon} ${t("recycle.fileCount", { n: entries.length })}`;
       list.innerHTML = deps.renderListHtml(entries);
       if (shell.cleanupActions.current) shell.cleanupActions.current();

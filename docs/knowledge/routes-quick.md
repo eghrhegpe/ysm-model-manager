@@ -426,13 +426,13 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 存储子目录、storageSubDir、LoadResourceTypes、注册表加载 | [资源类型工具 resource-types](./utils-resource-types.md) | - | - |
+| 存储子目录、storageSubDir、资源类型同步视图、schema.ts | [资源类型工具 resource-types](./utils-resource-types.md) | - | - |
 | 共享类型、AppConfig、配置 | [共享类型 go/types](./go-types.md) | 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义 | ADR-144, ADR-192 |
 | 检查更新、更新下载、update | [自动更新 go/updater](./go-updater.md) | 更新检查必须走 go/updater，前端禁止手写更新下载逻辑 | - |
 | 扩展名、支持的文件类型、拖拽过滤 | [扩展名映射 extensions](./utils-extensions.md) | 扩展名判定必须走 extensions.ts 的 isSupportedExt，拖拽导入场景禁止等待异步注册表 | - |
 | 新增资源类型 / 修改 resource_types.json / 文件类型 | [资源注册表 registry](./resource-registry.md) | resource_types.json 是唯一事实来源；前端只读不判、禁本地重算 | - |
 | 注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
-| 资源类型、RESOURCE_TYPES、类型标签 | [资源类型工具 resource-types](./utils-resource-types.md) | 资源类型注册表必须经 LoadResourceTypes 加载，前端禁止手写类型映射 | - |
+| 资源类型、RESOURCE_TYPES、类型标签 | [资源类型工具 resource-types](./utils-resource-types.md) | 资源类型必须派生自 resource_types.json（前端唯一入口 = schema.ts 的同步视图 allResourceTypes/resourceTypesById），禁止手写类型映射、禁止异步 RPC 旁路 | - |
 | LoadRegistry/ParseDedupConfig | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
 | RESOURCE_EXTS/ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) | - | - |
 | version-updater | [自动更新 go/updater](./go-updater.md) | - | - |
@@ -1026,7 +1026,7 @@
 | 尾随空格校验必须吃**未 trim 原串**：前端 dstDir 拼接用未 trim 的 folder，校验若先 trim 就漏检（Windows 落盘静默剥离 | - | 落点漂移） |
 | 各自创建 renderer | - | 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享 |
 | rAF 未统一节流 | - | 帧率不统一；必须经 federation 的 rAF 调度 |
-| loadResourceRegistry 空结果/异常不缓存（P2 修复）；旧实现 Go 失败返回  时会缓存空注册表导致整会话降级；现正确行为是失败路径返回 `{}` 不写入 `_registry`，下次调用可重试 | `"{}"` | - |
+| ⚠️ 历史：原前端  异步加载器 `loadResourceRegistry()`（Go RPC + `_registry` 缓存，空/失败不缓存）已由 ADR-269 D3（2026-09）退役——全部消费方迁 `utils/resource/schema.ts` 同步视图 `allResourceTypes`/`resourceTypesById` 后连模块一并删除，勿再引用 | `services/resource-registry.ts` | - |
 | ⚠️ 历史：原  服务注册表的 `get` 用 `Map.has()` 判定 falsy 值——该文件已删，本 pitfall 仅存史 | `services/registry.ts` | - |
 | MMD 子类型 instanceDir 必须精确为 `3d-skin/<子名>`（含子级），漏写一级右键打开到错误父目录；TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix 回归测试锁定 | `打开文件夹` | - |
 | 硬编码 Windows 路径 | - | Android/Linux 启动失败；必须经平台桥的编译脚本 |
@@ -1083,7 +1083,7 @@
 | 静态表未与 resource_types.json 对齐 | - | 三端不一致；必须由契约测试守护 |
 | console.log 散落 | - | 无法按 tag 过滤、生产环境泄漏日志；必须经 dbg |
 | 环形缓冲区未限制大小 | - | 内存累积；必须经环形缓冲的 max 限制 |
-| 手写类型映射 | - | 与注册表不一致、分类错乱；必须经 LoadResourceTypes |
+| 手写类型映射 | - | 与注册表不一致、分类错乱；必须派生自 resource_types.json（走 schema.ts 同步视图） |
 | 新增资源类型未注册 | - | 前端无法识别；必须在 resource_types.json 中注册 |
 | 手写详情卡片 | - | 与 summaryCardHTML 样式不一致、作者信息重复；必须经 summaryCardHTML |
 | 加密模型未走安全提取路径 | - | 加密内容泄露；必须经 summaryCardHTML 渲染 |

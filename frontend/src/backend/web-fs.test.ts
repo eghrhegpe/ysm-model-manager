@@ -6,16 +6,6 @@
 // 通过其调用者间接覆盖，不在此直接测。
 import { describe, it, expect, vi } from "vitest";
 
-// resource_types.json mock：typeFromWebDir 依赖
-vi.mock("../../../resource_types.json", () => ({
-  default: {
-    resourceTypes: [
-      { id: "ysm", instanceDir: "ysm-assets" },
-      { id: "vrm", instanceDir: "vrm-models" },
-    ],
-  },
-}));
-
 // web-common mock：webDirType 是 typeFromWebDir 的核心
 vi.mock("./web-common.ts", () => ({
   webDirType: (dir: string): string | undefined => {

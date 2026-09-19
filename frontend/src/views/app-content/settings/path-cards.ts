@@ -5,7 +5,6 @@
 import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import type { ResourceTypeEntry } from "@/services/resource-registry.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
@@ -13,6 +12,7 @@ import { modalPicker } from "@/utils/dom/modal-picker.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import type { ResourceType } from "@/utils/resource/schema.ts";
 import { groupStorageRootOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { cardRefreshers, getCfg, isBusy, setBusy, toastError } from "./store.ts";
@@ -173,7 +173,7 @@ function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[])
 // 返回 refreshAdvanced，供展开折叠/路径卡片变更后刷新复用
 export function initAdvancedGrid(
   root: ShadowRoot,
-  reg: Record<string, ResourceTypeEntry>,
+  reg: Record<string, ResourceType>,
 ): () => Promise<void> {
   // 从注册表构建高级设置条目
   interface AdvancedType {
@@ -182,10 +182,10 @@ export function initAdvancedGrid(
     name: string;
     cfgKey: string;
   }
-  const advancedTypes: AdvancedType[] = Object.values(reg).map((entry: ResourceTypeEntry) => ({
+  const advancedTypes: AdvancedType[] = Object.values(reg).map((entry: ResourceType) => ({
     rtype: entry.id,
-    icon: entry.icon as string,
-    name: (entry.name as string) || entry.id,
+    icon: entry.icon ?? "📦",
+    name: entry.name || entry.id,
     cfgKey: entry.configField
       ? String(entry.configField).charAt(0).toLowerCase() + String(entry.configField).slice(1)
       : "",

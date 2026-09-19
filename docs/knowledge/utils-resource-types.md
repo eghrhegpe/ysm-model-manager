@@ -55,6 +55,7 @@ auto_fields:
     - RESOURCE_TYPE_LABELS
     - RESOURCE_TYPES
     - ResourceType
+    - resourceTypesById
     - ResourceTypeVariant
     - shortLabelOf
     - typeIconOf
@@ -65,11 +66,11 @@ quick_groups:
   - 配置与注册表
 quick_intents:
   - 资源类型、RESOURCE_TYPES、类型标签
-  - 存储子目录、storageSubDir、LoadResourceTypes、注册表加载
+  - 存储子目录、storageSubDir、资源类型同步视图、schema.ts
 quick_risk_lines:
-  - 资源类型注册表必须经 LoadResourceTypes 加载，前端禁止手写类型映射
+  - 资源类型必须派生自 resource_types.json（前端唯一入口 = schema.ts 的同步视图 allResourceTypes/resourceTypesById），禁止手写类型映射、禁止异步 RPC 旁路
 pitfalls:
-  - 手写类型映射 → 与注册表不一致、分类错乱；必须经 LoadResourceTypes
+  - 手写类型映射 → 与注册表不一致、分类错乱；必须派生自 resource_types.json（走 schema.ts 同步视图）
   - 新增资源类型未注册 → 前端无法识别；必须在 resource_types.json 中注册
 
 use_when:
@@ -78,10 +79,10 @@ use_when:
   - 类型标签
   - 存储子目录
   - storageSubDir
-  - LoadResourceTypes
+  - resourceTypesById
   - 注册表加载
 invariant_anchors:
-  - frontend/src/services/resource-registry.ts|_registry
+  - frontend/src/utils/resource/schema.ts|resourceTypesById
 status: active
 ---
 
@@ -89,12 +90,12 @@ status: active
 
 ## 概览
 
-前端资源类型常量与注册表加载工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 `services/resource-registry.ts`（资源类型注册表加载器）；本卡讲 `utils/` 下的两套工具 —— 静态常量表（同步、直接 import）与异步加载器（走 Wails binding）。⚠️ 曾存在的 `services/registry.ts` 服务注册表已于 2026-09 删除，与本卡无关。
+前端资源类型常量与派生工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 Go 端加载；本卡讲 `utils/resource/` 下的同步派生层 —— `schema.ts`（唯一 ResourceType 接口 + 单一 JSON 解析点，导出 `allResourceTypes`/`resourceTypesById`）与 `types.ts`/`extensions.ts`（同源派生视图）。⚠️ ADR-269 D3（2026-09）退役了原 `services/resource-registry.ts` 异步 RPC 旁路，前端资源类型统一走 `schema.ts` 同步视图，无空表窗口。⚠️ 更曾存在的 `services/registry.ts` 服务注册表已于 2026-09 删除，与本卡无关。
 
 ## 核心职责
 
 - 提供资源类型 ID 常量、中文标签、全类型列表（同步访问，无需等加载）
-- 从 Go 端异步加载 resource_types.json 并提供条目/存储子目录查询
+- 键控条目/存储子目录查询走 `schema.ts` 的同步视图 `resourceTypesById`（构建期 import 内联，ADR-269 D3 起取代异步 RPC）
 
 ## 对外 API / 入口
 
@@ -116,28 +117,29 @@ status: active
   - `isContainerExt(pathOrExt)` — 压缩容器扩展名判定（`.zip`/`.7z`；容器可包裹任意类型，类型判定仍以 Go 内容检测为准）
   - 内部实现（非导出）：`RESOURCE_CAPS`（派生能力表）/`resolveTypeByExt`（反查）——外部统一走 `resolveTypeSafe`/`matchTypeByExt` 等安全入口（2026-08-16 去 export 收敛，消除死代码告警）
 
-`services/resource-registry.ts`（异步加载器）：
-- `loadResourceRegistry(): Promise<Record<string, ResourceTypeEntry>>` — 经 `getApp().LoadResourceTypes()` 加载，模块级 `_registry` 缓存；**仅当拿到非空 `resourceTypes` 数组才写缓存**（P2 修复：Go 端错误路径返回 `"{}"` 时原实现会缓存空注册表、整会话降级；现失败/空结果返回 `{}` 不缓存，Go 桥瞬断后下次调用重试）
-- `ResourceTypeEntry` 接口：`extends ResourceType`（`schema.ts` 唯一完整前端视图：id/name/icon/group/groupLabel/groupIcon/extensions/storageSubDir/configField/instanceDir/preview/detector/variants/zipEntries）+ `[key: string]: unknown` 索引签名（容忍 Go 端未来新增字段，消费者读未知字段需自行 `typeof` 收窄；T2 收敛自原 `{id, storageSubDir?, name?}` 手写子集）
-- 有 vitest 覆盖（registry.test.ts：成功缓存/失败不缓存/空结果不缓存/重复调用仅一次 Go 调用，P2 补测）
+`schema.ts`（同步单一解析点，ADR-269 D3 起取代异步加载器）：
+- `allResourceTypes: ResourceType[]` — 全类型条目数组（插入序 = JSON 序），`types.ts`/`extensions.ts`/`web-fs.ts`/`site-edit.ts` 等消费
+- `resourceTypesById: Record<string, ResourceType>` — 按 id 键控视图（`Object.fromEntries` 保序），取代原 `loadResourceRegistry()` 的 keyed-map：设置/诊断/同步管理等键控消费方直读此处，与 `allResourceTypes` 同源、无空表窗口
+- `ResourceType` 接口（前端消费字段子集，完整 schema 事实源仍是 Go `go/types/resource.go` + 根 `resource_types.json`）：`id/name/icon/group/groupLabel/groupIcon/extensions/storageSubDir/configField/instanceDir/preview/detector/variants/zipEntries`；Go 新增未被前端消费的字段不要求补声明
+- ⚠️ 历史：原 `services/resource-registry.ts` 提供 `loadResourceRegistry()`（走 `getApp().LoadResourceTypes()` 异步 RPC + 模块级 `_registry` 缓存），ADR-269 D3（2026-09）删除全部消费方后连模块一并退役——勿再引用
 
 ## 与其他子系统关系
 
 - `RESOURCE_TYPES` 是消费面最广的前端常量：`app-sidebar`、`app-tree`、`app-content`、`app-sync-manager`、`app-preview`、`core/handler-dnd`、`core/handler-sync`、`core/context-menus`、`features/*`（`app-resource-manager` 已于 2026-08-24 删除）
-- `loadResourceRegistry` 消费方：`features/recycle-bin.ts`、`features/oldest-models.ts`、`app-content/community/settings.ts` + `diagnostics.ts`
+- 键控消费方（ADR-269 D3 起同步读 `schema.ts` `resourceTypesById`）：`features/maintenance/recycle-bin.ts`（图标走 `typeIconOf`）、`app-content/settings/init.ts`、`app-content/diagnostics/dedup.ts` + `perf-matrix-render.ts`、`app-sync-manager/store.ts`
 - Wails 调用统一走 `getApp()`（治理红线 §3.2，禁止 window.go.main.App）
 
 ## 不变量
 
 - 不在前端手写新的 StorageSubDir / ResourceExts 条目，新增类型从 `resource_types.json` 开始（注册表优先，AGENTS.md §4.4）
 - `RESOURCE_TYPE_LABELS` 是 UI 类型中文文案的来源，新增类型必须同步补标签（UI 文案与代码字段一致）
-- loadResourceRegistry 返回的 Map 只应读取不应改写；注册表条目查询请基于其返回值就地进行
+- `schema.ts` 导出的 `allResourceTypes`/`resourceTypesById` 是构建期内联派生的只读视图，消费方只读不改写（改写会污染同会话所有消费方）
 - **歧义扩展名（`.zip`/`.7z`）禁止用扩展名直判类型**：`.zip` 可包裹任意类型（ADR-067），必须经 `resolveTypeSafe`（返回 null）回退 Go `DetectResourceType` 内容指纹——`AMBIGUOUS_EXTS` 派生自注册表，新增类型含容器扩展名自动纳入歧义集
 - **契约测试守护**（`types.test.ts`，18 例）：RESOURCE_TYPES/LABELS 与 JSON 对账、`AMBIGUOUS_EXTS` 与注册表派生一致、`resolveTypeSafe` 单归属/歧义/大小写、`VOXEL_RPC_BY_EXT` 体素扩展名全覆盖（voxelFn 映射契约）
 
 ## 相关
 
-- [resource_registry](./resource-registry.md) — 单一事实源 + `services/resource-registry.ts` 加载器
+- [resource_registry](./resource-registry.md) — `resource_types.json` 单一事实源 + Go 端加载（前端异步加载器 ADR-269 D3 已退役，统一走本卡 `schema.ts` 同步视图）
 - [utils_extensions](./utils-extensions.md) — 扩展名映射
 - [utils_icon](./utils-icon.md) — 文件图标（容器扩展名统一 📦，见 ADR-067 漂移修复）
 - [wails_bridge](./wails-bridge.md) — getApp() 桥接

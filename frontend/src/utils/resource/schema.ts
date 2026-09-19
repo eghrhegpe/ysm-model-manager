@@ -1,6 +1,7 @@
 // ===== 资源类型 schema（唯一前端 ResourceType + 单一 JSON 解析点）=====
-// types.ts / extensions.ts 同源消费 allResourceTypes；registry.ts 的
-// ResourceTypeEntry extends 本类型（数据源仍走 Go RPC，不动）。
+// types.ts / extensions.ts 同源消费 allResourceTypes；键控消费方读 resourceTypesById。
+// ADR-269 D3：本文件是前端资源类型的唯一同步入口，原 `services/resource-registry.ts`
+// 异步 RPC 旁路已删除。
 //
 // 语义边界：本类型只建模「前端消费」的字段子集；完整 schema 事实源是 Go 端
 // go/types/resource.go（+ 根 resource_types.json）。Go 新增未被前端消费的字段
@@ -42,11 +43,22 @@ interface ResourceTypeRegistryJson {
   resourceTypes?: ResourceType[];
 }
 
-/** 单一解析入口：整个前端只 import 这一处 resource_types.json */
+/** 单一解析入口：整个前端生产代码只 import 这一处 resource_types.json（测试文件直读
+ *  JSON 做对账是故意为之，避免「用派生模块验证派生模块」的自证） */
 const registryJson = resourceTypesJson as ResourceTypeRegistryJson;
 
 /** 全部资源类型条目（types.ts / extensions.ts 共同消费，单一来源） */
 export const allResourceTypes: ResourceType[] = registryJson.resourceTypes ?? [];
+
+/**
+ * 按 id 键控的同步资源类型视图（ADR-269 D3）。
+ * 取代 `services/resource-registry.ts` 的异步 RPC 旁路：消费方从
+ * `await loadResourceRegistry()` 改为直读此处，与 `allResourceTypes` 同源、无空表窗口。
+ * 插入序 = JSON 序（`Object.fromEntries` 保序），需要稳定顺序时消费方自行排序。
+ */
+export const resourceTypesById: Record<string, ResourceType> = Object.fromEntries(
+  allResourceTypes.map((t) => [t.id, t]),
+);
 
 if (allResourceTypes.length === 0) {
   // 结构漂移（resourceTypes 缺失/为空）显式暴露，避免空表被误当"无资源类型"静默吞掉

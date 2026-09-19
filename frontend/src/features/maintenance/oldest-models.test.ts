@@ -22,13 +22,6 @@ vi.mock("@/backend/app.ts", () => ({
   }),
 }));
 
-vi.mock("@/services/resource-registry.ts", () => ({
-  loadResourceRegistry: vi.fn().mockResolvedValue({
-    ysm: { icon: "📦" },
-    mmd: { icon: "🎭" },
-  }),
-}));
-
 // 固定随机数，保证每日推荐可断言
 // 注意：不能使用 vi.restoreAllMocks() —— 它会清掉 vi.mock factory 中 getApp 的
 // mockResolvedValue 实现，导致后续测试 getApp() 返回 undefined

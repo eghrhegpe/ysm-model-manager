@@ -52,11 +52,11 @@ import {
 } from "@/parsers/ysm-header.ts";
 // rtype 扩展名白名单（resource_types.json 派生，单一事实源；ScanModelEntriesFiltered 过滤用）
 import { getExts } from "@/utils/resource/extensions.ts";
+// 全类型条目（id / instanceDir）同步读单一解析点 schema.ts
+// （ADR-269 D3⑥：废本模块对 resource_types.json 的重复内联 import）
+import { allResourceTypes } from "@/utils/resource/schema.ts";
 // rtype 魔法字符串统一走 RESOURCE_TYPES 常量（治理红线 R7）
 import { RESOURCE_TYPES, resolveTypeSafe } from "@/utils/resource/types.ts";
-// 复用 dnd-shared 的导入白名单（.json 仅放行 ysm.json，其余须 ALL_EXTS 成员），
-// 避免 browser-adapter 另起一套扩展名校验导致漂移
-import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
 import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
 import { type IdbOp, idbDel, idbGet, idbGetAll, idbGetAllMetadata, idbKeys, idbTx } from "./idb.ts";
 import {
@@ -284,7 +284,7 @@ async function readNbtMetaJson(
 export async function scanAllWebModels(): Promise<
   Array<{ type: string; name: string; path: string }>
 > {
-  const rts = (resourceTypesJson as { resourceTypes?: Array<{ id: string }> }).resourceTypes ?? [];
+  const rts = allResourceTypes;
   const out: Array<{ type: string; name: string; path: string }> = [];
   for (const r of rts) {
     const entries = await scanWebModels(`${WEB_ROOT}/${r.id}`);
@@ -670,17 +670,14 @@ async function moveOrCopyWebModel(src: string, dstDir: string, move: boolean): P
 async function getWebSubDirMap(): Promise<Record<string, string>> {
   // 对齐 go/types/extensions.go SubDirAll：返回 rt.InstanceDir（整合包实例版本目录子目录），
   // 非 storageSubDir（仓库存储子目录）——B1 契约测试暴露的字段错用
-  const rts =
-    (resourceTypesJson as { resourceTypes?: Array<{ id: string; instanceDir?: string }> })
-      .resourceTypes ?? [];
   const map: Record<string, string> = {};
-  for (const r of rts) map[r.id] = r.instanceDir ?? "";
+  for (const r of allResourceTypes) map[r.id] = r.instanceDir ?? "";
   return map;
 }
 
 /** 聚合所有资源类型的 IDB 模型条目（网页版「本地仓库」= 虚拟根 /web） */
 export async function collectAllWebEntries(): Promise<ModelEntry[]> {
-  const rts = (resourceTypesJson as { resourceTypes?: Array<{ id: string }> }).resourceTypes ?? [];
+  const rts = allResourceTypes;
   const all: ModelEntry[] = [];
   for (const r of rts) {
     const entries = await scanWebModels(`${WEB_ROOT}/${r.id}`);

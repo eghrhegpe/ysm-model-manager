@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-270：preview-3d/menu 目录物理分层（七层隐式收敛为显式子目录）",
+        "link": "/adr/ADR-270-menu-directory-layering"
+      },
+      {
         "text": "ADR-269：资源清单单一事实源化：mcmeta 四份手抄收敛 + pack provenance 维度",
         "link": "/adr/ADR-269-resource-manifest-single-source"
       },

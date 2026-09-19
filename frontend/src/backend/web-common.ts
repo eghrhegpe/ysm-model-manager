@@ -34,9 +34,9 @@ export { arrayBufferToBase64, base64ToBytes, u8ToBase64 } from "@/utils/base/pri
 
 // ===== 基础 binding 片段（Top 6 注册表驱动：browser-adapter.ts 只做 {...} 装配）=====
 // 网页版无 Go 侧版本/3D 通道，这些 binding 为占位或常量实现；LoadResourceTypes
-// 依赖 resource_types.json（vite 构建期内联，与 extensions.ts 同源），放本文件避免
-// web-fs/web-store/web-community 各自引入 JSON import。
-import resourceTypesJson from "../../../resource_types.json" with { type: "json" };
+// 返回与桌面 Go 同形状 struct，数据同步读单一解析点 schema.ts（ADR-269 D3⑥：
+// 废本模块对 resource_types.json 的重复内联 import）。
+import { allResourceTypes } from "@/utils/resource/schema.ts";
 
 // __APP_VERSION__ 由 vite define 注入（vite.web.config.ts / vite.config.js：
 // `process.env.WEB_VERSION || "web"`，索引 1.6 构建注入，与桌面 Go version.Version
@@ -44,10 +44,9 @@ import resourceTypesJson from "../../../resource_types.json" with { type: "json"
 declare const __APP_VERSION__: string;
 
 export const webCommonBindings = {
-  // 注册表驱动视图（recycle-bin/oldest-models/community/app-resource-manager）依赖
-  // LoadResourceTypes；直接返回同形状 struct（ADR-143 P0：去 string-JSON 化），
-  // 消除 registry.ts 静默降级为空
-  LoadResourceTypes: () => Promise.resolve(resourceTypesJson),
+  // 注册表驱动视图 binding（与桌面 Go LoadResourceTypes 同形状 struct，ADR-143 P0：
+  // 去 string-JSON 化）；数据同步源自 schema.ts 单一解析点，无空表窗口
+  LoadResourceTypes: () => Promise.resolve({ resourceTypes: allResourceTypes }),
   // P2 修复（审核）：网页版无 Go 侧 version.Version，补版本 binding 让导航/设置页
   // 不再触发 fail-fast（原缺失导致 app-nav catch 兜底硬编码 "v1.0.0"、设置页版本
   // 卡「加载中」）；版本号由构建注入（__APP_VERSION__，发版脚本传 WEB_VERSION），

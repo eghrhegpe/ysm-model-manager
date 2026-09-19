@@ -51,7 +51,7 @@ status: active
 
 ## 核心职责
 
-- `loadRecycleBin()`：`ListRecycleBin("")` 取全部条目 → `GetRepoRoot(currentType)` 按当前资源类型根目录前缀过滤 → 渲染条目（名称走 `renderDisplayName`、大小走宿主 `_fmtSize`、完整路径展示）；类型图标取自 `loadResourceRegistry()`
+- `loadRecycleBin()`：`ListRecycleBin("")` 取全部条目 → `GetRepoRoot(currentType)` 按当前资源类型根目录前缀过滤 → 渲染条目（名称走 `renderDisplayName`、大小走宿主 `_fmtSize`、完整路径展示）；类型图标同步走 `typeIconOf()`（`utils/resource/types.ts` 派生自 `resource_types.json`，ADR-269 D3④：废 `loadResourceRegistry()` RPC 旁路）
 - generation 守卫：`createLoadGuard()`（utils/async/load-guard.ts，与 oldest-models 共用）每次加载自增代数，`await` 后比对 `guard.isStale()`，过期请求的结果直接丢弃，不覆盖新列表；重载入口先 `guard.invalidate()`（含 catch 分支）
 - 单条恢复：按钮 `disabled` 自锁 + `leaving` 离场动画（150ms）后 `RestoreFromRecycle(path, "")`，成功后重载列表并广播刷新；失败回滚 `leaving` 类并解锁按钮
 - 单条删除：`modalConfirm` 二次确认后同样自锁 + 动画 → `DeleteFromRecycle(path)`

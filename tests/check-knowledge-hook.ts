@@ -56,7 +56,7 @@ check("--quiet 仅吐 card stem", () => {
       path.join(ROOT, "scripts", "check-knowledge-drift.ts"),
       "--affected",
       "--quiet",
-      "frontend/src/services/resource-registry.ts",
+      "frontend/src/utils/resource/schema.ts",
       "go/avatar/resource.go",
     ],
     { encoding: "utf8" },
@@ -69,7 +69,7 @@ check("--quiet 仅吐 card stem", () => {
   // frontend_repo_audit 为整包审计快照卡（source_files: frontend/src/ 粒度过粗），
   // 已声明 affected: false 退出 affected 匹配——若本断言失败且输出含它，
   // 说明 opt-out 标记失效或有人删了该标记（整包卡会污染所有前端文件的提交提示）
-  assert.deepStrictEqual(lines, ["go-avatar", "resource-registry"]);
+  assert.deepStrictEqual(lines, ["go-avatar", "utils-resource-types"]);
 });
 
 check("--quiet 无命中输出空", () => {

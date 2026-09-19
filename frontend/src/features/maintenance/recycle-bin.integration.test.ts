@@ -15,7 +15,7 @@ const { mocks } = vi.hoisted(() => {
     friendlyError: vi.fn((e: unknown, fallback: string) =>
       e instanceof Error ? e.message : fallback,
     ),
-    loadResourceRegistry: vi.fn(),
+    typeIconOf: vi.fn((id: string) => (id === "ysm" ? "💎" : "📦")),
     // app 方法键类型占位（undefined as MockFn）：运行时经下方 Object.assign 注入
     // appFn 实例。#10 清 hoisted 死 vi.fn() 后 Object.assign 扩展无 TS 类型——
     // typecheck 报 TS2339（code_review 54ef29d3 修复的后续 typecheck 验证发现）
@@ -51,12 +51,11 @@ vi.mock("@/utils/dom/errors.ts", () => ({
   friendlyError: mocks.friendlyError,
 }));
 
-vi.mock("@/services/resource-registry.ts", () => ({
-  loadResourceRegistry: mocks.loadResourceRegistry,
-}));
-
+// ADR-269 D3④：recycle-bin 图标改走同步 typeIconOf（废 resource-registry RPC 旁路，
+// 该模块 mock 随之移除）；types.ts mock 补齐 typeIconOf 出口。
 vi.mock("@/utils/resource/types.ts", () => ({
   RESOURCE_TYPES: { YSM: "ysm", PACK: "resourcepack" },
+  typeIconOf: (id: string) => mocks.typeIconOf(id),
 }));
 
 vi.mock("@/backend/app.ts", async () => {
@@ -90,7 +89,6 @@ beforeEach(async () => {
   host = { _root: root };
   mocks.GetRepoRoot.mockResolvedValue("/mc");
   mocks.ListRecycleBin.mockResolvedValue([]);
-  mocks.loadResourceRegistry.mockResolvedValue({ ysm: { icon: "💎" } });
   // 默认成功值，防单个用例 mockRejectedValue/mockResolvedValueOnce 残留给后续用例
   mocks.RestoreFromRecycle.mockResolvedValue(undefined);
   mocks.DeleteFromRecycle.mockResolvedValue(undefined);

@@ -5,13 +5,153 @@ tier: architecture
 category: config
 source_files:
   - resource_types.json
-  - frontend/src/services/resource-registry.ts
+  - go/types/
 auto_fields:
   symbols_with_lines:
-    - loadResourceRegistry
-    - ResourceTypeEntry
+    - AllExts
+    - AllSubDirs
+    - AppConfig
+    - AppError
+    - AppError.Error
+    - AppError.Unwrap
+    - AppError.WithCause
+    - AuthorInfo
+    - BedrockModel
+    - Bone2D
+    - BundledRegistryJSON
+    - ContainerExts
+    - Cube2D
+    - CustomFileInfo
+    - DedupConfig
+    - DisabledSuffix
+    - DownloadTask
+    - ErrAlreadyExists
+    - ErrDecodeFailed
+    - ErrFileEmpty
+    - ErrFileExists
+    - ErrFileNameInvalid
+    - ErrFileTooLarge
+    - ErrInvalidParam
+    - ErrInvalidPath
+    - ErrIO
+    - ErrLinkFailed
+    - ErrMcRootNotSet
+    - ErrMkdirFailed
+    - ErrorCode
+    - ErrUnknown
+    - ErrUnsupportedFmt
+    - ErrUnsupportedType
+    - ErrWriteFailed
+    - ExtBelongsTo
+    - ExtBelongsToBy
+    - FileInventory
+    - FindInstDir
+    - FormatRange
+    - FormatRange.UnmarshalJSON
+    - GroupIcon
+    - GroupLabel
+    - GroupOf
+    - GroupStorageRoot
+    - ImportFileItem
+    - ImportLog
+    - InstallExtsFor
+    - InstanceStatus
+    - IsContainerExt
+    - IsDirLevelSync
+    - IsDisableSuffix
+    - IsNestedModelDir
+    - IsRenderableTextureExt
+    - IsResourceAllowed
+    - IsScanInstance
+    - IsSupportedExt
+    - IsTextureExt
+    - IsYsmEntryJSON
+    - LauncherInstance
+    - LevelDebug
+    - LevelError
+    - LevelFatal
+    - LevelInfo
+    - LevelWarn
+    - LinkCopy
+    - LinkHard
+    - LinkSym
+    - LinkType
+    - LinkUnknown
+    - LitematicBlockStat
+    - LitematicMeta
+    - LitematicVoxelData
+    - LoadRegistry
+    - LogLevel
+    - MatchZipEntry
+    - MaxImportSize
+    - MaxImportSizeMB
+    - MaxReadLimit
+    - ModelEntry
+    - ModKeywordsFor
+    - ModMetaFor
+    - ModRequirement
+    - NestedPattern
+    - NestedPatternsFor
+    - NormalizeResourceName
+    - PackInfo
+    - PackMeta
+    - PackMeta.Desc
+    - PackMetaView
+    - PackModelDetail
+    - PackModelDetailList
+    - ParseDedupConfig
+    - QueueStatusInfo
+    - RegistryType
+    - RenderableTextureExts
+    - ResourceSyncItem
+    - ResourceSyncResult
+    - ResourceType
+    - ResourceType.EffectiveExtensions
+    - ResourceType.MatchZipEntry
+    - ResourceTypeRegistry
+    - ResourceTypeRegistry.FindByID
+    - RuntimeLog
+    - SearchResult
+    - SetBundledRegistryJSON
+    - SetRegistryPath
+    - ShaderpackLang
+    - ShouldHashExt
+    - StatusToLevel
+    - StorageSubDir
+    - StripBanSuffix
+    - StripDisableSuffix
+    - SubDirAll
+    - SubDirEntry
+    - SubDirMap
+    - SubModel
+    - SupportedExtsForSubtype
+    - SupportedExtsForType
+    - SupportedTextureExts
+    - SyncConfig
+    - SyncResolveResult
+    - SyncScanDirs
+    - SyncStatus
+    - SyncStatusDisabled
+    - SyncStatusDiverged
+    - SyncStatusLegacy
+    - SyncStatusMissing
+    - SyncStatusOptional
+    - SyncStatusSynced
+    - TextureMIME
+    - TypeByLocation
+    - Variant
+    - VersionInstance
+    - VoxelGroup
+    - WindowState
+    - WorkshopCreator
+    - WorkshopPresetSearch
+    - WorkshopSite
+    - YsmAuthor
+    - YsmLicense
+    - YsmMetadata
+    - ZipEntryMatch
   tests:
-    - frontend/src/services/resource-registry.test.ts
+    - frontend/src/utils/resource/schema.test.ts
 use_when:
   - 资源类型
   - 注册表
@@ -19,7 +159,7 @@ use_when:
   - registry
   - 文件类型
 invariant_anchors:
-  - frontend/src/services/resource-registry.ts|loadResourceRegistry
+  - resource_types.json|resourceTypes
 
 quick_groups:
   - 配置与注册表
@@ -28,7 +168,7 @@ quick_intents:
 quick_risk_lines:
   - resource_types.json 是唯一事实来源；前端只读不判、禁本地重算
 pitfalls:
-  - loadResourceRegistry 空结果/异常不缓存（P2 修复）；旧实现 Go 失败返回 `"{}"` 时会缓存空注册表导致整会话降级；现正确行为是失败路径返回 `{}` 不写入 `_registry`，下次调用可重试
+  - ⚠️ 历史：原前端 `services/resource-registry.ts` 异步加载器 `loadResourceRegistry()`（Go RPC + `_registry` 缓存，空/失败不缓存）已由 ADR-269 D3（2026-09）退役——全部消费方迁 `utils/resource/schema.ts` 同步视图 `allResourceTypes`/`resourceTypesById` 后连模块一并删除，勿再引用
   - ⚠️ 历史：原 `services/registry.ts` 服务注册表的 `get` 用 `Map.has()` 判定 falsy 值——该文件已删，本 pitfall 仅存史
   - MMD 子类型 instanceDir 必须精确为 `3d-skin/<子名>`（含子级），漏写一级右键「打开文件夹」打开到错误父目录；TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix 回归测试锁定
 status: active
@@ -48,14 +188,15 @@ status: active
 
 ## 对外 API / 入口
 
-- `loadResourceRegistry()`（`services/resource-registry.ts`）— 加载资源类型注册表；**空结果/异常不缓存**（Go 失败返回 `"{}"` 时不会写入 `_registry`，下次调用可重试，P2 修复）；失败路径 `console.warn` 告警（P3 修复，对齐 Go 端损坏回退告警）
+- `resource_types.json` — 单一事实源（顶层唯一键 `resourceTypes`），Go `go/types/` 与前端 `utils/resource/schema.ts` 各自同源读取
+- `utils/resource/schema.ts`（前端唯一同步入口）— `allResourceTypes: ResourceType[]` + `resourceTypesById: Record<string, ResourceType>`；构建期 import 内联 JSON，无空表窗口
+- ⚠️ 历史：原前端 `services/resource-registry.ts` 提供 `loadResourceRegistry()`（异步 Go RPC + 模块级缓存），ADR-269 D3（2026-09）退役全部消费方后连模块删除——勿再引用
 - ⚠️ 历史：原 `services/registry.ts` **服务注册表**曾提供 `register/get/has/unregister/clear`（`ServiceName` 联合收窄 + `Map.has()` falsy 判定），2026-09 已删除——勿再引用
 
 ## 与其他子系统关系
 
-- `go/types/`: Go 端注册表加载
-- `frontend/src/services/resource-registry.ts`: 前端资源类型注册表加载（Go `LoadResourceTypes` binding）
-- `frontend/src/utils/resource/types.ts`: 前端类型工具；`schema.ts` 为前端唯一 ResourceType 接口 + 单一 JSON 解析点（`types.ts`/`extensions.ts` 同源消费，T2 收敛）
+- `go/types/`: Go 端注册表加载（读同一份 `resource_types.json`）
+- `frontend/src/utils/resource/schema.ts`: 前端唯一同步入口（`types.ts`/`extensions.ts`/键控消费方同源消费，ADR-269 D3 起取代原 `services/resource-registry.ts` 异步 RPC 旁路）
 
 ## 不变量
 

@@ -7,6 +7,7 @@ vi.mock("@/views/backend-deps.ts", () => ({ backendGetApp: vi.fn() }));
 vi.mock("@/bus", () => ({ bus: { emit: vi.fn() } }));
 
 import { bus } from "@/bus";
+import { allResourceTypes } from "@/utils/resource/schema.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import type { SyncManagerSelf } from "./self-type.ts";
@@ -94,26 +95,20 @@ describe("store.applyFilter", () => {
 });
 
 describe("store.loadTypeConfig", () => {
-  it("成功 → 只保留前端所需字段子集", async () => {
-    getAppMock.mockResolvedValue({
-      LoadResourceTypes: vi.fn().mockResolvedValue({
-        resourceTypes: [
-          { id: "ysm", name: "YSM", icon: "i", dirLevelSync: true, extra: "drop-me" },
-        ],
-      }),
-    } as never);
+  it("同步投影 resource_types.json → 仅 id/name/icon，无 dirLevelSync/多余键（ADR-269 D3③）", () => {
     const self = makeSelf();
-    await loadTypeConfig(self);
-    expect(self._typeConfig).toEqual([{ id: "ysm", name: "YSM", icon: "i", dirLevelSync: true }]);
-  });
-
-  it("失败 → 空数组降级 + warn toast", async () => {
-    getAppMock.mockRejectedValue(new Error("boom"));
-    const self = makeSelf();
-    await loadTypeConfig(self);
-    expect(self._typeConfig).toEqual([]);
-    expect(busEmit).toHaveBeenCalledTimes(1);
-    expect(busEmit.mock.calls[0][0]).toBe("toast:show");
+    loadTypeConfig(self);
+    // 与 SSOT 同源、全量投影，不再有异步空表窗口
+    expect(self._typeConfig).toHaveLength(allResourceTypes.length);
+    expect(self._typeConfig.find((c) => c.id === "ysm")).toEqual({
+      id: "ysm",
+      name: "YSM 模型",
+      icon: "💎",
+    });
+    // 不变量：每条只含 {id,name,icon}，dirLevelSync 已从投影摘除
+    for (const c of self._typeConfig) {
+      expect(Object.keys(c).sort()).toEqual(["icon", "id", "name"]);
+    }
   });
 });
 

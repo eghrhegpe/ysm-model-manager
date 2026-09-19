@@ -21,7 +21,7 @@ export interface SyncManagerFields {
   _filteredItems: SyncItem[];
   /** 筛选后强制展开的目录 path 集合（status 筛选下「有命中后代的目录」，见 store.applyFilter） */
   _forceOpenPaths?: Set<string>;
-  _typeConfig: Array<{ id: string; name?: string; icon?: string; dirLevelSync?: boolean }>;
+  _typeConfig: Array<{ id: string; name?: string | undefined; icon?: string | undefined }>;
   _loading: boolean;
   /** 展开/折叠状态（dir-level 层级展示用，key = item path） */
   _dirOpen: Record<string, boolean>;

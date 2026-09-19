@@ -9,9 +9,9 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { loadResourceRegistry } from "@/services/resource-registry.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { resourceTypesById } from "@/utils/resource/schema.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import {
   bindCancelButton,
@@ -222,30 +222,18 @@ export function createDedupSession(): DedupSession {
     if (state.busy) return;
     state.busy = true;
     try {
-      // ① loadResourceRegistry（early return err）
-      let reg: DedupRegType | null = null;
-      let typeLabel = "";
-      let typeIcon = "📦";
-      try {
-        reg = await loadResourceRegistry();
-        const entry = rtype ? reg[rtype] : undefined;
-        const entryName = entry && typeof entry.name === "string" ? entry.name : "";
-        const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
-        typeLabel = rtype ? entryName || rtype : t("diagnostics.all");
-        typeIcon = rtype ? entryIcon || "📦" : "📦";
-        list.innerHTML = statRowHTML(
-          "muted",
-          t("diagnostics.scanHash", { icon: esc(typeIcon), label: esc(typeLabel) }),
-        );
-      } catch (e) {
-        list.innerHTML = statRowHTML(
-          "muted",
-          friendlyError(e, t("diagnostics.loadResourceTypesFailed")),
-          esc,
-          { icon: UI_ICONS.error },
-        );
-        return;
-      }
+      // ① 类型元数据同步派生自 resource_types.json（ADR-269 D3④：废 loadResourceRegistry RPC 旁路，
+      // 无异步加载 → 原 try/catch 降级路径随之退役）
+      const reg: DedupRegType = resourceTypesById;
+      const entry = rtype ? reg[rtype] : undefined;
+      const entryName = entry && typeof entry.name === "string" ? entry.name : "";
+      const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
+      const typeLabel = rtype ? entryName || rtype : t("diagnostics.all");
+      const typeIcon = rtype ? entryIcon || "📦" : "📦";
+      list.innerHTML = statRowHTML(
+        "muted",
+        t("diagnostics.scanHash", { icon: esc(typeIcon), label: esc(typeLabel) }),
+      );
 
       try {
         const { FindDuplicateFiles, GetRepoRoot, MoveToRecycle } = await backendGetApp();

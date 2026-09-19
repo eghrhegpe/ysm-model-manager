@@ -9,15 +9,13 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { executeCLI, isWebPlatform, loadResourceRegistry } = vi.hoisted(() => ({
+const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
   isWebPlatform: vi.fn(() => false),
-  loadResourceRegistry: vi.fn(async () => ({})),
 }));
 
 vi.mock("@/services/cli-bridge.ts", () => ({ executeCLI }));
 vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
-vi.mock("@/services/resource-registry.ts", () => ({ loadResourceRegistry }));
 
 import { initPerfPanel } from "./perf.ts";
 import { scanBenchParsePayload } from "./perf-scan-bench.ts";

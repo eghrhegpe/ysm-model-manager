@@ -63,7 +63,7 @@ status: active
 - 监听 bus：`repo:rtype-changed`（经 `useCurrentResourceType` 订阅，见 features/repo/repo-rtype.ts）
 - 派发 bus：`model:select`
 - getApp() 调用：`ScanModelEntries`、`GetRepoRoot`
-- 依赖：`renderDisplayName`（utils/dom/display.ts）、`parseHealthReport`（utils/health-report.ts）、`loadResourceRegistry`（services/resource-registry.ts，取类型图标）、`useCurrentResourceType`（features/repo/repo-rtype.ts，替代直接监听 rtype 事件）、DOM 模板 `tpl-oldest.ts`（views/app-content/）
+- 依赖：`renderDisplayName`（utils/dom/display.ts）、`parseHealthReport`（utils/health-report.ts）、`useCurrentResourceType`（features/repo/repo-rtype.ts，替代直接监听 rtype 事件）、DOM 模板 `tpl-oldest.ts`（views/app-content/）
 
 ## 与其他子系统关系
 

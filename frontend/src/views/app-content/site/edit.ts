@@ -2,12 +2,12 @@
 
 import { t } from "@/core/i18n/t.ts";
 import * as m from "@/features/community/community-data.ts";
-import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { allResourceTypes } from "@/utils/resource/schema.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { bindDragSort, type DragStateShell } from "./edit-drag.ts";
@@ -164,16 +164,11 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
       btn.disabled = true;
       try {
         const App = await backendGetApp();
-        const results = await Promise.all([
+        const [community, sitesData, gitHubRepos] = await Promise.all([
           m.fetchCommunityCreators(m.DEFAULT_COMMUNITY_URL),
           m.fetchCommunitySites(),
           App.LoadGitHubRepos().catch(() => []),
-          App.LoadResourceTypes().catch(() => null),
         ]);
-        const community = results[0],
-          sitesData = results[1],
-          gitHubRepos = results[2],
-          resourceTypesRaw = results[3];
         const logs: string[] = [];
         let changed = false;
 
@@ -213,17 +208,9 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
           logs.push(t("workshop.logGithub", { n: gitHubRepos.length }));
           changed = true;
         }
-        let resourceTypes: unknown[] = [];
-        try {
-          const reg = resourceTypesRaw;
-          if (reg && Array.isArray(reg.resourceTypes)) {
-            resourceTypes = reg.resourceTypes;
-          }
-        } catch (e) {
-          logWarn("site-edit", "parse resourceTypes", e);
-        }
-        if (resourceTypes.length) {
-          logs.push(t("workshop.logTypes", { n: resourceTypes.length }));
+        // ADR-269 D3⑤：资源类型计数同步读 resource_types.json（allResourceTypes），废 LoadResourceTypes RPC
+        if (allResourceTypes.length) {
+          logs.push(t("workshop.logTypes", { n: allResourceTypes.length }));
           changed = true;
         }
 

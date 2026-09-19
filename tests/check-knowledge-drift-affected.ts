@@ -44,16 +44,16 @@ function assert(stdout, needle, label) {
 console.log("=== check-knowledge-drift --affected 契约 ===");
 
 // 1. 文件精确命中
-const out1 = runAffected("frontend/src/services/resource-registry.ts");
-assert(out1, "resource-registry", "文件精确命中 → resource-registry");
+const out1 = runAffected("frontend/src/utils/resource/schema.ts");
+assert(out1, "utils-resource-types", "文件精确命中 → utils-resource-types");
 
 // 2. 目录前缀命中
 const out2 = runAffected("go/avatar/");
 assert(out2, "go-avatar", "目录前缀命中 → go-avatar");
 
 // 3. 多文件混合
-const out3 = runAffected("frontend/src/services/resource-registry.ts", "go/avatar/");
-assert(out3, "resource-registry", "多文件 → resource-registry");
+const out3 = runAffected("frontend/src/utils/resource/schema.ts", "go/avatar/");
+assert(out3, "utils-resource-types", "多文件 → utils-resource-types");
 assert(out3, "go-avatar", "多文件 → go-avatar");
 
 // 4. 无关文件不命中

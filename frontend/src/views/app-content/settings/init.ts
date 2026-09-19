@@ -8,11 +8,11 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { initVersionUpdater } from "@/features/maintenance/version-updater.ts";
-import { loadResourceRegistry } from "@/services/resource-registry.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { resourceTypesById } from "@/utils/resource/schema.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { initDefaultPagePrefs } from "./default-page.ts";
@@ -302,7 +302,8 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
   const cfgLoaded = await LoadAppConfig();
   resetSettingsStore(cfgLoaded);
 
-  const reg = await loadResourceRegistry();
+  // ADR-269 D3④：资源类型注册表同步读 resource_types.json 派生视图，废 Go RPC 旁路
+  const reg = resourceTypesById;
   const refreshAdvanced = initAdvancedGrid(root, reg);
 
   bindPathClick(

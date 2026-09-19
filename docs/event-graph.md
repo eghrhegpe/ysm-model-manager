@@ -36,7 +36,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 173 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 172 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 
@@ -223,7 +223,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 42 |
-| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 193 |
+| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 192 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 246 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 332 |
@@ -297,7 +297,7 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 318 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 241 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 242 |
 
 ### `repo:search-creator`
 
@@ -322,7 +322,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 264 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 265 |
 
 ### `stats:refresh`
 
@@ -335,8 +335,8 @@
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 171 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 56 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 185 |
-| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 111 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 177 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 110 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 176 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
@@ -348,8 +348,8 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 165 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 162 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 180 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 163 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 181 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 92 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 127 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 194 |
@@ -360,7 +360,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 111 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 221 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 222 |
 
 ### `sync:download:done`
 
@@ -435,7 +435,7 @@
 | (顶层) | `frontend/src/features/import/executor.ts` | 51 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 189 |
-| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 268 |
+| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 266 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 146 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 155 |
 | checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 181 |
@@ -489,9 +489,9 @@
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 113 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 138 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 145 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 231 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 238 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 254 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 218 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 225 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 241 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 145 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 281 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 129 |
@@ -524,11 +524,10 @@
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 305 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 310 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
-| _init | `frontend/src/views/app-sync-manager/index.ts` | 214 |
+| _init | `frontend/src/views/app-sync-manager/index.ts` | 215 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 50 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
-| loadTypeConfig | `frontend/src/views/app-sync-manager/store.ts` | 35 |
-| loadData | `frontend/src/views/app-sync-manager/store.ts` | 91 |
+| loadData | `frontend/src/views/app-sync-manager/store.ts` | 77 |
 | show | `frontend/src/views/app-toast/index.ts` | 160 |
 | show | `frontend/src/views/app-toast/index.ts` | 179 |
 | show | `frontend/src/views/app-toast/index.ts` | 188 |
@@ -598,8 +597,8 @@
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 172 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 57 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 184 |
-| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 112 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 178 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 111 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 177 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |

@@ -10,18 +10,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { initDiagnostics, createDedupSession } from "./init.ts";
 
-const { busEmit, busOn, getApp, loadResourceRegistry, can, isViewerMode } = vi.hoisted(() => ({
+const { busEmit, busOn, getApp, can, isViewerMode } = vi.hoisted(() => ({
   busEmit: vi.fn(),
   busOn: vi.fn(() => () => {}),
   getApp: vi.fn(),
-  loadResourceRegistry: vi.fn(() => ({})),
   can: vi.fn(() => true),
   isViewerMode: vi.fn(() => false),
 }));
 
 vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
-vi.mock("@/services/resource-registry.ts", () => ({ loadResourceRegistry }));
 vi.mock("@/backend/capabilities.ts", () => ({ can }));
 vi.mock("@/backend/platform.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/backend/platform.ts")>();
@@ -117,7 +115,6 @@ function buildReport() {
 beforeEach(() => {
   vi.clearAllMocks();
   document.body.innerHTML = "";
-  loadResourceRegistry.mockResolvedValue({});
   can.mockReturnValue(true);
   isViewerMode.mockReturnValue(false);
   mockApp();
@@ -348,9 +345,6 @@ describe("startDedup（会话工厂 createDedupSession）", () => {
   ];
 
   it("rtype 指定 → 单目录扫描 + 渲染组 + exec 移入回收站", async () => {
-    loadResourceRegistry.mockResolvedValue({
-      ysm: { id: "ysm", name: "模型", icon: "🧊" },
-    });
     const moveFn = vi.fn();
     mockApp({
       GetRepoRoot: vi.fn(() => "/repo"),
@@ -375,16 +369,14 @@ describe("startDedup（会话工厂 createDedupSession）", () => {
   });
 
   it("rtype=all → 遍历所有注册类型目录", async () => {
-    loadResourceRegistry.mockResolvedValue({
-      ysm: { id: "ysm", name: "模型", icon: "🧊" },
-      mmd: { id: "mmd", name: "MMD", icon: "🎭" },
-    });
+    // ADR-269 D3④：collectTargets 现遍历真 SSOT（resourceTypesById），非 mock 子集——
+    // 抽两个真实类型 id 验证「all 分支逐类型取目录」，其余类型同样被覆盖。
     const repoRoot = vi.fn(() => "/repo");
     mockApp({ GetRepoRoot: repoRoot });
     const list = document.createElement("div");
     await dedup.start(list, esc, "all");
     expect(repoRoot).toHaveBeenCalledWith("ysm");
-    expect(repoRoot).toHaveBeenCalledWith("mmd");
+    expect(repoRoot).toHaveBeenCalledWith("EntityPlayer");
     await waitFor(() => list.textContent!.includes("没有重复文件"));
   });
 
@@ -432,21 +424,18 @@ describe("startDedup（会话工厂 createDedupSession）", () => {
   });
 
   it("重入守卫：并发调用仅首次执行，busy 期间第二次早退且不重复扫描", async () => {
-    loadResourceRegistry.mockResolvedValue({
-      ysm: { id: "ysm", name: "模型", icon: "🧊" },
-    });
     mockApp({ FindDuplicateFiles: vi.fn(() => groupJson) });
     const list = document.createElement("div");
     // 同步双调用：首次在首个 await 前已置 _dedupBusy=true，第二次必命中守卫早退
+    // ADR-269 D3④：类型元数据已同步（无 RPC 计点），改以 getApp 调用次数佐证「第二次未进入扫描」
     const p1 = dedup.start(list, esc, "ysm");
     const p2 = dedup.start(list, esc, "ysm");
     await Promise.all([p1, p2]);
-    expect(loadResourceRegistry).toHaveBeenCalledTimes(1);
     expect(getApp).toHaveBeenCalledTimes(1);
     // 守卫已复位，后续可正常再次扫描
     const list2 = document.createElement("div");
     await dedup.start(list2, esc, "ysm");
-    expect(loadResourceRegistry).toHaveBeenCalledTimes(2);
+    expect(getApp).toHaveBeenCalledTimes(2);
   });
 });
 

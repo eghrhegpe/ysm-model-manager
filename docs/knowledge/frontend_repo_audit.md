@@ -683,7 +683,6 @@ auto_fields:
     - loadModelData
     - LoadModelOpts
     - loadOldestModel
-    - loadResourceRegistry
     - loadRuntimeLogs
     - loadTdCamSpeed
     - loadTdKeymap
@@ -1066,7 +1065,6 @@ auto_fields:
     - RESOURCE_TYPE_LABELS
     - RESOURCE_TYPES
     - ResourceType
-    - ResourceTypeEntry
     - ResourceTypeVariant
     - restoreFields
     - restoreModelGroupsVisible

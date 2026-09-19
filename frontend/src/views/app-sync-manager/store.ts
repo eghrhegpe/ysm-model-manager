@@ -6,6 +6,7 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { allResourceTypes } from "@/utils/resource/schema.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SyncManagerSelf } from "./self-type.ts";
 import type { SyncItem } from "./tpl.ts";
@@ -13,31 +14,16 @@ import type { SyncItem } from "./tpl.ts";
 export type SyncStoreSelf = SyncManagerSelf;
 
 /**
- * 加载资源类型配置（LoadResourceTypes）
- * 过期代际/已卸载静默丢弃；加载失败 toast 提醒 + 空数组降级。
+ * 加载资源类型配置（ADR-269 D3③：同步读 resource_types.json 派生视图，废 Go RPC 旁路）。
+ * 只投影前端消费的字段子集（id/name/icon）；`dirLevelSync` 全仓零读，已随本步摘除
+ * （文件夹行实由每条 SyncItem.isDir+children 驱动，非类型级旗标）。
  */
-export async function loadTypeConfig(self: SyncStoreSelf): Promise<void> {
-  const gen = self._guard.current;
-  try {
-    const { LoadResourceTypes } = await backendGetApp();
-    const reg = await LoadResourceTypes();
-    if (self._guard.stale(gen)) return;
-    // 只取前端需要的字段子集
-    self._typeConfig = (reg?.resourceTypes || []).map((r) => ({
-      id: r.id,
-      name: r.name,
-      icon: r.icon,
-      dirLevelSync: r.dirLevelSync,
-    }));
-  } catch {
-    if (self._guard.stale(gen) || !self.isConnected) return;
-    self._typeConfig = [];
-    bus.emit("toast:show", {
-      msg: t("syncManager.loadTypeConfigFailed"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
-  }
+export function loadTypeConfig(self: SyncStoreSelf): void {
+  self._typeConfig = allResourceTypes.map((r) => ({
+    id: r.id,
+    name: r.name,
+    icon: r.icon,
+  }));
 }
 
 /**

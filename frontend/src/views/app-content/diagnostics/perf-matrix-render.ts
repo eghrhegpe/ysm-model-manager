@@ -8,10 +8,10 @@
 // 前端必须显示"未采集"而不是 0ms——否则又变回"拿空数据当实测"。
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
-import { loadResourceRegistry } from "@/services/resource-registry.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { resourceTypesById } from "@/utils/resource/schema.ts";
 import type { EscFn } from "./logs.ts";
 import { type OptionRow, optionRows } from "./option-rows.ts";
 import { sectionHeader } from "./perf-common.ts";
@@ -267,11 +267,11 @@ export async function populatePerfTargetOptions(
 ): Promise<void> {
   const select = root.getElementById(selectId) as HTMLSelectElement | null;
   if (!select) return;
-  const reg = await loadResourceRegistry();
+  const reg = resourceTypesById;
   const types = Object.values(reg).sort((a, b) => String(a.id).localeCompare(String(b.id)));
   if (!types.length) return;
 
-  // 重填（registry 异步到达）不得重置用户已选好的目标集：先记住当前值，重建后再回填
+  // 重填不得重置用户已选好的目标集：先记住当前值，重建后再回填
   const keep = select.value;
   const rows: OptionRow[] = [];
   if (includeModel) rows.push({ value: "", label: t("diagnostics.perfTargetModel") });

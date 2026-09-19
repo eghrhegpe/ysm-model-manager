@@ -75,7 +75,7 @@ status: active
 
 ## 核心职责
 
-- `index.ts` — `<app-sync-manager>` 组件（拆分模式）：`observedAttributes: ["instance", "default-type"]`；`store.ts` 的 `loadTypeConfig` 调 `LoadResourceTypes` 拉类型配置（失败 toast + 空数组降级；过期代际静默丢弃）、`_loadData` 调 `GetInstanceSyncStatus` 拉全量条目，`renderer.ts` 的 `render` 渲染「当前类型只读指示（`shortLabelOf`，类型选择已全局化到 app-nav 下拉）+ 状态筛选标签」（全部/已同步/待推送/已禁用/可拉取/旧仓库遗留）+ **`.sm-summary` 摘要栏（`GetSyncScanDirs` 返回仓库基准/实例实际扫描目录，兜底路径可见）** + 条目列表；`network.ts` 的 `performSingleOp` 单文件 push/pull（原 `_pushSingleFile`/`_pullSingleFile` 80% 重复已合并），由 `_singleBusy`（`Set<string>` 按 path 粒度）防重入——不同行可并发，同一行串行；busy 视觉由 `_singleBusy.size > 0` 派生
+- `index.ts` — `<app-sync-manager>` 组件（拆分模式）：`observedAttributes: ["instance", "default-type"]`；`store.ts` 的 `loadTypeConfig` 同步读 `schema.ts` 的 `allResourceTypes`（ADR-269 D3③：废 `LoadResourceTypes` RPC 旁路，构建期内联、无空表窗口与失败降级）、`_loadData` 调 `GetInstanceSyncStatus` 拉全量条目，`renderer.ts` 的 `render` 渲染「当前类型只读指示（`shortLabelOf`，类型选择已全局化到 app-nav 下拉）+ 状态筛选标签」（全部/已同步/待推送/已禁用/可拉取/旧仓库遗留）+ **`.sm-summary` 摘要栏（`GetSyncScanDirs` 返回仓库基准/实例实际扫描目录，兜底路径可见）** + 条目列表；`network.ts` 的 `performSingleOp` 单文件 push/pull（原 `_pushSingleFile`/`_pullSingleFile` 80% 重复已合并），由 `_singleBusy`（`Set<string>` 按 path 粒度）防重入——不同行可并发，同一行串行；busy 视觉由 `_singleBusy.size > 0` 派生
 - `_init` 代际守卫 `_guard`（`createLoadGuard`，ADR-230 收口，原裸 `_gen` 计数退役）：每次进入 `_guard.next()`，`await` 类型配置与数据后若 `_guard.stale(gen)` 直接返回，丢弃 instance 快速切换产生的过期渲染与订阅
 - `tpl.ts` — 模板：`containerHTML` / `itemHTML` / `statusTabHTML` / `emptyHTML` / `loadingHTML` + `SyncItem` 类型
 
@@ -85,7 +85,7 @@ status: active
 - 导出类：`AppSyncManager`
 - 监听 bus：`stats:refresh`（重新 `_loadData` + `_render`；回调内以 `isConnected` 守卫，重订阅前先清旧 `_unsubs`；`_loadData().then()` 链尾接 `.catch` 打 `logWarn`（`utils/base/log.ts` 环形日志），避免 `_render` 抛错被 Promise 静默吞掉）
 - 派发 bus：`repo:rtype-changed`（类型标签切换联动 `app-sidebar`）、`toast:show`、`stats:refresh`（单文件操作成功后）
-- Go 调用（动态 import bindings）：`LoadResourceTypes`、`GetInstanceSyncStatus`、`GetSyncScanDirs`（同步目录可见性，返回 `{global, instance, warningCode, warningParams}`；`warningCode="scan_dir_wide"` 时仓库基准疑似过宽（含 mods/config/FilesRoot 特征），显示文案由前端 i18n 组装，防静默混入）、`PushSingleResourceToInstance`、`PullSingleResourceFromInstance`
+- Go 调用（动态 import bindings）：`GetInstanceSyncStatus`、`GetSyncScanDirs`（同步目录可见性，返回 `{global, instance, warningCode, warningParams}`；`warningCode="scan_dir_wide"` 时仓库基准疑似过宽（含 mods/config/FilesRoot 特征），显示文案由前端 i18n 组装，防静默混入）、`PushSingleResourceToInstance`、`PullSingleResourceFromInstance`（类型配置不再走 `LoadResourceTypes` RPC，改 `schema.ts` 同步读——ADR-269 D3③）
 
 ## 与其他子系统关系
 

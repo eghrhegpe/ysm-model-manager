@@ -11,18 +11,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { initPerfPanel, populatePerfTargetOptions } from "./perf.ts";
 
-const { executeCLI, isWebPlatform, loadResourceRegistry } = vi.hoisted(() => ({
+const { executeCLI, isWebPlatform, perfRegistry } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
   isWebPlatform: vi.fn(() => false),
-  loadResourceRegistry: vi.fn(async () => ({
+  // ADR-269 D3④：perf-matrix-render 现同步读 resourceTypesById。以受控两类型子集覆盖该视图
+  // （保留本测试「选项来自 registry、前端不写死类型表」的原意——断言随受控子集，而非真 15 类）。
+  perfRegistry: {
     ysm: { id: "ysm", name: "YSM 模型", icon: "💎" },
     EntityPlayer: { id: "EntityPlayer", name: "MMD 模型", icon: "🧊" },
-  })),
+  },
 }));
 
 vi.mock("@/services/cli-bridge.ts", () => ({ executeCLI }));
 vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
-vi.mock("@/services/resource-registry.ts", () => ({ loadResourceRegistry }));
+vi.mock("@/utils/resource/schema.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/utils/resource/schema.ts")>();
+  return { ...actual, resourceTypesById: perfRegistry };
+});
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");

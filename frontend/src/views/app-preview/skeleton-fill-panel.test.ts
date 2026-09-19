@@ -83,8 +83,7 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
     const nodes = buildYsmModelSchema(multiCtx, snap(-1), sessionActive(-1));
     const sel = nodes.find((n) => n.kind === "select")!;
     expect(sel.id).toBe("ysm-component-select");
-    // [doc:adr-126-p5-b→B2] select 不再 bind 全局状态层——get/set 闭包读写 per-scene 会话态
-    expect(sel.control?.bind).toBeUndefined();
+    // [doc:adr-126-p5-b→B2] select 走 get/set 闭包读写 per-scene 会话态
     expect(sel.control?.get).toBeTypeOf("function");
     expect(sel.control?.set).toBeTypeOf("function");
     expect(sel.control?.options?.map((o) => o.value)).toEqual(["-1", "0", "1"]);

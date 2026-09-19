@@ -115,8 +115,7 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     expect(axis.kind).toBe("select");
     expect(axis.control!.options!.map((o) => o.value)).toEqual(["Y", "X", "Z"]);
     const mode = nodeById(nodes, "slice-mode");
-    // 模式真源 = shell 闭包（场景级会话态）：非 bind 模式，get/set 闭包读写
-    expect(mode.control!.bind).toBeUndefined();
+    // 模式真源 = shell 闭包（场景级会话态）：get/set 闭包读写
     expect(mode.control!.get!(undefined)).toBe("all");
     mode.control!.set!("bogus");
     expect(mode.control!.get!(undefined)).toBe("all"); // 非法值防御回落 all

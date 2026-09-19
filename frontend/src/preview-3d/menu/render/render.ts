@@ -19,12 +19,7 @@ import {
   MENU_ROW_DENSITY_CSS,
   MENU_SECTION_CSS,
 } from "@/preview-3d/menu/style/menu-styles.ts";
-import {
-  isPathAvailable,
-  type KNOWN_PATHS,
-  previewSnapshot,
-  setStateValue,
-} from "@/preview-3d/state/preview-state.ts";
+import { previewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { applyIcon } from "@/utils/icon/resolve.ts";
 import {
@@ -485,38 +480,21 @@ function rmAppendDynamicRow(
  * Divider）直吃——不再构造控件中间对象（该类型刀 3 已退役）。
  *
  * 语义保留（对齐旧 nodeControlToCapControl 全行为）：
- *   - get(v?) → getValue()（bind 优先：取 snapshot[bind] 经 get 衍生）
- *   - set(v) → setValue(v)（spec.set → bind 写状态层 → spec.onChange）
+ *   - get() → getValue()（闭包读，感知类无状态路径控件用 get/set 直读写）
+ *   - set(v) → setValue(v)（spec.set → spec.onChange）
  *   - refreshOnChange → onChange 内触发 menu.refresh()
  *   - numeric/slider.unit/onCommit → view.slider 透传
  */
-export function nodeControlToView(
-  node: PreviewMenuNode,
-  snapshot: Record<string, unknown>,
-  menu?: SlideMenuHandle,
-): CapControlView {
+export function nodeControlToView(node: PreviewMenuNode, menu?: SlideMenuHandle): CapControlView {
   const spec = node.control;
   const labelKey = node.labelKey ?? "";
   const fallback = node.label ?? node.id;
 
-  const getValue = (): unknown => {
-    if (!spec) return null;
-    if (spec.bind) {
-      const raw = snapshot[spec.bind];
-      return spec.get ? spec.get(raw) : raw;
-    }
-    return spec.get ? spec.get(undefined) : null;
-  };
+  const getValue = (): unknown => (spec?.get ? spec.get(undefined) : null);
 
   const setValue = (v: number | string | boolean): void => {
     if (!spec) return;
     spec.set?.(v);
-    if (spec.bind) {
-      const path = spec.bind as (typeof KNOWN_PATHS)[number];
-      if (isPathAvailable(path)) {
-        setStateValue(path, v);
-      }
-    }
     spec.onChange?.(v);
     if (spec.refreshOnChange) menu?.refresh();
   };
@@ -739,7 +717,7 @@ export function renderMenu(
         // [控件原语归一 · ADR-195 刀 2.5 投影反转] 节点控件经 nodeControlToView 适配为
         // CapControlView 直供 cap 栈渲染器（renderCapToggle/Slider/Select/Color）——
         // 不再构造控件中间对象（rmAppendSelect/Slider/Toggle 已退役）。
-        const view = nodeControlToView(node, snapshot, deps.menu);
+        const view = nodeControlToView(node, deps.menu);
         CAP_CONTROL_RENDERERS[node.kind](container, view);
         break;
       }

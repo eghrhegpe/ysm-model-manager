@@ -723,21 +723,19 @@ describe("renderMenu 新 kind", () => {
 
 // ===== nodeControlToView 单测（控件原语归一 · ADR-195 刀 2.5 投影反转）=====
 describe("nodeControlToView", () => {
-  it("bind 映射：spec.bind 时 getValue 读 snapshot[bind]，setValue 写状态层", () => {
-    // 用 render.frustumCull（KNOWN_PATHS 之一，无 cap 直管持久化）验证 bind 读写
+  it("get/set 闭包读写：getValue 走 spec.get，setValue 走 spec.set 写状态层", () => {
+    // 用 render.frustumCull（KNOWN_PATHS 之一，无 cap 直管持久化）验证 get/set 闭包读写
     setStateValue("render.frustumCull", false);
-    const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "test-frustum",
       kind: "toggle",
       labelKey: "preview.frustumCull",
       control: {
-        bind: "render.frustumCull",
-        get: (v: unknown) => Boolean(v),
+        get: () => Boolean(previewSnapshot()["render.frustumCull"]),
         set: (v: unknown) => { setStateValue("render.frustumCull", Boolean(v)); },
       },
     };
-    const view = nodeControlToView(node, snapshot);
+    const view = nodeControlToView(node);
     expect(view.getValue()).toBe(false);
     view.setValue(true);
     expect(previewSnapshot()["render.frustumCull"]).toBe(true);
@@ -750,19 +748,17 @@ describe("nodeControlToView", () => {
     const menu = mockMenuHandle();
     menu.refresh = () => { refreshCalled++; };
     setStateValue("render.frustumCull", false);
-    const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "test-refresh",
       kind: "toggle",
       labelKey: "preview.frustumCull",
       control: {
-        bind: "render.frustumCull",
-        get: (v: unknown) => Boolean(v),
+        get: () => Boolean(previewSnapshot()["render.frustumCull"]),
         set: (v: unknown) => { setStateValue("render.frustumCull", Boolean(v)); },
         refreshOnChange: true,
       },
     };
-    const view = nodeControlToView(node, snapshot, menu);
+    const view = nodeControlToView(node, menu);
     expect(view.onChange).toBeDefined();
     view.onChange!(true);
     expect(previewSnapshot()["render.frustumCull"]).toBe(true);
@@ -773,7 +769,6 @@ describe("nodeControlToView", () => {
 
   it("onChange 注入：spec 含 onChange 时 view.onChange = setValue", () => {
     const changed: unknown[] = [];
-    const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "test-onchange",
       kind: "toggle",
@@ -784,14 +779,13 @@ describe("nodeControlToView", () => {
         onChange: (v: unknown) => { changed.push(v); },
       },
     };
-    const view = nodeControlToView(node, snapshot);
+    const view = nodeControlToView(node);
     expect(view.onChange).toBeDefined();
     view.onChange!(true);
     expect(changed).toEqual([true]);
   });
 
   it("numeric 透传：slider 节点 numeric/unit/onCommit 透传到 view.slider", () => {
-    const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "test-numeric",
       kind: "slider",
@@ -807,7 +801,7 @@ describe("nodeControlToView", () => {
         onCommit: () => {},
       },
     };
-    const view = nodeControlToView(node, snapshot);
+    const view = nodeControlToView(node);
     expect(view.slider).toBeDefined();
     expect(view.slider!.min).toBe(30);
     expect(view.slider!.max).toBe(120);
@@ -818,20 +812,18 @@ describe("nodeControlToView", () => {
   });
 
   it("无 labelKey 时 label 兜底：view.fallback = node.label ?? node.id", () => {
-    const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "bare-control",
       kind: "toggle",
       control: { get: () => false, set: () => {} },
     };
-    const view = nodeControlToView(node, snapshot);
+    const view = nodeControlToView(node);
     expect(view.labelKey).toBe("");
     expect(view.fallback).toBe("bare-control");
     expect(view.id).toBe("bare-control");
   });
 
   it("有 labelKey 时 view.labelKey = node.labelKey", () => {
-    const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "labeled-control",
       kind: "toggle",
@@ -839,13 +831,12 @@ describe("nodeControlToView", () => {
       label: "视锥剔除",
       control: { get: () => false, set: () => {} },
     };
-    const view = nodeControlToView(node, snapshot);
+    const view = nodeControlToView(node);
     expect(view.labelKey).toBe("preview.frustumCull");
     expect(view.fallback).toBe("视锥剔除");
   });
 
   it("select 节点透传 spec.options 到 view.select", () => {
-    const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "test-select",
       kind: "select",
@@ -859,14 +850,13 @@ describe("nodeControlToView", () => {
         set: () => {},
       },
     };
-    const view = nodeControlToView(node, snapshot);
+    const view = nodeControlToView(node);
     expect(view.select).toBeDefined();
     expect(view.select!.length).toBe(2);
     expect(view.select![0].value).toBe("film");
   });
 
   it("hintKey 透传：node.hintKey → view.hintKey", () => {
-    const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "hint-control",
       kind: "toggle",
@@ -874,17 +864,16 @@ describe("nodeControlToView", () => {
       hintKey: "preview.frustumCullHint",
       control: { get: () => false, set: () => {} },
     };
-    const view = nodeControlToView(node, snapshot);
+    const view = nodeControlToView(node);
     expect(view.hintKey).toBe("preview.frustumCullHint");
   });
 
   it("无 spec 时 getValue 返回 null，setValue 不抛错", () => {
-    const snapshot = previewSnapshot();
     const node: PreviewMenuNode = {
       id: "no-control",
       kind: "toggle",
     };
-    const view = nodeControlToView(node, snapshot);
+    const view = nodeControlToView(node);
     expect(view.getValue()).toBe(null);
     expect(() => view.setValue(true)).not.toThrow();
   });

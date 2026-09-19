@@ -18,7 +18,7 @@
 // menu/node-types.ts 留 PreviewMenuCtx（依赖 caps/adapters 真依赖）+ 值函数并 re-export
 // 本叶类型保 30+ 消费者 import 零改动。
 
-import type { PreviewSnapshot, PreviewStatePath } from "@/preview-3d/state/preview-paths.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { IconRef } from "@/utils/icon/resolve.ts";
 
 /** 控件种类（含简单+复杂）——controls 通道承载元素的 kind。
@@ -148,7 +148,7 @@ export type PreviewMenuNodeKind =
   | "action"
   | "slider"
   | "toggle"
-  | "select" // [doc:adr-126-p5-c] 下拉选择控件（bind 到 PreviewStatePath，走状态层读写）
+  | "select" // [doc:adr-126-p5-c] 下拉选择控件（options 选项，get/set 闭包读写状态层）
   | "button"
   | "color" // [ADR-195] 颜色控件（cap color 原生化；值 0xRRGGBB ↔ #rrggbb，投影 renderCapColor）
   | "field" // 键值对行（统计/信息展示）
@@ -172,14 +172,11 @@ export type PreviewMenuGroupId = "model" | "motion" | "env" | "scene" | "setting
 /** dockGroup 合法值：dock 组 ∪ 统计附加行通道（node-types 类型叶自足，消费方经此引用） */
 export type PreviewDockGroup = PreviewMenuGroupId | "stats";
 
-/** 控件绑定规格（slider/toggle/button/field 用；ysm 侧 state 映射表建立后 bind 生效）。
+/** 控件绑定规格（slider/toggle/button/field 用；值读写走 get/set 闭包）。
  *  [ADR-195 刀3] 本接口与 PreviewControlDef（复杂控件）同属一个控件声明体系——简单控件
  *  由节点原生承载（本接口），复杂控件经 controls 通道承载（PreviewControlDef），
  *  渲染统一走 cap 栈（见 ADR-195）。 */
 export interface PreviewControlSpec {
-  /** 声明式路径（走状态层读写；感知类闭包控件如 perception toggle 无状态层路径——
-   *  用 get/set 直接读写，bind 可省略） */
-  bind?: PreviewStatePath;
   min?: number;
   max?: number;
   step?: number;

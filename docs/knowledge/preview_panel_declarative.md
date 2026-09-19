@@ -4,8 +4,8 @@ name: 3D 预览面板内容声明式化通道（ADR-126 P4-B）
 tier: leaf
 category: ui
 source_files:
-  - frontend/src/preview-3d/menu/core.ts
-  - frontend/src/preview-3d/menu/render.ts
+  - frontend/src/preview-3d/menu/engine/core.ts
+  - frontend/src/preview-3d/menu/render/render.ts
   - frontend/src/preview-3d/menu/schema/node-types.ts
   - frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
@@ -16,9 +16,14 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - buildMmdScene
+    - buildPreviewMenuRouters
     - buildYsmScene
+    - clearFolderCollapsedState
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
+    - corePanelBuilder
+    - CorePanelId
+    - disposeCustomCleanups
     - isPreviewFolderNode
     - makeMmdAdapter
     - makeYsmAdapter
@@ -33,10 +38,20 @@ auto_fields:
     - mmdShotNodes
     - MorphMeshLike
     - morphNodes
+    - mountPreviewRootMenu
+    - nodeControlToView
     - playNodes
     - PreviewMenuCtx
+    - PreviewMenuHandle
+    - PreviewMenuRouters
     - registerYsmModelSchema
+    - renderAdapterPanelContent
+    - renderCapControls
+    - renderMenu
+    - renderPreviewPanel
+    - roleBaseName
     - shotButtonNodes
+    - unregisterCorePanelSchemas
     - YsmAdapterOptions
     - YsmControlsContext
     - ysmMenuItems

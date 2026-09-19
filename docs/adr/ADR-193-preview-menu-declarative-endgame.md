@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-06
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/knowledge/preview-menu.md`、`frontend/src/preview-3d/menu/core.ts`、`frontend/src/preview-3d/adapters/menu-graph.ts`、ADR-126（本 ADR 是其 P4 的收官刀，不取代）
+- **相关**：`docs/knowledge/preview-menu.md`、`frontend/src/preview-3d/menu/engine/core.ts`、`frontend/src/preview-3d/adapters/menu-graph.ts`、ADR-126（本 ADR 是其 P4 的收官刀，不取代）
 
 ---
 
@@ -45,7 +45,7 @@
 - 锐评 2026-09-06（右键菜单审核连带 3D 菜单体检）P2 #10 → 本 ADR 立项
 - 可行性核对 2026-09-06（同日）→ §1 症状 3 措辞修正（前两臂已声明式，renderCustom 仅 camera/env/bones 三面板）、§2.2 bones 决策点预设、§2.3 litematic per-scene 注册范式、§2.5 双注册合并步——四项修正均经代码核实（settings.ts:35 / env.ts:375 / bones-panel-node.ts:64 / litematic-adapter.ts:404,457,263 / menu-graph.ts dualChannelDebt 判定）
 - `frontend/src/preview-3d/adapters/menu-graph.ts` coverage 判定式与 dualChannelDebt 结构 → §1 症状 1/2、§2.5
-- `frontend/src/preview-3d/menu/core.ts` buildPreviewMenuRouters（fillers roles-only + 宽表）→ §1 症状 2、§2.4
+- `frontend/src/preview-3d/menu/engine/core.ts` buildPreviewMenuRouters（fillers roles-only + 宽表）→ §1 症状 2、§2.4
 - `docs/knowledge/preview-menu.md` renderPreviewPanel 四路分派 / health.test 白名单 → §1 症状 3、§2.1
 - ADR-126 P4 验货对账（2026-08-28）→ §1 根因
 - litematic-adapter「renderCustom 逃生舱退役」先例（registerSchema per-scene key + unregister）→ §2.3 范式来源

@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/menu/settings.ts collectSettingsCapControls(settingsOrder 先例); frontend/src/preview-3d/menu/env.ts; docs/adr/ADR-125-preview-menu-unified-state-single-renderer.md`
+- **相关**：`frontend/src/preview-3d/menu/panels/settings.ts collectSettingsCapControls(settingsOrder 先例); frontend/src/preview-3d/menu/panels/env.ts; docs/adr/ADR-125-preview-menu-unified-state-single-renderer.md`
 
 ---
 

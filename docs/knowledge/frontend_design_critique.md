@@ -16,7 +16,7 @@ source_files:
   - frontend/src/preview-3d/adapters/shared/perception/autodance.ts
   - frontend/src/preview-3d/infra/safe-dispose.ts
   - frontend/src/preview-3d/infra/scene-registry.ts
-  - frontend/src/preview-3d/menu/roles.ts
+  - frontend/src/preview-3d/menu/panels/roles.ts
   - frontend/src/utils/dom/modal-core.ts
   - frontend/src/features/dialogs/adv-filter.ts
   - frontend/src/features/dialogs/batch-rename.ts

@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-06
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：ADR-195（cap 控件单类型化，并列）；ADR-193（preview-menu declarative endgame）；`frontend/src/preview-3d/caps/scene-capability.ts`、`frontend/src/preview-3d/menu/env.ts`、`frontend/src/preview-3d/adapters/shared-infra.ts`
+- **相关**：ADR-195（cap 控件单类型化，并列）；ADR-193（preview-menu declarative endgame）；`frontend/src/preview-3d/caps/scene-capability.ts`、`frontend/src/preview-3d/menu/panels/env.ts`、`frontend/src/preview-3d/adapters/shared-infra.ts`
 
 ---
 

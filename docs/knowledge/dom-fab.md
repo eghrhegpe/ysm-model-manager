@@ -12,7 +12,7 @@ auto_fields:
     - IconButtonOpts
     - YSW_FAB_CSS
   tests:
-    - frontend/src/preview-3d/menu/fab.test.ts
+    - frontend/src/preview-3d/menu/shell/fab.test.ts
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

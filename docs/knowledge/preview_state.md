@@ -5,12 +5,20 @@ tier: leaf
 category: ui
 source_files:
   - frontend/src/preview-3d/state/preview-state.ts
-  - frontend/src/preview-3d/menu/settings.ts
+  - frontend/src/preview-3d/menu/panels/settings.ts
   - frontend/src/preview-3d/menu/schema/node-types.ts
 auto_fields:
   symbols_with_lines:
+    - buildCameraSchema
+    - buildCrossCuttingControls
+    - buildLightingSchema
+    - buildPostprocessingSchema
+    - buildSettingsControls
+    - buildSettingsSchema
+    - buildShadowSchema
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
+    - collectSettingsCapControls
     - getStateValue
     - isPathAvailable
     - isPreviewFolderNode

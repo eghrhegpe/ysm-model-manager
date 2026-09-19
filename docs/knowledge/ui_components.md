@@ -107,7 +107,7 @@ status: active
 
 ## 与其他子系统关系
 
-- **消费方（3D 预览）**：`mount-preview-core.ts`（`installComponentsStyles` + `componentsStyleSheet` + `PREVIEW_OVERLAY_ID` + `slideMenuStyleSheet`）、`preview-3d/menu/core.ts`（`createSlideMenu`）、`preview-3d/menu/cap-controls.ts`（`createHeaderToggle` + `DragSliderController` + `dom-contract`）、`preview-3d/menu/render.ts`（`createHeaderToggle`）；`ui-card`/`ui-loading` 曾长期零生产消费（卡内记「备件保留」），2026-09-10 已连 orphan 样式一并删除——保留无期且会误导后人「有现成卡片壳可用」
+- **消费方（3D 预览）**：`mount-preview-core.ts`（`installComponentsStyles` + `componentsStyleSheet` + `PREVIEW_OVERLAY_ID` + `slideMenuStyleSheet`）、`preview-3d/menu/engine/core.ts`（`createSlideMenu`）、`preview-3d/menu/render/cap-controls.ts`（`createHeaderToggle` + `DragSliderController` + `dom-contract`）、`preview-3d/menu/render/render.ts`（`createHeaderToggle`）；`ui-card`/`ui-loading` 曾长期零生产消费（卡内记「备件保留」），2026-09-10 已连 orphan 样式一并删除——保留无期且会误导后人「有现成卡片壳可用」
 - **shared-styles** — 共享按钮/焦点样式被本簇样式引用
 - **views/app-*** — 各视图在 Shadow DOM 内经 `adoptedStyleSheets = [componentsStyleSheet, ...]` 消费样式串（`var()` 不跨 Shadow 边界继承的坑按前端 AGENTS 处理）
 - **views/app-tree** — ADR-220 后首次 import `preview-3d` 目录（`overlay-active` 查询），层规不拦（preview-3d 不在 LAYER_ORDER），语义为「查 3D 模态会话」

@@ -8,43 +8,85 @@ adr:
 category: rendering
 source_files:
   - frontend/src/preview-3d/menu/schema/menu-node-types.ts
-  - frontend/src/preview-3d/menu/core.ts
-  - frontend/src/preview-3d/menu/render.ts
+  - frontend/src/preview-3d/menu/engine/core.ts
+  - frontend/src/preview-3d/menu/render/render.ts
   - frontend/src/preview-3d/menu/schema/node-types.ts
-  - frontend/src/preview-3d/menu/cap-to-node.ts
-  - frontend/src/preview-3d/menu/defs.ts
-  - frontend/src/preview-3d/menu/cap-controls.ts
-  - frontend/src/preview-3d/menu/env.ts
-  - frontend/src/preview-3d/menu/roles.ts
-  - frontend/src/preview-3d/menu/settings.ts
+  - frontend/src/preview-3d/menu/render/cap-to-node.ts
+  - frontend/src/preview-3d/menu/engine/defs.ts
+  - frontend/src/preview-3d/menu/render/cap-controls.ts
+  - frontend/src/preview-3d/menu/panels/env.ts
+  - frontend/src/preview-3d/menu/panels/roles.ts
+  - frontend/src/preview-3d/menu/panels/settings.ts
   - frontend/src/preview-3d/menu/panels/stats.ts
   - frontend/src/preview-3d/menu/shell/switch.ts
   - frontend/src/preview-3d/menu/panels/multi-model.ts
 auto_fields:
   symbols_with_lines:
+    - buildCameraSchema
+    - buildCrossCuttingControls
+    - buildEnvSchema
+    - buildLightingSchema
+    - buildPostprocessingSchema
+    - buildPreviewMenuRouters
+    - buildRolesSchema
+    - buildSettingsControls
+    - buildSettingsSchema
+    - buildShadowSchema
     - buildStatsPanel
     - buildSwitchNodes
+    - canNodeRepresent
+    - capControlsToNodes
+    - capControlToNode
+    - capControlToView
+    - CapControlView
+    - clearFolderCollapsedState
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
+    - collectSettingsCapControls
+    - collectVisiblePredicates
+    - CORE_MENU_ITEMS
+    - corePanelBuilder
+    - CorePanelId
+    - disposeCustomCleanups
+    - disposeEnvSubscriptions
+    - formatCapSliderValue
     - hasSceneStats
     - isPreviewFolderNode
     - makeSwitchState
     - mergeStatsMenuItems
+    - mountPreviewRootMenu
     - multiModelSelectNode
     - MultiModelSelectOpts
+    - nodeControlToView
+    - PREVIEW_MENU_GROUPS
     - PreviewActionMenuCtx
     - PreviewControlDef
     - PreviewControlKind
     - PreviewControlSpec
     - PreviewDockGroup
     - PreviewMenuCtx
+    - PreviewMenuGroupDef
     - PreviewMenuGroupId
+    - PreviewMenuHandle
     - PreviewMenuNode
     - PreviewMenuNodeKind
+    - PreviewMenuRouters
+    - renderAdapterPanelContent
+    - renderCapColor
+    - renderCapControls
+    - renderCapDivider
+    - renderCapSelect
+    - renderCapSlider
+    - renderCapToggle
+    - renderMenu
+    - renderPreviewPanel
+    - roleBaseName
+    - RolesSchemaDeps
     - STATS_PANEL_ID
     - switchNormPath
     - SwitchState
     - switchTabHighlightBg
+    - unregisterCorePanelSchemas
 tests:
   - frontend/src/features/community/render.test.ts
   - frontend/src/preview-3d/adapters/preview-menu.test.ts
@@ -86,13 +128,13 @@ use_when:
   - 面板 schema 注册
   - SlideMenu 多层导航
 invariant_anchors:
-  - frontend/src/preview-3d/menu/core.ts|mountPreviewRootMenu
-  - frontend/src/preview-3d/menu/core.ts|buildPreviewMenuRouters
-  - frontend/src/preview-3d/menu/render.ts|renderMenu
-  - frontend/src/preview-3d/menu/render.ts|renderAdapterPanelContent
+  - frontend/src/preview-3d/menu/engine/core.ts|mountPreviewRootMenu
+  - frontend/src/preview-3d/menu/engine/core.ts|buildPreviewMenuRouters
+  - frontend/src/preview-3d/menu/render/render.ts|renderMenu
+  - frontend/src/preview-3d/menu/render/render.ts|renderAdapterPanelContent
   - frontend/src/preview-3d/menu/schema/node-types.ts|PreviewMenuNode
-  - frontend/src/preview-3d/menu/defs.ts|CORE_MENU_ITEMS
-  - frontend/src/preview-3d/menu/defs.ts|PREVIEW_MENU_GROUPS
+  - frontend/src/preview-3d/menu/engine/defs.ts|CORE_MENU_ITEMS
+  - frontend/src/preview-3d/menu/engine/defs.ts|PREVIEW_MENU_GROUPS
 status: active
 ---
 

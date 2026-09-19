@@ -82,7 +82,7 @@ status: active
 
 ## 与其他子系统关系
 
-- 消费方：`mount-preview-core.ts` 的环境面板（🌍 时间/云量/IBL/地面开关）通过 `createSlideMenu` 构建（`preview-3d/menu/core.ts` 亦直接 `import { createSlideMenu } from "./slide-menu.ts"`）
+- 消费方：`mount-preview-core.ts` 的环境面板（🌍 时间/云量/IBL/地面开关）通过 `createSlideMenu` 构建（`preview-3d/menu/engine/core.ts` 亦直接 `import { createSlideMenu } from "./slide-menu.ts"`）
 - 同目录兄弟模块：`slide-menu-styles.ts`（外壳样式）、`components-styles.ts`（行组件样式）、`style-install.ts`（两样式共用安装脚手架）、`header-toggle.ts` / `slider-controller.ts`（cap 栈控件）
 - 原「🥉 行组件 barrel（`ui-helpers.ts` re-export）」已随 ADR-146 反桶运动删除（2026-08-26）：全部消费方从具体叶模块直引（`createSlideMenu` 直引 `slide-menu.ts`；`cardContainer`/`ui-card.ts` 已于 2026-09-10 随零消费者清理删除）；旧世界命令式行 builder 簇（`ui-rows`/`ui-advanced-rows`/`ui-slide-row` 等）已随拔管删除（见 [ui_components](./ui_components.md)）
 - **不消费**：MikuMikuAR 的 `ui-resource-panel` / `ui-fullscreen-overlay` / `ui-virtual-grid` 未纳入本批
@@ -117,7 +117,7 @@ status: active
 
 > ⚠️ 实测教训：宽松上限（≤25）时注入 `--uih-font-bad: 13px` **能溜过**；改精确断言 + 零引用断言后双重命中。断言写松等于没写。
 
-**设计约束**：3D 菜单只允许 MenuNode schema（根 AGENTS.md 红线），故「基准字号」偏好**只在主设置页可达**，未进 3D 菜单——`preview-3d/menu/settings.ts|buildSettingsSchema` 聚合的是渲染相关 cap 控件（视锥裁剪/帧率/分辨率/画质），与 `ui-prefs` 的 UI 偏好零交集。若要进菜单，须走 `settingsOrder` 声明。
+**设计约束**：3D 菜单只允许 MenuNode schema（根 AGENTS.md 红线），故「基准字号」偏好**只在主设置页可达**，未进 3D 菜单——`preview-3d/menu/panels/settings.ts|buildSettingsSchema` 聚合的是渲染相关 cap 控件（视锥裁剪/帧率/分辨率/画质），与 `ui-prefs` 的 UI 偏好零交集。若要进菜单，须走 `settingsOrder` 声明。
 
 ## ⚠️ 历史悬空引用（已修）
 

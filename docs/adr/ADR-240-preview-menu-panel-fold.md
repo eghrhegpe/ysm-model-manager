@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/menu/render.ts (rmAppendFolder/hasFoldedBody); frontend/src/preview-3d/menu/node-render.test.ts; frontend/src/preview-3d/menu/roles.test.ts; menu-node-types.ts PreviewMenuNode.kind`
+- **相关**：`frontend/src/preview-3d/menu/render/render.ts (rmAppendFolder/hasFoldedBody); frontend/src/preview-3d/menu/node-render.test.ts; frontend/src/preview-3d/menu/roles.test.ts; menu-node-types.ts PreviewMenuNode.kind`
 
 ---
 

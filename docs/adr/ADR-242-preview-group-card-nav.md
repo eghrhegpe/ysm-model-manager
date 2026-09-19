@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/menu/env.ts (envCapRow/buildEnvCards 范式); frontend/src/preview-3d/menu/render.ts (rmAppendCard); frontend/src/preview-3d/menu/roles-views.ts (modelDetailView/motionDetailView); frontend/src/preview-3d/menu/panels/bones-panel-node.ts`
+- **相关**：`frontend/src/preview-3d/menu/panels/env.ts (envCapRow/buildEnvCards 范式); frontend/src/preview-3d/menu/render/render.ts (rmAppendCard); frontend/src/preview-3d/menu/panels/roles-views.ts (modelDetailView/motionDetailView); frontend/src/preview-3d/menu/panels/bones-panel-node.ts`
 
 ---
 
@@ -63,7 +63,7 @@ ADR-240（内容型 panel 统一折叠卡）解决了「新旧样式混排」，
 
 - 用户 2026-09 反馈：「骨骼、表情、材质必须跳转到次级菜单，它们的主按钮使用折叠收纳，
   内容仅在跳转后渲染？」+ 贴 `env-card-basic` DOM 实证「环境怎么做的，动作应该也能怎么做」。
-- 范式来源：`frontend/src/preview-3d/menu/env.ts` 的 `buildEnvCards` + `envCapRow` + `envCapSubview`
+- 范式来源：`frontend/src/preview-3d/menu/panels/env.ts` 的 `buildEnvCards` + `envCapRow` + `envCapSubview`
   （`kind:"card"` collapsible + 入口行 navigate）。
 - 对照（环境有收纳、动作没有）：环境一级 card 收纳 sky/ground/water 入口行；动作一级曾平铺骨骼树。
 

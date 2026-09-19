@@ -304,7 +304,7 @@ quick_risk_lines:
   - 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update()
   - 截图入口走 shotNodes 菜单闭包，禁止往 PreviewHandle 透传 screenshot（2026-09-04 死透传已删）
 pitfalls:
-  - 「frontend/src/preview-3d/menu/core.ts」跨类型追加走错适配器 → 必须经 switchExternal → openModel3DFullscreen(cooperate)
+  - 「frontend/src/preview-3d/menu/engine/core.ts」跨类型追加走错适配器 → 必须经 switchExternal → openModel3DFullscreen(cooperate)
   - 「skeleton.ts」异步回调写入已卸载 DOM → 每个 await 后检查 container.isConnected
   - 「vrm.humanoid.update()」手动调用导致 T-pose 回归 → 只用 vrm.update(dt)
 ---

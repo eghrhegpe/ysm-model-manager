@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-06
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/caps/scene-capability.ts`、`frontend/src/preview-3d/menu/render.ts`、`frontend/src/preview-3d/menu/cap-controls.ts`、ADR-193（相邻刀，不取代；本 ADR 只动控件形制不动面板通道）
+- **相关**：`frontend/src/preview-3d/caps/scene-capability.ts`、`frontend/src/preview-3d/menu/render/render.ts`、`frontend/src/preview-3d/menu/render/cap-controls.ts`、ADR-193（相邻刀，不取代；本 ADR 只动控件形制不动面板通道）
 
 ---
 
@@ -40,7 +40,7 @@ caps 层锐评（2026-09-06，三子代理体检）确认：`MenuControlDef`（s
 
 - caps 层锐评 2026-09-06（架构核心子代理 P3）→ 本 ADR 立项（胖接口判定 + 「需 ADR」结论）
 - `frontend/src/preview-3d/caps/scene-capability.ts:29-106` MenuControlDef 胖接口 + `[控件原语归一]` 注释链 → §1 症状 1
-- `frontend/src/preview-3d/menu/render.ts:319,360,370` kind cast + 防御判空分派；`frontend/src/preview-3d/menu/cap-controls.ts:546` switch 分派 → §1 症状 2
+- `frontend/src/preview-3d/menu/render/render.ts:319,360,370` kind cast + 防御判空分派；`frontend/src/preview-3d/menu/render/cap-controls.ts:546` switch 分派 → §1 症状 2
 - `makeSliderDef`/`makeColorDef` 共享工厂（scene-capability.ts，2026-09-06 上提，commit 74cc9ad9）→ §2.2 工厂主干道判定
 - ADR-193 §2 分刀递进 / 拒绝大爆炸的论证范式 → §2 刀序与拒绝方案沿用其框架
 

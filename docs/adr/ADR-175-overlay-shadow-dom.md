@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts`（overlay 挂载）、`preview-3d/menu/core.ts:104`（createSlideMenu 唯一生产消费）、`ui/ui-slide-menu.ts`、`ui/ui-components-styles.ts`、`ui/ui-slide-menu-styles.ts`、`views/app-tree/index.ts:296`（getElementById 守卫）、勘察报告 `frontend-src-critique-g6p1-survey.md` §3、锐评处置卡 G6 行、ADR-066/126
+- **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts`（overlay 挂载）、`preview-3d/menu/engine/core.ts:104`（createSlideMenu 唯一生产消费）、`ui/ui-slide-menu.ts`、`ui/ui-components-styles.ts`、`ui/ui-slide-menu-styles.ts`、`views/app-tree/index.ts:296`（getElementById 守卫）、勘察报告 `frontend-src-critique-g6p1-survey.md` §3、锐评处置卡 G6 行、ADR-066/126
 
 ---
 
@@ -33,7 +33,7 @@ overlay 整链 28 个类 token 三类归属，**样式层迁移障碍远小于�
    （ensureMenuStyles / ensureCapStyles / ensureRolesStyles / ensureEnvStyles / ensureSwitchStyles /
    ensureCoreStyles / ensureVbuStyles / ensureMpcStyles，均 `document.head.appendChild`）——G6 的
    样式注入目标迁移从「散点搬迁」变成「每文件改一处注入目标」，面进一步收敛。
-2. **createSlideMenu 唯一生产消费方 = preview-3d/menu/core.ts:104**（buildPreviewMenuShell）。
+2. **createSlideMenu 唯一生产消费方 = preview-3d/menu/engine/core.ts:104**（buildPreviewMenuShell）。
    无外部全局共用 → slide 菜单 shadow 化影响面限于 3D overlay 链内部。
 3. **app-tree/index.ts:296** `document.getElementById(PREVIEW_OVERLAY_ID)` 守卫：overlay 若改为
    **shadow host 且保留 id 挂 document**，getElementById 仍命中（host 自身在 document 树）→ 兼容，守卫零改动。
@@ -103,12 +103,12 @@ shadow root，与全站形态一致」。
 
 | 文件 | ensure 函数 | 注入目标现状 | M1/M2 动作 |
 |---|---|---|---|
-| preview-3d/menu/render.ts | ensureMenuStyles | document.head | → host root |
-| preview-3d/menu/cap-controls.ts | ensureCapStyles | document.head | → host root |
-| preview-3d/menu/roles.ts | ensureRolesStyles | document.head | → host root |
-| preview-3d/menu/env.ts | ensureEnvStyles | document.head | → host root |
+| preview-3d/menu/render/render.ts | ensureMenuStyles | document.head | → host root |
+| preview-3d/menu/render/cap-controls.ts | ensureCapStyles | document.head | → host root |
+| preview-3d/menu/panels/roles.ts | ensureRolesStyles | document.head | → host root |
+| preview-3d/menu/panels/env.ts | ensureEnvStyles | document.head | → host root |
 | preview-3d/menu/switch.ts | ensureSwitchStyles | document.head | → host root |
-| preview-3d/menu/core.ts | ensureCoreStyles | document.head | → host root |
+| preview-3d/menu/engine/core.ts | ensureCoreStyles | document.head | → host root |
 | preview-3d/adapters/vrm-bone-ui.ts | ensureVbuStyles | document.head | → host root |
 | preview-3d/adapters/mount-preview-core.ts | ensureMpcStyles（挂 installUiComponentsStyles 旁） | document.head | → host root |
 | ui/ui-slide-menu-styles.ts | 安装函数 | head/菜单容器 | → host root/adopted |

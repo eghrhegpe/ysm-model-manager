@@ -199,8 +199,8 @@ invariant_anchors:
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|sceneCapabilityRegistry
   - frontend/src/preview-3d/caps/scene-capability.ts|SceneCapability
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|createAll
-  - frontend/src/preview-3d/menu/env.ts|buildEnvSchema
-  - frontend/src/preview-3d/menu/env.ts|envCapRow
+  - frontend/src/preview-3d/menu/panels/env.ts|buildEnvSchema
+  - frontend/src/preview-3d/menu/panels/env.ts|envCapRow
 status: active
 ---
 

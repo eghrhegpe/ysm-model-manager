@@ -89,7 +89,7 @@ invariant_anchors:
   - frontend/src/views/app-preview/ysm-controls.ts|registerYsmModelSchema
   - frontend/src/views/app-preview/mmd-controls.ts|playNodes
   - frontend/src/preview-3d/infra/camera-controls.ts|CameraControlBridge
-  - frontend/src/preview-3d/menu/core.ts|setAdapterItems
+  - frontend/src/preview-3d/menu/engine/core.ts|setAdapterItems
   - frontend/src/views/app-preview/siblings.ts|resolveSiblingsForRoute
   - frontend/src/views/app-preview/preview-library.ts|openModel3DFullscreen
 status: active

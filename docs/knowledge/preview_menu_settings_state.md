@@ -5,18 +5,30 @@ tier: leaf
 category: ui
 source_files:
   - frontend/src/preview-3d/state/preview-state.ts
-  - frontend/src/preview-3d/menu/settings.ts
-  - frontend/src/preview-3d/menu/cap-controls.ts
+  - frontend/src/preview-3d/menu/panels/settings.ts
+  - frontend/src/preview-3d/menu/render/cap-controls.ts
   - frontend/src/preview-3d/caps/scene-capability.ts
 auto_fields:
   symbols_with_lines:
     - bindFieldRestorers
+    - buildCameraSchema
+    - buildCrossCuttingControls
+    - buildLightingSchema
+    - buildPostprocessingSchema
+    - buildSettingsControls
+    - buildSettingsSchema
+    - buildShadowSchema
     - CapabilityId
     - CapabilityMap
+    - capControlToView
+    - CapControlView
+    - collectSettingsCapControls
+    - collectVisiblePredicates
     - EnvPlacement
     - EnvSectionId
     - FieldKind
     - FieldRestorer
+    - formatCapSliderValue
     - getStateValue
     - getTypedCap
     - GROUND_LAYER_OFFSETS
@@ -30,6 +42,12 @@ auto_fields:
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath
+    - renderCapColor
+    - renderCapControls
+    - renderCapDivider
+    - renderCapSelect
+    - renderCapSlider
+    - renderCapToggle
     - resetSettingsListeners
     - restoreFields
     - restoreState

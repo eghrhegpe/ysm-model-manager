@@ -198,13 +198,13 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "EntityPlayer";
-    self._typeConfig = [{ id: "EntityPlayer", dirLevelSync: true }];
+    self._typeConfig = [{ id: "EntityPlayer" }];
     // code review P1：更新为新 renderer 的 isDir 契约（旧 subdir 分组语义已移除——
     // 文件夹行 = isDir:true + children 数组，展开渲染 children）
     self._allItems = [
@@ -394,13 +394,13 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; name: string; icon: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string; name: string; icon: string }>;
       _dirOpen: Record<string, boolean>;
       _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "blueprint";
-    self._typeConfig = [{ id: "blueprint", name: "蓝图", icon: "⚙️", dirLevelSync: true }];
+    self._typeConfig = [{ id: "blueprint", name: "蓝图", icon: "⚙️" }];
     // 真实场景：蓝图在仓库、整合包缺失 → missing；path 为仓库绝对路径
     // code review P1：新 renderer 的 isDir 契约——children 直接携带（不再依赖
     // ScanModelEntriesWithLabel 仓库扫描——新 renderer 无 scan 路径）
@@ -455,14 +455,14 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
       _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "EntityPlayer";
-    self._typeConfig = [{ id: "EntityPlayer", dirLevelSync: true }];
+    self._typeConfig = [{ id: "EntityPlayer" }];
     self._allItems = [
       { path: "模型A", name: "模型A", status: "diverged", type: "EntityPlayer", icon: "🗂️", size: 10, isDir: true, children: [
         { path: "模型A/a.pmx", name: "a.pmx", status: "missing", type: "EntityPlayer", icon: "🎭", size: 10, isDir: false },
@@ -500,7 +500,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
       _filesRoots: Record<string, string>;
@@ -508,7 +508,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _doRender: () => void;
     };
     self._selectedType = "EntityPlayer";
-    self._typeConfig = [{ id: "EntityPlayer", dirLevelSync: true }];
+    self._typeConfig = [{ id: "EntityPlayer" }];
     self._allItems = [
       { path: "模型A", name: "模型A", status: "diverged", type: "EntityPlayer", icon: "🗂️", size: 10, isDir: true, children: [
         { path: "模型A/a.pmx", name: "a.pmx", status: "missing", type: "EntityPlayer", icon: "🎭", size: 10, isDir: false },
@@ -545,13 +545,13 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; name?: string; icon?: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string; name?: string; icon?: string }>;
       _dirOpen: Record<string, boolean>;
       _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "ysm";
-    self._typeConfig = [{ id: "ysm", name: "YSM", icon: "💎", dirLevelSync: true }];
+    self._typeConfig = [{ id: "ysm", name: "YSM", icon: "💎" }];
     // 三层容器：vendor → authors → character（模型文件夹叶子，含文件级 children）
     self._allItems = [{
       path: "/repo/ysm/vendor", name: "vendor", status: "diverged", type: "ysm", icon: "🗂️", size: 0, isDir: true,
@@ -607,14 +607,14 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
       _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "resourcepack";
-    self._typeConfig = [{ id: "resourcepack", dirLevelSync: true }];
+    self._typeConfig = [{ id: "resourcepack" }];
     // 容器 synced，内部 disabled 子文件——旧 applyFilter 顶层过滤会整体丢弃容器
     self._allItems = [{
       path: "packs", name: "packs", status: "synced", type: "resourcepack", icon: "📁", size: 0, isDir: true,
@@ -649,14 +649,14 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
       _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "resourcepack";
-    self._typeConfig = [{ id: "resourcepack", dirLevelSync: true }];
+    self._typeConfig = [{ id: "resourcepack" }];
     self._allItems = [{
       path: "packs", name: "packs", status: "synced", type: "resourcepack", icon: "📁", size: 0, isDir: true,
       children: [
@@ -692,14 +692,14 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
       _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "ysm";
-    self._typeConfig = [{ id: "ysm", dirLevelSync: true }];
+    self._typeConfig = [{ id: "ysm" }];
     // 三层嵌套，最深层 leaf 是 disabled——旧逻辑需逐层手动展开才可见
     self._allItems = [{
       path: "vendor", name: "vendor", status: "synced", type: "ysm", icon: "🗂️", size: 0, isDir: true,
@@ -735,14 +735,14 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
       _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "ysm";
-    self._typeConfig = [{ id: "ysm", dirLevelSync: true }];
+    self._typeConfig = [{ id: "ysm" }];
     // 容器自身 missing（命中 missing tab），但子文件全是 synced——旧逻辑返回原 item
     // 会带出全部 synced 子行；修后 children 清空，展开无未命中行
     self._allItems = [{
@@ -776,13 +776,13 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _selectedType: string;
       _allItems: SyncItem[];
       _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; dirLevelSync: boolean }>;
+      _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "ysm";
-    self._typeConfig = [{ id: "ysm", dirLevelSync: true }];
+    self._typeConfig = [{ id: "ysm" }];
     self._allItems = [
       { path: "模型A", name: "模型A", status: "synced", type: "ysm", icon: "📁", size: 0, isDir: true, children: [
         { path: "模型A/a.ysm", name: "a.ysm", status: "synced", type: "ysm", icon: "💎", size: 10, isDir: false },

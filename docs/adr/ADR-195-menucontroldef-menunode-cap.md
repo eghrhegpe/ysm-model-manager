@@ -61,7 +61,7 @@ YSM cap 是**实例方法自报控件**（`cap.setCloudCoverage(v)` 等闭包）
    > - 判据：`grep MenuControlDef` 全仓零命中（代码）；contrast 测试 1894 全绿 + typecheck + biome 全过。
    > 未做：custom 逃生舱迁移（因走法乙保留 controls 通道，无需触动量仓）；cap-controls 整组退役（简单控件渲染器本就是 render 主链活依赖，保留）。
 
-   > **2026-09-19 增量2b/3 收口（决策方向补正，不改本 ADR「已采纳」立场）**：走法乙落地并叠加增量2a（`PreviewControlKind` 窄为复杂件专用、`PreviewControlDef` 删简单字段）后，遗留的「增量2b = `PreviewControlSpec`/`PreviewControlDef` 字段级统一 + 增量3 = `CapControlView`/`PreviewControlDef` 视图合并」经全仓实证定性为 **churn / 空目标**，予以**关闭不做**。理由：① 声明侧在走法乙下已达单一 `MenuNode[]` schema——`controls` 通道本身即一种 `PreviewMenuNode.kind`，`PreviewControlDef` 是其 payload 而非游离第二 schema；② 简单件↔`PreviewControlSpec`（节点 `.control` 绑定）与复杂件↔自包含 `PreviewControlDef` 按 kind 不相交，`CapControlView` 已统一简单件视图（只喂 4 简单渲染器）、复杂件渲染器合法直吃 Def，合并两类型/两视图只增噪音；③ 原生 `kind:"button"`（`rmAppendButton`，可点导航行）与 controls 通道 button（`renderCapButton`，样式化按钮控件）是两种 UI 原语、非重复真值，不构成待合并冗余。**据此把「刀3 走法甲」（复杂件全原生化 + 删 controls 通道 + 删 `PreviewControlDef`）明确定为可选未来架构项，而非必偿技术债**——真实剩余面虽极小（全仓 6 个 controls 节点 / 8 个复杂 Def，集中 sky-menu/ground-menu/environment-menu 三文件），但收益（消一个类型名）远低于触达类型叶 + renderMenu 分派 + 复杂渲染器入参 + 约 6 测试文件的爆炸半径。本 ADR §2「渐进根除」方向不变，但根除的收敛终点在走法乙处**认定为已达足够收敛**，不再强制推向删类型。详见知识卡 `preview-menu.md`「增量2b/3 收口」条。
+   > **2026-09-19 增量2b/3 收口**：遗留的 Spec/Def 字段统一（2b）+ 视图合并（3）经实证定性 churn / 空目标，不做——2a 后简单↔`PreviewControlSpec`、复杂↔`PreviewControlDef` 按 kind 不相交，走法乙下声明侧已是单一 `MenuNode[]` schema（`controls` 通道本身是一种 node kind）；复杂件全原生化（刀3 走法甲、删 Def）列为可选未来项、非必偿债，收敛终点认定在走法乙。详见知识卡 `preview-menu.md`「cap 控件单类型化」条。
 
 ### 关键映射（刀 0/1 固化，刀 2 按此迁移；2026-09-06 全仓实证）
 

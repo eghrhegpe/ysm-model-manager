@@ -170,7 +170,7 @@ function cmPgApplyLock(
       const pctEl = qs?.querySelector(".gh-progress-pct") as PctEl | null;
       const fillEl = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
       if (pctEl && pctEl.textContent !== "100%") {
-        pctEl.textContent = "⏳";
+        pctEl.innerHTML = UI_ICONS.refresh;
         pctEl.style.fontSize = "var(--fs-micro)";
         pctEl._dots = 0;
         pctEl._dotTimer = setInterval(() => {
@@ -184,7 +184,7 @@ function cmPgApplyLock(
             return;
           }
           pctEl._dots = ((pctEl._dots || 0) + 1) % 4;
-          pctEl.textContent = `⏳${".".repeat(pctEl._dots)}`;
+          pctEl.innerHTML = `${UI_ICONS.refresh}${".".repeat(pctEl._dots)}`;
         }, DOT_INTERVAL_MS);
       }
       if (fillEl) fillEl.style.width = "99%";
@@ -229,7 +229,7 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
       if (s.errorList.length > 0) {
         summary = document.createElement("div");
         summary.className = "gh-queue-error";
-        summary.textContent = `⚠️ ${t("downloadQueue.failedCount", { n: s.errorList.length })}`;
+        summary.innerHTML = `${UI_ICONS.warning} ${t("downloadQueue.failedCount", { n: s.errorList.length })}`;
       }
       ctx.onTimedCompletion(summary);
     }, COMPLETE_DELAY_MS);

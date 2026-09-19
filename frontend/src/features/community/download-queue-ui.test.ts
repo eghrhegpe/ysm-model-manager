@@ -421,7 +421,7 @@ describe("createDownloadQueue 99% 锁定状态机（陷阱 #6）", () => {
     expect(pctEl!.textContent).toBe("99%");
     expect(fillEl!.style.width).toBe("99%");
     vi.advanceTimersByTime(2000);
-    expect(pctEl!.textContent).toBe("⏳");
+    expect(pctEl!.innerHTML).toContain('<svg class="ws-icon"');
     ctrl.destroy();
   });
 
@@ -517,7 +517,7 @@ describe("createDownloadQueue 99% 锁定状态机（陷阱 #6）", () => {
     const { pctEl } = progressEls(sr);
     expect(pctEl!.textContent).toBe("99%");
     vi.advanceTimersByTime(2000);
-    expect(pctEl!.textContent).toBe("⏳"); // timer 未被锁定态 progress 清除
+    expect(pctEl!.innerHTML).toContain('<svg class="ws-icon"'); // timer 未被锁定态 progress 清除
     ctrl.destroy();
   });
 

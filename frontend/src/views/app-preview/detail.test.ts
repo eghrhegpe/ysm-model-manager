@@ -402,7 +402,8 @@ describe("detailGen 过期守卫（在途请求作废）", () => {
     resolveSummary(null);
     await pending;
     const detail = ctx.root.getElementById("preview-detail") as HTMLElement;
-    expect(detail.innerHTML).toContain("⏳"); // 停留在加载占位，未回写
+    // 停留在加载占位（图标位已是 SVG）、未回写；用结构断言避开「源码字面 SVG vs DOM 序列化」差异
+    expect(detail.querySelector(".dp-placeholder .big-icon svg")).toBeTruthy();
   });
 
   it("摘要无实义 → decodeYsmViaWasm 补全成功（95 enriched）", async () => {
@@ -518,6 +519,6 @@ describe("showShaderpack 光影包详情", () => {
     resolveLang({ name: "迟到的光影", entries: {} });
     await pending;
     const content = ctx.root.getElementById("preview-content") as HTMLElement;
-    expect(content.innerHTML).toContain("⏳"); // 停留在加载占位
+    expect(content.querySelector(".dp-placeholder .big-icon svg")).toBeTruthy(); // 停留在加载占位
   });
 });

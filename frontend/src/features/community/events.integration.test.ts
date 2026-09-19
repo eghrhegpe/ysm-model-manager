@@ -46,11 +46,11 @@ function makeSr(ms: WorkshopModel[] = models): {
 } {
   const sr = document.createElement("div");
   sr.innerHTML = `
-    <button class="gh-back-repo" data-testid="gh-back">← 返回</button>
+    <button class="gh-back-repo" data-testid="gh-back">返回</button>
     <input id="gh-repo-srch" class="gh-search" data-testid="gh-srch">
-    <button class="gh-toggle-missing" data-testid="gh-toggle">📁 仅显示缺失</button>
+    <button class="gh-toggle-missing" data-testid="gh-toggle">仅显示缺失</button>
     <div id="gh-repo-list" data-testid="gh-list"></div>
-    <button class="gh-dl-selected" data-testid="gh-dl-selected" disabled>⬇️ 下载选中 (0)</button>
+    <button class="gh-dl-selected" data-testid="gh-dl-selected" disabled>下载选中 (0)</button>
     <label class="gh-select-all" data-testid="gh-select-all"><input type="checkbox"> 全选</label>
   `;
   document.body.appendChild(sr);

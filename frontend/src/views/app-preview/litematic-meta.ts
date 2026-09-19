@@ -235,7 +235,7 @@ export async function showLitematic(ctx: PreviewRoot, path: string): Promise<voi
     <button class="pv-tab ${savedTab === "material" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="material">${UI_ICONS.voxel} ${t("preview.materialList")}</button>
   </div>
   <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}>
-    <div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsingLitematica")}...</div></div>
+    <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div><div class="dp-hint">${t("preview.parsingLitematica")}...</div></div>
   </div>
   <div id="preview-material"${savedTab !== "material" ? ' style="display:none"' : ""}></div>
 </div>

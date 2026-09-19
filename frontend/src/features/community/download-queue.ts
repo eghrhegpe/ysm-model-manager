@@ -143,7 +143,7 @@ function cmDqHandleFileStart(ctx: CmDqCtx, s: DownloadState): void {
     name.innerHTML = renderDisplayName(s.currentFile);
     const pct = document.createElement("span");
     pct.className = "gh-progress-pct";
-    pct.textContent = "⏳";
+    pct.innerHTML = UI_ICONS.refresh;
     row.append(icon, name, pct);
     if (remain > 1) {
       const remainEl = document.createElement("span");
@@ -208,7 +208,7 @@ function cmDqHandleQueueEnded(ctx: CmDqCtx, s: DownloadState): void {
     wrap.className = "gh-queue-error-wrap";
     const title = document.createElement("div");
     title.className = "gh-queue-error";
-    title.textContent = `⚠️ ${t("downloadQueue.failedListTitle", { n: s.errorList.length })}`;
+    title.innerHTML = `${UI_ICONS.warning} ${t("downloadQueue.failedListTitle", { n: s.errorList.length })}`;
     wrap.appendChild(title);
     for (const e of s.errorList.slice(0, 5)) {
       const item = document.createElement("div");
@@ -229,7 +229,7 @@ function cmDqHandleQueueEnded(ctx: CmDqCtx, s: DownloadState): void {
   if (cancelled) {
     const cancelSpan = document.createElement("span");
     cancelSpan.className = "gh-queue-cancel";
-    cancelSpan.textContent = `⏹ ${t("downloadQueue.cancelled")}`;
+    cancelSpan.innerHTML = `${UI_ICONS.stop} ${t("downloadQueue.cancelled")}`;
     cmDqCleanupProgressUI(ctx, summary || cancelSpan);
   } else {
     cmDqCleanupProgressUI(ctx, summary || undefined);

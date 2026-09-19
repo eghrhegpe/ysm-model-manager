@@ -34,7 +34,7 @@ export async function showModelDetail(
     <button class="pv-tab ${savedTab === "detail" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="detail">${UI_ICONS.file} ${t("preview.detailTab")}</button>
     <button class="pv-tab ${savedTab === "skeleton" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="skeleton">${UI_ICONS.build} ${t("preview.tab.skeleton")}</button>
   </div>
-  <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div></div>
+  <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3><div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div><div class="dp-hint">${t("preview.parsing")}...</div></div></div>
   <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
 </div>`;
 
@@ -262,7 +262,7 @@ export async function showShaderpack(
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
-  <div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div>
+  <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div><div class="dp-hint">${t("preview.parsing")}...</div></div>
 </div>`;
   try {
     const { ReadShaderpackLang } = await backendGetApp();

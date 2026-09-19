@@ -26,7 +26,11 @@ import { describe, expect, it } from "vitest";
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const GRAPHIC = "[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{2190}-\\u{21FF}]";
+// U+2300-23FF（⌚⌛⏰⏳⏸⏹…「杂项技术符号」）补充于 2026-09：`⏳`=U+231B 落在
+// 原四段范围之外，导致 `textContent = "⏳"` 类单字形槽**整类逃逸**（实测 5 处）；
+// 该段同属 emoji 呈现类字形，纳入后闸才真正覆盖「槽=纯字形」。
+const GRAPHIC =
+  "[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{2190}-\\u{21FF}\\u{2300}-\\u{23FF}]";
 const COMBINING = "[\\u{FE0F}\\u{200D}]";
 const GLYPH_ONLY_SLOT = new RegExp(
   `\\.(textContent|innerText|innerHTML)\\s*=\\s*(["'\`])\\s*${GRAPHIC}${COMBINING}*(?:${GRAPHIC}${COMBINING}*)*\\s*\\2`,

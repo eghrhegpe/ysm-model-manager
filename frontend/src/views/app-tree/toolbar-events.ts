@@ -10,6 +10,7 @@ import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { flashBtn } from "@/utils/dom/feedback.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getExts } from "@/utils/resource/extensions.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -291,7 +292,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
         vm._renderTree();
       } else if (action === "genindex") {
         const btn = item as HTMLButtonElement;
-        btn.textContent = "⏳";
+        btn.innerHTML = UI_ICONS.refresh;
         btn.disabled = true;
         try {
           const { GenerateRepoIndex, GetRepoRoot } = await backendGetApp();

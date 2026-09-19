@@ -8,6 +8,7 @@ import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { toastEmptyRtype } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SidebarInstance } from "./data.ts";
 import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";
@@ -260,12 +261,12 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
         const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } = await backendGetApp();
         const cfg = await LoadAppConfig();
         if (cfg.mcRoot) {
-          btn.textContent = `🎮 ${cfg.mcRoot}`;
+          btn.innerHTML = `${UI_ICONS.game} ${cfg.mcRoot}`;
         } else {
           // 没设置时自动检测：用第一个有效路径
           const paths = await GetMinecraftPaths();
           if (paths?.length) {
-            btn.textContent = `🎮 ${paths[0]}`;
+            btn.innerHTML = `${UI_ICONS.game} ${paths[0]}`;
             const theme = safeGet("theme") || "dark";
             await SaveAppConfig(
               cfg.filesRoot || "",
@@ -275,11 +276,11 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
               theme,
             );
           } else {
-            btn.textContent = `🎮 ${t("sidebar.notSet")}`;
+            btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;
           }
         }
       } catch (e) {
-        btn.textContent = `🎮 ${t("sidebar.notSet")}`;
+        btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;
         logWarn("sidebar", "MC detection", e);
       }
     })();

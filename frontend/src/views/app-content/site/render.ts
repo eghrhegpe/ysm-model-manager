@@ -71,7 +71,8 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
         esc(cr.name) +
         '" title="' +
         t("content.viewLocalModels") +
-        '">📁' +
+        '">' +
+        UI_ICONS.folder +
         authorCount +
         "</span>"
       : cr._fromLocal

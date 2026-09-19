@@ -5,6 +5,7 @@ import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import { sidebarCSS } from "./sidebar-css.ts";
 
@@ -89,8 +90,9 @@ class AppSidebar extends WebComponentBase {
       // 更新导入按钮文字
       const btn = this._root.querySelector(".sidebar-import-all");
       if (btn) {
-        btn.textContent =
-          "⬇️ " +
+        btn.innerHTML =
+          UI_ICONS.import +
+          " " +
           t("sidebar.installAll") +
           (RESOURCE_TYPE_LABELS[this._rtype] || t("format.resources"));
       }

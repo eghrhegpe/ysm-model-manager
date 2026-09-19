@@ -8,6 +8,7 @@ import { t } from "@/core/i18n/t.ts";
 import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { parseHealthReport } from "@/utils/health-report.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
 
@@ -92,7 +93,7 @@ export async function loadOldestModel(
   const S = '<div style="padding:12px;';
   async function render(): Promise<void> {
     const gen = guard.next();
-    container.innerHTML = `<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">⏳ ${t("oldest.scanning")}</div>`;
+    container.innerHTML = `<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">${UI_ICONS.refresh} ${t("oldest.scanning")}</div>`;
     try {
       const { ScanModelEntriesWithLabel, GetRepoRoot } = await maintenanceGetApp();
       const filesRoot = await GetRepoRoot(getCurrentType());

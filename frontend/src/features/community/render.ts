@@ -192,7 +192,9 @@ export function renderRepoHeaderHTML(params: {
     '<div class="gh-header">' +
     // 行1: 返回 | 模型计数徽章
     '<div class="gh-header-top">' +
-    '<button class="btn-base sm gh-back-repo" data-testid="gh-back">← ' +
+    '<button class="btn-base sm gh-back-repo" data-testid="gh-back">' +
+    UI_ICONS.back +
+    " " +
     t("common.back") +
     "</button>" +
     '<span class="gh-section-fill"></span>' +

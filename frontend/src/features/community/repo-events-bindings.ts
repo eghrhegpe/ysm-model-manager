@@ -7,6 +7,7 @@ import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";
 import { communityGetApp } from "./community-deps.ts";
@@ -36,7 +37,8 @@ export function cmReBindToggle(ctx: CmReCtx, listeners: ListenerRef[]): void {
   if (toggleBtn) {
     cmReListen(listeners, toggleBtn, "click", () => {
       state.showAll = !state.showAll;
-      toggleBtn.textContent = state.showAll ? t("workshop.showAll") : t("workshop.showMissing");
+      const label = state.showAll ? t("workshop.showAll") : t("workshop.showMissing");
+      toggleBtn.innerHTML = `${UI_ICONS.folder} ${label}`;
       toggleBtn.classList.toggle("active", state.showAll);
       cmReRenderList(ctx);
     });

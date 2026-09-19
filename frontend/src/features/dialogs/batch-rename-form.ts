@@ -8,6 +8,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type {
   BatchItem,
   BatchRenameChange,
@@ -284,7 +285,7 @@ function dgBrBindApplyClick(
       return;
     }
     const btn = thisEl.querySelector("#br-apply") as HTMLButtonElement;
-    btn.textContent = `⏳ ${t("dialog.executing")}`;
+    btn.innerHTML = `${UI_ICONS.refresh} ${t("dialog.executing")}`;
     btn.disabled = true;
     try {
       await onApply(

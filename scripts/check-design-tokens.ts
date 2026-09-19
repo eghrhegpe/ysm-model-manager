@@ -104,6 +104,7 @@ import {
   findToastEmojiPrefixViolations,
   findViolationsOnLines,
   fixLineTokens,
+  hasGraphicEmoji,
   parseTokenMap,
 } from "./_lib/design-tokens.ts";
 import { addedLines, content, type DiffSource, renameMap } from "./_lib/diff-source.ts";
@@ -522,7 +523,7 @@ for (const f of files) {
       !line.includes("background") &&
       !line.includes("transition") &&
       !line.includes("box-shadow") &&
-      !/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u.test(line)
+      !hasGraphicEmoji(line)
     ) {
       continue;
     }

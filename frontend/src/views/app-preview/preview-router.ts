@@ -94,7 +94,7 @@ export async function routePackInfo(
   dirPath: string,
 ): Promise<void> {
   const gen = ctx.previewGuard.current;
-  ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.package} ${t("preview.pack")}</h3><div class="dp-placeholder"><div class="big-icon">⏳</div></div></div>`;
+  ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.package} ${t("preview.pack")}</h3><div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div></div></div>`;
 
   try {
     const { GetPackInfo } = await backendGetApp();

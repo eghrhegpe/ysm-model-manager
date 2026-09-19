@@ -53,7 +53,7 @@ export async function showCard(
   // 有 fetchMeta：加载态 → 获取 → 渲染
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${config.icon} ${config.label}</h3>
-  <div class="dp-placeholder"><div class="big-icon">⏳</div><div class="dp-hint">${t("preview.parsing")}...</div></div>
+  <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div><div class="dp-hint">${t("preview.parsing")}...</div></div>
 </div>`;
 
   try {

@@ -219,7 +219,7 @@ describe("bindFooter", () => {
     const root = host.attachShadow({ mode: "open" });
     root.innerHTML =
       '<div class="footer-stats"><span class="stat-item" id="stat-sync">完全同步 -/-</span></div>' +
-      '<button class="btn-mc-dir" id="btn-mc">🎮 未设置</button>';
+      '<button class="btn-mc-dir" id="btn-mc">未设置</button>';
     return { root };
   }
 
@@ -255,7 +255,7 @@ describe("bindFooter", () => {
     const { root } = mountFooter();
     bindFooter(root, []);
     await waitFor(() =>
-      expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe("🎮 /mc/root"),
+      expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe(" /mc/root"),
     );
   });
 
@@ -266,7 +266,7 @@ describe("bindFooter", () => {
     const { root } = mountFooter();
     bindFooter(root, []);
     await waitFor(() => expect(app.GetMinecraftPaths).toHaveBeenCalled());
-    expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe("🎮 未设置");
+    expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe(" 未设置");
   });
 
   it("未配置但有检测路径 → 自动使用第一个路径并保存配置", async () => {
@@ -281,7 +281,7 @@ describe("bindFooter", () => {
     const { root } = mountFooter();
     bindFooter(root, []);
     await waitFor(() =>
-      expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe("🎮 /detected"),
+      expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe(" /detected"),
     );
     expect(app.SaveAppConfig).toHaveBeenCalled();
   });
@@ -300,7 +300,7 @@ describe("bindFooter", () => {
     const { root } = mountFooter();
     bindFooter(root, []);
     await waitFor(
-      () => expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe("🎮 未设置"),
+      () => expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe(" 未设置"),
     );
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();

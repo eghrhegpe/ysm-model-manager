@@ -7,6 +7,7 @@ import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { allResourceTypes } from "@/utils/resource/schema.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -160,7 +161,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
     "click",
     async () => {
       const btn = searchResults.querySelector(".cr-fetch-btn") as HTMLButtonElement;
-      btn.textContent = "⏳";
+      btn.innerHTML = UI_ICONS.refresh;
       btn.disabled = true;
       try {
         const App = await backendGetApp();

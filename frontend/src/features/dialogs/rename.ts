@@ -67,7 +67,7 @@ function dgRnBindReadHeaderBtn(
     }
     try {
       const btn = box.querySelector("#rn-from-header") as HTMLButtonElement;
-      btn.textContent = `⏳ ${t("dialog.reading")}`;
+      btn.innerHTML = `${UI_ICONS.refresh} ${t("dialog.reading")}`;
       btn.disabled = true;
       const App = await getApp();
       const header = await App.ExtractYSMHeader(filePath);

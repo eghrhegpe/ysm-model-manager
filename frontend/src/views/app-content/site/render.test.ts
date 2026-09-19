@@ -248,10 +248,10 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     const mk = (cr: LocalCreatorLike, counts: Record<string, number>) =>
       parseCardHtml(createCrCard(cr, cardCtx([cr], { authorCountMap: counts, avatarCache: {} })));
     const c1 = mk({ name: "甲", desc: "", _fromLocal: true }, { 甲: 5 });
-    expect(c1.querySelector(".cr-card-local-count")?.textContent).toBe("📁5");
+    expect(c1.querySelector(".cr-card-local-count")?.textContent).toBe("5");
     expect(c1.querySelector("[data-local-creator]")?.getAttribute("data-local-creator")).toBe("甲");
     const c2 = mk({ name: "乙", desc: "", _fromLocal: true }, {});
-    // ADR-238：「仅本地、无作者」分支的徽章图标由 emoji 📁 改走 SVG（含作者分支 c1 仍用 📁+数字，未迁移）
+    // ADR-238：本地徽章图标由 emoji 📁 改走 SVG（含作者分支 c1 的 📁+数字，2026-09 收尽）
     const c2html = c2.querySelector(".cr-card-local-count")?.innerHTML ?? "";
     expect(c2html).toContain('<svg class="ws-icon"');
     const c3 = mk({ name: "丙", desc: "" }, {});

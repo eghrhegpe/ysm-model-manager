@@ -3,6 +3,7 @@
 // 供 repo-events-bindings.ts（8 个 cmReBind*）与 events.ts（bindRepoEvents 组装）共用。
 
 import { t } from "@/core/i18n/t.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { DownloadQueue } from "./download-queue.ts";
 import { filterModels, type WorkshopModel } from "./render.ts";
 import type { VirtualList } from "./virtual-list.ts";
@@ -87,7 +88,7 @@ export function cmReUpdateSelectedUI(ctx: CmReCtx): void {
   const checked = selectedSet.size;
   const btn = sr.querySelector(".gh-dl-selected") as HTMLButtonElement | null;
   if (btn) {
-    btn.textContent = `⬇️ ${t("workshop.downloadSelected", { n: checked })}`;
+    btn.innerHTML = `${UI_ICONS.download} ${t("workshop.downloadSelected", { n: checked })}`;
     btn.disabled = checked === 0;
   }
 }

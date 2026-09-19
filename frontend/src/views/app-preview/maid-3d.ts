@@ -274,7 +274,7 @@ export async function showMaidPreview(
     <div class="big-icon">${UI_ICONS.model}</div>
     <div class="dp-hint">${esc(basename)}</div>
     <div class="dp-hint">${t("preview.bedrockModel")}</div>
-    <div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">⏳ ${t("preview.analyzingModel")}</div>
+    <div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">${UI_ICONS.refresh} ${t("preview.analyzingModel")}</div>
   </div>
 </div>`;
 

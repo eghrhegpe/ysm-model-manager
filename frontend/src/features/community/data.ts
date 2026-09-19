@@ -2,6 +2,7 @@
 // tryFetchModels + 进度条
 
 import { hasRecycleSegment } from "@/utils/base/pure/recycle-path.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 /**
  * 创建进度条 UI（插入到 searchResults 容器）
@@ -25,7 +26,7 @@ export function showProgress(searchResults: HTMLElement, pct: number, label?: st
   labelRow.className = "gh-progress-label";
   const spin = document.createElement("span");
   spin.className = "gh-progress-spin";
-  spin.textContent = "⏳";
+  spin.innerHTML = UI_ICONS.refresh;
   const text = document.createElement("span");
   text.className = "gh-progress-text";
   text.textContent = label || "";

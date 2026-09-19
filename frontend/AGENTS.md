@@ -21,7 +21,7 @@ frontend/src/
 ├── backend/app.ts         # Wails 绑定桥（getApp() 唯一入口）
 ├── core/                  # 基础设施：i18n / page-store / error-diary
 ├── features/              # 业务功能模块（import-queue / recycle-bin / community）
-├── services/               # 服务层：resource-registry.ts（资源类型加载）/ cli-bridge.ts
+├── services/               # 服务层：cli-bridge.ts（资源类型加载已收口 utils/resource/schema.ts 同步视图）
 ├── test-utils/            # 测试工具（ADR-035）
 ├── utils/                 # 工具函数（base/pure 真纯函数 / base/primitives 副作用原语 / dom / debug / format / icon / resource / animation / cache / async / html / model-name）
 ├── views/app-xxx/         # Web Component 视图组件（按职责独立文件）
@@ -30,7 +30,7 @@ frontend/src/
 
 - **新组件放 `views/app-xxx/`**，一个文件放一个可独立工作的功能，不按行数机械切割
 - **新业务模块放 `features/`**；工具函数放 `utils/`
-- 服务注册表 `services/registry.ts` 已于 2026-09 删除；`loadInstances`（app-sidebar）/ `loadEntries`（app-tree）由各自 `loader.ts` 直接提供，测试经 `vi.mock("./loader.ts")` 替换；数据加载服务（如 `services/resource-registry.ts`）直接 import 消费
+- 服务注册表 `services/registry.ts` 已于 2026-09 删除；`loadInstances`（app-sidebar）/ `loadEntries`（app-tree）由各自 `loader.ts` 直接提供，测试经 `vi.mock("./loader.ts")` 替换；资源类型加载走 `utils/resource/schema.ts` 同步视图（原 `services/resource-registry.ts` 异步 RPC 旁路已由 ADR-269 D3 删除）
 
 ## Wails 桥接
 

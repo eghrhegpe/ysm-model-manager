@@ -143,13 +143,14 @@ describe("formatClock — HH:MM:SS 时刻（诊断页审计 C12 单点）", () =
     expect(formatClock("")).toBe("");
   });
 
-  // 不锁死完整串——toLocaleTimeString 的 AM/PM 与分隔符随运行环境 locale 漂移，
-  // 只断言「秒」形态存在（:HH:MM）即可，跨 CI/本地稳定
+  // 不锁死完整串、也**不锚定结尾**——toLocaleTimeString 的 AM/PM 后缀随运行环境 locale
+  // 漂移（CI en-US → "09:05:07 AM"，结尾是 " AM" 而非 ":SS"，`$` 锚点必挂；
+  // 本地 zh-CN → "09:05:07"）。只断言「时:分:秒」三段形态存在，跨 CI/本地稳定。
   it("有效时间戳 → 含秒的时钟形态", () => {
     const now = new Date(2026, 8, 18, 9, 5, 7); // 09:05:07
     vi.useFakeTimers();
     vi.setSystemTime(now);
     const out = formatClock(now.getTime());
-    expect(out).toMatch(/:\d{2}:\d{2}$/);
+    expect(out).toMatch(/:\d{2}:\d{2}/);
   });
 });

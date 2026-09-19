@@ -625,7 +625,8 @@ export class WaterCapability implements SceneCapability {
   // ── 水面尺寸（ADR-272：两形态均零重建，故与 waterLevel 同列 form 组）──
   // 下界钳到 ≥1 与 loadState 恢复同口径（0/负数会让水面退化成一个点；shader 侧 /sizeSafe 再兜一层）。
   setWaterSize(v: number): void {
-    setEnvState({ waterSize: Math.max(1, v) }, { source: "manual" });
+    // NaN/Infinity 不进 envState（Math.max(1, NaN) = NaN 会被 shader 侧 uSize 接住、水面退化）
+    setEnvState({ waterSize: Number.isFinite(v) ? Math.max(1, v) : 1 }, { source: "manual" });
   }
   getWaterSize(): number {
     return envState.waterSize;
@@ -710,9 +711,13 @@ export class WaterCapability implements SceneCapability {
     if (!state) return;
     restoreFields(state, {
       enabled: { boolean: (v) => (this.enabled = v) },
-      // 存档脏数据 0/负数会让水面退化成一个点，故在入口钳到 ≥1
-      //（与 setWaterSize 同下界，shader 侧 max(uSize, 0.001) 再兜一层）
-      size: { number: (v) => setEnvState({ waterSize: Math.max(1, v) }, { source: "manual" }) },
+      // 存档脏数据 0/负数会让水面退化成一个点，故在入口钳到 ≥1（与 setWaterSize 同下界，
+      // shader 侧 max(uSize, 0.001) 再兜一层）；NaN/Infinity 同不合法（JSON.parse 拒绝纯 NaN，
+      // 但手改 localStorage / 未来代码路径可能写进来）→ 回落默认 1，不传 NaN 给 uSize
+      size: {
+        number: (v) =>
+          setEnvState({ waterSize: Number.isFinite(v) ? Math.max(1, v) : 1 }, { source: "manual" }),
+      },
     });
     // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。
     // 子域开关键随格式不同：V2 嵌套用 enabled；flat 用顶层 waterEnabled。

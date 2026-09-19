@@ -236,3 +236,35 @@ export function findStrayCommentClose(src: string): number {
   }
   return idx;
 }
+
+/**
+ * 跨层存在性判定（css-layer-check 检查 6 的纯函数抽出）。
+ *
+ * 检查 3 的判定域是「本域命名空间」，故命名空间在本域不存在的类（错名 / 从未实现）结构上落在
+ * 它的盲区里——2026-09 实测残余盲区 42 类，其中 `.lt-*` 全族是真缺陷（色块空 span 恒不可见），
+ * `.heatmap-bar-*` 则有内联承载、属合法无规则。本函数用**全局**口径补上对偶的另一半：
+ * 一个类若在「所有 shadow 域 CSS ∪ document 层 CSS」都没有定义，就是「用了但哪儿都没定义」，
+ * 正是错名断链的形态。
+ *
+ * 刻意**不做 JS 引用启发式**（`classList` / `querySelector` 全仓字符串扫描）：实测对偶口径
+ * naive 版报 617 条、真死 0 条（绝大多数是运行时加的类），噪声换不到信号；
+ * 合法无规则类一律由调用方经 `KNOWN_NO_CSS_CLASSES` 显式登记（逐类附理由）。
+ *
+ * @param domainUsed 域 → （类名 → 首次出现该类的模板文件名）
+ * @param globallyDefined 全仓任何 CSS 层定义过的类名并集
+ * @param exempt 显式豁免集（合法无规则类）
+ */
+export function findUndefinedAnywhereClasses(
+  domainUsed: ReadonlyMap<string, ReadonlyMap<string, string>>,
+  globallyDefined: ReadonlySet<string>,
+  exempt: ReadonlySet<string>,
+): { domain: string; cls: string; file: string }[] {
+  const out: { domain: string; cls: string; file: string }[] = [];
+  for (const [domain, used] of domainUsed) {
+    for (const [cls, file] of used) {
+      if (globallyDefined.has(cls) || exempt.has(cls)) continue;
+      out.push({ domain, cls, file });
+    }
+  }
+  return out;
+}

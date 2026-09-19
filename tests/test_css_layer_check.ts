@@ -12,6 +12,7 @@
  *   1. @/ 别名 import + ${IDENT} → 展开为 @keyframes 定义，且不残留占位符
  *   2. 不存在的常量保持原样（不因 tooling 变化制造新假阳性）
  *   3b. 共享样式常量（非 @keyframes，如 dropdownBaseCSS）同样展开——否则其定义对检查 3 静默不可见
+ *   8. 检查 6 跨层存在性：在「所有 shadow 域 CSS ∪ document 层 CSS」都无定义 → 报出；已定义 / 已豁免 → 不报
  *   4. resolveImportAbs：相对路径解析 / 裸包导入排除（裸包不参与 shadow CSS 组装）
  *   5. readConstLiteral 可读跨行字符串字面量
  *
@@ -27,6 +28,7 @@ import { dropdownBaseCSS, noAnimationsCSS } from "../frontend/src/utils/dom/css.
 import {
   expandStyleInterpolations,
   findStrayCommentClose,
+  findUndefinedAnywhereClasses,
   hasMotionDeclaration,
   hasNoAnimationsBridge,
   readConstLiteral,
@@ -166,4 +168,32 @@ assert.ok(
 );
 console.log("  ✓ 检查 5 判定：注释完整性（破注释检出 + 正常注释/`//`/字符串字面量不误报）");
 
-console.log("\nOK: css-layer-check 插值展开契约（回归锁 8 条）");
+// 8) 检查 6：跨层存在性——「用到、但全仓任何 CSS 层都没定义」的类
+//    病因（2026-09）：检查 3 的判定域是「本域命名空间」，故命名空间在本域不存在的类（错名 /
+//    从未实现）结构上落在它的盲区里（实测残余 42 类）。.lt-* 全族即真缺陷——色块空 span 没有
+//    尺寸、恒不可见；补本检查后才现形（现已在 app-preview/css.ts 补真规则）。
+const crossUsed = new Map<string, Map<string, string>>([
+  [
+    "app-preview",
+    new Map([
+      ["lt-color-swatch", "litematic-meta.ts"],
+      ["md-row", "detail.ts"],
+      ["stage-item", "detail-3d.ts"],
+    ]),
+  ],
+]);
+const crossDefined = new Set(["md-row"]); // 定义在本域 CSS 层
+const crossExempt = new Set(["stage-item"]); // 合法无规则（全内联承载）
+assert.deepEqual(
+  findUndefinedAnywhereClasses(crossUsed, crossDefined, crossExempt).map((f) => `${f.domain}:${f.cls}`),
+  ["app-preview:lt-color-swatch"],
+  "任何 CSS 层都无定义 → 报出；已定义 / 已豁免 → 不报",
+);
+assert.deepEqual(
+  findUndefinedAnywhereClasses(crossUsed, crossDefined, new Set([...crossExempt, "lt-color-swatch"])),
+  [],
+  "豁免集命中即静默（合法无规则类的唯一出口）",
+);
+console.log("  ✓ 检查 6 判定：跨层存在性（任何 CSS 层都无定义 → 报；已定义/已豁免 → 不报）");
+
+console.log("\nOK: css-layer-check 插值展开契约（回归锁 9 条）");

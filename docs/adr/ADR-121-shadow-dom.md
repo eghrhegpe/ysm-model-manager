@@ -36,6 +36,7 @@
 | 检查 1c | 全局副本与 shadow 侧 keyframe `from translate` 参数值须一致 | ERROR |
 | 检查 2 | components.css 不得再含已回迁 shadow 的类 | ERROR |
 | 检查 3 | 本域**命名空间**类在 shadow 层须有定义（判定域自推导，见 [ADR-274](./ADR-274-css-layer-check.md)） | WARN |
+| 检查 6 | 用了但**全仓任何 CSS 层都没定义**的类（跨层存在性，检查 3 的对偶盲区补口，见 [ADR-275](./ADR-275-css-layer-check-6.md)） | WARN |
 | e2e `settings.spec.ts` | computed style 断言抓 shadow 裸奔 | 测试层 |
 
 pre-push 通过 `scripts/css-layer-check.ts --strict` 接入；逃生阀 `YSM_SKIP_CSS_LAYER=1`（紧急绕过，需二次确认）。

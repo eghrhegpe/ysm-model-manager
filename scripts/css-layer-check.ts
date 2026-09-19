@@ -49,6 +49,7 @@ import { fileURLToPath } from "node:url";
 import {
   expandStyleInterpolations,
   findStrayCommentClose,
+  findUndefinedAnywhereClasses,
   hasMotionDeclaration,
   hasNoAnimationsBridge,
 } from "./_lib/css-layer-utils.ts";
@@ -146,9 +147,6 @@ const DOCUMENT_LAYER_FILE = "frontend/css/components.css";
 // 已知「仅作 JS 钩子/容器锚点、样式全靠内联 style= 写死、无独立 shadow CSS 规则」的类。
 // 这些类带本域专属前缀但刻意无 CSS 定义，属合法状态位，非漏迁。
 // 未来若真要给它们加 shadow CSS 规则，从此集移除即会触发 WARN，倒逼复核（评审 2026-08-24 第 2 条）。
-// 已知「仅作 JS 钩子/容器锚点、样式全靠内联 style= 写死、无独立 shadow CSS 规则」的类。
-// 这些类带本域专属前缀但刻意无 CSS 定义，属合法状态位，非漏迁。
-// 未来若真要给它们加 shadow CSS 规则，从此集移除即会触发 WARN，倒逼复核（评审 2026-08-24 第 2 条）。
 // 分类依据（walk 全目录后逐一审）：
 //   gh-repo-card   — 与 .gh-card 同用（class="gh-card gh-repo-card"），冗余修饰钩子，gh-card 已有定义
 //   ws-name/ws-desc — init-github.ts 内联 style 写死字号（11px/9px），纯锚点
@@ -195,6 +193,27 @@ const KNOWN_NO_CSS_CLASSES = new Set([
   "ha-copy",
   "ws-empty",
   "btn-mc-dir",
+  // 2026-09 新增（检查 6「跨层存在性」报出，逐一核实均为合法无规则）：
+  //   heatmap-bar-wrap / heatmap-bar / heatmap-bar-label — tpl-oldest.ts 月热力图：外层容器与
+  //     bar 的高度/颜色全内联，bar 宽度由 label 文本撑开，容器 align-items:end 让标签基线对齐
+  //     ⇒ 实际渲染为合法柱状图（类仅装饰，无布局职责）
+  //   stage-item          — detail-3d.ts 兄弟列表项，样式全内联（padding/cursor/flex/border-left）
+  //   model-detail-title  — preview-router.ts 详情标题，内联 font-size/font-weight
+  //   stat-item           — app-sidebar footer 统计文本 span，样式由父 .footer-stats 提供
+  //   gray                — app-sidebar「无YSM」标记的灰变体：.tag 基类已定义，green/red/orange
+  //                         变体均限 .instance-card-header 作用域，gray **从未定义**（设计缺口，
+  //                         非漏迁）；标记仍继承 .tag 样式，故不阻断
+  //   br-preset           — tpl-batch-rename.ts 预设项，共类 .dlg-preset-chip 已定义 + JS 钩子
+  //   br-file-cb          — 同上，共类 .br-cb 已定义 + JS 钩子（batch-rename-form.ts）
+  "heatmap-bar-wrap",
+  "heatmap-bar",
+  "heatmap-bar-label",
+  "stage-item",
+  "model-detail-title",
+  "stat-item",
+  "gray",
+  "br-preset",
+  "br-file-cb",
 ]);
 
 // 提取 CSS 文本中的类名（.foo / .foo-bar）。
@@ -422,7 +441,7 @@ for (const forbidden of [
 // 自推导把「该不该锁」从人手记忆变成证据：本域没定义过该族就不锁（不误报跨层模板如 dlg-*）；
 // 本域定义了该族却用了没定义的类，就是漏定义（正是本检查要抓的形态）。
 // 边界（有意）：本域**从未**定义过任何该族类时无法判定——此时该族可能定义在别的层或靠内联样式，
-// 不报。已知盲区，与 gpu-budget 的 textureBytes 覆盖盲区同款处置：写明而非假装没有。
+// 不报。该盲区由**检查 6** 用全局口径补上（2026-09 实测盲区 42 类）。
 function stemOf(cls: string): string | null {
   const i = cls.indexOf("-");
   return i > 0 ? cls.slice(0, i + 1) : null; // .perf-bar-row → perf-
@@ -436,6 +455,9 @@ function deriveNamespaceStems(classes: Iterable<string>): Set<string> {
   return stems;
 }
 
+// 供检查 6 复用：域 → 本域 CSS 定义集 / 域 →（用到的类 → 首次出现的模板文件）
+const domainCssClasses = new Map<string, Set<string>>();
+const domainUsedClasses = new Map<string, Map<string, string>>();
 for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
@@ -443,12 +465,15 @@ for (const dom of SHADOW_DOMAINS) {
     if (t) cssAgg += `\n${expandStyleInterpolations(t, path.resolve(ROOT, f))}`;
   }
   const cssClasses = extractClasses(cssAgg);
+  domainCssClasses.set(dom.name, cssClasses);
   const stems = deriveNamespaceStems(cssClasses);
+  const usedMap = new Map<string, string>();
   for (const f of dom.html) {
     const t = readSafe(f);
     if (!t) continue;
     const used = extractHtmlClasses(t);
     for (const c of used) {
+      if (!usedMap.has(c)) usedMap.set(c, path.basename(f));
       const s = stemOf(c);
       const isOwnNamespace = s !== null && stems.has(s);
       if (isOwnNamespace && !cssClasses.has(c) && !KNOWN_NO_CSS_CLASSES.has(c)) {
@@ -459,6 +484,37 @@ for (const dom of SHADOW_DOMAINS) {
       }
     }
   }
+  domainUsedClasses.set(dom.name, usedMap);
+}
+
+// ── 检查 6（WARN）：跨层存在性——用到、但**全仓任何 CSS 层都没定义**的类 ──
+// 检查 3 的判定域是「本域命名空间」，故命名空间在本域不存在的类（错名 / 从未实现）结构上落在它的
+// 盲区里。2026-09 实测该盲区 42 类：30 个 dlg-*/br-* 是 document 层对话框模板（components.css
+// 服务，边界正确）、2 个完全内联样式、7 个 .lt-* 是真缺陷（色块空 span 恒不可见）、3 个
+// .heatmap-bar-* 靠内联承载。本检查用**全局**口径补上对偶的另一半：类若在「所有 shadow 域 CSS ∪
+// document 层 frontend/css/*.css」都无定义，就是「用了但哪儿都没定义」——错名断链的典型形态。
+// 刻意不做 JS 引用启发式：实测对偶口径 naive 版报 617 条、真死 0（绝大多数是 classList 运行时类），
+// 噪声换不到信号；合法无规则类一律经 KNOWN_NO_CSS_CLASSES 显式登记（逐类附理由）。
+// 保守口径：document 层定义**不穿透 shadow 边界**，此处「定义过即放行」，宁漏勿误报。
+const globalClassUniverse = new Set<string>();
+for (const classes of domainCssClasses.values()) for (const c of classes) globalClassUniverse.add(c);
+const documentLayerFiles = walk("frontend/css", {
+  exts: [".css"],
+  skipDir: () => false,
+  skipFile: () => false,
+}) as string[];
+for (const f of documentLayerFiles) {
+  for (const c of extractClasses(readSafe(f) ?? "")) globalClassUniverse.add(c);
+}
+for (const finding of findUndefinedAnywhereClasses(
+  domainUsedClasses,
+  globalClassUniverse,
+  KNOWN_NO_CSS_CLASSES,
+)) {
+  warnCount++;
+  problems.push(
+    `[WARN] ${finding.domain}: tpl ${finding.file} 使用类 '${finding.cls}' 但全仓任何 CSS 层（shadow 域 ∪ frontend/css/*.css）均无定义（疑似错名/漏定义；若为内联承载的合法无规则类，登记 KNOWN_NO_CSS_CLASSES）`,
+  );
 }
 
 // ── 检查 4：有动效的 shadow 域必须 adopt `.no-animations` 通配桥（ADR-015 §2.4 约束 1）──

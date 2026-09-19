@@ -68,18 +68,4 @@ ${metaTagCSS}
 .pick-card .name { font-size:var(--fs-md); font-weight:600; color:var(--txt); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pick-card .meta { font-size:var(--fs-sm); color:var(--muted); margin-top:4px; display:flex; gap:6px; flex-wrap:wrap; }
 
-/* ===== 热力图 ===== */
-.hm-wrap { padding:4px 0; }
-.hm-month { font-size:var(--fs-tiny); color:var(--muted); padding:0 0 2px 0; display:flex; gap:2px; }
-.hm-month span { flex:1; text-align:center; }
-.hm-grid { display:flex; gap:2px; }
-.hm-col { display:flex; flex-direction:column; gap:2px; }
-.hm-cell { width:10px; height:10px; border-radius:var(--radius-xs); background:var(--bd); }
-.hm-cell.l1 { background:var(--hm-1); }
-.hm-cell.l2 { background:var(--hm-2); }
-.hm-cell.l3 { background:var(--hm-3); }
-.hm-cell.l4 { background:var(--hm-4); }
-.hm-label { font-size:var(--fs-tiny); color:var(--muted); padding-top:2px; display:flex; gap:2px; }
-.hm-label span { flex:1; text-align:center; }
-.hm-legend { display:flex; align-items:center; gap:2px; font-size:var(--fs-tiny); color:var(--muted); justify-content:flex-end; }
 `;

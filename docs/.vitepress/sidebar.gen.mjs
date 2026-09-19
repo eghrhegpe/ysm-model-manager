@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-275：css-layer-check 检查 6：跨层存在性——收口命名空间盲区",
+        "link": "/adr/ADR-275-css-layer-check-6"
+      },
+      {
         "text": "ADR-274：css-layer-check 类归属判定：手写前缀表改为自推导命名空间",
         "link": "/adr/ADR-274-css-layer-check"
       },

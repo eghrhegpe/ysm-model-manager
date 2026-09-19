@@ -102,4 +102,19 @@ ${metaTagCSS}
 
 /* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts） */
 ${noAnimationsCSS}
+
+/* ===== litematic 元数据面板（litematic-meta.ts）2026-09 补 =====
+   此前 .lt-* 全族**全仓零规则**（不是漏扫，是从来没有）：.lt-color-swatch 只有内联 background
+   没有尺寸 → 空 inline span **恒不可见**，方块颜色色块根本没渲染；.lt-meta-row 无 flex →
+   label/value 挤成一行；.lt-meta-label 不弱化。同文件 121 行那行是全内联
+   （display:flex;justify-content:space-between;padding:4px 0;…）＝作者本意，此处收口为类。
+   闸为何曾看不见：这些类所在的命名空间 lt- 在本域从未被定义过，检查 3 自推导域结构上不覆盖
+   （2026-09 补检查 6「跨层存在性」才现形）。 */
+.lt-material-list { display:flex; flex-direction:column; gap:1px; }
+.lt-block-row { display:flex; align-items:center; gap:6px; padding:2px 0; font-size:var(--fs-xs); color:var(--txt); }
+.lt-color-swatch { width:10px; height:10px; border-radius:var(--radius-xs); flex-shrink:0; border:1px solid var(--bd); }
+.lt-block-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lt-block-count { color:var(--muted); font-size:var(--fs-tiny); flex-shrink:0; }
+.lt-meta-row { display:flex; justify-content:space-between; gap:8px; padding:2px 0; font-size:var(--fs-xs); color:var(--txt); }
+.lt-meta-label { color:var(--muted); }
 `;

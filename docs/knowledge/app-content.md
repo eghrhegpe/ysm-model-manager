@@ -133,7 +133,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - `css/content-css.ts` — 样式组合层：6 个域 CSS 文件（同在 `css/` 子目录）join 输出单一字符串，经 `adoptedStyleSheets` 注入 Shadow DOM，全走 CSS 变量。
 - `css/content-layout.ts` — 基础层：`::host` 变量 + 通用 keyframes + 骨架卡片系统（`.page` / `.stat-card` / `.model-card` / `.health-ring` 等）+ 工坊通用按钮类（`.ws-*`）。**CSS 变量可穿 shadow，@keyframes 不可**——必须在 shadow 层本地重定义副本，且参数值与全局副本一致（机检 1c 硬校验，`scripts/css-layer-check.ts` 阻断 pre-push）。
 - **居中空态/加载态块 = `.placeholder-box` 唯一原语**（`content-layout`；`.big` 大图标槽 + `--roomy` 大面积留白变体）。消费方只放内容（图标/文案/操作），**不内联、不复刻**。2026-09 体检收纳三份同构实现：本类曾是**零消费者死 CSS**，实例页把配方内联照抄一份（还借了 app-preview 的 `.dp-placeholder` 类名——在 app-content 的 shadow 内无规则），工坊站点又复刻成 `.cr-empty-site`。**刻意不并**另两族（形状不同，硬并会造视觉回归）：居中提示行（`.gh-loading-placeholder` / `.perf-no-data` / `.gh-initial-hint`）与左对齐小提示（`.stg-hint` / `.stg-card-hint`）。机检：`content-css.test.ts`「竖排+双向居中+muted 配方只允许出现在 `.placeholder-box`」（签名含 muted 是刻意的——只用三个 flex 属性会误伤 `.health-ring-inner` 这类圆环内居中数字）。
-- `css/content-repo.ts` — 仓库/实例/站点骨架 + 资历页 + 热力图 + 通用标签。
+- `css/content-repo.ts` — 仓库/实例/站点骨架 + 资历页 + 通用标签。原含日历热力图 `.hm-*` 13 条（`.hm-grid`/`.hm-col`/`.hm-cell.l1..l4`/`.hm-legend` 等），2026-09 核实 **src 与 e2e 全无消费者**（git 考古 `-S 'hm-grid'` 显示引入后从未被消费）后连同孤儿令牌 `--hm-0..4` 一并删除；**资历页月热力图另有其一**（`tpl-oldest.ts` 的 `.heatmap-bar-*`，布局由内联容器与 bar 的 height/color 承载，本无 CSS 规则）。
 - `css/content-creator.ts` — 创作者 `.cr-*` 全族样式（标签/频道/卡片/详情浮层/编辑）。
 - `css/content-diag.ts` — 诊断页样式：日志工具栏（`.diag-log-*`）+ 性能面板控制条（`.perf-wrap` / `.perf-controls` / `.perf-row` 语义行，2026-09 补齐——前两者此前**零 CSS 规则**）+ 冲突/扫描/去重/同步配置。GitHub 工坊 `.gh-*` 全族**已拆至 `content-gh.ts`**（本行原称仍含 gh-*，为陈旧描述）。
 - `css/content-util.ts` — 回收站动画 / 资源管理器 / 预览拖拽 / 主题选择器 / 响应式 `@media`。

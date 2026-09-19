@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { initDiagnostics, createDedupSession } from "./init.ts";
+import { clearLoadTraces, recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 
 const { busEmit, busOn, getApp, can, isViewerMode } = vi.hoisted(() => ({
   busEmit: vi.fn(),
@@ -42,6 +43,8 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="diag-scan-conflict"></div>
     <div id="diag-scan-sync-conflict"></div>
     <div id="diag-scan-health"></div>
+    <button id="diag-perf-refresh-trace"></button>
+    <div id="diag-load-trace"></div>
     <button class="repo-tab" data-tab="log">日志</button>
     <button class="repo-tab" data-tab="single">单一</button>
     <button class="repo-tab" data-tab="gui">GUI</button>
@@ -846,6 +849,36 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     initDiagnostics(root, esc);
     expect(
       (root.getElementById("diag-scan-conflict") as HTMLElement).style.display,
+    ).not.toBe("none");
+  });
+});
+
+describe("initDiagnostics — trace 面板进入语义（2026-09）", () => {
+  beforeEach(() => {
+    clearLoadTraces();
+  });
+
+  it("激活 trace tab → 即渲染内存 store（无需先手点刷新）", async () => {
+    recordLoadTrace({
+      ts: Date.now(),
+      format: "mmd",
+      path: "./ysm/player.ysm",
+      stages: [{ name: "读取", ms: 12, status: "ok" }],
+      ok: true,
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const out = root.getElementById("diag-load-trace") as HTMLElement;
+    (root.querySelector('.repo-tab[data-tab="trace"]') as HTMLElement).click();
+    await waitFor(() => expect(out.textContent).toContain("player.ysm"));
+  });
+
+  it("查看器模式：trace 刷新入口不隐藏（纯内存 store，不依赖 Go/CLI）", () => {
+    isViewerMode.mockReturnValue(true);
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    expect(
+      (root.getElementById("diag-perf-refresh-trace") as HTMLElement).style.display,
     ).not.toBe("none");
   });
 });

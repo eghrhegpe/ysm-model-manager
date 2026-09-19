@@ -293,13 +293,18 @@ test.describe("诊断页", () => {
       .toEqual({ runVisible: true, outVisible: true });
     expect(probe.workers).toBe("4");
     expect(probe.max).toBe("20");
+    // 初态只允许是**引导空态**，不得预置任何**实测数字**。原断言是「textContent 长度 === 0」；
+    // 2026-09 性能面板统一「进入即有内容（引导空态）」后在容器内预置了 diagnostics.perfIdle
+    // 文案，长度断言随之失效。判据改为更贴近本意的「不含数字」：比长度更严（长度 0 也可能
+    // 夹带纯字母假数据），且对 zh-CN/en/ja 三语引导文案都成立。
     expect(
       await page.evaluate(() => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelector('[data-testid="diag-perf-conc-out"]')?.textContent ?? "").trim()
-          .length;
+        return (
+          root?.querySelector('[data-testid="diag-perf-conc-out"]')?.textContent ?? ""
+        ).trim();
       }),
-    ).toBe(0);
+    ).not.toMatch(/\d/);
   });
 
   test("日志子 tab：操作日志与运行时日志互斥可见", async ({ page }) => {

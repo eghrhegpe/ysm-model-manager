@@ -266,7 +266,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 48 |
+| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 45 |
 
 ### `repo:focus-search`
 
@@ -293,8 +293,8 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
-| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 90 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 318 |
+| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 87 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 315 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
 | _init | `frontend/src/views/app-sync-manager/index.ts` | 242 |
@@ -456,8 +456,8 @@
 | dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 93 |
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
-| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 215 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 353 |
+| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 212 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 350 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 74 |

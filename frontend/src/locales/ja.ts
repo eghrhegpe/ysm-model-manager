@@ -499,6 +499,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfTrendNoData":
     "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",
   "diagnostics.perfRunning": "実行中…",
+  "diagnostics.perfIdle": "上のボタンで開始；結果はここに表示されます",
   "diagnostics.perfFail": "実行に失敗しました",
   "diagnostics.perfGuiFailed": "失敗したステージがあります",
   "diagnostics.loadTraceRefresh": "ロード解析を更新",

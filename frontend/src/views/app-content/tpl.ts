@@ -212,8 +212,8 @@ export function diagnosticsHTML(): string {
         <button class="btn-base" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench" title="${t("diagnostics.perfScanBenchHint")}">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
       </div>
     </div>
-    <div id="diag-perf-single" data-testid="diag-perf-single"></div>
-    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out"></div>
+    <div id="diag-perf-single" data-testid="diag-perf-single"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
@@ -225,7 +225,7 @@ export function diagnosticsHTML(): string {
         <button class="btn-base" id="diag-perf-gui" data-testid="diag-perf-gui-run">${UI_ICONS.diagnose} ${t("diagnostics.perfRunGui")}</button>
       </div>
     </div>
-    <div id="diag-perf-gui-out" data-testid="diag-perf-gui-out"></div>
+    <div id="diag-perf-gui-out" data-testid="diag-perf-gui-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
@@ -252,7 +252,7 @@ export function diagnosticsHTML(): string {
         <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfMaxModelsHint")}">
       </div>
     </div>
-    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out"></div>
+    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
@@ -264,7 +264,7 @@ export function diagnosticsHTML(): string {
         <button class="btn-base" id="diag-perf-log">${UI_ICONS.note} ${t("diagnostics.perfPerfLog")}</button>
       </div>
     </div>
-    <div id="diag-perf-hist"></div>
+    <div id="diag-perf-hist"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {

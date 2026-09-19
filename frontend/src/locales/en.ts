@@ -500,6 +500,7 @@ export const en: Record<string, string> = {
   "diagnostics.perfTrendTitle": "Performance trend (stage time)",
   "diagnostics.perfTrendNoData": "No trend yet — run single-bench twice or more to show the chart",
   "diagnostics.perfRunning": "Running…",
+  "diagnostics.perfIdle": "Click the button above to start; results will appear here",
   "diagnostics.perfFail": "Execution failed",
   "diagnostics.perfGuiFailed": "Some stages failed",
   "diagnostics.loadTraceRefresh": "Refresh Load Trace",

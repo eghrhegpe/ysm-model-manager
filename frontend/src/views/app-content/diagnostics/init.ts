@@ -13,7 +13,7 @@ import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
 import { copyWithToast } from "./copy-toast.ts";
 import { runHealthAudit } from "./health.ts";
 import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
-import { initPerfPanel } from "./perf.ts";
+import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 
 // 对外 API 兼容：createDedupSession 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）
 export { createDedupSession } from "./dedup.ts";
@@ -155,7 +155,9 @@ function dgInHideDesktopOnly(root: ShadowRoot): void {
     "diag-perf-run",
     "diag-perf-gui",
     "diag-perf-log",
-    "diag-perf-refresh-trace",
+    // 加载剖析**不**隐藏（2026-09 修正）：它的数据是 3D 适配器写进内存 store 的
+    // （getLoadTraces()，零 Go/CLI 依赖），网页/查看器模式下同样可用——原先连它一起藏，
+    // 等于把「唯一跨模式可用」的面板的唯一入口藏掉，与本函数「避免可见但不可用」的本意反向成立。
     // ADR-262 D3：引擎对照同样靠 Go 扫描引擎，查看器/网页版一并隐藏
     "diag-perf-scan-bench",
   ]) {
@@ -193,10 +195,28 @@ function dgInBindLogSearch(root: ShadowRoot, esc: EscFn): void {
 }
 
 /**
+ * trace 面板的**进入语义**（2026-09 补齐）：进 tab 即渲染，不要求用户先手点刷新。
+ *
+ * 为什么不登记进 `bindTabs` 的 `TAB_INIT` 懒加载表：那张表是「**首次**切换只跑一次」语义
+ * （`if (!inited[tab] && tab !== ids[0])`），而加载剖析的数据由 3D 适配器**随时**写入内存 store
+ * （`getLoadTraces()`），用户每次从 3D 预览回来都该看到**最新**的一份。
+ * 不这么做的后果（2026-09 实测）：该面板是裸空 div，唯一提示写着「加载模型后自动记录，点击刷新
+ * 查看」——用户得先去 3D 预览转一圈、再回本页手点刷新，才看得到自己刚触发的加载开销。
+ */
+function dgInBindTraceTab(root: ShadowRoot, esc: EscFn): void {
+  // 初始化即渲染：语言切换重建面板后同样能恢复（本函数由 initDiagnostics 统一调用）
+  renderLoadTraceSection(root, esc);
+  root.querySelector<HTMLElement>('.repo-tab[data-tab="trace"]')?.addEventListener("click", () => {
+    renderLoadTraceSection(root, esc);
+  });
+}
+
+/**
  * 初始化诊断页所有功能
  * @param root - 组件 shadow root
  * @param esc - HTML 转义函数
  */
+
 export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   dgInHideDesktopOnly(root);
   dgInBindRefreshClear(root, esc);
@@ -204,6 +224,7 @@ export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   dgInBindCopyRows(root);
   dgInBindScanBtns(root, esc);
   initPerfPanel(root, esc);
+  dgInBindTraceTab(root, esc);
   dgInBindLogSubTabs(root, esc);
   loadDiagnosticsLogs(root, esc);
   dgInBindLogFilter(root, esc);

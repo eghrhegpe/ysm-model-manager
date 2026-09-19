@@ -54,8 +54,11 @@ class AppToast extends WebComponentBase {
       <style>
         :host {
           position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-          z-index: var(--z-toast); display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+          z-index: var(--z-toast); display: flex; flex-direction: column; pointer-events: none;
         }
+        /* toast 的真实父节点是 #c（.toast-container），不是 :host——原先把 gap 写在
+           :host 上，toast 只是它的孙节点，这条 8px 间距从未生效（2026-09 闸发现）。 */
+        .toast-container { display: flex; flex-direction: column; gap: 8px; }
         .toast {
           display: flex; align-items: center; gap: 10px; padding: 10px 16px;
           border-radius:var(--radius-lg); background: var(--card); color: var(--txt); font-size: var(--fs-base);

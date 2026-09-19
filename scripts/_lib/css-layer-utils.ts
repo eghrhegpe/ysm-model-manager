@@ -38,16 +38,25 @@ export function readConstLiteral(src: string, name: string): string | null {
 }
 
 /**
- * 聚合 CSS 前展开 TS 模板插值：把 cssText 里 import 进来、且内容含 @keyframes 的
- * `${IDENT}` 常量就地展开，使按源文件文本扫 @keyframes 的正则能看见插值内容。
+ * 聚合 CSS 前展开 TS 模板插值：把 cssText 里 import 进来的 `${IDENT}` 常量就地展开，
+ * 使按源文件文本正则扫类名 / @keyframes 的检查能看见插值内容。
  *
- * 最小侵入：
+ * **为什么展开全部常量（不再只展开含 @keyframes 的）**：插值进来的常量正是本 shadow
+ * 实际 adopt 的样式——`sidebar-css.ts` / `app-tree-styles.ts` 都靠 `${dropdownBaseCSS}` /
+ * `${btnBaseCSS}` 引入共享串。旧实现只展开含 @keyframes 的常量（理由「不扰动检查 3
+ * 判定基线」），后果是这些**真实生效的定义对检查 3 不可见**：`.dd-wrap` / `.dd-menu` 被判
+ * 「未定义」（假阳性），而 `.btn-base` 仅因某句注释提过它才侥幸不被报（注释洗白，2026-09 实测）。
+ * 判定基线本就该建立在「shadow 真正拿到什么」之上，故过滤条件删除。
+ *
+ * 最小侵入保留：
  * - 无 `${` 的文本原样返回（性能守卫：不触发 import 解析）
- * - 只展开内容含 @keyframes 的常量——避免把无关样式常量（如 btnBaseCSS）的类名
- *   一并引入，扰动既有 WARN 判定基线
  * - 解析不出的 import（文件缺失 / 裸包）保持原样，不因 tooling 缺失制造新假阳性
+ *
+ * 对检查 1/1b/1c 无影响：共享常量里唯一的 animation 声明是 noAnimationsCSS 的
+ * `animation: none !important`（extractAnimationRefs 显式跳过含 none 的体），
+ * 故展开后不会新增任何 keyframe 引用。
  */
-export function expandKeyframeInterpolations(cssText: string, fileAbs: string): string {
+export function expandStyleInterpolations(cssText: string, fileAbs: string): string {
   if (!cssText.includes("${")) return cssText;
   const importRe = /import\s*(?:type\s+)?\{([^}]+)\}\s*from\s*["']([^"']+)["']/g;
   let out = cssText;
@@ -75,7 +84,7 @@ export function expandKeyframeInterpolations(cssText: string, fileAbs: string): 
       const token = "${" + n + "}";
       if (!out.includes(token)) continue;
       const lit = readConstLiteral(src, n);
-      if (!lit || !/@keyframes/.test(lit)) continue;
+      if (!lit) continue;
       out = out.split(token).join(lit);
     }
   }

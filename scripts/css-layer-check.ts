@@ -17,7 +17,8 @@
  *   [ERROR] 反向断言：frontend/css/components.css 仍含 .stg-* / .tab-body
  *           → 这些已回迁 shadow（见 21c01725 / 9942ada3），全局副本是漂移源
  *   [WARN]  shadow tpl/组件 HTML 的 class="..." 使用的类，在当前 shadow 层无定义
- *           → 可能是漏迁/误归全局；WARN 因部分类来自内联或 document 层白名单
+ *           → 判定域 = **本域 CSS 自己定义过的命名空间**（自推导；不再靠手写前缀表，
+ *             手写表漏一族即整族静默失明）。跨层模板（如 document 层 .dlg-*）不在域内，不误报
  *   [ERROR] 有 animation/transition 的 shadow 域未 adopt `.no-animations` 通配桥
  *           → 「关闭动画」开关在该域静默失效（文档层规则不穿透 shadow 边界，见 ADR-015
  *             §2.4 约束 1「用户关闭时零动画」）
@@ -46,7 +47,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  expandKeyframeInterpolations,
+  expandStyleInterpolations,
   findStrayCommentClose,
   hasMotionDeclaration,
   hasNoAnimationsBridge,
@@ -170,13 +171,44 @@ const KNOWN_NO_CSS_CLASSES = new Set([
   "cr-del",
   "cr-add",
   "cr-del-preset",
+  // 2026-09 新增：css-layer-check 检查 3 判定域改为「本域自推导命名空间」后由闸报出。
+  // 逐一核实为「样式写在内联 style（且用 token）或纯 JS/e2e 钩子」，非漏定义：
+  //   log-group / health-head — 分组头与体检头，样式全在内联 style（token）
+  //   perf-gui / perf-hist / perf-bars / perf-trend / perf-legend / perf-legend-item
+  //                           — 各面板容器，样式在内联 style（token）
+  //   perf-copy-btn           — 与 .btn-base 同用，仅内联覆盖间距/字号
+  //   perf-sb-status          — 引擎对照表状态列，e2e 列定位钩子，外观由 .perf-sb-table td 提供
+  //   ha-preview / ha-copy    — app-tree 行内「作者/复制」按钮，纯 JS 点击钩子（与 .ha-btn 同用）
+  //   ws-empty                — app-sidebar 空态容器，内联 style + 测试查询锚点
+  //   btn-mc-dir              — app-sidebar footer 按钮修饰类，样式由 .btn-base + .footer-btn 承载
+  "log-group",
+  "health-head",
+  "perf-gui",
+  "perf-hist",
+  "perf-bars",
+  "perf-trend",
+  "perf-legend",
+  "perf-legend-item",
+  "perf-copy-btn",
+  "perf-sb-status",
+  "ha-preview",
+  "ha-copy",
+  "ws-empty",
+  "btn-mc-dir",
 ]);
 
-// 提取 CSS 文本中的类名（.foo / .foo-bar）与 @keyframes 名
+// 提取 CSS 文本中的类名（.foo / .foo-bar）。
+// ⚠️ 先剥注释：注释里出现的 `.btn-base` 会被当成「已定义」——而真正定义该类的是运行期
+// 注入的常量（utils/dom/css.ts|btnBaseCSS，本脚本刻意不展开它以免扰动判定基线），
+// 于是「有没有那句注释」成了判定开关（2026-09 实测：content-layout.ts 一句说明注释让 .btn-base 隐身）。
+function stripCssComments(cssText: string): string {
+  // CSS 注释按「首个 */ 闭合」解析，故朴素非贪婪剥离与浏览器语义一致
+  return cssText.replace(/\/\*[\s\S]*?\*\//g, "");
+}
 function extractClasses(cssText: string) {
-  const classes = new Set();
+  const classes = new Set<string>();
   const re = /\.([a-zA-Z][a-zA-Z0-9-]*)/g;
-  for (const m of cssText.matchAll(re)) classes.add(m[1]);
+  for (const m of stripCssComments(cssText).matchAll(re)) if (m[1]) classes.add(m[1]);
   return classes;
 }
 function extractKeyframes(cssText: string) {
@@ -205,43 +237,24 @@ function extractAnimationRefs(cssText: string) {
   }
   return refs;
 }
-// 提取 HTML 模板里 class="..." 使用的类名（仅纯 CSS 标识符，过滤拼接噪声如 ' + ( ? ')
+// 提取 HTML 模板里 class="..." 使用的类名。
+// 只认**静态类名列表**：属性值含 `$` 或 `+` 即动态表达式（`class="x-${v}"` /
+// `'class="' + cls + '"'`），其中的标识符是变量名不是类名。旧实现只滤标点不滤标识符，
+// 把 `healthTagClass` 这类变量名当类名收下（2026-09 实测假阳性）。
+// 边界（有意）：动态表达式整组跳过——宁漏勿误报，假阳性会稀释真信号。
 function extractHtmlClasses(htmlText: string) {
   const classes = new Set<string>();
   const re = /class\s*=\s*"([^"]*)"/g;
   for (const m of htmlText.matchAll(re)) {
-    for (const c of (m[1] ?? "").split(/\s+/)) {
-      // 仅收「字母开头、仅含字母数字连字符」的 token；排除 ' + ( ? : ) 等模板拼接碎片
+    const raw = m[1] ?? "";
+    if (/[$+]/.test(raw)) continue;
+    for (const c of raw.split(/\s+/)) {
+      // 仅收「字母开头、仅含字母数字连字符」的 token
       if (/^[a-zA-Z][a-zA-Z0-9-]*$/.test(c)) classes.add(c);
     }
   }
   return classes;
 }
-
-// 各域「专属前缀」：本域内定义、不应出现在 document 层/其他域的专属类。
-// 仅当类名匹配本域专属前缀且本域无定义时 WARN（精准锁定"自己域的专属类漏定义"）。
-const DOMAIN_PREFIXES = {
-  "app-content": [
-    "stg-",
-    "repo-",
-    "cr-",
-    "gh-",
-    "ws-",
-    "diag-",
-    "recy-",
-    "rm-",
-    "set-",
-    "settings-",
-    "page",
-    "section-title",
-    "stat-card",
-    "placeholder-box",
-    "ptag",
-  ],
-  sidebar: ["instance-card", "card-", "footer", "sk-", "tag", "pkg-icon", "list"],
-  "app-tree": ["tree-", "node-"],
-  "app-preview": ["preview", "dp-"],
-};
 
 function readSafe(p: string) {
   const abs = path.resolve(ROOT, p);
@@ -289,7 +302,7 @@ function extractKeyframeTranslate(cssText: string, name: string) {
 // 只对含 @keyframes 的常量展开——避免把无关样式常量（如 btnBaseCSS）的类名一并引入，
 // 扰动检查 3 的 WARN 判定基线（最小侵入，不动既有判定面）。
 // 实现：resolveImportAbs / readConstLiteral / expandKeyframeInterpolations 三纯函数
-// 抽至 _lib/css-layer-utils.ts（脚本主体有顶层 process.exit，测试直接 import 会被杀掉，
+// 实现：resolveImportAbs / readConstLiteral / expandStyleInterpolations 三纯函数
 // 故纯算法下沉零副作用模块供测试消费，2026-09-14 契约测试缺口收口）。
 
 let errorCount = 0;
@@ -301,7 +314,7 @@ for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
     const t = readSafe(f);
-    if (t) cssAgg += `\n${expandKeyframeInterpolations(t, path.resolve(ROOT, f))}`;
+    if (t) cssAgg += `\n${expandStyleInterpolations(t, path.resolve(ROOT, f))}`;
   }
   const kf = extractKeyframes(cssAgg);
   const refs = extractAnimationRefs(cssAgg);
@@ -331,7 +344,7 @@ let shadowKfAgg = "";
 for (const f of shadowKfSources) {
   const t = readSafe(f);
   // 同检查 1：必须展开插值，否则 fadeSlideLeft 两侧都取不到 → 参数契约静默跳过（假绿）
-  if (t) shadowKfAgg += `\n${expandKeyframeInterpolations(t, path.resolve(ROOT, f))}`;
+  if (t) shadowKfAgg += `\n${expandStyleInterpolations(t, path.resolve(ROOT, f))}`;
 }
 for (const name of KF_PARAM_NAMES) {
   const globalVal = extractKeyframeTranslate(compCssText, name);
@@ -361,7 +374,7 @@ for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
     const t = readSafe(f);
-    if (t) cssAgg += `\n${expandKeyframeInterpolations(t, path.resolve(ROOT, f))}`;
+    if (t) cssAgg += `\n${expandStyleInterpolations(t, path.resolve(ROOT, f))}`;
   }
   const kf = extractKeyframes(cssAgg);
   for (const f of dom.html) {
@@ -396,25 +409,47 @@ for (const forbidden of [
   }
 }
 
-// ── 检查 3（WARN）：本域专属前缀的类是否在 shadow 层有定义 ──
+// ── 检查 3（WARN）：本域命名空间的类是否在 shadow 层有定义 ──
+// 判定域 = **本域 CSS 自己定义过的命名空间**（`deriveNamespaceStems`：本域出现 .perf-bar-row
+// 即认定 perf- 属本域），而不是手写前缀表。立因（2026-09 实测）：`DOMAIN_PREFIXES` 是 opt-in
+// 子集，app-content 定义了 12 个 .perf-* 类却没登记 'perf-'，于是 .perf-controls / .perf-wrap
+// （零 CSS 规则、控制条裸奔）对本闸完全不可见——「漏登记一族 = 整族静默失明」。
+// 自推导把「该不该锁」从人手记忆变成证据：本域没定义过该族就不锁（不误报跨层模板如 dlg-*）；
+// 本域定义了该族却用了没定义的类，就是漏定义（正是本检查要抓的形态）。
+// 边界（有意）：本域**从未**定义过任何该族类时无法判定——此时该族可能定义在别的层或靠内联样式，
+// 不报。已知盲区，与 gpu-budget 的 textureBytes 覆盖盲区同款处置：写明而非假装没有。
+function stemOf(cls: string): string | null {
+  const i = cls.indexOf("-");
+  return i > 0 ? cls.slice(0, i + 1) : null; // .perf-bar-row → perf-
+}
+function deriveNamespaceStems(classes: Iterable<string>): Set<string> {
+  const stems = new Set<string>();
+  for (const c of classes) {
+    const s = stemOf(c);
+    if (s) stems.add(s);
+  }
+  return stems;
+}
+
 for (const dom of SHADOW_DOMAINS) {
   let cssAgg = "";
   for (const f of dom.css) {
     const t = readSafe(f);
-    if (t) cssAgg += `\n${expandKeyframeInterpolations(t, path.resolve(ROOT, f))}`;
+    if (t) cssAgg += `\n${expandStyleInterpolations(t, path.resolve(ROOT, f))}`;
   }
   const cssClasses = extractClasses(cssAgg);
-  const prefixes = (DOMAIN_PREFIXES as Record<string, string[]>)[dom.name] || [];
+  const stems = deriveNamespaceStems(cssClasses);
   for (const f of dom.html) {
     const t = readSafe(f);
     if (!t) continue;
     const used = extractHtmlClasses(t);
     for (const c of used) {
-      const isOwnPrefix = prefixes.some((p) => c === p || c.startsWith(p));
-      if (isOwnPrefix && !cssClasses.has(c) && !KNOWN_NO_CSS_CLASSES.has(c)) {
+      const s = stemOf(c);
+      const isOwnNamespace = s !== null && stems.has(s);
+      if (isOwnNamespace && !cssClasses.has(c) && !KNOWN_NO_CSS_CLASSES.has(c)) {
         warnCount++;
         problems.push(
-          `[WARN] ${dom.name}: tpl ${path.basename(f)} 使用本域专属类 '${c}' 但在本 shadow 层无定义（疑似漏迁/误归全局，需人工确认）`,
+          `[WARN] ${dom.name}: tpl ${path.basename(f)} 使用本域命名空间类 '${c}' 但在本 shadow 层无定义（疑似漏定义/死类，需人工确认）`,
         );
       }
     }
@@ -431,7 +466,7 @@ for (const dom of SHADOW_DOMAINS) {
 // app-content（.cr-*/.stg-*/.recy-item/.gh-card/…）的动画都关不掉，而「所有动画都可关闭」
 // 早已写进规范——白名单由此沦为假开关。本检查把该承诺变成可执行断言。
 // 判定用**未展开的源文本**：桥以 `noAnimationsCSS` 标识符形式出现，而
-// expandKeyframeInterpolations 只展开含 @keyframes 的常量，展开后反而看不见该标识符。
+// 展开（expandStyleInterpolations）会把它换成规则体、反而看不见该标识符——故本检查读原文。
 for (const dom of [...SHADOW_DOMAINS, ...EXTRA_MOTION_DOMAINS]) {
   let srcAgg = "";
   for (const f of dom.css) srcAgg += `\n${readSafe(f) ?? ""}`;

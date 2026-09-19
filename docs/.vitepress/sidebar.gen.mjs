@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-274：css-layer-check 类归属判定：手写前缀表改为自推导命名空间",
+        "link": "/adr/ADR-274-css-layer-check"
+      },
+      {
         "text": "ADR-273：下载队列落盘账本（借鉴 .dsh durable ledger）",
         "link": "/adr/ADR-273-download-queue-ledger"
       },

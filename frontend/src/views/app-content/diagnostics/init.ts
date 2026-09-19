@@ -84,7 +84,11 @@ function dgInCopyActiveLog(root: ShadowRoot): void {
   clone?.querySelectorAll(".log-copy").forEach((b) => {
     b.remove();
   });
-  const text = (clone?.textContent ?? "").trim();
+  // 空态/错误态（列表内没有任何 .log-row）不得被当成日志复制：那行是占位文案
+  // （「暂无日志」/「无匹配日志」/「加载失败」），照抄并弹「已复制」= 复制了一段假日志。
+  // 2026-09 实测：noLogsToCopy 兜底因占位文案非空而生产不可达（只有列表元素整个缺失才走到）。
+  const rows = clone?.querySelectorAll(".log-row");
+  const text = rows && rows.length > 0 ? (clone?.textContent ?? "").trim() : "";
   if (!text) {
     bus.emit("toast:show", {
       msg: `📋 ${t("diagnostics.noLogsToCopy")}`,

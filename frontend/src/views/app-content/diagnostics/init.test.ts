@@ -566,6 +566,25 @@ describe("initDiagnostics — 复制面板与行内复制", () => {
     expect(writeText).not.toHaveBeenCalled();
   });
 
+  it("diag-copy：加载完成为空（列表只剩占位文案）→ 仍不复制、弹「当前无日志可复制」", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    mockApp({ GetImportLogs: vi.fn(() => []) });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    // 等空态渲染完成：此时列表文本**非空**（占位文案），但没有任何 .log-row
+    await waitFor(() => expect(list.textContent).toContain("暂无日志"));
+    (root.getElementById("diag-copy") as HTMLElement).click();
+    await waitFor(() =>
+      expect(busEmit).toHaveBeenCalledWith(
+        "toast:show",
+        expect.objectContaining({ msg: expect.stringContaining("当前无日志可复制") }),
+      ),
+    );
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
   it("diag-copy：有日志 → 剪贴板写入剔除 .log-copy 后的文本 + toast 已复制提示", async () => {
     const writeText = vi.fn(() => Promise.resolve());
     stubClipboard(writeText);
@@ -591,13 +610,20 @@ describe("initDiagnostics — 复制面板与行内复制", () => {
 
   it("diag-copy：clipboard 拒绝 → execCommand textarea 降级 + toast 已复制", async () => {
     stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Status: "success", Operation: "import", ModelName: "fallback.ysm", Timestamp: 1700000000000 },
+      ]),
+    });
     const execSpy = vi.fn(() => true);
     const restore = overrideExecCommand(execSpy);
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    // 先等日志列表渲染出占位文本，保证有可复制内容（否则撞「无日志」早退分支）
+    // 必须有真实 .log-row 才算「可复制内容」——占位文案（「暂无日志」）不是日志；
+    // 拿它当内容复制并弹「已复制」正是 2026-09 修掉的谎报（见「加载完成为空」回归锁）。
+    const list = root.getElementById("diag-log-list") as HTMLElement;
     await waitFor(() =>
-      expect((root.getElementById("diag-log-list") as HTMLElement).textContent).toContain("暂无日志"),
+      expect(list.querySelector(".log-row")).toBeTruthy(),
     );
     (root.getElementById("diag-copy") as HTMLElement).click();
     await waitFor(() => expect(execSpy).toHaveBeenCalledWith("copy"));
@@ -660,10 +686,17 @@ describe("initDiagnostics — 复制面板与行内复制", () => {
   it("diag-copy：写入与降级全失败 → ❌ 复制失败，绝不弹「已复制」", async () => {
     stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
     const restore = overrideExecCommand(vi.fn(() => false)); // 降级也失败
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Status: "success", Operation: "import", ModelName: "fail.ysm", Timestamp: 1700000000000 },
+      ]),
+    });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     await waitFor(() =>
-      expect((root.getElementById("diag-log-list") as HTMLElement).textContent).toContain("暂无日志"),
+      expect(
+        (root.getElementById("diag-log-list") as HTMLElement).querySelector(".log-row"),
+      ).toBeTruthy(),
     );
     (root.getElementById("diag-copy") as HTMLElement).click();
     await waitFor(() =>

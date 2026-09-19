@@ -11,7 +11,7 @@
  * 锁定的语义：
  *   1. @/ 别名 import + ${IDENT} → 展开为 @keyframes 定义，且不残留占位符
  *   2. 不存在的常量保持原样（不因 tooling 变化制造新假阳性）
- *   3. 无 ${ 的文本原样返回（性能守卫：不触发 import 解析）
+ *   3b. 共享样式常量（非 @keyframes，如 dropdownBaseCSS）同样展开——否则其定义对检查 3 静默不可见
  *   4. resolveImportAbs：相对路径解析 / 裸包导入排除（裸包不参与 shadow CSS 组装）
  *   5. readConstLiteral 可读跨行字符串字面量
  *
@@ -23,9 +23,9 @@
 import assert from "node:assert";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { noAnimationsCSS } from "../frontend/src/utils/dom/css.ts";
+import { dropdownBaseCSS, noAnimationsCSS } from "../frontend/src/utils/dom/css.ts";
 import {
-  expandKeyframeInterpolations,
+  expandStyleInterpolations,
   findStrayCommentClose,
   hasMotionDeclaration,
   hasNoAnimationsBridge,
@@ -40,7 +40,7 @@ const FSL = "${" + "FADE_SLIDE_LEFT" + "}";
 // ── 1. @/ 别名 + ${FADE_SLIDE_LEFT} → 展开为 @keyframes ──
 {
   const css = `import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";\n.log-row { animation: fadeSlideLeft .25s ease both; }\n${FSL}`;
-  const out = expandKeyframeInterpolations(css, DIAG_ABS);
+  const out = expandStyleInterpolations(css, DIAG_ABS);
   assert.ok(out.includes("@keyframes fadeSlideLeft"), "插值应展开为 @keyframes 定义");
   assert.ok(!out.includes(FSL), "展开后不应残留 FSL 占位符");
   console.log("  ✓ @/ 别名 + FSL 占位符 展开为 @keyframes");
@@ -50,7 +50,7 @@ const FSL = "${" + "FADE_SLIDE_LEFT" + "}";
 {
   const token = "${" + "FOO_NON_EXISTENT" + "}";
   const css = `import { FOO_NON_EXISTENT } from "@/views/css/keyframes.ts";\n${token}`;
-  const out = expandKeyframeInterpolations(css, DIAG_ABS);
+  const out = expandStyleInterpolations(css, DIAG_ABS);
   assert.ok(out.includes(token), "解析不出的常量应保持原样");
   console.log("  ✓ 不存在的常量不展开");
 }
@@ -58,9 +58,22 @@ const FSL = "${" + "FADE_SLIDE_LEFT" + "}";
 // ── 3. 无 ${ 原样返回（性能守卫）──
 {
   const css = ".a { color: red; }";
-  const out = expandKeyframeInterpolations(css, path.join(ROOT, "x.ts"));
+  const out = expandStyleInterpolations(css, path.join(ROOT, "x.ts"));
   assert.equal(out, css, "无插值应原样返回同一文本");
   console.log("  ✓ 无 ${ 原样返回");
+}
+
+// ── 3b. 共享样式常量（非 @keyframes）同样展开：检查 3 判定基线回归锁 ──
+// 旧实现只展开含 @keyframes 的常量 → `${dropdownBaseCSS}` / `${btnBaseCSS}` 注入的真
+// 生效定义对检查 3 不可见，把 .dd-wrap / .dd-menu 判成「未定义」（2026-09 实测假阳性）。
+{
+  const token = "${" + "dropdownBaseCSS" + "}";
+  const css = `import { dropdownBaseCSS } from "@/utils/dom/css.ts";\n${token}`;
+  const out = expandStyleInterpolations(css, DIAG_ABS);
+  assert.ok(out.includes(".dd-wrap"), "共享样式常量应展开（否则其定义对检查 3 静默不可见）");
+  assert.ok(!out.includes(token), "展开后不应残留占位符");
+  assert.ok(dropdownBaseCSS.includes(".dd-wrap"), "锚点常量本体应含 .dd-wrap（防本用例自欺）");
+  console.log("  ✓ 非 @keyframes 共享样式常量同样展开");
 }
 
 // ── 4. resolveImportAbs：相对路径 / 裸包排除 ──
@@ -153,4 +166,4 @@ assert.ok(
 );
 console.log("  ✓ 检查 5 判定：注释完整性（破注释检出 + 正常注释/`//`/字符串字面量不误报）");
 
-console.log("\nOK: css-layer-check 插值展开契约（回归锁 7 条）");
+console.log("\nOK: css-layer-check 插值展开契约（回归锁 8 条）");

@@ -24,7 +24,7 @@
 1. 任何新建 Shadow DOM 组件，其样式必须走该 shadow 层内的 CSS（由 `scripts/css-layer-check.ts` 自动发现并校验），禁止依赖全局 `components.css` 的类 / keyframe。
 2. 全局 `components.css` 仅承载 document 层 DOM 样式，不得新增 shadow 域类名；已回迁 shadow 的类（`.stg-*` / `.tab-body` / `.settings-group` / `.setting-row`）其全局层副本必须删除，单一事实源在 shadow 层。
 3. Shadow 域发现一律**全自动递归**（`css-layer-check.mjs` 遍历 `frontend/src/views/*/`），禁止手写域清单——手写清单是第二批漂移事实源（评审 2026-08-24 第 2 条）。
-4. 新增 shadow 视图无需改 `css-layer-check`；若需「专属前缀锁定」（检查 3 精准断言），在 `DOMAIN_PREFIXES` 增补前缀数组。
+4. ~~新增 shadow 视图无需改 `css-layer-check`；若需「专属前缀锁定」（检查 3 精准断言），在 `DOMAIN_PREFIXES` 增补前缀数组。~~ **[被 ADR-274 取代]**：`DOMAIN_PREFIXES` 已删除，检查 3 判定域改为「本域 CSS 自己定义过的命名空间」自推导——手写表漏一族即整族静默失明（2026-09 实测 `perf-` 族漏登记，`.perf-controls` 零 CSS 规则却全绿无报）。
 
 ## 3. 后果（Consequences）
 
@@ -35,7 +35,7 @@
 | 检查 1 / 1b | shadow 内 `animation:` 引用的 keyframe 同层须有 `@keyframes` | ERROR |
 | 检查 1c | 全局副本与 shadow 侧 keyframe `from translate` 参数值须一致 | ERROR |
 | 检查 2 | components.css 不得再含已回迁 shadow 的类 | ERROR |
-| 检查 3 | 本域专属前缀类在 shadow 层须有定义 | WARN |
+| 检查 3 | 本域**命名空间**类在 shadow 层须有定义（判定域自推导，见 [ADR-274](./ADR-274-css-layer-check.md)） | WARN |
 | e2e `settings.spec.ts` | computed style 断言抓 shadow 裸奔 | 测试层 |
 
 pre-push 通过 `scripts/css-layer-check.ts --strict` 接入；逃生阀 `YSM_SKIP_CSS_LAYER=1`（紧急绕过，需二次确认）。

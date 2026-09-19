@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **271** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **272** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 0 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 12 |
-| [✅ 已采纳](#已采纳) | 249 |
+| [✅ 已采纳](#已采纳) | 250 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -43,10 +43,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（249）
+### ✅ 已采纳（250）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-274](./ADR-274-css-layer-check.md) | css-layer-check 类归属判定：手写前缀表改为自推导命名空间 | ✅ 已采纳 |
 | [ADR-273](./ADR-273-download-queue-ledger.md) | 下载队列落盘账本（借鉴 .dsh durable ledger） | ✅ 已采纳 |
 | [ADR-272](./ADR-272-water-size-ui-entry.md) | waterSize 放开 UI 入口 + pool 尺寸零重建（sizeLinks） | ✅ 已采纳 |
 | [ADR-271](./ADR-271-water-detail-normal-gpu.md) | 水面微细节法线 GPU 化（移除 CPU DataTexture 链路） | ✅ 已采纳 |
@@ -321,6 +322,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-274 | css-layer-check 类归属判定：手写前缀表改为自推导命名空间 | ✅ 已采纳 | 2026-09-19 |
 | ADR-273 | 下载队列落盘账本（借鉴 .dsh durable ledger） | ✅ 已采纳 | 2026-09-19 |
 | ADR-272 | waterSize 放开 UI 入口 + pool 尺寸零重建（sizeLinks） | ✅ 已采纳 | 2026-09-19 |
 | ADR-271 | 水面微细节法线 GPU 化（移除 CPU DataTexture 链路） | ✅ 已采纳 | 2026-09-19 |

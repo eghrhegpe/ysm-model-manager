@@ -16,6 +16,9 @@ export const contentDiagCSS: string = `
 .log-row .log-op { font-size:var(--fs-xs); padding:0 4px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); flex-shrink:0; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
 .log-row .log-time { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
+/* 行内复制按钮：此前无规则 → 每个日志行里都是一个 UA 默认灰底描边按钮，与暗色主题格格不入 */
+.log-row .log-copy { background:transparent; border:none; color:var(--muted); cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
+.log-row .log-copy:hover { color:var(--accent); }
 
 .conflict-row { padding:3px 16px; display:flex; justify-content:space-between; font-size:var(--fs-base); color:var(--txt); }
 .conflict-name { color:var(--status-error); }
@@ -87,6 +90,16 @@ export const contentDiagCSS: string = `
 .perf-matrix-model-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); }
 .perf-matrix-model-detail { color:var(--muted); font-variant-numeric:tabular-nums; flex-shrink:0; }
 
+/* ===== 性能面板控制条（2026-09 由 css-layer-check 报出后收口）=====
+   此前 .perf-wrap / .perf-controls 在 shadow 内**没有任何规则**——类名是空头支票：
+   11+ 控件靠 UA 默认 inline 流换行，功能分组不可见、窄屏折行后语义全散。
+   （旧闸漏检原因：css-layer-check 检查 3 的判定域是手写前缀表，表里没有 perf-。）
+   现按日志工具栏已验证的范式：.perf-controls = 纵向堆叠的框，.perf-row = 语义行。 */
+.perf-wrap { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:8px 12px; }
+.perf-controls { display:flex; flex-direction:column; gap:4px; padding:0 0 6px; border-bottom:1px solid var(--bd); flex-shrink:0; }
+.perf-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
+.perf-row > input[type="text"] { flex:1; min-width:180px; }
+
 /* ===== 性能面板（single-bench / gui-flow / perf-log） ===== */
 .perf-section { font-size:var(--fs-sm); font-weight:600; color:var(--txt); display:flex; align-items:center; gap:6px; }
 .perf-bar-row { display:flex; align-items:center; gap:8px; margin:2px 0; font-size:var(--fs-xs); }
@@ -117,7 +130,7 @@ export const contentDiagCSS: string = `
 /* 并发基准（ADR-262 D5）：加速比与判决 token 由 Go 给出，前端只映射配色 */
 .perf-conc { display:flex; flex-direction:column; }
 .perf-conc-params { color:var(--muted); font-size:var(--fs-xs); padding:0 2px 4px 2px; }
-.perf-conc-row { display:flex; align-items:center; gap:8px; padding:3px 2px; font-size:var(--fs-sm); color:var(--txt); border-bottom:1px dotted var(--bd); flex-wrap:wrap; }
+.perf-conc-row, .perf-conc-filerow { display:flex; align-items:center; gap:8px; padding:3px 2px; font-size:var(--fs-sm); color:var(--txt); border-bottom:1px dotted var(--bd); flex-wrap:wrap; }
 .perf-conc-serial { font-weight:600; }
 .perf-conc-label { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .perf-conc-ms { flex:0 0 auto; min-width:88px; text-align:right; font-variant-numeric:tabular-nums; }

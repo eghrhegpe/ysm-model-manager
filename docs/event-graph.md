@@ -453,7 +453,7 @@
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 28 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 39 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 45 |
-| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 89 |
+| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 93 |
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 215 |
@@ -528,9 +528,9 @@
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 50 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
 | loadData | `frontend/src/views/app-sync-manager/store.ts` | 77 |
-| show | `frontend/src/views/app-toast/index.ts` | 160 |
-| show | `frontend/src/views/app-toast/index.ts` | 179 |
-| show | `frontend/src/views/app-toast/index.ts` | 188 |
+| show | `frontend/src/views/app-toast/index.ts` | 163 |
+| show | `frontend/src/views/app-toast/index.ts` | 182 |
+| show | `frontend/src/views/app-toast/index.ts` | 191 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 93 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 129 |
 | atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 153 |
@@ -584,7 +584,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | registerErrorDiary | `frontend/src/core/error-diary.ts` | 136 |
-| connectedCallback | `frontend/src/views/app-toast/index.ts` | 92 |
+| connectedCallback | `frontend/src/views/app-toast/index.ts` | 95 |
 
 ### `tree:reload`
 

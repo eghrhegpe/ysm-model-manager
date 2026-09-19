@@ -1,7 +1,7 @@
 // ===== 模型预览数据持久缓存（类型化版 — ADR-014 P2）=====
 // 模块级 Map，组件卸载/重挂不丢失
 // key: 模型文件绝对路径
-// value: { texture?:string, geometry?:object, _decodedBy?:string }
+// value: { texture?:string, geometry?:object, animations?:unknown[], authors?, avatars? }
 //
 // 缓存有大小限制（默认 50），超出时淘汰最早插入的条目。
 // 淘汰时会自动调用 onEvict 回调释放 blob URL。

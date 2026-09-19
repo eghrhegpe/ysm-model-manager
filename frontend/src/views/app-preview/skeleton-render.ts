@@ -124,7 +124,6 @@ export async function buildStatsCard(
     _modelPath?: string;
   },
   modelPath: string,
-  _decodedBy: string,
   _ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
 ): Promise<void> {
   const card = document.createElement("div");

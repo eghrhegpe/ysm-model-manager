@@ -3,6 +3,7 @@
 
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { cacheGet, cacheSet } from "@/preview-3d/decoder/model-cache.ts";
+import { DECODE_SOURCE } from "@/preview-3d/decoder/utils.ts";
 import { type AnimationClip, parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 import { extOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -31,14 +32,13 @@ export async function loadModelData(
   modelPath: string,
   ctx: YsmDecoder & PreviewDebugger,
   opts: LoadModelOpts = {},
-): Promise<{ model: BedrockGeometry | null; decodedBy: string }> {
+): Promise<BedrockGeometry | null> {
   // 查缓存：subPath（L0 单角色）必须并入缓存键，否则切角色命中旧角色几何（审核 P2）
   const cacheKey = opts.subPath ? `${modelPath}#sub:${opts.subPath}` : modelPath;
 
   // ① 查缓存命中 → 直接回填动画回返
   const fromCache = loadModelFromCache(cacheKey);
-  let model = fromCache.model;
-  let decodedBy = fromCache.decodedBy;
+  let model = fromCache;
   let wasmAuthors: NonNullable<BedrockGeometry["_authors"]> = [];
   let wasmAvatars: Record<string, string> = {};
 
@@ -46,16 +46,13 @@ export async function loadModelData(
   if (!model) {
     const wasm = await loadModelViaWasm(ctx, modelPath, cacheKey, !!opts.skipWasm);
     model = wasm.model;
-    decodedBy = wasm.decodedBy;
     wasmAuthors = wasm.authors;
     wasmAvatars = wasm.avatars;
   }
 
   // ③ 非 YSM/ZIP/JSON 或 WASM 失败/空骨骼 → 走 Go 兜底
   if (!model?.bones?.length) {
-    const go = await loadModelViaGo(ctx, modelPath, opts, model, wasmAuthors, wasmAvatars);
-    model = go.model;
-    decodedBy = go.decodedBy;
+    model = await loadModelViaGo(ctx, modelPath, opts, model, wasmAuthors, wasmAvatars);
   }
 
   // ④ 统一补充：缓存中可能有 WASM 解析出的 authors 但未挂上 model
@@ -72,25 +69,24 @@ export async function loadModelData(
 
   if (model) model._modelPath = modelPath;
 
-  return { model: model || null, decodedBy };
+  return model || null;
 }
 
 /** 缓存命中读取：含骨骼几何才视为命中，并回填动画 clips */
-function loadModelFromCache(cacheKey: string): {
-  model: BedrockGeometry | null;
-  decodedBy: string;
-} {
+function loadModelFromCache(cacheKey: string): BedrockGeometry | null {
   const cached = cacheGet(cacheKey);
   const cachedGeo = cached?.geometry as BedrockGeometry | undefined;
   if (!cachedGeo?.bones?.length) {
-    return { model: null, decodedBy: "" };
+    return null;
   }
   // 缓存回填动画（此前 WASM/Go 解码时写入缓存的 clips）
   const cachedAnims = cached?.animations;
   if (!cachedGeo._animClips && Array.isArray(cachedAnims) && cachedAnims.length > 0) {
     cachedGeo._animClips = cachedAnims as AnimationClip[];
   }
-  return { model: cachedGeo, decodedBy: cached?._decodedBy || "" };
+  // 从缓存恢复解码器标记（模型对象本身已带 _decodedBy，此处仅作兜底）
+  if (cached?._decodedBy) cachedGeo._decodedBy = cached._decodedBy;
+  return cachedGeo;
 }
 
 /** .ysm → 前端 WASM 解码；空结果/空骨骼回退 Go（此处仅返回空壳，不落 Go） */
@@ -101,20 +97,20 @@ async function loadModelViaWasm(
   skipWasm: boolean,
 ): Promise<{
   model: BedrockGeometry | null;
-  decodedBy: string;
   authors: NonNullable<BedrockGeometry["_authors"]>;
   avatars: Record<string, string>;
 }> {
   // WASM 仅对 .ysm 二进制格式有意义；.zip/.7z/.json 通用格式走 Go
   const isWasmCapable = !skipWasm && extOf(modelPath) === ".ysm";
   if (!isWasmCapable) {
-    return { model: null, decodedBy: "", authors: [], avatars: {} };
+    return { model: null, authors: [], avatars: {} };
   }
   const decoded = await ctx.decodeYsmViaWasm(modelPath);
   const authors = (decoded?.authors || []) as NonNullable<BedrockGeometry["_authors"]>;
   const avatars = decoded?.avatars || {};
   if (decoded?.geometry?.bones?.length) {
     const model = decoded.geometry;
+    model._decodedBy = decoded._decodedBy || DECODE_SOURCE.wasm;
     model._authors = authors;
     model._avatars = avatars;
     // 内嵌动画：WASM 已把 .ysm 包内 animations/*.json 解析为 clips——
@@ -122,16 +118,14 @@ async function loadModelViaWasm(
     if (Array.isArray(decoded.animations) && decoded.animations.length > 0) {
       model._animClips = decoded.animations as AnimationClip[];
     }
-    const decodedBy = "🧠 WASM 内置解码";
     cacheSet(cacheKey, {
       ...(cacheGet(cacheKey) || {}),
       geometry: model,
-      _decodedBy: decodedBy,
     });
-    return { model, decodedBy, authors, avatars };
+    return { model, authors, avatars };
   }
   ctx.appendDebug(null, "[YSM] WASM 返回空或无骨骼，回退 Go");
-  return { model: null, decodedBy: "", authors, avatars };
+  return { model: null, authors, avatars };
 }
 
 /** Go AnalyzeBedrockModel 兜底：subPath 单角色优先，再回退全量；挂 authors/animClips/texMappingLog */
@@ -142,13 +136,11 @@ async function loadModelViaGo(
   current: BedrockGeometry | null,
   wasmAuthors: NonNullable<BedrockGeometry["_authors"]>,
   wasmAvatars: Record<string, string>,
-): Promise<{ model: BedrockGeometry | null; decodedBy: string }> {
+): Promise<BedrockGeometry | null> {
   const app = await backendGetApp();
   // current 可能是缓存命中但无骨骼的对象：subPath 未命中时不覆盖它（沿用原有无骨骼对象语义）
   let model = current;
   const cacheKey = opts.subPath ? `${modelPath}#sub:${opts.subPath}` : modelPath;
-  let subPathUsed = false;
-
   // subPath 模式：先试单条目解析（多角色包切角色），再回退全量
   if (opts.subPath && typeof app.AnalyzeBedrockModelEntry === "function") {
     const entryModel = (await app.AnalyzeBedrockModelEntry(modelPath, opts.subPath)) as
@@ -157,7 +149,6 @@ async function loadModelViaGo(
       | undefined;
     if (entryModel?.bones?.length) {
       model = entryModel;
-      subPathUsed = true;
       ctx.appendDebug(null, `[L0] 单角色解析：${opts.subPath}`);
     }
   }
@@ -182,6 +173,7 @@ async function loadModelViaGo(
     }
     // Go 兜底路径同样挂载（文件夹/zip 模型的 .animation.json 由 Go 收集透传）
     if (goClips.length > 0) model._animClips = goClips as AnimationClip[];
+    model._decodedBy = opts.subPath ? DECODE_SOURCE.goSingle : DECODE_SOURCE.go;
     const goTexCount = model.textures?.length || 0;
     model._texMappingLog = [
       {
@@ -205,18 +197,16 @@ async function loadModelViaGo(
         finalSize: "—",
       });
     }
-    const decodedBy = subPathUsed ? "📦 Go 单角色（L0 清单）" : "📦 Go 原生解析";
     cacheSet(cacheKey, {
       ...(cacheGet(cacheKey) || {}),
       ...(model.texture !== undefined ? { texture: model.texture } : {}),
       geometry: model,
       ...(goClips.length > 0 ? { animations: goClips } : {}),
-      _decodedBy: decodedBy,
     });
-    return { model, decodedBy };
+    return model;
   }
 
-  return { model, decodedBy: "" };
+  return model;
 }
 
 /**

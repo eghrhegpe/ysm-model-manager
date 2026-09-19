@@ -32,8 +32,7 @@ async function listAllFilePaths(dir: string): Promise<string[] | null> {
 /** 跨类型换角色路由用：注入轻量 loader ctx（decodeYsmViaWasm + 空 appendDebug） */
 async function openYsmFullscreen(path: string, opts?: OpenerOptions): Promise<void> {
   await createYsm3D(path, 0, {
-    loader: async (p) =>
-      (await loadModelData(p, { decodeYsmViaWasm, appendDebug: () => {} })).model,
+    loader: async (p) => await loadModelData(p, { decodeYsmViaWasm, appendDebug: () => {} }),
     // ADR-253 D6：转发路由兜底算出的 siblings（entry 为资源包专用通道，YSM 不消费）
     ...(opts?.siblings != null ? { siblings: opts.siblings } : {}),
   });

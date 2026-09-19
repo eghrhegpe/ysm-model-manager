@@ -86,6 +86,7 @@ export interface StatsCardModel {
     legacyModels?: string[];
     avatars?: string[];
   };
+  _decodedBy?: string;
 }
 
 /** 模型统计卡片 */
@@ -101,7 +102,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
         : ext === ".zip"
           ? ".zip"
           : "其他";
-  // 解码器徽标已移至 summaryCardHTML 标题行（2026-08-30），此处不再渲染
+  // 解码器徽标挂在文件信息橙卡（2026-09-18 从 h3 标题行迁回，与格式信息同展）
   // 纹理分类统计（区分角色纹理 vs 独立模型组件纹理，2026-08-28）：
   // 统计卡「含 N 张额外纹理」口径不再把独立模型纹理混进角色纹理
   const cats = model.textureCategories || [];
@@ -198,6 +199,6 @@ ${subBlock}
 </div>
 <div class="pv-card-section pv-section-orange">
   <div class="pv-card-section-label">${UI_ICONS.save} ${t("preview.fileInfo")}</div>
-  <div class="pv-card-row">${fmt}</div>
+  <div class="pv-card-row">${fmt}${model._decodedBy ? `<span class="ysm-badge">${esc(model._decodedBy)}</span>` : ""}</div>
 </div>`;
 }

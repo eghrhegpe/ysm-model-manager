@@ -13,7 +13,7 @@ import { type BedrockGeometry, parseBedrockGeometryFromJSON } from "./geometry.t
 import { cacheGet, cacheSet } from "./model-cache.ts";
 import { parseYsmJsonDirect } from "./parse-ysm-json.ts";
 import { buildOrderedTexKeys } from "./texture-order.ts";
-import { type DecodedYsm, devLog, stripYsgpTextHeader } from "./utils.ts";
+import { DECODE_SOURCE, type DecodedYsm, devLog, stripYsgpTextHeader } from "./utils.ts";
 import { type DecodedFile, parseYsmMetaFromFiles, type YsmMeta } from "./ysm-meta-parser.ts";
 
 /** 并发去重：同一路径在途解码共享（Android 兜底与纹理并行触发时只解一次）。
@@ -280,7 +280,8 @@ async function tryJsonDispatch(ctx: InflightCtx, bytes: Uint8Array): Promise<Dec
 
   await loadAvatarsForJson(ctx, finalResult);
 
-  cacheSet(ctx.modelPath, { ...finalResult, _decodedBy: "🧠 JSON 直接解析" });
+  finalResult._decodedBy = DECODE_SOURCE.json; // 解码器盖章（唯一事实源）
+  cacheSet(ctx.modelPath, { ...finalResult });
   swallowError(getApp().then(({ CacheModelAvatars }) => CacheModelAvatars(ctx.modelPath)));
   return finalResult;
 }
@@ -696,7 +697,8 @@ async function handleWasmDecode(modelPath: string, bytes: Uint8Array): Promise<D
     ...(meta.animGroups !== undefined ? { animGroups: meta.animGroups } : {}),
     ...(meta.configMenus !== undefined ? { configMenus: meta.configMenus } : {}),
   };
-  cacheSet(modelPath, { ...result, _decodedBy: "🧠 WASM 内置解码" });
+  result._decodedBy = DECODE_SOURCE.wasm; // 解码器盖章（唯一事实源）
+  cacheSet(modelPath, { ...result });
   swallowError(getApp().then(({ CacheModelAvatars }) => CacheModelAvatars(modelPath)));
   return result;
 }

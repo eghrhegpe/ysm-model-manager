@@ -192,6 +192,7 @@ auto_fields:
     - Cube2D
     - cullModelGroups
     - customHdrThumbnail
+    - DECODE_SOURCE
     - DecodedFile
     - DecodedTexture
     - DecodedYsm

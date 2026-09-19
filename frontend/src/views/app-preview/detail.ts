@@ -86,9 +86,8 @@ export async function showModelDetail(
         dec?.authors?.length
       );
       if (decHasInfo) {
-        // 写入缓存，供详情卡 decodedBy 徽标展示（与 loadModelData → skeleton.ts 的缓存写入路径对齐）
         const existing = cacheGet(path) || {};
-        cacheSet(path, { ...existing, _decodedBy: "🧠 WASM 内置解码" });
+        cacheSet(path, existing);
         enriched = {
           name: header?.name || summary?.name || basename.replace(/\.[^.]+$/, ""),
           authors: (dec.authors || []).map((a) => ({
@@ -107,8 +106,7 @@ export async function showModelDetail(
     let cardHTML = "";
     const showSummary = hasRealSummary ? summary : enriched;
     if (showSummary || header) {
-      const decodedBy = cacheGet(path)?._decodedBy || "";
-      cardHTML = summaryCardHTML(showSummary, header, basename || "", decodedBy);
+      cardHTML = summaryCardHTML(showSummary, header, basename || "");
     } else {
       throw new Error(t("preview.cannotParse"));
     }

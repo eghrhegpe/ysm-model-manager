@@ -45,10 +45,10 @@ describe("modelDetailHTML", () => {
 describe("statsCardHTML", () => {
   const base = { boneCount: 4, cubeCount: 10, texWidth: 64, texHeight: 64 };
 
-  it(".ysm 路径 → .ysm 格式（徽标已移至 summaryCardHTML 标题行）", () => {
+  it(".ysm 路径 → .ysm 格式（无 _decodedBy 时不渲染徽标）", () => {
     const html = statsCardHTML(base, "/repo/a.ysm");
     expect(html).toContain(".ysm");
-    expect(html).not.toContain("ysm-badge"); // badge 已移到 summaryCardHTML
+    expect(html).not.toContain("ysm-badge"); // base 未带 _decodedBy → 不渲染
     expect(html).toContain("64 × 64");
   });
 
@@ -130,7 +130,14 @@ describe("statsCardHTML", () => {
     expect(html).toContain("含 2 张额外纹理（共 4 张）");
   });
 
-  it("statsCardHTML 不再渲染 badge（已移至 summaryCardHTML）", () => {
+  it("_decodedBy 存在 → 文件信息行渲染解码器徽标（缓存命中路径不再丢标记）", () => {
+    const html = statsCardHTML({ ...base, _decodedBy: "📦 Go 原生解析" }, "/repo/a.ysm");
+    expect(html).toContain('class="ysm-badge"');
+    expect(html).toContain("📦 Go 原生解析");
+    expect(html).not.toContain("pv-card-title"); // 卡内标题仍已去重，徽标只挂文件信息行
+  });
+
+  it("_decodedBy 缺失 → 文件信息行无徽标（不渲染空壳）", () => {
     const html = statsCardHTML(base, "/repo/a.ysm");
     expect(html).not.toContain("ysm-badge");
     expect(html).not.toContain("pv-card-title");

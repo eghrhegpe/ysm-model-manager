@@ -78,7 +78,7 @@ afterEach(() => {
 describe("loadPreviewImage", () => {
   it("缓存命中 → 直接返回纹理，不触 Go/WASM", async () => {
     const el = mountPreview();
-    cacheSet("/repo/cached.ysm", { texture: "blob:cache", _decodedBy: "" });
+    cacheSet("/repo/cached.ysm", { texture: "blob:cache" });
     expect(await el.loadPreviewImage("/repo/cached.ysm")).toBe("blob:cache");
     // 缓存命中即早返回，Go 兜底路径（FindPreviewImage）与 WASM 解码均未被触达
     expect(appObj.FindPreviewImage).not.toHaveBeenCalled();
@@ -86,11 +86,11 @@ describe("loadPreviewImage", () => {
     unmountElement(el);
   });
 
-  it(".ysm 走 WASM 解码出纹理 → 缓存并返回（_decodedBy 标记）", async () => {
+  it(".ysm 走 WASM 解码出纹理 → 缓存并返回", async () => {
     const el = mountPreview();
     decodeYsmViaWasm.mockResolvedValue({ texture: "blob:wasm-tex" });
     expect(await el.loadPreviewImage("/repo/a.ysm")).toBe("blob:wasm-tex");
-    expect(cacheGet("/repo/a.ysm")?._decodedBy).toBe("🧠 WASM 内置解码");
+    expect(cacheGet("/repo/a.ysm")?.texture).toBe("blob:wasm-tex");
     unmountElement(el);
   });
 

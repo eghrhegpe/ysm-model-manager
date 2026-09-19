@@ -54,7 +54,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .pv-tree-unit { color:var(--muted);font-size:var(--fs-xs);margin-left:2px; }
 .pv-tree-size { color:var(--muted);font-size:var(--fs-xs);margin-left:auto; }
 .pv-card-val { color:var(--accent);font-weight:600; }
-.ysm-badge { font-size:var(--fs-xs);padding:0 5px;border-radius:var(--radius-xs);background:color-mix(in srgb, var(--accent) 25%, transparent);color:var(--txt);margin-left:auto; }
+.ysm-badge { display:inline-block;font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--radius-xl);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600;vertical-align:middle; }
 .pv-section-blue { border-left:2px solid var(--accent); }
 .pv-section-green { border-left:2px solid var(--status-success); }
 .pv-section-orange { border-left:2px solid var(--sm-optional); }

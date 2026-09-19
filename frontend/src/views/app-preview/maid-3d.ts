@@ -53,13 +53,11 @@ async function openMaidFullscreen(path: string, opts?: OpenerOptions): Promise<v
   try {
     await createMaid3D(path, 0, {
       loader: async (p) =>
-        (
-          await loadModelData(
-            p,
-            { decodeYsmViaWasm: () => Promise.resolve(null), appendDebug: () => {} },
-            { skipWasm: true },
-          )
-        ).model,
+        await loadModelData(
+          p,
+          { decodeYsmViaWasm: () => Promise.resolve(null), appendDebug: () => {} },
+          { skipWasm: true },
+        ),
       onClose: close3D,
       // ADR-253 D6：转发路由兜底算出的 siblings（entry 为资源包专用通道，Maid 不消费）
       ...(opts?.siblings != null ? { siblings: opts.siblings } : {}),

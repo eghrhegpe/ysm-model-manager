@@ -99,7 +99,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   const licenseType = cleanText(header.license);
   const freeBadge = header.hasFree
     ? header.isFree
-      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">${UI_ICONS.tag} ${t("format.free")}</span>`
       : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
     : "";
   let authorHtml = "";
@@ -154,7 +154,6 @@ export function summaryCardHTML(
   summary: YsmSummary | null | undefined,
   header: YSMHeader | null | undefined,
   basename?: string,
-  decodedBy?: string,
 ): string {
   if (!summary && !header) {
     return `<div class="content" id="preview-content">
@@ -227,15 +226,12 @@ export function summaryCardHTML(
   // 免费/付费标记
   const freeBadge = header?.hasFree
     ? header.isFree
-      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">🆓 ${t("format.free")}</span>`
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">${UI_ICONS.tag} ${t("format.free")}</span>`
       : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
     : "";
 
-  // 解码器徽标（从 header 或 enriched 来源获取 decodedBy，挂标题行右侧）
-  const badgeHtml = decodedBy ? `<span class="ysm-badge">${esc(decodedBy)}</span>` : "";
-
   return `<div class="content" id="preview-content">
-<h3>${esc(name)}${freeBadge}${badgeHtml}</h3>
+<h3>${esc(name)}${freeBadge}</h3>
 
 ${tips ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px;line-height:1.6">${tips}</div>` : ""}
 

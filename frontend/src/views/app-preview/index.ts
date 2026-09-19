@@ -144,7 +144,7 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     if (isYsmWasmPreview(modelPath)) {
       const decoded = await this.decodeYsmViaWasm(modelPath);
       if (decoded?.texture) {
-        cacheSet(modelPath, { ...decoded, _decodedBy: "🧠 WASM 内置解码" });
+        cacheSet(modelPath, { ...decoded });
         return decoded.texture;
       }
       if (decoded?.geometry) {
@@ -157,11 +157,11 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
       const { FindPreviewImage, ExtractPreviewTexture } = await backendGetApp();
       const loose = await FindPreviewImage(modelPath);
       if (loose) {
-        cacheSet(modelPath, { texture: loose, _decodedBy: "" });
+        cacheSet(modelPath, { texture: loose });
         return loose;
       }
       const tex = await ExtractPreviewTexture(modelPath);
-      if (tex) cacheSet(modelPath, { texture: tex, _decodedBy: "" });
+      if (tex) cacheSet(modelPath, { texture: tex });
       return tex || null;
     } catch (_) {
       return null;

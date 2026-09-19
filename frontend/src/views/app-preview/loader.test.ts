@@ -69,14 +69,13 @@ beforeEach(() => {
 describe("loadModelData — 缓存命中", () => {
   it("缓存含骨骼几何 → 直接复用，不触 WASM / Go", async () => {
     const cached = geo();
-    cacheGetMock.mockReturnValue({ geometry: cached, _decodedBy: "🧠 WASM 内置解码" });
+    cacheGetMock.mockReturnValue({ geometry: cached });
     const decode = vi.fn();
     const r = await loadModelData("/m/a.ysm", ctx({ decode }));
 
     expect(decode).not.toHaveBeenCalled();
     expect(AnalyzeMock).not.toHaveBeenCalled();
-    expect(r.model).toBe(cached);
-    expect(r.decodedBy).toBe("🧠 WASM 内置解码");
+    expect(r).toBe(cached);
     expect(cached._modelPath).toBe("/m/a.ysm");
   });
 
@@ -87,7 +86,7 @@ describe("loadModelData — 缓存命中", () => {
     const r = await loadModelData("/m/a.ysm", ctx({ decode }));
 
     expect(decode).toHaveBeenCalledWith("/m/a.ysm");
-    expect(r.model).toBe(decoded);
+    expect(r).toBe(decoded);
   });
 });
 
@@ -101,12 +100,12 @@ describe("loadModelData — WASM 解码路径（.ysm）", () => {
     });
     const r = await loadModelData("/m/a.ysm", ctx({ decode }));
 
-    expect(r.decodedBy).toBe("🧠 WASM 内置解码");
+    expect(r).toBe(decoded);
     expect(decoded._authors).toEqual([{ name: "作者A" }]);
     expect(decoded._avatars).toEqual({ "作者A": "blob:x" });
     expect(cacheSetMock).toHaveBeenCalledWith(
       "/m/a.ysm",
-      expect.objectContaining({ geometry: decoded, _decodedBy: "🧠 WASM 内置解码" }),
+      expect.objectContaining({ geometry: decoded }),
     );
   });
 
@@ -123,8 +122,7 @@ describe("loadModelData — WASM 解码路径（.ysm）", () => {
       expect.stringContaining("WASM 返回空或无骨骼"),
     );
     expect(AnalyzeMock).toHaveBeenCalledWith("/m/a.ysm");
-    expect(r.model).toBe(goModel);
-    expect(r.decodedBy).toBe("📦 Go 原生解析");
+    expect(r).toBe(goModel);
   });
 
   it("WASM 解码抛错 → 异常向上传播（不静默吞错）", async () => {
@@ -145,8 +143,7 @@ describe("loadModelData — Go 兜底路径", () => {
 
     expect(decode).not.toHaveBeenCalled();
     expect(AnalyzeMock).toHaveBeenCalledWith("/m/b.json");
-    expect(r.model).toBe(goModel);
-    expect(r.decodedBy).toBe("📦 Go 原生解析");
+    expect(r).toBe(goModel);
   });
 
   it(".json 且 WASM 失败 → 回退 Go", async () => {
@@ -157,8 +154,7 @@ describe("loadModelData — Go 兜底路径", () => {
     const r = await loadModelData("/m/b.json", ctx({ decode }));
 
     expect(AnalyzeMock).toHaveBeenCalledWith("/m/b.json");
-    expect(r.model).toBe(goModel);
-    expect(r.decodedBy).toBe("📦 Go 原生解析");
+    expect(r).toBe(goModel);
   });
 
   it("Go 返回带骨骼 → 填充 _texMappingLog 并写缓存（单纹理）", async () => {
@@ -176,7 +172,7 @@ describe("loadModelData — Go 兜底路径", () => {
     ]);
     expect(cacheSetMock).toHaveBeenCalledWith(
       "/m/b.json",
-      expect.objectContaining({ _decodedBy: "📦 Go 原生解析" }),
+      expect.objectContaining({ geometry: goModel }),
     );
   });
 
@@ -206,13 +202,12 @@ describe("loadModelData — Go 兜底路径", () => {
     );
   });
 
-  it("Go 返回无骨骼 → 返回空骨骼对象（调用方按无几何兜底）+ decodedBy 空串", async () => {
+  it("Go 返回无骨骼 → 返回空骨骼对象（调用方按无几何兜底）", async () => {
     AnalyzeMock.mockResolvedValue({ bones: [] });
     const r = await loadModelData("/m/empty.bedrock", ctx());
 
     // 空骨骼对象仍被返回（非 null），skeleton.ts 以 !model.bones.length 判"未找到几何数据"
-    expect(r.model?.bones).toEqual([]);
-    expect(r.decodedBy).toBe("");
+    expect(r?.bones).toEqual([]);
   });
 });
 
@@ -230,7 +225,7 @@ describe("loadModelData — authors 填补", () => {
 
     expect(decode).toHaveBeenCalledWith("/m/c.ysm");
     expect(AnalyzeMock).toHaveBeenCalledWith("/m/c.ysm");
-    expect(r.model).toBe(goModel);
+    expect(r).toBe(goModel);
     expect(goModel._authors).toEqual([{ name: "作者B" }]);
     expect(goModel._avatars).toEqual({ 作者B: "blob:y" });
   });
@@ -247,8 +242,8 @@ describe("loadModelData — authors 填补", () => {
 
     const r = await loadModelData("/m/d.bedrock", ctx());
 
-    expect(r.model?._authors).toEqual([{ name: "缓存作者" }]);
-    expect(r.model?._avatars).toEqual({ 缓存作者: "blob:z" });
+    expect(r?._authors).toEqual([{ name: "缓存作者" }]);
+    expect(r?._avatars).toEqual({ 缓存作者: "blob:z" });
   });
 
   it("缓存 authors 含字符串元素 → 过滤为对象数组后填补", async () => {
@@ -260,7 +255,7 @@ describe("loadModelData — authors 填补", () => {
 
     const r = await loadModelData("/m/e.bedrock", ctx());
 
-    expect(r.model?._authors).toEqual([{ name: "对象作者" }]);
+    expect(r?._authors).toEqual([{ name: "对象作者" }]);
   });
 
   it("model 无 authors → loadModelData 不填充（延迟到 fillAuthorsAsync）", async () => {
@@ -273,7 +268,7 @@ describe("loadModelData — authors 填补", () => {
     const r = await loadModelData("/m/f.ysm", ctx());
 
     // loadModelData 不再填充 authors（延迟加载）
-    expect(r.model?._authors).toBeUndefined();
+    expect(r?._authors).toBeUndefined();
     expect(ExtractSummaryMock).not.toHaveBeenCalled();
   });
 
@@ -345,7 +340,7 @@ describe("loadModelData — _animClips 挂载（动画数据统一供给适配�
 
     const r = await loadModelData("/m/a.ysm", ctx({ decode }));
 
-    expect(r.model?._animClips).toEqual([clip]);
+    expect(r?._animClips).toEqual([clip]);
   });
 
   it("Go 动画 JSON 解析出 clips → 挂到 model._animClips（不只写缓存）", async () => {
@@ -355,7 +350,7 @@ describe("loadModelData — _animClips 挂载（动画数据统一供给适配�
 
     const r = await loadModelData("/m/b.json", ctx());
 
-    expect(r.model?._animClips).toEqual(["clipA", "clipB"]);
+    expect(r?._animClips).toEqual(["clipA", "clipB"]);
   });
 
   it("缓存命中且缓存有 animations → 挂到 model._animClips", async () => {
@@ -363,12 +358,11 @@ describe("loadModelData — _animClips 挂载（动画数据统一供给适配�
     cacheGetMock.mockReturnValue({
       geometry: cached,
       animations: ["clipC"],
-      _decodedBy: "🧠 WASM 内置解码",
     });
 
     const r = await loadModelData("/m/a.ysm", ctx());
 
-    expect(r.model?._animClips).toEqual(["clipC"]);
+    expect(r?._animClips).toEqual(["clipC"]);
   });
 
   it("无任何动画来源 → _animClips 保持 undefined（适配器走磁盘兜底）", async () => {
@@ -376,6 +370,6 @@ describe("loadModelData — _animClips 挂载（动画数据统一供给适配�
 
     const r = await loadModelData("/m/a.ysm", ctx({ decode }));
 
-    expect(r.model?._animClips).toBeUndefined();
+    expect(r?._animClips).toBeUndefined();
   });
 });

@@ -151,7 +151,6 @@ describe("buildStatsCard", () => {
       container,
       makeModel(),
       "/m/a.ysm",
-      "YSMParser",
       makeCtx(),
     );
     const card = container.querySelector(".pv-card");
@@ -166,7 +165,6 @@ describe("buildStatsCard", () => {
       container,
       makeModel({ _authors: [{ name: "作者A", role: "建模", avatarUrl: "ava.png" }] }),
       "/m/a.ysm",
-      "YSMParser",
       ctx,
     );
     expect(container.textContent).toContain("作者A");
@@ -185,7 +183,6 @@ describe("buildStatsCard", () => {
       container,
       makeModel({ _authors: [{ name: "纸板", role: "建模", bilibili: "https://space.bilibili.com/123" }] }),
       "/m/a.ysm",
-      "YSMParser",
       ctx,
     );
     const link = container.querySelector(".pv-card a") as HTMLAnchorElement;
@@ -207,7 +204,6 @@ describe("buildStatsCard", () => {
       container,
       makeModel({ _authors: [{ name: "匿名", role: "建模" }] }),
       "/m/a.ysm",
-      "",
       ctx,
     );
     expect(container.querySelector(".pv-card a")).toBeNull();
@@ -220,7 +216,6 @@ describe("buildStatsCard", () => {
       container,
       makeModel({ _authors: [{ name: "匿名" }] }),
       "/m/a.ysm",
-      "",
       ctx,
     );
     expect(container.textContent).toContain("匿名");

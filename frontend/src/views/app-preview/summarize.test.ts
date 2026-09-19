@@ -107,9 +107,9 @@ describe("summaryCardHTML 完整摘要", () => {
 });
 
 describe("summaryCardHTML 徽章与转义", () => {
-  it("hasFree+isFree → 🆓 免费徽章", () => {
+  it("hasFree+isFree → 🆓 免费徽章（ADR-238：图标由 emoji 改走 SVG，锁定语义未丢）", () => {
     const html = summaryCardHTML({ name: "x" }, { hasFree: true, isFree: true });
-    expect(html).toContain("🆓 免费");
+    expect(html).toMatch(/<svg class="ws-icon"[\s\S]*?<\/svg>\s*免费/);
     expect(html).not.toContain("🔒");
   });
 
@@ -241,26 +241,5 @@ describe("summaryCardHTML 安全与折叠", () => {
     expect(html).toContain("+2"); // 10 - 8
     expect(html).not.toContain("item8");
     expect(html).not.toContain("item9");
-  });
-
-  it("decodedBy 非空 → badge 渲染在 h3 标题行右侧", () => {
-    const html = summaryCardHTML(
-      { name: "酒狐", stats: { textures: 1 } },
-      {},
-      undefined,
-      "📦 Go 原生解析",
-    );
-    expect(html).toContain("酒狐");
-    expect(html).toContain('class="ysm-badge">📦 Go 原生解析');
-    // badge 紧跟 h3，不在统计卡里
-    const h3Idx = html.indexOf("<h3>");
-    const badgeIdx = html.indexOf('class="ysm-badge"');
-    expect(badgeIdx).toBeGreaterThan(h3Idx);
-    expect(html.substring(h3Idx, badgeIdx + 50)).toContain("</h3>");
-  });
-
-  it("decodedBy 空 → h3 行不含 badge", () => {
-    const html = summaryCardHTML({ name: "酒狐" }, {}, undefined, "");
-    expect(html).not.toContain("ysm-badge");
   });
 });

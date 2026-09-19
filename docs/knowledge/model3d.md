@@ -196,6 +196,7 @@ auto_fields:
     - DecodedFile
     - DecodedTexture
     - DecodedYsm
+    - DecodeSource
     - decodeYsmViaWasm
     - DeepPartial
     - DEFAULT_GPU_LOAD_LIMITS

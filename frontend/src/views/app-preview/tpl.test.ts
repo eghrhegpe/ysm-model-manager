@@ -2,6 +2,7 @@
 // ===== preview HTML 模板测试 =====
 // 覆盖：modelDetailHTML（占位/错误/正常+转义）、statsCardHTML（格式后缀/徽标/多纹理）
 import { describe, it, expect } from "vitest";
+import { DECODE_SOURCE } from "@/preview-3d/decoder/utils.ts";
 import { modelDetailHTML, statsCardHTML } from "./tpl.ts";
 
 describe("modelDetailHTML", () => {
@@ -130,11 +131,19 @@ describe("statsCardHTML", () => {
     expect(html).toContain("含 2 张额外纹理（共 4 张）");
   });
 
-  it("_decodedBy 存在 → 文件信息行渲染解码器徽标（缓存命中路径不再丢标记）", () => {
-    const html = statsCardHTML({ ...base, _decodedBy: "📦 Go 原生解析" }, "/repo/a.ysm");
+  it("_decodedBy 存在 → 文件信息行渲染解码器徽标（SVG 图标 + i18n 文案，缓存命中不再丢标记）", () => {
+    const html = statsCardHTML({ ...base, _decodedBy: DECODE_SOURCE.go }, "/repo/a.ysm");
     expect(html).toContain('class="ysm-badge"');
-    expect(html).toContain("📦 Go 原生解析");
+    // ADR-238：图标为 SVG（不再吃 emoji 字形，随 currentColor/字号走）；文案走 i18n（测试环境 zh-CN）
+    expect(html).toMatch(/class="ysm-badge"><svg class="ws-icon"[\s\S]*?<\/svg>\s*Go 原生解析/);
+    expect(html).not.toContain("📦");
     expect(html).not.toContain("pv-card-title"); // 卡内标题仍已去重，徽标只挂文件信息行
+  });
+
+  it("_decodedBy 为未识别的码（旧缓存遗留的展示文案）→ 不渲染徽标，不漏裸串", () => {
+    const html = statsCardHTML({ ...base, _decodedBy: "📦 Go 原生解析" }, "/repo/a.ysm");
+    expect(html).not.toContain("ysm-badge");
+    expect(html).not.toContain("Go 原生解析");
   });
 
   it("_decodedBy 缺失 → 文件信息行无徽标（不渲染空壳）", () => {

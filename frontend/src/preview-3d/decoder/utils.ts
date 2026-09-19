@@ -11,16 +11,25 @@ export const devLog: (...args: unknown[]) => void = import.meta.env.DEV
   ? (...args) => dbg("ysm-decode", args.length === 1 ? args[0] : args)
   : () => {};
 
-/** 解码器来源标记（`_decodedBy`）——**解码器是唯一事实源**：
- *  凡经某条解码路径产出的结果都盖此章，写入缓存/纹理预览等旁路也随对象传播，
- *  统计卡「文件信息」行直接消费（无需知道谁解的码，只读标记）。
- *  ⚠️ 现为展示用文案；若改 SVG 图标须换成来源码 + tpl 侧映射。 */
+/** 解码器来源**码**（`_decodedBy`）——**解码器是唯一事实源**：
+ *  凡经某条解码路径产出的结果都盖此章，写入缓存/纹理预览等旁路也随对象传播。
+ *
+ *  ⚠️ 数据层只存**来源码**，不存展示文案：文案进数据 ⇒ i18n 失效（切语言不变）、
+ *  图标退化成 emoji 字形（ADR-238：不受 currentColor 控制 / 跨平台漂移 / 不随字号缩放）。
+ *  展示由 `views/app-preview/tpl.ts` 映射：语义名 → `resolveIcon()` SVG，文案 → `preview.decodedBy.*`。 */
 export const DECODE_SOURCE = {
-  wasm: "🧠 WASM 内置解码",
-  json: "🧠 JSON 直接解析",
-  go: "📦 Go 原生解析",
-  goSingle: "📦 Go 单角色（L0 清单）",
+  /** 前端 WASM 内置解码（.ysm 二进制包） */
+  wasm: "wasm",
+  /** 前端 WASM 解析解压后的 ysm.json 规格 */
+  json: "json",
+  /** Go 原生解析兜底（.zip / 文件夹 / 解码失败回退） */
+  go: "go",
+  /** Go 单角色解析（L0 清单命中，多角色包切角色） */
+  goSingle: "go-single",
 } as const;
+
+/** 解码器来源码取值（`DecodedYsm._decodedBy`）；统计卡徽标按此联合键查表 */
+export type DecodeSource = (typeof DECODE_SOURCE)[keyof typeof DECODE_SOURCE];
 
 /** WASM 解码结果（decodeYsmViaWasm 返回） */
 export interface DecodedYsm {
@@ -40,8 +49,8 @@ export interface DecodedYsm {
   animGroups?: Array<{ id?: string; name?: string; items?: string[] | null }>;
   /** 解码 ysm.json properties 提取的配置菜单（模型配置 / 自定义表情），加密模型详情卡补显用 */
   configMenus?: Array<{ id?: string; name?: string }>;
-  /** 解码器来源标记（DECODE_SOURCE，解码器盖章；缓存命中回读与统计卡展示用） */
-  _decodedBy?: string;
+  /** 解码器来源码（DECODE_SOURCE，解码器盖章；缓存命中回读与统计卡徽标消费） */
+  _decodedBy?: DecodeSource;
 }
 
 /**

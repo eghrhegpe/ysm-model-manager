@@ -1,9 +1,10 @@
 // ===== preview HTML 模板 =====
 
 import { t } from "@/core/i18n/t.ts";
+import { DECODE_SOURCE } from "@/preview-3d/decoder/utils.ts";
 import { esc } from "@/utils/html/html.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { UI_ICONS, type UiIconName } from "@/utils/icon/ui-icons.ts";
 import { extOf } from "@/utils/resource/types.ts";
 
 /** 模型统计元数据（modelDetailHTML 入参） */
@@ -86,7 +87,30 @@ export interface StatsCardModel {
     legacyModels?: string[];
     avatars?: string[];
   };
+  /** 解码器来源**码**（`DECODE_SOURCE`，由解码器盖章）。展示层按码查表渲染
+   *  「SVG 图标 + i18n 文案」；未识别的码（如旧缓存里遗留的展示文案）不渲染，避免漏出裸串。 */
   _decodedBy?: string;
+}
+
+/**
+ * 解码器来源码 → 徽标 HTML（ADR-238：结构槽图标走 SVG；文案走 i18n）。
+ * 返回 "" = 无码或码未识别（不渲染空壳/裸串）。`t()` 用字面量键以吃类型检查。
+ */
+function decodeBadgeHTML(code: string | undefined): string {
+  const badge = (icon: UiIconName, label: string): string =>
+    `<span class="ysm-badge">${resolveIcon(icon)} ${esc(label)}</span>`;
+  switch (code) {
+    case DECODE_SOURCE.wasm:
+      return badge("parser", t("preview.decodedBy.wasm"));
+    case DECODE_SOURCE.json:
+      return badge("parser", t("preview.decodedBy.json"));
+    case DECODE_SOURCE.go:
+      return badge("package", t("preview.decodedBy.go"));
+    case DECODE_SOURCE.goSingle:
+      return badge("package", t("preview.decodedBy.goSingle"));
+    default:
+      return "";
+  }
 }
 
 /** 模型统计卡片 */
@@ -199,6 +223,6 @@ ${subBlock}
 </div>
 <div class="pv-card-section pv-section-orange">
   <div class="pv-card-section-label">${UI_ICONS.save} ${t("preview.fileInfo")}</div>
-  <div class="pv-card-row">${fmt}${model._decodedBy ? `<span class="ysm-badge">${esc(model._decodedBy)}</span>` : ""}</div>
+  <div class="pv-card-row">${fmt}${decodeBadgeHTML(model._decodedBy)}</div>
 </div>`;
 }

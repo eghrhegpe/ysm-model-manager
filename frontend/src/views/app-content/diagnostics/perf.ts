@@ -45,6 +45,13 @@ export const PERF_UNREAD_MODES: Record<string, readonly string[]> = {
   "diag-perf-conc-max": ["single", "scan"],
 };
 
+/** 基准三件套 id（双维门禁：模式 ∧ 目标集）——apply 循环跳过、由 syncPerfBaselineControls 兼并判定 */
+export const BASELINE_CONTROL_IDS: readonly string[] = [
+  "diag-perf-baseline-save",
+  "diag-perf-baseline-compare",
+  "diag-perf-baseline-th",
+];
+
 /** 运行按钮 id → 其所属模式（scope hint 随此派生，不另写第二份） */
 export const PERF_RUN_BUTTON_MODE_KEYS: Record<string, string> = {
   "diag-perf-run": "single",
@@ -124,16 +131,20 @@ function initPerfMode(root: ShadowRoot): () => void {
     }
     // 载荷不读的控件当场禁用（ADR-278 §2.6 反向半边）：整行隐藏的碰不到，三模式共用行里
     // 「能改却不被读」（如 scan 下的排序）才是欺骗——按 PERF_UNREAD_MODES 单点表置灰。
+    // 基准三件套是双维门禁（ADR-262 D8：只在单模型目标集可用），而本函数只知模式维——
+    // 委托 syncPerfBaselineControls 兼并两维判定，不在这里另写一份「baseline ∉ 表 → 直接启用」
+    // （那会把四修刚拆的同一颗雷从 apply 路径重新埋回来）；其余控件按表置灰。
     for (const [id, unread] of Object.entries(PERF_UNREAD_MODES)) {
+      if (BASELINE_CONTROL_IDS.includes(id)) continue;
       const el = root.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
       if (el) el.disabled = unread.includes(mode);
     }
+    syncPerfBaselineControls(root);
 
     const modelOpt = Array.from(targetEl?.options ?? []).find((o) => o.value === "");
     if (modelOpt) modelOpt.disabled = mode !== "single";
     if (mode === "conc" && targetEl && targetEl.value.trim() === "") {
       targetEl.value = PERF_TARGET_REPO;
-      syncPerfBaselineControls(root);
       // 静默改用户的选择是欺骗：发生了什么要当场说（重放时值已回落，不重复弹）
       toast(t("diagnostics.perfConcTargetFallback"));
     }

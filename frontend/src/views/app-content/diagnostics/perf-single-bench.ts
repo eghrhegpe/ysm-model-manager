@@ -14,6 +14,10 @@ import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
+// 双维门禁的基准三件套 id 表归 perf.ts（PERF_UNREAD_MODES 同文件）：两处写 disabled 的消费
+// 链共用一张名单，不各抄一份字面量。⚠️ 本行 import 构成 perf ↔ perf-single-bench 模块环：
+// 两边都只在函数体内读该绑定（TDZ-safe），但**禁止**在任一模块顶层求值 BASELINE_CONTROL_IDS。
+import { BASELINE_CONTROL_IDS } from "./perf.ts";
 import {
   type CLIResp,
   errorHTML,
@@ -194,11 +198,7 @@ export function syncPerfBaselineControls(root: ShadowRoot): void {
   const raw =
     (root.getElementById("diag-perf-rtype") as HTMLSelectElement | null)?.value.trim() ?? "";
   const isModel = parsePerfTargetValue(raw)?.target === "model";
-  for (const id of [
-    "diag-perf-baseline-save",
-    "diag-perf-baseline-compare",
-    "diag-perf-baseline-th",
-  ]) {
+  for (const id of BASELINE_CONTROL_IDS) {
     // 双维门禁（ADR-262 D8 × ADR-278 §2.6）：基准只在「单模型目标集」有意义，而本函数
     // 也被 rtype change / 选项填充回调独立触发——此时必须读当前模式兼并判定，否则
     // scan/conc 下动一下选择器就把载荷不读的基准控件解禁了（§2.6 要清的同一笔账）。

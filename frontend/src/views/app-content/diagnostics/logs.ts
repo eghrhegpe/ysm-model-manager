@@ -20,6 +20,15 @@ export type EscFn = (s: unknown) => string;
 // 前比对丢弃陈旧
 const diagLoadGuard = createLoadGuard();
 
+// ===== 展示窗口容量（单一事实源在 Go，此处为镜像）=====
+// 两个窗口是「前端展示层收窄」，与 Go 侧环形缓冲上限对应但**独立**：
+//   操作日志 Go 上限 500（go/logs/logs.go|logMaxEntries，AppConfig.LogMaxEntries 可配置）
+//   运行时日志 Go 上限 200（go/logs/runtime.go|DefaultRuntimeCap，固定）
+// ⚠️ 改 Go 容量时须同步此处（不崩，仅影响「窗口内检索」范围与无命中占位准确性）。
+// 运行时后端恒 ≤200，DIAG_RUNTIME_WINDOW=300 是防御性冗余（搜索口径留余量）。
+const DIAG_OP_WINDOW = 500;
+const DIAG_RUNTIME_WINDOW = 300;
+
 /** 绑定 ImportLog（仅用到的字段） */
 interface ImportLogLike {
   Status?: string;
@@ -77,6 +86,12 @@ function dgLsReadSearch(root: ShadowRoot): string {
   );
 }
 
+/** 读取操作类型下拉当前值（缺省 / 空 / "all" → 全部） */
+function dgLsReadOpFilter(root: ShadowRoot): string {
+  const sel = root.getElementById("diag-log-op-filter") as HTMLSelectElement | null;
+  return sel?.value || "all";
+}
+
 /**
  * 操作日志搜索命中域：模型名 / 报错内容 / 目标路径 / 源路径 / 操作类型。
  * 2026-09-17 收口：此前只匹配 ModelName，placeholder 写着「搜索模型名」——用户搜报错文本必然空手。
@@ -96,12 +111,15 @@ function dgLsMatchDiagSearch(l: ImportLogLike, search: string): boolean {
 function dgLsFilterDiagLogs(logs: ImportLogLike[], root: ShadowRoot): ImportLogLike[] {
   const activeBtn = root.querySelector(".diag-log-fbtn.active");
   const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status : "all";
+  const opFilter = dgLsReadOpFilter(root);
   const search = dgLsReadSearch(root);
   return logs
-    .slice(-500)
+    .slice(-DIAG_OP_WINDOW)
     .reverse()
     .filter((l) => {
+      // 横向（状态）× 纵向（操作类型）× 搜索，三者 AND 交集——互斥维度，叠加不冲突
       if (filter !== "all" && l.Status !== filter) return false;
+      if (opFilter !== "all" && (l.Operation || "import") !== opFilter) return false;
       return dgLsMatchDiagSearch(l, search);
     });
 }
@@ -199,12 +217,12 @@ interface RuntimeLogLike {
 
 /**
  * 运行时日志按搜索词过滤（只匹配 Message——运行时日志无 Status/路径概念）。
- * 与操作日志同口径：在「最新 300 条」窗口内检索（超窗口的历史条目不召回，避免大缓冲全量扫描）。
+ * 与操作日志同口径：在「最新 DIAG_RUNTIME_WINDOW 条」窗口内检索（超窗口的历史条目不召回，避免大缓冲全量扫描）。
  */
 function dgLsFilterRuntimeLogs(logs: RuntimeLogLike[], root: ShadowRoot): RuntimeLogLike[] {
   const search = dgLsReadSearch(root);
   return logs
-    .slice(-300)
+    .slice(-DIAG_RUNTIME_WINDOW)
     .reverse()
     .filter(
       (l) =>

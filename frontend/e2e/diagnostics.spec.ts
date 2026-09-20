@@ -191,6 +191,8 @@ test.describe("诊断页", () => {
         clear: rect("#diag-clear"),
         filter: rect("#diag-log-filter"),
         search: rect("#diag-log-search"),
+        opFilter: rect("#diag-log-op-filter"),
+        skipChip: rect('.diag-log-fbtn[data-status="skipped"]'),
       };
     });
     expect(layout.rows).toHaveLength(2);
@@ -222,10 +224,18 @@ test.describe("诊断页", () => {
     expect(search.left).toBeLessThan(refresh.left);
     expect(refresh.left).toBeLessThan(copy.left);
     expect(copy.left).toBeLessThan(clear.left);
-    // 行2 归属：筛选 chips 容器（清空不得混入筛选行；搜索框已上移行1，不得回落行2）
+    // 行2 归属：筛选 chips 容器 + 操作类型下拉（清空不得混入筛选行；搜索框已上移行1，不得回落行2）
     expect(box("filter", layout.filter).top).toBeGreaterThanOrEqual(row2.top);
     expect(box("filter", layout.filter).bottom).toBeLessThanOrEqual(row2.bottom);
     expect(search.top).toBeLessThan(row2.top); // 搜索框整体在行2 上方
+    // 2026-09-28 纵向筛选：操作类型下拉与状态 chips **同排**（都在行2 内），
+    // 且位于最后一个 chip 右侧（margin-left:auto 推到行尾）——漂到行1 即版面回归。
+    // ⚠️ 不断言 filter.right <= opFilter.left：下拉是 filter（flex:1 容器）的**子元素**，
+    //    容器 right 天然包住子元素，该断言恒假（实测 1268 vs 1165）。
+    const opFilter = box("opFilter", layout.opFilter);
+    expect(opFilter.top).toBeGreaterThanOrEqual(row2.top);
+    expect(opFilter.bottom).toBeLessThanOrEqual(row2.bottom);
+    expect(box("skipChip", layout.skipChip).right).toBeLessThanOrEqual(opFilter.left);
   });
 
   test("单模型 tab：类型选择器选项来自 registry（前端不写死类型表）", async ({ page }) => {

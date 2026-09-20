@@ -878,6 +878,7 @@ export const zhCN = {
 
   // ── 诊断操作类型 ──
   "diagnostics.logsCleared": "日志已清空",
+  "diagnostics.opAll": "全部操作",
   "diagnostics.opImport": "导入",
   "diagnostics.opScan": "扫描",
   "diagnostics.opDownload": "下载",

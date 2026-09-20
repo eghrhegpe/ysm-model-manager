@@ -187,6 +187,16 @@ export function diagnosticsHTML(): string {
         <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
         <button class="diag-log-fbtn" data-status="warn">${UI_ICONS.warning} ${t("diagnostics.warn")}</button>
         <button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.performance} ${t("diagnostics.skipped")}</button>
+        <select id="diag-log-op-filter" class="diag-log-op-filter">
+          <option value="all">${t("diagnostics.opAll")}</option>
+          <option value="import">${t("diagnostics.opImport")}</option>
+          <option value="scan">${t("diagnostics.opScan")}</option>
+          <option value="download">${t("diagnostics.opDownload")}</option>
+          <option value="sync">${t("diagnostics.opSync")}</option>
+          <option value="rename">${t("diagnostics.opRename")}</option>
+          <option value="delete">${t("diagnostics.opDelete")}</option>
+          <option value="ui">${t("diagnostics.opUI")}</option>
+        </select>
       </div>
     </div>
   </div>

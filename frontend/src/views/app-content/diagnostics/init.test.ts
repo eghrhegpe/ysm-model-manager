@@ -63,6 +63,16 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <button class="diag-log-fbtn" data-status="warn">警告</button>
     <button class="diag-log-fbtn" data-status="skipped">跳过</button>
     <input id="diag-log-search">
+    <select id="diag-log-op-filter">
+      <option value="all">全部操作</option>
+      <option value="import">导入</option>
+      <option value="scan">扫描</option>
+      <option value="download">下载</option>
+      <option value="sync">同步</option>
+      <option value="rename">重命名</option>
+      <option value="delete">删除</option>
+      <option value="ui">界面</option>
+    </select>
   `;
   (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
     (id: string) => el.querySelector(`#${id}`);
@@ -204,6 +214,31 @@ describe("initDiagnostics — 日志面板", () => {
     expect(list.textContent).not.toContain("bad");
     // 徽标按 Level（warn→warning 图标）渲染
     expect(list.querySelector(".log-status.warn .ws-icon")).not.toBeNull();
+  });
+
+  it("操作类型下拉 → 单独筛出某一类操作（与状态 chips 正交叠加）", async () => {
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Status: "success", Operation: "import", ModelName: "imp.ysm" },
+        { Status: "success", Operation: "scan", ModelName: "scn.ysm" },
+        { Status: "warn", Operation: "ui", ModelName: "uimsg.ysm" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    await waitFor(() => list.textContent!.includes("imp"));
+    // 选「扫描」：只剩 scan 行（import / ui 都消失）
+    const sel = root.getElementById("diag-log-op-filter") as HTMLSelectElement;
+    sel.value = "scan";
+    sel.dispatchEvent(new Event("change"));
+    await waitFor(() => !list.textContent!.includes("imp"));
+    expect(list.textContent).toContain("scn");
+    expect(list.textContent).not.toContain("uimsg");
+    // 正交叠加：再选「警告」状态 chip → scan 里没有 warn，应为空态
+    (root.querySelector('.diag-log-fbtn[data-status="warn"]') as HTMLElement).click();
+    await waitFor(() => !list.textContent!.includes("scn"));
+    expect(list.textContent).not.toContain("imp");
   });
 
   it("搜索输入 → 300ms 防抖重载", async () => {

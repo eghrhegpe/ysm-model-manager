@@ -46,14 +46,23 @@
 
 | 方向 | 内容 | 风险 / 代价 |
 |---|---|---|
-| **A. 操作类型纵向筛选** | 行2 或新增一排 chips，按 `Operation` 过滤，与状态 chips 正交共存（互斥维度 → 不冲突） | 需新 UI + 绑定 + i18n；与现有「chip × 搜索」交集并存，语义需说清 |
-| **B. warn 分流** | 在操作类型筛选落地后，`ui` / `scan` 可各自筛出，warn 混类可见性自然缓解 | 依赖 A |
-| **C. 容量口径单点化** | 把 Go 容量（500/200）与前端窗口（slice）收敛到单一事实源（如契约测试锚定） | 小改动；防未来 Go 改容量前端漏同步 |
-| **D. 流 B 语义化** | 推动 Go 侧结构化信息走流 A，流 B 只留 debug | 大改动，涉及多个 Go 包调用点，需 ADR 立项 |
+| ~~**A. 操作类型纵向筛选**~~ | ✅ **已落地**（2026-09-28）：行2 加「操作类型」下拉（`#diag-log-op-filter`），单选，与状态 chips 正交叠加 | — |
+| ~~**B. warn 分流**~~ | ✅ **随 A 自然达成**：`ui` / `scan` 可各自单独筛出，warn 混类可见性缓解（但警告 chip 内仍混类） | — |
+| ~~**C. 容量口径单点化**~~ | ✅ **已落地**（2026-09-28）：`DIAG_OP_WINDOW` / `DIAG_RUNTIME_WINDOW` 具名常量 + Go 来源注释 | — |
+| **D. 流 B 语义化** | 推动 Go 侧结构化信息走流 A，流 B 只留 debug | 大改动，涉及多个 Go 包调用点，需 ADR 立项（**唯一剩余方向**） |
 
-## 五、本次已落地（2026-09-28，commit 5673a5b2b）
+## 五、本次已落地（2026-09，两批）
 
+**第一批（commit 5673a5b2b）**
 - 搜索框上移行1、紧跟子 tab（视图范围控件与子 tab 同层语义）。
 - 状态 chips 补「警告」(warn) 档，三语 i18n `diagnostics.warn` + 重新生成 locale JSON。
 - `content-diag-classes.test.ts` 判据修正（交互控件 = 按钮/输入框，`.diag-log-filter` 归布局容器）。
 - 新增 vitest「警告 chip → 筛出 warn」用例；e2e 布局用例同步（行1=子tab+搜索+动作，行2=筛选）。
+
+**第二批（方向 A + C）**
+- 行2 新增操作类型下拉（纵向筛选），`logs.ts|dgLsFilterDiagLogs` 加第三条 AND 条件；`init.ts|dgInBindLogOpFilter` 绑 change（与 chips 同口径：运行时子 tab 不回落拉列表）。
+- 三语 i18n `diagnostics.opAll`；`tpl.test.ts` 锁选项集 = OP_META 七类 + 全部；类名契约纳入 `.diag-log-op-filter`（判据补 `select`）。
+- 容量口径具名常量（`DIAG_OP_WINDOW` / `DIAG_RUNTIME_WINDOW`）+ Go 来源注释。
+- e2e 两行归属断言扩展：下拉必在行2 内、位于末位 chip 右侧（防漂回行1）。
+
+> 实施坑记：e2e 初版误写 `filter.right <= opFilter.left` —— 下拉是 `filter`（`flex:1` 容器）的**子元素**，容器 right 天然包住子元素，该断言恒假（实测 1268 vs 1165）。正确锚点是「末位 chip 的 right ≤ 下拉的 left」。

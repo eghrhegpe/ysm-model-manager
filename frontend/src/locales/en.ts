@@ -901,6 +901,7 @@ export const en: Record<string, string> = {
 
   // ── Diagnostics Operation Types ──
   "diagnostics.logsCleared": "Logs cleared",
+  "diagnostics.opAll": "All operations",
   "diagnostics.opImport": "Import",
   "diagnostics.opScan": "Scan",
   "diagnostics.opDownload": "Download",

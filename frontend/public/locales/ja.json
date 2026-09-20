@@ -771,6 +771,7 @@
   "inst.countFailPrefix": "集計失敗",
   "inst.clearFail": "クリア失敗",
   "diagnostics.logsCleared": "ログをクリアしました",
+  "diagnostics.opAll": "すべての操作",
   "diagnostics.opImport": "インポート",
   "diagnostics.opScan": "スキャン",
   "diagnostics.opDownload": "ダウンロード",

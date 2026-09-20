@@ -898,6 +898,7 @@ export const ja: Record<string, string> = {
 
   // ── Diagnostics Operation Types ──
   "diagnostics.logsCleared": "ログをクリアしました",
+  "diagnostics.opAll": "すべての操作",
   "diagnostics.opImport": "インポート",
   "diagnostics.opScan": "スキャン",
   "diagnostics.opDownload": "ダウンロード",

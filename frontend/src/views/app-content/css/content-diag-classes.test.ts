@@ -65,7 +65,9 @@ function hasSubstantiveRule(rawCss: string, cls: string): boolean {
   //    （非筛选控件本体；控件是其中的 .diag-log-fbtn）——搜索框移出后它退回纯布局类，
   //    按布局类判定（有规则即通过），不要求外观。历史上它靠 `.diag-log-filter input`
   //    搜索框外观规则蹭过交互判据，是巧合性绿，并非真有按钮外观。
-  const interactive = /(btn|button|search|input)/.test(cls) || /-tab$/.test(cls);
+  // ⚠️ 2026-09-28 纵向筛选用 <select>（.diag-log-op-filter），判据补 select 一词——
+  //    同样不能用「含 filter」（否则布局容器 .diag-log-filter 又会被误判为交互控件）。
+  const interactive = /(btn|button|search|input|select)/.test(cls) || /-tab$/.test(cls);
   for (const m of css.matchAll(re)) {
     const body = m[3];
     if (!interactive) return true;
@@ -86,7 +88,7 @@ describe("诊断页日志工具栏：HTML 类名必须有 CSS 规则", () => {
 
   // ADR-258 回归的具体锁定：这三个类曾整体丢失规则（2026-09-28 起 .diag-log-search
   // 取代 .diag-log-filter 成为新交互控件条目；后者退为布局容器，由下方全量用例覆盖）
-  it.each(["diag-log-fbtn", "diag-sub-tab", "diag-log-search"])(
+  it.each(["diag-log-fbtn", "diag-sub-tab", "diag-log-search", "diag-log-op-filter"])(
     ".%s 在生效样式表（contentCSS 聚合）里有规则",
     (cls) => {
       expect(hasSubstantiveRule(css, cls)).toBe(true);

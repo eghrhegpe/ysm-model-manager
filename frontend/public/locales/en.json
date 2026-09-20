@@ -771,6 +771,7 @@
   "inst.countFailPrefix": "Count failed",
   "inst.clearFail": "Clear failed",
   "diagnostics.logsCleared": "Logs cleared",
+  "diagnostics.opAll": "All operations",
   "diagnostics.opImport": "Import",
   "diagnostics.opScan": "Scan",
   "diagnostics.opDownload": "Download",

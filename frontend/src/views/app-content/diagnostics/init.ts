@@ -184,6 +184,18 @@ function dgInBindLogFilter(root: ShadowRoot, esc: EscFn): void {
   });
 }
 
+/**
+ * 操作类型（纵向）筛选下拉：与状态 chips（横向）正交叠加，二者 AND 交集。
+ * 与 chips 同口径——只作用于操作日志，运行时子 tab 下仅更新选中态、不回落拉列表。
+ */
+function dgInBindLogOpFilter(root: ShadowRoot, esc: EscFn): void {
+  const sel = root.getElementById("diag-log-op-filter") as HTMLSelectElement | null;
+  if (!sel) return;
+  sel.addEventListener("change", () => {
+    if (!dgInIsRuntimeLog(root)) loadDiagnosticsLogs(root, esc);
+  });
+}
+
 function dgInBindLogSearch(root: ShadowRoot, esc: EscFn): void {
   const logSearch = root.getElementById("diag-log-search") as HTMLInputElement | null;
   if (logSearch) {
@@ -233,6 +245,7 @@ export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   dgInBindLogSubTabs(root, esc);
   loadDiagnosticsLogs(root, esc);
   dgInBindLogFilter(root, esc);
+  dgInBindLogOpFilter(root, esc);
   dgInBindLogSearch(root, esc);
 }
 

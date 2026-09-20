@@ -201,6 +201,14 @@ describe("app-content 模板", () => {
     expect(html).toContain('id="diag-sync-conflict-list"');
     expect(html).toContain('class="diag-pane"');
   });
+  it("日志工具栏含「操作类型」纵向筛选下拉（选项集 = OP_META 七类 + 全部）", () => {
+    const html = diagnosticsHTML();
+    expect(html).toContain('id="diag-log-op-filter"');
+    // 七个操作类型 + 「全部」——与 logs.ts|OP_META 同源（新增操作类型时此处须同步）
+    for (const op of ["all", "import", "scan", "download", "sync", "rename", "delete", "ui"]) {
+      expect(html).toContain(`<option value="${op}">`);
+    }
+  });
   it("recycleHTML 包含清空回收站按钮", () => {
     const html = recycleHTML();
     expect(html).toContain('id="recy-empty"');

@@ -501,7 +501,7 @@ export const en: Record<string, string> = {
   // repo = N of the whole repo). That rule lives in the title hint only — the label text stays put,
   // because a label that changes meaning with the mode is exactly the debt this change pays off.
   "diagnostics.perfMaxModelsHint":
-    "This number means different things per scope: a type = N of that type; N per type = N of each type; top N of the whole repo = N of the repo",
+    "What this number means depends on the scope you pick in \"What to test\": a type = take N of that type; N per type = take N of EVERY type (the total can far exceed N when there are many types); top N of the whole repo = take N from the whole repo"
   "diagnostics.perfMatrixResult": "Type matrix result",
   "diagnostics.perfMatrixColType": "Type",
   "diagnostics.perfMatrixColFound": "Found",

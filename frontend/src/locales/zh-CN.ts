@@ -487,7 +487,7 @@ export const zhCN = {
   "diagnostics.perfMaxModels": "最多模型数",
   // 上限控件的**单位随目标集选择器变**（rtype = 该类型 N 条 / all = 每类各 N 条 / repo = 全库 N 条）——
   "diagnostics.perfMaxModelsHint":
-    "这个数字的含义随「测什么」变：某个类型 = 该类型 N 条；每个类型各取几条 = 每类各 N 条；全库最重的几条 = 全库 N 条",
+    "这个数字是什么意思，看你在「测什么」里选了哪种：某个类型 = 该类型取 N 条；每个类型各取几条 = 每个类型都取 N 条（类型多时总数会远超 N）；全库最重的几条 = 全库只取 N 条",
   "diagnostics.perfMatrixResult": "类型矩阵结果",
   "diagnostics.perfMatrixColType": "类型",
   "diagnostics.perfMatrixColFound": "命中",

@@ -250,8 +250,8 @@ describe("基准模式接线（ADR-278）", () => {
         if (!el) continue; // 夹具未放的控件不判（宽容旧 DOM）
         const inVisibleRow = visibleRows.some((row) => row.contains(el));
         if (!inVisibleRow) continue; // 整行已隐藏 → 不可交互，无需禁
-        // 基准三件套是双维门禁：模式=single **且**目标集=model 才可用（ADR-262 D8，
-        // syncPerfBaselineControls 管目标集维、本表管模式维）。夹具 rtype 默认 ""=单模型，
+        // 基准三件套是双维门禁：模式=single **且**目标集=model 才可用（ADR-262 D8 × §2.6 四修，
+        // syncPerfBaselineControls 兼并两维、本表管 apply 路径的模式维）。夹具 rtype 默认 ""=单模型，
         // single 下基准就该可用——期望值随「当前选中目标集」算，不写死。
         const isModelTarget =
           (root.getElementById("diag-perf-rtype") as HTMLSelectElement).value === "";

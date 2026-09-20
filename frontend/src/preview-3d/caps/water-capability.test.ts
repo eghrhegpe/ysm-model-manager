@@ -690,6 +690,45 @@ describe("WaterCapability — loadState 多分支", () => {
     expect(envState.waterSize).toBeGreaterThanOrEqual(1);
   });
 
+  // 锐评病灶②：值钳制曾「三张皮」——loadState 自备 Math.max(1, v) 自钳，
+  // 与 setEnvState 的 clampFieldValue 重复且只覆盖下界（无上界）。
+  // 经 storage 边界后只可能有**有限**数值，故两者行为恰好一致——
+  // 即：那段自钳是公认的死重量，与「唯一写入口」原则相悖。
+  // 现删除自钳，投诚唯一写入口；本组测试钉死「去自钳不得改变可观察行为」。
+  it("脏 waterSize 下界钳制仍生效（0/负数 → range.min）", () => {
+    const scene = new THREE.Scene();
+    persistState("water", { size: 0, enabled: true });
+    const cap = new WaterCapability({ scene });
+    cap.loadState();
+    // 写入口口径：clamp(0, 1, 300) = 1
+    expect(envState.waterSize).toBe(1);
+  });
+
+  it("脏 waterSize 上界钳制同口径（旧自钳只盖下界，现投诚 schema range）", () => {
+    const scene = new THREE.Scene();
+    persistState("water", { size: 9999, enabled: true });
+    const cap = new WaterCapability({ scene });
+    cap.loadState();
+    // 写入口口径：clamp(9999, 1, 300) = 300（旧自钳 Math.max(1,v) 不盖上界）
+    expect(envState.waterSize).toBe(300);
+  });
+
+  it("负数 waterSize 钳到 range.min", () => {
+    const scene = new THREE.Scene();
+    persistState("water", { size: -12, enabled: true });
+    const cap = new WaterCapability({ scene });
+    cap.loadState();
+    expect(envState.waterSize).toBe(1);
+  });
+
+  it("legacy size 键迁移仍生效（去自钳 ≠ 去兼容）", () => {
+    const scene = new THREE.Scene();
+    persistState("water", { size: 64, enabled: true });
+    const cap = new WaterCapability({ scene });
+    cap.loadState();
+    expect(cap.getWaterSize()).toBe(64);
+  });
+
   it("类型不匹配字段全部跳过（保持默认）", () => {
     persistState("water", {
       enabled: "yes", size: "big",
@@ -1000,6 +1039,38 @@ describe("WaterCapability — 水面/容器解耦：waterLevel（ADR-257 A 档�
     cap.setPoolHeight(2.4);
     expect(scene.getObjectByName("ysm-water-top")!.position.y).toBeCloseTo(0.5, 5);
     expect(cap.getPoolHeight()).toBeCloseTo(2.4, 5);
+  });
+
+  // 锐评病灶③：顶面 thickness 是「从池深派生的光学光程」，在 buildMaterial 里
+  // 算一次（Math.max(0.01, waterPoolHeight * 0.5)）。但 ADR-272 后 pool 的
+  // needsRebuild 恒 false，于是运行期拖池深：几何（transformLinks）跟上了，
+  // 这个派生光学量却停在装配那一刻——池子变深、水体光程不变。
+  it("pool：改 poolHeight 重派生顶面 thickness（派生光学量不烘死在装配期）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("pool");
+    cap.setPoolHeight(1.0);
+    const top = scene.getObjectByName("ysm-water-top") as THREE.Mesh;
+    const mat = top.material as THREE.MeshPhysicalMaterial;
+    expect(mat.thickness, "建时期派生：h × 0.5").toBeCloseTo(0.5, 5);
+
+    cap.setPoolHeight(2.0);
+    const matAfter = (scene.getObjectByName("ysm-water-top") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    expect(matAfter, "零重建：材质实例不变").toBe(mat);
+    expect(matAfter.thickness, "改池深后光程应重派生为 1.0").toBeCloseTo(1.0, 5);
+  });
+
+  it("film 无容器：改 wetness 不引入体积光学（thickness 恒 0）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    expect(mat.thickness, "film 水膜无厚度可言").toBe(0);
+    cap.setWetness(0.9);
+    expect(mat.thickness, "wetness 不得把水膜变透光体").toBe(0);
   });
 
   it("菜单 ground-water-level 在 film 与 pool 下均可见（无 visibleWhen 门控）", () => {

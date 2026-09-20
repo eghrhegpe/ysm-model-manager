@@ -143,3 +143,95 @@ describe("值域钳制（唯一写入口）", () => {
     expect(envState.waterOpacity).toBe(1);
   });
 });
+
+// ===== 分组前置过滤（锐评病灶④a：无匹配键时不得白分配）=====
+describe("dispatch 分组过滤", () => {
+  beforeEach(() => {
+    clearEnvCallbacks();
+    resetEnvState();
+  });
+  afterEach(() => {
+    clearEnvCallbacks();
+    resetEnvState();
+  });
+
+  it("带 group 的回调只收到本组键", () => {
+    const got: Array<Set<string>> = [];
+    registerEnvCallback("water-cap", (changed) => got.push(changed as Set<string>), "water");
+    setEnvState({ skyCloudCoverage: 0.5 }, { source: "manual" });
+    expect(got, "sky 变更不应触达 water 回调").toHaveLength(0);
+
+    setEnvState({ waterOpacity: 0.5 }, { source: "manual" });
+    expect(got).toHaveLength(1);
+    expect([...got[0]!]).toEqual(["waterOpacity"]);
+  });
+
+  it("无匹配键时不构造过滤 Set（热路径：昼夜循环每帧派发 × 全 cap）", () => {
+    registerEnvCallback("water-cap", () => {}, "water");
+    registerEnvCallback("fog-cap", () => {}, "fog");
+    registerEnvCallback("ground-cap", () => {}, "ground");
+
+    // 先热身（首次调用会触发 schema group 键集缓存填充，其内部 Set 不计入本断言）
+    setEnvState({ skyCloudCoverage: 0.1 }, { source: "manual" });
+
+    // 拦计：派发一个 sky 键，三个分组回调均无匹配。
+    // 唯一允许的分配 = setEnvState 自建的 `changedKeys`（它是派发的**入参**，不可避免，恒 1 个）。
+    // 关键不变量：分配数**不随分组 cap 数量增长**（旧实现 1 + N，N=无匹配的 cap 数）。
+    const RealSet = globalThis.Set;
+    let allocations = 0;
+    class CountingSet<T> extends RealSet<T> {
+      constructor(iterable?: Iterable<T> | null) {
+        super(iterable ?? undefined);
+        allocations++;
+      }
+    }
+    (globalThis as { Set: unknown }).Set = CountingSet;
+    try {
+      setEnvState({ skyCloudCoverage: 0.2 }, { source: "manual" });
+    } finally {
+      (globalThis as { Set: unknown }).Set = RealSet;
+    }
+    // 恒 1（changedKeys）；旧实现为 1 + 3（三个分组 cap 各一个空 Set）。
+    expect(allocations, "无匹配键时不得为每个 cap 各建一个空 Set").toBe(1);
+  });
+
+  it("分组 cap 数量增长不增加分配（不变量：与 N 无关）", () => {
+    const RealSet = globalThis.Set;
+    const countAllocs = (): number => {
+      let n = 0;
+      class CountingSet<T> extends RealSet<T> {
+        constructor(iterable?: Iterable<T> | null) {
+          super(iterable ?? undefined);
+          n++;
+        }
+      }
+      (globalThis as { Set: unknown }).Set = CountingSet;
+      try {
+        setEnvState({ skyCloudCoverage: Math.random() }, { source: "manual" });
+      } finally {
+        (globalThis as { Set: unknown }).Set = RealSet;
+      }
+      return n;
+    };
+
+    registerEnvCallback("water-cap", () => {}, "water");
+    registerEnvCallback("fog-cap", () => {}, "fog");
+    const withTwo = countAllocs();
+    for (const g of ["ground", "shadow", "light", "reflector", "postprocessing", "environment", "renderMode"]) {
+      registerEnvCallback(`cap-${g}`, () => {}, g);
+    }
+    const withNine = countAllocs();
+    expect(withNine, "不匹配时分配数不得随分组 cap 数增长").toBe(withTwo);
+  });
+
+  it("有匹配键时仍正确过滤（优化不得改变可观察行为）", () => {
+    const water: Array<string> = [];
+    const fog: Array<string> = [];
+    registerEnvCallback("water-cap", (c) => water.push(...(c as Set<string>)), "water");
+    registerEnvCallback("fog-cap", (c) => fog.push(...(c as Set<string>)), "fog");
+
+    setEnvState({ waterOpacity: 0.4, fogEnabled: true }, { source: "manual" });
+    expect(water).toEqual(["waterOpacity"]);
+    expect(fog).toEqual(["fogEnabled"]);
+  });
+});

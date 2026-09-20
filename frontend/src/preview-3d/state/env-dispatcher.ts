@@ -60,11 +60,23 @@ export function dispatchEnvChange(changed: Set<EnvStateKey>, state: EnvState): v
   for (const { cb, groupKeys } of _callbacks.values()) {
     try {
       if (groupKeys) {
+        // 热路径（昼夜循环每帧派发 × 全 cap）：先**探测**是否有本组键，有才构造 filtered。
+        // 原实现在此处无条件 `new Set` —— 即便一个键都不匹配（sky 帧对 water/fog/ground 回调
+        // 即典型场景），也为每个带 group 的 cap 各分配一个空 Set。
+        // 先探测后分配：不匹配时零分配、零回调，语义与原先完全一致。
+        let hit = false;
+        for (const k of changed) {
+          if (groupKeys.has(k)) {
+            hit = true;
+            break;
+          }
+        }
+        if (!hit) continue;
         const filtered = new Set<EnvStateKey>();
         for (const k of changed) {
           if (groupKeys.has(k)) filtered.add(k);
         }
-        if (filtered.size > 0) cb(filtered, state);
+        cb(filtered, state);
       } else {
         cb(changed, state);
       }

@@ -501,6 +501,15 @@ export class WaterCapability implements SceneCapability {
         poolHeight: s.waterPoolHeight,
         wallThickness: s.waterPoolWallThickness,
       });
+      // 池深同时是顶水面的体积光学光程（ADR-257：「容器内水的光程」由容器深度派生）。
+      // 它是**派生量**，必须随 poolHeight 重算——ADR-272 后 pool 的 needsRebuild 恒 false，
+      // 没有任何重建路径会重跑构造期的 thickness，不在此处重派生就会停在装配那一刻：
+      // 池子变深、水体光程不变（拖池深滑块可感的观感裂缝）。
+      // 仅 supportsVolumeOptics 形态有意义（film 水膜无厚度，必须保持 0，不得被误赋）。
+      if (changed.has("waterPoolHeight") && strategy.supportsVolumeOptics) {
+        const topMat = this.findTopWater()?.material;
+        if (topMat) topMat.thickness = Math.max(0.01, s.waterPoolHeight * 0.5);
+      }
       // 壁厚同时是池内壁的体积光学光程（材质属性，与几何无关）
       if (changed.has("waterPoolWallThickness")) {
         for (const m of targets("wallInner")) {
@@ -699,13 +708,14 @@ export class WaterCapability implements SceneCapability {
     if (!state) return;
     restoreFields(state, {
       enabled: { boolean: (v) => (this.enabled = v) },
-      // 存档脏数据 0/负数会让水面退化成一个点，故在入口钳到 ≥1（与 setWaterSize 同下界，
-      // shader 侧 max(uSize, 0.001) 再兜一层）；NaN/Infinity 同不合法（JSON.parse 拒绝纯 NaN，
-      // 但手改 localStorage / 未来代码路径可能写进来）→ 回落默认 1，不传 NaN 给 uSize
-      size: {
-        number: (v) =>
-          setEnvState({ waterSize: Number.isFinite(v) ? Math.max(1, v) : 1 }, { source: "manual" }),
-      },
+      // legacy `size` 键（ADR-272 前旧名）——值一律交回唯一写入口 `setWaterSize`，
+      // 不在此处自备钳制（ADR-283 收口：值域单一事实源 = schema `range`）。
+      // 历史：此处曾自钳 `Number.isFinite(v) ? Math.max(1, v) : 1`——
+      //   ① 与 setEnvState 的 clampFieldValue 重复（同是钳到 ≥1）；
+      //   ② 且只覆盖下界，与 schema `range [1,300]` 口径不齐（自钳只算半个执法者）；
+      //   ③ `Number.isFinite` 分支不可达：存档过 JSON 边界后 NaN/Infinity 已变 null。
+      // 现存唯一例外是 shader 侧 `max(uSize, 0.001)`（防除零，语义不同，保留）。
+      size: { number: (v) => this.setWaterSize(v) },
     });
     // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。
     // 子域开关键随格式不同：V2 嵌套用 enabled；flat 用顶层 waterEnabled。

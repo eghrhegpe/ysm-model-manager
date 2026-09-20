@@ -213,33 +213,73 @@ function dgLsRenderDiagGroups(
 interface RuntimeLogLike {
   Message?: string;
   Timestamp?: string | number;
+  /** ADR-289：捕获层从 Message 推断（标准库 log 无真实级别；前端不重判，只读） */
+  Level?: "" | "debug" | "info" | "warn" | "error" | "fatal";
+  /** ADR-289：行首 `[tag]` 前缀提取（无前缀为空） */
+  Tag?: string;
 }
 
 /**
- * 运行时日志按搜索词过滤（只匹配 Message——运行时日志无 Status/路径概念）。
- * 与操作日志同口径：在「最新 DIAG_RUNTIME_WINDOW 条」窗口内检索（超窗口的历史条目不召回，避免大缓冲全量扫描）。
+ * 运行时日志过滤：状态 chips（按推断 Level）× 搜索（Message + Tag）。
+ *
+ * ADR-289：chips 此前在运行时子 tab 下**不生效**（点击只更新选中态），因为运行时日志
+ * 无 Status 概念；现捕获层已从 Message 推断 Level，chips 遂有真实语义可比。
+ * 命中域含 Tag：`[watcher]` 这类前缀成为独立可搜维度（Message 里也含，但字段化后语义明确）。
  */
 function dgLsFilterRuntimeLogs(logs: RuntimeLogLike[], root: ShadowRoot): RuntimeLogLike[] {
+  const activeBtn = root.querySelector(".diag-log-fbtn.active");
+  const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status : "all";
   const search = dgLsReadSearch(root);
   return logs
     .slice(-DIAG_RUNTIME_WINDOW)
     .reverse()
-    .filter(
-      (l) =>
-        !search ||
-        String(l.Message ?? "")
-          .toLowerCase()
-          .includes(search),
-    );
+    .filter((l) => {
+      // 「全部」放行一切。⚠️ chip 的 data-status 沿用操作日志的 Status 词汇（success/failed/
+      // warn/skipped），而运行时日志是 Level 词汇（info/error/warn/debug）——两者**不同族**，
+      // 须显式映射：success↔info、failed↔error、skipped↔debug、warn 是级别阈值（含更严重者）。
+      if (filter !== "all") {
+        const lv = l.Level || "info";
+        if (filter === "warn") {
+          if (lv !== "warn" && lv !== "error" && lv !== "fatal") return false;
+        } else {
+          const want = filter === "failed" ? "error" : filter === "success" ? "info" : "debug";
+          if (lv !== want) return false;
+        }
+      }
+      if (!search) return true;
+      const hay = `${l.Message ?? ""}\n${l.Tag ?? ""}`.toLowerCase();
+      return hay.includes(search);
+    });
+}
+
+/** 运行时日志状态图标：按推断 Level 映射（与操作日志 dgLsMakeStatusLabel 同口径；无 Level 时 joystick 兜底） */
+function dgLsRuntimeStatusIcon(l: RuntimeLogLike): { icon: string; cls: string } {
+  switch (l.Level) {
+    case "error":
+      return { icon: UI_ICONS.error, cls: "error" };
+    case "fatal":
+      return { icon: UI_ICONS.fatal, cls: "fatal" };
+    case "warn":
+      return { icon: UI_ICONS.warning, cls: "warn" };
+    case "debug":
+      return { icon: UI_ICONS.search, cls: "debug" };
+    case "info":
+      return { icon: UI_ICONS.success, cls: "info" };
+    default:
+      return { icon: UI_ICONS.joystick, cls: "unknown" };
+  }
 }
 
 function dgLsRenderRuntimeRows(logs: RuntimeLogLike[], esc: EscFn, copyLogTitle: string): string {
   return logs
     .map((l, i) => {
       const timeStr = formatClock(l.Timestamp);
+      // ADR-289：图标按推断 Level（不再固定 joystick）；Tag 以徽标前缀展示，便于扫读分类
+      const st = dgLsRuntimeStatusIcon(l);
+      const tagBadge = l.Tag ? `<span class="log-tag">${esc(l.Tag)}</span>` : "";
       return `<div class="log-row" style="animation-delay:${stagger(i, 20, 400)}ms">
-<span class="log-status">${UI_ICONS.joystick}</span>
-<span class="log-msg" style="white-space:pre-wrap">${esc(l.Message || "")}</span>
+<span class="log-status ${st.cls}" title="${esc(l.Tag || "")}">${st.icon}</span>
+<span class="log-msg" style="white-space:pre-wrap">${tagBadge}${esc(l.Message || "")}</span>
 <span class="log-time">${timeStr}</span>
 <button class="log-copy" title="${copyLogTitle}">${UI_ICONS.clipboard}</button>
 </div>`;

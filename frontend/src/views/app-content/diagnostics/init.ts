@@ -177,9 +177,11 @@ function dgInBindLogFilter(root: ShadowRoot, esc: EscFn): void {
         b.classList.remove("active");
       });
       btn.classList.add("active");
-      // 状态 chips 只作用于操作日志（运行时日志无 Status，恒为 info）；运行时子 tab 下仅更新选中态，
-      // 不回落拉操作日志列表——避免白跑一次 GetImportLogs（切回「操作」子 tab 时按新条件重载）。
-      if (!dgInIsRuntimeLog(root)) loadDiagnosticsLogs(root, esc);
+      // ADR-289：运行时日志的 Level 已由 Go 捕获层推断，chips 在运行时子 tab 下也**真正生效**
+      // （此前无 Status 可筛，点击只更新选中态）。两个分支都只重渲染当前子 tab 的列表，
+      // 互不回落拉取对方的日志（运行时子 tab 永不触发 GetImportLogs）。
+      if (dgInIsRuntimeLog(root)) loadRuntimeLogs(root, esc);
+      else loadDiagnosticsLogs(root, esc);
     });
   });
 }

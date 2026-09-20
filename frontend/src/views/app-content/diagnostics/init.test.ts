@@ -312,6 +312,53 @@ describe("initDiagnostics — 日志面板", () => {
     await waitFor(() => rtList.textContent!.includes("无匹配日志"));
   });
 
+  it("运行时子 tab：chips 按推断 Level 生效（ADR-289），且仍不回落拉操作日志", async () => {
+    const opFn = vi.fn(() => []);
+    mockApp({
+      GetImportLogs: opFn,
+      GetRuntimeLogs: vi.fn(() => [
+        { Message: "[watcher] 自动同步完成: 禁用 3 启用 2", Timestamp: 1, Level: "info" },
+        { Message: "[installer] 安装文件 x.ysm 失败: boom", Timestamp: 2, Level: "error" },
+        { Message: "[sync] 警告: 冲突处理未在锁内", Timestamp: 3, Level: "warn" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
+    await waitFor(() => rtList.textContent!.includes("自动同步完成"));
+    const opCalls = opFn.mock.calls.length;
+    // 点「失败」→ 只留 error 行（ADR-289 前 chips 在运行时子 tab 下不生效）
+    (root.querySelector('.diag-log-fbtn[data-status="failed"]') as HTMLElement).click();
+    await waitFor(() => !rtList.textContent!.includes("自动同步完成"));
+    expect(rtList.textContent).toContain("boom");
+    expect(rtList.textContent).not.toContain("冲突处理未在锁内");
+    // 既有不变量仍成立：chips 不回落拉操作日志
+    expect(opFn.mock.calls.length).toBe(opCalls);
+    // 徽标按 Level 渲染（error → error 图标），不再是固定 joystick
+    expect(rtList.querySelector(".log-status.error .ws-icon")).not.toBeNull();
+  });
+
+  it("运行时子 tab：搜索命中 Tag（ADR-289 结构化字段并入命中域）", async () => {
+    mockApp({
+      GetRuntimeLogs: vi.fn(() => [
+        { Message: "[watcher] 已启动: /root", Timestamp: 1, Level: "info", Tag: "watcher" },
+        { Message: "[queue] emit queue:status done", Timestamp: 2, Level: "info", Tag: "queue" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
+    await waitFor(() => rtList.textContent!.includes("已启动"));
+    // 搜 tag 名（消息里也含，但 Tag 字段独立并入命中域后语义更明确）
+    const input = root.getElementById("diag-log-search") as HTMLInputElement;
+    input.value = "queue";
+    input.dispatchEvent(new Event("input"));
+    await waitFor(() => !rtList.textContent!.includes("已启动"));
+    expect(rtList.textContent).toContain("queue:status");
+  });
+
   it("运行时子 tab：点状态 chips 仅更新选中态，不回落拉取操作日志", async () => {
     const opFn = vi.fn(() => []);
     mockApp({ GetImportLogs: opFn, GetRuntimeLogs: vi.fn(() => [{ Message: "ok", Timestamp: 1 }]) });

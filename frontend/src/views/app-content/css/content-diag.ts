@@ -13,7 +13,14 @@ export const contentDiagCSS: string = `
 .log-row .log-status.failed, .log-row .log-status.error, .log-row .log-status.fatal { color:var(--status-error); }
 .log-row .log-status.warn { color:var(--status-warning, #e6b800); }
 .log-row .log-status.debug, .log-row .log-status.skipped { color:var(--muted); }
+/* ADR-289：运行时日志按推断 Level 出 class。info 中性（不抢眼，运行时大量是正常流水），
+   unknown = 无 Level 字段的旧数据/兜底，与 muted 同档。 */
+.log-row .log-status.info { color:var(--txt); }
+.log-row .log-status.unknown { color:var(--muted); }
 .log-row .log-op { font-size:var(--fs-xs); padding:0 4px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); flex-shrink:0; }
+/* 运行时日志 tag 徽标（ADR-289）：Go 捕获层提取的行首方括号前缀，与 .log-op 同范式
+   （操作日志出 Operation、运行时日志出 Tag，两者都是「这条日志属于哪个子系统」）。 */
+.log-row .log-tag { font-size:var(--fs-xs); padding:0 4px; margin-right:4px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--muted) 22%, transparent); color:var(--muted); flex-shrink:0; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
 .log-row .log-time { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
 /* 行内复制按钮：此前无规则 → 每个日志行里都是一个 UA 默认灰底描边按钮，与暗色主题格格不入 */

@@ -5,7 +5,6 @@
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_LIGHT_PARAMS,
-  FLATTEN_MAP,
   flattenLightParams,
   LIGHT_SLOTS,
   type LightInstanceParams,
@@ -324,10 +323,12 @@ describe("DEFAULT_LIGHT_PARAMS = envState schema 默认值的派生投影", () =
   });
 
   it("enum 合法域守卫（ADR-283 延伸）：非法枚举回退 schema default，合法值原样过", () => {
-    // 脏存档/程序化写入传 "banana"：旧行为是静默建成 DirectionalLight 且字段与实际不符
-    expect(clampFieldValue("lightKeyType", "banana")).toBe("directional");
+    // 脏存档/程序化写入传 "banana"：旧行为是静默建成 DirectionalLight 且字段与实际不符。
+    // `as never` 是刻意的：该输入来自不可信 JSON，强类型签名下无合法值可传——
+    // 运行时 enum 守卫正是为它而设，缺了转型这条用例就写不出来。
+    expect(clampFieldValue("lightKeyType", "banana" as never)).toBe("directional");
     expect(clampFieldValue("lightKeyType", "spot")).toBe("spot");
-    expect(clampFieldValue("groundType", "nope")).toBe("plain");
+    expect(clampFieldValue("groundType", "nope" as never)).toBe("plain");
     // undefined（Partial patch 缺键）不参与钳制，重载短路语义保留
     expect(clampFieldValue("lightKeyType", undefined)).toBeUndefined();
   });

@@ -105,6 +105,7 @@ invariant_anchors:
     不命中即 `continue`（零分配零回调）；分配数**不随分组 cap 数增长**，不可约为「入参 changedKeys 那 1 个」。
     守卫：`env-state.test.ts` 的计数 `Set` 桩用例（含「与 N 无关」不变量）。
 - **`suspendEnvCallbacks()` / `resumeEnvCallbacks()`（2026-09，ADR-281 收口）**：挂起计数器，`_suspended > 0` 时 `dispatchEnvChange` 直接早退，全部回调不收派发。用途 = **loadState 重入治理**：`LightCapability.loadState` 里 `restoreLightParams` 内部的 `setEnvState` 会**同步**触发 `onEnvChanged`（此时 Three 灯对象还是旧类型 → callback 先重建一次），回到 loadState 末尾的显式 `syncLight` 又跑一遍（**重入双跑**，旧注释自承为 ADR-281 已知遗留）。挂起后恢复路径只写 envState，末尾统一应用一次。语义细节：计数式（多次 suspend 需等量 resume）、resume 与 suspend 不配对也安全（`Math.max(0, ...)`）；`isEnvCallbacksSuspended()` 供测试断言。**新增 cap 的 loadState 若内部走 `setEnvState` 恢复，应比照 light 同样挂起**，否则回调会在 loadState 期间以「旧 Three 对象 + 新 envState」的不一致态被触发。
+- **挂起器的两个口径约束（2026-09 复审补）**：① 粒度是**全局**的（挂起期所有 cap 都停派发，不是「只挡 light」）——当前唯一调用点在 light 自身同步块内闭合、`registry.loadAll` 顺序串行故无重叠窗，但**它不是跨 cap 事务边界**，禁止用于「先改 A 再改 B、中间别派发」；② `clearEnvCallbacks()` **同时复位 `_suspended`**——clear 是「全清」语义，兼作测试隔离兜底；否则任一 suspend 逃逸（抛出/提前 return）会让计数跨测试存活，导致后续全仓 envState 派发**静默假死**（envState 有值、Three 不更新、无任何报错）。守卫：`env-dispatcher.test.ts` 的「clearEnvCallbacks 一并复位挂起计数」用例。
 
 ## 对外 API / 入口
 

@@ -105,6 +105,10 @@ export function getEnvCallbackCount(): number {
  */
 export function clearEnvCallbacks(): void {
   _callbacks.clear();
+  // 挂起计数一并复位：clear 是「全清」语义，兼作测试隔离兜底——否则任一 suspend 逃逸（抛出/
+  // 提前 return）会让 _suspended 跨测试存活，后续全仓 envState 派发静默假死（envState 有值、
+  // Three 不更新、无任何报错）。
+  _suspended = 0;
 }
 
 /**
@@ -113,7 +117,11 @@ export function clearEnvCallbacks(): void {
  * callback 里 syncLight 会先拿新 envState 重建一次，回到显式同步入口又跑一遍（重入双跑）。
  * 挂起后恢复路径只写 envState，末尾统一应用一次，消除双跑窗口。
  * 计数器语义：多次挂起只需一次 resume 即恢复，resume 与 suspend 不配对也安全。
- */
+ *  ⚠️ **粒度是全局的，不是「只挡 light」**：挂起期间所有 cap 的派发都停。当前唯一调用点
+ *  是 LightCapability.loadState（自身同步块内闭合，registry.loadAll 顺序串行，跨 cap 无重叠窗），
+ *  故无受害方——但本机制**只保证单 cap 自身重入收敛，不是跨 cap 事务边界**，
+ *  勿用于「先改 A 再改 B，中间别派发」这类场景（其它 cap 会错过派发）。
+ *  另：clearEnvCallbacks 会一并复位计数（测试隔离兜底）。 */
 export function suspendEnvCallbacks(): void {
   _suspended++;
 }

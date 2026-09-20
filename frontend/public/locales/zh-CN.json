@@ -438,7 +438,7 @@
   "diagnostics.perfRunning": "运行中…",
   "diagnostics.perfIdle": "点上方按钮开始；结果将显示在此处",
   "diagnostics.perfMode": "怎么跑",
-  "diagnostics.perfModeHint": "怎么跑 = 用哪种基准命令；下方「测什么」= 这次测多大范围。两者独立：先选命令，再圈范围",
+  "diagnostics.perfModeHint": "怎么跑 = 用哪种基准命令；旁边「测什么」= 这次测多大范围。两者独立：先选命令，再圈范围",
   "diagnostics.perfRunBench": "跑基准",
   "diagnostics.perfRecord": "性能记录",
   "diagnostics.perfFail": "执行失败",

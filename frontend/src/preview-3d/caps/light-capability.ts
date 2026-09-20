@@ -67,6 +67,8 @@ export function lightDirToPosition(p: LightInstanceParams, radius: number): THRE
  *  ⚠️ 这是**手抄快照**，非 three 导出 API：对齐 three r165+ 的
  *  `getDistanceAttenuation`（r165 已移除 useLegacyLights，SpotLight.intensity 单位是坎德拉）。
  *  three 历史上改过该公式——**升级 three 时必须复核本函数**，否则预览照度与实际渲染静默分叉。
+ *  ✅ 已机器强制（非仅注释提醒）：`light-attenuation-mirror.test.ts` 直读 three 随包发布的
+ *  GLSL 原文（lights_pars_begin.glsl）校验本镜像的三个结构锚点，升级后公式变动即测试红。
  *  falloff = 1/pow(d, decay) × cutoffWindow(distance, cutoff)。
  *  用途：把 UI 暴露的「到达目标处照度(lx)」反推回需设的 candela，使聚光灯强度不随目标高度漂移。 */
 export function spotDistanceAttenuation(
@@ -558,7 +560,10 @@ export class LightCapability implements SceneCapability {
     return [this.keyLight, this.fillLight, this.rimLight];
   }
 
-  /** 返回第一盏启用的 type=spot 灯（体积光锥驱动源）+ 其槽位，无则 null */
+  /** 返回体积光锥的驱动 spot 灯 + 其槽位，无则 null。
+   *  优先级：当前编辑的灯（activeLight）若是启用的 spot → 它；
+   *  否则回退槽位顺序（key→fill→rim）第一盏启用的 spot。
+   *  ⚠️ 驱动源依赖 activeLight，故 setActiveLight 变更时必须主动收敛锥体（已内联）。 */
   getSpotLightForCone(): { light: THREE.SpotLight; which: LightKey } | null {
     // 当前编辑的灯若是启用的 spot，优先驱动锥体（与用户心智：我在调的那盏灯）一致；
     // 否则回退到槽位顺序（key→fill→rim）第一盏启用的 spot。
@@ -668,8 +673,16 @@ export class LightCapability implements SceneCapability {
     return this.activeLight;
   }
 
+  /** 切换当前编辑的灯槽位。
+   *  ⚠️ 不写 envState（UI 焦点态，不入存档/派发），但**会主动收敛锥体**：
+   *  getSpotLightForCone 优先取 activeLight，若此处不收敛，切换编辑灯后驱动源已变、
+   *  锥体却停在旧灯上（无派发 = 无 rebuild），要等下次碰任意灯光参数才跟上——
+   *  「切了没反应」比旧实现的固定顺序更难预期。 */
   setActiveLight(which: LightKey): void {
+    const prev = this.activeLight;
     this.activeLight = which;
+    // 驱动源变了才重建（同槽位重复设值不空转）；rebuildConeIfNeeded 自带「非 spot/未启用即隐藏」语义
+    if (prev !== which) this.rebuildConeIfNeeded(envState);
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

@@ -60,6 +60,7 @@ invariant_anchors:
 
 > **[light-type-switch] 驱动源变更（2026-09）**：锥体不再绑定「第四盏独立聚光灯」，改由**三盏灯中启用的 `type==='spot'` 灯**驱动——任一盏灯切到聚光灯即可见光柱。
 > **[驱动源优先级] 编辑器优先（2026-09 修复）**：多盏 spot 同框时，`getSpotLightForCone()` **优先返回当前编辑的灯**（`activeLight`，即菜单 `light-select` 选中的槽位）；仅当该灯不是启用的 spot 时，才回退到槽位顺序（key→fill→rim）第一盏启用的 spot。旧实现纯按数组顺序取「第一盏」，用户把 key 切 directional、fill 切 spot 后锥体跟 fill，再切 rim 为 spot 仍跟 fill——驱动源不可见、不可控（隐式优先级 UX 语病）。
+> **[同步点硬约束] `setActiveLight` 必须收敛锥体（2026-09 复审补）**：驱动源依赖 `activeLight`，而 `setActiveLight` **不写 envState**（UI 焦点态，不入存档/不派发）——若不内联调 `rebuildConeIfNeeded`，切编辑灯后**驱动源已变、锥体却停在旧灯上**，要等下次碰任意灯光参数才跟上（「切了没反应」，比旧的固定顺序更难预期）。实现：`if (prev !== which) this.rebuildConeIfNeeded(envState)`（同槽位重复设值不空转）。后续若再新增「运行时态影响渲染」的字段，同样必须自带收敛点，不可依赖 envState 派发。守卫：`light-capability.test.ts` 的「setActiveLight 切换驱动源时主动收敛锥体」（断言锥顶位置随驱动源变、回退到非 spot 槽位时回到原驱动源）。
 
 当前实现：`ConeGeometry(baseRadius, height, 48, 4, openEnded)` 单网格 + `AdditiveBlending` + `DoubleSide` + 轴向衰减 + Fresnel 视角边缘辉光 + ACES/色彩空间转换。**无 post-process 管线**（ADR-246 D1 的单引擎裁定）。
 

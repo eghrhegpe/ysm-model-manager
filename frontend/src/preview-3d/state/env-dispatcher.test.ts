@@ -54,6 +54,24 @@ describe("env-dispatcher — 挂起/恢复（loadState 重入治理）", () => {
     dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
     expect(cb).toHaveBeenCalledOnce();
   });
+
+  it("clearEnvCallbacks 一并复位挂起计数（测试隔离兜底，防跨测试静默假死）", () => {
+    const cb = vi.fn();
+    registerEnvCallback("capA", cb);
+    suspendEnvCallbacks();
+    suspendEnvCallbacks();
+    expect(isEnvCallbacksSuspended()).toBe(true);
+
+    // clear 是「全清」语义——若只清注册表不清计数，逃逸的 suspend 会让后续全仓派发永久失效
+    clearEnvCallbacks();
+    expect(isEnvCallbacksSuspended()).toBe(false);
+
+    // 复位后重新注册的回调能正常收到派发（证明不是假活）
+    const cb2 = vi.fn();
+    registerEnvCallback("capB", cb2);
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+    expect(cb2).toHaveBeenCalledOnce();
+  });
 });
 
 import type { EnvState, EnvStateKey } from "./env-state-schema.ts";

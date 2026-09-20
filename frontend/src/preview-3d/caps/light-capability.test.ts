@@ -965,6 +965,43 @@ describe("LightCapability — 灯光对象命名与锥体驱动源", () => {
     cap.setActiveLight("rim");
     expect(cap.getSpotLightForCone()!.which).toBe("key");
   });
+
+  it("setActiveLight 切换驱动源时主动收敛锥体（否则「切了没反应」等下次参数变更）", () => {
+    const cap = newCap();
+    cap.apply();
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    const coneGroup = (): THREE.Object3D | undefined => scene.getObjectByName("ysm-light-volumetric-cone");
+
+    cap.setVolumetric({ enabled: true });
+    // 两盏都切成 spot，但 key 与 fill 拉开位置（方位角相反）——驱动源变了锥顶位置就变
+    cap.setLightParams("key", { type: "spot", enabled: true, azimuth: 0, elevation: 30 });
+    cap.setLightParams("fill", { type: "spot", enabled: true, azimuth: 180, elevation: 30 });
+    expect(cap.getSpotLightForCone()!.which).toBe("key");
+    const keyPos = coneGroup()!.position.clone();
+
+    // 切到 fill（启用的 spot）→ 驱动源变更，锥体必须立即重建跟随（而非停在 key）
+    cap.setActiveLight("fill");
+    expect(cap.getSpotLightForCone()!.which).toBe("fill");
+    expect(coneGroup()).toBeDefined();
+    expect(coneGroup()!.position.equals(keyPos)).toBe(false);
+
+    // 切到 rim（不是 spot）→ 回退到 key 驱动，锥体仍挂载且回到 key 位置
+    cap.setActiveLight("rim");
+    expect(cap.getSpotLightForCone()!.which).toBe("key");
+    expect(coneGroup()).toBeDefined();
+    expect(coneGroup()!.position.equals(keyPos)).toBe(true);
+  });
+
+  it("setActiveLight 同槽位重复设值不空转（驱动源未变不重建）", () => {
+    const cap = newCap();
+    cap.apply();
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    cap.setVolumetric({ enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
+    const before = scene.getObjectByName("ysm-light-volumetric-cone")!.uuid;
+    cap.setActiveLight("key"); // 与当前同值
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")!.uuid).toBe(before);
+  });
 });
 
 // ============ loadState 重入双跑治理（ADR-281 收口）============

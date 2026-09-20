@@ -50,6 +50,9 @@ export const VIEW_TESTIDS: readonly string[] = [
   // ADR-262 D3：Go/Rust 扫描引擎对照的入口与结果容器（未采集的引擎显示原因而不是 0ms）
   "diag-perf-scan-bench",
   "diag-perf-scan-bench-out",
+  // scan-bench 自己的迭代输入框（与 single 模式的 #diag-perf-iter 正交，模式独立参数）
+  "diag-perf-scan-iter",
+  "diag-perf-scan-iter-label",
 ];
 
 // settingsHTML 已拆至 settings/tpl-settings.ts，消费者直接 import 叶文件（P1-6）

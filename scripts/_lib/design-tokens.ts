@@ -431,9 +431,10 @@ function clip(s: string, max = 120): string {
 // U+2300-23FF（⌚⌛⏰⏳⏸⏹…「杂项技术符号」）补于 2026-09：`⏳`=U+231B 落在原四段
 // 之外，`textContent = "⏳"` 类单字形槽整类逃逸（实测 5 处，已收）。与
 // `frontend/src/utils/icon/glyph-only-slots.test.ts` 的 GRAPHIC 保持逐字一致。
-const GRAPHIC_EMOJI =
-  "[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{2190}-\\u{21FF}\\u{2300}-\\u{23FF}]";
-const COMBINING_MARKS = "[\\u{FE0F}\\u{200D}]";
+export const GRAPHIC_EMOJI =
+  "[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2190}-\u{21FF}\u{2300}-\u{23FF}]";
+export const COMBINING_MARKS = "[\u{FE0F}\u{200D}]";
+
 /** 行内是否含图形 emoji 字形（**预筛**用：check-design-tokens 的快速跳过表）。
  *
  * 与判定层共用同一字符集是**硬要求**：预筛若比判定窄，命中行在预筛即被
@@ -446,7 +447,7 @@ export function hasGraphicEmoji(line: string): boolean {
   return GRAPHIC_EMOJI_RE.test(line);
 }
 /** 单个字形簇（一捕获组），供 `["'\x60]` 开头的字面量前缀检测复用。 */
-const GLYPH_CLUSTER = `(${GRAPHIC_EMOJI}${COMBINING_MARKS}*(?:${GRAPHIC_EMOJI}${COMBINING_MARKS}*)*)`;
+export const GLYPH_CLUSTER = `(${GRAPHIC_EMOJI}${COMBINING_MARKS}*(?:${GRAPHIC_EMOJI}${COMBINING_MARKS}*)*)`;
 
 /**
  * 「前缀型状态符号」语义名集合（ADR-267 决策 #4）。

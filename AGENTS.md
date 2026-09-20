@@ -51,6 +51,11 @@
   （features 根 `backend-deps.ts` 供零散模块 + 目录级 `community-deps.ts` / `context-menu-deps.ts`），
   「生产默认 getApp」一律写 `deps?.fn || backendGetApp` 注入形态。check-layering 门禁 R5 兜底
   （features 层规则，勿与 check-path-hygiene 同号 R5 混淆）。
+- **features 生产文件禁 HTML 字面量（check-layering R8，防回退，2026-09-20 立法）**：ADR-190 D1a /
+  ADR-208 D2「HTML 模板归 views」执法——字符串/模板串含 HTML 标签即违规；存量在
+  `docs/.layering-baseline.json`（只减不增，触碰即顺手收敛：tpl 注入或 DOM API 构建 +
+  `outerHTML`），新增即红；确属 HTML 数据语义的场景用行尾注 `// layering-allow: html` 精确豁免。
+  勿与 check-redlines 同号 R8 混淆。
 
 ### 前端 import 路径约定（ADR-146，别让大模型手写错路径深度）
 - **任何非精确同目录的 import**（跨顶层 **或** 同顶层内不同子目录）→ 一律 `@/<顶层目录>/具体文件`（如 `@/features/repo/x.ts`）。别手算 `../` 深度——精确同目录就写 `./`，其余就写 `@/`。

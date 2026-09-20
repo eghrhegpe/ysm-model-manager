@@ -612,6 +612,14 @@ invariant_anchors:
   - **端到端验收（不只看测试绿）**：重建后**重渲染复测**，对比度失败 **cyber repo 1→0 / warm repo 17→0 / cyber workshop 3→0**，且 `mutedCount` 不变（19/22，同批元素仅由不合格转合格）。`vite build` ✅ / `npm run typecheck` ✅ / `check-design-tokens --baseline` 新增 **0** ✅。
   - **⚠️ 顺带发现（覆盖面缺口）**：`frontend/css/` **不在 biome 覆盖面内**——`check-biome --files frontend/css/variables.css` 报 `No files were processed`（`biome.json` 忽略该路径）。那 5 个手写样式表当前**唯一守卫就是设计令牌闸**。
   - **方法论（与刀⑲–㉘ 同构的下一站）**：令牌闸守的是「有没有写成 `var()`」，**对「`var()` 取值对不对」零感知**。`warm --muted = 3.94` 能活到今天不是没人认真，是**它不在任何闸的视野里**——**闸只看得见它被写死的那一类位置**。
+- ✅ **刀㉚ features 层执法：R8 HTML 字面量闸立法**（2026-09-20，本会话用户「锐评 /features」落地）：
+  - **锐评总判**：features 纪律仓库天花板（R5 seam 零违例 / 全层零 `: any` 零 `@ts-ignore` / 跨 feature 依赖 DAG 无环 / 死代码仅 1 运行时孤儿导出），唯一结构性原罪 = **逻辑层私藏视图**——maintenance 三文件手写内联 style HTML 串、`_dots` 转圈状态挂 DOM 节点自定义属性。
+  - **立法**：`check-layering` 新增 **R8（防回退）**：features 生产文件禁 HTML 字符串/模板字面量（政策 ADR-190 D1a / ADR-208 D2 早立但从未执法，本条补闸）；存量 5 文件 76 处入基线（dialogs 三件套 + community render/show-repo-models，ADR-208「已知遗留」点名项，big-bang 在 ADR 里被显式反对），新增即红；行级豁免尾注 `// layering-allow: html`。扫描器 `htmlLiteralHits` = 手写词法态机（剥注释/抽字符串跨/模板插值嵌套），纯函数导出 + 合成样本契约测试直测，同 `matchImports`/`r7EdgeViolates` 防空转惯例。同号异策：与 check-redlines R8 勿混。
+  - **顺带修好一个隐藏死闸 bug**：`--force` 基线逃生阀在 parseArgs bools 漏登记 → 被 ADR-043 unknown-flag 拒于门外，从未可达；补登记后本次才第一次真能用。
+  - **存量收敛（maintenance 三文件清零退出基线）**：状态行改 DOM 构建（`statusRow()`/replaceChildren/textContent 自转义，❌ emoji 换 `UI_ICONS.error`）；modal bodyHTML 改 `outerHTML` 拼接（字符串契约与兄弟节点结构双保持）；`_dots`/`_dotTimer` 迁 `CmPgCtx` 闭包 + 双次进锁清孤儿动画；`forceRefreshCommunitySites` 零消费孤儿删除（`clearAllCommunityCache` 已覆盖站点键）。
+  - **明拒不做什么**：基线内存量按 ADR-208「改动即顺手收敛」不集中迁；adv-filter 六连 querySelector 收拢、community/ 影子小应用拆包——留给下次触碰/未来 ADR。
+  - **验收**：check-layering 绿 / 契约测试 15 用例全过（含 R8 两层）/ maintenance+community 255 用例全绿 / vite build / tsc / biome --write 后复检绿。
+
 
 ## 相关
 

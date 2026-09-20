@@ -10,7 +10,6 @@ import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { type RESOURCE_TYPES, typeIconOf } from "@/utils/resource/types.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
@@ -219,7 +218,15 @@ function renderRecycleError(
   e: unknown,
   t: TFn,
 ): void {
-  list.innerHTML = `<div class="stat-row" style="padding:12px;color:var(--status-error);font-size:var(--fs-sm)">${UI_ICONS.error} ${esc(friendlyError(e, t("recycle.loadFailed")))}</div>`;
+  // R8：DOM API 构建零 HTML 字面量；textContent 自转义替代旧 esc() 手拼路径
+  const row = document.createElement("div");
+  row.className = "stat-row";
+  row.style.padding = "12px";
+  row.style.color = "var(--status-error)";
+  row.style.fontSize = "var(--fs-sm)";
+  row.innerHTML = UI_ICONS.error;
+  row.appendChild(document.createTextNode(` ${friendlyError(e, t("recycle.loadFailed"))}`));
+  list.replaceChildren(row);
   if (count) count.textContent = t("common.loadFailed");
 }
 

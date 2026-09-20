@@ -54,7 +54,6 @@ auto_fields:
     - fillSearch
     - filterModels
     - forceRefreshCommunityMerge
-    - forceRefreshCommunitySites
     - forceRefreshScanAuthors
     - getAvatar
     - getAvatarSnapshot

@@ -222,8 +222,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 43 |
-| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 192 |
+| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 56 |
+| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 191 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 246 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 332 |
@@ -335,8 +335,8 @@
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 171 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 56 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 185 |
-| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 110 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 176 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 109 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 175 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 131 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
@@ -435,14 +435,14 @@
 | (顶层) | `frontend/src/features/import/executor.ts` | 51 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 189 |
-| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 283 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 146 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 155 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 181 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 190 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 211 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 246 |
+| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 290 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 156 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 165 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 191 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 200 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 221 |
 | initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 256 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 266 |
 | mountRootMenu | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 690 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 169 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
@@ -597,8 +597,8 @@
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 172 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 57 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 184 |
-| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 111 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 177 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 110 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 176 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |

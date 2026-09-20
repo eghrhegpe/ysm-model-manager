@@ -11,7 +11,6 @@ import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { modalProgress } from "@/utils/dom/modal-progress.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { fmtMB } from "@/utils/format/fmt-mb.ts";
-import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
 
@@ -114,21 +113,32 @@ async function doUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Promise
 
 /** 弹出更新确认对话框（手动/静默共用） — 含格式化的更新日志区域 */
 async function promptUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Promise<void> {
-  // 转义 HTML 后保留换行（textContent 法），样式通过 CSS 变量适应主题
+  // R8：DOM API 全构建零 HTML 字面量（同 community/data.ts「非字符串拼接」范式）；
+  // textContent 自动转义替代旧「转义后回填模板串」路径，outerHTML 产物为 modal bodyHTML 字符串契约。
   const notesHTML = info.releaseNotes
     ? (() => {
         const raw = info.releaseNotes.slice(0, 2000).trim();
         if (!raw) return "";
-        const d = document.createElement("div");
-        d.textContent = raw;
-        return `<div style="border:1px solid var(--bd);border-radius:var(--radius-md);background:var(--bg);padding:10px;font-size:var(--fs-sm);line-height:1.6;white-space:pre-wrap;max-height:40vh;overflow-y:auto;color:var(--txt);margin-top:6px">${d.innerHTML}</div>`;
+        const box = document.createElement("div");
+        box.style.cssText =
+          "border:1px solid var(--bd);border-radius:var(--radius-md);background:var(--bg);padding:10px;font-size:var(--fs-sm);line-height:1.6;white-space:pre-wrap;max-height:40vh;overflow-y:auto;color:var(--txt);margin-top:6px";
+        box.textContent = raw;
+        return box.outerHTML;
       })()
     : "";
-  const bodyHTML =
-    `<div style="font-size:var(--fs-base);color:var(--txt);line-height:1.5">${t("update.newVersionPrompt", { latest: esc(info.latest), current: esc(info.current) })}</div>` +
-    (notesHTML
-      ? `<div style="font-size:var(--fs-sm);color:var(--muted);margin-top:6px">━━━ ${t("update.changelog")} ━━━</div>${notesHTML}`
-      : "");
+  const bodyHTML = (() => {
+    const line = document.createElement("div");
+    line.style.cssText = "font-size:var(--fs-base);color:var(--txt);line-height:1.5";
+    line.textContent = t("update.newVersionPrompt", {
+      latest: info.latest,
+      current: info.current,
+    });
+    if (!notesHTML) return line.outerHTML;
+    const sep = document.createElement("div");
+    sep.style.cssText = "font-size:var(--fs-sm);color:var(--muted);margin-top:6px";
+    sep.textContent = `━━━ ${t("update.changelog")} ━━━`;
+    return line.outerHTML + sep.outerHTML + notesHTML;
+  })();
   const ok = await modalConfirm({
     title: t("update.newVersionTitle"),
     titleIcon: "package",

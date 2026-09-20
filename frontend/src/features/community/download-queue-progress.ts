@@ -1,6 +1,6 @@
 // ===== 创意工坊 — 下载队列 · 进度条守卫（99% 卡进度防骗状态机）=====
 // 从 download-queue.ts 拆分（ADR-040 ≤400 行红线）：陷阱 #6 卡进度锁定逻辑内聚于此，
-// 逻辑零改动纯搬移——回归护栏见 download-queue.test.ts「99% 锁定状态机」describe。
+// 自 download-queue.ts 拆分（ADR-040 ≤400 行红线）：陷阱 #6 卡进度锁定逻辑内聚于此。
 // 职责：进度条渲染 + 小文件 300ms 强制 100% / 大文件 2s 转菊花 / file-done 强制复位 /
 // 3s completeTimer 收口互斥（与队列结束双路收口防重复）。
 import { t } from "@/core/i18n/t.ts";
@@ -23,12 +23,6 @@ const COMPLETE_DELAY_MS = 3000;
 /** 进度锁定触发的起始阈值（_lastPct < 此值才触发） */
 const STUCK_PCT_THRESHOLD = 10;
 
-/** 进度条元素的自定义属性（点动画） */
-type PctEl = HTMLElement & {
-  _dotTimer?: ReturnType<typeof setInterval> | null;
-  _dots?: number;
-};
-
 /** createProgressGuard 依赖注入（controller 提供查找与收口回调） */
 export interface ProgressGuardHooks {
   /** 查找进度条容器（controller 注入其作用域根） */
@@ -44,7 +38,7 @@ export interface ProgressGuard {
   /** file-done 到达：ok 强制 100% / fail 显示 ❌，并复位锁定与定时器 */
   forceFileDone(done: { status: string; errMsg: string }): void;
   /** 清空进度并取 pct/fill 元素（ok/fail 分支共用，防重复代码红线） */
-  resetProgressUI(): { pctEl: PctEl | null; fillEl: HTMLElement | null };
+  resetProgressUI(): { pctEl: HTMLElement | null; fillEl: HTMLElement | null };
   /** 集中清 _stuckTimer/_dotTimer/completeTimer（destroy 与 cleanup 共用） */
   stuckGuardReset(): void;
   clearCompleteTimer(): void;
@@ -63,6 +57,10 @@ interface CmPgCtx {
   _stuckTimer: ReturnType<typeof setTimeout> | null;
   completeTimer: ReturnType<typeof setTimeout> | null;
   _doneNotified: boolean;
+  /** 菊花点动画：timer 与帧数收进守卫闭包（曾挂 pctEl 自定义属性 _dots/_dotTimer——
+   * 状态藏 DOM 节点的恶习：重渲染换节点即丢帧、detached 节点吊住 timer，2026-09 锐评整改） */
+  _dotTimer: ReturnType<typeof setInterval> | null;
+  _dots: number;
 }
 
 function cmPgClearCompleteTimer(ctx: CmPgCtx): void {
@@ -80,16 +78,18 @@ function cmPgStuckGuardReset(ctx: CmPgCtx): void {
     clearTimeout(ctx._stuckTimer);
     ctx._stuckTimer = null;
   }
-  const pctEl = ctx.qsEl()?.querySelector(".gh-progress-pct") as PctEl | null;
-  if (pctEl?._dotTimer) {
-    clearInterval(pctEl._dotTimer);
-    pctEl._dotTimer = null;
+  if (ctx._dotTimer) {
+    clearInterval(ctx._dotTimer);
+    ctx._dotTimer = null;
   }
 }
 
-function cmPgResetProgressUI(ctx: CmPgCtx): { pctEl: PctEl | null; fillEl: HTMLElement | null } {
+function cmPgResetProgressUI(ctx: CmPgCtx): {
+  pctEl: HTMLElement | null;
+  fillEl: HTMLElement | null;
+} {
   resetProgress();
-  const pctEl = ctx.qsEl()?.querySelector(".gh-progress-pct") as PctEl | null;
+  const pctEl = ctx.qsEl()?.querySelector(".gh-progress-pct") as HTMLElement | null;
   const fillEl = ctx.qsEl()?.querySelector(".gh-progress-fill") as HTMLElement | null;
   return { pctEl, fillEl };
 }
@@ -137,7 +137,7 @@ function cmPgApplyLock(
       ctx._stuckTimer = null;
     }
     ctx._stuckTimer = setTimeout(() => {
-      const pctEl2 = qs?.querySelector(".gh-progress-pct") as PctEl | null;
+      const pctEl2 = qs?.querySelector(".gh-progress-pct") as HTMLElement | null;
       const fillEl2 = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
       if (pctEl2) pctEl2.textContent = "100%";
       if (fillEl2) {
@@ -164,27 +164,28 @@ function cmPgApplyLock(
       clearTimeout(ctx._stuckTimer);
       ctx._stuckTimer = null;
     }
-    const lockPctEl = qs.querySelector(".gh-progress-pct") as PctEl | null;
+    const lockPctEl = qs.querySelector(".gh-progress-pct") as HTMLElement | null;
     if (lockPctEl) lockPctEl.textContent = outLabel;
     ctx._stuckTimer = setTimeout(() => {
-      const pctEl = qs?.querySelector(".gh-progress-pct") as PctEl | null;
+      const pctEl = qs?.querySelector(".gh-progress-pct") as HTMLElement | null;
       const fillEl = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
       if (pctEl && pctEl.textContent !== "100%") {
         pctEl.innerHTML = UI_ICONS.refresh;
         pctEl.style.fontSize = "var(--fs-micro)";
-        pctEl._dots = 0;
-        pctEl._dotTimer = setInterval(() => {
+        if (ctx._dotTimer) clearInterval(ctx._dotTimer); // 双次进锁不留孤儿动画
+        ctx._dots = 0;
+        ctx._dotTimer = setInterval(() => {
           // isConnected 守卫：pctEl 被重渲染/移除后文本永远停在 ⏳，原判据（textContent
-          // 变 100%）不再触发 → interval 悬挂持有 detached 节点。脱文档即自清。
+          // 变 100%）不再触发 → 脱文档即自清（帧数/timer 已在闭包，自清不依赖节点属性）。
           if (!pctEl.isConnected || pctEl.textContent === "100%") {
-            if (pctEl._dotTimer) {
-              clearInterval(pctEl._dotTimer);
-              pctEl._dotTimer = null;
+            if (ctx._dotTimer) {
+              clearInterval(ctx._dotTimer);
+              ctx._dotTimer = null;
             }
             return;
           }
-          pctEl._dots = ((pctEl._dots || 0) + 1) % 4;
-          pctEl.innerHTML = `${UI_ICONS.refresh}${".".repeat(pctEl._dots)}`;
+          ctx._dots = (ctx._dots + 1) % 4;
+          pctEl.innerHTML = `${UI_ICONS.refresh}${".".repeat(ctx._dots)}`;
         }, DOT_INTERVAL_MS);
       }
       if (fillEl) fillEl.style.width = "99%";
@@ -207,7 +208,7 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
   const { pct: rawPct, label: rawLabel, isTiny, total } = cmPgCalcPct(s);
   const { pct, label } = cmPgApplyLock(ctx, qs, rawPct, rawLabel, isTiny, total);
 
-  const pctEl = qs.querySelector(".gh-progress-pct") as PctEl | null;
+  const pctEl = qs.querySelector(".gh-progress-pct") as HTMLElement | null;
   const fillEl = qs.querySelector(".gh-progress-fill") as HTMLElement | null;
   if (pctEl && !ctx._stuckLocked) pctEl.textContent = label;
   if (fillEl) {
@@ -244,9 +245,9 @@ function cmPgForceFileDone(ctx: CmPgCtx, done: { status: string; errMsg: string 
     if (pctEl && (ctx._stuckLocked || pctEl.textContent === "99%")) {
       pctEl.textContent = "100%";
       ctx._stuckLocked = false;
-      if (pctEl._dotTimer) {
-        clearInterval(pctEl._dotTimer);
-        pctEl._dotTimer = null;
+      if (ctx._dotTimer) {
+        clearInterval(ctx._dotTimer);
+        ctx._dotTimer = null;
       }
       if (fillEl) fillEl.style.width = "100%";
     }
@@ -266,9 +267,9 @@ function cmPgForceFileDone(ctx: CmPgCtx, done: { status: string; errMsg: string 
       clearTimeout(ctx._stuckTimer);
       ctx._stuckTimer = null;
     }
-    if (pctEl?._dotTimer) {
-      clearInterval(pctEl._dotTimer);
-      pctEl._dotTimer = null;
+    if (ctx._dotTimer) {
+      clearInterval(ctx._dotTimer);
+      ctx._dotTimer = null;
     }
     if (fillEl) fillEl.classList.add("gh-progress-fill-error");
   }
@@ -294,12 +295,14 @@ export function createProgressGuard(hooks: ProgressGuardHooks): ProgressGuard {
     _stuckTimer: null,
     completeTimer: null,
     _doneNotified: false,
+    _dotTimer: null,
+    _dots: 0,
   };
 
   const render = (s: DownloadState): void => cmPgRender(ctx, s);
   const forceFileDone = (done: { status: string; errMsg: string }): void =>
     cmPgForceFileDone(ctx, done);
-  const resetProgressUI = (): { pctEl: PctEl | null; fillEl: HTMLElement | null } =>
+  const resetProgressUI = (): { pctEl: HTMLElement | null; fillEl: HTMLElement | null } =>
     cmPgResetProgressUI(ctx);
   const stuckGuardReset = (): void => cmPgStuckGuardReset(ctx);
   const clearCompleteTimer = (): void => cmPgClearCompleteTimer(ctx);

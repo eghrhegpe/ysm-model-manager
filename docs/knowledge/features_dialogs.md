@@ -56,6 +56,7 @@ quick_risk_lines:
   - modal-core.ts VIEW_TESTIDS 增删 data-testid 须同步本数组(ADR-133 阶段 B 契约测试静态聚合)
   - rename.ts 路径变更时需同步 vi.mock 字符串路径(ADR-170 实测教训:非 import 语句正则扫不到)
   - 批量重命名 DOM 模板（含 stagger 动画）在 views/app-tree/tpl-batch-rename.ts（ADR-208 D2 外移），features 经 BatchRenameTpl 注入；改模板走 views 侧，改接线走 features/dialogs
+  - rename / adv-filter / tag-editor 内嵌 HTML 字面量已入 check-layering R8 防回退基线（ADR-190 D1a / ADR-208 D2「HTML 模板归 views」执法闸，2026-09-20）；触碰这三文件即顺手收敛（tpl 注入照 BatchRenameTpl 先例，或 DOM API 构建 + outerHTML 字符串契约），新增 HTML 字面量门禁直接红
   - adv-filter.ts 后端约束:Go SearchModels 仅支持 6 范围 +1 关键字,前端不呈现其他控件(代码注释已注明)
 pitfalls:
   - 目录层级变动后,vi.mock 字符串路径与 import 同步重算(ADR-170 实测:非 import 语句正则扫不到 mock 路径变更)

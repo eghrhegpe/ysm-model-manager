@@ -69,8 +69,8 @@ const SCAN_LITE_AUTHORS_TTL_MS = 30 * 1000; // 30 秒
 const SCAN_LITE_AUTHORS_KEY = "ListModelAuthors";
 
 // 站点索引缓存：30 分钟 TTL（原 community-data 内置，544ae4b50 拆层时丢失——
-// 拆层后 edit.ts 每次加载直连三路网络回退，且 forceRefreshCommunitySites /
-// clearAllCommunityCache 的 invalidate 变死键。缓存壳留在数据层，拉取层保持零缓存）
+// 拆层后 edit.ts 每次加载直连三路网络回退，且 clearAllCommunityCache 对站点键的
+// invalidate 变死键。缓存壳留在数据层，拉取层保持零缓存）
 const SITES_FETCH_TTL_MS = 30 * 60 * 1000; // 30 分钟
 const SITES_FETCH_KEY = "community-sites";
 
@@ -83,11 +83,6 @@ export function forceRefreshCommunityMerge(): void {
 export function forceRefreshScanAuthors(): void {
   invalidateCache(SCAN_AUTHORS_KEY);
   invalidateCache(SCAN_LITE_AUTHORS_KEY);
-}
-
-/** 清除站点索引缓存 */
-export function forceRefreshCommunitySites(): void {
-  invalidateCache(SITES_FETCH_KEY);
 }
 
 /**

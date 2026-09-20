@@ -35,11 +35,19 @@
  *                             （禁 panels→engine、render→engine/panels、叶→上层）。
  *                             测试文件/type-only/menu 根散文件（menu-test-fixtures.ts）豁免。
  *
+ *   R8（防回退）  features/** 生产文件不得含 HTML 字面量字符串/模板串（ADR-190 D1a /
+ *                             ADR-208 D2「HTML 模板归 views，组合根注入」的执法闸：政策早已立，
+ *                             本条补闸。存量违规走基线（key=路径:html-literal），新增即回归
+ *                             阻断——尊重 ADR-208「改动即顺手收敛、反对 big-bang」，故防回退
+ *                             而非零容忍）。行级豁免尾注 `// layering-allow: html`（确属 HTML
+ *                             数据语义的场景）。与 check-redlines 的 W2/R8、check-path-hygiene
+ *                             的 R5/R6 各属同号异策规则集，勿混。
+ *
  *   skipFile 豁免测试文件的设计意图（2026-09 R6 摸排）：features/views 测试 import
  *   views 模板（如 batch-rename.test.ts → views/app-tree/tpl-batch-rename.ts）是
  *   ADR-208 D2「HTML 模板外移 views」的设计内合法测试依赖传递（测试对象在 views，
  *   测试文件在 features；若 R4 拦测试则被迫造桩，违反 ADR-208 反桩漂移原则）——
- *   此类命中是合法传递依赖，非层污染盲区，无需升格 R7/R8。check-redlines 对测试
+ *   此类命中是合法传递依赖，非层污染盲区，无需为此增设规则。check-redlines 对测试
  *   文件 100% 豁免（W2/R8 等 rg 规则全 filter .test.）经摸排同样无现存盲区：
  *   测试里 window.go / innerHTML / 品牌色命中全为合法桩/夹具/断值，收窄会膨胀基线。
  *   R6 的特殊性在于 core 是「引擎无关内核」，backend 是绑定产物，测试 import 绑定
@@ -48,11 +56,13 @@
  *
  *   `import type` 不构成运行时耦合，一律豁免（R6 例外：测试越层 type 感知亦违规）。
  *   基线文件 docs/.layering-baseline.json：仅允许减少，不允许增加（--update 收紧）。
+ *   R8 扫描器已知局限：代码区含引号的正则字面量可能骗过分词（一行内收敛），全仓实证
+ *   生产 features 无此类命中——留瑕，allow 尾注兜底。
  *
  * 用法：
- *   node scripts/check-layering.ts            # R1/R2/R0/R5/R6 违规或 R3/R4 超基线则退 1
+ *   node scripts/check-layering.ts            # R1/R2/R0/R5/R6/R7 违规或 R3/R4/R8 超基线则退 1
  *   node scripts/check-layering.ts --json     # JSON（CI / 子代理消费）
- *   node scripts/check-layering.ts --update   # 更新 R3/R4 基线（含当前全部反向边）
+ *   node scripts/check-layering.ts --update   # 更新 R3/R4/R8 基线（只许收紧；新增需 --force）
  *
  * 退出码：0 通过 / 1 违规。
  * 依赖：node:fs / node:path / node:url / 本地模块
@@ -189,12 +199,117 @@ export function r7EdgeViolates(fromSub: string, toSub: string): boolean {
   return fromRank < toRank;
 }
 
+/* ---------- R8 内核（模块级导出，供契约测试直测「非空转」）----------
+ * 手写词法态机扫描 HTML 字面量：行/块注释剔除；'...' / "..." 字符串跨与模板字面量体
+ * （含 ${...} 插值嵌套）中的字符串跨，含 `</?[a-zA-Z!]…` 标签开/闭形态即记命中（多行
+ * 模板只记起始行一次）。命中行尾注含 R8_ALLOW_MARKER 豁免。纯函数导出同 matchImports
+ * 惯例：契约测试用合成样本直测，防真实树碰巧无违规时空转假绿。 */
+export const R8_ALLOW_MARKER = "layering-allow: html";
+const HTML_TAG_RE = /<\/?[a-zA-Z!][a-zA-Z0-9_-]*[\s/>]/;
+
+export function htmlLiteralHits(text: string): Array<{ line: number; snippet: string }> {
+  const hits: Array<{ line: number; snippet: string }> = [];
+  const srcLines = text.split("\n");
+  // 帧栈：code 帧（含 ${} 插值内，brace 计数配对）/ tpl 帧（模板字面量体）；
+  // 单双引号字符串不跨行、就地消费，不入栈。
+  type Frame = { kind: "code"; brace: number } | { kind: "tpl" };
+  const frames: Frame[] = [{ kind: "code", brace: 0 }];
+  let i = 0;
+  let line = 1;
+  const n = text.length;
+  while (i < n) {
+    const c = text[i]!;
+    if (c === "\n") {
+      line++;
+      i++;
+      continue;
+    }
+    const top = frames[frames.length - 1]!;
+    if (top.kind === "tpl") {
+      let hitLine = 0;
+      let hitIdx = -1;
+      while (i < n) {
+        const k = text[i]!;
+        if (k === "\\") {
+          if (text[i + 1] === "\n") line++;
+          i += 2;
+          continue;
+        }
+        if (k === "`") {
+          frames.pop();
+          i++;
+          break;
+        }
+        if (k === "$" && text[i + 1] === "{") {
+          frames.push({ kind: "code", brace: 0 });
+          i += 2;
+          break;
+        }
+        if (!hitLine && k === "<" && HTML_TAG_RE.test(text.slice(i, i + 48))) {
+          hitLine = line;
+          hitIdx = i;
+        }
+        if (k === "\n") line++;
+        i++;
+      }
+      if (hitLine && !(srcLines[hitLine - 1] ?? "").includes(R8_ALLOW_MARKER)) {
+        hits.push({ line: hitLine, snippet: text.slice(hitIdx, hitIdx + 40).split("\n")[0]! });
+      }
+      continue;
+    }
+    // === code 帧 ===
+    if (c === "/" && text[i + 1] === "/") {
+      while (i < n && text[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && text[i + 1] === "*") {
+      i += 2;
+      while (i < n && !(text[i] === "*" && text[i + 1] === "/")) {
+        if (text[i] === "\n") line++;
+        i++;
+      }
+      i += 2;
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      const startLine = line;
+      let k = i + 1;
+      let seg = "";
+      while (k < n && text[k] !== c && text[k] !== "\n") {
+        if (text[k] === "\\") {
+          k += 2;
+          continue;
+        }
+        seg += text[k];
+        k++;
+      }
+      if (HTML_TAG_RE.test(seg) && !(srcLines[startLine - 1] ?? "").includes(R8_ALLOW_MARKER)) {
+        hits.push({ line: startLine, snippet: seg.slice(0, 40) });
+      }
+      i = k < n && text[k] === c ? k + 1 : k; // 跳过闭引号；遇换行交回外层处理
+      continue;
+    }
+    if (c === "`") {
+      frames.push({ kind: "tpl" });
+      i++;
+      continue;
+    }
+    if (c === "{") top.brace++;
+    else if (c === "}") {
+      if (top.brace > 0) top.brace--;
+      else if (frames.length > 1) frames.pop(); // ${...} 插值结束 → 回模板体
+    }
+    i++;
+  }
+  return hits;
+}
+
 /* ---------- 主流程 ---------- */
 function main() {
-  const parsed = parseArgs(process.argv.slice(2), { bools: ["json", "update"] });
+  const parsed = parseArgs(process.argv.slice(2), { bools: ["json", "update", "force"] });
   // ADR-043 陷阱 #12：未知 flag 显式拒绝，不静默落入默认值（此前 --foo 类误用被忽略）
   if (parsed.unknown.length) {
-    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --json / --update）`);
+    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --json / --update / --force）`);
     process.exit(1);
   }
   const { json, update } = parsed;
@@ -269,6 +384,21 @@ function main() {
 
       violations.push({ rule, from: srcRel, line, to: target, fromLayer, toLayer });
     }
+    // R8（防回退，ADR-190 D1a / ADR-208 D2 执法）：features 生产文件 HTML 字面量。
+    // to 固定为 html-literal → 基线 key = 文件路径，不随行号漂移；测试文件已被
+    // SCAN_OPTS.skipFile 豁免，views 层渲染 HTML 合法不在射程。
+    if (fromLayer === "features") {
+      for (const h of htmlLiteralHits(text)) {
+        violations.push({
+          rule: "R8",
+          from: srcRel,
+          line: h.line,
+          to: "html-literal",
+          fromLayer,
+          toLayer: "html",
+        });
+      }
+    }
   }
 
   /* ---------- R6 专用扫描：core/** 测试文件 import backend/*（零容忍，ADR-189 D4）----------
@@ -339,7 +469,7 @@ function main() {
       v.rule === "R6" ||
       v.rule === "R7",
   );
-  const tracked = violations.filter((v) => v.rule === "R3" || v.rule === "R4");
+  const tracked = violations.filter((v) => v.rule === "R3" || v.rule === "R4" || v.rule === "R8");
 
   const baseline = existsSync(BASELINE_FILE)
     ? JSON.parse(readFileSync(BASELINE_FILE, "utf8"))
@@ -370,7 +500,7 @@ function main() {
     }
     const data = {
       _comment:
-        "前端分层反向边基线（R3 core→上层 / R4 features→views）。仅允许减少，不允许增加。更新: node scripts/check-layering.ts --update",
+        "前端分层反向边基线（R3 core→上层 / R4 features→views / R8 features 生产文件 HTML 字面量，key=路径:html-literal）。仅允许减少，不允许增加。更新: node scripts/check-layering.ts --update",
       generatedAt: new Date().toISOString().slice(0, 10),
       entries: newEntries,
     };
@@ -425,10 +555,10 @@ function main() {
 
   const trackedEdges = new Set(tracked.map(key));
   console.log(
-    `\nR3/R4 反向边: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处 import（基线 ${known.size} 条）`,
+    `\nR3/R4 反向边 + R8 HTML 字面量: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处命中（基线 ${known.size} 条）`,
   );
   if (regressions.length) {
-    console.error(`❌ 新增 ${regressions.length} 条反向边（超出基线）：`);
+    console.error(`❌ 新增 ${regressions.length} 条反向边/HTML 字面量（超出基线）：`);
     for (const v of regressions) console.error(`   [${v.rule}] ${v.from}:${v.line} → ${v.to}`);
   }
   if (fixed.length) {

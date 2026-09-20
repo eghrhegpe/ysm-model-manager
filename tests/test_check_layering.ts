@@ -16,7 +16,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 // 静态 import：check-layering.mjs 带 invokedDirectly 守卫，被 import 时不执行 main()
-import { matchImports, menuSubOf, r7EdgeViolates } from "../scripts/check-layering.ts";
+import {
+  htmlLiteralHits,
+  matchImports,
+  menuSubOf,
+  r7EdgeViolates,
+} from "../scripts/check-layering.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fails = [];
@@ -137,6 +142,47 @@ check("R7 menuSubOf：子层归属解析 + 根散文件/非 menu 返回 null", (
   assert.equal(menuSubOf("preview-3d/menu/menu-test-fixtures.ts"), null);
   // 非 menu 路径 → null
   assert.equal(menuSubOf("core/i18n/t.ts"), null);
+});
+
+// R8（ADR-190 D1a / ADR-208 D2「HTML 模板归 views」执法闸）：features 生产文件不得含 HTML 字面量。
+// 两层断言缺一不可：
+//   1. 非空转（纯核）——htmlLiteralHits 合成样本直测（模板/字符串命中、注释/泛型/插值/allow 行豁免）；
+//   2. 集成——当前仓库零增量违规（存量走 docs/.layering-baseline.json 防回退基线，ADR-208「改动即顺手收敛」
+//      反对 big-bang，故 R8 是防回退而非零容忍）；基线必须含存量条目，否则扫描器在真实树上空转。
+check("R8 纯核 htmlLiteralHits：模板/字符串 HTML 命中，注释/泛型/插值/allow 行豁免", () => {
+  const text = [
+    'const a = `<div style="x">hi</div>`;', // 1 模板开标签
+    'container.innerHTML = "";', // 2 空串无标签
+    'const el = box.querySelector<HTMLElement>(".k");', // 3 泛型参数不在字符串内
+    "// const b = `<b>comment</b>`;", // 4 行注释剥离
+    'const c = "</button>" + "x";', // 5 闭合标签
+    "const d = `${UI_ICONS.refresh} plain`;", // 6 纯插值无标签
+    "const e = `<div>x</div>`; // layering-allow: html", // 7 allow 尾注豁免
+    "const f = `<div>", // 8 多行模板起点（命中记起始行）
+    "  <span>inner</span>", // 9 同一模板续行不重复记
+    "</div>`;", // 10
+    "/* const g = `<i>block</i>`; */", // 11 块注释剥离
+  ].join("\n");
+  assert.deepEqual(
+    htmlLiteralHits(text).map((h) => h.line),
+    [1, 5, 8],
+    "命中行应为 1/5/8（多行模板只记一次），实报 " + JSON.stringify(htmlLiteralHits(text)),
+  );
+});
+
+check("R8 集成：features 零新增 HTML 字面量（存量在基线，增量阻断）+ 基线非空防扫描器空转", () => {
+  const { out } = runLayering(["--json"]);
+  const data = JSON.parse(out);
+  const r8reg = (data.regressions ?? []).filter((v) => v.rule === "R8");
+  assert.equal(
+    r8reg.length,
+    0,
+    `R8 新增违规 ${r8reg.length} 条：${r8reg.map((v) => `${v.from}:${v.line}`).join(", ")}`,
+  );
+  assert.ok(
+    (data.debt ?? []).some((e) => e.includes(":html-literal")),
+    "R8 基线债务为空——扫描器疑似对真实树空转（或存量全清零却未收紧注释）",
+  );
 });
 
 check("基线文件存在且 tracked 与基线一致（防漂移）", () => {

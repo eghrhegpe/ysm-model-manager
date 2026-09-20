@@ -36,6 +36,19 @@ export interface RepoStats {
   healthTagClass: string;
 }
 
+/** 状态行（加载中/空/错误）——DOM API 构建，零 HTML 字面量（R8，同 community/data.ts 「非
+ * 字符串拼接」范式）。状态碎片粒度小到不构成页面模板，不单独开 tpl 注入口；整页仍走
+ * deps.renderPage（views 注入）。textContent 自动转义，无需 esc。 */
+function statusRow(opts: { tone: "muted" | "error"; icon?: string; text: string }): HTMLElement {
+  const row = document.createElement("div");
+  row.style.padding = "12px";
+  row.style.color = opts.tone === "error" ? "var(--status-error)" : "var(--muted)";
+  row.style.fontSize = "var(--fs-base)";
+  if (opts.icon) row.innerHTML = opts.icon;
+  row.appendChild(document.createTextNode(opts.icon ? ` ${opts.text}` : opts.text));
+  return row;
+}
+
 function handleContainerClick(e: MouseEvent): void {
   const card = (e.target as Element).closest("[data-path]") as HTMLElement | null;
   if (card) {
@@ -80,7 +93,7 @@ export interface OldestDeps {
 
 export async function loadOldestModel(
   container: HTMLElement,
-  esc: (s: string) => string,
+  _esc: (s: string) => string, // 保留位与 views 调用点兼容（init-pages 传参形状）；DOM 构建后 textContent 自转义，本函数不再消费
   deps?: OldestDeps,
 ): Promise<() => void> {
   const renderPage =
@@ -90,16 +103,17 @@ export async function loadOldestModel(
     });
   if (!container) return () => {};
   const guard = createLoadGuard();
-  const S = '<div style="padding:12px;';
   async function render(): Promise<void> {
     const gen = guard.next();
-    container.innerHTML = `<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">${UI_ICONS.refresh} ${t("oldest.scanning")}</div>`;
+    container.replaceChildren(
+      statusRow({ tone: "muted", icon: UI_ICONS.refresh, text: t("oldest.scanning") }),
+    );
     try {
       const { ScanModelEntriesWithLabel, GetRepoRoot } = await maintenanceGetApp();
       const filesRoot = await GetRepoRoot(getCurrentType());
       if (guard.stale(gen)) return;
       if (!filesRoot) {
-        container.innerHTML = `<div style="padding:12px;color:var(--status-error);font-size:var(--fs-base)">${t("oldest.configTypeDir")}</div>`;
+        container.replaceChildren(statusRow({ tone: "error", text: t("oldest.configTypeDir") }));
         return;
       }
       const entries: ModelEntry[] =
@@ -109,7 +123,7 @@ export async function loadOldestModel(
         )) || [];
       if (guard.stale(gen)) return;
       if (!entries?.length) {
-        container.innerHTML = `<div style="padding:12px;color:var(--muted);font-size:var(--fs-base)">${t("oldest.repoEmpty")}</div>`;
+        container.replaceChildren(statusRow({ tone: "muted", text: t("oldest.repoEmpty") }));
         return;
       }
       const stats = await fetchRepoStats(filesRoot);
@@ -120,13 +134,13 @@ export async function loadOldestModel(
       container.addEventListener("click", handleContainerClick);
     } catch (err) {
       if (guard.stale(gen)) return;
-      container.innerHTML =
-        S +
-        'color:var(--status-error);font-size:var(--fs-base)">❌ ' +
-        t("resource.loadFailed") +
-        ": " +
-        esc((err as Error).message || String(err)) +
-        "</div>";
+      container.replaceChildren(
+        statusRow({
+          tone: "error",
+          icon: UI_ICONS.error,
+          text: `${t("resource.loadFailed")}: ${(err as Error).message || String(err)}`,
+        }),
+      );
     }
   }
   const { get: getCurrentType, cleanup: cleanupRtype } = useCurrentResourceType(() => {

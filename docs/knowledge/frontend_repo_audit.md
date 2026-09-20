@@ -453,7 +453,6 @@ auto_fields:
     - footerHTML
     - FootIKController
     - forceRefreshCommunityMerge
-    - forceRefreshCommunitySites
     - forceRefreshScanAuthors
     - formatBytes
     - formatCapSliderValue

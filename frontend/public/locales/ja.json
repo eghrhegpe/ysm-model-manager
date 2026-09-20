@@ -376,6 +376,7 @@
   "diagnostics.perfConcurrentFileDetail": "{count} ファイル：直列 {serial}ms / 並列 {parallel}ms",
   "diagnostics.perfConcurrentParamInvalid": "同時実行パラメータが不正です：worker 数は 1~256、サンプル上限は 1 以上、目標セットに「単一モデル」は選べません（同時実行にはモデルパスの入力欄がありません）",
   "diagnostics.perfConcurrentEmpty": "並列ベンチの結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
+  "diagnostics.perfScanBench": "エンジン比較",
   "diagnostics.perfScanBenchRun": "エンジン比較を実行",
   "diagnostics.perfScanBenchHint": "同じリポジトリルートを Go / Rust でスキャンし中央値と p95 を計測。未計測のエンジンは理由を表示（0ms ではない）；対象 = リポジトリ全体のディレクトリツリー、モデル解析なし",
   "diagnostics.perfScanBenchTitle": "スキャンエンジン比較結果",

@@ -205,7 +205,7 @@ func runGUIFlow(ctx *CmdContext) error {
 	if targetModel != "" {
 		analyzeResult, model, analyzedPath := runPhaseModelAnalyzeTarget(ctx.App, scan, targetModel, explicitModel)
 		// 顺延命中后把 targetModel 换到**真正被分析**的那个：④ 的纹理哈希按它取
-		//（`runPhaseTextureCache(targetModel)`），不回写就会「模型换了、④ 还在算旧文件」。
+		// （`runPhaseTextureCache(targetModel)`），不回写就会「模型换了、④ 还在算旧文件」。
 		targetModel = analyzedPath
 		results = append(results, withRuntime(analyzeResult, guiFlowRuntimeGo))
 

@@ -64,11 +64,22 @@ var perfTypeManifest = map[string]perfTypeManifestEntry{
 	},
 }
 
-// rtypeDisplayName 取 registry 里的类型显示名（类型命名单一事实源 = resource_types.json）；
-// 未登记类型返回空串，由调用方回落 rtype id。
+// rtypeDisplayName 取类型显示名（类型命名单一事实源 = registry / resource_types.json）。
+//
+// 未登记 id 通常返回空串、由调用方回落 rtype id——但 `classifyForScan` 的两个**兜底 token**
+// 例外：`container`（容器未命中目录消歧）与 `other`（扩展名未命中）。它们**永远**不在 registry 里
+// （正因为「不猜任意类型」才诚实标出来），若也返回空串，前端 `typeLabel` 的
+// `rtype_label ? label : rtype` 会连同后面的 id span 印出同一个 token 两遍
+// （「container container」）。故在此给出人话：数据诚实是 Go 的事，人话也归 Go 这个单点。
+//
+// ⚠️ 只给这两个**语义确定的兜底**编人话；其他未登记 id 仍返回空串——凭空造名会掩盖
+// 真正的拼写漂移（如 manifest 里写错的类型 id）。
 func rtypeDisplayName(rtype string) string {
 	if rtype == "" {
 		return ""
+	}
+	if label, ok := rtypeFallbackLabels[rtype]; ok {
+		return label
 	}
 	for _, rt := range registry.LoadRegistry().ResourceTypes {
 		if rt.ID == rtype {
@@ -76,6 +87,16 @@ func rtypeDisplayName(rtype string) string {
 		}
 	}
 	return ""
+}
+
+// rtypeFallbackLabels `classifyForScan` 兜底 token 的人话标签。
+//
+// token 本身是判定**来源**而非资源类型（见 flow.go|classifyForScanWithSource 与 perf_identity.go
+// 的 rtype/rtype_source 注释），故不进 resource_types.json——那里是「真实资源类型」的表，
+// 把兜底塞进去会让它参与类型枚举、扩展名归属等一切下游消费。
+var rtypeFallbackLabels = map[string]string{
+	"container": "容器（未定类型）",
+	"other":     "其他（未识别扩展名）",
 }
 
 // cliAnalyzable 查询类型是否具备 CLI 分析链路（resource_types.json 的 cliAnalyzable 声明，

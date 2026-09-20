@@ -474,6 +474,8 @@ export const ja: Record<string, string> = {
   "diagnostics.perfTarget": "対象セット",
   "diagnostics.perfTargetModel": "（単一モデル：パス指定）",
   "diagnostics.perfTargetAll": "全タイプ",
+  "diagnostics.perfTargetAllHint":
+    "全タイプ：レジストリ内の**すべて**のタイプを走査します（CLI が解析できないタイプも含む。それらは識別情報のみを返し、段階の所要時間は収集しません）",
   "diagnostics.perfTargetRepo": "リポジトリ全体（フラット）",
   "diagnostics.perfTargetRepoHint":
     "リポジトリ全体（フラット）：タイプでグループ化せず、全体を並び順どおりに上位 N 件取得。JSON 構造化ペイロードのみ",

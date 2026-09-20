@@ -281,7 +281,13 @@ export async function populatePerfTargetOptions(
   const keep = select.value;
   const rows: OptionRow[] = [];
   if (includeModel) rows.push({ value: "", label: t("diagnostics.perfTargetModel") });
-  rows.push({ value: PERF_TARGET_ALL, label: t("diagnostics.perfTargetAll") });
+  // 「全部类型」哨兵不受可分析过滤：Go 侧 --target all 扫**全类型**（不可分析条目顺延），
+  // 故它覆盖的类型集大于上面列出的选项——title 说清这层差，否则用户读成「列出的这些的全部」
+  rows.push({
+    value: PERF_TARGET_ALL,
+    label: t("diagnostics.perfTargetAll"),
+    title: t("diagnostics.perfTargetAllHint"),
+  });
   // 全库扁平（ADR-262 D3 修订的第三种目标集）：上限单位 = 全库 N 条，排序另由排序控件决定
   rows.push({
     value: PERF_TARGET_REPO,

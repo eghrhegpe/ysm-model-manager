@@ -232,6 +232,13 @@ status: active
   - **哨兵不受过滤**：`单模型`/`__all__`/`__repo__` 保留——`--target all` 由 Go 侧对不可分析条目顺延（`firstWithGeometry`），语义仍成立。
   - **护栏三处**：① Go `perf_manifest_registry_test.go|TestCliAnalyzable_DeclaredSetIsKnown` 双向拦漏标/误标（声明集合必须恰好 = `{ysm, maid-model}`）；② `bench_matrix_test.go|TestPerfTypeManifest_Consistent` 改读新事实源（可分析 ↔ `ExpectedStages`）；③ 契约 `tests/test_cli_gui_flow_contract.ts` §3.7b 锁「JSON 字段名 ↔ Go 单点读取 ↔ 前端过滤」三者，并反向断言旧字段 `perfTypeManifest[rtype].CliAnalyzable` 不再出现。
   - 前端测试 `perf-matrix.test.ts`：受控子集 `ysm(cliAnalyzable:true)` / `EntityPlayer(无)` 同时覆盖「可分析入选项」与「不可分析被滤除」两侧（断言 `["", "__all__", "__repo__", "ysm"]`）。
+- **渲染与数据的差异：兜底 token 人话 + 哨兵覆盖面说清**（2026-09-21，审核续）：上一轮改动后复查「渲染层实际显示什么 vs 载荷实际说什么」，捞出两处**数据诚实但渲染失真**。
+  - **① `container container`（真缺陷）**：`classifyForScan` 的兜底 token `container`（容器未命中目录消歧）/ `other`（扩展名未命中）**永远不在 registry 里**（正因「不猜任意类型」才诚实标出来），故 `rtypeDisplayName` 返回空串 → 载荷 `omitempty` 不发 `rtype_label` → 前端 `typeLabel` 的 `s.rtype_label ? label : rtype` 与紧随的 id span 印出**同一 token 两遍**（表格里 `container container`）。实测证据：真实仓库 `--target repo` 的 `container` 行 `found=33`。
+    - **修法（人话归 Go 单点）**：`perf_targets.go` 增 `rtypeFallbackLabels{container: "容器（未定类型）", other: "其他（未识别扩展名）"}`，`rtypeDisplayName` 查表命中即返回。**为什么不进 `resource_types.json`**：那里是「真实资源类型」的表，兜底 token 是判定**来源**而非类型（`perf_identity.go` 的 `rtype`/`rtype_source` 字段分别承载这两件事），塞进去会让它参与类型枚举、扩展名归属等一切下游消费。**只给这两个语义确定的兜底编人话**，其他未登记 id 仍返回空串（凭空造名会掩盖 manifest 里的拼写漂移）。
+  - **② `__all__` 哨兵与过滤后的类型面脱节**：选择器已按 `cliAnalyzable` 过滤（只剩 ysm/maid-model），但「全部类型」在 Go 侧仍扫**全类型**（不可分析条目顺延）→ 用户能选到「全部类型」，表里却冒出选择器里根本没有的 `container`。**选项集 ⊊ 数据的类型集**。
+    - **修法（不隐藏信息，只说清）**：给该哨兵挂 `title`（新 i18n 键 `perfTargetAllHint`，三语齐备）说明它覆盖注册表**所有**类型、不可分析的那类只出身份不采集阶段耗时——与 `perfTargetRepoHint` 既有做法同构。**不收窄 `__all__`**：矩阵口径本意就是看全类型分布（`found=33` 的容器行也是有用信息），收窄反而丢数据。
+  - **护栏**：Go `perf_manifest_registry_test.go|TestRtypeDisplayName_FallbackTokens`（兜底 token 必须有标签**且标签 ≠ id**——只判非空挡不住「印两遍同样的话」；并反向断言非兜底的未登记 id 仍为空）；契约 §3.7c 锁「标签表存在 + 每 token 的标签与 token 有别 + 哨兵 title 已挂」。**两条断言都做过变异检查**：把 `container` 标签改回 token / 去掉哨兵 title → 各自精确变红，还原即绿（第一版只查 token 字面量存在，变异检查证明它恒真，已改成正则要求标签与 token 有别）。
+  - ⚠️ **改 i18n TS 后必须 `node scripts/generate-locale-json.ts`**（根目录，不是 `frontend/scripts/`）：vite build 的 `check-locales-sync` 会挡（实测报「locales/*.ts 与 public/locales/*.json key 不一致」）。
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

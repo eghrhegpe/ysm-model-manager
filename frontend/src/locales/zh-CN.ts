@@ -463,6 +463,11 @@ export const zhCN = {
   "diagnostics.perfTarget": "目标集",
   "diagnostics.perfTargetModel": "（单模型，按路径）",
   "diagnostics.perfTargetAll": "全部类型",
+  // 「全部类型」≠「选择器里列出的全部」：选择器只列 CLI 可分析类型，而 --target all 由 Go 侧
+  // 对不可分析条目顺延（firstWithGeometry）后仍覆盖**全类型**（含 container 等兜底）。
+  // 不写清这层差，用户会把哨兵读成「上面这些类型的全部」
+  "diagnostics.perfTargetAllHint":
+    "全部类型：扫描注册表里的**所有**类型（含 CLI 不可分析的类型，这类只出身份、不采集阶段耗时）",
   "diagnostics.perfTargetRepo": "全库扁平",
   "diagnostics.perfTargetRepoHint":
     "全库扁平：不按类型分组，全库按排序取前 N 条；仅结构化 JSON 载荷",

@@ -414,6 +414,9 @@ const TARGET_SET_I18N_KEYS = [
   "perfTarget",
   "perfTargetModel",
   "perfTargetAll",
+  // 「全部类型」哨兵覆盖的类型集 > 选择器列出的选项（后者已按 cliAnalyzable 过滤）——
+  // 这条 hint 是那层差的唯一出口，必须三语齐备且被 perf-matrix-render 引用
+  "perfTargetAllHint",
   "perfTargetRepo",
   "perfTargetRepoHint",
   "perfTargetNameRtype",
@@ -489,6 +492,30 @@ must(
 must(
   resourceTypesJsonTs.includes('"cliAnalyzable": true'),
   "resource_types.json 未声明任何 cliAnalyzable 类型（YSM / maid-model 的登记面丢了）",
+);
+
+// ── 3.7c) 渲染与数据的差异：兜底 token 人话 + 哨兵覆盖面说清 ────────────────────
+// 立因（2026-09-21 审核）：两处「数据诚实但渲染失真」。
+//  ① `classifyForScan` 的兜底 token（container / other）永远不在 registry 里，`rtypeDisplayName`
+//     原返回空串 → 载荷不发 rtype_label → 前端 `typeLabel` 的 `label ?: rtype` 与紧随的 id span
+//     印出同一 token 两遍（「container container」）。人话归 Go 单点（rtypeFallbackLabels）。
+//  ② 选择器已按 cliAnalyzable 过滤，但「全部类型」哨兵在 Go 侧仍扫**全类型**（不可分析条目顺延）
+//     → 哨兵覆盖的类型集大于列出的选项。不说明，用户会把它读成「上面列出的这些的全部」。
+must(
+  registryGoTs.includes("rtypeFallbackLabels") || targetsGo.includes("rtypeFallbackLabels"),
+  "Go 侧缺兜底 token 的人话标签表（rtypeFallbackLabels）——container/other 会渲染成同一 token 两遍",
+);
+for (const tok of ["container", "other"]) {
+  must(
+    // 必须成对出现且标签与 token 有别——只查 token 字面量会恒真（classifyForScan 里本就有
+    // `"container"` 作为返回值），变异检查证明过：把标签改回 token 时那种写法不变红。
+    new RegExp(`\"${tok}\":\\s*\"((?!${tok}\")[^\"]+)\"`).test(targetsGo),
+    `兜底 token ${tok} 未在 Go 侧给出人话标签（container/other 渲染重复 token 的根因）`,
+  );
+}
+must(
+  /title:\s*t\("diagnostics\.perfTargetAllHint"\)/.test(matrixCode),
+  "「全部类型」哨兵未挂覆盖面说明（它扫全类型，而选项已按 cliAnalyzable 过滤——不说清即误导）",
 );
 
 // ── 3.8) 扫描引擎对照（ADR-262 D3）：Go/Rust 对照载荷 + 未采集原因 token 双端锚定 ──

@@ -62,3 +62,31 @@ func TestPerfTypeManifest_IdsExistInRegistry(t *testing.T) {
 		}
 	}
 }
+
+// TestRtypeDisplayName_FallbackTokens 兜底 token 必须有人话标签。
+//
+// 立因（2026-09-21 审核）：`typeLabel`（前端）写作 `s.rtype_label ? label : rtype` 后接
+// `<span class="perf-matrix-id">${rtype}</span>`——载荷不发 label 时，两处都渲染同一个
+// token，表格里印出「container container」「other other」。
+// 载荷之所以不发 label，是 `rtypeDisplayName` 对未登记 id 返回空串；而 `container`/`other`
+// 是 `classifyForScan` 的**诚实兜底**（共享扩展名 .zip 被 14 类型声明，不猜任意类型），
+// 恰恰总是未登记。数据是对的（诚实不猜），失真的是渲染——故人话归 Go 这个单点。
+//
+// 断言双向：①兜底 token 有非空标签；②标签不等于 id（否则前端仍会印两遍同样的话）。
+func TestRtypeDisplayName_FallbackTokens(t *testing.T) {
+	t.Parallel()
+	for _, tok := range []string{"container", "other"} {
+		got := rtypeDisplayName(tok)
+		if got == "" {
+			t.Errorf("兜底 token %q 无显示名——载荷不发 rtype_label，前端会印出 %q %q（同一 token 两遍）", tok, tok, tok)
+			continue
+		}
+		if got == tok {
+			t.Errorf("兜底 token %q 的显示名与 id 相同——前端仍会印出 %q %q，人话必须与 token 有别", tok, tok, tok)
+		}
+	}
+	// 未登记且非兜底的 id 仍返回空串：不给「长得像类型的垃圾 token」编人话
+	if rtypeDisplayName("no-such-type-xyz") != "" {
+		t.Error("非兜底的未登记 id 不应有显示名（编人话会掩盖真正的拼写漂移）")
+	}
+}

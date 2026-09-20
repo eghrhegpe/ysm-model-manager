@@ -427,6 +427,11 @@ describe("目标集选择器选项来自 registry（前端不写死类型表）"
     expect(select.textContent).toContain("YSM 模型");
     expect(select.textContent).not.toContain("MMD 模型");
     expect(select.textContent).toContain("全库扁平");
+    // 「全部类型」哨兵不受可分析过滤（Go 侧对不可分析条目顺延），因此它覆盖的类型集
+    // **大于**选择器列出的选项——必须用 title 说清，否则用户会把它读成「上面这些类型的全部」
+    const allOpt = [...select.options].find((o) => o.value === "__all__");
+    expect(allOpt?.title).toBeTruthy();
+    expect(allOpt?.title).toContain("所有");
   });
 
   it("不可分析类型不进选项（漏标/误标的渲染面护栏）", async () => {

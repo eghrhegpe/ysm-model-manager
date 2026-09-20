@@ -477,6 +477,8 @@ export const en: Record<string, string> = {
   "diagnostics.perfTarget": "Target set",
   "diagnostics.perfTargetModel": "(single model by path)",
   "diagnostics.perfTargetAll": "All types",
+  "diagnostics.perfTargetAllHint":
+    "All types: scans **every** type in the registry (including types the CLI cannot analyze; those yield identity only, with no stage timings collected)",
   "diagnostics.perfTargetRepo": "Whole repo (flat)",
   "diagnostics.perfTargetRepoHint":
     "Whole repo (flat): no grouping by type — take the top N of the whole repo by the chosen order; JSON payload only",

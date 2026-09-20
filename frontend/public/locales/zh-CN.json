@@ -400,6 +400,7 @@
   "diagnostics.perfTarget": "目标集",
   "diagnostics.perfTargetModel": "（单模型，按路径）",
   "diagnostics.perfTargetAll": "全部类型",
+  "diagnostics.perfTargetAllHint": "全部类型：扫描注册表里的**所有**类型（含 CLI 不可分析的类型，这类只出身份、不采集阶段耗时）",
   "diagnostics.perfTargetRepo": "全库扁平",
   "diagnostics.perfTargetRepoHint": "全库扁平：不按类型分组，全库按排序取前 N 条；仅结构化 JSON 载荷",
   "diagnostics.perfTargetNameRtype": "{rtype} 类型",

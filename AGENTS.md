@@ -14,6 +14,7 @@
 - 查到的经验**写回知识卡**，让下次直接命中：`node scripts/new-knowledge-card.ts <kind> <name> <category> <source_file> [--leaf]`。
 - **工具/钩子/脚本**：需要修复报错 / 异常时, 才核对`read .githooks/pre-commit`、`read scripts/xx.ts`。
 - **正确性需实证**：当正确性依赖于检索、检查、执行或验证时，坚持使用工具；不要仅仅因为答案看似显而易见就忽略前提条件。
+- **ADR「背景/Context」是决策时的历史快照，≠ 当前状态**：评估「X 现状如何」唯一可信的是当前源码树（`ls`/`glob` 真 `src` + 读文件 import），不是 ADR 背景描述，也不是 git-ignored 生成物残留（`frontend/coverage/`、`docs/.vitepress/dist/` 滞后于源码重构）。读到 ADR 背景里的「病」，先查知识卡实施进度 / 源码树核验「病是否已治」再下结论。
 
 ### 改代码——TDD，改完即验
 - 先出方案（文件:行号 + diff 思路）拍板，再动手。

@@ -100,6 +100,7 @@ function buildTemplate(num: number, title: string, slug: string, related: string
 
 ## 1. 背景（Context）
 
+<!-- ⚠️ 本节是「决策当时」的状态快照，ADR 落地后此处的病灶可能已治愈；评估「现在是否还这样」以当前源码树 + 知识卡实施进度为准，勿把本节当现状。 -->
 <!-- TODO: 问题背景与动机 -->
 
 ## 2. 决策（Decision）

@@ -12,7 +12,7 @@
  *
  * 断言四件事：
  *  1. 性能命令（gui-flow / single-bench / perf-log / concurrent-bench / benchmark）在前端白名单内
- *  2. Go 侧 gui-flow 结构化字段名齐备，且前端 GuiFlowStage/GuiFlowStructured 同名同义
+ *  2. Go 侧 gui-flow 结构化字段名齐备（前端消费已退役，只钉 Go 载荷形状）
  *  3. Go 侧 single-bench 结构化字段名齐备（含 identity 身份块与基准判决），且前端载荷接口同名同义
  *  4. 前端**不得**回退到文本正则解析（防「文案当 API」范式回流）
  *  5. 基准判决字段双端锚定，且前端**真的传**基准参数（只声明接口不传参 = 功能不可达）
@@ -85,8 +85,9 @@ for (const cmd of PERF_COMMANDS) {
   );
 }
 
-// ── 2) gui-flow 结构化载荷契约（Go tags ↔ 前端接口）───────────────
-// Go: guiFlowStageItem / guiFlowStructured 的 json tag；前端: GuiFlowStage / GuiFlowStructured
+// ── 2) gui-flow 结构化载荷契约（只钉 Go json tag 形状）───────────────
+// Go: guiFlowStageItem / guiFlowStructured 的 json tag。前端消费已随 gui-flow 面板
+// 下线退役（a1e26419d），无前端 GuiFlowStage 接口可对齐；载荷供 CLI 终端 / gui-flow-gate。
 const GUI_FIELDS = [
   '"stages"',
   '"total_ms"',

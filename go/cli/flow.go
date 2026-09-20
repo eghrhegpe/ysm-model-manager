@@ -55,8 +55,8 @@ type guiFlowResult struct {
 }
 
 // guiFlowStageItem 单阶段结构化结果（ADR-200 D2：gui-flow 为首批结构化命令）。
-// 字段与前端 GuiFlowStage（perf-gui-flow.ts）逐字对齐，前端据此直接渲染、
-// 不再对人类文案做正则反解析。
+// 前端消费已随 gui-flow 面板下线退役（a1e26419d，ADR-278：UI 层拆除、Go 命令保留）；
+// 本载荷现供 CLI 人类终端（printFlowReport）与 gui-flow-gate 无头验证替身消费。
 type guiFlowStageItem struct {
 	Status string   `json:"status"` // "✅" / "❌"
 	Name   string   `json:"name"`

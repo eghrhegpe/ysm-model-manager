@@ -1,8 +1,9 @@
 package cli
 
 // flow_internal_test.go — gui-flow 结构化载荷序列化契约（ADR-200 D1/D2）。
-// 内部测试包：直接断言 guiFlowStructured 的 JSON 字段名与前端 GuiFlowStage
-// （perf-cli.ts）逐字对齐——字段名漂移会让前端静默渲染空面板，故机检锁死。
+// 内部测试包：直接断言 guiFlowStructured 的 JSON 字段名（json tag）。前端消费
+// 已随 gui-flow 面板下线退役（a1e26419d），此处只钉 Go 载荷形状，供 CLI 人类终端
+// 与 gui-flow-gate 消费；字段名漂移会让 gate 静默失明，故机检锁死。
 
 import (
 	"encoding/json"

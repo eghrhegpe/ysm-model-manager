@@ -9,7 +9,12 @@
 
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
-import { type LightInstanceParams, readLightParams } from "./light-presets.ts";
+import {
+  FLATTEN_MAP,
+  type LightInstanceParams,
+  type LightSlot,
+  readLightParams,
+} from "./light-presets.ts";
 import { restoreFields } from "./scene-capability.ts";
 /* ============ saveState：envState → 持久化嵌套结构（纯读，由 FLATTEN_MAP 逆读口派生） ============ */
 
@@ -45,28 +50,29 @@ export function buildLightPersistPayload(): Record<string, unknown> {
 
 /* ============ loadState：持久化结构 → envState（逐字段 typeof 校验，manual 源） ============ */
 
-/** 灯光字段表：saved 键 → [envState 后缀, 期望 typeof]。
- *  [light-type-switch] 每盏灯 10 字段结构统一后，逐字段 if 链换成表驱动（单一事实源，
- *  新增字段只改此表）；旧版 10 条 `if (typeof s.X === ...)` 等价保留。 */
-const LIGHT_FIELDS = {
-  type: ["Type", "string"],
-  enabled: ["Enabled", "boolean"],
-  color: ["Color", "number"],
-  intensity: ["Intensity", "number"],
-  azimuth: ["Azimuth", "number"],
-  elevation: ["Elevation", "number"],
-  angle: ["Angle", "number"],
-  penumbra: ["Penumbra", "number"],
-  distance: ["Distance", "number"],
-  decay: ["Decay", "number"],
-} as const satisfies Record<
-  keyof LightInstanceParams,
-  readonly [string, "string" | "number" | "boolean"]
->;
+/** 灯光字段表：saved 字段 → 期望 typeof。
+ *  [light-type-switch] 每盏灯 10 字段结构统一后，逐字段 if 链换成表驱动；
+ *  [锐评根治 2026-10] 原表还携「envState 后缀」列、经 `cap(which)` 拼串取键——与
+ *  ADR-281 在 presets 侧消灭的 `${prefix}${X}` 拼串同款病灶：与 FLATTEN_MAP 的对齐
+ *  纯靠命名巧合，schema 键重命名时前者编译报错、此侧静默丢字段（typeof 不匹配即
+ *  skip，用户灯光参数无声蒸发）。现后缀列退场，envState 键一律查 FLATTEN_MAP——
+ *  键映射唯一真相源在 light-presets.ts，本表只剩 typeof 校验列。 */
+const LIGHT_FIELD_TYPES = {
+  type: "string",
+  enabled: "boolean",
+  color: "number",
+  intensity: "number",
+  azimuth: "number",
+  elevation: "number",
+  angle: "number",
+  penumbra: "number",
+  distance: "number",
+  decay: "number",
+} as const satisfies Record<keyof LightInstanceParams, "string" | "number" | "boolean">;
 
-type LightFieldKey = keyof typeof LIGHT_FIELDS;
+type LightFieldKey = keyof typeof LIGHT_FIELD_TYPES;
 
-const ALL_LIGHT_FIELDS = Object.keys(LIGHT_FIELDS) as LightFieldKey[];
+const ALL_LIGHT_FIELDS = Object.keys(LIGHT_FIELD_TYPES) as LightFieldKey[];
 
 /** 旧存档 `spotlight` 块只有这些参数（enabled 归 `keyEnabled`、type 由迁移行决定）。 */
 const SPOT_MIGRATION_FIELDS: LightFieldKey[] = [
@@ -78,30 +84,23 @@ const SPOT_MIGRATION_FIELDS: LightFieldKey[] = [
   "decay",
 ];
 
-const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
-
-/** 按（可选）字段子集把 saved 对象的已校验字段写入 acc；prefix 形如 `lightKey`。
+/** 按（可选）字段子集把 saved 对象的已校验字段写入 acc，envState 键经 FLATTEN_MAP 查取。
  *  末尾一次 setEnvState 的合批约定不变——本函数只写 accumulator，不派发。 */
 function pickLightFields(
-  prefix: string,
+  which: LightSlot,
   s: Record<string, unknown>,
   acc: Record<string, unknown>,
   fields: LightFieldKey[] = ALL_LIGHT_FIELDS,
 ): void {
   for (const key of fields) {
-    const [suffix, expect] = LIGHT_FIELDS[key];
     const v = s[key];
-    if (typeof v === expect) acc[`${prefix}${suffix}`] = v;
+    if (typeof v === LIGHT_FIELD_TYPES[key]) acc[FLATTEN_MAP[which][key]] = v;
   }
 }
 
-function restoreDir(
-  which: "key" | "fill" | "rim",
-  saved: unknown,
-  acc: Record<string, unknown>,
-): void {
+function restoreDir(which: LightSlot, saved: unknown, acc: Record<string, unknown>): void {
   if (!saved || typeof saved !== "object") return;
-  pickLightFields(`light${cap(which)}`, saved as Record<string, unknown>, acc);
+  pickLightFields(which, saved as Record<string, unknown>, acc);
 }
 
 /**
@@ -130,9 +129,10 @@ export function restoreLightParams(state: Record<string, unknown>): void {
   // 兼容旧存档：如果存在旧 spotlight 字段，迁移到 key 灯的 spot 参数
   if (state.spotlight && typeof state.spotlight === "object") {
     const sp = state.spotlight as Record<string, unknown>;
-    // 旧存档有 spotlight 启用 → 迁移到 key 灯（type 与 enabled 归属不同，不走字段表）
-    if (sp.enabled === true) acc.lightKeyType = "spot";
-    pickLightFields("lightKey", sp, acc, SPOT_MIGRATION_FIELDS);
+    // 旧存档有 spotlight 启用 → 迁移到 key 灯（type 与 enabled 归属不同，不走字段表；
+    // 键仍查 FLATTEN_MAP，不留拼串裸字面量）
+    if (sp.enabled === true) acc[FLATTEN_MAP.key.type] = "spot";
+    pickLightFields("key", sp, acc, SPOT_MIGRATION_FIELDS);
   }
   if (typeof state.volumetricEnabled === "boolean") {
     acc.lightVolumetricEnabled = state.volumetricEnabled;
@@ -142,19 +142,21 @@ export function restoreLightParams(state: Record<string, unknown>): void {
   restoreDir("fill", state.fill, acc);
   restoreDir("rim", state.rim, acc);
   if (state.ambient && typeof state.ambient === "object") {
+    // [锐评根治 2026-10] 键一律查 FLATTEN_MAP，与三盏灯同口径（原裸字面量 acc.lightAmbient*
+    // 在 Record<string,unknown> 上无类型守卫）
     restoreFields(state.ambient as Record<string, unknown>, {
-      intensity: { number: (v) => (acc.lightAmbientIntensity = v) },
-      color: { number: (v) => (acc.lightAmbientColor = v) },
+      intensity: { number: (v) => (acc[FLATTEN_MAP.ambient.intensity] = v) },
+      color: { number: (v) => (acc[FLATTEN_MAP.ambient.color] = v) },
     });
   }
   if (state.volumetric && typeof state.volumetric === "object") {
     restoreFields(state.volumetric as Record<string, unknown>, {
-      enabled: { boolean: (v) => (acc.lightVolumetricEnabled = v) },
-      opacity: { number: (v) => (acc.lightVolumetricOpacity = v) },
-      fogPower: { number: (v) => (acc.lightVolumetricFogPower = v) },
-      edgeFade: { number: (v) => (acc.lightVolumetricEdgeFade = v) },
-      baseStrength: { number: (v) => (acc.lightVolumetricBaseStrength = v) },
-      tipStrength: { number: (v) => (acc.lightVolumetricTipStrength = v) },
+      enabled: { boolean: (v) => (acc[FLATTEN_MAP.volumetric.enabled] = v) },
+      opacity: { number: (v) => (acc[FLATTEN_MAP.volumetric.opacity] = v) },
+      fogPower: { number: (v) => (acc[FLATTEN_MAP.volumetric.fogPower] = v) },
+      edgeFade: { number: (v) => (acc[FLATTEN_MAP.volumetric.edgeFade] = v) },
+      baseStrength: { number: (v) => (acc[FLATTEN_MAP.volumetric.baseStrength] = v) },
+      tipStrength: { number: (v) => (acc[FLATTEN_MAP.volumetric.tipStrength] = v) },
     });
   }
   if (Object.keys(acc).length > 0) {

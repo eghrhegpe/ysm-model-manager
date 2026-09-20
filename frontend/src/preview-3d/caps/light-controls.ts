@@ -52,11 +52,17 @@ const LIGHT_TYPE_OPTIONS: Array<{ value: LightType; label: string; labelKey: Loc
 const LIGHT_PARAMS_GROUP = "preview.lightGroupParams";
 const SPOT_VOL_CARD = "cap-group-spot-vol";
 
-/** 灯光能力总开关 toggle（首行；读 isEnabled/setEnabled——setEnabled(false) 移除场景全部灯）。
- *  真值源/持久化与 shadow-enabled / pp-enabled 同构；light 面板直达平铺，不升 getMasterNodeId。 */
+/** 能力总开关节点 id：本文件（产节点）/ LightCapability.getMasterNodeId（声明）/
+ *  面板 filter（消费）三方共用的唯一常量——裸字符串散在三处即平行手抄，改名时
+ *  import 侧有 compiler 盯，字符串各写各的没人盯。 */
+export const LIGHT_MASTER_NODE_ID = "light-enabled";
+
+/** 灯光能力总开关 toggle（面板首行；读 isEnabled/setEnabled——setEnabled(false) 移除场景全部灯）。
+ *  真值源/持久化与 shadow-enabled / pp-enabled 同构；本节点经 getMasterNodeId 升场景组根视图
+ *  headerToggle，二级面板渲染时由 capPanelNodes 按 LIGHT_MASTER_NODE_ID filter 掉，防一二级双份。 */
 function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
   return {
-    id: "light-enabled",
+    id: LIGHT_MASTER_NODE_ID,
     kind: "toggle",
     labelKey: "preview.lighting",
     control: {
@@ -271,18 +277,31 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
   };
 }
 
-/** 环境光强度（三盏灯之外的独立轴） */
-function ambientNode(cap: LightCapability): PreviewMenuNode {
-  return {
-    id: "light-ambient",
-    kind: "slider",
-    labelKey: "preview.ambientIntensity",
-    control: {
-      ...getParamRange("lightAmbientIntensity"),
-      get: () => cap.getParams().ambient.intensity,
-      set: (v) => cap.setParams({ ambient: { intensity: v as number } }),
+/** 环境光（三盏灯之外的独立轴）。color 控件补齐 [锐评根治 2026-10]：lightAmbientColor
+ *  在 schema / FLATTEN_MAP / 持久化三处全链路注册，唯独控件面无入口——「参数面 ⊋ 控件面」
+ *  使其成为只随存档陪跑的幽灵字段。现两轴各一控件，与统一设置条的 color+intensity 同构。 */
+function ambientNodes(cap: LightCapability): PreviewMenuNode[] {
+  return [
+    {
+      id: "light-ambient-color",
+      kind: "color",
+      labelKey: "preview.ambientColor",
+      control: {
+        get: () => cap.getParams().ambient.color,
+        set: (v) => cap.setParams({ ambient: { color: v as number } }),
+      },
     },
-  };
+    {
+      id: "light-ambient",
+      kind: "slider",
+      labelKey: "preview.ambientIntensity",
+      control: {
+        ...getParamRange("lightAmbientIntensity"),
+        get: () => cap.getParams().ambient.intensity,
+        set: (v) => cap.setParams({ ambient: { intensity: v as number } }),
+      },
+    },
+  ];
 }
 
 /** 完整参数面板节点树：light-enabled 能力总开关（首行）+ 编辑灯选择（三灯按钮）
@@ -309,7 +328,7 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       labelKey: LIGHT_PARAMS_GROUP,
       children: [
         ...unifiedLightNodes(cap),
-        ambientNode(cap),
+        ...ambientNodes(cap),
         spotVolCardNode(cap),
         {
           // [ADR-282] 取代原「灯光预设」下拉：重置锚定模型无关的 DEFAULT_LIGHT_PARAMS。

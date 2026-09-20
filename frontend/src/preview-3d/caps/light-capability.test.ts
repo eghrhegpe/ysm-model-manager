@@ -15,7 +15,7 @@ import {
 } from "./light-presets.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
-import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
@@ -544,10 +544,26 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
       "light-key-intensity",
       "light-key-azimuth",
       "light-key-elevation",
+      "light-ambient-color",
       "light-ambient",
       "cap-group-spot-vol",
       "light-reset",
     ]);
+  });
+
+  it("[锐评根治 2026-10] ambient 颜色控件读写联动（幽灵字段退场：参数面 ≡ 控件面）", () => {
+    const cap = newCap();
+    const folder = cap.getMenuNodes()[2]!;
+    const color = folder.children!.find((c: PreviewMenuNode) => c.id === "light-ambient-color")!;
+    expect(color.kind).toBe("color");
+    color.control!.set!(0x8899aa);
+    expect(cap.getParams().ambient.color).toBe(0x8899aa);
+    expect(color.control!.get!(undefined)).toBe(0x8899aa);
+    // 经持久化全链路：save → 新实例 load 不丢
+    cap.saveState();
+    const cap2 = newCap();
+    cap2.loadState();
+    expect(cap2.getParams().ambient.color).toBe(0x8899aa);
   });
 
   it("slider/toggle 节点读写闭包直连 cap（fill/ambient，经 light-select 切槽位）", () => {
@@ -577,6 +593,49 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
 
     expect(cap.getParams().key.intensity).toBe(DEFAULT_LIGHT_PARAMS.key.intensity);
     expect(cap.getParams().fill.intensity).toBe(DEFAULT_LIGHT_PARAMS.fill.intensity);
+  });
+
+  it("[锐评根治 2026-10] 防回退闸：控件树写面 ≡ light 组 schema 字段集（全派生，零手抄清单）", () => {
+    // 参数对接的终点判据：schema 声明的每个灯光字段都有控件写入口（幽灵字段退场），
+    // 且控件不越界写灯光组之外的字段。旧闸手抄 21 键清单——用「防平行手抄」的名义
+    // 自己平行手抄了一份；本闸改为运行时探测：逐 leaf 控件 set 一个探针值 → diff
+    // envState 收集被写字段 → 与 ENV_STATE_SCHEMA light 组字段集双向断言。
+    const cap = newCap();
+    const flatten = (ns: PreviewMenuNode[]): PreviewMenuNode[] =>
+      ns.flatMap((n) => (n.children ? [n, ...flatten(n.children)] : [n]));
+    const changed = new Set<string>();
+    for (const slot of LIGHT_SLOTS) {
+      cap.setActiveLight(slot);
+      cap.setLightParams(slot, { type: "spot" }); // spot 展开全部类型专属参数
+      for (const node of flatten(cap.getMenuNodes())) {
+        const c = node.control;
+        if (!c?.set) continue;
+        const cur = c.get?.(undefined);
+        let next: unknown;
+        if (typeof cur === "boolean") next = !cur;
+        else if (typeof cur === "number") next = 0; // 灯光组无字段默认为 0，探针必产生变化
+        else if (typeof cur === "string") next = c.options?.find((o) => o.value !== cur)?.value;
+        if (next === undefined) continue;
+        const before = { ...envState };
+        c.set(next);
+        for (const k of Object.keys(before) as EnvStateKey[]) {
+          if ((envState as Record<string, unknown>)[k] !== before[k]) changed.add(k);
+        }
+      }
+    }
+    // baseStrength 唯一豁免：ADR-246 D2 起经「上下亮度比」派生写入（ratio 探针写中的
+    // 是 tipStrength），不单独暴露滑块——豁免的是控件，不是字段。
+    const EXEMPT = new Set(["lightVolumetricBaseStrength"]);
+    const declared = (Object.keys(ENV_STATE_SCHEMA) as EnvStateKey[]).filter(
+      (k) => (ENV_STATE_SCHEMA[k] as { group?: string }).group === "light" && !EXEMPT.has(k),
+    );
+    for (const k of declared) {
+      expect(changed.has(k), `${k} 在 schema 声明却无控件写入口（参数面 ⊋ 控件面）`).toBe(true);
+    }
+    const declaredSet: Set<string> = new Set(declared);
+    for (const k of changed) {
+      expect(declaredSet.has(k), `控件越界写非灯光组字段 ${k}`).toBe(true);
+    }
   });
 });
 

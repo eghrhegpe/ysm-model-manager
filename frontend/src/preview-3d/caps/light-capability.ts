@@ -32,7 +32,7 @@ import {
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { VolumetricCone } from "./light-cone.ts";
-import { buildLightNodes } from "./light-controls.ts";
+import { buildLightNodes, LIGHT_MASTER_NODE_ID } from "./light-controls.ts";
 import { buildLightPersistPayload, restoreLightParams } from "./light-persist.ts";
 import {
   DEFAULT_LIGHT_PARAMS,
@@ -688,10 +688,11 @@ export class LightCapability implements SceneCapability {
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
   /* -------- ADR-195 刀3：getMasterNodeId（能力总开关）-------- */
-  /** 能力总开关节点 id（light-enabled）：已升场景组根视图 headerToggle +
-   *  面板首行统一经 filter 移除（复用 envCapSubNodes 同一剔除逻辑，防一二级双份）。 */
+  /** 能力总开关节点 id（LIGHT_MASTER_NODE_ID 常量）：已升场景组根视图 headerToggle +
+   *  面板首行统一经 filter 移除（复用 envCapSubNodes 同一剔除逻辑，防一二级双份）。
+   *  [锐评根治 2026-10] 原裸字符串与 light-controls 产节点处两处手抄，现同源一常量。 */
   getMasterNodeId(): string {
-    return "light-enabled";
+    return LIGHT_MASTER_NODE_ID;
   }
 
   /** 完整参数面板节点树：light-enabled 能力总开关 + light-key 平铺 toggle + 参数组 folder（8 控件）。

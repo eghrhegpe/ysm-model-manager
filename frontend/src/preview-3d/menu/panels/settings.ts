@@ -86,17 +86,15 @@ function capPanelNodes(cap: SceneCapability): PreviewMenuNode[] {
   return all.filter((n) => n.id !== masterId);
 }
 
-/** 灯光面板 schema：从 light cap 自报控件渲染 */
+/** 灯光面板 schema：从 light cap 自报控件渲染。
+ *  [锐评根治 2026-10] 去双 cast 后门：capPanelNodes 只依赖 SceneCapability 通用接口
+ *  （getMenuNodes/getMasterNodeId 均为其可选成员），原兜底通道把 ctx.getCap 结果
+ *  `as unknown as LightCapability` 收窄属多余——registry 缺席时按通用接口降级渲染，
+ *  不再谎称具体类型（消费方 shadow/postproc 面板同款单通道口径）。 */
 export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const lightFromReg = sceneCapabilityRegistry.getById("light");
-  const lightCap =
-    lightFromReg ??
-    (() => {
-      const fromCtx = ctx.getCap("light");
-      if (fromCtx && "getMenuNodes" in fromCtx)
-        return fromCtx as unknown as import("@/preview-3d/caps/light-capability.ts").LightCapability;
-      return null;
-    })();
+  const fromCtx = ctx.getCap("light");
+  const lightCap: SceneCapability | undefined =
+    sceneCapabilityRegistry.getById("light") ?? (fromCtx?.getMenuNodes ? fromCtx : undefined);
   if (!lightCap) {
     return [
       {

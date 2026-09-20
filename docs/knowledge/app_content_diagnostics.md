@@ -100,7 +100,9 @@ status: active
 - `dedup-policy.ts` — keep 保留策略纯函数层（`getDefaultKeepIdx` + `pickByTime` 共享 pick 辅助 + `DedupFileLike`），自 `dedup.ts` 抽出（2026-09-03，ADR-040 拆分线延续）；零 mock 单测聚焦策略分支
   - `toTimestamp` 缺失/非法返回 `null`（「无时间信息」），不参与时间裁决；全缺失时 `pickByTime` 严格比较保序回退首项（2026-09-12 P0 收口，修「newest 侧 MAX 哨兵反判最新」潜伏语义缺陷——Go 扫描恒带回 modTime，生产不可达）
 - `conflicts.ts` — 两种冲突扫描 + 同步冲突解决：
-  - **`scanConflicts`（conflict tab，跨实例）**：聚合各整合包实例 CustomDir 的模型条目，判定为「**同名 + 内容哈希不唯一**」才算冲突。护栏（2026-09-18 修正）：旧实现只按文件名聚合，`v.length > 1` 即报 → 把 `PushResources` 的**正常同步产物**（同名同哈希分发到多实例）批量误报成冲突，用户体感「正常同步也报、离谱到不如删除」；且 `dgCfCollectInstanceFiles` 当时只取 `e.Name`，丢了 Go 已交付的 `ModelEntry.Hash`（SHA256）。现 `DgCfInstanceFile` 带 `hash`，判定要求 `ins.length > 1 && hashes.size > 1`。**空哈希（超大文件/读失败，Go 侧返空串）排除出判定**——拿「未知」当「不同」会制造误报，宁可不报（与 Go `DetectConflicts` 的 `HashFailed` 走人工审查同取向）。回归：`conflicts.test.ts`「同名同哈希不报」「哈希缺失不报」
+  - **`scanConflicts`（conflict tab，跨实例）**：聚合各整合包实例 CustomDir 的模型条目，判定为「**同名 + 内容哈希不唯一**」才算冲突。护栏（2026-09-18 修正）：旧实现只按文件名聚合，`v.length > 1` 即报 → 把 `PushResources` 的**正常同步产物**（同名同哈希分发到多实例）批量误报成冲突，用户体感「正常同步也报、离谱到不如删除」；且 `dgCfCollectInstanceFiles` 当时只取 `e.Name`，丢了 Go 已交付的 `ModelEntry.Hash`（SHA256）。现 `DgCfInstanceFile.hash?: string`，判定要求 `ins.length > 1 && hashes.size > 1`。
+  - **空哈希口径（订正：与 Go 不同，非「同取向」）**：空哈希（超大文件/读失败，Go 侧返空串）排除出判定 → **静默不报**；而 Go `DetectConflicts` 对两端 size 相同 + 任一端哈希失败是**报出来交人工审查**（HashFailed→ResolveManual）。代价是「两实例同名且都哈希失败」这一极窄场景漏报，覆盖面由 sync-conflict tab 兜底；若要对齐应在 UI 单列「无法判定」分区，而非混进冲突计数。回归：`conflicts.test.ts`「同名同哈希不报」「哈希缺失不报」
+  - 行徽标 = `modpackCount`（N 个整合包）+ `contentDiffers`（内容不一致）双段——只给实例数会让用户不知「谁跟谁不同」
   - **`scanSyncConflicts`（sync-conflict tab，实例↔仓库）**：调 Go `DetectConflicts`（真比两端 SHA256，哈希不同→`ConflictContentModified`），需手选 rtype + instance，带解决区（`ResolveConflicts` 三策略 + 1.5s 自动复扫，list 分离时作废迟到复扫）
   - 文案：`conflictsFound` / `noNameConflict` 措辞已改为「内容不一致」（三语同步），旧文案「存在于多个整合包」是错误判定的活化石
 - `logs.ts` — 操作日志渲染：`OP_META` 七种中文标签+图标，状态图标优先读 `Level`（error→❌ / warn→⚠️ / debug→🔍 / fatal→💀 / info→✅），无 Level 按 `Status` 兜底；消费 Go `logs` 包（见知识卡 `go_logs`）

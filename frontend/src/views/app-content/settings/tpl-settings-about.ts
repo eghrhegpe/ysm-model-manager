@@ -26,7 +26,7 @@ export function aboutHTML(): string {
           <option value="21600000">${t("settings.updateCheck.option6h")}</option>
           <option value="43200000">${t("settings.updateCheck.option12h")}</option>
           <option value="86400000">${t("settings.updateCheck.option24h")}</option>
-          <option value="0">${UI_ICONS.stop} ${t("settings.updateCheck.off")}</option>
+          <option value="0">${t("settings.updateCheck.off")}</option>
         </select>
       </div>
     </div>

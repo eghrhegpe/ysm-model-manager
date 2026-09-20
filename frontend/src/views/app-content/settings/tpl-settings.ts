@@ -5,7 +5,6 @@ import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
 import { THEME_VALID } from "@/theme-core";
-import { resolveIcon } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { navItems } from "@/views/app-nav/nav-items.ts";
 import { stgCard } from "./stg-card.ts";
@@ -47,9 +46,9 @@ function renderStgBasicPaths(isViewer: boolean): string {
         UI_ICONS.link,
         t("settings.links.title"),
         `<select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
-          <option value="copy">${UI_ICONS.clipboard} ${t("settings.links.copy")}</option>
-          <option value="hardlink" selected>${UI_ICONS.link} ${t("settings.links.hardlink")} ${UI_ICONS.success}</option>
-          <option value="symlink">${UI_ICONS.link} ${t("settings.links.symlink")}</option>
+          <option value="copy">${t("settings.links.copy")}</option>
+          <option value="hardlink" selected>${t("settings.links.hardlink")}</option>
+          <option value="symlink">${t("settings.links.symlink")}</option>
         </select>
         <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">${t("settings.links.copyHint")}</div>
         <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">${t("settings.links.hardlinkHint")}</div>
@@ -68,9 +67,9 @@ function renderStgBasicPaths(isViewer: boolean): string {
         UI_ICONS.web,
         t("settings.mirror.title"),
         `<select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
-          <option value="">${UI_ICONS.globe} ${t("settings.mirror.directOption")}</option>
-          <option value="jsdelivr">${UI_ICONS.performance} ${t("settings.mirror.jsdelivrOption")}</option>
-          <option value="githubapi">${UI_ICONS.github} GitHub API</option>
+          <option value="">${t("settings.mirror.directOption")}</option>
+          <option value="jsdelivr">${t("settings.mirror.jsdelivrOption")}</option>
+          <option value="githubapi">GitHub API</option>
         </select>
         <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.directHint")}</div>
         <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.jsdelivrHint")}</div>
@@ -224,11 +223,11 @@ function renderStgFontFamily(): string {
     UI_ICONS.ruler,
     t("settings.fontSize"),
     `<select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
-      <option value="xsmall">${UI_ICONS.bullet} ${t("settings.fontSize.xsmall")}</option>
-      <option value="small">${UI_ICONS.bulletAlt} ${t("settings.fontSize.small")}</option>
-      <option value="normal" selected>${UI_ICONS.dot} ${t("settings.fontSize.normal")}</option>
-      <option value="medium">${UI_ICONS.radioOn} ${t("settings.fontSize.medium")}</option>
-      <option value="large">${UI_ICONS.collision} ${t("settings.fontSize.large")}</option>
+      <option value="xsmall">${t("settings.fontSize.xsmall")}</option>
+      <option value="small">${t("settings.fontSize.small")}</option>
+      <option value="normal" selected>${t("settings.fontSize.normal")}</option>
+      <option value="medium">${t("settings.fontSize.medium")}</option>
+      <option value="large">${t("settings.fontSize.large")}</option>
     </select>
     <div id="set-size-preview" style="display:flex;gap:8px;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">
       <span>${t("settings.ui.body")} <b id="sz-base" style="color:var(--txt)">13px</b></span>
@@ -246,8 +245,8 @@ function renderStgFontFamily(): string {
     UI_ICONS.brush,
     t("settings.font.creatorFont"),
     `<select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="kaiti" selected>${UI_ICONS.brush} ${t("settings.font.kaiti")}</option>
-      <option value="system">${UI_ICONS.note} ${t("settings.font.systemFont")}</option>
+      <option value="kaiti" selected>${t("settings.font.kaiti")}</option>
+      <option value="system">${t("settings.font.systemFont")}</option>
     </select>
     <div class="stg-desc">${t("settings.fontHint")}</div>`,
     {
@@ -260,8 +259,8 @@ function renderStgFontFamily(): string {
     UI_ICONS.payment,
     t("settings.density"),
     `<select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="compact" selected>${UI_ICONS.package} ${t("settings.density.compact")}</option>
-      <option value="normal">${UI_ICONS.package} ${t("settings.density.normal")}</option>
+      <option value="compact" selected>${t("settings.density.compact")}</option>
+      <option value="normal">${t("settings.density.normal")}</option>
     </select>
     <div class="stg-desc">${t("settings.densityHint")}</div>`,
     {
@@ -309,7 +308,7 @@ function renderStgAnimDefault(): string {
       <label for="set-default-page" class="label">${t("settings.defaultPage.fixed")}</label>
       <select id="set-default-page" class="stg-select" style="width:auto">
         ${navItems()
-          .map((it) => `<option value="${it.id}">${resolveIcon(it.icon)} ${t(it.key)}</option>`)
+          .map((it) => `<option value="${it.id}">${t(it.key)}</option>`)
           .join("\n        ")}
       </select>
     </div>

@@ -21,8 +21,8 @@ function buildFormHTML(dir: string, total: number, changed: number): string {
 <div class="dlg-section">
   <span class="dlg-section-label">${t("dialog.pattern")}：</span>
   <select id="br-mode" class="dlg-input">
-    <option value="parse">${UI_ICONS.clipboard} ${t("dialog.parseFormat")}</option>
-    <option value="replace">${UI_ICONS.search} ${t("dialog.findReplace")}</option>
+    <option value="parse">${t("dialog.parseFormat")}</option>
+    <option value="replace">${t("dialog.findReplace")}</option>
   </select>
 </div>
 <div id="br-parse-mode" class="dlg-section">

@@ -55,9 +55,10 @@ export { KNOWN_PATHS } from "./preview-paths.ts";
 
 /**
  * 契约守卫：调用方路径必须落在 `PreviewStatePath` 的定义域内。
- * 路径前缀写错（如 `renderX.foo`）时本行编译失败——把「bind 无处可指」挡在编译期。
+ * 路径前缀写错（如 `renderX.foo`）时本行编译失败——把路径前缀漂移挡在编译期。
  * 升格后签名从 `(SettingsPath) => PreviewStatePath` 窄→宽 改为恒等函数
- * （类型层已是宽集合，调用点 `toStatePath(p)` 形态不变）。
+ * （类型层已是宽集合，调用点 `toStatePath(p)` 形态不变；`control.bind` 字段已于
+ * 4f7ca6b25 随 ADR-195 增量2a 拆除，本守卫仅守住路径定义域，不再关联 bind 语义）。
  */
 export function toStatePath(path: PreviewStatePath): PreviewStatePath {
   return path;

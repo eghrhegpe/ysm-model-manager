@@ -17,6 +17,7 @@ source_files:
   - frontend/src/views/app-content/diagnostics/perf-trace.ts
 auto_fields:
   symbols_with_lines:
+    - BASELINE_CONTROL_IDS
     - bindPerfCopyHandlers
     - CLIResp
     - createDedupSession

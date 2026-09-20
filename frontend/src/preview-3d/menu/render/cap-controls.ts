@@ -170,7 +170,10 @@ export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
   hint.textContent = v.hintKey ? tOf(v.hintKey) : "";
   labelBox.append(label, hint);
   const toggle = createHeaderToggle({
-    value: v.getValue() as boolean,
+    // 节点无 control.get 时 getValue() 为 null（nodeControlToView 默认 null）——
+    // 强转布尔会静默成 false，这里显式判空，缺 get 的 toggle 渲染为关且可点（点开后
+    // setValue 同样缺失即 no-op），与「永远显示开」的假状态相比，关态是更诚实的缺省
+    value: Boolean(v.getValue()),
     onChange: (val: boolean): void => {
       v.setValue(val);
       // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）

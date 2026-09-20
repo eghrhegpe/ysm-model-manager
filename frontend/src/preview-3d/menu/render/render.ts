@@ -508,6 +508,9 @@ export function nodeControlToView(node: PreviewMenuNode, menu?: SlideMenuHandle)
   const labelKey = node.labelKey ?? "";
   const fallback = node.label ?? node.id;
 
+  // 固定传 undefined：生产 spec 的 get 全是无参闭包（如 () => getStateValue(...)），
+  // undefined 不进入任何读取逻辑——保留 unknown 形参兼容 PreviewControlSpec 签名，
+  // 调用方无感知（旧 signature 的 snapshot 形参已拆除，见 4f7ca6b25）
   const getValue = (): unknown => (spec?.get ? spec.get(undefined) : null);
 
   const setValue = (v: number | string | boolean): void => {

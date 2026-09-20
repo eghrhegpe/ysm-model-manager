@@ -33,6 +33,10 @@ const DIAG_TABS = [
   "sync-conflict",
 ] as const;
 
+/** tab 就绪等待数**派生自 DIAG_TABS**——上一行清单与本数字是同一事实的两个副本时，
+ * 退役/新增 tab 只改一处必漂移（gui 教训）；故禁止再写 `>= 6` 这类字面量。 */
+const DIAG_TAB_COUNT = DIAG_TABS.length;
+
 /** 面板**真实可见**：display 非 none **且**占据布局尺寸（嵌套吞并时尺寸会塌成 0） */
 function panelMeasuredVisible(page: Page, id: string): Promise<boolean> {
   return page.evaluate((n: string) => {
@@ -70,11 +74,11 @@ test.describe("诊断页", () => {
     await navItem(page, "diagnostics").click();
     // 等待顶部 repo-tab 就绪（ADR-258 后不再是 .diag-btn）
     await page.waitForFunction(
-      () => {
+      (n: number) => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 6;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= n;
       },
-      undefined,
+      DIAG_TAB_COUNT,
       { timeout: 10000, polling: 200 },
     );
   });
@@ -527,11 +531,11 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     await gotoApp(page);
     await navItem(page, "diagnostics").click();
     await page.waitForFunction(
-      () => {
+      (n: number) => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 6;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= n;
       },
-      undefined,
+      DIAG_TAB_COUNT,
       { timeout: 10000, polling: 200 },
     );
     await clickBySelector(page, '.repo-tab[data-tab="bench"]');
@@ -740,11 +744,11 @@ test.describe("诊断页 · 引擎对照 scan-bench 真实载荷渲染（ADR-262
     await gotoApp(page);
     await navItem(page, "diagnostics").click();
     await page.waitForFunction(
-      () => {
+      (n: number) => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 6;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= n;
       },
-      undefined,
+      DIAG_TAB_COUNT,
       { timeout: 10000, polling: 200 },
     );
     // 引擎对照按钮在「跑基准」tab 的 scan 模式控制条上（ADR-278 §2.1），先切 tab 再拨模式
@@ -861,11 +865,11 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
     await gotoApp(page);
     await navItem(page, "diagnostics").click();
     await page.waitForFunction(
-      () => {
+      (n: number) => {
         const root = document.querySelector("app-content")?.shadowRoot;
-        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= 6;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= n;
       },
-      undefined,
+      DIAG_TAB_COUNT,
       { timeout: 10000, polling: 200 },
     );
     await clickBySelector(page, '.repo-tab[data-tab="bench"]');

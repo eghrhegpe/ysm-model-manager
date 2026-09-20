@@ -113,4 +113,49 @@ describe("renderTabs 产出契约（ADR-259 §2）", () => {
     expect(shell.bar).toBe('<div class="repo-tabs"></div>');
     expect(shell.panels).toBe("");
   });
+
+  // ===== desktopOnly：查看器降级的声明处单点（新增 tab 不再另写远处名单）=====
+  it("viewerMode=true → desktopOnly tab 整块不渲染（按钮+面板都缺席，非仅 display:none）", () => {
+    const shell = renderTabs({
+      prefix: "demo",
+      viewerMode: true,
+      tabs: [
+        { id: "alpha", label: "A", body: "AAA" },
+        { id: "beta", label: "B", body: "BBB", desktopOnly: true },
+        { id: "gamma", label: "G", body: "GGG" },
+      ],
+    });
+    expect(shell.bar).not.toContain('data-tab="beta"');
+    expect(shell.panels).not.toContain('id="demo-tab-beta"');
+    // 其余 tab 不受波及
+    expect(shell.bar).toContain('data-tab="alpha"');
+    expect(shell.bar).toContain('data-tab="gamma"');
+  });
+
+  it("viewerMode=true 且首个 tab 是 desktopOnly → 默认激活位让给首个**可见** tab", () => {
+    const shell = renderTabs({
+      prefix: "demo",
+      viewerMode: true,
+      tabs: [
+        { id: "alpha", label: "A", body: "AAA", desktopOnly: true },
+        { id: "beta", label: "B", body: "BBB" },
+      ],
+    });
+    // 旧口径下 alpha 带 active、beta 隐藏——现在 alpha 直接不渲染，beta 成为首位可见
+    expect(shell.bar).toContain('<button class="repo-tab active" data-tab="beta">');
+    // 首个可见面板不写 display（回落 .tab-body{display:flex}），否则查看器下面板全灰
+    expect(shell.panels).toContain('<div class="tab-body" id="demo-tab-beta">');
+  });
+
+  it("viewerMode 缺省/false → desktopOnly 照常渲染（桌面模式零行为变化）", () => {
+    for (const vm of [undefined, false]) {
+      const shell = renderTabs({
+        prefix: "demo",
+        ...(vm === undefined ? {} : { viewerMode: vm }),
+        tabs: [{ id: "alpha", label: "A", body: "AAA", desktopOnly: true }],
+      });
+      expect(shell.bar).toContain('data-tab="alpha"');
+      expect(shell.panels).toContain('id="demo-tab-alpha"');
+    }
+  });
 });

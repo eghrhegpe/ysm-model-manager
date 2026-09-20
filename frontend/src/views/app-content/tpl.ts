@@ -56,7 +56,8 @@ export const VIEW_TESTIDS: readonly string[] = [
 
 export function repositoryHTML(): string {
   // 查看器模式（Android/网页版 ADR-049）：回收站/查重/最旧模型依赖本地文件系统
-  // 操作（MoveToRecycle/FindDuplicateFiles 等 browser-adapter 未实现），隐藏对应 tab
+  // 操作（MoveToRecycle/FindDuplicateFiles 等 browser-adapter 未实现）——不再条件 push，
+  // 而是无条件声明 desktopOnly 由 renderTabs(viewerMode) 单点隐藏（声明处即真相）
   const tabs: TabSpec[] = [
     {
       id: "tree",
@@ -66,34 +67,37 @@ export function repositoryHTML(): string {
       body: `<app-tree root="${RESOURCE_TYPES.YSM}" style="flex:1;min-width:0"></app-tree>`,
     },
   ];
-  if (!isViewerMode()) {
-    tabs.push(
-      {
-        id: "recycle",
-        buttonTestid: "content-tab",
-        label: `${UI_ICONS.recycle} ${t("recycle.tab")}`,
-        body: "",
-        panelStyle: "overflow-y:auto",
-      },
-      {
-        id: "dedup",
-        buttonTestid: "content-tab",
-        label: `${UI_ICONS.link} ${t("repo.tab.dedup")}`,
-        body: "",
-        panelStyle: "overflow-y:auto;padding:12px",
-      },
-      {
-        id: "oldest",
-        buttonTestid: "content-tab",
-        label: `${UI_ICONS.oldest} ${t("repo.tab.oldest")}`,
-        body: "",
-        panelStyle: "overflow-y:auto;overflow-x:hidden",
-      },
-    );
-  }
+  // 桌面专属 tab（回收站/查重/最旧模型依赖 MoveToRecycle/FindDuplicateFiles 等，
+  // browser-adapter 未实现）现在也**无条件声明**：隐藏收进 renderTabs(viewerMode) 单点
+  tabs.push(
+    {
+      id: "recycle",
+      desktopOnly: true,
+      buttonTestid: "content-tab",
+      label: `${UI_ICONS.recycle} ${t("recycle.tab")}`,
+      body: "",
+      panelStyle: "overflow-y:auto",
+    },
+    {
+      id: "dedup",
+      desktopOnly: true,
+      buttonTestid: "content-tab",
+      label: `${UI_ICONS.link} ${t("repo.tab.dedup")}`,
+      body: "",
+      panelStyle: "overflow-y:auto;padding:12px",
+    },
+    {
+      id: "oldest",
+      desktopOnly: true,
+      buttonTestid: "content-tab",
+      label: `${UI_ICONS.oldest} ${t("repo.tab.oldest")}`,
+      body: "",
+      panelStyle: "overflow-y:auto;overflow-x:hidden",
+    },
+  );
   // tab 结构由 renderTabs 单点产出（ADR-259）：栏与面板**分产**，落位在此决定——
   // 面板组挂 .repo-left（与预览面板并列），故不与 tab 栏相邻
-  const { bar, panels } = renderTabs({ prefix: "repo", tabs });
+  const { bar, panels } = renderTabs({ prefix: "repo", tabs, viewerMode: isViewerMode() });
   return (
     '<div class="repo-wrap">' +
     bar +
@@ -150,6 +154,7 @@ export function diagnosticsHTML(): string {
   const { bar, panels } = renderTabs({
     prefix: "diag",
     panelClass: "diag-panel",
+    viewerMode: isViewerMode(),
     tabs: [
       {
         id: "log",
@@ -181,6 +186,8 @@ export function diagnosticsHTML(): string {
       },
       {
         id: "bench",
+        // ADR-278 §2.5：整 tab 桌面专属——它的每个入口都是 CLI，只藏按钮会留空壳 tab
+        desktopOnly: true,
         label: `${UI_ICONS.performance} ${t("diagnostics.perfRunBench")}`,
         // ADR-278 §2.2：目标集 / 排序 single 与 conc **共用同一份**（落实 ADR-262「跨命令同名同义，不写第二份」）
         // ADR-278 §2.3：取样上限**有意不合并**——单模型深测默认 5 / 并发广度扫默认 20 是两个真实口径
@@ -259,6 +266,7 @@ export function diagnosticsHTML(): string {
       },
       {
         id: "conflict",
+        desktopOnly: true,
         label: `${UI_ICONS.performance} ${t("diagnostics.conflict")}`,
         body: `  <div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
   <button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">${UI_ICONS.performance} ${t("diagnostics.startScan")}</button>
@@ -266,6 +274,7 @@ export function diagnosticsHTML(): string {
       },
       {
         id: "health",
+        desktopOnly: true,
         label: `${UI_ICONS.diagnose} ${t("diagnostics.healthTitle")}`,
         body: `  <div id="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.healthHint")}
   <button class="btn-base accent" id="diag-scan-health" style="margin-top:4px">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
@@ -273,6 +282,7 @@ export function diagnosticsHTML(): string {
       },
       {
         id: "sync-conflict",
+        desktopOnly: true,
         label: `${UI_ICONS.refresh} ${t("diagnostics.syncConflict")}`,
         body: `  <div id="diag-sync-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
   <button class="btn-base accent" id="diag-scan-sync-conflict" style="margin-top:4px">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>

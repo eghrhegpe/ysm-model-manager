@@ -140,23 +140,23 @@ function dgInBindScanBtns(root: ShadowRoot, esc: EscFn): void {
   });
 }
 
-/** 查看器/网页版：隐藏依赖 Go 本地能力或 CLI 的诊断 tab，避免“可见但不可用” */
+/** 查看器/网页版：隐藏扫描入口按钮（tab 本体已由 renderTabs(desktopOnly) 在模板层单点隐）。
+ * 本函数只剩「面板内局部控件」这一类无法声明进 TabSpec 的收窄；
+ * 加载剖析（diag-perf-refresh-trace）**不**隐藏：其数据是 3D 适配器写内存 store
+ * （getLoadTraces()，零 Go/CLI 依赖），跨模式可用——连它一起藏曾把唯一可用入口藏掉。 */
 function dgInHideDesktopOnly(root: ShadowRoot): void {
   if (!isViewerMode()) return;
-  for (const tab of root.querySelectorAll<HTMLElement>(
-    // ADR-278 §2.5：bench（跑基准）整 tab 隐藏——它的每个入口都是桌面专属
-    // CLI；只藏按钮会留下「满屏引导空态却点不着任何东西」的空壳 tab。
-    '.repo-tab[data-tab="conflict"], .repo-tab[data-tab="health"], .repo-tab[data-tab="sync-conflict"], .repo-tab[data-tab="bench"]',
-  )) {
-    tab.style.display = "none";
-  }
+  // ADR-278 §2.5：conflict / health / sync-conflict / bench 四个 tab 整 tab 隐藏已下沉
+  // tpl 声明处（desktopOnly: true → renderTabs(viewerMode) 产出时直接不渲染），
+  // 此处不再持有一份远处的选择器名单——那正是与 tpl 漂移的那只手。
   for (const id of [
+    // 扫描按钮在 desktopOnly tab 的面板内：tab 整块已不渲染，按 id 再显式隐一次保留既有口径
+    // （init.test 钉的是按钮自身 style 非仅继承不可见；且面板 body 可能被其它入口单独消费）
     "diag-scan-conflict",
     "diag-scan-health",
     "diag-scan-sync-conflict",
-    // 加载剖析**不**隐藏（2026-09 修正）：它的数据是 3D 适配器写进内存 store 的
-    // （getLoadTraces()，零 Go/CLI 依赖），网页/查看器模式下同样可用——原先连它一起藏，
-    // 等于把「唯一跨模式可用」的面板的唯一入口藏掉，与本函数「避免可见但不可用」的本意反向成立。
+    // 加载剖析（diag-perf-refresh-trace）不在此列：零 Go/CLI 依赖、跨模式可用——连它一起藏
+    // 曾把「唯一跨模式可用面板」的唯一入口藏掉（2026-09 修正，与本函数本意反向成立）。
   ]) {
     const el = root.getElementById(id);
     if (el) el.style.display = "none";

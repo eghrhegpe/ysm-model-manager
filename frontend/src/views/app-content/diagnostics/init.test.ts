@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { initDiagnostics, createDedupSession } from "./init.ts";
 import { clearLoadTraces, recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
+import { diagnosticsHTML } from "@/views/app-content/tpl.ts";
 
 const { busEmit, busOn, getApp, can, isViewerMode } = vi.hoisted(() => ({
   busEmit: vi.fn(),
@@ -828,24 +829,24 @@ describe("initDiagnostics — 同步冲突与体检扫描入口", () => {
 });
 
 describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
-  it("查看器模式（isViewerMode=true）→ 隐藏桌面专属 top tab 与扫描 / 基准入口", () => {
+  it("查看器模式（isViewerMode=true）→ 桌面专属 top tab 整块不渲染，扫描入口缺席", () => {
     isViewerMode.mockReturnValue(true);
-    const { root } = makeRoot();
+    const { root, el } = makeRoot();
+    // 降级已下沉模板层：用**真实成品模板**覆盖夹具，钉 renderTabs(viewerMode, desktopOnly)
+    // 新链——手拼夹具测不到「声明处即真相」（旧测试只验 init 事后改 style）。
+    el.innerHTML = diagnosticsHTML();
     initDiagnostics(root, esc);
-    // 桌面专属 top tab：三个只读扫描 + bench（跑基准）——每个入口都是桌面专属 CLI，
-    // 只藏按钮会留下「满屏引导空态却点不着任何东西」的空壳 tab（ADR-278 §2.5）
+    // 桌面专属 top tab（三个只读扫描 + bench，ADR-278 §2.5）：按钮与面板整块缺席
     for (const name of ["conflict", "health", "sync-conflict", "bench"]) {
-      expect(
-        (root.querySelector(`.repo-tab[data-tab="${name}"]`) as HTMLElement).style.display,
-      ).toBe("none");
+      expect(root.querySelector(`.repo-tab[data-tab="${name}"]`)).toBeNull();
+      expect(root.getElementById(`diag-tab-${name}`)).toBeNull();
     }
-    // 扫描入口 + 记录 tab 里唯一靠 CLI 的那一段（基准历史，含其控制行）
-    for (const id of [
-      "diag-scan-conflict",
-      "diag-scan-health",
-      "diag-scan-sync-conflict",
-    ]) {
-      expect((root.getElementById(id) as HTMLElement).style.display).toBe("none");
+    // 跨模式可用项照常在场：log / record
+    expect(root.querySelector('.repo-tab[data-tab="log"]')).not.toBeNull();
+    expect(root.querySelector('.repo-tab[data-tab="record"]')).not.toBeNull();
+    // 扫描按钮在缺席面板内同样不存在（若未来控件拆出 tab，dgInHideDesktopOnly 仍按 id 隐）
+    for (const id of ["diag-scan-conflict", "diag-scan-health", "diag-scan-sync-conflict"]) {
+      expect(root.getElementById(id)).toBeNull();
     }
     // 加载剖析读内存 store、零 Go/CLI 依赖 → 跨模式可用，入口不得隐藏（ADR-278 §2.5）
     expect(

@@ -26,6 +26,9 @@ export interface TabSpec {
   buttonTestid?: string;
   /** 面板 inner HTML */
   body: string;
+  /** 桌面专属 tab（入口依赖 Go 本地能力 / CLI）：查看器/网页版由 renderTabs **单点隐藏**，
+   * 调用方不再另写远处的选择器名单——「要不要藏」写在定义它的地方（ADR-259 同构精神） */
+  desktopOnly?: boolean;
   /** 面板额外行内样式。布局基线由 `.tab-body` 提供，此处**只放差异**（如 overflow-y:auto / padding:12px） */
   panelStyle?: string;
   /** 面板 data-testid（稳定的测试钩子，ADR-133） */
@@ -46,6 +49,10 @@ export interface TabsShellSpec {
   buttonClass?: string;
   /** 附加到每个面板的类（如诊断页的动画钩子 `diag-panel`） */
   panelClass?: string;
+  /** 查看器/网页版（isViewerMode）：带 desktopOnly 的 tab **整 tab 隐藏**（按钮+面板）。
+   * 单点在此而非各页 init：避免「远处的选择器名单」与 tpl 声明漂移（ADR-259 §2.1）；
+   * 只藏按钮不藏 tab 会留下空壳 tab（pitfalls：满屏引导空态却点不着东西）。 */
+  viewerMode?: boolean;
 }
 
 /**
@@ -64,11 +71,13 @@ export interface TabsShell {
 
 /** 按声明产出「tab 栏 + 面板组」两半；调用方负责外层容器与二者落位。 */
 export function renderTabs(spec: TabsShellSpec): TabsShell {
-  const { prefix, tabs, barId, barTestid, buttonClass = "repo-tab", panelClass } = spec;
+  const { prefix, tabs, barId, barTestid, buttonClass = "repo-tab", panelClass, viewerMode } = spec;
+  // desktopOnly 只在 viewerMode 下生效；首个**可见** tab 才是默认激活项（原语义不变）
+  const visible = tabs.filter((t) => !(viewerMode && t.desktopOnly));
 
   const barAttrs =
     (barId ? ` id="${barId}"` : "") + (barTestid ? ` data-testid="${barTestid}"` : "");
-  const bar = `<div class="repo-tabs"${barAttrs}>${tabs
+  const bar = `<div class="repo-tabs"${barAttrs}>${visible
     .map(
       (tab, i) =>
         `<button class="${buttonClass}${i === 0 ? " active" : ""}"${tab.buttonTestid ? ` data-testid="${tab.buttonTestid}"` : ""} data-tab="${tab.id}">${tab.label}</button>`,
@@ -76,7 +85,7 @@ export function renderTabs(spec: TabsShellSpec): TabsShell {
     .join("")}</div>`;
 
   const panelCls = panelClass ? `tab-body ${panelClass}` : "tab-body";
-  const panels = tabs
+  const panels = visible
     .map((tab, i) => {
       // 首个可见：不写 display，回落 `.tab-body{display:flex}`；其余 display:none
       const style = [i === 0 ? "" : "display:none", tab.panelStyle ?? ""].filter(Boolean).join(";");

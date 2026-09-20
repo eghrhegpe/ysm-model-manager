@@ -24,6 +24,7 @@ let diagSyncBusy = false;
 
 interface DgCfInstanceFile {
   name: string;
+  hash: string;
 }
 
 // ===== 同步冲突绑定类型（已 struct 化，ADR-143 P0） =====
@@ -95,23 +96,37 @@ async function dgCfCollectInstanceFiles(
       [];
     instanceFiles[ins.Name] = entries.map((e) => ({
       name: e.Name.replace(/\.(disabled|ban)$/i, ""),
+      hash: e.Hash || "",
     }));
   }
   return instanceFiles;
 }
 
+/**
+ * 跨实例冲突判定：**同名 + 内容哈希不唯一**才算冲突。
+ *
+ * 只按名字聚合会把「同步成功」误报成冲突——PushResources 的本职就是把仓库模型
+ * 分发到各实例，同名同哈希是预期状态，不是问题。真正的冲突是「同名但内容不同」
+ * （实为跨实例内容漂移）。
+ *
+ * 空哈希（超大文件 / 读取失败，Go 侧返回 ""）一律排除出判定：拿「未知」当「不同」
+ * 会批量制造误报，宁可不报（与 Go `DetectConflicts` 的 HashFailed 走人工审查同取向）。
+ */
 function dgCfBuildNameConflictMap(
   instanceFiles: Record<string, DgCfInstanceFile[]>,
 ): [string, string[]][] {
-  const nameMap: Record<string, string[]> = {};
+  const byName: Record<string, { ins: string[]; hashes: Set<string> }> = {};
   for (const [insName, files] of Object.entries(instanceFiles)) {
     for (const f of files) {
-      if (!nameMap[f.name]) nameMap[f.name] = [];
-      nameMap[f.name].push(insName);
+      const rec = byName[f.name] ?? { ins: [], hashes: new Set<string>() };
+      byName[f.name] = rec;
+      rec.ins.push(insName);
+      if (f.hash) rec.hashes.add(f.hash);
     }
   }
-  return Object.entries(nameMap)
-    .filter(([, v]) => v.length > 1)
+  return Object.entries(byName)
+    .filter(([, r]) => r.ins.length > 1 && r.hashes.size > 1)
+    .map(([name, r]) => [name, r.ins] as [string, string[]])
     .sort((a, b) => b[1].length - a[1].length);
 }
 

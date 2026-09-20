@@ -473,13 +473,16 @@ describe("scanConflicts（diag-scan-conflict 按钮）", () => {
         { Name: "insA", Exists: true, CustomDir: "/mc/insA" },
         { Name: "insB", Exists: true, CustomDir: "/mc/insB" },
       ]),
-      ScanModelEntriesWithLabel: vi.fn(() => [{ Name: "model.ysm" }]),
+      // 同名但两侧哈希不同 → 真冲突（同名同哈希属正常同步结果，不报）
+      ScanModelEntriesWithLabel: vi.fn((dir: string) => [
+        { Name: "model.ysm", Hash: `h-${dir}` },
+      ]),
     });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     (root.getElementById("diag-scan-conflict") as HTMLElement).click();
     const list = root.getElementById("diag-conflict-list") as HTMLElement;
-    await waitFor(() => list.textContent!.includes("存在于多个整合包"));
+    await waitFor(() => list.textContent!.includes("内容不一致"));
     expect(list.textContent).toContain("model"); // renderDisplayName 剥扩展名
     expect(list.textContent).toContain("insA");
     expect(list.textContent).toContain("insB");

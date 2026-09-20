@@ -99,7 +99,10 @@ status: active
 - `dedup.ts` — 去重检测（类型元数据同步读 `utils/resource/schema.ts` 的 `resourceTypesById`（ADR-269 D3④：废 `services/resource-registry.ts` RPC 旁路）+ Go 绑定）；`createDedupSession()` 会话工厂把 busy/exec 重入守卫与去重配置收进闭包，经 `init.ts` re-export 接线。keep 保留策略纯函数于 2026-09-03 抽至 `dedup-policy.ts`（策略决策零 DOM/会话依赖，渲染默认保留索引与 exec 删除共用同一决策源，防规则漂移）
 - `dedup-policy.ts` — keep 保留策略纯函数层（`getDefaultKeepIdx` + `pickByTime` 共享 pick 辅助 + `DedupFileLike`），自 `dedup.ts` 抽出（2026-09-03，ADR-040 拆分线延续）；零 mock 单测聚焦策略分支
   - `toTimestamp` 缺失/非法返回 `null`（「无时间信息」），不参与时间裁决；全缺失时 `pickByTime` 严格比较保序回退首项（2026-09-12 P0 收口，修「newest 侧 MAX 哨兵反判最新」潜伏语义缺陷——Go 扫描恒带回 modTime，生产不可达）
-- `conflicts.ts` — 冲突列表渲染（依赖 `logs.ts` 的操作日志数据）
+- `conflicts.ts` — 两种冲突扫描 + 同步冲突解决：
+  - **`scanConflicts`（conflict tab，跨实例）**：聚合各整合包实例 CustomDir 的模型条目，判定为「**同名 + 内容哈希不唯一**」才算冲突。护栏（2026-09-18 修正）：旧实现只按文件名聚合，`v.length > 1` 即报 → 把 `PushResources` 的**正常同步产物**（同名同哈希分发到多实例）批量误报成冲突，用户体感「正常同步也报、离谱到不如删除」；且 `dgCfCollectInstanceFiles` 当时只取 `e.Name`，丢了 Go 已交付的 `ModelEntry.Hash`（SHA256）。现 `DgCfInstanceFile` 带 `hash`，判定要求 `ins.length > 1 && hashes.size > 1`。**空哈希（超大文件/读失败，Go 侧返空串）排除出判定**——拿「未知」当「不同」会制造误报，宁可不报（与 Go `DetectConflicts` 的 `HashFailed` 走人工审查同取向）。回归：`conflicts.test.ts`「同名同哈希不报」「哈希缺失不报」
+  - **`scanSyncConflicts`（sync-conflict tab，实例↔仓库）**：调 Go `DetectConflicts`（真比两端 SHA256，哈希不同→`ConflictContentModified`），需手选 rtype + instance，带解决区（`ResolveConflicts` 三策略 + 1.5s 自动复扫，list 分离时作废迟到复扫）
+  - 文案：`conflictsFound` / `noNameConflict` 措辞已改为「内容不一致」（三语同步），旧文案「存在于多个整合包」是错误判定的活化石
 - `logs.ts` — 操作日志渲染：`OP_META` 七种中文标签+图标，状态图标优先读 `Level`（error→❌ / warn→⚠️ / debug→🔍 / fatal→💀 / info→✅），无 Level 按 `Status` 兜底；消费 Go `logs` 包（见知识卡 `go_logs`）
 - `perf.ts` — 性能面板 facade：事件接线 + re-export，业务逻辑拆至：
   - `perf-common.ts` — 共享工具层（sectionHeader / 复制按钮 / 守卫 / 错误辅助）

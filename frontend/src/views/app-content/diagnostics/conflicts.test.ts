@@ -130,11 +130,20 @@ describe("scanConflicts", () => {
     await waitFor(() => expect(list.textContent).toContain("没有找到整合包"));
   });
 
-  it("有冲突 → 渲染冲突行（Exists=false 实例跳过，.disabled/.ban 后缀剥离）", async () => {
-    const entries: Record<string, { Name: string }[]> = {
-      "/a": [{ Name: "model.ysm" }, { Name: "shared.ysm.disabled" }, { Name: "unique.ysm" }],
-      "/b": [{ Name: "model.ysm.ban" }, { Name: "shared.ysm.disabled" }],
-      "/c": [{ Name: "model.ysm" }],
+  it("内容不一致才报冲突（同名 + 哈希不同），Exists=false 实例跳过、.disabled/.ban 后缀剥离", async () => {
+    // model.ysm：insA/insB 均存在但哈希不同 → 真冲突
+    // shared.ysm：两实例哈希相同（同步分发结果）→ 不报
+    const entries: Record<string, { Name: string; Hash: string }[]> = {
+      "/a": [
+        { Name: "model.ysm", Hash: "h-model-a" },
+        { Name: "shared.ysm.disabled", Hash: "h-shared" },
+        { Name: "unique.ysm", Hash: "h-unique" },
+      ],
+      "/b": [
+        { Name: "model.ysm.ban", Hash: "h-model-b" },
+        { Name: "shared.ysm.disabled", Hash: "h-shared" },
+      ],
+      "/c": [{ Name: "model.ysm", Hash: "h-model-c" }],
     };
     const scanFn = vi.fn((dir: string) => entries[dir] || []);
     mockApp({
@@ -147,9 +156,9 @@ describe("scanConflicts", () => {
     });
     const { root, list } = makeRoot();
     await scanConflicts(root, esc);
-    await waitFor(() => expect(list.textContent).toContain("发现 2 个文件存在于多个整合包"));
+    await waitFor(() => expect(list.textContent).toContain("发现 1 个文件在多个整合包中内容不一致"));
     expect(list.textContent).toContain("model"); // renderDisplayName 剥扩展名
-    expect(list.textContent).toContain("shared");
+    expect(list.textContent).not.toContain("shared"); // 同名同哈希 = 正常同步结果，不报
     expect(list.textContent).not.toContain("unique"); // 仅单实例存在，不冲突
     expect(list.textContent).toContain("insA");
     expect(list.textContent).toContain("insB");
@@ -159,6 +168,38 @@ describe("scanConflicts", () => {
     expect(scanFn).not.toHaveBeenCalledWith("/c");
   });
 
+  it("同名同哈希（同步分发结果）→ 不报冲突", async () => {
+    mockApp({
+      ListVersionInstances: vi.fn(() => [
+        { Name: "insA", Exists: true, CustomDir: "/a" },
+        { Name: "insB", Exists: true, CustomDir: "/b" },
+      ]),
+      // 三实例同步同一份仓库模型：名字同、哈希同 —— 正是 PushResources 的正常产物
+      ScanModelEntriesWithLabel: vi.fn(() => [{ Name: "synced.ysm", Hash: "same-hash" }]),
+    });
+    const { root, list } = makeRoot();
+    await scanConflicts(root, esc);
+    await waitFor(() => expect(list.textContent).toContain("未检测到文件名冲突"));
+    expect(list.textContent).not.toContain("synced");
+  });
+
+  it("哈希缺失（超大/读失败）→ 保守不报，不拿未知当不同", async () => {
+    const entries: Record<string, { Name: string; Hash: string }[]> = {
+      "/a": [{ Name: "big.ysm", Hash: "" }],
+      "/b": [{ Name: "big.ysm", Hash: "" }],
+    };
+    mockApp({
+      ListVersionInstances: vi.fn(() => [
+        { Name: "insA", Exists: true, CustomDir: "/a" },
+        { Name: "insB", Exists: true, CustomDir: "/b" },
+      ]),
+      ScanModelEntriesWithLabel: vi.fn((dir: string) => entries[dir] || []),
+    });
+    const { root, list } = makeRoot();
+    await scanConflicts(root, esc);
+    await waitFor(() => expect(list.textContent).toContain("未检测到文件名冲突"));
+  });
+
   it("超过 50 组冲突 → 只渲染前 50 行并提示剩余数量", async () => {
     const names = Array.from({ length: 51 }, (_, i) => `c${i}.ysm`);
     mockApp({
@@ -166,7 +207,10 @@ describe("scanConflicts", () => {
         { Name: "insA", Exists: true, CustomDir: "/a" },
         { Name: "insB", Exists: true, CustomDir: "/b" },
       ]),
-      ScanModelEntriesWithLabel: vi.fn(() => names.map((n) => ({ Name: n }))),
+      // 每个名字在两侧哈希各不相同 → 全部成冲突（只要 ≥1 个不同哈希即算）
+      ScanModelEntriesWithLabel: vi.fn((dir: string) =>
+        names.map((n) => ({ Name: n, Hash: `${n}:${dir}` })),
+      ),
     });
     const { root, list } = makeRoot();
     await scanConflicts(root, esc);

@@ -497,7 +497,7 @@ export const ja: Record<string, string> = {
   // repo = 全体で N 件）。この規則は title ヒントにのみ置き、ラベル本文は変えない——
   // モードでラベルの意味が変わること自体が、今回清算する負債。
   "diagnostics.perfMaxModelsHint":
-    "この数値の意味は「何を測るか」で選んだものによって変わります：あるタイプ = そのタイプから N 件；タイプ毎に N 件 = 全タイプそれぞれから N 件（タイプが多いと合計が N を大きく超えます）；全体で上位 N 件 = 全体から N 件"
+    "この数値の意味は「何を測るか」で選んだものによって変わります：あるタイプ = そのタイプから N 件；タイプ毎に N 件 = 全タイプそれぞれから N 件（タイプが多いと合計が N を大きく超えます）；全体で上位 N 件 = 全体から N 件",
   "diagnostics.perfMatrixResult": "タイプ別マトリクス結果",
   "diagnostics.perfMatrixColType": "タイプ",
   "diagnostics.perfMatrixColFound": "該当",
@@ -523,7 +523,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfIdle": "上のボタンで開始；結果はここに表示されます",
   "diagnostics.perfMode": "実行方法",
   "diagnostics.perfModeHint":
-    "実行方法 = どのベンチマークコマンドを使うか；下の「何を測るか」= 今回測る範囲。両者は独立：コマンドを選んでから範囲を決めます",
+    "実行方法 = どのベンチマークコマンドを使うか；隣の「何を測るか」= 今回測る範囲。両者は独立：コマンドを選んでから範囲を決めます",
   "diagnostics.perfRunBench": "ベンチ実行",
   "diagnostics.perfRecord": "パフォーマンス記録",
   "diagnostics.perfFail": "実行に失敗しました",

@@ -515,7 +515,7 @@ export const zhCN = {
   "diagnostics.perfMode": "怎么跑",
   // 一句话说清两个下拉的关系：模式选「命令」，测什么选「范围」——原先两个「单模型」撞名又耦合
   "diagnostics.perfModeHint":
-    "怎么跑 = 用哪种基准命令；下方「测什么」= 这次测多大范围。两者独立：先选命令，再圈范围",
+    "怎么跑 = 用哪种基准命令；旁边「测什么」= 这次测多大范围。两者独立：先选命令，再圈范围",
   "diagnostics.perfRunBench": "跑基准",
   "diagnostics.perfRecord": "性能记录",
   "diagnostics.perfFail": "执行失败",

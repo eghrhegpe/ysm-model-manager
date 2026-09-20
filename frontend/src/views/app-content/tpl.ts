@@ -200,20 +200,15 @@ export function diagnosticsHTML(): string {
         body: `  <div class="perf-wrap">
     <div class="perf-controls">
       <div class="perf-row">
-        <label for="diag-perf-mode">${t("diagnostics.perfMode")}</label>
+        <label for="diag-perf-mode" title="${t("diagnostics.perfModeHint")}">${t("diagnostics.perfMode")}</label>
         <select id="diag-perf-mode" class="diag-config-select" data-testid="diag-perf-mode">
           <option value="single">${t("diagnostics.perfModeOptSingle")}</option>
           <option value="conc">${t("diagnostics.perfModeOptConc")}</option>
         </select>
-        <div class="perf-hint">${t("diagnostics.perfModeHint")}</div>
-      </div>
-      <div class="perf-row">
         <label for="diag-perf-rtype" id="diag-perf-target-label" data-testid="diag-perf-target-label">${t("diagnostics.perfTarget")}</label>
         <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
           <option value="">${t("diagnostics.perfTargetModel")}</option>
         </select>
-      </div>
-      <div class="perf-row">
         <label for="diag-perf-order" id="diag-perf-order-label">${t("diagnostics.perfOrder")}</label>
         <select id="diag-perf-order" class="diag-config-select" data-testid="diag-perf-order">
           ${perfOrderOptionsHTML()}

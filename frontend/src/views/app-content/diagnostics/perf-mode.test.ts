@@ -262,4 +262,24 @@ describe("基准模式接线（ADR-278）", () => {
       }
     }
   });
+
+  it("非 single 下拨目标集选择器不得把基准三件套解禁（双维门禁兼并判定）", () => {
+    // 回归钉：syncPerfBaselineControls 也被 rtype change / 选项填充回调独立触发，
+    // 若只判目标集维不读当前模式，scan/conc 下动一下选择器就绕过 §2.6 反向半边。
+    const root = makeRoot("scan");
+    initPerfPanel(root, esc);
+    const rtype = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
+    rtype.value = ""; // 选回「单模型」——目标集维满足，但模式仍是 scan
+    rtype.dispatchEvent(new Event("change"));
+    for (const id of [
+      "diag-perf-baseline-save",
+      "diag-perf-baseline-compare",
+      "diag-perf-baseline-th",
+    ]) {
+      expect({ id, disabled: (root.getElementById(id) as HTMLInputElement).disabled }).toEqual({
+        id,
+        disabled: true,
+      });
+    }
+  });
 });

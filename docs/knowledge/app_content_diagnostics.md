@@ -401,7 +401,12 @@ localPos: number[];
 - **参数传递是诚实的**：前端把输入框里的数字**原样**当 `--max-models` 传给 Go（`perf-single-bench.ts:523`/`perf-concurrent.ts:278`），不偷偷换算；Go 按 `--target` 展开（`perf_target_set.go:67`）——`all` = 每类型各取 N 条（`groupPerfTargets`，**无总上限**，类型多时总数远超 N）、`repo` = 全库扁平 N 条（`capFlat`）、`rtype` = 该类型 N 条。e2e 锁「数字原样传 + 回显一致」，契约测试锁「target=model 绝不带 max-models」。
 - **target=model 时这个数字根本不用**（单模型就一个，没「取几条」的事）。界面怎么处理：**输入框变灰**（`perf.ts:170`，`PERF_UNREAD_TARGETS`）+ title 换成 `perfMaxUnreadHint`（「单模型目标下不生效（只在选了类型 / 全库时才用）」）——不是靠改标签，是靠置灰 + 悬停说明。
 - **真正的可读性缺口**：这个输入框在 all 模式下是「每个类型都取 N 条」，但标签恒定叫「最多模型数」，读起来像「总共最多 N 个」。语义其实在 title 里（`perfMaxModelsHint`），但原文案没把「每类都取、类型多会翻倍」讲透。本轮已把三语 `perfMaxModelsHint` 改直白（zh：…每个类型都取 N 条（类型多时总数会远超 N）…）。
-- **为什么标签不能跟着 target 变**：ADR-278 特意锁死「标签不随目标集改义」（e2e 用例⑦ + perf-matrix 墓碑）——因为旧版 `syncPerfCountLabel` 就是「标签跟着模式改义」那笔账，改回=重蹈覆辙。所以单位解释**只进 title、不进标签正文**是既定决策，不是漏写的 bug。
+- **为什么标签不能跟着 target 变**：ADR-278 特意锁死「标签不随目标集改义」(e2e 用例 ⑦ + perf-matrix 墓碑)——因为旧版 `syncPerfCountLabel` 就是「标签跟着模式改义」那笔账，改回=重蹈覆辙。所以单位解释**只进 title、不进标签正文**是既定决策，不是漏写的 bug。
+
+**模型路径框的目标集维收口（2026-09-20 后续）**：
+- 用户的困惑：选了「类型/全库」目标集后，`#diag-perf-model` 路径框**还亮着**（它的显隐只跟模式 `data-perf-mode="single"` 绑定），填了却不进载荷——「填了没用」的视觉困惑。
+- 收口：`diag-perf-model` 已登记进 `PERF_UNREAD_TARGETS`（与 `max`/`order` 并列 `["model"]`），目标集 ≠ 单模型时它**置灰 + title 换成 `perfModelUnreadHint`**（「填路径只对『单模型』目标集有效」）；恢复单模型时 title 还原为 `perfModelHintFromTree`。
+- **为什么不整组隐藏**：基准三件套已由 `syncPerfBaselineControls` 按目标集置灰（`disabled = !isModel || mode !== "single"`），且 ADR-278 §2.6/six修 明确倾向「置灰 + title 说清」而非「隐藏」（隐藏=用户不知道有这个功能）。故维持置灰体系，只补上唯一漏网的 `diag-perf-model`。
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

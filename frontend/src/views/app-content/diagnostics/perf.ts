@@ -56,12 +56,16 @@ export const PERF_UNREAD_MODES: Record<string, readonly string[]> = {
 /** 控件 id → **不读它**的目标集集（第二维，与 PERF_UNREAD_MODES 对称）。
  *  真相源 = `perf-single-bench.ts|singleBenchReadMode`：`target==="model"` 时提前 return，
  *  只读 model / iterations / 基准三件套，`order` 与 `maxModels` 根本不进载荷。
+ *  ⚠️ `diag-perf-model` 也在本表：它是「单模型目标集专属」——选类型/全部/全库时它不进载荷，
+ *  却仍随 `data-perf-mode="single"` 整行显示（用户会困惑「填了路径怎么没用」）。登记后目标集维
+ *  会把它置灰 + title 说明（2026-09-20 收口）。
  *  为什么必须成表而不是散在 apply 里：五修穷尽护栏判据是「行归属 ∨ 不读表」，而 max / order
  *  整行可见（行归属 single）却仍不被读——护栏把「可见」误当「被读」。登记成表后护栏可校验，
  *  且这是**默认路径**（新手进 tab 即 single+model），漏判代价最高。 */
 export const PERF_UNREAD_TARGETS: Record<string, readonly string[]> = {
   "diag-perf-max": ["model"],
   "diag-perf-order": ["model"],
+  "diag-perf-model": ["model"],
 };
 
 /** 基准三件套 id（双维门禁：模式 ∧ 目标集）——apply 循环跳过、由 syncPerfBaselineControls 兼并判定 */
@@ -168,6 +172,14 @@ function initPerfMode(root: ShadowRoot): () => void {
       maxEl.title = maxEl.disabled
         ? t("diagnostics.perfMaxUnreadHint")
         : t("diagnostics.perfMaxModelsHint");
+    }
+    // 模型路径框同理：目标集≠model 时置灰 + title 说清「单模型才用」；
+    // 恢复时把悬停说明还给「从资源树带入」的常驻提示（tpl 里 `.perf-hint` 是它的可见版）
+    const modelEl = root.getElementById("diag-perf-model") as HTMLInputElement | null;
+    if (modelEl) {
+      modelEl.title = modelEl.disabled
+        ? t("diagnostics.perfModelUnreadHint")
+        : t("diagnostics.perfModelHintFromTree");
     }
     syncPerfBaselineControls(root);
 

@@ -369,6 +369,8 @@ export const en: Record<string, string> = {
     "Pick a model from the resource tree on the left and its path is filled in automatically",
   "diagnostics.perfMaxUnreadHint":
     "Not used for a single-model target (only applies once a type or the whole repo is selected)",
+  "diagnostics.perfModelUnreadHint":
+    "The path only applies to the single-model scope; not needed for type / all / the whole repo",
   "diagnostics.webNoConflictScan": "Conflict scanning is not supported on web",
   "diagnostics.webNoSyncConflictScan": "Sync conflict scanning is not supported on web",
   "diagnostics.loadDedupConfigFailed": "Failed to load dedup config",

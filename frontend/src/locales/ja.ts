@@ -371,6 +371,8 @@ export const ja: Record<string, string> = {
   "diagnostics.perfModelHintFromTree": "左のリソースツリーでモデルを選ぶとパスが自動入力されます",
   "diagnostics.perfMaxUnreadHint":
     "単一モデル対象では無効（タイプまたはリポジトリ全体を選んだ時のみ有効）",
+  "diagnostics.perfModelUnreadHint":
+    "パスは「単一モデル」対象のみ有効；タイプ・全体・リポジトリ全体では不要です",
   "diagnostics.webNoConflictScan": "ウェブ版では競合スキャンはサポートされていません",
   "diagnostics.webNoSyncConflictScan": "ウェブ版では同期競合スキャンはサポートされていません",
   "diagnostics.loadDedupConfigFailed": "重複排除設定の読み込みに失敗しました",

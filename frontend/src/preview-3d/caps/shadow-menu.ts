@@ -10,6 +10,7 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { ShadowCapability } from "./shadow-capability.ts";
 
 const SHADOW_PARAMS_GROUP: LocaleKey = "preview.shadowGroupParams";
@@ -65,9 +66,7 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
       labelKey: "preview.shadowBias",
       hintKey: "preview.shadowBiasDesc",
       control: {
-        min: -0.01,
-        max: 0.001,
-        step: 0.0001,
+        ...getParamRange("shadowBias"),
         get: () => cap.getBias(),
         set: (v) => cap.setBias(v as number),
       },
@@ -78,9 +77,7 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
       labelKey: "preview.shadowNormalBias",
       hintKey: "preview.shadowNormalBiasDesc",
       control: {
-        min: 0,
-        max: 0.1,
-        step: 0.005,
+        ...getParamRange("shadowNormalBias"),
         get: () => cap.getNormalBias(),
         set: (v) => cap.setNormalBias(v as number),
       },
@@ -91,9 +88,7 @@ function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
       labelKey: "preview.shadowCameraSize",
       hintKey: "preview.shadowCameraSizeDesc",
       control: {
-        min: 5,
-        max: 80,
-        step: 1,
+        ...getParamRange("shadowCameraSize"),
         get: () => cap.getCameraSize(),
         set: (v) => cap.setCameraSize(v as number),
       },

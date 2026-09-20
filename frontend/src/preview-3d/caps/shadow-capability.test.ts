@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { ShadowCapability } from "./shadow-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { LightCapability } from "./light-capability.ts";
 import type { SceneCapability, SceneCapabilityLookup } from "./scene-capability.ts";
@@ -247,8 +248,9 @@ describe("ShadowCapability — apply 管线（真实灯对象）", () => {
     const { renderer, lights, cap } = setup();
     cap.setEnabled(true); // apply：置 renderer.shadowMap.needsUpdate=true
     renderer.shadowMap.needsUpdate = false; // 清标志（区分后续是否走 apply）
-    cap.setBias(0.1); // param-only dispatch：in-place 改灯
-    expect(lights.dir.shadow.bias).toBe(0.1); // in-place 生效
+    // 夹具须落在 schema 合法域 [-0.01, 0.001] 内（ADR-283：写入口按 range 钳制，越界值会被改写）
+    cap.setBias(0.0008); // param-only dispatch：in-place 改灯
+    expect(lights.dir.shadow.bias).toBe(0.0008); // in-place 生效
     expect(renderer.shadowMap.needsUpdate).toBe(false); // 未触发 apply 重建
     cap.setMapSize(2048); // structural dispatch：apply 重建
     expect(renderer.shadowMap.needsUpdate).toBe(true);
@@ -738,6 +740,21 @@ describe("ShadowCapability — getMenuNodes 结构（节点化后 group 由 fold
     expect(cap.isSoft()).toBe(true);
   });
 
+  it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+    const folder = cap.getMenuNodes()[1]!;
+    for (const [id, key] of [
+      ["shadow-bias", "shadowBias"],
+      ["shadow-normal-bias", "shadowNormalBias"],
+      ["shadow-camera-size", "shadowCameraSize"],
+    ] as const) {
+      const c = folder.children!.find((x) => x.id === id)!.control!;
+      expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
+        getParamRange(key),
+      );
+    }
+  });
+
   it("bias / normalBias / cameraSize 滑块同步（节点 control 闭包）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     const folder = cap.getMenuNodes()[1]!;
@@ -800,8 +817,8 @@ describe("ShadowCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const folder = cap.getMenuNodes()[1]!;
     const bias = folder.children!.find((c) => c.id === "shadow-bias")!;
     expect(bias.control!.get!(undefined)).toBe(cap.getBias());
-    bias.control!.set!(0.002);
-    expect(cap.getBias()).toBe(0.002);
+    bias.control!.set!(0.0008);
+    expect(cap.getBias()).toBe(0.0008);
   });
 });
 

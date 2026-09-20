@@ -334,9 +334,24 @@ export const ENV_STATE_SCHEMA = {
     group: "shadow",
   },
   shadowMapSize: { type: "number", default: 2048, group: "shadow" },
-  shadowBias: { type: "number", default: -0.0005, group: "shadow" },
-  shadowNormalBias: { type: "number", default: 0.02, group: "shadow" },
-  shadowCameraSize: { type: "number", default: 15, group: "shadow" },
+  shadowBias: {
+    type: "number",
+    default: -0.0005,
+    group: "shadow",
+    range: { min: -0.01, max: 0.001, step: 0.0001 },
+  },
+  shadowNormalBias: {
+    type: "number",
+    default: 0.02,
+    group: "shadow",
+    range: { min: 0, max: 0.1, step: 0.005 },
+  },
+  shadowCameraSize: {
+    type: "number",
+    default: 15,
+    group: "shadow",
+    range: { min: 5, max: 80, step: 1 },
+  },
 
   // --- Reflector ---
   reflectorEnabled: { type: "boolean", default: false, group: "reflector" },

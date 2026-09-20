@@ -438,7 +438,7 @@ export class ShadowCapability implements SceneCapability {
 
   setCameraSize(v: number): void {
     // ADR-196 收口：纯写 envState；遍历灯改 camera 由 callback 落地。
-    setEnvState({ shadowCameraSize: Math.max(5, Math.min(80, v)) }, { source: "manual" });
+    setEnvState({ shadowCameraSize: v }, { source: "manual" }); // 值域钳制在唯一写入口（ADR-283）
   }
   getCameraSize(): number {
     return envState.shadowCameraSize;

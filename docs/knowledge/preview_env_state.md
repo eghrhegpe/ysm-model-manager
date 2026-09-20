@@ -163,8 +163,8 @@ invariant_anchors:
   - **首次引入写入钳制**：light 组原全无钳制，现由 `setEnvState` 唯一写入口按 schema range 钳制（脏存档 / 程序化写入的越界值会被改写到上下界）。
   - **例外（有意保留字面量）**：`light-volumetric-ratio`（「上下亮度比」）的值是派生标量 `tip = base × ratio`，不落在任何 envState 键上 → 不迁 schema；其 [0,1] 域由 `setVolumetricTipRatio` 自身的 clamp 保证。
   - **守卫用例**：`light-capability.test.ts` 逐一断言 21 个槽位滑杆 + 体积光 3 + 环境光 1 的菜单值域 === schema 值域，并钉死比值滑块的字面量例外。
-- **[ADR-283] 值域迁移进度与首次生效边界（2026-09-20）**：已迁组 = water（首组）→ fog → environment → ground → light → postprocessing；shadow / reflector / sky 待并行线（ADR-284）落地后补。
-  - **首次引入钳制的组**（原先全无钳制，按用户裁定「滑杆域即合法域」）：fog `fogDensity` [0.001,0.1] / `fogNear` [0,500] / `fogFar` [10,2000]；light 全组（见上）；postprocessing `ppExposure` [0.1,3]、`ppBloomStrength` [0,3] / `ppBloomThreshold` [0,1] / `ppBloomRadius` [0,2]、`ppSsaoRadius` [0.5,32] / `ppSsaoMinDist` [0.001,0.05] / `ppSsaoMaxDist` [0.01,1]、`ppSsrOpacity` [0,1] / `ppSsrMaxDistance` [10,800] / `ppSsrThickness` [0.001,0.1]——**越界的旧存档值或程序化写入会被改写到边界**（postprocessing 原测试夹具 8 / 0.2 即被此钳制改写，已改到域内并加注释）。
+- **[ADR-283] 值域迁移进度与首次生效边界（2026-09-20）**：已迁组 = water（首组）→ fog → environment → ground → light → postprocessing → shadow；reflector / sky 待并行线（ADR-284）落地后补。
+  - **首次引入钳制的组**（原先全无钳制，按用户裁定「滑杆域即合法域」）：fog `fogDensity` [0.001,0.1] / `fogNear` [0,500] / `fogFar` [10,2000]；shadow `shadowBias` [-0.01,0.001] / `shadowNormalBias` [0,0.1]（`shadowCameraSize` [5,80] 原已有钳制，仅从 setter 移到写入口）；light 全组（见上）；postprocessing `ppExposure` [0.1,3]、`ppBloomStrength` [0,3] / `ppBloomThreshold` [0,1] / `ppBloomRadius` [0,2]、`ppSsaoRadius` [0.5,32] / `ppSsaoMinDist` [0.001,0.05] / `ppSsaoMaxDist` [0.01,1]、`ppSsrOpacity` [0,1] / `ppSsrMaxDistance` [10,800] / `ppSsrThickness` [0.001,0.1]——**越界的旧存档值或程序化写入会被改写到边界**（postprocessing 夹具 8 / 0.2、shadow 夹具 bias 0.1 / 0.002 均被此钳制改写，已改到域内并加注释）。
   - **域分离的活证**：environment `envIntensity`（合法 [0,5] / 滑杆 [0,3]）；ground `groundMatGridSize`（原钳制只有下界 2，迁移时以滑杆上界 32 补齐合法域）。
   - **保留字面量的例外**：light 「上下亮度比」（派生标量 tip = base × ratio，不落在任何键上）。
 - **[ADR-282] 灯光与模型类别解耦（2026-09-20）**：三盏灯的类别默认值（原 `LIGHT_PRESETS`，源自 ADR-084 §2.5）已从 `MODEL_DEFAULTS` **全部删除**。

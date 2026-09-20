@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-285：跑基准可用性收口：动作与参数同序、文案去重、术语本地化",
+        "link": "/adr/ADR-285-bench-usability-copy-diff-plan"
+      },
+      {
         "text": "ADR-284：sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值",
         "link": "/adr/ADR-284-sky-reflector-shadow-decoupling-cleanup"
       },

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **282** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **283** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 4 |
+| [📝 提议中](#提议中) | 5 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 12 |
 | [✅ 已采纳](#已采纳) | 256 |
@@ -26,10 +26,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（4）
+### 📝 提议中（5）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-285](./ADR-285-bench-usability-copy-diff-plan.md) | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-282](./ADR-282-applymodelpreset-default-light-params.md) | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 |
 | [ADR-281](./ADR-281-flatten-map.md) | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | 📝 提议中 |
@@ -337,6 +338,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-285 | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 📝 提议中 | 2026-09-20 |
 | ADR-284 | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 | 2026-09-20 |
 | ADR-283 | 参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口 | ✅ 已采纳 | 2026-09-20 |
 | ADR-282 | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 | 2026-09-20 |

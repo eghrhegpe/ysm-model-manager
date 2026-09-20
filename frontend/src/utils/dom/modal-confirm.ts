@@ -46,7 +46,7 @@ function confirmBoxBuilder(
     box.innerHTML = `
       ${bodyHTML ?? `<div class="dlg-msg">${esc(message)}</div>`}
       <div class="dlg-footer dlg-footer-flush">
-        <button id="mc-cancel" data-testid="dlg-cancel" class="dlg-btn">${cancel}</button>
+        <button id="mc-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancel)}</button>
         <button id="mc-ok" data-testid="dlg-ok" class="dlg-btn ${danger ? "dlg-btn-danger" : "dlg-btn-primary"}">${okIconSvg ? `${okIconSvg} ` : ""}${esc(ok)} (Enter)</button>
       </div>
     `;

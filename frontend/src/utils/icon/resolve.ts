@@ -5,6 +5,7 @@
 // 2026-09：原并列的 icon-kit（多源中介层 ICON_KIT）按 ADR-248 §3 并入 UI_ICONS——
 // 故本函数由「两表按优先级查找」简化为**单表查找**，语义名命名空间收敛为一个。
 
+import { esc } from "@/utils/html/html.ts";
 import type { DataGlyph } from "@/utils/resource/types.ts";
 import { UI_ICONS, type UiIconName } from "./ui-icons.ts";
 
@@ -60,4 +61,21 @@ export function applyIcon(el: HTMLElement, icon: string | undefined): void {
   } else {
     el.textContent = icon ?? "";
   }
+}
+
+/**
+ * 图标字段的**字符串版**统一出口（applyIcon 的模板串孪生，ADR-238/248）——
+ * 三态入参 → 可信 HTML 产物：
+ *   - 预构建 SVG（UI_ICONS 常量直传形态）→ 原样透传；
+ *   - 语义名 → resolveIcon 的 SVG 产物；
+ *   - 数据图标/任意文本（DataGlyph 字形等）→ esc 后按文本落位。
+ *
+ * 消费方 = `${renderIconHtml(x)}` 模板插值（card-shell / detail / preview tpl）；
+ * R8 模板闸（scripts/_lib/innerhtml-hygiene.ts）按 render* builder 命名视为可信源。
+ * 与 applyIcon 同价：同一三态契约的 DOM 形态 vs 字符串形态，勿再造第四种写法。
+ */
+export function renderIconHtml(icon: string | undefined): string {
+  if (!icon) return "";
+  if (icon.includes("<svg")) return icon; // 预构建 SVG 常量透传（esc 会把它们打成字面文本）
+  return resolveIcon(icon) || esc(icon); // 语义名→SVG；其余→转义文本（数据图标兼容态）
 }

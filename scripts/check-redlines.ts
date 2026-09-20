@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { scanSource as scanInnerHtmlSrc } from "./_lib/innerhtml-hygiene.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { parseRgLine } from "./_lib/rg-line.ts";
 /**
@@ -80,7 +81,7 @@ function inBlockComment(file: string, lineno: number, cache: Map<string, string[
   // 扫描到 lineno-1 行（不含当前行）：当前行若以 /* 开头已被前一 filter 豁免
   const max = Math.min(lines.length, lineno - 1);
   for (let i = 0; i < max; i++) {
-    const line = lines[i]!;
+    const line = lines[i] ?? "";
     let idx = 0;
     while (idx < line.length) {
       if (!inBlock) {
@@ -111,7 +112,7 @@ function rgTracked(pattern: string, paths: string | string[], globs: string[]): 
     return rgStrict(pattern, paths, globs);
   } catch (e) {
     rgHealthy = false;
-    console.error(`[warn] ${(e as any).message}`);
+    console.error(`[warn] ${(e as Error).message}`);
     return [];
   }
 }
@@ -468,6 +469,35 @@ function runChecks() {
   });
   add("R8", "innerHTML concat (non-literal)", r8Inner, "esc()");
 
+  // R8（模板闸，2026-09 立法）：上方正则只盯「RHS 是裸变量」——以反引号开头的模板串
+  // 恒不命中，而模板插值恰是全仓 HTML 拼接主力形态（SVG 接入审计实证：外部数据路径
+  // 裸插进 innerHTML 模板绕过了整道闸）。扫描核 = _lib/innerhtml-hygiene.ts（纯函数）。
+  const r8Tpl: string[] = [];
+  {
+    const walkTpl = (dir: string): void => {
+      for (const name of fs.readdirSync(dir)) {
+        const p = path.join(dir, name);
+        if (fs.statSync(p).isDirectory()) walkTpl(p);
+        else if (name.endsWith(".ts") && !name.includes(".test.") && !name.endsWith(".d.ts")) {
+          const srcText = fs.readFileSync(p, "utf-8");
+          if (!srcText.includes(".innerHTML")) continue;
+          for (const h of scanInnerHtmlSrc(srcText)) {
+            r8Tpl.push(
+              `${toPosix(path.relative(ROOT, p))}:${h.line}:innerHTML 模板插值 \${${h.expr}}`,
+            );
+          }
+        }
+      }
+    };
+    walkTpl(path.join(ROOT, "frontend", "src"));
+  }
+  add(
+    "R8",
+    "innerHTML template interpolation hygiene",
+    r8Tpl,
+    "插值须 esc()/t()/UI_ICONS 常量/*HTML() builder 等可信源；预构建 HTML 局部用行注 `// r8-allow: <理由>` 精确豁免",
+  );
+
   add(
     "R9",
     "manual sidebar",
@@ -593,7 +623,13 @@ function runChecks() {
         if (hasContext(f, line, /migrate|probe\./, 15, cache)) return false;
         // 配置/工具文件操作（非模型资源缓存相关），豁免
         if (
-          hasContext(f, line, /workshopSitesPath|creatorsPath|configPath\(\)|ledgerPath|removeLedger/, 10, cache)
+          hasContext(
+            f,
+            line,
+            /workshopSitesPath|creatorsPath|configPath\(\)|ledgerPath|removeLedger/,
+            10,
+            cache,
+          )
         )
           return false;
         // 预览临时目录清扫（os.TempDir()/ysm-preview，非 scanner 跟踪范围），豁免

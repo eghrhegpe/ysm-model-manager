@@ -32,7 +32,7 @@ function promptBoxBuilder(
       <input id="mp-input" data-testid="dlg-input" class="dlg-field" maxlength="255" value="${esc(value || "")}" placeholder="${esc(placeholder || "")}">
       <div id="mp-err" class="dlg-err"></div>
       <div class="dlg-footer dlg-footer-flush">
-        <button id="mp-cancel" data-testid="dlg-cancel" class="dlg-btn">${cancel}</button>
+        <button id="mp-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancel)}</button>
         <button id="mp-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${esc(ok)} (Enter)</button>
       </div>
     `;

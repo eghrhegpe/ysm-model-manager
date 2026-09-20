@@ -8,6 +8,7 @@ import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { toastEmptyRtype } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SidebarInstance } from "./data.ts";
@@ -261,12 +262,13 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
         const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } = await backendGetApp();
         const cfg = await LoadAppConfig();
         if (cfg.mcRoot) {
-          btn.innerHTML = `${UI_ICONS.game} ${cfg.mcRoot}`;
+          // 路径是外部数据（配置/磁盘枚举），文本槽必 esc——R8 模板插值卫生回归锁见 events.test.ts
+          btn.innerHTML = `${UI_ICONS.game} ${esc(cfg.mcRoot)}`;
         } else {
           // 没设置时自动检测：用第一个有效路径
           const paths = await GetMinecraftPaths();
           if (paths?.length) {
-            btn.innerHTML = `${UI_ICONS.game} ${paths[0]}`;
+            btn.innerHTML = `${UI_ICONS.game} ${esc(paths[0])}`;
             const theme = safeGet("theme") || "dark";
             await SaveAppConfig(
               cfg.filesRoot || "",

@@ -12,6 +12,7 @@
 import { t } from "@/core/i18n/t.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { esc } from "@/utils/html/html.ts";
+import { renderIconHtml } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
@@ -52,7 +53,7 @@ export async function showCard(
 
   // 有 fetchMeta：加载态 → 获取 → 渲染
   ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${config.icon} ${config.label}</h3>
+  <h3>${renderIconHtml(config.icon)} ${esc(config.label)}</h3>
   <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div><div class="dp-hint">${t("preview.parsing")}...</div></div>
 </div>`;
 
@@ -67,7 +68,7 @@ export async function showCard(
   } catch (e) {
     if (ctx.detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${config.icon} ${config.label}</h3>
+  <h3>${renderIconHtml(config.icon)} ${esc(config.label)}</h3>
   <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
 </div>`;
   }

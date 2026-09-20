@@ -267,7 +267,7 @@ class AppNav extends WebComponentBase {
         ${items
           .map(
             (item) => `
-          <div class="nav-item ${item.id === this._current ? "active" : ""}" data-testid="nav-item" data-page="${item.id}" title="${t(item.key as LocaleKey)}" role="button" tabindex="0">
+          <div class="nav-item ${item.id === this._current ? "active" : ""}" data-testid="nav-item" data-page="${esc(item.id)}" title="${t(item.key as LocaleKey)}" role="button" tabindex="0">
             <span class="icon">${resolveIcon(item.icon)}</span>
             <span class="nav-text">${t(item.key as LocaleKey)}</span>
           </div>

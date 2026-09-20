@@ -14,6 +14,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { describeVersionRange } from "@/utils/format/pack-format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { renderIconHtml } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
 import { showCard } from "./card-shell.ts";
@@ -200,7 +201,7 @@ async function renderPackModelList(
     if (!host) return;
     if (models.length === 0) return; // 无模型 → 不渲染清单区（仅 FAB 3D 入口）
     const total = detail?.total ?? models.length;
-    const overflow =
+    const overflowHtml =
       total > models.length
         ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">${t("preview.modelListOverflow", { n: models.length })}</div>`
         : "";
@@ -216,7 +217,7 @@ async function renderPackModelList(
     </div>`;
     })
     .join("")}
-  ${overflow}
+  ${overflowHtml}
 </div>`;
     // 点击单模型直达 3D（ADR-253 D6：经统一路由传 entry，由 pack opener
     // 映射为 createPack3D 的 startEntry——不再绕过路由直调包装器）
@@ -239,11 +240,11 @@ export async function showSimplePreview(
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
   ctx.detailGen.invalidate(); // 无 await 也要作废在途的慢请求回写
-  const icon = opts?.icon || "☀️";
+  const iconHtml = renderIconHtml(opts?.icon || "☀️");
   const label = opts?.label || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${icon} ${label}</h3>
+  <h3>${iconHtml} ${esc(label)}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
   </div>
@@ -257,11 +258,11 @@ export async function showShaderpack(
   opts?: { icon?: string; label?: string },
 ): Promise<void> {
   const gen = ctx.detailGen.next();
-  const icon = opts?.icon || "☀️";
+  const iconHtml = renderIconHtml(opts?.icon || "☀️");
   const label = opts?.label || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${icon} ${label}</h3>
+  <h3>${iconHtml} ${esc(label)}</h3>
   <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div><div class="dp-hint">${t("preview.parsing")}...</div></div>
 </div>`;
   try {
@@ -280,7 +281,7 @@ export async function showShaderpack(
       ? descs.join("\n")
       : `${UI_ICONS.package} 光影包 (${Object.keys(entries).length} 项配置)`;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${icon} ${label}</h3>
+  <h3>${iconHtml} ${esc(label)}</h3>
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(displayName)}</strong></div>
     <div style="color:var(--muted);line-height:1.6;white-space:pre-wrap">${esc(desc)}</div>
@@ -289,7 +290,7 @@ export async function showShaderpack(
   } catch (e) {
     if (ctx.detailGen.stale(gen)) return;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${icon} ${label}</h3>
+  <h3>${iconHtml} ${esc(label)}</h3>
   <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
 </div>`;
   }

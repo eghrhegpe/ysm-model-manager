@@ -189,9 +189,9 @@ type SyncVerb = "push" | "pull";
 
 /** 按钮复位（push/pull finally 块共用） */
 function resetButton(btn: HTMLButtonElement, verb: SyncVerb): void {
-  const icon = verb === "push" ? UI_ICONS.upload : UI_ICONS.download;
+  const iconSvg = verb === "push" ? UI_ICONS.upload : UI_ICONS.download;
   const key = verb === "push" ? "sidebar.pushSelected" : "sidebar.pullSelected";
-  btn.innerHTML = `${icon} ${t(key)} ▾`;
+  btn.innerHTML = `${iconSvg} ${t(key)} ▾`;
   btn.disabled = false;
 }
 

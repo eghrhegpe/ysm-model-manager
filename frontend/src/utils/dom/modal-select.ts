@@ -32,7 +32,7 @@ function selectBoxBuilder(
         ${(items || []).map((item) => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}
       </select>
       <div class="dlg-footer dlg-footer-flush">
-        <button id="ms-cancel" data-testid="dlg-cancel" class="dlg-btn">${cancel}</button>
+        <button id="ms-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancel)}</button>
         <button id="ms-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${esc(ok)} (Enter)</button>
       </div>`;
   };

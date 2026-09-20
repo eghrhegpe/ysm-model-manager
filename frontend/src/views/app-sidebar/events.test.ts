@@ -305,6 +305,42 @@ describe("bindFooter", () => {
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });
+
+  // 回归护栏（R8 模板插值卫生）：innerHTML 模板的文本槽只许喂 esc 产物——
+  // mcRoot/检测路径来自配置与磁盘枚举，属外部数据，含 HTML 元字符时必转文本落位。
+  it("mcRoot 含 HTML 元字符 → esc 后按文本落位，不生成元素", async () => {
+    const app = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+      mcRoot: "/mc/<img src=x onerror=1>&root",
+      filesRoot: "/f",
+      resourcepackRoot: "/r",
+      linkMode: "copy",
+    });
+    const { root } = mountFooter();
+    bindFooter(root, []);
+    const btn = root.getElementById("btn-mc") as HTMLElement;
+    await waitFor(() => expect(btn.textContent).toContain("/mc/"));
+    expect(btn.querySelector("img")).toBeNull(); // img 被解析成元素 = 破口重开
+    expect(btn.innerHTML).toContain("&lt;img");
+    expect(btn.textContent).toBe(" /mc/<img src=x onerror=1>&root");
+  });
+
+  it("检测路径含 HTML 元字符 → GetMinecraftPaths 分支同样 esc 落位", async () => {
+    const app = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+      mcRoot: "",
+      filesRoot: "/f",
+      resourcepackRoot: "/r",
+      linkMode: "copy",
+    });
+    (app.GetMinecraftPaths as ReturnType<typeof vi.fn>).mockResolvedValue(["<b>x</b>/detected"]);
+    const { root } = mountFooter();
+    bindFooter(root, []);
+    const btn = root.getElementById("btn-mc") as HTMLElement;
+    await waitFor(() => expect(app.SaveAppConfig).toHaveBeenCalled());
+    expect(btn.querySelector("b")).toBeNull(); // textContent 两态都含 /detected，元素查询才辨得出生成态
+    expect(btn.textContent).toBe(" <b>x</b>/detected");
+  });
 });
 
 // ===== 覆盖率补强：点击早退 / 右键菜单 / 绑定生命周期 / restore 兜底 =====

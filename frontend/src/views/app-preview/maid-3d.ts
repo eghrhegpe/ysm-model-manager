@@ -232,7 +232,7 @@ function dpRenderPanel(
   const statsHTML = modelInfo
     ? `<div class="pv-card">${statsCardHTML(toStatsCardModel(modelInfo, componentCounts), basename)}</div>`
     : "";
-  const detail = dpRenderDetail(modelInfo);
+  const detailHtml = dpRenderDetail(modelInfo);
   // 封面缩略图（loadPreviewImage 产物）：有图时替换 🧸 大图标，无图回退 🧸 装饰。
   // 样式对齐资源包详情（detail.ts:171）：96px、圆角、边框、pixelated。
   const coverHtml = previewUri
@@ -246,7 +246,7 @@ function dpRenderPanel(
     <div class="dp-hint">Bedrock Edition Model</div>
   </div>
   ${statsHTML}
-  ${detail ? `<div class="pv-card" style="margin-top:8px">${detail}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">${UI_ICONS.warning} 无法读取模型数据</div>` : ""}
+  ${detailHtml ? `<div class="pv-card" style="margin-top:8px">${detailHtml}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">${UI_ICONS.warning} 无法读取模型数据</div>` : ""}
 </div>`;
 
   // ADR-253 D7：3D 入口 FAB 已删——3D 统一从左下角 nav-fab 进入

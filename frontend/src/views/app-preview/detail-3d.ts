@@ -128,9 +128,9 @@ export async function showMmdPreview(
               <span style="color:var(--accent)">${UI_ICONS.chart} ${t("preview.stats.file")}</span>
               <span>${UI_ICONS.collision} ${t("preview.stats.vertices")}: <b>${stats.vertices.toLocaleString()}</b></span>
               <span>◻️ ${t("preview.stats.faces")}: <b>${stats.faces.toLocaleString()}</b></span>
-              <span>${UI_ICONS.bone} ${t("preview.stats.bones")}: <b>${stats.bones}</b></span>
-              <span>${UI_ICONS.appearance} ${t("preview.stats.materials")}: <b>${stats.materials}</b></span>
-              <span>${UI_ICONS.avatar} ${t("preview.stats.morphs")}: <b>${stats.morphs}</b></span>
+              <span>${UI_ICONS.bone} ${t("preview.stats.bones")}: <b>${stats.bones.toLocaleString()}</b></span>
+              <span>${UI_ICONS.appearance} ${t("preview.stats.materials")}: <b>${stats.materials.toLocaleString()}</b></span>
+              <span>${UI_ICONS.avatar} ${t("preview.stats.morphs")}: <b>${stats.morphs.toLocaleString()}</b></span>
             </div>`;
           } catch {
             /* 统计读取失败静默：基础卡不受影响（详情卡降级约定） */
@@ -225,7 +225,7 @@ export async function showMorphPreview(
           const siblings = await resolveMorphSiblings();
           const container = ctx.root.querySelector<HTMLElement>("#morph-siblings");
           if (container && siblings.length > 0) {
-            const items = siblings
+            const itemsHtml = siblings
               .map((p) => {
                 const name = p.split(/[/\\]/).pop() || p;
                 const active = p === path;
@@ -238,7 +238,7 @@ export async function showMorphPreview(
                 </div>`;
               })
               .join("");
-            container.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-sm);margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${items}`;
+            container.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-sm);margin-bottom:4px">${t("preview.allMorphCount", { n: siblings.length })}</div>${itemsHtml}`;
             // 点击兄弟列表项切换
             container.querySelectorAll<HTMLElement>(".morph-item").forEach((el) => {
               el.onclick = () => {

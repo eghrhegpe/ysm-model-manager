@@ -191,24 +191,24 @@ function renderLitematicDetail(
   if (!detailDiv) return;
   // P2 修复：await Go 解析后比对代际——慢 litematic A 迟到不得污染已切换的 B
   if (litematicGuard.stale(gen)) return;
-  let extra = "";
+  let extraHtml = "";
   if (ext === ".nbt" || ext === ".schematic") {
-    extra = `${field(t("preview.dataVersion"), meta.dataVersion)}${field(t("preview.formatVersion"), meta.version)}${field(t("preview.nameLabel"), meta.name)}${field(t("preview.authorLabel"), meta.author)}`;
+    extraHtml = `${field(t("preview.dataVersion"), meta.dataVersion)}${field(t("preview.formatVersion"), meta.version)}${field(t("preview.nameLabel"), meta.name)}${field(t("preview.authorLabel"), meta.author)}`;
   } else {
-    extra = `${field(t("preview.nameLabel"), meta.name)}${field(t("preview.authorLabel"), meta.author)}${field(t("preview.createdAt"), meta.timeCreated ? fmtTime(meta.timeCreated) : "")}${field(t("preview.modifiedAt"), meta.timeModified ? fmtTime(meta.timeModified) : "")}<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.formatVersion")}</span><span>Litematica v${meta.version || "?"} · MC Data v${meta.minecraftDataVersion || "?"}</span></div>${field(t("preview.description"), meta.description)}`;
+    extraHtml = `${field(t("preview.nameLabel"), meta.name)}${field(t("preview.authorLabel"), meta.author)}${field(t("preview.createdAt"), meta.timeCreated ? fmtTime(meta.timeCreated) : "")}${field(t("preview.modifiedAt"), meta.timeModified ? fmtTime(meta.timeModified) : "")}<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.formatVersion")}</span><span>Litematica v${esc(String(meta.version || "?"))} · MC Data v${esc(String(meta.minecraftDataVersion || "?"))}</span></div>${field(t("preview.description"), meta.description)}`;
   }
   detailDiv.innerHTML = `<h3>${UI_ICONS.clipboard} ${t("preview.blueprintDetail")}</h3>
     <div style="padding:12px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm)">
       ${previewImgHTML}
       <div><strong>${renderFormattedText(basename || "")}</strong></div>
-      ${extra}
+      ${extraHtml}
       <div style="margin:4px 0;border-top:1px solid var(--bd)"></div>
       <div class="lt-meta-row"><span class="lt-meta-label">${t("preview.nonAirBlocks")}</span><span>${t("preview.blockCount", { n: (meta.totalBlocks || meta.blockCount || 0).toLocaleString() })}</span></div>
       <div class="lt-meta-row"><span class="lt-meta-label">${t("preview.totalVolume")}</span><span>${t("preview.cubeUnit", { n: (meta.totalVolume || 0).toLocaleString() })}</span></div>
-      <div class="lt-meta-row"><span class="lt-meta-label">${t("preview.boundingBox")}</span><span>${sizeStr}</span></div>
-      ${ext !== ".nbt" && ext !== ".schematic" ? `<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.regionCount")}</span><span>${meta.regionCount || 0}</span></div>` : ""}
-      ${meta.entityCount !== undefined ? `<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.entityCount")}</span><span>${meta.entityCount}</span></div>` : ""}
-      ${meta.tileEntityCount !== undefined ? `<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.blockEntity")}</span><span>${meta.tileEntityCount}</span></div>` : ""}
+      <div class="lt-meta-row"><span class="lt-meta-label">${t("preview.boundingBox")}</span><span>${esc(sizeStr)}</span></div>
+      ${ext !== ".nbt" && ext !== ".schematic" ? `<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.regionCount")}</span><span>${(meta.regionCount || 0).toLocaleString()}</span></div>` : ""}
+      ${meta.entityCount !== undefined ? `<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.entityCount")}</span><span>${meta.entityCount.toLocaleString()}</span></div>` : ""}
+      ${meta.tileEntityCount !== undefined ? `<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.blockEntity")}</span><span>${meta.tileEntityCount.toLocaleString()}</span></div>` : ""}
     </div>`;
 }
 

@@ -97,6 +97,12 @@ invariant_anchors:
 4. **结构参数应用**：**结构参数不进几何**——几何一律单位化，世界尺寸 / 壁高 / 壁厚由 `scale` / `position` 表达；
    形态在 build 期把「哪些件随哪个结构参数怎么变」固化成 `transformLinks`（`square` 等比铺满 / `wall` 双轴
    + 沿法向轴平移），故 **film 与 pool 的 size、以及 pool 的池深 / 壁厚变更均零重建**（ADR-272 §2.1 / §5.1）。
+   ⚠️ **零重建的代价：派生量必须自己在运行期重算**——几何跟上了不代表派生属性也跟上。
+   顶水面 `thickness`（= `max(0.01, waterPoolHeight × 0.5)`，ADR-257「容器内水的光程」）曾只在
+   `buildMaterial` 算一次，而 pool `needsRebuild` 恒 false ⇒ **拖池深：壁长高了、水体光程不动**。
+   已于 2026-09-20 在 `applyChangedParams` 的 `waterPoolHeight` 分支补重派生（仅
+   `supportsVolumeOptics` 形态，film 水膜恒 0 不得被误赋）。教训：**任何「由参数派生、只在装配期算」
+   的量，在零重建形态里都是定时炸弹**——新增派生量时先问「谁负责在运行期重算它」。
 5. **参数应用**：`registerEnvCallback` 单入口三分派——mode 切换重建容器、结构参数就地改 transform（`applyProfile`）、参数字段就地改
    material / uniform、开关只切可见性。setter 只写 `envState`，不各自就地改渲染。
 
@@ -109,6 +115,10 @@ invariant_anchors:
 - 池体：`setPoolHeight`、`setPoolWallThickness`（**两条均零重建**，ADR-272 §5.1：壁高走 `scale.y`、外偏与光学光程运行期现算）、`setPoolWallColor`、`setPoolRoundness`（钳制同源 schema `range`，ADR-283）
 - 波纹：`setWaveSpeed`；时间推进走 `update(dt)` 累加 `waterTime`（仅推进 uniform，从不写变换）
 - 持久化：`saveState` / `loadState`（新旧键双轨；旧档无 `waterLevel` 时 pool 取 `waterPoolHeight` 兜底）
+  - **值钳制唯一执法点 = `setEnvState` 的 `clampFieldValue`（ADR-283）**：`loadState` 的 legacy `size` 键
+    曾自钳 `Number.isFinite(v) ? Math.max(1, v) : 1`——与写入口重复、且只盖下界（与 schema `range [1,300]`
+    口径不齐）。已于 2026-09-20 删除自钳、改为委派 `setWaterSize`（保存兼容性不变，legacy `size` 仍生效）。
+    ⚠️ 存档过 JSON 边界后 NaN/Infinity 已变 `null`，故「非有限值」分支实际不可达——别为它写特例。
 
 ## 与其他子系统关系
 

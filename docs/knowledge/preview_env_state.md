@@ -97,6 +97,10 @@ invariant_anchors:
 - `env-state-schema.ts`：`ENV_STATE_SCHEMA` 声明全部参数字段 `{ type, default, group }`。键名 = `{cap}{Group}{Field}` 扁平化（`skyTimeOfDay`/`groundMatSource`/`waterMode`/`ppBloomStrength`/`lightKeyIntensity`/`lightSpotAngle`），颜色统一 `number`(hex)（勿用 tuple3——仅 ground 风格 RGB 用 tuple3）。能力级 enabled（cap 是否挂载）**不入 schema**，留 cap 私有 `this.enabled`。`deriveDefaultEnvState()` 派生默认值，`EnvState` 类型由 schema 推导（枚举取 `V[number]`）。**（ADR-283：数值字段可再声明 `range`（合法域，写入钳制）/ `uiRange`（滑杆展示域，缺省=range）——值域的唯一事实源；读口 `getParamRange(key: RangedKey)`（未声明值域的键编译期传不进）与 `clampFieldValue`，菜单与 cap 都只是读口。）**
 - `env-state.ts`：可变单例 `envState` + `setEnvState(partial, {source})` 中央写入入口 + `getStateValue/setStateValue(path)` StatePath 读写 + `resetEnvState()`（测试用）。写入带 `lastWriteSource`（`auto-model`/`auto-atmosphere`/`manual`），守卫决策 `manual > auto-atmosphere > auto-model`——手动调参不被预设覆盖。
 - `env-dispatcher.ts`：`registerEnvCallback(cap, cb)` 回调注册表 + `dispatchEnvChange(changed, state)` 派发（setEnvState 自动触发）。cap 构造时注册、dispose 退订。`clearEnvCallbacks()` 测试用。**`changed` 是 `Set<EnvStateKey>`（`keyof EnvState`，schema 派生，2026-09）**——`changed.has("拼错")` 编译不过；分组键事实源是 `getPresetKeys(group)`（注册时缓存 groupKeys 前置过滤；跨组用数组形式，ADR-250）。
+  - **前置过滤是「先探测、后分配」（2026-09-20）**：原实现对每个带 group 的 cap 无条件 `new Set`，即便一个键都不匹配
+    （昼夜循环每帧派发 sky 键 × 其余 cap 全不匹配 = 每帧白分配 N 个空 Set）。现先 `for…break` 探测命中，
+    不命中即 `continue`（零分配零回调）；分配数**不随分组 cap 数增长**，不可约为「入参 changedKeys 那 1 个」。
+    守卫：`env-state.test.ts` 的计数 `Set` 桩用例（含「与 N 无关」不变量）。
 
 ## 对外 API / 入口
 

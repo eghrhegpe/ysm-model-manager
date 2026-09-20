@@ -37,6 +37,8 @@
 5. **范围外**（本 ADR 不涉，避免与并行施工撞车）：`settings` 页自有 `renderStgTabBody`，其结构**已符合本标准**，后续可换用工厂；`.stg-tab` 是否统一为 `.repo-tab` 另议。
 
 6. **运行期真值同源（本 ADR 的另一半）**：`init-pages.ts|bindTabs` 此前要求调用方手传 `ids` **id 白名单**，它与模板里的 `data-tab` 是**第二份手工真值**；新增 tab 时漏同步，`activate` 遍历的是白名单而非 DOM——新面板永远不被设为可见，表现为「按钮在、点了没反应、内容区空白」且**不报错**（2026-09 设置页新增「操作」tab 的真实事故，其回归测试注释留有自白）。现改为**从 DOM 派生**（`tabs.map(btn => btn.dataset.tab)`），`ids` 参数删除：新增 tab 只需改模板一处，ARIA / 键盘 / 懒初始化 / 面板切换自动覆盖。契约违例（按钮缺 `data-tab` / 面板缺失）改为 `logWarn` **响亮告警**，不再静默。防线：`init-pages.test.ts`（无白名单也能切第三个 tab / ARIA 全集 / 缺面板告警）+ `tpl-structure.test.ts` 的静态闸（禁止 `bindTabs` 调用点再出现数组白名单）。
+
+7. **查看器降级同源（§2.6 的模板层同胞，同日追加）**：「哪些 tab 在 Android/网页版隐藏」此前也是**第二份手工真值**——仓库页靠 `if (!isViewerMode())` 条件 push、诊断页靠 `dgInHideDesktopOnly` 里一条远处的选择器名单，两处都与 tpl 声明无机器连线（新增桌面专属 tab 忘同步即「可见但不可用」）。现降为声明参数：`TabSpec.desktopOnly` + `TabsShellSpec.viewerMode`，`renderTabs` 产出时过滤（按钮+面板整块不渲染），首个**可见** tab 拿默认激活位；面板内局部控件（如扫描按钮拆出复用时）仍归各页 init。
 **拒绝的替代方案**：① 保留两种范式共存——共享容器无收益且更脆；② 只在文档里写「请用每 tab 一个 `.tab-body`」而不建工厂——无机器守护的约定已在 ADR-258 证伪（自称同范式而实际不同）；③ 全仓一次性重写六页（含 settings）——与并行会话撞车，且违反「按刀递减」的迁移纪律。
 
 ## 3. 后果（Consequences）

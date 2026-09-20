@@ -485,9 +485,59 @@ must(
   !stripComments(targetsGo).includes("perfTypeManifest[rtype].CliAnalyzable"),
   "cliAnalyzable 仍在读已退役的 perfTypeManifest 字段（双写必然漂移，该字段已删）",
 );
+// stages_declared：载荷必须能区分「未声明阶段链」与「声明为 0 段」，前端据实渲染不得反推。
+// 立因（2026-09-21）：`expected_stages` 的 Go 零值 0 兼作两种含义，前端曾写
+// `cli_analyzable ? expected_stages : "—"` 用一个字段解释另一个字段的零值——口径分叉时
+// 「—」会静默变成 0，「未采集」被渲染成「测了，是 0 段」（ADR-278 §2.6 诚实语义）。
+must(
+  /StagesDeclared\s+bool\s+`json:"stages_declared"`/.test(concurrentGo),
+  "perfTypeSummary 缺 stages_declared 字段（前端无法区分「未声明」与「0 段」）",
+);
+must(
+  targetsGo.includes("func stagesDeclared("),
+  "缺 stagesDeclared 单点出口（两处回填各写一遍 map 存在性判断必然漂移）",
+);
+must(
+  /s\.stages_declared\s*\?\s*s\.expected_stages/.test(matrixCode),
+  "阶段列未按 stages_declared 渲染（回到用 cli_analyzable 反推零值）",
+);
+must(
+  !/cli_analyzable\s*\?\s*s\.expected_stages/.test(matrixCode),
+  "阶段列仍在用 cli_analyzable 解释 expected_stages 的零值（该反推已退役）",
+);
 must(
   /Object\.values\(reg\)[\s\S]{0,220}?filter\(\(t\)\s*=>\s*t\.cliAnalyzable\)/.test(matrixCode),
   "目标集选择器未按 cliAnalyzable 过滤（会再次渲染出选了必报 unsupported 的类型）",
+);
+// unsupported_reason：Go 发结构化原因 token，前端按 token 查三语文案（不渲染中文散文 hints）。
+// 立因（2026-09-21）：Go 的 `hints` 是未 i18n 的中文散文（前端不渲染），明细区只能靠
+// `len(stages)==0` 反推一句通用文案——Go 已算好的逐条原因被丢掉。token 与 size_source 同构。
+must(
+  // 必须查**接线**而非常量/字段名的存在：变异检查证明过，只查 `unsupportedReasonNoCLIParser`
+  // 会被常量声明满足（删掉回填仍绿），只查 json tag 会被结构体声明满足。
+  concurrentGo.includes("UnsupportedReason: unsupportedReasonNoCLIParser,"),
+  "identityOnlyPayload 未回填 unsupported_reason（明细区拿不到逐条原因）",
+);
+must(
+  concurrentGo.includes('json:"unsupported_reason,omitempty"'),
+  "singleBenchJSON 缺 unsupported_reason token（明细区无法逐条说明未采集原因）",
+);
+must(
+  // 必须是 token → 键的**配对**（变异检查证明过：只查 token 字面量出现在映射表附近的
+  // 宽泛正则，把键改名仍绿——那等于没锁住映射）
+  /UNSUPPORTED_REASON_KEYS[\s\S]{0,200}?no_cli_parser:\s*"diagnostics\.perfReasonNoCliParser"/.test(
+    matrixCode,
+  ),
+  "前端缺 unsupported_reason → i18n 映射表（token 将无从渲染）",
+);
+must(
+  matrixCode.includes("unsupportedReasonText("),
+  "明细区未走 unsupportedReasonText（回到渲染中文散文或通用句）",
+);
+// 反向：中文散文 hints 不得重新进入渲染路径（未 i18n，英/日界面会冒中文）
+must(
+  !/esc\(\s*m\.hints/.test(matrixCode) && !/<[^>]*>\$\{[^}]*m\.hints/.test(matrixCode),
+  "明细区在渲染 Go 的中文散文 hints（未 i18n，英/日界面会冒中文）",
 );
 must(
   resourceTypesJsonTs.includes('"cliAnalyzable": true'),

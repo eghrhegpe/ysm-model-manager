@@ -106,6 +106,17 @@ func cliAnalyzable(rtype string) bool {
 	return rt != nil && rt.CliAnalyzable
 }
 
+// stagesDeclared 该类型是否在样本清单里登记了阶段链（perfTypeManifest 中存在 key）。
+//
+// 与 cliAnalyzable 配对但**语义不同**：可分析性归 resource_types.json 声明（前端同源消费），
+// 阶段链长度是 Go 内部的自检依据（矩阵运行时核实际段数是否与声明相符）。
+// 二者当前一致（可分析 ⟺ 声明了阶段链，由 TestPerfTypeManifest_Consistent 钉住），但**不可互相替代**：
+// 前者答「CLI 能不能解析」，后者答「解析该出几段」。载荷两个都发，前端据实渲染不反推。
+func stagesDeclared(rtype string) bool {
+	_, ok := perfTypeManifest[rtype]
+	return ok
+}
+
 // cliAnalyzablePath 判定某路径是否属于 CLI 可分析的模型（ADR-262 D3 收编，2026-09-18）。
 //
 // 这是「这个文件 CLI 能不能真分析」的**单点答案**，由两个既有事实源组合而成：

@@ -486,6 +486,10 @@ export const zhCN = {
   "diagnostics.perfMatrixColFound": "命中",
   "diagnostics.perfMatrixColAnalyzed": "已采集",
   "diagnostics.perfMatrixUnsupported": "CLI 无该类型解析器，未采集阶段耗时",
+  // 逐条未采集原因（按 Go 的 unsupported_reason token 渲染）——与上面的**通用**文案分开：
+  // 通用句答「为什么这批没有阶段耗时」，本键答「这一条具体怎么了」，且能随 token 扩展
+  "diagnostics.perfReasonNoCliParser": "解析器只在前端 3D 适配器，CLI 无法解析此类型",
+  "diagnostics.perfReasonUnknown": "未采集（原因未知）",
   "diagnostics.perfMatrixStageMismatch": "阶段链与清单声明不符",
   "diagnostics.perfMatrixEmpty": "仓库中未找到该类型的模型",
   "diagnostics.perfMatrixColUnsupported": "未采集",

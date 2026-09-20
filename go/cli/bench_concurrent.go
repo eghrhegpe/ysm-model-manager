@@ -580,8 +580,15 @@ type singleBenchJSON struct {
 	Stages         []benchStageJSON `json:"stages"`
 	Bottleneck     string           `json:"bottleneck"`
 	Hints          []string         `json:"hints"`
-	Format         string           `json:"format"`
-	SizeBytes      int64            `json:"size_bytes"`
+	// UnsupportedReason 未采集阶段耗时时的**结构化**原因 token（omitempty：能采集时缺席）。
+	//
+	// 与 Hints 的关系：Hints 是给 CLI/AI 读的中文散文（未 i18n，**前端不渲染**）；本字段是
+	// 给界面渲染的枚举——前端按 token 查三语文案，故一条记录一种语言。当前只有一个取值
+	// （unsupportedReasonNoCLIParser），但**用 token 而非布尔**：将来出现第二种未采集原因
+	// （如格式损坏、体积超限）时前端不改结构，只加一条 i18n 映射。
+	UnsupportedReason string `json:"unsupported_reason,omitempty"`
+	Format            string `json:"format"`
+	SizeBytes         int64  `json:"size_bytes"`
 	// FootprintBytes 参与 --order size 排名的**模型占用**（仅 size 序填；path 序 omitempty 缺席）。
 	// 为什么不能拿 SizeBytes 顶替：目录式模型的 SizeBytes 是 0（identity 口径），排名依据看不见
 	// 就等于不可复核——回显体量才能让读者自己验「它凭什么排第一」。
@@ -746,14 +753,24 @@ func benchOneModel(a AppService, modelPath, filesRoot string, iterations int) (s
 	}, avg
 }
 
+// unsupportedReasonNoCLIParser 「CLI 无该类型解析器」的 token（前端据它查三语文案）。
+// 解析器只在前端 3D adapter 的类型（PMX/PMD/VRM/FBX/GLTF）走这条——不是失败，是**不在能力范围**。
+const unsupportedReasonNoCLIParser = "no_cli_parser"
+
 // identityOnlyPayload CLI 无该类型解析器时的诚实载荷：只给身份与格式，**不采集阶段耗时**
 // （空模型的阶段数据不是实测，采集出来就是「数字不可信」的又一个来源）。
+//
+// `UnsupportedReason` 是与 `Hints` 并行的**结构化**出口（2026-09-21）：Hints 是给 CLI/AI 读的
+// 中文散文，**前端不渲染**（未 i18n，英/日界面会冒中文）；但明细区需要显示「这一条为什么没有
+// 阶段耗时」，此前只能靠 `len(stages)==0` 反推一句通用文案。故把原因显式成 token，
+// 前端按 token 查三语文案——与 §3.7 的 `size_source` 完全同构（枚举值不随语言变）。
 func identityOnlyPayload(modelPath, filesRoot, rtype string) singleBenchJSON {
 	return singleBenchJSON{
-		Model:    modelPath,
-		Stages:   []benchStageJSON{},
-		Format:   detectModelFormat(modelPath),
-		Identity: buildPerfIdentity(modelPath, filesRoot, nil),
+		Model:             modelPath,
+		Stages:            []benchStageJSON{},
+		Format:            detectModelFormat(modelPath),
+		Identity:          buildPerfIdentity(modelPath, filesRoot, nil),
+		UnsupportedReason: unsupportedReasonNoCLIParser,
 		Hints: []string{
 			"⛔ CLI 无 " + rtype + " 解析器：未采集阶段耗时（解析器在前端 3D adapter，见 gui-flow 对 PMX 跳过 ④⑤⑥ 的同源口径）",
 		},
@@ -851,8 +868,16 @@ type perfTypeSummary struct {
 	// Analyzed / Unsupported 实际采集 / 仅出身份的模型数
 	Analyzed    int `json:"analyzed"`
 	Unsupported int `json:"unsupported"`
-	// ExpectedStages 样本清单声明的阶段链长度（0 = CLI 不采集阶段）
+	// ExpectedStages 样本清单声明的阶段链长度。**与 StagesDeclared 配对读**：
+	// StagesDeclared=false 时本字段恒为 0，那是「未声明」的零值，**不是「声明为 0 段」**——
+	// 前端不得凭 0 反推「该类型没有阶段链」，须看 StagesDeclared（否则「未采集」会被渲染成「0 段」）。
 	ExpectedStages int `json:"expected_stages"`
+	// StagesDeclared 该类型是否在样本清单（perfTypeManifest）里登记了阶段链。
+	//
+	// 立因（2026-09-21）：`ExpectedStages` 的 Go 零值 0 原本兼作「未登记」与「登记为 0 段」两种含义，
+	// 前端 `typeRow` 只能打补丁 `cli_analyzable ? expected_stages : "—"`——用一个字段解释另一个
+	// 字段的零值。本字段把「是否声明」显式入载荷，前端据实渲染而非反推（空数据不得当实测）。
+	StagesDeclared bool `json:"stages_declared"`
 	// StageMismatch 可分析类型但实际阶段数与清单声明不符 —— 阶段链断裂的显式信号
 	// （样本清单因此不只是文档，而是矩阵运行时的自检依据）
 	StageMismatch bool `json:"stage_mismatch,omitempty"`
@@ -917,6 +942,7 @@ func buildMatrixPayload(ctx *CmdContext, spec perfTargetSpec, groups []perfTypeG
 			RtypeLabel:     rtypeDisplayName(g.Rtype),
 			CliAnalyzable:  cliAnalyzable(g.Rtype),
 			Found:          g.Found,
+			StagesDeclared: stagesDeclared(g.Rtype),
 			ExpectedStages: entry.ExpectedStages,
 		}
 		for _, t := range g.Targets {
@@ -961,6 +987,7 @@ func buildRepoPayload(ctx *CmdContext, spec perfTargetSpec, ranked []perfTarget,
 				RtypeLabel:     rtypeDisplayName(t.Rtype),
 				CliAnalyzable:  cliAnalyzable(t.Rtype),
 				Found:          foundByType[t.Rtype],
+				StagesDeclared: stagesDeclared(t.Rtype),
 				ExpectedStages: entry.ExpectedStages,
 			}
 			sums[t.Rtype] = sum

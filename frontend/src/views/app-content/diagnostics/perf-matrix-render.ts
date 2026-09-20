@@ -25,6 +25,15 @@ export interface PerfTypeSummary {
   analyzed: number;
   unsupported: number;
   expected_stages: number;
+  /**
+   * 该类型是否在样本清单里登记了阶段链（Go `perfTypeSummary.StagesDeclared`）。
+   *
+   * **必须据此渲染，不得用 `cli_analyzable` 反推**：`expected_stages` 的 0 是 Go 零值，
+   * 兼作「未声明」与「声明为 0 段」两种含义。用 `cli_analyzable ? expected_stages : "—"`
+   * 是拿一个字段解释另一个字段的零值——口径一旦分叉，「—」会静默变成 0，
+   * 于是「未采集」被渲染成「测了，是 0 段」（ADR-278 §2.6 诚实语义）。
+   */
+  stages_declared: boolean;
   stage_mismatch?: boolean;
 }
 
@@ -60,6 +69,14 @@ export interface PerfMatrixModel {
   per_iteration_ms?: number;
   total_ms?: number;
   stages?: { name: string; ms: number; status: string }[];
+  /**
+   * 未采集阶段耗时的**结构化原因** token（Go `singleBenchJSON.UnsupportedReason`，
+   * 当前取值 `no_cli_parser`）。能采集时缺席。
+   *
+   * 为什么不直接渲染 `hints`：那是 Go 侧中文散文（未 i18n），英/日界面会冒中文；
+   * token 不随语言变，渲染时查三语文案（与 `size_source` 同构）。
+   */
+  unsupported_reason?: string;
   hints?: string[];
   /**
    * 参与排名的模型占用（仅前 N 大模式）。
@@ -122,6 +139,20 @@ export function readPerfOrder(root: ShadowRoot, selectId = "diag-perf-order"): P
   return raw === PERF_ORDER_SIZE ? PERF_ORDER_SIZE : PERF_ORDER_PATH;
 }
 
+/** 未采集原因 token → i18n 键（与 SIZE_SOURCE_KEYS 同构：枚举值不随语言变，文案在 locale 里）。
+ * token 由 Go `unsupportedReason*` 常量产出；新增原因时这里加一条映射即可，渲染结构不动。 */
+const UNSUPPORTED_REASON_KEYS: Record<string, LocaleKey> = {
+  no_cli_parser: "diagnostics.perfReasonNoCliParser",
+};
+
+/** 把未采集原因 token 翻成人话；未知 token 落显式句（不落空串——「原因缺失」看起来像界面坏了）。 */
+function unsupportedReasonText(reason: string | undefined): string {
+  const key = reason ? UNSUPPORTED_REASON_KEYS[reason] : undefined;
+  if (key) return t(key);
+  // 有 token 但无映射 = 载荷新增了原因而前端没跟上：说「原因未知」比冒充通用原因更诚实
+  return reason ? t("diagnostics.perfReasonUnknown") : t("diagnostics.perfMatrixUnsupported");
+}
+
 /** 体量口径 token → i18n 描述；token 由 Go 单点给出，前端只映射不重算排名 */
 const SIZE_SOURCE_KEYS: Record<string, LocaleKey> = {
   dir_total: "diagnostics.perfSizeSourceDirTotal",
@@ -157,7 +188,7 @@ function typeRow(s: PerfTypeSummary, esc: EscFn): string {
 <td>${s.found}</td>
 <td>${s.analyzed}</td>
 <td>${unsupportedCell}</td>
-<td>${s.cli_analyzable ? s.expected_stages : "—"}${mismatch}</td>
+<td>${s.stages_declared ? s.expected_stages : "—"}${mismatch}</td>
 </tr>`;
 }
 
@@ -172,10 +203,15 @@ function modelRow(m: PerfMatrixModel, esc: EscFn): string {
     ? ` <span class="perf-matrix-tag" title="${esc(t("diagnostics.perfModelFootprintHint"))}">${esc(footprint)}</span>`
     : "";
   const stageCount = m.stages?.length ?? 0;
+  // 未采集的**逐条原因**：按 Go 的 `unsupported_reason` token 查三语文案。
+  //
+  // 为什么不直接渲染载荷里的 `hints`：那是 Go 侧中文散文（未 i18n），英/日界面会冒中文——
+  // 这正是此前明细区只能反推一句通用文案的原因（Go 已算好的原因被丢掉）。token 不随语言变，
+  // 与 §3.7 的 size_source 同构；未知 token 落通用句而非空串（「原因缺失」看起来像界面坏了）。
   const detail =
     stageCount > 0
       ? `${(m.per_iteration_ms ?? 0).toFixed(2)}ms · ${stageCount} ${t("diagnostics.perfMatrixColAnalyzed")}`
-      : t("diagnostics.perfMatrixUnsupported");
+      : unsupportedReasonText(m.unsupported_reason);
   const detailCls =
     stageCount > 0 ? "perf-matrix-model-detail" : "perf-matrix-model-detail perf-matrix-warn";
   return `<div class="perf-matrix-model">

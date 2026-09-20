@@ -495,6 +495,9 @@ export const ja: Record<string, string> = {
   "diagnostics.perfMatrixColFound": "該当",
   "diagnostics.perfMatrixColAnalyzed": "収集済み",
   "diagnostics.perfMatrixUnsupported": "CLI にこのタイプのパーサーが無く、段階の所要時間は未収集",
+  "diagnostics.perfReasonNoCliParser":
+    "パーサーはフロントエンドの 3D アダプタにのみ存在し、CLI では解析できません",
+  "diagnostics.perfReasonUnknown": "未収集（理由不明）",
   "diagnostics.perfMatrixStageMismatch": "段階数がマニフェストと不一致",
   "diagnostics.perfMatrixEmpty": "リポジトリに該当タイプのモデルがありません",
   "diagnostics.perfMatrixColUnsupported": "未収集",

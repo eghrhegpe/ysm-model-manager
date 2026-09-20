@@ -265,6 +265,89 @@ func TestSingleBench_TargetAll_Fixtures(t *testing.T) {
 	}
 }
 
+// TestPerfTypeSummary_StagesDeclared 载荷必须能区分「未声明阶段链」与「声明为 0 段」。
+//
+// 立因（2026-09-21 审核）：`ExpectedStages` 用 Go 零值 0 承载两种含义——`perfTypeManifest` 里
+// **没有**这个类型的 key（未声明，如 container/other 等兜底 token 与全部不可分析类型）
+// 与「登记了但声明 0 段」（当前不存在，但语义上是另一回事）。
+// 前端 `typeRow` 因此被迫打补丁：`s.cli_analyzable ? s.expected_stages : "—"`——
+// 用一个字段解释另一个字段的零值。载荷一旦不发 cli_analyzable（或前端改用别的判据），
+// `—` 会**静默变成 0**，于是「未采集」被渲染成「测了，是 0 段」——正是本模块反复清的那笔账
+// （空数据不得当实测）。故把「是否声明」显式入载荷，前端据实渲染而非反推。
+func TestPerfTypeSummary_StagesDeclared(t *testing.T) {
+	root := t.TempDir()
+	writeDirFormYsm(t, root, "a_model")
+	// 造一个 CLI 不可分析、且**不在 perfTypeManifest 里**的类型条目（PMX 解析器只在前端 adapter）——
+	// 它必须让 StagesDeclared=false（0 是 Go 零值，不是「声明为 0 段」）
+	pmxDir := filepath.Join(root, "mmd", "PMX")
+	if err := os.MkdirAll(pmxDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pmxDir, "角色.pmx"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := &CmdContext{App: &app.App{}, FilesRoot: root}
+	spec := perfTargetSpec{Target: perfTargetAll, Order: perfOrderPath, MaxModels: 1, Iterations: 1}
+	var err error
+	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, spec) })
+	if err != nil {
+		t.Fatalf("--target all 报错: %v", err)
+	}
+	var m singleBenchMatrixJSON
+	if err := json.Unmarshal([]byte(out), &m); err != nil {
+		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
+	}
+
+	byType := map[string]perfTypeSummary{}
+	for _, s := range m.Spec.Types {
+		byType[s.Rtype] = s
+	}
+
+	// ysm：已声明（manifest 里声明 7 段）
+	ysmSum, ok := byType["ysm"]
+	if !ok {
+		t.Fatalf("types 缺 ysm: %+v", m.Spec.Types)
+	}
+	if !ysmSum.StagesDeclared {
+		t.Errorf("ysm 已声明阶段链，StagesDeclared 必须为 true: %+v", ysmSum)
+	}
+	if ysmSum.ExpectedStages != 7 {
+		t.Errorf("ysm 期望段数应取自清单（7）: %+v", ysmSum)
+	}
+
+	// PMX / EntityPlayer：未声明（不在 manifest 里）——这正是前端此前被迫用 cli_analyzable 反推的情形
+	foundUndeclared := false
+	for _, s := range m.Spec.Types {
+		if s.Rtype == "ysm" {
+			continue
+		}
+		foundUndeclared = true
+		if s.StagesDeclared {
+			t.Errorf("%s 不在 perfTypeManifest 里，StagesDeclared 必须为 false（0 是零值不是声明）: %+v", s.Rtype, s)
+		}
+		if s.ExpectedStages != 0 {
+			t.Errorf("未声明类型不应有期望段数: %+v", s)
+		}
+	}
+	if !foundUndeclared {
+		t.Fatalf("夹具未产出未声明类型行，本测试失去判别面: %+v", m.Spec.Types)
+	}
+
+	// 显式断言 JSON 字段名与**两种取值都出现**（前端按名消费，改名即静默失真；
+	// 只断言 true 会漏掉「全都发 true」的退化——那等于回到用 0 反推）
+	if !strings.Contains(out, `"stages_declared": true`) {
+		t.Errorf("载荷缺 stages_declared=true（已声明类型）:\n%s", out)
+	}
+	if !strings.Contains(out, `"stages_declared": false`) {
+		t.Errorf("载荷缺 stages_declared=false（未声明类型）——前端无法区分「未声明」与「0 段」:\n%s", out)
+	}
+
+	// 单点出口自身的双向断言（不经载荷，锁语义）
+	if !stagesDeclared("ysm") || stagesDeclared("EntityPlayer") {
+		t.Errorf("stagesDeclared 单点判据错: ysm=%v EntityPlayer=%v", stagesDeclared("ysm"), stagesDeclared("EntityPlayer"))
+	}
+}
 func TestSingleBench_TargetAll_GuardsAndTextRejection(t *testing.T) {
 	root := t.TempDir()
 	writeDirFormYsm(t, root, "a_model")

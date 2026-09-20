@@ -10,6 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { initPerfPanel, populatePerfTargetOptions } from "./perf.ts";
+import { renderPerfMatrix } from "./perf-matrix-render.ts";
 
 const { executeCLI, isWebPlatform, perfRegistry } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
@@ -123,6 +124,7 @@ const REPO_SIZE_JSON = {
         analyzed: 2,
         unsupported: 0,
         expected_stages: 7,
+        stages_declared: true,
         stage_mismatch: false,
       },
     ],
@@ -179,6 +181,7 @@ const UNSUPPORTED_JSON = {
         analyzed: 0,
         unsupported: 1,
         expected_stages: 0,
+        stages_declared: false,
         stage_mismatch: true,
       },
     ],
@@ -193,6 +196,7 @@ const UNSUPPORTED_JSON = {
         relPath: "mmd/PMX/角色.pmx",
       },
       stages: [],
+      unsupported_reason: "no_cli_parser",
       hints: ["CLI 无解析器"],
     },
   ],
@@ -359,6 +363,128 @@ describe("类型矩阵 — 渲染", () => {
     expect(out.textContent).toContain("未采集");
     expect(out.textContent).not.toContain("0.00ms");
     expect(out.querySelector(".perf-matrix-warn")).toBeTruthy();
+  });
+
+  it("阶段列读 stages_declared，而非用 cli_analyzable 反推", () => {
+    // 立因（ADR-278 §2.6 诚实语义 / 本模块反复清的账「空数据不得当实测」）：
+    // `expected_stages` 的 0 是 Go 零值，兼作「未声明」与「声明为 0 段」。此前前端靠
+    // `cli_analyzable ? expected_stages : "—"` 反推——那是**用一个字段解释另一个字段的零值**，
+    // 载荷一旦不发 cli_analyzable 或二者口径分叉，「—」会静默变成 0，
+    // 于是「未采集」被渲染成「测了，是 0 段」。
+    //
+    // 本测试**故意打破**当前不变量（可分析 ⟺ 已声明）来验证渲染依据到底是哪一个：
+    // 造 `cli_analyzable:true + stages_declared:false` 与 `false + true` 两个反常组合，
+    // 断言输出跟随 stages_declared。若实现回头改用 cli_analyzable，这两条立刻变红。
+    const mk = (cliAnalyzable: boolean, stagesDeclared: boolean): string => {
+      const html = renderPerfMatrix(
+        {
+          spec: {
+            target: "rtype",
+            order: "path",
+            max_models: 1,
+            iterations: 1,
+            analyzed: 0,
+            unsupported: 0,
+            cli_analyzable: cliAnalyzable,
+            types: [
+              {
+                rtype: "x",
+                rtype_label: "X 类型",
+                cli_analyzable: cliAnalyzable,
+                found: 1,
+                analyzed: 0,
+                unsupported: 0,
+                expected_stages: stagesDeclared ? 7 : 0,
+                stages_declared: stagesDeclared,
+              },
+            ],
+          },
+          models: [{ model: "/repo/x", stages: [] }],
+        },
+        esc,
+      );
+      return html;
+    };
+
+    // 取第 5 列（类型/命中/已采集/未采集/阶段）——按列定位，避免误伤「已采集=0」那格
+    const stageCell = (html: string): string => {
+      const row = html.match(/<tbody>([\s\S]*?)<\/tbody>/)?.[1] ?? "";
+      const cells = row.split("</td>");
+      return cells[4] ?? "";
+    };
+
+    // cli_analyzable=true 但未声明阶段链 → 必须显示「—」（旧实现会显示 0）
+    expect(stageCell(mk(true, false))).toContain("—");
+
+    // cli_analyzable=false 但已声明阶段链 → 必须显示声明的段数（旧实现会显示「—」）
+    const declared = stageCell(mk(false, true));
+    expect(declared).toContain("7");
+    expect(declared).not.toContain("—");
+  });
+
+  it("未采集的逐条原因按 unsupported_reason token 渲染（可 i18n）", () => {
+    // 立因（2026-09-21）：Go 侧 `identityOnlyPayload` 一直带中文散文 `hints`
+    // （「⛔ CLI 无 X 解析器…」），但前端**不渲染 hints**（未 i18n，英/日界面会冒中文）。
+    // 于是明细区只能靠 `len(stages)==0` 反推一句通用文案——Go 已算好的逐条原因被丢掉。
+    // 故改为渲染结构化 token：一条记录一种语言，且未来加第二种原因时前端结构不动。
+    const html = renderPerfMatrix(
+      {
+        spec: {
+          target: "rtype",
+          order: "path",
+          max_models: 1,
+          iterations: 1,
+          analyzed: 0,
+          unsupported: 1,
+          cli_analyzable: false,
+          types: [
+            {
+              rtype: "EntityPlayer",
+              rtype_label: "MMD 模型",
+              cli_analyzable: false,
+              found: 1,
+              analyzed: 0,
+              unsupported: 1,
+              expected_stages: 0,
+              stages_declared: false,
+            },
+          ],
+        },
+        models: [
+          {
+            model: "/repo/mmd/PMX/角色.pmx",
+            stages: [],
+            unsupported_reason: "no_cli_parser",
+            hints: ["⛔ CLI 无 EntityPlayer 解析器：未采集阶段耗时"],
+          },
+        ],
+      },
+      esc,
+    );
+
+    // 断言**专用键**的独有措辞（不是通用句的子串——通用句已含「CLI 无该类型解析器」，
+    // 拿它断言会恒真，这条测试就失去判别力）
+    expect(html).toContain("解析器只在前端 3D 适配器");
+    expect(html).not.toContain("⛔");
+
+    // 未知 token 落通用句，不得渲染成空串（「原因缺失」看起来像界面坏了）
+    const unknown = renderPerfMatrix(
+      {
+        spec: {
+          target: "rtype",
+          order: "path",
+          max_models: 1,
+          iterations: 1,
+          analyzed: 0,
+          unsupported: 1,
+          cli_analyzable: false,
+          types: [],
+        },
+        models: [{ model: "/repo/x", stages: [], unsupported_reason: "future_reason" }],
+      },
+      esc,
+    );
+    expect(unknown).toContain("未采集");
   });
 
   it("models 为空 → 显式空态（不画空表）", async () => {

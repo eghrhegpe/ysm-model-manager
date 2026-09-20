@@ -415,6 +415,8 @@
   "diagnostics.perfMatrixColFound": "Found",
   "diagnostics.perfMatrixColAnalyzed": "Collected",
   "diagnostics.perfMatrixUnsupported": "No CLI parser for this type — stage timings not collected",
+  "diagnostics.perfReasonNoCliParser": "Parser lives in the front-end 3D adapter only; CLI cannot analyze this type",
+  "diagnostics.perfReasonUnknown": "Not collected (reason unknown)",
   "diagnostics.perfMatrixStageMismatch": "Stage chain differs from the manifest",
   "diagnostics.perfMatrixEmpty": "No model of this type found in the repo",
   "diagnostics.perfMatrixColUnsupported": "Not collected",

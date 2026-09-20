@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-289：运行时日志结构化：tag 提取与级别推断",
+        "link": "/adr/ADR-289-runtime-log-structuring"
+      },
+      {
         "text": "ADR-288：诊断页布局词汇统一与扫描类参数栏常驻化",
         "link": "/adr/ADR-288-diagnostics-scan-bar-persistent"
       },

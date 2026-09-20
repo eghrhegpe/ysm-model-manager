@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **286** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **287** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 259 |
+| [✅ 已采纳](#已采纳) | 260 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -53,10 +53,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（259）
+### ✅ 已采纳（260）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-289](./ADR-289-runtime-log-structuring.md) | 运行时日志结构化：tag 提取与级别推断 | ✅ 已采纳 |
 | [ADR-288](./ADR-288-diagnostics-scan-bar-persistent.md) | 诊断页布局词汇统一与扫描类参数栏常驻化 | ✅ 已采纳 |
 | [ADR-287](./ADR-287-water-ground.md) | water 菜单 ground- 化石前缀重命名 | ✅ 已采纳 |
 | [ADR-286](./ADR-286-water-applychangedparams.md) | water applyChangedParams 声明式分派表 | ✅ 已采纳 |
@@ -341,6 +342,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-289 | 运行时日志结构化：tag 提取与级别推断 | ✅ 已采纳 | 2026-09-20 |
 | ADR-288 | 诊断页布局词汇统一与扫描类参数栏常驻化 | ✅ 已采纳 | 2026-09-20 |
 | ADR-287 | water 菜单 ground- 化石前缀重命名 | ✅ 已采纳 | 2026-09-20 |
 | ADR-286 | water applyChangedParams 声明式分派表 | ✅ 已采纳 | 2026-09-20 |

@@ -4,6 +4,8 @@ package logs
 import (
 	"testing"
 	"time"
+
+	"ysm-model-manager/go/types"
 )
 
 func TestRuntimeBuffer_WriteAndGetAll(t *testing.T) {
@@ -78,5 +80,79 @@ func TestRuntimeBuffer_Clear(t *testing.T) {
 	b.Clear()
 	if all := b.GetAll(); len(all) != 0 {
 		t.Fatalf("Clear 后应为空，实际 %d 条", len(all))
+	}
+}
+
+// ===== ADR-289：tag 提取与级别推断 =====
+
+func TestRuntimeBuffer_TagExtraction(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		tag  string
+	}{
+		{"标准前缀", "[watcher] 已启动: /root\n", "watcher"},
+		{"带连字符", "[config-migrate] 迁移失败: boom\n", "config-migrate"},
+		{"带下划线", "[texture_cache] 淘汰删除失败\n", "texture_cache"},
+		{"无前缀", "裸日志没有 tag\n", ""},
+		{"前缀不在开头", "  [latent] 前导空格不算\n", ""},
+		{"空方括号", "[] 空 tag 应留空\n", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			b := NewRuntimeBuffer(10)
+			if _, err := b.Write([]byte(c.in)); err != nil {
+				t.Fatal(err)
+			}
+			got := b.GetAll()[0]
+			if got.Tag != c.tag {
+				t.Errorf("Tag = %q, 期望 %q（Message 必须原样保留）", got.Tag, c.tag)
+			}
+			// 关键不变量：提取是纯附加，Message 一字不改（前端仍展示原文）
+			if got.Message != c.in {
+				t.Errorf("Message 被改动: %q", got.Message)
+			}
+		})
+	}
+}
+
+func TestRuntimeBuffer_LevelInference(t *testing.T) {
+	cases := []struct {
+		name  string
+		in    string
+		level types.LogLevel
+	}{
+		{"panic → fatal", "[conc] worker panic: bad\n", types.LevelFatal},
+		{"失败 → error", "[installer] 安装文件 x 失败: boom\n", types.LevelError},
+		{"error 英文 → error", "[proxy] websocket error: reset\n", types.LevelError},
+		{"无法 → error", "[storage] 无法创建目录\n", types.LevelError},
+		{"警告 → warn", "[sync] 警告: 冲突处理未在锁内\n", types.LevelWarn},
+		{"WARN 标记 → warn", "[types][WARN] 注册表含重复 id\n", types.LevelWarn},
+		{"⚠️ → warn", "[spec] ⚠️ 骨骼 %q 无 pivot\n", types.LevelWarn},
+		{"截断 → warn", "[geometry] 达到物化封顶, 截断\n", types.LevelWarn},
+		{"正常 → info", "[watcher] 自动同步完成: 禁用 3 启用 2\n", types.LevelInfo},
+		{"裸日志 → info", "纯文本无级别线索\n", types.LevelInfo},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			b := NewRuntimeBuffer(10)
+			if _, err := b.Write([]byte(c.in)); err != nil {
+				t.Fatal(err)
+			}
+			if got := b.GetAll()[0].Level; got != c.level {
+				t.Errorf("Level = %q, 期望 %q", got, c.level)
+			}
+		})
+	}
+}
+
+// 优先级：fatal/error 高于 warn——同一行既有「失败」又有「警告」时应取更严重的
+func TestRuntimeBuffer_LevelPriority(t *testing.T) {
+	b := NewRuntimeBuffer(10)
+	if _, err := b.Write([]byte("[sync] 警告: 同步失败\n")); err != nil {
+		t.Fatal(err)
+	}
+	if got := b.GetAll()[0].Level; got != types.LevelError {
+		t.Errorf("error 应优先于 warn，实际 %q", got)
 	}
 }

@@ -113,10 +113,15 @@ type ImportLog struct {
 }
 
 // RuntimeLog 运行时日志（watcher/sync 等标准库 log 输出，诊断页可见）
+//
+// Tag / Level 由捕获层从 Message 推断（ADR-289）：标准库 log 无级别也无结构，
+// 但调用点已自发携带 `[tag]` 前缀与「失败/警告」等词——捕获层读出来，前端便能
+// 分级筛选与按 tag 检索，而无需改动 250+ 个调用点。
 type RuntimeLog struct {
 	Message   string   `json:"Message"`
 	Timestamp int64    `json:"Timestamp"`
-	Level     LogLevel `json:"Level,omitempty"` // 默认 info（标准库 log 无级别）
+	Level     LogLevel `json:"Level,omitempty"` // 推断级别（标准库 log 无真实级别；无把握时为 info）
+	Tag       string   `json:"Tag,omitempty"`   // `[tag]` 前缀提取（无前缀为空串，不丢弃消息）
 }
 
 // LinkType 链接类型

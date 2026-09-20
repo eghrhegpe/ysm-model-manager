@@ -81,12 +81,12 @@ status: active
 - 操作日志上限 500 条、运行时日志上限 `cap`（应用侧取 200），超出均裁掉最旧
 - `Timestamp` 一律 Unix 毫秒
 - `Operation` 为空的历史日志前端按 `"import"` 归组；后端不做补齐，`Add()` 写入时固定填 `"import"`
-- **`Level` 字段**（`LogLevel`）：`ImportLog` 由 `addOp` 调用 `statusToLevel` 自动派生（`success`→info, `failed`→error, `warn`→warn, `skipped`→debug），`RuntimeLog` 在 `RuntimeBuffer.Write` 默认标记 `LevelInfo`；旧日志无 Level 时前端按 `Status` 兜底，兼容历史数据
+- **`Level` 字段**（`LogLevel`）：`ImportLog` 由 `addOp` 调用 `statusToLevel` 自动派生（`success`→info, `failed`→error, `warn`→warn, `skipped`→debug）；`RuntimeLog` 的 `Level` 与 `Tag` 由 `RuntimeBuffer.Write` **从消息推断**（ADR-289，见下条）；旧日志无 Level 时前端按 `Status` 兜底，兼容历史数据
 - **分组纯属前端呈现**：后端 `GetAll()` 只按写入顺序平铺返回，不排序不分组；前端先 `slice(-500).reverse()` 取最近 500 条转时间倒序，再用 `Map` 按 op 归组，故组的先后 = 该 op 最新一条出现的先后，组内保持时间倒序。后端改变返回顺序会直接改变诊断页组序
 - 运行时日志只在内存，不落盘、重启即失；操作日志落盘失败只记系统 log、不向上抛错（日志不阻塞主流程）
-- `RuntimeBuffer.Write` 按调用次数分条（标准库 log 一行一次 Write），不解析日志级别，消息保留原始换行
+- **`RuntimeBuffer.Write` 解析 tag 与推断级别**（ADR-289，2026-09-20）：按调用次数分条（标准库 log 一行一次 Write），消息**原样保留**（含换行），同时顺带做两件事——① `extractRuntimeTag` 取**行首** `[tag]` 前缀写入 `Tag`（无前缀留空，不报错不丢弃）；② `inferRuntimeLevel` 按词表推断 `Level`（fatal > error > warn > info，保守优先）。**为何在捕获层做**：标准库 log 无级别无结构，但全仓 247 个调用点中 **225 个（91.1%）已自发携带 `[tag]` 前缀**、并普遍含「失败/警告/⚠️」等词——在此读出来（每条一次）即让前端可分级筛选与按 tag 检索，**而无需改动任何一个调用点**。推断是启发式非真实级别（实测分布 fatal 2% / error 60% / warn 12% / info 26%，error 高是真实分布——Go 只在出问题时写日志）。前端解析 Message 被否：违反「语义单一事实源在 Go」且 200 条每次渲染重复解析
 - **落盘原子性 + 损坏恢复**：tmp+rename 原子替换（rename 失败清理 tmp）；损坏 `ysm-import-logs.json` 备份 `.corrupt` 后重建空存储（对齐 tags.go 模式）；JSON `null` 内容守卫已封（`logs.go` null 守卫）
-- **RuntimeBuffer 已有测试覆盖**（P3 补测：`runtime_test.go` 覆盖 Write 分条/环形丢弃最旧/cap≤0 回退 200/GetAll 副本/Clear；损坏恢复的 `.corrupt` 备份断言与 load 端 500 裁剪为 P4 待补）
+- **RuntimeBuffer 已有测试覆盖**（P3 补测：`runtime_test.go` 覆盖 Write 分条/环形丢弃最旧/cap≤0 回退 200/GetAll 副本/Clear；ADR-289 补 `TestRuntimeBuffer_TagExtraction`（6 例含「前缀不在行首」「空方括号」边界）/`TestRuntimeBuffer_LevelInference`（10 例）/`TestRuntimeBuffer_LevelPriority`（error 优先于 warn）；损坏恢复的 `.corrupt` 备份断言与 load 端 500 裁剪为 P4 待补）
 
 ## 相关
 

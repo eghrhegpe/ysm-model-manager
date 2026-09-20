@@ -116,6 +116,9 @@ function fieldDocHasNonUi(lines: string[], declIdx: number, field: string): bool
   const docStart = findDocStart(lines, declIdx);
   if (docStart === declIdx + 1) return false; // 紧邻无 doc comment → 不可能有标注
   const span = lines.slice(docStart - 1, declIdx + 1).join("\n");
+  // 注意转义层级：在 RegExp 的**字符串**源里，字面量 `/**` 必须写成 `/\\*\\*`
+  // （JS 字符串先吃掉一层反斜杠，正则引擎再见 `\*`）。写成 `/\\\\*\\\\*` 会变成
+  // 「匹配字面反斜杠」，恒定不命中——实测踩坑：标注明明在仍报可疑。
   return new RegExp(
     `/\\*\\*(?:(?!\\*/)[\\s\\S])*@non-ui(?:(?!\\*/)[\\s\\S])*\\*/\\s*${field}\\??:`,
   ).test(span);
@@ -125,16 +128,14 @@ function fieldDocHasNonUi(lines: string[], declIdx: number, field: string): bool
  * 从文件文本里提取所有 interface 的字段声明（含行号、是否可选、doc 起始行）。
  * 文本解析，不做完整 TS 语法：遇 `{` 起头，遇 `}` 收尾，成员行按缩进识别。
  */
-export function extractInterfaceFields(
-  text: string,
-): Array<{
-    iface: string;
-    field: string;
-    line: number;
-    optional: boolean;
-    docStart: number;
-    declIdx: number;
-  }> {
+export function extractInterfaceFields(text: string): Array<{
+  iface: string;
+  field: string;
+  line: number;
+  optional: boolean;
+  docStart: number;
+  declIdx: number;
+}> {
   const out: Array<{
     iface: string;
     field: string;
@@ -179,11 +180,23 @@ export function extractInterfaceFields(
   return out;
 }
 
-/** 向上回溯紧邻的 doc 注释块起始行（1-indexed）；无则返回声明行自身。 */
+/**
+ * 向上回溯紧邻的 doc 注释块起始行（1-indexed）；无则返回 `declIdx + 1`（哨兵：没有注释）。
+ *
+ * 两种注释形态都要认，否则**单行 `@non-ui` 会被漏判成可疑**（实测踩坑：
+ * `perf-concurrent.ts` 的 `/** @non-ui … *\/` 紧贴在 `hints?: string[]` 上方，
+ * 旧实现只认「上一行是 `*\/`」的多行形态，直接回退哨兵 → 已标注的字段仍报可疑）：
+ *   ① 多行：`/**` … ` * …` … ` *\/`，回溯到开头的 `/**` 行；
+ *   ② 单行：`/** … *\/` 自成一行，就以该行为起始。
+ */
 function findDocStart(lines: string[], declIdx: number): number {
-  let j = declIdx - 1;
-  if (j < 0 || !/^\s*\*\/\s*$/.test(lines[j]!)) return declIdx + 1;
-  for (let k = j - 1; k >= 0; k--) {
+  const prev = lines[declIdx - 1];
+  if (prev === undefined) return declIdx + 1;
+  // ② 单行注释块：`/** … */` 一行写完（注意排除已跨行的收尾行 `*/`，那种走 ①）
+  if (/^\s*\/\*\*(?:(?!\*\/).)*\*\/\s*$/.test(prev)) return declIdx;
+  if (!/^\s*\*\/\s*$/.test(prev)) return declIdx + 1;
+  // ① 多行注释块：从收尾行向上找开头的 `/**`
+  for (let k = declIdx - 2; k >= 0; k--) {
     if (/^\s*\/\*\*/.test(lines[k]!)) return k + 1;
     if (!/^\s*\*/.test(lines[k]!)) break;
   }
@@ -219,7 +232,9 @@ function isExcluded(rel: string): boolean {
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
     console.log(
-      JSON_OUT ? JSON.stringify({ suspicious: [], error: "frontend/src 不存在" }) : "frontend/src 目录不存在",
+      JSON_OUT
+        ? JSON.stringify({ suspicious: [], error: "frontend/src 不存在" })
+        : "frontend/src 目录不存在",
     );
     process.exit(1);
   }
@@ -229,7 +244,12 @@ function main() {
   // 全仓文本一次读入：字段读取计数需跨文件统计（消费方常与声明方不同文件）。
   const texts: string[] = [];
   for (const f of files) {
-    texts.push(fs.readFileSync(f, "utf-8").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n"));
+    texts.push(
+      fs
+        .readFileSync(f, "utf-8")
+        .replace(/^\uFEFF/, "")
+        .replace(/\r\n/g, "\n"),
+    );
   }
 
   // ① 收集全部 interface 字段

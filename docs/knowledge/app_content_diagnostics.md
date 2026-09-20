@@ -280,6 +280,19 @@ status: active
 3. 按 interface 名收窄到契约类，再回查 Go JSON tag 是否真在发。
 4. ⚠️ **PowerShell 陷阱**：外层 `-match` 取 `$Matches[1]`、内层循环再跑正则 → 内层覆盖 `$Matches`，字段名被污染。**抓组后立刻落变量**。
 
+### 可搜索性：字段级审计脚本落地（2026-09-21）
+
+**问题**：`check-orphan-exports.ts` 只回答「这个**符号**有人用吗」。`PerfIdentity` 被两个文件 import，不是孤儿——可它的零读取字段正是盲区。**符号层之下没有工具。**
+
+**落地** `scripts/check-unread-fields.ts`（审计模式 rc=0，`--strict` 升级阻断）：
+- 提取 `frontend/src` 的 interface 成员 → 按属性访问形态统计全仓读取点 → 只报契约类 interface → 用 `@non-ui` 标注把「故意不渲染」与「疑似漏读」拆开。
+- 当前实测：**可疑 12 条**（含 `CLIResponse.command`、`SizeInfo.{centerX,centerY,centerZ,maxDim,zChunks}`、`BoneSelectInfo.{localPos,localRot,cubeRot,cubePos}`、`PmxParseResponse.additionalDataFlags`、`RawGeometryJSON.identifier` 等），**`@non-ui` 豁免 3 条**。
+- 这 12 条**尚未逐个定性**——多数看似第三方解析类型的中间态（`PmxParseResponse`/`SizeInfo`/`BoneSelectInfo` 由 adapter 产出后重整形），但**「看似合理」不等于核过**。下一步应逐条判「删字段 / 补消费方 / 补 `@non-ui`」，判完才谈接 doctor。
+
+**踩坑（子代理实现漏掉的真 bug，主模型修）**：`findDocStart` 只认「上一行是 `*/`」的**多行**注释形态，于是**单行** `/** @non-ui … */` 紧贴字段时直接回退哨兵 → 已标注的 `ConcPayload.hints`、`PerfTypeSummary.cli_analyzable` **仍被报可疑**（豁免数 1 而非 3）。修法是补单行注释分支。
+- ⚠️ 教训：这个 bug **恰好会让人误以为「标注没用」**——若不复核豁免明细就接受输出，会得出「@non-ui 机制不生效」的错误结论，进而可能去改一个本来正确的机制。**审计脚本自己的输出也要抽查明细，不能只看总数。**
+- 该修复过变异检查：删掉 `hints` 的标注 → 可疑 12→13、豁免 3→2，且 `hints` 被点名。
+
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

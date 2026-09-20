@@ -378,14 +378,23 @@ localPos: number[];
 
 ### ADR-285 跑基准可用性收口（2026-09-20 首轮拍板，部分落地）
 
-以「四问」切入 bench tab（上手难度 / 按钮布局 / 开放的按钮是否难调 / 三语翻译），全部以源码与脚本实测取证，结论记档：
+**这轮做了什么（一句话）**：把「跑基准」面板的按钮和文案收拾了一通——运行按钮挪到参数后面、并发按钮补上主按钮颜色、三语里重复的说明删掉、中/日界面里夹的英文 `workers` 换成当地话。全是文案/布局改动，没动 Go 和命令参数。
 
-- **无摆设控件**（逐个对账 Go flag）：`#diag-perf-conc-workers`→`--workers`、`#diag-perf-conc-max`→`--max-models`、`#diag-perf-iter`/`#diag-perf-scan-iter`→`--iterations`、基准三件套→`--baseline`/`--save-baseline`/`--threshold-pct`。真正的落差是 `--workers` 是**档位上限**（`concurrentWorkerCounts` 取 `{2,4,workers} ∩ ≤workers`，`bench_concurrent_json.go:106-117`）——填 8 实测 2/4/8 三档，hint 已说清但 label 读起来像「就用 8」。
-- **i18n parity 全绿**（`node scripts/i18n-check.ts` 实测）：1492 键 × 3 语 missing=0 extra=0，占位符一致。问题在 5 类**措辞**而非缺键：① 按钮 title 三重复述（`perfScopeHint` 短 scope 句 + 机制长句尾部的 scope 尾巴，`zh-CN.ts:417` 等）② 中/日夹英文 `workers` ③ zh「最多模型数」名不副实 ④ 诚实层「测什么/测哪些」差异只在单复数 ⑤ 撞名与风格不齐。
-- **两道穷尽护栏的位置与判据**（`perf-mode.test.ts`）：只收 `input/select`、**button 不入账**（`<input|select>…id=` 正则，`:338-341`）→ 运行按钮换行不触发护栏；每控件必须有归宿 = 行归属（所属 perf-row 的 data-perf-mode）∨ 不读表/基准名单 ∨ 公共区，`:422-439` 又补「single 下可见者须声明」。
-- **已落地（P0 全批 + P1-1 方案 A + P3）**：① 三语 `perfConcurrentHint`/`perfScanBenchHint` 删尾部 scope 尾巴（去三重复述）② conc 运行按钮补 `accent` ③ 中/日 `workers` 术语本地化且**一次落 P2-1 终值**（zh「最大并发路数」/en「Max concurrent workers」/ja「最大並列数」，键名不变、消费点零改动）④ **P1-1 运行按钮移到参数之后**：single 的按钮从 model 行拆出、移到 baseline 之后；conc 的按钮从 worker 行拆出、移到 conc-max 之后（带 accent）。⑤ P3-1/2 文档。
-- **P0-3（zh「最多模型数」→「取样上限」）被否**：会反转 ADR-278 §2.6 已评审结论（「取样上限」是黑话、当年三语统一改「最多模型数」），且 `perf-matrix.test.ts:610,615` 的 `toBe("最多模型数")` 是有意保留的锁定断言、`LyG` 刚清完同类失真——本卡的「改 i18n 必同步硬编码字面量」教训再次应验（ADR 方案只列 3 处、漏了单测 6 处连带）。**真痛点走另立 ADR 全量连带，当零风险微调即入「闸只看得见它被写死的那一类」同款坑。**
-- 未做（留待后续拍板）：P1-2（公共区上移）、P1-3（视觉分组）、P2-2（目标集改口带原因）、P2-3（scopeHint 前缀消撞名）。
+**怎么核实的（不靠猜）**：
+- **面板上的控件都不是摆设**：一个个对照了 Go 的命令参数，`并发路数`→`--workers`、`取样上限`→`--max-models`、`迭代次数`→`--iterations`、基准三件套→`--baseline`/`--save-baseline`/`--threshold-pct`，每个都能落到真参数。唯一容易误会的是 `--workers` 其实是**「最多跑到这档」**：填 8 会实际跑 2/4/8 三档（`concurrentWorkerCounts` 取 `{2,4,workers}`，`bench_concurrent_json.go:106-117`）——提示里写了，但标签读起来像「就是 8」。
+- **三语翻译没缺、只是不够口语**：`node scripts/i18n-check.ts` 实测 1492 键 × 3 语 missing=0 extra=0。毛病是 5 类措辞：① 按钮的悬停说明把同一件事说了三遍 ② 中/日界面夹英文 `workers` ③ zh「最多模型数」在选『每个类型各取几条』时叫得名不副实 ④ 「测什么/测哪些」就差个单复数，看不出语义真变了 ⑤ 有些标签撞名。
+- **防呆护栏在哪**（`perf-mode.test.ts`）：穷尽检查只数 `input/select`、**不数按钮**（`:338-341`），所以按钮挪行不会触发；每个控件必须能说出「我在哪个模式可见、谁读我」，说不出的会红。
+
+**已落地（P0 全批 + P1-1 + P3）**：
+1. 三语 `perfConcurrentHint`/`perfScanBenchHint` 删掉结尾重复的「测的对象」尾巴。
+2. 并发运行按钮补 `accent`（主按钮色），和单模型/引擎对照仨按钮一致。
+3. 中/日 `workers` 本地化，且一步到位用终值：zh「最大并发路数」/ en「Max concurrent workers」/ ja「最大並列数」（键名没变，引用处不用动）。
+4. **按钮移到参数后面**（先配置再点跑）：单模型的按钮从模型框那行拆出来、挪到基准三件套下面；并发的按钮挪到取样上限下面。
+5. 文档：ADR-278 补了段说明，本卡记了这轮结论。
+
+**有一项决定不做（P0-3）**：本想把 zh「最多模型数」改回「取样上限」，但一是会推翻 ADR-278 当年「取样上限是黑话」的结论，二是单测有断言锁死「最多模型数」（`perf-matrix.test.ts:610,615`）会连带 6+ 处——说它是「零风险」不实，于是保持原样。真要继续就另立 ADR 全量改。
+
+**留到以后**：P1-2（公共区上移）、P1-3（分组显示）、P2-2（并发目标集改口带原因）、P2-3（scopeHint 前缀消撞名）。
 
 ## 相关
 

@@ -237,7 +237,14 @@ export const ENV_STATE_SCHEMA = {
     default: "sky",
     group: "environment",
   },
-  envIntensity: { type: "number", default: 1.0, group: "environment" },
+  envIntensity: {
+    type: "number",
+    default: 1.0,
+    group: "environment",
+    // 合法域 [0,5]（写入钳制：HDR 环境常需 >3）；滑杆展示域 [0,3] 是手感设计（ADR-283 §2.2）
+    range: { min: 0, max: 5, step: 0.05 },
+    uiRange: { min: 0, max: 3, step: 0.05 },
+  },
   envUseAsBackground: { type: "boolean", default: false, group: "environment" },
   envResolution: { type: "number", default: 1024, group: "environment" },
 

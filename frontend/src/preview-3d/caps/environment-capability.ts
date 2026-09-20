@@ -440,7 +440,7 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   setIntensity(v: number): void {
-    setEnvState({ envIntensity: Math.max(0, Math.min(5, v)) }, { source: "manual" });
+    setEnvState({ envIntensity: v }, { source: "manual" }); // 值域钳制在唯一写入口（ADR-283）
     // callback → applyEnvIntensity（无需显式调用）
   }
 

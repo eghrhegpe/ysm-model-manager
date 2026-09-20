@@ -22,6 +22,7 @@ import type {
   PreviewControlDef,
   PreviewMenuNode,
 } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
 import type { EnvPresetId } from "./environment-state.ts";
 import { ENV_PRESETS } from "./environment-state.ts";
@@ -185,9 +186,7 @@ function envBuildBackgroundFolder(cap: EnvironmentCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.envIntensity",
         control: {
-          min: 0,
-          max: 3,
-          step: 0.05,
+          ...getParamRange("envIntensity"),
           get: () => cap.getIntensity(),
           set: (v) => cap.setIntensity(v as number),
         },

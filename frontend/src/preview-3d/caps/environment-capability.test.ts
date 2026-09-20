@@ -22,6 +22,7 @@ import {
 } from "./environment-capability.ts";
 import { MODEL_DEFAULTS, toModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-196：统一状态层
+import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
@@ -715,6 +716,20 @@ describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由
     expect(enabledNode.control!.get!(undefined)).toBe(false);
     enabledNode.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
+  });
+
+  it("菜单滑杆值域 = schema 展示域（ADR-283：菜单不再是第二事实源）", () => {
+    const cap = newCap();
+    const bgFolder = cap.getMenuNodes()[2]!;
+    const node = bgFolder.children!.find((c) => c.id === "env-intensity")!;
+    const c = node.control!;
+    const range = getParamRange("envIntensity");
+    expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, "env-intensity 值域应来自 schema").toEqual(
+      range,
+    );
+    // 分离语义的活证：写入可到 5（合法域），滑杆只到 3（展示域）
+    expect(ENV_STATE_SCHEMA.envIntensity.range.max).toBe(5);
+    expect(range.max).toBe(3);
   });
 
   it("强度滑块读写同步（节点 control 闭包）", () => {

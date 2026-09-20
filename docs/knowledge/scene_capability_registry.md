@@ -57,6 +57,7 @@ auto_fields:
     - FieldKind
     - FieldRestorer
     - filmStrategy
+    - FLATTEN_MAP
     - flattenLightParams
     - FogCapability
     - FogMode

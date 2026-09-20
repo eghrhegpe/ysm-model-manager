@@ -281,6 +281,7 @@ auto_fields:
     - fitCameraToRoots
     - fitCameraToScene
     - flagsForAlpha
+    - FLATTEN_MAP
     - flattenLightParams
     - FogCapability
     - FogMode

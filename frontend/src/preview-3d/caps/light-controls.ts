@@ -17,8 +17,19 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { LightCapability, LightKey } from "./light-capability.ts";
-import type { LightType } from "./light-presets.ts";
+import { FLATTEN_MAP, type LightType } from "./light-presets.ts";
+
+/** 统一设置条内「有值域」的参数字段（type/enabled/color 不在其列）。 */
+type LightSliderField =
+  | "intensity"
+  | "azimuth"
+  | "elevation"
+  | "angle"
+  | "penumbra"
+  | "distance"
+  | "decay";
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
 
@@ -64,6 +75,11 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
   const setField = (field: string, v: unknown) =>
     cap.setLightParams(which, { [field]: v } as never);
 
+  // 滑杆值域唯一事实源 = schema（ADR-283）：键由 FLATTEN_MAP（light-presets.ts，which→字段→键 唯一映射）
+  // 决定——which 是动态槽位，同一控件对应 key/fill/rim 三键之一；三键均已在 schema 声明 range，
+  // 故此处的窄化由编译期保证（若某槽位漏声明 range，`RangedKey` 约束即报错）。
+  const rangeOf = (field: LightSliderField) => getParamRange(FLATTEN_MAP[which][field]);
+
   const type = getP().type;
   const nodes: PreviewMenuNode[] = [
     {
@@ -101,9 +117,7 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
       kind: "slider",
       labelKey: "preview.lightIntensity",
       control: {
-        min: 0,
-        max: 6,
-        step: 0.1,
+        ...rangeOf("intensity"),
         get: () => getP().intensity,
         set: (v) => setField("intensity", v),
       },
@@ -113,10 +127,7 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
       kind: "slider",
       labelKey: "preview.lightAzimuth",
       control: {
-        min: -180,
-        max: 180,
-        step: 1,
-        unit: "°",
+        ...rangeOf("azimuth"),
         get: () => getP().azimuth,
         set: (v) => setField("azimuth", v),
       },
@@ -126,10 +137,7 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
       kind: "slider",
       labelKey: "preview.lightElevation",
       control: {
-        min: -90,
-        max: 90,
-        step: 1,
-        unit: "°",
+        ...rangeOf("elevation"),
         get: () => getP().elevation,
         set: (v) => setField("elevation", v),
       },
@@ -144,10 +152,7 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
         kind: "slider",
         labelKey: "preview.lightAngle",
         control: {
-          min: 10,
-          max: 70,
-          step: 1,
-          unit: "°",
+          ...rangeOf("angle"),
           get: () => getP().angle,
           set: (v) => setField("angle", v),
         },
@@ -157,9 +162,7 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
         kind: "slider",
         labelKey: "preview.lightPenumbra",
         control: {
-          min: 0,
-          max: 1,
-          step: 0.05,
+          ...rangeOf("penumbra"),
           get: () => getP().penumbra,
           set: (v) => setField("penumbra", v),
         },
@@ -175,9 +178,7 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
         kind: "slider",
         labelKey: "preview.lightDistance",
         control: {
-          min: 0,
-          max: 200,
-          step: 1,
+          ...rangeOf("distance"),
           get: () => getP().distance,
           set: (v) => setField("distance", v),
         },
@@ -187,9 +188,7 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
         kind: "slider",
         labelKey: "preview.lightDecay",
         control: {
-          min: 0,
-          max: 4,
-          step: 0.1,
+          ...rangeOf("decay"),
           get: () => getP().decay,
           set: (v) => setField("decay", v),
         },
@@ -225,9 +224,7 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.volumetricDensity",
         control: {
-          min: 0,
-          max: 1,
-          step: 0.05,
+          ...getParamRange("lightVolumetricOpacity"),
           get: () => cap.getParams().volumetric.opacity,
           set: (v) => cap.setVolumetric({ opacity: v as number }),
         },
@@ -237,9 +234,7 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.volumetricFalloff",
         control: {
-          min: 0.5,
-          max: 3,
-          step: 0.1,
+          ...getParamRange("lightVolumetricFogPower"),
           get: () => cap.getParams().volumetric.fogPower,
           set: (v) => cap.setVolumetric({ fogPower: v as number }),
         },
@@ -249,9 +244,7 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.volumetricEdgeFade",
         control: {
-          min: 0,
-          max: 1,
-          step: 0.05,
+          ...getParamRange("lightVolumetricEdgeFade"),
           get: () => cap.getParams().volumetric.edgeFade,
           set: (v) => cap.setVolumetric({ edgeFade: v as number }),
         },
@@ -262,6 +255,7 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.volumetricTipRatio",
         control: {
+          // 比值域 [0,1] 属派生标量（tip = base × ratio），不是 envState 键值 → 不迁 schema（ADR-283 §2.5 例外）
           min: 0,
           max: 1,
           step: 0.05,
@@ -280,9 +274,7 @@ function ambientNode(cap: LightCapability): PreviewMenuNode {
     kind: "slider",
     labelKey: "preview.ambientIntensity",
     control: {
-      min: 0,
-      max: 2,
-      step: 0.1,
+      ...getParamRange("lightAmbientIntensity"),
       get: () => cap.getParams().ambient.intensity,
       set: (v) => cap.setParams({ ambient: { intensity: v as number } }),
     },

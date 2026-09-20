@@ -159,6 +159,10 @@ invariant_anchors:
   - **去双层 `as`**：`readLightParams` 字段名取自映射（键拼写有锁）+ 返回类型 `LightInstanceParams` 反向校验（值类型 / 穷尽性有锁），旧实现 `${prefix}${X}` 拼串 + 两层 `as` 退场。
   - **持久化表**（`light-persist.ts`）：映射的是存档短名（跨版本稳定契约），无法派生，但 `satisfies Record<keyof LightInstanceParams, …>` 锁死同一字段全集。
   - **`export *` 转发桶已删**：`light-capability.ts` 不再重导出 `light-presets.ts`，消费方直引具体叶（同一符号不再两处入口）。
+  - **[ADR-283] light 组值域迁入 schema（2026-09-20）**：统一设置条 7 个滑杆（intensity/azimuth/elevation/angle/penumbra/distance/decay）不再写 min/max/step 字面量，改由 `getParamRange(FLATTEN_MAP[which][field])` 取 schema `range`——`which` 是动态槽位（同一控件对应 key/fill/rim 三键之一），三键均已声明 range，漏声明即编译报错（`RangedKey` 约束兜底）。`FLATTEN_MAP` 随之从模块私有升格为导出。
+  - **首次引入写入钳制**：light 组原全无钳制，现由 `setEnvState` 唯一写入口按 schema range 钳制（脏存档 / 程序化写入的越界值会被改写到上下界）。
+  - **例外（有意保留字面量）**：`light-volumetric-ratio`（「上下亮度比」）的值是派生标量 `tip = base × ratio`，不落在任何 envState 键上 → 不迁 schema；其 [0,1] 域由 `setVolumetricTipRatio` 自身的 clamp 保证。
+  - **守卫用例**：`light-capability.test.ts` 逐一断言 21 个槽位滑杆 + 体积光 3 + 环境光 1 的菜单值域 === schema 值域，并钉死比值滑块的字面量例外。
 - **[ADR-282] 灯光与模型类别解耦（2026-09-20）**：三盏灯的类别默认值（原 `LIGHT_PRESETS`，源自 ADR-084 §2.5）已从 `MODEL_DEFAULTS` **全部删除**。
   - **依据**：Three.js 层面「模型类别」不存在——灯光是**场景属性**，唯一合法的模型相关输入是**包围盒**（驱动 `targetHeight`/靶点），已由 `setTarget`/`setTargetHeight` **动态**处理（换模型实时重算），无需预设代劳。ADR-084 原表 vrm 与 mmd 逐字相同，唯一实质区分轴 `spotlight` 已随 ADR-280 删除 → 预设只剩三个光强数字。
   - **退役**：`LightCapability.applyModelPreset` / `manualPreset` / `currentPreset` / `getCurrentPreset` 全部删除；`shared-infra.applyModelDefaults` 预 apply cap **6 → 5**（light 退出本链）；`LIGHT_ENV_KEYS` / `VOLUMETRIC_ENV_KEYS` 随之成为孤儿，一并删除。

@@ -148,7 +148,7 @@ type LightGroupKey = keyof LightParams;
 // （认知 66🟥）。值取 `keyof EnvState`：目标键拼写经编译期校验（原实现经 Record<string,unknown>
 // 增量构建 + 末尾 cast，目标键拼写零守卫——cast 掩盖了它）；映射对各分组子字段穷尽（`-?` 必填），
 // 某组新增字段而此处漏配即编译报错，与 renderMenu MENU_HANDLERS 非 Partial Record 同款「并行结构编译期锁死」纪律。
-const FLATTEN_MAP = {
+export const FLATTEN_MAP = {
   key: {
     type: "lightKeyType",
     enabled: "lightKeyEnabled",

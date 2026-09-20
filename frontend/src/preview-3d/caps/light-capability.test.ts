@@ -8,12 +8,14 @@ import * as THREE from "three";
 import { LightCapability, spotDistanceAttenuation } from "./light-capability.ts";
 import {
   DEFAULT_LIGHT_PARAMS,
+  FLATTEN_MAP,
   LIGHT_SLOTS,
   type LightInstanceParams,
   readLightParams,
 } from "./light-presets.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
@@ -932,6 +934,54 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
 // ============ 菜单控件联动（节点 control 闭包）============
 describe("LightCapability — 菜单控件联动", () => {
   beforeEach(() => resetEnvState());
+
+  it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
+    const cap = newCap();
+    const collect = (nodes: PreviewMenuNode[]): PreviewMenuNode[] =>
+      nodes.flatMap((n) => (n.children ? [n, ...collect(n.children)] : [n]));
+    const fields = [
+      "intensity",
+      "azimuth",
+      "elevation",
+      "angle",
+      "penumbra",
+      "distance",
+      "decay",
+    ] as const;
+    let checked = 0;
+    for (const slot of ["key", "fill", "rim"] as const) {
+      cap.setActiveLight(slot);
+      // type=spot：angle/penumbra 仅 spot 渲染，distance/decay 仅非 directional（一套 spot 覆盖全部 7 字段）
+      cap.setLightParams(slot, { type: "spot" });
+      const all = collect(cap.getMenuNodes());
+      for (const field of fields) {
+        const id = `light-${slot}-${field}`;
+        const node = all.find((n) => n.id === id);
+        expect(node, `缺菜单节点 ${id}`).toBeDefined();
+        const c = node!.control!;
+        expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
+          getParamRange(FLATTEN_MAP[slot][field]),
+        );
+        checked += 1;
+      }
+    }
+    expect(checked).toBe(21);
+    const all = collect(cap.getMenuNodes());
+    for (const [id, key] of [
+      ["light-volumetric-density", "lightVolumetricOpacity"],
+      ["light-volumetric-falloff", "lightVolumetricFogPower"],
+      ["light-volumetric-edge-fade", "lightVolumetricEdgeFade"],
+      ["light-ambient", "lightAmbientIntensity"],
+    ] as const) {
+      const c = all.find((n) => n.id === id)!.control!;
+      expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
+        getParamRange(key),
+      );
+    }
+    // 「上下亮度比」是派生标量（tip = base × ratio），不是 envState 键值 → 字面量属有意为之（ADR-283 §2.5 例外）
+    const ratio = all.find((n) => n.id === "light-volumetric-ratio")!.control!;
+    expect({ min: ratio.min, max: ratio.max, step: ratio.step }).toEqual({ min: 0, max: 1, step: 0.05 });
+  });
 
   it("toggle/slider/select 全部读写联动（节点 control 闭包）", () => {
     const cap = newCap();

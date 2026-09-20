@@ -30,6 +30,7 @@ auto_fields:
     - EnvCallback
     - envState
     - EnvState
+    - EnvStateKey
     - EnvStateMiddleware
     - EnvStateSchema
     - getEnvCallbackCount
@@ -91,7 +92,7 @@ invariant_anchors:
 
 - `env-state-schema.ts`：`ENV_STATE_SCHEMA` 声明全部参数字段 `{ type, default, group }`。键名 = `{cap}{Group}{Field}` 扁平化（`skyTimeOfDay`/`groundMatSource`/`waterMode`/`ppBloomStrength`/`lightKeyIntensity`/`lightSpotAngle`），颜色统一 `number`(hex)（勿用 tuple3——仅 ground 风格 RGB 用 tuple3）。能力级 enabled（cap 是否挂载）**不入 schema**，留 cap 私有 `this.enabled`。`deriveDefaultEnvState()` 派生默认值，`EnvState` 类型由 schema 推导（枚举取 `V[number]`）。
 - `env-state.ts`：可变单例 `envState` + `setEnvState(partial, {source})` 中央写入入口 + `getStateValue/setStateValue(path)` StatePath 读写 + `resetEnvState()`（测试用）。写入带 `lastWriteSource`（`auto-model`/`auto-atmosphere`/`manual`），守卫决策 `manual > auto-atmosphere > auto-model`——手动调参不被预设覆盖。
-- `env-dispatcher.ts`：`registerEnvCallback(cap, cb)` 回调注册表 + `dispatchEnvChange(changed, state)` 派发（setEnvState 自动触发）。cap 构造时注册、dispose 退订。`clearEnvCallbacks()` 测试用。
+- `env-dispatcher.ts`：`registerEnvCallback(cap, cb)` 回调注册表 + `dispatchEnvChange(changed, state)` 派发（setEnvState 自动触发）。cap 构造时注册、dispose 退订。`clearEnvCallbacks()` 测试用。**`changed` 是 `Set<EnvStateKey>`（`keyof EnvState`，schema 派生，2026-09）**——`changed.has("拼错")` 编译不过；分组键事实源是 `getPresetKeys(group)`（注册时缓存 groupKeys 前置过滤；跨组用数组形式，ADR-250）。
 
 ## 对外 API / 入口
 
@@ -107,7 +108,7 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- caps/*-capability.ts：构造注册 callback 监听自己的 envState 键 → 分派 Three 应用（结构字段 rebuild 容器、参数字段就地改材质/uniform）。setter 不再直接改 Three（防双写双重建）。
+- caps/*-capability.ts：构造注册 callback 监听自己的 envState 键 → 分派 Three 应用（**仅 mode 类结构切换 rebuild 容器**；可就地表达的结构参数走形态 links——ADR-272：water 的 size / 池深 / 壁厚均零重建；参数字段就地改材质/uniform）。setter 不再直接改 Three（防双写双重建）。
 - menu 层（ADR-195 刀2 直产节点）：控件闭包绑 cap setter/getter。**ADR-196 刀3 字面 StatePath 化已决策不采纳**（2026-09-07）——cap setter 已直通 envState（见「对外 API」），菜单控件闭包即状态驱动；`getStateValue/setStateValue` 保留为可选实现细节，非菜单绑定要求。
 - 测试：各 cap 测试 `beforeEach(() => resetEnvState())` 隔离单例；`clearEnvCallbacks()` 清泄漏。
 
@@ -118,6 +119,7 @@ invariant_anchors:
 核心机制（`caps/scene-capability.ts` 的 `persistState/restoreState/restoreFields` 三件套）：
 - **键轨**：`localStorage["ysm-scene-cap-" + capId]`，JSON 序列化（如 `ysm-scene-cap-fog`）。
 - **saveState**（写）：`persistState(capId, { this.enabled(能力级私有) + envState 参数字段 })` —— 从 envState **摘键**，不存全量。
+  （2026-09：摘键可**派生化**——water 已改为逆历 `getPresetKeys("water")`，新增参数只需进 schema；历史键名由 loadState 双轨吸收）
   （fog 例外：其私有 `enabled` 已随 2026-09 锐评收口删除，只写 envState 键。）
 - **loadState**（读）：`restoreState` → **旧键迁移**（ADR-196 前无前缀旧键 `{mode,color,...}` 转新键，保升级用户配置，如 fog 的 legacyKeys 分支）→ `restoreFields`（类型安全批量恢复器，按存档值实际类型分派回填）→ `setEnvState(..., {source:"manual"})` 写回 envState → cap apply 落地 Three。
 - **触发时机**：进入 3D → `sceneCapabilityRegistry.loadAll()`（shared-infra.ts:239）；离开 3D → `sceneCapabilityRegistry.saveAll()`（mount-session.ts:267）。

@@ -21,7 +21,7 @@ import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patch
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
-import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import {
@@ -310,7 +310,12 @@ export class SkyCapability implements SceneCapability {
   }
 
   /** 双写 uniform（sky + envSky），仅当 changed 含该字段时 */
-  private applyUniform(changed: Set<string>, field: string, uniform: string, value: number): void {
+  private applyUniform(
+    changed: Set<EnvStateKey>,
+    field: EnvStateKey,
+    uniform: string,
+    value: number,
+  ): void {
     if (!changed.has(field)) return;
     (this.sky.material.uniforms as Record<string, { value: number }>)[uniform].value = value;
     (this.envSky.material.uniforms as Record<string, { value: number }>)[uniform].value = value;
@@ -318,8 +323,8 @@ export class SkyCapability implements SceneCapability {
 
   /** 双写 uniform（带 undefined 守卫——patch 幂等注入后 uniform 必存在，但防御性保留） */
   private applyScaledUniform(
-    changed: Set<string>,
-    field: string,
+    changed: Set<EnvStateKey>,
+    field: EnvStateKey,
     uniform: string,
     value: number,
   ): void {

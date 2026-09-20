@@ -37,7 +37,7 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.t
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
-import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { pickModelDefaultFields, toModelType } from "@/preview-3d/state/model-defaults.ts";
 import type { LightCapability } from "./light-capability.ts";
 import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
@@ -176,7 +176,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   /* -------- ADR-196：envState 变更回调（同步 pass 属性 / 重建 composer）-------- */
 
-  private onEnvChanged = (changed: Set<string>, state: EnvState): void => {
+  private onEnvChanged = (changed: Set<EnvStateKey>, state: EnvState): void => {
     // [ADR-250] 启用意图翻转：不再销毁/重建 composer，只切旁路 + 归权曝光
     if (changed.has("ppEnabled")) {
       this.applyEnabledSideEffects();

@@ -20,12 +20,17 @@
 // 与 mesh.name 彻底解耦（测试以「全树改名后仍能取出」为反证）。
 //
 // 2026-09-19（ADR-272）：同一套「build 期预捕获」思路延伸到尺寸——形态在装配时把自己的
-// 尺寸语义固化成 `WaterBody.sizeLinks`，`applySize` 退化为查表执行。至此 pool 的 size 变更
+// 尺寸语义固化成 `WaterBody.transformLinks`，`applyProfile` 退化为查表执行。至此 pool 的 size 变更
 // 也不再重建容器，`waterSize` 得以放开 UI 入口（拖滑块是高频事件，ADR-255 §2.2 的
 // 「pool 全量重建、低频接受」前提随之失效）。
+//
+// 2026-09（ADR-272 扩展）：同一判例适用于壁高与池深——`sizeLinks` 泛化为 `transformLinks`，
+// 几何一律单位尺寸，结构参数（size / poolHeight / wallThickness）全部经同一执行器落地。
+// 于是 pool 的 needsRebuild 恒为 false，重建契约专为未来形态（ocean 换几何）保留。
 
 import * as THREE from "three";
 import { envState } from "@/preview-3d/state/env-state.ts";
+import type { EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
 import type { WaterMode } from "./water-state.ts";
 
@@ -59,19 +64,20 @@ export interface WaterBuildContext {
 export type WaterPartRole = "surface" | "floor" | "wallInner" | "wallOuter";
 
 /**
- * 尺寸联动件（build 期预捕获，ADR-272）——形态把「哪些件随尺寸怎么变」固化成**数据**，
- * `applySize` 只按表执行，容器永不重建。与 `parts` 同一套思路：
+ * 变换联动件（build 期预捕获，ADR-272）——形态把「哪些件随哪个结构参数怎么变」固化成**数据**，
+ * `applyProfile` 只按表执行，容器永不重建。与 `parts` 同一套思路：
  * **形态差异在装配期固化，运行期只查表。**
  *
  * - `square`：平面件等比铺满 `size × size`（顶水面 / 池底）；
- * - `wall`：立面件沿法向轴平移 + 单轴缩放（四壁）——水平轴随 size 变化、y 轴不动，
- *   故**壁高与壁厚保持绝对值**，不被尺寸缩放连带变形。
+ * - `wall`：立面件沿法向轴（四壁）——水平轴随 size 缩放平移，y 轴 = 壁高；
+ *   外壁比内壁高出一截壁厚加高（max(0.02, t×0.6)）且外偏一个壁厚，
+ *   这些绝对量只随 h / t 变、不被尺寸缩放连带变形。
  *
- * 尺寸语义无法用这两类表达的形态（如未来 `ocean` 的视距 / LOD 环半径）给空数组，
- * 并在 `needsRebuild` 里声明 `waterSize` 触发重建——届时 `applySize` 按契约不会被调用。
- * ⚠️ 不导出：它经 `WaterBody.sizeLinks` 的字段类型对外生效，无需单独具名（YAGNI）。
+ * 结构语义无法用这两类表达的形态（如未来 `ocean` 的视距 / LOD 环半径）给空数组，
+ * 并在 `needsRebuild` 里声明重建——届时 `applyProfile` 按契约不会被调用。
+ * ⚠️ 不导出：它经 `WaterBody.transformLinks` 的字段类型对外生效（YAGNI）。
  */
-type WaterSizeLink =
+type WaterTransformLink =
   | { readonly kind: "square"; readonly mesh: THREE.Mesh }
   | {
       readonly kind: "wall";
@@ -80,8 +86,8 @@ type WaterSizeLink =
       readonly axis: "x" | "z";
       /** 沿该轴的方向（池壁朝 +/− 哪一侧） */
       readonly sign: 1 | -1;
-      /** 位置外偏量（外壁 = 壁厚，内壁 = 0）——绝对量，不随 size 缩放 */
-      readonly offset: number;
+      /** 外壁：位置再外偏一个壁厚，高度加一截壁厚抬升；内壁贴水面 */
+      readonly outer: boolean;
     };
 
 /** 组装完成的渲染体 */
@@ -97,23 +103,33 @@ export interface WaterBody {
    */
   readonly parts: Record<WaterPartRole, THREE.Mesh[]>;
   /**
-   * 尺寸联动件（ADR-272）：`applySize` 的唯一执行依据，build 期预捕获。
-   * 空数组 = 该形态不接受 size 就地更新（须由 `needsRebuild` 声明重建）。
+   * 变换联动件（ADR-272）：`applyProfile` 的唯一执行依据，build 期预捕获。
+   * 空数组 = 该形态不接受结构参数就地更新（须由 `needsRebuild` 声明重建）。
    */
-  readonly sizeLinks: readonly WaterSizeLink[];
+  readonly transformLinks: readonly WaterTransformLink[];
 }
 
-/** 依 `sizeLinks` 就地应用尺寸（模块内共享执行器）。
- *  尺寸语义已由各形态在 build 期固化成数据，执行动作本身与形态无关，故只此一份——
- *  新增形态只需产出自己的 `sizeLinks`，不必重写缩放/定位逻辑。 */
-function applySizeLinks(body: WaterBody, size: number): void {
+/** 依 `transformLinks` 就地应用结构参数（模块内共享执行器，build 与运行期同一推导）。
+ *  参数语义已由各形态在 build 期固化成数据，执行动作本身与形态无关，故只此一份——
+ *  新增形态只需产出自己的 `transformLinks`，不必重写缩放/定位逻辑。 */
+function applyTransformLinks(
+  body: WaterBody,
+  size: number,
+  poolHeight: number,
+  wallThickness: number,
+): void {
   const half = size / 2;
-  for (const link of body.sizeLinks) {
+  const h = Math.max(0.01, poolHeight);
+  const t = Math.max(0.01, wallThickness);
+  for (const link of body.transformLinks) {
     if (link.kind === "square") {
       link.mesh.scale.set(size, size, 1);
     } else {
+      const wallH = h + (link.outer ? Math.max(0.02, t * 0.6) : 0);
       link.mesh.scale.x = size;
-      link.mesh.position[link.axis] = link.sign * (half + link.offset);
+      link.mesh.scale.y = wallH;
+      link.mesh.position.y = wallH / 2;
+      link.mesh.position[link.axis] = link.sign * (half + (link.outer ? t : 0));
     }
   }
 }
@@ -132,11 +148,14 @@ export interface WaterBodyStrategy {
   getTargets(body: WaterBody, role: WaterPartRole): THREE.Mesh[];
   /** 应用水面世界 y（契约：必须零重建） */
   applyLevel(body: WaterBody, level: number): void;
-  /** 应用尺寸（契约：仅在 needsRebuild 判为 false 时被调用）。
-   *  尺寸的世界语义由各形态自行落地（scale / LOD 半径 / …）；微细节法线 GPU 化后不再需要 ctx。 */
-  applySize(body: WaterBody, size: number): void;
+  /** 就地应用结构参数（size / 池深 / 壁厚；契约：仅在 needsRebuild 判为 false 时被调用）。
+   *  世界语义由各形态自行落地（scale / LOD 半径 / …）；无容器的形态（film）可忽略 h / t。 */
+  applyProfile(
+    body: WaterBody,
+    profile: { size: number; poolHeight: number; wallThickness: number },
+  ): void;
   /** 本形态下哪些参数变更需要整体重建（mode 自身的切换由 cap 处理，不在此列） */
-  needsRebuild(changed: Set<string>): boolean;
+  needsRebuild(changed: Set<EnvStateKey>): boolean;
 }
 
 /* ============ film：贴地薄水膜（单位平面 + scale 驱动尺寸）============ */
@@ -160,7 +179,7 @@ const filmStrategy: WaterBodyStrategy = {
       // 薄水膜无容器部件：容器类 role 恒为空数组（cap 侧的一行表达式正依赖此约定）
       parts: { surface: [root], floor: [], wallInner: [], wallOuter: [] },
       // 水膜只有一件：单位平面 × scale 铺满
-      sizeLinks: [{ kind: "square", mesh: root }],
+      transformLinks: [{ kind: "square", mesh: root }],
     };
   },
   getTargets(body, role) {
@@ -169,10 +188,11 @@ const filmStrategy: WaterBodyStrategy = {
   applyLevel(body, level) {
     body.top.position.y = level;
   },
-  applySize(body, size) {
+  applyProfile(body, p) {
     // 微细节法线取世界水平坐标（vWorldPos_wave.xz），其世界频率随尺寸自动跟随——
     // 原先「size 变更须重取法线贴图」的约束随贴图链路一并消失（ADR-271，零 CPU 重算）
-    applySizeLinks(body, size);
+    // film 无容器：poolHeight / wallThickness 被 links 天然忽略（只有 square 件）
+    applyTransformLinks(body, p.size, p.poolHeight, p.wallThickness);
   },
   needsRebuild() {
     // size / level 均走 scale / position.y，永不需要重建
@@ -182,9 +202,9 @@ const filmStrategy: WaterBodyStrategy = {
 
 /* ============ pool：盒式凹形水池（顶面 + 池底 + 4 面内外壁）============ */
 
-/** 四壁布局（build 与 applySize 共用的单一事实源）：
- *  `axis` / `sign` = 该壁沿哪个水平轴、朝哪一侧随 size 平移（|位置| = size/2 + offset）；
- *  `rotY` = 让壁面法线朝向池内。build 期据此产出 mesh 与 sizeLinks，运行期零推导。 */
+/** 四壁布局（build 与 transformLinks 共用的单一事实源）：
+ *  `axis` / `sign` = 该壁沿哪个水平轴、朝哪一侧随 size 平移（|位置| = size/2 + 壁厚）；
+ *  `rotY` = 让壁面法线朝向池内。build 期据此产出 mesh 与 links，运行期零推导。 */
 const POOL_WALLS: readonly {
   readonly key: string;
   readonly axis: "x" | "z";
@@ -202,29 +222,21 @@ const poolStrategy: WaterBodyStrategy = {
   wetnessGated: false,
   supportsVolumeOptics: true,
   build(ctx) {
-    const size = envState.waterSize;
-    const half = size / 2;
-    const wallThickness = envState.waterPoolWallThickness;
-    // h = 池深：自此只描述容器本身（墙体几何高度 / 光学厚度），
-    // 不再决定水面位置——水面由 envState.waterLevel 决定（ADR-257 A 档）。
-    const h = Math.max(0.01, envState.waterPoolHeight);
     const group = new THREE.Group();
     group.name = "ysm-ground-water";
 
-    // ADR-272：**尺寸不进几何**——几何一律按单位宽建，世界尺寸由 scale / position 表达。
-    // 于是改 size 只改 transform、容器零重建（拖滑块是高频事件，全量重建不可接受）。
-    // 壁高 h 与壁厚是绝对量，故只缩放水平轴、y 轴不动（见 WaterSizeLink 注释）。
-    const sizeLinks: WaterSizeLink[] = [];
+    // ADR-272 及其扩展：**结构参数不进几何**——几何一律按单位尺寸建，世界尺寸 /
+    // 壁高 / 壁厚全部由 transformLinks 表达（拖滑块是高频事件，全量重建不可接受）。
+    const links: WaterTransformLink[] = [];
 
     const topGeo = new THREE.PlaneGeometry(1, 1, 64, 64);
     const topMat = ctx.buildMaterial({ forPool: true });
     const top = new THREE.Mesh(topGeo, topMat) as WaterTopMesh;
     top.rotation.x = -Math.PI / 2;
     top.position.y = envState.waterLevel;
-    top.scale.set(size, size, 1);
     top.name = "ysm-water-top";
     group.add(top);
-    sizeLinks.push({ kind: "square", mesh: top });
+    links.push({ kind: "square", mesh: top });
 
     const bottomMat = new THREE.MeshStandardMaterial({
       color: envState.waterPoolWallColor,
@@ -234,10 +246,9 @@ const poolStrategy: WaterBodyStrategy = {
     const bottom = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), bottomMat);
     bottom.rotation.x = -Math.PI / 2;
     bottom.position.y = GROUND_LAYER_OFFSETS.waterPoolBottom;
-    bottom.scale.set(size, size, 1);
     bottom.name = "ysm-water-bottom";
     group.add(bottom);
-    sizeLinks.push({ kind: "square", mesh: bottom });
+    links.push({ kind: "square", mesh: bottom });
 
     const innerMat = new THREE.MeshPhysicalMaterial({
       color: envState.waterColor,
@@ -262,42 +273,42 @@ const poolStrategy: WaterBodyStrategy = {
     const wallOuter: THREE.Mesh[] = [];
 
     for (const wall of POOL_WALLS) {
-      const innerGeo = new THREE.PlaneGeometry(1, h, 4, 4);
-      const outerGeo = new THREE.PlaneGeometry(1, h + Math.max(0.02, wallThickness * 0.6), 4, 4);
-      const inner = new THREE.Mesh(innerGeo, innerMat);
-      const outer = new THREE.Mesh(outerGeo, outerMat);
-
+      // 单位壁几何：壁高 / 加高 / 外偏全部经 links 表达（h / t 变更零重建）。
+      // 池深 h 只描述容器（壁高 / 光学光程），不动水面——水面由 waterLevel 决定（ADR-257 A 档）。
+      const inner = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 4, 4), innerMat);
+      const outer = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 4, 4), outerMat);
       inner.name = `ysm-water-wall-${wall.key}-inner`;
       outer.name = `ysm-water-wall-${wall.key}-outer`;
-      inner.scale.x = size;
-      outer.scale.x = size;
-      inner.position[wall.axis] = wall.sign * half;
-      outer.position[wall.axis] = wall.sign * (half + wallThickness);
-      inner.position.y = h / 2;
-      outer.position.y = h / 2;
       if (wall.rotY !== undefined) {
         inner.rotation.y = wall.rotY;
         outer.rotation.y = wall.rotY;
       }
-
       group.add(inner, outer);
-      // 预捕获：运行时按 role 取件不再遍历 + name 匹配（name 仅保留给调试可读性）
+      // 预捕获：运行时按 role 取件不遍历 + name 匹配（name 仅保留给调试可读性）
       wallInner.push(inner);
       wallOuter.push(outer);
-      // 尺寸联动：内壁贴在 size/2 处，外壁再外偏一个壁厚（绝对量）
-      sizeLinks.push(
-        { kind: "wall", mesh: inner, axis: wall.axis, sign: wall.sign, offset: 0 },
-        { kind: "wall", mesh: outer, axis: wall.axis, sign: wall.sign, offset: wallThickness },
+      // 变换联动：内壁贴 size/2，外壁再外偏一个壁厚；壁高 = h（外壁加一截）
+      links.push(
+        { kind: "wall", mesh: inner, axis: wall.axis, sign: wall.sign, outer: false },
+        { kind: "wall", mesh: outer, axis: wall.axis, sign: wall.sign, outer: true },
       );
     }
 
-    return {
+    const body: WaterBody = {
       mode: "pool",
       root: group,
       top,
       parts: { surface: [top], floor: [bottom], wallInner, wallOuter },
-      sizeLinks,
+      transformLinks: links,
     };
+    // 初始变换与运行期同一执行器（单一推导）：几何永不烘焙结构参数
+    applyTransformLinks(
+      body,
+      envState.waterSize,
+      envState.waterPoolHeight,
+      envState.waterPoolWallThickness,
+    );
+    return body;
   },
   getTargets(body, role) {
     return body.parts[role];
@@ -305,15 +316,16 @@ const poolStrategy: WaterBodyStrategy = {
   applyLevel(body, level) {
     body.top.position.y = level;
   },
-  applySize(body, size) {
-    // 逐件 scale + 定位（依据为 build 期预捕获的 sizeLinks）：顶/底等比铺满、四壁只缩放水平轴，
-    // 壁高与壁厚保持绝对值；几何一句不动（ADR-272）。
-    applySizeLinks(body, size);
+  applyProfile(body, p) {
+    // 逐件 scale + 定位（依据为 build 期预捕获的 transformLinks）：顶/底等比铺满，
+    // 四壁壁高 = 池深（外壁按壁厚加一截、外偏一个壁厚），全部经 scale.y / position
+    // 表达——几何一句不动（ADR-272 扩展，拖池深/壁厚滑块零重建）。
+    applyTransformLinks(body, p.size, p.poolHeight, p.wallThickness);
   },
-  needsRebuild(changed) {
-    // ADR-272：waterSize 已零重建（走 sizeLinks）。墙高与壁厚仍烘焙进壁几何
-    // （y 尺寸 / 外壁偏移 / 外壁加高），故保留重建。
-    return changed.has("waterPoolHeight") || changed.has("waterPoolWallThickness");
+  needsRebuild() {
+    // ADR-272 扩展：size / 水位 / 池深 / 壁厚全走 transformLinks，pool 永不重建。
+    // 重建契约为真正需要换几何的形态保留（如未来 ocean）。
+    return false;
   },
 };
 

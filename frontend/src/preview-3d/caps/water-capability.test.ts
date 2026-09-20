@@ -172,7 +172,7 @@ describe("WaterCapability — 水池几何 / 嵌套参数", () => {
     expect(meshes.length).toBeGreaterThanOrEqual(5);
   });
 
-  it("poolHeight 只决定容器墙体几何高度（ADR-257：不再决定水面位置）", () => {
+  it("poolHeight 只决定容器壁高（ADR-257 / 272：不动水面，且零重建）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
@@ -185,10 +185,11 @@ describe("WaterCapability — 水池几何 / 嵌套参数", () => {
       if (m.isMesh && m.name.includes("wall")) walls.push(m);
     });
     expect(walls.length).toBe(8); // 4 面 × inner/outer
-    // 容器几何由 poolHeight 驱动
+    // 容器壁高由 poolHeight 驱动：几何单位化（参数高度恒 1），h 经 scale.y 表达——
+    // 这正是不再重建的根据（ADR-272 扩展）。
     const inner = walls.find((m) => m.name.endsWith("-inner"))!;
-    const params = (inner.geometry as THREE.PlaneGeometry).parameters;
-    expect(params.height).toBeCloseTo(1.2, 5);
+    expect((inner.geometry as THREE.PlaneGeometry).parameters.height).toBeCloseTo(1, 5);
+    expect(inner.scale.y, "壁高 = 池深").toBeCloseTo(1.2, 5);
     // 而顶层水面的 y 由 waterLevel 决定，与 poolHeight 无关
     expect(scene.getObjectByName("ysm-water-top")!.position.y).toBeCloseTo(cap.getLevel(), 5);
   });
@@ -558,13 +559,24 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
     expect((inner.material as THREE.MeshPhysicalMaterial).transmission).toBeCloseTo(0.4, 5);
   });
 
-  it("setPoolWallThickness（pool）→ 触发几何重建不崩", () => {
+  it("setPoolWallThickness（pool）→ 外壁偏移 / 壁高 / 光学光程就地更新，零重建", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.setWaterMode("pool");
     cap.apply();
+    const outer = scene.getObjectByName("ysm-water-wall-n-outer") as THREE.Mesh;
+    const geoBefore = outer.geometry;
     expect(() => cap.setPoolWallThickness(0.3)).not.toThrow();
     expect(cap.getPoolWallThickness()).toBeCloseTo(0.3, 5);
+    const outerAfter = scene.getObjectByName("ysm-water-wall-n-outer") as THREE.Mesh;
+    expect(outerAfter, "壁件同一实例（ADR-272 扩展：零重建）").toBe(outer);
+    expect(outerAfter.geometry, "壁几何不被重建").toBe(geoBefore);
+    // 外壁位置 = size/2 + 壁厚（绝对量，不随 size 缩放）
+    expect(outerAfter.position.z).toBeCloseTo(-(cap.getWaterSize() / 2 + 0.3), 5);
+    // 壁厚同时是池内壁的体积光学光程（材质属性，随壁厚跟随）
+    const innerMat = (scene.getObjectByName("ysm-water-wall-n-inner") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    expect(innerMat.thickness).toBeCloseTo(0.3, 5);
   });
 
   it("setWaveSpeed 存参且影响 update 累加", () => {
@@ -1060,15 +1072,16 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     expect(clampPoolRoundness(9)).toBeCloseTo(0.5, 5);
   });
 
-  it("needsRebuild 由形态自行声明：film 永不重建；pool 也不因 waterSize 重建（ADR-272），墙高/壁厚仍重建", () => {
+  it("needsRebuild 由形态自行声明：film / pool 恒不重建（结构参数全走 transformLinks，ADR-272 扩展）", () => {
     expect(filmStrategy.needsRebuild(new Set(["waterLevel", "waterSize"]))).toBe(false);
     expect(poolStrategy.needsRebuild(new Set(["waterLevel"]))).toBe(false);
-    // ADR-272：pool 的 size 改走 sizeLinks（逐件 scale + 定位），不再全量重建容器——
+    // ADR-272：pool 的 size 改走 transformLinks（逐件 scale + 定位），不再全量重建容器——
     // 这是 waterSize 得以放开 UI 入口的前提：拖动是高频事件，ADR-255 §2.2 的「低频接受」前提已失效
     expect(poolStrategy.needsRebuild(new Set(["waterSize"])), "pool size 零重建").toBe(false);
-    // 墙高 / 壁厚仍烘焙进壁几何（y 尺寸与外壁偏移），故保留重建
-    expect(poolStrategy.needsRebuild(new Set(["waterPoolHeight"]))).toBe(true);
-    expect(poolStrategy.needsRebuild(new Set(["waterPoolWallThickness"]))).toBe(true);
+    // ADR-272 扩展：池深与壁厚同样收进 links（壁高走 scale.y、外偏 = size/2 + t、外壁按 t 加高），
+    // 几何一句不动——「拖池深滑块每帧重建 10 个 mesh」的旧账至此结清
+    expect(poolStrategy.needsRebuild(new Set(["waterPoolHeight"])), "pool 池深零重建").toBe(false);
+    expect(poolStrategy.needsRebuild(new Set(["waterPoolWallThickness"])), "pool 壁厚零重建").toBe(false);
   });
 });
 
@@ -1149,7 +1162,7 @@ describe("WaterCapability — waterSize UI 入口与零重建（ADR-272）", () 
     // n 壁：法向轴 z、符号 -1；内壁 |位置| = size/2，外壁再加一个壁厚（壁厚是绝对量，不随 size 缩放）
     const innerN = scene.getObjectByName("ysm-water-wall-n-inner") as THREE.Mesh;
     expect(innerN.scale.x).toBeCloseTo(120, 5);
-    expect(innerN.scale.y, "壁高不随 size 缩放").toBeCloseTo(1, 5);
+    expect(innerN.scale.y, "壁高 = 池深（不随 size 缩放）").toBeCloseTo(cap.getPoolHeight(), 5);
     expect(innerN.position.z).toBeCloseTo(-half, 5);
     const outerN = scene.getObjectByName("ysm-water-wall-n-outer") as THREE.Mesh;
     expect(outerN.position.z).toBeCloseTo(-(half + thickness), 5);

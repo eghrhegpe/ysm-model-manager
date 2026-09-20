@@ -3,7 +3,7 @@
 // 仿 MikuMikuAR setEnvState 模式。
 
 import { dispatchEnvChange } from "./env-dispatcher.ts";
-import { deriveDefaultEnvState, type EnvState } from "./env-state-schema.ts";
+import { deriveDefaultEnvState, type EnvState, type EnvStateKey } from "./env-state-schema.ts";
 
 // 可变单例（仿 MikuMikuAR envState）
 export const envState: EnvState = deriveDefaultEnvState() as EnvState;
@@ -78,12 +78,12 @@ export function setEnvState(
     }
   }
 
-  const changedKeys = new Set<string>();
+  const changedKeys = new Set<EnvStateKey>();
   for (const key of Object.keys(patch) as Array<keyof EnvState>) {
     if (force || shouldOverwrite(key as string, source)) {
       (envState as unknown as Record<string, unknown>)[key as string] = patch[key];
       _writeSource[key as string] = source;
-      changedKeys.add(key as string);
+      changedKeys.add(key);
     }
   }
 

@@ -4,9 +4,9 @@
 
 import { ringLog } from "@/preview-3d/caps/scene-capability.ts";
 import type { EnvState } from "./env-state-schema.ts";
-import { getPresetKeys } from "./env-state-schema.ts";
+import { type EnvStateKey, getPresetKeys } from "./env-state-schema.ts";
 
-export type EnvCallback = (changed: Set<string>, state: EnvState) => void;
+export type EnvCallback = (changed: Set<EnvStateKey>, state: EnvState) => void;
 
 interface Registration {
   cb: EnvCallback;
@@ -14,7 +14,7 @@ interface Registration {
   group?: string | readonly string[];
   /** group 键集，注册时算一次缓存（getPresetKeys 是静态查表；昼夜循环每帧派发，
    *  若每次 dispatch 重建 Set 会在热路径重复分配——锐评 §四） */
-  groupKeys?: Set<string>;
+  groupKeys?: Set<EnvStateKey>;
 }
 
 // 回调注册表（cap 在构造时注册，析构时取消）
@@ -40,7 +40,7 @@ export function registerEnvCallback(
     _callbacks.set(cap, { cb });
   } else {
     const groups = typeof group === "string" ? [group] : group;
-    const keys = new Set<string>();
+    const keys = new Set<EnvStateKey>();
     for (const g of groups) {
       for (const k of getPresetKeys(g)) keys.add(k);
     }
@@ -56,11 +56,11 @@ export function registerEnvCallback(
  * 由 setEnvState 调用。
  * 带 group 注册的 cap 只收到 group 匹配的键（前置过滤）。
  */
-export function dispatchEnvChange(changed: Set<string>, state: EnvState): void {
+export function dispatchEnvChange(changed: Set<EnvStateKey>, state: EnvState): void {
   for (const { cb, groupKeys } of _callbacks.values()) {
     try {
       if (groupKeys) {
-        const filtered = new Set<string>();
+        const filtered = new Set<EnvStateKey>();
         for (const k of changed) {
           if (groupKeys.has(k)) filtered.add(k);
         }

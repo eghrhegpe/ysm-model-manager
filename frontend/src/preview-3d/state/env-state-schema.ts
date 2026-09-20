@@ -351,19 +351,22 @@ export type EnvState = {
     : never;
 };
 
+/** envState 键域——派发层唯一合法键类型（changed.has 拼写错误由编译器拦截） */
+export type EnvStateKey = keyof EnvState;
+
 // ======== Dispatch Key 派生 ========
 
-const _groupCache = new Map<string, string[]>();
+const _groupCache = new Map<string, EnvStateKey[]>();
 
-export function getPresetKeys(group: string): string[] {
+export function getPresetKeys(group: string): EnvStateKey[] {
   const cached = _groupCache.get(group);
   if (cached) return cached;
-  const keys: string[] = [];
+  const keys: EnvStateKey[] = [];
   for (const [key, def] of Object.entries(ENV_STATE_SCHEMA)) {
     const g = (def as { group?: string | readonly string[] }).group;
     if (!g) continue;
     if (typeof g === "string" ? g === group : g.includes(group)) {
-      keys.push(key);
+      keys.push(key as EnvStateKey);
     }
   }
   _groupCache.set(group, keys);

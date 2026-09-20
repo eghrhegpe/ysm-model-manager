@@ -64,7 +64,7 @@ ADR-257 §6.3 登记了两条彼此咬合的遗留，指向同一件事：**`wat
 
 ### 已知遗留
 
-- **pool 的 `waterPoolHeight` / `waterPoolWallThickness` 拖动仍是全量重建**（两条既有滑块，`needsRebuild` 为 true）：与本次同族、同一张表的病灶，登记待办。修法与本次同构（把墙高改为 `scale.y`、壁厚改为外壁 offset 数据），但会动壁几何与 transmission `thickness` 的取值路径，超出「放开 size 入口」的范围，故未并入。
+- **pool 的 `waterPoolHeight` / `waterPoolWallThickness` 拖动仍是全量重建**（两条既有滑块，`needsRebuild` 为 true）：与本次同族、同一张表的病灶，登记待办。修法与本次同构（把墙高改为 `scale.y`、壁厚改为外壁 offset 数据），但会动壁几何与 transmission `thickness` 的取值路径，超出「放开 size 入口」的范围，故未并入。→ **已由 §5.1 结清（2026-09）**：修法即此处预告的同构写法，池深与壁厚一并收进 `transformLinks`。
 - 水面仍不参与阴影（无 `castShadow` / `receiveShadow`）；圆角裁剪隐含「水面恒在世界原点」的未登记假设（ADR-257 §6.3 补记外，本次亦未处理）。
 
 ## 4. 数据溯源
@@ -74,3 +74,42 @@ ADR-257 §6.3 登记了两条彼此咬合的遗留，指向同一件事：**`wat
 - 实现形态的选择依据：ADR-257 §6.1 的「build 期预捕获」反证测试（「全树改名后仍能取出」）证明该思路在本文件已被验证过一轮，`sizeLinks` 是同一思路在尺寸轴上的复刻，而非新范式。
 - 数字实证：`water-capability.test.ts` 池体 mesh 计数 = **10**（`collectMeshes`），与 ADR-257 §1/§3 及知识卡的「9」不符 → 顺带勘误。
 - 验证：`water-capability.test.ts` 65 例全绿（原 59，新增 6）；`npm run typecheck` ✅；`npx vite build` ✅；`check-biome` ✅；`i18n-check` 三语 1485 键齐平 ✅。
+
+## 5. 扩展（2026-09）：结构参数全轴零重建 + 三处接线收口
+
+本节把 §2.1 的判例从「尺寸轴」推广到「结构参数全轴」，并顺带收口评审点名的三处接线债务。
+**§2 的决策方向不变，只是其适用范围被自身判例证明可以更宽。**
+
+### 5.1 池深 / 壁厚也进 transformLinks（几何不再烘焙任何结构参数）
+
+§3「已知遗留」登记的 `waterPoolHeight` / `waterPoolWallThickness` 全量重建至此结清，修法与 §2.1 同构：
+
+- 壁几何一律单位化（`PlaneGeometry(1, 1, 4, 4)`）：壁高走 `scale.y`、外壁加高 `scale.y = h + max(0.02, t×0.6)`、
+  外壁外偏 `position[axis] = sign × (size/2 + t)`、壁件中线 `position.y = wallH/2`。
+- `WaterSizeLink` → `WaterTransformLink`：`wall` 的 `offset: number`（build 期烘焙的绝对量）换成 `outer: boolean`——
+  **外偏量在运行期由 `t` 现算**，不再是快照。
+- 执行器 `applySizeLinks(body, size)` → `applyTransformLinks(body, size, poolHeight, wallThickness)`；
+  契约 `applySize(body, size)` → `applyProfile(body, { size, poolHeight, wallThickness })`。
+- **build 不再自己写一份初始变换**：pool 装配完 `body` 后直接调用同一执行器（单一推导，
+  杜绝「build 与运行期各写一套」的漂移）；ADR-257 §6.1「形态差异在装配期固化」因此更彻底。
+- `poolStrategy.needsRebuild` 恒 `false`；重建契约保留给真正需要换几何的形态（如未来 `ocean`）。
+- 壁厚同时是池内壁的体积光学光程（`MeshPhysicalMaterial.thickness`），cap 在 `waterPoolWallThickness`
+  变更时就地写材质——它不描述几何，不入 links。
+
+### 5.2 三处接线债务收口（评审「一处参数六处接线」的第一批）
+
+- **派发键类型化**：`EnvCallback.changed` 由 `Set<string>` 收为 `Set<EnvStateKey>`（schema 派生 `keyof EnvState`）；
+  `changed.has("拼错")` 从此编译不过——派发层的字符串契约与 ADR-257 治过的 mesh-name 寻址同病，同一判例清理。
+- **持久化派生化**：`saveState` 不再手抄 16 键，改为遍历 `getPresetKeys("water")`（dispatcher 早已在用的事实源）；
+  新增 water 参数只需进 schema，写侧自动跟上。历史键名 `size` 由 `loadState` 双轨兼容，写侧统一 `waterSize`。
+- **uniform 写入收口**：cap 内五处 `as unknown as { userData?: { shader?: … } }` 深挖合并为
+  `setUniform(mat, name, value)` 单一出口（原先每处各写一遍，拼错 uniform 名即静默失效）。
+
+### 5.3 代价与边界
+
+- 壁面 UV 与 §3 同款（单位几何，`v` 恒 0–1）；壁面无贴图，无观感影响。
+- `applyProfile` 每次变更只做 O(件数) 的标量赋值（pool 10 件），不含任何分配——
+  拖池深 / 壁厚滑块不再产生几何与材质 churn。
+- 仍存的接线债务：菜单 slider 的 min/max/step 与 setter 钳制值域仍是两份字面量
+  （`POOL_ROUNDNESS_MAX` 一例有注释自辩）；`applyChangedParams` 仍是逐键 `if` 链。
+  二者属「参数描述符化」范畴，需单独 ADR。

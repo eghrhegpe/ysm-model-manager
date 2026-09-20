@@ -18,6 +18,7 @@ import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patch
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { type EnvStateKey, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import {
@@ -75,7 +76,8 @@ export class WaterCapability implements SceneCapability {
     this.water = this.rebuildWaterContainer(true);
 
     // ADR-196：订阅 envState 变更——渲染应用统一收敛到此回调：
-    // 结构字段（mode/size/池体几何）→ 重建容器；参数字段 → 就地改材质/uniform；
+    // mode 切换 → 重建容器；其余结构参数（size / 池深 / 壁厚）→ 按形态 transformLinks
+    // 就地改 transform（ADR-272 扩展后 pool 亦零重建）；参数字段 → 就地改材质/uniform；
     // 子域开关 → 只切可见性。setter 只负责写 envState（不再各自就地改材质，避免双写）。
     // 只接收 water 组的键（dispatcher 前置过滤）。
     this.unsubscribeEnv = registerEnvCallback(
@@ -419,7 +421,7 @@ export class WaterCapability implements SceneCapability {
 
   // ── 水面参数（film + pool 通用）──
   // 就地渲染应用统一入口（registerEnvCallback 的参数字段分派）：不重建容器，保持材质句柄稳定。
-  private applyChangedParams(changed: Set<string>): void {
+  private applyChangedParams(changed: Set<EnvStateKey>): void {
     const s = envState;
     // ADR-257：形态差异一律查表，此处不再出现 `mode === "film" / "pool"` 分支。
     // film 形态下 wallInner / wallOuter / floor 均为空数组——正因如此，
@@ -460,15 +462,7 @@ export class WaterCapability implements SceneCapability {
     // normalStrength → 顶水面 uDetailStrength uniform（微细节法线强度，GPU 侧就地生效，
     // 无贴图重算、无 needsUpdate）
     if (changed.has("waterNormalStrength")) {
-      const top = this.findTopWater();
-      const shader = (
-        top?.material as unknown as {
-          userData?: { shader?: { uniforms?: Record<string, { value: number }> } };
-        }
-      )?.userData?.shader;
-      if (shader?.uniforms?.uDetailStrength) {
-        shader.uniforms.uDetailStrength.value = s.waterNormalStrength;
-      }
+      this.setUniform(this.findTopWater()?.material, "uDetailStrength", s.waterNormalStrength);
     }
     // poolWallColor → 池底 + 外壁（film 下两者皆空数组，天然 no-op）
     if (changed.has("waterPoolWallColor")) {
@@ -479,17 +473,11 @@ export class WaterCapability implements SceneCapability {
     // poolRoundness → top uRoundness uniform（经 clampPoolRoundness——与构造期同一钳制，
     // 防存档恢复/其他 cap 直写 envState 时越界值从这条路径漏进 uniform）
     if (changed.has("waterPoolRoundness")) {
-      const top = this.findTopWater();
-      if (top) {
-        const shader = (
-          top.material as unknown as {
-            userData: { shader?: { uniforms: { uRoundness?: { value: number } } } };
-          }
-        ).userData?.shader;
-        if (shader?.uniforms?.uRoundness) {
-          shader.uniforms.uRoundness.value = clampPoolRoundness(s.waterPoolRoundness);
-        }
-      }
+      this.setUniform(
+        this.findTopWater()?.material,
+        "uRoundness",
+        clampPoolRoundness(s.waterPoolRoundness),
+      );
     }
     // clarity → 水面 + 内壁 transmission（仅启用体积光学的形态，避免把 film 水膜变透光体）
     if (changed.has("waterClarity") && strategy.supportsVolumeOptics) {
@@ -501,32 +489,34 @@ export class WaterCapability implements SceneCapability {
         }
       }
     }
-    // size：几何层面交由形态自行解释（film = 仅 scale 一档；pool 的 size 变更已被判为重建，
-    // 故能走到此处的必是支持就地更新的形态）。
-    if (changed.has("waterSize")) {
-      strategy.applySize(this.water, s.waterSize);
-      // uSize / uHalfSize 属波浪 shader 的共享 uniform（跨形态一致），故仍留在 cap 而非下沉。
-      const top = this.findTopWater();
-      const topShader = (
-        top?.material as unknown as {
-          userData?: { shader?: { uniforms?: Record<string, { value: number }> } };
+    // 结构参数（size / 池深 / 壁厚）：交由形态按 transformLinks 查表就地应用，容器零重建——
+    // pool 的 h / t 原烘焙进壁几何而必须重建，现已收进 links（ADR-272 扩展）。
+    if (
+      changed.has("waterSize") ||
+      changed.has("waterPoolHeight") ||
+      changed.has("waterPoolWallThickness")
+    ) {
+      strategy.applyProfile(this.water, {
+        size: s.waterSize,
+        poolHeight: s.waterPoolHeight,
+        wallThickness: s.waterPoolWallThickness,
+      });
+      // 壁厚同时是池内壁的体积光学光程（材质属性，与几何无关）
+      if (changed.has("waterPoolWallThickness")) {
+        for (const m of targets("wallInner")) {
+          (m.material as THREE.MeshPhysicalMaterial).thickness = s.waterPoolWallThickness;
         }
-      )?.userData?.shader;
-      if (topShader?.uniforms?.uSize) {
-        topShader.uniforms.uSize.value = s.waterSize;
-        topShader.uniforms.uHalfSize.value = s.waterSize / 2;
+      }
+      // uSize / uHalfSize 属波浪 shader 的共享 uniform（跨形态一致），故仍留在 cap 而非下沉。
+      if (changed.has("waterSize")) {
+        const topMat = this.findTopWater()?.material;
+        this.setUniform(topMat, "uSize", s.waterSize);
+        this.setUniform(topMat, "uHalfSize", s.waterSize / 2);
       }
     }
     // choppiness：顶 uChoppiness uniform（film/pool 共用，ADR-255 改造 B）
     if (changed.has("waterChoppiness")) {
-      const top = this.findTopWater();
-      const topShader = (
-        top?.material as unknown as {
-          userData?: { shader?: { uniforms?: Record<string, { value: number }> } };
-        }
-      )?.userData?.shader;
-      if (topShader?.uniforms?.uChoppiness)
-        topShader.uniforms.uChoppiness.value = s.waterChoppiness;
+      this.setUniform(this.findTopWater()?.material, "uChoppiness", s.waterChoppiness);
     }
     // ADR-257：waterLevel → 水面 position.y（film/pool 通用，零重建）。
     // 解耦的全部收益在此：旧语义下抬水面必须走 pool 并重建 10 个 mesh，如今只改一个标量。
@@ -536,13 +526,21 @@ export class WaterCapability implements SceneCapability {
     // waterWaveSpeed：无材质应用（仅 update 累加速度读值）
   }
 
-  private syncBaseOpacityUniform(mat: THREE.MeshPhysicalMaterial, value: number): void {
-    const shader = (
+  /** 顶水面 shader 的 uniform 就地写入——穿透 three 的 userData.shader 后门，统一收口。
+   *  原实现每处各写一遍五层 `as unknown as` cast（拼错 uniform 名即静默失效，与 ADR-257 批判的
+   *  mesh-name 寻址同病）；守卫：shader 尚未编译或 uniform 名不存在时静默跳过——
+   *  调用方均为「值已进 envState」的路径，重建时由 buildMaterial 读 envState 兜底。 */
+  private setUniform(mat: THREE.Material | undefined, name: string, value: number): void {
+    const u = (
       mat as unknown as {
-        userData: { shader?: { uniforms?: { uBaseOpacity?: { value: number } } } };
+        userData?: { shader?: { uniforms?: Record<string, { value: number } | undefined> } };
       }
-    ).userData?.shader;
-    if (shader?.uniforms?.uBaseOpacity) shader.uniforms.uBaseOpacity.value = value;
+    )?.userData?.shader?.uniforms?.[name];
+    if (u) u.value = value;
+  }
+
+  private syncBaseOpacityUniform(mat: THREE.MeshPhysicalMaterial, value: number): void {
+    this.setUniform(mat, "uBaseOpacity", value);
   }
 
   setWetness(v: number): void {
@@ -660,26 +658,14 @@ export class WaterCapability implements SceneCapability {
     return { section: "basic", order: 30 };
   }
 
-  /** 保存状态到 localStorage */
+  /** 保存状态到 localStorage。
+   *  持久化字段 = schema 的 water 组键集（getPresetKeys("water")）+ 能力级 enabled——
+   *  不再手抄清单：新增 water 参数只要进 schema，读写两侧自动跟上（评审「一处参数六处接线」收口）。
+   *  ⚠️ 历史键名 size / pool* 由 loadState 新旧双轨兼容；写侧统一用 water* 规范键。 */
   saveState(): void {
-    persistState(this.id, {
-      size: envState.waterSize,
-      enabled: this.enabled,
-      waterEnabled: envState.waterEnabled,
-      waterMode: envState.waterMode,
-      waterWetness: envState.waterWetness,
-      waterColor: envState.waterColor,
-      waterOpacity: envState.waterOpacity,
-      waterNormalStrength: envState.waterNormalStrength,
-      waterClarity: envState.waterClarity,
-      waterWaveSpeed: envState.waterWaveSpeed,
-      waterChoppiness: envState.waterChoppiness,
-      waterLevel: envState.waterLevel,
-      waterPoolHeight: envState.waterPoolHeight,
-      waterPoolWallThickness: envState.waterPoolWallThickness,
-      waterPoolWallColor: envState.waterPoolWallColor,
-      waterPoolRoundness: envState.waterPoolRoundness,
-    });
+    const state: Record<string, unknown> = { enabled: this.enabled };
+    for (const key of getPresetKeys("water")) state[key] = envState[key];
+    persistState(this.id, state);
   }
 
   /** 从 localStorage 恢复状态 */
@@ -753,6 +739,8 @@ export class WaterCapability implements SceneCapability {
       waterLevel: { number: (v) => this.setLevel(v) },
       clarity: { number: (v) => this.setClarity(v) },
       waterClarity: { number: (v) => this.setClarity(v) },
+      // ADR-272 扩展：写侧已规范为 waterSize（旧存档的 size 键在上方 restoreFields 已吸收）
+      waterSize: { number: (v) => this.setWaterSize(v) },
       poolHeight: { number: (v) => this.setPoolHeight(v) },
       waterPoolHeight: { number: (v) => this.setPoolHeight(v) },
       poolWallThickness: { number: (v) => this.setPoolWallThickness(v) },

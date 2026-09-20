@@ -40,11 +40,14 @@ pitfalls:
   - 水面有 waterNormalStrength，但材质 normalMap 恒为 null——微细节法线由 fragment 程序化生成，不存在贴图（ADR-271）
   - 水面 mesh 是 scale(uSize,uSize,1) 各向异性缩放：世界量与局部量互换必须成对换算，只修一边等于换一种错法（ADR-257 §6.4）
   - 波浪振幅被 min(…, 0.5) 钳制，wave0–4 全部顶到上限，设计的几何级数衰减实际不存在（ADR-257 §6.4，登记未改）
-  - 改尺寸只能动 sizeLinks（square 等比铺满 / wall 单轴缩放 + 沿法向轴平移）：**wall 的 y 轴必须不动**，否则壁高与壁厚会被 size 连带放大
-  - pool 的 waterPoolHeight / waterPoolWallThickness 仍走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——这两条滑块**今天拖动就会每帧重建 10 个 mesh**，ADR-272 登记为同族待办
+  - 结构参数只能动 `transformLinks`（`square` 等比铺满 / `wall` 双轴：x = size、y = 壁高 + 外偏沿法向轴）：**y 轴不得被 size 缩放**（`wallH` 由 h / t 现算，与 size 无关），否则壁高与壁厚会被尺寸连带放大
+  - **（已修复 2026-09，ADR-272 §5.1）** pool 的 waterPoolHeight / waterPoolWallThickness 曾走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——拖动即每帧重建 10 个 mesh。现壁几何单位化：壁高走 `scale.y`、外偏 = `size/2 + t` 运行期现算。教训：**任何结构参数只要被烘焙进几何，就必然在滑块拖动时变成重建风暴**
   - waterSize 下界钳 ≥1：setter 与 loadState 恢复同口径，shader 侧另有 max(uSize, 0.001)
   - 圆角裁剪用世界坐标 max(|x|,|z|) 对比 uHalfSize，隐含「水面恒在世界原点」这一未登记假设
   - **透明度预设失效（已修复 2026-09）**：`applyChangedParams` 中 `waterOpacity` 变更路径只更新 `top.material.opacity`，漏同步 shader uniform `uBaseOpacity`。shader 用 `min(gl_FragColor.a, uBaseOpacity)` clamp 透明度，`uBaseOpacity` 固化在构建期，导致增大 opacity 不生效（减小偶然正常）。修复：补调 `syncBaseOpacityUniform`，与 `waterWetness` 路径同口径
+  - **派发键是类型化键域（2026-09）**：`EnvCallback.changed` 为 `Set<EnvStateKey>`，`changed.has("拼错")` 编译不过；新增参数必须先在 `env-state-schema.ts` 声明（含 `group: "water"`），否则派发链与持久化都抓不到它
+  - **water 持久化由 schema 派生**：`saveState` 遍历 `getPresetKeys("water")`（不再手抄键表）；写侧统一 `water*` 规范键，历史键名 `size` / `pool*` 由 `loadState` 双轨吸收——新增参数只需进 schema，读侧按需补别名
+  - **uniform 一律经 `setUniform(mat, name, value)` 写入**（原五处 `as unknown as { userData.shader }` 深挖已收口）：`onBeforeCompile` 未跑或 uniform 名拼错时静默跳过，故改动后须以「uniform 实际取到值」的断言兜底，不能只断言 envState
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -71,7 +74,7 @@ invariant_anchors:
 | `water-state.ts` | 类型 | `WaterMode = "film" \| "pool"`，零 THREE、零副作用 |
 | `water-menu.ts` | 声明 | 15 控件 / 4 组 folder（form / look / pool / wave），纯节点树 |
 | `water-capability.ts` | 渲染 | 波浪 shader 注入、微细节法线、容器装配、参数应用、持久化 |
-| `water-body-strategies.ts` | 策略 | 形态注册表；**新增形态 = 注册一项，现有实现零改动**（尺寸语义固化为 `sizeLinks`） |
+| `water-body-strategies.ts` | 策略 | 形态注册表；**新增形态 = 注册一项，现有实现零改动**（结构参数语义固化为 `transformLinks`） |
 
 两形态语义：`film` = 贴地薄水膜（单位平面 × scale，受 wetness 门控，无体积光学）；
 `pool` = 盒式凹形水池（顶面 + 池底 + 4 组内外壁共 10 mesh，transmission 体积光学）。
@@ -86,11 +89,11 @@ invariant_anchors:
    送入视图空间叠加到 `normal`；强度由 `uDetailStrength` 驱动（原 `normalScale` 槽位的替代）。
    **CPU 侧不存在任何法线贴图**（ADR-271）。
 3. **形态装配**：策略表 `build()` 产出 `WaterBody`（`root` / `top` / `parts` 按 `WaterPartRole`
-   在 build 期预捕获 / `sizeLinks` 尺寸联动计划），cap 只按语义 role 取件——运行时零遍历、零字符串匹配。
-4. **尺寸应用**：**尺寸不进几何**——几何一律按单位宽建，世界尺寸由 `scale` / `position` 表达；
-   形态在 build 期把「哪些件随尺寸怎么变」固化成 `sizeLinks`（`square` 等比铺满 / `wall` 单轴缩放
-   + 沿法向轴平移），故 **film 与 pool 的 size 变更都零重建**（ADR-272）。
-5. **参数应用**：`registerEnvCallback` 单入口三分派——结构字段重建容器、参数字段就地改
+   在 build 期预捕获 / `transformLinks` 结构参数联动计划），cap 只按语义 role 取件——运行时零遍历、零字符串匹配。
+4. **结构参数应用**：**结构参数不进几何**——几何一律单位化，世界尺寸 / 壁高 / 壁厚由 `scale` / `position` 表达；
+   形态在 build 期把「哪些件随哪个结构参数怎么变」固化成 `transformLinks`（`square` 等比铺满 / `wall` 双轴
+   + 沿法向轴平移），故 **film 与 pool 的 size、以及 pool 的池深 / 壁厚变更均零重建**（ADR-272 §2.1 / §5.1）。
+5. **参数应用**：`registerEnvCallback` 单入口三分派——mode 切换重建容器、结构参数就地改 transform（`applyProfile`）、参数字段就地改
    material / uniform、开关只切可见性。setter 只写 `envState`，不各自就地改渲染。
 
 ## 对外 API / 入口
@@ -99,7 +102,7 @@ invariant_anchors:
 - 形态：`setWaterMode` / `getWaterMode`；水位：`setLevel` / `getLevel`（**跨形态通用，零重建**）
 - 尺寸：`setWaterSize` / `getWaterSize`（菜单 id `ground-water-size`，10–300 m；**跨形态通用，零重建**，ADR-272）
 - 外观：`setWaterColor`、`setWaterOpacity`、`setWetness`、`setNormalStrength`、`setClarity`、`setChoppiness`
-- 池体：`setPoolHeight`、`setPoolWallThickness`、`setPoolWallColor`、`setPoolRoundness`
+- 池体：`setPoolHeight`、`setPoolWallThickness`（**两条均零重建**，ADR-272 §5.1：壁高走 `scale.y`、外偏与光学光程运行期现算）、`setPoolWallColor`、`setPoolRoundness`
 - 波纹：`setWaveSpeed`；时间推进走 `update(dt)` 累加 `waterTime`（仅推进 uniform，从不写变换）
 - 持久化：`saveState` / `loadState`（新旧键双轨；旧档无 `waterLevel` 时 pool 取 `waterPoolHeight` 兜底）
 
@@ -120,7 +123,7 @@ invariant_anchors:
 - **水面 mesh 的各向异性缩放**（`scale(uSize, uSize, 1)`）：世界量 ↔ 局部量互换必须成对
   （位移 `/sizeSafe`、解析法线 `×sizeSafe`），测试以「两处 `uSize` 因子成对出现」为结构断言。
 - **`waterLevel` 变更零重建**：抬水面只改一个 `position.y` 标量，绝不触发容器重建。
-- **`waterSize` 变更零重建**（ADR-272）：只按 `sizeLinks` 改 transform（pool 恒 10 件 mesh：
+- **结构参数（`waterSize` / `waterPoolHeight` / `waterPoolWallThickness`）变更零重建**（ADR-272 §2.1 + §5.1）：只按 `transformLinks` 改 transform（pool 恒 10 件 mesh：
   顶 + 底 + 4 组内外壁，几何与材质句柄全程同一）。测试以「mesh 与 geometry 同一性保持」为硬断言，
   不以结果尺寸通过为满足；拖动滑块属高频事件，重建路径不允许出现在此。**注意 wall 只缩放 x 轴**——
   y 轴一旦被 scale，壁高与壁厚会随 size 放大（绝对量语义破坏）。
@@ -131,7 +134,7 @@ invariant_anchors:
 
 ## 相关
 
-- ADR-272（waterSize 放开 UI 入口 + pool 尺寸零重建 / `sizeLinks`）
+- ADR-272（waterSize 放开 UI 入口 + pool 尺寸零重建 / `sizeLinks`；§5 扩展：池深/壁厚一并零重建 + 三处接线收口）
 - ADR-271（微细节法线 GPU 化，移除 CPU DataTexture 链路）
 - ADR-257（水面/容器解耦 + 水体形态策略表）、ADR-255（Gerstner + uniform 化）
 - ADR-196（envState 单一事实源）、ADR-195（cap 直产菜单节点）、ADR-268（env 面板归属）

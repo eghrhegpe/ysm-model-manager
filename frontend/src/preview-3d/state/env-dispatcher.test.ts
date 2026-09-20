@@ -8,7 +8,7 @@ import {
   clearEnvCallbacks,
   type EnvCallback,
 } from "./env-dispatcher.ts";
-import type { EnvState } from "./env-state-schema.ts";
+import type { EnvState, EnvStateKey } from "./env-state-schema.ts";
 
 const fakeState = {} as EnvState;
 
@@ -17,12 +17,12 @@ describe("env-dispatcher", () => {
   afterEach(() => clearEnvCallbacks());
 
   it("registerEnvCallback 注册后计数 +1，并可在派发时收到 (changed, state)", () => {
-    const received: Array<{ changed: Set<string>; state: EnvState }> = [];
+    const received: Array<{ changed: Set<EnvStateKey>; state: EnvState }> = [];
     const cb: EnvCallback = (changed, state) => received.push({ changed, state });
     const unsub = registerEnvCallback("capA", cb);
     expect(getEnvCallbackCount()).toBe(1);
 
-    const changed = new Set(["fogEnabled"]);
+    const changed = new Set<EnvStateKey>(["fogEnabled"]);
     dispatchEnvChange(changed, fakeState);
 
     expect(received).toHaveLength(1);
@@ -39,7 +39,7 @@ describe("env-dispatcher", () => {
     expect(getEnvCallbackCount()).toBe(0);
 
     // 取消订阅后派发不得再触达已移除的回调（原断言用了从未注册的 spy，恒真不验证任何行为）
-    dispatchEnvChange(new Set(["x"]), fakeState);
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
     expect(cb).not.toHaveBeenCalled();
   });
 
@@ -49,7 +49,7 @@ describe("env-dispatcher", () => {
     registerEnvCallback("capA", a);
     registerEnvCallback("capA", b); // 同键覆盖
     expect(getEnvCallbackCount()).toBe(1);
-    dispatchEnvChange(new Set(["x"]), fakeState);
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
     expect(a).not.toHaveBeenCalled();
     expect(b).toHaveBeenCalledOnce();
   });
@@ -59,7 +59,7 @@ describe("env-dispatcher", () => {
     const b = vi.fn();
     registerEnvCallback("capA", a);
     registerEnvCallback("capB", b);
-    dispatchEnvChange(new Set(["x"]), fakeState);
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
     expect(a).toHaveBeenCalledOnce();
     expect(b).toHaveBeenCalledOnce();
   });
@@ -72,7 +72,7 @@ describe("env-dispatcher", () => {
     const ok = vi.fn();
     registerEnvCallback("capBoom", boom);
     registerEnvCallback("capOk", ok);
-    expect(() => dispatchEnvChange(new Set(["x"]), fakeState)).not.toThrow();
+    expect(() => dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState)).not.toThrow();
     expect(ok).toHaveBeenCalledOnce();
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();

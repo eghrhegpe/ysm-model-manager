@@ -1,0 +1,59 @@
+# 诊断日志面板：能力面盘点与演进方向（只读分析）
+
+> 范围：诊断页日志面板（`diagnostics/logs.ts` + `init.ts` 子 tab 分派 + `tpl.ts` 工具栏 + Go `logs` / `internal/app`）。
+> 性质：**只读分析**，不动代码。源于 2026-09-28 日志面板改版（搜索框上移行1 + 状态筛选补 warn 档）后的复盘。
+> 相关：`docs/plans/diagnostics-dedup-audit.md` 的 D4（两路日志源必要差异论）是本文的展开；决策红线见根 AGENTS「职责归属」。
+
+## 一、两条日志流的真实拓扑（单一事实源）
+
+| | 流 A：操作日志（环形账本） | 流 B：运行时日志（环形缓冲） |
+|---|---|---|
+| 入口 | `AddOpLog(op, model, src, dst, size, status, errMsg)` → `logger.AddOp` | `log.SetOutput(io.MultiWriter(os.Stderr, runtimeLogs))`（`internal/app/app.go:168`） |
+| 结构 | `Operation + Status + Level + 4 文本字段`（`types.ImportLog`） | 单 `Message` + `Timestamp`，`Level` 恒 `info`（`go/logs/runtime.go:36`） |
+| 持久化 | 磁盘 `ysm-import-logs.json`，重启保留 | 内存，重启清零，无清空后端能力 |
+| 容量 | 500（`go/logs/logs.go:19`，`LogConfig.LogMaxEntries` 可配置） | 200（`go/logs/runtime.go:11` `DefaultRuntimeCap`） |
+| 状态语义 | `success/failed/warn/skipped`（由 Go `StatusToLevel` 派生 Level） | 无状态 |
+| 搜索域 | 模型 / 报错 / 目标路径 / 源路径 / Operation（4+ 维） | 仅 Message |
+| 前端窗口 | `slice(-500)`（`logs.ts:102`） | `slice(-300)`（`logs.ts:209`） |
+
+**关键不对称**：两流在 Go 侧就分灶——流 A 是「结构化账本」（审计/回溯），流 B 是「stderr 尾巴」（debug）。前端子 tab 切换、搜索分派、状态 chip 只作用操作日志，**全是如实映射 Go 结构差异**，非前端偷懒。
+
+## 二、筛选语义：横纵正交模型
+
+面板实际承载一个 **二维语义空间**：
+
+- **横向（结果好坏）**：`Status` 四值，`dgLsMakeStatusLabel` 优先读 `Level` 再按 `Status` 兜底（Go 冻结判据，前端只映射图标）。
+- **纵向（做什么事）**：`Operation` 七类（import/scan/download/sync/rename/delete/ui），`OP_META` 映射中文标签+图标。
+
+现状是 **「半正交」**：
+- 行2 chips = 纯横向（全部/成功/失败/警告/跳过——2026-09-28 补「警告」档）。
+- 搜索框 = **横纵混合**（既匹配模型名/报错=横，又匹配 Operation 标签=纵）。
+- 组合语义（成功+扫描 / 失败+警告）靠「chip × 搜索」AND 交集实现，**无独立纵向筛选入口**。
+
+## 三、复核后的事实修正与遗留洞察
+
+### ✅ 修正一个初判
+- **`skipped` chip 不是「为未来预留」**：`go/sync/sync_push.go:310,322` 在推送到仓库出现同哈希/同名文件时真实写 `Status:"skipped"`。该档有效。
+- **`warn` 并非只来自扫描**：`ui`（前端 error-diary `DiaryStatus = "failed"|"warn"`）与 `scan`（`app.go:183` 错误 sink）都会产生 warn。警告 chip 无法区分「界面报错」还是「扫描断链」，除非展开看内容。
+
+### 遗留洞察（按价值排序）
+1. **纵向（操作类型）筛选缺位**：用户筛「扫描」「界面」得靠搜关键词，没有独立入口。OP_META 已有 7 类映射，是现成的事实源。
+2. **warn 混类可见性**：`ui` 与 `scan` 的 warn 同行同标，用户无法从 chip 层面分辨来源。
+3. **容量口径双轨**：Go 操作日志 500 / 运行时 200，前端各自 `slice(-500)` / `slice(-300)`——运行时永远不满 300，`slice(-300)` 是防御性空操作；两处口径各写各的，**Go 改容量前端不会同步**（单一事实源缺失）。
+4. **流 B 价值递减**：运行时日志 = 整进程 stderr 尾巴，无级别/无分类/无语义。用户期望「业务运行信息」，实际看到库的嘈杂输出。长期应推动 Go 侧把「该给用户看的结构化信息」走流 A，流 B 当 debug 尾巴。
+
+## 四、演进方向（候选，未经拍板）
+
+| 方向 | 内容 | 风险 / 代价 |
+|---|---|---|
+| **A. 操作类型纵向筛选** | 行2 或新增一排 chips，按 `Operation` 过滤，与状态 chips 正交共存（互斥维度 → 不冲突） | 需新 UI + 绑定 + i18n；与现有「chip × 搜索」交集并存，语义需说清 |
+| **B. warn 分流** | 在操作类型筛选落地后，`ui` / `scan` 可各自筛出，warn 混类可见性自然缓解 | 依赖 A |
+| **C. 容量口径单点化** | 把 Go 容量（500/200）与前端窗口（slice）收敛到单一事实源（如契约测试锚定） | 小改动；防未来 Go 改容量前端漏同步 |
+| **D. 流 B 语义化** | 推动 Go 侧结构化信息走流 A，流 B 只留 debug | 大改动，涉及多个 Go 包调用点，需 ADR 立项 |
+
+## 五、本次已落地（2026-09-28，commit 5673a5b2b）
+
+- 搜索框上移行1、紧跟子 tab（视图范围控件与子 tab 同层语义）。
+- 状态 chips 补「警告」(warn) 档，三语 i18n `diagnostics.warn` + 重新生成 locale JSON。
+- `content-diag-classes.test.ts` 判据修正（交互控件 = 按钮/输入框，`.diag-log-filter` 归布局容器）。
+- 新增 vitest「警告 chip → 筛出 warn」用例；e2e 布局用例同步（行1=子tab+搜索+动作，行2=筛选）。

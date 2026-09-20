@@ -16,8 +16,8 @@
  * 一个未覆盖的小函数不再代表整包。契约锁见 tests/test_check_go_coverage_threshold.ts。
  *
  * 用法：
- *   node scripts/check-go-coverage-threshold.ts                                # 文本报告，cover-profile 默认 go-cover.out
- *   node scripts/check-go-coverage-threshold.ts --cover-profile go-cover.out --fail-on-below 20
+ *   node scripts/check-go-coverage-threshold.ts                                # 文本报告，cover-profile 默认 .coverage/go-cover.out
+ *   node scripts/check-go-coverage-threshold.ts --cover-profile .coverage/go-cover.out --fail-on-below 20
  *   node scripts/check-go-coverage-threshold.ts --thresholds internal/app/:30  # 追加特定包阈值
  *   node scripts/check-go-coverage-threshold.ts --json                         # JSON（CI / 子代理稳定消费）
  *
@@ -171,9 +171,9 @@ function main() {
   const args = parseArgs(process.argv.slice(2), {
     bools: ["json"],
     strings: ["cover-profile", "fail-on-below", "thresholds"],
-    defaults: { "cover-profile": "go-cover.out", "fail-on-below": "20" },
+    defaults: { "cover-profile": ".coverage/go-cover.out", "fail-on-below": "20" },
   });
-  const coverFile = (args["cover-profile"] as string) || "go-cover.out";
+  const coverFile = (args["cover-profile"] as string) || ".coverage/go-cover.out";
   const globalMin = parseFloat((args["fail-on-below"] as string) || "20");
   const asJSON = args.json === true;
 

@@ -272,13 +272,14 @@ jobs:
         run: |
           # -p 1 串行：多包并行跑 coverprofile 时 go/scanner 测试存在隔离冲突（flaky），
           # 串行可复现通过（本地已验证）。本步骤仅作覆盖率趋势展示，不构成测试门禁。
-          # 注意：-coverprofile=go-cover.out 必须加引号——PowerShell 会把
-          # 「go-cover.out」解析成成员访问（值为 null），profile 落盘为 0 字节，
+          # 注意：-coverprofile=.coverage/go-cover.out 必须加引号——PowerShell 会把
+          # 「.coverage/go-cover.out」解析成成员访问（值为 null），profile 落盘为 0 字节，
           # 后续 go tool cover -func= 收到空参数报 too many arguments。
           # 同上用 ./...：原 ./go/... 使 internal/app 的 33 个测试文件完全不计入覆盖率。
-          go test ./... -coverprofile='go-cover.out' -count=1 -p 1 | Out-String -Width 200
+          New-Item -ItemType Directory -Force '.coverage' | Out-Null
+          go test ./... -coverprofile='.coverage/go-cover.out' -count=1 -p 1 | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go tool cover -func='go-cover.out' | Select-String 'total:'
+          go tool cover -func='.coverage/go-cover.out' | Select-String 'total:'
 
       - name: 前端类型检查（ADR-014 门槛）
         working-directory: frontend

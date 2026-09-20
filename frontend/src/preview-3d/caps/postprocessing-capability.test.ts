@@ -14,6 +14,7 @@ import { POSTPROC_PERSIST_FIELDS, PP_PARAMS_TO_ENV } from "./postprocessing-stat
 import type { LightCapability } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 // ADR-196：统一状态层（测试隔离）
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
@@ -980,15 +981,16 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
       distanceAttenuation: boolean; fresnel: boolean; bouncing: boolean;
     };
     cap.setSSROpacity(0.7);
-    cap.setSSRMaxDistance(8);
-    cap.setSSRThickness(0.2);
+    // 夹具值须落在 schema 合法域内（ADR-283：写入口按 range 钳制，越界值会被改写而非放行）
+    cap.setSSRMaxDistance(120);
+    cap.setSSRThickness(0.05);
     cap.setSSRBlur(true);
     cap.setSSRDistanceAttenuation(true);
     cap.setSSRFresnel(true);
     cap.setSSRBouncing(true);
     expect(ssr.opacity).toBe(0.7);
-    expect(ssr.maxDistance).toBe(8);
-    expect(ssr.thickness).toBe(0.2);
+    expect(ssr.maxDistance).toBe(120);
+    expect(ssr.thickness).toBe(0.05);
     expect(ssr.blur).toBe(true);
     expect(ssr.distanceAttenuation).toBe(true);
     expect(ssr.fresnel).toBe(true);
@@ -1221,6 +1223,29 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
 
 // ============ 菜单控件联动（节点 control 闭包）============
 describe("PostprocessingCapability — 菜单控件联动补充", () => {
+  it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    const pairs = [
+      ["pp-exposure", "ppExposure"],
+      ["pp-bloom-strength", "ppBloomStrength"],
+      ["pp-bloom-threshold", "ppBloomThreshold"],
+      ["pp-bloom-radius", "ppBloomRadius"],
+      ["pp-ssao-radius", "ppSsaoRadius"],
+      ["pp-ssao-mindist", "ppSsaoMinDist"],
+      ["pp-ssao-maxdist", "ppSsaoMaxDist"],
+      ["pp-ssr-opacity", "ppSsrOpacity"],
+      ["pp-ssr-maxdistance", "ppSsrMaxDistance"],
+      ["pp-ssr-thickness", "ppSsrThickness"],
+    ] as const;
+    for (const [id, key] of pairs) {
+      const c = findNode(nodes, id)!.control!;
+      expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
+        getParamRange(key),
+      );
+    }
+  });
+
   it("bloom/SSAO/SSR/色彩控件 setValue 落地参数（节点 control 闭包）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
@@ -1236,7 +1261,7 @@ describe("PostprocessingCapability — 菜单控件联动补充", () => {
     by("pp-reflection-mode").control!.set!("envmap+ssr");
     by("pp-ssr-opacity").control!.set!(0.9);
     by("pp-ssr-maxdistance").control!.set!(10);
-    by("pp-ssr-thickness").control!.set!(0.15);
+    by("pp-ssr-thickness").control!.set!(0.05);
     by("pp-ssr-blur").control!.set!(true);
     by("pp-ssr-distanceAttenuation").control!.set!(true);
     by("pp-ssr-fresnel").control!.set!(true);
@@ -1256,7 +1281,7 @@ describe("PostprocessingCapability — 菜单控件联动补充", () => {
     expect(p.reflectionMode).toBe("envmap+ssr");
     expect(p.ssrOpacity).toBe(0.9);
     expect(p.ssrMaxDistance).toBe(10);
-    expect(p.ssrThickness).toBe(0.15);
+    expect(p.ssrThickness).toBe(0.05);
     expect(p.ssrBlur).toBe(true);
     expect(p.ssrDistanceAttenuation).toBe(true);
     expect(p.ssrFresnel).toBe(true);

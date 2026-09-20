@@ -8,6 +8,7 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type {
   PostprocessingCapability,
   PostprocessingParams,
@@ -83,9 +84,7 @@ function colorFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.exposure",
         control: {
-          min: 0.1,
-          max: 3,
-          step: 0.05,
+          ...getParamRange("ppExposure"),
           get: () => cap.getParams().exposure,
           set: (v) => cap.setExposure(v as number),
         },
@@ -119,9 +118,7 @@ function bloomFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.bloomStrength",
         control: {
-          min: 0,
-          max: 3,
-          step: 0.05,
+          ...getParamRange("ppBloomStrength"),
           get: () => cap.getParams().bloomStrength,
           set: (v) => cap.setBloomStrength(v as number),
         },
@@ -131,9 +128,7 @@ function bloomFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.bloomThreshold",
         control: {
-          min: 0,
-          max: 1,
-          step: 0.02,
+          ...getParamRange("ppBloomThreshold"),
           get: () => cap.getParams().bloomThreshold,
           set: (v) => cap.setBloomThreshold(v as number),
         },
@@ -143,9 +138,7 @@ function bloomFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.bloomRadius",
         control: {
-          min: 0,
-          max: 2,
-          step: 0.02,
+          ...getParamRange("ppBloomRadius"),
           get: () => cap.getParams().bloomRadius,
           set: (v) => cap.setBloomRadius(v as number),
         },
@@ -188,9 +181,7 @@ function ssaoFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.ssaoRadius",
         control: {
-          min: 0.5,
-          max: 32,
-          step: 0.5,
+          ...getParamRange("ppSsaoRadius"),
           get: () => cap.getParams().ssaoRadius,
           set: (v) => cap.setSSAORadius(v as number),
         },
@@ -200,9 +191,7 @@ function ssaoFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.ssaoMinDist",
         control: {
-          min: 0.001,
-          max: 0.05,
-          step: 0.001,
+          ...getParamRange("ppSsaoMinDist"),
           get: () => cap.getParams().ssaoMinDist,
           set: (v) => cap.setSSAOMinDist(v as number),
         },
@@ -212,9 +201,7 @@ function ssaoFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.ssaoMaxDist",
         control: {
-          min: 0.01,
-          max: 1,
-          step: 0.01,
+          ...getParamRange("ppSsaoMaxDist"),
           get: () => cap.getParams().ssaoMaxDist,
           set: (v) => cap.setSSAOMaxDist(v as number),
         },
@@ -265,9 +252,7 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.ssrOpacity",
         control: {
-          min: 0,
-          max: 1,
-          step: 0.02,
+          ...getParamRange("ppSsrOpacity"),
           get: () => cap.getParams().ssrOpacity,
           set: (v) => cap.setSSROpacity(v as number),
         },
@@ -277,9 +262,7 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.ssrMaxDistance",
         control: {
-          min: 10,
-          max: 800,
-          step: 5,
+          ...getParamRange("ppSsrMaxDistance"),
           get: () => cap.getParams().ssrMaxDistance,
           set: (v) => cap.setSSRMaxDistance(v as number),
         },
@@ -289,9 +272,7 @@ function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
         kind: "slider",
         labelKey: "preview.ssrThickness",
         control: {
-          min: 0.001,
-          max: 0.1,
-          step: 0.001,
+          ...getParamRange("ppSsrThickness"),
           get: () => cap.getParams().ssrThickness,
           set: (v) => cap.setSSRThickness(v as number),
         },

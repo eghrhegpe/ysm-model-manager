@@ -214,7 +214,7 @@ describe("并发基准面板（ADR-262 D5）", () => {
     await clickAndFlush(root);
 
     const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
-    expect(text).toContain("目标集 全库扁平");
+    expect(text).toContain("测什么 全库最重的几条（不分类型）");
     expect(text).toContain("排序 体积从大到小");
     expect(text).toContain("上限 20");
     // 排序依据不可见 = 不可复核：口径 token 与人话一起给
@@ -241,8 +241,8 @@ describe("并发基准面板（ADR-262 D5）", () => {
     await clickAndFlush(root);
 
     const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
-    expect(text).toContain("目标集 ysm 类型");
-    expect(text).not.toContain("目标集  类型");
+    expect(text).toContain("测什么 ysm 类型");
+    expect(text).not.toContain("测什么  类型");
   });
 
   it("并发载荷缺顶层 rtype 时不得从入选样本反推类型（前端不臆断）", async () => {
@@ -258,7 +258,7 @@ describe("并发基准面板（ADR-262 D5）", () => {
     await clickAndFlush(root);
 
     const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
-    expect(text).not.toContain("目标集 ysm 类型");
+    expect(text).not.toContain("测什么 ysm 类型");
   });
 
   it("web 平台不发 CLI（走 toast 提示）", async () => {

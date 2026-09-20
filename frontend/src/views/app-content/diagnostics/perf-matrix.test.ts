@@ -512,7 +512,7 @@ describe("目标集回显与体量徽标（排序依据不可见 = 不可复核�
     setOrder(root, "size");
     const out = await run(root);
 
-    expect(out.textContent).toContain("目标集 全库扁平");
+    expect(out.textContent).toContain("测什么 全库最重的几条（不分类型）");
     expect(out.textContent).toContain("排序 体积从大到小");
     expect(out.textContent).toContain("上限 2");
     expect(out.textContent).toContain("dir_total");
@@ -532,7 +532,7 @@ describe("目标集回显与体量徽标（排序依据不可见 = 不可复核�
     setTarget(root, "ysm");
     const out = await run(root);
 
-    expect(out.textContent).toContain("目标集 ysm 类型");
+    expect(out.textContent).toContain("测什么 ysm 类型");
     expect(out.textContent).toContain("排序 路径升序");
     expect(out.textContent).not.toContain("dir_total");
     expect(out.textContent).not.toContain("MB");
@@ -547,12 +547,25 @@ describe("目标集选择器选项来自 registry（前端不写死类型表）"
 
     const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
     const values = [...select.options].map((o) => o.value);
-    // 顺序 = 「单模型」占位 → 两个哨兵（全部类型 / 全库扁平）→ 可分析类型（id 字典序）
+    // 顺序 = 组1「单个模型」→ 组2「按模型类型」（id 字典序）→ 组3「跨类型对比」（两个哨兵）。
+    // 递进：测一个 → 测一类 → 测跨类（2026-09 分组改造：原来四档平铺，且"单模型"与模式下拉撞名）
     // EntityPlayer 无 cliAnalyzable → 被滤除：选了必报 unsupported 的选项不该出现在渲染里
-    expect(values).toEqual(["", "__all__", "__repo__", "ysm"]);
+    expect(values).toEqual(["", "ysm", "__all__", "__repo__"]);
     expect(select.textContent).toContain("YSM 模型");
     expect(select.textContent).not.toContain("MMD 模型");
-    expect(select.textContent).toContain("全库扁平");
+    expect(select.textContent).toContain("全库最重的几条（不分类型）");
+    // 分组标题必须真的落进 optgroup：用户靠它回答「这两个下拉什么关系」
+    const groupLabels = [...select.querySelectorAll("optgroup")].map((g) => g.getAttribute("label"));
+    expect(groupLabels).toEqual(["单个模型", "按模型类型", "跨类型对比（进阶）"]);
+    // 组归属正确：单模型只在组1、ysm 只在组2、两个哨兵只在组3（防「分组拼错层级」）
+    const inGroup = (value: string): string | null =>
+      [...select.querySelectorAll("optgroup")]
+        .find((g) => [...g.querySelectorAll("option")].some((o) => o.value === value))
+        ?.getAttribute("label") ?? null;
+    expect(inGroup("")).toBe("单个模型");
+    expect(inGroup("ysm")).toBe("按模型类型");
+    expect(inGroup("__all__")).toBe("跨类型对比（进阶）");
+    expect(inGroup("__repo__")).toBe("跨类型对比（进阶）");
     // 「全部类型」哨兵不受可分析过滤（Go 侧对不可分析条目顺延），因此它覆盖的类型集
     // **大于**选择器列出的选项——必须用 title 说清，否则用户会把它读成「上面这些类型的全部」
     const allOpt = [...select.options].find((o) => o.value === "__all__");
@@ -577,8 +590,10 @@ describe("目标集选择器选项来自 registry（前端不写死类型表）"
     await populatePerfTargetOptions(root, "diag-perf-alt-target", false);
 
     const select = root.getElementById("diag-perf-alt-target") as HTMLSelectElement;
-    // includeModel=false：省略「单模型」哨兵；同样只列可分析类型
-    expect([...select.options].map((o) => o.value)).toEqual(["__all__", "__repo__", "ysm"]);
+    // includeModel=false：省略「单个模型」组（连组标题也不出现）；同样只列可分析类型
+    expect([...select.options].map((o) => o.value)).toEqual(["ysm", "__all__", "__repo__"]);
+    const labels = [...select.querySelectorAll("optgroup")].map((g) => g.getAttribute("label"));
+    expect(labels).toEqual(["按模型类型", "跨类型对比（进阶）"]);
   });
 });
 

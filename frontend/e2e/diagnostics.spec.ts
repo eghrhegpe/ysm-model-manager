@@ -900,20 +900,20 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
   }) => {
     const single = await readHonesty(page);
     expect(single.iter).toContain("parse repeats"); // zh：重复解析次数
-    expect(single.target).toContain("Test scope");
+    expect(single.target).toContain("What to test");
     await setShadowSelect(page, "diag-perf-mode", "scan");
     const scan = await readHonesty(page);
     expect(scan.iter).toContain("rescan passes"); // zh：全库重扫次数
-    // scan 不读目标集行，但标签不得被串改成并发的「取样范围」（模式态互斥）
-    expect(scan.target).toContain("Test scope");
+    // scan 不读目标集行，但标签不得被串改成并发的「测哪些」（模式态互斥）
+    expect(scan.target).toContain("What to test");
   });
 
-  test("切 conc：目标集标签改为 Sample range，且单模型回落伴随可见 toast（不再静默改选择）", async ({
+  test("切 conc：目标集标签改为 Which to test，且单模型回落伴随可见 toast（不再静默改选择）", async ({
     page,
   }) => {
     await setShadowSelect(page, "diag-perf-mode", "conc");
     const got = await readHonesty(page);
-    expect(got.target).toContain("Sample range"); // zh：取样范围
+    expect(got.target).toContain("Which to test"); // zh：测哪些
     // toast 用 data-testid="toast" 稳定钩子（同 toast.spec.ts）；⚠️ 它在 <app-toast> 的 **shadowRoot**
     // 内，document.querySelectorAll 看不见——必须穿透。文案随语言变，不锁内容锁出现性：
     // 回落发生过就该有非空 toast 节点在屏上。

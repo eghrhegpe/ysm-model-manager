@@ -200,6 +200,13 @@ export function diagnosticsHTML(): string {
           <option value="conc">${t("diagnostics.perfModeOptConc")}</option>
           <option value="scan">${t("diagnostics.perfModeOptScan")}</option>
         </select>
+        <div class="perf-hint">${t("diagnostics.perfModeHint")}</div>
+      </div>
+      <div class="perf-row" data-perf-mode="single conc">
+        <label for="diag-perf-rtype" id="diag-perf-target-label" data-testid="diag-perf-target-label">${t("diagnostics.perfTarget")}</label>
+        <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
+          <option value="">${t("diagnostics.perfTargetModel")}</option>
+        </select>
       </div>
       <div class="perf-row" data-perf-mode="single">
         <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
@@ -217,12 +224,6 @@ export function diagnosticsHTML(): string {
         <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
         <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
         <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
-      </div>
-      <div class="perf-row" data-perf-mode="single conc">
-        <label for="diag-perf-rtype" id="diag-perf-target-label" data-testid="diag-perf-target-label">${t("diagnostics.perfTarget")}</label>
-        <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
-          <option value="">${t("diagnostics.perfTargetModel")}</option>
-        </select>
       </div>
       <div class="perf-row" data-perf-mode="single conc scan">
         <label for="diag-perf-order" id="diag-perf-order-label">${t("diagnostics.perfOrder")}</label>

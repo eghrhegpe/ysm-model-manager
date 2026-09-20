@@ -99,6 +99,11 @@ export const contentDiagCSS: string = `
 .perf-controls { display:flex; flex-direction:column; gap:4px; padding:0 0 6px; border-bottom:1px solid var(--bd); flex-shrink:0; }
 .perf-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .perf-row > input[type="text"] { flex:1; min-width:180px; }
+/* 提示行（2026-09 补齐）：.perf-hint 此前**无任何规则**，而 .perf-row 是 flex 容器——
+   提示 div 会被当成排在内联控件旁边的 flex item，与 select 挤在一行。
+   这里钉死：占满整行（flex-basis:100% 强制换行）+ 弱化小字，使提示真正落在控件下方。
+   与 .perf-wrap 里的说明行同语义，不给交互权重（不可点、不截断 title）。 */
+.perf-hint { flex-basis:100%; color:var(--muted); font-size:var(--fs-xs); line-height:1.4; }
 /* ADR-278 §2.4：基准模式显隐走 class，与查看器降级的 inline display:none 分工不冲突（inline 胜过 class） */
 .perf-mode-off { display: none; }
 

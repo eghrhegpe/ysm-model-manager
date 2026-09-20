@@ -333,27 +333,58 @@ export async function populatePerfTargetOptions(
 
   // 重填不得重置用户已选好的目标集：先记住当前值，重建后再回填
   const keep = select.value;
-  const rows: OptionRow[] = [];
-  if (includeModel) rows.push({ value: "", label: t("diagnostics.perfTargetModel") });
-  // 「全部类型」哨兵不受可分析过滤：Go 侧 --target all 扫**全类型**（不可分析条目顺延），
-  // 故它覆盖的类型集大于上面列出的选项——title 说清这层差，否则用户读成「列出的这些的全部」
-  rows.push({
-    value: PERF_TARGET_ALL,
-    label: t("diagnostics.perfTargetAll"),
-    title: t("diagnostics.perfTargetAllHint"),
-  });
-  // 全库扁平（ADR-262 D3 修订的第三种目标集）：上限单位 = 全库 N 条，排序另由排序控件决定
-  rows.push({
-    value: PERF_TARGET_REPO,
-    label: t("diagnostics.perfTargetRepo"),
-    title: t("diagnostics.perfTargetRepoHint"),
-  });
+  // 分组（2026-09 用户锐评「全库扁平 / 全部类型让人迷惑」）：四档原来平铺在同一个下拉里，
+  // 而「单模型」与上方模式下拉的「单模型」**撞名又耦合**（只在 single 模式可用），
+  // 用户第一眼无法回答「这两个下拉什么关系」。改按「测一个 / 测一类 / 测跨类」分三组，
+  // 把人话当组内标签、黑话退到 title：先选「测多大范围」，再让选项自称其义。
+  const groups: string[] = [];
+  // 组 1：测单个模型（按路径）
+  if (includeModel) {
+    groups.push(
+      `<optgroup label="${esc(t("diagnostics.perfTargetGroupModel"))}">` +
+        optionRows([{ value: "", label: t("diagnostics.perfTargetModel") }], esc) +
+        "</optgroup>",
+    );
+  }
+  // 组 2：按模型类型（同类型内横向比）
+  const typeRows: OptionRow[] = [];
   for (const ty of types) {
     const icon = typeof ty.icon === "string" ? ty.icon : "";
     // 顺序 = 注册表按 id 字典序（localeCompare），逐字保持现状；label 带图标与 name 兜底 id
-    rows.push({ value: String(ty.id), label: `${icon} ${String(ty.name ?? ty.id)}`.trim() });
+    typeRows.push({ value: String(ty.id), label: `${icon} ${String(ty.name ?? ty.id)}`.trim() });
   }
-  select.innerHTML = optionRows(rows, esc);
+  // 组 2：按模型类型（同类型内横向比）——必须在 typeRows 填满后拼，否则组空
+  if (typeRows.length) {
+    groups.push(
+      `<optgroup label="${esc(t("diagnostics.perfTargetGroupType"))}">` +
+        optionRows(typeRows, esc) +
+        "</optgroup>",
+    );
+  }
+  // 组 3：跨类型（只有这两档会改变「上限」的单位，故单独成组并标进阶）
+  groups.push(
+    `<optgroup label="${esc(t("diagnostics.perfTargetGroupCross"))}">` +
+      optionRows(
+        [
+          // 「每个类型各取几条」哨兵不受可分析过滤：Go 侧 --target all 扫**全类型**（不可分析条目顺延），
+          // 故它覆盖的类型集大于组 2 列出的选项——title 说清这层差，否则用户读成「列出的这些的全部」
+          {
+            value: PERF_TARGET_ALL,
+            label: t("diagnostics.perfTargetAll"),
+            title: t("diagnostics.perfTargetAllHint"),
+          },
+          // 全库最重的几条（ADR-262 D3 修订的第三种目标集）：上限单位 = 全库 N 条，排序另由排序控件决定
+          {
+            value: PERF_TARGET_REPO,
+            label: t("diagnostics.perfTargetRepo"),
+            title: t("diagnostics.perfTargetRepoHint"),
+          },
+        ],
+        esc,
+      ) +
+      "</optgroup>",
+  );
+  select.innerHTML = groups.join("");
   select.value = keep;
   // 原选中值不在新选项里（首次填充）→ 回到各自默认：单模型 / 全库扁平（与 Go 默认值一致）
   if (select.value !== keep) select.value = includeModel ? "" : PERF_TARGET_REPO;

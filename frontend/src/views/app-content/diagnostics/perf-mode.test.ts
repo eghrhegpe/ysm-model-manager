@@ -185,14 +185,14 @@ describe("基准模式接线（ADR-278）", () => {
     expect(iterLabel(root)?.textContent).toContain("重复解析");
   });
 
-  it("目标集标签在并发模式改为「取样范围」（并发没有单模型，同控件在 conc 下只剩选样本语义）", () => {
+  it("目标集标签在并发模式改为「测哪些」（并发没有单模型，同控件在 conc 下只剩选样本语义）", () => {
     const root = makeRoot("single");
     initPerfPanel(root, esc);
-    expect(targetLabel(root)?.textContent).toBe("测试范围");
+    expect(targetLabel(root)?.textContent).toBe("测什么");
     switchMode(root, "conc");
-    expect(targetLabel(root)?.textContent).toBe("取样范围");
+    expect(targetLabel(root)?.textContent).toBe("测哪些");
     switchMode(root, "single");
-    expect(targetLabel(root)?.textContent).toBe("测试范围");
+    expect(targetLabel(root)?.textContent).toBe("测什么");
   });
 
   it("三个运行按钮各自挂本模式「测什么对象」的 hint（防把引擎对照误读为再测一次模型）", () => {
@@ -225,7 +225,7 @@ describe("基准模式接线（ADR-278）", () => {
     switchMode(root, "conc");
     const msgs = concFallbackToastMsgs();
     expect(msgs.length).toBe(1);
-    expect(msgs[0]).toContain("全库扁平");
+    expect(msgs[0]).toContain("全库最重的几条");
     // 重放路径：填充完成后再次 apply()，值已是 __repo__ → 不重复弹
     await Promise.resolve();
     expect(concFallbackToastMsgs().length).toBe(1);

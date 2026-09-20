@@ -364,9 +364,9 @@ export const en: Record<string, string> = {
   "diagnostics.perfIterationsSuffixScan": " (repo rescan passes)",
   "diagnostics.perfIterationsHint":
     "Rounds over the same target (median taken); in engine comparison = full repo rescans",
-  "diagnostics.perfTargetSampleRange": "Sample range",
+  "diagnostics.perfTargetSampleRange": "Which to test",
   "diagnostics.perfConcTargetFallback":
-    "Concurrent bench has no single-model target: fell back to flat repo",
+    "Concurrent bench has no single-model target: fell back to top N of the whole repo",
   "diagnostics.perfModelPlaceholder": "Enter .ysm path (YSM only; PMX: use GUI 3D preview)",
   "diagnostics.perfModelHintFromTree":
     "Pick a model from the resource tree on the left and its path is filled in automatically",
@@ -502,7 +502,7 @@ export const en: Record<string, string> = {
   // repo = N of the whole repo). That rule lives in the title hint only — the label text stays put,
   // because a label that changes meaning with the mode is exactly the debt this change pays off.
   "diagnostics.perfMaxModelsHint":
-    "Unit follows the target set: one type = N of that type; all types = N per type; whole repo = N of the repo",
+    "This number means different things per scope: a type = N of that type; N per type = N of each type; top N of the whole repo = N of the repo",
   "diagnostics.perfMatrixResult": "Type matrix result",
   "diagnostics.perfMatrixColType": "Type",
   "diagnostics.perfMatrixColFound": "Found",
@@ -527,7 +527,9 @@ export const en: Record<string, string> = {
   "diagnostics.perfTrendNoData": "No trend yet — run single-bench twice or more to show the chart",
   "diagnostics.perfRunning": "Running…",
   "diagnostics.perfIdle": "Click the button above to start; results will appear here",
-  "diagnostics.perfMode": "Benchmark",
+  "diagnostics.perfMode": "How to run",
+  "diagnostics.perfModeHint":
+    "How to run = which benchmark command; \u201cWhat to test\u201d below = how wide this run goes. They are independent: pick the command, then the scope",
   "diagnostics.perfRunBench": "Benchmark",
   "diagnostics.perfRecord": "Perf Records",
   "diagnostics.perfFail": "Execution failed",

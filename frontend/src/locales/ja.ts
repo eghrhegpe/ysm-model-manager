@@ -366,9 +366,9 @@ export const ja: Record<string, string> = {
   "diagnostics.perfIterationsSuffixScan": "（リポジトリ再スキャン回数）",
   "diagnostics.perfIterationsHint":
     "同一対象を何回繰り返すか（中央値採用）；エンジン比較ではリポジトリ全体再スキャン回数",
-  "diagnostics.perfTargetSampleRange": "サンプル範囲",
+  "diagnostics.perfTargetSampleRange": "何を測るか（複数）",
   "diagnostics.perfConcTargetFallback":
-    "並列ベンチに単一モデル対象はない：フラット全ライブラリに回落しました",
+    "並列ベンチに単一モデル対象はない：全体で上位 N 件に回落しました",
   "diagnostics.perfModelPlaceholder":
     ".ysm モデルパスを入力（YSM のみシミュレート可；PMX は GUI 3D プレビューで実測）",
   "diagnostics.perfModelHintFromTree": "左のリソースツリーでモデルを選ぶとパスが自動入力されます",
@@ -498,7 +498,7 @@ export const ja: Record<string, string> = {
   // repo = 全体で N 件）。この規則は title ヒントにのみ置き、ラベル本文は変えない——
   // モードでラベルの意味が変わること自体が、今回清算する負債。
   "diagnostics.perfMaxModelsHint":
-    "単位は対象セットで変わります：あるタイプ = そのタイプ N 件；全タイプ = タイプ毎に N 件；全体 = 全体で N 件",
+    "この数値の意味は「何を測るか」で変わります：あるタイプ = そのタイプ N 件；各タイプ N 件 = タイプ毎に N 件；全体で上位 N 件 = 全体で N 件",
   "diagnostics.perfMatrixResult": "タイプ別マトリクス結果",
   "diagnostics.perfMatrixColType": "タイプ",
   "diagnostics.perfMatrixColFound": "該当",
@@ -522,7 +522,9 @@ export const ja: Record<string, string> = {
     "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",
   "diagnostics.perfRunning": "実行中…",
   "diagnostics.perfIdle": "上のボタンで開始；結果はここに表示されます",
-  "diagnostics.perfMode": "ベンチマーク",
+  "diagnostics.perfMode": "実行方法",
+  "diagnostics.perfModeHint":
+    "実行方法 = どのベンチマークコマンドを使うか；下の「何を測るか」= 今回測る範囲。両者は独立：コマンドを選んでから範囲を決めます",
   "diagnostics.perfRunBench": "ベンチ実行",
   "diagnostics.perfRecord": "パフォーマンス記録",
   "diagnostics.perfFail": "実行に失敗しました",

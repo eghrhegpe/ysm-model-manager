@@ -9,6 +9,7 @@ import { readPmxStats } from "@/preview-3d/adapters/mmd/mmd-detail-stats.ts";
 import { readVrmMeta } from "@/preview-3d/adapters/vrm/vrm-adapter.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
+import { renderIconHtml } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -304,14 +305,15 @@ export async function showStagePreview(
                 contents
                   .map((c) => {
                     const name = c.path.split(/[/\\]/).pop() || c.path;
-                    const icon =
+                    const icon = renderIconHtml(
                       c.kind === "vmd"
                         ? "🎬"
                         : c.kind === "audio"
                           ? "🎵"
                           : c.kind === "config"
                             ? "⚙️"
-                            : "📄";
+                            : "📄",
+                    );
                     const color =
                       c.kind === "vmd"
                         ? "var(--warning,#ffa050)"

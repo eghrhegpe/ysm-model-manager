@@ -110,7 +110,7 @@ func buildGuiFlowStructured(results []guiFlowResult, totalDuration time.Duration
 		items = append(items, guiFlowStageItem{
 			Status:      map[bool]string{true: "✅", false: "❌"}[r.Success],
 			Name:        r.Stage,
-			Ms:          float64(r.Duration.Microseconds()) / 1000,
+			Ms:          durationMs(r.Duration),
 			Kind:        kind,
 			Desc:        splitDescLines(r.Description),
 			EstimatedMs: float64(r.Estimated.Nanoseconds()) / 1e6,
@@ -120,8 +120,8 @@ func buildGuiFlowStructured(results []guiFlowResult, totalDuration time.Duration
 	}
 	return &guiFlowStructured{
 		Stages:      items,
-		TotalMs:     float64(totalDuration.Microseconds()) / 1000,
-		EstimatedMs: float64(estimatedTotal.Microseconds()) / 1000,
+		TotalMs:     durationMs(totalDuration),
+		EstimatedMs: durationMs(estimatedTotal),
 		Failed:      failed,
 	}
 }
@@ -637,12 +637,12 @@ func runPhaseDataPrep(model types.BedrockModel, modelPath string) guiFlowResult 
 		Estimated: transfer,
 		Note: fmt.Sprintf(
 			"载荷与序列化耗时为实测（%s / %.2fms）；仅传输时间按 %dMB/s 假设外推（CLI 观测不到 Wails IPC 通道），估算不计入总耗时",
-			fsutil.FormatSize(payloadBytes), float64(elapsed.Microseconds())/1000, ipcAssumedBytesPerSec/1024/1024,
+			fsutil.FormatSize(payloadBytes), durationMs(elapsed), ipcAssumedBytesPerSec/1024/1024,
 		),
 		Description: fmt.Sprintf(
 			"📦 数据就绪\n   载荷(实测 JSON): %s\n   序列化(实测): %.2fms\n   预计传输: %.0fms (假设 %dMB/s，估算)",
 			fsutil.FormatSize(payloadBytes),
-			float64(elapsed.Microseconds())/1000,
+			durationMs(elapsed),
 			transferMs,
 			ipcAssumedBytesPerSec/1024/1024,
 		),
@@ -720,7 +720,7 @@ func printFlowReport(results []guiFlowResult, totalDuration time.Duration, verbo
 
 		fmt.Printf("\n%s [%d] %s%s (%.2fms)\n",
 			status, i+1, r.Stage, kindMark,
-			float64(r.Duration.Microseconds())/1000)
+			durationMs(r.Duration))
 
 		// 打印描述（缩进）
 		for _, line := range strings.Split(r.Description, "\n") {
@@ -730,10 +730,10 @@ func printFlowReport(results []guiFlowResult, totalDuration time.Duration, verbo
 
 	fmt.Println()
 	fmt.Println(strings.Repeat("-", 70))
-	fmt.Printf("⏱️  总耗时: %.2fms（实测）\n", float64(totalDuration.Microseconds())/1000)
+	fmt.Printf("⏱️  总耗时: %.2fms（实测）\n", durationMs(totalDuration))
 	if estimatedTotal > 0 {
 		// ADR-262 D2：估算单独呈现，不进总耗时
-		fmt.Printf("📐 其中估算: %.2fms（不计入总耗时）\n", float64(estimatedTotal.Microseconds())/1000)
+		fmt.Printf("📐 其中估算: %.2fms（不计入总耗时）\n", durationMs(estimatedTotal))
 	}
 	fmt.Printf("📈 成功: %d, 失败: %d\n", successCount, failCount)
 

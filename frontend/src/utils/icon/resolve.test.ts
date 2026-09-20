@@ -13,8 +13,7 @@ describe("renderIconHtml 三态", () => {
   });
   it("语义名 → resolveIcon 产物 SVG（preview-router 的 icon:\"unknown\" 字面名回归）", () => {
     const html = renderIconHtml("unknown");
-    expect(html).toContain("<svg");
-    expect(html).not.toBe("unknown"); // 旧裸插值会把「unknown」当文本显示
+    expect(html).toBe(UI_ICONS.unknown); // 强断言：产物须恰好是 UI_ICONS.unknown（防外壳被改后仍 toContain("<svg") 假绿）
   });
   it("数据图标字形（DataGlyph）→ 文本原样落位", () => {
     expect(renderIconHtml("☀️")).toBe("☀️");

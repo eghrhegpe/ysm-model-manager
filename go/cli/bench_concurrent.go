@@ -559,7 +559,7 @@ func runSingleBench(ctx *CmdContext) error {
 	}
 
 	fmt.Println()
-	fmt.Printf("⏱️  总耗时（%d 次迭代）: %.2fms\n", *iterations, float64(totalDuration.Microseconds())/1000)
+	fmt.Printf("⏱️  总耗时（%d 次迭代）: %.2fms\n", *iterations, durationMs(totalDuration))
 
 	if len(allStages) > 0 {
 		printOptimizationHints(allStages[0])
@@ -731,7 +731,7 @@ func benchOneModel(a AppService, modelPath, filesRoot string, iterations int) (s
 	avg := avgBenchStages(allStages)
 	stageJSON, bottleneckName := stagesToJSON(avg, allStages)
 
-	totalMs := float64(totalDuration.Microseconds()) / 1000
+	totalMs := durationMs(totalDuration)
 	// 单次平均：AI/前端问「这个模型加载一次多久」时要的是它，而非 N 次累计
 	perIterationMs := totalMs
 	if iterations > 0 {
@@ -1105,7 +1105,7 @@ func parseStageName(path string) string {
 func generateHints(stages []singleBenchStage) []string {
 	var hints []string
 	for _, s := range stages {
-		ms := float64(s.Duration.Microseconds()) / 1000
+		ms := durationMs(s.Duration)
 		if ms <= 10 {
 			continue
 		}
@@ -1190,9 +1190,9 @@ func avgBenchStages(allStages [][]singleBenchStage) []singleBenchStage {
 	return out
 }
 
-// msOf 阶段耗时转毫秒
+// msOf 阶段耗时转毫秒（纳秒精度，与 durationMs 同口径——亚毫秒阶段不截断成 0）
 func msOf(s singleBenchStage) float64 {
-	return float64(s.Duration.Microseconds()) / 1000
+	return durationMs(s.Duration)
 }
 
 // durationMs 裸 duration → 毫秒（纳秒精度）。

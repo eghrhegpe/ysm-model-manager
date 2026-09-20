@@ -76,6 +76,10 @@ export function applyIcon(el: HTMLElement, icon: string | undefined): void {
  */
 export function renderIconHtml(icon: string | undefined): string {
   if (!icon) return "";
-  if (icon.includes("<svg")) return icon; // 预构建 SVG 常量透传（esc 会把它们打成字面文本）
+  // 预构建 SVG 常量透传（esc 会把它们打成字面文本）。
+  // 入参仅限 UI_ICONS 常量 / 语义名 / DataGlyph 字形（typeIconOf、UI_ICONS 表派生），
+  // 禁止喂外部输入（URL 参数、文件名派生等）——`<svg` 前缀无白名单校验，刻意 `<svg`
+  // 开头的外部数据会原样进 innerHTML（XSS 放大面）。
+  if (icon.includes("<svg")) return icon;
   return resolveIcon(icon) || esc(icon); // 语义名→SVG；其余→转义文本（数据图标兼容态）
 }

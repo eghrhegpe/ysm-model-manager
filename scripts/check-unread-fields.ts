@@ -237,6 +237,11 @@ function findDocStart(lines: string[], declIdx: number): number {
  *   - `x.field` / `x?.field`
  *   - `x["field"]` / `x['field']`
  * 三种形态都要求前面有属性访问符，才算「真读了这个字段」。
+ *
+ * ⚠️ 已知盲区（读数可能偏低，非零读取误报）——**解构赋值**（`const { field } = obj` /
+ * `({ field }: obj)` / 函数参数解构）不含 `.`/`?.`/`[""]`，本计数不命中。前端消费契约
+ * 对象时若大量用解构，字段会被误判「零读取」。处置：脚本报告只作**摸排线索**，删字段前
+ * 须人工核对解构形态；`--strict` 阻断模式下慎用本工具判零。
  */
 function countFieldReads(field: string, texts: string[]): number {
   const esc = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

@@ -4,15 +4,12 @@
 //   - ground-visible：平铺 toggle（ground 无 getMasterToggle——visible 是 params 级）
 //   - ground-grid-visible：参考网格（GridHelper 层）平铺 toggle，与总开关/材质层正交
 //   - 材质组 folder（preview.groundGroupMaterial）：mat-source select + 3 color +
-//     9 slider 原生节点；2 button（texture/clear，variant/getHint）→ controls 通道节点
-//     （PreviewControlDef 树内嵌，保 variant/disabled/getHint 语义——节点 button 不承载）
+//     9 slider 原生节点；2 button（texture/clear）原生 button 节点直持
+//     variant/getHint/action（rmAppendButton 按钮臂，锐评修复 2026-09-20）
 // visibleWhen 谓词（B 轨快照驱动）原样挂节点。
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
-import type {
-  PreviewControlDef,
-  PreviewMenuNode,
-} from "@/preview-3d/menu/schema/menu-node-types.ts";
+import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCapability } from "./ground-capability.ts";
@@ -88,46 +85,38 @@ function sliderNode(
   };
 }
 
-/** 贴图按钮（PreviewControlDef 保 variant/getHint——controls 通道节点承载） */
-function textureButtonsNode(cap: GroundCapability): PreviewMenuNode {
-  const buttons: PreviewControlDef[] = [
+/** 贴图按钮：原生 button 节点直持 variant/getHint（锐评修复 2026-09-20——
+ *  rmAppendButton 补齐 control 按钮臂后，不再绕道 controls 通道塞空桩 getValue/setValue）。 */
+function textureButtonsNode(cap: GroundCapability): PreviewMenuNode[] {
+  const sourceIsTexture = (s: Partial<PreviewSnapshot>): boolean =>
+    s["env.groundSourceKind"] === "texture";
+  return [
     {
       id: "ground-mat-texture",
       kind: "button",
       labelKey: "preview.groundMatPick",
-      fallback: "选择贴图",
-      group: MAT_GROUP,
-      button: {
-        textKey: "preview.groundMatPick",
-        getHint: () => cap.getCustomTexName() || "",
+      visibleWhen: sourceIsTexture,
+      control: {
         variant: "primary",
+        getHint: () => cap.getCustomTexName() || "",
         action: () => cap.openTexturePicker(),
       },
-      getValue: () => null,
-      setValue: () => {},
-      visibleWhen: (s) => s["env.groundSourceKind"] === "texture",
     },
     {
       id: "ground-mat-clear",
       kind: "button",
       labelKey: "preview.groundMatClear",
-      fallback: "清除贴图",
-      group: MAT_GROUP,
-      button: {
-        textKey: "preview.groundMatClear",
+      visibleWhen: sourceIsTexture,
+      control: {
         variant: "ghost",
         action: () => cap.clearCustomTexture(),
       },
-      getValue: () => null,
-      setValue: () => {},
-      visibleWhen: (s) => s["env.groundSourceKind"] === "texture",
     },
   ];
-  return { id: "cap-group-ground-texture-buttons", kind: "controls", controls: buttons };
 }
 
 /** 材质组 folder：mat-source + 原生 color/slider 按原控件顺序排布，
- *  texture/clear 按钮位插 controls 通道节点（保序保语义）。 */
+ *  texture/clear 按钮位插原生 button 节点（保序保语义）。 */
 function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
   const children: PreviewMenuNode[] = [
     {
@@ -201,7 +190,7 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
       getParamRange("groundMatAngleDeg"),
       { get: () => cap.getMatAngle(), set: (v) => cap.setMatAngle(v) },
     ),
-    textureButtonsNode(cap),
+    ...textureButtonsNode(cap),
     sliderNode(
       "ground-mat-opacity",
       "preview.groundMatOpacity",

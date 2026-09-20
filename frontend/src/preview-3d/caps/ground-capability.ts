@@ -4,16 +4,23 @@
 // apply() 挂入场景，dispose() 移除并释放，作用域不泄漏到其它预览。
 
 import * as THREE from "three";
+import { bus } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
-import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
+import {
+  registerEnvCallback,
+  resumeEnvCallbacks,
+  suspendEnvCallbacks,
+} from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, registerEnvStateMiddleware, setEnvState } from "@/preview-3d/state/env-state.ts";
-import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { clampFieldValue } from "@/preview-3d/state/env-state-schema.ts";
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { buildGroundNodes } from "./ground-menu.ts";
 import {
   applyGroundSurfaceAppearance,
@@ -121,17 +128,52 @@ export class GroundCapability implements SceneCapability {
     // ADR-196：订阅 envState 变更（只接收 ground 组的键，dispatcher 前置过滤）
     this.unsubscribeEnv = registerEnvCallback(
       this,
-      () => {
-        // 任何 ground 组字段变更都触发 refreshSurface + refreshOverlay + 网格显隐同步。
-        // 网格必须走同一回调：直接 setEnvState 写 groundGridVisible/groundVisible 的路径
-        // （存档恢复、预设快照、外部调用）不经 setter 的显式落地，漏同步即「半隐形残影」
-        // ——历史同形缺陷：loadState 只写 envState，grid.visible 停在构造默认。
+      (changed) => {
+        // ground 组字段变更的唯一落地出口（几何同步 + refreshSurface/Overlay + 网格显隐）。
+        // setter 内的手动 refresh 已删（锐评修复 2026-09-20）：旧接线 setter 手动 refresh +
+        // 本回调 = 每次击键双刷，全靠 refresh 幂等 + needsRebuild 判别才没炸。
+        // 网格必须走本回调：直接 setEnvState 写 groundGridVisible/groundVisible 的路径
+        // （存档恢复、预设快照、外部调用）不经 setter；漏同步即「半隐形残影」——
+        // 历史同形缺陷：loadState 只写 envState，grid.visible 停在构造默认。
+        this.syncGeometry(changed);
         this.refreshSurface();
         this.refreshOverlay();
         this.updateGridVisible();
       },
       "ground",
     );
+  }
+
+  /** groundSize/divisions/color 系的几何落地：平面换装 + GridHelper 重建。
+   *  这四键无菜单出口但有存档恢复通路，此前只在构造期读一次——恢复写入永不落地，
+   *  存档改了尺寸重启仍是旧尺寸（与 gridVisible「存档重启重现」同形病例，
+   *  锐评修复 2026-09-20）。GridHelper 无 resize API，直接重建；重建后 visible
+   *  由同一回调尾部的 updateGridVisible 收敛，不依赖构造态。 */
+  private syncGeometry(changed: Set<EnvStateKey>): void {
+    if (changed.has("groundSize")) {
+      for (const mesh of [this.surface, this.overlay]) {
+        mesh.geometry.dispose();
+        mesh.geometry = new THREE.PlaneGeometry(envState.groundSize, envState.groundSize);
+      }
+    }
+    if (
+      changed.has("groundSize") ||
+      changed.has("groundDivisions") ||
+      changed.has("groundColorCenter") ||
+      changed.has("groundColorGrid")
+    ) {
+      const parent = this.grid.parent;
+      if (parent) parent.remove(this.grid);
+      this.grid.geometry.dispose();
+      const gridMat = this.grid.material;
+      if (Array.isArray(gridMat))
+        gridMat.forEach((m) => {
+          m.dispose();
+        });
+      else gridMat.dispose();
+      this.grid = this.createGridHelper();
+      if (parent) parent.add(this.grid);
+    }
   }
 
   private createGridHelper(): THREE.GridHelper {
@@ -202,6 +244,12 @@ export class GroundCapability implements SceneCapability {
       this.rebuildOverlay(next);
     } else if (this.overlayMat) {
       this.overlayMat.opacity = next.opacity;
+      // groundSize 变更（几何已由 syncGeometry 换装）且样式不变时走此原地分支：
+      // 世界格重复密度必须跟着重算，否则「格线尺寸」与新地面脱锚。
+      if (this.overlayTex) {
+        const rep = textureRepeat(envState.groundSize, Math.max(1, next.size));
+        this.overlayTex.repeat.set(rep, rep);
+      }
       this.overlayMat.needsUpdate = true;
     }
     this.overlay.visible = this.enabled && envState.groundVisible;
@@ -246,11 +294,9 @@ export class GroundCapability implements SceneCapability {
   /** 地面总显隐开关（参考网格/表面层/叠加层均跟随；水面由 water.enabled 独立控制） */
   setVisible(v: boolean): void {
     setEnvState({ groundVisible: v }, { source: "manual" });
-    this.updateGridVisible();
-    this.updateSurfaceVisible();
-    // 叠加层同步跟随（无条件赋值）：不跟随会留「地面已隐、格线还漂」的半隐形残影
-    // （surface 层同形历史缺陷，见本文件 L616-617 注释；review 268cc3c21 P2-2）
-    this.overlay.visible = v && this.enabled;
+    // 三层显隐同步（含叠加层跟随）已全部归入 ground 回调单路径（锐评修复 2026-09-20）：
+    // 旧接线在此手改 overlay.visible 是为堵「地面已隐、格线还漂」残影，
+    // 而 refreshOverlay 尾部本就无条件重算 visible，同一判据不需两处表达。
   }
 
   /** 总开关真值源 = envState.groundVisible。
@@ -264,7 +310,7 @@ export class GroundCapability implements SceneCapability {
    *  「选了纯色/贴图材质仍关不掉底下 y=0 参考网格」的历史遗留（知识卡「已知遗留 1」）。 */
   setGridVisible(v: boolean): void {
     setEnvState({ groundGridVisible: v }, { source: "manual" });
-    this.updateGridVisible();
+    // 网格显隐落地归 ground 回调单路径（同值重写仍派发，回调幂等重算无碍）。
   }
 
   getGridVisible(): boolean {
@@ -382,6 +428,8 @@ export class GroundCapability implements SceneCapability {
     }
     this.customTex = tex;
     this.customTexName = name;
+    // 落地归 ground 回调单路径：同值重写（texture 态重选图）仍派发（setEnvState 无同值
+    // 去重，见 env-state.ts 契约注释），回调 refreshSurface 读新 textureToken → rebuild。
     setEnvState({ groundSourceKind: "texture" }, { source: "manual" });
   }
 
@@ -396,6 +444,8 @@ export class GroundCapability implements SceneCapability {
     if (envState.groundSourceKind === "texture")
       setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "plain" }, { source: "manual" });
     if (wasAttached) this.surfaceTex = null;
+    // 显式落地（refresh 单路径的合法例外）：非 texture 态下清缓存不写 envState → 不派发；
+    // 且 customTex 摘除是私有态变更、不在 envState 里——不显式 refresh 会留悬空引用。
     this.refreshSurface();
   }
 
@@ -411,7 +461,16 @@ export class GroundCapability implements SceneCapability {
       new THREE.TextureLoader()
         .loadAsync(url)
         .then((tex) => this.acceptLoadedTexture(tex, file.name))
-        .catch(() => dbg("ground-tex-load-fail", { name: file.name }))
+        .catch(() => {
+          // 失败对用户可见（锐评修复 2026-09-20：旧行为静默 dbg，选图失败零反馈）；
+          // 口径对齐 infra/preview-loading showLoadFailure：bus 发 toast，cap 不直接碰 DOM。
+          dbg("ground-tex-load-fail", { name: file.name });
+          bus.emit("toast:show", {
+            msg: `❌ ${t("preview.groundMatLoadFailed")}: ${file.name}`,
+            duration: TOAST_MS.normal,
+            type: "error",
+          });
+        })
         .finally(() => URL.revokeObjectURL(url));
     };
     input.click();
@@ -441,7 +500,6 @@ export class GroundCapability implements SceneCapability {
       },
       { source: "manual" },
     );
-    this.refreshSurface();
     this.notify();
   }
 
@@ -452,7 +510,6 @@ export class GroundCapability implements SceneCapability {
   setSourceKind(kind: GroundSourceKind): void {
     if (envState.groundSourceKind === kind) return;
     setEnvState({ groundSourceKind: kind }, { source: "manual" });
-    this.refreshSurface();
     this.notify();
   }
   getCanvasStyle(): GroundCanvasStyle {
@@ -461,7 +518,6 @@ export class GroundCapability implements SceneCapability {
   setCanvasStyle(style: GroundCanvasStyle): void {
     if (envState.groundCanvasStyle === style) return;
     setEnvState({ groundCanvasStyle: style }, { source: "manual" });
-    this.refreshSurface();
     this.notify();
   }
 
@@ -472,7 +528,6 @@ export class GroundCapability implements SceneCapability {
   setOverlayStyle(style: GroundOverlayStyle): void {
     if (envState.groundOverlay === style) return;
     setEnvState({ groundOverlay: style }, { source: "manual" });
-    this.refreshOverlay();
     this.notify();
   }
   getOverlayColor(): number {
@@ -481,7 +536,6 @@ export class GroundCapability implements SceneCapability {
   setOverlayColor(hex: number): void {
     if (envState.groundOverlayColor === hex) return;
     setEnvState({ groundOverlayColor: hex }, { source: "manual" });
-    this.refreshOverlay();
     this.notify();
   }
   getOverlaySize(): number {
@@ -492,7 +546,6 @@ export class GroundCapability implements SceneCapability {
     const clamped = clampFieldValue("groundOverlaySize", Math.round(n));
     if (envState.groundOverlaySize === clamped) return;
     setEnvState({ groundOverlaySize: clamped }, { source: "manual" });
-    this.refreshOverlay();
     this.notify();
   }
   getOverlayOpacity(): number {
@@ -503,7 +556,6 @@ export class GroundCapability implements SceneCapability {
     const clamped = clampFieldValue("groundOverlayOpacity", v);
     if (envState.groundOverlayOpacity === clamped) return;
     setEnvState({ groundOverlayOpacity: clamped }, { source: "manual" });
-    this.refreshOverlay();
     this.notify();
   }
 
@@ -516,55 +568,47 @@ export class GroundCapability implements SceneCapability {
     this.listenerSet.notify();
   }
   setMatColor(hex: number): void {
-    setEnvState({ groundMatColor: hex }, { source: "manual" });
-    this.refreshSurface();
+    setEnvState({ groundMatColor: hex }, { source: "manual" }); // 落地经 ground 回调单路径
   }
   setMatGridSize(n: number): void {
     // 取整是数据类型归一（非值域）；合法域 [2,32] 由唯一写入口钳制（ADR-283）
-    setEnvState({ groundMatGridSize: Math.round(n) }, { source: "manual" });
-    this.refreshSurface();
+    setEnvState({ groundMatGridSize: Math.round(n) }, { source: "manual" }); // 落地经 ground 回调
   }
   getMatOpacity(): number {
     return envState.groundMatOpacity;
   }
   setMatOpacity(v: number): void {
     setEnvState({ groundMatOpacity: v }, { source: "manual" }); // 值域钳制在唯一写入口（ADR-283）
-    this.refreshSurface();
   }
   getMatScale(): number {
     return envState.groundMatScale;
   }
   setMatScale(v: number): void {
     setEnvState({ groundMatScale: v }, { source: "manual" }); // 值域钳制在唯一写入口（ADR-283）
-    this.refreshSurface();
   }
   getMatRotation(): number {
     return envState.groundMatRotationDeg;
   }
   setMatRotation(deg: number): void {
     setEnvState({ groundMatRotationDeg: ((deg % 360) + 360) % 360 }, { source: "manual" });
-    this.refreshSurface();
   }
   getMatRoughness(): number {
     return envState.groundMatRoughness;
   }
   setMatRoughness(v: number): void {
     setEnvState({ groundMatRoughness: v }, { source: "manual" });
-    this.refreshSurface();
   }
   getMatMetalness(): number {
     return envState.groundMatMetalness;
   }
   setMatMetalness(v: number): void {
     setEnvState({ groundMatMetalness: v }, { source: "manual" });
-    this.refreshSurface();
   }
   getMatColor2(): number {
     return envState.groundMatColor2;
   }
   setMatColor2(hex: number): void {
     setEnvState({ groundMatColor2: hex }, { source: "manual" });
-    this.refreshSurface();
   }
   /* 菜单 getter */
   getMatColor(): number {
@@ -581,14 +625,12 @@ export class GroundCapability implements SceneCapability {
   }
   setMatDensity(v: number, opts?: { skipMiddleware?: boolean }): void {
     setEnvState({ groundMatDensity: v }, { source: "manual", ...opts });
-    this.refreshSurface();
   }
   getMatAngle(): number {
     return envState.groundMatAngleDeg;
   }
   setMatAngle(deg: number, opts?: { skipMiddleware?: boolean }): void {
     setEnvState({ groundMatAngleDeg: ((deg % 360) + 360) % 360 }, { source: "manual", ...opts });
-    this.refreshSurface();
   }
   /** 存档恢复：委托同一 setter + skipMiddleware（还原非手改，不触发「脱离预设」标记，ADR-254）。
    *  委托而非独立方法：clamp/取模 边界单一事实源，避免与用户 setter 双写漂移。 */
@@ -760,71 +802,92 @@ export class GroundCapability implements SceneCapability {
         }
       }
     }
-    restoreFields(state, {
-      enabled: {
-        boolean: (v) => {
-          this.enabled = v;
+    // 重入治理（对齐 light 侧 ADR-281 口径）：restoreFields 内部逐字段 setEnvState 会
+    // **同步**触发 ground 回调 → 每字段一次 refresh/syncGeometry（含 GridHelper 重建）。
+    // 挂起后恢复只写 envState，末尾统一应用一次——二十余字段 = 一次落地。
+    suspendEnvCallbacks();
+    try {
+      restoreFields(state, {
+        enabled: {
+          boolean: (v) => {
+            this.enabled = v;
+          },
         },
-      },
-      groundVisible: {
-        // 改走 setVisible——原绑定只写 envState，
-        // env 回调 changed 键集不含 groundVisible → grid.visible 停在构造默认 true，
-        // 「隐藏地面」存档重启后网格重现（半隐形地面：surface 隐藏 grid 仍显示）
-        boolean: (v) => this.setVisible(v),
-      },
-      groundGridVisible: {
-        // 同 groundVisible：走 setter 保 grid 同步（直接写 envState 会让参考网格
-        // 显隐停在构造态，重踏「半隐形」覆辙）；旧存档缺该键 → 保持 schema 默认 true
-        boolean: (v) => this.setGridVisible(v),
-      },
-      groundSourceKind: oneOf(GROUND_SOURCE_KINDS, (v) =>
-        setEnvState({ groundSourceKind: v }, { source: "manual", skipMiddleware: true }),
-      ),
-      // ADR-254：恢复路径全部 skipMiddleware——存档还原是**非用户手改**写入，
-      // 配色/形状还原不得触发「手改即 custom」中间件（实测：逐字段恢复会把
-      // 用户选的预设恒打成 custom，名实不符）。preset 单独 oneOf 恢复；
-      // 旧存档缺该字段 → 回退 plain（与 schema 默认一致，保守兜底）。
-      groundMaterialPreset: oneOf([...GROUND_MATERIAL_PRESET_IDS, "custom"] as const, (v) =>
-        setEnvState({ groundMaterialPreset: v }, { source: "manual", skipMiddleware: true }),
-      ),
-      groundCanvasStyle: oneOf(GROUND_CANVAS_STYLES, (v) =>
-        setEnvState({ groundCanvasStyle: v }, { source: "manual", skipMiddleware: true }),
-      ),
-      groundSize: { number: (v) => setEnvState({ groundSize: v }, { source: "manual" }) },
-      groundDivisions: { number: (v) => setEnvState({ groundDivisions: v }, { source: "manual" }) },
-      groundColorCenter: {
-        number: (v) => setEnvState({ groundColorCenter: v }, { source: "manual" }),
-      },
-      groundColorGrid: { number: (v) => setEnvState({ groundColorGrid: v }, { source: "manual" }) },
-      groundMatColor: {
-        number: (v) =>
-          setEnvState({ groundMatColor: v }, { source: "manual", skipMiddleware: true }),
-      },
-      groundMatColor2: {
-        number: (v) =>
-          setEnvState({ groundMatColor2: v }, { source: "manual", skipMiddleware: true }),
-      },
-      groundMatGridSize: {
-        number: (v) =>
-          setEnvState({ groundMatGridSize: v }, { source: "manual", skipMiddleware: true }),
-      },
-      groundMatOpacity: { number: (v) => this.setMatOpacity(v) },
-      groundMatScale: { number: (v) => this.setMatScale(v) },
-      groundMatRotationDeg: { number: (v) => this.setMatRotation(v) },
-      groundMatDensity: { number: (v) => this.setMatDensityRestore(v) },
-      groundMatAngleDeg: { number: (v) => this.setMatAngleRestore(v) },
-      groundMatRoughness: { number: (v) => this.setMatRoughness(v) },
-      groundMatMetalness: { number: (v) => this.setMatMetalness(v) },
-      // ADR-249 §2.3 叠加层恢复
-      groundOverlay: oneOf(GROUND_OVERLAY_STYLES, (v) =>
-        setEnvState({ groundOverlay: v }, { source: "manual" }),
-      ),
-      groundOverlayColor: {
-        number: (v) => setEnvState({ groundOverlayColor: v }, { source: "manual" }),
-      },
-      groundOverlaySize: { number: (v) => this.setOverlaySize(v) },
-      groundOverlayOpacity: { number: (v) => this.setOverlayOpacity(v) },
-    });
+        groundVisible: {
+          // 走 setVisible（内部写 envState，挂起期不派发）；末尾统一落地覆盖。
+          boolean: (v) => this.setVisible(v),
+        },
+        groundGridVisible: {
+          // 同 groundVisible；旧存档缺该键 → 保持 schema 默认 true
+          boolean: (v) => this.setGridVisible(v),
+        },
+        groundSourceKind: oneOf(GROUND_SOURCE_KINDS, (v) =>
+          setEnvState({ groundSourceKind: v }, { source: "manual", skipMiddleware: true }),
+        ),
+        // ADR-254：恢复路径全部 skipMiddleware——存档还原是**非用户手改**写入，
+        // 配色/形状还原不得触发「手改即 custom」中间件（实测：逐字段恢复会把
+        // 用户选的预设恒打成 custom，名实不符）。旧存档缺该字段 → 回退 plain。
+        groundMaterialPreset: oneOf([...GROUND_MATERIAL_PRESET_IDS, "custom"] as const, (v) =>
+          setEnvState({ groundMaterialPreset: v }, { source: "manual", skipMiddleware: true }),
+        ),
+        groundCanvasStyle: oneOf(GROUND_CANVAS_STYLES, (v) =>
+          setEnvState({ groundCanvasStyle: v }, { source: "manual", skipMiddleware: true }),
+        ),
+        groundSize: { number: (v) => setEnvState({ groundSize: v }, { source: "manual" }) },
+        groundDivisions: {
+          number: (v) => setEnvState({ groundDivisions: v }, { source: "manual" }),
+        },
+        groundColorCenter: {
+          number: (v) => setEnvState({ groundColorCenter: v }, { source: "manual" }),
+        },
+        groundColorGrid: {
+          number: (v) => setEnvState({ groundColorGrid: v }, { source: "manual" }),
+        },
+        groundMatColor: {
+          number: (v) =>
+            setEnvState({ groundMatColor: v }, { source: "manual", skipMiddleware: true }),
+        },
+        groundMatColor2: {
+          number: (v) =>
+            setEnvState({ groundMatColor2: v }, { source: "manual", skipMiddleware: true }),
+        },
+        groundMatGridSize: {
+          number: (v) =>
+            setEnvState({ groundMatGridSize: v }, { source: "manual", skipMiddleware: true }),
+        },
+        groundMatOpacity: { number: (v) => this.setMatOpacity(v) },
+        groundMatScale: { number: (v) => this.setMatScale(v) },
+        groundMatRotationDeg: { number: (v) => this.setMatRotation(v) },
+        groundMatDensity: { number: (v) => this.setMatDensityRestore(v) },
+        groundMatAngleDeg: { number: (v) => this.setMatAngleRestore(v) },
+        groundMatRoughness: { number: (v) => this.setMatRoughness(v) },
+        groundMatMetalness: { number: (v) => this.setMatMetalness(v) },
+        // ADR-249 §2.3 叠加层恢复
+        groundOverlay: oneOf(GROUND_OVERLAY_STYLES, (v) =>
+          setEnvState({ groundOverlay: v }, { source: "manual" }),
+        ),
+        groundOverlayColor: {
+          number: (v) => setEnvState({ groundOverlayColor: v }, { source: "manual" }),
+        },
+        groundOverlaySize: { number: (v) => this.setOverlaySize(v) },
+        groundOverlayOpacity: { number: (v) => this.setOverlayOpacity(v) },
+      });
+    } finally {
+      resumeEnvCallbacks();
+    }
+    // 统一落地一次（与 ground 回调体同序）：几何同步吃满四键（loadState 后
+    // 无从知晓哪些真变了，重建一次 GridHelper 的代价可忽略）。
+    this.syncGeometry(
+      new Set<EnvStateKey>([
+        "groundSize",
+        "groundDivisions",
+        "groundColorCenter",
+        "groundColorGrid",
+      ]),
+    );
+    this.refreshSurface();
+    this.refreshOverlay();
+    this.updateGridVisible();
   }
 
   /** 移除并释放 */

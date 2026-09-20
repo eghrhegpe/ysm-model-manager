@@ -88,6 +88,12 @@ export function setEnvState(
     if (force || shouldOverwrite(key as string, source)) {
       // ADR-283：值域钳制在**唯一写入口**执行——setter / 存档恢复 / 预设 / 中间件产物
       // 一律就范，各 cap 不再自备 clamp（防「一处参数六处接线各钳一套」）。
+      // ⚠️ 故意不做「同值去重」（锐评修复 2026-09-20 实测回退）：同值重写派发是
+      // 多 cap 的既有契约——shadow setMapSize(2048) 重写触发 structural 重应用、
+      // skyForceEnv 等「本次 patch 携带即要求响应」的脉冲键粘滞后再写仍是新请求。
+      // 中央去重会静默吞掉这些重触发（三套回归用例实证）。省白刷的责任下沉到
+      // 各 cap 的离散 setter 早退守卫；但注意带意图的写入（如地面「手改即 custom」
+      // 中间件所消费的 mat 系键）同值写仍是新请求，不得局部早退。
       (envState as unknown as Record<string, unknown>)[key as string] = clampFieldValue(
         key,
         patch[key],

@@ -43,7 +43,7 @@ export interface CapControlView {
     onCommit?: (v: number) => void;
   };
   /** select 专属 */
-  select?: Array<{ value: string; label: string; labelKey?: LocaleKey }>;
+  select?: Array<{ value: string; label?: string; labelKey?: LocaleKey }>;
 }
 
 /**
@@ -319,7 +319,9 @@ export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
   for (const opt of v.select ?? []) {
     const o = document.createElement("option");
     o.value = opt.value;
-    o.textContent = opt.labelKey ? tOf(opt.labelKey) : opt.label;
+    // label 可选（379d2abc9 select 去明文冗余）：labelKey/label 双缺以 value 兜底，
+    // 原生 option 无文案时显示裸值胜过空白（CapControlView.select 类型已同步放宽）。
+    o.textContent = opt.labelKey ? tOf(opt.labelKey) : (opt.label ?? opt.value);
     sel.appendChild(o);
   }
   sel.value = String(v.getValue());

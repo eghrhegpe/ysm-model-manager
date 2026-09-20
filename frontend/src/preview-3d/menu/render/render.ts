@@ -394,7 +394,11 @@ function rmMakeRowBase(node: PreviewMenuNode): { row: HTMLDivElement; lb: HTMLSp
   return { row, lb };
 }
 
-/** [子函数 3/6] button：操作按钮行 */
+/** [子函数 3/6] button：操作按钮行。
+ *  两形态（锐评修复 2026-09-20）：control 携按钮语义（action/variant/getHint/disabled）
+ *  时渲染行内真按钮（对齐 cap 栈 renderCapButton 视觉：cc-btn + 动态 hint + 异步禁用）；
+ *  无 control 保持整行 action（导航钮形态，历史行为）。旧接线下节点 button 不承载
+ *  variant/getHint，迫使地面贴图按钮绕道 controls 通道——此臂补齐后绕道退役。 */
 function rmAppendButton(
   container: HTMLElement,
   node: PreviewMenuNode,
@@ -402,7 +406,38 @@ function rmAppendButton(
 ): void {
   const { row, lb } = rmMakeRowBase(node);
   lb.textContent = rmLabel(node);
-  rmBindActionClick(row, node.action, actionCtx);
+  const spec = node.control;
+  if (spec && (spec.action || spec.variant || spec.getHint || spec.disabled)) {
+    const btn = document.createElement("button");
+    btn.className = spec.variant === "primary" ? "cc-btn cc-btn-primary" : "cc-btn cc-btn-ghost";
+    btn.textContent = spec.text ? tOf(spec.text) : rmLabel(node);
+    const hint = document.createElement("span");
+    hint.className = "cc-hint cc-hint-45";
+    const syncHint = (): void => {
+      hint.textContent = spec.getHint?.() ?? (spec.hintKey ? tOf(spec.hintKey) : "");
+    };
+    syncHint();
+    const applyDisabled = (): void => {
+      const d = spec.disabled?.() ?? false;
+      btn.disabled = d;
+      btn.style.opacity = d ? "0.5" : "1";
+    };
+    applyDisabled();
+    btn.onclick = async (): Promise<void> => {
+      if (!spec.action || btn.disabled) return;
+      btn.disabled = true;
+      btn.style.opacity = "0.5";
+      try {
+        await spec.action();
+      } finally {
+        applyDisabled();
+        syncHint();
+      }
+    };
+    row.append(btn, hint);
+  } else {
+    rmBindActionClick(row, node.action, actionCtx);
+  }
   container.appendChild(row);
 }
 

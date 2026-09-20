@@ -170,9 +170,11 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const mat = surf.material as THREE.MeshStandardMaterial;
     expect(surf.visible).toBe(true);
     expect(mat.map).toBe(tex);
-    const btnNode = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
-    const btn = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)![0]!;
-    expect(btn!.button!.getHint!()).toContain("wood.png");
+    const btn = cap
+      .getMenuNodes()
+      .find((n) => n.id === "cap-group-ground-material")!
+      .children!.find((c) => c.id === "ground-mat-texture")!;
+    expect(btn.control!.getHint!()).toContain("wood.png");
   });
 
   it("clearCustomTexture：释放缓存并回退 canvas/plain（ADR-249 不再改写为语义无关模式）", () => {
@@ -441,8 +443,11 @@ describe("GroundCapability — 材质参数 setter 批量", () => {
     expect(disposeSpy).toHaveBeenCalled();
     const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.map).toBe(tex2);
-    const hintNode = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
-    const hint = (typeof hintNode.controls === "function" ? hintNode.controls() : hintNode.controls)![0]!.button!.getHint!();
+    const hintNode = cap
+      .getMenuNodes()
+      .find((n) => n.id === "cap-group-ground-material")!
+      .children!.find((c) => c.id === "ground-mat-texture")!;
+    const hint = hintNode.control!.getHint!();
     expect(hint).toContain("b.png");
   });
 
@@ -511,28 +516,27 @@ describe("GroundCapability — 菜单控件联动", () => {
     expect(by("ground-mat-metalness").control!.get!(undefined)).toBe(0.2);
   });
 
-  it("button 控件：getValue null、setValue no-op、visibleWhen 随来源切换（controls 通道节点）", () => {
+  it("button 节点：原生形态持 variant/action，visibleWhen 随来源切换（锐评修复：controls 绕道退役）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const btnNode = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
-    const btnControls = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)!;
-    const pick = btnControls[0]!;
-    const clear = btnControls[1]!;
+    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
+    const pick = folder.children!.find((c) => c.id === "ground-mat-texture")!;
+    const clear = folder.children!.find((c) => c.id === "ground-mat-clear")!;
     const snap = (src: string) => ({ "env.groundSourceKind": src } as Partial<PreviewSnapshot>);
+    expect(pick.kind).toBe("button");
+    expect(pick.control!.variant).toBe("primary");
+    expect(clear.control!.variant).toBe("ghost");
     expect(pick.visibleWhen?.(snap("none"))).toBe(false);
     expect(clear.visibleWhen?.(snap("none"))).toBe(false);
-    expect(pick.getValue()).toBeNull();
-    expect(() => pick.setValue("x")).not.toThrow();
-    expect(() => clear.setValue("x")).not.toThrow();
     expect(pick.visibleWhen?.(snap("texture"))).toBe(true);
     expect(clear.visibleWhen?.(snap("texture"))).toBe(true);
     cap.setSourceKind("texture");
-    clear.button!.action!();
+    void clear.control!.action!();
     expect(cap.getSourceKind()).toBe("canvas");
     expect(cap.getCanvasStyle()).toBe("plain");
   });
 
-  it("选择贴图按钮 action 触发文件选择器（mock input，node 环境，controls 通道节点）", () => {
+  it("选择贴图按钮 action 触发文件选择器（mock input，node 环境，原生 button 节点）", () => {
     const fakeInput = {
       type: "",
       accept: "",
@@ -546,9 +550,11 @@ describe("GroundCapability — 菜单控件联动", () => {
       const scene = new THREE.Scene();
       setEnvState({ groundSourceKind: "texture" }, { source: 'manual' });
       const cap = new GroundCapability({ scene });
-      const btnNode = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
-      const pick = (typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls)![0]!;
-      expect(() => pick.button!.action!()).not.toThrow();
+      const pick = cap
+        .getMenuNodes()
+        .find((n) => n.id === "cap-group-ground-material")!
+        .children!.find((c) => c.id === "ground-mat-texture")!;
+      expect(() => void pick.control!.action!()).not.toThrow();
       expect(fakeInput.type).toBe("file");
       expect(fakeInput.accept).toBe("image/*");
     } finally {
@@ -610,7 +616,7 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     expect(overlayFolder.labelKey).toBe("preview.groundGroupOverlay");
   });
 
-  it("材质 folder 混排原生节点 + controls 通道（texture/clear button）", () => {
+  it("材质 folder 混排原生节点（含 texture/clear 原生 button 节点）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
@@ -621,12 +627,14 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const style = folder.children!.find((c) => c.id === "ground-mat-canvas-style")!;
     style.control!.set!("marble");
     expect(cap.getCanvasStyle()).toBe("marble");
-    const btnNode = folder.children!.find((c) => c.id === "cap-group-ground-texture-buttons")!;
-    expect(btnNode.kind).toBe("controls");
-    const btnControls = typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls;
-    expect(btnControls!.map((c) => c.id)).toEqual(["ground-mat-texture", "ground-mat-clear"]);
-    expect(btnControls![0]!.visibleWhen?.({ "env.groundSourceKind": "texture" })).toBe(true);
-    expect(btnControls![0]!.visibleWhen?.({ "env.groundSourceKind": "none" })).toBe(false);
+    // 锐评修复：texture/clear 从 controls 通道回归原生 button 节点（variant/getHint 由
+    // rmAppendButton 按钮臂承载，不再需要绕道）
+    const pick = folder.children!.find((c) => c.id === "ground-mat-texture")!;
+    const clear = folder.children!.find((c) => c.id === "ground-mat-clear")!;
+    expect(pick.kind).toBe("button");
+    expect(clear.kind).toBe("button");
+    expect(pick.visibleWhen?.({ "env.groundSourceKind": "texture" })).toBe(true);
+    expect(pick.visibleWhen?.({ "env.groundSourceKind": "none" })).toBe(false);
   });
 
   it("原生 color/slider 节点读写闭包直连 cap", () => {

@@ -30,8 +30,6 @@ export const contentDiagCSS: string = `
 .log-row { animation: fadeSlideLeft .25s ease both; }
 @keyframes conflictRowIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
 .conflict-row, .conflict-ins { animation: conflictRowIn .3s ease both; }
-@keyframes scanPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.15); } }
-.btn-base.accent.scanning { animation: scanPulse 1s ease-in-out infinite; pointer-events:none; opacity:.7; }
 @keyframes scanRadar {
   0%   { background: conic-gradient(from 0deg, transparent 0%, var(--accent) 10%, transparent 20%); }
   100% { background: conic-gradient(from 360deg, transparent 0%, var(--accent) 10%, transparent 20%); }

@@ -1,32 +1,21 @@
-// ===== 诊断页：冲突扫描（scanConflicts） =====
-// ADR-040 按职责切文件：原 init.ts 拆分——日志加载（logs.ts）/ 去重（dedup.ts）/ 冲突扫描（本文件）
+// ===== 诊断页：同步冲突检测与解决（sync-conflict tab） =====
+// 「冲突检测」（跨实例同名内容漂移）tab 已于 2026-09 下线（用户视角与同步冲突重叠、
+// 只读无后续动作、扫描成本全页最重），本文件只剩同步冲突一条链。
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { renderDisplayName } from "@/utils/model-name/display.ts";
-import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import type { AppConfig, FileConflict, VersionInstance } from "@/utils/types-re-export.ts";
+import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
+import type { FileConflict } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
 import { optionRows } from "./option-rows.ts";
 import { msgRowHTML } from "./status-row.ts";
 import { webGate } from "./web-gate.ts";
 
-// P3 修复（子代理审计，重入守卫）：scanConflicts 并发标志——快速 3 连点会并发扫描
-// 同一 list 互相覆盖（结果写 innerHTML 竞争）；busy 命中直接返回。
-// 【范式豁免】本模块无跨调用配置状态（不像 dedup.ts 的 keepPolicy/priorityPath 需跨调用保持），
-// 纯并发守卫故保留模块级 busy；try/finally 兜底复位（见 :276）。改造会话工厂 ROI 低，不立项。
-let diagScanning = false;
-
-// 同步冲突扫描并发标志（同 diagScanning 豁免理由；try/finally 兜底复位 :277）
+// 同步冲突扫描并发标志（纯并发守卫，无跨调用配置状态——【范式豁免】同 dedup 会话工厂
+// 改造 ROI 低，不立项；try/finally 兜底复位）
 let diagSyncBusy = false;
-
-interface DgCfInstanceFile {
-  name: string;
-  /** Go `ModelEntry.Hash`（SHA256）；超大/读失败时为空串，判定层据此排除而非当作差异 */
-  hash?: string;
-}
 
 // ===== 同步冲突绑定类型（已 struct 化，ADR-143 P0） =====
 // DetectConflicts / ResolveConflicts 现返回 typed struct，失败走 error 通道（Promise reject）
@@ -34,159 +23,12 @@ interface DgCfInstanceFile {
 // 兼容旧 interface，实际使用 binding 生成的类型
 type DgCfFileConflict = FileConflict;
 
-// ===== scanConflicts 子函数 =====
-
-function dgCfSetScanBtnState(scanBtn: HTMLElement | null, scanning: boolean, esc: EscFn): void {
-  if (!scanBtn) return;
-  if (scanning) {
-    scanBtn.classList.add("scanning");
-    scanBtn.textContent = t("diagnostics.scanningDot");
-  } else {
-    scanBtn.classList.remove("scanning");
-    // 复位重建图标：扫描态用 textContent 覆掉了模板层 SVG，只写文字会形态漂移；
-    // startScan 是静态文案无插值，esc 包文本节点与旧 textContent 防注入口径等价。
-    scanBtn.innerHTML = `${UI_ICONS.performance} ${esc(t("diagnostics.startScan"))}`;
-  }
-}
-
 function dgCfRenderRadarPlaceholder(list: HTMLElement): void {
   list.innerHTML =
     '<div class="scan-radar-wrap"><div class="scan-radar"></div><div class="scan-radar-dot"></div></div><div class="stat-row diag-msg diag-msg-muted" style="text-align:center">' +
     t("diagnostics.scanningConflicts") +
     "</div>";
 }
-
-async function dgCfLoadCfgAndInstances(): Promise<{
-  cfg: AppConfig;
-  mcRoot: string;
-  instances: VersionInstance[];
-  errorHtml: string | null;
-}> {
-  const { LoadAppConfig, ListVersionInstances } = await backendGetApp();
-  const cfg = await LoadAppConfig();
-  const mcRoot = cfg.mcRoot || "";
-  if (!mcRoot) {
-    return {
-      cfg,
-      mcRoot: "",
-      instances: [],
-      errorHtml: msgRowHTML("error", t("diagnostics.configGameDir")),
-    };
-  }
-  const instances = (await ListVersionInstances(mcRoot)) || [];
-  if (!instances?.length) {
-    return {
-      cfg,
-      mcRoot,
-      instances: [],
-      errorHtml: msgRowHTML("muted", t("diagnostics.noModpacks")),
-    };
-  }
-  return { cfg, mcRoot, instances, errorHtml: null };
-}
-
-async function dgCfCollectInstanceFiles(
-  instances: VersionInstance[],
-): Promise<Record<string, DgCfInstanceFile[]>> {
-  const { ScanModelEntriesWithLabel } = await backendGetApp();
-  const instanceFiles: Record<string, DgCfInstanceFile[]> = {};
-  for (const ins of instances) {
-    if (!ins.Exists) continue;
-    const entries =
-      (await ScanModelEntriesWithLabel(ins.CustomDir, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) ||
-      [];
-    instanceFiles[ins.Name] = entries.map((e) => ({
-      name: e.Name.replace(/\.(disabled|ban)$/i, ""),
-      hash: e.Hash || "",
-    }));
-  }
-  return instanceFiles;
-}
-
-/**
- * 跨实例冲突判定：**同名 + 内容哈希不唯一**才算冲突。
- *
- * 只按名字聚合会把「同步成功」误报成冲突——PushResources 的本职就是把仓库模型
- * 分发到各实例，同名同哈希是预期状态，不是问题。真正的冲突是「同名但内容不同」
- * （实为跨实例内容漂移）。
- *
- * 空哈希（超大文件 / 读取失败，Go 侧返回 ""）一律排除出判定：拿「未知」当「不同」
- * 会批量制造误报，故此处选择**静默不报**。⚠️ 与 Go `DetectConflicts` 口径不同而非相同：
- * 后者对两端 size 相同 + 任一端哈希失败会**报出来交人工审查**（HashFailed→ResolveManual）。
- * 代价是「两实例同名且都哈希失败」这一极窄场景会漏报，覆盖面由 sync-conflict tab 兜底。
- * （若日后想对齐，应在 UI 单列「无法判定」分区，而不是把它们混进冲突计数。）
- */
-function dgCfBuildNameConflictMap(
-  instanceFiles: Record<string, DgCfInstanceFile[]>,
-): [string, string[]][] {
-  const byName: Record<string, { ins: string[]; hashes: Set<string> }> = {};
-  for (const [insName, files] of Object.entries(instanceFiles)) {
-    for (const f of files) {
-      const rec = byName[f.name] ?? { ins: [], hashes: new Set<string>() };
-      byName[f.name] = rec;
-      rec.ins.push(insName);
-      if (f.hash) rec.hashes.add(f.hash);
-    }
-  }
-  return Object.entries(byName)
-    .filter(([, r]) => r.ins.length > 1 && r.hashes.size > 1)
-    .map(([name, r]) => [name, r.ins] as [string, string[]])
-    .sort((a, b) => b[1].length - a[1].length);
-}
-
-function dgCfRenderConflictList(conflicts: [string, string[]][], esc: EscFn): string {
-  if (!conflicts.length) {
-    return msgRowHTML("success", t("diagnostics.noNameConflict"), undefined, {
-      icon: UI_ICONS.success,
-    });
-  }
-  let html = `<div class="stat-row diag-msg diag-msg-error" style="animation:conflictRowIn .3s ease">${UI_ICONS.warning} ${t("diagnostics.conflictsFound", { n: conflicts.length })}</div>`;
-  conflicts.slice(0, 50).forEach(([name, insNames], i) => {
-    const delay = stagger(i, 30, 600);
-    html += `<div class="conflict-row" style="animation-delay:${delay}ms">
-<span class="conflict-name">${renderDisplayName(name)}</span>
-<span class="conflict-ver">${t("diagnostics.modpackCount", { n: insNames.length })} · ${t("diagnostics.contentDiffers")}</span>
-</div>`;
-    insNames.forEach((n, j) => {
-      html += `<div class="conflict-ins" style="animation-delay:${delay + (j + 1) * 15}ms">&nbsp;&nbsp;${UI_ICONS.package} ${esc(n)}</div>`;
-    });
-  });
-  if (conflicts.length > 50) {
-    html += `<div class="stat-row diag-msg diag-msg-muted" style="font-size:var(--fs-xs)">...${t("diagnostics.moreCount", { n: conflicts.length - 50 })}</div>`;
-  }
-  return html;
-}
-
-export async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void> {
-  if (webGate("diagnostics.webNoConflictScan")) return;
-  const list = root.getElementById("diag-conflict-list");
-  if (!list) return;
-  if (diagScanning) return;
-  diagScanning = true;
-
-  const scanBtn = root.getElementById("diag-scan-conflict");
-  dgCfSetScanBtnState(scanBtn, true, esc);
-  dgCfRenderRadarPlaceholder(list as HTMLElement);
-
-  try {
-    const { instances, errorHtml } = await dgCfLoadCfgAndInstances();
-    if (errorHtml) {
-      dgCfSetScanBtnState(scanBtn, false, esc);
-      list.innerHTML = errorHtml;
-      return;
-    }
-    const instanceFiles = await dgCfCollectInstanceFiles(instances);
-    const conflicts = dgCfBuildNameConflictMap(instanceFiles);
-    list.innerHTML = dgCfRenderConflictList(conflicts, esc);
-  } catch (err) {
-    list.innerHTML = msgRowHTML("error", `${t("diagnostics.scanFailed")}: ${esc(String(err))}`);
-  } finally {
-    dgCfSetScanBtnState(scanBtn, false, esc);
-    diagScanning = false;
-  }
-}
-
-// ===== 同步冲突检测与解决（P1 优先级） =====
 
 // ===== scanSyncConflicts 子函数 =====
 

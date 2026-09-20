@@ -1,15 +1,13 @@
-// ===== 诊断页：冲突扫描（conflicts.ts）测试 =====
+// ===== 诊断页：同步冲突（conflicts.ts）测试 =====
 // ⚠️ locale 前提：本文件写死 zh-CN 文案断言，依赖 test-setup 把 t() 钉在 zhCN 查表；
 // e2e（playwright.config 钉浏览器 locale=en-US）走的是 en 包，勿以本文件为 e2e 文案参照。
 // 覆盖：
-//  - scanConflicts：web 门禁 / list 缺失 / 重入守卫 / 无目录 / 无实例 /
-//    冲突渲染（Exists 过滤 + .disabled/.ban 剥离）/ >50 截断 / 异常兜底
 //  - scanSyncConflicts：web 门禁 / 重入守卫 / 无目录 / 配置面板渲染与交互 /
 //    检测（error / 无冲突 / 有冲突渲染）/ 异常兜底
 //  - 同步冲突解决：ResolveConflicts 策略透传 + 结果计数 + 1.5s 自动复扫 / error / 异常
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
-import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
+import { scanSyncConflicts } from "./conflicts.ts";
 
 const { busEmit, busOn, getApp, isWebPlatform } = vi.hoisted(() => ({
   busEmit: vi.fn(),
@@ -24,20 +22,6 @@ vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 
 const esc = (s: unknown): string =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-
-function makeRoot(): { root: ShadowRoot; list: HTMLElement } {
-  const el = document.createElement("div");
-  el.innerHTML = `
-    <div id="diag-scan-conflict"></div>
-    <div id="diag-conflict-list"><span class="sentinel">占位</span></div>
-  `;
-  (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
-    (id: string) => el.querySelector(`#${id}`);
-  return {
-    root: el as unknown as ShadowRoot,
-    list: el.querySelector("#diag-conflict-list") as HTMLElement,
-  };
-}
 
 function mockApp(overrides: Record<string, unknown> = {}) {
   getApp.mockResolvedValue({
@@ -71,164 +55,6 @@ beforeEach(() => {
   document.body.innerHTML = "";
   isWebPlatform.mockReturnValue(false);
   mockApp();
-});
-
-describe("scanConflicts", () => {
-  it("web 门禁：isWebPlatform → toast 警告，不触达 Go 桥，list 不动", async () => {
-    isWebPlatform.mockReturnValue(true);
-    const { root, list } = makeRoot();
-    await scanConflicts(root, esc);
-    expect(busEmit).toHaveBeenCalledWith(
-      "toast:show",
-      expect.objectContaining({ msg: "网页版不支持冲突扫描", type: "warn" }),
-    );
-    expect(getApp).not.toHaveBeenCalled();
-    expect(list.innerHTML).toContain("sentinel");
-  });
-
-  it("diag-conflict-list 缺失 → 静默返回", async () => {
-    const el = document.createElement("div");
-    (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
-      () => null;
-    await scanConflicts(el as unknown as ShadowRoot, esc);
-    expect(getApp).not.toHaveBeenCalled();
-  });
-
-  it("重入守卫：并发第二次早退，首次完成后复位可再扫", async () => {
-    const { loadCfg, release } = loadCfgPendingThenOk();
-    mockApp({ LoadAppConfig: loadCfg });
-    const { root, list } = makeRoot();
-    const p1 = scanConflicts(root, esc);
-    // 同步段（gate/list/busy 置位/雷达占位）已在首个 await 前执行
-    expect(list.innerHTML).toContain("scan-radar");
-    const p2 = scanConflicts(root, esc);
-    await p2;
-    expect(getApp).toHaveBeenCalledTimes(1); // 第二次被守卫吞掉
-    release({ mcRoot: "/mc" });
-    await p1;
-    await waitFor(() => expect(list.textContent).toContain("没有找到整合包"));
-    // 守卫复位：后续可正常再次扫描
-    await scanConflicts(root, esc);
-    expect(getApp).toHaveBeenCalledTimes(2);
-  });
-
-  it("无 mcRoot → 请先配置游戏目录 + 扫描按钮复位", async () => {
-    mockApp({ LoadAppConfig: vi.fn(() => ({ mcRoot: "" })) });
-    const { root, list } = makeRoot();
-    await scanConflicts(root, esc);
-    await waitFor(() => expect(list.textContent).toContain("请先配置游戏目录"));
-    const btn = root.getElementById("diag-scan-conflict") as HTMLElement;
-    // 复位重建模板层 SVG 图标（文案键已去 emoji）：文本对、形态也对
-    expect(btn.textContent!.trim()).toBe("开始扫描"); // SVG 与文字间的模板空格不算文案
-    expect(btn.querySelector("svg")).toBeTruthy();
-    expect(btn.classList.contains("scanning")).toBe(false);
-  });
-
-  it("无实例 → 没有找到整合包", async () => {
-    const { root, list } = makeRoot();
-    await scanConflicts(root, esc);
-    await waitFor(() => expect(list.textContent).toContain("没有找到整合包"));
-  });
-
-  it("内容不一致才报冲突（同名 + 哈希不同），Exists=false 实例跳过、.disabled/.ban 后缀剥离", async () => {
-    // model.ysm：insA/insB 均存在但哈希不同 → 真冲突
-    // shared.ysm：两实例哈希相同（同步分发结果）→ 不报
-    const entries: Record<string, { Name: string; Hash: string }[]> = {
-      "/a": [
-        { Name: "model.ysm", Hash: "h-model-a" },
-        { Name: "shared.ysm.disabled", Hash: "h-shared" },
-        { Name: "unique.ysm", Hash: "h-unique" },
-      ],
-      "/b": [
-        { Name: "model.ysm.ban", Hash: "h-model-b" },
-        { Name: "shared.ysm.disabled", Hash: "h-shared" },
-      ],
-      "/c": [{ Name: "model.ysm", Hash: "h-model-c" }],
-    };
-    const scanFn = vi.fn((dir: string) => entries[dir] || []);
-    mockApp({
-      ListVersionInstances: vi.fn(() => [
-        { Name: "insA", Exists: true, CustomDir: "/a" },
-        { Name: "insB", Exists: true, CustomDir: "/b" },
-        { Name: "insC", Exists: false, CustomDir: "/c" },
-      ]),
-      ScanModelEntriesWithLabel: scanFn,
-    });
-    const { root, list } = makeRoot();
-    await scanConflicts(root, esc);
-    await waitFor(() => expect(list.textContent).toContain("发现 1 个文件在多个整合包中内容不一致"));
-    expect(list.textContent).toContain("model"); // renderDisplayName 剥扩展名
-    expect(list.textContent).not.toContain("shared"); // 同名同哈希 = 正常同步结果，不报
-    expect(list.textContent).not.toContain("unique"); // 仅单实例存在，不冲突
-    expect(list.textContent).toContain("insA");
-    expect(list.textContent).toContain("insB");
-    expect(list.textContent).toContain("2 个整合包");
-    expect(list.textContent).toContain("内容不一致"); // 徽标语义：实例数 + 分歧性质，不止“几个包有它”
-    // Exists=false 的 insC 不扫描
-    expect(scanFn).toHaveBeenCalledTimes(2);
-    expect(scanFn).not.toHaveBeenCalledWith("/c");
-  });
-
-  it("同名同哈希（同步分发结果）→ 不报冲突", async () => {
-    mockApp({
-      ListVersionInstances: vi.fn(() => [
-        { Name: "insA", Exists: true, CustomDir: "/a" },
-        { Name: "insB", Exists: true, CustomDir: "/b" },
-      ]),
-      // 三实例同步同一份仓库模型：名字同、哈希同 —— 正是 PushResources 的正常产物
-      ScanModelEntriesWithLabel: vi.fn(() => [{ Name: "synced.ysm", Hash: "same-hash" }]),
-    });
-    const { root, list } = makeRoot();
-    await scanConflicts(root, esc);
-    await waitFor(() => expect(list.textContent).toContain("未检测到文件名冲突"));
-    expect(list.textContent).not.toContain("synced");
-  });
-
-  it("哈希缺失（超大/读失败）→ 保守不报，不拿未知当不同", async () => {
-    const entries: Record<string, { Name: string; Hash: string }[]> = {
-      "/a": [{ Name: "big.ysm", Hash: "" }],
-      "/b": [{ Name: "big.ysm", Hash: "" }],
-    };
-    mockApp({
-      ListVersionInstances: vi.fn(() => [
-        { Name: "insA", Exists: true, CustomDir: "/a" },
-        { Name: "insB", Exists: true, CustomDir: "/b" },
-      ]),
-      ScanModelEntriesWithLabel: vi.fn((dir: string) => entries[dir] || []),
-    });
-    const { root, list } = makeRoot();
-    await scanConflicts(root, esc);
-    await waitFor(() => expect(list.textContent).toContain("未检测到文件名冲突"));
-  });
-
-  it("超过 50 组冲突 → 只渲染前 50 行并提示剩余数量", async () => {
-    const names = Array.from({ length: 51 }, (_, i) => `c${i}.ysm`);
-    mockApp({
-      ListVersionInstances: vi.fn(() => [
-        { Name: "insA", Exists: true, CustomDir: "/a" },
-        { Name: "insB", Exists: true, CustomDir: "/b" },
-      ]),
-      // 每个名字在两侧哈希各不相同 → 全部成冲突（只要 ≥1 个不同哈希即算）
-      ScanModelEntriesWithLabel: vi.fn((dir: string) =>
-        names.map((n) => ({ Name: n, Hash: `${n}:${dir}` })),
-      ),
-    });
-    const { root, list } = makeRoot();
-    await scanConflicts(root, esc);
-    await waitFor(() => expect(list.textContent).toContain("发现 51 个"));
-    expect(list.textContent).toContain("还有 1 个");
-    expect(list.querySelectorAll(".conflict-row").length).toBe(50);
-  });
-
-  it("扫描抛错 → 扫描失败兜底（含错误原文转义）", async () => {
-    mockApp({
-      ListVersionInstances: vi.fn(() => Promise.reject(new Error("磁盘错误"))),
-    });
-    const { root, list } = makeRoot();
-    await scanConflicts(root, esc);
-    await waitFor(() => expect(list.textContent).toContain("扫描失败"));
-    expect(list.textContent).toContain("磁盘错误");
-  });
 });
 
 describe("scanSyncConflicts", () => {

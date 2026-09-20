@@ -1,11 +1,10 @@
 // ===== 诊断页测试 =====
 // 覆盖：
-//  - initDiagnostics：初始加载 / tab 切换（log/runtime/conflict/perf/health/sync-conflict）/
+//  - initDiagnostics：初始加载 / tab 切换（log/runtime/perf/health/sync-conflict）/
 //    刷新 / 清空（含能力门禁与失败）/ 筛选 / 搜索防抖 / 复制面板与行内复制（含降级）/
 //    同步冲突与体检扫描入口 / 查看器模式隐藏桌面专属入口
 //  - 日志渲染：分组徽标 / 空态 / 抛错兜底（import + runtime）
 //  - startDedup：单类型/全类型目录扫描 / 无目录 / 无重复 / exec 移入回收站 / 取消
-//  - scanConflicts：无游戏目录 / 无实例 / 冲突渲染 / 无冲突 / 扫描失败
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { initDiagnostics, createDedupSession } from "./init.ts";
@@ -41,7 +40,6 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="diag-refresh"></div>
     <div id="diag-clear"></div>
     <div id="diag-copy"></div>
-    <div id="diag-scan-conflict"></div>
     <div id="diag-scan-sync-conflict"></div>
     <div id="diag-scan-health"></div>
     <button id="diag-perf-refresh-trace"></button>
@@ -51,7 +49,6 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <button class="repo-tab" data-tab="log">日志</button>
     <button class="repo-tab" data-tab="bench">基准</button>
     <button class="repo-tab" data-tab="record">记录</button>
-    <button class="repo-tab" data-tab="conflict">冲突</button>
     <button class="repo-tab" data-tab="health">体检</button>
     <button class="repo-tab" data-tab="sync-conflict">同步</button>
     <button class="diag-sub-tab active" data-log="op">操作</button>
@@ -60,7 +57,6 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
       <div id="diag-log-list"></div>
       <div id="diag-runtime-list" style="display:none"></div>
     </div>
-    <div id="diag-tab-conflict"><div id="diag-conflict-list"></div></div>
     <div id="diag-tab-health"><div id="diag-health-list"></div></div>
     <div id="diag-tab-sync-conflict"><div id="diag-sync-conflict-list"></div></div>
     <button class="diag-log-fbtn" data-status="all">全部</button>
@@ -443,89 +439,6 @@ describe("startDedup（会话工厂 createDedupSession）", () => {
   });
 });
 
-describe("scanConflicts（diag-scan-conflict 按钮）", () => {
-  it("无 mcRoot → 请先配置游戏目录", async () => {
-    mockApp({ LoadAppConfig: vi.fn(() => ({ mcRoot: "" })) });
-    const { root } = makeRoot();
-    initDiagnostics(root, esc);
-    (root.getElementById("diag-scan-conflict") as HTMLElement).click();
-    await waitFor(() =>
-      (root.getElementById("diag-conflict-list") as HTMLElement).textContent!.includes(
-        "请先配置游戏目录",
-      ),
-    );
-  });
-
-  it("无实例 → 没有找到整合包", async () => {
-    const { root } = makeRoot();
-    initDiagnostics(root, esc);
-    (root.getElementById("diag-scan-conflict") as HTMLElement).click();
-    await waitFor(() =>
-      (root.getElementById("diag-conflict-list") as HTMLElement).textContent!.includes(
-        "没有找到整合包",
-      ),
-    );
-  });
-
-  it("有冲突 → 渲染冲突行 + 按钮复位", async () => {
-    mockApp({
-      ListVersionInstances: vi.fn(() => [
-        { Name: "insA", Exists: true, CustomDir: "/mc/insA" },
-        { Name: "insB", Exists: true, CustomDir: "/mc/insB" },
-      ]),
-      // 同名但两侧哈希不同 → 真冲突（同名同哈希属正常同步结果，不报）
-      ScanModelEntriesWithLabel: vi.fn((dir: string) => [
-        { Name: "model.ysm", Hash: `h-${dir}` },
-      ]),
-    });
-    const { root } = makeRoot();
-    initDiagnostics(root, esc);
-    (root.getElementById("diag-scan-conflict") as HTMLElement).click();
-    const list = root.getElementById("diag-conflict-list") as HTMLElement;
-    await waitFor(() => list.textContent!.includes("内容不一致"));
-    expect(list.textContent).toContain("model"); // renderDisplayName 剥扩展名
-    expect(list.textContent).toContain("insA");
-    expect(list.textContent).toContain("insB");
-    const text = (root.getElementById("diag-scan-conflict") as HTMLElement).innerHTML;
-    expect(text).toContain("开始扫描"); // 复位
-    // 图标归模板层 SVG（与 healthRun/scanSyncConflict 同族口径）：文案键不得夹带 emoji，
-    // 复位也不得退回字面 ⚡——否则初始双图标、复位后形态漂移。
-    expect((root.getElementById("diag-scan-conflict") as HTMLElement).querySelector("svg")).toBeTruthy();
-    expect(text).not.toContain("⚡");
-  });
-
-  it("无冲突 → 未检测到文件名冲突", async () => {
-    mockApp({
-      ListVersionInstances: vi.fn(() => [
-        { Name: "insA", Exists: true, CustomDir: "/mc/insA" },
-      ]),
-      ScanModelEntriesWithLabel: vi.fn(() => [{ Name: "model.ysm" }]),
-    });
-    const { root } = makeRoot();
-    initDiagnostics(root, esc);
-    (root.getElementById("diag-scan-conflict") as HTMLElement).click();
-    await waitFor(() =>
-      (root.getElementById("diag-conflict-list") as HTMLElement).textContent!.includes(
-        "未检测到文件名冲突",
-      ),
-    );
-  });
-
-  it("扫描抛错 → 扫描失败兜底", async () => {
-    mockApp({
-      ListVersionInstances: vi.fn(() => Promise.reject(new Error("boom"))),
-    });
-    const { root } = makeRoot();
-    initDiagnostics(root, esc);
-    (root.getElementById("diag-scan-conflict") as HTMLElement).click();
-    await waitFor(() =>
-      (root.getElementById("diag-conflict-list") as HTMLElement).textContent!.includes(
-        "扫描失败",
-      ),
-    );
-  });
-});
-
 describe("dedup config（getConfig / resetConfig）", () => {
   const dedup = createDedupSession();
   it("getConfig 返回冻结快照，调用方篡改不影响内部状态", () => {
@@ -842,8 +755,8 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     // 新链——手拼夹具测不到「声明处即真相」（旧测试只验 init 事后改 style）。
     el.innerHTML = diagnosticsHTML();
     initDiagnostics(root, esc);
-    // 桌面专属 top tab（三个只读扫描 + bench + scan，ADR-278 §2.5/§2.7）：按钮与面板整块缺席
-    for (const name of ["conflict", "health", "sync-conflict", "bench", "scan"]) {
+    // 桌面专属 top tab（两个只读扫描 + bench + scan，ADR-278 §2.5/§2.7）：按钮与面板整块缺席
+    for (const name of ["health", "sync-conflict", "bench", "scan"]) {
       expect(root.querySelector(`.repo-tab[data-tab="${name}"]`)).toBeNull();
       expect(root.getElementById(`diag-tab-${name}`)).toBeNull();
     }
@@ -851,7 +764,7 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     expect(root.querySelector('.repo-tab[data-tab="log"]')).not.toBeNull();
     expect(root.querySelector('.repo-tab[data-tab="record"]')).not.toBeNull();
     // 扫描按钮在缺席面板内同样不存在（若未来控件拆出 tab，dgInHideDesktopOnly 仍按 id 隐）
-    for (const id of ["diag-scan-conflict", "diag-scan-health", "diag-scan-sync-conflict", "diag-perf-scan-bench"]) {
+    for (const id of ["diag-scan-health", "diag-scan-sync-conflict", "diag-perf-scan-bench"]) {
       expect(root.getElementById(id)).toBeNull();
     }
     // 加载剖析读内存 store、零 Go/CLI 依赖 → 跨模式可用，入口不得隐藏（ADR-278 §2.5）
@@ -864,7 +777,7 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     expect(
-      (root.getElementById("diag-scan-conflict") as HTMLElement).style.display,
+      (root.getElementById("diag-scan-health") as HTMLElement).style.display,
     ).not.toBe("none");
   });
 });

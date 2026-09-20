@@ -9,7 +9,7 @@ import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { scanConflicts, scanSyncConflicts } from "./conflicts.ts";
+import { scanSyncConflicts } from "./conflicts.ts";
 import { copyWithToast } from "./copy-toast.ts";
 import { runHealthAudit } from "./health.ts";
 import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
@@ -126,9 +126,6 @@ function dgInBindCopyRows(root: ShadowRoot): void {
 }
 
 function dgInBindScanBtns(root: ShadowRoot, esc: EscFn): void {
-  root
-    .getElementById("diag-scan-conflict")
-    ?.addEventListener("click", () => scanConflicts(root, esc));
   root.getElementById("diag-scan-sync-conflict")?.addEventListener("click", () => {
     const list = root.getElementById("diag-sync-conflict-list");
     if (list) scanSyncConflicts(list, esc);
@@ -152,7 +149,6 @@ function dgInHideDesktopOnly(root: ShadowRoot): void {
   for (const id of [
     // 扫描按钮在 desktopOnly tab 的面板内：tab 整块已不渲染，按 id 再显式隐一次保留既有口径
     // （init.test 钉的是按钮自身 style 非仅继承不可见；且面板 body 可能被其它入口单独消费）
-    "diag-scan-conflict",
     "diag-scan-health",
     "diag-scan-sync-conflict",
     // ADR-278 §2.7：引擎对照已是独立 desktopOnly tab，其运行按钮同样按 id 显式隐一次

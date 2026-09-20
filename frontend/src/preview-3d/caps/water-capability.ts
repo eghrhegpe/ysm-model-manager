@@ -441,7 +441,10 @@ export class WaterCapability implements SceneCapability {
     // 否则拖透明度滑块时水面与池壁脱节；内壁套 INNER_WALL_OPACITY_FACTOR 与构建期一致）
     if (changed.has("waterOpacity")) {
       const top = this.findTopWater();
-      if (top) top.material.opacity = effectiveOpacity;
+      if (top) {
+        top.material.opacity = effectiveOpacity;
+        this.syncBaseOpacityUniform(top.material, effectiveOpacity);
+      }
       for (const m of targets("wallInner")) {
         (m.material as THREE.MeshPhysicalMaterial).opacity =
           s.waterOpacity * INNER_WALL_OPACITY_FACTOR;

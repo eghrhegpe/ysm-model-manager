@@ -597,6 +597,36 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
     expect(mat.opacity).toBeCloseTo(0.25 * 0.6, 5);
     expect(mat.userData.shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.25 * 0.6, 5);
   });
+
+  it("setWaterOpacity（film，shader 已编译）→ 同步 uBaseOpacity uniform", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh).material as THREE.MeshPhysicalMaterial & {
+      userData: { shader?: { uniforms: { uBaseOpacity: { value: number } } } };
+    };
+    mat.userData.shader = { uniforms: { uBaseOpacity: { value: 0 } } };
+    cap.setWaterOpacity(0.8);
+    // film: opacity = waterOpacity * wetness(默认0.5)
+    expect(mat.opacity).toBeCloseTo(0.8 * 0.5, 5);
+    expect(mat.userData.shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.8 * 0.5, 5);
+  });
+
+  it("setWaterOpacity（pool，shader 已编译）→ 同步 uBaseOpacity uniform", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("pool");
+    const top = scene.getObjectByName("ysm-water-top") as THREE.Mesh;
+    const mat = top.material as THREE.MeshPhysicalMaterial & {
+      userData: { shader?: { uniforms: { uBaseOpacity: { value: number } } } };
+    };
+    mat.userData.shader = { uniforms: { uBaseOpacity: { value: 0 } } };
+    cap.setWaterOpacity(0.9);
+    // pool: opacity = waterOpacity（无 wetness 因子）
+    expect(mat.opacity).toBeCloseTo(0.9, 5);
+    expect(mat.userData.shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.9, 5);
+  });
 });
 
 describe("WaterCapability — loadState 多分支", () => {

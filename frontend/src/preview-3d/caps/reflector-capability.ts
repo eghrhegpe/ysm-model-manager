@@ -188,14 +188,9 @@ export class ReflectorCapability implements SceneCapability {
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */
   applyModelPreset(modelType: ModelType): void {
     if (this.isStateLoaded) return;
-    const picked = pickModelDefaultFields(modelType, [
-      "reflectorEnabled",
-      "reflectorOpacity",
-      "reflectorSize",
-      "reflectorResolution",
-      "reflectorColor",
-      "reflectorClipBias",
-    ]);
+    // [ADR-284] 仅保留有场景尺度辩护的两键（size 随体量、resolution 降精度）；
+    // opacity/color 噪声与撞默认值的 resolution 已从 MODEL_DEFAULTS 摘除。
+    const picked = pickModelDefaultFields(modelType, ["reflectorSize", "reflectorResolution"]);
     if (Object.keys(picked).length > 0) setEnvState(picked, { source: "auto-model" });
   }
 

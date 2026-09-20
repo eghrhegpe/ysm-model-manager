@@ -124,15 +124,16 @@ describe("ReflectorCapability — 尺寸与精度", () => {
 describe("ReflectorCapability — 预设", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("applyModelPreset 按模型类别套用", () => {
+  it("[ADR-284] applyModelPreset 仅按场景尺度改 size，不再改 opacity（噪声解耦）", () => {
     const cap = newCap();
     cap.applyModelPreset("vrm");
     const p = cap.getParams();
-    expect(p.opacity).toBe(0.5);
+    // opacity 不再随类别变化 → 回落 schema 默认 0.6；size 是场景尺度参数，保留。
+    expect(p.opacity).toBe(0.6);
     expect(p.size).toBe(60);
     cap.applyModelPreset("litematic");
     const p2 = cap.getParams();
-    expect(p2.opacity).toBe(0.25);
+    expect(p2.opacity).toBe(0.6);
     expect(p2.size).toBe(500);
   });
 });
@@ -180,7 +181,8 @@ describe("ReflectorCapability — 持久化", () => {
     const cap = newCap();
     cap.loadState();
     cap.applyModelPreset("vrm");
-    expect(cap.getParams().opacity).toBe(0.5);
+    // [ADR-284] opacity 噪声解耦，vrm 仅剩场景尺度 size=60；resolution 1024==默认已删。
+    expect(cap.getParams().size).toBe(60);
   });
 });
 

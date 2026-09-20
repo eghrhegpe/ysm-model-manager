@@ -32,18 +32,34 @@ describe("ADR-282 灯光与模型类别解耦", () => {
     }
   });
 
-  it("其余 cap 的类别默认值仍然保留（未误删过头）", () => {
-    // 每个类别的 sky 段都在（skyForceEnv 是各类别共有标记）
+  it("[ADR-284] 类别表不得含 sky 散射键 / reflector 噪声键（漂移源防回退）", () => {
+    // 承 ADR-282（灯光解耦）向其余类别推广：大气散射、reflector 光泽/颜色系噪声，
+    // 不得再以模型类别维度写回 MODEL_DEFAULTS（否则换模型即悄悄改天空/反射观感）。
     for (const mt of modelTypes) {
-      expect(MODEL_DEFAULTS[mt].skyForceEnv, `类别 ${mt} 的 sky 段不应被删`).toBe(true);
-    }
-    // fog / shadow / reflector / environment 至少有一个类别携带
-    const all = modelTypes.flatMap((mt) => Object.keys(MODEL_DEFAULTS[mt]));
-    for (const k of ["fogNear", "shadowType", "reflectorSize", "envPreset", "ppEnabled"]) {
-      expect(all, `MODEL_DEFAULTS 全体不应丢失 ${k}`).toContain(k);
+      const skyKeys = Object.keys(MODEL_DEFAULTS[mt]).filter((k) => k.startsWith("sky"));
+      expect(skyKeys, `类别 ${mt} 不应含任何 sky* 键（ADR-284 大气与类别解耦）`).toEqual([]);
+      expect(
+        MODEL_DEFAULTS[mt].reflectorOpacity,
+        `类别 ${mt} 不应有 reflectorOpacity（噪声 A）`,
+      ).toBeUndefined();
+      expect(
+        MODEL_DEFAULTS[mt].reflectorColor,
+        `类别 ${mt} 不应有 reflectorColor（噪声 A）`,
+      ).toBeUndefined();
+      // shadowType 若携带只能是有软阴影语义的 soft；hard == schema 默认属 no-op，须清除。
+      if (MODEL_DEFAULTS[mt].shadowType !== undefined) {
+        expect(MODEL_DEFAULTS[mt].shadowType, `类别 ${mt} 的 shadowType 只能是 soft`).toBe("soft");
+      }
     }
   });
 
+  it("场景尺度 / 离散语义键仍然保留（未误删过头）", () => {
+    // fog（场景尺度）、reflectorSize（场景尺度）、envPreset（离散语义）、ppEnabled 仍在
+    const all = modelTypes.flatMap((mt) => Object.keys(MODEL_DEFAULTS[mt]));
+    for (const k of ["fogNear", "reflectorSize", "envPreset", "ppEnabled"]) {
+      expect(all, `MODEL_DEFAULTS 全体不应丢失 ${k}`).toContain(k);
+    }
+  });
   it("灯光参数的唯一来源是 envState schema 默认值（schema 仍持有全部 light* 键）", () => {
     // 解耦只砍「类别维度」，不砍 schema——灯光键必须仍存在于 EnvState
     const schemaLightKeys: (keyof EnvState)[] = [

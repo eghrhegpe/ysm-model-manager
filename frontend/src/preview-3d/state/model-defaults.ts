@@ -6,9 +6,9 @@
 // LIGHT_PRESETS + REFLECTOR_PRESETS + POSTPROC_PRESETS + SHADOW_PRESET_BY_MODEL。
 //
 // 注意：
-//   - skyForceEnv: true 标记「模型切换是离散动作，应触发 PMREM 重建」
-//   - 参数字段（fogDensity/lightIntensity 等）走 auto-model source，
-//     用户手动调参（manual source）后不被覆盖
+//   - [ADR-284] 本表只承载「场景尺度 / 离散语义」两类合法耦合（fog 距离、
+//     reflectorSize、envPreset、ppEnabled）；灯光（ADR-282）与 sky 大气散射已解耦移除。
+//   - 参数字段走 auto-model source，用户手动调参（manual source）后不被覆盖
 
 import type { EnvState } from "./env-state-schema.ts";
 
@@ -29,13 +29,12 @@ export type ModelType =
  * @param keys      本 cap 关注的键集（只挑存在的键，undefined 跳过）
  *
  * @example
- * // sky-capability:
- * const preset = pickModelDefaultFields(modelType, [
- *   "skyTurbidity", "skyRayleigh", "skyMieCoefficient",
- *   "skyMieDirectionalG", "skyExposure", "skySunIntensityScale", "skySunDiscScale",
+ * // reflector-capability：[ADR-284] 仅取场景尺度键（size 随体量、resolution 降精度）
+ * const picked = pickModelDefaultFields(modelType, [
+ *   "reflectorSize", "reflectorResolution",
  * ]);
- * if (Object.keys(preset).length > 0) {
- *   setEnvState({ ...preset, skyForceEnv: true }, { source: "auto-model" });
+ * if (Object.keys(picked).length > 0) {
+ *   setEnvState(picked, { source: "auto-model" });
  * }
  */
 export function pickModelDefaultFields<K extends keyof EnvState>(
@@ -65,15 +64,10 @@ export function toModelType(v: string): ModelType {
 }
 
 const DEFAULT_MODEL_STATE: Partial<EnvState> = {
-  // --- sky (来自 MODEL_SKY_PRESETS.default) ---
-  skyTurbidity: 7.5,
-  skyRayleigh: 2.5,
-  skyMieCoefficient: 0.005,
-  skyMieDirectionalG: 0.8,
-  skyExposure: 0.5,
-  skySunIntensityScale: 0.75,
-  skySunDiscScale: 0.5,
-  skyForceEnv: true,
+  // --- sky：[ADR-284] 大气与模型类别解耦，不再有任何 sky* 类别默认值 ---
+  // 散射参数（turbidity/rayleigh/mie/...）属天空盒/大气，与模型类别无关；
+  // 唯一来源 = envState schema 默认值 + 用户手动修改。
+  // （原 skyForceEnv: true 为死字段——applyModelPreset 硬置不从表读，一并删）
   // --- fog (来自 FOG_PRESETS.default = 空 → 不写任何 fog 键，不打扰用户已开雾) ---
   // default 回退不强制关雾（旧 FOG_PRESETS.default={} 空语义）
   // --- environment ---
@@ -83,8 +77,7 @@ const DEFAULT_MODEL_STATE: Partial<EnvState> = {
   // 灯光参数唯一来源 = envState schema 默认值（DEFAULT_LIGHT_PARAMS）+ 用户手动修改。
   // 曾经的 `lightVolumetricEnabled: false`（源自 LIGHT_PRESETS.default）与 schema 默认同值，
   // 属纯 no-op，却会在选中「默认」时夺取手动所有权并永久冻结后续模型预设——已删。
-  // --- shadow (来自 SHADOW_PRESET_BY_MODEL.default → hard) ---
-  shadowType: "hard",
+  // --- shadow：[ADR-284] default 的 shadowType:"hard" == schema 默认，属 no-op，已删 ---
   // --- reflector (来自 REFLECTOR_PRESETS.default = 空) ---
   // --- postprocessing (来自 POSTPROC_PRESETS.default = 空) ---
   // [ADR-250] 原 POSTPROC_PRESETS 表已删除；per-type「默认是否开后处理」改写 `ppEnabled`
@@ -94,15 +87,7 @@ const DEFAULT_MODEL_STATE: Partial<EnvState> = {
 export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
   default: DEFAULT_MODEL_STATE,
   ysm: {
-    // sky (MODEL_SKY_PRESETS.ysm)
-    skyTurbidity: 8.5,
-    skyRayleigh: 2.6,
-    skyMieCoefficient: 0.005,
-    skyMieDirectionalG: 0.8,
-    skyExposure: 0.6,
-    skySunIntensityScale: 0.75,
-    skySunDiscScale: 0.5,
-    skyForceEnv: true,
+    // sky：[ADR-284] 大气与模型类别解耦（原 MODEL_SKY_PRESETS.ysm）
     // fog (FOG_PRESETS.ysm：线性雾 ysm 蓝，20~600 远距)
     fogEnabled: false,
     fogMode: "linear",
@@ -114,28 +99,17 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     envPreset: "sky",
     envIntensity: 1.0,
     // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.ysm：key 1.3 / fill 0.5 / rim 0.45 + vol 0.4/1.2）
-    // shadow (SHADOW_PRESET_BY_MODEL.ysm = "default" → hard)
-    shadowType: "hard",
+    // shadow：[ADR-284] hard == schema 默认，no-op，已删
     // reflector (REFLECTOR_PRESETS.ysm)
-    reflectorOpacity: 0.25,
     reflectorSize: 200,
-    reflectorResolution: 512,
-    reflectorColor: 0xf0f4fa,
+    reflectorResolution: 512, // 大尺寸反射面降精度省显存（非默认 1024）
     // postprocessing (原 POSTPROC_PRESETS.ysm = {enabled: false})
     // [ADR-250] 方块/车万女仆：满亮材质 + 发光骨，默认关后处理避免爆亮。
     // 与 envState 默认同值（false），显式写下以表达意图（用户可覆盖）。
     ppEnabled: false,
   },
   vrm: {
-    // sky (MODEL_SKY_PRESETS.vrm)
-    skyTurbidity: 6,
-    skyRayleigh: 2.3,
-    skyMieCoefficient: 0.004,
-    skyMieDirectionalG: 0.85,
-    skyExposure: 0.55,
-    skySunIntensityScale: 0.78,
-    skySunDiscScale: 0.55,
-    skyForceEnv: true,
+    // sky：[ADR-284] 大气与模型类别解耦（原 MODEL_SKY_PRESETS.vrm）
     // fog (FOG_PRESETS.vrm：线性雾冷色调，50~400)
     fogEnabled: false,
     fogMode: "linear",
@@ -150,24 +124,13 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     // shadow (SHADOW_PRESET_BY_MODEL.vrm = "soft")
     shadowType: "soft",
     // reflector (REFLECTOR_PRESETS.vrm)
-    reflectorOpacity: 0.5,
-    reflectorSize: 60,
-    reflectorResolution: 1024,
-    reflectorColor: 0xf8efe2,
+    reflectorSize: 60, // opacity/color 噪声已删（ADR-284）；resolution 1024==默认已删
     // postprocessing (原 POSTPROC_PRESETS.vrm = {enabled: true})
     // [ADR-250] PBR 角色：开柔光。
     ppEnabled: true,
   },
   mmd: {
-    // sky (MODEL_SKY_PRESETS.mmd)
-    skyTurbidity: 7.5,
-    skyRayleigh: 2.3,
-    skyMieCoefficient: 0.006,
-    skyMieDirectionalG: 0.8,
-    skyExposure: 0.55,
-    skySunIntensityScale: 0.72,
-    skySunDiscScale: 0.45,
-    skyForceEnv: true,
+    // sky：[ADR-284] 大气与模型类别解耦（原 MODEL_SKY_PRESETS.mmd）
     // fog (FOG_PRESETS.mmd：线性雾暖白，80~500)
     fogEnabled: false,
     fogMode: "linear",
@@ -182,25 +145,14 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     // shadow (SHADOW_PRESET_BY_MODEL.mmd = "soft")
     shadowType: "soft",
     // reflector (REFLECTOR_PRESETS.mmd)
-    reflectorOpacity: 0.2,
-    reflectorSize: 80,
-    reflectorResolution: 1024,
-    reflectorColor: 0xfafcff,
+    reflectorSize: 80, // opacity/color 噪声已删（ADR-284）；resolution 1024==默认已删
     // postprocessing (原 POSTPROC_PRESETS.mmd = {enabled: true})
     // [ADR-250] toon：开辉光。注意：此前「MMD 亮瞎」并非本行所致——亮度轴无 per-type 值，
     // 真因是后处理一开即夺走 exposure 属主（skyExposure 0.55 → ppExposure 1.0）。
     ppEnabled: true,
   },
   "mmd-scene": {
-    // sky (MODEL_SKY_PRESETS.mmd-scene)
-    skyTurbidity: 10,
-    skyRayleigh: 2.0,
-    skyMieCoefficient: 0.008,
-    skyMieDirectionalG: 0.75,
-    skyExposure: 0.55,
-    skySunIntensityScale: 0.7,
-    skySunDiscScale: 0.45,
-    skyForceEnv: true,
+    // sky：[ADR-284] 大气与模型类别解耦（原 MODEL_SKY_PRESETS.mmd-scene）
     // fog (FOG_PRESETS.mmd-scene：线性雾远距 100~1500，大场景专用)
     fogEnabled: false,
     fogMode: "linear",
@@ -219,15 +171,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     ppEnabled: false,
   },
   litematic: {
-    // sky (MODEL_SKY_PRESETS.litematic)
-    skyTurbidity: 7.5,
-    skyRayleigh: 2.5,
-    skyMieCoefficient: 0.005,
-    skyMieDirectionalG: 0.8,
-    skyExposure: 0.5,
-    skySunIntensityScale: 0.75,
-    skySunDiscScale: 0.5,
-    skyForceEnv: true,
+    // sky：[ADR-284] 大气与模型类别解耦（原 MODEL_SKY_PRESETS.litematic）
     // fog (FOG_PRESETS.litematic：线性雾蓝白 30~800)
     fogEnabled: false,
     fogMode: "linear",
@@ -239,18 +183,15 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     envPreset: "forest",
     envIntensity: 1.1,
     // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.litematic：key 1.0@45/60 + fill 0.4@-45/30 + rim 0.3@135/30）
-    shadowType: "hard",
+    // shadow：[ADR-284] hard == schema 默认，no-op，已删
     // reflector (REFLECTOR_PRESETS.litematic)
-    reflectorOpacity: 0.25,
     reflectorSize: 500,
-    reflectorResolution: 512,
-    reflectorColor: 0xeaf1fb,
+    reflectorResolution: 512, // 大尺寸（500）降精度省显存
     // postprocessing (原 POSTPROC_PRESETS.litematic = {enabled: false})
     ppEnabled: false,
   },
   resourcepack: {
-    // sky/shadow/reflector/environment 与 default 逐字段相同 → 直接 spread，
-    // 仅覆盖差异：fog（FOG_PRESETS.resourcepack：与 ysm 同调 20~600）
+    // 仅覆盖差异：fog（场景尺度）+ reflectorSize/Resolution（场景尺度）
     // （light 段据 ADR-282 已从全部类别删除，不再覆盖）
     ...DEFAULT_MODEL_STATE,
     fogEnabled: false,
@@ -260,10 +201,8 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     fogFar: 600,
     fogDensity: 0.006,
     // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.resourcepack：key 1.3 / fill 0.4 / rim 0.35 + vol 0.4）
-    reflectorOpacity: 0.25,
     reflectorSize: 200,
-    reflectorResolution: 512,
-    reflectorColor: 0xf0f4fa,
+    reflectorResolution: 512, // 噪声 opacity/color 已删（ADR-284）
     // postprocessing (原 POSTPROC_PRESETS.resourcepack = {enabled: false})
     ppEnabled: false,
   },

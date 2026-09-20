@@ -553,13 +553,14 @@ describe("SkyCapability — SkyParams 太阳耦合解耦参数", () => {
     expect(envState.skySunDiscScale).toBeLessThanOrEqual(1.0);
   });
 
-  it("MODEL_DEFAULTS sky 全部模型类型均携带解耦参数", () => {
+  it("[ADR-284] MODEL_DEFAULTS 不再携带 sky 解耦参数（大气与类别解耦）", () => {
     const all = ["default", "vrm", "mmd", "mmd-scene", "ysm", "litematic"];
     for (const k of all) {
       const preset = MODEL_DEFAULTS[k as keyof typeof MODEL_DEFAULTS];
       expect(preset).toBeDefined();
-      expect(typeof preset.skySunIntensityScale).toBe("number");
-      expect(typeof preset.skySunDiscScale).toBe("number");
+      expect(preset.skySunIntensityScale).toBeUndefined();
+      expect(preset.skySunDiscScale).toBeUndefined();
+      expect(preset.skyTurbidity).toBeUndefined();
     }
   });
 
@@ -1099,13 +1100,15 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     expect((cap as unknown as { beams: SunBeams }).beams.group!.parent).toBeNull();
   });
 
-  it("applyModelPreset 在 disabled 时只合并参数不写 uniforms", () => {
+  it("[ADR-284] applyModelPreset 不再按类别改 turbidity（大气与类别解耦）", () => {
     const cap = newCap({ enabled: false });
     const u = (cap as unknown as { sky: Sky }).sky.material.uniforms;
     const turbidityBefore = u["turbidity"].value;
     cap.applyModelPreset("vrm");
-    expect(envState.skyTurbidity).toBe(MODEL_DEFAULTS.vrm!.skyTurbidity!);
-    expect(u["turbidity"].value).toBe(turbidityBefore); // 未写入 uniforms
+    // 解耦后 applyModelPreset 仅置 skyForceEnv 脉冲，不再写 skyTurbidity：
+    // schema 默认 7.5 保持（旧 vrm 预设 = 6 不再生效），disabled 下 uniforms 亦不写。
+    expect(envState.skyTurbidity).toBe(7.5);
+    expect(u["turbidity"].value).toBe(turbidityBefore);
   });
 
   it("loadState 非法类型字段全部跳过（restoreFields 守卫）", () => {

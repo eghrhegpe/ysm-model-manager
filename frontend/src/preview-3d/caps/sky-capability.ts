@@ -23,7 +23,6 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
-import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import {
   type EnvPlacement,
   getTypedCap,
@@ -484,19 +483,11 @@ export class SkyCapability implements SceneCapability {
     getTypedCap(this.caps, "light")?.refreshAmbientFromSky?.();
   }
 
-  /** 按模型类别套用散射/曝光预设（ADR-073 #3）；modelType 取 adapter.id（ysm/vrm/mmd/litematic） */
+  /** [ADR-284] 大气与模型类别解耦：不再按类别改散射/曝光参数。
+   *  本方法仅保留「换模型 → 置 skyForceEnv 脉冲 → 重建 IBL」的离散动作。 */
   applyModelPreset(modelType: ModelType): void {
-    // 表驱动：只挑本 cap 关注的键，undefined 自动跳过；编译期拼错 modelType 直接报错
-    const picked = pickModelDefaultFields(modelType, [
-      "skyTurbidity",
-      "skyRayleigh",
-      "skyMieCoefficient",
-      "skyMieDirectionalG",
-      "skyExposure",
-      "skySunIntensityScale",
-      "skySunDiscScale",
-    ]);
-    setEnvState({ ...picked, skyForceEnv: true }, { source: "auto-model" });
+    void modelType; // 类别不再参与取参（保留签名以对齐装配链其余 cap）
+    setEnvState({ skyForceEnv: true }, { source: "auto-model" });
     // 恢复预设切换的 IBL 重建：changed 集不命中 callback 的任一重建分支
     // （唯一判 skyForceEnv 的 cloudCoverage 分支要求 skyCloudCoverage 同变，预设不含），
     // envSky uniforms 已由 callback 散射分支同步，此处只需重建一次

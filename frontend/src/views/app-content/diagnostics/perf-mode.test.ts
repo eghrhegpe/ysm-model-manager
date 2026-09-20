@@ -35,7 +35,7 @@ function makeRoot(mode = "single"): ShadowRoot {
   el.innerHTML = `
     <select id="diag-perf-mode" data-testid="diag-perf-mode">
       <option value="single">单模型</option>
-      <option value="conc">并发</option>
+      <option value="conc">批量并发</option>
       <option value="scan">引擎对照</option>
     </select>
     <select id="diag-perf-rtype" data-testid="diag-perf-rtype">
@@ -188,11 +188,11 @@ describe("基准模式接线（ADR-278）", () => {
   it("目标集标签在并发模式改为「取样范围」（并发没有单模型，同控件在 conc 下只剩选样本语义）", () => {
     const root = makeRoot("single");
     initPerfPanel(root, esc);
-    expect(targetLabel(root)?.textContent).toBe("目标集");
+    expect(targetLabel(root)?.textContent).toBe("测试范围");
     switchMode(root, "conc");
     expect(targetLabel(root)?.textContent).toBe("取样范围");
     switchMode(root, "single");
-    expect(targetLabel(root)?.textContent).toBe("目标集");
+    expect(targetLabel(root)?.textContent).toBe("测试范围");
   });
 
   it("三个运行按钮各自挂本模式「测什么对象」的 hint（防把引擎对照误读为再测一次模型）", () => {

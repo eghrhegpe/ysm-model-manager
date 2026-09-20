@@ -57,7 +57,7 @@ function makeRoot(): ShadowRoot {
     <button id="diag-perf-conc-run"></button>
     <input id="diag-perf-conc-workers" type="number" value="4">
     <input id="diag-perf-conc-max" type="number" value="20">
-    <select id="diag-perf-order"><option value="path">路径升序</option><option value="size">体量降序</option></select>
+    <select id="diag-perf-order"><option value="path">路径升序</option><option value="size">体积从大到小</option></select>
     <div id="diag-perf-conc-out"></div>
     <div id="diag-perf-hist"></div>
     <div id="diag-load-trace"></div>
@@ -215,7 +215,7 @@ describe("并发基准面板（ADR-262 D5）", () => {
 
     const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
     expect(text).toContain("目标集 全库扁平");
-    expect(text).toContain("排序 体量降序");
+    expect(text).toContain("排序 体积从大到小");
     expect(text).toContain("上限 20");
     // 排序依据不可见 = 不可复核：口径 token 与人话一起给
     expect(text).toContain("dir_total");

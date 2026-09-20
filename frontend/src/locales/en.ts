@@ -357,6 +357,9 @@ export const en: Record<string, string> = {
   "diagnostics.perfModeNameSingle": "load time of one model",
   "diagnostics.perfModeNameConc": "serial vs parallel across a batch of models",
   "diagnostics.perfModeNameScan": "whole-repo directory scan (no model parsing)",
+  "diagnostics.perfModeOptSingle": "Single model",
+  "diagnostics.perfModeOptConc": "Batch concurrency",
+  "diagnostics.perfModeOptScan": "Engine comparison",
   "diagnostics.perfIterationsSuffixSingle": " (parse repeats)",
   "diagnostics.perfIterationsSuffixScan": " (repo rescan passes)",
   "diagnostics.perfIterationsHint":
@@ -365,6 +368,10 @@ export const en: Record<string, string> = {
   "diagnostics.perfConcTargetFallback":
     "Concurrent bench has no single-model target: fell back to flat repo",
   "diagnostics.perfModelPlaceholder": "Enter .ysm path (YSM only; PMX: use GUI 3D preview)",
+  "diagnostics.perfModelHintFromTree":
+    "Pick a model from the resource tree on the left and its path is filled in automatically",
+  "diagnostics.perfMaxUnreadHint":
+    "Not used for a single-model target (only applies once a type or the whole repo is selected)",
   "diagnostics.webNoConflictScan": "Conflict scanning is not supported on web",
   "diagnostics.webNoSyncConflictScan": "Sync conflict scanning is not supported on web",
   "diagnostics.loadDedupConfigFailed": "Failed to load dedup config",
@@ -416,7 +423,7 @@ export const en: Record<string, string> = {
     "The standard baseline slot cannot be located (user config root unavailable): pass an explicit baseline file path",
   "diagnostics.perfBaselineErrUnknown": "Baseline unavailable (see the tooltip for the reason)",
   // ADR-262 D5 concurrent bench: speedup + verdict token come from Go; the UI only renders them
-  "diagnostics.perfRunConcurrent": "Concurrent bench",
+  "diagnostics.perfRunConcurrent": "Run concurrent bench",
   "diagnostics.perfConcurrentWorkers": "Concurrent workers",
   "diagnostics.perfConcurrentHint":
     "Measured serial-vs-parallel speedup (tiers 2 / 4 / target); speedup and verdict are decided in Go; scope = a batch of models",
@@ -443,7 +450,7 @@ export const en: Record<string, string> = {
     "No concurrent bench result (the repo may have no CLI-analyzable model)",
   // ADR-262 D3 scan engine comparison (Go / Rust): an engine that was not measured shows the
   // reason, never 0.00ms (0ms reads as "too fast to measure", which is the opposite of the truth)
-  "diagnostics.perfScanBenchRun": "Engine comparison (Go/Rust)",
+  "diagnostics.perfScanBenchRun": "Run engine comparison",
   "diagnostics.perfScanBenchHint":
     "Scan the same repo root with both Go and Rust and report median/p95; an engine that was not measured shows the reason, not 0ms; scope = the whole repo directory tree, no model parsing",
   "diagnostics.perfScanBenchTitle": "Scan engine comparison result",
@@ -474,7 +481,7 @@ export const en: Record<string, string> = {
   "diagnostics.perfScanBenchFieldDiff": "Field mismatch",
   "diagnostics.perfScanBenchEmpty":
     "No engine comparison result (the repo may have no CLI-analyzable model)",
-  "diagnostics.perfTarget": "Target set",
+  "diagnostics.perfTarget": "Test scope",
   "diagnostics.perfTargetModel": "(single model by path)",
   "diagnostics.perfTargetAll": "All types",
   "diagnostics.perfTargetAllHint":
@@ -483,7 +490,7 @@ export const en: Record<string, string> = {
   "diagnostics.perfTargetRepoHint":
     "Whole repo (flat): no grouping by type — take the top N of the whole repo by the chosen order; JSON payload only",
   "diagnostics.perfTargetNameRtype": "{rtype} type",
-  "diagnostics.perfTargetSetEcho": "Target set {target} · order {order} · cap {n}",
+  "diagnostics.perfTargetSetEcho": "Test scope {target} · order {order} · cap {n}",
   "diagnostics.perfOrder": "Order",
   "diagnostics.perfOrderPath": "Path ascending",
   "diagnostics.perfOrderSize": "Size descending",
@@ -1214,6 +1221,20 @@ export const en: Record<string, string> = {
   "preview.coneAngle": "Cone Angle",
   "preview.lightPreset": "Light Preset",
   "preview.lighting": "Lighting",
+  "preview.lightSelect": "Edit Light",
+  "preview.lightType": "Light Type",
+  "preview.lightTypeDirectional": "Directional",
+  "preview.lightTypePoint": "Point",
+  "preview.lightTypeSpot": "Spot",
+  "preview.lightEnabled": "Enabled",
+  "preview.lightColor": "Color",
+  "preview.lightIntensity": "Intensity",
+  "preview.lightAzimuth": "Azimuth",
+  "preview.lightElevation": "Elevation",
+  "preview.lightAngle": "Cone Angle",
+  "preview.lightPenumbra": "Penumbra",
+  "preview.lightDistance": "Distance",
+  "preview.lightDecay": "Decay",
   "preview.cameraView": "Camera View",
   "preview.environment": "Environment",
   "preview.environmentDesc": "Environment map: procedural sky/studio presets or custom HDR",

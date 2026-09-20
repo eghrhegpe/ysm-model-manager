@@ -45,9 +45,9 @@ function makeRoot(): ShadowRoot {
     <select id="diag-perf-rtype"><option value="">（单模型，按路径）</option></select>
     <select id="diag-perf-order">
       <option value="path">路径升序</option>
-      <option value="size">体量降序</option>
+      <option value="size">体积从大到小</option>
     </select>
-    <label for="diag-perf-max" id="diag-perf-max-label" title="单位随目标集变：某类型 = 该类型 N 条；全部类型 = 每类各 N 条；全库扁平 = 全库 N 条">取样上限</label>
+    <label for="diag-perf-max" id="diag-perf-max-label" title="单位随目标集变：某类型 = 该类型 N 条；全部类型 = 每类各 N 条；全库扁平 = 全库 N 条">最多模型数</label>
     <input id="diag-perf-max" value="3">
     <div id="diag-perf-single"></div>
     <div id="diag-perf-hist"></div>
@@ -513,7 +513,7 @@ describe("目标集回显与体量徽标（排序依据不可见 = 不可复核�
     const out = await run(root);
 
     expect(out.textContent).toContain("目标集 全库扁平");
-    expect(out.textContent).toContain("排序 体量降序");
+    expect(out.textContent).toContain("排序 体积从大到小");
     expect(out.textContent).toContain("上限 2");
     expect(out.textContent).toContain("dir_total");
     expect(out.textContent).toContain("目录式按目录内容合计");
@@ -592,12 +592,12 @@ describe("取样上限的标签不随目标集改义", () => {
     const label = root.getElementById("diag-perf-max-label") as HTMLElement;
     const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
 
-    expect(label.textContent).toBe("取样上限");
+    expect(label.textContent).toBe("最多模型数");
 
     for (const target of ["__all__", "__repo__", "ysm"]) {
       setTarget(root, target);
       select.dispatchEvent(new Event("change", { bubbles: true }));
-      expect(label.textContent).toBe("取样上限");
+      expect(label.textContent).toBe("最多模型数");
       expect(label.title).toContain("单位随目标集变");
     }
   });

@@ -349,7 +349,7 @@ export const zhCN = {
   // 同族扫描按钮（healthRun/scanSyncConflict）均如此；夹带则与 tpl 侧 SVG 叠成双图标。
   "diagnostics.startScan": "开始扫描",
   "diagnostics.clearFailed": "清除日志失败",
-  "diagnostics.perfRunSingle": "运行单一模型基准",
+  "diagnostics.perfRunSingle": "运行单模型基准",
   // ADR-278 §2.6 语义诚实层：三模式共用一套控件，但每个数字/选项**测的对象不同**——
   // 不当场说清就会被误读（scan 的「迭代」不是再测一次模型，而是重扫整库目录树）。
   // 接线面单点 = perf.ts|PERF_MODE_I18N（模式 → 键表）；文案本体不随模式分平行键——
@@ -358,6 +358,9 @@ export const zhCN = {
   "diagnostics.perfModeNameSingle": "一个模型的加载耗时",
   "diagnostics.perfModeNameConc": "一批模型的串行 vs 并行",
   "diagnostics.perfModeNameScan": "整库目录树扫描（不解析模型文件）",
+  "diagnostics.perfModeOptSingle": "单模型",
+  "diagnostics.perfModeOptConc": "批量并发",
+  "diagnostics.perfModeOptScan": "引擎对照",
   // 同一 #diag-perf-iter 在 single 与 scan 下是两种物理量：标签 = 既有 perfIterations + 模式后缀
   "diagnostics.perfIterationsSuffixSingle": "（重复解析次数）",
   "diagnostics.perfIterationsSuffixScan": "（全库重扫次数）",
@@ -366,6 +369,8 @@ export const zhCN = {
   "diagnostics.perfTargetSampleRange": "取样范围",
   "diagnostics.perfConcTargetFallback": "并发基准没有单模型目标：已回落到全库扁平",
   "diagnostics.perfModelPlaceholder": "填 .ysm 模型路径（仅 YSM 可模拟；PMX 请用 GUI 3D 预览实测）",
+  "diagnostics.perfModelHintFromTree": "在左侧资源树中点选模型，路径会自动带入",
+  "diagnostics.perfMaxUnreadHint": "单模型目标下不生效（只在选了类型 / 全库时才用）",
   "diagnostics.webNoConflictScan": "网页版不支持冲突扫描",
   "diagnostics.webNoSyncConflictScan": "网页版不支持同步冲突扫描",
   "diagnostics.loadDedupConfigFailed": "加载去重配置失败",
@@ -407,7 +412,7 @@ export const zhCN = {
     "无法定位标准基准槽（用户配置根不可用）：请改用显式的基准文件路径",
   "diagnostics.perfBaselineErrUnknown": "基准不可用（原因见悬停提示）",
   // ADR-262 D5 并发基准：加速比与判决 token 均由 Go 单点给出，前端只渲染
-  "diagnostics.perfRunConcurrent": "并发基准",
+  "diagnostics.perfRunConcurrent": "运行并发基准",
   "diagnostics.perfConcurrentWorkers": "并发 worker 数",
   "diagnostics.perfConcurrentHint":
     "串行 vs 并行的实测加速比（含 2 / 4 / 目标值三档）；加速比与判决由 Go 判定；测的对象 = 一批模型",
@@ -431,7 +436,7 @@ export const zhCN = {
     "并发参数无效：worker 数须为 1~256、取样上限须 ≥ 1，且目标集不能选「单模型」（并发没有模型路径输入）",
   "diagnostics.perfConcurrentEmpty": "未取得并发基准结果（仓库里可能没有 CLI 可分析的模型）",
   // ADR-262 D3 扫描引擎对照（Go / Rust）：未采集的引擎显示原因，不显示 0.00ms
-  "diagnostics.perfScanBenchRun": "引擎对照（Go/Rust）",
+  "diagnostics.perfScanBenchRun": "运行引擎对照",
   "diagnostics.perfScanBenchHint":
     "同一仓库根分别用 Go / Rust 扫描并取中位与 p95；未采集的引擎显示原因，而不是 0ms；测的对象 = 整库目录树，不解析模型文件",
   "diagnostics.perfScanBenchTitle": "扫描引擎对照结果",
@@ -460,7 +465,7 @@ export const zhCN = {
   "diagnostics.perfScanBenchEmpty": "未取得引擎对照结果（仓库里可能没有 CLI 可分析的模型）",
   "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
   "diagnostics.perfStageStatsHint": "中位 {median}ms / p95 {p95}ms；n = 该阶段实际出现次数",
-  "diagnostics.perfTarget": "目标集",
+  "diagnostics.perfTarget": "测试范围",
   "diagnostics.perfTargetModel": "（单模型，按路径）",
   "diagnostics.perfTargetAll": "全部类型",
   // 「全部类型」≠「选择器里列出的全部」：选择器只列 CLI 可分析类型，而 --target all 由 Go 侧
@@ -475,10 +480,9 @@ export const zhCN = {
   "diagnostics.perfTargetSetEcho": "目标集 {target} · 排序 {order} · 上限 {n}",
   "diagnostics.perfOrder": "排序",
   "diagnostics.perfOrderPath": "路径升序",
-  "diagnostics.perfOrderSize": "体量降序",
-  "diagnostics.perfMaxModels": "取样上限",
+  "diagnostics.perfOrderSize": "体积从大到小",
+  "diagnostics.perfMaxModels": "最多模型数",
   // 上限控件的**单位随目标集选择器变**（rtype = 该类型 N 条 / all = 每类各 N 条 / repo = 全库 N 条）——
-  // 这条规则只进 title 提示，标签正文恒为「取样上限」：标签跟着模式改义正是本次要清的账
   "diagnostics.perfMaxModelsHint":
     "单位随目标集变：某类型 = 该类型 N 条；全部类型 = 每类各 N 条；全库扁平 = 全库 N 条",
   "diagnostics.perfMatrixResult": "类型矩阵结果",
@@ -1188,6 +1192,20 @@ export const zhCN = {
   "preview.coneAngle": "锥角",
   "preview.lightPreset": "灯光预设",
   "preview.lighting": "灯光",
+  "preview.lightSelect": "编辑灯光",
+  "preview.lightType": "灯光类型",
+  "preview.lightTypeDirectional": "方向光",
+  "preview.lightTypePoint": "点光源",
+  "preview.lightTypeSpot": "聚光灯",
+  "preview.lightEnabled": "启用",
+  "preview.lightColor": "颜色",
+  "preview.lightIntensity": "强度",
+  "preview.lightAzimuth": "方位角",
+  "preview.lightElevation": "仰角",
+  "preview.lightAngle": "锥角",
+  "preview.lightPenumbra": "半影",
+  "preview.lightDistance": "衰减距离",
+  "preview.lightDecay": "衰减指数",
   "preview.cameraView": "摄像机视图",
   "preview.environment": "环境",
   "preview.environmentDesc": "环境贴图：程序化天空/工作室等预设光照或自定义 HDR",

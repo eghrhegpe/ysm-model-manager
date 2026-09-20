@@ -900,12 +900,12 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
   }) => {
     const single = await readHonesty(page);
     expect(single.iter).toContain("parse repeats"); // zh：重复解析次数
-    expect(single.target).toContain("Target set");
+    expect(single.target).toContain("Test scope");
     await setShadowSelect(page, "diag-perf-mode", "scan");
     const scan = await readHonesty(page);
     expect(scan.iter).toContain("rescan passes"); // zh：全库重扫次数
     // scan 不读目标集行，但标签不得被串改成并发的「取样范围」（模式态互斥）
-    expect(scan.target).toContain("Target set");
+    expect(scan.target).toContain("Test scope");
   });
 
   test("切 conc：目标集标签改为 Sample range，且单模型回落伴随可见 toast（不再静默改选择）", async ({

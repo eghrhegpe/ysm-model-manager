@@ -102,7 +102,10 @@ auto_fields:
     - LegacyGroundMatSource
     - LightCapability
     - lightDirToPosition
+    - LightInstanceParams
+    - LightKey
     - LightParams
+    - LightType
     - lowFreqMask
     - luminanceHistogram
     - makeDecorrelatedVariant

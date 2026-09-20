@@ -350,7 +350,7 @@ export const ja: Record<string, string> = {
   "diagnostics.noRuntimeLogs": "ランタイムログはまだありません",
   "diagnostics.startScan": "スキャン開始",
   "diagnostics.clearFailed": "ログのクリアに失敗しました",
-  "diagnostics.perfRunSingle": "単一モデルベンチマークを実行",
+  "diagnostics.perfRunSingle": "単一モデルのベンチマークを実行",
   // ADR-278 §2.6：3 モードが同一控件を共有するが、各数値／選択肢が「測る対象」が違う——
   // その場で明示する（エンジン比較の「反復」はモデル再測定ではなくリポジトリ全体再スキャン）。
   // 配線の単一点 = perf.ts|PERF_MODE_I18N（モード → キー表）；文言本体はモード別の平行キーにしない——
@@ -359,6 +359,9 @@ export const ja: Record<string, string> = {
   "diagnostics.perfModeNameSingle": "1 つのモデルの読込時間",
   "diagnostics.perfModeNameConc": "複数モデルの逐次 vs 並列",
   "diagnostics.perfModeNameScan": "リポジトリ全体のディレクトリスキャン（モデル解析なし）",
+  "diagnostics.perfModeOptSingle": "単一モデル",
+  "diagnostics.perfModeOptConc": "一括並列",
+  "diagnostics.perfModeOptScan": "エンジン比較",
   "diagnostics.perfIterationsSuffixSingle": "（解析繰り返し回数）",
   "diagnostics.perfIterationsSuffixScan": "（リポジトリ再スキャン回数）",
   "diagnostics.perfIterationsHint":
@@ -368,6 +371,9 @@ export const ja: Record<string, string> = {
     "並列ベンチに単一モデル対象はない：フラット全ライブラリに回落しました",
   "diagnostics.perfModelPlaceholder":
     ".ysm モデルパスを入力（YSM のみシミュレート可；PMX は GUI 3D プレビューで実測）",
+  "diagnostics.perfModelHintFromTree": "左のリソースツリーでモデルを選ぶとパスが自動入力されます",
+  "diagnostics.perfMaxUnreadHint":
+    "単一モデル対象では無効（タイプまたはリポジトリ全体を選んだ時のみ有効）",
   "diagnostics.webNoConflictScan": "ウェブ版では競合スキャンはサポートされていません",
   "diagnostics.webNoSyncConflictScan": "ウェブ版では同期競合スキャンはサポートされていません",
   "diagnostics.loadDedupConfigFailed": "重複排除設定の読み込みに失敗しました",
@@ -416,7 +422,7 @@ export const ja: Record<string, string> = {
     "標準の基準スロットを特定できません（ユーザー設定ルートが利用不可）：基準ファイルのパスを明示してください",
   "diagnostics.perfBaselineErrUnknown": "基準を利用できません（理由はツールチップをご覧ください）",
   // ADR-262 D5 並列ベンチ：加速比と判定トークンは Go が単一の出所。UI は描画のみ
-  "diagnostics.perfRunConcurrent": "並列ベンチ",
+  "diagnostics.perfRunConcurrent": "並列ベンチを実行",
   "diagnostics.perfConcurrentWorkers": "並列 worker 数",
   "diagnostics.perfConcurrentHint":
     "直列と並列の実測加速比（2 / 4 / 指定値の段階）。加速比と判定は Go が決定します；対象 = 複数モデル",
@@ -440,7 +446,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfConcurrentEmpty":
     "並列ベンチの結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
   // ADR-262 D3 スキャンエンジン比較（Go / Rust）：未計測のエンジンは理由を表示し、0.00ms は出さない
-  "diagnostics.perfScanBenchRun": "エンジン比較（Go/Rust）",
+  "diagnostics.perfScanBenchRun": "エンジン比較を実行",
   "diagnostics.perfScanBenchHint":
     "同じリポジトリルートを Go / Rust でスキャンし中央値と p95 を計測。未計測のエンジンは理由を表示（0ms ではない）；対象 = リポジトリ全体のディレクトリツリー、モデル解析なし",
   "diagnostics.perfScanBenchTitle": "スキャンエンジン比較結果",
@@ -471,7 +477,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfScanBenchFieldDiff": "フィールド不一致",
   "diagnostics.perfScanBenchEmpty":
     "エンジン比較結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
-  "diagnostics.perfTarget": "対象セット",
+  "diagnostics.perfTarget": "テスト範囲",
   "diagnostics.perfTargetModel": "（単一モデル：パス指定）",
   "diagnostics.perfTargetAll": "全タイプ",
   "diagnostics.perfTargetAllHint":
@@ -480,10 +486,10 @@ export const ja: Record<string, string> = {
   "diagnostics.perfTargetRepoHint":
     "リポジトリ全体（フラット）：タイプでグループ化せず、全体を並び順どおりに上位 N 件取得。JSON 構造化ペイロードのみ",
   "diagnostics.perfTargetNameRtype": "{rtype} タイプ",
-  "diagnostics.perfTargetSetEcho": "対象セット {target} · 並び順 {order} · 上限 {n}",
+  "diagnostics.perfTargetSetEcho": "テスト範囲 {target} · 並び順 {order} · 上限 {n}",
   "diagnostics.perfOrder": "並び順",
   "diagnostics.perfOrderPath": "パス昇順",
-  "diagnostics.perfOrderSize": "サイズ降順",
+  "diagnostics.perfOrderSize": "サイズ大きい順",
   "diagnostics.perfMaxModels": "サンプル上限",
   // 上限の**単位は対象セットのセレクタで変わる**（rtype = そのタイプ N 件 / all = タイプ毎に N 件 /
   // repo = 全体で N 件）。この規則は title ヒントにのみ置き、ラベル本文は変えない——
@@ -1216,6 +1222,20 @@ export const ja: Record<string, string> = {
   "preview.coneAngle": "コーン角",
   "preview.lightPreset": "ライトプリセット",
   "preview.lighting": "照明",
+  "preview.lightSelect": "ライトを編集",
+  "preview.lightType": "ライトタイプ",
+  "preview.lightTypeDirectional": "平行光",
+  "preview.lightTypePoint": "点光源",
+  "preview.lightTypeSpot": "スポットライト",
+  "preview.lightEnabled": "有効",
+  "preview.lightColor": "色",
+  "preview.lightIntensity": "強度",
+  "preview.lightAzimuth": "方位角",
+  "preview.lightElevation": "仰角",
+  "preview.lightAngle": "コーン角",
+  "preview.lightPenumbra": "半影",
+  "preview.lightDistance": "減衰距離",
+  "preview.lightDecay": "減衰指数",
   "preview.cameraView": "カメラビュー",
   "preview.environment": "環境",
   "preview.environmentDesc":

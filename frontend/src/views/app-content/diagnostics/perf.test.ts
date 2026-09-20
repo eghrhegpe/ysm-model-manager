@@ -8,6 +8,7 @@
 // mock cli-bridge.executeCLI（web 模式在测试环境视为 native，isWebPlatform=false）
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { rememberModelPath, __resetLastModelPathForTest } from "@/core/model-path-store.ts";
+import { bus } from "@/bus";
 import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 import { recordLoadTrace, clearLoadTraces } from "@/preview-3d/infra/load-trace.ts";
 
@@ -82,10 +83,11 @@ function makeRoot(): ShadowRoot {
   el.innerHTML = `
     <button class="diag-btn" id="diag-perf-run">运行</button>
     <button class="diag-btn" id="diag-perf-refresh-trace">刷新</button>
+    <select id="diag-perf-mode"><option value="single">单模型</option><option value="conc">批量并发</option><option value="scan">引擎对照</option></select>
     <input id="diag-perf-model">
     <input id="diag-perf-iter">
     <select id="diag-perf-rtype"><option value="">（单模型，按路径）</option></select>
-    <select id="diag-perf-order"><option value="path">路径升序</option><option value="size">体量降序</option></select>
+    <select id="diag-perf-order"><option value="path">路径升序</option><option value="size">体积从大到小</option></select>
     <input id="diag-perf-max" value="5">
     <input id="diag-perf-baseline-save" type="checkbox">
     <input id="diag-perf-baseline-compare" type="checkbox">
@@ -597,6 +599,43 @@ describe("diag-perf-model 预填最近选中模型路径（ADR-221 消除手输�
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./mine.ysm";
     initPerfPanel(root, esc);
     expect((root.getElementById("diag-perf-model") as HTMLInputElement).value).toBe("./mine.ysm");
+  });
+});
+
+describe("进阶 P2：订阅 model:select 实时带入路径（ADR-221 延伸）", () => {
+  it("进入 bench tab 后再点资源树模型 → 单模型模式下空输入框被实时带入", () => {
+    __resetLastModelPathForTest();
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    const inp = root.getElementById("diag-perf-model") as HTMLInputElement;
+    expect(inp.value).toBe(""); // 初始无选中
+    bus.emit("model:select", { path: "D:\\repo\\ysm\\player.ysm" });
+    expect(inp.value).toBe("D:\\repo\\ysm\\player.ysm");
+  });
+
+  it("用户已手填路径 → 总线同步绝不覆盖", () => {
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    const inp = root.getElementById("diag-perf-model") as HTMLInputElement;
+    inp.value = "./mine.ysm";
+    bus.emit("model:select", { path: "D:\\repo\\ysm\\player.ysm" });
+    expect(inp.value).toBe("./mine.ysm");
+  });
+
+  it("并发 / 引擎对照模式下不带入（无模型路径输入框）", () => {
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    const modeEl = root.getElementById("diag-perf-mode") as HTMLSelectElement;
+    modeEl.value = "conc";
+    bus.emit("model:select", { path: "D:\\repo\\ysm\\player.ysm" });
+    expect((root.getElementById("diag-perf-model") as HTMLInputElement).value).toBe("");
+  });
+
+  it("目录载荷（isDir）不带入", () => {
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    bus.emit("model:select", { path: "D:\\repo\\ysm", isDir: true });
+    expect((root.getElementById("diag-perf-model") as HTMLInputElement).value).toBe("");
   });
 });
 

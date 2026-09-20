@@ -403,7 +403,10 @@ auto_fields:
     - LegChain
     - LightCapability
     - lightDirToPosition
+    - LightInstanceParams
+    - LightKey
     - LightParams
+    - LightType
     - LipSyncCallback
     - LipSyncOptions
     - ListAllFilePaths

@@ -196,14 +196,15 @@ export function diagnosticsHTML(): string {
       <div class="perf-row">
         <label for="diag-perf-mode">${t("diagnostics.perfMode")}</label>
         <select id="diag-perf-mode" class="diag-config-select" data-testid="diag-perf-mode">
-          <option value="single">${t("diagnostics.perfRunSingle")}</option>
-          <option value="conc">${t("diagnostics.perfRunConcurrent")}</option>
-          <option value="scan">${t("diagnostics.perfScanBenchRun")}</option>
+          <option value="single">${t("diagnostics.perfModeOptSingle")}</option>
+          <option value="conc">${t("diagnostics.perfModeOptConc")}</option>
+          <option value="scan">${t("diagnostics.perfModeOptScan")}</option>
         </select>
       </div>
       <div class="perf-row" data-perf-mode="single">
         <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
         <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
+        <div class="perf-hint" data-perf-mode="single">${t("diagnostics.perfModelHintFromTree")}</div>
       </div>
       <div class="perf-row" data-perf-mode="single scan">
         <label for="diag-perf-iter" id="diag-perf-iter-label" data-testid="diag-perf-iter-label">${t("diagnostics.perfIterations")}</label>

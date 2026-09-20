@@ -25,7 +25,7 @@
 | `instance:export-list` | 1 | 1 | 0 | 0 | ✅ |
 | `lang:changed` | 2 | 2 | 0 | 0 | ✅ |
 | `menu:show` | 1 | 1 | 0 | 0 | ✅ |
-| `model:select` | 8 | 1 | 0 | 0 | ✅ |
+| `model:select` | 8 | 2 | 0 | 0 | ✅ |
 | `nav:changed` | 7 | 2 | 0 | 0 | ✅ |
 | `package:selected` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:focus-search` | 1 | 1 | 0 | 0 | ✅ |
@@ -226,7 +226,7 @@
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 191 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 246 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 332 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 333 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 545 |
@@ -234,6 +234,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
+| initPerfPanel | `frontend/src/views/app-content/diagnostics/perf.ts` | 191 |
 | connectedCallback | `frontend/src/views/app-preview/index.ts` | 83 |
 
 ### `nav:changed`

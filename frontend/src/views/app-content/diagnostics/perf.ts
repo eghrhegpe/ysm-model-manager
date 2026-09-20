@@ -7,18 +7,25 @@
 //   - perf-trace.ts       ：加载剖析（load-trace store 消费）
 // ADR-040 拆分后每文件 ≤400 行红线；本文件为薄接线层。
 
+import { bus, type ModelSelectPayload } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { getLastModelPath } from "@/core/model-path-store.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import type { EscFn } from "./logs.ts";
 import { bindPerfCopyHandlers } from "./perf-common.ts";
 import { runConcurrentBench } from "./perf-concurrent.ts";
-import { PERF_TARGET_REPO, populatePerfTargetOptions } from "./perf-matrix-render.ts";
+import {
+  PERF_TARGET_REPO,
+  parsePerfTargetValue,
+  populatePerfTargetOptions,
+} from "./perf-matrix-render.ts";
 import { runScanBench } from "./perf-scan-bench.ts";
 import { runSingleBench, syncPerfBaselineControls } from "./perf-single-bench.ts";
 import { renderLoadTraceSection } from "./perf-trace.ts";
 
 export { renderLoadTraceSection } from "./perf-trace.ts";
+
+const _perfModelSync = new Map<ShadowRoot, () => void>();
 
 /**
  * 基准模式的 i18n 接线单点（ADR-278 §2.6）：模式 → 文案键的**唯一事实源**。
@@ -139,6 +146,20 @@ function initPerfMode(root: ShadowRoot): () => void {
       const el = root.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
       if (el) el.disabled = unread.includes(mode);
     }
+    // ===== 双维门禁的「目标集」半边：单模型目标下 max / order 不读（ADR-278 §2.6 漏判的默认态）=====
+    // single 模式默认目标集 = 单模型，此时 singleBenchReadMode 提前 return 根本不读 max / order；
+    // 两控件仍可见却不被读 = 与 scan 下排序同款的「可见但欺骗」，这里按目标集维置灰并给原因 title。
+    const targetIsModel =
+      mode === "single" && parsePerfTargetValue(targetEl?.value ?? "")?.target === "model";
+    const maxEl = root.getElementById("diag-perf-max") as HTMLInputElement | null;
+    if (maxEl) {
+      maxEl.disabled = targetIsModel;
+      maxEl.title = targetIsModel
+        ? t("diagnostics.perfMaxUnreadHint")
+        : t("diagnostics.perfMaxModelsHint");
+    }
+    const orderEl = root.getElementById("diag-perf-order") as HTMLSelectElement | null;
+    if (orderEl) orderEl.disabled = mode === "scan" || targetIsModel;
     syncPerfBaselineControls(root);
 
     const modelOpt = Array.from(targetEl?.options ?? []).find((o) => o.value === "");
@@ -163,6 +184,21 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   const modelInput = root.getElementById("diag-perf-model") as HTMLInputElement | null;
   const lastModel = getLastModelPath();
   if (modelInput && !modelInput.value.trim() && lastModel) modelInput.value = lastModel;
+  // 进阶 P2（ADR-221 延伸）：订阅全局「模型选中」总线，进入 bench tab 后再去资源树点模型也实时带入——
+  // 比初始化只预填一次更进一步，彻底免手敲路径。仅在 single 模式且输入框为空时带入（不覆盖用户已输入值）；
+  // 重复 init 同一 root 按 map 去重，不叠加监听。
+  if (modelInput && !_perfModelSync.has(root)) {
+    const unsub = bus.on("model:select", (p) => {
+      const sel = p as ModelSelectPayload;
+      if (sel.isDir) return; // 目录不是可测单模型文件，跳过
+      const modeEl = root.getElementById("diag-perf-mode") as HTMLSelectElement | null;
+      // 缺省（夹具/异常态无 mode select）按 single 处理，不因 DOM 缺失而静默不填充
+      if ((modeEl?.value ?? "single") !== "single") return; // 并发 / 引擎对照无模型路径输入框
+      const inp = root.getElementById("diag-perf-model") as HTMLInputElement | null;
+      if (inp && !inp.value.trim()) inp.value = sel.path;
+    });
+    _perfModelSync.set(root, unsub);
+  }
   root.getElementById("diag-perf-run")?.addEventListener("click", () => runSingleBench(root, esc));
   // 目标集选择器选项来自 Go/registry（前端不写死类型表）；注册表不可用时静默回落静态首项旧行为
   // 填充后同步基准控件可用性（选项变化不影响当前值，但仍以填充后的值为准）
@@ -176,9 +212,10 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
     applyPerfMode();
   });
   // 基准三件套只在单模型目标集可用（ADR-262 D8）：Go 对 target≠model 的基准参数是**明确拒绝**的
-  root
-    .getElementById("diag-perf-rtype")
-    ?.addEventListener("change", () => syncPerfBaselineControls(root));
+  root.getElementById("diag-perf-rtype")?.addEventListener("change", () => {
+    syncPerfBaselineControls(root);
+    applyPerfMode(); // 目标集维度变化需重放：单模型目标下禁用 max / order
+  });
   syncPerfBaselineControls(root);
   // 并发基准（ADR-262 D5）：加速比只有 Go 量得到，前端只提交参数 + 渲染结构化载荷
   root

@@ -43,6 +43,7 @@ auto_fields:
     - isSkyEnvironmentOn
     - LightCapability
     - lightDirToPosition
+    - LightKey
     - mount3D
     - Mount3DOptions
     - PoseScene

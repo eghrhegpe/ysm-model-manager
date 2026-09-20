@@ -21,6 +21,7 @@ auto_fields:
     - ATMOSPHERE_PRESETS
     - AtmospherePresetId
     - buildSharedInfra
+    - clampFieldValue
     - clearEnvCallbacks
     - clearEnvStateMiddlewares
     - clearSceneCaps
@@ -34,12 +35,15 @@ auto_fields:
     - EnvStateMiddleware
     - EnvStateSchema
     - getEnvCallbackCount
+    - getParamRange
     - getPresetKeys
     - getSceneCaps
     - getStateValue
     - MODEL_DEFAULTS
     - ModelType
+    - NumericRange
     - pickModelDefaultFields
+    - RangedKey
     - registerEnvCallback
     - registerEnvStateMiddleware
     - resetEnvState
@@ -90,13 +94,13 @@ invariant_anchors:
 
 ## 核心职责
 
-- `env-state-schema.ts`：`ENV_STATE_SCHEMA` 声明全部参数字段 `{ type, default, group }`。键名 = `{cap}{Group}{Field}` 扁平化（`skyTimeOfDay`/`groundMatSource`/`waterMode`/`ppBloomStrength`/`lightKeyIntensity`/`lightSpotAngle`），颜色统一 `number`(hex)（勿用 tuple3——仅 ground 风格 RGB 用 tuple3）。能力级 enabled（cap 是否挂载）**不入 schema**，留 cap 私有 `this.enabled`。`deriveDefaultEnvState()` 派生默认值，`EnvState` 类型由 schema 推导（枚举取 `V[number]`）。
+- `env-state-schema.ts`：`ENV_STATE_SCHEMA` 声明全部参数字段 `{ type, default, group }`。键名 = `{cap}{Group}{Field}` 扁平化（`skyTimeOfDay`/`groundMatSource`/`waterMode`/`ppBloomStrength`/`lightKeyIntensity`/`lightSpotAngle`），颜色统一 `number`(hex)（勿用 tuple3——仅 ground 风格 RGB 用 tuple3）。能力级 enabled（cap 是否挂载）**不入 schema**，留 cap 私有 `this.enabled`。`deriveDefaultEnvState()` 派生默认值，`EnvState` 类型由 schema 推导（枚举取 `V[number]`）。**（ADR-283：数值字段可再声明 `range`（合法域，写入钳制）/ `uiRange`（滑杆展示域，缺省=range）——值域的唯一事实源；读口 `getParamRange(key: RangedKey)`（未声明值域的键编译期传不进）与 `clampFieldValue`，菜单与 cap 都只是读口。）**
 - `env-state.ts`：可变单例 `envState` + `setEnvState(partial, {source})` 中央写入入口 + `getStateValue/setStateValue(path)` StatePath 读写 + `resetEnvState()`（测试用）。写入带 `lastWriteSource`（`auto-model`/`auto-atmosphere`/`manual`），守卫决策 `manual > auto-atmosphere > auto-model`——手动调参不被预设覆盖。
 - `env-dispatcher.ts`：`registerEnvCallback(cap, cb)` 回调注册表 + `dispatchEnvChange(changed, state)` 派发（setEnvState 自动触发）。cap 构造时注册、dispose 退订。`clearEnvCallbacks()` 测试用。**`changed` 是 `Set<EnvStateKey>`（`keyof EnvState`，schema 派生，2026-09）**——`changed.has("拼错")` 编译不过；分组键事实源是 `getPresetKeys(group)`（注册时缓存 groupKeys 前置过滤；跨组用数组形式，ADR-250）。
 
 ## 对外 API / 入口
 
-- `setEnvState(partial, { source })`：唯一写入口。cap setter 收口为它（`source:'manual'`）；模型类别预设用 `source:'auto-model'`；氛围预设（刀4 ATMOSPHERE_PRESETS）用 `auto-atmosphere`。
+- `setEnvState(partial, { source })`：唯一写入口。cap setter 收口为它（`source:'manual'`）；模型类别预设用 `source:'auto-model'`；氛围预设（刀4 ATMOSPHERE_PRESETS）用 `auto-atmosphere`。**（ADR-283：写入口顺带取值域钳制 `clampFieldValue`——schema 声明了 `range` 的数值字段在此就范，setter / 存档 / 预设 / 中间件产物四条路径一次性覆盖。）**
 - cap 公开 setter/getter **保留**（`setWaterMode`/`getPresetId` 等签名不变），内部实现改读/写 envState + registerEnvCallback 落地渲染——菜单闭包不感知，装配链见下「已收敛」。
 
 ## 统一数据源（ADR-196 刀4–5）
@@ -121,7 +125,7 @@ invariant_anchors:
 - **saveState**（写）：`persistState(capId, { this.enabled(能力级私有) + envState 参数字段 })` —— 从 envState **摘键**，不存全量。
   （2026-09：摘键可**派生化**——water 已改为逆历 `getPresetKeys("water")`，新增参数只需进 schema；历史键名由 loadState 双轨吸收）
   （fog 例外：其私有 `enabled` 已随 2026-09 锐评收口删除，只写 envState 键。）
-- **loadState**（读）：`restoreState` → **旧键迁移**（ADR-196 前无前缀旧键 `{mode,color,...}` 转新键，保升级用户配置，如 fog 的 legacyKeys 分支）→ `restoreFields`（类型安全批量恢复器，按存档值实际类型分派回填）→ `setEnvState(..., {source:"manual"})` 写回 envState → cap apply 落地 Three。
+- **loadState**（读）：`restoreState` → **旧键迁移**（ADR-196 前无前缀旧键 `{mode,color,...}` 转新键，保升级用户配置，如 fog 的 legacyKeys 分支）→ `restoreFields`（类型安全批量恢复器，按存档值实际类型分派回填）→ `setEnvState(..., {source:"manual"})` 写回 envState → cap apply 落地 Three。**（ADR-283：恢复路径同样经唯一入口的值域钳制——存档里的越界值不会漏进 envState。）**
 - **触发时机**：进入 3D → `sceneCapabilityRegistry.loadAll()`（shared-infra.ts:239）；离开 3D → `sceneCapabilityRegistry.saveAll()`（mount-session.ts:267）。
 
 **与预设的共存（守卫链）**：装配序 `loadAll()`（恢复用户存档 source:"manual" **且** shadow/reflector 置 `isStateLoaded=true`）→ `applyModelDefaults`（读 MODEL_DEFAULTS source:"auto-model"）。`shouldOverwrite` 裁决 `manual > auto-atmosphere > auto-model` → 用户手动值（含恢复的存档）不被预设覆盖；shadow/reflector 额外用 `isStateLoaded` 早退连套用都不执行。双重机制保「上次调的雾/灯切模型不被重置」。

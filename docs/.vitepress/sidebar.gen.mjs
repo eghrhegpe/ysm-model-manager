@@ -246,6 +246,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-284：sky 散射参数与模型类别解耦 + reflector/shadow 清除 schema 默认值 no-op",
+        "link": "/adr/ADR-284-sky-reflector-shadow-decoupling-cleanup"
+      },
+      {
+        "text": "ADR-283：参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口",
+        "link": "/adr/ADR-283-env-param-range-descriptor"
+      },
+      {
         "text": "ADR-282：灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS",
         "link": "/adr/ADR-282-applymodelpreset-default-light-params"
       },

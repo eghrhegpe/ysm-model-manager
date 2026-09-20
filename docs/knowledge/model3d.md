@@ -134,6 +134,7 @@ auto_fields:
     - capLabel
     - captureTextureName
     - checkRevision
+    - clampFieldValue
     - clampPoolRoundness
     - cleanupPreview
     - clearEnvCallbacks
@@ -311,6 +312,7 @@ auto_fields:
     - getMeshBoneId
     - getMmdMaterialDetail
     - getModelRootCount
+    - getParamRange
     - getPerfPreset
     - getPresetKeys
     - getSceneCaps
@@ -522,6 +524,7 @@ auto_fields:
     - MultiModelSelectOpts
     - nodeControlToView
     - normalizeFbxScale
+    - NumericRange
     - oneOf
     - onOverlayStyleTargetReset
     - OrderedTexInput
@@ -615,6 +618,7 @@ auto_fields:
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath
+    - RangedKey
     - RawYsmAuthor
     - rcMasterToggleNode
     - ReadFileBytes

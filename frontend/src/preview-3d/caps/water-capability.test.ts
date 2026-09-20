@@ -11,6 +11,7 @@ import {
 } from "./water-body-strategies.ts";
 import { WaterCapability } from "./water-capability.ts";
 import { persistState } from "./scene-capability.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
@@ -1105,6 +1106,31 @@ describe("WaterCapability — waterSize UI 入口与零重建（ADR-272）", () 
     expect(cap.getWaterSize()).toBe(140);
     cap.setWaterSize(0);
     expect(cap.getWaterSize(), "脏数据 0 会让水面退化成一个点").toBe(1);
+  });
+
+  it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    const sliders = cap.getMenuNodes().flatMap((n) => n.children ?? []);
+    const pairs = [
+      ["ground-water-level", "waterLevel"],
+      ["ground-water-size", "waterSize"],
+      ["ground-wetness", "waterWetness"],
+      ["ground-water-opacity", "waterOpacity"],
+      ["ground-normal-strength", "waterNormalStrength"],
+      ["ground-water-clarity", "waterClarity"],
+      ["ground-water-choppiness", "waterChoppiness"],
+      ["ground-pool-height", "waterPoolHeight"],
+      ["ground-pool-wall-thickness", "waterPoolWallThickness"],
+      ["ground-pool-roundness", "waterPoolRoundness"],
+      ["ground-wave-speed", "waterWaveSpeed"],
+    ] as const;
+    for (const [id, key] of pairs) {
+      const node = sliders.find((c) => c.id === id);
+      expect(node, `缺菜单节点 ${id}`).toBeDefined();
+      const c = node!.control!;
+      const range = getParamRange(key);
+      expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(range);
+    }
   });
 
   it("菜单 ground-water-size：form 组、跨形态无 visibleWhen、双向直连 cap", () => {

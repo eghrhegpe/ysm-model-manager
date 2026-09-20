@@ -3,7 +3,12 @@
 // 仿 MikuMikuAR setEnvState 模式。
 
 import { dispatchEnvChange } from "./env-dispatcher.ts";
-import { deriveDefaultEnvState, type EnvState, type EnvStateKey } from "./env-state-schema.ts";
+import {
+  clampFieldValue,
+  deriveDefaultEnvState,
+  type EnvState,
+  type EnvStateKey,
+} from "./env-state-schema.ts";
 
 // 可变单例（仿 MikuMikuAR envState）
 export const envState: EnvState = deriveDefaultEnvState() as EnvState;
@@ -81,7 +86,12 @@ export function setEnvState(
   const changedKeys = new Set<EnvStateKey>();
   for (const key of Object.keys(patch) as Array<keyof EnvState>) {
     if (force || shouldOverwrite(key as string, source)) {
-      (envState as unknown as Record<string, unknown>)[key as string] = patch[key];
+      // ADR-283：值域钳制在**唯一写入口**执行——setter / 存档恢复 / 预设 / 中间件产物
+      // 一律就范，各 cap 不再自备 clamp（防「一处参数六处接线各钳一套」）。
+      (envState as unknown as Record<string, unknown>)[key as string] = clampFieldValue(
+        key,
+        patch[key],
+      );
       _writeSource[key as string] = source;
       changedKeys.add(key);
     }

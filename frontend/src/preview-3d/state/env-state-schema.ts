@@ -14,6 +14,7 @@ import {
   GROUND_OVERLAY_STYLES,
   GROUND_SOURCE_KINDS,
 } from "@/preview-3d/caps/ground-surface-spec.ts";
+import { clamp } from "@/utils/base/pure/clamp.ts";
 
 type FieldDefaultMap = {
   number: number;
@@ -25,12 +26,26 @@ type FieldDefaultMap = {
   "nullable-number": number | null;
 };
 
+/** 数值值域描述符（ADR-283）：schema 是值域的**唯一事实源**。
+ *  - `range`   = **合法域**：`setEnvState` 唯一写入口按此钳制（step/unit 不参与钳制，仅供菜单）；
+ *  - `uiRange` = **展示域**（可选，缺省 = range）：滑杆行程的手感设计，可与合法域不同
+ *               （`waterSize` 合法 ≥1，但滑杆 10–300 才是常用区）。
+ *  只声明在 `type: "number"` 字段上（颜色虽为 number，但无值域语义，故不声明）。 */
+export type NumericRange = {
+  readonly min: number;
+  readonly max: number;
+  /** 步长（**必填**：值域的实际消费者是滑杆；给个缺省值反而会成为隐藏的第二事实源）。 */
+  readonly step: number;
+  readonly unit?: string;
+};
+
 type _FieldDef<TType extends keyof FieldDefaultMap> = {
   type: TType;
   default: FieldDefaultMap[TType];
   /** dispatch 分组：字段变化时触发哪些 cap 回调。未指定 = 不触发。 */
   group?: string | readonly string[];
-} & (TType extends "enum" ? { values: readonly string[] } : object);
+} & (TType extends "enum" ? { values: readonly string[] } : object) &
+  (TType extends "number" ? { range?: NumericRange; uiRange?: NumericRange } : object);
 
 type _AnyFieldDef = {
   [TType in keyof FieldDefaultMap]: _FieldDef<TType>;
@@ -143,19 +158,77 @@ export const ENV_STATE_SCHEMA = {
   // ADR-257：水面世界 y 坐标——「抬高/压低水面」的唯一入口，film 与 pool 共用。
   // 默认 0.01 = film 历史水膜微抬量（原 scene-capability.ts|GROUND_LAYER_OFFSETS.waterFilm
   // 已随 2026-09-18 收口删除，此处成为唯一事实源）；本 schema 为零 THREE 依赖层，故写字面量。
-  waterLevel: { type: "number", default: 0.01, group: "water" },
-  waterWetness: { type: "number", default: 0.5, group: "water" },
-  waterColor: { type: "number", default: 0x335577, group: "water" },
-  waterOpacity: { type: "number", default: 0.25, group: "water" },
-  waterNormalStrength: { type: "number", default: 0.08, group: "water" },
-  waterClarity: { type: "number", default: 0.6, group: "water" },
-  waterWaveSpeed: { type: "number", default: 1.0, group: "water" },
-  waterChoppiness: { type: "number", default: 0.5, group: "water" },
-  waterPoolHeight: { type: "number", default: 0.3, group: "water" },
-  waterPoolWallThickness: { type: "number", default: 0.15, group: "water" },
-  waterPoolWallColor: { type: "number", default: 0x1a2a44, group: "water" },
-  waterPoolRoundness: { type: "number", default: 0, group: "water" },
-  waterSize: { type: "number", default: 80, group: "water" },
+  waterLevel: {
+    type: "number",
+    default: 0.01,
+    group: "water",
+    range: { min: 0, max: 5, step: 0.01, unit: "m" },
+  },
+  waterWetness: {
+    type: "number",
+    default: 0.5,
+    group: "water",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
+  waterColor: { type: "number", default: 0x335577, group: "water" }, // 颜色：无值域语义，不声明 range
+  waterOpacity: {
+    type: "number",
+    default: 0.25,
+    group: "water",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
+  waterNormalStrength: {
+    type: "number",
+    default: 0.08,
+    group: "water",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
+  waterClarity: {
+    type: "number",
+    default: 0.6,
+    group: "water",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
+  waterWaveSpeed: {
+    type: "number",
+    default: 1.0,
+    group: "water",
+    range: { min: 0, max: 3, step: 0.05, unit: "x" },
+  },
+  waterChoppiness: {
+    type: "number",
+    default: 0.5,
+    group: "water",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
+  waterPoolHeight: {
+    type: "number",
+    default: 0.3,
+    group: "water",
+    range: { min: 0.01, max: 5, step: 0.05, unit: "m" },
+  },
+  waterPoolWallThickness: {
+    type: "number",
+    default: 0.15,
+    group: "water",
+    range: { min: 0.01, max: 2, step: 0.01, unit: "m" },
+  },
+  waterPoolWallColor: { type: "number", default: 0x1a2a44, group: "water" }, // 颜色：同上
+  waterPoolRoundness: {
+    type: "number",
+    default: 0,
+    group: "water",
+    range: { min: 0, max: 0.5, step: 0.01 },
+  },
+  // 合法域下界 = 1（0/负数会让水面退化成一个点；与 loadState 脏数据同口径）；
+  // 展示域 10–300 是滑杆手感设计（默认 80 居中，step=1 避开小数累加误差）。
+  waterSize: {
+    type: "number",
+    default: 80,
+    group: "water",
+    range: { min: 1, max: 300, step: 1, unit: "m" },
+    uiRange: { min: 10, max: 300, step: 1, unit: "m" },
+  },
 
   // --- Environment ---
   envPreset: {
@@ -371,4 +444,31 @@ export function getPresetKeys(group: string): EnvStateKey[] {
   }
   _groupCache.set(group, keys);
   return keys;
+}
+
+// ======== 值域读口（ADR-283）========
+
+/** 声明了 `range` 的键域：菜单取值域的**类型入口**——未声明值域的键在编译期就传不进来。 */
+export type RangedKey = {
+  [K in EnvStateKey]: EnvStateSchema[K] extends { range: NumericRange } ? K : never;
+}[EnvStateKey];
+
+/** 菜单展示域：`uiRange ?? range`（合法域与展示域分离——ADR-283 §2.2）。 */
+export function getParamRange(key: RangedKey): NumericRange {
+  const def = ENV_STATE_SCHEMA[key] as { range: NumericRange; uiRange?: NumericRange };
+  return def.uiRange ?? def.range;
+}
+
+/** 唯一写入口的值域钳制（ADR-283 §2.3）：声明了 `range` 的数值字段钳到合法域，其余原样返回。
+ *  NaN → range.min（`clamp` 语义），Infinity → range.max。
+ *  重载：传入可能缺失的 `Partial` 值（唯一写入口的 patch）时，undefined 原样短路。 */
+export function clampFieldValue<K extends EnvStateKey>(key: K, value: EnvState[K]): EnvState[K];
+export function clampFieldValue<K extends EnvStateKey>(
+  key: K,
+  value: EnvState[K] | undefined,
+): EnvState[K] | undefined;
+export function clampFieldValue(key: EnvStateKey, value: unknown): unknown {
+  const range = (ENV_STATE_SCHEMA[key] as { range?: NumericRange }).range;
+  if (range && typeof value === "number") return clamp(value, range.min, range.max);
+  return value;
 }

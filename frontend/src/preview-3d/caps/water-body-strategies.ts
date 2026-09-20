@@ -30,7 +30,7 @@
 
 import * as THREE from "three";
 import { envState } from "@/preview-3d/state/env-state.ts";
-import type { EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
+import { clampFieldValue, type EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
 import type { WaterMode } from "./water-state.ts";
 
@@ -38,15 +38,14 @@ import type { WaterMode } from "./water-state.ts";
  *  构建（build）与运行期（waterOpacity 变更）必须共用同一因子，否则内壁透明度会脱节。 */
 export const INNER_WALL_OPACITY_FACTOR = 0.85;
 
-/** 圆角参数合法域（与菜单 slider 的 min/max 一致）。
- *  构建期与运行期必须共用同一钳制——只钳一处会让越界值从另一条路径漏进 uniform。
- *  ⚠️ 不导出：唯一消费者是本文件的 `clampPoolRoundness`。菜单侧的同名域刻意以字面量重复，
- *  因为 `water-menu.ts` 是零 THREE 依赖的纯声明层，从本文件取值会把 THREE 拖进声明层。 */
-const POOL_ROUNDNESS_MAX = 0.5;
+/** 圆角合法域的**唯一事实源 = schema `range`**（ADR-283）。
+ *  构建期与运行期必须共用同一钳制——只钳一处会让越界值从另一条路径漏进 uniform；
+ *  而该钳制的源头（不再是本文件的字面量，也不再是菜单 slider 的重复字面量）
+ *  统一为 `ENV_STATE_SCHEMA.waterPoolRoundness.range`，菜单与 cap 都只是它的读口。 */
 
-/** 把任意来源的 roundness 钳到合法域（setter 之外还有存档恢复/其他 cap 直写两条路径） */
+/** 把任意来源的 roundness 归一到 schema 合法域（存档恢复 / 其他 cap 直写仍走此处）。 */
 export function clampPoolRoundness(v: number): number {
-  return Math.max(0, Math.min(POOL_ROUNDNESS_MAX, v));
+  return clampFieldValue("waterPoolRoundness", v);
 }
 
 /** 承载波浪材质的顶水面 */
@@ -119,8 +118,8 @@ function applyTransformLinks(
   wallThickness: number,
 ): void {
   const half = size / 2;
-  const h = Math.max(0.01, poolHeight);
-  const t = Math.max(0.01, wallThickness);
+  const h = clampFieldValue("waterPoolHeight", poolHeight);
+  const t = clampFieldValue("waterPoolWallThickness", wallThickness); // 值域同源 schema（ADR-283）
   for (const link of body.transformLinks) {
     if (link.kind === "square") {
       link.mesh.scale.set(size, size, 1);

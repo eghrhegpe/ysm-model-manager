@@ -94,3 +94,52 @@ describe("env-state 守卫优先级", () => {
     expect(envState.fogEnabled).toBe(true);
   });
 });
+
+// ===== 值域钳制（ADR-283：schema range 在唯一写入口落地）=====
+describe("值域钳制（唯一写入口）", () => {
+  beforeEach(() => {
+    clearEnvCallbacks();
+    resetEnvState();
+  });
+  afterEach(() => {
+    clearEnvCallbacks();
+    resetEnvState();
+  });
+
+  it("超上限 / 超下限按 schema range 钳制", () => {
+    setEnvState({ waterOpacity: 1.5 }, { source: "manual" });
+    expect(envState.waterOpacity).toBe(1);
+    setEnvState({ waterOpacity: -0.2 }, { source: "manual" });
+    expect(envState.waterOpacity).toBe(0);
+  });
+
+  it("NaN → range.min，Infinity → range.max（clamp 语义）", () => {
+    setEnvState({ waterSize: Number.NaN }, { source: "manual" });
+    expect(envState.waterSize).toBe(1);
+    setEnvState({ waterPoolWallThickness: Number.POSITIVE_INFINITY }, { source: "manual" });
+    expect(envState.waterPoolWallThickness).toBe(2);
+  });
+
+  it("未声明 range 的字段原样写入（颜色不被钳）", () => {
+    setEnvState({ waterColor: 0xffffff }, { source: "manual" });
+    expect(envState.waterColor).toBe(0xffffff);
+  });
+
+  it("非 manual 来源同样受钳：预设 / 存档路径无豁免", () => {
+    setEnvState({ waterPoolHeight: 99 }, { source: "auto-model" });
+    expect(envState.waterPoolHeight).toBe(5);
+  });
+
+  it("setStateValue 这条旁路也过钳制", () => {
+    setStateValue("waterClarity", 3);
+    expect(envState.waterClarity).toBe(1);
+  });
+
+  it("钳制后仍正常派发", () => {
+    const fired: number[] = [];
+    registerEnvCallback("cap", () => fired.push(1));
+    setEnvState({ waterOpacity: 9 }, { source: "manual" });
+    expect(fired).toHaveLength(1);
+    expect(envState.waterOpacity).toBe(1);
+  });
+});

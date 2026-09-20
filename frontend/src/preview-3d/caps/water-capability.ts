@@ -544,7 +544,7 @@ export class WaterCapability implements SceneCapability {
   }
 
   setWetness(v: number): void {
-    setEnvState({ waterWetness: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+    setEnvState({ waterWetness: v }, { source: "manual" });
   }
   getWetness(): number {
     return envState.waterWetness;
@@ -558,7 +558,7 @@ export class WaterCapability implements SceneCapability {
   }
 
   setWaterOpacity(v: number): void {
-    setEnvState({ waterOpacity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+    setEnvState({ waterOpacity: v }, { source: "manual" });
   }
   getWaterOpacity(): number {
     return envState.waterOpacity;
@@ -566,7 +566,7 @@ export class WaterCapability implements SceneCapability {
 
   // ── 法线贴图强度（顶层水面）──
   setNormalStrength(v: number): void {
-    setEnvState({ waterNormalStrength: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+    setEnvState({ waterNormalStrength: v }, { source: "manual" });
   }
   getNormalStrength(): number {
     return envState.waterNormalStrength;
@@ -574,14 +574,14 @@ export class WaterCapability implements SceneCapability {
 
   // ── 水池专属参数（pool 模式）──
   setPoolHeight(v: number): void {
-    setEnvState({ waterPoolHeight: Math.max(0.01, v) }, { source: "manual" });
+    setEnvState({ waterPoolHeight: v }, { source: "manual" });
   }
   getPoolHeight(): number {
     return envState.waterPoolHeight;
   }
 
   setPoolWallThickness(v: number): void {
-    setEnvState({ waterPoolWallThickness: Math.max(0.01, v) }, { source: "manual" });
+    setEnvState({ waterPoolWallThickness: v }, { source: "manual" });
   }
   getPoolWallThickness(): number {
     return envState.waterPoolWallThickness;
@@ -595,21 +595,21 @@ export class WaterCapability implements SceneCapability {
   }
 
   setPoolRoundness(v: number): void {
-    setEnvState({ waterPoolRoundness: clampPoolRoundness(v) }, { source: "manual" });
+    setEnvState({ waterPoolRoundness: v }, { source: "manual" });
   }
   getPoolRoundness(): number {
     return envState.waterPoolRoundness;
   }
 
   setWaveSpeed(v: number): void {
-    setEnvState({ waterWaveSpeed: Math.max(0, v) }, { source: "manual" });
+    setEnvState({ waterWaveSpeed: v }, { source: "manual" });
   }
   getWaveSpeed(): number {
     return envState.waterWaveSpeed;
   }
 
   setChoppiness(v: number): void {
-    setEnvState({ waterChoppiness: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+    setEnvState({ waterChoppiness: v }, { source: "manual" });
   }
   getChoppiness(): number {
     return envState.waterChoppiness;
@@ -617,24 +617,23 @@ export class WaterCapability implements SceneCapability {
 
   // ── 水面高度（ADR-257：跨形态通用，与容器彻底解耦）──
   setLevel(v: number): void {
-    setEnvState({ waterLevel: Math.max(0, v) }, { source: "manual" });
+    setEnvState({ waterLevel: v }, { source: "manual" });
   }
   getLevel(): number {
     return envState.waterLevel;
   }
 
   // ── 水面尺寸（ADR-272：两形态均零重建，故与 waterLevel 同列 form 组）──
-  // 下界钳到 ≥1 与 loadState 恢复同口径（0/负数会让水面退化成一个点；shader 侧 /sizeSafe 再兜一层）。
+  // ADR-283：下界 ≥1 / 上界 300 / NaN → 1 由 schema `range` 在唯一写入口统一钳制，setter 不再自备。
   setWaterSize(v: number): void {
-    // NaN/Infinity 不进 envState（Math.max(1, NaN) = NaN 会被 shader 侧 uSize 接住、水面退化）
-    setEnvState({ waterSize: Number.isFinite(v) ? Math.max(1, v) : 1 }, { source: "manual" });
+    setEnvState({ waterSize: v }, { source: "manual" });
   }
   getWaterSize(): number {
     return envState.waterSize;
   }
 
   setClarity(v: number): void {
-    setEnvState({ waterClarity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+    setEnvState({ waterClarity: v }, { source: "manual" });
   }
   getClarity(): number {
     return envState.waterClarity;

@@ -261,7 +261,7 @@
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
 | 🍃 vmd_vrm_retarget | VMD→VRM 动作重定向 vmd-retarget | leaf | — | 要把 MMD 的 .vmd 动作播到 VRM 模型上（或改对应的发现/加载逻辑）, 要增删骨骼映射（MMD 骨名 → VRM humanoid 骨名）, 排查「VMD 动作在 VRM 上腿部不动 / 轨道为空 / 动作卡点顿挫」 |
 | 🏗 volumetric_cone | 体积光锥 VolumetricCone（真锥体网格 + Fresnel） | architecture | — | 体积光, 光锥, 聚光灯可见光柱, volumetric / cone, 边缘辉光 / fresnel |
-| 🍃 water | 水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线） | leaf | — | 改水面波浪 / 颜色 / 透明度 / 水位 / 尺寸 / 池体参数, 找不到水面的 normalMap, 拖水面尺寸滑块卡顿 / 水面几何重建, 新增水体形态（海洋 / 喷泉 / 大水面） |
+| 🍃 water | 水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线） | leaf | — | 改水面波浪 / 颜色 / 透明度 / 水位 / 尺寸 / 池体参数, 找不到水面的 normalMap, 拖水面尺寸滑块卡顿 / 水面几何重建, 改滑杆范围 / 参数值域（range / uiRange）, 新增水体形态（海洋 / 喷泉 / 大水面） |
 
 ### 摘要
 

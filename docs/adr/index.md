@@ -30,7 +30,7 @@ permalink: /adr/
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 schema 默认值 no-op | 📝 提议中 |
+| [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-282](./ADR-282-applymodelpreset-default-light-params.md) | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 |
 | [ADR-281](./ADR-281-flatten-map.md) | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | 📝 提议中 |
 | [ADR-280](./ADR-280-key-fill-rim-directional-point-spot.md) | 灯光类型切换：三灯统一实例（key/fill/rim 各可 directional/point/spot） | 📝 提议中 |
@@ -337,7 +337,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-284 | sky 散射参数与模型类别解耦 + reflector/shadow 清除 schema 默认值 no-op | 📝 提议中 | 2026-09-20 |
+| ADR-284 | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 | 2026-09-20 |
 | ADR-283 | 参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口 | ✅ 已采纳 | 2026-09-20 |
 | ADR-282 | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 | 2026-09-20 |
 | ADR-281 | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | 📝 提议中 | 2026-09-20 |

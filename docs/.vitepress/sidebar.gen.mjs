@@ -246,7 +246,7 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "ADR-284：sky 散射参数与模型类别解耦 + reflector/shadow 清除 schema 默认值 no-op",
+        "text": "ADR-284：sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值",
         "link": "/adr/ADR-284-sky-reflector-shadow-decoupling-cleanup"
       },
       {

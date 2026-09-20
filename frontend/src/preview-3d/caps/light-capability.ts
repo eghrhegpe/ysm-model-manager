@@ -402,6 +402,10 @@ export class LightCapability implements SceneCapability {
       light = dir;
     }
     light.visible = p.enabled;
+    // ⚠️ 灯本体 name 按**类型**命名（`ysm-light-${p.type}`），三盏若同时为 spot 会重名——
+    // 当前全仓无按名取灯本体的消费方（helper 按槽位命名 `ysm-light-${which}-helper` 才
+    // 被 getObjectByName 消费），故重名无实害。未来若新增「按名查灯」逻辑，须改按槽位
+    // （which）命名，勿沿用类型名（与 helper 命名口径对齐）。
     light.name = `ysm-light-${p.type}`;
     return light;
   }

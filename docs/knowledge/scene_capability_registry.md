@@ -101,6 +101,7 @@ auto_fields:
     - LEGACY_CANVAS_PATTERNS
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
+    - LIGHT_MASTER_NODE_ID
     - LIGHT_SLOTS
     - LightCapability
     - lightDirToPosition

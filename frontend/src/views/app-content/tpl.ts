@@ -216,17 +216,8 @@ export function diagnosticsHTML(): string {
       </div>
       <div class="perf-row" data-perf-mode="single">
         <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
-        <div class="perf-hint" data-perf-mode="single">${t("diagnostics.perfModelHintFromTree")}</div>
-      </div>
-      <div class="perf-row" data-perf-mode="single">
-        <label for="diag-perf-iter" id="diag-perf-iter-label" data-testid="diag-perf-iter-label">${t("diagnostics.perfIterations")}</label>
-        <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
-      </div>
-      <div class="perf-row" data-perf-mode="single">
         <label for="diag-perf-max" id="diag-perf-max-label" data-testid="diag-perf-max-label" title="${t("diagnostics.perfMaxModelsHint")}">${t("diagnostics.perfMaxModels")}</label>
         <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max">
-      </div>
-      <div class="perf-row" data-perf-mode="single">
         <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
         <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
         <label for="diag-perf-baseline-compare">${t("diagnostics.perfBaselineCompare")}</label>
@@ -236,12 +227,12 @@ export function diagnosticsHTML(): string {
       </div>
       <div class="perf-row" data-perf-mode="single">
         <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
+        <label for="diag-perf-iter" id="diag-perf-iter-label" data-testid="diag-perf-iter-label">${t("diagnostics.perfIterations")}</label>
+        <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
       </div>
       <div class="perf-row" data-perf-mode="conc">
         <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
         <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
-      </div>
-      <div class="perf-row" data-perf-mode="conc">
         <label for="diag-perf-conc-max">${t("diagnostics.perfMaxModels")}</label>
         <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfMaxModelsHint")}">
       </div>
@@ -287,14 +278,6 @@ export function diagnosticsHTML(): string {
     </div>
     <div id="diag-load-trace"></div>
   </div>`,
-      },
-      {
-        id: "conflict",
-        desktopOnly: true,
-        label: `${UI_ICONS.performance} ${t("diagnostics.conflict")}`,
-        body: `  <div id="diag-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
-  <button class="btn-base accent" id="diag-scan-conflict" style="margin-top:4px">${UI_ICONS.performance} ${t("diagnostics.startScan")}</button>
-  </div></div>`,
       },
       {
         id: "health",

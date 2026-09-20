@@ -1089,7 +1089,6 @@ auto_fields:
     - saveCfg
     - saveScreenshot
     - scanAllWebModels
-    - scanConflicts
     - scanModelsByType
     - scanSyncConflicts
     - scanWebModels

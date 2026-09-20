@@ -406,6 +406,7 @@ auto_fields:
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
     - LegChain
+    - LIGHT_MASTER_NODE_ID
     - LIGHT_SLOTS
     - LightCapability
     - lightDirToPosition

@@ -41,7 +41,6 @@ auto_fields:
     - renderLoadTraceSection
     - runHealthAudit
     - runSingleBench
-    - scanConflicts
     - scanSyncConflicts
     - sectionHeader
     - singleBenchReadIterations

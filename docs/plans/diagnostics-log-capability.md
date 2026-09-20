@@ -49,7 +49,7 @@
 | ~~**A. 操作类型纵向筛选**~~ | ✅ **已落地**（2026-09-28）：行2 加「操作类型」下拉（`#diag-log-op-filter`），单选，与状态 chips 正交叠加 | — |
 | ~~**B. warn 分流**~~ | ✅ **随 A 自然达成**：`ui` / `scan` 可各自单独筛出，warn 混类可见性缓解（但警告 chip 内仍混类） | — |
 | ~~**C. 容量口径单点化**~~ | ✅ **已落地**（2026-09-28）：`DIAG_OP_WINDOW` / `DIAG_RUNTIME_WINDOW` 具名常量 + Go 来源注释 | — |
-| **D. 流 B 语义化** | 推动 Go 侧结构化信息走流 A，流 B 只留 debug | 大改动，涉及多个 Go 包调用点，需 ADR 立项（**唯一剩余方向**） |
+| ~~**D. 流 B 语义化**~~ | ✅ **已立项并落地**（ADR-289，2026-09-20）：捕获层提取 `[tag]`（实测覆盖 **91.1%**，41 个 tag）+ 推断 `Level`，前端据此出图标/tag 徽标/让 chips 在运行时子 tab 真正生效 | 推断是启发式（实测 error 60% 为真实分布，非误判） |
 
 ## 五、本次已落地（2026-09，两批）
 
@@ -66,3 +66,10 @@
 - e2e 两行归属断言扩展：下拉必在行2 内、位于末位 chip 右侧（防漂回行1）。
 
 > 实施坑记：e2e 初版误写 `filter.right <= opFilter.left` —— 下拉是 `filter`（`flex:1` 容器）的**子元素**，容器 right 天然包住子元素，该断言恒假（实测 1268 vs 1165）。正确锚点是「末位 chip 的 right ≤ 下拉的 left」。
+
+**第三批（方向 D → ADR-289，分两轮）**
+
+- **轮 1（Go 捕获层）**：`go/logs/runtime.go|RuntimeBuffer.Write` 提取行首 `[tag]`（`extractRuntimeTag`）+ 按词表推断级别（`inferRuntimeLevel`，fatal > error > warn > info，保守优先）；`types.RuntimeLog` 增 `Tag` 字段。**零调用点改动**。
+- **轮 2（前端消费）**：`logs.ts|dgLsFilterRuntimeLogs` 接入 chips 级别筛选 + Tag 搜索命中域；`dgLsRuntimeStatusIcon` 按 Level 出图标；`.log-tag` 徽标；`init.ts` chips 在运行时子 tab 下改调 `loadRuntimeLogs`（仍不回落拉操作日志）。绑定已重生成。
+- **关键设计坑**：chip 的 `data-status` 沿用**操作日志 Status 词汇**（success/failed/skipped），而运行时日志是 **Level 词汇**（info/error/debug）——**不同族，须显式映射**。warn 档语义也不同：操作日志是精确 `Status === "warn"`，运行时是**级别阈值**（warn + error + fatal）。
+- **实证**：247 条真实日志中 225 条（91.1%）带 tag；级别分布 fatal 2% / error 60% / warn 12% / info 26%（error 高是真实分布——Go 只在出问题时写日志）。

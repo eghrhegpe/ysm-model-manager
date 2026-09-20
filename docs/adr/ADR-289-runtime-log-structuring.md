@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`go/logs/runtime.go`（RuntimeBuffer 捕获层）、`go/types/types.go`（RuntimeLog 类型）、`frontend/src/views/app-content/diagnostics/logs.ts`（展示层）、`internal/app/app.go`（log.SetOutput 接线）、[ADR-040](./ADR-040-diagnostics-page-split.md)（诊断页按职责切文件）、`docs/plans/diagnostics-log-capability.md`（能力面复盘，本 ADR 是其「方向 D」立项）
+- **相关**：`go/logs/runtime.go`（RuntimeBuffer 捕获层）、`go/types/types.go`（RuntimeLog 类型）、`frontend/src/views/app-content/diagnostics/logs.ts`（展示层）、`internal/app/app.go`（log.SetOutput 接线）、[ADR-259](./ADR-259-tab-rendertabs.md)（诊断页面板容器结构）、`docs/plans/diagnostics-log-capability.md`（能力面复盘，本 ADR 是其「方向 D」立项）
 
 ---
 

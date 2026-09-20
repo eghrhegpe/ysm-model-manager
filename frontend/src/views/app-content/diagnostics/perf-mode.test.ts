@@ -9,9 +9,12 @@
 //  - 目标集填充（async，会重建 <option>）之后模式态被重放，disabled 不丢
 //  - ADR-278 §2.6 语义诚实层：同一个控件跨模式**改义必须当场说明**——迭代/目标集标签随模式改写、
 //    每个运行按钮挂本模式「测什么对象」hint、并发回落不再静默改用户的选择
+//  - 门禁登记面扫描（大刀护栏）：tpl.ts bench tab 的每个可输入控件必须有归宿，新控件忘登记即红
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
-import { initPerfPanel, perfScopeHint, PERF_RUN_BUTTON_MODE_KEYS, PERF_UNREAD_MODES } from "./perf.ts";
+import { BASELINE_CONTROL_IDS, initPerfPanel, perfScopeHint, PERF_RUN_BUTTON_MODE_KEYS, PERF_UNREAD_MODES } from "./perf.ts";
 
 const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
@@ -234,11 +237,7 @@ describe("基准模式接线（ADR-278）", () => {
   // 载荷读取**的控件必须 disabled——基准三件套在 conc/scan 下、并发控件在 single/scan 下。
   it("非 single 模式下可见但载荷不读的控件必已禁用（隐藏的不用禁，可见的可改就必须拒）", () => {
     // 按 data-perf-mode 可见性判定：整行被 .perf-mode-off 隐藏的无需禁（用户碰不到）；
-    const baselineIds = [
-      "diag-perf-baseline-save",
-      "diag-perf-baseline-compare",
-      "diag-perf-baseline-th",
-    ];
+    const baselineIds = BASELINE_CONTROL_IDS;
     for (const mode of ["single", "conc", "scan"]) {
       const root = makeRoot(mode);
       initPerfPanel(root, esc);
@@ -271,15 +270,81 @@ describe("基准模式接线（ADR-278）", () => {
     const rtype = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
     rtype.value = ""; // 选回「单模型」——目标集维满足，但模式仍是 scan
     rtype.dispatchEvent(new Event("change"));
-    for (const id of [
-      "diag-perf-baseline-save",
-      "diag-perf-baseline-compare",
-      "diag-perf-baseline-th",
-    ]) {
+    for (const id of BASELINE_CONTROL_IDS) {
       expect({ id, disabled: (root.getElementById(id) as HTMLInputElement).disabled }).toEqual({
         id,
         disabled: true,
       });
+    }
+  });
+
+  // ===== 大刀护栏：控件门禁登记面 = tpl 真实控件集（防「新控件哪边都没归宿」静默漏网）=====
+  it("tpl.ts bench tab 的每个可输入控件都有门禁归宿（行归属或 PERF_UNREAD_MODES，二选一）", () => {
+    // happy-dom 下 import.meta.url 是 http://，new URL 不可用；process.cwd() = frontend/（vitest 工作目录）
+    const src = readFileSync(resolve(process.cwd(), "src/views/app-content/tpl.ts"), "utf8");
+    // 锚定 tab 数组项的 `id: "bench",`（带尾逗号：标签文案不含此字面量，不会误锚）；
+    // 终点锁 record tab 声明处——不能用「下一行以 `{` 开头」判界（body 模板串里有 JSON 样例缩进块）。
+    // 起点从 body 模板串开头算：行 div 在 `body:` 之前（tab 元数据区），切片内自洽。
+    const bodyAt = src.indexOf("body:", src.indexOf('id: "bench",'));
+    const start = src.indexOf("`", bodyAt) + 1;
+    const end = src.indexOf('id: "record",');
+    expect(bodyAt).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const seg = src.slice(start, end);
+    // 只钉「用户能改值」的控件（input/select）；button/label/output 容器不进门禁账
+    const ids = [...seg.matchAll(/<(?:input|select)[^>]*id="(diag-perf-[a-z-]+)"/g)].map(
+      (m) => m[1],
+    );
+    // 真相源抽样：共用旋钮 + 基准三件套必须在扫描结果里（防正则空转假绿）
+    for (const mustSee of [
+      "diag-perf-rtype",
+      "diag-perf-order",
+      "diag-perf-iter",
+      "diag-perf-model",
+      "diag-perf-max",
+      "diag-perf-conc-workers",
+      "diag-perf-conc-max",
+      ...BASELINE_CONTROL_IDS,
+    ]) {
+      expect(ids, `扫描面丢失 ${mustSee}`).toContain(mustSee);
+    }
+    // 行归属：控件**所属 perf-row 开标签**的 data-perf-mode 列表（未写 = 所有模式都显示）。
+    // 从控件位置向前找最近的 `<div class="perf-row"`——不能拿控件自身所在行判定
+    // （tpl 里按钮与输入框同行，如 run+model 合排，data-perf-mode 挂在行 div 上）。
+    // 行归属：控件**所属 perf-row 开标签**的 data-perf-mode 列表（未写 = 所有模式都显示）。
+    // 不能用「向前最近一个 <div」——嵌套下（row > row-label）会抓到内层 div；
+    // 也不能拿控件自身所在行（tpl 里按钮与输入框同行，data-perf-mode 挂在行 div 上）。
+    // 做法：取控件前最后一个 perf-row 开标签，再沿 <div/</div> 配平验证它仍开着（嵌套行不误抓）。
+    const rowOpenAt = (pos: number): string | null => {
+      let cursor = pos;
+      for (;;) {
+        const i = seg.lastIndexOf('<div class="perf-row"', cursor);
+        if (i < 0) return null;
+        // 从该开标签到控件位置做深度扫描：回零 = 它已被闭合，继续向前找更早的行
+        let depth = 1;
+        for (const m of seg.slice(i + 20, pos).matchAll(/<div\b|<\/div>/g)) {
+          depth += m[0].startsWith("</") ? -1 : 1;
+          if (depth === 0) break;
+        }
+        if (depth > 0) return seg.slice(i, seg.indexOf("\n", i));
+        cursor = i - 1;
+      }
+    };
+    // 归宿 = 行归属 ∨ 不读表，两维**至少其一**：
+    //  - 行写了 data-perf-mode → 缺席模式下整行隐藏（用户碰不到），诚实；
+    //  - 登记进 PERF_UNREAD_MODES/基准名单 → 三模式共用行里「可见但不被读」被置灰。
+    // 两者都没有 = 新控件在某些模式下永远可见、可改、不被读——正是 §2.6 要拒的欺骗，当场红。
+    for (const id of ids) {
+      if (id === "diag-perf-mode") continue; // 模式选择器自身：读它才能接线，不适用门禁
+      const idx = seg.indexOf(`id="${id}"`);
+      const rowOpen = rowOpenAt(idx);
+      const hasRowGate = rowOpen !== null && rowOpen.includes("data-perf-mode");
+      const hasUnreadGate = id in PERF_UNREAD_MODES || BASELINE_CONTROL_IDS.includes(id);
+      // 归宿是「或」：行归属 ∨ 不读表，至少其一（两者都没 = 可见可改不被读，当场红）
+      expect(
+        hasRowGate || hasUnreadGate,
+        `${id} 无门禁归宿：既不在带 data-perf-mode 的行内，也不在 PERF_UNREAD_MODES/基准名单——新增控件忘登记即红`,
+      ).toBe(true);
     }
   });
 });

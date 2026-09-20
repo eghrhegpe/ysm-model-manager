@@ -71,25 +71,60 @@ export function buildLightPersistPayload(): Record<string, unknown> {
 
 /* ============ loadState：持久化结构 → envState（逐字段 typeof 校验，manual 源） ============ */
 
-/** 恢复方向灯全量字段（key/fill/rim），逐字段 typeof 校验后写入 accumulator（不派发）。 */
+/** 灯光字段表：saved 键 → [envState 后缀, 期望 typeof]。
+ *  [light-type-switch] 每盏灯 10 字段结构统一后，逐字段 if 链换成表驱动（单一事实源，
+ *  新增字段只改此表）；旧版 10 条 `if (typeof s.X === ...)` 等价保留。 */
+const LIGHT_FIELDS = {
+  type: ["Type", "string"],
+  enabled: ["Enabled", "boolean"],
+  color: ["Color", "number"],
+  intensity: ["Intensity", "number"],
+  azimuth: ["Azimuth", "number"],
+  elevation: ["Elevation", "number"],
+  angle: ["Angle", "number"],
+  penumbra: ["Penumbra", "number"],
+  distance: ["Distance", "number"],
+  decay: ["Decay", "number"],
+} as const satisfies Record<string, readonly [string, "string" | "number" | "boolean"]>;
+
+type LightFieldKey = keyof typeof LIGHT_FIELDS;
+
+const ALL_LIGHT_FIELDS = Object.keys(LIGHT_FIELDS) as LightFieldKey[];
+
+/** 旧存档 `spotlight` 块只有这些参数（enabled 归 `keyEnabled`、type 由迁移行决定）。 */
+const SPOT_MIGRATION_FIELDS: LightFieldKey[] = [
+  "color",
+  "intensity",
+  "angle",
+  "penumbra",
+  "distance",
+  "decay",
+];
+
+const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** 按（可选）字段子集把 saved 对象的已校验字段写入 acc；prefix 形如 `lightKey`。
+ *  末尾一次 setEnvState 的合批约定不变——本函数只写 accumulator，不派发。 */
+function pickLightFields(
+  prefix: string,
+  s: Record<string, unknown>,
+  acc: Record<string, unknown>,
+  fields: LightFieldKey[] = ALL_LIGHT_FIELDS,
+): void {
+  for (const key of fields) {
+    const [suffix, expect] = LIGHT_FIELDS[key];
+    const v = s[key];
+    if (typeof v === expect) acc[`${prefix}${suffix}`] = v;
+  }
+}
+
 function restoreDir(
   which: "key" | "fill" | "rim",
   saved: unknown,
   acc: Record<string, unknown>,
 ): void {
   if (!saved || typeof saved !== "object") return;
-  const s = saved as Record<string, unknown>;
-  const prefix = `light${which.charAt(0).toUpperCase()}${which.slice(1)}`;
-  if (typeof s.type === "string") acc[`${prefix}Type`] = s.type;
-  if (typeof s.enabled === "boolean") acc[`${prefix}Enabled`] = s.enabled;
-  if (typeof s.color === "number") acc[`${prefix}Color`] = s.color;
-  if (typeof s.intensity === "number") acc[`${prefix}Intensity`] = s.intensity;
-  if (typeof s.azimuth === "number") acc[`${prefix}Azimuth`] = s.azimuth;
-  if (typeof s.elevation === "number") acc[`${prefix}Elevation`] = s.elevation;
-  if (typeof s.angle === "number") acc[`${prefix}Angle`] = s.angle;
-  if (typeof s.penumbra === "number") acc[`${prefix}Penumbra`] = s.penumbra;
-  if (typeof s.distance === "number") acc[`${prefix}Distance`] = s.distance;
-  if (typeof s.decay === "number") acc[`${prefix}Decay`] = s.decay;
+  pickLightFields(`light${cap(which)}`, saved as Record<string, unknown>, acc);
 }
 
 /**
@@ -118,16 +153,9 @@ export function restoreLightParams(state: Record<string, unknown>): void {
   // 兼容旧存档：如果存在旧 spotlight 字段，迁移到 key 灯的 spot 参数
   if (state.spotlight && typeof state.spotlight === "object") {
     const sp = state.spotlight as Record<string, unknown>;
-    if (typeof sp.enabled === "boolean" && sp.enabled) {
-      // 旧存档有 spotlight 启用 → 迁移到 key 灯
-      acc.lightKeyType = "spot";
-    }
-    if (typeof sp.color === "number") acc.lightKeyColor = sp.color;
-    if (typeof sp.intensity === "number") acc.lightKeyIntensity = sp.intensity;
-    if (typeof sp.angle === "number") acc.lightKeyAngle = sp.angle;
-    if (typeof sp.penumbra === "number") acc.lightKeyPenumbra = sp.penumbra;
-    if (typeof sp.distance === "number") acc.lightKeyDistance = sp.distance;
-    if (typeof sp.decay === "number") acc.lightKeyDecay = sp.decay;
+    // 旧存档有 spotlight 启用 → 迁移到 key 灯（type 与 enabled 归属不同，不走字段表）
+    if (sp.enabled === true) acc.lightKeyType = "spot";
+    pickLightFields("lightKey", sp, acc, SPOT_MIGRATION_FIELDS);
   }
   if (typeof state.volumetricEnabled === "boolean") {
     acc.lightVolumetricEnabled = state.volumetricEnabled;

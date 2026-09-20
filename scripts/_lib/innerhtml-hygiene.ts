@@ -297,8 +297,11 @@ export function scanSource(src: string): HygieneHit[] {
   const lineOf = (idx: number) => src.slice(0, idx).split("\n").length;
   for (let m = re.exec(src); m !== null; m = re.exec(src)) {
     let i = m.index + m[0].length;
-    while (i < src.length && /\s/.test(src[i])) i++;
-    if (src[i] !== "`") continue; // 非模板串赋值：裸变量形态归旧 R8 正则管
+    let ch = src[i];
+    while (ch !== undefined && /\s/.test(ch)) {
+      i++;
+      ch = src[i];
+    }
     const [interps, end] = templateInterps(src, i);
     const startLine = lineOf(m.index);
     const endLine = lineOf(end);

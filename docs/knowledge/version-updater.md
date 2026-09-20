@@ -68,7 +68,7 @@ status: active
 - 后端更新流水线见 [go_updater](./go-updater.md)（版本比对/下载/hash 校验/替换）
 - 启动挂载点见 [app_modules](./app-modules.md)（`registerErrorDiary` → `initTheme` → `applyUIPrefs` 之后 fire-and-forget 静默检查，不阻塞界面）
 - toast 通知（含 `click` 回调支持）由 [app_toast](./app-toast.md) 渲染；确认弹窗直接复用 [dialog_modal](./dialog-modal.md) 的 `modalConfirm`（含其 Esc / 点遮罩关闭行为），本文件不再自建 `dlg-overlay`
-- 转义用 `utils/dom/html.ts` 的 `esc`；错误文案复用 `utils/dom/errors.ts` 的 `friendlyError`
+- 转义：body/更新日志经 DOM API 构建 + textContent 自转义（R8 后文件零 HTML 字面量，`utils/html/html.ts` 的 `esc` import 已退役）；错误文案复用 `utils/dom/errors.ts` 的 `friendlyError`
 
 ## 不变量
 
@@ -76,7 +76,7 @@ status: active
 - 静默路径异常一律静默捕获，绝不向启动流程抛错（**`canCheck()` 已移入 try**——P3 修复：原在 try 外，隐私模式 localStorage 抛错时 promise reject 靠调用方 `.catch` 兜底而非模块内静默）
 - 手动检查按钮的文案/disabled 必须在 `finally` 中恢复，防止异步失败后按钮卡死（致命陷阱 #3）
 - `promptUpdate` 内部捕获 `doUpdate` 异常转 toast，不再向外抛（由外层 finally 恢复按钮）
-- 更新日志展示前必须经 textContent 转义（先写 `textContent` 再取 `innerHTML`），长度截断 2000 字符
+- 更新日志必须先 `textContent` 写入再输出 `outerHTML`（R8 前旧径是 textContent→innerHTML 回填模板串，已废），长度截断 2000 字符
 - `DoUpdate` 失败时 reject（不再返回错误字符串，`421ae7b5` 收敛），不做部分成功假设（**reject 分支与 releaseNotes 转义截断零测试覆盖**，P3 观察）
 - `doUpdate` 末尾的 `RestartApplication()` 是防御性死代码（Go 侧已 `os.Exit(0)`），不得据此假设前端能拿到「更新完成」后续控制权（测试断言该路径属锁防御行为）
 - 下载中进度弹窗 `closable:false`（Esc/点遮罩不可关），配合窗口标题进度（`Window.SetTitle`）双保险——弹窗被挤兑/异常关闭时标题栏仍显示下载状态；`finally` 必须恢复原标题

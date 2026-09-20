@@ -49,7 +49,7 @@ status: active
 
 ## 核心职责
 
-- `loadOldestModel(container, esc)`：主入口，返回清理函数
+- `loadOldestModel(container, _esc, deps)`：主入口，返回清理函数（`_esc` 保留位仅与 views 调用点传参形状兼容，DOM 构建后 textContent 自转义，本函数不再消费）
 - 数据获取：`GetRepoRoot(currentType)` 取当前类型仓库根（未配置显示提示），`ScanModelEntries(repoRoot)` 取条目列表（`{ Name, Size, Path, Ext, Hash, ModTime }`）
 - 仓库评分：初始 100 分，`.ban` 占比罚最多 40 分、重复（按 `Hash` 分组）每个多余副本罚 5 分封顶 55 分；≥80 健康（绿）/≥50 亚健康（黄）/其余需要整理（红），conic-gradient 圆环展示
 - 资历最深：过滤有 `ModTime` 的条目升序取前 4，展示大小/日期/入库天数
@@ -59,7 +59,7 @@ status: active
 
 ## 对外 API / 入口
 
-- 导出：`loadOldestModel(container: HTMLElement, esc: (s: string) => string): Promise<() => void>`
+- 导出：`loadOldestModel(container: HTMLElement, _esc: (s: string) => string, deps?: OldestDeps): Promise<() => void>`（R8 后状态行零 HTML 字面量：本地 `statusRow()` DOM 构建，整页仍走 `deps.renderPage` 注入）
 - 监听 bus：`repo:rtype-changed`（经 `useCurrentResourceType` 订阅，见 features/repo/repo-rtype.ts）
 - 派发 bus：`model:select`
 - getApp() 调用：`ScanModelEntries`、`GetRepoRoot`
@@ -76,7 +76,7 @@ status: active
 
 - 清理函数必须同时 `removeEventListener("click", handleContainerClick)` 与调 `useCurrentResourceType` 返回的 `cleanup()`，二者缺一即泄漏
 - 重绑点击监听前先移除旧监听（命名函数引用），防止 render 多次执行导致重复绑定
-- 所有动态文本过 `esc` 转义、显示名过 `renderDisplayName`；`container` 为空直接返回空清理函数
+- 状态行（扫描中/空/错）经 `statusRow()` DOM API 构建、`replaceChildren` 上屏，动态文本 textContent 自转义；显示名过 `renderDisplayName`；`container` 为空直接返回空清理函数
 - 扫描失败/仓库为空/未配置目录均有对应空态文案，不渲染半成品
 
 ## 相关

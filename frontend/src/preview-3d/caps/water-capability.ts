@@ -114,7 +114,11 @@ const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> 
       (m.material as THREE.MeshStandardMaterial).color.setHex(envState.waterPoolWallColor);
     }
   },
-  waterPoolRoundness: ({ top, setUniform }) => {
+  waterPoolRoundness: ({ strategy, top, setUniform }) => {
+    // 形态门控与构造期同源（`supportsRoundness`）：film 水膜无容器，写圆角会凭空裁掉四角。
+    // 构造期靠 buildMaterial 的 forPool 恒 0，运行期必须显式查 strategy——否则 pool 专属参数
+    // 会经存档恢复 / 预设套用 / 其他 cap 直写 envState 泄漏进 film 材质（2026-09 修复）。
+    if (!strategy.supportsRoundness) return;
     // 经 clampPoolRoundness——与构造期同一钳制，防存档恢复/其他 cap 直写 envState 时越界值漏进 uniform
     setUniform(top.material, "uRoundness", clampPoolRoundness(envState.waterPoolRoundness));
   },

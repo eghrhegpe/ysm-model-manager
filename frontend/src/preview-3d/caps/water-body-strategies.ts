@@ -143,6 +143,14 @@ export interface WaterBodyStrategy {
    * 会把 film 的水膜错误地变成透光体。故此能力由形态显式声明，而非靠 `mode === "pool"` 猜。
    */
   readonly supportsVolumeOptics: boolean;
+  /**
+   * 是否支持圆角裁剪（`uRoundness` 边角淡出）。
+   * pool=true（盒式容器可切圆角）；film=false（水膜无容器，圆角只会凭空裁掉四角）。
+   * 与 `supportsVolumeOptics` 同理——由形态显式声明，**构造期与运行期共用同一门控**：
+   * 若只在构造期门控（`buildMaterial` 的 forPool），pool 专属参数变更就会在运行期
+   * 把 `uRoundness` 泄漏进 film 材质（分派表 applier 侧漏门控，2026-09 修复）。
+   */
+  readonly supportsRoundness: boolean;
   build(ctx: WaterBuildContext): WaterBody;
   getTargets(body: WaterBody, role: WaterPartRole): THREE.Mesh[];
   /** 应用水面世界 y（契约：必须零重建） */
@@ -163,6 +171,7 @@ const filmStrategy: WaterBodyStrategy = {
   id: "film",
   wetnessGated: true,
   supportsVolumeOptics: false,
+  supportsRoundness: false, // 薄水膜无容器：圆角裁剪无意义（构造期亦恒 0）
   build(ctx) {
     const geo = new THREE.PlaneGeometry(1, 1, 64, 64);
     const mat = ctx.buildMaterial({ forPool: false });
@@ -220,6 +229,7 @@ const poolStrategy: WaterBodyStrategy = {
   id: "pool",
   wetnessGated: false,
   supportsVolumeOptics: true,
+  supportsRoundness: true, // 盒式容器：圆角 = 池体边角淡出
   build(ctx) {
     const group = new THREE.Group();
     group.name = "ysm-ground-water";

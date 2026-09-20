@@ -450,6 +450,29 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     expect(live.uniforms.uRoundness.value).toBeCloseTo(0.5, 5);
   });
 
+  it("film：waterPoolRoundness 变更不得泄漏进 uRoundness（构造期门控 = 运行期门控）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply(); // 默认 film
+    const root = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    const mat = root.material as THREE.MeshPhysicalMaterial;
+    mat.onBeforeCompile(
+      fakeShader() as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    const live = (
+      mat as unknown as {
+        userData: { shader: { uniforms: { uRoundness: { value: number } } } };
+      }
+    ).userData.shader;
+    // 构造期：film 无容器，圆角恒 0（buildWaveWaterMaterial 的 forPool 门控）
+    expect(live.uniforms.uRoundness.value).toBe(0);
+    // 直写 envState（模拟存档恢复 / 预设套用 / 其他 cap 写入）——
+    // film 下不得被 pool 专属参数污染，否则水膜被圆角裁剪
+    setEnvState({ waterPoolRoundness: 0.5 }, { source: "manual" });
+    expect(live.uniforms.uRoundness.value).toBe(0);
+  });
+
   it("film 模式 waterSize 变更不重建 mesh（scale 驱动，ADR-255 改造 A）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
@@ -670,6 +693,37 @@ describe("WaterCapability — loadState 多分支", () => {
     expect(cap.getPoolWallThickness()).toBeCloseTo(0.2, 5);
     expect(cap.getPoolWallColor()).toBe(0x445566);
     expect(cap.getPoolRoundness()).toBeCloseTo(0.25, 5);
+  });
+
+  it("film 存档残留 pool 圆角 → 恢复后不得污染 film 的 uRoundness（pool 专属参数不跨界）", () => {
+    // 现实来源：用户先在 pool 调过圆角、切回 film 后保存——saveState 写全量 water 键（不分形态），
+    // 存档里因此残留 poolRoundness。恢复时若 applier 无形态门控，水膜会被凭空裁掉四角
+    // （构造期靠 forPool 恒 0 明令禁止的行为，只在运行期漏门控 → 2026-09 修复）。
+    persistState("water", {
+      enabled: true,
+      mode: "film",
+      poolRoundness: 0.5,
+      waterPoolRoundness: 0.5,
+    });
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply(); // 默认 film
+    // 真实时序：先编译 shader（存下 uniform 句柄），再恢复存档——否则 setUniform 因无 shader 而自然跳过
+    const root = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    const mat = root.material as THREE.MeshPhysicalMaterial;
+    mat.onBeforeCompile(
+      fakeShader() as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    cap.loadState();
+    // 参数本身照常恢复（pool 用户的持久化不受影响）
+    expect(cap.getPoolRoundness()).toBeCloseTo(0.5, 5);
+    const live = (
+      mat as unknown as {
+        userData: { shader: { uniforms: { uRoundness: { value: number } } } };
+      }
+    ).userData.shader;
+    expect(live.uniforms.uRoundness.value, "film 圆角恒 0").toBe(0);
   });
 
   it("legacy ground 键（water 嵌套对象）迁移", () => {
@@ -1129,11 +1183,13 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     expect(filmStrategy.getTargets(body, "wallOuter")).toEqual([]);
   });
 
-  it("形态能力旗标：film 受 wetness 门控且无体积光学；pool 反之", () => {
+  it("形态能力旗标：film 受 wetness 门控、无体积光学 / 无圆角；pool 反之", () => {
     expect(filmStrategy.wetnessGated).toBe(true);
     expect(filmStrategy.supportsVolumeOptics).toBe(false);
+    expect(filmStrategy.supportsRoundness).toBe(false);
     expect(poolStrategy.wetnessGated).toBe(false);
     expect(poolStrategy.supportsVolumeOptics).toBe(true);
+    expect(poolStrategy.supportsRoundness).toBe(true);
   });
 
   it("clampPoolRoundness 边界：负值归零、超上限取 0.5（构造期与运行期共用同一域）", () => {

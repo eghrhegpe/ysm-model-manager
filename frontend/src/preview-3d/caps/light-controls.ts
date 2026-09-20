@@ -7,12 +7,19 @@
 //   D1 删「锥引擎」下拉（postprocess 空壳引擎已移除，控件本就只会关掉体积光）
 //   D2 体积光 5 参数收编为 3 个语义滑块 + 1 个上下亮度比（base/tip 不再各自暴露）
 //   D3 聚光灯与体积光合并进同一可折叠卡（用户裁定：不做 visibleWhen 隐藏，只折叠）
+//
+// [light-type-switch] 统一实例重构：
+//   三盏灯（key/fill/rim）各可在 directional / point / spot 之间切换，参数结构统一。
+//   UI 改为「选择编辑哪盏灯（light-select）→ 同一套设置条读写该灯」，取代原先
+//   key/fill/rim 各自的平铺 toggle + 独立滑块组（那会让每盏灯都要复制一份 spot 参数）。
+//   类型专属参数（锥角/半影/距离/衰减）按当前灯 type 条件显示；类型 select 带
+//   refreshOnChange → 切换后重建节点树，参数区随之增减。
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import type { DeepPartial, LightCapability, LightParams } from "./light-capability.ts";
+import type { LightCapability, LightKey, LightType } from "./light-capability.ts";
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
 const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string; labelKey?: LocaleKey }> = [
@@ -22,6 +29,20 @@ const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string; labelKey?: Loc
   { value: "mmd", label: "MMD角色", labelKey: "preview.lightPresetMmd" },
   { value: "litematic", label: "体素", labelKey: "preview.lightPresetLitematic" },
   { value: "resourcepack", label: "MC块包", labelKey: "preview.lightPresetResourcepack" },
+];
+
+/** 三盏灯槽位（[light-type-switch] 顶栏「编辑灯光」按钮组） */
+const LIGHT_SLOTS: Array<{ value: string; label: string; labelKey: LocaleKey }> = [
+  { value: "key", label: "主灯", labelKey: "preview.keyLight" },
+  { value: "fill", label: "补灯", labelKey: "preview.fillLight" },
+  { value: "rim", label: "轮廓灯", labelKey: "preview.rimLight" },
+];
+
+/** 灯光类型选项（每盏灯可自由切换） */
+const LIGHT_TYPE_OPTIONS: Array<{ value: LightType; label: string; labelKey: LocaleKey }> = [
+  { value: "directional", label: "方向光", labelKey: "preview.lightTypeDirectional" },
+  { value: "point", label: "点光源", labelKey: "preview.lightTypePoint" },
+  { value: "spot", label: "聚光灯", labelKey: "preview.lightTypeSpot" },
 ];
 
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
@@ -43,128 +64,153 @@ function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
   };
 }
 
-/** 单盏方向光灯的参数滑块（方位角/仰角/强度，可选颜色）——数据模型本就带这些字段，
- *  此前 UI 在 ADR-195/246 收敛时被砍成纯 toggle，用户完全摸不到位置/强度；此处补齐暴露。
- *  setParams 经现有 envState 管线落到 updateDirectional，零额外胶水。 */
-function dirParamSliders(
-  which: "key" | "fill" | "rim",
-  cap: LightCapability,
-  keys: { azimuth: LocaleKey; elevation: LocaleKey; intensity: LocaleKey; color?: LocaleKey },
-): PreviewMenuNode[] {
+/** [light-type-switch] 统一设置条：读写「当前编辑的那盏灯」，参数结构三类型共用。
+ *  类型专属参数（angle/penumbra/distance/decay）按 type 条件展开——同一套 UI 服务三盏灯，
+ *  消灭「每盏灯复制一份 spot 参数」的 N×M 重复。 */
+function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
+  const which = cap.getActiveLight();
   const getP = () => cap.getParams()[which];
-  const setField = (field: "azimuth" | "elevation" | "intensity", v: number) =>
-    cap.setParams({ [which]: { [field]: v } } as DeepPartial<LightParams>);
-  const sliders: PreviewMenuNode[] = [
+  const setField = (field: string, v: unknown) =>
+    cap.setLightParams(which, { [field]: v } as never);
+
+  const type = getP().type;
+  const nodes: PreviewMenuNode[] = [
+    {
+      id: `light-${which}-type`,
+      kind: "select",
+      labelKey: "preview.lightType",
+      control: {
+        options: LIGHT_TYPE_OPTIONS,
+        get: () => getP().type,
+        set: (v) => setField("type", v),
+        // 类型变化 → 重建节点树，参数区随之增减（锥角/半影/距离/衰减条件显示）
+        refreshOnChange: true,
+      },
+    },
+    {
+      id: `light-${which}-enabled`,
+      kind: "toggle",
+      labelKey: "preview.lightEnabled",
+      control: {
+        get: () => getP().enabled,
+        set: (v) => setField("enabled", v),
+      },
+    },
+    {
+      id: `light-${which}-color`,
+      kind: "color",
+      labelKey: "preview.lightColor",
+      control: {
+        get: () => getP().color,
+        set: (v) => setField("color", v),
+      },
+    },
+    {
+      id: `light-${which}-intensity`,
+      kind: "slider",
+      labelKey: "preview.lightIntensity",
+      control: {
+        min: 0,
+        max: 6,
+        step: 0.1,
+        get: () => getP().intensity,
+        set: (v) => setField("intensity", v),
+      },
+    },
     {
       id: `light-${which}-azimuth`,
       kind: "slider",
-      labelKey: keys.azimuth,
+      labelKey: "preview.lightAzimuth",
       control: {
         min: -180,
         max: 180,
         step: 1,
         unit: "°",
         get: () => getP().azimuth,
-        set: (v) => setField("azimuth", v as number),
+        set: (v) => setField("azimuth", v),
       },
     },
     {
       id: `light-${which}-elevation`,
       kind: "slider",
-      labelKey: keys.elevation,
+      labelKey: "preview.lightElevation",
       control: {
         min: -90,
         max: 90,
         step: 1,
         unit: "°",
         get: () => getP().elevation,
-        set: (v) => setField("elevation", v as number),
-      },
-    },
-    {
-      id: `light-${which}-intensity`,
-      kind: "slider",
-      labelKey: keys.intensity,
-      control: {
-        min: 0,
-        max: 3,
-        step: 0.1,
-        get: () => getP().intensity,
-        set: (v) => setField("intensity", v as number),
+        set: (v) => setField("elevation", v),
       },
     },
   ];
-  if (keys.color) {
-    sliders.push({
-      id: `light-${which}-color`,
-      kind: "color",
-      labelKey: keys.color,
-      control: {
-        get: () => getP().color,
-        set: (v) => cap.setParams({ [which]: { color: v as number } } as DeepPartial<LightParams>),
+
+  // spot 专属：锥角 / 半影
+  if (type === "spot") {
+    nodes.push(
+      {
+        id: `light-${which}-angle`,
+        kind: "slider",
+        labelKey: "preview.lightAngle",
+        control: {
+          min: 10,
+          max: 70,
+          step: 1,
+          unit: "°",
+          get: () => getP().angle,
+          set: (v) => setField("angle", v),
+        },
       },
-    });
+      {
+        id: `light-${which}-penumbra`,
+        kind: "slider",
+        labelKey: "preview.lightPenumbra",
+        control: {
+          min: 0,
+          max: 1,
+          step: 0.05,
+          get: () => getP().penumbra,
+          set: (v) => setField("penumbra", v),
+        },
+      },
+    );
   }
-  return sliders;
+
+  // spot / point 共用：衰减距离 / 衰减指数（directional 无衰减概念）
+  if (type !== "directional") {
+    nodes.push(
+      {
+        id: `light-${which}-distance`,
+        kind: "slider",
+        labelKey: "preview.lightDistance",
+        control: {
+          min: 0,
+          max: 200,
+          step: 1,
+          get: () => getP().distance,
+          set: (v) => setField("distance", v),
+        },
+      },
+      {
+        id: `light-${which}-decay`,
+        kind: "slider",
+        labelKey: "preview.lightDecay",
+        control: {
+          min: 0,
+          max: 4,
+          step: 0.1,
+          get: () => getP().decay,
+          set: (v) => setField("decay", v),
+        },
+      },
+    );
+  }
+
+  return nodes;
 }
 
-/** 三点布光 + ambient 节点（与聚光灯/体积光分卡，保持「基础光照」与「戏剧光」语义分离）。
- *  主灯 key 的 toggle 在顶层平铺，其参数滑块随下方 folder 内 key 滑块组一并暴露。 */
-function baseLightingNodes(cap: LightCapability): PreviewMenuNode[] {
-  return [
-    {
-      id: "light-fill",
-      kind: "toggle",
-      labelKey: "preview.fillLight",
-      control: {
-        get: () => cap.getParams().fill.enabled,
-        set: (v) => cap.setParams({ fill: { enabled: v as boolean } }),
-      },
-    },
-    ...dirParamSliders("fill", cap, {
-      azimuth: "preview.fillAzimuth",
-      elevation: "preview.fillElevation",
-      intensity: "preview.fillIntensity",
-    }),
-    {
-      id: "light-rim",
-      kind: "toggle",
-      labelKey: "preview.rimLight",
-      control: {
-        get: () => cap.getParams().rim.enabled,
-        set: (v) => cap.setParams({ rim: { enabled: v as boolean } }),
-      },
-    },
-    ...dirParamSliders("rim", cap, {
-      azimuth: "preview.rimAzimuth",
-      elevation: "preview.rimElevation",
-      intensity: "preview.rimIntensity",
-    }),
-    {
-      id: "light-ambient",
-      kind: "slider",
-      labelKey: "preview.ambientIntensity",
-      control: {
-        min: 0,
-        max: 2,
-        step: 0.1,
-        get: () => cap.getParams().ambient.intensity,
-        set: (v) => cap.setParams({ ambient: { intensity: v as number } }),
-      },
-    },
-    // 主灯 key 的参数（toggle 在顶层平铺，此处补方位角/仰角/强度/颜色）
-    ...dirParamSliders("key", cap, {
-      azimuth: "preview.keyAzimuth",
-      elevation: "preview.keyElevation",
-      intensity: "preview.keyIntensity",
-      color: "preview.keyColor",
-    }),
-  ];
-}
-
-/** [ADR-246 D3] 聚光灯与体积光折叠卡：两者是同一光学事件的「光源」与「可见化」，同卡呈现即传达依赖。
- *  体积光是聚光灯锥体的可见化——故聚光灯未开时体积光无效果（物理设定，非缺陷）；
- *  用户在卡内一眼可同时开关两者，不靠隐藏控件去「解释」依赖。 */
+/** [ADR-246 D3] 体积光卡：聚光灯锥体的可见化。
+ *  [light-type-switch] 锥体由「第一盏启用的 spot 灯」驱动——故任一灯切到聚光灯并开启即可见。 */
 function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
   return {
     id: SPOT_VOL_CARD,
@@ -172,44 +218,6 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
     collapsible: true,
     labelKey: "preview.spotlightVolume",
     children: [
-      {
-        id: "light-spotlight",
-        kind: "toggle",
-        labelKey: "preview.spotlight",
-        hintKey: "preview.spotlightHint",
-        control: {
-          get: () => cap.getParams().spotlight.enabled,
-          set: (v) => cap.setSpotlight({ enabled: v as boolean }),
-        },
-      },
-      {
-        // [spot-fix] 暴露强度控件：UI 值语义 = 到达目标处照度(lx)，与衰减解耦，所见即所得。
-        // 此前缺此滑块，聚光灯强度被距离衰减吃掉后用户无任何补救入口（「开了没效果」的体验根因之一）。
-        id: "light-spot-intensity",
-        kind: "slider",
-        labelKey: "preview.spotlightIntensity",
-        hintKey: "preview.spotlightIntensityHint",
-        control: {
-          min: 0,
-          max: 6,
-          step: 0.1,
-          get: () => cap.getParams().spotlight.intensity,
-          set: (v) => cap.setSpotlight({ intensity: v as number }),
-        },
-      },
-      {
-        id: "light-cone-angle",
-        kind: "slider",
-        labelKey: "preview.coneAngle",
-        control: {
-          min: 10,
-          max: 60,
-          step: 1,
-          unit: "°",
-          get: () => cap.getParams().spotlight.angle,
-          set: (v) => cap.setSpotlight({ angle: v as number }),
-        },
-      },
       {
         id: "light-volumetric",
         kind: "toggle",
@@ -258,7 +266,6 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
         },
       },
       // [ADR-246 D2] base/tip 合并为单一「上下亮度比」——原两参数是 shader 的 mix() 两端
-      // （实现细节），对用户不是可理解的概念
       {
         id: "light-volumetric-ratio",
         kind: "slider",
@@ -275,19 +282,38 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
   };
 }
 
-/** 完整参数面板节点树：light-enabled 能力总开关（首行）+ light-key 平铺 toggle
- *  + 参数组 folder（预设 + 三点布光 + 聚光灯/体积光折叠卡）。
- *  light-key 是主灯 params 开关（单盏主灯），非能力总开关——总开关是首行 light-enabled。 */
+/** 环境光强度（三盏灯之外的独立轴） */
+function ambientNode(cap: LightCapability): PreviewMenuNode {
+  return {
+    id: "light-ambient",
+    kind: "slider",
+    labelKey: "preview.ambientIntensity",
+    control: {
+      min: 0,
+      max: 2,
+      step: 0.1,
+      get: () => cap.getParams().ambient.intensity,
+      set: (v) => cap.setParams({ ambient: { intensity: v as number } }),
+    },
+  };
+}
+
+/** 完整参数面板节点树：light-enabled 能力总开关（首行）+ 编辑灯选择（三灯按钮）
+ *  + 统一设置条（类型/颜色/强度/方位角/仰角 + 类型专属参数）+ 环境光 + 体积光卡。 */
 export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
   return [
     lightEnabledNode(cap),
+    // [light-type-switch] 顶栏三灯按钮：选择当前编辑的灯，其下统一设置条读写该灯
     {
-      id: "light-key",
-      kind: "toggle",
-      labelKey: "preview.keyLight",
+      id: "light-select",
+      kind: "select",
+      labelKey: "preview.lightSelect",
       control: {
-        get: () => cap.getParams().key.enabled,
-        set: (v) => cap.setParams({ key: { enabled: v as boolean } }),
+        options: LIGHT_SLOTS,
+        get: () => cap.getActiveLight(),
+        set: (v) => cap.setActiveLight(v as LightKey),
+        // 切换编辑对象 → 重建节点树（设置条各闭包绑定新槽位）
+        refreshOnChange: true,
       },
     },
     {
@@ -305,7 +331,8 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
             set: (v) => cap.applyModelPreset(toModelType(v as string), { manual: true }),
           },
         },
-        ...baseLightingNodes(cap),
+        ...unifiedLightNodes(cap),
+        ambientNode(cap),
         spotVolCardNode(cap),
       ],
     },

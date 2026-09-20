@@ -16,7 +16,10 @@ export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
-export interface DirectionalLightParams {
+export type LightType = "directional" | "point" | "spot";
+
+export interface LightInstanceParams {
+  type: LightType;
   enabled: boolean;
   color: number;
   intensity: number;
@@ -24,83 +27,85 @@ export interface DirectionalLightParams {
   azimuth: number;
   /** 仰角（度，0=水平，90=正上；负值=地面下） */
   elevation: number;
+  /** spot 锥角半角（度，越大越宽；directional 时忽略） */
+  angle: number;
+  /** spot 半影（0=硬边，1=全软边；directional 时忽略） */
+  penumbra: number;
+  /** spot/point 衰减距离（directional 时忽略） */
+  distance: number;
+  /** spot/point 衰减指数（0=无衰减，2=经典物理衰减；directional 时忽略） */
+  decay: number;
 }
+
+/** @deprecated 使用 LightInstanceParams */
+export type DirectionalLightParams = LightInstanceParams;
+
+/** 聚光灯参数子集（VolumetricCone.rebuild 消费；与旧 SpotlightParams 接口兼容） */
+export type SpotlightParams = Pick<
+  LightInstanceParams,
+  "enabled" | "color" | "intensity" | "angle" | "penumbra" | "distance" | "decay"
+>;
 
 export interface AmbientLightParams {
   color: number;
   intensity: number;
 }
 
-export interface SpotlightParams {
-  enabled: boolean;
-  color: number;
-  intensity: number;
-  /** 锥角半角（度，越大越宽） */
-  angle: number;
-  /** 半影（0=硬边，1=全软边） */
-  penumbra: number;
-  /** 衰减距离 */
-  distance: number;
-  /** 衰减指数（0=无衰减，2=经典物理衰减） */
-  decay: number;
-}
-
 export interface VolumetricParams {
   enabled: boolean;
-  /** 最大透明度 */
   opacity: number;
-  /** 空气散射幂次（越大衰减越陡，越集中底部） */
   fogPower: number;
-  /** 边缘羽化（0=无，1=完全透明边缘） */
   edgeFade: number;
-  /** 底部强度（光落在对象上） */
   baseStrength: number;
-  /** 顶部强度（光源附近） */
   tipStrength: number;
 }
 
 export interface LightParams {
-  key: DirectionalLightParams;
-  fill: DirectionalLightParams;
-  rim: DirectionalLightParams;
+  key: LightInstanceParams;
+  fill: LightInstanceParams;
+  rim: LightInstanceParams;
   ambient: AmbientLightParams;
-  spotlight: SpotlightParams;
   volumetric: VolumetricParams;
 }
-
 /* ============ 默认值与预设 ============ */
 
-const DEFAULT_KEY: DirectionalLightParams = {
+const DEFAULT_KEY: LightInstanceParams = {
+  type: "directional",
   enabled: true,
   color: 0xffffff,
   intensity: 1.2,
   azimuth: 30,
   elevation: 45,
-};
-const DEFAULT_FILL: DirectionalLightParams = {
-  enabled: true,
-  color: 0xffffff,
-  intensity: 0.4,
-  azimuth: -30,
-  elevation: 20,
-};
-const DEFAULT_RIM: DirectionalLightParams = {
-  enabled: true,
-  color: 0xffffff,
-  intensity: 0.3,
-  azimuth: 180,
-  elevation: 25,
-};
-const DEFAULT_AMBIENT: AmbientLightParams = { color: 0xffffff, intensity: 0.5 };
-const DEFAULT_SPOTLIGHT: SpotlightParams = {
-  enabled: false,
-  color: 0xffffff,
-  intensity: 2.0,
   angle: 25,
   penumbra: 0.3,
   distance: 30,
   decay: 1.5,
 };
+const DEFAULT_FILL: LightInstanceParams = {
+  type: "directional",
+  enabled: true,
+  color: 0xffffff,
+  intensity: 0.4,
+  azimuth: -30,
+  elevation: 20,
+  angle: 25,
+  penumbra: 0.3,
+  distance: 30,
+  decay: 1.5,
+};
+const DEFAULT_RIM: LightInstanceParams = {
+  type: "directional",
+  enabled: true,
+  color: 0xffffff,
+  intensity: 0.3,
+  azimuth: 180,
+  elevation: 25,
+  angle: 25,
+  penumbra: 0.3,
+  distance: 30,
+  decay: 1.5,
+};
+const DEFAULT_AMBIENT: AmbientLightParams = { color: 0xffffff, intensity: 0.5 };
 const DEFAULT_VOLUMETRIC: VolumetricParams = {
   enabled: false,
   opacity: 0.45,
@@ -115,7 +120,6 @@ export const DEFAULT_LIGHT_PARAMS: LightParams = {
   fill: { ...DEFAULT_FILL },
   rim: { ...DEFAULT_RIM },
   ambient: { ...DEFAULT_AMBIENT },
-  spotlight: { ...DEFAULT_SPOTLIGHT },
   volumetric: { ...DEFAULT_VOLUMETRIC },
 };
 
@@ -139,38 +143,44 @@ type LightGroupKey = keyof LightParams;
 // 某组新增字段而此处漏配即编译报错，与 renderMenu MENU_HANDLERS 非 Partial Record 同款「并行结构编译期锁死」纪律。
 const FLATTEN_MAP = {
   key: {
+    type: "lightKeyType",
     enabled: "lightKeyEnabled",
     color: "lightKeyColor",
     intensity: "lightKeyIntensity",
     azimuth: "lightKeyAzimuth",
     elevation: "lightKeyElevation",
+    angle: "lightKeyAngle",
+    penumbra: "lightKeyPenumbra",
+    distance: "lightKeyDistance",
+    decay: "lightKeyDecay",
   },
   fill: {
+    type: "lightFillType",
     enabled: "lightFillEnabled",
     color: "lightFillColor",
     intensity: "lightFillIntensity",
     azimuth: "lightFillAzimuth",
     elevation: "lightFillElevation",
+    angle: "lightFillAngle",
+    penumbra: "lightFillPenumbra",
+    distance: "lightFillDistance",
+    decay: "lightFillDecay",
   },
   rim: {
+    type: "lightRimType",
     enabled: "lightRimEnabled",
     color: "lightRimColor",
     intensity: "lightRimIntensity",
     azimuth: "lightRimAzimuth",
     elevation: "lightRimElevation",
+    angle: "lightRimAngle",
+    penumbra: "lightRimPenumbra",
+    distance: "lightRimDistance",
+    decay: "lightRimDecay",
   },
   ambient: {
     color: "lightAmbientColor",
     intensity: "lightAmbientIntensity",
-  },
-  spotlight: {
-    enabled: "lightSpotEnabled",
-    color: "lightSpotColor",
-    intensity: "lightSpotIntensity",
-    angle: "lightSpotAngle",
-    penumbra: "lightSpotPenumbra",
-    distance: "lightSpotDistance",
-    decay: "lightSpotDecay",
   },
   volumetric: {
     enabled: "lightVolumetricEnabled",

@@ -233,9 +233,11 @@ export class ShadowCapability implements SceneCapability {
     // 查询即就绪——不再需要 createAll 后手工 setLightCap 接线 + 注入后补 apply）
     const lightCap = getTypedCap(this.caps, "light");
     if (lightCap) {
-      dirs.push(...lightCap.getDirectionalLights());
-      const sp = lightCap.getSpotLight();
-      if (sp) spots.push(sp);
+      // [light-type-switch] 三盏灯类型动态：按 instanceof 分流到 dirs/spots
+      for (const l of lightCap.getLights()) {
+        if (l instanceof THREE.DirectionalLight) dirs.push(l);
+        else if (l instanceof THREE.SpotLight) spots.push(l);
+      }
     }
     const seenDirs = new Set<THREE.DirectionalLight>(dirs);
     const seenSpots = new Set<THREE.SpotLight>(spots);
@@ -317,7 +319,7 @@ export class ShadowCapability implements SceneCapability {
       return;
     }
     const sp: THREE.SpotLight | null =
-      this._spotRef ?? getTypedCap(this.caps, "light")?.getSpotLight() ?? null;
+      this._spotRef ?? getTypedCap(this.caps, "light")?.getSpotLightForCone()?.light ?? null;
     if (sp && this.spotSnap) {
       sp.castShadow = this.spotSnap.castShadow;
       sp.shadow.mapSize.set(this.spotSnap.mapSize.x, this.spotSnap.mapSize.y);

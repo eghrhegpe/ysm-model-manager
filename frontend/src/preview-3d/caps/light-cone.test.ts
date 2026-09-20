@@ -6,12 +6,12 @@
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { VolumetricCone } from "./light-cone.ts";
-import { DEFAULT_LIGHT_PARAMS, type SpotlightParams, type VolumetricParams } from "./light-presets.ts";
+import { DEFAULT_LIGHT_PARAMS, type LightInstanceParams, type VolumetricParams } from "./light-presets.ts";
 
 const CONE_NAME = "ysm-light-volumetric-cone";
 const HEIGHT = 8;
 const SPOT_POS = new THREE.Vector3(0, 8, 0);
-const SP: SpotlightParams = { ...DEFAULT_LIGHT_PARAMS.spotlight, enabled: true };
+const SP: LightInstanceParams = { ...DEFAULT_LIGHT_PARAMS.key, type: "spot", enabled: true };
 const VM: VolumetricParams = { ...DEFAULT_LIGHT_PARAMS.volumetric, enabled: true };
 
 /** 建锥 + 挂载，返回可直接做几何断言的 group（世界矩阵已刷新）。 */
@@ -34,7 +34,7 @@ function meshOf(group: THREE.Group): THREE.Mesh {
 }
 
 /** 锥底半径（与 rebuild 内公式同源）：height · tan(半角) · (1 + penumbra/2) */
-function expectedBaseRadius(height: number, sp: SpotlightParams): number {
+function expectedBaseRadius(height: number, sp: LightInstanceParams): number {
   return height * Math.tan(THREE.MathUtils.degToRad(sp.angle)) * (1 + sp.penumbra * 0.5);
 }
 
@@ -59,7 +59,7 @@ describe("VolumetricCone — 真锥体几何", () => {
   it("高度/锥角变化反映到新几何", () => {
     const scene = new THREE.Scene();
     const cone = new VolumetricCone(scene);
-    const sp40: SpotlightParams = { ...SP, angle: 40 };
+    const sp40: LightInstanceParams = { ...SP, angle: 40 };
     cone.rebuild(12, sp40, VM, new THREE.Vector3(0, 12, 0));
     cone.attach(new THREE.Vector3(0, 12, 0));
     const params = (

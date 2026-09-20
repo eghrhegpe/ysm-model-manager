@@ -140,8 +140,14 @@ invariant_anchors:
 - **[ADR-246] 灯光/体积光简化已落地（2026-09-16，主提交 `66f7b5d6f`）**：
   - **D1 删空壳引擎**：`set/getVolumetricEngine`、`lightVolumetricEngine` schema 字段、菜单「锥引擎」下拉、`saveState` 写入、`loadState` 引擎恢复步、`needComposer` 的 volumetric 分支全部摘除；老存档残留 `volumetricEngine` 成惰性数据（read 时忽略，有测试锁）。
   - **D2 参数收编**：`VolumetricParams` 内部 5 字段不动（shader 契约 + 预设表兼容），菜单层收编为「浓度 `opacity` / 衰减 `fogPower` / 边缘羽化 `edgeFade`」三语义滑块 + 单一「上下亮度比」（`tipStrength = baseStrength × ratio`，getter 除零守卫 + `clamp[0,1]`、setter 对称 clamp）。
-  - **D3 可视化**：`THREE.SpotLightHelper` 随聚光灯开关显隐（`apply()` 与 `loadState()` 两处显式挂载，`update()` 随聚光灯更新，`dispose()` 释放）+ zh`preview.spotlight`「顶光」→「聚光灯」+ 聚光灯/体积光合并进同一 `collapsible` 卡（**不做 visibleWhen 隐藏**）。
-  - 验证：`light-capability`(61) + `postprocessing-capability`(86) + `fog-capability`(33) = 180 测试绿。
+  - **D3 可视化**：每盏灯按 type 配 helper（Directional/Spot/Point 各对应），随开关显隐 + 聚光灯/体积光合并进同一 `collapsible` 卡（**不做 visibleWhen 隐藏**）。
+  - 验证：`light-capability` + `postprocessing-capability`(86) + `fog-capability`(33) 测试绿。
+- **[light-type-switch] 三灯统一实例（2026-09）**：三盏灯（key/fill/rim）各可在 `directional`/`point`/`spot` 间切换，参数结构统一为 `LightInstanceParams`（type/enabled/color/intensity/azimuth/elevation/angle/penumbra/distance/decay）。
+  - **破坏性重构**：原「三盏方向灯 + 一盏独立聚光灯」四灯二体系废除；`lightSpot*` schema 字段、`setSpotlight`、`getDirectionalLights`/`getSpotLight` 全部删除。
+  - **切换语义**：类型变化 → dispose 旧 Three 对象 + 旧 helper → 按新 type 重建（MikuMikuAR 同款）；参数变化 → 原地更新。
+  - **体积光锥**：不再绑定第四盏灯，由三盏中「第一盏 `type==='spot'` 且启用」的灯驱动（`getSpotLightForCone()`）。
+  - **菜单**：顶栏 `light-select`（三灯按钮）选择编辑对象 → 同一套设置条读写该灯；类型专属参数（angle/penumbra/distance/decay）按 type 条件展开。
+  - **旧存档迁移**：`restoreLightParams` 检测旧 `spotlight` 块 → 迁移为 key 灯 `type='spot'` + 对应参数。
 - **[ADR-246] 未落地项——「雾中体积光」**：真正的 raymarching 体积光（`VolumetricLightingPass`，ADR-084 §L3）**仍未实现**；ADR-246 已裁定若要做须以**新增 pass** 方式引入，不得复活「切换渲染器」开关。注意与两条已落地能力区分：`FogCapability`（`scene.fog` 线性/指数雾，非体积光）、ADR-107 天空体积光束 god rays（非雾中散射）。
 - 颜色字段统一 number(hex)；枚举字段 `type:"enum"` + `values`。
 - 已迁移 cap（10/10，刀2 完成）：Sky/Fog/Reflector/Shadow/Ground/RenderMode/Water/Environment/Postprocessing/Light。

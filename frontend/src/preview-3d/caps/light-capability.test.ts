@@ -1,11 +1,15 @@
 // @vitest-environment node
 // ===== LightCapability 测试 =====
+// [light-type-switch] key/fill/rim 统一为 LightInstanceParams（type/enabled/color/intensity/
+// azimuth/elevation/angle/penumbra/distance/decay），原独立 spotlight 灯已删除——
+// 「聚光灯」= 把某盏灯（默认 key）的 type 设为 "spot"，体积光锥由第一盏启用的 spot 灯驱动。
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import {
   LightCapability,
   DEFAULT_LIGHT_PARAMS,
   spotDistanceAttenuation,
+  type LightInstanceParams,
 } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
@@ -34,7 +38,21 @@ function newCap(opts: { enabled?: boolean; target?: THREE.Vector3; targetHeight?
   });
 }
 
-/** 往返 helper：saveState 后新实例 loadState（spotlight 开启），
+/** 三盏灯统一的「全部字段」基线（构造 LightInstanceParams 的部分覆盖用） */
+const LIGHT_FIELDS_BASE: LightInstanceParams = {
+  type: "directional",
+  enabled: true,
+  color: 0xffffff,
+  intensity: 1,
+  azimuth: 0,
+  elevation: 0,
+  angle: 25,
+  penumbra: 0.3,
+  distance: 30,
+  decay: 1.5,
+};
+
+/** 往返 helper：saveState 后新实例 loadState（key 灯切聚光灯并开启），
  *  返回恢复后的实例与 params。ON/OFF 两方向共用，消除测试结构重复（jscpd）。
  *  [ADR-246 D1] 原「cone 引擎」维度已随 postprocess 空壳一并删除。 */
 function roundtripConeVolumetric(opts: { volumetricEnabled: boolean }): {
@@ -43,7 +61,8 @@ function roundtripConeVolumetric(opts: { volumetricEnabled: boolean }): {
 } {
   const cap = newCap();
   cap.applyModelPreset("mmd", { manual: true });
-  cap.setSpotlight({ enabled: true });
+  // [light-type-switch] 原 setSpotlight({ enabled: true }) → 等价：key 灯切 spot 并开启
+  cap.setLightParams("key", { type: "spot", enabled: true });
   cap.setVolumetric({ enabled: opts.volumetricEnabled });
   cap.saveState();
   const cap2 = newCap();
@@ -57,7 +76,13 @@ describe("LightCapability — 构造函数与默认值", () => {
   it("构造默认值完整", () => {
     const cap = newCap();
     const p = cap.getParams();
-    expect(p.spotlight.enabled).toBe(false);
+    // [light-type-switch] 原独立 spotlight 灯（默认关）已并入 key 灯：默认三盏灯全是方向光
+    for (const which of ["key", "fill", "rim"] as const) {
+      expect(p[which].type).toBe("directional");
+      expect(p[which].enabled).toBe(true);
+    }
+    // 「默认无聚光灯」的等价断言：没有可见的 spot 灯 → 体积光锥无驱动源
+    expect(cap.getSpotLightForCone()).toBeNull();
     expect(p.volumetric.enabled).toBe(false);
     expect(p.ambient.intensity).toBe(0.5);
     expect(cap.isEnabled()).toBe(true);
@@ -92,10 +117,14 @@ describe("LightCapability — apply / setEnabled / dispose", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
     cap.apply();
-    // 六个对象：key/fill/rim/ambient/spotlight/spotlightTarget
-    const names = scene.children.map((c) => c.name || c.type);
+    // 六个对象：key/fill/rim/ambient/spotTarget（+ 每盏灯的 helper）
     expect(scene.children.length).toBeGreaterThanOrEqual(6);
-    expect(names.some((n) => n.includes("SpotLight"))).toBe(true);
+    // [light-type-switch] 默认三盏灯都是方向光（原独立 Spotlight 不再常驻场景）
+    expect(scene.children.filter((c) => c instanceof THREE.DirectionalLight)).toHaveLength(3);
+    expect(scene.children.some((c) => c instanceof THREE.AmbientLight)).toBe(true);
+    // 把 key 灯切成 spot → 聚光灯实例随即挂入场景（类型切换自带挂载分支）
+    cap.setLightParams("key", { type: "spot" });
+    expect(scene.children.some((c) => c instanceof THREE.SpotLight)).toBe(true);
   });
 
   it("setEnabled(false) 从场景移除全部灯光", () => {
@@ -151,26 +180,30 @@ describe("LightCapability — apply / setEnabled / dispose", () => {
   });
 });
 
-describe("LightCapability — 聚光灯 setSpotlight", () => {
+describe("LightCapability — 聚光灯（key 灯 type=spot）", () => {
   beforeEach(() => resetEnvState());
 
   it("启用聚光灯", () => {
     const cap = newCap();
-    cap.setSpotlight({ enabled: true });
+    // [light-type-switch] 原 cap.setSpotlight({ enabled: true }) →
+    // 聚光灯 = 把 key 灯类型设为 spot（构造默认三盏都是 directional）
+    cap.setLightParams("key", { type: "spot", enabled: true });
     const p = cap.getParams();
-    expect(p.spotlight.enabled).toBe(true);
-    expect(p.spotlight.angle).toBe(25);
-    expect(p.spotlight.color).toBe(0xffffff);
+    expect(p.key.type).toBe("spot");
+    expect(p.key.enabled).toBe(true);
+    expect(p.key.angle).toBe(25); // 与旧 spotlight 同名字段一一对应
+    expect(p.key.color).toBe(0xffffff);
   });
 
-  it("setSpotlight 更新参数", () => {
+  it("setLightParams 更新聚光灯参数", () => {
     const cap = newCap();
-    cap.setSpotlight({ enabled: true, angle: 40, intensity: 3.0, color: 0xffffcc });
+    cap.setLightParams("key", { type: "spot", enabled: true, angle: 40, intensity: 3.0, color: 0xffffcc });
     const p = cap.getParams();
-    expect(p.spotlight.enabled).toBe(true);
-    expect(p.spotlight.angle).toBe(40);
-    expect(p.spotlight.intensity).toBe(3.0);
-    expect(p.spotlight.color).toBe(0xffffcc);
+    expect(p.key.type).toBe("spot");
+    expect(p.key.enabled).toBe(true);
+    expect(p.key.angle).toBe(40);
+    expect(p.key.intensity).toBe(3.0);
+    expect(p.key.color).toBe(0xffffcc);
   });
 });
 
@@ -182,7 +215,7 @@ describe("LightCapability — 体积光锥 setVolumetric", () => {
     const cap = new LightCapability({
       scene, renderer: makeFakeRenderer(),
     });
-    cap.setSpotlight({ enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
     cap.setVolumetric({ enabled: true });
     cap.apply();
     const cone = scene.getObjectByName("ysm-light-volumetric-cone");
@@ -207,7 +240,7 @@ describe("LightCapability — 体积光锥 setVolumetric", () => {
     const cap = new LightCapability({
       scene, renderer: makeFakeRenderer(),
     });
-    cap.setSpotlight({ enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
     cap.setVolumetric({ enabled: true });
     cap.apply();
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
@@ -221,7 +254,7 @@ describe("LightCapability — 体积光锥 setVolumetric", () => {
     const cap = new LightCapability({
       scene, renderer: makeFakeRenderer(),
     });
-    cap.setSpotlight({ enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
     cap.setVolumetric({ enabled: true });
     cap.apply();
     cap.setVolumetric({ opacity: 0.8, fogPower: 2.5 });
@@ -260,8 +293,10 @@ describe("LightCapability — applyModelPreset", () => {
     cap.applyModelPreset("ysm");
     const p = cap.getParams();
     expect(p.key.intensity).toBe(1.3);
-    expect(p.spotlight.intensity).toBe(1.8);
-    expect(p.spotlight.angle).toBe(30);
+    // [light-type-switch] 旧 MODEL_DEFAULTS.lightSpot* 字段（强度 1.8 / 锥角 30）已删除——
+    // spot 参数下沉到每盏灯。等价断言 = ysm 预设不再携带 spot 专属参数（保持默认）、也不切灯类型。
+    expect(p.key.angle).toBe(DEFAULT_LIGHT_PARAMS.key.angle);
+    expect(p.key.type).toBe("directional");
   });
 
   it("vrm 预设：rim 稍强", () => {
@@ -280,7 +315,9 @@ describe("LightCapability — applyModelPreset", () => {
   it("未知类型经 toModelType 收窄回退 default 预设（存储脏数据兜底）", () => {
     const cap = newCap();
     cap.applyModelPreset(toModelType("unknown-type"));
-    expect(cap.getParams().spotlight.enabled).toBe(false);
+    // 等价断言：default 预设不点灯为聚光灯（原 p.spotlight.enabled === false）
+    expect(cap.getParams().key.type).toBe("directional");
+    expect(cap.getSpotLightForCone()).toBeNull();
   });
 
   it("原型链成员经 toModelType 收窄回退 default（Object.hasOwn 自身属性判定，防裸索引走原型链）", () => {
@@ -337,15 +374,15 @@ describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folde
   it("主灯之外的节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // light-enabled 能力总开关 + light-key 平铺
+    // light-enabled 能力总开关 + [light-type-switch] light-select（编辑哪盏灯，取代原 light-key 平铺）
     expect(nodes[0]!.id).toBe("light-enabled");
-    expect(nodes[1]!.id).toBe("light-key");
+    expect(nodes[1]!.id).toBe("light-select");
     // 其余节点在 folder children 内
     const folder = nodes[2]!;
     expect(folder.kind).toBe("folder");
     const childIds = folder.children!.map((c: { id: string }) => c.id);
-    expect(childIds).toContain("light-fill");
-    expect(childIds).toContain("light-rim");
+    // 三盏灯的开关不再平铺在 folder 外层：统一设置条按当前槽位产出 light-<which>-*
+    expect(childIds).toContain("light-key-enabled");
     expect(childIds).toContain("light-ambient");
     expect(childIds).toContain("light-preset");
     // [ADR-246 D3] 聚光灯 + 体积光收进同一可折叠卡（不再平铺、不做输入隐藏）
@@ -366,16 +403,13 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
     return card!;
   }
 
-  it("是 collapsible card，含聚光灯 + 体积光全量控件；体积光参数不做 visibleWhen 隐藏", () => {
+  it("是 collapsible card，体积光全量控件收进卡内；聚光灯参数由统一设置条按 type 展开", () => {
     const cap = newCap();
     const card = spotVolCard(cap);
     expect(card.kind).toBe("card");
     expect(card.collapsible).toBe(true);
     expect(card.labelKey).toBe("preview.spotlightVolume");
     expect(card.children!.map((c) => c.id)).toEqual([
-      "light-spotlight",
-      "light-spot-intensity",
-      "light-cone-angle",
       "light-volumetric",
       "light-volumetric-density",
       "light-volumetric-falloff",
@@ -386,6 +420,15 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
     for (const child of card.children!) {
       expect(child.visibleWhen).toBeUndefined();
     }
+    // [light-type-switch] 原卡内 light-spotlight / light-spot-intensity / light-cone-angle 已删——
+    // 「聚光灯」改为把某盏灯的 type 设为 spot，其专属参数（锥角/半影/距离/衰减）随统一设置条展开。
+    // 等价断言：切到 spot 后同一套设置条里出现这些控件。
+    cap.setLightParams("key", { type: "spot" });
+    const expanded = cap.getMenuNodes()[2]!.children!.map((c) => c.id);
+    expect(expanded).toContain("light-key-angle");
+    expect(expanded).toContain("light-key-penumbra");
+    expect(expanded).toContain("light-key-distance");
+    expect(expanded).toContain("light-key-decay");
   });
 
   it("三个语义滑块读写映射到 opacity / fogPower / edgeFade", () => {
@@ -460,12 +503,13 @@ describe("LightCapability — helper 挂载契约", () => {
 
   it("loadState 单独调用后 helper 已在场景（不依赖后续 apply 兜底）", () => {
     const cap = newCap();
-    cap.setSpotlight({ enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
     cap.saveState();
     const cap2 = newCap();
     cap2.loadState();
     const capScene = (cap2 as unknown as { scene: THREE.Scene }).scene;
-    const helper = capScene.getObjectByName("ysm-light-spot-helper");
+    // [light-type-switch] helper 名随槽位（不再是单例 ysm-light-spot-helper）
+    const helper = capScene.getObjectByName("ysm-light-key-helper");
     expect(helper).toBeDefined();
     expect(helper!.visible).toBe(true);
   });
@@ -481,7 +525,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     expect(cap.getMenuNodes().map((n) => n.id)).toContain("light-enabled");
   });
 
-  it("完整树 = light-enabled 能力总开关 + light-key 平铺 toggle + 参数组 folder（4 控件 + 折叠卡）", () => {
+  it("完整树 = light-enabled 能力总开关 + light-select 编辑灯选择 + 参数组 folder（统一设置条 + 折叠卡）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
     expect(nodes).toHaveLength(3);
@@ -491,40 +535,40 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     expect(nodes[0]!.control!.get!(undefined)).toBe(true);
     nodes[0]!.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
-    // light-key 平铺（主灯参数开关）
-    expect(nodes[1]!.kind).toBe("toggle");
-    expect(nodes[1]!.id).toBe("light-key");
-    nodes[1]!.control!.set!(false);
-    expect(cap.getParams().key.enabled).toBe(false);
-    // 参数组 folder：预设 + 三点布光平铺 + 聚光灯/体积光折叠卡
+    // [light-type-switch] light-select：选择当前编辑的灯槽位（三灯按钮取代原三盏平铺 toggle）
+    expect(nodes[1]!.kind).toBe("select");
+    expect(nodes[1]!.id).toBe("light-select");
+    expect(nodes[1]!.control!.get!(undefined)).toBe("key");
+    nodes[1]!.control!.set!("fill");
+    expect(cap.getActiveLight()).toBe("fill");
+    nodes[1]!.control!.set!("key");
+    // 参数组 folder：预设 + 统一设置条（当前槽位 key，默认 directional 故无锥角/衰减控件）
+    // + 环境光 + 聚光灯/体积光折叠卡
     const folder = nodes[2]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.lightGroupParams");
     expect(folder.children!.map((c: PreviewMenuNode) => c.id)).toEqual([
       "light-preset",
-      "light-fill",
-      "light-fill-azimuth",
-      "light-fill-elevation",
-      "light-fill-intensity",
-      "light-rim",
-      "light-rim-azimuth",
-      "light-rim-elevation",
-      "light-rim-intensity",
-      "light-ambient",
+      "light-key-type",
+      "light-key-enabled",
+      "light-key-color",
+      "light-key-intensity",
       "light-key-azimuth",
       "light-key-elevation",
-      "light-key-intensity",
-      "light-key-color",
+      "light-ambient",
       "cap-group-spot-vol",
     ]);
   });
 
-  it("slider/toggle 节点读写闭包直连 cap（fill/ambient）", () => {
+  it("slider/toggle 节点读写闭包直连 cap（fill/ambient，经 light-select 切槽位）", () => {
     const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    // [light-type-switch] 原平铺的 light-fill 开关 → 先切编辑槽位，再操作该槽位的统一设置条
+    nodes[1]!.control!.set!("fill");
     const folder = cap.getMenuNodes()[2]!;
-    const fill = folder.children!.find((c: PreviewMenuNode) => c.id === "light-fill")!;
-    fill.control!.set!(true);
-    expect(cap.getParams().fill.enabled).toBe(true);
+    const fill = folder.children!.find((c: PreviewMenuNode) => c.id === "light-fill-enabled")!;
+    fill.control!.set!(false);
+    expect(cap.getParams().fill.enabled).toBe(false);
     const ambient = folder.children!.find((c: PreviewMenuNode) => c.id === "light-ambient")!;
     ambient.control!.set!(1.5);
     expect(cap.getParams().ambient.intensity).toBe(1.5);
@@ -557,7 +601,11 @@ describe("LightCapability — setParams 合并更新", () => {
   });
 
   it("DEFAULT_LIGHT_PARAMS 基线", () => {
-    expect(DEFAULT_LIGHT_PARAMS.spotlight.enabled).toBe(false);
+    // [light-type-switch] DEFAULT_LIGHT_PARAMS.spotlight 已删除：spot 参数并入每盏灯
+    expect(DEFAULT_LIGHT_PARAMS.key.type).toBe("directional");
+    expect(DEFAULT_LIGHT_PARAMS.key.enabled).toBe(true);
+    expect(DEFAULT_LIGHT_PARAMS.key.angle).toBe(25);
+    expect(DEFAULT_LIGHT_PARAMS.key.penumbra).toBe(0.3);
     expect(DEFAULT_LIGHT_PARAMS.volumetric.enabled).toBe(false);
     expect(DEFAULT_LIGHT_PARAMS.ambient.intensity).toBe(0.5);
   });
@@ -588,13 +636,15 @@ describe("LightCapability — 持久化", () => {
   beforeEach(() => { resetEnvState(); localStorage.clear(); });
   afterEach(() => { localStorage.clear(); });
 
-  it("saveState/loadState 往返：布尔/数值/引擎/预设全还原", () => {
+  it("saveState/loadState 往返：布尔/数值/灯类型/预设全还原", () => {
     const cap = newCap();
     // 真实用户路径：先选手动预设，再逐个调灯开关（故开关值须在 applyModelPreset 之后设置，
     // 否则被预设就地覆盖，saveState 存下的就已经是预设值，测不出跨会话丢失）
     cap.applyModelPreset("mmd", { manual: true });
     cap.setParams({ key: { enabled: false }, ambient: { intensity: 0.9 } });
-    cap.setSpotlight({ enabled: true });
+    // [light-type-switch] 原独立 spotlight 开关 → 等价：把 key 灯类型切到 spot。
+    // 刻意不传 enabled：用户刚关掉主灯，切类型不得把开关重新打开（类型与开关正交）。
+    cap.setLightParams("key", { type: "spot" });
     cap.setVolumetric({ enabled: true });
     cap.saveState();
 
@@ -602,28 +652,28 @@ describe("LightCapability — 持久化", () => {
     cap2.loadState();
     const p = cap2.getParams();
     // 用户显式保存的灯开关优先于模型预设（ADR-126 P5「手动优先」同口径）：
-    // 预设先套用，再用保存值覆盖，故此处 key=false / spotlight=true / volumetric=true 均须保住
+    // 预设先套用，再用保存值覆盖，故此处 key=false / key.type=spot / volumetric=true 均须保住
     expect(p.key.enabled).toBe(false); // 用户关了主光，不被 mmd 预设（true）盖回
     expect(p.ambient.intensity).toBe(0.9); // ambient 不在 MODEL_DEFAULTS 的 light 合并范围，保留
-    expect(p.spotlight.enabled).toBe(true); // 用户开了聚光，不被 mmd 预设（false）盖回
+    expect(p.key.type).toBe("spot"); // 用户把主灯切成聚光灯，不被 mmd 预设（不携带 type）盖回
     expect(p.volumetric.enabled).toBe(true); // 用户开了体积光，不被 mmd 预设（false）盖回
     expect(cap2.getCurrentPreset()).toBe("mmd");
   });
 
-  it("saveState/loadState 往返：volumetric=false + spotlight 开启 → 体积光保持关闭（不被重新打开）", () => {
+  it("saveState/loadState 往返：volumetric=false + 聚光灯开启 → 体积光保持关闭（不被重新打开）", () => {
     const { cap2, p } = roundtripConeVolumetric({ volumetricEnabled: false });
     // [ADR-246 D1] 原「引擎恢复强制开启体积光」的坑随 postprocess 空壳一并消除；
     // 本用例保留为「用户关闭意图跨会话存活」的契约锁。
-    expect(p.spotlight.enabled).toBe(true);
+    expect(p.key.type).toBe("spot");
     expect(p.volumetric.enabled).toBe(false);
-    // 锥组不因任何恢复路径被挂载（spotlight 开启但 volumetric 关闭 → 无光锥）
+    // 锥组不因任何恢复路径被挂载（spot 灯开启但 volumetric 关闭 → 无光锥）
     const capScene = (cap2 as unknown as { scene: THREE.Scene }).scene;
     expect(capScene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 
-  it("saveState/loadState 往返：volumetric=true + spotlight 开启 → 锥组重建并挂载", () => {
+  it("saveState/loadState 往返：volumetric=true + 聚光灯开启 → 锥组重建并挂载", () => {
     const { cap2, p } = roundtripConeVolumetric({ volumetricEnabled: true });
-    expect(p.spotlight.enabled).toBe(true);
+    expect(p.key.type).toBe("spot");
     expect(p.volumetric.enabled).toBe(true);
     const capScene = (cap2 as unknown as { scene: THREE.Scene }).scene;
     expect(capScene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
@@ -653,17 +703,20 @@ describe("LightCapability — 持久化", () => {
     expect(cap.getCurrentPreset()).toBe("litematic"); // 仍被压制
   });
 
-  it("loadState 类型不匹配字段全部跳过", () => {
+  it("loadState 类型不匹配字段全部跳过（含旧 spotlight 迁移字段）", () => {
     localStorage.setItem("ysm-scene-cap-light", JSON.stringify({
       enabled: "yes", keyEnabled: 1, ambientIntensity: "bright",
-      spotlightEnabled: null, volumetricEnabled: 0,
+      // [light-type-switch] 旧 spotlightEnabled 已不再是合法键；旧 spotlight 迁移块也须逐字段 typeof 校验
+      spotlightEnabled: null, spotlight: { enabled: "yes", angle: "big" }, volumetricEnabled: 0,
     }));
     const cap = newCap();
     cap.loadState();
     const p = cap.getParams();
     expect(p.key.enabled).toBe(true); // 默认
     expect(p.ambient.intensity).toBe(0.5);
-    expect(p.spotlight.enabled).toBe(false);
+    // 脏 spotlight 块不迁移（enabled 非 boolean → 不切 key 类型；angle 非 number → 不写锥角）
+    expect(p.key.type).toBe("directional");
+    expect(p.key.angle).toBe(DEFAULT_LIGHT_PARAMS.key.angle);
     expect(p.volumetric.enabled).toBe(false);
   });
 });
@@ -672,33 +725,62 @@ describe("LightCapability — 持久化", () => {
 describe("LightCapability — 锥组挂载态更新路径", () => {
   beforeEach(() => resetEnvState());
 
+  /** 锥顶（spot 灯位置）→ 几何中心：与 VolumetricCone.applyTransform 同式的定位契约 */
+  function coneTip(cap: LightCapability, height: number): THREE.Vector3 {
+    const spot = cap.getSpotLightForCone()!.light;
+    const dir = cap.getTarget().sub(spot.position).normalize();
+    const group = (cap as unknown as { scene: THREE.Scene }).scene.getObjectByName(
+      "ysm-light-volumetric-cone",
+    )!;
+    return group.position.clone().addScaledVector(dir, -height / 2);
+  }
+
   function coneCap(scene: THREE.Scene): LightCapability {
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
-    // 顺序敏感：rebuildCone 需要 spotlight+volumetric 双开才建锥组，
-    // setSpotlight 内部有挂载分支，故先开 volumetric 再开 spotlight
+    // 顺序敏感：rebuildCone 需要「启用的 spot 灯 + 体积光开」双条件，
+    // 故先开 volumetric 再把 key 灯切成聚光灯
     cap.setVolumetric({ enabled: true });
-    cap.setSpotlight({ enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
     cap.apply(); // 挂载锥组
     return cap;
   }
 
-  it("getDirectionalLights/getSpotLight 返回内部灯引用", () => {
+  it("getLights/getSpotLightForCone 返回内部灯引用", () => {
     const cap = newCap();
-    const dirs = cap.getDirectionalLights();
-    expect(dirs).toHaveLength(3);
-    dirs.forEach((d) => expect(d.isDirectionalLight).toBe(true));
-    expect(cap.getSpotLight().isSpotLight).toBe(true);
+    // [light-type-switch] getDirectionalLights/getSpotLight → getLights/getSpotLightForCone
+    const lights = cap.getLights();
+    expect(lights).toHaveLength(3);
+    lights.forEach((l) => expect(l instanceof THREE.DirectionalLight).toBe(true));
+    // 无启用的 spot 灯 → 锥体驱动源为空
+    expect(cap.getSpotLightForCone()).toBeNull();
+    // 把 key 灯切成 spot → 返回第一盏启用的 spot 灯 + 其槽位（同一内部引用）
+    cap.setLightParams("key", { type: "spot", enabled: true });
+    const spot = cap.getSpotLightForCone();
+    expect(spot).not.toBeNull();
+    expect(spot!.light instanceof THREE.SpotLight).toBe(true);
+    expect(spot!.which).toBe("key");
+    expect(cap.getLights()[0]).toBe(spot!.light);
   });
 
-  it("setTarget 挂载态下同步锥组位置（跟随 spotlight 下方）", () => {
+  it("setTarget 挂载态下同步锥组朝向（锥顶贴 spot 灯、灯随模型中心平移）", () => {
     const scene = new THREE.Scene();
     const cap = coneCap(scene);
-    const group = scene.getObjectByName("ysm-light-volumetric-cone")!;
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+    const spotBefore = cap.getSpotLightForCone()!.light;
+    const offsetBefore = spotBefore.position.clone().sub(cap.getTarget());
     cap.setTarget(new THREE.Vector3(10, 2, 5));
-    expect(group.position.x).toBe(10);
-    expect(group.position.z).toBe(5);
-    // 锥组在 spotlight（target.y + targetHeight）下方 half height
-    expect(group.position.y).toBeCloseTo(2 + 8 - 8 / 2, 5);
+    // setTarget 触发锥组重建（新实例默认脱离场景 → 按重建前挂载态回挂），故重新取组
+    const group = scene.getObjectByName("ysm-light-volumetric-cone");
+    expect(group).toBeDefined();
+    // [light-type-switch] 灯位 = 「target + 方位角/仰角 × targetHeight」：target 既是平移基准也是瞄准点。
+    // 回归护栏：若改回原点固定半径，非原点模型（switch-preview 传 bbox 中心）的光源会跑飞。
+    const spot = cap.getSpotLightForCone()!.light;
+    const offsetAfter = spot.position.clone().sub(cap.getTarget());
+    expect(offsetAfter.length()).toBeCloseTo(8, 5); // = targetHeight
+    // 相对模型中心的偏移在 setTarget 前后不变（方向/距离只由方位角/仰角 + targetHeight 决定）
+    expect(offsetAfter.distanceTo(offsetBefore)).toBeCloseTo(0, 5);
+    // 锥顶仍贴灯位（coneTip 内部用「target − 灯位」反推 → 同时验证锥轴朝向）
+    expect(coneTip(cap, 8).distanceTo(spot.position)).toBeCloseTo(0, 5);
   });
 
   it("setTargetHeight 重建锥后保持挂载（rebuildCone 换新实例不得让锥组消失）", () => {
@@ -706,13 +788,16 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     const cap = coneCap(scene);
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
     cap.setTargetHeight(12);
-    const spot = cap.getSpotLight();
-    expect(spot.position.y).toBeCloseTo(12, 5);
-    // rebuildCone 会 dispose 旧锥组并换成新实例（新实例默认脱离场景），
-    // 必须按重建前的挂载态回挂 + 重新定位，否则改高度会让体积光锥凭空消失
+    const spot = cap.getSpotLightForCone()!.light;
+    // [light-type-switch] 半径用 targetHeight → 改高度同时移动灯位与锥长；
+    // 等价断言 = 重建后仍挂载 + 灯距靶点 = 新高 + 锥顶贴灯位 + 几何高度随高度更新。
+    expect(spot.position.distanceTo(cap.getTarget())).toBeCloseTo(12, 5);
     const group = scene.getObjectByName("ysm-light-volumetric-cone");
     expect(group).toBeDefined();
-    expect(group!.position.y).toBeCloseTo(12 - 12 / 2, 5);
+    expect(coneTip(cap, 12).distanceTo(spot.position)).toBeCloseTo(0, 5);
+    expect(
+      ((group!.children[0] as THREE.Mesh).geometry as THREE.ConeGeometry).parameters.height,
+    ).toBe(12);
   });
 
   it("setTargetHeight 在锥组未挂载时不主动挂载（保持未挂载态）", () => {
@@ -734,25 +819,28 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     // 锐评 §二 收口后与其他 cap 同契约——用户手动选择优先）
     cap.applyModelPreset("ysm");
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
-    // 手动切预设（light-preset select 入口）→ volumetric/spotlight 双关 → 锥组卸载
+    // 手动切预设（light-preset select 入口）→ volumetric 关（spot 灯类型保留）→ 锥组卸载
     cap.applyModelPreset("ysm", { manual: true });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
-    // 用户重新双开（锥组挂载需 volumetric+spotlight 双开）→ 回挂
-    cap.setSpotlight({ enabled: true });
+    // 用户重新双开（锥组挂载需「启用的 spot 灯 + volumetric」双开）→ 回挂
+    cap.setLightParams("key", { type: "spot", enabled: true });
     cap.setVolumetric({ enabled: true });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
   });
 
-  it("setSpotlight 时锥组已在场景则原位重建跟随", () => {
+  it("key 灯参数变更时锥组已在场景则原位重建跟随", () => {
     const scene = new THREE.Scene();
     const cap = coneCap(scene);
-    cap.setSpotlight({ angle: 40, intensity: 3 });
+    cap.setLightParams("key", { angle: 40, intensity: 3 });
     const group = scene.getObjectByName("ysm-light-volumetric-cone");
     expect(group).toBeDefined();
-    // 单位补偿：THREE SpotLight.intensity 现在是 candela = UI 照度 ÷ 到目标衰减系数
-    // （默认 distance=30, decay=1.5, targetHeight=8 → 衰减约 0.0438）。
-    const falloff = spotDistanceAttenuation(8, 30, 1.5);
-    expect(cap.getSpotLight().intensity).toBeCloseTo(3 / falloff, 5);
+    // 单位补偿：THREE SpotLight.intensity = candela = UI 照度 ÷ 到目标衰减系数。
+    // 灯位 = 模型中心 + 方位角/仰角方向 × targetHeight（默认 8），靶点在原点 → d = targetHeight。
+    const spot = cap.getSpotLightForCone()!.light;
+    const d = spot.position.distanceTo(new THREE.Vector3(0, 0, 0));
+    expect(d).toBeCloseTo(8, 5); // 默认 targetHeight
+    const falloff = spotDistanceAttenuation(d, 30, 1.5);
+    expect(spot.intensity).toBeCloseTo(3 / falloff, 5);
   });
 
   it("spotlight 非几何字段（颜色/强度）走 uniforms 快路径，不重建 GPU 几何", () => {
@@ -761,7 +849,7 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     const meshBefore = scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh;
     const uuidBefore = meshBefore.geometry.uuid;
 
-    cap.setSpotlight({ color: 0xff8800, intensity: 1.5, distance: 40, decay: 2 });
+    cap.setLightParams("key", { color: 0xff8800, intensity: 1.5, distance: 40, decay: 2 });
 
     const meshAfter = scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh;
     // 同一几何实例 → 未 dispose/重建（旧实现对任意 spotlight 字段都整组 dispose + build，
@@ -777,7 +865,7 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     const uuidBefore = (
       scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh
     ).geometry.uuid;
-    cap.setSpotlight({ angle: 40 });
+    cap.setLightParams("key", { angle: 40 });
     const uuidAfter = (
       scene.getObjectByName("ysm-light-volumetric-cone")!.children[0] as THREE.Mesh
     ).geometry.uuid;
@@ -814,11 +902,11 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     const scene = new THREE.Scene();
     const cap = coneCap(scene);
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
-    // 关聚光灯 → 锥组不再产出（既不挂载也不残留）
-    cap.setSpotlight({ enabled: false });
+    // 关聚光灯（key 灯 enabled=false → 无可见 spot 灯）→ 锥组不再产出（既不挂载也不残留）
+    cap.setLightParams("key", { enabled: false });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
     // 再开聚光灯 → 重建 + 回挂（volumetric 无需重新打开）
-    cap.setSpotlight({ enabled: true });
+    cap.setLightParams("key", { enabled: true });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
   });
 
@@ -829,11 +917,13 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 
-  it("setParams 开 volumetric+spotlight 时挂载锥组；关闭时移除", () => {
+  it("setParams 把 key 灯切 spot + 开 volumetric 时挂载锥组；关闭时移除", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
     cap.apply();
-    cap.setParams({ spotlight: { enabled: true }, volumetric: { enabled: true } });
+    // [light-type-switch] 原 setParams({ spotlight: { enabled: true }, ... }) →
+    // 等价：一次合批把 key 灯类型设为 spot（构造默认三盏都是 directional）
+    cap.setParams({ key: { type: "spot", enabled: true }, volumetric: { enabled: true } });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
     cap.setParams({ volumetric: { enabled: false } });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
@@ -847,27 +937,35 @@ describe("LightCapability — 菜单控件联动", () => {
   it("toggle/slider/select 全部读写联动（节点 control 闭包）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const folder = nodes[2]!;
-    const by = (id: string) => folder.children!.find((c: PreviewMenuNode) => c.id === id)!;
+    // 每次按需重取节点树：切槽位/切类型都会重建参数区（refreshOnChange 由消费端触发）
+    const by = (id: string) =>
+      cap.getMenuNodes()[2]!.children!.find((c: PreviewMenuNode) => c.id === id)!;
     nodes[0]!.control!.set!(false);
     expect(nodes[0]!.control!.get!(undefined)).toBe(false);
-    by("light-fill").control!.set!(false);
-    expect(by("light-fill").control!.get!(undefined)).toBe(false);
-    by("light-rim").control!.set!(false);
-    expect(by("light-rim").control!.get!(undefined)).toBe(false);
+    // [light-type-switch] 原平铺的 light-fill/light-rim 开关 → 切编辑槽位后由统一设置条读写
+    nodes[1]!.control!.set!("fill");
+    expect(nodes[1]!.control!.get!(undefined)).toBe("fill");
+    by("light-fill-enabled").control!.set!(false);
+    expect(cap.getParams().fill.enabled).toBe(false);
+    by("light-fill-enabled").control!.set!(true);
+    expect(by("light-fill-enabled").control!.get!(undefined)).toBe(true);
+    nodes[1]!.control!.set!("rim");
+    by("light-rim-enabled").control!.set!(false);
+    expect(by("light-rim-enabled").control!.get!(undefined)).toBe(false);
     by("light-ambient").control!.set!(1.2);
     expect(by("light-ambient").control!.get!(undefined)).toBe(1.2);
     by("light-preset").control!.set!("vrm");
     expect(by("light-preset").control!.get!(undefined)).toBe("vrm");
-    // [ADR-246 D3] 聚光灯/体积光控件下沉折叠卡
+    // [ADR-246 D3] 体积光控件下沉折叠卡
     const card = by("cap-group-spot-vol");
     const inCard = (id: string) => card.children!.find((c: PreviewMenuNode) => c.id === id)!;
-    inCard("light-spotlight").control!.set!(true);
-    expect(inCard("light-spotlight").control!.get!(undefined)).toBe(true);
     inCard("light-volumetric").control!.set!(true);
     expect(inCard("light-volumetric").control!.get!(undefined)).toBe(true);
-    inCard("light-cone-angle").control!.set!(45);
-    expect(inCard("light-cone-angle").control!.get!(undefined)).toBe(45);
+    // 聚光灯专属参数（锥角）由统一设置条在 type=spot 时展开
+    nodes[1]!.control!.set!("key");
+    by("light-key-type").control!.set!("spot");
+    by("light-key-angle").control!.set!(45);
+    expect(by("light-key-angle").control!.get!(undefined)).toBe(45);
   });
 
   it("light-preset select 经 manual 入口记录手动预设（节点 control 闭包）", () => {
@@ -882,30 +980,36 @@ describe("LightCapability — 菜单控件联动", () => {
 });
 
 // [ADR-246 D3] 聚光灯可视化：SpotLightHelper 线框（空间参照，消灭盲拖调参）
+// [light-type-switch] helper 由「单例 spotHelper」改为「每盏灯一个、随该灯类型重建」，
+// 命名 ysm-light-<which>-helper。
 describe("LightCapability — 聚光灯 helper 线框", () => {
   beforeEach(() => resetEnvState());
 
-  it("apply 后场景中存在聚光灯 helper，且随聚光灯开关显隐", () => {
+  it("apply 后场景中存在 key 灯 helper，切 spot 后重建且随开关显隐", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
     cap.apply();
-    const helper = scene.getObjectByName("ysm-light-spot-helper");
+    const KEY_HELPER = "ysm-light-key-helper";
+    // 默认 key 灯是方向光 → DirectionalLightHelper
+    expect(scene.getObjectByName(KEY_HELPER)).toBeDefined();
+    // 切 spot → 旧 helper 被 dispose，新 SpotLightHelper 须仍挂场景（与 apply/loadState 路径同款契约）
+    cap.setLightParams("key", { type: "spot" });
+    const helper = scene.getObjectByName(KEY_HELPER);
     expect(helper).toBeDefined();
-    // 聚光灯默认关 → helper 不可见
-    expect(helper!.visible).toBe(false);
-    cap.setSpotlight({ enabled: true });
-    expect(scene.getObjectByName("ysm-light-spot-helper")!.visible).toBe(true);
-    cap.setSpotlight({ enabled: false });
-    expect(scene.getObjectByName("ysm-light-spot-helper")!.visible).toBe(false);
+    expect(helper!.visible).toBe(true);
+    cap.setLightParams("key", { enabled: false });
+    expect(scene.getObjectByName(KEY_HELPER)!.visible).toBe(false);
+    cap.setLightParams("key", { enabled: true });
+    expect(scene.getObjectByName(KEY_HELPER)!.visible).toBe(true);
   });
 
   it("setEnabled(false) 卸载时 helper 一并移除场景", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
     cap.apply();
-    expect(scene.getObjectByName("ysm-light-spot-helper")).toBeDefined();
+    expect(scene.getObjectByName("ysm-light-key-helper")).toBeDefined();
     cap.setEnabled(false);
-    expect(scene.getObjectByName("ysm-light-spot-helper")).toBeUndefined();
+    expect(scene.getObjectByName("ysm-light-key-helper")).toBeUndefined();
   });
 
   it("dispose 释放 helper（不泄漏）", () => {
@@ -913,7 +1017,7 @@ describe("LightCapability — 聚光灯 helper 线框", () => {
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
     cap.apply();
     expect(() => cap.dispose()).not.toThrow();
-    expect(scene.getObjectByName("ysm-light-spot-helper")).toBeUndefined();
+    expect(scene.getObjectByName("ysm-light-key-helper")).toBeUndefined();
   });
 });
 
@@ -924,10 +1028,11 @@ describe("light-capability 导出工具函数", () => {
     expect(attenuateAmbientForSky(1.0, true)).toBeCloseTo(0.5, 10);
     expect(attenuateAmbientForSky(1.0, false)).toBeCloseTo(1.0, 10);
     // lightDirToPosition：仰角 90 → 正上方；方位 0 → +Z
-    const top = lightDirToPosition({ enabled: true, color: 0, intensity: 0, azimuth: 0, elevation: 90 }, 5);
+    // [light-type-switch] 入参类型统一为 LightInstanceParams（含 type/angle/penumbra/distance/decay）
+    const top = lightDirToPosition({ ...LIGHT_FIELDS_BASE, elevation: 90 }, 5);
     expect(top.y).toBeCloseTo(5, 5);
     expect(top.x).toBeCloseTo(0, 5);
-    const north = lightDirToPosition({ enabled: true, color: 0, intensity: 0, azimuth: 0, elevation: 0 }, 5);
+    const north = lightDirToPosition({ ...LIGHT_FIELDS_BASE, elevation: 0 }, 5);
     expect(north.z).toBeCloseTo(5, 5);
     expect(north.y).toBeCloseTo(0, 5);
   });

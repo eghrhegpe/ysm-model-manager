@@ -19,7 +19,7 @@ import * as THREE from "three";
 import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import type { SpotlightParams, VolumetricParams } from "./light-presets.ts";
+import type { LightInstanceParams, VolumetricParams } from "./light-presets.ts";
 
 /* ============ 体积光锥 shader（真锥体网格 + 轴向衰减 + Fresnel 边缘辉光） ============ */
 
@@ -173,7 +173,7 @@ export class VolumetricCone {
    */
   rebuild(
     height: number,
-    sp: SpotlightParams,
+    sp: LightInstanceParams,
     vm: VolumetricParams,
     spotlightPos: THREE.Vector3,
     spotlightDir: THREE.Vector3 = DEFAULT_BEAM_DIR,
@@ -191,7 +191,7 @@ export class VolumetricCone {
 
   private createMaterial(
     height: number,
-    sp: SpotlightParams,
+    sp: LightInstanceParams,
     vm: VolumetricParams,
   ): THREE.ShaderMaterial {
     const uniforms: VolumetricConeUniforms = {
@@ -267,7 +267,7 @@ export class VolumetricCone {
   }
 
   /** 更新现有材质 uniforms（setVolumetric 走此路径，不重建几何） */
-  updateUniforms(sp: SpotlightParams, vm: VolumetricParams): void {
+  updateUniforms(sp: LightInstanceParams, vm: VolumetricParams): void {
     if (!this.uniforms || !this.material) return;
     this.uniforms.uColor.value.setHex(sp.color);
     this.uniforms.uMaxAlpha.value = vm.opacity;

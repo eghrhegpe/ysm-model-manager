@@ -80,7 +80,8 @@ const DEFAULT_MODEL_STATE: Partial<EnvState> = {
   envPreset: "sky",
   envIntensity: 1.0,
   // --- light (来自 LIGHT_PRESETS.default) ---
-  lightSpotEnabled: false,
+  // --- light (来自 LIGHT_PRESETS.default) ---
+  // [light-type-switch] 旧 lightSpot* 字段已移除，spot 参数下沉到每盏灯的 type+参数
   lightVolumetricEnabled: false,
   // --- shadow (来自 SHADOW_PRESET_BY_MODEL.default → hard) ---
   shadowType: "hard",
@@ -116,10 +117,6 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     lightKeyIntensity: 1.3,
     lightFillIntensity: 0.5,
     lightRimIntensity: 0.45,
-    lightSpotEnabled: false,
-    lightSpotIntensity: 1.8,
-    lightSpotAngle: 30,
-    lightSpotPenumbra: 0.4,
     lightVolumetricEnabled: false,
     lightVolumetricOpacity: 0.4,
     lightVolumetricFogPower: 1.2,
@@ -159,9 +156,6 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     lightKeyIntensity: 1.0,
     lightFillIntensity: 0.5,
     lightRimIntensity: 0.6,
-    lightSpotEnabled: false,
-    lightSpotIntensity: 1.5,
-    lightSpotAngle: 28,
     lightVolumetricEnabled: false,
     // shadow (SHADOW_PRESET_BY_MODEL.vrm = "soft")
     shadowType: "soft",
@@ -198,8 +192,6 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     lightKeyIntensity: 0.85,
     lightFillIntensity: 0.3,
     lightRimIntensity: 0.25,
-    lightSpotEnabled: false,
-    lightSpotIntensity: 1.4,
     lightVolumetricEnabled: false,
     // shadow (SHADOW_PRESET_BY_MODEL.mmd = "soft")
     shadowType: "soft",
@@ -237,10 +229,6 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     lightKeyIntensity: 1.2,
     lightFillIntensity: 0.55,
     lightRimIntensity: 0.4,
-    lightSpotEnabled: false,
-    lightSpotIntensity: 1.6,
-    lightSpotAngle: 40,
-    lightSpotPenumbra: 0.6,
     lightVolumetricEnabled: false,
     lightVolumetricOpacity: 0.35,
     lightVolumetricFogPower: 1.0,
@@ -280,9 +268,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     lightRimIntensity: 0.3,
     lightRimAzimuth: 135,
     lightRimElevation: 30,
-    lightSpotEnabled: false,
     lightVolumetricEnabled: false,
-    // shadow (SHADOW_PRESET_BY_MODEL.litematic = "default" → hard)
     shadowType: "hard",
     // reflector (REFLECTOR_PRESETS.litematic)
     reflectorOpacity: 0.25,
@@ -306,8 +292,6 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     lightKeyIntensity: 1.3,
     lightFillIntensity: 0.4,
     lightRimIntensity: 0.35,
-    lightSpotIntensity: 1.8,
-    lightSpotAngle: 30,
     lightVolumetricOpacity: 0.4,
     reflectorOpacity: 0.25,
     reflectorSize: 200,

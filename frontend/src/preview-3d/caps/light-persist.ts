@@ -17,40 +17,46 @@ export function buildLightPersistPayload(): Record<string, unknown> {
     keyEnabled: envState.lightKeyEnabled,
     fillEnabled: envState.lightFillEnabled,
     rimEnabled: envState.lightRimEnabled,
-    // 方向灯全量持久化（azimuth/elevation/color/intensity），跨会话不丢方向/强度/颜色
+    // 灯光全量持久化（含 type + spot 参数），跨会话不丢类型/方向/强度/颜色
     key: {
+      type: envState.lightKeyType,
       enabled: envState.lightKeyEnabled,
       color: envState.lightKeyColor,
       intensity: envState.lightKeyIntensity,
       azimuth: envState.lightKeyAzimuth,
       elevation: envState.lightKeyElevation,
+      angle: envState.lightKeyAngle,
+      penumbra: envState.lightKeyPenumbra,
+      distance: envState.lightKeyDistance,
+      decay: envState.lightKeyDecay,
     },
     fill: {
+      type: envState.lightFillType,
       enabled: envState.lightFillEnabled,
       color: envState.lightFillColor,
       intensity: envState.lightFillIntensity,
       azimuth: envState.lightFillAzimuth,
       elevation: envState.lightFillElevation,
+      angle: envState.lightFillAngle,
+      penumbra: envState.lightFillPenumbra,
+      distance: envState.lightFillDistance,
+      decay: envState.lightFillDecay,
     },
     rim: {
+      type: envState.lightRimType,
       enabled: envState.lightRimEnabled,
       color: envState.lightRimColor,
       intensity: envState.lightRimIntensity,
       azimuth: envState.lightRimAzimuth,
       elevation: envState.lightRimElevation,
+      angle: envState.lightRimAngle,
+      penumbra: envState.lightRimPenumbra,
+      distance: envState.lightRimDistance,
+      decay: envState.lightRimDecay,
     },
     ambient: {
       color: envState.lightAmbientColor,
       intensity: envState.lightAmbientIntensity,
-    },
-    spotlight: {
-      enabled: envState.lightSpotEnabled,
-      color: envState.lightSpotColor,
-      intensity: envState.lightSpotIntensity,
-      angle: envState.lightSpotAngle,
-      penumbra: envState.lightSpotPenumbra,
-      distance: envState.lightSpotDistance,
-      decay: envState.lightSpotDecay,
     },
     volumetric: {
       enabled: envState.lightVolumetricEnabled,
@@ -74,11 +80,16 @@ function restoreDir(
   if (!saved || typeof saved !== "object") return;
   const s = saved as Record<string, unknown>;
   const prefix = `light${which.charAt(0).toUpperCase()}${which.slice(1)}`;
+  if (typeof s.type === "string") acc[`${prefix}Type`] = s.type;
   if (typeof s.enabled === "boolean") acc[`${prefix}Enabled`] = s.enabled;
   if (typeof s.color === "number") acc[`${prefix}Color`] = s.color;
   if (typeof s.intensity === "number") acc[`${prefix}Intensity`] = s.intensity;
   if (typeof s.azimuth === "number") acc[`${prefix}Azimuth`] = s.azimuth;
   if (typeof s.elevation === "number") acc[`${prefix}Elevation`] = s.elevation;
+  if (typeof s.angle === "number") acc[`${prefix}Angle`] = s.angle;
+  if (typeof s.penumbra === "number") acc[`${prefix}Penumbra`] = s.penumbra;
+  if (typeof s.distance === "number") acc[`${prefix}Distance`] = s.distance;
+  if (typeof s.decay === "number") acc[`${prefix}Decay`] = s.decay;
 }
 
 /**
@@ -103,13 +114,25 @@ export function restoreLightParams(state: Record<string, unknown>): void {
   if (typeof state.rimEnabled === "boolean") {
     acc.lightRimEnabled = state.rimEnabled;
   }
-  if (typeof state.spotlightEnabled === "boolean") {
-    acc.lightSpotEnabled = state.spotlightEnabled;
+  // spot 参数已下沉到每盏灯的 restoreDir 中，此处不再单独恢复旧 lightSpot* 字段
+  // 兼容旧存档：如果存在旧 spotlight 字段，迁移到 key 灯的 spot 参数
+  if (state.spotlight && typeof state.spotlight === "object") {
+    const sp = state.spotlight as Record<string, unknown>;
+    if (typeof sp.enabled === "boolean" && sp.enabled) {
+      // 旧存档有 spotlight 启用 → 迁移到 key 灯
+      acc.lightKeyType = "spot";
+    }
+    if (typeof sp.color === "number") acc.lightKeyColor = sp.color;
+    if (typeof sp.intensity === "number") acc.lightKeyIntensity = sp.intensity;
+    if (typeof sp.angle === "number") acc.lightKeyAngle = sp.angle;
+    if (typeof sp.penumbra === "number") acc.lightKeyPenumbra = sp.penumbra;
+    if (typeof sp.distance === "number") acc.lightKeyDistance = sp.distance;
+    if (typeof sp.decay === "number") acc.lightKeyDecay = sp.decay;
   }
   if (typeof state.volumetricEnabled === "boolean") {
     acc.lightVolumetricEnabled = state.volumetricEnabled;
   }
-  // ②.b 全量参数恢复（方向灯 key/fill/rim 并入同一 accumulator）
+  // ②.b 全量参数恢复（灯光 key/fill/rim 并入同一 accumulator）
   restoreDir("key", state.key, acc);
   restoreDir("fill", state.fill, acc);
   restoreDir("rim", state.rim, acc);
@@ -117,17 +140,6 @@ export function restoreLightParams(state: Record<string, unknown>): void {
     restoreFields(state.ambient as Record<string, unknown>, {
       intensity: { number: (v) => (acc.lightAmbientIntensity = v) },
       color: { number: (v) => (acc.lightAmbientColor = v) },
-    });
-  }
-  if (state.spotlight && typeof state.spotlight === "object") {
-    restoreFields(state.spotlight as Record<string, unknown>, {
-      enabled: { boolean: (v) => (acc.lightSpotEnabled = v) },
-      color: { number: (v) => (acc.lightSpotColor = v) },
-      intensity: { number: (v) => (acc.lightSpotIntensity = v) },
-      angle: { number: (v) => (acc.lightSpotAngle = v) },
-      penumbra: { number: (v) => (acc.lightSpotPenumbra = v) },
-      distance: { number: (v) => (acc.lightSpotDistance = v) },
-      decay: { number: (v) => (acc.lightSpotDecay = v) },
     });
   }
   if (state.volumetric && typeof state.volumetric === "object") {

@@ -34,18 +34,50 @@ function addStandardSceneLights(scene: THREE.Scene): void {
 }
 
 /** 按预览灯光参数建灯（无 lights → 回退标准灯）——[doc:adr-126-p5] 截图灯光割裂修复：
- *  离屏多角度截图此前用硬编码标准灯，与预览三点布光割裂（所见非所得） */
-function applyLights(scene: THREE.Scene, lights?: ScreenshotLights): void {
+ *  离屏多角度截图此前用硬编码标准灯，与预览三点布光割裂（所见非所得）
+ *  [light-type-switch] 三盏灯类型动态（directional/point/spot）——截图按 type 建对应对象，与预览一致。
+ *  灯位 = 模型中心 + 方位角/仰角 × radius，与预览 `LightCapability.lightPosition` 同式。 */
+function applyLights(
+  scene: THREE.Scene,
+  lights: ScreenshotLights | undefined,
+  origin: THREE.Vector3,
+): void {
   if (!lights) {
     addStandardSceneLights(scene);
     return;
   }
   scene.add(new THREE.AmbientLight(lights.ambient.color, lights.ambient.intensity));
+  // 靶点随模型中心（预览用同一锚点：spot 瞄准 + directional 方向基准）
+  const sharedTarget = new THREE.Object3D();
+  sharedTarget.position.copy(origin);
+  scene.add(sharedTarget);
   for (const d of [lights.key, lights.fill, lights.rim]) {
     if (!d.enabled) continue;
-    const dl = new THREE.DirectionalLight(d.color, d.intensity);
-    dl.position.copy(lightDirToPosition(d, 5)); // radius 5 对齐预览 createDirectional
-    scene.add(dl);
+    const pos = lightDirToPosition(d, lights.radius).add(origin);
+    let light: THREE.Light;
+    if (d.type === "spot") {
+      const sp = new THREE.SpotLight(
+        d.color,
+        d.intensity,
+        d.distance,
+        THREE.MathUtils.degToRad(d.angle),
+        d.penumbra,
+        d.decay,
+      );
+      sp.position.copy(pos);
+      sp.target = sharedTarget;
+      light = sp;
+    } else if (d.type === "point") {
+      const pl = new THREE.PointLight(d.color, d.intensity, d.distance, d.decay);
+      pl.position.copy(pos);
+      light = pl;
+    } else {
+      const dl = new THREE.DirectionalLight(d.color, d.intensity);
+      dl.position.copy(pos);
+      dl.target = sharedTarget; // 方向 = position − target，与预览同源
+      light = dl;
+    }
+    scene.add(light);
   }
 }
 
@@ -122,7 +154,6 @@ export async function renderMultiAngle(
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     scene = new THREE.Scene();
-    applyLights(scene, opts.lights);
 
     ysmObject = buildYsmObject(spec, texArr, componentTexMap, 0);
     const { rootGroup } = ysmObject;
@@ -131,6 +162,8 @@ export async function renderMultiAngle(
     scene.updateMatrixWorld();
     const box = new THREE.Box3().setFromObject(rootGroup);
     const center = box.getCenter(new THREE.Vector3());
+    // 灯光在模型中心算出后再建：spot/point 灯位需相对模型中心（与预览同构）
+    applyLights(scene, opts.lights, center);
     const maxDim = Math.max(...box.getSize(new THREE.Vector3()).toArray());
     // meshGroups 空/骨骼组不匹配时 Box3 为空 → getSize 为
     // NaN/0，maxDim 非有限或 ≤0，相机 position 落入 NaN → 截图脏数据甚至渲染异常。

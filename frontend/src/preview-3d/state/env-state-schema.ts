@@ -247,43 +247,69 @@ export const ENV_STATE_SCHEMA = {
   ppReflectorDisableWhenSSR: { type: "boolean", default: true, group: "postprocessing" },
 
   // --- Light ---
-  // 注意：schema 键 = cap LightParams 扁平化（key/fill/rim 各含
-  // enabled/color/intensity/azimuth/elevation；spotlight/volumetric 各自参数集）。
-  // 颜色统一 number(hex)，与 cap 内部一致（勿用 tuple3）。
-  // enabled(能力级) + currentPreset/manualPreset 运行时态不入 schema。
-  // [ADR-246 D1] 原 volumetricEngine 运行时态随 postprocess 空壳引擎一并移除。
+  // --- Light ---
+  // 统一灯光实例（[light-type-switch]）：每盏灯(key/fill/rim)可在
+  // directional / point / spot 间切换，参数结构统一。
+  // volume 参数仍独立（与任意 spot 灯绑定）。
+  //
+  // key 灯
+  lightKeyType: {
+    type: "enum",
+    values: ["directional", "point", "spot"] as const,
+    default: "directional",
+    group: "light",
+  },
   lightKeyEnabled: { type: "boolean", default: true, group: "light" },
   lightKeyColor: { type: "number", default: 0xffffff, group: "light" },
   lightKeyIntensity: { type: "number", default: 1.2, group: "light" },
   lightKeyAzimuth: { type: "number", default: 30, group: "light" },
   lightKeyElevation: { type: "number", default: 45, group: "light" },
+  lightKeyAngle: { type: "number", default: 25, group: "light" },
+  lightKeyPenumbra: { type: "number", default: 0.3, group: "light" },
+  lightKeyDistance: { type: "number", default: 30, group: "light" },
+  lightKeyDecay: { type: "number", default: 1.5, group: "light" },
+  // fill 灯
+  lightFillType: {
+    type: "enum",
+    values: ["directional", "point", "spot"] as const,
+    default: "directional",
+    group: "light",
+  },
   lightFillEnabled: { type: "boolean", default: true, group: "light" },
   lightFillColor: { type: "number", default: 0xffffff, group: "light" },
   lightFillIntensity: { type: "number", default: 0.4, group: "light" },
   lightFillAzimuth: { type: "number", default: -30, group: "light" },
   lightFillElevation: { type: "number", default: 20, group: "light" },
+  lightFillAngle: { type: "number", default: 25, group: "light" },
+  lightFillPenumbra: { type: "number", default: 0.3, group: "light" },
+  lightFillDistance: { type: "number", default: 30, group: "light" },
+  lightFillDecay: { type: "number", default: 1.5, group: "light" },
+  // rim 灯
+  lightRimType: {
+    type: "enum",
+    values: ["directional", "point", "spot"] as const,
+    default: "directional",
+    group: "light",
+  },
   lightRimEnabled: { type: "boolean", default: true, group: "light" },
   lightRimColor: { type: "number", default: 0xffffff, group: "light" },
   lightRimIntensity: { type: "number", default: 0.3, group: "light" },
   lightRimAzimuth: { type: "number", default: 180, group: "light" },
   lightRimElevation: { type: "number", default: 25, group: "light" },
+  lightRimAngle: { type: "number", default: 25, group: "light" },
+  lightRimPenumbra: { type: "number", default: 0.3, group: "light" },
+  lightRimDistance: { type: "number", default: 30, group: "light" },
+  lightRimDecay: { type: "number", default: 1.5, group: "light" },
+  // ambient
   lightAmbientColor: { type: "number", default: 0xffffff, group: "light" },
   lightAmbientIntensity: { type: "number", default: 0.5, group: "light" },
-  lightSpotEnabled: { type: "boolean", default: false, group: "light" },
-  lightSpotColor: { type: "number", default: 0xffffff, group: "light" },
-  lightSpotIntensity: { type: "number", default: 2.0, group: "light" },
-  lightSpotAngle: { type: "number", default: 25, group: "light" },
-  lightSpotPenumbra: { type: "number", default: 0.3, group: "light" },
-  lightSpotDistance: { type: "number", default: 30, group: "light" },
-  lightSpotDecay: { type: "number", default: 1.5, group: "light" },
+  // volume（与任意 type=spot 的灯绑定）
   lightVolumetricEnabled: { type: "boolean", default: false, group: "light" },
   lightVolumetricOpacity: { type: "number", default: 0.45, group: "light" },
   lightVolumetricFogPower: { type: "number", default: 1.5, group: "light" },
   lightVolumetricEdgeFade: { type: "number", default: 0.4, group: "light" },
   lightVolumetricBaseStrength: { type: "number", default: 0.9, group: "light" },
   lightVolumetricTipStrength: { type: "number", default: 0.25, group: "light" },
-  // [ADR-246 D1] lightVolumetricEngine 已删除——postprocess 引擎为空壳（无任何体积光 pass），
-  // 「cone/postprocess 切换」维度整体移除，回归单引擎。
 } as const satisfies Record<string, _AnyFieldDef>;
 
 export type EnvStateSchema = typeof ENV_STATE_SCHEMA;

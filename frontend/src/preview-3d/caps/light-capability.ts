@@ -22,7 +22,6 @@
 //   - ADR-196 刀2：参数真值源从 this.params 迁到 envState 单例
 
 import * as THREE from "three";
-import { deferred } from "@/preview-3d/deferred.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
@@ -38,10 +37,9 @@ import { buildLightNodes } from "./light-controls.ts";
 import { buildLightPersistPayload, restoreLightParams } from "./light-persist.ts";
 import {
   type DeepPartial,
-  type DirectionalLightParams,
   flattenLightParams,
+  type LightInstanceParams,
   type LightParams,
-  type SpotlightParams,
   type VolumetricParams,
 } from "./light-presets.ts";
 import {
@@ -56,7 +54,7 @@ import {
 export * from "./light-presets.ts";
 
 /** 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） */
-export function lightDirToPosition(p: DirectionalLightParams, radius: number): THREE.Vector3 {
+export function lightDirToPosition(p: LightInstanceParams, radius: number): THREE.Vector3 {
   const az = THREE.MathUtils.degToRad(p.azimuth);
   const el = THREE.MathUtils.degToRad(p.elevation);
   const h = radius * Math.cos(el); // 水平分量
@@ -93,30 +91,23 @@ export function attenuateAmbientForSky(intensity: number, skyEnvOn: boolean): nu
 // ======== ADR-196：嵌套 ↔ 扁平映射 ========
 
 /** 从 envState 读取方向灯参数 */
-function readDirParams(
+/** 从 envState 读取单盏灯的完整参数（含 type） */
+function readLightParams(
   which: "key" | "fill" | "rim",
   state: EnvState = envState,
-): DirectionalLightParams {
+): LightInstanceParams {
   const prefix = `light${which.charAt(0).toUpperCase()}${which.slice(1)}` as const;
   return {
+    type: state[`${prefix}Type` as keyof EnvState] as LightInstanceParams["type"],
     enabled: state[`${prefix}Enabled` as keyof EnvState] as boolean,
     color: state[`${prefix}Color` as keyof EnvState] as number,
     intensity: state[`${prefix}Intensity` as keyof EnvState] as number,
     azimuth: state[`${prefix}Azimuth` as keyof EnvState] as number,
     elevation: state[`${prefix}Elevation` as keyof EnvState] as number,
-  };
-}
-
-/** 从 envState 读取聚光灯参数 */
-function readSpotParams(state: EnvState = envState): SpotlightParams {
-  return {
-    enabled: state.lightSpotEnabled,
-    color: state.lightSpotColor,
-    intensity: state.lightSpotIntensity,
-    angle: state.lightSpotAngle,
-    penumbra: state.lightSpotPenumbra,
-    distance: state.lightSpotDistance,
-    decay: state.lightSpotDecay,
+    angle: state[`${prefix}Angle` as keyof EnvState] as number,
+    penumbra: state[`${prefix}Penumbra` as keyof EnvState] as number,
+    distance: state[`${prefix}Distance` as keyof EnvState] as number,
+    decay: state[`${prefix}Decay` as keyof EnvState] as number,
   };
 }
 
@@ -135,59 +126,79 @@ function readVolParams(state: EnvState = envState): VolumetricParams {
 /** 从 envState 组装完整 LightParams（getParams 用） */
 function getParamsFromEnvState(state: EnvState = envState): LightParams {
   return {
-    key: readDirParams("key", state),
-    fill: readDirParams("fill", state),
-    rim: readDirParams("rim", state),
+    key: readLightParams("key", state),
+    fill: readLightParams("fill", state),
+    rim: readLightParams("rim", state),
     ambient: {
       color: state.lightAmbientColor,
       intensity: state.lightAmbientIntensity,
     },
-    spotlight: readSpotParams(state),
     volumetric: readVolParams(state),
   };
 }
 
 // ======== 变更分组（callback 分派用） ========
+// [light-type-switch] 三盏灯结构统一：每盏灯的变更集 = 全部字段。
+// 灯内部按字段决定「重建灯对象」（type 变化）还是「原地更新」。
 
-const DIR_KEY_CHANGES = new Set([
-  "lightKeyEnabled",
-  "lightKeyColor",
-  "lightKeyIntensity",
-  "lightKeyAzimuth",
-  "lightKeyElevation",
-]);
-const DIR_FILL_CHANGES = new Set([
-  "lightFillEnabled",
-  "lightFillColor",
-  "lightFillIntensity",
-  "lightFillAzimuth",
-  "lightFillElevation",
-]);
-const DIR_RIM_CHANGES = new Set([
-  "lightRimEnabled",
-  "lightRimColor",
-  "lightRimIntensity",
-  "lightRimAzimuth",
-  "lightRimElevation",
-]);
-const SPOT_CHANGES = new Set([
-  "lightSpotEnabled",
-  "lightSpotColor",
-  "lightSpotIntensity",
-  "lightSpotAngle",
-  "lightSpotPenumbra",
-  "lightSpotDistance",
-  "lightSpotDecay",
-]);
-/** SPOT_CHANGES 子集：真正影响锥组几何（锥形/高度/存在性）的字段。
- *  颜色/强度/距离/衰减只动 uniforms——旧实现对这些字段也整组 dispose + 重建，拖滑块即 GC 抖动。 */
-const SPOT_GEO_CHANGES = new Set(["lightSpotEnabled", "lightSpotAngle", "lightSpotPenumbra"]);
+const LIGHT_FIELDS = [
+  "Type",
+  "Enabled",
+  "Color",
+  "Intensity",
+  "Azimuth",
+  "Elevation",
+  "Angle",
+  "Penumbra",
+  "Distance",
+  "Decay",
+] as const;
+
+export type LightKey = "key" | "fill" | "rim";
+
+function lightChangeSet(which: LightKey): Set<string> {
+  const prefix = `light${which.charAt(0).toUpperCase()}${which.slice(1)}`;
+  return new Set(LIGHT_FIELDS.map((f) => `${prefix}${f}`));
+}
+
+const KEY_CHANGES = lightChangeSet("key");
+const FILL_CHANGES = lightChangeSet("fill");
+const RIM_CHANGES = lightChangeSet("rim");
+
 const VOL_PARAM_CHANGES = new Set([
   "lightVolumetricOpacity",
   "lightVolumetricFogPower",
   "lightVolumetricEdgeFade",
   "lightVolumetricBaseStrength",
   "lightVolumetricTipStrength",
+]);
+
+/** 影响锥体几何（形状/存在性）的字段：type/enabled/angle/penumbra 变化才需 dispose+重建；
+ *  颜色/强度/距离/衰减只动 uniforms，方位角/仰角只动 transform。
+ *  （旧实现：任意 spotlight 字段变更都整组重建，拖滑块即 GC 抖动。） */
+const CONE_GEO_CHANGES = new Set([
+  "lightKeyType",
+  "lightFillType",
+  "lightRimType",
+  "lightKeyEnabled",
+  "lightFillEnabled",
+  "lightRimEnabled",
+  "lightKeyAngle",
+  "lightFillAngle",
+  "lightRimAngle",
+  "lightKeyPenumbra",
+  "lightFillPenumbra",
+  "lightRimPenumbra",
+]);
+
+/** 只改变光源位置（不影响锥形）的字段 → 锥体 syncPosition */
+const CONE_MOVE_CHANGES = new Set([
+  "lightKeyAzimuth",
+  "lightFillAzimuth",
+  "lightRimAzimuth",
+  "lightKeyElevation",
+  "lightFillElevation",
+  "lightRimElevation",
 ]);
 
 function hasAny(changed: Set<string>, keys: Set<string>): boolean {
@@ -215,13 +226,13 @@ export class LightCapability implements SceneCapability {
   private target: THREE.Vector3; // 对象中心，聚光灯瞄准点
   private targetHeight: number; // 聚光灯位于对象上方的高度
 
-  // 灯光对象
-  private keyLight: THREE.DirectionalLight;
-  private fillLight: THREE.DirectionalLight;
-  private rimLight: THREE.DirectionalLight;
+  // 灯光对象（[light-type-switch] 三盏统一实例，各可 directional/point/spot）
+  private keyLight: THREE.Light;
+  private fillLight: THREE.Light;
+  private rimLight: THREE.Light;
   private ambientLight: THREE.AmbientLight;
-  private spotlight: THREE.SpotLight;
-  private spotlightTarget: THREE.Object3D; // 隐形目标，SpotLight 瞄准
+  /** 聚光灯瞄准点（仅 type=spot 的灯使用；全局共享一个隐形 Object3D） */
+  private spotTarget: THREE.Object3D;
 
   // 体积光锥（ADR-177：实现下沉 VolumetricCone，本类仅委派）
   private cone: VolumetricCone;
@@ -229,18 +240,17 @@ export class LightCapability implements SceneCapability {
    *  VolumetricCone 内部立即拷贝，外部不得长期持有。 */
   private spotDir = new THREE.Vector3(0, -1, 0);
 
-  // [ADR-246 D3] 聚光灯线框 helper（空间参照：锥角/朝向/位置一眼可见）
-  private spotHelper: THREE.SpotLightHelper;
-
-  // [light-gizmo] 方向光灯可视化辅助（key/fill/rim）：开关 + 来向一眼可见，与 spotHelper 同生命周期
-  private keyHelper: THREE.DirectionalLightHelper;
-  private fillHelper: THREE.DirectionalLightHelper;
-  private rimHelper: THREE.DirectionalLightHelper;
-
+  // [light-gizmo] 每盏灯一个 helper（类型相关的线框）——类型切换时重建
+  private keyHelper: THREE.Object3D | null = null;
+  private fillHelper: THREE.Object3D | null = null;
+  private rimHelper: THREE.Object3D | null = null;
   // ADR-085 S2：记录当前预设名，消灭 fillLighting 启发式派生
   private currentPreset: ModelType = "default";
   /** 手动 preset 记忆（light-preset select 显式选择；非空时自动套模型预设不覆盖——[doc:adr-126-p5] 手动优先） */
   private manualPreset: ModelType | null = null;
+
+  /** [light-type-switch] 菜单「编辑灯光」的选择态（运行时态，不入 envState/持久化） */
+  private activeLight: LightKey = "key";
 
   // ADR-196：取消订阅函数
   private unsubscribeEnv: () => void;
@@ -260,23 +270,28 @@ export class LightCapability implements SceneCapability {
     this.target = opts.target ?? new THREE.Vector3(0, 0, 0);
     this.targetHeight = opts.targetHeight ?? 8;
 
+    // 聚光灯瞄准点（隐形 Object3D，所有 spot 灯共享）
+    this.spotTarget = new THREE.Object3D();
+    this.spotTarget.name = "ysm-light-spot-target";
+    this.spotTarget.position.copy(this.target);
+
     // 从 envState 读取初始值（ADR-196：真值源迁移）
-    this.keyLight = this.createDirectional(readDirParams("key"));
-    this.fillLight = this.createDirectional(readDirParams("fill"));
-    this.rimLight = this.createDirectional(readDirParams("rim"));
-    // [light-gizmo] 三盏方向光灯各配一个 DirectionalLightHelper（颜色区分），visible 绑 enabled，
-    // 让「开/关 + 从哪照来」一眼可见——此前方向光无任何空间锚点，开关只能靠模型受光变化猜。
-    this.keyHelper = this.createDirHelper(
+    // [light-type-switch] 三盏灯统一实例化：createLight 按各盏灯的 type 建对应 Three 对象
+    this.keyLight = this.createLight(readLightParams("key"));
+    this.fillLight = this.createLight(readLightParams("fill"));
+    this.rimLight = this.createLight(readLightParams("rim"));
+    // [light-gizmo] 每盏灯配一个类型相关 helper（颜色区分），visible 绑 enabled
+    this.keyHelper = this.createHelper(
       this.keyLight,
       DIR_HELPER_COLORS.key,
       "ysm-light-key-helper",
     );
-    this.fillHelper = this.createDirHelper(
+    this.fillHelper = this.createHelper(
       this.fillLight,
       DIR_HELPER_COLORS.fill,
       "ysm-light-fill-helper",
     );
-    this.rimHelper = this.createDirHelper(
+    this.rimHelper = this.createHelper(
       this.rimLight,
       DIR_HELPER_COLORS.rim,
       "ysm-light-rim-helper",
@@ -286,40 +301,9 @@ export class LightCapability implements SceneCapability {
       envState.lightAmbientIntensity,
     );
 
-    // 聚光灯：位于对象正上方，向下照射
-    const sp = readSpotParams();
-    this.spotlight = new THREE.SpotLight(
-      sp.color,
-      sp.intensity,
-      sp.distance,
-      THREE.MathUtils.degToRad(sp.angle),
-      sp.penumbra,
-      sp.decay,
-    );
-    this.spotlight.position.set(this.target.x, this.target.y + this.targetHeight, this.target.z);
-    this.spotlightTarget = new THREE.Object3D();
-    this.spotlightTarget.name = "ysm-light-spot-target";
-    this.spotlightTarget.position.copy(this.target);
-    this.spotlight.target = this.spotlightTarget;
-    // 校正：构造期未应用 enabled → spotlight.visible 默认 true（UI 关灯却仍亮，直到首次 env 变更才同步）。
-    // 与 createDirectional 补齐 visible 同源；applySpotlightToThree 内统一重算强度。
-    this.spotlight.visible = sp.enabled;
-
     // 初始化体积光锥（ADR-177：委派 VolumetricCone；未同时启用则不产出锥组）
     this.cone = new VolumetricCone(this.scene);
-    this.cone.rebuild(
-      this.targetHeight,
-      sp,
-      readVolParams(),
-      this.spotlight.position,
-      this.getSpotDir(),
-    );
-
-    // [ADR-246 D3] 聚光灯线框 helper：空间参照（调锥角时看得见锥在哪）。
-    // 初始按 envState 的聚光灯开关定显隐；apply() 时挂场景，detach() 时移除。
-    this.spotHelper = new THREE.SpotLightHelper(this.spotlight);
-    this.spotHelper.name = "ysm-light-spot-helper";
-    this.spotHelper.visible = envState.lightSpotEnabled;
+    this.rebuildConeIfNeeded(envState);
 
     // ADR-196：订阅 envState 变更 → 分派到 Three 应用（只接收 light 组的键）
     this.unsubscribeEnv = registerEnvCallback(
@@ -334,94 +318,177 @@ export class LightCapability implements SceneCapability {
   /* ----- envState 变更回调：分派到 Three 应用 ----- */
 
   private onEnvChanged(changed: Set<string>, state: EnvState): void {
-    // key/fill/rim 方向灯
-    if (hasAny(changed, DIR_KEY_CHANGES)) {
-      this.updateDirectional(this.keyLight, readDirParams("key", state));
-      this.syncDirHelper(this.keyHelper, readDirParams("key", state));
-    }
-    if (hasAny(changed, DIR_FILL_CHANGES)) {
-      this.updateDirectional(this.fillLight, readDirParams("fill", state));
-      this.syncDirHelper(this.fillHelper, readDirParams("fill", state));
-    }
-    if (hasAny(changed, DIR_RIM_CHANGES)) {
-      this.updateDirectional(this.rimLight, readDirParams("rim", state));
-      this.syncDirHelper(this.rimHelper, readDirParams("rim", state));
-    }
+    // key/fill/rim：类型变化 → 重建；其余 → 原地更新
+    if (hasAny(changed, KEY_CHANGES)) this.syncLight("key", state);
+    if (hasAny(changed, FILL_CHANGES)) this.syncLight("fill", state);
+    if (hasAny(changed, RIM_CHANGES)) this.syncLight("rim", state);
 
     // ambient：总是刷新（依赖 caps 查询器的 sky 环境开关，非纯 envState 派生）
     this.refreshAmbientFromSky(state);
 
-    // spotlight → 应用属性 +（仅在几何相关字段变更时）重建锥组 + 挂载态
-    const spotTouched = hasAny(changed, SPOT_CHANGES);
-    const spotGeo = hasAny(changed, SPOT_GEO_CHANGES);
+    // 体积光锥三路分派：几何变更 → dispose+重建；位置变更 → syncPosition；uniform 变更 → updateUniforms
+    // （旧实现：任意字段变更都整组重建，拖滑块即 GC 抖动）
     const volToggled = changed.has("lightVolumetricEnabled");
-    if (spotTouched) {
-      this.applySpotlightToThree(state);
+    const coneGeo = hasAny(changed, CONE_GEO_CHANGES);
+    const coneMove = hasAny(changed, CONE_MOVE_CHANGES);
+    const lightTouched =
+      hasAny(changed, KEY_CHANGES) || hasAny(changed, FILL_CHANGES) || hasAny(changed, RIM_CHANGES);
+    if (volToggled || coneGeo) {
+      this.rebuildConeIfNeeded(state);
+    } else {
+      // 快路径：光源参数变了只刷 uniforms；位置变了再补一次 transform 同步
+      const spot = this.getSpotLightForCone();
+      if (spot) {
+        if (coneMove) this.cone.syncPosition(spot.light.position, this.getSpotDir(spot.light));
+        if (lightTouched || hasAny(changed, VOL_PARAM_CHANGES)) {
+          this.cone.updateUniforms(readLightParams(spot.which, state), readVolParams(state));
+        }
+      }
     }
+  }
 
-    // 锥组几何重建收窄至 SPOT_GEO_CHANGES ∪（volumetric 由关转开）；单批只重建一次
-    // （旧实现：任意 spotlight 字段变更都重建一遍，且 spot/vol 同批变更时重建两遍）。
-    const needConeRebuild =
-      (spotTouched && spotGeo) ||
-      (volToggled && state.lightVolumetricEnabled && state.lightSpotEnabled);
-    if (needConeRebuild) {
-      this.cone.rebuild(
-        this.targetHeight,
-        readSpotParams(state),
-        readVolParams(state),
-        this.spotlight.position,
-        this.getSpotDir(),
+  /* ----- 单盏灯同步：类型变化重建，否则原地更新 ----- */
+
+  private syncLight(which: LightKey, state: EnvState): void {
+    const p = readLightParams(which, state);
+    const current = this.getLight(which);
+    const currentType = this.getLightType(current);
+
+    if (p.type !== currentType) {
+      // 类型切换：dispose 旧灯 + 旧 helper → 重建（MikuMikuAR 同款）
+      this.disposeLight(which);
+      const next = this.createLight(p);
+      // createLight 内建的是原始强度；spot 需经衰减补偿重算（与原地更新路径同源）
+      this.applyLightParams(next, p);
+      this.setLight(which, next);
+      this.setHelper(
+        which,
+        this.createHelper(next, DIR_HELPER_COLORS[which], `ysm-light-${which}-helper`),
       );
-      if (state.lightVolumetricEnabled && state.lightSpotEnabled && !this.cone.isMounted()) {
-        this.cone.attach(this.spotlight.position, this.spotDir);
+      if (this.enabled) {
+        this.mountLight(which);
+        this.mountHelper(which);
       }
-    } else if (spotTouched || volToggled || hasAny(changed, VOL_PARAM_CHANGES)) {
-      // 颜色/强度/距离/衰减/体积光参数：只刷 uniforms（几何与挂载态原地不动）
-      this.cone.updateUniforms(readSpotParams(state), readVolParams(state));
+      // 锥体重建由调用方负责（onEnvChanged 走 CONE_GEO_CHANGES；loadState 走第④步）
+      return;
     }
 
-    // volumetric 开关 → 挂载态同步（开：锥组已由上方重建路径产出；关：卸载）
-    if (volToggled) {
-      if (state.lightVolumetricEnabled && state.lightSpotEnabled && this.cone.hasGroup()) {
-        if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position, this.spotDir);
-      } else {
-        if (this.cone.isMounted()) this.cone.detach();
-      }
+    this.applyLightParams(current, p);
+    this.syncHelper(which, p);
+  }
+
+  private getLight(which: LightKey): THREE.Light {
+    return which === "key" ? this.keyLight : which === "fill" ? this.fillLight : this.rimLight;
+  }
+
+  private setLight(which: LightKey, light: THREE.Light): void {
+    if (which === "key") this.keyLight = light;
+    else if (which === "fill") this.fillLight = light;
+    else this.rimLight = light;
+  }
+
+  private getLightType(light: THREE.Light): LightInstanceParams["type"] {
+    if (light instanceof THREE.SpotLight) return "spot";
+    if (light instanceof THREE.PointLight) return "point";
+    return "directional";
+  }
+
+  /* ----- 灯光工厂（[light-type-switch] 按 type 建对应 Three 对象） ----- */
+
+  /** 灯位 = 模型中心 + 方位角/仰角方向 × targetHeight。
+   *  半径用 targetHeight（switch-preview 设为 `max(maxDim*0.8, 6)`）而非固定值，
+   *  使大模型的光源不会陷在网格内部；同时保留旧独立聚光灯「距靶点 = targetHeight」
+   *  的 candela 补偿距离语义。spot/point 跟随模型中心；directional 靠 target 同步平移。 */
+  private lightPosition(p: LightInstanceParams): THREE.Vector3 {
+    return lightDirToPosition(p, this.targetHeight).add(this.target);
+  }
+
+  private createLight(p: LightInstanceParams): THREE.Light {
+    const pos = this.lightPosition(p);
+    let light: THREE.Light;
+    if (p.type === "spot") {
+      const spot = new THREE.SpotLight(
+        p.color,
+        p.intensity,
+        p.distance,
+        THREE.MathUtils.degToRad(p.angle),
+        p.penumbra,
+        p.decay,
+      );
+      spot.position.copy(pos);
+      spot.target = this.spotTarget;
+      light = spot;
+    } else if (p.type === "point") {
+      const point = new THREE.PointLight(p.color, p.intensity, p.distance, p.decay);
+      point.position.copy(pos);
+      light = point;
+    } else {
+      const dir = new THREE.DirectionalLight(p.color, p.intensity);
+      dir.position.copy(pos);
+      // 方向 = position − target；target 跟随模型中心 → 方向恒等于方位角/仰角向量
+      dir.target.position.copy(this.target);
+      light = dir;
     }
-  }
-
-  /* ----- 方向灯方向更新 ----- */
-
-  private createDirectional(p: DirectionalLightParams): THREE.DirectionalLight {
-    const dl = new THREE.DirectionalLight(p.color, p.intensity);
-    dl.position.copy(lightDirToPosition(p, 5));
-    dl.visible = p.enabled;
-    return dl;
-  }
-
-  private updateDirectional(light: THREE.DirectionalLight, p: DirectionalLightParams): void {
-    light.color.setHex(p.color);
-    light.intensity = p.intensity;
-    light.position.copy(lightDirToPosition(p, 5));
     light.visible = p.enabled;
+    light.name = `ysm-light-${p.type}`;
+    return light;
   }
 
-  /** 方向光灯 helper 工厂：size=2 的线框（灯位 → 目标），配色区分三盏灯 */
-  private createDirHelper(
-    light: THREE.DirectionalLight,
-    color: number,
-    name: string,
-  ): THREE.DirectionalLightHelper {
-    const h = new THREE.DirectionalLightHelper(light, 2, color);
+  /** 原地更新已有灯的参数（类型不变时）。返回值包含需要同步 helper 的信息。 */
+  private applyLightParams(light: THREE.Light, p: LightInstanceParams): void {
+    light.color.setHex(p.color);
+    light.visible = p.enabled;
+    light.position.copy(this.lightPosition(p));
+    // DirectionalLight 方向 = position − target；target 跟随模型中心才能保证方向语义
+    if (light instanceof THREE.DirectionalLight) light.target.position.copy(this.target);
+
+    if (light instanceof THREE.SpotLight) {
+      // UI intensity 语义 = 「到达目标处照度」→ 反推 candela（防距离衰减吃强度）
+      const d = Math.max(light.position.distanceTo(this.spotTarget.position), 0.01);
+      const falloff = spotDistanceAttenuation(d, p.distance, p.decay);
+      light.intensity = falloff > 0 ? p.intensity / falloff : p.intensity;
+      light.distance = p.distance;
+      light.angle = THREE.MathUtils.degToRad(p.angle);
+      light.penumbra = p.penumbra;
+      light.decay = p.decay;
+      light.target = this.spotTarget;
+    } else if (light instanceof THREE.PointLight) {
+      light.intensity = p.intensity;
+      light.distance = p.distance;
+      light.decay = p.decay;
+    } else {
+      light.intensity = p.intensity;
+    }
+  }
+
+  /** 类型相关 helper 工厂 */
+  private createHelper(light: THREE.Light, color: number, name: string): THREE.Object3D {
+    let h: THREE.Object3D;
+    if (light instanceof THREE.SpotLight) h = new THREE.SpotLightHelper(light, color);
+    else if (light instanceof THREE.PointLight) h = new THREE.PointLightHelper(light, 1, color);
+    else h = new THREE.DirectionalLightHelper(light as THREE.DirectionalLight, 2, color);
     h.name = name;
     h.visible = light.visible;
     return h;
   }
 
-  /** 方向光灯 helper 显隐跟随 enabled，并在方向/位置变化后重算几何（与 spotHelper.update 同语义） */
-  private syncDirHelper(h: THREE.DirectionalLightHelper, p: DirectionalLightParams): void {
+  private getHelper(which: LightKey): THREE.Object3D | null {
+    return which === "key" ? this.keyHelper : which === "fill" ? this.fillHelper : this.rimHelper;
+  }
+
+  private setHelper(which: LightKey, h: THREE.Object3D): void {
+    if (which === "key") this.keyHelper = h;
+    else if (which === "fill") this.fillHelper = h;
+    else this.rimHelper = h;
+  }
+
+  /** helper 显隐跟随 enabled + 几何重算 */
+  private syncHelper(which: LightKey, p: LightInstanceParams): void {
+    const h = this.getHelper(which);
+    if (!h) return;
     h.visible = p.enabled;
-    h.update();
+    const updatable = h as unknown as { update?: () => void };
+    updatable.update?.();
   }
 
   /* ----- 公共 API ----- */
@@ -431,33 +498,49 @@ export class LightCapability implements SceneCapability {
       this.detach();
       return;
     }
-    if (!this.keyLight.parent) this.scene.add(this.keyLight);
-    if (!this.fillLight.parent) this.scene.add(this.fillLight);
-    if (!this.rimLight.parent) this.scene.add(this.rimLight);
+    this.mountLight("key");
+    this.mountLight("fill");
+    this.mountLight("rim");
     if (!this.ambientLight.parent) this.scene.add(this.ambientLight);
-    // DirectionalLight.target 默认 Object3D(0,0,0)，没 add 到 scene 时 light.shadow.camera 不会跟随 target 位置更新
-    // （shadow 需要 target 在 scene 图里，才能在世界坐标内正确定向 shadow frustum）
-    if (!this.keyLight.target.parent) this.scene.add(this.keyLight.target);
-    if (!this.fillLight.target.parent) this.scene.add(this.fillLight.target);
-    if (!this.rimLight.target.parent) this.scene.add(this.rimLight.target);
-    if (this.spotlightTarget && !this.spotlightTarget.parent) this.scene.add(this.spotlightTarget);
-    if (!this.spotlight.parent) this.scene.add(this.spotlight);
-    // [ADR-246 D3] helper 与聚光灯同生命周期挂场景
-    if (!this.spotHelper.parent) this.scene.add(this.spotHelper);
-    this.spotHelper.visible = envState.lightSpotEnabled;
-    this.spotHelper.update();
-    // [light-gizmo] 方向光灯 helper 与方向光灯同生命周期挂场景，visible 随 envState 开关
-    if (!this.keyHelper.parent) this.scene.add(this.keyHelper);
-    if (!this.fillHelper.parent) this.scene.add(this.fillHelper);
-    if (!this.rimHelper.parent) this.scene.add(this.rimHelper);
-    this.keyHelper.visible = envState.lightKeyEnabled;
-    this.fillHelper.visible = envState.lightFillEnabled;
-    this.rimHelper.visible = envState.lightRimEnabled;
-    this.keyHelper.update();
-    this.fillHelper.update();
-    this.rimHelper.update();
-    if (envState.lightVolumetricEnabled && envState.lightSpotEnabled && this.cone.hasGroup()) {
-      if (!this.cone.isMounted()) this.cone.attach(this.spotlight.position, this.getSpotDir());
+    // 聚光灯瞄准点需要挂到场景图，否则 SpotLight 定向失效
+    if (!this.spotTarget.parent) this.scene.add(this.spotTarget);
+    this.mountHelper("key");
+    this.mountHelper("fill");
+    this.mountHelper("rim");
+    this.rebuildConeIfNeeded(envState);
+  }
+
+  /** 把单盏灯（+ 其 DirectionalLight target）挂到场景 */
+  private mountLight(which: LightKey): void {
+    const light = this.getLight(which);
+    if (!light.parent) this.scene.add(light);
+    if (light instanceof THREE.DirectionalLight && !light.target.parent) {
+      this.scene.add(light.target);
+    }
+  }
+
+  /** 把单盏灯的 helper 挂到场景并同步显隐 */
+  private mountHelper(which: LightKey): void {
+    const h = this.getHelper(which);
+    if (!h) return;
+    if (!h.parent) this.scene.add(h);
+    h.visible = readLightParams(which).enabled;
+    (h as unknown as { update?: () => void }).update?.();
+  }
+
+  /** 释放单盏灯与 helper（类型切换前调用） */
+  private disposeLight(which: LightKey): void {
+    const light = this.getLight(which);
+    if (light.parent) light.parent.remove(light);
+    if (light instanceof THREE.DirectionalLight && light.target.parent) {
+      light.target.parent.remove(light.target);
+    }
+    light.dispose();
+
+    const h = this.getHelper(which);
+    if (h) {
+      if (h.parent) h.parent.remove(h);
+      (h as unknown as { dispose?: () => void }).dispose?.();
     }
   }
 
@@ -473,49 +556,51 @@ export class LightCapability implements SceneCapability {
 
   setTarget(v: THREE.Vector3): void {
     this.target.copy(v);
-    this.spotlightTarget.position.copy(this.target);
-    this.spotlight.position.set(this.target.x, this.target.y + this.targetHeight, this.target.z);
-    if (this.cone.hasGroup()) {
-      this.cone.syncPosition(this.spotlight.position, this.getSpotDir());
+    this.spotTarget.position.copy(this.target);
+    // 三盏灯位置基于 target 重算（方位角/仰角不变），强度/朝向同步
+    for (const which of ["key", "fill", "rim"] as LightKey[]) {
+      const light = this.getLight(which);
+      const p = readLightParams(which);
+      this.applyLightParams(light, p);
+      this.syncHelper(which, p);
     }
-    // [ADR-246 D3] 聚光灯移位后线框同步（否则 helper 停在旧位置误导）
-    this.spotHelper.update();
+    this.rebuildConeIfNeeded(envState);
   }
 
   getTarget(): THREE.Vector3 {
     return this.target.clone();
   }
 
-  /* ShadowCapability 跨能力协作：取得当前挂到场景的方向灯（3 盏）与聚光灯，统一设置 shadow 参数；
+  /* ShadowCapability 跨能力协作：取得当前挂到场景的三盏灯，统一设置 shadow 参数；
    * 不返回内部引用副本，避免 ShadowCapability 直接写 private 字段。 */
-  getDirectionalLights(): THREE.DirectionalLight[] {
+  getLights(): THREE.Light[] {
     return [this.keyLight, this.fillLight, this.rimLight];
   }
-  getSpotLight(): THREE.SpotLight {
-    return this.spotlight;
+
+  /** 返回第一盏启用的 type=spot 灯（体积光锥驱动源）+ 其槽位，无则 null */
+  getSpotLightForCone(): { light: THREE.SpotLight; which: LightKey } | null {
+    for (const which of ["key", "fill", "rim"] as LightKey[]) {
+      const light = this.getLight(which);
+      if (light instanceof THREE.SpotLight && light.visible) return { light, which };
+    }
+    return null;
+  }
+
+  /** 靶点高度（= 灯光定位半径 + 锥长）。截图侧需读取以保持与预览同构。 */
+  getTargetHeight(): number {
+    return this.targetHeight;
   }
 
   setTargetHeight(h: number): void {
     this.targetHeight = h;
-    this.spotlight.position.set(this.target.x, this.target.y + h, this.target.z);
-    // rebuildCone 会 dispose 旧锥组并换成全新实例（新实例默认脱离场景），故先记挂载态，
-    // 重建后按原状态回挂 + 重新定位——否则挂载态下改高度会让体积光锥凭空消失。
-    // 只恢复「重建前已挂载」的情形，不凭空新增挂载（未开启体积光时不应出现锥组）。
-    const wasMounted = this.cone.isMounted();
-    this.cone.rebuild(
-      this.targetHeight,
-      readSpotParams(),
-      readVolParams(),
-      this.spotlight.position,
-      this.getSpotDir(),
-    );
-    if (wasMounted && this.cone.hasGroup()) {
-      this.cone.attach(this.spotlight.position, this.spotDir);
+    // 高度变化只影响 spot 灯到目标的物理距离 → 重算 candela 补偿 + 锥体定位
+    for (const which of ["key", "fill", "rim"] as LightKey[]) {
+      const light = this.getLight(which);
+      const p = readLightParams(which);
+      this.applyLightParams(light, p);
+      this.syncHelper(which, p);
     }
-    // [ADR-246 D3] 高度变化 → 聚光灯移位 → 线框同步
-    this.spotHelper.update();
-    // 聚光灯移位后到目标的物理距离变化 → 重算 candela 补偿（否则目标处照度随高度漂移）
-    this.applySpotlightToThree();
+    this.rebuildConeIfNeeded(envState);
   }
 
   /** 按模型类别套用预设；opts.manual（light-preset select 入口）记手动选择——手动优先 */
@@ -545,13 +630,21 @@ export class LightCapability implements SceneCapability {
       "lightRimIntensity",
       "lightRimAzimuth",
       "lightRimElevation",
-      "lightSpotEnabled",
-      "lightSpotColor",
-      "lightSpotIntensity",
-      "lightSpotAngle",
-      "lightSpotPenumbra",
-      "lightSpotDistance",
-      "lightSpotDecay",
+      "lightKeyType",
+      "lightKeyAngle",
+      "lightKeyPenumbra",
+      "lightKeyDistance",
+      "lightKeyDecay",
+      "lightFillType",
+      "lightFillAngle",
+      "lightFillPenumbra",
+      "lightFillDistance",
+      "lightFillDecay",
+      "lightRimType",
+      "lightRimAngle",
+      "lightRimPenumbra",
+      "lightRimDistance",
+      "lightRimDecay",
       "lightVolumetricEnabled",
       "lightVolumetricOpacity",
       "lightVolumetricFogPower",
@@ -569,22 +662,30 @@ export class LightCapability implements SceneCapability {
   }
 
   /**
-   * 锥组挂载态与当前 envState 同步（applyModelPreset / loadState 复用）。
-   * 只在锥组已挂载时处理卸载与定位。
+   * 体积光锥与当前 envState 同步：[light-type-switch] 锥体由第一盏启用的 spot 灯驱动。
+   * 无 spot 灯 / 体积光未开 → 卸载；有则挂载并定位。
    */
-  private syncConeMount(): void {
-    if (this.cone.hasGroup() && this.cone.isMounted()) {
-      if (!envState.lightVolumetricEnabled || !envState.lightSpotEnabled) {
-        this.cone.detach();
-      }
-      this.cone.syncPosition(this.spotlight.position, this.getSpotDir());
+  private rebuildConeIfNeeded(state: EnvState = envState): void {
+    const spot = this.getSpotLightForCone();
+    const volOn = state.lightVolumetricEnabled;
+    if (!spot || !volOn) {
+      if (this.cone.isMounted()) this.cone.detach();
+      return;
+    }
+    const p = readLightParams(spot.which, state);
+    const pos = spot.light.position;
+    const dir = this.getSpotDir(spot.light);
+    this.cone.rebuild(this.targetHeight, p, readVolParams(state), pos, dir);
+    // rebuild 产出的新锥组默认脱离场景——volume 开启且有锥组时挂载
+    if (this.cone.hasGroup() && !this.cone.isMounted()) {
+      this.cone.attach(pos, this.spotDir);
     }
   }
-
-  /** 聚光灯参数更新（经 envState） */
-  setSpotlight(p: Partial<SpotlightParams>): void {
-    setEnvState(flattenLightParams({ spotlight: p }), { source: "manual" });
-    // callback 处理 Three 应用 + rebuild + 挂载态
+  /** 单盏灯参数更新（[light-type-switch] 菜单统一设置栏调用） */
+  setLightParams(which: LightKey, p: Partial<LightInstanceParams>): void {
+    setEnvState(flattenLightParams({ [which]: p } as DeepPartial<LightParams>), {
+      source: "manual",
+    });
   }
 
   /** 体积光锥参数更新（经 envState） */
@@ -623,6 +724,15 @@ export class LightCapability implements SceneCapability {
   /** 当前预设名（ADR-085 S2：fillLighting 只读初始化，消灭启发式派生） */
   getCurrentPreset(): string {
     return this.currentPreset;
+  }
+
+  /** [light-type-switch] 当前编辑的灯槽位（菜单统一设置条读写） */
+  getActiveLight(): LightKey {
+    return this.activeLight;
+  }
+
+  setActiveLight(which: LightKey): void {
+    this.activeLight = which;
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
@@ -668,39 +778,16 @@ export class LightCapability implements SceneCapability {
     // ② 用户显式保存的灯开关 + ②.b 全量参数恢复（纯数据映射，下沉 light-persist.ts；
     //    顺序敏感：必须在预设套用之后——后恢复的用户值优先于预设，ADR-126 P5 同口径）
     restoreLightParams(state);
-    // ③ 开关被覆盖回用户值后，锥组挂载态需随之同步
-    this.syncConeMount();
-    // ④ 锥组按恢复后的 params 重建 + 挂载（[ADR-246 D1] 原「引擎恢复」步骤删除——
-    //    单引擎后无引擎维度；此处只按用户保存的 volumetric/spotlight 双开态决定，
-    //    不强制翻转任何开关）。
-    if (envState.lightVolumetricEnabled && envState.lightSpotEnabled) {
-      this.cone.rebuild(
-        this.targetHeight,
-        readSpotParams(),
-        readVolParams(),
-        this.spotlight.position,
-        this.getSpotDir(),
-      );
-      if (this.cone.hasGroup() && !this.cone.isMounted()) {
-        this.cone.attach(this.spotlight.position, this.spotDir);
-      }
+    // ③ 类型可能因恢复而变化（旧存档迁移：key 灯 → spot）→ 逐盏重建 Three 对象
+    for (const which of ["key", "fill", "rim"] as LightKey[]) {
+      this.syncLight(which, envState);
     }
-    // ⑤ helper 挂场景 + 显隐随恢复后的聚光灯开关。
-    //    显式挂载（不复用「组合根随后必调 apply()」的隐式约定——单独 loadState 的路径
-    //    会静默缺少 helper）。
-    if (!this.spotHelper.parent) this.scene.add(this.spotHelper);
-    this.spotHelper.visible = envState.lightSpotEnabled;
-    this.spotHelper.update();
-    // [light-gizmo] 方向光灯 helper 挂场景 + 显隐随恢复后的开关（单独 loadState 路径也会静默缺 helper）
-    if (!this.keyHelper.parent) this.scene.add(this.keyHelper);
-    if (!this.fillHelper.parent) this.scene.add(this.fillHelper);
-    if (!this.rimHelper.parent) this.scene.add(this.rimHelper);
-    this.keyHelper.visible = envState.lightKeyEnabled;
-    this.fillHelper.visible = envState.lightFillEnabled;
-    this.rimHelper.visible = envState.lightRimEnabled;
-    this.keyHelper.update();
-    this.fillHelper.update();
-    this.rimHelper.update();
+    // ④ 体积光锥按恢复后的 spot/volumetric 双开态重建 + 挂载
+    this.rebuildConeIfNeeded(envState);
+    // ⑤ helper 挂场景 + 显隐随恢复后的开关（单独 loadState 路径也会静默缺 helper）
+    this.mountHelper("key");
+    this.mountHelper("fill");
+    this.mountHelper("rim");
   }
 
   /** sky 环境光开关变化时重算 ambient（防 ×0.5 衰减过期——sky.setEnvironmentEnabled 侧调；
@@ -715,48 +802,27 @@ export class LightCapability implements SceneCapability {
 
   /** 射束方向（世界，光源 → 靶点）——体积光锥朝向锚。
    *  旧实现把「恒垂直向下」写死进锥体几何，聚光灯一旦可倾斜锥体即与真实光锥脱钩；
-   *  统一从 spotlight/靶点算方向后，默认俯视灯下恒为 (0,-1,0)（旧行为不变），倾斜灯自动跟随。
+   *  统一从 spot 灯/靶点算方向后，默认俯视灯下恒为 (0,-1,0)（旧行为不变），倾斜灯自动跟随。
    *  返回内部暂存向量（未归一化；VolumetricCone 内部归一化并对退化情形兜底）。 */
-  private getSpotDir(): THREE.Vector3 {
-    return this.spotDir.copy(this.spotlightTarget.position).sub(this.spotlight.position);
-  }
-
-  private applySpotlightToThree(state: EnvState = envState): void {
-    this.spotlight.color.setHex(state.lightSpotColor);
-    // 单位补偿：UI intensity 语义 = 「到达目标处的照度(lx)」（所见即所得）；
-    // 物理模式 SpotLight 单位是坎德拉，须除以到目标的衰减系数。聚光灯固定在 target 正上方，
-    // 距离 = 聚光灯→目标距离（随 setTargetHeight 改变，本函数在其后调用，天然跟随，不再漂移）。
-    const d = Math.max(this.spotlight.position.distanceTo(this.spotlightTarget.position), 0.01);
-    const falloff = spotDistanceAttenuation(d, state.lightSpotDistance, state.lightSpotDecay);
-    this.spotlight.intensity =
-      falloff > 0 ? state.lightSpotIntensity / falloff : state.lightSpotIntensity;
-    this.spotlight.distance = state.lightSpotDistance;
-    this.spotlight.angle = THREE.MathUtils.degToRad(state.lightSpotAngle);
-    this.spotlight.penumbra = state.lightSpotPenumbra;
-    this.spotlight.decay = state.lightSpotDecay;
-    this.spotlight.visible = state.lightSpotEnabled;
-    // [ADR-246 D3] helper 跟随聚光灯开关显隐（关灯即收起线框，不残留误导性参照）；
-    // 参数（angle/penumbra/distance）变化后必须 update() 才反映到线框几何。
-    this.spotHelper.visible = state.lightSpotEnabled;
-    this.spotHelper.update();
+  private getSpotDir(light: THREE.SpotLight): THREE.Vector3 {
+    return this.spotDir.copy(this.spotTarget.position).sub(light.position);
   }
 
   private detach(): void {
-    [
+    const objs: (THREE.Object3D | null | undefined)[] = [
       this.keyLight,
       this.fillLight,
       this.rimLight,
       this.ambientLight,
-      this.keyLight?.target ?? null,
-      this.fillLight?.target ?? null,
-      this.rimLight?.target ?? null,
-      this.spotlight,
-      this.spotlightTarget,
-      this.spotHelper,
+      this.keyLight instanceof THREE.DirectionalLight ? this.keyLight.target : null,
+      this.fillLight instanceof THREE.DirectionalLight ? this.fillLight.target : null,
+      this.rimLight instanceof THREE.DirectionalLight ? this.rimLight.target : null,
+      this.spotTarget,
       this.keyHelper,
       this.fillHelper,
       this.rimHelper,
-    ]
+    ];
+    objs
       .filter((o): o is THREE.Object3D => o !== null && o !== undefined)
       .forEach((o) => {
         if (o.parent) o.parent.remove(o);
@@ -768,18 +834,13 @@ export class LightCapability implements SceneCapability {
     this.unsubscribeEnv();
     this.detach();
     this.cone.dispose();
-    this.spotHelper.dispose();
     this.keyLight.dispose();
     this.fillLight.dispose();
     this.rimLight.dispose();
     this.ambientLight.dispose();
-    this.spotlight.dispose();
     // [light-gizmo] helper 释放（几何/材质归 three，dispose 幂等）
-    this.keyHelper.dispose();
-    this.fillHelper.dispose();
-    this.rimHelper.dispose();
-    // R1-P2-6：spotlightTarget 是隐形 Object3D（无几何/材质），detach 已从场景移除；
-    // 显式置空引用，防止后续误用
-    this.spotlightTarget = deferred<THREE.Object3D>();
+    (this.keyHelper as unknown as { dispose?: () => void } | null)?.dispose?.();
+    (this.fillHelper as unknown as { dispose?: () => void } | null)?.dispose?.();
+    (this.rimHelper as unknown as { dispose?: () => void } | null)?.dispose?.();
   }
 }

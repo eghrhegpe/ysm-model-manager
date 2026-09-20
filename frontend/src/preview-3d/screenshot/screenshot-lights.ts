@@ -13,9 +13,13 @@ import {
   sceneCapabilityRegistry,
 } from "@/preview-3d/caps/scene-capability-registry.ts";
 
-/** 截图灯光描述（与预览 light-capability 三点布光同构——截图所见即所得） */
+/** 截图灯光描述（与预览 light-capability 三点布光同构——截图所见即所得）。
+ *  `radius` = 预览的 targetHeight：灯位 = 模型中心 + 方位角/仰角 × radius，
+ *  spot/point 属位置敏感光源，缺此值截图与预览会不一致。 */
 export interface ScreenshotLights {
   ambient: { color: number; intensity: number };
+  /** 灯光定位半径（预览 LightCapability.getTargetHeight()） */
+  radius: number;
   key: DirectionalLightParams;
   fill: DirectionalLightParams;
   rim: DirectionalLightParams;
@@ -33,6 +37,7 @@ export function toScreenshotLights(): ScreenshotLights | undefined {
       color: p.ambient.color,
       intensity: attenuateAmbientForSky(p.ambient.intensity, isSkyEnvironmentOn()),
     },
+    radius: cap.getTargetHeight(),
     key: { ...p.key },
     fill: { ...p.fill },
     rim: { ...p.rim },

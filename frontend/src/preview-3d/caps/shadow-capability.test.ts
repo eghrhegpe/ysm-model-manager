@@ -36,8 +36,10 @@ function makeFakeRenderer() {
 /** stub LightCapability：只提供 shadow 侧消费的两个 getter */
 function stubLightCap(dirs: THREE.DirectionalLight[], spot: THREE.SpotLight | null) {
   return {
-    getDirectionalLights: () => dirs,
-    getSpotLight: () => spot,
+    // [light-type-switch] getDirectionalLights/getSpotLight 已删 → getLights/getSpotLightForCone
+    // （ShadowCapability.collectLights 现按 instanceof 从 getLights() 现场分流方向灯/聚光灯）
+    getLights: () => [...dirs, ...(spot ? [spot] : [])],
+    getSpotLightForCone: () => (spot ? { light: spot, which: "key" as const } : null),
   } as unknown as LightCapability;
 }
 
@@ -111,7 +113,7 @@ describe("ShadowCapability — collectLights 取灯语义（白名单，不遍�
       caps: capsWithLight(lightCap),
     });
     cap.apply();
-    for (const dl of lightCap.getDirectionalLights()) {
+    for (const dl of lightCap.getLights()) {
       expect(dl.castShadow).toBe(true);
     }
   });

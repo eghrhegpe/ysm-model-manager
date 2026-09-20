@@ -245,7 +245,10 @@ export function htmlLiteralHits(text: string): Array<{ line: number; snippet: st
           i += 2;
           break;
         }
-        if (!hitLine && k === "<" && HTML_TAG_RE.test(text.slice(i, i + 48))) {
+        // R8 命中判定：取模板段剩余全文匹配（窗口过窄会因「首短标签切断」漏检——
+        // 如首标签是 <b> 时 48 字符窗口在标签边界处切到标签之外，后续真正的违规
+        // <div> 漏报；取到段尾（反引号/插值）保证整个模板段内的任一标签都可见）
+        if (!hitLine && k === "<" && HTML_TAG_RE.test(text.slice(i))) {
           hitLine = line;
           hitIdx = i;
         }
@@ -478,7 +481,9 @@ function main() {
   if (update) {
     // P1 守卫（2026-08-17）：基线只许减少（注释已声明，实现此前未拦截）——
     // 新增反向边拒绝写入，除非显式 --force（门禁锐评 P1-3）。
-    const force = process.argv.includes("--force");
+    // force 读 parseArgs 结果而非 argv 直读——后者对 `--force=false`（parse-args.ts
+    // 显式支持的内联 bool 写法）无响应，双通道并存会致「显式关闭」被 argv.includes 误判为 true
+    const force = parsed.force === true;
     const knownPrev = new Set(baseline?.entries ?? []);
     const added = tracked.filter((v) => !knownPrev.has(key(v))).map(key);
     if (added.length > 0 && !force) {

@@ -79,10 +79,13 @@ export {
 const USAGE_ERROR = 2;
 const COVERAGE_FAILURE = 1;
 
-/** 仅保留应纳入 Go diff 门禁的源码：.go 且非 _test.go、非根覆盖产物 go-cover。 */
+/** 仅保留应纳入 Go diff 门禁的源码：.go 且非 _test.go、非覆盖产物（.coverage/ 目录）。 */
 export function isGoSource(f: string) {
   return (
-    f.endsWith(".go") && !f.endsWith("_test.go") && f !== "go-cover" && !f.includes("/testdata/")
+    f.endsWith(".go") &&
+    !f.endsWith("_test.go") &&
+    !f.includes("/testdata/") &&
+    !f.startsWith(".coverage/")
   );
 }
 

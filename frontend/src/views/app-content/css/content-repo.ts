@@ -1,6 +1,7 @@
 // ===== 仓库/实例/站点页骨架 + 资历最深页 + 通用标签 =====
-// 注：「热力图」`.hm-*` 13 条死 CSS 已于 838a9bb2f 删除——
-// 资历最深页的热力图样式实际由 tpl-oldest.ts 的 .heatmap-bar-* 内联承载。
+// 注：原「热力图」13 条死 CSS 规则已于 838a9bb2f 删除（勿在此注释点名类前缀——
+// extractClasses 会读到注释文本致已删类「复活」为已定义，削弱死 CSS 信号）；
+// 资历最深页的热力图样式实际由 tpl-oldest.ts 的柱状图内联承载。
 import { metaTagCSS } from "@/utils/dom/css.ts";
 
 export const contentRepoCSS: string = `

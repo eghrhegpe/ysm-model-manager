@@ -45,7 +45,7 @@ export function getChangedGoFiles(root) {
     .split("\n")
     .filter((l) => l.endsWith(".go"))
     .filter((l) => !l.endsWith("_test.go")) // 只盯源码，不盯测试自身
-    .filter((l) => l !== "go-cover"); // 排除仓库根的覆盖产物
+    .filter((l) => !l.startsWith(".coverage/")); // 排除覆盖产物目录（原根目录散名 go-cover 已迁 .coverage/）
 }
 
 /**

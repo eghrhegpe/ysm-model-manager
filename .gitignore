@@ -119,7 +119,7 @@ frontend/test-results/
 
 # Web 版构建产物（ADR-049，GitHub Pages 部署用，不入库）
 frontend/dist-web/
-go-cover
+# Go coverprofile 产物（统一收纳 .coverage/，原根目录散名 go-cover 已迁）
 .coverage/
 
 # 渲染对齐对比一次性报告（compare.mjs 可随时再生，不入库）

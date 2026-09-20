@@ -151,7 +151,9 @@ export function bindTabs(host: AppContentHost, tabSelector: string, prefix: stri
     btn.setAttribute("role", "tab");
     btn.setAttribute("id", `${prefix}-tab-btn-${tabId}`);
     btn.setAttribute("aria-controls", panelId);
-    btn.setAttribute("tabindex", i === 0 ? "0" : "-1"); // roving tabindex
+    // roving tabindex：仅首个「可见」tab 拿 0（i===0 且非 display:none），防被隐藏按钮抢焦点
+    const isVisible = btn.style.display !== "none";
+    btn.setAttribute("tabindex", i === 0 && isVisible ? "0" : "-1");
     const panel = host.state.root.getElementById(panelId);
     if (panel) {
       panel.setAttribute("role", "tabpanel");

@@ -104,6 +104,7 @@ invariant_anchors:
     （昼夜循环每帧派发 sky 键 × 其余 cap 全不匹配 = 每帧白分配 N 个空 Set）。现先 `for…break` 探测命中，
     不命中即 `continue`（零分配零回调）；分配数**不随分组 cap 数增长**，不可约为「入参 changedKeys 那 1 个」。
     守卫：`env-state.test.ts` 的计数 `Set` 桩用例（含「与 N 无关」不变量）。
+- **`suspendEnvCallbacks()` / `resumeEnvCallbacks()`（2026-09，ADR-281 收口）**：挂起计数器，`_suspended > 0` 时 `dispatchEnvChange` 直接早退，全部回调不收派发。用途 = **loadState 重入治理**：`LightCapability.loadState` 里 `restoreLightParams` 内部的 `setEnvState` 会**同步**触发 `onEnvChanged`（此时 Three 灯对象还是旧类型 → callback 先重建一次），回到 loadState 末尾的显式 `syncLight` 又跑一遍（**重入双跑**，旧注释自承为 ADR-281 已知遗留）。挂起后恢复路径只写 envState，末尾统一应用一次。语义细节：计数式（多次 suspend 需等量 resume）、resume 与 suspend 不配对也安全（`Math.max(0, ...)`）；`isEnvCallbacksSuspended()` 供测试断言。**新增 cap 的 loadState 若内部走 `setEnvState` 恢复，应比照 light 同样挂起**，否则回调会在 loadState 期间以「旧 Three 对象 + 新 envState」的不一致态被触发。
 
 ## 对外 API / 入口
 

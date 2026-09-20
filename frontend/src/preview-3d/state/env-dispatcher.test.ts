@@ -7,7 +7,55 @@ import {
   getEnvCallbackCount,
   clearEnvCallbacks,
   type EnvCallback,
+  suspendEnvCallbacks,
+  resumeEnvCallbacks,
+  isEnvCallbacksSuspended,
 } from "./env-dispatcher.ts";
+
+describe("env-dispatcher — 挂起/恢复（loadState 重入治理）", () => {
+  beforeEach(() => clearEnvCallbacks());
+  afterEach(() => {
+    while (isEnvCallbacksSuspended()) resumeEnvCallbacks();
+    clearEnvCallbacks();
+  });
+
+  it("suspend 期间 dispatchEnvChange 不派发任何回调", () => {
+    const cb = vi.fn();
+    registerEnvCallback("capA", cb);
+    suspendEnvCallbacks();
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+    expect(cb).not.toHaveBeenCalled();
+    expect(isEnvCallbacksSuspended()).toBe(true);
+  });
+
+  it("resume 后恢复派发", () => {
+    const cb = vi.fn();
+    registerEnvCallback("capA", cb);
+    suspendEnvCallbacks();
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+    expect(cb).not.toHaveBeenCalled();
+    resumeEnvCallbacks();
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+    expect(cb).toHaveBeenCalledOnce();
+    expect(isEnvCallbacksSuspended()).toBe(false);
+  });
+
+  it("计数器语义：多次 suspend 只需一次 resume 即恢复", () => {
+    const cb = vi.fn();
+    registerEnvCallback("capA", cb);
+    suspendEnvCallbacks();
+    suspendEnvCallbacks();
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+    expect(cb).not.toHaveBeenCalled();
+    resumeEnvCallbacks();
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+    expect(cb).not.toHaveBeenCalled();
+    resumeEnvCallbacks();
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+    expect(cb).toHaveBeenCalledOnce();
+  });
+});
+
 import type { EnvState, EnvStateKey } from "./env-state-schema.ts";
 
 const fakeState = {} as EnvState;

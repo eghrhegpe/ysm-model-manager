@@ -20,6 +20,9 @@ interface Registration {
 // 回调注册表（cap 在构造时注册，析构时取消）
 const _callbacks = new Map<unknown, Registration>();
 
+// 挂起计数器：loadState 等恢复路径期间 suspend，避免 setEnvState 同步派发导致重入双跑（ADR-281 已知遗留收口）。
+let _suspended = 0;
+
 /**
  * 注册状态变更回调（cap 用）。
  * @param cap  注册主体（能力实例，用于取消订阅）
@@ -57,6 +60,8 @@ export function registerEnvCallback(
  * 带 group 注册的 cap 只收到 group 匹配的键（前置过滤）。
  */
 export function dispatchEnvChange(changed: Set<EnvStateKey>, state: EnvState): void {
+  // 挂起态（loadState 期间）：跳过派发，恢复路径只写 envState，末尾统一应用一次。
+  if (_suspended > 0) return;
   for (const { cb, groupKeys } of _callbacks.values()) {
     try {
       if (groupKeys) {
@@ -100,4 +105,25 @@ export function getEnvCallbackCount(): number {
  */
 export function clearEnvCallbacks(): void {
   _callbacks.clear();
+}
+
+/**
+ * 挂起全部 env 回调派发（loadState 期间使用）。
+ * 恢复路径会**同步** setEnvState → 同步触发 onEnvChanged，此时 Three 灯对象仍是旧类型，
+ * callback 里 syncLight 会先拿新 envState 重建一次，回到显式同步入口又跑一遍（重入双跑）。
+ * 挂起后恢复路径只写 envState，末尾统一应用一次，消除双跑窗口。
+ * 计数器语义：多次挂起只需一次 resume 即恢复，resume 与 suspend 不配对也安全。
+ */
+export function suspendEnvCallbacks(): void {
+  _suspended++;
+}
+
+/** 恢复 env 回调派发（与 suspendEnvCallbacks 配对）。 */
+export function resumeEnvCallbacks(): void {
+  _suspended = Math.max(0, _suspended - 1);
+}
+
+/** 是否处于挂起态（测试用）。 */
+export function isEnvCallbacksSuspended(): boolean {
+  return _suspended > 0;
 }

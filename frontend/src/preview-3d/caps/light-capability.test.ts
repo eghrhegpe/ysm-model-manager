@@ -16,6 +16,7 @@ import {
 import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
@@ -930,6 +931,72 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 });
+
+// ============ 灯对象命名 / 锥体驱动源优先级 ============
+describe("LightCapability — 灯光对象命名与锥体驱动源", () => {
+  beforeEach(() => resetEnvState());
+
+  it("三盏灯按槽位命名（多 spot 同框不重名），与 helper 同口径", () => {
+    const cap = newCap();
+    cap.apply();
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    expect(scene.getObjectByName("ysm-light-key")).toBeDefined();
+    expect(scene.getObjectByName("ysm-light-fill")).toBeDefined();
+    expect(scene.getObjectByName("ysm-light-rim")).toBeDefined();
+    cap.setLightParams("key", { type: "spot" });
+    cap.setLightParams("fill", { type: "spot" });
+    cap.setLightParams("rim", { type: "spot" });
+    const names = new Set([
+      scene.getObjectByName("ysm-light-key")!.uuid,
+      scene.getObjectByName("ysm-light-fill")!.uuid,
+      scene.getObjectByName("ysm-light-rim")!.uuid,
+    ]);
+    expect(names.size).toBe(3);
+  });
+
+  it("getSpotLightForCone 优先用当前编辑的灯（activeLight）", () => {
+    const cap = newCap();
+    cap.setVolumetric({ enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
+    cap.setLightParams("fill", { type: "spot", enabled: true });
+    expect(cap.getSpotLightForCone()!.which).toBe("key");
+    cap.setActiveLight("fill");
+    expect(cap.getSpotLightForCone()!.which).toBe("fill");
+    cap.setActiveLight("rim");
+    expect(cap.getSpotLightForCone()!.which).toBe("key");
+  });
+});
+
+// ============ loadState 重入双跑治理（ADR-281 收口）============
+describe("LightCapability — loadState 重入双跑治理", () => {
+  beforeEach(() => {
+    resetEnvState();
+    localStorage.clear();
+  });
+  afterEach(() => localStorage.clear());
+
+  it("loadState 期间 env 回调被挂起：恢复路径只写 envState，不触发 onEnvChanged（消除重入双跑）", () => {
+    const cap = newCap();
+    cap.setLightParams("key", { type: "spot", intensity: 4, angle: 60 });
+    cap.saveState();
+
+    const cap2 = newCap();
+    let duringLoadCalls = 0;
+    const stub = cap2 as unknown as { onEnvChanged: (c: Set<EnvStateKey>, s: EnvState) => void };
+    const orig = stub.onEnvChanged.bind(cap2);
+    stub.onEnvChanged = (changed: Set<EnvStateKey>, state: EnvState) => {
+      duringLoadCalls++;
+      orig(changed, state);
+    };
+    cap2.loadState();
+    expect(duringLoadCalls).toBe(0);
+    const p = cap2.getParams();
+    expect(p.key.type).toBe("spot");
+    expect(p.key.intensity).toBe(4);
+    expect(p.key.angle).toBe(60);
+  });
+});
+
 
 // ============ 菜单控件联动（节点 control 闭包）============
 describe("LightCapability — 菜单控件联动", () => {

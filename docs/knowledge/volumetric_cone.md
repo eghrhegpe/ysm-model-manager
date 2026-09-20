@@ -58,7 +58,8 @@ invariant_anchors:
 
 聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry` + `discard` 抠锥」换成**真锥体网格**，因为十字片只是锥的剪影，侧视角会变薄消失、相机穿入时两片在中轴叠加出亮竖缝、模型贴近锥面时呈剪纸感。
 
-> **[light-type-switch] 驱动源变更（2026-09）**：锥体不再绑定「第四盏独立聚光灯」，改由**三盏灯中第一盏 `type==='spot'` 且启用的灯**驱动——任一盏灯切到聚光灯即可见光柱。
+> **[light-type-switch] 驱动源变更（2026-09）**：锥体不再绑定「第四盏独立聚光灯」，改由**三盏灯中启用的 `type==='spot'` 灯**驱动——任一盏灯切到聚光灯即可见光柱。
+> **[驱动源优先级] 编辑器优先（2026-09 修复）**：多盏 spot 同框时，`getSpotLightForCone()` **优先返回当前编辑的灯**（`activeLight`，即菜单 `light-select` 选中的槽位）；仅当该灯不是启用的 spot 时，才回退到槽位顺序（key→fill→rim）第一盏启用的 spot。旧实现纯按数组顺序取「第一盏」，用户把 key 切 directional、fill 切 spot 后锥体跟 fill，再切 rim 为 spot 仍跟 fill——驱动源不可见、不可控（隐式优先级 UX 语病）。
 
 当前实现：`ConeGeometry(baseRadius, height, 48, 4, openEnded)` 单网格 + `AdditiveBlending` + `DoubleSide` + 轴向衰减 + Fresnel 视角边缘辉光 + ACES/色彩空间转换。**无 post-process 管线**（ADR-246 D1 的单引擎裁定）。
 
@@ -85,7 +86,7 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- **`LightCapability`**：三盏灯（key/fill/rim）各可在 directional/point/spot 间切换；锥体由「第一盏启用的 spot 灯」驱动（`getSpotLightForCone()`），方向由 `getSpotDir(spotLight)`（光源 → 靶点）算出。重建触发面 = `CONE_GEO_CHANGES`（type/enabled/angle/penumbra），位置变更走 `syncPosition`，其余走 uniforms 快路径。
+- **`LightCapability`**：三盏灯（key/fill/rim）各可在 directional/point/spot 间切换；锥体由「当前编辑的 spot 灯优先，否则第一盏启用的 spot 灯」驱动（`getSpotLightForCone()`），方向由 `getSpotDir(spotLight)`（光源 → 靶点）算出。重建触发面 = `CONE_GEO_CHANGES`（type/enabled/angle/penumbra），位置变更走 `syncPosition`，其余走 uniforms 快路径。
 - **envState / env-dispatcher**：参数变更经 `setEnvState` 派发，`onEnvChanged` 分派到锥体。
 - **灯 helper**（ADR-246 D3 扩展）：每盏灯按当前 type 配对应 helper（Directional↔DirectionalLightHelper / Spot↔SpotLightHelper / Point↔PointLightHelper），类型切换时重建；体积光锥是视觉光柱本体。
 - **截图渲染**（`preview-3d/screenshot/screenshot-lights.ts`）：**不复用本能力**，不产出光锥——预览与截图在体积光上本就不同构。

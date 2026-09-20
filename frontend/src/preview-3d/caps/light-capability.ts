@@ -23,7 +23,11 @@
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
-import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
+import {
+  registerEnvCallback,
+  resumeEnvCallbacks,
+  suspendEnvCallbacks,
+} from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
@@ -245,9 +249,9 @@ export class LightCapability implements SceneCapability {
 
     // 从 envState 读取初始值（ADR-196：真值源迁移）
     // [light-type-switch] 三盏灯统一实例化：createLight 按各盏灯的 type 建对应 Three 对象
-    this.keyLight = this.createLight(readLightParams("key"));
-    this.fillLight = this.createLight(readLightParams("fill"));
-    this.rimLight = this.createLight(readLightParams("rim"));
+    this.keyLight = this.createLight(readLightParams("key"), "key");
+    this.fillLight = this.createLight(readLightParams("fill"), "fill");
+    this.rimLight = this.createLight(readLightParams("rim"), "rim");
     // [light-gizmo] 每盏灯配一个类型相关 helper（颜色区分），visible 绑 enabled
     this.keyHelper = this.createHelper(
       this.keyLight,
@@ -281,6 +285,8 @@ export class LightCapability implements SceneCapability {
       },
       "light",
     );
+    // 注：构造期即注册 light 组回调；loadState 期间经 suspendEnvCallbacks 挂起，
+    // 避免 restoreLightParams 同步 setEnvState 重入触发 onEnvChanged（见 loadState）。
   }
 
   /* ----- envState 变更回调：分派到 Three 应用 ----- */
@@ -329,7 +335,7 @@ export class LightCapability implements SceneCapability {
     if (p.type !== currentType) {
       // 类型切换：dispose 旧灯 + 旧 helper → 重建（MikuMikuAR 同款）
       this.disposeLight(which);
-      const next = this.createLight(p);
+      const next = this.createLight(p, which);
       // createLight 内建的是原始强度；spot 需经衰减补偿重算（与原地更新路径同源）
       this.applyLightParams(next, p);
       this.setLight(which, next);
@@ -375,7 +381,7 @@ export class LightCapability implements SceneCapability {
     return lightDirToPosition(p, this.targetHeight).add(this.target);
   }
 
-  private createLight(p: LightInstanceParams): THREE.Light {
+  private createLight(p: LightInstanceParams, which: LightKey): THREE.Light {
     const pos = this.lightPosition(p);
     let light: THREE.Light;
     if (p.type === "spot") {
@@ -402,11 +408,10 @@ export class LightCapability implements SceneCapability {
       light = dir;
     }
     light.visible = p.enabled;
-    // ⚠️ 灯本体 name 按**类型**命名（`ysm-light-${p.type}`），三盏若同时为 spot 会重名——
-    // 当前全仓无按名取灯本体的消费方（helper 按槽位命名 `ysm-light-${which}-helper` 才
-    // 被 getObjectByName 消费），故重名无实害。未来若新增「按名查灯」逻辑，须改按槽位
-    // （which）命名，勿沿用类型名（与 helper 命名口径对齐）。
-    light.name = `ysm-light-${p.type}`;
+    // 灯本体与 helper 同口径按**槽位**命名（`which`），三盏同为 spot 也不再重名——
+    // 旧实现按类型命名（`ysm-light-${p.type}`）在 types 已切口径不一致，且多 spot 同框时重名，
+    // 未来任何「按名查灯」逻辑都会踩雷；helper 早已按槽位命名，此处对齐。
+    light.name = `ysm-light-${which}`;
     return light;
   }
 
@@ -555,6 +560,13 @@ export class LightCapability implements SceneCapability {
 
   /** 返回第一盏启用的 type=spot 灯（体积光锥驱动源）+ 其槽位，无则 null */
   getSpotLightForCone(): { light: THREE.SpotLight; which: LightKey } | null {
+    // 当前编辑的灯若是启用的 spot，优先驱动锥体（与用户心智：我在调的那盏灯）一致；
+    // 否则回退到槽位顺序（key→fill→rim）第一盏启用的 spot。
+    const active = this.activeLight;
+    const activeLight = this.getLight(active);
+    if (activeLight instanceof THREE.SpotLight && activeLight.visible) {
+      return { light: activeLight, which: active };
+    }
     for (const which of LIGHT_SLOTS) {
       const light = this.getLight(which);
       if (light instanceof THREE.SpotLight && light.visible) return { light, which };
@@ -692,13 +704,17 @@ export class LightCapability implements SceneCapability {
     //    currentPreset 可恢复。旧存档中这两个键现为死数据——restoreState 对未知键宽容，
     //    不报错也不算错（灯光值已由 restoreLightParams 全量恢复）。
     // ② 用户显式保存的灯开关 + ②.b 全量参数恢复（纯数据映射，下沉 light-persist.ts；
-    //    顺序敏感：必须在预设套用之后——后恢复的用户值优先于预设，ADR-126 P5 同口径）
-    //    ⚠️ 重入提示：本调用内部会 setEnvState → **同步**触发 onEnvChanged，此时 Three 灯
-    //    对象还是旧类型，callback 里的 syncLight 会先拿新 envState 重建一次；
-    //    回到③后同一盏灯又跑一遍（第二遍走「类型已对上 → 原地更新」分支）。幂等→不是
-    //    bug，但新增字段时别误以为③是唯一同步入口。（收口做法：loadState 期间挂起 callback，
-    //    末尾统一应用一次；见 ADR-281 已知遗留）
-    restoreLightParams(state);
+    //    顺序敏感：必须在预设套用之后——后恢复的用户值优先于预设，ADR-126 P5 同口径）。
+    //    ⚠️ 重入治理（ADR-281 收口）：restoreLightParams 内部的 setEnvState 会**同步**触发
+    //    onEnvChanged；挂起回调后恢复路径只写 envState，本调用末尾统一应用一次——
+    //    消除「callback 先拿旧类型灯重建一次、回到③又跑一遍」的双跑窗口；新增字段时
+    //    ③即唯一同步入口，不再有隐性双入口。
+    suspendEnvCallbacks();
+    try {
+      restoreLightParams(state);
+    } finally {
+      resumeEnvCallbacks();
+    }
     // ③ 类型可能因恢复而变化（旧存档迁移：key 灯 → spot）→ 逐盏重建 Three 对象
     for (const which of LIGHT_SLOTS) {
       this.syncLight(which, envState);
@@ -711,13 +727,12 @@ export class LightCapability implements SceneCapability {
     this.mountHelper("rim");
   }
 
-  /** sky 环境光开关变化时重算 ambient（防 ×0.5 衰减过期——sky.setEnvironmentEnabled 侧调），
-   *  也由 env callback 复用——ambient 应用单一出口，预览/截图同构。
-   *  ⚠️ 本方法在 onEnvChanged 里**无条件**调用（不按 changed 集过滤）：sky 环境开关是 cap 私有态
-   *  （非 envState 派生），sky 变更不经 light 组 callback，故灯组任何一次回调都可能是「补刷
-   *  ambient」的唯一时机。单次两行赋值成本可忽略，换取「不会漏刷」。
-   *  sky 环境开关经构造注入的查询器读取（全局版 isSkyEnvironmentOn 在组合根 registry）；
-   *  让位系数/公式走 attenuateAmbientForSky 单源 */
+  /** ambient 应用单一出口（预览/截图同构）：ambient 强度/颜色属 light 组 envState 字段，
+   *  环境开关让位系数（×0.5）由 sky 私有态经构造注入的查询器读取——二者在此汇合。
+   *  触发方有二：①sky.setEnvironmentEnabled 会主动调本方法（sky-capability.ts:483），
+   *  确保翻转环境开关时立即重算；②light 组任意键变动的 onEnvChanged 也调用——因
+   *  lightAmbientIntensity/Color 是 light 组字段，回调里刷它本就正当。两路幂等、语义一致，
+   *  无「漏刷」窗口（旧注释称「灯组回调是补刷唯一时机」，sky 主动通知落地后已不成立）。 */
   refreshAmbientFromSky(state: EnvState = envState): void {
     const skyEnvOn = getTypedCap(this.caps, "sky")?.isEnvironmentEnabled() ?? false;
     this.ambientLight.color.setHex(state.lightAmbientColor);

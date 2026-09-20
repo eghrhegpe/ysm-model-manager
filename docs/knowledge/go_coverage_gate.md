@@ -78,7 +78,7 @@ invariant_anchors:
 ## 对外 API / 入口
 
 ```bash
-node scripts/check-go-coverage-threshold.ts                          # 文本报告（默认读 go-cover.out）
+node scripts/check-go-coverage-threshold.ts                          # 文本报告（默认读 .coverage/go-cover.out）
 node scripts/check-go-coverage-threshold.ts --fail-on-below 20       # 抬高全局下限
 node scripts/check-go-coverage-threshold.ts --thresholds internal/app/:30
 node scripts/check-go-coverage-threshold.ts --json                   # CI / 子代理消费
@@ -89,7 +89,7 @@ node scripts/check-go-coverage-threshold.ts --json                   # CI / 子�
 
 ## 与其他子系统关系
 
-- 生成方：`go test ./go/... ./internal/... -coverprofile=go-cover.out`（`go-cover.out` 已被 `.gitignore` 覆盖）。
+- 生成方：`go test ./go/... ./internal/... -coverprofile=.coverage/go-cover.out`（`.coverage/` 已被 `.gitignore` 覆盖）。
 - 同族门禁：`check-go-diff-coverage.ts`（增量行覆盖）、`scripts/hooks/go-coverage-hint.ts`
   （commit 时按包提示，非阻断）。
 - **本门禁刻意旁路** pre-commit/CI（见 doctor 覆盖口径输出），需手动或 CI 显式调用。

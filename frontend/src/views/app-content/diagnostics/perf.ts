@@ -77,12 +77,6 @@ export const PERF_RUN_BUTTON_MODE_KEYS: Record<string, string> = {
   "diag-perf-conc-run": "conc",
 };
 
-/** 迭代标签的模式后缀：只有语义真变的模式才登记（ADR-278 §2.7：scan 已独立成 tab，
- * 它有自己的 #diag-perf-scan-iter 标签，与 single 的框不再是同一个控件）。 */
-export const PERF_ITER_SUFFIX_KEYS: Record<string, LocaleKey | undefined> = {
-  single: "diagnostics.perfIterationsSuffixSingle",
-};
-
 /**
  * 组装运行按钮的 scope hint：短 scope 句（模板插值 mode 名）+ 该模式的既有机制长句。
  * 未知模式只落通用句，不编造。机制句本体仍归各自命令模块消费（perfConcurrentHint /
@@ -132,8 +126,7 @@ function initPerfMode(root: ShadowRoot): () => void {
     // ===== ADR-278 §2.6 语义诚实层：同控件跨模式改义，当场说清 =====
     const iterLabel = root.getElementById("diag-perf-iter-label");
     if (iterLabel) {
-      const suffixKey = PERF_ITER_SUFFIX_KEYS[mode];
-      iterLabel.textContent = t("diagnostics.perfIterations") + (suffixKey ? t(suffixKey) : ""); // 未知模式回落中性「迭代次数」，不编造后缀
+      iterLabel.textContent = t("diagnostics.perfIterations"); // 跑几次 = 重复跑几轮，不再按模式拼后缀（原 PERF_ITER_SUFFIX_KEYS 随改名退役）
       iterLabel.title = t("diagnostics.perfIterationsHint");
     }
     // 并发下目标集只剩「挑样本范围」语义（单模型选项已禁），标签同步改口

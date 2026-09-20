@@ -361,7 +361,6 @@ export const ja: Record<string, string> = {
   "diagnostics.perfModeNameScan": "リポジトリ全体のディレクトリスキャン（モデル解析なし）",
   "diagnostics.perfModeOptSingle": "単一モデル",
   "diagnostics.perfModeOptConc": "一括並列",
-  "diagnostics.perfIterationsSuffixSingle": "（解析繰り返し回数）",
   "diagnostics.perfIterationsHint":
     "同一対象を何回解析するか（中央値採用）；エンジン比較タブには専用の再スキャン回数欄があります",
   "diagnostics.perfTargetSampleRange": "何を測るか（複数）",
@@ -382,7 +381,7 @@ export const ja: Record<string, string> = {
   "diagnostics.webNoPerf": "ウェブ版では性能診断はサポートされていません",
   "diagnostics.opImportFallback": "インポート",
   "diagnostics.perfModelRequired": "モデルのパスを入力してください",
-  "diagnostics.perfIterations": "イテレーション数",
+  "diagnostics.perfIterations": "何回実行するか",
   "diagnostics.perfSingleResult": "単一モデルベンチマーク結果",
   "diagnostics.perfTotal": "総所要時間",
   "diagnostics.perfTotalDetail": "{avg}ms（{n} 回反復の平均／累計 {total}ms）",

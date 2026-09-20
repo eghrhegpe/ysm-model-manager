@@ -360,8 +360,6 @@ export const zhCN = {
   "diagnostics.perfModeNameScan": "整库目录树扫描（不解析模型文件）",
   "diagnostics.perfModeOptSingle": "单模型",
   "diagnostics.perfModeOptConc": "批量并发",
-  // ADR-278 §2.7：scan 独立成 tab 后有自己的标签，不再与 single 共用控件——后缀只剩 single 一个
-  "diagnostics.perfIterationsSuffixSingle": "（重复解析次数）",
   "diagnostics.perfIterationsHint":
     "同一目标重复解析几轮后取中位（ADR-278 §2.7：引擎对照已独立成 tab，其重扫次数是另一个框）",
   // 并发没有单模型目标集：同控件在 conc 下只剩「挑样本范围」语义，且原选「单模型」会被回落
@@ -380,7 +378,7 @@ export const zhCN = {
   "diagnostics.webNoPerf": "网页版不支持性能诊断",
   "diagnostics.opImportFallback": "导入",
   "diagnostics.perfModelRequired": "请先填入模型路径",
-  "diagnostics.perfIterations": "迭代次数",
+  "diagnostics.perfIterations": "跑几次",
   "diagnostics.perfSingleResult": "单模型基准结果",
   "diagnostics.perfTotal": "总耗时",
   "diagnostics.perfTotalDetail": "{avg}ms（{n} 次迭代平均；累计 {total}ms）",

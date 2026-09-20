@@ -179,10 +179,10 @@ describe("基准模式接线（ADR-278）", () => {
   // 同一个控件跨模式改义，界面必须当场说清。三件事各钉一条；断言只锁**语义关键词**
   // （重复解析 / 全库重扫 / 一个模型…），不锁文案拼接形态——文案本体归 locale 三语文件，
   // 改措辞不应红测试（维护成本约束）。
-  it("迭代标签单模型下改口（ADR-278 §2.7：scan 独立成 tab 后不再与 single 共用同一个框）", () => {
+  it("迭代标签单模型下显示「跑几次」（原「迭代次数（重复解析次数）」已随改名收口；scan 独立成 tab 后用自己的框）", () => {
     const root = makeRoot("single");
     initPerfPanel(root, esc);
-    expect(iterLabel(root)?.textContent).toContain("重复解析");
+    expect(iterLabel(root)?.textContent).toContain("跑几次");
     // scan 自己的框在另一个 tab，有自己的标签，不因模式切换而改口（它不再是模式）
     expect(root.getElementById("diag-perf-scan-iter")).not.toBeNull();
   });

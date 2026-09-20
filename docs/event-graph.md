@@ -234,7 +234,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initPerfPanel | `frontend/src/views/app-content/diagnostics/perf.ts` | 207 |
+| initPerfPanel | `frontend/src/views/app-content/diagnostics/perf.ts` | 200 |
 | connectedCallback | `frontend/src/views/app-preview/index.ts` | 83 |
 
 ### `nav:changed`

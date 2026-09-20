@@ -901,7 +901,7 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
     page,
   }) => {
     const single = await readHonesty(page);
-    expect(single.iter).toContain("parse repeats"); // zh：重复解析次数
+    expect(single.iter).toContain("How many runs"); // zh：跑几次
     expect(single.target).toContain("What to test");
     // scan 已退出模式轴：它不是模式，而是一个独立 tab——切过去看它自己的框
     await clickBySelector(page, '.repo-tab[data-tab="scan"]');

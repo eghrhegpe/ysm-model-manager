@@ -359,7 +359,6 @@ export const en: Record<string, string> = {
   "diagnostics.perfModeNameScan": "whole-repo directory scan (no model parsing)",
   "diagnostics.perfModeOptSingle": "Single model",
   "diagnostics.perfModeOptConc": "Batch concurrency",
-  "diagnostics.perfIterationsSuffixSingle": " (parse repeats)",
   "diagnostics.perfIterationsHint":
     "Rounds of parsing the same target (median taken); the engine-comparison tab has its own rescan box",
   "diagnostics.perfTargetSampleRange": "Which to test",
@@ -380,7 +379,7 @@ export const en: Record<string, string> = {
   "diagnostics.webNoPerf": "Performance diagnostics are not supported on web",
   "diagnostics.opImportFallback": "Import",
   "diagnostics.perfModelRequired": "Please enter a model path",
-  "diagnostics.perfIterations": "Iterations",
+  "diagnostics.perfIterations": "How many runs",
   "diagnostics.perfSingleResult": "Single-model benchmark result",
   "diagnostics.perfTotal": "Total time",
   "diagnostics.perfTotalDetail": "{avg}ms (avg over {n} iterations; {total}ms total)",

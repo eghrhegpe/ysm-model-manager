@@ -31,7 +31,6 @@ auto_fields:
     - initPerfPanel
     - loadDiagnosticsLogs
     - loadRuntimeLogs
-    - PERF_ITER_SUFFIX_KEYS
     - PERF_RUN_BUTTON_MODE_KEYS
     - PERF_UNREAD_MODES
     - PERF_UNREAD_TARGETS

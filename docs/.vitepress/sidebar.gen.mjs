@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-280：灯光类型切换：三灯统一实例（key/fill/rim 各可 directional/point/spot）",
+        "link": "/adr/ADR-280-key-fill-rim-directional-point-spot"
+      },
+      {
         "text": "ADR-279：设置页下拉图标死代码处置与自定义下拉迁移",
         "link": "/adr/ADR-279-select-icon-migration"
       },

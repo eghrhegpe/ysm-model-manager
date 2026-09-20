@@ -193,6 +193,13 @@ describe("app-content 模板", () => {
     expect(html).toContain('id="diag-scan-health"');
     expect(html).toContain('id="diag-clear"');
     expect(html).toContain('data-tab="sync-conflict"');
+    // ADR-288 D2：两个只读扫描是「常驻栏 + 结果区」两段式（栏内即入口）。
+    // ⚠️ 结构不变量（按钮必须在栏内、不得住结果容器）由 conflicts/health 的 dead-end
+    // 墓碑用例以真实 DOM 关系钉死；此处只做模板层存在性断言。
+    expect(html).toContain('id="diag-health-bar"');
+    expect(html).toContain('id="diag-sync-bar"');
+    expect(html).toContain('id="diag-sync-conflict-list"');
+    expect(html).toContain('class="diag-pane"');
   });
   it("recycleHTML 包含清空回收站按钮", () => {
     const html = recycleHTML();

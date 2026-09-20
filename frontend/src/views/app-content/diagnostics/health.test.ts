@@ -1,9 +1,10 @@
 // ===== 诊断页：仓库体检（health.ts）测试 =====
 // 覆盖：parseHealthReport（合法/非法/后端错误）/ renderHealthReport（分数环/维度/警告/转义）
-//      / runHealthAudit（成功渲染 / 后端错误 / 解析失败 / 调用异常 + 重入守卫）
+//      / runHealthAudit（成功渲染 / 后端错误 / 解析失败 / 调用异常 + 重入守卫 + 按钮禁用外观）
+//      / initHealthPanel（常驻栏接线 + **体检后按钮仍在**的 ADR-288 §1 dead-end 墓碑）
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
-import { runHealthAudit, renderHealthReport, formatSize } from "./health.ts";
+import { initHealthPanel, runHealthAudit, renderHealthReport, formatSize } from "./health.ts";
 import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
 
 const { getApp } = vi.hoisted(() => ({ getApp: vi.fn() }));
@@ -130,6 +131,91 @@ describe("renderHealthReport", () => {
     const html = renderHealthReport(r, esc);
     expect(html).not.toContain("<b>evil");
     expect(html).toContain("&lt;b>evil");
+  });
+});
+
+describe("initHealthPanel（常驻体检栏）", () => {
+  /**
+   * 夹具对齐**真实 tpl**（ADR-288 D2）：按钮住栏内，结果区是栏的**兄弟**。
+   * 旧实现按钮住在结果容器内，首次体检的整块 innerHTML 会把它抹掉——本夹具 + 下方
+   * 「体检后按钮仍在」用例即该 dead-end 的墓碑。
+   */
+  function makePanel(): { bar: HTMLElement; list: HTMLElement; btn: HTMLButtonElement } {
+    const root = document.createElement("div");
+    root.innerHTML = `
+      <div class="diag-bar" id="diag-health-bar">
+        <div class="diag-bar-row"><button id="diag-scan-health">开始体检</button></div>
+      </div>
+      <div id="diag-health-list"><span class="sentinel">占位</span></div>
+    `;
+    document.body.appendChild(root);
+    return {
+      bar: root.querySelector("#diag-health-bar") as HTMLElement,
+      list: root.querySelector("#diag-health-list") as HTMLElement,
+      btn: root.querySelector("#diag-scan-health") as HTMLButtonElement,
+    };
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("栏内按钮点击 → 报告写进结果区", async () => {
+    getApp.mockResolvedValue({
+      RepoHealthAudit: vi.fn(() => buildReport()),
+      GetRepoRoot: vi.fn(async () => "/m"),
+    });
+    const { bar, list, btn } = makePanel();
+    initHealthPanel(bar, list, esc);
+    btn.click();
+    await waitFor(() => expect(list.innerHTML).toContain("85"));
+    expect(list.innerHTML).toContain("健康");
+  });
+
+  it("扫描期间按钮禁用（可见反馈），结束后复位", async () => {
+    let resolveFn: (v: Record<string, unknown> | null) => void = () => {};
+    const auditMock = vi.fn(
+      () =>
+        new Promise<Record<string, unknown> | null>((res) => {
+          resolveFn = res;
+        }),
+    );
+    getApp.mockResolvedValue({
+      RepoHealthAudit: auditMock,
+      GetRepoRoot: vi.fn(async () => "/m"),
+    });
+    const { bar, list, btn } = makePanel();
+    initHealthPanel(bar, list, esc);
+    btn.click();
+    await vi.waitFor(() => expect(auditMock).toHaveBeenCalled());
+    expect(btn.disabled).toBe(true); // 正在跑：禁用而非静默吞点击
+    resolveFn({ ...buildReport() });
+    await waitFor(() => expect(btn.disabled).toBe(false));
+  });
+
+  /** ADR-288 §1 dead-end 墓碑：报告渲染是**结果区**的整块替换，按钮在栏里 ⇒ 必须仍可再体检。
+   *  把按钮挪回结果容器，本用例立刻红（旧实现即此形态：体检一次后不可复检，只能重载应用）。 */
+  it("体检出报告后按钮仍在栏内且可再次体检", async () => {
+    const auditMock = vi.fn(() => buildReport());
+    getApp.mockResolvedValue({
+      RepoHealthAudit: auditMock,
+      GetRepoRoot: vi.fn(async () => "/m"),
+    });
+    const { bar, list, btn } = makePanel();
+    initHealthPanel(bar, list, esc);
+
+    btn.click();
+    await waitFor(() => expect(list.innerHTML).toContain("85"));
+
+    expect(btn.isConnected).toBe(true);
+    expect(bar.contains(btn)).toBe(true);
+    btn.click(); // 直接复检
+    await waitFor(() => expect(auditMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("栏/结果区缺失（查看器模式未渲染该 tab）→ 静默返回", () => {
+    initHealthPanel(null, null, esc);
+    expect(getApp).not.toHaveBeenCalled();
   });
 });
 

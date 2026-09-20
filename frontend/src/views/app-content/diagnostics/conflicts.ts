@@ -30,10 +30,22 @@ function dgCfRenderRadarPlaceholder(list: HTMLElement): void {
     "</div>";
 }
 
-// ===== scanSyncConflicts 子函数 =====
+// ===== 常驻参数栏 + 扫描流程（ADR-288 D2/D3）=====
+
+/** 一次扫描的目标：栏内选中值 + 结果区/按钮引用（「解决后自动复扫」按原目标重跑）。 */
+export interface DgCfScanTarget {
+  rtype: string;
+  instance: string;
+  scanBtn: HTMLButtonElement | null;
+}
+
+/** 扫描按钮可用性单点：扫描进行中与「目标不可用」两态共用。
+ *  禁用是给用户的**可见**反馈——旧实现只靠 busy 守卫静默吞掉重复点击，界面毫无变化。 */
+function dgCfSetScanEnabled(btn: HTMLButtonElement | null, enabled: boolean): void {
+  if (btn) btn.disabled = !enabled;
+}
 
 async function dgCfLoadSyncContext(): Promise<{
-  mcRoot: string;
   availableInstances: string[];
   errorHtml: string | null;
 }> {
@@ -42,25 +54,112 @@ async function dgCfLoadSyncContext(): Promise<{
   const mcRoot = cfg.mcRoot || "";
   if (!mcRoot) {
     return {
-      mcRoot: "",
       availableInstances: [],
       errorHtml: msgRowHTML("error", t("diagnostics.configGameDir")),
     };
   }
   const instances = (await ListVersionInstances(mcRoot)) || [];
-  const availableInstances = instances.filter((ins) => ins.Exists).map((ins) => ins.Name);
-  return { mcRoot, availableInstances, errorHtml: null };
+  return {
+    availableInstances: instances.filter((ins) => ins.Exists).map((ins) => ins.Name),
+    errorHtml: null,
+  };
+}
+
+/**
+ * 初始化常驻参数栏（**页面挂载时一次**，ADR-288 D3）：
+ * 资源类型下拉（`RESOURCE_TYPE_LABELS` 声明序，与旧参数面板逐字一致）→ 异步填充可用实例。
+ *
+ * 不可用态（无游戏目录 / 无可用实例 / 上下文读取失败）→ 原因落**结果区** + 禁用扫描按钮
+ * （ADR-288 D4：点不了好过点了报错）。
+ *
+ * ⚠️ 旧实现是「点外层按钮才渲染参数面板」的两段式：首次点击零信息增量，且面板连同按钮
+ * 住在结果容器内 → 头一次扫描的 `innerHTML` 整块替换把入口一起抹掉（ADR-288 §1）。
+ */
+export async function initSyncConflictPanel(
+  bar: HTMLElement | null,
+  list: HTMLElement | null,
+  esc: EscFn,
+): Promise<void> {
+  const rtypeSel = bar?.querySelector<HTMLSelectElement>("#sync-rtype");
+  const insSel = bar?.querySelector<HTMLSelectElement>("#sync-instance");
+  const scanBtn = bar?.querySelector<HTMLButtonElement>("#diag-scan-sync-conflict") ?? null;
+  if (!list || !rtypeSel || !insSel || !scanBtn) return;
+
+  rtypeSel.innerHTML = optionRows(
+    // RESOURCE_TYPE_LABELS 已在模块构建期过滤掉无 name 的类型（见 utils/resource/types.ts:35-38），
+    // 故这里不会产出空标签选项；顺序 = JSON 声明序，逐字保持旧面板口径
+    Object.entries(RESOURCE_TYPE_LABELS).map(([id, label]) => ({ value: id, label })),
+    esc,
+  );
+
+  const state = { rtype: rtypeSel.value, instance: "" };
+  rtypeSel.addEventListener("change", () => {
+    state.rtype = rtypeSel.value;
+  });
+  insSel.addEventListener("change", () => {
+    state.instance = insSel.value;
+  });
+  scanBtn.addEventListener("click", () => {
+    // 每次点击现读栏内选中值：栏常驻，用户可换实例后直接复扫（无需离开页面）
+    void runSyncConflictScan(list, esc, { ...state, scanBtn });
+  });
+
+  try {
+    const { availableInstances, errorHtml } = await dgCfLoadSyncContext();
+    if (errorHtml) {
+      list.innerHTML = errorHtml;
+      dgCfSetScanEnabled(scanBtn, false);
+      return;
+    }
+    if (!availableInstances.length) {
+      list.innerHTML = msgRowHTML("error", t("diagnostics.noInstances"), undefined, {
+        icon: UI_ICONS.warning,
+      });
+      dgCfSetScanEnabled(scanBtn, false);
+      return;
+    }
+    insSel.innerHTML = optionRows(
+      availableInstances.map((n) => ({ value: n, label: n })),
+      esc,
+    );
+    state.instance = insSel.value; // 默认选中首个可用实例（无 selected 声明时浏览器取首项）
+  } catch (err) {
+    list.innerHTML = msgRowHTML("error", `${t("diagnostics.scanFailed")}: ${esc(String(err))}`);
+    dgCfSetScanEnabled(scanBtn, false);
+  }
+}
+
+/**
+ * 跑一次同步冲突检测（栏内按钮与「解决后自动复扫」共用）：**只写结果区**，
+ * 栏与按钮不受影响——这是 ADR-288 D2 的核心约束，结果整块替换不得再吃掉入口。
+ */
+export async function runSyncConflictScan(
+  list: HTMLElement,
+  esc: EscFn,
+  target: DgCfScanTarget,
+): Promise<void> {
+  if (webGate("diagnostics.webNoSyncConflictScan")) return;
+  if (diagSyncBusy) return;
+  diagSyncBusy = true;
+  dgCfSetScanEnabled(target.scanBtn, false);
+  try {
+    await dgCfRunSyncDetection(list, esc, target);
+  } catch (err) {
+    list.innerHTML = msgRowHTML("error", `${t("diagnostics.scanFailed")}: ${esc(String(err))}`);
+  } finally {
+    diagSyncBusy = false;
+    dgCfSetScanEnabled(target.scanBtn, true);
+  }
 }
 
 async function dgCfRunSyncDetection(
   list: HTMLElement,
   esc: EscFn,
-  rtype: string,
-  instanceName: string,
+  target: DgCfScanTarget,
 ): Promise<void> {
   const { DetectConflicts } = await backendGetApp();
   dgCfRenderRadarPlaceholder(list);
-  const result = await DetectConflicts(rtype, instanceName);
+  const result = await DetectConflicts(target.rtype, target.instance);
   if (!result) {
     list.innerHTML = msgRowHTML("error", t("diagnostics.conflictDetectionFailed"), undefined, {
       icon: UI_ICONS.error,
@@ -74,109 +173,7 @@ async function dgCfRunSyncDetection(
     });
     return;
   }
-  renderSyncConflictsResult(list, esc, conflicts, rtype, instanceName);
-}
-
-export async function scanSyncConflicts(
-  list: HTMLElement,
-  esc: EscFn,
-  rtype?: string,
-  instanceName?: string,
-): Promise<void> {
-  if (webGate("diagnostics.webNoSyncConflictScan")) return;
-  if (diagSyncBusy) return;
-  diagSyncBusy = true;
-
-  try {
-    const { availableInstances, errorHtml } = await dgCfLoadSyncContext();
-    if (errorHtml) {
-      list.innerHTML = errorHtml;
-      return;
-    }
-    if (!rtype || !instanceName) {
-      renderSyncConfigPanel(list, esc, availableInstances);
-      return;
-    }
-    await dgCfRunSyncDetection(list, esc, rtype, instanceName);
-  } catch (err) {
-    list.innerHTML = msgRowHTML("error", `${t("diagnostics.scanFailed")}: ${esc(String(err))}`);
-  } finally {
-    diagSyncBusy = false;
-  }
-}
-
-// ===== renderSyncConfigPanel 子函数 =====
-
-function dgCfBuildConfigPanelHtml(
-  instances: string[],
-  selectedInstance: string,
-  selectedRtype: string,
-  esc: EscFn,
-): string {
-  const instanceOptions = instances
-    .map(
-      (ins) =>
-        `<option value="${esc(ins)}"${ins === selectedInstance ? " selected" : ""}>${esc(ins)}</option>`,
-    )
-    .join("");
-  const rtypeOptions = optionRows(
-    // RESOURCE_TYPE_LABELS 已在模块构建期过滤掉无 name 的类型（见 utils/resource/types.ts:35-38），
-    // 故这里不会产出空标签选项；顺序 = JSON 声明序，逐字保持现状
-    Object.entries(RESOURCE_TYPE_LABELS).map(([id, label]) => ({
-      value: id,
-      label,
-      selected: id === selectedRtype,
-    })),
-    esc,
-  );
-  return `
-      <div class="diag-sync-config">
-        <div class="diag-config-item">
-          <label for="sync-rtype">${UI_ICONS.package} ${t("diagnostics.selectResourceType")}:</label>
-          <select id="sync-rtype" class="diag-config-select">
-            ${rtypeOptions}
-          </select>
-        </div>
-        <div class="diag-config-item">
-          <label for="sync-instance">${UI_ICONS.game} ${t("diagnostics.selectInstance")}:</label>
-          <select id="sync-instance" class="diag-config-select">
-            ${instanceOptions}
-          </select>
-        </div>
-        <button id="sync-scan-btn" class="diag-dedup-exec">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
-      </div>
-    `;
-}
-
-function dgCfBindConfigPanelEvents(
-  list: HTMLElement,
-  esc: EscFn,
-  state: { selectedInstance: string; selectedRtype: string },
-): void {
-  list.querySelector("#sync-rtype")?.addEventListener("change", (e) => {
-    state.selectedRtype = (e.target as HTMLSelectElement).value;
-  });
-  list.querySelector("#sync-instance")?.addEventListener("change", (e) => {
-    state.selectedInstance = (e.target as HTMLSelectElement).value;
-  });
-  list.querySelector("#sync-scan-btn")?.addEventListener("click", async () => {
-    await scanSyncConflicts(list, esc, state.selectedRtype, state.selectedInstance);
-  });
-}
-
-function renderSyncConfigPanel(list: HTMLElement, esc: EscFn, instances: string[]): void {
-  const rtypeOptions = Object.entries(RESOURCE_TYPE_LABELS);
-  const state = {
-    selectedInstance: instances[0] || "",
-    selectedRtype: rtypeOptions[0]?.[0] || "",
-  };
-  list.innerHTML = dgCfBuildConfigPanelHtml(
-    instances,
-    state.selectedInstance,
-    state.selectedRtype,
-    esc,
-  );
-  dgCfBindConfigPanelEvents(list, esc, state);
+  renderSyncConflictsResult(list, esc, conflicts, target);
 }
 
 // ===== renderSyncConflictsResult 子函数 =====
@@ -236,15 +233,14 @@ async function dgCfExecuteResolve(
   list: HTMLElement,
   esc: EscFn,
   conflicts: DgCfFileConflict[],
-  rtype: string,
-  instanceName: string,
+  target: DgCfScanTarget,
 ): Promise<void> {
   const strategyEl = list.querySelector("#resolve-strategy") as HTMLSelectElement;
   const strategy = strategyEl?.value || DEFAULT_RESOLVE_STRATEGY.value;
   try {
     const { ResolveConflicts } = await backendGetApp();
     const conflictsJSON = JSON.stringify(conflicts);
-    const result = await ResolveConflicts(conflictsJSON, strategy, rtype, instanceName);
+    const result = await ResolveConflicts(conflictsJSON, strategy, target.rtype, target.instance);
     if (!result) {
       list.innerHTML = msgRowHTML("error", t("diagnostics.resolveFailed"), undefined, {
         icon: UI_ICONS.error,
@@ -264,9 +260,10 @@ async function dgCfExecuteResolve(
     list.appendChild(okDiv);
     // 1.5s 后自动复扫（resolve 后刷新冲突态）。守卫：用户已离开诊断页（list 分离）
     // 则作废这次迟到的复扫——省一次后端 RPC，也避免向分离 DOM 写 innerHTML。
+    // 复扫按**原目标**重跑（把当次扫描的 target 原样带回来），栏内新选中值不参与本次复扫。
     setTimeout(() => {
       if (!list.isConnected) return;
-      void scanSyncConflicts(list, esc, rtype, instanceName);
+      void runSyncConflictScan(list, esc, target);
     }, 1500);
   } catch (err) {
     const errDiv = document.createElement("div");
@@ -281,8 +278,7 @@ function renderSyncConflictsResult(
   list: HTMLElement,
   esc: EscFn,
   conflicts: DgCfFileConflict[],
-  rtype: string,
-  instanceName: string,
+  target: DgCfScanTarget,
 ): void {
   const header = msgRowHTML(
     "error",
@@ -295,6 +291,6 @@ function renderSyncConflictsResult(
   const html = header + rowsHtml + resolveHtml;
   list.innerHTML = html;
   list.querySelector("#do-resolve-btn")?.addEventListener("click", async () => {
-    await dgCfExecuteResolve(list, esc, conflicts, rtype, instanceName);
+    await dgCfExecuteResolve(list, esc, conflicts, target);
   });
 }

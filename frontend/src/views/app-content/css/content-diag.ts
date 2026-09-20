@@ -92,20 +92,23 @@ export const contentDiagCSS: string = `
 .perf-matrix-model-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); }
 .perf-matrix-model-detail { color:var(--muted); font-variant-numeric:tabular-nums; flex-shrink:0; }
 
-/* ===== 性能面板控制条（2026-09 由 css-layer-check 报出后收口）=====
-   此前 .perf-wrap / .perf-controls 在 shadow 内**没有任何规则**——类名是空头支票：
-   11+ 控件靠 UA 默认 inline 流换行，功能分组不可见、窄屏折行后语义全散。
-   （旧闸漏检原因：css-layer-check 检查 3 的判定域是手写前缀表，表里没有 perf-。）
-   现按日志工具栏已验证的范式：.perf-controls = 纵向堆叠的框，.perf-row = 语义行。 */
-.perf-wrap { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:8px 12px; }
-.perf-controls { display:flex; flex-direction:column; gap:4px; padding:0 0 6px; border-bottom:1px solid var(--bd); flex-shrink:0; }
-.perf-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
-.perf-row > input[type="text"] { flex:1; min-width:180px; }
-/* 提示行（2026-09 补齐）：.perf-hint 此前**无任何规则**，而 .perf-row 是 flex 容器——
-   提示 div 会被当成排在内联控件旁边的 flex item，与 select 挤在一行。
-   这里钉死：占满整行（flex-basis:100% 强制换行）+ 弱化小字，使提示真正落在控件下方。
-   与 .perf-wrap 里的说明行同语义，不给交互权重（不可点、不截断 title）。 */
-.perf-hint { flex-basis:100%; color:var(--muted); font-size:var(--fs-xs); line-height:1.4; }
+/* ===== 诊断页通用布局三件套（2026-09-21 由 .perf-wrap/.perf-controls/.perf-row/.perf-hint 泛化，ADR-288）=====
+   全页 tab 共用「上栏常驻 + 结果独立」骨架：
+     .diag-pane      = 纵向容器（flex:1，结果随内容滚）
+     .diag-bar       = 常驻控制栏（border-bottom + flex-shrink:0，不随结果滚走）
+     .diag-bar-row   = 栏内语义行（flex-wrap）
+     .diag-bar-hint  = 栏内说明行（独占一行，弱化）
+   改名理由：前缀 perf- 名不副实（health / sync-conflict 同样要用）；规则逐字未变。
+   历史：这几个类 2026-09 之前**无任何规则**（类名空头支票），控件靠 UA 默认 inline 流换行，
+   分组不可见、窄屏折行语义全散；当时按日志工具栏已验证的范式补的规则。
+   ⚠️ 新布局一律抄这四个类；tpl 里出现的类必须在 shadow 层有规则（css-layer-check 判定域自推导）。 */
+.diag-pane { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:8px 12px; }
+.diag-bar { display:flex; flex-direction:column; gap:4px; padding:0 0 6px; border-bottom:1px solid var(--bd); flex-shrink:0; }
+.diag-bar-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
+.diag-bar-row > input[type="text"] { flex:1; min-width:180px; }
+/* 提示行：.diag-bar-row 是 flex 容器，flex-basis:100% 让说明文字独占一行，
+   与栏内控件行同语义但无交互权重（不可点、不截断 title）。 */
+.diag-bar-hint { flex-basis:100%; color:var(--muted); font-size:var(--fs-xs); line-height:1.4; }
 /* ADR-278 §2.4：基准模式显隐走 class，与查看器降级的 inline display:none 分工不冲突（inline 胜过 class） */
 .perf-mode-off { display: none; }
 
@@ -223,7 +226,8 @@ export const contentDiagCSS: string = `
 .diag-config-item { display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:var(--fs-sm); color:var(--txt); }
 .diag-config-select, .diag-config-input { padding:var(--btn-padding-sm); border-radius:var(--radius-md); border:1px solid var(--bd); background:var(--bg); color:var(--txt); font-size:var(--fs-sm); font-family:inherit; min-width:160px; }
 .diag-config-select:focus, .diag-config-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
-.diag-sync-config { padding:8px 12px; border:1px solid var(--bd); border-radius:var(--radius-md); margin:4px 0; background:var(--surf); }
+/* .diag-sync-config 规则已随 ADR-288 删除：同步冲突的参数面板不再是「点按钮后渲染的卡片」，
+   而是常驻 .diag-bar（选择器 + 按钮直接排在栏内）——旧卡片类失去生产者，规则一并退场。 */
 .diag-sync-resolve { margin-top:16px; padding:12px; background:var(--diag-stat-bg, var(--surf)); border-radius:var(--radius-lg); }
 .diag-dedup-config { padding:8px 12px; }
 .diag-warn { color:var(--status-warning, #e6b800); font-weight:600; }

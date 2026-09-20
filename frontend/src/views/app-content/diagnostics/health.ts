@@ -19,15 +19,40 @@ import { msgRowHTML, statRowHTML } from "./status-row.ts";
 let _healthBusy = false;
 
 /**
+ * 初始化常驻体检栏（**页面挂载时一次**，ADR-288 D2/D3）：
+ * 按钮住在栏里（`#diag-health-bar`），结果只写结果区。
+ *
+ * ⚠️ 旧实现把按钮放在 `#diag-health-list` **内部**：首次体检的整块 `innerHTML` 会连按钮
+ * 一起抹掉，而 app-content 按页缓存面板（`init` 仅在 isNew 时执行）⇒ 同一会话内再也无法
+ * 复检，只能重载应用（ADR-288 §1 实测）。按钮迁出即根除该 dead-end。
+ */
+export function initHealthPanel(
+  bar: HTMLElement | null,
+  list: HTMLElement | null,
+  esc: EscFn,
+): void {
+  const btn = bar?.querySelector<HTMLButtonElement>("#diag-scan-health") ?? null;
+  if (!btn || !list) return;
+  btn.addEventListener("click", () => void runHealthAudit(list, esc, btn));
+}
+
+/**
  * 仓库体检：调 Go 端 RepoHealthAudit（当前类型单仓库审计）并渲染结果——
  * 动态感知当前资源类型（repo-rtype，等价树视图 vm._filesRoot 的类型来源），
  * 切蓝图扫蓝图、精准建议；不用全仓（RepoHealthAuditAll 合并报告泛泛且全扫耗时）。
  * @param list 结果容器（#diag-health-list）
  * @param esc HTML 转义函数
+ * @param btn 栏内触发按钮（可选）：扫描期间禁用，给「正在跑」以**可见**反馈，
+ *            替代旧实现「重复点击被 busy 守卫静默吞掉」的外观
  */
-export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<void> {
+export async function runHealthAudit(
+  list: HTMLElement,
+  esc: EscFn,
+  btn?: HTMLButtonElement | null,
+): Promise<void> {
   if (_healthBusy) return;
   _healthBusy = true;
+  if (btn) btn.disabled = true;
   try {
     list.innerHTML = statRowHTML("muted", t("diagnostics.healthScanning"), undefined, {
       icon: UI_ICONS.refresh,
@@ -50,6 +75,7 @@ export async function runHealthAudit(list: HTMLElement, esc: EscFn): Promise<voi
     list.innerHTML = msgRowHTML("error", msg, esc, { icon: UI_ICONS.error });
   } finally {
     _healthBusy = false;
+    if (btn) btn.disabled = false;
   }
 }
 

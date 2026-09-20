@@ -2,7 +2,7 @@
 // 覆盖：
 //  - initDiagnostics：初始加载 / tab 切换（log/runtime/perf/health/sync-conflict）/
 //    刷新 / 清空（含能力门禁与失败）/ 筛选 / 搜索防抖 / 复制面板与行内复制（含降级）/
-//    同步冲突与体检扫描入口 / 查看器模式隐藏桌面专属入口
+//    扫描栏接线（ADR-288：挂载即备参数 + 栏内按钮触发）/ 查看器模式隐藏桌面专属入口
 //  - 日志渲染：分组徽标 / 空态 / 抛错兜底（import + runtime）
 //  - startDedup：单类型/全类型目录扫描 / 无目录 / 无重复 / exec 移入回收站 / 取消
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -40,8 +40,6 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="diag-refresh"></div>
     <div id="diag-clear"></div>
     <div id="diag-copy"></div>
-    <div id="diag-scan-sync-conflict"></div>
-    <div id="diag-scan-health"></div>
     <button id="diag-perf-refresh-trace"></button>
     <div id="diag-load-trace"></div>
     <div id="diag-perf-hist-row"></div>
@@ -57,8 +55,8 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
       <div id="diag-log-list"></div>
       <div id="diag-runtime-list" style="display:none"></div>
     </div>
-    <div id="diag-tab-health"><div id="diag-health-list"></div></div>
-    <div id="diag-tab-sync-conflict"><div id="diag-sync-conflict-list"></div></div>
+    <div id="diag-tab-health"><div class="diag-bar" id="diag-health-bar"><div class="diag-bar-row"><button id="diag-scan-health"></button></div></div><div id="diag-health-list"></div></div>
+    <div id="diag-tab-sync-conflict"><div class="diag-bar" id="diag-sync-bar"><div class="diag-bar-row"><select id="sync-rtype"></select><select id="sync-instance"></select><button id="diag-scan-sync-conflict"></button></div></div><div id="diag-sync-conflict-list"></div></div>
     <button class="diag-log-fbtn" data-status="all">全部</button>
     <button class="diag-log-fbtn" data-status="success">成功</button>
     <button class="diag-log-fbtn" data-status="failed">失败</button>
@@ -740,8 +738,8 @@ describe("initDiagnostics — 清空日志门禁与失败", () => {
   });
 });
 
-describe("initDiagnostics — 同步冲突与体检扫描入口", () => {
-  it("diag-scan-sync-conflict 点击 → 同步冲突配置面板渲染（Exists 实例过滤）", async () => {
+describe("initDiagnostics — 扫描栏接线（ADR-288 D2/D3：进页面即备好参数，扫描仍显式点击）", () => {
+  it("挂载即填充同步冲突参数栏（Exists 实例过滤 + 默认选首）——无需先点一次按钮", async () => {
     mockApp({
       ListVersionInstances: vi.fn(() => [
         { Name: "insA", Exists: true, CustomDir: "/a" },
@@ -750,25 +748,35 @@ describe("initDiagnostics — 同步冲突与体检扫描入口", () => {
     });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    (root.getElementById("diag-scan-sync-conflict") as HTMLElement).click();
-    const list = root.getElementById("diag-sync-conflict-list") as HTMLElement;
-    await waitFor(() => expect(list.querySelector("#sync-scan-btn")).toBeTruthy());
-    const optTexts = Array.from(list.querySelectorAll("#sync-instance option")).map((o) => o.textContent);
+    const bar = root.getElementById("diag-sync-bar") as HTMLElement;
+    await waitFor(() =>
+      expect(bar.querySelectorAll("#sync-instance option").length).toBeGreaterThan(0),
+    );
+    const optTexts = Array.from(bar.querySelectorAll("#sync-instance option")).map(
+      (o) => o.textContent,
+    );
     expect(optTexts).toContain("insA");
-    expect(optTexts).not.toContain("insB");
+    expect(optTexts).not.toContain("insB"); // Exists=false 不入选项
+    expect((bar.querySelector("#sync-instance") as HTMLSelectElement).value).toBe("insA");
+    // 结果区未被初始化改写（仍是引导空态），栏与结果区两段式
+    const list = root.getElementById("diag-sync-conflict-list") as HTMLElement;
+    expect(list.textContent).not.toContain("insA");
   });
 
-  it("diag-scan-health 点击 → 体检报告渲染到 diag-health-list", async () => {
+  it("栏内体检按钮点击 → 报告渲染到结果区，且按钮仍在栏内（不被结果替换吃掉）", async () => {
     mockApp({
       RepoHealthAudit: vi.fn(() => buildReport()),
       GetRepoRoot: vi.fn(async () => "/repo"),
     });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    (root.getElementById("diag-scan-health") as HTMLElement).click();
+    const bar = root.getElementById("diag-health-bar") as HTMLElement;
     const list = root.getElementById("diag-health-list") as HTMLElement;
+    (bar.querySelector("#diag-scan-health") as HTMLElement).click();
     await waitFor(() => expect(list.innerHTML).toContain("85"));
     expect(list.innerHTML).toContain("健康");
+    // ADR-288 §1：按钮住栏内，结果整块替换不得把入口一起抹掉
+    expect(bar.querySelector("#diag-scan-health")).toBeTruthy();
   });
 });
 
@@ -788,8 +796,9 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     // 跨模式可用项照常在场：log / record
     expect(root.querySelector('.repo-tab[data-tab="log"]')).not.toBeNull();
     expect(root.querySelector('.repo-tab[data-tab="record"]')).not.toBeNull();
-    // 扫描按钮在缺席面板内同样不存在（若未来控件拆出 tab，dgInHideDesktopOnly 仍按 id 隐）
-    for (const id of ["diag-scan-health", "diag-scan-sync-conflict", "diag-perf-scan-bench"]) {
+    // 扫描入口是**常驻栏**（ADR-288 D2）：栏本体在缺席面板内同样不存在
+    // （若未来控件拆出 tab，dgInHideDesktopOnly 仍按 id 隐栏）
+    for (const id of ["diag-health-bar", "diag-sync-bar", "diag-perf-scan-bench"]) {
       expect(root.getElementById(id)).toBeNull();
     }
     // 加载剖析读内存 store、零 Go/CLI 依赖 → 跨模式可用，入口不得隐藏（ADR-278 §2.5）
@@ -802,7 +811,10 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     expect(
-      (root.getElementById("diag-scan-health") as HTMLElement).style.display,
+      (root.getElementById("diag-health-bar") as HTMLElement).style.display,
+    ).not.toBe("none");
+    expect(
+      (root.getElementById("diag-sync-bar") as HTMLElement).style.display,
     ).not.toBe("none");
   });
 });

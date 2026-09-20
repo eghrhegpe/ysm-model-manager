@@ -788,6 +788,7 @@
   "diagnostics.scanningProgress": "⏳ 扫描中 {cur}/{total} {icon} {label}",
   "diagnostics.configResourceDir": "请先配置资源目录",
   "diagnostics.configGameDir": "请先配置游戏目录",
+  "diagnostics.noInstances": "未找到可用整合包（先配置游戏目录并安装整合包）",
   "diagnostics.noDups": "没有重复文件",
   "diagnostics.dupSummary": "发现 {groups} 组重复文件（共 {dups} 个多余副本），每组选一个保留：",
   "diagnostics.dupSummaryHint": "未选择的文件将移入回收站",

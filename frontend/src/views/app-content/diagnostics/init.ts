@@ -9,9 +9,9 @@ import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { scanSyncConflicts } from "./conflicts.ts";
+import { initSyncConflictPanel } from "./conflicts.ts";
 import { copyWithToast } from "./copy-toast.ts";
-import { runHealthAudit } from "./health.ts";
+import { initHealthPanel } from "./health.ts";
 import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
 import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 
@@ -125,16 +125,24 @@ function dgInBindCopyRows(root: ShadowRoot): void {
   });
 }
 
-function dgInBindScanBtns(root: ShadowRoot, esc: EscFn): void {
-  root.getElementById("diag-scan-sync-conflict")?.addEventListener("click", () => {
-    const list = root.getElementById("diag-sync-conflict-list");
-    if (list) scanSyncConflicts(list, esc);
-  });
-  root.getElementById("diag-scan-health")?.addEventListener("click", async () => {
-    const list = root.getElementById("diag-health-list");
-    if (!list) return;
-    await runHealthAudit(list, esc);
-  });
+/**
+ * 初始化两个只读扫描的**常驻参数栏**（ADR-288 D2/D3）：进 tab 即有参数与按钮，
+ * 扫描仍显式点击触发（「进 tab 不跑进程」口径不变，ADR-278 §2.5）。
+ * 栏与结果区是两段式——结果只写结果区，按钮不再住在结果容器内（旧形态的 dead-end 见 ADR-288 §1）。
+ * sync-conflict 栏为异步：读配置 + 列实例（两次轻量 Go 读，与 log tab 进即 GetImportLogs 同级）；
+ * 失败/不可用态由该函数内部落结果区 + 禁用按钮，故此处 void 调用。
+ */
+function dgInInitScanPanels(root: ShadowRoot, esc: EscFn): void {
+  void initSyncConflictPanel(
+    root.getElementById("diag-sync-bar"),
+    root.getElementById("diag-sync-conflict-list"),
+    esc,
+  );
+  initHealthPanel(
+    root.getElementById("diag-health-bar"),
+    root.getElementById("diag-health-list"),
+    esc,
+  );
 }
 
 /** 查看器/网页版：隐藏扫描入口按钮（tab 本体已由 renderTabs(desktopOnly) 在模板层单点隐）。
@@ -147,12 +155,13 @@ function dgInHideDesktopOnly(root: ShadowRoot): void {
   // tpl 声明处（desktopOnly: true → renderTabs(viewerMode) 产出时直接不渲染），
   // 此处不再持有一份远处的选择器名单——那正是与 tpl 漂移的那只手。
   for (const id of [
-    // 扫描按钮在 desktopOnly tab 的面板内：tab 整块已不渲染，按 id 再显式隐一次保留既有口径
-    // （init.test 钉的是按钮自身 style 非仅继承不可见；且面板 body 可能被其它入口单独消费）
-    "diag-scan-health",
-    "diag-scan-sync-conflict",
+    // ADR-288：扫描入口已由「结果容器内的按钮」迁到**常驻栏**（bar 内按钮 + 结果区两段式），
+    // 故这里隐的是栏本体——栏内即入口，隐栏等价隐入口（tab 本体在 desktopOnly 下已整块不渲染，
+    // 此为二道防线；init.test 钉的是元素自身 style 非仅继承不可见）
+    "diag-health-bar",
+    "diag-sync-bar",
     // ADR-278 §2.7：引擎对照已是独立 desktopOnly tab，其运行按钮同样按 id 显式隐一次
-    // （与上面三个扫描按钮同口径：tab 本体不渲染 + 面板内控件再隐）
+    // （与上面两条同口径：tab 本体不渲染 + 面板内控件再隐）
     "diag-perf-scan-bench",
     // 加载剖析（diag-perf-refresh-trace）不在此列：零 Go/CLI 依赖、跨模式可用——连它一起藏
     // 曾把「唯一跨模式可用面板」的唯一入口藏掉（2026-09 修正，与本函数本意反向成立）。
@@ -218,7 +227,7 @@ export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   dgInBindRefreshClear(root, esc);
   dgInBindCopyPanel(root);
   dgInBindCopyRows(root);
-  dgInBindScanBtns(root, esc);
+  dgInInitScanPanels(root, esc);
   initPerfPanel(root, esc);
   dgInBindTraceTab(root, esc);
   dgInBindLogSubTabs(root, esc);

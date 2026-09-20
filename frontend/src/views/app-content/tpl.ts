@@ -53,6 +53,11 @@ export const VIEW_TESTIDS: readonly string[] = [
   // scan-bench 自己的迭代输入框（与 single 模式的 #diag-perf-iter 正交，模式独立参数）
   "diag-perf-scan-iter",
   "diag-perf-scan-iter-label",
+  // ADR-288 D2：两个只读扫描的**启动按钮 + 结果区**（两段式：按钮在常驻栏里、结果写结果区）
+  "diag-scan-health",
+  "diag-health-list",
+  "diag-scan-sync-conflict",
+  "diag-sync-conflict-list",
 ];
 
 // settingsHTML 已拆至 settings/tpl-settings.ts，消费者直接 import 叶文件（P1-6）
@@ -198,9 +203,9 @@ export function diagnosticsHTML(): string {
         // data-perf-mode 行里（"两个模式都显示"）正是臃肿与漂移之源。
         // ADR-278 §2.3：取样上限**有意不合并**——单模型深测默认 5 / 并发广度扫默认 20 是两个真实口径
         // （故 max 仍是两行：一条给 single、一条给 conc，各自默认值不同）。
-        body: `  <div class="perf-wrap">
-    <div class="perf-controls">
-      <div class="perf-row">
+        body: `  <div class="diag-pane">
+    <div class="diag-bar">
+      <div class="diag-bar-row">
         <label for="diag-perf-mode" title="${t("diagnostics.perfModeHint")}">${t("diagnostics.perfMode")}</label>
         <select id="diag-perf-mode" class="diag-config-select" data-testid="diag-perf-mode">
           <option value="single">${t("diagnostics.perfModeOptSingle")}</option>
@@ -215,7 +220,7 @@ export function diagnosticsHTML(): string {
           ${perfOrderOptionsHTML()}
         </select>
       </div>
-      <div class="perf-row" data-perf-mode="single">
+      <div class="diag-bar-row" data-perf-mode="single">
         <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
         <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
         <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
@@ -224,20 +229,20 @@ export function diagnosticsHTML(): string {
         <label for="diag-perf-baseline-th">${t("diagnostics.perfBaselineThreshold")}</label>
         <input id="diag-perf-baseline-th" type="number" min="1" step="1" value="50" data-testid="diag-perf-baseline-th">
       </div>
-      <div class="perf-row" data-perf-mode="single">
+      <div class="diag-bar-row" data-perf-mode="single">
         <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
         <label for="diag-perf-iter" id="diag-perf-iter-label" data-testid="diag-perf-iter-label">${t("diagnostics.perfIterations")}</label>
         <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
         <label for="diag-perf-max" id="diag-perf-max-label" data-testid="diag-perf-max-label" title="${t("diagnostics.perfMaxModelsHint")}">${t("diagnostics.perfMaxModels")}</label>
         <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max">
       </div>
-      <div class="perf-row" data-perf-mode="conc">
+      <div class="diag-bar-row" data-perf-mode="conc">
         <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
         <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
         <label for="diag-perf-conc-max">${t("diagnostics.perfMaxModels")}</label>
         <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfMaxModelsHint")}">
       </div>
-      <div class="perf-row" data-perf-mode="conc">
+      <div class="diag-bar-row" data-perf-mode="conc">
         <button class="btn-base accent" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
       </div>
     </div>
@@ -253,15 +258,15 @@ export function diagnosticsHTML(): string {
         // 把它当「第三种范围」列在模式下拉里是错误分类。
         desktopOnly: true,
         label: `${UI_ICONS.performance} ${t("diagnostics.perfScanBench")}`,
-        body: `  <div class="perf-wrap">
-    <div class="perf-controls">
-      <div class="perf-row">
+        body: `  <div class="diag-pane">
+    <div class="diag-bar">
+      <div class="diag-bar-row">
         <button class="btn-base accent" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
         <label for="diag-perf-scan-iter" id="diag-perf-scan-iter-label" data-testid="diag-perf-scan-iter-label">${t("diagnostics.perfIterations")}</label>
         <input id="diag-perf-scan-iter" type="number" min="1" step="1" value="3" data-testid="diag-perf-scan-iter">
       </div>
-      <div class="perf-row">
-        <div class="perf-hint">${t("diagnostics.perfScanBenchHint")}</div>
+      <div class="diag-bar-row">
+        <div class="diag-bar-hint">${t("diagnostics.perfScanBenchHint")}</div>
       </div>
     </div>
     <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
@@ -271,9 +276,9 @@ export function diagnosticsHTML(): string {
         id: "record",
         label: `${UI_ICONS.note} ${t("diagnostics.perfRecord")}`,
         // 加载剖析（内存 store → 进即渲染）
-        body: `  <div class="perf-wrap">
-    <div class="perf-controls">
-      <div class="perf-row">
+        body: `  <div class="diag-pane">
+    <div class="diag-bar">
+      <div class="diag-bar-row">
         <button class="btn-base" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>
       </div>
     </div>
@@ -284,17 +289,44 @@ export function diagnosticsHTML(): string {
         id: "health",
         desktopOnly: true,
         label: `${UI_ICONS.diagnose} ${t("diagnostics.healthTitle")}`,
-        body: `  <div id="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.healthHint")}
-  <button class="btn-base accent" id="diag-scan-health" style="margin-top:4px">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
-  </div></div>`,
+        // ADR-288 D2：「参数栏常驻 + 结果独立」两段式。⚠️ 启动按钮**必须**住在 bar 内，不得
+        // 放回结果容器——结果渲染走 list.innerHTML 整块替换，而 app-content 按页缓存面板
+        // （init 仅 isNew 跑）⇒ 按钮一旦被覆盖就**会话内不再复活**（原实现即此 dead-end：
+        // 体检一次后再也无法复检，只能重载应用）。
+        body: `  <div class="diag-pane">
+    <div class="diag-bar" id="diag-health-bar">
+      <div class="diag-bar-row">
+        <button class="btn-base accent" id="diag-scan-health" data-testid="diag-scan-health">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
+      </div>
+      <div class="diag-bar-row">
+        <div class="diag-bar-hint">${t("diagnostics.healthHint")}</div>
+      </div>
+    </div>
+    <div id="diag-health-list" data-testid="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+  </div>`,
       },
       {
         id: "sync-conflict",
         desktopOnly: true,
         label: `${UI_ICONS.refresh} ${t("diagnostics.syncConflict")}`,
-        body: `  <div id="diag-sync-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.scanHint")}
-  <button class="btn-base accent" id="diag-scan-sync-conflict" style="margin-top:4px">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
-  </div></div>`,
+        // ADR-288 D2/D3：参数栏常驻（页面挂载即填充下拉），结果只写结果区。
+        // 原实现把「引导空态 + 按钮」放结果容器内，点它才渲染参数面板，面板内再点一次才扫描
+        // （三次点击，且首次零信息增量）；扫描一次后按钮被结果整块覆盖 → 换实例/复扫不可达。
+        body: `  <div class="diag-pane">
+    <div class="diag-bar" id="diag-sync-bar">
+      <div class="diag-bar-row">
+        <label for="sync-rtype">${UI_ICONS.package} ${t("diagnostics.selectResourceType")}</label>
+        <select id="sync-rtype" class="diag-config-select" data-testid="sync-rtype"></select>
+        <label for="sync-instance">${UI_ICONS.game} ${t("diagnostics.selectInstance")}</label>
+        <select id="sync-instance" class="diag-config-select" data-testid="sync-instance"></select>
+        <button class="btn-base accent" id="diag-scan-sync-conflict" data-testid="diag-scan-sync-conflict">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
+      </div>
+      <div class="diag-bar-row">
+        <div class="diag-bar-hint">${t("diagnostics.scanHint")}</div>
+      </div>
+    </div>
+    <div id="diag-sync-conflict-list" data-testid="diag-sync-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+  </div>`,
       },
     ],
   });

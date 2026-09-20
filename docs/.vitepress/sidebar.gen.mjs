@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-288：诊断页布局词汇统一与扫描类参数栏常驻化",
+        "link": "/adr/ADR-288-diagnostics-scan-bar-persistent"
+      },
+      {
         "text": "ADR-287：water 菜单 ground- 化石前缀重命名",
         "link": "/adr/ADR-287-water-ground"
       },

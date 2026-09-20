@@ -1090,7 +1090,6 @@ auto_fields:
     - saveScreenshot
     - scanAllWebModels
     - scanModelsByType
-    - scanSyncConflicts
     - scanWebModels
     - SceneCapability
     - SceneCapabilityFactory

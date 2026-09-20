@@ -41,30 +41,30 @@ function makeRoot(mode = "single"): ShadowRoot {
       <option value="">单模型</option>
       <option value="__repo__">全库扁平</option>
     </select>
-    <div class="perf-row">
+    <div class="diag-bar-row">
       <select id="diag-perf-order" data-testid="diag-perf-order">
         <option value="path">路径升序</option>
       </select>
     </div>
-    <div class="perf-row" data-perf-mode="single" id="row-single"></div>
-    <div class="perf-row" data-perf-mode="single" id="row-iter">
+    <div class="diag-bar-row" data-perf-mode="single" id="row-single"></div>
+    <div class="diag-bar-row" data-perf-mode="single" id="row-iter">
       <label for="diag-perf-iter" id="diag-perf-iter-label">迭代次数</label>
       <input id="diag-perf-iter" value="3">
     </div>
-    <div class="perf-row" id="row-target">
+    <div class="diag-bar-row" id="row-target">
       <label for="diag-perf-rtype" id="diag-perf-target-label">目标集</label>
     </div>
-    <div class="perf-row" data-perf-mode="conc" id="row-conc-inputs">
+    <div class="diag-bar-row" data-perf-mode="conc" id="row-conc-inputs">
       <input id="diag-perf-conc-workers" value="4">
       <input id="diag-perf-conc-max" value="20">
     </div>
-    <div class="perf-row" data-perf-mode="single" id="row-single-model">
+    <div class="diag-bar-row" data-perf-mode="single" id="row-single-model">
       <input id="diag-perf-model" value="/m/a.ysm">
     </div>
-    <div class="perf-row" data-perf-mode="single" id="row-single-max">
+    <div class="diag-bar-row" data-perf-mode="single" id="row-single-max">
       <input id="diag-perf-max" value="5">
     </div>
-    <div class="perf-row" data-perf-mode="single" id="row-baseline">
+    <div class="diag-bar-row" data-perf-mode="single" id="row-baseline">
       <input id="diag-perf-baseline-save" type="checkbox">
       <input id="diag-perf-baseline-compare" type="checkbox">
       <input id="diag-perf-baseline-th" value="50">
@@ -72,8 +72,8 @@ function makeRoot(mode = "single"): ShadowRoot {
     <button id="diag-perf-run"></button>
     <button id="diag-perf-conc-run"></button>
     <button id="diag-perf-scan-bench"></button>
-    <div class="perf-row" data-perf-mode="conc" id="row-conc"></div>
-    <div class="perf-row" id="row-scan">
+    <div class="diag-bar-row" data-perf-mode="conc" id="row-conc"></div>
+    <div class="diag-bar-row" id="row-scan">
       <input id="diag-perf-scan-iter" value="3">
     </div>
     <div id="diag-perf-single" data-perf-mode="single"></div>
@@ -367,21 +367,21 @@ describe("基准模式接线（ADR-278）", () => {
     ]) {
       expect(ids, `扫描面丢失 ${mustSee}`).toContain(mustSee);
     }
-    // 行归属：控件**所属 perf-row 开标签**的 data-perf-mode 列表（未写 = 所有模式都显示）。
-    // 从控件位置向前找最近的 `<div class="perf-row"`——不能拿控件自身所在行判定
-    // （tpl 里按钮与输入框同行，如 run+model 合排，data-perf-mode 挂在行 div 上）。
-    // 行归属：控件**所属 perf-row 开标签**的 data-perf-mode 列表（未写 = 所有模式都显示）。
+    // 行归属：控件**所属 diag-bar-row 开标签**的 data-perf-mode 列表（未写 = 所有模式都显示）。
     // 不能用「向前最近一个 <div」——嵌套下（row > row-label）会抓到内层 div；
     // 也不能拿控件自身所在行（tpl 里按钮与输入框同行，data-perf-mode 挂在行 div 上）。
-    // 做法：取控件前最后一个 perf-row 开标签，再沿 <div/</div> 配平验证它仍开着（嵌套行不误抓）。
+    // 做法：取控件前最后一个行开标签，再沿 <div/</div> 配平验证它仍开着（嵌套行不误抓）。
+    // ⚠️ 开标签字面量取常量、切片偏移取 `.length`：类名 2026-09 由 perf-row 泛化为
+    // diag-bar-row（ADR-288 D1），旧的硬编码 `i + 20` 会静默错位——长度不再手写。
+    const ROW_OPEN = '<div class="diag-bar-row"';
     const rowOpenAt = (pos: number): string | null => {
       let cursor = pos;
       for (;;) {
-        const i = seg.lastIndexOf('<div class="perf-row"', cursor);
+        const i = seg.lastIndexOf(ROW_OPEN, cursor);
         if (i < 0) return null;
         // 从该开标签到控件位置做深度扫描：回零 = 它已被闭合，继续向前找更早的行
         let depth = 1;
-        for (const m of seg.slice(i + 20, pos).matchAll(/<div\b|<\/div>/g)) {
+        for (const m of seg.slice(i + ROW_OPEN.length, pos).matchAll(/<div\b|<\/div>/g)) {
           depth += m[0].startsWith("</") ? -1 : 1;
           if (depth === 0) break;
         }

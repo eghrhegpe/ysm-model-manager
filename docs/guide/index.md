@@ -35,7 +35,7 @@
 | [备份与迁移](./backup-migration.md) | 配置文件备份、仓库文件备份与换机迁移流程 |
 | **🩺 疑难排查** |  |
 | [常见问题（FAQ）](./faq.md) | 安装、同步、导入、预览等高频问题与故障排查表 |
-| [诊断与去重](./diagnostics.md) | 操作日志查询与多整合包冲突扫描（去重、回收站在仓库页 tab） |
+| [诊断与去重](./diagnostics.md) | 操作日志查询与同步冲突检测 / 仓库体检（去重、回收站在仓库页 tab） |
 | **📐 参考** |  |
 | [bone-tools-architecture](./bone-tools-architecture.md) |  |
 <!-- /GEN: guide-index -->

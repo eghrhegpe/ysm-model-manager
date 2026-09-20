@@ -919,6 +919,8 @@ export const en: Record<string, string> = {
   "diagnostics.scanningProgress": "⏳ Scanning {cur}/{total} {icon} {label}",
   "diagnostics.configResourceDir": "Please configure the resource directory first",
   "diagnostics.configGameDir": "Please configure the game directory first",
+  "diagnostics.noInstances":
+    "No usable modpack instance found (configure the game directory and install one)",
   "diagnostics.noDups": "No duplicate files",
   "diagnostics.dupSummary":
     "Found {groups} groups of duplicate files ({dups} extra copies total), keep one per group:",

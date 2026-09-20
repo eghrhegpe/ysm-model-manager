@@ -916,6 +916,8 @@ export const ja: Record<string, string> = {
   "diagnostics.scanningProgress": "⏳ {cur}/{total} {icon} {label} をスキャン中",
   "diagnostics.configResourceDir": "リソースディレクトリを先に設定してください",
   "diagnostics.configGameDir": "ゲームディレクトリを先に設定してください",
+  "diagnostics.noInstances":
+    "利用可能な統合パックがありません（ゲームディレクトリの設定と統合パックの導入が必要です）",
   "diagnostics.noDups": "重複ファイルはありません",
   "diagnostics.dupSummary":
     "{groups} グループの重複ファイルを検出（計 {dups} 個の余分なコピー）、各グループから1つを残します：",

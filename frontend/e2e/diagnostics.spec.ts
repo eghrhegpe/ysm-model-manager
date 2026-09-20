@@ -480,7 +480,7 @@ async function readMatrixOut(page: Page): Promise<{
   });
 }
 
-/** 读「取样上限」控件的标签正文：它**不随目标集改义**是被删掉的 syncPerfCountLabel 留下的契约 */
+/** 读上限控件的标签正文（当前标签文案为「最多模型数」）：它**不随目标集改义**是被删掉的 syncPerfCountLabel 留下的契约 */
 async function readMaxLabelText(page: Page): Promise<string> {
   return page.evaluate(() => {
     const root = document.querySelector("app-content")?.shadowRoot;
@@ -489,7 +489,7 @@ async function readMaxLabelText(page: Page): Promise<string> {
   });
 }
 
-/** 读「取样上限」控件的 title：单位（每类 / 全库）差异只许落在这里，不许进标签正文 */
+/** 读上限控件的 title：单位（每类 / 全库）差异只许落在这里，不许进标签正文 */
 async function readMaxLabelTitle(page: Page): Promise<string> {
   return page.evaluate(() => {
     const root = document.querySelector("app-content")?.shadowRoot;
@@ -724,7 +724,7 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
   // ⑦ ADR-262 D3 修订的红线：上限标签**不得随目标集改义**。
   // 旧面把「每类上限」与「全库前 N」压进同一个数字控件，标签只能跟着模式改义
   //（syncPerfCountLabel 即那张账单）；三旋钮正交后该函数已删，本用例就是它的墓碑。
-  test("取样上限标签在三种目标集下逐字相同（改义即回归）", async ({ page }) => {
+  test("上限标签在三种目标集下逐字相同（改义即回归）", async ({ page }) => {
     const texts: string[] = [];
     for (const value of ["", "__all__", "__repo__"]) {
       await setShadowSelect(page, "diag-perf-rtype", value);

@@ -440,5 +440,12 @@ describe("基准模式接线（ADR-278）", () => {
     // 抽样防正则空转：这两条必须落在「可见 single 且已登记目标集维」上
     expect(Object.keys(PERF_UNREAD_TARGETS)).toContain("diag-perf-max");
     expect(Object.keys(PERF_UNREAD_TARGETS)).toContain("diag-perf-order");
+
+    // 反向闸（上轮锐评 F 的可锁子集）：不读登记表里的每个 id 必须是 tpl 里真实控件。
+    // 登记表漂出幽灵 id（控件已删/改名、表忘同步）时，apply 循环 getElementById 拿到 null 静默跳过，
+    // 「可见不被读」的欺骗复活而无人知。登记面自审：幽灵项即红。
+    for (const id of [...Object.keys(PERF_UNREAD_MODES), ...Object.keys(PERF_UNREAD_TARGETS)]) {
+      expect(ids, `不读登记表里的 ${id} 在 tpl 已不存在（幽灵条目，登记面自身漂移）`).toContain(id);
+    }
   });
 });

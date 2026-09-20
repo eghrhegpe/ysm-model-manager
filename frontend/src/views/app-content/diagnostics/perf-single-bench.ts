@@ -190,7 +190,7 @@ function singleBenchReadBaseline(root: ShadowRoot): BenchBaselineOpts {
  * 基准控件只在单模型目标集可用（ADR-262 D8）：Go 侧对 target≠model **明确拒绝**基准参数
  * （基准是单模型概念）。「被禁用」比「勾了却没生效」诚实（后者是被吞参数）。
  *
- * ⚠️ 这里**不再**顺带改上限控件的标签（旧 `syncPerfCountLabel` 已删）：上限一律叫「取样上限」，
+ * ⚠️ 这里**不再**顺带改上限控件的标签（旧 `syncPerfCountLabel` 已删）：标签文案一律叫「最多模型数」（旋钮语义仍是取样上限），
  * 「单位随目标集变」只进 title 提示——「一个数字控件两种含义、标签跟着模式改义」正是本次要清的账。
  */
 export function syncPerfBaselineControls(root: ShadowRoot): void {

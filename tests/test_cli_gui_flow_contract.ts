@@ -21,6 +21,8 @@
  *     并**反向断言**旧契约（all_types / top_largest / syncPerfCountLabel）已消失——残留即回归
  *  7. 扫描引擎对照（scan-bench，ADR-262 D3）：载荷字段名 + 4 个「未参与原因」token 双端锚定，
  *     且前端**以 used 为渲染分叉依据**（未采集不得渲染成 0.00ms）
+ *  8. 控件默认值（3/5/20/50/4）↔ Go flag 默认值、verdict / stage status token 集**双端逐字对齐**
+ *     （上轮锐评：这几处隐式契约无机制保证，改了不跟 → 本节把它钉成 must）
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -761,6 +763,112 @@ for (const key of SCAN_BENCH_I18N_KEYS) {
   must(
     scanBenchUsages.includes(`diagnostics.${key}`),
     `引擎对照文案 ${key} 未被 perf-scan-bench.ts / tpl.ts 引用（加了键却没接线）`,
+  );
+}
+
+// ── 3.7d) 控件默认值 ↔ Go flag 默认值双端对齐（上轮锐评：默认值三处手抄无机制）──────
+// 立因：iterations=3 / max-models=5(单模型)·20(并发) / threshold=50 / workers=4 这几个数，
+// 在 Go fs 默认、tpl value=、前端 ?? "N" fallback 三处各抄一遍。Go 调默认而忘改任一处 →
+// 控件缺席/异常态下按旧值提交，护栏不红（perf_target_set.go 自己把 flag 默认值称"哑弹"，
+// 前端 fallback 是同颗哑弹的镜像副本）。本节把三端钉成一条 must：改了不跟即红。
+// tpl.ts 已在 §3.7 载入为 perfTplTs；前端读取逻辑在 singleCode（含 readIterations/Max/Baseline）。
+const D_ITER = "3";
+const D_MAX = "5";
+const D_CONC_MAX = "20";
+const D_TH = "50";
+const D_WORKERS = "4";
+// Go 侧默认值原文（全在 bench_concurrent.go：iterations / 两次 registerPerfTargetFlags / threshold / workers）
+must(
+  new RegExp(`fs\\.Int\\("iterations",\\s*${D_ITER}\\b`).test(concurrentGo),
+  `Go --iterations 默认值应为 ${D_ITER}（bench_concurrent.go）`,
+);
+must(
+  new RegExp(`registerPerfTargetFlags\\(fs,\\s*perfTargetModel,\\s*${D_MAX}\\b`).test(concurrentGo),
+  `Go single-bench --max-models 默认值应为 ${D_MAX}（bench_concurrent.go）`,
+);
+must(
+  new RegExp(`registerPerfTargetFlags\\(fs,\\s*perfTargetRepo,\\s*${D_CONC_MAX}\\b`).test(concurrentGo),
+  `Go concurrent-bench --max-models 默认值应为 ${D_CONC_MAX}（bench_concurrent.go）`,
+);
+must(
+  new RegExp(`fs\\.Float64\\("threshold",\\s*${D_TH}\\b`).test(concurrentGo),
+  `Go --threshold 默认值应为 ${D_TH}（bench_concurrent.go）`,
+);
+must(
+  new RegExp(`fs\\.Int\\("workers",\\s*${D_WORKERS}\\b`).test(concurrentGo),
+  `Go --workers 默认值应为 ${D_WORKERS}（bench_concurrent.go）`,
+);
+// tpl 侧 value= 初始呈现值（控件在 DOM 里的默认数字）
+must(
+  new RegExp(`id="diag-perf-iter"[^>]*\\bvalue="${D_ITER}"`).test(perfTplTs),
+  `tpl 迭代控件 value 应为 ${D_ITER}（与 Go --iterations 默认同步）`,
+);
+must(
+  new RegExp(`id="diag-perf-max"[^>]*\\bvalue="${D_MAX}"`).test(perfTplTs),
+  `tpl 单模型上限控件 value 应为 ${D_MAX}（与 Go 默认同步）`,
+);
+must(
+  new RegExp(`id="diag-perf-conc-max"[^>]*\\bvalue="${D_CONC_MAX}"`).test(perfTplTs),
+  `tpl 并发上限控件 value 应为 ${D_CONC_MAX}（与 Go concurrent 默认同步）`,
+);
+must(
+  new RegExp(`id="diag-perf-baseline-th"[^>]*\\bvalue="${D_TH}"`).test(perfTplTs),
+  `tpl 阈值控件 value 应为 ${D_TH}（与 Go --threshold 默认同步）`,
+);
+must(
+  new RegExp(`id="diag-perf-conc-workers"[^>]*\\bvalue="${D_WORKERS}"`).test(perfTplTs),
+  `tpl 并发 worker 控件 value 应为 ${D_WORKERS}（与 Go --workers 默认同步）`,
+);
+// 前端 fallback 默认值（控件缺席/异常态 ?? "N" 读到的数）：iter/max/th 各有，workers 走 NaN 拦截无硬编码
+must(
+  singleCode.includes(`?? "${D_ITER}"`),
+  `前端迭代 fallback 应为 ?? "${D_ITER}"（singleBenchReadIterations）`,
+);
+must(
+  singleCode.includes(`?? "${D_MAX}"`),
+  `前端上限 fallback 应为 ?? "${D_MAX}"（singleBenchReadMaxModels）`,
+);
+must(
+  singleCode.includes(`?? "${D_TH}"`),
+  `前端阈值 fallback 应为 ?? "${D_TH}"（singleBenchReadBaseline）`,
+);
+
+// ── 3.7e) verdict / stage status token 集双端逐字对齐（上轮锐评第5条：Go 加 token 前端静默显灰）──
+// 两个判决/分级枚举是前后端跨界 token：Go 产出、前端按 token 查 emoji/配色。
+// 现状：字段名（"verdict"/"status"）已由 §3/§3.5 锁住，但**取值集**没锁 → Go 加一档、前端未跟上，
+// 前端静默落 `?? { icon: "⚪" }`，用户再看不出这档（正是上轮点名的"兜底静默"盲区）。
+/** 取前端某映射表体（const NAME = {...}; 单层，体内无嵌套 };），判 key 是否在其中登记 */
+function metaHas(src, mapName, key) {
+  const blk = src.match(new RegExp(`const ${mapName}[\\s\\S]*?\\};`));
+  return !!blk && new RegExp(`(^|[,{\\s])${key}:`).test(blk[0]);
+}
+// verdict：Go 有 stageVerdict* 常量 → 锚 `= "v"`；前端 BASELINE_VERDICT_META 须有同名键
+const VERDICT_TOKENS = ["regressed", "slower", "faster", "ok", "noise", "new"];
+for (const v of VERDICT_TOKENS) {
+  must(
+    new RegExp(`stageVerdict\\w+ = "${v}"`).test(baselineGo),
+    `Go verdict 常量缺 "${v}"（bench_baseline.go 的 stageVerdict*）`,
+  );
+  must(
+    metaHas(singleTs, "BASELINE_VERDICT_META", v),
+    `前端 BASELINE_VERDICT_META 缺 verdict "${v}"（Go 会静默显灰，token 集漂移）`,
+  );
+}
+// stage status：Go stageStatus() 是裸 switch 无常量集（提常量=动骨架，本轮刻意不做）。
+// 轻量锁：从函数体抽 return "x" 字面量 → 每个都须被前端 STAGE_STATUS_META 映射；
+// 外加 failed（stagesToJSON 的失败旁路，不在 stageStatus 但同属载荷 status 域）。
+const stageFn = concurrentGo.match(/func stageStatus\(ms float64\) string \{[\s\S]*?\n\}/);
+must(!!stageFn, "Go stageStatus 函数体没找到（改了签名/位置会假绿）");
+const STATUS_TOKENS = new Set(
+  (stageFn ? stageFn[0] : "")
+    .match(/return "(\w+)"/g)
+    ?.map((s) => s.replace(/return "|"/g, "")) ?? [],
+);
+STATUS_TOKENS.add("failed");
+for (const st of STATUS_TOKENS) {
+  must(
+    metaHas(singleTs, "STAGE_STATUS_META", st),
+    `前端 STAGE_STATUS_META 缺 stage status "${st}"（Go 会静默显灰，token 集漂移）`,
   );
 }
 

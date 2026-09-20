@@ -619,6 +619,12 @@ invariant_anchors:
   - **存量收敛（maintenance 三文件清零退出基线）**：状态行改 DOM 构建（`statusRow()`/replaceChildren/textContent 自转义，❌ emoji 换 `UI_ICONS.error`）；modal bodyHTML 改 `outerHTML` 拼接（字符串契约与兄弟节点结构双保持）；`_dots`/`_dotTimer` 迁 `CmPgCtx` 闭包 + 双次进锁清孤儿动画；`forceRefreshCommunitySites` 零消费孤儿删除（`clearAllCommunityCache` 已覆盖站点键）。
   - **明拒不做什么**：基线内存量按 ADR-208「改动即顺手收敛」不集中迁；adv-filter 六连 querySelector 收拢、community/ 影子小应用拆包——留给下次触碰/未来 ADR。
   - **验收**：check-layering 绿 / 契约测试 15 用例全过（含 R8 两层）/ maintenance+community 255 用例全绿 / vite build / tsc / biome --write 后复检绿。
+- ✅ **刀㉛ 图标字段的字符串出口收口 + R8 模板闸立法**（2026-09-21，SVG 接入审计，提交 `39691ae76`）：
+  - **病症**：SVG 接入各面板后，图标字段在 innerHTML 模板里被三种口径消费——预构建 SVG 常量（`UI_ICONS.x`）、语义名（要 `resolveIcon`）、数据字形（emoji，要 `esc`）；调用点各写各的，`resolveIcon(x) || esc(x)` 这类局部发明又把 SVG 常量二次转义成字面文本。
+  - **根治（通用化，复用既有 applyIcon 契约）**：新增 `utils/icon/resolve.ts|renderIconHtml(icon)` = `applyIcon` 的**模板串孪生**——三态判别收口一处（含 `<svg` → 透传；语义名 → `resolveIcon`；其余 → `esc`），消费方统一写 `${renderIconHtml(x)}`。顺带修掉既有假渲染：`preview-router.ts` 传的 `icon:"unknown"`、detail-3d 的 `"build"/"avatar"/"voice"` 以前把语义名当字面文本上屏（回归锁 `utils/icon/resolve.test.ts`）。
+  - **同批清零 29 处 innerHTML 模板裸插值**（全部改代码、零 `r8-allow` 豁免）：外部数据（MC 路径、`.litematic` 的 `meta.version`/`minecraftDataVersion`）走 `esc`；数字走 `.toLocaleString()`；预构建 HTML 局部按命名约定改名（`extra`→`extraHtml`、`items`→`itemsHtml`、`overflow`→`overflowHtml`、`detail`→`detailHtml`、`icon`→`iconSvg`）；modal 三件套取消按钮补 `esc(cancel)`。
+  - **闸法**：check-redlines R8 补「模板插值卫生」子规则（扫描核 `scripts/_lib/innerhtml-hygiene.ts` + 契约测试 34 断言），从「只抓裸变量赋值」升级为覆盖模板串主力形态。⚠️ 与 check-layering R8（features 禁 HTML 字面量）**同号异策**，勿混。
+  - **原生 `<option>` 是纯文本内容模型（本次未动，留判决）**：`<option>`+`UI_ICONS` 写法全仓约 15 处（`app-content/settings/tpl-settings*.ts`、`app-tree/tpl-batch-rename.ts` 等），SVG 恒显字面标记（`menu/env.ts` 早有实证注释）。两条路：**A** 删掉 option 内图标（零视觉回归——它们从未渲染出来过）；**B** 设置页原生 `<select>` 迁自定义 dd-menu（真图标，工作量大）。待用户拍板。
 
 
 ## 相关

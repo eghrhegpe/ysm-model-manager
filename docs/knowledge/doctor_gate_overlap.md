@@ -66,3 +66,9 @@ status: active
 **2026-08-14 二次治本（已解决）**：并行工作区 `f259643c` 拆出 context-menu-shared.ts 破除循环依赖（check-circular 归零）；本会话清理死代码（提交 `feb00e05`）——删除 4 处死 re-export、8 处去 export、debug-render↔cleanup-helper dispose 去重、dnd-collector.mergeDropFiles 删除，`check-deadcode` errors 归零，全量 doctor 36/36。
 
 **2026-08-26 变更域过滤（已实施）**：check-redlines 接受 `--files <换行分隔文件列表>`（pre-push-gate 在文件驱动/push 模式透传本次变更文件），仅把「变更文件内」的违规计入新增阻断——避免只改 Go/文档时被仓库内其他文件（如未提交 frontend）存量新增红线卡住。`--all`/`--docs` 不传 `--files`，保持全库基线比对。键过滤逻辑抽为可测纯函数 `redlineFilterKeysByChangedFiles`，契约测试 `tests/test_redlines_changed_files.ts` 锁定。
+
+**2026-09-21 R8 补模板插值盲区（已实施，提交 `39691ae76`）**：原 R8 正则 `innerHTML\s*=\s*[^'"`]` 只盯「RHS 是裸变量」，**以反引号开头的模板串恒不命中**——而模板插值恰是全仓 HTML 拼接主力形态（SVG 接入审计实证：`app-sidebar/events.ts` 把外部 MC 路径裸插进 innerHTML 模板，整道闸静默放行）。现 R8 拆两条子规则：`innerHTML concat (non-literal)`（原正则）+ `innerHTML template interpolation hygiene`（新增）。
+- **扫描核** = `scripts/_lib/innerhtml-hygiene.ts`（纯函数、零依赖，导出 `isTrustedExpr` / `scanSource`）：提取全部顶层 `${...}` 插值，按可信源白名单判定（`UI_ICONS`/`ICONS` 常量、`t()`/`tOf()`、`esc()` 系、`resolveIcon()` 系图标产物、`render*`/`build*`/`*HTML()` builder、`*Html`/`*Svg`/`*CSS` 命名约定、字面量三元、`toLocaleString()` 数值文本）。
+- **豁免**：行注 `// r8-allow: <理由>`（赋值行前 4 行 ~ 模板结束行 +1 窗口内）——本轮实测**零豁免**即把全仓 29 处破口清零，故当前无任何 marker 依赖。
+- **契约测试** `tests/test_innerhtml_hygiene.ts`（34 断言：非空转 + 游标泄漏回归 + 白名单形态 + 豁免 + 嵌套模板出口收口）。
+- **两条踩坑（防重踩）**：① 表达式分段器「跳过字符串/模板后必须精确落到下一未读字符」——初版漏普通字符收尾，条件段被切成空串后 `slice(1)` 错位，`a !== 1 ? \`<p>${m.count || 0}</p>\` : ""` 这类模板链被误判可信（假阴性）；② 嵌套模板「内层插值全可信即短路」必须再加一层「骨架无顶层运算符（`??`/`||`/`&&`/`? :`/`+`）」——否则 `rawData ?? \`安全模板\`` 的左侧照样被注入（假阳性放行）。

@@ -9,6 +9,7 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { FogCapability, FogMode } from "./fog-capability.ts";
 
 const FOG_PARAMS_GROUP: LocaleKey = "preview.fogGroupParams";
@@ -58,9 +59,7 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       // 密度仅指数雾（FogExp2）读——线性雾下隐藏，避免拖了没反应的死控件
       visibleWhen: (s) => s["env.fogMode"] === "exp2",
       control: {
-        min: 0.001,
-        max: 0.1,
-        step: 0.001,
+        ...getParamRange("fogDensity"),
         get: () => cap.getDensity(),
         set: (v) => cap.setDensity(v as number),
       },
@@ -72,10 +71,7 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       // 近距仅线性雾（THREE.Fog）读——指数雾下隐藏
       visibleWhen: (s) => s["env.fogMode"] === "linear",
       control: {
-        min: 0,
-        max: 500,
-        step: 1,
-        unit: "",
+        ...getParamRange("fogNear"),
         get: () => cap.getNear(),
         set: (v) => cap.setLinearRange(v as number, undefined),
       },
@@ -87,10 +83,7 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       // 远距仅线性雾读——指数雾下隐藏
       visibleWhen: (s) => s["env.fogMode"] === "linear",
       control: {
-        min: 10,
-        max: 2000,
-        step: 10,
-        unit: "",
+        ...getParamRange("fogFar"),
         get: () => cap.getFar(),
         set: (v) => cap.setLinearRange(undefined, v as number),
       },

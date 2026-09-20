@@ -250,9 +250,24 @@ export const ENV_STATE_SCHEMA = {
     group: "fog",
   },
   fogColor: { type: "number", default: 0xaac4e8, group: "fog" },
-  fogDensity: { type: "number", default: 0.015, group: "fog" },
-  fogNear: { type: "number", default: 10, group: "fog" },
-  fogFar: { type: "number", default: 200, group: "fog" },
+  fogDensity: {
+    type: "number",
+    default: 0.015,
+    group: "fog",
+    range: { min: 0.001, max: 0.1, step: 0.001 },
+  },
+  fogNear: {
+    type: "number",
+    default: 10,
+    group: "fog",
+    range: { min: 0, max: 500, step: 1 },
+  },
+  fogFar: {
+    type: "number",
+    default: 200,
+    group: "fog",
+    range: { min: 10, max: 2000, step: 10 },
+  },
 
   // --- Shadow ---
   shadowEnabled: { type: "boolean", default: true, group: "shadow" },

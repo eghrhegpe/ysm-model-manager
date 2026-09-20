@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { FogCapability } from "./fog-capability.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
@@ -288,6 +289,25 @@ describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
     const density = folder.children!.find((c) => c.id === "fog-density")!;
     density.control!.set!(0.03);
     expect(cap.getDensity()).toBe(0.03);
+  });
+
+  it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
+    const cap = newCap();
+    const children = cap.getMenuNodes()[1]!.children!;
+    const pairs = [
+      ["fog-density", "fogDensity"],
+      ["fog-near", "fogNear"],
+      ["fog-far", "fogFar"],
+    ] as const;
+    for (const [id, key] of pairs) {
+      const node = children.find((c) => c.id === id);
+      expect(node, `缺菜单节点 ${id}`).toBeDefined();
+      const c = node!.control!;
+      const range = getParamRange(key);
+      expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
+        range,
+      );
+    }
   });
 
   it("mode select 选项带 labelKey（i18n 三语，不硬编码中文）", () => {

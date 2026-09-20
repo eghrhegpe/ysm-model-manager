@@ -401,11 +401,15 @@ auto_fields:
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
     - LegChain
+    - LIGHT_ENV_KEYS
+    - LIGHT_SLOTS
     - LightCapability
     - lightDirToPosition
+    - lightEnvKeys
     - LightInstanceParams
     - LightKey
     - LightParams
+    - LightSlot
     - LightType
     - LipSyncCallback
     - LipSyncOptions
@@ -614,6 +618,7 @@ auto_fields:
     - RawYsmAuthor
     - rcMasterToggleNode
     - ReadFileBytes
+    - readLightParams
     - readPmxStats
     - readVrmMeta
     - rebuildDebug
@@ -848,6 +853,7 @@ auto_fields:
     - VmdHumanoidRig
     - VmdRetargetOptions
     - VmdRetargetResult
+    - VOLUMETRIC_ENV_KEYS
     - VolumetricCone
     - VolumetricParams
     - VrmAdapterDeps

@@ -6,7 +6,7 @@
 // 职责拆分（ADR-177，2026-09-04）：
 //   - 灯光对象管理（key/fill/rim/ambient/spotlight + 阴影协作）保留本类（核心职责①）
 //   - 体积光锥体② → light-cone.ts（VolumetricCone）
-//   - 预设数据③ → light-presets.ts（经 export * 重导出，外部 import 零改动）
+//   - 预设数据③ → light-presets.ts（ADR-281 后不再经本文件 `export *` 转发，消费方直引具体叶）
 //   - 嵌套 ↔ 扁平参数映射 flattenLightParams → light-presets.ts（P3 下沉：纯映射样板，不触 cap 状态）
 //   - 菜单 UI 定义④ → light-controls.ts（buildLightNodes）
 //   - 状态持久化⑤ 保留本类（触达大量私有字段，顺序语义敏感）
@@ -38,8 +38,14 @@ import { buildLightPersistPayload, restoreLightParams } from "./light-persist.ts
 import {
   type DeepPartial,
   flattenLightParams,
+  LIGHT_ENV_KEYS,
+  LIGHT_SLOTS,
   type LightInstanceParams,
   type LightParams,
+  type LightSlot,
+  lightEnvKeys,
+  readLightParams as readLightParamsFrom,
+  VOLUMETRIC_ENV_KEYS,
   type VolumetricParams,
 } from "./light-presets.ts";
 import {
@@ -50,9 +56,6 @@ import {
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
 
-/** 本文件导出的全部参数类型 / 预设数据均来自 light-presets.ts，重导出以维持外部 import 零改动 */
-export * from "./light-presets.ts";
-
 /** 方位角 + 仰角 → 3D 位置（radius 为单位长度；预览灯光与截图渲染共用同一套公式——光系统统一性） */
 export function lightDirToPosition(p: LightInstanceParams, radius: number): THREE.Vector3 {
   const az = THREE.MathUtils.degToRad(p.azimuth);
@@ -62,9 +65,11 @@ export function lightDirToPosition(p: LightInstanceParams, radius: number): THRE
   return new THREE.Vector3(h * Math.sin(az), y, h * Math.cos(az));
 }
 
-/** three.js 物理光照下 SpotLight 距离衰减（与 three 的 getDistanceAttenuation 逐字对齐，
- *  r165+ 已移除 useLegacyLights，SpotLight.intensity 单位是坎德拉，到达处照度 = intensity × falloff）。
- *  lightDistance 处 falloff = 1/pow(d, decay) × cutoffWindow(distance, cutoff)。
+/** three.js 物理光照下 SpotLight 距离衰减。
+ *  ⚠️ 这是**手抄快照**，非 three 导出 API：对齐 three r165+ 的
+ *  `getDistanceAttenuation`（r165 已移除 useLegacyLights，SpotLight.intensity 单位是坎德拉）。
+ *  three 历史上改过该公式——**升级 three 时必须复核本函数**，否则预览照度与实际渲染静默分叉。
+ *  falloff = 1/pow(d, decay) × cutoffWindow(distance, cutoff)。
  *  用途：把 UI 暴露的「到达目标处照度(lx)」反推回需设的 candela，使聚光灯强度不随目标高度漂移。 */
 export function spotDistanceAttenuation(
   lightDistance: number,
@@ -90,25 +95,10 @@ export function attenuateAmbientForSky(intensity: number, skyEnvOn: boolean): nu
 
 // ======== ADR-196：嵌套 ↔ 扁平映射 ========
 
-/** 从 envState 读取方向灯参数 */
-/** 从 envState 读取单盏灯的完整参数（含 type） */
-function readLightParams(
-  which: "key" | "fill" | "rim",
-  state: EnvState = envState,
-): LightInstanceParams {
-  const prefix = `light${which.charAt(0).toUpperCase()}${which.slice(1)}` as const;
-  return {
-    type: state[`${prefix}Type` as keyof EnvState] as LightInstanceParams["type"],
-    enabled: state[`${prefix}Enabled` as keyof EnvState] as boolean,
-    color: state[`${prefix}Color` as keyof EnvState] as number,
-    intensity: state[`${prefix}Intensity` as keyof EnvState] as number,
-    azimuth: state[`${prefix}Azimuth` as keyof EnvState] as number,
-    elevation: state[`${prefix}Elevation` as keyof EnvState] as number,
-    angle: state[`${prefix}Angle` as keyof EnvState] as number,
-    penumbra: state[`${prefix}Penumbra` as keyof EnvState] as number,
-    distance: state[`${prefix}Distance` as keyof EnvState] as number,
-    decay: state[`${prefix}Decay` as keyof EnvState] as number,
-  };
+/** 从 envState 读取单盏灯参数（缺省读单例 envState）。
+ *  真值映射体在 light-presets.readLightParams——本包装只为让本模块内调用省掉 envState 形参。 */
+function readLightParams(which: LightSlot, state: EnvState = envState): LightInstanceParams {
+  return readLightParamsFrom(state, which);
 }
 
 /** 从 envState 读取体积光参数 */
@@ -138,27 +128,15 @@ function getParamsFromEnvState(state: EnvState = envState): LightParams {
 }
 
 // ======== 变更分组（callback 分派用） ========
-// [light-type-switch] 三盏灯结构统一：每盏灯的变更集 = 全部字段。
+// [light-type-switch] 三盏灯结构统一：每盏灯的变更集 = 该槽位的全部 envState 键，
+// 由 light-presets 的 FLATTEN_MAP 派生（lightEnvKeys）——新增字段不再需同步维护本表。
 // 灯内部按字段决定「重建灯对象」（type 变化）还是「原地更新」。
 
-const LIGHT_FIELDS = [
-  "Type",
-  "Enabled",
-  "Color",
-  "Intensity",
-  "Azimuth",
-  "Elevation",
-  "Angle",
-  "Penumbra",
-  "Distance",
-  "Decay",
-] as const;
+/** 三槽位的通用别名（本模块旧名，语义同 LightSlot） */
+export type LightKey = LightSlot;
 
-export type LightKey = "key" | "fill" | "rim";
-
-function lightChangeSet(which: LightKey): Set<string> {
-  const prefix = `light${which.charAt(0).toUpperCase()}${which.slice(1)}`;
-  return new Set(LIGHT_FIELDS.map((f) => `${prefix}${f}`));
+function lightChangeSet(which: LightSlot): Set<string> {
+  return new Set(lightEnvKeys(which));
 }
 
 const KEY_CHANGES = lightChangeSet("key");
@@ -236,9 +214,6 @@ export class LightCapability implements SceneCapability {
 
   // 体积光锥（ADR-177：实现下沉 VolumetricCone，本类仅委派）
   private cone: VolumetricCone;
-  /** 射束方向暂存（世界，光源 → 靶点）——锥体朝向锚；避免各处调用各分配一个 Vector3。
-   *  VolumetricCone 内部立即拷贝，外部不得长期持有。 */
-  private spotDir = new THREE.Vector3(0, -1, 0);
 
   // [light-gizmo] 每盏灯一个 helper（类型相关的线框）——类型切换时重建
   private keyHelper: THREE.Object3D | null = null;
@@ -339,7 +314,11 @@ export class LightCapability implements SceneCapability {
       // 快路径：光源参数变了只刷 uniforms；位置变了再补一次 transform 同步
       const spot = this.getSpotLightForCone();
       if (spot) {
-        if (coneMove) this.cone.syncPosition(spot.light.position, this.getSpotDir(spot.light));
+        if (coneMove) {
+          const dir = new THREE.Vector3();
+          this.getSpotDir(spot.light, dir);
+          this.cone.syncPosition(spot.light.position, dir);
+        }
         if (lightTouched || hasAny(changed, VOL_PARAM_CHANGES)) {
           this.cone.updateUniforms(readLightParams(spot.which, state), readVolParams(state));
         }
@@ -558,7 +537,7 @@ export class LightCapability implements SceneCapability {
     this.target.copy(v);
     this.spotTarget.position.copy(this.target);
     // 三盏灯位置基于 target 重算（方位角/仰角不变），强度/朝向同步
-    for (const which of ["key", "fill", "rim"] as LightKey[]) {
+    for (const which of LIGHT_SLOTS) {
       const light = this.getLight(which);
       const p = readLightParams(which);
       this.applyLightParams(light, p);
@@ -579,7 +558,7 @@ export class LightCapability implements SceneCapability {
 
   /** 返回第一盏启用的 type=spot 灯（体积光锥驱动源）+ 其槽位，无则 null */
   getSpotLightForCone(): { light: THREE.SpotLight; which: LightKey } | null {
-    for (const which of ["key", "fill", "rim"] as LightKey[]) {
+    for (const which of LIGHT_SLOTS) {
       const light = this.getLight(which);
       if (light instanceof THREE.SpotLight && light.visible) return { light, which };
     }
@@ -594,7 +573,7 @@ export class LightCapability implements SceneCapability {
   setTargetHeight(h: number): void {
     this.targetHeight = h;
     // 高度变化只影响 spot 灯到目标的物理距离 → 重算 candela 补偿 + 锥体定位
-    for (const which of ["key", "fill", "rim"] as LightKey[]) {
+    for (const which of LIGHT_SLOTS) {
       const light = this.getLight(which);
       const p = readLightParams(which);
       this.applyLightParams(light, p);
@@ -614,44 +593,9 @@ export class LightCapability implements SceneCapability {
     // ADR-196：统一数据源 MODEL_DEFAULTS，表驱动挑选 light 相关键写入 envState
     // ambient 排除（测试契约「ambient 不在合并范围，保留」）：键表刻意不含
     // lightAmbientColor/Intensity，切模型不静默重置用户 ambient 微调。
-    const picked = pickModelDefaultFields(modelType, [
-      "lightKeyEnabled",
-      "lightKeyColor",
-      "lightKeyIntensity",
-      "lightKeyAzimuth",
-      "lightKeyElevation",
-      "lightFillEnabled",
-      "lightFillColor",
-      "lightFillIntensity",
-      "lightFillAzimuth",
-      "lightFillElevation",
-      "lightRimEnabled",
-      "lightRimColor",
-      "lightRimIntensity",
-      "lightRimAzimuth",
-      "lightRimElevation",
-      "lightKeyType",
-      "lightKeyAngle",
-      "lightKeyPenumbra",
-      "lightKeyDistance",
-      "lightKeyDecay",
-      "lightFillType",
-      "lightFillAngle",
-      "lightFillPenumbra",
-      "lightFillDistance",
-      "lightFillDecay",
-      "lightRimType",
-      "lightRimAngle",
-      "lightRimPenumbra",
-      "lightRimDistance",
-      "lightRimDecay",
-      "lightVolumetricEnabled",
-      "lightVolumetricOpacity",
-      "lightVolumetricFogPower",
-      "lightVolumetricEdgeFade",
-      "lightVolumetricBaseStrength",
-      "lightVolumetricTipStrength",
-    ]);
+    // 灯三槽位 + 体积光的 envState 键均由 FLATTEN_MAP 派生（含 type 与 spot 参数）；
+    // 新增灯光字段自动进挑参范围，不再手拄 36 键。
+    const picked = pickModelDefaultFields(modelType, [...LIGHT_ENV_KEYS, ...VOLUMETRIC_ENV_KEYS]);
     if (Object.keys(picked).length > 0) {
       // source 双轨：自动套模型预设走 "auto-model"（与 sky/fog/shadow 同语义，
       // 后续 auto-atmosphere 可再覆盖——写 "manual" 会让预设永久压制昼夜循环，
@@ -674,11 +618,12 @@ export class LightCapability implements SceneCapability {
     }
     const p = readLightParams(spot.which, state);
     const pos = spot.light.position;
-    const dir = this.getSpotDir(spot.light);
+    const dir = new THREE.Vector3();
+    this.getSpotDir(spot.light, dir);
     this.cone.rebuild(this.targetHeight, p, readVolParams(state), pos, dir);
     // rebuild 产出的新锥组默认脱离场景——volume 开启且有锥组时挂载
     if (this.cone.hasGroup() && !this.cone.isMounted()) {
-      this.cone.attach(pos, this.spotDir);
+      this.cone.attach(pos, dir);
     }
   }
   /** 单盏灯参数更新（[light-type-switch] 菜单统一设置栏调用） */
@@ -777,9 +722,14 @@ export class LightCapability implements SceneCapability {
     }
     // ② 用户显式保存的灯开关 + ②.b 全量参数恢复（纯数据映射，下沉 light-persist.ts；
     //    顺序敏感：必须在预设套用之后——后恢复的用户值优先于预设，ADR-126 P5 同口径）
+    //    ⚠️ 重入提示：本调用内部会 setEnvState → **同步**触发 onEnvChanged，此时 Three 灯
+    //    对象还是旧类型，callback 里的 syncLight 会先拿新 envState 重建一次；
+    //    回到③后同一盏灯又跑一遍（第二遍走「类型已对上 → 原地更新」分支）。幂等→不是
+    //    bug，但新增字段时别误以为③是唯一同步入口。（收口做法：loadState 期间挂起 callback，
+    //    末尾统一应用一次；见 ADR-281 已知遗留）
     restoreLightParams(state);
     // ③ 类型可能因恢复而变化（旧存档迁移：key 灯 → spot）→ 逐盏重建 Three 对象
-    for (const which of ["key", "fill", "rim"] as LightKey[]) {
+    for (const which of LIGHT_SLOTS) {
       this.syncLight(which, envState);
     }
     // ④ 体积光锥按恢复后的 spot/volumetric 双开态重建 + 挂载
@@ -790,8 +740,11 @@ export class LightCapability implements SceneCapability {
     this.mountHelper("rim");
   }
 
-  /** sky 环境光开关变化时重算 ambient（防 ×0.5 衰减过期——sky.setEnvironmentEnabled 侧调；
-   *  也由 callback 复用——ambient 应用单一出口，预览/截图同构）。
+  /** sky 环境光开关变化时重算 ambient（防 ×0.5 衰减过期——sky.setEnvironmentEnabled 侧调），
+   *  也由 env callback 复用——ambient 应用单一出口，预览/截图同构。
+   *  ⚠️ 本方法在 onEnvChanged 里**无条件**调用（不按 changed 集过滤）：sky 环境开关是 cap 私有态
+   *  （非 envState 派生），sky 变更不经 light 组 callback，故灯组任何一次回调都可能是「补刷
+   *  ambient」的唯一时机。单次两行赋值成本可忽略，换取「不会漏刷」。
    *  sky 环境开关经构造注入的查询器读取（全局版 isSkyEnvironmentOn 在组合根 registry）；
    *  让位系数/公式走 attenuateAmbientForSky 单源 */
   refreshAmbientFromSky(state: EnvState = envState): void {
@@ -800,12 +753,13 @@ export class LightCapability implements SceneCapability {
     this.ambientLight.intensity = attenuateAmbientForSky(state.lightAmbientIntensity, skyEnvOn);
   }
 
-  /** 射束方向（世界，光源 → 靶点）——体积光锥朝向锚。
+  /** 射束方向（世界，光源 → 靶点）——体积光锥朝向锚，结果写入调用方拥有的 `out`。
    *  旧实现把「恒垂直向下」写死进锥体几何，聚光灯一旦可倾斜锥体即与真实光锥脱钩；
    *  统一从 spot 灯/靶点算方向后，默认俯视灯下恒为 (0,-1,0)（旧行为不变），倾斜灯自动跟随。
-   *  返回内部暂存向量（未归一化；VolumetricCone 内部归一化并对退化情形兜底）。 */
-  private getSpotDir(light: THREE.SpotLight): THREE.Vector3 {
-    return this.spotDir.copy(this.spotTarget.position).sub(light.position);
+   *  显式 `out` 形参（而非返回内部暂存向量）：调用方拥有结果生命周期，
+   *  消除「外部长期持有即串改」的隐式契约；未归一化，VolumetricCone 内部归一化。 */
+  private getSpotDir(light: THREE.SpotLight, out: THREE.Vector3): void {
+    out.copy(this.spotTarget.position).sub(light.position);
   }
 
   private detach(): void {

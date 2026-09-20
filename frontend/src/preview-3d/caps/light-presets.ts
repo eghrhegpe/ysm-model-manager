@@ -1,11 +1,16 @@
 // ===== LightCapability 预设层（ADR-177 拆分：职责③数据面）=====
 // 从 light-capability.ts 抽离：参数类型、默认值、模型类别预设、合并函数。
-// 行为与原实现逐字节一致；light-capability.ts 经 `export *` 重导出本文件全部符号，
-// 外部 import（screenshot-lights.ts 的 DirectionalLightParams）零改动。
+// 行为与原实现逐字节一致。
+// [ADR-281] 本文件是灯光字段全集（LightInstanceParams 10 字段 × key/fill/rim）的**唯一真相源**：
+//   FLATTEN_MAP 声明的嵌套→扁平映射既有 `satisfies` 锁死键拼写，又派生出
+//   lightEnvKeys / LIGHT_ENV_KEYS / VOLUMETRIC_ENV_KEYS / readLightParams——
+//   变更集、预设挑参、读参数全由它计算，不再各自手抄（新增字段只改本文件 + 接口）。
+// 曾经 light-capability.ts 用 `export * from` 重导出本文件（ADR-177 拆分期的兼容垫层），
+// 该转发桶已删：消费方一律直接 import 本文件，同一符号不再两处合法入口。
 // P3 下沉（对齐 P1 sun-beams.ts / ADR-177 light-cone.ts 拆出先例）：纯参数映射样板
 // flattenLightParams（嵌套 DeepPartial<LightParams> → 扁平 Partial<EnvState>）自
 // light-capability.ts 下沉至本层——纯函数、不触达任何 cap 私有状态，正文与注释逐字
-// 等价保留；light-capability.ts 的 `export *` 重导出覆盖新符号，外部 import 仍零改动。
+// 等价保留。
 
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 
@@ -193,6 +198,42 @@ const FLATTEN_MAP = {
 } as const satisfies {
   [G in LightGroupKey]: { [F in keyof LightParams[G]]-?: keyof EnvState };
 };
+
+/** 灯光三槽位（key/fill/rim）——与 ambient/volumetric 的单例参数面区分：
+ *  只有这三者是「可切换类型的灯实例」，故灯对象管理 / 菜单 / 持久化 / 变更集共用此枚举。 */
+export const LIGHT_SLOTS = ["key", "fill", "rim"] as const;
+export type LightSlot = (typeof LIGHT_SLOTS)[number];
+
+/** 槽位 → 该槽位全部 envState 键（由 FLATTEN_MAP 派生，无手抄副本）。 */
+export function lightEnvKeys(which: LightSlot): (keyof EnvState)[] {
+  return Object.values(FLATTEN_MAP[which]);
+}
+
+/** 三盏灯全部 envState 键（预设挑参范围：含 type 与 spot 参数，不含 ambient） */
+export const LIGHT_ENV_KEYS: (keyof EnvState)[] = LIGHT_SLOTS.flatMap((w) => lightEnvKeys(w));
+
+/** 体积光全部 envState 键（同由 FLATTEN_MAP 派生） */
+export const VOLUMETRIC_ENV_KEYS: (keyof EnvState)[] = Object.values(FLATTEN_MAP.volumetric);
+
+/** envState → 单盏灯参数（flattenLightParams 的逆方向）。
+ *  [light-type-switch] 字段名逐个取自 FLATTEN_MAP——键拼写由 `satisfies` 锁死、值类型由返回
+ *  类型 `LightInstanceParams` 反向校验：漏读 / 读错键 / 类型不符任一即编译报错。
+ *  取代旧实现 `${prefix}${X}` 拼串 + 两层 `as`（拼串键天然不是 keyof，类型系统全程缺席）。 */
+export function readLightParams(state: EnvState, which: LightSlot): LightInstanceParams {
+  const m = FLATTEN_MAP[which];
+  return {
+    type: state[m.type],
+    enabled: state[m.enabled],
+    color: state[m.color],
+    intensity: state[m.intensity],
+    azimuth: state[m.azimuth],
+    elevation: state[m.elevation],
+    angle: state[m.angle],
+    penumbra: state[m.penumbra],
+    distance: state[m.distance],
+    decay: state[m.decay],
+  };
+}
 
 export function flattenLightParams(p: DeepPartial<LightParams>): Partial<EnvState> {
   const out: Record<string, unknown> = {};

@@ -8,6 +8,7 @@
 
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import type { LightInstanceParams } from "./light-presets.ts";
 import { restoreFields } from "./scene-capability.ts";
 
 /* ============ saveState：envState → 持久化嵌套结构（纯读） ============ */
@@ -85,7 +86,10 @@ const LIGHT_FIELDS = {
   penumbra: ["Penumbra", "number"],
   distance: ["Distance", "number"],
   decay: ["Decay", "number"],
-} as const satisfies Record<string, readonly [string, "string" | "number" | "boolean"]>;
+} as const satisfies Record<
+  keyof LightInstanceParams,
+  readonly [string, "string" | "number" | "boolean"]
+>;
 
 type LightFieldKey = keyof typeof LIGHT_FIELDS;
 

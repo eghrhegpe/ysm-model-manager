@@ -19,7 +19,8 @@ import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import type { LightCapability, LightKey, LightType } from "./light-capability.ts";
+import type { LightCapability, LightKey } from "./light-capability.ts";
+import type { LightType } from "./light-presets.ts";
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
 const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string; labelKey?: LocaleKey }> = [

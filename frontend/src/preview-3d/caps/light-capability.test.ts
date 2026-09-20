@@ -5,12 +5,11 @@
 // 「聚光灯」= 把某盏灯（默认 key）的 type 设为 "spot"，体积光锥由第一盏启用的 spot 灯驱动。
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
+import { LightCapability, spotDistanceAttenuation } from "./light-capability.ts";
 import {
-  LightCapability,
   DEFAULT_LIGHT_PARAMS,
-  spotDistanceAttenuation,
   type LightInstanceParams,
-} from "./light-capability.ts";
+} from "./light-presets.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";

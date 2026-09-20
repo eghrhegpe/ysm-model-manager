@@ -287,9 +287,10 @@ export const ORPHAN_EXEMPT_RULES = [
     reason: "ADR-196 env-state 统一数据源 refactor 中间态",
   },
   // 原 deepMergeLightParams「ADR-196 refactor 中间态」豁免已于 2026-09-11 删除：
-  // 该符号经 light-capability.ts 的 `export * from "./light-presets.ts"` 转发消费，
+  // 当时该符号经 light-capability.ts 的 `export * from "./light-presets.ts"` 转发消费，
   // 属检测器 export * 漏检期的遮蔽规则；漏检修复后它不再是孤儿，豁免为僵尸规则
   // （契约测试「定期清理过期规则」要求：规则超期 → 要么重构完成删规则，要么确认永久产物）。
+  // 注：该转发桶已于 ADR-281 删除（消费方直引 light-presets.ts），本段仅存历史因果。
 ];
 
 /** 简化 glob 匹配：** = 任意（含 /）跨目录，* = 不含 /；其余正则特殊字符转义。 */

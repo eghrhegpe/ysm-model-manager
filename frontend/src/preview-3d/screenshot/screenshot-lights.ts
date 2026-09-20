@@ -4,10 +4,8 @@
 //
 // 从预览 LightCapability 提取截图灯光（仅 light cap 缺失才回退标准灯——三点全关是用户
 // 刻意的暗场景，截图必须保持暗——[doc:adr-126-p5] 截图灯光割裂修复：所见即所得）。
-import {
-  attenuateAmbientForSky,
-  type DirectionalLightParams,
-} from "@/preview-3d/caps/light-capability.ts";
+import { attenuateAmbientForSky } from "@/preview-3d/caps/light-capability.ts";
+import type { LightInstanceParams } from "@/preview-3d/caps/light-presets.ts";
 import {
   isSkyEnvironmentOn,
   sceneCapabilityRegistry,
@@ -20,9 +18,9 @@ export interface ScreenshotLights {
   ambient: { color: number; intensity: number };
   /** 灯光定位半径（预览 LightCapability.getTargetHeight()） */
   radius: number;
-  key: DirectionalLightParams;
-  fill: DirectionalLightParams;
-  rim: DirectionalLightParams;
+  key: LightInstanceParams;
+  fill: LightInstanceParams;
+  rim: LightInstanceParams;
 }
 
 /** 从预览 LightCapability 提取截图灯光；cap 缺失 → undefined（渲染方回退标准灯） */

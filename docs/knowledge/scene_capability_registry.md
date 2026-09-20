@@ -100,11 +100,15 @@ auto_fields:
     - LEGACY_CANVAS_PATTERNS
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
+    - LIGHT_ENV_KEYS
+    - LIGHT_SLOTS
     - LightCapability
     - lightDirToPosition
+    - lightEnvKeys
     - LightInstanceParams
     - LightKey
     - LightParams
+    - LightSlot
     - LightType
     - lowFreqMask
     - luminanceHistogram
@@ -127,6 +131,7 @@ auto_fields:
     - PostprocessingParams
     - PP_PARAMS_TO_ENV
     - rcMasterToggleNode
+    - readLightParams
     - REFLECTION_MODES
     - ReflectionMode
     - ReflectorCapability
@@ -163,6 +168,7 @@ auto_fields:
     - TONE_MAPPING_KEYS
     - valueNoise2
     - valueNoise4D
+    - VOLUMETRIC_ENV_KEYS
     - VolumetricCone
     - VolumetricParams
     - WATER_MODES

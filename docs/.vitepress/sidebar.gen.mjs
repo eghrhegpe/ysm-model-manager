@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-281：灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化",
+        "link": "/adr/ADR-281-flatten-map"
+      },
+      {
         "text": "ADR-280：灯光类型切换：三灯统一实例（key/fill/rim 各可 directional/point/spot）",
         "link": "/adr/ADR-280-key-fill-rim-directional-point-spot"
       },

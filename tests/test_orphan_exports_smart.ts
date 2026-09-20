@@ -167,8 +167,8 @@ assert.equal(
 
 // ADR-196 env-state 暂存应该豁免 4 个（getStateValue / setStateValue / getPresetKeys / getEnvCallbackCount）
 // 2026-09-11：原第 5 个 deepMergeLightParams 退出——检测器修复 export * 通配转发漏检后，
-// 该符号被证明是活的（经 light-capability.ts 的 `export * from "./light-presets.ts"` 转发消费），
-// 其 ADR-196 豁免规则随之删除（僵尸规则清理，契约测试自身要求的「定期过期」）。
+// 该符号被证明是活的（当时经 light-capability.ts 的 `export * from "./light-presets.ts"` 转发消费；
+// 该桶已于 ADR-281 删除），其 ADR-196 豁免规则随之删除（僵尸规则清理）。
 const adr196Count = exempted.filter(
   (e) =>
     globMatch("get*Value", e.symbol) ||

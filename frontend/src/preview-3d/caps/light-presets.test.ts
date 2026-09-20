@@ -3,7 +3,17 @@
 // 目标键串位）+ undefined 不写出守卫（仅拷传入子集，缺字段不出现在输出）。
 // 表驱动重构（FLATTEN_MAP）的行为基线，实现换法不变契约。
 import { describe, it, expect } from "vitest";
-import { flattenLightParams, type LightParams } from "./light-presets.ts";
+import {
+  flattenLightParams,
+  LIGHT_ENV_KEYS,
+  LIGHT_SLOTS,
+  type LightInstanceParams,
+  type LightParams,
+  lightEnvKeys,
+  readLightParams,
+  VOLUMETRIC_ENV_KEYS,
+} from "./light-presets.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 
 describe("flattenLightParams 映射契约", () => {
   it("全量输入：30 条源字段各归其扁平 EnvState 键", () => {
@@ -89,5 +99,150 @@ describe("flattenLightParams 映射契约", () => {
     expect(out.lightKeyIntensity).toBe(0);
     expect("lightKeyEnabled" in out).toBe(true);
     expect("lightKeyIntensity" in out).toBe(true);
+  });
+});
+
+// ===== [ADR-281] 灯光字段全集单一真相源（FLATTEN_MAP 派生） =====
+// 旧状：同一 10 字段集散在 5 处（FLATTEN_MAP / 变更集 / 预设挑参 / 持久化 / readLightParams），
+// 只有 FLATTEN_MAP 有 `satisfies` 锁。此处锁死「其余四处均由它派生」的契约。
+describe("灯光字段全集单一真相源（FLATTEN_MAP 派生）", () => {
+  /** 每个槽位的字段全集（与 LightInstanceParams 同构） */
+  const FIELDS_PER_SLOT = [
+    "type",
+    "enabled",
+    "color",
+    "intensity",
+    "azimuth",
+    "elevation",
+    "angle",
+    "penumbra",
+    "distance",
+    "decay",
+  ];
+
+  it("lightEnvKeys 覆盖 LightInstanceParams 全字段（每槽位 10 键）", () => {
+    for (const slot of LIGHT_SLOTS) {
+      const keys = lightEnvKeys(slot);
+      expect(keys.length).toBe(FIELDS_PER_SLOT.length);
+      // 键名 = 槽位前缀 + 字段名首字母大写（与 FLATTEN_MAP 同构）
+      const prefix = `light${slot.charAt(0).toUpperCase()}${slot.slice(1)}`;
+      for (const f of FIELDS_PER_SLOT) {
+        expect(keys).toContain(`${prefix}${f.charAt(0).toUpperCase()}${f.slice(1)}`);
+      }
+    }
+  });
+
+  it("变更集恰好 = 该槽位全部 envState 键（无手抄副本可漂移）", () => {
+    // 变更集是模块私有的，但它的消费者是「任一灯字段变更都要 syncLight」——
+    // 若变更集漂移漏键，对应字段的修改将静默不生效。此处经 envState 写入反推覆盖度。
+    resetEnvState();
+    const before = readLightParams(envState, "rim");
+    for (const key of lightEnvKeys("rim")) {
+      // 每个键都必须能被 readLightParams 读到（键集与读方向一致）
+      expect(key in envState).toBe(true);
+    }
+    expect(before.type).toBe("directional");
+  });
+
+  it("LIGHT_ENV_KEYS = 三槽位 30 键；VOLUMETRIC_ENV_KEYS = 6 键", () => {
+    expect(LIGHT_ENV_KEYS.length).toBe(30);
+    expect(VOLUMETRIC_ENV_KEYS.length).toBe(6);
+    // 预设挑参不含 ambient（切模型不静默重置用户 ambient 微调，测试契约）
+    expect(LIGHT_ENV_KEYS).not.toContain("lightAmbientColor");
+    expect(LIGHT_ENV_KEYS).not.toContain("lightAmbientIntensity");
+  });
+
+  it("readLightParams 是 flattenLightParams 的真逆：往返逐字段等价", () => {
+    resetEnvState();
+    // 三槽位故意取互不相同的值，任何「读错键」都会表现为串位而不是碰巧相等
+    const src: Pick<LightParams, "key" | "fill" | "rim"> = {
+      key: {
+        type: "spot",
+        enabled: true,
+        color: 0x111111,
+        intensity: 1.1,
+        azimuth: 11,
+        elevation: 12,
+        angle: 51,
+        penumbra: 0.52,
+        distance: 53,
+        decay: 5.4,
+      },
+      fill: {
+        type: "directional",
+        enabled: false,
+        color: 0x222222,
+        intensity: 2.1,
+        azimuth: 21,
+        elevation: 22,
+        angle: 62,
+        penumbra: 0.63,
+        distance: 64,
+        decay: 6.5,
+      },
+      rim: {
+        type: "point",
+        enabled: true,
+        color: 0x333333,
+        intensity: 3.1,
+        azimuth: 31,
+        elevation: 32,
+        angle: 73,
+        penumbra: 0.74,
+        distance: 75,
+        decay: 7.6,
+      },
+    };
+    // 写入 envState（经 flatten 的真值路径）
+    setEnvState(flattenLightParams(src), { source: "manual" });
+    for (const slot of LIGHT_SLOTS) {
+      const read = readLightParams(envState, slot);
+      const want: LightInstanceParams = src[slot];
+      for (const f of FIELDS_PER_SLOT as (keyof LightInstanceParams)[]) {
+        expect(read[f], `${slot}.${f}`).toBe(want[f]);
+      }
+    }
+  });
+
+  it("readLightParams 逐字段对到正确 envState 键（独立于 flatten 的直读方向锁定）", () => {
+    resetEnvState();
+    // 与 flatten 用例同构：每个键写唯一值，任何「读错键」都表现为串位
+    setEnvState(
+      {
+        lightKeyType: "spot",
+        lightKeyEnabled: true,
+        lightKeyColor: 0x111111,
+        lightKeyIntensity: 1.1,
+        lightKeyAzimuth: 11,
+        lightKeyElevation: 12,
+        lightKeyAngle: 51,
+        lightKeyPenumbra: 0.52,
+        lightKeyDistance: 53,
+        lightKeyDecay: 5.4,
+        lightRimType: "point",
+        lightRimAngle: 73,
+        lightRimDecay: 7.6,
+      },
+      { source: "manual" },
+    );
+    const key = readLightParams(envState, "key");
+    expect(key).toEqual({
+      type: "spot",
+      enabled: true,
+      color: 0x111111,
+      intensity: 1.1,
+      azimuth: 11,
+      elevation: 12,
+      angle: 51,
+      penumbra: 0.52,
+      distance: 53,
+      decay: 5.4,
+    });
+    // 槽位不得串读：rim 只取 rim 的键
+    const rim = readLightParams(envState, "rim");
+    expect(rim.type).toBe("point");
+    expect(rim.angle).toBe(73);
+    expect(rim.decay).toBe(7.6);
+    expect(rim.azimuth).toBe(180); // DEFAULT_RIM 默认值，未被 key 的 11 污染
   });
 });

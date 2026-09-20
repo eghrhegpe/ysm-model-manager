@@ -105,9 +105,9 @@ invariant_anchors:
 
 ## 统一数据源（ADR-196 刀4–5）
 
-- `state/model-defaults.ts`：`MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>>` 收敛模型类别预设（default/ysm/vrm/mmd/mmd-scene/litematic/resourcepack），**已合并**此前散落的 7 张表（MODEL_SKY_PRESETS / FOG_PRESETS / ENV_PRESET_BY_MODEL / LIGHT_PRESETS / REFLECTOR_PRESETS / POSTPROC_PRESETS / SHADOW_PRESET_BY_MODEL）——前 6 张物理删除，POSTPROC_PRESETS 残留为 cap 专属数据源（known gap，见下）。`skyForceEnv: true` 标记「模型切换是离散动作，应触发 PMREM 重建」。**[ADR-282] light 已退出本表：灯光与模型类别解耦，不再含任何 `light*` 键。**
+- `state/model-defaults.ts`：`MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>>` 收敛模型类别预设（default/ysm/vrm/mmd/mmd-scene/litematic/resourcepack），**已合并**此前散落的 7 张表（MODEL_SKY_PRESETS / FOG_PRESETS / ENV_PRESET_BY_MODEL / LIGHT_PRESETS / REFLECTOR_PRESETS / POSTPROC_PRESETS / SHADOW_PRESET_BY_MODEL）——前 6 张物理删除，POSTPROC_PRESETS 残留为 cap 专属数据源（known gap，见下）。**[ADR-282] light 已退出本表；[ADR-284] sky 大气散射段 + reflector 噪声键（opacity/color）+ `shadowType:"hard"` no-op 已退出——本表现只承载「场景尺度」（fog near/far/density、reflectorSize/Resolution）与「离散语义」（envPreset、shadowType:soft、ppEnabled）两类合法耦合；`skyForceEnv` 不在本表（系 sky cap 硬置的 IBL 重建脉冲，非类别值）。**
 - `state/atmosphere-presets.ts`：`ATMOSPHERE_PRESETS` 完整氛围快照（含 light 强度/色温 + postproc exposure/bloom 氛围语义），取代 ENV_PRESET_LINKAGE 硬编码联动。
-- **预设套用收口态（刀3.5/刀5 + 装配链收尾）**：`SceneCapability.setPreset` 接口**已删除**（2026-09-07），各 cap 预设套用方法降级为非接口 public——sky/fog/shadow/reflector/environment 统一命名 `applyModelPreset(modelType)`，postprocessing 为 `applyPostProcDefaults(modelType)`。这些 cap 内部读 `MODEL_DEFAULTS` 只取自己关注的键并 `setEnvState(..., {source:'auto-model'})`，侧效（isStateLoaded 守卫、shadow needsUpdate、reflector 重建、sky regenerateEnvironment 后置）仍留在 cap 内。**（[ADR-282] 原列表中的 light 已退役。）**
+- **预设套用收口态（刀3.5/刀5 + 装配链收尾）**：`SceneCapability.setPreset` 接口**已删除**（2026-09-07），各 cap 预设套用方法降级为非接口 public——sky/fog/shadow/reflector/environment 统一命名 `applyModelPreset(modelType)`，postprocessing 为 `applyPostProcDefaults(modelType)`。这些 cap 内部读 `MODEL_DEFAULTS` 只取自己关注的键并 `setEnvState(..., {source:'auto-model'})`，侧效（isStateLoaded 守卫、shadow needsUpdate、reflector 重建、sky regenerateEnvironment 后置）仍留在 cap 内。**（[ADR-282] 原列表中的 light 已退役；[ADR-284] sky 现仅硬置 skyForceEnv 重建脉冲不再读表取大气参数，reflector 仅取 size/resolution。）**
 - **装配链已收敛（2026-09-07；[ADR-282] 2026-09-20 缩为 5 cap）**：adapters/shared-infra.ts 由 7 个散落 `cap.setPreset(adapter.id)` 改为两个命名入口——`applyModelDefaults(modelType, deps)`（预 apply **5** cap：sky→fog→shadow→reflector→environment）+ `applyPostProcDefaults(postProcCap, modelType)`（post-apply 1 cap，在 apply/syncShadowLights 之后、setReflectorCap 之前）。**刻意不做**「字面单一 `setEnvState(MODEL_DEFAULTS[adapter.id])`」：isStateLoaded 全量守卫、postproc enabled 侧效无法被单次 setEnvState 等效替代，钝直合并会回归。装配序逐字复刻原行为。light 已退出本链（见 ADR-282）。
 
 ## 与其他子系统关系
@@ -176,6 +176,13 @@ invariant_anchors:
   - **反向陷阱（已修）**：原 `default` 预设的 light 段只剩 `lightVolumetricEnabled:false`（与 schema 默认同值 = 纯 no-op），但选中它会设 `manualPreset` → **永久冻结**后续模型预设（跨会话、无 UI 可解）。即「改了等于没改，却把开关焊死」。
   - **双重手动优先收敛**：旧有 `manualPreset`（粗粒度整体早退）与 `shouldOverwrite` 按 key 记 `manual`（细粒度）两套；现只剩后者独当——用户拖过的键在后续 `auto-model` 写入时自动豁免。
   - **防回退闸**：`state/model-defaults.test.ts` 断言 `MODEL_DEFAULTS` 任何类别都不得含 `light` 前缀键——防止将来「顺手」加一行 `lightKeyIntensity` 悄悄复活漂移源。
+- **[ADR-284] sky 大气散射与模型类别解耦 + reflector/shadow 清噪声（2026-09-20）**：承 ADR-282 的手术刀向其余类别推广——把灯光病灶拆成 **A 噪声 / B no-op / C 单向陷阱** 三标准逐类审计。
+  - **澄清**：C（`source:manual` 夺所有权永久冻结）是灯光孤例——其余 cap 走 `source:'auto-model'` + `isStateLoaded` 守卫，结构上无 C。普适病灶只有 A/B。
+  - **sky 解耦**：`MODEL_DEFAULTS` 摘除全部 sky 散射段（turbidity/rayleigh/mie/mieDir/exposure/sunIntensityScale/sunDiscScale）——大气属天空盒，与「模型是 VRM 还是 MMD」无关（同灯光 1.3 论证）。`skyForceEnv` 经查是**死字段**（五 cap 挑参表均不读它，sky `applyModelPreset` 硬置）→ 一并删；重建脉冲真实来源在 cap 内，摘表不扰动 IBL 重建。
+  - **reflector**：删 opacity/color（纯噪声 A）+ 撞默认 1024 的 resolution（B）；保留 size（场景尺度）与降精度 512。
+  - **shadow**：删 `shadowType:"hard"`（== schema 默认，B）；保留 soft（PBR 角色语义）。
+  - **保留辩护**：fog（near/far/density 随场景体量）、envPreset（离散场景选择 studio/forest/sky）——逐类差异是量纲/语义非噪声，理由记入 ADR-284，消除「看着差不多」怀疑空间。
+  - **防回退闸**：`model-defaults.test.ts` 断言任何类别不得含 `sky` 前缀键 / `reflectorOpacity` / `reflectorColor`；`shadowType` 若存在只能为 `soft`。
 - **[ADR-246] 未落地项——「雾中体积光」**：真正的 raymarching 体积光（`VolumetricLightingPass`，ADR-084 §L3）**仍未实现**；ADR-246 已裁定若要做须以**新增 pass** 方式引入，不得复活「切换渲染器」开关。注意与两条已落地能力区分：`FogCapability`（`scene.fog` 线性/指数雾，非体积光）、ADR-107 天空体积光束 god rays（非雾中散射）。
 - 颜色字段统一 number(hex)；枚举字段 `type:"enum"` + `values`。
 - 已迁移 cap（10/10，刀2 完成）：Sky/Fog/Reflector/Shadow/Ground/RenderMode/Water/Environment/Postprocessing/Light。

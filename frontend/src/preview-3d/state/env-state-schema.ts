@@ -525,7 +525,10 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 25,
     group: "light",
-    range: { min: 10, max: 70, step: 1, unit: "°" },
+    // 合法域下界 1°（锐评根治 2026-09）：旧 min:10 把 three 合法窄锥（聚光手电效果）
+    // 挡在写入口外；滑杆常用行程另声明 uiRange [10,70]，菜单展示不变。
+    range: { min: 1, max: 70, step: 1, unit: "°" },
+    uiRange: { min: 10, max: 70, step: 1, unit: "°" },
   },
   lightKeyPenumbra: {
     type: "number",
@@ -537,7 +540,8 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 30,
     group: "light",
-    range: { min: 0, max: 200, step: 1 },
+    // 0 = 无截止窗（three distance=0 语义）；上界 200 防脏存档把光推到无穷远
+    range: { min: 0, max: 200, step: 1, unit: "m" },
   },
   lightKeyDecay: {
     type: "number",
@@ -576,7 +580,8 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 25,
     group: "light",
-    range: { min: 10, max: 70, step: 1, unit: "°" },
+    range: { min: 1, max: 70, step: 1, unit: "°" },
+    uiRange: { min: 10, max: 70, step: 1, unit: "°" },
   },
   lightFillPenumbra: {
     type: "number",
@@ -588,7 +593,7 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 30,
     group: "light",
-    range: { min: 0, max: 200, step: 1 },
+    range: { min: 0, max: 200, step: 1, unit: "m" },
   },
   lightFillDecay: {
     type: "number",
@@ -627,7 +632,8 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 25,
     group: "light",
-    range: { min: 10, max: 70, step: 1, unit: "°" },
+    range: { min: 1, max: 70, step: 1, unit: "°" },
+    uiRange: { min: 10, max: 70, step: 1, unit: "°" },
   },
   lightRimPenumbra: {
     type: "number",
@@ -639,7 +645,7 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 30,
     group: "light",
-    range: { min: 0, max: 200, step: 1 },
+    range: { min: 0, max: 200, step: 1, unit: "m" },
   },
   lightRimDecay: {
     type: "number",
@@ -762,7 +768,19 @@ export function clampFieldValue<K extends EnvStateKey>(
   value: EnvState[K] | undefined,
 ): EnvState[K] | undefined;
 export function clampFieldValue(key: EnvStateKey, value: unknown): unknown {
-  const range = (ENV_STATE_SCHEMA[key] as { range?: NumericRange }).range;
+  const def = ENV_STATE_SCHEMA[key] as {
+    type?: string;
+    values?: readonly string[];
+    default?: unknown;
+    range?: NumericRange;
+  };
+  // enum 合法域（锐评根治 2026-09，ADR-283 延伸到非数值字段）：脏存档/程序化写入传
+  // 非法枚举值时回退 schema default——否则 createLight 的 else 分支会把 "banana"
+  // 静默建成 DirectionalLight，类型字段从此与 Three 实际对象不符。
+  // undefined 短路：Partial patch 缺键不参与钳制（重载签名允许 undefined 原样透传）。
+  if (def.type === "enum" && def.values && value !== undefined)
+    return def.values.includes(value as string) ? value : def.default;
+  const range = def.range;
   if (range && typeof value === "number") return clamp(value, range.min, range.max);
   return value;
 }

@@ -1087,6 +1087,21 @@ describe("LightCapability — 菜单控件联动", () => {
     expect({ min: ratio.min, max: ratio.max, step: ratio.step }).toEqual({ min: 0, max: 1, step: 0.05 });
   });
 
+  it("锥角滑杆展示域 = uiRange [10,70]，合法域已放宽到 1°（ADR-283 §2.2 双域分离）", () => {
+    const cap = newCap();
+    const collect2 = (nodes: PreviewMenuNode[]): PreviewMenuNode[] =>
+      nodes.flatMap((n) => (n.children ? [n, ...collect2(n.children)] : [n]));
+    cap.setLightParams("key", { type: "spot" });
+    const angle = collect2(cap.getMenuNodes()).find((n) => n.id === "light-key-angle")!;
+    // 菜单行程仍用 uiRange：默认 25 居中，与旧观感一致
+    expect({ min: angle.control!.min, max: angle.control!.max }).toEqual({ min: 10, max: 70 });
+    // 合法域下界 1°：写入口不再拒绝窄锥（旧 min:10 把 three 合法的聚光手电挡在门外）
+    setEnvState({ lightKeyAngle: 3 }, { source: "manual" });
+    expect(envState.lightKeyAngle).toBe(3);
+    setEnvState({ lightKeyAngle: -5 }, { source: "manual" });
+    expect(envState.lightKeyAngle).toBe(1); // 钳到合法下界
+  });
+
   it("toggle/slider/select 全部读写联动（节点 control 闭包）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();

@@ -9,53 +9,25 @@
 
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
-import type { LightInstanceParams } from "./light-presets.ts";
+import { type LightInstanceParams, readLightParams } from "./light-presets.ts";
 import { restoreFields } from "./scene-capability.ts";
+/* ============ saveState：envState → 持久化嵌套结构（纯读，由 FLATTEN_MAP 逆读口派生） ============ */
 
-/* ============ saveState：envState → 持久化嵌套结构（纯读） ============ */
-
+/** [锐评根治 2026-09] 旧实现逐字段手抄 30 个 envState 键裸字面量——新增灯光字段时
+ *  FLATTEN_MAP 漏配编译报错，本函数漏加却静默不持久化。现三盏灯经 readLightParams
+ *  （FLATTEN_MAP 真逆口）派生，ambient/volumetric 直读各自键：字段全集只在
+ *  light-presets.ts 声明一次，本文件零手抄。顶层冗余键 keyEnabled/fillEnabled/rimEnabled
+ *  保留：与旧存档格式向后兼容（restore 侧只读 state.key.enabled，不消费它们，但外部工具
+ *  可能直读），删之无收益。 */
 export function buildLightPersistPayload(): Record<string, unknown> {
   return {
     keyEnabled: envState.lightKeyEnabled,
     fillEnabled: envState.lightFillEnabled,
     rimEnabled: envState.lightRimEnabled,
     // 灯光全量持久化（含 type + spot 参数），跨会话不丢类型/方向/强度/颜色
-    key: {
-      type: envState.lightKeyType,
-      enabled: envState.lightKeyEnabled,
-      color: envState.lightKeyColor,
-      intensity: envState.lightKeyIntensity,
-      azimuth: envState.lightKeyAzimuth,
-      elevation: envState.lightKeyElevation,
-      angle: envState.lightKeyAngle,
-      penumbra: envState.lightKeyPenumbra,
-      distance: envState.lightKeyDistance,
-      decay: envState.lightKeyDecay,
-    },
-    fill: {
-      type: envState.lightFillType,
-      enabled: envState.lightFillEnabled,
-      color: envState.lightFillColor,
-      intensity: envState.lightFillIntensity,
-      azimuth: envState.lightFillAzimuth,
-      elevation: envState.lightFillElevation,
-      angle: envState.lightFillAngle,
-      penumbra: envState.lightFillPenumbra,
-      distance: envState.lightFillDistance,
-      decay: envState.lightFillDecay,
-    },
-    rim: {
-      type: envState.lightRimType,
-      enabled: envState.lightRimEnabled,
-      color: envState.lightRimColor,
-      intensity: envState.lightRimIntensity,
-      azimuth: envState.lightRimAzimuth,
-      elevation: envState.lightRimElevation,
-      angle: envState.lightRimAngle,
-      penumbra: envState.lightRimPenumbra,
-      distance: envState.lightRimDistance,
-      decay: envState.lightRimDecay,
-    },
+    key: { ...readLightParams(envState, "key") },
+    fill: { ...readLightParams(envState, "fill") },
+    rim: { ...readLightParams(envState, "rim") },
     ambient: {
       color: envState.lightAmbientColor,
       intensity: envState.lightAmbientIntensity,

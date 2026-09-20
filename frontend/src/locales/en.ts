@@ -1200,6 +1200,7 @@ export const en: Record<string, string> = {
   "preview.cameraSpeed": "Camera Speed",
 
   "preview.spotlightVolume": "Volumetric Beam",
+  "preview.spotlightVolumeHint": "Requires any light set to spotlight & enabled",
   "preview.ambientIntensity": "Ambient",
   "preview.volumetric": "Volumetric",
   "preview.volumetricHint": "Requires spotlight",
@@ -1374,6 +1375,7 @@ export const en: Record<string, string> = {
   "preview.groundMatAngle": "Texture Angle",
   "preview.groundMatPick": "Pick Image",
   "preview.groundMatClear": "Clear Image",
+  "preview.groundMatLoadFailed": "Ground texture failed to load",
   "preview.groundMatOpacity": "Surface Opacity",
   "preview.groundMatScale": "Texture Scale",
   "preview.groundMatRotation": "Texture Rotation",

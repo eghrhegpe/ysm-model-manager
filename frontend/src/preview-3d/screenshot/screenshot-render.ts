@@ -6,7 +6,7 @@
 import * as THREE from "three";
 
 import { getApp } from "@/backend/app.ts";
-import { lightDirToPosition } from "@/preview-3d/caps/light-capability.ts";
+import { lightDirToPosition, spotDistanceAttenuation } from "@/preview-3d/caps/light-capability.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/model/ysm-object.ts";
@@ -65,6 +65,11 @@ function applyLights(
         d.decay,
       );
       sp.position.copy(pos);
+      // candela 补偿与预览 applyLightParams 同式：UI intensity = 到达靶点处照度，
+      // 反推需设的坎德拉（防距离衰减吃强度）——预览/截图所见即所得的同构义务。
+      const d0 = Math.max(pos.distanceTo(sharedTarget.position), 0.01);
+      const falloff = spotDistanceAttenuation(d0, d.distance, d.decay);
+      sp.intensity = falloff > 0 ? d.intensity / falloff : d.intensity;
       sp.target = sharedTarget;
       light = sp;
     } else if (d.type === "point") {

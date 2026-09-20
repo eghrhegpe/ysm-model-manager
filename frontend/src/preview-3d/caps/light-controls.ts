@@ -33,7 +33,7 @@ type LightSliderField =
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
 
-/** 三盏灯槽位（[light-type-switch] 顶栏「编辑灯光」按钮组） */
+/** 三盏灯槽位（[light-type-switch] 「编辑灯光」select；旧注释称「按钮组」与实现不符已修） */
 const LIGHT_SLOTS: Array<{ value: string; label: string; labelKey: LocaleKey }> = [
   { value: "key", label: "主灯", labelKey: "preview.keyLight" },
   { value: "fill", label: "补灯", labelKey: "preview.fillLight" },
@@ -200,13 +200,17 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
 }
 
 /** [ADR-246 D3] 体积光卡：聚光灯锥体的可见化。
- *  [light-type-switch] 锥体由「第一盏启用的 spot 灯」驱动——故任一灯切到聚光灯并开启即可见。 */
+ *  [light-type-switch] 锥体驱动源优先「当前编辑的灯」（若它是启用的 spot），否则回退
+ *  槽位顺序第一盏启用的 spot（getSpotLightForCone）——卡面 hint 诚实告知此前提。 */
 function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
   return {
     id: SPOT_VOL_CARD,
     kind: "card",
     collapsible: true,
     labelKey: "preview.spotlightVolume",
+    // [锐评根治 2026-09] 不做 visibleWhen（ADR-246 D3 用户裁定），但无启用 spot 灯时
+    // 本卡滑块零效果——hintKey 把隐藏耦合显式化，免用户对 directional 灯拖满滑块发懵。
+    hintKey: "preview.spotlightVolumeHint",
     children: [
       {
         id: "light-volumetric",

@@ -4,6 +4,8 @@
 // 表驱动重构（FLATTEN_MAP）的行为基线，实现换法不变契约。
 import { describe, it, expect } from "vitest";
 import {
+  DEFAULT_LIGHT_PARAMS,
+  FLATTEN_MAP,
   flattenLightParams,
   LIGHT_SLOTS,
   type LightInstanceParams,
@@ -12,7 +14,13 @@ import {
   readLightParams,
 } from "./light-presets.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
-
+import {
+  clampFieldValue,
+  deriveDefaultEnvState,
+  ENV_STATE_SCHEMA,
+  getParamRange,
+  type EnvStateKey,
+} from "@/preview-3d/state/env-state-schema.ts";
 describe("flattenLightParams 映射契约", () => {
   it("全量输入：30 条源字段各归其扁平 EnvState 键", () => {
     const full: LightParams = {
@@ -237,6 +245,90 @@ describe("灯光字段全集单一真相源（FLATTEN_MAP 派生）", () => {
     expect(rim.type).toBe("point");
     expect(rim.angle).toBe(69);
     expect(rim.decay).toBe(3.6);
-    expect(rim.azimuth).toBe(180); // DEFAULT_RIM 默认值，未被 key 的 11 污染
+    expect(rim.azimuth).toBe(180); // schema 默认值（DEFAULT_RIM 已派生化），未被 key 的 11 污染
+  });
+});
+
+// ===== [锐评根治 2026-09] DEFAULT_LIGHT_PARAMS 派生自 schema，零第二套字面量 =====
+// ADR-249 §2.6「默认值单一事实源」延伸到灯光组：旧实现平行手抄 38 个字面量，与本表
+// 同值只是巧合不是契约——任何一侧单独改动即静默分叉，「重置」回到 schema 不认的状态。
+// 本用例把「逐字段 === deriveDefaultEnvState() 对应键」钉成回归闸。
+describe("DEFAULT_LIGHT_PARAMS = envState schema 默认值的派生投影", () => {
+  it("三盏灯逐字段等于 schema default（经 FLATTEN_MAP 逆读口）", () => {
+    const defaults = deriveDefaultEnvState();
+    for (const slot of LIGHT_SLOTS) {
+      expect(DEFAULT_LIGHT_PARAMS[slot], `${slot} 应与 schema 默认逐字段相等`).toEqual(
+        readLightParams(defaults, slot),
+      );
+    }
+  });
+
+  it("ambient / volumetric 逐字段等于 schema default", () => {
+    const d = deriveDefaultEnvState();
+    expect(DEFAULT_LIGHT_PARAMS.ambient).toEqual({
+      color: d.lightAmbientColor,
+      intensity: d.lightAmbientIntensity,
+    });
+    expect(DEFAULT_LIGHT_PARAMS.volumetric).toEqual({
+      enabled: d.lightVolumetricEnabled,
+      opacity: d.lightVolumetricOpacity,
+      fogPower: d.lightVolumetricFogPower,
+      edgeFade: d.lightVolumetricEdgeFade,
+      baseStrength: d.lightVolumetricBaseStrength,
+      tipStrength: d.lightVolumetricTipStrength,
+    });
+  });
+
+  it("基线快照与可变单例解耦：resetEnvState + 写脏值后 DEFAULT_LIGHT_PARAMS 不变", () => {
+    const before = structuredClone(DEFAULT_LIGHT_PARAMS);
+    setEnvState({ lightKeyIntensity: 99, lightKeyType: "spot" }, { source: "manual" });
+    resetEnvState();
+    expect(DEFAULT_LIGHT_PARAMS).toEqual(before); // 模块加载期固定，不随运行时写入漂移
+  });
+
+  it("防回退闸：灯光组全部数值滑杆字段声明 range（菜单值域单一事实源，ADR-283）", () => {
+    const ranged: EnvStateKey[] = [
+      "lightKeyIntensity",
+      "lightKeyAzimuth",
+      "lightKeyElevation",
+      "lightKeyAngle",
+      "lightKeyPenumbra",
+      "lightKeyDistance",
+      "lightKeyDecay",
+      "lightFillIntensity",
+      "lightFillAzimuth",
+      "lightFillElevation",
+      "lightFillAngle",
+      "lightFillPenumbra",
+      "lightFillDistance",
+      "lightFillDecay",
+      "lightRimIntensity",
+      "lightRimAzimuth",
+      "lightRimElevation",
+      "lightRimAngle",
+      "lightRimPenumbra",
+      "lightRimDistance",
+      "lightRimDecay",
+      "lightAmbientIntensity",
+      "lightVolumetricOpacity",
+      "lightVolumetricFogPower",
+      "lightVolumetricEdgeFade",
+    ];
+    for (const k of ranged) {
+      expect((ENV_STATE_SCHEMA[k] as { range?: unknown }).range, `${k} 缺 range`).toBeDefined();
+    }
+    // 锥角双域分离：合法域下界 1°（窄锥合法），展示域仍 [10,70]
+    expect(getParamRange("lightKeyAngle")).toMatchObject({ min: 10, max: 70 });
+    expect(clampFieldValue("lightKeyAngle", 3)).toBe(3);
+    expect(clampFieldValue("lightKeyAngle", -5)).toBe(1);
+  });
+
+  it("enum 合法域守卫（ADR-283 延伸）：非法枚举回退 schema default，合法值原样过", () => {
+    // 脏存档/程序化写入传 "banana"：旧行为是静默建成 DirectionalLight 且字段与实际不符
+    expect(clampFieldValue("lightKeyType", "banana")).toBe("directional");
+    expect(clampFieldValue("lightKeyType", "spot")).toBe("spot");
+    expect(clampFieldValue("groundType", "nope")).toBe("plain");
+    // undefined（Partial patch 缺键）不参与钳制，重载短路语义保留
+    expect(clampFieldValue("lightKeyType", undefined)).toBeUndefined();
   });
 });

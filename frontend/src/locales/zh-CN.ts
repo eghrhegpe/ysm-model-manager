@@ -1172,6 +1172,7 @@ export const zhCN = {
   "preview.cameraSpeed": "摄像机速度",
 
   "preview.spotlightVolume": "体积光柱",
+  "preview.spotlightVolumeHint": "需任一灯设为聚光灯并启用",
   "preview.ambientIntensity": "环境光强度",
   "preview.volumetric": "体积光",
   "preview.volumetricHint": "需先开启聚光灯",
@@ -1339,6 +1340,7 @@ export const zhCN = {
   "preview.groundMatAngle": "纹理角度",
   "preview.groundMatPick": "选择贴图",
   "preview.groundMatClear": "清除贴图",
+  "preview.groundMatLoadFailed": "地面贴图加载失败",
   "preview.groundMatOpacity": "表面不透明度",
   "preview.groundMatScale": "纹理缩放",
   "preview.groundMatRotation": "纹理旋转",

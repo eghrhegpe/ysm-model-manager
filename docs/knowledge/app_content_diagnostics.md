@@ -380,9 +380,9 @@ localPos: number[];
 **这轮做了什么（一句话）**：把「跑基准」面板的按钮和文案收拾了一通——运行按钮挪到参数后面、并发按钮补上主按钮颜色、三语里重复的说明删掉、中/日界面里夹的英文 `workers` 换成当地话。全是文案/布局改动，没动 Go 和命令参数。
 
 **怎么核实的（不靠猜）**：
-- **面板上的控件都不是摆设**：一个个对照了 Go 的命令参数，`并发路数`→`--workers`、`取样上限`→`--max-models`、`迭代次数`→`--iterations`、基准三件套→`--baseline`/`--save-baseline`/`--threshold-pct`，每个都能落到真参数。唯一容易误会的是 `--workers` 其实是**「最多跑到这档」**：填 8 会实际跑 2/4/8 三档（`concurrentWorkerCounts` 取 `{2,4,workers}`，`bench_concurrent_json.go:106-117`）——提示里写了，但标签读起来像「就是 8」。
+- **面板上的控件都不是摆设**：一个个对照了 Go 的命令参数，`并发路数`→`--workers`、`取样上限`→`--max-models`、`迭代次数`→`--iterations`、基准三件套→`--baseline`/`--save-baseline`/`--threshold-pct`，每个都能落到真参数。唯一容易误会的是 `--workers` 其实是**「最多跑到这档」**：填 8 会实际跑 2/4/8 三档（`concurrentWorkerCounts` 取 `{2,4,workers}`，`go/cli/bench_concurrent_json.go`）——提示里写了，但标签读起来像「就是 8」。
 - **三语翻译没缺、只是不够口语**：`node scripts/i18n-check.ts` 实测 1492 键 × 3 语 missing=0 extra=0。毛病是 5 类措辞：① 按钮的悬停说明把同一件事说了三遍 ② 中/日界面夹英文 `workers` ③ zh「最多模型数」在选『每个类型各取几条』时叫得名不副实 ④ 「测什么/测哪些」就差个单复数，看不出语义真变了 ⑤ 有些标签撞名。
-- **防呆护栏在哪**（`perf-mode.test.ts`）：穷尽检查只数 `input/select`、**不数按钮**（`:338-341`），所以按钮挪行不会触发；每个控件必须能说出「我在哪个模式可见、谁读我」，说不出的会红。
+- **防呆护栏在哪**（`perf-mode.test.ts`）：穷尽检查只数 `input/select`、**不数按钮**，所以按钮挪行不会触发；每个控件必须能说出「我在哪个模式可见、谁读我」，说不出的会红。
 
 **已落地（P0 全批 + P1-1 + P3）**：
 1. 三语 `perfConcurrentHint`/`perfScanBenchHint` 删掉结尾重复的「测的对象」尾巴。
@@ -398,15 +398,18 @@ localPos: number[];
 **追查：`最多模型数` 名不副实，会不会是前后端对劲出了错？（2026-09-20 续）**
 
 结论：**对劲没问题，是「设计如此」**。逐项实证：
-- **参数传递是诚实的**：前端把输入框里的数字**原样**当 `--max-models` 传给 Go（`perf-single-bench.ts:523`/`perf-concurrent.ts:278`），不偷偷换算；Go 按 `--target` 展开（`perf_target_set.go:67`）——`all` = 每类型各取 N 条（`groupPerfTargets`，**无总上限**，类型多时总数远超 N）、`repo` = 全库扁平 N 条（`capFlat`）、`rtype` = 该类型 N 条。e2e 锁「数字原样传 + 回显一致」，契约测试锁「target=model 绝不带 max-models」。
-- **target=model 时这个数字根本不用**（单模型就一个，没「取几条」的事）。界面怎么处理：**输入框变灰**（`perf.ts:170`，`PERF_UNREAD_TARGETS`）+ title 换成 `perfMaxUnreadHint`（「单模型目标下不生效（只在选了类型 / 全库时才用）」）——不是靠改标签，是靠置灰 + 悬停说明。
+- **参数传递是诚实的**：前端把输入框里的数字**原样**当 `--max-models` 传给 Go（`perf-single-bench.ts`/`perf-concurrent.ts`），不偷偷换算；Go 按 `--target` 展开（`go/cli/perf_target_set.go`）——`all` = 每类型各取 N 条（`groupPerfTargets`，**无总上限**，类型多时总数远超 N）、`repo` = 全库扁平 N 条（`capFlat`）、`rtype` = 该类型 N 条。e2e 锁「数字原样传 + 回显一致」，契约测试锁「target=model 绝不带 max-models」。
+- **target=model 时这个数字根本不用**（单模型就一个，没「取几条」的事）。界面怎么处理：**输入框变灰**（`PERF_UNREAD_TARGETS` 目标集维）+ title 换成 `perfMaxUnreadHint`（「单模型目标下不生效（只在选了类型 / 全库时才用）」）——不是靠改标签，是靠置灰 + 悬停说明。
 - **真正的可读性缺口**：这个输入框在 all 模式下是「每个类型都取 N 条」，但标签恒定叫「最多模型数」，读起来像「总共最多 N 个」。语义其实在 title 里（`perfMaxModelsHint`），但原文案没把「每类都取、类型多会翻倍」讲透。本轮已把三语 `perfMaxModelsHint` 改直白（zh：…每个类型都取 N 条（类型多时总数会远超 N）…）。
 - **为什么标签不能跟着 target 变**：ADR-278 特意锁死「标签不随目标集改义」(e2e 用例 ⑦ + perf-matrix 墓碑)——因为旧版 `syncPerfCountLabel` 就是「标签跟着模式改义」那笔账，改回=重蹈覆辙。所以单位解释**只进 title、不进标签正文**是既定决策，不是漏写的 bug。
 
-**模型路径框的目标集维收口（2026-09-20 后续）**：
-- 用户的困惑：选了「类型/全库」目标集后，`#diag-perf-model` 路径框**还亮着**（它的显隐只跟模式 `data-perf-mode="single"` 绑定），填了却不进载荷——「填了没用」的视觉困惑。
-- 收口：`diag-perf-model` 已登记进 `PERF_UNREAD_TARGETS`（与 `max`/`order` 并列 `["model"]`），目标集 ≠ 单模型时它**置灰 + title 换成 `perfModelUnreadHint`**（「填路径只对『单模型』目标集有效」）；恢复单模型时 title 还原为 `perfModelHintFromTree`。
-- **为什么不整组隐藏**：基准三件套已由 `syncPerfBaselineControls` 按目标集置灰（`disabled = !isModel || mode !== "single"`），且 ADR-278 §2.6/six修 明确倾向「置灰 + title 说清」而非「隐藏」（隐藏=用户不知道有这个功能）。故维持置灰体系，只补上唯一漏网的 `diag-perf-model`。
+**模型路径框的目标集维收口（2026-09-20 后续，含一次反逻辑修正）**：
+- 用户困惑：选了「类型/全库」目标集后，`#diag-perf-model` 路径框还亮着（它的显隐只跟模式 `data-perf-mode="single"` 绑定），填了却不进载荷——「填了没用」。
+- **第一次实现是错的（登记进 `PERF_UNREAD_TARGETS`）**：那张表的语义是「枚举**不读它**的目标集」，`max`/`order` 登记 `["model"]` = 单模型时灰（单模型没有 N 条）。但模型路径框**恰好相反**——它只在单模型才读、非单模型才灰，且非单模型的目标集（rtype 动态类型）**不可枚举**。照搬 `["model"]` 导致**单模型反而被置灰**，用户一眼抓出（「灰色逻辑写反了」）。
+- **正确实现**：不走表，显式 `modelInputNeeded = mode==="single" && targetKey==="model"`，`disabled = !modelInputNeeded`（与 `syncPerfBaselineControls` 同口径）。加回归测试「单模型亮 / 全库灰」防再写反。
+- **教训**：`PERF_UNREAD_TARGETS` 是「枚举不读面」，只适合「在少数静态目标集不读」的控件；「除某类外全不读」的控件必须显式判断，塞表里必然方向反或漏枚举。
+- **为什么不整组隐藏**：基准三件套已由 `syncPerfBaselineControls` 按目标集置灰，且 ADR-278 §2.6 明确倾向「置灰 + title 说清」而非隐藏（隐藏=用户不知道有这个功能）。故维持置灰体系。
+- **布局**：单模型专属行（路径框 / 跑几次 / 上限 / 基准 / 运行按钮）已挪成连续一块，与并发的（并发路数 / 上限 / 运行按钮）分开——选哪种模式就看哪块，不再交错穿插。
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

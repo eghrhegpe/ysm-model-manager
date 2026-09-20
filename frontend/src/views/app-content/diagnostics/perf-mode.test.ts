@@ -294,6 +294,21 @@ describe("基准模式接线（ADR-278）", () => {
     expect({ max: max.disabled, order: order.disabled }).toEqual({ max: false, order: false });
   });
 
+  it("模型路径框与 max/order 方向相反：单模型亮、非单模型灰（反面，防写反——2026-09-20 回归钉）", async () => {
+    const root = makeRoot("single");
+    initPerfPanel(root, esc);
+    await Promise.resolve(); // 等目标集异步填充落地
+    const modelEl = root.getElementById("diag-perf-model") as HTMLInputElement;
+    // 默认单模型目标集 → 路径框必须可用（上次回归正是把方向写反：单模型被灰）
+    expect(modelEl.disabled).toBe(false);
+    // 切到全库 → 路径框置灰 + title 说清「单模型才用」
+    const rtype = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
+    rtype.value = "__repo__";
+    rtype.dispatchEvent(new Event("change"));
+    expect(modelEl.disabled).toBe(true);
+    expect(modelEl.title).toContain("单模型");
+  });
+
   it("目标集维不读表 PERF_UNREAD_TARGETS 登记 max / order（与模式维表对称，护栏可校验）", () => {
     // 表存在且语义正确：这两控件在 target=model 下不进载荷（真相源 = perf-single-bench 的提前 return）
     expect(PERF_UNREAD_TARGETS["diag-perf-max"]).toContain("model");

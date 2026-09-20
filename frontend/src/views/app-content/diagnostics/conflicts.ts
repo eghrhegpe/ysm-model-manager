@@ -34,14 +34,16 @@ type DgCfFileConflict = FileConflict;
 
 // ===== scanConflicts 子函数 =====
 
-function dgCfSetScanBtnState(scanBtn: HTMLElement | null, scanning: boolean): void {
+function dgCfSetScanBtnState(scanBtn: HTMLElement | null, scanning: boolean, esc: EscFn): void {
   if (!scanBtn) return;
   if (scanning) {
     scanBtn.classList.add("scanning");
     scanBtn.textContent = t("diagnostics.scanningDot");
   } else {
     scanBtn.classList.remove("scanning");
-    scanBtn.textContent = t("diagnostics.startScan");
+    // 复位重建图标：扫描态用 textContent 覆掉了模板层 SVG，只写文字会形态漂移；
+    // startScan 是静态文案无插值，esc 包文本节点与旧 textContent 防注入口径等价。
+    scanBtn.innerHTML = `${UI_ICONS.performance} ${esc(t("diagnostics.startScan"))}`;
   }
 }
 
@@ -144,13 +146,13 @@ export async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void>
   diagScanning = true;
 
   const scanBtn = root.getElementById("diag-scan-conflict");
-  dgCfSetScanBtnState(scanBtn, true);
+  dgCfSetScanBtnState(scanBtn, true, esc);
   dgCfRenderRadarPlaceholder(list as HTMLElement);
 
   try {
     const { instances, errorHtml } = await dgCfLoadCfgAndInstances();
     if (errorHtml) {
-      dgCfSetScanBtnState(scanBtn, false);
+      dgCfSetScanBtnState(scanBtn, false, esc);
       list.innerHTML = errorHtml;
       return;
     }
@@ -160,7 +162,7 @@ export async function scanConflicts(root: ShadowRoot, esc: EscFn): Promise<void>
   } catch (err) {
     list.innerHTML = msgRowHTML("error", `${t("diagnostics.scanFailed")}: ${esc(String(err))}`);
   } finally {
-    dgCfSetScanBtnState(scanBtn, false);
+    dgCfSetScanBtnState(scanBtn, false, esc);
     diagScanning = false;
   }
 }

@@ -483,9 +483,12 @@ describe("scanConflicts（diag-scan-conflict 按钮）", () => {
     expect(list.textContent).toContain("model"); // renderDisplayName 剥扩展名
     expect(list.textContent).toContain("insA");
     expect(list.textContent).toContain("insB");
-    expect(
-      (root.getElementById("diag-scan-conflict") as HTMLElement).textContent,
-    ).toBe("⚡ 开始扫描"); // 复位
+    const text = (root.getElementById("diag-scan-conflict") as HTMLElement).innerHTML;
+    expect(text).toContain("开始扫描"); // 复位
+    // 图标归模板层 SVG（与 healthRun/scanSyncConflict 同族口径）：文案键不得夹带 emoji，
+    // 复位也不得退回字面 ⚡——否则初始双图标、复位后形态漂移。
+    expect((root.getElementById("diag-scan-conflict") as HTMLElement).querySelector("svg")).toBeTruthy();
+    expect(text).not.toContain("⚡");
   });
 
   it("无冲突 → 未检测到文件名冲突", async () => {

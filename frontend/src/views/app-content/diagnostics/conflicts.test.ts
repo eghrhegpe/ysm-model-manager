@@ -118,7 +118,9 @@ describe("scanConflicts", () => {
     await scanConflicts(root, esc);
     await waitFor(() => expect(list.textContent).toContain("请先配置游戏目录"));
     const btn = root.getElementById("diag-scan-conflict") as HTMLElement;
-    expect(btn.textContent).toBe("⚡ 开始扫描");
+    // 复位重建模板层 SVG 图标（文案键已去 emoji）：文本对、形态也对
+    expect(btn.textContent!.trim()).toBe("开始扫描"); // SVG 与文字间的模板空格不算文案
+    expect(btn.querySelector("svg")).toBeTruthy();
     expect(btn.classList.contains("scanning")).toBe(false);
   });
 

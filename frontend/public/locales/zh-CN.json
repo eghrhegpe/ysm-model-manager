@@ -303,7 +303,7 @@
   "diagnostics.skipped": "跳过",
   "diagnostics.noLogs": "暂无日志",
   "diagnostics.noRuntimeLogs": "暂无运行时日志",
-  "diagnostics.startScan": "⚡ 开始扫描",
+  "diagnostics.startScan": "开始扫描",
   "diagnostics.clearFailed": "清除日志失败",
   "diagnostics.perfRunSingle": "运行单一模型基准",
   "diagnostics.perfScopeHint": "测什么：{mode}",

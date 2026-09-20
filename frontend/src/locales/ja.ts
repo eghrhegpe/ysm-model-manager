@@ -348,7 +348,7 @@ export const ja: Record<string, string> = {
   "diagnostics.skipped": "スキップ",
   "diagnostics.noLogs": "ログはまだありません",
   "diagnostics.noRuntimeLogs": "ランタイムログはまだありません",
-  "diagnostics.startScan": "⚡ スキャン開始",
+  "diagnostics.startScan": "スキャン開始",
   "diagnostics.clearFailed": "ログのクリアに失敗しました",
   "diagnostics.perfRunSingle": "単一モデルベンチマークを実行",
   // ADR-278 §2.6：3 モードが同一控件を共有するが、各数値／選択肢が「測る対象」が違う——

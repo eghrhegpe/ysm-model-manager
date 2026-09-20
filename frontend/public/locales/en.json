@@ -303,7 +303,7 @@
   "diagnostics.skipped": "Skipped",
   "diagnostics.noLogs": "No logs yet",
   "diagnostics.noRuntimeLogs": "No runtime logs yet",
-  "diagnostics.startScan": "⚡ Start Scan",
+  "diagnostics.startScan": "Start Scan",
   "diagnostics.clearFailed": "Failed to clear logs",
   "diagnostics.perfRunSingle": "Run single-model benchmark",
   "diagnostics.perfScopeHint": "Measures: {mode}",

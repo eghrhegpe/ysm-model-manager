@@ -345,7 +345,9 @@ export const zhCN = {
   "diagnostics.skipped": "跳过",
   "diagnostics.noLogs": "暂无日志",
   "diagnostics.noRuntimeLogs": "暂无运行时日志",
-  "diagnostics.startScan": "⚡ 开始扫描",
+  // 图标归模板层 SVG（UI_ICONS.performance）：文案键只存文字，不夹带 emoji——
+  // 同族扫描按钮（healthRun/scanSyncConflict）均如此；夹带则与 tpl 侧 SVG 叠成双图标。
+  "diagnostics.startScan": "开始扫描",
   "diagnostics.clearFailed": "清除日志失败",
   "diagnostics.perfRunSingle": "运行单一模型基准",
   // ADR-278 §2.6 语义诚实层：三模式共用一套控件，但每个数字/选项**测的对象不同**——

@@ -303,7 +303,7 @@
   "diagnostics.skipped": "スキップ",
   "diagnostics.noLogs": "ログはまだありません",
   "diagnostics.noRuntimeLogs": "ランタイムログはまだありません",
-  "diagnostics.startScan": "⚡ スキャン開始",
+  "diagnostics.startScan": "スキャン開始",
   "diagnostics.clearFailed": "ログのクリアに失敗しました",
   "diagnostics.perfRunSingle": "単一モデルベンチマークを実行",
   "diagnostics.perfScopeHint": "測定対象：{mode}",

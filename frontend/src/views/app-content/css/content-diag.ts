@@ -177,9 +177,6 @@ export const contentDiagCSS: string = `
 .perf-no-data { color:var(--muted);font-size:var(--fs-sm);padding:12px 2px;text-align:center; }
 .perf-no-hint { color:var(--muted);font-size:var(--fs-xs);padding:2px 2px 8px;text-align:center;opacity:.7; }
 .perf-trace-hint { color:var(--muted);font-size:var(--fs-xs);padding:4px 2px 8px;text-align:center;opacity:.6;border-top:1px solid var(--bd);margin-top:6px; }
-/* gui tab 的能力范围常驻说明（完整链路仅 YSM，其余类型走「不模拟 + 3D 预览实测」）——顶替原
-   「(YSM)」标签后缀：**该在面板里说清楚的事，不该藏在标签里**（ADR-278 后续） */
-.perf-scope-note { color:var(--muted); font-size:var(--fs-xs); padding:4px 2px 8px; line-height:1.6; }
 
 /* ===== 诊断页去重 UI (diag-dedup) ===== */
 .diag-msg { padding:12px;font-size:var(--fs-sm); }

@@ -346,7 +346,7 @@ export const en: Record<string, string> = {
   "diagnostics.skipped": "Skipped",
   "diagnostics.noLogs": "No logs yet",
   "diagnostics.noRuntimeLogs": "No runtime logs yet",
-  "diagnostics.startScan": "⚡ Start Scan",
+  "diagnostics.startScan": "Start Scan",
   "diagnostics.clearFailed": "Failed to clear logs",
   "diagnostics.perfRunSingle": "Run single-model benchmark",
   // ADR-278 §2.6 honesty layer: three modes share one control set, but each number/option measures

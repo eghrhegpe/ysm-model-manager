@@ -26,6 +26,8 @@ const DIAG_TABS = [
   "log",
   // ADR-278 §2.1：single / conc 两态合并为 bench（模式选择器切三态），hist / trace 合并为 record
   "bench",
+  // ADR-278 §2.7：引擎对照退出模式轴，自成一个独立 tab（CLI 侧它只有 --iterations）
+  "scan",
   // gui tab 已随 a1e26419d「砍除 gui-flow 面板」下线（Go 命令保留）；此处曾漂移一个提交周期
   "record",
   "conflict",
@@ -227,6 +229,8 @@ test.describe("诊断页", () => {
   test("单模型 tab：类型选择器选项来自 registry（前端不写死类型表）", async ({ page }) => {
     // ADR-262 D3：矩阵的类型选项必须来自 Go/registry（resource_types.json 单一事实源），
     // 前端只读不判。选择器除固定的「单模型」「全部类型」外，应出现 mock 注册表里的类型。
+    // ⚠️ 只列 **cliAnalyzable** 的类型（`8d448bb3f` 起的口径：不可分析的类型进了选择器也跑不了）；
+    // resourcepack 无此标记，故**不应**出现——旧断言期望它出现，与 8d448bb3f 本意相反。
     await clickBySelector(page, '.repo-tab[data-tab="bench"]');
     const info = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
@@ -245,7 +249,7 @@ test.describe("诊断页", () => {
     expect(info.values[0]).toBe("");
     expect(info.values).toContain("__all__");
     expect(info.values).toContain("ysm");
-    expect(info.values).toContain("resourcepack");
+    expect(info.values).not.toContain("resourcepack"); // 不可分析类型不进选择器
     expect(info.text).toContain("YSM 模型");
   });
 
@@ -751,9 +755,8 @@ test.describe("诊断页 · 引擎对照 scan-bench 真实载荷渲染（ADR-262
       DIAG_TAB_COUNT,
       { timeout: 10000, polling: 200 },
     );
-    // 引擎对照按钮在「跑基准」tab 的 scan 模式控制条上（ADR-278 §2.1），先切 tab 再拨模式
-    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
-    await setShadowSelect(page, "diag-perf-mode", "scan");
+    // ADR-278 §2.7：引擎对照已退出模式轴，现为**独立 top tab**，直接点 tab 名进入
+    await clickBySelector(page, '.repo-tab[data-tab="scan"]');
   });
 
   /**
@@ -888,24 +891,26 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
         target: txt("diag-perf-target-label"),
         runTitle: title("diag-perf-run"),
         concTitle: title("diag-perf-conc-run"),
-        scanTitle: title("diag-perf-scan-bench"),
       };
     });
   }
 
   // ⚠️ 语种口径：playwright.config 把浏览器钉在 locale: "en-US"（防 CI 系统语言翻车），
   // 文案断言一律用 en 包关键词；zh-CN 只在注释里留对照。语义关键词不锁拼接形态（同单测降噪原则）。
-  test("切 scan：迭代标签当场改口为 rescan 口径；single 下为 parse repeats 口径", async ({
+  test("引擎对照独立成 tab：迭代框自带 rescan 口径，不随模式改口（ADR-278 §2.7）", async ({
     page,
   }) => {
     const single = await readHonesty(page);
     expect(single.iter).toContain("parse repeats"); // zh：重复解析次数
     expect(single.target).toContain("What to test");
-    await setShadowSelect(page, "diag-perf-mode", "scan");
-    const scan = await readHonesty(page);
-    expect(scan.iter).toContain("rescan passes"); // zh：全库重扫次数
-    // scan 不读目标集行，但标签不得被串改成并发的「测哪些」（模式态互斥）
-    expect(scan.target).toContain("What to test");
+    // scan 已退出模式轴：它不是模式，而是一个独立 tab——切过去看它自己的框
+    await clickBySelector(page, '.repo-tab[data-tab="scan"]');
+    const scanIter = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      return root?.querySelector('[data-testid="diag-perf-scan-iter"]')?.id ?? "";
+    });
+    // 迭代框是 scan tab **自己的** id，不再与 single 共用 #diag-perf-iter
+    expect(scanIter).toBe("diag-perf-scan-iter");
   });
 
   test("切 conc：目标集标签改为 Which to test，且单模型回落伴随可见 toast（不再静默改选择）", async ({
@@ -926,17 +931,16 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
     expect(toastShown).toBe(true);
   });
 
-  test("三个运行按钮各自带「测什么对象」hint（模板不写死，initPerfMode 单点派生）", async ({
+  test("两个模式运行按钮各自带「测什么对象」hint（scan 已独立成 tab，其 scope 说明写在 tab 内）", async ({
     page,
   }) => {
     const got = await readHonesty(page);
-    for (const h of [got.runTitle, got.concTitle, got.scanTitle]) {
+    for (const h of [got.runTitle, got.concTitle]) {
       expect(h.length).toBeGreaterThan(0);
       expect(PLACEHOLDER_LEAK.test(h)).toBe(false); // {mode} 插值残留 = hint 组装漏填参数
     }
     expect(got.runTitle).toContain("one model"); // zh：一个模型
     expect(got.concTitle).toContain("batch of models"); // zh：一批模型
-    expect(got.scanTitle).toContain("directory scan"); // zh：目录树
   });
 
   // ⚠️ 语种口径：e2e 浏览器被 playwright.config 钉在 locale: "en-US"（防 CI 系统语言翻车），

@@ -842,8 +842,8 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     // 新链——手拼夹具测不到「声明处即真相」（旧测试只验 init 事后改 style）。
     el.innerHTML = diagnosticsHTML();
     initDiagnostics(root, esc);
-    // 桌面专属 top tab（三个只读扫描 + bench，ADR-278 §2.5）：按钮与面板整块缺席
-    for (const name of ["conflict", "health", "sync-conflict", "bench"]) {
+    // 桌面专属 top tab（三个只读扫描 + bench + scan，ADR-278 §2.5/§2.7）：按钮与面板整块缺席
+    for (const name of ["conflict", "health", "sync-conflict", "bench", "scan"]) {
       expect(root.querySelector(`.repo-tab[data-tab="${name}"]`)).toBeNull();
       expect(root.getElementById(`diag-tab-${name}`)).toBeNull();
     }
@@ -851,7 +851,7 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     expect(root.querySelector('.repo-tab[data-tab="log"]')).not.toBeNull();
     expect(root.querySelector('.repo-tab[data-tab="record"]')).not.toBeNull();
     // 扫描按钮在缺席面板内同样不存在（若未来控件拆出 tab，dgInHideDesktopOnly 仍按 id 隐）
-    for (const id of ["diag-scan-conflict", "diag-scan-health", "diag-scan-sync-conflict"]) {
+    for (const id of ["diag-scan-conflict", "diag-scan-health", "diag-scan-sync-conflict", "diag-perf-scan-bench"]) {
       expect(root.getElementById(id)).toBeNull();
     }
     // 加载剖析读内存 store、零 Go/CLI 依赖 → 跨模式可用，入口不得隐藏（ADR-278 §2.5）

@@ -69,7 +69,7 @@ function makeRoot(): ShadowRoot {
   el.innerHTML = `
     <button id="diag-perf-run"></button>
     <input id="diag-perf-model" value="">
-    <input id="diag-perf-iter" value="2">
+    <input id="diag-perf-scan-iter" value="2">
     <select id="diag-perf-rtype"><option value=""></option></select>
     <input id="diag-perf-max" value="5">
     <input id="diag-perf-baseline-save" type="checkbox">
@@ -151,7 +151,8 @@ describe("扫描引擎对照面板（ADR-262 D3）", () => {
     initPerfPanel(root, esc);
     await clickAndFlush(root);
 
-    // 参数键 = Go flag 名；迭代次数取自面板既有控件（值 2），绝不另开第二个迭代输入框
+    // 参数键 = Go flag 名；迭代次数取自 **scan tab 自己**的控件（值 2）
+    // （ADR-278 §2.7：scan 独立成 tab 后不再与 single 共用 #diag-perf-iter）
     expect(executeCLI).toHaveBeenLastCalledWith("scan-bench", { iterations: 2, format: "json" });
 
     const out = outRoot(root);

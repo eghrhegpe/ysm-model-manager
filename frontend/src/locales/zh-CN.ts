@@ -360,11 +360,10 @@ export const zhCN = {
   "diagnostics.perfModeNameScan": "整库目录树扫描（不解析模型文件）",
   "diagnostics.perfModeOptSingle": "单模型",
   "diagnostics.perfModeOptConc": "批量并发",
-  "diagnostics.perfModeOptScan": "引擎对照",
-  // 同一 #diag-perf-iter 在 single 与 scan 下是两种物理量：标签 = 既有 perfIterations + 模式后缀
+  // ADR-278 §2.7：scan 独立成 tab 后有自己的标签，不再与 single 共用控件——后缀只剩 single 一个
   "diagnostics.perfIterationsSuffixSingle": "（重复解析次数）",
-  "diagnostics.perfIterationsSuffixScan": "（全库重扫次数）",
-  "diagnostics.perfIterationsHint": "同一目标重复几轮取中位；引擎对照下 = 整库目录树重扫几遍",
+  "diagnostics.perfIterationsHint":
+    "同一目标重复解析几轮后取中位（ADR-278 §2.7：引擎对照已独立成 tab，其重扫次数是另一个框）",
   // 并发没有单模型目标集：同控件在 conc 下只剩「挑样本范围」语义，且原选「单模型」会被回落
   "diagnostics.perfTargetSampleRange": "测哪些",
   "diagnostics.perfConcTargetFallback": "并发基准没有单模型目标：已回落到全库最重的几条",
@@ -436,6 +435,7 @@ export const zhCN = {
     "并发参数无效：worker 数须为 1~256、取样上限须 ≥ 1，且目标集不能选「单模型」（并发没有模型路径输入）",
   "diagnostics.perfConcurrentEmpty": "未取得并发基准结果（仓库里可能没有 CLI 可分析的模型）",
   // ADR-262 D3 扫描引擎对照（Go / Rust）：未采集的引擎显示原因，不显示 0.00ms
+  "diagnostics.perfScanBench": "引擎对照",
   "diagnostics.perfScanBenchRun": "运行引擎对照",
   "diagnostics.perfScanBenchHint":
     "同一仓库根分别用 Go / Rust 扫描并取中位与 p95；未采集的引擎显示原因，而不是 0ms；测的对象 = 整库目录树，不解析模型文件",

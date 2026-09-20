@@ -38,18 +38,19 @@ const PERF_MODE_NAMES: Record<string, LocaleKey> = {
   scan: "diagnostics.perfModeNameScan",
 };
 
-/** 控件 id → **不读它**的模式集（真相源 = 各命令模块的 read*：perf-single-bench / perf-concurrent /
- * perf-scan-bench）。未登记 = 所有模式都读；登记了则在列出的模式下置 disabled——
- * 「可见但被忽略」与「同控件跨模式改义」是 §2.6 要清的同一笔账的两面。 */
+/** 控件 id → **不读它**的模式集（真相源 = 各命令模块的 read*：perf-single-bench / perf-concurrent）。
+ * 未登记 = 所有模式都读；登记了则在列出的模式下置 disabled——
+ * 「可见但被忽略」与「同控件跨模式改义」是 §2.6 要清的同一笔账的两面。
+ * ⚠️ ADR-278 §2.7：引擎对照已退出模式轴（独立 tab），故本表不再有 scan 列。 */
 export const PERF_UNREAD_MODES: Record<string, readonly string[]> = {
-  "diag-perf-model": ["conc", "scan"],
-  "diag-perf-order": ["scan"],
-  "diag-perf-max": ["conc", "scan"],
-  "diag-perf-baseline-save": ["conc", "scan"],
-  "diag-perf-baseline-compare": ["conc", "scan"],
-  "diag-perf-baseline-th": ["conc", "scan"],
-  "diag-perf-conc-workers": ["single", "scan"],
-  "diag-perf-conc-max": ["single", "scan"],
+  "diag-perf-model": ["conc"],
+  "diag-perf-order": [], // 公共区常驻：两种模式都读排序（ADR-278 §2.7 前是 ["scan"]）
+  "diag-perf-max": ["conc"],
+  "diag-perf-baseline-save": ["conc"],
+  "diag-perf-baseline-compare": ["conc"],
+  "diag-perf-baseline-th": ["conc"],
+  "diag-perf-conc-workers": ["single"],
+  "diag-perf-conc-max": ["single"],
 };
 
 /** 控件 id → **不读它**的目标集集（第二维，与 PERF_UNREAD_MODES 对称）。
@@ -74,13 +75,12 @@ export const BASELINE_CONTROL_IDS: readonly string[] = [
 export const PERF_RUN_BUTTON_MODE_KEYS: Record<string, string> = {
   "diag-perf-run": "single",
   "diag-perf-conc-run": "conc",
-  "diag-perf-scan-bench": "scan",
 };
 
-/** 迭代标签的模式后缀：只有语义真变的模式才登记（conc 不读迭代框，无此行） */
+/** 迭代标签的模式后缀：只有语义真变的模式才登记（ADR-278 §2.7：scan 已独立成 tab，
+ * 它有自己的 #diag-perf-scan-iter 标签，与 single 的框不再是同一个控件）。 */
 export const PERF_ITER_SUFFIX_KEYS: Record<string, LocaleKey | undefined> = {
   single: "diagnostics.perfIterationsSuffixSingle",
-  scan: "diagnostics.perfIterationsSuffixScan",
 };
 
 /**
@@ -237,7 +237,8 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   root
     .getElementById("diag-perf-conc-run")
     ?.addEventListener("click", () => void runConcurrentBench(root, esc));
-  // 扫描引擎对照（ADR-262 D3）：Go/Rust 对照的实测归属归 Go，前端只提交迭代次数 + 渲染载荷
+  // 扫描引擎对照（ADR-278 §2.7：已退出模式轴，在独立 scan tab 内挂线）：
+  // Go/Rust 对照的实测归属归 Go，前端只提交迭代次数 + 渲染载荷
   root
     .getElementById("diag-perf-scan-bench")
     ?.addEventListener("click", () => void runScanBench(root, esc));

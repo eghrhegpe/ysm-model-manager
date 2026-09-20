@@ -189,8 +189,11 @@ export function diagnosticsHTML(): string {
         // ADR-278 §2.5：整 tab 桌面专属——它的每个入口都是 CLI，只藏按钮会留空壳 tab
         desktopOnly: true,
         label: `${UI_ICONS.performance} ${t("diagnostics.perfRunBench")}`,
-        // ADR-278 §2.2：目标集 / 排序 single 与 conc **共用同一份**（落实 ADR-262「跨命令同名同义，不写第二份」）
+        // ADR-278 §2.7：公共区（测什么 / 排序 / 最多模型数）**模式无关常驻**——single 与 conc
+        // 在 Go 侧由同一个 registerPerfTargetFlags 注册，是同一套参数面；把公共参数埋进
+        // data-perf-mode 行里（"两个模式都显示"）正是臃肿与漂移之源。
         // ADR-278 §2.3：取样上限**有意不合并**——单模型深测默认 5 / 并发广度扫默认 20 是两个真实口径
+        // （故 max 仍是两行：一条给 single、一条给 conc，各自默认值不同）。
         body: `  <div class="perf-wrap">
     <div class="perf-controls">
       <div class="perf-row">
@@ -198,14 +201,19 @@ export function diagnosticsHTML(): string {
         <select id="diag-perf-mode" class="diag-config-select" data-testid="diag-perf-mode">
           <option value="single">${t("diagnostics.perfModeOptSingle")}</option>
           <option value="conc">${t("diagnostics.perfModeOptConc")}</option>
-          <option value="scan">${t("diagnostics.perfModeOptScan")}</option>
         </select>
         <div class="perf-hint">${t("diagnostics.perfModeHint")}</div>
       </div>
-      <div class="perf-row" data-perf-mode="single conc">
+      <div class="perf-row">
         <label for="diag-perf-rtype" id="diag-perf-target-label" data-testid="diag-perf-target-label">${t("diagnostics.perfTarget")}</label>
         <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
           <option value="">${t("diagnostics.perfTargetModel")}</option>
+        </select>
+      </div>
+      <div class="perf-row">
+        <label for="diag-perf-order" id="diag-perf-order-label">${t("diagnostics.perfOrder")}</label>
+        <select id="diag-perf-order" class="diag-config-select" data-testid="diag-perf-order">
+          ${perfOrderOptionsHTML()}
         </select>
       </div>
       <div class="perf-row" data-perf-mode="single">
@@ -213,23 +221,14 @@ export function diagnosticsHTML(): string {
         <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
         <div class="perf-hint" data-perf-mode="single">${t("diagnostics.perfModelHintFromTree")}</div>
       </div>
-      <div class="perf-row" data-perf-mode="single scan">
+      <div class="perf-row" data-perf-mode="single">
         <label for="diag-perf-iter" id="diag-perf-iter-label" data-testid="diag-perf-iter-label">${t("diagnostics.perfIterations")}</label>
         <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
-      </div>
-      <div class="perf-row" data-perf-mode="scan">
-        <button class="btn-base" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
       </div>
       <div class="perf-row" data-perf-mode="conc">
         <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
         <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
         <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
-      </div>
-      <div class="perf-row" data-perf-mode="single conc scan">
-        <label for="diag-perf-order" id="diag-perf-order-label">${t("diagnostics.perfOrder")}</label>
-        <select id="diag-perf-order" class="diag-config-select" data-testid="diag-perf-order">
-          ${perfOrderOptionsHTML()}
-        </select>
       </div>
       <div class="perf-row" data-perf-mode="single">
         <label for="diag-perf-max" id="diag-perf-max-label" data-testid="diag-perf-max-label" title="${t("diagnostics.perfMaxModelsHint")}">${t("diagnostics.perfMaxModels")}</label>
@@ -249,8 +248,29 @@ export function diagnosticsHTML(): string {
       </div>
     </div>
     <div id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out" data-perf-mode="scan"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
     <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+  </div>`,
+      },
+      {
+        id: "scan",
+        // ADR-278 §2.7：引擎对照**退出模式轴单独成 tab**。它测的是「扫一遍仓库」
+        // （Go vs Rust 对照），而 single/conc 测的是「解析一个模型」——输入/阶段/可比对象
+        // 全不同。CLI 侧 scan-bench 只有 --iterations + --format，**根本没有目标集参数**，
+        // 把它当「第三种范围」列在模式下拉里是错误分类。
+        desktopOnly: true,
+        label: `${UI_ICONS.performance} ${t("diagnostics.perfScanBench")}`,
+        body: `  <div class="perf-wrap">
+    <div class="perf-controls">
+      <div class="perf-row">
+        <button class="btn-base accent" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
+        <label for="diag-perf-scan-iter" id="diag-perf-scan-iter-label" data-testid="diag-perf-scan-iter-label">${t("diagnostics.perfIterations")}</label>
+        <input id="diag-perf-scan-iter" type="number" min="1" step="1" value="3" data-testid="diag-perf-scan-iter">
+      </div>
+      <div class="perf-row">
+        <div class="perf-hint">${t("diagnostics.perfScanBenchHint")}</div>
+      </div>
+    </div>
+    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {

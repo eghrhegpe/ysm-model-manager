@@ -361,11 +361,9 @@ export const ja: Record<string, string> = {
   "diagnostics.perfModeNameScan": "リポジトリ全体のディレクトリスキャン（モデル解析なし）",
   "diagnostics.perfModeOptSingle": "単一モデル",
   "diagnostics.perfModeOptConc": "一括並列",
-  "diagnostics.perfModeOptScan": "エンジン比較",
   "diagnostics.perfIterationsSuffixSingle": "（解析繰り返し回数）",
-  "diagnostics.perfIterationsSuffixScan": "（リポジトリ再スキャン回数）",
   "diagnostics.perfIterationsHint":
-    "同一対象を何回繰り返すか（中央値採用）；エンジン比較ではリポジトリ全体再スキャン回数",
+    "同一対象を何回解析するか（中央値採用）；エンジン比較タブには専用の再スキャン回数欄があります",
   "diagnostics.perfTargetSampleRange": "何を測るか（複数）",
   "diagnostics.perfConcTargetFallback":
     "並列ベンチに単一モデル対象はない：全体で上位 N 件に回落しました",
@@ -446,6 +444,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfConcurrentEmpty":
     "並列ベンチの結果を取得できませんでした（CLI で解析可能なモデルが無い可能性）",
   // ADR-262 D3 スキャンエンジン比較（Go / Rust）：未計測のエンジンは理由を表示し、0.00ms は出さない
+  "diagnostics.perfScanBench": "エンジン比較",
   "diagnostics.perfScanBenchRun": "エンジン比較を実行",
   "diagnostics.perfScanBenchHint":
     "同じリポジトリルートを Go / Rust でスキャンし中央値と p95 を計測。未計測のエンジンは理由を表示（0ms ではない）；対象 = リポジトリ全体のディレクトリツリー、モデル解析なし",

@@ -157,9 +157,11 @@ type BenchMode =
   | { kind: "all"; order: PerfOrder; maxModels: number; iterations: number }
   | { kind: "repo"; order: PerfOrder; maxModels: number; iterations: number };
 
-/** 读取面板既有的「迭代次数」（single-bench 与 scan-bench 共用：同一语义同一控件，默认与 Go 的 3 对齐） */
-export function singleBenchReadIterations(root: ShadowRoot): number {
-  const raw = (root.getElementById("diag-perf-iter") as HTMLInputElement | null)?.value ?? "3";
+/** 读取面板的「迭代次数」（默认与 Go 的 3 对齐）。
+ * ⚠️ ADR-278 §2.7：scan 独立成 tab 后有了自己的输入框——同一语义不再共用一个控件，
+ * 故把 id 参数化（默认仍是 single 的 #diag-perf-iter），避免 scan 去读别人 tab 里的框。 */
+export function singleBenchReadIterations(root: ShadowRoot, id = "diag-perf-iter"): number {
+  const raw = (root.getElementById(id) as HTMLInputElement | null)?.value ?? "3";
   return Math.max(1, parseInt(raw, 10) || 3);
 }
 

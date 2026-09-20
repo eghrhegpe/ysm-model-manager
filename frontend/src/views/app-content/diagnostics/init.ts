@@ -155,6 +155,9 @@ function dgInHideDesktopOnly(root: ShadowRoot): void {
     "diag-scan-conflict",
     "diag-scan-health",
     "diag-scan-sync-conflict",
+    // ADR-278 §2.7：引擎对照已是独立 desktopOnly tab，其运行按钮同样按 id 显式隐一次
+    // （与上面三个扫描按钮同口径：tab 本体不渲染 + 面板内控件再隐）
+    "diag-perf-scan-bench",
     // 加载剖析（diag-perf-refresh-trace）不在此列：零 Go/CLI 依赖、跨模式可用——连它一起藏
     // 曾把「唯一跨模式可用面板」的唯一入口藏掉（2026-09 修正，与本函数本意反向成立）。
   ]) {

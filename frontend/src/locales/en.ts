@@ -359,11 +359,9 @@ export const en: Record<string, string> = {
   "diagnostics.perfModeNameScan": "whole-repo directory scan (no model parsing)",
   "diagnostics.perfModeOptSingle": "Single model",
   "diagnostics.perfModeOptConc": "Batch concurrency",
-  "diagnostics.perfModeOptScan": "Engine comparison",
   "diagnostics.perfIterationsSuffixSingle": " (parse repeats)",
-  "diagnostics.perfIterationsSuffixScan": " (repo rescan passes)",
   "diagnostics.perfIterationsHint":
-    "Rounds over the same target (median taken); in engine comparison = full repo rescans",
+    "Rounds of parsing the same target (median taken); the engine-comparison tab has its own rescan box",
   "diagnostics.perfTargetSampleRange": "Which to test",
   "diagnostics.perfConcTargetFallback":
     "Concurrent bench has no single-model target: fell back to top N of the whole repo",
@@ -450,6 +448,7 @@ export const en: Record<string, string> = {
     "No concurrent bench result (the repo may have no CLI-analyzable model)",
   // ADR-262 D3 scan engine comparison (Go / Rust): an engine that was not measured shows the
   // reason, never 0.00ms (0ms reads as "too fast to measure", which is the opposite of the truth)
+  "diagnostics.perfScanBench": "Engine comparison",
   "diagnostics.perfScanBenchRun": "Run engine comparison",
   "diagnostics.perfScanBenchHint":
     "Scan the same repo root with both Go and Rust and report median/p95; an engine that was not measured shows the reason, not 0ms; scope = the whole repo directory tree, no model parsing",

@@ -399,7 +399,7 @@ localPos: number[];
 结论：**对劲没问题，是「设计如此」**。逐项实证：
 - **参数传递是诚实的**：前端把输入框里的数字**原样**当 `--max-models` 传给 Go（`perf-single-bench.ts`/`perf-concurrent.ts`），不偷偷换算；Go 按 `--target` 展开（`go/cli/perf_target_set.go`）——`all` = 每类型各取 N 条（`groupPerfTargets`，**无总上限**，类型多时总数远超 N）、`repo` = 全库扁平 N 条（`capFlat`）、`rtype` = 该类型 N 条。e2e 锁「数字原样传 + 回显一致」，契约测试锁「target=model 绝不带 max-models」。
 - **target=model 时这个数字根本不用**（单模型就一个，没「取几条」的事）。界面怎么处理：**输入框变灰**（`PERF_UNREAD_TARGETS` 目标集维）+ title 换成 `perfMaxUnreadHint`（「单模型目标下不生效（只在选了类型 / 全库时才用）」）——不是靠改标签，是靠置灰 + 悬停说明。
-- **真正的可读性缺口**：这个输入框在 all 模式下是「每个类型都取 N 条」，但标签恒定叫「最多模型数」，读起来像「总共最多 N 个」。语义其实在 title 里（`perfMaxModelsHint`），但原文案没把「每类都取、类型多会翻倍」讲透。本轮已把三语 `perfMaxModelsHint` 改直白（zh：…每个类型都取 N 条（类型多时总数会远超 N）…）。
+- **真正的可读性缺口**：这个输入框在 all 模式下是「每个类型都取 N 条」，但标签原叫「最多模型数」，读起来像「总共最多 N 个」。语义其实在 title 里（`perfMaxModelsHint`），但原文案没把「每类都取、类型多会翻倍」讲透。本轮已把三语 `perfMaxModelsHint` 改直白（zh：…每个类型都取 N 条（类型多时总数会远超 N）…），且 zh 标签改名「**最多跑几个**」（与「跑几次」对称，更贴语义；en「Sample cap」/ja「サンプル上限」本已中性不动）。
 - **为什么标签不能跟着 target 变**：ADR-278 特意锁死「标签不随目标集改义」(e2e 用例 ⑦ + perf-matrix 墓碑)——因为旧版 `syncPerfCountLabel` 就是「标签跟着模式改义」那笔账，改回=重蹈覆辙。所以单位解释**只进 title、不进标签正文**是既定决策，不是漏写的 bug。
 
 **模型路径框的目标集维收口（2026-09-20 后续，含一次反逻辑修正）**：

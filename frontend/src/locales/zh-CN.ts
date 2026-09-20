@@ -337,7 +337,6 @@ export const zhCN = {
   "diagnostics.copiedLogPrivacy": "日志已复制（可能含本机路径，注意勿公开分享）",
   "diagnostics.refresh": "刷新",
   "diagnostics.clearLog": "清空日志",
-  "diagnostics.conflict": "冲突检测",
   "diagnostics.conflictDetectionFailed": "冲突检测失败",
   "diagnostics.all": "全部",
   "diagnostics.success": "成功",
@@ -345,9 +344,6 @@ export const zhCN = {
   "diagnostics.skipped": "跳过",
   "diagnostics.noLogs": "暂无日志",
   "diagnostics.noRuntimeLogs": "暂无运行时日志",
-  // 图标归模板层 SVG（UI_ICONS.performance）：文案键只存文字，不夹带 emoji——
-  // 同族扫描按钮（healthRun/scanSyncConflict）均如此；夹带则与 tpl 侧 SVG 叠成双图标。
-  "diagnostics.startScan": "开始扫描",
   "diagnostics.clearFailed": "清除日志失败",
   "diagnostics.perfRunSingle": "运行单模型基准",
   // ADR-278 §2.6 语义诚实层：三模式共用一套控件，但每个数字/选项**测的对象不同**——
@@ -484,7 +480,7 @@ export const zhCN = {
   "diagnostics.perfOrder": "排序",
   "diagnostics.perfOrderPath": "路径升序",
   "diagnostics.perfOrderSize": "体积从大到小",
-  "diagnostics.perfMaxModels": "最多模型数",
+  "diagnostics.perfMaxModels": "最多跑几个",
   // 上限控件的**单位随目标集选择器变**（rtype = 该类型 N 条 / all = 每类各 N 条 / repo = 全库 N 条）——
   "diagnostics.perfMaxModelsHint":
     "这个数字是什么意思，看你在「测什么」里选了哪种：某个类型 = 该类型取 N 条；每个类型各取几条 = 每个类型都取 N 条（类型多时总数会远超 N）；全库最重的几条 = 全库只取 N 条",

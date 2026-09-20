@@ -30,7 +30,6 @@ const DIAG_TABS = [
   "scan",
   // gui tab 已随 a1e26419d「砍除 gui-flow 面板」下线（Go 命令保留）；此处曾漂移一个提交周期
   "record",
-  "conflict",
   "health",
   "sync-conflict",
 ] as const;
@@ -480,7 +479,7 @@ async function readMatrixOut(page: Page): Promise<{
   });
 }
 
-/** 读上限控件的标签正文（当前标签文案为「最多模型数」）：它**不随目标集改义**是被删掉的 syncPerfCountLabel 留下的契约 */
+/** 读上限控件的标签正文（当前标签文案为「最多跑几个」）：它**不随目标集改义**是被删掉的 syncPerfCountLabel 留下的契约 */
 async function readMaxLabelText(page: Page): Promise<string> {
   return page.evaluate(() => {
     const root = document.querySelector("app-content")?.shadowRoot;

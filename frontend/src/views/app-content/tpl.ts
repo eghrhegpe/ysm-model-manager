@@ -23,7 +23,7 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-rtype",
   // ADR-262 D3 修订：排序控件（路径升序 / 体量降序）——与「选谁」正交，故独立成控件而非塞进选择器哨兵
   "diag-perf-order",
-  // ADR-262 D3 修订：取样上限——单位 = 目标集的展开单位（标签文案恒为「最多模型数」，单位只进 title）
+  // ADR-262 D3 修订：取样上限——单位 = 目标集的展开单位（标签文案恒为「最多跑几个」，单位只进 title）
   // 标签本身也是 e2e 契约（读它的正文证明「不随模式改义」），故同样给稳定钩子
   "diag-perf-max-label",
   // ADR-278 §2.6：随基准模式改义的标签（迭代次数 / 目标集）——e2e 读它们的正文验证「改义当场说清」
@@ -192,7 +192,7 @@ export function diagnosticsHTML(): string {
         // ADR-278 §2.5：整 tab 桌面专属——它的每个入口都是 CLI，只藏按钮会留空壳 tab
         desktopOnly: true,
         label: `${UI_ICONS.performance} ${t("diagnostics.perfRunBench")}`,
-        // ADR-278 §2.7：公共区（测什么 / 排序 / 最多模型数）**模式无关常驻**——single 与 conc
+        // ADR-278 §2.7：公共区（测什么 / 排序 / 最多跑几个）**模式无关常驻**——single 与 conc
         // 在 Go 侧由同一个 registerPerfTargetFlags 注册，是同一套参数面；把公共参数埋进
         // data-perf-mode 行里（"两个模式都显示"）正是臃肿与漂移之源。
         // ADR-278 §2.3：取样上限**有意不合并**——单模型深测默认 5 / 并发广度扫默认 20 是两个真实口径
@@ -216,8 +216,6 @@ export function diagnosticsHTML(): string {
       </div>
       <div class="perf-row" data-perf-mode="single">
         <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
-        <label for="diag-perf-max" id="diag-perf-max-label" data-testid="diag-perf-max-label" title="${t("diagnostics.perfMaxModelsHint")}">${t("diagnostics.perfMaxModels")}</label>
-        <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max">
         <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
         <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
         <label for="diag-perf-baseline-compare">${t("diagnostics.perfBaselineCompare")}</label>
@@ -229,6 +227,8 @@ export function diagnosticsHTML(): string {
         <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
         <label for="diag-perf-iter" id="diag-perf-iter-label" data-testid="diag-perf-iter-label">${t("diagnostics.perfIterations")}</label>
         <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
+        <label for="diag-perf-max" id="diag-perf-max-label" data-testid="diag-perf-max-label" title="${t("diagnostics.perfMaxModelsHint")}">${t("diagnostics.perfMaxModels")}</label>
+        <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max">
       </div>
       <div class="perf-row" data-perf-mode="conc">
         <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>

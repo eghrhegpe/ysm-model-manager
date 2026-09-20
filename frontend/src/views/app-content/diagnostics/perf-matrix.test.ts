@@ -47,7 +47,7 @@ function makeRoot(): ShadowRoot {
       <option value="path">路径升序</option>
       <option value="size">体积从大到小</option>
     </select>
-    <label for="diag-perf-max" id="diag-perf-max-label" title="单位随目标集变：某类型 = 该类型 N 条；全部类型 = 每类各 N 条；全库扁平 = 全库 N 条">最多模型数</label>
+    <label for="diag-perf-max" id="diag-perf-max-label" title="单位随目标集变：某类型 = 该类型 N 条；全部类型 = 每类各 N 条；全库扁平 = 全库 N 条">最多跑几个</label>
     <input id="diag-perf-max" value="3">
     <div id="diag-perf-single"></div>
     <div id="diag-perf-hist"></div>
@@ -598,7 +598,7 @@ describe("目标集选择器选项来自 registry（前端不写死类型表）"
 });
 
 // 本次要清的账（ADR-262 D3 修订）：同一个 `#diag-perf-max` 承载三种目标集的取样上限，
-// 但**标签文案一律叫「最多模型数」**（旋钮语义是取样上限）——单位随目标集变这件事只进 title 提示。
+// 但**标签文案一律叫「最多跑几个」**（旋钮语义是取样上限）——单位随目标集变这件事只进 title 提示。
 // 旧实现按模式换标签（`syncPerfCountLabel`）修的是症状：标签改义 = 控件在骗人。
 describe("上限标签不随目标集改义", () => {
   it("三种目标集下标签逐字相同，且单位规则只在 title 里", async () => {
@@ -607,12 +607,12 @@ describe("上限标签不随目标集改义", () => {
     const label = root.getElementById("diag-perf-max-label") as HTMLElement;
     const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
 
-    expect(label.textContent).toBe("最多模型数");
+    expect(label.textContent).toBe("最多跑几个");
 
     for (const target of ["__all__", "__repo__", "ysm"]) {
       setTarget(root, target);
       select.dispatchEvent(new Event("change", { bubbles: true }));
-      expect(label.textContent).toBe("最多模型数");
+      expect(label.textContent).toBe("最多跑几个");
       expect(label.title).toContain("单位随目标集变");
     }
   });

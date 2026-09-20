@@ -376,6 +376,17 @@ localPos: number[];
 - **文案漂移附带订正**：「取样上限→最多模型数」一次未完成的迁移留下多处「注释冒充当前标签名」的失真（含与不变量直接矛盾的 `tpl.ts:26`「标签恒为取样上限」），保守改法：只修「当标签名引用」处，保留 `--max-models`/旋钮概念等合法用法；test 标题/describe 名是标识符非断言字面量，`toBe("最多模型数")` 未触碰。
 - ⚠ **改 i18n / 文案时同步硬编码字面量**（本仓反复撞的账）：单测 fixture 直接写死中文、e2e 被 playwright 钉 `locale:en-US`——改 zh 不红 fixture、改 en 必红 e2e；本例只动注释/test 标题未碰 locale 值，无需重跑 `generate-locale-json.ts`。
 
+### ADR-285 跑基准可用性收口（2026-09-20 首轮拍板，部分落地）
+
+以「四问」切入 bench tab（上手难度 / 按钮布局 / 开放的按钮是否难调 / 三语翻译），全部以源码与脚本实测取证，结论记档：
+
+- **无摆设控件**（逐个对账 Go flag）：`#diag-perf-conc-workers`→`--workers`、`#diag-perf-conc-max`→`--max-models`、`#diag-perf-iter`/`#diag-perf-scan-iter`→`--iterations`、基准三件套→`--baseline`/`--save-baseline`/`--threshold-pct`。真正的落差是 `--workers` 是**档位上限**（`concurrentWorkerCounts` 取 `{2,4,workers} ∩ ≤workers`，`bench_concurrent_json.go:106-117`）——填 8 实测 2/4/8 三档，hint 已说清但 label 读起来像「就用 8」。
+- **i18n parity 全绿**（`node scripts/i18n-check.ts` 实测）：1492 键 × 3 语 missing=0 extra=0，占位符一致。问题在 5 类**措辞**而非缺键：① 按钮 title 三重复述（`perfScopeHint` 短 scope 句 + 机制长句尾部的 scope 尾巴，`zh-CN.ts:417` 等）② 中/日夹英文 `workers` ③ zh「最多模型数」名不副实 ④ 诚实层「测什么/测哪些」差异只在单复数 ⑤ 撞名与风格不齐。
+- **两道穷尽护栏的位置与判据**（`perf-mode.test.ts`）：只收 `input/select`、**button 不入账**（`<input|select>…id=` 正则，`:338-341`）→ 运行按钮换行不触发护栏；每控件必须有归宿 = 行归属（所属 perf-row 的 data-perf-mode）∨ 不读表/基准名单 ∨ 公共区，`:422-439` 又补「single 下可见者须声明」。
+- **已落地（P0 全批 + P1-1 方案 A + P3）**：① 三语 `perfConcurrentHint`/`perfScanBenchHint` 删尾部 scope 尾巴（去三重复述）② conc 运行按钮补 `accent` ③ 中/日 `workers` 术语本地化且**一次落 P2-1 终值**（zh「最大并发路数」/en「Max concurrent workers」/ja「最大並列数」，键名不变、消费点零改动）④ **P1-1 运行按钮移到参数之后**：single 的按钮从 model 行拆出、移到 baseline 之后；conc 的按钮从 worker 行拆出、移到 conc-max 之后（带 accent）。⑤ P3-1/2 文档。
+- **P0-3（zh「最多模型数」→「取样上限」）被否**：会反转 ADR-278 §2.6 已评审结论（「取样上限」是黑话、当年三语统一改「最多模型数」），且 `perf-matrix.test.ts:610,615` 的 `toBe("最多模型数")` 是有意保留的锁定断言、`LyG` 刚清完同类失真——本卡的「改 i18n 必同步硬编码字面量」教训再次应验（ADR 方案只列 3 处、漏了单测 6 处连带）。**真痛点走另立 ADR 全量连带，当零风险微调即入「闸只看得见它被写死的那一类」同款坑。**
+- 未做（留待后续拍板）：P1-2（公共区上移）、P1-3（视觉分组）、P2-2（目标集改口带原因）、P2-3（scopeHint 前缀消撞名）。
+
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

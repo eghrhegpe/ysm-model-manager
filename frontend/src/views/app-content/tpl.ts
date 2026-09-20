@@ -220,7 +220,6 @@ export function diagnosticsHTML(): string {
         </select>
       </div>
       <div class="perf-row" data-perf-mode="single">
-        <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
         <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
         <div class="perf-hint" data-perf-mode="single">${t("diagnostics.perfModelHintFromTree")}</div>
       </div>
@@ -229,7 +228,6 @@ export function diagnosticsHTML(): string {
         <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
       </div>
       <div class="perf-row" data-perf-mode="conc">
-        <button class="btn-base" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
         <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
         <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
       </div>
@@ -241,6 +239,9 @@ export function diagnosticsHTML(): string {
         <label for="diag-perf-conc-max">${t("diagnostics.perfMaxModels")}</label>
         <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfMaxModelsHint")}">
       </div>
+      <div class="perf-row" data-perf-mode="conc">
+        <button class="btn-base accent" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
+      </div>
       <div class="perf-row" data-perf-mode="single">
         <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
         <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
@@ -248,6 +249,9 @@ export function diagnosticsHTML(): string {
         <input id="diag-perf-baseline-compare" type="checkbox" data-testid="diag-perf-baseline-compare" title="${t("diagnostics.perfBaselineHint")}">
         <label for="diag-perf-baseline-th">${t("diagnostics.perfBaselineThreshold")}</label>
         <input id="diag-perf-baseline-th" type="number" min="1" step="1" value="50" data-testid="diag-perf-baseline-th">
+      </div>
+      <div class="perf-row" data-perf-mode="single">
+        <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
       </div>
     </div>
     <div id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>

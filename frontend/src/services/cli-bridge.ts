@@ -46,9 +46,14 @@ interface CLIData {
 /** CLI 统一响应 */
 export interface CLIResponse {
   status: CLIStatus;
+  /** @non-ui 命令名回显。界面不渲染：调用方本就知道自己调了什么（`executeCLI(command)`）；
+   * 保留在契约里是为了让**失败响应**能自证是哪条命令失败（排错/断言用），删掉会让
+   * `parseErrorResponse` 的未知命令回退 "unknown" 失去对账面。 */
   command: string;
   data?: CLIData;
   error?: CLIError;
+  /** 命令本身的墙钟耗时（Go `TimingInfo`，纳秒精度）。**已消费**：经区段头耗时徽标展示
+   * （`perf-common.ts|sectionHeader` 第四参）——回答「这一节等了 4 秒，是命令慢还是渲染慢」。 */
   timing?: { total_ms: number };
   meta?: { platform: string };
 }

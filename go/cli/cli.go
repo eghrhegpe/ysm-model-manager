@@ -63,7 +63,8 @@ func RunCLI(a AppService, args []string) error {
 		restoreStdout() // 显式关闭 pipe，确保 outputBuf.String() 不死锁
 
 		cmdName := commandArgs[0]
-		elapsed := float64(time.Since(start).Milliseconds())
+		// 同 runCLIInProcessCore：信封耗时统一走 durationMs，不另用截断的 Milliseconds()
+		elapsed := durationMs(time.Since(start))
 
 		if err != nil {
 			resp := NewJsonError(cmdName, err, elapsed)
@@ -186,7 +187,10 @@ func runCLIInProcessCore(a AppService, args []string) (json string, err error) {
 	restoreStdout()
 
 	cmdName := commandArgs[0]
-	elapsed := float64(time.Since(start).Milliseconds())
+	// 信封耗时走 durationMs（纳秒精度）：`Milliseconds()` 整毫秒截断，快命令（version/缓存查询）
+	// 会报 0——前端把它当「命令耗时」展示时，0 就是「没测到」，与 ADR-262 D2 同款陷阱
+	// （亚毫秒被截断成 0，再被 omitempty 吞掉）。本包内耗时换算只有 durationMs 一个出口。
+	elapsed := durationMs(time.Since(start))
 
 	if runErr != nil {
 		resp := NewJsonError(cmdName, runErr, elapsed)

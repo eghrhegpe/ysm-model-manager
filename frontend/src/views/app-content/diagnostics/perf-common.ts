@@ -12,15 +12,32 @@ import type { EscFn } from "./logs.ts";
 
 // ===== 区段头（带可选复制按钮）=====
 
-/** 结果区段头（可选复制按钮：data-perf-copy 供事件委托识别） */
-export function sectionHeader(icon: string, label: string, rawText?: string): string {
+/**
+ * 结果区段头（可选复制按钮：data-perf-copy 供事件委托识别）。
+ *
+ * `timingMs` 是 CLI 信封耗时（`go/cli/json.go|TimingInfo`，GUI 桥路径每调用必发）：
+ * 回答「这一节等了 4.2 秒，是 CLI 慢还是渲染慢」。**缺席/0 一律不渲染**——
+ * 0 在 Go 口径里是「没测到」（时钟粒度截断），印 `0.00ms` 等于把没测到包装成实测，
+ * 正是本模块反复清的账（ADR-278 §2.6）。
+ */
+export function sectionHeader(
+  icon: string,
+  label: string,
+  rawText?: string,
+  timingMs?: number,
+): string {
   const copyBtn =
     rawText !== undefined
       ? `<button type="button" data-perf-copy class="btn-base perf-copy-btn" style="margin-left:auto;padding:2px 8px;font-size:var(--fs-xs);line-height:1.4" title="${t("perf.copyRaw")}">${UI_ICONS.clipboard} ${t("perf.copy")}</button>`
       : "";
+  // 耗时徽标紧贴标签；有复制按钮时它不抢 margin-left:auto（后者把按钮推到最右）
+  const timingTag =
+    timingMs !== undefined && timingMs > 0
+      ? `<span class="perf-section-ms" title="${t("diagnostics.perfCliTimingHint")}">${UI_ICONS.clock}${timingMs.toFixed(2)}ms</span>`
+      : "";
   const wrapper = rawText !== undefined ? ` data-perf-raw="${encodeURIComponent(rawText)}"` : "";
   return `<div class="perf-section" style="margin-top:10px;font-size:var(--fs-sm);font-weight:600;color:var(--txt);display:flex;align-items:center;gap:6px"${wrapper}>
-<span>${icon}</span><span>${label}</span>${copyBtn}</div>`;
+<span>${icon}</span><span>${label}</span>${timingTag}${copyBtn}</div>`;
 }
 
 // ===== 契约类型：Go 载荷的身份块 =====

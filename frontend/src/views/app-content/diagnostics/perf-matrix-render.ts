@@ -267,9 +267,23 @@ export function perfTargetEchoHTML(spec: PerfTargetEcho | undefined, esc: EscFn)
 }
 
 /** 渲染类型矩阵（表格 + 逐模型明细）。空结果走显式空态，不画空表。 */
-export function renderPerfMatrix(payload: PerfMatrixPayload, esc: EscFn): string {
+/** 渲染类型矩阵（表格 + 逐模型明细）。空结果走显式空态，不画空表。
+ *
+ * `timingMs` 是 CLI 信封耗时（桥路径每调用必发），透传给区段头展示——回答
+ * 「这一节等了 4 秒，是命令慢还是渲染慢」。可选：缺席即不渲染徽标（不印 0.00ms 冒充）。
+ */
+export function renderPerfMatrix(
+  payload: PerfMatrixPayload,
+  esc: EscFn,
+  timingMs?: number,
+): string {
   const rawOutput = payload.output ?? JSON.stringify(payload, null, 2);
-  const head = sectionHeader(UI_ICONS.performance, t("diagnostics.perfMatrixResult"), rawOutput);
+  const head = sectionHeader(
+    UI_ICONS.performance,
+    t("diagnostics.perfMatrixResult"),
+    rawOutput,
+    timingMs,
+  );
   // 口径回显先于空态判断：一条样本都没采到，也要说清「这次是按什么挑的」
   const specEcho = perfTargetEchoHTML(payload.spec, esc);
   if (!payload.models.length) {

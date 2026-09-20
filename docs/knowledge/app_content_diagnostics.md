@@ -253,6 +253,33 @@ status: active
   - **③ 结构重复（根因）**：`PerfIdentity` 被声明**两次且形状不同**——`perf-single-bench.ts`（含 `filesRoot`/`absPath`，`rtype_source` 必填）与 `perf-matrix-render.ts`（内联匿名，只有 5 个字段，`rtype_source` 可选）。**于是没有任何一处能回答「这个结构的消费面有哪些字段」**，②类字段就藏在这个盲区里。已合并为 `perf-common.ts|export interface PerfIdentity` 单一声明（`perf-matrix-render` 不再内联匿名）；字段可选性按 Go tag 如实对齐（`rtype_source`/`absPath` 无 `omitempty` → 必填；`filesRoot` 有 `omitempty` → 可选）。
   - ⚠️ **摸排方法本身的坑（记下来免得重犯）**：首轮 census 用「外层 `if ($l -match ...)` 取 `$Matches[1]`、内层 `foreach` 扫全文件」的嵌套写法——**内层正则把 `$Matches` 覆盖了**，导致字段名被污染成上一轮的值（PowerShell 经典陷阱）。结论侥幸未错（`runtime` 本就不在零读取名单里），但当时口头把它误报为「未消费」。**教训：抓组后立刻落变量，且不要在循环里复用 `$Matches`。** 另：判「未消费」必须查**属性访问形态**（`.field`/`?.field`）而非 `\bfield\b` 裸词——后者会被注释里的同名字段名满足（`hints` 在 `perf-matrix-render.ts:208` 就是这么一条注释）。
   - **护栏**：契约 §3.7 增 6 条锚点锁「单一声明 + 两个消费方不得重复声明或回退内联匿名 + 三个 `@non-ui` 字段必须紧邻标注」。`@non-ui` 正则要求标签在**该字段自己的 doc comment 内**——首版用 `{0,400}` 宽泛窗口，被相邻字段的 `@non-ui` 满足（变异检查：去掉 `absPath` 的标注仍绿），改成逐注释块匹配后才精确变红。
+### 全仓字段级摸排 + 信封 timing 落地（2026-09-21 续）
+
+把摸排从 `diagnostics/` 扩到全仓后，**结论收窄**（这是本轮最重要的认知修正）：
+
+- 全仓 `frontend/src` 共 **2707 个 interface 字段，263 个零读取（≈10%）**——但这是**噪音占比**，不是问题规模。绝大多数是**第三方格式类型**（`PmxMaterialData`/`FbxMaterialData`/`VrmBuildArtifacts` 解析后重整形）、**mock**（`IdbMock`）、**内部 UI 状态**，零读取多为合理。
+- 收窄到**契约类 interface**（名字以 `Payload|Resp|Response|JSON|Snapshot|Echo|Summary|Info` 收尾）后：**194 个字段，仅 14 个零读取**，其中 3 个已在上一轮处理。**真正的问题面是 14 而非 263**——差点被大数字带偏方向。
+- `scripts/check-orphan-exports.ts` **看不见这一层**（实测 `--min-consumers 3` 对 `perf-common` 零命中）：它管**导出符号**，而 `PerfIdentity` 被两个文件 import，不是孤儿。**盲区在符号之下的一层**——这正是要补的。
+
+### 信封 `timing` 的真相（三轮修正，记下以免再错）
+
+1. **首判错**（我说「Go 在白白计时」）：以为 `timing` 全仓无意义。
+2. **二判修正**：`--format json`（CLI stdout）**根本不发信封**——`single-bench`/`scan-bench`/`concurrent-bench`/`health-report`/`version` 实测全是裸载荷（无 `status`/`command`/`timing`/`meta`）。信封**只走 GUI 桥路径** `internal/app/cli_bridge.go|ExecuteCLI`（`go/cli/cli.go` 两处 `NewJsonSuccess`/`NewJsonError`）。所以 `meta.platform` 有 7 处读取是自洽的。
+3. **三判**：真正的缺陷是 `command`/`timing` 在**桥路径真字段**前提下全仓零读取，且 `timing` 用 `float64(time.Since(start).Milliseconds())` **整毫秒截断**——比业务载荷的 `durationMs`（纳秒精度）差一档，快命令（`version`/缓存查询）恒报 `0`，而 `0` 在本仓口径里是「没测到」。
+
+**处置（按实用度）**：
+- **修精度**：两处组装点改 `durationMs(time.Since(start))`，与包内唯一耗时出口对齐。护栏 `TestEnvelopeTiming_UsesDurationMs`（源码断言 `Milliseconds()` 不得回现 + `durationMs(time.Since(start))` 至少两处）+ `TestDurationMs_SubMillisecondNotTruncated`（500µs 必须为正，`Milliseconds()` 会得 0）。均过变异检查。
+- **接消费端**：`perf-common.ts|sectionHeader` 增第四参 `timingMs`，渲染 `.perf-section-ms` 耗时徽标（`clock` 图标 + `toFixed(2)ms`），tooltip 说明「量的是命令本身，不含本页解析渲染」。三个 perf 区段（single-bench / concurrent / scan-bench）透传 `resp.timing?.total_ms`。**缺席或 0 一律不渲染**——印 `0.00ms` 等于把没测到包装成实测（ADR-278 §2.6）。两条变异检查（徽标恒空 / 去掉 `>0` 守卫）均精确变红。
+- **`command` 不接**：调用方本就知道自己调了什么，界面渲染它是噪音；改加 `@non-ui` 标注（保留在契约里是为了让失败响应自证哪条命令失败）。**「能读却硬要读」与「该读却没读」要分开判**——这是本轮 `@non-ui` 体系的又一次实操。
+- ⚠️ **曾误以为「日志面板是 timing 的自然归宿」**：`utils/base/primitives/log.ts` 的 sink 只有 `warn`/`error` 两级，而 error-diary 是**问题册**不是**流水账**——把每次 CLI 调用记进去是类别错误。**别为了「有个地方放」而污染诊断通道。**
+
+### 摸排方法（可复用）
+
+1. 枚举 `frontend/src/**/*.ts`（排除 `*.test.ts`/`*.d.ts`/`vendor`）的 interface 成员行（两空格缩进 + `?` 可选）。
+2. 每字段统计**全仓**读取点：`(?:\.|\?\.)$field\b|\["$field"\]`——**必须查属性访问形态**，裸词会被注释命中。
+3. 按 interface 名收窄到契约类，再回查 Go JSON tag 是否真在发。
+4. ⚠️ **PowerShell 陷阱**：外层 `-match` 取 `$Matches[1]`、内层循环再跑正则 → 内层覆盖 `$Matches`，字段名被污染。**抓组后立刻落变量**。
+
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

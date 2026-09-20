@@ -104,6 +104,8 @@ export const contentDiagCSS: string = `
 
 /* ===== 性能面板（single-bench / concurrent / scan-bench / perf-log） ===== */
 .perf-section { font-size:var(--fs-sm); font-weight:600; color:var(--txt); display:flex; align-items:center; gap:6px; }
+/* CLI 信封耗时徽标：量的是命令本身，非本页渲染——弱化样式，不与区段标题抢视觉权重 */
+.perf-section-ms { display:inline-flex; align-items:center; gap:2px; font-size:var(--fs-xs); font-weight:400; color:var(--txt-dim); }
 .perf-bar-row { display:flex; align-items:center; gap:8px; margin:2px 0; font-size:var(--fs-xs); }
 .perf-bar-name { flex:0 0 118px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); }
 .perf-bar-track { flex:1; height:12px; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-md); overflow:hidden; }

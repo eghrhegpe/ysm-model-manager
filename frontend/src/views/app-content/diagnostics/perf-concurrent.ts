@@ -193,7 +193,7 @@ function concFileReadHTML(fr: ConcFileRead, esc: EscFn): string {
 </div>`;
 }
 
-function concRender(payload: ConcPayload, banner: string, esc: EscFn): string {
+function concRender(payload: ConcPayload, banner: string, esc: EscFn, timingMs?: number): string {
   // 目标集回显（ADR-262 D3 修订）：并发载荷是**扁平**的（无 spec 对象），三旋钮与 max_models 同层
   const echo = perfTargetEchoHTML(
     {
@@ -235,6 +235,7 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn): string {
       UI_ICONS.performance,
       t("diagnostics.perfConcurrentResult"),
       payload.output ?? "",
+      timingMs,
     ) +
     banner +
     echo +
@@ -305,7 +306,8 @@ export async function runConcurrentBench(root: ShadowRoot, esc: EscFn): Promise<
       resp.status === "error"
         ? errorHTML(resp.error?.message ?? t("diagnostics.perfFail"), esc)
         : "";
-    out.innerHTML = concRender(payload, banner, esc);
+    // 信封耗时透传（与 single-bench 同一口径）：区分「命令慢」与「本页渲染慢」
+    out.innerHTML = concRender(payload, banner, esc, resp.timing?.total_ms);
   } catch (e) {
     if (perfConcGuard.stale(gen)) return;
     setErrorCatch(out, e, esc);

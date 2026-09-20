@@ -203,9 +203,14 @@ function parityHTML(p: ScanBenchParity, esc: EscFn): string {
  * 渲染引擎对照（规格回显 + 引擎表 + 一致性结论）。
  * 空引擎表在守卫层就被拒（没东西可比就该报错，不该画空表）。
  */
-export function renderScanBench(payload: ScanBenchPayload, esc: EscFn): string {
+export function renderScanBench(payload: ScanBenchPayload, esc: EscFn, timingMs?: number): string {
   const rawOutput = payload.output ?? JSON.stringify(payload, null, 2);
-  const head = sectionHeader(UI_ICONS.performance, t("diagnostics.perfScanBenchTitle"), rawOutput);
+  const head = sectionHeader(
+    UI_ICONS.performance,
+    t("diagnostics.perfScanBenchTitle"),
+    rawOutput,
+    timingMs,
+  );
 
   // 规格回显：量的是什么、量了几次、什么构建——仓库根可能很长，只进 title
   const spec = payload.spec ?? ({} as ScanBenchSpec);
@@ -260,7 +265,7 @@ export async function runScanBench(root: ShadowRoot, esc: EscFn): Promise<void> 
     // 若把拼接直接写在赋值右侧，R8（innerHTML XSS，阻断型）会判新增违规：行内豁免正则要的是
     // `esc(`，而本行的 esc 是实参名，匹配不上。⚠️ 该规则扫的是**文本行**（含注释）——注释里
     // 照抄那行写法同样会被判违规，故此处用文字描述而非代码片段。
-    const html = renderScanBench(payload, esc) + banner;
+    const html = renderScanBench(payload, esc, resp.timing?.total_ms) + banner;
     out.innerHTML = html;
   } catch (e) {
     if (scanBenchGuard.stale(gen)) return;

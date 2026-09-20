@@ -501,6 +501,8 @@ export const en: Record<string, string> = {
   "diagnostics.perfReasonNoCliParser":
     "Parser lives in the front-end 3D adapter only; CLI cannot analyze this type",
   "diagnostics.perfReasonUnknown": "Not collected (reason unknown)",
+  "diagnostics.perfCliTimingHint":
+    "Time spent inside the CLI command itself (excludes parsing and rendering on this page)",
   "diagnostics.perfMatrixStageMismatch": "Stage chain differs from the manifest",
   "diagnostics.perfMatrixEmpty": "No model of this type found in the repo",
   "diagnostics.perfMatrixColUnsupported": "Not collected",

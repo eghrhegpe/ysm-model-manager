@@ -498,6 +498,7 @@ export const ja: Record<string, string> = {
   "diagnostics.perfReasonNoCliParser":
     "パーサーはフロントエンドの 3D アダプタにのみ存在し、CLI では解析できません",
   "diagnostics.perfReasonUnknown": "未収集（理由不明）",
+  "diagnostics.perfCliTimingHint": "CLI コマンド自体の実行時間（本ページの解析・描画は含みません）",
   "diagnostics.perfMatrixStageMismatch": "段階数がマニフェストと不一致",
   "diagnostics.perfMatrixEmpty": "リポジトリに該当タイプのモデルがありません",
   "diagnostics.perfMatrixColUnsupported": "未収集",

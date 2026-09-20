@@ -490,6 +490,8 @@ export const zhCN = {
   // 通用句答「为什么这批没有阶段耗时」，本键答「这一条具体怎么了」，且能随 token 扩展
   "diagnostics.perfReasonNoCliParser": "解析器只在前端 3D 适配器，CLI 无法解析此类型",
   "diagnostics.perfReasonUnknown": "未采集（原因未知）",
+  // CLI 信封耗时徽标的 tooltip：说清它量的是「命令本身」而非本页渲染
+  "diagnostics.perfCliTimingHint": "CLI 命令本身的执行耗时（不含本页解析与渲染）",
   "diagnostics.perfMatrixStageMismatch": "阶段链与清单声明不符",
   "diagnostics.perfMatrixEmpty": "仓库中未找到该类型的模型",
   "diagnostics.perfMatrixColUnsupported": "未采集",

@@ -531,7 +531,8 @@ export async function runSingleBench(root: ShadowRoot, esc: EscFn): Promise<void
       renderLoadFailure(out, resp, esc, "diagnostics.perfFail");
       return;
     }
-    out.innerHTML = renderPerfMatrix(matrix, esc);
+    // 信封耗时（Go 桥每次调用必发）透传进区段头：区分「命令慢」与「渲染慢」
+    out.innerHTML = renderPerfMatrix(matrix, esc, resp.timing?.total_ms);
   } catch (e) {
     if (perfSingleGuard.stale(gen)) return;
     setErrorCatch(out, e, esc);

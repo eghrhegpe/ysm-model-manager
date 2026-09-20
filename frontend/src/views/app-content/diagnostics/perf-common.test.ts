@@ -24,6 +24,28 @@ describe("sectionHeader", () => {
     expect(html).toContain("慢查询");
     expect(html).toContain(encodeURIComponent("TOP 10"));
   });
+  // CLI 信封耗时（go/cli/json.go|TimingInfo）：Go 每次调用都发，前端曾声明了却零读取。
+  // 它回答一个真实问题——「这一节的结果等了 4.2 秒，是 CLI 慢还是渲染慢」。
+  it("给 timingMs → 渲染耗时徽标（整毫秒转人话）", () => {
+    const html = sectionHeader(UI_ICONS.chart, "性能概览", undefined, 1234.5678);
+    expect(html).toContain("1234.57ms");
+    expect(html).not.toContain("—");
+  });
+
+  it("timingMs 缺席/为 0 → 不渲染耗时徽标（不印 0.00ms 冒充实测）", () => {
+    const absent = sectionHeader(UI_ICONS.chart, "性能概览");
+    const zero = sectionHeader(UI_ICONS.chart, "性能概览", undefined, 0);
+    for (const html of [absent, zero]) {
+      expect(html).not.toContain("ms</span>");
+      expect(html).not.toContain("0.00ms");
+    }
+  });
+
+  it("rawText 与 timingMs 可并存（复制按钮 + 耗时徽标不互斥）", () => {
+    const html = sectionHeader(UI_ICONS.search, "慢查询", "TOP 10", 42.5);
+    expect(html).toContain(encodeURIComponent("TOP 10"));
+    expect(html).toContain("42.50ms");
+  });
 
   it("无 rawText → 不抛错", () => {
     expect(() => sectionHeader(UI_ICONS.settings, "配置")).not.toThrow();

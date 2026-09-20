@@ -34,6 +34,7 @@ auto_fields:
     - PERF_ITER_SUFFIX_KEYS
     - PERF_RUN_BUTTON_MODE_KEYS
     - PERF_UNREAD_MODES
+    - PerfIdentity
     - perfScopeHint
     - populatePerfTargetOptions
     - renderHealthReport
@@ -246,6 +247,12 @@ status: active
     - **修法**：`singleBenchJSON` 增 `UnsupportedReason string \`json:"unsupported_reason,omitempty"\``，取值来自新常量 `unsupportedReasonNoCLIParser = "no_cli_parser"`；前端 `UNSUPPORTED_REASON_KEYS` 映射表 + `unsupportedReasonText()`（未知 token 落 `perfReasonUnknown` 而非空串——「原因缺失」看起来像界面坏了）。**与 size_source 完全同构**：枚举值不随语言变，文案在 locale 里。**用 token 而非布尔**：将来出现第二种未采集原因（格式损坏/体积超限）时前端结构不动，只加一条映射。新增 i18n 键 `perfReasonNoCliParser` / `perfReasonUnknown`（三语）。
   - **护栏**：Go `bench_matrix_test.go|TestPerfTypeSummary_StagesDeclared`（一次 `--target all` 扫描同时覆盖「已声明」与「未声明」两侧，显式断言 JSON 里 `stages_declared` 的 **true 与 false 都出现**——只断言 true 会漏掉「全都发 true」的退化，那等于回到用 0 反推）；契约 §3.7b 增四条锚点（字段 + 单点出口 + 前端读 `stages_declared` + 反向断言不再用 `cli_analyzable` 反推）、§3.7 增三条（token 回填 + 映射表配对 + 反向断言不渲染 `m.hints`）。
   - ⚠️ **变异检查又一次救下空转断言**（本轮共 4 次）：①`unsupported_reason` 首版只查 `concurrentGo.includes("unsupportedReasonNoCLIParser")`——**常量声明就满足它**，删掉回填仍绿；改查 `UnsupportedReason: unsupportedReasonNoCLIParser,`（接线形态）。②前端映射表首版正则过宽，把键改名仍绿；改成要求 token→键**配对**。③`StagesDeclared` 首版测试用 `--target rtype EntityPlayer`——**该类型在夹具里不存在**，扫描直接报错（改用 `--target all` + 造 PMX 文件）。④前端渲染测试首版用 `toContain("CLI 无该类型解析器")`——**通用句本来就含这个子串**，恒真；改用专用键的独有措辞。**教训：断言必须查「接线/配对/独有措辞」，查「符号存在」几乎必然空转。**
+- **「Go 发了 / 前端声明了 / 没人读」字段摸排（2026-09-21）**：以「前端在 `diagnostics/` 下声明的 interface 字段」为全集，逐字段统计**全目录**读取点（`x.field` / `x?.field` / `x["field"]`），再回查 Go 是否真在发。164 个声明字段里 **7 个零读取**，分三类：
+  - **① 真未消费（1 个）**：`SingleBenchStage.bytes`（Go `bench_concurrent.go` 发）+ 载荷级 `hints`（两处声明）。已加 `@non-ui` 标注说明为何不渲染——`bytes` 各阶段口径不同（读入 vs 纹理 vs 网格），并排展示会**诱导横向比较不可比的量**。
+  - **② 合法非界面消费（4 个）**：`PerfIdentity.{absPath, filesRoot, rtype_source}`、`SingleBenchPayload.size_bytes`——测试/AI 断言与排错用。**它们与①在静态检查里长得一样**，这正是危险处：将来加「未消费字段」门禁会一起误伤。故本轮先用 `@non-ui` 把它们**在源码里区分开**，门禁留待标注体系成型。
+  - **③ 结构重复（根因）**：`PerfIdentity` 被声明**两次且形状不同**——`perf-single-bench.ts`（含 `filesRoot`/`absPath`，`rtype_source` 必填）与 `perf-matrix-render.ts`（内联匿名，只有 5 个字段，`rtype_source` 可选）。**于是没有任何一处能回答「这个结构的消费面有哪些字段」**，②类字段就藏在这个盲区里。已合并为 `perf-common.ts|export interface PerfIdentity` 单一声明（`perf-matrix-render` 不再内联匿名）；字段可选性按 Go tag 如实对齐（`rtype_source`/`absPath` 无 `omitempty` → 必填；`filesRoot` 有 `omitempty` → 可选）。
+  - ⚠️ **摸排方法本身的坑（记下来免得重犯）**：首轮 census 用「外层 `if ($l -match ...)` 取 `$Matches[1]`、内层 `foreach` 扫全文件」的嵌套写法——**内层正则把 `$Matches` 覆盖了**，导致字段名被污染成上一轮的值（PowerShell 经典陷阱）。结论侥幸未错（`runtime` 本就不在零读取名单里），但当时口头把它误报为「未消费」。**教训：抓组后立刻落变量，且不要在循环里复用 `$Matches`。** 另：判「未消费」必须查**属性访问形态**（`.field`/`?.field`）而非 `\bfield\b` 裸词——后者会被注释里的同名字段名满足（`hints` 在 `perf-matrix-render.ts:208` 就是这么一条注释）。
+  - **护栏**：契约 §3.7 增 6 条锚点锁「单一声明 + 两个消费方不得重复声明或回退内联匿名 + 三个 `@non-ui` 字段必须紧邻标注」。`@non-ui` 正则要求标签在**该字段自己的 doc comment 内**——首版用 `{0,400}` 宽泛窗口，被相邻字段的 `@non-ui` 满足（变异检查：去掉 `absPath` 的标注仍绿），改成逐注释块匹配后才精确变红。
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

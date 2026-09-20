@@ -120,7 +120,7 @@ interface ConcPayload {
   serial?: ConcPhase;
   parallel?: ConcWorker[];
   file_read?: ConcFileRead;
-  /** Go 侧中文建议（未 i18n，不渲染，仅供 AI/CLI） */
+  /** @non-ui Go 侧中文建议（未 i18n，不渲染，仅供 AI/CLI）——见本文件头 §载荷里的 hints */
   hints?: string[];
   /** ADR-200 D5 sidecar：桥注入的原始文本（复制原文用） */
   output?: string;

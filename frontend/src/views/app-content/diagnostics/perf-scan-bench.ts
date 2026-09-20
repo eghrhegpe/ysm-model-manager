@@ -75,6 +75,7 @@ export interface ScanBenchPayload {
   engines: ScanBenchEngine[];
   parity: ScanBenchParity;
   output?: string;
+  /** @non-ui 桥注入的 Go 扫描根（ADR-200 D5）：排错用，界面不渲染 */
   filesRoot?: string;
 }
 

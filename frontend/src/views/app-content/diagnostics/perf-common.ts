@@ -23,6 +23,42 @@ export function sectionHeader(icon: string, label: string, rawText?: string): st
 <span>${icon}</span><span>${label}</span>${copyBtn}</div>`;
 }
 
+// ===== 契约类型：Go 载荷的身份块 =====
+
+/**
+ * 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定 —— 报告靠它分辨真实场景类别。
+ *
+ * Go 出处 `perf_identity.go|perfIdentity`，被 single-bench / concurrent / matrix 三个载荷复用。
+ * **全仓唯一声明**：此前 `perf-single-bench.ts` 与 `perf-matrix-render.ts` 各写一份且形状不同，
+ * 于是没有任何一处能回答「这个结构的消费面到底有哪些字段」——字段悄悄变成没人读的死重量
+ * （`absPath` / `filesRoot` / `rtype_source` 即在此盲区里躺了很久）。改 Go 字段时改一处即可。
+ *
+ * `@non-ui` 标记的字段是**非界面消费**：供测试/AI 断言、排错、或 Go 侧自检；界面不读它们是**取舍**，
+ * 不是遗漏。标注的意义是让「Go 发了但没人读」与「故意不读」在源码里可区分——
+ * 否则将来加「未消费字段」门禁时会把这两类一起误伤。
+ */
+export interface PerfIdentity {
+  /** registry 类型 id（ysm / EntityPlayer / resourcepack / …）；容器兜底为 container */
+  rtype: string;
+  /** registry 显示名（如「YSM 模型」）；由 Go 给出，前端不建类型映射 */
+  rtype_label?: string;
+  /**
+   * 判定来源：location（祖先目录归属）| extension（扩展名消歧）| container（容器兜底）。
+   *
+   * @non-ui 界面不渲染：它是**判定过程的审计线索**（回答「为什么算成这个类型」），
+   * 归 CLI/AI 与排错消费；渲染它需要把三值口径再翻译一遍，收益低于维护成本。
+   */
+  rtype_source: string;
+  /** 模型形态：dir（解包目录，入口 <dir>/ysm.json）| file（打包容器/单文件） */
+  form?: "file" | "dir";
+  /** 相对仓库根，跨机器可比（测试/AI 断言用这个，不用 absPath） */
+  relPath: string;
+  /** @non-ui 绝对路径：本机专用，跨机器不可比且泄漏本地目录结构——测试/AI 断言一律用 relPath */
+  absPath: string;
+  /** @non-ui Go 扫描根：排错时确认「扫的是哪个仓库」，界面用不上（用户自己知道选了什么） */
+  filesRoot?: string;
+}
+
 // ===== 复制按钮事件委托 =====
 
 /**

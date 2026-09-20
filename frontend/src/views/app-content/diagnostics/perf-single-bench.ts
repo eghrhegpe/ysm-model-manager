@@ -22,6 +22,7 @@ import {
   type CLIResp,
   errorHTML,
   getOutBox,
+  type PerfIdentity,
   renderLoadFailure,
   sectionHeader,
   setBusy,
@@ -44,6 +45,11 @@ const perfSingleGuard = createLoadGuard();
 interface SingleBenchStage {
   name: string;
   ms: number;
+  /**
+   * @non-ui 阶段处理字节数。界面不渲染：阶段耗时条已表达「慢在哪」，字节数要读懂需先知道
+   * 「这个阶段的输入该有多大」，是**排错/建模**维度；且各阶段字节口径不同（读入 vs 纹理 vs 网格），
+   * 并排展示会诱导读者横向比较不可比的量。归 CLI/AI 消费。
+   */
   bytes?: number;
   /** Go stageStatus 口径：bottleneck / warn / slow / ok / failed（failed 优先于耗时分级） */
   status: string;
@@ -55,21 +61,7 @@ interface SingleBenchStage {
   stats?: { n: number; median_ms: number; p95_ms: number };
 }
 
-/** 身份块（ADR-262 D2）：registry 类型 id + 相对路径限定 —— 报告靠它分辨真实场景类别 */
-interface PerfIdentity {
-  /** registry 类型 id（ysm / EntityPlayer / resourcepack / …）；容器兜底为 container */
-  rtype: string;
-  /** 判定来源：location（祖先目录归属）| extension（扩展名消歧）| container（容器兜底） */
-  rtype_source: string;
-  /** registry 显示名（如「YSM 模型」）；由 Go 给出，前端不建类型映射 */
-  rtype_label?: string;
-  filesRoot?: string;
-  /** 相对仓库根，跨机器可比（测试/AI 断言用这个，不用 absPath） */
-  relPath: string;
-  absPath: string;
-  /** 模型形态：dir（解包目录，入口 <dir>/ysm.json）| file（打包容器/单文件） */
-  form?: "file" | "dir";
-}
+/** 身份块单一声明在 perf-common.ts（三处载荷共用，避免形状分叉与消费面盲区） */
 
 /** Go singleBenchJSON 载荷（附 AttachSidecar 注入的 output/filesRoot，ADR-200 D5） */
 interface SingleBenchPayload {
@@ -82,6 +74,11 @@ interface SingleBenchPayload {
   stages: SingleBenchStage[];
   bottleneck: string;
   format: string;
+  /**
+   * @non-ui 模型文件字节数（identity 口径）。界面不用它：目录式模型恒为 0，拿它当体量会误导
+   * （前 N 大模式另有 `footprint_bytes` 才是排名依据）。保留声明是因为它是载荷的既有字段，
+   * 单纯为「形状与 Go 对齐」而声明——**不代表可渲染**。
+   */
   size_bytes?: number;
   /** 身份块；旧版 Go 载荷缺省（前端按可选处理并回落 format 标签） */
   identity?: PerfIdentity;

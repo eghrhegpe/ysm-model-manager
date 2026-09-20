@@ -581,6 +581,48 @@ const scanBenchCode = stripComments(scanBenchTs);
 //（perf-single-bench.ts / perf-common.ts 与本面板同属一条 import 链，文案引用视为已接线）。
 const perfFacadeTs = readOrDie("frontend/src/views/app-content/diagnostics/perf.ts");
 const perfCommonTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-common.ts");
+
+// PerfIdentity 单一声明（2026-09-21 摸排）：身份块此前在 perf-single-bench.ts 与 perf-matrix-render.ts
+// 各写一份且形状不同，于是**没有任何一处能回答「这个结构的消费面有哪些字段」**——absPath /
+// filesRoot / rtype_source 三个字段就在这个盲区里躺了很久（Go 在发、前端声明了、没人读）。
+// 合并到 perf-common.ts 后必须防止再分叉：「这份载荷小，就近抄一份」是最自然的写法。
+must(
+  /export interface PerfIdentity\b/.test(perfCommonTs),
+  "PerfIdentity 未在 perf-common.ts 单点声明（消费面将再次无处可查）",
+);
+for (const [src, name] of [
+  [singleCode, "perf-single-bench.ts"],
+  [matrixCode, "perf-matrix-render.ts"],
+] as const) {
+  must(
+    !/interface PerfIdentity\b/.test(src),
+    `${name} 重复声明了 PerfIdentity（应与 perf-common.ts 单一声明对齐，否则形状必然分叉）`,
+  );
+}
+// 消费方必须真的 import 单一声明，而不是各自内联匿名结构（内联同样会重新制造盲区）
+must(
+  /import\s*\{[^}]*PerfIdentity[^}]*\}\s*from\s*"\.\/perf-common\.ts"/.test(matrixCode),
+  "perf-matrix-render.ts 未从 perf-common.ts 引入 PerfIdentity（又回落到内联匿名结构）",
+);
+must(
+  !/identity\?:\s*\{/.test(matrixCode),
+  "perf-matrix-render.ts 的 identity 又变回内联匿名结构（消费面再次不可查）",
+);
+// @non-ui 标注：让「故意不渲染」与「漏了没渲染」在源码里可区分（将来加未消费字段门禁的前提）
+for (const [field, label] of [
+  ["absPath", "绝对路径"],
+  ["filesRoot", "扫描根"],
+  ["rtype_source", "判定来源"],
+] as const) {
+  must(
+    // 必须**紧邻**该字段（同一段 doc comment）：宽泛窗口会被相邻字段的 @non-ui 满足，
+    // 变异检查证明过——去掉 absPath 自己的标注仍绿，等于没锁住。
+    new RegExp(`/\\*\\*(?:(?!\\*/)[\\s\\S])*@non-ui(?:(?!\\*/)[\\s\\S])*\\*/\\s*${field}\\??:`).test(
+      perfCommonTs,
+    ),
+    `PerfIdentity.${field}（${label}）缺 @non-ui 标注（非界面消费字段必须显式标注，否则与漏渲染不可区分）`,
+  );
+}
 const scanBenchUsages =
   scanBenchCode +
   stripComments(perfTplTs) +

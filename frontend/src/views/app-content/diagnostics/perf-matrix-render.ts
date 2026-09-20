@@ -14,12 +14,13 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
 import type { EscFn } from "./logs.ts";
 import { type OptionRow, optionRows } from "./option-rows.ts";
-import { sectionHeader } from "./perf-common.ts";
+import { type PerfIdentity, sectionHeader } from "./perf-common.ts";
 
 /** 单类型汇总（字段与 Go `perfTypeSummary` 逐字对齐） */
 export interface PerfTypeSummary {
   rtype: string;
   rtype_label?: string;
+  /** @non-ui 类型级「CLI 能否解析」标记；阶段列渲染依据是 `stages_declared`，此处不读 */
   cli_analyzable: boolean;
   found: number;
   analyzed: number;
@@ -52,6 +53,10 @@ export interface PerfMatrixSpec {
   iterations: number;
   analyzed: number;
   unsupported: number;
+  /**
+   * @non-ui 本批是否有可分析类型。界面不渲染本字段：类型级判定看 `types[]` 的
+   * `cli_analyzable`，阶段列据 `stages_declared`——**别再拿它反推别的东西**（本轮刚退役的反推）。
+   */
   cli_analyzable: boolean;
   types: PerfTypeSummary[];
 }
@@ -59,13 +64,7 @@ export interface PerfMatrixSpec {
 /** 矩阵里的单个模型条目（单模型载荷子集，身份块与 singleBenchJSON 同源） */
 export interface PerfMatrixModel {
   model: string;
-  identity?: {
-    rtype: string;
-    rtype_label?: string;
-    rtype_source?: string;
-    form?: "file" | "dir";
-    relPath: string;
-  };
+  identity?: PerfIdentity;
   per_iteration_ms?: number;
   total_ms?: number;
   stages?: { name: string; ms: number; status: string }[];
@@ -77,6 +76,11 @@ export interface PerfMatrixModel {
    * token 不随语言变，渲染时查三语文案（与 `size_source` 同构）。
    */
   unsupported_reason?: string;
+  /**
+   * @non-ui Go 侧中文散文建议（未 i18n）。**刻意不渲染**：英/日界面会冒未翻译中文。
+   * 逐条原因已由上面的 `unsupported_reason` token 承担（可 i18n）；本字段与 single-bench/
+   * concurrent 的 hints 同口径——结构化保留，供 CLI/AI 消费。
+   */
   hints?: string[];
   /**
    * 参与排名的模型占用（仅前 N 大模式）。

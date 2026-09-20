@@ -3,6 +3,8 @@
 // ground 结构：
 //   - ground-visible：平铺 toggle（ground 无 getMasterToggle——visible 是 params 级）
 //   - ground-grid-visible：参考网格（GridHelper 层）平铺 toggle，与总开关/材质层正交
+//   - 网格组 folder（preview.groundGroupGrid，锐评 P3 补齐 2026-09-21）：尺寸/密度滑杆 +
+//     中心线/网格线 color——此四键早有渲染接线与持久化，此前却零 UI 出口
 //   - 材质组 folder（preview.groundGroupMaterial）：mat-source select + 3 color +
 //     9 slider 原生节点；2 button（texture/clear）原生 button 节点直持
 //     variant/getHint/action（rmAppendButton 按钮臂，锐评修复 2026-09-20）
@@ -25,6 +27,7 @@ import {
 
 const MAT_GROUP: LocaleKey = "preview.groundGroupMaterial";
 const OVERLAY_GROUP: LocaleKey = "preview.groundGroupOverlay";
+const GRID_GROUP: LocaleKey = "preview.groundGroupGrid";
 /** ADR-249 §2.4：参数级显隐谓词——控件可见 ⇔ 矩阵判定该参在当前模式生效。
  *
  * 历史：全部控件共用一条粗谓词（仅判 ≠ none），导致 solid/plain/grid 等模式下
@@ -115,6 +118,59 @@ function textureButtonsNode(cap: GroundCapability): PreviewMenuNode[] {
   ];
 }
 
+/** 网格组 folder（锐评 P3 补齐 2026-09-21）：参考网格几何四键的 UI 出口。
+ *  groundSize / groundDivisions / groundColorCenter / groundColorGrid 早有渲染接线
+ *  （syncGeometry → PlaneGeometry 换装 + GridHelper 重建）与持久化，却纯靠存档通路活着；
+ *  水面尺寸滑杆早已可达而地面不能改，拖大 waterSize 即水陆脱锚。
+ *  值域一律 getParamRange（ADR-283 单源），落地归 ground 回调单路径（setter 只写状态）。 */
+function groundBuildGridFolder(cap: GroundCapability): PreviewMenuNode {
+  return {
+    id: "cap-group-ground-grid",
+    kind: "folder",
+    labelKey: GRID_GROUP,
+    children: [
+      {
+        id: "ground-size",
+        kind: "slider",
+        labelKey: "preview.groundSize",
+        control: {
+          ...getParamRange("groundSize"),
+          get: () => cap.getSize(),
+          set: (v) => cap.setSize(v as number),
+        },
+      },
+      {
+        id: "ground-divisions",
+        kind: "slider",
+        labelKey: "preview.groundDivisions",
+        control: {
+          ...getParamRange("groundDivisions"),
+          get: () => cap.getDivisions(),
+          set: (v) => cap.setDivisions(v as number),
+        },
+      },
+      {
+        id: "ground-color-center",
+        kind: "color",
+        labelKey: "preview.groundColorCenter",
+        control: {
+          get: () => cap.getColorCenter(),
+          set: (v) => cap.setColorCenter(v as number),
+        },
+      },
+      {
+        id: "ground-color-grid",
+        kind: "color",
+        labelKey: "preview.groundColorGrid",
+        control: {
+          get: () => cap.getColorGrid(),
+          set: (v) => cap.setColorGrid(v as number),
+        },
+      },
+    ],
+  };
+}
+
 /** 材质组 folder：mat-source + 原生 color/slider 按原控件顺序排布，
  *  texture/clear 按钮位插原生 button 节点（保序保语义）。 */
 function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
@@ -174,7 +230,8 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
       "preview.groundMatGridSize",
       "matGridSize",
       getParamRange("groundMatGridSize"),
-      { get: () => cap.getMatGridSize(), set: (v) => cap.setMatGridSize(Math.round(v)) },
+      // 取整单一收口在 cap.setMatGridSize（数据类型归一），菜单不再重复 Math.round（锐评 P6b）
+      { get: () => cap.getMatGridSize(), set: (v) => cap.setMatGridSize(v) },
     ),
     sliderNode(
       "ground-mat-density",
@@ -297,7 +354,8 @@ function groundBuildOverlayFolder(cap: GroundCapability): PreviewMenuNode {
   };
 }
 
-/** 完整参数面板节点树：ground-visible + ground-grid-visible 平铺 + 材质组 folder + 叠加层 folder。
+/** 完整参数面板节点树：ground-visible + ground-grid-visible 平铺 + 网格组 folder +
+ *  材质组 folder + 叠加层 folder。
  *  ground 无能力总开关（visible 是 params 级，非 getMasterToggle 语义）。
  *  ground-grid-visible（2026-09-19 新增）：参考网格（GridHelper 层）独立开关——与
  *  表面材质/叠加层正交，补上旧网格层长期缺失的出口（知识卡「已知遗留 1」）。 */
@@ -321,6 +379,7 @@ export function buildGroundNodes(cap: GroundCapability): PreviewMenuNode[] {
         set: (v) => cap.setGridVisible(v as boolean),
       },
     },
+    groundBuildGridFolder(cap),
     groundBuildMatFolder(cap),
     groundBuildOverlayFolder(cap),
   ];

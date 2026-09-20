@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **287** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **288** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 4 |
+| [📝 提议中](#提议中) | 5 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
 | [✅ 已采纳](#已采纳) | 260 |
@@ -26,10 +26,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（4）
+### 📝 提议中（5）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-290](./ADR-290-volumetric-cone-driver.md) | 体积光锥驱动源 schema 化（lightVolumetricDriver） | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-282](./ADR-282-applymodelpreset-default-light-params.md) | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 |
 | [ADR-281](./ADR-281-flatten-map.md) | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | 📝 提议中 |
@@ -342,6 +343,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-290 | 体积光锥驱动源 schema 化（lightVolumetricDriver） | 📝 提议中 | 2026-09-20 |
 | ADR-289 | 运行时日志结构化：tag 提取与级别推断 | ✅ 已采纳 | 2026-09-20 |
 | ADR-288 | 诊断页布局词汇统一与扫描类参数栏常驻化 | ✅ 已采纳 | 2026-09-20 |
 | ADR-287 | water 菜单 ground- 化石前缀重命名 | ✅ 已采纳 | 2026-09-20 |

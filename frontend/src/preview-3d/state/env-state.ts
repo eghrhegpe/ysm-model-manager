@@ -13,8 +13,7 @@ import {
 // 可变单例（仿 MikuMikuAR envState）
 export const envState: EnvState = deriveDefaultEnvState() as EnvState;
 
-// 写入来源标记
-type WriteSource = "auto-model" | "auto-atmosphere" | "manual";
+// 写入来源标记（类型出口见上方 WriteSource）
 
 // 各字段最后一次写入来源
 const _writeSource: Record<string, WriteSource> = {};
@@ -23,8 +22,17 @@ const _writeSource: Record<string, WriteSource> = {};
  * ADR-254：envState 写入中间件。
  * 拿到**本次 patch**，可返回一个补充 patch（合并回本次写入）；返回 undefined 表示不改。
  * 只在真正写入前执行，不持有实例、不落盘。
+ * meta.source（锐评修复 2026-09-21）：中间件必须能区分「用户手改」与程序化写入——
+ * 「手改即脱离预设」类标记只许消费 manual；auto-model / auto-atmosphere（氛围预设快照、
+ * 模型默认值等程序化派发）携带同一批字段时不得误触发。这是豁免通道的**来源维度**，
+ * 与 opts.skipMiddleware（存档恢复显式豁免）互补：前者防全局漏网，后者供逐调用点声明。
  */
-export type EnvStateMiddleware = (patch: Partial<EnvState>) => Partial<EnvState> | undefined;
+export type WriteSource = "auto-model" | "auto-atmosphere" | "manual";
+
+export type EnvStateMiddleware = (
+  patch: Partial<EnvState>,
+  meta: { source: WriteSource },
+) => Partial<EnvState> | undefined;
 
 const _writeMiddlewares: EnvStateMiddleware[] = [];
 
@@ -78,7 +86,7 @@ export function setEnvState(
   let patch = partial;
   if (!opts?.skipMiddleware) {
     for (const mw of _writeMiddlewares) {
-      const extra = mw(patch);
+      const extra = mw(patch, { source });
       if (extra) patch = { ...patch, ...extra };
     }
   }

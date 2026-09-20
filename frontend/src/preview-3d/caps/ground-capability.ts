@@ -82,7 +82,11 @@ export const GROUND_MATERIAL_PRESET_KEYS = [
 ] as const satisfies readonly (keyof EnvState)[];
 
 // 收口置位：不依赖每个 setter 自觉。预设点击自带 groundMaterialPreset，故不会被误清。
-registerEnvStateMiddleware((patch) => {
+// 来源门（锐评修复 2026-09-21）：「手改」只对 manual 写入成立——auto-atmosphere（氛围
+// 预设快照）/ auto-model（模型默认值）携带同批字段属程序化派发，不该把用户预设打成
+// custom。存档恢复路径另有显式 skipMiddleware 豁免（loadState 逐字段还原）。
+registerEnvStateMiddleware((patch, { source }) => {
+  if (source !== "manual") return undefined;
   if (patch.groundMaterialPreset !== undefined) return undefined;
   const touched = GROUND_MATERIAL_PRESET_KEYS.some((k) => patch[k] !== undefined);
   return touched ? { groundMaterialPreset: "custom" } : undefined;
@@ -108,7 +112,8 @@ export class GroundCapability implements SceneCapability {
   private overlayTex: THREE.Texture | null = null;
   private overlaySpec: GroundOverlaySpec | null = null;
   private enabled: boolean;
-  /** 参数变更监听（menu 局部刷新用）；仅材质来源切换等影响分组可见性的离散操作 notify */
+  /** 订阅参数变更（menu 局部刷新用）；仅**离散操作** notify——菜单结构只随来源/样式/
+   *  叠加层模式等 select/toggle 变化，滑杆与取色器拖动不触发重建。 */
   private readonly listenerSet = createListenerSet();
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
@@ -317,6 +322,35 @@ export class GroundCapability implements SceneCapability {
     return envState.groundGridVisible;
   }
 
+  // ── 参考网格几何参数（锐评 P3 补齐菜单出口 2026-09-21）──
+  // 此四键早有渲染接线（syncGeometry → GridHelper 重建 / PlaneGeometry 换装）与持久化，
+  // 却零 UI 入口、纯靠存档通路活着；水面尺寸滑杆（waterSize）早已可达，地面反而不能改。
+  getSize(): number {
+    return envState.groundSize;
+  }
+  setSize(n: number): void {
+    // 取整是数据类型归一（GridHelper/divisions 语义），合法域钳制在唯一写入口（ADR-283）
+    setEnvState({ groundSize: Math.round(n) }, { source: "manual" });
+  }
+  getDivisions(): number {
+    return envState.groundDivisions;
+  }
+  setDivisions(n: number): void {
+    setEnvState({ groundDivisions: Math.round(n) }, { source: "manual" });
+  }
+  getColorCenter(): number {
+    return envState.groundColorCenter;
+  }
+  setColorCenter(hex: number): void {
+    setEnvState({ groundColorCenter: hex }, { source: "manual" });
+  }
+  getColorGrid(): number {
+    return envState.groundColorGrid;
+  }
+  setColorGrid(hex: number): void {
+    setEnvState({ groundColorGrid: hex }, { source: "manual" });
+  }
+
   setEnabled(v: boolean): void {
     this.enabled = v;
     if (v) this.apply();
@@ -522,6 +556,8 @@ export class GroundCapability implements SceneCapability {
   }
 
   // ── 叠加层 setter（ADR-249 §2.3）──
+  // notify 纪律：菜单结构只随**离散 select**（叠加样式）变化；color/slider 的拖动写入
+  // 不改变任何 visibleWhen 判定，notify 只会白白重建栈顶子视图（锐评 P6）。
   getOverlayStyle(): GroundOverlayStyle {
     return envState.groundOverlay;
   }
@@ -536,7 +572,6 @@ export class GroundCapability implements SceneCapability {
   setOverlayColor(hex: number): void {
     if (envState.groundOverlayColor === hex) return;
     setEnvState({ groundOverlayColor: hex }, { source: "manual" });
-    this.notify();
   }
   getOverlaySize(): number {
     return envState.groundOverlaySize;
@@ -546,7 +581,6 @@ export class GroundCapability implements SceneCapability {
     const clamped = clampFieldValue("groundOverlaySize", Math.round(n));
     if (envState.groundOverlaySize === clamped) return;
     setEnvState({ groundOverlaySize: clamped }, { source: "manual" });
-    this.notify();
   }
   getOverlayOpacity(): number {
     return envState.groundOverlayOpacity;
@@ -556,19 +590,15 @@ export class GroundCapability implements SceneCapability {
     const clamped = clampFieldValue("groundOverlayOpacity", v);
     if (envState.groundOverlayOpacity === clamped) return;
     setEnvState({ groundOverlayOpacity: clamped }, { source: "manual" });
-    this.notify();
   }
 
-  /** 订阅参数变更（材质来源切换触发）；返回取消订阅函数 */
+  /** 订阅参数变更（材质来源/样式/叠加模式等离散切换触发）；返回取消订阅函数 */
   subscribe(listener: () => void): () => void {
     return this.listenerSet.subscribe(listener);
   }
 
   private notify(): void {
     this.listenerSet.notify();
-  }
-  setMatColor(hex: number): void {
-    setEnvState({ groundMatColor: hex }, { source: "manual" }); // 落地经 ground 回调单路径
   }
   setMatGridSize(n: number): void {
     // 取整是数据类型归一（非值域）；合法域 [2,32] 由唯一写入口钳制（ADR-283）
@@ -613,6 +643,9 @@ export class GroundCapability implements SceneCapability {
   /* 菜单 getter */
   getMatColor(): number {
     return envState.groundMatColor;
+  }
+  setMatColor(hex: number): void {
+    setEnvState({ groundMatColor: hex }, { source: "manual" }); // 落地经 ground 回调单路径
   }
   getMatGridSize(): number {
     return envState.groundMatGridSize;
@@ -704,8 +737,11 @@ export class GroundCapability implements SceneCapability {
     // legacy 旧键迁移——ADR-196 前 ground 持久化为
     // {visible, size, divisions, colorCenter, colorGrid, matSource, matColor...}
     // （无 ground 前缀），迁移后只读前缀键且 migrateEnvState 空透传 → 升级用户的
-    // 网格尺寸/线色/材质源设置静默回默认。判据用 groundSize（saveState 恒写前缀
-    // 代表键）缺失 + 任一旧键存在；只映射实际存在的旧键。
+    // 网格尺寸/线色/材质源设置静默回默认。判据 = **存在任一旧无前缀键**（锐评 P4
+    // 修复 2026-09-21：旧判据「缺 groundSize」建立在恒真前提上——该键当时无 UI 写口，
+    // 一切存档都算 legacy；P3 补上菜单出口后新存档可携 groundSize + 残留旧键，
+    // 「缺新键」判据即告失效）。旧键已由 map 处理、与新前缀键零冲突，混合存档
+    // 照常逐键搬运 + 下方透传保底；无旧键的纯新档自然跳过整段。
     const legacyGroundKeys = [
       "visible",
       "size",
@@ -737,7 +773,7 @@ export class GroundCapability implements SceneCapability {
         : typeof gs.groundMatGridSize === "number"
           ? gs.groundMatGridSize
           : undefined;
-    if (!("groundSize" in gs) && legacyGroundKeys.some((k) => k in gs)) {
+    if (legacyGroundKeys.some((k) => k in gs)) {
       const map: Record<string, string> = {
         visible: "groundVisible",
         size: "groundSize",
@@ -759,10 +795,10 @@ export class GroundCapability implements SceneCapability {
       for (const k of legacyGroundKeys) {
         if (k in gs && k !== "matSource") migrated[map[k]] = gs[k];
       }
-      // 新前缀键保底透传：legacy 判据是「缺 groundSize + 有任一旧键」，混合存档
-      // （部分字段已升级）若整对象替换会把已前缀化的字段静默丢弃（审核回归实测：
-      // {visible, groundCanvasStyle} 混合 → canvasStyle 丢失）。旧键已由上方 map
-      // 处理，这里只透传 ground 前缀的新键（旧键均不带 ground 前缀，无冲突）。
+      // 新前缀键保底透传：混合存档（部分字段已升级）若整对象替换会把已前缀化的
+      // 字段静默丢弃（审核回归实测：{visible, groundCanvasStyle} 混合 → canvasStyle
+      // 丢失）。旧键已由上方 map 处理，这里只透传 ground 前缀的新键（旧键均不带
+      // ground 前缀，无冲突）。
       for (const [k, v] of Object.entries(gs)) {
         if (k.startsWith("ground") && !(k in migrated)) migrated[k] = v;
       }

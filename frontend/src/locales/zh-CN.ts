@@ -1320,6 +1320,11 @@ export const zhCN = {
 
   "preview.waterStrength": "法线强度",
   "preview.groundGroupMaterial": "表面材质",
+  "preview.groundGroupGrid": "参考网格",
+  "preview.groundSize": "地面尺寸",
+  "preview.groundDivisions": "网格密度",
+  "preview.groundColorCenter": "中心线色",
+  "preview.groundColorGrid": "网格线色",
   "preview.groundMatSource": "来源",
   "preview.groundCanvasStyle": "样式",
   "preview.groundGroupOverlay": "叠加层",

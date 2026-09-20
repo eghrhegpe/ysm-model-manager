@@ -50,6 +50,7 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 
 - `ground-visible`：平铺 toggle（地面总开关，`GroundCapability.getMasterNodeId()="ground-visible"` 升级为 env 面板一级行 headerToggle）
 - `ground-grid-visible`：平铺 toggle（参考网格 / GridHelper 层独立开关，2026-09-19；与总开关、材质层正交，`labelKey=preview.groundGridVisible`）
+- 网格组 folder（`preview.groundGroupGrid`，锐评 P3 补齐 2026-09-21）：`ground-size`/`ground-divisions` 滑杆 + `ground-color-center`/`ground-color-grid` color——四键早有渲染接线（syncGeometry）与持久化，此前零 UI 出口纯靠存档通路；值域一律 `getParamRange`（groundSize range/uiRange 与 waterSize 同口径），cap setter 只写状态、落地归 ground 回调单路径
 - 材质组 folder（`preview.groundGroupMaterial`）：来源轴 select + 样式轴 select（仅来源=canvas 显示）+ 3 color + 9 slider + 2 button（texture/clear，走 controls 通道节点）
 - 叠加层 folder（`preview.groundGroupOverlay`，ADR-249 §2.3）：叠加样式 select（none/grid/checker/stripes/diamond）+ color/size/opacity（仅叠加 ≠ none 显示）
 
@@ -72,7 +73,7 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 - 白名单与 select 选项列表保持对齐（ADR-249/252 拆轴后：来源轴 `GROUND_SOURCE_KINDS` = none/solid/canvas/texture，样式轴 `GROUND_CANVAS_STYLES` = plain/marble/sand/grass；统一枚举 `GROUND_SURFACE_MODES` 当前 7 项 = none/solid/plain/marble/sand/grass/texture，旧 9 值已迁出至 `LEGACY_GROUND_MAT_SOURCES` 仅迁移路径消费）。
 - `textureButtonsNode` 走 `controls` 通道节点（保 `variant`/`getHint` 语义），非原生 button 节点。
 - `visibleWhen` 谓词（B 轨快照驱动）原样挂节点：`paramVisible(param)` 逐参数 × 逐模式判定（`ground-surface-spec.ts|paramIsEffective`），在来源轴/样式轴下对应子控件可见；原 `groundSurfaceOn` 已删除（`paramIsEffective` 对 `none` 全返 false，语义已覆盖）。
-- **滑杆值域唯一事实源 = `env-state-schema.ts` 的 `range`**（ADR-283）：10 个滑杆（8 材质 + 叠加层 size/opacity）一律 `getParamRange("<key>")` 取值域，菜单内零 `min/max/step` 字面量；钳制收口 `setEnvState` 唯一写入口，setter 不再手写 `Math.max/min`（`groundMatGridSize` 的 `Math.round` 是数据类型归一，非值域，保留在 setter）。
+- **滑杆值域唯一事实源 = `env-state-schema.ts` 的 `range`**（ADR-283）：全部滑杆（8 材质 + 叠加层 size/opacity + 网格组 size/divisions）一律 `getParamRange("<key>")` 取值域，菜单内零 `min/max/step` 字面量；钳制收口 `setEnvState` 唯一写入口，setter 不再手写 `Math.max/min`（`groundMatGridSize` 的取整单一收口在 cap setter——菜单侧不得重复 `Math.round`，锐评 P6b）。
 
 ## 历史问题清单（2026-08-27 ts-package-review）— 已完成修复
 

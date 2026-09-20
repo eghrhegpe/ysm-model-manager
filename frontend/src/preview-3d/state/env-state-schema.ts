@@ -21,6 +21,8 @@ type FieldDefaultMap = {
   boolean: boolean;
   string: string;
   enum: string;
+  /** 三维分量（RGB 等）。⚠️ 当前 schema 无使用者（原 ground tuple3 三键系死键，2026-09-21
+   *  锐评清理删除）；deriveDefaultEnvState 的深拷贝分支保留为通用能力，勿随手删。 */
   tuple3: readonly [number, number, number];
   "nullable-boolean": boolean | null;
   "nullable-number": number | null;
@@ -98,22 +100,6 @@ export const ENV_STATE_SCHEMA = {
   // 网格层与表面材质层共用 groundVisible，用户选了纯色/贴图材质也关不掉底下那张 y=0 参考网格，
   // 且菜单无任何网格参数出口。现拆出单轴：网格显隐 = enabled && groundVisible && groundGridVisible。
   groundGridVisible: { type: "boolean", default: true, group: "ground" },
-  groundType: {
-    type: "enum",
-    values: ["plain", "grid", "checker", "lines", "dots"] as const,
-    default: "plain",
-    group: "ground",
-  },
-  groundColor: {
-    type: "tuple3",
-    default: [0.15, 0.15, 0.18] as [number, number, number],
-    group: "ground",
-  },
-  groundLineColor: {
-    type: "tuple3",
-    default: [0.5, 0.5, 0.55] as [number, number, number],
-    group: "ground",
-  },
   // ADR-249 §2.1 拆轴：来源轴（颜色从哪来）。替代原单枚举 groundMatSource。
   groundSourceKind: {
     type: "enum",
@@ -156,11 +142,23 @@ export const ENV_STATE_SCHEMA = {
     group: "ground",
     range: { min: 0, max: 1, step: 0.05 },
   },
-  groundSize: { type: "number", default: 80, group: "ground" },
-  groundDivisions: { type: "number", default: 60, group: "ground" },
+  // ADR-249 §2.6：默认值统一取自 spec（唯一事实源），不在此重写字面量。
+  groundSize: {
+    type: "number",
+    default: 80,
+    group: "ground",
+    // 合法域对齐 waterSize（≥1）；展示域 10–300 与水面滑杆同手感，两轴分离（ADR-283）。
+    range: { min: 1, max: 1000, step: 1 },
+    uiRange: { min: 10, max: 300, step: 1, unit: "m" },
+  },
+  groundDivisions: {
+    type: "number",
+    default: 60,
+    group: "ground",
+    range: { min: 2, max: 200, step: 2 },
+  },
   groundColorCenter: { type: "number", default: 0x555577, group: "ground" },
   groundColorGrid: { type: "number", default: 0x2a2a3a, group: "ground" },
-  // ADR-249 §2.6：默认值统一取自 spec（唯一事实源），不在此重写字面量。
   groundMatColor: { type: "number", default: GROUND_DEFAULTS.matColor, group: "ground" },
   groundMatColor2: { type: "number", default: GROUND_DEFAULTS.matColor2, group: "ground" },
   groundMatGridSize: {
@@ -692,7 +690,12 @@ export type EnvStateSchema = typeof ENV_STATE_SCHEMA;
 export function deriveDefaultEnvState(): EnvState {
   const out = {} as Record<string, unknown>;
   for (const [key, def] of Object.entries(ENV_STATE_SCHEMA)) {
-    out[key] = def.type === "tuple3" ? (def.default as readonly number[]).slice() : def.default;
+    // tuple3 深拷贝：数组默认值是可变共享态，逐实例 slice 防跨会话污染。
+    // 当前 schema 无 tuple3 使用者（原 ground 三死键已删），经宽化读取保留为通用能力——
+    // 窄类型下 "tuple3" 比较会因联合穷尽而报 TS2367。
+    const d = def as { type: string; default: unknown };
+    out[key] =
+      d.type === "tuple3" ? ((d.default as readonly number[]).slice() as unknown) : d.default;
   }
   return out as unknown as EnvState;
 }

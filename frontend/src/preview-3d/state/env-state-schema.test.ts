@@ -1,6 +1,6 @@
 // ===== env-state-schema 单元测试 =====
 // 锁定 deriveDefaultEnvState（全键 + tuple3 深拷贝独立）与 getPresetKeys（分组键派发）。
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   ENV_STATE_SCHEMA,
   clampFieldValue,
@@ -19,14 +19,26 @@ describe("env-state-schema", () => {
   });
 
   it("tuple3 默认值返回独立副本（避免跨实例共享可变数组）", () => {
-    const a = deriveDefaultEnvState();
-    const b = deriveDefaultEnvState();
-    const arrA = a.groundColor as number[];
-    const arrB = b.groundColor as number[];
-    expect(arrA).not.toBe(arrB); // 不同引用
-    expect(arrA).toEqual(arrB); // 同值
-    arrA[0] = 999;
-    expect((b.groundColor as number[])[0]).not.toBe(999); // 互不影响
+    // 当前 schema 已无 tuple3 使用者（原 ground 三死键 2026-09-21 锐评清理删除），
+    // 本用例经临时注入锁定「深拷贝独立」这一通用能力不回归——若未来再有 tuple3
+    // 字段，直接换用其键名即可。
+    const key = "__tuple3_probe__";
+    (ENV_STATE_SCHEMA as Record<string, unknown>)[key] = {
+      type: "tuple3",
+      default: [1, 2, 3],
+      group: "test",
+    };
+    try {
+      const a = deriveDefaultEnvState() as unknown as Record<string, number[]>;
+      const b = deriveDefaultEnvState() as unknown as Record<string, number[]>;
+      expect(a[key]).toBeDefined();
+      expect(a[key]).not.toBe(b[key]); // 不同引用
+      expect(a[key]).toEqual(b[key]); // 同值
+      a[key][0] = 999;
+      expect(b[key][0]).not.toBe(999); // 互不影响
+    } finally {
+      delete (ENV_STATE_SCHEMA as Record<string, unknown>)[key];
+    }
   });
 
   it("getPresetKeys 返回分组下全部键", () => {

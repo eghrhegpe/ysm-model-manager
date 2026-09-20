@@ -328,7 +328,9 @@ describe("DEFAULT_LIGHT_PARAMS = envState schema 默认值的派生投影", () =
     // 运行时 enum 守卫正是为它而设，缺了转型这条用例就写不出来。
     expect(clampFieldValue("lightKeyType", "banana" as never)).toBe("directional");
     expect(clampFieldValue("lightKeyType", "spot")).toBe("spot");
-    expect(clampFieldValue("groundType", "nope" as never)).toBe("plain");
+    // 原第三断言宿主 groundType 系死键（2026-09-21 锐评清理删除），换第二个枚举键
+    // 独立验证守卫非 lightKeyType 专属：非法值回退该键自身 default（"film"）。
+    expect(clampFieldValue("waterMode", "banana" as never)).toBe("film");
     // undefined（Partial patch 缺键）不参与钳制，重载短路语义保留
     expect(clampFieldValue("lightKeyType", undefined)).toBeUndefined();
   });

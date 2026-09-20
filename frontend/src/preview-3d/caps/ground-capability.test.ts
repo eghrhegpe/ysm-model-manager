@@ -571,6 +571,7 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const nodes = cap.getMenuNodes();
     const matFolder = nodes.find((n) => n.id === "cap-group-ground-material")!;
     const overlayFolder = nodes.find((n) => n.id === "cap-group-ground-overlay")!;
+    const gridFolder = nodes.find((n) => n.id === "cap-group-ground-grid")!;
     const pairs = [
       ["ground-mat-grid-size", "groundMatGridSize"],
       ["ground-mat-density", "groundMatDensity"],
@@ -582,8 +583,11 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
       ["ground-mat-metalness", "groundMatMetalness"],
       ["ground-overlay-size", "groundOverlaySize"],
       ["ground-overlay-opacity", "groundOverlayOpacity"],
+      // 锐评 P3（2026-09-21）：网格几何滑杆同样吃 schema 值域
+      ["ground-size", "groundSize"],
+      ["ground-divisions", "groundDivisions"],
     ] as const;
-    const children = [...matFolder.children!, ...overlayFolder.children!];
+    const children = [...matFolder.children!, ...overlayFolder.children!, ...gridFolder.children!];
     for (const [id, key] of pairs) {
       const node = children.find((c) => c.id === id);
       expect(node, `缺菜单节点 ${id}`).toBeDefined();
@@ -594,11 +598,11 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     }
   });
 
-  it("完整树 = 两个平铺 toggle（地面 / 参考网格）+ 材质组 folder + 叠加层 folder", () => {
+  it("完整树 = 两个平铺 toggle（地面 / 参考网格）+ 网格组 folder + 材质组 folder + 叠加层 folder", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(4);
+    expect(nodes).toHaveLength(5);
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("ground-visible");
     nodes[0]!.control!.set!(false);
@@ -606,6 +610,10 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     // 2026-09-19：参考网格（GridHelper 层）独立开关——旧网格层长期无出口的补齐
     expect(nodes[1]!.kind).toBe("toggle");
     expect(nodes[1]!.id).toBe("ground-grid-visible");
+    // 锐评 P3（2026-09-21）：网格几何四键（size/divisions/双色）补 UI 出口
+    const gridFolder = nodes.find((n) => n.id === "cap-group-ground-grid")!;
+    expect(gridFolder.kind).toBe("folder");
+    expect(gridFolder.labelKey).toBe("preview.groundGroupGrid");
     const folder = nodes.find((n) => n.id === "cap-group-ground-material")!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.groundGroupMaterial");
@@ -851,6 +859,20 @@ describe("GroundCapability — 材质预设（ADR-254 材质名兑现配色）",
     cap.setMatColor(0x123456);
     expect(cap.getMaterialPreset()).toBe("custom");
     expect(cap.getCanvasStyle(), "custom 态保留上一次形状").toBe("grass");
+  });
+
+  it("非 manual 来源（auto-atmosphere/auto-model）写预设键 → 不误清 custom（锐评 P1）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.setMaterialPreset("grass");
+    // 程序化派发携带同一批字段：不是「用户手改」，预设标记必须原样保留
+    setEnvState({ groundMatColor: 0x654321 }, { source: "auto-atmosphere" });
+    expect(cap.getMaterialPreset(), "auto-atmosphere 写入不触发手改标记").toBe("grass");
+    setEnvState({ groundCanvasStyle: "sand" }, { source: "auto-model" });
+    expect(cap.getMaterialPreset(), "auto-model 写入不触发手改标记").toBe("grass");
+    // manual 仍照常置位（守卫没被整体关掉）
+    setEnvState({ groundMatColor: 0x111111 }, { source: "manual" });
+    expect(cap.getMaterialPreset()).toBe("custom");
   });
 
   it("改预设不管的字段 → 不清预设（白名单精确性，非前缀匹配）", () => {

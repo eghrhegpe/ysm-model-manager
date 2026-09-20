@@ -99,7 +99,8 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 >
 > ⚠️ **ADR-254 材质名兼现配色**：`canvasStyle` 原本只控形状（频率/对比度）、颜色正交——于是选「草地」得到的是**棕色斑块**（默认 matColor/matColor2 均棕）。现增 `GROUND_MATERIAL_PRESETS`（**配色唯一事实源**）+ 显式状态 `groundMaterialPreset`（plain|marble|sand|grass|custom）：选材质 = **一次性写入形状+配色**；手改预设关心的字段 → 中间件置 `custom`（菜单下拉可见）。
 >
-> ⚠️ **中间件与存档恢复的边界**（审核 1807efcd7 修正）：「手改即 custom」中间件只许拦**用户 setter** 写入——`loadState` 恢复路径必须 `skipMiddleware: true`（`setEnvState` opts 通道），否则逐字段还原配色会触发中间件，用户选的预设重启恒显示「自定义（已手改）」（名实不符）；`groundMaterialPreset` 须持久化（saveState 写、loadState oneOf 恢复，旧存档缺字段回退 plain）。**教训：新增全局写入中间件 = 同时定义「豁免通道」，恢复/同步类非用户写入一律显式豁免。**
+> **legacy 迁移判据（2026-09-21 锐评 P4 订正）**：旧实现以「缺 `groundSize` + 有任一旧键」判定 legacy 存档——该判据建立在恒真前提上（当时 groundSize 无任何 UI 写口 ⇒ 一切存档都算 legacy），靠透传保底未出事；网格四键补上菜单出口后新存档可携 groundSize，「缺新键」判据失效。现判据 = **存在任一旧无前缀键**（纯新档自然跳过整段，混合存档照常逐键搬运 + 透传保底）。
+> ⚠️ **中间件与存档恢复的边界**（审核 1807efcd7 修正）：「手改即 custom」中间件只许拦**用户 setter** 写入——`loadState` 恢复路径必须 `skipMiddleware: true`（`setEnvState` opts 通道），否则逐字段还原配色会触发中间件，用户选的预设重启恒显示「自定义（已手改）」（名实不符）；`groundMaterialPreset` 须持久化（saveState 写、loadState oneOf 恢复，旧存档缺字段回退 plain）。**教训：新增全局写入中间件 = 同时定义「豁免通道」，恢复/同步类非用户写入一律显式豁免。**（锐评 P1 根治 2026-09-21：豁免通道升级为**来源维度**——中间件收 `meta.source`，仅 manual 触发；auto-atmosphere/auto-model 程序化派发天然免疫，见不变量 11。）
 > ⚠️ **legacy 迁移分支禁止整对象替换**（同轮实测发现）：`state = migrated` 会把混合存档（旧键+已前缀化新键共存，如 `{visible, groundCanvasStyle}`）中未映射的 `ground*` 键静默丢弃——迁移后须透传 `ground` 前缀键保底。
 >
 > `sand`：高频细颗粒低对比（freq 14 / contrast 0.45）；`grass`：中频块状高对比（freq 5 / contrast 0.95）。两者与 `marble` 共用 `valueNoise` 三倍频基建。
@@ -139,9 +140,10 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 
 ## 已知遗留（ADR-249 §2.7 登记）
 
-1. **旧网格层与表面层字段语义重叠（病例 C）**：`env-state-schema.ts` 同时存在两套语义重叠的地面字段——旧网格层（y=0，`groundType` plain/grid/checker/lines/dots + `groundColor` tuple3 + `groundLineColor` tuple3，即 GridHelper）与表面层（y=0.005，`groundSourceKind`/`groundCanvasStyle` + `groundMatColor` hex + `groundMatLineColor` hex + …）。两套都表达「底色/线色/样式」，是历史层叠的双重实现。**未合并**（ADR-249 显式排除以避免范围蔓延）；合并是独立议题。
-   - **2026-09-19 进展 = 只补出口、不合并**：新增 `groundGridVisible` + 菜单 `ground-grid-visible`，让网格层可独立关闭（用户实测痛点：选材质后仍关不掉自带网格）。**字段合并、死字段清理仍待做**：`groundType`/`groundColor`/`groundLineColor` 至今**零消费者**（违「零消费者字段即时删除」不变量 1c，是 ADR-252 清理的漏网）；GridHelper 真消费的 `groundDivisions`/`groundColorCenter`/`groundColorGrid`/`groundSize` 仍**无菜单出口**。
+1. **旧网格层与表面层字段语义重叠（病例 C）**：`env-state-schema.ts` 曾同时存在两套语义重叠的地面字段——旧网格层（y=0，`groundType` plain/grid/checker/lines/dots + `groundColor` tuple3 + `groundLineColor` tuple3，即 GridHelper）与表面层（y=0.005，`groundSourceKind`/`groundCanvasStyle` + `groundMatColor` hex + `groundMatLineColor` hex + …）。两套都表达「底色/线色/样式」，是历史层叠的双重实现。**未合并**（ADR-249 显式排除以避免范围蔓延）；合并是独立议题。
+   - **2026-09-19 进展 = 只补出口、不合并**：新增 `groundGridVisible` + 菜单 `ground-grid-visible`，让网格层可独立关闭（用户实测痛点：选材质后仍关不掉自带网格）。
    - **2026-09-20 进展（锐评修复）= groundSize 死参数治愈**：构造器 ground 回调新增 `syncGeometry(changed)`——`groundSize` 变更换装 surface/overlay 平面几何并叠算 repeat（refreshOverlay 原地分支），`groundSize/groundDivisions/groundColorCenter/groundColorGrid` 任一变更重建 GridHelper（无 resize API）；`loadState` 挂起派发（suspend/resumeEnvCallbacks，对齐 light 侧 ADR-281 口径）后末尾统一 syncGeometry 四键。旧病「几何只在构造期读一次、存档恢复写入永不落地」（gridVisible 同形病例）就此收口——菜单出口仍缺，但**加上即生效**，不再撞「几何尺寸不跟、贴图密度跟」错位。
+   - **2026-09-21 进展（锐评 P2/P3 收口）= 死字段清零 + 菜单出口补齐**：① `groundType`/`groundColor`/`groundLineColor` 三死键按不变量 1c 从 schema **删除**（tuple3 型全仓零使用者，`deriveDefaultEnvState` 深拷贝分支保留为通用能力并有注入探针用例锁定；原拿死键当宿主的测试断言已换活键）；② GridHelper 真消费的四键补上 UI 出口——菜单新增 `cap-group-ground-grid` folder（`ground-size`/`ground-divisions` 滑杆 + `ground-color-center`/`ground-color-grid` color），值域走 `getParamRange`（groundSize range [1,1000] / uiRange [10,300]m 与 waterSize 同口径，divisions [2,200] step2），cap 侧 `getSize/setSize/getDivisions/setDivisions/getColorCenter/setColorCenter/getColorGrid/setColorGrid` 只写 envState、落地归 ground 回调单路径（不变量 14）；③ legacy 迁移判据由「缺 groundSize + 有旧键」改为「**存在任一旧无前缀键**」——旧判据恒真（该键当时无 UI 写口 ⇒ 一切存档皆 legacy），P3 补出口后新存档可携 groundSize + 残留旧键，「缺新键」判据失效，混合存档语义靠透传保底。
 2. **地面 y 位置固定（水膜已豁免）**：承接面 / 叠加层 y 取 `GROUND_LAYER_OFFSETS` 常量，不可调（与菜单拆轴无关）；**水面高度自 ADR-257 起改由 `envState.waterLevel` 驱动**（默认 0.01，菜单 `ground-water-level` 可调，film/pool 共用），原 `GROUND_LAYER_OFFSETS.waterFilm` 常量因零消费者已于 2026-09-18 删除（见不变量 1c）。
 3. **叠加层样式集可扩展**（ADR-249/251）：已落地 grid/checker/stripes/diamond；scan/glowEdge 等待扩展（只需改 `GROUND_OVERLAY_STYLES` + `generateOverlayPixels` 分支）。
 4. **噪声材质重建开销**（ADR-252 未知遗留）：`density` 属 structural，每次变更触发 512² × 3 次 `valueNoise` 重建；拖拽密度滑杆可能卡顿（测试已因此触及 5s 超时，用例改用廉价材质规避）。优化方向：降采样或重建节流。
@@ -160,11 +162,12 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 8. **spec 零运行时依赖**：`ground-surface-spec.ts` 保持 `import type * as THREE`——像素生成只产出 `Uint8Array`，DataTexture 构造一律在 capability（叠加层与表面层同口径，保证 spec 可 node 单测）
 9. **材质预设配色单一事实源（ADR-254）**：材质名 ⇒ 配色只能来自 `GROUND_MATERIAL_PRESETS`。菜单选项与 `setMaterialPreset` 均从它派生，**禁止在菜单里重写色值**。
 10. **预设白名单精确匹配（ADR-254）**：`GROUND_MATERIAL_PRESET_KEYS`（定义在 `ground-capability.ts`）必须与 `setMaterialPreset` 写入的 envState 键**一一对应**（有一致性断言测试）。**严禁前缀匹配**——否则改 groundSize/groundVisible/groundOverlay 系列会误清预设标记（邻座 `_WATER_KEYS` 精确清单教训）。
-11. **预设状态由中间件收口置位（ADR-254）**：`custom` 的置位只发生在 `env-state.ts` 的写入中间件（`registerEnvStateMiddleware`）一處，**不靠每个 setter 自觉**（防漏）。预设点击自带 `groundMaterialPreset`，故不会被误清。
+11. **预设状态由中间件收口置位（ADR-254）**：`custom` 的置位只发生在 `env-state.ts` 的写入中间件（`registerEnvStateMiddleware`）一處，**不靠每个 setter 自觉**（防漏）。预设点击自带 `groundMaterialPreset`，故不会被误清。**来源门（锐评 P1 修复 2026-09-21）**：中间件签名带 `meta: { source }`，仅 `manual` 写入可触发「手改即 custom」——auto-atmosphere（氛围预设快照派发）/ auto-model（模型默认值）携带同批字段属程序化写入，不得把用户预设打成 custom；存档恢复另有显式 `skipMiddleware` 豁免。两条豁免通道互补：来源门防全局漏网，skipMiddleware 供逐调用点声明。
 12. **plain 与 solid 同路径（ADR-254 §2.5）**：两者均为平坦 matColor，`plain` 走 `tex = null`（材质直出 color），**不再生成均匀贴图**——同一输出不留两条实现路径。
 13. **网格显隐单点判据（2026-09-19）**：参考网格可见性只由 `updateGridVisible()`（`enabled × groundVisible × groundGridVisible`）写入——构造期、env 回调、setter、loadState 四路皆经它；`getVisible()` 语义 = 总开关，禁止改回读 `this.grid.visible`。
 14. **refresh 单路径（2026-09-20 锐评修复）**：ground 组 envState 字段的渲染落地只走构造器 `registerEnvCallback` 回调（syncGeometry → refreshSurface → refreshOverlay → updateGridVisible）；mat/overlay/source 系 setter **禁止再手动 refresh**（旧接线 setter + 回调双刷，全靠 refresh 幂等 + needsRebuild 判别才没炸）。合法例外两条：① `setEnabled`（摘挂 mesh 不经 envState 变更、回调不触发，须显式重算）；② `clearCustomTexture`（非 texture 态不写 envState → 不派发，且私有缓存摘除需即时重落地）。
 15. **地面 mat 系 setter 不得加同值早退（2026-09-20 实测裁决）**：`setMatColor/setMatColor2/setMatDensity/setMatAngle` 的写入被「手改即 custom」中间件消费——用户把颜色拖回预设原值**仍是「已手改」的声明**，同值写携带意图，早退即丢语义（与 `skyForceEnv` 脉冲键同族；中央 setEnvState 也因此明确不做同值去重，见 env-state.ts 契约注释）。离散开关类 setter（source/style/overlay 系）无中间件消费，既有早退守卫可留。
+16. **notify 纪律 = 离散 select 专属（锐评 P6 收口 2026-09-21）**：`subscribe` 通道驱动 env 子视图整栈重建（`menu.refresh()`），只该由**改变菜单结构的操作**触发——来源/样式/叠加模式 select、材质预设套用。color 取色器与 slider 拖动逐帧写入不改变任何 visibleWhen 判定，其 setter（`setOverlayColor/setOverlaySize/setOverlayOpacity`、mat 系全体）**禁止 notify**（旧接线连拖动都重建 = 纯白刷）；mat 系本就不 notify（不变量 15 的同值写意图经 refresh 单路径落地，与 notify 无关）。
 
 ## 相关
 

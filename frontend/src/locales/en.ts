@@ -1359,6 +1359,11 @@ export const en: Record<string, string> = {
 
   "preview.waterStrength": "Normal Strength",
   "preview.groundGroupMaterial": "Surface Material",
+  "preview.groundGroupGrid": "Reference Grid",
+  "preview.groundSize": "Ground Size",
+  "preview.groundDivisions": "Grid Density",
+  "preview.groundColorCenter": "Center Line Color",
+  "preview.groundColorGrid": "Grid Line Color",
   "preview.groundMatSource": "Source",
   "preview.groundCanvasStyle": "Style",
   "preview.groundGroupOverlay": "Overlay",

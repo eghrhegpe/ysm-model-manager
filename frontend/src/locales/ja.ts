@@ -1358,6 +1358,11 @@ export const ja: Record<string, string> = {
 
   "preview.waterStrength": "ノーマル強度",
   "preview.groundGroupMaterial": "表面マテリアル",
+  "preview.groundGroupGrid": "参照グリッド",
+  "preview.groundSize": "地面サイズ",
+  "preview.groundDivisions": "グリッド密度",
+  "preview.groundColorCenter": "中心線色",
+  "preview.groundColorGrid": "グリッド線色",
   "preview.groundMatSource": "ソース",
   "preview.groundCanvasStyle": "スタイル",
   "preview.groundGroupOverlay": "オーバーレイ",

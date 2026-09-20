@@ -223,6 +223,10 @@ export const autoSidebar = [
         "link": "/ADR-249-ground-material-effect-matrix"
       },
       {
+        "text": "环境系统面板审查（锐评）— 进度与发现",
+        "link": "/audit-env-review"
+      },
+      {
         "text": "CLI 命令参考",
         "link": "/cli-commands"
       },
@@ -245,6 +249,10 @@ export const autoSidebar = [
     "link": "/adr/",
     "collapsed": true,
     "items": [
+      {
+        "text": "ADR-290：体积光锥驱动源 schema 化（lightVolumetricDriver）",
+        "link": "/adr/ADR-290-volumetric-cone-driver"
+      },
       {
         "text": "ADR-289：运行时日志结构化：tag 提取与级别推断",
         "link": "/adr/ADR-289-runtime-log-structuring"

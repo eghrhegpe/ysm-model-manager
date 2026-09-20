@@ -891,6 +891,7 @@ auto_fields:
     - WorkerBridge
     - WorkerErrorStrategy
     - workerMmdUpdateWithMixer
+    - WriteSource
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
     - YsmAnimPlayer

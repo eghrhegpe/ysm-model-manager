@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
-import { BASELINE_CONTROL_IDS, initPerfPanel, perfScopeHint, PERF_RUN_BUTTON_MODE_KEYS, PERF_UNREAD_MODES } from "./perf.ts";
+import { BASELINE_CONTROL_IDS, initPerfPanel, perfScopeHint, PERF_RUN_BUTTON_MODE_KEYS, PERF_UNREAD_MODES, PERF_UNREAD_TARGETS } from "./perf.ts";
 
 const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
@@ -262,6 +262,42 @@ describe("基准模式接线（ADR-278）", () => {
     }
   });
 
+  // ===== 第六维（同日六修）：目标集维不读也是欺骗，且这是**默认路径** =====
+  // 五修护栏判据「行归属 ∨ 不读表」把「整行可见」当成合格，漏掉 single+model 默认态：
+  // max / order 整行可见（行归属 single 通过护栏），但 singleBenchReadMode 在 target==="model"
+  // 时提前 return，两者根本不进载荷。危险在于新手进 tab 就是这一态。
+  it("single + 单模型目标（默认态）→ max / order 被禁且 title 说明原因（可见但不被读 = 欺骗）", async () => {
+    const root = makeRoot("single");
+    initPerfPanel(root, esc);
+    await Promise.resolve(); // 等目标集异步填充落地（它会重建 <option> 并重放模式态）
+    const rtype = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
+    rtype.value = ""; // 单模型
+    rtype.dispatchEvent(new Event("change"));
+    const max = root.getElementById("diag-perf-max") as HTMLInputElement;
+    const order = root.getElementById("diag-perf-order") as HTMLSelectElement;
+    expect({ max: max.disabled, order: order.disabled }).toEqual({ max: true, order: true });
+    // 原因不能只说「禁用」——要告诉用户什么时候才生效
+    expect(max.title).toContain("不生效");
+  });
+
+  it("single + 非单模型目标（切到全库）→ max / order 解禁（同一控件换目标集即被读）", async () => {
+    const root = makeRoot("single");
+    initPerfPanel(root, esc);
+    await Promise.resolve(); // 等目标集异步填充落地
+    const rtype = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
+    rtype.value = "__repo__";
+    rtype.dispatchEvent(new Event("change"));
+    const max = root.getElementById("diag-perf-max") as HTMLInputElement;
+    const order = root.getElementById("diag-perf-order") as HTMLSelectElement;
+    expect({ max: max.disabled, order: order.disabled }).toEqual({ max: false, order: false });
+  });
+
+  it("目标集维不读表 PERF_UNREAD_TARGETS 登记 max / order（与模式维表对称，护栏可校验）", () => {
+    // 表存在且语义正确：这两控件在 target=model 下不进载荷（真相源 = perf-single-bench 的提前 return）
+    expect(PERF_UNREAD_TARGETS["diag-perf-max"]).toContain("model");
+    expect(PERF_UNREAD_TARGETS["diag-perf-order"]).toContain("model");
+  });
+
   it("非 single 下拨目标集选择器不得把基准三件套解禁（双维门禁兼并判定）", () => {
     // 回归钉：syncPerfBaselineControls 也被 rtype change / 选项填充回调独立触发，
     // 若只判目标集维不读当前模式，scan/conc 下动一下选择器就绕过 §2.6 反向半边。
@@ -346,5 +382,36 @@ describe("基准模式接线（ADR-278）", () => {
         `${id} 无门禁归宿：既不在带 data-perf-mode 的行内，也不在 PERF_UNREAD_MODES/基准名单——新增控件忘登记即红`,
       ).toBe(true);
     }
+
+    // ===== 第三维（同日六修）：目标集维也得有归宿 =====
+    // 上面那道判据是「行归属 ∨ 不读表」，两者只要其一就放行，而 max / order 恰好"行归属 single"
+    // 合格却仍被 singleBenchReadMode 在 target==="model" 下提前 return 跳过——护栏把「可见」误当「被读」。
+    // 这里补第二道：**在 single 模式下可见的控件**，要么被 single 的 model 分支真读到（白名单，
+    // 真相源 = perf-single-bench 的 read*），要么必须在 PERF_UNREAD_TARGETS / 基准名单登记。
+    // 新增一个 single 可见控件时，必须显式回答「单模型目标下读不读它」——不许沉默。
+    const READ_IN_SINGLE_MODEL = new Set([
+      "diag-perf-rtype", // 目标集选择器自身：决定走哪条分支
+      "diag-perf-iter", // singleBenchReadIterations（model 分支也读）
+      "diag-perf-model", // model 分支的主角
+      "diag-perf-run", // 运行按钮（button 不进门禁账，此处防御性列出）
+    ]);
+    for (const id of ids) {
+      if (id === "diag-perf-mode") continue;
+      const rowOpen = rowOpenAt(seg.indexOf(`id="${id}"`));
+      const rowModes = (rowOpen?.match(/data-perf-mode="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+      const visibleInSingle = rowOpen === null || rowModes.includes("single");
+      if (!visibleInSingle) continue; // single 下整行隐藏 → 用户碰不到，不需目标集维归宿
+      const accounted =
+        READ_IN_SINGLE_MODEL.has(id) ||
+        id in PERF_UNREAD_TARGETS ||
+        BASELINE_CONTROL_IDS.includes(id);
+      expect(
+        accounted,
+        `${id} 在 single 下可见，但未声明「单模型目标下读不读它」：不是被 model 分支读到的控件，也不在 PERF_UNREAD_TARGETS/基准名单——六修同款漏判`,
+      ).toBe(true);
+    }
+    // 抽样防正则空转：这两条必须落在「可见 single 且已登记目标集维」上
+    expect(Object.keys(PERF_UNREAD_TARGETS)).toContain("diag-perf-max");
+    expect(Object.keys(PERF_UNREAD_TARGETS)).toContain("diag-perf-order");
   });
 });

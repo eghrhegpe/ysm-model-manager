@@ -52,6 +52,17 @@ export const PERF_UNREAD_MODES: Record<string, readonly string[]> = {
   "diag-perf-conc-max": ["single", "scan"],
 };
 
+/** 控件 id → **不读它**的目标集集（第二维，与 PERF_UNREAD_MODES 对称）。
+ *  真相源 = `perf-single-bench.ts|singleBenchReadMode`：`target==="model"` 时提前 return，
+ *  只读 model / iterations / 基准三件套，`order` 与 `maxModels` 根本不进载荷。
+ *  为什么必须成表而不是散在 apply 里：五修穷尽护栏判据是「行归属 ∨ 不读表」，而 max / order
+ *  整行可见（行归属 single）却仍不被读——护栏把「可见」误当「被读」。登记成表后护栏可校验，
+ *  且这是**默认路径**（新手进 tab 即 single+model），漏判代价最高。 */
+export const PERF_UNREAD_TARGETS: Record<string, readonly string[]> = {
+  "diag-perf-max": ["model"],
+  "diag-perf-order": ["model"],
+};
+
 /** 基准三件套 id（双维门禁：模式 ∧ 目标集）——apply 循环跳过、由 syncPerfBaselineControls 兼并判定 */
 export const BASELINE_CONTROL_IDS: readonly string[] = [
   "diag-perf-baseline-save",
@@ -146,20 +157,25 @@ function initPerfMode(root: ShadowRoot): () => void {
       const el = root.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
       if (el) el.disabled = unread.includes(mode);
     }
-    // ===== 双维门禁的「目标集」半边：单模型目标下 max / order 不读（ADR-278 §2.6 漏判的默认态）=====
+    // ===== 目标集维（ADR-278 §2.6 六修）：模式维之外的第二维不读面 =====
     // single 模式默认目标集 = 单模型，此时 singleBenchReadMode 提前 return 根本不读 max / order；
-    // 两控件仍可见却不被读 = 与 scan 下排序同款的「可见但欺骗」，这里按目标集维置灰并给原因 title。
-    const targetIsModel =
-      mode === "single" && parsePerfTargetValue(targetEl?.value ?? "")?.target === "model";
+    // 两控件整行可见（行归属 single，模式维护栏判它合格）却不被读 = 默认路径上的欺骗。
+    // 与 PERF_UNREAD_MODES 对称成表：真相源仍是 perf-single-bench 的 read*，表只是登记面。
+    const targetKey =
+      mode === "single" ? (parsePerfTargetValue(targetEl?.value ?? "")?.target ?? "") : "";
+    for (const [id, unreadTargets] of Object.entries(PERF_UNREAD_TARGETS)) {
+      const el = root.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+      if (!el) continue;
+      // 两维**并集**：模式维已在上面的循环置过灰（如 scan 下的 order），这里只叠加、不覆盖
+      if (unreadTargets.includes(targetKey)) el.disabled = true;
+    }
+    // 「为什么禁」要当场说清，不能只留一个灰控件：title 随禁用原因切换
     const maxEl = root.getElementById("diag-perf-max") as HTMLInputElement | null;
     if (maxEl) {
-      maxEl.disabled = targetIsModel;
-      maxEl.title = targetIsModel
+      maxEl.title = maxEl.disabled
         ? t("diagnostics.perfMaxUnreadHint")
         : t("diagnostics.perfMaxModelsHint");
     }
-    const orderEl = root.getElementById("diag-perf-order") as HTMLSelectElement | null;
-    if (orderEl) orderEl.disabled = mode === "scan" || targetIsModel;
     syncPerfBaselineControls(root);
 
     const modelOpt = Array.from(targetEl?.options ?? []).find((o) => o.value === "");

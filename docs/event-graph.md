@@ -225,8 +225,8 @@
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 56 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 191 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 246 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 333 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 247 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 545 |
@@ -234,7 +234,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initPerfPanel | `frontend/src/views/app-content/diagnostics/perf.ts` | 212 |
+| initPerfPanel | `frontend/src/views/app-content/diagnostics/perf.ts` | 207 |
 | connectedCallback | `frontend/src/views/app-preview/index.ts` | 83 |
 
 ### `nav:changed`

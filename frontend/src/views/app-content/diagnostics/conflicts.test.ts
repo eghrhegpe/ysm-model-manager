@@ -163,6 +163,7 @@ describe("scanConflicts", () => {
     expect(list.textContent).toContain("insA");
     expect(list.textContent).toContain("insB");
     expect(list.textContent).toContain("2 个整合包");
+    expect(list.textContent).toContain("内容不一致"); // 徽标语义：实例数 + 分歧性质，不止“几个包有它”
     // Exists=false 的 insC 不扫描
     expect(scanFn).toHaveBeenCalledTimes(2);
     expect(scanFn).not.toHaveBeenCalledWith("/c");

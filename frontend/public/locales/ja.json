@@ -806,6 +806,7 @@
   "diagnostics.noNameConflict": "ファイル名の競合は検出されませんでした（同名ファイルの内容は一致）",
   "diagnostics.conflictsFound": "複数の統合パックで内容が異なるファイルが {n} 個見つかりました",
   "diagnostics.modpackCount": "{n} 個の統合パック",
+  "diagnostics.contentDiffers": "内容が不一致",
   "diagnostics.moreCount": "他 {n} 個",
   "diagnostics.scanFailed": "スキャンに失敗しました",
   "diagnostics.syncConflict": "同期競合",

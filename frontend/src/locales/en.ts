@@ -930,6 +930,7 @@ export const en: Record<string, string> = {
   "diagnostics.noNameConflict": "No filename conflicts detected (same-name files are identical)",
   "diagnostics.conflictsFound": "Found {n} files with differing content across modpacks",
   "diagnostics.modpackCount": "{n} modpacks",
+  "diagnostics.contentDiffers": "content differs",
   "diagnostics.moreCount": "{n} more",
   "diagnostics.scanFailed": "Scan failed",
   "diagnostics.syncConflict": "Sync Conflict",

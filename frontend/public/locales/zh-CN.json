@@ -806,6 +806,7 @@
   "diagnostics.noNameConflict": "未检测到文件名冲突（同名文件内容一致）",
   "diagnostics.conflictsFound": "发现 {n} 个文件在多个整合包中内容不一致",
   "diagnostics.modpackCount": "{n} 个整合包",
+  "diagnostics.contentDiffers": "内容不一致",
   "diagnostics.moreCount": "还有 {n} 个",
   "diagnostics.scanFailed": "扫描失败",
   "diagnostics.syncConflict": "同步冲突",

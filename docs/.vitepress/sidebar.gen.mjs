@@ -1803,6 +1803,10 @@ export const autoSidebar = [
             "link": "/knowledge/shared-styles"
           },
           {
+            "text": "emoji/UI_ICONS 摸排方法论",
+            "link": "/knowledge/survey_emoji_icons"
+          },
+          {
             "text": "测试工具 test-utils（G-1 抗脆弱测试基础设施）",
             "link": "/knowledge/test-utils"
           },

@@ -24,7 +24,8 @@ let diagSyncBusy = false;
 
 interface DgCfInstanceFile {
   name: string;
-  hash: string;
+  /** Go `ModelEntry.Hash`（SHA256）；超大/读失败时为空串，判定层据此排除而非当作差异 */
+  hash?: string;
 }
 
 // ===== 同步冲突绑定类型（已 struct 化，ADR-143 P0） =====
@@ -110,7 +111,10 @@ async function dgCfCollectInstanceFiles(
  * （实为跨实例内容漂移）。
  *
  * 空哈希（超大文件 / 读取失败，Go 侧返回 ""）一律排除出判定：拿「未知」当「不同」
- * 会批量制造误报，宁可不报（与 Go `DetectConflicts` 的 HashFailed 走人工审查同取向）。
+ * 会批量制造误报，故此处选择**静默不报**。⚠️ 与 Go `DetectConflicts` 口径不同而非相同：
+ * 后者对两端 size 相同 + 任一端哈希失败会**报出来交人工审查**（HashFailed→ResolveManual）。
+ * 代价是「两实例同名且都哈希失败」这一极窄场景会漏报，覆盖面由 sync-conflict tab 兜底。
+ * （若日后想对齐，应在 UI 单列「无法判定」分区，而不是把它们混进冲突计数。）
  */
 function dgCfBuildNameConflictMap(
   instanceFiles: Record<string, DgCfInstanceFile[]>,
@@ -141,7 +145,7 @@ function dgCfRenderConflictList(conflicts: [string, string[]][], esc: EscFn): st
     const delay = stagger(i, 30, 600);
     html += `<div class="conflict-row" style="animation-delay:${delay}ms">
 <span class="conflict-name">${renderDisplayName(name)}</span>
-<span class="conflict-ver">${t("diagnostics.modpackCount", { n: insNames.length })}</span>
+<span class="conflict-ver">${t("diagnostics.modpackCount", { n: insNames.length })} · ${t("diagnostics.contentDiffers")}</span>
 </div>`;
     insNames.forEach((n, j) => {
       html += `<div class="conflict-ins" style="animation-delay:${delay + (j + 1) * 15}ms">&nbsp;&nbsp;${UI_ICONS.package} ${esc(n)}</div>`;

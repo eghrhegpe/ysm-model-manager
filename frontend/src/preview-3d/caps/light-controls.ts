@@ -17,20 +17,10 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
-import { toModelType } from "@/preview-3d/state/model-defaults.ts";
-import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { LightCapability, LightKey } from "./light-capability.ts";
 import type { LightType } from "./light-presets.ts";
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
-const LIGHT_PRESET_OPTIONS: Array<{ value: string; label: string; labelKey?: LocaleKey }> = [
-  { value: "default", label: "默认", labelKey: "preview.lightPresetDefault" },
-  { value: RESOURCE_TYPES.YSM, label: "YSM方块", labelKey: "preview.lightPresetYsm" },
-  { value: "vrm", label: "VRM角色", labelKey: "preview.lightPresetVrm" },
-  { value: "mmd", label: "MMD角色", labelKey: "preview.lightPresetMmd" },
-  { value: "litematic", label: "体素", labelKey: "preview.lightPresetLitematic" },
-  { value: "resourcepack", label: "MC块包", labelKey: "preview.lightPresetResourcepack" },
-];
 
 /** 三盏灯槽位（[light-type-switch] 顶栏「编辑灯光」按钮组） */
 const LIGHT_SLOTS: Array<{ value: string; label: string; labelKey: LocaleKey }> = [
@@ -322,19 +312,18 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
       kind: "folder",
       labelKey: LIGHT_PARAMS_GROUP,
       children: [
-        {
-          id: "light-preset",
-          kind: "select",
-          labelKey: "preview.lightPreset",
-          control: {
-            options: LIGHT_PRESET_OPTIONS,
-            get: () => cap.getCurrentPreset(),
-            set: (v) => cap.applyModelPreset(toModelType(v as string), { manual: true }),
-          },
-        },
         ...unifiedLightNodes(cap),
         ambientNode(cap),
         spotVolCardNode(cap),
+        {
+          // [ADR-282] 取代原「灯光预设」下拉：重置锚定模型无关的 DEFAULT_LIGHT_PARAMS。
+          // 旧下拉列的是 ModelType 枚举（YSM方块/VRM角色/…），实际只含三个光强数字，
+          // 且选中任一项（含「默认」）会设 manualPreset 永久冻结后续模型预设——已删。
+          id: "light-reset",
+          kind: "button",
+          labelKey: "preview.lightReset",
+          action: () => cap.resetLightParams(),
+        },
       ],
     },
   ];

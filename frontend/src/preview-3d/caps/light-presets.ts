@@ -1,10 +1,12 @@
-// ===== LightCapability 预设层（ADR-177 拆分：职责③数据面）=====
-// 从 light-capability.ts 抽离：参数类型、默认值、模型类别预设、合并函数。
+// ===== LightCapability 参数层（ADR-177 拆分：职责③数据面）=====
+// 从 light-capability.ts 抽离：参数类型、默认值、合并函数。
+// [ADR-282] 模型类别预设（原 LIGHT_PRESETS）已废除——灯光与模型类别解耦，
+//   本文件只剩「参数面」：类型/默认值/嵌套↔扁平映射。
 // 行为与原实现逐字节一致。
 // [ADR-281] 本文件是灯光字段全集（LightInstanceParams 10 字段 × key/fill/rim）的**唯一真相源**：
 //   FLATTEN_MAP 声明的嵌套→扁平映射既有 `satisfies` 锁死键拼写，又派生出
-//   lightEnvKeys / LIGHT_ENV_KEYS / VOLUMETRIC_ENV_KEYS / readLightParams——
-//   变更集、预设挑参、读参数全由它计算，不再各自手抄（新增字段只改本文件 + 接口）。
+//   lightEnvKeys / LIGHT_SLOTS / readLightParams——变更集与读参数全由它计算，
+//   不再各自手抄（新增字段只改本文件 + 接口）。
 // 曾经 light-capability.ts 用 `export * from` 重导出本文件（ADR-177 拆分期的兼容垫层），
 // 该转发桶已删：消费方一律直接 import 本文件，同一符号不再两处合法入口。
 // P3 下沉（对齐 P1 sun-beams.ts / ADR-177 light-cone.ts 拆出先例）：纯参数映射样板
@@ -209,11 +211,9 @@ export function lightEnvKeys(which: LightSlot): (keyof EnvState)[] {
   return Object.values(FLATTEN_MAP[which]);
 }
 
-/** 三盏灯全部 envState 键（预设挑参范围：含 type 与 spot 参数，不含 ambient） */
-export const LIGHT_ENV_KEYS: (keyof EnvState)[] = LIGHT_SLOTS.flatMap((w) => lightEnvKeys(w));
-
-/** 体积光全部 envState 键（同由 FLATTEN_MAP 派生） */
-export const VOLUMETRIC_ENV_KEYS: (keyof EnvState)[] = Object.values(FLATTEN_MAP.volumetric);
+// [ADR-282] 原 LIGHT_ENV_KEYS / VOLUMETRIC_ENV_KEYS 已删：唯一消费者是 LightCapability.applyModelPreset
+// （按模型类别挑参），该函数随灯光与模型类别解耦一并退役。字段全集真相源仍由上方
+// lightEnvKeys / FLATTEN_MAP / readLightParams 提供（变更集与读参数继续消费）。
 
 /** envState → 单盏灯参数（flattenLightParams 的逆方向）。
  *  [light-type-switch] 字段名逐个取自 FLATTEN_MAP——键拼写由 `satisfies` 锁死、值类型由返回

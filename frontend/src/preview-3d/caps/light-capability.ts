@@ -26,26 +26,20 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.t
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
-import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
-import {
-  type ModelType,
-  pickModelDefaultFields,
-  toModelType,
-} from "@/preview-3d/state/model-defaults.ts";
+import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { VolumetricCone } from "./light-cone.ts";
 import { buildLightNodes } from "./light-controls.ts";
 import { buildLightPersistPayload, restoreLightParams } from "./light-persist.ts";
 import {
+  DEFAULT_LIGHT_PARAMS,
   type DeepPartial,
   flattenLightParams,
-  LIGHT_ENV_KEYS,
   LIGHT_SLOTS,
   type LightInstanceParams,
   type LightParams,
   type LightSlot,
   lightEnvKeys,
   readLightParams as readLightParamsFrom,
-  VOLUMETRIC_ENV_KEYS,
   type VolumetricParams,
 } from "./light-presets.ts";
 import {
@@ -135,7 +129,7 @@ function getParamsFromEnvState(state: EnvState = envState): LightParams {
 /** 三槽位的通用别名（本模块旧名，语义同 LightSlot） */
 export type LightKey = LightSlot;
 
-function lightChangeSet(which: LightSlot): Set<string> {
+function lightChangeSet(which: LightSlot): Set<EnvStateKey> {
   return new Set(lightEnvKeys(which));
 }
 
@@ -143,7 +137,7 @@ const KEY_CHANGES = lightChangeSet("key");
 const FILL_CHANGES = lightChangeSet("fill");
 const RIM_CHANGES = lightChangeSet("rim");
 
-const VOL_PARAM_CHANGES = new Set([
+const VOL_PARAM_CHANGES: Set<EnvStateKey> = new Set([
   "lightVolumetricOpacity",
   "lightVolumetricFogPower",
   "lightVolumetricEdgeFade",
@@ -154,7 +148,7 @@ const VOL_PARAM_CHANGES = new Set([
 /** 影响锥体几何（形状/存在性）的字段：type/enabled/angle/penumbra 变化才需 dispose+重建；
  *  颜色/强度/距离/衰减只动 uniforms，方位角/仰角只动 transform。
  *  （旧实现：任意 spotlight 字段变更都整组重建，拖滑块即 GC 抖动。） */
-const CONE_GEO_CHANGES = new Set([
+const CONE_GEO_CHANGES: Set<EnvStateKey> = new Set([
   "lightKeyType",
   "lightFillType",
   "lightRimType",
@@ -170,7 +164,7 @@ const CONE_GEO_CHANGES = new Set([
 ]);
 
 /** 只改变光源位置（不影响锥形）的字段 → 锥体 syncPosition */
-const CONE_MOVE_CHANGES = new Set([
+const CONE_MOVE_CHANGES: Set<EnvStateKey> = new Set([
   "lightKeyAzimuth",
   "lightFillAzimuth",
   "lightRimAzimuth",
@@ -179,7 +173,7 @@ const CONE_MOVE_CHANGES = new Set([
   "lightRimElevation",
 ]);
 
-function hasAny(changed: Set<string>, keys: Set<string>): boolean {
+function hasAny(changed: Set<EnvStateKey>, keys: Set<EnvStateKey>): boolean {
   for (const k of keys) if (changed.has(k)) return true;
   return false;
 }
@@ -219,10 +213,9 @@ export class LightCapability implements SceneCapability {
   private keyHelper: THREE.Object3D | null = null;
   private fillHelper: THREE.Object3D | null = null;
   private rimHelper: THREE.Object3D | null = null;
-  // ADR-085 S2：记录当前预设名，消灭 fillLighting 启发式派生
-  private currentPreset: ModelType = "default";
-  /** 手动 preset 记忆（light-preset select 显式选择；非空时自动套模型预设不覆盖——[doc:adr-126-p5] 手动优先） */
-  private manualPreset: ModelType | null = null;
+  // [ADR-282] `currentPreset` / `manualPreset` 已退役：灯光与模型类别解耦，不再有预设名可记。
+  // 旧职责：ADR-085 S2 记录真实预设名、ADR-126 P5 粗粒度「手动优先」——
+  // 后者与 shouldOverwrite 的按 key 保护重复，改为后者独当（见 ADR-282 §1.5）。
 
   /** [light-type-switch] 菜单「编辑灯光」的选择态（运行时态，不入 envState/持久化） */
   private activeLight: LightKey = "key";
@@ -292,7 +285,7 @@ export class LightCapability implements SceneCapability {
 
   /* ----- envState 变更回调：分派到 Three 应用 ----- */
 
-  private onEnvChanged(changed: Set<string>, state: EnvState): void {
+  private onEnvChanged(changed: Set<EnvStateKey>, state: EnvState): void {
     // key/fill/rim：类型变化 → 重建；其余 → 原地更新
     if (hasAny(changed, KEY_CHANGES)) this.syncLight("key", state);
     if (hasAny(changed, FILL_CHANGES)) this.syncLight("fill", state);
@@ -582,27 +575,15 @@ export class LightCapability implements SceneCapability {
     this.rebuildConeIfNeeded(envState);
   }
 
-  /** 按模型类别套用预设；opts.manual（light-preset select 入口）记手动选择——手动优先 */
-  applyModelPreset(modelType: ModelType, opts?: { manual?: boolean }): void {
-    if (opts?.manual) {
-      this.manualPreset = modelType;
-    } else if (this.manualPreset) {
-      return; // [doc:adr-126-p5] 自动套模型预设被手动选择压制
-    }
-    this.currentPreset = modelType; // ADR-085 S2：记录真实预设名
-    // ADR-196：统一数据源 MODEL_DEFAULTS，表驱动挑选 light 相关键写入 envState
-    // ambient 排除（测试契约「ambient 不在合并范围，保留」）：键表刻意不含
-    // lightAmbientColor/Intensity，切模型不静默重置用户 ambient 微调。
-    // 灯三槽位 + 体积光的 envState 键均由 FLATTEN_MAP 派生（含 type 与 spot 参数）；
-    // 新增灯光字段自动进挑参范围，不再手拄 36 键。
-    const picked = pickModelDefaultFields(modelType, [...LIGHT_ENV_KEYS, ...VOLUMETRIC_ENV_KEYS]);
-    if (Object.keys(picked).length > 0) {
-      // source 双轨：自动套模型预设走 "auto-model"（与 sky/fog/shadow 同语义，
-      // 后续 auto-atmosphere 可再覆盖——写 "manual" 会让预设永久压制昼夜循环，
-      // env-state.shouldOverwrite manual 优先级最高，锐评 §二 行为 bug）；
-      // opts.manual（light-preset select 用户显式选择 / loadState 恢复）才写 "manual"。
-      setEnvState(picked, { source: opts?.manual ? "manual" : "auto-model" });
-    }
+  /** [ADR-282] 把三盏灯 + 体积光重置为规范默认值。
+   *  锚点 = `DEFAULT_LIGHT_PARAMS`（与 envState schema 初始值同源，模型无关）——
+   *  语义：「重置」= 回到「从没动过」的状态。
+   *  不再有任何按模型类别的预设：灯光是场景属性，Three.js 层面无「模型类别」概念；
+   *  唯一合法的模型相关输入是包围盒（驱动灯位/坎德拉补偿），已由 setTarget/setTargetHeight 动态处理。
+   *  `source: "manual"`：用户显式重置与拖滑块同源——重置后的值受 shouldOverwrite 保护。 */
+  resetLightParams(): void {
+    setEnvState(flattenLightParams(DEFAULT_LIGHT_PARAMS), { source: "manual" });
+    // callback 负责 syncLight + 锥体重建（含 volumetric.enabled 变 false 时卸载）
   }
 
   /**
@@ -666,11 +647,6 @@ export class LightCapability implements SceneCapability {
     return getParamsFromEnvState();
   }
 
-  /** 当前预设名（ADR-085 S2：fillLighting 只读初始化，消灭启发式派生） */
-  getCurrentPreset(): string {
-    return this.currentPreset;
-  }
-
   /** [light-type-switch] 当前编辑的灯槽位（菜单统一设置条读写） */
   getActiveLight(): LightKey {
     return this.activeLight;
@@ -700,8 +676,6 @@ export class LightCapability implements SceneCapability {
     persistState(this.id, {
       enabled: this.enabled,
       ...buildLightPersistPayload(),
-      currentPreset: this.currentPreset,
-      manualPreset: this.manualPreset,
     });
   }
 
@@ -710,16 +684,9 @@ export class LightCapability implements SceneCapability {
     const state = restoreState(this.id);
     if (!state) return;
     if (typeof state.enabled === "boolean") this.enabled = state.enabled;
-    // ① 预设先套用（内含锥组挂载判定）。必须在灯开关恢复之前：
-    //    预设以 envState 为准，后恢复的开关才会生效。
-    if (typeof state.manualPreset === "string") {
-      // [doc:adr-126-p5] 手动优先跨会话保持（重建/刷新不丢）；存储串经 toModelType
-      // 校验（脏数据回退 default），不裸 cast
-      this.manualPreset = toModelType(state.manualPreset);
-      this.applyModelPreset(this.manualPreset, { manual: true });
-    } else if (typeof state.currentPreset === "string") {
-      this.applyModelPreset(toModelType(state.currentPreset));
-    }
+    // ① [ADR-282] 原「预设先套用」步骤已删：灯光与模型类别解耦，不再有 manualPreset/
+    //    currentPreset 可恢复。旧存档中这两个键现为死数据——restoreState 对未知键宽容，
+    //    不报错也不算错（灯光值已由 restoreLightParams 全量恢复）。
     // ② 用户显式保存的灯开关 + ②.b 全量参数恢复（纯数据映射，下沉 light-persist.ts；
     //    顺序敏感：必须在预设套用之后——后恢复的用户值优先于预设，ADR-126 P5 同口径）
     //    ⚠️ 重入提示：本调用内部会 setEnvState → **同步**触发 onEnvChanged，此时 Three 灯

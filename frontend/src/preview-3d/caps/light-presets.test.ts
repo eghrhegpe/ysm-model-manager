@@ -5,13 +5,11 @@
 import { describe, it, expect } from "vitest";
 import {
   flattenLightParams,
-  LIGHT_ENV_KEYS,
   LIGHT_SLOTS,
   type LightInstanceParams,
   type LightParams,
   lightEnvKeys,
   readLightParams,
-  VOLUMETRIC_ENV_KEYS,
 } from "./light-presets.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 
@@ -144,13 +142,9 @@ describe("灯光字段全集单一真相源（FLATTEN_MAP 派生）", () => {
     expect(before.type).toBe("directional");
   });
 
-  it("LIGHT_ENV_KEYS = 三槽位 30 键；VOLUMETRIC_ENV_KEYS = 6 键", () => {
-    expect(LIGHT_ENV_KEYS.length).toBe(30);
-    expect(VOLUMETRIC_ENV_KEYS.length).toBe(6);
-    // 预设挑参不含 ambient（切模型不静默重置用户 ambient 微调，测试契约）
-    expect(LIGHT_ENV_KEYS).not.toContain("lightAmbientColor");
-    expect(LIGHT_ENV_KEYS).not.toContain("lightAmbientIntensity");
-  });
+  // [ADR-282] 原「LIGHT_ENV_KEYS = 30 / VOLUMETRIC_ENV_KEYS = 6」用例已删：
+  // 两个常量随 applyModelPreset（按模型类别挑参）退役而删除。
+  // 「字段全集单一真相源」的契约仍由本文件其余用例（lightEnvKeys 覆盖度、往返、直读）守住。
 
   it("readLightParams 是 flattenLightParams 的真逆：往返逐字段等价", () => {
     resetEnvState();

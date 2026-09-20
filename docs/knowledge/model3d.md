@@ -243,6 +243,7 @@ auto_fields:
     - EnvSectionId
     - envState
     - EnvState
+    - EnvStateKey
     - EnvStateMiddleware
     - EnvStateSchema
     - estimateSceneTextureBytes
@@ -401,7 +402,6 @@ auto_fields:
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
     - LegChain
-    - LIGHT_ENV_KEYS
     - LIGHT_SLOTS
     - LightCapability
     - lightDirToPosition
@@ -853,7 +853,6 @@ auto_fields:
     - VmdHumanoidRig
     - VmdRetargetOptions
     - VmdRetargetResult
-    - VOLUMETRIC_ENV_KEYS
     - VolumetricCone
     - VolumetricParams
     - VrmAdapterDeps

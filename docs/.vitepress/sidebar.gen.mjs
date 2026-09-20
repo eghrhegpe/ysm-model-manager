@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-282：灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS",
+        "link": "/adr/ADR-282-applymodelpreset-default-light-params"
+      },
+      {
         "text": "ADR-281：灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化",
         "link": "/adr/ADR-281-flatten-map"
       },

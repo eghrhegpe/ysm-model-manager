@@ -79,10 +79,10 @@ const DEFAULT_MODEL_STATE: Partial<EnvState> = {
   // --- environment ---
   envPreset: "sky",
   envIntensity: 1.0,
-  // --- light (来自 LIGHT_PRESETS.default) ---
-  // --- light (来自 LIGHT_PRESETS.default) ---
-  // [light-type-switch] 旧 lightSpot* 字段已移除，spot 参数下沉到每盏灯的 type+参数
-  lightVolumetricEnabled: false,
+  // --- light：[ADR-282] 灯光与模型类别解耦，不再有任何 light* 类别默认值 ---
+  // 灯光参数唯一来源 = envState schema 默认值（DEFAULT_LIGHT_PARAMS）+ 用户手动修改。
+  // 曾经的 `lightVolumetricEnabled: false`（源自 LIGHT_PRESETS.default）与 schema 默认同值，
+  // 属纯 no-op，却会在选中「默认」时夺取手动所有权并永久冻结后续模型预设——已删。
   // --- shadow (来自 SHADOW_PRESET_BY_MODEL.default → hard) ---
   shadowType: "hard",
   // --- reflector (来自 REFLECTOR_PRESETS.default = 空) ---
@@ -113,13 +113,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     // environment (ENV_PRESET_BY_MODEL.ysm)
     envPreset: "sky",
     envIntensity: 1.0,
-    // light (LIGHT_PRESETS.ysm)
-    lightKeyIntensity: 1.3,
-    lightFillIntensity: 0.5,
-    lightRimIntensity: 0.45,
-    lightVolumetricEnabled: false,
-    lightVolumetricOpacity: 0.4,
-    lightVolumetricFogPower: 1.2,
+    // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.ysm：key 1.3 / fill 0.5 / rim 0.45 + vol 0.4/1.2）
     // shadow (SHADOW_PRESET_BY_MODEL.ysm = "default" → hard)
     shadowType: "hard",
     // reflector (REFLECTOR_PRESETS.ysm)
@@ -152,11 +146,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     // environment (ENV_PRESET_BY_MODEL.vrm)
     envPreset: "studio",
     envIntensity: 1.6,
-    // light (LIGHT_PRESETS.vrm)
-    lightKeyIntensity: 1.0,
-    lightFillIntensity: 0.5,
-    lightRimIntensity: 0.6,
-    lightVolumetricEnabled: false,
+    // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.vrm：key 1.0 / fill 0.5 / rim 0.6）
     // shadow (SHADOW_PRESET_BY_MODEL.vrm = "soft")
     shadowType: "soft",
     // reflector (REFLECTOR_PRESETS.vrm)
@@ -188,11 +178,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     // environment (ENV_PRESET_BY_MODEL.mmd = studio)
     envPreset: "studio",
     envIntensity: 1.6,
-    // light (LIGHT_PRESETS.mmd)
-    lightKeyIntensity: 0.85,
-    lightFillIntensity: 0.3,
-    lightRimIntensity: 0.25,
-    lightVolumetricEnabled: false,
+    // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.mmd：key 0.85 / fill 0.3 / rim 0.25）
     // shadow (SHADOW_PRESET_BY_MODEL.mmd = "soft")
     shadowType: "soft",
     // reflector (REFLECTOR_PRESETS.mmd)
@@ -225,13 +211,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     // environment (ENV_PRESET_BY_MODEL.mmd-scene = sky)
     envPreset: "sky",
     envIntensity: 1.1,
-    // light (LIGHT_PRESETS.mmd-scene)
-    lightKeyIntensity: 1.2,
-    lightFillIntensity: 0.55,
-    lightRimIntensity: 0.4,
-    lightVolumetricEnabled: false,
-    lightVolumetricOpacity: 0.35,
-    lightVolumetricFogPower: 1.0,
+    // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.mmd-scene：key 1.2 / fill 0.55 / rim 0.4 + vol 0.35/1.0）
     // shadow (SHADOW_PRESET_BY_MODEL.mmd-scene = "soft")
     shadowType: "soft",
     // reflector (REFLECTOR_PRESETS 无 mmd-scene → 同 default = 空)
@@ -258,17 +238,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     // environment (ENV_PRESET_BY_MODEL.litematic = forest)
     envPreset: "forest",
     envIntensity: 1.1,
-    // light (LIGHT_PRESETS.litematic)
-    lightKeyIntensity: 1.0,
-    lightKeyAzimuth: 45,
-    lightKeyElevation: 60,
-    lightFillIntensity: 0.4,
-    lightFillAzimuth: -45,
-    lightFillElevation: 30,
-    lightRimIntensity: 0.3,
-    lightRimAzimuth: 135,
-    lightRimElevation: 30,
-    lightVolumetricEnabled: false,
+    // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.litematic：key 1.0@45/60 + fill 0.4@-45/30 + rim 0.3@135/30）
     shadowType: "hard",
     // reflector (REFLECTOR_PRESETS.litematic)
     reflectorOpacity: 0.25,
@@ -281,7 +251,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
   resourcepack: {
     // sky/shadow/reflector/environment 与 default 逐字段相同 → 直接 spread，
     // 仅覆盖差异：fog（FOG_PRESETS.resourcepack：与 ysm 同调 20~600）
-    // 与 light（LIGHT_PRESETS.resourcepack 有主/补/轮廓三灯强度）
+    // （light 段据 ADR-282 已从全部类别删除，不再覆盖）
     ...DEFAULT_MODEL_STATE,
     fogEnabled: false,
     fogMode: "linear",
@@ -289,10 +259,7 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     fogNear: 20,
     fogFar: 600,
     fogDensity: 0.006,
-    lightKeyIntensity: 1.3,
-    lightFillIntensity: 0.4,
-    lightRimIntensity: 0.35,
-    lightVolumetricOpacity: 0.4,
+    // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.resourcepack：key 1.3 / fill 0.4 / rim 0.35 + vol 0.4）
     reflectorOpacity: 0.25,
     reflectorSize: 200,
     reflectorResolution: 512,

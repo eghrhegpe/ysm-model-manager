@@ -100,6 +100,9 @@ export function readLightParams(state: EnvState, which: LightSlot): LightInstanc
 
 ### D4：`applyModelPreset` 挑参范围由映射派生
 
+<!-- ⚠️ 本节已被 ADR-282 取代（2026-09-20）：applyModelPreset 整体退役，灯光与模型类别解耦；
+     LIGHT_ENV_KEYS / VOLUMETRIC_ENV_KEYS 随之删除。以下为决策当时记录。 -->
+
 36 行手写键字面量 → `[...LIGHT_ENV_KEYS, ...VOLUMETRIC_ENV_KEYS]`。
 「不含 ambient」的既有契约（切模型不静默重置用户 ambient 微调）由
 `LIGHT_ENV_KEYS` 只覆盖 `LIGHT_SLOTS` 天然保证，并有测试锚定。

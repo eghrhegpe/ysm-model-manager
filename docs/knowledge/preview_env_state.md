@@ -101,10 +101,10 @@ invariant_anchors:
 
 ## 统一数据源（ADR-196 刀4–5）
 
-- `state/model-defaults.ts`：`MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>>` 收敛模型类别预设（default/ysm/vrm/mmd/mmd-scene/litematic/resourcepack），**已合并**此前散落的 7 张表（MODEL_SKY_PRESETS / FOG_PRESETS / ENV_PRESET_BY_MODEL / LIGHT_PRESETS / REFLECTOR_PRESETS / POSTPROC_PRESETS / SHADOW_PRESET_BY_MODEL）——前 6 张物理删除，POSTPROC_PRESETS 残留为 cap 专属数据源（known gap，见下）。`skyForceEnv: true` 标记「模型切换是离散动作，应触发 PMREM 重建」。
+- `state/model-defaults.ts`：`MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>>` 收敛模型类别预设（default/ysm/vrm/mmd/mmd-scene/litematic/resourcepack），**已合并**此前散落的 7 张表（MODEL_SKY_PRESETS / FOG_PRESETS / ENV_PRESET_BY_MODEL / LIGHT_PRESETS / REFLECTOR_PRESETS / POSTPROC_PRESETS / SHADOW_PRESET_BY_MODEL）——前 6 张物理删除，POSTPROC_PRESETS 残留为 cap 专属数据源（known gap，见下）。`skyForceEnv: true` 标记「模型切换是离散动作，应触发 PMREM 重建」。**[ADR-282] light 已退出本表：灯光与模型类别解耦，不再含任何 `light*` 键。**
 - `state/atmosphere-presets.ts`：`ATMOSPHERE_PRESETS` 完整氛围快照（含 light 强度/色温 + postproc exposure/bloom 氛围语义），取代 ENV_PRESET_LINKAGE 硬编码联动。
-- **预设套用收口态（刀3.5/刀5 + 装配链收尾）**：`SceneCapability.setPreset` 接口**已删除**（2026-09-07），各 cap 预设套用方法降级为非接口 public——sky/fog/shadow/reflector/light/environment 统一命名 `applyModelPreset(modelType)`，postprocessing 为 `applyPostProcDefaults(modelType)`。六个 cap 内部读 `MODEL_DEFAULTS` 只取自己关注的键并 `setEnvState(..., {source:'auto-model'})`（light 为 `{source:'manual'}` 双入口），侧效（isStateLoaded 守卫、shadow needsUpdate、light 锥组挂载/手动压制、reflector 重建、sky regenerateEnvironment 后置）仍留在 cap 内。
-- **装配链已收敛（2026-09-07）**：adapters/shared-infra.ts 由 7 个散落 `cap.setPreset(adapter.id)` 改为两个命名入口——`applyModelDefaults(modelType, deps)`（预 apply 6 cap：sky→light→fog→shadow→reflector→environment）+ `applyPostProcDefaults(postProcCap, modelType)`（post-apply 1 cap，在 apply/syncShadowLights 之后、setReflectorCap 之前）。**刻意不做**「字面单一 `setEnvState(MODEL_DEFAULTS[adapter.id])`」：isStateLoaded 全量守卫、light 手动/自动双入口、postproc enabled 侧效无法被单次 setEnvState 等效替代，钝直合并会回归。装配序逐字复刻原行为。
+- **预设套用收口态（刀3.5/刀5 + 装配链收尾）**：`SceneCapability.setPreset` 接口**已删除**（2026-09-07），各 cap 预设套用方法降级为非接口 public——sky/fog/shadow/reflector/environment 统一命名 `applyModelPreset(modelType)`，postprocessing 为 `applyPostProcDefaults(modelType)`。这些 cap 内部读 `MODEL_DEFAULTS` 只取自己关注的键并 `setEnvState(..., {source:'auto-model'})`，侧效（isStateLoaded 守卫、shadow needsUpdate、reflector 重建、sky regenerateEnvironment 后置）仍留在 cap 内。**（[ADR-282] 原列表中的 light 已退役。）**
+- **装配链已收敛（2026-09-07；[ADR-282] 2026-09-20 缩为 5 cap）**：adapters/shared-infra.ts 由 7 个散落 `cap.setPreset(adapter.id)` 改为两个命名入口——`applyModelDefaults(modelType, deps)`（预 apply **5** cap：sky→fog→shadow→reflector→environment）+ `applyPostProcDefaults(postProcCap, modelType)`（post-apply 1 cap，在 apply/syncShadowLights 之后、setReflectorCap 之前）。**刻意不做**「字面单一 `setEnvState(MODEL_DEFAULTS[adapter.id])`」：isStateLoaded 全量守卫、postproc enabled 侧效无法被单次 setEnvState 等效替代，钝直合并会回归。装配序逐字复刻原行为。light 已退出本链（见 ADR-282）。
 
 ## 与其他子系统关系
 
@@ -151,10 +151,17 @@ invariant_anchors:
   - **菜单**：顶栏 `light-select`（三灯按钮）选择编辑对象 → 同一套设置条读写该灯；类型专属参数（angle/penumbra/distance/decay）按 type 条件展开。
   - **旧存档迁移**：`restoreLightParams` 检测旧 `spotlight` 块 → 迁移为 key 灯 `type='spot'` + 对应参数。
 - **[ADR-281] 灯光字段全集单一真相源（2026-09-20）**：三盏灯的 10 字段集曾散在 5 处（`FLATTEN_MAP` / 变更集 / 预设挑参 / 持久化表 / `readLightParams`），只有第一处有 `satisfies` 锁——新增字段漏改四处中的任何一处都是**静默 bug**（滑块无反应 / 切模型不更新 / 运行时 NaN）。
-  - **收口**：`light-presets.ts` 的 `FLATTEN_MAP` 升格为唯一真相源，派生出 `LIGHT_SLOTS` / `lightEnvKeys`（变更集）/ `LIGHT_ENV_KEYS` + `VOLUMETRIC_ENV_KEYS`（预设挑参）/ `readLightParams`（读参数）。
+  - **收口**：`light-presets.ts` 的 `FLATTEN_MAP` 升格为唯一真相源，派生出 `LIGHT_SLOTS` / `lightEnvKeys`（变更集）/ `readLightParams`（读参数）。
   - **去双层 `as`**：`readLightParams` 字段名取自映射（键拼写有锁）+ 返回类型 `LightInstanceParams` 反向校验（值类型 / 穷尽性有锁），旧实现 `${prefix}${X}` 拼串 + 两层 `as` 退场。
   - **持久化表**（`light-persist.ts`）：映射的是存档短名（跨版本稳定契约），无法派生，但 `satisfies Record<keyof LightInstanceParams, …>` 锁死同一字段全集。
   - **`export *` 转发桶已删**：`light-capability.ts` 不再重导出 `light-presets.ts`，消费方直引具体叶（同一符号不再两处入口）。
+- **[ADR-282] 灯光与模型类别解耦（2026-09-20）**：三盏灯的类别默认值（原 `LIGHT_PRESETS`，源自 ADR-084 §2.5）已从 `MODEL_DEFAULTS` **全部删除**。
+  - **依据**：Three.js 层面「模型类别」不存在——灯光是**场景属性**，唯一合法的模型相关输入是**包围盒**（驱动 `targetHeight`/靶点），已由 `setTarget`/`setTargetHeight` **动态**处理（换模型实时重算），无需预设代劳。ADR-084 原表 vrm 与 mmd 逐字相同，唯一实质区分轴 `spotlight` 已随 ADR-280 删除 → 预设只剩三个光强数字。
+  - **退役**：`LightCapability.applyModelPreset` / `manualPreset` / `currentPreset` / `getCurrentPreset` 全部删除；`shared-infra.applyModelDefaults` 预 apply cap **6 → 5**（light 退出本链）；`LIGHT_ENV_KEYS` / `VOLUMETRIC_ENV_KEYS` 随之成为孤儿，一并删除。
+  - **取代**：`resetLightParams()` —— 把三盏灯 + 环境光 + 体积光写回模型无关的 `DEFAULT_LIGHT_PARAMS`（与 envState schema 初始值同源），`source:"manual"`。UI 入口 = 灯光参数组底的「重置灯光」按钮（原预设下拉已删）。
+  - **反向陷阱（已修）**：原 `default` 预设的 light 段只剩 `lightVolumetricEnabled:false`（与 schema 默认同值 = 纯 no-op），但选中它会设 `manualPreset` → **永久冻结**后续模型预设（跨会话、无 UI 可解）。即「改了等于没改，却把开关焊死」。
+  - **双重手动优先收敛**：旧有 `manualPreset`（粗粒度整体早退）与 `shouldOverwrite` 按 key 记 `manual`（细粒度）两套；现只剩后者独当——用户拖过的键在后续 `auto-model` 写入时自动豁免。
+  - **防回退闸**：`state/model-defaults.test.ts` 断言 `MODEL_DEFAULTS` 任何类别都不得含 `light` 前缀键——防止将来「顺手」加一行 `lightKeyIntensity` 悄悄复活漂移源。
 - **[ADR-246] 未落地项——「雾中体积光」**：真正的 raymarching 体积光（`VolumetricLightingPass`，ADR-084 §L3）**仍未实现**；ADR-246 已裁定若要做须以**新增 pass** 方式引入，不得复活「切换渲染器」开关。注意与两条已落地能力区分：`FogCapability`（`scene.fog` 线性/指数雾，非体积光）、ADR-107 天空体积光束 god rays（非雾中散射）。
 - 颜色字段统一 number(hex)；枚举字段 `type:"enum"` + `values`。
 - 已迁移 cap（10/10，刀2 完成）：Sky/Fog/Reflector/Shadow/Ground/RenderMode/Water/Environment/Postprocessing/Light。

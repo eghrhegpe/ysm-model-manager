@@ -32,13 +32,13 @@ import type { PreviewAdapter } from "./mount-preview-core.ts";
 
 /**
  * 装配链——按模型类别套用预设（ADR-196）。
- * MODEL_DEFAULTS 驱动的单个入口：把 6 个预 apply cap 的模型预设套用统一编排，
- * 逐字复刻原 7 个散落 `cap.setPreset(adapter.id)` 的调用顺序（sky→light→fog→shadow→
- * reflector→environment）与各 cap 内部守卫（shadow/reflector 的 isStateLoaded、
- * light 的 manual 双入口原样保留在 cap 内，此处不越权）。
+ * MODEL_DEFAULTS 驱动的单个入口：把 5 个预 apply cap 的模型预设套用统一编排，
+ * 逐字复刻原 7 个散落 `cap.setPreset(adapter.id)` 的调用顺序（sky→fog→shadow→
+ * reflector→environment）与各 cap 内部守卫（shadow/reflector 的 isStateLoaded）。
+ * [ADR-282] light 已退出本链：灯光与模型类别解耦（见下方调用点注释）。
  *
- * 脏数据防御：runtime 入口（light/reflector/sky 的 loadState + light-preset select）
- * 统一经 toModelType 校验（Object.hasOwn 自身属性判定，防原型链误判）；
+ * 脏数据防御：runtime 入口（reflector/sky 的 loadState）统一经 toModelType 校验
+ * （Object.hasOwn 自身属性判定，防原型链误判）；
  * 本函数调用点（buildSharedInfra）传 adapter.id 来自 RESOURCE_TYPES 已知集合，
  * 不经 toModelType——保持装配期与 runtime 恢复的入口分工。
  */
@@ -46,7 +46,6 @@ export function applyModelDefaults(
   modelType: ModelType,
   deps: {
     sky?: SkyCapability | null;
-    light?: LightCapability | null;
     fog?: FogCapability | null;
     shadow?: ShadowCapability | null;
     reflector?: ReflectorCapability | null;
@@ -54,7 +53,9 @@ export function applyModelDefaults(
   },
 ): void {
   deps.sky?.applyModelPreset(modelType);
-  deps.light?.applyModelPreset(modelType);
+  // [ADR-282] light 不再预 apply：灯光与模型类别解耦（灯光是场景属性，
+  // Three.js 层面无「模型类别」；唯一模型相关输入是包围盒，已由 setTarget/setTargetHeight
+  // 动态处理）。用户想回默认值走 LightCapability.resetLightParams() 显式重置。
   deps.fog?.applyModelPreset(modelType);
   deps.shadow?.applyModelPreset(modelType);
   deps.reflector?.applyModelPreset(modelType);
@@ -312,12 +313,12 @@ export function buildSharedInfra(
   // 从 localStorage 恢复上次会话状态
   sceneCapabilityRegistry.loadAll();
   // 按模型类别套用预设（已有持久化状态的 cap 不覆盖）——ADR-196 装配链收敛：
-  // 单个 applyModelDefaults 入口编排 6 个预 apply cap，逐字复刻原 setPreset 顺序与守卫
+  // 单个 applyModelDefaults 入口编排 5 个预 apply cap（light 已据 ADR-282 退出本链），
+  // 逐字复刻原 setPreset 顺序与守卫
   // adapter.id 是运行时字符串（来自 RESOURCE_TYPES 联合），经 toModelType 校验收窄
   // （未知值回退 "default"，不再裸 cast）
   applyModelDefaults(toModelType(adapter.id), {
     sky: skyCap,
-    light: lightCap,
     fog: fogCap,
     shadow: shadowCap,
     reflector: reflectorCap,

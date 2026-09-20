@@ -8,10 +8,11 @@ import * as THREE from "three";
 import { LightCapability, spotDistanceAttenuation } from "./light-capability.ts";
 import {
   DEFAULT_LIGHT_PARAMS,
+  LIGHT_SLOTS,
   type LightInstanceParams,
+  readLightParams,
 } from "./light-presets.ts";
 import type { SceneCapability } from "./scene-capability.ts";
-import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
@@ -59,7 +60,6 @@ function roundtripConeVolumetric(opts: { volumetricEnabled: boolean }): {
   p: ReturnType<LightCapability["getParams"]>;
 } {
   const cap = newCap();
-  cap.applyModelPreset("mmd", { manual: true });
   // [light-type-switch] 原 setSpotlight({ enabled: true }) → 等价：key 灯切 spot 并开启
   cap.setLightParams("key", { type: "spot", enabled: true });
   cap.setVolumetric({ enabled: opts.volumetricEnabled });
@@ -284,70 +284,55 @@ describe("LightCapability — 聚光灯定位 setTarget / setTargetHeight", () =
   });
 });
 
-describe("LightCapability — applyModelPreset", () => {
+describe("LightCapability — 灯光与模型类别解耦（ADR-282）", () => {
   beforeEach(() => resetEnvState());
 
-  it("ysm 预设：方块顶光稍柔", () => {
-    const cap = newCap();
-    cap.applyModelPreset("ysm");
-    const p = cap.getParams();
-    expect(p.key.intensity).toBe(1.3);
-    // [light-type-switch] 旧 MODEL_DEFAULTS.lightSpot* 字段（强度 1.8 / 锥角 30）已删除——
-    // spot 参数下沉到每盏灯。等价断言 = ysm 预设不再携带 spot 专属参数（保持默认）、也不切灯类型。
-    expect(p.key.angle).toBe(DEFAULT_LIGHT_PARAMS.key.angle);
-    expect(p.key.type).toBe("directional");
+  it("applyModelPreset / getCurrentPreset 已退役（类别维度入口不存在）", () => {
+    const cap = newCap() as unknown as Record<string, unknown>;
+    expect(cap.applyModelPreset).toBeUndefined();
+    expect(cap.getCurrentPreset).toBeUndefined();
   });
 
-  it("vrm 预设：rim 稍强", () => {
+  it("换模型不再改动任何灯光参数：用户微调后 envState 保持原值", () => {
     const cap = newCap();
-    cap.applyModelPreset("vrm");
-    expect(cap.getParams().rim.intensity).toBe(0.6);
-    expect(cap.getParams().key.intensity).toBe(1.0);
+    cap.setLightParams("key", { intensity: 2.5, type: "spot", azimuth: 77 });
+    cap.setLightParams("rim", { intensity: 0.9 });
+    const snapshot = cap.getParams();
+    // ADR-282：灯光与模型类别解耦——不再有任何「按类别套预设」的入口可调。
+    // 旧 applyModelPreset 会按 MODEL_DEFAULTS 覆写三个光强（如 vrm 把 key 拉到 1.0）。
+    expect(envState.lightKeyIntensity).toBe(2.5);
+    expect(envState.lightRimIntensity).toBe(0.9);
+    expect(cap.getParams()).toEqual(snapshot);
+    expect(cap.getSpotLightForCone()?.which).toBe("key");
   });
 
-  it("mmd 预设：整体降 30%", () => {
+  it("resetLightParams：三盏灯 + 环境光 + 体积光逐字段回到 DEFAULT_LIGHT_PARAMS", () => {
     const cap = newCap();
-    cap.applyModelPreset("mmd");
-    expect(cap.getParams().key.intensity).toBe(0.85);
-  });
+    // 先把所有维度推离默认
+    cap.setLightParams("key", { type: "spot", intensity: 9, azimuth: 11, angle: 66, decay: 3 });
+    cap.setLightParams("fill", { type: "point", intensity: 8, distance: 111 });
+    cap.setLightParams("rim", { intensity: 7, color: 0x123456, enabled: false });
+    cap.setVolumetric({ enabled: true, opacity: 0.9, fogPower: 3.3 });
 
-  it("未知类型经 toModelType 收窄回退 default 预设（存储脏数据兜底）", () => {
-    const cap = newCap();
-    cap.applyModelPreset(toModelType("unknown-type"));
-    // 等价断言：default 预设不点灯为聚光灯（原 p.spotlight.enabled === false）
-    expect(cap.getParams().key.type).toBe("directional");
+    cap.resetLightParams();
+    for (const which of LIGHT_SLOTS) {
+      expect(cap.getParams()[which]).toEqual(DEFAULT_LIGHT_PARAMS[which]);
+      expect(readLightParams(envState, which)).toEqual(DEFAULT_LIGHT_PARAMS[which]);
+    }
+    expect(cap.getParams().ambient).toEqual(DEFAULT_LIGHT_PARAMS.ambient);
+    expect(cap.getParams().volumetric).toEqual(DEFAULT_LIGHT_PARAMS.volumetric);
+    // 体积光回默认（关）→ 锥体已卸载
     expect(cap.getSpotLightForCone()).toBeNull();
   });
 
-  it("原型链成员经 toModelType 收窄回退 default（Object.hasOwn 自身属性判定，防裸索引走原型链）", () => {
+  it("resetLightParams 写 manual 源：重置后的值不被 auto-model 覆盖", () => {
     const cap = newCap();
-    // "constructor"/"toString" 等 Object.prototype 成员若被裸索引误判为合法模型类别，
-    // pickModelDefaultFields 会读到 undefined 字段 → 预设静默 no-op（P2 行为 bug）。
-    cap.applyModelPreset(toModelType("constructor"));
-    expect(cap.getCurrentPreset()).toBe("default");
-    cap.applyModelPreset(toModelType("toString"));
-    expect(cap.getCurrentPreset()).toBe("default");
-  });
-
-  it("手动 preset 后自动 applyModelPreset 不再覆盖（手动优先——双入口时序修复）", () => {
-    const cap = newCap();
-    cap.applyModelPreset("vrm", { manual: true });
-    expect(cap.getCurrentPreset()).toBe("vrm");
-    cap.applyModelPreset("ysm"); // 模拟切模型自动套 adapter.id（mount-preview-core）
-    expect(cap.getCurrentPreset()).toBe("vrm"); // 手动选择压制自动覆盖
-    expect(cap.getParams().key.intensity).toBe(1.0); // 仍是 vrm 预设参数
-  });
-
-  it("自动 applyModelPreset 写 auto-model 源：后续 auto-atmosphere 可覆盖（锐评 §二 回归）", () => {
-    const cap = newCap();
-    cap.applyModelPreset("ysm"); // 自动套模型预设 → source "auto-model"
-    // 昼夜循环 atmosphere 预设（auto-atmosphere > auto-model）应能覆盖 light 参数
-    setEnvState({ lightKeyIntensity: 9.5 }, { source: "auto-atmosphere" });
-    expect(envState.lightKeyIntensity).toBe(9.5);
-    // 手动选择（opts.manual）写 manual 源 → 压制后续 auto-atmosphere
-    cap.applyModelPreset("mmd", { manual: true });
-    setEnvState({ lightKeyIntensity: 0.1 }, { source: "auto-atmosphere" });
-    expect(envState.lightKeyIntensity).not.toBe(0.1);
+    cap.setLightParams("key", { intensity: 9 });
+    cap.resetLightParams();
+    expect(envState.lightKeyIntensity).toBe(DEFAULT_LIGHT_PARAMS.key.intensity);
+    // 模型类别（auto-model）不得覆盖用户显式重置的值——「重置」与拖滑块同源
+    setEnvState({ lightKeyIntensity: 0.01 }, { source: "auto-model" });
+    expect(envState.lightKeyIntensity).toBe(DEFAULT_LIGHT_PARAMS.key.intensity);
   });
 
   it("PMREM 环境光开启时 ambient 自动衰减 ×0.5（双间接光协调，caps 查询器经构造注入）", () => {
@@ -361,7 +346,8 @@ describe("LightCapability — applyModelPreset", () => {
           id === "sky" ? ({ isEnvironmentEnabled: () => true } as unknown as SceneCapability) : undefined,
       },
     });
-    cap.applyModelPreset("ysm"); // 触发 syncLightsFromParams
+    // 原经 applyModelPreset("ysm") 顺带触发；该入口已据 ADR-282 退役，改为直接触发重算
+    cap.refreshAmbientFromSky();
     const ambient = (cap as unknown as { ambientLight: THREE.AmbientLight }).ambientLight;
     expect(ambient.intensity).toBeCloseTo(cap.getParams().ambient.intensity * 0.5, 6);
   });
@@ -383,7 +369,9 @@ describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folde
     // 三盏灯的开关不再平铺在 folder 外层：统一设置条按当前槽位产出 light-<which>-*
     expect(childIds).toContain("light-key-enabled");
     expect(childIds).toContain("light-ambient");
-    expect(childIds).toContain("light-preset");
+    // [ADR-282] 原 light-preset 下拉已删，代之以「重置灯光」按钮
+    expect(childIds).toContain("light-reset");
+    expect(childIds).not.toContain("light-preset");
     // [ADR-246 D3] 聚光灯 + 体积光收进同一可折叠卡（不再平铺、不做输入隐藏）
     expect(childIds).toContain("cap-group-spot-vol");
     // folder labelKey 对应原 group
@@ -541,13 +529,12 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     nodes[1]!.control!.set!("fill");
     expect(cap.getActiveLight()).toBe("fill");
     nodes[1]!.control!.set!("key");
-    // 参数组 folder：预设 + 统一设置条（当前槽位 key，默认 directional 故无锥角/衰减控件）
-    // + 环境光 + 聚光灯/体积光折叠卡
+    // 参数组 folder：统一设置条（当前槽位 key，默认 directional 故无锥角/衰减控件）
+    // + 环境光 + 聚光灯/体积光折叠卡 + 重置按钮（[ADR-282] 取代原预设下拉）
     const folder = nodes[2]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.lightGroupParams");
     expect(folder.children!.map((c: PreviewMenuNode) => c.id)).toEqual([
-      "light-preset",
       "light-key-type",
       "light-key-enabled",
       "light-key-color",
@@ -556,6 +543,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
       "light-key-elevation",
       "light-ambient",
       "cap-group-spot-vol",
+      "light-reset",
     ]);
   });
 
@@ -573,13 +561,19 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     expect(cap.getParams().ambient.intensity).toBe(1.5);
   });
 
-  it("light-preset select 直连 cap 预设", () => {
+  it("light-reset 按钮直连 resetLightParams（[ADR-282] 取代原预设下拉）", () => {
     const cap = newCap();
+    cap.setLightParams("key", { intensity: 4.2 });
+    cap.setLightParams("fill", { intensity: 3.3 });
+    expect(cap.getParams().key.intensity).toBe(4.2);
+
     const folder = cap.getMenuNodes()[2]!;
-    const preset = folder.children!.find((c: PreviewMenuNode) => c.id === "light-preset")!;
-    expect(preset.control!.options!.length).toBe(6);
-    preset.control!.set!("mmd");
-    expect(cap.getCurrentPreset()).toBe("mmd");
+    const reset = folder.children!.find((c: PreviewMenuNode) => c.id === "light-reset")!;
+    expect(reset.kind).toBe("button");
+    reset.action!({} as never);
+
+    expect(cap.getParams().key.intensity).toBe(DEFAULT_LIGHT_PARAMS.key.intensity);
+    expect(cap.getParams().fill.intensity).toBe(DEFAULT_LIGHT_PARAMS.fill.intensity);
   });
 });
 
@@ -635,11 +629,9 @@ describe("LightCapability — 持久化", () => {
   beforeEach(() => { resetEnvState(); localStorage.clear(); });
   afterEach(() => { localStorage.clear(); });
 
-  it("saveState/loadState 往返：布尔/数值/灯类型/预设全还原", () => {
+  it("saveState/loadState 往返：布尔/数值/灯类型全还原（[ADR-282] 不再有预设维度）", () => {
     const cap = newCap();
-    // 真实用户路径：先选手动预设，再逐个调灯开关（故开关值须在 applyModelPreset 之后设置，
-    // 否则被预设就地覆盖，saveState 存下的就已经是预设值，测不出跨会话丢失）
-    cap.applyModelPreset("mmd", { manual: true });
+    // [ADR-282] 原「先选手动预设」步骤已删：灯光与模型类别解耦，预设维度不存在。
     cap.setParams({ key: { enabled: false }, ambient: { intensity: 0.9 } });
     // [light-type-switch] 原独立 spotlight 开关 → 等价：把 key 灯类型切到 spot。
     // 刻意不传 enabled：用户刚关掉主灯，切类型不得把开关重新打开（类型与开关正交）。
@@ -650,13 +642,15 @@ describe("LightCapability — 持久化", () => {
     const cap2 = newCap();
     cap2.loadState();
     const p = cap2.getParams();
-    // 用户显式保存的灯开关优先于模型预设（ADR-126 P5「手动优先」同口径）：
-    // 预设先套用，再用保存值覆盖，故此处 key=false / key.type=spot / volumetric=true 均须保住
-    expect(p.key.enabled).toBe(false); // 用户关了主光，不被 mmd 预设（true）盖回
-    expect(p.ambient.intensity).toBe(0.9); // ambient 不在 MODEL_DEFAULTS 的 light 合并范围，保留
-    expect(p.key.type).toBe("spot"); // 用户把主灯切成聚光灯，不被 mmd 预设（不携带 type）盖回
-    expect(p.volumetric.enabled).toBe(true); // 用户开了体积光，不被 mmd 预设（false）盖回
-    expect(cap2.getCurrentPreset()).toBe("mmd");
+    // 跨会话全部还原（不再有「预设先套用、保存值再覆盖」的时序问题）
+    expect(p.key.enabled).toBe(false);
+    expect(p.ambient.intensity).toBe(0.9);
+    expect(p.key.type).toBe("spot");
+    expect(p.volumetric.enabled).toBe(true);
+    // 旧预设键不再写入存档
+    const raw = JSON.parse(localStorage.getItem("ysm-scene-cap-light")!) as Record<string, unknown>;
+    expect(raw.currentPreset).toBeUndefined();
+    expect(raw.manualPreset).toBeUndefined();
   });
 
   it("saveState/loadState 往返：volumetric=false + 聚光灯开启 → 体积光保持关闭（不被重新打开）", () => {
@@ -686,20 +680,23 @@ describe("LightCapability — 持久化", () => {
 
   it("loadState 老存档残留 volumetricEngine 字段被忽略（ADR-246 D1 惰性数据）", () => {
     localStorage.setItem("ysm-scene-cap-light", JSON.stringify({
-      volumetricEngine: "postprocess", currentPreset: "vrm",
+      volumetricEngine: "postprocess",
     }));
     const cap = newCap();
     expect(() => cap.loadState()).not.toThrow();
-    expect(cap.getCurrentPreset()).toBe("vrm"); // 预设仍自动恢复
+    expect(cap.getParams().key.type).toBe("directional"); // 回 schema 默认（不再有任何预设）
   });
-
-  it("loadState manualPreset 存在时按手动恢复并压制后续自动预设", () => {
-    localStorage.setItem("ysm-scene-cap-light", JSON.stringify({ manualPreset: "litematic", currentPreset: "mmd" }));
+  it("[ADR-282] 旧存档的 manualPreset/currentPreset 成死数据：不报错、不影响灯光值", () => {
+    localStorage.setItem("ysm-scene-cap-light", JSON.stringify({
+      manualPreset: "litematic",
+      currentPreset: "mmd",
+      // 真实持久化形状是嵌套 per-light（buildLightPersistPayload）
+      key: { intensity: 0.42 },
+    }));
     const cap = newCap();
-    cap.loadState();
-    expect(cap.getCurrentPreset()).toBe("litematic"); // 手动优先
-    cap.applyModelPreset("mmd"); // 自动套模型类别
-    expect(cap.getCurrentPreset()).toBe("litematic"); // 仍被压制
+    expect(() => cap.loadState()).not.toThrow();
+    // 旧预设键被忽略（不再有 applyModelPreset 可用）；显式保存的灯光值照常恢复
+    expect(cap.getParams().key.intensity).toBe(0.42);
   });
 
   it("loadState 类型不匹配字段全部跳过（含旧 spotlight 迁移字段）", () => {
@@ -810,21 +807,24 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 
-  it("applyModelPreset 切到 volumetric 关闭的预设时卸载锥组；重新开启时回挂", () => {
+  it("volumetric 关闭时卸载锥组；重新双开时回挂（[ADR-282] 改用 setVolumetric/reset 驱动）", () => {
     const scene = new THREE.Scene();
     const cap = coneCap(scene);
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
-    // 自动套模型预设（auto-model）不压制用户手动开启的锥组（manual > auto-model，
-    // 锐评 §二 收口后与其他 cap 同契约——用户手动选择优先）
-    cap.applyModelPreset("ysm");
-    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
-    // 手动切预设（light-preset select 入口）→ volumetric 关（spot 灯类型保留）→ 锥组卸载
-    cap.applyModelPreset("ysm", { manual: true });
+
+    // 用户关闭体积光 → 锥组卸载（spot 灯类型保留）
+    cap.setVolumetric({ enabled: false });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+
     // 用户重新双开（锥组挂载需「启用的 spot 灯 + volumetric」双开）→ 回挂
     cap.setLightParams("key", { type: "spot", enabled: true });
     cap.setVolumetric({ enabled: true });
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+
+    // [ADR-282] resetLightParams 把 volumetric 回默认（关）→ 锥组再卸载；
+    // 且不再有任何「按模型类别切预设」的路径会动它。
+    cap.resetLightParams();
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 
   it("key 灯参数变更时锥组已在场景则原位重建跟随", () => {
@@ -953,8 +953,6 @@ describe("LightCapability — 菜单控件联动", () => {
     expect(by("light-rim-enabled").control!.get!(undefined)).toBe(false);
     by("light-ambient").control!.set!(1.2);
     expect(by("light-ambient").control!.get!(undefined)).toBe(1.2);
-    by("light-preset").control!.set!("vrm");
-    expect(by("light-preset").control!.get!(undefined)).toBe("vrm");
     // [ADR-246 D3] 体积光控件下沉折叠卡
     const card = by("cap-group-spot-vol");
     const inCard = (id: string) => card.children!.find((c: PreviewMenuNode) => c.id === id)!;
@@ -967,14 +965,17 @@ describe("LightCapability — 菜单控件联动", () => {
     expect(by("light-key-angle").control!.get!(undefined)).toBe(45);
   });
 
-  it("light-preset select 经 manual 入口记录手动预设（节点 control 闭包）", () => {
+  it("light-reset 按钮经节点闭包触发重置（[ADR-282] 取代原预设 select）", () => {
     const cap = newCap();
+    cap.setLightParams("rim", { intensity: 5.5 });
+    expect(cap.getParams().rim.intensity).toBe(5.5);
+
     const folder = cap.getMenuNodes()[2]!;
-    const presetNode = folder.children!.find((c: PreviewMenuNode) => c.id === "light-preset")!;
-    presetNode.control!.set!("ysm");
-    expect(cap.getCurrentPreset()).toBe("ysm");
-    cap.applyModelPreset("mmd"); // 自动入口被手动压制
-    expect(cap.getCurrentPreset()).toBe("ysm");
+    const resetNode = folder.children!.find((c: PreviewMenuNode) => c.id === "light-reset")!;
+    expect(resetNode.kind).toBe("button");
+    resetNode.action!({} as never);
+
+    expect(cap.getParams().rim.intensity).toBe(DEFAULT_LIGHT_PARAMS.rim.intensity);
   });
 });
 

@@ -22,6 +22,7 @@ import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { buildGroundNodes } from "./ground-menu.ts";
+import { normalizeGroundLegacyState } from "./ground-migrations.ts";
 import {
   applyGroundSurfaceAppearance,
   applyGroundSurfaceStructural,
@@ -44,9 +45,6 @@ import {
   generateSurfacePixels,
   groundMatSourceFromAxes,
   groundSurfaceNeedsRebuild,
-  LEGACY_CANVAS_PATTERNS,
-  type LegacyGroundMatSource,
-  migrateGroundMatSource,
   OVERLAY_TEX_SIZE,
   overlayNeedsRebuild,
   textureRepeat,
@@ -732,112 +730,12 @@ export class GroundCapability implements SceneCapability {
 
   /** 从 localStorage 恢复状态（texture 模式二进制未持久化 → 回退 plain） */
   loadState(): void {
-    let state = restoreState(this.id);
-    if (!state) return;
-    // legacy 旧键迁移——ADR-196 前 ground 持久化为
-    // {visible, size, divisions, colorCenter, colorGrid, matSource, matColor...}
-    // （无 ground 前缀），迁移后只读前缀键且 migrateEnvState 空透传 → 升级用户的
-    // 网格尺寸/线色/材质源设置静默回默认。判据 = **存在任一旧无前缀键**（锐评 P4
-    // 修复 2026-09-21：旧判据「缺 groundSize」建立在恒真前提上——该键当时无 UI 写口，
-    // 一切存档都算 legacy；P3 补上菜单出口后新存档可携 groundSize + 残留旧键，
-    // 「缺新键」判据即告失效）。旧键已由 map 处理、与新前缀键零冲突，混合存档
-    // 照常逐键搬运 + 下方透传保底；无旧键的纯新档自然跳过整段。
-    const legacyGroundKeys = [
-      "visible",
-      "size",
-      "divisions",
-      "colorCenter",
-      "colorGrid",
-      "matSource",
-      "matColor",
-      "matColor2",
-      "matGridSize",
-      "matOpacity",
-      "matScale",
-      "matDensity",
-      "matAngleDeg",
-      "matRoughness",
-      "matMetalness",
-    ] as const;
-    const gs = state as Record<string, unknown>; // 非空副本（重赋值丢失收窄）
-    // ADR-252：旧线色/格数需搬入叠加层（图案由 surface 迁至 overlay 时带走样式参数）
-    const legacyLineColor =
-      typeof gs.matLineColor === "number"
-        ? gs.matLineColor
-        : typeof gs.groundMatLineColor === "number"
-          ? gs.groundMatLineColor
-          : undefined;
-    const legacyGridSize =
-      typeof gs.matGridSize === "number"
-        ? gs.matGridSize
-        : typeof gs.groundMatGridSize === "number"
-          ? gs.groundMatGridSize
-          : undefined;
-    if (legacyGroundKeys.some((k) => k in gs)) {
-      const map: Record<string, string> = {
-        visible: "groundVisible",
-        size: "groundSize",
-        divisions: "groundDivisions",
-        colorCenter: "groundColorCenter",
-        colorGrid: "groundColorGrid",
-        // matSource 旧单枚举 → 三轴（在循环后单独处理）
-        matColor: "groundMatColor",
-        matColor2: "groundMatColor2",
-        matGridSize: "groundMatGridSize",
-        matOpacity: "groundMatOpacity",
-        matScale: "groundMatScale",
-        matDensity: "groundMatDensity",
-        matAngleDeg: "groundMatAngleDeg",
-        matRoughness: "groundMatRoughness",
-        matMetalness: "groundMatMetalness",
-      };
-      const migrated: Record<string, unknown> = {};
-      for (const k of legacyGroundKeys) {
-        if (k in gs && k !== "matSource") migrated[map[k]] = gs[k];
-      }
-      // 新前缀键保底透传：混合存档（部分字段已升级）若整对象替换会把已前缀化的
-      // 字段静默丢弃（审核回归实测：{visible, groundCanvasStyle} 混合 → canvasStyle
-      // 丢失）。旧键已由上方 map 处理，这里只透传 ground 前缀的新键（旧键均不带
-      // ground 前缀，无冲突）。
-      for (const [k, v] of Object.entries(gs)) {
-        if (k.startsWith("ground") && !(k in migrated)) migrated[k] = v;
-      }
-      // ADR-249 §2.1 + ADR-252：旧单枚举 matSource 拆为来源轴 + 材质轴 + 叠加层
-      if ("matSource" in gs) {
-        const m = migrateGroundMatSource(String(gs.matSource) as LegacyGroundMatSource);
-        migrated.groundSourceKind = m.sourceKind;
-        if (m.canvasStyle) migrated.groundCanvasStyle = m.canvasStyle;
-        if (m.overlayStyle) {
-          // 旧图案值 → 叠加层，并把线色/格数一并搬过去（视觉等价）
-          migrated.groundOverlay = m.overlayStyle;
-          if (legacyLineColor !== undefined) migrated.groundOverlayColor = legacyLineColor;
-          if (legacyGridSize !== undefined) migrated.groundOverlaySize = legacyGridSize;
-        }
-      }
-      state = migrated;
-    }
-
-    // ADR-252：ADR-249 时代的存档——`groundCanvasStyle` 可能仍是已废弃的几何图案值。
-    // 拆为「canvasStyle=plain + overlay=<同名>」，并搬运线色/格数（视觉等价）。
-    {
-      const st = state as Record<string, unknown>;
-      const rawStyle = st.groundCanvasStyle;
-      if (
-        typeof rawStyle === "string" &&
-        (LEGACY_CANVAS_PATTERNS as readonly string[]).includes(rawStyle)
-      ) {
-        st.groundCanvasStyle = "plain";
-        if (st.groundOverlay === undefined || st.groundOverlay === "none") {
-          st.groundOverlay = rawStyle;
-        }
-        if (legacyLineColor !== undefined && st.groundOverlayColor === undefined) {
-          st.groundOverlayColor = legacyLineColor;
-        }
-        if (legacyGridSize !== undefined && st.groundOverlaySize === undefined) {
-          st.groundOverlaySize = legacyGridSize;
-        }
-      }
-    }
+    // 三代存档（扁平无前缀 / 旧单枚举 matSource / ADR-249 图案型 canvasStyle）的归一
+    // 逻辑下沉至 ground-migrations.ts——纯函数、node 可测，回归锚见其同名测试；
+    // capability 只保留「当前键形 → envState + Three」的恢复职责。
+    const raw = restoreState(this.id);
+    if (!raw) return;
+    const state = normalizeGroundLegacyState(raw);
     // 重入治理（对齐 light 侧 ADR-281 口径）：restoreFields 内部逐字段 setEnvState 会
     // **同步**触发 ground 回调 → 每字段一次 refresh/syncGeometry（含 GridHelper 重建）。
     // 挂起后恢复只写 envState，末尾统一应用一次——二十余字段 = 一次落地。

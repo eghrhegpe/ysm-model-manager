@@ -527,6 +527,7 @@ auto_fields:
     - MultiModelSelectOpts
     - nodeControlToView
     - normalizeFbxScale
+    - normalizeGroundLegacyState
     - NumericRange
     - oneOf
     - onOverlayStyleTargetReset

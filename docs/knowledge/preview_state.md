@@ -71,7 +71,7 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 |----|--------------|-----------|
 | 模块 | `state/settings-state.ts` | `state/preview-state.ts` |
 | 路径类型 | `SettingsPath`（六项窄联合） | 并入 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀归位；**2026-09 收紧 = `typeof KNOWN_PATHS[number]`，类型契约即运行时实现**，未落地键编译期报错） |
-| 已知路径常量 | `SETTINGS_PATHS` | `KNOWN_PATHS`（**10 项落地**：6 横切 + env.waterMode/groundMatSource + **[2026-09-03 S1] ui.mode / env.skyGroundCap**；ui.activeComponent 已由 per-scene 闭包取代、移出数组不再写入） |
+| 已知路径常量 | `SETTINGS_PATHS` | `KNOWN_PATHS`（清单以 `state/preview-paths.ts` 为准，勿在卡内维护计数；探针入册门槛见 [ADR-291]。ui.activeComponent 已由 per-scene 闭包取代、移出数组不再写入） |
 | 快照函数 | `settingsSnapshot()` | `previewSnapshot()` |
 | 公共函数名 | `getStateValue/setStateValue/subscribeSettings/isPathAvailable/resetSettingsListeners/toStatePath` | **保持同名**（通用名，跨子步零额外回归） |
 
@@ -89,8 +89,10 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 
 ```ts
 // 路径类型（编译期契约）
-type PreviewStatePath          // = typeof KNOWN_PATHS[number]（9 键联合，2026-09 收紧：类型=实现；ADR-250 后 render.bloom 退场）
-const KNOWN_PATHS              // readonly ["render.frustumCull", ...]（9 项：5 横切 + 2 env 探针 + ui.mode + env.skyGroundCap；ui.activeComponent 已移出）
+type PreviewStatePath          // = typeof KNOWN_PATHS[number]（编译期契约：类型=实现；ADR-250 后 render.bloom 退场）
+const KNOWN_PATHS              // readonly ["render.frustumCull", ...]——清单以该文件为准，勿在此维护计数
+                               // （cap 派生探针入册门槛三条：判定输入须是 cap 态上浮值 /
+                               //   三步登记 + 活体消费者守卫 / 控件基元归一在 binding 内 → [ADR-291]）
 
 // 状态层（入参窄类型 = typeof KNOWN_PATHS[number]，编译期守「加新路径 = 扩 KNOWN_PATHS + 填 binding」）
 getStateValue(path)                       // 读（返回类型 = PathValue[path] 精确值域，2026 锐评 P1 消灭 unknown 擦除）
@@ -121,10 +123,11 @@ toStatePath(path)                         // 恒等函数（编译期守卫 Prev
 3. `getStateValue/setStateValue/isPathAvailable` 的入参类型是 `typeof KNOWN_PATHS[number]`（窄联合）——加新路径必须先扩 `KNOWN_PATHS` + 在 `PathValue` 补值类型 + 填 binding，类型层守住。读侧返回/写侧入参经 `PathValue`/`PathInput` 逐路径精确（2026 锐评 P1：消灭 `unknown` 擦除与消费端 `as boolean` cast；`PathInput` 放宽到控件基元联合，binding 内部归一——读精确、写宽松的分裂是承重设计，勿把 `setStateValue` 收紧回 `PathValue`，否则 `settings.ts`/`render.ts`/`perf-presets.ts` 的泛型控件调用点会重新报错）。
 4. `PreviewStatePath` = `KNOWN_PATHS` 联合（2026-09 收紧）——**不存在未落地键**，谓词写未落地键（如 `s["ui.activePanel"]`，P4-C 预留）编译报错（TS7053），静默假死从根上消除；谓词入参为 `Partial<PreviewSnapshot>`（可传部分快照，键存在性仍守卫）。
 5. 业务状态（角色/动作/面板导航）**不进本层**——留在 sceneRegistry / SlideMenuHandle / 节点字段。
+6. cap 派生探针的入册门槛三条（判定输入须是 cap 态上浮值 / 三处登记 + 活体消费者守卫 / 控件基元归一在 binding 内）见 [ADR-291]，正本卡与 `preview-paths.ts` 文件头注释同源引用、不重抄细则。
 
 ## 相关
 
-- ADR-126（本决策 P4-A）、ADR-125（P1 血统）、ADR-085（S2 补全对象）、ADR-093（sceneRegistry 归属）
+- ADR-126（本决策 P4-A）、ADR-125（P1 血统）、ADR-085（S2 补全对象）、ADR-093（sceneRegistry 归属）、ADR-291（探针入册门槛）
 - 契约测试：`frontend/src/preview-3d/state/preview-state.test.ts`（30 例，含 [2026-09-03 S1] ui.mode / env.skyGroundCap 两键单测）+ `menu/node-render.test.ts` 编译期契约（@ts-expect-error 锁未落地键 `ui.activePanel` 报错）
 - 消费者：`preview-menu/settings.ts`（`buildCrossCuttingNodes` 三项横切节点读写走本层）、`menu/core.ts dockGroupItemsFor`（dock 级谓词经 `previewSnapshot()` 读 `ui.mode` / `env.skyGroundCap`）
 - 后续：P4-B 面板 schema 化（**已落地 P4-B-1/2**）、P4-D 可见性谓词化（**已落地**：node 级 `visibleWhen`（renderMenu 统一消费 `previewSnapshot()`）+ **[2026-09-03 S1] dock 级 dockGroupItemsFor 同求值器**——三专有布尔删除、状态层扩 `ui.mode`/`env.skyGroundCap` 供 dock 谓词读）、P4-C dockGroup 解耦（按需加 `ui.activePanel`）

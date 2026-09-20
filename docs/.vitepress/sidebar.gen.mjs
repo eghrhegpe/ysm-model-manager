@@ -250,6 +250,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-291：B 轨快照探针入册门槛（双轨状态镜像的治理边界）",
+        "link": "/adr/ADR-291-preview-snapshot-probe-threshold"
+      },
+      {
         "text": "ADR-290：体积光锥驱动源 schema 化（lightVolumetricDriver）",
         "link": "/adr/ADR-290-volumetric-cone-driver"
       },

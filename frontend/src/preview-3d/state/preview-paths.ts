@@ -54,6 +54,9 @@ export const KNOWN_PATHS = [
  * 状态路径：已落地路径的联合（类型契约 = 运行时实现）。
  * 写未落地键（如 `ui.mode` / `env.sky`）编译报错——把「谓词读黑洞键静默假死」
  * 挡在编译期。新路径两步走：扩 KNOWN_PATHS + 填 bindings。
+ * cap 派生探针（env.waterMode / env.ground* / env.fogMode / env.skyGroundCap 类）
+ * 入册另有三条门槛（判定输入须是 cap 态上浮值 / 三处登记一步不缺 + 活体消费者守卫 /
+ * 控件基元归一在 binding 内），见 [ADR-291]。
  */
 export type PreviewStatePath = (typeof KNOWN_PATHS)[number];
 
@@ -66,6 +69,7 @@ export type PreviewStatePath = (typeof KNOWN_PATHS)[number];
  * 路径可交付任意基元，binding 内部负责归一（Number()/Boolean()/String()/枚举守卫），
  * 故写入域 = 本路径精确类型 ∪ 控件基元联合（仍比 unknown 严：拒绝 object/undefined）。
  * 新增路径两步走不变：扩 KNOWN_PATHS + 在 PathValue 补值类型 + 填 binding。
+ * （cap 派生探针的入册门槛见 [ADR-291]。）
  */
 export type PathValue = {
   "render.frustumCull": boolean;

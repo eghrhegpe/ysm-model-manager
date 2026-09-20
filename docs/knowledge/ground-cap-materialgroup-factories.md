@@ -62,7 +62,7 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 
 ## 与其他子系统关系
 
-- 上游：`GroundCapability.getMenuNodes()`（`ground-capability.ts:369-370`）调用 `buildGroundNodes(this)`。
+- 上游：`GroundCapability.getMenuNodes()` 调用 `buildGroundNodes(this)`。
 - 下游：`preview-menu/` 渲染层消费 `PreviewMenuNode[]` 递归渲染声明式菜单。
 - 横向：`scene-capability.ts` 定义 `getMenuNodes?()` 可选接口，各 cap（ground/sky/fog/shadow/light/water/reflector/postprocessing/render-mode）统一走 cap 直产节点。
 

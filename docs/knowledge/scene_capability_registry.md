@@ -119,6 +119,7 @@ auto_fields:
     - maxWrapSeamDiscontinuity
     - migrateGroundMatSource
     - ModelEntry
+    - normalizeGroundLegacyState
     - oneOf
     - OVERLAY_TEX_SIZE
     - overlayNeedsRebuild

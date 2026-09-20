@@ -6,6 +6,7 @@ category: rendering
 source_files:
   - frontend/src/preview-3d/caps/ground-surface-spec.ts
   - frontend/src/preview-3d/caps/ground-capability.ts
+  - frontend/src/preview-3d/caps/ground-migrations.ts
 auto_fields:
   symbols_with_lines:
     - applyGroundSurfaceAppearance
@@ -45,6 +46,7 @@ auto_fields:
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
     - migrateGroundMatSource
+    - normalizeGroundLegacyState
     - OVERLAY_TEX_SIZE
     - overlayNeedsRebuild
     - overlaySpecKey
@@ -122,7 +124,8 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 - **参考网格独立开关（2026-09-19，`groundGridVisible`）**：三层 mesh 各有显隐判据、各由单一出口落地——`updateGridVisible()`（`enabled && groundVisible && groundGridVisible`）、`updateSurfaceVisible()`（`enabled && groundVisible && groundSourceKind !== "none"`）、`refreshOverlay` 内的 `overlay.visible = enabled && groundVisible`（style=none 另走销毁分支）。新字段**只**进网格判据，与材质/叠加两层正交——补的是「选了纯色/贴图材质也关不掉底下 y=0 参考网格」的长期缺口（用户实测提问触发）。
   - ⚠️ **必须走 `setGridVisible()` 落地 + 进 `saveState`/`loadState`**：`groundVisible` 的覆辙在眼前——`loadState` 若只写 envState 不走 setter，`grid.visible` 会停在构造默认，「隐藏地面」存档重启即重现（本文件「半隐形地面」旧病例同形）。故 env 回调里也补 `updateGridVisible()`，让 `setEnvState` 直写路径（存档恢复/预设快照/外部调用）同样落地。
   - ⚠️ `getVisible()` 现读 `envState.groundVisible`，**不再读 `this.grid.visible`**——网格显隐已是三层合取，读它会把「参考网格关掉」误报成「地面关掉」。
-- **拆轴映射（ADR-249 §2.1/§2.5 + ADR-252）**：`GroundSourceKind`（来源轴 none/solid/canvas/texture）× `GroundCanvasStyle`（**材质轴** plain/marble/sand/grass）× `GroundOverlayStyle`（装饰轴 none/grid/checker/stripes/diamond）。`migrateGroundMatSource(old: LegacyGroundMatSource | GroundCanvasStyle)` → `GroundAxisMapping { sourceKind, canvasStyle?, overlayStyle? }`——**不再互逆**：旧图案值拆为 plain 底座 + 叠加层（并须搬运 `matLineColor→overlayColor`、`matGridSize→overlaySize`）。`groundMatSourceFromAxes(sourceKind, canvasStyle)` 派生当前 `GroundSurfaceMode`。`LegacyGroundMatSource`（旧 9 值）+ `LEGACY_CANVAS_PATTERNS`（旧 canvasStyle 里的 4 个图案值）**仅作迁移输入**；`loadState` 两条路径（扁平枚举 / ADR-249 时代图案）均有契约测试。脏数据回退 none。
+- **拆轴映射（ADR-249 §2.1/§2.5 + ADR-252）**：`GroundSourceKind`（来源轴 none/solid/canvas/texture）× `GroundCanvasStyle`（**材质轴** plain/marble/sand/grass）× `GroundOverlayStyle`（装饰轴 none/grid/checker/stripes/diamond）。`migrateGroundMatSource(old: LegacyGroundMatSource | GroundCanvasStyle)` → `GroundAxisMapping { sourceKind, canvasStyle?, overlayStyle? }`——**不再互逆**：旧图案值拆为 plain 底座 + 叠加层（并须搬运 `matLineColor→overlayColor`、`matGridSize→overlaySize`）。`groundMatSourceFromAxes(sourceKind, canvasStyle)` 派生当前 `GroundSurfaceMode`。`LegacyGroundMatSource`（旧 9 值）+ `LEGACY_CANVAS_PATTERNS`（旧 canvasStyle 里的 4 个图案值）**仅作迁移输入**；两条迁移路径（扁平枚举 / ADR-249 时代图案）均有契约测试。脏数据回退 none。
+- **存档归一已下沉独立模块（锐评「迁移考古层下沉」2026-09-21）**：三代存档归一逻辑整体迁入 `frontend/src/preview-3d/caps/ground-migrations.ts|normalizeGroundLegacyState`——纯函数（零 THREE/DOM/envState），loadState 只做 `restoreState → normalizeGroundLegacyState → restoreFields`；回归锚 = ground-migrations.test.ts（逐条钉死原内联段语义，含恒等快路、透传保底、新键被旧值覆盖的原行为）。capability 从此不持有考古代码，新增世代只改该模块 + 其测试。**注意透传判据是 `startsWith("ground")`**：cap 私有非前缀键（`enabled`）只在恒等快路存活，legacy 分支会丢弃它们——现状 loadState 于构造期后调用、`enabled` 默认 true 无害，但**若未来把 loadState 提前到构造前或给 cap 私有键加持久化语义，须先扩透传白名单**。
 - **叠加层（ADR-249 §2.3 架构 / ADR-251 补齐图案集）**：第三个正交层——独立透明格线 mesh（`ysm-ground-overlay`，y 取 `GROUND_LAYER_OFFSETS.groundOverlay`，介于 surface 与 water 之间），可叠加在任意底层（solid/canvas/texture）之上，实现旧互斥枚举下不可达的「纯色 + 格线」。`GroundOverlayStyle`（none/grid/checker/stripes/diamond）+ `buildGroundOverlaySpec` / `overlaySpecKey`（style/color/size 入 key，opacity 属外观走原地）/ `overlayNeedsRebuild` / `generateOverlayPixels`（透明底 + alpha 二值化线色，none → 空数组；**`cells` 参数驱动格数且必须参与像素生成**——初版硬编码 `sizePx/8` 致「叠加格数」滑杆成死控件，回归修复见 `24be598e8`）/ `applyOverlayMaterial`。**资源所有权**：`overlayTex`/`overlayMat`/`overlay.geometry` 均属 GroundCapability（非 customTex），`dispose` 与切换到 none 时释放（§1.4 第 2 条"谁拥有纹理"的落实）。纹理构造在 capability（`makeOverlayTexture`）而非 spec——spec 保持 `import type * as THREE` 的零运行时依赖（node 可测）。
   - **叠加倍率口径**（review 268cc3c21 P2-3）：`makeOverlayTexture` 设 `tex.repeat = textureRepeat(groundSize, max(1, spec.size))`，与 surface 的 `applyGroundSurfaceAppearance` 同口径（`meshSize/TILE_WORLD_SIZE/scale`）——「叠加格数」滑杆除改贴图像素外，还经 repeat 真实驱动世界格密度（只设 `RepeatWrapping` 而不写 repeat 是无效 wrap，密度恒定）。
   - **overlay.visible 同步路径**（2026-09-20 锐评修复后收敛）：① 一律经 `refreshOverlay` 尾部 `overlay.visible = enabled && groundVisible`——`setVisible`/`setGridVisible` 等 setter 不再手改 visible（写 envState 后 ground 回调必达 refreshOverlay），防「地面已隐、格线还漂」残影的判据单源化；② `setEnabled` 摘挂 mesh 后须显式 `refreshOverlay()`（不经 envState 变更、回调不触发）；③ `refreshOverlay` none 分支的销毁只走「曾激活→none」过渡（稳态 none 每次 ground 组变更重入不再置 needsUpdate，避免强制材质重传）。

@@ -54,7 +54,28 @@
  * 理由：其余 interface（第三方格式类型如 `PmxMaterialData`、mock 如 `IdbMock`、
  * 内部 UI 状态）零读取多为合理，全面报告会淹没在噪音里——实测全仓 2707 个字段中
  * 263 个零读取，而契约类只有 14 个。信号/噪音比是白名单存在的全部理由。
+ * ⚠️ 已知局限：字段名歧义（本工具最大的假阴性来源，读报告前必看）
  *
+ * 读取计数用「属性访问形态全仓匹配」，它只认**名字**不认**归属**——零依赖文本解析做不到
+ * 类型推断。后果：任何一处同名读取都会给所有同名字段「洗白」。实测实证（可复现）：
+ *
+ *   `filesRoot` 在 4 个 interface 里声明（`CLIData` / `PerfIdentity` / `ConcPayload` /
+ *   `ScanBenchPayload`），其中 `PerfIdentity.filesRoot` 经人工核定为**零读取**（已加
+ *   `@non-ui`）；但另外三个有 22 处读取 → 本工具**从不报它**。同组的 `absPath` /
+ *   `rtype_source` 因名字全局唯一，照实报出——**同一结构里三个同性质字段，工具只抓到 2 个**。
+ *
+ * 规模：全仓 451 个字段名跨 interface 重名（`name` 在 84 个 interface 里）；契约类 219 个
+ * 「已读」字段中 158 个（72%）读数归属存疑。**不能把「12 条可疑」读成「契约面已全核过」**。
+ *
+ * 处置（不做假承诺）：把不确定性**印在报告里**——顶部「读数可信度」行给出可信分母，
+ * 逐条带歧义者追加「← 名字跨 interface 重名」。JSON 同步给 `contractReadAmbiguous` /
+ * `suspiciousAmbiguous` / `nonUiOkAmbiguous`。
+ * 阅读姿势：`suspiciousAmbiguous > 0` 说明可疑名单里仍有洗白风险；
+ * 但即使 `= 0`，**漏报依然可能存在**（歧义字段被洗白后根本不进名单）——
+ * `PerfIdentity.filesRoot` 就是 `suspiciousAmbiguous = 0` 却漏报的活证据。
+ *
+ * 真做归属需类型解析（如 TS Compiler API）；那与本仓「零依赖文本解析」的脚本风格相悖，
+ * 故有意不做——**宁可公开局限，不假装能判**。
  * 排除：`*.test.ts`、`*.d.ts`、任何路径含 `vendor` 的目录（不扫描）。
  *
  * 用法：
@@ -277,21 +298,59 @@ function main() {
     }
   }
 
-  // ② 统计全仓读取次数，挑出零读取字段
+  // ② 统计字段名歧义：同一名字在多少个**不同 interface** 里出现。
+  //
+  // 立因（2026-09-21 实测）：计数用的是「属性访问形态全仓匹配」，它只认**名字**不认**归属**。
+  // 全仓 451 个字段名跨 interface 重名（`name` 出现在 84 个 interface 里），于是任何一处
+  // 同名读取都会给所有同名字段「洗白」——这是**假阴性**（漏报），比误报危险：
+  //   · 实证：`PerfIdentity.filesRoot` 全仓 22 处 `.filesRoot` 读取，全部属于
+  //     `ConcPayload` / `ScanBenchPayload`，与本字段无关；但它因此**永远不会被报零读取**，
+  //     而上一轮人工摸排已证实它确实是零读取（同组的 absPath / rtype_source 就报出来了）。
+  //   · 规模：契约类 181 个「已读」字段中 129 个（71%）名字跨 interface 重名，
+  //     即读数归属存疑；只有 52 个名字全局唯一、读数可信。
+  //
+  // 处置：不假装能判归属（真做需要类型推断，超出零依赖文本解析的边界），而是**把不确定性
+  // 标出来**——`ambiguous=true` 的字段在报告里显式标注「读数归属存疑」，零读取结论尤其
+  // 不可信（它可能是被别处同名读取掩盖的真零读取）。
+  const nameOwners = new Map<string, Set<string>>();
+  for (const d of allFields) {
+    let owners = nameOwners.get(d.field);
+    if (!owners) {
+      owners = new Set<string>();
+      nameOwners.set(d.field, owners);
+    }
+    owners.add(d.iface);
+  }
+  const isAmbiguous = (field: string): boolean => (nameOwners.get(field)?.size ?? 0) > 1;
+
+  // ③ 统计全仓读取次数，挑出零读取字段
   const unread = allFields.filter((d) => countFieldReads(d.field, texts) === 0);
 
   // ③ 只报契约类 interface（白名单），降低噪音
   const contractUnread = unread.filter((d) => CONTRACT_NAME_RE.test(d.iface));
 
-  // ④ 按紧邻 doc comment 里的 `@non-ui` 拆「可疑 / OK（故意不渲染）」
-  const suspicious: typeof contractUnread = [];
-  const nonUiOk: typeof contractUnread = [];
+  // ⑤ 按紧邻 doc comment 里的 `@non-ui` 拆「可疑 / OK（故意不渲染）」，并附上歧义标记
+  const decorate = (d: (typeof contractUnread)[number]) => ({
+    ...d,
+    // 名字跨多 interface 重名 → 读数归属存疑（详见 ② 的立因）。
+    // ⚠️ 即便进了 suspicious（真的零读取），也仍可能漏报别的同名字段——歧义是双向的。
+    ambiguous: isAmbiguous(d.field),
+  });
+  const suspicious: ReturnType<typeof decorate>[] = [];
+  const nonUiOk: ReturnType<typeof decorate>[] = [];
   for (const d of contractUnread) {
     // 锚定到**本字段自己的**声明行做 `@non-ui` 判定（踩坑②：全文件匹配会被同文件
     // 其他字段的标注洗白，实测漏报）。
-    if (fieldDocHasNonUi(d.lines, d.declIdx, d.field)) nonUiOk.push(d);
-    else suspicious.push(d);
+    if (fieldDocHasNonUi(d.lines, d.declIdx, d.field)) nonUiOk.push(decorate(d));
+    else suspicious.push(decorate(d));
   }
+
+  // 契约类里「已读」字段中有多少读音归属存疑：报告里给出可信度分母，
+  // 免得把「52 个名字唯一的可信读数」误当成「181 个都核过了」。
+  const contractRead = allFields.filter(
+    (d) => CONTRACT_NAME_RE.test(d.iface) && countFieldReads(d.field, texts) > 0,
+  );
+  const contractReadAmbiguous = contractRead.filter((d) => isAmbiguous(d.field)).length;
 
   const fail = STRICT && suspicious.length > 0;
 
@@ -306,6 +365,13 @@ function main() {
             contractUnread: contractUnread.length,
             suspicious: suspicious.length,
             nonUiOk: nonUiOk.length,
+            // 可信度分母：契约类已读字段中，名字跨 interface 重名（读数归属存疑）的数量。
+            // 报告时务必与 contractRead 一起读——它回答「这些结论有多大范围是核过的」。
+            contractRead: contractRead.length,
+            contractReadAmbiguous,
+            // 零读取字段里带歧义标记的数量：它们即便进了 suspicious，也仍可能漏报同名字段
+            suspiciousAmbiguous: suspicious.filter((d) => d.ambiguous).length,
+            nonUiOkAmbiguous: nonUiOk.filter((d) => d.ambiguous).length,
           },
           suspicious,
           nonUiOk,
@@ -329,6 +395,14 @@ function main() {
   console.log(`契约类零读取 : ${contractUnread.length}（白名单内）`);
   console.log(`可疑       : ${suspicious.length}`);
   console.log(`@non-ui OK : ${nonUiOk.length}（故意不渲染，豁免）`);
+  // 可信度分母：读报告的人必须看到「本工具的读数有多少是名字唯一的」。
+  // 不印这行，就会把「12 条可疑」误读成「全仓契约面已核过 194 个字段」。
+  console.log(
+    `读数可信度 : 契约类已读 ${contractRead.length} 个中，${contractReadAmbiguous} 个字段名跨 interface 重名（归属存疑）`,
+  );
+  console.log(
+    `             → 只有 ${contractRead.length - contractReadAmbiguous} 个名字全局唯一，其余读数可能来自同名的别的 interface`,
+  );
   console.log(
     `模式       : ${STRICT ? "STRICT（可疑字段阻断）" : "审计（可疑字段仅报告，加 --strict 阻断）"}`,
   );
@@ -337,7 +411,10 @@ function main() {
   if (suspicious.length) {
     console.log("\n【可疑：契约类字段零读取且无 @non-ui】");
     for (const d of suspicious.slice(0, 40)) {
-      console.log(`  ⚠ ${d.file}:${d.line}  ${d.iface}.${d.field}${d.optional ? "?" : ""}`);
+      // ⚠ 后缀标注与前面那条读数可信度呼应；带此标记者「零读取」未必真，
+      // 它可能只是被同名的别处读取掩盖了（同名字段同时有假阴/假阳两面）。
+      const amb = d.ambiguous ? "  ← 名字跨 interface 重名（读数归属存疑）" : "";
+      console.log(`  ⚠ ${d.file}:${d.line}  ${d.iface}.${d.field}${d.optional ? "?" : ""}${amb}`);
     }
     if (suspicious.length > 40) console.log(`  … 其余 ${suspicious.length - 40} 条（--json 全量）`);
   }
@@ -345,7 +422,8 @@ function main() {
   if (nonUiOk.length) {
     console.log(`\n【@non-ui 豁免（故意不渲染，${nonUiOk.length} 条，不计入）】`);
     for (const d of nonUiOk) {
-      console.log(`  · ${d.iface}.${d.field}  ← ${d.file}:${d.line}`);
+      const amb = d.ambiguous ? "  ← 名字跨 interface 重名" : "";
+      console.log(`  · ${d.iface}.${d.field}  ← ${d.file}:${d.line}${amb}`);
     }
   }
 

@@ -246,6 +246,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-279：设置页下拉图标死代码处置与自定义下拉迁移",
+        "link": "/adr/ADR-279-select-icon-migration"
+      },
+      {
         "text": "ADR-278：诊断页按「动作 / 产物」重划性能分组",
         "link": "/adr/ADR-278-diagnostics-perf-ia"
       },

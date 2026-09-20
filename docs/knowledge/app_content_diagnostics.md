@@ -292,6 +292,39 @@ status: active
 **踩坑（子代理实现漏掉的真 bug，主模型修）**：`findDocStart` 只认「上一行是 `*/`」的**多行**注释形态，于是**单行** `/** @non-ui … */` 紧贴字段时直接回退哨兵 → 已标注的 `ConcPayload.hints`、`PerfTypeSummary.cli_analyzable` **仍被报可疑**（豁免数 1 而非 3）。修法是补单行注释分支。
 - ⚠️ 教训：这个 bug **恰好会让人误以为「标注没用」**——若不复核豁免明细就接受输出，会得出「@non-ui 机制不生效」的错误结论，进而可能去改一个本来正确的机制。**审计脚本自己的输出也要抽查明细，不能只看总数。**
 - 该修复过变异检查：删掉 `hints` 的标注 → 可疑 12→13、豁免 3→2，且 `hints` 被点名。
+### 12 条可疑的逐条定性 + 工具自身的重大缺陷（2026-09-21 续二）
+
+**12 条分四类**（实地看过源码，不是看工具输出）：
+
+| 组 | 字段 | 定性 |
+|---|---|---|
+| A | `SizeInfo.{centerX,centerY,centerZ,maxDim,zChunks}`（5 条，`litematic-adapter.ts`） | **真冗余**。第 105-119 行用的是**函数内局部 const**（`centerX` 等），算完存进 `sizeInfo` 后没人取；实际消费的只有 `sizeX/sizeY/sizeZ/xChunks/yChunks`（第 185/219/297-305 行）。**接口未导出**，纯内部中间态。 |
+| B | `BoneSelectInfo.{localPos,localRot,cubeRot,cubePos}`（4 条，`model3d.ts`） | **非缺陷，是归属误判**。注释写明「`window._3dOnBoneSelect` 回调参数」，生产侧 `assembleBoneSelectInfo` 认真填、`bone-raycast.test.ts:123-170` 认真断言——**消费方是宿主页面，不在本仓**。 |
+| C | `PmxParseResponse.additionalDataFlags` | 第三方 PMX 头字段原样透传，本仓不从 PMX header 取这项。 |
+| D | `RawGeometryJSON.identifier?` | Bedrock 几何中间态，形状来自 MC 格式规范；**接口未导出**。 |
+
+**A 与 B 的区别不在「零读取」而在「导出与否 + 有无外部消费方」**——工具只报零读取，判不了这个，所以定性必须人工。
+
+### ⚠️ 本轮最重要的发现：工具存在结构性假阴性
+
+读计数用「属性访问形态全仓匹配」，**它只认名字、不认归属**；零依赖文本解析做不到类型推断。
+
+**可复现实证**（不是推测）：`filesRoot` 在 4 个 interface 里声明——`CLIData` / `PerfIdentity` / `ConcPayload` / `ScanBenchPayload`。其中 `PerfIdentity.filesRoot` 经上一轮人工核定为零读取（已加 `@non-ui`），但另外三个有 22 处读取 → **工具从不报它**。同组的 `absPath` / `rtype_source` 因名字全局唯一而照实报出——**同一结构里三个同性质字段，工具只抓到 2 个**。
+
+**规模量化**：全仓 **451 个字段名跨 interface 重名**（`name` 出现在 **84 个** interface 里）；契约类 **219 个「已读」字段中 158 个（72%）读数归属存疑**。只有 61 个名字全局唯一、读数可信。
+
+**为什么这个缺陷比误报危险**：误报会让人去核实（有摩擦力，能发现）；**假阴性静默通过**——报告全绿，人以为核过了。而且它恰好**长成「工具有用」的样子**。
+
+**处置（不做假承诺）**：不假装能判归属（真做需 TS Compiler API，与本仓零依赖脚本风格相悖），而是**把不确定性印在报告里**——顶部新增「读数可信度」行给出可信分母，逐条带歧义者标注「← 名字跨 interface 重名」；JSON 同步 `contractReadAmbiguous` / `suspiciousAmbiguous` / `nonUiOkAmbiguous`。当前实测：`suspiciousAmbiguous=0`（12 条可疑的名字都全局唯一，**它们的零读取结论可信**）而 `nonUiOkAmbiguous=2`。
+
+⚠️ **但 `suspiciousAmbiguous=0` 不等于没漏报**：歧义字段被洗白后**根本不进名单**。`PerfIdentity.filesRoot` 正是这种「可疑名单干净却仍漏报」的活证据——**别把「12 条可疑」读成「契约面已全核过」**。
+
+### 工具踩坑（累计）
+
+1. **单行 `@non-ui` 漏认**：`findDocStart` 只认多行注释（上一行是 `*/`），单行 `/** @non-ui … */` 直接回退哨兵 → 已标注字段仍报可疑。**这个 bug 会让人误以为「`@non-ui` 机制不生效」**，进而去改一个本来正确的机制。
+2. **同名跨 interface 洗白**（本轮）：见上，结构性假阴性。
+
+**共同教训：审计脚本自己的输出必须抽查明细，且要主动问「它可能以什么方式骗我」**——两个 bug 都属于「输出看起来合理，实际判别力缺失」。
 
 ## 相关
 

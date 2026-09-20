@@ -61,6 +61,9 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     <div id="diag-tab-sync-conflict"><div id="diag-sync-conflict-list"></div></div>
     <button class="diag-log-fbtn" data-status="all">全部</button>
     <button class="diag-log-fbtn" data-status="success">成功</button>
+    <button class="diag-log-fbtn" data-status="failed">失败</button>
+    <button class="diag-log-fbtn" data-status="warn">警告</button>
+    <button class="diag-log-fbtn" data-status="skipped">跳过</button>
     <input id="diag-log-search">
   `;
   (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
@@ -181,6 +184,28 @@ describe("initDiagnostics — 日志面板", () => {
     (root.querySelector('.diag-log-fbtn[data-status="success"]') as HTMLElement).click();
     await waitFor(() => !list.textContent!.includes("bad"));
     expect(list.textContent).toContain("ok");
+  });
+
+  it("警告 chip → 单独筛出 warn 状态（扫描/界面提示，不会被成功/失败吞掉）", async () => {
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Status: "success", Operation: "scan", ModelName: "ok.ysm" },
+        { Status: "warn", Operation: "scan", ModelName: "warn.ysm", ErrorMsg: "部分文件跳过" },
+        { Status: "failed", Operation: "import", ModelName: "bad.ysm" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    await waitFor(() => list.textContent!.includes("ok"));
+    // 切到 warn：只留 warn，success/failed 都消失（renderDisplayName 剥扩展名：ok/bad）
+    (root.querySelector('.diag-log-fbtn[data-status="warn"]') as HTMLElement).click();
+    await waitFor(() => list.textContent!.includes("部分文件跳过"));
+    expect(list.textContent).toContain("warn");
+    expect(list.textContent).not.toContain("ok");
+    expect(list.textContent).not.toContain("bad");
+    // 徽标按 Level（warn→warning 图标）渲染
+    expect(list.querySelector(".log-status.warn .ws-icon")).not.toBeNull();
   });
 
   it("搜索输入 → 300ms 防抖重载", async () => {

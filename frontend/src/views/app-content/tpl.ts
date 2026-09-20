@@ -169,6 +169,7 @@ export function diagnosticsHTML(): string {
         <button class="diag-sub-tab active" data-log="op">${t("diagnostics.opsLog")}</button>
         <button class="diag-sub-tab" data-log="runtime">${t("diagnostics.runtimeLog")}</button>
       </div>
+      <input id="diag-log-search" class="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
       <span class="diag-log-bar-spacer"></span>
       <button class="btn-base sm" id="diag-refresh">${t("diagnostics.refresh")}</button>
       <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
@@ -179,8 +180,8 @@ export function diagnosticsHTML(): string {
         <button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
         <button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
         <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
+        <button class="diag-log-fbtn" data-status="warn">${UI_ICONS.warning} ${t("diagnostics.warn")}</button>
         <button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.performance} ${t("diagnostics.skipped")}</button>
-        <input id="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
       </div>
     </div>
   </div>

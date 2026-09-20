@@ -56,12 +56,16 @@ function hasSubstantiveRule(rawCss: string, cls: string): boolean {
   const css = stripComments(rawCss);
   const esc = cls.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
   const re = new RegExp(`(^|[},])\\s*([^{}]*\\.${esc}(?![\\w-])[^{}]*)\\{([^}]*)\\}`, "gm");
-  // 交互类判据：名字以 btn/-btn / -tab 结尾，或含 filter/button。
-  // ⚠️ 不能用「含 tab」——会把容器 .diag-log-subtabs（display:flex 容器）误判为按钮。
-  // 交互类判据：含 btn（覆盖 -btn / -fbtn 等缩写）或 filter/button，或 -tab 结尾。
+  // 交互控件判据（须有外观属性）：含 btn/button（覆盖 .diag-log-fbtn 这类 -fbtn 缩写）、
+  // 以 -tab 结尾（子 tab 按钮）、或输入框（search/input——搜索框 2026-09-28 上移行1 后
+  // 由独立类 .diag-log-search 承接，需外观以锁定接入新判据）。
   // ⚠️ 不能用「含 tab」——会把容器 .diag-log-subtabs（display:flex 容器）误判为按钮。
   // ⚠️ 必须用「含 btn」而非「-btn$」：.diag-log-fbtn 的 -fbtn 不以 -btn 结尾（实测漏判致假绿）。
-  const interactive = /(btn|filter|button|-tab$)/.test(cls);
+  // ⚠️ 不再把「含 filter」当交互判据：.diag-log-filter 是筛选 chips 的**布局容器**
+  //    （非筛选控件本体；控件是其中的 .diag-log-fbtn）——搜索框移出后它退回纯布局类，
+  //    按布局类判定（有规则即通过），不要求外观。历史上它靠 `.diag-log-filter input`
+  //    搜索框外观规则蹭过交互判据，是巧合性绿，并非真有按钮外观。
+  const interactive = /(btn|button|search|input)/.test(cls) || /-tab$/.test(cls);
   for (const m of css.matchAll(re)) {
     const body = m[3];
     if (!interactive) return true;
@@ -80,8 +84,9 @@ describe("诊断页日志工具栏：HTML 类名必须有 CSS 规则", () => {
     expect(cls).toContain("diag-log-fbtn");
   });
 
-  // ADR-258 回归的具体锁定：这三个类曾整体丢失规则
-  it.each(["diag-log-fbtn", "diag-sub-tab", "diag-log-filter"])(
+  // ADR-258 回归的具体锁定：这三个类曾整体丢失规则（2026-09-28 起 .diag-log-search
+  // 取代 .diag-log-filter 成为新交互控件条目；后者退为布局容器，由下方全量用例覆盖）
+  it.each(["diag-log-fbtn", "diag-sub-tab", "diag-log-search"])(
     ".%s 在生效样式表（contentCSS 聚合）里有规则",
     (cls) => {
       expect(hasSubstantiveRule(css, cls)).toBe(true);

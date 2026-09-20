@@ -47,12 +47,14 @@ export const contentDiagCSS: string = `
 
 .diag-panel { animation: diagPanelIn .2s ease; }
 @keyframes diagPanelIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
-/* 日志面板工具栏：两行语义分组（2026-09-17 版面收口）。
-   行1 = 视图切换（操作/运行时）+ 动作（刷新/复制/清空）；行2 = 状态筛选 + 搜索。
-   立因：9 按钮 + 1 输入框挤单行时，flex:1 的 spacer 把「清空」（破坏性动作）与筛选 chips
+/* 日志面板工具栏：两行语义分组（2026-09-17 版面收口，搜索框 2026-09-28 上移）。
+   行1 = 视图切换（操作/运行时）+ 搜索框 + 动作（刷新/复制/清空）；行2 = 状态筛选 chips。
+   演进：9 按钮 + 1 输入框挤单行时，flex:1 的 spacer 把「清空」（破坏性动作）与筛选 chips
    划成一组、却把刷新/复制推到行尾——视觉分组 ≠ 功能分组；且 spacer 自身会随
-   flex-wrap 折行，窄宽下右侧动作组被挤散。分层后每行语义单一，行2 的搜索框
-   可吃掉腾出的宽度。.diag-log-row 为布局类，由 content-diag-classes.test.ts 强制同步。 */
+   flex-wrap 折行，窄宽下右侧动作组被挤散。
+   2026-09-28 再收口：搜索框本质是「视图范围」控件（按激活子 tab 分派过滤），与
+   「操作/运行时」子 tab 同属一层语义，随之上移行1 紧跟子 tab；行2 只剩纯筛选 chips。
+   .diag-log-row 为布局类，由 content-diag-classes.test.ts 强制同步。 */
 .diag-log-bar { display:flex; flex-direction:column; gap:4px; padding:4px 12px; border-bottom:1px solid var(--bd); flex-shrink:0; }
 .diag-log-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .diag-log-bar-spacer { flex:1; }
@@ -67,7 +69,9 @@ export const contentDiagCSS: string = `
    → 裸渲染；3f0389c70 在 content-creator.ts 恢复共享规则 + 本处保留字号覆盖。 */
 .diag-log-fbtn { font-size:var(--fs-sm); }
 .diag-log-filter { display:flex; align-items:center; gap:4px; overflow:hidden; flex:1; min-width:0; }
-.diag-log-filter input { flex:1; min-width:110px; max-width:320px; font-size:var(--fs-sm); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }
+/* 搜索框（2026-09-28 上移行1 后由 .diag-log-search 接管）：flex:1 吃掉子 tab 与动作组
+   之间的空档，max-width 封顶避免把动作组挤太远；缩窄时 min-width 保证仍可输入。 */
+.diag-log-search { flex:1; min-width:110px; max-width:320px; font-size:var(--fs-sm); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }
 .diag-log-scroll { overflow-y:auto; flex:1; }
 /* ADR-259：布局基线归 .tab-body（面板即 .tab-body）；.diag-panel 只留入场动画钩子（见上方 diagPanelIn） */
 .diag-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; font-size:var(--fs-md); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); flex-shrink:0; }

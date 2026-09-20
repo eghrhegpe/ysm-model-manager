@@ -162,9 +162,11 @@ test.describe("诊断页", () => {
     ).resolves.toBe(0);
   });
 
-  test("日志工具栏两行语义分组：行1=子tab+动作，行2=筛选+搜索", async ({ page }) => {
+  test("日志工具栏两行语义分组：行1=子tab+搜索+动作，行2=筛选", async ({ page }) => {
     // 2026-09-17 版面收口（方案 A）：9 按钮 + 1 输入框挤单行时分组语义错乱（清空与筛选同组、
-    // 刷新/复制被 spacer 推远），且 spacer 随 flex-wrap 折行挤散动作组。本用例锁两行结构与归属。
+    // 刷新/复制被 spacer 推远），且 spacer 随 flex-wrap 折行挤散动作组。
+    // 2026-09-28 再收口：搜索框上移行1、紧跟子 tab（搜索按激活子 tab 分派，属「视图范围」
+    // 语义，与子 tab 同层），行2 只剩筛选 chips。本用例锁两行结构与归属。
     const layout = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
       const rect = (
@@ -205,24 +207,25 @@ test.describe("诊断页", () => {
     };
     // 行1 严格位于行2 上方（互不重叠）
     expect(row1.bottom).toBeLessThanOrEqual(row2.top);
-    // 行1 归属：子 tab + 三个动作按钮
+    // 行1 归属：子 tab + 搜索框 + 三个动作按钮
     const subTabs = box("subTabs", layout.subTabs);
+    const search = box("search", layout.search);
     const refresh = box("refresh", layout.refresh);
     const copy = box("copy", layout.copy);
     const clear = box("clear", layout.clear);
-    for (const r of [subTabs, refresh, copy, clear]) {
+    for (const r of [subTabs, search, refresh, copy, clear]) {
       expect(r.top).toBeGreaterThanOrEqual(row1.top);
       expect(r.bottom).toBeLessThanOrEqual(row1.bottom);
     }
-    // 行1 语义次序：导航靠左、动作被 spacer 顶到右侧，且破坏性「清空」殿后
-    expect(subTabs.right).toBeLessThan(refresh.left);
+    // 行1 语义次序：导航靠左，搜索吃掉空档（spacer 前），动作被顶到右侧、破坏性「清空」殿后
+    expect(subTabs.right).toBeLessThan(search.left);
+    expect(search.left).toBeLessThan(refresh.left);
     expect(refresh.left).toBeLessThan(copy.left);
     expect(copy.left).toBeLessThan(clear.left);
-    // 行2 归属：筛选 chips 容器 + 搜索框（清空不得混入筛选行）
-    for (const r of [box("filter", layout.filter), box("search", layout.search)]) {
-      expect(r.top).toBeGreaterThanOrEqual(row2.top);
-      expect(r.bottom).toBeLessThanOrEqual(row2.bottom);
-    }
+    // 行2 归属：筛选 chips 容器（清空不得混入筛选行；搜索框已上移行1，不得回落行2）
+    expect(box("filter", layout.filter).top).toBeGreaterThanOrEqual(row2.top);
+    expect(box("filter", layout.filter).bottom).toBeLessThanOrEqual(row2.bottom);
+    expect(search.top).toBeLessThan(row2.top); // 搜索框整体在行2 上方
   });
 
   test("单模型 tab：类型选择器选项来自 registry（前端不写死类型表）", async ({ page }) => {

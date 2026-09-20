@@ -341,6 +341,7 @@ export const zhCN = {
   "diagnostics.all": "全部",
   "diagnostics.success": "成功",
   "diagnostics.failed": "失败",
+  "diagnostics.warn": "警告",
   "diagnostics.skipped": "跳过",
   "diagnostics.noLogs": "暂无日志",
   "diagnostics.noRuntimeLogs": "暂无运行时日志",

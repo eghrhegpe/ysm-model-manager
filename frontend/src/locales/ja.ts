@@ -344,6 +344,7 @@ export const ja: Record<string, string> = {
   "diagnostics.all": "すべて",
   "diagnostics.success": "成功",
   "diagnostics.failed": "失敗",
+  "diagnostics.warn": "警告",
   "diagnostics.skipped": "スキップ",
   "diagnostics.noLogs": "ログはまだありません",
   "diagnostics.noRuntimeLogs": "ランタイムログはまだありません",

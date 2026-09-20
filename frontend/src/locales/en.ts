@@ -342,6 +342,7 @@ export const en: Record<string, string> = {
   "diagnostics.all": "All",
   "diagnostics.success": "Success",
   "diagnostics.failed": "Failed",
+  "diagnostics.warn": "Warning",
   "diagnostics.skipped": "Skipped",
   "diagnostics.noLogs": "No logs yet",
   "diagnostics.noRuntimeLogs": "No runtime logs yet",

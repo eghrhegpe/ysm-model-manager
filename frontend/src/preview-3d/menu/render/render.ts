@@ -428,9 +428,10 @@ function rmAppendDynamicRow(
       row.appendChild(meta);
     }
   } else {
-    lb.textContent = node.label ?? node.id;
+    // 无 labelKey（动态内容如角色名/候选文件名）→ resolveLabel ③级 plain 回退（node.label ?? node.id）；
     // 显式明文行（动态名）+ value = 附加信息 → 副标签照旧展示（「名称 + 声明/面数」类行：
     // 纹理短名 + 引用面数、组件名 + 纹理声明）；value 与行文案相同则不加，避免重复
+    lb.textContent = rmLabel(node);
     if (typeof node.value === "string" && node.value && node.value !== lb.textContent) {
       const meta = document.createElement("span");
       meta.className = "slide-sublabel";

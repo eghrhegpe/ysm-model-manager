@@ -20,6 +20,8 @@ import {
   syncDirRowHTML,
 } from "./tpl.ts";
 
+// 纯别名，为渲染层类型语义命名——renderer 7+ 处渲染函数经此消费 SyncManagerSelf，
+// 若日后需对渲染方做接口隔离（仅暴露读侧字段）此处是扩展锚点，故保留而非直接 import SyncManagerSelf。
 export type SyncRenderSelf = SyncManagerSelf;
 
 // 类型统计计数（diverged 折叠进 missing tab——counts 不含 diverged 字段，防误导）
@@ -105,9 +107,16 @@ function collectCounts(self: SyncRenderSelf): {
   return { typeCounts, globalCounts };
 }
 
-/** 「全部」页签计数：选中类型时用该类型 total，否则用条目总数 */
+/** 「全部」页签计数：选中类型时用该类型 total（未知类型兜底 0 而非全类型数），否则用条目总数 */
 function countOfAll(self: SyncRenderSelf, curCounts: TypeCounts): number {
-  return self._selectedType ? curCounts.total || 0 : self._allItems.length;
+  // curCounts.total 恒为 number（collectCounts 按 _typeConfig 预置 0 桶）；
+  // || 0 冗余但保真——未知 _selectedType（外部插件类型）时 caller 已 fallback 到
+  // globalCounts，此处若再取 total 会把全类型数误显为该类型数，故未知类型应显式 0。
+  return self._selectedType
+    ? self._typeConfig.some((tc) => tc.id === self._selectedType)
+      ? curCounts.total
+      : 0
+    : self._allItems.length;
 }
 
 /** 渲染状态筛选栏（当前类型只读指示 + 六态页签） */

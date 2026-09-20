@@ -146,10 +146,11 @@ export class AppSyncManager extends WebComponentBase {
     this._pruneSubs();
     this._bindDelegate(self);
 
-    // 并发代入守卫：过期代际/已卸载直接丢弃
-    // code_review 47e68917b #5（P3）：失败者 bailing 前复位 _loading——败方已置
-    // _loading=true 并渲染 spinner 容器；若胜方 loadData（ADR-269 D3③ 后 loadTypeConfig 已同步、不抛）
-    // 随后抛错，无此处复位会让 loading 旗标/转圈残留（守卫语义保留：数据一致性由胜方保证）
+    // 并发代入守卫：过期代际/已卸载直接丢弃。
+    // 进入异步段（L156-158 三行 await）前复位 _loading：败方若已置 spinner 态
+    // 却因代际失效/卸载 bailing，不在此复位会让 loading 旗标残留（胜方 _init
+    // 重跑时会再次置位，故此处复位是「败方干净离场」的守卫，非「立即结束加载」）。
+    // 后续 L162 的 _loading=false 才是加载成功完成后的终态复位。
     this._loading = false;
     if (initGen !== this._initGen || !this.isConnected) return;
 

@@ -496,29 +496,28 @@ export class SkyCapability implements SceneCapability {
 
   /** 设置云量 0=晴空 1=多云（ADR-073 #4）；regenerate=true 时同步刷新 IBL 环境 */
   setCloudCoverage(v: number, regenerate = false): void {
-    const clamped = Math.max(0, Math.min(1, v));
     // ADR-196 收口：纯写 envState；uniform 由 callback 的 skyCloudCoverage 分支落地；
     // regenerate 语义保留（置 skyForceEnv 由 callback 判定重建）。
     setEnvState(
-      { skyCloudCoverage: clamped, ...(regenerate ? { skyForceEnv: true } : {}) },
+      { skyCloudCoverage: v, ...(regenerate ? { skyForceEnv: true } : {}) },
       { source: "manual" },
     );
   }
 
-  /** §4 解耦：设置太阳强度对天空底色的耦合尺度（0.5~1.0，默认 0.75）；
+  /** §4 解耦：设置太阳强度对天空底色的耦合尺度（合法域 [0,1.5]／滑杆 0.3–1.2，默认 0.75）；
    *  1.0 = 原生 Preetham 强度（正午最白），越低天空越不被太阳光绑架。 */
   setSunIntensityScale(v: number): void {
-    const clamped = Math.max(0, Math.min(1.5, v));
+    // 值域钳制在唯一写入口（ADR-283）：合法域 [0,1.5] 由 schema range 声明，滑杆行程见 uiRange
     // ADR-196 收口：纯写 envState；uniform 由 callback 落地。
-    setEnvState({ skySunIntensityScale: clamped }, { source: "manual" });
+    setEnvState({ skySunIntensityScale: v }, { source: "manual" });
   }
 
-  /** §4 解耦：设置太阳盘白光的尺度（0.2~1.0，默认 0.5）；
+  /** §4 解耦：设置太阳盘白光的尺度（合法域 [0,1.5]／滑杆 0–1.2，默认 0.5）；
    *  1.0 = 原生 19000× 白光炸弹，越低太阳盘越暗、Bloom 越不炸屏。 */
   setSunDiscScale(v: number): void {
-    const clamped = Math.max(0, Math.min(1.5, v));
+    // 值域钳制在唯一写入口（ADR-283）：合法域 [0,1.5] 由 schema range 声明，滑杆行程见 uiRange
     // ADR-196 收口：纯写 envState；uniform 由 callback 落地。
-    setEnvState({ skySunDiscScale: clamped }, { source: "manual" });
+    setEnvState({ skySunDiscScale: v }, { source: "manual" });
   }
 
   /** 获取解耦尺度当前值（用于 UI getter / 测试断言） */

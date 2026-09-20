@@ -9,6 +9,7 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { getParamRange, type RangedKey } from "@/preview-3d/state/env-state-schema.ts";
 import type { ReflectorCapability } from "./reflector-capability.ts";
 
 const REFLECTOR_PARAMS_GROUP: LocaleKey = "preview.reflectorGroupParams";
@@ -31,9 +32,7 @@ function rcBuildParamsFolder(cap: ReflectorCapability): PreviewMenuNode {
   const slider = (
     id: string,
     labelKey: LocaleKey,
-    min: number,
-    max: number,
-    step: number,
+    key: RangedKey,
     getValue: () => number,
     setValue: (v: number) => void,
   ): PreviewMenuNode => ({
@@ -41,9 +40,7 @@ function rcBuildParamsFolder(cap: ReflectorCapability): PreviewMenuNode {
     kind: "slider",
     labelKey,
     control: {
-      min,
-      max,
-      step,
+      ...getParamRange(key),
       get: () => getValue(),
       set: (v) => setValue(v as number),
     },
@@ -56,27 +53,21 @@ function rcBuildParamsFolder(cap: ReflectorCapability): PreviewMenuNode {
       slider(
         "reflector-opacity",
         "preview.reflectorOpacity",
-        0,
-        1,
-        0.01,
+        "reflectorOpacity",
         () => cap.getParams().opacity,
         (v) => cap.setOpacity(v),
       ),
       slider(
         "reflector-resolution",
         "preview.reflectorResolution",
-        256,
-        2048,
-        256,
+        "reflectorResolution",
         () => cap.getParams().resolution,
         (v) => cap.setResolution(v),
       ),
       slider(
         "reflector-size",
         "preview.reflectorSize",
-        20,
-        500,
-        10,
+        "reflectorSize",
         () => cap.getParams().size,
         (v) => cap.setSize(v),
       ),

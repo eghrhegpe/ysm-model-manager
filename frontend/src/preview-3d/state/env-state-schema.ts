@@ -57,7 +57,12 @@ type _AnyFieldDef = {
 export const ENV_STATE_SCHEMA = {
   // --- Sky ---
   skyTimeOfDay: { type: "number", default: 9, group: "sky" },
-  skyCloudCoverage: { type: "number", default: 0, group: "sky" },
+  skyCloudCoverage: {
+    type: "number",
+    default: 0,
+    group: "sky",
+    range: { min: 0, max: 1, step: 0.05, unit: "%" },
+  },
   skyElevation: { type: "number", default: 10, group: "sky" },
   skyAzimuth: { type: "number", default: 180, group: "sky" },
   skyForceEnv: { type: "boolean", default: true, group: "sky" },
@@ -65,8 +70,22 @@ export const ENV_STATE_SCHEMA = {
   skyRayleigh: { type: "number", default: 2.5, group: "sky" },
   skyMieCoefficient: { type: "number", default: 0.005, group: "sky" },
   skyMieDirectionalG: { type: "number", default: 0.8, group: "sky" },
-  skySunIntensityScale: { type: "number", default: 0.75, group: "sky" },
-  skySunDiscScale: { type: "number", default: 0.5, group: "sky" },
+  skySunIntensityScale: {
+    type: "number",
+    default: 0.75,
+    group: "sky",
+    // 合法域 [0,1.5]（原 setter 钳制）；滑杆 [0.3,1.2] 是手感行程（ADR-283 §2.2 域分离）
+    range: { min: 0, max: 1.5, step: 0.05 },
+    uiRange: { min: 0.3, max: 1.2, step: 0.05 },
+  },
+  skySunDiscScale: {
+    type: "number",
+    default: 0.5,
+    group: "sky",
+    // 合法域 [0,1.5]（原 setter 钳制）；滑杆 [0,1.2] 是手感行程（ADR-283 §2.2 域分离）
+    range: { min: 0, max: 1.5, step: 0.05 },
+    uiRange: { min: 0, max: 1.2, step: 0.05 },
+  },
   skyExposure: { type: "number", default: 0.5, group: "sky" },
   skyEnvironment: { type: "boolean", default: true, group: "sky" },
   skyGodRaysEnabled: { type: "boolean", default: false, group: "sky" },
@@ -355,9 +374,24 @@ export const ENV_STATE_SCHEMA = {
 
   // --- Reflector ---
   reflectorEnabled: { type: "boolean", default: false, group: "reflector" },
-  reflectorOpacity: { type: "number", default: 0.6, group: "reflector" },
-  reflectorResolution: { type: "number", default: 1024, group: "reflector" },
-  reflectorSize: { type: "number", default: 100, group: "reflector" },
+  reflectorOpacity: {
+    type: "number",
+    default: 0.6,
+    group: "reflector",
+    range: { min: 0, max: 1, step: 0.01 },
+  },
+  reflectorResolution: {
+    type: "number",
+    default: 1024,
+    group: "reflector",
+    range: { min: 256, max: 2048, step: 256 },
+  },
+  reflectorSize: {
+    type: "number",
+    default: 100,
+    group: "reflector",
+    range: { min: 20, max: 500, step: 10 },
+  },
   reflectorColor: { type: "number", default: 0xffffff, group: "reflector" },
   reflectorClipBias: { type: "number", default: 0.003, group: "reflector" },
 

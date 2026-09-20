@@ -3,6 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { ReflectorCapability } from "./reflector-capability.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
@@ -373,6 +374,21 @@ describe("ReflectorCapability — 真实管线", () => {
 // ============ 菜单控件联动 ============
 describe("ReflectorCapability — 菜单控件联动（节点 control 闭包）", () => {
   beforeEach(() => { resetEnvState(); });
+
+  it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
+    const cap = newCap();
+    const folder = cap.getMenuNodes()[1]!;
+    for (const [id, key] of [
+      ["reflector-opacity", "reflectorOpacity"],
+      ["reflector-resolution", "reflectorResolution"],
+      ["reflector-size", "reflectorSize"],
+    ] as const) {
+      const c = folder.children!.find((x) => x.id === id)!.control!;
+      expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
+        getParamRange(key),
+      );
+    }
+  });
 
   it("opacity/resolution/size 滑块读写联动", () => {
     const cap = newCap();

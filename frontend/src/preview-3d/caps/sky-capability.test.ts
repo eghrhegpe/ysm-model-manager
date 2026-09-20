@@ -15,6 +15,7 @@ import {
 } from "./sky-capability.ts";
 import type { SunBeams } from "./sun-beams.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
+import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import type { SceneCapability } from "./scene-capability.ts";
@@ -343,6 +344,24 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
     const cloudNode = folder.children!.find((c) => c.id === "sky-cloud")!;
     cloudNode.control!.set!(0.8);
     expect(cap.getCloudCoverage()).toBe(0.8);
+  });
+
+  it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
+    const cap = newCap();
+    const folder = cap.getMenuNodes()[3]!;
+    for (const [id, key] of [
+      ["sky-cloud", "skyCloudCoverage"],
+      ["sky-sun-intensity", "skySunIntensityScale"],
+      ["sky-sun-disc", "skySunDiscScale"],
+    ] as const) {
+      const c = folder.children!.find((x) => x.id === id)!.control!;
+      expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
+        getParamRange(key),
+      );
+    }
+    // 域分离活证：合法域比滑杆行程宽（写入可到 1.5，滑杆只到 1.2）
+    expect(ENV_STATE_SCHEMA.skySunIntensityScale.range.max).toBe(1.5);
+    expect(getParamRange("skySunIntensityScale").max).toBe(1.2);
   });
 
   it("太阳耦合滑块与昼夜循环控件联动（高级 folder，节点 control 闭包）", () => {

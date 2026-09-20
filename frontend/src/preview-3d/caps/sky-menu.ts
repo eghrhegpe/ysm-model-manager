@@ -4,6 +4,7 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { PreviewControlDef } from "./scene-capability.ts";
 import type { SkyCapability } from "./sky-capability.ts";
 
@@ -51,10 +52,7 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       kind: "slider",
       labelKey: "preview.cloudCoverage",
       control: {
-        min: 0,
-        max: 1,
-        step: 0.05,
-        unit: "%",
+        ...getParamRange("skyCloudCoverage"),
         get: () => cap.getCloudCoverage(),
         set: (v) => cap.setCloudCoverage(v as number, true),
       },
@@ -65,9 +63,7 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       labelKey: "preview.skySunIntensityScale",
       hintKey: "preview.skySunIntensityScaleHint",
       control: {
-        min: 0.3,
-        max: 1.2,
-        step: 0.05,
+        ...getParamRange("skySunIntensityScale"),
         get: () => cap.getSunIntensityScale(),
         set: (v) => cap.setSunIntensityScale(v as number),
       },
@@ -78,9 +74,7 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       labelKey: "preview.skySunDiscScale",
       hintKey: "preview.skySunDiscScaleHint",
       control: {
-        min: 0.0,
-        max: 1.2,
-        step: 0.05,
+        ...getParamRange("skySunDiscScale"),
         get: () => cap.getSunDiscScale(),
         set: (v) => cap.setSunDiscScale(v as number),
       },

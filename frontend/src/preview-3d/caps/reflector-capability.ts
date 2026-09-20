@@ -200,7 +200,7 @@ export class ReflectorCapability implements SceneCapability {
 
   setOpacity(v: number): void {
     // ADR-196 收口：纯写 envState；uniform 就地改由 callback 细粒度落地。
-    setEnvState({ reflectorOpacity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+    setEnvState({ reflectorOpacity: v }, { source: "manual" }); // 值域钳制在唯一写入口（ADR-283）
   }
 
   setColor(hex: number): void {

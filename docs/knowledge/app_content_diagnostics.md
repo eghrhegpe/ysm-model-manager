@@ -362,6 +362,20 @@ localPos: number[];
 - **可疑 0 / 豁免 10**，`--strict` 可安全接入。
 - 但**读数可信度仍是 61/219**（158 个字段名跨 interface 重名）——`filesRoot` 那个假阴性**依然存在**，只是已知。**「可疑 0」指的是「名字唯一的那些字段都核过了」，不是「契约面全部核过」。** 要让结论覆盖到歧义字段，需要类型级归属分析（TS Compiler API）——与本仓零依赖脚本风格相悖，故有意不做，只在报告里公开分母。
 
+### 前后端「对劲」从设计正确升级为漂移即红（契约补锁 + 刻意不根治的边界决定，2026-09-21）
+
+用户就 bench tab（`#diag-perf-*`）锐评「前后端对劲」，查清后落地 WP1–WP4（纯加锁/注释订正，**零 Go 生产改动**），并把「为什么不根治」钉成可命中的判断——因这正是下一个人会重踩的决策点。
+
+- **已锁的跨界契约**（`tests/test_cli_gui_flow_contract.ts` 新增 §3.7d / §3.7e，全过真绿）：
+  - **§3.7d 默认值三端逐字对齐**：`iterations=3` / `max-models=5(单模型)·20(并发)` / `threshold=50` / `workers=4` 一次性钉死 Go `fs.Int`/`Float64` ↔ tpl `value=` ↔ 前端 `?? "N"` fallback 三端。立因：`perf_target_set.go` 自己把 flag 默认值称「哑弹」并归一化为 0，而前端 fallback 是同颗哑弹的镜像副本——三处手抄，Go 调默认忘改任一→控件缺席/异常态按旧值提交、护栏不红。
+  - **§3.7e verdict / stage status token 集双端锁**：verdict 六档（Go 有 `stageVerdict*` 常量→锚 `= "v"`，前端 `BASELINE_VERDICT_META` 须有同名键）；stage status 的 `ok/slow/warn/bottleneck`+旁路 `failed`。立因：Go 加第 7 档、前端未跟上→静默落 `?? { icon: "⚪" }`，用户看不出这档（「兜底静默」盲区）。
+- **stage status 刻意不提 Go 常量（重要）**：`bench_concurrent.go|stageStatus()` 是裸 `switch` 按耗时阈值（>100/>50/>10）产出，非命名常量集。为锁 token 而给它提一组 `statusXxx = "…"` const=为边际护栏动生产 switch + 其表驱动测（`cli_test.go|TestStageMarkAndStatus`），违「不碰骨架」。改走轻量法：正则从函数体抽 `return "x"` + 补 `failed`→逐个比对前端 `STAGE_STATUS_META`。**代价（诚实标注）**：Go 改了 return 字面量而函数体形状不变仍能绿——但前端漏映射新值仍红，方向安全。
+- **`PERF_UNREAD_MODES`/`PERF_UNREAD_TARGETS` 的「读法漂移」刻意不根治（这是本节的判断重点）**：两张表是前端镜像 Go `singleBenchReadMode` 的读法。唯一真「根治」路=让 Go 声明「每个命令×模式×目标集实际吃哪几个 flag」、前端派生——但这是把「某控件此刻是否被消费」的展示层决策交回 Go，**正撞 AGENTS.md S3 收口的「输入端归 Go，展示端豁免」边界**（视图态每次击键本地响应，下沉 RPC 荒谬）。故保留镜像=边界两侧的合理分工（Go 拥有读法真相、前端拥有禁用态展示），**不是欠账**。本轮只用 `perf-mode.test.ts` 反向闸挡低级漂移（登记表每个 id 必须是 tpl 真实控件，幽灵 id 即红），深层「读法变了表没跟」归 review + 真相源注释管。
+- **触发条件（满足任一再议根治，不凭「看起来不够干净」）**：① 目标集加第三根正交轴（8 控件→ 20+ 镜像表失控）；② 第三条命令加入共用目标集面（现只 single/conc）；③ 真因「读法改了表没跟」ship 了一次线上回归（用事故换立法）。
+- **护栏**：上述均在 `test_cli_gui_flow_contract.ts`（§3.7d/3.7e）+ `perf-mode.test.ts`（登记面反向自审）。契约测验绿（6 个 stageVerdict 常量 / 4+failed status / 5 个默认值三端逐字对齐均真实存在，非假红）。
+- **文案漂移附带订正**：「取样上限→最多模型数」一次未完成的迁移留下多处「注释冒充当前标签名」的失真（含与不变量直接矛盾的 `tpl.ts:26`「标签恒为取样上限」），保守改法：只修「当标签名引用」处，保留 `--max-models`/旋钮概念等合法用法；test 标题/describe 名是标识符非断言字面量，`toBe("最多模型数")` 未触碰。
+- ⚠ **改 i18n / 文案时同步硬编码字面量**（本仓反复撞的账）：单测 fixture 直接写死中文、e2e 被 playwright 钉 `locale:en-US`——改 zh 不红 fixture、改 en 必红 e2e；本例只动注释/test 标题未碰 locale 值，无需重跑 `generate-locale-json.ts`。
+
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

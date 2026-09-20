@@ -160,7 +160,7 @@ describe("灯光字段全集单一真相源（FLATTEN_MAP 派生）", () => {
         angle: 51,
         penumbra: 0.52,
         distance: 53,
-        decay: 5.4,
+        decay: 3.4,
       },
       fill: {
         type: "directional",
@@ -172,7 +172,7 @@ describe("灯光字段全集单一真相源（FLATTEN_MAP 派生）", () => {
         angle: 62,
         penumbra: 0.63,
         distance: 64,
-        decay: 6.5,
+        decay: 3.5,
       },
       rim: {
         type: "point",
@@ -181,10 +181,10 @@ describe("灯光字段全集单一真相源（FLATTEN_MAP 派生）", () => {
         intensity: 3.1,
         azimuth: 31,
         elevation: 32,
-        angle: 73,
+        angle: 69,
         penumbra: 0.74,
         distance: 75,
-        decay: 7.6,
+        decay: 3.6,
       },
     };
     // 写入 envState（经 flatten 的真值路径）
@@ -212,10 +212,10 @@ describe("灯光字段全集单一真相源（FLATTEN_MAP 派生）", () => {
         lightKeyAngle: 51,
         lightKeyPenumbra: 0.52,
         lightKeyDistance: 53,
-        lightKeyDecay: 5.4,
+        lightKeyDecay: 3.4,
         lightRimType: "point",
-        lightRimAngle: 73,
-        lightRimDecay: 7.6,
+        lightRimAngle: 69,
+        lightRimDecay: 3.6,
       },
       { source: "manual" },
     );
@@ -230,13 +230,13 @@ describe("灯光字段全集单一真相源（FLATTEN_MAP 派生）", () => {
       angle: 51,
       penumbra: 0.52,
       distance: 53,
-      decay: 5.4,
+      decay: 3.4,
     });
     // 槽位不得串读：rim 只取 rim 的键
     const rim = readLightParams(envState, "rim");
     expect(rim.type).toBe("point");
-    expect(rim.angle).toBe(73);
-    expect(rim.decay).toBe(7.6);
+    expect(rim.angle).toBe(69);
+    expect(rim.decay).toBe(3.6);
     expect(rim.azimuth).toBe(180); // DEFAULT_RIM 默认值，未被 key 的 11 污染
   });
 });

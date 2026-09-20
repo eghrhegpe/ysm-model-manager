@@ -72,9 +72,9 @@ function wColorNode(
 export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
   return [
     {
-      id: "ground-water-enabled",
+      id: "water-enabled",
       kind: "toggle",
-      labelKey: "preview.groundWaterEnabled",
+      labelKey: "preview.waterEnabled",
       control: {
         get: () => cap.getWaterEnabled(),
         set: (v) => cap.setWaterEnabled(v as boolean),
@@ -86,13 +86,13 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       labelKey: WATER_GROUP_FORM,
       children: [
         {
-          id: "ground-water-mode",
+          id: "water-mode",
           kind: "select",
-          labelKey: "preview.groundWaterMode",
+          labelKey: "preview.waterMode",
           control: {
             options: [
-              { value: "film", label: "薄膜", labelKey: "preview.groundWaterModeFilm" },
-              { value: "pool", label: "水池", labelKey: "preview.groundWaterModePool" },
+              { value: "film", label: "薄膜", labelKey: "preview.waterModeFilm" },
+              { value: "pool", label: "水池", labelKey: "preview.waterModePool" },
             ],
             get: () => cap.getWaterMode(),
             set: (v) => cap.setWaterMode(v as WaterMode),
@@ -100,7 +100,7 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
         },
         // ADR-257：水位跨形态通用，故**不带 visibleWhen**——film 下也能抬水面。
         // 这是本次改造对用户最直接的可感收益（旧：只有 pool 才有高度入口）。
-        wSliderNode("ground-water-level", "preview.groundWaterLevel", getParamRange("waterLevel"), {
+        wSliderNode("water-level", "preview.waterLevel", getParamRange("waterLevel"), {
           get: () => cap.getLevel(),
           set: (v) => cap.setLevel(v),
         }),
@@ -109,7 +109,7 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
         // 展示域 10–300（默认 80 居中）来自 schema `uiRange`，合法域 ≥1（ADR-283：值域单一事实源）；
         // 与 groundSize 同默认值，即「水膜刚好铺满地面」。step=1 足够细（拖满全程 290 步），
         // 且避开小数累加误差。
-        wSliderNode("ground-water-size", "preview.groundWaterSize", getParamRange("waterSize"), {
+        wSliderNode("water-size", "preview.waterSize", getParamRange("waterSize"), {
           get: () => cap.getWaterSize(),
           set: (v) => cap.setWaterSize(v),
         }),
@@ -121,40 +121,38 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       labelKey: WATER_GROUP_LOOK,
       children: [
         wSliderNode(
-          "ground-wetness",
+          "water-wetness",
           "preview.waterFilmDensity",
           getParamRange("waterWetness"),
           { get: () => cap.getWetness(), set: (v) => cap.setWetness(v) },
           waterFilmOn,
         ),
         wColorNode(
-          "ground-water-color",
-          "preview.groundWaterColor",
+          "water-color",
+          "preview.waterColor",
           () => cap.getWaterColor(),
           (v) => cap.setWaterColor(v),
         ),
+        wSliderNode("water-opacity", "preview.waterOpacity", getParamRange("waterOpacity"), {
+          get: () => cap.getWaterOpacity(),
+          set: (v) => cap.setWaterOpacity(v),
+        }),
         wSliderNode(
-          "ground-water-opacity",
-          "preview.groundWaterOpacity",
-          getParamRange("waterOpacity"),
-          { get: () => cap.getWaterOpacity(), set: (v) => cap.setWaterOpacity(v) },
-        ),
-        wSliderNode(
-          "ground-normal-strength",
-          "preview.groundNormalStrength",
+          "water-normal-strength",
+          "preview.waterStrength",
           getParamRange("waterNormalStrength"),
           { get: () => cap.getNormalStrength(), set: (v) => cap.setNormalStrength(v) },
         ),
         wSliderNode(
-          "ground-water-clarity",
-          "preview.groundWaterClarity",
+          "water-clarity",
+          "preview.waterClarity",
           getParamRange("waterClarity"),
           { get: () => cap.getClarity(), set: (v) => cap.setClarity(v) },
           waterPoolOn, // 仅 pool 生效（film 无体积光学，supportsVolumeOptics=false 已拦截），消歧义
         ),
         wSliderNode(
-          "ground-water-choppiness",
-          "preview.groundWaterChoppiness",
+          "water-choppiness",
+          "preview.waterChoppiness",
           getParamRange("waterChoppiness"),
           { get: () => cap.getChoppiness(), set: (v) => cap.setChoppiness(v) },
         ),
@@ -166,29 +164,29 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       labelKey: WATER_GROUP_POOL,
       children: [
         wSliderNode(
-          "ground-pool-height",
-          "preview.groundPoolHeight",
+          "water-pool-height",
+          "preview.waterHeight",
           getParamRange("waterPoolHeight"),
           { get: () => cap.getPoolHeight(), set: (v) => cap.setPoolHeight(v) },
           waterPoolOn,
         ),
         wSliderNode(
-          "ground-pool-wall-thickness",
-          "preview.groundPoolWallThickness",
+          "water-pool-wall-thickness",
+          "preview.waterWallThickness",
           getParamRange("waterPoolWallThickness"),
           { get: () => cap.getPoolWallThickness(), set: (v) => cap.setPoolWallThickness(v) },
           waterPoolOn,
         ),
         wColorNode(
-          "ground-pool-wall-color",
-          "preview.groundPoolWallColor",
+          "water-pool-wall-color",
+          "preview.waterWallColor",
           () => cap.getPoolWallColor(),
           (v) => cap.setPoolWallColor(v),
           waterPoolOn,
         ),
         wSliderNode(
-          "ground-pool-roundness",
-          "preview.groundPoolRoundness",
+          "water-pool-roundness",
+          "preview.waterRoundness",
           getParamRange("waterPoolRoundness"),
           { get: () => cap.getPoolRoundness(), set: (v) => cap.setPoolRoundness(v) },
           waterPoolOn,
@@ -200,12 +198,10 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       kind: "folder",
       labelKey: WATER_GROUP_WAVE,
       children: [
-        wSliderNode(
-          "ground-wave-speed",
-          "preview.groundWaveSpeed",
-          getParamRange("waterWaveSpeed"),
-          { get: () => cap.getWaveSpeed(), set: (v) => cap.setWaveSpeed(v) },
-        ),
+        wSliderNode("water-wave-speed", "preview.waterSpeed", getParamRange("waterWaveSpeed"), {
+          get: () => cap.getWaveSpeed(),
+          set: (v) => cap.setWaveSpeed(v),
+        }),
       ],
     },
   ];

@@ -39,6 +39,7 @@ auto_fields:
     - getPresetKeys
     - getSceneCaps
     - getStateValue
+    - isEnvCallbacksSuspended
     - MODEL_DEFAULTS
     - ModelType
     - NumericRange
@@ -48,11 +49,13 @@ auto_fields:
     - registerEnvStateMiddleware
     - resetEnvState
     - resetSceneInfra
+    - resumeEnvCallbacks
     - sceneInfraHost
     - SceneInfraHost
     - setEnvState
     - setStateValue
     - SharedInfra
+    - suspendEnvCallbacks
     - teardownSharedInfra
     - toModelType
 perf: gpu-bound

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **283** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **285** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,30 +16,30 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 5 |
+| [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 12 |
-| [✅ 已采纳](#已采纳) | 256 |
+| [🔄 部分采纳](#部分采纳) | 13 |
+| [✅ 已采纳](#已采纳) | 258 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（5）
+### 📝 提议中（4）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-285](./ADR-285-bench-usability-copy-diff-plan.md) | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-282](./ADR-282-applymodelpreset-default-light-params.md) | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 |
 | [ADR-281](./ADR-281-flatten-map.md) | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | 📝 提议中 |
 | [ADR-280](./ADR-280-key-fill-rim-directional-point-spot.md) | 灯光类型切换：三灯统一实例（key/fill/rim 各可 directional/point/spot） | 📝 提议中 |
 
-### 🔄 部分采纳（12）
+### 🔄 部分采纳（13）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-285](./ADR-285-bench-usability-copy-diff-plan.md) | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 |
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
 | [ADR-249](./ADR-249-ground-material-axis-split-layer-overlay.md) | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | 🔄 部分采纳 |
 | [ADR-247](./ADR-247-postproc-linkage-gate.md) | 后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移 | 🔄 部分采纳 |
@@ -53,10 +53,12 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（256）
+### ✅ 已采纳（258）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-287](./ADR-287-water-ground.md) | water 菜单 ground- 化石前缀重命名 | ✅ 已采纳 |
+| [ADR-286](./ADR-286-water-applychangedparams.md) | water applyChangedParams 声明式分派表 | ✅ 已采纳 |
 | [ADR-283](./ADR-283-env-param-range-descriptor.md) | 参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口 | ✅ 已采纳 |
 | [ADR-279](./ADR-279-select-icon-migration.md) | 设置页下拉图标死代码处置与自定义下拉迁移 | ✅ 已采纳 |
 | [ADR-278](./ADR-278-diagnostics-perf-ia.md) | 诊断页按「动作 / 产物」重划性能分组 | ✅ 已采纳 |
@@ -338,7 +340,9 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-285 | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 📝 提议中 | 2026-09-20 |
+| ADR-287 | water 菜单 ground- 化石前缀重命名 | ✅ 已采纳 | 2026-09-20 |
+| ADR-286 | water applyChangedParams 声明式分派表 | ✅ 已采纳 | 2026-09-20 |
+| ADR-285 | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 | 2026-09-20 |
 | ADR-284 | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 | 2026-09-20 |
 | ADR-283 | 参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口 | ✅ 已采纳 | 2026-09-20 |
 | ADR-282 | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 | 2026-09-20 |

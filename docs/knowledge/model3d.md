@@ -385,6 +385,7 @@ auto_fields:
     - installSlideMenuStyles
     - invalidateMaxFpsCache
     - invalidatePreview
+    - isEnvCallbacksSuspended
     - isFrustumCullEnabled
     - isIdentityQuat
     - isLikelyTga
@@ -681,6 +682,7 @@ auto_fields:
     - restoreLightParams
     - restoreModelGroupsVisible
     - restoreState
+    - resumeEnvCallbacks
     - rewriteVmdTracks
     - ringLog
     - ROLE
@@ -796,6 +798,7 @@ auto_fields:
     - SurfacePixelGenerator
     - SurfacePixelInput
     - surfaceSpecKey
+    - suspendEnvCallbacks
     - SwitchContext
     - switchNormPath
     - switchPreview

@@ -64,7 +64,7 @@ describe("WaterCapability", () => {
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
     expect(nodes).toHaveLength(5);
-    expect(nodes[0].id).toBe("ground-water-enabled");
+    expect(nodes[0].id).toBe("water-enabled");
     expect(nodes.slice(1).map((n) => n.kind)).toEqual(["folder", "folder", "folder", "folder"]);
     expect(nodes.slice(1).map((n) => n.labelKey)).toEqual([
       "preview.waterGroupForm",
@@ -74,10 +74,10 @@ describe("WaterCapability", () => {
     ]);
   });
 
-  it("getMasterNodeId 返回 ground-water-enabled 使 env 面板能在行首渲染开关", () => {
+  it("getMasterNodeId 返回 water-enabled 使 env 面板能在行首渲染开关", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
-    expect(cap.getMasterNodeId()).toBe("ground-water-enabled");
+    expect(cap.getMasterNodeId()).toBe("water-enabled");
   });
 
   it("菜单控件条件显隐：wetness 仅 film；pool 系列仅 pool", () => {
@@ -86,8 +86,8 @@ describe("WaterCapability", () => {
     const nodes = cap.getMenuNodes();
     const look = nodes[2]!;
     const pool = nodes[3]!;
-    const wetness = look.children!.find((c) => c.id === "ground-wetness")!;
-    const poolHeight = pool.children!.find((c) => c.id === "ground-pool-height")!;
+    const wetness = look.children!.find((c) => c.id === "water-wetness")!;
+    const poolHeight = pool.children!.find((c) => c.id === "water-pool-height")!;
     const snap = (mode: string) => ({ "env.waterMode": mode } as Partial<PreviewSnapshot>);
     expect(wetness.visibleWhen?.(snap("film"))).toBe(true);
     expect(poolHeight.visibleWhen?.(snap("film"))).toBe(false);
@@ -835,10 +835,10 @@ describe("WaterCapability — 微细节法线（fragment 程序化，无 CPU 贴
     const cap = new WaterCapability({ scene });
     cap.apply();
     cap.setWaterMode("film");
-    const topBefore = cap["findTopWater"]() as THREE.Mesh;
+    const topBefore = (cap["water"].top as unknown as THREE.Mesh);
     // 走 registerEnvCallback 的 film size 分支（applyChangedParams，非重建路径）
     setEnvState({ waterSize: 60 }, { source: "manual" });
-    const topAfter = cap["findTopWater"]() as THREE.Mesh;
+    const topAfter = (cap["water"].top as unknown as THREE.Mesh);
     expect(topAfter, "film size 变更不得重建 mesh（scale 驱动）").toBe(topBefore);
     expect((topAfter.material as THREE.MeshPhysicalMaterial).normalMap).toBeNull();
     // size 的世界语义改由 uniform 承担（波浪波频与圆角裁剪依赖它们），替代原先的贴图重取
@@ -891,34 +891,34 @@ describe("WaterCapability — 菜单控件全联动", () => {
     };
     nodes[0]!.control!.set!(false);
     expect(nodes[0]!.control!.get!(undefined)).toBe(false);
-    by("ground-water-mode").control!.set!("pool");
-    expect(by("ground-water-mode").control!.get!(undefined)).toBe("pool");
-    by("ground-water-size").control!.set!(140);
-    expect(by("ground-water-size").control!.get!(undefined)).toBeCloseTo(140, 5);
-    by("ground-water-level").control!.set!(1.2);
-    expect(by("ground-water-level").control!.get!(undefined)).toBeCloseTo(1.2, 5);
-    by("ground-wetness").control!.set!(0.45);
-    expect(by("ground-wetness").control!.get!(undefined)).toBeCloseTo(0.45, 5);
-    by("ground-water-color").control!.set!(0x0a0b0c);
-    expect(by("ground-water-color").control!.get!(undefined)).toBe(0x0a0b0c);
-    by("ground-water-opacity").control!.set!(0.55);
-    expect(by("ground-water-opacity").control!.get!(undefined)).toBeCloseTo(0.55, 5);
-    by("ground-normal-strength").control!.set!(0.6);
-    expect(by("ground-normal-strength").control!.get!(undefined)).toBeCloseTo(0.6, 5);
-    by("ground-water-clarity").control!.set!(0.35);
-    expect(by("ground-water-clarity").control!.get!(undefined)).toBeCloseTo(0.35, 5);
-    by("ground-pool-height").control!.set!(1.5);
-    expect(by("ground-pool-height").control!.get!(undefined)).toBeCloseTo(1.5, 5);
-    by("ground-pool-wall-thickness").control!.set!(0.4);
-    expect(by("ground-pool-wall-thickness").control!.get!(undefined)).toBeCloseTo(0.4, 5);
-    by("ground-pool-wall-color").control!.set!(0x334455);
-    expect(by("ground-pool-wall-color").control!.get!(undefined)).toBe(0x334455);
-    by("ground-pool-roundness").control!.set!(0.2);
-    expect(by("ground-pool-roundness").control!.get!(undefined)).toBeCloseTo(0.2, 5);
-    by("ground-wave-speed").control!.set!(1.8);
-    expect(by("ground-wave-speed").control!.get!(undefined)).toBeCloseTo(1.8, 5);
-    by("ground-water-choppiness").control!.set!(0.42);
-    expect(by("ground-water-choppiness").control!.get!(undefined)).toBeCloseTo(0.42, 5);
+    by("water-mode").control!.set!("pool");
+    expect(by("water-mode").control!.get!(undefined)).toBe("pool");
+    by("water-size").control!.set!(140);
+    expect(by("water-size").control!.get!(undefined)).toBeCloseTo(140, 5);
+    by("water-level").control!.set!(1.2);
+    expect(by("water-level").control!.get!(undefined)).toBeCloseTo(1.2, 5);
+    by("water-wetness").control!.set!(0.45);
+    expect(by("water-wetness").control!.get!(undefined)).toBeCloseTo(0.45, 5);
+    by("water-color").control!.set!(0x0a0b0c);
+    expect(by("water-color").control!.get!(undefined)).toBe(0x0a0b0c);
+    by("water-opacity").control!.set!(0.55);
+    expect(by("water-opacity").control!.get!(undefined)).toBeCloseTo(0.55, 5);
+    by("water-normal-strength").control!.set!(0.6);
+    expect(by("water-normal-strength").control!.get!(undefined)).toBeCloseTo(0.6, 5);
+    by("water-clarity").control!.set!(0.35);
+    expect(by("water-clarity").control!.get!(undefined)).toBeCloseTo(0.35, 5);
+    by("water-pool-height").control!.set!(1.5);
+    expect(by("water-pool-height").control!.get!(undefined)).toBeCloseTo(1.5, 5);
+    by("water-pool-wall-thickness").control!.set!(0.4);
+    expect(by("water-pool-wall-thickness").control!.get!(undefined)).toBeCloseTo(0.4, 5);
+    by("water-pool-wall-color").control!.set!(0x334455);
+    expect(by("water-pool-wall-color").control!.get!(undefined)).toBe(0x334455);
+    by("water-pool-roundness").control!.set!(0.2);
+    expect(by("water-pool-roundness").control!.get!(undefined)).toBeCloseTo(0.2, 5);
+    by("water-wave-speed").control!.set!(1.8);
+    expect(by("water-wave-speed").control!.get!(undefined)).toBeCloseTo(1.8, 5);
+    by("water-choppiness").control!.set!(0.42);
+    expect(by("water-choppiness").control!.get!(undefined)).toBeCloseTo(0.42, 5);
   });
 });
 
@@ -934,7 +934,7 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const nodes = cap.getMenuNodes();
     expect(nodes).toHaveLength(5);
     expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.id).toBe("ground-water-enabled");
+    expect(nodes[0]!.id).toBe("water-enabled");
     nodes[0]!.control!.set!(false);
     expect(cap.getWaterEnabled()).toBe(false);
     expect(nodes.slice(1).map((n) => n.labelKey)).toEqual([
@@ -945,12 +945,12 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     ]);
     const look = nodes[2]!;
     expect(look.children!.map((c) => c.id)).toEqual([
-      "ground-wetness",
-      "ground-water-color",
-      "ground-water-opacity",
-      "ground-normal-strength",
-      "ground-water-clarity",
-      "ground-water-choppiness",
+      "water-wetness",
+      "water-color",
+      "water-opacity",
+      "water-normal-strength",
+      "water-clarity",
+      "water-choppiness",
     ]);
   });
 
@@ -958,11 +958,11 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const cap = newCap();
     const nodes = cap.getMenuNodes();
     const look = nodes[2]!;
-    const wetness = look.children!.find((c) => c.id === "ground-wetness")!;
+    const wetness = look.children!.find((c) => c.id === "water-wetness")!;
     expect(wetness.visibleWhen?.({ "env.waterMode": "film" })).toBe(true);
     expect(wetness.visibleWhen?.({ "env.waterMode": "pool" })).toBe(false);
     const pool = nodes[3]!;
-    const height = pool.children!.find((c) => c.id === "ground-pool-height")!;
+    const height = pool.children!.find((c) => c.id === "water-pool-height")!;
     expect(height.visibleWhen?.({ "env.waterMode": "pool" })).toBe(true);
     expect(height.visibleWhen?.({ "env.waterMode": "film" })).toBe(false);
   });
@@ -971,7 +971,7 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const cap = newCap();
     const nodes = cap.getMenuNodes();
     const look = nodes[2]!;
-    const clarity = look.children!.find((c) => c.id === "ground-water-clarity")!;
+    const clarity = look.children!.find((c) => c.id === "water-clarity")!;
     expect(clarity.visibleWhen).toBeDefined();
     expect(clarity.visibleWhen?.({ "env.waterMode": "pool" })).toBe(true);
     expect(clarity.visibleWhen?.({ "env.waterMode": "film" })).toBe(false);
@@ -981,11 +981,11 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const cap = newCap();
     const nodes = cap.getMenuNodes();
     const look = nodes[2]!;
-    const color = look.children!.find((c) => c.id === "ground-water-color")!;
+    const color = look.children!.find((c) => c.id === "water-color")!;
     expect(color.kind).toBe("color");
     color.control!.set!(0x3355aa);
     expect(cap.getWaterColor()).toBe(0x3355aa);
-    const opacity = look.children!.find((c) => c.id === "ground-water-opacity")!;
+    const opacity = look.children!.find((c) => c.id === "water-opacity")!;
     opacity.control!.set!(0.6);
     expect(cap.getWaterOpacity()).toBeCloseTo(0.6, 5);
   });
@@ -1078,7 +1078,7 @@ describe("WaterCapability — 水面/容器解耦：waterLevel（ADR-257 A 档�
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
     const form = nodes[1]!;
-    const level = form.children!.find((c) => c.id === "ground-water-level");
+    const level = form.children!.find((c) => c.id === "water-level");
     expect(level).toBeDefined();
     expect(level!.visibleWhen).toBeUndefined(); // 关键：不带模式门控
     level!.control!.set!(0.77);
@@ -1183,17 +1183,17 @@ describe("WaterCapability — waterSize UI 入口与零重建（ADR-272）", () 
     const cap = new WaterCapability({ scene: new THREE.Scene() });
     const sliders = cap.getMenuNodes().flatMap((n) => n.children ?? []);
     const pairs = [
-      ["ground-water-level", "waterLevel"],
-      ["ground-water-size", "waterSize"],
-      ["ground-wetness", "waterWetness"],
-      ["ground-water-opacity", "waterOpacity"],
-      ["ground-normal-strength", "waterNormalStrength"],
-      ["ground-water-clarity", "waterClarity"],
-      ["ground-water-choppiness", "waterChoppiness"],
-      ["ground-pool-height", "waterPoolHeight"],
-      ["ground-pool-wall-thickness", "waterPoolWallThickness"],
-      ["ground-pool-roundness", "waterPoolRoundness"],
-      ["ground-wave-speed", "waterWaveSpeed"],
+      ["water-level", "waterLevel"],
+      ["water-size", "waterSize"],
+      ["water-wetness", "waterWetness"],
+      ["water-opacity", "waterOpacity"],
+      ["water-normal-strength", "waterNormalStrength"],
+      ["water-clarity", "waterClarity"],
+      ["water-choppiness", "waterChoppiness"],
+      ["water-pool-height", "waterPoolHeight"],
+      ["water-pool-wall-thickness", "waterPoolWallThickness"],
+      ["water-pool-roundness", "waterPoolRoundness"],
+      ["water-wave-speed", "waterWaveSpeed"],
     ] as const;
     for (const [id, key] of pairs) {
       const node = sliders.find((c) => c.id === id);
@@ -1207,10 +1207,10 @@ describe("WaterCapability — waterSize UI 入口与零重建（ADR-272）", () 
   it("菜单 ground-water-size：form 组、跨形态无 visibleWhen、双向直连 cap", () => {
     const cap = new WaterCapability({ scene: new THREE.Scene() });
     const form = cap.getMenuNodes()[1]!;
-    const size = form.children!.find((c) => c.id === "ground-water-size");
+    const size = form.children!.find((c) => c.id === "water-size");
     expect(size).toBeDefined();
     expect(size!.kind).toBe("slider");
-    expect(size!.labelKey).toBe("preview.groundWaterSize");
+    expect(size!.labelKey).toBe("preview.waterSize");
     expect(size!.visibleWhen, "与 ground-water-level 同款：film/pool 通用").toBeUndefined();
     size!.control!.set!(140);
     expect(cap.getWaterSize()).toBe(140);
@@ -1306,3 +1306,67 @@ describe("WaterCapability — waterSize UI 入口与零重建（ADR-272）", () 
     expect(live.uniforms.uHalfSize.value).toBe(70);
   });
 });
+
+describe("ADR-286 分派表：顺序无关性守卫", () => {
+  /** 逐 mesh 快照：几何类型 / 变换 / 材质可见属性（opacity/color/transmission/thickness） */
+  function snapshot(cap: WaterCapability): string {
+    const out: unknown[] = [];
+    cap["water"].root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      const mat = m.material as THREE.MeshPhysicalMaterial;
+      out.push({
+        g: m.geometry.type,
+        p: [m.position.x, m.position.y, m.position.z],
+        s: [m.scale.x, m.scale.y, m.scale.z],
+        o: mat.opacity,
+        c: "color" in mat ? mat.color.getHex() : null,
+        tr: "transmission" in mat ? mat.transmission : null,
+        th: "thickness" in mat ? mat.thickness : null,
+      });
+    });
+    return JSON.stringify(out);
+  }
+
+  const PATCH = {
+    waterOpacity: 0.7,
+    waterWetness: 0.6,
+    waterColor: 0x112233,
+    waterNormalStrength: 0.8,
+    waterPoolWallColor: 0x445566,
+    waterPoolRoundness: 0.3,
+    waterClarity: 0.5,
+    waterSize: 120,
+    waterPoolHeight: 3,
+    waterPoolWallThickness: 0.4,
+    waterChoppiness: 1.5,
+    waterLevel: 1.2,
+  } as const;
+
+  it("乱序全量 patch（单次派发）与单键逐发（正序多次）落到完全一致的渲染体", () => {
+    // Run1：单键逐发（正序）——模拟旧瀑布的键序
+    resetEnvState();
+    const sceneA = new THREE.Scene();
+    const capA = new WaterCapability({ scene: sceneA });
+    capA.apply();
+    capA.setWaterMode("pool");
+    for (const [k, v] of Object.entries(PATCH)) {
+      setEnvState({ [k]: v } as unknown as Partial<typeof envState>, { source: "manual" });
+    }
+    const snapA = snapshot(capA);
+    capA.dispose();
+
+    // Run2：同一终态、但一次乱序全量 patch（分派表按 changed 集合序逐键派发）
+    resetEnvState();
+    const sceneB = new THREE.Scene();
+    const capB = new WaterCapability({ scene: sceneB });
+    capB.apply();
+    capB.setWaterMode("pool");
+    const reversed = Object.fromEntries(Object.entries(PATCH).reverse());
+    setEnvState(reversed as unknown as Partial<typeof envState>, { source: "manual" });
+    const snapB = snapshot(capB);
+
+    expect(snapB).toBe(snapA);
+  });
+});
+

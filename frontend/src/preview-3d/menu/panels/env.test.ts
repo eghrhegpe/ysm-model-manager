@@ -237,12 +237,12 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
       {
         id: "cap-group-ground-water",
         kind: "folder",
-        labelKey: "preview.groundGroupWater",
+        labelKey: "preview.water",
         children: [
           {
             id: "ground-water-enabled",
             kind: "toggle",
-            labelKey: "preview.groundWaterEnabled",
+            labelKey: "preview.waterEnabled",
             control: {
               get: () => true,
               set: () => {},

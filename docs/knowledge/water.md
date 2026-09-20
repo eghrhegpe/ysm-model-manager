@@ -103,14 +103,20 @@ invariant_anchors:
    已于 2026-09-20 在 `applyChangedParams` 的 `waterPoolHeight` 分支补重派生（仅
    `supportsVolumeOptics` 形态，film 水膜恒 0 不得被误赋）。教训：**任何「由参数派生、只在装配期算」
    的量，在零重建形态里都是定时炸弹**——新增派生量时先问「谁负责在运行期重算它」。
-5. **参数应用**：`registerEnvCallback` 单入口三分派——mode 切换重建容器、结构参数就地改 transform（`applyProfile`）、参数字段就地改
-   material / uniform、开关只切可见性。setter 只写 `envState`，不各自就地改渲染。
+5. **参数应用（ADR-286 分派表，2026-09-20）**：`registerEnvCallback` 单入口三分派——mode 切换重建容器、
+   结构参数就地改 transform（`applyProfile`）、参数字段就地改 material / uniform、开关只切可见性。
+   setter 只写 `envState`，不各自就地改渲染。参数应用已由 if 瀑布收敛为模块级
+   `WATER_PARAM_APPLIERS: Record<WaterParamKey, applier>` **逐键分派表**（`water-capability.ts`）：
+   `Record` 对 water 组全键编译期强制表态（`waterEnabled`/`waterMode`/`waterWaveSpeed` 为显式 no-op 声明），
+   **新增 water 参数 = schema 声明 + 表内加一条目，漏接编译期即红**；条目间写互不相交字段，
+   派发序无关结果（守卫测试：乱序全量 patch ≡ 单键逐发快照一致）。
+   原 `findTopWater`/`syncBaseOpacityUniform` 私有 helper 已随瀑布退役（顶水面恒为 `water.top`）。
 
 ## 对外 API / 入口
 
-- 能力开关：`setWaterEnabled` / `getWaterEnabled`（菜单 id `ground-water-enabled`，cap 的 master node）
+- 能力开关：`setWaterEnabled` / `getWaterEnabled`（菜单 id `water-enabled`，cap 的 master node）
 - 形态：`setWaterMode` / `getWaterMode`；水位：`setLevel` / `getLevel`（**跨形态通用，零重建**）
-- 尺寸：`setWaterSize` / `getWaterSize`（菜单 id `ground-water-size`，展示域 10–300 m / 合法域 ≥1；**跨形态通用，零重建**，ADR-272 + ADR-283）
+- 尺寸：`setWaterSize` / `getWaterSize`（菜单 id `water-size`，展示域 10–300 m / 合法域 ≥1；**跨形态通用，零重建**，ADR-272 + ADR-283）
 - 外观：`setWaterColor`、`setWaterOpacity`、`setWetness`、`setNormalStrength`、`setClarity`、`setChoppiness`
 - 池体：`setPoolHeight`、`setPoolWallThickness`（**两条均零重建**，ADR-272 §5.1：壁高走 `scale.y`、外偏与光学光程运行期现算）、`setPoolWallColor`、`setPoolRoundness`（钳制同源 schema `range`，ADR-283）
 - 波纹：`setWaveSpeed`；时间推进走 `update(dt)` 累加 `waterTime`（仅推进 uniform，从不写变换）

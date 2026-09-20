@@ -36,6 +36,7 @@ import {
   getWaterBodyStrategy,
   INNER_WALL_OPACITY_FACTOR,
   type WaterBody,
+  type WaterBodyStrategy,
   type WaterBuildContext,
   type WaterPartRole,
   type WaterTopMesh,
@@ -50,6 +51,112 @@ export type { WaterMode };
 // 原实现挂在 onBeforeCompile + 模块级 once flag：`waterRevisionChecked` 是进程级单例，
 // 多实例（多 tab / 场景重建）下只有首个实例真正被审计，语义也难推理——现每实例每次构造断言，
 // 构造频率是用户操作级（模式切换 / pool 结构字段变更），开销可忽略。
+/* ===== ADR-286：water 参数应用分派表 =====
+ * 原为 applyChangedParams 里的逐键 if 瀑布；现按 changed 逐键查表派发：
+ *  - `Record<WaterParamKey, …>` 编译期强制 water 组每键表态——缺键即红；
+ *  - `waterEnabled` / `waterMode` / `waterWaveSpeed` 的空条目是**结构性声明**（非疏漏）：
+ *    分别由回调的 syncWaterVisibility / rebuildWaterContainer / update 累加速度承接，此处无材质应用；
+ *  - 条目间写互不相交的字段、派生量（effectiveOpacity）由 envState 现算，故派发序无关结果；
+ *  - 形态门控（wetnessGated / supportsVolumeOptics / 空 targets 数组）一律查 strategy，不写 mode 分支。 */
+type WaterParamKey = Extract<EnvStateKey, `water${string}`>;
+type WaterApplyCtx = {
+  water: WaterBody;
+  strategy: WaterBodyStrategy;
+  targets: (role: WaterPartRole) => THREE.Mesh[];
+  /** 顶水面（承载波浪材质）：各形态 build 期统一塞入，恒存在 */
+  top: WaterTopMesh;
+  setUniform: (mat: THREE.Material | undefined, name: string, value: number) => void;
+};
+/** 结构参数三键共享：查表执行 transformLinks（幂等，重复调用 no-op） */
+function applyStructuralProfile(ctx: WaterApplyCtx): void {
+  ctx.strategy.applyProfile(ctx.water, {
+    size: envState.waterSize,
+    poolHeight: envState.waterPoolHeight,
+    wallThickness: envState.waterPoolWallThickness,
+  });
+}
+const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> = {
+  waterEnabled: () => {}, // 可见性由回调 syncWaterVisibility 单独承接
+  waterMode: () => {}, // 形态切换由回调 rebuildWaterContainer 承接，不入本表
+  waterWaveSpeed: () => {}, // 无材质应用（仅 update 累加速度读值）
+  waterWetness: ({ strategy, top, setUniform }) => {
+    if (!strategy.wetnessGated) return;
+    const eff = envState.waterOpacity * envState.waterWetness;
+    top.material.opacity = eff;
+    setUniform(top.material, "uBaseOpacity", eff);
+  },
+  waterOpacity: ({ strategy, targets, top, setUniform }) => {
+    // 顶水面 + 池内壁（ADR-257 审核 Item 6：内壁透明度必须随 waterOpacity 跟随，
+    // 否则拖透明度滑块时水面与池壁脱节；内壁套 INNER_WALL_OPACITY_FACTOR 与构建期一致）
+    const eff = strategy.wetnessGated
+      ? envState.waterOpacity * envState.waterWetness
+      : envState.waterOpacity;
+    top.material.opacity = eff;
+    setUniform(top.material, "uBaseOpacity", eff);
+    for (const m of targets("wallInner")) {
+      (m.material as THREE.MeshPhysicalMaterial).opacity =
+        envState.waterOpacity * INNER_WALL_OPACITY_FACTOR;
+    }
+  },
+  waterColor: ({ targets }) => {
+    for (const m of [...targets("surface"), ...targets("wallInner")]) {
+      const mat = m.material as THREE.MeshPhysicalMaterial | THREE.MeshStandardMaterial;
+      if ("color" in mat) mat.color.setHex(envState.waterColor);
+    }
+  },
+  waterNormalStrength: ({ top, setUniform }) => {
+    // 微细节法线强度（GPU 侧就地生效，无贴图重算、无 needsUpdate）
+    setUniform(top.material, "uDetailStrength", envState.waterNormalStrength);
+  },
+  waterPoolWallColor: ({ targets }) => {
+    // 池底 + 外壁（film 下两者皆空数组，天然 no-op）
+    for (const m of [...targets("floor"), ...targets("wallOuter")]) {
+      (m.material as THREE.MeshStandardMaterial).color.setHex(envState.waterPoolWallColor);
+    }
+  },
+  waterPoolRoundness: ({ top, setUniform }) => {
+    // 经 clampPoolRoundness——与构造期同一钳制，防存档恢复/其他 cap 直写 envState 时越界值漏进 uniform
+    setUniform(top.material, "uRoundness", clampPoolRoundness(envState.waterPoolRoundness));
+  },
+  waterClarity: ({ strategy, targets, top }) => {
+    // 仅启用体积光学的形态，避免把 film 水膜变透光体
+    if (!strategy.supportsVolumeOptics) return;
+    for (const m of [...targets("surface"), ...targets("wallInner")]) {
+      const mat = m.material as THREE.MeshPhysicalMaterial;
+      if ("transmission" in mat) {
+        mat.transmission = m === top ? envState.waterClarity : envState.waterClarity * 0.5;
+        mat.needsUpdate = true;
+      }
+    }
+  },
+  waterSize: (ctx) => {
+    applyStructuralProfile(ctx);
+    // uSize / uHalfSize 属波浪 shader 的共享 uniform（跨形态一致），故仍留在 cap 而非下沉
+    ctx.setUniform(ctx.top.material, "uSize", envState.waterSize);
+    ctx.setUniform(ctx.top.material, "uHalfSize", envState.waterSize / 2);
+  },
+  waterPoolHeight: (ctx) => {
+    applyStructuralProfile(ctx);
+    // 池深同时是顶水面的体积光学光程（ADR-257：「容器内水的光程」由容器深度派生）。
+    // 派生量必须随 poolHeight 重算，否则拖池深滑块观感裂缝；仅 supportsVolumeOptics 有意义。
+    if (!ctx.strategy.supportsVolumeOptics) return;
+    ctx.top.material.thickness = Math.max(0.01, envState.waterPoolHeight * 0.5);
+  },
+  waterPoolWallThickness: (ctx) => {
+    applyStructuralProfile(ctx);
+    // 壁厚同时是池内壁的体积光学光程（材质属性，与几何无关）
+    for (const m of ctx.targets("wallInner")) {
+      (m.material as THREE.MeshPhysicalMaterial).thickness = envState.waterPoolWallThickness;
+    }
+  },
+  waterChoppiness: ({ top, setUniform }) => {
+    setUniform(top.material, "uChoppiness", envState.waterChoppiness);
+  },
+  waterLevel: ({ water, strategy }) => {
+    // ADR-257：水面 position.y（film/pool 通用，零重建）——旧语义抬水面须重建 10 个 mesh，如今一个标量
+    strategy.applyLevel(water, envState.waterLevel);
+  },
+};
 
 export class WaterCapability implements SceneCapability {
   readonly id = "water";
@@ -313,11 +420,6 @@ export class WaterCapability implements SceneCapability {
     return out;
   }
 
-  /** 顶水面（承载波浪材质）——各形态在 build 时统一塞进 top，故无需再按形态分支 */
-  private findTopWater(): WaterTopMesh {
-    return this.water.top;
-  }
-
   /**
    * 交给形态策略的装配上下文：材质构造（含波浪 shader 注入）仍留在 cap 侧，
    * strategy 只负责「用这些零件搭出什么样的水体」（ADR-257 B 档）。
@@ -421,118 +523,22 @@ export class WaterCapability implements SceneCapability {
 
   // ── 水面参数（film + pool 通用）──
   // 就地渲染应用统一入口（registerEnvCallback 的参数字段分派）：不重建容器，保持材质句柄稳定。
+  // ADR-286：应用逻辑全部在模块级 WATER_PARAM_APPLIERS 分派表（编译期完备 + 形态差异查 strategy），
+  // 本方法只负责装配 ctx 并逐键派发。
   private applyChangedParams(changed: Set<EnvStateKey>): void {
-    const s = envState;
-    // ADR-257：形态差异一律查表，此处不再出现 `mode === "film" / "pool"` 分支。
-    // film 形态下 wallInner / wallOuter / floor 均为空数组——正因如此，
-    // 形如 [...targets("surface"), ...targets("wallInner")] 的表达式才能一行同时适配两种形态。
-    const strategy = getWaterBodyStrategy(s.waterMode);
-    const targets = (role: WaterPartRole) => strategy.getTargets(this.water, role);
-    // 受 wetness 门控的形态（film）需乘上 wetness 才是有效不透明度
-    const effectiveOpacity = strategy.wetnessGated
-      ? s.waterOpacity * s.waterWetness
-      : s.waterOpacity;
-
-    // wetness → 顶水面 opacity + uBaseOpacity uniform（仅对受门控形态有意义）
-    if (changed.has("waterWetness") && strategy.wetnessGated) {
-      const mat = this.water.top.material;
-      mat.opacity = effectiveOpacity;
-      this.syncBaseOpacityUniform(mat, mat.opacity);
+    const strategy = getWaterBodyStrategy(envState.waterMode);
+    const ctx: WaterApplyCtx = {
+      water: this.water,
+      strategy,
+      targets: (role) => strategy.getTargets(this.water, role),
+      top: this.water.top,
+      setUniform: this.setUniform,
+    };
+    for (const key of changed) {
+      // dispatcher 已前置过滤为 water 组；类型收窄在此收敛（拼错键 = undefined no-op，
+      // 与旧行为「changed.has 不命中即跳过」一致）
+      WATER_PARAM_APPLIERS[key as WaterParamKey]?.(ctx);
     }
-    // opacity → 顶水面 + 池内壁（ADR-257 审核 Item 6：内壁透明度必须随 waterOpacity 跟随，
-    // 否则拖透明度滑块时水面与池壁脱节；内壁套 INNER_WALL_OPACITY_FACTOR 与构建期一致）
-    if (changed.has("waterOpacity")) {
-      const top = this.findTopWater();
-      if (top) {
-        top.material.opacity = effectiveOpacity;
-        this.syncBaseOpacityUniform(top.material, effectiveOpacity);
-      }
-      for (const m of targets("wallInner")) {
-        (m.material as THREE.MeshPhysicalMaterial).opacity =
-          s.waterOpacity * INNER_WALL_OPACITY_FACTOR;
-      }
-    }
-    // color → 水面 + 内壁
-    if (changed.has("waterColor")) {
-      for (const m of [...targets("surface"), ...targets("wallInner")]) {
-        const mat = m.material as THREE.MeshPhysicalMaterial | THREE.MeshStandardMaterial;
-        if ("color" in mat) mat.color.setHex(s.waterColor);
-      }
-    }
-    // normalStrength → 顶水面 uDetailStrength uniform（微细节法线强度，GPU 侧就地生效，
-    // 无贴图重算、无 needsUpdate）
-    if (changed.has("waterNormalStrength")) {
-      this.setUniform(this.findTopWater()?.material, "uDetailStrength", s.waterNormalStrength);
-    }
-    // poolWallColor → 池底 + 外壁（film 下两者皆空数组，天然 no-op）
-    if (changed.has("waterPoolWallColor")) {
-      for (const m of [...targets("floor"), ...targets("wallOuter")]) {
-        (m.material as THREE.MeshStandardMaterial).color.setHex(s.waterPoolWallColor);
-      }
-    }
-    // poolRoundness → top uRoundness uniform（经 clampPoolRoundness——与构造期同一钳制，
-    // 防存档恢复/其他 cap 直写 envState 时越界值从这条路径漏进 uniform）
-    if (changed.has("waterPoolRoundness")) {
-      this.setUniform(
-        this.findTopWater()?.material,
-        "uRoundness",
-        clampPoolRoundness(s.waterPoolRoundness),
-      );
-    }
-    // clarity → 水面 + 内壁 transmission（仅启用体积光学的形态，避免把 film 水膜变透光体）
-    if (changed.has("waterClarity") && strategy.supportsVolumeOptics) {
-      for (const m of [...targets("surface"), ...targets("wallInner")]) {
-        const mat = m.material as THREE.MeshPhysicalMaterial;
-        if ("transmission" in mat) {
-          mat.transmission = m === this.water.top ? s.waterClarity : s.waterClarity * 0.5;
-          mat.needsUpdate = true;
-        }
-      }
-    }
-    // 结构参数（size / 池深 / 壁厚）：交由形态按 transformLinks 查表就地应用，容器零重建——
-    // pool 的 h / t 原烘焙进壁几何而必须重建，现已收进 links（ADR-272 扩展）。
-    if (
-      changed.has("waterSize") ||
-      changed.has("waterPoolHeight") ||
-      changed.has("waterPoolWallThickness")
-    ) {
-      strategy.applyProfile(this.water, {
-        size: s.waterSize,
-        poolHeight: s.waterPoolHeight,
-        wallThickness: s.waterPoolWallThickness,
-      });
-      // 池深同时是顶水面的体积光学光程（ADR-257：「容器内水的光程」由容器深度派生）。
-      // 它是**派生量**，必须随 poolHeight 重算——ADR-272 后 pool 的 needsRebuild 恒 false，
-      // 没有任何重建路径会重跑构造期的 thickness，不在此处重派生就会停在装配那一刻：
-      // 池子变深、水体光程不变（拖池深滑块可感的观感裂缝）。
-      // 仅 supportsVolumeOptics 形态有意义（film 水膜无厚度，必须保持 0，不得被误赋）。
-      if (changed.has("waterPoolHeight") && strategy.supportsVolumeOptics) {
-        const topMat = this.findTopWater()?.material;
-        if (topMat) topMat.thickness = Math.max(0.01, s.waterPoolHeight * 0.5);
-      }
-      // 壁厚同时是池内壁的体积光学光程（材质属性，与几何无关）
-      if (changed.has("waterPoolWallThickness")) {
-        for (const m of targets("wallInner")) {
-          (m.material as THREE.MeshPhysicalMaterial).thickness = s.waterPoolWallThickness;
-        }
-      }
-      // uSize / uHalfSize 属波浪 shader 的共享 uniform（跨形态一致），故仍留在 cap 而非下沉。
-      if (changed.has("waterSize")) {
-        const topMat = this.findTopWater()?.material;
-        this.setUniform(topMat, "uSize", s.waterSize);
-        this.setUniform(topMat, "uHalfSize", s.waterSize / 2);
-      }
-    }
-    // choppiness：顶 uChoppiness uniform（film/pool 共用，ADR-255 改造 B）
-    if (changed.has("waterChoppiness")) {
-      this.setUniform(this.findTopWater()?.material, "uChoppiness", s.waterChoppiness);
-    }
-    // ADR-257：waterLevel → 水面 position.y（film/pool 通用，零重建）。
-    // 解耦的全部收益在此：旧语义下抬水面必须走 pool 并重建 10 个 mesh，如今只改一个标量。
-    if (changed.has("waterLevel")) {
-      strategy.applyLevel(this.water, s.waterLevel);
-    }
-    // waterWaveSpeed：无材质应用（仅 update 累加速度读值）
   }
 
   /** 顶水面 shader 的 uniform 就地写入——穿透 three 的 userData.shader 后门，统一收口。
@@ -546,10 +552,6 @@ export class WaterCapability implements SceneCapability {
       }
     )?.userData?.shader?.uniforms?.[name];
     if (u) u.value = value;
-  }
-
-  private syncBaseOpacityUniform(mat: THREE.MeshPhysicalMaterial, value: number): void {
-    this.setUniform(mat, "uBaseOpacity", value);
   }
 
   setWetness(v: number): void {
@@ -658,7 +660,7 @@ export class WaterCapability implements SceneCapability {
 
   /** 能力主开关节点 id：env 面板据此升 headerToggle + body 剔除同源 */
   getMasterNodeId(): string {
-    return "ground-water-enabled";
+    return "water-enabled";
   }
 
   /** 环境面板归属（ADR-268）：基础卡末位 */

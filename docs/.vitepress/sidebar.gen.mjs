@@ -246,6 +246,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-287：water 菜单 ground- 化石前缀重命名",
+        "link": "/adr/ADR-287-water-ground"
+      },
+      {
+        "text": "ADR-286：water applyChangedParams 声明式分派表",
+        "link": "/adr/ADR-286-water-applychangedparams"
+      },
+      {
         "text": "ADR-285：跑基准可用性收口：动作与参数同序、文案去重、术语本地化",
         "link": "/adr/ADR-285-bench-usability-copy-diff-plan"
       },

@@ -24,11 +24,13 @@ quick_risk_lines:
 pitfalls:
   - 手写菜单结构 → 与 buildGroundNodes 输出不一致、菜单构建重复；必须经工厂函数
   - 新增地面模式未走工厂 → 菜单缺控件；必须在 ground-menu.ts 中注册
+  - 滑杆值域字面量写进菜单 → 与 schema 漂移（改一处不生效）；ADR-283 起值域只从 `getParamRange(key)` 取
 
 use_when:
   - 评审 ground-capability.ts 菜单构建
   - ground 材质菜单节点
   - ADR-195 cap 直产节点
+  - ground 滑杆值域 / ADR-283
 status: active
 ---
 
@@ -70,6 +72,7 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 - 白名单与 select 选项列表保持对齐（ADR-249/252 拆轴后：来源轴 `GROUND_SOURCE_KINDS` = none/solid/canvas/texture，样式轴 `GROUND_CANVAS_STYLES` = plain/marble/sand/grass；统一枚举 `GROUND_SURFACE_MODES` 当前 7 项 = none/solid/plain/marble/sand/grass/texture，旧 9 值已迁出至 `LEGACY_GROUND_MAT_SOURCES` 仅迁移路径消费）。
 - `textureButtonsNode` 走 `controls` 通道节点（保 `variant`/`getHint` 语义），非原生 button 节点。
 - `visibleWhen` 谓词（B 轨快照驱动）原样挂节点：`paramVisible(param)` 逐参数 × 逐模式判定（`ground-surface-spec.ts|paramIsEffective`），在来源轴/样式轴下对应子控件可见；原 `groundSurfaceOn` 已删除（`paramIsEffective` 对 `none` 全返 false，语义已覆盖）。
+- **滑杆值域唯一事实源 = `env-state-schema.ts` 的 `range`**（ADR-283）：10 个滑杆（8 材质 + 叠加层 size/opacity）一律 `getParamRange("<key>")` 取值域，菜单内零 `min/max/step` 字面量；钳制收口 `setEnvState` 唯一写入口，setter 不再手写 `Math.max/min`（`groundMatGridSize` 的 `Math.round` 是数据类型归一，非值域，保留在 setter）。
 
 ## 历史问题清单（2026-08-27 ts-package-review）— 已完成修复
 
@@ -82,3 +85,4 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 - 兄弟卡：`ground_surface_spec.md`（材质 spec 单源驱动，新增 3 种程序化像素）
 - ADR-195（cap 直产 PreviewMenuNode[] 终态）
 - ADR-117（ground-material-spec 单一事实源，参数嵌套设计）
+- ADR-283（参数值域描述符：schema `range`/`uiRange` 单一事实源，钳制收口 `setEnvState`）

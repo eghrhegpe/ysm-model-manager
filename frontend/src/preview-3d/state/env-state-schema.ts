@@ -125,8 +125,18 @@ export const ENV_STATE_SCHEMA = {
     group: "ground",
   },
   groundOverlayColor: { type: "number", default: 0xffffff, group: "ground" },
-  groundOverlaySize: { type: "number", default: 10, group: "ground" },
-  groundOverlayOpacity: { type: "number", default: 1, group: "ground" },
+  groundOverlaySize: {
+    type: "number",
+    default: 10,
+    group: "ground",
+    range: { min: 2, max: 64, step: 1 },
+  },
+  groundOverlayOpacity: {
+    type: "number",
+    default: 1,
+    group: "ground",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
   groundSize: { type: "number", default: 80, group: "ground" },
   groundDivisions: { type: "number", default: 60, group: "ground" },
   groundColorCenter: { type: "number", default: 0x555577, group: "ground" },
@@ -134,18 +144,57 @@ export const ENV_STATE_SCHEMA = {
   // ADR-249 §2.6：默认值统一取自 spec（唯一事实源），不在此重写字面量。
   groundMatColor: { type: "number", default: GROUND_DEFAULTS.matColor, group: "ground" },
   groundMatColor2: { type: "number", default: GROUND_DEFAULTS.matColor2, group: "ground" },
-  groundMatGridSize: { type: "number", default: GROUND_DEFAULTS.matGridSize, group: "ground" },
-  groundMatOpacity: { type: "number", default: GROUND_DEFAULTS.matOpacity, group: "ground" },
-  groundMatScale: { type: "number", default: GROUND_DEFAULTS.matScale, group: "ground" },
+  groundMatGridSize: {
+    type: "number",
+    default: GROUND_DEFAULTS.matGridSize,
+    group: "ground",
+    // 合法域上界 32 取自滑杆（原钳制 Math.max(2, round(n)) 无上界，ADR-283 迁移时补齐）
+    range: { min: 2, max: 32, step: 1 },
+  },
+  groundMatOpacity: {
+    type: "number",
+    default: GROUND_DEFAULTS.matOpacity,
+    group: "ground",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
+  groundMatScale: {
+    type: "number",
+    default: GROUND_DEFAULTS.matScale,
+    group: "ground",
+    range: { min: 0.25, max: 8, step: 0.25 },
+  },
   groundMatRotationDeg: {
     type: "number",
     default: GROUND_DEFAULTS.matRotationDeg,
     group: "ground",
+    // 角度域 [0,360]：实际归一靠 setter 的 360 回绕（非钳制），故入口钳制不会触发
+    range: { min: 0, max: 360, step: 5, unit: "°" },
   },
-  groundMatDensity: { type: "number", default: GROUND_DEFAULTS.matDensity, group: "ground" },
-  groundMatAngleDeg: { type: "number", default: GROUND_DEFAULTS.matAngleDeg, group: "ground" },
-  groundMatRoughness: { type: "number", default: GROUND_DEFAULTS.matRoughness, group: "ground" },
-  groundMatMetalness: { type: "number", default: GROUND_DEFAULTS.matMetalness, group: "ground" },
+  groundMatDensity: {
+    type: "number",
+    default: GROUND_DEFAULTS.matDensity,
+    group: "ground",
+    range: { min: 0.25, max: 8, step: 0.25 },
+  },
+  groundMatAngleDeg: {
+    type: "number",
+    default: GROUND_DEFAULTS.matAngleDeg,
+    group: "ground",
+    // 同 rotation：语义是回绕而非钳制
+    range: { min: 0, max: 360, step: 5, unit: "°" },
+  },
+  groundMatRoughness: {
+    type: "number",
+    default: GROUND_DEFAULTS.matRoughness,
+    group: "ground",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
+  groundMatMetalness: {
+    type: "number",
+    default: GROUND_DEFAULTS.matMetalness,
+    group: "ground",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
 
   // --- Water ---
   waterEnabled: { type: "boolean", default: true, group: "water" },
@@ -341,7 +390,6 @@ export const ENV_STATE_SCHEMA = {
   ppSsrBouncing: { type: "boolean", default: false, group: "postprocessing" },
   ppReflectorDisableWhenSSR: { type: "boolean", default: true, group: "postprocessing" },
 
-  // --- Light ---
   // --- Light ---
   // 统一灯光实例（[light-type-switch]）：每盏灯(key/fill/rim)可在
   // directional / point / spot 间切换，参数结构统一。

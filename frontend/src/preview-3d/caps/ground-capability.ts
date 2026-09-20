@@ -10,6 +10,7 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, registerEnvStateMiddleware, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import { clampFieldValue } from "@/preview-3d/state/env-state-schema.ts";
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -487,7 +488,8 @@ export class GroundCapability implements SceneCapability {
     return envState.groundOverlaySize;
   }
   setOverlaySize(n: number): void {
-    const clamped = Math.max(2, Math.min(64, Math.round(n)));
+    // 钳制读口与写入口同源（ADR-283）：早退比较必须用钳后值，否则会漏写
+    const clamped = clampFieldValue("groundOverlaySize", Math.round(n));
     if (envState.groundOverlaySize === clamped) return;
     setEnvState({ groundOverlaySize: clamped }, { source: "manual" });
     this.refreshOverlay();
@@ -497,7 +499,8 @@ export class GroundCapability implements SceneCapability {
     return envState.groundOverlayOpacity;
   }
   setOverlayOpacity(v: number): void {
-    const clamped = Math.max(0, Math.min(1, v));
+    // 钳制读口与写入口同源（ADR-283）：早退比较必须用钳后值，否则会漏写
+    const clamped = clampFieldValue("groundOverlayOpacity", v);
     if (envState.groundOverlayOpacity === clamped) return;
     setEnvState({ groundOverlayOpacity: clamped }, { source: "manual" });
     this.refreshOverlay();
@@ -517,21 +520,22 @@ export class GroundCapability implements SceneCapability {
     this.refreshSurface();
   }
   setMatGridSize(n: number): void {
-    setEnvState({ groundMatGridSize: Math.max(2, Math.round(n)) }, { source: "manual" });
+    // 取整是数据类型归一（非值域）；合法域 [2,32] 由唯一写入口钳制（ADR-283）
+    setEnvState({ groundMatGridSize: Math.round(n) }, { source: "manual" });
     this.refreshSurface();
   }
   getMatOpacity(): number {
     return envState.groundMatOpacity;
   }
   setMatOpacity(v: number): void {
-    setEnvState({ groundMatOpacity: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+    setEnvState({ groundMatOpacity: v }, { source: "manual" }); // 值域钳制在唯一写入口（ADR-283）
     this.refreshSurface();
   }
   getMatScale(): number {
     return envState.groundMatScale;
   }
   setMatScale(v: number): void {
-    setEnvState({ groundMatScale: Math.max(0.25, Math.min(8, v)) }, { source: "manual" });
+    setEnvState({ groundMatScale: v }, { source: "manual" }); // 值域钳制在唯一写入口（ADR-283）
     this.refreshSurface();
   }
   getMatRotation(): number {
@@ -545,14 +549,14 @@ export class GroundCapability implements SceneCapability {
     return envState.groundMatRoughness;
   }
   setMatRoughness(v: number): void {
-    setEnvState({ groundMatRoughness: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+    setEnvState({ groundMatRoughness: v }, { source: "manual" });
     this.refreshSurface();
   }
   getMatMetalness(): number {
     return envState.groundMatMetalness;
   }
   setMatMetalness(v: number): void {
-    setEnvState({ groundMatMetalness: Math.max(0, Math.min(1, v)) }, { source: "manual" });
+    setEnvState({ groundMatMetalness: v }, { source: "manual" });
     this.refreshSurface();
   }
   getMatColor2(): number {
@@ -576,10 +580,7 @@ export class GroundCapability implements SceneCapability {
     return envState.groundMatDensity;
   }
   setMatDensity(v: number, opts?: { skipMiddleware?: boolean }): void {
-    setEnvState(
-      { groundMatDensity: Math.max(0.25, Math.min(8, v)) },
-      { source: "manual", ...opts },
-    );
+    setEnvState({ groundMatDensity: v }, { source: "manual", ...opts });
     this.refreshSurface();
   }
   getMatAngle(): number {

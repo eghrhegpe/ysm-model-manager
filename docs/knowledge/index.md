@@ -244,7 +244,7 @@
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
 | 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼拾取, BoneNode, BoneTree, buildBoneTree |
-| 🍃 ground-cap-materialgroup-factories | ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点） | leaf | cpu-bound | 评审 ground-capability.ts 菜单构建, ground 材质菜单节点, ADR-195 cap 直产节点 |
+| 🍃 ground-cap-materialgroup-factories | ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点） | leaf | cpu-bound | 评审 ground-capability.ts 菜单构建, ground 材质菜单节点, ADR-195 cap 直产节点, ground 滑杆值域 / ADR-283 |
 | 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（噪声材质 plain/marble/sand/grass + 几何图案 grid/checker/stripes/diamond）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken, 参考网格（GridHelper 层）显隐 / 关不掉自带网格 |
 | 🏗 ground_texture_gen | 程序化地面贴图生成 surface-pixels | architecture | — | 修改地面材质（草/大理石/沙）的像素形状，或新增材质时, 排查地面贴图重建频率、平铺重复、接缝问题时 |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |

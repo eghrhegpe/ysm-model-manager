@@ -3,6 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { GroundCapability } from "./ground-capability.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
@@ -558,6 +559,34 @@ describe("GroundCapability — 菜单控件联动", () => {
 
 describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
   beforeEach(() => { resetEnvState(); });
+
+  it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
+    const cap = new GroundCapability({ scene: new THREE.Scene() });
+    const nodes = cap.getMenuNodes();
+    const matFolder = nodes.find((n) => n.id === "cap-group-ground-material")!;
+    const overlayFolder = nodes.find((n) => n.id === "cap-group-ground-overlay")!;
+    const pairs = [
+      ["ground-mat-grid-size", "groundMatGridSize"],
+      ["ground-mat-density", "groundMatDensity"],
+      ["ground-mat-angle", "groundMatAngleDeg"],
+      ["ground-mat-opacity", "groundMatOpacity"],
+      ["ground-mat-scale", "groundMatScale"],
+      ["ground-mat-rotation", "groundMatRotationDeg"],
+      ["ground-mat-roughness", "groundMatRoughness"],
+      ["ground-mat-metalness", "groundMatMetalness"],
+      ["ground-overlay-size", "groundOverlaySize"],
+      ["ground-overlay-opacity", "groundOverlayOpacity"],
+    ] as const;
+    const children = [...matFolder.children!, ...overlayFolder.children!];
+    for (const [id, key] of pairs) {
+      const node = children.find((c) => c.id === id);
+      expect(node, `缺菜单节点 ${id}`).toBeDefined();
+      const c = node!.control!;
+      expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
+        getParamRange(key),
+      );
+    }
+  });
 
   it("完整树 = 两个平铺 toggle（地面 / 参考网格）+ 材质组 folder + 叠加层 folder", () => {
     const scene = new THREE.Scene();

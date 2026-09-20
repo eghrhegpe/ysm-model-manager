@@ -13,6 +13,7 @@ import type {
   PreviewControlDef,
   PreviewMenuNode,
 } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCapability } from "./ground-capability.ts";
 import {
@@ -187,21 +188,21 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
       "ground-mat-grid-size",
       "preview.groundMatGridSize",
       "matGridSize",
-      { min: 2, max: 32, step: 1 },
+      getParamRange("groundMatGridSize"),
       { get: () => cap.getMatGridSize(), set: (v) => cap.setMatGridSize(Math.round(v)) },
     ),
     sliderNode(
       "ground-mat-density",
       "preview.groundMatDensity",
       "matDensity",
-      { min: 0.25, max: 8, step: 0.25 },
+      getParamRange("groundMatDensity"),
       { get: () => cap.getMatDensity(), set: (v) => cap.setMatDensity(v) },
     ),
     sliderNode(
       "ground-mat-angle",
       "preview.groundMatAngle",
       "matAngleDeg",
-      { min: 0, max: 360, step: 5, unit: "°" },
+      getParamRange("groundMatAngleDeg"),
       { get: () => cap.getMatAngle(), set: (v) => cap.setMatAngle(v) },
     ),
     textureButtonsNode(cap),
@@ -209,35 +210,35 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
       "ground-mat-opacity",
       "preview.groundMatOpacity",
       "matOpacity",
-      { min: 0, max: 1, step: 0.05 },
+      getParamRange("groundMatOpacity"),
       { get: () => cap.getMatOpacity(), set: (v) => cap.setMatOpacity(v) },
     ),
     sliderNode(
       "ground-mat-scale",
       "preview.groundMatScale",
       "matScale",
-      { min: 0.25, max: 8, step: 0.25 },
+      getParamRange("groundMatScale"),
       { get: () => cap.getMatScale(), set: (v) => cap.setMatScale(v) },
     ),
     sliderNode(
       "ground-mat-rotation",
       "preview.groundMatRotation",
       "matRotationDeg",
-      { min: 0, max: 360, step: 5, unit: "°" },
+      getParamRange("groundMatRotationDeg"),
       { get: () => cap.getMatRotation(), set: (v) => cap.setMatRotation(v) },
     ),
     sliderNode(
       "ground-mat-roughness",
       "preview.groundMatRoughness",
       "matRoughness",
-      { min: 0, max: 1, step: 0.05 },
+      getParamRange("groundMatRoughness"),
       { get: () => cap.getMatRoughness(), set: (v) => cap.setMatRoughness(v) },
     ),
     sliderNode(
       "ground-mat-metalness",
       "preview.groundMatMetalness",
       "matMetalness",
-      { min: 0, max: 1, step: 0.05 },
+      getParamRange("groundMatMetalness"),
       { get: () => cap.getMatMetalness(), set: (v) => cap.setMatMetalness(v) },
     ),
   ];
@@ -286,9 +287,7 @@ function groundBuildOverlayFolder(cap: GroundCapability): PreviewMenuNode {
       labelKey: "preview.groundOverlaySize",
       visibleWhen: overlayOn,
       control: {
-        min: 2,
-        max: 64,
-        step: 1,
+        ...getParamRange("groundOverlaySize"),
         get: () => cap.getOverlaySize(),
         set: (v) => cap.setOverlaySize(v as number),
       },
@@ -299,9 +298,7 @@ function groundBuildOverlayFolder(cap: GroundCapability): PreviewMenuNode {
       labelKey: "preview.groundOverlayOpacity",
       visibleWhen: overlayOn,
       control: {
-        min: 0,
-        max: 1,
-        step: 0.05,
+        ...getParamRange("groundOverlayOpacity"),
         get: () => cap.getOverlayOpacity(),
         set: (v) => cap.setOverlayOpacity(v as number),
       },

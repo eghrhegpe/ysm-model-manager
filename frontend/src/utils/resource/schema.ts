@@ -34,6 +34,10 @@ export interface ResourceType {
   instanceDir?: string;
   preview?: string;
   detector?: string;
+  /** CLI（go/cli benchmark 等）是否有该类型的解析链路；事实源 = resource_types.json 的
+   * cliAnalyzable 声明（Go 侧 cliAnalyzable() 读同一字段）。前端只消费：目标集选择器据此
+   * 只列可分析类型，不再自己判「哪些模型能跑 benchmark」（ADR-262 D3 / ADR-269 D3 同步通路）。 */
+  cliAnalyzable?: boolean;
   variants?: ResourceTypeVariant[];
   zipEntries?: ZipEntryMatch[];
 }

@@ -268,7 +268,13 @@ export async function populatePerfTargetOptions(
   const select = root.getElementById(selectId) as HTMLSelectElement | null;
   if (!select) return;
   const reg = resourceTypesById;
-  const types = Object.values(reg).sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  // benchmark 目标集只列 CLI 可分析类型（cliAnalyzable 声明在 resource_types.json，Go/前端同源）：
+  // 判定归 Go（ADR-262 D3），前端只消费不重算——渲染出「选了必报 unsupported」的选项，
+  // 是诚实语义的反面（ADR-278 §2.6：能改却不被读是欺骗）。哨兵不受此过滤：「全部类型」
+  // 由 Go 侧对不可分析条目顺延（firstWithGeometry），语义上仍成立。
+  const types = Object.values(reg)
+    .filter((t) => t.cliAnalyzable)
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)));
   if (!types.length) return;
 
   // 重填不得重置用户已选好的目标集：先记住当前值，重建后再回填

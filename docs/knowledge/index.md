@@ -321,7 +321,7 @@
 | 🍃 preview_panel_declarative | 3D 预览面板内容声明式化通道（ADR-126 P4-B） | leaf | gpu-bound | 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）, 评估"面板内容该走 renderCustom 还是 children 声明式", 排查面板内容不出现 / 渲染通道冲突, P4-B 子步（1→2→3）状态通道复用参考 |
 | 🍃 preview_state | 3D 预览全域状态层（ADR-126 P4-A） | leaf | — | 新增 3D 预览面板跨 cap 设置项, 排查预览面板状态改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, P4 子步（A→B→D→C）状态通道复用参考, 评估"某状态是否应进 previewState vs 留在 sceneRegistry/SlideMenu/节点字段" |
 | 🍃 shared-styles | 共享样式 shared-styles | leaf | — | 共享样式, 按钮样式, btn-base, focus-visible, tree 样式, Shadow DOM 样式, CSS 变量 |
-| 🍃 survey_emoji_icons | emoji/UI_ICONS 摸排方法论 | leaf | — | — |
+| 🍃 survey_emoji_icons | emoji/UI_ICONS 摸排方法论 | leaf | — | emoji 残留摸排, UI_ICONS 消费分布, 孤儿图标盘点, 图标迁移审计 |
 | 🏗 test-utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture | — | 测试工具, testid, getByTestId, waitFor, sleep, flaky, 异步等待, 组件测试 |
 | 🍃 toolbar-search | 工具栏搜索编排 toolbar-search | leaf | — | 搜索编排, 高级筛选, 关键词搜索, 数值范围搜索, 标签过滤, 多线程统计角标, 降级提示 |
 | 🍃 ui-slide-menu | ADR 去桶化 slide-menu 外壳组件 | leaf | — | slide-menu, slide 菜单, 去桶化, 两级菜单, 轻量导航栈, createSlideMenu |

@@ -44,6 +44,7 @@ type ResourceType struct {
 	InstanceLevel  bool            `json:"instanceLevel"`
 	Preview        string          `json:"preview"`                  // "3d" / "thumbnail" / "none"
 	Detector       string          `json:"detector"`                 // "ysm" / "mcmeta" / "shader" / "zipentry" / "extension"
+	CliAnalyzable  bool            `json:"cliAnalyzable"`            // CLI（go/cli benchmark 等）是否有该类型的解析链路；单一事实源=本 JSON，2026-09 起 perfTypeManifest 不再持有（前端目标集选择器同源消费）
 	ConfigField    string          `json:"configField"`              // AppConfig 字段名（如 YsmRoot）
 	ConfigFallback string          `json:"configFallback"`           // AppConfig 回退字段名（如 VrcRoot→MmdRoot）
 	IsDir          bool            `json:"isDir"`                    // 目录型资源（删除/同步整目录）

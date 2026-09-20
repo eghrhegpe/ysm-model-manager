@@ -879,7 +879,7 @@ func matrixGroups(filesRoot string, spec perfTargetSpec) []perfTypeGroup {
 // 矩阵（rtype/all）与全库（repo）两条目标集共用这一条采集路径——二者的差异只在
 // **选谁、按什么顺序**，不在「怎么采」。返回值：载荷、是否 unsupported、阶段链是否与清单声明不符。
 func collectBenchTarget(ctx *CmdContext, path, rtype string, iterations int, entry perfTypeManifestEntry) (singleBenchJSON, bool, bool) {
-	if !entry.CliAnalyzable {
+	if !cliAnalyzable(rtype) { // 可分析性归 resource_types.json 声明（cliAnalyzable 单点），不再读 entry
 		return identityOnlyPayload(path, ctx.FilesRoot, rtype), true, false
 	}
 	payload, _ := benchOneModel(ctx.App, path, ctx.FilesRoot, iterations)
@@ -915,7 +915,7 @@ func buildMatrixPayload(ctx *CmdContext, spec perfTargetSpec, groups []perfTypeG
 		sum := perfTypeSummary{
 			Rtype:          g.Rtype,
 			RtypeLabel:     rtypeDisplayName(g.Rtype),
-			CliAnalyzable:  entry.CliAnalyzable,
+			CliAnalyzable:  cliAnalyzable(g.Rtype),
 			Found:          g.Found,
 			ExpectedStages: entry.ExpectedStages,
 		}
@@ -959,7 +959,7 @@ func buildRepoPayload(ctx *CmdContext, spec perfTargetSpec, ranked []perfTarget,
 			sum = &perfTypeSummary{
 				Rtype:          t.Rtype,
 				RtypeLabel:     rtypeDisplayName(t.Rtype),
-				CliAnalyzable:  entry.CliAnalyzable,
+				CliAnalyzable:  cliAnalyzable(t.Rtype),
 				Found:          foundByType[t.Rtype],
 				ExpectedStages: entry.ExpectedStages,
 			}

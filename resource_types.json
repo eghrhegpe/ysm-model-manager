@@ -70,6 +70,7 @@
       "instanceLevel": true,
       "preview": "3d",
       "detector": "ysm",
+      "cliAnalyzable": true,
       "hashable": true,
       "dirLevelSync": true,
       "installExts": [
@@ -110,6 +111,7 @@
       "instanceLevel": true,
       "preview": "3d",
       "detector": "zipentry",
+      "cliAnalyzable": true,
       "zipEntries": [
         {
           "name": "maid_model.json",

@@ -293,7 +293,7 @@ func runPhaseConfigLoad(a AppService) guiFlowResult {
 // 原实现硬编码 yml/ysm/other 三槽，MMD 的 PMX/PMD 等注册表类型全归 "other"，
 // 导致纯 MMD 仓库统计失真（"其他: 333"）——现按注册表真实类型展示分布。
 // firstModel 只选 **CLI 可分析**的类型（分析阶段 AnalyzeBedrockModel 仅支持 Bedrock geometry）：
-// 判据 = `cliAnalyzable(id)`（perfTypeManifest 登记，perf_targets.go），不再自持 `ext == ".ysm"`
+// 判据 = `cliAnalyzable(id)`（resource_types.json 的 cliAnalyzable 声明，perf_targets.go 单点读取），不再自持 `ext == ".ysm"`
 // 白名单（ADR-262 D3 收编，2026-09-18）——随清单自动扩展，且天然含 ysm 目录下的
 // 容器 .zip / 解包目录 ysm.json 等「非 .ysm 扩展名但确实在分析链路上」的形态。
 // 不可分析类型**不提升为首模型**（用户可 --model 显式指定）——这只关「③ 拿谁去跑」；

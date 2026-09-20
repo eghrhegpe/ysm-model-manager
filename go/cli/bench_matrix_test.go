@@ -203,10 +203,10 @@ func TestPerfTypeManifest_Consistent(t *testing.T) {
 		if !known[id] {
 			t.Errorf("清单登记了 registry 里不存在的类型 %q（拼写漂移或类型已删）", id)
 		}
-		if entry.CliAnalyzable && entry.ExpectedStages <= 0 {
+		if cliAnalyzable(id) && entry.ExpectedStages <= 0 {
 			t.Errorf("可分析类型 %q 必须声明期望阶段链长度", id)
 		}
-		if !entry.CliAnalyzable && entry.ExpectedStages != 0 {
+		if !cliAnalyzable(id) && entry.ExpectedStages != 0 {
 			t.Errorf("不可分析类型 %q 不应声明阶段链长度", id)
 		}
 	}

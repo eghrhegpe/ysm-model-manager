@@ -16,8 +16,10 @@ const { executeCLI, isWebPlatform, perfRegistry } = vi.hoisted(() => ({
   isWebPlatform: vi.fn(() => false),
   // ADR-269 D3④：perf-matrix-render 现同步读 resourceTypesById。以受控两类型子集覆盖该视图
   // （保留本测试「选项来自 registry、前端不写死类型表」的原意——断言随受控子集，而非真 15 类）。
+  // cliAnalyzable：ysm=true（Go 侧有解析链路）/ EntityPlayer=false（解析器只在前端 3D adapter）——
+  // 这对子集同时覆盖「可分析入选项」与「不可分析被滤除」两侧，正是本次要清的账。
   perfRegistry: {
-    ysm: { id: "ysm", name: "YSM 模型", icon: "💎" },
+    ysm: { id: "ysm", name: "YSM 模型", icon: "💎", cliAnalyzable: true },
     EntityPlayer: { id: "EntityPlayer", name: "MMD 模型", icon: "🧊" },
   },
 }));
@@ -413,16 +415,30 @@ describe("目标集回显与体量徽标（排序依据不可见 = 不可复核�
 });
 
 describe("目标集选择器选项来自 registry（前端不写死类型表）", () => {
-  it("populatePerfTargetOptions 生成「单模型」+「全部类型」+「全库扁平」+ registry 各类型", async () => {
+  it("populatePerfTargetOptions 生成「单模型」+「哨兵」+ 仅 CLI 可分析类型", async () => {
     const root = makeRoot();
     await populatePerfTargetOptions(root, "diag-perf-rtype", true);
 
     const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
     const values = [...select.options].map((o) => o.value);
-    // 顺序 = 「单模型」占位 → 两个哨兵（全部类型 / 全库扁平）→ registry 类型（前端不写死类型表）
-    expect(values).toEqual(["", "__all__", "__repo__", "EntityPlayer", "ysm"]);
+    // 顺序 = 「单模型」占位 → 两个哨兵（全部类型 / 全库扁平）→ 可分析类型（id 字典序）
+    // EntityPlayer 无 cliAnalyzable → 被滤除：选了必报 unsupported 的选项不该出现在渲染里
+    expect(values).toEqual(["", "__all__", "__repo__", "ysm"]);
     expect(select.textContent).toContain("YSM 模型");
+    expect(select.textContent).not.toContain("MMD 模型");
     expect(select.textContent).toContain("全库扁平");
+  });
+
+  it("不可分析类型不进选项（漏标/误标的渲染面护栏）", async () => {
+    const root = makeRoot();
+    await populatePerfTargetOptions(root, "diag-perf-rtype", true);
+
+    const select = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
+    const values = [...select.options].map((o) => o.value);
+    expect(values).not.toContain("EntityPlayer");
+    // 哨兵不受过滤：「全部类型」由 Go 侧对不可分析条目顺延（firstWithGeometry），语义仍成立
+    expect(values).toContain("__all__");
+    expect(values).toContain("__repo__");
   });
 
   it("includeModel=false 不提供「单模型」项（helper 契约；并发已改用共享选择器，见 ADR-278 §2.2）", async () => {
@@ -430,7 +446,8 @@ describe("目标集选择器选项来自 registry（前端不写死类型表）"
     await populatePerfTargetOptions(root, "diag-perf-alt-target", false);
 
     const select = root.getElementById("diag-perf-alt-target") as HTMLSelectElement;
-    expect([...select.options].map((o) => o.value)).toEqual(["__all__", "__repo__", "EntityPlayer", "ysm"]);
+    // includeModel=false：省略「单模型」哨兵；同样只列可分析类型
+    expect([...select.options].map((o) => o.value)).toEqual(["__all__", "__repo__", "ysm"]);
   });
 });
 

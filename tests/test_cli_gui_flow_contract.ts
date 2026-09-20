@@ -461,6 +461,36 @@ for (const dead of [
   }
 }
 
+// ── 3.7b) CLI 可分析类型（cliAnalyzable）双端锚定 ──────────────────────────────
+// 立因（2026-09-21 审核）：目标集 selector 此前渲染 registry 全部 15 类，其中 13 类 CLI 无解析
+// 链路（PMX/PMD/VRM/FBX/GLTF 的解析器只在前端 3D adapter）、resourcepack/shaderpack 更非模型——
+// 用户选中即被 Go 判 unsupported，是「渲染出必然失败的选项」的诚实语义反面（ADR-278 §2.6）。
+// 修法：可分析性事实源从 Go 硬编码 map 迁至 resource_types.json 的 cliAnalyzable 声明，
+// Go（cliAnalyzable 单点）与前端（选择器过滤）同源消费。本节锁三件事，防再次漂移：
+//   ① JSON 字段名是两端共用契约；② Go 的 cliAnalyzable 单点确实读该字段；③ 前端确实据它过滤。
+const resourceTypesJsonTs = readOrDie("resource_types.json");
+const registryGoTs = readOrDie("go/types/registry/resource.go");
+must(
+  registryGoTs.includes('json:"cliAnalyzable"'),
+  "registry.ResourceType 缺 cliAnalyzable 字段（resource_types.json 的声明将加载不到，Go/前端双双读空）",
+);
+must(
+  targetsGo.includes("registry.RegistryType(rtype)") && targetsGo.includes("rt.CliAnalyzable"),
+  "cliAnalyzable 未从注册表读取（事实源应是 resource_types.json 声明，不是 Go 第二份表）",
+);
+must(
+  !stripComments(targetsGo).includes("perfTypeManifest[rtype].CliAnalyzable"),
+  "cliAnalyzable 仍在读已退役的 perfTypeManifest 字段（双写必然漂移，该字段已删）",
+);
+must(
+  /Object\.values\(reg\)[\s\S]{0,220}?filter\(\(t\)\s*=>\s*t\.cliAnalyzable\)/.test(matrixCode),
+  "目标集选择器未按 cliAnalyzable 过滤（会再次渲染出选了必报 unsupported 的类型）",
+);
+must(
+  resourceTypesJsonTs.includes('"cliAnalyzable": true'),
+  "resource_types.json 未声明任何 cliAnalyzable 类型（YSM / maid-model 的登记面丢了）",
+);
+
 // ── 3.8) 扫描引擎对照（ADR-262 D3）：Go/Rust 对照载荷 + 未采集原因 token 双端锚定 ──
 // 立因：`used=false` 时若前端把缺席的数值当 0 渲染，界面就会说「Rust 0ms」——与「拿不到就说
 // 不采集」的诚实红线正好相反（0ms 会被读成「快到测不出」）。故锁三件事：载荷字段名、四个原因

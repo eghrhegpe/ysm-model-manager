@@ -17,11 +17,11 @@ import (
 
 // perfTypeManifestEntry 单类型的样本清单条目（ADR-262 D3「样本清单」在 Go 侧的落地形态）。
 //
-// 它是「CLI 侧性能采集能力」的**单一登记处**：是否具备分析链路、该链路应产出几个阶段。
-// 用 Go 表而非外部 JSON：与 registry 同仓同语言，漂移由测试直接断言，无需加载器与跨端同步。
+// 它是「CLI 侧性能采集」的**阶段链产出口径登记处**：该链路应产出几个阶段。
+// 用 Go 表而非外部 JSON：阶段链长度是 Go 内部验证语义，不与前端共享；
+// 可分析性（有无解析链路）已迁至 resource_types.json 的 cliAnalyzable 声明（2026-09-21，
+// 前端目标集选择器同源消费，ADR-269 D3 同步通路；本表不再持有，双写必然漂移）。
 type perfTypeManifestEntry struct {
-	// CliAnalyzable CLI 是否具备该类型的分析链路（解析器只在前端 3D adapter 的类型为 false）
-	CliAnalyzable bool
 	// ExpectedStages 该类型在 CLI 侧应产出的阶段链长度（0 = 不采集阶段）
 	//
 	// ⚠️ 只声明**长度**：① 的名称随形态变（目录式「① 清单读取」/ 文件式「① 文件读取」），
@@ -51,15 +51,14 @@ type perfTypeManifestEntry struct {
 // （实测 maid-model\ 下的 atri_sound_pack-1.0.0.zip 解析出 0 bones）。后一问由 `firstWithGeometry`
 // 在末端验证，不得用类型谓词冒充。
 //
-// 未登记的类型 = CLI 不可分析（默认零值），无需逐条罗列；新增 CLI 分析链路时在此登记。
+// 可分析性（CliAnalyzable）已迁 resource_types.json 声明（默认 false）；未声明即不可分析，
+// 新增 CLI 分析链路时同步改 JSON（cliAnalyzable: true）+ 在下方登记阶段链长度。
 var perfTypeManifest = map[string]perfTypeManifestEntry{
 	"ysm": {
-		CliAnalyzable:  true,
 		ExpectedStages: 7,
 		Note:           "YSM 的完整分析链路（WASM 解码 / geometry 容器 / 解包目录三形态）——2026-09-19 前写作「CLI 唯一」，经 maid-model 实测订正",
 	},
 	"maid-model": {
-		CliAnalyzable:  true,
 		ExpectedStages: 7,
 		Note:           "TLM 女仆包 .zip 走 geometry 包 maid L0 清单（detectMaidNs/collectMaidManifest/resolveL0），与 YSM 容器同一 ParseFromZip 入口；实测 7 段齐全",
 	},
@@ -79,16 +78,18 @@ func rtypeDisplayName(rtype string) string {
 	return ""
 }
 
-// cliAnalyzable 查询类型是否具备 CLI 分析链路（未登记即不可分析）。
+// cliAnalyzable 查询类型是否具备 CLI 分析链路（resource_types.json 的 cliAnalyzable 声明，
+// 单一事实源，前端目标集选择器同源消费；2026-09-21 起不再读本表，双写必然漂移）。
 func cliAnalyzable(rtype string) bool {
-	return perfTypeManifest[rtype].CliAnalyzable
+	rt := registry.RegistryType(rtype)
+	return rt != nil && rt.CliAnalyzable
 }
 
 // cliAnalyzablePath 判定某路径是否属于 CLI 可分析的模型（ADR-262 D3 收编，2026-09-18）。
 //
 // 这是「这个文件 CLI 能不能真分析」的**单点答案**，由两个既有事实源组合而成：
 // 归属 = `classifyForScan`（三段口径 location > extension > container，flow.go）、
-// 可分析性 = `perfTypeManifest` / `cliAnalyzable`（本文件）。
+// 可分析性 = `cliAnalyzable`（本文件；事实源是 resource_types.json 的 cliAnalyzable 声明）。
 //
 // 立因：这问题原先在四处各写一份扩展名白名单（并发基准 `.ysm` 过滤、`scanFirstModel|allowedExts`、
 // gui-flow 首模型 `ext == ".ysm"`），其中 `scanFirstModel` 把 `.vrm/.gltf/.litematic` 也算「模型」

@@ -9,12 +9,12 @@ package cli
 //  3. `flow.go:266`            gui-flow 首模型：`ext == ".ysm"`；
 //  4. `detectModelFormat`      扩展名 → 展示标签（另案，属 `format` 展示口径而非归属）。
 //
-// 而「可分析性」的单一事实源**早已存在**：`perfTypeManifest` / `cliAnalyzable`（perf_targets.go），
+// 而「可分析性」的单一事实源**早已存在**：`cliAnalyzable`（perf_targets.go；事实源为 resource_types.json 的 cliAnalyzable 声明），
 // 归属判定也早已单点：`classifyForScan`（flow.go，三段口径）。本次只把二者组合成一个谓词，
 // 让四条线都走它——不新建表，只删表。
 //
 // ⚠️ 这不只是 DRY：`scanFirstModel` 原表把 `.vrm/.gltf/.litematic` 也算「模型」，
-// 而 manifest 明说这些类型的解析器只在前端 3D adapter（CLI 拿到是空模型）。
+// 而可分析性清单明说这些类型的解析器只在前端 3D adapter（CLI 拿到是空模型）。
 // 它的两个消费方 `perf.go|resolveTargetModel` 与 `health.go` 都**直接把返回值喂进
 // `runSingleModelBench`** → 产出「空模型数据当实测」，违反 D3 与 D8 的诚实红线。
 // 故本文件的断言里，「不可分析类型不得被选中」是**行为修复**，不是等价重构。

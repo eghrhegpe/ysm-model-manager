@@ -71,6 +71,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_check_menu_health.ts": ["frontend"],
   "test_e2e_location_contract.ts": ["frontend"],
   "test_html_integrity.ts": ["frontend"],
+  // R8 模板闸扫描核（scripts/_lib/innerhtml-hygiene.ts）——纯函数核在 tests 域，
+  // 但结论建在前端模板写法上（栅标 frontend 源），故双域。
+  "test_innerhtml_hygiene.ts": ["frontend", "tests"],
   "test_i18n_key_naming.ts": ["frontend"],
   // i18n 未使用键：判定层在 scripts（故 tests 域），但结论建在真实语言包键集上
   // （frontend/src/locales/en.ts，故 frontend 域）——改语言包键数应触发本测试。
@@ -227,6 +230,11 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "go-coverage-hint.ts": ["scripts/hooks/go-coverage-hint.ts"],
   "test_alias-resolve.ts": ["scripts/_lib/alias-resolve.ts", "scripts/_lib/scan-files.ts"],
+  // R8 模板闸扫描核：仅改纯函数核（或本测试自身）才需重跑
+  "test_innerhtml_hygiene.ts": [
+    "scripts/_lib/innerhtml-hygiene.ts",
+    "tests/test_innerhtml_hygiene.ts",
+  ],
   "test_changed_scope.ts": ["scripts/_lib/changed-scope.ts"],
   "test_diff_source.ts": ["scripts/_lib/diff-source.ts", "scripts/_lib/git-hunks.ts"],
   "test_token_shift_audit.ts": ["scripts/token-shift-audit.ts", "scripts/_lib/design-tokens.ts"],

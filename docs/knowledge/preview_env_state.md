@@ -148,6 +148,11 @@ invariant_anchors:
   - **体积光锥**：不再绑定第四盏灯，由三盏中「第一盏 `type==='spot'` 且启用」的灯驱动（`getSpotLightForCone()`）。
   - **菜单**：顶栏 `light-select`（三灯按钮）选择编辑对象 → 同一套设置条读写该灯；类型专属参数（angle/penumbra/distance/decay）按 type 条件展开。
   - **旧存档迁移**：`restoreLightParams` 检测旧 `spotlight` 块 → 迁移为 key 灯 `type='spot'` + 对应参数。
+- **[ADR-281] 灯光字段全集单一真相源（2026-09-20）**：三盏灯的 10 字段集曾散在 5 处（`FLATTEN_MAP` / 变更集 / 预设挑参 / 持久化表 / `readLightParams`），只有第一处有 `satisfies` 锁——新增字段漏改四处中的任何一处都是**静默 bug**（滑块无反应 / 切模型不更新 / 运行时 NaN）。
+  - **收口**：`light-presets.ts` 的 `FLATTEN_MAP` 升格为唯一真相源，派生出 `LIGHT_SLOTS` / `lightEnvKeys`（变更集）/ `LIGHT_ENV_KEYS` + `VOLUMETRIC_ENV_KEYS`（预设挑参）/ `readLightParams`（读参数）。
+  - **去双层 `as`**：`readLightParams` 字段名取自映射（键拼写有锁）+ 返回类型 `LightInstanceParams` 反向校验（值类型 / 穷尽性有锁），旧实现 `${prefix}${X}` 拼串 + 两层 `as` 退场。
+  - **持久化表**（`light-persist.ts`）：映射的是存档短名（跨版本稳定契约），无法派生，但 `satisfies Record<keyof LightInstanceParams, …>` 锁死同一字段全集。
+  - **`export *` 转发桶已删**：`light-capability.ts` 不再重导出 `light-presets.ts`，消费方直引具体叶（同一符号不再两处入口）。
 - **[ADR-246] 未落地项——「雾中体积光」**：真正的 raymarching 体积光（`VolumetricLightingPass`，ADR-084 §L3）**仍未实现**；ADR-246 已裁定若要做须以**新增 pass** 方式引入，不得复活「切换渲染器」开关。注意与两条已落地能力区分：`FogCapability`（`scene.fog` 线性/指数雾，非体积光）、ADR-107 天空体积光束 god rays（非雾中散射）。
 - 颜色字段统一 number(hex)；枚举字段 `type:"enum"` + `values`。
 - 已迁移 cap（10/10，刀2 完成）：Sky/Fog/Reflector/Shadow/Ground/RenderMode/Water/Environment/Postprocessing/Light。

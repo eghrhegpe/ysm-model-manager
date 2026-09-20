@@ -44,6 +44,7 @@ pitfalls:
   - pool 的 waterPoolHeight / waterPoolWallThickness 仍走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——这两条滑块**今天拖动就会每帧重建 10 个 mesh**，ADR-272 登记为同族待办
   - waterSize 下界钳 ≥1：setter 与 loadState 恢复同口径，shader 侧另有 max(uSize, 0.001)
   - 圆角裁剪用世界坐标 max(|x|,|z|) 对比 uHalfSize，隐含「水面恒在世界原点」这一未登记假设
+  - **透明度预设失效（已修复 2026-09）**：`applyChangedParams` 中 `waterOpacity` 变更路径只更新 `top.material.opacity`，漏同步 shader uniform `uBaseOpacity`。shader 用 `min(gl_FragColor.a, uBaseOpacity)` clamp 透明度，`uBaseOpacity` 固化在构建期，导致增大 opacity 不生效（减小偶然正常）。修复：补调 `syncBaseOpacityUniform`，与 `waterWetness` 路径同口径
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

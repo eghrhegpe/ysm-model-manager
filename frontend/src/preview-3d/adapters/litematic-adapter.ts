@@ -109,9 +109,7 @@ function setupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): SizeInfo {
   ctx.camera?.position.set(centerX + maxDim * 1.5, centerY + maxDim, centerZ + maxDim * 1.5);
   ctx.camera?.lookAt(centerX, centerY, centerZ);
   ctx.controls?.target.set(centerX, centerY, centerZ);
-  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   requireSharedInfra(ctx).controls.minDistance = 1;
-  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   requireSharedInfra(ctx).controls.maxDistance = maxDim * 8;
   ctx.controls?.update();
   const gridSize = Math.ceil(maxDim / 10) * 10;
@@ -347,9 +345,9 @@ function buildSliceSchema(
       labelKey: "preview.sliceMode",
       control: {
         options: [
-          { value: "all", label: "全部", labelKey: "preview.sliceModeAll" },
-          { value: "single", label: "单层", labelKey: "preview.sliceModeSingle" },
-          { value: "range", label: "范围", labelKey: "preview.sliceModeRange" },
+          { value: "all", labelKey: "preview.sliceModeAll" },
+          { value: "single", labelKey: "preview.sliceModeSingle" },
+          { value: "range", labelKey: "preview.sliceModeRange" },
         ],
         // 模式真源 = shell 闭包（场景级会话态，非全局状态层路径）——get/set 闭包模式
         // 与 MmdPlayBridge 动作 select 同构；slider visibleWhen 谓词读同一闭包
@@ -453,7 +451,6 @@ function buildResult(
       meshSet.boxGeo.dispose();
       safeDispose(meshSet.grid);
     },
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     screenshot: () =>
       Promise.resolve(
         screenshotFromRenderer(requireSharedInfra(ctx).renderer, ctx.scene, ctx.camera),

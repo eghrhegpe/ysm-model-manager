@@ -91,8 +91,8 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           labelKey: "preview.waterMode",
           control: {
             options: [
-              { value: "film", label: "薄膜", labelKey: "preview.waterModeFilm" },
-              { value: "pool", label: "水池", labelKey: "preview.waterModePool" },
+              { value: "film", labelKey: "preview.waterModeFilm" },
+              { value: "pool", labelKey: "preview.waterModePool" },
             ],
             get: () => cap.getWaterMode(),
             set: (v) => cap.setWaterMode(v as WaterMode),

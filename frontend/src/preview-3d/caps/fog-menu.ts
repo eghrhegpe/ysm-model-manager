@@ -45,8 +45,8 @@ function fcBuildParamsFolder(cap: FogCapability): PreviewMenuNode {
       labelKey: "preview.fogMode",
       control: {
         options: [
-          { value: "linear", label: "线性", labelKey: "preview.fogModeLinear" },
-          { value: "exp2", label: "指数", labelKey: "preview.fogModeExp2" },
+          { value: "linear", labelKey: "preview.fogModeLinear" },
+          { value: "exp2", labelKey: "preview.fogModeExp2" },
         ],
         get: () => cap.getMode(),
         set: (v) => cap.setMode(v as FogMode),

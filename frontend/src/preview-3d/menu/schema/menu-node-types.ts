@@ -145,7 +145,10 @@ export interface PreviewControlSpec {
   max?: number;
   step?: number;
   icon?: IconRef;
-  options?: Array<{ value: string; label: string; labelKey?: LocaleKey }>;
+  /** select 选项：`labelKey` 优先（i18n 渲染器已按此优先级取值）；`label` 仅承载
+   *  运行时数据名（动态枚举等，同节点级 label 语义），**禁止作为静态文案的第二事实源**
+   *  ——既有 labelKey 就不要再写明文 label（硬编码中文是 i18n 漏洞）。 */
+  options?: Array<{ value: string; label?: string; labelKey?: LocaleKey }>;
   /** 衍生控件：状态值 → 控件显示值 */
   get?: (v: unknown) => unknown;
   /** 衍生控件：控件值 → 状态值 */

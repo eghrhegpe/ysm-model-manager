@@ -301,6 +301,9 @@ interface RawGeometryJSON {
   format_version?: string;
   "minecraft:geometry"?: {
     description: {
+      /** @non-ui Bedrock 几何标识符（第三方规格字段，MC 格式里为可选）。
+       * 本仓用不到它（骨骼/纹理尺寸才是所需），但类型要忠于规范，
+       * 否则 `description` 的可选性会与真实 JSON 不符。 */
       identifier?: string;
       texture_width?: number;
       texture_height?: number;

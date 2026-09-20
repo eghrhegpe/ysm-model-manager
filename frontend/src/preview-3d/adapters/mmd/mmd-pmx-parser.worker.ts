@@ -81,6 +81,9 @@ export interface PmxParseResponse {
   header?: {
     version: string;
     encoding: "utf-8" | "utf-16";
+    /** @non-ui PMX 头部「追加 UV 数」标志位（第三方格式字段）。
+     * mmd-pmx-convert.ts 会把它写进转换结果，本层不从该字段取数——
+     * 保留是为了让 worker ↔ 主线程的响应形状**忠于 PMX 规范**（便于对照解析日志）。 */
     additionalDataFlags: number;
   };
   vertices?: PmxVertexData;

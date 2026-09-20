@@ -56,10 +56,17 @@ export interface BoneSelectInfo {
   parent: string | null;
   children: string[];
   meshCount: number;
+  /** @non-ui 骨骼局部坐标。消费方是**宿主页面**（window._3dOnBoneSelect 回调的接收方），
+   * 不在本仓——本仓只有 bone-raycast.test.ts 断言其组装正确。不是漏读，是跨界导出。 */
   localPos: number[];
+  /** @non-ui 同上（宿主页面消费）。与 localPos 同构；它未被本工具报出仅因 gate.ts 另有
+   * 同名的 GazeSnap.worldPos 把读数洗白了——属工具已知假阴性，不是它真被读过。 */
   worldPos: number[];
+  /** @non-ui 骨骼局部旋转（四元数），同上。 */
   localRot: number[] | null;
+  /** @non-ui 命中 mesh 的局部旋转，同上。 */
   cubeRot: number[] | null;
+  /** @non-ui 命中 mesh 的局部位移，同上。 */
   cubePos: number[] | null;
 }
 

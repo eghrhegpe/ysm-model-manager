@@ -46,13 +46,13 @@ interface SizeInfo {
   sizeX: number;
   sizeY: number;
   sizeZ: number;
-  centerX: number;
-  centerY: number;
-  centerZ: number;
-  maxDim: number;
+  // centerX/Y/Z 与 maxDim 已删（2026-09-21）：setupCameraAndGrid 里它们是**函数内局部 const**
+  // （相机定位/看向/网格尺寸直接用），存进 SizeInfo 后零消费者——真冗余，不是「留待将来」。
+  // 需要它们时从 sizeX/Y/Z 现算即可（center = size/2，maxDim = max(...,10)），别再存一份。
   xChunks: number;
   yChunks: number;
-  zChunks: number;
+  // zChunks 同理已删：索引数学只用 xChunks/yChunks（见本文件 linear 索引处），
+  // 分块是 x-y 平面切片，z 方向的 chunk 数在本适配器里从不参与定位。
   grid: THREE.GridHelper;
 }
 
@@ -122,13 +122,8 @@ function setupCameraAndGrid(ctx: PreviewBuildCtx, data: VoxelData): SizeInfo {
     sizeX,
     sizeY,
     sizeZ,
-    centerX,
-    centerY,
-    centerZ,
-    maxDim,
     xChunks: Math.ceil(sizeX / CHUNK_SIZE),
     yChunks: Math.ceil(sizeY / CHUNK_SIZE),
-    zChunks: Math.ceil(sizeZ / CHUNK_SIZE),
     grid,
   };
 }

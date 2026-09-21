@@ -212,7 +212,6 @@ auto_fields:
     - detectFormat
     - detectFormatCtx
     - devLog
-    - DirectionalLightParams
     - dispatchEnvChange
     - DISPOSE_TEX_KEYS
     - disposeCustomCleanups
@@ -759,7 +758,6 @@ auto_fields:
     - shouldRenderPreviewFrame
     - showLoadFailure
     - showModelGroup
-    - SKY_SCALE
     - SkyCapability
     - slideMenuCss
     - SlideMenuHandle
@@ -778,7 +776,6 @@ auto_fields:
     - SpecModelInput
     - splitMeshByFaceAlpha
     - spotDistanceAttenuation
-    - SpotlightParams
     - Stage1bCtx
     - Stage1Ctx
     - Stage1Input

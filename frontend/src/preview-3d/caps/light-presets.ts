@@ -57,14 +57,9 @@ export interface LightInstanceParams {
   decay: number;
 }
 
-/** @deprecated 使用 LightInstanceParams */
-export type DirectionalLightParams = LightInstanceParams;
-
-/** 聚光灯参数子集（VolumetricCone.rebuild 消费；与旧 SpotlightParams 接口兼容） */
-export type SpotlightParams = Pick<
-  LightInstanceParams,
-  "enabled" | "color" | "intensity" | "angle" | "penumbra" | "distance" | "decay"
->;
+// [死代码清偿 2026-09-22] 原 DirectionalLightParams（@deprecated 别名）与 SpotlightParams
+//（Pick 子集）两个导出具已无消费者——light-type-switch 后统一实例参数即 LightInstanceParams，
+// 锥体参数面亦直取实例类型（knip 基线闸点名，删除防复活）。
 
 export interface AmbientLightParams {
   color: number;

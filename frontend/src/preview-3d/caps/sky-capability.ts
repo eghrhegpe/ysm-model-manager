@@ -46,9 +46,10 @@ import { godRaysIntensity, SunBeams } from "./sun-beams.ts";
  * 该值是渲染实现细节而非用户偏好：无 UI 控件、无回调分支、saveState 不落盘，
  * 暴露成 envState 键只会造就一个「拖了不响应」或「拖坏画面」的旋钮。
  * 约束出处与受约束者现同处一文件（原注释只在 env-state-schema.ts 侧提到）。
- * SunBeams 的锥体/overlay 尺寸也按本常量缩放（构造期快照）。
+ * SunBeams 的锥体/overlay 尺寸亦按本常量缩放（宿主在本文件内构造时传入，无外部消费者
+ *——[死代码清偿 2026-09-22] knip 点名后摘除 export，模块私有常量身份归位）。
  */
-export const SKY_SCALE = 12000;
+const SKY_SCALE = 12000;
 
 /**
  * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，

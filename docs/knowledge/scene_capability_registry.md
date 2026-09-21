@@ -42,7 +42,6 @@ auto_fields:
     - DEFAULT_POSTPROC_PARAMS
     - derandomize
     - derandomizeDual
-    - DirectionalLightParams
     - drawEnvEquirect
     - effectiveParamsOf
     - ENV_PRESETS
@@ -156,11 +155,9 @@ auto_fields:
     - sceneRegistry
     - ShadowCapability
     - ShadowType
-    - SKY_SCALE
     - SkyCapability
     - smoothStep
     - spotDistanceAttenuation
-    - SpotlightParams
     - SunBeams
     - SURFACE_PIXEL_GENERATORS
     - SurfaceCanvasStyle

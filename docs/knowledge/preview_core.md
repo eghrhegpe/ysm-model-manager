@@ -211,7 +211,6 @@ auto_fields:
     - SessionStatus
     - setBoneNodeVisible
     - SharedInfra
-    - SKY_SCALE
     - SkyCapability
     - Stage1bCtx
     - Stage1Ctx

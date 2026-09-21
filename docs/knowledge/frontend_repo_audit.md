@@ -330,7 +330,6 @@ auto_fields:
     - DIR_HANDLERS
     - DirCtx
     - directImport
-    - DirectionalLightParams
     - dirKey
     - Disposable
     - DISPOSE_TEX_KEYS
@@ -1181,7 +1180,6 @@ auto_fields:
     - SpecModelInput
     - spinnerHTML
     - splitMeshByFaceAlpha
-    - SpotlightParams
     - stagger
     - startMainThreadWatch
     - STATS_BATCH_LIMIT

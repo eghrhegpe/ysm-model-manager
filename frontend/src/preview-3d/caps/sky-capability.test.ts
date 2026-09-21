@@ -950,6 +950,53 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     });
   });
 
+  // [锐评 2026-09-21] 批次二的 requestEnvironmentRefresh 路由器只管到「天空参数变化」两分支，
+  // apply()/skyEnvironment 开启/applyModelPreset 三处离散入口仍直写 regenerateEnvironment()，
+  // 在 envSource="sky"（env 接管装载）下让 sky 抢回槽位——正是 D1 收口消灭的「后写者赢」双写者
+  // 竞争复辟，且 envRT 仍以为槽位挂着自己的旧图（生命周期归属错位）。现三处一律走路由器。
+  // 上方批次二用例只断言「参数变化后槽位不变」，apply 旧代码也会先污染 slotBefore 再保持相等，
+  // 钉不住本回归——以下三用例逐入口断言「sky 不写槽位 + env 收到刷新请求」。
+  describe("ADR-292 D10 补全 — 三处离散装载入口同样走路由器", () => {
+    function skyWithEnvTaker() {
+      const scene = new THREE.Scene();
+      const refreshFromSkySource = vi.fn();
+      const caps = {
+        getById: (id: string) =>
+          id === "environment" ? { isSkySourced: () => true, refreshFromSkySource } : undefined,
+      };
+      const cap = new SkyCapability({
+        scene,
+        renderer: makeFakeRenderer(),
+        caps: caps as never,
+      });
+      return { scene, cap, refreshFromSkySource };
+    }
+
+    it("apply()：env 接管时 sky 不写槽位，转交 env 刷新", () => {
+      const { scene, cap, refreshFromSkySource } = skyWithEnvTaker();
+      cap.apply();
+      expect(scene.environment, "env 接管时装载权在 env，sky 不得抢写").toBeNull();
+      expect(refreshFromSkySource).toHaveBeenCalled();
+    });
+
+    it("skyEnvironment false→true 派发：走路由器不抢写槽位", () => {
+      const { scene, cap, refreshFromSkySource } = skyWithEnvTaker();
+      void cap; // 本用例只验派发落地，cap 引用防未用告警
+      setEnvState({ skyEnvironment: false }, { source: "manual" });
+      refreshFromSkySource.mockClear();
+      setEnvState({ skyEnvironment: true }, { source: "manual" });
+      expect(scene.environment).toBeNull();
+      expect(refreshFromSkySource).toHaveBeenCalled();
+    });
+
+    it("applyModelPreset()：走路由器不抢写槽位", () => {
+      const { scene, cap, refreshFromSkySource } = skyWithEnvTaker();
+      cap.applyModelPreset("mmd");
+      expect(scene.environment).toBeNull();
+      expect(refreshFromSkySource).toHaveBeenCalled();
+    });
+  });
+
   it("setSun 写 uniforms 并在 enabled+environment 下重建环境", () => {
     const scene = new THREE.Scene();
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });

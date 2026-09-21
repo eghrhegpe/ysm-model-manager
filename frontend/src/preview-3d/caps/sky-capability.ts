@@ -303,7 +303,7 @@ export class SkyCapability implements SceneCapability {
           this.applyExposure();
         }
         if (changed.has("skyEnvironment")) {
-          if (state.skyEnvironment) this.regenerateEnvironment();
+          if (state.skyEnvironment) this.requestEnvironmentRefresh(true);
           else this.clearEnvironment();
         }
         if (changed.has("skyGodRaysEnabled")) {
@@ -419,7 +419,7 @@ export class SkyCapability implements SceneCapability {
     // 但 exposure 可能已被外部改过，必须重新写入。
     // [ADR-250 §2.3] 统一走 applyExposure（skyExposure × ppExposure）。
     this.applyExposure();
-    if (envState.skyEnvironment) this.regenerateEnvironment();
+    if (envState.skyEnvironment) this.requestEnvironmentRefresh(true);
     else this.clearEnvironment();
     // 同步日落光束 + tint overlay 挂载（按当前太阳角度决策）
     this.beams.sync(this.elevation, this.azimuth);
@@ -549,8 +549,11 @@ export class SkyCapability implements SceneCapability {
     setEnvState({ skyForceEnv: true }, { source: "auto-model" });
     // 恢复预设切换的 IBL 重建：changed 集不命中 callback 的任一重建分支
     // （唯一判 skyForceEnv 的 cloudCoverage 分支要求 skyCloudCoverage 同变，预设不含），
-    // envSky uniforms 已由 callback 散射分支同步，此处只需重建一次
-    if (this.enabled && envState.skyEnvironment) this.regenerateEnvironment();
+    // envSky uniforms 已由 callback 散射分支同步，此处只需重建一次。
+    // [ADR-292 D10] 走 requestEnvironmentRefresh 路由器（与 callback 各分支同源）：
+    // env 接管装载时转交 env，sky 不抢写槽位；force=true——换模型是离散动作，
+    // 必须拿到当前帧的图（同 apply 打开路径），不能被太阳高度角阈值门控跳过。
+    if (this.enabled) this.requestEnvironmentRefresh(true);
   }
 
   /** 设置云量 0=晴空 1=多云（ADR-073 #4）；regenerate=true 时同步刷新 IBL 环境 */

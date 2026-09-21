@@ -100,6 +100,7 @@ ${noAnimationsCSS}
   font-size:var(--fs-base);
   font-weight:600;
   color:var(--txt);
+  font-family:var(--font-display);
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
@@ -133,6 +134,7 @@ ${noAnimationsCSS}
   font-size:var(--fs-base);
   font-weight:600;
   color:var(--txt);
+  font-family:var(--font-display);
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
@@ -160,7 +162,7 @@ ${noAnimationsCSS}
 .rec-card:hover {
   transform:scale(1.02) translateY(-2px);
 }
-.rec-card .name { font-size:var(--fs-base); font-weight:600; color:var(--txt); margin-bottom:2px; }
+.rec-card .name { font-size:var(--fs-base); font-weight:600; color:var(--txt); font-family:var(--font-display); margin-bottom:2px; }
 .rec-card .hint { font-size:var(--fs-xs); color:var(--muted); margin-top:4px; }
 .rec-card .actions { display:flex; gap:4px; margin-top:6px; }
 .rec-card .actions button { font-size:var(--fs-xs); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; transition:var(--tr-fast); } /* 主操作按钮 = txt（hover 变 accent 仍作状态反馈） */

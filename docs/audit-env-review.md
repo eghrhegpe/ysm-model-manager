@@ -41,7 +41,7 @@
 - 状态层（统一 ADR-196）：`state/env-state.ts`（envState 单例 + setEnvState 中央写入 +
   lastWriteSource 守卫 manual > auto-atmosphere > auto-model）、`state/env-state-schema.ts`
   （字段声明 + 值域钳制唯一入口）、`state/env-dispatcher.ts`（回调注册/组过滤/挂起）、
-  `state/atmosphere-presets.ts`（5 氛围预设 = Partial<EnvState> 完整快照）。
+  `state/atmosphere-presets.ts`（5 氛围预设 = `Partial<EnvState>` 完整快照）。
 - 守卫测试：env.test.ts 尾部「守护」describe 遍历 6 cap 的 prototype 锁死
   getMasterNodeId/getEnvPlacement 声明 + 分段/序 + master id 集合。
 

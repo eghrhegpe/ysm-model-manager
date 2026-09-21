@@ -250,6 +250,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-292：环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源",
+        "link": "/adr/ADR-292-scene-environment-sky-ibl-env"
+      },
+      {
         "text": "ADR-291：B 轨快照探针入册门槛（双轨状态镜像的治理边界）",
         "link": "/adr/ADR-291-preview-snapshot-probe-threshold"
       },

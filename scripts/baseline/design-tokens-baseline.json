@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-21T23:06:19.549Z",
+  "generated": "2026-09-21T23:15:24.730Z",
   "count": 463,
   "note": "设计令牌存量债账本（ADR-256：已不参与门禁判定，只供 doctor 报告 / 收债排期）；清理后重跑 --update-baseline 收缩",
   "violations": [
@@ -57,7 +57,7 @@
     "frontend/css/layout.css:397:css-padding",
     "frontend/css/layout.css:67:css-padding",
     "frontend/css/layout.css:99:css-padding",
-    "frontend/css/variables.css:339:css-padding",
+    "frontend/css/variables.css:348:css-padding",
     "frontend/src/features/dialogs/rename.ts:44:emoji-icon",
     "frontend/src/features/maintenance/version-updater.ts:124:css-padding",
     "frontend/src/preview-3d/adapters/litematic-adapter.ts:33:css-padding",

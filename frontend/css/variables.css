@@ -255,6 +255,15 @@
   --space-sm: calc(4px + var(--fs-scale) * 0.35);
   --space-md: calc(5px + var(--fs-scale) * 0.42);
 
+  /* 间距五档令牌（ADR-294）：UI-Design.md §5 间距系统的 CSS 变量化，
+     内容间距标量（4 的倍数 ∩ §5 层级），随字号缩放，与 --pad-* 同构。
+     --sp-* = 内容/列表/卡片间距；--pad-* = 按钮/标签垂直档（语义不同轨，勿混）。 */
+  --sp-1: calc(4px + var(--fs-scale) * 0.35);  /* 4px @ 基准：§5 层级1 图标与文字、小元素 */
+  --sp-2: calc(8px + var(--fs-scale) * 0.6);   /* 8px @ 基准：§5 层级2 列表项、小元素间距 */
+  --sp-3: calc(12px + var(--fs-scale) * 0.8);  /* 12px @ 基准：§5 层级3 卡片内边距、段落 */
+  --sp-4: calc(16px + var(--fs-scale) * 1.1);  /* 16px @ 基准：§5 层级4 区块间距、大按钮 */
+  --sp-5: calc(24px + var(--fs-scale) * 1.6);  /* 24px @ 基准：§5 层级5 页面主间距 */
+
   /* 语义化字号 — 按 UI 角色命名，派生自 --fs-base-size（基准一动全盘跟随）+ --fs-scale 偏移 */
   --fs-nav: calc(var(--fs-base-size) + 3px + var(--fs-scale)); /* 16px @ 基准（导航主标签 repo-tab + 侧边菜单项 .nav-item）*/
   --fs-tab: calc(var(--fs-base-size) + var(--fs-scale)); /* 13px @ 基准（二级子标签 repo-subtab, sm-tab）*/

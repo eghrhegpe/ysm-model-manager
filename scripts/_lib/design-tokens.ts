@@ -106,22 +106,35 @@ export const TOKEN_PX_BASELINE: Readonly<Record<string, number>> = {
 };
 
 /**
- * padding 硬编码判定（2026-09 立闸）。
+ * padding 硬编码判定（2026-09 立闸；2026-09 ADR-294 升级 --sp-* 优先）。
  *
  * 为什么补：`docs/UI-Design.md` §5 间距系统明文「不要使用 3px、7px、9px 等
  * 非标准值。要么 4 的倍数，要么用上述层级」，且 §语义化间距变量定义了
  * [--pad-*] 垂直语义档、[--btn-padding-*] 完整简写档——但判定层原只覆盖
  * font-size/radius/color/emoji/shadow/transition，**padding 长期零守护**。
- * 实测全仓 358 处硬编码 padding（值高达 108 种），规范与实际严重漂移。
+ * 实测全仓 454 处硬编码 padding（值高达 113 种），规范与实际严重漂移。
+ *
+ * [ADR-294 D2] 判定建议升级为 [--sp-*] 优先：存量 padding 主语义是**内容间距**
+ * （4/8/12/16/24px，对应 §5 五档），非按钮垂直档（--pad-*）。故单值先落 [--sp-*]
+ * （内容间距默认），[--pad-*] 仅承接 3/5/6px 这类 [--sp-*] 无档的按钮/标签垂直值。
  *
  * 判定口径（与 transition 反转同哲学——硬编码即债，能安全归位才给建议）：
  *   - **一律报**：`padding: Npx`（内联或 CSS 块，含 `0` 与组合值）→ 应走令牌档；
- *   - **只给精确建议**：单值 `padding: Npx`（垂直语义最纯）→ 就近垂直档 `--pad-*`；
- *     组合值（`4px 8px` 等）涉及横向语义，机械收敛到 `--btn-padding-*` 完整档是
- *     存量收敛的事，闸建议给 null（照报但宁可不猜，与 transition 先例一致）。
+ *   - **只给精确建议**：单值 `padding: Npx` → 就近 [--sp-*]（内容间距）或 [--pad-*]；
+ *     组合值（`4px 8px` 等）涉及横向语义，机械收敛是存量的事，建议给 null
+ *     （照报但宁可不猜，与 transition 先例一致）。
  *
  * 档位基准值见下方表格，与 variables.css 的一致性由测试契约锁定。
  */
+/** 间距五档（ADR-294）：内容间距标量，4 的倍数 ∩ §5 层级。 */
+export const SP_TOKEN_VERTICAL: Readonly<Record<string, number>> = {
+  "--sp-1": 4,
+  "--sp-2": 8,
+  "--sp-3": 12,
+  "--sp-4": 16,
+  "--sp-5": 24,
+};
+/** 按钮/标签垂直档（3-6px）。 */
 export const PAD_TOKEN_VERTICAL: Readonly<Record<string, number>> = {
   "--pad-btn-tool": 3,
   "--pad-filter": 4,
@@ -132,17 +145,34 @@ export const PAD_TOKEN_VERTICAL: Readonly<Record<string, number>> = {
 };
 
 /**
- * 取最近垂直档令牌名（**就近归档**：5px → --pad-tab，4px → --pad-filter…）。
- * 距离 ≤2px 才建议（孤品如 1px 无档可归 → null，宁可不猜）。
+ * 取最近间距档令牌名（**就近归档**，距离 ≤2px 才建议；孤品返回 null）。
+ * 优先 [--sp-*]（内容间距默认语义），次选 [--pad-*]（按钮/标签垂直档）。
  */
 export function nearestPadToken(px: number, tokenMap?: TokenRawMap | null): string | null {
-  let best: { name: string; dist: number } | null = null;
+  // ① 精确命中：--sp-* 优先（内容间距默认），--pad-* 次之
+  for (const [name, v] of Object.entries(SP_TOKEN_VERTICAL)) {
+    if (tokenMap && !tokenMap.has(name)) continue;
+    if (v === px) return name;
+  }
+  for (const [name, v] of Object.entries(PAD_TOKEN_VERTICAL)) {
+    if (tokenMap && !tokenMap.has(name)) continue;
+    if (v === px) return name;
+  }
+  // ② 非精确：收集 ≤2px 候选，按「--sp-* 优先 → 距离近」排序
+  const cands: Array<{ name: string; dist: number; priority: number }> = [];
+  for (const [name, v] of Object.entries(SP_TOKEN_VERTICAL)) {
+    if (tokenMap && !tokenMap.has(name)) continue;
+    const dist = Math.abs(v - px);
+    if (dist <= 2) cands.push({ name, dist, priority: 2 });
+  }
   for (const [name, v] of Object.entries(PAD_TOKEN_VERTICAL)) {
     if (tokenMap && !tokenMap.has(name)) continue;
     const dist = Math.abs(v - px);
-    if (best === null || dist < best.dist) best = { name, dist };
+    if (dist <= 2) cands.push({ name, dist, priority: 1 });
   }
-  return best && best.dist <= 2 ? best.name : null;
+  if (cands.length === 0) return null;
+  cands.sort((a, b) => b.priority - a.priority || a.dist - b.dist);
+  return cands[0]!.name;
 }
 
 /**

@@ -36,7 +36,9 @@ import {
   fixLineTokens,
   isCommentLine,
   isRealtimeFeedbackTransition,
+  PAD_TOKEN_VERTICAL,
   parseTokenMap,
+  SP_TOKEN_VERTICAL,
   suggestToken,
   TOKEN_PX_BASELINE,
 } from "../scripts/_lib/design-tokens.ts";
@@ -1041,13 +1043,59 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   // 为什么补：UI-Design.md §5 明文「不要使用 3px、7px、9px 等非标准值」，且
   // §语义化间距变量已定义 --pad-* 垂直档、--btn-padding-* 完整档，但判定层
   // 原只覆盖 font-size/radius/color/shadow/transition——padding 长期零守护。
+  // [ADR-294] 建议升级为 --sp-* 优先（内容间距默认语义），--pad-* 承接按钮/标签档。
   const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
 
-  // ① CSS 块硬编码 padding → 命中 css-padding；单值给最近垂直档建议
+  // 0) 档表对账（防手写表漂移成独立事实源，同 TOKEN_PX_BASELINE 对账哲学）：
+  //    建议表里每个令牌必须真实存在于 variables.css，基准 px 与注释/字面值一致。
+  const cssText = fs.readFileSync(VARIABLES_CSS, "utf-8").replace(/\r\n/g, "\n");
+  const padReal = parseTokenMap(cssText);
+  for (const [table, tag] of [
+    [SP_TOKEN_VERTICAL, "--sp-*"],
+    [PAD_TOKEN_VERTICAL, "--pad-*"],
+  ] as const) {
+    for (const [name, expected] of Object.entries(table)) {
+      assert.ok(padReal.has(name), `${tag} 表令牌 ${name} 必须存在于 variables.css`);
+      const declLine = cssText.split("\n").find((l) => l.includes(`${name}:`));
+      const commentPx = declLine ? /\/\*\s*(\d+(?:\.\d+)?)px/.exec(declLine) : null;
+      const literalPx = declLine ? /:\s*(\d+(?:\.\d+)?)px\s*;/.exec(declLine) : null;
+      const actual = commentPx?.[1]
+        ? Number(commentPx[1])
+        : literalPx?.[1]
+          ? Number(literalPx[1])
+          : null;
+      if (actual !== null && actual !== expected) {
+        assert.fail(`${name}: 表=${expected}px, css=${actual}px（${tag} 对账漂移）`);
+      }
+    }
+  }
+  // 0b) --sp-* 与 --pad-* 基准值不重复：--sp-* 是内容间距（4/8/12/16/24），
+  //     --pad-* 是按钮垂直档（3/4/5/6）；4px 在两个表共存属刻意（情境不同轨）。
+  assert.equal(SP_TOKEN_VERTICAL["--sp-1"], 4, "--sp-1 应 4px（§5 层级1）");
+  assert.equal(SP_TOKEN_VERTICAL["--sp-2"], 8, "--sp-2 应 8px（§5 层级2）");
+  assert.equal(SP_TOKEN_VERTICAL["--sp-3"], 12, "--sp-3 应 12px（§5 层级3）");
+  assert.equal(SP_TOKEN_VERTICAL["--sp-4"], 16, "--sp-4 应 16px（§5 层级4）");
+  assert.equal(SP_TOKEN_VERTICAL["--sp-5"], 24, "--sp-5 应 24px（§5 层级5）");
+  console.log("  ✓ --sp-* / --pad-* 档表与 variables.css 对账 + 五档基准值");
+
+  // ① CSS 块硬编码 padding → 命中 css-padding；单值给 --sp-* 优先建议（ADR-294）
   const a = findStyleAttrViolations("  .x { padding: 4px; }", 3, tokens);
   assert.equal(a.length, 1, "CSS 块 padding:4px 应命中 1 条");
   assert.equal(a[0]!.kind, "css-padding", "种类应为 css-padding");
-  assert.equal(a[0]!.suggestion, "--pad-filter", "4px 应建议 --pad-filter（4px 档）");
+  assert.equal(a[0]!.suggestion, "--sp-1", "4px 应建议 --sp-1（内容间距默认，ADR-294）");
+
+  // ①b 大间距单值 → --sp-* 档（12px → --sp-3）
+  const a12 = findStyleAttrViolations("  .x { padding: 12px; }", 30, tokens);
+  assert.equal(a12[0]?.suggestion, "--sp-3", "12px 应建议 --sp-3");
+
+  // ①c 按钮/标签垂直档 → --pad-*（5px/6px 无 --sp-* 精确档）
+  const a5 = findStyleAttrViolations("  .x { padding: 5px; }", 31, tokens);
+  assert.ok(
+    a5[0]?.suggestion === "--pad-tab" || a5[0]?.suggestion === "--pad-btn-primary",
+    `5px 应建议 --pad-*（无 --sp-* 档），实际 ${a5[0]?.suggestion}`,
+  );
+  const a6 = findStyleAttrViolations("  .x { padding: 6px; }", 32, tokens);
+  assert.equal(a6[0]?.suggestion, "--pad-nav", "6px 应建议 --pad-nav");
 
   // ② 组合值 → 命中但建议 null（横向语义机械收敛属存量，不瞎猜）
   const b = findStyleAttrViolations("  .b { padding: 4px 8px; }", 4, tokens);
@@ -1108,8 +1156,8 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   // ⑨ --fix：仅单值且安全距离内才替换；组合值 / 子属性 / 自定义属性一律不碰
   const fixed = fixLineTokens(".x { padding: 4px; }", tokens).text;
   assert.ok(
-    fixed.includes("padding:var(--pad-filter)"),
-    `单值 4px 应替换为 var(--pad-filter)，实际: ${fixed}`,
+    fixed.includes("padding:var(--sp-1)"),
+    `单值 4px 应替换为 var(--sp-1)，实际: ${fixed}`,
   );
   const fixedCombo = fixLineTokens(".x { padding: 4px 8px; }", tokens).text;
   assert.equal(fixedCombo, ".x { padding: 4px 8px; }", "组合值不应被 --fix 改写（会改语义）");

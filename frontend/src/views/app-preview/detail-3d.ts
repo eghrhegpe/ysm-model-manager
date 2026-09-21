@@ -277,7 +277,7 @@ export async function showStagePreview(
   <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:color-mix(in srgb,var(--warning,#ffa050) 18%,transparent);color:var(--warning,#ffa050);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.STAGE)}</span>
+      <span style="background:color-mix(in srgb,var(--status-warning,#ffa050) 18%,transparent);color:var(--status-warning,#ffa050);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.STAGE)}</span>
       <span>${t("preview.stagePerformanceLabel")}</span>
     </div>
     <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px"></div>
@@ -316,7 +316,7 @@ export async function showStagePreview(
                     );
                     const color =
                       c.kind === "vmd"
-                        ? "var(--warning,#ffa050)"
+                        ? "var(--status-warning,#ffa050)"
                         : c.kind === "audio"
                           ? "var(--accent)"
                           : "var(--muted)";

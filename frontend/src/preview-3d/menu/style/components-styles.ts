@@ -150,8 +150,10 @@ ${wsIconCSS}
     width: 18px;
     height: 18px;
     border-radius:var(--radius-sm);
-    background: var(--accent-dim, rgba(255, 255, 255, 0.12));
-    color: var(--text-dim, #aaa);
+    /* 3D 深色玻璃场景主题无关，用本文件 --uih-* 域（原 --accent-dim/--text-dim 为文档主题变量，
+       全仓无定义且与 3D 深底语义不符——2026-09 悬空引用收敛归位） */
+    background: var(--uih-white-medium);
+    color: rgba(255, 255, 255, 0.85);
     font-size:var(--fs-sm);
     font-weight: 600;
     flex-shrink: 0;

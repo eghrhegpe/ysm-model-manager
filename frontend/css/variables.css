@@ -72,6 +72,8 @@
   --meta-date: #f1fa8c;
   --status-success: #a6e3a1;
   --status-error: #f38ba8;
+  /* 警告色：收敛 15 处 var(--warning, #xx) 悬空引用为单一事实源（深色主题取亮暖橙保证对比） */
+  --status-warning: #ffb74d;
   /* 文件大小色标：语义独立（树内 sz-green/sz-red），取值恒等 status——
      派生以消重复字面量；若将来「大小色」需独立于「状态色」，改回字面量即可 */
   --size-ok: var(--status-success);
@@ -102,6 +104,7 @@
   --meta-date: #a0866a;
   --status-success: #2e7d32;  /* 绿色 — 与深色主题语义一致 */
   --status-error: #c62828;
+  --status-warning: #b8860b;
   --size-ok: var(--status-success);
   --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
@@ -124,6 +127,7 @@
   --meta-date: #90a4ae;
   --status-success: #a5d6a7;
   --status-error: #ef9a9a;
+  --status-warning: #ffb74d;
   --size-ok: var(--status-success);
   --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 20%, transparent);
@@ -147,6 +151,7 @@
   --meta-date: #ef6c00;
   --status-success: #2e7d32;
   --status-error: #c62828;
+  --status-warning: #b8860b;
   --size-ok: var(--status-success);
   --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
@@ -169,6 +174,7 @@
   --meta-date: #ffb74d;
   --status-success: #81c784;
   --status-error: #e57373;
+  --status-warning: #ffb74d;
   --size-ok: var(--status-success);
   --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 18%, transparent);
@@ -192,6 +198,7 @@
   --meta-date: #ffb74d;
   --status-success: #2e7d32;
   --status-error: #c62828;
+  --status-warning: #b8860b;
   --size-ok: var(--status-success);
   --size-large: var(--status-error);
   --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);

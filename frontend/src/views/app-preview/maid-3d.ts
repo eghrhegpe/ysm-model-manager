@@ -246,7 +246,7 @@ function dpRenderPanel(
     <div class="dp-hint">Bedrock Edition Model</div>
   </div>
   ${statsHTML}
-  ${detailHtml ? `<div class="pv-card" style="margin-top:8px">${detailHtml}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">${UI_ICONS.warning} 无法读取模型数据</div>` : ""}
+  ${detailHtml ? `<div class="pv-card" style="margin-top:8px">${detailHtml}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.warning} 无法读取模型数据</div>` : ""}
 </div>`;
 
   // ADR-253 D7：3D 入口 FAB 已删——3D 统一从左下角 nav-fab 进入
@@ -274,7 +274,7 @@ export async function showMaidPreview(
     <div class="big-icon">${UI_ICONS.model}</div>
     <div class="dp-hint">${esc(basename)}</div>
     <div class="dp-hint">${t("preview.bedrockModel")}</div>
-    <div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--txt-dim)">${UI_ICONS.refresh} ${t("preview.analyzingModel")}</div>
+    <div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.refresh} ${t("preview.analyzingModel")}</div>
   </div>
 </div>`;
 

@@ -89,14 +89,14 @@ export const contentDiagCSS: string = `
 .diag-stat { padding:12px; font-size:var(--fs-base); display:block; text-align:center; }
 .diag-stat-muted { color:var(--muted); }
 .diag-stat-error { color: var(--status-error); }
-.perf-gui-est { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--warning, #b8860b) 20%, transparent); color:var(--warning, #b8860b); flex-shrink:0; }
+.perf-gui-est { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--status-warning) 20%, transparent); color:var(--status-warning); flex-shrink:0; }
 /* 类型矩阵（ADR-262 D3）：表格 + 逐模型明细；未采集/阶段不符用 warning 色显式标注 */
 .perf-matrix { width:100%; border-collapse:collapse; margin:6px 0; font-size:var(--fs-xs); color:var(--txt); }
 .perf-matrix th, .perf-matrix td { text-align:left; padding:4px 8px; border-bottom:1px solid var(--bd); }
 .perf-matrix th { color:var(--muted); font-weight:600; }
 .perf-matrix-id { color:var(--muted); font-size:var(--fs-micro); }
 .perf-matrix-tag { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:var(--surf); color:var(--muted); }
-.perf-matrix-warn { color:var(--warning, #b8860b); }
+.perf-matrix-warn { color:var(--status-warning); }
 .perf-matrix-models { display:flex; flex-direction:column; gap:2px; padding:2px 0; }
 .perf-matrix-model { display:flex; align-items:center; gap:8px; font-size:var(--fs-xs); }
 .perf-matrix-model-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); font-family:var(--font-mono); }
@@ -125,15 +125,15 @@ export const contentDiagCSS: string = `
 /* ===== 性能面板（single-bench / concurrent / scan-bench / perf-log） ===== */
 .perf-section { font-size:var(--fs-sm); font-weight:600; color:var(--txt); display:flex; align-items:center; gap:6px; }
 /* CLI 信封耗时徽标：量的是命令本身，非本页渲染——弱化样式，不与区段标题抢视觉权重 */
-.perf-section-ms { display:inline-flex; align-items:center; gap:2px; font-size:var(--fs-xs); font-weight:400; color:var(--txt-dim); }
+.perf-section-ms { display:inline-flex; align-items:center; gap:2px; font-size:var(--fs-xs); font-weight:400; color:var(--muted); }
 .perf-bar-row { display:flex; align-items:center; gap:8px; margin:2px 0; font-size:var(--fs-xs); }
 .perf-bar-name { flex:0 0 118px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); }
 .perf-bar-track { flex:1; height:12px; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-md); overflow:hidden; }
 .perf-bar-fill { display:block; height:100%; background:var(--accent); border-radius:var(--radius-md); }
-.perf-bar-fill.perf-bar-warn { background: var(--warning, #e6b800); }
+.perf-bar-fill.perf-bar-warn { background: var(--status-warning); }
 .perf-bar-fill.perf-bar-danger { background: var(--status-error); }
 .perf-bar-val { flex:0 0 auto; min-width:130px; text-align:right; color:var(--txt); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } /* 测量值 = 面板产出正文（warn/danger 变体下条覆盖） */
-.perf-bar-val.perf-bar-warn { color: var(--warning, #b8860b); }
+.perf-bar-val.perf-bar-warn { color: var(--status-warning); }
 .perf-bar-val.perf-bar-danger { color: var(--status-error); }
 /* 阶段运行归属徽标（ADR-262 D2）：single-bench / concurrent / scan-bench 共用同一概念，同一类名 */
 .perf-rt-tag { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--muted, #888) 18%, transparent); color:var(--muted); flex-shrink:0; }
@@ -144,7 +144,7 @@ export const contentDiagCSS: string = `
 .perf-bl-rows { margin:2px 0 0 0; }
 .perf-bl-row { display:flex; align-items:center; gap:8px; padding:2px 2px; font-size:var(--fs-sm); color:var(--txt); border-bottom:1px dotted var(--bd); }
 .perf-bl-row.perf-bar-danger { color:var(--status-error); font-weight:600; }
-.perf-bl-row.perf-bar-warn { color:var(--warning, #b8860b); }
+.perf-bl-row.perf-bar-warn { color:var(--status-warning); }
 /* noise/new 不是「判退化」——压低权重，避免被误读成结论 */
 .perf-bl-row.perf-bl-muted { color:var(--muted); }
 .perf-bl-name { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -161,21 +161,21 @@ export const contentDiagCSS: string = `
 .perf-conc-speedup { flex:0 0 auto; min-width:64px; text-align:right; font-variant-numeric:tabular-nums; }
 .perf-conc-detail { flex:0 0 auto; color:var(--muted); font-variant-numeric:tabular-nums; }
 .perf-conc-verdict { flex:0 0 auto; min-width:72px; }
-.perf-conc-good { color:var(--status-ok, #2e7d32); }
-.perf-conc-warn { color:var(--warning, #b8860b); }
+.perf-conc-good { color:var(--status-success); }
+.perf-conc-warn { color:var(--status-warning); }
 .perf-conc-bad { color:var(--status-error); }
 /* 扫描引擎对照（ADR-262 D3）：实测行与未采集行必须视觉可分——0ms 假象的源头就是两者长得一样 */
 .perf-sb-table td { vertical-align:top; }
 .perf-sb-engine { font-weight:600; }
 .perf-sb-ms { font-variant-numeric:tabular-nums; }
-.perf-sb-ok { color:var(--status-ok, #2e7d32); }
-.perf-sb-skip { color:var(--warning, #b8860b); }
+.perf-sb-ok { color:var(--status-success); }
+.perf-sb-skip { color:var(--status-warning); }
 .perf-sb-reason { color:var(--muted); font-size:var(--fs-micro); }
 .perf-sb-skipped { color:var(--muted); font-size:var(--fs-micro); margin-top:2px; }
 .perf-sb-parity { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:4px 2px; font-size:var(--fs-sm); }
 .perf-sb-parity-label { font-weight:600; }
-.perf-sb-parity-ok { color:var(--status-ok, #2e7d32); font-weight:600; }
-.perf-sb-parity-warn { color:var(--warning, #b8860b); font-weight:600; }
+.perf-sb-parity-ok { color:var(--status-success); font-weight:600; }
+.perf-sb-parity-warn { color:var(--status-warning); font-weight:600; }
 .perf-sb-parity-bad { color:var(--status-error); font-weight:600; }
 .perf-sb-diff { font-size:var(--fs-xs); color:var(--muted); word-break:break-all; padding-left:10px; }
 .perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-md); background:var(--surf); padding:6px 10px; margin:4px 0; animation: conflictRowIn .3s ease both; }
@@ -189,7 +189,7 @@ export const contentDiagCSS: string = `
 .perf-asset-grid { display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 2px;font-size:var(--fs-xs); }
 .perf-asset-item { color:var(--txt);white-space:nowrap; }
 .perf-badge-ok { color:var(--status-success);font-weight:600; }
-.perf-badge-warn { color:var(--warning,#b8860b); }
+.perf-badge-warn { color:var(--status-warning); }
 .perf-tex-section { font-size:var(--fs-xs);color:var(--muted);padding:4px 2px;line-height:1.6; }
 .perf-tex-row { display:flex;align-items:center;gap:6px;padding:1px 0; }
 .perf-tex-name { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt); }
@@ -238,7 +238,7 @@ export const contentDiagCSS: string = `
 .diag-config-select:focus, .diag-config-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
 /* .diag-sync-config 规则已随 ADR-288 删除：同步冲突的参数面板不再是「点按钮后渲染的卡片」，
    而是常驻 .diag-bar（选择器 + 按钮直接排在栏内）——旧卡片类失去生产者，规则一并退场。 */
-.diag-sync-resolve { margin-top:16px; padding:12px; background:var(--diag-stat-bg, var(--surf)); border-radius:var(--radius-lg); }
+.diag-sync-resolve { margin-top:16px; padding:12px; background:var(--surf); border-radius:var(--radius-lg); }
 .diag-dedup-config { padding:8px 12px; }
 .diag-warn { color:var(--status-warning, #e6b800); font-weight:600; }
 

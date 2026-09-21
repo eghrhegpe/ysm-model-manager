@@ -88,7 +88,7 @@ export const TOKEN_PX_BASELINE: Readonly<Record<string, number>> = {
   "--fs-lg": 15,
   "--fs-xl": 25,
   // 语义字号（同样派生自 --fs-base-size；此处为基准 13px 时的等价像素）
-  "--fs-nav": 14,
+  "--fs-nav": 16,
   "--fs-tab": 13,
   "--fs-filter": 12,
   "--fs-btn-primary": 13,

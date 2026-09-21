@@ -97,7 +97,7 @@ export const navCSS: string = `
   border-left: 3px solid var(--accent);
   padding-left: 7px;
 }
-.nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
+.nav-item .icon { font-size: var(--fs-lg); width: 20px; text-align: center; }
 /* 左下角 3D 一键跳转（统一为导航项样式，与 nav-item 一致） */
 .nav-viewer-fab {
   display: flex;
@@ -112,7 +112,7 @@ export const navCSS: string = `
   transition: var(--tr-fast);
 }
 .nav-viewer-fab:hover { background: var(--hover); }
-.nav-viewer-fab .icon { font-size: 15px; width: 20px; text-align: center; }
+.nav-viewer-fab .icon { font-size: var(--fs-lg); width: 20px; text-align: center; }
 :host([data-collapsed]) .nav-viewer-fab { justify-content: center; padding: 8px 0; margin: 2px 6px 6px; }
 :host([data-collapsed]) .nav-viewer-fab .fab-text { display: none; }
 .version {

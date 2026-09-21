@@ -1,14 +1,15 @@
 {
-  "generated": "2026-09-19T09:05:09.181Z",
+  "generated": "2026-09-21T13:33:51.474Z",
   "count": 21,
   "note": "设计令牌存量债账本（ADR-256：已不参与门禁判定，只供 doctor 报告 / 收债排期）；清理后重跑 --update-baseline 收缩",
   "violations": [
-    "frontend/src/preview-3d/adapters/litematic-adapter.ts:92:inline-style-font-size",
+    "frontend/src/features/dialogs/rename.ts:44:emoji-icon",
+    "frontend/src/preview-3d/adapters/litematic-adapter.ts:93:inline-style-font-size",
     "frontend/src/preview-3d/adapters/vrm/vrm-bone-ui.ts:49:css-color",
     "frontend/src/preview-3d/infra/preview-loading.ts:32:inline-style-font-size",
     "frontend/src/preview-3d/infra/preview-loading.ts:43:inline-style-font-size",
-    "frontend/src/preview-3d/menu/engine/core.ts:90:css-font-size",
-    "frontend/src/preview-3d/menu/render/cap-controls.ts:97:css-color",
+    "frontend/src/preview-3d/menu/engine/core.ts:91:css-font-size",
+    "frontend/src/preview-3d/menu/render/cap-controls.ts:101:css-color",
     "frontend/src/preview-3d/menu/style/slide-menu-styles.ts:44:css-color",
     "frontend/src/utils/dom/tooltip.ts:13:css-color",
     "frontend/src/views/app-content/css/content-creator.ts:280:css-font-size",
@@ -16,13 +17,12 @@
     "frontend/src/views/app-content/css/content-gh.ts:155:css-color",
     "frontend/src/views/app-content/css/content-gh.ts:156:css-color",
     "frontend/src/views/app-content/css/content-gh.ts:24:css-font-size",
-    "frontend/src/views/app-content/tpl.ts:400:inline-style-font-size",
-    "frontend/src/views/app-nav/tpl.ts:114:css-font-size",
+    "frontend/src/views/app-content/tpl.ts:456:inline-style-font-size",
     "frontend/src/views/app-nav/tpl.ts:56:css-font-size",
-    "frontend/src/views/app-nav/tpl.ts:99:css-font-size",
-    "frontend/src/views/app-preview/css.ts:78:css-font-size",
+    "frontend/src/views/app-preview/css.ts:68:css-font-size",
     "frontend/src/views/app-tree/app-tree-styles.ts:116:css-radius",
     "frontend/src/views/app-tree/app-tree-styles.ts:78:css-font-size",
-    "frontend/src/views/app-tree/app-tree-styles.ts:88:css-radius"
+    "frontend/src/views/app-tree/app-tree-styles.ts:88:css-radius",
+    "frontend/src/views/app-tree/tpl-batch-rename.ts:79:emoji-icon"
   ]
 }

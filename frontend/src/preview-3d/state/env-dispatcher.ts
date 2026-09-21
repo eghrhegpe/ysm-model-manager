@@ -121,7 +121,11 @@ export function clearEnvCallbacks(): void {
  *  是 LightCapability.loadState（自身同步块内闭合，registry.loadAll 顺序串行，跨 cap 无重叠窗），
  *  故无受害方——但本机制**只保证单 cap 自身重入收敛，不是跨 cap 事务边界**，
  *  勿用于「先改 A 再改 B，中间别派发」这类场景（其它 cap 会错过派发）。
- *  另：clearEnvCallbacks 会一并复位计数（测试隔离兜底）。 */
+ *  另：clearEnvCallbacks 会一并复位计数（测试隔离兜底）。
+ *  ⚠️ 调用点更新（2026-09-21 锐评 D7 回写）：除 LightCapability.loadState 外，
+ *  GroundCapability / FogCapability / EnvironmentCapability 的 loadState 亦已入列——
+ *  各自「挂起 → 只写 envState → 末尾统一应用一次」重入治理，同构闭合，跨 cap 仍无重叠窗，
+ *  上述「非跨 cap 事务边界」警告依然成立。 */
 export function suspendEnvCallbacks(): void {
   _suspended++;
 }

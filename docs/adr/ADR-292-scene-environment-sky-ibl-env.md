@@ -257,6 +257,19 @@ node 可测，对齐 `ground-migrations.ts` 先例；21 例测试覆盖三判据
 > `env.refreshFromSkySource()` 而**不写槽位**；未接管时保留 sky 自持装载（既有行为不回归）。
 > 这使「谁写槽位」在运行期也是**单一**的，而非仅靠 dispose 期守卫兜底。
 
+> **D10 修订（2026-09-21 锐评复审，commit ce0ec8090/795e369db/77fa57159）**：原判据
+> 「env 未 *sky 源接管* ⇒ sky 自持」有洞——默认路径（`envSource="preset"`）下 sky 仍经
+> 自持路写槽位，顶掉 env 的预设图，「写者唯一」在运行期未真正成立。**判据改为「env cap
+> 在场且启用 ⇒ 一律让权」**：env 在场时 sky 的事件只转交 `refreshFromSkySource(force)`
+> （其内部自判：sky 源重新取图装载，非 sky 源早退不动作——预设图不随天空事件重烤）；
+> sky 自持装载**仅留给 env 缺席（独立预览）或 env 整体关闭**的兜底路，此时 `skyEnvironment`
+> 退役开关照常门控。配套三点：① `clearEnvironment()` 同加在场让权守卫（D-3 直装使槽位值
+> 恰等于 sky 的 renderTarget 纹理，旧守卫会误清 env 装载）；② env 直装态 dispose 认
+> `skySourcedTex` 还原 prevEnvironment，不赌反序 dispose；③ 天空交回的是 PMREM 预滤波
+> cubeUV 产物，env **直装、严禁再入 `fromEquirectangular`**，force=false 同引用短路整轮
+> 免重建（D9 门控跨 cap 传导恢复）。回归锁：`sky-capability.test.ts`「[D-1 红线]/[A]」
+> 用例 + `environment-capability.test.ts`「[D-2/D-3/D-4/D-5]」系列。
+
 **批次三定案：UI 出口（2026-09-21）**
 
 > **决策 D11（来源单向权威）**：`envSource` 是通路选择的**唯一**权威，`envPreset` 只承载

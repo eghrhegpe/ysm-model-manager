@@ -44,6 +44,34 @@ describe("createListenerSet — 无参通知（原 3D 域 ground/water 共用样
     notify();
     expect(a).not.toHaveBeenCalled();
   });
+
+  // [ADR-293 复核 P0] notify 同步栈内「退订旧 + 订阅新」重绑（面板 refresh → 渲染器
+  // 重建闭包）若走活 Set 迭代，新监听器会被同一轮 notify 再触发 → 无穷兄弟循环。
+  // 快照迭代断链：本轮只通知 notify 时刻已在册者（DOM EventTarget 同语义）。
+  it("notify 迭代期间 subscribe 的新监听器不参与本轮（快照迭代，防重入自激循环）", () => {
+    const { subscribe, notify } = createListenerSet();
+    let lateCalls = 0;
+    subscribe(() => {
+      subscribe(() => {
+        lateCalls++;
+      });
+    });
+    notify();
+    expect(lateCalls).toBe(0); // 本轮快照里没有新订阅者
+    notify();
+    expect(lateCalls).toBe(1); // 下一轮才收到
+  });
+
+  it("notify 迭代期间 unsubscribe 的靠后监听器本轮即跳过（快照 + 在册校验）", () => {
+    const { subscribe, notify } = createListenerSet();
+    const b = vi.fn();
+    subscribe(() => {
+      unsubB();
+    });
+    const unsubB = subscribe(b);
+    notify();
+    expect(b).not.toHaveBeenCalled();
+  });
 });
 
 describe("createListenerSet<T> — 状态快照订阅（带载荷）", () => {

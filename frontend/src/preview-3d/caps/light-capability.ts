@@ -371,8 +371,11 @@ export class LightCapability implements SceneCapability {
     }
 
     // [ADR-293] 离散键 notify（subscribe 契约，对齐 fog 的 fogMode 先例）：外部写
-    //（跨会话共享 cap 的程序化写入）时面板值与场景同步；本会话用户自拨时，
-    // 叠加在 refreshOnChange 之上多一次面板重建——同步块内幂等，无害。
+    //（跨会话共享 cap 的程序化写入）时面板值与场景同步。⚠️ 本调用处于 setEnvState
+    // 同步派发栈内，面板订阅者 menu.refresh() 会同步重入 schema 渲染——安全前提是
+    // 双保险：listener-set 快照迭代（notify 只触达在册时刻）+ rebindSceneCapSubs
+    // (menu,cap) 幂等（重渲染不重订阅）。缺任一即自激重建死循环（复核 P0 立法，
+    // 回归测试见 preview-state.test.ts「面板重入收敛」）。
     if (hasAny(changed, DISCRETE_NOTIFY_KEYS)) this.listenerSet.notify();
   }
 

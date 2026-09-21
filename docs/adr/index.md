@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **291** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **292** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 262 |
+| [✅ 已采纳](#已采纳) | 263 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -30,7 +30,7 @@ permalink: /adr/
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-293](./ADR-293-schema-helper.md) | 灯光能力总开关 schema 化、helper 可见性控件化与面板响应 | 📝 提议中 |
+| [ADR-294](./ADR-294-spacing-five-tier-tokens.md) | 间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层） | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-282](./ADR-282-applymodelpreset-default-light-params.md) | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 |
@@ -55,10 +55,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（262）
+### ✅ 已采纳（263）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-293](./ADR-293-schema-helper.md) | 灯光能力总开关 schema 化、helper 可见性控件化与面板响应 | ✅ 已采纳 |
 | [ADR-291](./ADR-291-preview-snapshot-probe-threshold.md) | B 轨快照探针入册门槛（双轨状态镜像的治理边界） | ✅ 已采纳 |
 | [ADR-290](./ADR-290-volumetric-cone-driver.md) | 体积光锥驱动源 schema 化（lightVolumetricDriver） | ✅ 已采纳 |
 | [ADR-289](./ADR-289-runtime-log-structuring.md) | 运行时日志结构化：tag 提取与级别推断 | ✅ 已采纳 |
@@ -346,7 +347,8 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-293 | 灯光能力总开关 schema 化、helper 可见性控件化与面板响应 | 📝 提议中 | 2026-09-22 |
+| ADR-294 | 间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层） | 📝 提议中 | 2026-09-22 |
+| ADR-293 | 灯光能力总开关 schema 化、helper 可见性控件化与面板响应 | ✅ 已采纳 | 2026-09-22 |
 | ADR-292 | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 | 2026-09-21 |
 | ADR-291 | B 轨快照探针入册门槛（双轨状态镜像的治理边界） | ✅ 已采纳 | 2026-09-21 |
 | ADR-290 | 体积光锥驱动源 schema 化（lightVolumetricDriver） | ✅ 已采纳 | 2026-09-20 |

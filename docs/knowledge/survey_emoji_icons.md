@@ -46,6 +46,7 @@ auto_fields:
     - REALTIME_FEEDBACK_MAX_SECS
     - REALTIME_FEEDBACK_PROPS
     - SHADOW_TOKEN_VALUES
+    - SP_TOKEN_VERTICAL
     - splitTopLevelCommas
     - STATUS_ICON_NAMES
     - suggestIconName

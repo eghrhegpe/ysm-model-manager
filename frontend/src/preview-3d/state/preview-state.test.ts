@@ -26,6 +26,7 @@ import {
   buildLightingSchema,
   buildShadowSchema,
   buildPostprocessingSchema,
+  disposeSceneCapSubscriptions,
 } from "@/preview-3d/menu/panels/settings.ts";
 import type { PreviewMenuCtx } from "@/preview-3d/menu/engine/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
@@ -35,6 +36,7 @@ import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-regi
 import { setSceneCapabilityLookup, setPreviewUiMode } from "./preview-state.ts";
 import type { PreviewControlDef, SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { MAX_FPS_KEY, MAX_PIXEL_RATIO_KEY, getMaxFps } from "@/preview-3d/infra/render-budget.ts";
+import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { PERF_PRESETS } from "./perf-presets.ts";
 import type { LocaleKey } from "@/core/i18n/t.ts";
 
@@ -503,6 +505,36 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     // 面板首行不再是能力总开关——被 filter 掉（总开关已升场景组根视图 headerToggle）
     expect(lighting.map((n) => n.id)).not.toContain("light-enabled");
     expect(lighting.map((n) => n.id)).toEqual(["light-key"]);
+  });
+
+  // [ADR-293 复核 P0] 回归：面板渲染栈内同步重入的 notify 闭环。离散变更 → cap.notify
+  // → menu.refresh() → renderTop 同步重跑 buildLightingSchema → rebind。若监听集合活
+  // Set 迭代 + 重绑每次渲染退订重订，新订阅者会被同一轮 notify 触发 → 无穷自激重建
+  //（探针实测 501 次/6ms 熔断才停，页面冻结）。双保险：listener-set 快照迭代 +
+  // rebind (menu,cap) 幂等。本用例走真实闭环（refresh 里同步再跑 builder）。
+  it("面板重入收敛：一次 notify 只 refresh 一次，rebind 幂等不自激（ADR-293 复核 P0）", () => {
+    const ls = createListenerSet();
+    const lightCap = {
+      id: "light",
+      getMenuNodes: () => [],
+      subscribe: (fn: () => void) => ls.subscribe(fn),
+    } as unknown as SceneCapability;
+    mountCaps(lightCap);
+    const ctx = { getCap: () => lightCap } as unknown as PreviewMenuCtx;
+    let renders = 0;
+    const menu = {
+      refresh: () => {
+        renders++;
+        if (renders > 20) throw new Error("rebind 自激：schema 重建超过熔断阈值");
+        buildLightingSchema(ctx, menu as never); // slide-menu 真实路径：refresh 同步再跑 builder
+      },
+    };
+    buildLightingSchema(ctx, menu as never); // 首渲染：绑定订阅
+    ls.notify(); // 一次离散参数变更
+    expect(renders).toBe(1); // 只刷新一帧；重绑幂等（无退订重订，快照迭代掐灭自激）
+    disposeSceneCapSubscriptions(menu as never);
+    ls.notify(); // 会话卸载后无人接收
+    expect(renders).toBe(1);
   });
 });
 

@@ -115,25 +115,35 @@ export function buildLightingSchema(
   return capPanelNodes(lightCap);
 }
 
-/** 场景面板 cap 订阅表（[ADR-293]）：per-menu WeakMap 隔离——多挂载实例互不清对方
- *  订阅（env.ts 同款教训），menu 句柄回收时表项随弱键自动消失。 */
-const _sceneCapSubsByMenu = new WeakMap<SlideMenuHandle, Array<() => void>>();
+/** 场景面板 cap 订阅表（[ADR-293]）：WeakMap 值存「已绑 cap + 退订句柄」——同一
+ *  (menu, cap) 只绑一次。per-menu 隔离（多挂载实例互不清对方订阅），menu 句柄回收
+ *  时表项随弱键自动消失。 */
+const _sceneCapSubsByMenu = new WeakMap<
+  SlideMenuHandle,
+  { cap: SceneCapability; unsub: () => void }
+>();
 
 function rebindSceneCapSubs(menu: SlideMenuHandle | undefined, cap: SceneCapability): void {
   if (!menu) return;
-  const prev = _sceneCapSubsByMenu.get(menu);
-  if (prev) for (const u of prev) u();
-  const subs = cap.subscribe ? [cap.subscribe(() => menu.refresh())] : [];
-  if (subs.length > 0) _sceneCapSubsByMenu.set(menu, subs);
-  else _sceneCapSubsByMenu.delete(menu);
+  // [ADR-293 复核 P0] 幂等早退：cap 未变则不动订阅。原「每次渲染退订重订」与面板
+  // refresh 的同步重入（notify → refresh → 本函数）组合成活 Set 迭代自激回路——
+  // 探针实测一次 notify 触发 501 次 schema 重建冻结页面。listener-set 快照迭代已是
+  // 第一道闸，此处幂等是第二道：不产生每帧无谓的闭包 churn。
+  if (_sceneCapSubsByMenu.get(menu)?.cap === cap) return;
+  _sceneCapSubsByMenu.get(menu)?.unsub();
+  if (!cap.subscribe) {
+    _sceneCapSubsByMenu.delete(menu);
+    return;
+  }
+  _sceneCapSubsByMenu.set(menu, { cap, unsub: cap.subscribe(() => menu.refresh()) });
 }
 
 /** 会话卸载时清场景面板 cap 订阅（与 disposeEnvSubscriptions 并列入 core dispose 链，
  *  防 cap 单例持有过期 menu 引用） */
 export function disposeSceneCapSubscriptions(menu: SlideMenuHandle): void {
-  const subs = _sceneCapSubsByMenu.get(menu);
-  if (subs) {
-    for (const u of subs) u();
+  const bound = _sceneCapSubsByMenu.get(menu);
+  if (bound) {
+    bound.unsub();
     _sceneCapSubsByMenu.delete(menu);
   }
 }

@@ -5,6 +5,8 @@
 // 与 bus（跨模块事件流）的语义边界：bus emit 对 handler 包 try/catch（异常吞掉
 // console.error）、事件名进全局 BusEvents 类型表；本原语是模块本地通道——notify
 // 直接逐调、异常向订阅方传播，是「单一写入纪律」（如 ADR-187 D3）的保护载体。
+// notify 采用快照迭代：本轮只触达 notify 时刻已在册的监听器（迭代期间新增的等下轮、
+// 已退订的本轮跳过）——防「监听器同步重绑」形状的自激循环（ADR-293 复核 P0 立法）。
 //
 // 两种形态：
 // - 无参变更通知（T = void，缺省）：subscribe(fn) + notify() —— 原 3D ground/water/scene 样板
@@ -36,7 +38,13 @@ export function createListenerSet<T = void>(): ListenerSet<T> {
       };
     },
     notify(payload) {
-      for (const fn of listeners) fn(payload);
+      // [ADR-293 复核 P0] 快照迭代（DOM EventTarget 同语义）：本轮只通知 notify 时刻
+      // 已在册者。活 Set 迭代下，监听器若同步「退订旧 + 订阅新」重绑（面板 refresh →
+      // 渲染器重建闭包即此形状），新监听器会被同一轮 notify 访问 → 无穷自激。
+      // has() 复核补另一个方向：本轮已退订的靠后监听器不再触达。
+      for (const fn of [...listeners]) {
+        if (listeners.has(fn)) fn(payload);
+      }
     },
   };
 }

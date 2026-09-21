@@ -250,6 +250,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-294：间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层）",
+        "link": "/adr/ADR-294-spacing-five-tier-tokens"
+      },
+      {
         "text": "ADR-293：灯光能力总开关 schema 化、helper 可见性控件化与面板响应",
         "link": "/adr/ADR-293-schema-helper"
       },

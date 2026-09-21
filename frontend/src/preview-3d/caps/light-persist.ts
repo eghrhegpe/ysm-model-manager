@@ -32,8 +32,8 @@ import { oneOf, restoreFields } from "./scene-capability.ts";
  *  可能直读），删之无收益。 */
 export function buildLightPersistPayload(): Record<string, unknown> {
   return {
-    // [ADR-293] 总开关与线框可见性（顶层键，格式向后兼容：旧存档缺键 restore 不写、
-    // 落 schema 默认 true/true，行为与旧「恒挂载恒可见」一致）
+    // [ADR-293] 总开关与线框可见性（顶层键，格式向后兼容：旧存档缺键 restore 不写，
+    // 新会话即落 schema 默认 true/true，行为与旧「恒挂载恒可见」一致）
     enabled: envState.lightEnabled,
     helperVisible: envState.lightHelperVisible,
     keyEnabled: envState.lightKeyEnabled,
@@ -126,7 +126,8 @@ export function restoreLightParams(state: Record<string, unknown>): void {
   //（原 Record<string, unknown> 下 typo 键静默蒸发——FLATTEN_MAP 查键路径守得住，
   // 直写 acc.lightXxx 的旁路守不住，一并上闸）。
   const acc: Partial<Record<EnvStateKey, unknown>> = {};
-  // [ADR-293] 能力总开关与线框可见性（顶层键；旧档缺键 = 不写，落 schema 默认）
+  // [ADR-293] 能力总开关与线框可见性（顶层键；旧档缺键 = 不写，落 envState 现值——
+  // 新会话现值即 schema 默认，同进程宿主复用时尊重现值，与 ADR-250 ppEnabled 同口径）
   if (typeof state.enabled === "boolean") acc.lightEnabled = state.enabled;
   if (typeof state.helperVisible === "boolean") acc.lightHelperVisible = state.helperVisible;
   // ② 用户显式保存的灯开关优先于模型预设

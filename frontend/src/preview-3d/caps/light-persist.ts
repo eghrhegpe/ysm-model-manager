@@ -8,14 +8,14 @@
 // 对齐 light-presets.ts（参数面）/ light-controls.ts（菜单面）的拆分先例。
 
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
-import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import { ENV_STATE_SCHEMA, type EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import {
   FLATTEN_MAP,
   type LightInstanceParams,
   type LightSlot,
   readLightParams,
 } from "./light-presets.ts";
-import { restoreFields } from "./scene-capability.ts";
+import { oneOf, restoreFields } from "./scene-capability.ts";
 /* ============ saveState：envState → 持久化嵌套结构（纯读，由 FLATTEN_MAP 逆读口派生） ============ */
 
 /** [锐评根治 2026-09] 旧实现逐字段手抄 30 个 envState 键裸字面量——新增灯光字段时
@@ -39,6 +39,7 @@ export function buildLightPersistPayload(): Record<string, unknown> {
     },
     volumetric: {
       enabled: envState.lightVolumetricEnabled,
+      driver: envState.lightVolumetricDriver,
       opacity: envState.lightVolumetricOpacity,
       fogPower: envState.lightVolumetricFogPower,
       edgeFade: envState.lightVolumetricEdgeFade,
@@ -152,6 +153,11 @@ export function restoreLightParams(state: Record<string, unknown>): void {
   if (state.volumetric && typeof state.volumetric === "object") {
     restoreFields(state.volumetric as Record<string, unknown>, {
       enabled: { boolean: (v) => (acc[FLATTEN_MAP.volumetric.enabled] = v) },
+      // [ADR-290] driver 走 oneOf 白名单（值集从 schema 声明派生，零手抄）；
+      // 旧存档缺此键 / 脏值 → 不写，落 schema 默认 "auto" = 旧「槽位顺序」行为
+      driver: oneOf(ENV_STATE_SCHEMA.lightVolumetricDriver.values, (v) => {
+        acc[FLATTEN_MAP.volumetric.driver] = v;
+      }),
       opacity: { number: (v) => (acc[FLATTEN_MAP.volumetric.opacity] = v) },
       fogPower: { number: (v) => (acc[FLATTEN_MAP.volumetric.fogPower] = v) },
       edgeFade: { number: (v) => (acc[FLATTEN_MAP.volumetric.edgeFade] = v) },

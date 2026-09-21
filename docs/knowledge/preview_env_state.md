@@ -161,7 +161,8 @@ invariant_anchors:
 - **[light-type-switch] 三灯统一实例（2026-09）**：三盏灯（key/fill/rim）各可在 `directional`/`point`/`spot` 间切换，参数结构统一为 `LightInstanceParams`（type/enabled/color/intensity/azimuth/elevation/angle/penumbra/distance/decay）。
   - **破坏性重构**：原「三盏方向灯 + 一盏独立聚光灯」四灯二体系废除；`lightSpot*` schema 字段、`setSpotlight`、`getDirectionalLights`/`getSpotLight` 全部删除。
   - **切换语义**：类型变化 → dispose 旧 Three 对象 + 旧 helper → 按新 type 重建（MikuMikuAR 同款）；参数变化 → 原地更新。
-  - **体积光锥**：不再绑定第四盏灯，由三盏中「第一盏 `type==='spot'` 且启用」的灯驱动（`getSpotLightForCone()`）。
+  - **体积光锥**：不再绑定第四盏灯。~~由「当前编辑的灯（activeLight）优先，否则槽位顺序第一盏启用 spot」驱动~~ → **[ADR-290] 驱动源 schema 化**：`lightVolumetricDriver: enum["auto","key","fill","rim"]`（默认 auto），`getSpotLightForCone` 只读该键与 activeLight 无关；auto = 槽位顺序（key→fill→rim）第一盏启用 spot，显式槽位 = 严格绑定（该槽位非启用 spot 则无锥，**不回落**）。activeLight 回归纯 UI 焦点态（`setActiveLight` 不再收敛锥体，原内联 rebuild 补丁退役）；driver 入存档（持久化 `volumetric.driver`，oneOf 白名单从 schema values 派生），旧存档缺键落 auto = 旧槽位顺序行为。菜单：体积光卡内 `light-volumetric-driver` select。
+  - **[锐评根治 2026-10] point 灯与 spot 同吃 candela 补偿（预览/截图双镜像点同式）**：UI intensity 语义统一为「到达模型中心处照度」，`applyLightParams` 位置光（SpotLight|PointLight）分支合并反推 `intensity/falloff(d, distance, decay)`。原 point 走裸强度，同参数 spot↔point 切换靶点照度瞬变 targetHeight^decay 倍（默认 ≈23 倍）——「强度」滑块跨 type 物理语义分裂已除。directional 无衰减不受影响；`spotDistanceAttenuation` 三处消费者（预览/截图/镜像守卫测试）不变。
   - **菜单**：顶栏 `light-select`（三灯按钮）选择编辑对象 → 同一套设置条读写该灯；类型专属参数（angle/penumbra/distance/decay）按 type 条件展开。
   - **旧存档迁移**：`restoreLightParams` 检测旧 `spotlight` 块 → 迁移为 key 灯 `type='spot'` + 对应参数。
 - **[ADR-281] 灯光字段全集单一真相源（2026-09-20）**：三盏灯的 10 字段集曾散在 5 处（`FLATTEN_MAP` / 变更集 / 预设挑参 / 持久化表 / `readLightParams`），只有第一处有 `satisfies` 锁——新增字段漏改四处中的任何一处都是**静默 bug**（滑块无反应 / 切模型不更新 / 运行时 NaN）。

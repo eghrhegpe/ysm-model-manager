@@ -19,7 +19,7 @@ import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { LightCapability, LightKey } from "./light-capability.ts";
-import { FLATTEN_MAP, type LightType } from "./light-presets.ts";
+import { FLATTEN_MAP, type LightType, type VolumetricDriver } from "./light-presets.ts";
 
 /** 统一设置条内「有值域」的参数字段（type/enabled/color 不在其列）。 */
 type LightSliderField =
@@ -45,6 +45,18 @@ const LIGHT_TYPE_OPTIONS: Array<{ value: LightType; label: string; labelKey: Loc
   { value: "directional", label: "方向光", labelKey: "preview.lightTypeDirectional" },
   { value: "point", label: "点光源", labelKey: "preview.lightTypePoint" },
   { value: "spot", label: "聚光灯", labelKey: "preview.lightTypeSpot" },
+];
+
+/** [ADR-290] 体积光锥驱动源选项：auto = 槽位顺序第一盏启用 spot；显式槽位 = 严格绑定 */
+const VOLUMETRIC_DRIVER_OPTIONS: Array<{
+  value: VolumetricDriver;
+  label: string;
+  labelKey: LocaleKey;
+}> = [
+  { value: "auto", label: "自动", labelKey: "preview.volumetricDriverAuto" },
+  { value: "key", label: "主灯", labelKey: "preview.keyLight" },
+  { value: "fill", label: "补灯", labelKey: "preview.fillLight" },
+  { value: "rim", label: "轮廓灯", labelKey: "preview.rimLight" },
 ];
 
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
@@ -206,8 +218,9 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
 }
 
 /** [ADR-246 D3] 体积光卡：聚光灯锥体的可见化。
- *  [light-type-switch] 锥体驱动源优先「当前编辑的灯」（若它是启用的 spot），否则回退
- *  槽位顺序第一盏启用的 spot（getSpotLightForCone）——卡面 hint 诚实告知此前提。 */
+ *  [ADR-290] 锥体驱动源由卡内「驱动灯光」select（lightVolumetricDriver，schema 化 +
+ *  入存档）显式决定：auto = 槽位顺序第一盏启用的 spot；显式槽位 = 严格绑定（前提不满足
+ *  则无锥）。hint 告知「需一盏启用的聚光灯」前提。 */
 function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
   return {
     id: SPOT_VOL_CARD,
@@ -226,6 +239,18 @@ function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
         control: {
           get: () => cap.getParams().volumetric.enabled,
           set: (v) => cap.setVolumetric({ enabled: v as boolean }),
+        },
+      },
+      // [ADR-290] 驱动灯光：渲染输入显式化，替换原「随编辑焦点漂移」的隐式行为
+      {
+        id: "light-volumetric-driver",
+        kind: "select",
+        labelKey: "preview.volumetricDriver",
+        hintKey: "preview.volumetricDriverHint",
+        control: {
+          options: VOLUMETRIC_DRIVER_OPTIONS,
+          get: () => cap.getParams().volumetric.driver,
+          set: (v) => cap.setVolumetric({ driver: v as VolumetricDriver }),
         },
       },
       // [ADR-246 D2] 三个语义滑块：覆盖「多浓 / 衰减多快 / 边缘多软」

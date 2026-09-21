@@ -1202,6 +1202,10 @@ export const en: Record<string, string> = {
   "preview.ambientIntensity": "Ambient",
   "preview.volumetric": "Volumetric",
   "preview.volumetricHint": "Requires spotlight",
+  "preview.volumetricDriver": "Driven By Light",
+  "preview.volumetricDriverAuto": "Auto",
+  "preview.volumetricDriverHint":
+    "Auto = first enabled spotlight; a fixed slot requires that light to be an enabled spotlight, or no cone shows",
   "preview.volumetricDensity": "Density",
   "preview.volumetricFalloff": "Falloff",
   "preview.volumetricEdgeFade": "Edge Fade",

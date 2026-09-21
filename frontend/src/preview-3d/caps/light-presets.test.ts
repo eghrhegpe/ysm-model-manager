@@ -29,6 +29,8 @@ describe("flattenLightParams 映射契约", () => {
       ambient: { color: 0x444444, intensity: 4.1 },
       volumetric: {
         enabled: true,
+        // [ADR-290] 非缺省值探针：auto 之外必须逐槽位钉死 driver 落键
+        driver: "fill",
         opacity: 6.1,
         fogPower: 6.2,
         edgeFade: 6.3,
@@ -67,12 +69,13 @@ describe("flattenLightParams 映射契约", () => {
     expect(out.lightAmbientIntensity).toBe(4.1);
     // volumetric 组
     expect(out.lightVolumetricEnabled).toBe(true);
+    expect(out.lightVolumetricDriver).toBe("fill");
     expect(out.lightVolumetricOpacity).toBe(6.1);
     expect(out.lightVolumetricFogPower).toBe(6.2);
     expect(out.lightVolumetricEdgeFade).toBe(6.3);
     expect(out.lightVolumetricBaseStrength).toBe(6.4);
-    // 恰好 38 键（3×10 + 2 ambient + 6 volumetric），无多余
-    expect(Object.keys(out).length).toBe(38);
+    // 恰好 39 键（3×10 + 2 ambient + 7 volumetric [ADR-290]），无多余
+    expect(Object.keys(out).length).toBe(39);
   });
 
   it("部分输入：仅传子集，缺字段不写出（undefined 守卫）", () => {
@@ -270,6 +273,7 @@ describe("DEFAULT_LIGHT_PARAMS = envState schema 默认值的派生投影", () =
     });
     expect(DEFAULT_LIGHT_PARAMS.volumetric).toEqual({
       enabled: d.lightVolumetricEnabled,
+      driver: d.lightVolumetricDriver,
       opacity: d.lightVolumetricOpacity,
       fogPower: d.lightVolumetricFogPower,
       edgeFade: d.lightVolumetricEdgeFade,

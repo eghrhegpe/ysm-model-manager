@@ -55,33 +55,32 @@ function applyLights(
     if (!d.enabled) continue;
     const pos = lightDirToPosition(d, lights.radius).add(origin);
     let light: THREE.Light;
-    if (d.type === "spot") {
-      const sp = new THREE.SpotLight(
-        d.color,
-        d.intensity,
-        d.distance,
-        THREE.MathUtils.degToRad(d.angle),
-        d.penumbra,
-        d.decay,
-      );
-      sp.position.copy(pos);
-      // candela 补偿与预览 applyLightParams 同式：UI intensity = 到达靶点处照度，
-      // 反推需设的坎德拉（防距离衰减吃强度）——预览/截图所见即所得的同构义务。
+    // [锐评根治 2026-10] candela 补偿收口成一份，与预览 applyLightParams 同式：
+    // UI intensity = 到达靶点处照度（spot/point 同语义），反推需设的坎德拉（防距离
+    // 衰减吃强度）——预览/截图所见即所得的同构义务。原只有 spot 分支补偿、point 裸强度。
+    if (d.type === "spot" || d.type === "point") {
       const d0 = Math.max(pos.distanceTo(sharedTarget.position), 0.01);
       const falloff = spotDistanceAttenuation(d0, d.distance, d.decay);
-      sp.intensity = falloff > 0 ? d.intensity / falloff : d.intensity;
-      sp.target = sharedTarget;
-      light = sp;
-    } else if (d.type === "point") {
-      const pl = new THREE.PointLight(d.color, d.intensity, d.distance, d.decay);
-      pl.position.copy(pos);
-      light = pl;
+      const candela = falloff > 0 ? d.intensity / falloff : d.intensity;
+      light =
+        d.type === "spot"
+          ? new THREE.SpotLight(
+              d.color,
+              candela,
+              d.distance,
+              THREE.MathUtils.degToRad(d.angle),
+              d.penumbra,
+              d.decay,
+            )
+          : new THREE.PointLight(d.color, candela, d.distance, d.decay);
+      light.position.copy(pos);
     } else {
       const dl = new THREE.DirectionalLight(d.color, d.intensity);
       dl.position.copy(pos);
       dl.target = sharedTarget; // 方向 = position − target，与预览同源
       light = dl;
     }
+    if (light instanceof THREE.SpotLight) light.target = sharedTarget;
     scene.add(light);
   }
 }

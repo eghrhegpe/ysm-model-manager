@@ -401,6 +401,7 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
     expect(card.labelKey).toBe("preview.spotlightVolume");
     expect(card.children!.map((c) => c.id)).toEqual([
       "light-volumetric",
+      "light-volumetric-driver",
       "light-volumetric-density",
       "light-volumetric-falloff",
       "light-volumetric-edge-fade",
@@ -410,6 +411,14 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
     for (const child of card.children!) {
       expect(child.visibleWhen).toBeUndefined();
     }
+    // [ADR-290] 驱动灯 select 读写 volumetric.driver
+    cap.setLightParams("key", { type: "spot" });
+    const driver = card.children!.find((c) => c.id === "light-volumetric-driver")!;
+    expect(driver.kind).toBe("select");
+    expect(driver.control!.get!(undefined)).toBe("auto");
+    driver.control!.set!("key");
+    expect(cap.getParams().volumetric.driver).toBe("key");
+    expect(driver.control!.get!(undefined)).toBe("key");
     // [light-type-switch] 原卡内 light-spotlight / light-spot-intensity / light-cone-angle 已删——
     // 「聚光灯」改为把某盏灯的 type 设为 spot，其专属参数（锥角/半影/距离/衰减）随统一设置条展开。
     // 等价断言：切到 spot 后同一套设置条里出现这些控件。
@@ -889,6 +898,22 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
   });
 
+  it("[锐评根治 2026-10] point 灯与 spot 同吃 candela 补偿（强度语义跨 type 统一）", () => {
+    const cap = newCap();
+    cap.setLightParams("key", { type: "point", intensity: 1.2 });
+    const pl = (cap as unknown as { keyLight: THREE.PointLight }).keyLight;
+    expect(pl).toBeInstanceOf(THREE.PointLight);
+    // 同式：candela = UI 照度 ÷ 到模型中心衰减系数（d = targetHeight 默认 8）
+    const d = pl.position.distanceTo(cap.getTarget());
+    expect(d).toBeCloseTo(8, 5);
+    const falloff = spotDistanceAttenuation(d, envState.lightKeyDistance, 1.5);
+    expect(pl.intensity).toBeCloseTo(1.2 / falloff, 5);
+    // 跨 type 语义对齐：point→spot 同参数切换，模型中心处照度不变（原实现反向瞬升 ~23 倍）
+    cap.setLightParams("key", { type: "spot" });
+    const sp = (cap as unknown as { keyLight: THREE.SpotLight }).keyLight;
+    expect(sp.intensity).toBeCloseTo(pl.intensity, 5);
+  });
+
   it("key 灯参数变更时锥组已在场景则原位重建跟随", () => {
     const scene = new THREE.Scene();
     const cap = coneCap(scene);
@@ -991,9 +1016,13 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
   });
 });
 
-// ============ 灯对象命名 / 锥体驱动源优先级 ============
+// ============ 灯对象命名 / 锥体驱动源（[ADR-290] driver schema 化） ============
 describe("LightCapability — 灯光对象命名与锥体驱动源", () => {
-  beforeEach(() => resetEnvState());
+  beforeEach(() => {
+    resetEnvState();
+    localStorage.clear();
+  });
+  afterEach(() => localStorage.clear());
 
   it("三盏灯按槽位命名（多 spot 同框不重名），与 helper 同口径", () => {
     const cap = newCap();
@@ -1013,53 +1042,89 @@ describe("LightCapability — 灯光对象命名与锥体驱动源", () => {
     expect(names.size).toBe(3);
   });
 
-  it("getSpotLightForCone 优先用当前编辑的灯（activeLight）", () => {
+  it("[ADR-290] auto 驱动源 = 槽位顺序第一盏启用 spot，与 activeLight 焦点态无关", () => {
     const cap = newCap();
     cap.setVolumetric({ enabled: true });
     cap.setLightParams("key", { type: "spot", enabled: true });
     cap.setLightParams("fill", { type: "spot", enabled: true });
     expect(cap.getSpotLightForCone()!.which).toBe("key");
+    // 切编辑焦点不再漂移驱动源（原实现：activeLight=fill 即改贴 fill——渲染输出挂钩
+    // 不可存档焦点态的债，随 ADR-290 清偿）
     cap.setActiveLight("fill");
-    expect(cap.getSpotLightForCone()!.which).toBe("fill");
+    expect(cap.getSpotLightForCone()!.which).toBe("key");
     cap.setActiveLight("rim");
     expect(cap.getSpotLightForCone()!.which).toBe("key");
   });
 
-  it("setActiveLight 切换驱动源时主动收敛锥体（否则「切了没反应」等下次参数变更）", () => {
+  it("[ADR-290] 显式 driver 严格绑定槽位：该槽位非启用 spot 则无锥（不回落）", () => {
+    const cap = newCap();
+    cap.setVolumetric({ enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
+    cap.setLightParams("fill", { type: "spot", enabled: true, azimuth: 180 });
+    // 钉死 fill → 驱动源切 fill
+    cap.setVolumetric({ driver: "fill" });
+    expect(cap.getSpotLightForCone()!.which).toBe("fill");
+    // fill 关闭 → 无锥（严格语义：不回落到 key）
+    cap.setLightParams("fill", { enabled: false });
+    expect(cap.getSpotLightForCone()).toBeNull();
+    // fill 不是 spot → 同样无锥
+    cap.setLightParams("fill", { enabled: true, type: "directional" });
+    expect(cap.getSpotLightForCone()).toBeNull();
+    // 改回 auto → 恢复槽位顺序语义，第一盏启用 spot = key
+    cap.setVolumetric({ driver: "auto" });
+    expect(cap.getSpotLightForCone()!.which).toBe("key");
+  });
+
+  it("[ADR-290] setActiveLight 与锥体彻底脱钩（怎么切都不动锥）；driver 变更即收敛锥体", () => {
     const cap = newCap();
     cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
-    const coneGroup = (): THREE.Object3D | undefined => scene.getObjectByName("ysm-light-volumetric-cone");
+    const coneGroup = (): THREE.Object3D | undefined =>
+      scene.getObjectByName("ysm-light-volumetric-cone");
 
     cap.setVolumetric({ enabled: true });
-    // 两盏都切成 spot，但 key 与 fill 拉开位置（方位角相反）——驱动源变了锥顶位置就变
+    // 两盏都切成 spot，方位角相反——驱动源变了锥顶位置才变
     cap.setLightParams("key", { type: "spot", enabled: true, azimuth: 0, elevation: 30 });
     cap.setLightParams("fill", { type: "spot", enabled: true, azimuth: 180, elevation: 30 });
     expect(cap.getSpotLightForCone()!.which).toBe("key");
     const keyPos = coneGroup()!.position.clone();
 
-    // 切到 fill（启用的 spot）→ 驱动源变更，锥体必须立即重建跟随（而非停在 key）
+    // 焦点切换零渲染效果（原 setActiveLight 内联 rebuild 补丁随 ADR-290 退役）
     cap.setActiveLight("fill");
-    expect(cap.getSpotLightForCone()!.which).toBe("fill");
+    cap.setActiveLight("rim");
+    expect(coneGroup()!.position.equals(keyPos)).toBe(true);
+
+    // driver 显式绑定 fill → 锥体随 envState 派发立即换贴 fill（位置镜像翻转）
+    cap.setVolumetric({ driver: "fill" });
     expect(coneGroup()).toBeDefined();
     expect(coneGroup()!.position.equals(keyPos)).toBe(false);
-
-    // 切到 rim（不是 spot）→ 回退到 key 驱动，锥体仍挂载且回到 key 位置
-    cap.setActiveLight("rim");
-    expect(cap.getSpotLightForCone()!.which).toBe("key");
-    expect(coneGroup()).toBeDefined();
-    expect(coneGroup()!.position.equals(keyPos)).toBe(true);
   });
 
-  it("setActiveLight 同槽位重复设值不空转（驱动源未变不重建）", () => {
+  it("[ADR-290] driver 进存档往返：新实例恢复后驱动源不变（会话间确定性）", () => {
     const cap = newCap();
-    cap.apply();
-    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
-    cap.setVolumetric({ enabled: true });
-    cap.setLightParams("key", { type: "spot", enabled: true });
-    const before = scene.getObjectByName("ysm-light-volumetric-cone")!.uuid;
-    cap.setActiveLight("key"); // 与当前同值
-    expect(scene.getObjectByName("ysm-light-volumetric-cone")!.uuid).toBe(before);
+    cap.setVolumetric({ enabled: true, driver: "rim" });
+    cap.setLightParams("rim", { type: "spot", enabled: true });
+    cap.saveState();
+    const cap2 = newCap();
+    cap2.loadState();
+    expect(cap2.getParams().volumetric.driver).toBe("rim");
+    cap2.setActiveLight("key"); // 焦点态不参与驱动源
+    expect(cap2.getSpotLightForCone()!.which).toBe("rim");
+  });
+
+  it("[ADR-290] 旧存档无 driver 键 → 落 auto 不报错（增量兼容，行为 = 旧槽位顺序）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-light",
+      JSON.stringify({
+        enabled: true,
+        volumetric: { enabled: true, opacity: 0.5 },
+        key: { type: "spot", enabled: true },
+      }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    expect(cap.getParams().volumetric.driver).toBe("auto");
+    expect(cap.getSpotLightForCone()!.which).toBe("key");
   });
 });
 

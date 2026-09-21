@@ -105,6 +105,7 @@ function readLightParams(which: LightSlot, state: EnvState = envState): LightIns
 function readVolParams(state: EnvState = envState): VolumetricParams {
   return {
     enabled: state.lightVolumetricEnabled,
+    driver: state.lightVolumetricDriver,
     opacity: state.lightVolumetricOpacity,
     fogPower: state.lightVolumetricFogPower,
     edgeFade: state.lightVolumetricEdgeFade,
@@ -304,7 +305,9 @@ export class LightCapability implements SceneCapability {
 
     // 体积光锥三路分派：几何变更 → dispose+重建；位置变更 → syncPosition；uniform 变更 → updateUniforms
     // （旧实现：任意字段变更都整组重建，拖滑块即 GC 抖动）
-    const volToggled = changed.has("lightVolumetricEnabled");
+    // [ADR-290] driver 变更同 enabled 级别：驱动源换了 = 附着体/存在性变，走重建非 uniforms
+    const volToggled =
+      changed.has("lightVolumetricEnabled") || changed.has("lightVolumetricDriver");
     const coneGeo = hasAny(changed, CONE_GEO_CHANGES);
     const coneMove = hasAny(changed, CONE_MOVE_CHANGES);
     const lightTouched =
@@ -313,7 +316,7 @@ export class LightCapability implements SceneCapability {
       this.rebuildConeIfNeeded(state);
     } else {
       // 快路径：光源参数变了只刷 uniforms；位置变了再补一次 transform 同步
-      const spot = this.getSpotLightForCone();
+      const spot = this.getSpotLightForCone(state);
       if (spot) {
         if (coneMove) {
           const dir = new THREE.Vector3();
@@ -425,22 +428,27 @@ export class LightCapability implements SceneCapability {
     // DirectionalLight 方向 = position − target；target 跟随模型中心才能保证方向语义
     if (light instanceof THREE.DirectionalLight) light.target.position.copy(this.target);
 
-    if (light instanceof THREE.SpotLight) {
-      // UI intensity 语义 = 「到达目标处照度」→ 反推 candela（防距离衰减吃强度）
-      const d = Math.max(light.position.distanceTo(this.spotTarget.position), 0.01);
+    // [锐评根治 2026-10] spot 与 point 同吃 candela 补偿（原只有 spot）：UI intensity
+    // 语义统一为「到达模型中心处照度」。原 point 走裸强度，同参数 spot→point 切换靶点
+    // 照度瞬降 targetHeight^decay 倍（默认 8m/1.5 衰减 ≈ 23 倍暗）——同一根「强度」滑块
+    // 在两种 type 下物理语义分裂，是参数对接的断层而非观感微差。两型均为位置光、
+    // 靶点恒为模型中心（spotTarget 与 this.target 恒等位），补偿式收口成一份防手抄分叉。
+    const positional =
+      light instanceof THREE.SpotLight || light instanceof THREE.PointLight ? light : null;
+    if (positional) {
+      const d = Math.max(light.position.distanceTo(this.target), 0.01);
       const falloff = spotDistanceAttenuation(d, p.distance, p.decay);
-      light.intensity = falloff > 0 ? p.intensity / falloff : p.intensity;
-      light.distance = p.distance;
-      light.angle = THREE.MathUtils.degToRad(p.angle);
-      light.penumbra = p.penumbra;
-      light.decay = p.decay;
-      light.target = this.spotTarget;
-    } else if (light instanceof THREE.PointLight) {
-      light.intensity = p.intensity;
-      light.distance = p.distance;
-      light.decay = p.decay;
+      positional.intensity = falloff > 0 ? p.intensity / falloff : p.intensity;
+      positional.distance = p.distance;
+      positional.decay = p.decay;
     } else {
       light.intensity = p.intensity;
+    }
+
+    if (light instanceof THREE.SpotLight) {
+      light.angle = THREE.MathUtils.degToRad(p.angle);
+      light.penumbra = p.penumbra;
+      light.target = this.spotTarget;
     }
   }
 
@@ -561,16 +569,19 @@ export class LightCapability implements SceneCapability {
   }
 
   /** 返回体积光锥的驱动 spot 灯 + 其槽位，无则 null。
-   *  优先级：当前编辑的灯（activeLight）若是启用的 spot → 它；
-   *  否则回退槽位顺序（key→fill→rim）第一盏启用的 spot。
-   *  ⚠️ 驱动源依赖 activeLight，故 setActiveLight 变更时必须主动收敛锥体（已内联）。 */
-  getSpotLightForCone(): { light: THREE.SpotLight; which: LightKey } | null {
-    // 当前编辑的灯若是启用的 spot，优先驱动锥体（与用户心智：我在调的那盏灯）一致；
-    // 否则回退到槽位顺序（key→fill→rim）第一盏启用的 spot。
-    const active = this.activeLight;
-    const activeLight = this.getLight(active);
-    if (activeLight instanceof THREE.SpotLight && activeLight.visible) {
-      return { light: activeLight, which: active };
+   *  [ADR-290] 驱动源由 schema 键 lightVolumetricDriver 显式决定，与 activeLight 焦点态无关：
+   *   - "auto"（缺省）：按槽位顺序（key→fill→rim）第一盏启用的 spot；
+   *   - "key"/"fill"/"rim"：严格绑定该槽位——它不是启用的 spot 则无锥（**不回落**，
+   *     回落会让「钉 fill 却看到锥体贴 key」的幽灵行为复活）。
+   *  旧实现在此优先读 this.activeLight（不入存档的运行时焦点态）→ 同一份存档跨会话
+   *  锥体贴到不同灯，是渲染输入未 schema 化的债，本决策清偿。 */
+  getSpotLightForCone(
+    state: EnvState = envState,
+  ): { light: THREE.SpotLight; which: LightKey } | null {
+    const driver = state.lightVolumetricDriver;
+    if (driver !== "auto") {
+      const light = this.getLight(driver);
+      return light instanceof THREE.SpotLight && light.visible ? { light, which: driver } : null;
     }
     for (const which of LIGHT_SLOTS) {
       const light = this.getLight(which);
@@ -608,11 +619,12 @@ export class LightCapability implements SceneCapability {
   }
 
   /**
-   * 体积光锥与当前 envState 同步：[light-type-switch] 锥体由第一盏启用的 spot 灯驱动。
-   * 无 spot 灯 / 体积光未开 → 卸载；有则挂载并定位。
+   * 体积光锥与当前 envState 同步：[ADR-290] 锥体由 lightVolumetricDriver 选定的 spot 灯驱动
+   * （auto = 槽位顺序第一盏启用 spot；显式槽位 = 严格绑定，不满足前提即无锥）。
+   * 无驱动灯 / 体积光未开 → 卸载；有则挂载并定位。
    */
   private rebuildConeIfNeeded(state: EnvState = envState): void {
-    const spot = this.getSpotLightForCone();
+    const spot = this.getSpotLightForCone(state);
     const volOn = state.lightVolumetricEnabled;
     if (!spot || !volOn) {
       if (this.cone.isMounted()) this.cone.detach();
@@ -673,16 +685,12 @@ export class LightCapability implements SceneCapability {
     return this.activeLight;
   }
 
-  /** 切换当前编辑的灯槽位。
-   *  ⚠️ 不写 envState（UI 焦点态，不入存档/派发），但**会主动收敛锥体**：
-   *  getSpotLightForCone 优先取 activeLight，若此处不收敛，切换编辑灯后驱动源已变、
-   *  锥体却停在旧灯上（无派发 = 无 rebuild），要等下次碰任意灯光参数才跟上——
-   *  「切了没反应」比旧实现的固定顺序更难预期。 */
+  /** 切换当前编辑的灯槽位（纯 UI 焦点态）。
+   *  [ADR-290] 与锥体彻底脱钩：驱动源改由 lightVolumetricDriver schema 键决定，
+   *  不再读 activeLight，故此处无需收敛锥体。原「切编辑灯即重建锥体」的内联逻辑
+   *  是渲染输出隐式挂钩不可存档焦点态的补丁，随本决策退役。 */
   setActiveLight(which: LightKey): void {
-    const prev = this.activeLight;
     this.activeLight = which;
-    // 驱动源变了才重建（同槽位重复设值不空转）；rebuildConeIfNeeded 自带「非 spot/未启用即隐藏」语义
-    if (prev !== which) this.rebuildConeIfNeeded(envState);
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

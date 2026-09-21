@@ -49,9 +49,9 @@ export interface LightInstanceParams {
   angle: number;
   /** spot 半影（0=硬边，1=全软边；directional 时忽略） */
   penumbra: number;
-  /** spot/point 衰减截止距离（0=不衰减；directional 时忽略）。注意：spot 灯强度语义
-   *  =「到达靶点处照度」（candela 反推补偿），故拖本滑块不改变靶点亮度，只收窄
-   *  「光在何处归零」的截止窗；point 灯则是裸强度，拖本滑块亮度会变。 */
+  /** spot/point 衰减截止距离（0=不衰减；directional 时忽略）。[锐评根治 2026-10]
+   *  spot/point 同语义：强度=「到达靶点处照度」（candela 反推补偿两型同吃），
+   *  拖本滑块不改变靶点亮度，只收窄「光在何处归零」的截止窗。 */
   distance: number;
   /** spot/point 衰减指数（0=无衰减，2=经典物理衰减；directional 时忽略） */
   decay: number;
@@ -71,8 +71,14 @@ export interface AmbientLightParams {
   intensity: number;
 }
 
+/** [ADR-290] 体积光锥驱动源："auto" = 槽位顺序第一盏启用的 spot；其余 = 严格绑定该槽位 */
+export type VolumetricDriver = "auto" | LightSlot;
+
 export interface VolumetricParams {
   enabled: boolean;
+  /** [ADR-290] 锥体驱动灯（渲染输入显式化——原隐式挂钩 activeLight 焦点态，不入存档致会话间漂移）。
+   *  "auto" = 槽位顺序第一盏启用的 spot；"key"/"fill"/"rim" = 严格绑定该槽位（不满足前提则无锥）。 */
+  driver: VolumetricDriver;
   opacity: number;
   fogPower: number;
   edgeFade: number;
@@ -139,6 +145,7 @@ export const FLATTEN_MAP = {
   },
   volumetric: {
     enabled: "lightVolumetricEnabled",
+    driver: "lightVolumetricDriver",
     opacity: "lightVolumetricOpacity",
     fogPower: "lightVolumetricFogPower",
     edgeFade: "lightVolumetricEdgeFade",
@@ -193,6 +200,7 @@ export const DEFAULT_LIGHT_PARAMS: LightParams = {
   },
   volumetric: {
     enabled: ENV_DEFAULTS.lightVolumetricEnabled,
+    driver: ENV_DEFAULTS.lightVolumetricDriver,
     opacity: ENV_DEFAULTS.lightVolumetricOpacity,
     fogPower: ENV_DEFAULTS.lightVolumetricFogPower,
     edgeFade: ENV_DEFAULTS.lightVolumetricEdgeFade,

@@ -250,6 +250,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-293：灯光能力总开关 schema 化、helper 可见性控件化与面板响应",
+        "link": "/adr/ADR-293-schema-helper"
+      },
+      {
         "text": "ADR-292：环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源",
         "link": "/adr/ADR-292-scene-environment-sky-ibl-env"
       },

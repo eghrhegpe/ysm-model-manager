@@ -1,26 +1,32 @@
-// ===== 契约探针：shadow 内 var() 读文档 :root 自定义属性（长期回归守卫）=====
-// 目的：钉死「这套 calc(13px + var(--fs-scale)) 写法在标准浏览器内核（chromium）
-// 的 adoptedStyleSheets / <style> + ShadowRoot 环境下是否成立」——即验证 AGENTS.md
-// 那条「adoptedStyleSheets 中 var() 不继承文档自定义属性」在标准引擎下到底成不成立。
+// ===== 契约探针：shadow 内 CSS 变量穿透机制（长期回归守卫）=====
+// 动机：AGENTS.md 旧认知「adoptedStyleSheets 中 var() 不继承文档自定义属性」含糊，
+// 把「规则不穿透」与「变量值可穿透」混为一谈。本探针用最简页面钉死两件事：
 //
-// 结论（2026-06 实测，本用例即实证）：
-//   - shadow 内两种注入法（<style> 标签 / adoptedStyleSheets）**都**正常生效
-//   - var() 读文档 :root 自定义属性**穿透成立**，且随文档变量差分响应（0→2px 增量正确）
-//   → AGENTS.md 那句「不继承文档自定义属性」对**规则穿透**成立（shadow 规则只影响
-//     自己树内），但对**变量值穿透**不成立（CSS custom property 可跨 shadow 边界继承）。
-//     二者不可混为一谈。
+// 契约 A（穿透成立）：待办（2026-09-21 实测）
+//   - shadow 内两种注入法（<style> / adoptedStyleSheets）的**规则**都在本树生效
+//   - `var(--x)` **可穿透**读宿主文档 :root 变量，且随文档变量差分响应
+//   - 但 adoptedStyleSheets 里 `:root { --y: ... }` 的**变量定义并不落到 shadow 根**
+//     ——真正让 `--uih-*` 生效的是 install*Styles 把整串（含 :root 块）注入 document.head，
+//     变量定义在文档根，shadow 元素靠穿透读到。故「shadow 内 :root 定义」不作为变量源。
 //
-// 关键方法（血泪教训）：必须用 page.setContent 手写**最简页面**。
-//   在 app 页面（gotoApp 后）里人造 shadow 探针**会假阴性全红**——app 已加载全局样式、
-//   既有 shadow 组件与自定义元素，evaluate 中途 append 的普通 div shadow 易被全局样式
-//   干扰/覆盖；而真实自定义组件（app-content）却完全正常（shadow-var-control 实证：
-//   .stg-card 的 var(--surf) 背景 + border 均生效）。故穿透结论以原始页面为准——
-//   它只依赖浏览器核心行为，无 app 干扰。
+// 契约 B（双源裁决）：`--uih-slide-divider` 双源真值
+//   - variables.css:85 定义 0.1（文档根，启动即载）
+//   - slide-menu-styles.ts:21 定义 0.08（installSlideMenuStyles → document.head 后注入）
+//   - 实测：后注入的 0.08 覆盖 0.1，消费方（.slide-header 边框）得到 0.08 → variables.css 0.1 是死值
+//   - 本契约锁死「生效值必须是 0.08」——若将来有人误以为 0.1 是活值改回去，此测试红。
 //
-// 局限：本用例只判**标准 chromium 行为**（e2e 运行环境）。WebView2（桌面实机）是
-// 独立验证维度——见 docs 验证清单，chromium 绿 ≠ WebView2 绿。
+// 关键方法（血泪教训）：
+//   1. 必须用 page.setContent 手写最简页面，不要在 app 页面里人造 shadow——app 全局样式
+//      会干扰，导致假阴性（2026-09-21 探针踩坑，先全红后被 app 样式污染）。
+//   2. 机制还原要镜像真实部署：真实 3D 菜单同时 adopt 样式表 + install 到 document.head，
+//      单测只走 adoptedStyleSheets 会得出错误结论。
+//   3. 真实注入路径：mount-preview-core.ts → ensureOverlayShell(adoptedStyleSheets) +
+//      installComponentsStyles()/installSlideMenuStyles() → style-install.ts|install 塞 head。
+//
+// 局限：本用例判标准 chromium 行为；WebView2 桌面实机由人工清单验证（chromium 绿 ≠ WebView2 绿）。
 import { expect, test } from "./fixture.ts";
 
+// ===== 契约 A-1：穿透成立（核心）=====
 test("原始页面：shadow 内 <style> 与 adoptedStyleSheets 均生效且 var() 穿透", async ({ page }) => {
   await page.setContent(`
     <!doctype html>
@@ -77,26 +83,8 @@ test("原始页面：shadow 内 <style> 与 adoptedStyleSheets 均生效且 var(
     const a2 = getComputedStyle(elA).fontSize;
     const b2 = getComputedStyle(elB).fontSize;
 
-    return {
-      a0,
-      b0,
-      ca0,
-      cb0,
-      a2,
-      b2,
-      adoptedRules: shB.adoptedStyleSheets.length,
-    };
+    return { a0, b0, ca0, cb0, a2, b2, adoptedRules: shB.adoptedStyleSheets.length };
   });
-
-  console.log(
-    "[shadow-var-raw] styleTag:",
-    `${r.a0} → ${r.a2}`,
-    " adopted:",
-    `${r.b0} → ${r.b2}`,
-    " adoptedCount:",
-    r.adoptedRules,
-  );
-  console.log("[shadow-var-raw] colors: styleTag=", r.ca0, " adopted=", r.cb0);
 
   // 哨兵：两种注入都生效（颜色非黑）
   expect(r.ca0).toBe("rgb(1, 2, 3)");
@@ -106,4 +94,62 @@ test("原始页面：shadow 内 <style> 与 adoptedStyleSheets 均生效且 var(
   expect(r.b2).not.toBe(r.b0);
   expect(parseFloat(r.a2) - parseFloat(r.a0)).toBe(2);
   expect(parseFloat(r.b2) - parseFloat(r.b0)).toBe(2);
+});
+
+// ===== 契约 B：--uih-slide-divider 双源裁决（variables.css 0.1 是死值）=====
+// 真实部署：variables.css 先在 head（0.1），mount3D 时 installSlideMenuStyles 把
+// slide-menu-styles.ts|:root(0.08) 后注入 head → 覆盖。消费方在 shadow 内读 var() → 穿透得 0.08。
+// 本测试镜像该顺序，锁死「最终生效 = 0.08」。
+test("镜像真实：--uih-slide-divider 生效值为 0.08（variables.css 0.1 被后注入覆盖）", async ({
+  page,
+}) => {
+  await page.setContent(`
+    <!doctype html>
+    <html>
+      <head>
+        <style id="variables-css">
+          :root { --uih-slide-divider: rgba(255, 255, 255, 0.10); }
+        </style>
+      </head>
+      <body>
+        <div id="host-wrap"></div>
+      </body>
+    </html>
+  `);
+
+  const r = await page.evaluate(async () => {
+    const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+
+    // ① 模拟 installSlideMenuStyles：含 :root 0.08 的整串塞进 head（晚于 variables.css）
+    const headStyle = document.createElement("style");
+    headStyle.textContent = `
+      :root { --uih-slide-divider: rgba(255, 255, 255, 0.08); }
+    `;
+    document.head.appendChild(headStyle);
+
+    // ② adoptedStyleSheets：shadow 内消费规则（.slide-header border 同款）
+    const host = document.createElement("div");
+    const shadow = host.attachShadow({ mode: "open" });
+    document.querySelector("#host-wrap")?.appendChild(host);
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(`.probe { border-bottom: 1px solid var(--uih-slide-divider); }`);
+    shadow.adoptedStyleSheets = [sheet];
+    const el = document.createElement("div");
+    el.className = "probe";
+    shadow.appendChild(el);
+
+    await nextFrame();
+    await nextFrame();
+
+    return {
+      borderColor: getComputedStyle(el).borderBottomColor,
+      docRootVar: getComputedStyle(document.documentElement)
+        .getPropertyValue("--uih-slide-divider")
+        .trim(),
+    };
+  });
+
+  console.log("[shadow-var-raw] mirror-real:", JSON.stringify(r));
+  // 生效值必须 0.08（后注入覆盖 0.1）——variables.css 的 0.1 是死定义
+  expect(r.borderColor).toBe("rgba(255, 255, 255, 0.08)");
 });

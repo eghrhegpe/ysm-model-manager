@@ -81,8 +81,6 @@
   --accent-btn-bg: color-mix(in srgb, var(--accent) 15%, transparent);
   --accent-btn-color: var(--accent);
   --accent-btn-border: color-mix(in srgb, var(--accent) 25%, transparent);
-  /* R5 治理：原硬编码 UI 颜色上提到主题变量（颜色即数据/算法色豁免见 check-redlines.mjs） */
-  --uih-slide-divider: rgba(255, 255, 255, 0.1);
 }
 
 /* ===== 温暖木纹（明亮模式） ===== */

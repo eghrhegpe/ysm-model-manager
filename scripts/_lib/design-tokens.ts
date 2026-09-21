@@ -47,6 +47,8 @@ export type DesignViolationKind =
   | "css-color"
   | "css-shadow"
   | "css-transition"
+  | "inline-style-padding"
+  | "css-padding"
   | "emoji-icon"
   | "toast-emoji-prefix"
   | "locale-emoji-prefix";
@@ -102,6 +104,65 @@ export const TOKEN_PX_BASELINE: Readonly<Record<string, number>> = {
   "--radius-xl": 10,
   "--radius-pill": 20,
 };
+
+/**
+ * padding 硬编码判定（2026-09 立闸）。
+ *
+ * 为什么补：`docs/UI-Design.md` §5 间距系统明文「不要使用 3px、7px、9px 等
+ * 非标准值。要么 4 的倍数，要么用上述层级」，且 §语义化间距变量定义了
+ * [--pad-*] 垂直语义档、[--btn-padding-*] 完整简写档——但判定层原只覆盖
+ * font-size/radius/color/emoji/shadow/transition，**padding 长期零守护**。
+ * 实测全仓 358 处硬编码 padding（值高达 108 种），规范与实际严重漂移。
+ *
+ * 判定口径（与 transition 反转同哲学——硬编码即债，能安全归位才给建议）：
+ *   - **一律报**：`padding: Npx`（内联或 CSS 块，含 `0` 与组合值）→ 应走令牌档；
+ *   - **只给精确建议**：单值 `padding: Npx`（垂直语义最纯）→ 就近垂直档 `--pad-*`；
+ *     组合值（`4px 8px` 等）涉及横向语义，机械收敛到 `--btn-padding-*` 完整档是
+ *     存量收敛的事，闸建议给 null（照报但宁可不猜，与 transition 先例一致）。
+ *
+ * 档位基准值见下方表格，与 variables.css 的一致性由测试契约锁定。
+ */
+export const PAD_TOKEN_VERTICAL: Readonly<Record<string, number>> = {
+  "--pad-btn-tool": 3,
+  "--pad-filter": 4,
+  "--pad-btn-secondary": 4,
+  "--pad-tab": 5,
+  "--pad-btn-primary": 5,
+  "--pad-nav": 6,
+};
+
+/**
+ * 取最近垂直档令牌名（**就近归档**：5px → --pad-tab，4px → --pad-filter…）。
+ * 距离 ≤2px 才建议（孤品如 1px 无档可归 → null，宁可不猜）。
+ */
+export function nearestPadToken(px: number, tokenMap?: TokenRawMap | null): string | null {
+  let best: { name: string; dist: number } | null = null;
+  for (const [name, v] of Object.entries(PAD_TOKEN_VERTICAL)) {
+    if (tokenMap && !tokenMap.has(name)) continue;
+    const dist = Math.abs(v - px);
+    if (best === null || dist < best.dist) best = { name, dist };
+  }
+  return best && best.dist <= 2 ? best.name : null;
+}
+
+/**
+ * padding 组合值 → 建议令牌名。只对「单值垂直语义」给建议，组合值返回 null。
+ *
+ * 安全边界（防给错答案）：
+ *   - 非 px 分量（calc/var/auto/百分比/inherit）→ null；
+ *   - 组合值（2/3/4 分量）→ null（横向语义机械到 --btn-padding-* 是存量收敛，不瞎猜）；
+ *   - 孤品（单值但无 ≤2px 的垂直档）→ null。
+ */
+export function suggestPaddingToken(value: string, tokenMap?: TokenRawMap | null): string | null {
+  const v = value.trim().replace(/\s+/g, " ");
+  const parts = v.split(" ").filter(Boolean);
+  if (parts.length !== 1) return null; // 组合值不猜
+  const single = parts[0];
+  if (single === undefined) return null;
+  const m = /^(\d+(?:\.\d+)?)px$/.exec(single);
+  if (!m) return null; // 0 / calc / var / 百分比不猜
+  return nearestPadToken(Number(m[1]), tokenMap);
+}
 
 /**
  * `--shadow-*` 令牌的**归一化值**（供 box-shadow 精确比对）。
@@ -644,6 +705,23 @@ export function fixLineTokens(
     return to;
   });
 
+  // padding：**仅单值（padding: Npx）且最近垂直档 ≤2px 安全距离时**替换。
+  // 组合值（`4px 8px` 等）涉及横向语义，自动替换会改语义 → 一律不碰（由报告层
+  // 提示、存量收敛人工归档 --btn-padding-*）。排除 padding-block/padding-inline 子属性。
+  text = text.replace(
+    new RegExp(`(?<![\\w-])padding(?![-a-z])\\s*:\\s*([^;"'\`}]+)`, "g"),
+    (match, val: string, offset: number) => {
+      if (inVar(offset)) return match;
+      const v = val.trim();
+      if (!/^\d+(?:\.\d+)?px$/.test(v)) return match; // 仅单值 px；0/组合/calc/var 不碰
+      const token = suggestPaddingToken(v, tokenMap);
+      if (!token) return match;
+      const to = `padding:var(${token})`;
+      edits.push({ from: match, to, count: 1 });
+      return to;
+    },
+  );
+
   return { text, edits };
 }
 
@@ -877,6 +955,35 @@ export function findStyleAttrViolations(
       // 的自相矛盾（`transform .25s` 缓动为隐式 ease ≠ --tr-enter 的 ease-out）。
       // 给不出安全建议就 null：报告仍保留，供人工决定归位/加档/写 tr-exempt。
       suggestion: suggestTransitionTokenExact(offending, tokenMap),
+    });
+  }
+
+  // ⑥ padding 硬编码（[gap 补齐 2026-09] UI-Design.md §5 + §语义化间距变量明文）
+  //    「不要使用 3px、7px、9px 等非标准值。要么 4 的倍数，要么用上述层级」，
+  //    且 `--pad-*` 垂直语义档 / `--btn-padding-*` 完整简写档早已定义——
+  //    但判定层原只覆盖 font-size/radius/color/shadow/transition，padding 长期零守护。
+  //
+  //    判定口径（与 transition 反转同哲学：硬编码即债，能安全归位才给建议）：
+  //      - 一律报 `padding: Npx`（内联或 CSS 块，含 0 与组合值）；
+  //      - **纯零豁免**：`padding: 0`（全分量 0）令牌化无意义（--pad-* 无 0 档），
+  //        与 border-radius:0 同哲学放行；但 `0 8px` 这类「0 + 非 0」仍报（非 0 是真债）；
+  //      - 建议：单值 `padding: Npx` → 就近垂直档 `--pad-*`（suggestPaddingToken）；
+  //        组合值（涉及横向语义，机械收 `--btn-padding-*` 属存量收敛）→ null，照报不猜。
+  //
+  //    ⚠️ 必须排除 `padding-block`/`padding-inline` 子属性：`propValueRe("padding")`
+  //    会误匹配它们（padding 前是 `{` 或空白 → 左边界放行）。加 `(?![-a-z])` 防后缀。
+  const padRe = new RegExp(`(?<![\\w-])padding(?![-a-z])\\s*:\\s*([^;"'\`}]+)`, "g");
+  let pm: RegExpExecArray | null;
+  while ((pm = padRe.exec(line)) !== null) {
+    const val = (pm[1] ?? "").trim().replace(/\s+/g, " ");
+    if (!/^(?:\d+(?:\.\d+)?px|0)(?:\s+(?:\d+(?:\.\d+)?px|0)){0,3}$/.test(val)) continue; // 非纯 px 组合不判
+    // 纯零豁免：全分量都是 0 / 0px（令牌化无意义，同 border-radius:0）
+    if (/^(?:0|0px)(?:\s+(?:0|0px)){0,3}$/.test(val)) continue;
+    out.push({
+      kind: inlineBodies.some((b) => b.includes(`padding:`)) ? "inline-style-padding" : "css-padding",
+      line: lineNo,
+      snippet: clip(`padding:${val}`),
+      suggestion: suggestPaddingToken(val, tokenMap),
     });
   }
 

@@ -265,6 +265,7 @@
 
   /* 语义化垂直间距 — 按 UI 角色，随字号比例缩放 */
   --pad-nav: calc(6px + var(--fs-scale) * 0.5);
+  --pad-tab: calc(5px + var(--fs-scale) * 0.42); /* 子标签垂直内边距（UI-Design.md §语义化间距变量） */
   --pad-filter: calc(4px + var(--fs-scale) * 0.35);
   --pad-btn-primary: calc(5px + var(--fs-scale) * 0.42);
   --pad-btn-secondary: calc(4px + var(--fs-scale) * 0.35);

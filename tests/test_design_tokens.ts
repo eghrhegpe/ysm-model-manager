@@ -174,16 +174,18 @@ const FS_MD_PX = TOKEN_PX_BASELINE["--fs-md"];
     `--fs-sm: ${FS_SM_PX}px;\n--fs-md: ${FS_MD_PX}px;\n--radius-md: 6px;`,
   );
 
-  // 4a) 内联 font-size → 命中且带建议
+  // 4a) 内联 font-size → 命中；同行 padding 也命中（padding 已入判定域）
   const a = findStyleAttrViolations(
     `  <div class="x" style="padding:4px;font-size:${FS_MD_PX}px">hi</div>`,
     10,
     tokens,
   );
-  assert.equal(a.length, 1, "内联字号应只报 1 条（不叠加纯内联）");
-  assert.equal(a[0]!.kind, "inline-style-font-size", "种类应为内联字号");
-  assert.equal(a[0]!.suggestion, "--fs-md", "应建议 --fs-md");
-  assert.equal(a[0]!.line, 10, "行号应回填");
+  assert.equal(a.length, 2, "内联字号 + 内联 padding 各报 1 条");
+  assert.ok(a.some((v) => v.kind === "inline-style-font-size"), "应含内联字号");
+  assert.ok(a.some((v) => v.kind === "inline-style-padding"), "应含内联 padding");
+  const aFs = a.find((v) => v.kind === "inline-style-font-size");
+  assert.equal(aFs!.suggestion, "--fs-md", "字号应建议 --fs-md");
+  assert.equal(aFs!.line, 10, "行号应回填");
 
   // 4b) 内联 border-radius → 命中且带建议
   const b = findStyleAttrViolations('style="border-radius:6px"', 3, tokens);
@@ -942,6 +944,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     ["border-radius", ".x { border-radius: 6px; }"],
     ["transition", ".x { transition: transform 0.2s; }"],
     ["box-shadow", ".x { box-shadow: 0 8px 32px rgba(0,0,0,.25); }"],
+    ["padding", ".x { padding: 4px 8px; }"],
   ];
   const OTHER_KWS = ["style=", "color", "background"];
 
@@ -1031,6 +1034,93 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     "越界 / 重复 / 非整数行号一律安全忽略（不得抛错，也不得重复计数）",
   );
   console.log("  ✓ 行级判定锁: 反幻影 / 重写命中 / 键碰撞 / 行号边界");
+}
+
+// ── 19. padding 判定（2026-09 立闸）──
+{
+  // 为什么补：UI-Design.md §5 明文「不要使用 3px、7px、9px 等非标准值」，且
+  // §语义化间距变量已定义 --pad-* 垂直档、--btn-padding-* 完整档，但判定层
+  // 原只覆盖 font-size/radius/color/shadow/transition——padding 长期零守护。
+  const tokens = parseTokenMap(fs.readFileSync(VARIABLES_CSS, "utf8"));
+
+  // ① CSS 块硬编码 padding → 命中 css-padding；单值给最近垂直档建议
+  const a = findStyleAttrViolations("  .x { padding: 4px; }", 3, tokens);
+  assert.equal(a.length, 1, "CSS 块 padding:4px 应命中 1 条");
+  assert.equal(a[0]!.kind, "css-padding", "种类应为 css-padding");
+  assert.equal(a[0]!.suggestion, "--pad-filter", "4px 应建议 --pad-filter（4px 档）");
+
+  // ② 组合值 → 命中但建议 null（横向语义机械收敛属存量，不瞎猜）
+  const b = findStyleAttrViolations("  .b { padding: 4px 8px; }", 4, tokens);
+  assert.equal(b.length, 1, "padding:4px 8px 应命中 1 条");
+  assert.equal(b[0]!.kind, "css-padding", "组合值仍属 css-padding");
+  assert.equal(b[0]!.suggestion, null, "组合值建议为 null（不猜横向语义）");
+
+  // ③ 内联 padding → inline-style-padding
+  const c = findStyleAttrViolations('style="padding:2px"', 5, tokens);
+  assert.equal(c.length, 1, "内联 padding 应命中");
+  assert.equal(c[0]!.kind, "inline-style-padding", "种类应为 inline-style-padding");
+
+  // ④ 已令牌化 → 不报（合规写法零命中）
+  assert.deepEqual(
+    findStyleAttrViolations("  .d { padding: var(--pad-nav); }", 6, tokens),
+    [],
+    "已用令牌的 padding 不应报",
+  );
+
+  // ⑤ padding-block/padding-inline 子属性 → 不报（语义独立，非组合 padding）
+  assert.deepEqual(
+    findStyleAttrViolations("  .e { padding-block: 8px; }", 7, tokens),
+    [],
+    "padding-block 子属性不应误报",
+  );
+  assert.deepEqual(
+    findStyleAttrViolations("  .f { padding-inline: 4px; }", 8, tokens),
+    [],
+    "padding-inline 子属性不应误报",
+  );
+
+  // ⑥ 自定义属性定义（--x-padding: 8px）→ 不报（防 --fix 误改写，块 12 同源）
+  assert.deepEqual(
+    findStyleAttrViolations("  --my-padding: 8px;", 9, tokens),
+    [],
+    "自定义属性定义不应被判成 padding 违规",
+  );
+
+  // ⑦ 非 px 分量（calc/var/百分比）→ 不判（无法安全建议）
+  assert.deepEqual(
+    findStyleAttrViolations("  .g { padding: calc(4px + 2px); }", 10, tokens),
+    [],
+    "calc 分量不判（非纯 px 组合）",
+  );
+  assert.deepEqual(
+    findStyleAttrViolations("  .h { padding: 10%; }", 11, tokens),
+    [],
+    "百分比不判",
+  );
+
+  // ⑧ 纯 0 / 0px → 不判（0 合法，无需令牌化）
+  assert.deepEqual(
+    findStyleAttrViolations("  .i { padding: 0; }", 12, tokens),
+    [],
+    "padding:0 合法不判",
+  );
+
+  // ⑨ --fix：仅单值且安全距离内才替换；组合值 / 子属性 / 自定义属性一律不碰
+  const fixed = fixLineTokens(".x { padding: 4px; }", tokens).text;
+  assert.ok(
+    fixed.includes("padding:var(--pad-filter)"),
+    `单值 4px 应替换为 var(--pad-filter)，实际: ${fixed}`,
+  );
+  const fixedCombo = fixLineTokens(".x { padding: 4px 8px; }", tokens).text;
+  assert.equal(fixedCombo, ".x { padding: 4px 8px; }", "组合值不应被 --fix 改写（会改语义）");
+  const fixedSub = fixLineTokens(".x { padding-block: 8px; }", tokens).text;
+  assert.equal(fixedSub, ".x { padding-block: 8px; }", "padding-block 不应被 --fix 改写");
+  const fixedCust = fixLineTokens("--my-padding: 8px;", tokens).text;
+  assert.equal(fixedCust, "--my-padding: 8px;", "自定义属性定义不应被 --fix 改写");
+  // 单值替换幂等
+  assert.equal(fixLineTokens(fixed, tokens).text, fixed, "padding --fix 应幂等");
+
+  console.log("  ✓ padding 判定: 内联/CSS 块命中 + 子属性/自定义属性/calc/0 豁免 + --fix 安全");
 }
 
 console.log("\n✅ test_design_tokens.ts 全部通过");

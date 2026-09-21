@@ -37,7 +37,9 @@ auto_fields:
     - isCommentLine
     - isNeutralColor
     - isRealtimeFeedbackTransition
+    - nearestPadToken
     - normalizeShadowValue
+    - PAD_TOKEN_VERTICAL
     - parseTokenMap
     - propDeclRe
     - propValueRe
@@ -47,6 +49,7 @@ auto_fields:
     - splitTopLevelCommas
     - STATUS_ICON_NAMES
     - suggestIconName
+    - suggestPaddingToken
     - suggestShadowToken
     - suggestToken
     - suggestTransitionToken

@@ -23,6 +23,7 @@
  * 检查项（均对应 UI-Design.md 明文规则，不自造规则）：
  *   [ERROR] font-size:Npx 硬编码（内联或 CSS 块）→ 应走 var(--fs-*)
  *   [ERROR] border-radius:Npx 硬编码            → 应走 var(--radius-*)
+ *   [ERROR] padding:Npx 硬编码（内联或 CSS 块） → 应走 `--pad-*`/`--btn-padding-*`（2026-09 补）
  *   [ERROR] box-shadow 与某 --shadow-* 完全同值 → 应走 var(--shadow-*)（2026-09 补）
  *   [ERROR] transition 时长与某 --tr-* 相等     → 应走 var(--tr-*)（2026-09 补）
  *   [WARN]  硬编码颜色（内联或 CSS 块，中性色豁免）→ 应走语义色 token
@@ -523,6 +524,7 @@ for (const f of files) {
       !line.includes("background") &&
       !line.includes("transition") &&
       !line.includes("box-shadow") &&
+      !line.includes("padding") &&
       !hasGraphicEmoji(line)
     ) {
       continue;
@@ -574,7 +576,9 @@ const total = reports.reduce((n, r) => n + r.violations.length, 0);
 const ERROR_KINDS: DesignViolationKind[] = [
   "inline-style-font-size",
   "inline-style-radius",
+  "inline-style-padding",
   "css-font-size",
+  "css-padding",
   "css-radius",
   "css-shadow",
   "css-transition",
@@ -681,9 +685,11 @@ if (BASELINE_MODE) {
 const KIND_LABEL: Record<string, string> = {
   "inline-style-font-size": "内联硬编码字号",
   "inline-style-radius": "内联硬编码圆角",
+  "inline-style-padding": "内联硬编码 padding",
   "inline-style-color": "内联硬编码颜色",
   "css-font-size": "CSS 块硬编码字号",
   "css-radius": "CSS 块硬编码圆角",
+  "css-padding": "CSS 块硬编码 padding",
   "css-color": "CSS 块硬编码颜色",
   "css-shadow": "硬编码阴影（同 --shadow-* 值）",
   "css-transition": "硬编码过渡时长",

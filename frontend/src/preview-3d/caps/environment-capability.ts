@@ -229,7 +229,7 @@ export class EnvironmentCapability implements SceneCapability {
     } catch (err) {
       ringLog(
         "env",
-        `自定义 HDR 解码失败，回退到 studio 预设: ${err instanceof Error ? err.message : String(err)}`,
+        `自定义 HDR 解码失败，保持当前渲染不动（通路键未拨回，画面维持旧内容）: ${err instanceof Error ? err.message : String(err)}`,
         "warn",
       );
       // 失败不保留中间缓存
@@ -454,7 +454,9 @@ export class EnvironmentCapability implements SceneCapability {
         const skyTex = this.buildSkyEnvTex(skyForce);
         if (skyTex) {
           if (skyTex === prevSkyTex && this.scene.environment === skyTex) return;
-          this.disposeEnvironment();
+          // [复审 D] 传覆盖前旧引用：skySourcedTex 此刻已被覆盖为新图，
+          // 旧图若还挂在背景槽须并入排除集
+          this.disposeEnvironment(prevSkyTex);
           this.skySourcedTex = skyTex;
           this.scene.environment = skyTex; // env 仍是槽位唯一写者（D1 红线）
           // cubeUV 图集不是合法的 background 源（天空视觉由 sky 的穹顶 mesh 本身承担）；
@@ -464,7 +466,9 @@ export class EnvironmentCapability implements SceneCapability {
         }
         // 取不到（无 sky cap / 烘焙失败）→ 落到下方预设路径（不黑场景）。
       }
-      this.disposeEnvironment();
+      // [复审 D] sky 取图失败（skySourcedTex 已被 buildSkyEnvTex 置 null）时，
+      // 旧 sky 纹理同样须并入排除集——统一传覆盖前引用，两分支一个口径。
+      this.disposeEnvironment(prevSkyTex);
       if (!this.enabled) {
         this.scene.environment = this.prevEnvironment;
         this.applyBackground(null);
@@ -503,7 +507,12 @@ export class EnvironmentCapability implements SceneCapability {
     return luminanceHistogram(this.customHdrTex, this.backgroundSrcTex);
   }
 
-  private disposeEnvironment(): void {
+  /**
+   * @param extraExclude 复审 D 收口：sky 直装分支里 buildSkyEnvTex 已把 this.skySourcedTex
+   *   覆盖为**新**图，此刻若背景槽还挂着**旧** sky 图（今日不可达——sky 分支恒不挂背景；
+   *   守卫防未来回潮），单比对现值会放行误 dispose。调用方把覆盖前捕获的旧引用传进来并入排除集。
+   */
+  private disposeEnvironment(extraExclude?: THREE.Texture | null): void {
     if (this.envRT) {
       this.envRT.dispose();
       this.envRT = null;
@@ -519,7 +528,8 @@ export class EnvironmentCapability implements SceneCapability {
     if (
       this.backgroundSrcTex &&
       this.backgroundSrcTex !== this.customHdrTex &&
-      this.backgroundSrcTex !== this.skySourcedTex
+      this.backgroundSrcTex !== this.skySourcedTex &&
+      this.backgroundSrcTex !== extraExclude
     ) {
       this.backgroundSrcTex.dispose();
     }

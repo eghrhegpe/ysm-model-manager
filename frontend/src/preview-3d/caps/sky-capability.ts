@@ -377,8 +377,9 @@ export class SkyCapability implements SceneCapability {
     const env = getTypedCap(this.caps, "environment");
     if (env?.isEnabled?.()) {
       // env 是 scene.environment 唯一写者——天空侧只转交刷新，绝不直写槽位。
-      // refreshFromSkySource 内部自判 envSource：="sky" 时重新向本 cap 取图，
-      // ≠"sky" 时按自己通路重建（幂等、廉价），两分支都不需要 sky 再动手。
+      // refreshFromSkySource 内部自判 envSource：="sky" 时重新向本 cap 取图装载；
+      // ≠"sky" 时**早退不动作**（预设通路自己的图不随天空事件重烤——槽位属 env，
+      // 天空变化与其内容无关；氛围切换仍由 env callback 按 env 组键正常重建）。
       env.refreshFromSkySource?.(force);
       return;
     }
@@ -524,6 +525,11 @@ export class SkyCapability implements SceneCapability {
   }
 
   private clearEnvironment(): void {
+    // [复审 A 收口 2026-09-21] 判据与 requestEnvironmentRefresh 同源：**env 在场启用 ⇒ 槽位去留归 env**。
+    // D-3 直装后 scene.environment 恰等于 sky 的烘焙产物（env 直装 sky 交回的 renderTarget.texture），
+    // 旧守卫「槽位==自家纹理→清」分不清「env 装的」与「sky 自持的」，天空总开关关闭/detach
+    // 会越过 D1 红线把 env 的照明清空（skyEnvironment=false 存档下再无装载者 → 永久黑）。
+    if (getTypedCap(this.caps, "environment")?.isEnabled?.()) return;
     if (this.scene.environment === this.renderTarget?.texture) {
       this.scene.environment = null;
     }

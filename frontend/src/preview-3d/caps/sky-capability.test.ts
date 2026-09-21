@@ -1018,6 +1018,33 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
       expect(scene.environment).toBeNull();
       expect(refreshFromSkySource).toHaveBeenCalled();
     });
+
+    // [复审 A 收口 2026-09-21] D-3 直装让槽位值恰等于 sky 的 renderTarget 纹理，
+    // clearEnvironment 旧守卫分不清「env 装的」与「sky 自持的」——天空总开关一关，
+    // detach→clearEnvironment 越过 D1 红线把 env 照明清空。现守卫与路由器同判据。
+    it("[A] env 在场启用：天空停用不得清空 env 装载的槽位", () => {
+      const { scene, cap } = skyWithEnvTaker();
+      const installed = new THREE.Texture();
+      // 伪状：sky 烘焙产物经 env 直装入槽（renderTarget 与槽位同引用——正是旧守卫被骗的形态）
+      (cap as unknown as Record<string, unknown>).renderTarget = {
+        texture: installed,
+        dispose: () => {},
+      };
+      scene.environment = installed;
+      cap.setEnabled(false);
+      expect(scene.environment, "env 在场时槽位去留归 env，天空停用不得清").toBe(installed);
+    });
+
+    it("[A 对照] env 缺席：天空停用仍自持清槽（兜底语义不回归）", () => {
+      const scene = new THREE.Scene();
+      const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+      cap.apply();
+      const held = (cap as unknown as { renderTarget: { texture: THREE.Texture } }).renderTarget
+        .texture;
+      scene.environment = held;
+      cap.setEnabled(false);
+      expect(scene.environment, "env 缺席时 sky 自持装载/清除如旧").toBeNull();
+    });
   });
 
   it("setSun 写 uniforms 并在 enabled+environment 下重建环境", () => {

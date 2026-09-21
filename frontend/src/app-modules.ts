@@ -56,7 +56,7 @@ loadView("app-sync-manager", () => import("@/views/app-sync-manager/index.ts"));
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 // 2026-08-17 神桶拆分：normalizeTheme/applyTheme/initTheme 已移至 theme-core.ts
 // （纯逻辑无顶层副作用，测试可独立 import）；本文件保留启动装配 + window 桥接。
-import { applyTheme, initTheme, normalizeTheme } from "./theme-core.ts";
+import { applyTheme, applyThemeAuto, initTheme, normalizeTheme } from "./theme-core.ts";
 
 export { applyTheme, initTheme, normalizeTheme };
 
@@ -136,7 +136,12 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
         tag: "theme",
         failMsg: "主题初始化失败:",
         toast: { prefix: "⚠️ ", fallback: "主题初始化失败" },
-        run: initTheme,
+        // P3 修复：initTheme 应用定格主题后，按 theme-auto 重算（time 模式重启
+        // 不再定格旧值——白天设 time 夜间重启仍亮色的病根治于此）
+        run: async () => {
+          await initTheme();
+          applyThemeAuto();
+        },
       },
       { tag: "ui-prefs", failMsg: "界面偏好应用失败:", run: applyUIPrefs },
     ]);

@@ -5,6 +5,7 @@
 import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { THEME_DARK } from "@/theme-core";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
@@ -34,7 +35,7 @@ export async function saveCfg(patch: {
   } catch {
     /* 重读失败退化为内存 cfg（尽力而为） */
   }
-  const theme = safeGet("theme") || "dark";
+  const theme = safeGet("theme") || THEME_DARK;
   await SaveAppConfig(
     patch.filesRoot !== undefined ? patch.filesRoot : latest.filesRoot || "",
     patch.rpRoot !== undefined ? patch.rpRoot : latest.resourcepackRoot || "",
@@ -325,7 +326,7 @@ export function initMcDetect(root: ShadowRoot): void {
         selected = await showPathPicker(paths);
         if (!selected) return; // 用户取消
       }
-      const theme = safeGet("theme") || "dark";
+      const theme = safeGet("theme") || THEME_DARK;
       await SaveAppConfig(
         getCfg().filesRoot || "",
         getCfg().resourcepackRoot || "",

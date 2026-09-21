@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { initThemeSection } from "./theme.ts";
 
-const { safeGet, safeSet, getApp, applyTheme } = vi.hoisted(() => ({
+const { safeGet, safeSet, getApp, applyTheme, applyTimeTheme } = vi.hoisted(() => ({
   safeGet: vi.fn((_key: string) => ""),
   safeSet: vi.fn((_key: string, _val: string) => {}),
   getApp: vi.fn(),
   applyTheme: vi.fn((_name: string) => {}),
+  // 默认白天：applyTimeTheme 返回 warm；夜晚用例在用例内 mockReturnValue("cyber")
+  applyTimeTheme: vi.fn(() => "warm"),
 }));
 
 vi.mock("@/utils/base/primitives/storage.ts", () => ({
@@ -19,6 +21,12 @@ vi.mock("@/backend/app.ts", () => ({
 
 vi.mock("@/theme-core", () => ({
   applyTheme: (...a: unknown[]) => applyTheme(...(a as [string])),
+  // mock applyTimeTheme 复刻真实行为：取返回值 + 调 applyTheme（否则 applyTheme 调 0 次）
+  applyTimeTheme: () => {
+    const r = applyTimeTheme();
+    applyTheme(r);
+    return r;
+  },
 }));
 
 vi.mock("./store.ts", () => ({
@@ -103,12 +111,20 @@ describe("initThemeSection", () => {
     expect(applyTheme).toHaveBeenCalledWith("system");
   });
 
-  it("auto=time applies time-based theme (warm or cyber)", () => {
+  it("auto=time 白天 → applyTimeTheme 返回 warm，应用 warm + 写 theme=warm", () => {
+    applyTimeTheme.mockReturnValue("warm");
     const { root } = makeRoot("cyber", "time");
     initThemeSection(root);
-    const hour = new Date().getHours();
-    const expected = hour >= 6 && hour < 18 ? "warm" : "cyber";
-    expect(applyTheme).toHaveBeenCalledWith(expected);
+    expect(applyTheme).toHaveBeenCalledWith("warm");
+    expect(safeSet).toHaveBeenCalledWith("theme", "warm");
+  });
+
+  it("auto=time 夜晚 → applyTimeTheme 返回 cyber，应用 cyber + 写 theme=cyber", () => {
+    applyTimeTheme.mockReturnValue("cyber");
+    const { root } = makeRoot("cyber", "time");
+    initThemeSection(root);
+    expect(applyTheme).toHaveBeenCalledWith("cyber");
+    expect(safeSet).toHaveBeenCalledWith("theme", "cyber");
   });
 
   it("auto select change to system applies system", () => {
@@ -121,15 +137,15 @@ describe("initThemeSection", () => {
     expect(safeSet).toHaveBeenCalledWith("theme", "system");
   });
 
-  it("auto select change to time applies time theme", () => {
+  it("auto select change to time → applyTimeTheme 返回值应用 + 写 theme", () => {
+    applyTimeTheme.mockReturnValue("warm");
     const { root, autoSelect } = makeRoot("cyber", "off");
     initThemeSection(root);
     applyTheme.mockClear();
     autoSelect.value = "time";
     autoSelect.dispatchEvent(new Event("change"));
-    const hour = new Date().getHours();
-    const expected = hour >= 6 && hour < 18 ? "warm" : "cyber";
-    expect(applyTheme).toHaveBeenCalledWith(expected);
+    expect(applyTheme).toHaveBeenCalledWith("warm");
+    expect(safeSet).toHaveBeenCalledWith("theme", "warm");
   });
 
   it("no picker element still applies theme", () => {

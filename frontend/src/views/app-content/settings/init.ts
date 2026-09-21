@@ -8,6 +8,7 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { initVersionUpdater } from "@/features/maintenance/version-updater.ts";
+import { THEME_DARK } from "@/theme-core";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
@@ -230,7 +231,7 @@ function stgBindLinkMode(
       applyHintVisibility(root, "lm-hint", val, LINK_MODE_KEYS);
       try {
         const { SaveAppConfig, SetLinkMode } = await backendGetApp();
-        const theme = safeGet("theme") || "dark";
+        const theme = safeGet("theme") || THEME_DARK;
         await SaveAppConfig(
           cfgLocal.filesRoot || "",
           cfgLocal.resourcepackRoot || "",

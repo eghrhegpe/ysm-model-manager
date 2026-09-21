@@ -3,24 +3,13 @@
 // 隐私模式（存储禁用）下 localStorage 抛错会中断 initSettings、整页失效。
 // 原局部 themeGet/themeSet 收敛为共享工具（app-modules 启动链同源实现）。
 
-import { applyTheme } from "@/theme-core";
+import { applyTheme, applyTimeTheme } from "@/theme-core";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { getCfg } from "./store.ts";
 
-// 时间段主题边界（魔法数值收敛）：6:00–18:00 白天 warm，其余夜晚 cyber
-const DAY_START_HOUR = 6;
-const DAY_END_HOUR = 18;
-
-/** 时间段主题切换：返回实际应用的主题名（warm 白天 / cyber 夜晚） */
-function applyTimeTheme(): string {
-  const hour = new Date().getHours();
-  const isDay = hour >= DAY_START_HOUR && hour < DAY_END_HOUR;
-  const themeName = isDay ? "warm" : "cyber";
-  applyTheme(themeName);
-  return themeName;
-}
+// applyTimeTheme / 时段常量已下沉至 theme-core.ts（设置页与启动链共用单源，P3 修复重启失效）
 
 // ===== 主题卡片色点取色（运行时探针，2026-09 修）=====
 // 主题色单一事实源 = document 层 variables.css（.theme-x 块，--bd 为 color-mix 派生）。

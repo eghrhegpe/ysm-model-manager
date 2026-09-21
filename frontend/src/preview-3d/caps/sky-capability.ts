@@ -37,6 +37,20 @@ import { buildSkyNodes } from "./sky-menu.ts";
 import { godRaysIntensity, SunBeams } from "./sun-beams.ts";
 
 /**
+ * 天空盒半边长（[锐评 S2-4] 原 envState.skyScale 键摘除后提为模块常量）。
+ *
+ * **硬物理约束**：Three 官方 Sky 的材质 side=BackSide 且顶点 z 强制 far，
+ * 故相机须**始终位于天空盒内部**——半边长必须 > 预览核心相机 maxDistance(5000)，
+ * 否则相机拉远即飞出盒外、天空整体消失。取 12000 留 2.4× 余量。
+ *
+ * 该值是渲染实现细节而非用户偏好：无 UI 控件、无回调分支、saveState 不落盘，
+ * 暴露成 envState 键只会造就一个「拖了不响应」或「拖坏画面」的旋钮。
+ * 约束出处与受约束者现同处一文件（原注释只在 env-state-schema.ts 侧提到）。
+ * SunBeams 的锥体/overlay 尺寸也按本常量缩放（构造期快照）。
+ */
+export const SKY_SCALE = 12000;
+
+/**
  * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，
  * 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为可配置尺度。
  * ——不替换 shader 主体（仍为 Preetham 物理模型），仅追加 uniforms 声明 + 两处乘法。
@@ -221,7 +235,7 @@ export class SkyCapability implements SceneCapability {
     this.envScene = new THREE.Scene();
     this.envScene.add(this.envSky);
     // 日落光束 + tint overlay（默认禁用；SunBeams 内聚 cones/tint/time 状态机）
-    this.beams = new SunBeams(this.scene, envState.skyScale);
+    this.beams = new SunBeams(this.scene, SKY_SCALE);
 
     // ADR-196：初始化运行时太阳位置
     this.elevation = envState.skyElevation;
@@ -359,7 +373,7 @@ export class SkyCapability implements SceneCapability {
 
   private createSky(): Sky {
     const sky = new Sky();
-    sky.scale.setScalar(envState.skyScale);
+    sky.scale.setScalar(SKY_SCALE);
     sky.material.uniforms.cloudCoverage.value = envState.skyCloudCoverage;
     return sky;
   }
@@ -538,7 +552,7 @@ export class SkyCapability implements SceneCapability {
       mieCoefficient: envState.skyMieCoefficient,
       mieDirectionalG: envState.skyMieDirectionalG,
       cloudCoverage: envState.skyCloudCoverage,
-      scale: envState.skyScale,
+      scale: SKY_SCALE,
       environment: envState.skyEnvironment,
       timeOfDay: envState.skyTimeOfDay,
       exposure: envState.skyExposure,

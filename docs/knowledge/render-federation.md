@@ -61,6 +61,7 @@ auto_fields:
     - SemanticScene
     - ShadowCapability
     - ShadowType
+    - SKY_SCALE
     - SkyCapability
     - spotDistanceAttenuation
     - switchPreview

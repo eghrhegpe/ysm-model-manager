@@ -10,11 +10,17 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - applyTheme
+    - applyThemeAuto
+    - applyTimeTheme
     - initTheme
     - loadView
     - normalizeTheme
     - revealMainWindow
+    - SYSTEM_DARK_THEME
+    - SYSTEM_LIGHT_THEME
+    - THEME_DARK
     - THEME_VALID
+    - timeThemeForHour
     - unregisterDevtools
   tests:
     - frontend/src/app-modules.test.ts

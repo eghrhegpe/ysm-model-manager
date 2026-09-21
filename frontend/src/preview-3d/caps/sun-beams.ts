@@ -100,8 +100,8 @@ function sunDirFromAngles(elevation: number, azimuth: number): THREE.Vector3 {
  * 日落光束视觉组：两交叉光束锥体（God Rays）+ 太阳方向暖色 overlay（Sunset Tint）。
  * 状态（group / tintMesh / time / enabled）完全内聚于本类；对外只暴露基于
  * 太阳角度 + dt 的纯操作，不反向依赖 SkyCapability。scale 为天空盒半边长
- * （构造期快照：锥体/overlay 尺寸随其缩放，与原实现一致——运行期 skyScale
- * 变更不重建，宿主原有行为）。
+ * （构造期快照：锥体/overlay 尺寸随其缩放。宿主传入 `SKY_SCALE` 常量——
+ * 该值是渲染实现细节，不可变，故无需运行期重建）。
  */
 export class SunBeams {
   private scene: THREE.Scene;

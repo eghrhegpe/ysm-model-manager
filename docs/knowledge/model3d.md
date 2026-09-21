@@ -754,6 +754,7 @@ auto_fields:
     - shouldRenderPreviewFrame
     - showLoadFailure
     - showModelGroup
+    - SKY_SCALE
     - SkyCapability
     - slideMenuCss
     - SlideMenuHandle
@@ -864,6 +865,7 @@ auto_fields:
     - VmdRetargetOptions
     - VmdRetargetResult
     - VolumetricCone
+    - VolumetricDriver
     - VolumetricParams
     - VrmAdapterDeps
     - VrmBonePanelCtx

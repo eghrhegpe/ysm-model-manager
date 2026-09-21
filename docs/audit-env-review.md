@@ -582,9 +582,9 @@ postprocessing cap 确认，列观察项）。
 > 全部 6 面板（sky/ground/water/environment/fog/reflector）UI + 接线审查完毕。
 > 缺陷按严重度分级（🔴 真实缺陷 / 🟡 性能冗余 / 🟢 UX 改进 / ⚪ 观察项）。
 >
-> **修复进度（2026 续轮）**：🔴 中 **E-3 / F-2 / E-4 三条已修复**并附回归测试
-> （TDD：先写测试 → 对旧实现实测 4 例全红 → 修复后 101 例全绿）。
-> 详见文末「§14 修复记录」。其余 🔴🟡🟢 仍待办。
+> **修复进度（2026 续轮）**：🔴 中 **E-3 / F-2 / E-4 / S2-4 四条已修复**并附回归测试
+> （TDD：先写测试 → 对旧实现实测全红 → 修复后全绿）。**G-1 经复核为误判并撤销**
+> （见 §15），故 🔴 实际 5 条、已修 4 条、余 S1-4。详见 §14 / §15 修复记录。
 
 ### 🔴 真实缺陷（建议优先修）
 | # | 位置 | 缺陷 | 建议 | 状态 |
@@ -592,8 +592,8 @@ postprocessing cap 确认，列观察项）。
 | E-3 | environment-capability.ts:323/548 | custom 预设回退写 `envPreset=studio` 用 **source:"manual"**——程序化回退打穿 lastWriteSource 守卫，污染预设链路（同 ground 中间件立法思路的漏网） | 改 source:"auto-model"（程序化动作） | ✅ 已修 |
 | F-2 | fog-capability.ts:256-263 | loadState 逐字段 **setEnvState(manual) 且无挂起**——恢复打 manual 级别，后续预设写雾参数被守卫拒绝；与 ground/water 恢复口径不一致 | 对齐 ground：suspendEnvCallbacks + 逐字段 source:"auto-model"（或 skipMiddleware 语义的恢复来源） | ✅ 已修 |
 | E-4 | environment-capability.ts:563 vs sky-capability.ts:808-814 | scene.environment 三权打架：env cap dispose **无条件**还原 prevEnvironment，sky cap 有 ownership 守卫——两 cap 同写 scene.environment 无协调，dispose 顺序不同结果不同 | env 侧对齐 sky 的 ownership 守卫（仅当 environment 仍归本 cap 时还原） | ✅ 已修 |
-| S2-4 | sky-capability.ts 回调 L238-303 | **skyScale 死键**：schema 有键、无回调分支、无 UI 控件、预设可写但渲染层不响应 | 补控件 + 分支，或从 schema 摘除 |
-| G-1 | ground-menu.ts buildGroundNodes | 注释宣称「锐评 P3 补齐菜单出口」（groundSize/divisions/线色）但**菜单实际未露出** | 补 4 控件或修注释 |
+| S2-4 | sky-capability.ts 回调 L238-303 | **skyScale 死键**：schema 有键、无回调分支、无 UI 控件、预设可写但渲染层不响应 | 补控件 + 分支，或从 schema 摘除 | ✅ 已修（摘键提常量，见 §14） |
+| ~~G-1~~ | ~~ground-menu.ts buildGroundNodes~~ | ~~注释宣称「锐评 P3 补齐菜单出口」但菜单实际未露出~~ | — | ❌ **误判，撤销**（见 §15 更正） |
 | S1-4 | sky 子视图 sky-env toggle | 语义漂移：实为「天空 IBL」却标「环境贴图映射」，与 atmosphere 卡 EnvironmentCapability 抢写 scene.environment 无联动 | 标签改「天空 IBL」+ description 说明互斥；或开 sky IBL 自动关 env useAsBackground |
 
 ### 🟡 性能冗余（中优先级）
@@ -699,8 +699,46 @@ TDD 流程：先写回归测试 → 对**旧实现**实测（4 例全红，证�
 需以 `positional` 收口。留给该会话或后续收口。
 
 ### 未修的 🔴（仍待办）
-- **S2-4** skyScale 死键（补控件+分支 or 摘除 schema）
-- **G-1** ground 注释宣称的菜单出口未落地（补 4 控件 or 修注释）
 - **S1-4** sky「环境贴图映射」标签语义漂移 + 与 env cap 抢写槽位（E-4 已修 dispose 侧，
   但**运行期**两 cap 同写 scene.environment 仍无协调——建议抽 ownership 协议或联动开关）
+- ~~G-1~~ 撤销（误判，见 §15）
+- ~~S2-4~~ 已修（见下）
+
+## §15 S2-4 修复记录 + G-1 误判更正
+
+### ✅ S2-4 — skyScale 死键摘除（提为模块常量）
+**方案选择**：报告原给「补控件+分支」或「摘除」两选项。核查后**选摘除**，理由：
+1. **无存档依赖**：`sky-capability.saveState`（L707-720）**从不落盘** skyScale，
+   loadState 也无该字段 ⇒ 摘除零兼容成本（旧存档里多出的键由 restoreFields 的
+   typeof 分发自动忽略）。
+2. **有硬物理约束**：天空盒 `side=BackSide` + 顶点 z 强制 far，相机须**始终在盒内**；
+   半边长 < 相机 maxDistance(5000) 时相机拉远即飞出盒外、天空消失。补滑杆
+   = 给用户一把能弄坏画面的旋钮。
+3. **本就无人读**：3 处读全是构造期快照（createSky / SunBeams ctor / getParams），
+   cap 回调**无 `changed.has("skyScale")` 分支** ⇒ 任何途径改它都不重建。
+
+**改动**：
+| 文件 | 改动 |
+|------|------|
+| `state/env-state-schema.ts` | 删 `skyScale` 键 + 注释留档（记录三点理由） |
+| `caps/sky-capability.ts` | 新增导出 `const SKY_SCALE = 12000`（含约束出处），3 处读改引常量 |
+| `caps/sun-beams.ts` | 修正过时注释（原称「运行期 skyScale 变更不重建」） |
+| `caps/sky-capability.test.ts` | 新回归测试（锁键已脱离 envState + 常量 > 5000） |
+
+**TDD 验证**：新测试对旧实现 = `expected true to be false`（键存在）→ 修复后 87 passed。
+
+### ❌ G-1 误判更正（重要）
+原报告 G-1 称「ground 注释宣称已补菜单出口，但菜单实际未露出」——**判断错误**。
+
+**事实**：`ground-menu.ts:126-172` 的 `groundBuildGridFolder()` **四控件齐全**
+（ground-size / ground-divisions / ground-color-center / ground-color-grid），
+且 `ground-capability.test.ts:586-588` 有显式回归锁（注释标「锐评 P3 2026-09-21」）。
+注释与实现**完全一致**，`buildGroundNodes` 也正确把该 folder 拼进返回值。
+
+**误判成因**：本会话前序轮次读 `ground-menu.ts` 时，工具输出中段被裁剪（"middle pruned"），
+我只看到 `buildGroundNodes` 的头尾，**漏读了中间的 folder 工厂函数**，据此下了
+「注释与实现脱节」的结论。这是**采样偏差导致的假病**——教训：判「某功能缺失」时
+必须 grep 符号落点（本次 grep `groundSize` 立刻见 12 处命中），不能只凭单文件首尾推断。
+
+因此 🔴 实际数量由 6 降为 **5**，已修 4 条（E-3/F-2/E-4/S2-4），余 1 条（S1-4）。
 

@@ -395,7 +395,17 @@ describe("SkyCapability — 预设数据完整性", () => {
     expect(typeof envState.skyElevation).toBe("number");
     expect(typeof envState.skyTurbidity).toBe("number");
     expect(typeof envState.skyCloudCoverage).toBe("number");
-    expect(envState.skyScale).toBeGreaterThan(0);
+  });
+
+  // [锐评 S2-4] skyScale 原为「死键」：schema 有声明、预设可写、saveState 落盘，
+  // 但 cap 回调无 changed 分支 ⇒ 任何途径改它都不重建天空盒，UI 也无控件。
+  // 且该值有硬物理约束（天空盒半边长须 > 相机 maxDistance=5000，否则相机飞出盒外
+  // 天空消失）——暴露给用户等于给一把能弄坏画面的旋钮。故摘除 schema 键、提为模块常量。
+  it("[S2-4] skyScale 已脱离 envState（内部实现常量，不是用户状态）", () => {
+    expect("skyScale" in envState).toBe(false);
+    // 天空盒仍按常量正确落地：getParams().scale 读得到、且满足 > 相机 maxDistance(5000) 约束
+    const cap = newCap();
+    expect(cap.getParams().scale).toBeGreaterThan(5000);
   });
 
   it("MODEL_DEFAULTS 覆盖所有模型类型", () => {

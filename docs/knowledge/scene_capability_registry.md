@@ -152,6 +152,7 @@ auto_fields:
     - sceneRegistry
     - ShadowCapability
     - ShadowType
+    - SKY_SCALE
     - SkyCapability
     - smoothStep
     - spotDistanceAttenuation
@@ -171,6 +172,7 @@ auto_fields:
     - valueNoise2
     - valueNoise4D
     - VolumetricCone
+    - VolumetricDriver
     - VolumetricParams
     - WATER_MODES
     - WaterBody

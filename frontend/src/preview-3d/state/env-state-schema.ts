@@ -92,7 +92,12 @@ export const ENV_STATE_SCHEMA = {
   skyEnvironment: { type: "boolean", default: true, group: "sky" },
   skyGodRaysEnabled: { type: "boolean", default: false, group: "sky" },
   skyAutoRotate: { type: "boolean", default: false, group: "sky" },
-  skyScale: { type: "number", default: 12000, group: "sky" },
+  // [锐评 S2-4 收口] 原 `skyScale` 键已摘除——它是**内部实现常量**而非用户状态：
+  //   ① 无 UI 控件、cap 回调无 changed 分支 ⇒ 任何途径改它都不重建天空盒（死键）；
+  //   ② saveState 从不落盘（见 sky-capability.saveState），故无历史存档依赖，摘除零兼容成本；
+  //   ③ 该值有硬物理约束——天空盒半边长须 > 相机 maxDistance(5000)，否则相机拉远即
+  //      飞出盒外、天空消失（Side=BackSide + 顶点 z 强制 far）。
+  // 现提为 sky-capability.ts 的模块常量 SKY_SCALE，约束出处与被约束者同处一文件。
 
   // --- Ground ---
   groundVisible: { type: "boolean", default: true, group: "ground" },
@@ -661,6 +666,15 @@ export const ENV_STATE_SCHEMA = {
   },
   // volume（与任意 type=spot 的灯绑定）
   lightVolumetricEnabled: { type: "boolean", default: false, group: "light" },
+  // [ADR-290] 锥体驱动源显式化：auto = 槽位顺序（key→fill→rim）第一盏启用的 spot；
+  // key/fill/rim = 严格绑定该槽位（该槽位非启用 spot 则无锥，不回落）。
+  // 旧存档缺此键 → schema 默认 auto，与「槽位顺序」旧主路径逐字同行为。
+  lightVolumetricDriver: {
+    type: "enum",
+    values: ["auto", "key", "fill", "rim"] as const,
+    default: "auto",
+    group: "light",
+  },
   lightVolumetricOpacity: {
     type: "number",
     default: 0.45,

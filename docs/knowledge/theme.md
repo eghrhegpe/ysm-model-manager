@@ -12,10 +12,16 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - applyTheme
+    - applyThemeAuto
+    - applyTimeTheme
     - initTheme
     - loadView
     - normalizeTheme
+    - SYSTEM_DARK_THEME
+    - SYSTEM_LIGHT_THEME
+    - THEME_DARK
     - THEME_VALID
+    - timeThemeForHour
     - unregisterDevtools
 quick_groups:
   - 跨组件通信与页面

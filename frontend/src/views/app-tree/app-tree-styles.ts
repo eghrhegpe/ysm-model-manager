@@ -97,12 +97,13 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .fl.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
 .fl.selected:hover { background: color-mix(in srgb, var(--accent) 38%, transparent); }
 .fh.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
-/* 紧凑列表模式行高（受卡片密度驱动：--tree-row-list，与 render.ts rowHeightList 同源） */
-.fl-list { display: flex; align-items: center; gap: 6px; height: var(--tree-row-list, 24px); padding: 0 4px; border-radius:var(--radius-sm); font-size: var(--fs-sm); cursor: default; user-select: none; -webkit-user-select: none; transition: background var(--tr-fast); }
+/* 紧凑列表模式行高（受卡片密度驱动：--tree-row-list，与 render.ts rowHeightList 同源）——
+   与网格模式同理固定 height + border-box，保证 CSS 实际高度恒等于虚拟滚动假定行高 */
+.fl-list { display: flex; align-items: center; gap: 6px; height: var(--tree-row-list, 24px); padding: 0 4px; box-sizing: border-box; border-radius:var(--radius-sm); font-size: var(--fs-sm); cursor: default; user-select: none; -webkit-user-select: none; transition: background var(--tr-fast); }
 .fl-list:hover { background: var(--hover); }
 .fl-list.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
 .fl-list.ban { opacity: .55; }
-.fh-list { display: flex; align-items: center; gap: 4px; height: var(--tree-row-list, 24px); padding: 0 4px; border-radius: 0; cursor: pointer; font-size: var(--fs-sm); transition: background var(--tr-fast); border-left: 2px solid transparent; }
+.fh-list { display: flex; align-items: center; gap: 4px; height: var(--tree-row-list, 24px); padding: 0 4px; box-sizing: border-box; border-radius: 0; cursor: pointer; font-size: var(--fs-sm); transition: background var(--tr-fast); border-left: 2px solid transparent; }
 .fh-list:hover { background: var(--hover); }
 .fh-list.locked { opacity: .5; }
 .fl-list .ck, .fh-list .ck { width: 22px; height: 12px; border-radius:var(--radius-md); background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }

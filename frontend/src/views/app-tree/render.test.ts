@@ -7,6 +7,8 @@ import {
   buildTree,
   flattenVisible,
   getRenderMode,
+  ROW_H_GRID_COMPACT,
+  ROW_H_LIST_COMPACT,
   rowHeightGrid,
   rowHeightList,
   setRenderMode,
@@ -413,6 +415,35 @@ describe("行高随卡片密度驱动（rowHeightGrid / rowHeightList）", () =>
     localStorage.setItem("ui-card-density", "spacious");
     expect(rowHeightGrid()).toBe(28);
     expect(rowHeightList()).toBe(24);
+  });
+});
+
+describe("行高单一事实源：CSS 兜底与 JS 常量不漂移", () => {
+  // CSS 的 var(--tree-row-*, <兜底值>) 与 variables.css 的 :root 默认值是手写字面量，
+  // 若只改 ROW_H_* 常量（JS 与注入变量会一起动）而漏改兜底，则 applyUIPrefs 未跑时
+  // （隐私模式 localStorage 被禁 → 回落 compact）CSS 高度 ≠ JS 假定高度 → 虚拟滚动错位。
+  // 本用例把「JS 常量 == CSS 字面量」钉死，消除这一处唯一残留的漂移面。
+  const compactGrid = 28;
+  const compactList = 24;
+
+  it("compact 档 JS 常量等于 CSS 兜底默认值", () => {
+    expect(ROW_H_GRID_COMPACT).toBe(compactGrid);
+    expect(ROW_H_LIST_COMPACT).toBe(compactList);
+  });
+
+  it("app-tree-styles 的 var 兜底值与 compact 常量一致", async () => {
+    const { readFileSync } = await import("node:fs");
+    const css = readFileSync(new URL("./app-tree-styles.ts", import.meta.url), "utf8");
+    // 兜底形如 var(--tree-row-grid, 28px)
+    expect(css).toContain(`var(--tree-row-grid, ${ROW_H_GRID_COMPACT}px)`);
+    expect(css).toContain(`var(--tree-row-list, ${ROW_H_LIST_COMPACT}px)`);
+  });
+
+  it("variables.css 的 :root 默认值与 compact 常量一致", async () => {
+    const { readFileSync } = await import("node:fs");
+    const css = readFileSync(new URL("../../../css/variables.css", import.meta.url), "utf8");
+    expect(css).toContain(`--tree-row-grid: ${ROW_H_GRID_COMPACT}px;`);
+    expect(css).toContain(`--tree-row-list: ${ROW_H_LIST_COMPACT}px;`);
   });
 });
 

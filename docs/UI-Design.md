@@ -126,7 +126,7 @@
 
 | 变量                 | 值               | 应用元素                        |
 | -------------------- | ---------------- | ------------------------------- |
-| `--fs-nav`           | 16px（基准缩放） | `.repo-tab` 导航主标签、`.nav-item` 侧边菜单项 |
+| `--fs-nav`           | 16px（基准缩放） | `.repo-tab` 导航主标签、`.nav-item` 侧边菜单项、`.stg-tab` 设置页 tab |
 | `--fs-tab`           | 13px（基准缩放） | `.repo-subtab` `.sm-tab` 子标签 |
 | `--fs-filter`        | 12px（基准缩放） | `.sm-status-tab` 筛选标签       |
 | `--fs-btn-primary`   | 13px（基准缩放） | `.hdr-btn` `.btn` 主要按钮      |

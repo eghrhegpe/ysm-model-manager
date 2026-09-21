@@ -247,21 +247,27 @@ export class EnvironmentCapability implements SceneCapability {
     if (!f) return;
     const ok = await this.loadCustomHdrFromFile(f);
     if (ok) {
-      // 成功：写 preset=custom → 触发 callback build
-      setEnvState({ envPreset: "custom" }, { source: "manual" });
-    } else {
-      // 解码失败 → 回退 studio 预设（保证反射始终有内容，不出现黑镜，教训 433477-4）
-      setEnvState({ envPreset: "studio" }, { source: "manual" });
+      // [ADR-292 D5 补全 2026-09-21] 通路权威 = envSource（buildCustomHdrTex 只认它）。
+      // 旧代码只写 envPreset，选完 HDR 通路仍停 "preset" → 新图永不上屏（按钮整体失效）。
+      // 严格按 D5「只写一个键」：不动 envPreset——它承载预设通路选图；无缓存时
+      // buildCustomHdrTex 返回 null → buildEnvironment 回落预设渲染（D12 回落不改键），
+      // 用户换 HDR 文件后自动生效，跨会话意图不被吞。
+      setEnvState({ envSource: "custom" }, { source: "manual" });
     }
+    // 解码失败 → **不动任何键**：通路本就停在原值，画面维持旧内容即正确语义。
   }
 
-  /** 用户交互入口：清空 custom HDR，回到 studio */
+  /** 用户交互入口：清空 custom HDR，回到预设通路。
+   *  [ADR-292 D5 补全] 与 onPickCustomHdr 对称：显式清除 = 撤回 custom 通路意图，
+   *  envSource 落回 "preset"（不写则通路停在 custom、缓存已空 → 只剩静默回落，
+   *  来源单选与画面再度分裂）。envPreset 仅在残留旧语义值 custom（新语义的非法选图值）
+   *  时修回 studio（同 loadState 的 preset 修复口），否则保留用户预设原样回屏。 */
   onClearCustomHdr(): void {
     this.disposeCustomCache();
-    if (envState.envPreset === "custom") {
-      // 仅 custom 时写回 studio → 触发 callback build；非 custom 保持当前预设
-      setEnvState({ envPreset: "studio" }, { source: "manual" });
-    }
+    const patch: Partial<EnvState> = {};
+    if (envState.envSource === "custom") patch.envSource = "preset";
+    if (envState.envPreset === "custom") patch.envPreset = "studio";
+    if (Object.keys(patch).length > 0) setEnvState(patch, { source: "manual" });
   }
 
   /** 当前是否已有 custom HDR 缓存（用于按钮 hint / preset=custom 不告警） */
@@ -302,8 +308,13 @@ export class EnvironmentCapability implements SceneCapability {
   /** 把 backgroundSrcTex 或 程序化 CanvasTexture 挂到 scene.background（useAsBackground=true 时）；
    *  useAsBackground=false 或 enabled=false：还原 prevBackground（若 prevBackground 是 Color 对象保留实例，Texture 保留引用，不 dispose prev） */
   private applyBackground(srcTex: THREE.Texture | null): void {
-    // 先清旧的 backgroundSrcTex（不碰 customHdrTex / prevBackground）
-    if (this.backgroundSrcTex && this.backgroundSrcTex !== this.customHdrTex) {
+    // 先清旧的 backgroundSrcTex（不碰 customHdrTex / skySourcedTex / prevBackground——
+    // 前两者各有专属释放路径，sky 纹理归 sky 所有，D-4 守卫）
+    if (
+      this.backgroundSrcTex &&
+      this.backgroundSrcTex !== this.customHdrTex &&
+      this.backgroundSrcTex !== this.skySourcedTex
+    ) {
       this.backgroundSrcTex.dispose();
     }
     this.backgroundSrcTex = null;
@@ -394,26 +405,28 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   /**
-   * [ADR-292 D7] 向 SkyCapability 取一张烘焙好的天空 IBL 纹理。
+   * [ADR-292 D7 + 锐评补全 2026-09-21] 向 SkyCapability 取一张烘焙好的天空 IBL 纹理。
    *
    * 所有权契约（D1/D2）：env 是 `scene.environment` 唯一写者；sky 只「烤」不「装」。
    * 失败/缺查询器的**每条路径都返回 null**，由调用方安全降级到预设路径——
    * 独立预览（无组合根注入 caps）不得因缺 sky 而崩。
    *
-   * ⚠️ 返回纹理归 sky 所有（其 renderTarget 持有），**本 cap 不得 dispose**。
-   * 故 pmremToSceneEnv 的 srcTex dispose 分支需排除该纹理（见 pmremToSceneEnv 守卫）。
+   * ⚠️ 返回的是 **PMREM 预滤波产物**（cubeUV 图集，`renderTarget.texture`），
+   * 归 sky 所有（其 renderTarget 持有），本 cap **不得 dispose、更不得二次滤波**
+   * ——把它喂给 `fromEquirectangular` 会把 cubeUV 图集按等距柱状采样重烤一遍，
+   * 光照静默错乱（D-3 修复：sky 分支改为直装，见 buildEnvironment 前置分派）。
+   *
+   * @param force 透传给 sky 的阈值门控：离散结构性变更 true；昼夜循环等连续动画
+   *   false——sky 未 dirty 时原样交回**同一纹理引用**，供 buildEnvironment 短路整轮重建（D-5）。
    */
-  private buildSkyEnvTex(): THREE.Texture | null {
+  private buildSkyEnvTex(force = true): THREE.Texture | null {
     try {
       const sky = getTypedCap(this.caps, "sky");
       if (!sky?.bakeEnvironmentTexture) {
         this.skySourcedTex = null;
         return null;
       }
-      // force：env 侧结构性变更（来源/预设/分辨率切换）是离散动作，必须拿到当前帧的图，
-      // 不能被 sky 的「太阳高度角变化阈值」门控跳过（否则切到「跟随天空」后看到的是旧图）。
-      // 连续动画（昼夜循环）不经此路径，故不会退化成每帧全量烘焙。
-      const tex = sky.bakeEnvironmentTexture({ force: true }) ?? null;
+      const tex = sky.bakeEnvironmentTexture({ force }) ?? null;
       this.skySourcedTex = tex;
       return tex;
     } catch (e) {
@@ -423,10 +436,34 @@ export class EnvironmentCapability implements SceneCapability {
     }
   }
 
-  private buildEnvironment(): void {
+  /**
+   * @param skyForce 仅作用于「跟随天空」通路向 sky 取图时的阈值门控透传（D-5）：
+   *   结构性变更（来源/预设/分辨率/装载开关/存档恢复）默认 true 拿当前帧的图；
+   *   连续动画（昼夜循环经 refreshFromSkySource(false)）传 false，
+   *   sky 未 dirty 交回同一纹理引用时本轮**整轮重建短路**，env 侧不再每帧全量重建。
+   */
+  private buildEnvironment(skyForce = true): void {
     if (this.isBuilding) return;
-    this.isBuilding = true;
+    this.isBuilding = true; // 取图即置位：buildSkyEnvTex 内部触发的同步派发须同样被 isBuilding 短路（对齐旧序）
     try {
+      // [D-5] 同引用短路须**先捕获旧纹理引用**：buildSkyEnvTex 会把 this.skySourcedTex
+      // 覆盖为新返回值，拿覆盖后的字段比「变没变」是循环自证，必须用覆盖前的引用对比。
+      const prevSkyTex = this.skySourcedTex;
+      // [D-3/D-5] 「跟随天空」前置分派：sky 产物已滤波，直装槽位；同引用未换 → 免整轮重建。
+      if (this.enabled && envState.envSource === "sky") {
+        const skyTex = this.buildSkyEnvTex(skyForce);
+        if (skyTex) {
+          if (skyTex === prevSkyTex && this.scene.environment === skyTex) return;
+          this.disposeEnvironment();
+          this.skySourcedTex = skyTex;
+          this.scene.environment = skyTex; // env 仍是槽位唯一写者（D1 红线）
+          // cubeUV 图集不是合法的 background 源（天空视觉由 sky 的穹顶 mesh 本身承担）；
+          // applyBackground(null) 同时清理旧背景纹理引用。
+          this.applyBackground(null);
+          return;
+        }
+        // 取不到（无 sky cap / 烘焙失败）→ 落到下方预设路径（不黑场景）。
+      }
       this.disposeEnvironment();
       if (!this.enabled) {
         this.scene.environment = this.prevEnvironment;
@@ -437,8 +474,7 @@ export class EnvironmentCapability implements SceneCapability {
       // [ADR-292 D7] 按 envSource 分派取图通路：preset / sky / custom（三者互斥）
       switch (envState.envSource) {
         case "sky":
-          // 跟随天空：向 sky 取烘焙图。取不到（无查询器/烘焙失败）→ 回落预设路径。
-          srcTex = this.buildSkyEnvTex();
+          // 本分支仅在上方前置取图失败（返回 null）时到达 → 直接落预设兜底。
           break;
         case "custom":
           srcTex = this.buildCustomHdrTex();
@@ -477,8 +513,14 @@ export class EnvironmentCapability implements SceneCapability {
       this.pmrem.dispose();
       this.pmrem = null;
     }
-    // backgroundSrcTex 清理：只有不等于 customHdrTex（程序化 CanvasTexture 情形）才 dispose
-    if (this.backgroundSrcTex && this.backgroundSrcTex !== this.customHdrTex) {
+    // backgroundSrcTex 清理：不等于 customHdrTex / skySourcedTex 才 dispose
+    //（sky 纹理归 sky 所有，D-4 守卫：旧代码只排除 customHdrTex，
+    // envSource=sky + useAsBackground 时代背景挂过 sky 图，切通路即误释 sky 的 GPU 资源）
+    if (
+      this.backgroundSrcTex &&
+      this.backgroundSrcTex !== this.customHdrTex &&
+      this.backgroundSrcTex !== this.skySourcedTex
+    ) {
       this.backgroundSrcTex.dispose();
     }
     this.backgroundSrcTex = null;
@@ -511,11 +553,15 @@ export class EnvironmentCapability implements SceneCapability {
 
   /**
    * [ADR-292 D1] 天空参数变化后由 sky 调用：重新取图并装载。
-   * 仅在 {@link isSkySourced} 为真时有意义（sky 侧已判定）。
+   * 仅「跟随天空」通路有意义（envSource≠"sky" 时天空变化与槽位内容无关，早退——
+   * 正是 D-1 红线的语义：槽位属 env，但 sky 事件不驱动预设通路重建）。
+   *
+   * @param force 阈值门控透传（D-5）：离散动作 true（缺省，拿当前帧的图）；
+   *   昼夜循环等连续动画 false——天空未 dirty 时同引用短路，整轮免重建。
    */
-  refreshFromSkySource(): void {
+  refreshFromSkySource(force = true): void {
     if (!this.isSkySourced()) return;
-    this.buildEnvironment();
+    this.buildEnvironment(force);
   }
 
   /** [ADR-292 D3] 当前供图来源（来源选择控件读值） */

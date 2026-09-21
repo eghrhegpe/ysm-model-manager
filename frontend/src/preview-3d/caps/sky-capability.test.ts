@@ -912,11 +912,17 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
 
   // ===== ADR-292 批次二：D1 所有权交接（env 接管「跟随天空」时 sky 不再自持装载）=====
   describe("ADR-292 批次二 — sky 让渡 scene.environment 装载权", () => {
-    it("env 声明接管（isSkySourced=true）→ 天空参数变化时 sky **不**写槽位，转交 env 刷新", () => {
+    it("env 在场且 sky 源接管 → 天空参数变化时 sky **不**写槽位，转交 env 刷新", () => {
       const scene = new THREE.Scene();
       const caps = {
         getById: (id: string) =>
-          id === "environment" ? { isSkySourced: () => true, refreshFromSkySource: vi.fn() } : undefined,
+          id === "environment"
+            ? {
+                isEnabled: () => true,
+                isSkySourced: () => true,
+                refreshFromSkySource: vi.fn(),
+              }
+            : undefined,
       };
       const cap = new SkyCapability({
         scene,
@@ -927,22 +933,33 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
       const slotBefore = scene.environment;
       // 天空参数变化（触发 maybeRegenerateEnvironment 路径）
       setEnvState({ skyTimeOfDay: 15, skyForceEnv: true }, { source: "manual", force: true });
-      // env 接管时 sky 不得再抢写（槽位保持 env 装载的内容）
+      // env 在场时 sky 不得再抢写（槽位保持 env 装载的内容）
       expect(scene.environment).toBe(slotBefore);
     });
 
-    it("env 未接管 → sky 保留自持装载（既有行为不回归）", () => {
+    it("[D-1 红线] env 在场启用但走预设通路（isSkySourced=false）→ sky 仍不自持装载", () => {
+      // 旧判据把「env 未 sky 源接管」误同「sky 可自持」，默认 envSource=preset 下
+      // 拖时间轴即让 sky 顶掉 env 的预设图——写者唯一形同虚设。现 env 在场即让权。
       const scene = new THREE.Scene();
+      const refresh = vi.fn();
       const caps = {
         getById: (id: string) =>
           id === "environment"
-            ? { isSkySourced: () => false, refreshFromSkySource: vi.fn() }
+            ? { isEnabled: () => true, isSkySourced: () => false, refreshFromSkySource: refresh }
             : undefined,
       };
+      const cap = new SkyCapability({ scene, renderer: makeFakeRenderer(), caps: caps as never });
+      cap.apply();
+      expect(scene.environment, "env 在场时 sky 不写槽位").toBeNull();
+      setEnvState({ skyTimeOfDay: 15, skyForceEnv: true }, { source: "manual", force: true });
+      expect(scene.environment, "天空参数变化也不得让 sky 顶掉 env 装载").toBeNull();
+    });
+
+    it("env 缺席（独立预览无组合根）→ sky 保留自持装载（兜底行为不回归）", () => {
+      const scene = new THREE.Scene();
       const cap = new SkyCapability({
         scene,
         renderer: makeFakeRenderer(),
-        caps: caps as never,
       });
       cap.apply();
       setEnvState({ skyTimeOfDay: 15, skyForceEnv: true }, { source: "manual", force: true });
@@ -962,7 +979,13 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
       const refreshFromSkySource = vi.fn();
       const caps = {
         getById: (id: string) =>
-          id === "environment" ? { isSkySourced: () => true, refreshFromSkySource } : undefined,
+          id === "environment"
+            ? {
+                isEnabled: () => true, // [D-1 新判据] 在场+启用即让权（isSkySourced 决定转交后是否装载）
+                isSkySourced: () => true,
+                refreshFromSkySource,
+              }
+            : undefined,
       };
       const cap = new SkyCapability({
         scene,

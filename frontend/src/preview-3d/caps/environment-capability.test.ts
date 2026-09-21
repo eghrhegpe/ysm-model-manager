@@ -465,7 +465,7 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
     }
   });
 
-  it("解码成功 → preset=custom 并重建环境", async () => {
+  it("[D-2] 解码成功 → envSource=custom（通路权威），envPreset 原值不动", async () => {
     const cap = newCap();
     spyFilePicker(makeHdrFile());
     // 真实 loadCustomHdrFromFile 成功时会写入 customHdrTex 缓存，mock 保持同语义
@@ -476,17 +476,22 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
         return true;
       });
     await cap.onPickCustomHdr();
-    expect(cap.getPresetId()).toBe("custom");
+    // 通路开关拨到 custom——这是 buildCustomHdrTex / 来源单选的唯一读键
+    expect(envState.envSource).toBe("custom");
+    // D5「只写一个键」：预设选择保留（切回预设通路时免丢用户选择）
+    expect(cap.getPresetId()).toBe("sky"); // schema 默认，未被按钮改写
     expect(cap.hasCustomHdr()).toBe(true);
   });
 
-  it("解码失败 → 回退 studio 并重建环境", async () => {
+  it("[D-2] 解码失败 → 不动任何键（D12 回落不改键，画面维持旧内容即正确语义）", async () => {
     const cap = newCap();
     spyFilePicker(makeHdrFile());
     vi.spyOn(cap as unknown as { loadCustomHdrFromFile: (f: File) => Promise<boolean> }, "loadCustomHdrFromFile")
       .mockResolvedValue(false);
+    setEnvState({ envSource: "preset", envPreset: "night" }, { source: "manual", force: true });
     await cap.onPickCustomHdr();
-    expect(cap.getPresetId()).toBe("studio");
+    expect(envState.envSource).toBe("preset");
+    expect(cap.getPresetId()).toBe("night");
   });
 
   it("onClearCustomHdr 清缓存：custom 回 studio，非 custom 保持", () => {
@@ -499,6 +504,16 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
     expect(cap.hasCustomHdr()).toBe(false);
     expect(cap.getCustomHdrName()).toBe("");
     expect(cap.getPresetId()).toBe("studio");
+  });
+
+  it("[D-2 对称] onClearCustomHdr：envSource=custom 撤回通路意图，落回 preset", () => {
+    const cap = newCap();
+    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture();
+    cap.setSource("custom");
+    cap.setPresetId("forest"); // 用户此前的预设选择应完好保留
+    cap.onClearCustomHdr();
+    expect(envState.envSource).toBe("preset"); // 通路落回
+    expect(cap.getPresetId()).toBe("forest"); // 预设不动（D5 单键正交）
   });
 
   it("onClearCustomHdr 非 custom 预设时保持当前预设", () => {
@@ -1105,6 +1120,61 @@ describe("EnvironmentCapability — ADR-292 envSource 取图通道（批次一�
     const before = sky.bakeEnvironmentTexture.mock.calls.length;
     setEnvState({ envSource: "sky" }, { source: "manual", force: true });
     expect(sky.bakeEnvironmentTexture.mock.calls.length).toBeGreaterThan(before);
+  });
+
+  // ===== 锐评补全 2026-09-21（批次三复审 D-3/D-4/D-5）=====
+  it("[D-3] sky 交回的 PMREM 产物**直装**槽位——不二次 fromEquirectangular（cubeUV 再滤波=光照静默错乱）", () => {
+    const sky = makeFakeSkyCap();
+    const { cap, scene } = newCapWithSky(sky);
+    const eqSpy = vi.spyOn(THREE.PMREMGenerator.prototype, "fromEquirectangular");
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    cap.apply();
+    expect(scene.environment).toBe(sky.baked); // 装载的就是 sky 交回的那张纹理本体
+    expect(eqSpy, "sky 产物已是预滤波 cubeUV，禁再入 equirect 管线").not.toHaveBeenCalled();
+  });
+
+  it("[D-5] refreshFromSkySource(force) 透传取图门控；同纹理引用 → 短路免重建", () => {
+    const sky = makeFakeSkyCap(); // 每次交回同一 baked 引用（模拟未 dirty 阈值命中）
+    const { cap, scene } = newCapWithSky(sky);
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    cap.apply();
+    expect(scene.environment).toBe(sky.baked);
+    sky.bakeEnvironmentTexture.mockClear();
+    cap.refreshFromSkySource(false);
+    expect(sky.bakeEnvironmentTexture).toHaveBeenCalledWith({ force: false });
+    // 同引用且槽位仍挂着它 → buildEnvironment 整轮短路（连 bake 请求之后的 dispose/装载都跳过）
+    const env = scene.environment;
+    cap.refreshFromSkySource(false);
+    expect(scene.environment).toBe(env);
+    expect(sky.bakeEnvironmentTexture).toHaveBeenCalledTimes(2); // 仅取图探测，无重建副作用可测面
+  });
+
+  it("[D-5] 天空烘焙交回新纹理 → 槽位换挂新图", () => {
+    const texA = new THREE.Texture();
+    const texB = new THREE.Texture();
+    let next: THREE.Texture = texA;
+    const fakeSky = { bakeEnvironmentTexture: vi.fn(() => next), baked: null };
+    const { cap, scene } = newCapWithSky(fakeSky);
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    cap.apply();
+    expect(scene.environment).toBe(texA);
+    next = texB;
+    cap.refreshFromSkySource(true);
+    expect(scene.environment).toBe(texB);
+  });
+
+  it("[D-4] backgroundSrcTex === skySourcedTex 时重建不 dispose sky 的 GPU 纹理", () => {
+    const sky = makeFakeSkyCap();
+    const skyTex = sky.baked as THREE.Texture; // makeFakeSkyCap 缺省恒造一张纹理，非空
+    const { cap } = newCapWithSky(sky);
+    setEnvState({ envSource: "sky", envUseAsBackground: true }, { source: "manual", force: true });
+    cap.apply();
+    // 手工复现旧缺陷态：背景槽挂着 sky 纹理（新代码 sky 分支不再挂背景，守卫防未来回潮）
+    const priv = cap as unknown as Record<string, unknown>;
+    priv.backgroundSrcTex = skyTex;
+    const disposeSpy = vi.spyOn(skyTex, "dispose");
+    cap.setSource("preset"); // 结构性变更 → buildEnvironment → disposeEnvironment
+    expect(disposeSpy, "sky 纹理归 sky 所有，env 两条 dispose 守卫都不得放行").not.toHaveBeenCalled();
   });
 
   // ===== 批次二：D1 所有权交接（sky 不再自持装载，改由 env 装载）=====

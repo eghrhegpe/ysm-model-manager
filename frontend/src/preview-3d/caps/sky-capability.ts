@@ -265,15 +265,17 @@ export class SkyCapability implements SceneCapability {
         if (changed.has("skyElevation") || changed.has("skyAzimuth")) {
           this.writeUniforms(this.sky);
           this.writeUniforms(this.envSky);
-          if (state.skyEnvironment && state.skyForceEnv) {
+          if (state.skyForceEnv) {
+            // [D-6] 不再前置 skyEnvironment 门控——转交 env 的通路不受退役开关约束，
+            // 该开关现只门控路由器末端的 sky 自持兜底路（见 requestEnvironmentRefresh）
             this.requestEnvironmentRefresh(true);
           }
         }
 
         // ② 散射/大气类：双写 uniform（sky + envSky）
         this.applyUniform(changed, "skyCloudCoverage", "cloudCoverage", state.skyCloudCoverage);
-        if (changed.has("skyCloudCoverage") && changed.has("skyForceEnv") && state.skyEnvironment) {
-          // 云量 + forceEnv 同变 → 重建 IBL（setCloudCoverage(regenerate=true) 语义）
+        if (changed.has("skyCloudCoverage") && changed.has("skyForceEnv")) {
+          // 云量 + forceEnv 同变 → 重建 IBL（setCloudCoverage(regenerate=true) 语义；D-6 同去门控）
           this.requestEnvironmentRefresh(true);
         }
         this.applyUniform(changed, "skyTurbidity", "turbidity", state.skyTurbidity);
@@ -303,7 +305,13 @@ export class SkyCapability implements SceneCapability {
           this.applyExposure();
         }
         if (changed.has("skyEnvironment")) {
-          if (state.skyEnvironment) this.requestEnvironmentRefresh(true);
+          // [D-6] 退役开关不再驱动槽位：env 在场启用时，scene.environment 的去留由
+          // envSource 裁决（本 cap 只转交刷新请求，refreshFromSkySource 自判是否 sky 源）；
+          // 仅自持兜底路（env 缺席/关闭）保留旧语义——开=装载、关=清自己烘的图。
+          const env = getTypedCap(this.caps, "environment");
+          if (env?.isEnabled?.()) {
+            if (state.skyEnvironment) env.refreshFromSkySource?.(true);
+          } else if (state.skyEnvironment) this.regenerateEnvironment(true);
           else this.clearEnvironment();
         }
         if (changed.has("skyGodRaysEnabled")) {
@@ -351,29 +359,37 @@ export class SkyCapability implements SceneCapability {
   }
 
   /**
-   * [ADR-292 D1/D2] 请求环境贴图刷新——**不再自行写 scene.environment**。
+   * [ADR-292 D1/D2 + 锐评补全 2026-09-21] 环境贴图刷新路由器。
    *
    * 收口前：sky 直接 `regenerateEnvironment()` 写槽位，env cap 也写，后写者赢（竞争根因）。
-   * 收口后：sky 只在**自己没有装载权**时把请求转交 env（envSource="sky" 时 env 才是装载者）；
-   * 若 env 未接管（旧路径 / 无查询器 / envSource≠"sky"），sky 保留自持装载以维持既有行为。
+   * 旧路由器的错误判据：「env 未 *sky 源接管*（envSource≠sky）」⇒ sky 自持装载——于是
+   * 默认路径（envSource="preset"）下拖时间轴/换云量仍让 sky 顶掉 env 的预设图，
+   * 「写者唯一」红线形同虚设。现判据改为**env 在场且启用 ⇒ 一律让权**：
+   *   - env 在场启用 + envSource="sky" → 转交 env 重新取图装载（本 cap 烤、env 装）；
+   *   - env 在场启用 + envSource≠"sky" → 不装载也不烘焙，仅让 env 刷新它自己属主的槽位
+   *     （预设通路下天空变化不动 scene.environment，但 sky 的 uniforms 仍照写）；
+   *   - env 缺席（独立预览无组合根）或 env 整体关闭 → sky 自持装载（既有兜底行为，
+   *     此时受 skyEnvironment 旧开关门控——退役语义只作用于这条兜底路）。
    *
-   * @param force 跳过阈值门控强制重建
+   * @param force 跳过阈值门控强制重建（离散动作 true / 昼夜循环 false）
    */
   private requestEnvironmentRefresh(force = false): void {
-    if (!envState.skyEnvironment) return;
     const env = getTypedCap(this.caps, "environment");
-    // env 接管了「跟随天空」→ 由它装载（它会在自己的 buildEnvironment 里回调本 cap 取图）
-    if (env?.isSkySourced?.()) {
-      env.refreshFromSkySource?.();
+    if (env?.isEnabled?.()) {
+      // env 是 scene.environment 唯一写者——天空侧只转交刷新，绝不直写槽位。
+      // refreshFromSkySource 内部自判 envSource：="sky" 时重新向本 cap 取图，
+      // ≠"sky" 时按自己通路重建（幂等、廉价），两分支都不需要 sky 再动手。
+      env.refreshFromSkySource?.(force);
       return;
     }
-    // 未接管：sky 自持路径（既有行为保持不变）
+    // env 缺席/关闭：sky 自持兜底（旧行为），此时才受 skyEnvironment 开关门控
+    if (!envState.skyEnvironment) return;
     this.regenerateEnvironment(force);
   }
 
-  /** PMREM 重建门控：forceEnv=true 无条件重建；forceEnv=false 按太阳高度角阈值 */
+  /** PMREM 重建门控：forceEnv=true 无条件重建；forceEnv=false 按太阳高度角阈值。
+   *  [D-6] skyEnvironment 前置门控已入路由器（只兜底路受它约束）——env 在场时此处直接转发。 */
   private maybeRegenerateEnvironment(state: EnvState): void {
-    if (!state.skyEnvironment) return;
     this.requestEnvironmentRefresh(state.skyForceEnv);
   }
 

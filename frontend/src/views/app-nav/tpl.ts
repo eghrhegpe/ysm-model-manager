@@ -85,7 +85,7 @@ export const navCSS: string = `
   gap: 8px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  font-size: calc(var(--fs-nav) + 2px);
+  font-size: var(--fs-nav);
   color: var(--txt);
   cursor: pointer;
   transition: var(--tr-fast);
@@ -106,7 +106,7 @@ export const navCSS: string = `
   margin: 2px 8px 6px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  font-size: calc(var(--fs-nav) + 2px);
+  font-size: var(--fs-nav);
   color: var(--txt);
   cursor: pointer;
   transition: var(--tr-fast);

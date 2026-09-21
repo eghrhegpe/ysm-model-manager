@@ -240,7 +240,7 @@
   --space-md: calc(5px + var(--fs-scale) * 0.42);
 
   /* 语义化字号 — 按 UI 角色命名，派生自 --fs-base-size（基准一动全盘跟随）+ --fs-scale 偏移 */
-  --fs-nav: calc(var(--fs-base-size) + 1px + var(--fs-scale)); /* 14px @ 基准（导航主标签 repo-tab）*/
+  --fs-nav: calc(var(--fs-base-size) + 3px + var(--fs-scale)); /* 16px @ 基准（导航主标签 repo-tab + 侧边菜单项 .nav-item）*/
   --fs-tab: calc(var(--fs-base-size) + var(--fs-scale)); /* 13px @ 基准（二级子标签 repo-subtab, sm-tab）*/
   --fs-filter: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 12px @ 基准（筛选标签 sm-status-tab）*/
   --fs-btn-primary: calc(var(--fs-base-size) + var(--fs-scale)); /* 13px @ 基准（主要操作按钮 hdr-btn, dlg-btn）*/

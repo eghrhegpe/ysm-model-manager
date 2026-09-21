@@ -35,6 +35,7 @@ pitfalls:
   - "verify-adr-042 失败不 exit(1) → 假门禁（已修复，GAP_FOUND 应阻断 pre-push）"
   - "testid_contract 跳过测试文件 fixture HTML → 删真实钩子忘删 VIEW_TESTIDS 时契约仍绿"
   - "vi.useFakeTimers 不取消已挂起真实 timer → 跨用例污染断言；治本需模块级登记 + afterEach clearTimeout"
+  - "装配层 mock 缺新导出 → 每次 boot 抛 No-export 误判初始化失败、toast 计数 +1 连锁红；源与 mock 导出面需同步（app-modules.boot 主题三件套案例）"
   - "test_config_defaults CI 无 UserConfigDir 时整体跳过 = 零覆盖假绿"
   - "orch-test 零断言属开发笔记不应进 tests/ → 应移至 poc/ 脱离套件"
   - "test_scripts_json 12 脚本串行 spawn 最坏 720s timeout → 可并行化或排除已知慢脚本"
@@ -77,6 +78,7 @@ invariant_anchors:
 5. **契约真实性（✅ 2026-08-30 修复，ADR-133）**：test_testid_contract.mjs 补反向孤儿扫描（关键前缀 testid 未登记 → 红）+ canonical 修复指引（删条目、禁补假按钮）；**跳过测试文件**——fixture HTML 字面量不再算真实钩子（否则删真实钩子忘删 VIEW_TESTIDS 时契约仍绿，G-1「删能红」被静默打穿）；两趟遍历合并单趟（消双重 readFileSync）。
 6. **真竞态：useFakeTimers 不取消已挂起真实 timer（✅ 2026-08-30 修复）**：app-modules.boot.test.ts 上一用例 boot 的 IIFE 注册真实 `setTimeout(2000)`（stats.worker 预取），`vi.useFakeTimers()` 只劫持新注册定时器、**不取消已挂起的真实定时器**，会在下一用例 await 间隙触发污染断言。治本：**文件级登记真实 timer（模块级 Set，boot 内 spy 全局 setTimeout 透传登记句柄）+ afterEach 统一 clearTimeout**。坑（实测踩过）：spy 全局 setTimeout 与 `vi.useFakeTimers` 的恢复链互相干扰——fake 用例里 spyOn 保存/恢复的是 fake 实现，会把全局 setTimeout 恢复错乱，导致后续用例 flush 泵挂起 20s 超时；故 spy 仅在真实计时器环境激活（`microFlush` fake 用例不登记，其 timer 由 advance + useRealTimers 丢弃）。另：重装配用例（resetModules + 动态 import + 20 轮宏任务泵）负载下易超默认 5s testTimeout，文件级 `vi.setConfig({ testTimeout: 20000 })` 放宽。
 7. **测试耦合私有字段治理第一道闸（✅ 2026-09-01 落地，ADR-147）**：`tests/test_private_access_contract.ts` 孤儿守卫——扫描 app-tree 测试对私有字段的写入（`. _xxx =`）与断言（`as unknown as X & {` / `as X & {`，支持跨行，括号平衡窗口收集全部 `_xxx`），引用了已从 AppTree 类删除的字段即红。已实证捕获 `_typeFilter` 死字段自证用例；跨行形态（`as unknown as AppTree & {` 换行 `_filterPaths:`）与 `as HTMLElement & {` 均覆盖（code_review 洞已补，4378e57b）。后续删私有字段时测试残留引用会被此契约拦截；终态收敛层 `test-internals.ts` 未建。
+8. **装配层 mock 导出面与新导出失步（✅ 2026-10-06 修复）**：`app-modules.boot.test.ts` 的 theme-core mock 缺 `applyThemeAuto`（commit 721b33ff8 在启动链 `initTheme` 后新增 `applyThemeAuto()` 调用，但 boot 测试的 mock 导出面未同步）→ 每次 boot 抛「No applyThemeAuto export」被当成主题初始化失败，theme 步骤 toast 计数 +1 连锁 6 条用例红（registerErrorDiary/i18n/app-nav/ui-prefs 的 toast 断言 + 系统主题跟随两例）。**成因**：boot 测试用 hoisted mock 池 + `vi.mock` factory 双处声明，源侧新增导出只需补一处即漏。治本原则：改 `theme-core.ts` / `app-modules.ts` 启动链后，同步核对 boot 测试的 `m.hoisted` 池与 `vi.mock("./theme-core.ts")` factory 两处导出面。
 
 ## 中低优先级
 

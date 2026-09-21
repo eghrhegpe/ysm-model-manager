@@ -32,6 +32,11 @@ const m = vi.hoisted(() => ({
   applyUIPrefs: vi.fn(),
   initTheme: vi.fn(),
   applyTheme: vi.fn(),
+  // ADR 主题三件套补全：app-modules 启动链在 initTheme 后调用 applyThemeAuto()
+  //（theme-auto=time 重启重算，commit 721b33ff8 引入）——mock 缺该导出会让每次
+  // boot 抛「No applyThemeAuto export」→ 误判主题初始化失败、多弹一枚 error toast，
+  // 六条用例一次性连锁红（toast 计数 +1）。
+  applyThemeAuto: vi.fn(),
   normalizeTheme: vi.fn((t: string) => t),
   windowShow: vi.fn(),
   openDevTools: vi.fn(),
@@ -61,6 +66,7 @@ vi.mock("./views/app-content/settings/ui-prefs.ts", () => ({ applyUIPrefs: m.app
 vi.mock("./theme-core.ts", () => ({
   normalizeTheme: m.normalizeTheme,
   applyTheme: m.applyTheme,
+  applyThemeAuto: m.applyThemeAuto,
   initTheme: m.initTheme,
 }));
 vi.mock("./backend/runtime.ts", () => ({

@@ -24,7 +24,7 @@
 | 边界 | 保护了什么 | 创造的暗缝 |
 |------|-----------|-----------|
 | Go → JSON → JS | 类型安全/序列化规范 | `[]byte` 变 base64 字符串 |
-| Shadow DOM | 样式隔离/组件封装 | CSS 变量不继承、事件穿透不了、按钮看得到点不到 |
+| Shadow DOM | 样式隔离/组件封装 | 变量值可穿、规则不穿（CSS 变量值可穿透，但 shadow 内规则/事件/按钮看得到点不到） |
 | WASM 沙箱 | 安全执行/跨平台 | HEAPU8 内存扩容后分离、导不出闭包变量 |
 | ESM 模块化 | 依赖明确/防全局污染 | `public/js/` 影子副本优先加载 |
 | .ban 封印 | 不删除文件/可逆禁用 | 文件名匹配永远差一个后缀 |
@@ -106,7 +106,7 @@
 |--------|
 | Go `[]byte` 经 JSON 序列化返回 base64 字符串（JSON 规范） |
 | `ALLOW_MEMORY_GROWTH` 后 `_malloc` 触发扩容，旧 HEAPU8 指向分离 ArrayBuffer（Emscripten 设计） |
-| `adoptedStyleSheets` 中 `var()` 不继承文档自定义属性（WebView2 实现） |
+| Shadow DOM 隔离的是**规则**不是**变量值**——`adoptedStyleSheets`/shadow 内 `<style>` 的规则不穿透文档树，但 `var(--x)` 可穿透读宿主文档 `:root` 变量（WebView2 实测成立，2026 探针 `frontend/e2e/shadow-var-raw.spec.ts`；旧认知「var 不继承文档自定义属性」应为「规则不穿透、变量值可穿透」） |
 | Go `bool` 默认 `false`，无法区分"值为假"和"未设置"（Go 规范） |
 | Vite `public/` 文件优先于源码目录同名文件（Vite 文档） |
 | Windows 游戏运行时 `os.Rename` 返回 `ERROR_SHARING_VIOLATION`（Windows 内核） |

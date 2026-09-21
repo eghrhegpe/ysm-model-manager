@@ -109,7 +109,7 @@ status: active
 
 - **消费方（3D 预览）**：`mount-preview-core.ts`（`installComponentsStyles` + `componentsStyleSheet` + `PREVIEW_OVERLAY_ID` + `slideMenuStyleSheet`）、`preview-3d/menu/engine/core.ts`（`createSlideMenu`）、`preview-3d/menu/render/cap-controls.ts`（`createHeaderToggle` + `DragSliderController` + `dom-contract`）、`preview-3d/menu/render/render.ts`（`createHeaderToggle`）；`ui-card`/`ui-loading` 曾长期零生产消费（卡内记「备件保留」），2026-09-10 已连 orphan 样式一并删除——保留无期且会误导后人「有现成卡片壳可用」
 - **shared-styles** — 共享按钮/焦点样式被本簇样式引用
-- **views/app-*** — 各视图在 Shadow DOM 内经 `adoptedStyleSheets = [componentsStyleSheet, ...]` 消费样式串（`var()` 不跨 Shadow 边界继承的坑按前端 AGENTS 处理）
+- **views/app-*** — 各视图在 Shadow DOM 内经 `adoptedStyleSheets = [componentsStyleSheet, ...]` 消费样式串。⚠️ **边界二分**：shadow 内**规则**不穿透文档树（选择器/`@keyframes`/`.no-animations` 通配只在本 shadow 内生效），但 `var(--x)` **变量值可穿透**读宿主文档 `:root` 的变量（WebView2 实测成立，探针 `frontend/e2e/shadow-var-raw.spec.ts`）。细节见 `frontend/AGENTS.md`
 - **views/app-tree** — ADR-220 后首次 import `preview-3d` 目录（`overlay-active` 查询），层规不拦（preview-3d 不在 LAYER_ORDER），语义为「查 3D 模态会话」
 
 ## 不变量

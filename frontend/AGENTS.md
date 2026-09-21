@@ -63,7 +63,7 @@ frontend/src/
 
 ## Shadow DOM 特殊性
 
-- `attachShadow({ mode: "open" })` 后，`adoptedStyleSheets` 中 `var()` **不继承**文档自定义属性（WebView2 实现）
+- `attachShadow({ mode: "open" })` 后，Shadow 边界对 CSS 的隔离**只作用于「规则」不作用于「变量值」**：`adoptedStyleSheets`/shadow 内 `<style>` 的**规则**只在本 shadow 树内生效（不穿透到文档树），但 `var(--x)` **可以穿透**去读宿主文档 `:root` 上定义的变量（CSS custom property 会沿 shadow 边界继承，标准行为，WebView2 实测成立——2026 探针 `frontend/e2e/shadow-var-raw.spec.ts` 钉死）。故「shadow 里 var 全坏」的旧认知不对，真正不穿透的是**规则**（选择器/`@keyframes`/`.no-animations` 通配），`--fs-scale` 这类文档变量在 3D 菜单 shadow 内可正常读到并参与计算
 - 跨 Shadow 边界传数据：组件间用 `bus.emit`（不靠 `window` 全局变量透传）
 - Shadow 组件的 CSS 用 `:host` 选择器，跨组件主题切分用 `:host-context`
 - 事件穿透不了 Shadow 边界——`dispatchEvent` 时设 `composed: true`

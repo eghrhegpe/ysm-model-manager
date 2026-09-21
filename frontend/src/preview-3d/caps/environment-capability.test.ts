@@ -735,6 +735,53 @@ describe("EnvironmentCapability — 持久化", () => {
     expect(cap.getIntensity()).toBe(1.1);
     expect(cap.isUseAsBackground()).toBe(true);
   });
+
+  // [锐评 E-2 / D1] 存档恢复属程序化动作，不得把 env 组键的 lastWriteSource 打成 manual——
+  // 否则后续 auto-atmosphere 氛围预设写 envPreset/envIntensity 被 shouldOverwrite 拒绝。
+  it("loadState 恢复 env 键来源为 auto-model（不冻死氛围预设）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ preset: "sunset", intensity: 1.4, resolution: 1024, useAsBackground: true }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    expect(cap.getPresetId()).toBe("sunset");
+    // 关键断言：恢复后氛围预设（auto-atmosphere）仍能写 envPreset —— 若被打成 manual 则被守卫拒绝
+    setEnvState({ envPreset: "forest" }, { source: "auto-atmosphere" });
+    expect(envState.envPreset).toBe("forest");
+  });
+
+  // [ADR-292 D7 / D2] envSource 持久化 roundtrip：用户选 sky 取图通路重启后保留。
+  it("saveState / loadState 保真 envSource（sky 取图通路不丢）", () => {
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    const cap = newCap();
+    cap.saveState();
+    const saved = JSON.parse(localStorage.getItem("ysm-scene-cap-environment") ?? "{}") as { envSource: string };
+    expect(saved.envSource).toBe("sky");
+    // 新 cap 从存储恢复（模拟重启：resetEnvState 清空 writeSource，否则上一行 manual 会挡 auto-model 恢复）
+    setEnvState({ envSource: "preset" }, { source: "manual", force: true });
+    resetEnvState();
+    const cap2 = newCap();
+    cap2.loadState();
+    expect(envState.envSource).toBe("sky");
+  });
+
+  // [ADR-292 D7 / D3] 旧存档（无 envSource 键 + sky IBL 开关）经 normalizeEnvLegacyState 迁移：
+  // env 关闭 + sky IBL 开 → 强意图 → 迁移为 "sky"。
+  it("loadState 旧存档无 envSource 键时按 migrateEnvSource 补写（env 关 + sky IBL 开 → sky）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ preset: "sky", enabled: false, intensity: 1.0, resolution: 1024, useAsBackground: false }),
+    );
+    // 旧 world 里 sky 槽的 environment 开关独立存储
+    localStorage.setItem(
+      "ysm-scene-cap-sky",
+      JSON.stringify({ environment: true, enabled: true }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    expect(envState.envSource).toBe("sky");
+  });
 });
 
 describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {

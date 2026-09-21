@@ -15,7 +15,11 @@
 import * as THREE from "three";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
-import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
+import {
+  registerEnvCallback,
+  resumeEnvCallbacks,
+  suspendEnvCallbacks,
+} from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
@@ -25,6 +29,8 @@ import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 // 对齐 P1 sun-beams.ts 范式（状态完全内聚、不反向依赖宿主）。
 import { customHdrThumbnail, drawEnvEquirect, luminanceHistogram } from "./env-pixels.ts";
 import { buildEnvironmentNodes } from "./environment-menu.ts";
+// ADR-292 D7：旧存档 envSource 迁移（与 ground-capability 同口径的可测纯函数，零 THREE/DOM 依赖）
+import { normalizeEnvLegacyState } from "./environment-migrations.ts";
 import type { EnvPreset, EnvPresetId } from "./environment-state.ts";
 // ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
 import { ENV_PRESETS } from "./environment-state.ts";
@@ -567,6 +573,11 @@ export class EnvironmentCapability implements SceneCapability {
     persistState(this.id, {
       enabled: this.enabled,
       preset: savePreset,
+      // [ADR-292 D7] envSource 是「谁供 scene.environment」的单一事实源（preset/sky/custom），
+      // 必须落盘——否则用户选 sky/custom 取图通路重启即丢，回退默认 preset 画面突变。
+      // 键名与迁移模块 normalizeEnvLegacyState 产出的 envSource 同形（旧存档迁移后也归此键），
+      // 保证 idempotent 快路（"envSource" in state）命中、不重复迁移。
+      envSource: envState.envSource,
       intensity: envState.envIntensity,
       resolution: envState.envResolution,
       useAsBackground: envState.envUseAsBackground,
@@ -574,8 +585,19 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   loadState(): void {
-    const state = restoreState(this.id);
-    if (!state) return;
+    const raw = restoreState(this.id);
+    if (!raw) return;
+
+    // [ADR-292 D7] 旧存档（无 envSource 键）归一：跨槽读 sky 的 environment 开关 + 本槽 enabled，
+    // 按 migrateEnvSource 三条判据补写 envSource。已含 envSource 则幂等返回同引用（零拷贝）。
+    // 与 ground-capability.loadState 同口径——否则 ADR-292 的 legacy 迁移纯函数（已带测试）
+    // 永不被生产代码调用，旧存档落到「envSource 缺省 = preset」的伪默认。
+    const skyState = restoreState("sky");
+    const state = normalizeEnvLegacyState(raw, {
+      preset: raw.preset,
+      skyEnvironment: skyState ? skyState.environment : undefined,
+      envEnabled: raw.enabled,
+    });
 
     // 能力级 enabled 不入 envState，直接恢复
     if (typeof state.enabled === "boolean") {
@@ -616,8 +638,23 @@ export class EnvironmentCapability implements SceneCapability {
     if (typeof state.useAsBackground === "boolean")
       partial.envUseAsBackground = state.useAsBackground;
 
+    // [ADR-292 D7] D2：envSource 持久化读回（preset/sky/custom）。缺省（极旧存档未走迁移）
+    // → 跳过，交由下方 buildEnvironment 按默认 "preset" 路径走。
+    if (typeof state.envSource === "string")
+      partial.envSource = state.envSource as EnvState["envSource"];
+
     if (Object.keys(partial).length > 0) {
-      setEnvState(partial, { source: "manual" });
+      // [锐评 E-2 / D1] 存档恢复是**程序化动作**，非用户手改——与 fog/ground loadState 同口径：
+      // 用 auto-model 而非 manual。原 manual 会把 env 组 4 键 lastWriteSource 全打成 manual，
+      // 此后 auto-atmosphere 氛围预设写 envPreset/envIntensity 一律被 shouldOverwrite 拒绝
+      // （用户选 sunset 氛围，环境贴图却不跟着换）。同时挂起派发，恢复期间只写 envState，
+      // 末尾 buildEnvironment 统一落地一次（避免逐键 dispatch × 逐键 rebuild 的重入抖动）。
+      suspendEnvCallbacks();
+      try {
+        setEnvState(partial, { source: "auto-model" });
+      } finally {
+        resumeEnvCallbacks();
+      }
     }
 
     // 恢复后显式 build（callback 可能因值未变而跳过，确保初始状态正确）

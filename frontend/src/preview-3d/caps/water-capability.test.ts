@@ -59,6 +59,25 @@ describe("WaterCapability", () => {
     expect(scene.getObjectByName("ysm-ground-water")?.visible).toBe(true);
   });
 
+  // [探针回归 2026-09-21] waterEnabled 与参数键**同批派发**（预设快照/程序化批量写入）时，
+  // 回调原在开关分支 `return` 早退，吞掉同行其余 water 键的分派：envState 已更新、
+  // 材质/transform 却停在旧值（用户可见的画面与状态脱节），直到下一次无关派发才惰性补上。
+  // 现开关只管可见性、参数照常逐键派发——两种落地在同一次派发内都发生。
+  it("waterEnabled + 参数同批派发：参数不被可见性分支吞掉", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const top = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    const mat = top.material as THREE.MeshPhysicalMaterial;
+    // 开关 + 颜色同批
+    setEnvState({ waterEnabled: false, waterColor: 0x11aa22 }, { source: "manual" });
+    expect(mat.color.getHex(), "颜色应随同批写入落地材质").toBe(0x11aa22);
+    // 开关 + 尺寸同批
+    setEnvState({ waterEnabled: true, waterSize: 200 }, { source: "manual" });
+    expect(top.scale.x, "size 应随同批写入落到 scale").toBe(200);
+    expect(top.visible, "同批的开关也要生效").toBe(true);
+  });
+
   it("getMenuNodes：enabled 平铺 toggle + 4 组 folder", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });

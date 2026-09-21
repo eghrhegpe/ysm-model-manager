@@ -207,13 +207,17 @@ export class WaterCapability implements SceneCapability {
           if (changed.has("waterMode")) this.notify();
           return;
         }
-        if (changed.has("waterEnabled")) {
-          this.syncWaterVisibility();
-          return;
-        }
+        // [探针实证修复 2026-09-21] 开关与参数同批写入（氛围/预设快照、程序化批量
+        // setEnvState）时，原「开关分支 → return 早退」会吞掉同行其余 water 键的分派：
+        // envState 已更新、材质/transform 却停在旧值，画面与状态脱节，直到下一次无关
+        // 派发才惰性补上。现参数照常逐键派发（waterEnabled 在分派表里是显式空条目），
+        // 可见性统一在派发尾重算一次——开关与参数不再互斥。
         // 参数字段：就地应用（不重建容器，材质句柄保持稳定）
         this.applyChangedParams(changed);
-        if (changed.has("waterWetness")) this.syncWaterVisibility();
+        // wetness 与 enabled 都参与可见性门控（wetnessGated 形态下 0 即隐），末位统一重算
+        if (changed.has("waterWetness") || changed.has("waterEnabled")) {
+          this.syncWaterVisibility();
+        }
       },
       "water",
     );

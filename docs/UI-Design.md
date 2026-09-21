@@ -160,6 +160,22 @@
 | ---------------- | --------------------------------------------------------------------- | -------------------- |
 | `--font-ui`      | `-apple-system, "Microsoft YaHei", "Segoe UI", system-ui, sans-serif` | 所有 UI 文字         |
 | `--font-display` | `'STKaiti','KaiTi','楷体', serif`                                     | 创作者名字等艺术场景 |
+| `--font-mono`    | `"Cascadia Code", "JetBrains Mono", "Consolas", "SFMono-Regular", monospace` | 路径/数值/ID 等机器标识 |
+
+### 三槽位字体判定线
+
+字体体系按「文字语义」分三个角色槽位，择一使用，**不得混用**：
+
+| 槽位             | 语义                         | 典型消费点                                                         |
+| ---------------- | ---------------------------- | ------------------------------------------------------------------ |
+| `--font-ui`      | 操作 / 正文 / 按钮           | 全局默认、列表、弹窗、标签                                         |
+| `--font-display` | 艺术署名 / 作品标题（人文感） | 创作者卡片名、工坊作品名、仓库作品卡名（`.cr-card-name`/`.gh-card .name`/`.model-card .name` 等） |
+| `--font-mono`    | 机器标识 / 数值 / 路径 / ID  | 文件树名·尺寸·时间（`.fl .nm`/`.sz`/`.dt`）、性能矩阵（`.perf-matrix-*`）、3D 预览字段值（`.md-value`/`.lt-meta-row > span:last-child`） |
+
+**判定问答**：这条文字是「被当作有温度的个体来展示的署名/标题」→ 用 `--font-display`；
+是「用来定位/检索/对齐的标识或数值」→ 用 `--font-mono`；其余一律 `--font-ui`。
+反例（保持 `--font-ui`，不接艺术字/等宽）：MC 实例名、文件名/路径标识（已有独立等宽处除外）、
+性能矩阵以外的诊断数据、搜索框输入（除非纯路径）。
 
 ### 规则
 
@@ -169,6 +185,7 @@
 - 每个 Shadow DOM 组件的 `:host` 必须设置 `font-family: var(--font-ui); font-size: var(--fs-base)`
 - 全局 `*` 选择器已设置默认字体/字号，组件只需覆盖有差异的部分
 - 创作者名字等需要艺术字体的场景，使用类名 + `--font-display`，禁止内联 style
+- 等宽字体场景（路径/数值/ID）使用类名 + `--font-mono`，禁止内联 `font-family: monospace` 散落
 
 ### 未来改进方向
 

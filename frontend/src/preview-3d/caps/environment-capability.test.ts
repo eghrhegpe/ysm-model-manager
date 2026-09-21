@@ -1177,6 +1177,28 @@ describe("EnvironmentCapability — ADR-292 envSource 取图通道（批次一�
     expect(disposeSpy, "sky 纹理归 sky 所有，env 两条 dispose 守卫都不得放行").not.toHaveBeenCalled();
   });
 
+  it("[D-3 dispose 对称] sky 直装态 env.dispose 还原 prevEnvironment，不赌 dispose 顺序", () => {
+    const prev = new THREE.Texture();
+    const scene = new THREE.Scene();
+    scene.environment = prev;
+    const tex = new THREE.Texture();
+    const fakeSky = { bakeEnvironmentTexture: vi.fn(() => tex), baked: tex };
+    const caps = { getById: (id: string) => (id === "sky" ? fakeSky : undefined) };
+    const renderer = makeFakeRenderer();
+    const cap = new EnvironmentCapability({
+      scene,
+      renderer,
+      caps: caps as unknown as { getById(id: string): unknown },
+    } as unknown as ConstructorParameters<typeof EnvironmentCapability>[0]);
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    cap.apply();
+    expect(scene.environment).toBe(tex); // 直装态：槽位挂 sky 交回的纹理（envTexture 恒 null）
+    cap.dispose();
+    // 直装纹理归 sky：env 不得留悬空引用占槽，也不得 dispose 它——还原 prevEnvironment，
+    // 无论 sky 随后是否再 dispose（sky 守卫见 slot ≠ owned 即不动，两序皆收敛）
+    expect(scene.environment).toBe(prev);
+  });
+
   // ===== 批次二：D1 所有权交接（sky 不再自持装载，改由 env 装载）=====
   describe("批次二 — isSkySourced / refreshFromSkySource 交接语义", () => {
     it("envSource=sky 且 enabled → isSkySourced() 为真（env 接管装载）", () => {

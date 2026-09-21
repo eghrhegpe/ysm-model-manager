@@ -770,14 +770,22 @@ export class EnvironmentCapability implements SceneCapability {
 
   dispose(): void {
     this.unsubscribeEnv();
-    // [锐评 E-4] 还原前做 **ownership 守卫**（对齐 sky-capability.dispose 的对称实现）：
+    // [锐评 E-4 + D-3 补全 2026-09-21] 还原前做 **ownership 守卫**（对齐 sky-capability.dispose 的对称实现）：
     // scene.environment / scene.background 是**多 cap 共享的全局槽位**——sky 的 IBL
     // PMREM 也会写 scene.environment。原实现无条件还原 prevEnvironment，若 sky 在本
     // cap 之后写过 environment（构造序：env → sky），env.dispose 会把 sky 的贴图冲掉，
-    // 呈现「关掉环境贴图，天空 IBL 也黑了」。仅当槽位仍归本 cap 所有（自建贴图，
-    // 或已被子路径置 null）才还原。
+    // 呈现「关掉环境贴图，天空 IBL 也黑了」。仅当槽位仍归本 cap 所有（自建贴图 /
+    // 已被子路径置 null / **sky 源直装交回 sky 处置**）才还原。
+    // 直装态（D-3）下槽位挂的是 sky 的烘焙纹理，本 cap 不拥有它：不主动清则本 cap
+    // 死后槽位悬空指向 sky 的 renderTarget 纹理，全靠 registry 反序 dispose 里
+    // sky 恰好随后收拾——所有权收口的意义就是路径自洽，不赌 dispose 顺序。
+    // sky 侧 dispose 守卫见 slot ≠ owned 即不动，两序皆收敛到 prevEnvironment。
     const ownedEnv = this.envTexture;
-    if (this.scene.environment === null || this.scene.environment === ownedEnv) {
+    if (
+      this.scene.environment === null ||
+      this.scene.environment === ownedEnv ||
+      (this.scene.environment !== null && this.scene.environment === this.skySourcedTex)
+    ) {
       this.scene.environment = this.prevEnvironment;
     }
     // background 同理（同槽位无他人竞写，但保持与 environment 同构，防未来多 cap 接入）

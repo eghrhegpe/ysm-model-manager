@@ -963,3 +963,94 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     }
   });
 });
+
+// ===== ADR-292 D7：envSource 取图通道（env 独占 scene.environment，sky 降为数据源）=====
+// 批次一：只做 env 侧「向 sky 取烘焙纹理」的通道，不改天空面板、不加 UI 节点。
+// 契约：envSource === "sky" 时 env 不再走 drawEnvEquirect 静态渐变，而是经 caps 查询器
+// 向 SkyCapability 要一张烘焙好的纹理（D1：scene.environment 写者仍唯一是 env）。
+describe("EnvironmentCapability — ADR-292 envSource 取图通道（批次一）", () => {
+  /** 假 sky cap：只实现本能力经查询器消费的那一个方法 */
+  function makeFakeSkyCap(opts: { tex?: THREE.Texture | null; throwOnBake?: boolean } = {}) {
+    const baked = opts.tex === undefined ? new THREE.Texture() : opts.tex;
+    const bakeEnvironmentTexture = vi.fn(() => {
+      if (opts.throwOnBake) throw new Error("PMREM bake failed");
+      return baked;
+    });
+    return { bakeEnvironmentTexture, baked };
+  }
+
+  function newCapWithSky(fakeSky: ReturnType<typeof makeFakeSkyCap>) {
+    const scene = new THREE.Scene();
+    const renderer = makeFakeRenderer();
+    const caps = { getById: (id: string) => (id === "sky" ? fakeSky : undefined) };
+    const cap = new EnvironmentCapability({
+      scene,
+      renderer,
+      caps: caps as unknown as { getById(id: string): unknown },
+    } as unknown as ConstructorParameters<typeof EnvironmentCapability>[0]);
+    return { cap, scene };
+  }
+
+  it("envSource=sky → 走 sky 烘焙，不调用 drawEnvEquirect（不再画静态渐变）", () => {
+    const sky = makeFakeSkyCap();
+    const { cap } = newCapWithSky(sky);
+    // 真实观测点：预设路径必然把 CanvasTexture 挂到 scene.background（useAsBackground 时）
+    // 或至少生成 canvas。此处用 canvas 创建次数判定是否走了 drawEnvEquirect 静态路径。
+    const createSpy = vi.spyOn(document, "createElement");
+    setEnvState({ envSource: "sky", envUseAsBackground: true }, { source: "manual", force: true });
+    createSpy.mockClear();
+    cap.apply();
+    expect(sky.bakeEnvironmentTexture).toHaveBeenCalled();
+    // sky 来源下**不应**为程序化预设新建 canvas（drawEnvEquirect 的必由之路）
+    const canvasCalls = createSpy.mock.calls.filter((c) => c[0] === "canvas");
+    expect(canvasCalls).toHaveLength(0);
+  });
+
+  it("envSource=preset → 仍走 drawEnvEquirect，不打扰 sky", () => {
+    const sky = makeFakeSkyCap();
+    const { cap } = newCapWithSky(sky);
+    setEnvState({ envSource: "preset" }, { source: "manual", force: true });
+    cap.apply();
+    expect(sky.bakeEnvironmentTexture).not.toHaveBeenCalled();
+  });
+
+  it("envSource=sky 但查询器缺失 → 安全降级（不抛错，回落预设路径）", () => {
+    // 独立预览（无组合根注入 caps）不得因缺 sky 而崩
+    const cap = newCap();
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    expect(() => cap.apply()).not.toThrow();
+  });
+
+  it("envSource=sky 但 sky 烘焙抛错 → 安全降级不冒泡", () => {
+    const sky = makeFakeSkyCap({ throwOnBake: true });
+    const { cap } = newCapWithSky(sky);
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    expect(() => cap.apply()).not.toThrow();
+  });
+
+  it("envSource=sky 且 bake 返回 null → 安全降级不崩", () => {
+    const sky = makeFakeSkyCap({ tex: null });
+    const { cap } = newCapWithSky(sky);
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    expect(() => cap.apply()).not.toThrow();
+  });
+
+  it("D1 所有权：envSource=sky 时 scene.environment 仍由 env 写（sky 不直接写槽位）", () => {
+    const sky = makeFakeSkyCap();
+    const { cap, scene } = newCapWithSky(sky);
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    cap.apply();
+    // 写者唯一性：env 把 bake 回来的纹理经自己的 PMREM 管线装入槽位
+    expect(scene.environment).not.toBeNull();
+  });
+
+  it("envSource 变更触发重建（入 env 组结构性键集）", () => {
+    const sky = makeFakeSkyCap();
+    const { cap } = newCapWithSky(sky);
+    setEnvState({ envSource: "preset" }, { source: "manual", force: true });
+    cap.apply();
+    const before = sky.bakeEnvironmentTexture.mock.calls.length;
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    expect(sky.bakeEnvironmentTexture.mock.calls.length).toBeGreaterThan(before);
+  });
+});

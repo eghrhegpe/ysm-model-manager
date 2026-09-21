@@ -318,6 +318,17 @@ export const ENV_STATE_SCHEMA = {
   },
   envUseAsBackground: { type: "boolean", default: false, group: "environment" },
   envResolution: { type: "number", default: 1024, group: "environment" },
+  // [ADR-292 D5] 环境贴图数据源——scene.environment 唯一槽位的「谁在供图」单一事实源。
+  // 三者互斥：preset（程序化 Canvas 预设）/ sky（跟随天空，向 SkyCapability 取烘焙图）/
+  // custom（用户加载的 HDR 文件）。旧存档迁移见 caps/environment-migrations.ts。
+  // ⚠️ 与 envPreset 的分工：envPreset 选「哪张预设图」，envSource 选「走哪条取图通路」。
+  // envSource !== "preset" 时 envPreset 无意义但**保留原值**（切回时免于丢失用户选择）。
+  envSource: {
+    type: "enum",
+    values: ["preset", "sky", "custom"] as const,
+    default: "preset",
+    group: "environment",
+  },
 
   // --- Fog ---
   fogEnabled: { type: "boolean", default: false, group: "fog" },

@@ -30,10 +30,12 @@ import type { EnvPreset, EnvPresetId } from "./environment-state.ts";
 import { ENV_PRESETS } from "./environment-state.ts";
 import {
   type EnvPlacement,
+  getTypedCap,
   persistState,
   restoreState,
   ringLog,
   type SceneCapability,
+  type SceneCapabilityLookup,
 } from "./scene-capability.ts";
 
 // P2 抽取：drawEnvEquirect 已下沉 env-pixels.ts，保留透传导出（测试/调用方仍从 cap 文件导入）。
@@ -122,20 +124,35 @@ export class EnvironmentCapability implements SceneCapability {
   private customHdrLoading = false;
   /** 用户选 preset=custom 但没有缓存 DataTexture 时，是否已经向环形日志面板告警过（避免重复刷屏） */
   private customHdrWarnedMissing = false;
+  /**
+   * [ADR-292 D7] 最近一次经 envSource="sky" 从 SkyCapability 取回的烘焙纹理。
+   * 仅用于 pmremToSceneEnv 的**所有权守卫**（不得 dispose 别人的纹理）；
+   * 本 cap 不持有其生命周期，dispose 路径一律不碰它。
+   */
+  private skySourcedTex: THREE.Texture | null = null;
 
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
   /** 防递归标记：buildEnvironment 内部 setEnvState 触发回调时跳过 */
   private isBuilding = false;
+  /**
+   * [ADR-292 D7] cap 间协调查询器（组合根 createAll 注入）。
+   * 用途：`envSource === "sky"` 时向 SkyCapability 取烘焙纹理。
+   * 与 sky-capability 的 `caps` 同源同形（`ctx.caps` 由 registry 统一注入）。
+   */
+  private caps?: SceneCapabilityLookup;
 
   constructor(opts: {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
     enabled?: boolean;
+    /** [ADR-292 D7] cap 间协调查询器——envSource="sky" 时经此向 sky 取烘焙纹理 */
+    caps?: SceneCapabilityLookup;
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
     this.enabled = opts.enabled ?? true;
+    if (opts.caps !== undefined) this.caps = opts.caps;
     this.prevEnvironment = this.scene.environment;
     this.prevBackground = (this.scene.background as THREE.Texture | THREE.Color | null) ?? null;
 
@@ -147,7 +164,9 @@ export class EnvironmentCapability implements SceneCapability {
         const structural =
           changed.has("envPreset") ||
           changed.has("envResolution") ||
-          changed.has("envUseAsBackground");
+          changed.has("envUseAsBackground") ||
+          // [ADR-292 D7] 来源切换是结构性变更（换整条取图通路），必须重建
+          changed.has("envSource");
         if (structural && this.enabled) {
           this.buildEnvironment();
         }
@@ -340,7 +359,14 @@ export class EnvironmentCapability implements SceneCapability {
       this.envTexture = rt.texture;
       this.scene.environment = this.envTexture;
       this.applyBackground(srcTex);
-      if (srcTex !== this.customHdrTex && this.backgroundSrcTex !== srcTex) {
+      // [ADR-292 D7] 所有权守卫：只 dispose **本 cap 自建**的源纹理。
+      // 排除两类外来者——
+      //   ① customHdrTex：本 cap 的长期缓存（由 disposeCustomCache 释放，此处不得动）
+      //   ② envSource="sky" 时来自 SkyCapability 的烘焙纹理：归 sky 所有（其 renderTarget
+      //      持有），本 cap 若在此 dispose 会把 sky 的 renderTarget 纹理释放掉，
+      //      导致天空 IBL 与后续烘焙出现「纹理已释放」类故障。
+      const isOwnedSrc = srcTex !== this.customHdrTex && srcTex !== this.skySourcedTex;
+      if (isOwnedSrc && this.backgroundSrcTex !== srcTex) {
         srcTex.dispose();
       }
     } catch (e) {
@@ -351,6 +377,33 @@ export class EnvironmentCapability implements SceneCapability {
       // 已把旧 backgroundSrcTex dispose 掉——成功路径靠 applyBackground 重挂新背景，
       // 失败路径必须显式还原 prevBackground，否则 scene.background 悬空指向已释放纹理
       this.applyBackground(null);
+    }
+  }
+
+  /**
+   * [ADR-292 D7] 向 SkyCapability 取一张烘焙好的天空 IBL 纹理。
+   *
+   * 所有权契约（D1/D2）：env 是 `scene.environment` 唯一写者；sky 只「烤」不「装」。
+   * 失败/缺查询器的**每条路径都返回 null**，由调用方安全降级到预设路径——
+   * 独立预览（无组合根注入 caps）不得因缺 sky 而崩。
+   *
+   * ⚠️ 返回纹理归 sky 所有（其 renderTarget 持有），**本 cap 不得 dispose**。
+   * 故 pmremToSceneEnv 的 srcTex dispose 分支需排除该纹理（见 pmremToSceneEnv 守卫）。
+   */
+  private buildSkyEnvTex(): THREE.Texture | null {
+    try {
+      const sky = getTypedCap(this.caps, "sky");
+      if (!sky?.bakeEnvironmentTexture) {
+        this.skySourcedTex = null;
+        return null;
+      }
+      const tex = sky.bakeEnvironmentTexture() ?? null;
+      this.skySourcedTex = tex;
+      return tex;
+    } catch (e) {
+      ringLog("env", `envSource=sky 取天空烘焙纹理失败，回退预设: ${e}`, "warn");
+      this.skySourcedTex = null;
+      return null;
     }
   }
 
@@ -365,7 +418,20 @@ export class EnvironmentCapability implements SceneCapability {
         return;
       }
       let srcTex: THREE.Texture | null = null;
-      if (envState.envPreset === "custom") {
+      // [ADR-292 D7] 按 envSource 分派取图通路：preset / sky / custom（三者互斥）
+      switch (envState.envSource) {
+        case "sky":
+          // 跟随天空：向 sky 取烘焙图。取不到（无查询器/烘焙失败）→ 回落预设路径。
+          srcTex = this.buildSkyEnvTex();
+          break;
+        case "custom":
+          srcTex = this.buildCustomHdrTex();
+          break;
+        default:
+          break; // "preset" → 下方 buildPresetEquirectTex
+      }
+      // custom 预设下的兼容回落（旧存档 envSource 缺省时的历史语义）
+      if (!srcTex && envState.envSource !== "sky" && envState.envPreset === "custom") {
         srcTex = this.buildCustomHdrTex();
       }
       if (!srcTex) {

@@ -442,24 +442,39 @@ export class SkyCapability implements SceneCapability {
     }
   }
 
-  private regenerateEnvironment(): void {
+  /**
+   * 烘焙 IBL 纹理（**纯生产，不碰 scene.environment**）。
+   *
+   * [ADR-292 D2] 从 `regenerateEnvironment` 拆出的「只烤不装」半边：slots 写入归
+   * {@link regenerateEnvironment}（sky 自持路径）或 EnvironmentCapability（envSource="sky" 路径）。
+   *
+   * @returns 烘焙是否成功（成功则 this.renderTarget 可读）
+   */
+  private bakeEnvironment(): boolean {
     // 生成环境贴图时隐藏太阳盘，避免光斑伪影（Sky 文档建议）
     this.envSky.material.uniforms.showSunDisc.value = 0;
     try {
       if (this.renderTarget) this.renderTarget.dispose();
       this.renderTarget = this.ensurePMREM().fromScene(this.envScene);
-      this.scene.environment = this.renderTarget.texture;
       // 同步阈值基准：任何重建路径（手动 forceEnv / 循环阈值命中 / setSun / preset）
       // 都以此时太阳高度角为新的门控基准，避免循环在手动调参后首帧冗余重建。
       this.lastPmremElevation = this.elevation;
+      return true;
     } catch (e) {
       ringLog("sky", `环境贴图生成失败: ${e}`, "error");
       // catch 后 renderTarget 可能悬空（fromScene 抛错时 renderTarget 已 dispose 但未重置）
       this.renderTarget = null;
-      this.scene.environment = null;
+      return false;
     } finally {
       this.envSky.material.uniforms.showSunDisc.value = 1;
     }
+  }
+
+  /** 烘焙 + 装入 scene.environment（sky 自持路径；ADR-292 后 envSource="sky" 走 bakeEnvironmentTexture） */
+  private regenerateEnvironment(): void {
+    this.bakeEnvironment();
+    // bakeEnvironment 失败时已把 renderTarget 置 null，故此处读值天然带 null 语义
+    this.scene.environment = this.renderTarget?.texture ?? null;
   }
 
   private clearEnvironment(): void {
@@ -667,6 +682,22 @@ export class SkyCapability implements SceneCapability {
   /** 当前是否联动 IBL 环境贴图（下拉开关初始化用） */
   isEnvironmentEnabled(): boolean {
     return envState.skyEnvironment;
+  }
+
+  /**
+   * [ADR-292 D2] 烘焙一张天空 IBL 纹理并**交回调用方**——本方法**不写 scene.environment**。
+   *
+   * 所有权收口：`scene.environment` 的唯一写者是 EnvironmentCapability（D1）。本能力
+   * 降级为数据源提供者，只负责「烤」，装载由 env 决定。这样两个 cap 不再互相覆盖
+   * （旧实现：本类 regenerateEnvironment 直接写槽位，env cap 也写，后写者赢）。
+   *
+   * 返回的纹理归**本能力**所有（由 this.renderTarget 持有），生命周期随本 cap 的
+   * dispose/重建；调用方**不得** dispose 它，也不得跨重建长期持有。
+   *
+   * @returns PMREM 预滤波后的环境纹理；烘焙失败时 null（调用方应安全降级）
+   */
+  bakeEnvironmentTexture(): THREE.Texture | null {
+    return this.bakeEnvironment() ? (this.renderTarget?.texture ?? null) : null;
   }
 
   /** 当前云量（ADR-085 S2：菜单初始化惰性读，消灭硬编码 "0%"） */

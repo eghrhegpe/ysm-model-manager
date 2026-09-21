@@ -226,6 +226,10 @@
   --font-ui:
     -apple-system, "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
   --font-display: "STKaiti", "KaiTi", "楷体", serif;
+  /* 等宽：路径/数值/ID 等机器标识（与 --font-ui 操作正文、--font-display 艺术署名三槽分立） */
+  --font-mono:
+    "Cascadia Code", "JetBrains Mono", "Consolas", "SFMono-Regular",
+    "Menlo", "DejaVu Sans Mono", monospace;
 }
 
 /* 布局变量 — 共享布局变量提升到 :root */

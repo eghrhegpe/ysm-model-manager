@@ -112,12 +112,12 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .fl-list .ck.on::after, .fh-list .ck.on::after { left: 12px; }
 .fh-list .ck.partial { background: var(--sm-optional); }
 .fh-list .ck.partial::after { left: 7px; }
-.fl-list .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fl-list .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family:var(--font-mono); }
 .fh-list .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
 .fh-list .ar.open { transform: rotate(90deg); }
 .fh-list .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
 .fh-list .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
-.fl-list .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; }
+.fl-list .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; font-family:var(--font-mono); }
 .fl-list .sz.sz-green { color: var(--size-ok,#a6e3a1); }
 .fl-list .sz.sz-red { color: var(--size-large,#f38ba8); }
 .fl-list .sz:not(.sz-green):not(.sz-red) { color: var(--muted); }
@@ -128,17 +128,17 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .fl .ck.on::after, .fh .ck.on::after { left: 12px; }
 .fh .ck.partial { background: var(--sm-optional); }
 .fh .ck.partial::after { left: 7px; }
-.fl .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fl .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family:var(--font-mono); }
 /* .fl 与 .fh 同：.tag-author/.tag-work/.tag-date 外观与色标走共享 metaTagCSS（本串在下方插值），
    原 .nm-tag/.nm-bracket 别名选择器为死代码（renderDisplayName 只产出 .tag-*），2026-09 删除；
    scoped base 行同 .fh 侧冗余删除。域特有仅剩 .tag-ext（扩展名灰标）。 */
 .fl .nm .tag-ext { color: var(--muted); font-size: 0.85em; }
 .fl .nm.ysm { color: var(--txt); }
-.fl .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.fl .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; font-family:var(--font-mono); text-shadow:0 1px 2px rgba(0,0,0,.12); }
 .fl .sz.sz-green { color: var(--size-ok,#a6e3a1); }
 .fl .sz.sz-red { color: var(--size-large,#f38ba8); }
 .fl .sz:not(.sz-green):not(.sz-red) { color: var(--muted); }
-.fl .dt { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.fl .dt { font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; flex-shrink: 0; font-family:var(--font-mono); }
 /* 悬停快捷操作 */
 .hover-actions { display: none; gap: 2px; flex-shrink: 0; align-items: center; }
 .fl:hover .hover-actions { display: flex; }

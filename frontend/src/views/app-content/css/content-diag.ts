@@ -99,8 +99,8 @@ export const contentDiagCSS: string = `
 .perf-matrix-warn { color:var(--warning, #b8860b); }
 .perf-matrix-models { display:flex; flex-direction:column; gap:2px; padding:2px 0; }
 .perf-matrix-model { display:flex; align-items:center; gap:8px; font-size:var(--fs-xs); }
-.perf-matrix-model-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); }
-.perf-matrix-model-detail { color:var(--muted); font-variant-numeric:tabular-nums; flex-shrink:0; }
+.perf-matrix-model-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); font-family:var(--font-mono); }
+.perf-matrix-model-detail { color:var(--muted); font-variant-numeric:tabular-nums; flex-shrink:0; font-family:var(--font-mono); }
 
 /* ===== 诊断页通用布局三件套（2026-09-21 由 .perf-wrap/.perf-controls/.perf-row/.perf-hint 泛化，ADR-288）=====
    全页 tab 共用「上栏常驻 + 结果独立」骨架：

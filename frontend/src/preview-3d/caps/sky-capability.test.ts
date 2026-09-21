@@ -307,11 +307,8 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
     expect(cap.getMasterNodeId()).toBe("sky-enabled");
     // 1: timeline controls 通道
     expect(nodes[1]!.kind).toBe("controls");
-    // 2: sky-env toggle 平铺
-    expect(nodes[2]!.id).toBe("sky-env");
-    expect(nodes[2]!.kind).toBe("toggle");
-    // 3: 高级 folder
-    const folder = nodes[3]!;
+    // 2: 高级 folder（[ADR-292 D4] 原 sky-env「环境贴图」toggle 已删除，folder 提到 index 2）
+    const folder = nodes[2]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.skyGroupAdvanced");
     const childIds = folder.children!.map((c) => c.id);
@@ -322,14 +319,21 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
     expect(childIds).toContain("sky-godrays");
   });
 
-  it("控件操作同步状态（sky-env 节点 control 闭包）", () => {
+  it("[ADR-292 D4] 天空面板**不再**暴露 scene.environment 开关（写者唯一归 env 的来源选择）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const envNode = nodes[2]!;
-    envNode.control!.set!(false);
-    expect(cap.isEnvironmentEnabled()).toBe(false);
-    envNode.control!.set!(true);
-    expect(cap.isEnvironmentEnabled()).toBe(true);
+    // 遍历整棵树（含 folder children），不得存在任何环境贴图开关节点
+    const allIds: string[] = [];
+    const walk = (ns: typeof nodes): void => {
+      for (const n of ns) {
+        allIds.push(n.id);
+        if (n.children) walk(n.children);
+      }
+    };
+    walk(nodes);
+    expect(allIds).not.toContain("sky-env");
+    // 顶层只剩 3 项：总开关 + timeline + 高级 folder
+    expect(nodes).toHaveLength(3);
   });
 
   it("时间轴控件与云量滑块联动状态（controls 通道 + 高级 folder，节点 control 闭包）", () => {
@@ -340,7 +344,7 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
     tl.setValue(20);
     expect(cap.getTimeOfDay()).toBe(20);
     expect(tl.getValue()).toBe(20);
-    const folder = nodes[3]!;
+    const folder = nodes[2]!;
     const cloudNode = folder.children!.find((c) => c.id === "sky-cloud")!;
     cloudNode.control!.set!(0.8);
     expect(cap.getCloudCoverage()).toBe(0.8);
@@ -348,7 +352,7 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
 
   it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[3]!;
+    const folder = cap.getMenuNodes()[2]!;
     for (const [id, key] of [
       ["sky-cloud", "skyCloudCoverage"],
       ["sky-sun-intensity", "skySunIntensityScale"],
@@ -366,7 +370,7 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
 
   it("太阳耦合滑块与昼夜循环控件联动（高级 folder，节点 control 闭包）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[3]!;
+    const folder = cap.getMenuNodes()[2]!;
     const intensityNode = folder.children!.find((c) => c.id === "sky-sun-intensity")!;
     intensityNode.control!.set!(1.1);
     expect(cap.getSunIntensityScale()).toBe(1.1);
@@ -486,7 +490,7 @@ describe("SkyCapability — God Rays（体积光束）", () => {
 
   it("getMenuNodes 包含 sky-godrays toggle（高级 folder）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[3]!;
+    const folder = cap.getMenuNodes()[2]!;
     const godraysNode = folder.children!.find((c) => c.id === "sky-godrays")!;
     expect(godraysNode).toBeDefined();
     expect(godraysNode.kind).toBe("toggle");
@@ -1215,11 +1219,8 @@ describe("SkyCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
     expect(tl![0]!.getValue!()).toBe(cap.getTimeOfDay());
     tl![0]!.setValue!(9);
     expect(cap.getTimeOfDay()).toBe(9);
-    // 2: sky-env toggle 平铺（基座级开关）
-    expect(nodes[2]!.kind).toBe("toggle");
-    expect(nodes[2]!.id).toBe("sky-env");
-    // 3: 高级 folder
-    const folder = nodes[3]!;
+    // 2: 高级 folder（[ADR-292 D4] 原 sky-env toggle 已删，folder 提到 index 2）
+    const folder = nodes[2]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.skyGroupAdvanced");
     expect(folder.children!.map((c) => c.id)).toEqual([
@@ -1233,7 +1234,7 @@ describe("SkyCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
 
   it("高级组节点读写闭包直连 cap（cloud/godrays）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[3]!;
+    const folder = cap.getMenuNodes()[2]!;
     const cloud = folder.children!.find((c) => c.id === "sky-cloud")!;
     cloud.control!.set!(0.6);
     expect(cap.getCloudCoverage()).toBeCloseTo(0.6, 5);

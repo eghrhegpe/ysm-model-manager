@@ -307,26 +307,26 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
     expect(scene.environment).toBeNull(); // disabled 不重建，保持还原态
   });
 
-  it("preset=custom 无缓存时 build 告警一次并回退 studio", () => {
+  it("envSource=custom 无缓存时 build 告警一次，且**不改写** envPreset（回落只影响渲染）", () => {
     const log = vi.fn();
     (globalThis as Record<string, unknown>).__ysmRingLog = log;
     const cap = newCap();
-    // 直接置 preset=custom（模拟内部状态），触发 buildEnvironment
-    setEnvState({ envPreset: "custom" }, { source: "manual" });
+    setEnvState({ envPreset: "sunset" }, { source: "manual", force: true });
+    setEnvState({ envSource: "custom" }, { source: "manual" });
+    const before = envState.envPreset;
     cap.apply();
     expect(log).toHaveBeenCalledWith("env", expect.stringContaining("HDR"), "warn");
-    // 告警后回退 studio
-    expect(cap.getPresetId()).toBe("studio");
+    // [ADR-292 D5 定案] 键值一个都不动——用户意图与既有选择完整保留
+    expect(envState.envPreset).toBe(before);
     // 第二次不再告警（customHdrWarnedMissing 去重）
-    setEnvState({ envPreset: "custom" }, { source: "manual" });
     cap.apply();
     expect(log).toHaveBeenCalledTimes(1);
   });
 
-  it("preset=custom 无缓存且无 __ysmRingLog 时走 console.warn", () => {
+  it("envSource=custom 无缓存且无 __ysmRingLog 时走 console.warn", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const cap = newCap();
-    setEnvState({ envPreset: "custom" }, { source: "manual" });
+    setEnvState({ envSource: "custom" }, { source: "manual" });
     cap.apply();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("custom"));
     warnSpy.mockRestore();
@@ -380,22 +380,23 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
     expect(scene.environment).toBe(prev);
   });
 
-  // [锐评 E-3] custom 无缓存回退是**程序化动作**：不得打成 manual（否则冻死
-  // auto-atmosphere 预设写 envPreset），且须 force 写入（防用户曾手选 studio 时滞留 custom）。
-  it("custom 无缓存回退 studio：不污染 lastWriteSource，预设仍可写 envPreset", () => {
-    const log = vi.fn();
-    (globalThis as Record<string, unknown>).__ysmRingLog = log;
+  // [锐评 E-3] custom 通路取图失败是**程序化动作**：不得写成 manual（否则冻死
+  // auto-atmosphere 预设写 envPreset）。[ADR-292 D5 定案] 现实现干脆**不写 envPreset**，
+  // 从根上杜绝污染——本测试改为直接守「auto-atmosphere 预设仍能写 envPreset」这一不变量。
+  it("custom 通路无缓存时不留 manual 足迹：auto-atmosphere 预设仍可写 envPreset", () => {
     const cap = newCap();
-    cap.apply(); // 建立初始环境（source 走 manual 之外）
+    cap.apply();
 
-    // 用户手选过 studio（把 envPreset 打成 manual）
-    cap.setPresetId("studio");
-    setEnvState({ envPreset: "custom" }, { source: "auto-model", force: true });
+    // 用户**未**手选预设（envPreset 仍是默认值），只把来源切到 custom（无缓存）
+    const presetBefore = envState.envPreset;
+    setEnvState({ envSource: "custom" }, { source: "manual" });
+    cap.apply();
+    expect(envState.envPreset).toBe(presetBefore); // 预设值未被静默改写
 
-    cap.apply(); // 触发回退路径
-    expect(cap.getPresetId()).toBe("studio");
-
-    // 关键断言：氛围预设（auto-atmosphere）此后仍能写 envPreset
+    // 关键断言：氛围预设（auto-atmosphere）此后仍能写 envPreset——
+    // 若 custom 回落逻辑曾把 envPreset 打成 manual，此处会被 shouldOverwrite 拒绝而失败。
+    // （注：若用户**确实**手选过预设，则 manual > auto-atmosphere 的优先级本应拒绝，
+    //   那是设计意图而非缺陷；本测试守的是「回落不得伪造 manual 足迹」。）
     setEnvState({ envPreset: "sunset" }, { source: "auto-atmosphere" });
     expect(envState.envPreset).toBe("sunset");
   });
@@ -791,7 +792,7 @@ describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由
     // env-enabled 平铺
     expect(nodes[0]!.id).toBe("env-enabled");
     // 其余节点在 folder children 内
-    const bgFolder = nodes[2]!;
+    const bgFolder = nodes.find((n) => n.id === "cap-group-env-background")!;
     expect(bgFolder.kind).toBe("folder");
     expect(bgFolder.labelKey).toBe("preview.envGroupBackground");
     const bgChildIds = bgFolder.children!.map((c) => c.id);
@@ -799,8 +800,10 @@ describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由
     expect(bgChildIds).toContain("env-intensity");
     expect(bgChildIds).toContain("cap-group-env-histogram");
     // folder labelKey 对应原 group
-    expect(nodes[1]!.labelKey).toBe("preview.envGroupPreset");
-    expect(nodes[3]!.labelKey).toBe("preview.envGroupCustomHdr");
+    expect(nodes[2]!.labelKey).toBe("preview.envGroupPreset");
+    expect(nodes.find((n) => n.id === "cap-group-env-custom-hdr")!.labelKey).toBe(
+      "preview.envGroupCustomHdr",
+    );
   });
 
   it("toggle 开关操作同步状态（节点 control 闭包）", () => {
@@ -817,7 +820,7 @@ describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由
 
   it("菜单滑杆值域 = schema 展示域（ADR-283：菜单不再是第二事实源）", () => {
     const cap = newCap();
-    const bgFolder = cap.getMenuNodes()[2]!;
+    const bgFolder = cap.getMenuNodes().find((n) => n.id === "cap-group-env-background")!;
     const node = bgFolder.children!.find((c) => c.id === "env-intensity")!;
     const c = node.control!;
     const range = getParamRange("envIntensity");
@@ -831,7 +834,7 @@ describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由
 
   it("强度滑块读写同步（节点 control 闭包）", () => {
     const cap = newCap();
-    const bgFolder = cap.getMenuNodes()[2]!;
+    const bgFolder = cap.getMenuNodes().find((n) => n.id === "cap-group-env-background")!;
     const intensityNode = bgFolder.children!.find((c) => c.id === "env-intensity")!;
     intensityNode.control!.set!(2.5);
     expect(cap.getIntensity()).toBe(2.5);
@@ -840,7 +843,7 @@ describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由
 
   it("背景开关读写同步（节点 control 闭包）", () => {
     const cap = newCap();
-    const bgFolder = cap.getMenuNodes()[2]!;
+    const bgFolder = cap.getMenuNodes().find((n) => n.id === "cap-group-env-background")!;
     const bgNode = bgFolder.children!.find((c) => c.id === "env-use-as-background")!;
     bgNode.control!.set!(true);
     expect(cap.isUseAsBackground()).toBe(true);
@@ -894,11 +897,11 @@ describe("EnvironmentCapability — 预设数据完整性", () => {
 });
 
 describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
-  it("完整树 = env-enabled 平铺 toggle + preset/background/customHdr 三 folder（组分裂修复：background 含 histogram）", () => {
+  it("完整树 = env-enabled 平铺 toggle + env-source select + preset/background/customHdr 三 folder（组分裂修复：background 含 histogram）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // 4 顶层项
-    expect(nodes).toHaveLength(4);
+    // 5 顶层项：总开关 + [ADR-292 D3] 来源选择 + 三 folder
+    expect(nodes).toHaveLength(5);
     // 0: env-enabled toggle 原生（能力总开关，无 group）
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("env-enabled");
@@ -906,11 +909,14 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     expect(cap.isEnabled()).toBe(false);
     nodes[0]!.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    // 1: preset folder
-    expect(nodes[1]!.kind).toBe("folder");
-    expect(nodes[1]!.labelKey).toBe("preview.envGroupPreset");
-    // 2: background folder（组分裂修复：含 use-as-background + intensity + histogram）
-    const bgFolder = nodes[2]!;
+    // 1: [ADR-292 D3] env-source select——来源决定「谁供图」，紧随总开关
+    expect(nodes[1]!.kind).toBe("select");
+    expect(nodes[1]!.id).toBe("env-source");
+    // 2: preset folder
+    expect(nodes[2]!.kind).toBe("folder");
+    expect(nodes[2]!.labelKey).toBe("preview.envGroupPreset");
+    // background folder（组分裂修复：含 use-as-background + intensity + histogram）
+    const bgFolder = nodes.find((n) => n.id === "cap-group-env-background")!;
     expect(bgFolder.kind).toBe("folder");
     expect(bgFolder.labelKey).toBe("preview.envGroupBackground");
     expect(bgFolder.children!.map((c) => c.id)).toEqual([
@@ -934,14 +940,14 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     const histControls = typeof histNode.controls === "function" ? histNode.controls() : histNode.controls;
     expect(histControls![0]!.kind).toBe("histogram");
     expect(histControls![0]!.id).toBe("env-histogram");
-    // 3: customHdr folder
-    expect(nodes[3]!.kind).toBe("folder");
-    expect(nodes[3]!.labelKey).toBe("preview.envGroupCustomHdr");
+    // 4: customHdr folder
+    expect(nodes[4]!.kind).toBe("folder");
+    expect(nodes[4]!.labelKey).toBe("preview.envGroupCustomHdr");
   });
 
   it("preset folder 内 preset-thumb 走 controls 通道节点（控件定义内嵌）", () => {
     const cap = newCap();
-    const presetFolder = cap.getMenuNodes()[1]!;
+    const presetFolder = cap.getMenuNodes().find((n) => n.id === "cap-group-env-preset")!;
     const thumbNode = presetFolder.children![0]!;
     expect(thumbNode.kind).toBe("controls");
     expect(thumbNode.id).toBe("cap-group-env-preset-thumb");
@@ -960,7 +966,7 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
 
   it("customHdr folder 内 image + button 走 controls 通道节点", () => {
     const cap = newCap();
-    const hdrFolder = cap.getMenuNodes()[3]!;
+    const hdrFolder = cap.getMenuNodes().find((n) => n.id === "cap-group-env-custom-hdr")!;
     expect(hdrFolder.children!.map((c) => c.id)).toEqual([
       "cap-group-env-hdr-preview",
       "cap-group-env-hdr-buttons",
@@ -1147,6 +1153,124 @@ describe("EnvironmentCapability — ADR-292 envSource 取图通道（批次一�
       setEnvState({ envSource: "sky" }, { source: "manual", force: true });
       cap.refreshFromSkySource();
       expect(sky.bakeEnvironmentTexture).toHaveBeenCalledWith({ force: true });
+    });
+  });
+});
+
+// ===== ADR-292 批次三：来源选择 UI（envSource 的 MenuNode 出口）=====
+describe("EnvironmentCapability — ADR-292 批次三 来源选择控件", () => {
+  it("顶层新增 env-source select 节点，三选项 = preset/sky/custom", () => {
+    const cap = newCap();
+    const node = cap.getMenuNodes().find((n) => n.id === "env-source");
+    expect(node, "缺 env-source 节点").toBeDefined();
+    expect(node!.kind).toBe("select");
+    expect(node!.control!.options!.map((o) => o.value)).toEqual(["preset", "sky", "custom"]);
+  });
+
+  it("env-source 选项文案走 labelKey（禁硬编码中文——i18n 单一来源）", () => {
+    const cap = newCap();
+    const node = cap.getMenuNodes().find((n) => n.id === "env-source")!;
+    for (const o of node.control!.options!) {
+      expect(o.labelKey, `选项 ${o.value} 缺 labelKey`).toBeTruthy();
+      expect(o.label, `选项 ${o.value} 不得带明文 label（i18n 漏洞）`).toBeUndefined();
+    }
+  });
+
+  it("env-source 读写闭包直连 envState.envSource", () => {
+    const cap = newCap();
+    const node = cap.getMenuNodes().find((n) => n.id === "env-source")!;
+    expect(node.control!.get!(undefined)).toBe("preset"); // schema 默认
+    node.control!.set!("sky");
+    expect(envState.envSource).toBe("sky");
+    expect(node.control!.get!(undefined)).toBe("sky");
+    node.control!.set!("custom");
+    expect(envState.envSource).toBe("custom");
+  });
+
+  it("切到 custom **只**写 envSource（不与 envPreset 分裂，e2e 可断言单一真值）", () => {
+    const cap = newCap();
+    const node = cap.getMenuNodes().find((n) => n.id === "env-source")!;
+    const presetBefore = envState.envPreset;
+    node.control!.set!("custom");
+    expect(envState.envSource).toBe("custom");
+    // envPreset 不动：通路与「选哪张预设图」正交，且用户既有选择不得被静默改写
+    expect(envState.envPreset).toBe(presetBefore);
+  });
+
+  it("改选 preset/sky 时同样不碰 envPreset（切回时免丢用户选择）", () => {
+    const cap = newCap();
+    const node = cap.getMenuNodes().find((n) => n.id === "env-source")!;
+    setEnvState({ envPreset: "sunset" }, { source: "manual", force: true });
+    node.control!.set!("sky");
+    expect(envState.envPreset).toBe("sunset");
+    node.control!.set!("preset");
+    expect(envState.envPreset).toBe("sunset");
+  });
+
+  it("切换来源触发重建（结构性键集含 envSource）", () => {
+    const scene = new THREE.Scene();
+    const cap = new EnvironmentCapability({
+      scene,
+      renderer: makeFakeRenderer(),
+      caps: {
+        getById: (id: string) =>
+          id === "sky" ? { bakeEnvironmentTexture: () => new THREE.Texture() } : undefined,
+      } as never,
+    });
+    cap.apply();
+    const node = cap.getMenuNodes().find((n) => n.id === "env-source")!;
+    node.control!.set!("sky");
+    // sky 来源下槽位由 env 装载（不抛错即有重建发生）
+    expect(scene.environment).not.toBeNull();
+  });
+
+  // ===== 批次三：旧存档迁移落到 loadState（migrateEnvSource 的生产消费点）=====
+  describe("批次三 — loadState 旧存档迁移", () => {
+    // 存档读写走 localStorage（ysm-scene-cap-*），必须隔离——否则上一个 describe 的
+    // 残留会让"全新存档"用例读到脏值，断言失准
+    beforeEach(() => {
+      localStorage.clear();
+    });
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it("旧存档 preset=custom 且无 HDR 缓存 → envSource 也回落 preset（不留两键分裂）", () => {
+      // HDR 文件内容不入 localStorage，故跨会话必然无缓存
+      localStorage.setItem(
+        "ysm-scene-cap-environment",
+        JSON.stringify({ preset: "custom", enabled: true }),
+      );
+      const cap = newCap();
+      cap.loadState();
+      // 两键一致：都回落，不能一个显示 custom 一个渲染 studio
+      expect(envState.envSource).toBe("preset");
+      expect(envState.envPreset).toBe("studio");
+    });
+
+    it("旧存档 env 关掉 + sky IBL 开 → 迁移为 envSource=sky（保画面不变）", () => {
+      localStorage.setItem("ysm-scene-cap-environment", JSON.stringify({ enabled: false }));
+      localStorage.setItem("ysm-scene-cap-sky", JSON.stringify({ environment: true }));
+      const cap = newCap();
+      cap.loadState();
+      expect(envState.envSource).toBe("sky");
+    });
+
+    it("全新存档（无任何键）→ envSource 为默认 preset，不误判为 sky", () => {
+      const cap = newCap();
+      cap.loadState();
+      expect(envState.envSource).toBe("preset");
+    });
+
+    it("含 envSource 的存档幂等读回（不再走迁移）", () => {
+      localStorage.setItem(
+        "ysm-scene-cap-environment",
+        JSON.stringify({ envSource: "sky", preset: "sunset", enabled: true }),
+      );
+      const cap = newCap();
+      cap.loadState();
+      expect(envState.envSource).toBe("sky");
+      expect(envState.envPreset).toBe("sunset");
     });
   });
 });

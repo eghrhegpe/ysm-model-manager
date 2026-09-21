@@ -257,6 +257,28 @@ node 可测，对齐 `ground-migrations.ts` 先例；21 例测试覆盖三判据
 > `env.refreshFromSkySource()` 而**不写槽位**；未接管时保留 sky 自持装载（既有行为不回归）。
 > 这使「谁写槽位」在运行期也是**单一**的，而非仅靠 dispose 期守卫兜底。
 
+**批次三定案：UI 出口（2026-09-21）**
+
+> **决策 D11（来源单向权威）**：`envSource` 是通路选择的**唯一**权威，`envPreset` 只承载
+> 「预设通路选哪张图」，两者**正交**。故 `setSource()` **只写 `envSource` 一个键**——
+> 早期草案让它同时写 `envPreset:"custom"`，与 `buildCustomHdrTex` 的回退写 `envPreset:"studio"`
+> 互相打架，产生「来源显示自定义 HDR、envPreset 是 studio」的分裂态，且 e2e 无法断言单一真值。
+
+> **决策 D12（custom 回退不动键值）**：`envSource==="custom"` 但无 HDR 缓存时，**只回落渲染**
+> （返回 null → `buildEnvironment` 走预设路径）+ 告警一次，**不改写任何 envState 键**。
+> 用户意图完整保留，加载文件后自动生效。原实现静默改写 `envPreset:"studio"`，既吞掉用户
+> 手选的预设，又制造分裂态。
+
+> **决策 D13（custom 回退的最后裁决权）**：`loadState` 中「custom 无缓存 → 回落 preset」
+> 的裁决必须**排在 envSource 读回与 legacy 迁移之后**。因为 HDR 文件内容不入 localStorage，
+> 任何存档里的 custom 通路跨会话都无图可用；而 `normalizeEnvLegacyState` 会按
+> `preset==="custom"` 迁移出 `envSource==="custom"`。若不在最后压掉，两键分裂会从旧存档
+> 复现。**运行时事实（无缓存）优先于存档意图**。
+
+> **决策 D14（天空面板开关退役）**：删除 `sky-menu` 的 `sky-env` 节点与 `preview.environmentMapping`
+> 文案。它与环境面板总开关互不知晓、后写者赢，UI 上两个开关都「开」却只有一个生效——
+> 这正是本次收口的病根。供图者现由环境面板「来源」单选统一表达。
+
 ### 3.4 ADR 起草期间的事实更正（留档）
 
 起草本 ADR 时曾据记忆写出两个错误事实，已在核验后更正，留档以防复现：

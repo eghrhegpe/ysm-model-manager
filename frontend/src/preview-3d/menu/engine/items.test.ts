@@ -154,7 +154,7 @@ const fakeCapNodes: PreviewMenuNode[] = [
   {
     id: "sky-env",
     kind: "toggle" as const,
-    labelKey: "preview.environmentMapping",
+    labelKey: "preview.environment",
     control: { get: () => fakeCapCore.isEnvironmentEnabled(), set: (v: unknown) => fakeCapCore.setEnvironmentEnabled(v) },
   },
   {

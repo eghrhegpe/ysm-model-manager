@@ -582,9 +582,9 @@ postprocessing cap 确认，列观察项）。
 > 全部 6 面板（sky/ground/water/environment/fog/reflector）UI + 接线审查完毕。
 > 缺陷按严重度分级（🔴 真实缺陷 / 🟡 性能冗余 / 🟢 UX 改进 / ⚪ 观察项）。
 >
-> **修复进度（2026 续轮）**：🔴 中 **E-3 / F-2 / E-4 / S2-4 四条已修复**并附回归测试
-> （TDD：先写测试 → 对旧实现实测全红 → 修复后全绿）。**G-1 经复核为误判并撤销**
-> （见 §15），故 🔴 实际 5 条、已修 4 条、余 S1-4。详见 §14 / §15 修复记录。
+> **修复进度（2026 续轮）**：🔴 **E-3 / F-2 / E-4 / S2-4 / S1-4 五条全部已修复**并附回归测试
+> （TDD：先写测试 → 对旧实现实测全红 → 修复后全绿）。**G-1 经复核为误判并撤销**（见 §15）。
+> S1-4 按 ADR-292 以三批次收口（架构级，非文案级）——详见 §16 修复记录。
 
 ### 🔴 真实缺陷（建议优先修）
 | # | 位置 | 缺陷 | 建议 | 状态 |
@@ -594,7 +594,7 @@ postprocessing cap 确认，列观察项）。
 | E-4 | environment-capability.ts:563 vs sky-capability.ts:808-814 | scene.environment 三权打架：env cap dispose **无条件**还原 prevEnvironment，sky cap 有 ownership 守卫——两 cap 同写 scene.environment 无协调，dispose 顺序不同结果不同 | env 侧对齐 sky 的 ownership 守卫（仅当 environment 仍归本 cap 时还原） | ✅ 已修 |
 | S2-4 | sky-capability.ts 回调 L238-303 | **skyScale 死键**：schema 有键、无回调分支、无 UI 控件、预设可写但渲染层不响应 | 补控件 + 分支，或从 schema 摘除 | ✅ 已修（摘键提常量，见 §14） |
 | ~~G-1~~ | ~~ground-menu.ts buildGroundNodes~~ | ~~注释宣称「锐评 P3 补齐菜单出口」但菜单实际未露出~~ | — | ❌ **误判，撤销**（见 §15 更正） |
-| S1-4 | sky 子视图 sky-env toggle | 语义漂移：实为「天空 IBL」却标「环境贴图映射」，与 atmosphere 卡 EnvironmentCapability 抢写 scene.environment 无联动 | **根因非文案而是架构**：一个功能（给 scene.environment 供图）被劈成两半分置两面板。方案见 ADR-292——所有权收口归 env cap，sky IBL 降为「来源」选项 | 📝 ADR-292 已起草，待拍板 |
+| S1-4 | sky 子视图 sky-env toggle | 语义漂移：实为「天空 IBL」却标「环境贴图映射」，与 atmosphere 卡 EnvironmentCapability 抢写 scene.environment 无联动 | **根因非文案而是架构**：一个功能（给 scene.environment 供图）被劈成两半分置两面板。已按 ADR-292 收口：env 独占槽位 + 来源单选（preset/sky/custom）+ sky 降为烘焙数据源 + sky 面板 toggle 退役 | ✅ 已修复（ADR-292 三批次，2026-09-21） |
 
 ### 🟡 性能冗余（中优先级）
 | # | 位置 | 问题 | 建议 |
@@ -746,4 +746,45 @@ TDD 流程：先写回归测试 → 对**旧实现**实测（4 例全红，证�
 必须 grep 符号落点（本次 grep `groundSize` 立刻见 12 处命中），不能只凭单文件首尾推断。
 
 因此 🔴 实际数量由 6 降为 **5**，已修 4 条（E-3/F-2/E-4/S2-4），余 1 条（S1-4）。
+
+---
+
+## §16 S1-4 修复记录：scene.environment 供图权收口（ADR-292，三批次）
+
+S1-4 原描述是「toggle 标签语义漂移」，但**根因是架构**：给 `scene.environment` 供图这一个
+功能，被劈成两半分置两个面板（天空面板的「环境贴图」开关 + 环境面板的总开关），二者
+互不知晓、后写者赢，UI 上两个开关都「开」却只有一个生效。
+
+### 批次划分（用户指定顺序：先取图通道 → 再删开关 → 最后接 UI）
+
+| 批次 | 内容 | 提交 |
+|------|------|------|
+| 一 | env 侧取图通道：`bakeEnvironmentTexture()` 只烤不装 + `envSource` schema + 纹理所有权守卫 | `19d42b235` |
+| 二 | 装载权让渡：`requestEnvironmentRefresh()` 交棒 + `skyForceEnv` 职责拆分（D8/D9/D10） | `10f0db9f9` |
+| 三 | UI 出口：来源单选（MenuNode `select`）+ 删天空 toggle + 旧存档迁移落地 | 本次提交 |
+
+### 关键修复点
+
+1. **写者唯一性（运行期保证，非仅 dispose 期）**：`bakeEnvironment` 拆为「纯烤」与「装载」
+   两半；env 接管时 sky 走 `requestEnvironmentRefresh()` 转交而不写槽位。
+2. **纹理所有权守卫**：`pmremToSceneEnv` 原本无条件 dispose `srcTex`；sky 来源的纹理归
+   sky 的 renderTarget 所有，dispose 它会释放掉天空的烘焙产物 → 新增 `skySourcedTex` 排除。
+3. **阈值门控保留**：`bakeEnvironmentTexture({force})`——结构性变更传 `force:true`（离散动作
+   须拿当前帧图），连续动画不传走 `PMREM_ELEVATION_THRESHOLD`，守住防 GPU 熔炉的历史防线。
+4. **两键分裂根除（D11/D12/D13）**：`envSource` 为通路唯一权威、与 `envPreset` 正交。
+   custom 无缓存时**只回落渲染、不动键值**；`loadState` 中该裁决排在读回与迁移**之后**，
+   因 HDR 内容不入 localStorage，运行时事实优先于存档意图。
+5. **UI 出口合规**：来源控件用 MenuNode schema 的 `select` 种类（非自造控件），
+   从 `buildEnvironmentNodes` 直产，满足「3d菜单只允许 MenuNode schema」硬规。
+
+### 验证
+
+- TDD：三批共 **22 例新测试**，各自对旧实现实测**全红**（批次一 7 / 批次二 7 / 批次三 8），
+  修复后全绿。含 `preset=custom 无缓存 → envSource 也回落 preset` 这类分裂态回归锁。
+- `vitest --run src/preview-3d/` → **2773 passed / 157 files**
+- `vite build` ✓ 8.07s（含 locale JSON 再生成后 TS↔JSON 1499 keys 一致）
+- `npm run typecheck` ✓ 全绿
+- `check-biome --files` ✅
+- 全量 `vitest --run` → 6605 passed；6 条失败在 `app-modules.boot.test.ts`，经 stash 验证为
+  **存量问题**（与我改动无关，该文件不 import 任何 preview-3d 模块）。
 

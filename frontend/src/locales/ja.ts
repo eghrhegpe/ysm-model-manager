@@ -1231,6 +1231,12 @@ export const ja: Record<string, string> = {
   "preview.environmentDesc":
     "環境マップ：プロシージャルな空/スタジオ等のプリセットまたはカスタム HDR",
   "preview.envPresetThumbnail": "プリセットプレビュー",
+  "preview.envSource": "ソース",
+  "preview.envSourceHint":
+    "環境マップの供給元：プリセットはプログラム生成のライティング、空に追従はリアルタイムの空をベイク（空の変化が即座に反映）、カスタムはローカル HDR ファイルを読み込みます",
+  "preview.envSourcePreset": "プリセット",
+  "preview.envSourceSky": "空に追従",
+  "preview.envSourceCustom": "カスタム HDR",
   "preview.envIntensity": "環境強度",
   "preview.envHistogram": "輝度ヒストグラム",
   "preview.envPickHdr": "カスタム HDR",
@@ -1407,7 +1413,6 @@ export const ja: Record<string, string> = {
   "preview.skyDesc": "時間帯を制御できるプログラマティック大気散乱空",
   "preview.timeOfDay": "時間帯",
   "preview.cloudCoverage": "雲量",
-  "preview.environmentMapping": "環境マップ",
   "preview.lightingDesc": "三点布光 + スポットライト + 体積光コーン",
   "preview.keyLight": "キーライト",
   "preview.fillLight": "フィラーライト",

@@ -29,6 +29,7 @@ import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 // 对齐 P1 sun-beams.ts 范式（状态完全内聚、不反向依赖宿主）。
 import { customHdrThumbnail, drawEnvEquirect, luminanceHistogram } from "./env-pixels.ts";
 import { buildEnvironmentNodes } from "./environment-menu.ts";
+import type { EnvSource } from "./environment-migrations.ts";
 // ADR-292 D7：旧存档 envSource 迁移（与 ground-capability 同口径的可测纯函数，零 THREE/DOM 依赖）
 import { normalizeEnvLegacyState } from "./environment-migrations.ts";
 import type { EnvPreset, EnvPresetId } from "./environment-state.ts";
@@ -332,26 +333,32 @@ export class EnvironmentCapability implements SceneCapability {
     return tex;
   }
 
+  /**
+   * 自定义 HDR 通路取图。
+   *
+   * [ADR-292 D5 定案] **本方法不写 `envPreset`**——`envSource` 是通路唯一权威，
+   * `envPreset` 只承载「预设通路选哪张图」。原实现在无 HDR 缓存时把 envPreset 改写成
+   * `"studio"`，导致：来源显示「自定义 HDR」而 envPreset 是 studio（两键分裂，
+   * e2e 无从断言）；且用户手选的预设被静默吞掉。
+   *
+   * 现语义：无文件 → 记一次告警 + 返回 null（由 buildEnvironment 回落预设渲染），
+   * **键值一个都不动**。用户意图（envSource==="custom"）完整保留，加载文件后自动生效。
+   */
   private buildCustomHdrTex(): THREE.Texture | null {
-    if (envState.envPreset !== "custom") return null;
+    // 通路判定只看 envSource。兼容旧存档：只有 envPreset==="custom" 而无 envSource 键时
+    // 由 normalizeEnvLegacyState 迁移补写 envSource，故此处无需再兼容 preset 信号。
+    if (envState.envSource !== "custom") return null;
     if (this.customHdrTex) return this.customHdrTex;
     if (!this.customHdrWarnedMissing) {
       this.customHdrWarnedMissing = true;
       ringLog(
         "env",
-        "未加载 HDR 文件，已自动回退到「工作室」预设。请点击「选择 HDR 文件」加载 .hdr。",
+        "来源为「自定义 HDR」但尚未加载文件，暂以预设渲染。请点击「选择 HDR 文件」加载 .hdr。",
         "warn",
-        () => console.warn("[EnvironmentCapability] preset=custom 但无 HDR 缓存，回退 studio 预设"),
+        () =>
+          console.warn("[EnvironmentCapability] envSource=custom 但无 HDR 缓存，暂回落预设渲染"),
       );
     }
-    // 回退 studio：写 setEnvState 触发 callback build（isBuilding 守卫防递归）。
-    // [锐评 E-3] 来源纪律：回退是**程序化动作**，不是用户手改——原实现写 "manual"
-    // 会把 envPreset 的 lastWriteSource 打成 manual，此后 auto-atmosphere 氛围预设
-    // 写 envPreset 一律被 shouldOverwrite 拒绝（用户选 sunset，环境贴图却不跟着换）。
-    // force:true 语义同昼夜循环先例：程序化动作不得被守卫冻结。此处必须 force——
-    // 若用户曾手选过 studio（prev=manual），auto-model 写入会被守卫拒绝，
-    // envState.envPreset 将滞留 "custom" 而渲染已是 studio 贴图（真值源与画面撕裂）。
-    setEnvState({ envPreset: "studio" }, { source: "auto-model", force: true });
     return null;
   }
 
@@ -439,10 +446,8 @@ export class EnvironmentCapability implements SceneCapability {
         default:
           break; // "preset" → 下方 buildPresetEquirectTex
       }
-      // custom 预设下的兼容回落（旧存档 envSource 缺省时的历史语义）
-      if (!srcTex && envState.envSource !== "sky" && envState.envPreset === "custom") {
-        srcTex = this.buildCustomHdrTex();
-      }
+      // 回落预设：custom/sky 通路取不到图（无文件/无查询器/烘焙失败）时一律回落，
+      // 保证 scene.environment 始终有一张可用贴图（不出现「来源选了却没光」的黑场景）。
       if (!srcTex) {
         srcTex = this.buildPresetEquirectTex();
       }
@@ -511,6 +516,23 @@ export class EnvironmentCapability implements SceneCapability {
   refreshFromSkySource(): void {
     if (!this.isSkySourced()) return;
     this.buildEnvironment();
+  }
+
+  /** [ADR-292 D3] 当前供图来源（来源选择控件读值） */
+  getSource(): EnvSource {
+    return envState.envSource;
+  }
+
+  /**
+   * [ADR-292 D3] 切换供图来源。
+   *
+   * **只写 `envSource` 一个键**——通路选择与「预设选哪张图」是正交的两件事。
+   * 旧设计让本方法同时写 `envPreset:"custom"`，与 buildCustomHdrTex 的回退写
+   * `envPreset:"studio"` 互相打架，导致来源与预设分裂、e2e 无法断言单一真值。
+   * 现 `envPreset` 保留原值不动（切回预设通路时免丢用户此前选择）。
+   */
+  setSource(src: EnvSource): void {
+    setEnvState({ envSource: src }, { source: "manual" });
   }
 
   applyModelPreset(modelType: ModelType): void {
@@ -626,12 +648,14 @@ export class EnvironmentCapability implements SceneCapability {
 
     // 收集 envState 恢复值
     const partial: Partial<EnvState> = {};
+    /** custom 通路读回但无 HDR 缓存 → 需在最后统一回落到 preset（含 envSource） */
+    let customWithoutCache = false;
 
     if (typeof state.preset === "string") {
       const p = state.preset as EnvPresetId;
       if (p === "custom") {
         if (!this.customHdrTex) {
-          // 持久化读回 custom 但没缓存 → 静默回退 studio + 告警一次
+          // 持久化读回 custom 但没缓存 → 告警一次，实际回落留到下方统一裁决（见 customWithoutCache）
           if (!this.customHdrWarnedMissing) {
             this.customHdrWarnedMissing = true;
             ringLog(
@@ -644,9 +668,10 @@ export class EnvironmentCapability implements SceneCapability {
                 ),
             );
           }
-          partial.envPreset = "studio";
+          customWithoutCache = true;
         } else {
           partial.envPreset = "custom";
+          partial.envSource = "custom";
         }
       } else if (ENV_PRESETS[p as Exclude<EnvPresetId, "custom">]) {
         partial.envPreset = p;
@@ -662,6 +687,16 @@ export class EnvironmentCapability implements SceneCapability {
     // → 跳过，交由下方 buildEnvironment 按默认 "preset" 路径走。
     if (typeof state.envSource === "string")
       partial.envSource = state.envSource as EnvState["envSource"];
+
+    // [ADR-292 D5 收尾] custom 回退必须**最后**裁决，优先级高于上面的读回与迁移结果。
+    // 原因：HDR 文件内容不入 localStorage，所以任何存档里的 custom 通路跨会话都无图可用；
+    // 而 normalizeEnvLegacyState 会按 preset==="custom" 迁移出 envSource==="custom"，
+    // 若不在此处压掉，就会出现「来源显示自定义 HDR、实际渲染 studio」的两键分裂。
+    // 放在读回之后 = 让「无缓存」这一运行时事实成为最终裁决者。
+    if (customWithoutCache) {
+      partial.envPreset = "studio";
+      partial.envSource = "preset";
+    }
 
     if (Object.keys(partial).length > 0) {
       // [锐评 E-2 / D1] 存档恢复是**程序化动作**，非用户手改——与 fog/ground loadState 同口径：

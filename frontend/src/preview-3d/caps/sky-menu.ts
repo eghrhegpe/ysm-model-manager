@@ -106,15 +106,9 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
   return [
     skyEnabledNode(cap),
     skyTimelineControlsNode(cap),
-    {
-      id: "sky-env",
-      kind: "toggle",
-      labelKey: "preview.environmentMapping",
-      control: {
-        get: () => cap.isEnvironmentEnabled(),
-        set: (v) => cap.setEnvironmentEnabled(v as boolean),
-      },
-    },
+    // [ADR-292 D4] 原「环境贴图」toggle（sky-env）已删除：它与环境面板的总开关互不知晓、
+    // 后写者赢，UI 上两个开关都「开」却只有一个生效。scene.environment 的供图者现在由
+    // 环境面板的「来源」单选统一表达（选「跟随天空」即旧 toggle=开的效果）。
     {
       id: "cap-group-sky-advanced",
       kind: "folder",

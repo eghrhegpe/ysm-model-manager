@@ -24,12 +24,40 @@ import type {
 } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
+import type { EnvSource } from "./environment-migrations.ts";
 import type { EnvPresetId } from "./environment-state.ts";
 import { ENV_PRESETS } from "./environment-state.ts";
 
 const ENV_GROUP_PRESET: LocaleKey = "preview.envGroupPreset";
 const ENV_GROUP_BACKGROUND: LocaleKey = "preview.envGroupBackground";
 const ENV_GROUP_CUSTOM_HDR: LocaleKey = "preview.envGroupCustomHdr";
+
+/**
+ * [ADR-292 D3/D7] 环境贴图「来源」选择——scene.environment 唯一槽位的供图者。
+ *
+ * 收口前该槽位有两个写者（天空面板的「环境贴图」开关 + 本面板），互不知晓、后写者赢，
+ * UI 显示两个开关都「开」却只有一个生效。收口后写者唯一 = 本 cap，来源由此单选表达。
+ *
+ * ⚠️ 与「预设」folder 的分工：来源选**走哪条取图通路**（预设 Canvas / 跟随天空 / 自定义 HDR），
+ * 预设选**具体哪张图**。故本节点置于 preset folder **之外**（顶层），避免被误读为预设的子选项。
+ */
+function envSourceNode(cap: EnvironmentCapability): PreviewMenuNode {
+  return {
+    id: "env-source",
+    kind: "select",
+    labelKey: "preview.envSource",
+    hintKey: "preview.envSourceHint",
+    control: {
+      options: [
+        { value: "preset", labelKey: "preview.envSourcePreset" },
+        { value: "sky", labelKey: "preview.envSourceSky" },
+        { value: "custom", labelKey: "preview.envSourceCustom" },
+      ],
+      get: () => cap.getSource(),
+      set: (v) => cap.setSource(v as EnvSource),
+    },
+  };
+}
 
 /** ENV_PRESETS 预设 id → i18n 键（与 env.ts 快捷预设 select 同源复用 presetQuick*，
  *  使同一预设在一级快捷选与 cap 缩略图两处文案恒等）。 */
@@ -220,6 +248,8 @@ export function buildEnvironmentNodes(cap: EnvironmentCapability): PreviewMenuNo
         set: (v) => cap.setEnabled(v as boolean),
       },
     },
+    // [ADR-292 D3] 来源选择紧随总开关（决定「谁供图」），再往下才是各来源的参数
+    envSourceNode(cap),
     envBuildPresetFolder(cap),
     envBuildBackgroundFolder(cap),
     envBuildCustomHdrFolder(cap),

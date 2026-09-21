@@ -906,6 +906,46 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     expect(scene.environment).toBe(prev);
   });
 
+  // ===== ADR-292 批次二：D1 所有权交接（env 接管「跟随天空」时 sky 不再自持装载）=====
+  describe("ADR-292 批次二 — sky 让渡 scene.environment 装载权", () => {
+    it("env 声明接管（isSkySourced=true）→ 天空参数变化时 sky **不**写槽位，转交 env 刷新", () => {
+      const scene = new THREE.Scene();
+      const caps = {
+        getById: (id: string) =>
+          id === "environment" ? { isSkySourced: () => true, refreshFromSkySource: vi.fn() } : undefined,
+      };
+      const cap = new SkyCapability({
+        scene,
+        renderer: makeFakeRenderer(),
+        caps: caps as never,
+      });
+      cap.apply();
+      const slotBefore = scene.environment;
+      // 天空参数变化（触发 maybeRegenerateEnvironment 路径）
+      setEnvState({ skyTimeOfDay: 15, skyForceEnv: true }, { source: "manual", force: true });
+      // env 接管时 sky 不得再抢写（槽位保持 env 装载的内容）
+      expect(scene.environment).toBe(slotBefore);
+    });
+
+    it("env 未接管 → sky 保留自持装载（既有行为不回归）", () => {
+      const scene = new THREE.Scene();
+      const caps = {
+        getById: (id: string) =>
+          id === "environment"
+            ? { isSkySourced: () => false, refreshFromSkySource: vi.fn() }
+            : undefined,
+      };
+      const cap = new SkyCapability({
+        scene,
+        renderer: makeFakeRenderer(),
+        caps: caps as never,
+      });
+      cap.apply();
+      setEnvState({ skyTimeOfDay: 15, skyForceEnv: true }, { source: "manual", force: true });
+      expect(scene.environment).not.toBeNull(); // sky 自持路径照常装载
+    });
+  });
+
   it("setSun 写 uniforms 并在 enabled+environment 下重建环境", () => {
     const scene = new THREE.Scene();
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });

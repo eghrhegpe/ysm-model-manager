@@ -266,7 +266,7 @@ export class SkyCapability implements SceneCapability {
           this.writeUniforms(this.sky);
           this.writeUniforms(this.envSky);
           if (state.skyEnvironment && state.skyForceEnv) {
-            this.regenerateEnvironment();
+            this.requestEnvironmentRefresh(true);
           }
         }
 
@@ -274,7 +274,7 @@ export class SkyCapability implements SceneCapability {
         this.applyUniform(changed, "skyCloudCoverage", "cloudCoverage", state.skyCloudCoverage);
         if (changed.has("skyCloudCoverage") && changed.has("skyForceEnv") && state.skyEnvironment) {
           // 云量 + forceEnv 同变 → 重建 IBL（setCloudCoverage(regenerate=true) 语义）
-          this.regenerateEnvironment();
+          this.requestEnvironmentRefresh(true);
         }
         this.applyUniform(changed, "skyTurbidity", "turbidity", state.skyTurbidity);
         this.applyUniform(changed, "skyRayleigh", "rayleigh", state.skyRayleigh);
@@ -350,17 +350,31 @@ export class SkyCapability implements SceneCapability {
     if (esu !== undefined) esu.value = value;
   }
 
+  /**
+   * [ADR-292 D1/D2] 请求环境贴图刷新——**不再自行写 scene.environment**。
+   *
+   * 收口前：sky 直接 `regenerateEnvironment()` 写槽位，env cap 也写，后写者赢（竞争根因）。
+   * 收口后：sky 只在**自己没有装载权**时把请求转交 env（envSource="sky" 时 env 才是装载者）；
+   * 若 env 未接管（旧路径 / 无查询器 / envSource≠"sky"），sky 保留自持装载以维持既有行为。
+   *
+   * @param force 跳过阈值门控强制重建
+   */
+  private requestEnvironmentRefresh(force = false): void {
+    if (!envState.skyEnvironment) return;
+    const env = getTypedCap(this.caps, "environment");
+    // env 接管了「跟随天空」→ 由它装载（它会在自己的 buildEnvironment 里回调本 cap 取图）
+    if (env?.isSkySourced?.()) {
+      env.refreshFromSkySource?.();
+      return;
+    }
+    // 未接管：sky 自持路径（既有行为保持不变）
+    this.regenerateEnvironment(force);
+  }
+
   /** PMREM 重建门控：forceEnv=true 无条件重建；forceEnv=false 按太阳高度角阈值 */
   private maybeRegenerateEnvironment(state: EnvState): void {
     if (!state.skyEnvironment) return;
-    if (state.skyForceEnv) {
-      this.regenerateEnvironment();
-    } else {
-      const el = this.elevation;
-      const dirty =
-        Math.abs(el - this.lastPmremElevation) >= SkyCapability.PMREM_ELEVATION_THRESHOLD;
-      if (dirty) this.regenerateEnvironment();
-    }
+    this.requestEnvironmentRefresh(state.skyForceEnv);
   }
 
   /** 确保 PMREMGenerator 已创建（延迟到首次需要时） */
@@ -445,12 +459,23 @@ export class SkyCapability implements SceneCapability {
   /**
    * 烘焙 IBL 纹理（**纯生产，不碰 scene.environment**）。
    *
-   * [ADR-292 D2] 从 `regenerateEnvironment` 拆出的「只烤不装」半边：slots 写入归
+   * [ADR-292 D2] 从 `regenerateEnvironment` 拆出的「只烤不装」半边：槽位写入归
    * {@link regenerateEnvironment}（sky 自持路径）或 EnvironmentCapability（envSource="sky" 路径）。
    *
+   * @param force 跳过「太阳高度角变化阈值」门控强制烘焙。
+   *   阈值门控存在的理由：昼夜循环每帧推进 timeOfDay，无门控会**每帧全量 PMREM**
+   *   （GPU 熔炉，见 sky-capability.test.ts 的云量回归）。故连续动画走阈值，
+   *   离散的结构性变更（来源/预设切换）显式 force。
    * @returns 烘焙是否成功（成功则 this.renderTarget 可读）
    */
-  private bakeEnvironment(): boolean {
+  private bakeEnvironment(force = false): boolean {
+    if (!force) {
+      // 阈值门控：太阳高度角未显著变化时不重建（IBL 反射差异肉眼不可辨）
+      const dirty =
+        Math.abs(this.elevation - this.lastPmremElevation) >=
+        SkyCapability.PMREM_ELEVATION_THRESHOLD;
+      if (this.renderTarget && !dirty) return true;
+    }
     // 生成环境贴图时隐藏太阳盘，避免光斑伪影（Sky 文档建议）
     this.envSky.material.uniforms.showSunDisc.value = 0;
     try {
@@ -470,9 +495,14 @@ export class SkyCapability implements SceneCapability {
     }
   }
 
-  /** 烘焙 + 装入 scene.environment（sky 自持路径；ADR-292 后 envSource="sky" 走 bakeEnvironmentTexture） */
-  private regenerateEnvironment(): void {
-    this.bakeEnvironment();
+  /**
+   * 烘焙 + 装入 scene.environment（**sky 自持路径的唯一入口**）。
+   *
+   * [ADR-292] envSource="sky" 时改用 {@link bakeEnvironmentTexture}：由 env 装载，
+   * sky 不碰槽位（D1 所有权收口）。
+   */
+  private regenerateEnvironment(force = false): void {
+    this.bakeEnvironment(force);
     // bakeEnvironment 失败时已把 renderTarget 置 null，故此处读值天然带 null 语义
     this.scene.environment = this.renderTarget?.texture ?? null;
   }
@@ -694,10 +724,11 @@ export class SkyCapability implements SceneCapability {
    * 返回的纹理归**本能力**所有（由 this.renderTarget 持有），生命周期随本 cap 的
    * dispose/重建；调用方**不得** dispose 它，也不得跨重建长期持有。
    *
+   * @param opts.force 跳过阈值门控强制烘焙（结构性变更用；连续动画应省略）
    * @returns PMREM 预滤波后的环境纹理；烘焙失败时 null（调用方应安全降级）
    */
-  bakeEnvironmentTexture(): THREE.Texture | null {
-    return this.bakeEnvironment() ? (this.renderTarget?.texture ?? null) : null;
+  bakeEnvironmentTexture(opts?: { force?: boolean }): THREE.Texture | null {
+    return this.bakeEnvironment(opts?.force ?? false) ? (this.renderTarget?.texture ?? null) : null;
   }
 
   /** 当前云量（ADR-085 S2：菜单初始化惰性读，消灭硬编码 "0%"） */

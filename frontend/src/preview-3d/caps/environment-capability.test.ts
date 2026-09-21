@@ -1100,4 +1100,53 @@ describe("EnvironmentCapability — ADR-292 envSource 取图通道（批次一�
     setEnvState({ envSource: "sky" }, { source: "manual", force: true });
     expect(sky.bakeEnvironmentTexture.mock.calls.length).toBeGreaterThan(before);
   });
+
+  // ===== 批次二：D1 所有权交接（sky 不再自持装载，改由 env 装载）=====
+  describe("批次二 — isSkySourced / refreshFromSkySource 交接语义", () => {
+    it("envSource=sky 且 enabled → isSkySourced() 为真（env 接管装载）", () => {
+      const cap = newCap();
+      setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+      expect(cap.isSkySourced()).toBe(true);
+    });
+
+    it("envSource≠sky → isSkySourced() 为假（sky 自持装载，既有行为）", () => {
+      const cap = newCap();
+      setEnvState({ envSource: "preset" }, { source: "manual", force: true });
+      expect(cap.isSkySourced()).toBe(false);
+      setEnvState({ envSource: "custom" }, { source: "manual", force: true });
+      expect(cap.isSkySourced()).toBe(false);
+    });
+
+    it("能力关掉时 isSkySourced() 为假（关掉即不接管，槽位还原 prev）", () => {
+      const cap = newCap({ enabled: false });
+      setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+      expect(cap.isSkySourced()).toBe(false);
+    });
+
+    it("refreshFromSkySource：接管时重新取图（sky 参数变化 → env 装载新图）", () => {
+      const sky = makeFakeSkyCap();
+      const { cap } = newCapWithSky(sky);
+      setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+      const before = sky.bakeEnvironmentTexture.mock.calls.length;
+      cap.refreshFromSkySource();
+      expect(sky.bakeEnvironmentTexture.mock.calls.length).toBeGreaterThan(before);
+    });
+
+    it("refreshFromSkySource：未接管时**不**取图（防资源浪费与越权装载）", () => {
+      const sky = makeFakeSkyCap();
+      const { cap } = newCapWithSky(sky);
+      setEnvState({ envSource: "preset" }, { source: "manual", force: true });
+      const before = sky.bakeEnvironmentTexture.mock.calls.length;
+      cap.refreshFromSkySource();
+      expect(sky.bakeEnvironmentTexture.mock.calls.length).toBe(before);
+    });
+
+    it("取图时传 force=true（结构性变更不得被 sky 阈值门控跳过）", () => {
+      const sky = makeFakeSkyCap();
+      const { cap } = newCapWithSky(sky);
+      setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+      cap.refreshFromSkySource();
+      expect(sky.bakeEnvironmentTexture).toHaveBeenCalledWith({ force: true });
+    });
+  });
 });

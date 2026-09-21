@@ -403,7 +403,10 @@ export class EnvironmentCapability implements SceneCapability {
         this.skySourcedTex = null;
         return null;
       }
-      const tex = sky.bakeEnvironmentTexture() ?? null;
+      // force：env 侧结构性变更（来源/预设/分辨率切换）是离散动作，必须拿到当前帧的图，
+      // 不能被 sky 的「太阳高度角变化阈值」门控跳过（否则切到「跟随天空」后看到的是旧图）。
+      // 连续动画（昼夜循环）不经此路径，故不会退化成每帧全量烘焙。
+      const tex = sky.bakeEnvironmentTexture({ force: true }) ?? null;
       this.skySourcedTex = tex;
       return tex;
     } catch (e) {
@@ -491,6 +494,23 @@ export class EnvironmentCapability implements SceneCapability {
 
   isEnabled(): boolean {
     return this.enabled;
+  }
+
+  /**
+   * [ADR-292 D1] 本 cap 当前是否为 `scene.environment` 的「跟随天空」装载者。
+   * sky 用它决定「自己装载」还是「转交 env」——避免两个 cap 争抢槽位。
+   */
+  isSkySourced(): boolean {
+    return this.enabled && envState.envSource === "sky";
+  }
+
+  /**
+   * [ADR-292 D1] 天空参数变化后由 sky 调用：重新取图并装载。
+   * 仅在 {@link isSkySourced} 为真时有意义（sky 侧已判定）。
+   */
+  refreshFromSkySource(): void {
+    if (!this.isSkySourced()) return;
+    this.buildEnvironment();
   }
 
   applyModelPreset(modelType: ModelType): void {

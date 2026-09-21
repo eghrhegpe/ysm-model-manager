@@ -224,13 +224,38 @@ env cap callback (envSource / envPreset / envResolution / envUseAsBackground 变
 node 可测，对齐 `ground-migrations.ts` 先例；21 例测试覆盖三判据 + 类型异常容错 + 幂等/无 mutate。
 
 **仍未定**：
-- **`skyForceEnv` 处置**：默认 `true`，语义「天空参数变化时重建 IBL」。收口后重建由 env 发起，
-  建议**保留为 env 的输入信号**（表达「需要刷新」是正当需求，只是执行者换人），除非一并简化。
 - **`custom` 缓存判定落点**：`migrateEnvSource` 只看 `preset === "custom"`；
   「HDR 缓存是否仍在」由 cap 侧在 `loadState` 结合，与既有 custom 无缓存回退 studio 行为一致。
 - **`prevEnvironment` 语义**：三写点收敛后，构造期快照/失败回滚目标需重新定义。
 - **`envIntensity` 跨来源一致性**：`applyEnvIntensity` 作用于 `[this.scene]`，
   来源切换（预设 Canvas ↔ 真天空烘焙，分辨率/色域差异）后强度手感是否一致，需视觉验证。
+
+**已定：`skyForceEnv` 的处置（批次二，2026-09-21）**
+
+该键原是**两个职责耦合在一个布尔**里：
+
+| 职责 | 用途 | 收口后归属 |
+|------|------|-----------|
+| A. 重建触发器 | `maybeRegenerateEnvironment` 读它决定「无条件重建」vs「按高度角阈值」 | **env**（装载者） |
+| B. 阈值门控旁路 | `skyForceEnv=false` 时按 `PMREM_ELEVATION_THRESHOLD` 判断（防昼夜循环每帧烘焙的 GPU 熔炉） | **sky**（生产者；阈值是烘焙成本问题） |
+
+收口后 A/B 分属两个 cap，但必须协同——原设计把这份协议**塞进了状态层**（一个跨 cap 的 envState 键）。
+批次一已建立更好的通道（`bakeEnvironmentTexture()` 直接调用）。故：
+
+> **决策 D8**：`skyForceEnv` **保留为 envState 键**（不退役）——A 职责改由 env 侧
+> 「直接调用 `bakeEnvironmentTexture({ force })`」表达；B 职责下沉为 sky 的
+> `bakeEnvironment(force)` 私有门控。键仍承载**天空内部的**动画/阈值意图，
+> 但**不再承担跨 cap 契约**。
+
+> **决策 D9（强制 vs 省电的取舍）**：`bakeEnvironmentTexture(opts?: { force?: boolean })`——
+> env 的**结构性变更**（来源/预设/分辨率切换）传 `force: true`（离散动作，必须拿到当前帧的图，
+> 否则切到「跟随天空」后看到旧图）；**连续动画**（昼夜循环）不传，走阈值门控，
+> 保留防 GPU 熔炉的历史防线（见 `sky-capability.test.ts` 云量回归用例）。
+
+> **决策 D10（装载权让渡）**：`SkyCapability.requestEnvironmentRefresh()` 取代原先的直接
+> `regenerateEnvironment()` 调用——env 声明接管（`isSkySourced()` 为真）时，sky **转交**
+> `env.refreshFromSkySource()` 而**不写槽位**；未接管时保留 sky 自持装载（既有行为不回归）。
+> 这使「谁写槽位」在运行期也是**单一**的，而非仅靠 dispose 期守卫兜底。
 
 ### 3.4 ADR 起草期间的事实更正（留档）
 

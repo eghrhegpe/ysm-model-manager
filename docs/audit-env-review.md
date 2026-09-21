@@ -704,6 +704,8 @@ TDD 流程：先写回归测试 → 对**旧实现**实测（4 例全红，证�
   独占，sky IBL 降为 env 面板「来源」三选一中的一项，删除天空面板的重复开关。
   根因是「一个功能被劈成两半放在两处」而非两个功能——详见
   `docs/adr/ADR-292-scene-environment-sky-ibl-env.md`。
+  **迁移语义已拍板**（保画面不变：`env关切+sky开`→`sky`；`custom`→`custom`；其余→`preset`），
+  纯函数已落地 `caps/environment-migrations.ts`（21 例测试）。
 - ~~G-1~~ 撤销（误判，见 §15）
 - ~~S2-4~~ 已修（见下）
 

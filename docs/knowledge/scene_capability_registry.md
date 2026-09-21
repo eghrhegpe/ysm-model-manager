@@ -48,10 +48,12 @@ auto_fields:
     - ENV_PRESETS
     - EnvironmentCapability
     - EnvironmentParams
+    - EnvMigrationInput
     - EnvPlacement
     - EnvPreset
     - EnvPresetId
     - EnvSectionId
+    - EnvSource
     - fbm2
     - fcMasterToggleNode
     - FieldKind
@@ -117,8 +119,10 @@ auto_fields:
     - MAX_MODELS
     - maxSeamDiscontinuity
     - maxWrapSeamDiscontinuity
+    - migrateEnvSource
     - migrateGroundMatSource
     - ModelEntry
+    - normalizeEnvLegacyState
     - normalizeGroundLegacyState
     - oneOf
     - OVERLAY_TEX_SIZE

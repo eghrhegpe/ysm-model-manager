@@ -46,11 +46,27 @@ this.envSky  ← 不挂 scene，仅塞进 this.envScene，专供 PMREM 烘焙成
 | UI 开关 | 所属面板 | 实际语义 |
 |---------|---------|---------|
 | `skyEnvironment`（文案「环境贴图」） | 天空（基础卡） | 把**程序化天空**烤成 IBL 写入 `scene.environment` |
-| `envEnabled` + `envPreset`（文案「环境」+ 预设缩略图/HDR） | 环境（氛围卡） | 把**程序化 Canvas 预设或自定义 HDR** 烤成 IBL 写入 `scene.environment` |
+| `env-enabled` + `envPreset`（文案「环境」+ 预设缩略图/HDR） | 环境（氛围卡） | 把**程序化 Canvas 预设或自定义 HDR** 烤成 IBL 写入 `scene.environment` |
 
 两者**是同一件事（为 `scene.environment` 供图）的两个数据源**，却被呈现为用户可见的两个独立开关，且都能开、互相静默覆盖。类比：同一个相框，一个按钮说「放手机拍的照片」，另一个说「放相册里的照片」，两个都能按，后按的赢。
 
 用户视角的故障表现：开了 HDR 环境贴图，调一下太阳角度，HDR 被天空 IBL 顶掉；或反之。**UI 在撒谎——它展示的两个开关都处于「开」，但只有一个在生效。**
+
+### 1.2b 关键发现：「跟随天空」已是既有的 envPreset 值，但没兑现
+
+`envPreset` 的**默认值就是 `"sky"`**（`env-state-schema.ts:308`），且该预设的 label 是
+**「天空（跟随 SkyCapability）」**（`environment-state.ts:31-33`）。
+
+即：**「跟随天空」在概念上早已是 env 的一个数据源**，ADR-292 想立的「来源」三元并非新发明——
+现状是**名字对了、实现没跟上**：
+
+- `ENV_PRESETS.sky` 只定义了一组静态三色渐变（`zenith/horizon/nadir`），
+  经 `drawEnvEquirect` 画成 equirect 贴图（`environment-capability.ts:293-308`）；
+- label 承诺「跟随 SkyCapability」，但**没有任何代码去向 SkyCapability 取图**——
+  它是**仿**天空，不是**跟随**天空。
+
+因此本 ADR 的实质是**让已有的 `sky` 预设兑现其 label 承诺**，而非新增一套并列概念。
+这大幅降低了复杂度与迁移面（见 §3.3）。
 
 ### 1.3 文案层面同样撞名
 
@@ -108,7 +124,19 @@ i18n 现状（`locales/zh-CN.ts`）：
 
 > **决策 D5**：新增 `envSource: "preset" | "sky" | "custom"`（`group: "environment"`），作为槽位数据源的**单一事实源**。原 `skyEnvironment` 键退役。
 
-存档兼容（`skyEnvironment` 已由 `sky-capability.saveState` 落盘，见 `sky-capability.ts:725`）→ 见 §3.3 迁移。
+存档兼容（`skyEnvironment` 已由 `sky-capability.saveState` 落盘为 **sky 槽的 `environment` 键**，见 `sky-capability.ts:725`；⚠️ 非同名键，易错）→ 见 §3.3 迁移。
+
+> **决策 D7（方案形态，2026-09-21 拍板）**：**兑现既有 `envPreset="sky"` 的 label 承诺**，
+> 而非新造并列概念。`"sky"` 已是 `envPreset` 的合法值**且为默认值**，label 已写
+> 「跟随 SkyCapability」但实际只画静态渐变（§1.2b）。故：
+> - `"sky"` 保持为 `envPreset` 的**一个值**（不拆出枚举、不做正交第三轴）；
+> - env cap 在 `envSource === "sky"` 时**真正调用** SkyCapability 烘焙取图，
+>   不再走 `drawEnvEquirect` 静态渐变路径；
+> - `envSource` 的**唯一职责**是表达「哪个数据源在供图」——解决
+>   「`preset` 值为 `"sky"` 但用户其实不要天空 IBL」与「自定义 HDR」的区分，
+>   而非重复表达 preset 已有信息。
+>
+> 理由：概念最少、复用最多，且**不触发 `envPreset` 枚举迁移**（无需改写历史存档的 preset 值）。
 
 ### 2.3 UI 归属与 ADR-268 一致性
 
@@ -157,12 +185,64 @@ env cap callback (envSource / envPreset / envResolution / envUseAsBackground 变
 - **天空面板失去一个控件**（功能位移，非功能删除）：习惯在天空面板开关 IBL 的用户需要重新建立心智模型。
 - **`envSource` 与 `envPreset` 存在语义耦合**：来源为 `"sky"` 时 `envPreset` 无意义但不被清除，需明确「哪个键在何种来源下有效」并加守卫测试，否则成为新的事实源分裂点。（建议 `envSource !== "preset"` 时保留 `envPreset` 原值以备切回，渲染分支忽略之。）
 
-### 3.3 已知遗留 / 待决
+### 3.3 存档迁移语义（已拍板 2026-09-21）
 
-- **存档迁移策略待定**：`skyEnvironment: false` 应迁移为 `envSource = "preset"`（用户当时明确不要天空 IBL）；`skyEnvironment: true` 迁移为什么？若此时 `envPreset` 非默认，语义上天空 IBL 曾**覆盖**过 preset，严格还原应取 `"sky"`。需一并确认 `skyForceEnv` 等关联键的处置。
-- **迁移落点待定**：本仓已有 `ground-migrations.ts` 先例（前缀化迁移 + 判据），sky/env 是否共用同类纯函数模块待定。
-- **`prevEnvironment` 语义**：三个写点收敛后，构造期快照/失败回滚的目标需要重新定义（可能仍是「接管前的场景值」）。
-- **`envIntensity` 的跨来源一致性**：`applyEnvIntensity` 作用于 `[this.scene]`，来源切换（如 sky↔preset 分辨率/色域差异）后强度手感是否一致，需视觉验证。
+**判据总纲 = 保画面不变。** 旧世界里两 cap 同写 `scene.environment`，env cap 构造在后
+（基础卡 sky → 氛围卡 env）且 `loadState` 末尾显式 `buildEnvironment()`（`environment-capability.ts:558`），
+故 **env 后写胜出**——旧存档的可见画面由 env 侧决定，**除非 env 功能被整体关掉**。
+
+三条判据，优先级 ① > ② > ③，互斥且穷尽：
+
+| # | 旧存档条件 | 迁移为 | 依据 |
+|---|-----------|--------|------|
+| ① | env 总开关 **关** + sky IBL **开** | `"sky"` | **唯一强意图信号**：用户关掉了整个环境贴图功能、却留着天空 IBL。此组合下旧世界画面 = 天空烘的 IBL，迁 `"preset"` 会**丢画面**。 |
+| ② | `preset === "custom"` | `"custom"` | 用户显式加载过 HDR，画面 = HDR。HDR 二进制不入存档，「缓存是否仍在」由 cap 侧判定（纯函数只看 preset 字符串）。 |
+| ③ | 其余（含默认路径） | `"preset"` | 见下「默认路径为何不迁 sky」 |
+
+**默认路径为何不迁 `"sky"`（关键决策）**：
+存档 `preset: "sky"`（默认值）+ `environment: true`（默认值）+ `enabled: true`（默认值）
+= **用户从未改过任何开关**。旧世界 env 后写胜出 ⇒ 画面是 env 的 `sky` 预设（静态渐变仿天空）。
+若把「没关默认开关」解读成「我要天空 IBL」，会把**所有默认用户**迁进 `"sky"`，
+且画面从静态渐变突变为真天空烘焙——**迁移引入回归**。故取 `"preset"`。
+
+**两个数据源的存档位置**（分属两个 localStorage 槽，迁移需读齐）：
+
+```jsonc
+// localStorage["preview3d.sky"]          ← sky cap 读写
+{ "environment": true, ... }             // sky IBL 开关（saveState:725 ↔ loadState:754）
+
+// localStorage["preview3d.environment"]  ← env cap 读写
+{ "enabled": true, "preset": "sky", ... } // enabled=总开关（cap 级 this.enabled）
+```
+
+**落点**：`envSource` 归属 env ⇒ 由 env 侧决定（决策 D7）。env 需要「sky 想不想要 IBL」
+这一个布尔，经既有 `caps` 查询器向 sky 问一句即可（`getTypedCap(this.caps,"sky")` 先例），
+**不新增通用协议、不破坏所有权收口**。
+
+**已落地**：迁移纯函数 `frontend/src/preview-3d/caps/environment-migrations.ts`
+（`migrateEnvSource` / `normalizeEnvLegacyState`）——零 THREE / 零 DOM / 零 envState，
+node 可测，对齐 `ground-migrations.ts` 先例；21 例测试覆盖三判据 + 类型异常容错 + 幂等/无 mutate。
+
+**仍未定**：
+- **`skyForceEnv` 处置**：默认 `true`，语义「天空参数变化时重建 IBL」。收口后重建由 env 发起，
+  建议**保留为 env 的输入信号**（表达「需要刷新」是正当需求，只是执行者换人），除非一并简化。
+- **`custom` 缓存判定落点**：`migrateEnvSource` 只看 `preset === "custom"`；
+  「HDR 缓存是否仍在」由 cap 侧在 `loadState` 结合，与既有 custom 无缓存回退 studio 行为一致。
+- **`prevEnvironment` 语义**：三写点收敛后，构造期快照/失败回滚目标需重新定义。
+- **`envIntensity` 跨来源一致性**：`applyEnvIntensity` 作用于 `[this.scene]`，
+  来源切换（预设 Canvas ↔ 真天空烘焙，分辨率/色域差异）后强度手感是否一致，需视觉验证。
+
+### 3.4 ADR 起草期间的事实更正（留档）
+
+起草本 ADR 时曾据记忆写出两个错误事实，已在核验后更正，留档以防复现：
+
+1. **`envEnabled` 键不存在**：env 面板的「环境」toggle 实为 cap 级 `this.enabled`
+   （UI 节点 `env-enabled` → `cap.setEnabled`），**并非 envState 键**。grep `envEnabled` 零命中。
+2. **`envPreset` 默认值是 `"sky"` 而非 `"studio"`**（`env-state-schema.ts:308`）；
+   `"studio"` 只是 custom 无缓存时的**回退目标**（`environment-capability.ts:329`）。
+   此更正直接改变了迁移推理（见 §3.3 默认路径），并催生了 §1.2b 的「既有 sky 预设」发现。
+
+教训：ADR 的背景/事实陈述必须逐条以当前源码树核验，不得凭前序会话记忆落笔。
 
 ## 4. 数据溯源
 
@@ -173,10 +253,18 @@ env cap callback (envSource / envPreset / envResolution / envUseAsBackground 变
 | `sky-capability.ts:491-498` `setEnvironmentEnabled` | `skyEnvironment` 语义 + `getTypedCap(this.caps,"light")` 跨 cap 通知先例 |
 | `environment-capability.ts:143-159` callback | env 结构性键集（envPreset/envResolution/envUseAsBackground） |
 | `environment-capability.ts:341` `pmremToSceneEnv` | env 的唯一正常写槽点 |
-| `env-state-schema.ts:92` `skyEnvironment` | 待退役键 |
-| `sky-capability.ts:725` `saveState` | `skyEnvironment` 已落盘 ⇒ 迁移必要性的依据 |
+| `env-state-schema.ts:92` `skyEnvironment` | 待退役键（默认 `true` —— 开箱即两个写者都活着，竞争在默认路径上） |
+| `sky-capability.ts:725` `saveState` / `:754` `loadState` | `skyEnvironment` 落盘键名为 **`environment`**（sky 槽）⇒ 迁移必要性依据 |
+| `env-state-schema.ts:308` `envPreset` 默认值 | **`"sky"`**（非 `"studio"`）——§1.2b 发现的依据 |
+| `environment-state.ts:31-33` `ENV_PRESETS.sky` | label「天空（跟随 SkyCapability）」但仅静态三色渐变 ⇒ 未兑现承诺 |
+| `environment-capability.ts:293-308` `buildPresetEquirectTex` | sky 预设走 `drawEnvEquirect` 静态路径（待改真调用） |
+| `environment-capability.ts:495-508` `saveState` / `:510-559` `loadState` | env 槽键形（`enabled` 为 cap 级总开关，非 envState 键） |
+| `environment-capability.ts:558` `buildEnvironment()` | loadState 末尾显式 build ⇒ **env 后写胜出**是迁移判据总纲的依据 |
+| `environment-capability.ts:319` `envUseAsBackground` 默认 `false` | 与 `skyEnvironment` 默认 `true` 对比 |
+| `environment-migrations.ts`（本次新增） | 迁移纯函数落地 + 21 例测试 |
 | `locales/zh-CN.ts:1372 / 1198-1199` | 文案撞名证据 |
-| `scene-capability.ts:42-81` `SceneCapabilityLookup` / `getTypedCap` | 跨 cap 协调的合法通道 |
+| `scene-capability.ts:42-81` `SceneCapabilityLookup` / `getTypedCap` | 跨 cap 协调的合法通道（D7 落点依据） |
 | ADR-268（环境面板插件式归属）、ADR-195（cap 直产节点）、ADR-196（统一状态层） | 归属与 UI 机制的既有立法 |
+| `ground-migrations.ts` | 迁移纯函数下沉的先例（零 THREE / node 可测 / 幂等无 mutate） |
 
 <!-- 文件名: scene-environment-sky-ibl-env.md → 实际文件 ADR-292-scene-environment-sky-ibl-env.md -->

@@ -238,10 +238,12 @@ auto_fields:
     - EnvCallback
     - EnvironmentCapability
     - EnvironmentParams
+    - EnvMigrationInput
     - EnvPlacement
     - EnvPreset
     - EnvPresetId
     - EnvSectionId
+    - EnvSource
     - envState
     - EnvState
     - EnvStateKey
@@ -486,6 +488,7 @@ auto_fields:
     - mergeStatsMenuItems
     - MeshData
     - MeshFragment
+    - migrateEnvSource
     - migrateGroundMatSource
     - MIPMAP_CHAIN_FACTOR
     - MMD_SEMANTIC_CANDIDATES
@@ -526,6 +529,7 @@ auto_fields:
     - multiModelSelectNode
     - MultiModelSelectOpts
     - nodeControlToView
+    - normalizeEnvLegacyState
     - normalizeFbxScale
     - normalizeGroundLegacyState
     - NumericRange

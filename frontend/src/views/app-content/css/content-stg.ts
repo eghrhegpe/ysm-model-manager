@@ -148,7 +148,7 @@ export const contentStgCSS: string = `
 .settings-group:has(+ .section-title) { margin-bottom: 0; }
 .setting-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surf); border-radius:var(--radius-md); margin-bottom:4px; font-size:var(--fs-md); animation:fadeSlideUp var(--tr-enter) both; }
 .setting-row .label { color:var(--txt); }
-.setting-row .value { color:var(--muted); }
+.setting-row .value { color:var(--txt); } /* 值 = 正文（与 .td-camspeed-val 同口径）；.meta 仍 muted */
 
 /* ===== 设置页 tab 按钮（从 content-repo.ts 拆出，设置页资产不归仓库域托管） ===== */
 /* 本地化 keyframe：shadow 内引用全局 fadeSlideDown 不生效（keyframes 不穿 shadow），故本地定义 stgTabIn */

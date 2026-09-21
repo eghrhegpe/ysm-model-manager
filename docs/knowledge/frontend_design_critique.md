@@ -625,7 +625,12 @@ invariant_anchors:
   - **同批清零 29 处 innerHTML 模板裸插值**（全部改代码、零 `r8-allow` 豁免）：外部数据（MC 路径、`.litematic` 的 `meta.version`/`minecraftDataVersion`）走 `esc`；数字走 `.toLocaleString()`；预构建 HTML 局部按命名约定改名（`extra`→`extraHtml`、`items`→`itemsHtml`、`overflow`→`overflowHtml`、`detail`→`detailHtml`、`icon`→`iconSvg`）；modal 三件套取消按钮补 `esc(cancel)`。
   - **闸法**：check-redlines R8 补「模板插值卫生」子规则（扫描核 `scripts/_lib/innerhtml-hygiene.ts` + 契约测试 34 断言），从「只抓裸变量赋值」升级为覆盖模板串主力形态。⚠️ 与 check-layering R8（features 禁 HTML 字面量）**同号异策**，勿混。
   - **原生 `<option>` 是纯文本内容模型（本次未动，留判决）**：`<option>`+`UI_ICONS` 写法全仓约 15 处（`app-content/settings/tpl-settings*.ts`、`app-tree/tpl-batch-rename.ts` 等），SVG 恒显字面标记（`menu/env.ts` 早有实证注释）。两条路：**A** 删掉 option 内图标（零视觉回归——它们从未渲染出来过）；**B** 设置页原生 `<select>` 迁自定义 dd-menu（真图标，工作量大）。待用户拍板。
-
+- ✅ **刀㉜ 层级扁平治理：正文级 muted→txt 提升 13 处 + 文字层级口径成文**（2026-09-21，用户点题「担心主题设计不佳」续——架构三病根（system 映射/默认值漂移/theme-auto 重启）修复后，审美层由用户拍板「层级扁平」方向）：
+  - **病症**（刀㉙ 实测量测①复核）：全仓声明层 `--muted` 274 处 vs `--txt` 180 处；导航项 `.nav-item` base 色 = muted——常驻正文全员次色，「可扫描」被抵消：全都次要 = 没有主次。
+  - **口径（成文三处：`variables.css` 头注释 / `UI-Design.md` §CSS 变量体系 / theme 卡不变量）**：`--txt` = 正文级（列表主名/数值读数/错误正文/主操作按钮文字/导航项）；`--muted` = 真次要（提示/说明/元信息/时间戳/占位/空态/禁用与非激活态色/装饰图标）。**闸判不了这层语义分工**（令牌闸只看「有没有写成 var()」）——成文口径 + 人审是唯一防线，此即刀㉙「取值对不对」盲区的方法论续。
+  - **提升 13 处**：`.nav-item`/`.nav-viewer-fab` base（激活态本有 --hover 底 + accent 指示条，不靠底色深浅；连带清除因此失效的 hover/active 死色行）；`.gh-error-msg`（错误正文）、`.gh-progress-pct`（下载读数）；`.perf-bar-val`（测量值 = 面板产出）；`.setting-row .value`（消除与同页 `.td-camspeed-val` 用 txt 的内部矛盾）；`.cr-edit-btn`/`.repo-bar-btn`×2/`.rec-card .actions button`/sync pull 按钮/回收站计数（主操作按钮文字对齐 `.btn-base` 正典 `color:var(--txt)`，css.ts:7）。
+  - **明拒不做什么**：未激活 tab/分段选项、取消/返回按钮、`-muted` 命名变体、locked/existing 行降色、提示与 meta 与时间戳与装饰图标一律**保留 muted**（它们是状态语义与真次要，不是扁平）——层级治理是「纠误用」不是「整体调亮」。无新闸。
+  - **验收**：vite build ✅ / biome ✅ / 相关测试（nav/sync/recycle/perf/download-queue/site render）全绿。
 
 ## 相关
 

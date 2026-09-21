@@ -132,7 +132,7 @@ export const contentDiagCSS: string = `
 .perf-bar-fill { display:block; height:100%; background:var(--accent); border-radius:var(--radius-md); }
 .perf-bar-fill.perf-bar-warn { background: var(--warning, #e6b800); }
 .perf-bar-fill.perf-bar-danger { background: var(--status-error); }
-.perf-bar-val { flex:0 0 auto; min-width:130px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.perf-bar-val { flex:0 0 auto; min-width:130px; text-align:right; color:var(--txt); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } /* 测量值 = 面板产出正文（warn/danger 变体下条覆盖） */
 .perf-bar-val.perf-bar-warn { color: var(--warning, #b8860b); }
 .perf-bar-val.perf-bar-danger { color: var(--status-error); }
 /* 阶段运行归属徽标（ADR-262 D2）：single-bench / concurrent / scan-bench 共用同一概念，同一类名 */

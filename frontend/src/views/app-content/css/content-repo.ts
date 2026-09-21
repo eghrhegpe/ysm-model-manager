@@ -28,8 +28,8 @@ ${metaTagCSS}
 .repo-bar { display:flex;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--bd); }
 .repo-bar:empty { padding:0;border-bottom:none; }
 .repo-bar-spacer { flex:1; }
-.repo-bar-btn { padding:var(--pad-btn-tool) 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-btn-tool);transition:var(--tr-fast); }
-.repo-bar-btn:hover { background:var(--hover);color:var(--txt); }
+.repo-bar-btn { padding:var(--pad-btn-tool) 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-tool);transition:var(--tr-fast); } /* 工具栏命令按钮 = txt（对齐 .btn-base 正典） */
+.repo-bar-btn:hover { background:var(--hover); }
 .repo-spacer { flex:1; }
 .repo-btn { font-size:var(--fs-xs);padding:2px 8px; }
 .repo-srch { width:160px;padding:4px 8px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0;transition:var(--tr-fast); }

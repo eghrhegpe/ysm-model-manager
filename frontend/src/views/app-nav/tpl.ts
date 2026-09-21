@@ -77,6 +77,8 @@ export const navCSS: string = `
 .nav-toggle:hover { color: var(--accent); background: var(--hover); }
 .menu { padding: 4px 8px 8px; flex: 1; display: flex; flex-direction: column; }
 .menu-label { flex: 1; font-size: var(--fs-xs); color: var(--muted); padding: 8px 10px 4px; text-transform: uppercase; letter-spacing: .5px; }
+/* 2026-09 层级扁平治理：导航项文字 = 正文 → 底色 --txt；激活态由 --hover 底 +
+   accent 指示条区分,不靠底色深浅（原 base muted 让常驻导航全员次色） */
 .nav-item {
   display: flex;
   align-items: center;
@@ -84,15 +86,14 @@ export const navCSS: string = `
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   font-size: calc(var(--fs-nav) + 2px);
-  color: var(--muted);
+  color: var(--txt);
   cursor: pointer;
   transition: var(--tr-fast);
   margin-bottom: 2px;
 }
-.nav-item:hover { background: var(--hover); color: var(--txt); }
+.nav-item:hover { background: var(--hover); }
 .nav-item.active {
   background: var(--hover);
-  color: var(--txt);
   border-left: 3px solid var(--accent);
   padding-left: 7px;
 }
@@ -106,11 +107,11 @@ export const navCSS: string = `
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   font-size: calc(var(--fs-nav) + 2px);
-  color: var(--muted);
+  color: var(--txt);
   cursor: pointer;
   transition: var(--tr-fast);
 }
-.nav-viewer-fab:hover { background: var(--hover); color: var(--txt); }
+.nav-viewer-fab:hover { background: var(--hover); }
 .nav-viewer-fab .icon { font-size: 15px; width: 20px; text-align: center; }
 :host([data-collapsed]) .nav-viewer-fab { justify-content: center; padding: 8px 0; margin: 2px 6px 6px; }
 :host([data-collapsed]) .nav-viewer-fab .fab-text { display: none; }

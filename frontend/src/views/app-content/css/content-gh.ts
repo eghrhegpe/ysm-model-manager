@@ -138,7 +138,7 @@ export const contentGhCSS: string = `
 
 /* ===== 错误页 ===== */
 .gh-error-page { padding:12px; text-align:center; }
-.gh-error-msg { color:var(--muted); font-size:var(--fs-sm); line-height:1.6; }
+.gh-error-msg { color:var(--txt); font-size:var(--fs-sm); line-height:1.6; } /* 错误正文须可读,muted 属误用（2026-09 层级口径） */
 .gh-error-hint { font-size:var(--fs-xs); opacity:.6; }
 .gh-back-btn { padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-sm); }
 
@@ -150,7 +150,7 @@ export const contentGhCSS: string = `
 .gh-queue-cancel { font-size:var(--fs-sm); color:var(--muted); }
 .gh-progress-row { display:flex; align-items:center; gap:4px; }
 .gh-progress-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--fs-sm); }
-.gh-progress-pct { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
+.gh-progress-pct { font-size:var(--fs-xs); color:var(--txt); flex-shrink:0; } /* 百分比 = 读数（error 变体下条覆盖） */
 .gh-progress-remain { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
 .gh-cancel-btn { width:20px; height:20px; border-radius:50%; border:none; background:rgba(128,128,128,.15); color:var(--muted); cursor:pointer; font-size:var(--fs-base); flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:background var(--tr-normal); }
 .gh-cancel-btn:hover { background:rgba(128,128,128,.3); }

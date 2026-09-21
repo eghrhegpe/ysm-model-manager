@@ -24,8 +24,8 @@ export const treeCSS: string = `
 .hdr-btn-row { justify-content:flex-start; flex-wrap:wrap; }
 .hdr-label { font-size:var(--fs-base);font-weight:600;color:var(--txt);flex-shrink:0; }
 .hdr-spacer { flex:1; }
-.repo-bar-btn { padding:var(--pad-btn-tool) 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-btn-tool); }
-.repo-bar-btn:hover { background:var(--hover);color:var(--txt); }
+.repo-bar-btn { padding:var(--pad-btn-tool) 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-tool); } /* 工具栏命令按钮 = txt（对齐 .btn-base 正典） */
+.repo-bar-btn:hover { background:var(--hover); }
 /* 高级筛选面板 */
 .adv-filter { border-top:1px solid var(--bd);padding:6px 8px 4px;background:var(--bg2); }
 .adv-filter-row { display:flex;align-items:center;gap:4px;flex-wrap:wrap; }

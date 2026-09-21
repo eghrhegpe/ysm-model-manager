@@ -63,6 +63,12 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
       vm.focusSearch();
     }),
   );
+  // 卡片密度变更 → 重排虚拟滚动（行高随密度变化需重算 JS 行高 + 重渲切片）
+  cleanups.push(
+    bus.on("ui:card-density", () => {
+      vm._renderTree();
+    }),
+  );
 
   return cleanups;
 }

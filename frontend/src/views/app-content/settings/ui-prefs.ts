@@ -5,6 +5,12 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import {
+  ROW_H_GRID_COMPACT,
+  ROW_H_GRID_NORMAL,
+  ROW_H_LIST_COMPACT,
+  ROW_H_LIST_NORMAL,
+} from "@/views/app-tree/render.ts";
 
 // 魔法数值收敛：偏好变更成功 toast 展示时长（ms）
 const TOAST_DURATION_MS = TOAST_MS.quick;
@@ -47,11 +53,27 @@ export function applyUIPrefs(): void {
     displayFont === "system" ? "var(--font-ui)" : "'STKaiti','KaiTi','楷体',serif",
   );
 
-  // 卡片密度
-  const padding = density === "compact" ? "6px 10px" : "10px 14px";
-  document.documentElement.style.setProperty("--card-padding", padding);
+  // 卡片密度：纵向/横向两分量各出变量，--card-padding 由二者拼出（单一事实源），
+  // 使「需要单独用水平分量」的场景（如侧栏选中态补偿边框）不必再抄一份 10px/14px 字面量。
+  const padY = density === "compact" ? "6px" : "10px";
+  const padX = density === "compact" ? "10px" : "14px";
+  document.documentElement.style.setProperty("--card-pad-y", padY);
+  document.documentElement.style.setProperty("--card-pad-x", padX);
+  document.documentElement.style.setProperty("--card-padding", `${padY} ${padX}`);
   const cardGap = density === "compact" ? "6px" : "10px";
   document.documentElement.style.setProperty("--card-gap", cardGap);
+  // 树行高同源变量（grid/list 两档）：数值单一事实源在 app-tree/render.ts 的
+  // ROW_H_* 常量（JS 虚拟滚动行高与 CSS height 共用同一组数字），此处只做 px 字符串化注入。
+  // 这样「改 JS 行高忘改 CSS」不可能发生——见 render.ts rowHeightGrid/List。
+  const isCompact = density === "compact";
+  document.documentElement.style.setProperty(
+    "--tree-row-grid",
+    `${isCompact ? ROW_H_GRID_COMPACT : ROW_H_GRID_NORMAL}px`,
+  );
+  document.documentElement.style.setProperty(
+    "--tree-row-list",
+    `${isCompact ? ROW_H_LIST_COMPACT : ROW_H_LIST_NORMAL}px`,
+  );
 
   // 动画
   document.documentElement.classList.toggle("no-animations", !anim);
@@ -142,8 +164,12 @@ export function initUiPrefs(root: ShadowRoot): void {
 
   // 卡片密度变更
   root.getElementById("set-card-density")?.addEventListener("change", (e) => {
-    safeSet("ui-card-density", (e.target as HTMLSelectElement).value);
+    const val = (e.target as HTMLSelectElement).value === "normal" ? "normal" : "compact";
+    safeSet("ui-card-density", val);
     applyUIPref();
+    // 广播密度变更：app-tree 订阅后重排虚拟滚动（行高随密度变化需重算），
+    // 整合包侧栏/旧式卡片为纯 CSS 变量驱动，setProperty 即时生效无需重排。
+    bus.emit("ui:card-density", { density: val });
     bus.emit("toast:show", {
       msg: t("settings.ui.densityUpdated"),
       duration: TOAST_DURATION_MS,

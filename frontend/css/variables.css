@@ -234,6 +234,13 @@
   --preview-width: 240px;
   --card-padding: 6px 10px;
   --card-gap: 6px;
+  --card-pad-y: 6px;
+  --card-pad-x: 10px;
+  /* 树行高（app-tree 虚拟滚动）：JS 行高单一事实源在 src/views/app-tree/render.ts 的
+     ROW_H_* 常量，ui-prefs.ts 按密度覆盖这两个变量；此处默认值与 compact 档一致，
+     保证 applyUIPrefs 未跑（隐私模式降级）时 CSS 行高仍与 JS 兜底值同值。 */
+  --tree-row-grid: 28px;
+  --tree-row-list: 24px;
   --sm-optional: #f9a826;
   /* 间距变量 — 按钮/tab padding-V 使用，随字号缩放 */
   --space-sm: calc(4px + var(--fs-scale) * 0.35);

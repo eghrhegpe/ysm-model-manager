@@ -31,9 +31,9 @@ import {
   getVsMode,
   getVsRows,
   type RenderMode,
-  ROW_H_GRID,
-  ROW_H_LIST,
   renderTree,
+  rowHeightGrid,
+  rowHeightList,
   setRenderMode,
   type TreeRenderCtx,
   updateStat,
@@ -548,7 +548,8 @@ export class AppTree extends WebComponentBase {
     const allRows = getVsRows(this.treeRenderCtx, container);
     const rowIdx = allRows.findIndex((r) => r.key === nextKey);
     if (rowIdx >= 0) {
-      const rowH = getVsMode(this.treeRenderCtx, container) === "list" ? ROW_H_LIST : ROW_H_GRID;
+      const rowH =
+        getVsMode(this.treeRenderCtx, container) === "list" ? rowHeightList() : rowHeightGrid();
       const targetScroll = rowIdx * rowH;
       if (
         targetScroll < container.scrollTop ||

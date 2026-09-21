@@ -120,7 +120,7 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
       <option value="kaiti">kaiti</option><option value="system">system</option>
     </select>
     <select id="set-card-density">
-      <option value="compact">compact</option><option value="spacious">spacious</option>
+      <option value="compact">compact</option><option value="normal">normal</option>
     </select>
     <input type="checkbox" id="set-remember-page">
     <select id="set-default-page">
@@ -477,14 +477,38 @@ describe("initSettings — UI 偏好（ui-prefs.ts）", () => {
     expect(localStorage.getItem("ui-animations")).toBe("on");
   });
 
-  it("卡片密度 change → --card-padding 更新", async () => {
+  it("卡片密度 change → --card-padding / 树行高 / --card-gap 同步更新", async () => {
     const { root } = makeRoot();
     await initSettings(root);
     const sel = root.getElementById("set-card-density") as HTMLSelectElement;
-    sel.value = "spacious";
+    // 使用模板真实 option 值（compact / normal）；曾用不存在的 "spacious" 假值，
+    // 被归一化逻辑判为 compact → 断言不成立（回归修复）
+    sel.value = "normal";
     sel.dispatchEvent(new Event("change"));
-    expect(document.documentElement.style.getPropertyValue("--card-padding")).toBe("10px 14px");
-    expect(localStorage.getItem("ui-card-density")).toBe("spacious");
+    const style = document.documentElement.style;
+    expect(style.getPropertyValue("--card-padding")).toBe("10px 14px");
+    expect(style.getPropertyValue("--card-pad-x")).toBe("14px");
+    expect(style.getPropertyValue("--card-gap")).toBe("10px");
+    // 树行高与 app-tree/render.ts 的 ROW_H_* 同源（normal 档 grid 32 / list 28）
+    expect(style.getPropertyValue("--tree-row-grid")).toBe("32px");
+    expect(style.getPropertyValue("--tree-row-list")).toBe("28px");
+    expect(localStorage.getItem("ui-card-density")).toBe("normal");
+
+    // 切回紧凑档 → 全部回落 compact 值（防单向残留）
+    sel.value = "compact";
+    sel.dispatchEvent(new Event("change"));
+    expect(style.getPropertyValue("--card-padding")).toBe("6px 10px");
+    expect(style.getPropertyValue("--tree-row-grid")).toBe("28px");
+    expect(style.getPropertyValue("--tree-row-list")).toBe("24px");
+  });
+
+  it("卡片密度 change → 广播 ui:card-density（app-tree 据此重排虚拟滚动）", async () => {
+    const { root } = makeRoot();
+    await initSettings(root);
+    const sel = root.getElementById("set-card-density") as HTMLSelectElement;
+    sel.value = "normal";
+    sel.dispatchEvent(new Event("change"));
+    expect(busEmit).toHaveBeenCalledWith("ui:card-density", { density: "normal" });
   });
 });
 

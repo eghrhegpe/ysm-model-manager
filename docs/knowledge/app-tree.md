@@ -39,8 +39,12 @@ auto_fields:
     - renderDropdown
     - RenderMode
     - renderTree
-    - ROW_H_GRID
-    - ROW_H_LIST
+    - ROW_H_GRID_COMPACT
+    - ROW_H_GRID_NORMAL
+    - ROW_H_LIST_COMPACT
+    - ROW_H_LIST_NORMAL
+    - rowHeightGrid
+    - rowHeightList
     - selectSingle
     - SelectState
     - setRenderMode
@@ -131,6 +135,7 @@ status: active
 - **文件夹启禁用标记**（`render.ts` `annotateDirNodes` → `dirFlags` WeakMap）：文件夹行的 `hasEnabled/hasDisabled` 由 `dirFlags` 提供（ckCls：全启 `" on"`、混合 `" on partial"`、全禁空）。实现为**显式栈迭代后序**（2026-09 审计重写）：父目录 flags = 直接文件贡献 ∪ 各子目录已算好的 flags，每节点恰好访问一次，**O(n)** 且无递归——旧实现「外层 for 每目录 + 内层 stack 重扫整棵子树」最坏 O(n²)（深链 2000 级 115.9ms、每倍增 3-6×），且递归深度=树深，10000 级深链直接 `Maximum call stack size exceeded`（回归绊线：`render.test.ts` 深链用例 + 计时断言）。
 - **flattenVisible 显式栈迭代（2026-09 P2 修复）**：`flattenVisible` 原递归 `atFvFlattenLevel`（搜索态 `shouldOpen` 无条件 true 全展开 → 递归深度=树深，与 annotateDirNodes 同源栈溢出）。已改显式栈（Frame/idx 模式，同 annotateDirNodes 同款），深度优先前序保序、无递归。回归绊线：`render.test.ts`「10000 级深链 + 搜索命中」用例。
 - **方向键导航（P2 观察）**：`selectSingle` 后仍全量 `_renderTree`，但行 HTML 预缓存 + 可见区 slice<100，实际开销低，未优化。
+- **行高随卡片密度驱动（2026-09）**：行高不再是裸常量——`render.ts` 的 `rowHeightGrid()`/`rowHeightList()` 读 `ui-card-density` 返回 28/24（compact）或 32/28（normal），尺寸常量 `ROW_H_GRID_COMPACT|NORMAL`/`ROW_H_LIST_COMPACT|NORMAL` 是**唯一事实源**；`ui-prefs.ts` 把它们字符串化为 `--tree-row-grid`/`--tree-row-list` 供 CSS 行高（`.fl`/`.fh`/`.fl-list`/`.fh-list` 的 `height`）消费，`variables.css` 的 `:root` 默认值与 compact 档同值（applyUIPrefs 未跑时 CSS 与 JS 兜底仍一致）。**不变量：JS 行高必须等于 CSS 行高**，否则虚拟滚动 paddingTop/Bottom 撑出的滚动长度与 `index.ts` 键盘导航 `scrollTop` 全部算错。密度变更经 `bus.emit("ui:card-density")` → `bus-handlers.ts` 订阅调 `_renderTree()` 重排（行高变了必须重算切片）。
 
 ## 响应式属性与代际守卫
 

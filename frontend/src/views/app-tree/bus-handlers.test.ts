@@ -510,3 +510,14 @@ describe("bindBusEvents — 树刷新", () => {
     expect(loadedArgs).toEqual(["EntityPlayer", "EntityPlayer"]);
   });
 });
+
+describe("bindBusEvents — 卡片密度变更", () => {
+  it("ui:card-density → 重新渲染树（行高变化需重排虚拟滚动）", async () => {
+    const vm = makeVM();
+    await bind(vm);
+
+    bus.emit("ui:card-density", { density: "normal" });
+
+    expect(vm._renderTree).toHaveBeenCalled();
+  });
+});

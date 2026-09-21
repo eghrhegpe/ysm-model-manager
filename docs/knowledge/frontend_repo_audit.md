@@ -1071,8 +1071,6 @@ auto_fields:
     - returnFocus
     - revealMainWindow
     - roleBaseName
-    - ROW_H_GRID
-    - ROW_H_LIST
     - runHealthAudit
     - runLauncherDetect
     - runMcSearch

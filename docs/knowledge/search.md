@@ -69,8 +69,12 @@ auto_fields:
     - ReadFileMeta
     - RenderMode
     - renderTree
-    - ROW_H_GRID
-    - ROW_H_LIST
+    - ROW_H_GRID_COMPACT
+    - ROW_H_GRID_NORMAL
+    - ROW_H_LIST_COMPACT
+    - ROW_H_LIST_NORMAL
+    - rowHeightGrid
+    - rowHeightList
     - setRenderMode
     - setVsRows
     - terminateStatsWorker

@@ -14,16 +14,19 @@ export const sidebarCSS: string = `
 .list { flex: 1; overflow-y: auto; padding: 4px 6px; }
 .instance-card {
   background: var(--bg); border: 1px solid var(--bd);
-  border-radius:var(--radius-md); margin-bottom: 4px; overflow: hidden;
+  border-radius:var(--radius-md); margin-bottom: var(--card-gap, 4px); overflow: hidden;
 }
 /* 拖拽导入悬停态：虚线框提示「拖到此卡片可直接推送到该整合包」 */
 .instance-card.dnd-over { border: 1px dashed var(--accent, #89b4fa); box-shadow: 0 0 0 1px var(--accent, #89b4fa) inset; }
+/* 卡片内边距/间距走密度变量（--card-padding 水平档 10px/14px、--card-gap 4px/10px，
+   由 ui-prefs.ts 统一注入）；.active 的 padding-left 需补偿 3px 指示边框，
+   故同样基于 --card-padding 的水平分量派生，避免密度切换后选中态文字错位 */
 .instance-card-header {
-  padding: 5px 10px; cursor: pointer; transition: background var(--tr-fast);
+  padding: var(--card-padding, 5px 10px); cursor: pointer; transition: background var(--tr-fast);
 }
 .instance-card-header:hover { background: var(--hover); }
 /* 高亮对齐导航栏选中态口径：--hover 淡底（与文件树悬停同口径，亮色主题不加深）+ 指示边框，文字保持 --txt */
-.instance-card-header.active { background: var(--hover); border-left: 3px solid var(--accent); padding-left: 7px; }
+.instance-card-header.active { background: var(--hover); border-left: 3px solid var(--accent); padding-left: max(0px, calc(var(--card-pad-x, 10px) - 3px)); }
 .instance-card-header.active .name { color: var(--txt); }
 /* 涟漪选中效果：与选中底同口径（--hover），避免 accent 强调色。
  * opacity 0.4s 为**有意**不经 --tr-* 令牌：水波扩散需缓慢浮现（0.4s 长于令牌最长档

@@ -3,7 +3,14 @@
 // buildTree：排序（name/size/date）/ filterPaths 交集 / Windows 路径归一。
 // flattenVisible：目录展开/折叠 / search 过滤 / 搜索自动展开 / 文件行 key 用 fullPath。
 import { describe, it, expect, beforeEach } from "vitest";
-import { buildTree, flattenVisible, getRenderMode, setRenderMode } from "./render.ts";
+import {
+  buildTree,
+  flattenVisible,
+  getRenderMode,
+  rowHeightGrid,
+  rowHeightList,
+  setRenderMode,
+} from "./render.ts";
 import { fileRowCommon, folderRowCommon } from "./row-common.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { TreeEntry } from "./loader.ts";
@@ -381,6 +388,31 @@ describe("getRenderMode / setRenderMode（node 环境无 localStorage 的降级�
 
   it("setRenderMode 在存储不可用时静默降级（不抛错）", () => {
     expect(() => setRenderMode("list")).not.toThrow();
+  });
+});
+
+describe("行高随卡片密度驱动（rowHeightGrid / rowHeightList）", () => {
+  beforeEach(() => {
+    localStorage.removeItem("ui-card-density");
+  });
+
+  it("未设置密度 → 回落 compact（grid 28 / list 24，与 CSS 默认同值）", () => {
+    expect(rowHeightGrid()).toBe(28);
+    expect(rowHeightList()).toBe(24);
+  });
+
+  it("normal → grid 32 / list 28", () => {
+    localStorage.setItem("ui-card-density", "normal");
+    expect(rowHeightGrid()).toBe(32);
+    expect(rowHeightList()).toBe(28);
+  });
+
+  it("显式 compact / 非法值 → 均回落 compact（防脏值撑错行高）", () => {
+    localStorage.setItem("ui-card-density", "compact");
+    expect(rowHeightGrid()).toBe(28);
+    localStorage.setItem("ui-card-density", "spacious");
+    expect(rowHeightGrid()).toBe(28);
+    expect(rowHeightList()).toBe(24);
   });
 });
 

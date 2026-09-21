@@ -14,9 +14,36 @@ import { emptyStateHTML } from "./tpl.ts";
 /** 每级缩进像素（树深 → padding-left） */
 const INDENT_PER_LEVEL = 16;
 
-/** 树行高（虚拟滚动定高窗口，grid/list 两档；自 app-tree 原 virtual-scroll.ts 迁入） */
-export const ROW_H_GRID = 28;
-export const ROW_H_LIST = 24;
+/**
+ * 树行高（虚拟滚动定高窗口，grid/list 两档；自 app-tree 原 virtual-scroll.ts 迁入）。
+ * 行高随「卡片密度」偏好变化：compact = 原值（grid 28 / list 24），normal = 加大一档
+ * （grid 32 / list 28）。
+ *
+ * ⚠️ 单源约束：JS 行高（rowHeightGrid/List）与 CSS 行高（app-tree-styles.ts 的
+ * --tree-row-grid / --tree-row-list）**必须同值**，否则虚拟滚动假定行高与实际渲染高度
+ * 错位（paddingTop/paddingBottom 撑出的滚动条长度、键盘导航 scrollTop 全部算错）。
+ * 故此处导出 ROW_H 尺寸供 ui-prefs.ts 写 CSS 变量，改动只需动这一处。
+ */
+export const ROW_H_GRID_COMPACT = 28;
+export const ROW_H_GRID_NORMAL = 32;
+export const ROW_H_LIST_COMPACT = 24;
+export const ROW_H_LIST_NORMAL = 28;
+
+/** 取当前卡片密度（compact / normal），与 ui-prefs.ts 同源读取同一 localStorage 键 */
+function cardDensity(): "compact" | "normal" {
+  // safeGet 在隐私模式/禁用存储下静默降级为 undefined → 回落 compact
+  return safeGet("ui-card-density") === "normal" ? "normal" : "compact";
+}
+
+/** grid 模式行高（受卡片密度驱动） */
+export function rowHeightGrid(): number {
+  return cardDensity() === "normal" ? ROW_H_GRID_NORMAL : ROW_H_GRID_COMPACT;
+}
+
+/** list 模式行高（受卡片密度驱动） */
+export function rowHeightList(): number {
+  return cardDensity() === "normal" ? ROW_H_LIST_NORMAL : ROW_H_LIST_COMPACT;
+}
 
 /** 扁平化行（虚拟滚动数据单元） */
 export interface TreeRow {
@@ -476,7 +503,7 @@ export function renderTree(
   const st = vsOf(ctx, container);
   st.rows = rows;
   st.mode = mode;
-  const rowH = mode === "list" ? ROW_H_LIST : ROW_H_GRID;
+  const rowH = mode === "list" ? rowHeightList() : rowHeightGrid();
   renderSlice(ctx, container, rows, rowH);
 
   // 首次渲染容器可能还没布局 → 等 layout 后重新计算可见范围
@@ -485,7 +512,7 @@ export function renderTree(
       const s2 = vsOf(ctx, container);
       if (s2.rows && s2.mode) {
         const m = s2.mode;
-        const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
+        const rh = m === "list" ? rowHeightList() : rowHeightGrid();
         renderSlice(ctx, container, s2.rows, rh);
       }
     });
@@ -498,7 +525,7 @@ export function renderTree(
       const r = s2.rows;
       const m = s2.mode;
       if (r?.length) {
-        const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
+        const rh = m === "list" ? rowHeightList() : rowHeightGrid();
         renderSlice(ctx, container, r, rh);
       }
     });
@@ -511,7 +538,7 @@ export function renderTree(
       const r = s2.rows;
       const m = s2.mode;
       if (r?.length) {
-        const rh = m === "list" ? ROW_H_LIST : ROW_H_GRID;
+        const rh = m === "list" ? rowHeightList() : rowHeightGrid();
         renderSlice(ctx, container, r, rh);
       }
     });

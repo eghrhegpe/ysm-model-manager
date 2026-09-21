@@ -123,6 +123,8 @@ export interface BusEvents {
   "dir:recycle": { dir: string };
   "dir:mkdir": { dir: string };
   "dir:batch-rename": { dir: string };
+  // 卡片密度偏好变更（设置页 → app-tree 重排虚拟滚动行高；与 ui-prefs.ts 同源）
+  "ui:card-density": { density: "compact" | "normal" };
 }
 
 export type BusEventName = keyof BusEvents;

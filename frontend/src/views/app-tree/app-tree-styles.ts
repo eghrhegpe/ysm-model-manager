@@ -76,7 +76,9 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .vs-wrap { box-sizing: border-box; }
 .empty { text-align: center; padding: 40px 16px; font-size:var(--fs-base); color: var(--muted); line-height: 1.8; }
 .empty .big { font-size: 36px; margin-bottom: 8px; }
-.fh { display: flex; align-items: center; gap: 4px; padding: 3px 4px; border-radius: 0; cursor: pointer; font-size: var(--fs-base); transition: background var(--tr-fast); border-left: 2px solid transparent; }
+/* 网格模式行高（受卡片密度驱动：--tree-row-grid，与 render.ts rowHeightGrid 同源）——
+   固定 height 取代原来的 padding 撑高，杜绝「CSS 实际高度 ≠ 虚拟滚动假定行高」错位 */
+.fh { display: flex; align-items: center; gap: 4px; height: var(--tree-row-grid, 28px); padding: 0 4px; box-sizing: border-box; border-radius: 0; cursor: pointer; font-size: var(--fs-base); transition: background var(--tr-fast); border-left: 2px solid transparent; }
 .fh:hover { background: var(--hover); }
 .fh.has-items { border-left-color: color-mix(in srgb, var(--status-success) 40%, transparent); }
 .fh .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
@@ -88,19 +90,19 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .fh .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
 .fh.locked { opacity: .5; }
 .fh.locked .nm { color: var(--muted); }
-.fl { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius:var(--radius-sm); font-size: var(--fs-base); transition: all var(--tr-normal); cursor: default; user-select: none; -webkit-user-select: none; }
+.fl { display: flex; align-items: center; gap: 6px; height: var(--tree-row-grid, 28px); padding: 0 4px; box-sizing: border-box; border-radius:var(--radius-sm); font-size: var(--fs-base); transition: all var(--tr-normal); cursor: default; user-select: none; -webkit-user-select: none; }
 .fl:hover { background: var(--hover); }
 .fl.flash { background: color-mix(in srgb, var(--status-success) 13%, transparent); }
 .fl-list.flash { background: color-mix(in srgb, var(--status-success) 13%, transparent); }
 .fl.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
 .fl.selected:hover { background: color-mix(in srgb, var(--accent) 38%, transparent); }
 .fh.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
-/* 紧凑列表模式（24px 行高） */
-.fl-list { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 4px; border-radius:var(--radius-sm); font-size: var(--fs-sm); cursor: default; user-select: none; -webkit-user-select: none; transition: background var(--tr-fast); }
+/* 紧凑列表模式行高（受卡片密度驱动：--tree-row-list，与 render.ts rowHeightList 同源） */
+.fl-list { display: flex; align-items: center; gap: 6px; height: var(--tree-row-list, 24px); padding: 0 4px; border-radius:var(--radius-sm); font-size: var(--fs-sm); cursor: default; user-select: none; -webkit-user-select: none; transition: background var(--tr-fast); }
 .fl-list:hover { background: var(--hover); }
 .fl-list.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
 .fl-list.ban { opacity: .55; }
-.fh-list { display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 4px; border-radius: 0; cursor: pointer; font-size: var(--fs-sm); transition: background var(--tr-fast); border-left: 2px solid transparent; }
+.fh-list { display: flex; align-items: center; gap: 4px; height: var(--tree-row-list, 24px); padding: 0 4px; border-radius: 0; cursor: pointer; font-size: var(--fs-sm); transition: background var(--tr-fast); border-left: 2px solid transparent; }
 .fh-list:hover { background: var(--hover); }
 .fh-list.locked { opacity: .5; }
 .fl-list .ck, .fh-list .ck { width: 22px; height: 12px; border-radius:var(--radius-md); background: var(--muted); cursor: pointer; flex-shrink: 0; position: relative; transition: background var(--tr-normal); font-size: 0; line-height: 0; }

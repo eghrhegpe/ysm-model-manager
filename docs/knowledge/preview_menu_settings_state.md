@@ -24,6 +24,7 @@ auto_fields:
     - capLabel
     - collectSettingsCapControls
     - collectVisiblePredicates
+    - disposeSceneCapSubscriptions
     - EnvPlacement
     - EnvSectionId
     - FieldKind

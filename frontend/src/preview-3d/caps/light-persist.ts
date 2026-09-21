@@ -1,14 +1,20 @@
 // ===== LightCapability 持久化数据层（锐评 §三 下沉：职责⑤的纯数据面）=====
 // 从 light-capability.ts 抽离：saveState 的参数映射 + loadState 的开关/参数恢复块。
-// 均为「envState ↔ localStorage 嵌套结构」的纯数据映射，不触达 cap 私有字段
-//（私有态：enabled 仍由主类 saveState/loadState 编排；顺序敏感段——开关恢复→
-// syncConeMount→锥组重建——留在主类）。
+// 均为「envState ↔ localStorage 嵌套结构」的纯数据映射。
+// [ADR-293] 能力总开关（lightEnabled）与线框可见性（lightHelperVisible）入 schema 后，
+// 本层不再是「envState 纯读 + 主类编排私有态」的混合体——enabled 私有字段已退场，
+// payload 全部 envState 纯读派生、restore 全部并入 acc 单批写回，无主类特判。
+//（顺序敏感段——开关恢复→syncLight 重建→锥组重建——留在主类 loadState。）
 // [ADR-282] 原 currentPreset/manualPreset 两个私有态键已随灯光与模型类别解耦退役。
 // [ADR-246 D1] 原 volumetricEngine 维度已删（postprocess 空壳引擎移除）。
 // 对齐 light-presets.ts（参数面）/ light-controls.ts（菜单面）的拆分先例。
 
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
-import { ENV_STATE_SCHEMA, type EnvState } from "@/preview-3d/state/env-state-schema.ts";
+import {
+  ENV_STATE_SCHEMA,
+  type EnvState,
+  type EnvStateKey,
+} from "@/preview-3d/state/env-state-schema.ts";
 import {
   FLATTEN_MAP,
   type LightInstanceParams,
@@ -26,6 +32,10 @@ import { oneOf, restoreFields } from "./scene-capability.ts";
  *  可能直读），删之无收益。 */
 export function buildLightPersistPayload(): Record<string, unknown> {
   return {
+    // [ADR-293] 总开关与线框可见性（顶层键，格式向后兼容：旧存档缺键 restore 不写、
+    // 落 schema 默认 true/true，行为与旧「恒挂载恒可见」一致）
+    enabled: envState.lightEnabled,
+    helperVisible: envState.lightHelperVisible,
     keyEnabled: envState.lightKeyEnabled,
     fillEnabled: envState.lightFillEnabled,
     rimEnabled: envState.lightRimEnabled,
@@ -112,7 +122,13 @@ export function restoreLightParams(state: Record<string, unknown>): void {
   // 合批派发：所有校验通过的字段并入单一 accumulator，末尾一次 setEnvState。
   // 对齐 render-mode-capability.ts 批量化先例（N 次全场景材质遍历 → 1 次）。
   // manual source 恒过 shouldOverwrite，合批不改变最终值，仅砍冗余派发。
-  const acc: Record<string, unknown> = {};
+  // [ADR-293] acc 升型 Partial<Record<EnvStateKey, unknown>>：裸键拼写自此有编译期守卫
+  //（原 Record<string, unknown> 下 typo 键静默蒸发——FLATTEN_MAP 查键路径守得住，
+  // 直写 acc.lightXxx 的旁路守不住，一并上闸）。
+  const acc: Partial<Record<EnvStateKey, unknown>> = {};
+  // [ADR-293] 能力总开关与线框可见性（顶层键；旧档缺键 = 不写，落 schema 默认）
+  if (typeof state.enabled === "boolean") acc.lightEnabled = state.enabled;
+  if (typeof state.helperVisible === "boolean") acc.lightHelperVisible = state.helperVisible;
   // ② 用户显式保存的灯开关优先于模型预设
   if (typeof state.ambientIntensity === "number") {
     acc.lightAmbientIntensity = state.ambientIntensity;

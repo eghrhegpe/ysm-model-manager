@@ -1213,6 +1213,9 @@ export const en: Record<string, string> = {
   "preview.lightReset": "Reset Lights",
   "preview.lighting": "Lighting",
   "preview.lightSelect": "Edit Light",
+  "preview.lightHelper": "Light helpers",
+  "preview.lightHelperHint":
+    "Show light-direction gizmos in the viewport (editing aid only, excluded from screenshots)",
   "preview.lightType": "Light Type",
   "preview.lightTypeDirectional": "Directional",
   "preview.lightTypePoint": "Point",

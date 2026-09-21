@@ -508,6 +508,14 @@ export const ENV_STATE_SCHEMA = {
   // directional / point / spot 间切换，参数结构统一。
   // volume 参数仍独立（与任意 spot 灯绑定）。
   //
+  // [ADR-293] 两维 schema 化收口：
+  //   lightEnabled——能力总开关，对齐 ppEnabled（ADR-250）/ fogEnabled（ADR-196）口径，
+  //     LightCapability 不再持私有 enabled 字段，写路径全走 setEnvState 四件套；
+  //   lightHelperVisible——视口线框（gizmo）显隐。默认 true = 保持现状观感（线框随各灯
+  //     开关），新开关只赋予「一键全收」的撤销能力。
+  lightEnabled: { type: "boolean", default: true, group: "light" },
+  lightHelperVisible: { type: "boolean", default: true, group: "light" },
+  //
   // key 灯
   lightKeyType: {
     type: "enum",

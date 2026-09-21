@@ -31,12 +31,14 @@ import {
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
+import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { VolumetricCone } from "./light-cone.ts";
 import { buildLightNodes, LIGHT_MASTER_NODE_ID } from "./light-controls.ts";
 import { buildLightPersistPayload, restoreLightParams } from "./light-persist.ts";
 import {
   DEFAULT_LIGHT_PARAMS,
   type DeepPartial,
+  FLATTEN_MAP,
   flattenLightParams,
   LIGHT_SLOTS,
   type LightInstanceParams,
@@ -180,6 +182,18 @@ const CONE_MOVE_CHANGES: Set<EnvStateKey> = new Set([
   "lightRimElevation",
 ]);
 
+/** [ADR-293] 触发菜单刷新（subscribe notify）的离散键集：点击式开关/选择——总开关、
+ *  三槽位类型/开关、体积光开关/驱动源、helper 线框开关；连续滑块（intensity/azimuth/
+ *  angle…）一律不入：拖动中途重建面板会让滑块指针捕获脱靶（fog 的 near/far 教训，
+ *  subscribe 契约）。type/enabled/driver 键由 FLATTEN_MAP 派生，零裸字面量。 */
+const DISCRETE_NOTIFY_KEYS: Set<EnvStateKey> = new Set<EnvStateKey>([
+  "lightEnabled",
+  "lightHelperVisible",
+  ...LIGHT_SLOTS.flatMap((w) => [FLATTEN_MAP[w].type, FLATTEN_MAP[w].enabled]),
+  FLATTEN_MAP.volumetric.enabled,
+  FLATTEN_MAP.volumetric.driver,
+]);
+
 function hasAny(changed: Set<EnvStateKey>, keys: Set<EnvStateKey>): boolean {
   for (const k of keys) if (changed.has(k)) return true;
   return false;
@@ -201,7 +215,12 @@ export class LightCapability implements SceneCapability {
 
   private scene: THREE.Scene;
   private caps?: SceneCapabilityLookup;
-  private enabled: boolean;
+  /** [ADR-293] 启用意图唯一真值源 = envState.lightEnabled（对齐 ADR-250 pp / ADR-196 fog
+   *  口径：本 cap 不再持有 enabled 字段）。私有字段时代绕开 setEnvState 的钳制/优先级/
+   *  派发纪律，灯组写路径在此双轨并行——收口。 */
+  private get enabled(): boolean {
+    return envState.lightEnabled;
+  }
   private target: THREE.Vector3; // 对象中心，聚光灯瞄准点
   private targetHeight: number; // 聚光灯位于对象上方的高度
 
@@ -229,6 +248,9 @@ export class LightCapability implements SceneCapability {
 
   // ADR-196：取消订阅函数
   private unsubscribeEnv: () => void;
+  /** [ADR-293] 参数变更监听（菜单局部刷新，对齐 fog/ground/water 先例）：
+   *  仅离散键变更 notify——subscribe 契约见 DISCRETE_NOTIFY_KEYS */
+  private readonly listenerSet = createListenerSet();
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -241,7 +263,13 @@ export class LightCapability implements SceneCapability {
   }) {
     this.scene = opts.scene;
     if (opts.caps !== undefined) this.caps = opts.caps;
-    this.enabled = opts.enabled ?? true;
+    // [ADR-293] 总开关入 schema（对齐 ADR-250 pp 口径）：显式传值才写状态层，
+    // 不传则尊重 envState 现值（含用户存档恢复的顺序）。
+    // ⚠️ 顺序敏感：此处 setEnvState 发生在 registerEnvCallback **之前**，订阅者尚未
+    // 就位，挂载/卸载副作用不会自动触发——场景对象由组合根随后的 apply() 落地。
+    if (opts.enabled !== undefined) {
+      setEnvState({ lightEnabled: opts.enabled }, { source: "manual" });
+    }
     this.target = opts.target ?? new THREE.Vector3(0, 0, 0);
     this.targetHeight = opts.targetHeight ?? 8;
 
@@ -295,10 +323,23 @@ export class LightCapability implements SceneCapability {
   /* ----- envState 变更回调：分派到 Three 应用 ----- */
 
   private onEnvChanged(changed: Set<EnvStateKey>, state: EnvState): void {
+    // [ADR-293] 总开关翻转：场景灯 + 瞄准点 + helper + 锥体整体挂/卸的副作用在此分派
+    //（setEnabled 只写状态层，不再直调 apply/detach——绕开状态层的旁路退场）。
+    // 必须置于逐灯同步之前：开闸时对象先进场，后续分支作用在已挂载对象上。
+    if (changed.has("lightEnabled")) {
+      if (this.enabled) this.apply();
+      else this.detach();
+    }
+
     // key/fill/rim：类型变化 → 重建；其余 → 原地更新
     if (hasAny(changed, KEY_CHANGES)) this.syncLight("key", state);
     if (hasAny(changed, FILL_CHANGES)) this.syncLight("fill", state);
     if (hasAny(changed, RIM_CHANGES)) this.syncLight("rim", state);
+
+    // [ADR-293] helper 可见性翻转：三副线框重新套显隐门禁（灯本体与锥体不动）
+    if (changed.has("lightHelperVisible")) {
+      for (const which of LIGHT_SLOTS) this.syncHelper(which, readLightParams(which, state));
+    }
 
     // ambient：总是刷新（依赖 caps 查询器的 sky 环境开关，非纯 envState 派生）
     this.refreshAmbientFromSky(state);
@@ -328,6 +369,11 @@ export class LightCapability implements SceneCapability {
         }
       }
     }
+
+    // [ADR-293] 离散键 notify（subscribe 契约，对齐 fog 的 fogMode 先例）：外部写
+    //（跨会话共享 cap 的程序化写入）时面板值与场景同步；本会话用户自拨时，
+    // 叠加在 refreshOnChange 之上多一次面板重建——同步块内幂等，无害。
+    if (hasAny(changed, DISCRETE_NOTIFY_KEYS)) this.listenerSet.notify();
   }
 
   /* ----- 单盏灯同步：类型变化重建，否则原地更新 ----- */
@@ -459,7 +505,8 @@ export class LightCapability implements SceneCapability {
     else if (light instanceof THREE.PointLight) h = new THREE.PointLightHelper(light, 1, color);
     else h = new THREE.DirectionalLightHelper(light as THREE.DirectionalLight, 2, color);
     h.name = name;
-    h.visible = light.visible;
+    // [ADR-293] helper 可见 = 本灯开 && 线框总闸开（重建即取当前门禁态）
+    h.visible = light.visible && envState.lightHelperVisible;
     return h;
   }
 
@@ -473,11 +520,11 @@ export class LightCapability implements SceneCapability {
     else this.rimHelper = h;
   }
 
-  /** helper 显隐跟随 enabled + 几何重算 */
+  /** helper 显隐 = 本灯 enabled && [ADR-293] lightHelperVisible 总闸 + 几何重算 */
   private syncHelper(which: LightKey, p: LightInstanceParams): void {
     const h = this.getHelper(which);
     if (!h) return;
-    h.visible = p.enabled;
+    h.visible = p.enabled && envState.lightHelperVisible;
     const updatable = h as unknown as { update?: () => void };
     updatable.update?.();
   }
@@ -510,12 +557,13 @@ export class LightCapability implements SceneCapability {
     }
   }
 
-  /** 把单盏灯的 helper 挂到场景并同步显隐 */
+  /** 把单盏灯的 helper 挂到场景并同步显隐（[ADR-293] 显隐 = 总闸 ∧ 本灯开关 ∧ 线框总闸——
+   *  单独 loadState 后总开关为 off 时 helper 也不该可见） */
   private mountHelper(which: LightKey): void {
     const h = this.getHelper(which);
     if (!h) return;
     if (!h.parent) this.scene.add(h);
-    h.visible = readLightParams(which).enabled;
+    h.visible = this.enabled && readLightParams(which).enabled && envState.lightHelperVisible;
     (h as unknown as { update?: () => void }).update?.();
   }
 
@@ -536,13 +584,29 @@ export class LightCapability implements SceneCapability {
   }
 
   setEnabled(v: boolean): void {
-    this.enabled = v;
-    if (v) this.apply();
-    else this.detach();
+    // [ADR-293] 唯一写路径 = setEnvState（对齐 ADR-250 pp 口径）——挂/卸副作用由
+    // onEnvChanged 的 lightEnabled 分支分派，本方法不再直调 apply/detach。
+    setEnvState({ lightEnabled: v }, { source: "manual" });
   }
 
   isEnabled(): boolean {
-    return this.enabled;
+    // [ADR-293] 真值源 = envState.lightEnabled（私有字段退场）
+    return envState.lightEnabled;
+  }
+
+  /** [ADR-293] helper 线框可见性总闸（视口 gizmo 显隐；不关断灯本体，不影响截图） */
+  setHelperVisible(v: boolean): void {
+    setEnvState({ lightHelperVisible: v }, { source: "manual" });
+  }
+
+  isHelperVisible(): boolean {
+    return envState.lightHelperVisible;
+  }
+
+  /** [ADR-293] 参数变更订阅（菜单局部刷新）：仅离散键变更触发——
+   *  连续滑块恒不 notify（subscribe 契约，见 DISCRETE_NOTIFY_KEYS），对齐 fog/water */
+  subscribe(listener: () => void): () => void {
+    return this.listenerSet.subscribe(listener);
   }
 
   setTarget(v: THREE.Vector3): void {
@@ -622,11 +686,13 @@ export class LightCapability implements SceneCapability {
    * 体积光锥与当前 envState 同步：[ADR-290] 锥体由 lightVolumetricDriver 选定的 spot 灯驱动
    * （auto = 槽位顺序第一盏启用 spot；显式槽位 = 严格绑定，不满足前提即无锥）。
    * 无驱动灯 / 体积光未开 → 卸载；有则挂载并定位。
+   * [ADR-293] 再加总开关门禁：master off 时灯不在场景，锥体若照挂就是无源天光柱——
+   * 旧实现在「总开关关 + 翻体积光开关」路径下会悬浮一只锥（本轮锐评附带发现）。
    */
   private rebuildConeIfNeeded(state: EnvState = envState): void {
     const spot = this.getSpotLightForCone(state);
     const volOn = state.lightVolumetricEnabled;
-    if (!spot || !volOn) {
+    if (!this.enabled || !spot || !volOn) {
       if (this.cone.isMounted()) this.cone.detach();
       return;
     }
@@ -703,30 +769,29 @@ export class LightCapability implements SceneCapability {
     return LIGHT_MASTER_NODE_ID;
   }
 
-  /** 完整参数面板节点树：light-enabled 能力总开关 + light-key 平铺 toggle + 参数组 folder（8 控件）。
-   *  能力总开关是 light-enabled（isEnabled/setEnabled）；light-key 是主灯 params 开关。 */
+  /** 完整参数面板节点树（映射体在 light-controls.ts buildLightNodes）：
+   *  light-enabled 能力总开关 + light-select 编辑槽位 + light-helper 线框开关 +
+   *  参数组 folder（统一设置条/环境光/聚光体积卡/重置）。 */
   getMenuNodes(): PreviewMenuNode[] {
     return buildLightNodes(this);
   }
 
-  /** 保存状态到 localStorage（参数映射下沉 light-persist.ts；私有运行时态在此编排） */
+  /** 保存状态到 localStorage（[ADR-293] 总开关/helper 可见性已入 envState，
+   *  持久化 payload 全部由 envState 纯读派生，映射体在 light-persist.ts） */
   saveState(): void {
-    persistState(this.id, {
-      enabled: this.enabled,
-      ...buildLightPersistPayload(),
-    });
+    persistState(this.id, buildLightPersistPayload());
   }
 
   /** 从 localStorage 恢复状态 */
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") this.enabled = state.enabled;
     // ① [ADR-282] 原「预设先套用」步骤已删：灯光与模型类别解耦，不再有 manualPreset/
     //    currentPreset 可恢复。旧存档中这两个键现为死数据——restoreState 对未知键宽容，
     //    不报错也不算错（灯光值已由 restoreLightParams 全量恢复）。
     // ② 用户显式保存的灯开关 + ②.b 全量参数恢复（纯数据映射，下沉 light-persist.ts；
-    //    顺序敏感：必须在预设套用之后——后恢复的用户值优先于预设，ADR-126 P5 同口径）。
+    //    [ADR-293] 能力总开关/线框可见性亦并入该批——顶层 enabled/helperVisible 键
+    //    格式与旧存档兼容，缺键落 schema 默认）。
     //    ⚠️ 重入治理（ADR-281 收口）：restoreLightParams 内部的 setEnvState 会**同步**触发
     //    onEnvChanged；挂起回调后恢复路径只写 envState，本调用末尾统一应用一次——
     //    消除「callback 先拿旧类型灯重建一次、回到③又跑一遍」的双跑窗口；新增字段时

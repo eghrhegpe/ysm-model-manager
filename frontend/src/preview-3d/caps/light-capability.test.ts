@@ -41,6 +41,14 @@ function newCap(opts: { enabled?: boolean; target?: THREE.Vector3; targetHeight?
   });
 }
 
+/** 参数组 folder 节点：[ADR-293] 顶层新增 light-helper 总开关后不再在固定下标
+ *  （结构断言按 id 寻址，防节点增删的索引漂移误伤）。 */
+function paramsFolder(cap: LightCapability): PreviewMenuNode {
+  const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-light-params");
+  expect(folder).toBeDefined();
+  return folder!;
+}
+
 /** 三盏灯统一的「全部字段」基线（构造 LightInstanceParams 的部分覆盖用） */
 const LIGHT_FIELDS_BASE: LightInstanceParams = {
   type: "directional",
@@ -362,11 +370,12 @@ describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folde
   it("主灯之外的节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // light-enabled 能力总开关 + [light-type-switch] light-select（编辑哪盏灯，取代原 light-key 平铺）
+    // light-enabled 能力总开关 + [light-type-switch] light-select（编辑哪盏灯）+ [ADR-293] light-helper
     expect(nodes[0]!.id).toBe("light-enabled");
     expect(nodes[1]!.id).toBe("light-select");
+    expect(nodes[2]!.id).toBe("light-helper");
     // 其余节点在 folder children 内
-    const folder = nodes[2]!;
+    const folder = paramsFolder(cap);
     expect(folder.kind).toBe("folder");
     const childIds = folder.children!.map((c: { id: string }) => c.id);
     // 三盏灯的开关不再平铺在 folder 外层：统一设置条按当前槽位产出 light-<which>-*
@@ -387,7 +396,7 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
   beforeEach(() => resetEnvState());
 
   function spotVolCard(cap: LightCapability): PreviewMenuNode {
-    const folder = cap.getMenuNodes()[2]!;
+    const folder = paramsFolder(cap);
     const card = folder.children!.find((c: PreviewMenuNode) => c.id === "cap-group-spot-vol");
     expect(card).toBeDefined();
     return card!;
@@ -423,7 +432,7 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
     // 「聚光灯」改为把某盏灯的 type 设为 spot，其专属参数（锥角/半影/距离/衰减）随统一设置条展开。
     // 等价断言：切到 spot 后同一套设置条里出现这些控件。
     cap.setLightParams("key", { type: "spot" });
-    const expanded = cap.getMenuNodes()[2]!.children!.map((c) => c.id);
+    const expanded = paramsFolder(cap).children!.map((c) => c.id);
     expect(expanded).toContain("light-key-angle");
     expect(expanded).toContain("light-key-penumbra");
     expect(expanded).toContain("light-key-distance");
@@ -514,6 +523,120 @@ describe("LightCapability — helper 挂载契约", () => {
   });
 });
 
+// [ADR-293] 总开关 schema 化（R1）+ helper 可见性控件化（R3）+ 离散 notify 契约（R2）
+describe("LightCapability — ADR-293 总开关与 helper schema 化", () => {
+  beforeEach(() => {
+    resetEnvState();
+    localStorage.clear();
+  });
+  afterEach(() => localStorage.clear());
+
+  it("setEnabled 写 envState.lightEnabled——开关入 schema（钳制/优先级/派发四件套全面生效）", () => {
+    const cap = newCap();
+    expect(envState.lightEnabled).toBe(true); // 声明进 schema，默认开
+    cap.setEnabled(false);
+    expect(envState.lightEnabled).toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    cap.setEnabled(true);
+    expect(envState.lightEnabled).toBe(true);
+    expect(cap.isEnabled()).toBe(true);
+  });
+
+  it("构造入参 opts.enabled 写状态层（对齐 ADR-250 pp 口径：显式给定才写）", () => {
+    newCap({ enabled: false });
+    expect(envState.lightEnabled).toBe(false);
+    resetEnvState();
+    newCap(); // 不传 = 不覆盖 envState 现值
+    expect(envState.lightEnabled).toBe(true);
+    setEnvState({ lightEnabled: false }, { source: "manual" });
+    newCap();
+    expect(envState.lightEnabled).toBe(false);
+  });
+
+  it("总开关持久化往返：顶层 enabled 键格式不变（旧存档零迁移）", () => {
+    const cap = newCap();
+    cap.setEnabled(false);
+    cap.saveState();
+    const raw = JSON.parse(localStorage.getItem("ysm-scene-cap-light") as string);
+    expect(raw.enabled).toBe(false); // 与旧格式同键位
+    resetEnvState();
+    expect(envState.lightEnabled).toBe(true); // 复位后先回默认开
+    const cap2 = newCap();
+    cap2.loadState();
+    expect(cap2.isEnabled()).toBe(false);
+    expect(envState.lightEnabled).toBe(false);
+  });
+
+  it("总开关关闭时：体积光锥不悬浮（rebuild 门禁）——开总闸即复活", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setEnabled(false);
+    cap.setVolumetric({ enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+    cap.apply(); // 关闭态 apply = detach，依旧无锥
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeUndefined();
+    cap.setEnabled(true); // 开总闸 → apply 副作用 → 锥体挂载
+    expect(scene.getObjectByName("ysm-light-volumetric-cone")).toBeDefined();
+  });
+
+  it("helper 门禁：lightHelperVisible 统一管三副线框，灯本体不动；各灯开关再套一层", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    const keyHelper = scene.getObjectByName("ysm-light-key-helper")!;
+    const keyLight = scene.getObjectByName("ysm-light-key")!;
+    expect(cap.isHelperVisible()).toBe(true); // 默认 = 现状（线框随灯开关）
+    cap.setHelperVisible(false);
+    expect(envState.lightHelperVisible).toBe(false);
+    expect(keyHelper.visible).toBe(false);
+    expect(keyLight.visible).toBe(true); // 灯还亮着——只收 gizmo 不收功率
+    cap.setHelperVisible(true);
+    expect(keyHelper.visible).toBe(true);
+    cap.setLightParams("key", { enabled: false }); // 关灯 → helper 全局开着也藏
+    expect(keyHelper.visible).toBe(false);
+  });
+
+  it("helper 可见性持久化往返 + 旧存档缺键落默认（显）", () => {
+    const cap = newCap();
+    cap.setHelperVisible(false);
+    cap.saveState();
+    resetEnvState();
+    const cap2 = newCap();
+    cap2.loadState();
+    expect(cap2.isHelperVisible()).toBe(false);
+    localStorage.setItem(
+      "ysm-scene-cap-light",
+      JSON.stringify({ enabled: true, key: { intensity: 2 } }),
+    );
+    resetEnvState();
+    const cap3 = newCap();
+    cap3.loadState();
+    expect(cap3.isHelperVisible()).toBe(true); // 旧档无 helperVisible 键 = 不写，落默认
+    expect(cap3.getParams().key.intensity).toBe(2); // 其余旧字段照恢复
+  });
+
+  it("subscribe 契约：离散键 notify、连续滑块恒不 notify（拖动不断指针捕获）", () => {
+    const cap = newCap();
+    let calls = 0;
+    const off = cap.subscribe(() => {
+      calls++;
+    });
+    cap.setLightParams("key", { intensity: 2.5 }); // 连续强度拖动——0 通知
+    cap.setVolumetric({ opacity: 0.8 }); // 同上
+    cap.setLightParams("fill", { azimuth: 30 }); // 同上
+    expect(calls).toBe(0);
+    cap.setEnabled(false); // 总开关离散
+    cap.setEnabled(true);
+    cap.setLightParams("fill", { type: "spot" }); // 类型切换离散
+    cap.setHelperVisible(false); // helper 开关离散
+    expect(calls).toBe(4);
+    off();
+    cap.setEnabled(false);
+    expect(calls).toBe(4); // 退订后无人接收
+  });
+});
+
 describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
   beforeEach(() => resetEnvState());
 
@@ -524,16 +647,18 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     expect(cap.getMenuNodes().map((n) => n.id)).toContain("light-enabled");
   });
 
-  it("完整树 = light-enabled 能力总开关 + light-select 编辑灯选择 + 参数组 folder（统一设置条 + 折叠卡）", () => {
+  it("完整树 = light-enabled 能力总开关 + light-select 编辑灯选择 + light-helper 线框开关 + 参数组 folder（统一设置条 + 折叠卡）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(3);
-    // light-enabled 能力总开关（isEnabled/setEnabled）
+    expect(nodes).toHaveLength(4);
+    // light-enabled 能力总开关（isEnabled/setEnabled；[ADR-293] 真值源 envState.lightEnabled）
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("light-enabled");
     expect(nodes[0]!.control!.get!(undefined)).toBe(true);
     nodes[0]!.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
+    expect(envState.lightEnabled).toBe(false);
+    nodes[0]!.control!.set!(true);
     // [light-type-switch] light-select：选择当前编辑的灯槽位（三灯按钮取代原三盏平铺 toggle）
     expect(nodes[1]!.kind).toBe("select");
     expect(nodes[1]!.id).toBe("light-select");
@@ -541,9 +666,16 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     nodes[1]!.control!.set!("fill");
     expect(cap.getActiveLight()).toBe("fill");
     nodes[1]!.control!.set!("key");
+    // [ADR-293] light-helper：三副线框的可见性总开关（渲染输入显式化，真值源 schema 键）
+    expect(nodes[2]!.kind).toBe("toggle");
+    expect(nodes[2]!.id).toBe("light-helper");
+    expect(nodes[2]!.control!.get!(undefined)).toBe(true);
+    nodes[2]!.control!.set!(false);
+    expect(envState.lightHelperVisible).toBe(false);
+    nodes[2]!.control!.set!(true);
     // 参数组 folder：统一设置条（当前槽位 key，默认 directional 故无锥角/衰减控件）
     // + 环境光 + 聚光灯/体积光折叠卡 + 重置按钮（[ADR-282] 取代原预设下拉）
-    const folder = nodes[2]!;
+    const folder = nodes[3]!;
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.lightGroupParams");
     expect(folder.children!.map((c: PreviewMenuNode) => c.id)).toEqual([
@@ -562,7 +694,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
 
   it("[锐评根治 2026-10] ambient 颜色控件读写联动（幽灵字段退场：参数面 ≡ 控件面）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[2]!;
+    const folder = paramsFolder(cap);
     const color = folder.children!.find((c: PreviewMenuNode) => c.id === "light-ambient-color")!;
     expect(color.kind).toBe("color");
     color.control!.set!(0x8899aa);
@@ -580,7 +712,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const nodes = cap.getMenuNodes();
     // [light-type-switch] 原平铺的 light-fill 开关 → 先切编辑槽位，再操作该槽位的统一设置条
     nodes[1]!.control!.set!("fill");
-    const folder = cap.getMenuNodes()[2]!;
+    const folder = paramsFolder(cap);
     const fill = folder.children!.find((c: PreviewMenuNode) => c.id === "light-fill-enabled")!;
     fill.control!.set!(false);
     expect(cap.getParams().fill.enabled).toBe(false);
@@ -595,7 +727,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     cap.setLightParams("fill", { intensity: 3.3 });
     expect(cap.getParams().key.intensity).toBe(4.2);
 
-    const folder = cap.getMenuNodes()[2]!;
+    const folder = paramsFolder(cap);
     const reset = folder.children!.find((c: PreviewMenuNode) => c.id === "light-reset")!;
     expect(reset.kind).toBe("button");
     reset.action!({} as never);
@@ -1231,7 +1363,7 @@ describe("LightCapability — 菜单控件联动", () => {
     const nodes = cap.getMenuNodes();
     // 每次按需重取节点树：切槽位/切类型都会重建参数区（refreshOnChange 由消费端触发）
     const by = (id: string) =>
-      cap.getMenuNodes()[2]!.children!.find((c: PreviewMenuNode) => c.id === id)!;
+      paramsFolder(cap).children!.find((c: PreviewMenuNode) => c.id === id)!;
     nodes[0]!.control!.set!(false);
     expect(nodes[0]!.control!.get!(undefined)).toBe(false);
     // [light-type-switch] 原平铺的 light-fill/light-rim 开关 → 切编辑槽位后由统一设置条读写
@@ -1263,7 +1395,7 @@ describe("LightCapability — 菜单控件联动", () => {
     cap.setLightParams("rim", { intensity: 5.5 });
     expect(cap.getParams().rim.intensity).toBe(5.5);
 
-    const folder = cap.getMenuNodes()[2]!;
+    const folder = paramsFolder(cap);
     const resetNode = folder.children!.find((c: PreviewMenuNode) => c.id === "light-reset")!;
     expect(resetNode.kind).toBe("button");
     resetNode.action!({} as never);

@@ -1213,6 +1213,9 @@ export const ja: Record<string, string> = {
   "preview.lightReset": "ライトをリセット",
   "preview.lighting": "照明",
   "preview.lightSelect": "ライトを編集",
+  "preview.lightHelper": "ライト補助線",
+  "preview.lightHelperHint":
+    "ビューポートに3灯の方向ワイヤーフレームを表示（編集中の補助のみ、スクリーンショットには含めません）",
   "preview.lightType": "ライトタイプ",
   "preview.lightTypeDirectional": "平行光",
   "preview.lightTypePoint": "点光源",

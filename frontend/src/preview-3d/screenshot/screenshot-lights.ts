@@ -28,16 +28,19 @@ export function toScreenshotLights(): ScreenshotLights | undefined {
   const cap = sceneCapabilityRegistry.getById("light");
   if (!cap) return undefined;
   const p = cap.getParams();
+  // [ADR-293] 总开关门禁：预览关总闸时场景无任何灯光（含 ambient 也被 detach），
+  // 截图须同样全黑——旧实现不看 isEnabled()，预览全黑而截图灯火通明，WYSIWYG 破洞。
+  const on = cap.isEnabled();
   return {
     // 镜像预览的 PMREM 环境光衰减——截图与预览 ambient 同构：
     // 开关读组合根 isSkyEnvironmentOn，系数/公式走 light-capability 的 attenuateAmbientForSky 单源
     ambient: {
       color: p.ambient.color,
-      intensity: attenuateAmbientForSky(p.ambient.intensity, isSkyEnvironmentOn()),
+      intensity: on ? attenuateAmbientForSky(p.ambient.intensity, isSkyEnvironmentOn()) : 0,
     },
     radius: cap.getTargetHeight(),
-    key: { ...p.key },
-    fill: { ...p.fill },
-    rim: { ...p.rim },
+    key: { ...p.key, enabled: p.key.enabled && on },
+    fill: { ...p.fill, enabled: p.fill.enabled && on },
+    rim: { ...p.rim, enabled: p.rim.enabled && on },
   };
 }

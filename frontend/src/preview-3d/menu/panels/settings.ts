@@ -90,8 +90,12 @@ function capPanelNodes(cap: SceneCapability): PreviewMenuNode[] {
  *  [锐评根治 2026-10] 去双 cast 后门：capPanelNodes 只依赖 SceneCapability 通用接口
  *  （getMenuNodes/getMasterNodeId 均为其可选成员），原兜底通道把 ctx.getCap 结果
  *  `as unknown as LightCapability` 收窄属多余——registry 缺席时按通用接口降级渲染，
- *  不再谎称具体类型（消费方 shadow/postproc 面板同款单通道口径）。 */
-export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
+ *  不再谎称具体类型（消费方 shadow/postproc 面板同款单通道口径）。
+ *  [ADR-293] 接受 menu 句柄并把 cap.subscribe 接入面板重绑（见 rebindSceneCapSubs）。 */
+export function buildLightingSchema(
+  ctx: PreviewMenuCtx,
+  menu?: SlideMenuHandle,
+): PreviewMenuNode[] {
   const fromCtx = ctx.getCap("light");
   const lightCap: SceneCapability | undefined =
     sceneCapabilityRegistry.getById("light") ?? (fromCtx?.getMenuNodes ? fromCtx : undefined);
@@ -104,7 +108,34 @@ export function buildLightingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
+  // [ADR-293] 每次 schema 重建重绑 cap 离散变更订阅 → menu.refresh()（对齐 env.ts
+  // rebuildEnvSubs 的 per-menu WeakMap 样板）：跨会话共享 cap / 程序化写灯时，
+  // 打开中的灯光面板与场景同步；未实现 subscribe 的 cap 自然跳过。
+  rebindSceneCapSubs(menu, lightCap);
   return capPanelNodes(lightCap);
+}
+
+/** 场景面板 cap 订阅表（[ADR-293]）：per-menu WeakMap 隔离——多挂载实例互不清对方
+ *  订阅（env.ts 同款教训），menu 句柄回收时表项随弱键自动消失。 */
+const _sceneCapSubsByMenu = new WeakMap<SlideMenuHandle, Array<() => void>>();
+
+function rebindSceneCapSubs(menu: SlideMenuHandle | undefined, cap: SceneCapability): void {
+  if (!menu) return;
+  const prev = _sceneCapSubsByMenu.get(menu);
+  if (prev) for (const u of prev) u();
+  const subs = cap.subscribe ? [cap.subscribe(() => menu.refresh())] : [];
+  if (subs.length > 0) _sceneCapSubsByMenu.set(menu, subs);
+  else _sceneCapSubsByMenu.delete(menu);
+}
+
+/** 会话卸载时清场景面板 cap 订阅（与 disposeEnvSubscriptions 并列入 core dispose 链，
+ *  防 cap 单例持有过期 menu 引用） */
+export function disposeSceneCapSubscriptions(menu: SlideMenuHandle): void {
+  const subs = _sceneCapSubsByMenu.get(menu);
+  if (subs) {
+    for (const u of subs) u();
+    _sceneCapSubsByMenu.delete(menu);
+  }
 }
 
 /** 阴影面板 schema：从 shadow cap 直产节点渲染 */

@@ -70,8 +70,10 @@ const SPOT_VOL_CARD = "cap-group-spot-vol";
 export const LIGHT_MASTER_NODE_ID = "light-enabled";
 
 /** 灯光能力总开关 toggle（面板首行；读 isEnabled/setEnabled——setEnabled(false) 移除场景全部灯）。
- *  真值源/持久化与 shadow-enabled / pp-enabled 同构；本节点经 getMasterNodeId 升场景组根视图
- *  headerToggle，二级面板渲染时由 capPanelNodes 按 LIGHT_MASTER_NODE_ID filter 掉，防一二级双份。 */
+ *  [ADR-293] 真值源 = envState.lightEnabled，与 pp-enabled（ADR-250）/ fog-enabled（ADR-196）
+ *  同口径——旧注释宣称「与 shadow 同构」实为双轨（shadow-enabled 仍是 cap 私有态，同病另刀）。
+ *  本节点经 getMasterNodeId 升场景组根视图 headerToggle，二级面板渲染时由 capPanelNodes 按
+ *  LIGHT_MASTER_NODE_ID filter 掉，防一二级双份。 */
 function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
   return {
     id: LIGHT_MASTER_NODE_ID,
@@ -80,6 +82,25 @@ function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
     control: {
       get: () => cap.isEnabled(),
       set: (v) => cap.setEnabled(v as boolean),
+    },
+  };
+}
+
+/** [ADR-293] 灯架线框（helper）可见性开关：视口 gizmo 总闸。
+ *  三副线框是渲染输出的一部分却曾长期不可见地恒挂载——无 schema 键、无控件、无存档，
+ *  正是 ADR-290 给锥体驱动源清偿的「渲染输入未显式化」同款债，本节点收口。
+ *  不入 LightParams/FLATTEN_MAP（那映射的是「灯光参数面」，线框不是灯光参数），
+ *  直接挂 schema 布尔键，持久化走顶层 helperVisible 键（light-persist.ts）。
+ *  默认 true = 现状观感（线框随各灯开关），此开关只增加撤销权。 */
+function lightHelperNode(cap: LightCapability): PreviewMenuNode {
+  return {
+    id: "light-helper",
+    kind: "toggle",
+    labelKey: "preview.lightHelper",
+    hintKey: "preview.lightHelperHint",
+    control: {
+      get: () => cap.isHelperVisible(),
+      set: (v) => cap.setHelperVisible(v as boolean),
     },
   };
 }
@@ -330,7 +351,8 @@ function ambientNodes(cap: LightCapability): PreviewMenuNode[] {
 }
 
 /** 完整参数面板节点树：light-enabled 能力总开关（首行）+ 编辑灯选择（三灯按钮）
- *  + 统一设置条（类型/颜色/强度/方位角/仰角 + 类型专属参数）+ 环境光 + 体积光卡。 */
+ *  + [ADR-293] light-helper 线框可见性开关 + 统一设置条（类型/颜色/强度/方位角/仰角
+ *  + 类型专属参数）+ 环境光 + 体积光卡。 */
 export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
   return [
     lightEnabledNode(cap),
@@ -347,6 +369,8 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
         refreshOnChange: true,
       },
     },
+    // [ADR-293] 视口线框总闸（编辑焦点之下、参数组之上——它管「怎么看」不管「怎么亮」）
+    lightHelperNode(cap),
     {
       id: "cap-group-light-params",
       kind: "folder",

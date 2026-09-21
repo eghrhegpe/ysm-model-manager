@@ -19,6 +19,7 @@ auto_fields:
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
     - collectSettingsCapControls
+    - disposeSceneCapSubscriptions
     - getStateValue
     - isPathAvailable
     - isPreviewFolderNode

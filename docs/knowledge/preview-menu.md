@@ -48,6 +48,7 @@ auto_fields:
     - CorePanelId
     - disposeCustomCleanups
     - disposeEnvSubscriptions
+    - disposeSceneCapSubscriptions
     - formatCapSliderValue
     - hasSceneStats
     - isPreviewFolderNode

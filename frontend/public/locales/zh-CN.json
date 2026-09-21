@@ -1055,6 +1055,8 @@
   "preview.lightReset": "重置灯光",
   "preview.lighting": "灯光",
   "preview.lightSelect": "编辑灯光",
+  "preview.lightHelper": "灯光辅助线",
+  "preview.lightHelperHint": "视口内显示三盏灯的来向线框（仅编辑辅助，不随截图输出）",
   "preview.lightType": "灯光类型",
   "preview.lightTypeDirectional": "方向光",
   "preview.lightTypePoint": "点光源",

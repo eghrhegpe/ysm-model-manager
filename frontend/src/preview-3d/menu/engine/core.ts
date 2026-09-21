@@ -24,6 +24,7 @@ import {
   buildPostprocessingSchema,
   buildSettingsSchema,
   buildShadowSchema,
+  disposeSceneCapSubscriptions,
 } from "@/preview-3d/menu/panels/settings.ts";
 import { renderCapControls } from "@/preview-3d/menu/render/cap-controls.ts";
 import {
@@ -225,7 +226,8 @@ export function buildPreviewMenuRouters(
   // 先占位：makePanelView 上面的闭包会立即引用 routers，routers 下面立即赋值
   const routers: PreviewMenuRouters = {
     schemaBuilders: {
-      lighting: (_menu) => buildLightingSchema(ctx),
+      // [ADR-293] 透传 menu：灯光面板把 cap.subscribe 接入 menu.refresh（rebindSceneCapSubs）
+      lighting: (menu) => buildLightingSchema(ctx, menu),
       shadow: () => buildShadowSchema(ctx),
       postproc: () => buildPostprocessingSchema(ctx),
       settings: (menu) => buildSettingsSchema(ctx, menu),
@@ -771,6 +773,7 @@ export function mountPreviewRootMenu(
       // restoreFocus:false —— 会话正在销毁，焦点归还由 finishSession 的 returnFocus 统一负责。
       hideMenu({ restoreFocus: false });
       disposeEnvSubscriptions(menu); // 清环境面板 cap 订阅（per-mount 隔离，防 cap 单例持有过期 menu 引用）
+      disposeSceneCapSubscriptions(menu); // [ADR-293] 清场景面板 cap 订阅（灯光线框），同 per-menu 隔离口径
       unregisterCorePanelSchemas(routers); // ADR-193 §2.5：注销 core 六面板 registry 注册（所有权感知，防陈旧 ctx 闭包跨会话污染/误删新会话）
       clearFolderCollapsedState(); // 清 folder 折叠态记忆（render.ts 模块级 Map，dispose 不清则残留到下次 mount——render.ts 注释承诺的调用点）
       menu.dispose();

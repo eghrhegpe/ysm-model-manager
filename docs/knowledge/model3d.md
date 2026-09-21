@@ -221,6 +221,7 @@ auto_fields:
     - disposeMaterial
     - disposeMmdMesh
     - disposeObject3D
+    - disposeSceneCapSubscriptions
     - disposeSceneMeshes
     - disposeTextureDecoder
     - DragSliderController

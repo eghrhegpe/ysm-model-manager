@@ -594,7 +594,7 @@ postprocessing cap 确认，列观察项）。
 | E-4 | environment-capability.ts:563 vs sky-capability.ts:808-814 | scene.environment 三权打架：env cap dispose **无条件**还原 prevEnvironment，sky cap 有 ownership 守卫——两 cap 同写 scene.environment 无协调，dispose 顺序不同结果不同 | env 侧对齐 sky 的 ownership 守卫（仅当 environment 仍归本 cap 时还原） | ✅ 已修 |
 | S2-4 | sky-capability.ts 回调 L238-303 | **skyScale 死键**：schema 有键、无回调分支、无 UI 控件、预设可写但渲染层不响应 | 补控件 + 分支，或从 schema 摘除 | ✅ 已修（摘键提常量，见 §14） |
 | ~~G-1~~ | ~~ground-menu.ts buildGroundNodes~~ | ~~注释宣称「锐评 P3 补齐菜单出口」但菜单实际未露出~~ | — | ❌ **误判，撤销**（见 §15 更正） |
-| S1-4 | sky 子视图 sky-env toggle | 语义漂移：实为「天空 IBL」却标「环境贴图映射」，与 atmosphere 卡 EnvironmentCapability 抢写 scene.environment 无联动 | 标签改「天空 IBL」+ description 说明互斥；或开 sky IBL 自动关 env useAsBackground |
+| S1-4 | sky 子视图 sky-env toggle | 语义漂移：实为「天空 IBL」却标「环境贴图映射」，与 atmosphere 卡 EnvironmentCapability 抢写 scene.environment 无联动 | **根因非文案而是架构**：一个功能（给 scene.environment 供图）被劈成两半分置两面板。方案见 ADR-292——所有权收口归 env cap，sky IBL 降为「来源」选项 | 📝 ADR-292 已起草，待拍板 |
 
 ### 🟡 性能冗余（中优先级）
 | # | 位置 | 问题 | 建议 |
@@ -699,8 +699,11 @@ TDD 流程：先写回归测试 → 对**旧实现**实测（4 例全红，证�
 需以 `positional` 收口。留给该会话或后续收口。
 
 ### 未修的 🔴（仍待办）
-- **S1-4** sky「环境贴图映射」标签语义漂移 + 与 env cap 抢写槽位（E-4 已修 dispose 侧，
-  但**运行期**两 cap 同写 scene.environment 仍无协调——建议抽 ownership 协议或联动开关）
+- **S1-4** sky「环境贴图映射」标签语义漂移 + 与 env cap 抢写槽位（E-4 已修 dispose 侧）——
+  **已出方案 ADR-292**（📝 提议中）：`scene.environment` 所有权收口归 EnvironmentCapability
+  独占，sky IBL 降为 env 面板「来源」三选一中的一项，删除天空面板的重复开关。
+  根因是「一个功能被劈成两半放在两处」而非两个功能——详见
+  `docs/adr/ADR-292-scene-environment-sky-ibl-env.md`。
 - ~~G-1~~ 撤销（误判，见 §15）
 - ~~S2-4~~ 已修（见下）
 

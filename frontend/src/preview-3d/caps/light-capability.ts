@@ -815,6 +815,11 @@ export class LightCapability implements SceneCapability {
     this.mountHelper("key");
     this.mountHelper("fill");
     this.mountHelper("rim");
+    // ⑥ [ADR-293 复核加固] 末尾补一次 notify：suspend 窗内恢复不派发（重入治理本意），
+    //    代价是同宿主复用（二次 createSceneInfra 的 loadAll）时若灯光面板恰开着，
+    //    离散值与场景脱节——此处补一帧面板刷新。安全前提：notify 重入面板渲染的自激
+    //    已被双保险掐灭（listener-set 快照迭代 + rebindSceneCapSubs 幂等，复核 P0）。
+    this.listenerSet.notify();
   }
 
   /** ambient 应用单一出口（预览/截图同构）：ambient 强度/颜色属 light 组 envState 字段，

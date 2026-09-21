@@ -635,6 +635,21 @@ describe("LightCapability — ADR-293 总开关与 helper schema 化", () => {
     cap.setEnabled(false);
     expect(calls).toBe(4); // 退订后无人接收
   });
+
+  it("[ADR-293 复核加固] loadState 末尾补 notify：同宿主复用下面板离散值不脱节", () => {
+    const cap = newCap();
+    cap.setEnabled(false);
+    cap.setLightParams("fill", { type: "spot" });
+    cap.saveState();
+    resetEnvState();
+    const cap2 = newCap(); // 模拟同进程宿主复用：新 cap 在复位态上构造
+    let calls = 0;
+    cap2.subscribe(() => calls++);
+    cap2.loadState(); // suspend 窗内恢复不派发（重入治理本意）→ 末尾须补一次
+    expect(calls).toBe(1);
+    expect(envState.lightEnabled).toBe(false);
+    expect(envState.lightFillType).toBe("spot");
+  });
 });
 
 describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {

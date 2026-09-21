@@ -222,7 +222,7 @@ const bindings: PathBindingMap = {
     available: () => true,
   },
   // ── cap 派生项：走 get/set 映射，本层不落盘（cap 存自己的域）──
-  //   与 cap 自报控件同源：wireframe-toggle / sky-env
+  //   与 cap 自报控件同源（sky-env 随 [ADR-292 D4] 退场，PMREM 供图归 env 面板来源单选）
   // [ADR-250] `render.bloom` 已退场——后处理是视觉项，与 wireframe/pmrem 同类不进性能档位表。
   // 历史：该路径经 setMasterEnabled 写 cap 私有总闸字段，与 per-type 门禁二元相与，
   // 构成「一枚字段三重语义」，且档位切换会覆盖用户手动开关。现后处理开关唯一入口 = `pp-enabled`。

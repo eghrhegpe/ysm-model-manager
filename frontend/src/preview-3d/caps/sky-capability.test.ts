@@ -1248,7 +1248,7 @@ describe("SkyCapability — God Rays 挂载分支", () => {
 describe("SkyCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("完整树 = sky-enabled 总开关 + timeline controls 节点 + sky-env 平铺 + 高级 folder", () => {
+  it("完整树 = sky-enabled 总开关 + timeline controls 节点 + 高级 folder（sky-env 随 ADR-292 D4 退场）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
     // 0: sky-enabled 能力总开关 toggle（env 一级行 headerToggle 源）

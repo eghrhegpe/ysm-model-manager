@@ -513,15 +513,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-mono);
 }
 .br-name-old {
   color: var(--muted);
+  font-family: var(--font-mono);
 }
 .br-name-new {
   color: var(--accent);
+  font-family: var(--font-mono);
 }
 .br-name-plain {
   color: var(--muted);
+  font-family: var(--font-mono);
 }
 .br-arrow {
   color: var(--muted);

@@ -1,17 +1,19 @@
 // @vitest-environment node
 // ===== FogCapability 测试（ADR-196 迁移至 envState）=====
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
 import { FogCapability } from "./fog-capability.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
-import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
+import { clearEnvCallbacks, isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";
 
 // ADR-196：构造即注册全局 env 回调、仅 dispose 注销；与 ground/sky/water 同侪一致，
 // afterEach 清空防 cap 泄漏跨测试（O(N²) 回调累积超时隐患）。
 afterEach(() => { clearEnvCallbacks(); });
+/** 测试用 scene：共享实例供「scene.fog 落地」断言（newCap 内部重建会丢引用） */
+const scene = new THREE.Scene();
 function newCap() {
-  return new FogCapability({ scene: new THREE.Scene() });
+  return new FogCapability({ scene });
 }
 
 describe("FogCapability — 构造与默认值", () => {
@@ -185,6 +187,47 @@ describe("FogCapability — 持久化", () => {
     expect(cap.isEnabled()).toBe(true);
     expect(cap.getMode()).toBe("exp2");
     expect(cap.getParams().density).toBe(0.02);
+  });
+
+  // [锐评 F-2] 恢复路径来源纪律：存档恢复是**程序化动作**，不得把 fog 组 6 键
+  // 打成 manual——否则后续 auto-atmosphere 预设写雾参数被 shouldOverwrite 拒绝
+  // （用户选了 sunset 氛围，雾却不跟着变）。与 ground/water 恢复口径对齐。
+  it("loadState 后 preset 仍能写雾参数（恢复不得把 fog 键打成 manual 冻死预设）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-fog",
+      JSON.stringify({ enabled: true, fogMode: "linear", fogColor: 0x111111, fogNear: 10, fogFar: 100, fogDensity: 0.01 }),
+    );
+    const cap = newCap();
+    cap.loadState();
+
+    // 氛围预设（auto-atmosphere）写雾：恢复后必须仍然生效
+    setEnvState(
+      { fogMode: "exp2", fogDensity: 0.015, fogNear: 50, fogFar: 800 },
+      { source: "auto-atmosphere" },
+    );
+    expect(envState.fogMode).toBe("exp2");
+    expect(envState.fogDensity).toBe(0.015);
+    expect(envState.fogFar).toBe(800);
+  });
+
+  // [锐评 F-2] 挂起收口：恢复期间派发应被挂起，末尾统一 applyFog 一次——
+  // 消除「6 次 dispatch × 6 次 applyFog」的启动期冗余（对齐 ground loadState）。
+  it("loadState 恢复期间派发挂起，末尾统一落地一次", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-fog",
+      JSON.stringify({ enabled: true, fogMode: "exp2", fogColor: 0x123456, fogNear: 20, fogFar: 300, fogDensity: 0.02 }),
+    );
+    const cap = newCap();
+    const applySpy = vi.spyOn(cap as unknown as { applyFog: () => void }, "applyFog");
+
+    cap.loadState();
+
+    // 恢复后状态正确落地，且 applyFog 只在末尾显式跑一次（挂起期内派发不触发回调）
+    expect(envState.fogMode).toBe("exp2");
+    expect(scene.fog).toBeInstanceOf(THREE.FogExp2);
+    expect(applySpy).toHaveBeenCalledTimes(1);
+    // 挂起计数必须归零（逃逸会让后续全仓 envState 派发静默假死）
+    expect(isEnvCallbacksSuspended()).toBe(false);
   });
 });
 

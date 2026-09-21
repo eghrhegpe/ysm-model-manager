@@ -5,7 +5,11 @@
 
 import * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
-import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
+import {
+  registerEnvCallback,
+  resumeEnvCallbacks,
+  suspendEnvCallbacks,
+} from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
@@ -253,14 +257,29 @@ export class FogCapability implements SceneCapability {
         ...("density" in s ? { fogDensity: s.density } : {}),
       };
     }
-    restoreFields(state, {
-      fogEnabled: { boolean: (v) => setEnvState({ fogEnabled: v }, { source: "manual" }) },
-      fogMode: oneOf(FOG_MODES, (v) => setEnvState({ fogMode: v }, { source: "manual" })),
-      fogColor: { number: (v) => setEnvState({ fogColor: v }, { source: "manual" }) },
-      fogNear: { number: (v) => setEnvState({ fogNear: v }, { source: "manual" }) },
-      fogFar: { number: (v) => setEnvState({ fogFar: v }, { source: "manual" }) },
-      fogDensity: { number: (v) => setEnvState({ fogDensity: v }, { source: "manual" }) },
-    });
+    // [锐评 F-2] 恢复路径来源纪律 + 挂起收口（对齐 ground loadState 口径）：
+    //  ① source:"auto-model"——存档恢复是**程序化动作**，不是用户手改。原实现写
+    //     "manual" 会把 fog 组 6 键的 lastWriteSource 全打成 manual，此后
+    //     auto-atmosphere 氛围预设写 fogMode/fogDensity/... 一律被 shouldOverwrite
+    //     拒绝（用户选 sunset 氛围，雾却不跟着变）。与 env-state 的
+    //     skipMiddleware「存档恢复豁免」同一法理。
+    //  ② suspendEnvCallbacks()——恢复 6 字段期间挂起派发，避免 6 次 dispatch ×
+    //     6 次 applyFog（其中含 mode 变更的中途 new 对象），末尾统一 applyFog 一次。
+    //     resume 放 finally：任一 restoreFields 抛出也不让挂起计数逃逸
+    //     （逃逸会让全仓 envState 派发静默假死——envState 有值、Three 不更新、无报错）。
+    suspendEnvCallbacks();
+    try {
+      restoreFields(state, {
+        fogEnabled: { boolean: (v) => setEnvState({ fogEnabled: v }, { source: "auto-model" }) },
+        fogMode: oneOf(FOG_MODES, (v) => setEnvState({ fogMode: v }, { source: "auto-model" })),
+        fogColor: { number: (v) => setEnvState({ fogColor: v }, { source: "auto-model" }) },
+        fogNear: { number: (v) => setEnvState({ fogNear: v }, { source: "auto-model" }) },
+        fogFar: { number: (v) => setEnvState({ fogFar: v }, { source: "auto-model" }) },
+        fogDensity: { number: (v) => setEnvState({ fogDensity: v }, { source: "auto-model" }) },
+      });
+    } finally {
+      resumeEnvCallbacks();
+    }
     this.applyFog();
   }
 

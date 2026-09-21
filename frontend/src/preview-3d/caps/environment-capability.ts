@@ -319,8 +319,14 @@ export class EnvironmentCapability implements SceneCapability {
         () => console.warn("[EnvironmentCapability] preset=custom 但无 HDR 缓存，回退 studio 预设"),
       );
     }
-    // 回退 studio：写 setEnvState 触发 callback build（isBuilding 守卫防递归）
-    setEnvState({ envPreset: "studio" }, { source: "manual" });
+    // 回退 studio：写 setEnvState 触发 callback build（isBuilding 守卫防递归）。
+    // [锐评 E-3] 来源纪律：回退是**程序化动作**，不是用户手改——原实现写 "manual"
+    // 会把 envPreset 的 lastWriteSource 打成 manual，此后 auto-atmosphere 氛围预设
+    // 写 envPreset 一律被 shouldOverwrite 拒绝（用户选 sunset，环境贴图却不跟着换）。
+    // force:true 语义同昼夜循环先例：程序化动作不得被守卫冻结。此处必须 force——
+    // 若用户曾手选过 studio（prev=manual），auto-model 写入会被守卫拒绝，
+    // envState.envPreset 将滞留 "custom" 而渲染已是 studio 贴图（真值源与画面撕裂）。
+    setEnvState({ envPreset: "studio" }, { source: "auto-model", force: true });
     return null;
   }
 
@@ -560,8 +566,21 @@ export class EnvironmentCapability implements SceneCapability {
 
   dispose(): void {
     this.unsubscribeEnv();
-    this.scene.environment = this.prevEnvironment;
-    this.scene.background = this.prevBackground;
+    // [锐评 E-4] 还原前做 **ownership 守卫**（对齐 sky-capability.dispose 的对称实现）：
+    // scene.environment / scene.background 是**多 cap 共享的全局槽位**——sky 的 IBL
+    // PMREM 也会写 scene.environment。原实现无条件还原 prevEnvironment，若 sky 在本
+    // cap 之后写过 environment（构造序：env → sky），env.dispose 会把 sky 的贴图冲掉，
+    // 呈现「关掉环境贴图，天空 IBL 也黑了」。仅当槽位仍归本 cap 所有（自建贴图，
+    // 或已被子路径置 null）才还原。
+    const ownedEnv = this.envTexture;
+    if (this.scene.environment === null || this.scene.environment === ownedEnv) {
+      this.scene.environment = this.prevEnvironment;
+    }
+    // background 同理（同槽位无他人竞写，但保持与 environment 同构，防未来多 cap 接入）
+    const ownedBg = this.backgroundSrcTex;
+    if (this.scene.background === null || this.scene.background === ownedBg) {
+      this.scene.background = this.prevBackground;
+    }
     this.disposeEnvironment();
     this.disposeCustomCache();
   }

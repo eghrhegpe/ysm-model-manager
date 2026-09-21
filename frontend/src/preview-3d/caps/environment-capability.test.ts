@@ -23,7 +23,7 @@ import {
 import { MODEL_DEFAULTS, toModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-196：统一状态层
 import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
-import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
 // PMREMGenerator 扩展 mock：全局 setup 的 Fake 只有 fromScene，本文件需 fromEquirectangular
@@ -348,6 +348,56 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
     expect(scene.background).toBe(color);
     expect(cap.hasCustomHdr()).toBe(false);
     expect(cap.getCustomHdrName()).toBe("");
+  });
+
+  // [锐评 E-4] scene.environment 是多 cap 共享全局槽位：dispose 前须做 ownership 守卫，
+  // 否则「关掉环境贴图」会把 sky 后写的 IBL PMREM 一起冲掉（黑天 + 无环境光）。
+  it("dispose ownership 守卫：他人（sky IBL）后写的 environment 不被本 cap 冲掉", () => {
+    const scene = new THREE.Scene();
+    const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    expect(scene.environment).not.toBeNull();
+
+    // 模拟 sky 在本 cap 之后接管 environment（IBL PMREM）
+    const skyEnv = new THREE.Texture();
+    scene.environment = skyEnv;
+
+    cap.dispose();
+    // 槽位不归本 cap 所有 → 不还原，sky 的贴图保持
+    expect(scene.environment).toBe(skyEnv);
+  });
+
+  it("dispose ownership 守卫：槽位仍归本 cap 时正常还原 prevEnvironment", () => {
+    const scene = new THREE.Scene();
+    const prev = new THREE.Texture();
+    scene.environment = prev;
+    const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    const owned = scene.environment;
+    expect(owned).not.toBe(prev);
+
+    cap.dispose();
+    expect(scene.environment).toBe(prev);
+  });
+
+  // [锐评 E-3] custom 无缓存回退是**程序化动作**：不得打成 manual（否则冻死
+  // auto-atmosphere 预设写 envPreset），且须 force 写入（防用户曾手选 studio 时滞留 custom）。
+  it("custom 无缓存回退 studio：不污染 lastWriteSource，预设仍可写 envPreset", () => {
+    const log = vi.fn();
+    (globalThis as Record<string, unknown>).__ysmRingLog = log;
+    const cap = newCap();
+    cap.apply(); // 建立初始环境（source 走 manual 之外）
+
+    // 用户手选过 studio（把 envPreset 打成 manual）
+    cap.setPresetId("studio");
+    setEnvState({ envPreset: "custom" }, { source: "auto-model", force: true });
+
+    cap.apply(); // 触发回退路径
+    expect(cap.getPresetId()).toBe("studio");
+
+    // 关键断言：氛围预设（auto-atmosphere）此后仍能写 envPreset
+    setEnvState({ envPreset: "sunset" }, { source: "auto-atmosphere" });
+    expect(envState.envPreset).toBe("sunset");
   });
 });
 

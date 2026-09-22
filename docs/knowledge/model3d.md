@@ -399,6 +399,7 @@ auto_fields:
     - isPreviewOverlayActive
     - isRenderableModel
     - isSkyEnvironmentOn
+    - isSsrRenderActive
     - JavaModelFace
     - JavaModelResult
     - KNOWN_PATHS

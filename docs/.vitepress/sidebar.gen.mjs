@@ -245,6 +245,10 @@ export const autoSidebar = [
       {
         "text": "YSM 模型管理器 — 界面视觉与布局一致性诊断报告",
         "link": "/UI-Design-Audit-2026-09"
+      },
+      {
+        "text": "YSM 模型管理器 — 界面一致性落地改动方案",
+        "link": "/UI-Design-Fix-Plan"
       }
     ]
   },

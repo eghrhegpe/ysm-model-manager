@@ -40,6 +40,7 @@ auto_fields:
     - getSceneCaps
     - getStateValue
     - isEnvCallbacksSuspended
+    - isSsrRenderActive
     - MODEL_DEFAULTS
     - ModelType
     - NumericRange

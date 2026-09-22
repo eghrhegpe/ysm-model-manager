@@ -995,3 +995,100 @@ ground-capability.ts:698-729 手写 27 字段。对比 water 侧 `getPresetKeys(
 
 > 提交：`<type>: <desc>`（见 git log）——仅含 ground-capability.ts + 其测试 + 本报告。
 
+---
+
+## §19 同类情况横向排查（2026-10 问询轮「还有类似的情况吗」）
+
+> 问题溯源：G-6 是「用户手动动作未触发状态标记」的缺陷。横向排查环境系统全部 cap，问题
+> 一分为二：**A. 来源纪律（restore 用 manual 打穿守卫）**、**B. 保存清单手抄 vs schema 驱动**、
+> **C. cap 私有 enabled 双键**。逐一实地核查，结论：**A/C 无活动故障（均被守卫/归属兜住），
+> B 是零故障风险的债务，另有 G-6 的旁支变体已随本轮一并修复**。
+
+### 19.1 来源纪律（A 类）——环境系统横向 verdict
+
+| cap | loadState 恢复 source | 已修？ | 现况 |
+|-----|----------------------|--------|------|
+| sky | `auto-model` | ✅（S-1 收口 2026-09-22） | 正确 |
+| fog | `auto-model` + suspend | ✅（F-2） | 正确 |
+| env | `auto-model` + suspend | ✅（E-2） | 正确 |
+| light | `auto-model`（light-persist，acc 合批） | ✅（L-1 收口 2026-09-22） | 正确 |
+| postprocessing | `auto-model`（表驱动字段全 auto-model） | ✅（P-1） | 正确 |
+| ground | `manual` + skipMiddleware | ⚠️ 部分（G-6 已修中间件，loadState 仍 manual 但**有 skipMiddleware 豁免**） | G-6 中间件修复后正确 |
+| **reflector** | **`manual`**（reflector-capability.ts:297-303） | ❌ **未修** | **潜伏（latent），见下** |
+| **shadow** | **`manual`**（shadow-capability.ts:483-492） | ❌ **未修** | **潜伏（latent），见下** |
+| renderMode | `manual` | ❌ 未修 | 无自动来源会写 renderMode 键，**非漏洞** |
+
+**为什么 reflector/shadow 的 `manual` 恢复是「潜伏」而非「活动故障」**——两条防线共同兜住：
+
+1. **`isStateLoaded` 守卫**：reflector/shadow 的 `applyModelPreset` 首行 `if (this.isStateLoaded) return`
+   （reflector-capability.ts:207 / shadow-capability.ts:158），loadState 末尾置 `isStateLoaded = true`。
+   装配序 `loadAll() → applyModelDefaults()`（shared-infra.ts:308,314）——有存档时模型默认值**根本不写**
+   reflector/shadow 键，故「manual 打穿 auto-model 模型默认」这条 E-3/F-2 病在本二 cap 不成立。
+2. **归属隔离**：氛围预设 `ATMOSPHERE_PRESETS` 明确 `❌ shadow 类型（技术质量档）/ reflector 尺寸（场景布置）`
+   （atmosphere-presets.ts:10-11）——auto-atmosphere 永不写这两组键，故「manual 打穿氛围预设」也不成立。
+   唯一会写 reflector/shadow 的自动来源（模型默认）恰被守卫挡掉，manual 锁无受害方。
+
+> **结论**：reflector/shadow 的 restore `manual` 是**格式不一致的债**（与六 cap 同族），但不是**活动 bug**。
+> 修它的收益仅是「物体一致性」（新 cap 读代码不会再误以为 manual 是正确范式），零行为变化。
+> **已记录，不做（留作格式收敛候选，与 19.2 的 B 类合并处理更合理）。**
+
+### 19.2 保存清单手抄 vs schema 驱动（B 类）——横向 verdict
+
+| cap | saveState | 是否 schema 驱动 | 风险 |
+|-----|-----------|------------------|------|
+| water | `getPresetKeys("water")` 循环 | ✅ | 零（新增键写侧自动跟上） |
+| light | `buildLightPersistPayload` + `FLATTEN_MAP` | ✅ | 零（字段全集只在 light-presets 声明一次） |
+| ground | 手写 27 字段（ground-capability.ts:705-735） | ❌ | 中（§18 G-8 已记录；ADR-249 漏键病史） |
+| fog | 手写 6 字段 | ❌ | 低（字段少且稳定） |
+| env | 手写 6 字段 | ❌ | 低 |
+| pp | 手写 19 字段（postprocessing-capability.ts:730-753） | ❌ | 中（字段多、新增易漏） |
+| reflector | 手写 7 字段 | ❌ | 低 |
+| shadow | 手写 6 字段 | ❌ | 低 |
+| renderMode | 手写 5 字段 | ❌ | 低（debug 工具） |
+
+> **结论**：B 类是真实的同族「手抄清单」债，但它是**零故障风险的风格债务**（不在本次修复范围）。
+> 最值得后续收敛的是 pp（19 字段）+ ground（27 字段）——水/光的 schema 驱动先例已证明可行路径。
+
+### 19.3 cap 私有 enabled 双键（C 类）——横向 verdict
+
+| cap | 私有 `this.enabled` | envState gate | 双键？ | 现况 |
+|-----|--------------------|---------------|--------|------|
+| ground | ✅ L112 | `groundVisible` + `groundGridVisible` | ⚠️ 三键 | 私有 enabled 恒 true（构造 `?? true`，registry 不传），仅存 loadState 恢复；三层合取判据（updateGridVisible/updateSurfaceVisible）以 envState 为真值源 |
+| water | ❌（已删，单门收口 2026-09-22） | `waterEnabled` | ✅ 已治 | 单门收口（fog 同法） |
+| sky | ✅ L195 | `skyEnvironment` + `skyEnabled` | ⚠️ | `setEnabled` 摘挂；`isEnvironmentEnabled` 读 envState |
+| env | ✅ L115 | 无 envState gate（enabled 不入 envState） | ⚠️ | `saveState` 落 `enabled` 私有 |
+| fog | ❌（已删） | `fogEnabled` | ✅ 已治 | 单门收口 |
+| reflector | ✅ L42 | `reflectorEnabled` | ⚠️ | **历史病灶**（§12 R-2）：`buildReflector` AND 判定 `!this.enabled || !envState.reflectorEnabled`；legacy 存档双键漂移——但 `reflection-chain-invariants.test.ts` 锁死「默认关 AND 关系」，正常升级路径 enabled 构造默认 true |
+| shadow | ✅ L39 | 无 envState gate（enabled 私有） | ⚠️ | `setEnabled` 私有；saveState 落 `enabled`；无 envState 镜像键 |
+| light | ❌（已删，[ADR-293] 总开关入 envState） | `lightEnabled` | ✅ 已治 | 总开关/线框可见性入 schema |
+
+> **结论**：C 类中 water/fog/light 已「单门收口」（enabled 私有退役，真值源全归一 envState），是圆桌的
+> **正确方向**；ground/sky/env/reflector/shadow 仍保留私有 enabled 双键，但 **reflector 是唯一有
+> 明确历史病灶（legacy 双键漂移）**的——不过被 AND 语义 + 不变量测试兜住（默认关必须在 envState
+> reflectorEnabled=false，私有 enabled 恒 true 不构成误开路径）。C 类同样为**潜伏债务**，非活动故障。
+
+### 19.4 G-6 旁支变体：solid/solid 反复切换（本轮已随 G-6 一并修复）
+
+横向排查时发现 G-6 修复还需覆盖**纯来源轴开关**（不触碰材质预设键）的变体：
+- `setSourceKind("solid")` / `setSourceKind("texture")` / `setSourceKind("canvas")` 切换 = 用户手动改材质形态，
+  但不携带 `GROUND_MATERIAL_PRESET_KEYS` 中任一键 → 原中间件漏判（菜单下拉回跳旧预设名）。
+- G-6 修复的 `sourceKindChanged` 分支已涵盖（非 none 的 sourceKind 变更即置 custom），
+  4 例回归测试里「texture→solid→canvas→marble 反复切换一律 custom」与该「texture↔solid 反复切换」同锁。
+- **done**：`setSourceKind` 无「同值早退置位」反例——`setSourceKind` 早退守卫 `if (envState.groundSourceKind === kind) return`（ground-capability.ts:543）在中间件**之后**，同值写 still 派发（env-state.ts 无同值去重），但同值写 manual 也会经中间件 → 置 custom；这是可接受的（同值重写 = 用户仍触发了控件）。
+
+### 19.5 结论（回答问题「还有类似的情况吗」）
+
+- **A 类（来源纪律）**：无**活动**漏洞——reflector/shadow 的 manual 恢复被 `isStateLoaded` + 归属隔离兜住，
+  为格式债（有行为恒等的前提，修它零收益）。见 19.1。
+- **B 类（手抄 saveState 清单）**：环境系统有 7 个 cap 仍手抄（ground/fog/env/pp/reflector/shadow/renderMode），
+  是零故障风险的债务，water/light 的 schema 驱动是收敛先例。见 19.2。
+- **C 类（私有 enabled 双键）**：reflector 是唯一带明确历史病灶的，但被 AND 语义 + 不变量测试兜住；
+  water/fog/light 已单门收口为正确方向。见 19.3。
+- **G-6 旁支**：纯来源轴开关（solid/texture/canvas）已随本轮中间件修复覆盖，无残余。见 19.4。
+- **没有任何证据表明存在第 2 个与 G-6 同级的「活动」接线缺陷**——环境系统 6 面板的最严重
+  病灶（E-3/F-2/E-4/S2-4/S1-4/G-6）已全部闭环。
+
+> ⚠️ 本轮为**只读排查（§19.1-19.3 未改代码）**；G-6 修复 + 旁支覆盖已在 §18 提交（`66633f35d`）。
+> reflector/shadow 的 manual→auto-model 收敛留作「格式一致性」候选（有行为恒等的充分前提，可安全批量做，
+> 但单独提交无用户可感知收益，暂缓）。
+

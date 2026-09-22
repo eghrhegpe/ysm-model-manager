@@ -216,7 +216,7 @@ status: active
 ### 配置与环境（app_config.go）
 
 - `LoadAppConfig() → types.AppConfig` — 加载应用配置（FilesRoot/RpRoot/McRoot/链接模式/主题）
-- `SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme) → void` — 保存应用配置
+- `SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme) → void` — 保存应用配置。linkMode 写盘前经 `install.SanitizeLinkMode` 软校验（ADR-296 D6）：空串=未传参（orDefault 保留旧值）；非法值（手改 config.json 等）不 reject 整个保存、回落旧值——入口 fail-closed 会误伤「只想改 mcRoot/theme、原样回写 linkMode」的多数调用方（同卡 SetLinkMode 硬校验拒脏值）；loadAppConfig 加载侧软校验不交 SyncLinkMode 污染内存快照，非法值留 log 走默认 copy
 - `SetDownloadMirror(mirror) → void` — 设置下载镜像源
 - `GetSubDirMap() → Record<string,string>` — 资源类型→子目录映射表（前端右键菜单等场景使用）
 - `GetMinecraftPaths() → string[]` — 返回探测到的候选 Minecraft 目录

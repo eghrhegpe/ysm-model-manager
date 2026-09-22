@@ -100,6 +100,7 @@ status: active
 - 配置变更三事件（`config:updated` / `stats:refresh` / `toast:show`）必须齐全，否则改配置后界面不刷新
 - `ui-default-page` 显示值兜底 `repository`，与 `resolveInitialPage` 的兜底一致
 - 主题写回必须过白名单（cyber/warm/pro/sakura/ocean/mint/system），防脏值污染持久层
+- **链接模式切换 = 确认框 + 全程持锁 + 增量进度**（ADR-296 D5，`init.ts|stgBindLinkMode` / `relinkAllInstancesInner`）：change 回调顶部纳入 `isBusy/setBusy` 守卫（与「重新链接」按钮共锁，busy 期间忽略点击、不弹确认框），发任何 RPC 前先 `ListVersionInstances` 计数并弹 `modalConfirm`（danger；mcRoot 空/计数失败退化 n=0 不拦确认）；**取消必须回退 `linkSelect.value` 与 hint 到上次生效值**（闭包 `curVal` 仅在保存成功后推进，勿用 cfg 初值快照当旧值）且零 RPC、零切换 toast；确认后 relink 段调无守卫的 `relinkAllInstancesInner`（公共出口 `relinkAllInstances` 仍带守卫，供按钮复用——拆 Inner 而非加 skipBusyGuard 参数，锁语义单点）。逐实例增量 toast `settings.relinkProgress{done}/{total}`，末个实例让位终态汇总不重发、单实例无中间进度。测试注意：modalConfirm 结算走退场动画定时器（~120ms），取消回退断言必须 `waitFor` 而非裸 `setTimeout(0)`
 - **路径选择走统一 `modalPicker` 脚手架**（2026-09-05 code_review 修复 8cfbf2e7）：path-cards 多路径选择不再自建手写 modal（`.mc-pick-item`/`.mc-pick-cancel` 类已删），测试须驱动共享 DOM 契约——行 `[data-testid="pick-item"]`（`data-idx` 定位）、取消 `[data-testid="dlg-cancel"]`；扫描提示 tooltip 的 id 保持 `mc-scan-tooltip`（init.test.ts 经 `getElementById` 驱动 hover/泄漏回归断言，改名即测试断裂）
 - **复制到剪贴板必须消费布尔结果**（code_review 同批修复，宿主 instance-ops.ts 见 [global_handlers](./global-handlers.md)）：`copyText` 永不 reject，Clipboard API/execCommand 兜底失败只返回 false——`await copyText(text)` 丢弃返回值会在失败时误弹「已复制」假成功；须 `const ok = await copyText(text); if (!ok) { error toast; return; }`
   - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（字体三栏、语言选择是已知待修债）

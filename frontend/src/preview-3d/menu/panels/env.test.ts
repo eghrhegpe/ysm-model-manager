@@ -324,10 +324,6 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
           envListeners.delete(l);
         };
       },
-      // 模拟真实 cap 的 notify：离散键变更触发监听（此处直接调监听即等价于 menu.refresh 被接）
-      onEnvChanged: () => {
-        for (const l of envListeners) l();
-      },
     });
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky, fog, env]);
     const menu = makeMenu();

@@ -71,6 +71,10 @@ export class ReflectorCapability implements SceneCapability {
           changed.has("reflectorClipBias")
         ) {
           this.buildReflector();
+          // [ADR-293 收口 2026-10] 离散键 notify（subscribe 契约，对齐 fog/light）：
+          // 总开关 reflectorEnabled 是离散 toggle，面板需实时刷新；opacity/color 连续滑块不 notify。
+          // 结构性重建后立即 notify，使面板订阅收到变化。
+          if (changed.has("reflectorEnabled")) this.notify();
           return;
         }
         if (changed.has("reflectorOpacity")) {
@@ -81,9 +85,6 @@ export class ReflectorCapability implements SceneCapability {
           const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
           if (mat?.uniforms?.color) mat.uniforms.color.value.setHex(envState.reflectorColor);
         }
-        // [ADR-293 收口 2026-10] 离散键 notify（subscribe 契约，对齐 fog/light）：
-        // 总开关 reflectorEnabled 是离散 toggle，面板需实时刷新；opacity/color 连续滑块不 notify。
-        if (changed.has("reflectorEnabled")) this.notify();
       },
       "reflector",
     );

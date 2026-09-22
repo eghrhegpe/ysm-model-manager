@@ -372,7 +372,9 @@ func runBenchIterations(ctx *CmdContext, targetModel string, iterations int, for
 	avg := avgBenchStages(allStages)
 	stageJSON, bottleneckName := stagesToJSON(avg, allStages)
 	// 与 runSingleBenchJSON 同口径：total_ms 是 N 次累计，单次看 per_iteration_ms
-	totalMs := float64(totalDuration.Microseconds()) / 1000
+	// （a128f35bc 残口收口：benchOneModel 组装点已走 durationMs，此处曾漏——
+	// 同一个 singleBenchJSON 两个组装点跨命令口径分叉，快迭代累计被截亚毫秒）
+	totalMs := durationMs(totalDuration)
 	perIterationMs := totalMs
 	if iterations > 0 {
 		perIterationMs = totalMs / float64(iterations)

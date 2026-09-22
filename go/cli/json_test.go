@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -73,6 +74,46 @@ func TestEnvelopeTiming_UsesDurationMs(t *testing.T) {
 	}
 	if n := strings.Count(s, "durationMs(time.Since(start))"); n < 2 {
 		t.Errorf("信封组装点应有两处走 durationMs，实际 %d 处", n)
+	}
+}
+
+// TestCliTiming_NoTruncationAnywhere：全 go/cli 包不得有任何耗时截断形态入码。
+//
+// 立因（2026-09-22 审核 a128f35bc）：该提交自称「纳秒精度全收口」，实则只改了信封与
+// benchOneModel 组装点，health.go/perf.go/scan_bench.go 三处仍写 `Microseconds()/1000`
+// ——同一个 singleBenchJSON 的两个组装点（perf.go runBenchIterations vs bench_concurrent.go
+// benchOneModel）跨命令口径分叉，快迭代累计/快扫描样本被截亚毫秒。原 TestEnvelopeTiming
+// 只扫 cli.go 单文件，够不着命令模块里的站点，故升级为**全包扫描**。
+// 豁免：注释行（`//` 起始）——历史说明合法引用旧形态作反面教材（bench_concurrent.go:142/1199）。
+func TestCliTiming_NoTruncationAnywhere(t *testing.T) {
+	t.Parallel()
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("glob 失败: %v", err)
+	}
+	checked := 0
+	for _, f := range files {
+		if strings.HasSuffix(f, "_test.go") {
+			continue // 测试文件豁免：本测试自身含反例文本，其它 _test 亦可能有说明性引用
+		}
+		src, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatalf("读 %s 失败: %v", f, err)
+		}
+		checked++
+		for i, line := range strings.Split(string(src), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "//") {
+				continue
+			}
+			if strings.Contains(trimmed, ".Milliseconds()") || strings.Contains(trimmed, ".Microseconds()") {
+				t.Errorf("%s:%d 耗时截断形态入码（亚毫秒被截 → 前端当「没测到」/speedup 退化 0）——应走 durationMs: %s",
+					f, i+1, trimmed)
+			}
+		}
+	}
+	if checked < 20 {
+		t.Fatalf("全包扫描疑似失效（只扫了 %d 个非测试文件），glob 路径对不对？", checked)
 	}
 }
 

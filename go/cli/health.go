@@ -70,7 +70,7 @@ func runHealthReport(ctx *CmdContext) error {
 			avg := avgBenchStages([][]singleBenchStage{stages})
 			var total float64
 			for _, s := range avg {
-				total += float64(s.Duration.Microseconds()) / 1000
+				total += durationMs(s.Duration)
 			}
 			report.Bench = &benchEntry{
 				Model:       target,

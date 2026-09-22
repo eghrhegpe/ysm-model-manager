@@ -161,7 +161,7 @@ func measureScanEngine(root, engine string, iterations int) (scanBenchEngineJSON
 		}
 		out.Used = true
 		out.Reason = ""
-		out.RunsMs = append(out.RunsMs, float64(elapsed.Microseconds())/1000)
+		out.RunsMs = append(out.RunsMs, durationMs(elapsed))
 		out.Entries = len(got)
 		entries = got
 	}

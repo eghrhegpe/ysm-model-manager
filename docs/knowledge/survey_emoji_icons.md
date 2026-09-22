@@ -18,6 +18,7 @@ auto_fields:
     - allIconNames
     - checkLayoutDocDrift
     - COMBINING_MARKS
+    - COMBO_PADDING_TOKENS
     - DesignViolation
     - DesignViolationKind
     - DocDrift

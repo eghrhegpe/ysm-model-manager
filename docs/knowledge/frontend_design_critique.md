@@ -656,6 +656,9 @@ invariant_anchors:
     - **明拒建档**：`5px 8px`×8 虽垂直 5px 对齐 `--pad-tab`/`--pad-btn-primary`，但语义三分（输入 `.srch-inp`/`.afv-input-kw`/`.te-input`；按钮 `.footer-btn`；列表头 `.diag-dedup-group-head`）——按「先画像再建档」纪律留人工。`10px 14px`×6 垂直 10px **不对齐任何既有垂直档**，新垂直档不划算，也留人工。
     - **关键决策（3D 共用）**：`8px 10px` 的 5 处 3D（`.cm-row`/error-note/section/empty-note/unload-row）与 2D 6 处卡片**共用同一 `--sp-vh-card`**——3D 深色菜单面板走 `--sp-vh-*` 是既有惯例（`slide-menu` 已用 `--sp-vh-pane`），值等价替换安全，不是域污染。
     - **验收**：`test_design_tokens` 全绿（新档展开值对账）✅ / contract-tests 103/103 ✅ / vite build ✅ / typecheck ✅ / biome 存量 noAssignInExpressions 既有不误伤 ✅ / 基线 234 → **214**。
+  - **非 padding 定向收（2026-09-22，用户拍板「A：先收 2px 圆角」）**：剩 214 条中非 padding 14 条多为**上轮已记录的留人工判例**（`.logo-icon` 20px 品牌 / `.preview-fab` 20px 浮标 / 32/36px 大图标 / 两个 `→` 排版符号 / `rgba(20,20,30,.1)` 3D 特有色 / `.ysw-tooltip` color）。本波只收 **搜索高亮 mark 一处（同文件 2 条规则）**，基线 214 → **210**：
+    - `.fh .nm mark` / `.fh-list .nm mark`（搜索关键词高亮）：`border-radius: 2px` → `var(--radius-xs)`(3px，+1px，对齐「标签内小元素」注释)；**同行存量 `padding: 0 2px` 被 pre-commit 行级闸（ADR-256）连带判为新增** → 顺带令牌化 `0 var(--sp-1)`(4px，+2px)。**经验：行级闸是同行整判，改一行 radius 会连带要求同行 padding 一起收——「触碰即顺手收敛」在此成为强制**。
+    - **明拒**：36px 空态图标（`.empty .big`，归 `--fs-xl` 25px 有 −11px 位移，超出「留人工」口径），维持判例。
 - ✅ **刀㉚ features 层执法：R8 HTML 字面量闸立法**（2026-09-20，本会话用户「锐评 /features」落地）：
   - **锐评总判**：features 纪律仓库天花板（R5 seam 零违例 / 全层零 `: any` 零 `@ts-ignore` / 跨 feature 依赖 DAG 无环 / 死代码仅 1 运行时孤儿导出），唯一结构性原罪 = **逻辑层私藏视图**——maintenance 三文件手写内联 style HTML 串、`_dots` 转圈状态挂 DOM 节点自定义属性。
   - **立法**：`check-layering` 新增 **R8（防回退）**：features 生产文件禁 HTML 字符串/模板字面量（政策 ADR-190 D1a / ADR-208 D2 早立但从未执法，本条补闸）；存量 5 文件 76 处入基线（dialogs 三件套 + community render/show-repo-models，ADR-208「已知遗留」点名项，big-bang 在 ADR 里被显式反对），新增即红；行级豁免尾注 `// layering-allow: html`。扫描器 `htmlLiteralHits` = 手写词法态机（剥注释/抽字符串跨/模板插值嵌套），纯函数导出 + 合成样本契约测试直测，同 `matchImports`/`r7EdgeViolates` 防空转惯例。同号异策：与 check-redlines R8 勿混。

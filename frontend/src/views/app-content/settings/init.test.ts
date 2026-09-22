@@ -998,6 +998,34 @@ describe("initSettings — relink 收尾分支（busy / 全跳过 / 外层失败
     expect(listInstances).toHaveBeenCalledTimes(1);
   });
 
+  it("busy 进行中改链接模式 → 同步回退 select 与 hint，不弹确认框（ADR-296 D5 审查 E）", async () => {
+    const saveFn = vi.fn();
+    mockApp({
+      ListVersionInstances: vi.fn(() => new Promise(() => {})), // 永不 resolve → busy 锁卡住
+      SaveAppConfig: saveFn,
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        resourcepackRoot: "",
+        mcRoot: "/mc",
+        linkMode: "copy",
+      })),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-relink") as HTMLElement).click(); // 占住 busy 锁
+    await new Promise((r) => setTimeout(r, 0));
+    const sel = root.getElementById("set-link-mode") as HTMLSelectElement;
+    sel.value = "hardlink";
+    sel.dispatchEvent(new Event("change"));
+    // 回滚是 change 回调顶部同步完成的：同一宏任务后即可断言
+    expect(sel.value).toBe("copy");
+    expect((root.getElementById("lm-hint-hardlink") as HTMLElement).style.display).toBe("none");
+    expect((root.getElementById("lm-hint-copy") as HTMLElement).style.display).toBe("block");
+    expect(saveFn).not.toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.querySelector("[data-testid='dlg-ok']")).toBeNull(); // 不弹确认框
+  });
+
   it("实例全被跳过（无 Exists / 无 Name）→ 「没有需要重新链接」toast 且不调 Relink", async () => {
     const relinkFn = vi.fn(() => 5);
     mockApp({

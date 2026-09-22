@@ -253,9 +253,14 @@ function stgBindLinkMode(
     // 均以此为准；仅在保存成功后推进（闭包变量，勿用 cfg 初值快照当旧值）
     let curVal = linkMode;
     linkSelect.addEventListener("change", async () => {
-      // ADR-296 D5：change 全程 busy 守卫（与 relink 按钮共锁）；busy 期间忽略，
-      // 不弹确认框——重入时 select 回滚留给下一次真实切换
-      if (isBusyLocal()) return;
+      // ADR-296 D5：change 全程 busy 守卫（与 relink 按钮共锁）；busy 期间忽略并
+      // **当场回退** select 与 hint 到上次生效值——吞掉不回滚会让下拉停显示未生效的
+      // 新模式（模式实际未变），直到用户下次操作前 UI/真相分叉（审查 E 项）。
+      if (isBusyLocal()) {
+        linkSelect.value = curVal;
+        applyHintVisibility(root, "lm-hint", curVal, LINK_MODE_KEYS);
+        return;
+      }
       setBusyLocal(true);
       const oldVal = curVal;
       const val = linkSelect.value;

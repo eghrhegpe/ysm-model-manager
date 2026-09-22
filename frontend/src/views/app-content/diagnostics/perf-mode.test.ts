@@ -14,7 +14,15 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
-import { BASELINE_CONTROL_IDS, initPerfPanel, perfScopeHint, PERF_RUN_BUTTON_MODE_KEYS, PERF_UNREAD_MODES, PERF_UNREAD_TARGETS } from "./perf.ts";
+// BASELINE_CONTROL_IDS 现居共享叶 perf-common.ts（2026-09-23 断环迁居）；其余门禁表仍归 perf.ts。
+import { BASELINE_CONTROL_IDS } from "./perf-common.ts";
+import {
+  initPerfPanel,
+  perfScopeHint,
+  PERF_RUN_BUTTON_MODE_KEYS,
+  PERF_UNREAD_MODES,
+  PERF_UNREAD_TARGETS,
+} from "./perf.ts";
 
 const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   executeCLI: vi.fn(),

@@ -10,6 +10,21 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { copyWithToast } from "./copy-toast.ts";
 import type { EscFn } from "./logs.ts";
 
+// ===== 基准门禁控件名单（双维门禁：模式 ∧ 目标集）=====
+
+/** 基准三件套 id——perf.ts 的 apply 循环遇名单成员跳过、统一委托
+ *  perf-single-bench.ts|syncPerfBaselineControls 兼并两维判定（ADR-262 D8 × ADR-278 §2.6）。
+ *  **为什么住在本文件（2026-09-23 断环）**：名单原居 perf.ts，而消费它的
+ *  syncPerfBaselineControls 在 perf-single-bench.ts → `perf ↔ perf-single-bench` 成环
+ *  （check-circular 环 1，还经 perf-scan-bench 放大成三环），全靠「两边只在函数体内
+ *  读绑定、禁止顶层求值」的 TDZ 注释走钢丝。perf-common 是命令模块共享叶（零回边），
+ *  契约常量（PerfIdentity 同类先例）住这里，环与钢丝一并消失。 */
+export const BASELINE_CONTROL_IDS: readonly string[] = [
+  "diag-perf-baseline-save",
+  "diag-perf-baseline-compare",
+  "diag-perf-baseline-th",
+];
+
 // ===== 区段头（带可选复制按钮）=====
 
 /**

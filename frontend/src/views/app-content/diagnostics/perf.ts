@@ -12,7 +12,7 @@ import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { getLastModelPath } from "@/core/model-path-store.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import type { EscFn } from "./logs.ts";
-import { bindPerfCopyHandlers } from "./perf-common.ts";
+import { BASELINE_CONTROL_IDS, bindPerfCopyHandlers } from "./perf-common.ts";
 import { runConcurrentBench } from "./perf-concurrent.ts";
 import {
   PERF_TARGET_REPO,
@@ -67,12 +67,8 @@ export const PERF_UNREAD_TARGETS: Record<string, readonly string[]> = {
   "diag-perf-order": ["model"],
 };
 
-/** 基准三件套 id（双维门禁：模式 ∧ 目标集）——apply 循环跳过、由 syncPerfBaselineControls 兼并判定 */
-export const BASELINE_CONTROL_IDS: readonly string[] = [
-  "diag-perf-baseline-save",
-  "diag-perf-baseline-compare",
-  "diag-perf-baseline-th",
-];
+// 基准三件套 id 名单已迁 perf-common.ts（2026-09-23 断环：perf ↔ perf-single-bench 环的
+// 唯一回边，见该文件 BASELINE_CONTROL_IDS 头注）。本文件 apply 循环与 syncPerfBaselineControls 同读。
 
 /** 运行按钮 id → 其所属模式（scope hint 随此派生，不另写第二份） */
 export const PERF_RUN_BUTTON_MODE_KEYS: Record<string, string> = {

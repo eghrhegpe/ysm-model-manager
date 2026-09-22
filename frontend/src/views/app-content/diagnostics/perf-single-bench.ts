@@ -14,11 +14,12 @@ import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { EscFn } from "./logs.ts";
-// 双维门禁的基准三件套 id 表归 perf.ts（PERF_UNREAD_MODES 同文件）：两处写 disabled 的消费
-// 链共用一张名单，不各抄一份字面量。⚠️ 本行 import 构成 perf ↔ perf-single-bench 模块环：
-// 两边都只在函数体内读该绑定（TDZ-safe），但**禁止**在任一模块顶层求值 BASELINE_CONTROL_IDS。
-import { BASELINE_CONTROL_IDS } from "./perf.ts";
+// 基准三件套 id 表归 perf-common.ts（契约常量层，2026-09-23 断环迁居）：两处写 disabled 的
+// 消费链（perf.ts apply 循环 / 本文件 syncPerfBaselineControls）共用一张名单，不各抄字面量。
+// 原居 perf.ts 时本行 import 构成 perf ↔ perf-single-bench 模块环（靠 TDZ 注释走钢丝），
+// 迁至零回边共享叶后环消，顶层求值限制同步解除。
 import {
+  BASELINE_CONTROL_IDS,
   type CLIResp,
   errorHTML,
   getOutBox,

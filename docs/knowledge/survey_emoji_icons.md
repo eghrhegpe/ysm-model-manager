@@ -73,7 +73,7 @@ quick_risk_lines:
   - 别再几十次零散 grep emoji —— 一封 `node scripts/_lib/survey-emoji-icons.ts` 出全貌
 pitfalls:
   - 零散 grep 每枚 emoji/每个 UI_ICONS 模式各发一次 → token 浪费（实测上一会话 28 分钟 / 5.6M tok 都在翻 emoji）：改用一次性脚本
-  - `check-design-tokens --kind emoji-icon` 只认「HTML 标签图标位 + 字面量 emoji」，扫不到运行时 toast 载荷 / locale 值前缀 emoji；要全量需用 survey 脚本或 findToastEmojiPrefixViolations / findLocaleEmojiPrefixViolations
+  - "`check-design-tokens --kind emoji-icon` 只认「HTML 标签图标位 + 字面量 emoji」，扫不到运行时 toast 载荷 / locale 值前缀 emoji；要全量需用 survey 脚本或 findToastEmojiPrefixViolations / findLocaleEmojiPrefixViolations"
   - emoji 字符集必须含 U+2190-21FF / U+2300-23FF（含 ⏳/← 等），否则单字形槽整类逃逸 —— survey 脚本已**复用 design-tokens.ts 导出的 GRAPHIC_EMOJI**，不自抄副本（单一事实源，门禁改字符集 survey 自动跟随）
 invariant_anchors:
   - scripts/_lib/design-tokens.ts|GRAPHIC_EMOJI

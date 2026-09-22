@@ -43,17 +43,17 @@ pitfalls:
   - 水面 mesh 是 scale(uSize,uSize,1) 各向异性缩放：世界量与局部量互换必须成对换算，只修一边等于换一种错法（ADR-257 §6.4）
   - 波浪振幅被 min(…, 0.5) 钳制，wave0–4 全部顶到上限，设计的几何级数衰减实际不存在（ADR-257 §6.4，登记未改）
   - 结构参数只能动 `transformLinks`（`square` 等比铺满 / `wall` 双轴：x = size、y = 壁高 + 外偏沿法向轴）：**y 轴不得被 size 缩放**（`wallH` 由 h / t 现算，与 size 无关），否则壁高与壁厚会被尺寸连带放大
-  - **（已修复 2026-09，ADR-272 §5.1）** pool 的 waterPoolHeight / waterPoolWallThickness 曾走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——拖动即每帧重建 10 个 mesh。现壁几何单位化：壁高走 `scale.y`、外偏 = `size/2 + t` 运行期现算。教训：**任何结构参数只要被烘焙进几何，就必然在滑块拖动时变成重建风暴**
+  - '**（已修复 2026-09，ADR-272 §5.1）** pool 的 waterPoolHeight / waterPoolWallThickness 曾走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——拖动即每帧重建 10 个 mesh。现壁几何单位化：壁高走 `scale.y`、外偏 = `size/2 + t` 运行期现算。教训：**任何结构参数只要被烘焙进几何，就必然在滑块拖动时变成重建风暴**'
   - waterSize 值域：合法域 [1, 300]（下界来自「0/负数会让水面退化成一个点」）、展示域 10–300；钳制在 `setEnvState`（ADR-283），shader 侧另有 max(uSize, 0.001) 兜底
   - 圆角裁剪用世界坐标 max(|x|,|z|) 对比 uHalfSize，隐含「水面恒在世界原点」这一假设——已登记（2026-09-20）：若未来支持移动/放置水面（脱离原点），圆角裁剪会静默出错，需先改为相对水面自身中心的局部坐标
-   - ⏰ 升级 three ≥ r190 前必读：buildWaveWaterMaterial 的 assertRevisionRange allowed 窗口为 [185,190)（water-capability.ts）——r190 起 water 材质构造会故意 throw（registry 工厂兜底使 cap 缺失，拒绝静默降级）。升级时须重新审计 wave shader 注入的 chunk 锚点（common / normal_fragment_maps 在 onBeforeCompile 期仍存在）后收窄/前移窗口，不可无脑放行
-  - **透明度预设失效（已修复 2026-09）**：`applyChangedParams` 中 `waterOpacity` 变更路径只更新 `top.material.opacity`，漏同步 shader uniform `uBaseOpacity`。shader 用 `min(gl_FragColor.a, uBaseOpacity)` clamp 透明度，`uBaseOpacity` 固化在构建期，导致增大 opacity 不生效（减小偶然正常）。修复：补调 `syncBaseOpacityUniform`，与 `waterWetness` 路径同口径
-  - **派发键是类型化键域（2026-09）**：`EnvCallback.changed` 为 `Set<EnvStateKey>`，`changed.has("拼错")` 编译不过；新增参数必须先在 `env-state-schema.ts` 声明（含 `group: "water"`），否则派发链与持久化都抓不到它
-  - **water 持久化由 schema 派生**：`saveState` 遍历 `getPresetKeys("water")`（不再手抄键表）；写侧统一 `water*` 规范键，历史键名 `size` / `pool*` 由 `loadState` 双轨吸收——新增参数只需进 schema，读侧按需补别名
-  - **uniform 一律经 `setUniform(mat, name, value)` 写入**（原五处 `as unknown as { userData.shader }` 深挖已收口）：`onBeforeCompile` 未跑或 uniform 名拼错时静默跳过，故改动后须以「uniform 实际取到值」的断言兜底，不能只断言 envState
-  - **值域改一处生效（ADR-283）**：滑杆 `min/max/step` 由 `getParamRange(key)` 从 schema 取，cap 内不再有值域字面量；写侧钳制在 `setEnvState` 唯一入口。改范围请改 `ENV_STATE_SCHEMA.xxx.range`（合法域）/ `uiRange`（展示域），**不要在 menu 或 setter 里写死**
-  - **setter 不再 clamp（ADR-283）**：`setWaterOpacity` 等一律只 `setEnvState({...})`；若要加保护请补 schema `range`，写回 setter 即造出第二事实源
-  - **形态门控必须「构造期 = 运行期」同源（2026-09 修复）**：`uRoundness` 构造期靠 `buildMaterial` 的 `forPool` 对 film 恒 0，但分派表 applier 侧曾漏门控——pool 专属参数 `waterPoolRoundness` 经存档恢复 / 预设套用 / 其他 cap 直写 envState 时会把圆角泄漏进 film 材质（水膜四角被凭空裁掉，恰是构造期明令禁止的行为）。现由 `WaterBodyStrategy.supportsRoundness` 显式声明（film=false / pool=true）并在 applier 查 strategy。**教训：同一门控只写在构造期，运行期迟早从另一条路径漏进 uniform**——新增形态旗标时构造期与运行期必须共用
+  - '⏰ 升级 three ≥ r190 前必读：buildWaveWaterMaterial 的 assertRevisionRange allowed 窗口为 [185,190)（water-capability.ts）——r190 起 water 材质构造会故意 throw（registry 工厂兜底使 cap 缺失，拒绝静默降级）。升级时须重新审计 wave shader 注入的 chunk 锚点（common / normal_fragment_maps 在 onBeforeCompile 期仍存在）后收窄/前移窗口，不可无脑放行'
+  - '**透明度预设失效（已修复 2026-09）**：`applyChangedParams` 中 `waterOpacity` 变更路径只更新 `top.material.opacity`，漏同步 shader uniform `uBaseOpacity`。shader 用 `min(gl_FragColor.a, uBaseOpacity)` clamp 透明度，`uBaseOpacity` 固化在构建期，导致增大 opacity 不生效（减小偶然正常）。修复：补调 `syncBaseOpacityUniform`，与 `waterWetness` 路径同口径'
+  - '**派发键是类型化键域（2026-09）**：`EnvCallback.changed` 为 `Set<EnvStateKey>`，`changed.has("拼错")` 编译不过；新增参数必须先在 `env-state-schema.ts` 声明（含 `group: "water"`），否则派发链与持久化都抓不到它'
+  - '**water 持久化由 schema 派生**：`saveState` 遍历 `getPresetKeys("water")`（不再手抄键表）；写侧统一 `water*` 规范键，历史键名 `size` / `pool*` 由 `loadState` 双轨吸收——新增参数只需进 schema，读侧按需补别名'
+  - '**uniform 一律经 `setUniform(mat, name, value)` 写入**（原五处 `as unknown as { userData.shader }` 深挖已收口）：`onBeforeCompile` 未跑或 uniform 名拼错时静默跳过，故改动后须以「uniform 实际取到值」的断言兜底，不能只断言 envState'
+  - '**值域改一处生效（ADR-283）**：滑杆 `min/max/step` 由 `getParamRange(key)` 从 schema 取，cap 内不再有值域字面量；写侧钳制在 `setEnvState` 唯一入口。改范围请改 `ENV_STATE_SCHEMA.xxx.range`（合法域）/ `uiRange`（展示域），**不要在 menu 或 setter 里写死**'
+  - '**setter 不再 clamp（ADR-283）**：`setWaterOpacity` 等一律只 `setEnvState({...})`；若要加保护请补 schema `range`，写回 setter 即造出第二事实源'
+  - '**形态门控必须「构造期 = 运行期」同源（2026-09 修复）**：`uRoundness` 构造期靠 `buildMaterial` 的 `forPool` 对 film 恒 0，但分派表 applier 侧曾漏门控——pool 专属参数 `waterPoolRoundness` 经存档恢复 / 预设套用 / 其他 cap 直写 envState 时会把圆角泄漏进 film 材质（水膜四角被凭空裁掉，恰是构造期明令禁止的行为）。现由 `WaterBodyStrategy.supportsRoundness` 显式声明（film=false / pool=true）并在 applier 查 strategy。**教训：同一门控只写在构造期，运行期迟早从另一条路径漏进 uniform**——新增形态旗标时构造期与运行期必须共用'
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

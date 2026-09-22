@@ -38,7 +38,7 @@ export async function showVrmMeta(
         // 无 meta（非标准 VRM 或解析失败）→ 仅名称
         return `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
   </div>
 </div>`;
@@ -73,7 +73,7 @@ export async function showVrmMeta(
           : "";
       return `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${thumb}
     <div><strong>${renderFormattedText((m.name as string) || basename)}</strong></div>
     ${authors ? `<div style="color:var(--muted)">${UI_ICONS.author} ${esc(authors)}</div>` : ""}
@@ -106,7 +106,7 @@ export async function showMmdPreview(
       const basename = path.split(/[/\\]/).pop() || "";
       return `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div id="mmd-stats-row"></div>
   </div>
@@ -157,7 +157,7 @@ export async function showFbxPreview(
       const basename = path.split(/[/\\]/).pop() || "";
       return `<div class="content" id="preview-content">
   <h3>${icon} ${label}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
   </div>
 </div>`;
@@ -179,7 +179,7 @@ export async function showScenePreview(
       const basename = path.split(/[/\\]/).pop() || "";
       return `<div class="content" id="preview-content">
   <h3>${UI_ICONS.build} ${t("preview.sceneModel")}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center">
       <span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.SCENE)}</span>
@@ -205,14 +205,14 @@ export async function showMorphPreview(
       const basename = path.split(/[/\\]/).pop() || "";
       return `<div class="content" id="preview-content">
   <h3>${UI_ICONS.avatar} ${t("preview.customMorph")}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
       <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.CUSTOM_MORPH)}</span>
       <span>${t("preview.vpdPose")}</span>
       <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm)">${t("preview.singleFrameMorph")}</span>
     </div>
-    <div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px"></div>
+    <div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--pad-nav);margin-top:4px"></div>
   </div>
 </div>`;
     },
@@ -252,7 +252,7 @@ export async function showMorphPreview(
               };
             });
           } else if (container) {
-            container.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-sm);padding:4px">${t("preview.noOtherMorph")}</div>`;
+            container.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-sm);padding:var(--sp-1)">${t("preview.noOtherMorph")}</div>`;
           }
         } catch {
           /* 兄弟列表加载失败不阻断 */
@@ -274,13 +274,13 @@ export async function showStagePreview(
       const basename = path.split(/[/\\]/).pop() || "";
       return `<div class="content" id="preview-content">
   <h3>${UI_ICONS.voice} ${t("preview.stageAnim")}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
     <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
       <span style="background:color-mix(in srgb,var(--status-warning,#ffa050) 18%,transparent);color:var(--status-warning,#ffa050);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.STAGE)}</span>
       <span>${t("preview.stagePerformanceLabel")}</span>
     </div>
-    <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px"></div>
+    <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--pad-nav);margin-top:4px"></div>
   </div>
 </div>`;
     },
@@ -295,7 +295,7 @@ export async function showStagePreview(
           const container = ctx.root.querySelector<HTMLElement>("#stage-contents");
           if (container) {
             if (contents.length === 0) {
-              container.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-sm);padding:4px">${t("preview.stageEmpty")}</div>`;
+              container.innerHTML = `<div style="color:var(--muted);font-size:var(--fs-sm);padding:var(--sp-1)">${t("preview.stageEmpty")}</div>`;
             } else {
               const vmdCount = contents.filter((c) => c.kind === "vmd").length;
               const audioCount = contents.filter((c) => c.kind === "audio").length;

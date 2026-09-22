@@ -78,7 +78,7 @@ export const dropdownBaseCSS = `
 .dd-menu {
   position:absolute;top:100%;left:0;z-index:100;
   background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);
-  padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);
+  padding:var(--sp-1);box-shadow:0 4px 12px rgba(0,0,0,.3);
   display:none;min-width:130px;max-height:220px;overflow-y:auto;
 }
 .dd-item {

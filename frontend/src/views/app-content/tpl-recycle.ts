@@ -11,7 +11,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 
 export function recycleHTML(): string {
-  return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px">
+  return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:var(--sp-3)">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
 <span id="recy-count" style="font-size:var(--fs-sm);color:var(--txt)">${t("common.loading")}</span>
 <button class="btn-base sm" id="recy-refresh" style="margin-left:auto">${UI_ICONS.refresh} ${t("common.refresh")}</button>

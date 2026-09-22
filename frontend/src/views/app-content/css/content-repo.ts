@@ -37,7 +37,7 @@ ${metaTagCSS}
 .repo-sort { padding:4px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);cursor:pointer;margin-left:auto;transition:var(--tr-fast); }
 .repo-sort:hover { border-color:var(--accent);background:var(--hover); }
 .batch-dropdown { position:relative;display:inline-block; }
-.batch-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px;box-shadow:0 4px 12px rgba(0,0,0,.3);min-width:120px; }
+.batch-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--sp-1);box-shadow:0 4px 12px rgba(0,0,0,.3);min-width:120px; }
 .repo-footer { padding:3px 12px;font-size:var(--fs-xs);color:var(--muted);border-top:1px solid var(--bd);flex-shrink:0; }
 /* 通用标签（作者/作品/日期）外观由共享 metaTagCSS 承载（utils/dom/css.ts）——
    原三行本地实现已删，避免与 app-tree 侧第三份同构实现漂移。
@@ -50,7 +50,7 @@ ${metaTagCSS}
 .link-badge-ghapi { color:var(--badge-ghapi); background:var(--badge-ghapi-bg); }
 
 /* ===== 资历最深页专用样式 ===== */
-.oldest-page { display:flex; flex-direction:column; gap:16px; padding:16px; overflow-y:auto; height:100%; }
+.oldest-page { display:flex; flex-direction:column; gap:16px; padding:var(--sp-4); overflow-y:auto; height:100%; }
 .oldest-stats-bar { display:inline-flex; align-items:center; gap:12px; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-lg); padding:8px 14px; flex-wrap:wrap; align-self:flex-start; }
 .oldest-health-box { display:flex; align-items:center; gap:8px; }
 .oldest-health-label { font-size:var(--fs-sm); color:var(--muted); white-space:nowrap; }

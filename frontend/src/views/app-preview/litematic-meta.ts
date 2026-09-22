@@ -198,7 +198,7 @@ function renderLitematicDetail(
     extraHtml = `${field(t("preview.nameLabel"), meta.name)}${field(t("preview.authorLabel"), meta.author)}${field(t("preview.createdAt"), meta.timeCreated ? fmtTime(meta.timeCreated) : "")}${field(t("preview.modifiedAt"), meta.timeModified ? fmtTime(meta.timeModified) : "")}<div class="lt-meta-row"><span class="lt-meta-label">${t("preview.formatVersion")}</span><span>Litematica v${esc(String(meta.version || "?"))} · MC Data v${esc(String(meta.minecraftDataVersion || "?"))}</span></div>${field(t("preview.description"), meta.description)}`;
   }
   detailDiv.innerHTML = `<h3>${UI_ICONS.clipboard} ${t("preview.blueprintDetail")}</h3>
-    <div style="padding:12px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm)">
+    <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm)">
       ${previewImgHTML}
       <div><strong>${renderFormattedText(basename || "")}</strong></div>
       ${extraHtml}
@@ -218,7 +218,7 @@ function renderLitematicMaterial(ctx: PreviewRoot, meta: LitematicMeta): void {
   const materialDiv = ctx.root.getElementById("preview-material");
   if (!materialDiv) return;
   materialDiv.innerHTML = `<h3>${UI_ICONS.voxel} ${t("preview.materialList")}</h3>
-	    <div style="padding:12px;font-size:var(--fs-sm)">
+	    <div style="padding:var(--sp-3);font-size:var(--fs-sm)">
 	      ${renderBlockList(blockStats)}
 	    </div>`;
 }

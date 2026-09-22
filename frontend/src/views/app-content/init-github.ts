@@ -180,7 +180,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
       if (resultsBody) {
         resultsBody.innerHTML =
           ghPlaceholder("❌ " + t("downloads.noModelList")) +
-          '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo-dl">' +
+          '<div style="text-align:center;padding:var(--sp-2)"><button class="btn-base sm ws-btn-txt" id="gh-open-repo-dl">' +
           UI_ICONS.external +
           " " +
           t("downloads.openInGithub") +
@@ -201,7 +201,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
     if (resultsBody) {
       resultsBody.innerHTML =
         ghPlaceholder("❌ " + escUtil(msg)) +
-        '<div style="text-align:center;padding:8px"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">' +
+        '<div style="text-align:center;padding:var(--sp-2)"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">' +
         UI_ICONS.external +
         " " +
         t("downloads.openInGithub") +

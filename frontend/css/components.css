@@ -393,7 +393,7 @@
   flex-wrap: wrap;
   gap: 4px;
   min-height: 28px;
-  padding: 4px;
+  padding:var(--sp-1);
   border: 1px solid var(--bd);
   border-radius:var(--radius-sm);
   background: var(--bg);
@@ -624,7 +624,7 @@
   background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;
 }
 .mc-pick-box {
-  background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:16px;
+  background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:var(--sp-4);
   max-width:500px;width:90%;max-height:70vh;overflow-y:auto;
   box-shadow:var(--shadow-xl);
 }

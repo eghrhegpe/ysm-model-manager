@@ -12,7 +12,7 @@ export const contentGhCSS: string = `
 .gh-search-wrap { padding:2px 0 6px; }
 .gh-search { width:160px;padding:4px 8px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0; }
 .gh-search:focus { border-color:var(--accent); }
-.gh-loading-placeholder { padding:24px;text-align:center;color:var(--muted);font-size:var(--fs-sm); }
+.gh-loading-placeholder { padding:var(--sp-5);text-align:center;color:var(--muted);font-size:var(--fs-sm); }
 .gh-initial-hint { color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center; }
 .gh-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px;will-change:scroll-position; }
 .gh-card { display:flex; align-items:center; gap:var(--card-gap,8px); padding:var(--card-padding,7px 10px); border-radius:var(--radius-lg); border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:var(--tr-normal), box-shadow var(--tr-normal); box-shadow:var(--card-shadow, none); transform:translateZ(0); animation:fadeSlideUp var(--tr-enter) both; }
@@ -21,7 +21,7 @@ export const contentGhCSS: string = `
 .gh-card .name { font-size:var(--fs-md); font-weight:var(--fw-bold); color:var(--txt); font-family:var(--font-display); overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .gh-card .name + .meta { margin-top:1px; font-size:var(--fs-xs); color:var(--muted); }
 .gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
-.gh-card-icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; transition:transform var(--tr-normal); }
+.gh-card-icon { font-size:var(--fs-nav); width:24px; text-align:center; flex-shrink:0; transition:transform var(--tr-normal); }
 .gh-card:hover .gh-card-icon { transform:rotate(-8deg) scale(1.1); }
 .gh-card-body { flex:1; min-width:0; }
 .gh-card-label { font-size:var(--fs-base); font-weight:600; color:var(--txt); }
@@ -55,7 +55,7 @@ export const contentGhCSS: string = `
 .gh-dl-selected:hover { background:var(--accent);color:var(--bg); }
 
 /* 二级菜单 */
-.gh-popup { position:fixed; z-index:var(--z-popover); background:var(--surf,#2a2a3c); border:1px solid var(--bd,#444); border-radius:var(--radius-lg); padding:4px; box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:140px; }
+.gh-popup { position:fixed; z-index:var(--z-popover); background:var(--surf,#2a2a3c); border:1px solid var(--bd,#444); border-radius:var(--radius-lg); padding:var(--sp-1); box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:140px; }
 .gh-popup-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:var(--radius-md); cursor:pointer; transition:background var(--tr-fast); }
 .gh-popup-item:hover { background:var(--hover,#ffffff15); }
 .gh-popup-icon { font-size:var(--fs-lg); width:20px; text-align:center; flex-shrink:0; }
@@ -76,7 +76,7 @@ export const contentGhCSS: string = `
 .gh-creator-action { font-size:var(--fs-base); color:var(--muted); flex-shrink:0; }
 
 /* ===== 模型列表行 ===== */
-.gh-empty { padding:12px; text-align:center; color:var(--muted); font-size:var(--fs-sm); }
+.gh-empty { padding:var(--sp-3); text-align:center; color:var(--muted); font-size:var(--fs-sm); }
 .gh-row { display: grid; grid-template-columns: 1fr max-content max-content; gap: 8px; align-items: center; padding: 6px 10px; border-radius: var(--radius-md); margin-bottom: 2px; border-left: 3px solid transparent; font-size: var(--fs-sm); transition: background var(--tr-fast); }
 .gh-row:hover { background: var(--hover); }
 .gh-row-exists { border-left-color: var(--status-success); background: transparent; }
@@ -133,11 +133,11 @@ export const contentGhCSS: string = `
 .gh-cr-add-area { padding:4px 12px; }
 .gh-cr-add { padding:2px 8px; border-radius:var(--radius-sm); border:1px dashed var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:var(--fs-sm); width:100%; }
 
-.gh-empty-site { flex:1; overflow-y:auto; padding:12px; color:var(--muted); font-size:var(--fs-sm); }
+.gh-empty-site { flex:1; overflow-y:auto; padding:var(--sp-3); color:var(--muted); font-size:var(--fs-sm); }
 .gh-site-link { color:var(--accent); }
 
 /* ===== 错误页 ===== */
-.gh-error-page { padding:12px; text-align:center; }
+.gh-error-page { padding:var(--sp-3); text-align:center; }
 .gh-error-msg { color:var(--txt); font-size:var(--fs-sm); line-height:1.6; } /* 错误正文须可读,muted 属误用（2026-09 层级口径） */
 .gh-error-hint { font-size:var(--fs-xs); opacity:.6; }
 .gh-back-btn { padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-sm); }

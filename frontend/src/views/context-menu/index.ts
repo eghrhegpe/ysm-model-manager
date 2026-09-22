@@ -97,7 +97,7 @@ class ContextMenu extends WebComponentBase {
           background: var(--card);
           border: 1px solid var(--bd);
           border-radius:var(--radius-lg);
-          padding: 4px;
+          padding:var(--sp-1);
           min-width: 160px;
           box-shadow: 0 8px 24px rgba(0,0,0,.5);
           animation: menuPop .2s cubic-bezier(.34,1.56,.64,1);

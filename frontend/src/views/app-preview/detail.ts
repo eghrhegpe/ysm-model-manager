@@ -157,7 +157,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
       // 数据经 ListPackModelsDetail 异步取（Go 绑定 / web-fs 镜像同构）
       return `<div class="content" id="preview-content">
   <h3>${UI_ICONS.appearance} ${t("preview.resourcePack")}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${m.thumbnail ? `<img src="${esc(m.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:var(--fs-xl);line-height:1">${UI_ICONS.error}</div><div style="font-size:var(--fs-sm);color:var(--muted)">${t("preview.noPackPng")}</div></div>`}
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
     ${desc ? `<div style="color:var(--muted);line-height:1.6">${desc}</div>` : ""}
@@ -205,7 +205,7 @@ async function renderPackModelList(
       total > models.length
         ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">${t("preview.modelListOverflow", { n: models.length })}</div>`
         : "";
-    host.innerHTML = `<div style="border:1px solid var(--bd);border-radius:var(--radius-md);padding:6px;margin-top:4px">
+    host.innerHTML = `<div style="border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--pad-nav);margin-top:4px">
   <div style="color:var(--muted);font-size:var(--fs-sm);margin-bottom:4px">${t("preview.modelList", { n: total })}</div>
   ${models
     .map((m) => {
@@ -245,7 +245,7 @@ export async function showSimplePreview(
   const basename = path.split(/[/\\]/).pop() || "";
   ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${iconHtml} ${esc(label)}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
   </div>
 </div>`;
@@ -282,7 +282,7 @@ export async function showShaderpack(
       : `${UI_ICONS.package} 光影包 (${Object.keys(entries).length} 项配置)`;
     ctx.root.innerHTML = `<div class="content" id="preview-content">
   <h3>${iconHtml} ${esc(label)}</h3>
-  <div style="padding:12px;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(displayName)}</strong></div>
     <div style="color:var(--muted);line-height:1.6;white-space:pre-wrap">${esc(desc)}</div>
   </div>

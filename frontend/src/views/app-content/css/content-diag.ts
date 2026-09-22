@@ -41,7 +41,7 @@ export const contentDiagCSS: string = `
   0%   { background: conic-gradient(from 0deg, transparent 0%, var(--accent) 10%, transparent 20%); }
   100% { background: conic-gradient(from 360deg, transparent 0%, var(--accent) 10%, transparent 20%); }
 }
-.scan-radar-wrap { position:relative; display:flex; align-items:center; justify-content:center; padding:24px; }
+.scan-radar-wrap { position:relative; display:flex; align-items:center; justify-content:center; padding:var(--sp-5); }
 .scan-radar { width:80px; height:80px; border-radius:50%; border:2px solid var(--bd); animation: scanRadar 2s linear infinite; opacity:.5; }
 .scan-radar-dot { position:absolute; width:8px; height:8px; border-radius:50%; background:var(--accent); animation: scanDot 2s linear infinite; }
 @keyframes scanDot {
@@ -86,7 +86,7 @@ export const contentDiagCSS: string = `
 /* ADR-259：布局基线归 .tab-body（面板即 .tab-body）；.diag-panel 只留入场动画钩子（见上方 diagPanelIn） */
 .diag-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; font-size:var(--fs-md); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); flex-shrink:0; }
 .stat-row { font-size:var(--fs-md); color:var(--txt); padding:3px 0; display:flex; justify-content:space-between; }
-.diag-stat { padding:12px; font-size:var(--fs-base); display:block; text-align:center; }
+.diag-stat { padding:var(--sp-3); font-size:var(--fs-base); display:block; text-align:center; }
 .diag-stat-muted { color:var(--muted); }
 .diag-stat-error { color: var(--status-error); }
 .perf-gui-est { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--status-warning) 20%, transparent); color:var(--status-warning); flex-shrink:0; }
@@ -201,7 +201,7 @@ export const contentDiagCSS: string = `
 .perf-trace-hint { color:var(--muted);font-size:var(--fs-xs);padding:4px 2px 8px;text-align:center;opacity:.6;border-top:1px solid var(--bd);margin-top:6px; }
 
 /* ===== 诊断页去重 UI (diag-dedup) ===== */
-.diag-msg { padding:12px;font-size:var(--fs-sm); }
+.diag-msg { padding:var(--sp-3);font-size:var(--fs-sm); }
 .diag-msg-error { color:var(--status-error); }
 .diag-msg-success { color:var(--status-success); }
 .diag-msg-muted { color:var(--muted); }
@@ -238,7 +238,7 @@ export const contentDiagCSS: string = `
 .diag-config-select:focus, .diag-config-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
 /* .diag-sync-config 规则已随 ADR-288 删除：同步冲突的参数面板不再是「点按钮后渲染的卡片」，
    而是常驻 .diag-bar（选择器 + 按钮直接排在栏内）——旧卡片类失去生产者，规则一并退场。 */
-.diag-sync-resolve { margin-top:16px; padding:12px; background:var(--surf); border-radius:var(--radius-lg); }
+.diag-sync-resolve { margin-top:16px; padding:var(--sp-3); background:var(--surf); border-radius:var(--radius-lg); }
 .diag-dedup-config { padding:8px 12px; }
 .diag-warn { color:var(--status-warning, #e6b800); font-weight:600; }
 

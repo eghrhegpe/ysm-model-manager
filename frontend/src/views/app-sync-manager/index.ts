@@ -99,7 +99,7 @@ export class AppSyncManager extends WebComponentBase {
     this._defaultType = this.getAttribute("default-type") || RESOURCE_TYPES.YSM;
     this._selectedType = getLastSelectedType() || this._defaultType;
     if (!this._instance) {
-      this.innerHTML = `<div style="padding:12px;color:var(--err)">${UI_ICONS.warning} ${t("sync.noInstance")}</div>`;
+      this.innerHTML = `<div style="padding:var(--sp-3);color:var(--err)">${UI_ICONS.warning} ${t("sync.noInstance")}</div>`;
       return;
     }
     this._init();

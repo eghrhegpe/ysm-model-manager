@@ -41,7 +41,7 @@ ${FADE_SLIDE_LEFT}
 /* 标题与内容同层入场：标题恒定 0ms 起播（class 内显式声明），卡片经内联 animation-delay
    从 0/60/120ms… 错峰起播——标题永不晚于其下方卡片，切 tab 观感连贯（无「标题先弹、内容再滑」割裂）。 */
 .section-title { font-size:var(--fs-lg); font-weight:600; color:var(--txt); padding:16px 16px 16px; animation:fadeSlideUp var(--tr-enter) both; animation-delay:0ms; }
-.stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-xl); padding:16px; }
+.stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-xl); padding:var(--sp-4); }
 /* .num bump 用回弹缓动（overshoot 1.56）：令牌三档均 ease/ease-out 直落、无回弹档 → 保留硬编码 */
 .stat-card .num { font-size:var(--fs-xl); font-weight:700; color:var(--accent); transition:transform .2s cubic-bezier(.34,1.56,.64,1); }
 .stat-card .num.bump { transform:scale(1.15); }

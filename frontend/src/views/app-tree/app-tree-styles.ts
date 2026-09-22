@@ -50,7 +50,7 @@ ${focusVisibleCSS}
    .dd-item.flash 保留在上方为本视图 feedback 特化，不随共享以维持无动画观感 */
 ${dropdownBaseCSS}${dropdownHoverCSS}
 .batch-dropdown { position: relative; }
-.batch-menu { position: absolute; top: 100%; left: 0; z-index: 100; background: var(--card); border: 1px solid var(--bd); border-radius:var(--radius-md); padding: 3px; min-width: 120px; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
+.batch-menu { position: absolute; top: 100%; left: 0; z-index: 100; background: var(--card); border: 1px solid var(--bd); border-radius:var(--radius-md); padding:var(--pad-btn-tool); min-width: 120px; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
 .batch-item { display: block; width: 100%; text-align: left; padding: 4px 10px; border: none; border-radius:var(--radius-sm); margin-bottom: 1px; font-size: var(--fs-sm); color: var(--txt); cursor: pointer; background: transparent; font-family: inherit; }
 .batch-item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
 .srch-row { display: flex; align-items: center; gap: 6px; }

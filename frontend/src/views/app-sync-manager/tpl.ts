@@ -167,7 +167,7 @@ export function containerHTML(): string {
     // 硬编码字号消失，债真正还掉（非仅搬位置——闸对硬编码字号位置无关）。
     ".sm-empty-icon{font-size:var(--fs-xl)}" +
     ".sm-list{animation:fade-in .15s ease}" +
-    ".sm-loading{display:flex;flex-direction:column;gap:8px;padding:12px}" +
+    ".sm-loading{display:flex;flex-direction:column;gap:8px;padding:var(--sp-3)}" +
     ".sm-dir{cursor:pointer}" +
     ".sm-dir .sm-dir-arrow{transition:color var(--tr-fast)}" +
     ".sm-dir:hover{background:var(--hover)}" +

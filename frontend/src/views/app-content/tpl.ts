@@ -92,7 +92,7 @@ export function repositoryHTML(): string {
       buttonTestid: "content-tab",
       label: `${UI_ICONS.link} ${t("repo.tab.dedup")}`,
       body: "",
-      panelStyle: "overflow-y:auto;padding:12px",
+      panelStyle: "overflow-y:auto;padding:var(--sp-3)",
     },
     {
       id: "oldest",

@@ -1,7 +1,7 @@
 // ===== 回收站 / 资源管理器 / 预览拖拽 / 主题选择器 / 响应式 =====
 export const contentUtilCSS: string = `
 /* ===== 回收站动画 ===== */
-.recy-page { flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px; }
+.recy-page { flex:1;display:flex;flex-direction:column;overflow:hidden;padding:var(--sp-3); }
 .recy-item { animation: fadeSlideUp .2s ease both; transition:opacity var(--tr-normal), transform var(--tr-normal); }
 .recy-item.leaving { opacity:0; transform:translateX(20px); pointer-events:none; }
 @keyframes recyItemIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }

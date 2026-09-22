@@ -89,7 +89,7 @@ function ensureCoreStyles(): void {
    镜像已随 ADR-193 第四刀退役）。 */
 .ysm-preview-menu.cm-popup { position:absolute;left:16px;bottom:84px;width:300px;max-height:70vh;z-index:25; }
 .ysm-preview-menu-row.cm-row { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-lg);cursor:pointer;font-size:var(--fs-md); }
-.cm-row-icon { font-size:15px;width:18px;text-align:center; }
+.cm-row-icon { font-size:var(--fs-lg);width:18px;text-align:center; }
 .cm-row-chev { margin-left:auto;font-size:var(--fs-md);font-weight:700;opacity:0.4;user-select:none; }
 ${MENU_ERROR_NOTE_CSS}
 `,

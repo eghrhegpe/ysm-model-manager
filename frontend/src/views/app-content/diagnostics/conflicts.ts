@@ -218,7 +218,7 @@ function dgCfBuildSyncConflictRows(conflicts: DgCfFileConflict[], esc: EscFn): s
 }
 
 function dgCfBuildResolveSectionHtml(): string {
-  return `<div class="diag-sync-resolve" style="margin-top:16px;padding:12px;background:var(--surf);border-radius:var(--radius-lg)">
+  return `<div class="diag-sync-resolve" style="margin-top:16px;padding:var(--sp-3);background:var(--surf);border-radius:var(--radius-lg)">
 <div class="diag-config-item">
   <label for="resolve-strategy">${UI_ICONS.target} ${t("diagnostics.resolveConflicts")}:</label>
   <select id="resolve-strategy" class="diag-config-select">

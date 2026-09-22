@@ -15,9 +15,11 @@ auto_fields:
     - initTheme
     - loadView
     - normalizeTheme
+    - normalizeThemeAuto
     - revealMainWindow
     - SYSTEM_DARK_THEME
     - SYSTEM_LIGHT_THEME
+    - THEME_AUTO_VALID
     - THEME_DARK
     - THEME_VALID
     - timeThemeForHour

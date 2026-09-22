@@ -1059,8 +1059,8 @@ export function RevealInExplorer(path: string): $CancellablePromise<void> {
     return $Call.ByID(3185410442, path);
 }
 
-export function SaveAppConfig(filesRoot: string, rpRoot: string, mcRoot: string, linkMode: string, theme: string): $CancellablePromise<void> {
-    return $Call.ByID(3201182099, filesRoot, rpRoot, mcRoot, linkMode, theme);
+export function SaveAppConfig(filesRoot: string, rpRoot: string, mcRoot: string, linkMode: string, theme: string, themeAuto: string): $CancellablePromise<void> {
+    return $Call.ByID(3201182099, filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto);
 }
 
 /**

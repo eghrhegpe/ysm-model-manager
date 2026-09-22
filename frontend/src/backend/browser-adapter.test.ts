@@ -162,23 +162,25 @@ describe("browserAdapter — Phase 2 模型库（IndexedDB）", () => {
 
 describe("browserAdapter — Phase 2 配置（localStorage）", () => {
   it("SaveAppConfig → LoadAppConfig 往返（字段名对齐 AppConfig.resourcepackRoot）", async () => {
-    await browserAdapter.SaveAppConfig("/web", "/web", "", "copy", "dark");
+    await browserAdapter.SaveAppConfig("/web", "/web", "", "copy", "dark", "off");
     const cfg = (await browserAdapter.LoadAppConfig()) as unknown as Record<string, string>;
     expect(cfg.filesRoot).toBe("/web");
     // rpRoot 必须落到 resourcepackRoot，否则 community.ts 读回恒 undefined 并永久丢失资源包根
     expect(cfg.resourcepackRoot).toBe("/web");
     expect(cfg.linkMode).toBe("copy");
     expect(cfg.theme).toBe("dark");
+    expect(cfg.themeAuto).toBe("off");
   });
 
   it("SaveAppConfig 空串保留旧值（对齐桌面 orDefault 语义，避免整体覆盖丢失其他配置）", async () => {
-    await browserAdapter.SaveAppConfig("/web", "/rp", "", "copy", "dark");
-    // 第二次以空串传 rpRoot —— 应保持上一次的 "/rp" 而非清空
-    await browserAdapter.SaveAppConfig("/web2", "", "", "move", "light");
+    await browserAdapter.SaveAppConfig("/web", "/rp", "", "copy", "dark", "time");
+    // 第二次以空串传 rpRoot/themeAuto —— 应保持上一次的 "/rp" / "time" 而非清空
+    await browserAdapter.SaveAppConfig("/web2", "", "", "move", "light", "");
     const cfg = (await browserAdapter.LoadAppConfig()) as unknown as Record<string, string>;
     expect(cfg.resourcepackRoot).toBe("/rp");
     expect(cfg.filesRoot).toBe("/web2");
     expect(cfg.linkMode).toBe("move");
+    expect(cfg.themeAuto).toBe("time");
   });
 
   it("无配置 LoadAppConfig → {}（主应用可启动）", async () => {

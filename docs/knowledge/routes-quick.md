@@ -554,10 +554,10 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 两步走路径扩展 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
-| KNOWN_PATHS 状态路径 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
-| PreviewSnapshot 快照类型 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
-| PreviewStatePath 类型契约 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | - |
+| 两步走路径扩展 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | ADR-297 |
+| KNOWN_PATHS 状态路径 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | ADR-297 |
+| PreviewSnapshot 快照类型 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | ADR-297 |
+| PreviewStatePath 类型契约 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | ADR-297 |
 
 ## 🎯 校验入口：ContainsIllegalNameChar（单一事实源）
 

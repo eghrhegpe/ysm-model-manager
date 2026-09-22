@@ -287,8 +287,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 381 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 408 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 382 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 409 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -345,10 +345,10 @@
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 212 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 341 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 165 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 79 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 343 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 317 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 203 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 222 |
@@ -469,17 +469,17 @@
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 184 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 205 |
 | relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 229 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 310 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 311 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 109 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 120 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 79 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 260 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 266 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 288 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 294 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 316 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 342 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 80 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 261 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 267 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 289 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 295 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 317 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 344 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 147 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 158 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 173 |
@@ -514,10 +514,10 @@
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 121 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 42 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 74 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 144 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 75 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 94 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 145 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 167 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 157 |
 | beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 113 |
 | runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 256 |

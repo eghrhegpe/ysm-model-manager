@@ -24,6 +24,7 @@ type AppConfig struct {
 	McRoot         string `json:"mcRoot"`
 	LinkMode       string `json:"linkMode"`
 	Theme          string `json:"theme"`
+	ThemeAuto      string `json:"themeAuto"` // 主题自动模式（off/system/time），空=未设置；P4 修复 theme-auto 落盘（localStorage 清理后可回退）
 	Mirror         string `json:"mirror"`
 	VoxelMaxBlocks int    `json:"voxelMaxBlocks"` // 3D 体素渲染上限，0=使用默认 200000
 	// 运行阈值（ADR-062 可配置化下沉：0=使用各包默认常量，行为零漂移）

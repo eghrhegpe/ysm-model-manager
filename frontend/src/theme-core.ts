@@ -27,6 +27,16 @@ export const THEME_VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "
 // class 清理列表由 THEME_VALID 推导，新增主题无需再手抄第二份（原 applyTheme 手抄双份是漂移源）
 const THEME_CLASSES = THEME_VALID.filter((t) => t !== "system").map((t) => `theme-${t}`);
 
+// P4 修复：主题自动模式白名单（off/system/time），供 initTheme 兜底 + 设置页校验
+export const THEME_AUTO_VALID = ["off", "system", "time"] as const;
+
+/** 主题自动模式归一化：白名单外一律回落 off */
+export function normalizeThemeAuto(mode: string): (typeof THEME_AUTO_VALID)[number] {
+  return THEME_AUTO_VALID.includes(mode as (typeof THEME_AUTO_VALID)[number])
+    ? (mode as (typeof THEME_AUTO_VALID)[number])
+    : "off";
+}
+
 /** 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） */
 export function normalizeTheme(mode: string): string {
   return THEME_VALID.includes(mode) ? mode : "system";
@@ -81,10 +91,18 @@ export async function initTheme() {
     const theme = normalizeTheme(raw);
     safeSet("theme", theme);
     applyTheme(theme);
+    // P4 修复（2026-09，theme-auto 落盘同步）：localStorage 被清理后从 Go 配置兜底恢复
+    // theme-auto——无此兜底时 time 自动模式重启后 applyThemeAuto 读不到值，定格上次主题
+    const rawAuto = safeGet("theme-auto") || cfg.themeAuto || "off";
+    const auto = normalizeThemeAuto(rawAuto);
+    safeSet("theme-auto", auto);
   } catch {
     const raw = safeGet("theme") || THEME_DARK;
     const theme = normalizeTheme(raw);
     safeSet("theme", theme);
     applyTheme(theme);
+    // 隐私模式 / Go 不可用时，theme-auto 仍尝试回写（safeSet 静默降级）
+    const rawAuto = safeGet("theme-auto") || "off";
+    safeSet("theme-auto", normalizeThemeAuto(rawAuto));
   }
 }

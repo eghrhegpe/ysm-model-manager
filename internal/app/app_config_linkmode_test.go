@@ -141,7 +141,7 @@ func TestSaveAppConfig_WashesDirtyDiskLinkMode(t *testing.T) {
 			a.loadAppConfig() // 内存洗：configCache.LinkMode=""（磁盘仍 mirror）
 
 			// 模拟改主题保存：FilesRoot/McRoot 传空 → orDefault 保留旧值、不触发 watcher 重建
-			if err := a.SaveAppConfig("", "", "", tc.arg, "dark"); err != nil {
+			if err := a.SaveAppConfig("", "", "", tc.arg, "dark", ""); err != nil {
 				t.Fatalf("SaveAppConfig 失败: %v", err)
 			}
 			data, err := os.ReadFile(configPath())

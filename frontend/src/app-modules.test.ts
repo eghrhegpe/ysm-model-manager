@@ -178,6 +178,27 @@ describe("initTheme 隐私模式 + 白名单回写", () => {
       restore();
     }
   });
+
+  it("cfg.themeAuto=time + localStorage 无 theme-auto → 回写 time（P4 修复：localStorage 清理后可从 Go 配置恢复）", async () => {
+    localStorage.clear();
+    LoadAppConfigMock.mockResolvedValue({ theme: "warm", themeAuto: "time" });
+    await initTheme();
+    expect(localStorage.getItem("theme-auto")).toBe("time");
+  });
+
+  it("cfg.themeAuto=system + localStorage 无 theme-auto → 回写 system", async () => {
+    localStorage.clear();
+    LoadAppConfigMock.mockResolvedValue({ theme: "system", themeAuto: "system" });
+    await initTheme();
+    expect(localStorage.getItem("theme-auto")).toBe("system");
+  });
+
+  it("localStorage 有 theme-auto 优先于 cfg.themeAuto（localStorage 是事实源）", async () => {
+    localStorage.setItem("theme-auto", "off");
+    LoadAppConfigMock.mockResolvedValue({ theme: "cyber", themeAuto: "time" });
+    await initTheme();
+    expect(localStorage.getItem("theme-auto")).toBe("off");
+  });
 });
 
 describe("applyUIPrefs 字号/密度/动画偏好", () => {

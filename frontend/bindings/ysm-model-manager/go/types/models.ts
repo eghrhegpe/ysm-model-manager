@@ -32,6 +32,11 @@ export interface AppConfig {
     "mcRoot": string;
     "linkMode": string;
     "theme": string;
+
+    /**
+     * 主题自动模式（off/system/time），空=未设置；P4 修复 theme-auto 落盘（localStorage 清理后可回退）
+     */
+    "themeAuto": string;
     "mirror": string;
 
     /**

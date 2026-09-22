@@ -17,8 +17,10 @@ auto_fields:
     - initTheme
     - loadView
     - normalizeTheme
+    - normalizeThemeAuto
     - SYSTEM_DARK_THEME
     - SYSTEM_LIGHT_THEME
+    - THEME_AUTO_VALID
     - THEME_DARK
     - THEME_VALID
     - timeThemeForHour
@@ -93,7 +95,8 @@ status: active
 - **写入侧也须写合法值**：设置页主题卡写 6 套皮肤名、`theme-auto="time"` 时经 `applyTimeTheme()`（定义于 theme-core.ts，2026-09 自设置页下沉）把实际主题（warm/cyber）写入 `theme` 键——不允许写 `"time"`/`"dark"` 等非法值到 `theme`（否则重启 initTheme 归一化为 system，按时间段模式被静默降级，P2 修复）
 - **设置页主题读写同样走 safe 包装**（P3 修复：`themeGet`/`themeSet` 与 app-modules 的 safeGet/safeSet 同口径——原设置页裸 localStorage 在隐私模式下抛错中断 initSettings、主题卡片整页失效）
 - UI 偏好修改只操作 CSS 变量与类名（`--fs-scale`/`no-animations`），不直接改各 `--fs-*` 计算值；`--fs-base-size` 是唯一真基准——核心 7 个 + 语义 6 个 `--fs-*` 全派生自它，故「调基准」与「调偏移」是两个正交杠杆（前者设计级、后者用户级）
-- **P3 修复**（2026-09）：`theme-auto="time"` 按时间自动切换现已全链生效——启动链 `applyThemeAuto()` 读 `theme-auto`，`time` 模式按当前时刻重算时段主题并回写 `theme` 键（白天设 time 夜间重启不再定格亮色）。**遗留**：自动模式（system/time）变更仍**未同步 ysm_config.json**（localStorage 被清理后回退 cfg 旧主题）——需扩 `AppConfig` + `SaveAppConfig` 签名加 `theme-auto` 字段，属 Go 侧改动，列为后续
+- **P3 修复**（2026-09）：`theme-auto="time"` 按时间自动切换现已全链生效——启动链 `applyThemeAuto()` 读 `theme-auto`，`time` 模式按当前时刻重算时段主题并回写 `theme` 键（白天设 time 夜间重启不再定格亮色）。
+- **P4 修复**（2026-09，本会话落地）：**theme-auto 落盘同步**——扩 `AppConfig.ThemeAuto` + `SaveAppConfig` 六参签名；设置页 auto 下拉 change / 卡片点击均调 SaveAppConfig 同步 theme-auto；initTheme 从 cfg.themeAuto 兜底恢复 localStorage（localStorage 被清理后可从 ysm_config.json 回退）。
 
 ## 相关
 

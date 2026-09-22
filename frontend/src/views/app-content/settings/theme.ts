@@ -67,6 +67,7 @@ export function initThemeSection(root: ShadowRoot): void {
         // P3 修复（审核，linkMode 失同步）：读 cfg.linkMode 而非闭包旧值 linkMode——
         // 原 initSettings 顶部的 const linkMode 是捕获值，用户在链接模式下拉改过后不更新，
         // 主题切换会用旧值把已改的 linkMode 覆盖回退
+        // P4 修复（theme-auto 落盘）：点击卡片 = 手动选主题 = 自动模式关闭 → themeAuto="off"
         void (async () => {
           try {
             const { SaveAppConfig } = await backendGetApp();
@@ -76,6 +77,7 @@ export function initThemeSection(root: ShadowRoot): void {
               getCfg().mcRoot || "",
               getCfg().linkMode || "copy",
               themeName,
+              "off",
             );
           } catch (e) {
             logWarn(
@@ -122,6 +124,22 @@ export function initThemeSection(root: ShadowRoot): void {
           });
       }
       // "off" 时不改变当前主题，等用户手动点卡片
+      // P4 修复：自动模式变更同步 ysm_config.json（theme-auto 落盘）
+      void (async () => {
+        try {
+          const { SaveAppConfig } = await backendGetApp();
+          await SaveAppConfig(
+            getCfg().filesRoot || "",
+            getCfg().resourcepackRoot || "",
+            getCfg().mcRoot || "",
+            getCfg().linkMode || "copy",
+            safeGet("theme") || "cyber",
+            mode,
+          );
+        } catch (e) {
+          logWarn("settings", "自动主题模式保存到配置失败", e);
+        }
+      })();
     });
     // 初始化：如果 savedAuto 是 system/time，应用对应主题
     if (savedAuto === "system") {

@@ -60,6 +60,7 @@ async function saveMcRoot(
     mcRoot,
     latest.linkMode || "copy",
     safeGet("theme") || "dark",
+    safeGet("theme-auto") || "",
   );
 }
 

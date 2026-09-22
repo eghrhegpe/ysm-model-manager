@@ -276,6 +276,7 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
               paths[0],
               cfg.linkMode || "copy",
               theme,
+              safeGet("theme-auto") || "",
             );
           } else {
             btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;

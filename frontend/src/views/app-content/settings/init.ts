@@ -303,6 +303,7 @@ function stgBindLinkMode(
           cfgLocal.mcRoot || "",
           val,
           theme,
+          safeGet("theme-auto") || "",
         );
         await SetLinkMode(val);
         cfgLocal.linkMode = val;

@@ -170,9 +170,9 @@ describe("runLauncherDetect", () => {
       (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
       await p;
 
-      // SaveAppConfig 五参（filesRoot/resourcepackRoot 原样回写，theme 缺省 dark）
+      // SaveAppConfig 六参（filesRoot/resourcepackRoot 原样回写，theme 缺省 dark，themeAuto 空串保留）
       expect(app.SaveAppConfig).toHaveBeenCalledTimes(1);
-      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "dark");
+      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "dark", "");
       // 默认勾选「用作 YSM 根目录」→ SetResourceRoot
       expect(app.SetResourceRoot).toHaveBeenCalledTimes(1);
       expect(app.SetResourceRoot).toHaveBeenCalledWith("ysm", "/mc/custom");
@@ -199,7 +199,7 @@ describe("runLauncherDetect", () => {
     (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
     await p;
     expect(app.SaveAppConfig).toHaveBeenCalledTimes(1);
-    expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "dark");
+    expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "dark", "");
     expect(app.SetResourceRoot).not.toHaveBeenCalled();
   });
 
@@ -249,7 +249,7 @@ describe("runMcSearch", () => {
     const { events: stats, off: offStats } = watchBus("stats:refresh");
     try {
       await runMcSearch(mockGuard);
-      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/auto/minecraft", "copy", "dark");
+      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/auto/minecraft", "copy", "dark", "");
       expect(stats).toHaveLength(1);
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("success");

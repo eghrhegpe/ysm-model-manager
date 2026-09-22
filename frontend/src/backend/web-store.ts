@@ -285,6 +285,7 @@ export const webStoreBindings = {
     mcRoot: string,
     linkMode: string,
     theme: string,
+    themeAuto: string,
   ) => {
     // 字段名对齐 AppConfig（消费方读 resourcepackRoot，非 rpRoot）；spread 旧配置避免
     // 整体覆盖丢失 ysmRoot/shaderpackRoot 等；空串保留旧值（对齐桌面 orDefault 语义）
@@ -296,6 +297,7 @@ export const webStoreBindings = {
       mcRoot: mcRoot || prev.mcRoot,
       linkMode: linkMode || prev.linkMode,
       theme: theme || prev.theme,
+      themeAuto: themeAuto || prev.themeAuto,
     });
     return Promise.resolve();
   },

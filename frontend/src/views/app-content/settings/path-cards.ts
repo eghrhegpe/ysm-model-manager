@@ -42,6 +42,7 @@ export async function saveCfg(patch: {
     patch.mcRoot !== undefined ? patch.mcRoot : latest.mcRoot || "",
     patch.linkMode !== undefined ? patch.linkMode : latest.linkMode || "copy",
     theme,
+    safeGet("theme-auto") || "",
   );
   if (patch.filesRoot !== undefined) getCfg().filesRoot = patch.filesRoot;
   if (patch.rpRoot !== undefined) getCfg().resourcepackRoot = patch.rpRoot;
@@ -333,6 +334,7 @@ export function initMcDetect(root: ShadowRoot): void {
         selected,
         getCfg().linkMode || "copy",
         theme,
+        safeGet("theme-auto") || "",
       );
       getCfg().mcRoot = selected as string; // 语义上此处非空（单路径为 paths[0]，多路径已 return null）
       cardRefreshers.forEach((fn) => {

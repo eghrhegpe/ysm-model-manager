@@ -145,7 +145,7 @@ func washLinkMode(cfg *types.AppConfig) {
 	}
 }
 
-func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) error {
+func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto string) error {
 	oldCfg := a.LoadAppConfig()
 	// 校验失败时 validated 置空 → 下方 orDefault 回退 oldCfg.McRoot——
 	// 原实现校验失败 errMsg 被丢弃、未校验的 mcRoot 原样写入（配置损坏路径静默生效）。
@@ -169,7 +169,9 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) e
 		// 净化已自兜底（空参→旧值、脏值→旧值、双脏→""），勿再套 orDefault（审查 ④）
 		LinkMode: install.SanitizeLinkMode(linkMode, oldCfg.LinkMode),
 		Theme:    orDefault(theme, oldCfg.Theme),
-		Mirror:   oldCfg.Mirror,
+		// P4 修复：theme-auto 落盘（localStorage 被清理后可从 ysm_config.json 回退）
+		ThemeAuto:  orDefault(themeAuto, oldCfg.ThemeAuto),
+		Mirror:     oldCfg.Mirror,
 		// VoxelMaxBlocks 从 oldCfg 拷贝——原手工构造漏带该字段，
 		// 保存任何设置都会把用户体素上限重置为 0（默认 200000）
 		VoxelMaxBlocks: oldCfg.VoxelMaxBlocks,

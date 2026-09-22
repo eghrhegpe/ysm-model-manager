@@ -611,6 +611,16 @@ describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P
     expect(water.setWaterMode).toHaveBeenCalledWith("film");
   });
 
+  it("[锐评 F-3] env.waterMode 探针写入归一：非 pool 值一律落 film（fogMode 先例同构）", () => {
+    const water = { ...baseCap("water"), getWaterMode: () => "film", setWaterMode: vi.fn() };
+    mountCaps(water as unknown as SceneCapability);
+    setStateValue("env.waterMode", "banana");
+    // 归一守卫：binding 层先把任意基元收成 "pool" | "film"，脏值不外溢进 cap
+    expect(water.setWaterMode).toHaveBeenCalledWith("film");
+    setStateValue("env.waterMode", "pool");
+    expect(water.setWaterMode).toHaveBeenLastCalledWith("pool");
+  });
+
   it("previewSnapshot 含这两个键且 cap 缺席时为安全缺省", () => {
     mountCaps();
     const snap = previewSnapshot();

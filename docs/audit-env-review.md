@@ -1092,3 +1092,73 @@ ground-capability.ts:698-729 手写 27 字段。对比 water 侧 `getPresetKeys(
 > reflector/shadow 的 manual→auto-model 收敛留作「格式一致性」候选（有行为恒等的充分前提，可安全批量做，
 > 但单独提交无用户可感知收益，暂缓）。
 
+---
+
+## §20 水面接线锐评修复轮（2026-09-23）
+
+> 轮次：对 water 面板做一轮全新接线体检（复核 §5/§6/§13/§17 旧账全部维持已治），首诊四缺陷
+> F-1~F-4 + 轻症 L-1/L-3，除 L-2/L-4/L-5（登记不修）外全部闭环。TDD：F-1/F-2/F-3 先写红测试
+> （F-2 对旧实现 2 failed 实证非空转），实现后全绿。
+
+### 🔴→✅ F-2 三无魔法数 `clipBias: 3` 下沉 schema + UI 出口闭环
+
+- **实证**：官方 `Reflector.js`（r185）L81 `options.clipBias || 0` → 烘进 onBeforeRender 闭包
+  （L212 调投影矩阵 z 行）——**不可就地改**；地面镜面先例 `reflectorClipBias`（默认 0.003）
+  走 envState + schema 值域，water 侧却是裸字面量 `3`（无注释/无 ADR 登记/无测试锁，
+  `git log -S` 只指回 ADR-297 主提交）。
+- **修复**：schema 新键 `waterReflectionClipBias`（默认 **保持 3 = 现观感零变化**，range
+  [0,10] step 0.1；官方 0.003 是不同量级语义，注释明令勿"对齐"回去）。消费点
+  `ensureReflector` 现读比对 `reflectorClipBias` 烙值——不一致即 `disposeReflector()`
+  弃载体、下拍懒建重建（bias 变更离散，成本可接受）；分派表维持空条目口径。
+- **不自犯 R-1**：补 `water-reflection-clip-bias` 滑杆（reflect 组第五控件，同主开
+  visibleWhen 门控）+ 三语言 locale 键（`preview.waterReflectionClipBias`）；D3 还原表
+  登记 + 偏离值表（5.5）。
+- **回归锁**：默认值/值域断言、bias 变更 → 新载体 + RT 即时补挂当前分辨率、bias 不变
+  → 载体幸存（防每帧重建抖动）。
+
+### 🟡→✅ F-1 SSR 活跃判定手抄双源 → `isSsrRenderActive()` 单源
+
+- **实证**：同一判别式（ppEnabled ∧ ppReflectionMode ≠ envmap-only）存在两份**私有手抄**——
+  pp `ssrIsActive() && this.enabled`（applyReflectorSync 内联）与 water 的
+  `ssrActive()`。pp 侧还随 R-1 血案（关 pp 仍白压镜子）演化过一次——手抄副本即分叉隐患。
+- **修复**：`state/env-state.ts` 新增纯函数 `isSsrRenderActive()` 收编唯一判别式；pp 侧删
+  `ssrIsActive()` 方法、门禁取 `isSsrRenderActive() && envState.ppReflectorDisableWhenSSR`；
+  water 侧删私有 `ssrActive()`，`reflectionActive` 改调单源判定（保持逐帧现读纪律）。
+- **回归锁**：`env-state.test.ts` 真值表三例（含 R-1 语义：ppEnabled=false → false）；
+  既有 pp 压制测试 + water SSR 真值表测试不动而全绿 = 行为恒等证明。
+
+### 🟡→✅ F-3 探针 `env.waterMode` 类型侵蚀 → 收窄 WaterMode + binding 归一
+
+- **修复**：`PathValue["env.waterMode"]` 由 `string` 收窄为 `"film" | "pool"`（preview-paths
+  零依赖叶子，采 `"ui.mode"` 同款本地字面量 + 注释指向事实源范式）；binding 两侧过
+  `normalizeWaterMode`（fogMode 先例同构，非 pool 一律落 film）；顺手删
+  `getWaterMode()` 的冗余 `as WaterMode` cast（schema 推导已是精确联合）。
+- **回归锁**：`preview-state.test.ts`「探针写入归一」用例（banana → setWaterMode("film")）。
+
+### 🟢→✅ F-4 注释化石：water-menu 头注「无 getMasterToggle / water 无能力总开关」与
+cap 实际 `getMasterNodeId()` 矛盾（ADR-195 刀3 前化石）——纠偏。
+
+### ⚪→✅ L-1 / L-3：分派表头注「条目写互不相交」改述为两条收敛保证（不相交 ∪
+applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectionUniforms`（归零路
+唯一调用）内联进 `renderReflection`，强度写口归 `applyReflectionUniforms` 一处。
+
+### 登记未修（本轮判断，非遗忘）
+- **L-2** 一名三拍（wetness/水膜浓度/uBaseOpacity 词典链）：契约全覆盖不构成错，改名 = 存档键迁移成本 > 收益。
+- **L-4** S5-2 / S5-3（wetness=0 消失无提示、波纹单控件组）：§13 已定级低优先级 UX，维持。
+- **L-5** loadState 不 notify × 已开菜单刷新窗：挂载时序上概率极低，观察项维持。
+
+### 验证
+| 门禁 | 结果 |
+|------|------|
+| F-2 新测试对旧实现 | 2 failed（TDD 非空转证明） |
+| `vitest --run src/preview-3d/` 全量 | **2850 passed / 158 files** |
+| `npm run typecheck` | ✓（含 F-3 收窄后零消费者破坏） |
+| `npx vite build`（locale JSON 再生后） | ✓ built in 8.49s |
+| `check-biome --files`（13 文件） | ✅ |
+| `check-layering` | ✅ |
+| 知识卡回写 | water.md（F-1/F-2 陷阱 + API 五键 + UI 出口）、preview_env_state.md（isSsrRenderActive 登记） |
+
+> check-circular 报 1 环：`views/app-content/diagnostics/perf.ts ↔ perf-scan/single-bench`
+> ——本会话未触碰 perf 系文件（git status 可证），属**存量环**（diag 工具区，2026-09-22
+> `eff50f47c` 前后即在），与本次改动无关，报告在案待归属会话处理。
+

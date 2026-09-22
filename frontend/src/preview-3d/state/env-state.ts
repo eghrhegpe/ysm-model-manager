@@ -131,6 +131,20 @@ export function setStateValue(path: string, value: unknown): void {
 }
 
 /**
+ * [锐评 F-1] SSR 活跃判定的唯一事实源：后处理主开关开 ∧ 反射模式含 ssr。
+ * 语义 = 「SSRPass 此刻真的在渲染」——R-1 血案修正：pp 关掉时 pass 已旁路，SSR 没在
+ * 渲染，不得白禁地面镜面 / 白跳水面镜像。判别式曾被两处各手抄一份（pp 侧还随血案
+ * 演化过一次）——手抄即分叉隐患，收编纯函数单源：
+ *   - postprocessing-capability|applyReflectorSync（压制地面单平面镜）
+ *   - water-capability|reflectionActive（抑制水面模型倒影，ADR-297）
+ * water 侧仍守「逐帧现读不另订阅」纪律（pp 键属 postprocessing 组，water 回调收不到
+ * 派发）——现读的是**本判定**，不是手抄公式。
+ */
+export function isSsrRenderActive(): boolean {
+  return envState.ppEnabled && envState.ppReflectionMode !== "envmap-only";
+}
+
+/**
  * 重置单例（测试用）。
  */
 export function resetEnvState(): void {

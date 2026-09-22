@@ -244,6 +244,19 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           },
           waterReflectOn,
         ),
+        // [锐评 F-2] 裁剪偏置滑杆：原 ensureReflector 裸字面量 3 的下沉归宿，键化后补
+        // UI 出口（R-1「持久化活、菜单缺席」同病不自犯）。高级参数语义：0 = 官方裸裁剪
+        // （掠射角倒影易闪断），默认 3 已验证，拖大进一步回拉裁剪面。
+        wSliderNode(
+          "water-reflection-clip-bias",
+          "preview.waterReflectionClipBias",
+          getParamRange("waterReflectionClipBias"),
+          {
+            get: () => cap.getWaterReflectionClipBias(),
+            set: (v) => cap.setWaterReflectionClipBias(v),
+          },
+          waterReflectOn,
+        ),
         {
           id: "water-reflect-ssr-suppress",
           kind: "toggle",

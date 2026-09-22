@@ -1085,11 +1085,11 @@ describe("WaterCapability — 菜单控件全联动", () => {
   const countControls = (arr: readonly PreviewMenuNode[]): number =>
     arr.reduce((n, c) => n + (c.children ? countControls(c.children) : 1), 0);
 
-  it("19 项控件 setValue/getValue 双向读写联动（数量与树一致）", () => {
+  it("20 项控件 setValue/getValue 双向读写联动（数量与树一致）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(countControls(nodes)).toBe(19);
+    expect(countControls(nodes)).toBe(20);
     const form = nodes[1]!;
     const look = nodes[2]!;
     const pool = nodes[3]!;
@@ -1139,13 +1139,15 @@ describe("WaterCapability — 菜单控件全联动", () => {
     expect(by("water-wave-speed").control!.get!(undefined)).toBeCloseTo(1.8, 5);
     by("water-choppiness").control!.set!(0.42);
     expect(by("water-choppiness").control!.get!(undefined)).toBeCloseTo(0.42, 5);
-    // ADR-297 reflect 组四控件（主开 + 三从控）双向读写
+    // ADR-297 reflect 组五控件（主开 + 四从控）双向读写
     by("water-reflection").control!.set!(true);
     expect(by("water-reflection").control!.get!(undefined)).toBe(true);
     by("water-reflection-strength").control!.set!(0.8);
     expect(by("water-reflection-strength").control!.get!(undefined)).toBeCloseTo(0.8, 5);
     by("water-reflection-resolution").control!.set!(1024);
     expect(by("water-reflection-resolution").control!.get!(undefined)).toBe(1024);
+    by("water-reflection-clip-bias").control!.set!(5.5);
+    expect(by("water-reflection-clip-bias").control!.get!(undefined)).toBeCloseTo(5.5, 5);
     by("water-reflect-ssr-suppress").control!.set!(false);
     expect(by("water-reflect-ssr-suppress").control!.get!(undefined)).toBe(false);
   });
@@ -1430,6 +1432,8 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
       waterReflectionStrength: 0.9,
       waterReflectionResolution: 1024,
       waterReflectDisableWhenSSR: false,
+      // [锐评 F-2] clipBias 下沉键（默认 3，偏离取 5.5 ∈ [0,10]）
+      waterReflectionClipBias: 5.5,
     };
     const schemaKeys = getPresetKeys("water").filter((k) => k.startsWith("water"));
     const missing = schemaKeys.filter((k) => !(k in DEVIATION));
@@ -1726,6 +1730,31 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     expect(getParamRange("waterReflectionResolution")).toMatchObject({ min: 256, max: 2048 });
   });
 
+  it("[锐评 F-2] clipBias 下沉 schema：默认保持 3（现观感零变化），不再是 ensureReflector 裸字面量", () => {
+    expect(envState.waterReflectionClipBias).toBe(3);
+    expect(getParamRange("waterReflectionClipBias")).toMatchObject({ min: 0, max: 10 });
+  });
+
+  it("[锐评 F-2] clipBias 变更 → 弃载体懒建重建（bias 烘进 Reflector 闭包，不可就地改）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    cap.update(0.016);
+    const refl1 = cap["reflector"] as NonNullable<WaterCapability["reflector"]>;
+    expect(refl1).toBeTruthy();
+    cap.setWaterReflectionClipBias(1.5);
+    cap.update(0.016);
+    const refl2 = cap["reflector"] as NonNullable<WaterCapability["reflector"]>;
+    expect(refl2, "bias 变 → 旧载体弃、新载体懒建").toBeTruthy();
+    expect(refl2).not.toBe(refl1);
+    expect(refl2.getRenderTarget().width, "重建即时补挂当前分辨率（不白弃一帧）").toBe(
+      envState.waterReflectionResolution,
+    );
+    cap.update(0.016);
+    expect(cap["reflector"], "bias 未再变 → 载体幸存（防每帧重建抖动）").toBe(refl2);
+  });
+
   it("默认关：update 不建载体（零开销纪律，与 reflectorEnabled 默认关同门）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
@@ -1918,7 +1947,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     }
   });
 
-  it("reflect 组树形：主开 + 三从控，从控按主开 visibleWhen 出场", () => {
+  it("reflect 组树形：主开 + 四从控（强度/分辨率/裁剪偏置/SSR 抑制），从控按主开 visibleWhen 出场", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const reflect = cap.getMenuNodes()[5]!;
@@ -1927,6 +1956,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
       "water-reflection",
       "water-reflection-strength",
       "water-reflection-resolution",
+      "water-reflection-clip-bias",
       "water-reflect-ssr-suppress",
     ]);
     const main = reflect.children![0]!;
@@ -1953,13 +1983,14 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     off();
   });
 
-  it("loadState 还原倒影四键并触发一次重建落地（suspend 纪律不破）", () => {
+  it("loadState 还原倒影五键并触发一次重建落地（suspend 纪律不破）", () => {
     const scene = new THREE.Scene();
     persistState("water", {
       waterMode: "pool",
       waterReflectionEnabled: true,
       waterReflectionStrength: 0.35,
       waterReflectionResolution: 2048,
+      waterReflectionClipBias: 7.5,
       waterReflectDisableWhenSSR: false,
     });
     const cap = new WaterCapability({ scene });
@@ -1967,6 +1998,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     expect(cap.getWaterReflectionEnabled()).toBe(true);
     expect(cap.getWaterReflectionStrength()).toBeCloseTo(0.35, 5);
     expect(cap.getWaterReflectionResolution()).toBe(2048);
+    expect(cap.getWaterReflectionClipBias()).toBeCloseTo(7.5, 5);
     expect(cap.getWaterReflectDisableWhenSSR()).toBe(false);
     expect(isEnvCallbacksSuspended(), "suspend 计数已随 finally 归零").toBe(false);
   });

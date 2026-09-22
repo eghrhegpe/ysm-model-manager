@@ -53,6 +53,12 @@ RT + 水 shader 自采样**，配套两项默认值决策：
    一次整场重渲，不是白拿的——与地面 `reflectorEnabled` 默认关同纪律。配套
    `waterReflectionStrength`（默认 0.6）、`waterReflectionResolution`（默认 512，
    256–2048 step 256，变更走 RT setSize 原位扩缩、不重建载体）。
+   - **补记（2026-09-23 锐评 F-2，方向修正）**：镜像裁剪偏置亦应键化，不落裸字面量——
+     与地面 `reflectorClipBias`（reflector cap）同规格，遵「高级参数不豁免 envState 单源
+     + 值域进 schema（ADR-283）」纪律。新键 `waterReflectionClipBias`，默认 3 = 落地观感
+     保持（three 官方示例 0.003 是归一化单位场景的量级语义，不可"对齐"）。⚠️ 与分辨率
+     不同：**bias 烘进 Reflector.onBeforeRender 闭包（r185 源码实证），不可就地改**——
+     变更语义 = 弃载体、下拍懒建重建（离散低频参数，接受重建成本），非 setSize 原位扩缩。
 3. **SSR 活跃时抑制水反射**（`waterReflectDisableWhenSSR` 默认 true）：`ppEnabled` 且
    `ppReflectionMode ∈ {envmap+ssr, ssr-only}` 时水反射自动跳渲归零——`ppReflectorDisableWhenSSR`
    （地面镜面对 SSR 的抑制）同范式。抑制态归水 cap 持有（ADR-247 D2 口径）。实现取

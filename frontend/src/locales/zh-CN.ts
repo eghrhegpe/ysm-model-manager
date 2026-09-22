@@ -1370,6 +1370,7 @@ export const zhCN = {
   "preview.waterReflection": "模型倒影",
   "preview.waterReflectionStrength": "倒影强度",
   "preview.waterReflectionResolution": "倒影分辨率",
+  "preview.waterReflectionClipBias": "倒影裁剪偏置",
   "preview.waterReflectSsrSuppress": "SSR 活跃时抑制倒影",
   "preview.waterEnabled": "启用水面",
   "preview.waterMode": "水面形态",

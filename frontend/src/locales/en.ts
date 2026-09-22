@@ -1411,6 +1411,7 @@ export const en: Record<string, string> = {
   "preview.waterReflection": "Model reflections",
   "preview.waterReflectionStrength": "Reflection strength",
   "preview.waterReflectionResolution": "Reflection resolution",
+  "preview.waterReflectionClipBias": "Reflection clip bias",
   "preview.waterReflectSsrSuppress": "Suppress water reflection while SSR is active",
   "preview.waterEnabled": "Enable Water",
   "preview.waterMode": "Water Mode",

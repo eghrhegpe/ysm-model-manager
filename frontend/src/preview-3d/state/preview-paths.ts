@@ -80,7 +80,10 @@ export type PathValue = {
   "render.maxPixelRatio": number;
   "render.wireframe": boolean;
   "env.pmrem": boolean;
-  "env.waterMode": string;
+  // [锐评 F-3] 收窄为精确联合（原 string 让谓词 `=== "filmx"` 拼错编译不红、静默恒假）：
+  // 与本文件 "ui.mode" 同款「本地字面量 + 注释指向事实源」范式——本叶子零 import 是
+  // 断环铁律（ADR-168），WaterMode 真值源 = caps/water-state.ts，成员变更两处同步。
+  "env.waterMode": "film" | "pool";
   "env.groundSourceKind": string;
   "env.groundCanvasStyle": string;
   // ADR-249 §2.3 叠加层：独立透明格线层状态上浮

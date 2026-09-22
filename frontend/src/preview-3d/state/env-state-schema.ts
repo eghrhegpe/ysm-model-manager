@@ -321,6 +321,19 @@ export const ENV_STATE_SCHEMA = {
   // SSR 活跃时抑制水反射（ppReflectorDisableWhenSSR 同范式）：屏幕空间倒影与平面反射
   // 双叠过亮发脏。抑制态归水 cap 持有（ADR-247 D2 口径），逐帧现读 pp 键不另订阅。
   waterReflectDisableWhenSSR: { type: "boolean", default: true, group: "water" },
+  // [锐评 F-2 收口 2026-09-23] 镜像裁剪偏置（clipBias）：官方 Reflector 用它把镜像相机
+  // 近裁剪面自镜面平面调正（投影视空间调正量，非米制），控制与水面相交内容的倒影裁切。
+  // 原为 ensureReflector 内裸字面量 `3`——三无魔法数（无注释/无登记/无测试锁），下沉
+  // schema 键收编值域单源纪律（ADR-283）。**默认保持 3 = 现观感零变化**（three 官方
+  // 示例 0.003 是默认近平面场景的观感实验值，量级语义不同，勿"对齐"回去）；0 = 裸裁剪。
+  // ⚠️ clipBias 烘进 Reflector.onBeforeRender 闭包（r185 源码实证），**不可就地改**——
+  // 变更须弃载体懒建重建（消费点 water-capability.ts|ensureReflector，守卫见其测试）。
+  waterReflectionClipBias: {
+    type: "number",
+    default: 3,
+    group: "water",
+    range: { min: 0, max: 10, step: 0.1 },
+  },
 
   // --- Environment ---
   envPreset: {

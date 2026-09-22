@@ -1240,6 +1240,7 @@
   "preview.waterReflection": "モデルの反射",
   "preview.waterReflectionStrength": "反射の強さ",
   "preview.waterReflectionResolution": "反射解像度",
+  "preview.waterReflectionClipBias": "反射クリップバイアス",
   "preview.waterReflectSsrSuppress": "SSR 有効時は反射を抑制",
   "preview.waterEnabled": "水面を有効化",
   "preview.waterMode": "水面モード",

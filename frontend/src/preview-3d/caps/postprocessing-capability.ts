@@ -36,7 +36,7 @@ import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { envState, isSsrRenderActive, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { pickModelDefaultFields, toModelType } from "@/preview-3d/state/model-defaults.ts";
 import type { LightCapability } from "./light-capability.ts";
@@ -402,19 +402,15 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     return getTypedCap(this.caps, "reflector");
   }
 
-  private ssrIsActive(): boolean {
-    return envState.ppReflectionMode !== "envmap-only";
-  }
-
   private applyReflectorSync(): void {
     const reflectorCap = this.reflectorCap();
     if (!reflectorCap) return;
-    // 抑制门禁 = 真正在渲染 SSR：reflectionMode 配置 + 启用意图 ppEnabled 同时成立。
-    // 历史：原实现只看 reflectionMode（ssrIsActive），导致「用户关掉整条后处理、SSR pass 已
-    // 旁路（render() 里 ssrPass.enabled=false）」时，镜子仍被压制——SSR 没在渲染却白禁了单平面镜。
-    // 关掉后处理（ppEnabled=false）就该放回镜子、退出抑制态。
-    const shouldDisableReflector =
-      this.ssrIsActive() && this.enabled && envState.ppReflectorDisableWhenSSR;
+    // 抑制门禁 = 真正在渲染 SSR（[锐评 F-1] 判定收编 state/env-state|isSsrRenderActive 单源，
+    // 与 water-capability|reflectionActive 同源）：reflectionMode 配置 + 启用意图 ppEnabled
+    // 同时成立。历史：原实现只看 reflectionMode，导致「用户关掉整条后处理、SSR pass 已
+    // 旁路（render() 里 ssrPass.enabled=false）」时，镜子仍被压制——SSR 没在渲染却白禁了
+    // 单平面镜。关掉后处理（ppEnabled=false）就该放回镜子、退出抑制态。
+    const shouldDisableReflector = isSsrRenderActive() && envState.ppReflectorDisableWhenSSR;
     if (shouldDisableReflector) {
       // 首次施加压制时记录原值（后续同步不覆盖基准）
       if (!this.reflectorSuppressing) {

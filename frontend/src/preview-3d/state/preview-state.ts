@@ -137,13 +137,22 @@ function envToggleCap(id: string): EnvToggleCap | undefined {
   return lazyCap<EnvToggleCap>(id, "isEnvironmentEnabled", "setEnvironmentEnabled");
 }
 
-/** [doc:adr-126-p5-c] 水面能力（读/写 mode）——供 env.waterMode 惰性绑定 */
+/** [doc:adr-126-p5-c] 水面能力（读/写 mode）——供 env.waterMode 惰性绑定。
+ *  [锐评 F-3] cap 侧签名保持宽（string），探针层归一收束为 "film" | "pool"——
+ *  fogMode binding 先例同构：谓词类型层精确比较，脏值不再外溢成静默恒假。 */
 interface WaterModeCap {
   getWaterMode(): string;
   setWaterMode(v: string): void;
 }
 function waterCap(): WaterModeCap | undefined {
   return lazyCap<WaterModeCap>("water", "getWaterMode", "setWaterMode");
+}
+
+/** [锐评 F-3] env.waterMode 探针归一：任意值收成 WaterMode 联合（非 "pool" 一律落
+ *  "film"，与默认值同侧保守）。联合字面量不 import caps/water-state.ts——preview-paths
+ *  零依赖叶子的断环纪律（ADR-168）在此同样成立：事实源 = WATER_MODES，成员变更两处同步。 */
+function normalizeWaterMode(v: unknown): "film" | "pool" {
+  return v === "pool" ? "pool" : "film";
 }
 
 /** [doc:adr-126-p5-c] 地面能力（读/写 来源轴+样式轴+叠加层）——供 env.ground* 惰性绑定 */
@@ -256,9 +265,10 @@ const bindings: PathBindingMap = {
   },
   // [doc:adr-126-p5-c] 探针：cap 内部状态上浮——water.mode / ground.matSource。
   // 惰性解析（cap 缺席时 available=false、get 安全缺省），不持有实例、不落盘。
+  // [锐评 F-3] 两侧归一为 WaterMode 联合（normalizeWaterMode），谓词类型精确比较。
   "env.waterMode": {
-    get: () => waterCap()?.getWaterMode() ?? "film",
-    set: (v) => waterCap()?.setWaterMode(String(v)),
+    get: () => normalizeWaterMode(waterCap()?.getWaterMode()),
+    set: (v) => waterCap()?.setWaterMode(normalizeWaterMode(v)),
     available: () => waterCap() !== undefined,
   },
   "env.groundSourceKind": {

@@ -23,7 +23,7 @@ import {
   suspendEnvCallbacks,
 } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { envState, isSsrRenderActive, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { type EnvStateKey, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
@@ -62,7 +62,10 @@ export type { WaterMode };
  *  - `Record<WaterParamKey, …>` 编译期强制 water 组每键表态——缺键即红；
  *  - `waterEnabled` / `waterMode` / `waterWaveSpeed` 的空条目是**结构性声明**（非疏漏）：
  *    分别由回调的 syncWaterVisibility / rebuildWaterContainer / update 累加速度承接，此处无材质应用；
- *  - 条目间写互不相交的字段、派生量（effectiveOpacity）由 envState 现算，故派发序无关结果；
+ *  - 派发序无关结果的保证有两条：多数条目各写各自不相交的字段/uniform；结构三键
+ *    （size/poolHeight/wallThickness）共享 applyStructuralProfile 写域，但它是**读 envState
+ *    全量的幂等执行器**（重复调用 no-op），且其余条目不触碰 transform——故乱序仍收敛
+ *    （守卫 = 乱序全量 patch ≡ 单键逐发快照一致）；派生量（effectiveOpacity）由 envState 现算；
  *  - 形态门控（wetnessGated / supportsVolumeOptics / 空 targets 数组）一律查 strategy，不写 mode 分支。 */
 type WaterParamKey = Extract<EnvStateKey, `water${string}`>;
 type WaterApplyCtx = {
@@ -103,6 +106,7 @@ export const WATER_PARAM_APPLIER_KEYS = [
   "waterReflectionEnabled",
   "waterReflectionStrength",
   "waterReflectionResolution",
+  "waterReflectionClipBias",
   "waterReflectDisableWhenSSR",
 ] as const;
 const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> = {
@@ -190,11 +194,14 @@ const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> 
     // ADR-257：水面 position.y（film/pool 通用，零重建）——旧语义抬水面须重建 10 个 mesh，如今一个标量
     strategy.applyLevel(water, envState.waterLevel);
   },
-  // ADR-297 倒影四键：结构性空条目——门控/权重/RT 边长/镜面高度全部由
-  // renderReflection 逐帧现读 envState（真值源单一，派发侧零材质写，waterWaveSpeed 同口径）。
+  // ADR-297 倒影五键：结构性空条目——门控/权重/RT 边长/镜面高度/裁剪偏置全部由
+  // renderReflection / ensureReflector 逐帧现读 envState（真值源单一，派发侧零材质写，
+  // waterWaveSpeed 同口径）。clipBias 虽烘进 Reflector 闭包不可就地改，但「弃载体懒建」
+  // 收敛在 ensureReflector 的现读比对里（锐评 F-2），派发侧同样无需动作。
   waterReflectionEnabled: () => {},
   waterReflectionStrength: () => {},
   waterReflectionResolution: () => {},
+  waterReflectionClipBias: () => {},
   waterReflectDisableWhenSSR: () => {},
 };
 
@@ -213,6 +220,10 @@ export class WaterCapability implements SceneCapability {
   /** ADR-297：倒影载体——官方 Reflector 但**不挂进场景**：只借它「镜像相机 + 斜裁剪 + 整场渲进 RT」
    *  的管线，反射贴图不靠镜面展示、由水 shader 自采样（投影 + 斜率扰动 + fresnel）。首次活跃懒建。 */
   private reflector: Reflector | null = null;
+  /** [锐评 F-2] 懒建时烙进的 clipBias（schema waterReflectionClipBias，默认 3 = 原裸字面量值）。
+   *  bias 烘在 Reflector.onBeforeRender 闭包里（r185 源码实证），无法就地改 uniform——
+   *  ensureReflector 现读 envState 与之比对，不一致即弃载体、下拍以新 bias 重建。 */
+  private reflectorClipBias = -1;
   /** 逐帧临时量：matrixWorld⁻¹（官方 textureMatrix 末位乘了镜面变换，输入是镜面局部坐标；
    *  水 shader 喂世界坐标，须右乘 M⁻¹ 剥回世界空间口径） */
   private readonly reflWorldInv = new THREE.Matrix4();
@@ -592,28 +603,28 @@ export class WaterCapability implements SceneCapability {
    *  逐帧现读 envState 现算（真值源仍是 envState 单处，单门纪律不破）。 */
   private reflectionActive(): boolean {
     if (!envState.waterReflectionEnabled) return false;
-    if (envState.waterReflectDisableWhenSSR && this.ssrActive()) return false;
+    if (envState.waterReflectDisableWhenSSR && isSsrRenderActive()) return false;
     return this.renderer !== null && this.camera !== null;
-  }
-
-  /** SSR 活跃判定：与 postprocessing-capability 的 ssr 路口径一致（主开关开 ∧ 模式含 ssr） */
-  private ssrActive(): boolean {
-    return (
-      envState.ppEnabled &&
-      (envState.ppReflectionMode === "envmap+ssr" || envState.ppReflectionMode === "ssr-only")
-    );
   }
 
   /** 镜面载体懒建 / RT 原位扩缩（边长比对 O(1)，不重建 Reflector）。
    *  **不入场景**：主渲染零开销、零拾取污染；onBeforeRender 用 scope.matrixWorld 算镜像，
-   *  故调用前须手动 updateMatrixWorld（无父链可赖）。 */
+   *  故调用前须手动 updateMatrixWorld（无父链可赖）。
+   *  [锐评 F-2] clipBias 现读 schema 键 `waterReflectionClipBias`（默认 3 = 原裸字面量，
+   *  观感零变化）；bias 烘进 onBeforeRender 闭包不可就地改——现读值与懒建时烙进的
+   *  `reflectorClipBias` 不一致即弃旧建新（RT/材质具名释放，不泄漏）。 */
   private ensureReflector(): Reflector {
+    const bias = envState.waterReflectionClipBias;
+    if (this.reflector && this.reflectorClipBias !== bias) {
+      this.disposeReflector();
+    }
     if (!this.reflector) {
       this.reflector = new Reflector(new THREE.PlaneGeometry(1, 1), {
-        clipBias: 3,
+        clipBias: bias,
         textureWidth: envState.waterReflectionResolution,
         textureHeight: envState.waterReflectionResolution,
       });
+      this.reflectorClipBias = bias;
       // 镜面朝上 = 水面平面（裁剪平面即该平面的无限延展，1×1 尺寸不参与数学）
       this.reflector.rotation.x = -Math.PI / 2;
     }
@@ -621,6 +632,14 @@ export class WaterCapability implements SceneCapability {
     const res = envState.waterReflectionResolution;
     if (rt.width !== res) rt.setSize(res, res);
     return this.reflector;
+  }
+
+  /** 弃倒影载体（RT + 材质 + 几何具名释放）：bias 重建与 dispose 共用同一出口。
+   *  Reflector 不入场景，disposeWater 的 traverse 遍历不到，必须在此点名释放。 */
+  private disposeReflector(): void {
+    this.reflector?.dispose();
+    this.reflector = null;
+    this.reflectorClipBias = -1;
   }
 
   /** 每帧一次反射 RT 渲染 + 水 shader 三 uniform 落地。
@@ -633,7 +652,8 @@ export class WaterCapability implements SceneCapability {
       this.water.top.material.userData as { shader?: THREE.WebGLProgramParametersWithUniforms }
     ).shader;
     if (!this.reflectionActive()) {
-      if (shader) this.setReflectionUniforms(shader, 0);
+      // 非活跃：权重归零（开关只翻 uniform，不触发 program 重编译；混合块整体跳过）
+      if (shader) (shader.uniforms.uReflStrength as { value: number }).value = 0;
       return;
     }
     const renderer = this.renderer as THREE.WebGLRenderer;
@@ -662,16 +682,11 @@ export class WaterCapability implements SceneCapability {
     if (shader) this.applyReflectionUniforms(shader, reflector);
   }
 
-  /** 三 uniform 归零/赋值的公共出口（shader 编译产物，经 userData.shader 后门，setUniform 同纪律） */
-  private setReflectionUniforms(
-    shader: THREE.WebGLProgramParametersWithUniforms,
-    strength: number,
-  ): void {
-    (shader.uniforms.uReflStrength as { value: number }).value = strength;
-  }
-
   /** RT 贴图 + 强度 + 世界→RT uv 矩阵一次落地（renderReflection 帧路与 onBeforeCompile
-   *  补挂路共用——新材质编译入场的同一拍即重绑，不滞后一帧）。 */
+   *  补挂路共用——新材质编译入场的同一拍即重绑，不滞后一帧）。
+   *  [锐评 L-3 收口] 原 `setReflectionUniforms(shader, strength)` 是「写死 0 归零」与
+   *  「现读强度赋值」两条路各写一遍的公共出口，归零路唯一调用点即此处内联，两函数
+   *  一合并（少一层跳转，强度真值源仍唯一 = envState.waterReflectionStrength）。 */
   private applyReflectionUniforms(
     shader: THREE.WebGLProgramParametersWithUniforms,
     reflector: Reflector,
@@ -724,7 +739,9 @@ export class WaterCapability implements SceneCapability {
     this.listenerSet.notify();
   }
   getWaterMode(): WaterMode {
-    return envState.waterMode as WaterMode;
+    // [锐评 F-3 顺手] 原 `envState.waterMode as WaterMode` 冗余 cast——schema 推导已是
+    // WaterMode（enum values 派生），cast 只会掩盖未来类型漂移，删。
+    return envState.waterMode;
   }
 
   // ── 水面参数（film + pool 通用）──
@@ -879,6 +896,15 @@ export class WaterCapability implements SceneCapability {
     return envState.waterReflectionResolution;
   }
 
+  // [锐评 F-2] 镜像裁剪偏置（原 ensureReflector 裸字面量 3 的下沉归宿；无菜单 UI，
+  // 供预设/程序化写入与将来高级面板出口；变更由 ensureReflector 现读比对承接）
+  setWaterReflectionClipBias(v: number): void {
+    setEnvState({ waterReflectionClipBias: v }, { source: "manual" });
+  }
+  getWaterReflectionClipBias(): number {
+    return envState.waterReflectionClipBias;
+  }
+
   setWaterReflectDisableWhenSSR(v: boolean): void {
     setEnvState({ waterReflectDisableWhenSSR: v }, { source: "manual" });
   }
@@ -1010,6 +1036,8 @@ export class WaterCapability implements SceneCapability {
         waterReflectionEnabled: { boolean: (v) => this.setWaterReflectionEnabled(v) },
         waterReflectionStrength: { number: (v) => this.setWaterReflectionStrength(v) },
         waterReflectionResolution: { number: (v) => this.setWaterReflectionResolution(v) },
+        // [锐评 F-2] bias 新键（D3 契约锁点名登记，漏即红）
+        waterReflectionClipBias: { number: (v) => this.setWaterReflectionClipBias(v) },
         waterReflectDisableWhenSSR: { boolean: (v) => this.setWaterReflectDisableWhenSSR(v) },
       });
       // ADR-257 迁移：旧存档没有 waterLevel 键（旧语义里「水面 y == 池深 h」）。
@@ -1033,8 +1061,8 @@ export class WaterCapability implements SceneCapability {
     this.unsubscribeEnv();
     if (this.water.root.parent) this.water.root.parent.remove(this.water.root);
     this.disposeWater();
-    // ADR-297：镜面载体不入场景，disposeWater 遍历不到——具名释放（RT/材质/几何）
-    this.reflector?.dispose();
-    this.reflector = null;
+    // ADR-297：镜面载体不入场景，disposeWater 遍历不到——具名释放（RT/材质/几何，
+    // 与 bias 重建路径共用 disposeReflector 出口）
+    this.disposeReflector();
   }
 }

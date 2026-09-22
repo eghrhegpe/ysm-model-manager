@@ -8,6 +8,7 @@ import {
   getStateValue,
   setStateValue,
   resetEnvState,
+  isSsrRenderActive,
 } from "./env-state.ts";
 import {
   registerEnvCallback,
@@ -233,5 +234,31 @@ describe("dispatch 分组过滤", () => {
     setEnvState({ waterOpacity: 0.4, fogEnabled: true }, { source: "manual" });
     expect(water).toEqual(["waterOpacity"]);
     expect(fog).toEqual(["fogEnabled"]);
+  });
+});
+
+// [锐评 F-1] SSR 活跃判定单源化：pp 侧 applyReflectorSync 与 water 侧 reflectionActive
+// 曾各手抄一份判别式（ppEnabled ∧ mode ≠ envmap-only），pp 修正历史（R-1「关 pp 仍压镜」
+// 血案）证明这条判别式会演化——手抄即分叉隐患。收编为 env-state 纯函数，两处消费。
+describe("isSsrRenderActive — SSR 活跃判定单源（锐评 F-1）", () => {
+  beforeEach(() => {
+    resetEnvState();
+  });
+
+  it("ppEnabled ∧ mode 含 ssr → true（两档一视同仁）", () => {
+    setEnvState({ ppEnabled: true, ppReflectionMode: "envmap+ssr" }, { source: "manual" });
+    expect(isSsrRenderActive()).toBe(true);
+    setEnvState({ ppReflectionMode: "ssr-only" }, { source: "manual" });
+    expect(isSsrRenderActive()).toBe(true);
+  });
+
+  it("envmap-only → false（SSR 不在渲染）", () => {
+    setEnvState({ ppEnabled: true, ppReflectionMode: "envmap-only" }, { source: "manual" });
+    expect(isSsrRenderActive()).toBe(false);
+  });
+
+  it("ppEnabled=false → false（R-1 血案语义：pass 已旁路，SSR 没在渲染）", () => {
+    setEnvState({ ppEnabled: false, ppReflectionMode: "ssr-only" }, { source: "manual" });
+    expect(isSsrRenderActive()).toBe(false);
   });
 });

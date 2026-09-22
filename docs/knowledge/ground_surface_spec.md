@@ -103,6 +103,7 @@ ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 �
 >
 > **legacy 迁移判据（2026-09-21 锐评 P4 订正）**：旧实现以「缺 `groundSize` + 有任一旧键」判定 legacy 存档——该判据建立在恒真前提上（当时 groundSize 无任何 UI 写口 ⇒ 一切存档都算 legacy），靠透传保底未出事；网格四键补上菜单出口后新存档可携 groundSize，「缺新键」判据失效。现判据 = **存在任一旧无前缀键**（纯新档自然跳过整段，混合存档照常逐键搬运 + 透传保底）。
 > ⚠️ **中间件与存档恢复的边界**（审核 1807efcd7 修正）：「手改即 custom」中间件只许拦**用户 setter** 写入——`loadState` 恢复路径必须 `skipMiddleware: true`（`setEnvState` opts 通道），否则逐字段还原配色会触发中间件，用户选的预设重启恒显示「自定义（已手改）」（名实不符）；`groundMaterialPreset` 须持久化（saveState 写、loadState oneOf 恢复，旧存档缺字段回退 plain）。**教训：新增全局写入中间件 = 同时定义「豁免通道」，恢复/同步类非用户写入一律显式豁免。**（锐评 P1 根治 2026-09-21：豁免通道升级为**来源维度**——中间件收 `meta.source`，仅 manual 触发；auto-atmosphere/auto-model 程序化派发天然免疫，见不变量 11。）
+> ⚠️ **来源轴也是「手改」触发源（[G-6] 锐评修复 2026-10）**：`GROUND_MATERIAL_PRESET_KEYS` 白名单刻意不含 `groundSourceKind`（精确防误清），但手动切来源轴（`texture` 选贴图 / `solid` / `canvas`）同样是**脱离材质预设**动作——若不置位，用户「选贴图 → 切回素面」后菜单下拉仍回跳旧预设名（名实不符）。中间件现补一条：manual 写 `groundSourceKind`（非 `none`）即置 `custom`；`none`（彻底无表面层，素材层级归零）不置位；`setMaterialPreset` 自带 preset 键天然豁免。回归锁见 `ground-capability.test.ts` 的 [G-6] 用例。
 > ⚠️ **legacy 迁移分支禁止整对象替换**（同轮实测发现）：`state = migrated` 会把混合存档（旧键+已前缀化新键共存，如 `{visible, groundCanvasStyle}`）中未映射的 `ground*` 键静默丢弃——迁移后须透传 `ground` 前缀键保底。
 >
 > `sand`：高频细颗粒低对比（freq 14 / contrast 0.45）；`grass`：中频块状高对比（freq 5 / contrast 0.95）。两者与 `marble` 共用 `valueNoise` 三倍频基建。

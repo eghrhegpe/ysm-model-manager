@@ -703,11 +703,16 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
   });
 
   // [ADR-250] loadState 恢复 enabled 落入 ppEnabled，与原 R1 场景等价但失配已不可能发生。
+  // [锐评 P-1 形态修正 2026-09-22] 恢复 source 改 auto-model 后，第二会话须按**生产形状**
+  // 模拟：registry 工厂 ctx 无 enabled 字段 → 构造不播种（原 `newCap({enabled:false})`
+  // 以 manual 播种，恰好演示了"manual 足迹挡 auto 系覆盖"——那是本要消灭的病，不是场景）。
   it("loadState 恢复 enabled=true 落 ppEnabled，off→on 往返自洽（原 R1 场景）", () => {
     localStorage.clear();
+    resetEnvState();
     const cap1 = newCap({ enabled: true });
     cap1.saveState();
-    const cap2 = newCap({ enabled: false });
+    resetEnvState(); // 新会话：状态回默认（ppEnabled=false），写来源清空
+    const cap2 = newCap();
     cap2.loadState();
     expect(cap2.isEnabled()).toBe(true);
     cap2.setEnabled(false);
@@ -719,12 +724,41 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
 
   it("loadState 后 applyModelPreset('default') 不扰动已恢复的启用意图（原 R1 组合场景）", () => {
     localStorage.clear();
+    resetEnvState();
     const cap1 = newCap({ enabled: true });
     cap1.saveState();
-    const cap2 = newCap({ enabled: false });
+    resetEnvState();
+    const cap2 = newCap();
     cap2.loadState();
     cap2.applyModelPreset("default"); // default 无 ppEnabled 键 → 不触碰
     expect(cap2.isEnabled()).toBe(true);
+    localStorage.clear();
+  });
+
+  // [R-1 收口 2026-09-22] 恢复走 auto-model（P-1）后，同轨 auto-model→auto-model 被
+  // shouldOverwrite 放行——ppEnabled 在 MODEL_DEFAULTS 各模型均有值，无 isStateLoaded
+  // 守卫则存档开关每次挂载被模型值顶掉（fog/env 探针同形病）。
+  it("[R-1] 有存档时 applyModelPreset 不得顶掉存档 ppEnabled（模型默认让位）", () => {
+    localStorage.clear();
+    resetEnvState();
+    const cap1 = newCap({ enabled: true });
+    cap1.saveState(); // 存档 ppEnabled=true
+    resetEnvState(); // 新会话默认 false
+    const cap2 = newCap();
+    cap2.loadState(); // 恢复 auto-model → true
+    expect(cap2.isEnabled()).toBe(true);
+    cap2.applyModelPreset("ysm"); // ysm 的模型默认 ppEnabled:false → 有存档必须让位
+    expect(cap2.isEnabled(), "存档开启意图应存活（对齐 shadow/reflector isStateLoaded）").toBe(true);
+    localStorage.clear();
+  });
+
+  it("[R-1 对照] 无存档首启：applyModelPreset 照常套用模型 ppEnabled（守卫不误伤）", () => {
+    localStorage.clear();
+    resetEnvState();
+    const cap = newCap();
+    cap.loadState(); // 无存储 → 早退，isStateLoaded 不置位
+    cap.applyModelPreset("vrm"); // vrm → ppEnabled:true 模型值应落
+    expect(cap.isEnabled(), "首启无存档 → 模型值照写").toBe(true);
     localStorage.clear();
   });
 

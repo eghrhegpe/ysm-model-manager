@@ -137,10 +137,11 @@ invariant_anchors:
 - **saveState**（写）：`persistState(capId, { this.enabled(能力级私有) + envState 参数字段 })` —— 从 envState **摘键**，不存全量。
   （2026-09：摘键可**派生化**——water 已改为逆历 `getPresetKeys("water")`，新增参数只需进 schema；历史键名由 loadState 双轨吸收）
   （fog 例外：其私有 `enabled` 已随 2026-09 锐评收口删除，只写 envState 键。）
-- **loadState**（读）：`restoreState` → **旧键迁移**（ADR-196 前无前缀旧键 `{mode,color,...}` 转新键，保升级用户配置，如 fog 的 legacyKeys 分支）→ `restoreFields`（类型安全批量恢复器，按存档值实际类型分派回填）→ `setEnvState(..., {source:"manual"})` 写回 envState → cap apply 落地 Three。**（ADR-283：恢复路径同样经唯一入口的值域钳制——存档里的越界值不会漏进 envState。）**
+- **loadState**（读）：`restoreState` → **旧键迁移**（ADR-196 前无前缀旧键 `{mode,color,...}` 转新键，保升级用户配置，如 fog 的 legacyKeys 分支）→ `restoreFields`（类型安全批量恢复器，按存档值实际类型分派回填）→ `setEnvState(..., {source:"auto-model"})` 写回 envState → cap apply 落地 Three。**（ADR-283：恢复路径同样经唯一入口的值域钳制——存档里的越界值不会漏进 envState。）**
+  **（来源纪律 2026-09-22 立法：恢复一律 `auto-model`，禁 manual——fog F-2 / env E-2 / ground / light L-1 四路同口径。存档值是上一次会话的偏好延续，不是本次手改：打成 manual 会永久拒绝 auto-atmosphere 氛围预设覆盖（切 sunset 氛围雾/环境/灯光不跟改），回归锁 `fog-capability.test.ts`「F-2」、`environment-capability.test.ts`「E-2/D1」、`light-capability.test.ts`「L-1」。）**
 - **触发时机**：进入 3D → `sceneCapabilityRegistry.loadAll()`（shared-infra.ts:239）；离开 3D → `sceneCapabilityRegistry.saveAll()`（mount-session.ts:267）。
 
-**与预设的共存（守卫链）**：装配序 `loadAll()`（恢复用户存档 source:"manual" **且** shadow/reflector 置 `isStateLoaded=true`）→ `applyModelDefaults`（读 MODEL_DEFAULTS source:"auto-model"）。`shouldOverwrite` 裁决 `manual > auto-atmosphere > auto-model` → 用户手动值（含恢复的存档）不被预设覆盖；shadow/reflector 额外用 `isStateLoaded` 早退连套用都不执行。双重机制保「上次调的雾/灯切模型不被重置」。
+**与预设的共存（守卫链）**：装配序 `loadAll()`（恢复写 auto-model）→ `applyModelDefaults()`（模型值 auto-model）。`shouldOverwrite` 对 **auto-model→auto-model 放行**——同轨互踩是实锤（探针实证：vrm 模型值顶掉存档雾色、mmd 顶掉存档 envPreset），故**凡 MODEL_DEFAULTS 携带本 cap 键的（fog/environment/ppEnabled/shadow/reflector），恢复路径必须配 `isStateLoaded` 守卫「有存档 = 模型默认让位」**（shadow/reflector 原生自带；fog/environment 2026-09-22 锐评 R-1 补齐）。无存档首启 → `loadState` 早退不置位，模型默认照常套用。氛围快照 `auto-atmosphere` > auto-model，用户点氛围恒能盖过存档值（E-2/F-2/L-1 恢复走 auto-model 要保的通道）。回归锁：fog「R-1」+ environment「R-1」+ 首启不误伤例。**light 注脚**：ADR-282 已令灯光与模型类别解耦，MODEL_DEFAULTS 现零 light 键，light 组 auto-model 恢复无同轨对手（L-1）；若未来再往表里加 light 键，须同步补 light 的 isStateLoaded 守卫。
 
 **envState 层为何不做全量持久化（刀0 空壳已删）**：
 1. **键轨冲突**——envState 全量快照 vs 各 cap 的 `ysm-scene-cap-*` 双套并存会双写双恢复（同参数存两份，启动恢复两遍，行为取决顺序易回归）。

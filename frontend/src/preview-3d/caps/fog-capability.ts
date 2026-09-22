@@ -45,6 +45,10 @@ export class FogCapability implements SceneCapability {
   private prevFog: THREE.Fog | THREE.FogExp2 | null;
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
+  /** [R-1] 有存档恢复过 = 模型默认值让位（对齐 shadow/reflector 同款守卫）：
+   *  恢复走 auto-model，装配序 loadAll→applyModelDefaults 同轨 auto-model→auto-model
+   *  被 shouldOverwrite 放行，无守卫则每次挂载模型默认值顶掉存档雾（探针实证）。 */
+  private isStateLoaded = false;
   /** 参数变更监听（menu 局部刷新用）：仅 fogMode 离散切换 notify（near/far × density 互斥显隐） */
   private readonly listenerSet = createListenerSet();
 
@@ -124,8 +128,13 @@ export class FogCapability implements SceneCapability {
     return envState.fogEnabled;
   }
 
-  /** 按模型类别套用预设；持久化状态优先（applyModelPreset 仅做合理默认） */
+  /** 按模型类别套用预设；持久化状态优先（applyModelPreset 仅做合理默认）。
+   *  [锐评 R-1 收口 2026-09-22] 守卫从注释口号落成 isStateLoaded 早退（对齐 shadow/reflector
+   *  同款）：F-2 把恢复 source 改 auto-model 后，装配序 loadAll→applyModelDefaults 里
+   *  同轨 auto-model→auto-model 被 shouldOverwrite **放行**——存档雾被模型默认值顶掉
+   *  （探针实证：vrm 下存档 fogColor 0x112233 变 0xC5D4E8）。有存档 = 连套用都不执行。 */
   applyModelPreset(modelType: ModelType): void {
+    if (this.isStateLoaded) return;
     const picked = pickModelDefaultFields(modelType, [
       "fogEnabled",
       "fogMode",
@@ -280,6 +289,7 @@ export class FogCapability implements SceneCapability {
     } finally {
       resumeEnvCallbacks();
     }
+    this.isStateLoaded = true; // [R-1] 有存档 = 模型默认值让位（对齐 shadow/reflector）
     this.applyFog();
   }
 

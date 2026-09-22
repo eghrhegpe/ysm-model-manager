@@ -192,7 +192,7 @@ describe("FogCapability — 持久化", () => {
   // [锐评 F-2] 恢复路径来源纪律：存档恢复是**程序化动作**，不得把 fog 组 6 键
   // 打成 manual——否则后续 auto-atmosphere 预设写雾参数被 shouldOverwrite 拒绝
   // （用户选了 sunset 氛围，雾却不跟着变）。与 ground/water 恢复口径对齐。
-  it("loadState 后 preset 仍能写雾参数（恢复不得把 fog 键打成 manual 冻死预设）", () => {
+  it("[锐评 F-2] loadState 后 preset 仍能写雾参数（恢复不得把 fog 键打成 manual 冻死预设）", () => {
     localStorage.setItem(
       "ysm-scene-cap-fog",
       JSON.stringify({ enabled: true, fogMode: "linear", fogColor: 0x111111, fogNear: 10, fogFar: 100, fogDensity: 0.01 }),
@@ -208,6 +208,29 @@ describe("FogCapability — 持久化", () => {
     expect(envState.fogMode).toBe("exp2");
     expect(envState.fogDensity).toBe(0.015);
     expect(envState.fogFar).toBe(800);
+  });
+
+  // [锐评 R-1 收口 2026-09-22] 恢复走 auto-model（F-2）后，装配序 loadAll→applyModelDefaults
+  // 的同轨 auto-model→auto-model 被 shouldOverwrite **放行**——无 isStateLoaded 守卫则
+  // 存档雾被模型默认值顶掉（探针实证：vrm 把存档 fogColor 0x112233 改成 0xC5D4E8）。
+  // 「持久化状态优先」从注释口号落成 shadow/reflector 同款显式守卫。
+  it("[R-1] 有存档时 applyModelPreset 不得顶掉存档雾值（持久化状态优先）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-fog",
+      JSON.stringify({ fogEnabled: true, fogMode: "exp2", fogColor: 0x112233, fogDensity: 0.03 }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    cap.applyModelPreset("vrm"); // vrm 的 MODEL_DEFAULTS 携全套雾键
+    expect(envState.fogColor, "存档雾色应存活").toBe(0x112233);
+    expect(envState.fogDensity).toBe(0.03);
+  });
+
+  it("[R-1 对照] 无存档首启：applyModelPreset 照常套用模型雾值（守卫不误伤）", () => {
+    const cap = newCap();
+    cap.loadState(); // 无 localStorage → 早退，isStateLoaded 不置位
+    cap.applyModelPreset("vrm");
+    expect(envState.fogColor, "首启无存档 → 模型值照写").toBe(0xc5d4e8);
   });
 
   // [锐评 F-2] 挂起收口：恢复期间派发应被挂起，末尾统一 applyFog 一次——

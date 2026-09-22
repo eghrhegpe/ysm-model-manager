@@ -140,6 +140,8 @@ export class EnvironmentCapability implements SceneCapability {
 
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
+  /** [R-1] 有存档恢复过 = 模型默认值让位（对齐 shadow/reflector/fog 同款守卫） */
+  private isStateLoaded = false;
   /** 防递归标记：buildEnvironment 内部 setEnvState 触发回调时跳过 */
   private isBuilding = false;
   /**
@@ -591,7 +593,14 @@ export class EnvironmentCapability implements SceneCapability {
     setEnvState({ envSource: src }, { source: "manual" });
   }
 
+  /**
+   * [R-1 收口 2026-09-22] 按模型类别套用环境预设；**有存档则让位**（对齐 shadow/reflector
+   * isStateLoaded 守卫）。装配序 loadAll→applyModelDefaults 且 MODEL_DEFAULTS 各模型均携
+   * envPreset/envIntensity——E-2 后恢复走 auto-model，同轨 auto-model→auto-model 被放行，
+   * 无守卫则每次挂载存档预设被 studio 顶掉（探针实证：night 存档 → mmd 套回 studio）。
+   */
   applyModelPreset(modelType: ModelType): void {
+    if (this.isStateLoaded) return;
     const picked = pickModelDefaultFields(modelType, [
       "envPreset",
       "envIntensity",
@@ -767,6 +776,10 @@ export class EnvironmentCapability implements SceneCapability {
         resumeEnvCallbacks();
       }
     }
+
+    // [R-1] 有存档 = 模型默认值让位（对齐 shadow/reflector/fog）——置位须在恢复写之后、
+    // build 之前；无存档的早退路径（上方 `if (!raw) return`）不置位，模型预设照常套用。
+    this.isStateLoaded = true;
 
     // 恢复后显式 build（callback 可能因值未变而跳过，确保初始状态正确）
     this.buildEnvironment();

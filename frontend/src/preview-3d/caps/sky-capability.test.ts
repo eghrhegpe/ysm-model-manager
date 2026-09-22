@@ -292,6 +292,23 @@ describe("SkyCapability — 持久化", () => {
     cap2.update(1);
     expect(cap2.getTimeOfDay()).not.toBe(before);
   });
+
+  // [锐评 S-1 收口 2026-09-22] 恢复一律 auto-model（对齐 fog F-2 / env E-2）：原 manual
+  // 把 skyTimeOfDay/skyCloudCoverage 打成手改足迹，此后 auto-atmosphere 氛围预设（五档全携
+  // 这两键）写天空时间/云量被 shouldOverwrite 静默拒绝——重启后选 sunset 氛围天空不转黄昏。
+  it("[S-1] loadState 后氛围预设仍能写天空时间/云量（恢复不得冻成 manual）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-sky",
+      JSON.stringify({ timeOfDay: 7, cloudCoverage: 0, environment: true, enabled: true }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    expect(cap.getTimeOfDay()).toBe(7);
+    // 关键断言：恢复后氛围（auto-atmosphere）写天空时间必须生效
+    setEnvState({ skyTimeOfDay: 18, skyCloudCoverage: 0.6 }, { source: "auto-atmosphere" });
+    expect(envState.skyTimeOfDay, "氛围应能把天空拨到黄昏").toBe(18);
+    expect(envState.skyCloudCoverage).toBe(0.6);
+  });
 });
 
 describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {

@@ -794,7 +794,7 @@ export class LightCapability implements SceneCapability {
     //    不报错也不算错（灯光值已由 restoreLightParams 全量恢复）。
     // ② 用户显式保存的灯开关 + ②.b 全量参数恢复（纯数据映射，下沉 light-persist.ts；
     //    [ADR-293] 能力总开关/线框可见性亦并入该批——顶层 enabled/helperVisible 键
-    //    格式与旧存档兼容，缺键落 schema 默认）。
+    //    格式与旧存档兼容，缺键 = 不写，落 envState 现值（新会话现值即 schema 默认））。
     //    ⚠️ 重入治理（ADR-281 收口）：restoreLightParams 内部的 setEnvState 会**同步**触发
     //    onEnvChanged；挂起回调后恢复路径只写 envState，本调用末尾统一应用一次——
     //    消除「callback 先拿旧类型灯重建一次、回到③又跑一遍」的双跑窗口；新增字段时

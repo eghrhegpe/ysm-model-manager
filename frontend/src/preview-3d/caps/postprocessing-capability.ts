@@ -134,6 +134,10 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   // ADR-196：取消订阅函数
   private unsubscribeEnv: () => void;
+  /** [R-1 收口 2026-09-22] 有存档 = 模型默认让位。ppEnabled 在 MODEL_DEFAULTS（ADR-250
+   *  各模型显式写），恢复 source 改 auto-model 后若无守卫，同轨 auto-model→auto-model
+   *  被 shouldOverwrite 放行 → 每次挂载模型值顶掉存档开关（fog/env 探针同形病）。 */
+  private isStateLoaded = false;
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -630,6 +634,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
    *  `auto-model` 源写入——**写的是状态参数，不是 cap 私有字段**（职责边界收口）。
    *  用户手动开关（`source: "manual"`）按 ADR-196 仲裁规则不被覆盖。 */
   applyModelPreset(modelType: string): void {
+    // [R-1] 有存档 = 模型默认让位（对齐 shadow/reflector/fog/env；恢复已改 auto-model，
+    // 同轨放行若无守卫则每次挂载 ppEnabled 存档被模型值顶掉）
+    if (this.isStateLoaded) return;
     const preset = pickModelDefaultFields(toModelType(modelType), ["ppEnabled"]);
     if (Object.keys(preset).length > 0) {
       setEnvState(preset, { source: "auto-model" });
@@ -748,43 +755,70 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     const state = restoreState(this.id);
     if (!state) return;
 
-    // 表驱动恢复：存档键（params 名）→ envState 键，类型校验后写回
+    // 表驱动恢复：存档键（params 名）→ envState 键，类型校验后写回。
+    // [锐评 P-1 收口 2026-09-22] source 一律 auto-model（对齐 fog F-2 / env E-2 / sky S-1
+    // 纪律）：原 manual 把 pp 组键打成手改足迹，此后 auto-atmosphere 氛围预设写
+    // ppExposure/ppBloomStrength（sunset/night 档全携）被静默拒绝——重启后切氛围
+    // 曝光不跟调。ppEnabled 的模型默认顶档风险由 isStateLoaded 守卫承接（R-1）。
     restoreFields(state, {
       // [ADR-250] 存档的 `enabled` 键名保持向后兼容，但落点改为统一状态层。
       // 原实现写 this.enabled + 手工同步 perTypeGate（ADR-247 R1 的补丁），
       // 降参后二者归一，**该失配在结构上不再可能发生**。
-      enabled: { boolean: (v) => setEnvState({ ppEnabled: v }, { source: "manual" }) },
-      bloomStrength: { number: (v) => setEnvState({ ppBloomStrength: v }, { source: "manual" }) },
-      bloomThreshold: { number: (v) => setEnvState({ ppBloomThreshold: v }, { source: "manual" }) },
-      bloomRadius: { number: (v) => setEnvState({ ppBloomRadius: v }, { source: "manual" }) },
+      enabled: { boolean: (v) => setEnvState({ ppEnabled: v }, { source: "auto-model" }) },
+      bloomStrength: {
+        number: (v) => setEnvState({ ppBloomStrength: v }, { source: "auto-model" }),
+      },
+      bloomThreshold: {
+        number: (v) => setEnvState({ ppBloomThreshold: v }, { source: "auto-model" }),
+      },
+      bloomRadius: {
+        number: (v) => setEnvState({ ppBloomRadius: v }, { source: "auto-model" }),
+      },
       bloomFollowVolumetric: {
-        boolean: (v) => setEnvState({ ppBloomFollowVolumetric: v }, { source: "manual" }),
+        boolean: (v) => setEnvState({ ppBloomFollowVolumetric: v }, { source: "auto-model" }),
       },
-      bloomEnabled: { boolean: (v) => setEnvState({ ppBloomEnabled: v }, { source: "manual" }) },
-      ssaoEnabled: { boolean: (v) => setEnvState({ ppSsaoEnabled: v }, { source: "manual" }) },
-      ssaoRadius: { number: (v) => setEnvState({ ppSsaoRadius: v }, { source: "manual" }) },
-      ssaoMinDist: { number: (v) => setEnvState({ ppSsaoMinDist: v }, { source: "manual" }) },
-      ssaoMaxDist: { number: (v) => setEnvState({ ppSsaoMaxDist: v }, { source: "manual" }) },
+      bloomEnabled: {
+        boolean: (v) => setEnvState({ ppBloomEnabled: v }, { source: "auto-model" }),
+      },
+      ssaoEnabled: {
+        boolean: (v) => setEnvState({ ppSsaoEnabled: v }, { source: "auto-model" }),
+      },
+      ssaoRadius: {
+        number: (v) => setEnvState({ ppSsaoRadius: v }, { source: "auto-model" }),
+      },
+      ssaoMinDist: {
+        number: (v) => setEnvState({ ppSsaoMinDist: v }, { source: "auto-model" }),
+      },
+      ssaoMaxDist: {
+        number: (v) => setEnvState({ ppSsaoMaxDist: v }, { source: "auto-model" }),
+      },
       toneMapping: oneOf(["none", "linear", "reinhard", "aces", "cineon"], (v) =>
-        setEnvState({ ppToneMapping: v }, { source: "manual" }),
+        setEnvState({ ppToneMapping: v }, { source: "auto-model" }),
       ),
-      exposure: { number: (v) => setEnvState({ ppExposure: v }, { source: "manual" }) },
+      exposure: { number: (v) => setEnvState({ ppExposure: v }, { source: "auto-model" }) },
       reflectionMode: oneOf(["envmap-only", "envmap+ssr", "ssr-only"], (v) =>
-        setEnvState({ ppReflectionMode: v }, { source: "manual" }),
+        setEnvState({ ppReflectionMode: v }, { source: "auto-model" }),
       ),
-      ssrOpacity: { number: (v) => setEnvState({ ppSsrOpacity: v }, { source: "manual" }) },
-      ssrMaxDistance: { number: (v) => setEnvState({ ppSsrMaxDistance: v }, { source: "manual" }) },
-      ssrThickness: { number: (v) => setEnvState({ ppSsrThickness: v }, { source: "manual" }) },
-      ssrBlur: { boolean: (v) => setEnvState({ ppSsrBlur: v }, { source: "manual" }) },
-      ssrDistanceAttenuation: {
-        boolean: (v) => setEnvState({ ppSsrDistanceAttenuation: v }, { source: "manual" }),
+      ssrOpacity: {
+        number: (v) => setEnvState({ ppSsrOpacity: v }, { source: "auto-model" }),
       },
-      ssrFresnel: { boolean: (v) => setEnvState({ ppSsrFresnel: v }, { source: "manual" }) },
-      ssrBouncing: { boolean: (v) => setEnvState({ ppSsrBouncing: v }, { source: "manual" }) },
+      ssrMaxDistance: {
+        number: (v) => setEnvState({ ppSsrMaxDistance: v }, { source: "auto-model" }),
+      },
+      ssrThickness: {
+        number: (v) => setEnvState({ ppSsrThickness: v }, { source: "auto-model" }),
+      },
+      ssrBlur: { boolean: (v) => setEnvState({ ppSsrBlur: v }, { source: "auto-model" }) },
+      ssrDistanceAttenuation: {
+        boolean: (v) => setEnvState({ ppSsrDistanceAttenuation: v }, { source: "auto-model" }),
+      },
+      ssrFresnel: { boolean: (v) => setEnvState({ ppSsrFresnel: v }, { source: "auto-model" }) },
+      ssrBouncing: { boolean: (v) => setEnvState({ ppSsrBouncing: v }, { source: "auto-model" }) },
       reflectorDisableWhenSSR: {
-        boolean: (v) => setEnvState({ ppReflectorDisableWhenSSR: v }, { source: "manual" }),
+        boolean: (v) => setEnvState({ ppReflectorDisableWhenSSR: v }, { source: "auto-model" }),
       },
     });
+    this.isStateLoaded = true; // [R-1] 有存档 = 模型默认让位（置于恢复写后、副作用应用前）
 
     // [ADR-250] 恢复后按启用意图落输出设置（曝光已归 sky，此处只管 tone mapping）
     if (this.enabled) this.applyToneMapping();

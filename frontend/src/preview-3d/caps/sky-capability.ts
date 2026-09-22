@@ -821,8 +821,14 @@ export class SkyCapability implements SceneCapability {
     });
   }
 
-  /** 从 localStorage 恢复状态（字段恢复走 restoreFields，消除与 ground/water 同构的 typeof 样板） */
+  /** 从 localStorage 恢复状态（字段恢复走 restoreFields，消除与 ground/water 同构的 typeof 样板）。
+   *  [锐评 S-1 收口 2026-09-22] 恢复一律 auto-model（对齐 fog F-2 / env E-2 纪律）：
+   *  存档恢复是程序化动作非手改。原 manual 把 skyTimeOfDay/skyCloudCoverage 的 lastWriteSource
+   *  打成 manual，此后 auto-atmosphere 氛围预设（五档全携这两键）写天空时间/云量被
+   *  shouldOverwrite 静默拒绝——重启后选 sunset 氛围天空不转黄昏。sky 不在 MODEL_DEFAULTS
+   *  （ADR-284 大气与类别解耦）→ 无同轨模型写对手，故不需 isStateLoaded 守卫即安全。 */
   loadState(): void {
+    const RESTORE = { source: "auto-model" } as const;
     restoreFields(restoreState(this.id), {
       enabled: {
         boolean: (v) => {
@@ -831,17 +837,17 @@ export class SkyCapability implements SceneCapability {
       },
       timeOfDay: {
         number: (v) => {
-          setEnvState({ skyTimeOfDay: v }, { source: "manual" });
+          setEnvState({ skyTimeOfDay: v }, RESTORE);
         },
       },
       cloudCoverage: {
         number: (v) => {
-          setEnvState({ skyCloudCoverage: v }, { source: "manual" });
+          setEnvState({ skyCloudCoverage: v }, RESTORE);
         },
       },
       environment: {
         boolean: (v) => {
-          setEnvState({ skyEnvironment: v }, { source: "manual" });
+          setEnvState({ skyEnvironment: v }, RESTORE);
         },
       },
       godRaysEnabled: {
@@ -852,18 +858,18 @@ export class SkyCapability implements SceneCapability {
       // 刀⑳：恢复昼夜循环开关（写 envState → 回调同步实例标志）
       autoRotate: {
         boolean: (v) => {
-          setEnvState({ skyAutoRotate: v }, { source: "manual" });
+          setEnvState({ skyAutoRotate: v }, RESTORE);
         },
       },
       // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
       sunIntensityScale: {
         number: (v) => {
-          setEnvState({ skySunIntensityScale: v }, { source: "manual" });
+          setEnvState({ skySunIntensityScale: v }, RESTORE);
         },
       },
       sunDiscScale: {
         number: (v) => {
-          setEnvState({ skySunDiscScale: v }, { source: "manual" });
+          setEnvState({ skySunDiscScale: v }, RESTORE);
         },
       },
     });

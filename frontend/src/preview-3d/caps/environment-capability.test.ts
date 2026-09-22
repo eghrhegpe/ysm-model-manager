@@ -767,6 +767,29 @@ describe("EnvironmentCapability — 持久化", () => {
     expect(envState.envPreset).toBe("forest");
   });
 
+  // [锐评 R-1 收口 2026-09-22] E-2 把恢复改 auto-model 后，同轨 auto-model→auto-model 被
+  // shouldOverwrite 放行，而 MODEL_DEFAULTS 各模型均携 envPreset/envIntensity——无
+  // isStateLoaded 守卫则每次挂载存档预设被模型值顶掉（探针：night 存档 → mmd 套回 studio）。
+  it("[R-1] 有存档时 applyModelPreset 不得顶掉存档 envPreset（持久化状态优先）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ preset: "night", intensity: 2.2, resolution: 1024, useAsBackground: false }),
+    );
+    const cap = newCap({ enabled: false }); // 避开 canvas/PMREM，只验仲裁
+    cap.loadState();
+    expect(cap.getPresetId()).toBe("night");
+    cap.applyModelPreset("mmd"); // mmd 模型默认 envPreset:studio → 有存档必须让位
+    expect(cap.getPresetId(), "存档环境预设应存活").toBe("night");
+    expect(envState.envIntensity).toBe(2.2);
+  });
+
+  it("[R-1 对照] 无存档首启：applyModelPreset 照常套用模型预设（守卫不误伤）", () => {
+    const cap = newCap({ enabled: false });
+    cap.loadState(); // 无存储 → 早退，isStateLoaded 不置位
+    cap.applyModelPreset("mmd"); // mmd → studio 应落
+    expect(cap.getPresetId(), "首启无存档 → 模型值照写").toBe("studio");
+  });
+
   // [ADR-292 D7 / D2] envSource 持久化 roundtrip：用户选 sky 取图通路重启后保留。
   it("saveState / loadState 保真 envSource（sky 取图通路不丢）", () => {
     setEnvState({ envSource: "sky" }, { source: "manual", force: true });

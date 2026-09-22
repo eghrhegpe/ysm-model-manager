@@ -636,6 +636,18 @@ describe("LightCapability — ADR-293 总开关与 helper schema 化", () => {
     expect(calls).toBe(4); // 退订后无人接收
   });
 
+  // [锐评 L-1] 恢复路径来源纪律探针（fog F-2 同款）：ATMOSPHERE_PRESETS 五档全部携带
+  // light 连续键（lightKeyIntensity 等，atmosphere-presets.ts 实证）。restoreLightParams
+  // 若以 manual 合批写回，灯组键的 lastWriteSource 恒 manual → 此后 auto-atmosphere
+  // 写灯强度被 shouldOverwrite 静默拒绝（用户切 sunset 氛围，灯光不跟着变暗）。
+  it("[锐评 L-1] loadState 后氛围预设仍能写灯强度（恢复不得把 light 键冻成 manual）", () => {
+    localStorage.setItem("ysm-scene-cap-light", JSON.stringify({ key: { intensity: 1.2 } }));
+    const cap = newCap();
+    cap.loadState();
+    setEnvState({ lightKeyIntensity: 0.8 }, { source: "auto-atmosphere" });
+    expect(envState.lightKeyIntensity).toBe(0.8);
+  });
+
   it("[ADR-293 复核加固] loadState 末尾补 notify：同宿主复用下面板离散值不脱节", () => {
     const cap = newCap();
     cap.setEnabled(false);

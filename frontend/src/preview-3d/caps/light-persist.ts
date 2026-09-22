@@ -121,7 +121,11 @@ function restoreDir(which: LightSlot, saved: unknown, acc: Record<string, unknow
 export function restoreLightParams(state: Record<string, unknown>): void {
   // 合批派发：所有校验通过的字段并入单一 accumulator，末尾一次 setEnvState。
   // 对齐 render-mode-capability.ts 批量化先例（N 次全场景材质遍历 → 1 次）。
-  // manual source 恒过 shouldOverwrite，合批不改变最终值，仅砍冗余派发。
+  // [锐评 L-1 收口 2026-09-22] source:"auto-model"——存档恢复是**程序化动作**非用户手改
+  //（fog F-2 / env E-2 / ground 同口径先例）。原 manual 把 light 组全部键的 lastWriteSource
+  // 打成 manual，此后 auto-atmosphere 氛围预设写 lightKeyIntensity 等被 shouldOverwrite
+  // 静默拒绝——重启后选 sunset 氛围灯光不变暗（ATMOSPHERE_PRESETS 五档均携 light 连续键）。
+  // 回归锁：light-capability.test.ts「[锐评 L-1] loadState 后氛围预设仍能写灯强度」。
   // [ADR-293] acc 升型 Partial<Record<EnvStateKey, unknown>>：裸键拼写自此有编译期守卫
   //（原 Record<string, unknown> 下 typo 键静默蒸发——FLATTEN_MAP 查键路径守得住，
   // 直写 acc.lightXxx 的旁路守不住，一并上闸）。
@@ -183,6 +187,6 @@ export function restoreLightParams(state: Record<string, unknown>): void {
     });
   }
   if (Object.keys(acc).length > 0) {
-    setEnvState(acc as Partial<EnvState>, { source: "manual" });
+    setEnvState(acc as Partial<EnvState>, { source: "auto-model" });
   }
 }

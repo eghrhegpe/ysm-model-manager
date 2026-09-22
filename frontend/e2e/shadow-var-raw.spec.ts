@@ -9,11 +9,13 @@
 //     ——真正让 `--uih-*` 生效的是 install*Styles 把整串（含 :root 块）注入 document.head，
 //     变量定义在文档根，shadow 元素靠穿透读到。故「shadow 内 :root 定义」不作为变量源。
 //
-// 契约 B（双源裁决）：`--uih-slide-divider` 双源真值
-//   - variables.css:85 定义 0.1（文档根，启动即载）
-//   - slide-menu-styles.ts:21 定义 0.08（installSlideMenuStyles → document.head 后注入）
-//   - 实测：后注入的 0.08 覆盖 0.1，消费方（.slide-header 边框）得到 0.08 → variables.css 0.1 是死值
-//   - 本契约锁死「生效值必须是 0.08」——若将来有人误以为 0.1 是活值改回去，此测试红。
+// 契约 B（双源裁决 → 单源现状 + 覆盖语义哨兵）：`--uih-slide-divider`
+//   - 历史：variables.css 曾定义 0.1（文档根）+ slide-menu-styles.ts:21 定义 0.08（
+//     installSlideMenuStyles → document.head 后注入），后注入者赢 → 0.1 恒为死值。
+//   - 现状（`892de253a`）：文档层 0.1 死定义已删，**0.08 成为唯一源**；本用例仍复刻
+//     「先 0.1 后 0.08」的双序镜像——守护的是 **CSS 变量后注入覆盖语义本身**（若将来
+//     有人再往文档层加回同名定义，覆盖序仍须成立且 0.08 赢），非仓库当前存在双源。
+//   - 断言「生效值必须是 0.08」——若将来有人误改回 0.1 或破坏注入序，此测试红。
 //
 // 关键方法（血泪教训）：
 //   1. 必须用 page.setContent 手写最简页面，不要在 app 页面里人造 shadow——app 全局样式
@@ -100,7 +102,7 @@ test("原始页面：shadow 内 <style> 与 adoptedStyleSheets 均生效且 var(
 // 真实部署：variables.css 先在 head（0.1），mount3D 时 installSlideMenuStyles 把
 // slide-menu-styles.ts|:root(0.08) 后注入 head → 覆盖。消费方在 shadow 内读 var() → 穿透得 0.08。
 // 本测试镜像该顺序，锁死「最终生效 = 0.08」。
-test("镜像真实：--uih-slide-divider 生效值为 0.08（variables.css 0.1 被后注入覆盖）", async ({
+test("注入序哨兵：--uih-slide-divider 双序注入下生效值为 0.08（后注入覆盖语义，防文档层死值回潮）", async ({
   page,
 }) => {
   await page.setContent(`

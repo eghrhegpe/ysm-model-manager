@@ -890,6 +890,7 @@ auto_fields:
     - WasdReuse
     - WATER_MODES
     - WATER_PARAM_APPLIER_KEYS
+    - WATER_WAVE_SEGMENTS
     - WaterBody
     - WaterBodyStrategy
     - WaterBuildContext

@@ -59,7 +59,7 @@ export function buildLightPersistPayload(): Record<string, unknown> {
   };
 }
 
-/* ============ loadState：持久化结构 → envState（逐字段 typeof 校验，manual 源） ============ */
+/* ============ loadState：持久化结构 → envState（逐字段 typeof 校验，auto-model 源） ============ */
 
 /** 灯光字段表：saved 字段 → 期望 typeof。
  *  [light-type-switch] 每盏灯 10 字段结构统一后，逐字段 if 链换成表驱动；

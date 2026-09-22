@@ -26,6 +26,7 @@ auto_fields:
     - registerWaterBodyStrategy
     - WATER_MODES
     - WATER_PARAM_APPLIER_KEYS
+    - WATER_WAVE_SEGMENTS
     - WaterBody
     - WaterBodyStrategy
     - WaterBuildContext

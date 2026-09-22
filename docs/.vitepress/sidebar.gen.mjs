@@ -250,12 +250,12 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "ADR-295：组合间距档 --sp-vh-*：为高频「垂直+横向」组合值补标准化令牌（承接 ADR-294 D3 存量收敛）",
-        "link": "/adr/ADR-295-combo-spacing-tokens"
+        "text": "ADR-296：链接模式切换重链链路加固（锐评落地）",
+        "link": "/adr/ADR-296-linkmode-switch-relink-hardening"
       },
       {
-        "text": "ADR-295: 链接模式切换重链链路加固（锐评落地）",
-        "link": "/adr/ADR-295-linkmode-switch-relink-hardening"
+        "text": "ADR-295：组合间距档 --sp-vh-*：为高频「垂直+横向」组合值补标准化令牌（承接 ADR-294 D3 存量收敛）",
+        "link": "/adr/ADR-295-combo-spacing-tokens"
       },
       {
         "text": "ADR-294：间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层）",

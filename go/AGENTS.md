@@ -69,7 +69,7 @@ node scripts/doctor.ts         # 发版前全量闸门
 
 - **RE2 不支持负向前瞻 `(?!`**：Go 正则引擎是 RE2，写正则时遇到 `(?!...)` 必报错。改用正向断言组合或先过滤后匹配
 - **Windows `os.Rename` 会 `ERROR_SHARING_VIOLATION`**：目标文件被进程打开时重命名失败。涉及删除/移动的操作，先 `os.Remove`（Go 在 Windows 下删除成功但保留文件名到下次 `FindFirst` 前可见），或先断共享再重命名
-- **硬链接跨分区失败**：NTFS 硬链接不允许跨驱动器卷。`fsutil/hardlink` 里的跨设备回退逻辑是必要防线，不要"简化"
+- **硬链接跨分区失败**：NTFS 硬链接不允许跨驱动器卷。安装链路**不自动降级**——`linkErr` 经 `fsutil.IsCrossDeviceErr`（`fsutil/crossdevice_*.go`，只做 errno 分类）识别 EXDEV/17 后报 AppError 提示切复制模式；真正的「复制后删」回退只存在于回收站/移动链路（`recycle.moveEx` / `fileops.renameForMove`），是必要防线，不要"简化"
 - **`sync.Once` 只执行一次**：并发初始化用 `sync.Once` 安全；但**重置场景不能用**，改 `sync.Mutex` + 手动状态
 - **文件路径用 `filepath` 不用字符串拼接**：`filepath.Join`、`filepath.Clean`、`filepath.Abs`。禁止 `"C:\\" + name` 式拼接
 - **不要裸 `os.Open` 做批量读取**：大文件用 `bufio.Reader`，带超时用 `context.Context` + `ioutil.NopCloser`

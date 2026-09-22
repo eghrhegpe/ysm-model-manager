@@ -30,7 +30,7 @@ permalink: /adr/
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-295](./ADR-295-linkmode-switch-relink-hardening.md) | 链接模式切换重链链路加固（锐评落地） | 📝 提议中 |
+| [ADR-296](./ADR-296-linkmode-switch-relink-hardening.md) | 链接模式切换重链链路加固（锐评落地） | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-282](./ADR-282-applymodelpreset-default-light-params.md) | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 |
@@ -349,8 +349,8 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-296 | 链接模式切换重链链路加固（锐评落地） | 📝 提议中 | 2026-09-22 |
 | ADR-295 | 组合间距档 --sp-vh-*：为高频「垂直+横向」组合值补标准化令牌（承接 ADR-294 D3 存量收敛） | ✅ 已采纳 | 2026-09-22 |
-| ADR-295 | 链接模式切换重链链路加固（锐评落地） | 📝 提议中 | 2026-09-23 |
 | ADR-294 | 间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层） | ✅ 已采纳 | 2026-09-22 |
 | ADR-293 | 灯光能力总开关 schema 化、helper 可见性控件化与面板响应 | ✅ 已采纳 | 2026-09-22 |
 | ADR-292 | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 | 2026-09-21 |

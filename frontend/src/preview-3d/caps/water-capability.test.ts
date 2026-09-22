@@ -9,6 +9,7 @@ import {
   type WaterBody,
   type WaterPartRole,
 } from "./water-body-strategies.ts";
+import { WATER_WAVE_SEGMENTS } from "./water-state.ts";
 import { WaterCapability } from "./water-capability.ts";
 import { WATER_PARAM_APPLIER_KEYS } from "./water-capability.ts";
 import { persistState, restoreState } from "./scene-capability.ts";
@@ -352,6 +353,65 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     expect(shader.vertexShader).toContain("nrm.y -= dir.y * wa * c * sizeSafe;");
     expect(shader.vertexShader).toContain("nrm.z -= steep * wa * s;");
     expect(shader.vertexShader).toContain("nrm.z += 1.0;");
+  });
+
+  // ── 波幅采样抗锯齿（2026-09-22）──
+  // 病灶：64×64 分段固定，顶点间距 = size/64；水膜拉到 300 m 时最短波长只剩 ~2.2 个
+  // 顶点/波长（奈奎斯特极限 2），高频波混叠成游走摩尔纹。处方：按「每波长顶点数」
+  // 逐波衰减振幅——≥6 全留，2–6 淡出；位移/法线/泡沫同源于 amp，一处衰减三处一致。
+  it("分段数唯一事实源 = water-state WATER_WAVE_SEGMENTS，film/pool 顶水面几何实际用它分段", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    // cap["water"].top 走 role 契约取件（同 L1041 先例）：film 顶=root、pool 顶=group 内
+    // 顶板，不靠 mesh name 字符串（pool 的 "ysm-ground-water" 挂在 group 上，无几何）
+    const filmGeo = (cap["water"].top as unknown as THREE.Mesh)
+      .geometry as THREE.PlaneGeometry;
+    expect(filmGeo.parameters.widthSegments).toBe(WATER_WAVE_SEGMENTS);
+    expect(filmGeo.parameters.heightSegments).toBe(WATER_WAVE_SEGMENTS);
+    cap.setWaterMode("pool");
+    const poolGeo = (cap["water"].top as unknown as THREE.Mesh)
+      .geometry as THREE.PlaneGeometry;
+    expect(poolGeo.parameters.widthSegments).toBe(WATER_WAVE_SEGMENTS);
+    expect(poolGeo.parameters.heightSegments).toBe(WATER_WAVE_SEGMENTS);
+  });
+
+  it("gerstner 按每波长顶点数淡出波幅，间距由 WATER_WAVE_SEGMENTS 推导（改分段两处必同步）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    // 间距派生与 shader/几何同一常数（模板内插，字面 64 不许回流两处各写各的）
+    expect(shader.vertexShader).toContain(`sizeSafe / float(${WATER_WAVE_SEGMENTS})`);
+    // 衰减必须先于 wa/steep 派生（wa = freq*amp 用淡出后的 amp，泡沫与法线自动同幅）
+    const ampScale = shader.vertexShader.indexOf("amp *= aa;");
+    const waDerive = shader.vertexShader.indexOf("float wa = freq * amp;");
+    expect(ampScale).toBeGreaterThan(-1);
+    expect(waDerive).toBeGreaterThan(ampScale);
+    expect(shader.vertexShader).toContain(
+      "float aa = max(smoothstep(2.0, 6.0, waveLen / spacing), 0.001);",
+    );
+  });
+
+  it("aa 带 1‰ 下界：wa 恒 > 0，steep 除零 Inf×0=NaN 的通路被焊死", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    // 裸 smoothstep（无 max 下界）意味着 λ/s ≤ 2 时 amp=0 → wa=0 → steep clamp 除零，红
+    expect(shader.vertexShader).toContain("max(smoothstep(2.0, 6.0,");
   });
 
   it("尺度自洽：位移 /size 与法线 ×size 成对出现（水面 mesh 为各向异性缩放，缺一即畸变）", () => {

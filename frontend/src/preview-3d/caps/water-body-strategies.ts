@@ -32,7 +32,7 @@ import * as THREE from "three";
 import { envState } from "@/preview-3d/state/env-state.ts";
 import { clampFieldValue, type EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
-import type { WaterMode } from "./water-state.ts";
+import { WATER_WAVE_SEGMENTS, type WaterMode } from "./water-state.ts";
 
 /** 池内壁相对水面不透明度的衰减因子（池壁比水面更实，观感更稳）。
  *  构建（build）与运行期（waterOpacity 变更）必须共用同一因子，否则内壁透明度会脱节。 */
@@ -173,7 +173,8 @@ const filmStrategy: WaterBodyStrategy = {
   supportsVolumeOptics: false,
   supportsRoundness: false, // 薄水膜无容器：圆角裁剪无意义（构造期亦恒 0）
   build(ctx) {
-    const geo = new THREE.PlaneGeometry(1, 1, 64, 64);
+    // 分段数 = WATER_WAVE_SEGMENTS 唯一事实源（与 shader 波幅抗锯齿的间距推导同源）
+    const geo = new THREE.PlaneGeometry(1, 1, WATER_WAVE_SEGMENTS, WATER_WAVE_SEGMENTS);
     const mat = ctx.buildMaterial({ forPool: false });
     const root = new THREE.Mesh(geo, mat) as WaterTopMesh;
     root.rotation.x = -Math.PI / 2;
@@ -238,7 +239,7 @@ const poolStrategy: WaterBodyStrategy = {
     // 壁高 / 壁厚全部由 transformLinks 表达（拖滑块是高频事件，全量重建不可接受）。
     const links: WaterTransformLink[] = [];
 
-    const topGeo = new THREE.PlaneGeometry(1, 1, 64, 64);
+    const topGeo = new THREE.PlaneGeometry(1, 1, WATER_WAVE_SEGMENTS, WATER_WAVE_SEGMENTS);
     const topMat = ctx.buildMaterial({ forPool: true });
     const top = new THREE.Mesh(topGeo, topMat) as WaterTopMesh;
     top.rotation.x = -Math.PI / 2;

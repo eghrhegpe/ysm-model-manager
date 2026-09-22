@@ -47,7 +47,7 @@ import {
 } from "./water-body-strategies.ts";
 import { buildWaterNodes } from "./water-menu.ts";
 import type { WaterMode } from "./water-state.ts";
-import { WATER_MODES } from "./water-state.ts";
+import { WATER_MODES, WATER_WAVE_SEGMENTS } from "./water-state.ts";
 
 export type { WaterMode };
 
@@ -310,12 +310,23 @@ export class WaterCapability implements SceneCapability {
            // 防除零：/uSize 遇 0 会产生 NaN 几何，故取正下界；setter（≥1）与 loadState 恢复
            // 另有入口钳制（两道防线，语义不同：此处只求非零）。
            float sizeSafe = max(uSize, 0.001);
+            // 采样抗锯齿（2026-09-22）：顶点间距 = uSize / 分段数（唯一事实源
+            // WATER_WAVE_SEGMENTS，几何装配与此处同源）。波长 λ 的可呈现性取决于每波长
+            // 顶点数 λ/s：逼近奈奎斯特极限 2 时欠采样混叠成游走摩尔纹（300 m 大水面
+            // 高频波频闪的病灶）。逐波淡出：≥6 顶点/波长全保留，2–6 线性消退；
+            // 1‰ 下界保 wa 恒 > 0——steep 项含 1/wa，恰零会炸 Inf×0 = NaN。
+            float spacing = sizeSafe / float(${WATER_WAVE_SEGMENTS});
            for (int i = 0; i < GERSTNER_COUNT; i++) {
              float fi = float(i);
              float ang = hash11(fi + 1.0) * 6.2831853;
              vec2 dir = vec2(cos(ang), sin(ang));
              float freq = 0.25 * pow(1.19, fi);
              float amp = min(0.6 * pow(0.82, fi) / freq, 0.5);
+             // 衰减须在 wa/steep 派生之前：位移 / 解析法线 / 泡沫 Jacobian 同源于 amp，
+             // 一处淡出三处一致（法线不会声称一个位移里不存在的高频斜率）。
+             float waveLen = 6.2831853 / freq;
+             float aa = max(smoothstep(2.0, 6.0, waveLen / spacing), 0.001);
+             amp *= aa;
              float speed = sqrt(9.8 * freq);
              float wa = freq * amp;
              float steep = clamp(uChoppiness * 0.8 / (wa * float(GERSTNER_COUNT)), 0.0, 0.8 / (wa * float(GERSTNER_COUNT)));

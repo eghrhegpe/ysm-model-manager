@@ -20,14 +20,15 @@ func IsValidLinkMode(mode string) bool {
 	return false
 }
 
-// SanitizeLinkMode 写盘前净化（ADR-296 D6，软校验不 reject）：
-// 空串 = 「未传该参」（SaveAppConfig orDefault 语义，透传交 orDefault 处理）；
-// 合法值原样通过；非法值（手改 config.json / 未来脏调用方）回落 fallback，
-// fallback 也非法时归 ""——绝不把脏值写进磁盘或内存快照。
+// SanitizeLinkMode 写盘前净化（ADR-296 D6，软校验不 reject；返回值恒为合法值或 ""）：
+// 合法 mode 原样通过；mode 空串=「未传该参」→ 回落 fallback；mode 非法（手改
+// config.json / 脏调用方）→ 回落 fallback；fallback 也脏 → ""（= 未设置，默认 copy 语义）。
 // 不在入口 fail-closed 的原因：App.SaveAppConfig 五参版有多个只想改 mcRoot/theme
 // 的调用点会原样回写 linkMode，硬拒会让历史脏值连累无关字段保存（核实子代理 B 项结论）。
+// 注意：调用方**不得**再套 orDefault——`orDefault(SanitizeLinkMode(x, old), old)` 在
+// x、old 双脏时会被外层 orDefault 用脏 old 反洗（对抗审查 ④），Sanitize 自身已消化兜底。
 func SanitizeLinkMode(mode, fallback string) string {
-	if mode == "" || IsValidLinkMode(mode) {
+	if IsValidLinkMode(mode) {
 		return mode
 	}
 	if IsValidLinkMode(fallback) {

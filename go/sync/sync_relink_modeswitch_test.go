@@ -12,6 +12,7 @@ package sync
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"ysm-model-manager/go/types"
@@ -149,6 +150,98 @@ func TestRelinkDir_CopyToHardLink_Links(t *testing.T) {
 	ci, _ := os.Stat(customFile)
 	if !os.SameFile(si, ci) {
 		t.Fatal("copy→hardlink 后应与仓库共享 inode")
+	}
+}
+
+// TestRelinkDir_DirLevelSnapshotMissingRefusesRename（ADR-296 D4 + 对抗审查①）：
+// 目录级分支的锁内复验——scanFn 快照了 dstParent，但锁外 Lstat 时目录已不存在
+// （快照收集不存 key）→ 锁内必须**拒搬**（旧行为：无复验直接 rename 失败留噪），
+// 并记 logger failed「快照缺失」。断言零 rename 产物：目录不存在、无备份、count==0。
+func TestRelinkDir_DirLevelSnapshotMissingRefusesRename(t *testing.T) {
+	base := t.TempDir()
+	repoRoot := filepath.Join(base, "repo")
+	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	if err := os.MkdirAll(filepath.Join(repoRoot, "m"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	// 仓库侧实体目录；实例侧 sub 目录**故意不建**——注入 scanFn 撒谎快照 dstParent
+	_ = os.WriteFile(filepath.Join(repoRoot, "m", "ysm.json"), []byte("repo"), 0644)
+	scanFn := func(dir string) []types.ModelEntry {
+		if dir == repoRoot {
+			return []types.ModelEntry{{Name: "ysm.json", Path: filepath.Join(repoRoot, "m", "ysm.json"), Hash: "h1"}}
+		}
+		return []types.ModelEntry{{Name: "ysm.json", Path: filepath.Join(customDir, "sub", "ysm.json"), Hash: "h1"}}
+	}
+	var failedMsgs []string
+	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn,
+		func(name, src, dst string, size int64, status, msg string) {
+			if status == "failed" {
+				failedMsgs = append(failedMsgs, msg)
+			}
+		})
+	if err != nil {
+		t.Fatalf("RelinkDir 失败: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("快照缺失应拒搬，count=%d want 0", count)
+	}
+	if len(failedMsgs) == 0 || !strings.Contains(failedMsgs[0], "快照缺失") {
+		t.Errorf("应记 logger failed 含「快照缺失」，实际 %v", failedMsgs)
+	}
+	// 无 rename 产物：备份目录不得出现（旧实现会 rename→失败→留 .relink-bak 噪点）
+	mb, _ := filepath.Glob(filepath.Join(customDir, "*.relink-bak-*"))
+	if len(mb) != 0 {
+		t.Errorf("拒搬不应产生备份残留: %v", mb)
+	}
+}
+
+// TestRelinkDir_DirLevelSnapshotReplacedRefusesRename（ADR-296 D4）：
+// 复验三分支之二——SameFile 失配（dstParent 被换成异体对象）→ 拒搬 + failed「已被替换」。
+// 构造：scanFn 真实快照 customDir/sub 后、锁内复验前无法注入竞态（RelinkDir 内部），
+// 改为让复验对象与快照对象天然不同：注入 scanFn 的 ce.Path 指向 **文件**（非目录），
+// 锁外 Lstat 存到的是文件 FileInfo，锁内复验 IsDir 失败 → 拒搬（三分支之 IsDir 校验）。
+func TestRelinkDir_DirLevelSnapshotReplacedRefusesRename(t *testing.T) {
+	base := t.TempDir()
+	repoRoot := filepath.Join(base, "repo")
+	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	if err := os.MkdirAll(filepath.Join(repoRoot, "m"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(customDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(repoRoot, "m", "ysm.json"), []byte("repo"), 0644)
+	// dstParent = customDir/occ，被**普通文件**占据（模拟外部改动把目录换成异体类型）
+	occupied := filepath.Join(customDir, "occ")
+	if err := os.WriteFile(occupied, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	scanFn := func(dir string) []types.ModelEntry {
+		if dir == repoRoot {
+			return []types.ModelEntry{{Name: "ysm.json", Path: filepath.Join(repoRoot, "m", "ysm.json"), Hash: "h1"}}
+		}
+		return []types.ModelEntry{{Name: "ysm.json", Path: filepath.Join(occupied, "ysm.json"), Hash: "h1"}}
+	}
+	var failedMsgs []string
+	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn,
+		func(name, src, dst string, size int64, status, msg string) {
+			if status == "failed" {
+				failedMsgs = append(failedMsgs, msg)
+			}
+		})
+	if err != nil {
+		t.Fatalf("RelinkDir 失败: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("dstParent 非目录应拒搬，count=%d want 0", count)
+	}
+	if strings.Contains(strings.Join(failedMsgs, ";"), "relink 备份目录失败") {
+		t.Errorf("应走复验拒搬（快照复验失败/类型不符），而非旧路径 rename 噪点，实际 %v", failedMsgs)
+	}
+	// 文件占位物必须完好——复验在 rename **之前**，旧实现会把文件 rename 走变成备份目录
+	data, err := os.ReadFile(occupied)
+	if err != nil || string(data) != "x" {
+		t.Fatalf("占位文件应原样完好（未被动过）: err=%v data=%q", err, data)
 	}
 }
 

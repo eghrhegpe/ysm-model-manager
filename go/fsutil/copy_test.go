@@ -529,3 +529,35 @@ func TestRecoverAtomicRename_NonExistentDir(t *testing.T) {
 		t.Fatalf("目录不存在应恢复 0，实际 %d", recovered)
 	}
 }
+
+// TestRecoverAtomicRename_IgnoresRelinkBakFamily（ADR-296 对抗审查③）：
+// relink 备份命名族 `<目录名>.relink-bak-<ts>` 不得被 .bak-* 自愈分组认领——
+// 否则会把 relink 恢复点当 AtomicRename 半成品 rename 回 `<目录名>.relink-bak`
+// （凭空造出脏目录、且原 dst 已存在时是二次污染）。当前 LastIndex(".bak-") 因
+// "relink-bak-" 中 b 前是连字符而非点号天然不匹配，本测试钉死该免疫性，
+// 防将来放宽匹配（如改 HasSuffix 前判 "-bak-"）时静默回归误搬恢复点。
+func TestRecoverAtomicRename_IgnoresRelinkBakFamily(t *testing.T) {
+	dir := t.TempDir()
+	// 一个 relink 备份尸体 + 其 dst 原样存在（模拟 relink 崩溃后现场）
+	relinkBak := filepath.Join(dir, "model.relink-bak-1700000000")
+	if err := os.MkdirAll(relinkBak, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(relinkBak, "ysm.json"), []byte("bak"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	recovered, err := RecoverAtomicRename(dir)
+	if err != nil {
+		t.Fatalf("不应报错: %v", err)
+	}
+	if recovered != 0 {
+		t.Fatalf(".relink-bak-* 不得被 .bak-* 自愈认领，实际恢复 %d", recovered)
+	}
+	// 尸体目录原样在位，未被 rename 成 model.relink-bak
+	if _, err := os.Stat(relinkBak); err != nil {
+		t.Errorf("relink 备份应原样保留: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "model.relink-bak")); !os.IsNotExist(err) {
+		t.Error("不得凭空 rename 出 model.relink-bak 脏目录")
+	}
+}

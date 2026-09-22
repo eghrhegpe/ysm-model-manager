@@ -78,13 +78,15 @@ func TestSyncLinkMode_NilManager(t *testing.T) {
 	m.SyncLinkMode("symlink") // 不应 panic
 }
 
-// TestSanitizeLinkMode（ADR-296 D6）写盘前净化表：
-// 空串=未传参透传（orDefault 语义）；合法值原样；非法值回落合法 fallback；
-// fallback 也非法 → ""（绝不把脏值写进磁盘/内存快照）。
+// TestSanitizeLinkMode（ADR-296 D6 + 审查④）净化表：返回值恒为合法值或 ""。
+// 空串=未传参 → 回落 fallback；合法值原样；非法值 → 回落 fallback；
+// fallback 也脏/空 → ""（默认 copy 语义）。调用点不再套 orDefault——
+// `orDefault(Sanitize…, old)` 在双脏时被外层用脏 old 反洗，净化函数已自兜底。
 func TestSanitizeLinkMode(t *testing.T) {
 	cases := []struct{ mode, fallback, want string }{
-		{"", "hardlink", ""},               // 未传参：透传空串交 orDefault
+		{"", "hardlink", "hardlink"},       // 未传参：回落旧值（与旧 orDefault 组合净行为等价）
 		{"", "", ""},                       // 双侧空：仍空
+		{"", "mirror", ""},                 // 未传参 + 旧值脏：归零，脏值不得续命
 		{"copy", "hardlink", "copy"},       // 合法：原样
 		{"hardlink", "copy", "hardlink"},   // 合法：原样
 		{"symlink", "copy", "symlink"},     // 合法：原样

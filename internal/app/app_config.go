@@ -121,17 +121,8 @@ func (a *App) loadAppConfig() {
 		return
 	}
 	// 配置迁移逻辑简化：旧 repoRoot 字段已废弃，由 FilesRoot 统一承载
-	// 加载侧软校验（ADR-296 D6）：手改 config.json 的脏值不得污染内存快照
-	// （SyncLinkMode 零校验直写，安装/同步读点经 applyInstallFileByMode 的
-	// default 分支静默变 copy、无提示）。非法值洗为 ""（未设置=默认 copy 语义）——
-	// 必须连 configCache 一起洗：前端 `cfgLocal.linkMode || "copy"` 只兜空串，
-	// 脏值进缓存会让 linkSelect.value 匹配不到 option（浏览器回落显示首项），
-	// 与 Go 内存快照（""→copy）分叉。磁盘原样保留供人工修复——loadAppConfig
-	// 无写盘职责，不在读路径写文件。
-	if cfg.LinkMode != "" && !install.IsValidLinkMode(cfg.LinkMode) {
-		log.Printf("[loadAppConfig] 链接模式非法: %q ——洗为默认（copy），磁盘保留原值", cfg.LinkMode)
-		cfg.LinkMode = ""
-	}
+	// 加载侧软校验：见 washLinkMode（ADR-296 D6）
+	washLinkMode(&cfg)
 	if cfg.LinkMode != "" {
 		a.install.SyncLinkMode(cfg.LinkMode)
 	}
@@ -140,6 +131,18 @@ func (a *App) loadAppConfig() {
 	a.configCache = cfg
 	a.configLoaded = true
 	a.configMu.Unlock()
+}
+
+// washLinkMode 就地洗脏 linkMode（ADR-296 D6）：非法值洗为 ""（未设置 = 默认 copy 语义）并记日志，
+// 合法值/空串原样保留。loadAppConfig 与 LoadAppConfig 惰性路径**共用**——两路都直填 configCache，
+// 任一路漏洗都会让脏值进缓存：前端 `cfgLocal.linkMode || "copy"` 只兜空串，脏值使
+// linkSelect.value 匹配不到 option（selectedIndex=-1 显示空白），与 Go 内存快照分叉（对抗审查 D 项）。
+// 磁盘原样保留供人工修复——两个读路径都无写盘职责，不在读路径写文件。
+func washLinkMode(cfg *types.AppConfig) {
+	if cfg.LinkMode != "" && !install.IsValidLinkMode(cfg.LinkMode) {
+		log.Printf("[config] 链接模式非法: %q ——洗为默认（copy），磁盘保留原值", cfg.LinkMode)
+		cfg.LinkMode = ""
+	}
 }
 
 func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) error {
@@ -163,9 +166,10 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) e
 		FilesRoot:   orDefault(filesRoot, oldCfg.FilesRoot),
 		CustomRoots: oldCfg.CustomRoots, // 保留自定义根目录映射
 		McRoot:      orDefault(validated, oldCfg.McRoot),
-		LinkMode:    orDefault(install.SanitizeLinkMode(linkMode, oldCfg.LinkMode), oldCfg.LinkMode),
-		Theme:       orDefault(theme, oldCfg.Theme),
-		Mirror:      oldCfg.Mirror,
+		// 净化已自兜底（空参→旧值、脏值→旧值、双脏→""），勿再套 orDefault（审查 ④）
+		LinkMode: install.SanitizeLinkMode(linkMode, oldCfg.LinkMode),
+		Theme:    orDefault(theme, oldCfg.Theme),
+		Mirror:   oldCfg.Mirror,
 		// VoxelMaxBlocks 从 oldCfg 拷贝——原手工构造漏带该字段，
 		// 保存任何设置都会把用户体素上限重置为 0（默认 200000）
 		VoxelMaxBlocks: oldCfg.VoxelMaxBlocks,
@@ -292,6 +296,9 @@ func (a *App) LoadAppConfig() types.AppConfig {
 	}
 	// ADR-095: 将废弃的独立配置字段（YsmRoot/MmdRoot 等）迁移到 CustomRoots map
 	migrateLegacyConfigFields(&a.configCache)
+	// 惰性路径与 loadAppConfig 同洗脏值（ADR-296 D6 审查 ②：启动 IO 失败后首次调用
+	// 走本路径直填 configCache，不洗则脏 linkMode 从旁路漏进前端下拉——两路对称）
+	washLinkMode(&a.configCache)
 	a.configLoaded = true
 	return a.configCache
 }

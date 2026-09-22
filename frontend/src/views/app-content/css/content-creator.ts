@@ -52,7 +52,7 @@ export const contentCreatorCSS: string = `
 /* 创作者卡片：.cr-creator-card 基础（列表行） + .cr-creator-card--grid 网格变体（BEM 修饰符，替代后置 cascade 覆盖） */
 .cr-creator-card { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);cursor:pointer;transition:var(--tr-fast); }
 .cr-creator-card:hover { border-color:var(--accent);background:var(--hover); }
-.cr-creator-icon { font-size:18px;width:28px;text-align:center;flex-shrink:0; }
+.cr-creator-icon { font-size:var(--fs-nav);width:28px;text-align:center;flex-shrink:0; }
 .cr-creator-body { flex:1;min-width:0; }
 .cr-creator-name { font-size:var(--fs-md);font-weight:600;color:var(--txt); }
 .cr-creator-desc { font-size:var(--fs-xs);color:var(--muted);margin-top:1px; }
@@ -277,7 +277,7 @@ export const contentCreatorCSS: string = `
 .cr-drop-zone-active {
   border-color:var(--accent);color:var(--accent);background:var(--hover);
 }
-.cr-drop-icon { font-size:18px; }
+.cr-drop-icon { font-size:var(--fs-nav); }
 .cr-drop-text { font-size:var(--fs-xs); }
 .cr-fetch-btn, .cr-edit-btn, .cr-save-btn, .cr-cancel-btn {
   padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);border:1px solid var(--bd);

@@ -46,7 +46,7 @@ export function boneRowActiveBg(): string {
 
 /** 骨骼面板样式(P1 批次8:cssText 抽类集中注入;panel 容器由框架传入非本模块私有,增量声明走属性级赋值豁免) */
 const vbuCss = `
-.slide-sublabel.vbu-empty { padding:8px 10px; color:rgba(128,128,128,0.85); font-size:var(--fs-base); }
+.slide-sublabel.vbu-empty { padding:var(--sp-vh-btn); color:var(--muted); font-size:var(--fs-base); }
 .slide-item.vbu-bone-row { display:flex; align-items:center; gap:6px; cursor:pointer; min-height:28px; border-radius:var(--radius-sm); }
 .vbu-cb { flex-shrink:0; cursor:pointer; accent-color:var(--accent,#7c83ff); }
 .slide-label.vbu-bone-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

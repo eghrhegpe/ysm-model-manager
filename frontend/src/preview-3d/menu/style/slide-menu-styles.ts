@@ -90,7 +90,7 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
 .slide-back {
   color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: var(--btn-padding-md);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -53,7 +53,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .pv-section-green { border-left:2px solid var(--status-success); }
 .pv-section-orange { border-left:2px solid var(--sm-optional); }
 .pv-tab-row { display:flex;gap:2px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--bd); }
-.pv-tab { flex:1;font-size:var(--fs-sm);padding:3px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);cursor:pointer;text-align:center;transition:var(--tr-fast); }
+.pv-tab { flex:1;font-size:var(--fs-sm);padding:var(--btn-padding-sm);border-radius:var(--radius-sm);border:1px solid var(--bd);cursor:pointer;text-align:center;transition:var(--tr-fast); }
 .pv-tab:hover { border-color:var(--accent); }
 .pv-tab-active { background:var(--accent);color:var(--bg); }
 .pv-tab-inactive { background:var(--surf);color:var(--txt); }

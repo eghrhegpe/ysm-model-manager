@@ -456,7 +456,7 @@ ${wsIconCSS}
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 4px 12px;
+    padding: var(--btn-padding-filter);
     height: var(--uih-preset-chip-height);
     border-radius:var(--radius-md);
     border: 1px solid var(--uih-white-medium);

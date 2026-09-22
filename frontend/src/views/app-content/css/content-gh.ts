@@ -117,7 +117,7 @@ export const contentGhCSS: string = `
 .gh-section-sub { font-size:var(--fs-xs); color:var(--muted); }
 .gh-preset-area { padding:8px 12px 4px; display:flex; gap:4px; flex-wrap:wrap; }
 .gh-preset-btn { padding:2px 6px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--surf); color:var(--accent); cursor:pointer; font-size:var(--fs-xs); }
-.gh-action-btn { padding:4px 12px; border-radius:var(--radius-md); border:1px solid var(--bd); background:transparent; cursor:pointer; font-size:var(--fs-base); }
+.gh-action-btn { padding:var(--btn-padding-filter); border-radius:var(--radius-md); border:1px solid var(--bd); background:transparent; cursor:pointer; font-size:var(--fs-base); }
 .gh-action-btn-accent { color:var(--accent); }
 .gh-action-btn-muted { color:var(--muted); }
 .gh-save-btn { padding:4px 14px; border-radius:var(--radius-md); border:none; background:var(--accent); color:var(--bg); cursor:pointer; font-size:var(--fs-base); }

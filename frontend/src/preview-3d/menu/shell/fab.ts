@@ -52,7 +52,7 @@ export const YSW_FAB_CSS = `
 .ysm-3d-popselect{flex:1;font-size:var(--fs-sm);padding:3px 6px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);cursor:pointer;font-family:inherit}
 .ysm-3d-popslider{flex:1;accent-color:var(--accent,#7c83ff);cursor:pointer}
 .ysm-3d-popval{font-size:var(--fs-sm);color:var(--txt);min-width:24px;text-align:right}
-.ysm-3d-popbtn{font-size:var(--fs-sm);padding:4px 8px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);cursor:pointer;font-family:inherit;text-align:left;transition:var(--tr-fast)}
+.ysm-3d-popbtn{font-size:var(--fs-sm);padding:var(--btn-padding-md);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);cursor:pointer;font-family:inherit;text-align:left;transition:var(--tr-fast)}
 .ysm-3d-popbtn:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
 .ysm-3d-popbtn--row{width:100%;margin:1px 0}
 

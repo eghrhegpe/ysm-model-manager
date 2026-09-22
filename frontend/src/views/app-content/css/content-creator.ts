@@ -194,7 +194,7 @@ export const contentCreatorCSS: string = `
 .cr-preset-area { display:flex;gap:6px;flex-wrap:wrap;padding:4px 0 12px; }
 .cr-preset-icon { font-size:var(--fs-base); }
 .cr-preset-btn {
-  font-size:var(--fs-sm);padding:4px 12px;border-radius:var(--radius-md);
+  font-size:var(--fs-sm);padding:var(--btn-padding-filter);border-radius:var(--radius-md);
   border:1px solid var(--bd);background:var(--surf);color:var(--txt);
   cursor:pointer;font-family:inherit;transition:var(--tr-fast);
   animation:fadeSlideUp var(--tr-enter) both;
@@ -251,7 +251,7 @@ export const contentCreatorCSS: string = `
 .cr-fetch-failed { color: var(--muted); cursor: default; }
 .cr-add-area { padding:4px 0 12px; }
 .cr-add-area button, .cr-add-preset {
-  padding:4px 12px;border-radius:var(--radius-md);border:1px dashed var(--bd);
+  padding:var(--btn-padding-filter);border-radius:var(--radius-md);border:1px dashed var(--bd);
   background:transparent;color:var(--muted);cursor:pointer;
   font-size:var(--fs-sm);font-family:inherit;transition:var(--tr-fast);
 }

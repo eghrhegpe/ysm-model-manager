@@ -16,7 +16,7 @@ export const contentLayoutCSS: string = `
 /* ===== 通用 keyframes（跨域复用，集中在 layout 层，避免子域相互依赖） ===== */
 @keyframes dl-slide-up {
   from { opacity:0; transform:translateY(8px); max-height:0; padding:0 var(--sp-1) }
-  to   { opacity:1; transform:translateY(0); max-height:30px; padding:2px 4px }
+  to   { opacity:1; transform:translateY(0); max-height:30px; padding:var(--btn-padding-xs)}
 }
 #dl-imported-list > div { animation:dl-slide-up .25s ease-out both; }
 @keyframes pageIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
@@ -196,9 +196,9 @@ ${wsIconCSS}
 .ws-dl-selected[disabled]:hover, .ws-btn-sm[disabled]:hover { background:transparent; }
 .ws-filter-btn { position:relative; }
 .ws-back, .cr-back-btn, .cr-back-repo, .ws-btn, .ws-btn-txt,
-.ws-back-repo { padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-base);font-family:inherit; }
+.ws-back-repo { padding:var(--btn-padding-std);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-base);font-family:inherit; }
 .ws-back:hover, .cr-back-btn:hover, .cr-back-repo:hover, .ws-btn:hover, .ws-btn-txt:hover,
 .ws-back-repo:hover { background:var(--hover); }
-.ws-open-btn { padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
+.ws-open-btn { padding:var(--btn-padding-std);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .ws-open-btn:hover { background:var(--hover); }
 `;

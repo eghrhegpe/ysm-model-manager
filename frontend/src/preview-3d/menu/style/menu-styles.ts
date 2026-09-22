@@ -158,6 +158,6 @@ export const MENU_CARD_CSS = `.cap-card {
  * 类名保留 `cc-` 前缀（历史命名，改名=无谓 churn，非第二套样式）。
  * 消费者守卫：`menu-styles.test.ts`。
  */
-export const MENU_BTN_CSS = `.cc-btn { padding:4px 10px;font-size:var(--fs-sm);border-radius:var(--radius-md);cursor:pointer; }
+export const MENU_BTN_CSS = `.cc-btn { padding:var(--btn-padding-std);font-size:var(--fs-sm);border-radius:var(--radius-md);cursor:pointer; }
 .cc-btn-primary { border:0;background:var(--accent,#7c83ff);color:#fff; }
 .cc-btn-ghost { border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.85); }`;

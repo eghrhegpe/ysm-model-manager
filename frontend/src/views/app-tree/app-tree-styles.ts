@@ -31,7 +31,7 @@ export const treeCSS: string = `
 .adv-filter-row { display:flex;align-items:center;gap:4px;flex-wrap:wrap; }
 .adv-filter-row label { font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;margin-left:6px; }
 .adv-filter-row label:first-child { margin-left:0; }
-.af-inp { width:56px;padding:2px 4px;font-size:var(--fs-xs);border:1px solid var(--bd);border-radius:var(--radius-sm);background:var(--bg);color:var(--txt);font-family:inherit; }
+.af-inp { width:56px;padding:var(--btn-padding-xs);font-size:var(--fs-xs);border:1px solid var(--bd);border-radius:var(--radius-sm);background:var(--bg);color:var(--txt);font-family:inherit; }
 .af-inp::placeholder { color:var(--muted);font-size:var(--fs-micro); }
 .af-sep { font-size:var(--fs-xs);color:var(--muted); }
 /* ===== 元数据标签（.tag-author/.tag-work/.tag-date）共享串 =====
@@ -51,7 +51,7 @@ ${focusVisibleCSS}
 ${dropdownBaseCSS}${dropdownHoverCSS}
 .batch-dropdown { position: relative; }
 .batch-menu { position: absolute; top: 100%; left: 0; z-index: 100; background: var(--card); border: 1px solid var(--bd); border-radius:var(--radius-md); padding:var(--pad-btn-tool); min-width: 120px; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
-.batch-item { display: block; width: 100%; text-align: left; padding: 4px 10px; border: none; border-radius:var(--radius-sm); margin-bottom: 1px; font-size: var(--fs-sm); color: var(--txt); cursor: pointer; background: transparent; font-family: inherit; }
+.batch-item { display: block; width: 100%; text-align: left; padding:var(--btn-padding-std); border: none; border-radius:var(--radius-sm); margin-bottom: 1px; font-size: var(--fs-sm); color: var(--txt); cursor: pointer; background: transparent; font-family: inherit; }
 .batch-item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
 .srch-row { display: flex; align-items: center; gap: 6px; }
 .srch-inp { flex: 1; padding: 5px 8px; border-radius:var(--radius-md); border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-base); outline: none; font-family: inherit; }

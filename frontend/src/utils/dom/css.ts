@@ -82,7 +82,7 @@ export const dropdownBaseCSS = `
   display:none;min-width:130px;max-height:220px;overflow-y:auto;
 }
 .dd-item {
-  display:block;width:100%;padding:4px 10px;border:none;background:transparent;
+  display:block;width:100%;padding:var(--btn-padding-std);border:none;background:transparent;
   color:var(--txt);cursor:pointer;font-size:var(--fs-btn-secondary);
   text-align:left;border-radius:var(--radius-sm);
 }

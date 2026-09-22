@@ -24,7 +24,7 @@ import type { AppTree } from "./index.ts";
 
 // P1 批次11:统计角标样式(cssText 抽类;挂 document.body light DOM,head 注入适用)
 const tsCss = `
-.ts-badge { position:fixed; right:12px; bottom:12px; z-index:9999; padding:4px 10px; border-radius:var(--radius-lg); font-size:var(--fs-base); font-family:monospace; background:rgba(0,0,0,.72); color:var(--status-success); border:1px solid color-mix(in srgb, var(--status-success) 40%, transparent); pointer-events:none; user-select:none; }
+.ts-badge { position:fixed; right:12px; bottom:12px; z-index:9999; padding:var(--btn-padding-std); border-radius:var(--radius-lg); font-size:var(--fs-base); font-family:monospace; background:rgba(0,0,0,.72); color:var(--status-success); border:1px solid color-mix(in srgb, var(--status-success) 40%, transparent); pointer-events:none; user-select:none; }
 `;
 let _tsBadgeStylesInjected = false;
 function ensureTsBadgeStyles(): void {

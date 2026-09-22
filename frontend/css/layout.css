@@ -64,7 +64,7 @@
 
 /* 顶栏按钮 */
 .tb-btn {
-  padding: 4px 10px;
+  padding:var(--btn-padding-std);
   border-radius: var(--radius-lg);
   border: 1px solid var(--bd);
   background: var(--bg);
@@ -177,7 +177,7 @@
 
 .sidebar-footer {
   flex-shrink: 0;
-  padding: 4px 10px;
+  padding:var(--btn-padding-std);
   border-top: 1px solid var(--bd);
   background: var(--surf);
 }
@@ -249,7 +249,7 @@
 }
 
 .main-btn-small {
-  padding: 2px 6px;
+  padding:var(--btn-padding-sm);
   border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--bg);
@@ -265,7 +265,7 @@
 }
 
 .main-select {
-  padding: 2px 4px;
+  padding:var(--btn-padding-xs);
   border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--bg);
@@ -298,7 +298,7 @@
 
 .main-footer {
   flex-shrink: 0;
-  padding: 4px 10px;
+  padding:var(--btn-padding-std);
   border-top: 1px solid var(--bd);
   background: var(--surf);
   display: flex;
@@ -394,7 +394,7 @@
   }
 
   .tb-btn {
-    padding: 3px 8px;
+    padding:var(--btn-padding-tool-lg);
     font-size: var(--fs-xs);
   }
 }

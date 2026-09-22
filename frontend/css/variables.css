@@ -294,6 +294,8 @@
      横向沿用既有四档的**字面量**约定（--btn-padding-* 横向不随 --fs-scale 缩放）。 */
   --btn-padding-tool-lg: var(--pad-btn-tool) 8px;    /* 3px 8px @ 基准（源 2px 8px，垂直 +1px 映射按钮最小档） */
   --btn-padding-filter-lg: var(--pad-filter) 12px;   /* 4px 12px @ 基准（值等价） */
+  --btn-padding-std: var(--pad-btn-secondary) 10px;  /* 4px 10px @ 基准：标准按钮/输入载体（值等价，横向 10px 定值不缩） */
+  --btn-padding-xs: 2px 4px;                            /* 2px 4px @ 基准：紧凑输入/选择器（值等价，全字面量不随字号缩放——同 tool-lg 字面量哲学） */
   --btn-transition: background-color var(--tr-normal), border-color var(--tr-normal), color var(--tr-normal), box-shadow var(--tr-normal);
 
   /* ===== 过渡时长系统 ===== */

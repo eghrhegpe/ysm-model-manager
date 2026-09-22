@@ -37,7 +37,7 @@ export const contentGhCSS: string = `
 .gh-header-repo { display:flex;align-items:center;gap:8px;padding:0 12px 8px; }
 .gh-header-actions { display:flex;align-items:center;gap:8px;padding:0 12px 8px;position:relative; }
 .gh-section-fill { flex:1; }
-.gh-back-repo { font-size:var(--fs-sm);padding:2px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-family:inherit; }
+.gh-back-repo { font-size:var(--fs-sm);padding:var(--btn-padding-sm);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-family:inherit; }
 .gh-back-repo:hover { background:var(--hover); }
 .gh-btn-txt { border-color:transparent; }
 .gh-repo-name { font-size:var(--fs-md);font-weight:600;color:var(--txt);flex:1; }
@@ -116,7 +116,7 @@ export const contentGhCSS: string = `
 .gh-section-title-lg { font-size:var(--fs-sm); font-weight:600; color:var(--txt); }
 .gh-section-sub { font-size:var(--fs-xs); color:var(--muted); }
 .gh-preset-area { padding:8px 12px 4px; display:flex; gap:4px; flex-wrap:wrap; }
-.gh-preset-btn { padding:2px 6px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--surf); color:var(--accent); cursor:pointer; font-size:var(--fs-xs); }
+.gh-preset-btn { padding:var(--btn-padding-sm); border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--surf); color:var(--accent); cursor:pointer; font-size:var(--fs-xs); }
 .gh-action-btn { padding:var(--btn-padding-filter); border-radius:var(--radius-md); border:1px solid var(--bd); background:transparent; cursor:pointer; font-size:var(--fs-base); }
 .gh-action-btn-accent { color:var(--accent); }
 .gh-action-btn-muted { color:var(--muted); }
@@ -125,10 +125,10 @@ export const contentGhCSS: string = `
 
 /* ===== 创作者编辑行（GitHub 侧栏编辑） ===== */
 .gh-cr-row { display:flex; align-items:center; gap:3px; padding:4px 6px; border-radius:var(--radius-sm); border:1px solid var(--bd); font-size:var(--fs-sm); margin:1px 12px; }
-.gh-cr-input { flex:2; min-width:30px; padding:2px 4px; border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; font-size:var(--fs-sm); }
+.gh-cr-input { flex:2; min-width:30px; padding:var(--btn-padding-xs); border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; font-size:var(--fs-sm); }
 .gh-cr-input-name { color:var(--txt); }
 .gh-cr-input-desc { color:var(--muted); font-size:var(--fs-xs); }
-.gh-cr-input-type { flex:1; min-width:30px; padding:2px 4px; border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--accent); font-size:var(--fs-xs); text-align:center; }
+.gh-cr-input-type { flex:1; min-width:30px; padding:var(--btn-padding-xs); border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--accent); font-size:var(--fs-xs); text-align:center; }
 .gh-cr-del { padding:1px 4px; border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--status-error); cursor:pointer; font-size:var(--fs-sm); }
 .gh-cr-add-area { padding:var(--btn-padding-filter-lg); }
 .gh-cr-add { padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px dashed var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:var(--fs-sm); width:100%; }

@@ -168,8 +168,12 @@ export const SP_FLOOR_PX = 4;
  *
  * 覆盖高频值（2026-09-22 实测）：
  *   `2px 8px`×25 按钮/标签小控件 → --btn-padding-tool-lg（垂直 2→3px，+1px 映射按钮最小档，已拍板）
+ *   `3px 8px`×6  与 tool-lg 同展开值的既有写法 → --btn-padding-tool-lg（值等价，补建档遗漏——表键曾只认源值 2px 8px，漏了同展开值的 3px 8px）
  *   `4px 8px`×12 次要按钮/列表项 → --btn-padding-md（值等价，复用既有档）
  *   `3px 6px`×3  工具栏小按钮   → --btn-padding-sm（值等价，复用既有档）
+ *   `2px 6px`×14 紧凑按钮      → --btn-padding-sm（垂直 2→3px，+1px 映射按钮最小档，同 tool-lg 哲学）
+ *   `2px 4px`×14 紧凑输入/选择器 → --btn-padding-xs（值等价，新档）
+ *   `4px 10px`×16 标准按钮/输入载体 → --btn-padding-std（值等价，新档）
  *   `4px 12px`×12 筛选/操作按钮 → --btn-padding-filter-lg（值等价）
  *   `6px 10px`×13 列表行/菜单项 → --sp-vh-btn（值等价，内容间距组合）
  *   `8px 12px`×15 滚动容器/卡片正文/设置行 → --sp-vh-pane（值等价）
@@ -180,8 +184,12 @@ export const SP_FLOOR_PX = 4;
  */
 export const COMBO_PADDING_TOKENS: Readonly<Record<string, { token: string }>> = {
   "2px 8px": { token: "--btn-padding-tool-lg" },
+  "3px 8px": { token: "--btn-padding-tool-lg" },
   "4px 8px": { token: "--btn-padding-md" },
   "3px 6px": { token: "--btn-padding-sm" },
+  "2px 6px": { token: "--btn-padding-sm" },
+  "2px 4px": { token: "--btn-padding-xs" },
+  "4px 10px": { token: "--btn-padding-std" },
   "4px 12px": { token: "--btn-padding-filter-lg" },
   "6px 10px": { token: "--sp-vh-btn" },
   "8px 12px": { token: "--sp-vh-pane" },
@@ -197,6 +205,8 @@ export const COMBO_EXPANSION: Readonly<Record<string, readonly [number, number]>
   "--btn-padding-tool-lg": [3, 8],
   "--btn-padding-md": [4, 8],
   "--btn-padding-sm": [3, 6],
+  "--btn-padding-xs": [2, 4],
+  "--btn-padding-std": [4, 10],
   "--btn-padding-filter-lg": [4, 12],
   "--sp-vh-btn": [6, 10],
   "--sp-vh-pane": [8, 12],
@@ -818,7 +828,7 @@ export function fixLineTokens(
   // （ADR-295 COMBO_PADDING_TOKENS）时替换（值等价）。其余组合/calc/var 不碰
   // （横向语义是作者裁量，机械就近会给错答案）。排除 padding-block/padding-inline 子属性。
   text = text.replace(
-    new RegExp(`(?<![\\w-])padding(?![-a-z])\\s*:\\s*([^;"'\`}]+)`, "g"),
+    /(?<![\w-])padding(?![-a-z])\s*:\s*([^;"'`}]+)/g,
     (match, val: string, offset: number) => {
       if (inVar(offset)) return match;
       const v = val.trim();
@@ -1081,7 +1091,7 @@ export function findStyleAttrViolations(
   //
   //    ⚠️ 必须排除 `padding-block`/`padding-inline` 子属性：`propValueRe("padding")`
   //    会误匹配它们（padding 前是 `{` 或空白 → 左边界放行）。加 `(?![-a-z])` 防后缀。
-  const padRe = new RegExp(`(?<![\\w-])padding(?![-a-z])\\s*:\\s*([^;"'\`}]+)`, "g");
+  const padRe = /(?<![\w-])padding(?![-a-z])\s*:\s*([^;"'`}]+)/g;
   let pm: RegExpExecArray | null;
   while ((pm = padRe.exec(line)) !== null) {
     const val = (pm[1] ?? "").trim().replace(/\s+/g, " ");
@@ -1089,7 +1099,9 @@ export function findStyleAttrViolations(
     // 纯零豁免：全分量都是 0 / 0px（令牌化无意义，同 border-radius:0）
     if (/^(?:0|0px)(?:\s+(?:0|0px)){0,3}$/.test(val)) continue;
     out.push({
-      kind: inlineBodies.some((b) => b.includes(`padding:`)) ? "inline-style-padding" : "css-padding",
+      kind: inlineBodies.some((b) => b.includes(`padding:`))
+        ? "inline-style-padding"
+        : "css-padding",
       line: lineNo,
       snippet: clip(`padding:${val}`),
       suggestion: suggestPaddingToken(val, tokenMap),

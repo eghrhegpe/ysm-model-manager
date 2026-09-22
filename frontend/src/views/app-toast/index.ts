@@ -75,7 +75,7 @@ class AppToast extends WebComponentBase {
         .toast .toast-icon { display: inline-flex; align-items: center; flex: 0 0 auto; }
         /* 常态=容器色（隐形）→ 悬停 --hover 浮现，与设置页 .stg-path-* / 导航选中态同口径
            （原常态 --hover → 悬停 --act，起手高一档故需第二级色；2026-09 反向取值对齐全站） */
-        .toast .undo-btn { padding: 4px 10px; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--accent); cursor: pointer; font-size: var(--fs-sm); font-family: inherit; transition: background var(--tr-fast); }
+        .toast .undo-btn { padding:var(--btn-padding-std); border-radius: var(--radius-sm); border: none; background: transparent; color: var(--accent); cursor: pointer; font-size: var(--fs-sm); font-family: inherit; transition: background var(--tr-fast); }
         .toast .undo-btn:hover { background: var(--hover); }
         .toast .close-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: var(--fs-md); padding: 0 2px; }
         .toast .close-btn:hover { color: var(--txt); }

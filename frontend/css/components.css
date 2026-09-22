@@ -191,7 +191,7 @@
   color: var(--bg);
 }
 .dlg-btn-sm {
-  padding: 2px 6px;
+  padding:var(--btn-padding-sm);
   border-radius: var(--radius-sm);
   font-size:var(--fs-xs);
   cursor: pointer;
@@ -206,7 +206,7 @@
   color: var(--bg);
 }
 .dlg-btn-accent {
-  padding: 2px 6px;
+  padding:var(--btn-padding-sm);
   border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   background: transparent;
@@ -230,7 +230,7 @@
   color: var(--txt);
 }
 .dlg-preset-chip {
-  padding: 3px 8px;
+  padding:var(--btn-padding-tool-lg);
   font-size:var(--fs-xs);
   border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
@@ -371,7 +371,7 @@
   opacity: 1;
 }
 .te-sug-btn {
-  padding: 2px 6px;
+  padding:var(--btn-padding-sm);
   font-size:var(--fs-xs);
   border-radius: var(--radius-sm);
   border: 1px dashed var(--bd);
@@ -413,7 +413,7 @@
   font-size:var(--fs-sm);
 }
 .te-add-btn {
-  padding: 4px 10px;
+  padding:var(--btn-padding-std);
 }
 .te-suggest-details {
   font-size:var(--fs-xs);
@@ -490,7 +490,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 4px;
+  padding:var(--btn-padding-xs);
   font-size:var(--fs-xs);
   color: var(--muted);
   border-bottom: 1px solid var(--bd);
@@ -499,7 +499,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 4px;
+  padding:var(--btn-padding-xs);
   font-size:var(--fs-xs);
   border-bottom: 1px solid var(--bd);
   animation: fadeSlideUp .15s ease both;

@@ -14,7 +14,7 @@ ${metaTagCSS}
 .ins-sidebar { width:var(--sidebar-w);flex:none; }
 .ins-content { flex:1;display:flex;flex-direction:column;overflow:hidden; }
 .ins-model-list .sec-title { font-size:var(--fs-sm);color:var(--muted);padding:4px 2px 2px;text-transform:uppercase;letter-spacing:.5px;margin-top:4px; }
-.ins-model-list .row { display:flex;align-items:center;gap:6px;padding:2px 6px;border-radius:var(--radius-sm);font-size:var(--fs-md);transition:background var(--tr-fast); }
+.ins-model-list .row { display:flex;align-items:center;gap:6px;padding:var(--btn-padding-sm);border-radius:var(--radius-sm);font-size:var(--fs-md);transition:background var(--tr-fast); }
 .ins-model-list .row:hover { background:var(--hover); }
 .ins-model-list .row .dot { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
 .ins-model-list .row .rn { flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }

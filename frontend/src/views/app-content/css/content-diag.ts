@@ -81,7 +81,7 @@ export const contentDiagCSS: string = `
 .diag-log-search { flex:1; min-width:110px; max-width:320px; font-size:var(--fs-sm); padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }
 /* 操作类型下拉（2026-09-28 纵向筛选）：与状态 chips 同排、与搜索框同款度量；
    max-width 封顶防长标签（「全部操作」多语）把 chips 挤走，margin-left:auto 推到行尾与 chips 分离。 */
-.diag-log-op-filter { font-size:var(--fs-sm); padding:2px 4px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); max-width:150px; margin-left:auto; }
+.diag-log-op-filter { font-size:var(--fs-sm); padding:var(--btn-padding-xs); border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); max-width:150px; margin-left:auto; }
 .diag-log-scroll { overflow-y:auto; flex:1; }
 /* ADR-259：布局基线归 .tab-body（面板即 .tab-body）；.diag-panel 只留入场动画钩子（见上方 diagPanelIn） */
 .diag-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; font-size:var(--fs-md); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); flex-shrink:0; }

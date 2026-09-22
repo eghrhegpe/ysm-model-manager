@@ -22,7 +22,7 @@ export function aboutHTML(): string {
       <button class="btn-base sm stg-btn" id="set-check-update">${UI_ICONS.refresh} ${t("about.checkUpdate")}</button>
       <div class="setting-row" style="margin:0;padding:var(--sp-1) 0;background:none;border-radius:0">
         <span style="font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.clock} ${t("settings.updateCheck.title")}</span>
-        <select id="set-update-check" class="stg-select" style="width:auto;font-size:var(--fs-sm);padding:2px 4px">
+        <select id="set-update-check" class="stg-select" style="width:auto;font-size:var(--fs-sm);padding:var(--btn-padding-xs)">
           <option value="21600000">${t("settings.updateCheck.option6h")}</option>
           <option value="43200000">${t("settings.updateCheck.option12h")}</option>
           <option value="86400000">${t("settings.updateCheck.option24h")}</option>

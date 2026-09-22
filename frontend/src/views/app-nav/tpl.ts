@@ -39,7 +39,7 @@ export const navCSS: string = `
   border-radius:var(--radius-sm);
   font-size: var(--fs-tab);
   font-family: var(--font-ui);
-  padding: 2px 4px;
+  padding:var(--btn-padding-xs);
   width: 100%;
 }
 :host([data-collapsed]) .nav-repo-sel { display: none; }

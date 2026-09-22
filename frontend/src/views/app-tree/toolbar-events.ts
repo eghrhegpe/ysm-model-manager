@@ -68,7 +68,7 @@ function fillAuthorMenu(menuAuthors: HTMLElement, vm: AppTree, $: $Id): void {
   if (menuAuthors.children.length) return;
   const authors: Array<AuthorInfo | string> = vm._authors || [];
   if (!authors.length) {
-    menuAuthors.innerHTML = `<div style="padding:4px 10px;font-size:var(--fs-xs);color:var(--muted)">${t("tree.authorsEmpty")}</div>`;
+    menuAuthors.innerHTML = `<div style="padding:var(--btn-padding-std);font-size:var(--fs-xs);color:var(--muted)">${t("tree.authorsEmpty")}</div>`;
     return;
   }
   authors.forEach((a) => {

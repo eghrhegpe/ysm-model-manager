@@ -81,7 +81,7 @@ ${MENU_CARD_CSS}
    display: flex;
    align-items: center;
    gap: 8px;
-   padding: 4px 10px;
+   padding:var(--btn-padding-std);
 }
 .slide-label.rm-label-sm {
    font-size:var(--fs-base);

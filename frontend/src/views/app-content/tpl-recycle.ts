@@ -34,8 +34,8 @@ export function renderRecycleListHtml(entries: RecycleBinEntry[]): string {
 <div style="display:flex;align-items:center;gap:6px">
 <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="${t("common.viewDetail", { name: esc(e.Path) })}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
 <span style="font-size:var(--fs-xs);color:var(--muted)">${size}</span>
-<button class="recy-restore" data-testid="recy-restore" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:var(--radius-xs);border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-xs)">${UI_ICONS.undo} ${t("recycle.restore")}</button>
-<button class="recy-del" data-testid="recy-del" data-path="${esc(e.Path)}" style="padding:2px 6px;border-radius:var(--radius-xs);border:1px solid var(--status-error);background:transparent;color:var(--status-error);cursor:pointer;font-size:var(--fs-xs)">${UI_ICONS.delete} ${t("recycle.delete")}</button>
+<button class="recy-restore" data-testid="recy-restore" data-path="${esc(e.Path)}" style="padding:var(--btn-padding-sm);border-radius:var(--radius-xs);border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-xs)">${UI_ICONS.undo} ${t("recycle.restore")}</button>
+<button class="recy-del" data-testid="recy-del" data-path="${esc(e.Path)}" style="padding:var(--btn-padding-sm);border-radius:var(--radius-xs);border:1px solid var(--status-error);background:transparent;color:var(--status-error);cursor:pointer;font-size:var(--fs-xs)">${UI_ICONS.delete} ${t("recycle.delete")}</button>
 </div>
 <div style="font-size:var(--fs-xs);color:var(--muted);padding-left:2px;word-break:break-all">${UI_ICONS.folderOpen} ${esc(e.Path)}</div>
 </div>`;

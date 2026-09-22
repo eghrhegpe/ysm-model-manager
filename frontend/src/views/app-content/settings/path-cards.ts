@@ -225,7 +225,7 @@ export function initAdvancedGrid(
         (isOverridden
           ? '<button class="btn-base sm stg-adv-reset" data-rtype="' +
             at.rtype +
-            '" style="font-size:var(--fs-btn-tool);padding:2px 6px">' +
+            '" style="font-size:var(--fs-btn-tool);padding:var(--btn-padding-sm)">' +
             UI_ICONS.undo +
             " " +
             t("settings.path.default") +

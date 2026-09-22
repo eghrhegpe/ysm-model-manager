@@ -92,7 +92,7 @@ ${MENU_SECTION_CSS}
 .cc-head-strong { display:flex;justify-content:space-between;font-size:var(--fs-md);color:rgba(255,255,255,0.85); }
 .cc-hint { font-size:var(--fs-base);color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .cc-hint-45 { max-width:45%; }
-.setting-select.cc-select { font-size:var(--fs-sm);padding:2px 4px; }
+.setting-select.cc-select { font-size:var(--fs-sm);padding:var(--btn-padding-xs); }
 .cc-img-block { width:100%;border-radius:var(--radius-md);border:1px solid rgba(255,255,255,0.12);display:block; }
 .cc-canvas-fill { width:100%;height:100%;display:block; }
 .cc-canvas-auto { width:100%;height:auto;border-radius:var(--radius-md);border:1px solid rgba(255,255,255,0.12);display:block; }

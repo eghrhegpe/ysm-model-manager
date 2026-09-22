@@ -105,7 +105,7 @@ function syncDropdownHTML(o: SyncDropdownOpts): string {
   return (
     // dd-wrap / dd-menu 外观由共享 dropdownBaseCSS 承载（sidebar-css.ts 注入 + 局部覆盖），不再内联
     '<div class="dd-wrap">' +
-    `<button class="${cls}" ${btnTestid} style="padding:3px 8px;border-radius:var(--radius-sm);border:1px solid ${theme};background:transparent;color:${theme};cursor:pointer;font-size:var(--fs-btn-tool);font-family:inherit">` +
+    `<button class="${cls}" ${btnTestid} style="padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);border:1px solid ${theme};background:transparent;color:${theme};cursor:pointer;font-size:var(--fs-btn-tool);font-family:inherit">` +
     o.icon +
     " " +
     o.label +

@@ -143,7 +143,7 @@ export function containerHTML(): string {
     // height/max-height **transition**（与 innerHTML 替换冲突触发闪烁）；定高恰是窗口化的前提，
     // 且本行 transition 只列 background。另：行不再挂入场动画，理由同该 ADR「已知例外」
     // （模型树子行淡入即因此禁用：animation-fill-mode:both 叠加窗口化替换会滚动闪烁）。
-    ".sm-item{display:flex;align-items:center;gap:4px;padding:4px 10px;height:calc(var(--fs-sm) * 1.4 + 9px);box-sizing:border-box;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}" +
+    ".sm-item{display:flex;align-items:center;gap:4px;padding:var(--btn-padding-std);height:calc(var(--fs-sm) * 1.4 + 9px);box-sizing:border-box;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}" +
     ".sm-item:hover{background:var(--hover)}" +
     ".sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background var(--tr-fast),border-color var(--tr-fast),color var(--tr-fast)}" +
     ".sm-item-btn:hover{background:var(--hover)}" +
@@ -182,7 +182,7 @@ export function containerHTML(): string {
     "</style>" +
     '<div class="sm-wrap" style="display:flex;flex-direction:column;height:100%;overflow:hidden">' +
     // 状态筛选栏（类型选择已全局化到 nav 下拉，sm-cur-type 只读指示随本栏渲染）
-    '<div class="sm-status-tabs" style="display:flex;gap:2px;padding:3px 8px;flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>' +
+    '<div class="sm-status-tabs" style="display:flex;gap:2px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>' +
     // 摘要栏
     '<div class="sm-summary" style="display:flex;align-items:center;gap:8px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>' +
     // 列表容器

@@ -20,10 +20,10 @@ export const YSW_FAB_CSS = `
 /* ===== 3D overlay 控制层（顶栏按钮/下拉/标签，light DOM） ===== */
 .ysm-ovl-bar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10}
 .ysm-ovl-spacer{flex:1}
-.ysm-ovl-btn{font-size:var(--fs-sm);padding:2px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:rgba(0,0,0,.3);color:var(--txt);cursor:pointer;font-family:inherit;white-space:nowrap;transition:var(--tr-fast)}
+.ysm-ovl-btn{font-size:var(--fs-sm);padding:var(--btn-padding-sm);border-radius:var(--radius-sm);border:1px solid var(--bd);background:rgba(0,0,0,.3);color:var(--txt);cursor:pointer;font-family:inherit;white-space:nowrap;transition:var(--tr-fast)}
 .ysm-ovl-btn:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
 .ysm-ovl-btn:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#7c83ff) 35%,transparent)}
-.ysm-ovl-select{font-size:var(--fs-sm);padding:2px 4px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:rgba(0,0,0,.3);color:var(--txt);cursor:pointer;font-family:inherit}
+.ysm-ovl-select{font-size:var(--fs-sm);padding:var(--btn-padding-xs);border-radius:var(--radius-sm);border:1px solid var(--bd);background:rgba(0,0,0,.3);color:var(--txt);cursor:pointer;font-family:inherit}
 .ysm-ovl-select:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#7c83ff) 35%,transparent)}
 .ysm-ovl-label{font-size:var(--fs-sm);color:var(--muted)}
 .ysm-ovl-val{font-size:var(--fs-sm);color:var(--txt);min-width:20px}
@@ -71,7 +71,7 @@ export const YSW_FAB_CSS = `
   .ysm-3d-popup{width:min(86vw,280px)}
 }
 @media (orientation:landscape) and (max-height:500px){
-  .ysm-ovl-bar{padding:3px 8px;gap:6px}
+  .ysm-ovl-bar{padding:var(--btn-padding-tool-lg);gap:6px}
 }
 /* 触控热区扩到 44px（Apple HIG），透明叠加不改视觉高度 */
 @media (pointer:coarse){

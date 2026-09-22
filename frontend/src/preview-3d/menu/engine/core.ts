@@ -89,7 +89,7 @@ function ensureCoreStyles(): void {
 /* core 装配层集中样式（P1 批次6：cssText→类）。cm-row 为 core 行专属（switch .sw-row
    镜像已随 ADR-193 第四刀退役）。 */
 .ysm-preview-menu.cm-popup { position:absolute;left:16px;bottom:84px;width:300px;max-height:70vh;z-index:25; }
-.ysm-preview-menu-row.cm-row { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-lg);cursor:pointer;font-size:var(--fs-md); }
+.ysm-preview-menu-row.cm-row { display:flex;align-items:center;gap:8px;padding:var(--sp-vh-card);border-radius:var(--radius-lg);cursor:pointer;font-size:var(--fs-md); }
 .cm-row-icon { font-size:var(--fs-lg);width:18px;text-align:center; }
 .cm-row-chev { margin-left:auto;font-size:var(--fs-md);font-weight:700;opacity:0.4;user-select:none; }
 ${MENU_ERROR_NOTE_CSS}

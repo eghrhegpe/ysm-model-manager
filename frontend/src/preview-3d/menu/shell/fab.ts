@@ -18,7 +18,7 @@ export const YSW_FAB_CSS = `
    见 preview-3d/adapters/mount-preview-core.ts）。 */
 
 /* ===== 3D overlay 控制层（顶栏按钮/下拉/标签，light DOM） ===== */
-.ysm-ovl-bar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(0,0,0,.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10}
+.ysm-ovl-bar{display:flex;align-items:center;gap:8px;padding:var(--sp-vh-hdr);background:rgba(0,0,0,.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10}
 .ysm-ovl-spacer{flex:1}
 .ysm-ovl-btn{font-size:var(--fs-sm);padding:var(--btn-padding-sm);border-radius:var(--radius-sm);border:1px solid var(--bd);background:rgba(0,0,0,.3);color:var(--txt);cursor:pointer;font-family:inherit;white-space:nowrap;transition:var(--tr-fast)}
 .ysm-ovl-btn:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}

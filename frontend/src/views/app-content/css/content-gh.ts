@@ -66,7 +66,7 @@ export const contentGhCSS: string = `
 .gh-left-head-label { font-size:var(--fs-sm);font-weight:600;color:var(--muted); }
 .gh-left-head-spacer { flex:1; }
 .gh-left-foot { padding:4px 12px 8px;font-size:var(--fs-micro);color:var(--muted); }
-.gh-creators-list { flex:1; overflow-y:auto; padding:6px 12px; display:flex; flex-direction:column; gap:4px; }
+.gh-creators-list { flex:1; overflow-y:auto; padding:var(--sp-vh-hdr); display:flex; flex-direction:column; gap:4px; }
 .gh-creator-card { display:flex; align-items:center; gap:8px; padding:var(--sp-vh-btn); border-radius:var(--radius-md); border:1px solid var(--bd); background:var(--surf); cursor:pointer; transition:var(--tr-fast); }
 .gh-creator-card:hover { border-color:var(--accent); background:var(--hover); }
 .gh-creator-icon { font-size:var(--fs-lg); width:22px; text-align:center; flex-shrink:0; }

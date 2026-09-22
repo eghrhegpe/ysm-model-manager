@@ -287,8 +287,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 311 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 338 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 312 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 339 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -344,7 +344,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 203 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 204 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 341 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
@@ -462,13 +462,13 @@
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 352 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
-| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 75 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 116 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 153 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 160 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 187 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 206 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 244 |
+| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 76 |
+| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 117 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 154 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 161 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 188 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 207 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 245 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 109 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 120 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |

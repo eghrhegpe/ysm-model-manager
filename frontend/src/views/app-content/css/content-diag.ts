@@ -233,7 +233,7 @@ export const contentDiagCSS: string = `
 /* ===== 诊断页配置面板（conflicts.ts / dedup.ts / health.ts 渲染） =====
    这些类此前在 shadow 内无 CSS 规则，裸奔靠 UA 默认样式（WebView2 暗色不协调）；
    机检 css-layer-check 的 WARN 暴露后补显式样式（评审 2026-08-24 第 1 条盲区收口）。 */
-.diag-config-item { display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:var(--fs-sm); color:var(--txt); }
+.diag-config-item { display:flex; align-items:center; gap:8px; padding:var(--sp-vh-hdr); font-size:var(--fs-sm); color:var(--txt); }
 .diag-config-select, .diag-config-input { padding:var(--btn-padding-sm); border-radius:var(--radius-md); border:1px solid var(--bd); background:var(--bg); color:var(--txt); font-size:var(--fs-sm); font-family:inherit; min-width:160px; }
 .diag-config-select:focus, .diag-config-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
 /* .diag-sync-config 规则已随 ADR-288 删除：同步冲突的参数面板不再是「点按钮后渲染的卡片」，

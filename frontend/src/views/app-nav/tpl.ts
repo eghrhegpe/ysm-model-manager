@@ -83,7 +83,7 @@ export const navCSS: string = `
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding:var(--sp-vh-card);
   border-radius: var(--radius-sm);
   font-size: var(--fs-nav);
   color: var(--txt);
@@ -104,7 +104,7 @@ export const navCSS: string = `
   align-items: center;
   gap: 8px;
   margin: 2px 8px 6px;
-  padding: 8px 10px;
+  padding:var(--sp-vh-card);
   border-radius: var(--radius-sm);
   font-size: var(--fs-nav);
   color: var(--txt);

@@ -43,7 +43,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .pv-hint { font-size:var(--fs-xs);color:var(--muted); }
 .pv-canvas { width:100%;height:auto;border-radius:var(--radius-lg);background:rgba(0,0,0,.12);margin-bottom:6px;touch-action:none; }
 .pv-grab { cursor:grab;touch-action:none; }
-.pv-card { background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:8px 10px;margin-bottom:8px; }
+.pv-card { background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:var(--sp-vh-card);margin-bottom:8px; }
 .pv-card-section { padding-left:8px;margin-bottom:5px; }
 .pv-card-section-label { font-size:var(--fs-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px; }
 .pv-card-row { font-size:var(--fs-sm);color:var(--txt);line-height:1.6; }

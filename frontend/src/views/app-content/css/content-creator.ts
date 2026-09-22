@@ -44,13 +44,13 @@ export const contentCreatorCSS: string = `
 .cr-mode-opt:hover { color:var(--txt);background:var(--hover); }
 .cr-mode-opt.active { color:var(--accent);background:var(--surf);margin-bottom:-1px; }
 .cr-mode-opt:first-child { border-right:1px solid var(--bd); }
-.cr-browser-bar { display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--surf);border-bottom:1px solid var(--bd);flex-shrink:0; }
+.cr-browser-bar { display:flex;align-items:center;gap:8px;padding:var(--sp-vh-hdr);background:var(--surf);border-bottom:1px solid var(--bd);flex-shrink:0; }
 .cr-back { padding:var(--btn-padding-std);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-base);font-family:inherit; }
 .cr-back:hover { background:var(--hover); }
 .cr-url { flex:1;font-size:var(--fs-sm);color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; } /* URL = 数据值 */
 
 /* 创作者卡片：.cr-creator-card 基础（列表行） + .cr-creator-card--grid 网格变体（BEM 修饰符，替代后置 cascade 覆盖） */
-.cr-creator-card { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);cursor:pointer;transition:var(--tr-fast); }
+.cr-creator-card { display:flex;align-items:center;gap:8px;padding:var(--sp-vh-card);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);cursor:pointer;transition:var(--tr-fast); }
 .cr-creator-card:hover { border-color:var(--accent);background:var(--hover); }
 .cr-creator-icon { font-size:var(--fs-nav);width:28px;text-align:center;flex-shrink:0; }
 .cr-creator-body { flex:1;min-width:0; }
@@ -323,7 +323,7 @@ export const contentCreatorCSS: string = `
 .cr-desc-tag { font-size:var(--fs-xs);padding:1px 7px;border-radius:var(--radius-sm);line-height:18px;background:var(--surf);color:var(--txt);opacity:.75;border:1px solid var(--bd); }
 
 /* Local count card */
-.cr-local-card { display:flex;align-items:center;gap:8px;background:var(--surf);border-radius:var(--radius-lg);padding:8px 10px;border:1px solid var(--bd); }
+.cr-local-card { display:flex;align-items:center;gap:8px;background:var(--surf);border-radius:var(--radius-lg);padding:var(--sp-vh-card);border:1px solid var(--bd); }
 .cr-local-icon { font-size:var(--fs-md); }
 .cr-local-text { flex:1;font-size:var(--fs-sm);color:var(--txt); }
 

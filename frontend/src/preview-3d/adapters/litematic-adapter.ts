@@ -30,7 +30,7 @@ import type {
 // 提取魔法数值常量（体素尺寸 / 默认色 / chunk 维 / 截断上限）
 /** litematic 截断警告条样式(P1 批次11:cssText 抽类;插 ctx.overlay——ADR-175 M1 后为 overlay shadow root,ensureMdliStyles 经桥注入同域) */
 const mdliCss = `
-.mdli-trunc-warn { padding:6px 12px; background:var(--status-warning,#ffa050); color:var(--status-warning,#ffa050); font-size:var(--fs-base); text-align:center; flex-shrink:0; }
+.mdli-trunc-warn { padding:var(--sp-vh-hdr); background:var(--status-warning,#ffa050); color:var(--status-warning,#ffa050); font-size:var(--fs-base); text-align:center; flex-shrink:0; }
 `;
 function ensureMdliStyles(): void {
   installOnceStyles("mdli", mdliCss);

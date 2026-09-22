@@ -16,7 +16,7 @@ export const treeCSS: string = `
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
-.hdr { padding: 6px 12px; border-bottom: 1px solid var(--bd); }
+.hdr { padding:var(--sp-vh-hdr); border-bottom: 1px solid var(--bd); }
 .hdr-row { display:flex; align-items:center; gap:4px; }
 .hdr-row + .hdr-row { margin-top:4px; }
 .hdr-search-row { margin-bottom:2px; }

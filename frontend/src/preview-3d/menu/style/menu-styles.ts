@@ -10,14 +10,14 @@
 // （后定义覆盖先定义，值相同），单一事实源在常量本身。
 
 /** 错误提示行（红色文案）：core.ts 装配层与 roles.ts 角色面板同值 */
-export const MENU_ERROR_NOTE_CSS = `.cm-error-note, .fr-error-note { padding: 8px 10px; color: var(--status-error); font-size:var(--fs-base); }`;
+export const MENU_ERROR_NOTE_CSS = `.cm-error-note, .fr-error-note { padding:var(--sp-vh-card); color: var(--status-error); font-size:var(--fs-base); }`;
 
 /** 可折叠 section 头（folder / cap 分组共用）：cap-controls 渲染与 render.ts rmAppendFolder 同源 */
 export const MENU_SECTION_CSS = `.cap-section-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px;
+  padding:var(--sp-vh-card);
   min-height: 32px;
   cursor: pointer;
   user-select: none;

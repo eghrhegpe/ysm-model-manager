@@ -51,7 +51,7 @@ function ensureRolesStyles(): void {
 .fr-role-row { padding: 6px 8px; font-size:var(--fs-md); }
 .fr-comp-row { padding:var(--sp-vh-btn); font-size:var(--fs-base); }
 .fr-row-active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
-.fr-empty-note { padding: 8px 10px; color: rgba(255,255,255,0.5); font-size:var(--fs-base); }
+.fr-empty-note { padding:var(--sp-vh-card); color: rgba(255,255,255,0.5); font-size:var(--fs-base); }
 ${MENU_ERROR_NOTE_CSS}
 .fr-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 6px 10px; }
 .fr-scroll-box { max-height: 220px; overflow-y: auto; }
@@ -70,7 +70,7 @@ ${MENU_ERROR_NOTE_CSS}
   border: none; border-radius:var(--radius-sm); cursor: pointer; font-size:var(--fs-sm); line-height: 1;
 }
 .fr-unload-row {
-  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius:var(--radius-lg);
+  display: flex; align-items: center; gap: 8px; padding:var(--sp-vh-card); border-radius:var(--radius-lg);
   cursor: pointer; font-size:var(--fs-md); color: var(--status-error);
 }
 .fr-section-title { padding: 6px 10px 2px; color: rgba(255,255,255,0.5); font-size:var(--fs-sm); }

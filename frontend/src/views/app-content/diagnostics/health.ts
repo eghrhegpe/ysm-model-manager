@@ -100,7 +100,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     .join("");
 
   return (
-    '<div class="health-head" style="display:flex;align-items:center;gap:14px;padding:6px 12px">' +
+    '<div class="health-head" style="display:flex;align-items:center;gap:14px;padding:var(--sp-vh-hdr)">' +
     '<div class="health-ring" style="width:64px;height:64px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:conic-gradient(' +
     color +
     " " +
@@ -179,9 +179,9 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     "</div>" +
     "</div>" +
     (warnings
-      ? `<div style="padding:6px 12px;border-top:1px solid var(--bd)">${warnings}</div>`
+      ? `<div style="padding:var(--sp-vh-hdr);border-top:1px solid var(--bd)">${warnings}</div>`
       : "") +
-    '<div class="stat-row diag-stat diag-stat-muted" style="padding:6px 12px">' +
+    '<div class="stat-row diag-stat diag-stat-muted" style="padding:var(--sp-vh-hdr)">' +
     UI_ICONS.settings +
     " " +
     t("diagnostics.healthSource") +

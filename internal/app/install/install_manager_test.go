@@ -78,6 +78,42 @@ func TestSyncLinkMode_NilManager(t *testing.T) {
 	m.SyncLinkMode("symlink") // 不应 panic
 }
 
+// TestSanitizeLinkMode（ADR-296 D6）写盘前净化表：
+// 空串=未传参透传（orDefault 语义）；合法值原样；非法值回落合法 fallback；
+// fallback 也非法 → ""（绝不把脏值写进磁盘/内存快照）。
+func TestSanitizeLinkMode(t *testing.T) {
+	cases := []struct{ mode, fallback, want string }{
+		{"", "hardlink", ""},               // 未传参：透传空串交 orDefault
+		{"", "", ""},                       // 双侧空：仍空
+		{"copy", "hardlink", "copy"},       // 合法：原样
+		{"hardlink", "copy", "hardlink"},   // 合法：原样
+		{"symlink", "copy", "symlink"},     // 合法：原样
+		{"mirror", "hardlink", "hardlink"}, // 脏值 → 回落合法旧值
+		{"MIRROR", "copy", "copy"},         // 大小写敏感：不认大写（与 SetLinkMode 同口径）
+		{"mirror", "bad", ""},              // 双脏 → 归零（默认 copy 语义）
+		{"mirror", "", ""},                 // 旧值未设置 → 归零
+	}
+	for _, c := range cases {
+		if got := SanitizeLinkMode(c.mode, c.fallback); got != c.want {
+			t.Errorf("SanitizeLinkMode(%q,%q)=%q want %q", c.mode, c.fallback, got, c.want)
+		}
+	}
+}
+
+// TestIsValidLinkMode 白名单唯一事实源：三值真、空串/脏值假（空串语义由调用方处理）。
+func TestIsValidLinkMode(t *testing.T) {
+	for _, m := range []string{"copy", "hardlink", "symlink"} {
+		if !IsValidLinkMode(m) {
+			t.Errorf("IsValidLinkMode(%q) 应为 true", m)
+		}
+	}
+	for _, m := range []string{"", " mirror", "mirror", "Copy", "unknown"} {
+		if IsValidLinkMode(m) {
+			t.Errorf("IsValidLinkMode(%q) 应为 false", m)
+		}
+	}
+}
+
 // TestSetLinkMode 设置链接模式（含持久化和内存同步）
 func TestSetLinkMode(t *testing.T) {
 	savedCfg := &types.AppConfig{}

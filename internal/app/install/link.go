@@ -9,13 +9,40 @@ import (
 	"strings"
 )
 
+// IsValidLinkMode 链接模式白名单（install 域唯一事实源，ADR-296 D6）：
+// SetLinkMode 硬校验、loadAppConfig 加载软校验、App.SaveAppConfig 写盘前净化共用，
+// 替代此前散落各调用方的 `mode != "symlink" && mode != "hardlink" && mode != "copy"` 内联表。
+func IsValidLinkMode(mode string) bool {
+	switch mode {
+	case "symlink", "hardlink", "copy":
+		return true
+	}
+	return false
+}
+
+// SanitizeLinkMode 写盘前净化（ADR-296 D6，软校验不 reject）：
+// 空串 = 「未传该参」（SaveAppConfig orDefault 语义，透传交 orDefault 处理）；
+// 合法值原样通过；非法值（手改 config.json / 未来脏调用方）回落 fallback，
+// fallback 也非法时归 ""——绝不把脏值写进磁盘或内存快照。
+// 不在入口 fail-closed 的原因：App.SaveAppConfig 五参版有多个只想改 mcRoot/theme
+// 的调用点会原样回写 linkMode，硬拒会让历史脏值连累无关字段保存（核实子代理 B 项结论）。
+func SanitizeLinkMode(mode, fallback string) string {
+	if mode == "" || IsValidLinkMode(mode) {
+		return mode
+	}
+	if IsValidLinkMode(fallback) {
+		return fallback
+	}
+	return ""
+}
+
 // SetLinkMode 设置链接模式（symlink/hardlink/copy），校验后持久化并同步内存快照。
 func (m *Manager) SetLinkMode(mode string) error {
 	if m == nil {
 		return fmt.Errorf("install manager 未初始化")
 	}
 	mode = strings.TrimSpace(mode)
-	if mode != "symlink" && mode != "hardlink" && mode != "copy" {
+	if !IsValidLinkMode(mode) {
 		return fmt.Errorf("无效的链接模式: %s", mode)
 	}
 	cfg := m.deps.LoadAppConfig()

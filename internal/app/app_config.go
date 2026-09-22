@@ -21,6 +21,7 @@ import (
 	"ysm-model-manager/go/updater"
 	"ysm-model-manager/go/version"
 	"ysm-model-manager/go/watcher"
+	"ysm-model-manager/internal/app/install"
 )
 
 // ========== 配置持久化 ==========
@@ -120,8 +121,16 @@ func (a *App) loadAppConfig() {
 		return
 	}
 	// 配置迁移逻辑简化：旧 repoRoot 字段已废弃，由 FilesRoot 统一承载
+	// 加载侧软校验（ADR-296 D6）：手改 config.json 的脏值不得污染内存快照
+	// （SyncLinkMode 零校验直写，安装/同步读点经 applyInstallFileByMode 的
+	// default 分支静默变 copy、无提示）。非法值回落 ""（未设置=默认 copy 语义），
+	// 磁盘原样保留供人工修复——loadAppConfig 无写盘职责，不在读路径写文件。
 	if cfg.LinkMode != "" {
-		a.install.SyncLinkMode(cfg.LinkMode)
+		if install.IsValidLinkMode(cfg.LinkMode) {
+			a.install.SyncLinkMode(cfg.LinkMode)
+		} else {
+			log.Printf("[loadAppConfig] 链接模式非法: %q ——不写入内存快照，回落默认（copy）", cfg.LinkMode)
+		}
 	}
 	// populate config cache
 	a.configMu.Lock()
@@ -151,7 +160,7 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme string) e
 		FilesRoot:   orDefault(filesRoot, oldCfg.FilesRoot),
 		CustomRoots: oldCfg.CustomRoots, // 保留自定义根目录映射
 		McRoot:      orDefault(validated, oldCfg.McRoot),
-		LinkMode:    orDefault(linkMode, oldCfg.LinkMode),
+		LinkMode:    orDefault(install.SanitizeLinkMode(linkMode, oldCfg.LinkMode), oldCfg.LinkMode),
 		Theme:       orDefault(theme, oldCfg.Theme),
 		Mirror:      oldCfg.Mirror,
 		// VoxelMaxBlocks 从 oldCfg 拷贝——原手工构造漏带该字段，

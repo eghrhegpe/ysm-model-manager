@@ -60,7 +60,7 @@ ${btnBaseCSS}
 }
 .footer-btn:hover { background: var(--hover); }
 /* 骨架屏 */
-.sk-item { padding: 10px; margin-bottom: 6px; border-radius:var(--radius-lg); border: 1px solid var(--bd); background: var(--surf); }
+.sk-item { padding: var(--sp-3); margin-bottom: 6px; border-radius:var(--radius-lg); border: 1px solid var(--bd); background: var(--surf); }
 .sk-line { height: 12px; border-radius:var(--radius-md); background: linear-gradient(90deg, var(--bd) 25%, var(--hover) 50%, var(--bd) 75%); background-size: 200% 100%; animation: sk-shimmer 1.5s infinite; margin-bottom: 6px; }
 .sk-w80 { width: 80%; }
 .sk-w40 { width: 40%; }

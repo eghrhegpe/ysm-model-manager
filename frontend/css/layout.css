@@ -312,7 +312,7 @@
   background: var(--surf);
   border-left: 1px solid var(--bd);
   overflow-y: auto;
-  padding: 10px;
+  padding: var(--sp-3);
   display: flex;
   flex-direction: column;
   gap: 8px;

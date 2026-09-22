@@ -145,8 +145,8 @@ export const contentGhCSS: string = `
 /* ===== 下载队列 ===== */
 .gh-queue-icon { color:var(--accent); }
 .gh-queue-error { padding:2px 0; font-size:var(--fs-sm); color:var(--status-error); }
-.gh-queue-err-item { font-size:var(--fs-xs); color:var(--muted); padding:0 4px; }
-.gh-queue-ellipsis { font-size:var(--fs-xs); color:var(--muted); padding:0 4px; }
+.gh-queue-err-item { font-size:var(--fs-xs); color:var(--muted); padding:0 var(--sp-1); }
+.gh-queue-ellipsis { font-size:var(--fs-xs); color:var(--muted); padding:0 var(--sp-1); }
 .gh-queue-cancel { font-size:var(--fs-sm); color:var(--muted); }
 .gh-progress-row { display:flex; align-items:center; gap:4px; }
 .gh-progress-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--fs-sm); }

@@ -29,7 +29,7 @@ export const YSW_FAB_CSS = `
 .ysm-ovl-val{font-size:var(--fs-sm);color:var(--txt);min-width:20px}
 .ysm-ovl-slider{width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff)}
 .ysm-ovl-shotwrap{position:relative;display:inline-block;margin-right:8px}
-.ysm-ovl-shotmenu{display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--card);border:1px solid var(--bd);border-radius:var(--radius-md);padding:4px 0;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.ysm-ovl-shotmenu{display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--card);border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--sp-1) 0;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
 .ysm-ovl-shotitem{padding:4px 12px;font-size:var(--fs-sm);color:var(--txt);cursor:pointer;white-space:nowrap;transition:var(--tr-fast)}
 .ysm-ovl-shotitem:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
 

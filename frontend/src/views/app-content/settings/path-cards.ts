@@ -140,7 +140,7 @@ function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[])
   // 搜索结果
   if (!paths.length) {
     html +=
-      "<div style='color:var(--muted,#888);padding:4px 0'>" +
+      "<div style='color:var(--muted,#888);padding:var(--sp-1) 0'>" +
       t("content.noMcDirFound") +
       "</div>" +
       "<div style='font-size:var(--fs-xs);color:var(--muted,#888);padding-top:2px'>" +

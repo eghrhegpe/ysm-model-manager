@@ -106,7 +106,7 @@
 .dlg-overlay.dlg-closing .dlg-box { animation: dlgBoxOut .12s ease forwards; }
 /* .no-animations 覆盖已上收 variables.css 通配规则（文档层全域 animation/transition 零值），此处不再重复 */
 .dlg-pad {
-  padding: 14px;
+  padding: var(--sp-4);
 }
 .dlg-gap {
   gap: 6px;
@@ -465,7 +465,7 @@
   flex-wrap: wrap;
   gap: 4px;
   width: 100%;
-  padding: 4px 0;
+  padding: var(--sp-1) 0;
 }
 .dlg-label-check {
   display: flex;
@@ -656,7 +656,7 @@
 .mc-scan-title { font-weight:600;margin-bottom:4px; }
 .mc-scan-range { font-size:var(--fs-xs);color:var(--muted);margin-bottom:8px;padding-left:4px; }
 .mc-scan-divider { border-top:1px solid var(--bd);margin:6px 0; }
-.mc-scan-empty { color:var(--muted);padding:4px 0; }
+.mc-scan-empty { color:var(--muted);padding:var(--sp-1) 0; }
 .mc-scan-tip { font-size:var(--fs-xs);color:var(--muted);padding-top:2px; }
 .mc-scan-result-title { font-weight:600;margin-bottom:4px; }
 .mc-scan-path { padding:1px 0;display:flex;align-items:center;gap:6px;font-size:var(--fs-xs); }

@@ -245,7 +245,7 @@ export const contentCreatorCSS: string = `
 .cr-input-desc { font-size: var(--fs-xs); }
 .cr-input-role { width:auto;min-width:70px;padding:2px 4px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit; }
 .cr-input-role:focus { border-color: var(--accent); }
-.cr-btn-icon { font-size:var(--fs-base);padding:0 4px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit; }
+.cr-btn-icon { font-size:var(--fs-base);padding:0 var(--sp-1);background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit; }
 .cr-btn-icon:hover { color:var(--txt); }
 .cr-edit-label { font-size:var(--fs-xs);color:var(--muted);width:28px;flex-shrink:0; }
 .cr-fetch-failed { color: var(--muted); cursor: default; }

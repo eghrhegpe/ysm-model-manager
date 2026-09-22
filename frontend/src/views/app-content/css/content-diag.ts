@@ -17,14 +17,14 @@ export const contentDiagCSS: string = `
    unknown = 无 Level 字段的旧数据/兜底，与 muted 同档。 */
 .log-row .log-status.info { color:var(--txt); }
 .log-row .log-status.unknown { color:var(--muted); }
-.log-row .log-op { font-size:var(--fs-xs); padding:0 4px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); flex-shrink:0; }
+.log-row .log-op { font-size:var(--fs-xs); padding:0 var(--sp-1); border-radius:var(--radius-sm); background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); flex-shrink:0; }
 /* 运行时日志 tag 徽标（ADR-289）：Go 捕获层提取的行首方括号前缀，与 .log-op 同范式
    （操作日志出 Operation、运行时日志出 Tag，两者都是「这条日志属于哪个子系统」）。 */
-.log-row .log-tag { font-size:var(--fs-xs); padding:0 4px; margin-right:4px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--muted) 22%, transparent); color:var(--muted); flex-shrink:0; }
+.log-row .log-tag { font-size:var(--fs-xs); padding:0 var(--sp-1); margin-right:4px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--muted) 22%, transparent); color:var(--muted); flex-shrink:0; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
 .log-row .log-time { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
 /* 行内复制按钮：此前无规则 → 每个日志行里都是一个 UA 默认灰底描边按钮，与暗色主题格格不入 */
-.log-row .log-copy { background:transparent; border:none; color:var(--muted); cursor:pointer; padding:0 4px; line-height:1; flex-shrink:0; }
+.log-row .log-copy { background:transparent; border:none; color:var(--muted); cursor:pointer; padding:0 var(--sp-1); line-height:1; flex-shrink:0; }
 .log-row .log-copy:hover { color:var(--accent); }
 
 .conflict-row { padding:3px 16px; display:flex; justify-content:space-between; font-size:var(--fs-base); color:var(--txt); }
@@ -89,13 +89,13 @@ export const contentDiagCSS: string = `
 .diag-stat { padding:var(--sp-3); font-size:var(--fs-base); display:block; text-align:center; }
 .diag-stat-muted { color:var(--muted); }
 .diag-stat-error { color: var(--status-error); }
-.perf-gui-est { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--status-warning) 20%, transparent); color:var(--status-warning); flex-shrink:0; }
+.perf-gui-est { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:color-mix(in srgb, var(--status-warning) 20%, transparent); color:var(--status-warning); flex-shrink:0; }
 /* 类型矩阵（ADR-262 D3）：表格 + 逐模型明细；未采集/阶段不符用 warning 色显式标注 */
 .perf-matrix { width:100%; border-collapse:collapse; margin:6px 0; font-size:var(--fs-xs); color:var(--txt); }
 .perf-matrix th, .perf-matrix td { text-align:left; padding:4px 8px; border-bottom:1px solid var(--bd); }
 .perf-matrix th { color:var(--muted); font-weight:600; }
 .perf-matrix-id { color:var(--muted); font-size:var(--fs-micro); }
-.perf-matrix-tag { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:var(--surf); color:var(--muted); }
+.perf-matrix-tag { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:var(--surf); color:var(--muted); }
 .perf-matrix-warn { color:var(--status-warning); }
 .perf-matrix-models { display:flex; flex-direction:column; gap:2px; padding:2px 0; }
 .perf-matrix-model { display:flex; align-items:center; gap:8px; font-size:var(--fs-xs); }
@@ -136,7 +136,7 @@ export const contentDiagCSS: string = `
 .perf-bar-val.perf-bar-warn { color: var(--status-warning); }
 .perf-bar-val.perf-bar-danger { color: var(--status-error); }
 /* 阶段运行归属徽标（ADR-262 D2）：single-bench / concurrent / scan-bench 共用同一概念，同一类名 */
-.perf-rt-tag { font-size:var(--fs-micro); padding:0 4px; border-radius:var(--radius-xs); background:color-mix(in srgb, var(--muted, #888) 18%, transparent); color:var(--muted); flex-shrink:0; }
+.perf-rt-tag { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:color-mix(in srgb, var(--muted, #888) 18%, transparent); color:var(--muted); flex-shrink:0; }
 /* 阶段样本统计（n / median / p95，ADR-262 D2）：等宽数字避免列跳动 */
 .perf-stats { font-size:var(--fs-micro); color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; flex-shrink:0; }
 .perf-total { padding:6px 2px; font-size:var(--fs-base); font-weight:600; color:var(--txt); border-top:1px solid var(--bd); margin-top:8px; }
@@ -180,7 +180,7 @@ export const contentDiagCSS: string = `
 .perf-sb-diff { font-size:var(--fs-xs); color:var(--muted); word-break:break-all; padding-left:10px; }
 .perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-md); background:var(--surf); padding:6px 10px; margin:4px 0; animation: conflictRowIn .3s ease both; }
 .perf-hist-head { display:block; font-size:var(--fs-sm); color:var(--txt); margin-bottom:2px; }
-.perf-hist-head code { background:var(--bg); padding:0 4px; border-radius:var(--radius-xs); font-size:var(--fs-xs); }
+.perf-hist-head code { background:var(--bg); padding:0 var(--sp-1); border-radius:var(--radius-xs); font-size:var(--fs-xs); }
 .perf-hist-body { display:block; font-size:var(--fs-xs); color:var(--muted); white-space:pre-wrap; }
 
 /* ===== 加载剖析面板 ===== */
@@ -222,7 +222,7 @@ export const contentDiagCSS: string = `
 .diag-dedup-file-dir { display:block;font-size:var(--fs-micro);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .diag-dedup-file-size { font-size:var(--fs-micro);color:var(--muted);flex-shrink:0;margin-right:4px; }
 .diag-dedup-file-date { font-size:var(--fs-micro);color:var(--muted);flex-shrink:0; }
-.diag-dedup-recommend { font-size:var(--fs-micro);padding:0 4px;border-radius:var(--radius-xs);background:color-mix(in srgb, var(--status-success) 12%, transparent);color:var(--status-success); }
+.diag-dedup-recommend { font-size:var(--fs-micro);padding:0 var(--sp-1);border-radius:var(--radius-xs);background:color-mix(in srgb, var(--status-success) 12%, transparent);color:var(--status-success); }
 .diag-dedup-radio { flex-shrink:0;accent-color:var(--accent); }
 .diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast);border-top:1px solid var(--bd); }
 .diag-dedup-keep-all-label { color:var(--muted); }

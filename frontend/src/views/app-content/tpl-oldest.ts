@@ -36,7 +36,7 @@ function buildHeatmapHtml(entries: ModelEntry[]): string {
   const monthCounts = buildMonthHeatmap(entries);
   const maxMonth = Math.max(1, ...monthCounts);
   return (
-    '<div style="display:flex;gap:4px;justify-content:center;align-items:end;padding:4px 0;min-height:48px">' +
+    '<div style="display:flex;gap:4px;justify-content:center;align-items:end;padding:var(--sp-1) 0;min-height:48px">' +
     monthCounts
       .map((c, i) => {
         const pct = c / maxMonth;

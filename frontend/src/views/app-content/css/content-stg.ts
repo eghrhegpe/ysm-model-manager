@@ -61,7 +61,7 @@ export const contentStgCSS: string = `
 .stg-radio-row {
   display: flex;
   gap: 8px;
-  padding: 4px 0;
+  padding: var(--sp-1) 0;
 }
 .stg-label {
   display: flex;

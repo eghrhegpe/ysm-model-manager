@@ -15,7 +15,7 @@ export const previewCSS: string = `
   font-family: var(--font-ui);
   font-size: var(--fs-base);
 }
-.content { padding: 10px; overflow-y: auto; flex: 1; }
+.content { padding: var(--sp-3); overflow-y: auto; flex: 1; }
 @keyframes previewIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
 .content > * { animation: previewIn .2s ease; }
 h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transform: uppercase; letter-spacing: .5px; margin: 0 0 8px; }
@@ -32,7 +32,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .md-label { color: var(--muted); }
 .md-value { color: var(--txt); font-weight: 500; font-family:var(--font-mono); }
 .md-divider { border: none; border-top: 1px solid var(--bd); margin: 8px 0; }
-.err { font-size: var(--fs-sm); color: var(--status-error); padding: 4px 0; }
+.err { font-size: var(--fs-sm); color: var(--status-error); padding: var(--sp-1) 0; }
 .preview-thumb { margin-bottom: 10px; border-radius:var(--radius-lg); overflow: hidden; background: var(--surf); border: 1px solid var(--bd); }
 .preview-thumb img { display: block; width: 100%; height: auto; object-fit: cover; }
 .pv-stat-label { display:inline-block;min-width:80px; }

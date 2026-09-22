@@ -15,7 +15,7 @@ export const contentLayoutCSS: string = `
 
 /* ===== 通用 keyframes（跨域复用，集中在 layout 层，避免子域相互依赖） ===== */
 @keyframes dl-slide-up {
-  from { opacity:0; transform:translateY(8px); max-height:0; padding:0 4px }
+  from { opacity:0; transform:translateY(8px); max-height:0; padding:0 var(--sp-1) }
   to   { opacity:1; transform:translateY(0); max-height:30px; padding:2px 4px }
 }
 #dl-imported-list > div { animation:dl-slide-up .25s ease-out both; }

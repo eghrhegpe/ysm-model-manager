@@ -118,7 +118,7 @@ function renderBlockList(stats: BlockStat[] | undefined): string {
       return `<div class="lt-block-row"><span class="lt-color-swatch" style="background:${color}"></span><span class="lt-block-name">${esc(shortName(s.name))}</span><span class="lt-block-count">${t("preview.blockCount", { n: s.count })}</span></div>`;
     })
     .join("");
-  return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:var(--fs-xs);color:var(--muted)"><span>${t("preview.uniqueBlocks", { n: stats.length })}</span><span>${t("preview.totalBlocks", { n: total.toLocaleString() })}</span></div><div class="lt-material-list">${rows}</div>`;
+  return `<div style="display:flex;justify-content:space-between;padding:var(--sp-1) 0;font-size:var(--fs-xs);color:var(--muted)"><span>${t("preview.uniqueBlocks", { n: stats.length })}</span><span>${t("preview.totalBlocks", { n: total.toLocaleString() })}</span></div><div class="lt-material-list">${rows}</div>`;
 }
 
 /** 投影元数据（ReadLitematicMeta/ReadNbtStructure/ReadSchematic 返回 JSON 的兼容视图） */

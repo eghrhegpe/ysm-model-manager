@@ -20,7 +20,7 @@ export function aboutHTML(): string {
     </div>
     <div class="stg-card-body" style="display:flex;flex-direction:column;gap:8px">
       <button class="btn-base sm stg-btn" id="set-check-update">${UI_ICONS.refresh} ${t("about.checkUpdate")}</button>
-      <div class="setting-row" style="margin:0;padding:4px 0;background:none;border-radius:0">
+      <div class="setting-row" style="margin:0;padding:var(--sp-1) 0;background:none;border-radius:0">
         <span style="font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.clock} ${t("settings.updateCheck.title")}</span>
         <select id="set-update-check" class="stg-select" style="width:auto;font-size:var(--fs-sm);padding:2px 4px">
           <option value="21600000">${t("settings.updateCheck.option6h")}</option>

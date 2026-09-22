@@ -121,7 +121,7 @@ async function promptUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Pro
         if (!raw) return "";
         const box = document.createElement("div");
         box.style.cssText =
-          "border:1px solid var(--bd);border-radius:var(--radius-md);background:var(--bg);padding:10px;font-size:var(--fs-sm);line-height:1.6;white-space:pre-wrap;max-height:40vh;overflow-y:auto;color:var(--txt);margin-top:6px";
+          "border:1px solid var(--bd);border-radius:var(--radius-md);background:var(--bg);padding:var(--sp-3);font-size:var(--fs-sm);line-height:1.6;white-space:pre-wrap;max-height:40vh;overflow-y:auto;color:var(--txt);margin-top:6px";
         box.textContent = raw;
         return box.outerHTML;
       })()

@@ -120,6 +120,12 @@ export class SceneCapabilityRegistry {
     return this.instances.find((c) => c.id === id);
   }
 
+  /** [暗线 C1 收口] 面板渲染侧 id → cap 解析（默认 = id；命名分裂的面板经 cap.panelId 映射，
+   *  如 lighting→light / postproc→postprocessing）。替代 core.ts 手写 SCENE_CAP_FOR_PANEL。 */
+  getCapByPanelId(panelId: string): SceneCapability | undefined {
+    return this.instances.find((c) => (c.panelId ?? c.id) === panelId);
+  }
+
   /** 保存所有能力状态到 localStorage */
   saveAll(): void {
     for (const cap of this.instances) {
@@ -165,8 +171,10 @@ export class SceneCapabilityRegistry {
 export const sceneCapabilityRegistry = new SceneCapabilityRegistry();
 
 // ============ 内置能力注册 ============
-// 注意顺序：菜单渲染按注册顺序列出控件（天→地→水面→环境→雾→阴影→反光→后处理→灯光→渲染模式），
-// 与用户"先环境后灯光"的心智一致。
+// 注册顺序即 createAll 实例化顺序（dispose 反向）。本顺序**不是**菜单渲染顺序：
+//   - 环境面板成员由各自 getEnvPlacement().order 排序（env.ts buildEnvCards）
+//   - 场景组面板由 PREVIEW_MENU_GROUPS + CORE_MENU_ITEMS 顺序决定（menu/engine/defs.ts）
+// 故下方顺序变更仅影响实例化/释放序，不影响 UI 展示序。
 sceneCapabilityRegistry.add("sky", (ctx) => new SkyCapability(ctx));
 sceneCapabilityRegistry.add("ground", (ctx) => new GroundCapability(ctx));
 sceneCapabilityRegistry.add("water", (ctx) => new WaterCapability(ctx));

@@ -3,6 +3,12 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SceneCapabilityRegistry, sceneCapabilityRegistry, isSkyEnvironmentOn } from "./scene-capability-registry.ts";
+import { SkyCapability } from "./sky-capability.ts";
+import { GroundCapability } from "./ground-capability.ts";
+import { WaterCapability } from "./water-capability.ts";
+import { EnvironmentCapability } from "./environment-capability.ts";
+import { FogCapability } from "./fog-capability.ts";
+import { ReflectorCapability } from "./reflector-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { LocaleKey } from "@/core/i18n/t.ts";
@@ -160,5 +166,26 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     registry.createAll({} as unknown as CreateAllCtx);
     expect(registry.getById("sky")).toBe(cap);
     expect(registry.getById("sky")).toBe(cap);
+  });
+
+  it("env 面板入选 cap 全部实现 subscribe（锐评暗线 A 收口：面板订阅不漏掉任何成员）", () => {
+    // 环境面板经 collectEnvEntries（实现 getEnvPlacement 即入选）订阅各 cap 的 subscribe；
+    // 若任一成员缺失 subscribe，面板将靠手动 refresh 兜底而非统一 listenerSet 自 notify。
+    // 本例锁定「入选 env 面板的 6 个 cap 均实现 subscribe」契约，新增 env cap 不得破此对称。
+    // 用原型静态断言（免构造 Three 对象/renderer），直接验证真实实现的方法存在性。
+    const envPanelCaps = [
+      SkyCapability,
+      GroundCapability,
+      WaterCapability,
+      EnvironmentCapability,
+      FogCapability,
+      ReflectorCapability,
+    ];
+    for (const Ctor of envPanelCaps) {
+      expect(
+        typeof (Ctor.prototype as { subscribe?: unknown }).subscribe,
+        `${Ctor.name} 必须实现 subscribe（env 面板自我刷新契约）`,
+      ).toBe("function");
+    }
   });
 });

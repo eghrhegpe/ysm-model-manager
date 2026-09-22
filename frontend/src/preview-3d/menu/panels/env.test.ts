@@ -313,12 +313,35 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     resetEnvState();
     const sky = makeCap("sky", "preview.sky", []);
     const fog = makeCap("fog", "preview.fog", []);
-    const env = makeCap("environment", "preview.environment", []);
+    // [暗线 A 收口] environment cap 实现 subscribe（真实 cap 已实现）；预设写入经 env cap 自 notify
+    // 驱动面板刷新（rebuildEnvSubs 接 menu.refresh），不再由 applyPreset 直接调 menu.refresh。
+    const envListeners = new Set<() => void>();
+    const env = makeCap("environment", "preview.environment", [], {
+      // 真实 cap 经 listenerSet 注册；此处捕获同一通知，验证「预设变更→env cap 自 notify」链路
+      subscribe: (l: () => void) => {
+        envListeners.add(l);
+        return () => {
+          envListeners.delete(l);
+        };
+      },
+      // 模拟真实 cap 的 notify：离散键变更触发监听（此处直接调监听即等价于 menu.refresh 被接）
+      onEnvChanged: () => {
+        for (const l of envListeners) l();
+      },
+    });
     vi.spyOn(sceneCapabilityRegistry, "getAll").mockReturnValue([sky, fog, env]);
     const menu = makeMenu();
     menusToDispose.add(menu);
     const preset = buildEnvSchema(makeCtx(), menu)[0]!;
     expect(preset.control!.options).toHaveLength(5); // studio/sunset/night/forest/sky
+    // [暗线 A 收口] 面板构建即订阅 env cap（rebuildEnvSubs）：断言 env cap 被订阅且监听即接 menu.refresh，
+    // 取代原 applyPreset 直接调 menu.refresh 的接线（真实 cap 经 listenerSet 自 notify 触发此监听）。
+    expect(envListeners.size).toBe(1);
+    expect(menu.refresh).not.toHaveBeenCalled();
+    // 模拟 env cap 离散键 notify → 面板经此监听刷新
+    for (const l of envListeners) l();
+    expect(menu.refresh).toHaveBeenCalledTimes(1);
+
     preset.control!.set!("sunset");
     // ATMOSPHERE_PRESETS.sunset 完整快照落到 envState（不再逐 cap 调 setter）
     expect(envState.skyTimeOfDay).toBe(ATMOSPHERE_PRESETS.sunset.skyTimeOfDay); // 18
@@ -326,7 +349,6 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(envState.fogMode).toBe("linear");
     expect(envState.envPreset).toBe("sunset");
     expect(envState.envIntensity).toBeCloseTo(ATMOSPHERE_PRESETS.sunset.envIntensity! as number, 5);
-    expect(menu.refresh).toHaveBeenCalled(); // 联动后重渲染兄弟控件
   });
 
   it("cap 自报 getMasterNodeId → 一级行带 headerToggle（行尾开关）；子视图剔除同源开关", () => {

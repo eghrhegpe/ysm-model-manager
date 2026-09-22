@@ -91,6 +91,8 @@ const POSTPROC_MSAA_SAMPLES = 4;
 
 export class PostprocessingCapability implements SceneCapability, PostprocessingLike {
   readonly id = "postprocessing";
+  /** [暗线 C1 收口] 面板渲染 id（core.ts dock 绑定）≠ cap id：面板用 postproc / cap 用 postprocessing */
+  readonly panelId = "postproc";
   readonly labelKey = "preview.postprocessing";
   readonly icon = "sparkle";
   readonly descKey = "preview.postprocessingDesc";

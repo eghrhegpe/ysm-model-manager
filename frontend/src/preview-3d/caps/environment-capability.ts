@@ -25,6 +25,8 @@ import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
+// ADR-216：监听器集合工厂提级共享原语（fog/light/ground/water 同源；菜单局部刷新 notify 用）
+import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 // P2 抽取：纯像素工具（drawEnvEquirect / 缩略图 / 直方图）已下沉 env-pixels.ts，
 // 对齐 P1 sun-beams.ts 范式（状态完全内聚、不反向依赖宿主）。
 import { customHdrThumbnail, drawEnvEquirect, luminanceHistogram } from "./env-pixels.ts";
@@ -32,6 +34,9 @@ import { buildEnvironmentNodes } from "./environment-menu.ts";
 import type { EnvSource } from "./environment-migrations.ts";
 // ADR-292 D7：旧存档 envSource 迁移（与 ground-capability 同口径的可测纯函数，零 THREE/DOM 依赖）
 import { normalizeEnvLegacyState } from "./environment-migrations.ts";
+// 暗线 B 收口：scene.environment 槽位所有权纯判定（dispose 安全边界）下沉本文件，
+// 与 env-pixels.ts 同范式——令 ADR-292 所有权契约集中在可单测一处，替代原 4 处手抄排除集。
+import { envOwnsSceneEnvironment, isEnvDisposableSource } from "./environment-ownership.ts";
 import type { EnvPreset, EnvPresetId } from "./environment-state.ts";
 // ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
 import { ENV_PRESETS } from "./environment-state.ts";
@@ -140,6 +145,11 @@ export class EnvironmentCapability implements SceneCapability {
 
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
+  /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify——
+   *  与 fog/light/ground/water 同款 listenerSet，消除环境面板「订阅了不说话的 cap、
+   *  却靠 applyPreset 手动 refresh 兜底」的接线不对称（锐评暗线 A）。连续滑块
+   *  （envIntensity / envResolution）恒不 notify（subscribe 契约，防指针脱靶）。 */
+  private readonly listenerSet = createListenerSet();
   /** [R-1] 有存档恢复过 = 模型默认值让位（对齐 shadow/reflector/fog 同款守卫） */
   private isStateLoaded = false;
   /** 防递归标记：buildEnvironment 内部 setEnvState 触发回调时跳过 */
@@ -181,6 +191,17 @@ export class EnvironmentCapability implements SceneCapability {
         }
         if (changed.has("envIntensity")) {
           applyEnvIntensity([this.scene], envState.envIntensity);
+        }
+        // [ADR-293 收口 2026-10] 离散键 notify（subscribe 契约，对齐 fog/light 同款）：
+        // 来源选择 / 背景开关 / 预设选择是离散控件，面板需实时刷新；连续滑块不 notify。
+        // 复用 env 组现有按键集合——envSource/envUseAsBackground/envPreset 均属离散切换，
+        // envPreset 已含在 structural 内，此处并集覆盖其余离散键。
+        if (
+          changed.has("envSource") ||
+          changed.has("envUseAsBackground") ||
+          changed.has("envPreset")
+        ) {
+          this.notify();
         }
       },
       "environment",
@@ -310,12 +331,14 @@ export class EnvironmentCapability implements SceneCapability {
   /** 把 backgroundSrcTex 或 程序化 CanvasTexture 挂到 scene.background（useAsBackground=true 时）；
    *  useAsBackground=false 或 enabled=false：还原 prevBackground（若 prevBackground 是 Color 对象保留实例，Texture 保留引用，不 dispose prev） */
   private applyBackground(srcTex: THREE.Texture | null): void {
-    // 先清旧的 backgroundSrcTex（不碰 customHdrTex / skySourcedTex / prevBackground——
-    // 前两者各有专属释放路径，sky 纹理归 sky 所有，D-4 守卫）
+    // 先清旧的 backgroundSrcTex：是否可 dispose 由 ownership 纯判定收口
+    // （customHdrTex/skySourcedTex 各有专属释放路径或归他人所有，暗线 B）
     if (
       this.backgroundSrcTex &&
-      this.backgroundSrcTex !== this.customHdrTex &&
-      this.backgroundSrcTex !== this.skySourcedTex
+      isEnvDisposableSource(this.backgroundSrcTex, {
+        customHdrTex: this.customHdrTex,
+        skySourcedTex: this.skySourcedTex,
+      })
     ) {
       this.backgroundSrcTex.dispose();
     }
@@ -386,13 +409,18 @@ export class EnvironmentCapability implements SceneCapability {
       this.scene.environment = this.envTexture;
       this.applyBackground(srcTex);
       // [ADR-292 D7] 所有权守卫：只 dispose **本 cap 自建**的源纹理。
-      // 排除两类外来者——
+      // 排除两类外来者（暗线 B 收口为 isEnvDisposableSource 单一事实源）——
       //   ① customHdrTex：本 cap 的长期缓存（由 disposeCustomCache 释放，此处不得动）
       //   ② envSource="sky" 时来自 SkyCapability 的烘焙纹理：归 sky 所有（其 renderTarget
       //      持有），本 cap 若在此 dispose 会把 sky 的 renderTarget 纹理释放掉，
       //      导致天空 IBL 与后续烘焙出现「纹理已释放」类故障。
-      const isOwnedSrc = srcTex !== this.customHdrTex && srcTex !== this.skySourcedTex;
-      if (isOwnedSrc && this.backgroundSrcTex !== srcTex) {
+      if (
+        isEnvDisposableSource(srcTex, {
+          customHdrTex: this.customHdrTex,
+          skySourcedTex: this.skySourcedTex,
+        }) &&
+        this.backgroundSrcTex !== srcTex
+      ) {
         srcTex.dispose();
       }
     } catch (e) {
@@ -524,14 +552,17 @@ export class EnvironmentCapability implements SceneCapability {
       this.pmrem.dispose();
       this.pmrem = null;
     }
-    // backgroundSrcTex 清理：不等于 customHdrTex / skySourcedTex 才 dispose
+    // backgroundSrcTex 清理：ownership 纯判定收口（暗线 B）。
+    // 不等于 customHdrTex / skySourcedTex / extraExclude 才 dispose
     //（sky 纹理归 sky 所有，D-4 守卫：旧代码只排除 customHdrTex，
     // envSource=sky + useAsBackground 时代背景挂过 sky 图，切通路即误释 sky 的 GPU 资源）
     if (
       this.backgroundSrcTex &&
-      this.backgroundSrcTex !== this.customHdrTex &&
-      this.backgroundSrcTex !== this.skySourcedTex &&
-      this.backgroundSrcTex !== extraExclude
+      isEnvDisposableSource(this.backgroundSrcTex, {
+        customHdrTex: this.customHdrTex,
+        skySourcedTex: this.skySourcedTex,
+        extraExclude,
+      })
     ) {
       this.backgroundSrcTex.dispose();
     }
@@ -553,6 +584,15 @@ export class EnvironmentCapability implements SceneCapability {
 
   isEnabled(): boolean {
     return this.enabled;
+  }
+
+  /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/water）。 */
+  subscribe(listener: () => void): () => void {
+    return this.listenerSet.subscribe(listener);
+  }
+
+  private notify(): void {
+    this.listenerSet.notify();
   }
 
   /**
@@ -803,11 +843,12 @@ export class EnvironmentCapability implements SceneCapability {
     // 死后槽位悬空指向 sky 的 renderTarget 纹理，全靠 registry 反序 dispose 里
     // sky 恰好随后收拾——所有权收口的意义就是路径自洽，不赌 dispose 顺序。
     // sky 侧 dispose 守卫见 slot ≠ owned 即不动，两序皆收敛到 prevEnvironment。
-    const ownedEnv = this.envTexture;
+    // [暗线 B 收口] 占有权判定下沉 envOwnsSceneEnvironment 纯函数（与 3 处 isEnvDisposableSource 同文件）。
     if (
-      this.scene.environment === null ||
-      this.scene.environment === ownedEnv ||
-      (this.scene.environment !== null && this.scene.environment === this.skySourcedTex)
+      envOwnsSceneEnvironment(this.scene.environment, {
+        envTexture: this.envTexture,
+        skySourcedTex: this.skySourcedTex,
+      })
     ) {
       this.scene.environment = this.prevEnvironment;
     }

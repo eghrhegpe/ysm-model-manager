@@ -45,13 +45,16 @@ auto_fields:
     - drawEnvEquirect
     - effectiveParamsOf
     - ENV_PRESETS
+    - EnvBorrowedTextures
     - EnvironmentCapability
     - EnvironmentParams
     - EnvMigrationInput
+    - envOwnsSceneEnvironment
     - EnvPlacement
     - EnvPreset
     - EnvPresetId
     - EnvSectionId
+    - EnvSlotOwnership
     - EnvSource
     - fbm2
     - fcMasterToggleNode
@@ -98,6 +101,7 @@ auto_fields:
     - GroundSurfaceStructuralSpec
     - injectSkySunScalePatch
     - INNER_WALL_OPACITY_FACTOR
+    - isEnvDisposableSource
     - isSkyEnvironmentOn
     - LEGACY_CANVAS_PATTERNS
     - LEGACY_GROUND_MAT_SOURCES

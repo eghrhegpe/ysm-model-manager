@@ -662,6 +662,7 @@ function mountRootMenu(ctx: MountCtx, deps: RootMenuDeps): PreviewMenuHandle {
   const menuCtx: PreviewMenuCtx = {
     selfMode,
     getCap: (id: string) => sceneCapabilityRegistry.getById(id) ?? null,
+    getCapByPanelId: (panelId: string) => sceneCapabilityRegistry.getCapByPanelId(panelId) ?? null,
     getCamBridge: () => camBridge,
     getSiblings: () => (opts.siblings ?? []).filter((p) => p !== session.currentPath),
     getCurrentPath: () => session.currentPath,

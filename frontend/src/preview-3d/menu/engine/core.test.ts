@@ -26,6 +26,13 @@ function switchSelectTo(overlay: HTMLElement, rtype: string): void {
   sel.dispatchEvent(new Event("change"));
 }
 
+/** [暗线 C1 收口] 面板 id → cap id 映射（测试桩，对齐真实 cap 声明的 panelId：
+ *  lighting→light / postproc→postprocessing；同名面板 sky/ground/shadow 等退化为 id）。 */
+function getCapForPanel(panelId: string): string | null {
+  const map: Record<string, string> = { lighting: "light", postproc: "postprocessing" };
+  return map[panelId] ?? (panelId === "light" || panelId === "shadow" || panelId === "postprocessing" ? panelId : null);
+}
+
 /** 读当前 tab select 的值（默认高亮断言用） */
 function switchSelectedTab(overlay: HTMLElement): string {
   const sel = overlay.querySelector('[data-testid="cap-switch-tab"] select') as HTMLSelectElement;
@@ -314,6 +321,9 @@ describe("mountPreviewRootMenu", () => {
       makeCtx({
         getSiblings: () => ["/m/b.ysm"],
         getCap: (id) => (id === "light" || id === "shadow" || id === "postprocessing" ? makeFake(id) : null),
+        // [暗线 C1 收口] 面板 id ↔ cap id 映射经 ctx.getCapByPanelId 自派生（取代 SCENE_CAP_FOR_PANEL）
+        getCapByPanelId: (panelId) =>
+          getCapForPanel(panelId) !== null ? makeFake(getCapForPanel(panelId)!) : null,
       }),
     );
     (overlay.querySelector(`[data-testid="dock-scene"]`) as HTMLElement).click();

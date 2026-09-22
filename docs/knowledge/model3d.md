@@ -235,14 +235,17 @@ auto_fields:
     - ensureViewContainer
     - ENV_PRESETS
     - ENV_STATE_SCHEMA
+    - EnvBorrowedTextures
     - EnvCallback
     - EnvironmentCapability
     - EnvironmentParams
     - EnvMigrationInput
+    - envOwnsSceneEnvironment
     - EnvPlacement
     - EnvPreset
     - EnvPresetId
     - EnvSectionId
+    - EnvSlotOwnership
     - EnvSource
     - envState
     - EnvState
@@ -388,6 +391,7 @@ auto_fields:
     - invalidateMaxFpsCache
     - invalidatePreview
     - isEnvCallbacksSuspended
+    - isEnvDisposableSource
     - isFrustumCullEnabled
     - isIdentityQuat
     - isLikelyTga

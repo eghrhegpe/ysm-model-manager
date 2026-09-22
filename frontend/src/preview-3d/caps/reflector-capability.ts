@@ -10,6 +10,8 @@ import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patch
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { type ModelType, pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
+// ADR-216：监听器集合工厂提级共享原语（fog/light/ground/water/sky/environment 同源；菜单局部刷新 notify 用）
+import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { buildReflectorNodes } from "./reflector-menu.ts";
 import {
   type EnvPlacement,
@@ -44,6 +46,8 @@ export class ReflectorCapability implements SceneCapability {
   private isStateLoaded = false;
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
+  /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/light 同款）。 */
+  private readonly listenerSet = createListenerSet();
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -77,6 +81,9 @@ export class ReflectorCapability implements SceneCapability {
           const mat = this.reflector?.material as THREE.ShaderMaterial | undefined;
           if (mat?.uniforms?.color) mat.uniforms.color.value.setHex(envState.reflectorColor);
         }
+        // [ADR-293 收口 2026-10] 离散键 notify（subscribe 契约，对齐 fog/light）：
+        // 总开关 reflectorEnabled 是离散 toggle，面板需实时刷新；opacity/color 连续滑块不 notify。
+        if (changed.has("reflectorEnabled")) this.notify();
       },
       "reflector",
     );
@@ -183,6 +190,15 @@ export class ReflectorCapability implements SceneCapability {
 
   isEnabled(): boolean {
     return this.enabled;
+  }
+
+  /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/water）。 */
+  subscribe(listener: () => void): () => void {
+    return this.listenerSet.subscribe(listener);
+  }
+
+  private notify(): void {
+    this.listenerSet.notify();
   }
 
   /** 按模型类别套用预设：若用户尚未从 localStorage 恢复过状态（isStateLoaded=false）则套用，避免覆盖用户上次会话配置 */

@@ -23,6 +23,8 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
+// ADR-216：监听器集合工厂提级共享原语（fog/light/ground/water/environment 同源；菜单局部刷新 notify 用）
+import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import {
   type EnvPlacement,
   getTypedCap,
@@ -191,6 +193,8 @@ export class SkyCapability implements SceneCapability {
   private enabled: boolean;
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
+  /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/light 同款）。 */
+  private readonly listenerSet = createListenerSet();
   /** 本实例是否已向 toneRefCount 贡献过引用（apply 幂等标记——防重复 apply 抬高计数；
    *  从未贡献的实例 dispose 不得拆共享 tone 状态，见 dispose/apply 注释） */
   private toneApplied = false;
@@ -317,6 +321,15 @@ export class SkyCapability implements SceneCapability {
         }
         if (changed.has("skyGodRaysEnabled")) {
           this.beams.sync(this.elevation, this.azimuth);
+        }
+        // [ADR-293 收口 2026-10] 离散键 notify（subscribe 契约，对齐 fog/light）：
+        // 环境 IBL 开关 / 昼夜循环 / 光束 为离散控件，面板需实时刷新；连续滑块不 notify。
+        if (
+          changed.has("skyEnvironment") ||
+          changed.has("skyAutoRotate") ||
+          changed.has("skyGodRaysEnabled")
+        ) {
+          this.notify();
         }
         // ⚠️ 刀⑳：skyAutoRotate 原为「只写不读的孤儿」——schema 声明了该键（env-state-schema.ts），
         // 但此处无分支、save/loadState 也不读写它 ⇒ 昼夜循环开关**无法持久化**。
@@ -550,10 +563,21 @@ export class SkyCapability implements SceneCapability {
     this.enabled = v;
     if (v) this.apply();
     else this.detach();
+    // [ADR-293 收口 2026-10] 总开关是私有态（不入 envState），菜单 headerToggle 需主动 notify 刷新。
+    this.notify();
   }
 
   isEnabled(): boolean {
     return this.enabled;
+  }
+
+  /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/water）。 */
+  subscribe(listener: () => void): () => void {
+    return this.listenerSet.subscribe(listener);
+  }
+
+  private notify(): void {
+    this.listenerSet.notify();
   }
 
   setEnvironmentEnabled(v: boolean): void {

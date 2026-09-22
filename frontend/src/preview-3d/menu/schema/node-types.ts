@@ -35,6 +35,9 @@ export interface PreviewMenuCtx {
   /** 统一能力解析点：按 id 取场景能力实例。mount 层透传 sceneCapabilityRegistry.getById，
    *  测试注入 fake——收编原 getSkyCap/getGroundCap/getLightCap 三字段，新增能力零 ctx 改动 */
   getCap: (id: string) => SceneCapability | null;
+  /** [暗线 C1 收口 2026-10] 面板渲染侧 id → cap 解析（默认 = id，命名分裂面板经 cap.panelId）。
+   *  取代 core.ts 手写 SCENE_CAP_FOR_PANEL 平行映射表；测试 mock 可省略（回退 getCap）。 */
+  getCapByPanelId?: (panelId: string) => SceneCapability | null;
   getCamBridge: () => CameraControlBridge;
   getSiblings: () => string[];
   getCurrentPath: () => string;

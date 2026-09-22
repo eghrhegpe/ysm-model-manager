@@ -7,6 +7,7 @@
 // 关闭统一走 SlideMenu header ✕（根级）/ ←（子级），外部点击关闭。
 
 import { t, tOf } from "@/core/i18n/t.ts";
+import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import {
@@ -424,16 +425,18 @@ function dockGroupItemsFor(g: PreviewMenuGroupDef, allItems: PreviewMenuNode[]):
 }
 
 /**
- * 场景组 panelId → capId 解析（lighting→light, shadow→shadow, postproc→postprocessing）。
- *  panel id 与 cap id 命名天然不同（面板用 lighting/postproc，cap 用 light/postprocessing），
- *  需此桥。**是否给某行总开关由 cap.getMasterNodeId() 单一来源决定**——camera 无对应
- *  cap/不声明 getMasterNodeId（视口不可关，关闭=黑屏）故自然无开关，保持「能关才给开关」。
+ * 场景组 panelId → cap 解析（[暗线 C1 收口 2026-10] 经 ctx.getCapByPanelId 自派生，
+ * 取代手写 SCENE_CAP_FOR_PANEL 平行映射表）：面板 id 与 cap id 命名天然不同
+ * （面板 lighting/postproc，cap light/postprocessing），现由 cap 自报 panelId 单一来源。
+ * **是否给某行总开关由 cap.getMasterNodeId() 单一来源决定**——camera 无对应
+ * cap/不声明 getMasterNodeId（视口不可关，关闭=黑屏）故自然无开关，保持「能关才给开关」。
  */
-const SCENE_CAP_FOR_PANEL: Readonly<Record<string, string>> = {
-  lighting: "light",
-  shadow: "shadow",
-  postproc: "postprocessing",
-};
+function resolveCapByPanelId(ctx: PreviewMenuCtx, panelId: string): SceneCapability | null {
+  // getCapByPanelId 优先（命名分裂的 lighting/postproc 走 panelId 映射）；
+  // 退化路径：面板 id 与 cap id 同名的（shadow 等）getById 同样命中，故回退 getCap(panelId)。
+  const cap = ctx.getCapByPanelId?.(panelId) ?? ctx.getCap(panelId);
+  return cap;
+}
 
 /** dock 渲染工厂（原 renderPreviewDock 内联形参类型的命名化，供各路由子函数复用） */
 interface DockRenderFactories {
@@ -486,8 +489,7 @@ function panelNodeToRow(
   makePanelViewFn: DockRenderFactories["makePanelViewFn"],
 ): PreviewMenuNode {
   if (node.kind !== "panel") return node; // 兼容 adapter 注入的非-panel 项
-  const capId = SCENE_CAP_FOR_PANEL[node.id];
-  const cap = capId ? ctx.getCap(capId) : null;
+  const cap = resolveCapByPanelId(ctx, node.id);
   let headerToggle: PreviewMenuNode["headerToggle"];
   if (
     cap?.getMasterNodeId?.() &&

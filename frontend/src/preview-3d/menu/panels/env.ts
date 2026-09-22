@@ -102,7 +102,7 @@ function collectEnvEntries(): EnvEntry[] {
 function applyPreset(
   _ctx: PreviewMenuCtx,
   presetId: Exclude<EnvPresetId, "custom">,
-  menu?: SlideMenuHandle,
+  _menu?: SlideMenuHandle,
 ): void {
   // ADR-196 刀4：氛围预设收口——ATMOSPHERE_PRESETS[presetId] 完整快照经 setEnvState
   // 统一派发到各 cap callback（取代 ENV_PRESET_LINKAGE 硬编码 if(link.sky) 联动）。
@@ -110,8 +110,9 @@ function applyPreset(
   const snapshot = ATMOSPHERE_PRESETS[presetId];
   if (!snapshot) return;
   setEnvState(snapshot, { source: "auto-atmosphere" });
-  // env.ts 行/select 依赖 menu.refresh 重渲染读最新 envState
-  menu?.refresh();
+  // [ADR-293 收口 2026-10] 无需手动 refresh：各环境 cap 现经 subscribe 的 listenerSet 自 notify，
+  // rebuildEnvSubs 已把 cap 变更转发到 menu.refresh()（对齐 light/fog/ground/water）。
+  // 唯独「快捷预设 select 当前选值」由 envCap.getPresetId() 直读，随 cap 通知一并刷新。
 }
 
 /**

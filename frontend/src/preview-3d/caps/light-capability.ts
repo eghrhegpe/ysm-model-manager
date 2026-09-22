@@ -210,6 +210,8 @@ const DIR_HELPER_COLORS = {
 
 export class LightCapability implements SceneCapability {
   readonly id = "light";
+  /** [暗线 C1 收口] 面板渲染 id（core.ts dock 绑定）≠ cap id：面板用 lighting / cap 用 light */
+  readonly panelId = "lighting";
   readonly labelKey = "preview.lighting";
   readonly icon = "hint";
   readonly descKey = "preview.lightingDesc";

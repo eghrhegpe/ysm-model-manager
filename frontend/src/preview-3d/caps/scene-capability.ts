@@ -41,6 +41,13 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.t
  *  scene-capability-registry——组合根 import 全部 cap，cap 反向 import 它即成模块环） */
 export interface SceneCapabilityLookup {
   getById(id: string): SceneCapability | undefined;
+  /**
+   * [暗线 C1 收口 2026-10] panelId → cap 解析（替代 core.ts 手写 SCENE_CAP_FOR_PANEL 平行映射表）。
+   * 面板 id 与 cap id 命名天然不同（面板 lighting/postproc，cap light/postprocessing），
+   * 现由 cap 自行声明 panelId（默认 = id），新增 cap 无需再改 core.ts 映射表。
+   * 仅当存在「启停整个能力」的总开关且面板渲染需挂 headerToggle 时，调用方据此查 cap。
+   */
+  getCapByPanelId?(panelId: string): SceneCapability | undefined;
 }
 
 /**
@@ -96,6 +103,13 @@ export interface EnvPlacement {
 export interface SceneCapability {
   /** 唯一标识（如 "sky" / "ground" / "light" / "fog"） */
   readonly id: string;
+
+  /**
+   * [暗线 C1 收口 2026-10] 面板渲染侧 id（dock 组 rootView / 场景组 headerToggle 绑定用）。
+   * 默认 = id（sky/ground/light 面板与 cap 同名）；命名分裂的面板（lighting→light、
+   * postproc→postprocessing）在此显式声明，消除 core.ts 手写 SCENE_CAP_FOR_PANEL 平行映射表。
+   */
+  readonly panelId?: string;
 
   /** 显示名称 i18n 键 */
   readonly labelKey: LocaleKey;

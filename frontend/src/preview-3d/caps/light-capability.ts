@@ -401,6 +401,13 @@ export class LightCapability implements SceneCapability {
         this.mountLight(which);
         this.mountHelper(which);
       }
+      // [锐评 L-2 收口 2026-09-22] 重建出来的是**裸新灯**（createLight 不碰 castShadow/shadow.*），
+      // 而 ShadowCapability 只订阅 "shadow" 组——类型切换写的全是 light* 键，派发永不到它，
+      // 旧灯身上的阴影配置随 dispose 一起蒸发（ADR-280 前灯对象终身存活掩盖了这条断口）。
+      // 唯一补挂出口 = 请 shadow cap 重跑 apply()：其 disable→restore→现场重快照→施 的
+      // 重入自洽序（shadow-capability.ts apply/applyShadows）保证幂等不递归（纯 Three 写、零 envState）；
+      // loadState 第③步逐盏重建同样经本分支，一并覆盖。
+      getTypedCap(this.caps, "shadow")?.apply();
       // 锥体重建由调用方负责（onEnvChanged 走 CONE_GEO_CHANGES；loadState 走第④步）
       return;
     }

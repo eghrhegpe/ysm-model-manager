@@ -308,7 +308,6 @@
   "diagnostics.perfScopeHint": "测什么：{mode}",
   "diagnostics.perfModeNameSingle": "一个模型的加载耗时",
   "diagnostics.perfModeNameConc": "一批模型的串行 vs 并行",
-  "diagnostics.perfModeNameScan": "整库目录树扫描（不解析模型文件）",
   "diagnostics.perfModeOptSingle": "单模型",
   "diagnostics.perfModeOptConc": "批量并发",
   "diagnostics.perfIterationsHint": "同一目标重复解析几轮后取中位（ADR-278 §2.7：引擎对照已独立成 tab，其重扫次数是另一个框）",

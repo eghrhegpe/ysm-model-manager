@@ -834,3 +834,55 @@ describe("ShadowCapability — envState 默认值完整", () => {
     expect(typeof envState.shadowCameraSize).toBe("number");
   });
 });
+
+// [锐评 L-2 回归 2026-09-22] ADR-280 灯类型切换把灯对象从「终身存活」变成「切换即重建」，
+// 裸新灯不带 castShadow/shadow.*；而本 cap 只订阅 "shadow" 组（light* 键的派发永不到这），
+// 类型切换后该灯不再投影，直到手动改 shadowType/mapSize 才恢复——跨能力断口由
+// light-capability.ts syncLight 重建分支尾的 shadow.apply() 补挂（本测试双真 cap 生产接线实证）。
+describe("ShadowCapability — 灯类型切换跨能力补挂（L-2）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  function wiredPair() {
+    const scene = new THREE.Scene();
+    const renderer = makeFakeRenderer();
+    // 生产 registry 同款**双向**查询器：createAll 给每个 cap 注入同一 getById（可查全部实例），
+    // 故 light→shadow（L-2 补挂 apply）与 shadow→light（collectLights 取灯）两条边都要通。
+    let lightRef: LightCapability | undefined;
+    let shadowRef: ShadowCapability | undefined;
+    const lookup = {
+      getById: (id: string) =>
+        id === "light" ? lightRef : id === "shadow" ? shadowRef : undefined,
+    } as never;
+    lightRef = new LightCapability({ scene, renderer, caps: lookup });
+    shadowRef = new ShadowCapability({ scene, renderer, enabled: true, caps: lookup });
+    lightRef.apply();
+    shadowRef.apply();
+    return { light: lightRef, shadow: shadowRef };
+  }
+  const privKeyLight = (light: LightCapability) =>
+    (light as unknown as { keyLight: THREE.Light }).keyLight;
+
+  it("directional→spot 重建后新灯仍带阴影配置", () => {
+    const { light, shadow } = wiredPair();
+    const before = privKeyLight(light);
+    expect(before.castShadow, "前置：方向灯已被 shadow.apply 挂上投影").toBe(true);
+
+    light.setLightParams("key", { type: "spot" });
+    const after = privKeyLight(light);
+    expect(after).not.toBe(before); // 确经重建换体
+    expect(after.castShadow, "重建出的裸新灯必须由 syncLight 尾的 shadow.apply() 补挂").toBe(true);
+    // spot 走 applySpotShadow（visible 门槛）：mapSize 亦应随 envState 落上新灯
+    expect((after as THREE.SpotLight).shadow.mapSize.x).toBe(envState.shadowMapSize);
+    light.dispose();
+    shadow.dispose();
+  });
+
+  it("spot→directional 切回同样补挂（重建分支同路）", () => {
+    const { light, shadow } = wiredPair();
+    light.setLightParams("key", { type: "spot" });
+    light.setLightParams("key", { type: "directional" });
+    expect(privKeyLight(light).castShadow).toBe(true);
+    light.dispose();
+    shadow.dispose();
+  });
+});

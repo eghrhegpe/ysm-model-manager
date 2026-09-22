@@ -12,6 +12,7 @@ import { THEME_DARK } from "@/theme-core";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -168,8 +169,53 @@ function emitRelinkToast(total: number, failed: number): void {
 }
 
 /**
- * 重链接所有整合包资源：busy 守卫 → LoadAppConfig → 空 mcRoot 提示 → 遍历实例
- * RelinkAllInstanceResources → 汇总 toast。relink 单实例的 error 第三参直传约定见 relinkOneInstance。
+ * 重链接核心（不含 busy 守卫）：LoadAppConfig → 空 mcRoot 提示 → 遍历实例
+ * RelinkAllInstanceResources（逐实例增量进度 toast，ADR-296 D5）→ 汇总 toast。
+ * 拆出 Inner 而非加 skipBusyGuard 参数（最小改动：公共出口签名不变，锁语义集中一处）——
+ * 链接模式 change 回调自持 busy 锁后若调带守卫的 relinkAllInstances 会因已置忙直接 return。
+ * relink 单实例的 error 第三参直传约定见 relinkOneInstance。
+ */
+async function relinkAllInstancesInner(): Promise<void> {
+  let failed = 0;
+  const { LoadAppConfig, ListVersionInstances, RelinkAllInstanceResources } = await backendGetApp();
+  const cfg2 = await LoadAppConfig();
+  const mcRoot = cfg2.mcRoot || "";
+  if (!mcRoot) {
+    bus.emit("toast:show", {
+      msg: t("settings.setGameRootFirst"),
+      duration: TOAST_MS.info,
+      type: "warn",
+    });
+    return;
+  }
+  const instances = ((await ListVersionInstances(mcRoot)) || []).filter(
+    (ins) => ins.Exists && ins.Name,
+  );
+  let total = 0;
+  const n = instances.length;
+  let done = 0;
+  for (const ins of instances) {
+    const res = await relinkOneInstance(ins, RelinkAllInstanceResources);
+    total += res.count;
+    failed += res.failed;
+    // ADR-296 D5：增量覆盖式进度（末个实例让位给紧随其后的终态汇总 toast，
+    // 不闪重复条；单实例时天然跳过中间进度）
+    done += 1;
+    if (done < n) {
+      bus.emit("toast:show", {
+        msg: t("settings.relinkProgress", { done, total: n }),
+        duration: Math.round(TOAST_MS.info / 1.5),
+        type: "info",
+      });
+    }
+  }
+  bus.emit("stats:refresh");
+  emitRelinkToast(total, failed);
+}
+
+/**
+ * 重链接所有整合包（公共出口，busy 守卫 + 外层错误 toast）：
+ * isBusy → setBusy → relinkAllInstancesInner → finally 释放。供「重新链接」按钮调用。
  */
 async function relinkAllInstances(
   isBusyLocal: typeof isBusy,
@@ -177,31 +223,8 @@ async function relinkAllInstances(
 ): Promise<void> {
   if (isBusyLocal()) return;
   setBusyLocal(true);
-  let failed = 0;
   try {
-    const { LoadAppConfig, ListVersionInstances, RelinkAllInstanceResources } =
-      await backendGetApp();
-    const cfg2 = await LoadAppConfig();
-    const mcRoot = cfg2.mcRoot || "";
-    if (!mcRoot) {
-      bus.emit("toast:show", {
-        msg: t("settings.setGameRootFirst"),
-        duration: TOAST_MS.info,
-        type: "warn",
-      });
-      return;
-    }
-    const instances = ((await ListVersionInstances(mcRoot)) || []).filter(
-      (ins) => ins.Exists && ins.Name,
-    );
-    let total = 0;
-    for (const ins of instances) {
-      const res = await relinkOneInstance(ins, RelinkAllInstanceResources);
-      total += res.count;
-      failed += res.failed;
-    }
-    bus.emit("stats:refresh");
-    emitRelinkToast(total, failed);
+    await relinkAllInstancesInner();
   } catch (e) {
     bus.emit("toast:show", {
       msg: `❌ ${friendlyError(e)}`,
@@ -226,10 +249,47 @@ function stgBindLinkMode(
   const linkSelect = root.getElementById("set-link-mode") as HTMLSelectElement | null;
   if (linkSelect) {
     linkSelect.value = linkMode;
+    // 上一次生效值：change 事件触发时 select 已指向新值，取消回退 / busy 重入判定
+    // 均以此为准；仅在保存成功后推进（闭包变量，勿用 cfg 初值快照当旧值）
+    let curVal = linkMode;
     linkSelect.addEventListener("change", async () => {
+      // ADR-296 D5：change 全程 busy 守卫（与 relink 按钮共锁）；busy 期间忽略，
+      // 不弹确认框——重入时 select 回滚留给下一次真实切换
+      if (isBusyLocal()) return;
+      setBusyLocal(true);
+      const oldVal = curVal;
       const val = linkSelect.value;
       applyHintVisibility(root, "lm-hint", val, LINK_MODE_KEYS);
       try {
+        // 确认前先数实例（与 relinkAllInstancesInner 的 Exists && Name 同口径），
+        // 供文案展示工作量；mcRoot 为空跳过计数（n=0，relink 段随后自会提示
+        // 「请先设置游戏根目录」）；计数失败不拦确认框，退化为 n=0。
+        let n = 0;
+        try {
+          const { LoadAppConfig, ListVersionInstances } = await backendGetApp();
+          const cfg2 = await LoadAppConfig();
+          const mcRoot = cfg2.mcRoot || "";
+          if (mcRoot) {
+            n = ((await ListVersionInstances(mcRoot)) || []).filter(
+              (ins) => ins.Exists && ins.Name,
+            ).length;
+          }
+        } catch {
+          /* 计数失败静默：n=0 仍可读，用户照样能决策 */
+        }
+        const confirmed = await modalConfirm({
+          title: t("settings.linkModeConfirmTitle"),
+          titleIcon: "warning",
+          message: t("settings.linkModeConfirmMessage", { val, n }),
+          danger: true,
+        });
+        if (!confirmed) {
+          // 取消：回退 select 与 hint，不发任何 RPC、不弹模式切换 toast（静默，
+          // 比 instance-ops 样板少一条 cancelled toast 噪音）
+          linkSelect.value = oldVal;
+          applyHintVisibility(root, "lm-hint", oldVal, LINK_MODE_KEYS);
+          return;
+        }
         const { SaveAppConfig, SetLinkMode } = await backendGetApp();
         const theme = safeGet("theme") || THEME_DARK;
         await SaveAppConfig(
@@ -241,14 +301,19 @@ function stgBindLinkMode(
         );
         await SetLinkMode(val);
         cfgLocal.linkMode = val;
+        curVal = val;
         bus.emit("toast:show", {
           msg: t("settings.linkModeSwitched", { val }),
           duration: TOAST_MS.success,
           type: "success",
         });
-        await relinkAllInstances(isBusyLocal, setBusyLocal);
+        // 本回调已持 busy 锁，调无守卫的 Inner——若走带守卫的 relinkAllInstances
+        // 会因判忙直接 return；锁统一由本回调 finally 释放，覆盖整个 relink 段
+        await relinkAllInstancesInner();
       } catch (e) {
         toastErrorLocal(e);
+      } finally {
+        setBusyLocal(false);
       }
     });
   }

@@ -3,7 +3,8 @@
 //  - 初始化：版本号填充 / 高级面板渲染 / 链接提示
 //  - 路径卡片点击 → SelectDirectory + SaveAppConfig + toast
 //  - 游戏目录自动检测：单路径 / 无路径 / 多路径选择器（选择/取消）
-//  - 链接模式切换 → SetLinkMode + 自动 relink；relink 无 mcRoot warn / 有实例成功
+//  - 链接模式切换 → 确认框（取消静默回退）+ SetLinkMode + 自动 relink（逐实例进度）；
+//    relink 无 mcRoot warn / 有实例成功
 //  - 高级面板展开、主题卡片点击、镜像源切换、发布页跳转
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
@@ -265,20 +266,90 @@ describe("initSettings — 游戏目录检测", () => {
 });
 
 describe("initSettings — 链接模式与重链接", () => {
-  it("链接模式 change → SaveAppConfig + SetLinkMode + toast + 自动 relink", async () => {
+  it("链接模式 change → 确认框（含新值与实例数）→ SaveAppConfig + SetLinkMode + toast + 自动 relink", async () => {
     const setLinkFn = vi.fn();
-    mockApp({ SetLinkMode: setLinkFn });
+    const saveFn = vi.fn();
+    const relinkFn = vi.fn(() => 3);
+    mockApp({
+      SetLinkMode: setLinkFn,
+      SaveAppConfig: saveFn,
+      RelinkAllInstanceResources: relinkFn,
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        resourcepackRoot: "",
+        mcRoot: "/mc",
+        linkMode: "copy",
+      })),
+      ListVersionInstances: vi.fn(() => [
+        { Name: "insA", Exists: true },
+        { Name: "insB", Exists: false },
+      ]),
+    });
     const { root } = makeRoot();
     await initSettings(root);
     const sel = root.getElementById("set-link-mode") as HTMLSelectElement;
     sel.value = "hardlink";
     sel.dispatchEvent(new Event("change"));
+    // ADR-296 D5：发任何 RPC 前先弹确认框；文案含新模式与计数（insB 无 Exists 被过滤 → 1 个）
+    await waitFor(() => document.querySelector("[data-testid='dlg-ok']"));
+    const msg = document.querySelector(".dlg-msg") as HTMLElement;
+    expect(msg.textContent).toContain("hardlink");
+    expect(msg.textContent).toContain("1 个");
+    expect(setLinkFn).not.toHaveBeenCalled();
+    (document.querySelector("[data-testid='dlg-ok']") as HTMLElement).click();
     await waitFor(() => setLinkFn.mock.calls.length > 0);
     expect(setLinkFn).toHaveBeenCalledWith("hardlink");
+    expect(saveFn).toHaveBeenCalled();
     expect(busEmit).toHaveBeenCalledWith(
       "toast:show",
       expect.objectContaining({ msg: expect.stringContaining("hardlink") }),
     );
+    // 确认后自动 relink（change 自持 busy 锁调 Inner）
+    await waitFor(() => relinkFn.mock.calls.length > 0);
+    expect(relinkFn).toHaveBeenCalledWith("insA");
+    await waitFor(() =>
+      busEmit.mock.calls.some(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("3 个文件"),
+      ),
+    );
+  });
+
+  it("链接模式确认框取消 → select 回退旧值、不发 RPC、不弹切换 toast（ADR-296 D5）", async () => {
+    const setLinkFn = vi.fn();
+    const saveFn = vi.fn();
+    const relinkFn = vi.fn(() => 3);
+    mockApp({
+      SetLinkMode: setLinkFn,
+      SaveAppConfig: saveFn,
+      RelinkAllInstanceResources: relinkFn,
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        resourcepackRoot: "",
+        mcRoot: "/mc",
+        linkMode: "copy",
+      })),
+      ListVersionInstances: vi.fn(() => [{ Name: "insA", Exists: true }]),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    const sel = root.getElementById("set-link-mode") as HTMLSelectElement;
+    sel.value = "hardlink";
+    sel.dispatchEvent(new Event("change"));
+    await waitFor(() => document.querySelector("[data-testid='dlg-cancel']"));
+    (document.querySelector("[data-testid='dlg-cancel']") as HTMLElement).click();
+    // modalConfirm 结算在退场动画定时器之后（closeDlg），回退是异步的 → waitFor
+    await waitFor(() => sel.value === "copy", 1000);
+    expect(sel.value).toBe("copy"); // 回退旧值
+    expect((root.getElementById("lm-hint-copy") as HTMLElement).style.display).toBe("block");
+    expect((root.getElementById("lm-hint-hardlink") as HTMLElement).style.display).toBe("none");
+    expect(saveFn).not.toHaveBeenCalled();
+    expect(setLinkFn).not.toHaveBeenCalled();
+    expect(relinkFn).not.toHaveBeenCalled();
+    expect(
+      busEmit.mock.calls.some(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("链接模式已切换"),
+      ),
+    ).toBe(false);
   });
 
   it("relink 无 mcRoot → warn toast", async () => {
@@ -312,7 +383,48 @@ describe("initSettings — 链接模式与重链接", () => {
       "toast:show",
       expect.objectContaining({ msg: expect.stringContaining("5 个文件") }),
     );
+    // 单实例：跳过中间进度 toast（末个让位给终态汇总）
+    expect(
+      busEmit.mock.calls.some(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("重新链接中"),
+      ),
+    ).toBe(false);
   });
+
+  it("relink 多实例 → 逐实例增量进度 toast（末个不重发，ADR-296 D5）", async () => {
+    const relinkFn = vi.fn(() => 2);
+    mockApp({
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        resourcepackRoot: "",
+        mcRoot: "/mc",
+        linkMode: "copy",
+      })),
+      ListVersionInstances: vi.fn(() => [
+        { Name: "insA", Exists: true },
+        { Name: "insB", Exists: true },
+      ]),
+      RelinkAllInstanceResources: relinkFn,
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-relink") as HTMLElement).click();
+    await waitFor(() => relinkFn.mock.calls.length >= 2);
+    expect(busEmit).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ msg: t("settings.relinkProgress", { done: 1, total: 2 }) }),
+    );
+    expect(
+      busEmit.mock.calls.filter(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("重新链接中"),
+      ),
+    ).toHaveLength(1);
+    expect(busEmit).toHaveBeenCalledWith(
+      "toast:show",
+      expect.objectContaining({ msg: expect.stringContaining("4 个文件") }),
+    );
+  });
+
 });
 
 describe("initSettings — 高级面板/主题/镜像/发布页", () => {
@@ -682,6 +794,9 @@ describe("initSettings — 错误路径与降级", () => {
     const sel = root.getElementById("set-link-mode") as HTMLSelectElement;
     sel.value = "hardlink";
     sel.dispatchEvent(new Event("change"));
+    // ADR-296 D5：先确认才发 RPC → 点 dlg-ok 放行到 SetLinkMode 失败路径
+    await waitFor(() => document.querySelector("[data-testid='dlg-ok']"));
+    (document.querySelector("[data-testid='dlg-ok']") as HTMLElement).click();
     await waitFor(() =>
       busEmit.mock.calls.some(
         (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("link boom"),

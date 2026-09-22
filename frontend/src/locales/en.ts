@@ -179,7 +179,11 @@ export const en: Record<string, string> = {
   "settings.relinkNone": "No files need relinking",
   "settings.relinkDone": "Relinked {total} files",
   "settings.relinkDonePartial": "Relinked {total} files ({failed} failed)",
+  "settings.relinkProgress": "Relinking {done}/{total}…",
   "settings.linkModeSwitched": "Link mode switched to: {val}",
+  "settings.linkModeConfirmTitle": "Switch link mode",
+  "settings.linkModeConfirmMessage":
+    "This will relink {n} modpack(s) in {val} mode. It may take a while. Continue?",
   "settings.keymap.pressKey": "Press key…",
   "settings.keymap.conflict": '{key} is already used by "{label}"',
   "settings.keymap.bound": "{label} → {key}",

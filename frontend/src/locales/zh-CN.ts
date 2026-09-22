@@ -184,7 +184,11 @@ export const zhCN = {
   "settings.relinkNone": "没有需要重新链接的文件",
   "settings.relinkDone": "已重新链接 {total} 个文件",
   "settings.relinkDonePartial": "已重新链接 {total} 个文件（{failed} 个失败）",
+  "settings.relinkProgress": "重新链接中 {done}/{total}…",
   "settings.linkModeSwitched": "链接模式已切换至: {val}",
+  "settings.linkModeConfirmTitle": "切换链接模式",
+  "settings.linkModeConfirmMessage":
+    "将把 {n} 个整合包重新链接为 {val} 模式，可能需要一些时间。继续？",
   "settings.keymap.pressKey": "按键…",
   "settings.keymap.conflict": "{key} 已被「{label}」占用",
   "settings.keymap.bound": "{label} → {key}",

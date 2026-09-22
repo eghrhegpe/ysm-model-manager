@@ -50,7 +50,7 @@ const vbuCss = `
 .slide-item.vbu-bone-row { display:flex; align-items:center; gap:6px; cursor:pointer; min-height:28px; border-radius:var(--radius-sm); }
 .vbu-cb { flex-shrink:0; cursor:pointer; accent-color:var(--accent,#7c83ff); }
 .slide-label.vbu-bone-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.vbu-detail { padding:6px 10px; background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); margin:2px 4px 4px; font-size:var(--fs-xs); color:rgba(255,255,255,0.7); border-left:2px solid var(--accent,#7c83ff); }
+.vbu-detail { padding:var(--sp-vh-btn); background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); margin:2px 4px 4px; font-size:var(--fs-xs); color:rgba(255,255,255,0.7); border-left:2px solid var(--accent,#7c83ff); }
 .vbu-field { margin-bottom:3px; }
 `;
 function ensureVbuStyles(): void {

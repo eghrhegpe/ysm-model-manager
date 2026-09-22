@@ -138,7 +138,7 @@ export function initWorkshopTabs(
           // 加载失败则提示「加载失败」（ADR-082 续：区分失败与真无数据，不再空白无感知）
           const emptyText = data.failed ? t("common.loadFailed") : t("common.empty");
           tabsEl.innerHTML =
-            '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">' +
+            '<span style="padding:var(--btn-padding-filter-lg);font-size:var(--fs-sm);color:var(--muted)">' +
             emptyText +
             " " +
             UI_ICONS.upload +

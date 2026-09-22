@@ -23,16 +23,16 @@ ${metaTagCSS}
 .ins-model-list .row .link-icon { font-size:var(--fs-sm);margin-right:4px;flex-shrink:0; }
 .ins-model-list .row .sz { font-size:var(--fs-base);color:var(--muted); }
 
-.repo-topbar { display:flex;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--bd);flex-wrap:nowrap;overflow-x:auto; }
+.repo-topbar { display:flex;align-items:center;gap:4px;padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd);flex-wrap:nowrap;overflow-x:auto; }
 .repo-title { font-size:var(--fs-md);font-weight:600;flex-shrink:0; }
-.repo-bar { display:flex;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--bd); }
+.repo-bar { display:flex;align-items:center;gap:4px;padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd); }
 .repo-bar:empty { padding:0;border-bottom:none; }
 .repo-bar-spacer { flex:1; }
 .repo-bar-btn { padding:var(--pad-btn-tool) 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-tool);transition:var(--tr-fast); } /* 工具栏命令按钮 = txt（对齐 .btn-base 正典） */
 .repo-bar-btn:hover { background:var(--hover); }
 .repo-spacer { flex:1; }
-.repo-btn { font-size:var(--fs-xs);padding:2px 8px; }
-.repo-srch { width:160px;padding:4px 8px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0;transition:var(--tr-fast); }
+.repo-btn { font-size:var(--fs-xs);padding:var(--btn-padding-tool-lg); }
+.repo-srch { width:160px;padding:var(--btn-padding-md);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0;transition:var(--tr-fast); }
 .repo-srch:focus { border-color:var(--accent); }
 .repo-sort { padding:4px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);cursor:pointer;margin-left:auto;transition:var(--tr-fast); }
 .repo-sort:hover { border-color:var(--accent);background:var(--hover); }

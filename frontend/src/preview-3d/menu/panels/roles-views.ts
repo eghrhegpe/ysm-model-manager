@@ -49,7 +49,7 @@ function ensureRolesStyles(): void {
   cursor: pointer;
 }
 .fr-role-row { padding: 6px 8px; font-size:var(--fs-md); }
-.fr-comp-row { padding: 6px 10px; font-size:var(--fs-base); }
+.fr-comp-row { padding:var(--sp-vh-btn); font-size:var(--fs-base); }
 .fr-row-active { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .fr-empty-note { padding: 8px 10px; color: rgba(255,255,255,0.5); font-size:var(--fs-base); }
 ${MENU_ERROR_NOTE_CSS}

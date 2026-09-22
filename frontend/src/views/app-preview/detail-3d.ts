@@ -320,7 +320,7 @@ export async function showStagePreview(
                         : c.kind === "audio"
                           ? "var(--accent)"
                           : "var(--muted)";
-                    return `<div class="stage-item" data-path="${esc(c.path)}" style="padding:3px 6px;cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-base);display:flex;align-items:center;gap:6px;border-left:3px solid ${color}">
+                    return `<div class="stage-item" data-path="${esc(c.path)}" style="padding:var(--btn-padding-sm);cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-base);display:flex;align-items:center;gap:6px;border-left:3px solid ${color}">
                       <span>${icon}</span>
                       <span>${esc(name)}</span>
                       <span style="color:var(--muted);font-size:var(--fs-xs);margin-left:auto">${c.kind}</span>

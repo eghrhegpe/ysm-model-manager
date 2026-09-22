@@ -10,11 +10,11 @@ export const contentGhCSS: string = `
 #gh-results { flex:1;display:flex;flex-direction:column;overflow:hidden; }
 #gh-results-body { flex:1;overflow-y:auto;padding:0 12px 8px;will-change:scroll-position; }
 .gh-search-wrap { padding:2px 0 6px; }
-.gh-search { width:160px;padding:4px 8px;border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0; }
+.gh-search { width:160px;padding:var(--btn-padding-md);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0; }
 .gh-search:focus { border-color:var(--accent); }
 .gh-loading-placeholder { padding:var(--sp-5);text-align:center;color:var(--muted);font-size:var(--fs-sm); }
 .gh-initial-hint { color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center; }
-.gh-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px;will-change:scroll-position; }
+.gh-grid { flex:1; overflow-y:auto; padding:var(--btn-padding-md); display:flex; flex-direction:column; gap:4px;will-change:scroll-position; }
 .gh-card { display:flex; align-items:center; gap:var(--card-gap,8px); padding:var(--card-padding,7px 10px); border-radius:var(--radius-lg); border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:var(--tr-normal), box-shadow var(--tr-normal); box-shadow:var(--card-shadow, none); transform:translateZ(0); animation:fadeSlideUp var(--tr-enter) both; }
 .gh-card:hover { border-color:var(--accent); background:var(--hover); box-shadow:var(--card-shadow-hover, none); transform:translateY(-1px); }
 .gh-card.active { border-color:var(--accent); background:var(--accent); color:var(--bg); box-shadow:var(--card-shadow-hover, none); }
@@ -56,7 +56,7 @@ export const contentGhCSS: string = `
 
 /* 二级菜单 */
 .gh-popup { position:fixed; z-index:var(--z-popover); background:var(--surf,#2a2a3c); border:1px solid var(--bd,#444); border-radius:var(--radius-lg); padding:var(--sp-1); box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:140px; }
-.gh-popup-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:var(--radius-md); cursor:pointer; transition:background var(--tr-fast); }
+.gh-popup-item { display:flex; align-items:center; gap:8px; padding:var(--sp-vh-btn); border-radius:var(--radius-md); cursor:pointer; transition:background var(--tr-fast); }
 .gh-popup-item:hover { background:var(--hover,#ffffff15); }
 .gh-popup-icon { font-size:var(--fs-lg); width:20px; text-align:center; flex-shrink:0; }
 .gh-popup-label { font-size:var(--fs-base); color:var(--txt,#cdd6f4); }
@@ -67,7 +67,7 @@ export const contentGhCSS: string = `
 .gh-left-head-spacer { flex:1; }
 .gh-left-foot { padding:4px 12px 8px;font-size:var(--fs-micro);color:var(--muted); }
 .gh-creators-list { flex:1; overflow-y:auto; padding:6px 12px; display:flex; flex-direction:column; gap:4px; }
-.gh-creator-card { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:var(--radius-md); border:1px solid var(--bd); background:var(--surf); cursor:pointer; transition:var(--tr-fast); }
+.gh-creator-card { display:flex; align-items:center; gap:8px; padding:var(--sp-vh-btn); border-radius:var(--radius-md); border:1px solid var(--bd); background:var(--surf); cursor:pointer; transition:var(--tr-fast); }
 .gh-creator-card:hover { border-color:var(--accent); background:var(--hover); }
 .gh-creator-icon { font-size:var(--fs-lg); width:22px; text-align:center; flex-shrink:0; }
 .gh-creator-body { flex:1; min-width:0; }
@@ -77,7 +77,7 @@ export const contentGhCSS: string = `
 
 /* ===== 模型列表行 ===== */
 .gh-empty { padding:var(--sp-3); text-align:center; color:var(--muted); font-size:var(--fs-sm); }
-.gh-row { display: grid; grid-template-columns: 1fr max-content max-content; gap: 8px; align-items: center; padding: 6px 10px; border-radius: var(--radius-md); margin-bottom: 2px; border-left: 3px solid transparent; font-size: var(--fs-sm); transition: background var(--tr-fast); }
+.gh-row { display: grid; grid-template-columns: 1fr max-content max-content; gap: 8px; align-items: center; padding:var(--sp-vh-btn); border-radius: var(--radius-md); margin-bottom: 2px; border-left: 3px solid transparent; font-size: var(--fs-sm); transition: background var(--tr-fast); }
 .gh-row:hover { background: var(--hover); }
 .gh-row-exists { border-left-color: var(--status-success); background: transparent; }
 .gh-row-exists .gh-name { color: var(--muted); }
@@ -91,7 +91,7 @@ export const contentGhCSS: string = `
 .gh-dl-btn:hover { background: var(--accent); color: var(--bg); }
 .gh-dl-btn:disabled { border-color: var(--bd); color: var(--muted); }
 .gh-cb { accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
-.gh-badge { padding:2px 8px; border-radius:var(--radius-sm); font-size:var(--fs-sm); color:var(--status-success); flex-shrink:0; }
+.gh-badge { padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); font-size:var(--fs-sm); color:var(--status-success); flex-shrink:0; }
 .gh-size { font-size:var(--fs-sm); color:var(--muted); }
 .gh-meta { display:flex; align-items:center; gap:6px; }
 .gh-actions { display:flex; align-items:center; justify-content:flex-end; }
@@ -130,8 +130,8 @@ export const contentGhCSS: string = `
 .gh-cr-input-desc { color:var(--muted); font-size:var(--fs-xs); }
 .gh-cr-input-type { flex:1; min-width:30px; padding:2px 4px; border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--accent); font-size:var(--fs-xs); text-align:center; }
 .gh-cr-del { padding:1px 4px; border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--status-error); cursor:pointer; font-size:var(--fs-sm); }
-.gh-cr-add-area { padding:4px 12px; }
-.gh-cr-add { padding:2px 8px; border-radius:var(--radius-sm); border:1px dashed var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:var(--fs-sm); width:100%; }
+.gh-cr-add-area { padding:var(--btn-padding-filter-lg); }
+.gh-cr-add { padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px dashed var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:var(--fs-sm); width:100%; }
 
 .gh-empty-site { flex:1; overflow-y:auto; padding:var(--sp-3); color:var(--muted); font-size:var(--fs-sm); }
 .gh-site-link { color:var(--accent); }
@@ -140,7 +140,7 @@ export const contentGhCSS: string = `
 .gh-error-page { padding:var(--sp-3); text-align:center; }
 .gh-error-msg { color:var(--txt); font-size:var(--fs-sm); line-height:1.6; } /* 错误正文须可读,muted 属误用（2026-09 层级口径） */
 .gh-error-hint { font-size:var(--fs-xs); opacity:.6; }
-.gh-back-btn { padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-sm); }
+.gh-back-btn { padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-sm); }
 
 /* ===== 下载队列 ===== */
 .gh-queue-icon { color:var(--accent); }

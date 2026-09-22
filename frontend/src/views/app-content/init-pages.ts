@@ -291,7 +291,7 @@ async function initDedupTab(
   let dedupType = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
   container.innerHTML =
     '<div style="display:flex;flex-direction:column;height:100%">' +
-    '<div style="display:flex;align-items:center;gap:8px;padding:4px 12px;border-bottom:1px solid var(--bd)">' +
+    '<div style="display:flex;align-items:center;gap:8px;padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd)">' +
     '<span style="flex:1;font-size:var(--fs-sm);color:var(--muted)">' +
     UI_ICONS.pin +
     " " +
@@ -303,7 +303,7 @@ async function initDedupTab(
     t("dedup.startDedup") +
     "</button>" +
     "</div>" +
-    '<div id="dedup-config-panel" style="padding:4px 12px;border-bottom:1px solid var(--bd)"></div>' +
+    '<div id="dedup-config-panel" style="padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd)"></div>' +
     '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>' +
     "</div>";
   const panel = container.querySelector("#dedup-config-panel") as HTMLElement | null;

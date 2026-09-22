@@ -91,7 +91,7 @@ function renderStgStorageCard(isWebViewer: boolean): string {
         UI_ICONS.folder,
         t("settings.webRepo.title"),
         `<div class="stg-card-desc">${t("settings.webRepo.desc")}</div>
-     <button class="btn-base sm" id="web-repo-auth-btn" style="margin-top:8px;font-size:var(--fs-sm);padding:4px 12px">${UI_ICONS.folderOpen} ${t("settings.webRepo.authorize")}</button>
+     <button class="btn-base sm" id="web-repo-auth-btn" style="margin-top:8px;font-size:var(--fs-sm);padding:var(--btn-padding-filter-lg)">${UI_ICONS.folderOpen} ${t("settings.webRepo.authorize")}</button>
      <div id="web-repo-auth-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.5"></div>`,
         {
           header: { spaceBetween: false, titleSize: "base" },
@@ -111,7 +111,7 @@ function renderStgStorageCard(isWebViewer: boolean): string {
      </div>`,
         {
           header: {
-            actions: `<button class="btn-base sm" id="set-advanced-toggle" style="font-size:var(--fs-tiny);padding:2px 8px">${UI_ICONS.folderOpen} ${t("settings.storage.expand")} ▸</button>`,
+            actions: `<button class="btn-base sm" id="set-advanced-toggle" style="font-size:var(--fs-tiny);padding:var(--btn-padding-tool-lg)">${UI_ICONS.folderOpen} ${t("settings.storage.expand")} ▸</button>`,
           },
           cardId: "stg-files-card",
           marginTop: 8,

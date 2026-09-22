@@ -61,7 +61,7 @@ ${FADE_SLIDE_LEFT}
 .placeholder-box .big { font-size:var(--fs-xl); }
 /* 大面积留白变体（工坊站点空态等整页空场用；行内空态不加） */
 .placeholder-box--roomy { padding:48px 20px; }
-.ptag { font-size:var(--fs-xs); background:var(--tag-amber-bg); color:var(--tag-amber); padding:2px 8px; border-radius:var(--radius-sm); }
+.ptag { font-size:var(--fs-xs); background:var(--tag-amber-bg); color:var(--tag-amber); padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); }
 
 .repo-layout-wrap { flex:1; }
 
@@ -165,7 +165,7 @@ ${noAnimationsCSS}
 .rec-card .name { font-size:var(--fs-base); font-weight:600; color:var(--txt); font-family:var(--font-display); margin-bottom:2px; }
 .rec-card .hint { font-size:var(--fs-xs); color:var(--muted); margin-top:4px; }
 .rec-card .actions { display:flex; gap:4px; margin-top:6px; }
-.rec-card .actions button { font-size:var(--fs-xs); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; transition:var(--tr-fast); } /* 主操作按钮 = txt（hover 变 accent 仍作状态反馈） */
+.rec-card .actions button { font-size:var(--fs-xs); padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; transition:var(--tr-fast); } /* 主操作按钮 = txt（hover 变 accent 仍作状态反馈） */
 .rec-card .actions button:hover { border-color:var(--accent); color:var(--accent); background:var(--hover); }
 
 .health-ring { width:80px; height:80px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:calc(16px + var(--fs-scale)); font-weight:700; position:relative; }
@@ -175,10 +175,10 @@ ${noAnimationsCSS}
 .health-tag.good { background:color-mix(in srgb, var(--status-success) 12%, transparent); color:var(--status-success); }
 .health-tag.ok { background:color-mix(in srgb, var(--sm-optional) 12%, transparent); color:var(--sm-optional); }
 .health-tag.bad { background:color-mix(in srgb, var(--status-error) 12%, transparent); color:var(--status-error); }
-.stat-pill { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:var(--radius-xl); background:var(--surf); border:1px solid var(--bd); font-size:var(--fs-xs); color:var(--muted); }
+.stat-pill { display:inline-flex; align-items:center; gap:3px; padding:var(--btn-padding-tool-lg); border-radius:var(--radius-xl); background:var(--surf); border:1px solid var(--bd); font-size:var(--fs-xs); color:var(--muted); }
 
 /* 通用工具按钮（repo/gh/workshop 三处共享的 .btn-sm 家族） */
-.btn-sm,.ws-btn-sm,.gh-btn-sm { padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:var(--tr-fast);white-space:nowrap; }
+.btn-sm,.ws-btn-sm,.gh-btn-sm { padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:var(--tr-fast);white-space:nowrap; }
 .btn-sm:hover,.ws-btn-sm:hover,.gh-btn-sm:hover { background:var(--hover); }
 .btn-sm[disabled] { opacity:.4;cursor:default; }
 .btn-sm[disabled]:hover { background:transparent; }

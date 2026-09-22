@@ -26,7 +26,7 @@ export const VIEW_TESTIDS: readonly string[] = [
 
 export function headerHTML(): string {
   return (
-    '<div style="padding:4px 8px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
+    '<div style="padding:var(--btn-padding-md);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
     '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:var(--fs-xs);color:var(--muted);flex:1">' +
     '<input type="checkbox" id="sb-select-all" data-testid="sidebar-select-all" style="cursor:pointer"> ' +
     t("common.selectAll") +

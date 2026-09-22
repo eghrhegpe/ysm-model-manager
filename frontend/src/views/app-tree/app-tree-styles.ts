@@ -64,7 +64,7 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
   display: none;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
+  padding:var(--btn-padding-filter-lg);
   font-size:var(--fs-sm);
   color: var(--muted);
   border-top: 1px dashed var(--bd);

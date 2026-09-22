@@ -263,6 +263,8 @@
   --sp-3: calc(12px + var(--fs-scale) * 0.8);  /* 12px @ 基准：§5 层级3 卡片内边距、段落 */
   --sp-4: calc(16px + var(--fs-scale) * 1.1);  /* 16px @ 基准：§5 层级4 区块间距、大按钮 */
   --sp-5: calc(24px + var(--fs-scale) * 1.6);  /* 24px @ 基准：§5 层级5 页面主间距 */
+  /* 组合间距档（ADR-295 D1）：高频「垂直+横向」组合值的标准归档 */
+  --sp-vh-btn: var(--pad-nav) 10px;             /* 6px 10px @ 基准：列表行/菜单项内容间距组合（横向 10px 属 §5 层级3 下沿，定值不缩） */
 
   /* 语义化字号 — 按 UI 角色命名，派生自 --fs-base-size（基准一动全盘跟随）+ --fs-scale 偏移 */
   --fs-nav: calc(var(--fs-base-size) + 3px + var(--fs-scale)); /* 16px @ 基准（导航主标签 repo-tab + 侧边菜单项 .nav-item）*/
@@ -286,6 +288,10 @@
   --btn-padding-md: var(--pad-btn-secondary) 8px; /* 次要按钮 */
   --btn-padding-lg: var(--pad-btn-primary) 12px;  /* 主要按钮 */
   --btn-padding-filter: var(--pad-filter) 12px;   /* 筛选标签（sm-status-tab 等，横向 12px） */
+  /* [ADR-295 D3] 高频按钮组合扩展档——只建覆盖率高的档，不为孤品建档；
+     横向沿用既有四档的**字面量**约定（--btn-padding-* 横向不随 --fs-scale 缩放）。 */
+  --btn-padding-tool-lg: var(--pad-btn-tool) 8px;    /* 3px 8px @ 基准（源 2px 8px，垂直 +1px 映射按钮最小档） */
+  --btn-padding-filter-lg: var(--pad-filter) 12px;   /* 4px 12px @ 基准（值等价） */
   --btn-transition: background-color var(--tr-normal), border-color var(--tr-normal), color var(--tr-normal), box-shadow var(--tr-normal);
 
   /* ===== 过渡时长系统 ===== */

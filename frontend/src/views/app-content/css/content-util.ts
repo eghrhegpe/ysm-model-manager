@@ -23,7 +23,7 @@ export const contentUtilCSS: string = `
 
 /* ===== 主题选择器 ===== */
 .theme-picker { display:flex;gap:6px;flex-wrap:wrap; }
-.theme-card { display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 10px;border-radius:var(--radius-md);cursor:pointer;transition:var(--tr-fast);min-width:72px;border:2px solid var(--bd); }
+.theme-card { display:flex;flex-direction:column;align-items:center;gap:4px;padding:var(--sp-vh-btn);border-radius:var(--radius-md);cursor:pointer;transition:var(--tr-fast);min-width:72px;border:2px solid var(--bd); }
 .theme-card:hover { border-color:var(--accent) !important;transform:translateY(-2px);box-shadow:var(--shadow-md); }
 .theme-card.active { border-color:var(--accent) !important;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent); }
 .theme-mode-btn.active { background:var(--accent);color:var(--bg);border-color:var(--accent); }

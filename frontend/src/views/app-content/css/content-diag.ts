@@ -62,7 +62,7 @@ export const contentDiagCSS: string = `
    2026-09-28 再收口：搜索框本质是「视图范围」控件（按激活子 tab 分派过滤），与
    「操作/运行时」子 tab 同属一层语义，随之上移行1 紧跟子 tab；行2 只剩纯筛选 chips。
    .diag-log-row 为布局类，由 content-diag-classes.test.ts 强制同步。 */
-.diag-log-bar { display:flex; flex-direction:column; gap:4px; padding:4px 12px; border-bottom:1px solid var(--bd); flex-shrink:0; }
+.diag-log-bar { display:flex; flex-direction:column; gap:4px; padding:var(--btn-padding-filter-lg); border-bottom:1px solid var(--bd); flex-shrink:0; }
 .diag-log-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .diag-log-bar-spacer { flex:1; }
 .diag-log-subtabs { display:flex; gap:2px; }
@@ -78,7 +78,7 @@ export const contentDiagCSS: string = `
 .diag-log-filter { display:flex; align-items:center; gap:4px; overflow:hidden; flex:1; min-width:0; }
 /* 搜索框（2026-09-28 上移行1 后由 .diag-log-search 接管）：flex:1 吃掉子 tab 与动作组
    之间的空档，max-width 封顶避免把动作组挤太远；缩窄时 min-width 保证仍可输入。 */
-.diag-log-search { flex:1; min-width:110px; max-width:320px; font-size:var(--fs-sm); padding:2px 8px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }
+.diag-log-search { flex:1; min-width:110px; max-width:320px; font-size:var(--fs-sm); padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); }
 /* 操作类型下拉（2026-09-28 纵向筛选）：与状态 chips 同排、与搜索框同款度量；
    max-width 封顶防长标签（「全部操作」多语）把 chips 挤走，margin-left:auto 推到行尾与 chips 分离。 */
 .diag-log-op-filter { font-size:var(--fs-sm); padding:2px 4px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); max-width:150px; margin-left:auto; }
@@ -92,7 +92,7 @@ export const contentDiagCSS: string = `
 .perf-gui-est { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:color-mix(in srgb, var(--status-warning) 20%, transparent); color:var(--status-warning); flex-shrink:0; }
 /* 类型矩阵（ADR-262 D3）：表格 + 逐模型明细；未采集/阶段不符用 warning 色显式标注 */
 .perf-matrix { width:100%; border-collapse:collapse; margin:6px 0; font-size:var(--fs-xs); color:var(--txt); }
-.perf-matrix th, .perf-matrix td { text-align:left; padding:4px 8px; border-bottom:1px solid var(--bd); }
+.perf-matrix th, .perf-matrix td { text-align:left; padding:var(--btn-padding-md); border-bottom:1px solid var(--bd); }
 .perf-matrix th { color:var(--muted); font-weight:600; }
 .perf-matrix-id { color:var(--muted); font-size:var(--fs-micro); }
 .perf-matrix-tag { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:var(--surf); color:var(--muted); }
@@ -178,7 +178,7 @@ export const contentDiagCSS: string = `
 .perf-sb-parity-warn { color:var(--status-warning); font-weight:600; }
 .perf-sb-parity-bad { color:var(--status-error); font-weight:600; }
 .perf-sb-diff { font-size:var(--fs-xs); color:var(--muted); word-break:break-all; padding-left:10px; }
-.perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-md); background:var(--surf); padding:6px 10px; margin:4px 0; animation: conflictRowIn .3s ease both; }
+.perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-md); background:var(--surf); padding:var(--sp-vh-btn); margin:4px 0; animation: conflictRowIn .3s ease both; }
 .perf-hist-head { display:block; font-size:var(--fs-sm); color:var(--txt); margin-bottom:2px; }
 .perf-hist-head code { background:var(--bg); padding:0 var(--sp-1); border-radius:var(--radius-xs); font-size:var(--fs-xs); }
 .perf-hist-body { display:block; font-size:var(--fs-xs); color:var(--muted); white-space:pre-wrap; }
@@ -214,7 +214,7 @@ export const contentDiagCSS: string = `
 .diag-dedup-group-head { display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:var(--fs-xs);font-weight:600;color:var(--txt);background:var(--surf);border-bottom:1px solid var(--bd); }
 .diag-dedup-group-fill { flex:1; }
 .diag-dedup-group-info { font-size:var(--fs-micro);color:var(--muted);font-weight:400; }
-.diag-dedup-file { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast); }
+.diag-dedup-file { display:flex;align-items:center;gap:4px;padding:var(--btn-padding-md);font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast); }
 .diag-dedup-file-default { background:var(--hover); }
 .diag-dedup-file-name { flex:1;overflow:hidden;min-width:0; }
 .diag-dedup-file-name-text { color:var(--txt);font-size:var(--fs-xs);cursor:pointer; }
@@ -224,7 +224,7 @@ export const contentDiagCSS: string = `
 .diag-dedup-file-date { font-size:var(--fs-micro);color:var(--muted);flex-shrink:0; }
 .diag-dedup-recommend { font-size:var(--fs-micro);padding:0 var(--sp-1);border-radius:var(--radius-xs);background:color-mix(in srgb, var(--status-success) 12%, transparent);color:var(--status-success); }
 .diag-dedup-radio { flex-shrink:0;accent-color:var(--accent); }
-.diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:4px 8px;font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast);border-top:1px solid var(--bd); }
+.diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:var(--btn-padding-md);font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast);border-top:1px solid var(--bd); }
 .diag-dedup-keep-all-label { color:var(--muted); }
 .diag-dedup-actions { display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--bd); }
 .diag-dedup-exec { flex:1;padding:7px 16px;border-radius:var(--radius-md);border:none;background:var(--accent);color:var(--bg);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }

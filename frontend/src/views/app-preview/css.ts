@@ -27,7 +27,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-placeholder .big-icon { font-size: var(--fs-xl); margin-bottom: 8px; }
 .dp-placeholder .dp-hint { font-size: var(--fs-base); margin-bottom: 12px; }
 .dp-placeholder .dp-hints { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
-.dp-placeholder .dp-hints span { font-size: var(--fs-xs); padding: 2px 8px; border-radius: var(--radius-sm); background: var(--surf); border: 1px solid var(--bd); color: var(--muted); }
+.dp-placeholder .dp-hints span { font-size: var(--fs-xs); padding:var(--btn-padding-tool-lg); border-radius: var(--radius-sm); background: var(--surf); border: 1px solid var(--bd); color: var(--muted); }
 .md-row { font-size:var(--fs-base); color: var(--txt); padding: 3px 0; display: flex; justify-content: space-between; }
 .md-label { color: var(--muted); }
 .md-value { color: var(--txt); font-weight: 500; font-family:var(--font-mono); }
@@ -48,7 +48,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .pv-card-section-label { font-size:var(--fs-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px; }
 .pv-card-row { font-size:var(--fs-sm);color:var(--txt);line-height:1.6; }
 .pv-card-val { color:var(--accent);font-weight:600; }
-.ysm-badge { display:inline-block;font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--radius-xl);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600;vertical-align:middle; }
+.ysm-badge { display:inline-block;font-size:var(--fs-xs);padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600;vertical-align:middle; }
 .pv-section-blue { border-left:2px solid var(--accent); }
 .pv-section-green { border-left:2px solid var(--status-success); }
 .pv-section-orange { border-left:2px solid var(--sm-optional); }

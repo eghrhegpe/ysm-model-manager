@@ -28,7 +28,7 @@ export function sectionHeader(
 ): string {
   const copyBtn =
     rawText !== undefined
-      ? `<button type="button" data-perf-copy class="btn-base perf-copy-btn" style="margin-left:auto;padding:2px 8px;font-size:var(--fs-xs);line-height:1.4" title="${t("perf.copyRaw")}">${UI_ICONS.clipboard} ${t("perf.copy")}</button>`
+      ? `<button type="button" data-perf-copy class="btn-base perf-copy-btn" style="margin-left:auto;padding:var(--btn-padding-tool-lg);font-size:var(--fs-xs);line-height:1.4" title="${t("perf.copyRaw")}">${UI_ICONS.clipboard} ${t("perf.copy")}</button>`
       : "";
   // 耗时徽标紧贴标签；有复制按钮时它不抢 margin-left:auto（后者把按钮推到最右）
   const timingTag =

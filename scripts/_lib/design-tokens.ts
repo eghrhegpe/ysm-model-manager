@@ -145,14 +145,74 @@ export const PAD_TOKEN_VERTICAL: Readonly<Record<string, number>> = {
 };
 
 /**
+ * [--sp-*] 的地板值 = §5 层级1（4px）。低于它的值不属内容间距语义
+ * （见 nearestPadToken 的 ADR-295 附则）。
+ */
+export const SP_FLOOR_PX = 4;
+
+/**
+ * 组合 padding 档（ADR-295 D1 — 高频「垂直+横向」组合值的标准归档）。
+ *
+ * 为什么补：ADR-294 三波收债后剩 377 条，量化显示前 13 高频值占 185 条（52%），
+ * 垂直分量全对齐既有档、横向无档可归（10/6/8px 属 §5 层级区间下沿非标准值）。
+ * D4 原「明拒不建组合档」的保守立场以本档表**取代**（见 ADR-295），但保留防膨胀
+ * 精神——只建覆盖率高的档，不为孤品建档。
+ *
+ * 键 = 源组合值（`垂直px 横向px`），值 = 目标令牌名。
+ * ⚠️ 本表只给**精确命中**建议，不做就近——组合值就近会给错答案（横向语义是作者裁量）。
+ * 与 SP/PAD 垂直表的「近档 ≤2px」哲学不同轨。
+ *
+ * 展开值对账由契约测试锁定（tests/test_design_tokens.ts：解析 variables.css 的声明，
+ * 须等于 COMBO_EXPANSION 的期望 px）——**防「令牌名写对、展开值写错」的静默位移**
+ * （本表初稿即踩过：--sp-vh-btn 误写 var(--sp-3)=12px，而源值是 10px）。
+ *
+ * 覆盖高频值（2026-09-22 实测）：
+ *   `2px 8px`×25 按钮/标签小控件 → --btn-padding-tool-lg（垂直 2→3px，+1px 映射按钮最小档，已拍板）
+ *   `4px 8px`×12 次要按钮/列表项 → --btn-padding-md（值等价，复用既有档）
+ *   `3px 6px`×3  工具栏小按钮   → --btn-padding-sm（值等价，复用既有档）
+ *   `4px 12px`×12 筛选/操作按钮 → --btn-padding-filter-lg（值等价）
+ *   `6px 10px`×13 列表行/菜单项 → --sp-vh-btn（值等价，内容间距组合）
+ */
+export const COMBO_PADDING_TOKENS: Readonly<Record<string, { token: string }>> = {
+  "2px 8px": { token: "--btn-padding-tool-lg" },
+  "4px 8px": { token: "--btn-padding-md" },
+  "3px 6px": { token: "--btn-padding-sm" },
+  "4px 12px": { token: "--btn-padding-filter-lg" },
+  "6px 10px": { token: "--sp-vh-btn" },
+};
+
+/**
+ * 组合档的**期望展开值**（[垂直, 横向] px @ `--fs-scale:0`），供契约测试与
+ * variables.css 声明文本对账——单一事实源是 CSS，本表是「期望」侧。
+ * 与源值的差值即**已拍板的位移**（当前仅 tool-lg 垂直 +1px）。
+ */
+export const COMBO_EXPANSION: Readonly<Record<string, readonly [number, number]>> = {
+  "--btn-padding-tool-lg": [3, 8],
+  "--btn-padding-md": [4, 8],
+  "--btn-padding-sm": [3, 6],
+  "--btn-padding-filter-lg": [4, 12],
+  "--sp-vh-btn": [6, 10],
+};
+
+/**
  * 取最近间距档令牌名（**就近归档**，距离 ≤2px 才建议；孤品返回 null）。
  * 优先 [--sp-*]（内容间距默认语义），次选 [--pad-*]（按钮/标签垂直档）。
+ *
+ * [ADR-295 附则] **低于 §5 层级1（4px）的值不推 [--sp-***：§5 间距层级从 4px 起步
+ * （层级1 = 4px），1–3px 属**按钮/标签垂直档领地**（--pad-* 的 3px 是按钮最小档）。
+ * 反例（本规则立前实测）：`padding:2px` 距 [--sp-1](4px) 差 2px、距 [--pad-btn-tool](3px)
+ * 差 1px，却因「[--sp-*] 优先」压过更近的按钮档 → 建议 +2px 位移的内容间距档，
+ * 语义与位移双错。故 px < 4 时跳过 [--sp-*] 候选，只留 [--pad-*]。
  */
 export function nearestPadToken(px: number, tokenMap?: TokenRawMap | null): string | null {
+  // [ADR-295 附则] §5 层级1 起点 4px；低于它属按钮垂直档领地，[--sp-*] 不参与
+  const belowSpFloor = px < SP_FLOOR_PX;
   // ① 精确命中：--sp-* 优先（内容间距默认），--pad-* 次之
-  for (const [name, v] of Object.entries(SP_TOKEN_VERTICAL)) {
-    if (tokenMap && !tokenMap.has(name)) continue;
-    if (v === px) return name;
+  if (!belowSpFloor) {
+    for (const [name, v] of Object.entries(SP_TOKEN_VERTICAL)) {
+      if (tokenMap && !tokenMap.has(name)) continue;
+      if (v === px) return name;
+    }
   }
   for (const [name, v] of Object.entries(PAD_TOKEN_VERTICAL)) {
     if (tokenMap && !tokenMap.has(name)) continue;
@@ -160,10 +220,12 @@ export function nearestPadToken(px: number, tokenMap?: TokenRawMap | null): stri
   }
   // ② 非精确：收集 ≤2px 候选，按「--sp-* 优先 → 距离近」排序
   const cands: Array<{ name: string; dist: number; priority: number }> = [];
-  for (const [name, v] of Object.entries(SP_TOKEN_VERTICAL)) {
-    if (tokenMap && !tokenMap.has(name)) continue;
-    const dist = Math.abs(v - px);
-    if (dist <= 2) cands.push({ name, dist, priority: 2 });
+  if (!belowSpFloor) {
+    for (const [name, v] of Object.entries(SP_TOKEN_VERTICAL)) {
+      if (tokenMap && !tokenMap.has(name)) continue;
+      const dist = Math.abs(v - px);
+      if (dist <= 2) cands.push({ name, dist, priority: 2 });
+    }
   }
   for (const [name, v] of Object.entries(PAD_TOKEN_VERTICAL)) {
     if (tokenMap && !tokenMap.has(name)) continue;
@@ -176,17 +238,25 @@ export function nearestPadToken(px: number, tokenMap?: TokenRawMap | null): stri
 }
 
 /**
- * padding 组合值 → 建议令牌名。只对「单值垂直语义」给建议，组合值返回 null。
+ * padding 组合值 → 建议令牌名。单值走就近垂直档；组合值走 [COMBO_PADDING_TOKENS]
+ * **精确命中**（ADR-295）。
  *
  * 安全边界（防给错答案）：
  *   - 非 px 分量（calc/var/auto/百分比/inherit）→ null；
- *   - 组合值（2/3/4 分量）→ null（横向语义机械到 --btn-padding-* 是存量收敛，不瞎猜）；
+ *   - 组合值（2/3/4 分量）→ 仅当 [COMBO_PADDING_TOKENS] **精确命中**时给建议；
+ *     不在表中的组合值 → null（横向语义是作者裁量，机械就近会给错答案）；
  *   - 孤品（单值但无 ≤2px 的垂直档）→ null。
  */
 export function suggestPaddingToken(value: string, tokenMap?: TokenRawMap | null): string | null {
   const v = value.trim().replace(/\s+/g, " ");
   const parts = v.split(" ").filter(Boolean);
-  if (parts.length !== 1) return null; // 组合值不猜
+  if (parts.length !== 1) {
+    // 组合值：精确命中组合档表（值等价）才建议；tokenMap 存在时也须该令牌已定义
+    const hit = COMBO_PADDING_TOKENS[v];
+    if (!hit) return null;
+    if (tokenMap && !tokenMap.has(hit.token)) return null;
+    return hit.token;
+  }
   const single = parts[0];
   if (single === undefined) return null;
   const m = /^(\d+(?:\.\d+)?)px$/.exec(single);
@@ -735,15 +805,15 @@ export function fixLineTokens(
     return to;
   });
 
-  // padding：**仅单值（padding: Npx）且最近垂直档 ≤2px 安全距离时**替换。
-  // 组合值（`4px 8px` 等）涉及横向语义，自动替换会改语义 → 一律不碰（由报告层
-  // 提示、存量收敛人工归档 --btn-padding-*）。排除 padding-block/padding-inline 子属性。
+  // padding：单值（padding: Npx）且垂直档 ≤2px 替换；组合值**精确命中组合档表**
+  // （ADR-295 COMBO_PADDING_TOKENS）时替换（值等价）。其余组合/calc/var 不碰
+  // （横向语义是作者裁量，机械就近会给错答案）。排除 padding-block/padding-inline 子属性。
   text = text.replace(
     new RegExp(`(?<![\\w-])padding(?![-a-z])\\s*:\\s*([^;"'\`}]+)`, "g"),
     (match, val: string, offset: number) => {
       if (inVar(offset)) return match;
       const v = val.trim();
-      if (!/^\d+(?:\.\d+)?px$/.test(v)) return match; // 仅单值 px；0/组合/calc/var 不碰
+      if (!/^\d+(?:\.\d+)?px$/.test(v) && !COMBO_PADDING_TOKENS[v]) return match; // 仅单值 px 或组合档命中
       const token = suggestPaddingToken(v, tokenMap);
       if (!token) return match;
       const to = `padding:var(${token})`;

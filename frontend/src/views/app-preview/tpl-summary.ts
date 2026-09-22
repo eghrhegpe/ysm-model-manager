@@ -99,8 +99,8 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   const licenseType = cleanText(header.license);
   const freeBadge = header.hasFree
     ? header.isFree
-      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">${UI_ICONS.tag} ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
+      ? `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">${UI_ICONS.tag} ${t("format.free")}</span>`
+      : `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
     : "";
   let authorHtml = "";
   let workHtml = "";
@@ -132,7 +132,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   return `<div class="content" id="preview-content">
 ${titleHtml}
 ${workHtml ? `<div class="md-row"><span class="md-label">${t("dialog.work")}</span><span class="md-value">${workHtml}</span></div>` : ""}
-${tips ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px;line-height:1.6;padding:6px 10px;background:var(--surf);border-radius:var(--radius-md);border-left:3px solid var(--accent)">${tips}</div>` : ""}
+${tips ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px;line-height:1.6;padding:var(--sp-vh-btn);background:var(--surf);border-radius:var(--radius-md);border-left:3px solid var(--accent)">${tips}</div>` : ""}
 <div class="md-row"><span class="md-label">${t("format.license")}</span><span class="md-value">${esc(licenseType) || t("format.unlabeled")}</span></div>
 ${p?.author ? `<div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value"><span class="tag-author">${esc(p.author)}</span></span></div>` : authorHtml ? `<div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value">${authorHtml}</span></div>` : ""}
 ${header.linkHome ? `<div class="md-row"><span class="md-label">${t("format.homepage")}</span><span class="md-value"><a href="${esc(safeUrl(header.linkHome))}" target="_blank" style="color:var(--accent);text-decoration:none">${esc(header.linkHome.replace(/^https?:\/\//, "").replace(/\/.*$/, ""))}</a></span></div>` : ""}
@@ -199,7 +199,7 @@ export function summaryCardHTML(
           displayItems
             .map(
               (it) =>
-                `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`,
+                `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`,
             )
             .join("") + more;
         return `<div style="margin-bottom:4px"><div style="font-size:var(--fs-xs);font-weight:600;color:var(--txt);margin-bottom:2px">${UI_ICONS.video} ${esc(name)}（${items.length}）</div><div>${badges}</div></div>`;
@@ -226,8 +226,8 @@ export function summaryCardHTML(
   // 免费/付费标记
   const freeBadge = header?.hasFree
     ? header.isFree
-      ? `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">${UI_ICONS.tag} ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:2px 8px;border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
+      ? `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">${UI_ICONS.tag} ${t("format.free")}</span>`
+      : `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
     : "";
 
   return `<div class="content" id="preview-content">

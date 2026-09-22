@@ -12,7 +12,7 @@ export const contentCreatorCSS: string = `
    本组度量 = 原 .diag-log-fbtn 的 2px 8px / radius-sm / hover 色 var(--txt)：
    .cr-tag-filter-btn 由 2px 10px / radius-xl / hover 色 var(--accent) 收敛至此（2026-09
    有意统一，三组筛选按钮逐值同款，见 app-sync-manager tpl.ts 统一范式注释）。 */
-.cr-tag-filter-btn, .diag-log-fbtn { font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:var(--tr-fast);animation:fadeSlideUp var(--tr-enter) both; }
+.cr-tag-filter-btn, .diag-log-fbtn { font-size:var(--fs-xs);padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:var(--tr-fast);animation:fadeSlideUp var(--tr-enter) both; }
 .cr-tag-filter-btn:hover, .diag-log-fbtn:hover { border-color:var(--accent);color:var(--txt);background:var(--hover); }
 .cr-tag-filter-btn.active, .diag-log-fbtn.active { border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent); }
 
@@ -21,7 +21,7 @@ export const contentCreatorCSS: string = `
 .cr-left { width:var(--sidebar-w); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); overflow:hidden; background:var(--surf); }
 .cr-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .cr-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-.cr-grid { flex:1; overflow-y:auto; padding:4px 8px; display:flex; flex-direction:column; gap:4px; }
+.cr-grid { flex:1; overflow-y:auto; padding:var(--btn-padding-md); display:flex; flex-direction:column; gap:4px; }
 .cr-scroll { flex:1; overflow-y:auto; padding:8px 12px; }
 
 .cr-section { margin-bottom:8px; }
@@ -37,7 +37,7 @@ export const contentCreatorCSS: string = `
 .cr-browse-repo:hover { background:var(--accent);color:var(--bg); }
 .cr-edit-btn { font-size:var(--fs-xs);padding:2px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-family:inherit; } /* 主操作按钮文字 = txt（对齐 .btn-base 正典） */
 .cr-edit-btn:hover { background:var(--hover); }
-.cr-toggle { font-size:var(--fs-xs);padding:2px 8px;border-radius:var(--radius-md);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap;transition:var(--tr-fast); }
+.cr-toggle { font-size:var(--fs-xs);padding:var(--btn-padding-tool-lg);border-radius:var(--radius-md);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-family:inherit;white-space:nowrap;transition:var(--tr-fast); }
 .cr-toggle:hover { background:var(--accent);color:var(--bg); }
 .cr-mode-switch { display:inline-flex;border:1px solid var(--bd);border-radius:var(--radius-md) 6px 0 0;border-bottom:none;overflow:hidden;cursor:pointer;margin-right:2px;flex-shrink:0;align-self:stretch;background:transparent;padding:0;appearance:none;-webkit-appearance:none;font:inherit;color:inherit; }
 .cr-mode-opt { padding:2px 6px;font-size:var(--fs-xs);font-family:inherit;transition:var(--tr-fast);color:var(--muted);background:var(--bg);cursor:pointer;display:flex;align-items:center; }
@@ -280,7 +280,7 @@ export const contentCreatorCSS: string = `
 .cr-drop-icon { font-size:18px; }
 .cr-drop-text { font-size:var(--fs-xs); }
 .cr-fetch-btn, .cr-edit-btn, .cr-save-btn, .cr-cancel-btn {
-  padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);
+  padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);border:1px solid var(--bd);
   background:transparent;color:var(--txt);cursor:pointer;
   font-size:var(--fs-xs);font-family:inherit;transition:var(--tr-fast);
 }
@@ -339,7 +339,7 @@ export const contentCreatorCSS: string = `
 .cr-detail-actions .secondary:hover { background:var(--hover);color:var(--txt); }
 .cr-model-count { font-size:var(--fs-xs);color:var(--muted);display:inline-flex;align-items:center;gap:2px; }
     .cr-detail-box .cr-star-btn { position:absolute;top:16px;right:16px;font-size:calc(18px + var(--fs-scale)); }
-.cr-local-btn { padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:background-color var(--tr-fast),color var(--tr-fast); }
+.cr-local-btn { padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:background-color var(--tr-fast),color var(--tr-fast); }
 .cr-local-btn:hover { background:var(--accent);color:var(--bg); }
 .cr-local-count { font-size:var(--fs-xs);color:var(--muted);align-self:center; }
 

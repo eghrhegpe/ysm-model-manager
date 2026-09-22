@@ -27,6 +27,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  COMBO_EXPANSION,
+  COMBO_PADDING_TOKENS,
   checkLayoutDocDrift,
   findEmojiIconViolations,
   findLocaleEmojiPrefixViolations,
@@ -183,8 +185,14 @@ const FS_MD_PX = TOKEN_PX_BASELINE["--fs-md"];
     tokens,
   );
   assert.equal(a.length, 2, "内联字号 + 内联 padding 各报 1 条");
-  assert.ok(a.some((v) => v.kind === "inline-style-font-size"), "应含内联字号");
-  assert.ok(a.some((v) => v.kind === "inline-style-padding"), "应含内联 padding");
+  assert.ok(
+    a.some((v) => v.kind === "inline-style-font-size"),
+    "应含内联字号",
+  );
+  assert.ok(
+    a.some((v) => v.kind === "inline-style-padding"),
+    "应含内联 padding",
+  );
   const aFs = a.find((v) => v.kind === "inline-style-font-size");
   assert.equal(aFs!.suggestion, "--fs-md", "字号应建议 --fs-md");
   assert.equal(aFs!.line, 10, "行号应回填");
@@ -1097,11 +1105,48 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   const a6 = findStyleAttrViolations("  .x { padding: 6px; }", 32, tokens);
   assert.equal(a6[0]?.suggestion, "--pad-nav", "6px 应建议 --pad-nav");
 
-  // ② 组合值 → 命中但建议 null（横向语义机械收敛属存量，不瞎猜）
+  // ② 组合值 → 命中；[ADR-295] 精确命中组合档表给建议，否则 null（不猜横向语义）
   const b = findStyleAttrViolations("  .b { padding: 4px 8px; }", 4, tokens);
   assert.equal(b.length, 1, "padding:4px 8px 应命中 1 条");
   assert.equal(b[0]!.kind, "css-padding", "组合值仍属 css-padding");
-  assert.equal(b[0]!.suggestion, null, "组合值建议为 null（不猜横向语义）");
+  assert.equal(b[0]!.suggestion, "--btn-padding-md", "4px 8px 精确命中组合档 → --btn-padding-md");
+  // 2b) 未命中组合档的组合值 → 仍 null
+  const b2 = findStyleAttrViolations("  .b2 { padding: 5px 14px; }", 4, tokens);
+  assert.equal(b2[0]?.suggestion, null, "5px 14px 不在组合档表 → 建议 null");
+  // 2c) 组合档表对账：表中每个令牌必须真实存在于 variables.css，且**展开值**等于
+  //     COMBO_EXPANSION 期望（防「令牌名写对、展开值写错」的静默位移——
+  //     本表初稿即踩过：--sp-vh-btn 误写 var(--sp-3)=12px，而源值是 10px）。
+  for (const [val, { token }] of Object.entries(COMBO_PADDING_TOKENS)) {
+    assert.ok(padReal.has(token), `组合档 ${token}（来自 ${val}）必须存在于 variables.css`);
+    const declLine = cssText.split("\n").find((l) => l.includes(`${token}:`));
+    assert.ok(declLine, `${token} 应有声明行`);
+    const rhs = /:\s*([^;]+);/.exec(declLine!)![1]!.trim();
+    const resolved = rhs.split(/\s+/).map((part) => {
+      const varRef = /^var\((--[\w-]+)\)$/.exec(part);
+      if (varRef) {
+        const ref = varRef[1]!;
+        return SP_TOKEN_VERTICAL[ref] ?? PAD_TOKEN_VERTICAL[ref] ?? null;
+      }
+      const literal = /^(\d+)px$/.exec(part);
+      return literal ? Number(literal[1]) : null;
+    });
+    assert.deepEqual(
+      resolved,
+      COMBO_EXPANSION[token],
+      `${token} 展开值应为 ${COMBO_EXPANSION[token]?.join("px ")}px（源值 ${val}），实际 ${resolved.join("px ")}px`,
+    );
+  }
+  // 2d) [ADR-295 附则] 低于 §5 层级1（4px）的值**不推 --sp-**（属按钮垂直档领地）：
+  //     反例：2px 距 --sp-1(4px) 差 2、距 --pad-btn-tool(3px) 差 1，曾因「--sp-* 优先」报 --sp-1（+2px 位移）
+  const sub4 = findStyleAttrViolations("  .x { padding: 2px; }", 40, tokens);
+  assert.equal(
+    sub4[0]?.suggestion,
+    "--pad-btn-tool",
+    "2px 应建议 --pad-btn-tool（<4px 不推 --sp-*）",
+  );
+  // 层级1 自身不受影响（4px 精确命中 --sp-1）
+  const at4 = findStyleAttrViolations("  .x { padding: 4px; }", 41, tokens);
+  assert.equal(at4[0]?.suggestion, "--sp-1", "4px 仍应建议 --sp-1（层级1 地板不受影响）");
 
   // ③ 内联 padding → inline-style-padding
   const c = findStyleAttrViolations('style="padding:2px"', 5, tokens);
@@ -1140,11 +1185,7 @@ console.log("  ✓ isCommentLine: 三种注释形态");
     [],
     "calc 分量不判（非纯 px 组合）",
   );
-  assert.deepEqual(
-    findStyleAttrViolations("  .h { padding: 10%; }", 11, tokens),
-    [],
-    "百分比不判",
-  );
+  assert.deepEqual(findStyleAttrViolations("  .h { padding: 10%; }", 11, tokens), [], "百分比不判");
 
   // ⑧ 纯 0 / 0px → 不判（0 合法，无需令牌化）
   assert.deepEqual(
@@ -1155,18 +1196,23 @@ console.log("  ✓ isCommentLine: 三种注释形态");
 
   // ⑨ --fix：仅单值且安全距离内才替换；组合值 / 子属性 / 自定义属性一律不碰
   const fixed = fixLineTokens(".x { padding: 4px; }", tokens).text;
-  assert.ok(
-    fixed.includes("padding:var(--sp-1)"),
-    `单值 4px 应替换为 var(--sp-1)，实际: ${fixed}`,
-  );
+  assert.ok(fixed.includes("padding:var(--sp-1)"), `单值 4px 应替换为 var(--sp-1)，实际: ${fixed}`);
   const fixedCombo = fixLineTokens(".x { padding: 4px 8px; }", tokens).text;
-  assert.equal(fixedCombo, ".x { padding: 4px 8px; }", "组合值不应被 --fix 改写（会改语义）");
+  assert.ok(
+    fixedCombo.includes("padding:var(--btn-padding-md)"),
+    `[ADR-295] 组合值 4px 8px 精确命中组合档应替换为 --btn-padding-md，实际: ${fixedCombo}`,
+  );
+  // 2c) 不在组合档表的组合值仍不碰（横向语义是作者裁量，就近会给错答案）
+  const fixedComboMiss = fixLineTokens(".x { padding: 5px 14px; }", tokens).text;
+  assert.equal(fixedComboMiss, ".x { padding: 5px 14px; }", "5px 14px 不在组合档表 → 不改写");
   const fixedSub = fixLineTokens(".x { padding-block: 8px; }", tokens).text;
   assert.equal(fixedSub, ".x { padding-block: 8px; }", "padding-block 不应被 --fix 改写");
   const fixedCust = fixLineTokens("--my-padding: 8px;", tokens).text;
   assert.equal(fixedCust, "--my-padding: 8px;", "自定义属性定义不应被 --fix 改写");
   // 单值替换幂等
   assert.equal(fixLineTokens(fixed, tokens).text, fixed, "padding --fix 应幂等");
+  // 组合值替换幂等
+  assert.equal(fixLineTokens(fixedCombo, tokens).text, fixedCombo, "组合档 --fix 应幂等");
 
   console.log("  ✓ padding 判定: 内联/CSS 块命中 + 子属性/自定义属性/calc/0 豁免 + --fix 安全");
 }

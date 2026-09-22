@@ -382,14 +382,14 @@ export function workshopHTML(): string {
   return (
     '<div class="repo-wrap">' +
     '<div class="repo-tabs" id="ws-tabs" data-testid="ws-tabs">' +
-    '<span style="padding:4px 12px;font-size:var(--fs-sm);color:var(--muted)">' +
+    '<span style="padding:var(--btn-padding-filter-lg);font-size:var(--fs-sm);color:var(--muted)">' +
     UI_ICONS.refresh +
     " " +
     t("common.loading") +
     "</span>" +
     "</div>" +
     // 站点配置导入/导出工具栏（index.ts ws-export-btn / ws-import-btn 绑定）
-    '<div style="display:flex;gap:6px;padding:4px 12px;border-bottom:1px solid var(--bd);flex-shrink:0">' +
+    '<div style="display:flex;gap:6px;padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd);flex-shrink:0">' +
     '<button class="btn-base sm" id="ws-export-btn" title="' +
     t("workshop.exportSiteTitle") +
     '">' +

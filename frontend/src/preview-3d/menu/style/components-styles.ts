@@ -982,14 +982,14 @@ ${wsIconCSS}
 /* 下拉选择框 */
 .setting-select {
     flex: 1;
-    padding: 4px 8px;
+    padding:var(--btn-padding-md);
     border-radius:var(--radius-md);
     font-size:var(--fs-base);
 }
 
 .diag-model-chips .preset-chip {
     font-size: var(--uih-font-ui-xs);
-    padding: 2px 8px;
+    padding:var(--btn-padding-tool-lg);
 }
 `;
 

@@ -119,7 +119,7 @@
 }
 
 .sidebar-btn-small {
-  padding: 2px 8px;
+  padding:var(--btn-padding-tool-lg);
   border-radius: var(--radius-md);
   border: 1px solid var(--bd);
   background: var(--bg);

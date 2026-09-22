@@ -1243,6 +1243,59 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
       `schema water 组键集与分派表字面量漂移（schema=${JSON.stringify(schemaKeys)}）`,
     ).toEqual(new Set(WATER_PARAM_APPLIER_KEYS));
   });
+
+  // [锐评 D3 契约锁 2026-09-22] saveState 派生化（getPresetKeys 遍历）只覆盖**写侧**，
+  // loadState 还原表仍是手写双轨清单——旧注释「读写两侧自动跟上」超额承诺了读侧
+  //（e7c9e52fb 复审发现）。本行为锁补上读侧：schema 每键写偏离值 → save → reset →
+  // load → 全部存活；未来 schema 加水键而漏登记还原表，本测试即红，且偏离值表缺键
+  // 会被点名（把加键动作逼回本文件登记，防「自动持久化、静默不还原」）。
+  it("[D3] schema water 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    // 每键一个「≠ schema 默认」的偏离值（合法域内）——新键未列入即 fail 提示登记
+    const DEVIATION: Record<string, unknown> = {
+      waterEnabled: false,
+      waterMode: "pool",
+      waterLevel: 2.5,
+      waterWetness: 0.9,
+      waterColor: 0x010203,
+      waterOpacity: 0.6,
+      waterNormalStrength: 0.3,
+      waterClarity: 0.2,
+      waterWaveSpeed: 2.5,
+      waterChoppiness: 0.9,
+      waterPoolHeight: 1.5,
+      waterPoolWallThickness: 0.5,
+      waterPoolWallColor: 0x040506,
+      waterPoolRoundness: 0.2,
+      waterSize: 123,
+    };
+    const schemaKeys = getPresetKeys("water").filter((k) => k.startsWith("water"));
+    const missing = schemaKeys.filter((k) => !(k in DEVIATION));
+    expect(
+      missing,
+      `schema 新增了 water 键但本测试未登记偏离值: ${JSON.stringify(missing)}`,
+    ).toEqual([]);
+    const patch: Record<string, unknown> = {};
+    for (const k of schemaKeys) {
+      // 偏离值必须确实偏离当前值，否则「存活」断言恒真、锁形同虚设
+      expect(
+        envState[k as keyof typeof envState],
+        `water 键 ${k} 的偏离值与当前值同值（测试自失能）`,
+      ).not.toBe(DEVIATION[k]);
+      patch[k] = DEVIATION[k];
+    }
+    setEnvState(patch as never, { source: "manual", force: true });
+    cap.saveState();
+    resetEnvState();
+    const cap2 = new WaterCapability({ scene });
+    cap2.loadState();
+    for (const k of schemaKeys) {
+      expect(envState[k as keyof typeof envState], `water 键 ${k} 未被 loadState 还原`).toBe(
+        DEVIATION[k],
+      );
+    }
+  });
 });
 
 describe("WaterCapability — waterSize UI 入口与零重建（ADR-272）", () => {

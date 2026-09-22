@@ -31,11 +31,12 @@ const _perfModelSync = new Map<ShadowRoot, () => void>();
  * 基准模式的 i18n 接线单点（ADR-278 §2.6）：模式 → 文案键的**唯一事实源**。
  * 维护约定：新增模式只改下面三张表 + 补一个 `perfModeName*`，**禁止**再为某模式开平行
  * 后缀键（如 perfScopeHintXxx）——那会把「加一个模式 = 改 N 处」的债重新养回来。
+ * （表内只列**模式轴上的**模式——scan 已据 §2.7 退轴成独立 tab，其 hint 由 tpl 直写
+ *  perfScanBenchHint，不在派生面，2026-09-22 复审清算。）
  */
 const PERF_MODE_NAMES: Record<string, LocaleKey> = {
   single: "diagnostics.perfModeNameSingle",
   conc: "diagnostics.perfModeNameConc",
-  scan: "diagnostics.perfModeNameScan",
 };
 
 /** 控件 id → **不读它**的模式集（真相源 = 各命令模块的 read*：perf-single-bench / perf-concurrent）。
@@ -88,7 +89,8 @@ export function perfScopeHint(mode: string): string {
   const nameKey = PERF_MODE_NAMES[mode];
   const scope = t("diagnostics.perfScopeHint", { mode: nameKey ? t(nameKey) : mode });
   if (mode === "conc") return `${scope} · ${t("diagnostics.perfConcurrentHint")}`;
-  if (mode === "scan") return `${scope} · ${t("diagnostics.perfScanBenchHint")}`;
+  // （scan 不再有机制长句分支：§2.7 退轴后它不在 PERF_RUN_BUTTON_MODE_KEYS 派发面内，
+  //  其 tab hint 由 tpl 直写 perfScanBenchHint。未知模式只落通用句。）
   return scope;
 }
 

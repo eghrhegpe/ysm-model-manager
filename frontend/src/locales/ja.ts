@@ -357,7 +357,6 @@ export const ja: Record<string, string> = {
   "diagnostics.perfScopeHint": "測定対象：{mode}",
   "diagnostics.perfModeNameSingle": "1 つのモデルの読込時間",
   "diagnostics.perfModeNameConc": "複数モデルの逐次 vs 並列",
-  "diagnostics.perfModeNameScan": "リポジトリ全体のディレクトリスキャン（モデル解析なし）",
   "diagnostics.perfModeOptSingle": "単一モデル",
   "diagnostics.perfModeOptConc": "一括並列",
   "diagnostics.perfIterationsHint":

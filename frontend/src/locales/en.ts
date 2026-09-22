@@ -355,7 +355,6 @@ export const en: Record<string, string> = {
   "diagnostics.perfScopeHint": "Measures: {mode}",
   "diagnostics.perfModeNameSingle": "load time of one model",
   "diagnostics.perfModeNameConc": "serial vs parallel across a batch of models",
-  "diagnostics.perfModeNameScan": "whole-repo directory scan (no model parsing)",
   "diagnostics.perfModeOptSingle": "Single model",
   "diagnostics.perfModeOptConc": "Batch concurrency",
   "diagnostics.perfIterationsHint":

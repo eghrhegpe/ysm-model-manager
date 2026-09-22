@@ -698,7 +698,9 @@ export class WaterCapability implements SceneCapability {
 
   /** 保存状态到 localStorage。
    *  持久化字段 = schema 的 water 组键集（getPresetKeys("water")）+ 能力级 enabled——
-   *  不再手抄清单：新增 water 参数只要进 schema，读写两侧自动跟上（评审「一处参数六处接线」收口）。
+   *  不再手抄清单：新增 water 参数只要进 schema，**写侧**自动跟上（评审「一处参数六处接线」收口）。
+   *  ⚠️ 读侧不自动：loadState 还原表仍是手写双轨清单，新键须同步登记——
+   *  缺口由契约锁兜住：water-capability.test.ts「schema 键全部可 round-trip」（漏登记即红）。
    *  ⚠️ 历史键名 size / pool* 由 loadState 新旧双轨兼容；写侧统一用 water* 规范键。 */
   saveState(): void {
     const state: Record<string, unknown> = { enabled: this.enabled };

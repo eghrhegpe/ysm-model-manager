@@ -354,7 +354,6 @@ export const zhCN = {
   "diagnostics.perfScopeHint": "测什么：{mode}",
   "diagnostics.perfModeNameSingle": "一个模型的加载耗时",
   "diagnostics.perfModeNameConc": "一批模型的串行 vs 并行",
-  "diagnostics.perfModeNameScan": "整库目录树扫描（不解析模型文件）",
   "diagnostics.perfModeOptSingle": "单模型",
   "diagnostics.perfModeOptConc": "批量并发",
   "diagnostics.perfIterationsHint":

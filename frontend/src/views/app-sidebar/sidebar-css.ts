@@ -47,7 +47,7 @@ export const sidebarCSS: string = `
 /* 资源包计数锚点：📦 收口为可定位/可样式化的语义节点（aria-hidden 不参与朗读，数值由内部 chip 承载） */
 .pkg-icon { flex-shrink: 0; line-height: 1; }
 .instance-card-pkg-count { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; }
-.footer { padding: 8px 12px; border-top: 1px solid var(--bd); }
+.footer { padding:var(--sp-vh-pane); border-top: 1px solid var(--bd); }
 .footer-stats { display: flex; flex-direction: column; gap: 2px; font-size: calc(var(--fs-base) - 2px); color: var(--muted); margin-bottom: 6px; }
 /* ===== 统一按钮系统 .btn-base ===== */
 ${btnBaseCSS}

@@ -172,6 +172,11 @@ export const SP_FLOOR_PX = 4;
  *   `3px 6px`×3  工具栏小按钮   → --btn-padding-sm（值等价，复用既有档）
  *   `4px 12px`×12 筛选/操作按钮 → --btn-padding-filter-lg（值等价）
  *   `6px 10px`×13 列表行/菜单项 → --sp-vh-btn（值等价，内容间距组合）
+ *   `8px 12px`×15 滚动容器/卡片正文/设置行 → --sp-vh-pane（值等价）
+ *   `24px 12px`×6 进度块/空态区块 → --sp-vh-block（值等价）
+ *
+ * ⚠️ 只收录**内容/按钮语义明确且覆盖率≥5** 的组合（ADR-295 D4 防膨胀口径）；
+ * `8px 0`/`12px 0`/`12px 16px`/`0 8px` 这类低频或方向残缺值**不建档**（留存量债）。
  */
 export const COMBO_PADDING_TOKENS: Readonly<Record<string, { token: string }>> = {
   "2px 8px": { token: "--btn-padding-tool-lg" },
@@ -179,6 +184,8 @@ export const COMBO_PADDING_TOKENS: Readonly<Record<string, { token: string }>> =
   "3px 6px": { token: "--btn-padding-sm" },
   "4px 12px": { token: "--btn-padding-filter-lg" },
   "6px 10px": { token: "--sp-vh-btn" },
+  "8px 12px": { token: "--sp-vh-pane" },
+  "24px 12px": { token: "--sp-vh-block" },
 };
 
 /**
@@ -192,6 +199,8 @@ export const COMBO_EXPANSION: Readonly<Record<string, readonly [number, number]>
   "--btn-padding-sm": [3, 6],
   "--btn-padding-filter-lg": [4, 12],
   "--sp-vh-btn": [6, 10],
+  "--sp-vh-pane": [8, 12],
+  "--sp-vh-block": [24, 12],
 };
 
 /**

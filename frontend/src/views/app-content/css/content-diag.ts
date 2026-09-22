@@ -112,7 +112,7 @@ export const contentDiagCSS: string = `
    历史：这几个类 2026-09 之前**无任何规则**（类名空头支票），控件靠 UA 默认 inline 流换行，
    分组不可见、窄屏折行语义全散；当时按日志工具栏已验证的范式补的规则。
    ⚠️ 新布局一律抄这四个类；tpl 里出现的类必须在 shadow 层有规则（css-layer-check 判定域自推导）。 */
-.diag-pane { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:8px 12px; }
+.diag-pane { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:var(--sp-vh-pane); }
 .diag-bar { display:flex; flex-direction:column; gap:4px; padding:0 0 6px; border-bottom:1px solid var(--bd); flex-shrink:0; }
 .diag-bar-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .diag-bar-row > input[type="text"] { flex:1; min-width:180px; }
@@ -226,7 +226,7 @@ export const contentDiagCSS: string = `
 .diag-dedup-radio { flex-shrink:0;accent-color:var(--accent); }
 .diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:var(--btn-padding-md);font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast);border-top:1px solid var(--bd); }
 .diag-dedup-keep-all-label { color:var(--muted); }
-.diag-dedup-actions { display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--bd); }
+.diag-dedup-actions { display:flex;gap:6px;padding:var(--sp-vh-pane);border-top:1px solid var(--bd); }
 .diag-dedup-exec { flex:1;padding:7px 16px;border-radius:var(--radius-md);border:none;background:var(--accent);color:var(--bg);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .diag-dedup-cancel { padding:7px 16px;border-radius:var(--radius-md);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 
@@ -239,7 +239,7 @@ export const contentDiagCSS: string = `
 /* .diag-sync-config 规则已随 ADR-288 删除：同步冲突的参数面板不再是「点按钮后渲染的卡片」，
    而是常驻 .diag-bar（选择器 + 按钮直接排在栏内）——旧卡片类失去生产者，规则一并退场。 */
 .diag-sync-resolve { margin-top:16px; padding:var(--sp-3); background:var(--surf); border-radius:var(--radius-lg); }
-.diag-dedup-config { padding:8px 12px; }
+.diag-dedup-config { padding:var(--sp-vh-pane); }
 .diag-warn { color:var(--status-warning, #e6b800); font-weight:600; }
 
 /* P1 批次12:工坊行名称容器(community/render.ts nameWrap,gh-row 列1 内部 flex 容器) → 已归位 content-gh.ts */

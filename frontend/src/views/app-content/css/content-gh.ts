@@ -33,7 +33,7 @@ export const contentGhCSS: string = `
 .gh-card.active .gh-card-external { border-left-color:var(--accent);color:var(--accent); }
 .gh-section-title { font-size:var(--fs-md);font-weight:600;color:var(--txt);padding:8px 12px 4px; }
 .gh-header { border-bottom:1px solid var(--bd);flex-shrink:0; }
-.gh-header-top { display:flex;align-items:center;gap:8px;padding:8px 12px; }
+.gh-header-top { display:flex;align-items:center;gap:8px;padding:var(--sp-vh-pane); }
 .gh-header-repo { display:flex;align-items:center;gap:8px;padding:0 12px 8px; }
 .gh-header-actions { display:flex;align-items:center;gap:8px;padding:0 12px 8px;position:relative; }
 .gh-section-fill { flex:1; }
@@ -158,7 +158,7 @@ export const contentGhCSS: string = `
 .gh-progress-fill { height:100%; width:0%; border-radius:var(--radius-xs); background:var(--accent); transition:width 0.06s linear; box-shadow:0 0 4px var(--accent); animation:breathe-subtle 4s ease-in-out infinite;will-change:filter,box-shadow; }
 .gh-progress-pct.gh-progress-error { color:var(--status-error); }
 .gh-progress-fill.gh-progress-fill-error { background:var(--status-error); }
-.gh-progress-box { padding:24px 12px; text-align:center; }
+.gh-progress-box { padding:var(--sp-vh-block); text-align:center; }
 .gh-progress-label { font-size:var(--fs-sm); color:var(--muted); margin-bottom:8px; }
 .gh-name-wrap { display:flex; align-items:center; gap:6px; min-width:0; }
 `;

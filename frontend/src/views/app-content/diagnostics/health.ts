@@ -118,7 +118,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     esc(r.directory) +
     "</div>" +
     "</div></div>" +
-    '<div class="stat-row" style="justify-content:space-around;padding:8px 12px;border-top:1px solid var(--bd)">' +
+    '<div class="stat-row" style="justify-content:space-around;padding:var(--sp-vh-pane);border-top:1px solid var(--bd)">' +
     "<span>" +
     UI_ICONS.clipboard +
     " " +
@@ -148,7 +148,7 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
     esc(r.resources.total_files) +
     "</b></span>" +
     "</div>" +
-    '<div class="stat-row" style="flex-direction:column;align-items:stretch;gap:2px;padding:8px 12px;border-top:1px solid var(--bd);font-size:var(--fs-sm);color:var(--muted)">' +
+    '<div class="stat-row" style="flex-direction:column;align-items:stretch;gap:2px;padding:var(--sp-vh-pane);border-top:1px solid var(--bd);font-size:var(--fs-sm);color:var(--muted)">' +
     "<div>" +
     UI_ICONS.success +
     " " +

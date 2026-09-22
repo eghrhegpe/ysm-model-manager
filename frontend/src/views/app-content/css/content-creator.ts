@@ -22,7 +22,7 @@ export const contentCreatorCSS: string = `
 .cr-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .cr-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .cr-grid { flex:1; overflow-y:auto; padding:var(--btn-padding-md); display:flex; flex-direction:column; gap:4px; }
-.cr-scroll { flex:1; overflow-y:auto; padding:8px 12px; }
+.cr-scroll { flex:1; overflow-y:auto; padding:var(--sp-vh-pane); }
 
 .cr-section { margin-bottom:8px; }
 .cr-section-title-lg { font-size:var(--fs-md);font-weight:600;color:var(--txt); }

@@ -265,6 +265,8 @@
   --sp-5: calc(24px + var(--fs-scale) * 1.6);  /* 24px @ 基准：§5 层级5 页面主间距 */
   /* 组合间距档（ADR-295 D1）：高频「垂直+横向」组合值的标准归档 */
   --sp-vh-btn: var(--pad-nav) 10px;             /* 6px 10px @ 基准：列表行/菜单项内容间距组合（横向 10px 属 §5 层级3 下沿，定值不缩） */
+  --sp-vh-pane: var(--sp-2) var(--sp-3);        /* 8px 12px @ 基准：滚动容器/卡片正文/设置行（§5 层级2 × 层级3） */
+  --sp-vh-block: var(--sp-5) var(--sp-3);       /* 24px 12px @ 基准：进度块/空态区块（§5 层级5 × 层级3） */
 
   /* 语义化字号 — 按 UI 角色命名，派生自 --fs-base-size（基准一动全盘跟随）+ --fs-scale 偏移 */
   --fs-nav: calc(var(--fs-base-size) + 3px + var(--fs-scale)); /* 16px @ 基准（导航主标签 repo-tab + 侧边菜单项 .nav-item）*/

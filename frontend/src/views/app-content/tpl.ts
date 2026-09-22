@@ -256,8 +256,8 @@ export function diagnosticsHTML(): string {
         <button class="btn-base accent" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
       </div>
     </div>
-    <div id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
@@ -279,7 +279,7 @@ export function diagnosticsHTML(): string {
         <div class="diag-bar-hint">${t("diagnostics.perfScanBenchHint")}</div>
       </div>
     </div>
-    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
@@ -312,7 +312,7 @@ export function diagnosticsHTML(): string {
         <div class="diag-bar-hint">${t("diagnostics.healthHint")}</div>
       </div>
     </div>
-    <div id="diag-health-list" data-testid="diag-health-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-health-list" data-testid="diag-health-list"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
@@ -335,7 +335,7 @@ export function diagnosticsHTML(): string {
         <div class="diag-bar-hint">${t("diagnostics.scanHint")}</div>
       </div>
     </div>
-    <div id="diag-sync-conflict-list" data-testid="diag-sync-conflict-list"><div class="stat-row" style="padding:24px 12px;color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-sync-conflict-list" data-testid="diag-sync-conflict-list"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
     ],
@@ -417,7 +417,7 @@ export function workshopHTML(): string {
     "</div>" +
     "</div>" +
     '<div id="ws-creator-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">' +
-    '<div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
+    '<div style="padding:var(--sp-vh-pane);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
     '<span style="font-size:var(--fs-base);font-weight:600;color:var(--txt)" id="ws-cr-title">' +
     UI_ICONS.appearance +
     " " +

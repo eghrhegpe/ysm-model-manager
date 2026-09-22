@@ -128,7 +128,7 @@
   gap: 4px;
 }
 .dlg-section {
-  padding: 8px 12px;
+  padding:var(--sp-vh-pane);
   display: flex;
   gap: 6px;
   align-items: center;
@@ -215,7 +215,7 @@
   font-size:var(--fs-xs);
 }
 .dlg-footer {
-  padding: 8px 12px;
+  padding:var(--sp-vh-pane);
   border-top: 1px solid var(--bd);
   display: flex;
   gap: 6px;

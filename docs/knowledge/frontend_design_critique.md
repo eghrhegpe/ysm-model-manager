@@ -628,6 +628,13 @@ invariant_anchors:
     - **⚠️ 本波抓到的两个真缺陷（都已修 + 已立契约）**：① **`--sp-vh-btn` 初稿误写 `var(--sp-3)`（12px）**，而源值是横向 10px —— 令牌名写对、**展开值写错 = 静默 +2px 位移**。修：字面 `10px`，并新增 **`COMBO_EXPANSION` 期望表 + 契约测试「解析 variables.css 声明 → 展开值须等于期望」**，此类错误今后必红。② **`nearestPadToken` 的「`--sp-*` 优先」在 <4px 区间给错答案**：`padding:2px` 距 `--sp-1`(4px) 差 2、距 `--pad-btn-tool`(3px) 差 1，却因优先级压过更近的按钮档 → 报 `--sp-1`（+2px 位移，语义与位移双错）。修：**§5 层级1（4px）以下不推 `--sp-*`**（属按钮垂直档领地），补 `SP_FLOOR_PX` 常量 + 契约断言；修正后 `--fix` 达**幂等**（不再反复改写）。
     - **另一条工程经验（全量 vitest 的超时脆弱点）**：全量跑时 6 条用例报 5000ms 超时（android-events/app/version-updater/render-loop/wasm fixture/state），**单独跑或 `--testTimeout=20000` 全量跑则 6655/6655 全绿**——本仓全量套件在并发负载下动态 import 慢于 vitest 默认 5s 超时，属既有脆弱点（非样式改动引入），但与「判定闸假阴性」同属**「绿灯≠没问题」**家族，值得后续单独治理。
     - **验收**：契约测试 103/103 ✅ / `test_design_tokens` 全绿 ✅ / vite build ✅ / typecheck ✅ / biome ✅ / 令牌闸新增 0 ✅ / vitest 6655/6655（延长超时）✅ / 基线 377 → 311。
+  - **内容间距组合档波次（2026-09-22，承 ADR-295 D1 续建）**：沿「只建覆盖率高的档、不为孤品建档」口径（ADR-295 D4 防膨胀），从剩 311 条中筛出**纯 `--sp-*` 分量可精确展开**的组合（即两分量都命中五档、无按钮档混入）共 36 条 / 10 种，按覆盖率取 Top 2 建档：
+    - `--sp-vh-pane: var(--sp-2) var(--sp-3)`（8px 12px）——滚动容器/卡片正文/设置行（`.cr-scroll`/`.diag-pane`/`.gh-header-top`/`.stg-card-body`/`.setting-row`/`.footer`/`.ftr`），**×15**；
+    - `--sp-vh-block: var(--sp-5) var(--sp-3)`（24px 12px）——进度块/空态区块（`.gh-progress-box` 等），**×6**。
+    - **明拒建档**（低频/方向残缺，留存量债）：`8px 0`×4、`12px 0`×3、`12px 16px`×2、`0 8px`×2、`8px 16px`/`0 12px`/`4px 0`/`24px 0` 各 1——**建档收益不抵令牌面膨胀**，这正是 D4 精神的执行。
+    - **清债**：`--fix` 一次清 **21 条**（值等价，两分量均可精确展开），基线 311 → **290 条**。
+    - **方法论（重要）**：判「哪个组合值值得建档」的正确姿势不是「列全部可展开值」，而是**先按覆盖率和语义聚类**——本次 10 种可展开值里，Top 2 占 21/36，其余 8 种合计 15 条且多为单例；**建档的分界线应画在「高频语义簇」而非「技术上可展开」**。
+    - **验收**：`test_design_tokens` 全绿（含新增两档展开值对账）✅ / contract-tests 103/103 ✅ / vite build ✅ / typecheck ✅ / biome ✅ / `--fix` 幂等 ✅ / 基线 311 → 290。
 - ✅ **刀㉚ features 层执法：R8 HTML 字面量闸立法**（2026-09-20，本会话用户「锐评 /features」落地）：
   - **锐评总判**：features 纪律仓库天花板（R5 seam 零违例 / 全层零 `: any` 零 `@ts-ignore` / 跨 feature 依赖 DAG 无环 / 死代码仅 1 运行时孤儿导出），唯一结构性原罪 = **逻辑层私藏视图**——maintenance 三文件手写内联 style HTML 串、`_dots` 转圈状态挂 DOM 节点自定义属性。
   - **立法**：`check-layering` 新增 **R8（防回退）**：features 生产文件禁 HTML 字符串/模板字面量（政策 ADR-190 D1a / ADR-208 D2 早立但从未执法，本条补闸）；存量 5 文件 76 处入基线（dialogs 三件套 + community render/show-repo-models，ADR-208「已知遗留」点名项，big-bang 在 ADR 里被显式反对），新增即红；行级豁免尾注 `// layering-allow: html`。扫描器 `htmlLiteralHits` = 手写词法态机（剥注释/抽字符串跨/模板插值嵌套），纯函数导出 + 合成样本契约测试直测，同 `matchImports`/`r7EdgeViolates` 防空转惯例。同号异策：与 check-redlines R8 勿混。

@@ -110,8 +110,8 @@ export const contentStgCSS: string = `
 /* 2 列变体：两张卡并排（如「行为与动画」+「启动默认页」） */
 .stg-grid-2 { grid-template-columns: repeat(2, 1fr); }
 .stg-card { background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-lg); overflow:hidden; animation:fadeSlideUp var(--tr-enter) both; }
-.stg-card-hdr { display:flex;align-items:center;gap:6px; padding:8px 12px; font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--surf); }
-.stg-card-body { padding:8px 12px; }
+.stg-card-hdr { display:flex;align-items:center;gap:6px; padding:var(--sp-vh-pane); font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--surf); }
+.stg-card-body { padding:var(--sp-vh-pane); }
 .stg-path-val { display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:var(--radius-md); cursor:pointer; font-size:var(--fs-sm); color:var(--txt); background:var(--bg); transition:border-color var(--tr-fast), background var(--tr-fast); width:100%; box-sizing:border-box; min-height:0; }
 .stg-path-val:hover { border-color:var(--accent); background:var(--hover); }
 .stg-path-val.derived:hover { border-color:var(--accent); background:var(--hover); }
@@ -146,7 +146,7 @@ export const contentStgCSS: string = `
    margin 与 padding 不相叠，只能靠选择器消掉其中一份；此处保留标题的 padding-top。
    （与上面的左右 padding 无关：本条管垂直间距。） */
 .settings-group:has(+ .section-title) { margin-bottom: 0; }
-.setting-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--surf); border-radius:var(--radius-md); margin-bottom:4px; font-size:var(--fs-md); animation:fadeSlideUp var(--tr-enter) both; }
+.setting-row { display:flex; align-items:center; justify-content:space-between; padding:var(--sp-vh-pane); background:var(--surf); border-radius:var(--radius-md); margin-bottom:4px; font-size:var(--fs-md); animation:fadeSlideUp var(--tr-enter) both; }
 .setting-row .label { color:var(--txt); }
 .setting-row .value { color:var(--txt); } /* 值 = 正文（与 .td-camspeed-val 同口径）；.meta 仍 muted */
 

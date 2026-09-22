@@ -1,6 +1,6 @@
 # ADR-296：链接模式切换重链链路加固（锐评落地）
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（D1–D6 全部落地并经对抗审查放行；D7 按决策留观未升级、D8 明示不做项维持现状）
 - **实施状态**：查知识卡 `go-sync` / `go-installer`（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-22
 - **决策人**：Jieling（人类首席架构师）、AI 代理
@@ -58,6 +58,7 @@ GetLinkType 仅 UI 分类消费（optional/legacy 标记），无资损路径。
 - 代价：relink 每目录级条目 +1~2 次锁内 Lstat（微秒级）；count 语义不变（本就统计全部重链条目）；D5 使既有 2 条测试改动。
 - 实施顺序：D2 → D3 → D1 → D4 → D5/D6。D3/D4 同文件按序免冲突。
 - 验证红线：每笔 `go build ./...` + `go test ./go/sync/ -timeout 5m`；前端 D5 另过 `vite build + typecheck + check-biome --files`；知识卡 go-sync/go-installer 同步。
+- 落地后经两路独立对抗审查（可行性核实 ×3 + 全局审查 ×1）：坐实并修复 2 个 P1（busy 期吞切换致 UI 分叉、脏 linkMode 进 configCache 致下拉空白）、收口 4 个 P2（双读路径洗值对称、净化函数去 orDefault 反洗组合、D4 拒搬分支钉桩、`.relink-bak-`/`.bak-` 命名族免疫测试）；全仓 `go test ./...` 绿。
 
 ## 4. 数据溯源
 

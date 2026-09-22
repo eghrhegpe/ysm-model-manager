@@ -843,13 +843,9 @@ export class EnvironmentCapability implements SceneCapability {
     // 死后槽位悬空指向 sky 的 renderTarget 纹理，全靠 registry 反序 dispose 里
     // sky 恰好随后收拾——所有权收口的意义就是路径自洽，不赌 dispose 顺序。
     // sky 侧 dispose 守卫见 slot ≠ owned 即不动，两序皆收敛到 prevEnvironment。
-    // [暗线 B 收口] 占有权判定下沉 envOwnsSceneEnvironment 纯函数（与 3 处 isEnvDisposableSource 同文件）。
-    if (
-      envOwnsSceneEnvironment(this.scene.environment, {
-        envTexture: this.envTexture,
-        skySourcedTex: this.skySourcedTex,
-      })
-    ) {
+    // [暗线 B 收口] 占有权判定下沉 envOwnsSceneEnvironment 纯函数（与 3 处 isEnvDisposableSource 同文件）；
+    // env 享还原权的纹理：本 cap 自建 PMREM 产物 + sky 直装交回纹理（D-3 直装独占，env 离场即还原）。
+    if (envOwnsSceneEnvironment(this.scene.environment, [this.envTexture, this.skySourcedTex])) {
       this.scene.environment = this.prevEnvironment;
     }
     // background 同理（同槽位无他人竞写，但保持与 environment 同构，防未来多 cap 接入）

@@ -40,22 +40,19 @@ export function isEnvDisposableSource(tex: THREE.Texture | null, b: EnvBorrowedT
   return tex !== b.customHdrTex && tex !== b.skySourcedTex && tex !== (b.extraExclude ?? null);
 }
 
-/** env cap 对 scene.environment 槽位的占有权（dispose 时是否可还原 prevEnvironment） */
-export interface EnvSlotOwnership {
-  /** 本 cap 自建的 PMREM 产物纹理（scene.environment 写者之一） */
-  envTexture: THREE.Texture | null;
-  /** 天空直装交回的纹理（env 经直装独占该槽位，D-3 红线） */
-  skySourcedTex: THREE.Texture | null;
-}
-
 /**
- * [锐评 E-4 / D-3] env 离场时是否可安全把 scene.environment 还原为 prevEnvironment。
- * 收口原 `scene.environment === null || === ownedEnv || === skySourcedTex` 三态判定为单一事实源：
- *   - null：早已清（或本 cap 清空）
- *   - 等于本 cap 自建 envTexture：本 cap 写的，还原无碍
- *   - 等于 skySourcedTex：env 经直装独占该槽位（D1 写者唯一）→ env 离场即还原，不赌 registry 反序 dispose
- *   - 否则：槽位被**后续其它 cap**（或射线/后处理）写入，env 越权还原会冲掉他人贴图（黑天）→ 不碰。
+ * env 离场时是否可安全把 scene.environment 还原为 prevEnvironment（收口原散落两处的手写判定：
+ * environment-capability.dispose 的 `=== null || === envTexture || === skySourcedTex` 与
+ * sky-capability.dispose 的 `=== null || === ownedEnv` 为单一事实源）。
+ * `owned` 为本 cap 享有还原权的纹理集合：env cap 传 [envTexture, skySourcedTex]（D-3 直装独占），
+ * sky cap 传 [renderTarget.texture]（自身烘焙产物）。null 槽位恒可还原（早已清或本 cap 清空）。
+ * 否则槽位被**后续其它 cap**写入，越权还原会冲掉他人贴图（黑天）→ 不碰。
  */
-export function envOwnsSceneEnvironment(slot: THREE.Texture | null, o: EnvSlotOwnership): boolean {
-  return slot === null || slot === o.envTexture || slot === o.skySourcedTex;
+export function envOwnsSceneEnvironment(
+  slot: THREE.Texture | null,
+  owned: THREE.Texture | null | readonly (THREE.Texture | null)[],
+): boolean {
+  if (slot === null) return true;
+  const owners = Array.isArray(owned) ? owned : [owned];
+  return owners.includes(slot);
 }

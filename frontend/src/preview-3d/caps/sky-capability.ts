@@ -25,6 +25,8 @@ import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-216：监听器集合工厂提级共享原语（fog/light/ground/water/environment 同源；菜单局部刷新 notify 用）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
+// 暗线 B 收口：scene.environment 槽位所有权纯判定（与 environment-capability.dispose 共用单事实源）
+import { envOwnsSceneEnvironment } from "./environment-ownership.ts";
 import {
   type EnvPlacement,
   getTypedCap,
@@ -941,7 +943,8 @@ export class SkyCapability implements SceneCapability {
     // 仅当当前 environment 仍归本能力所有（自建贴图或已被
     // clearEnvironment 置 null）才还原——environment-capability（HDR）若在本能力之后写过
     // scene.environment，无条件还原会把别人的贴图冲掉。
-    if (this.scene.environment === null || this.scene.environment === ownedEnv) {
+    // [暗线 B 收口] 占有权判定下沉 envOwnsSceneEnvironment 纯函数（与 environment-capability.dispose 共用单事实源）。
+    if (envOwnsSceneEnvironment(this.scene.environment, ownedEnv)) {
       this.scene.environment = this.prevEnvironment;
     }
     this.sky.geometry.dispose();

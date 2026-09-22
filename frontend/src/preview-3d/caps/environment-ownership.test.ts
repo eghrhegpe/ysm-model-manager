@@ -51,18 +51,24 @@ describe("envOwnsSceneEnvironment（离场还原守卫）", () => {
   const skySrc = tex("sky");
 
   it("槽位为 null → 可还原（已清或本 cap 清空）", () => {
-    expect(envOwnsSceneEnvironment(null, { envTexture: envTex, skySourcedTex: skySrc })).toBe(true);
+    expect(envOwnsSceneEnvironment(null, [envTex, skySrc])).toBe(true);
   });
 
   it("槽位等于本 cap 自建 envTexture → 可还原", () => {
-    expect(envOwnsSceneEnvironment(envTex, { envTexture: envTex, skySourcedTex: skySrc })).toBe(true);
+    expect(envOwnsSceneEnvironment(envTex, [envTex, skySrc])).toBe(true);
   });
 
   it("槽位等于 sky 直装交回纹理（D-3 写者唯一红线）→ 可还原", () => {
-    expect(envOwnsSceneEnvironment(skySrc, { envTexture: envTex, skySourcedTex: skySrc })).toBe(true);
+    expect(envOwnsSceneEnvironment(skySrc, [envTex, skySrc])).toBe(true);
   });
 
   it("槽位被后续其它 cap 写入（prev 非本 cap 所有）→ 不可还原（防冲掉他人）", () => {
-    expect(envOwnsSceneEnvironment(prev, { envTexture: envTex, skySourcedTex: skySrc })).toBe(false);
+    expect(envOwnsSceneEnvironment(prev, [envTex, skySrc])).toBe(false);
+  });
+
+  it("sky cap 单 owned 纹理形态（[ownedEnv] 等价 {envTexture}）→ 仅认自身 renderTarget 纹理", () => {
+    // sky-capability.dispose 复用同一谓词，传单一 renderTarget.texture 集合
+    expect(envOwnsSceneEnvironment(owned, owned)).toBe(true);
+    expect(envOwnsSceneEnvironment(prev, owned)).toBe(false);
   });
 });

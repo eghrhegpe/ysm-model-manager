@@ -83,10 +83,17 @@ export const GROUND_MATERIAL_PRESET_KEYS = [
 // 来源门（锐评修复 2026-09-21）：「手改」只对 manual 写入成立——auto-atmosphere（氛围
 // 预设快照）/ auto-model（模型默认值）携带同批字段属程序化派发，不该把用户预设打成
 // custom。存档恢复路径另有显式 skipMiddleware 豁免（loadState 逐字段还原）。
+// [G-6 修复 2026-10] 白名单 PRESET_KEYS 刻意不含 groundSourceKind（精确防误清），但手动切
+// 来源轴（texture 选贴图 / solid / canvas）同样是「脱离材质预设」动作——不置位则「选了贴图
+// → 切回素面」后菜单下拉仍显示旧预设名（名实不符，ADR-254 要消灭的病）。来源轴改为 none
+// （彻底无表面层）不置位：素材层级归零，custom 标记无意义；预设点击自带 preset 键天然豁免。
 registerEnvStateMiddleware((patch, { source }) => {
   if (source !== "manual") return undefined;
   if (patch.groundMaterialPreset !== undefined) return undefined;
-  const touched = GROUND_MATERIAL_PRESET_KEYS.some((k) => patch[k] !== undefined);
+  const sourceKindChanged =
+    patch.groundSourceKind !== undefined && patch.groundSourceKind !== "none";
+  const touched =
+    sourceKindChanged || GROUND_MATERIAL_PRESET_KEYS.some((k) => patch[k] !== undefined);
   return touched ? { groundMaterialPreset: "custom" } : undefined;
 });
 

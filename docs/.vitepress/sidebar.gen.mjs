@@ -241,6 +241,10 @@ export const autoSidebar = [
       {
         "text": "3D 预览菜单系统全景图",
         "link": "/preview-menu-overview"
+      },
+      {
+        "text": "YSM 模型管理器 — 界面视觉与布局一致性诊断报告",
+        "link": "/UI-Design-Audit-2026-09"
       }
     ]
   },

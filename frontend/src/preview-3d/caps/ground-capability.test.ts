@@ -875,6 +875,65 @@ describe("GroundCapability — 材质预设（ADR-254 材质名兑现配色）",
     expect(cap.getMaterialPreset()).toBe("custom");
   });
 
+  it("[G-6] 切到贴图来源（用户手动动作）→ 脱离材质预设（置位 custom）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.setMaterialPreset("grass");
+    // 用户去「选择贴图」→ acceptLoadedTexture 写 sourceKind=texture（manual，不携带 preset 键）
+    const tex = new THREE.DataTexture(new Uint8Array(4 * 4), 2, 2);
+    cap.acceptLoadedTexture(tex, "wood.png");
+    expect(envState.groundSourceKind).toBe("texture");
+    expect(
+      cap.getMaterialPreset(),
+      "手动选择贴图应视为脱离材质预设（菜单下拉不得回跳素面）",
+    ).toBe("custom");
+  });
+
+  it("[G-6] 贴图 → 清贴图（释放缓存 + 回退 canvas/plain）→ 置位 custom", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    cap.setMaterialPreset("grass");
+    const tex = new THREE.DataTexture(new Uint8Array(4 * 4), 2, 2);
+    cap.acceptLoadedTexture(tex, "wood.png");
+    cap.clearCustomTexture();
+    expect(cap.getSourceKind()).toBe("canvas");
+    expect(cap.getCanvasStyle()).toBe("plain");
+    expect(
+      cap.getMaterialPreset(),
+      "清贴图是用户手动动作，应视为脱离材质预设",
+    ).toBe("custom");
+    // 清贴图后 canvas 轴停留在用户手改的 plain（形状保留，与「custom 态保留上一次形状」一致）
+    expect(cap.getCanvasStyle()).toBe("plain");
+  });
+
+  it("[G-6] texture → solid/solid → texture 反复切换 → 一律置位 custom（不复位素面）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.setMaterialPreset("grass");
+    cap.setSourceKind("texture");
+    expect(cap.getMaterialPreset()).toBe("custom");
+    cap.setSourceKind("solid");
+    expect(cap.getMaterialPreset()).toBe("custom");
+    cap.setSourceKind("canvas");
+    cap.setCanvasStyle("marble");
+    expect(cap.getMaterialPreset()).toBe("custom");
+  });
+
+  it("[G-6] 来源轴改为 none（彻底无表面层）→ 不置位 custom（none 下素材层级归零）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.setMaterialPreset("grass");
+    cap.setSourceKind("none");
+    expect(cap.getMaterialPreset(), "none 无表面层，custom 标记无意义").toBe("grass");
+    // 预设点击仍可正常复位（自带 preset 键，天然豁免）
+    cap.setSourceKind("canvas");
+    cap.setCanvasStyle("grass");
+    cap.setMaterialPreset("sand");
+    expect(cap.getMaterialPreset()).toBe("sand");
+    expect(cap.getCanvasStyle()).toBe("sand");
+  });
+
   it("改预设不管的字段 → 不清预设（白名单精确性，非前缀匹配）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });

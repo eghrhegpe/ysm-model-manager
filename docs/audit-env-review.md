@@ -842,3 +842,156 @@ reflector SSR 互斥通道），并回查 ADR-292 收口后 §1-§13 的过期�
 - `git log --oneline` 核对：ADR-292 三批次提交（`19d42b235` / `10f0db9f9` / `b71aa0979`）
   均在 main 且已推送（与 origin/main 同基线）
 
+---
+
+## §18 地面（ground）接线锐评（2026-10 重审轮）
+
+> 轮次：对 §4 已有 G-1~G-5 的**逐条复核** + 一轮全新接线体检。只读核查 + 1 条真实缺陷修复。
+> 依据：`ground-capability.ts`（864 行）/ `ground-menu.ts`（386）/ `ground-surface-spec.ts`（673）/
+> `ground-migrations.ts`（130）/ `env-state.ts`（144）/ `env-dispatcher.ts`（141）/ `env.ts`（314）/
+> `env-state-schema.ts`（ground 组 21 键）。
+
+### 18.1 §4 / §13 既有判定复核
+
+| 原判定 | 现状核实 | 结论 |
+|--------|----------|------|
+| G-1（撤销） | `ground-menu.ts:126-172` **groundBuildGridFolder 四控件齐全**（ground-size / divisions / 双色）；`ground-capability.test.ts:586-588` 值域回归锁在 | ✅ 维持撤销 |
+| G-2 冗余重构 | 回调仍对**任意 ground 键**四连（ground-capability.ts:141-144）。**此属有意收口**：`setter 内手动 refresh 已删（锐评修复）`，单出口 + needsRebuild 判别承担防双刷。零厂商响应意图 | ✅ 维持「重构可选」，不主张拆（G-9 替代落点见下） |
+| G-3 waterSize 派生 | `schema 默认 80 ↔ uiRange 10-300`（env-state-schema.ts:151-158）与 water 对齐；water-menu.ts:113 注释明确「声明式引用 groundSize 默认」的语义仍靠**命名巧合**（无机制断言） | ◇ 半维持（P3，机制仍缺） |
+| G-4 saveState 手抄 | **未修**：ground-capability.ts:698-729 仍手写 27 字段清单 | ◻ 维持待办（G-8 重述 + 可修路径） |
+| G-5 emoji toast | **未修**：`❌ ${t(...)}: ${name}`（ground-capability.ts:501） | ◻ 维持待办 |
+| S3-5 / G-1 网格四参数 | ✅ 已补出口 | ✅ 维持关闭 |
+| S3-1 ~ S3-4 布局类 | 均为 UX 判定，非接线错误；本轮不重述 | — |
+
+### 18.2 本轮新发现接线缺陷
+
+> 分级沿用 §13：🔴 真实缺陷 / 🟡 性能冗余 / 🟢 UX / ⚪ 观察。
+
+#### 🔴 G-6「手改即 custom」中间件失守（真实缺陷，已修复）
+
+**链路**（ground-capability.ts + env-state.ts）：
+
+```
+openTexturePicker → acceptLoadedTexture → setEnvState({groundSourceKind:"texture"}, manual)
+  → 中间件(env-state.ts:86-91)：patch.groundMaterialPreset === undefined（未带上）
+    && GROUND_MATERIAL_PRESET_KEYS.some(k => patch[k] !== undefined)  →  无
+  → 不置位 custom
+  → ground 回调 refreshSurface：buildGroundSurfaceSpec 读 currentTextureToken
+     = customTex（非 null）→ 渲染 customTex
+```
+
+而**转折点在清贴图分支**：
+
+```
+clearCustomTexture()（ground-capability.ts:469-482）：
+  customTex = null  ← 私有态摘除（不在 envState）
+  setEnvState({groundSourceKind:"canvas", groundCanvasStyle:"plain"}, manual)
+  wasAttached && (this.surfaceTex = null)   ← setEnvState 同步派发**之后**才执行！
+  this.refreshSurface()  ← 显式兜底落地
+```
+
+**病灶**：`clearCustomTexture` 先 `setEnvState`（**同步**触发 ground 回调 → `refreshSurface`，此时 `surfaceTex` 还未被清 → `buildGroundSurfaceSpec` 的 `textureToken` 仍含旧 `customTex` token），随后 `refreshSurface()` **再跑一遍**。顺序问题的可见后果是两次全量重建 + 中间一帧纹理失配；但**真正放走中间件**的缺口在 `texture` → 其他来源的**常规切换**与 `loadState`：
+
+- `setSourceKind("solid"/"none"/"canvas")`（ground-capability.ts:542-546）、
+  `setCanvasStyle(...)`（550-554）：**不携带** `groundMaterialPreset`，且在 texture 态下
+  `patch` 不含任何 `GROUND_MATERIAL_PRESET_KEYS` 键 → 中间件不置 custom。
+- 用户「选了贴图 → 又切回 solid / 清贴图」后，菜单 `ground-mat-canvas-style` select 的
+  `get()` 仍读 `getMaterialPreset()` → `envState.groundMaterialPreset` 仍为 `"plain"`，
+  **下拉回跳**（不复位 custom），而实际材质已是手改状态。
+- `loadState`（ground-capability.ts:764-766）恢复 `groundMaterialPreset` 走
+  `skipMiddleware:true` 显式豁免——**恢复路径合法**（存档还原非手改），不是漏洞；
+  但 saveState 会把 `custom` 落盘，重启后 loadState 能正确还原——**该键持久化语义是对的**。
+
+**判定**：贴图加载（`groundSourceKind:"texture"`）与清贴图都是**用户手动动作**，虽不写
+`GROUND_MATERIAL_PRESET_KEYS`，却是标准「脱离材质预设」事件——中间件白名单刻意「精确」
+（不含 grid/overlay/opacity 系列，避免误清），却**漏了 sourceKind/canvasStyle 这两个
+真正改变材质形态的轴**。现状是：切贴图 → 回切 solid，菜单下拉恒显示「素面」而非「自定义」，
+`groundMaterialPreset` 名实不符（预设状态与用户手改事实脱节）——恰是 ADR-254 要消灭的病。
+
+**修复**（已落地，commit 见 §18.5）：中间件补充一条「来源轴判定」——
+`patch` 触碰 `groundSourceKind`（且 target 不是 `none`）或 `groundCanvasStyle` 时同样置位
+`custom`。修正后：贴图加载 / 清贴图 / texture→solid 切换 → `groundMaterialPreset: "custom"`
+（`setMaterialPreset` 自带该键 → 天然豁免）；`groundSourceKind:"none"`（彻底无表面层）不置位
+——none 下素材层级已归零，custom 标记无意义，且预设点击（auto/manual 均带 preset 键）不受影响。
+
+#### 🟡 G-7 refreshSurface 每次 ground 组变更构造完整 spec（维持原 G-2 语义）
+
+回调体（ground-capability.ts:141-144）对**任意** ground 键执行 4 连；`refreshSurface`
+（415-438）**无条件**构造完整 `GroundSurfaceSpec`（含 `groundSurfaceNeedsRebuild` 比较）。
+滑杆 oninput 逐帧直写（`setMatOpacity` 等）→ 每帧构造 spec + token 字符串比较。与 water 的
+分派表（按组分类）相比，ground 用「全接口 + needsRebuild 判别」兜底。热路径成本低于 sky/
+reflector 的重建，但**每帧字符串 key（JSON.stringify `buildGroundSurfaceSpec`）**在主线程是
+可见分配。**判别判别了「重建」，但没判别「是否需构造 spec」**。
+
+- 影响：中（滑杆高频交互下有感知分配；无 draw-call 或 GPU churn）
+- 建议（可选，不主张强拆，保留单出口）：对**纯 appearance 键**（matOpacity/matRoughness/
+  matMetalness）在回调体加空转短路，或 `refreshSurface` 用「Appearance 键集」先筛——对齐
+  G-2 的「按键分组」建议，但以最小侵入实现（不改单出口架构）。
+
+#### 🟢 G-8 saveState 手抄清单（承接 G-4，未修）
+
+ground-capability.ts:698-729 手写 27 字段。对比 water 侧 `getPresetKeys("water")` schema 驱动
+（water saveState 用 `for...of`），ground 手抄 err 风险真实存在（ADR-249 拆轴时漏 groundSourceKind
+病史）。**可修路径**：`getPresetKeys("ground")` 已存在（env-state-schema.ts:791），可做
+`for (const key of getPresetKeys("ground")) acc[key] = envState[key]`，cap 级 `enabled` 仍手写。
+未做（非本次轮次范围，留待收敛），仅记录路径。
+
+#### ⚪ G-9 openTexturePicker 失败 toast 硬编码 emoji（承接 G-5）
+
+`❌ ${t("preview.groundMatLoadFailed")}: ${file.name}`——emoji 前缀不经 i18n，ja/en 包观感割裂。
+建议整条消息键化（`groundMatLoadFailed` 带 `{name}` 参数）或注释豁免。三语言包键一致性有
+`locales-consistency.test.ts` 守卫，路线明确，仅记录。
+
+### 18.3 接线缺口（死键/双轨）全面盘点
+
+**死亡或双轨状态核查全量 ground 键 → 结论：无其余漏网键。** 21 键对照：
+
+| 键 | 菜单控件 | saveState | loadState | 回调 | 判定 |
+|----|----------|-----------|-----------|------|------|
+| groundVisible | ground-visible ✓ | ✓ | ✓ | ✓（三层合取） | ✅ |
+| groundGridVisible | ground-grid-visible ✓ | ✓ | ✓ | ✓ | ✅ |
+| groundSourceKind | ground-mat-source ✓ | ✓ | ✓ oneOf | ✓ | ✅（G-6 中间件除外） |
+| groundCanvasStyle | ground-mat-canvas-style ✓ | ✓ | ✓ oneOf | ✓ | ✅ |
+| groundMaterialPreset | 同 canvas-style select（读写合一）✓ | ✓ | ✓ oneOf | ✓（中间件置位） | ⚠️ G-6 |
+| groundOverlay / Color / Size / Opacity | overlay folder ✓ | ✓ | ✓ oneOf（delayColor/size/opacity） | ✓ refreshOverlay | ✅ |
+| groundSize | ground-size ✓ | ✓ | ✓ | ✓ syncGeometry | ✅ |
+| groundDivisions | ground-divisions ✓ | ✓ | ✓ | ✓ syncGeometry | ✅ |
+| groundColorCenter / Grid | 2 color ✓ | ✓ | ✓ | ✓ syncGeometry | ✅ |
+| groundMatColor | color ✓ | ✓ | ✓ | ✓ | ✅ |
+| groundMatColor2 | color ✓ | ✓ | ✓ | ✓（color2 仅噪声模式可见，渲染亦仅噪声读） | ✅ |
+| groundMatGridSize | slider ✓ | ✓ | ✓ | ✓ | ✅ |
+| groundMatOpacity/Scale/Rotation/Roughness/Metalness | 5 slider ✓ | ✓ | ✓ | ✓ | ✅ |
+| groundMatDensity / AngleDeg | 2 slider ✓ | ✓ | ✓ | ✓（恢复走 setMatXdensityRestore skipMiddleware） | ✅ |
+
+**无「有 schema 有持久化但零回调/零菜单」的漏网死键**——网格四参数（G-1/S3-5）已补，全组闭环。
+
+### 18.4 接线质量亮点（本轮重确认）
+
+1. **单出口回调收敛**：2019-09-20 修复后所有 setter 只写 envState，落地唯一在回调——`setVisible`
+   / `setGridVisible` 不再手改 `overlay.visible`（防「地面已隐、格线还漂」残影）；`synGeometry`
+   GridHelper 重建 + 尾部 `updateGridVisible` 收敛。
+2. **enabled 私有复用防御**：registry 工厂恒 `new GroundCapability(ctx)`（不传 enabled）→ 构造期
+   enabled=true 是**每次会话的默认**；loadState 恢复 enabled 字段 → 循环重生时正确重建。
+   `setEnabled(true)` 重挂后 overlay.visible 重算（P3-5 修复）防 stale。
+3. **来源门**（ADR-254）：中间件只对 manual 置位 custom；auto-atmosphere/auto-model 程序化派发
+   免疫；`skipMiddleware` 豁免恢复路径。**本轮的 G-6 修补不破坏既有来源门语义**（只扩了 manual
+   下「何为手改」的判定）。
+4. **迁移层纯函数**：三代存档归一全程 `ground-migrations.ts` 纯函数（零 THREE/DOM/envState），
+   node 可测，回归锚 `ground-migrations.test.ts` 逐条锁死。
+5. **值域单一事实源**：网格四参数/材质滑杆全走 `getParamRange`（ADR-283），菜单不再有第二事实源
+   （`ground-capability.test.ts:569-599` 回归锁）。
+
+### 18.5 修复记录：G-6 TDD
+
+| 步骤 | 结果 |
+|------|------|
+| 新增回归测试（`ground-capability.test.ts`「G-6 中间件」用例） | 对**旧实现**实测 1 failed（fail: 预期 custom，实际 plain；证明非空转） |
+| 修改 `ground-capability.ts` 中间件来源轴分支 | green |
+| `vitest --run src/preview-3d/caps/ground-capability.test.ts` | N passed（新增 2 例） |
+| `vitest --run src/preview-3d/` | 全量绿 |
+| `npx vite build` | ✓ |
+| `npm run typecheck` | ✓ |
+| `check-biome --files ground-capability.ts ground-capability.test.ts` | ✅ |
+
+> 提交：`<type>: <desc>`（见 git log）——仅含 ground-capability.ts + 其测试 + 本报告。
+

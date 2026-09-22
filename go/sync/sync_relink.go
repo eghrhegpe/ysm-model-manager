@@ -32,10 +32,10 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	// 全量扫描含 SHA256 哈希，持锁执行会阻塞所有其他同步/安装操作）。
 	// TOCTOU 容忍：哈希仅作为 content 关联兜底，锁外快照后文件被外部修改的概率极低
 	// （SyncToggleStatus 同款理由，单进程桌面应用无并发 relink 同 customDir 路径）。
-	// 局限：目录级分支（下方 isDirType）基于锁外快照的 dstParent 做 rename/回滚——
-	// 若快照到锁内执行之间 dstParent 被并发操作改动，备份/回滚的原子性前提被破坏，
-	// 可能滞留 .relink-bak 或丢失原目录（logger 'failed' 可见但非静默；属该低频路径的
-	// 已知残余风险，未做锁内重 stat 校验以守住锁范围语义，见 TestRelinkDir_ScanNotHeldLock）。
+	// 目录级分支（下方 isDirType）的 rename/回滚目标 dstParent 在锁内 rename 前经
+	// dstSnapshots + os.SameFile 复验（ADR-296 D4），收窄「锁外快照→锁内 rename」
+	// 窗口内 dstParent 被 rename 走/替换为异体目录导致的搬错对象；残余窗口见
+	// dstSnapshots 收集处注释。
 	repoEntries := scanFn(filesRoot)
 	repoByHash := make(map[string][]types.ModelEntry)
 	for _, e := range repoEntries {
@@ -53,6 +53,29 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		repoByHash[e.Hash] = append(repoByHash[e.Hash], e)
 	}
 	customEntries := scanFn(customDir)
+
+	// ADR-296 D4：目录级替换分支的 dstParent 锁外快照——rename/回滚的原子性前提是
+	// 「锁内搬的就是扫描时观察到的那个目录」。对将走整目录替换的条目（isDirType 且非
+	// 根层平铺）在锁外 Lstat 父目录，锁内 rename 前经 verifyDirSnapshot 复验。
+	// 仅逐条 Lstat（微秒级），不违 TestRelinkDir_ScanNotHeldLock 的「全量扫描不持锁」契约。
+	dirSnaps := make(map[string]os.FileInfo)
+	if registry.IsDirLevelSync(rtype) {
+		for _, ce := range customEntries {
+			baseName := registry.StripDisableSuffix(strings.ToLower(filepath.Base(ce.Path)))
+			if !packs.IsTypeModelFile(baseName, rtype) {
+				continue
+			}
+			dstParent := filepath.Dir(ce.Path)
+			if strings.EqualFold(filepath.Clean(dstParent), filepath.Clean(customDir)) {
+				continue // 平铺分支不做整目录 rename，无需复验
+			}
+			if info, err := os.Lstat(dstParent); err == nil {
+				dirSnaps[ce.Path] = info
+			}
+			// Lstat 失败（目录不存在/竞态中消失）→ 无快照 → 复验放行，
+			// 由锁内 rename 走原有失败路径记 logger（行为与加固前一致）
+		}
+	}
 
 	// 整段持 installer.InstallLock（仅覆盖操作段，不含锁外扫描）：RelinkDir 自身对 custom
 	// 目录做 os.Rename/os.RemoveAll（目录级分支的备份/回滚/清理）——ADR-056 要求同步与
@@ -130,6 +153,23 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 			// 但 InstallDir 会自动创建 {targetSubDir}，如果 dstParent 已经是模型目录
 			// 则会二次嵌套。正确的做法：上一层目录作为 dstDir，让 InstallDir 创建子目录
 			dstBase := filepath.Dir(dstParent)
+			// ADR-296 D4 锁内复验：搬前确认 dstParent 仍是锁外快照观察到的那个对象
+			// （谓词与残余窗口说明见 verifyDirSnapshot）
+			snap, hasSnap := dirSnaps[ce.Path]
+			if !hasSnap {
+				// 锁外 Lstat 即失败（目录不存在/竞态窗口中消失）——拒绝搬一个
+				// 从未观察到的对象；改名/删除竞态中重建的同名目录不是快照对象
+				if logger != nil {
+					logger(ce.Name, ce.Path, dstParent, 0, "failed", "relink 跳过: 目标目录快照缺失（已不存在或扫描窗口中被改动）")
+				}
+				continue
+			}
+			if ok, reason := verifyDirSnapshot(snap, dstParent); !ok {
+				if logger != nil {
+					logger(ce.Name, ce.Path, dstParent, 0, "failed", "relink 跳过: "+reason)
+				}
+				continue
+			}
 			// 原子替换：先把旧目录挪走作备份，InstallDir 重建成功后再清理备份；
 			// 失败则回滚恢复，避免目录整体丢失（旧实现先 RemoveAll 后重建，失败即丢）
 			// 备份名带时间戳（P2-4）：旧实现固定 ".relink-bak" + 无条件 RemoveAll，
@@ -192,6 +232,29 @@ func isRelinkBackupPath(p string) bool {
 		}
 	}
 	return false
+}
+
+// verifyDirSnapshot 锁内 rename 前复验 dstParent 仍是快照观察到的对象（ADR-296 D4）。
+// os.SameFile 比对文件身份：Windows 走 VolumeSerial+FileIndex、Unix 走 dev+ino
+// （installer.sameDir 同口径，双端可用，不依赖 Sys() 断言）。
+// 能检出：路径被换成异体对象（rename 搬走/删除后新建）→ 拒搬。
+// 诚实标注的残余窗口（不可检出，接受）：
+//   - 目录内容增删不改目录自身身份——relink 本就整目录覆盖重建，内容漂移不威胁「搬对对象」；
+//   - NTFS FileId 删除后立即回收复用的极端巧合（理论漏检，概率≈0）；
+//   - InstallLock 只互斥本进程，复验 Lstat 与 Rename 之间外部进程仍可改动——窗口已从
+//     「扫描→rename 全程」收窄为「两条相邻 syscall 之间」。
+func verifyDirSnapshot(snap os.FileInfo, dstParent string) (bool, string) {
+	cur, err := os.Lstat(dstParent)
+	if err != nil {
+		return false, "目标目录已不存在: " + err.Error()
+	}
+	if !cur.IsDir() {
+		return false, "目标已不是目录（快照后类型被改动）"
+	}
+	if !os.SameFile(snap, cur) {
+		return false, "目标目录已被替换为另一对象（锁外快照失效）"
+	}
+	return true, ""
 }
 
 // removeRelinkBackup 删除 relink 成功后的备份目录，失败仅记 logger 不吞净——

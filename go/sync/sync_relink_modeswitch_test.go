@@ -156,8 +156,7 @@ func TestRelinkDir_CopyToHardLink_Links(t *testing.T) {
 // 钉住 RelinkDir 主循环真实的 continue 边界（sync_relink.go），
 // 防后续重构把 continue 条件挪错位置引入「禁用被悄悄恢复」类缺陷。
 func TestRelinkDir_NoHashOrBanned_Untouched(t *testing.T) {
-	repoRoot, customDir, repoFile, _, scanBase := modeSwitchFixture(t, "same")
-	_ = scanBase
+	repoRoot, customDir, repoFile, _, _ := modeSwitchFixture(t, "same")
 	noHash := filepath.Join(customDir, "nohash.ysm")
 	banned := filepath.Join(customDir, "m.ysm.ban")
 	for _, p := range []string{noHash, banned} {

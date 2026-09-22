@@ -36,7 +36,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 172 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 173 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 13 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 | `ui:card-density` | 1 | 1 | 0 | 0 | ✅ |
@@ -287,8 +287,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 312 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 339 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 334 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 361 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -344,7 +344,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 204 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 212 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 78 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 341 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 92 |
@@ -466,9 +466,10 @@
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 117 |
 | emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 154 |
 | emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 161 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 188 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 207 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 245 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 184 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 205 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 229 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 267 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 109 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 120 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |

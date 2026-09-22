@@ -39,6 +39,10 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	repoEntries := scanFn(filesRoot)
 	repoByHash := make(map[string][]types.ModelEntry)
 	for _, e := range repoEntries {
+		// 重链备份目录尸体不得充当重链源（ADR-296 D3，谓词说明见 isRelinkBackupPath）
+		if isRelinkBackupPath(e.Path) {
+			continue
+		}
 		if e.Hash == "" {
 			continue
 		}
@@ -62,6 +66,10 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 
 	count := 0
 	for _, ce := range customEntries {
+		// 重链备份目录尸体不参与重链（斩断 rename→InstallDir→新备份 套娃，ADR-296 D3）
+		if isRelinkBackupPath(ce.Path) {
+			continue
+		}
 		if ce.Hash == "" {
 			continue
 		}
@@ -169,6 +177,21 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		count++
 	}
 	return count, nil
+}
+
+// isRelinkBackupPath 判断路径是否落在某次 relink 的备份目录（`<目录名>.relink-bak-<UnixNano>`）子树内。
+// 备份名是**后缀形态**（不是独立段），故不能照抄 sync.go hasRecycleSegment 的逐段精确 EqualFold——
+// 必须逐段判「是否含 .relink-bak-」。命中即从 relink/toggle 的扫描条目集中剔除：
+// 否则备份目录内的模型条目（Go WalkDir 与生产 Rust 快路径都会下钻并填哈希）哈希恒匹配仓库原件，
+// 触发对尸体的 rename→InstallDir→再生新备份，套娃增长（ADR-296 D3）。
+// 谓词判「任一段」而非只判 basename：备份目录**内部**的文件（Path 含 .relink-bak 段）同样要剔除。
+func isRelinkBackupPath(p string) bool {
+	for _, seg := range strings.Split(p, string(filepath.Separator)) {
+		if strings.Contains(strings.ToLower(seg), ".relink-bak-") {
+			return true
+		}
+	}
+	return false
 }
 
 // removeRelinkBackup 删除 relink 成功后的备份目录，失败仅记 logger 不吞净——

@@ -150,7 +150,8 @@ status: active
 - `SyncToggleStatus` 与 `go/installer` 共用包级 `installer.InstallLock`（`sync.Mutex`），防止与安装操作并发写同一文件
 - `RelinkDir` / `PushSingleResource` 整段持 `InstallLock`，内部对 `installer.Install/InstallDir/CopyFile` 改用 `*Locked` 变体，避免同 goroutine 重入非重入 mutex 死锁；`SyncToggleStatus` 采分段持锁（阶段 1 收集与阶段 3+4 执行各为独立持锁段，中间锁外算哈希）——锁生命周期由段内 defer 保证，锁外 panic 不会触发对已释放锁的二次 Unlock
 - 文件被占用（如 Minecraft 锁定）时 `isFileLocked` 识别后静默跳过不阻塞
-- `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `.relink-bak`，重建成功才删备份、失败则回滚；根层平铺的 ysm.json/.pmx 退化为 `installer.Install` 单文件路径
+- `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `<目录名>.relink-bak-<UnixNano>` 备份（时间戳防覆盖恢复点，与 conflict.go 的 `.bak-<ts>` 同族），重建成功才删备份、失败则回滚；根层平铺的 ysm.json/.pmx 退化为 `installer.CopyFile` 单文件路径
+- **`.relink-bak-*` 备份尸体不参与扫描消费（ADR-296 D3）**：Go WalkDir 与生产 Rust 快路径（`rust_backend` tag，`should_skip_dir_name` 只跳 `.recycle`/`.github`/禁用后缀）都会下钻备份目录并照常填哈希 → 尸体内条目哈希恒匹配仓库原件。`go/sync/sync_relink.go|isRelinkBackupPath`（逐段判「含 `.relink-bak-`」，后缀形态不能照抄 `hasRecycleSegment` 的精确段匹配）在三处剔除：`RelinkDir` custom 主循环、repoByHash 构建循环、`SyncToggleStatus` WalkDir——斩断「对尸体 rename→InstallDir→再生新备份」的套娃增长与尸体被 `.disabled` 改名的污染。展示层（`GetInstanceStatus` 走 scanner 源头）尚未过滤，属已知残余，源头收敛须 Go+Rust 双端同步另立项（回归测试 `TestRelinkDir_RelinkBackupCorpsesSkipped` / `TestSyncToggleStatus_RelinkBackupCorpsesSkipped`）
 - 硬链接检测跨平台分实现，系统调用失败一律降级 `LinkCopy`；`GetLinkType` 必须先 `os.Lstat` 判 `os.ModeSymlink`
 - 链接类型是删除策略依据：硬链接(nlink>1)/符号链接直接删，普通文件才移回收站
 - 拉取侧 `copyFile` 已修复为 **tmp+rename 原子落地**；`copyDirRecursive` 保留符号链接语义

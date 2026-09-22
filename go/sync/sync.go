@@ -297,6 +297,11 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			if hasRecycleSegment(p) {
 				return nil
 			}
+			// relink 备份尸体同样剔除（ADR-296 D3）：尸体哈希匹配仓库原件，
+			// 不跳则对备份目录内的模型做 .disabled 改名，污染恢复点
+			if isRelinkBackupPath(p) {
+				return nil
+			}
 			actualPath := p
 			isCurrentlyBanned := registry.IsDisableSuffix(p)
 			if isCurrentlyBanned {

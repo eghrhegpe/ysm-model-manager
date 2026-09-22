@@ -8,6 +8,7 @@ import (
 
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/go/types/registry"
 )
 
 func TestRelinkDir_MatchesByHash(t *testing.T) {
@@ -143,8 +144,9 @@ func TestRelinkDir_FlatEntryAtCustomDirRoot(t *testing.T) {
 	if _, err := os.Stat(sibling); err != nil {
 		t.Fatalf("兄弟模型被误删: %v", err)
 	}
-	// 不留 .relink-bak 残留
-	matches, _ := filepath.Glob(customDir + "*.relink-bak")
+	// 不留 .relink-bak 残留（L147 旧断言 customDir+"*.relink-bak" 缺分隔符恒空=死断言，
+	// 且后缀形态是 <目录名>.relink-bak-<ts>，必须 Join + 通配 -<ts>）
+	matches, _ := filepath.Glob(filepath.Join(customDir, "*.relink-bak-*"))
 	if len(matches) != 0 {
 		t.Fatalf("不应有 .relink-bak 残留: %v", matches)
 	}
@@ -224,8 +226,8 @@ func TestRelinkDir_DirLevelReplacesOldDir(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(customDir, "custom-sub")); !os.IsNotExist(err) {
 		t.Fatalf("旧目录应被替换移除: %v", err)
 	}
-	// 无 .relink-bak 残留
-	matches, _ := filepath.Glob(filepath.Join(customDir, "*.relink-bak"))
+	// 无 .relink-bak 残留（后缀形态 <目录名>.relink-bak-<ts>，旧断言漏 -<ts> 恒空）
+	matches, _ := filepath.Glob(filepath.Join(customDir, "*.relink-bak-*"))
 	if len(matches) != 0 {
 		t.Fatalf("不应有 .relink-bak 残留: %v", matches)
 	}
@@ -236,5 +238,128 @@ func TestRelinkDir_DirLevelReplacesOldDir(t *testing.T) {
 	}
 	if string(data) != "repo-version" {
 		t.Fatalf("新目录应为仓库版本，实际 %q", string(data))
+	}
+}
+
+// TestRelinkDir_RelinkBackupCorpsesSkipped（ADR-296 D3 回归）：
+// 实例侧 `.relink-bak-<ts>` 备份目录内的条目（哈希与仓库原件恒等）必须被剔除，
+// 否则每轮 relink 对尸体 rename→InstallDir→再生新备份，套娃增长。
+// 断言：尸体不计数、尸体文件原样保留、不新增备份目录。
+func TestRelinkDir_RelinkBackupCorpsesSkipped(t *testing.T) {
+	base := t.TempDir()
+	repoRoot := filepath.Join(base, "repo")
+	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
+	if err := os.MkdirAll(repoRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(customDir, "m.ysm.relink-bak-123"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("same"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(customDir, "m.ysm"), []byte("same"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	corpse := filepath.Join(customDir, "m.ysm.relink-bak-123", "m.ysm")
+	_ = os.WriteFile(corpse, []byte("same"), 0644)
+
+	scanFn := func(dir string) []types.ModelEntry {
+		if dir == repoRoot {
+			return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(repoRoot, "m.ysm"), Hash: "h1"}}
+		}
+		// custom 侧：真实平铺条目 + 尸体内条目（Path 含 .relink-bak-）
+		return []types.ModelEntry{
+			{Name: "m.ysm", Path: filepath.Join(customDir, "m.ysm"), Hash: "h1"},
+			{Name: "m.ysm", Path: corpse, Hash: "h1"},
+		}
+	}
+	count, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
+		func(name, src, dst string, size int64, status, msg string) {
+			t.Logf("logger: %s %s %s %s", name, src, status, msg)
+		})
+	if err != nil {
+		t.Fatalf("RelinkDir 失败: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("尸体不参与重链，只应重链平铺 1 个，实际 %d", count)
+	}
+	// 尸体文件应原样保留（未被 rename 搬走 / 重建）
+	if _, err := os.Stat(corpse); err != nil {
+		t.Fatalf("尸体应原样保留不被触碰: %v", err)
+	}
+	// 不产生新的 relink 备份（套娃的产物）——只应剩最初手搭的那一个
+	m2, _ := filepath.Glob(filepath.Join(customDir, "*.relink-bak-*"))
+	if len(m2) != 1 {
+		t.Fatalf("不应新增 relink 备份目录: %v", m2)
+	}
+}
+
+// TestIsRelinkBackupPath 谓词口径钉桩：后缀形态 `<目录名>.relink-bak-<ts>`，
+// 判「任一路径段含 .relink-bak-」（备份目录**内部**文件同样命中，WalkDir/Rust 快路径会下钻）；
+// 不误伤正常模型名（含 .relinkbak 无连字符、.recycle 等近似形态）。
+func TestIsRelinkBackupPath(t *testing.T) {
+	sep := string(filepath.Separator)
+	hit := []string{
+		filepath.Join("C:\\mc\\resourcepacks", "m.ysm.relink-bak-1700000000") + sep + "ysm.json",
+		"repo" + sep + "sub.relink-bak-42" + sep + "a.ysm",
+		"X.RELINK-BAK-1" + sep + "ysm.json", // 大小写不敏感（Windows rename 保留字面但判定须稳）
+	}
+	miss := []string{
+		filepath.Join("repo", "model.ysm"),
+		filepath.Join("repo", "m.relinkbak-1", "ysm.json"), // 无连字符的内部名不误伤
+		filepath.Join("repo", ".recycle", "m.ysm.ban"),
+		"model.relink.txt",
+	}
+	for _, p := range hit {
+		if !isRelinkBackupPath(p) {
+			t.Errorf("应命中备份谓词: %s", p)
+		}
+	}
+	for _, p := range miss {
+		if isRelinkBackupPath(p) {
+			t.Errorf("不应命中备份谓词: %s", p)
+		}
+	}
+}
+
+// TestSyncToggleStatus_RelinkBackupCorpsesSkipped（ADR-296 D3）：
+// 备份目录内与仓库禁用版**同内容**的文件，必须不被 hash 兜底关联而改名 .disabled——
+// 污染恢复点。repo 侧唯一条目被禁用，正常位置的 mymodel.ysm 应被禁用（对照组），
+// 尸体内同名内容文件应原样不动。
+func TestSyncToggleStatus_RelinkBackupCorpsesSkipped(t *testing.T) {
+	_, repoDir, customDir := newToggleEnv(t)
+	repoFile := filepath.Join(repoDir, "model.ysm.ban")
+	if err := os.WriteFile(repoFile, []byte("AAA"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// 正常实例文件（应被禁用）+ 备份尸体内的同内容文件（应不动）
+	live := filepath.Join(customDir, "mymodel.ysm")
+	corpseDir := filepath.Join(customDir, "m.relink-bak-99")
+	corpse := filepath.Join(corpseDir, "mymodel.ysm")
+	for _, p := range []string{live, corpse} {
+		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("AAA"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	hash := computeHash(repoFile)
+	scanFn := func(string) []types.ModelEntry {
+		return []types.ModelEntry{{Name: "model.ysm.ban", Path: repoFile, Hash: hash}}
+	}
+	disable, _, err := SyncToggleStatus(customDir, repoDir, scanFn)
+	if err != nil {
+		t.Fatalf("不应报错: %v", err)
+	}
+	if disable != 1 {
+		t.Errorf("只应禁用正常位置的 1 个（尸体被过滤），disable=%d", disable)
+	}
+	if _, err := os.Stat(corpse); err != nil {
+		t.Errorf("尸体文件应原样保留: %v", err)
+	}
+	if _, err := os.Stat(corpse + registry.DisabledSuffix()); err == nil {
+		t.Error("尸体不应被改名为 .disabled")
 	}
 }

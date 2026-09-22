@@ -15,7 +15,11 @@
 import * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patches/patch-guard.ts";
-import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
+import {
+  registerEnvCallback,
+  resumeEnvCallbacks,
+  suspendEnvCallbacks,
+} from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { type EnvStateKey, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
@@ -191,18 +195,13 @@ export class WaterCapability implements SceneCapability {
   private scene: THREE.Scene;
   private water: WaterBody;
   private waterTime: { value: number };
-  private enabled: boolean;
   /** 参数变更监听（menu 局部刷新用）；仅模式切换等影响分组可见性的离散操作 notify */
   private readonly listenerSet = createListenerSet();
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
 
-  constructor(opts: {
-    scene: THREE.Scene;
-    enabled?: boolean;
-  }) {
+  constructor(opts: { scene: THREE.Scene }) {
     this.scene = opts.scene;
-    this.enabled = opts.enabled ?? true;
     this.waterTime = { value: 0 };
     this.water = this.rebuildWaterContainer(true);
 
@@ -221,8 +220,8 @@ export class WaterCapability implements SceneCapability {
           getWaterBodyStrategy(envState.waterMode).needsRebuild(changed);
         if (needsRebuild) {
           // rebuildWaterContainer 内部已
-          // syncWaterVisibility（L323 由已更新的 envState 重算 visible）——此处重复
-          // 调用是纯 no-op，删除（film/pool/wetness 门控单一入口，便于推理）
+          // rebuildWaterContainer 内部已 syncWaterVisibility（由已更新的 envState 重算
+          // visible）——此处重复调用是纯 no-op，删除（film/pool/wetness 门控单一入口，便于推理）
           this.rebuildWaterContainer(false);
           if (changed.has("waterMode")) this.notify();
           return;
@@ -243,7 +242,7 @@ export class WaterCapability implements SceneCapability {
     );
   }
 
-  // ── 水材质（波浪 shader + 法线贴图）：film 顶 / pool 顶 共用，避免技术分叉 ──
+  // ── 水材质（波浪 shader + fragment 程序化微细节法线，ADR-271）：film 顶 / pool 顶 共用，避免技术分叉 ──
   private buildWaveWaterMaterial(opts: { forPool: boolean }): THREE.MeshPhysicalMaterial {
     // [shader-patch 守卫] REVISION 断言：water 锚点是渲染管线稳定 chunk 标记，给宽松范围
     // [185,190)，升级审计后再收窄。失配即 throw → registry 工厂兜底使本 cap 缺失，拒绝静默降级。
@@ -486,41 +485,39 @@ export class WaterCapability implements SceneCapability {
     // ADR-257 B 档：形态不再在此处三元判断，交给注册表——新增形态不影响本函数。
     this.water = getWaterBodyStrategy(envState.waterMode).build(this.buildCtx());
     this.syncWaterVisibility();
-    if (wasInScene && this.enabled) {
+    if (wasInScene) {
       this.scene.add(this.water.root);
     }
     return this.water;
   }
 
-  /** 水面可见性：enabled ∧ water.enabled ∧（受 wetness 门控的形态还需 wetness>0） */
+  /** 水面可见性：waterEnabled ∧（受 wetness 门控的形态还需 wetness>0）。
+   *  单一 gate（fog 先例同法，2026-09-22）：能力启停 === waterEnabled，
+   *  真值源唯一 envState——原私有 `this.enabled` 恒 true 且被 legacy 存档误写中毒，已退役。 */
   private syncWaterVisibility(): void {
     const strategy = getWaterBodyStrategy(envState.waterMode);
     const gatePassed = strategy.wetnessGated ? envState.waterWetness > 0 : true;
-    const shouldShow = this.enabled && envState.waterEnabled && gatePassed;
-    this.water.root.visible = shouldShow;
+    this.water.root.visible = envState.waterEnabled && gatePassed;
   }
 
-  /** 推进水面波纹动画（render loop 调用） */
+  /** 推进水面波纹动画（render loop 调用）。visible 已含 waterEnabled 语义，单判即可。 */
   update(dt: number): void {
-    if (!this.enabled || !envState.waterEnabled || !this.water.root.visible) return;
+    if (!this.water.root.visible) return;
     this.waterTime.value += dt * envState.waterWaveSpeed;
   }
 
   apply(): void {
-    if (!this.enabled) return;
     if (!this.water.root.parent) this.scene.add(this.water.root);
   }
 
+  // 能力级启停 = waterEnabled 别名（SceneCapability 接口出口；fog/water 单门收口同法）。
+  // 不再另有私有开关：真值源唯一，legacy 存档 water.enabled 也只写此一处。
   setEnabled(v: boolean): void {
-    this.enabled = v;
-    if (v) this.apply();
-    else {
-      if (this.water.root.parent) this.water.root.parent.remove(this.water.root);
-    }
+    this.setWaterEnabled(v);
   }
 
   isEnabled(): boolean {
-    return this.enabled;
+    return envState.waterEnabled;
   }
 
   // ── 水面：独立开关 / 形态切换 ──
@@ -603,7 +600,7 @@ export class WaterCapability implements SceneCapability {
     return envState.waterOpacity;
   }
 
-  // ── 法线贴图强度（顶层水面）──
+  // ── 微细节法线强度（顶层水面；GPU 程序化，无贴图槽，ADR-271）──
   setNormalStrength(v: number): void {
     setEnvState({ waterNormalStrength: v }, { source: "manual" });
   }
@@ -697,18 +694,24 @@ export class WaterCapability implements SceneCapability {
   }
 
   /** 保存状态到 localStorage。
-   *  持久化字段 = schema 的 water 组键集（getPresetKeys("water")）+ 能力级 enabled——
+   *  持久化字段 = schema 的 water 组键集（getPresetKeys("water")，含 waterEnabled——
+   *  单门收口后它就是能力开关，fog/water 同法，2026-09-22 私有 enabled 退役后不再另落幽灵键）——
    *  不再手抄清单：新增 water 参数只要进 schema，**写侧**自动跟上（评审「一处参数六处接线」收口）。
    *  ⚠️ 读侧不自动：loadState 还原表仍是手写双轨清单，新键须同步登记——
    *  缺口由契约锁兜住：water-capability.test.ts「schema 键全部可 round-trip」（漏登记即红）。
    *  ⚠️ 历史键名 size / pool* 由 loadState 新旧双轨兼容；写侧统一用 water* 规范键。 */
   saveState(): void {
-    const state: Record<string, unknown> = { enabled: this.enabled };
+    const state: Record<string, unknown> = {};
     for (const key of getPresetKeys("water")) state[key] = envState[key];
     persistState(this.id, state);
   }
 
-  /** 从 localStorage 恢复状态 */
+  /** 从 localStorage 恢复状态。
+   *  恢复段挂起派发（suspendEnvCallbacks，fog/ground/light 同法）：逐字段 setter 只写
+   *  envState，末尾 rebuildWaterContainer 一次性从 envState 全量落地——消除「~15 次派发 ×
+   *  mode 键中途重建」的重入窗口。resume 放 finally：计数逃逸会让全仓派发静默假死。
+   *  ⚠️ 顶层 `enabled` 键（2026-09-22 私有门退役前的能力级幽灵键）不再消费：单门收口后
+   *  水面开关唯一真值源 = waterEnabled（嵌套 dialect 的 enabled 子域开关由下方双轨表吸收）。 */
   loadState(): void {
     let state = restoreState(this.id) as Record<string, unknown> | null;
     // legacy.water 解包后 state.water 不存在 → 下方
@@ -738,66 +741,75 @@ export class WaterCapability implements SceneCapability {
       }
     }
     if (!state) return;
-    restoreFields(state, {
-      enabled: { boolean: (v) => (this.enabled = v) },
-      // legacy `size` 键（ADR-272 前旧名）——值一律交回唯一写入口 `setWaterSize`，
-      // 不在此处自备钳制（ADR-283 收口：值域单一事实源 = schema `range`）。
-      // 历史：此处曾自钳 `Number.isFinite(v) ? Math.max(1, v) : 1`——
-      //   ① 与 setEnvState 的 clampFieldValue 重复（同是钳到 ≥1）；
-      //   ② 且只覆盖下界，与 schema `range [1,300]` 口径不齐（自钳只算半个执法者）；
-      //   ③ `Number.isFinite` 分支不可达：存档过 JSON 边界后 NaN/Infinity 已变 null。
-      // 现存唯一例外是 shader 侧 `max(uSize, 0.001)`（防除零，语义不同，保留）。
-      size: { number: (v) => this.setWaterSize(v) },
-    });
-    // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。
-    // 子域开关键随格式不同：V2 嵌套用 enabled；flat 用顶层 waterEnabled。
-    const nested = fromNestedLegacy
-      ? state // legacy.water 解包内容即嵌套方言（含 enabled 子域开关）
-      : state.water && typeof state.water === "object"
-        ? (state.water as Record<string, unknown>)
-        : null;
-    const w = (nested ?? state) as Record<string, unknown>;
-    restoreFields(w, {
-      // 子域开关：仅当取到嵌套对象时 w.enabled 才是子域开关（顶层 enabled=能力级，已在上方处理）
-      ...(nested
-        ? { enabled: { boolean: (v) => this.setWaterEnabled(v) } }
-        : { waterEnabled: { boolean: (v) => this.setWaterEnabled(v) } }),
-      // 新旧键双轨（restoreFields 对缺失键安全跳过；实际存档只含一种方言）
-      mode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
-      waterMode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
-      wetness: { number: (v) => this.setWetness(v) },
-      waterWetness: { number: (v) => this.setWetness(v) },
-      waterColor: { number: (v) => this.setWaterColor(v) },
-      waterOpacity: { number: (v) => this.setWaterOpacity(v) },
-      normalStrength: { number: (v) => this.setNormalStrength(v) },
-      waterNormalStrength: { number: (v) => this.setNormalStrength(v) },
-      waveSpeed: { number: (v) => this.setWaveSpeed(v) },
-      waterWaveSpeed: { number: (v) => this.setWaveSpeed(v) },
-      choppiness: { number: (v) => this.setChoppiness(v) },
-      waterChoppiness: { number: (v) => this.setChoppiness(v) },
-      // ADR-257：水面高度键（跨形态通用，新旧键双轨与其余参数同惯例）
-      level: { number: (v) => this.setLevel(v) },
-      waterLevel: { number: (v) => this.setLevel(v) },
-      clarity: { number: (v) => this.setClarity(v) },
-      waterClarity: { number: (v) => this.setClarity(v) },
-      // ADR-272 扩展：写侧已规范为 waterSize（旧存档的 size 键在上方 restoreFields 已吸收）
-      waterSize: { number: (v) => this.setWaterSize(v) },
-      poolHeight: { number: (v) => this.setPoolHeight(v) },
-      waterPoolHeight: { number: (v) => this.setPoolHeight(v) },
-      poolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
-      waterPoolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
-      poolWallColor: { number: (v) => this.setPoolWallColor(v) },
-      waterPoolWallColor: { number: (v) => this.setPoolWallColor(v) },
-      poolRoundness: { number: (v) => this.setPoolRoundness(v) },
-      waterPoolRoundness: { number: (v) => this.setPoolRoundness(v) },
-    });
-    // ADR-257 迁移：旧存档没有 waterLevel 键（旧语义里「水面 y == 池深 h」）。
-    // pool 用户兜底为 waterPoolHeight 以保持原有观感；film 用户沿用默认 0.01（与旧硬编码一致）。
-    // 注：mode/waterMode 在上方 restoreFields 中已先行还原，故此处读到的 waterMode 即存档形态。
-    const hadLevelKey = w.level !== undefined || w.waterLevel !== undefined;
-    if (!hadLevelKey && envState.waterMode === "pool") {
-      this.setLevel(envState.waterPoolHeight);
+    suspendEnvCallbacks();
+    try {
+      restoreFields(state, {
+        // legacy `size` 键（ADR-272 前旧名）——值一律交回唯一写入口 `setWaterSize`，
+        // 不在此处自备钳制（ADR-283 收口：值域单一事实源 = schema `range`）。
+        // 历史：此处曾自钳 `Number.isFinite(v) ? Math.max(1, v) : 1`——
+        //   ① 与 setEnvState 的 clampFieldValue 重复（同是钳到 ≥1）；
+        //   ② 且只覆盖下界，与 schema `range [1,300]` 口径不齐（自钳只算半个执法者）；
+        //   ③ `Number.isFinite` 分支不可达：存档过 JSON 边界后 NaN/Infinity 已变 null。
+        // 现存唯一例外是 shader 侧 `max(uSize, 0.001)`（防除零，语义不同，保留）。
+        size: { number: (v) => this.setWaterSize(v) },
+      });
+      // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。
+      // 子域开关键随格式不同：V2 嵌套用 enabled；flat 用顶层 waterEnabled。
+      const nested = fromNestedLegacy
+        ? state // legacy.water 解包内容即嵌套方言（含 enabled 子域开关）
+        : state.water && typeof state.water === "object"
+          ? (state.water as Record<string, unknown>)
+          : null;
+      const w = (nested ?? state) as Record<string, unknown>;
+      restoreFields(w, {
+        // 子域开关：仅当取到嵌套对象时 w.enabled 才是子域开关（顶层 enabled=已退役的
+        // 能力级幽灵键，不再消费——见本方法头注）
+        ...(nested
+          ? { enabled: { boolean: (v) => this.setWaterEnabled(v) } }
+          : { waterEnabled: { boolean: (v) => this.setWaterEnabled(v) } }),
+        // 新旧键双轨（restoreFields 对缺失键安全跳过；实际存档只含一种方言）
+        mode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
+        waterMode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
+        wetness: { number: (v) => this.setWetness(v) },
+        waterWetness: { number: (v) => this.setWetness(v) },
+        waterColor: { number: (v) => this.setWaterColor(v) },
+        waterOpacity: { number: (v) => this.setWaterOpacity(v) },
+        normalStrength: { number: (v) => this.setNormalStrength(v) },
+        waterNormalStrength: { number: (v) => this.setNormalStrength(v) },
+        waveSpeed: { number: (v) => this.setWaveSpeed(v) },
+        waterWaveSpeed: { number: (v) => this.setWaveSpeed(v) },
+        choppiness: { number: (v) => this.setChoppiness(v) },
+        waterChoppiness: { number: (v) => this.setChoppiness(v) },
+        // ADR-257：水面高度键（跨形态通用，新旧键双轨与其余参数同惯例）
+        level: { number: (v) => this.setLevel(v) },
+        waterLevel: { number: (v) => this.setLevel(v) },
+        clarity: { number: (v) => this.setClarity(v) },
+        waterClarity: { number: (v) => this.setClarity(v) },
+        // ADR-272 扩展：写侧已规范为 waterSize（旧存档的 size 键在上方 restoreFields 已吸收）
+        waterSize: { number: (v) => this.setWaterSize(v) },
+        poolHeight: { number: (v) => this.setPoolHeight(v) },
+        waterPoolHeight: { number: (v) => this.setPoolHeight(v) },
+        poolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
+        waterPoolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
+        poolWallColor: { number: (v) => this.setPoolWallColor(v) },
+        waterPoolWallColor: { number: (v) => this.setPoolWallColor(v) },
+        poolRoundness: { number: (v) => this.setPoolRoundness(v) },
+        waterPoolRoundness: { number: (v) => this.setPoolRoundness(v) },
+      });
+      // ADR-257 迁移：旧存档没有 waterLevel 键（旧语义里「水面 y == 池深 h」）。
+      // pool 用户兜底为 waterPoolHeight 以保持原有观感；film 用户沿用默认 0.01（与旧硬编码一致）。
+      // 注：mode/waterMode 在上方 restoreFields 中已先行还原，故此处读到的 waterMode 即存档形态。
+      const hadLevelKey = w.level !== undefined || w.waterLevel !== undefined;
+      if (!hadLevelKey && envState.waterMode === "pool") {
+        this.setLevel(envState.waterPoolHeight);
+      }
+    } finally {
+      resumeEnvCallbacks();
     }
+    // 统一应用一次（fog applyFog / ground 同法）：容器重建即从 envState 全量重导——
+    // 材质（buildMaterial 读 envState）、结构 transform（applyTransformLinks）、水位与
+    // 可见性（rebuildWaterContainer 内 syncWaterVisibility）一条路径闭环，不依赖逐键派发。
+    this.rebuildWaterContainer(false);
   }
 
   /** 移除并释放 */

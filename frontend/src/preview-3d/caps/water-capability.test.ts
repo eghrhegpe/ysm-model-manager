@@ -11,7 +11,8 @@ import {
 } from "./water-body-strategies.ts";
 import { WaterCapability } from "./water-capability.ts";
 import { WATER_PARAM_APPLIER_KEYS } from "./water-capability.ts";
-import { persistState } from "./scene-capability.ts";
+import { persistState, restoreState } from "./scene-capability.ts";
+import { isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";
 import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
@@ -682,6 +683,76 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
     // pool: opacity = waterOpacity（无 wetness 因子）
     expect(mat.opacity).toBeCloseTo(0.9, 5);
     expect(mat.userData.shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.9, 5);
+  });
+});
+
+describe("WaterCapability — 能力级开关单门收口（fog 先例同法，2026-09-22）", () => {
+  beforeEach(() => {
+    resetEnvState();
+  });
+
+  it("私有 enabled 字段已退役——实例不持有同名 own 属性（防僵尸门回归守卫）", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    expect("enabled" in cap, "能力级开关唯一真值源 = envState.waterEnabled，私有门不得复活").toBe(
+      false,
+    );
+  });
+
+  it("setEnabled/isEnabled 是 envState.waterEnabled 的别名（写即派发即同步可见性）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setEnabled(false);
+    expect(envState.waterEnabled).toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    expect(scene.getObjectByName("ysm-ground-water")!.visible).toBe(false);
+    cap.setEnabled(true);
+    expect(cap.isEnabled()).toBe(true);
+    expect(scene.getObjectByName("ysm-ground-water")!.visible).toBe(true);
+  });
+
+  it("saveState 不再持久化能力级 enabled 幽灵键（waterEnabled 随 schema 键集照常落盘）", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    cap.saveState();
+    const saved = restoreState("water") as Record<string, unknown>;
+    expect("enabled" in saved, "恒 true 的幽灵键不得再进存档").toBe(false);
+    expect("waterEnabled" in saved).toBe(true);
+  });
+
+  it("legacy 中毒回归：ground 嵌套 water.enabled=false 恢复后，单一开关仍能救回水面", () => {
+    // 病灶（2026-09-22 收口）：旧 loadState 首段把嵌套 dialect 的 water.enabled 同时写进
+    // 私有 this.enabled——该键无任何 UI 写口（registry ctx 无 enabled，env 行 headerToggle
+    // 绑的是 waterEnabled），false 一进即永久锁死：菜单开关显示 ON 而水面不再出现，
+    // saveState 还把中毒值落盘，重启自续。现单门收口后同一存档可正常翻回。
+    persistState("ground", { water: { enabled: false, wetness: 0.4 } });
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.loadState();
+    expect(cap.getWaterEnabled()).toBe(false);
+    expect(scene.getObjectByName("ysm-ground-water")!.visible).toBe(false);
+    cap.setWaterEnabled(true);
+    expect(scene.getObjectByName("ysm-ground-water")!.visible, "单门可逆：翻开关即复现").toBe(true);
+  });
+
+  it("loadState 恢复段挂起派发、末尾一次性落地（同侪 fog/ground 口径）", () => {
+    // 断言两点：① 恢复结束后 visible/geometry 与整批 envState 一致（end-of-line 统一应用，
+    // 不依赖逐键派发）；② 挂起计数无逃逸。
+    persistState("water", {
+      waterEnabled: true,
+      waterMode: "pool",
+      waterSize: 150,
+      waterPoolHeight: 2,
+    });
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.loadState();
+    expect(isEnvCallbacksSuspended(), "resume 必须在 finally 闭合").toBe(false);
+    cap.apply();
+    const root = scene.getObjectByName("ysm-ground-water") as THREE.Group;
+    expect(root.visible).toBe(true);
+    const top = root.getObjectByName("ysm-water-top") as THREE.Mesh;
+    expect(top.scale.x, "结构参数在末尾统一落地").toBe(150);
   });
 });
 

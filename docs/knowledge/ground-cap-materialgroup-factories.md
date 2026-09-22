@@ -58,7 +58,7 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 
 - `buildGroundNodes(cap: GroundCapability): PreviewMenuNode[]` — 包级函数，`GroundCapability.getMenuNodes()` 唯一桥接入口。
 - 内部工厂（包级、material group 专用）：`colorNode` / `sliderNode` / `textureButtonsNode` / `groundBuildMatFolder`。
-- 水面菜单（12 项 water 控件）已随 2026-08-28 拆分迁至独立 `WaterCapability`（`frontend/src/preview-3d/caps/water-capability.ts`），ground 不再聚合水面组。
+- 水面菜单（原嵌于 ground 的水面子域控件全数）已随 2026-08-28 拆分迁至独立 `WaterCapability`（`frontend/src/preview-3d/caps/water-capability.ts`），ground 不再聚合水面组。
 
 ## 与其他子系统关系
 

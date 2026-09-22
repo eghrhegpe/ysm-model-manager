@@ -54,6 +54,8 @@ pitfalls:
   - '**uniform 一律经 `setUniform(mat, name, value)` 写入**（原五处 `as unknown as { userData.shader }` 深挖已收口）：`onBeforeCompile` 未跑或 uniform 名拼错时静默跳过，故改动后须以「uniform 实际取到值」的断言兜底，不能只断言 envState'
   - '**值域改一处生效（ADR-283）**：滑杆 `min/max/step` 由 `getParamRange(key)` 从 schema 取，cap 内不再有值域字面量；写侧钳制在 `setEnvState` 唯一入口。改范围请改 `ENV_STATE_SCHEMA.xxx.range`（合法域）/ `uiRange`（展示域），**不要在 menu 或 setter 里写死**'
   - '**setter 不再 clamp（ADR-283）**：`setWaterOpacity` 等一律只 `setEnvState({...})`；若要加保护请补 schema `range`，写回 setter 即造出第二事实源'
+  - '**水面开关单门（2026-09-22，fog 先例同法）**：启停唯一真值源 = `envState.waterEnabled`，`SceneCapability.setEnabled/isEnabled` 是其别名出口。原私有 `this.enabled` 为僵尸门——registry ctx 无 `enabled` 字段 ⇒ 生产恒 true、无任何 UI 写口、却经 saveState 持久化幽灵键；且 `loadState` 首段曾把 ground 嵌套 legacy 的 `water.enabled` 直写进它：**中毒即永久锁死水面，菜单开关显示 ON 也救不回**。现私有字段退役（守卫 = 测试断言 `"enabled" in cap === false`），幽灵键不再落盘也不再消费，同一存档翻开关即可复现'
+  - '**含开关键的批次派发不得早退吞键（2026-09-21 修复）**：回调曾 `changed.has("waterEnabled") → syncWaterVisibility → return`，同批其余 water 键的材质/transform 应用被整体跳过——envState 已新、渲染体仍旧（画面与状态脱节直到下一次无关派发）。现参数照常逐键派发、可见性统一在派发尾重算；守卫 = 测试「waterEnabled + 参数同批派发」用例。往回调里加任何「单键早退 return」前先想清楚同批其余键谁负责'
   - '**形态门控必须「构造期 = 运行期」同源（2026-09 修复）**：`uRoundness` 构造期靠 `buildMaterial` 的 `forPool` 对 film 恒 0，但分派表 applier 侧曾漏门控——pool 专属参数 `waterPoolRoundness` 经存档恢复 / 预设套用 / 其他 cap 直写 envState 时会把圆角泄漏进 film 材质（水膜四角被凭空裁掉，恰是构造期明令禁止的行为）。现由 `WaterBodyStrategy.supportsRoundness` 显式声明（film=false / pool=true）并在 applier 查 strategy。**教训：同一门控只写在构造期，运行期迟早从另一条路径漏进 uniform**——新增形态旗标时构造期与运行期必须共用'
 quick_groups:
   - 3D 预览与模型追加
@@ -79,7 +81,7 @@ invariant_anchors:
 | 文件 | 轴 | 特征 |
 |---|---|---|
 | `water-state.ts` | 类型 | `WaterMode = "film" \| "pool"`，零 THREE、零副作用 |
-| `water-menu.ts` | 声明 | 15 控件 / 4 组 folder（form / look / pool / wave），纯节点树 |
+| `water-menu.ts` | 声明 | 纯节点树：`water-enabled` 平铺 toggle + form/look/pool/wave 四组 folder（组内全原生控件） |
 | `water-capability.ts` | 渲染 | 波浪 shader 注入、微细节法线、容器装配、参数应用、持久化 |
 | `water-body-strategies.ts` | 策略 | 形态注册表；**新增形态 = 注册一项，现有实现零改动**（结构参数语义固化为 `transformLinks`） |
 
@@ -117,13 +119,15 @@ invariant_anchors:
 
 ## 对外 API / 入口
 
-- 能力开关：`setWaterEnabled` / `getWaterEnabled`（菜单 id `water-enabled`，cap 的 master node）
+- 能力开关：`setWaterEnabled` / `getWaterEnabled`（菜单 id `water-enabled`，cap 的 master node）——**单门**：SceneCapability 的 `setEnabled/isEnabled` 是其别名，真值源唯一 `envState.waterEnabled`（2026-09-22 私有门退役，fog 同法）
 - 形态：`setWaterMode` / `getWaterMode`；水位：`setLevel` / `getLevel`（**跨形态通用，零重建**）
 - 尺寸：`setWaterSize` / `getWaterSize`（菜单 id `water-size`，展示域 10–300 m / 合法域 ≥1；**跨形态通用，零重建**，ADR-272 + ADR-283）
 - 外观：`setWaterColor`、`setWaterOpacity`、`setWetness`、`setNormalStrength`、`setClarity`、`setChoppiness`
 - 池体：`setPoolHeight`、`setPoolWallThickness`（**两条均零重建**，ADR-272 §5.1：壁高走 `scale.y`、外偏与光学光程运行期现算）、`setPoolWallColor`、`setPoolRoundness`（钳制同源 schema `range`，ADR-283）
 - 波纹：`setWaveSpeed`；时间推进走 `update(dt)` 累加 `waterTime`（仅推进 uniform，从不写变换）
-- 持久化：`saveState` / `loadState`（新旧键双轨；旧档无 `waterLevel` 时 pool 取 `waterPoolHeight` 兜底）
+- 持久化：`saveState` / `loadState`（新旧键双轨；旧档无 `waterLevel` 时 pool 取 `waterPoolHeight` 兜底）。
+  `loadState` 恢复段挂起派发（`suspendEnvCallbacks`，fog/ground/light 同法），末尾 `rebuildWaterContainer`
+  从 envState 一次性全量落地——不再逐键 dispatch×重建；顶层 `enabled` 幽灵键不再消费（单门收口）
   - **值钳制唯一执法点 = `setEnvState` 的 `clampFieldValue`（ADR-283）**：`loadState` 的 legacy `size` 键
     曾自钳 `Number.isFinite(v) ? Math.max(1, v) : 1`——与写入口重复、且只盖下界（与 schema `range [1,300]`
     口径不齐）。已于 2026-09-20 删除自钳、改为委派 `setWaterSize`（保存兼容性不变，legacy `size` 仍生效）。
@@ -131,7 +135,7 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- **envState（ADR-196）**：16 个 `water*` 键，group `water`；dispatcher 前置过滤后回调。
+- **envState（ADR-196）**：water 组键集（= `getPresetKeys("water")`，含 `waterEnabled`）全部 `group: "water"`，dispatcher 前置过滤后回调。
 - **GroundCapability**：水面原是其「双子域」，拆分后平级。
 - **environment**：水面的镜面感来自 `scene.environment`（PMREM 环境贴图），**不是**自身反射——
   水面不会倒映模型本体。
@@ -157,6 +161,8 @@ invariant_anchors:
   拒绝静默降级。
 - **不存在 CPU 法线贴图**：`getNormalMap` / `generateNormalMap` / `normalMapCache` 已整体退场，
   回归时不应复活。
+- **不存在能力级私有开关**：`this.enabled` / `opts.enabled` / 存档顶层 `enabled` 键已退役（单门 =
+  `envState.waterEnabled`，fog 同法），回归时不应复活——测试以 `"enabled" in cap === false` 为守卫。
 
 ## 相关
 

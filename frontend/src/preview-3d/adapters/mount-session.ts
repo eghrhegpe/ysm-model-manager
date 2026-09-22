@@ -63,7 +63,7 @@ export function guardSessionAlive(lc: SessionLifecycle): boolean {
 
 /**
  * mount3D 会话级可变状态收敛体（原 30+ 裸 let，收敛后仅剩 keys/mouseDown/lastMouse 等少量 input let）。
- * infra 字段（scene/camera/renderer/controls/orbitTarget + 全部 cap）复用 {@link SharedInfra}，
+ * infra 字段（scene/camera/renderer/controls/orbitTarget + mount 链消费的 cap 引用）复用 {@link SharedInfra}，
  * 本接口仅收敛 session 级可变状态——闭包读写统一经此对象，降低认知负担。
  */
 export interface MpSessionState {

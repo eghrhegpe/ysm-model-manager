@@ -12,15 +12,12 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.ts";
 import type { FogCapability } from "@/preview-3d/caps/fog-capability.ts";
-import type { GroundCapability } from "@/preview-3d/caps/ground-capability.ts";
 import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
-import type { PostprocessingCapability } from "@/preview-3d/caps/postprocessing-capability.ts";
 import type { ReflectorCapability } from "@/preview-3d/caps/reflector-capability.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
 import type { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
-import type { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
 import type { PostprocessingLike } from "@/preview-3d/infra/postprocessing.ts";
 import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
@@ -221,23 +218,22 @@ export function getSceneCaps(): readonly SceneCapability[] {
   return sceneInfraHost.getCaps();
 }
 
-/** buildSharedInfra 返回的 shared 基础设施 + 程序化能力引用（mount3D 赋值给会话局部变量） */
+/** buildSharedInfra 返回的 shared 基础设施 + 程序化能力引用（mount3D 赋值给会话局部变量）。
+ *  ⚠️ 只带「装配现场之外仍有消费者」的引用（2026-09-22 死字段清算：skyCap/groundCap/waterCap/
+ *  fogCap/reflectorCap/postProcCap 六枚只写不读字段已删）——cap 间协作的合法通道是构造注入的
+ *  `ctx.caps` 查询器 / `getTypedCap(registry,…)` 现场取（ADR-168/216），不是这里；
+ *  mount/switch 链消费 lightCap/shadowCap/environmentCap（session 生命周期联动）、
+ *  postProc（render/尺寸/像素比）。 */
 export interface SharedInfra {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
   controls: OrbitControls;
   orbitTarget: THREE.Vector3;
-  skyCap: SkyCapability | null;
-  groundCap: GroundCapability | null;
-  waterCap: WaterCapability | null;
   lightCap: LightCapability | null;
-  fogCap: FogCapability | null;
   shadowCap: ShadowCapability | null;
-  reflectorCap: ReflectorCapability | null;
   environmentCap: EnvironmentCapability | null;
   postProc: PostprocessingLike | null;
-  postProcCap: PostprocessingCapability | null;
 }
 
 /** buildSharedInfra：shared 模式基础设施 + 程序化能力装配（scene/camera/renderer/OrbitControls 单例复用 + caps 创建/preset/Shadow/postProc 联动）。
@@ -303,8 +299,6 @@ export function buildSharedInfra(
   setSceneCapabilityLookup(sceneCapabilityRegistry);
   sceneInfraHost.caps = caps;
   const skyCap = sceneCapabilityRegistry.getById("sky") ?? null;
-  const groundCap = sceneCapabilityRegistry.getById("ground") ?? null;
-  const waterCap = sceneCapabilityRegistry.getById("water") ?? null;
   const lightCap = sceneCapabilityRegistry.getById("light") ?? null;
   const fogCap = sceneCapabilityRegistry.getById("fog") ?? null;
   const shadowCap = sceneCapabilityRegistry.getById("shadow") ?? null;
@@ -365,16 +359,10 @@ export function buildSharedInfra(
     renderer,
     controls,
     orbitTarget,
-    skyCap,
-    groundCap,
-    waterCap,
     lightCap,
-    fogCap,
     shadowCap,
-    reflectorCap,
     environmentCap,
     postProc,
-    postProcCap,
   };
 }
 

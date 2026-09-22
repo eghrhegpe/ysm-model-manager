@@ -32,7 +32,7 @@ const EMPTY_CAM_POS = Object.freeze({ x: 0, y: 5, z: 10 } satisfies {
 const emptyAdapter: PreviewAdapter = {
   id: "empty",
   build: async (ctx) => {
-    // 不向 scene 添加任何对象——core 已有 skyCap/groundCap/lightCap，直接呈现环境
+    // 不向 scene 添加任何对象——core 已装配 sky/ground/light 等 cap，直接呈现环境
     ctx.loadingEl.remove();
     // 空场景无几何体可框选：build 即应用默认取景（真格式 build 内 fitCameraToRoots
     // 设机位；此处显式设位，避免 shared 相机单例残留位/原点贴地）

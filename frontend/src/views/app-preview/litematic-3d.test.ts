@@ -285,6 +285,10 @@ vi.mock("@/preview-3d/caps/scene-capability-registry.ts", () => ({
     loadAll: vi.fn(),
     getAll: vi.fn(() => []),
     getById: vi.fn(() => new Proxy({}, _noopHandler)),
+    // [顺手修 2026-09-22] 暗线 C1 收口给 core 加了 ctx.getCapByPanelId→registry 调用，
+    // 本桩未同步 → 菜单渲染路径 TypeError（HEAD 既有红）。Proxy 同 getById 法子：
+    // cap.getMasterNodeId?.() 得 vi.fn()→undefined，行开关自然跳过，与收口前行为一致。
+    getCapByPanelId: vi.fn(() => new Proxy({}, _noopHandler)),
     saveAll: vi.fn(),
     dispose: vi.fn(),
   },

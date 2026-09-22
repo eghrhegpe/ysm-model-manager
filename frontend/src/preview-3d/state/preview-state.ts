@@ -189,6 +189,20 @@ function fogModeCap(): FogModeCap | undefined {
   return lazyCap<FogModeCap>("fog", "getMode", "setMode");
 }
 
+/** [doc:adr-297] 水面倒影开关（读/写 waterReflectionEnabled）——供 env.waterReflectionEnabled
+ *  惰性绑定，服务 reflect 组三从控按主开互斥显隐（visibleWhen B 轨消费）。 */
+interface WaterReflectionCap {
+  getWaterReflectionEnabled(): boolean;
+  setWaterReflectionEnabled(v: boolean): void;
+}
+function waterReflectionCap(): WaterReflectionCap | undefined {
+  return lazyCap<WaterReflectionCap>(
+    "water",
+    "getWaterReflectionEnabled",
+    "setWaterReflectionEnabled",
+  );
+}
+
 /** 路径 → 读写绑定表（模块级常量；cap 解析全部惰性，不持有实例）
  *  类型用窄联合（`typeof KNOWN_PATHS[number]`）而非 `PreviewStatePath` 全集——
  *  保证"加新路径"必须先扩 `KNOWN_PATHS` + 填 binding，类型层守住"调用方永不传未落地项" */
@@ -269,6 +283,13 @@ const bindings: PathBindingMap = {
     get: () => fogModeCap()?.getMode() ?? "linear",
     set: (v) => fogModeCap()?.setMode(v === "exp2" ? "exp2" : "linear"),
     available: () => fogModeCap() !== undefined,
+  },
+  // [doc:adr-297] 探针：水面倒影开关上浮——reflect 组三从控（强度/分辨率/SSR 抑制）
+  // 按主开显隐。归一守卫 `v === true`：非 boolean 真值一律落 false（与默认关同侧保守）。
+  "env.waterReflectionEnabled": {
+    get: () => waterReflectionCap()?.getWaterReflectionEnabled() ?? false,
+    set: (v) => waterReflectionCap()?.setWaterReflectionEnabled(v === true),
+    available: () => waterReflectionCap() !== undefined,
   },
   // [doc:adr-126-p4-d] 会话模式：mount 期写一次（setPreviewUiMode），dock 级 visibleWhen
   // 谓词写 `(s) => s["ui.mode"] !== "self"` 与旧 hideInSelfMode 语义等价

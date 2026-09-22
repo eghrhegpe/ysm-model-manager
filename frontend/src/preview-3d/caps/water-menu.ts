@@ -14,6 +14,7 @@ const WATER_GROUP_FORM: LocaleKey = "preview.waterGroupForm"; // 形态
 const WATER_GROUP_LOOK: LocaleKey = "preview.waterGroupLook"; // 外观
 const WATER_GROUP_POOL: LocaleKey = "preview.waterGroupPool"; // 水池
 const WATER_GROUP_WAVE: LocaleKey = "preview.waterGroupWave"; // 波纹
+const WATER_GROUP_REFLECT: LocaleKey = "preview.waterGroupReflect"; // 倒影（ADR-297）
 
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
 
@@ -21,6 +22,8 @@ const WATER_GROUP_WAVE: LocaleKey = "preview.waterGroupWave"; // 波纹
 const waterFilmOn = (s: Partial<PreviewSnapshot>) => s["env.waterMode"] === "film";
 /** 水面为 pool 模式谓词 */
 const waterPoolOn = (s: Partial<PreviewSnapshot>) => s["env.waterMode"] === "pool";
+/** 模型倒影开启谓词（ADR-297：强度/分辨率/SSR 抑制三从控仅在此时出场） */
+const waterReflectOn = (s: Partial<PreviewSnapshot>) => s["env.waterReflectionEnabled"] === true;
 
 /** slider 原生节点（wSlider 的节点版） */
 function wSliderNode(
@@ -66,8 +69,8 @@ function wColorNode(
   };
 }
 
-/** 完整参数面板节点树：ground-water-enabled 平铺 toggle + 4 组 folder
- *  （form/look/pool/wave 全原生 toggle/select/color/slider，无复杂控件）。
+/** 完整参数面板节点树：ground-water-enabled 平铺 toggle + 5 组 folder
+ *  （form/look/pool/wave/reflect 全原生 toggle/select/color/slider，无复杂控件）。
  *  water 无能力总开关（无 getMasterToggle——enabled 为 params 级根行主控件）。 */
 export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
   return [
@@ -202,6 +205,55 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           get: () => cap.getWaveSpeed(),
           set: (v) => cap.setWaveSpeed(v),
         }),
+      ],
+    },
+    // ADR-297：模型倒影——隐藏 Reflector 借官方 RT + 水 shader 投影采样。
+    // 总开关默认关（每帧多一次整场重渲不是白拿的，与地面 reflectorEnabled 同纪律）；
+    // 从控仅在主开可见时出场（visibleWhen 走 env.waterReflectionEnabled 探针路径）。
+    {
+      id: "cap-group-water-reflect",
+      kind: "folder",
+      labelKey: WATER_GROUP_REFLECT,
+      children: [
+        {
+          id: "water-reflection",
+          kind: "toggle",
+          labelKey: "preview.waterReflection",
+          control: {
+            get: () => cap.getWaterReflectionEnabled(),
+            set: (v) => cap.setWaterReflectionEnabled(v as boolean),
+          },
+        },
+        wSliderNode(
+          "water-reflection-strength",
+          "preview.waterReflectionStrength",
+          getParamRange("waterReflectionStrength"),
+          {
+            get: () => cap.getWaterReflectionStrength(),
+            set: (v) => cap.setWaterReflectionStrength(v),
+          },
+          waterReflectOn,
+        ),
+        wSliderNode(
+          "water-reflection-resolution",
+          "preview.waterReflectionResolution",
+          getParamRange("waterReflectionResolution"),
+          {
+            get: () => cap.getWaterReflectionResolution(),
+            set: (v) => cap.setWaterReflectionResolution(v),
+          },
+          waterReflectOn,
+        ),
+        {
+          id: "water-reflect-ssr-suppress",
+          kind: "toggle",
+          labelKey: "preview.waterReflectSsrSuppress",
+          visibleWhen: waterReflectOn,
+          control: {
+            get: () => cap.getWaterReflectDisableWhenSSR(),
+            set: (v) => cap.setWaterReflectDisableWhenSSR(v as boolean),
+          },
+        },
       ],
     },
   ];

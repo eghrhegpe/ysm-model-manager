@@ -2,6 +2,8 @@
 kind: preview-paths
 name: 预览状态路径契约 preview-paths
 tier: architecture
+adr:
+  - ADR-297
 category: rendering
 source_files:
   - frontend/src/preview-3d/state/preview-paths.ts

@@ -32,7 +32,7 @@ function fakeShader() {
     vertexShader:
       "#include <common>\nvoid main() {\n#include <beginnormal_vertex>\n#include <begin_vertex>\n}",
     fragmentShader:
-      "#include <common>\nvoid main() {\n#include <normal_fragment_maps>\nvec3 normal = vec3(0.0, 0.0, 1.0);\n#include <dithering_fragment>\n}",
+      "#include <common>\nvoid main() {\n#include <normal_fragment_maps>\nvec3 normal = vec3(0.0, 0.0, 1.0);\nvViewPosition;\n#include <dithering_fragment>\n}",
   };
 }
 
@@ -50,7 +50,7 @@ describe("WaterCapability", () => {
     expect(water!.visible).toBe(true);
   });
 
-  it("setWaterEnabled 独立控制 visible（与能力 enabled 解耦）", () => {
+  it("setWaterEnabled 控制 visible（单门：能力启停即 waterEnabled，fog 同法）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
@@ -81,18 +81,25 @@ describe("WaterCapability", () => {
     expect(top.visible, "同批的开关也要生效").toBe(true);
   });
 
-  it("getMenuNodes：enabled 平铺 toggle + 4 组 folder", () => {
+  it("getMenuNodes：enabled 平铺 toggle + 5 组 folder", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(5);
+    expect(nodes).toHaveLength(6);
     expect(nodes[0].id).toBe("water-enabled");
-    expect(nodes.slice(1).map((n) => n.kind)).toEqual(["folder", "folder", "folder", "folder"]);
+    expect(nodes.slice(1).map((n) => n.kind)).toEqual([
+      "folder",
+      "folder",
+      "folder",
+      "folder",
+      "folder",
+    ]);
     expect(nodes.slice(1).map((n) => n.labelKey)).toEqual([
       "preview.waterGroupForm",
       "preview.waterGroupLook",
       "preview.waterGroupPool",
       "preview.waterGroupWave",
+      "preview.waterGroupReflect",
     ]);
   });
 
@@ -597,7 +604,7 @@ describe("WaterCapability — update 波纹动画推进", () => {
     expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(1.0, 5);
   });
 
-  it("update 早退：enabled / water.enabled / visible 任一为假则不累加", () => {
+  it("update 门控：visible 为假不累加（setEnabled 别名与 setWaterEnabled 同一 gate，两条路径都验）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
@@ -1078,17 +1085,25 @@ describe("WaterCapability — 菜单控件全联动", () => {
   const countControls = (arr: readonly PreviewMenuNode[]): number =>
     arr.reduce((n, c) => n + (c.children ? countControls(c.children) : 1), 0);
 
-  it("15 项控件 setValue/getValue 双向读写联动（数量与树一致）", () => {
+  it("19 项控件 setValue/getValue 双向读写联动（数量与树一致）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(countControls(nodes)).toBe(15);
+    expect(countControls(nodes)).toBe(19);
     const form = nodes[1]!;
     const look = nodes[2]!;
     const pool = nodes[3]!;
     const wave = nodes[4]!;
+    const reflect = nodes[5]!;
     const by = (id: string) => {
-      for (const arr of [nodes, form.children!, look.children!, pool.children!, wave.children!]) {
+      for (const arr of [
+        nodes,
+        form.children!,
+        look.children!,
+        pool.children!,
+        wave.children!,
+        reflect.children!,
+      ]) {
         const found = arr.find((c) => c.id === id);
         if (found) return found;
       }
@@ -1124,6 +1139,15 @@ describe("WaterCapability — 菜单控件全联动", () => {
     expect(by("water-wave-speed").control!.get!(undefined)).toBeCloseTo(1.8, 5);
     by("water-choppiness").control!.set!(0.42);
     expect(by("water-choppiness").control!.get!(undefined)).toBeCloseTo(0.42, 5);
+    // ADR-297 reflect 组四控件（主开 + 三从控）双向读写
+    by("water-reflection").control!.set!(true);
+    expect(by("water-reflection").control!.get!(undefined)).toBe(true);
+    by("water-reflection-strength").control!.set!(0.8);
+    expect(by("water-reflection-strength").control!.get!(undefined)).toBeCloseTo(0.8, 5);
+    by("water-reflection-resolution").control!.set!(1024);
+    expect(by("water-reflection-resolution").control!.get!(undefined)).toBe(1024);
+    by("water-reflect-ssr-suppress").control!.set!(false);
+    expect(by("water-reflect-ssr-suppress").control!.get!(undefined)).toBe(false);
   });
 });
 
@@ -1134,10 +1158,10 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     return new WaterCapability({ scene: new THREE.Scene() });
   }
 
-  it("完整树 = enabled 平铺 toggle + 4 组 folder（form/look/pool/wave）", () => {
+  it("完整树 = enabled 平铺 toggle + 5 组 folder（form/look/pool/wave/reflect）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(5);
+    expect(nodes).toHaveLength(6);
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("water-enabled");
     nodes[0]!.control!.set!(false);
@@ -1147,6 +1171,7 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
       "preview.waterGroupLook",
       "preview.waterGroupPool",
       "preview.waterGroupWave",
+      "preview.waterGroupReflect",
     ]);
     const look = nodes[2]!;
     expect(look.children!.map((c) => c.id)).toEqual([
@@ -1400,6 +1425,11 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
       waterPoolWallColor: 0x040506,
       waterPoolRoundness: 0.2,
       waterSize: 123,
+      // ADR-297 倒影键（偏离值均 ≠ schema 默认：false/0.6/512/true）
+      waterReflectionEnabled: true,
+      waterReflectionStrength: 0.9,
+      waterReflectionResolution: 1024,
+      waterReflectDisableWhenSSR: false,
     };
     const schemaKeys = getPresetKeys("water").filter((k) => k.startsWith("water"));
     const missing = schemaKeys.filter((k) => !(k in DEVIATION));
@@ -1639,6 +1669,306 @@ describe("ADR-286 分派表：顺序无关性守卫", () => {
     const snapB = snapshot(capB);
 
     expect(snapB).toBe(snapA);
+  });
+});
+
+describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
+  beforeEach(() => {
+    resetEnvState();
+  });
+
+  /** 假 renderer：覆盖官方 Reflector.onBeforeRender 的渲染器触点（r185 实证清单：
+   *  getRenderTarget / xr.enabled / shadowMap.autoUpdate / setRenderTarget /
+   *  state.buffers.depth.setMask / autoClear / render / state.viewport） */
+  function makeFakeRenderer(
+    onRender: (scene: THREE.Object3D, camera: THREE.Camera) => void = () => {},
+  ) {
+    return {
+      autoClear: true,
+      xr: { enabled: false },
+      shadowMap: { autoUpdate: false },
+      state: { buffers: { depth: { setMask: () => {} } }, viewport: () => {} },
+      getRenderTarget: () => null,
+      setRenderTarget: () => {},
+      clear: () => {},
+      render: (scene: unknown, camera: unknown) =>
+        onRender(scene as THREE.Object3D, camera as THREE.Camera),
+    } as unknown as THREE.WebGLRenderer;
+  }
+
+  function makeCamera() {
+    const cam = new THREE.PerspectiveCamera(50, 1.6, 0.1, 200);
+    cam.position.set(0, 8, 24);
+    cam.lookAt(0, 0, 0);
+    cam.updateMatrixWorld();
+    cam.updateProjectionMatrix();
+    return cam;
+  }
+
+  /** 编译水材质 shader（fake 锚点），返回其 uniforms 袋 */
+  function compileTop(cap: WaterCapability) {
+    const topMat = cap["water"].top.material as THREE.MeshPhysicalMaterial;
+    topMat.onBeforeCompile(
+      fakeShader() as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    return (
+      topMat.userData as { shader: { uniforms: Record<string, { value: unknown }> } }
+    ).shader.uniforms;
+  }
+
+  it("schema 四键默认值：总开关默认关（整场重渲不是白拿的），SSR 抑制默认开", () => {
+    expect(envState.waterReflectionEnabled).toBe(false);
+    expect(envState.waterReflectionStrength).toBe(0.6);
+    expect(envState.waterReflectionResolution).toBe(512);
+    expect(envState.waterReflectDisableWhenSSR).toBe(true);
+    expect(getParamRange("waterReflectionStrength")).toMatchObject({ min: 0, max: 1 });
+    expect(getParamRange("waterReflectionResolution")).toMatchObject({ min: 256, max: 2048 });
+  });
+
+  it("默认关：update 不建载体（零开销纪律，与 reflectorEnabled 默认关同门）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
+    cap.apply();
+    cap.update(0.016);
+    expect(cap["reflector"]).toBeNull();
+  });
+
+  it("无宿主（renderer/camera 缺省）：开了也不建载体，uniform 恒 0", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    const uni = compileTop(cap);
+    cap.update(0.016);
+    expect(cap["reflector"]).toBeNull();
+    expect(uni.uReflStrength!.value).toBe(0);
+  });
+
+  it("开启后 update：懒建载体不入场景、RT 整场渲一次、水面渲中隐藏渲后恢复、三 uniform 落地", () => {
+    const scene = new THREE.Scene();
+    let visibleDuringRender: boolean | null = null;
+    let renderCount = 0;
+    let renderCam: THREE.Camera | null = null;
+    const cap = new WaterCapability({
+      scene,
+      renderer: makeFakeRenderer((_s, cam) => {
+        renderCount += 1;
+        visibleDuringRender = cap["water"].root.visible;
+        renderCam = cam;
+      }),
+      camera: makeCamera(),
+    });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    const uni = compileTop(cap);
+    cap.update(0.016);
+    const refl = cap["reflector"] as NonNullable<WaterCapability["reflector"]>;
+    expect(refl).toBeTruthy();
+    expect(refl.parent, "载体不入场景：主渲染零开销、零拾取污染").toBeNull();
+    expect(scene.children).not.toContain(refl);
+    expect(renderCount, "每帧恰一次镜像 RT 渲染").toBe(1);
+    expect(visibleDuringRender, "渲染期间水根隐藏（防自身入镜像/transmission 嵌套）").toBe(false);
+    expect(cap["water"].root.visible, "渲染结束恢复可见").toBe(true);
+    expect(renderCam).not.toBe(cap["camera"]);
+    expect(uni.uReflTex!.value).toBe(refl.getRenderTarget().texture);
+    expect(uni.uReflStrength!.value).toBeCloseTo(0.6, 5);
+    expect(uni.uReflMatrix!.value, "世界→RT uv 矩阵（含官方 bias）").toBeInstanceOf(THREE.Matrix4);
+    expect(refl.position.y, "镜面平面 = 水面（clip 平面跟随水位）").toBeCloseTo(envState.waterLevel, 5);
+    expect(refl.rotation.x).toBeCloseTo(-Math.PI / 2, 5);
+  });
+
+  it("水位 / 分辨率 / 强度逐帧现读：改 envState 下一拍即生效（单真值源，无派发依赖）", () => {
+    const scene = new THREE.Scene();
+    let renderCount = 0;
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(() => { renderCount += 1; }), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    const uni = compileTop(cap);
+    cap.update(0.016);
+    cap.setLevel(2.5);
+    cap.setWaterReflectionResolution(1024);
+    cap.setWaterReflectionStrength(0.9);
+    cap.update(0.016);
+    const refl = cap["reflector"] as NonNullable<WaterCapability["reflector"]>;
+    expect(refl.position.y).toBeCloseTo(2.5, 5);
+    expect(refl.getRenderTarget().width, "RT 原位扩缩，不重建载体").toBe(1024);
+    expect(uni.uReflStrength!.value).toBeCloseTo(0.9, 5);
+    expect(renderCount).toBe(2);
+  });
+
+  it("SSR 抑制真值表：pp 开 + 模式含 ssr → 镜像跳渲 + uniform 归零；关抑制或 envmap-only 照常", () => {
+    const scene = new THREE.Scene();
+    let renderCount = 0;
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(() => { renderCount += 1; }), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    const uni = compileTop(cap);
+    // envmap-only：SSR 未活跃 → 倒影照常
+    setEnvState({ ppEnabled: true, ppReflectionMode: "envmap-only" }, { source: "manual" });
+    cap.update(0.016);
+    expect(renderCount).toBe(1);
+    // envmap+ssr：抑制生效（默认开）→ 跳渲 + uniform 0
+    setEnvState({ ppReflectionMode: "envmap+ssr" }, { source: "manual" });
+    cap.update(0.016);
+    expect(renderCount, "SSR 活跃时不再整场重渲").toBe(1);
+    expect(uni.uReflStrength!.value).toBe(0);
+    // ssr-only 同样抑制
+    setEnvState({ ppReflectionMode: "ssr-only" }, { source: "manual" });
+    cap.update(0.016);
+    expect(renderCount).toBe(1);
+    // 关掉抑制开关 → 恢复双跑（用户显式选择，两倒影叠不叠归用户）
+    cap.setWaterReflectDisableWhenSSR(false);
+    cap.update(0.016);
+    expect(renderCount).toBe(2);
+    expect(uni.uReflStrength!.value).toBeCloseTo(0.6, 5);
+    // pp 总开关关 → 无 ssr → 恢复
+    cap.setWaterReflectDisableWhenSSR(true);
+    setEnvState({ ppEnabled: false }, { source: "manual" });
+    cap.update(0.016);
+    expect(renderCount).toBe(3);
+  });
+
+  it("水面不可见（waterEnabled 关）：update 早退，倒影零渲染", () => {
+    const scene = new THREE.Scene();
+    let renderCount = 0;
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(() => { renderCount += 1; }), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    cap.setWaterEnabled(false);
+    cap.update(0.016);
+    expect(renderCount).toBe(0);
+    expect(cap["reflector"]).toBeNull();
+    cap.setWaterEnabled(true);
+    cap.update(0.016);
+    expect(renderCount).toBe(1);
+  });
+
+  it("shader 未编译不炸：update 在 userData.shader 缺席时照常渲 RT；编译入场同一拍即重绑（零滞后）", () => {
+    const scene = new THREE.Scene();
+    let renderCount = 0;
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(() => { renderCount += 1; }), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    expect(() => cap.update(0.016)).not.toThrow();
+    expect(renderCount).toBe(1);
+    const uni = compileTop(cap);
+    expect(uni.uReflTex!.value, "onBeforeCompile 补挂：镜像已在场，编译即重绑").toBeTruthy();
+    expect(uni.uReflStrength!.value).toBeCloseTo(0.6, 5);
+  });
+
+  it("形态切换后载体幸存、新顶面自动重绑（reflector 与容器生命周期解耦）", () => {
+    const scene = new THREE.Scene();
+    let renderCount = 0;
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(() => { renderCount += 1; }), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    cap.update(0.016);
+    const reflBefore = cap["reflector"];
+    cap.setWaterMode("pool");
+    cap.apply();
+    expect(cap["reflector"], "模式重建不动载体（RT 不白弃）").toBe(reflBefore);
+    cap.update(0.016);
+    const uniB = compileTop(cap);
+    expect(uniB.uReflTex!.value, "新顶面材质重绑同一 RT 贴图").toBe(
+      (reflBefore as NonNullable<WaterCapability["reflector"]>).getRenderTarget().texture,
+    );
+    expect(renderCount).toBe(2);
+  });
+
+  it("dispose 释放载体（RT/材质）且清空引用；幂等再 dispose 不炸", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    cap.update(0.016);
+    expect(cap["reflector"]).toBeTruthy();
+    cap.dispose();
+    expect(cap["reflector"], "不入场景的载体 disposeWater 遍历不到，须具名清空").toBeNull();
+    expect(() => cap.dispose()).not.toThrow();
+  });
+
+  it("shader 结构：倒影三 uniform + 斜率 varying 注入到位（fake 编译不告警 = 五锚点全命中）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const topMat = cap["water"].top.material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    try {
+      topMat.onBeforeCompile(
+        shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+        undefined as unknown as THREE.WebGLRenderer,
+      );
+      expect(warn, "refl 第五守卫并入后，fake 全锚点必须零告警").not.toHaveBeenCalled();
+      expect(shader.vertexShader).toContain("varying vec2 vWaveSlope_wave;");
+      expect(shader.vertexShader).toContain("vWaveSlope_wave = ysmWaveNormal.xy;");
+      expect(shader.fragmentShader).toContain("uniform sampler2D uReflTex;");
+      expect(shader.fragmentShader).toContain("uniform mat4 uReflMatrix;");
+      expect(shader.fragmentShader, "混合块锚点（守卫判据）").toContain("if (uReflStrength > 0.0) {");
+      expect(shader.fragmentShader, "RT 线性值过同源编码再混入已 colorspace 的底色").toContain(
+        "linearToOutputTexel",
+      );
+      expect(shader.fragmentShader).toContain("gl_FragColor.a = min(gl_FragColor.a, uBaseOpacity);");
+      expect(shader.uniforms.uReflStrength.value, "编译初值 0 = 关（开关只翻 uniform 不重编译）").toBe(0);
+      expect(shader.uniforms.uReflTex.value).toBeNull();
+      expect(shader.uniforms.uReflMatrix.value).toBeInstanceOf(THREE.Matrix4);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("reflect 组树形：主开 + 三从控，从控按主开 visibleWhen 出场", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    const reflect = cap.getMenuNodes()[5]!;
+    expect(reflect.id).toBe("cap-group-water-reflect");
+    expect(reflect.children!.map((c) => c.id)).toEqual([
+      "water-reflection",
+      "water-reflection-strength",
+      "water-reflection-resolution",
+      "water-reflect-ssr-suppress",
+    ]);
+    const main = reflect.children![0]!;
+    expect(main.visibleWhen, "主开无谓词（组头常驻）").toBeUndefined();
+    const snap = (on: boolean) => ({ "env.waterReflectionEnabled": on }) as Partial<PreviewSnapshot>;
+    for (const sub of reflect.children!.slice(1)) {
+      expect(sub.id).not.toBe(main.id);
+      expect(sub.visibleWhen?.(snap(true)), `${sub.id} 主开亮时出场`).toBe(true);
+      expect(sub.visibleWhen?.(snap(false)), `${sub.id} 主开灭时隐身`).toBe(false);
+    }
+  });
+
+  it("主开翻转触发 notify（visibleWhen 吃快照，dock 须重渲染）；从控键不触发", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    let hits = 0;
+    const off = cap.subscribe(() => { hits += 1; });
+    cap.setWaterReflectionEnabled(true);
+    expect(hits).toBe(1);
+    cap.setWaterReflectionStrength(0.4);
+    cap.setWaterReflectionResolution(1024);
+    cap.setWaterReflectDisableWhenSSR(false);
+    expect(hits, "从控不涉显隐，不发通知（防拖滑块重渲染风暴）").toBe(1);
+    off();
+  });
+
+  it("loadState 还原倒影四键并触发一次重建落地（suspend 纪律不破）", () => {
+    const scene = new THREE.Scene();
+    persistState("water", {
+      waterMode: "pool",
+      waterReflectionEnabled: true,
+      waterReflectionStrength: 0.35,
+      waterReflectionResolution: 2048,
+      waterReflectDisableWhenSSR: false,
+    });
+    const cap = new WaterCapability({ scene });
+    cap.loadState();
+    expect(cap.getWaterReflectionEnabled()).toBe(true);
+    expect(cap.getWaterReflectionStrength()).toBeCloseTo(0.35, 5);
+    expect(cap.getWaterReflectionResolution()).toBe(2048);
+    expect(cap.getWaterReflectDisableWhenSSR()).toBe(false);
+    expect(isEnvCallbacksSuspended(), "suspend 计数已随 finally 归零").toBe(false);
   });
 });
 

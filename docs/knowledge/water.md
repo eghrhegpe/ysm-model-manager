@@ -10,6 +10,7 @@ adr:
   - ADR-271
   - ADR-272
   - ADR-283
+  - ADR-297
 source_files:
   - frontend/src/preview-3d/caps/water-capability.ts
   - frontend/src/preview-3d/caps/water-body-strategies.ts
@@ -40,6 +41,7 @@ use_when:
   - 拖水面尺寸滑块卡顿 / 水面几何重建
   - 改滑杆范围 / 参数值域（range / uiRange）
   - 新增水体形态（海洋 / 喷泉 / 大水面）
+  - 改水面模型倒影 / 镜像 RT / fresnel 混合
 pitfalls:
   - 水面有 waterNormalStrength，但材质 normalMap 恒为 null——微细节法线由 fragment 程序化生成，不存在贴图（ADR-271）
   - 水面 mesh 是 scale(uSize,uSize,1) 各向异性缩放：世界量与局部量互换必须成对换算，只修一边等于换一种错法（ADR-257 §6.4）
@@ -58,6 +60,9 @@ pitfalls:
   - '**水面开关单门（2026-09-22，fog 先例同法）**：启停唯一真值源 = `envState.waterEnabled`，`SceneCapability.setEnabled/isEnabled` 是其别名出口。原私有 `this.enabled` 为僵尸门——registry ctx 无 `enabled` 字段 ⇒ 生产恒 true、无任何 UI 写口、却经 saveState 持久化幽灵键；且 `loadState` 首段曾把 ground 嵌套 legacy 的 `water.enabled` 直写进它：**中毒即永久锁死水面，菜单开关显示 ON 也救不回**。现私有字段退役（守卫 = 测试断言 `"enabled" in cap === false`），幽灵键不再落盘也不再消费，同一存档翻开关即可复现'
   - '**含开关键的批次派发不得早退吞键（2026-09-21 修复）**：回调曾 `changed.has("waterEnabled") → syncWaterVisibility → return`，同批其余 water 键的材质/transform 应用被整体跳过——envState 已新、渲染体仍旧（画面与状态脱节直到下一次无关派发）。现参数照常逐键派发、可见性统一在派发尾重算；守卫 = 测试「waterEnabled + 参数同批派发」用例。往回调里加任何「单键早退 return」前先想清楚同批其余键谁负责'
   - '**形态门控必须「构造期 = 运行期」同源（2026-09 修复）**：`uRoundness` 构造期靠 `buildMaterial` 的 `forPool` 对 film 恒 0，但分派表 applier 侧曾漏门控——pool 专属参数 `waterPoolRoundness` 经存档恢复 / 预设套用 / 其他 cap 直写 envState 时会把圆角泄漏进 film 材质（水膜四角被凭空裁掉，恰是构造期明令禁止的行为）。现由 `WaterBodyStrategy.supportsRoundness` 显式声明（film=false / pool=true）并在 applier 查 strategy。**教训：同一门控只写在构造期，运行期迟早从另一条路径漏进 uniform**——新增形态旗标时构造期与运行期必须共用'
+  - '**倒影三坑（ADR-297）**：① RT 渲染期间水根必须隐藏——不隐则 pool 顶面 transmission pass 在镜像通路里再渲一遍水体（嵌套整场渲染 + 双层水）；② 官方 textureMatrix 末位乘了 scope.matrixWorld（输入=镜面局部坐标），水 shader 喂世界坐标必须右乘 M⁻¹ 剥回，直乘会双重变换；③ 反射相机视锥内容不受 render-host 主相机剔除管辖（RT 渲发生在 cullModelGroups 之前），掠射角下官方「背对早退」跳帧、倒影边缘缺块属已拍板已知限制（见 ADR-297 §3），勿当 bug 修'
+  - '**倒影门控是逐帧现读，不是派发驱动**：`waterReflectionEnabled/Strength/Resolution/ReflectDisableWhenSSR` 在分派表里是显式 no-op 声明（与 waterWaveSpeed 同口径）——门控/权重/RT 边长/镜面高度全在 `renderReflection` 现读 envState 落地。别给它们补材质写（双写违 ADR-286），也别给 pp 键补订阅（SSR 抑制真值现算即可，多订一路 = 第二真值源）'
+  - '**倒影 RT 内容线性、无 tone map**（three 仅对 canvas 输出做 tone map）：dithering 段底色已过 colorspace，采样值必须过 `linearToOutputTexel` 再混——直接混 linear 进 sRGB 域会让倒影发黑'
   - '**波场采样密度 ≡ 几何分段数，两处必须同源（2026-09-22 治大水面摩尔纹）**：顶水面网格分段固定（唯一事实源 `water-state.ts|WATER_WAVE_SEGMENTS`），顶点间距 s = waterSize/分段数——s 逼近波长一半（奈奎斯特）时高频波混叠成游走摩尔纹（300 m 水池高频频闪的病灶）。gerstner 逐波按「每波长顶点数 λ/s」淡出振幅（≥6 全留、2–6 线性消退、1‰ 下界防 wa 除零 NaN）；位移/解析法线/泡沫 Jacobian 同源于 amp，一处衰减三处一致。改分段只动常数一处（几何装配与 shader 间距推导都读它，守卫 = 「分段数唯一事实源」用例）；调大 = 高频保留更好但三角数平方上涨，调小 = 消隐提前介入。注意此衰减治的是「采样不足」，`min(…, 0.5)` 抹平振幅级数是另一笔已登记未改的账'
 quick_groups:
   - 3D 预览与模型追加
@@ -66,11 +71,13 @@ quick_intents:
   - 水位与水膜（waterLevel / wetness）
   - 新增水体形态
 quick_risk_lines:
-  - 水面 shader 有 REVISION 断言与四处注入检测：升级 three 后必须重跑 water-capability.test.ts
+  - 水面 shader 有 REVISION 断言与注入守卫（vertex 波浪函数 / objectNormal 覆盖 / 圆角段 / 微细节覆写点 / 倒影混合块）：升级 three 后必须重跑 water-capability.test.ts
 invariant_anchors:
   - frontend/src/preview-3d/caps/water-capability.ts|buildWaveWaterMaterial
   - frontend/src/preview-3d/caps/water-capability.ts|applyChangedParams
   - frontend/src/preview-3d/caps/water-capability.ts|rebuildWaterContainer
+  - frontend/src/preview-3d/caps/water-capability.ts|renderReflection
+  - frontend/src/preview-3d/caps/water-capability.ts|reflectionActive
   - frontend/src/preview-3d/caps/water-body-strategies.ts|getWaterBodyStrategy
   - frontend/src/preview-3d/caps/water-state.ts|WATER_WAVE_SEGMENTS
 ---
@@ -84,7 +91,7 @@ invariant_anchors:
 | 文件 | 轴 | 特征 |
 |---|---|---|
 | `water-state.ts` | 类型 | `WaterMode = "film" \| "pool"`，零 THREE、零副作用 |
-| `water-menu.ts` | 声明 | 纯节点树：`water-enabled` 平铺 toggle + form/look/pool/wave 四组 folder（组内全原生控件） |
+| `water-menu.ts` | 声明 | 纯节点树：`water-enabled` 平铺 toggle + form/look/pool/wave/reflect 组 folder（组内全原生控件） |
 | `water-capability.ts` | 渲染 | 波浪 shader 注入、微细节法线、容器装配、参数应用、持久化 |
 | `water-body-strategies.ts` | 策略 | 形态注册表；**新增形态 = 注册一项，现有实现零改动**（结构参数语义固化为 `transformLinks`） |
 
@@ -119,6 +126,16 @@ invariant_anchors:
    **新增 water 参数 = schema 声明 + 表内加一条目，漏接编译期即红**；条目间写互不相交字段，
    派发序无关结果（守卫测试：乱序全量 patch ≡ 单键逐发快照一致）。
    原 `findTopWater`/`syncBaseOpacityUniform` 私有 helper 已随瀑布退役（顶水面恒为 `water.top`）。
+6. **模型倒影（ADR-297）**：`ensureReflector` 懒建官方 `Reflector` 载体但**不挂进场景**——只借
+   它「镜像相机 + 斜裁剪 + 整场渲进 RT」管线。`update(dt)` 每帧 `renderReflection`：镜面平面
+   即水面（`position.y` 跟随 `waterLevel`），驱动 `onBeforeRender` 渲 RT 期间**临时隐藏整个水根**
+   （防水体入自身镜像成双层水；防 pool 顶面 transmission pass 在镜像通路里嵌套第二场整场渲染）。
+   三 uniform（`uReflTex / uReflMatrix / uReflStrength`）由 shader 消费：世界坐标经
+   `uReflMatrix`（官方 textureMatrix = bias·P·V·M 右乘 M⁻¹ 剥回世界口径，bias 在内 → 除 w 即 uv）
+   投影采样，Gerstner 解析斜率（`vWaveSlope_wave`，与光照法线同源）扰动 uv，fresnel 掠射增强。
+   开关 = 翻 `uReflStrength`（0 → 混合块整体跳过），**不触发 program 重编译**；RT 内容为线性空间
+   （three 仅对 canvas 输出做 tone map），采样值过与主程序同源的 `linearToOutputTexel` 再混。
+   分辨率变更走 `getRenderTarget().setSize` 原位扩缩，不重建载体。
 
 ## 对外 API / 入口
 
@@ -128,6 +145,11 @@ invariant_anchors:
 - 外观：`setWaterColor`、`setWaterOpacity`、`setWetness`、`setNormalStrength`、`setClarity`、`setChoppiness`
 - 池体：`setPoolHeight`、`setPoolWallThickness`（**两条均零重建**，ADR-272 §5.1：壁高走 `scale.y`、外偏与光学光程运行期现算）、`setPoolWallColor`、`setPoolRoundness`（钳制同源 schema `range`，ADR-283）
 - 波纹：`setWaveSpeed`；时间推进走 `update(dt)` 累加 `waterTime`（仅推进 uniform，从不写变换）
+- 倒影（ADR-297）：`setWaterReflectionEnabled` / `setWaterReflectionStrength` / `setWaterReflectionResolution` /
+  `setWaterReflectDisableWhenSSR`（getter 同名 get* 族）。构造 opts 含可选 `renderer`/`camera`（registry 传
+  全量 ctx；缺省 = 倒影自动失效，单测可裸 scene 构造）。四键均 schema `group: "water"`——持久化写侧自动、
+  读侧已登记还原表（D3 契约锁兜底）；reflect 组四控件在 `water-menu.ts`，从控按主开 visibleWhen
+  出场（探针路径 `env.waterReflectionEnabled`，ADR-291 三步登记）
 - 持久化：`saveState` / `loadState`（新旧键双轨；旧档无 `waterLevel` 时 pool 取 `waterPoolHeight` 兜底）。
   `loadState` 恢复段挂起派发（`suspendEnvCallbacks`，fog/ground/light 同法），末尾 `rebuildWaterContainer`
   从 envState 一次性全量落地——不再逐键 dispatch×重建；顶层 `enabled` 幽灵键不再消费（单门收口）
@@ -140,10 +162,13 @@ invariant_anchors:
 
 - **envState（ADR-196）**：water 组键集（= `getPresetKeys("water")`，含 `waterEnabled`）全部 `group: "water"`，dispatcher 前置过滤后回调。
 - **GroundCapability**：水面原是其「双子域」，拆分后平级。
-- **environment**：水面的镜面感来自 `scene.environment`（PMREM 环境贴图），**不是**自身反射——
-  水面不会倒映模型本体。
+- **environment**：水面的高光感来自 `scene.environment`（PMREM 环境贴图）；**模型倒影**是
+  ADR-297 的独立通路（默认关），开了才会倒映模型本体。
 - **ReflectorCapability / SSR**：地面镜面默认关（`reflectorEnabled` 默认 false）；SSR 默认
-  `envmap-only`；双反射默认不可达（`ppReflectorDisableWhenSSR` 默认 true）。
+  `envmap-only`；双反射默认不可达（`ppReflectorDisableWhenSSR` 默认 true）。水面倒影同纪律：
+  `waterReflectionEnabled` 默认关 + `waterReflectDisableWhenSSR` 默认 true（SSR 活跃时跳渲归零，
+  逐帧现读 pp 键——pp 键属 postprocessing 组，water 回调收不到派发，不另订第二路订阅）。
+  地面镜面与 RT 嵌套：水面 RT 渲染内含地面 Reflector 时，官方 scope.visible 自排除保证不无限递归。
 - **shader-patches / patch-guard**：REVISION 断言（宽松区间）+ 四处注入检测（vertex 波浪函数、
   `objectNormal` 覆盖、fragment 圆角段、微细节 `normal` 覆写点），失配即告警而非静默降级。
 

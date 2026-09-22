@@ -300,6 +300,27 @@ export const ENV_STATE_SCHEMA = {
     range: { min: 1, max: 300, step: 1, unit: "m" },
     uiRange: { min: 10, max: 300, step: 1, unit: "m" },
   },
+  // ── 水面模型倒影（ADR-297：隐藏 Reflector 借官方 RT + 水 shader 投影采样）──
+  // 默认关：倒影 = 每帧多一次整场重渲进 RT，不是白拿的——与地面 reflectorEnabled 同纪律。
+  waterReflectionEnabled: { type: "boolean", default: false, group: "water" },
+  // 混合权重上限（fresnel 掠射增强乘于其上；0 等于关混合但保留 RT——通常直接关总开关）。
+  waterReflectionStrength: {
+    type: "number",
+    default: 0.6,
+    group: "water",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
+  // 反射 RT 边长（px）：step=256 离散档位（256 省 / 512 默认 / 2048 近观）。
+  // 变更走 Reflector RT setSize 原位扩缩，不重建载体（water-capability renderReflection）。
+  waterReflectionResolution: {
+    type: "number",
+    default: 512,
+    group: "water",
+    range: { min: 256, max: 2048, step: 256, unit: "px" },
+  },
+  // SSR 活跃时抑制水反射（ppReflectorDisableWhenSSR 同范式）：屏幕空间倒影与平面反射
+  // 双叠过亮发脏。抑制态归水 cap 持有（ADR-247 D2 口径），逐帧现读 pp 键不另订阅。
+  waterReflectDisableWhenSSR: { type: "boolean", default: true, group: "water" },
 
   // --- Environment ---
   envPreset: {

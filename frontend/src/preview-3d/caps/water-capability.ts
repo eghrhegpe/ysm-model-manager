@@ -13,6 +13,8 @@
 // 至此「改 size 要重建几何 + 重算法线」两条卡点全消，`waterSize` 不再是只服务存档的死路径。
 
 import * as THREE from "three";
+// ADR-297：倒影复用官方 Reflector（reflector-capability 同先例）——不允许自写镜像相机/斜裁剪。
+import { Reflector } from "three/addons/objects/Reflector.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patches/patch-guard.ts";
 import {
@@ -98,6 +100,10 @@ export const WATER_PARAM_APPLIER_KEYS = [
   "waterPoolWallThickness",
   "waterChoppiness",
   "waterLevel",
+  "waterReflectionEnabled",
+  "waterReflectionStrength",
+  "waterReflectionResolution",
+  "waterReflectDisableWhenSSR",
 ] as const;
 const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> = {
   waterEnabled: () => {}, // 可见性由回调 syncWaterVisibility 单独承接
@@ -184,6 +190,12 @@ const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> 
     // ADR-257：水面 position.y（film/pool 通用，零重建）——旧语义抬水面须重建 10 个 mesh，如今一个标量
     strategy.applyLevel(water, envState.waterLevel);
   },
+  // ADR-297 倒影四键：结构性空条目——门控/权重/RT 边长/镜面高度全部由
+  // renderReflection 逐帧现读 envState（真值源单一，派发侧零材质写，waterWaveSpeed 同口径）。
+  waterReflectionEnabled: () => {},
+  waterReflectionStrength: () => {},
+  waterReflectionResolution: () => {},
+  waterReflectDisableWhenSSR: () => {},
 };
 
 export class WaterCapability implements SceneCapability {
@@ -195,13 +207,28 @@ export class WaterCapability implements SceneCapability {
   private scene: THREE.Scene;
   private water: WaterBody;
   private waterTime: { value: number };
+  /** ADR-297：倒影 RT 渲染驱动需要宿主（registry 传全量 ctx；缺省 = 倒影自动失效） */
+  private renderer: THREE.WebGLRenderer | null;
+  private camera: THREE.PerspectiveCamera | null;
+  /** ADR-297：倒影载体——官方 Reflector 但**不挂进场景**：只借它「镜像相机 + 斜裁剪 + 整场渲进 RT」
+   *  的管线，反射贴图不靠镜面展示、由水 shader 自采样（投影 + 斜率扰动 + fresnel）。首次活跃懒建。 */
+  private reflector: Reflector | null = null;
+  /** 逐帧临时量：matrixWorld⁻¹（官方 textureMatrix 末位乘了镜面变换，输入是镜面局部坐标；
+   *  水 shader 喂世界坐标，须右乘 M⁻¹ 剥回世界空间口径） */
+  private readonly reflWorldInv = new THREE.Matrix4();
   /** 参数变更监听（menu 局部刷新用）；仅模式切换等影响分组可见性的离散操作 notify */
   private readonly listenerSet = createListenerSet();
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
 
-  constructor(opts: { scene: THREE.Scene }) {
+  constructor(opts: {
+    scene: THREE.Scene;
+    renderer?: THREE.WebGLRenderer;
+    camera?: THREE.PerspectiveCamera;
+  }) {
     this.scene = opts.scene;
+    this.renderer = opts.renderer ?? null;
+    this.camera = opts.camera ?? null;
     this.waterTime = { value: 0 };
     this.water = this.rebuildWaterContainer(true);
 
@@ -237,6 +264,9 @@ export class WaterCapability implements SceneCapability {
         if (changed.has("waterWetness") || changed.has("waterEnabled")) {
           this.syncWaterVisibility();
         }
+        // [ADR-297] 倒影主开关参与 reflect 组三从控显隐（visibleWhen 吃
+        // env.waterReflectionEnabled 快照）——须 notify 触发 dock 重渲染，fog setMode 先例同法。
+        if (changed.has("waterReflectionEnabled")) this.notify();
       },
       "water",
     );
@@ -278,6 +308,16 @@ export class WaterCapability implements SceneCapability {
       // 微细节法线强度（原 normalScale 槽位的替代；值域 0-1，由 ground-normal-strength 驱动）
       shader.uniforms.uDetailStrength = { value: envState.waterNormalStrength };
       shader.uniforms.uBaseOpacity = { value: mat.opacity };
+      // ADR-297 倒影三件套：贴图 + 镜面投影矩阵 + 权重。默认 0 = 混合块整体跳过——
+      // 开关只翻 uniform，不触发 program 重编译；值由 renderReflection 逐帧驱动。
+      shader.uniforms.uReflTex = { value: null as THREE.Texture | null };
+      shader.uniforms.uReflMatrix = { value: new THREE.Matrix4() };
+      shader.uniforms.uReflStrength = { value: 0 };
+      // [ADR-297] 新材质编译入场时若镜像已在场（如形态切换后的重编译），同一拍即重绑
+      // 三 uniform——不等下一帧 renderReflection 补挂，倒影零滞后。
+      if (this.reflector && this.reflectionActive()) {
+        this.applyReflectionUniforms(shader, this.reflector);
+      }
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
         `#include <common>
@@ -289,6 +329,7 @@ export class WaterCapability implements SceneCapability {
          uniform float uChoppiness;
          varying vec3 vWorldPos_wave;
          varying float vFoam;
+         varying vec2 vWaveSlope_wave;
          const int GERSTNER_COUNT = 6;
          float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
          // Gerstner 余摆线：返回**物体空间位移**；out 碎波泡沫 + out 物体空间法线。
@@ -363,6 +404,7 @@ export class WaterCapability implements SceneCapability {
            vec3 ysmWaveNormal;
            gerstner(position.xy * uSize, gnf, ysmWaveNormal);
            objectNormal = ysmWaveNormal;
+           vWaveSlope_wave = ysmWaveNormal.xy;
          }`,
       );
       shader.vertexShader = shader.vertexShader.replace(
@@ -386,8 +428,12 @@ export class WaterCapability implements SceneCapability {
          uniform float uHalfSize;
          uniform float uBaseOpacity;
          uniform float uDetailStrength;
+         uniform sampler2D uReflTex;
+         uniform mat4 uReflMatrix;
+         uniform float uReflStrength;
          varying vec3 vWorldPos_wave;
-         varying float vFoam;`,
+         varying float vFoam;
+         varying vec2 vWaveSlope_wave;`,
       );
       // 微细节法线（GPU 程序化，替代原 256² CPU DataTexture + normalMap 槽）：
       // 三组方向正弦沟槽求偏导，参数与原 generateNormalMap 逐项同源（0.08/0.8、0.05/1.1、0.03/1.6）——
@@ -417,15 +463,33 @@ export class WaterCapability implements SceneCapability {
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <dithering_fragment>",
         `#include <dithering_fragment>
+         // 圆角边缘衰减：抬到函数作用域算一次——alpha 与倒影权重共用（倒影边缘=水体边缘，同步淡出）
+         float fade = 1.0;
          if (uRoundness > 0.0) {
            vec2 p = vWorldPos_wave.xz;
            float md = max(abs(p.x), abs(p.y));
            float edge = uHalfSize - uRoundness * uHalfSize;
-           float fade = 1.0 - smoothstep(edge, uHalfSize, md);
+           fade = 1.0 - smoothstep(edge, uHalfSize, md);
            gl_FragColor.a *= fade;
          }
          // 碎波泡沫：Jacobian<0 处 mix 白沫（不依赖反射，单 pass 廉价）
          gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.92, 0.95, 0.98), vFoam * 0.55);
+         // ADR-297 水面模型倒影：世界坐标投影进镜像相机裁剪空间采样反射 RT——uReflMatrix
+         // 已含官方 bias（末位右乘 M⁻¹ 剥回世界口径）→ 除 w 即 uv。RT 内容为线性空间
+         // （three 仅对 canvas 输出做 tone map），采样值过同源 linearToOutputTexel 编到
+         // 与已过 colorspace 的底色同域再混。uReflStrength=0 整块跳过：开关只翻 uniform。
+         if (uReflStrength > 0.0) {
+           vec4 rc = uReflMatrix * vec4(vWorldPos_wave, 1.0);
+           if (rc.w > 0.0) {
+             // Gerstner 解析斜率（物体空间切向，与光照法线同源）扰动 uv：倒影随波摆动
+             vec2 ruv = clamp(rc.xy / rc.w + vWaveSlope_wave * 0.08, vec2(0.002), vec2(0.998));
+             vec3 refl = linearToOutputTexel(vec4(texture2D(uReflTex, ruv).rgb, 1.0)).rgb;
+             // fresnel：掠射增强反射，正视保持水体通透（权重下限 0.25）
+             float ndv = 1.0 - clamp(abs(dot(normal, normalize(vViewPosition))), 0.0, 1.0);
+             float rw = min(uReflStrength * fade * (0.25 + 0.75 * ndv * ndv * ndv), 1.0);
+             gl_FragColor.rgb = mix(gl_FragColor.rgb, refl, rw);
+           }
+         }
          gl_FragColor.a = min(gl_FragColor.a, uBaseOpacity);`,
       );
       // [shader-patch 守卫] 注入检测：多次无条件 replace 原本零检测（失配全静默）。
@@ -436,10 +500,12 @@ export class WaterCapability implements SceneCapability {
       const fragOk = shader.fragmentShader.includes("uRoundness");
       // 微细节法线落地检查：normal 覆写点在场（贴图链路已删，此处失配即是静默丢细节）
       const detailOk = shader.fragmentShader.includes("normal = normalize(normal +");
-      if (!vertexOk || !normalOk || !fragOk || !detailOk) {
+      // [ADR-297] 倒影混合块落地检查：失配 = 倒影静默消失，与其余四项同病
+      const reflOk = shader.fragmentShader.includes("if (uReflStrength > 0.0) {");
+      if (!vertexOk || !normalOk || !fragOk || !detailOk || !reflOk) {
         reportPatchIssue(
           "water",
-          `water onBeforeCompile 锚点失配（vertex=${vertexOk ? "ok" : "miss"} normal=${normalOk ? "ok" : "miss"} fragment=${fragOk ? "ok" : "miss"} detail=${detailOk ? "ok" : "miss"}），水面波浪法线 / 微细节 / 波纹 / 圆角 / 透明度 clamp 可能失效。请检查 three 渲染管线 chunk 标记是否变更。`,
+          `water onBeforeCompile 锚点失配（vertex=${vertexOk ? "ok" : "miss"} normal=${normalOk ? "ok" : "miss"} fragment=${fragOk ? "ok" : "miss"} detail=${detailOk ? "ok" : "miss"} refl=${reflOk ? "ok" : "miss"}），水面波浪法线 / 微细节 / 波纹 / 圆角 / 倒影 / 透明度 clamp 可能失效。请检查 three 渲染管线 chunk 标记是否变更。`,
           "warn",
         );
       }
@@ -511,10 +577,114 @@ export class WaterCapability implements SceneCapability {
     this.water.root.visible = envState.waterEnabled && gatePassed;
   }
 
-  /** 推进水面波纹动画（render loop 调用）。visible 已含 waterEnabled 语义，单判即可。 */
+  /** 推进水面波纹动画（render loop 调用）。visible 已含 waterEnabled 语义，单判即可。
+   *  ADR-297：反射 RT 渲染同受此门控——水面不可见时倒影无意义，一并免掉整场重渲。 */
   update(dt: number): void {
     if (!this.water.root.visible) return;
     this.waterTime.value += dt * envState.waterWaveSpeed;
+    this.renderReflection();
+  }
+
+  // ── ADR-297：水面模型倒影（隐藏 Reflector 借官方 RT + 水 shader 投影采样）──
+
+  /** 倒影门控：总开关 ∧（SSR 抑制启用时 SSR 不活跃）∧ 宿主在场。
+   *  ⚠️ pp* 键属 postprocessing 组，water 回调收不到派发——此处不另订第二路订阅，
+   *  逐帧现读 envState 现算（真值源仍是 envState 单处，单门纪律不破）。 */
+  private reflectionActive(): boolean {
+    if (!envState.waterReflectionEnabled) return false;
+    if (envState.waterReflectDisableWhenSSR && this.ssrActive()) return false;
+    return this.renderer !== null && this.camera !== null;
+  }
+
+  /** SSR 活跃判定：与 postprocessing-capability 的 ssr 路口径一致（主开关开 ∧ 模式含 ssr） */
+  private ssrActive(): boolean {
+    return (
+      envState.ppEnabled &&
+      (envState.ppReflectionMode === "envmap+ssr" || envState.ppReflectionMode === "ssr-only")
+    );
+  }
+
+  /** 镜面载体懒建 / RT 原位扩缩（边长比对 O(1)，不重建 Reflector）。
+   *  **不入场景**：主渲染零开销、零拾取污染；onBeforeRender 用 scope.matrixWorld 算镜像，
+   *  故调用前须手动 updateMatrixWorld（无父链可赖）。 */
+  private ensureReflector(): Reflector {
+    if (!this.reflector) {
+      this.reflector = new Reflector(new THREE.PlaneGeometry(1, 1), {
+        clipBias: 3,
+        textureWidth: envState.waterReflectionResolution,
+        textureHeight: envState.waterReflectionResolution,
+      });
+      // 镜面朝上 = 水面平面（裁剪平面即该平面的无限延展，1×1 尺寸不参与数学）
+      this.reflector.rotation.x = -Math.PI / 2;
+    }
+    const rt = this.reflector.getRenderTarget();
+    const res = envState.waterReflectionResolution;
+    if (rt.width !== res) rt.setSize(res, res);
+    return this.reflector;
+  }
+
+  /** 每帧一次反射 RT 渲染 + 水 shader 三 uniform 落地。
+   *  ⚠️ 渲染期间临时隐藏整个水根：① 防水体进自身镜像（双层水）；② 防 pool 顶面
+   *  transmission pass（three 内部再渲一遍不透明场景）在镜像通路里嵌套整场渲染。
+   *  已知限制（ADR-297 记录）：RT 渲染发生在 render-host 主相机剔除之前，镜像视锥内容
+   *  不受主相机 cull 影响（多渲不漏渲）；掠射角下官方「背对早退」跳帧，倒影滞后一帧再补。 */
+  private renderReflection(): void {
+    const shader = (
+      this.water.top.material.userData as { shader?: THREE.WebGLProgramParametersWithUniforms }
+    ).shader;
+    if (!this.reflectionActive()) {
+      if (shader) this.setReflectionUniforms(shader, 0);
+      return;
+    }
+    const renderer = this.renderer as THREE.WebGLRenderer;
+    const camera = this.camera as THREE.PerspectiveCamera;
+    const reflector = this.ensureReflector();
+    // 镜面即水面：clip 平面 = Reflector 平面本身，水位升降一个标量跟随
+    reflector.position.y = envState.waterLevel;
+    reflector.updateMatrixWorld(true);
+    // controls 更新在上一帧尾，官方读 camera.matrixWorld 前须刷新（否则镜像滞后一帧抖动）
+    camera.updateMatrixWorld();
+    const prevVisible = this.water.root.visible;
+    this.water.root.visible = false;
+    try {
+      // Reflector 自有实现只吃三参（Object3D 契约的 geometry/material/group 三尾参不参与
+      // 镜像数学，见 Reflector.js onBeforeRender 函数体）；声明层继承六参签名，此处收窄
+      const drive = reflector.onBeforeRender as unknown as (
+        r: THREE.WebGLRenderer,
+        s: THREE.Scene,
+        c: THREE.Camera,
+      ) => void;
+      drive.call(reflector, renderer, this.scene, camera);
+    } finally {
+      this.water.root.visible = prevVisible;
+    }
+    // shader 未编译时由 onBeforeCompile 尾部的同源调用补挂（不另等一帧）
+    if (shader) this.applyReflectionUniforms(shader, reflector);
+  }
+
+  /** 三 uniform 归零/赋值的公共出口（shader 编译产物，经 userData.shader 后门，setUniform 同纪律） */
+  private setReflectionUniforms(
+    shader: THREE.WebGLProgramParametersWithUniforms,
+    strength: number,
+  ): void {
+    (shader.uniforms.uReflStrength as { value: number }).value = strength;
+  }
+
+  /** RT 贴图 + 强度 + 世界→RT uv 矩阵一次落地（renderReflection 帧路与 onBeforeCompile
+   *  补挂路共用——新材质编译入场的同一拍即重绑，不滞后一帧）。 */
+  private applyReflectionUniforms(
+    shader: THREE.WebGLProgramParametersWithUniforms,
+    reflector: Reflector,
+  ): void {
+    const u = shader.uniforms;
+    (u.uReflTex as { value: THREE.Texture | null }).value = reflector.getRenderTarget().texture;
+    (u.uReflStrength as { value: number }).value = envState.waterReflectionStrength;
+    // 官方 textureMatrix = bias·P·V·M(镜面)（输入为镜面局部坐标）；水 shader 喂世界坐标，
+    // 右乘 M⁻¹ 剥除镜面自身变换。bias 已在矩阵内 → 除 w 后直接是 uv（0..1）。
+    const texMat = (reflector.material as THREE.ShaderMaterial).uniforms.textureMatrix
+      .value as THREE.Matrix4;
+    this.reflWorldInv.copy(reflector.matrixWorld).invert();
+    (u.uReflMatrix as { value: THREE.Matrix4 }).value.multiplyMatrices(texMat, this.reflWorldInv);
   }
 
   apply(): void {
@@ -686,6 +856,36 @@ export class WaterCapability implements SceneCapability {
     return envState.waterClarity;
   }
 
+  // ── 水面模型倒影（ADR-297）──
+  // setter 只写 envState（渲染应用由 renderReflection 逐帧现读，WATER_PARAM_APPLIERS 空条目同口径）
+  setWaterReflectionEnabled(v: boolean): void {
+    setEnvState({ waterReflectionEnabled: v }, { source: "manual" });
+  }
+  getWaterReflectionEnabled(): boolean {
+    return envState.waterReflectionEnabled;
+  }
+
+  setWaterReflectionStrength(v: number): void {
+    setEnvState({ waterReflectionStrength: v }, { source: "manual" });
+  }
+  getWaterReflectionStrength(): number {
+    return envState.waterReflectionStrength;
+  }
+
+  setWaterReflectionResolution(v: number): void {
+    setEnvState({ waterReflectionResolution: v }, { source: "manual" });
+  }
+  getWaterReflectionResolution(): number {
+    return envState.waterReflectionResolution;
+  }
+
+  setWaterReflectDisableWhenSSR(v: boolean): void {
+    setEnvState({ waterReflectDisableWhenSSR: v }, { source: "manual" });
+  }
+  getWaterReflectDisableWhenSSR(): boolean {
+    return envState.waterReflectDisableWhenSSR;
+  }
+
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
 
   getMenuNodes(): PreviewMenuNode[] {
@@ -806,6 +1006,11 @@ export class WaterCapability implements SceneCapability {
         waterPoolWallColor: { number: (v) => this.setPoolWallColor(v) },
         poolRoundness: { number: (v) => this.setPoolRoundness(v) },
         waterPoolRoundness: { number: (v) => this.setPoolRoundness(v) },
+        // ADR-297 倒影键（全为新键，无 legacy 方言，单轨直连）
+        waterReflectionEnabled: { boolean: (v) => this.setWaterReflectionEnabled(v) },
+        waterReflectionStrength: { number: (v) => this.setWaterReflectionStrength(v) },
+        waterReflectionResolution: { number: (v) => this.setWaterReflectionResolution(v) },
+        waterReflectDisableWhenSSR: { boolean: (v) => this.setWaterReflectDisableWhenSSR(v) },
       });
       // ADR-257 迁移：旧存档没有 waterLevel 键（旧语义里「水面 y == 池深 h」）。
       // pool 用户兜底为 waterPoolHeight 以保持原有观感；film 用户沿用默认 0.01（与旧硬编码一致）。
@@ -828,5 +1033,8 @@ export class WaterCapability implements SceneCapability {
     this.unsubscribeEnv();
     if (this.water.root.parent) this.water.root.parent.remove(this.water.root);
     this.disposeWater();
+    // ADR-297：镜面载体不入场景，disposeWater 遍历不到——具名释放（RT/材质/几何）
+    this.reflector?.dispose();
+    this.reflector = null;
   }
 }

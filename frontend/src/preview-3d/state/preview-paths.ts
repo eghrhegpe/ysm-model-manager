@@ -48,6 +48,9 @@ export const KNOWN_PATHS = [
   "env.skyGroundCap",
   // 探针：雾模式上浮（fog 的 near/far × density 按 mode 互斥显隐，visibleWhen B 轨消费）。
   "env.fogMode",
+  // 探针 [ADR-297]：水面模型倒影开关上浮（reflect 组强度/分辨率/SSR 抑制三从控
+  // 仅在主开可见时出场，visibleWhen B 轨消费；water cap 态直读，envState 单真值源）。
+  "env.waterReflectionEnabled",
 ] as const;
 
 /**
@@ -85,6 +88,7 @@ export type PathValue = {
   "ui.mode": "shared" | "self";
   "env.skyGroundCap": boolean;
   "env.fogMode": string;
+  "env.waterReflectionEnabled": boolean;
 };
 
 /** 写入侧输入域：精确类型 ∪ 控件基元（binding 归一后落精确类型） */

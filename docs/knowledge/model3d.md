@@ -886,6 +886,7 @@ auto_fields:
     - warnLargeModelIfNeeded
     - WasdReuse
     - WATER_MODES
+    - WATER_PARAM_APPLIER_KEYS
     - WaterBody
     - WaterBodyStrategy
     - WaterBuildContext

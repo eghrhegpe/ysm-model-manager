@@ -626,12 +626,29 @@ postprocessing cap 确认，列观察项）。
 | S9-1 | near>far 无约束 | clamp 或 hint |
 
 ### ⚪ 观察项（需后续核验）
-- **W-1**：water film 模式「水池」空组头是否渲染（render.ts folder 空组隐藏逻辑未读全文）。
-- **W-2**：transmissionRenderTarget 手动 dispose 与 three 内部生命周期的竞态面（下一帧渲染前调用即安全）。
-- **W-3**：契约测试锁 `getPresetKeys("water")` ⊆ 分派表键集（防 schema 加键漏分派）。
-- **W-5**：water onBeforeCompile 6 处 replace 仅检 4 锚点符号，建议扩到 6。
+- **W-1** ~~water film 模式「水池」空组头是否渲染~~ → **撤销（§17 核验）**：`render.ts` 的
+  folder 渲染已实现「全隐组不建空组头」（注释原句：回归场景即 water film 模式水池组
+  四控件全门控后的空「水池」组），`node-render.test.ts` 有「空 children 不渲染 section」
+  回归锁。原观察项是**未读渲染层全文就下的待核清单**，实为已治之病。
+- **W-2**：transmissionRenderTarget 手动 dispose 与 three 内部生命周期的竞态面（下一帧渲染前调用即安全）。→ **§17 核验为风险接受区**：`disposeWater` 的 `trt.texture.dispose() + trt.dispose()` 仅在「材质已脱离渲染流（mesh 已从 scene 摘除、material.dispose 已清 program 引用）」的销毁时序内调用，three 侧 WebGLState 持有的旧引用随 RT 释放同帧清理，无跨帧竞态；真正的残留风险是**同帧内再次 dispose 同 RT**（three 内部 releaseTransmissionRenderTarget 未去重），属 three 侧 API 契约，本仓不深究。
+- **W-3**：~~契约测试锁 `getPresetKeys("water")` ⊆ 分派表键集~~ → **已落地（§17）**：
+  `water-capability.ts` 导出 `WATER_PARAM_APPLIER_KEYS` 字面量（15 键），
+  `water-capability.test.ts` 新增「schema water 组键集 = 分派表键集」契约测试
+  （运行时锁，与类型派生 `WaterParamKey` 的编译期完备性双保险）。
+- **W-5**：~~water onBeforeCompile 6 处 replace 仅检 4 锚点符号，建议扩到 6~~ → **降级维持（§17 核验）**：
+  实测 6 处 replace 中第 2 处（`#include <common>` → 声明 varying/uTime 等）与第 6 处
+  （`void main() {` 补换行）确无独立检测——但第 1/3 处注入体已含检测符号（`vec3 gerstner(`
+  覆盖第 1 处、`objectNormal = ysmWaveNormal` 覆盖第 3 处），且第 2/6 处失配**必然**伴随
+  1/3/4/5 之一失配（同一 shader 模板），故 4 锚点检测对 6 处替换是**充分覆盖**——
+  原观察项「建议扩到 6」价值有限，不改。
 - **S2-3/E-5/R-1**：shader 锚点/版本号/文件类型白名单硬编码——守卫已到位（assertRevisionRange + 单锚点分检），属可控硬编码；R-1 clipBias 无 UI 出口。
-- **reflector SSR 互斥**：ppReflectorDisableWhenSSR 压制通道在 postprocessing 侧未本轮核实。
+- ~~**reflector SSR 互斥**：ppReflectorDisableWhenSSR 压制通道在 postprocessing 侧未本轮核实。~~ → **§17 核验**：
+  通道存在且完整——`postprocessing-capability.ts` 的 `applyReflectorSync()` 经
+  `getTypedCap(this.caps, "reflector")` 查询器取 reflector cap，按
+  `ssrIsActive() && enabled && ppReflectorDisableWhenSSR` 三条件压制/还原
+  （pull 式、由 postprocessing 侧事件驱动；压制约归属判定区分「我们按下」vs「用户手动重开」），
+  并有 `reflection-chain-invariants.test.ts` 专锁「双反射默认不可达」不变量。§7 的
+  「未核实」标记撤销。
 
 ### 系统级结论
 1. **状态层（env-state 单例 + dispatcher + lastWriteSource 守卫 + schema 钳制）设计是
@@ -699,15 +716,23 @@ TDD 流程：先写回归测试 → 对**旧实现**实测（4 例全红，证�
 需以 `positional` 收口。留给该会话或后续收口。
 
 ### 未修的 🔴（仍待办）
-- **S1-4** sky「环境贴图映射」标签语义漂移 + 与 env cap 抢写槽位（E-4 已修 dispose 侧）——
-  **已出方案 ADR-292**（📝 提议中）：`scene.environment` 所有权收口归 EnvironmentCapability
-  独占，sky IBL 降为 env 面板「来源」三选一中的一项，删除天空面板的重复开关。
-  根因是「一个功能被劈成两半放在两处」而非两个功能——详见
+- ~~**S1-4** sky「环境贴图映射」标签语义漂移 + 与 env cap 抢写槽位~~ → **已修复（§16，ADR-292 三批次闭环）**：
+  所有权收口归 EnvironmentCapability 独占，sky IBL 降为「来源」三选一中的一项，
+  天空面板重复 toggle 退役（D4）。迁移语义拍板：`env关切+sky开`→`sky`；`custom`→`custom`；
+  其余→`preset`。纯函数 `caps/environment-migrations.ts` + 21 例测试。详见
   `docs/adr/ADR-292-scene-environment-sky-ibl-env.md`。
-  **迁移语义已拍板**（保画面不变：`env关切+sky开`→`sky`；`custom`→`custom`；其余→`preset`），
-  纯函数已落地 `caps/environment-migrations.ts`（21 例测试）。
 - ~~G-1~~ 撤销（误判，见 §15）
 - ~~S2-4~~ 已修（见下）
+
+> **§16 S1-4 闭环注记（2026-09-22 锐评轮次核对）**：ADR-292 收口使 `skyEnvironment`
+> 开关退役后，§1-§13 正文中所有「sky 面板『环境贴图映射』toggle」的历史描述仍按
+> **当时快照**保留（审计文档惯例），但下列引用点已过期，阅读时以注记为准：
+> - §2 S2-2「envSky 未挂 scene 时对死 mesh 双写」——ADR-292 后 `envSky` 是
+>   **常驻烘焙载体**（`bakeEnvironmentTexture` 的 renderTarget 源），不再是「开关关闭即摘除」的
+>   死 mesh。S2-2 结论（全量重写 7 uniform）仍成立，但「envSky 是死 mesh」前提已变。
+> - §4 R-2 / §8 E-4 中「skyEnvironment 与 envUseAsBackground 互斥」的表述——
+>   收口后该互斥由 `envSource` 单选**结构性保证**（三通路互斥，非运行期判定）。
+> - §11 R-4 / §7「两 cap 各开总开关互不知晓」——收口后写者唯一，竞争面消除。
 
 ## §15 S2-4 修复记录 + G-1 误判更正
 
@@ -787,4 +812,33 @@ S1-4 原描述是「toggle 标签语义漂移」，但**根因是架构**：给 
 - `check-biome --files` ✅
 - 全量 `vitest --run` → 6605 passed；6 条失败在 `app-modules.boot.test.ts`，经 stash 验证为
   **存量问题**（与我改动无关，该文件不 import 任何 preview-3d 模块）。
+
+---
+
+## §17 观察项核验（定时任务轮次，2026-09-22）
+
+本轮重心：不重开新面板，而是**关闭 §13 遗留的 ⚪ 观察项**（W-1 / W-2 / W-3 / W-5 /
+reflector SSR 互斥通道），并回查 ADR-292 收口后 §1-§13 的过期引用点。
+
+### 核验结果
+
+| 观察项 | 结论 | 证据 |
+|--------|------|------|
+| **W-1** water film 空组头 | **撤销**（已治之病） | `render.ts` folder 渲染实现「全隐组不建空组头」，注释原句即 water film 水池组四控件全门控的回归场景；`node-render.test.ts` 有「空 children 不渲染 section」回归锁。原观察项系未读渲染层全文即挂的待核清单 |
+| **W-2** transmissionRenderTarget dispose 竞态 | **风险接受区** | `disposeWater` 的 `trt.texture.dispose() + trt.dispose()` 仅在销毁时序内调用（mesh 已摘、material.dispose 已清 program 引用），three 侧 WebGLState 旧引用随 RT 释放同帧清理，无跨帧竞态。残留风险 = three 侧「同帧双 dispose 未去重」的 API 契约，非本仓可修 |
+| **W-3** schema 键集 vs 分派表键集 | **已落地契约测试** | 新增 `WATER_PARAM_APPLIER_KEYS`（15 键字面量）导出 + 「schema water 组键集 = 分派表键集」测试。类型派生 `WaterParamKey` 管编译期、字面量管运行时——双保险。15 键经 PowerShell 逐一比对确认与 schema 完全一致 |
+| **W-5** 6 处 replace 仅检 4 锚点 | **维持 4 锚点（原建议撤回）** | 实测：第 2 处（common 注入 varying/uTime）与第 6 处（`void main() {` 补换行）无独立检测，但第 1/3 处注入体已含检测符号（`vec3 gerstner(` / `objectNormal = ysmWaveNormal`），且 2/6 失配必伴随 1/3/4/5 之一失配（同一 shader 模板）——4 锚点已充分覆盖 6 处替换 |
+| **reflector SSR 互斥通道** | **撤销「未核实」标记（通道完整）** | `postprocessing-capability.ts` 的 `applyReflectorSync()` 经 `getTypedCap(this.caps,"reflector")` 查询器取 reflector cap，三条件（`ssrIsActive() && enabled && ppReflectorDisableWhenSSR`）压制/还原，归属判定区分「我们按下」vs「用户手动重开」；`reflection-chain-invariants.test.ts` 专锁「双反射默认不可达」不变量 |
+
+### 新发现（本轮）
+
+无新增 🔴/🟡/🟢。本轮是**观察项清算轮**，产出 = 5 项观察项全部关闭 + 1 项新契约测试
+（W-3）+ §14 过期引用点注记。
+
+### 门禁
+
+- `water-capability.test.ts` → **79 passed**（含新契约测试）
+- W-3 契约测试对旧实现（未加 `WATER_PARAM_APPLIER_KEYS` 导出）= `Tests 1 failed`（TDD 证明）
+- `git log --oneline` 核对：ADR-292 三批次提交（`19d42b235` / `10f0db9f9` / `b71aa0979`）
+  均在 main 且已推送（与 origin/main 同基线）
 

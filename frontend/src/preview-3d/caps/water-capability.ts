@@ -75,6 +75,26 @@ function applyStructuralProfile(ctx: WaterApplyCtx): void {
     wallThickness: envState.waterPoolWallThickness,
   });
 }
+// [锐评 W-3] 分派表键名显式字面量——供契约测试与 getPresetKeys("water") 做字面同步核查。
+// WaterParamKey 派生类型（Extract<EnvStateKey, `water${string}`>）无法反向 import 回 schema，
+// 故键名集合在此以字面量登记，测试比对字面量与 schema 键集，任一侧加键忘另一侧即红。
+export const WATER_PARAM_APPLIER_KEYS = [
+  "waterEnabled",
+  "waterMode",
+  "waterWaveSpeed",
+  "waterWetness",
+  "waterOpacity",
+  "waterColor",
+  "waterNormalStrength",
+  "waterPoolWallColor",
+  "waterPoolRoundness",
+  "waterClarity",
+  "waterSize",
+  "waterPoolHeight",
+  "waterPoolWallThickness",
+  "waterChoppiness",
+  "waterLevel",
+] as const;
 const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> = {
   waterEnabled: () => {}, // 可见性由回调 syncWaterVisibility 单独承接
   waterMode: () => {}, // 形态切换由回调 rebuildWaterContainer 承接，不入本表

@@ -10,8 +10,9 @@ import {
   type WaterPartRole,
 } from "./water-body-strategies.ts";
 import { WaterCapability } from "./water-capability.ts";
+import { WATER_PARAM_APPLIER_KEYS } from "./water-capability.ts";
 import { persistState } from "./scene-capability.ts";
-import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
@@ -1229,6 +1230,18 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     // 几何一句不动——「拖池深滑块每帧重建 10 个 mesh」的旧账至此结清
     expect(poolStrategy.needsRebuild(new Set(["waterPoolHeight"])), "pool 池深零重建").toBe(false);
     expect(poolStrategy.needsRebuild(new Set(["waterPoolWallThickness"])), "pool 壁厚零重建").toBe(false);
+  });
+
+  it("[锐评 W-3] schema water 组键集 = 分派表键集（字面同步契约）", () => {
+    // 双保险：类型派生（WaterParamKey = Extract<EnvStateKey, `water${string}`>）负责编译期，
+    // 本字面量对比负责**运行时**——schema 加新水键而漏加分派表条目时，
+    // 编译期 Record 完备性会拦下（新增 key 必在分派表声明）；但分派表**删条目**
+    // 或字面量登记与分派表漂移（如手抄漏字），只有本测试能兜住。
+    const schemaKeys = getPresetKeys("water").filter((k) => k.startsWith("water"));
+    expect(
+      new Set(schemaKeys),
+      `schema water 组键集与分派表字面量漂移（schema=${JSON.stringify(schemaKeys)}）`,
+    ).toEqual(new Set(WATER_PARAM_APPLIER_KEYS));
   });
 });
 

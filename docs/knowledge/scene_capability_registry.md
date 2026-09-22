@@ -176,6 +176,7 @@ auto_fields:
     - VolumetricDriver
     - VolumetricParams
     - WATER_MODES
+    - WATER_PARAM_APPLIER_KEYS
     - WaterBody
     - WaterBodyStrategy
     - WaterBuildContext

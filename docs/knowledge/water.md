@@ -25,6 +25,7 @@ auto_fields:
     - poolStrategy
     - registerWaterBodyStrategy
     - WATER_MODES
+    - WATER_PARAM_APPLIER_KEYS
     - WaterBody
     - WaterBodyStrategy
     - WaterBuildContext

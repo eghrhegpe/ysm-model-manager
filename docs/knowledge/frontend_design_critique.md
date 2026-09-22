@@ -635,6 +635,12 @@ invariant_anchors:
     - **清债**：`--fix` 一次清 **21 条**（值等价，两分量均可精确展开），基线 311 → **290 条**。
     - **方法论（重要）**：判「哪个组合值值得建档」的正确姿势不是「列全部可展开值」，而是**先按覆盖率和语义聚类**——本次 10 种可展开值里，Top 2 占 21/36，其余 8 种合计 15 条且多为单例；**建档的分界线应画在「高频语义簇」而非「技术上可展开」**。
     - **验收**：`test_design_tokens` 全绿（含新增两档展开值对账）✅ / contract-tests 103/103 ✅ / vite build ✅ / typecheck ✅ / biome ✅ / `--fix` 幂等 ✅ / 基线 311 → 290。
+  - **非 padding 债首轮（2026-09-22，19 条中的可控项）**：剩 290 条里 19 条非 padding（字号 9 / 颜色 5 / 圆角 1 / emoji 1），本波先清位移小的与有仓内惯例支撑的 **6 条**，基线 290 → **284**：
+    - **字号 2 条**：`.cr-creator-icon`/`.cr-drop-icon` 的 `18px` → `var(--fs-nav)`(16px，−2px；图标由 `.ws-icon{width:1em}` 驱动，`18px` 不在 `--fs-*` 轴上)。
+    - **颜色 3 条**：`vrm-bone-ui.ts` 空态 `rgba(128,128,128,0.85)` → `var(--muted)`；`content-gh.ts` 取消钮 `rgba(128,128,128,.15/.3)` → `color-mix(in srgb, var(--muted) 15%/30%, transparent)`。
+    - **⚠️ 关键查证（图标尺寸机制）**：`.ws-icon { width:1em; height:1em }`（`utils/dom/css.ts`，ADR-238 唯一出处）⇒ **图标的尺寸通道就是 `font-size`**。故「给图标写 font-size」本身正当；**真债在于用字面 px 而非令牌**。仓内主流做法 = 走 `--fs-*`（如空态大图标范例 `.dp-placeholder .big-icon { font-size: var(--fs-xl) }`，被 19 处复用）；被闸标的 9 处是**偏离惯例的少数派**，不是闸的误报 —— 但 32/36px 归 `--fs-xl`(25px) 有 −7~−11px 位移，需单独拍板，本波未动。
+    - **明拒/留人工**：`.logo-icon`(20px，品牌标识)、`.preview-fab`(20px，44×44 内浮标)、32/36px 大图标（位移 >4px）；`rgba(20,20,30,.1)`/`#fff4c2` 3D 域特有色；`border-radius:2px`（低于 `--radius-xs`）；`rename.ts` 的 `→`（刀㉘ 已判定为文本槽排版符号，刻意保留）。
+    - **方法论**：「闸报的违规」与「闸误报」要分开——先查**该写法在仓内是否有正当机制与主流先例**（本例 `1em` 机制 ⇒ 机制正当、写法偏离），再决定是「豁免闸」还是「修正写法」。**方向搞反会把惯例写成豁免、把债务洗成合法**。
 - ✅ **刀㉚ features 层执法：R8 HTML 字面量闸立法**（2026-09-20，本会话用户「锐评 /features」落地）：
   - **锐评总判**：features 纪律仓库天花板（R5 seam 零违例 / 全层零 `: any` 零 `@ts-ignore` / 跨 feature 依赖 DAG 无环 / 死代码仅 1 运行时孤儿导出），唯一结构性原罪 = **逻辑层私藏视图**——maintenance 三文件手写内联 style HTML 串、`_dots` 转圈状态挂 DOM 节点自定义属性。
   - **立法**：`check-layering` 新增 **R8（防回退）**：features 生产文件禁 HTML 字符串/模板字面量（政策 ADR-190 D1a / ADR-208 D2 早立但从未执法，本条补闸）；存量 5 文件 76 处入基线（dialogs 三件套 + community render/show-repo-models，ADR-208「已知遗留」点名项，big-bang 在 ADR 里被显式反对），新增即红；行级豁免尾注 `// layering-allow: html`。扫描器 `htmlLiteralHits` = 手写词法态机（剥注释/抽字符串跨/模板插值嵌套），纯函数导出 + 合成样本契约测试直测，同 `matchImports`/`r7EdgeViolates` 防空转惯例。同号异策：与 check-redlines R8 勿混。

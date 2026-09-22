@@ -54,7 +54,6 @@ auto_fields:
     - EnvPreset
     - EnvPresetId
     - EnvSectionId
-    - EnvSlotOwnership
     - EnvSource
     - fbm2
     - fcMasterToggleNode

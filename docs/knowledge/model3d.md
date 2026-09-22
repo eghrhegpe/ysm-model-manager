@@ -245,7 +245,6 @@ auto_fields:
     - EnvPreset
     - EnvPresetId
     - EnvSectionId
-    - EnvSlotOwnership
     - EnvSource
     - envState
     - EnvState

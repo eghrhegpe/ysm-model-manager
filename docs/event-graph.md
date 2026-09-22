@@ -287,8 +287,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 376 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 403 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 381 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 408 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -469,7 +469,7 @@
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 184 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 205 |
 | relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 229 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 305 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 310 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 109 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 120 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |

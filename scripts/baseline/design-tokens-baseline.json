@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-22T13:51:09.608Z",
-  "count": 214,
+  "generated": "2026-09-22T14:18:46.047Z",
+  "count": 210,
   "note": "设计令牌存量债账本（ADR-256：已不参与门禁判定，只供 doctor 报告 / 收债排期）；清理后重跑 --update-baseline 收缩",
   "violations": [
     "frontend/css/components.css:144:css-padding",
@@ -204,8 +204,6 @@
     "frontend/src/views/app-sync-manager/tpl.ts:189:inline-style-padding",
     "frontend/src/views/app-toast/index.ts:63:css-padding",
     "frontend/src/views/app-toast/index.ts:80:css-padding",
-    "frontend/src/views/app-tree/app-tree-styles.ts:119:css-padding",
-    "frontend/src/views/app-tree/app-tree-styles.ts:119:css-radius",
     "frontend/src/views/app-tree/app-tree-styles.ts:145:css-padding",
     "frontend/src/views/app-tree/app-tree-styles.ts:151:css-padding",
     "frontend/src/views/app-tree/app-tree-styles.ts:30:css-padding",
@@ -214,8 +212,6 @@
     "frontend/src/views/app-tree/app-tree-styles.ts:61:css-padding",
     "frontend/src/views/app-tree/app-tree-styles.ts:77:css-padding",
     "frontend/src/views/app-tree/app-tree-styles.ts:78:css-font-size",
-    "frontend/src/views/app-tree/app-tree-styles.ts:90:css-padding",
-    "frontend/src/views/app-tree/app-tree-styles.ts:90:css-radius",
     "frontend/src/views/app-tree/tpl-batch-rename.ts:79:emoji-icon"
   ]
 }

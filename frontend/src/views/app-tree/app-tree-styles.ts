@@ -87,7 +87,7 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 /* .tag-author/.tag-work/.tag-date 的外观与色标全部由共享 metaTagCSS 承载（本串在下方插值）；
    本处不再另立 scoped 基础规则（旧 .fh .nm .tag-* 的 base 行与 metaTagCSS L115 逐值相同，
    已冗余删除）。域特有仅剩 .tag-ext（扩展名灰标）与 .nm mark 高亮。 */
-.fh .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
+.fh .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: var(--radius-xs); padding: 0 var(--sp-1); }
 .fh.locked { opacity: .5; }
 .fh.locked .nm { color: var(--muted); }
 .fl { display: flex; align-items: center; gap: 6px; height: var(--tree-row-grid, 28px); padding: 0 var(--sp-1); box-sizing: border-box; border-radius:var(--radius-sm); font-size: var(--fs-base); transition: all var(--tr-normal); cursor: default; user-select: none; -webkit-user-select: none; }
@@ -116,7 +116,7 @@ ${dropdownBaseCSS}${dropdownHoverCSS}
 .fh-list .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
 .fh-list .ar.open { transform: rotate(90deg); }
 .fh-list .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
-.fh-list .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: 2px; padding: 0 2px; }
+.fh-list .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: var(--radius-xs); padding: 0 var(--sp-1); }
 .fl-list .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; font-family:var(--font-mono); }
 .fl-list .sz.sz-green { color: var(--size-ok,#a6e3a1); }
 .fl-list .sz.sz-red { color: var(--size-large,#f38ba8); }

@@ -4,7 +4,7 @@
 // 只带来「选了就关掉体积光」的欺骗性控件与 3 条绕 bug 回归用例；现回归单引擎（cone）。
 //
 // 职责拆分（ADR-177，2026-09-04）：
-//   - 灯光对象管理（key/fill/rim/ambient/spotlight + 阴影协作）保留本类（核心职责①）
+//   - 灯光对象管理（key/fill/rim/ambient + 阴影协作）保留本类（核心职责①）
 //   - 体积光锥体② → light-cone.ts（VolumetricCone）
 //   - 预设数据③ → light-presets.ts（ADR-281 后不再经本文件 `export *` 转发，消费方直引具体叶）
 //   - 嵌套 ↔ 扁平参数映射 flattenLightParams → light-presets.ts（P3 下沉：纯映射样板，不触 cap 状态）
@@ -12,13 +12,14 @@
 //   - 状态持久化⑤ 保留本类（触达大量私有字段，顺序语义敏感）
 //
 // 设计要点（对齐 SkyCapability / GroundCapability 的能力模式）：
-//   - 默认经典三点布光（key/fill/rim DirectionalLight）+ AmbientLight
-//   - Spotlight 从对象正上方打下（聚光灯），cone + penumbra 可调 + SpotLightHelper 线框可视（ADR-246 D3）
+//   - 默认经典三点布光（key/fill/rim 三槽位统一实例，各可切 directional/point/spot——
+//     [light-type-switch] ADR-280 起原第四盏独立 Spotlight 并入槽位）+ AmbientLight
 //   - 体积光锥：真锥体网格 + Fresnel 视角边缘辉光（轻量，无 post-process 管线），
-//     朝向由 spotlight → 靶点方向驱动（默认俯视灯下恒垂直向下）
-//   - 按模型类别预设（对齐 SkyCapability.setPreset 模式）
+//     驱动源由 lightVolumetricDriver schema 键显式决定（ADR-290：auto = 槽位顺序第一盏
+//     启用 spot），朝向由该 spot 灯 → 靶点方向驱动（默认俯视灯下恒垂直向下）
+//   - [ADR-282] 灯光与模型类别解耦：无任何按类别预设，「重置」锚定 DEFAULT_LIGHT_PARAMS
 //   - 本类不持有 backend 引用，纯 Three.js 侧逻辑
-//   - target（对象中心）可动态更新，聚光灯 + 体积光锥随之重新定位
+//   - target（对象中心）可动态更新，各槽位 spot 灯 + 体积光锥随之重新定位
 //   - ADR-196 刀2：参数真值源从 this.params 迁到 envState 单例
 
 import * as THREE from "three";

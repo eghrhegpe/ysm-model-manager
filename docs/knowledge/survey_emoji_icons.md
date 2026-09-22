@@ -18,6 +18,7 @@ auto_fields:
     - allIconNames
     - checkLayoutDocDrift
     - COMBINING_MARKS
+    - COMBO_EXPANSION
     - COMBO_PADDING_TOKENS
     - DesignViolation
     - DesignViolationKind
@@ -47,6 +48,7 @@ auto_fields:
     - REALTIME_FEEDBACK_MAX_SECS
     - REALTIME_FEEDBACK_PROPS
     - SHADOW_TOKEN_VALUES
+    - SP_FLOOR_PX
     - SP_TOKEN_VERTICAL
     - splitTopLevelCommas
     - STATUS_ICON_NAMES

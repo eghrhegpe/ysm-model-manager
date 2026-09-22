@@ -641,6 +641,15 @@ invariant_anchors:
     - **⚠️ 关键查证（图标尺寸机制）**：`.ws-icon { width:1em; height:1em }`（`utils/dom/css.ts`，ADR-238 唯一出处）⇒ **图标的尺寸通道就是 `font-size`**。故「给图标写 font-size」本身正当；**真债在于用字面 px 而非令牌**。仓内主流做法 = 走 `--fs-*`（如空态大图标范例 `.dp-placeholder .big-icon { font-size: var(--fs-xl) }`，被 19 处复用）；被闸标的 9 处是**偏离惯例的少数派**，不是闸的误报 —— 但 32/36px 归 `--fs-xl`(25px) 有 −7~−11px 位移，需单独拍板，本波未动。
     - **明拒/留人工**：`.logo-icon`(20px，品牌标识)、`.preview-fab`(20px，44×44 内浮标)、32/36px 大图标（位移 >4px）；`rgba(20,20,30,.1)`/`#fff4c2` 3D 域特有色；`border-radius:2px`（低于 `--radius-xs`）；`rename.ts` 的 `→`（刀㉘ 已判定为文本槽排版符号，刻意保留）。
     - **方法论**：「闸报的违规」与「闸误报」要分开——先查**该写法在仓内是否有正当机制与主流先例**（本例 `1em` 机制 ⇒ 机制正当、写法偏离），再决定是「豁免闸」还是「修正写法」。**方向搞反会把惯例写成豁免、把债务洗成合法**。
+  - **按钮族 2px 垂直档波次（2026-09-22，承 ADR-295 D1 续建，用户拍板「补 2px 垂直档」）**：剩 284 条中 270 条 padding，可建议率此前 0%（无值等价组合档），本波**新增 2 个组合档 + 补 3 个建档遗漏**，`--fix` 机械清 **50 条**，基线 284 → **234**：
+    - **新增档（值等价，防膨胀口径）**：
+      - `--btn-padding-std: var(--pad-btn-secondary) 10px`（4px 10px）——标准按钮/输入载体（`.cr-back`/`.cr-search-input`/`.te-add-btn`/`.tb-btn`/`.sb-btn`/`.batch-item`/`.ws-back-repo`/`.cc-btn`/`.undo-btn` 等），**×16**；
+      - `--btn-padding-xs: 2px 4px`（2px 4px，全字面量不随字号缩放）——紧凑输入/选择器（`.cr-input-type`/`.diag-log-op-filter`/`.af-inp`/`.ysm-ovl-select`/`.stg-select` 等），**×14**。
+    - **补建档遗漏**：`3px 8px`×6 是既有 `--btn-padding-tool-lg` 的**精确展开值**，但因表键只收录源值 `2px 8px`，同展开值的 `3px 8px` 写法从未入表 → 6 处漏网。补键即 **+6** 可清。同理 `2px 6px`×14（全按钮）补 `→ --btn-padding-sm`（垂直 2→3px，+1px 映射按钮最小档）。**教训：组合档表是「源组合值 → 令牌」双向映射，应同时收录「同展开值的不同源写法」**，否则同值不同键会漏网。
+    - **方法（先画像再建档，防误挂）**：上轮曾踩 `4px 4px` 前缀误挂 `--sp-vh-btn` 的坑——**短值组合必须逐处看上下文定语义**，不能只看值的前缀命中。本波对每个候选簇先拉全量 `file:line` 画像、按选择器归语义（按钮/输入/面板/列表行），确认**单一语义**才建档。`4px 6px`×17 因语义三分（输入 `.dlg-input*`/按钮 `.sb-btn`/面板 `.dlg-preview`/列表 `.cr-scroll`）**不统一建档**，留人工逐处。
+    - **清债**：`--fix` 50 处全部落在 4 个目标令牌（`--btn-padding-std`×16 / `--btn-padding-sm`×14 / `--btn-padding-xs`×14 / `--btn-padding-tool-lg`×6），零 `--pad-*`/`--sp-vh-*` 误挂。逐条 diff 审后**语义全部正确**。
+    - **验收**：`test_design_tokens` 全绿（新档展开值对账）✅ / contract-tests 103/103 ✅ / vite build ✅ / typecheck ✅ / biome（--write 清 3 处存量 noNonNullAssertion + 正则字面量 sugar）✅ / 基线 284 → **234**。
+    - **方法论沉淀**：① 组合档表补键时**同时查「同展开值的不同源写法」**（本次揪出 3px 8px 漏网）；② **值等价优先于映射既有档**——横向 10px 曾有归 `--btn-padding-filter-lg`(12px) 的提议（+2px 横向位移），因「既有组合档全值等价」哲学否决，改新建 `--btn-padding-std` 值等价。
 - ✅ **刀㉚ features 层执法：R8 HTML 字面量闸立法**（2026-09-20，本会话用户「锐评 /features」落地）：
   - **锐评总判**：features 纪律仓库天花板（R5 seam 零违例 / 全层零 `: any` 零 `@ts-ignore` / 跨 feature 依赖 DAG 无环 / 死代码仅 1 运行时孤儿导出），唯一结构性原罪 = **逻辑层私藏视图**——maintenance 三文件手写内联 style HTML 串、`_dots` 转圈状态挂 DOM 节点自定义属性。
   - **立法**：`check-layering` 新增 **R8（防回退）**：features 生产文件禁 HTML 字符串/模板字面量（政策 ADR-190 D1a / ADR-208 D2 早立但从未执法，本条补闸）；存量 5 文件 76 处入基线（dialogs 三件套 + community render/show-repo-models，ADR-208「已知遗留」点名项，big-bang 在 ADR 里被显式反对），新增即红；行级豁免尾注 `// layering-allow: html`。扫描器 `htmlLiteralHits` = 手写词法态机（剥注释/抽字符串跨/模板插值嵌套），纯函数导出 + 合成样本契约测试直测，同 `matchImports`/`r7EdgeViolates` 防空转惯例。同号异策：与 check-redlines R8 勿混。

@@ -254,6 +254,10 @@ export const autoSidebar = [
         "link": "/adr/ADR-295-combo-spacing-tokens"
       },
       {
+        "text": "ADR-295: 链接模式切换重链链路加固（锐评落地）",
+        "link": "/adr/ADR-295-linkmode-switch-relink-hardening"
+      },
+      {
         "text": "ADR-294：间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层）",
         "link": "/adr/ADR-294-spacing-five-tier-tokens"
       },

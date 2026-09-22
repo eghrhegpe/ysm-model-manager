@@ -139,6 +139,7 @@ auto_fields:
     - SyncStatusSynced
     - TextureMIME
     - TypeByLocation
+    - ValidLinkMode
     - Variant
     - VersionInstance
     - VoxelGroup

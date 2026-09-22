@@ -7,17 +7,16 @@ package install
 import (
 	"fmt"
 	"strings"
+
+	"ysm-model-manager/go/types"
 )
 
-// IsValidLinkMode 链接模式白名单（install 域唯一事实源，ADR-296 D6）：
-// SetLinkMode 硬校验、loadAppConfig 加载软校验、App.SaveAppConfig 写盘前净化共用，
-// 替代此前散落各调用方的 `mode != "symlink" && mode != "hardlink" && mode != "copy"` 内联表。
+// IsValidLinkMode 链接模式白名单（install 域出口，ADR-296 D6）：
+// 值域事实源已下沉 `types.ValidLinkMode`（全仓唯一，GUI 与 CLI 双轨共用，防内联表漂移），
+// 本函数是 install 域的薄转发出口——SetLinkMode 硬校验、loadAppConfig 加载软校验、
+// SaveAppConfig 写盘前净化三处消费。
 func IsValidLinkMode(mode string) bool {
-	switch mode {
-	case "symlink", "hardlink", "copy":
-		return true
-	}
-	return false
+	return types.ValidLinkMode(mode)
 }
 
 // SanitizeLinkMode 写盘前净化（ADR-296 D6，软校验不 reject；返回值恒为合法值或 ""）：

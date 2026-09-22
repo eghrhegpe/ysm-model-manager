@@ -134,6 +134,19 @@ const (
 	LinkUnknown LinkType = "unknown"
 )
 
+// ValidLinkMode 链接模式白名单（全仓唯一值域事实源，ADR-296 D6）：
+// linkMode 配置值（AppConfig.LinkMode / SetLinkMode 参 / CLI --mode）与 LinkType
+// 前三常量同串。install 域与 go/cli 双轨共用本谓词，消除两份内联值域表的漂移
+// ——依赖方向合法：go/cli 禁止 import internal/app（ADR-145），但双轨都可 import types。
+// LinkUnknown 是检测返回值、不是可配置模式，故 switch 恰取三值。
+func ValidLinkMode(mode string) bool {
+	switch LinkType(mode) {
+	case LinkCopy, LinkHard, LinkSym:
+		return true
+	}
+	return false
+}
+
 // ErrorCode 结构化错误码（ADR-051 落地：替代裸字符串拼接，消除前后端双份分类表漂移）。
 // 所有错误构造点统一使用此处的常量，前端 friendlyError 消费 Code 字段做 i18n 映射。
 type ErrorCode string

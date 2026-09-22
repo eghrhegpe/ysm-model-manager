@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"strings"
+
+	"ysm-model-manager/go/types"
 )
 
 func init() {
@@ -67,17 +69,9 @@ func runSetLinkMode(ctx *CmdContext, mode, cmdName string) error {
 		return nil
 	}
 
-	// 有 --mode：设置
-	validModes := []string{"symlink", "hardlink", "copy"}
-	modeValid := false
-	for _, v := range validModes {
-		if v == mode {
-			modeValid = true
-			break
-		}
-	}
-	if !modeValid {
-		return newParamErrf("%s: 无效模式 %q，可选: %s", cmdName, mode, strings.Join(validModes, "|"))
+	// 有 --mode：设置（值域唯一事实源 = types.ValidLinkMode，与 install 域 GUI 轨同源）
+	if !types.ValidLinkMode(mode) {
+		return newParamErrf("%s: 无效模式 %q，可选: %s", cmdName, mode, strings.Join([]string{string(types.LinkSym), string(types.LinkHard), string(types.LinkCopy)}, "|"))
 	}
 
 	if err := ctx.App.SetLinkMode(mode); err != nil {

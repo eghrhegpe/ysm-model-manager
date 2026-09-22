@@ -148,6 +148,7 @@ auto_fields:
     - SyncStatusSynced
     - TextureMIME
     - TypeByLocation
+    - ValidLinkMode
     - Variant
     - VersionInstance
     - VoxelGroup
@@ -199,7 +200,7 @@ status: active
 
 ## 核心职责
 
-- `types.go` — 跨包数据结构：ModelEntry（含 **SubDir 字段，ADR-096 P1**：MMD 用途子目录分组，`json:"subdir,omitempty"`）、VersionInstance、InstanceStatus、ResourceSyncResult、SyncStatus、ImportLog、LinkType、AppError、CustomFileInfo、WindowState、AuthorInfo、SearchResult、**ErrorCode（结构化错误码，ADR-051 落地）**、**LogLevel（日志级别）**、**DownloadTask/QueueStatusInfo（下载队列契约 DTO，ADR-145：自 internal/app 下沉——go/cli 定义 AppService 接口需引用，不下沉则 cli 反向依赖 app 成死结；JSON tag 原样保留 → bindings 零漂移）**
+- `types.go` — 跨包数据结构：ModelEntry（含 **SubDir 字段，ADR-096 P1**：MMD 用途子目录分组，`json:"subdir,omitempty"`）、VersionInstance、InstanceStatus、ResourceSyncResult、SyncStatus、ImportLog、LinkType、AppError、CustomFileInfo、WindowState、AuthorInfo、SearchResult、**ErrorCode（结构化错误码，ADR-051 落地）**、**LogLevel（日志级别）**、**DownloadTask/QueueStatusInfo（下载队列契约 DTO，ADR-145：自 internal/app 下沉——go/cli 定义 AppService 接口需引用，不下沉则 cli 反向依赖 app 成死结；JSON tag 原样保留 → bindings 零漂移）**；**`ValidLinkMode(mode) bool`（ADR-296 D6）——链接模式值域全仓唯一事实源，复用 `LinkCopy/LinkHard/LinkSym` 前三常量**（`LinkUnknown` 是检测返回值非可配置模式，故排除）；`install.IsValidLinkMode` 薄转发 + `go/cli/install.go` 双轨共用，消灭两份内联值域表漂移（依赖方向合法：ADR-145 禁 cli→internal/app，但双轨皆可 import types）
 - `config.go` — AppConfig（FilesRoot/各类型 Root/LinkMode/Theme/Mirror/VoxelMaxBlocks/窗口状态）、PackInfo、WorkshopSite、WorkshopCreator；**`ParseDedupConfig`**（绑定层 configStr 的统一解析入口：空串→nil,nil「未配置」、非法 JSON→错误；`FindDuplicateFiles` 依赖它，消多个绑定入口各自内联 json.Unmarshal 的解析语义双轨漂移）。注意：`SyncConfig` 结构体仅供 `go/sync.SyncResourcesWithConfig` 使用，**暂无绑定层解析入口**——`ParseSyncConfig` 曾引入但因无消费者被删（d22368ad），同步配置链保持休眠
 - `resource.go` — 注册表加载（LoadRegistry），编译期嵌入基线 `bundledRegistryJSON`（根包 `embed.go` 经 `SetBundledRegistryJSON` 注入，单源 = 仓库根 `resource_types.json`，取代旧 `resource_types_embed.go` 手工副本）；PackMeta/FormatRange、LitematicMeta/LitematicVoxelData/VoxelGroup、**`ResourceType.ZipEntries []ZipEntryMatch`（ADR-067 内容指纹）**
 - `extensions.go` — 注册表驱动的扩展名与子目录查询

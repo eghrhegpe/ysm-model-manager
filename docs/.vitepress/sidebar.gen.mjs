@@ -250,6 +250,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-297：水面模型倒影：隐藏 Reflector 借官方 RT + 水 shader 投影采样",
+        "link": "/adr/ADR-297-water-planar-reflection"
+      },
+      {
         "text": "ADR-296：链接模式切换重链链路加固（锐评落地）",
         "link": "/adr/ADR-296-linkmode-switch-relink-hardening"
       },

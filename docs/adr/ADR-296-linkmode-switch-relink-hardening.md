@@ -1,6 +1,6 @@
 # ADR-296：链接模式切换重链链路加固（锐评落地）
 
-- **状态**：✅ 已采纳（D1–D6 全部落地并经对抗审查放行；D7 按决策留观未升级、D8 明示不做项维持现状）
+- **状态**：✅ 已采纳（D1–D7 全部落地并经对抗审查放行；D8 明示不做项维持现状）
 - **实施状态**：查知识卡 `go-sync` / `go-installer`（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-22
 - **决策人**：Jieling（人类首席架构师）、AI 代理
@@ -42,10 +42,10 @@ README + 用户指南 ×3 处改为「报错提示切换复制模式（不自动
 change 事件顶部纳入 busy 守卫 → modalConfirm（展示将处理实例数，danger:true）→ 取消回退 select.value + applyHintVisibility，不发 RPC。逐实例完成增量 toast（复用 bus "toast:show"，不引 modalProgress——字节级进度条与离散计数语义不符）。新增 i18n key 三语同步（占位符名一致）。
 
 ### D6 linkMode 软校验回落
-loadAppConfig：cfg.LinkMode 非法（∉{copy,hardlink,symlink,""}）→ logWarn + 回落 ""再交 SyncLinkMode；SaveAppConfig orDefault 前对传入 linkMode 软校验（非法则忽略该参、保留 oldCfg.LinkMode，不 reject）。避免入口 fail-closed 误伤回写调用点。
+loadAppConfig：cfg.LinkMode 非法（∉{copy,hardlink,symlink,""}）→ logWarn + 回落 ""再交 SyncLinkMode；SaveAppConfig 对传入 linkMode 软校验净化（非法则忽略该参、保留 oldCfg.LinkMode，不 reject；净化函数恒返回合法值或 ""，调用点勿再套 orDefault 防双脏反洗）。避免入口 fail-closed 误伤回写调用点（5 个前端 SaveAppConfig 调用点中 4 个只原样回写）。web 模式无需同口径（核实：链接模式卡在 viewer 下整块不渲染 + web 无 SetLinkMode binding，无脏值注入源）。**值域白名单下沉 `types.ValidLinkMode`**（复用 LinkType 前三常量作唯一事实源，install 域薄转发 + go/cli 双轨共用——依赖方向合法，ADR-145 禁 cli→internal/app 但双轨皆可 import types），消灭 `go/cli/install.go` 第二份内联表。
 
-### D7 IsHardLink 占用假阴性留观（不立项）
-GetLinkType 仅 UI 分类消费（optional/legacy 标记），无资损路径。等 D1 复现结果决定是否升级。
+### D7 IsHardLink 占用假阴性：一行 access mask 根治（核实子代理探针实证升级，替代原「留观」）
+影响面核实比预估更小：`GetLinkType` 头号消费者 `InstanceStatus.Files[].LinkType` 是前端死字段、recycle 误判方向经实证保守无资损、NTFS NumberOfLinks 实时无缓存不存在反向误判——但根治成本仅一行：`hardlink_windows.go` CreateFile access 从 `GENERIC_READ` 改 `0`（仅查询属性，独占句柄挡不住；探针实证独占下真硬链接仍读到 =2）。否决 BACKUP_SEMANTICS（目录才需要、且要求 SE_BACKUP_NAME 特权反咬）与保守重试（为 UI 标记不值延迟）。回归测试 `TestRecoverAtomicRename_IgnoresRelinkBakFamily` 同步钉死 `.relink-bak-*` 与 `.bak-*` 两备份命名族互不认领。
 
 ### D8 维持现状项（明示不做）
 - sameSource 目录 symlink 早退分支：生产不可达，归「下次触碰 installer.go 顺手加」。

@@ -118,3 +118,46 @@ func TestLoadAppConfig_LazyPathWashesDirtyLinkMode(t *testing.T) {
 		t.Errorf("惰性路径不应写盘，磁盘 linkMode=%q want mirror", disk.LinkMode)
 	}
 }
+
+// TestSaveAppConfig_WashesDirtyDiskLinkMode（ADR-296 D6 端到端，核实子代理建议 #5）：
+// 钉死「loadAppConfig 内存洗 + 下次任意 SaveAppConfig 顺带洗盘」的组合承诺——
+// 脏 mirror 经内存洗白后，任意一次保存（如改主题）都必须把磁盘 linkMode 洗干净，
+// SanitizeLinkMode 恒不返回脏值，mirror 绝不回流磁盘。
+func TestSaveAppConfig_WashesDirtyDiskLinkMode(t *testing.T) {
+	for _, tc := range []struct {
+		name, arg string // 前端实参 linkMode（改主题时传 getCfg().linkMode||"copy"="copy"；兜底空串亦洗白）
+		want      string
+	}{
+		{"前端兜底传 copy", "copy", "copy"},
+		{"传空串=未设参", "", ""}, // SanitizeLinkMode("", oldCfg="")→""，脏值同样被覆盖
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			orig := pathMgr
+			pathMgr = fakePathMgr{appData: t.TempDir()}
+			defer func() { pathMgr = orig }()
+
+			writeRawConfig(t, "mirror")
+			a := newLinkModeApp()
+			a.loadAppConfig() // 内存洗：configCache.LinkMode=""（磁盘仍 mirror）
+
+			// 模拟改主题保存：FilesRoot/McRoot 传空 → orDefault 保留旧值、不触发 watcher 重建
+			if err := a.SaveAppConfig("", "", "", tc.arg, "dark"); err != nil {
+				t.Fatalf("SaveAppConfig 失败: %v", err)
+			}
+			data, err := os.ReadFile(configPath())
+			if err != nil {
+				t.Fatal(err)
+			}
+			var disk types.AppConfig
+			if err := json.Unmarshal(data, &disk); err != nil {
+				t.Fatal(err)
+			}
+			if disk.LinkMode != tc.want {
+				t.Errorf("脏值不得回流磁盘：磁盘 linkMode=%q want %q", disk.LinkMode, tc.want)
+			}
+			if disk.Theme != "dark" {
+				t.Errorf("改主题应生效，Theme=%q", disk.Theme)
+			}
+		})
+	}
+}

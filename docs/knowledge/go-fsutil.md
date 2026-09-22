@@ -131,6 +131,8 @@ status: active
 - `walk.go` skipRecycle 大小写不敏感；单文件/目录读取失败不中断整体，WalkDir 错误打日志后跳过
 - `CopyDirRecursive` 遇符号链接按参数决定复制/跳过，不默认跟随
 - `IsHardLink` 目录恒返回 false（目录 nlink 恒 >1，误判会导致文件夹模型 Move 被当硬链接直接删除）
+- **`IsHardLink` Windows 用 `access=0`（仅查询属性）打开**（ADR-296 D7 根治）：`GENERIC_READ` 会被游戏的 `FileShare.None` 独占句柄挡出 ERROR_SHARING_VIOLATION → 静默 false → 硬链接误判为普通文件；NumberOfLinks 是内核实时元数据，0 access + OPEN_EXISTING 照样读到（探针实证：独占下真硬链接仍=2、普通文件仍=1，独占句柄不计入 nlink、无用户态缓存）。share 含 R|W|DELETE 放宽兼容面；**勿加 `FILE_FLAG_BACKUP_SEMANTICS`**（仅目录需要且本函数已排除目录，且以备份语义打开文件要求 SE_BACKUP_NAME 特权，普通权限反咬 ERROR_PRIVILEGE_NOT_HELD）
+- **`.relink-bak-*`（relink 备份族）与 `.bak-*`（AtomicRename 备份族）命名互不认领**：`RecoverAtomicRename` 用 `LastIndex(".bak-")` 分组，`.relink-bak-` 中 `b` 前是连字符非点号天然不匹配（回归测试 `TestRecoverAtomicRename_IgnoresRelinkBakFamily` 钉死，防将来放宽匹配时静默误搬恢复点）
 - `IsCrossDeviceErr` 分平台：POSIX EXDEV(18) / Windows ERROR_NOT_SAME_DEVICE(17)，语义不同不可混用
 - `StripBOM` 只剥文件头 BOM（前 3 字节 `0xEF 0xBB 0xBF`），中间字节不变
 - `DecodeBase64Limited(s, max)`（2026-08-30 审核修复）：binding 层 base64 输入统一受限解码入口——`len*3/4` 预检（不解码即拒绝，防超大字符串解码内存尖刺）→ 解码 → 复检，超限归哨兵 `ErrB64TooLarge`（`errors.Is` 分类）。`MaxImportSize`（500MB）/`MaxReadLimit`（50MB）由调用方按语义选择；importer / app_install_import / app_model 三处已收敛，勿再手写裸 `base64.DecodeString` + 事后查大小

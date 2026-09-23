@@ -168,7 +168,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 |------|------|------|
 | `stats:refresh` | 广播 → 订阅 | 变异完成 → sidebar 300ms 防抖 `_reload(true)` + sync-manager 重拉 |
 | `tree:reload` | 广播 → 订阅 | 整棵树重扫（sync:download:missing 成功后、sync:toggle:status finally） |
-| `package:selected` | sidebar → app-content | 携带 `{name, rtype, dir}` → 挂载 `<app-sync-manager>` |
+| `package:selected` | sidebar → app-content | 携带 `{name, rtype}`（`bus.ts` 契约；无 `dir` 字段）→ `app-content` 以 `innerHTML` 挂载 `<app-sync-manager instance default-type>` |
 | `repo:rtype-changed` | 全局 nav → 各处 | 切 rtype 重载 |
 | `repo:subdir-changed` | 全局 nav → sync-manager | MMD 子目录切换重载 |
 | `sync:download:missing` | sidebar → handler | 载荷 `{instanceName, rtype, token}` |
@@ -197,7 +197,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 
 ```
 sidebar 卡片点击
-  → bus.emit("package:selected", {name, rtype, dir})
+  → bus.emit("package:selected", {name, rtype})
     → app-content/init-pages.ts 在 #ins-content 内注入 <app-sync-manager instance="X" default-type="Y">
       → app-sync-manager 组件生命周期：
           connectedCallback / _init
@@ -218,7 +218,8 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 
 - **依赖 DAG 无循环**（index.ts 顶部注释）：`index → store/renderer/events/network/state`；leaf 模块互不反向依赖；共享状态下沉至 `state.ts` 打破 `index↔events` 循环
 - **组件实例单注册**：`customElements.get("app-sync-manager")` 守卫；`registerSync` 顶层调一次
-- **`_singleBusy` 按 path 粒度防重入**（network.ts，P2 修复）：`Set<string>` 而非全局布尔——不同行可并发 push/pull，同一行防重入；busy 视觉由 `_singleBusy.size > 0` 派生（原无条件 `setButtonsBusy(false)` 会把另一在途行按钮提前复位，两半自相矛盾）
+- **`_singleBusy` 按 path 粒度防重入**（network.ts）：`Set<string>` 而非全局布尔——不同行可并发 push/pull，同一行防重入
+- **⚠️ busy 视觉两侧同为 per-path 口径**（2026-09 修复「只做一半」）：`setRowButtonsBusy(self, path, busy)` 只锁/只解禁本行——原进入时 `setButtonsBusy(true)` 全局禁用把无关行一并锁死，令 per-path 并发在 UI 层形同虚设；原 finally 用 `size > 0` 全局派生，先结束的 op 会提前解禁仍在途行（守卫按 path、复位按全局，两半自相矛盾）。配套：窗口化每帧 `replaceChildren` 会冲掉禁用态，由 `renderer.restoreBusyState` 按 `st.busy`（引用同一 `_singleBusy`）贴回，否则用户重复点击同 path 被 Set 静默吞（"点了没反应"）
 - **代际守卫**：所有异步加载函数用 `_gen` 丢弃过期结果（`gen !== self._gen` 早退），防 `await` 期间 attribute 切换导致脏写入
 - **`_dirOpen` 显式折叠优先于 `_forceOpenPaths` 强制展开**（renderer.ts）：`??` 而非 `||`——用户点过折叠即尊重；只有 undefined 才允许 status 筛选强制展开
 - **筛选口径一致性**（store.ts `applyFilter`）：`tabStatus` 把 `diverged` 折叠进 `missing` tab，renderer 计数与递归 `filterNode` 复用同一 `tabStatus`，保证"徽标数 = 列表可见行数"

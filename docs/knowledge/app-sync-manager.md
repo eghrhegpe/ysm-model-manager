@@ -103,7 +103,9 @@ status: active
 
 - `_init` 可能因属性变更多次执行，重订阅 `stats:refresh` 前必须先清旧 `_unsubs`；`disconnectedCallback` 清理后必须 `this._unsubs = []` 置空，否则重连时复用旧数组会对已清理的 fn 再执行一次
 - 异步加载后一律先比对 `_gen` 代际再落 DOM / 建订阅，禁止在 `await` 之后无守卫地写 `innerHTML`。**`stats:refresh` 的 `.then` 重渲染与 `_loadData` 写 `_allItems` 同样必须比对 `_gen`**（P2 修复：原两处无守卫，instance 快速切换后旧代际数据覆盖新面板 / 后续过滤基于错误数据）
-- `_loading` 标记覆盖加载全程；`_render` 异常时保留错误提示不吞没；`_loadData` 失败必须 toast 告警，不能让界面停在「暂无资源文件」误导用户
+- **`_render` 异常必须保留错误提示不吞没**（2026-09 修复：曾整段死码 21 行）；`_loadData` 失败必须 toast 告警，不能让界面停在「暂无资源文件」误导用户；`_init` 三段 `await`（loadTypeConfig/loadData/loadRepoRoots）必须整体 try/catch 转错误 UI + toast——原为浮动 Promise，reject 即 unhandled rejection + spinner 永久卡死
+- **⚠️ `render()` 必须同步返回 void（禁止 `async`）**（2026-09 修复）：函数体零 `await`，标 `async` 会让抛出的异常变成 rejected promise 被调用方 `.catch` 静默吞掉，令 `_renderWithErrorFeedback` 的 try/catch 永不触发（错误 div + toast 全段死码）。同步契约由 `index.ts` 的 `_RENDER_SYNC_GUARD` 编译期守卫锁定，改回 async 即编译失败
+- **代际守卫唯一出口 `_guard`（ADR-230）**：2026-09 删除并存的手搓 `private _initGen`（语义不等价——`_guard.invalidate()` 打不进早期 bail）。禁止再引入第二套计数；`app-sidebar` 侧的 `_reloadGen` 同属待并轨项
 - 模块级 `_lastSelectedType` 跨实例记住上次选中类型（整合包间共享），并以 localStorage 键 `ysm_syncLastType` 持久化
 - 状态六态（synced/missing/disabled/optional/legacy/all）与 Go 端 `go/sync` 返回的状态字段一一对应，前端不自造状态
 - 组件 `define` 前先 `customElements.get` 守卫，防 HMR / 重复 import 重复注册

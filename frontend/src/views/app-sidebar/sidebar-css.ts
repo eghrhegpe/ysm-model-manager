@@ -87,5 +87,5 @@ ${noAnimationsCSS}
 ${dropdownBaseCSS}
 /* sidebar 下拉局部差异（宽度/换行/字号/项间距），覆盖共享默认值——勿回内联 */
 .dd-wrap .dd-menu { min-width:160px; white-space:nowrap; font-size:var(--fs-xs); }
-.dd-wrap .dd-item { padding:var(--btn-padding-md); }
+.dd-wrap .dd-item { padding:var(--sp-vh-cell); }
 `;

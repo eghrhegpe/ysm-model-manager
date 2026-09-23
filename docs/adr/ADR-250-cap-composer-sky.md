@@ -143,6 +143,13 @@ ADR-247 称此举是为避免「`setMasterEnabled` 因门禁初值 false 而无�
 
 ### 2.2 composer 常驻，启停走 pass 旁路而非销毁
 
+> ⚠️ **本节的「关闭态走 composer 旁路」已被 ADR-299 修订**：
+> 实测关闭态走 composer 每帧多耗 1.05ms GPU（+53.7%）并常驻 35.3MB 读写缓冲
+> （`ppEnabled` 默认 `false`，即默认路径上的绝大多数会话白付费）。
+> 现改为**惰性常驻**：首次启用才建、建后不销毁（本节的生命周期结论保留），
+> 但关闭态 `render()` 返回 `false` 交回直渲——生命周期与每帧参与解耦。
+> 「换模型不重建 GPU 资源」的收益不变。详见 ADR-299。
+
 后处理关闭时**不销毁 composer**，改为旁路：`needComposer()` 恒真（composer 一旦建立即常驻），
 关闭态经 `renderPass`/各 pass 的 `enabled` 与 `composer` 使用标记切换，`render()` 返回 true
 且直接走 `renderPass`（等价于原 `renderer.render`）。

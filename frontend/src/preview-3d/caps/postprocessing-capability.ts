@@ -4,8 +4,10 @@
 //
 // 设计要点：
 //   - 兼容旧 PostprocessingManager 外部接口：render(dt, lightCap): boolean，setSize，dispose
-//   - [ADR-250 §2.2] composer 常驻：构造即建、dispose 才拆（会话轴）。启用意图翻转走 pass
-//     旁路（不 allocate、不 dispose），故「换模型」不再触发整组 GPU 资源重建（缓存失效根治）。
+//   - [ADR-250 §2.2 + ADR-299] composer **惰性常驻**：首次启用才建、dispose 才拆（会话轴），
+//     关闭态既不建也**不参与每帧渲染**（render 返回 false，交回 render-host 直渲），
+//     故「换模型」不再触发整组 GPU 资源重建，且默认关闭的会话零成本。
+//     （ADR-299 实测：关闭态走 composer 每帧多耗 1.05ms GPU / +53.7%，另常驻 35.3MB 缓冲。）
 //   - Pass 顺序：RenderPass → (SSRPass 可选，reflectionMode 控制) → (SSAOPass 可选) → UnrealBloomPass → OutputPass
 //     （SSR 独占链首：它忽略 readBuffer、把自身 beauty 整片覆写进 writeBuffer，排前面才能让 SSAO/Bloom 叠加而非被吃掉）
 //   - dispose 还原构造前 renderer.toneMapping 等输出设置，不泄漏
@@ -109,6 +111,14 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   private ssrPass: SSRPass | null = null;
   private outputPass: OutputPass | null = null;
 
+  // [ADR-299] composer 惰性常驻的尺寸凭据。关闭态 composer 尚未创建，render-host 每帧
+  // 下发的 setSize / setPixelRatio 必须留下记录，否则首次启用时只能按
+  // `previewPixelRatio(devicePixelRatio)` 现场猜——自适应降档（render-host 的
+  // sampleAdaptivePixelRatio）后就会建出与 renderer 实际像素比不符的读写缓冲。
+  private lastW = 0;
+  private lastH = 0;
+  private lastPixelRatio = 0;
+
   // 联动 ReflectorCapability（SSR 开启时可自动禁用）——2026-09-14 起经构造注入的
   // caps 查询器现场取（getTypedCap(this.caps, "reflector")），替代原 setReflectorCap 注入器
   private readonly caps?: SceneCapabilityLookup;
@@ -166,10 +176,15 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.prevToneMapping = this.renderer.toneMapping;
     this.prevOutputColorSpace = this.renderer.outputColorSpace;
 
-    // [ADR-250] composer 常驻（§2.2）：构造即建，会话内不再随开关/换模型销毁重建。
-    // 关闭态走 pass 旁路（见 render），不 allocate、不 dispose——GPU 资源与模型轴解耦。
+    // [ADR-250 §2.2 → ADR-299] composer **惰性常驻**：构造期只在「启用意图已为真」时建
+    // （存档恢复 / 调用方显式传 enabled=true 的场景）；默认 `ppEnabled=false`
+    // （env-state-schema 默认值）的会话**一个 RenderTarget 都不分配**。
+    // 实测依据（ADR-299）：关闭态走 composer 每帧多耗 1.05ms GPU（+53.7%，948×610@DPR1），
+    // 另常驻 35.3MB 读写缓冲——而默认参数下真实效果（bloom/ssao/ssr 全关）只占 0.21ms，
+    // 管线过路费是载荷的 5 倍。建后仍常驻（换模型/启停不销毁），ADR-250 §2.2 的
+    // 「换模型不重建 GPU 资源」收益完整保留。
     // syncReflector=false：构造期不压制 reflector（见 buildComposer 注释）。
-    this.buildComposer(false);
+    if (this.enabled) this.buildComposer(false);
 
     // ADR-196：订阅 envState 变更，同步 pass 属性 / 重建 composer（只接收 postprocessing 组的键）
     this.unsubscribeEnv = registerEnvCallback(this, this.onEnvChanged, "postprocessing");
@@ -183,7 +198,8 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   /* -------- ADR-196：envState 变更回调（同步 pass 属性 / 重建 composer）-------- */
 
   private onEnvChanged = (changed: Set<EnvStateKey>, state: EnvState): void => {
-    // [ADR-250] 启用意图翻转：不再销毁/重建 composer，只切旁路 + 归权曝光
+    // [ADR-250 + ADR-299] 启用意图翻转：不销毁 composer（常驻），只切每帧参与 + 归权输出设置；
+    // 开启且尚未建时在此惰性创建（applyEnabledSideEffects 是唯一创建点）。
     if (changed.has("ppEnabled")) {
       this.applyEnabledSideEffects();
     }
@@ -255,20 +271,27 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   /* -------- 内部：构建/销毁 composer -------- */
 
-  /** [ADR-250 §2.2] composer 常驻：一旦建立即不随启用意图/模型切换销毁。
+  /** [ADR-250 §2.2 + ADR-299] composer **生命周期**惰性常驻：首次启用才建，建后不随
+   *  启用意图/模型切换销毁（GPU 资源与模型轴解耦的收益保留）。
+   *  ⚠️ 但「生命周期常驻」≠「每帧都走 composer」——本方法答的是后者：关闭态一律 false，
+   *  把渲染交回 render-host 的直渲兜底，避免 ADR-299 实测的 1.05ms/帧过路费。
+   *  两者分开，才能既省每帧又保住「换模型不重建」。
    *  `lightCap` 形参保留以兼容 PostprocessingLike 契约与既有调用方。 */
   private needComposer(lightCap: LightCapability | null): boolean {
-    // [ADR-246 D1] 体积光分支已删除（条件恒不成立）；[ADR-250] 启用意图分支亦不再参与——
-    // composer 生命周期已从「模型/开关轴」移到「会话轴」，故仅以「是否已建」为准。
+    // [ADR-246 D1] 体积光分支已删除（条件恒不成立）。
     void lightCap;
-    return this.composer !== null;
+    return this.composer !== null && this.enabled;
   }
 
   private createComposerBase(): EffectComposer {
+    // [ADR-299] 尺寸优先取 host 下发过的凭据（见字段注释），无凭据时才回落到 renderer 现值
+    // 与 `previewPixelRatio`——惰性化后 composer 可能在会话中段才建，此时 devicePixelRatio
+    // 已不能代表 renderer 的实际像素比（自适应降档）。
     const logicalSize = this.renderer.getSize(new THREE.Vector2());
-    const w = Math.max(logicalSize.x, 1);
-    const h = Math.max(logicalSize.y, 1);
-    const pixelRatio = previewPixelRatio(window.devicePixelRatio);
+    const w = this.lastW > 0 ? this.lastW : Math.max(logicalSize.x, 1);
+    const h = this.lastH > 0 ? this.lastH : Math.max(logicalSize.y, 1);
+    const pixelRatio =
+      this.lastPixelRatio > 0 ? this.lastPixelRatio : previewPixelRatio(window.devicePixelRatio);
     // [P2 修复] EffectComposer 自建读/写缓冲时不带 samples（three r185 构造器：
     // `new WebGLRenderTarget(w, h, { type: HalfFloatType })`，samples 默认 0），而共享 renderer
     // 是 `antialias: true` 建的——后期一开，整链改画进非 MSAA 离屏缓冲 → 抗锯齿被静默旁路，
@@ -534,27 +557,29 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   /* -------- 兼容旧 PostprocessingManager 对外 API -------- */
 
   /** 每帧调用：若返回 true 表示已渲染（composer.render）；否则调用方需 renderer.render。
-   *  [ADR-250 §2.2] composer 常驻，启用意图不再销毁它——关闭态走 pass 旁路（outputPass
-   *  直通 renderPass，等价于原 `renderer.render`），故返回 true 且不 allocate。 */
+   *  [ADR-299] 关闭态（composer 未建 **或** 已建但被关闭）一律返回 false——交回 render-host
+   *  的直渲兜底，不再付 composer 的每帧过路费（实测 1.05ms/帧、+53.7%，见 ADR-299）。
+   *  composer 本身不销毁（ADR-250 §2.2 常驻语义），仅退出每帧参与。 */
   render(dt: number, lightCap: LightCapability | null): boolean {
+    // needComposer 已含 `this.enabled`，故此处起 composer 与「已启用」二者同时成立。
     if (!this.needComposer(lightCap)) return false;
-    const on = this.enabled;
-    if (this.ssaoPass) this.ssaoPass.enabled = on && envState.ppSsaoEnabled;
-    if (this.ssrPass) this.ssrPass.enabled = on && envState.ppReflectionMode !== "envmap-only";
-    if (this.bloomPass) this.bloomPass.enabled = on && envState.ppBloomEnabled;
+    if (this.ssaoPass) this.ssaoPass.enabled = envState.ppSsaoEnabled;
+    if (this.ssrPass) this.ssrPass.enabled = envState.ppReflectionMode !== "envmap-only";
+    if (this.bloomPass) this.bloomPass.enabled = envState.ppBloomEnabled;
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.renderPass!.enabled = true;
-    if (on) {
-      this.syncBloomPass(lightCap);
-      this.syncSSAOPass();
-      this.syncSSRPass();
-    }
+    this.syncBloomPass(lightCap);
+    this.syncSSAOPass();
+    this.syncSSRPass();
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     this.composer!.render(dt);
     return true;
   }
 
   setSize(width: number, height: number): void {
+    // [ADR-299] 凭据无条件记录：关闭态 composer 为 null，但首次启用时要按此尺寸建缓冲。
+    this.lastW = width;
+    this.lastH = height;
     if (this.composer) {
       this.composer.setSize(width, height);
       if (this.bloomPass) this.bloomPass.resolution = new THREE.Vector2(width, height);
@@ -567,6 +592,8 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   }
 
   setPixelRatio(pixelRatio: number): void {
+    // [ADR-299] 同 setSize：关闭态也记，供惰性创建时对齐 renderer 的实际像素比。
+    this.lastPixelRatio = pixelRatio;
     this.composer?.setPixelRatio(pixelRatio);
   }
 
@@ -584,10 +611,14 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     setEnvState({ ppEnabled: v }, { source: "manual" });
   }
 
-  /** 启用意图翻转的副作用出口。[ADR-250 §2.2] composer 常驻，故此处**不建不销毁**，
-   *  只做输出设置归权与 reflector 联动；启停的实际渲染效果由 render() 的 pass 旁路实现。 */
+  /** 启用意图翻转的副作用出口。[ADR-299] 这里是 composer **唯一的惰性创建点**：首次启用
+   *  才建，已建则原样复用（换模型/反复启停都不重建，ADR-250 §2.2 的解耦收益完整保留）。
+   *  关闭分支**不销毁** composer——只归还输出设置并退出每帧参与（render 返回 false）。 */
   private applyEnabledSideEffects(): void {
     if (this.enabled) {
+      // syncReflector=false：抑制由本函数末尾那次 applyReflectorSync() 统一落地，
+      // 避免 buildComposer 内触发一次、此处再触发一次的重复（reflector 两态非幂等敏感）。
+      if (!this.composer) this.buildComposer(false);
       this.applyToneMapping();
     } else {
       this.restoreOutputSettings();

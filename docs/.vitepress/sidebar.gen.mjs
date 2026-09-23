@@ -258,6 +258,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-299：后处理 composer 惰性常驻——生命周期与每帧参与解耦（修订 ADR-250 §2.2）",
+        "link": "/adr/ADR-299-postproc-composer-lazy-residency"
+      },
+      {
         "text": "ADR-298：工具栏命令注册表与下拉无障碍统一",
         "link": "/adr/ADR-298-toolbar-command-registry"
       },

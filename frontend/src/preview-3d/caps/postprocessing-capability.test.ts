@@ -767,17 +767,22 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
   it("[症状③] 换模型（ppEnabled 翻转）不重建 composer——GPU 资源同一实例", () => {
     const cap = newCap({});
     const internals = cap as unknown as { composer: unknown; buildComposer: () => void };
-    const composerAtStart = internals.composer;
-    expect(composerAtStart).not.toBeNull();
+    // [ADR-299] 惰性常驻的前半段：默认 `ppEnabled=false` 的会话构造期**不分配** composer——
+    // 这正是常驻税的支付对象（实测 1.05ms/帧 + 35.3MB，见 ADR-299）。
+    expect(internals.composer).toBeNull();
     const spy = buildSpy();
     spy.mockClear();
     // 模拟切模型序列：ysm(false) → vrm(true) → mmd(true) → ysm(false)
     cap.applyModelPreset("ysm");
-    cap.applyModelPreset("vrm");
+    expect(internals.composer, "关闭态仍不建").toBeNull();
+    cap.applyModelPreset("vrm"); // 首个开启意图 → 惰性创建（全会话唯一一次）
+    const composerAtStart = internals.composer;
+    expect(composerAtStart).not.toBeNull();
+    expect(spy).toHaveBeenCalledTimes(1);
     cap.applyModelPreset("mmd");
-    cap.applyModelPreset("ysm");
-    // 关键：整个切模型序列零重建（原实现每次翻转都 dispose + 重新 allocate 整组 RT）
-    expect(spy).not.toHaveBeenCalled();
+    cap.applyModelPreset("ysm"); // 关闭：不销毁、也不重建
+    // 关键：建过之后整个切模型序列零重建（原实现每次翻转都 dispose + 重新 allocate 整组 RT）
+    expect(spy).toHaveBeenCalledTimes(1);
     expect(internals.composer).toBe(composerAtStart);
   });
 
@@ -1048,38 +1053,48 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(bloom.strength).toBeCloseTo(1.0, 6);
   });
 
-  it("render()：[ADR-250] composer 常驻——关闭态亦返回 true 并渲染（pass 旁路，不拆不建）", () => {
+  it("render()：[ADR-299] 关闭态返回 false 交回直渲；启用后建 composer 并接管渲染", () => {
     const { cap } = newRealCap();
     const renderSpy = vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
-    // 构造即建 composer（常驻），关闭态走旁路渲染而非回退 renderer.render
+    // 惰性：默认关闭态无 composer → render 让位，render-host 走 renderer.render 直渲兜底
+    // （ADR-299 实测：这条旁路省下 1.05ms/帧 GPU + 35.3MB 常驻缓冲）
+    expect(internalsOf(cap).composer).toBeNull();
+    expect(cap.render(0.016, null)).toBe(false);
+    expect(renderSpy).not.toHaveBeenCalled();
+    cap.setEnabled(true);
     expect(internalsOf(cap).composer).not.toBeNull();
     expect(cap.render(0.016, null)).toBe(true);
     expect(renderSpy).toHaveBeenCalled();
+    // 关闭后 composer 仍常驻（不销毁），但 render 再次让位直渲——生命周期与每帧参与解耦
+    cap.setEnabled(false);
+    expect(internalsOf(cap).composer).not.toBeNull();
+    expect(cap.render(0.016, null)).toBe(false);
+  });
+
+  it("render()：启用态按子开关旁路各 pass（bloom 关 → bloomPass disabled）", () => {
+    const { cap } = newRealCap();
+    vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
     cap.setEnabled(true);
-    expect(cap.render(0.016, null)).toBe(true);
-  });
-
-  it("render()：[ADR-250] 关闭态旁路——passes 全部 disabled（等价原 renderer.render）", () => {
-    const { cap } = newRealCap();
-    vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
-    expect(cap.isEnabled()).toBe(false);
+    const internals = internalsOf(cap) as unknown as { bloomPass: { enabled: boolean } };
+    cap.setBloomEnabled(false);
     cap.render(0.016, stubLightCap({ opacity: 1 }));
-    const internals = internalsOf(cap) as unknown as {
-      bloomPass: { enabled: boolean };
-      composer: unknown;
-    };
-    // 关闭态 bloomPass 旁路；composer 不销毁（缓存失效根治点）
     expect(internals.bloomPass.enabled).toBe(false);
-    expect(internals.composer).not.toBeNull();
+    cap.setBloomEnabled(true);
+    cap.render(0.016, stubLightCap({ opacity: 1 }));
+    expect(internals.bloomPass.enabled).toBe(true);
   });
 
-  it("needComposer：[ADR-250] composer 常驻后不再因体积光/开关变化而拆建", () => {
+  it("needComposer：[ADR-299] 启停往返复用同一 composer 实例（惰性创建后零重建）", () => {
     const { cap } = newRealCap();
     vi.spyOn(EffectComposer.prototype as unknown as { render: () => void }, "render").mockImplementation(() => {});
+    cap.setEnabled(true);
     const composerBefore = internalsOf(cap).composer;
-    const rendered = cap.render(0.016, stubLightCap({ opacity: 1 }));
-    expect(rendered).toBe(true);
-    // 同一实例：未重建（原实现会在 disabled 时 disposeComposer 使其为 null）
+    expect(cap.render(0.016, stubLightCap({ opacity: 1 }))).toBe(true);
+    cap.setEnabled(false);
+    expect(cap.render(0.016, stubLightCap({ opacity: 1 }))).toBe(false);
+    cap.setEnabled(true);
+    expect(cap.render(0.016, stubLightCap({ opacity: 1 }))).toBe(true);
+    // 同一实例：启停往返未重建（ADR-250 §2.2「GPU 资源与模型轴解耦」在惰性化后依然成立）
     expect(internalsOf(cap).composer).toBe(composerBefore);
   });
 
@@ -1094,6 +1109,27 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     // disabled 时 setSize no-op
     cap.setEnabled(false);
     expect(() => cap.setSize(100, 100)).not.toThrow();
+  });
+
+  it("[ADR-299] 关闭态下发的 setSize/setPixelRatio 留凭据：惰性创建的 composer 按该尺寸建", () => {
+    const { cap } = newRealCap();
+    // 关闭态 render-host 每帧下发的 resize（此时 composer 尚不存在，凭据必须留下）
+    cap.setSize(800, 600);
+    cap.setPixelRatio(2);
+    expect(internalsOf(cap).composer).toBeNull();
+    cap.setEnabled(true); // 惰性创建的唯一时机
+    const composer = internalsOf(cap).composer as unknown as {
+      _width: number;
+      _height: number;
+      _pixelRatio: number;
+      renderTarget1: { width: number; height: number };
+    };
+    expect(composer._width).toBe(800);
+    expect(composer._height).toBe(600);
+    // 关键：像素比取 host 凭据 2，而非回落 devicePixelRatio——自适应降档后不能建错分辨率
+    expect(composer._pixelRatio).toBe(2);
+    expect(composer.renderTarget1.width).toBe(1600);
+    expect(composer.renderTarget1.height).toBe(1200);
   });
 
   it("dispose 还原 renderer tone mapping/exposure/colorSpace", () => {

@@ -64,11 +64,11 @@ export const wsIconCSS = `
  * 圆角/阴影），`display:none` 也不生效 → 菜单常驻可见。与 `wsIconCSS` 同一套「各自
  * adopt，漏带即失效」机制。
  *
- * 展开方式默认 `display:none`，由消费方决定交互：
- *   - 需要 hover 展开 → 追加 `dropdownHoverCSS`（`.dd-wrap:hover .dd-menu`）；
- *   - 需要 click 展开 → JS 改 `style.display`（内联优先级高于本串的 display:none，
- *     可正常覆写开关）。
- * 两套互斥可选，避免「hover + JS 控制」打架（js 侧 closeAll 会压不过 hover）。
+ * 展开方式：display:none 起步，由 **utils/dom/dropdown.ts 控制器** click 展开
+ * （JS 改内联 style.display，内联优先级高于本串的 display:none，可正常开关）。
+ * 原 hover 展开串（`.dd-wrap:hover .dd-menu`）已于 ADR-238 无障碍统一中退役——
+ * 触屏生产形态（Android/viewer）下 hover 语义不成立，键盘更是完全打不开菜单；
+ * 「hover + JS 控制」互斥打架的历史问题随之整体消解。
  *
  * 尺寸/阴影等字面量已收敛为默认值；消费方如需局部差异，在各自 stylesheet 里追加
  * 更高优先级的选择器（如 `.dd-wrap .dd-menu { min-width:160px }`）覆盖，勿再回内联。
@@ -87,11 +87,6 @@ export const dropdownBaseCSS = `
   text-align:left;border-radius:var(--radius-sm);
 }
 .dd-item:hover { background:var(--hover); }
-`;
-
-/** hover 展开增强（`.dd-wrap:hover` 时显示菜单）。与 JS click 展开互斥，勿混用。 */
-export const dropdownHoverCSS = `
-.dd-wrap:hover .dd-menu { display:block; }
 `;
 /**
  * 元数据标签（`.tag-author` / `.tag-work` / `.tag-date`）——模型名后缀的作者/作品/日期色标。

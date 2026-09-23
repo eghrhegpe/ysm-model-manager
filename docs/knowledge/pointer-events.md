@@ -77,8 +77,8 @@ ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事
 - **拖拽旋转**（3D/2D 预览）：`pointerdown`（左键 `button===0`）起手 + `setPointerCapture(pointerId)` 捕获，`pointermove` 旋转，`pointerup` 释放捕获——input-and-animation.ts（3D 适配层，ADR-040 神桶拆分产物）、litematic-3d.ts、zoom.ts、skeleton.ts（model3d.ts 已不含 pointer 逻辑）
 - **面板 resize**：`pointerdown` 起手 + document 级 `pointermove/up`——app-content/index.ts（预览宽度）、skeleton.ts（3D 面板宽度）
 - **2D hover**（骨骼名高亮）：`pointermove` + `pointerleave`——model2d.ts
-- **菜单 hover**：`pointerenter/pointerleave`（替代 `mouseenter/mouseleave`）——settings/init.ts（扫描 tooltip）、skeleton.ts（截图菜单）、toolbar-events.ts（作者菜单）
-- **tap 兜底**：触屏无 hover，hover 菜单补 `click` 切换展开/收起——skeleton.ts 截图菜单、toolbar-events.ts 作者菜单（原有 click 保留）
+- **菜单 hover**：`pointerenter/pointerleave`（替代 `mouseenter/mouseleave`）——settings/init.ts（扫描 tooltip）、skeleton.ts（截图菜单）；~~toolbar-events.ts（作者菜单）~~ 已迁 `utils/dom/dropdown.ts` 控制器（ADR-238 无障碍统一：hover 展开退役，trigger click 展开 + `onOpen` 钩子每次展开重填，兼治作者缓存竞态）
+- **tap 兜底**：触屏无 hover，hover 菜单补 `click` 切换展开/收起——skeleton.ts 截图菜单；toolbar-events.ts 作者菜单的历史双轨（hover + click 兜底）已由 `utils/dom/dropdown.ts` 统一为 **click-only 展开**（外点/Esc 收起、↑↓/Home/End/Esc 键盘导航、aria-expanded 同步；sidebar 控制器化为 C 案后刀），兜底不再必要
 - **`touch-action: none`**：所有可拖拽元素（3D/2D canvas、resize handle）禁浏览器手势默认（滚动/缩放），pointer 事件才完整
 - **双端响应式热区（ADR-057）**：`utils/dom/fab.ts` 的 FAB/overlay 控钮走全局 CSS 类，`@media (pointer:coarse)` 下触控热区扩至 ≥44px（Apple HIG），窄屏 `max-width:480px` / 横屏 `max-height:500px` 适配（复用 MikuMikuAR 断点）；触屏把 WASD 键盘提示切为手势/虚拟控件文案
 

@@ -225,7 +225,8 @@ export class AppTree extends WebComponentBase {
     try {
       this._renderLayout();
       this._unsubs = [];
-      bindToolbarEvents(this._root, this);
+      // 工具栏（含三个下拉控制器）返回聚合 dispose，随 _unsubs 在卸载/layout 重建时释放
+      this._unsubs.push(bindToolbarEvents(this._root, this));
       this._unsubs.push(...bindBusEvents(this));
       // ADR-223：消费 nav 在树未挂时积压的 repo:focus-search 请求
       if (takeRepoSearchFocusPending()) this.focusSearch();

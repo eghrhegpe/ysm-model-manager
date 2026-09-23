@@ -93,18 +93,18 @@ function makeRoot(): { root: ShadowRoot; get: (id: string) => HTMLElement | null
     <select id="sort" data-testid="tree-sort"><option value="name">名称</option><option value="size">大小</option><option value="date">日期</option></select>
     <button id="btn-view-mode" data-testid="tree-view-mode">☰</button>
     <button id="btn-adv-filter" data-testid="tree-adv-filter">筛选</button>
-    <div class="dd-wrap" id="dd-authors"><div id="menu-authors"></div></div>
-    <div id="menu-batch">
-      <button data-batch="enable-all" data-testid="tree-batch-enable">全部启用</button>
-      <button data-batch="disable-all" data-testid="tree-batch-disable">全部禁用</button>
-    </div>
-    <div id="menu-more">
-      <button data-more="open-folder" data-testid="tree-more-open-folder">打开文件夹</button>
-      <button data-more="import-file" data-testid="tree-more-import-file">导入文件</button>
-      <button data-more="import-dir" data-testid="tree-more-import-dir">导入文件夹</button>
-      <button data-more="refresh" data-testid="tree-more-refresh">刷新</button>
-      <button data-more="genindex" data-testid="tree-more-genindex">生成索引</button>
-    </div>
+    <div class="dd-wrap" id="dd-authors"><button id="btn-authors" data-testid="tree-authors">作者</button><div class="dd-menu" id="menu-authors"></div></div>
+    <div class="dd-wrap" id="dd-batch"><button id="btn-batch" data-testid="tree-batch">批量</button><div class="dd-menu" id="menu-batch">
+      <button class="dd-item" data-batch="enable-all" data-testid="tree-batch-enable">全部启用</button>
+      <button class="dd-item" data-batch="disable-all" data-testid="tree-batch-disable">全部禁用</button>
+    </div></div>
+    <div class="dd-wrap" id="dd-more"><button id="btn-more" data-testid="tree-more">更多</button><div class="dd-menu" id="menu-more">
+      <button class="dd-item" data-more="open-folder" data-testid="tree-more-open-folder">打开文件夹</button>
+      <button class="dd-item" data-more="import-file" data-testid="tree-more-import-file">导入文件</button>
+      <button class="dd-item" data-more="import-dir" data-testid="tree-more-import-dir">导入文件夹</button>
+      <button class="dd-item" data-more="refresh" data-testid="tree-more-refresh">刷新</button>
+      <button class="dd-item" data-more="genindex" data-testid="tree-more-genindex">生成索引</button>
+    </div></div>
     <div id="tree"></div>
     <span id="ftr-stat" data-testid="tree-ftr-stat">共 0 项</span>
   `;
@@ -650,14 +650,13 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
 });
 
 describe("bindToolbarEvents — 作者菜单", () => {
-  it("hover 填充作者按钮（含数量）", () => {
+  it("trigger click 展开 → 填充作者按钮（含数量）", () => {
     const { root, get } = makeRoot();
     const vm = makeVM(root);
     vm._authors = [{ Name: "Alex", Count: 3 }, "Bob"];
     bindToolbarEvents(root, vm as unknown as AppTree);
 
-    const ddWrap = root.getElementById("dd-authors")!;
-    ddWrap.dispatchEvent(new PointerEvent("pointerenter"));
+    (root.getElementById("btn-authors") as HTMLElement).click();
 
     const menu = get("menu-authors")!;
     expect(menu.children.length).toBe(2);
@@ -671,9 +670,26 @@ describe("bindToolbarEvents — 作者菜单", () => {
     vm._authors = [];
     bindToolbarEvents(root, vm as unknown as AppTree);
 
-    root.getElementById("dd-authors")!.dispatchEvent(new PointerEvent("pointerenter"));
+    (root.getElementById("btn-authors") as HTMLElement).click();
 
     expect(get("menu-authors")!.textContent).toContain("暂无作者");
+  });
+
+  it("竞态回归锁：空态展开后 _authors 异步到达 → 再展开出真实列表（缓存闸已死）", () => {
+    const { root, get } = makeRoot();
+    const vm = makeVM(root);
+    vm._authors = [];
+    bindToolbarEvents(root, vm as unknown as AppTree);
+
+    const trigger = root.getElementById("btn-authors") as HTMLElement;
+    trigger.click(); // 加载完成前误触一次 → 暂无作者占位
+    expect(get("menu-authors")!.textContent).toContain("暂无作者");
+
+    vm._authors = [{ Name: "Alex", Count: 1 }]; // 模拟 _loadAuthorsAsync 完成
+    trigger.click(); // 收起
+    trigger.click(); // 再展开 → onOpen 重填，真实列表胜出
+    expect(get("menu-authors")!.textContent).toContain("Alex (1)");
+    expect(get("menu-authors")!.textContent).not.toContain("暂无作者");
   });
 
   it("点击作者 → 填充搜索框并触发 input 事件（渲染 debounce）", () => {
@@ -684,7 +700,7 @@ describe("bindToolbarEvents — 作者菜单", () => {
       vm._authors = [{ Name: "Alex", Count: 1 }];
       bindToolbarEvents(root, vm as unknown as AppTree);
 
-      root.getElementById("dd-authors")!.dispatchEvent(new MouseEvent("click"));
+      (root.getElementById("btn-authors") as HTMLElement).click();
       const menu = get("menu-authors")!;
       (menu.querySelector('[data-author="Alex"]') as HTMLButtonElement).click();
 

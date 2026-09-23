@@ -2,7 +2,6 @@
 import {
   btnBaseCSS,
   dropdownBaseCSS,
-  dropdownHoverCSS,
   focusVisibleCSS,
   metaTagCSS,
   noAnimationsCSS,
@@ -38,9 +37,11 @@ ${focusVisibleCSS}
 /* flash 反馈样式（feedback.ts 全局原语）：实际使用点为 .dd-item（sel-all 全选）/ .btn-base（btn-view-mode 视图切换） */
 .dd-item.flash { background: color-mix(in srgb, var(--status-success) 20%, transparent); border-color: color-mix(in srgb, var(--status-success) 33%, transparent); }
 .btn-base.flash { background: color-mix(in srgb, var(--status-success) 20%, transparent); border-color: color-mix(in srgb, var(--status-success) 33%, transparent); }
-/* 下拉容器基础 + hover 展开（共享 dropdownBase/dropdownHoverCSS，见 utils/dom/css.ts）；
+/* 下拉容器基础（共享 dropdownBaseCSS，见 utils/dom/css.ts）；
+   展开由 utils/dom/dropdown.ts 控制器 click 接管（ADR-238 无障碍统一），
+   原 hover 展开串 dropdownHoverCSS 已退役——触屏生产形态下 hover 语义不成立；
    .dd-item.flash 保留在上方为本视图 feedback 特化，不随共享以维持无动画观感 */
-${dropdownBaseCSS}${dropdownHoverCSS}
+${dropdownBaseCSS}
 .batch-dropdown { position: relative; }
 .batch-menu { position: absolute; top: 100%; left: 0; z-index: var(--z-popover); background: var(--card); border: 1px solid var(--bd); border-radius:var(--radius-md); padding:var(--pad-btn-tool); min-width: 120px; box-shadow: var(--shadow-md); } /* 审计 P2-2/P2-4：box-shadow 走 --shadow-md，z-index 走 --z-popover（与 content-repo 同档） */
 .batch-item { display: block; width: 100%; text-align: left; padding:var(--btn-padding-std); border: none; border-radius:var(--radius-sm); margin-bottom: 1px; font-size: var(--fs-sm); color: var(--txt); cursor: pointer; background: transparent; font-family: inherit; }

@@ -27,7 +27,7 @@ auto_fields:
     - disposeTooltipCore
     - downloadTextFile
     - dropdownBaseCSS
-    - dropdownHoverCSS
+    - DropdownOptions
     - ensureTooltipStyles
     - findTabbableAcrossShadow
     - FLASH_DURATION_MS
@@ -37,6 +37,7 @@ auto_fields:
     - focusVisibleCSS
     - friendlyError
     - getStackDepth
+    - initDropdown
     - InputBlockStack
     - installScrollSync
     - isEditableTarget

@@ -7,6 +7,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { initDropdown } from "@/utils/dom/dropdown.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { flashBtn } from "@/utils/dom/feedback.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -64,8 +65,10 @@ async function atTlShowConfirm(
   });
 }
 
+/** 每次展开重填（原 children.length 缓存闸已退役：_authors 异步加载完成前误触一次
+ *  即永久缓存「暂无作者」占位——竞态根修，见 ADR-238 无障碍统一 / dropdown onOpen 契约） */
 function fillAuthorMenu(menuAuthors: HTMLElement, vm: AppTree, $: $Id): void {
-  if (menuAuthors.children.length) return;
+  menuAuthors.replaceChildren();
   const authors: Array<AuthorInfo | string> = vm._authors || [];
   if (!authors.length) {
     menuAuthors.innerHTML = `<div style="padding:var(--btn-padding-std);font-size:var(--fs-xs);color:var(--muted)">${t("tree.authorsEmpty")}</div>`;
@@ -175,14 +178,14 @@ function atTlBindAdvFilter(ctx: AtTlCtx): void {
   // → advFilterClearAll 全清），未来命令表化时以 tree.filter.clear 命令复活。
 }
 
-function atTlBindAuthorMenu(ctx: AtTlCtx): void {
+function atTlBindAuthorMenu(ctx: AtTlCtx): () => void {
   const { vm, $ } = ctx;
   const menuAuthors = $("menu-authors");
-  if (!menuAuthors) return;
-  const ddWrap = menuAuthors.closest(".dd-wrap");
-  if (!ddWrap) return;
-  ddWrap.addEventListener("pointerenter", () => fillAuthorMenu(menuAuthors, vm, $));
-  ddWrap.addEventListener("click", () => fillAuthorMenu(menuAuthors, vm, $));
+  const ddWrap = menuAuthors ? (menuAuthors.closest(".dd-wrap") as HTMLElement | null) : null;
+  if (!ddWrap || !menuAuthors) return () => {};
+  // 展开/收起/键盘/ARIA 全权交通用控制器；onOpen 每次展开重填（替代原
+  // pointerenter + click 双填 + children.length 缓存闸，竞态根修）
+  return initDropdown(ddWrap, { onOpen: () => fillAuthorMenu(menuAuthors, vm, $) });
 }
 
 function atTlBindBatchMenu(ctx: AtTlCtx): void {
@@ -338,7 +341,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
   });
 }
 
-export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
+export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): () => void {
   const $: $Id = (id) => root.getElementById(id);
   const ctx: AtTlCtx = { root, vm, $ };
 
@@ -348,7 +351,20 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): void {
   atTlBindViewMode(ctx);
   atTlBindSearch(ctx);
   atTlBindAdvFilter(ctx);
-  atTlBindAuthorMenu(ctx);
+  // 三个 .dd-wrap 下拉统一交通用控制器（ADR-238 无障碍统一）：
+  // click 展开/收起 + ARIA 落位 + 键盘导航 + 外点关闭 + 互斥；
+  // 原 hover 展开（dropdownHoverCSS）已退役——触屏生产形态（Android/viewer）下
+  // hover 语义不成立，键盘此前完全无法打开菜单。
+  // 行为委托（atTlBindBatchMenu/atTlBindMoreMenu）绑在菜单容器自身，
+  // 生命周期随 shadow 内容重建（_renderLayout）自然终结，无泄漏面。
+  const disposeAuthors = atTlBindAuthorMenu(ctx);
+  const disposeBatch = initDropdown($("dd-batch"));
+  const disposeMore = initDropdown($("dd-more"));
   atTlBindBatchMenu(ctx);
   atTlBindMoreMenu(ctx);
+  return () => {
+    disposeAuthors();
+    disposeBatch();
+    disposeMore();
+  };
 }

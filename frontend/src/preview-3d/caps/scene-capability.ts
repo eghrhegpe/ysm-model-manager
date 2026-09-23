@@ -271,12 +271,23 @@ export function persistState(capId: string, state: Record<string, unknown>): voi
   safeSet(STORAGE_PREFIX + capId, JSON.stringify(state));
 }
 
-/** 从 localStorage 加载 JSON */
+/** 从 localStorage 加载 JSON。
+ *
+ *  **形态闸（2026-09-22 锐评 F-1 三度收口复审补）**：只接受 **JSON 对象**，其余一律 `null`
+ *  （同「无存档」语义）。原实现只 try/catch 包 `JSON.parse`，`JSON.parse("5")` 得 `5` 便
+ *  原样返回 —— 而各 cap 的 legacy 回填写 `!("xEnabled" in s)`，`in` 对非对象真值抛
+ *  `TypeError: Cannot use 'in' operator to search for ... in 5`；异常被 `loadAll` 的
+ *  per-cap try/catch 吞掉并 continue → **后续 cap 静默跳过恢复**（ringLog 无生产 sink，
+ *  用户只见黑场景零提示）。收口在**唯一入口**：一处闸住，9 个调用点全免疫，各 cap 不必
+ *  各写一遍 typeof 守卫（下游既有 `if (!state) return` 早退天然接住）。
+ *  数组亦排除——`in` 不抛错但非存档对象形态。 */
 export function restoreState(capId: string): Record<string, unknown> | null {
   const raw = safeGet(STORAGE_PREFIX + capId);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
   } catch {
     return null;
   }

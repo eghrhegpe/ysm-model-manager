@@ -1561,4 +1561,59 @@ describe("SkyCapability — 能力级开关单门收口（fog/water/shadow 先�
     cap2.update(1);
     expect(cap2.getTimeOfDay(), "恢复后须真在推进时间轴").not.toBe(before);
   });
+
+  // [复审补 2026-09-22] 前八例覆盖了「开态」与 legacy 救回，但缺两个反向护栏：
+  // ①恢复为**关**时不得挂任何东西（原实现关态早退，收口后靠 callback/syncBeams 两处判定，
+  //   任一处漏判就会「存档说关、场景却亮」）；②同一 setEnvState 里 skyEnabled 与兄弟键
+  //   同批到达时，回调那个 `return` 不得吞掉兄弟键（apply() 全量重读 envState 故安全，
+  //   但分析归分析，需护栏钉住）。
+  it("[复审补] 旧档 skyEnabled=false + godRaysEnabled=true → 恢复后不挂天空、不挂光束", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-sky",
+      JSON.stringify({ skyEnabled: false, godRaysEnabled: true, timeOfDay: 17 }),
+    );
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.loadState();
+    expect(envState.skyEnabled, "存档的关态须进真值源").toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    cap.apply();
+    expect((cap as unknown as { sky: Sky }).sky.parent, "关态不得把天空盒挂进场景").toBeNull();
+    const beams = (cap as unknown as { beams: SunBeams }).beams;
+    expect(beams.group!.parent, "总开关关 ⇒ 光束即使 godRays=true 也不得挂").toBeNull();
+    expect(beams.tintMesh!.parent, "暖色 overlay 同卸（原实现留挂怪癖）").toBeNull();
+    // 关态下 update 不得推进时间轴
+    const before = cap.getTimeOfDay();
+    cap.update(1);
+    expect(cap.getTimeOfDay(), "关态须冻结时间轴").toBe(before);
+  });
+
+  it("[复审补] 同批同写 skyEnabled + 兄弟键：apply() 全量重读，兄弟键不得被 return 吞掉", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setEnabled(false);
+    expect((cap as unknown as { sky: Sky }).sky.parent).toBeNull();
+    // 单次派发同时带总开关与两个兄弟参数（模拟氛围快照/程序化批量写）
+    setEnvState(
+      { skyEnabled: true, skyCloudCoverage: 0.77, skyTimeOfDay: 4 },
+      { source: "manual" },
+    );
+    expect(cap.isEnabled(), "总开关已开").toBe(true);
+    expect((cap as unknown as { sky: Sky }).sky.parent, "同批开态须真挂载").toBe(scene);
+    expect(cap.getCloudCoverage(), "兄弟键 skyCloudCoverage 不得被吞").toBeCloseTo(0.77, 4);
+    expect(cap.getTimeOfDay(), "兄弟键 skyTimeOfDay 不得被吞").toBeCloseTo(4, 4);
+  });
+
+  it("[复审补] 混合双形式档：新前缀键在场时旧无前缀键不得覆盖（新键优先）", () => {
+    // 收口后用户可能先手改过存档（新键），又留着他版本升级前的旧键——回填判据
+    // `!("skyEnabled" in s)` 须保证「新键在则不吃旧键」。
+    localStorage.setItem(
+      "ysm-scene-cap-sky",
+      JSON.stringify({ skyEnabled: true, enabled: false, skyGodRaysEnabled: false, godRaysEnabled: true }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    expect(envState.skyEnabled, "新键 true 须胜出，旧键 false 不得覆盖").toBe(true);
+    expect(envState.skyGodRaysEnabled, "新键 false 须胜出，旧键 true 不得覆盖").toBe(false);
+  });
 });

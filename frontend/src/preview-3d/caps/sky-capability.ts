@@ -234,6 +234,11 @@ export class SkyCapability implements SceneCapability {
     // 显式传值才写状态层，不传则尊重 envState 现值（含用户存档恢复的顺序）。
     // ⚠️ 顺序敏感：此处 setEnvState 发生在 registerEnvCallback **之前**，订阅者尚未就位，
     // 挂载/卸载副作用不会自动触发——场景对象由组合根随后的 apply() 落地。
+    // ⚠️ 来源纪律：构造期走 `manual`（与 light/pp 同惯例）——该键一经显式传入即被打上
+    // 手改足迹，此后 `auto-atmosphere`/`auto-model` 写它会被 shouldOverwrite 拒绝。
+    // 今日无害（MODEL_DEFAULTS 无天空键、ATMOSPHERE_PRESETS 五档均不携 skyEnabled/
+    // skyGodRaysEnabled，已逐档核实）；但**日后给氛围预设加天空能力开关时会静默失效**——
+    // 届时须改为按来源传参（或让预设走 force/skipMiddleware），勿只加预设项。
     if (opts.enabled !== undefined) {
       setEnvState({ skyEnabled: opts.enabled }, { source: "manual" });
     }
@@ -402,6 +407,10 @@ export class SkyCapability implements SceneCapability {
    * 以 envState 现读判定，SunBeams 降为纯执行器（无状态）。
    * 开光走本口时须真挂载：SunBeams.sync 只在 intensity>0 才挂，故关→开切换时
    * 即便 golden-hour 由 17:00 setTime 已就位，也需本调用把锥组补挂上。
+   *
+   * **关闭分支不调 sync（有意）**：关闭即 detach（锥组与 tint 同卸），故关闭期间锥体的
+   * 旋转/uniform 态**不追时间**——这是安全的，因为重新开启必经 `apply()`，其收尾会再调
+   * 本口重算（apply 先 syncSunFromTime 再调 syncBeams），不存在残留脏渲染。
    */
   private syncBeams(): void {
     if (!envState.skyGodRaysEnabled || !envState.skyEnabled) {

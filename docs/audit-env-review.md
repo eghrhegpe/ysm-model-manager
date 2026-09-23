@@ -1107,15 +1107,30 @@ ground-capability.ts:698-729 手写 27 字段。对比 water 侧 `getPresetKeys(
 
 ### 19.5 结论（回答问题「还有类似的情况吗」）
 
-- **A 类（来源纪律）**：无**活动**漏洞——reflector/shadow 的 manual 恢复被 `isStateLoaded` + 归属隔离兜住，
-  为格式债（有行为恒等的前提，修它零收益）。见 19.1。
+> ⚠️ **本节结论已于 §21 复核并修订**（2026-09-22）：下述「A/C 无活动故障」的判词**不成立**——
+> A 类四路**实际全是 manual**（「被守卫兜住」只说明**无用户可感知症状**，不等于纪律已落实），
+> C 类则漏掉了**唯一真·活动级缺陷**：`shadowEnabled` 是**幽灵键**（零消费者），实为 G-6 同级
+> 的「真值源分裂」。修订后的判词见 §21.4；本节保留原文以存证判词演变。
+
+- **A 类（来源纪律）**：~~无**活动**漏洞~~——reflector/shadow 的 manual 恢复被 `isStateLoaded` + 归属隔离兜住，
+  为格式债（有行为恒等的前提，修它零收益）。见 19.1。**（§21.4 修订：判词错在把「暂无症状」当「已合规」；
+  ground/reflector/shadow/renderMode 四路确为 manual，是**纪律未落实**，非格式债。修它零**行为**收益，
+  但收益在**回归防护**：同轨写入不再被静默拒绝，且与 fog/env/light/pp/sky 同轨，消除将来「照抄邻座」
+  抄错轨的风险。）**
 - **B 类（手抄 saveState 清单）**：环境系统有 7 个 cap 仍手抄（ground/fog/env/pp/reflector/shadow/renderMode），
-  是零故障风险的债务，water/light 的 schema 驱动是收敛先例。见 19.2。
-- **C 类（私有 enabled 双键）**：reflector 是唯一带明确历史病灶的，但被 AND 语义 + 不变量测试兜住；
-  water/fog/light 已单门收口为正确方向。见 19.3。
+  是零故障风险的债务，water/light 的 schema 驱动是收敛先例。见 19.2。**（§21.4 维持：但 shadow/reflector
+  的「手抄」与幽灵键是同一病根的两面——见 §21.1。）**
+- **C 类（私有 enabled 双键）**：~~reflector 是唯一带明确历史病灶的，但被 AND 语义 + 不变量测试兜住；
+  water/fog/light 已单门收口为正确方向~~。见 19.3。**（§21.4 修订：本类**漏判最重的一条**——
+  `shadow` 的私有门有 UI 写口且 `shadowEnabled` 零消费者，是**活动级**真值源分裂；`reflector` 才是
+  「被 AND 语义 + 双键同写兜住」的那个。C 类扫描只看了「私有门是否存在」，未做**键的消费者计数**，
+  故漏网。）**
 - **G-6 旁支**：纯来源轴开关（solid/texture/canvas）已随本轮中间件修复覆盖，无残余。见 19.4。
-- **没有任何证据表明存在第 2 个与 G-6 同级的「活动」接线缺陷**——环境系统 6 面板的最严重
-  病灶（E-3/F-2/E-4/S2-4/S1-4/G-6）已全部闭环。
+- ~~**没有任何证据表明存在第 2 个与 G-6 同级的「活动」接线缺陷**——环境系统 6 面板的最严重
+  病灶（E-3/F-2/E-4/S2-4/S1-4/G-6）已全部闭环。~~
+  **（§21.4 修订：该判词已被证伪——§21.1 的 shadow 幽灵键即第 2 个活动级缺陷。证伪方法可复用：
+  「逐 schema 键计生产消费者数」，零消费者即真值源分裂的信号；本类缺陷的特征是**不产生症状**，
+  故行为测试（全绿）永远抓不到它，必须靠机械扫描。）**
 
 > ⚠️ 本轮为**只读排查（§19.1-19.3 未改代码）**；G-6 修复 + 旁支覆盖已在 §18 提交（`66633f35d`）。
 > reflector/shadow 的 manual→auto-model 收敛留作「格式一致性」候选（有行为恒等的充分前提，可安全批量做，
@@ -1191,3 +1206,135 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
 > ——本会话未触碰 perf 系文件（git status 可证），属**存量环**（diag 工具区，2026-09-22
 > `eff50f47c` 前后即在），与本次改动无关，报告在案待归属会话处理。
 
+
+---
+
+## §21 环境系统阴影接线锐评修复轮（F-1 幽灵键 + F-2 来源纪律，2026-09-22）
+
+> 轮次：接 §18/§19（G-6 轮 + 横向排查）后的**续诊**。用户问「还有类似的情况吗」后追问
+> 「尝试处理属实的话」——本轮据此把 §19 的三类线索**从「登记」推进到「闭环」**，并在复核中
+> 发现 §19 漏判的**活动级缺陷**（F-1）。TDD：F-1 五项 + F-2 四项先写红测试（对旧实现
+> **9 failed**），实现后全绿。
+>
+> 方案拍板（用户当场二字确认）：**F-1 取 Option A「并入 schema 单门」（fog/water 先例），
+> 不取「删键」**；**F-2 改 4 处 cap + 补来源纪律回归锁**。
+
+### 🔴→✅ F-1 `shadowEnabled` 是幽灵键——第 2 个活动级真值源分裂（G-6 同级）
+
+**发现方法（可复用，本轮首次系统化）**：逐 schema 键统计**生产消费者数**（148 键 × 562 个
+非测试 `frontend/src` 文件，逐键 grep，人工排除 schema 声明/i18n/测试/文档四类噪声）。
+结果：**`shadowEnabled` 是唯一一个零消费者的键**。
+
+- **实证**：`env-state-schema.ts|shadowEnabled`（group `shadow`，默认 `true`，随 ADR-196
+  刀0/1/2 批次 `df84baefb` 引入）自落地起**没有任何 reader、没有任何 writer**。
+  真开关是 `shadow-capability.ts` 的**私有 `this.enabled`**，落盘成**无前缀** `enabled`。
+  于是三线各说各话：
+  - 菜单/headerToggle（`shadow-menu.ts|shcEnabledNode`）读写**私有门**；
+  - `saveState` 落**私有门**（无前缀 `enabled`）；
+  - schema 键 `shadowEnabled` **恒为默认 `true`**，无人读写。
+- **为何是「活动级」而非「格式债」**：`registry.createAll(ctx)` 的 `ctx` **无 `enabled` 字段**
+  （`scene-capability-registry.ts|createAll` 只传 `{scene,renderer,camera,caps}`），故私有门在
+  生产链路**恒为构造默认 `true`**；它的存在意义只剩「一个恒真的短路门」——`envState.shadowEnabled`
+  无论被谁改成 `false` 都不会影响渲染（回调首行 `if (!this.enabled) return;` 拦在真值判断之前，
+  且它恒 true 故不拦，但**键本身无人消费**，改了等于没改）。这正是 G-6 的同族病：
+  **真值源分裂**——只是 G-6 分裂出「标记不置位」，F-1 分裂出「键是空壳」。
+- **为何行为测试抓不到**：无用户可见症状（私有门与用户操作一致），故 §19 的全绿测试套件
+  与「6 面板最严重病灶已闭环」的判词都无法发现它——**必须靠消费者计数扫描**。这是本轮
+  方法论上最有价值的收获，已写入知识卡。
+- **修复（Option A：并入 schema 单门）**：
+  1. 删私有 `enabled` 字段与 `opts.enabled` 构造项（**同时退役 8 处测试传参**——它们传的
+     `enabled` 从来只是喂私有门，registry 生产路径根本不传）；
+  2. **env 回调新增 `changed.has("shadowEnabled")` 分支**——该键本就在 `shadow` 组内，
+     `registerEnvCallback` 会自动把它派发到本回调（`env-dispatcher.ts|registerEnvCallback`
+     按 `getPresetKeys("shadow")` 建 `groupKeys`）。**不接管则该键改了不落地**——这是本
+     修复最易漏的一步（原实现靠私有门短路挂在回调最前，键永无消费者）；
+  3. `setEnabled/isEnabled/getParams().enabled` 收敛为 `envState.shadowEnabled` 别名；
+  4. 4 处私有门读点（回调顶门 / `syncLights` / `syncMeshes` / `apply`）改读 schema 键；
+  5. `saveState` **只写 6 个 schema 键**（`shadowEnabled` + type/mapSize/bias/normalBias/
+     cameraSize），不再落无前缀 `enabled`；
+  6. `loadState` **双轨吸收**（fog 先例同法）：`enabled` → `shadowEnabled` 回填（仅当缺
+     `shadowEnabled`）+ 无前缀 `type/mapSize/bias/normalBias/cameraSize` → 前缀键（判据
+     `shadowType` 缺失），保留 `state.soft` 兜底——升级用户不丢配置。
+- **回归锁**：`shadow-capability.test.ts`「能力级开关单门收口」describe 五例——
+  ① 僵尸门守卫 `expect("enabled" in cap).toBe(false)`（防私有门复活）；
+  ② 别名写口真落到 `renderer.shadowMap.enabled`（不只改 envState）；
+  ③ **幽灵键不进存档** `expect("enabled" in saved).toBe(false)` + `"shadowEnabled" in saved`
+     （用 `restoreState("shadow")` 读真实落盘产物）；
+  ④ legacy 中毒救回（旧档 `enabled:false` → 恢复后开关仍能开回阴影）；
+  ⑤ F-2 同轨写入。
+- **知识卡**：`preview_env_state.md` 新增「锐评 F-1 收口」条 + 「持久化设计」的键形说明改为
+  按 cap 分组（fog/water/shadow 只写 schema 键；ground/reflector/environment 仍留旧键形）。
+
+### 🟡→✅ F-2 恢复来源纪律：4 路 manual → auto-model（§19.1 判词错在「暂无症状 ≠ 已合规」）
+
+- **实证**：§19.1 的表格把「恢复 source」列出来了，但结论把它读成「被守卫兜住 = 无活动漏洞」。
+  复核后判词应更准：**这是纪律未落实**（fog F-2 / env E-2 / light L-1 立法要求一律
+  `auto-model`，而 ground/reflector/shadow/renderMode 四路**实际全是 manual**）。
+  用户可感知症状确实没有（`isStateLoaded` 守卫 + `MODEL_DEFAULTS` 键集 + `ATMOSPHERE_PRESETS`
+  排除三线恰好掩住），但 **`_writeSource` 被钉成 manual 后，同轨 `auto-model` 写入被
+  `shouldOverwrite` 静默吞掉**——值不变、无报错、无日志。
+- **修复（行为中性，收益在防护）**：四路恢复写入 source 全改 `auto-model`。
+  - `render-mode-capability.ts`：1 处（合并 partial 单次写入）。
+  - `shadow-capability.ts`：随 F-1 一并改（6 键）。
+  - `reflector-capability.ts`：6 处。
+  - `ground-capability.ts`：**两条路径**——`loadState` 内直连 `setEnvState` 的 12 处
+    **加上**委托公开 setter 的 ~9 处。后者是本轮最细的一处：那些 setter 服务**用户手改**
+    （必须保持 manual），恢复时若不显式传来源就会留暗门。故新增
+    `ground-capability.ts|RESTORE_SOURCE` 常量 + `writeOpts()` 组装器，把「恢复来源」
+    收敛成单一事实源（`WriteOpts` 允许 `skipMiddleware` + `source` 两维覆盖）；**并保留
+    原有的 5 处 `skipMiddleware:true`**（ADR-254 中间件豁免，与 source 是正交两轴，勿混）。
+- **回归锁（一律行为断言）**：`_writeSource` 是 `env-state.ts` 模块私有、**无导出读口**
+  （`resetEnvState` 会清它但无生产调用方），故判据只能是**行为**——「loadState 之后用
+  `auto-model` 写同键，值必须落地」。四路各一 describe；
+  ground 额外锁「委托路径」那条（防只修直连留暗门）+「中间件仍只认 manual」对照例
+  （恢复走 auto-model 后 `groundMaterialPreset` 不得被误置 custom，ADR-254 不回归）。
+- **知识卡修正**：`preview_env_state.md` 原文「fog F-2 / env E-2 / ground / light L-1 **四路
+  同口径**」是**文档先于代码**的漂移（把 ground 写进已合规名单，实际它当时是 manual）。
+  已改述为「按**声明**而非按**实施**成立」+ 记录复核与收口，并列出八路真 auto-model 与
+  全部回归锁位置。
+
+### 一处既有测试的语义修正（非回归，是判据纠正）
+
+`render-mode-capability.test.ts|loadState null 值视为合法 override` 在 F-2 后失败。核查后
+判定：**该用例考的是 `null` 的类型守卫**（null 是合法 override 值，不得当「缺字段」跳过），
+**不是**来源优先级；而它原先用 `cap.setWireframe(true)`（manual）预置，恢复改走 auto-model 后
+被 `shouldOverwrite` 的「manual 优先」正当拒绝。故把预置值改为同轨 `auto-model`——
+**考的还是同一个 null 守卫，只是对照组不再混入优先级维度**。
+（附带确认：生产不可达此分歧——`saveAll` 落盘的恒是 `envState` 现值，档案与内存不会不一致；
+若强行让恢复凌驾 manual，反而会在「mid-session 重挂载」时回滚用户未落盘的手改。
+故**改测试判据而非改 `shouldOverwrite`**。）
+
+### 同族余项复核（§19.3 C 类的补课，结论见知识卡）
+
+- **`reflector` = shadow 的活体孪生，本轮未动手（待拍板）**：`buildReflector` 是**双门**
+  `if (!this.enabled || !envState.reflectorEnabled) return;`，`getParams().enabled` 返回
+  `this.enabled && envState.reflectorEnabled`。今日无症状只因 `saveState`/`loadState` 把
+  **两键都写都读**（恒同步）；但**只要存档缺 `enabled` 键**（旧档/手改档/未来只写 schema 键
+  的档），私有门保持构造默认 `true` 而 `reflectorEnabled` 已恢复 → 开关显示 OFF 而 schema
+  键 ON。**未随 F-1 一并动手的理由是语义而非工作量**：`reflectorEnabled` 默认 `false`
+  而私有门默认 `true`（与 shadow 相反），合一会改变**用户可见的默认态**，须单独拍板取
+  「默认关」还是「默认开」。
+- **`ground` = 僵尸私有门，非 live（暂不动）**：`getMasterNodeId()` 返回 `"ground-visible"`，
+  总开关绑的是 `envState.groundVisible`；私有 `enabled` 全仓**无 UI 写口**（`setEnabled`
+  虽存在但零生产调用方），生产恒 `true`。读起来吓人、实为惰性——与 shadow 的差别正在于
+  **shadow 的私有门有 UI 写口而 ground 没有**（这也再次印证 F-1 的定级方法：判 live 与否
+  看**写口**，不只看字段是否存在）。
+- **`environment` = 原教旨形态，非漏网**：`getMasterNodeId` 返回 `"env-enabled"`，开关
+  明确设计为不入 envState（源码注释即「能力总开关（不入 envState…）」），是 ADR-196 L70
+  「能力级 enabled 不入 schema 红线」的有意保留。
+
+### 验证
+
+| 门禁 | 结果 |
+|------|------|
+| F-1/F-2 新测试对旧实现（TDD 非空转） | **9 failed**（F-1 五项 + F-2 四项） |
+| `vitest --run src/preview-3d/` 全量 | **2865 passed / 158 files**（较上轮 +21） |
+| `npx tsc --noEmit` | EXIT 0 |
+| `npx vite build` | ✓ built in 9.58s |
+| `check-biome --files`（8 文件） | ✅（2 处格式化自动修复后复检通过） |
+| 知识卡回写 | `preview_env_state.md`（F-1 收口条 / F-2 判词修订 / 键形分组 / 不变量并列例外 / 同族余项复核） |
+
+> 未修 / 未动（**登记在案，非遗漏**）：`reflector` 私有门合一（待拍板默认态语义）、
+> `ground` 僵尸门清理（无行为收益，可随手）、§18 遗留 G-7/G-8/G-9/G-3、§19.2 B 类手抄清单
+> （`pp` 尤其**不可**改 `getPresetKeys`——其持久化键是无前缀方言，schema 驱动会改存档键名
+> 而破坏旧档）。

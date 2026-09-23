@@ -28,7 +28,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-placeholder .dp-hint { font-size: var(--fs-base); margin-bottom: 12px; }
 .dp-placeholder .dp-hints { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .dp-placeholder .dp-hints span { font-size: var(--fs-xs); padding:var(--btn-padding-tool-lg); border-radius: var(--radius-sm); background: var(--surf); border: 1px solid var(--bd); color: var(--muted); }
-.md-row { font-size:var(--fs-base); color: var(--txt); padding: 3px 0; display: flex; justify-content: space-between; }
+.md-row { font-size:var(--fs-base); color: var(--txt); padding: var(--pad-v-2); display: flex; justify-content: space-between; }
 .md-label { color: var(--muted); }
 .md-value { color: var(--txt); font-weight: 500; font-family:var(--font-mono); }
 .md-divider { border: none; border-top: 1px solid var(--bd); margin: 8px 0; }

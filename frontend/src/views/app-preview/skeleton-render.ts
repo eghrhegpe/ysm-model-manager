@@ -172,7 +172,7 @@ export async function buildStatsCard(
       "</div>" +
       authors
         .map(
-          (au) => `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+          (au) => `<div style="display:flex;align-items:center;gap:6px;padding:var(--pad-v-2)">
         ${
           au.avatarUrl
             ? `<img src="${esc(au.avatarUrl)}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid var(--bd)" onerror="this.style.display='none'">`

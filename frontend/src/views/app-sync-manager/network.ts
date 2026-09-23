@@ -35,7 +35,9 @@ export async function performSingleOp(
   // 不同行可并发 push/pull，同一行防重入（保原契约）。
   if (self._singleBusy.has(path)) return;
   self._singleBusy.add(path);
-  setButtonsBusy(self, true);
+  // per-path 禁用：只锁本行。原全局 setButtonsBusy(true) 会把无关行一并锁死，
+  // 令「不同行可并发 push/pull」的 per-path 守卫在 UI 层形同虚设（并发化只做了一半）。
+  setRowButtonsBusy(self, path, true);
   const rtype = self._selectedType;
   const targetInstance = self._instance;
   try {
@@ -62,23 +64,27 @@ export async function performSingleOp(
     });
   } finally {
     self._singleBusy.delete(path);
-    // code_review 3413288be 段 A #1/#2/#3/#4（P2）：busy 视觉须由在途 op 数派生——
-    // 无条件 setButtonsBusy(false) 会把另一在途行的按钮提前复位（per-path 并发化
-    // 只做了一半：守卫按 path、复位仍全局，两半自相矛盾——先结束的 op 让仍在途
-    // 行的 UI 假空闲、点击被 Set 守卫静默吞）
-    setButtonsBusy(self, self._singleBusy.size > 0);
+    // per-path 复位：只解禁本行，其他在途行的禁用态不受影响
+    // （原为全局 setButtonsBusy(self, size > 0)：先结束的 op 会把仍在途行提前解禁，
+    //  UI 假空闲 + 点击被 Set 静默吞——现两侧同为 per-path 口径，修复自相矛盾）
+    setRowButtonsBusy(self, path, false);
   }
 }
 
 /**
- * 切换所有单行按钮的禁用态与视觉反馈。
- * 守卫：querySelectorAll 可能返回空集（卸载后），静默跳过。
+ * 切换【单行】按钮的禁用态与视觉反馈（per-path 粒度）。
+ * 路径用 dataset 比对而非属性选择器——path 含分隔符/引号会破坏 CSS 选择器语义。
+ * 注：窗口化重建 DOM 后本处设置的禁用态会被冲掉，由 renderer.restoreBusyState
+ * 按 self._singleBusy 重新贴回（两侧共用同一在途集合，口径单一）。
  */
-function setButtonsBusy(self: NetworkSelf, busy: boolean): void {
-  self.querySelectorAll(".sm-item-btn").forEach((btn) => {
-    const htmlBtn = btn as HTMLButtonElement;
-    htmlBtn.disabled = busy;
-    htmlBtn.style.opacity = busy ? "0.55" : "";
-    htmlBtn.style.cursor = busy ? "wait" : "pointer";
+function setRowButtonsBusy(self: NetworkSelf, path: string, busy: boolean): void {
+  self.querySelectorAll("[data-path]").forEach((row) => {
+    if ((row as HTMLElement).dataset.path !== path) return;
+    row.querySelectorAll(".sm-item-btn").forEach((btn) => {
+      const htmlBtn = btn as HTMLButtonElement;
+      htmlBtn.disabled = busy;
+      htmlBtn.style.opacity = busy ? "0.55" : "";
+      htmlBtn.style.cursor = busy ? "wait" : "pointer";
+    });
   });
 }

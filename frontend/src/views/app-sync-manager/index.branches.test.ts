@@ -235,17 +235,9 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
     unmountElement(el);
   });
 
-  it("render promise reject → _doRender .catch console.error（234）", async () => {
-    const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { el } = mount();
-    await waitFor(() => renderMock.mock.calls.length > 0, 5000);
-    err.mockClear();
-    renderMock.mockRejectedValueOnce(new Error("render boom"));
-    bus.emit("stats:refresh"); // 复用 _doRender 入口
-    // 正等结果：render promise reject → .catch 触发 console.error
-    await waitFor(() => err.mock.calls.length > 0);
-    expect(err).toHaveBeenCalledWith("[sync-manager] render 失败:", expect.any(Error));
-    err.mockRestore();
-    unmountElement(el);
-  });
+  // 原「render promise reject → _doRender .catch console.error（234）」已删除（2026-09）：
+  // 该例断言的是 render 返回 rejected promise 时被 `_doRender` 的 .catch 静默吞成日志——
+  // 这正是「错误防线死码」的病症本身，测试把 bug 钉成了契约。render 已去伪 async 改为
+  // 同步抛，同步契约由 index.ts 的 _RENDER_SYNC_GUARD 编译期守卫锁定（改回 async 即编译失败），
+  // 运行时的错误呈现由上方「render 同步抛错 → _init catch：错误块 + error toast」守卫。
 });

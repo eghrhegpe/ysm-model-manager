@@ -45,6 +45,9 @@ async function loadRepoRoots(self: SyncManagerSelf, rtype: string): Promise<void
   }
 }
 
+/** 本组件错误文案键（i18n 字面量联合：t() 只收已知键，裸 string 会被拒收） */
+type SyncErrorMsgKey = "sync.renderFailed" | "syncManager.loadSyncStatusFailed";
+
 export class AppSyncManager extends WebComponentBase {
   static get observedAttributes(): string[] {
     return ["instance", "default-type"];
@@ -63,10 +66,10 @@ export class AppSyncManager extends WebComponentBase {
    *  renderer 消费；类侧声明须全量对齐，缺字段会让编译守卫「同形契约」宣称与实现脱节。
    *  ADR-269 D3③：dirLevelSync 全仓零读，已随本步从形状摘除） */
   _typeConfig: Array<{ id: string; name?: string | undefined; icon?: string | undefined }> = [];
-  _loading = false;
-  /** 代际守卫（ADR-230）：裸 _gen 计数退役，统一走全仓唯一出口 createLoadGuard */
+  /** 代际守卫（ADR-230）：裸 _gen 计数退役，统一走全仓唯一出口 createLoadGuard。
+   *  ⚠️ 曾并存手搓 `private _initGen`（与 _guard 语义不等价：invalidate 打不进早期 bail），
+   *  2026-09 并轨至此单一出口——见 ADR-230「全仓唯一」claim，勿再引入第二套计数。 */
   readonly _guard = createLoadGuard();
-  private _initGen = 0;
   _eventsBound = false;
   _clickHandler: ((e: Event) => void) | null = null;
   /** 一次性 click 委托的 unsub（生命周期跟随元素连接，不随 _init——re-init 不得销毁委托） */
@@ -102,14 +105,15 @@ export class AppSyncManager extends WebComponentBase {
       this.innerHTML = `<div style="padding:var(--sp-3);color:var(--err)">${UI_ICONS.warning} ${t("sync.noInstance")}</div>`;
       return;
     }
-    this._init();
+    // _init 内部已统一 catch（加载段转错误 UI + toast），此处 void 仅表「不等待」意图
+    void this._init();
   }
 
   attributeChangedCallback(name: string, oldVal: string | null, newVal: string | null): void {
     if (oldVal === newVal || !this.isConnected) return;
     if (name === "instance") {
       this._instance = newVal || "";
-      if (this._instance) this._init();
+      if (this._instance) void this._init();
     } else if (name === "default-type") {
       this._defaultType = newVal || RESOURCE_TYPES.YSM;
     }
@@ -139,30 +143,45 @@ export class AppSyncManager extends WebComponentBase {
 
   async _init(): Promise<void> {
     const self = this as SyncManagerSelf;
-    const initGen = ++this._initGen;
     const gen = this._guard.next();
-    this._loading = true;
+    this._resetViewState();
     this._setupSkeleton();
     this._pruneSubs();
     this._bindDelegate(self);
 
-    // 并发代入守卫：过期代际/已卸载直接丢弃。
-    // 进入异步段（L156-158 三行 await）前复位 _loading：败方若已置 spinner 态
-    // 却因代际失效/卸载 bailing，不在此复位会让 loading 旗标残留（胜方 _init
-    // 重跑时会再次置位，故此处复位是「败方干净离场」的守卫，非「立即结束加载」）。
-    // 后续 L162 的 _loading=false 才是加载成功完成后的终态复位。
-    this._loading = false;
-    if (initGen !== this._initGen || !this.isConnected) return;
-
-    await loadTypeConfig(self);
-    await loadData(self);
-    await loadRepoRoots(self, this._selectedType);
+    // 加载段异常统一出口：原为浮动 Promise（connectedCallback / attributeChangedCallback
+    // 均未 catch），三段 await 任一 reject 即 unhandled rejection + 骨架 spinner 永久卡死、
+    // 用户零反馈。此处转错误 UI + toast 并早退（过期代际/已卸载则静默丢弃）。
+    try {
+      await loadTypeConfig(self);
+      await loadData(self);
+      await loadRepoRoots(self, this._selectedType);
+    } catch (e) {
+      if (this._guard.stale(gen) || !this.isConnected) return;
+      this._showError("_init 加载失败:", e, "syncManager.loadSyncStatusFailed");
+      return;
+    }
 
     if (this._guard.stale(gen) || !this.isConnected) return;
 
-    this._loading = false;
     this._renderWithErrorFeedback();
     this._subscribeBus(self);
+  }
+
+  /**
+   * 视图状态复位（切换整合包 = 全新视图上下文）。
+   * 与 `repo:rtype-changed` 分支（复位 _statusFilter/_subtype）同口径——原仅 rtype 切换
+   * 复位、instance 切换不复位，两条切换路径处置不对称：A 包的 _dirOpen 展开态与
+   * _statusFilter 会串到 B 包（B 包首屏看着「空」或目录莫名展开）。
+   * _singleBusy 刻意不清：切包瞬间可能仍有在途单行 op，clear 会让同名 path 二次可点，
+   * 反丢重入保护；旧 op 的 finally 自行摘除，其过期结果亦被 _guard 丢弃。
+   */
+  private _resetViewState(): void {
+    this._dirOpen = {};
+    this._statusFilter = "all";
+    this._subtype = "";
+    // delete 而非赋 undefined：`exactOptionalPropertyTypes` 下可选属性不接受显式 undefined
+    delete this._forceOpenPaths;
   }
 
   /**
@@ -225,27 +244,37 @@ export class AppSyncManager extends WebComponentBase {
     }
   }
 
+  /**
+   * 错误呈现统一出口（加载失败 / 渲染失败共用）：错误 div 挂 `.sm-list` + error toast。
+   * @param context 环形日志上下文前缀
+   * @param msgKey i18n 主文案键（渲染失败 sync.renderFailed / 加载失败 syncManager.loadSyncStatusFailed）
+   */
+  private _showError(context: string, e: unknown, msgKey: SyncErrorMsgKey): void {
+    logError("sync-manager", context, e);
+    const head = t(msgKey);
+    // appendChild + textContent：杜绝「读改写 innerHTML +=」反模式（textContent 天然防注入，无需 esc）
+    // 挂到 .sm-list（与 spinner/列表同容器），不挂组件根——脱离 .sm-container 会让错误 div
+    // 落在布局/CSS 作用域外，排版异常（containerHTML 已在 _setupSkeleton 注入，.sm-list 此时必存在）
+    const errDiv = document.createElement("div");
+    errDiv.style.padding = "12px";
+    errDiv.style.color = "var(--err)";
+    errDiv.textContent = `${head}: ${safeErrorMessage(e)}`;
+    const listEl = this.querySelector(".sm-list");
+    if (listEl) listEl.appendChild(errDiv);
+    else this.appendChild(errDiv);
+    bus.emit("toast:show", {
+      msg: `${UI_ICONS.error} ${friendlyError(e, head)}`,
+      duration: TOAST_MS.long,
+      type: "error",
+    });
+  }
+
   /** `_doRender` 抛错兜底：错误 div + toast（不让异常冒泡出 `_init`） */
   private _renderWithErrorFeedback(): void {
     try {
       this._doRender();
     } catch (e) {
-      logError("sync-manager", "_render 出错:", e);
-      // appendChild + textContent：杜绝「读改写 innerHTML +=」反模式（textContent 天然防注入，无需 esc）
-      // 挂到 .sm-list（与 spinner/列表同容器），不挂组件根——脱离 .sm-container 会让错误 div
-      // 落在布局/CSS 作用域外，排版异常（containerHTML 已在 _setupSkeleton 注入，.sm-list 此时必存在）
-      const errDiv = document.createElement("div");
-      errDiv.style.padding = "12px";
-      errDiv.style.color = "var(--err)";
-      errDiv.textContent = `${t("sync.renderFailed")}: ${safeErrorMessage(e)}`;
-      const listEl = this.querySelector(".sm-list");
-      if (listEl) listEl.appendChild(errDiv);
-      else this.appendChild(errDiv);
-      bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e, t("sync.renderFailed"))}`,
-        duration: TOAST_MS.long,
-        type: "error",
-      });
+      this._showError("_render 出错:", e, "sync.renderFailed");
     }
   }
 
@@ -315,9 +344,10 @@ export class AppSyncManager extends WebComponentBase {
   /** 渲染统一入口（供 _init 和 stats:refresh 复用） */
   private _doRender(): void {
     const self = this as SyncManagerSelf;
-    // renderList 已是同步（数据展平后当帧窗口化切片）；事件由 _init 一次性委托绑定，
-    // render 重建 DOM 后无需重绑（原在此 .then 全量重绑，并发 _doRender 会双绑竞态）
-    render(self).catch((e) => logError("sync-manager", "render 失败:", e));
+    // render 同步抛（去伪 async），异常由调用方 _renderWithErrorFeedback 统一兜底；
+    // 事件由 _init 一次性委托绑定，render 重建 DOM 后无需重绑
+    // （原在此 .then 全量重绑，并发 _doRender 会双绑竞态）
+    render(self);
   }
 }
 
@@ -332,6 +362,14 @@ type _SyncSelfAlign =
     : never;
 const _SYNC_SELF_ALIGN_GUARD: _SyncSelfAlign = true;
 void _SYNC_SELF_ALIGN_GUARD;
+
+// 编译期守卫（零运行时成本）：render 必须【同步】返回 void。
+// 背景：render 曾误标 async 而函数体零 await，抛出的异常变成 rejected promise 被调用方
+// .catch 静默吞掉，令 _renderWithErrorFeedback 的 try/catch 永不触发（错误 div + toast
+// 整段死码）。改回 `async render` → 返回 Promise<void>（不 extends void）→ 此处编译失败。
+type _RenderSyncGuard = ReturnType<typeof render> extends void ? true : never;
+const _RENDER_SYNC_GUARD: _RenderSyncGuard = true;
+void _RENDER_SYNC_GUARD;
 
 if (typeof customElements !== "undefined" && !customElements.get("app-sync-manager")) {
   customElements.define("app-sync-manager", AppSyncManager);

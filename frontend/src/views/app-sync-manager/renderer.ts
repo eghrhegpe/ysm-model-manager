@@ -34,8 +34,13 @@ interface TypeCounts {
   total: number;
 }
 
-/** 主渲染入口：骨架 → 类型统计 → 状态标签 → 摘要栏 → 列表 */
-export async function render(self: SyncRenderSelf): Promise<void> {
+/**
+ * 主渲染入口：骨架 → 类型统计 → 状态标签 → 摘要栏 → 列表。
+ * ⚠️ 同步函数（曾误标 async）：函数体零 await，声明 async 会让抛出的异常变成
+ * rejected promise，被调用方 .catch 静默吞掉，令 index._renderWithErrorFeedback 的
+ * try/catch 永不触发（错误 div + toast 整段死码）。同步抛才能被上层兜底捕获。
+ */
+export function render(self: SyncRenderSelf): void {
   // 骨架幂等：已存在则不重建——重建会丢 .sm-list 滚动位置（用户停在中段时列表弹回
   // 顶部），且白白重解析内联 <style>。_init 首帧已注入骨架，此处只补骨架缺失场景。
   if (!ensureSkeleton(self)) return;
@@ -262,6 +267,8 @@ interface SmVsState {
   rowH: number;
   /** 待执行的零高重排 rAF 句柄（去重：隐藏容器内反复重渲染只排一个，cleanup 时取消） */
   pendingRaf: number | null;
+  /** 在途单行 op 的 path 集合（引用自 self._singleBusy；窗口化重建 DOM 后据此恢复按钮禁用态） */
+  busy: Set<string> | null;
 }
 
 /** 容器虚拟滚动状态表（WeakMap——listEl 为 key，元素 GC 自动回收） */
@@ -270,7 +277,14 @@ const vsStates = new WeakMap<HTMLElement, SmVsState>();
 function vsOf(listEl: HTMLElement): SmVsState {
   let st = vsStates.get(listEl);
   if (!st) {
-    st = { cleanup: null, resizeObserver: null, rows: [], rowH: 0, pendingRaf: null };
+    st = {
+      cleanup: null,
+      resizeObserver: null,
+      rows: [],
+      rowH: 0,
+      pendingRaf: null,
+      busy: null,
+    };
     vsStates.set(listEl, st);
   }
   return st;
@@ -333,6 +347,27 @@ function flattenRows(self: SyncRenderSelf, out: SmRow[]): void {
   walk(self._filteredItems, 0);
 }
 
+/**
+ * 切片重建后恢复在途行按钮的禁用态。
+ * 背景：per-path 并发化后按钮禁用不再全局，而窗口化每帧 replaceChildren 重建可见行，
+ * 在途 op 所在行的按钮会被冲回 enabled —— 用户重复点击同 path，请求被 _singleBusy
+ * 静默吞掉（「点了没反应」）。此处按 st.busy 复位视觉，让 UI 与守卫口径一致。
+ */
+function restoreBusyState(listEl: HTMLElement): void {
+  const st = vsOf(listEl);
+  if (!st.busy?.size) return;
+  listEl.querySelectorAll("[data-path]").forEach((row) => {
+    const p = (row as HTMLElement).dataset.path || "";
+    if (!st.busy?.has(p)) return;
+    row.querySelectorAll(".sm-item-btn").forEach((btn) => {
+      const b = btn as HTMLButtonElement;
+      b.disabled = true;
+      b.style.opacity = "0.55";
+      b.style.cursor = "wait";
+    });
+  });
+}
+
 /** 窗口化切片渲染：只把可见行 ± 缓冲注入 DOM，padding 撑出总高。 */
 function renderSlice(listEl: HTMLElement): void {
   const st = vsOf(listEl);
@@ -351,6 +386,8 @@ function renderSlice(listEl: HTMLElement): void {
   listEl.replaceChildren(frag);
   listEl.style.paddingTop = `${range.startIdx * rowH}px`;
   listEl.style.paddingBottom = `${(total - range.endIdx) * rowH}px`;
+  // 窗口化每帧重建可见行 → 在途 op 的按钮禁用态被冲掉，须按 _singleBusy 复位
+  restoreBusyState(listEl);
 
   // 首帧实测行高：CSS 用 calc(var(--fs-sm) * 1.4 + 9px) 保证同行等高，但 --fs-scale
   // 是用户可调设置（设置页 ±2px），TS 侧拿不到解析值——按实测值重渲一次（置位后
@@ -401,6 +438,8 @@ function renderList(self: SyncRenderSelf, listEl: HTMLElement): void {
 
   const st = vsOf(listEl);
   st.rows = rows;
+  // 在途集合按引用挂到窗口状态：切片重建后 restoreBusyState 据此恢复按钮禁用态
+  st.busy = self._singleBusy.size ? self._singleBusy : null;
   if (!st.cleanup) st.cleanup = installScrollSync(listEl, () => renderSlice(listEl));
   renderSlice(listEl);
 

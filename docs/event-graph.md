@@ -273,7 +273,7 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 317 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 122 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 274 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 303 |
 
 ### `repo:search-creator`
 
@@ -298,7 +298,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 297 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 326 |
 
 ### `stats:refresh`
 
@@ -324,8 +324,8 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 315 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 203 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 222 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 241 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 98 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 125 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 194 |
@@ -336,7 +336,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 114 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 254 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 283 |
 
 ### `sync:download:done`
 
@@ -501,9 +501,9 @@
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 304 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 309 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 318 |
-| _renderWithErrorFeedback | `frontend/src/views/app-sync-manager/index.ts` | 244 |
-| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 50 |
-| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
+| _showError | `frontend/src/views/app-sync-manager/index.ts` | 265 |
+| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 52 |
+| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 60 |
 | loadData | `frontend/src/views/app-sync-manager/store.ts` | 77 |
 | show | `frontend/src/views/app-toast/index.ts` | 163 |
 | show | `frontend/src/views/app-toast/index.ts` | 182 |

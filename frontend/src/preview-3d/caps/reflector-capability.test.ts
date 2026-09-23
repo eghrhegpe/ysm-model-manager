@@ -27,13 +27,9 @@ function makeFakeRenderer() {
   } as unknown as THREE.WebGLRenderer;
 }
 
-function newCap(opts: { enabled?: boolean } = {}) {
+function newCap() {
   const scene = new THREE.Scene();
-  return new ReflectorCapability({
-    scene,
-    renderer: makeFakeRenderer(),
-    ...opts,
-  });
+  return new ReflectorCapability({ scene, renderer: makeFakeRenderer() });
 }
 
 describe("ReflectorCapability — 构造与默认值", () => {
@@ -42,8 +38,10 @@ describe("ReflectorCapability — 构造与默认值", () => {
   it("构造默认值完整", () => {
     const cap = newCap();
     const p = cap.getParams();
-    expect(cap.isEnabled()).toBe(true);
+    // [锐评 F-1] 总开关单门收口后 isEnabled() 读 schema 键（默认关，与 water 同纪律）
+    expect(cap.isEnabled()).toBe(false);
     expect(envState.reflectorEnabled).toBe(false);
+    expect(p.enabled).toBe(false);
     expect(p.opacity).toBe(0.6);
     expect(p.size).toBe(100);
     expect(p.resolution).toBe(1024);
@@ -51,8 +49,8 @@ describe("ReflectorCapability — 构造与默认值", () => {
     expect(p.clipBias).toBe(0.003);
   });
 
-  it("enabled:false 初始禁用", () => {
-    const cap = newCap({ enabled: false });
+  it("构造不再是开关写口（总开关唯读 schema 键）", () => {
+    const cap = newCap();
     expect(cap.isEnabled()).toBe(false);
   });
 
@@ -227,7 +225,10 @@ describe("ReflectorCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
     // master toggle
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("reflector-enabled");
-    expect(nodes[0]!.control!.get!(undefined)).toBe(true);
+    // [锐评 F-1] master toggle 读数 = schema 键（默认关，与 water 同纪律）
+    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
+    nodes[0]!.control!.set!(true);
+    expect(cap.isEnabled()).toBe(true);
     nodes[0]!.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
     // 参数组 folder
@@ -266,7 +267,7 @@ describe("ReflectorCapability — 真实管线", () => {
   beforeEach(() => { resetEnvState(); });
 
   it("setEnabledReflector(true) + apply 后 scene 出现 ysm-reflector mesh，位置/旋转/uOpacity 就位", () => {
-    const cap = newCap({ enabled: true });
+    const cap = newCap();
     cap.setEnabledReflector(true);
     cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
@@ -282,7 +283,7 @@ describe("ReflectorCapability — 真实管线", () => {
   });
 
   it("setOpacity 挂载态下更新 uniforms.uOpacity", () => {
-    const cap = newCap({ enabled: true });
+    const cap = newCap();
     cap.setEnabledReflector(true);
     cap.apply();
     cap.setOpacity(0.2);
@@ -293,7 +294,7 @@ describe("ReflectorCapability — 真实管线", () => {
   });
 
   it("setColor 挂载态下更新 uniforms.color（官方 tint 通道）", () => {
-    const cap = newCap({ enabled: true });
+    const cap = newCap();
     cap.setEnabledReflector(true);
     cap.apply();
     cap.setColor(0x123456);
@@ -303,7 +304,7 @@ describe("ReflectorCapability — 真实管线", () => {
   });
 
   it("setSize/setResolution/setClipBias 挂载态下触发重建（旧 mesh 移除 + 新 mesh 就位）", () => {
-    const cap = newCap({ enabled: true });
+    const cap = newCap();
     cap.setEnabledReflector(true);
     cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
@@ -318,7 +319,7 @@ describe("ReflectorCapability — 真实管线", () => {
   });
 
   it("reflector 平面贴地偏移：position.y = GROUND_LAYER_OFFSETS.reflector（-0.01，z-fighting 防御）", () => {
-    const cap = newCap({ enabled: true });
+    const cap = newCap();
     cap.setEnabledReflector(true);
     cap.apply();
     const reflector = ((cap as unknown as { scene: THREE.Scene }).scene.getObjectByName("ysm-reflector")) as THREE.Mesh;
@@ -326,7 +327,7 @@ describe("ReflectorCapability — 真实管线", () => {
   });
 
   it("applyModelPreset 挂载态下重建（新尺寸参数生效）", () => {
-    const cap = newCap({ enabled: true });
+    const cap = newCap();
     cap.setEnabledReflector(true);
     cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
@@ -336,7 +337,7 @@ describe("ReflectorCapability — 真实管线", () => {
   });
 
   it("setEnabled(false) 移除并释放；重复 apply 幂等", () => {
-    const cap = newCap({ enabled: true });
+    const cap = newCap();
     cap.setEnabledReflector(true);
     cap.apply();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
@@ -361,8 +362,8 @@ describe("ReflectorCapability — 真实管线", () => {
     localStorage.removeItem("ysm-scene-cap-reflector");
   });
 
-  it("apply 挂载（enabled 默认 true + reflectorEnabled=false 时不创建）", () => {
-    const cap = newCap({ enabled: true });
+  it("apply 挂载（总开关默认关时不创建，schema 键开后才创建）", () => {
+    const cap = newCap();
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
     cap.apply();
     expect(scene.getObjectByName("ysm-reflector")).toBeUndefined();
@@ -437,5 +438,82 @@ describe("ReflectorCapability — 恢复路径来源纪律（锐评 F-2）", () 
     cap.loadState();
     setEnvState({ reflectorResolution: 2048 }, { source: "auto-model" });
     expect(envState.reflectorResolution).toBe(2048);
+  });
+});
+
+// [锐评 F-1] 能力总开关单门收口（fog/water/shadow 先例）：reflector 原为**双门**
+// `!this.enabled || !envState.reflectorEnabled`，且 isEnabled() 只读私有门。两门默认值
+// **相反**（私有 true / schema false，schema 侧刻意默认关——reflector-menu 同纪律
+// 「每帧多一次整场重渲不是白拿的」），故**首启无存档时两门必然不同步**：菜单显示 ON、
+// `buildReflector` 却因 reflectorEnabled=false 不建 mesh——与 fog 收口前的
+// 「master toggle 显示 ON 而 scene.fog 恒 null」是同一脱节病。收口 = 删私有门。
+describe("ReflectorCapability — 能力总开关单门收口（锐评 F-1）", () => {
+  beforeEach(() => {
+    resetEnvState();
+    localStorage.removeItem("ysm-scene-cap-reflector");
+  });
+  afterEach(() => localStorage.removeItem("ysm-scene-cap-reflector"));
+
+  it("[F-1] 私有门已退役（僵尸门守卫：构造不再收 enabled，实例无 enabled 自有属性）", () => {
+    const cap = newCap();
+    expect("enabled" in cap, "私有 enabled 不得复活").toBe(false);
+  });
+
+  it("[F-1] isEnabled/setEnabled 收敛为 envState.reflectorEnabled 别名（首启两门不再背离）", () => {
+    const cap = newCap();
+    // 首启：schema 默认 false → 菜单读数必须同步为 false（旧实现读私有门恒 true = 显示 ON 却无镜）
+    expect(envState.reflectorEnabled).toBe(false);
+    expect(cap.isEnabled(), "首启不得显示 ON 而无镜").toBe(false);
+    expect(cap.getParams().enabled, "getParams 与 isEnabled 同源").toBe(false);
+    // 写口只动 schema 键，且菜单读数随之翻转
+    cap.setEnabled(true);
+    expect(envState.reflectorEnabled).toBe(true);
+    expect(cap.isEnabled()).toBe(true);
+    cap.setEnabled(false);
+    expect(envState.reflectorEnabled).toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+  });
+
+  it("[F-1] 总开关只认 schema 键：直接改 envState.reflectorEnabled 即驱动 mesh 建/拆", () => {
+    const cap = newCap();
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    cap.setEnabledReflector(true);
+    expect(scene.getObjectByName("ysm-reflector")).toBeDefined();
+    expect(cap.isEnabled()).toBe(true);
+    cap.setEnabledReflector(false);
+    expect(scene.getObjectByName("ysm-reflector")).toBeUndefined();
+    expect(cap.isEnabled()).toBe(false);
+  });
+
+  it("[F-1] saveState 不再落无前缀幽灵键 enabled（只写 schema 键形）", () => {
+    const cap = newCap();
+    cap.setEnabledReflector(true);
+    cap.saveState();
+    const saved = JSON.parse(localStorage.getItem("ysm-scene-cap-reflector")!) as Record<string, unknown>;
+    expect("enabled" in saved, "无前缀幽灵键不得再进存档").toBe(false);
+    expect("reflectorEnabled" in saved).toBe(true);
+    expect(saved.reflectorEnabled).toBe(true);
+  });
+
+  it("[F-1] legacy enabled 回填进 schema 键（旧档不丢用户选择）", () => {
+    // 旧档：只有无前缀 enabled，无 reflectorEnabled → 须回填，不得静默丢弃
+    localStorage.setItem("ysm-scene-cap-reflector", JSON.stringify({ enabled: true, size: 250 }));
+    const cap = newCap();
+    cap.loadState();
+    expect(envState.reflectorEnabled, "legacy enabled 须回填 schema 键").toBe(true);
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    expect(scene.getObjectByName("ysm-reflector"), "回填后应重建反射面").toBeDefined();
+    expect(cap.isEnabled()).toBe(true);
+  });
+
+  it("[F-1] legacy 中毒救回：旧档 enabled=false 后仍能重新开启（不得永久关不掉）", () => {
+    localStorage.setItem("ysm-scene-cap-reflector", JSON.stringify({ enabled: false, reflectorEnabled: false }));
+    const cap = newCap();
+    cap.loadState();
+    expect(cap.isEnabled()).toBe(false);
+    cap.setEnabled(true);
+    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+    expect(scene.getObjectByName("ysm-reflector"), "中毒后须能救回").toBeDefined();
+    expect(cap.isEnabled()).toBe(true);
   });
 });

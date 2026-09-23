@@ -39,7 +39,6 @@ export class ReflectorCapability implements SceneCapability {
   readonly descKey = "preview.reflectorDesc";
 
   private scene: THREE.Scene;
-  private enabled: boolean;
 
   private reflector: Reflector | null = null;
   /** loadState 是否成功载入过；applyModelPreset 有它时不覆盖用户会话（对齐 shadow-capability 同名守卫） */
@@ -49,13 +48,8 @@ export class ReflectorCapability implements SceneCapability {
   /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/light 同款）。 */
   private readonly listenerSet = createListenerSet();
 
-  constructor(opts: {
-    scene: THREE.Scene;
-    renderer: THREE.WebGLRenderer;
-    enabled?: boolean;
-  }) {
+  constructor(opts: { scene: THREE.Scene; renderer: THREE.WebGLRenderer }) {
     this.scene = opts.scene;
-    this.enabled = opts.enabled ?? true;
 
     // ADR-196：订阅 envState 变更——细粒度分派（code_review P3 #5/#15/#20 单主化）：
     // 结构性字段（enabled/size/resolution/clipBias）→ buildReflector 全量重建；
@@ -148,7 +142,7 @@ export class ReflectorCapability implements SceneCapability {
 
   private buildReflector(): void {
     this.disposeReflector();
-    if (!this.enabled || !envState.reflectorEnabled) return;
+    if (!envState.reflectorEnabled) return;
     this.reflector = this.createReflectorMesh();
     if (this.reflector) this.scene.add(this.reflector);
   }
@@ -180,17 +174,18 @@ export class ReflectorCapability implements SceneCapability {
   /* -------- 参数 API -------- */
 
   setEnabled(v: boolean): void {
-    this.enabled = v;
-    // master toggle（reflector-menu.ts set:
-    // cap.setEnabled）须打通 envState.reflectorEnabled gate——buildReflector 的
-    // `!envState.reflectorEnabled` 使 toggle ON 后 mesh 永空（唯一写者
-    // setEnabledReflector 无生产调用方）；legacy {enabled:true} 存档无该键同样
-    // 恢复为永久关闭。ADR-196 收口：setEnvState 同步 dispatch → callback buildReflector。
+    // [锐评 F-1] 能力总开关单门收口（fog/water/shadow 先例）——原为**双门**：
+    // 私有 `this.enabled` + `envState.reflectorEnabled`，且 isEnabled() 只读私有门。
+    // 两门默认值**相反**（私有 true / schema false，schema 侧刻意默认关：倒影 = 每帧多
+    // 一次整场重渲进 RT，不是白拿的，与 water 同纪律），故首启无存档时两门必然背离——
+    // 菜单显示 ON 而 buildReflector 因 reflectorEnabled=false 不建 mesh，与 fog 收口前
+    // 「master toggle 显示 ON 而 scene.fog 恒 null」同一脱节病。
+    // 现唯一真值源 = schema 键；setEnvState 同步 dispatch → callback buildReflector。
     setEnvState({ reflectorEnabled: v }, { source: "manual" });
   }
 
   isEnabled(): boolean {
-    return this.enabled;
+    return envState.reflectorEnabled;
   }
 
   /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/water）。 */
@@ -242,7 +237,7 @@ export class ReflectorCapability implements SceneCapability {
 
   getParams() {
     return {
-      enabled: this.enabled && envState.reflectorEnabled,
+      enabled: envState.reflectorEnabled,
       size: envState.reflectorSize,
       resolution: envState.reflectorResolution,
       color: envState.reflectorColor,
@@ -273,8 +268,9 @@ export class ReflectorCapability implements SceneCapability {
   /* -------- 持久化 -------- */
 
   saveState(): void {
+    // [锐评 F-1] 只写 schema 键形：不再落无前缀 `enabled` 幽灵键（私有门已退役）。
+    // 旧存档里的 `enabled` 由 loadState 回填进 `reflectorEnabled`（fog/water/shadow 同法）。
     persistState(this.id, {
-      enabled: this.enabled,
       reflectorEnabled: envState.reflectorEnabled,
       size: envState.reflectorSize,
       resolution: envState.reflectorResolution,
@@ -285,8 +281,15 @@ export class ReflectorCapability implements SceneCapability {
   }
 
   loadState(): void {
-    const state = restoreState(this.id);
-    if (!state) return;
+    const raw = restoreState(this.id);
+    if (!raw) return;
+    // [锐评 F-1] legacy 双轨吸收（fog/water/shadow 先例同法）：
+    // ① 无前缀 `enabled` → `reflectorEnabled` 回填（仅当存档缺该 schema 键）。
+    //    旧档只落 `enabled`，不回填则用户「上次开着镜面」的选择静默丢失。
+    let state = raw;
+    if (!("reflectorEnabled" in raw) && typeof raw.enabled === "boolean") {
+      state = { ...raw, reflectorEnabled: raw.enabled };
+    }
     // [锐评 F-2] 恢复路径来源纪律（fog F-2 / light L-1 / ground 同口径，2026-09-22 立法）：
     // 存档恢复是**程序化动作**，非用户手改 → 一律 auto-model。原实现 6 处全写 manual，
     // 把 reflector 组键的 lastWriteSource 冻成最高优先级，此后同轨 auto-model
@@ -294,11 +297,6 @@ export class ReflectorCapability implements SceneCapability {
     // 静默吞掉——值不变、无报错、无日志，最难查的一类。与 skipMiddleware
     //「存档恢复豁免」同一法理（ADR-254）。
     restoreFields(state, {
-      enabled: {
-        boolean: (v) => {
-          this.enabled = v;
-        },
-      },
       reflectorEnabled: {
         boolean: (v) => setEnvState({ reflectorEnabled: v }, { source: "auto-model" }),
       },

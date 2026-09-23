@@ -1122,9 +1122,13 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
     const scene = new THREE.Scene();
     const renderer = makeFakeRenderer();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-    const reflector = new ReflectorCapability({ scene, renderer, enabled: true });
+    const reflector = new ReflectorCapability({ scene, renderer });
     // ADR-196：构造不再收 params，覆盖走 envState seed
+    // [锐评 F-1] 单门收口后 reflector 总开关 = envState.reflectorEnabled（schema 默认关）；
+    // 本组用例考 SSR 压制/还原，前提是「用户此前开着镜面」——故显式 seed 为 true，
+    // 语义等价于已退役的构造入参 `enabled: true`。
     setEnvState({
+      reflectorEnabled: true,
       ppReflectionMode: opts.mode ?? "envmap+ssr",
       ppReflectorDisableWhenSSR: opts.disableWhenSSR ?? true,
     }, { source: "manual" });
@@ -1239,6 +1243,35 @@ describe("PostprocessingCapability — ReflectorCapability 联动", () => {
     expect(reflector.isEnabled()).toBe(false);
     cap.dispose();
     expect(reflector.isEnabled()).toBe(true);
+  });
+
+  // [锐评 F-1 连带收获] 用户**从未碰过** reflector 总开关（首启 schema 默认关）时，
+  // SSR 的压制→还原一轮**不得凭空建出镜面**。旧实现 isEnabled() 读私有门（恒 true），
+  // 压制时 `reflectorPrevEnabled = true` 记下的是**用户从未表达过的意图**，
+  // SSR 关闭还原即 `setEnabled(true)` → 镜子凭空出现。
+  // 注意与上一条「reflector 原本就关」的区别：那条先显式 setEnabled(false)（用户表过态），
+  // 故旧实现也能通过——真正漏网的是「用户没表过态」这条路径。
+  it("[F-1] 用户从未开过 reflector：SSR 压制→还原一轮后仍保持关（不得凭空冒出镜面）", () => {
+    const scene = new THREE.Scene();
+    const renderer = makeFakeRenderer();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    const reflector = new ReflectorCapability({ scene, renderer });
+    setEnvState({ ppReflectionMode: "envmap+ssr", ppReflectorDisableWhenSSR: true }, { source: "manual" });
+    const cap = new PostprocessingCapability({
+      scene,
+      renderer,
+      camera,
+      enabled: false,
+      caps: { getById: (id) => (id === "reflector" ? reflector : undefined) },
+    });
+    // 首启：用户没开镜面
+    expect(envState.reflectorEnabled).toBe(false);
+    cap.setEnabled(true); // SSR 活动 → 压制
+    expect(reflector.isEnabled()).toBe(false);
+    cap.setReflectionMode("envmap-only"); // SSR 关闭 → 还原
+    expect(reflector.isEnabled(), "用户从未开过 → 还原后仍须关").toBe(false);
+    expect(envState.reflectorEnabled, "schema 键不得被凭空置 true").toBe(false);
+    expect(scene.getObjectByName("ysm-reflector"), "不得凭空建出镜面").toBeUndefined();
   });
 
   it("启用意图关闭后 reflector 恢复（SSR 不再渲染，不压制），dispose 不重复动作", () => {

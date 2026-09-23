@@ -5,8 +5,8 @@
 // 故把**跨文件耦合的关键事实**钉成断言，防后续按印象改动：
 //   ① 双反射（单平面镜 + SSR 同叠）默认不可达 —— 依赖 ppReflectorDisableWhenSSR 默认 true
 //   ② 单平面镜默认关 —— 依赖 envState.reflectorEnabled 默认 false
-//      （⚠️ 注意与 ReflectorCapability 构造的 `enabled ?? true` 区分：那是 cap 自身开关，
-//       buildReflector 仍要 `envState.reflectorEnabled` 才真正建 mesh，两者是 AND 关系）
+//      （[锐评 F-1] 原此处记「cap 构造 `enabled ?? true` 与 schema 键是 AND 关系」——
+//       私有门已随单门收口退役，`isEnabled()` 现直读 schema 键，两门不再背离。）
 //   ③ SSR 默认不启用 —— ppReflectionMode 默认 "envmap-only"
 import { describe, expect, it } from "vitest";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -45,17 +45,29 @@ describe("反射链默认值不变式", () => {
     expect(envState.ppReflectionMode).toBe("envmap-only");
   });
 
-  it("② reflectorEnabled 默认 false —— cap 自身 enabled 默认 true 但不建 mesh（AND 关系）", () => {
+  it("② reflectorEnabled 默认 false —— 单平面镜默认关（单门收口后即 cap 总开关）", () => {
     resetEnvState();
     expect(envState.reflectorEnabled).toBe(false);
     const scene = new THREE.Scene();
     const cap = new ReflectorCapability({ scene, renderer: makeFakeRenderer() });
-    // cap.enabled 默认 true（构造 `enabled ?? true`）
-    expect(cap.isEnabled()).toBe(true);
-    // 但 apply() 因 envState.reflectorEnabled=false 而不建 mesh（AND 关系）
+    // [锐评 F-1] 单门收口：isEnabled() 直读 schema 键，默认关——不再有「私有门恒 true
+    // 而 schema 键 false」的背离（旧实现此处断言 isEnabled()===true 且 getParams().enabled===false，
+    // 即菜单显示 ON 却无镜面的脱节，与 fog 收口前同病）。
+    expect(cap.isEnabled()).toBe(false);
     cap.apply();
     expect(scene.getObjectByName("ysm-reflector")).toBeUndefined();
-    expect(cap.getParams().enabled).toBe(false); // enabled && reflectorEnabled
+    expect(cap.getParams().enabled).toBe(false);
+    cap.dispose();
+  });
+
+  it("②a 菜单读数与 schema 键同源：首启显示关（防「显示 ON 却无镜」回归）", () => {
+    resetEnvState();
+    const scene = new THREE.Scene();
+    const cap = new ReflectorCapability({ scene, renderer: makeFakeRenderer() });
+    // headerToggle/菜单 master 节点读的就是 isEnabled()——首启必须与 schema 键一致为 false
+    const master = cap.getMenuNodes().find((n) => n.id === cap.getMasterNodeId())!;
+    expect(master.control!.get!(undefined)).toBe(false);
+    expect(cap.isEnabled()).toBe(false);
     cap.dispose();
   });
 

@@ -2,12 +2,12 @@
 // 从 community-data.ts 拆出（ADR-040 §2.1）：三路回退拉取是干净的网络 I/O 边界，
 // 与本地数据加载/合并/缓存解耦。本文件只依赖 i18n + bindings 类型，可独立测试。
 
-import { t } from "@/core/i18n/t.ts";
-import { dbg } from "@/utils/debug/debug.ts";
 import type {
   WorkshopCreator,
   WorkshopSite,
-} from "../../../bindings/ysm-model-manager/go/types/models.ts";
+} from "@/bindings/ysm-model-manager/go/types/models.ts";
+import { t } from "@/core/i18n/t.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 
 /**
  * 三路回退拉取 JSON 数组（raw → jsdelivr → GitHub API）。

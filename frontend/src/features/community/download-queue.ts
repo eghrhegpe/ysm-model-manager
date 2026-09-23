@@ -113,7 +113,7 @@ function cmDqCleanupProgressUI(ctx: CmDqCtx, errorSummary?: HTMLElement | null):
       communityGetApp().then((App) => {
         if (App.ClearScanCache) App.ClearScanCache();
         // 解除 features → views 反向依赖：经 bus 事件解耦，订阅在 views 层注册（ADR-039 范式）
-        bus.emit("community:clearCache");
+        bus.emit("community:clear-cache");
       }),
     );
   } catch (_) {
@@ -234,7 +234,9 @@ function cmDqHandleQueueEnded(ctx: CmDqCtx, s: DownloadState): void {
   } else {
     cmDqCleanupProgressUI(ctx, summary || undefined);
   }
-  if (ctx.onAllDone) ctx.onAllDone({ cancelled, errorList: s.errorList });
+  // 传快照拷贝而非活体引用（2026-09 锐评修复）：s 来自 notify 推送的 STATE 活体，
+  // 消费者改写会静默污染活状态——与 onTimedCompletion 路径的 getStateSnapshot 防御级对齐
+  if (ctx.onAllDone) ctx.onAllDone({ cancelled, errorList: getStateSnapshot().errorList });
 }
 
 function cmDqHandleCancel(ctx: CmDqCtx, s: DownloadState): void {
@@ -282,9 +284,15 @@ function cmDqHandleStateChange(ctx: CmDqCtx, s: DownloadState): void {
   if (s.status !== ctx.prev.status) {
     if (s.status === "done" || s.status === "cancelled") {
       cmDqHandleCancel(ctx, s);
-    } else if (s.status === "downloading") {
+    } else if (isActiveStatus(s)) {
+      // 认 downloading 与 enqueued 双态（2026-09 锐评修复）：Go 入队后只发 "enqueued"，
+      // 原只认 "downloading" 依赖「前端直设态恰好先于事件」的脆弱时序——事件序
+      // idle→enqueued 曾跳过 run 分支导致按钮不 disable、进度行不初始化
       cmDqHandleRun(ctx, s);
-    } else if (s.status === "idle" && ctx.prev.status === "downloading") {
+    } else if (
+      s.status === "idle" &&
+      (ctx.prev.status === "downloading" || ctx.prev.status === "enqueued")
+    ) {
       cmDqHandleEnded(ctx);
     }
   }

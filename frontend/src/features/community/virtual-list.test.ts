@@ -1,7 +1,9 @@
 // ===== 定高虚拟列表测试 =====
 // 覆盖：零高度全量回退 / 大数据切片渲染 + padding 撑高 / 滚动后窗口变化 / destroy 清理
+// + measureGhRowH 探针兜底（jsdom 无布局 → GH_ROW_H）
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { createVirtualList } from "./virtual-list.ts";
+import { GH_ROW_H, measureGhRowH } from "./repo-events-shared.ts";
 
 const ROW_H = 42;
 const items = (n: number): string[] => Array.from({ length: n }, (_, i) => `m${i}`);
@@ -105,5 +107,27 @@ describe("createVirtualList", () => {
     scrollEl.dispatchEvent(new Event("scroll"));
     await new Promise((r) => setTimeout(r, 20));
     expect(listEl.childElementCount).toBe(0);
+  });
+});
+
+describe("measureGhRowH 探针行高测量", () => {
+  it("无布局环境（jsdom offsetHeight=0）→ 回退 GH_ROW_H 兜底", () => {
+    const sr = document.createElement("div");
+    expect(measureGhRowH(sr)).toBe(GH_ROW_H);
+    // 探针自清：测量不留残余节点
+    expect(sr.childElementCount).toBe(0);
+  });
+
+  it("有布局探针（stub offsetHeight）→ 实测高 + margin 2px", () => {
+    const sr = document.createElement("div");
+    const proto = HTMLElement.prototype;
+    const original = Object.getOwnPropertyDescriptor(proto, "offsetHeight");
+    Object.defineProperty(proto, "offsetHeight", { configurable: true, get: () => 45 });
+    try {
+      expect(measureGhRowH(sr)).toBe(47); // 45 + margin-bottom 2
+      expect(sr.childElementCount).toBe(0); // 探针自清
+    } finally {
+      if (original) Object.defineProperty(proto, "offsetHeight", original);
+    }
   });
 });

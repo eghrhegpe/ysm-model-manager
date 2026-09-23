@@ -3,11 +3,11 @@
 // P0 整改：代际守卫封装为 createRepoRenderGuard() 工厂，消除模块级可变全局。
 // 模块级 defaultRepoGuard 保持既有消费者零改动。
 
+import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { stripDisableSuffix } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
-import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { bindRepoEvents } from "./events.ts";
 import type { WorkshopModel } from "./render.ts";

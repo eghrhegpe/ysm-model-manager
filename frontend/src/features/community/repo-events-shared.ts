@@ -72,7 +72,46 @@ export function cmReListen<K extends keyof HTMLElementEventMap>(
   el.addEventListener(type, handler);
 }
 
+/**
+ * 行高兜底值 42px = `.gh-row` 内容高（`.gh-icon-btn` 28px，content-gh.ts）
+ * + padding 上下各 `--pad-nav`(6px) + margin-bottom 2px（--fs-scale=0 基准下成立）。
+ * ⚠️ `--pad-nav = 6px + var(--fs-scale) * 0.5`——字体缩放主题下行高随之增长，
+ * 定值 42 会产生累计偏移（每行 ±scale px × 行数）。故 bindRepoEvents 优先用
+ * {@link measureGhRowH} 实测，本常量仅作测量失败（零布局/jsdom）兜底。
+ */
 export const GH_ROW_H = 42;
+
+/**
+ * 探针实测 .gh-row 行高（含 margin-bottom 2px，虚拟列表占位计算需含之内存高）。
+ * 临时挂入 sr（shadow 树内，content-gh.ts adopted rules 生效），同步读取后移除；
+ * offsetHeight 为 0（jsdom/无布局）返回 GH_ROW_H 兜底。DOM API 构建（R8：features 禁 HTML 字面量）。
+ */
+export function measureGhRowH(sr: HTMLElement): number {
+  const probe = document.createElement("div");
+  probe.className = "gh-row";
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  for (const [cls, isActions] of [
+    ["gh-name-wrap", false],
+    ["gh-meta", false],
+    ["gh-actions", true],
+  ] as const) {
+    const cell = document.createElement("div");
+    cell.className = cls;
+    if (isActions) {
+      const btn = document.createElement("button");
+      btn.className = "gh-icon-btn";
+      cell.appendChild(btn);
+    }
+    probe.appendChild(cell);
+  }
+  sr.appendChild(probe);
+  // offsetHeight 不含 margin-bottom：有布局时补固定 2px（.gh-row margin-bottom: 2px，
+  // 不随主题缩放）。判 0 在加 margin 之前——jsdom offsetHeight 恒 0，加完再判会误得 2
+  const rawH = probe.offsetHeight;
+  probe.remove();
+  return rawH > 0 ? rawH + 2 : GH_ROW_H;
+}
 
 /** 依据当前筛选/缺失开关重算 filtered 列表并刷新虚拟列表 */
 export function cmReRenderList(ctx: CmReCtx, filter?: string): void {

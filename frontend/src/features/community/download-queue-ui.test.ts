@@ -234,6 +234,38 @@ describe("createDownloadQueue UI 层", () => {
     ctrl.destroy();
   });
 
+  it("queue:status enqueued 也进 run 分支（2026-09 时序护栏：按钮 disabled + 队列行 show，不依赖前置 downloading）", async () => {
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    // idle → enqueued 直跳（Go 事件序，无 downloading 中间态）：run 分支必须生效
+    emit("queue:status", ["enqueued", 2, undefined]);
+    const qs = sr.querySelector("#gh-queue-status") as HTMLElement;
+    const btn = sr.querySelector(".gh-dl-selected") as HTMLButtonElement;
+    expect(qs.classList.contains("show")).toBe(true);
+    expect(btn.disabled).toBe(true);
+    ctrl.destroy();
+  });
+
+  it("done 收口 onAllDone 收到的是快照拷贝（改写不污染 STATE.errorList——2026-09 修复护栏）", async () => {
+    const { ctrl, onAllDone } = createCtrl();
+    await Promise.resolve();
+    emit("queue:file-done", ["f.ysm", "fail", "磁盘已满"]);
+    emit("queue:status", ["done", 0, undefined]);
+    expect(onAllDone).toHaveBeenCalledTimes(1);
+    const arg = onAllDone.mock.calls[0][0] as {
+      cancelled: boolean;
+      errorList: Array<{ name: string; err: string }>;
+    };
+    expect(arg.errorList[0].err).toBe("磁盘已满");
+    arg.errorList[0].err = "被改";
+    arg.errorList.push({ name: "hack", err: "y" });
+    // 消费者改写后回拉快照：STATE 未被污染
+    const { getStateSnapshot } = await import("./download-queue.ts");
+    expect(getStateSnapshot().errorList).toHaveLength(1);
+    expect(getStateSnapshot().errorList[0].err).toBe("磁盘已满");
+    ctrl.destroy();
+  });
+
   it("cancelled → qs 唯一直接子节点为已取消 span（无错误列表时不建 wrap）", async () => {
     const { sr, ctrl } = createCtrl();
     await Promise.resolve();

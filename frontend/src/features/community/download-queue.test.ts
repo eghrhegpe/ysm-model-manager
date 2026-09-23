@@ -362,6 +362,25 @@ describe("后端事件处理", () => {
     expect(s._lastDoneSeq).toBe(2);
   });
 
+  it("queue:file-done 不本地递减 remaining（单一事实源所有权护栏：remaining 只认 Go file-start 载荷，本地递减会造成批次中途假归零 → completeTimer 提前假完成）", () => {
+    emit("queue:file-start", ["a.ysm", 3, 2]); // pos=3 left=2（queue.go:254 语义）
+    emit("queue:file-done", ["a.ysm", "ok", ""]);
+    expect(getState().remaining).toBe(2); // file-done 只推进 _lastDoneSeq，不碰 remaining
+    expect(getState()._lastDoneSeq).toBe(1);
+  });
+
+  it("queue:status done 强制 remaining 归零（批中途收口不残留未完成计数）", () => {
+    emit("queue:file-start", ["a.ysm", 3, 2]);
+    emit("queue:status", ["done", 0, undefined]);
+    expect(getState().remaining).toBe(0);
+  });
+
+  it("queue:status cancelled 强制 remaining 归零（批中途取消快照干净）", () => {
+    emit("queue:file-start", ["a.ysm", 3, 2]);
+    emit("queue:status", ["cancelled", 0, undefined]);
+    expect(getState().remaining).toBe(0);
+  });
+
   it("download:progress 更新进度", () => {
     emit("download:progress", [50, 100]);
     expect(getState().progress).toEqual({ dl: 50, total: 100 });

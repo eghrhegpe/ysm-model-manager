@@ -78,7 +78,7 @@ class AppContent extends WebComponentBase {
     );
     // 社区缓存统一失效（原社区-data.ts 模块级 bus.on 迁移至生命周期桶，
     // 组件 disconnectedCallback 经 SubscriptionBucket.cleanupAll 自动退订，防泄漏）
-    this.subs.addGlobal(bus.on("community:clearCache", clearAllCommunityCache));
+    this.subs.addGlobal(bus.on("community:clear-cache", clearAllCommunityCache));
     this._render();
     // core 内核 + features 全局 handler（ADR-188：core/handlers/global 汇编壳已删，
     // app-content 直接注册各 features 全局 handler——core 不设壳层）

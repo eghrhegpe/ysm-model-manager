@@ -60,7 +60,9 @@ quick_intents:
 pitfalls:
   - ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On 无对应 Off（app 级单例，_registered 守卫防重复注册）
   - 非 app 级模块禁止复制此模式
-  - isActiveStatus 必须同时认 "downloading" 和 "enqueued"（Go 端入队后只发 enqueued，从不发 downloading）
+  - isActiveStatus 必须同时认 "downloading" 和 "enqueued"（Go 端入队后只发 enqueued，从不发 downloading）；UI 控制器 run/ended 分支同样走 isActiveStatus，勿再裸比较单字符串（2026-09 修复：idle→enqueued 直跳曾跳过 run 分支致按钮不 disable）
+  - remaining 所有权归 Go file-start 载荷（pos/left 语义，queue.go:254——末文件 left=0），**前端 file-done 禁止本地递减**：递减会在「本文件 done → 下一文件 start」窗口造成假归零，completeTimer `remaining>0` 守卫被击穿 → 批次中途假完成提前收口（2026-09 实证证伪「死代码」推断的教训）；done/cancelled 事件前端强制 remaining=0 仅限收口清残值
+  - 队列收口 onAllDone 载荷的 errorList 必须是 getStateSnapshot 拷贝（与 onTimedCompletion 路径防御级对齐），活体引用会静默污染 STATE
   - web 下载入库上限 50MB（WEB_DOWNLOAD_IDB_LIMIT），超限回退浏览器直链
   - fetch 15s 超时兜底（WEB_DOWNLOAD_FETCH_TIMEOUT_MS），防挂起服务器永久卡队列
 use_when:
@@ -132,7 +134,9 @@ ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`que
 ## 不变量
 
 - **app 级单例豁免**：`_registered` 布尔守卫防重复注册；禁止非 app 级模块复制此模式。
-- **isActiveStatus 双状态**：必须同时认 `downloading` 和 `enqueued`（P1 修复：Go 端入队后只发 `enqueued`）。
+- **isActiveStatus 双状态**：必须同时认 `downloading` 和 `enqueued`（P1 修复：Go 端入队后只发 `enqueued`）。UI 控制器（download-queue.ts）status 分支的 run/ended 判定同走 `isActiveStatus`，杜绝「idle→enqueued 直跳漏初始化 / enqueued→idle 回滚漏清理」。
+- **remaining 单一事实源**：`STATE.remaining` 只镜像 Go `queue:file-start` 载荷的 left（末文件为 0），file-done handler **不本地递减**（递减会造成批次窗口假归零，击穿 progress.ts completeTimer 的 `remaining>0` 守卫 → 提前假完成）；`queue:status` done/cancelled handler 强制归零清残值。
+- **收口载荷快照化**：`cmDqHandleQueueEnded` 向 `onAllDone` 传 `getStateSnapshot().errorList`（非 notify 活体引用），与 `onTimedCompletion` 路径防御级对齐——消费者改写不得污染 STATE。
 - **web 下载 50MB 上限**：`download-queue-web.ts` 的 `WEB_DOWNLOAD_IDB_LIMIT`（与 `web-common` 的 `DetectContainerType` 同款量级守卫）；超限回退浏览器直链。
 - **fetch 15s 超时兜底**：`download-queue-web.ts` 的 `WEB_DOWNLOAD_FETCH_TIMEOUT_MS`（防挂起服务器永久卡队列）。
 - **getStateSnapshot 只读**：调用方应只读快照、不可修改——修改会绕过通知链路。深拷贝（progress / _lastDone 新对象，errorList 元素逐一拷贝）使「只读快照」从君子协定变真保证；快照独立性回归护栏见 `download-queue.test.ts` 的「getStateSnapshot 快照独立性」describe（5 用例：progress / errorList push / errorList 元素级 / _lastDone 各路径）。

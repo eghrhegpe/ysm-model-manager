@@ -80,7 +80,7 @@ export interface BusEvents {
   // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "tree:reload": void;
   // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
-  "community:clearCache": void; // features → views 解耦（download-queue 触发社区缓存失效）
+  "community:clear-cache": void; // features → views 解耦（download-queue 触发社区缓存失效；2026-09 由 clearCache 归一 kebab-case）
   "tree:set-search": string; // tree 搜索关键字（app-tree 实证：srch.value = name）
   "avatar:refresh": { author: string; dataUri: string };
   // 模型 / 选择
@@ -140,7 +140,7 @@ type VoidEventName = {
 const VOID_EVENTS = [
   "stats:refresh",
   "tree:reload",
-  "community:clearCache",
+  "community:clear-cache",
   "sync:toggle:status",
   "batch:enable-all",
   "batch:disable-all",

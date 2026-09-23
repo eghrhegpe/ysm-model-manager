@@ -22,8 +22,8 @@ import {
   type CmReState,
   cmReRenderList,
   cmReUpdateSelectedUI,
-  GH_ROW_H,
   type ListenerRef,
+  measureGhRowH,
   type RepoEventsContext,
   type RepoEventsHandle,
 } from "./repo-events-shared.ts";
@@ -93,7 +93,7 @@ export function bindRepoEvents(sr: HTMLElement, ctx: RepoEventsContext): RepoEve
     ? createVirtualList<WorkshopModel>({
         scrollEl: sr,
         listEl,
-        rowH: GH_ROW_H,
+        rowH: measureGhRowH(sr),
         renderItem: (m) =>
           buildModelRow(m, { dlPrefix, localMap, showAll: state.showAll, selectedSet, esc }),
         renderEmpty: () => {

@@ -1,13 +1,13 @@
 // ===== 创意工坊纯数据层 =====
 
+import type {
+  WorkshopCreator,
+  WorkshopSite,
+} from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { invalidateCache, withCached } from "@/utils/cache/with-cached.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import type {
-  WorkshopCreator,
-  WorkshopSite,
-} from "../../../bindings/ysm-model-manager/go/types/models.ts";
 import { communityGetApp } from "./community-deps.ts";
 // 远程拉取层（ADR-040 拆出）：本文件既在 tryAutoMergeCommunity 本地使用，又保留
 // re-export 以维持 `import * as m from community-data.ts` 既有契约（site/edit.ts 零改动）

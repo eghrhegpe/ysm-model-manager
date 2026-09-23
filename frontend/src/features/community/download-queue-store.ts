@@ -296,6 +296,9 @@ if (!_registered) {
     if (status === "done" || status === "cancelled") {
       STATE.status = status;
       STATE.currentFile = "";
+      STATE.remaining = 0; // 收口归零：Go 对 done/cancelled 发 total=0（queue.go:228/145），
+      // 但 done 事件载荷无 remaining 字段——批中途取消会残留旧值，快照消费者
+      // （resume 对账 / UI「剩 N」）不应在收口后还看到未完成计数
       STATE.progress = { dl: 0, total: 0 };
       notify();
     } else if (status === "enqueued") {
@@ -329,6 +332,13 @@ if (!_registered) {
     if (status === "fail") {
       STATE.errorList.push({ name, err: errMsg || t("error.unknown") });
     }
+    // ⚠️ 勿在此「补一个 remaining 递减」——2026-09 锐评曾据「desktop 路径 remaining
+    // 永不归零 → completeTimer 兜底死代码」的推断提出此修法，经实证 Go 源码证伪：
+    // queue.go:245 `remaining := len(q.tasks)` 在出队后取，末文件 file-start 即发 0
+    // （app_download.go QueueStatus 同款），progress.ts 的 `s.remaining > 0` 守卫在末
+    // 文件自然放行，3s 兜底从未死。本地递减反而制造提前归零：批次中途 done 后、下一
+    // file-start 到达前的窗口内 completeTimer 守卫全通 → 假完成提前收口（P1 回归）。
+    // remaining 所有权归 Go file-start，前端只镜像不推导——单一事实源纪律。
     STATE._lastDone = { name, status, errMsg: errMsg || "" };
     STATE._lastDoneSeq++;
     notify();

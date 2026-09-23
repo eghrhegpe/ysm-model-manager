@@ -1426,3 +1426,110 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
    把 AND 关系**作为事实固化下来**（还加了「注意与构造 `enabled ?? true` 区分」的注脚），
    复核时它的全绿被当成「此处无误」的证据。**复核既有测试时要问：这条不变式是在描述期望，
    还是在给现状背书？**——描述「当前两值是什么关系」的断言，会把 bug 一起锁进去。
+
+---
+
+## §23 Sky 单门收口（F-1 三度收口：本族最后一个结构病余项，2026-09-22）
+
+§19 的横向排查、§21（shadow）、§22（reflector）已把地面/水面/阴影/反射四路的能力级开关从
+「私有门 + 无前缀幽灵键」收编进 schema 单门。**sky 是本族最后一个在结构上已具备病灶的余项**，
+本节闭合它，并使**全仓 29 枚 boolean schema 键全部有生产写入者**（零幽灵键）。
+
+### 23.1 病灶形态：一个文件里三处同病
+
+`sky-capability.ts` 同时含三处「schema 键 + 私有镜像」，是本次最值得记的发现：
+
+| # | 私有态 | 对应 schema 键 | 写口 | 收口前症状 |
+|---|--------|---------------|------|-----------|
+| ① | `private enabled: boolean`（构造 `opts.enabled ?? true`） | **键不存在** | `sky-menu.ts\|skyEnabledNode` toggle | 开关只有私有落点；`saveState` 落无前缀 `enabled` 幽灵键，`loadState` 读回私有门 |
+| ② | `SunBeams.enabled`（`sun-beams.ts` 私有门） | `skyGodRaysEnabled` | `sky-capability.ts\|setGodRaysEnabled` | **幽灵键**：schema 声明了键，生产码零写入者，真开关藏在 helper 类的私有门里 |
+| ③ | `private autoRotateOn`（靠 env 回调同步的镜像） | `skyAutoRotate` | `startAutoRotate`/`stopAutoRotate` | **潜伏**：`loadState` 改走 `suspendEnvCallbacks()` 后镜像永不回填 |
+
+第 ③ 处**不是靠读代码发现的，是靠给 `loadState` 补 `suspendEnvCallbacks()` 照出来的**——
+挂起派发即切断「回调同步镜像」这条隐线，任何依赖它的私有态立刻失同步。补挂起后
+`skyAutoRotate` 持久化用例实测转红（存档 `true`、`isAutoRotating()` 读 `false`），
+**这条新加的正确性改动，反过来照出了同文件第三处旧病**。
+
+> **方法沉淀**：想找出 cap 里所有「schema 键 + 私有镜像」，比逐行 grep 更有效的探针是
+> **给 `loadState` 补 `suspendEnvCallbacks()`**——凡是靠 env 回调维持同步的私有态都会失同步。
+> 这条探针既做对事（恢复期防重入双跑），又免费做体检。
+
+### 23.2 收口依据：ADR-250 已推翻旧红线
+
+§19 曾援引 ADR-196 记的「per-type 门禁，属能力级 enabled 不入 schema 红线」判定 sky 暂缓。
+本轮核实该红线**已被 ADR-250（已采纳，2026-09-16）判定为误判并推翻**：
+
+> 门禁之所以一度无家可归，是因它被误判为「能力级挂载」。但实际上「是否显示后处理效果」是
+> **用户对可见效果的偏好**，与「cap 是否构造」是两件事。
+
+且 ADR-250 §2.4 点名 **sky** 与 pp/light/fog/shadow/reflector 走同一条路；源码侧 `ppEnabled`
+已入 schema、`POSTPROC_PRESETS`/`perTypeGate`/`perfMaster` 已退役——**收口 sky 不是「要不要破例」，
+而是补上 ADR-250 已宣告的同族之路**。
+
+> **方法沉淀**：ADR 的「背景/Context」段是**决策时的历史快照**。旧 ADR 里的一条红线，
+> 可能已被新 ADR 在「决策」段明确推翻。评估「该不该并入」时须查**最新** ADR 的决策段，
+> 不能只读旧 ADR 正文里那句红线。
+
+### 23.3 收口内容
+
+1. **schema**：新增 `skyEnabled`（默认 `true`）置于 `// --- Sky ---` 之后首位，
+   对齐 water/fog/shadow/reflector/pp 的既有布局（每组的 `XEnabled` 键都排第一）。
+   默认 `true` = 被退役私有门的有效默认 → **零行为漂移**（**无** reflector 那种默认值冲突，
+   故无需拍板）。
+2. **删私有门**：`private enabled` 与 `private autoRotateOn` 一并退役；
+   `isEnabled/isAutoRotating/isGodRaysEnabled/update/apply/applyModelPreset` 一律直读 envState。
+   `SunBeams` 删 `enabled`/`setEnabled`/`isEnabled`，**降为无状态执行器**——挂载判据只剩
+   几何/角度事实，不再含能力开关语义。开关请求态由宿主 `sky-capability.ts|syncBeams` 现读判定。
+3. **回调接管**：新增 `changed.has("skyEnabled")` 分支（开态 `apply`、关态 `detach` + notify）。
+   开态可直接 `return`——`apply()` 已从 envState 全量重写 uniform/挂载/曝光/IBL/光束，
+   同批兄弟键亦被覆盖，与 shadow 同形。
+4. **存档键形**：两枚开关改落 schema 键形（`skyEnabled`/`skyGodRaysEnabled`），
+   **兄弟键保持无前缀方言零迁移**——`environment` 键另有跨槽读者
+   （`environment-capability.ts|loadState` 读 `skyState.environment` 做 ADR-292 旧档归一），
+   改名即断链。同族先例：reflector 亦仅前缀总开关。
+5. **legacy 回填 + 挂起派发**：`loadState` 双腿吸收旧档（`enabled`→`skyEnabled`、
+   `godRaysEnabled`→`skyGodRaysEnabled`，判「前缀键缺失 ∧ 旧键类型合法」），
+   并补 `suspendEnvCallbacks()`（fog/water/env/light 同法）。
+   **不加 `isStateLoaded`**——sky 不在 `MODEL_DEFAULTS`（ADR-284 大气与类别解耦），
+   无同轨模型写对手，原 `loadState` 注释里的这条理由依然成立。
+
+### 23.4 为何是「结构病」而非「活体故障」
+
+诚实定级：sky 收口前**用户可见行为是正确的**（开关读写一致、存档往返一致——私有门双轨自洽）。
+它缺的是单门收口的保障：`getParams()`/UI 与真值源之间是私有态直读，任何「只写 envState 的旁路」
+（氛围预设、未来程序化调用）都无法改变天空开关。故本节的价值是**真值源统一 + 消除幽灵键**，
+不是修一个正在发作的故障——这点与 §22 reflector（**有实测可复现的首启背离**）不同，不可混为一谈。
+
+### 回归锁
+
+`sky-capability.test.ts`「能力级开关单门收口」describe 八例：僵尸门守卫 ×2（cap 与 `SunBeams`
+**均**不得持有 `enabled` own 属性）/ 别名双向真落场景挂载 / 幽灵键 ×2 不进存档 /
+legacy 中毒救回 ×2（旧档 `enabled=false`、旧档 `godRaysEnabled=true`）/
+别名走单一真值源 / **第三处镜像：`autoRotateOn` 退役 + 挂起恢复后仍能推进时间轴**。
+
+### 验证
+
+| 门禁 | 结果 |
+|------|------|
+| sky F-1 新锁对旧实现（红相） | **7 failed | 98 passed** |
+| sky 收口后单文件 | **106 passed** |
+| `vitest --run src/preview-3d/` 全量 | **2881 passed / 158 files**（较 §22 再 +9） |
+| `npx tsc --noEmit` | EXIT 0 |
+| `npx vite build` | EXIT 0 |
+| `check-biome --files`（5 改动文件） | 通过 ✅ |
+| 全 29 枚 boolean schema 键生产者扫描 | **零幽灵键**（收口前 `skyGodRaysEnabled` 是唯一零写入者） |
+| 知识卡回写 | `preview_env_state.md`（sky 收口条 / 同族余项改判 / 并入判据补 sky / 键形分组 / light 注脚补两形态对比） |
+
+### 方法层沉淀
+
+1. **`suspendEnvCallbacks()` 是私有镜像的照妖镜**（见 §23.1）——补挂起能一次照出所有
+   「靠回调同步的私有态」，比 grep 有效。
+2. **一个文件可以携带同一种病的多个样本**：sky 三处（①无键私有门 ②有键但幽灵 ③有键有写口
+   但靠镜像同步），形态各异、病根同一。审计不能停在「这个 cap 查过了」。
+3. **幽灵键的机械扫法可复用**：逐 schema 键统计生产消费者，**判别式是「读而无写」**而非
+   「零消费者」——`skyGodRaysEnabled` 有读者（回调分支 + notify 列表）却零写入者，
+   单纯数「有没有人提到它」会漏判。
+4. **诚实定级**：结构病 ≠ 活体故障。同一族的 reflector 有可复现的首启背离，sky 只有
+   「将来任何第三条写路都会失效」的结构隐患。报告里必须写清是哪一种，否则方法层的
+   「并入判据」会被误当成「凡私有门皆故障」。
+

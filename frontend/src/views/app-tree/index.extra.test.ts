@@ -472,9 +472,13 @@ describe("app-tree index 入口生命周期（补位）", () => {
       throw new Error("toolbar boom");
     });
     const el = await mountEl();
+    const treeHtml = el.shadowRoot!.getElementById("tree")!.innerHTML;
     // 结构兜底断言：empty/big 容器仍在（图标与包裹在模板层 treeLoadFailedHTML）
-    expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toContain('class="big"');
-    expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toContain(t("tree.treeLoadFailed"));
+    expect(treeHtml).toContain('class="big"');
+    expect(treeHtml).toContain(t("tree.treeLoadFailed"));
+    // ADR-248 回归锁：空态图标必须是 SVG（语义名经 resolveIcon 落位），不是裸 emoji 字形
+    expect(treeHtml).toContain("<svg");
+    expect(treeHtml).not.toMatch(/[📁🔍⚠️]/u);
     expect(loader).not.toHaveBeenCalled(); // _load 未及执行
     expect(el.ready).toBe(true);
   });

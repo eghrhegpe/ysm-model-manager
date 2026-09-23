@@ -2,7 +2,8 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
+import { UI_ICONS, type UiIconName } from "@/utils/icon/ui-icons.ts";
 import { renderDropdown, toolbarMenuTestids } from "./toolbar-menus.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -46,8 +47,15 @@ export function footerHTML(): string {
 </div>`;
 }
 
-export function emptyStateHTML(icon: string, msg: string): string {
-  return `<div class="empty"><div class="big">${icon}</div>${msg}</div>`;
+/**
+ * 空态视图。
+ *
+ * 形参收 `UiIconName`（ADR-248 类型根治）：**裸 emoji 字面量编译期即错**——
+ * 此前签名是 `icon: string`，于是「同一函数两处传 UI_ICONS、两处传 📁/🔍 裸字形」
+ * 的双轨并存无人拦（2026-09 收尽）。语义名经 `resolveIcon` 落位，随主题着色缩放。
+ */
+export function emptyStateHTML(icon: UiIconName, msg: string): string {
+  return `<div class="empty"><div class="big">${resolveIcon(icon)}</div>${esc(msg)}</div>`;
 }
 
 /**
@@ -64,11 +72,12 @@ export function renderRepoLabel(filesRoot: string): string {
 }
 
 export function spinnerHTML(): string {
-  // HTML 结构（empty/big 包裹）在模板层，i18n 值只含纯文本（刀㉓：结构与内容分界）
-  return emptyStateHTML(UI_ICONS.refresh, t("tree.scanning"));
+  // HTML 结构（empty/big 包裹）在模板层，i18n 值只含纯文本（刀㉓：结构与内容分界）；
+  // 图标形参走语义名（空态族统一契约，见 emptyStateHTML）
+  return emptyStateHTML("refresh", t("tree.scanning"));
 }
 
 /** 树加载失败兜底视图：结构（empty/big + 图标）在模板层，i18n 值纯文本。 */
 export function treeLoadFailedHTML(): string {
-  return emptyStateHTML(UI_ICONS.warning, t("tree.treeLoadFailed"));
+  return emptyStateHTML("warning", t("tree.treeLoadFailed"));
 }

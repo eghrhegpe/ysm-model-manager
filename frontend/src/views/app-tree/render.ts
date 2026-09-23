@@ -489,14 +489,14 @@ export function renderTree(
   mode: RenderMode = "grid",
 ): void {
   if (!entries.length) {
-    container.innerHTML = emptyStateHTML("📁", t("tree.noModelFiles"));
+    container.innerHTML = emptyStateHTML("folder", t("tree.noModelFiles"));
     cleanupVirtualScroll(ctx, container);
     return;
   }
   const root = getBuildTreeCached(ctx, entries, sort, filterPaths);
   const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode);
   if (!rows.length) {
-    container.innerHTML = emptyStateHTML("🔍", t("tree.noMatchFiles"));
+    container.innerHTML = emptyStateHTML("search", t("tree.noMatchFiles"));
     cleanupVirtualScroll(ctx, container);
     return;
   }

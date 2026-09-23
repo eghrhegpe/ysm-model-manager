@@ -84,8 +84,8 @@ ${noAnimationsCSS}
 .model-card {
   background:var(--card);
   border:1px solid var(--bd);
-  border-radius:var(--radius-lg);
-  padding:var(--card-padding,10px 12px);
+  border-radius:var(--radius-card);
+  padding:var(--card-padding);
   text-align:left;
   cursor:pointer;
   transition:var(--tr-normal);
@@ -116,8 +116,8 @@ ${noAnimationsCSS}
 
 /* 紧凑卡片 — 网格布局（2列/3列） */
 .model-card-sm {
-  padding:var(--card-padding,6px 10px);
-  border-radius:var(--radius-lg);
+  padding:var(--card-padding);
+  border-radius:var(--radius-card);
   border:1px solid var(--bd);
   background:var(--card);
   text-align:left;

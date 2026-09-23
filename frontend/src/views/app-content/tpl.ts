@@ -114,7 +114,7 @@ export function repositoryHTML(): string {
     panels +
     "</div>" +
     '<div class="preview-resize-handle" id="preview-resize-handle" style="width:4px;cursor:col-resize;background:transparent;transition:background var(--tr-fast);flex-shrink:0"></div>' +
-    '<app-preview id="app-preview" style="width:var(--preview-width,220px);flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
+    '<app-preview id="app-preview" style="width:var(--preview-width,240px);flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
     "</div>" +
     "</div>"
   );

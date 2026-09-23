@@ -11,7 +11,7 @@ export const contentDiagCSS: string = `
    debug/skip 属次级信息用 muted，fatal 复用 error 红（级别差由图标形状区分）。 */
 .log-row .log-status.success { color:var(--status-success); }
 .log-row .log-status.failed, .log-row .log-status.error, .log-row .log-status.fatal { color:var(--status-error); }
-.log-row .log-status.warn { color:var(--status-warning, #e6b800); }
+.log-row .log-status.warn { color:var(--status-warning); } /* 审计 P2-6：删 --status-warning 冗余回退（6 主题已定义） */
 .log-row .log-status.debug, .log-row .log-status.skipped { color:var(--muted); }
 /* ADR-289：运行时日志按推断 Level 出 class。info 中性（不抢眼，运行时大量是正常流水），
    unknown = 无 Level 字段的旧数据/兜底，与 muted 同档。 */
@@ -178,7 +178,7 @@ export const contentDiagCSS: string = `
 .perf-sb-parity-warn { color:var(--status-warning); font-weight:600; }
 .perf-sb-parity-bad { color:var(--status-error); font-weight:600; }
 .perf-sb-diff { font-size:var(--fs-xs); color:var(--muted); word-break:break-all; padding-left:10px; }
-.perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-md); background:var(--surf); padding:var(--sp-vh-btn); margin:4px 0; animation: conflictRowIn .3s ease both; }
+.perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-card); background:var(--surf); padding:var(--sp-vh-btn); margin:4px 0; animation: conflictRowIn .3s ease both; } /* 审计 P1-2：卡片圆角收口 --radius-card */
 .perf-hist-head { display:block; font-size:var(--fs-sm); color:var(--txt); margin-bottom:2px; }
 .perf-hist-head code { background:var(--bg); padding:0 var(--sp-1); border-radius:var(--radius-xs); font-size:var(--fs-xs); }
 .perf-hist-body { display:block; font-size:var(--fs-xs); color:var(--muted); white-space:pre-wrap; }
@@ -210,7 +210,7 @@ export const contentDiagCSS: string = `
 .diag-dedup-rt { display:flex;align-items:center;gap:4px;padding:6px 12px 2px;font-size:var(--fs-xs);font-weight:600;color:var(--txt); }
 .diag-dedup-rt-sep { flex:1;border-bottom:1px solid var(--bd);margin-left:6px; }
 .diag-dedup-rt-count { font-size:var(--fs-micro);color:var(--muted);font-weight:400; }
-.diag-dedup-group { margin:4px 12px;border:1px solid var(--bd);border-radius:var(--radius-lg);overflow:hidden; }
+.diag-dedup-group { margin:4px 12px;border:1px solid var(--bd);border-radius:var(--radius-card);overflow:hidden; } /* 审计 P1-2：卡片圆角收口 --radius-card */
 .diag-dedup-group-head { display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:var(--fs-xs);font-weight:600;color:var(--txt);background:var(--surf);border-bottom:1px solid var(--bd); }
 .diag-dedup-group-fill { flex:1; }
 .diag-dedup-group-info { font-size:var(--fs-micro);color:var(--muted);font-weight:400; }
@@ -240,7 +240,7 @@ export const contentDiagCSS: string = `
    而是常驻 .diag-bar（选择器 + 按钮直接排在栏内）——旧卡片类失去生产者，规则一并退场。 */
 .diag-sync-resolve { margin-top:16px; padding:var(--sp-3); background:var(--surf); border-radius:var(--radius-lg); }
 .diag-dedup-config { padding:var(--sp-vh-pane); }
-.diag-warn { color:var(--status-warning, #e6b800); font-weight:600; }
+.diag-warn { color:var(--status-warning); font-weight:600; } /* 审计 P2-6：删 --status-warning 冗余回退（6 主题已定义） */
 
 /* P1 批次12:工坊行名称容器(community/render.ts nameWrap,gh-row 列1 内部 flex 容器) → 已归位 content-gh.ts */
 `;

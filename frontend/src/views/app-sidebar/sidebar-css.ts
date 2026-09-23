@@ -22,8 +22,8 @@ export const sidebarCSS: string = `
    由 ui-prefs.ts 统一注入）；.active 的 padding-left 需补偿 3px 指示边框，
    故同样基于 --card-padding 的水平分量派生，避免密度切换后选中态文字错位 */
 .instance-card-header {
-  padding: var(--card-padding, 5px 10px); cursor: pointer; transition: background var(--tr-fast);
-}
+  padding: var(--card-padding); cursor: pointer; transition: background var(--tr-fast);
+} /* 审计 P1-3：删 --card-padding 手抄回退（真值 6px 10px，:29 的选中态 padding-left 补偿仍基于 --card-pad-x） */
 .instance-card-header:hover { background: var(--hover); }
 /* 高亮对齐导航栏选中态口径：--hover 淡底（与文件树悬停同口径，亮色主题不加深）+ 指示边框，文字保持 --txt */
 .instance-card-header.active { background: var(--hover); border-left: 3px solid var(--accent); padding-left: max(0px, calc(var(--card-pad-x, 10px) - 3px)); }

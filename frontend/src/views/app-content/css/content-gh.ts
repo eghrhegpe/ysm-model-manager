@@ -15,7 +15,7 @@ export const contentGhCSS: string = `
 .gh-loading-placeholder { padding:var(--sp-5);text-align:center;color:var(--muted);font-size:var(--fs-sm); }
 .gh-initial-hint { color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center; }
 .gh-grid { flex:1; overflow-y:auto; padding:var(--btn-padding-md); display:flex; flex-direction:column; gap:4px;will-change:scroll-position; }
-.gh-card { display:flex; align-items:center; gap:var(--card-gap,8px); padding:var(--card-padding,7px 10px); border-radius:var(--radius-lg); border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:var(--tr-normal), box-shadow var(--tr-normal); box-shadow:var(--card-shadow, none); transform:translateZ(0); animation:fadeSlideUp var(--tr-enter) both; }
+.gh-card { display:flex; align-items:center; gap:var(--card-gap); padding:var(--card-padding); border-radius:var(--radius-card); border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:var(--tr-normal), box-shadow var(--tr-normal); box-shadow:var(--card-shadow, none); transform:translateZ(0); animation:fadeSlideUp var(--tr-enter) both; } /* 审计 P1-2/P1-3：卡片圆角收口 --radius-card，删 --card-padding 手抄回退 */
 .gh-card:hover { border-color:var(--accent); background:var(--hover); box-shadow:var(--card-shadow-hover, none); transform:translateY(-1px); }
 .gh-card.active { border-color:var(--accent); background:var(--accent); color:var(--bg); box-shadow:var(--card-shadow-hover, none); }
 .gh-card .name { font-size:var(--fs-md); font-weight:var(--fw-bold); color:var(--txt); font-family:var(--font-display); overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
@@ -55,11 +55,11 @@ export const contentGhCSS: string = `
 .gh-dl-selected:hover { background:var(--accent);color:var(--bg); }
 
 /* 二级菜单 */
-.gh-popup { position:fixed; z-index:var(--z-popover); background:var(--surf,#2a2a3c); border:1px solid var(--bd,#444); border-radius:var(--radius-lg); padding:var(--sp-1); box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:140px; }
+.gh-popup { position:fixed; z-index:var(--z-popover); background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-lg); padding:var(--sp-1); box-shadow:var(--shadow-lg); min-width:140px; } /* 审计 P2-2/P2-6：box-shadow 走 --shadow-lg，删 --surf/--bd 冗余回退（6 主题已定义） */
 .gh-popup-item { display:flex; align-items:center; gap:8px; padding:var(--sp-vh-btn); border-radius:var(--radius-md); cursor:pointer; transition:background var(--tr-fast); }
 .gh-popup-item:hover { background:var(--hover,#ffffff15); }
 .gh-popup-icon { font-size:var(--fs-lg); width:20px; text-align:center; flex-shrink:0; }
-.gh-popup-label { font-size:var(--fs-base); color:var(--txt,#cdd6f4); }
+.gh-popup-label { font-size:var(--fs-base); color:var(--txt); } /* 审计 P2-6：删 --txt 冗余回退（6 主题已定义） */
 
 /* 创作者列表（GitHub 侧栏） */
 .gh-left-head { padding:4px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap; }
@@ -80,7 +80,7 @@ export const contentGhCSS: string = `
 .gh-row { display: grid; grid-template-columns: 1fr max-content max-content; gap: 8px; align-items: center; padding:var(--sp-vh-btn); border-radius: var(--radius-md); margin-bottom: 2px; border-left: 3px solid transparent; font-size: var(--fs-sm); transition: background var(--tr-fast); }
 .gh-row:hover { background: var(--hover); }
 .gh-row-exists { border-left-color: var(--status-success); background: transparent; }
-.gh-row-exists .gh-name { color: var(--muted); }
+.gh-row-exists .gh-name { color: var(--txt); } /* 列表主名 = 正文级（规范 §层级口径）；同文件 :141 已按此修正错误正文，此处同类漂移一并收口 */
 .gh-row-missing { border-left-color: var(--status-error); background: color-mix(in srgb, var(--status-error) 4%, transparent); }
 .gh-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--txt); font-size: var(--fs-sm); }
 .gh-icon-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-md); border: 1px solid transparent; background: transparent; cursor: pointer; transition: var(--tr-fast); }

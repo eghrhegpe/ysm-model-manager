@@ -75,7 +75,7 @@ export const navCSS: string = `
   flex-shrink: 0;
 }
 .nav-toggle:hover { color: var(--accent); background: var(--hover); }
-.menu { padding: 4px 8px 8px; flex: 1; display: flex; flex-direction: column; }
+.menu { padding: var(--sp-1) var(--sp-3) 8px; flex: 1; display: flex; flex-direction: column; } /* 审计 P1-9：横向对齐 logo/version（14px→--sp-3 12px 近似），纵向 --sp-1（4px），消除整列错位 */
 .menu-label { flex: 1; font-size: var(--fs-xs); color: var(--muted); padding: 8px 10px 4px; text-transform: uppercase; letter-spacing: .5px; }
 /* 2026-09 层级扁平治理：导航项文字 = 正文 → 底色 --txt；激活态由 --hover 底 +
    accent 指示条区分,不靠底色深浅（原 base muted 让常驻导航全员次色） */

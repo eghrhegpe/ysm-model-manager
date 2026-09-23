@@ -37,7 +37,7 @@ ${metaTagCSS}
 .repo-sort { padding:4px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);cursor:pointer;margin-left:auto;transition:var(--tr-fast); }
 .repo-sort:hover { border-color:var(--accent);background:var(--hover); }
 .batch-dropdown { position:relative;display:inline-block; }
-.batch-menu { position:absolute;top:100%;left:0;z-index:100;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--sp-1);box-shadow:0 4px 12px rgba(0,0,0,.3);min-width:120px; }
+.batch-menu { position:absolute;top:100%;left:0;z-index:var(--z-popover);background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--sp-1);box-shadow:var(--shadow-md);min-width:120px; } /* 审计 P2-2/P2-4：box-shadow 走 --shadow-md，z-index 走 --z-popover */
 .repo-footer { padding:3px 12px;font-size:var(--fs-xs);color:var(--muted);border-top:1px solid var(--bd);flex-shrink:0; }
 /* 通用标签（作者/作品/日期）外观由共享 metaTagCSS 承载（utils/dom/css.ts）——
    原三行本地实现已删，避免与 app-tree 侧第三份同构实现漂移。
@@ -66,7 +66,7 @@ ${metaTagCSS}
 .oldest-cards-row { display:flex; flex-wrap:wrap; gap:6px; width:100%; }
 .oldest-card-name { font-size:var(--fs-sm); font-weight:600; color:var(--txt); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-all; }
 .oldest-card-meta { font-size:var(--fs-xs); color:var(--muted); margin-top:2px; display:flex; gap:6px; flex-wrap:wrap; }
-.pick-card { background:var(--card); border:1px solid var(--bd); border-left:3px solid var(--accent); border-radius:var(--radius-lg); padding:var(--card-padding,6px 10px); text-align:left; cursor:pointer; transition:var(--tr-normal); flex:1; min-width:140px; max-width:200px; }
+.pick-card { background:var(--card); border:1px solid var(--bd); border-left:3px solid var(--accent); border-radius:var(--radius-card); padding:var(--card-padding); text-align:left; cursor:pointer; transition:var(--tr-normal); flex:1; min-width:140px; max-width:200px; } /* 审计 P1-2/P1-3：卡片圆角收口 --radius-card，删 --card-padding 手抄回退 */
 .pick-card:hover { border-color:var(--accent); background:var(--hover); }
 .pick-card .name { font-size:var(--fs-md); font-weight:600; color:var(--txt); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pick-card .meta { font-size:var(--fs-sm); color:var(--muted); margin-top:4px; display:flex; gap:6px; flex-wrap:wrap; }

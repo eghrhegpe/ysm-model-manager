@@ -50,7 +50,7 @@ export const contentCreatorCSS: string = `
 .cr-url { flex:1;font-size:var(--fs-sm);color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; } /* URL = 数据值 */
 
 /* 创作者卡片：.cr-creator-card 基础（列表行） + .cr-creator-card--grid 网格变体（BEM 修饰符，替代后置 cascade 覆盖） */
-.cr-creator-card { display:flex;align-items:center;gap:8px;padding:var(--sp-vh-card);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);cursor:pointer;transition:var(--tr-fast); }
+.cr-creator-card { display:flex;align-items:center;gap:8px;padding:var(--sp-vh-card);border-radius:var(--radius-card);border:1px solid var(--bd);background:var(--bg);cursor:pointer;transition:var(--tr-fast); } /* 审计 P1-2：卡片圆角收口 --radius-card */
 .cr-creator-card:hover { border-color:var(--accent);background:var(--hover); }
 .cr-creator-icon { font-size:var(--fs-nav);width:28px;text-align:center;flex-shrink:0; }
 .cr-creator-body { flex:1;min-width:0; }
@@ -298,8 +298,8 @@ export const contentCreatorCSS: string = `
 .cr-drag-after { margin-bottom: 8px; }
 
 /* ===== 创作者详情浮层 (cr-detail) ===== */
-.cr-detail-overlay { position:fixed;inset:0;z-index:var(--z-modal);background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease; }
-.cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:20px;max-width:420px;width:90vw;box-shadow:var(--shadow-xl);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease; }
+.cr-detail-overlay { position:fixed;inset:0;z-index:var(--z-modal);background:var(--overlay-scrim);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease; }
+.cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:var(--sp-4);max-width:var(--dlg-width-sm);width:90vw;box-shadow:var(--shadow-xl);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease; } /* 审计 P1-1：宽收口 --dlg-width-sm，遮罩收口 --overlay-scrim，内边距走 --sp-4 */
 .cr-detail-box { position:relative; }
 .cr-detail-header { display:flex;align-items:center;gap:10px; }
     .cr-detail-name { font-size:calc(16px + var(--fs-scale));font-weight:700;color:var(--txt); }

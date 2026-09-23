@@ -109,7 +109,7 @@ export const contentStgCSS: string = `
 .stg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
 /* 2 列变体：两张卡并排（如「行为与动画」+「启动默认页」） */
 .stg-grid-2 { grid-template-columns: repeat(2, 1fr); }
-.stg-card { background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-lg); overflow:hidden; animation:fadeSlideUp var(--tr-enter) both; }
+.stg-card { background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-card); overflow:hidden; animation:fadeSlideUp var(--tr-enter) both; } /* 审计 P1-2：卡片圆角收口 --radius-card */
 .stg-card-hdr { display:flex;align-items:center;gap:6px; padding:var(--sp-vh-pane); font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--surf); }
 .stg-card-body { padding:var(--sp-vh-pane); }
 .stg-path-val { display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:var(--radius-md); cursor:pointer; font-size:var(--fs-sm); color:var(--txt); background:var(--bg); transition:border-color var(--tr-fast), background var(--tr-fast); width:100%; box-sizing:border-box; min-height:0; }

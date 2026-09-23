@@ -122,7 +122,9 @@ export function modalPicker(opts: ModalPickerOptions): Promise<ModalPickerResult
     const { box, close } = createDialog<ModalPickerResult | null>({
       title,
       titleIcon,
-      width: width || "480px",
+      width:
+        width ||
+        "var(--dlg-width-sm)" /* 审计 P1-1：默认宽收口 --dlg-width-sm（420px），调用方可覆盖 */,
       tabIndex: 0,
       cancelValue: null,
       resolve,

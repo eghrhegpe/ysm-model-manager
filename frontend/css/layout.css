@@ -13,7 +13,7 @@
       --preview-width,
       200px
     );
-  grid-template-rows: 44px 1fr;
+  grid-template-rows: var(--topbar-h) 1fr;
   position: absolute;
   top: 0;
   left: 0;

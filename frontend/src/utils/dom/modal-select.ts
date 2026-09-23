@@ -49,7 +49,7 @@ export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
     const { box, close } = createDialog<string | null>({
       title,
       titleIcon,
-      width: "400px",
+      width: "var(--dlg-width-sm)" /* 审计 P1-1：宽收口 --dlg-width-sm（420px） */,
       tabIndex: -1,
       cancelValue: null,
       resolve,

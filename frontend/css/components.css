@@ -84,7 +84,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -95,9 +95,9 @@
   background: var(--surf);
   border: 1px solid var(--bd);
   border-radius: var(--radius-xl);
-  width: 640px;
+  width: var(--dlg-width);
   max-width: 92vw;
-  max-height: 85vh;
+  max-height: var(--dlg-max-h);
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
@@ -341,8 +341,8 @@
 /* ===== 标签编辑弹窗 ===== */
 .te-box {
   gap: 10px;
-  width: 380px;
-  max-height: 80vh;
+  width: var(--dlg-width-sm);
+  max-height: var(--dlg-max-h);
   display: flex;
   flex-direction: column;
 }
@@ -621,11 +621,11 @@
 /* ===== 设置页路径选择器浮层（document.body 下） ===== */
 .mc-pick-overlay {
   position:fixed;z-index:var(--z-modal);inset:0;
-  background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;
+  background:var(--overlay-scrim);display:flex;align-items:center;justify-content:center;
 }
 .mc-pick-box {
   background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:var(--sp-4);
-  max-width:500px;width:90%;max-height:70vh;overflow-y:auto;
+  max-width:var(--dlg-width-sm);width:90%;max-height:var(--dlg-max-h);overflow-y:auto;
   box-shadow:var(--shadow-xl);
 }
 .mc-pick-title { font-weight:600;font-size:var(--fs-md);margin-bottom:8px; }
@@ -650,7 +650,7 @@
   background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);
   padding:10px 14px;font-size:var(--fs-sm);color:var(--txt);
   box-shadow:var(--shadow-lg);
-  max-width:420px;max-height:350px;overflow-y:auto;
+  max-width:var(--dlg-width-sm);max-height:var(--dlg-max-h);overflow-y:auto;
   pointer-events:none;line-height:1.6;
 }
 .mc-scan-title { font-weight:600;margin-bottom:4px; }

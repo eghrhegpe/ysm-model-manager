@@ -180,8 +180,9 @@ export function modalAdvFilter(
     const { overlay, box, close } = createDialog<AdvFilterResult>({
       title: t("dialog.advFilter"),
       titleIcon: "settings",
-      width: "420px",
-      boxClass: "dlg-box dlg-pad dlg-gap-lg",
+      width: "var(--dlg-width-sm)",
+      boxClass:
+        "dlg-box dlg-pad dlg-gap-lg" /* 审计 P1-1：宽收口 --dlg-width-sm（420px），与 .dlg-box（640px）解耦 */,
       tabIndex: 0,
       cancelValue: null,
       resolve,

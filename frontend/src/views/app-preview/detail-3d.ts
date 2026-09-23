@@ -51,7 +51,7 @@ export async function showVrmMeta(
       const r = m.restrictions as Record<string, unknown> | undefined;
       const badge = (label: string, ok: boolean | undefined, icon: string): string => {
         const v = ok === undefined ? "—" : ok ? "✅" : "❌";
-        return `<span style="display:inline-flex;align-items:center;gap:2px;padding:1px 6px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.06);font-size:var(--fs-sm);margin-right:4px"><span>${icon}</span>${label}:${v}</span>`;
+        return `<span style="display:inline-flex;align-items:center;gap:2px;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);background:var(--hover);font-size:var(--fs-sm);margin-right:4px"><span>${icon}</span>${label}:${v}</span>`; /* 审计 P0-4：亮色主题白叠白不可见 → var(--hover)；padding 走 --btn-padding-tool-lg（审计令牌合规） */
       };
       const refBadge = r?.reference
         ? `<div style="color:var(--muted);font-size:var(--fs-xs);margin-top:4px">${UI_ICONS.attach} ${t("preview.reference")}: ${esc(r.reference as string)}</div>`

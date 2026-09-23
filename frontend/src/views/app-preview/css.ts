@@ -10,7 +10,7 @@ export const previewCSS: string = `
   position: relative;
   background: var(--bg);
   border-left: 1px solid var(--bd);
-  width: 200px;
+  width: var(--preview-width);
   flex-shrink: 0;
   font-family: var(--font-ui);
   font-size: var(--fs-base);
@@ -43,12 +43,12 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .pv-hint { font-size:var(--fs-xs);color:var(--muted); }
 .pv-canvas { width:100%;height:auto;border-radius:var(--radius-lg);background:rgba(0,0,0,.12);margin-bottom:6px;touch-action:none; }
 .pv-grab { cursor:grab;touch-action:none; }
-.pv-card { background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:var(--sp-vh-card);margin-bottom:8px; }
+.pv-card { background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-card);padding:var(--sp-vh-card);margin-bottom:8px; } /* 审计 P1-2：卡片圆角收口 --radius-card */
 .pv-card-section { padding-left:8px;margin-bottom:5px; }
 .pv-card-section-label { font-size:var(--fs-sm);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px; }
 .pv-card-row { font-size:var(--fs-sm);color:var(--txt);line-height:1.6; }
 .pv-card-val { color:var(--accent);font-weight:600; }
-.ysm-badge { display:inline-block;font-size:var(--fs-xs);padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600;vertical-align:middle; }
+.ysm-badge { display:inline-block;font-size:var(--fs-xs);padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);background:color-mix(in srgb,var(--status-success) 18%,transparent);color:var(--status-success);margin-left:6px;font-weight:600;vertical-align:middle; } /* 审计 P2-6：删 --status-success 冗余回退（6 主题已定义） */
 .pv-section-blue { border-left:2px solid var(--accent); }
 .pv-section-green { border-left:2px solid var(--status-success); }
 .pv-section-orange { border-left:2px solid var(--sm-optional); }
@@ -65,7 +65,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .pv-error-body { font-size:var(--fs-xs);color:var(--muted);padding:8px 0; }
 
 /* === 3D 悬浮触发 FAB（ADR-057 §2.3，Shadow DOM 内面板右下角） === */
-.preview-fab{position:absolute;right:12px;bottom:12px;width:44px;height:44px;border-radius:50%;border:1px solid var(--bd);background:var(--accent);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:20;transition:var(--tr-fast)}
+.preview-fab{position:absolute;right:12px;bottom:12px;width:44px;height:44px;border-radius:50%;border:1px solid var(--bd);background:var(--accent);color:var(--bg);font-size:var(--fs-lg);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-lg);z-index:var(--z-fab);transition:var(--tr-fast)} /* color:#fff → var(--bg)：pro/ocean accent 上白字仅 2.31:1，与 .skip-link / .btn-base.primary 同口径（审计 P0-3）；box-shadow 走 --shadow-lg / z-index 走 --z-fab（P2-4）；font-size 走 --fs-lg（审计令牌合规） */
 .preview-fab:hover{filter:brightness(1.1)}
 .preview-fab:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 45%,transparent)}
 .preview-fab .preview-ic{line-height:1}
@@ -79,9 +79,9 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 
 /* === 兄弟列表 hover 规则（detail-3d.ts morph-item / detail.ts pack-model-item）=== */
 .morph-item{padding:4px 6px;cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-base);display:flex;align-items:center;gap:6px}
-.morph-item:hover{background:rgba(255,255,255,0.05)}
+.morph-item:hover{background:var(--hover)} /* 审计 P0-4：亮色主题下白叠白 = 无 hover 反馈，改 var(--hover) 跨主题恒可见 */
 .morph-item.active{background:color-mix(in srgb,var(--status-success) 15%,transparent);color:var(--status-success);font-weight:600}
-.pack-model-item:hover{background:rgba(255,255,255,0.05)}
+.pack-model-item:hover{background:var(--hover)} /* 审计 P0-4：同上 */
 
 /* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
 ${wsIconCSS}

@@ -120,8 +120,10 @@ function syncDropdownHTML(o: SyncDropdownOpts): string {
 function typeMenuItemsHTML(): string {
   // 图标为内部可信 SVG（UI_ICONS / 注册表派生 typeIconOf），不转义；
   // 文本（locale / 类型 id）走 esc 防注入。拆分两参避免把 SVG 转义成纯文本。
+  // ADR-298 D3：菜单项为 div（非原生 button），必须显式声明 role=menuitem + tabindex=-1
+  // ——否则控制器 itemEls() 选得到却聚焦不到，键盘导航与读屏全部失效。
   const render = (id: string, icon: string, text: string): string =>
-    '<div class="dd-item" data-testid="sidebar-sync-type" data-sync-type="' +
+    '<div class="dd-item" role="menuitem" tabindex="-1" data-testid="sidebar-sync-type" data-sync-type="' +
     esc(id) +
     '">' +
     icon +

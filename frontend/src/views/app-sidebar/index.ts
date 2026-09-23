@@ -57,7 +57,8 @@ class AppSidebar extends WebComponentBase {
   private _rtype: string;
   private _cardCleanup: (() => void) | null = null;
   private _packDndCleanup: (() => void) | null = null;
-  private _docClickHandler: (() => void) | null = null;
+  /** 下拉控制器 dispose（push/pull 两个，ADR-298 D3）；替代原 _docClickHandler 单槽 */
+  private _dropdownCleanup: (() => void) | null = null;
   private _syncInProgress = false; // 防止并发推送/拉取
   private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private _loading = false;
@@ -147,9 +148,8 @@ class AppSidebar extends WebComponentBase {
       (fn) => {
         this._cardCleanup = fn;
       },
-      () => this._docClickHandler,
       (fn) => {
-        this._docClickHandler = fn;
+        this._dropdownCleanup = fn;
       },
       () => this._syncInProgress,
       (v) => {
@@ -259,9 +259,9 @@ class AppSidebar extends WebComponentBase {
       this._packDndCleanup();
       this._packDndCleanup = null;
     }
-    if (this._docClickHandler) {
-      document.removeEventListener("click", this._docClickHandler);
-      this._docClickHandler = null;
+    if (this._dropdownCleanup) {
+      this._dropdownCleanup();
+      this._dropdownCleanup = null;
     }
     // _checkedSets / _lastEmittedPkg / _busy 均为实例属性，随组件 GC 自然回收
   }

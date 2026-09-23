@@ -5,6 +5,7 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { initDropdown } from "@/utils/dom/dropdown.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { ALL_RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -73,9 +74,15 @@ export function restoreCheckboxes(
 }
 
 // ---------- closeAllMenus ----------
+/** 程序化收起（兼容既有调用点）：菜单容器 display 复位。
+ *  ARIA 状态由 dropdown 控制器在自身 close 路径同步；此处仅兜底 display，
+ *  故同步重置 aria-expanded，避免「display 已关但 aria 仍为 true」的状态脱钩。 */
 function closeAllMenus(pushMenu: HTMLElement, pullMenu: HTMLElement): void {
-  pushMenu.style.display = "none";
-  pullMenu.style.display = "none";
+  for (const menu of [pushMenu, pullMenu]) {
+    menu.style.display = "none";
+    const trigger = menu.closest(".dd-wrap")?.querySelector("button");
+    trigger?.setAttribute("aria-expanded", "false");
+  }
 }
 
 // ---------- getSelected ----------
@@ -123,16 +130,6 @@ function beginSync(
   btn.innerHTML = UI_ICONS.refresh;
   btn.disabled = true;
   return selected;
-}
-
-function bindToggleMenu(btn: HTMLButtonElement, menu: HTMLElement, onToggle: () => void): void {
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const wasOpen = menu.style.display === "block";
-    onToggle();
-    if (!wasOpen) menu.style.display = "block";
-  });
-  menu.addEventListener("click", (e) => e.stopPropagation());
 }
 
 /** 单品推送：等待该 token 的下载完成事件；命中 skipped / 超时分别 reject 带 kind */
@@ -335,8 +332,8 @@ export function bindSyncSelected(
   getInstances: () => SidebarInstance[],
   _getCardCleanup: () => (() => void) | null,
   _setCardCleanup: (fn: (() => void) | null) => void,
-  getDocClickHandler: () => (() => void) | null,
-  setDocClickHandler: (fn: (() => void) | null) => void,
+  /** 下拉控制器 dispose 的归集口（替代原 docClick 单槽存取器对，ADR-298 D3） */
+  _setDropdownCleanup: (fn: () => void) => void,
   getSyncInProgress: () => boolean,
   setSyncInProgress: (v: boolean) => void,
 ): void {
@@ -346,18 +343,17 @@ export function bindSyncSelected(
   const pullMenu = root.getElementById("sidebar-pull-menu");
   if (!pushBtn || !pushMenu || !pullBtn || !pullMenu) return;
 
-  const closeAll = () => closeAllMenus(pushMenu, pullMenu);
-
-  bindToggleMenu(pushBtn, pushMenu, closeAll);
-  bindToggleMenu(pullBtn, pullMenu, closeAll);
-
-  const prevHandler = getDocClickHandler();
-  if (prevHandler) {
-    document.removeEventListener("click", prevHandler);
-  }
-  const docClickHandler = (): void => closeAll();
-  setDocClickHandler(docClickHandler);
-  document.addEventListener("click", docClickHandler);
+  // ADR-298 D3：展开/收起/ARIA/键盘/外点关闭/互斥全权交通用控制器——
+  // 替代原 bindToggleMenu（手写 display 开关）+ 模块级 document-click 单槽 hack
+  // （后者靠 _docClickHandler 存取器传递，且 aria 状态与 display 脱钩）。
+  const pushWrap = pushMenu.closest(".dd-wrap") as HTMLElement | null;
+  const pullWrap = pullMenu.closest(".dd-wrap") as HTMLElement | null;
+  const disposePush = initDropdown(pushWrap);
+  const disposePull = initDropdown(pullWrap);
+  _setDropdownCleanup(() => {
+    disposePush();
+    disposePull();
+  });
 
   pushMenu.addEventListener("click", (e) =>
     handleSyncMenuClick("push", e, pushBtn, pushMenu, pullMenu, root, getInstances, {

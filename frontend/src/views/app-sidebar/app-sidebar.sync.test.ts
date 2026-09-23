@@ -309,6 +309,42 @@ describe("app-sidebar — 拉取所选", () => {
   });
 });
 
+describe("app-sidebar — 下拉无障碍（ADR-298 D3 控制器接管）", () => {
+  it("push 触发器带 aria-haspopup/aria-expanded，点击展开翻转并落 role=menu", async () => {
+    const el = await mountSidebar();
+    const root = el.shadowRoot!;
+    const btn = root.querySelector(".sidebar-push-selected") as HTMLButtonElement;
+    const menu = root.getElementById("sidebar-push-menu") as HTMLElement;
+    expect(btn.getAttribute("aria-haspopup")).toBe("menu");
+    expect(btn.getAttribute("aria-expanded")).toBe("false");
+
+    btn.click();
+    expect(btn.getAttribute("aria-expanded")).toBe("true");
+    expect(menu.style.display).toBe("block");
+    expect(menu.getAttribute("role")).toBe("menu");
+
+    btn.click();
+    expect(btn.getAttribute("aria-expanded")).toBe("false");
+    expect(menu.style.display).toBe("none");
+  });
+
+  it("Esc 关闭并回焦触发器（键盘可达性，此前完全缺失）", async () => {
+    const el = await mountSidebar();
+    const root = el.shadowRoot!;
+    const btn = root.querySelector(".sidebar-push-selected") as HTMLButtonElement;
+    const menu = root.getElementById("sidebar-push-menu") as HTMLElement;
+
+    btn.click();
+    expect(btn.getAttribute("aria-expanded")).toBe("true");
+    const first = menu.querySelector<HTMLElement>('[role="menuitem"]');
+    expect(first).not.toBeNull();
+    first!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+    expect(btn.getAttribute("aria-expanded")).toBe("false");
+    expect(root.activeElement).toBe(btn);
+  });
+});
+
 describe("app-sidebar — _reload 失败分支", () => {
   it("loadInstances 抛错 → 实例清空且不抛", async () => {
     loadInstancesMock.mockImplementation(async () => {

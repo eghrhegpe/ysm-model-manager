@@ -42,7 +42,7 @@ ${metaTagCSS}
 /* 通用标签（作者/作品/日期）外观由共享 metaTagCSS 承载（utils/dom/css.ts）——
    原三行本地实现已删，避免与 app-tree 侧第三份同构实现漂移。
    模型名高亮复用 display.js renderDisplayName */
-.link-badge { display:inline-block; padding:0 5px; border-radius:var(--radius-xs); font-size:var(--fs-xs); font-weight:600; }
+.link-badge { display:inline-block; padding:0 var(--sp-1); border-radius:var(--radius-xs); font-size:var(--fs-xs); font-weight:600; }
 .link-badge-raw { color:var(--status-success); background:color-mix(in srgb,var(--status-success) 12%,transparent); }
 .link-badge-jsd { color:var(--badge-jsd); background:var(--badge-jsd-bg); }
 .link-badge-api { color:var(--badge-api); background:var(--badge-api-bg); }

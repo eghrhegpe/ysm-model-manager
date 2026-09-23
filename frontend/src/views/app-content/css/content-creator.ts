@@ -1,7 +1,7 @@
 // ===== 创作者域：标签/频道/卡片/详情浮层/编辑（.cr-* 全族；.ws-* 工坊类已归位 content-layout.ts） =====
 export const contentCreatorCSS: string = `
 /* ===== 创作者标签 (cr-tag) ===== */
-.cr-tag { display:inline-flex;align-items:center;gap:2px;font-size:var(--fs-micro);padding:0 5px;border-radius:var(--radius-xs);line-height:16px;font-weight:500;flex-shrink:0; }
+.cr-tag { display:inline-flex;align-items:center;gap:2px;font-size:var(--fs-micro);padding:0 var(--sp-1);border-radius:var(--radius-xs);line-height:16px;font-weight:500;flex-shrink:0; }
 .cr-tag-game { background:var(--tag-game-bg);color:var(--tag-game); }
 .cr-tag-vup { background:var(--tag-vup-bg);color:var(--tag-vup); }
 .cr-tag-oc { background:var(--tag-oc-bg);color:var(--tag-oc); }
@@ -165,7 +165,7 @@ export const contentCreatorCSS: string = `
 .cr-card-local-count {
   font-size:var(--fs-micro);color:var(--muted);flex-shrink:0;
   border:1px solid var(--bd);border-radius:var(--radius-lg);
-  padding:0 5px;line-height:14px;
+  padding:0 var(--sp-1);line-height:14px;
 }
 .cr-card-local-jump { cursor:pointer;transition:color var(--tr-fast),border-color var(--tr-fast); }
 .cr-card-local-jump:hover { color:var(--accent);border-color:var(--accent); }

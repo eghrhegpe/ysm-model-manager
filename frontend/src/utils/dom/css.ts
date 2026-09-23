@@ -112,7 +112,7 @@ export const dropdownHoverCSS = `
  * 三个 shadow 根各自 adopt。新增渲染 .tag-* 的视图若漏带，标签会无色标/无背景。
  */
 export const metaTagCSS = `
-.tag-author,.tag-work,.tag-date { display:inline-block;padding:0 5px;border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.tag-author,.tag-work,.tag-date { display:inline-block;padding:0 var(--sp-1);border-radius:var(--radius-xs);font-size:0.9em;text-shadow:0 1px 2px rgba(0,0,0,.12); }
 .tag-author { color:var(--meta-author,#66d9ef);background:color-mix(in srgb,var(--meta-author,#66d9ef) 12%,transparent); }
 .tag-work { color:var(--meta-work,#bd93f9);background:color-mix(in srgb,var(--meta-work,#bd93f9) 12%,transparent); }
 .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }

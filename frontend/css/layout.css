@@ -184,7 +184,7 @@
 .sidebar-footer .sb-btn,
 .main-footer .sb-btn {
   margin: 4px 0;
-  padding: 4px 6px;
+  padding: var(--btn-padding-sm);
   border-radius: var(--radius-sm);
   border: 1px solid var(--bd);
   background: var(--bg);

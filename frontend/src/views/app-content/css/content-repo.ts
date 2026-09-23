@@ -34,7 +34,7 @@ ${metaTagCSS}
 .repo-btn { font-size:var(--fs-xs);padding:var(--btn-padding-tool-lg); }
 .repo-srch { width:160px;padding:var(--btn-padding-md);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0;transition:var(--tr-fast); }
 .repo-srch:focus { border-color:var(--accent); }
-.repo-sort { padding:4px 6px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);cursor:pointer;margin-left:auto;transition:var(--tr-fast); }
+.repo-sort { padding:var(--btn-padding-sm);border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);cursor:pointer;margin-left:auto;transition:var(--tr-fast); }
 .repo-sort:hover { border-color:var(--accent);background:var(--hover); }
 .batch-dropdown { position:relative;display:inline-block; }
 .batch-menu { position:absolute;top:100%;left:0;z-index:var(--z-popover);background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--sp-1);box-shadow:var(--shadow-md);min-width:120px; } /* 审计 P2-2/P2-4：box-shadow 走 --shadow-md，z-index 走 --z-popover */

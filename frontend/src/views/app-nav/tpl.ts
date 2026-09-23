@@ -69,7 +69,7 @@ export const navCSS: string = `
   color: var(--muted);
   cursor: pointer;
   font-size:var(--fs-lg);
-  padding: 4px 6px;
+  padding: var(--btn-padding-sm);
   border-radius:var(--radius-sm);
   transition: var(--tr-fast);
   flex-shrink: 0;

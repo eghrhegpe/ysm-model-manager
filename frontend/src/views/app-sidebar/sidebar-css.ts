@@ -53,7 +53,7 @@ export const sidebarCSS: string = `
 ${btnBaseCSS}
 
 .footer-btn {
-  width: 100%; padding: 5px 8px; border-radius:var(--radius-md);
+  width: 100%; padding: var(--btn-padding-md); border-radius:var(--radius-md);
   border: 1px solid var(--bd); background: transparent;
   color: var(--txt); cursor: pointer; font-size: calc(var(--fs-base) - 2px); font-family: var(--font-ui);
   text-align: center; transition: background var(--tr-fast);

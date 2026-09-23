@@ -370,13 +370,22 @@ if (!fs.existsSync(BASELINE_FILE) && allHits.length > 0) {
 }
 
 // ── 输出 ──
+// --json 形状对齐 gate-parse.parseToolOutput 契约：_summary.ok 为 boolean（最高优先级），
+// 否则退回 rc===0。默认（无 --strict）即使有新增 WARN 也 ok=true / rc=0（不阻断 push，
+// 仅可见）；--strict 时 ok=false / rc=1（接 pre-push 阻断）。
+const okNow = !(STRICT && warnCount > 0);
 if (problems.length === 0) {
-  if (JSON_OUT) console.log(JSON.stringify({ ok: true, warns: 0 }));
+  if (JSON_OUT) console.log(JSON.stringify({ _summary: { ok: true, warns: 0 }, problems: [] }));
   else console.log("[css-token-check] ✅ 无新增视图层裸值（存量在基线内）");
   process.exit(0);
 }
 if (JSON_OUT) {
-  console.log(JSON.stringify({ ok: !(STRICT && warnCount > 0), warns: warnCount, problems }));
+  console.log(
+    JSON.stringify({
+      _summary: { ok: okNow, warns: warnCount },
+      problems,
+    }),
+  );
 } else {
   console.log(`[css-token-check] 发现 ${warnCount} 个新增 WARN：`);
   for (const p of problems) console.log(`  ${p}`);

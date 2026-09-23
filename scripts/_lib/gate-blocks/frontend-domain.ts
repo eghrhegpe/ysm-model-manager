@@ -166,6 +166,26 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
     });
   }
 
+  // 视图层 token 消费门禁（审计 UI-Design-Audit-2026-09.md §5.2 第 3 步）：
+  // 视图层出现裸数值（非 var()/calc(var())）即报警，逼出 token 消费纪律。
+  // 基线模式：首次自动建 baseline（存量 416 条），仅报基线外新增裸值，避免淹没信号。
+  // 默认（无 --strict）只报 WARN、rc=0（可见但不阻断 push）；日后升 --strict 即阻断新增裸值。
+  const tTk = Date.now();
+  const tk = await ctx.shAsync("node scripts/css-token-check.ts --json");
+  const tkz = tryParseSummary(tk.out);
+  const tkOk = tk.rc === 0; // 默认无 --strict → rc 恒 0 → 不阻断；--strict 时新增裸值 rc=1 才阻断
+  ctx.record("node scripts/css-token-check.ts --json", tkOk, {
+    time: Date.now() - tTk,
+    raw: tk.out,
+    note:
+      tkz === null
+        ? "输出解析失败（scripts/css-token-check.ts 缺失？）"
+        : tkOk
+          ? `视图层 token 合规（新增裸值 0，存量在基线内）`
+          : `新增裸值 ${tkz.warns} 处（未登记基线）`,
+    blockPolicy: "debt", // 基线债务只报告不阻断（与 check-design-tokens 存量债同口径）
+  });
+
   // ADR-023 P3：L3 Vitest 随前端域变更回归（串行在后，独占资源）
   const t1 = Date.now();
   // 与 frontend/package.json test 对齐：--maxWorkers 8（24 核默认并发过载反慢 ~10s）

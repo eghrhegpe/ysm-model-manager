@@ -176,6 +176,7 @@ export const SP_FLOOR_PX = 4;
  *   `4px 10px`×16 标准按钮/输入载体 → --btn-padding-std（值等价，新档）
  *   `6px 12px`×9  栏/头部/配置行容器 → --sp-vh-hdr（值等价，新档）
  *   `8px 10px`×11 内容卡片行/菜单行 → --sp-vh-card（值等价，新档；2D 卡片 + 3D 面板行共用同一组合）
+ *   `8px 2px`×5   性能诊断图表容器   → --sp-vh-perf（值等价，新档；perf-trend/trace/concurrent/single-bench 同源；横向 2px 为图表贴边刻意极窄）
  *   `4px 12px`×12 筛选/操作按钮 → --btn-padding-filter-lg（值等价）
  *   `6px 10px`×13 列表行/菜单项 → --sp-vh-btn（值等价，内容间距组合）
  *   `8px 12px`×15 滚动容器/卡片正文/设置行 → --sp-vh-pane（值等价）
@@ -194,6 +195,7 @@ export const COMBO_PADDING_TOKENS: Readonly<Record<string, { token: string }>> =
   "4px 10px": { token: "--btn-padding-std" },
   "6px 12px": { token: "--sp-vh-hdr" },
   "8px 10px": { token: "--sp-vh-card" },
+  "8px 2px": { token: "--sp-vh-perf" },
   "4px 12px": { token: "--btn-padding-filter-lg" },
   "6px 10px": { token: "--sp-vh-btn" },
   "8px 12px": { token: "--sp-vh-pane" },
@@ -217,6 +219,7 @@ export const COMBO_EXPANSION: Readonly<Record<string, readonly [number, number]>
   "--sp-vh-block": [24, 12],
   "--sp-vh-hdr": [6, 12],
   "--sp-vh-card": [8, 10],
+  "--sp-vh-perf": [8, 2],
 };
 
 /**

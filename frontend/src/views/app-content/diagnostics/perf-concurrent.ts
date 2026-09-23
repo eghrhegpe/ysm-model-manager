@@ -239,7 +239,7 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn, timingMs?:
     ) +
     banner +
     echo +
-    `<div class="perf-conc" style="padding:8px 2px;user-select:text;-webkit-user-select:text">` +
+    `<div class="perf-conc" style="padding:var(--sp-vh-perf);user-select:text;-webkit-user-select:text">` +
     concParamsHTML(payload, esc) +
     `<div class="perf-conc-row perf-conc-serial">
 <span class="perf-conc-label">${esc(t("diagnostics.perfConcurrentSerial"))}</span>

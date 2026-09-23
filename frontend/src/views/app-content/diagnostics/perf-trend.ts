@@ -48,7 +48,7 @@ export function renderPerfTrendSection(esc: EscFn): string {
   if (hist.length < 2) {
     return (
       head +
-      `<div class="perf-trend" style="padding:8px 2px"><div style="color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.perfTrendNoData")}</div></div>`
+      `<div class="perf-trend" style="padding:var(--sp-vh-perf)"><div style="color:var(--muted);font-size:var(--fs-sm)">${t("diagnostics.perfTrendNoData")}</div></div>`
     );
   }
   const pts = hist.slice(-MAX_TREND_POINTS); // 时间从旧到新
@@ -96,7 +96,7 @@ export function renderPerfTrendSection(esc: EscFn): string {
 
   return (
     head +
-    `<div class="perf-trend" style="padding:8px 2px">
+    `<div class="perf-trend" style="padding:var(--sp-vh-perf)">
 <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;width:100%;height:auto">${grid}${polys}</svg>
 <div class="perf-legend" style="display:flex;flex-wrap:wrap;padding:4px 2px 0">${legend}</div>
 </div>`

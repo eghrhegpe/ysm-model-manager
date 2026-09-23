@@ -116,7 +116,7 @@ function renderTraceRecord(rec: LoadTrace, esc: EscFn, sharedMaxMs: number): str
   return (
     `<div class="perf-hist-card">` +
     `<div class="perf-trace-meta">${meta}${coarse}</div>` +
-    `<div class="perf-gantt-wrap" style="padding:8px 2px">${ganttSvg}</div>` +
+    `<div class="perf-gantt-wrap" style="padding:var(--sp-vh-perf)">${ganttSvg}</div>` +
     `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${formatTime(totalMs)}</div>` +
     `<div class="perf-asset-grid">${assetRows}</div>` +
     texDetailHtml +

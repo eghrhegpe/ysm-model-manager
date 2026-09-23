@@ -456,7 +456,7 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
     : "";
   return (
     sectionHeader(UI_ICONS.performance, label, rawOutput) +
-    `<div class="perf-bars" style="padding:8px 2px;user-select:text;-webkit-user-select:text">${bars}</div>` +
+    `<div class="perf-bars" style="padding:var(--sp-vh-perf);user-select:text;-webkit-user-select:text">${bars}</div>` +
     totalLine +
     bottleneckLine +
     // 基准判决（ADR-262 D8）：放在瓶颈之后、趋势图之前——「与上次比好还是坏」是结果的一部分

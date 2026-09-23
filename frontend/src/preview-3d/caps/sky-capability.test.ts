@@ -18,6 +18,7 @@ import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
+import { restoreState } from "./scene-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 
 // ADR-196 单例化：SkyCapability 构造即注册 envState 回调（dispatch 广播），
@@ -1396,5 +1397,168 @@ describe("SkyCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
     const godrays = folder.children!.find((c) => c.id === "sky-godrays")!;
     godrays.control!.set!(true);
     expect(cap.isGodRaysEnabled()).toBe(true);
+  });
+});
+
+// [锐评 F-1 收口] 能力级开关单门收口——fog / water / shadow / reflector 先例同法（2026-10）。
+//
+// 本文件是**同一病灶的双份样本**（全仓仅此一处一文件两例）：
+//   ① 总开关：真门是私有 `this.enabled`（构造 `opts.enabled ?? true`，不入 envState），
+//      存档把私有态落成**无前缀** `enabled` 幽灵键；schema 侧无对应键可收口，
+//      菜单开关 / headerToggle / 存档三处各读私有门。
+//   ② 光束开关：`skyGodRaysEnabled` 早已入 schema（env-state-schema.ts|skyGodRaysEnabled，
+//      group "sky"），却是**只读不写的惰性键**——全仓生产码 2 处全是读（回调分支 + notify 名单），
+//      **零 setEnvState 写者**；真开关实为 SunBeams 私有 `enabled`，存档另走无前缀 `godRaysEnabled`。
+//      与 shadow 的 `shadowEnabled`（零消费者幽灵键）/ light 的 `lightEnabled` 同形。
+//
+// 收口 = 真值源唯一 envState（`skyEnabled` / `skyGodRaysEnabled`），两处私有门一并退役，
+// setEnabled/isEnabled/setGodRaysEnabled/isGodRaysEnabled 全部降为别名（写即派发即落地）。
+// 安全性前置（已核）：sky 不在 MODEL_DEFAULTS（ADR-284 大气与类别解耦）、
+// ATMOSPHERE_PRESETS 五档均不携这两个键 → 无双轨写对手，故不需 isStateLoaded 守卫。
+describe("SkyCapability — 能力级开关单门收口（fog/water/shadow 先例同法）", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetEnvState();
+  });
+
+  function newCap() {
+    return new SkyCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+  }
+
+  it("[F-1] 私有 enabled 字段已退役——cap 与 beams 均不持有同名 own 属性（防僵尸门回归守卫）", () => {
+    const cap = newCap();
+    expect(
+      "enabled" in cap,
+      "能力级开关唯一真值源 = envState.skyEnabled，私有门不得复活",
+    ).toBe(false);
+    const beams = (cap as unknown as { beams: SunBeams }).beams;
+    expect(
+      "enabled" in beams,
+      "光束开关唯一真值源 = envState.skyGodRaysEnabled，SunBeams 私有门不得复活",
+    ).toBe(false);
+  });
+
+  it("[F-1] setEnabled/isEnabled 是 envState.skyEnabled 的别名（写即派发即落地场景挂载）", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    expect(envState.skyEnabled).toBe(true);
+    expect(cap.isEnabled()).toBe(true);
+    expect((cap as unknown as { sky: Sky }).sky.parent, "别名写口须真落到场景").toBe(scene);
+
+    cap.setEnabled(false);
+    expect(envState.skyEnabled).toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    expect((cap as unknown as { sky: Sky }).sky.parent).toBeNull();
+
+    cap.setEnabled(true);
+    expect(envState.skyEnabled).toBe(true);
+    expect(cap.isEnabled()).toBe(true);
+    expect((cap as unknown as { sky: Sky }).sky.parent, "单门可逆：翻回即复现").toBe(scene);
+  });
+
+  it("[F-1] saveState 不再持久化能力级 enabled 幽灵键（skyEnabled 随 schema 键落盘）", () => {
+    const cap = newCap();
+    cap.saveState();
+    const saved = restoreState("sky") as Record<string, unknown>;
+    expect("enabled" in saved, "无前缀幽灵键不得再进存档").toBe(false);
+    expect("skyEnabled" in saved, "真值源须随 schema 键落盘").toBe(true);
+  });
+
+  it("[F-1] legacy 中毒回归：旧存档 enabled=false 恢复后，单一开关仍能救回天空", () => {
+    // 旧存档形态 = 无前缀 {enabled, timeOfDay, ...}（本 cap 收口前的 saveState 产物）。
+    // 收口后该键由 loadState 回填进 skyEnabled（fog/shadow 先例同法），不再进私有门——
+    // 否则「单一开关」在升级用户身上语义分叉：菜单开关读私有门，
+    // 而存档里的 false 只活在私有门里，重启自续，schema 键恒默认值 true。
+    localStorage.setItem(
+      "ysm-scene-cap-sky",
+      JSON.stringify({ enabled: false, timeOfDay: 7, cloudCoverage: 0.3 }),
+    );
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.loadState();
+    expect(envState.skyEnabled, "旧 enabled 须回填进 schema 键").toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    cap.apply();
+    expect((cap as unknown as { sky: Sky }).sky.parent, "关态不得挂天空").toBeNull();
+    cap.setEnabled(true);
+    expect(envState.skyEnabled, "单门可逆：翻开关即复现").toBe(true);
+    expect((cap as unknown as { sky: Sky }).sky.parent).toBe(scene);
+  });
+
+  it("[F-1] isGodRaysEnabled/setGodRaysEnabled 走 envState.skyGodRaysEnabled 单一真值源", () => {
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    // 黄金时刻（17:00 → elevation≈18.1°，落在 (0,20) 发光区间）——否则 intensity=0
+    // 时 sync 本就不挂载，断言测不到「写口真落地」这一层。
+    setEnvState({ skyTimeOfDay: 17 }, { source: "manual" });
+    cap.apply();
+    expect(envState.skyGodRaysEnabled).toBe(false);
+    expect(cap.isGodRaysEnabled()).toBe(false);
+
+    cap.setGodRaysEnabled(true);
+    expect(envState.skyGodRaysEnabled, "开光须写真值源").toBe(true);
+    expect(cap.isGodRaysEnabled()).toBe(true);
+    const beams = (cap as unknown as { beams: SunBeams }).beams;
+    expect(beams.group!.parent, "别名写口须真落到场景（当前太阳角 intensity>0）").toBe(scene);
+
+    cap.setGodRaysEnabled(false);
+    expect(envState.skyGodRaysEnabled).toBe(false);
+    expect(cap.isGodRaysEnabled()).toBe(false);
+    expect(beams.group!.parent, "关光须真摘除锥组").toBeNull();
+  });
+
+  it("[F-1] saveState 不再持久化 godRaysEnabled 幽灵键（skyGodRaysEnabled 落盘）", () => {
+    const cap = newCap();
+    cap.saveState();
+    const saved = restoreState("sky") as Record<string, unknown>;
+    expect("godRaysEnabled" in saved, "无前缀幽灵键不得再进存档").toBe(false);
+    expect("skyGodRaysEnabled" in saved, "真值源须随 schema 键落盘").toBe(true);
+  });
+
+  it("[F-1] legacy 中毒回归：旧存档 godRaysEnabled=true 恢复后挂载，且单一开关可逆", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-sky",
+      JSON.stringify({ godRaysEnabled: true, timeOfDay: 17 }),
+    );
+    const scene = new THREE.Scene();
+    const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    cap.loadState();
+    expect(envState.skyGodRaysEnabled, "旧 godRaysEnabled 须回填进 schema 键").toBe(true);
+    expect(cap.isGodRaysEnabled()).toBe(true);
+    cap.apply();
+    const beams = (cap as unknown as { beams: SunBeams }).beams;
+    expect(beams.group!.parent, "elevation≈18° 黄金时刻 → 恢复即挂载").toBe(scene);
+    cap.setGodRaysEnabled(false);
+    expect(beams.group!.parent).toBeNull();
+  });
+
+  it("[F-1] 同文件第三处镜像已退役：autoRotate 亦无私有字段，恢复后即可推进时间轴", () => {
+    // 本文件内「schema 键 + 私有镜像」同病共三处：enabled、godRaysEnabled 与
+    // autoRotateOn。前两者靠 setEnabled/setGodRaysEnabled 别名收口；后者藏得更深——
+    // 由私有镜像 + env 回调同步维持，只有 loadState 走 suspendEnvCallbacks() 挂起派发
+    // 时才失同步（存档里 true、isAutoRotating() 读 false、昼夜循环静默失效）。
+    const cap = newCap();
+    expect("autoRotateOn" in cap, "autoRotateOn 私有镜像不得复活").toBe(false);
+    expect(envState.skyAutoRotate).toBe(false);
+
+    cap.startAutoRotate();
+    expect(envState.skyAutoRotate, "唯一真值源已写").toBe(true);
+    expect(cap.isAutoRotating()).toBe(true);
+    cap.saveState();
+
+    localStorage.removeItem("ysm-scene-cap-sky");
+    resetEnvState();
+    const scene = new THREE.Scene();
+    const cap2 = new SkyCapability({ scene, renderer: makeFakeRenderer() });
+    localStorage.setItem(
+      "ysm-scene-cap-sky",
+      JSON.stringify({ autoRotate: true, timeOfDay: 9, skyEnabled: true }),
+    );
+    cap2.loadState();
+    expect(cap2.isAutoRotating(), "挂起派发亦须回填（原镜像在此失同步）").toBe(true);
+    const before = cap2.getTimeOfDay();
+    cap2.update(1);
+    expect(cap2.getTimeOfDay(), "恢复后须真在推进时间轴").not.toBe(before);
   });
 });

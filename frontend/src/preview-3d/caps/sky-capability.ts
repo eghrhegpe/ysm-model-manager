@@ -18,7 +18,12 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patches/patch-guard.ts";
-import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
+// 锐评 F-1 收口：loadState 恢复期间挂起派发（fog/water/env/light 同法），末尾统一 apply。
+import {
+  registerEnvCallback,
+  resumeEnvCallbacks,
+  suspendEnvCallbacks,
+} from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
@@ -192,7 +197,6 @@ export class SkyCapability implements SceneCapability {
   private envScene: THREE.Scene;
   private envSky: Sky;
   private renderTarget: THREE.WebGLRenderTarget | null = null;
-  private enabled: boolean;
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
   /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/light 同款）。 */
@@ -226,7 +230,13 @@ export class SkyCapability implements SceneCapability {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
     if (opts.caps !== undefined) this.caps = opts.caps;
-    this.enabled = opts.enabled ?? true;
+    // [锐评 F-1 收口] 能力级总开关入 schema（对齐 ADR-250/ADR-293 的 light/pp 口径）：
+    // 显式传值才写状态层，不传则尊重 envState 现值（含用户存档恢复的顺序）。
+    // ⚠️ 顺序敏感：此处 setEnvState 发生在 registerEnvCallback **之前**，订阅者尚未就位，
+    // 挂载/卸载副作用不会自动触发——场景对象由组合根随后的 apply() 落地。
+    if (opts.enabled !== undefined) {
+      setEnvState({ skyEnabled: opts.enabled }, { source: "manual" });
+    }
     this.prevToneMapping = this.renderer.toneMapping;
     this.prevExposure = this.renderer.toneMappingExposure;
     this.prevEnvironment = this.scene.environment;
@@ -253,7 +263,18 @@ export class SkyCapability implements SceneCapability {
     this.unsubscribeEnv = registerEnvCallback(
       this,
       (changed, state) => {
-        if (!this.enabled) return;
+        // [锐评 F-1 收口] 能力总开关 = envState.skyEnabled（原私有 this.enabled 已退役）——
+        // schema 键本就在 "sky" 组内，toggle 派发天然到本回调；不接管则该键改了不落地
+        // （原实现靠私有门短路挂在最前面，键永无消费者 = 幽灵键）。
+        // 开态 apply() 已从 envState 全量重写 uniform/挂载/曝光/IBL/光束（同批兄弟键
+        // 亦被覆盖，故可直接 return，与 shadow 同形）；关态 detach + notify 收口。
+        if (changed.has("skyEnabled")) {
+          if (envState.skyEnabled) this.apply();
+          else this.detach();
+          this.notify();
+          return;
+        }
+        if (!envState.skyEnabled) return;
 
         // ① 时间/位置类：先同步实例字段，再写 uniform
         if (changed.has("skyTimeOfDay")) {
@@ -261,7 +282,7 @@ export class SkyCapability implements SceneCapability {
           this.writeUniforms(this.sky);
           this.writeUniforms(this.envSky);
           this.maybeRegenerateEnvironment(state);
-          this.beams.sync(this.elevation, this.azimuth);
+          this.syncBeams();
         }
         if (changed.has("skyElevation")) {
           this.elevation = state.skyElevation;
@@ -322,7 +343,7 @@ export class SkyCapability implements SceneCapability {
           else this.clearEnvironment();
         }
         if (changed.has("skyGodRaysEnabled")) {
-          this.beams.sync(this.elevation, this.azimuth);
+          this.syncBeams();
         }
         // [ADR-293 收口 2026-10] 离散键 notify（subscribe 契约，对齐 fog/light）：
         // 环境 IBL 开关 / 昼夜循环 / 光束 为离散控件，面板需实时刷新；连续滑块不 notify。
@@ -335,10 +356,8 @@ export class SkyCapability implements SceneCapability {
         }
         // ⚠️ 刀⑳：skyAutoRotate 原为「只写不读的孤儿」——schema 声明了该键（env-state-schema.ts），
         // 但此处无分支、save/loadState 也不读写它 ⇒ 昼夜循环开关**无法持久化**。
-        // 现补齐：回调内同步实例标志（update(dt) 读它驱动推进），持久化随 save/loadState。
-        if (changed.has("skyAutoRotate")) {
-          this.autoRotateOn = state.skyAutoRotate;
-        }
+        // 现补齐：持久化随 save/loadState；[锐评 F-1 收口] 推进与读数一律直读 envState
+        // （原回调内同步的私有镜像 autoRotateOn 已退役，见 isAutoRotating）。
       },
       // [ADR-250 §2.3] 本 cap 是曝光属主（有效曝光 = skyExposure × ppExposure），
       // 故需跨组订阅：自己组的 skyExposure + postprocessing 组的 ppExposure。
@@ -372,6 +391,24 @@ export class SkyCapability implements SceneCapability {
     const esu = eu[uniform];
     if (su !== undefined) su.value = value;
     if (esu !== undefined) esu.value = value;
+  }
+
+  /**
+   * [锐评 F-1 收口] 光束挂载的唯一驱动口——真值源 envState.skyGodRaysEnabled。
+   *
+   * 收口前该判定藏在 `SunBeams.enabled` 私有门里（sun-beams.ts），而 schema 键
+   * `skyGodRaysEnabled` 生产码零写入者 ⇒ 键与门各说各话：UI toggle 只翻私有门，
+   * 键恒为默认值（幽灵键）；存档恢复写键亦不落地。现门退役，请求态由调用方在此
+   * 以 envState 现读判定，SunBeams 降为纯执行器（无状态）。
+   * 开光走本口时须真挂载：SunBeams.sync 只在 intensity>0 才挂，故关→开切换时
+   * 即便 golden-hour 由 17:00 setTime 已就位，也需本调用把锥组补挂上。
+   */
+  private syncBeams(): void {
+    if (!envState.skyGodRaysEnabled || !envState.skyEnabled) {
+      this.beams.detach();
+      return;
+    }
+    this.beams.sync(this.elevation, this.azimuth);
   }
 
   /**
@@ -430,7 +467,7 @@ export class SkyCapability implements SceneCapability {
     this.syncSunFromTime();
     this.writeUniforms(this.sky);
     this.writeUniforms(this.envSky);
-    if (!this.enabled) {
+    if (!envState.skyEnabled) {
       this.detach();
       return;
     }
@@ -454,8 +491,8 @@ export class SkyCapability implements SceneCapability {
     this.applyExposure();
     if (envState.skyEnvironment) this.requestEnvironmentRefresh(true);
     else this.clearEnvironment();
-    // 同步日落光束 + tint overlay 挂载（按当前太阳角度决策）
-    this.beams.sync(this.elevation, this.azimuth);
+    // 同步日落光束 + tint overlay 挂载（按当前太阳角度 + 光束开关决策）
+    this.syncBeams();
   }
 
   /**
@@ -567,16 +604,21 @@ export class SkyCapability implements SceneCapability {
     );
   }
 
+  /**
+   * [锐评 F-1 收口] 能力启停 === 天空开关，真值源唯一 envState.skyEnabled。
+   *
+   * 原实现是私有 `this.enabled` + 直接 apply/detach/notify 三连——与 schema 键各说各话
+   * （本键当时根本不存在），存档只能靠同款私有无前缀 `enabled` 方言续命。
+   * 现 setEnvState 同步 dispatch → 本 cap 回调的 `changed.has("skyEnabled")` 分支
+   * 统一 apply/detach + notify，写口不再自备副作用（对齐 fog/shadow/water 范式）。
+   */
   setEnabled(v: boolean): void {
-    this.enabled = v;
-    if (v) this.apply();
-    else this.detach();
-    // [ADR-293 收口 2026-10] 总开关是私有态（不入 envState），菜单 headerToggle 需主动 notify 刷新。
-    this.notify();
+    setEnvState({ skyEnabled: v }, { source: "manual" });
   }
 
+  /** [锐评 F-1 收口] 读 envState.skyEnabled——不再是私有门。 */
   isEnabled(): boolean {
-    return this.enabled;
+    return envState.skyEnabled;
   }
 
   /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/water）。 */
@@ -608,7 +650,7 @@ export class SkyCapability implements SceneCapability {
     // [ADR-292 D10] 走 requestEnvironmentRefresh 路由器（与 callback 各分支同源）：
     // env 接管装载时转交 env，sky 不抢写槽位；force=true——换模型是离散动作，
     // 必须拿到当前帧的图（同 apply 打开路径），不能被太阳高度角阈值门控跳过。
-    if (this.enabled) this.requestEnvironmentRefresh(true);
+    if (envState.skyEnabled) this.requestEnvironmentRefresh(true);
   }
 
   /** 设置云量 0=晴空 1=多云（ADR-073 #4）；regenerate=true 时同步刷新 IBL 环境 */
@@ -668,7 +710,10 @@ export class SkyCapability implements SceneCapability {
   // 自建 rAF 循环已删除——此前与 mount-preview-core 全局唯一 rAF（L591 c.update?.(dt)）
   // 双时钟并存，帧序 / document.hidden 暂停语义分裂；timeOfDay 推进改由核心帧循环驱动。
   // 速度：约 1 小时/秒（24 秒一圈），夜间会自然转暗。
-  private autoRotateOn = false;
+  // [锐评 F-1 收口] 原私有 `autoRotateOn` 镜像已退役——它与 schema 键 `skyAutoRotate`
+  // 同病（本文件内第三处「schema 键 + 私有镜像」）：探针由 `suspendEnvCallbacks()` 照出——
+  // loadState 挂起派发后只写 envState，镜像永不回填 ⇒ 重启后开关「存档里是 true、
+  // isAutoRotating() 读 false」，昼夜循环静默失效。现读 envState 单一真值源。
   private static readonly AUTO_ROTATE_HOURS_PER_SEC = 1;
   /**
    * 上次 PMREM 环境贴图重建时的太阳高度角（°）。
@@ -681,8 +726,10 @@ export class SkyCapability implements SceneCapability {
   private static readonly PMREM_ELEVATION_THRESHOLD = 2.0; // 太阳高度角变化 ≥ 2° 才重建
 
   /** 启动昼夜循环；已开则 no-op（实际推进由 update(dt) 驱动）。
-   *  刀⑳：走 setEnvState 单一事实源（对齐 setEnabled 范式）——实例标志由 env 回调同步，
-   *  且该键随 saveState/loadState 持久化，否则开关关掉预览就丢。 */
+   *  刀⑳：走 setEnvState 单一事实源（对齐 setEnabled 范式）——该键随 saveState/loadState
+   *  持久化，否则开关关掉预览就丢。
+   *  [锐评 F-1 收口] 原「实例标志由 env 回调同步」已取消：同步就是镜像，镜像就是第二真值源
+   *  （loadState 挂起派发时必失同步）。现 isAutoRotating/update 一律直读 envState。 */
   startAutoRotate(): void {
     setEnvState({ skyAutoRotate: true }, { source: "manual" });
   }
@@ -692,9 +739,9 @@ export class SkyCapability implements SceneCapability {
     setEnvState({ skyAutoRotate: false }, { source: "manual" });
   }
 
-  /** 当前是否正在昼夜循环 */
+  /** [锐评 F-1 收口] 当前是否正在昼夜循环——直读 envState.skyAutoRotate，无私有镜像。 */
   isAutoRotating(): boolean {
-    return this.autoRotateOn;
+    return envState.skyAutoRotate;
   }
 
   /** SceneCapability.update(dt) 钩子（对齐 water-capability 用法）：dt 单位秒，
@@ -702,9 +749,9 @@ export class SkyCapability implements SceneCapability {
    *  forceEnv=false：昼夜循环每帧驱动 setTime，PMREM 只按太阳高度角阈值重建
    *  （锐评 P1 GPU 熔炉修复——每帧重生环境贴图是 rAF 热路径上的重活）。 */
   update(dt: number): void {
-    if (!this.enabled) return;
+    if (!envState.skyEnabled) return;
     this.beams.tick(dt);
-    if (!this.autoRotateOn) return;
+    if (!envState.skyAutoRotate) return;
     // 昼夜循环每帧驱动 timeOfDay，PMREM 按太阳高度角阈值重建（callback 的 skyTimeOfDay
     // force 跳过 shouldOverwrite：autoRotate 推进是动画自身行为，用户拖过一次时间滑杆
     // （manual 写入）后 auto-model 写被永久拒绝 → 昼夜循环冻结；force 恢复推进语义。
@@ -822,15 +869,17 @@ export class SkyCapability implements SceneCapability {
     return godRaysIntensity(this.elevation);
   }
 
-  /** 是否启用 god rays */
+  /** [锐评 F-1 收口] 读 envState.skyGodRaysEnabled——原私有门 `SunBeams.enabled` 已退役。 */
   isGodRaysEnabled(): boolean {
-    return this.beams.isEnabled();
+    return envState.skyGodRaysEnabled;
   }
 
-  /** 切换 god rays 开关（enabled 时立即按当前太阳角同步挂载） */
+  /**
+   * [锐评 F-1 收口] 切换 god rays 开关——纯写 envState，挂载副作用统一走回调的
+   * `changed.has("skyGodRaysEnabled")` 分支（syncBeams：真挂载须在 intensity>0 时补挂）。
+   */
   setGodRaysEnabled(v: boolean): void {
-    this.beams.setEnabled(v);
-    if (this.enabled) this.beams.sync(this.elevation, this.azimuth);
+    setEnvState({ skyGodRaysEnabled: v }, { source: "manual" });
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */
@@ -853,14 +902,19 @@ export class SkyCapability implements SceneCapability {
     return { section: "basic", order: 10 };
   }
 
-  /** 保存状态到 localStorage */
+  /** 保存状态到 localStorage。
+   *  [锐评 F-1 收口] 两枚能力级开关改落 **schema 键形**（`skyEnabled` / `skyGodRaysEnabled`），
+   *  不再落无前缀 `enabled` / `godRaysEnabled` 幽灵键（私有门已退役，键与门不再各说各话）。
+   *  兄弟键保持原无前缀方言零迁移——`environment` 键另有跨槽读者
+   *  （environment-capability.loadState 读 skyState.environment 做 ADR-292 旧档归一），
+   *  改名即断链。同族先例：reflector 亦仅前缀总开关、兄弟键不动。 */
   saveState(): void {
     persistState(this.id, {
       timeOfDay: envState.skyTimeOfDay,
       cloudCoverage: envState.skyCloudCoverage,
       environment: envState.skyEnvironment,
-      enabled: this.enabled,
-      godRaysEnabled: this.beams.isEnabled(),
+      skyEnabled: envState.skyEnabled,
+      skyGodRaysEnabled: envState.skyGodRaysEnabled,
       // 刀⑳：昼夜循环开关纳入持久化（原漏 → 关掉预览即丢）
       autoRotate: envState.skyAutoRotate,
       // §4 解耦：持久化用户调整的太阳耦合尺度
@@ -874,53 +928,72 @@ export class SkyCapability implements SceneCapability {
    *  存档恢复是程序化动作非手改。原 manual 把 skyTimeOfDay/skyCloudCoverage 的 lastWriteSource
    *  打成 manual，此后 auto-atmosphere 氛围预设（五档全携这两键）写天空时间/云量被
    *  shouldOverwrite 静默拒绝——重启后选 sunset 氛围天空不转黄昏。sky 不在 MODEL_DEFAULTS
-   *  （ADR-284 大气与类别解耦）→ 无同轨模型写对手，故不需 isStateLoaded 守卫即安全。 */
+   *  （ADR-284 大气与类别解耦）→ 无同轨模型写对手，故不需 isStateLoaded 守卫即安全。
+   *  [锐评 F-1 收口] 键形归一 + legacy 回填 + 挂起派发（fog/shadow 同法）：旧档的两枚
+   *  无前缀幽灵键回填进 schema 键，否则升级用户开关语义分叉；恢复期间挂起派发，
+   *  只写 envState，末尾由组合根统一 apply 一次（防重入双跑，对齐 fog/water/env/light）。 */
   loadState(): void {
     const RESTORE = { source: "auto-model" } as const;
-    restoreFields(restoreState(this.id), {
-      enabled: {
-        boolean: (v) => {
-          this.enabled = v;
+    let state = restoreState(this.id) as Record<string, unknown> | null;
+    if (!state) return;
+    const s = state;
+    // legacy 旧键迁移（收口前 saveState 落无前缀 {enabled, godRaysEnabled, ...}）：
+    // 逐键判「前缀键缺失 ∧ 旧键类型合法」才回填——防 undefined 覆盖混合形态的新前缀键。
+    if (!("skyEnabled" in s) && typeof s.enabled === "boolean") {
+      state = { ...s, skyEnabled: s.enabled };
+    }
+    if (!("skyGodRaysEnabled" in s) && typeof s.godRaysEnabled === "boolean") {
+      state = { ...state, skyGodRaysEnabled: s.godRaysEnabled };
+    }
+    suspendEnvCallbacks();
+    try {
+      restoreFields(state, {
+        skyEnabled: {
+          boolean: (v) => {
+            setEnvState({ skyEnabled: v }, RESTORE);
+          },
         },
-      },
-      timeOfDay: {
-        number: (v) => {
-          setEnvState({ skyTimeOfDay: v }, RESTORE);
+        timeOfDay: {
+          number: (v) => {
+            setEnvState({ skyTimeOfDay: v }, RESTORE);
+          },
         },
-      },
-      cloudCoverage: {
-        number: (v) => {
-          setEnvState({ skyCloudCoverage: v }, RESTORE);
+        cloudCoverage: {
+          number: (v) => {
+            setEnvState({ skyCloudCoverage: v }, RESTORE);
+          },
         },
-      },
-      environment: {
-        boolean: (v) => {
-          setEnvState({ skyEnvironment: v }, RESTORE);
+        environment: {
+          boolean: (v) => {
+            setEnvState({ skyEnvironment: v }, RESTORE);
+          },
         },
-      },
-      godRaysEnabled: {
-        boolean: (v) => {
-          this.beams.setEnabled(v);
+        skyGodRaysEnabled: {
+          boolean: (v) => {
+            setEnvState({ skyGodRaysEnabled: v }, RESTORE);
+          },
         },
-      },
-      // 刀⑳：恢复昼夜循环开关（写 envState → 回调同步实例标志）
-      autoRotate: {
-        boolean: (v) => {
-          setEnvState({ skyAutoRotate: v }, RESTORE);
+        // 刀⑳：恢复昼夜循环开关（写 envState 单一真值源；无私有镜像可同步）
+        autoRotate: {
+          boolean: (v) => {
+            setEnvState({ skyAutoRotate: v }, RESTORE);
+          },
         },
-      },
-      // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
-      sunIntensityScale: {
-        number: (v) => {
-          setEnvState({ skySunIntensityScale: v }, RESTORE);
+        // §4 解耦：恢复用户调过的耦合尺度（如果有值）；无值保留 DEFAULT 兜底
+        sunIntensityScale: {
+          number: (v) => {
+            setEnvState({ skySunIntensityScale: v }, RESTORE);
+          },
         },
-      },
-      sunDiscScale: {
-        number: (v) => {
-          setEnvState({ skySunDiscScale: v }, RESTORE);
+        sunDiscScale: {
+          number: (v) => {
+            setEnvState({ skySunDiscScale: v }, RESTORE);
+          },
         },
-      },
-    });
+      });
+    } finally {
+      resumeEnvCallbacks();
+    }
   }
 
   private detach(): void {

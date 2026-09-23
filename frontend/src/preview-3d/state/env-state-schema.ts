@@ -58,6 +58,11 @@ type _AnyFieldDef = {
 
 export const ENV_STATE_SCHEMA = {
   // --- Sky ---
+  // [锐评 F-1 收口] 能力级总开关入 schema（首位，对齐 water/fog/shadow/reflector/pp 布局）：
+  // 原私有 `this.enabled`（opts.enabled ?? true）时代，本键不存在 ⇒ 用户对「是否显示天空」
+  // 的偏好无 envState 落点，且与「天空是否已挂载」混为一谈（ADR-250 §2.1 判定的误判）。
+  // 默认 true 与被退役私有门的有效默认一致，收口零行为漂移。
+  skyEnabled: { type: "boolean", default: true, group: "sky" },
   skyTimeOfDay: { type: "number", default: 9, group: "sky" },
   skyCloudCoverage: {
     type: "number",

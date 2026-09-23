@@ -98,14 +98,20 @@ function sunDirFromAngles(elevation: number, azimuth: number): THREE.Vector3 {
 
 /**
  * 日落光束视觉组：两交叉光束锥体（God Rays）+ 太阳方向暖色 overlay（Sunset Tint）。
- * 状态（group / tintMesh / time / enabled）完全内聚于本类；对外只暴露基于
+ * 状态（group / tintMesh / time）完全内聚于本类；对外只暴露基于
  * 太阳角度 + dt 的纯操作，不反向依赖 SkyCapability。scale 为天空盒半边长
  * （构造期快照：锥体/overlay 尺寸随其缩放。宿主传入 `SKY_SCALE` 常量——
  * 该值是渲染实现细节，不可变，故无需运行期重建）。
+ *
+ * [锐评 F-1 收口] 本类**不再持有 enabled 门**：原 `private enabled` 与
+ * `setEnabled/isEnabled` 已退役——它与 schema 键 `skyGodRaysEnabled`（生产码零写入口）
+ * 各说各话，令该键沦为幽灵键，而真实开关只活在这个私有门里。开关真值源现唯一归
+ * envState.skyGodRaysEnabled，由宿主 SkyCapability.syncBeams 现读判定后驱动本类：
+ * 开=调 sync（按 intensity 挂载）、关=调 detach（摘锥组 + 卸 tint）。
+ * 本类降为**无状态执行器**，挂载判据只剩几何/角度事实，不再含能力开关语义。
  */
 export class SunBeams {
   private scene: THREE.Scene;
-  private enabled = false;
   /** 光束锥组（两交叉 mesh 共享材质）。仅挂载态观察/释放判定用，勿直接修改 */
   group: THREE.Group | null = null;
   /** 日落 tint overlay mesh。仅挂载态观察/释放判定用，勿直接修改 */
@@ -120,33 +126,18 @@ export class SunBeams {
     this.tintMesh = this.buildTintMesh(scale * 0.999); // 略小于 sky，避免 z-fighting
   }
 
-  isEnabled(): boolean {
-    return this.enabled;
-  }
-
-  /**
-   * 切换光束开关（对齐原 setGodRaysEnabled → updateGodRays 的 disabled 分支）：
-   * 关闭时只摘除光束锥组（tint overlay 保持原挂载态，等下一次 sync 的
-   * intensity 判定收口——原实现同款怪癖，重构保持等价）；开启只翻标志，
-   * 实际挂载随下一次 sync() 按 intensity 判定。
-   */
-  setEnabled(v: boolean): void {
-    if (this.enabled === v) return;
-    this.enabled = v;
-    if (!v) this.unmountCones();
-  }
-
   /**
    * 核心同步（对齐原 updateGodRays + updateSunsetTint 成对语义）：
    * 按太阳角度旋转光束锥组、计算 intensity、决策锥组与 tint overlay 的
    * 挂载/卸载、刷新 tint overlay uniform。宿主在太阳位置变化 / 开关切换 /
-   * apply 后调用。
+   * apply 后调用（开关关态直接走 detach，不调本方法）。
+   *
+   * 注：本方法已无 enabled 语义——intensity=0（夜间/正午）时的卸载分支保留，
+   * 那是**太阳角度**事实而非开关意图（关光由宿主 detach 承担）。
    */
   sync(elevation: number, azimuth: number): void {
-    // disabled 分支：摘锥组 + 卸 tint（对齐旧 updateSunsetTint 的
-    // `intensity===0 || !godRaysEnabled` 卸载分支——旧成对语义里 disabled 时
-    if (!this.enabled || !this.group) {
-      this.unmountCones();
+    if (!this.group) {
+      // 已 dispose：仅剩 tint 清理语义（防御性，与旧实现等价）
       if (this.tintMesh?.parent) {
         this.tintMesh.parent.remove(this.tintMesh);
         this.tintMesh.visible = false;
@@ -201,7 +192,7 @@ export class SunBeams {
     this.time.value += dt;
   }
 
-  /** 从场景摘除光束 + tint overlay（宿主 detach 时调用；不动 enabled 标志） */
+  /** 从场景摘除光束 + tint overlay（宿主 detach / 关光时调用；本类无开关标志可动） */
   detach(): void {
     this.unmountCones();
     if (this.tintMesh?.parent) {

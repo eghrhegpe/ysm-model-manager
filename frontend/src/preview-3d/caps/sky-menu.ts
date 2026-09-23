@@ -45,8 +45,11 @@ function skyTimelineControlsNode(cap: SkyCapability): PreviewMenuNode {
 /** 完整参数面板节点树：timeline controls 节点 + 高级组 folder
  *  （cloud/sun-intensity/sun-disc/auto-rotate/godrays 全原生）。
  *  顶层：sky-enabled 能力总开关 → timeline → 高级组 folder。
- *  （sky 原被注释为「无能力总开关」——误将 sky-env 视作总开关；实则有
- *   isEnabled/setEnabled 真总开关，enabled 已被 saveState/loadState 持久化。）
+ *  （sky 原被注释为「无能力总开关」——误将 sky-env 视作总开关；「是否显示天空」
+ *   确是用户对可见效果的偏好，故 [锐评 F-1 收口] 已入 schema 归 `skyEnabled`，
+ *   真值源唯一 envState（私有门已退役，setEnabled/isEnabled 为别名）。
+ *   `skyGodRaysEnabled` 同批收口——收口前它有 schema 键却无生产写入者，
+ *   真开关藏在 SunBeams 私有门里 = 幽灵键。）
  *  （「时间」slider 已删：与 timeline 同源同槽，timeline 自带 HH:MM 读数 + 拖动，
  *   精度远高于原 0.5h 步进；同一参数不重复声明两条控件。） */
 export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {

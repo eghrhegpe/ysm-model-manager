@@ -1815,6 +1815,10 @@ export const autoSidebar = [
             "link": "/knowledge/context-menu"
           },
           {
+            "text": "视图层 token 消费门禁 css-token-check",
+            "link": "/knowledge/css-token-check"
+          },
+          {
             "text": "高级筛选 adv-filter",
             "link": "/knowledge/dialog-adv-filter"
           },

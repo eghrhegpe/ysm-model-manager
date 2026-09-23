@@ -230,3 +230,43 @@ grep -rn "rgba(255,255,255" frontend/src/views --include=*.ts   # 排除 preview
 7. **§5 门禁脚本** — 最后立，兜住 1–6 的债不再扩大。
 
 > 每步改完跑 `cd frontend && npx vite build && npm run typecheck`；非测试文件跑 `node scripts/check-biome.ts --files <改动文件>`。
+
+---
+
+## 8. 执行记录（2026-09-23 已落地）
+
+### 8.1 已提交改动
+
+| commit | 内容 | 验证 |
+|---|---|---|
+| `a586946d2` | P0×4 + P1×6 + P2 打磨 + 立 `css-token-check.ts` + 审计/方案文档 | vite build ✅ / typecheck ✅ / biome ✅ / check-design-tokens 新增行 0 违规 |
+| `9904fd63b` | 将 `css-token-check` 接入 `pre-push-gate.ts` 前端域（非阻断，基线债务口径） | pre-push --files dry-run PASS，token-check 0.6s 命中 |
+
+### 8.2 门禁形态（落定）
+
+- **脚本**：`scripts/css-token-check.ts`（复用 `css-layer-check.ts` 的 `walk`/`expandStyleInterpolations`）
+- **基线**：`scripts/.css-token-baseline.txt`（首次运行自动建，416 条存量）
+- **判定**：默认只报基线外**新增**裸值、rc=0（不阻断 push，仅可见）；`--strict` 升阻断；`--rebuild-baseline` 存量收敛后更新；`YSM_SKIP_TOKEN_CHECK=1` 逃生阀
+- **接入**：`pre-push-gate.ts` 前端域块（`frontend-domain.ts`），`blockPolicy:"debt"` —— 存量债只报告不阻断，新增裸值日后升 `--strict` 即拦
+- **令牌合规闸**：`check-design-tokens --added-lines`（pre-commit 已挂）负责"新增行零容忍"，与本脚本"存量基线"互补——两道闸合力：新增行立即拦 + 存量渐进收敛
+
+### 8.3 存量债盘点（截止 2026-09-23）
+
+`check-design-tokens` 全量：违规 **206** 处（ERROR 201 / WARN 5），`可建议替换: 0 处`。
+
+| 类别 | 数量 | 收敛策略 |
+|---|---|---|
+| CSS 块硬编码 padding | 156 | 人工：逐文件引 `--sp-*`/`--pad-*`（语义间距体系已全） |
+| 内联硬编码 padding | 39 | 人工：内联 style 改 `var(--sp-*)`（shadow 内 var() 穿透已证实） |
+| 内联硬编码字号 | 4 | 人工：改 `var(--fs-*)` |
+| CSS 块硬编码颜色 | 3 | **不自动替换**（语义需人工判定，机械猜测必错） |
+| emoji 当图标 | 2 | 改 `utils/icon` SVG 体系（跨平台/主题一致） |
+| CSS 块硬编码字号 | 2 | 人工：改 `var(--fs-*)` |
+
+热点文件：`content-diag.ts`(26) / `content-gh.ts`(18) / `content-creator.ts`(18) / `components.css`(16) / `layout.css`(12) / `app-preview/css.ts`(11) / `app-nav/tpl.ts`(9)。
+
+**结论**：存量是人工渐进游戏（0 处可机械 `--fix`），不在单次任务范围。门禁已立，债务停止扩大；后续按文件域认领收敛即可。
+
+### 8.4 知识卡
+
+已写回 `docs/knowledge/` 知识卡记录 `css-token-check` 用法（基线/接入/逃生阀），供下次直接命中。

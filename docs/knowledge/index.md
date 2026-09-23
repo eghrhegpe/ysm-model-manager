@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 191 张知识卡
+> 总计: 192 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -281,7 +281,7 @@
 - **volumetric_cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），四轴分离：
 
-## ui（39 张）
+## ui（40 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -302,6 +302,7 @@
 | 🍃 app_content_settings | 设置页 settings | leaf | — | 设置页, 主题设置, 键位, 路径配置, 界面偏好 |
 | 🍃 app_content_site | 创意工坊站点视图 site | leaf | — | 创意工坊, 站点视图, 浏览模式, 卡片拖拽, workshop-data |
 | 🏗 context-menu | 右键菜单系统 | architecture | — | 右键菜单, 右键, 上下文菜单, ctx:show, menu:show, 批量操作, 移入回收站 |
+| 🏗 css-token-check | 视图层 token 消费门禁 css-token-check | architecture | — | css-token-check, token 门禁, 视图层裸值, 硬编码 padding, 设计令牌合规 |
 | 🏗 dialog-adv-filter | 高级筛选 adv-filter | architecture | — | 高级筛选, 筛选, 骨骼数, 立方体, 纹理尺寸, 按标签筛选, 条件过滤 |
 | 🏗 dialog-batch-rename | 批量重命名 batch-rename | architecture | — | 批量重命名, 批量改名, 查找替换, 正则替换, 统一作者, 预设, batch-rename |
 | 🏗 dialog-modal | 弹窗基座 modal（6 文件家族） | architecture | — | 弹窗, 对话框, 确认框, 输入框弹窗, 下拉选择弹窗, modal, prompt, confirm |
@@ -342,6 +343,7 @@
 - **app_content_settings**（设置页 settings）：`settings/` 是 `app-content` 的「设置」页子域，由主卡 `app-content` 的 `init-pages.ts` 在切到设置页时分发初始化。内部高内聚：`init.ts` 汇聚全部子模块（键位 / 路径卡 /…
 - **app_content_site**（创意工坊站点视图 site）：`site/` 子目录（含 `site-view.ts`、`workshop-data.ts`、`workshop-browse-mode.ts` 与 5 个子模块）是 `app-content` 的「创意工坊站点」页子域，由主卡 `app…
 - **context-menu**（右键菜单系统）：右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`features/context-menu/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `me…
+- **css-token-check**（视图层 token 消费门禁 css-token-check）：`css-token-check.ts` 是 UI 一致性审计（UI-Design-Audit-2026-09.md §5.2 第 3 步）落地的**止血门禁**：扫描前端视图层 CSS，把「属性位出现裸数值（非 `var(--*)` / …
 - **dialog-adv-filter**（高级筛选 adv-filter）：`adv-filter.ts` 提供模型高级筛选弹窗：关键字 + 骨骼数/立方体数/纹理尺寸三组数值范围 + 标签名，采集后返回结构化条件对象交给调用方执行搜索。控件集合与后端 `SearchModels` 的能力严格对齐（6 个范围参数 …
 - **dialog-batch-rename**（批量重命名 batch-rename）：`batch-rename.ts` 提供目录级批量重命名弹窗：接收文件条目列表，用 `parseModelName` 逐个解析出作者/作品/角色/日期，支持两种模式——「解析格式」（统一作者/作品批量改写）与「查找替换」（字面量或正则，含 …
 - **dialog-modal**（弹窗基座 modal（6 文件家族））：`modal.ts` 原上帝文件已按 ADR-187 D2 拆为 6 文件平铺于 `dialogs/`：

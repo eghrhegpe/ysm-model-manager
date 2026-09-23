@@ -34,6 +34,7 @@ import {
   findLocaleEmojiPrefixViolations,
   findStyleAttrViolations,
   findToastEmojiPrefixViolations,
+  findToastEmojiPrefixWindowViolations,
   findViolationsOnLines,
   fixLineTokens,
   isCommentLine,
@@ -355,6 +356,59 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   const t7 = findToastEmojiPrefixViolations('// toast("✅ 已保存")', 7);
   assert.deepEqual(t7, [], "注释行应豁免");
   console.log("  ✓ findToastEmojiPrefixViolations: toast 载荷前缀状态 emoji 命中/豁免");
+}
+
+// ── 6c. findToastEmojiPrefixWindowViolations：多行 toast 载荷窗口（ADR-298 门禁勘误）──
+// 背景：本仓 toast 载荷主流形态是**多行对象字面量**（`bus.emit("toast:show", {` 一行，
+// `msg: \`❌ …\`` 下一行），单行检测器（6a）对 emoji 所在行无锚点特征 → 永久失明。
+// 本组锁定窗口检测器对该形态有牙齿，且不误报、不重复计数。
+{
+  const lines = [
+    "export function f(): void {",
+    '  bus.emit("toast:show", {',
+    "    msg: `❌ ${friendlyError(e)}`,",
+    "    duration: 1000,",
+    '    type: "error",',
+    "  });",
+    "}",
+  ];
+  // ① 锚点行本身不命中（无同行 emoji）——正是单行检测器的失明点
+  assert.deepEqual(
+    findToastEmojiPrefixViolations(lines[1]!, 2),
+    [],
+    "锚点行无同行 emoji（单行检测器失明点）",
+  );
+  // ② 窗口检测器命中，且归属锚点行号（报错定位指向载荷构造处）
+  const w1 = findToastEmojiPrefixWindowViolations(lines, 2);
+  assert.equal(w1.length, 1, "多行 toast 载荷的 ❌ 前缀应命中");
+  assert.equal(w1[0]!.kind, "toast-emoji-prefix");
+  assert.equal(w1[0]!.suggestion, "UI_ICONS.error");
+  assert.equal(w1[0]!.line, 2, "命中应归属锚点行（用户要改的是这处 toast）");
+
+  // ③ 同行已有 emoji → 不重复计数（单行检测器已覆盖）
+  const dup = ['bus.emit("toast:show", { msg: "❌ 失败" });'];
+  assert.deepEqual(
+    findToastEmojiPrefixWindowViolations(dup, 1),
+    [],
+    "同行命中时不重复计数（避免同一处报两遍）",
+  );
+
+  // ④ 内容字形前缀（无 type 图标承托）→ 不命中（与 6a 同口径，防误报）
+  const contentGlyph = ['bus.emit("toast:show", {', "  msg: `📦 打包完成`,", "});"];
+  assert.deepEqual(
+    findToastEmojiPrefixWindowViolations(contentGlyph, 1),
+    [],
+    "内容字形 📦 前缀不应命中",
+  );
+
+  // ⑤ 无 toast 锚点特征的多行字符串 → 完全不参与
+  const notToast = ["const x = {", '  msg: "❌ 加载失败",', "};"];
+  assert.deepEqual(findToastEmojiPrefixWindowViolations(notToast, 1), [], "非 toast 载荷不应命中");
+
+  // ⑥ 已清理形态（无前缀）→ 零命中
+  const clean = ['bus.emit("toast:show", {', "  msg: friendlyError(e),", "});"];
+  assert.deepEqual(findToastEmojiPrefixWindowViolations(clean, 1), [], "已清理不应命中");
+  console.log("  ✓ findToastEmojiPrefixWindowViolations: 多行窗口命中/归属/豁免");
 }
 
 // ── 6b. findLocaleEmojiPrefixViolations：locale 值前缀状态 emoji（ADR-267 门禁补盲）──

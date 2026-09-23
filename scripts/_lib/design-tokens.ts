@@ -1227,10 +1227,17 @@ export function findEmojiIconViolations(line: string, lineNo: number): DesignVio
  *     状态图标，这类前缀纯属信息冗余；动作/内容字形（如 `📦 打包完成`）无 type 图标承托，
  *     不是「前缀型状态符号」，不碰。
  */
-export function findToastEmojiPrefixViolations(line: string, lineNo: number): DesignViolation[] {
-  if (isCommentLine(line)) return [];
-  // 只认 toast 载荷构造行的特征；无 toast 特征的行一律不参与（防普通字符串误报）
-  if (!/toast\(|toastError\(|bus\.emit\(\s*["'\x60]toast:show["'\x60]/.test(line)) return [];
+/** toast 载荷锚点行特征（`bus.emit("toast:show"` / `toast(` / `toastError(`） */
+const TOAST_ANCHOR_RE = /toast\(|toastError\(|bus\.emit\(\s*["'\x60]toast:show["'\x60]/;
+
+/**
+ * 单行内「引号/反引号后紧跟状态字形」扫描原语（**不含** toast 锚点特征判定）。
+ *
+ * 拆出它的原因：多行窗口需要对 `msg:` 行扫描，而该行不含 `toast:show` 锚点特征——
+ * 若直接复用 `findToastEmojiPrefixViolations`（自带锚点门槛），窗口内逐行调用必然
+ * 全部返回空，闸再度静默失明（实测踩过：修好窗口后仍 0 命中，根因即此）。
+ */
+function scanStatusPrefixGlyphs(line: string, lineNo: number): DesignViolation[] {
   const out: DesignViolation[] = [];
   const re = new RegExp(`["'\x60]\\s*${GLYPH_CLUSTER}`, "gu");
   for (const m of line.matchAll(re)) {
@@ -1243,6 +1250,58 @@ export function findToastEmojiPrefixViolations(line: string, lineNo: number): De
       snippet: clip(glyph),
       suggestion,
     });
+  }
+  return out;
+}
+
+export function findToastEmojiPrefixViolations(line: string, lineNo: number): DesignViolation[] {
+  if (isCommentLine(line)) return [];
+  // 只认 toast 载荷构造行的特征；无 toast 特征的行一律不参与（防普通字符串误报）
+  if (!TOAST_ANCHOR_RE.test(line)) return [];
+  return scanStatusPrefixGlyphs(line, lineNo);
+}
+
+/** toast 多行窗口扫描行数（锚点行之后） */
+const TOAST_WINDOW_LINES = 4;
+
+/**
+ * toast 载荷「前缀型状态符号」**多行窗口**检测（ADR-298 门禁勘误）。
+ *
+ * 背景：`findToastEmojiPrefixViolations` 要求锚点与 emoji 字面量**同行**，而本仓
+ * toast 载荷几乎全是多行对象字面量形态：
+ *   bus.emit("toast:show", {
+ *     msg: `❌ ${friendlyError(e)}`,   ← emoji 在下一行，同行判定永久失明
+ *   });
+ * 实测该形态漏报整个 `msg:` 行的状态前缀（横跨 app-tree / sidebar / community /
+ * maintenance 等 12+ 模块），闸注释自称「ADR-267 已收口」实则只收口单行形态。
+ *
+ * 判定口径（收紧以防误报）：锚点行无同行命中时，向后拼 ≤{@link TOAST_WINDOW_LINES}
+ * 行扫描（用 `scanStatusPrefixGlyphs` 原语，**非**带锚点门槛的单行检测器），
+ * 命中**归属锚点行号**（报错定位指向载荷构造处）。
+ *
+ * 已知残余：若只在 `msg:` 行新增（锚点行是存量），行级判定放行（罕见，可接受）。
+ */
+export function findToastEmojiPrefixWindowViolations(
+  lines: readonly string[],
+  anchorLineNo: number,
+): DesignViolation[] {
+  const anchor = lines[anchorLineNo - 1];
+  if (anchor === undefined || isCommentLine(anchor)) return [];
+  if (!TOAST_ANCHOR_RE.test(anchor)) return [];
+  // 同行已由单行检测器覆盖 → 不重复计
+  if (scanStatusPrefixGlyphs(anchor, anchorLineNo).length > 0) return [];
+  const out: DesignViolation[] = [];
+  for (let i = 1; i <= TOAST_WINDOW_LINES; i++) {
+    const ln = anchorLineNo + i;
+    const line = lines[ln - 1];
+    if (line === undefined) break;
+    // 窗口在载荷构造块内：遇闭合/新语句即停（防跨块误报）
+    if (/^\s*\}\s*\)/.test(line) || /^\s*(const|let|return|function|export)\b/.test(line)) break;
+    if (isCommentLine(line)) continue;
+    for (const v of scanStatusPrefixGlyphs(line, ln)) {
+      out.push({ ...v, line: anchorLineNo }); // 归属锚点行
+    }
+    if (/msg\s*:/.test(line)) break; // msg 已见即可停（toast 只有一个 msg 槽）
   }
   return out;
 }
@@ -1323,6 +1382,8 @@ export function findViolationsOnLines(
       ...findStyleAttrViolations(line, ln, tokenMap),
       ...findEmojiIconViolations(line, ln),
       ...findToastEmojiPrefixViolations(line, ln),
+      // ADR-298 门禁勘误：多行 toast 载荷窗口（本仓主流形态，单行检测器看不见）
+      ...findToastEmojiPrefixWindowViolations(all, ln),
       ...(opts?.locale ? findLocaleEmojiPrefixViolations(line, ln) : []),
     );
   }

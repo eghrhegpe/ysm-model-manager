@@ -28,6 +28,7 @@ auto_fields:
     - findLocaleEmojiPrefixViolations
     - findStyleAttrViolations
     - findToastEmojiPrefixViolations
+    - findToastEmojiPrefixWindowViolations
     - findViolationsOnLines
     - FixEdit
     - fixLineTokens

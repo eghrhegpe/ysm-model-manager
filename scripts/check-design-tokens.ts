@@ -103,6 +103,7 @@ import {
   findLocaleEmojiPrefixViolations,
   findStyleAttrViolations,
   findToastEmojiPrefixViolations,
+  findToastEmojiPrefixWindowViolations,
   findViolationsOnLines,
   fixLineTokens,
   hasGraphicEmoji,
@@ -508,14 +509,17 @@ for (const f of files) {
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i] ?? "";
     // 快速预筛：五类特征都不含则跳过（大文件上省掉全部正则，实测占比 >95%）
-    // ⚠️ [2026-09 补齐] 关键词表必须与**判定层实际支持的种类**同步：本表原只有
-    // font-size / border-radius / color / background / style= / emoji —— 是 box-shadow
+    // ⚠️ [2026-09 补齐 / 2026-09-23 再补] 关键词表必须与**判定层实际支持的种类**同步：
+    // 本表原只有 font-size / border-radius / color / background / style= / emoji —— 是 box-shadow
     // 与 transition 加入判定层**之前**写的，此后从未补。后果是**静默失明**：
     // `transition: opacity .4s` / `transition: top 0.15s ease` / 单独的 `box-shadow:`
     // 不含任何旧关键词，在预筛即被 skip，永远到不了判定函数（实测变量表的
     // `.skip-link { transition: top 0.15s ease }` 即因此漏报）。
     // 规律：**新增判定种类时，必须同步本表**——否则新判定形同虚设（且极难察觉，
     // 因为「能命中的那些」恰好含有 color/background 而显得正常）。
+    // 2026-09-23（ADR-298 门禁勘误）：`toast:` 锚点关键词加入——多行 toast 载荷窗口的
+    // 锚点行（`bus.emit("toast:show"`）本身不含 emoji，若无此关键词会在预筛被跳过，
+    // 窗口检测器永远到不了（同型静默失明的第三次复发，故一并钉在这里）。
     if (
       !line.includes("style=") &&
       !line.includes("font-size") &&
@@ -525,6 +529,7 @@ for (const f of files) {
       !line.includes("transition") &&
       !line.includes("box-shadow") &&
       !line.includes("padding") &&
+      !line.includes("toast:") &&
       !hasGraphicEmoji(line)
     ) {
       continue;
@@ -546,6 +551,8 @@ for (const f of files) {
       ...findStyleAttrViolations(line, lineNo, tokenMap),
       ...findEmojiIconViolations(line, lineNo),
       ...findToastEmojiPrefixViolations(line, lineNo),
+      // ADR-298 门禁勘误：多行 toast 载荷窗口（锚点行 + 后续 ≤4 行）
+      ...findToastEmojiPrefixWindowViolations(lines, lineNo),
       ...(/\/locales\//.test(f.rel) ? findLocaleEmojiPrefixViolations(line, lineNo) : []),
     ];
     for (const v of hit) {

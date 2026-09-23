@@ -29,6 +29,30 @@ export function initDiagnosticsPage(host: AppContentHost): void {
 }
 
 /**
+ * 挂载 / 复用同步面板（整合包管理页内容区）。
+ *
+ * 2026-09 修复：原每次 `package:selected` 都 `innerHTML` 全量重建 `<app-sync-manager>`，
+ * 组件实例连同视图状态（目录展开态 / 状态筛选 / 子类型 / 在途集合）一起被丢弃——
+ * 切整合包闪烁，且「跨包复用同一实例」的诉求被架构层面否决。组件本就实现了
+ * `attributeChangedCallback` 支持 instance 变更（能力已有、接线没用），故改为**复用 + 改属性**：
+ *   - instance 变更 → 组件内部 `_init()` 重载，并先走 `_resetViewState()` 复位视图状态；
+ *   - 同值 setAttribute 会被 `oldVal === newVal` 拦下，重复 emit 零成本（不再依赖
+ *     app-sidebar 的去重状态机来「防丢状态」）。
+ */
+function mountSyncManager(content: HTMLElement, instance: string, defaultType: string): void {
+  let el = content.querySelector<HTMLElement>("app-sync-manager");
+  if (!el) {
+    content.innerHTML =
+      '<app-sync-manager style="display:flex;flex-direction:column;flex:1;overflow:hidden;height:100%"></app-sync-manager>';
+    el = content.querySelector<HTMLElement>("app-sync-manager");
+    if (!el) return;
+  }
+  // 先置 default-type 再置 instance：instance 变更即触发组件 _init，届时 default-type 已就位
+  el.setAttribute("default-type", defaultType);
+  el.setAttribute("instance", instance);
+}
+
+/**
  * 初始化实例页
  */
 export function initInstancesPage(host: AppContentHost): void {
@@ -48,14 +72,7 @@ export function initInstancesPage(host: AppContentHost): void {
         // P1 修复：去掉 || RESOURCE_TYPES.YSM 静默兜底。
         // 发射点（app-sidebar/events.ts）已拦空 rtype，这里防御性 return。
         if (!pkg.rtype) return;
-        const insName = pkg.name || "";
-        const defaultType = pkg.rtype;
-        content.innerHTML =
-          '<app-sync-manager instance="' +
-          esc(insName) +
-          '" default-type="' +
-          esc(defaultType) +
-          '" style="display:flex;flex-direction:column;flex:1;overflow:hidden;height:100%"></app-sync-manager>';
+        mountSyncManager(content, pkg.name || "", pkg.rtype);
       }),
   );
 }

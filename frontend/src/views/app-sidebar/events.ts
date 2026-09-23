@@ -83,9 +83,10 @@ function bindCardClickHandler(
       bus.emit("package:selected", pkg);
       // P2-1 修复：点击路径同步更新去重状态机（emitKey 格式与 restoreSelectedCard 的
       // reload 分支一致）。点击卡片 → 触发 reload（stats:refresh 等）→ restoreSelectedCard
-      // 读 localStorage 恢复选中并比对 emitKey；若此处不更新 _lastEmittedPkg，去重恒真失效，
-      // reload 后再次 emit package:selected，app-content 反复重建 <app-sync-manager>
-      // （丢用户状态/闪烁回归）。
+      // 读 localStorage 恢复选中并比对 emitKey；若此处不更新 _lastEmittedPkg，去重恒真失效。
+      // 2026-09 定位降级：app-content 现已复用同一 <app-sync-manager> 实例（只改属性），
+      // 重复 emit 不再导致「丢状态/闪烁」——本状态机退化为省掉无谓事件扩散的优化，
+      // 不再是防回归的救命稻草（勿再以「没有它就会丢状态」为由给它加复杂度）。
       // 点击允许 fallback 到 YSM（预览/选择无害），与右键拒绝 fallback 形成对称设计
       host.setLastEmittedPkg(`${st.instances[0]?.rtype || currentRepoType()}:${pkg.name}`);
       safeSet(`sb_selectedName_${pkg.rtype || currentRepoType()}`, pkg.name);
@@ -226,8 +227,9 @@ function restoreSelectedCard(
       const hdr = card.querySelector(".instance-card-header");
       if (!hdr) return;
       hdr.classList.add("active");
-      // P2 修复：仅选中项实际变化时才 emit——原每次重载都重发，
-      // app-content 每次收到都 innerHTML 重建 <app-sync-manager>（状态丢失/闪烁）
+      // P2 修复：仅选中项实际变化时才 emit——原每次重载都重发。
+      // 2026-09：app-content 已改为复用同一 <app-sync-manager> 实例（同值 setAttribute
+      // 被组件 oldVal===newVal 拦下），重复 emit 不再有丢状态代价，此处仅省事件扩散。
       const emitKey = `${rtypeKey}:${savedName}`;
       if (host.getLastEmittedPkg() !== emitKey) {
         const pkg = instances[idx];

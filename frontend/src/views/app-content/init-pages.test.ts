@@ -10,8 +10,9 @@
 // 与面板 id 同源），`bindTabs` 从 DOM 派生，**不再接受白名单**——新增 tab 只改模板一处。
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { bus } from "@/bus";
 import type { AppContentHost } from "./host.ts";
-import { bindTabs } from "./init-pages.ts";
+import { bindTabs, initInstancesPage } from "./init-pages.ts";
 import { AppContentState } from "./state.ts";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
 
@@ -153,5 +154,53 @@ describe("AppContentState 字段归属（ADR-263）", () => {
     // avatarCache 已于 ADR-264 上收 community 层 store，其断言转为「已不在容器内」。
     expect("workshopTimer" in state).toBe(true);
     expect("avatarCache" in state).toBe(false);
+  });
+});
+
+// ===== 整合包面板复用契约（2026-09 修复）=====
+// 背景：原每次 `package:selected` 都 `innerHTML` 全量重建 `<app-sync-manager>`，组件实例
+// 连同视图状态（目录展开态 / 状态筛选 / 子类型 / 在途集合）一起被丢弃——切整合包闪烁，
+// 且「跨包复用」在架构上不可能。组件本就实现了 `attributeChangedCallback` 支持 instance
+// 变更，故改为复用 + 改属性。此处锁定「同一元素引用」契约：改回 innerHTML 重建即红。
+describe("initInstancesPage：同步面板复用而非重建", () => {
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    document.body.replaceChildren();
+    // initInstancesPage 会跑 bindTabs，测试壳无 tab 面板 → 屏蔽其告警噪音
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  it("连续 package:selected → 复用同一实例（改属性，不重建）", () => {
+    const { host, root } = makeHost();
+    root.innerHTML = '<div id="ins-content"></div>';
+    initInstancesPage(host);
+
+    bus.emit("package:selected", { name: "packA", rtype: "ysm" });
+    const content = root.getElementById("ins-content") as HTMLElement;
+    const first = content.querySelector("app-sync-manager");
+    expect(first).not.toBeNull();
+    expect(first?.getAttribute("instance")).toBe("packA");
+    expect(first?.getAttribute("default-type")).toBe("ysm");
+
+    // 切包：必须是同一元素引用（不是新建），仅属性变更
+    bus.emit("package:selected", { name: "packB", rtype: "ysm" });
+    const second = content.querySelector("app-sync-manager");
+    expect(second).toBe(first);
+    expect(second?.getAttribute("instance")).toBe("packB");
+    expect(content.querySelectorAll("app-sync-manager").length).toBe(1);
+  });
+
+  it("空 rtype 早退：不挂载面板（发射点已拦，此处为防御分支）", () => {
+    const { host, root } = makeHost();
+    root.innerHTML = '<div id="ins-content"></div>';
+    initInstancesPage(host);
+
+    bus.emit("package:selected", { name: "packA", rtype: "" });
+    const content = root.getElementById("ins-content") as HTMLElement;
+    expect(content.querySelector("app-sync-manager")).toBeNull();
   });
 });

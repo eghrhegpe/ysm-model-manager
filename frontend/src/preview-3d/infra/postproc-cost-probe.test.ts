@@ -1,10 +1,12 @@
 // ===== postproc-cost-probe 纯函数段测试 =====
-// 只测零 WebGL 依赖的部分（median / percentile / estimateComposerRtBytes / summarizeArm）。
-// 采样主体需真实 WebGL + 活跃会话，属「按需手动跑」类（同 scripts/_attic/translucency-probe.ts），
-// 不进 CI——但纯计算段必须锁死，否则报告里的 MB 数没人复核。
+// 只测零 WebGL 依赖的部分（median / percentile / estimateComposerRtBytes / summarizeArm /
+// buildNote）。采样主体需真实 WebGL + 活跃会话，属「按需手动跑」类
+// （同 scripts/_attic/translucency-probe.ts），不进 CI——但纯计算段必须锁死，
+// 否则报告里的 MB 数与判读口径没人复核。
 
 import { describe, expect, it } from "vitest";
 import {
+  buildNote,
   estimateComposerRtBytes,
   median,
   percentile,
@@ -97,5 +99,34 @@ describe("summarizeArm", () => {
   it("arm 字段透传（报告按臂取值，别串行）", () => {
     expect(summarizeArm("direct", [], []).arm).toBe("direct");
     expect(summarizeArm("composer", [], []).arm).toBe("composer");
+  });
+});
+
+describe("buildNote（判读口径）", () => {
+  const base = {
+    taxMeaningful: true,
+    composerArmFrames: 60,
+    gpuTimingAvailable: true,
+    extraGpuMsPerFrame: 1.05,
+    extraPct: 53.7,
+    rtBytesBoth: 37_009_920,
+  } as unknown as Parameters<typeof buildNote>[0];
+
+  it("开启态：明说 A−B 是全部成本，非常驻税", () => {
+    const note = buildNote({ ...base, taxMeaningful: false });
+    expect(note).toContain("非常驻税");
+  });
+
+  // [ADR-299] 惰性常驻后关闭态两臂同路径：差值必然趋零。若仍按旧口径报「常驻每帧多耗
+  // X ms」，会把噪声（甚至负值）读成代价——这条守卫锁死「不谎报」。
+  it("[ADR-299] 关闭态 composer 零参与 → 自证常驻税归零，不报代价", () => {
+    const note = buildNote({ ...base, composerArmFrames: 0, extraGpuMsPerFrame: -0.02 });
+    expect(note).toContain("惰性常驻生效");
+    expect(note).not.toContain("常驻每帧多耗");
+  });
+
+  it("无 GPU timer：只给 CPU 值时明确禁止据其判决", () => {
+    const note = buildNote({ ...base, gpuTimingAvailable: false });
+    expect(note).toContain("勿据 submitMs 判决");
   });
 });

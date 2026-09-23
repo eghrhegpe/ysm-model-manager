@@ -93,6 +93,7 @@ auto_fields:
     - buildLitematicScene
     - buildMmdScene
     - buildModelGroup
+    - buildNote
     - buildOrderedTexKeys
     - buildPackScene
     - buildPmxScene

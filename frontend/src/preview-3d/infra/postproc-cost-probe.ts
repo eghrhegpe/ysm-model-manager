@@ -79,6 +79,8 @@ export interface PostprocProbeReport {
   rtBytesBoth: number;
   gpuTimingAvailable: boolean;
   arms: { composer: ArmStats; direct: ArmStats };
+  /** composer 臂中**真正走了 composer** 的帧数（ADR-299 惰性常驻后，关闭态为 0） */
+  composerArmFrames: number;
   /** composer 臂相对 direct 臂的每帧 GPU 增量（ms）；不可用时 null */
   extraGpuMsPerFrame: number | null;
   /** 增量占比（%）；不可用时 null */
@@ -229,9 +231,17 @@ const nextFrame = (): Promise<void> =>
     requestAnimationFrame(() => resolve());
   });
 
-function buildNote(report: Omit<PostprocProbeReport, "note">): string {
+/** 导出供单测：note 是判读口径的唯一出口，措辞错了会直接误导决策 */
+export function buildNote(report: Omit<PostprocProbeReport, "note">): string {
   if (!report.taxMeaningful) {
     return "ppEnabled=true：A−B 差是「后处理全部成本」（含 bloom/ssao/ssr 实效果），非常驻税；要量税请先关闭后处理再跑。";
+  }
+  // [ADR-299] 惰性常驻后，关闭态 composer 根本不参与渲染：两臂同路径，A−B 差应为噪声。
+  // 这本身就是「常驻税已归零」的证据，而不是「测不到」——需与「样本不足」区分开。
+  if (report.composerArmFrames === 0) {
+    const per = report.extraGpuMsPerFrame;
+    const diff = per === null ? "n/a" : `${per.toFixed(2)}ms`;
+    return `关闭态 composer 未参与任何采样帧（ADR-299 惰性常驻生效）：两臂同走直渲，A−B 差 ${diff} 应为噪声量级——常驻税已归零、读写缓冲也未分配。要量启用态成本请打开后处理再跑。`;
   }
   if (!report.gpuTimingAvailable) {
     return "本机无 EXT_disjoint_timer_query_webgl2：GPU 时间不可测，仅 submitMs（CPU，含主循环干扰）与 rtBytes 可用，勿据 submitMs 判决。";
@@ -282,6 +292,7 @@ export async function runPostprocCostProbe(
   };
 
   const total = warmup + framesPerArm * 2;
+  let composerArmFrames = 0;
   for (let i = 0; i < total; i++) {
     await nextFrame();
     // 交替：奇偶分工，两臂共享同一段墙钟（抵消热漂移/降频）
@@ -289,8 +300,12 @@ export async function runPostprocCostProbe(
     const count = i >= warmup;
     timer.begin();
     const t0 = performance.now();
-    if (arm === "composer" && postProc) postProc.render(dt, lightCap);
-    else renderer.render(scene, camera);
+    // [ADR-299] 与 render-host 同款语义：`render()` 返回 false = 该帧没画（惰性常驻后
+    // 关闭态 composer 不存在），必须补直渲——否则 composer 臂测的是「什么都没渲染」的
+    // 空帧，A−B 差会变成负的垃圾数字。走通 composer 的帧另作计数，供报告自证。
+    const renderedByComposer = arm === "composer" && !!postProc && postProc.render(dt, lightCap);
+    if (!renderedByComposer) renderer.render(scene, camera);
+    else composerArmFrames++;
     const submitMs = performance.now() - t0;
     timer.end(arm, count);
     collect();
@@ -329,6 +344,7 @@ export async function runPostprocCostProbe(
     rtBytesBoth: rtBytesSingle * 2,
     gpuTimingAvailable: hasGpu,
     arms: { composer, direct },
+    composerArmFrames,
     extraGpuMsPerFrame,
     extraPct,
   };

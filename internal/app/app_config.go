@@ -170,8 +170,8 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAut
 		LinkMode: install.SanitizeLinkMode(linkMode, oldCfg.LinkMode),
 		Theme:    orDefault(theme, oldCfg.Theme),
 		// P4 修复：theme-auto 落盘（localStorage 被清理后可从 ysm_config.json 回退）
-		ThemeAuto:  orDefault(themeAuto, oldCfg.ThemeAuto),
-		Mirror:     oldCfg.Mirror,
+		ThemeAuto: orDefault(themeAuto, oldCfg.ThemeAuto),
+		Mirror:    oldCfg.Mirror,
 		// VoxelMaxBlocks 从 oldCfg 拷贝——原手工构造漏带该字段，
 		// 保存任何设置都会把用户体素上限重置为 0（默认 200000）
 		VoxelMaxBlocks: oldCfg.VoxelMaxBlocks,

@@ -61,6 +61,11 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "🔀": "shuffle",
   "✕": "close",
   "☰": "menu",
+  // ▦（网格视图切换目标态）/ ⋮（更多溢出菜单）——2026-09 ADR-238 扫尾批次：
+  // 工具栏 view-mode / 「更多」按钮从 Unicode 文本字符升格为 SVG 语义图标，字形登记
+  // 供扫描器建议与契约对拍（▦=U+25A6、⋮=U+22EE，均在 GRAPHIC_EMOJI 段外，属文本符号）
+  "▦": "grid",
+  "⋮": "verticalDots",
   "☐": "checkbox",
   "🧭": "navigate",
 

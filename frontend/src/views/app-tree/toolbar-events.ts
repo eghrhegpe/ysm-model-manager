@@ -130,11 +130,17 @@ function atTlBindViewMode(ctx: AtTlCtx): void {
   const { vm, $ } = ctx;
   const viewModeBtn = $("btn-view-mode");
   if (!viewModeBtn) return;
-  viewModeBtn.textContent = vm.snapshot.renderMode === "list" ? "▦" : "☰";
+  // 图标一律走 UI_ICONS 常量 + 三元选择（红线 R8 白名单形态，勿拼模板串）；
+  // 原 textContent="☰"/"▦" 文本字符在绑定瞬间处决模板渲染的 SVG，双轨打架（ADR-238 结案）
+  const applyViewModeIcon = (mode: RenderMode): void => {
+    const icon = mode === "list" ? UI_ICONS.grid : UI_ICONS.menu;
+    viewModeBtn.innerHTML = icon;
+  };
+  applyViewModeIcon(vm.snapshot.renderMode);
   viewModeBtn.addEventListener("click", () => {
     const next = (vm.snapshot.renderMode === "list" ? "grid" : "list") as RenderMode;
     vm.setRenderMode(next);
-    viewModeBtn.textContent = next === "list" ? "▦" : "☰";
+    applyViewModeIcon(next);
     vm._renderTree();
     flashBtn(viewModeBtn);
   });
@@ -279,6 +285,9 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
         vm._renderTree();
       } else if (action === "genindex") {
         const btn = item as HTMLButtonElement;
+        // 捕获声明表渲染的完整内容（book 图标 + 文案）；finally 必须按原结构恢复，
+        // 原 btn.textContent = t(...) 会抹掉图标且菜单不重渲染永不归位（ADR-238 结案）
+        const origHtml = btn.innerHTML;
         btn.innerHTML = UI_ICONS.refresh;
         btn.disabled = true;
         try {
@@ -315,7 +324,7 @@ function atTlBindMoreMenu(ctx: AtTlCtx): void {
             type: "error",
           });
         } finally {
-          btn.textContent = t("tree.moreGenIndex");
+          btn.innerHTML = origHtml;
           btn.disabled = false;
         }
       }

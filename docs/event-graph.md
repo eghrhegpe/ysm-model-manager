@@ -60,7 +60,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 191 |
+| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 197 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -72,7 +72,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 190 |
+| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 196 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -569,11 +569,11 @@
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 49 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 60 |
-| atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 161 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 288 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 306 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 312 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 323 |
+| atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 167 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 297 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 315 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 321 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 332 |
 | advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 181 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 200 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 230 |

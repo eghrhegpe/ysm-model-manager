@@ -31,7 +31,7 @@ export function modelDetailHTML(meta: ModelDetailMeta | null): string {
   <div class="dp-hint">${t("preview.clickFileHint")}</div>
   <div class="dp-hints">
     <span>${UI_ICONS.gem} ${t("preview.ysmModel")}</span>
-    <span> ${t("preview.mmdSkin")}</span>
+    <span>${UI_ICONS.character} ${t("preview.mmdSkin")}</span>
     <span>${UI_ICONS.vrHeadset} ${t("preview.vrcAvatar")}</span>
     <span>${UI_ICONS.appearance} ${t("preview.resourcePack")}</span>
   </div>

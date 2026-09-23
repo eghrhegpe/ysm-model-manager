@@ -113,6 +113,14 @@ export const UI_ICONS = {
   menu: svg(
     '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>',
   ),
+  // 网格视图（列表⇄网格切换的目标态图标，ADR-238：替换原 `▦` 文本字符占位）
+  grid: svg(
+    '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  ),
+  // 更多/溢出菜单（⋮ 竖三点的语义名；工具栏「更多」下拉触发按钮，替换文本字符占位）
+  verticalDots: svg(
+    '<circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
+  ),
   checkbox: svg('<rect x="3" y="3" width="18" height="18" rx="2"/>'),
   navigate: svg(
     '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',

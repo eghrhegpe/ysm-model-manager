@@ -1851,6 +1851,10 @@ export const autoSidebar = [
             "link": "/knowledge/frontend_design_critique"
           },
           {
+            "text": "前端设计令牌债务 — 剩余 157 条决策记录",
+            "link": "/knowledge/frontend_design_debt"
+          },
+          {
             "text": "前端命名章程（黑话治理）",
             "link": "/knowledge/frontend_naming"
           },

@@ -113,7 +113,7 @@ status: active
 - `bus.on` 订阅全部收进 `_unsubs` 并在 `disconnectedCallback` 清理；`_cardCleanup` / `_packDndCleanup`（document 级 DnD）/ `_docClickHandler`（document 级）同步清理
 - `_loading` 守卫防止并发 `_reload`（`_reloadGen` 代数校验丢弃过期结果 + `_pendingReload` 补跑最新 rtype）；`_syncInProgress` 守卫防止推送/拉取并发触发；`stats:refresh` 走 300ms 防抖
 - **实例级** `_checkedSets`（`AppSidebar` 实例字段 `private _checkedSets = new Map<string, Set<string>>()`，定义在 `index.ts`，非模块级——模块级会跨组件实例共享、成泄漏源；sync-flow.ts 仅经 `getCheckedSets()` 回调读）按 rtype 隔离跨重渲染持久化勾选状态（实例级 = 组件 GC 自动回收）；事件绑定用事件委托 + 「list 未变则复用 handler」——**该复用分支生产不可达**（`_cardCleanup` 先置空 `_lastList`），实际每次 reload 都是「全量摘监听→重绑」，监听不累积（防泄漏语义成立，与「复用」描述有出入）
-- 渲染后经 `_restoreCheckboxes` 恢复勾选，选中卡片经 localStorage 恢复；**`restoreSelectedCard` 去重由宿主注入的去重状态机（`SidebarHost`/`EmitDedupe`）跨 reload 生效**（P2 复核修复：原「list 替换时复位」因复用分支不可达而每次复位、去重恒真失效、每次重发 `package:selected` 反复重建 `<app-sync-manager>`；现状态由宿主实例持有，同组件 reload 不复位，仅新挂载会话经宿主的 `resetSelectedEmit()` 重置，由 `disconnectedCallback` 调用）
+- 渲染后经 `_restoreCheckboxes` 恢复勾选，选中卡片经 localStorage 恢复；**`restoreSelectedCard` 去重由宿主注入的去重状态机（`SidebarHost`/`EmitDedupe`）跨 reload 生效**（P2 复核修复：原「list 替换时复位」因复用分支不可达而每次复位、去重恒真失效、每次重发 `package:selected` 反复重建 `<app-sync-manager>`；现状态由宿主实例持有，同组件 reload 不复位，仅新挂载会话经宿主的 `resetSelectedEmit()` 重置，由 `disconnectedCallback` 调用）。2026-09 定位降级：app-content 已改为**复用**同一面板实例（只改属性），重复 emit 不再导致丢状态，本状态机退化为省事件扩散的优化
 - **推送 done 按 token 精确匹配 + 识别 `skipped`**（P1 修复，与 sync.ts 联动）：原 `instanceName ===` fallback 会把「busy 被吞未处理」误判为成功（toast 报 ✅ 实际未推）；现 sync.ts busy 命中时回 done 带 `skipped: true`，sidebar 按拒绝处理
 
 ## 相关

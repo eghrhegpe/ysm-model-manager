@@ -168,7 +168,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 |------|------|------|
 | `stats:refresh` | 广播 → 订阅 | 变异完成 → sidebar 300ms 防抖 `_reload(true)` + sync-manager 重拉 |
 | `tree:reload` | 广播 → 订阅 | 整棵树重扫（sync:download:missing 成功后、sync:toggle:status finally） |
-| `package:selected` | sidebar → app-content | 携带 `{name, rtype}`（`bus.ts` 契约；无 `dir` 字段）→ `app-content` 以 `innerHTML` 挂载 `<app-sync-manager instance default-type>` |
+| `package:selected` | sidebar → app-content | 携带 `{name, rtype}`（`bus.ts` 契约；无 `dir` 字段）→ `app-content` **复用**同一 `<app-sync-manager>` 实例并改 `instance`/`default-type` 属性（2026-09 起不再 `innerHTML` 重建） |
 | `repo:rtype-changed` | 全局 nav → 各处 | 切 rtype 重载 |
 | `repo:subdir-changed` | 全局 nav → sync-manager | MMD 子目录切换重载 |
 | `sync:download:missing` | sidebar → handler | 载荷 `{instanceName, rtype, token}` |
@@ -227,7 +227,8 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - **busy 语义对称**：download/toggle 两个 handler 的 busy 命中都显式反馈，不静默吞事件
 - **`sync:download:missing` 载荷 rtype 必填**：缺参显式失败（P2 修复）
 - **`tree:reload` 仅在真正做过安装时广播**（handler P2）：配置缺失短路时无任何写操作
-- **`SidebarHost`/`EmitDedupe` 去重**：同组件 reload 不复位（防反复重发 `package:selected` → 反复重建 sync-manager 丢状态），宿主持有状态
+- **`SidebarHost`/`EmitDedupe` 去重**：同组件 reload 不复位，宿主持有状态。2026-09 定位降级——app-content 已复用面板实例（同值 `setAttribute` 被组件 `oldVal===newVal` 拦下），重复 emit 不再有丢状态代价，本状态机退化为省事件扩散的优化，**不再是防回归的救命稻草**
+- **⚠️ 面板复用而非重建**（2026-09 修复）：`init-pages.mountSyncManager` 首次注入元素、后续仅 `setAttribute`，实例跨整合包存活；切包时由组件 `_init` 内的 `_resetViewState()` 复位视图状态（展开态/筛选/子类型）。**改回 `innerHTML` 重建会被 `init-pages.test.ts` 的「复用同一实例」用例拦下**
 - **`_syncInProgress/_loading` 卸载时复位**：否则重挂载后按钮点击被静默 return
 - **Storage**：一律用 `safeGet/safeSet/safeRemove`（ADR-044），防隐私模式 `localStorage` 禁用抛错
 - **Go 绑定**：统一 `getApp()` 入口，禁止直调 `window.go.main.App.*`

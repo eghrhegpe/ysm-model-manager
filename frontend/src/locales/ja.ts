@@ -1581,7 +1581,7 @@ export const ja: Record<string, string> = {
   "tree.batch": "一括 ▾",
   "tree.batchEnableAll": "すべて有効",
   "tree.batchDisableAll": "すべて無効",
-  "tree.more": "⋮ その他 ▾",
+  "tree.more": "その他 ▾",
   "tree.moreImportFile": "ファイルをインポート",
   "tree.moreImportDir": "フォルダをインポート",
   "tree.selectAll": "☑️ すべて選択",

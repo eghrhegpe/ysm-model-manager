@@ -108,9 +108,9 @@ ADR-238 把 emoji 当 UI 图标迁移成 SVG（`UI_ICONS` + `.ws-icon`）。摸�
 
 ## 不变量
 
-- 全仓 emoji 字面量 ≈ 988（2026-09 盘点）：436 处为「未收录于 icon-map」的非图标类字形（`⭐/☆/🖱️/⇔` 等装饰/箭头/星标），与 UI 图标迁移无关，勿误改。
+- 全仓 emoji 字面量 ≈ 994（2026-09 盘点）：非图标类字形（`⭐/☆/🖱️/⇔` 等装饰/箭头/星标）与 UI 图标迁移无关，勿误改。
 - HTML 图标位残留 emoji 经 `check-design-tokens` 仅 2 处（rename.ts / tpl-batch-rename.ts），已是存量债。
-- 映射语义名共 118，已消费 98，孤儿 20（`restricted/inbox/motion/controls/fog/camera/play/visibility/shadow/mirror/sky/enableAll/disableAll/money/key/sun/sakura/mint/ocean/radioOff`）：多为 3D 菜单坞站/能力行/批量动作位，迁移时预定但当前未接 UI，属「备而不用」，非 bug。
+- 映射语义名共 120，已消费 96，孤儿 24（`restricted/verticalDots/inbox/globe/motion/controls/fog/camera/play/visibility/shadow/mirror/sky/enableAll/disableAll/money/key/sun/sakura/mint/ocean/bulletAlt/radioOn/radioOff`）：多为 3D 菜单坞站/能力行/批量动作位，迁移时预定但当前未接 UI，属「备而不用」，非 bug。
 
 ## diagnostics 三个扫描按钮状态机（上一会话重点翻的）
 

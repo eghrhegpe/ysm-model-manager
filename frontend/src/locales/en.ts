@@ -1582,7 +1582,7 @@ export const en: Record<string, string> = {
   "tree.batch": "Batch ▾",
   "tree.batchEnableAll": "Enable all",
   "tree.batchDisableAll": "Disable all",
-  "tree.more": "⋮ More ▾",
+  "tree.more": "More ▾",
   "tree.moreImportFile": "Import file",
   "tree.moreImportDir": "Import folder",
   "tree.selectAll": "☑️ Select all",

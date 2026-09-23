@@ -25,6 +25,8 @@ describe("toolbar-menus 声明式菜单（icon 语义名声明式）", () => {
 
   it("更多下拉：触发按钮 + 五菜单项 + dividerBefore 分隔线", () => {
     const html = renderDropdown("more");
+    // ADR-238：触发按钮的 ⋮ 语义图标走 SVG，i18n 文案回归纯文本。
+    expect(html).not.toContain("⋮");
     expect(html).toContain('id="btn-more"');
     expect(html).toContain('data-testid="tree-more"');
     expect(html).toContain('id="menu-more"');
@@ -47,10 +49,10 @@ describe("toolbar-menus 声明式菜单（icon 语义名声明式）", () => {
     expect(divIdx).toBeLessThan(html.indexOf('data-more="open-folder"'));
   });
 
-  it("更多下拉全部 5 个菜单项图标均经语义名解析为纯 SVG（无 emoji 残留，ADR-238）", () => {
+  it("更多下拉触发按钮 + 全部 5 个菜单项图标均经语义名解析为纯 SVG（无 emoji 残留，ADR-238）", () => {
     const html = renderDropdown("more");
-    // 五个菜单项都有 SVG 图标（file/folderOpen/folderOpen/refresh/book），无 emoji 并排
-    expect(html.match(/class="ws-icon"/g)).toHaveLength(5);
+    // 触发按钮 verticalDots + 五个菜单项 SVG 图标（file/folderOpen/folderOpen/refresh/book），无 ⋮/emoji 并排
+    expect(html.match(/class="ws-icon"/g)).toHaveLength(6);
     for (const action of ["import-file", "import-dir", "open-folder", "refresh", "genindex"]) {
       const btn = html.slice(
         html.indexOf(`data-more="${action}"`),

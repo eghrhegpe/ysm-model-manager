@@ -74,6 +74,7 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
     id: "btn-more",
     menuId: "menu-more",
     buttonLabelKey: "tree.more",
+    buttonIcon: "verticalDots",
     items: [
       {
         action: "import-file",

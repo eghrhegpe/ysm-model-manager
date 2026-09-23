@@ -1541,7 +1541,7 @@ export const zhCN = {
   "tree.batch": "批量 ▾",
   "tree.batchEnableAll": "全部启用",
   "tree.batchDisableAll": "全部禁用",
-  "tree.more": "⋮ 更多 ▾",
+  "tree.more": "更多 ▾",
   "tree.moreImportFile": "导入文件",
   "tree.moreImportDir": "导入文件夹",
   "tree.selectAll": "☑️ 全选",

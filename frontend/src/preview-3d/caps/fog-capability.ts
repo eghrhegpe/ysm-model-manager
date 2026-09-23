@@ -192,7 +192,9 @@ export class FogCapability implements SceneCapability {
   }
 
   getMode(): FogMode {
-    return envState.fogMode as FogMode;
+    // envState.fogMode 由 schema enum values 推导已是 "linear"|"exp2" ≡ FogMode，无需 cast
+    // （water getWaterMode 同款收口，锐评 F-3 家族）
+    return envState.fogMode;
   }
 
   /** 返回完整 params 浅拷贝（UI 面板 / 测试断言用） */

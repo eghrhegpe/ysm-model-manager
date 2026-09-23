@@ -16,7 +16,6 @@ import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCapability } from "./ground-capability.ts";
 import {
-  type GroundCanvasStyle,
   type GroundMaterialPreset,
   type GroundMatParam,
   type GroundOverlayStyle,
@@ -38,8 +37,11 @@ const GRID_GROUP: LocaleKey = "preview.groundGroupGrid";
 function paramVisible(param: GroundMatParam) {
   return (s: Partial<PreviewSnapshot>): boolean => {
     // ADR-249 §2.1 拆轴：由来源轴 + 样式轴派生当前模式
-    const sourceKind = s["env.groundSourceKind"] as GroundSourceKind | undefined;
-    const canvasStyle = s["env.groundCanvasStyle"] as GroundCanvasStyle | undefined;
+    // [锐评 F-3 家族收口] 探针已收窄为精确联合（PROBE_ENUM_VALUES ⇄ schema enum 同集），
+    // 快照类型与 GroundSourceKind / GroundCanvasStyle 逐字相同——原两处 `as … | undefined`
+    // 化石 cast 退役，类型漂移由编译器代管。
+    const sourceKind = s["env.groundSourceKind"];
+    const canvasStyle = s["env.groundCanvasStyle"];
     if (!sourceKind) return false;
     const mode = groundMatSourceFromAxes(sourceKind, canvasStyle);
     return paramIsEffective(mode, param);

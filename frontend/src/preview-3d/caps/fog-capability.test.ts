@@ -388,7 +388,8 @@ describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
   it("near/far 仅 linear 可见、density 仅 exp2 可见（visibleWhen 吃 env.fogMode 快照）", () => {
     const cap = newCap();
     const children = cap.getMenuNodes()[1]!.children!;
-    const vis = (id: string, mode: string) =>
+    // 快照已收窄为精确联合（锐评 F-3），夹具参数随之收紧——旧 `string` 下拼错 mode 恒漏过
+    const vis = (id: string, mode: "exp2" | "linear") =>
       children.find((c) => c.id === id)!.visibleWhen!({ "env.fogMode": mode });
     // exp2：density 可见，near/far 隐藏
     expect(vis("fog-density", "exp2")).toBe(true);

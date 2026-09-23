@@ -42,13 +42,19 @@ import {
   MAX_PIXEL_RATIO_KEY,
 } from "@/preview-3d/infra/render-budget.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
-import type { PathInput, PathValue, PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
 // [ADR-168 二期] KNOWN_PATHS / PreviewStatePath / PreviewSnapshot 已下沉零依赖叶子
 // preview-paths.ts（断 caps/scene-capability ⇄ preview-state 纯 type 环）：
 // 本文件 import KNOWN_PATHS 供 bindings 注册 / previewSnapshot() 遍历，并 re-export
 // 三件套保既有公共面——外部消费者（menu/caps/adapters）的 import 语句零改动。
 // （re-export 拆值/类型两行：gen-knowledge-autogen 的 reRe 正则不识别花括号内 `type X`。）
-import { KNOWN_PATHS } from "./preview-paths.ts";
+import {
+  KNOWN_PATHS,
+  type PathInput,
+  type PathValue,
+  PROBE_ENUM_VALUES,
+  type PreviewSnapshot,
+  type PreviewStatePath,
+} from "./preview-paths.ts";
 
 export type { PathInput, PathValue, PreviewSnapshot, PreviewStatePath } from "./preview-paths.ts";
 export { KNOWN_PATHS } from "./preview-paths.ts";
@@ -138,21 +144,13 @@ function envToggleCap(id: string): EnvToggleCap | undefined {
 }
 
 /** [doc:adr-126-p5-c] 水面能力（读/写 mode）——供 env.waterMode 惰性绑定。
- *  [锐评 F-3] cap 侧签名保持宽（string），探针层归一收束为 "film" | "pool"——
- *  fogMode binding 先例同构：谓词类型层精确比较，脏值不再外溢成静默恒假。 */
+ *  cap 侧签名保持宽（string），探针层经 probeEnum 归一收束为精确联合。 */
 interface WaterModeCap {
   getWaterMode(): string;
   setWaterMode(v: string): void;
 }
 function waterCap(): WaterModeCap | undefined {
   return lazyCap<WaterModeCap>("water", "getWaterMode", "setWaterMode");
-}
-
-/** [锐评 F-3] env.waterMode 探针归一：任意值收成 WaterMode 联合（非 "pool" 一律落
- *  "film"，与默认值同侧保守）。联合字面量不 import caps/water-state.ts——preview-paths
- *  零依赖叶子的断环纪律（ADR-168）在此同样成立：事实源 = WATER_MODES，成员变更两处同步。 */
-function normalizeWaterMode(v: unknown): "film" | "pool" {
-  return v === "pool" ? "pool" : "film";
 }
 
 /** [doc:adr-126-p5-c] 地面能力（读/写 来源轴+样式轴+叠加层）——供 env.ground* 惰性绑定 */
@@ -212,6 +210,21 @@ function waterReflectionCap(): WaterReflectionCap | undefined {
   );
 }
 
+/** [锐评 F-3 家族收口 2026-09-23] cap 态枚举探针的统一归一守卫。
+ *  值域 = preview-paths.ts|PROBE_ENUM_VALUES（叶子影子表；preview-paths.test.ts 对账闸
+ *  钉死 ⇄ schema enum 同步，**首成员 = schema default**）。非白名单值（脏 cap 态 /
+ *  控件基元杂值 / cap 缺席 undefined）一律回落 tuple[0]——binding 两侧永拿精确联合：
+ *  谓词 `=== "拼错"` 编译即红，脏值不再经 `String(v)` 漏进 cap setter。
+ *  原 fog 键的 `v === "exp2" ? … : …` 与 water 的 normalizeWaterMode 两份 bespoke 守卫
+ *  同归此处（语义恒等：非白名单 → 默认值同侧保守）。 */
+function probeEnum<P extends keyof typeof PROBE_ENUM_VALUES>(
+  path: P,
+  v: unknown,
+): (typeof PROBE_ENUM_VALUES)[P][number] {
+  const values = PROBE_ENUM_VALUES[path] as readonly string[];
+  return (values.includes(v as string) ? v : values[0]) as (typeof PROBE_ENUM_VALUES)[P][number];
+}
+
 /** 路径 → 读写绑定表（模块级常量；cap 解析全部惰性，不持有实例）
  *  类型用窄联合（`typeof KNOWN_PATHS[number]`）而非 `PreviewStatePath` 全集——
  *  保证"加新路径"必须先扩 `KNOWN_PATHS` + 填 binding，类型层守住"调用方永不传未落地项" */
@@ -263,35 +276,37 @@ const bindings: PathBindingMap = {
     set: (v) => envToggleCap("sky")?.setEnvironmentEnabled(Boolean(v)),
     available: () => envToggleCap("sky") !== undefined,
   },
-  // [doc:adr-126-p5-c] 探针：cap 内部状态上浮——water.mode / ground.matSource。
+  // [doc:adr-126-p5-c] 探针：cap 内部状态上浮——water.mode / ground.matSource / fog.mode。
   // 惰性解析（cap 缺席时 available=false、get 安全缺省），不持有实例、不落盘。
-  // [锐评 F-3] 两侧归一为 WaterMode 联合（normalizeWaterMode），谓词类型精确比较。
+  // [锐评 F-3 家族收口] 五枚举探针两侧一律经 probeEnum 归一——get/set 永拿精确联合，
+  // 谓词 `=== "拼错"` 编译即红；原 ground 三键的 `String(v)` 直漏与 fog 的 bespoke
+  // `v === "exp2"` 同归单守卫（非白名单 → schema 默认值同侧保守）。
   "env.waterMode": {
-    get: () => normalizeWaterMode(waterCap()?.getWaterMode()),
-    set: (v) => waterCap()?.setWaterMode(normalizeWaterMode(v)),
+    get: () => probeEnum("env.waterMode", waterCap()?.getWaterMode()),
+    set: (v) => waterCap()?.setWaterMode(probeEnum("env.waterMode", v)),
     available: () => waterCap() !== undefined,
   },
   "env.groundSourceKind": {
-    get: () => groundMatCap()?.getSourceKind() ?? "none",
-    set: (v) => groundMatCap()?.setSourceKind(String(v)),
+    get: () => probeEnum("env.groundSourceKind", groundMatCap()?.getSourceKind()),
+    set: (v) => groundMatCap()?.setSourceKind(probeEnum("env.groundSourceKind", v)),
     available: () => groundMatCap() !== undefined,
   },
   "env.groundCanvasStyle": {
-    get: () => groundMatCap()?.getCanvasStyle() ?? "plain",
-    set: (v) => groundMatCap()?.setCanvasStyle(String(v)),
+    get: () => probeEnum("env.groundCanvasStyle", groundMatCap()?.getCanvasStyle()),
+    set: (v) => groundMatCap()?.setCanvasStyle(probeEnum("env.groundCanvasStyle", v)),
     available: () => groundMatCap() !== undefined,
   },
   // ADR-249 §2.3 叠加层：独立透明格线层状态上浮（菜单叠加层控件 visibleWhen 消费）
   "env.groundOverlay": {
-    get: () => groundMatCap()?.getOverlayStyle() ?? "none",
-    set: (v) => groundMatCap()?.setOverlayStyle(String(v)),
+    get: () => probeEnum("env.groundOverlay", groundMatCap()?.getOverlayStyle()),
+    set: (v) => groundMatCap()?.setOverlayStyle(probeEnum("env.groundOverlay", v)),
     available: () => groundMatCap() !== undefined,
   },
-  // [doc:adr-126-p5-c] 探针：雾模式上浮——fog 控件 near/far（linear 专属）
-  // 与 density（exp2 专属）按 mode 互斥显隐，谓词只吃快照不摸 cap 实例。
+  // 雾模式上浮——fog 控件 near/far（linear 专属）与 density（exp2 专属）按 mode 互斥显隐，
+  // 谓词只吃快照不摸 cap 实例。
   "env.fogMode": {
-    get: () => fogModeCap()?.getMode() ?? "linear",
-    set: (v) => fogModeCap()?.setMode(v === "exp2" ? "exp2" : "linear"),
+    get: () => probeEnum("env.fogMode", fogModeCap()?.getMode()),
+    set: (v) => fogModeCap()?.setMode(probeEnum("env.fogMode", v)),
     available: () => fogModeCap() !== undefined,
   },
   // [doc:adr-297] 探针：水面倒影开关上浮——reflect 组三从控（强度/分辨率/SSR 抑制）

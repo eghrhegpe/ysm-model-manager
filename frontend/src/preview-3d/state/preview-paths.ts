@@ -64,6 +64,29 @@ export const KNOWN_PATHS = [
 export type PreviewStatePath = (typeof KNOWN_PATHS)[number];
 
 /**
+ * [锐评 F-3 家族收口 2026-09-23] cap 态枚举探针的**合法值域表**（影子声明）。
+ *
+ * 本叶子零 import（ADR-168 断环纪律）——不能引 schema，故值域在此抄一份；漂移风险
+ * 由 preview-paths.test.ts「PROBE_ENUM_VALUES ⇄ ENV_STATE_SCHEMA 值域同步」对账闸兜底
+ * （成员集合相等 + 首成员 = schema default，两向都锁）。这是「叶子零依赖」与「值域单源」
+ * 张力下的取舍：**宁可要一张受对账闸保护的影子表，也不要五个探针各退回宽 `string`**。
+ *
+ * 首成员约定 = schema default：binding 归一（probeEnum）遇非法值回落 tuple[0]，
+ * 与 schema 默认值同侧保守，不凭空造第三个状态。
+ */
+export const PROBE_ENUM_VALUES = {
+  "env.waterMode": ["film", "pool"],
+  "env.groundSourceKind": ["none", "solid", "canvas", "texture"],
+  "env.groundCanvasStyle": ["plain", "marble", "sand", "grass"],
+  "env.groundOverlay": ["none", "grid", "checker", "stripes", "diamond"],
+  "env.fogMode": ["linear", "exp2"],
+} as const;
+
+/** 探针联合派生读口：PROBE_ENUM_VALUES[P] 的成员字面量联合。 */
+export type ProbeEnumValue<P extends keyof typeof PROBE_ENUM_VALUES> =
+  (typeof PROBE_ENUM_VALUES)[P][number];
+
+/**
  * 路径 → 值类型映射（2026 锐评 P1：消灭 getStateValue/setStateValue 的 unknown 擦除）。
  *
  * 读取侧（getStateValue / PreviewSnapshot）按**精确输出域**声明；
@@ -80,17 +103,17 @@ export type PathValue = {
   "render.maxPixelRatio": number;
   "render.wireframe": boolean;
   "env.pmrem": boolean;
-  // [锐评 F-3] 收窄为精确联合（原 string 让谓词 `=== "filmx"` 拼错编译不红、静默恒假）：
-  // 与本文件 "ui.mode" 同款「本地字面量 + 注释指向事实源」范式——本叶子零 import 是
-  // 断环铁律（ADR-168），WaterMode 真值源 = caps/water-state.ts，成员变更两处同步。
-  "env.waterMode": "film" | "pool";
-  "env.groundSourceKind": string;
-  "env.groundCanvasStyle": string;
+  // [锐评 F-3 家族收口 2026-09-23] 五个 cap 态枚举探针统一从 PROBE_ENUM_VALUES 派生精确联合
+  // （原 string 让谓词 `=== "filmx"` 拼错编译不红、静默恒假，binding 侧 String(v) 直漏脏值）。
+  // 值域表在文件头，与 schema enum 的同步由 preview-paths.test.ts 对账闸钉死。
+  "env.waterMode": ProbeEnumValue<"env.waterMode">;
+  "env.groundSourceKind": ProbeEnumValue<"env.groundSourceKind">;
+  "env.groundCanvasStyle": ProbeEnumValue<"env.groundCanvasStyle">;
   // ADR-249 §2.3 叠加层：独立透明格线层状态上浮
-  "env.groundOverlay": string;
+  "env.groundOverlay": ProbeEnumValue<"env.groundOverlay">;
   "ui.mode": "shared" | "self";
   "env.skyGroundCap": boolean;
-  "env.fogMode": string;
+  "env.fogMode": ProbeEnumValue<"env.fogMode">;
   "env.waterReflectionEnabled": boolean;
 };
 

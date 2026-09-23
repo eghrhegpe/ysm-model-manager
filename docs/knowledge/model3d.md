@@ -630,6 +630,8 @@ auto_fields:
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath
+    - PROBE_ENUM_VALUES
+    - ProbeEnumValue
     - RangedKey
     - RawYsmAuthor
     - rcMasterToggleNode

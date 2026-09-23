@@ -11,6 +11,7 @@
 //
 // 数组身份契约：handles 只可原地增删（push/splice/length=0），**禁止整体替换**——
 // ctx.handles / switchCtx.handles 在装配期捕获该引用，换数组会让消费方看到旧表。
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import type { PreviewHandle } from "./mount-preview-core.ts";
 
 /** 存活会话条目（句柄 + 其所属代际；cooperate 模式下多模型各自独立一条） */
@@ -23,7 +24,10 @@ export interface LiveSessionEntry {
  * 会话台账：代际计数（作废在途加载）+ 会话序号（per-mount 稳定 id）+ 存活句柄表。
  */
 export class SessionLedgerHost {
-  private _gen = 0;
+  /** 代际守卫（ADR-230 全仓唯一出口）：原手搓 `private _gen` 计数，2026-09 并轨。
+   *  语义一一对应：beginSession→next() / invalidate→invalidate() / gen()→current。 */
+  private readonly _guard = createLoadGuard();
+  /** per-mount 会话序号（sessionId 分配，**非**代际——不并入 guard） */
   private _seq = 0;
   /** 所有已挂载的 PreviewHandle（cooperate 模式下多模型各自独立） */
   readonly handles: LiveSessionEntry[] = [];
@@ -32,19 +36,19 @@ export class SessionLedgerHost {
    *  [Bug A] 每次 mount3D 自增；switchTo 走 switch-preview 复用外壳、不重新 mount，故不递增。
    *  适配器 build 经 ctx.sessionId 读取，供 per-scene schema key（ysm-model-{sid}）注册/注销对齐。 */
   beginSession(): { gen: number; sessionId: string } {
-    this._gen++;
+    const gen = this._guard.next();
     this._seq++;
-    return { gen: this._gen, sessionId: `s${this._seq}` };
+    return { gen, sessionId: `s${this._seq}` };
   }
 
   /** 作废在途加载（对齐 invalidateVrmPreview / invalidateLitematicPreview） */
   invalidate(): void {
-    this._gen++;
+    this._guard.invalidate();
   }
 
   /** 当前代际（ctx.getGen 闭包读取；在途会话据此判定自身是否已失效） */
   gen(): number {
-    return this._gen;
+    return this._guard.current;
   }
 
   /** 最近一个已挂载会话的句柄（switchPreview / switchCtx.getHandle；coop 多会话下即最新提交者） */

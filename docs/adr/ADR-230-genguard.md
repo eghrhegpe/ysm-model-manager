@@ -71,6 +71,27 @@
 - 不给 `LoadGuard` 加 abort/取消语义——现有 4 套均只有代数比较，无 Promise 取消；引入 cancel token 是新功能，超本 ADR 范围（oldest-models/recycle-bin 现状即不依赖）
 - 不动 `utils/async/load-guard.ts` 文件位置——它是合规的 utils 层出口，无需迁移
 
+### D4. 职责边界：代际 ≠ 并发控制（2026-09 增补）
+
+**背景**：D1/D2 的实施范围是按当时 grep 出的 4 套实现（gen-guard / perf-common / app-tree / app-sync-manager）圈定的，
+并非「全仓代际守卫」的穷举。2026-09 复核发现 **3 处漏网的手搓计数**，均在原文范围外：
+
+| 位置 | 形态 | 处置（2026-09 已并轨） |
+|------|------|----------------------|
+| `views/app-sidebar/index.ts` | `private _reloadGen` + `++this._reloadGen` + 2 处 `gen !== this._reloadGen` | 替换为 `readonly _guard = createLoadGuard()` 的 `next()` / `stale()` |
+| `preview-3d/adapters/session-ledger.ts` | `private _gen`（`beginSession`/`invalidate`/`gen` 三件套） | 语义一一对应 `next()`/`invalidate()`/`current`，整体并入；`_seq`（sessionId 分配）**保留**——它不是代际 |
+| `views/app-sync-manager/index.ts` | `private _initGen`（与既有 `_guard` **并行**存在，两套语义不等价：`invalidate()` 打不进早期 bail） | 删除，统一走 `_guard`；新增编译期守卫 `_RENDER_SYNC_GUARD` 防 render 回退 async |
+
+**决策**：
+
+1. **`LoadGuard` 只管代际，不管并发**。`next/stale/invalidate/current` 表达的是「哪一轮结果该被丢弃」，
+   不表达「同一时刻允许几个请求在跑」。二者正交，禁止互相替代。
+2. **「单飞 + 尾随补跑」不抽象为通用原语**。app-sidebar 的 `_reloadInFlight`（在途锁）与
+   `_reloadPending`（补跑标记）属并发控制，2026-09 全仓核实**仅此一处**消费，抽象即过度设计。
+   （原命名 `_loading`/`_pendingReload` 含混——易被误读为「加载中」UI 状态，已连同并轨一并改名澄清。）
+3. **「ADR 已落地」≠「全仓零手搓」**。D1/D2 是范围性目标而非穷举保证；后续任何「全仓唯一出口」的
+   表述都必须以 `grep` 实证为准，不得由 ADR 落地状态反推（AGENTS.md 注脚曾据此写下「零残留」，已修正）。
+
 ## 3. 后果（Consequences）
 
 **正面**：

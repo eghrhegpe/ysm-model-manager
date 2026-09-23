@@ -2,6 +2,7 @@
 
 import { bus } from "@/bus";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
+import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -61,11 +62,15 @@ class AppSidebar extends WebComponentBase {
   private _dropdownCleanup: (() => void) | null = null;
   private _syncInProgress = false; // 防止并发推送/拉取
   private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private _loading = false;
-  /** 重载代数：rtype 快速切换时用代数校验丢弃过期结果 */
-  private _reloadGen = 0;
-  /** _loading 进行中又有新请求 → 标记待补跑（完成后用最新 rtype 再跑一次） */
-  private _pendingReload = false;
+  /** 重载在途锁（并发控制·单飞）：在途时新请求不并发，仅记补跑标记。
+   *  ⚠️ 职责与代际守卫 `_guard` 不同——本锁管「同一时刻只跑一次」，`_guard` 管「丢弃过期结果」，
+   *  二者正交，不可互相替代（原 `_loading` 命名含混，易被误读为「加载中」UI 状态）。
+   *  「单飞 + 尾随补跑」全仓仅此一处（2026-09 核实），故不抽象为通用原语。 */
+  private _reloadInFlight = false;
+  /** 代际守卫（ADR-230 全仓唯一出口）：原手搓 `private _reloadGen` 计数，2026-09 并轨 */
+  private readonly _guard = createLoadGuard();
+  /** 在途期间来了新请求 → 标记待补跑（完成后用最新 rtype 再跑一次，尾随合并） */
+  private _reloadPending = false;
   /** 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰；实例属性，生命周期随组件 */
   private _checkedSets = new Map<string, Set<string>>();
   /** 去重状态机：仅选中项实际变化时才 emit package:selected */
@@ -188,17 +193,17 @@ class AppSidebar extends WebComponentBase {
   }
 
   private async _reload(force = false): Promise<void> {
-    if (this._loading) {
+    if (this._reloadInFlight) {
       // 丢弃语义会导致 rtype 快速切换时 _instances 与 _rtype 错配：
       // 记下补跑请求，当前完成后用最新 rtype 再跑一次
-      this._pendingReload = true;
+      this._reloadPending = true;
       return;
     }
-    this._loading = true;
-    const gen = ++this._reloadGen;
+    this._reloadInFlight = true;
+    const gen = this._guard.next();
     try {
       const instances = await loadInstances(this._rtype, force ? { force: true } : undefined);
-      if (gen !== this._reloadGen) return; // 已被更新的重载取代，丢弃过期结果
+      if (this._guard.stale(gen)) return; // 已被更新的重载取代，丢弃过期结果
       this._instances = instances;
       dbg(
         "sidebar",
@@ -216,17 +221,17 @@ class AppSidebar extends WebComponentBase {
           : "无",
       );
     } catch (e) {
-      if (gen !== this._reloadGen) return;
+      if (this._guard.stale(gen)) return;
       dbg("sidebar", "_reload 失败:", e);
       this._instances = [];
     } finally {
-      this._loading = false;
+      this._reloadInFlight = false;
     }
-    if (gen !== this._reloadGen) return;
+    if (this._guard.stale(gen)) return;
     this._renderCards();
     bindFooter(this._root, this._instances);
-    if (this._pendingReload) {
-      this._pendingReload = false;
+    if (this._reloadPending) {
+      this._reloadPending = false;
       void this._reload();
     }
   }
@@ -241,13 +246,13 @@ class AppSidebar extends WebComponentBase {
     // 在途 bus.on 订阅与 30s timer 由各自 unsub 兜底（超时/完成后自行清理），此处
     // 仅需复位标志解除新实例的卡死
     this._syncInProgress = false;
-    this._loading = false;
+    this._reloadInFlight = false;
     // 清理防抖定时器，防止组件销毁后回调在已销毁实例上执行
     if (this._debounceTimer) {
       clearTimeout(this._debounceTimer);
       this._debounceTimer = null;
     }
-    this._pendingReload = false;
+    this._reloadPending = false;
     // P2 复核修复：组件真正卸载时复位去重标记（同组件 reload 不复位、去重跨 reload 生效）
     this.resetSelectedEmit();
     // 清理 DOM 事件监听

@@ -39,7 +39,7 @@ export const sidebarCSS: string = `
 .card-name-row { display: flex; align-items: center; }
 .card-status-row { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 .instance-card-header .name { flex: 1; font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--txt); white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.tag { font-size: var(--fs-xs); padding: 1px 4px; border-radius:var(--radius-xs); min-width:16px;text-align:center; }
+.tag { font-size: var(--fs-xs); padding: var(--pad-v-1) var(--sp-1); border-radius:var(--radius-xs); min-width:16px;text-align:center; }
 .instance-card-header .tag.green { background: color-mix(in srgb, var(--status-success) 13%, transparent); color: var(--status-success); }
 .instance-card-header .tag.red { background: color-mix(in srgb, var(--status-error) 13%, transparent); color: var(--status-error); }
 .instance-card-header .tag.orange { background: color-mix(in srgb, var(--sm-optional) 13%, transparent); color: var(--sm-optional); }

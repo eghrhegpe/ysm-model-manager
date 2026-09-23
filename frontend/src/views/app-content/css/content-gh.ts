@@ -129,7 +129,7 @@ export const contentGhCSS: string = `
 .gh-cr-input-name { color:var(--txt); }
 .gh-cr-input-desc { color:var(--muted); font-size:var(--fs-xs); }
 .gh-cr-input-type { flex:1; min-width:30px; padding:var(--btn-padding-xs); border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--accent); font-size:var(--fs-xs); text-align:center; }
-.gh-cr-del { padding:1px 4px; border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--status-error); cursor:pointer; font-size:var(--fs-sm); }
+.gh-cr-del { padding:var(--pad-v-1) var(--sp-1); border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--status-error); cursor:pointer; font-size:var(--fs-sm); }
 .gh-cr-add-area { padding:var(--btn-padding-filter-lg); }
 .gh-cr-add { padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px dashed var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:var(--fs-sm); width:100%; }
 

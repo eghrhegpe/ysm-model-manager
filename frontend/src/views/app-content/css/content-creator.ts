@@ -184,7 +184,7 @@ export const contentCreatorCSS: string = `
   background:var(--surf);color:var(--muted);border:1px solid var(--bd);gap:2px;
 }
  .cr-card-footer .cr-tag { font-size:var(--fs-micro);margin-left:auto; }
-.cr-platform-badge { font-size:var(--fs-micro);padding:1px 4px;border-radius:var(--radius-xs);line-height:12px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd); }
+.cr-platform-badge { font-size:var(--fs-micro);padding:var(--pad-v-1) var(--sp-1);border-radius:var(--radius-xs);line-height:12px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd); }
 .cr-card-search { cursor:pointer;font-size:var(--fs-sm);transition:transform var(--tr-normal);flex-shrink:0; }
 .cr-card-search:hover { transform:scale(1.15); }
 .cr-star-btn { cursor:pointer;font-size:var(--fs-sm);transition:transform var(--tr-normal);flex-shrink:0; }

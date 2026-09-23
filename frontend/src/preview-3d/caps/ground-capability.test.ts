@@ -1111,3 +1111,57 @@ describe("GroundCapability — 参考网格独立开关（groundGridVisible）",
     expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(true);
   });
 });
+
+// [锐评 F-2] 恢复路径来源纪律（fog F-2 / light L-1 同口径）：存档恢复是**程序化动作**，
+// 非用户手改，source 一律 auto-model——原实现全打 manual，把 ground 组键的
+// lastWriteSource 冻死，此后同轨 auto-model 写入被 shouldOverwrite 静默拒绝。
+// 「同轨 auto-model→auto-model 放行、manual→auto-model 拒绝」是唯一可观测判据
+// （_writeSource 是模块私有，无导出读口）——故本锁用**行为**断言，不探内部表。
+describe("GroundCapability — 恢复路径来源纪律（锐评 F-2）", () => {
+  beforeEach(() => {
+    resetEnvState();
+    localStorage.removeItem("ysm-scene-cap-ground");
+  });
+  afterEach(() => localStorage.removeItem("ysm-scene-cap-ground"));
+
+  it("[F-2] loadState 后 auto-model 仍能写 groundSize（直连 setEnvState 站点不得冻成 manual）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-ground",
+      JSON.stringify({ groundVisible: true, groundSize: 200, groundDivisions: 40 }),
+    );
+    const cap = new GroundCapability({ scene: new THREE.Scene() });
+    cap.loadState();
+    expect(envState.groundSize, "存档值先落地").toBe(200);
+    setEnvState({ groundSize: 120 }, { source: "auto-model" });
+    expect(envState.groundSize, "恢复后模型默认值仍须能落地").toBe(120);
+  });
+
+  it("[F-2] loadState 后 auto-model 仍能写 groundMatOpacity（经公开 setter 委托的站点同口径）", () => {
+    // groundMatOpacity 的恢复是 restoreFields → this.setMatOpacity(v)（内部硬编码 manual），
+    // 与直连 setEnvState 的站点是两条路径——F-2 必须两条都收口，只改直连会留暗门。
+    localStorage.setItem(
+      "ysm-scene-cap-ground",
+      JSON.stringify({ groundVisible: true, groundMatOpacity: 0.3 }),
+    );
+    const cap = new GroundCapability({ scene: new THREE.Scene() });
+    cap.loadState();
+    expect(envState.groundMatOpacity).toBeCloseTo(0.3);
+    setEnvState({ groundMatOpacity: 0.9 }, { source: "auto-model" });
+    expect(envState.groundMatOpacity, "委托站点恢复后同样不得冻死 auto-model").toBeCloseTo(0.9);
+  });
+
+  it("[F-2 对照] 中间件仍只认 manual：恢复写入 auto-model 不得误置 custom（ADR-254 不回归）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-ground",
+      JSON.stringify({
+        groundVisible: true,
+        groundMaterialPreset: "grass",
+        groundCanvasStyle: "grass",
+        groundMatColor: GROUND_MATERIAL_PRESETS.grass.matColor,
+      }),
+    );
+    const cap = new GroundCapability({ scene: new THREE.Scene() });
+    cap.loadState();
+    expect(cap.getMaterialPreset(), "恢复非手改，预设名须存续").toBe("grass");
+  });
+});

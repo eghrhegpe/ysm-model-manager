@@ -402,3 +402,40 @@ describe("ReflectorCapability — 菜单控件联动（节点 control 闭包）"
     expect(by("reflector-size").control!.get!(undefined)).toBe(400);
   });
 });
+
+// [锐评 F-2] 恢复路径来源纪律（fog F-2 / light L-1 / ground 同口径）：存档恢复是
+// **程序化动作**，非用户手改，source 一律 auto-model——原实现 6 处全 manual，把
+// reflector 组键的 lastWriteSource 冻死，此后同轨 auto-model（MODEL_DEFAULTS 携
+// reflectorSize / reflectorResolution）写入被 shouldOverwrite 静默拒绝。
+// 判据用**行为**（_writeSource 是模块私有、无导出读口），同 fog/light 先例。
+describe("ReflectorCapability — 恢复路径来源纪律（锐评 F-2）", () => {
+  beforeEach(() => {
+    resetEnvState();
+    localStorage.removeItem("ysm-scene-cap-reflector");
+  });
+  afterEach(() => localStorage.removeItem("ysm-scene-cap-reflector"));
+
+  it("[F-2] loadState 后 auto-model 仍能写 reflectorSize（恢复不得冻成 manual）", () => {
+    // 存档形态 = 本 cap saveState 的**实际**键形（无前缀 size/resolution/…，见 saveState）。
+    localStorage.setItem(
+      "ysm-scene-cap-reflector",
+      JSON.stringify({ reflectorEnabled: true, size: 400, resolution: 512 }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    expect(envState.reflectorSize, "存档值先落地").toBe(400);
+    setEnvState({ reflectorSize: 150 }, { source: "auto-model" });
+    expect(envState.reflectorSize, "恢复后模型默认值仍须能落地").toBe(150);
+  });
+
+  it("[F-2] loadState 后 auto-model 仍能写 reflectorResolution", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-reflector",
+      JSON.stringify({ reflectorEnabled: true, size: 400, resolution: 512 }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    setEnvState({ reflectorResolution: 2048 }, { source: "auto-model" });
+    expect(envState.reflectorResolution).toBe(2048);
+  });
+});

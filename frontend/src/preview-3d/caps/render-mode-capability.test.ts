@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { RenderModeCapability } from "./render-mode-capability.ts";
-import { resetEnvState } from "@/preview-3d/state/env-state.ts";
+import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
 // ADR-196：构造即注册全局 env 回调、仅 dispose 注销；与 ground/sky/water 同侪一致，
@@ -335,7 +335,13 @@ describe("RenderModeCapability — 持久化", () => {
   it("loadState null 值视为合法 override（清空该属性）", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ wireframe: null, depthWrite: null }));
     const cap = newCap(makeMesh());
-    cap.setWireframe(true);
+    // [锐评 F-2 收口] 本用例考的是 **null 的类型守卫**（null 是合法 override 值，
+    // 不得当作「缺字段/类型不符」跳过），**不是**来源优先级——故对照组改用同轨
+    // auto-model 预置值。恢复已按 F-2 走 auto-model，而 shouldOverwrite 的既定语义是
+    // 「manual 优先于程序化写入」，若此处用 cap.setWireframe(true)（manual）预置，
+    // 断言会变成在考优先级而非 null 守卫（且生产不可达：saveAll 落盘的恒是 envState 现值，
+    // 档案与内存不会分歧）。
+    setEnvState({ renderModeWireframe: true }, { source: "auto-model" });
     cap.loadState();
     expect(cap.getWireframe()).toBeNull();
     expect(cap.getDepthWrite()).toBeNull();
@@ -435,5 +441,29 @@ describe("RenderModeCapability — dispose", () => {
     cap.dispose();
     expect(matA.wireframe).toBe(false); // 旧材质 OK
     expect(matB.blending).toBe(THREE.NormalBlending); // ← 新材质已被补拍快照，dispose 一并还原
+  });
+});
+
+// [锐评 F-2] 恢复路径来源纪律（fog F-2 / light L-1 / ground / reflector 同口径）：
+// 存档恢复是**程序化动作**，非用户手改，source 一律 auto-model——原实现写 manual，
+// 把 renderMode 组 5 键的 lastWriteSource 冻死，此后同轨 auto-model 写入被
+// shouldOverwrite 静默拒绝。判据用**行为**（_writeSource 是模块私有、无导出读口）。
+describe("RenderModeCapability — 恢复路径来源纪律（锐评 F-2）", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetEnvState();
+  });
+  afterEach(() => localStorage.clear());
+
+  it("[F-2] loadState 后 auto-model 仍能写 renderMode 组键（恢复不得冻成 manual）", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ wireframe: true, blending: THREE.AdditiveBlending }),
+    );
+    const cap = newCap(makeMesh());
+    cap.loadState();
+    expect(cap.getWireframe(), "存档值先落地").toBe(true);
+    setEnvState({ renderModeWireframe: false }, { source: "auto-model" });
+    expect(cap.getWireframe(), "恢复后程序化写入仍须能落地").toBe(false);
   });
 });

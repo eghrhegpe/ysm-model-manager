@@ -7,6 +7,7 @@ import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { LightCapability } from "./light-capability.ts";
+import { restoreState } from "./scene-capability.ts";
 import type { SceneCapability, SceneCapabilityLookup } from "./scene-capability.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 
@@ -71,7 +72,7 @@ function setup(opts: { extraDir?: boolean; spot?: boolean } = {}): Ctx & { cap: 
     lights.spot = new THREE.SpotLight(0xffffff, 2);
     scene.add(lights.spot);
   }
-  const cap = new ShadowCapability({ scene, renderer, enabled: true });
+  const cap = new ShadowCapability({ scene, renderer });
   cap.syncLights([
     lights.dir,
     ...(lights.dir2 ? [lights.dir2] : []),
@@ -97,7 +98,7 @@ describe("ShadowCapability — collectLights 取灯语义（白名单，不遍�
     const wired = new THREE.DirectionalLight(0xffffff, 1);
     const stray = new THREE.DirectionalLight(0xffffff, 0.3);
     scene.add(wired, stray);
-    const cap = new ShadowCapability({ scene, renderer, enabled: true });
+    const cap = new ShadowCapability({ scene, renderer });
     cap.syncLights([wired]);
     expect(wired.castShadow).toBe(true);
     expect(stray.castShadow).toBe(false);
@@ -110,7 +111,6 @@ describe("ShadowCapability — collectLights 取灯语义（白名单，不遍�
     const cap = new ShadowCapability({
       scene,
       renderer,
-      enabled: true,
       caps: capsWithLight(lightCap),
     });
     cap.apply();
@@ -134,10 +134,11 @@ describe("ShadowCapability — 构造与默认值", () => {
     expect(cap.getCameraSize()).toBe(15);
   });
 
-  it("enabled:false 初始禁用", () => {
+  it("能力总开关默认开（schema 默认 true，构造不再是开关写口）", () => {
     const { scene, renderer } = { scene: new THREE.Scene(), renderer: makeFakeRenderer() };
-    const cap = new ShadowCapability({ scene, renderer, enabled: false });
-    expect(cap.isEnabled()).toBe(false);
+    const cap = new ShadowCapability({ scene, renderer });
+    expect(envState.shadowEnabled).toBe(true);
+    expect(cap.isEnabled()).toBe(true);
   });
 
   it("setEnvState 覆盖生效", () => {
@@ -442,7 +443,6 @@ describe("ShadowCapability — 跨能力注入（查询器机制）", () => {
     const cap = new ShadowCapability({
       scene,
       renderer: makeFakeRenderer(),
-      enabled: true,
       caps: capsWithLight(stubLightCap([dir], null)),
     });
     expect(dir.castShadow).toBe(false);
@@ -454,7 +454,7 @@ describe("ShadowCapability — 跨能力注入（查询器机制）", () => {
     const scene = new THREE.Scene();
     const dir = new THREE.DirectionalLight(0xffffff, 1);
     scene.add(dir);
-    const cap = new ShadowCapability({ scene, renderer: makeFakeRenderer(), enabled: true });
+    const cap = new ShadowCapability({ scene, renderer: makeFakeRenderer() });
     cap.syncLights([dir]);
     expect(dir.castShadow).toBe(true);
   });
@@ -630,7 +630,7 @@ describe("ShadowCapability — 持久化", () => {
 
   it("saveState / loadState 完整周期", () => {
     setEnvState({ shadowMapSize: 2048, shadowType: "soft", shadowBias: -0.001, shadowNormalBias: 0.05, shadowCameraSize: 20 }, { source: 'manual' });
-    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer(), enabled: true });
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.saveState();
     resetEnvState();
     const cap2 = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
@@ -854,7 +854,7 @@ describe("ShadowCapability — 灯类型切换跨能力补挂（L-2）", () => {
         id === "light" ? lightRef : id === "shadow" ? shadowRef : undefined,
     } as never;
     lightRef = new LightCapability({ scene, renderer, caps: lookup });
-    shadowRef = new ShadowCapability({ scene, renderer, enabled: true, caps: lookup });
+    shadowRef = new ShadowCapability({ scene, renderer, caps: lookup });
     lightRef.apply();
     shadowRef.apply();
     return { light: lightRef, shadow: shadowRef };
@@ -884,5 +884,90 @@ describe("ShadowCapability — 灯类型切换跨能力补挂（L-2）", () => {
     expect(privKeyLight(light).castShadow).toBe(true);
     light.dispose();
     shadow.dispose();
+  });
+});
+
+// [锐评 F-1 收口] 能力级开关单门收口——fog / water 先例同法（2026-09-22）。
+// 病灶：schema 早已声明 shadowEnabled（env-state-schema.ts|shadowEnabled，group "shadow"），
+// 但本 cap 另有私有 this.enabled 才是真门 —— 全仓机械扫描 148 键 × 562 生产文件，
+// shadowEnabled 是**唯一零消费者**的键（幽灵键）。真开关私存为**无前缀** enabled 落盘，
+// 与 schema 键各说各话：菜单/headerToggle 读私有门、存档写私有门，schema 键恒默认值。
+// 收口 = 真值源唯一 envState.shadowEnabled，私有门退役，setEnabled/isEnabled 降为别名。
+describe("ShadowCapability — 能力级开关单门收口（fog/water 先例同法）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  function newCap() {
+    return new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+  }
+
+  it("[F-1] 私有 enabled 字段已退役——实例不持有同名 own 属性（防僵尸门回归守卫）", () => {
+    const cap = newCap();
+    expect(
+      "enabled" in cap,
+      "能力级开关唯一真值源 = envState.shadowEnabled，私有门不得复活",
+    ).toBe(false);
+  });
+
+  it("[F-1] setEnabled/isEnabled 是 envState.shadowEnabled 的别名（写即派发即同步 shadowMap）", () => {
+    const scene = new THREE.Scene();
+    const dir = new THREE.DirectionalLight(0xffffff, 1);
+    scene.add(dir);
+    const renderer = makeFakeRenderer();
+    const cap = new ShadowCapability({ scene, renderer });
+    cap.syncLights([dir]);
+    cap.setEnabled(true);
+    expect(envState.shadowEnabled).toBe(true);
+    expect(cap.isEnabled()).toBe(true);
+    expect(renderer.shadowMap.enabled, "别名写口须真落到 renderer").toBe(true);
+    cap.setEnabled(false);
+    expect(envState.shadowEnabled).toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    expect(renderer.shadowMap.enabled).toBe(false);
+  });
+
+  it("[F-1] saveState 不再持久化能力级 enabled 幽灵键（shadowEnabled 随 schema 键集照常落盘）", () => {
+    const cap = newCap();
+    cap.saveState();
+    const saved = restoreState("shadow") as Record<string, unknown>;
+    expect("enabled" in saved, "无前缀幽灵键不得再进存档").toBe(false);
+    expect("shadowEnabled" in saved, "真值源须随 schema 键落盘").toBe(true);
+  });
+
+  it("[F-1] legacy 中毒回归：旧存档 enabled=false 恢复后，单一开关仍能救回阴影", () => {
+    // 旧存档形态 = 无前缀 {enabled, type, mapSize, ...}（本 cap 收口前的 saveState 产物）。
+    // 收口后该键由 loadState 回填进 shadowEnabled（fog 先例同法），不再进私有门——
+    // 否则「单一开关」在升级用户身上反向锁死：菜单开关读 schema 键恒 true，
+    // 而存档里的 false 只活在私有门里，saveState 又把中毒值落盘，重启自续。
+    localStorage.setItem(
+      "ysm-scene-cap-shadow",
+      JSON.stringify({ enabled: false, type: "soft", mapSize: 1024 }),
+    );
+    const scene = new THREE.Scene();
+    const dir = new THREE.DirectionalLight(0xffffff, 1);
+    scene.add(dir);
+    const renderer = makeFakeRenderer();
+    const cap = new ShadowCapability({ scene, renderer });
+    cap.syncLights([dir]);
+    cap.loadState();
+    expect(envState.shadowEnabled, "旧 enabled 须回填进 schema 键").toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    expect(dir.castShadow, "关态不得给灯挂阴影").toBe(false);
+    cap.setEnabled(true);
+    expect(envState.shadowEnabled, "单门可逆：翻开关即复现").toBe(true);
+    expect(dir.castShadow).toBe(true);
+  });
+
+  // [锐评 F-2] 恢复路径来源纪律（fog F-2 / light L-1 同款）：存档恢复是**程序化动作**，
+  // 不得把 shadow 组键打成 manual——否则此后同轨 auto-model 写入被 shouldOverwrite
+  // 静默拒绝（MODEL_DEFAULTS 各模型均携 shadowType，见 model-defaults.ts）。
+  it("[F-2] loadState 后 auto-model 仍能写 shadowType（恢复不得把 shadow 键冻成 manual）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-shadow",
+      JSON.stringify({ shadowEnabled: true, type: "hard", mapSize: 1024 }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    setEnvState({ shadowType: "soft" }, { source: "auto-model" });
+    expect(envState.shadowType, "存档恢复后模型默认值仍须能落地").toBe("soft");
   });
 });

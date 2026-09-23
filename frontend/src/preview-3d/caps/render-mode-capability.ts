@@ -284,7 +284,11 @@ export class RenderModeCapability implements SceneCapability {
       partial.renderModeSide = s.side as number | null;
     if (typeof s.depthWrite === "boolean" || s.depthWrite === null)
       partial.renderModeDepthWrite = s.depthWrite;
-    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "manual" });
+    // [锐评 F-2] 恢复路径来源纪律（fog F-2 / light L-1 / ground / reflector 同口径）：
+    // 存档恢复是**程序化动作**，非用户手改 → auto-model。原实现写 manual 把 renderMode
+    // 组 5 键的 lastWriteSource 冻成最高优先级，此后同轨 auto-model 写入被
+    // shouldOverwrite 静默吞掉（值不变、无报错）。
+    if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
     this.sync();
   }
 

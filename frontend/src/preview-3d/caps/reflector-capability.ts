@@ -287,6 +287,12 @@ export class ReflectorCapability implements SceneCapability {
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
+    // [锐评 F-2] 恢复路径来源纪律（fog F-2 / light L-1 / ground 同口径，2026-09-22 立法）：
+    // 存档恢复是**程序化动作**，非用户手改 → 一律 auto-model。原实现 6 处全写 manual，
+    // 把 reflector 组键的 lastWriteSource 冻成最高优先级，此后同轨 auto-model
+    // （MODEL_DEFAULTS 携 reflectorSize / reflectorResolution）被 shouldOverwrite
+    // 静默吞掉——值不变、无报错、无日志，最难查的一类。与 skipMiddleware
+    //「存档恢复豁免」同一法理（ADR-254）。
     restoreFields(state, {
       enabled: {
         boolean: (v) => {
@@ -294,13 +300,17 @@ export class ReflectorCapability implements SceneCapability {
         },
       },
       reflectorEnabled: {
-        boolean: (v) => setEnvState({ reflectorEnabled: v }, { source: "manual" }),
+        boolean: (v) => setEnvState({ reflectorEnabled: v }, { source: "auto-model" }),
       },
-      size: { number: (v) => setEnvState({ reflectorSize: v }, { source: "manual" }) },
-      resolution: { number: (v) => setEnvState({ reflectorResolution: v }, { source: "manual" }) },
-      color: { number: (v) => setEnvState({ reflectorColor: v }, { source: "manual" }) },
-      opacity: { number: (v) => setEnvState({ reflectorOpacity: v }, { source: "manual" }) },
-      clipBias: { number: (v) => setEnvState({ reflectorClipBias: v }, { source: "manual" }) },
+      size: { number: (v) => setEnvState({ reflectorSize: v }, { source: "auto-model" }) },
+      resolution: {
+        number: (v) => setEnvState({ reflectorResolution: v }, { source: "auto-model" }),
+      },
+      color: { number: (v) => setEnvState({ reflectorColor: v }, { source: "auto-model" }) },
+      opacity: { number: (v) => setEnvState({ reflectorOpacity: v }, { source: "auto-model" }) },
+      clipBias: {
+        number: (v) => setEnvState({ reflectorClipBias: v }, { source: "auto-model" }),
+      },
     });
     this.isStateLoaded = true;
     this.buildReflector();

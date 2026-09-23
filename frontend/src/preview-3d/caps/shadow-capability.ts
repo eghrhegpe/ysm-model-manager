@@ -36,7 +36,6 @@ export class ShadowCapability implements SceneCapability {
   private renderer: THREE.WebGLRenderer;
   /** cap 间协调查询器（组合根 createAll 注入）：collectLights 经 getTypedCap 取 LightCapability 实例 */
   private readonly caps?: SceneCapabilityLookup;
-  private enabled: boolean;
   /** loadState 是否成功载入过；applyModelPreset 有它时不覆盖用户会话（避免每次新会话回到预设） */
   private isStateLoaded = false;
 
@@ -59,7 +58,6 @@ export class ShadowCapability implements SceneCapability {
   constructor(opts: {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
-    enabled?: boolean;
     /** cap 间协调查询器（组合根 createAll 注入）——light 联动经查询器，不手工接线 */
     caps?: SceneCapabilityLookup;
   }) {
@@ -67,7 +65,6 @@ export class ShadowCapability implements SceneCapability {
     this.renderer = opts.renderer;
     // 条件赋值（对齐 sky/light 惯例）：exactOptionalPropertyTypes 下 undefined 不写入字段
     if (opts.caps !== undefined) this.caps = opts.caps;
-    this.enabled = opts.enabled ?? true;
     this.prevShadowMapEnabled = this.renderer.shadowMap.enabled;
     this.prevShadowMapType = this.renderer.shadowMap.type;
 
@@ -78,7 +75,14 @@ export class ShadowCapability implements SceneCapability {
     this.unsubscribeEnv = registerEnvCallback(
       this,
       (changed, _state) => {
-        if (!this.enabled) return;
+        // [锐评 F-1 收口] 能力总开关 = envState.shadowEnabled（原私有 this.enabled 已退役，
+        // 见 setEnabled/isEnabled）——schema 键本就在 "shadow" 组内，toggle 派发天然到本回调；
+        // 不接管则该键改了不落地（原实现靠私有门短路挂在最前面，键永无消费者 = 幽灵键）。
+        if (changed.has("shadowEnabled")) {
+          this.apply();
+          return;
+        }
+        if (!envState.shadowEnabled) return;
         if (changed.has("shadowType") || changed.has("shadowMapSize")) {
           this.apply();
           return;
@@ -145,7 +149,7 @@ export class ShadowCapability implements SceneCapability {
   /** mount-preview-core L386 旧接口：早期直接传入场景中遍历到的所有方向灯/聚光灯缓存（不要求 LightCapability 注入） */
   syncLights(lights: Array<THREE.DirectionalLight | THREE.SpotLight>): void {
     this.legacyLights = [...lights];
-    if (this.enabled) this.apply();
+    if (envState.shadowEnabled) this.apply();
   }
 
   /** mount-preview-core L663 旧接口：模型加载完对 roots 内所有 mesh 设 castShadow/receiveShadow（与 syncMeshes 等价） */
@@ -353,7 +357,7 @@ export class ShadowCapability implements SceneCapability {
 
   syncMeshes(roots: THREE.Object3D[]): void {
     this.restoreMeshes();
-    if (!this.enabled) return;
+    if (!envState.shadowEnabled) return;
     const touched = new Set<THREE.Object3D>();
     for (const root of roots) {
       root.traverse((obj) => {
@@ -372,7 +376,7 @@ export class ShadowCapability implements SceneCapability {
 
   apply(): void {
     this.disableShadows();
-    if (!this.enabled) return;
+    if (!envState.shadowEnabled) return;
     this.applyShadows();
   }
 
@@ -381,17 +385,19 @@ export class ShadowCapability implements SceneCapability {
     this.disableShadows();
   }
 
+  /** 能力总开关（菜单 toggle / env 一级行 headerToggle / postproc 联动共用）。
+   *  [锐评 F-1 收口] 真值源唯一 envState.shadowEnabled——私有 this.enabled 已退役。 */
   setEnabled(v: boolean): void {
-    this.enabled = v;
-    this.apply();
+    // setEnvState 同步 dispatch → env 回调（changed.has("shadowEnabled")）apply 一次。
+    setEnvState({ shadowEnabled: v }, { source: "manual" });
   }
   isEnabled(): boolean {
-    return this.enabled;
+    return envState.shadowEnabled;
   }
 
   getParams() {
     return {
-      enabled: this.enabled,
+      enabled: envState.shadowEnabled,
       type: envState.shadowType,
       mapSize: envState.shadowMapSize,
       bias: envState.shadowBias,
@@ -461,35 +467,69 @@ export class ShadowCapability implements SceneCapability {
   /* -------- 持久化 -------- */
 
   saveState(): void {
+    // [锐评 F-1 收口] 键形与 schema 对齐（原为无前缀 enabled/type/mapSize/… 私有方言）：
+    // 能力总开关真值源已收编 envState.shadowEnabled，无前缀 enabled 幽灵键不再落盘。
+    // 旧前缀键由 loadState 的 legacyKeys 块吸收，升级用户不丢配置。
     persistState(this.id, {
-      enabled: this.enabled,
-      type: envState.shadowType,
-      mapSize: envState.shadowMapSize,
-      bias: envState.shadowBias,
-      normalBias: envState.shadowNormalBias,
-      cameraSize: envState.shadowCameraSize,
+      shadowEnabled: envState.shadowEnabled,
+      shadowType: envState.shadowType,
+      shadowMapSize: envState.shadowMapSize,
+      shadowBias: envState.shadowBias,
+      shadowNormalBias: envState.shadowNormalBias,
+      shadowCameraSize: envState.shadowCameraSize,
     });
   }
 
   loadState(): void {
-    const state = restoreState(this.id);
+    let state = restoreState(this.id);
     if (!state) return;
-    if (typeof state.enabled === "boolean") {
-      this.enabled = state.enabled;
+    let s = state as Record<string, unknown>;
+    // [锐评 F-1 收口] 兼容：ADR-196 后的 `enabled` 是 cap 私有态，与 shadowEnabled 语义合一
+    // （本次已删私有态）。旧存档只要缺 shadowEnabled 键，就用 enabled 回填——防升级用户
+    // 丢开关（fog 先例同法，fog-capability.ts|loadState）。
+    if (!("shadowEnabled" in s) && typeof s.enabled === "boolean") {
+      state = { ...s, shadowEnabled: s.enabled };
+      s = state as Record<string, unknown>;
+    }
+    // [锐评 F-1 收口] legacy 旧键迁移：收口前 saveState 落的是无前缀
+    // {enabled, type, mapSize, bias, normalBias, cameraSize}。判据用 shadowType
+    // （saveState 恒写的前缀代表键）缺失 + 任一旧键存在 → 纯旧形态；
+    // 只映射实际存在的旧键（防 undefined 覆盖混合形态的新前缀键）。
+    const legacyKeys = ["type", "mapSize", "bias", "normalBias", "cameraSize"] as const;
+    if (!("shadowType" in s) && legacyKeys.some((k) => k in s)) {
+      state = {
+        ...s,
+        ...("type" in s ? { shadowType: s.type } : {}),
+        ...("mapSize" in s ? { shadowMapSize: s.mapSize } : {}),
+        ...("bias" in s ? { shadowBias: s.bias } : {}),
+        ...("normalBias" in s ? { shadowNormalBias: s.normalBias } : {}),
+        ...("cameraSize" in s ? { shadowCameraSize: s.cameraSize } : {}),
+      };
     }
     let typeRestored = false;
+    // [锐评 F-2] 恢复路径来源纪律 + F-1 键形归一：存档恢复是**程序化动作**，非用户手改，
+    // source 一律 auto-model（fog F-2 / light L-1 同口径）——原 manual 把 shadow 组键的
+    // lastWriteSource 全打成 manual，此后同轨 auto-model（MODEL_DEFAULTS 各模型携
+    // shadowType）写 shadowType 被 shouldOverwrite 静默拒绝。
     restoreFields(state, {
-      type: oneOf(SHADOW_TYPES, (v) => {
-        setEnvState({ shadowType: v }, { source: "manual" });
+      shadowEnabled: {
+        boolean: (v) => setEnvState({ shadowEnabled: v }, { source: "auto-model" }),
+      },
+      shadowType: oneOf(SHADOW_TYPES, (v) => {
+        setEnvState({ shadowType: v }, { source: "auto-model" });
         typeRestored = true;
       }),
-      mapSize: { number: (v) => setEnvState({ shadowMapSize: v }, { source: "manual" }) },
-      bias: { number: (v) => setEnvState({ shadowBias: v }, { source: "manual" }) },
-      normalBias: { number: (v) => setEnvState({ shadowNormalBias: v }, { source: "manual" }) },
-      cameraSize: { number: (v) => setEnvState({ shadowCameraSize: v }, { source: "manual" }) },
+      shadowMapSize: { number: (v) => setEnvState({ shadowMapSize: v }, { source: "auto-model" }) },
+      shadowBias: { number: (v) => setEnvState({ shadowBias: v }, { source: "auto-model" }) },
+      shadowNormalBias: {
+        number: (v) => setEnvState({ shadowNormalBias: v }, { source: "auto-model" }),
+      },
+      shadowCameraSize: {
+        number: (v) => setEnvState({ shadowCameraSize: v }, { source: "auto-model" }),
+      },
     });
     if (!typeRestored && typeof state.soft === "boolean") {
-      setEnvState({ shadowType: state.soft ? "soft" : "hard" }, { source: "manual" });
+      setEnvState({ shadowType: state.soft ? "soft" : "hard" }, { source: "auto-model" });
     }
     this.isStateLoaded = true;
     this.apply();

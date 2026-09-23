@@ -13,6 +13,7 @@ import {
   resumeEnvCallbacks,
   suspendEnvCallbacks,
 } from "@/preview-3d/state/env-dispatcher.ts";
+import type { WriteSource } from "@/preview-3d/state/env-state.ts";
 // ADR-196：统一状态层
 import { envState, registerEnvStateMiddleware, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
@@ -96,6 +97,37 @@ registerEnvStateMiddleware((patch, { source }) => {
     sourceKindChanged || GROUND_MATERIAL_PRESET_KEYS.some((k) => patch[k] !== undefined);
   return touched ? { groundMaterialPreset: "custom" } : undefined;
 });
+
+/**
+ * [锐评 F-2] 存档恢复的来源纪律（fog F-2 / light L-1 同口径，2026-09-22 立法）。
+ *
+ * 恢复是**程序化动作**，不是用户手改：一律 `auto-model`。
+ * 反例（原实现）：全写 `manual` → `_writeSource` 把 ground 组键钉成最高优先级，
+ * 此后同轨 `auto-model` 写入被 `shouldOverwrite` 静默吞掉（值不变、无报错、无日志，
+ * 最难查的一类）。同轨 auto-model→auto-model 放行是唯一可观测判据。
+ *
+ * 为何要一个常量而非就地手写字面量：恢复站点分**两条路径**——
+ *   ① loadState 内直接 `setEnvState(...)`；
+ *   ② 委托公开 setter（setMatOpacity / setMatScale / setOverlaySize …），
+ *      这些 setter 服务于**用户手改**，必须保持 `manual`。
+ * 两条路径若各写各的，F-2 只会修好①而②仍是暗门（且将来新增字段默认走②）。
+ * 故委托路径显式传入 `RESTORE_SOURCE`，把「恢复来源」收敛成单一事实源。
+ */
+const RESTORE_SOURCE = { source: "auto-model" } as const;
+
+/** 写入口的可选覆盖：`skipMiddleware`（存档恢复豁免中间件）+ `source`（恢复来源）。
+ *  省略即用户手改语义（manual）。 */
+type WriteOpts = { skipMiddleware?: boolean; source?: WriteSource };
+
+/** 组装 setEnvState 的 opts：省略项不写入键（exactOptionalPropertyTypes），
+ *  避免 `{source: undefined}` 把默认来源顶掉。 */
+function writeOpts(opts?: WriteOpts): { source: WriteSource; skipMiddleware?: boolean } {
+  const base: { source: WriteSource; skipMiddleware?: boolean } = {
+    source: opts?.source ?? "manual",
+  };
+  if (opts?.skipMiddleware === true) base.skipMiddleware = true;
+  return base;
+}
 
 export class GroundCapability implements SceneCapability {
   readonly id = "ground";
@@ -302,8 +334,8 @@ export class GroundCapability implements SceneCapability {
   }
 
   /** 地面总显隐开关（参考网格/表面层/叠加层均跟随；水面由 water.enabled 独立控制） */
-  setVisible(v: boolean): void {
-    setEnvState({ groundVisible: v }, { source: "manual" });
+  setVisible(v: boolean, opts?: WriteOpts): void {
+    setEnvState({ groundVisible: v }, writeOpts(opts));
     // 三层显隐同步（含叠加层跟随）已全部归入 ground 回调单路径（锐评修复 2026-09-20）：
     // 旧接线在此手改 overlay.visible 是为堵「地面已隐、格线还漂」残影，
     // 而 refreshOverlay 尾部本就无条件重算 visible，同一判据不需两处表达。
@@ -318,8 +350,8 @@ export class GroundCapability implements SceneCapability {
 
   /** 参考网格（GridHelper 层）独立开关：与表面材质层/叠加层正交——解决
    *  「选了纯色/贴图材质仍关不掉底下 y=0 参考网格」的历史遗留（知识卡「已知遗留 1」）。 */
-  setGridVisible(v: boolean): void {
-    setEnvState({ groundGridVisible: v }, { source: "manual" });
+  setGridVisible(v: boolean, opts?: WriteOpts): void {
+    setEnvState({ groundGridVisible: v }, writeOpts(opts));
     // 网格显隐落地归 ground 回调单路径（同值重写仍派发，回调幂等重算无碍）。
   }
 
@@ -581,20 +613,20 @@ export class GroundCapability implements SceneCapability {
   getOverlaySize(): number {
     return envState.groundOverlaySize;
   }
-  setOverlaySize(n: number): void {
+  setOverlaySize(n: number, opts?: WriteOpts): void {
     // 钳制读口与写入口同源（ADR-283）：早退比较必须用钳后值，否则会漏写
     const clamped = clampFieldValue("groundOverlaySize", Math.round(n));
     if (envState.groundOverlaySize === clamped) return;
-    setEnvState({ groundOverlaySize: clamped }, { source: "manual" });
+    setEnvState({ groundOverlaySize: clamped }, writeOpts(opts));
   }
   getOverlayOpacity(): number {
     return envState.groundOverlayOpacity;
   }
-  setOverlayOpacity(v: number): void {
+  setOverlayOpacity(v: number, opts?: WriteOpts): void {
     // 钳制读口与写入口同源（ADR-283）：早退比较必须用钳后值，否则会漏写
     const clamped = clampFieldValue("groundOverlayOpacity", v);
     if (envState.groundOverlayOpacity === clamped) return;
-    setEnvState({ groundOverlayOpacity: clamped }, { source: "manual" });
+    setEnvState({ groundOverlayOpacity: clamped }, writeOpts(opts));
   }
 
   /** 订阅参数变更（材质来源/样式/叠加模式等离散切换触发）；返回取消订阅函数 */
@@ -612,32 +644,32 @@ export class GroundCapability implements SceneCapability {
   getMatOpacity(): number {
     return envState.groundMatOpacity;
   }
-  setMatOpacity(v: number): void {
-    setEnvState({ groundMatOpacity: v }, { source: "manual" }); // 值域钳制在唯一写入口（ADR-283）
+  setMatOpacity(v: number, opts?: WriteOpts): void {
+    setEnvState({ groundMatOpacity: v }, writeOpts(opts)); // 值域钳制在唯一写入口（ADR-283）
   }
   getMatScale(): number {
     return envState.groundMatScale;
   }
-  setMatScale(v: number): void {
-    setEnvState({ groundMatScale: v }, { source: "manual" }); // 值域钳制在唯一写入口（ADR-283）
+  setMatScale(v: number, opts?: WriteOpts): void {
+    setEnvState({ groundMatScale: v }, writeOpts(opts)); // 值域钳制在唯一写入口（ADR-283）
   }
   getMatRotation(): number {
     return envState.groundMatRotationDeg;
   }
-  setMatRotation(deg: number): void {
-    setEnvState({ groundMatRotationDeg: ((deg % 360) + 360) % 360 }, { source: "manual" });
+  setMatRotation(deg: number, opts?: WriteOpts): void {
+    setEnvState({ groundMatRotationDeg: ((deg % 360) + 360) % 360 }, writeOpts(opts));
   }
   getMatRoughness(): number {
     return envState.groundMatRoughness;
   }
-  setMatRoughness(v: number): void {
-    setEnvState({ groundMatRoughness: v }, { source: "manual" });
+  setMatRoughness(v: number, opts?: WriteOpts): void {
+    setEnvState({ groundMatRoughness: v }, writeOpts(opts));
   }
   getMatMetalness(): number {
     return envState.groundMatMetalness;
   }
-  setMatMetalness(v: number): void {
-    setEnvState({ groundMatMetalness: v }, { source: "manual" });
+  setMatMetalness(v: number, opts?: WriteOpts): void {
+    setEnvState({ groundMatMetalness: v }, writeOpts(opts));
   }
   getMatColor2(): number {
     return envState.groundMatColor2;
@@ -661,22 +693,23 @@ export class GroundCapability implements SceneCapability {
   getMatDensity(): number {
     return envState.groundMatDensity;
   }
-  setMatDensity(v: number, opts?: { skipMiddleware?: boolean }): void {
-    setEnvState({ groundMatDensity: v }, { source: "manual", ...opts });
+  setMatDensity(v: number, opts?: WriteOpts): void {
+    setEnvState({ groundMatDensity: v }, writeOpts(opts));
   }
   getMatAngle(): number {
     return envState.groundMatAngleDeg;
   }
-  setMatAngle(deg: number, opts?: { skipMiddleware?: boolean }): void {
-    setEnvState({ groundMatAngleDeg: ((deg % 360) + 360) % 360 }, { source: "manual", ...opts });
+  setMatAngle(deg: number, opts?: WriteOpts): void {
+    setEnvState({ groundMatAngleDeg: ((deg % 360) + 360) % 360 }, writeOpts(opts));
   }
-  /** 存档恢复：委托同一 setter + skipMiddleware（还原非手改，不触发「脱离预设」标记，ADR-254）。
-   *  委托而非独立方法：clamp/取模 边界单一事实源，避免与用户 setter 双写漂移。 */
+  /** 存档恢复：委托同一 setter + skipMiddleware + RESTORE_SOURCE（还原非手改，不触发
+   *  「脱离预设」标记，ADR-254）。委托而非独立方法：clamp/取模 边界单一事实源，
+   *  避免与用户 setter 双写漂移。 */
   private setMatDensityRestore(v: number): void {
-    this.setMatDensity(v, { skipMiddleware: true });
+    this.setMatDensity(v, { ...RESTORE_SOURCE, skipMiddleware: true });
   }
   private setMatAngleRestore(deg: number): void {
-    this.setMatAngle(deg, { skipMiddleware: true });
+    this.setMatAngle(deg, { ...RESTORE_SOURCE, skipMiddleware: true });
   }
 
   isEnabled(): boolean {
@@ -756,62 +789,64 @@ export class GroundCapability implements SceneCapability {
         },
         groundVisible: {
           // 走 setVisible（内部写 envState，挂起期不派发）；末尾统一落地覆盖。
-          boolean: (v) => this.setVisible(v),
+          boolean: (v) => this.setVisible(v, RESTORE_SOURCE),
         },
         groundGridVisible: {
           // 同 groundVisible；旧存档缺该键 → 保持 schema 默认 true
-          boolean: (v) => this.setGridVisible(v),
+          boolean: (v) => this.setGridVisible(v, RESTORE_SOURCE),
         },
         groundSourceKind: oneOf(GROUND_SOURCE_KINDS, (v) =>
-          setEnvState({ groundSourceKind: v }, { source: "manual", skipMiddleware: true }),
+          setEnvState({ groundSourceKind: v }, { ...RESTORE_SOURCE, skipMiddleware: true }),
         ),
         // ADR-254：恢复路径全部 skipMiddleware——存档还原是**非用户手改**写入，
         // 配色/形状还原不得触发「手改即 custom」中间件（实测：逐字段恢复会把
         // 用户选的预设恒打成 custom，名实不符）。旧存档缺该字段 → 回退 plain。
         groundMaterialPreset: oneOf([...GROUND_MATERIAL_PRESET_IDS, "custom"] as const, (v) =>
-          setEnvState({ groundMaterialPreset: v }, { source: "manual", skipMiddleware: true }),
+          setEnvState({ groundMaterialPreset: v }, { ...RESTORE_SOURCE, skipMiddleware: true }),
         ),
         groundCanvasStyle: oneOf(GROUND_CANVAS_STYLES, (v) =>
-          setEnvState({ groundCanvasStyle: v }, { source: "manual", skipMiddleware: true }),
+          setEnvState({ groundCanvasStyle: v }, { ...RESTORE_SOURCE, skipMiddleware: true }),
         ),
-        groundSize: { number: (v) => setEnvState({ groundSize: v }, { source: "manual" }) },
+        groundSize: { number: (v) => setEnvState({ groundSize: v }, RESTORE_SOURCE) },
         groundDivisions: {
-          number: (v) => setEnvState({ groundDivisions: v }, { source: "manual" }),
+          number: (v) => setEnvState({ groundDivisions: v }, RESTORE_SOURCE),
         },
         groundColorCenter: {
-          number: (v) => setEnvState({ groundColorCenter: v }, { source: "manual" }),
+          number: (v) => setEnvState({ groundColorCenter: v }, RESTORE_SOURCE),
         },
         groundColorGrid: {
-          number: (v) => setEnvState({ groundColorGrid: v }, { source: "manual" }),
+          number: (v) => setEnvState({ groundColorGrid: v }, RESTORE_SOURCE),
         },
         groundMatColor: {
           number: (v) =>
-            setEnvState({ groundMatColor: v }, { source: "manual", skipMiddleware: true }),
+            setEnvState({ groundMatColor: v }, { ...RESTORE_SOURCE, skipMiddleware: true }),
         },
         groundMatColor2: {
           number: (v) =>
-            setEnvState({ groundMatColor2: v }, { source: "manual", skipMiddleware: true }),
+            setEnvState({ groundMatColor2: v }, { ...RESTORE_SOURCE, skipMiddleware: true }),
         },
         groundMatGridSize: {
           number: (v) =>
-            setEnvState({ groundMatGridSize: v }, { source: "manual", skipMiddleware: true }),
+            setEnvState({ groundMatGridSize: v }, { ...RESTORE_SOURCE, skipMiddleware: true }),
         },
-        groundMatOpacity: { number: (v) => this.setMatOpacity(v) },
-        groundMatScale: { number: (v) => this.setMatScale(v) },
-        groundMatRotationDeg: { number: (v) => this.setMatRotation(v) },
+        // [锐评 F-2] 以下站点委托公开 setter（用户手改语义 = manual）——
+        // 必须显式传 RESTORE_SOURCE，否则恢复把这批键冻成 manual（暗门）。
+        groundMatOpacity: { number: (v) => this.setMatOpacity(v, RESTORE_SOURCE) },
+        groundMatScale: { number: (v) => this.setMatScale(v, RESTORE_SOURCE) },
+        groundMatRotationDeg: { number: (v) => this.setMatRotation(v, RESTORE_SOURCE) },
         groundMatDensity: { number: (v) => this.setMatDensityRestore(v) },
         groundMatAngleDeg: { number: (v) => this.setMatAngleRestore(v) },
-        groundMatRoughness: { number: (v) => this.setMatRoughness(v) },
-        groundMatMetalness: { number: (v) => this.setMatMetalness(v) },
+        groundMatRoughness: { number: (v) => this.setMatRoughness(v, RESTORE_SOURCE) },
+        groundMatMetalness: { number: (v) => this.setMatMetalness(v, RESTORE_SOURCE) },
         // ADR-249 §2.3 叠加层恢复
         groundOverlay: oneOf(GROUND_OVERLAY_STYLES, (v) =>
-          setEnvState({ groundOverlay: v }, { source: "manual" }),
+          setEnvState({ groundOverlay: v }, RESTORE_SOURCE),
         ),
         groundOverlayColor: {
-          number: (v) => setEnvState({ groundOverlayColor: v }, { source: "manual" }),
+          number: (v) => setEnvState({ groundOverlayColor: v }, RESTORE_SOURCE),
         },
-        groundOverlaySize: { number: (v) => this.setOverlaySize(v) },
-        groundOverlayOpacity: { number: (v) => this.setOverlayOpacity(v) },
+        groundOverlaySize: { number: (v) => this.setOverlaySize(v, RESTORE_SOURCE) },
+        groundOverlayOpacity: { number: (v) => this.setOverlayOpacity(v, RESTORE_SOURCE) },
       });
     } finally {
       resumeEnvCallbacks();

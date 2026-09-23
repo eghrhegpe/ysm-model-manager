@@ -40,7 +40,7 @@ import {
   updateStat,
 } from "./render.ts";
 import { bindToolbarEvents } from "./toolbar-events.ts";
-import { footerHTML, headerHTML, spinnerHTML, treeLoadFailedHTML } from "./tpl.ts";
+import { footerHTML, headerHTML, renderRepoLabel, spinnerHTML, treeLoadFailedHTML } from "./tpl.ts";
 import { type TreeSnapshot, TreeState } from "./tree-state.ts";
 
 // 模块级样式表（shadow 根装配，含 HMR 注册；见 utils/dom/shadow-style.ts）。
@@ -417,12 +417,13 @@ export class AppTree extends WebComponentBase {
     if (!this._state.selectState.keys.size) {
       updateStat(this.treeRenderCtx, this._root.getElementById("ftr-stat"), filtered);
     }
-    // 仓库路径显示在按钮上
+    // 仓库路径显示在按钮上：icon 走语义名 SVG（ADR-238 结构槽），路径是外部数据
+    // 必须 esc —— 未设置态文案由 locale 提供纯文本
     const repoBtn = this._root.getElementById("btn-repo");
-    if (repoBtn)
-      repoBtn.textContent = this._state.filesRoot
-        ? `📁 ${this._state.filesRoot}`
-        : t("tree.repoNotSet");
+    if (repoBtn) {
+      const repoLabel = renderRepoLabel(this._state.filesRoot);
+      repoBtn.innerHTML = repoLabel;
+    }
     // 注意：_authors 仅作组件字段保留（曾写 _root._treeAuthors 伪字段，死写无读取方已删）
   }
 

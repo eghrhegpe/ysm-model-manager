@@ -71,6 +71,7 @@ auto_fields:
     - LocalAuthorLike
     - LocalCreator
     - markCurrentFile
+    - measureGhRowH
     - mergeCommunityCreators
     - mergeCommunitySites
     - mergeLocalAuthorsInto

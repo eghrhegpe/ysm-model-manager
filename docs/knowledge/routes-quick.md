@@ -787,7 +787,9 @@
 | FAB 挂 document.body 但样式在 Shadow DOM | - | light DOM 按钮不继承；必须经 ensureFabStyles 注入 head 标签 |
 | ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On 无对应 Off（app 级单例，_registered 守卫防重复注册） | - | - |
 | 非 app 级模块禁止复制此模式 | - | - |
-| isActiveStatus 必须同时认 "downloading" 和 "enqueued"（Go 端入队后只发 enqueued，从不发 downloading） | - | - |
+| isActiveStatus 必须同时认 "downloading" 和 "enqueued"（Go 端入队后只发 enqueued，从不发 downloading）；UI 控制器 run/ended 分支同样走 isActiveStatus，勿再裸比较单字符串（2026-09 修复：idle→enqueued 直跳曾跳过 run 分支致按钮不 disable） | - | - |
+| remaining 所有权归 Go file-start 载荷（pos/left 语义，queue.go:254——末文件 left=0），**前端 file-done 禁止本地递减**：递减会在「本文件 done | - | 下一文件 start」窗口造成假归零，completeTimer `remaining>0` 守卫被击穿 → 批次中途假完成提前收口（2026-09 实证证伪「死代码」推断的教训）；done/cancelled 事件前端强制 remaining=0 仅限收口清残值 |
+| 队列收口 onAllDone 载荷的 errorList 必须是 getStateSnapshot 拷贝（与 onTimedCompletion 路径防御级对齐），活体引用会静默污染 STATE | - | - |
 | web 下载入库上限 50MB（WEB_DOWNLOAD_IDB_LIMIT），超限回退浏览器直链 | - | - |
 | fetch 15s 超时兜底（WEB_DOWNLOAD_FETCH_TIMEOUT_MS），防挂起服务器永久卡队列 | - | - |
 | once off 错对象 | `bus.off(event, 原fn)` | 用 once 返回的 unsub 函数取消 |

@@ -48,7 +48,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cancelDownloads | `frontend/src/features/community/download-queue-store.ts` | 362 |
+| cancelDownloads | `frontend/src/features/community/download-queue-store.ts` | 364 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -230,7 +230,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 552 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 553 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -561,10 +561,10 @@
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 510 |
 | toastThrottled | `frontend/src/views/app-tree/index.ts` | 69 |
 | _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 322 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 476 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 484 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 605 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 612 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 477 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 485 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 606 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 613 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 50 |

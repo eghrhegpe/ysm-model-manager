@@ -1544,7 +1544,7 @@ export const zhCN = {
   "tree.more": "更多",
   "tree.moreImportFile": "导入文件",
   "tree.moreImportDir": "导入文件夹",
-  "tree.selectAll": "☑️ 全选",
+  "tree.selectAll": "全选",
   "tree.moreOpenFolder": "打开文件夹",
   // 文件树动作 toast/弹窗（app-tree 事件层 i18n 收敛）
   "tree.dirRenameTitle": "重命名文件夹",
@@ -1593,7 +1593,7 @@ export const zhCN = {
   "tree.statInitial": "共 0 项",
   "tree.statSummary": "共 {total} 项 (已启用 {enabled}) · {size}",
   "tree.repoConfigTitle": "配置仓库目录",
-  "tree.repoNotSet": "📁 未设置",
+  "tree.repoNotSet": "未设置",
   "tree.authorsEmpty": "暂无作者",
   "tree.treeLoadFailed": "加载失败",
   "tree.scanning": "扫描中...",

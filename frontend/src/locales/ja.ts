@@ -1584,7 +1584,7 @@ export const ja: Record<string, string> = {
   "tree.more": "その他",
   "tree.moreImportFile": "ファイルをインポート",
   "tree.moreImportDir": "フォルダをインポート",
-  "tree.selectAll": "☑️ すべて選択",
+  "tree.selectAll": "すべて選択",
   "tree.moreOpenFolder": "フォルダを開く",
   // ファイルツリー操作トースト/ダイアログ（app-tree イベント層 i18n 収束）
   "tree.dirRenameTitle": "フォルダ名を変更",
@@ -1634,7 +1634,7 @@ export const ja: Record<string, string> = {
   "tree.statInitial": "0 件",
   "tree.statSummary": "{total} 件 (有効 {enabled}) · {size}",
   "tree.repoConfigTitle": "リポジトリディレクトリを設定",
-  "tree.repoNotSet": "📁 未設定",
+  "tree.repoNotSet": "未設定",
   "tree.authorsEmpty": "作者なし",
   "tree.treeLoadFailed": "読み込み失敗",
   "tree.scanning": "スキャン中...",

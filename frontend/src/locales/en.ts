@@ -1585,7 +1585,7 @@ export const en: Record<string, string> = {
   "tree.more": "More",
   "tree.moreImportFile": "Import file",
   "tree.moreImportDir": "Import folder",
-  "tree.selectAll": "☑️ Select all",
+  "tree.selectAll": "Select all",
   "tree.moreOpenFolder": "Open folder",
   // file-tree action toasts/dialogs (app-tree event layer i18n convergence)
   "tree.dirRenameTitle": "Rename Folder",
@@ -1635,7 +1635,7 @@ export const en: Record<string, string> = {
   "tree.statInitial": "0 items",
   "tree.statSummary": "{total} items (enabled {enabled}) · {size}",
   "tree.repoConfigTitle": "Configure repository directory",
-  "tree.repoNotSet": "📁 Not set",
+  "tree.repoNotSet": "Not set",
   "tree.authorsEmpty": "No authors",
   "tree.treeLoadFailed": "Load failed",
   "tree.scanning": "Scanning...",

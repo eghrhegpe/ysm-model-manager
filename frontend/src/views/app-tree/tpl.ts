@@ -1,6 +1,7 @@
 // ===== HTML 模板（页面布局级，不含节点行） =====
 
 import { t } from "@/core/i18n/t.ts";
+import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDropdown, toolbarMenuTestids } from "./toolbar-menus.ts";
 
@@ -29,7 +30,7 @@ export function headerHTML(): string {
   <button class="btn-base sm" id="btn-adv-filter" data-testid="tree-adv-filter" title="${t("dialog.advFilter")}">${UI_ICONS.settings} ${t("tree.filter")}</button>
   <div class="dd-wrap" id="dd-authors"><button class="btn-base sm" id="btn-authors" data-testid="tree-authors">${UI_ICONS.brush} ${t("tree.authors")}</button><div class="dd-menu" id="menu-authors"></div></div>
   ${renderDropdown("batch")}
-  <button class="btn-base sm" id="sel-all" data-testid="tree-sel-all" title="${t("tree.selectAll")}">${t("tree.selectAll")}</button>
+  <button class="btn-base sm" id="sel-all" data-testid="tree-sel-all" title="${t("tree.selectAll")}">${UI_ICONS.checkbox} ${t("tree.selectAll")}</button>
   ${renderDropdown("more")}
   <select class="sort-sel" id="sort" data-testid="tree-sort"><option value="name">${t("tree.sortName")}</option><option value="size">${t("tree.sortSize")}</option><option value="date">${t("tree.sortDate")}</option></select>
   <button class="btn-base sm" id="btn-view-mode" data-testid="tree-view-mode" title="${t("tree.toggleView")}">${UI_ICONS.menu}</button>
@@ -41,12 +42,25 @@ export function footerHTML(): string {
   return `<div class="ftr">
 <span class="stat" id="ftr-stat" data-testid="tree-ftr-stat">${t("tree.statInitial")}</span>
 <div style="flex:1"></div>
-<button class="btn-base sm" id="btn-repo" data-testid="tree-repo" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t("tree.repoConfigTitle")}">${t("tree.repoNotSet")}</button>
+<button class="btn-base sm" id="btn-repo" data-testid="tree-repo" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t("tree.repoConfigTitle")}">${UI_ICONS.folder} ${t("tree.repoNotSet")}</button>
 </div>`;
 }
 
 export function emptyStateHTML(icon: string, msg: string): string {
   return `<div class="empty"><div class="big">${icon}</div>${msg}</div>`;
+}
+
+/**
+ * 仓库按钮内容（icon + 路径/未设置文案）。
+ *
+ * 单列为 `render*` builder 的意义有二：① 结构（图标槽）在模板层、i18n 值纯文本；
+ * ② 路径是**外部数据**，必须过 `esc` —— 且 R8 模板闸按 `render*` 命名识别可信 HTML 源，
+ * 使调用侧只出现「单调用赋值」形态（工具函数内拼串，不散落调用点）。
+ */
+export function renderRepoLabel(filesRoot: string): string {
+  return filesRoot
+    ? `${UI_ICONS.folder} ${esc(filesRoot)}`
+    : `${UI_ICONS.folder} ${t("tree.repoNotSet")}`;
 }
 
 export function spinnerHTML(): string {

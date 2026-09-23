@@ -39,6 +39,7 @@ auto_fields:
     - pickWebFilesAndImport
     - renderDropdown
     - RenderMode
+    - renderRepoLabel
     - renderTree
     - ROW_H_GRID_COMPACT
     - ROW_H_GRID_NORMAL

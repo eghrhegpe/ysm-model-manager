@@ -60,7 +60,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 204 |
+| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 191 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -72,7 +72,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 203 |
+| atTlBindBatchMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 190 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -570,10 +570,10 @@
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 49 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 60 |
 | atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 161 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 301 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 319 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 325 |
-| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 336 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 288 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 306 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 312 |
+| atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 323 |
 | advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 181 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 200 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 230 |

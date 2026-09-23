@@ -75,6 +75,11 @@ export const wsIconCSS = `
  */
 export const dropdownBaseCSS = `
 .dd-wrap { position:relative;display:inline-block; }
+/* 下拉指示符 ▾ = 结构性 affordance，单源在此（CSS 生成），**不进 i18n 值**：
+   曾以「作者 ▾」「批量 ▾」「⋮ 更多 ▾」形式混入三语 locale，翻译侧要抄箭头、
+   想统一箭头样式也无处落笔；here 一处生成，所有 .dd-wrap 触发器（app-tree 三下拉 +
+   sidebar push/pull）自动获得，且随主题字号缩放。.dd-menu 内菜单项非直接子元素，不受影响 */
+.dd-wrap > button::after { content:"▾"; margin-left:.3em; font-size:.9em; opacity:.65; }
 .dd-menu {
   position:absolute;top:100%;left:0;z-index:100;
   background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-md);

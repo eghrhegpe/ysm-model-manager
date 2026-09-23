@@ -109,7 +109,7 @@ function syncDropdownHTML(o: SyncDropdownOpts): string {
     o.icon +
     " " +
     o.label +
-    " ▾</button>" +
+    "</button>" +
     `<div class="dd-menu" ${menuAttrs}>` +
     typeMenuItemsHTML() +
     "</div></div>"

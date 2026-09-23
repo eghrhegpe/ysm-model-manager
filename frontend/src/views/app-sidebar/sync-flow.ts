@@ -187,11 +187,12 @@ function pushErrorKind(e: unknown): "skipped" | "timeout" | undefined {
 
 type SyncVerb = "push" | "pull";
 
-/** 按钮复位（push/pull finally 块共用） */
+/** 按钮复位（push/pull finally 块共用）。▾ 指示符由 dropdownBaseCSS 的
+ *  `.dd-wrap > button::after` 单源生成（ADR-238），此处不再手拼——手拼会双箭头 */
 function resetButton(btn: HTMLButtonElement, verb: SyncVerb): void {
   const iconSvg = verb === "push" ? UI_ICONS.upload : UI_ICONS.download;
   const key = verb === "push" ? "sidebar.pushSelected" : "sidebar.pullSelected";
-  btn.innerHTML = `${iconSvg} ${t(key)} ▾`;
+  btn.innerHTML = `${iconSvg} ${t(key)}`;
   btn.disabled = false;
 }
 

@@ -187,7 +187,9 @@ describe("app-sidebar — 推送所选", () => {
     // 成功 toast 不带 type（默认 success），用 `!t.type || success` 精确锁定
     expect(toasts.some((t) => (!t.type || t.type === "success") && t.msg.includes("推送完成：1 个整合包"))).toBe(true);
     expect(pushBtn.disabled).toBe(false);
-    expect(pushBtn.textContent).toBe(" 推送所选 ▾");
+    // ▾ 指示符已移交 dropdownBaseCSS 的 .dd-wrap > button::after 单源生成（ADR-238），
+    // 不再进入按钮文本（jsdom 不渲染伪元素，故此处断言无箭头）
+    expect(pushBtn.textContent).toBe(" 推送所选");
   });
 
   it("推送 skipped → warn toast（被吞请求不误报成功）", async () => {
@@ -210,7 +212,9 @@ describe("app-sidebar — 推送所选", () => {
     // P3 修复（审核发现）：skipped 与超时分别计数——文案为「被跳过」而非「超时」
     expect(toasts.some((t) => t.msg.includes("被跳过"))).toBe(true);
     expect(pushBtn.disabled).toBe(false);
-    expect(pushBtn.textContent).toBe(" 推送所选 ▾");
+    // ▾ 指示符已移交 dropdownBaseCSS 的 .dd-wrap > button::after 单源生成（ADR-238），
+    // 不再进入按钮文本（jsdom 不渲染伪元素，故此处断言无箭头）
+    expect(pushBtn.textContent).toBe(" 推送所选");
   });
 
   it("错误 token 的 done 不解锁（P2 修复防线负向验证）", async () => {
@@ -300,7 +304,8 @@ describe("app-sidebar — 拉取所选", () => {
       toasts.some((t) => t.type === "warn" && t.msg.includes("拉取完成") && t.msg.includes("失败")),
     );
     expect(pullBtn.disabled).toBe(false);
-    expect(pullBtn.textContent).toBe(" 拉取所选 ▾");
+    // 同上：▾ 单源在 CSS 伪元素
+    expect(pullBtn.textContent).toBe(" 拉取所选");
   });
 });
 

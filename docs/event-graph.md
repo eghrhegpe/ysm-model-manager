@@ -15,7 +15,7 @@
 | `batch:disable-all` | 1 | 1 | 0 | 0 | ✅ |
 | `batch:enable-all` | 1 | 1 | 0 | 0 | ✅ |
 | `batch:rename` | 1 | 1 | 0 | 0 | ✅ |
-| `community:clearCache` | 1 | 1 | 0 | 0 | ✅ |
+| `community:clear-cache` | 1 | 1 | 0 | 0 | ✅ |
 | `ctx:show` | 6 | 1 | 0 | 0 | ✅ |
 | `dir:batch-rename` | 1 | 1 | 0 | 0 | ✅ |
 | `dir:mkdir` | 1 | 1 | 0 | 0 | ✅ |
@@ -48,7 +48,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cancelDownloads | `frontend/src/features/community/download-queue-store.ts` | 354 |
+| cancelDownloads | `frontend/src/features/community/download-queue-store.ts` | 362 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -91,7 +91,7 @@
 |------|------|----|
 | bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 50 |
 
-### `community:clearCache`
+### `community:clear-cache`
 
 **发射方：**
 | 函数 | 文件 | 行 |
@@ -349,7 +349,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 343 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 317 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 318 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 203 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 222 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 98 |
@@ -416,8 +416,8 @@
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 96 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 304 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 328 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 312 |
+| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 336 |
 | cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 70 |
 | cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 82 |
 | cmReHandleSingleDownload | `frontend/src/features/community/repo-events-bindings.ts` | 156 |
@@ -520,13 +520,13 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 167 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 157 |
 | beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 113 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 256 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 262 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 268 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 300 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 306 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 311 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 320 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 257 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 263 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 269 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 301 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 307 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 312 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 321 |
 | _renderWithErrorFeedback | `frontend/src/views/app-sync-manager/index.ts` | 244 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 50 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 58 |
@@ -606,7 +606,7 @@
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 112 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 318 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

@@ -139,7 +139,7 @@ export const contentDiagCSS: string = `
 .perf-rt-tag { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:color-mix(in srgb, var(--muted, #888) 18%, transparent); color:var(--muted); flex-shrink:0; }
 /* 阶段样本统计（n / median / p95，ADR-262 D2）：等宽数字避免列跳动 */
 .perf-stats { font-size:var(--fs-micro); color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; flex-shrink:0; }
-.perf-total { padding:6px 2px; font-size:var(--fs-base); font-weight:600; color:var(--txt); border-top:1px solid var(--bd); margin-top:8px; }
+.perf-total { padding:var(--sp-vh-perf); font-size:var(--fs-base); font-weight:600; color:var(--txt); border-top:1px solid var(--bd); margin-top:8px; }
 /* 基准对比判决行（ADR-262 D8）：Go 给 base→now 与 delta，前端只映射配色/emoji */
 .perf-bl-rows { margin:2px 0 0 0; }
 .perf-bl-row { display:flex; align-items:center; gap:8px; padding:2px 2px; font-size:var(--fs-sm); color:var(--txt); border-bottom:1px dotted var(--bd); }
@@ -185,8 +185,8 @@ export const contentDiagCSS: string = `
 
 /* ===== 加载剖析面板 ===== */
 .perf-trace-meta { font-size:var(--fs-xs);color:var(--muted);word-break:break-all; }
-.perf-gantt-wrap { padding:6px 2px; }
-.perf-asset-grid { display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 2px;font-size:var(--fs-xs); }
+.perf-gantt-wrap { padding:var(--sp-vh-perf); }
+.perf-asset-grid { display:flex;flex-wrap:wrap;gap:4px 12px;padding:var(--sp-vh-perf);font-size:var(--fs-xs); }
 .perf-asset-item { color:var(--txt);white-space:nowrap; }
 .perf-badge-ok { color:var(--status-success);font-weight:600; }
 .perf-badge-warn { color:var(--status-warning); }
@@ -205,7 +205,7 @@ export const contentDiagCSS: string = `
 .diag-msg-error { color:var(--status-error); }
 .diag-msg-success { color:var(--status-success); }
 .diag-msg-muted { color:var(--muted); }
-.diag-dedup-summary { padding:10px 12px;font-size:var(--fs-sm);color:var(--txt);border-bottom:1px solid var(--bd); }
+.diag-dedup-summary { padding:var(--sp-vh-pane);font-size:var(--fs-sm);color:var(--txt);border-bottom:1px solid var(--bd); }
 .diag-dedup-summary-hint { display:block;font-size:var(--fs-micro);color:var(--muted);margin-top:2px; }
 .diag-dedup-rt { display:flex;align-items:center;gap:4px;padding:6px 12px 2px;font-size:var(--fs-xs);font-weight:600;color:var(--txt); }
 .diag-dedup-rt-sep { flex:1;border-bottom:1px solid var(--bd);margin-left:6px; }

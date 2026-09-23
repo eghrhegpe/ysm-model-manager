@@ -260,3 +260,30 @@ if (_devMode && typeof window !== "undefined") {
     })
     .catch((e) => console.warn("[app-modules] ysmCalibrateGpuBudget 挂载失败:", e));
 }
+
+// ===== 控制台后处理常驻成本探针钩子（ADR-214 同款装配层模式）=====
+// 开发/调试环境挂载 window.ysmPostprocProbe({framesPerArm, warmup}) —— A/B 交替采帧，
+// 量化 ADR-250 §2.2「composer 常驻」在**关闭**后处理时的每帧 GPU 代价与常驻显存。
+// 职责纯度：探针纯逻辑是 infra 叶子（不绑 window），钩子生命周期归装配层——
+// 与 ysmCalibrateGpuBudget 同规矩；采样需活跃 3D 会话，故走惰性动态 import。
+// ⚠️ 读数前先确认 ppEnabled=false（报告 taxMeaningful 会自证）：开着后处理跑出来的
+// 差值含 bloom/ssao/ssr 实效果，是「后处理全部成本」而非常驻税。
+if (_devMode && typeof window !== "undefined") {
+  import("@/utils/debug/debug.ts")
+    .then(async ({ isDebugEnabled }) => {
+      if (!isDebugEnabled()) return;
+      const { runPostprocCostProbe } = await import("@/preview-3d/infra/postproc-cost-probe.ts");
+      (
+        window as unknown as {
+          ysmPostprocProbe: (o?: { framesPerArm?: number; warmup?: number }) => Promise<unknown>;
+        }
+      ).ysmPostprocProbe = async (o?: {
+        framesPerArm?: number;
+        warmup?: number;
+      }): Promise<unknown> => {
+        const report = await runPostprocCostProbe(o ?? {});
+        return report ?? { error: "无活跃 3D 会话（scene/camera/renderer 未就绪）" };
+      };
+    })
+    .catch((e) => console.warn("[app-modules] ysmPostprocProbe 挂载失败:", e));
+}

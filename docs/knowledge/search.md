@@ -17,6 +17,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - __setStatsRunnerForTest
+    - advFilterClearAll
     - AdvFilterResult
     - AdvFilterValue
     - App.AnalyzeBedrockModel
@@ -44,6 +45,7 @@ auto_fields:
     - App.ScanModelEntriesFiltered
     - App.ScanModelEntriesWithLabel
     - App.SearchModels
+    - AppliedAdvFilter
     - AppTree
     - appTreeStyle
     - batchStatsWebModels

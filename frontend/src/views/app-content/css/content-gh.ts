@@ -14,7 +14,7 @@ export const contentGhCSS: string = `
 .gh-search:focus { border-color:var(--accent); }
 .gh-loading-placeholder { padding:var(--sp-5);text-align:center;color:var(--muted);font-size:var(--fs-sm); }
 .gh-initial-hint { color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center; }
-.gh-grid { flex:1; overflow-y:auto; padding:var(--btn-padding-md); display:flex; flex-direction:column; gap:4px;will-change:scroll-position; }
+.gh-grid { flex:1; overflow-y:auto; padding:var(--sp-vh-cell); display:flex; flex-direction:column; gap:4px;will-change:scroll-position; }
 .gh-card { display:flex; align-items:center; gap:var(--card-gap); padding:var(--card-padding); border-radius:var(--radius-card); border:1px solid var(--bd); background:var(--card); cursor:pointer; transition:var(--tr-normal), box-shadow var(--tr-normal); box-shadow:var(--card-shadow, none); transform:translateZ(0); animation:fadeSlideUp var(--tr-enter) both; } /* 审计 P1-2/P1-3：卡片圆角收口 --radius-card，删 --card-padding 手抄回退 */
 .gh-card:hover { border-color:var(--accent); background:var(--hover); box-shadow:var(--card-shadow-hover, none); transform:translateY(-1px); }
 .gh-card.active { border-color:var(--accent); background:var(--accent); color:var(--bg); box-shadow:var(--card-shadow-hover, none); }

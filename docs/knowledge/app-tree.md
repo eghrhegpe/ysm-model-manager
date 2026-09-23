@@ -8,6 +8,7 @@ source_files:
   - frontend/src/views/app-tree/
 auto_fields:
   symbols_with_lines:
+    - advFilterClearAll
     - AppTree
     - appTreeStyle
     - AuthorInfo

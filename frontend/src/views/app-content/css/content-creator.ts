@@ -21,7 +21,7 @@ export const contentCreatorCSS: string = `
 .cr-left { width:var(--sidebar-w); flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--bd); overflow:hidden; background:var(--surf); }
 .cr-right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .cr-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-.cr-grid { flex:1; overflow-y:auto; padding:var(--btn-padding-md); display:flex; flex-direction:column; gap:4px; }
+.cr-grid { flex:1; overflow-y:auto; padding:var(--sp-vh-cell); display:flex; flex-direction:column; gap:4px; }
 .cr-scroll { flex:1; overflow-y:auto; padding:var(--sp-vh-pane); }
 
 .cr-section { margin-bottom:8px; }

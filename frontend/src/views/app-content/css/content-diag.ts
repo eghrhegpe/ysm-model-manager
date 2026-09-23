@@ -92,7 +92,7 @@ export const contentDiagCSS: string = `
 .perf-gui-est { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:color-mix(in srgb, var(--status-warning) 20%, transparent); color:var(--status-warning); flex-shrink:0; }
 /* 类型矩阵（ADR-262 D3）：表格 + 逐模型明细；未采集/阶段不符用 warning 色显式标注 */
 .perf-matrix { width:100%; border-collapse:collapse; margin:6px 0; font-size:var(--fs-xs); color:var(--txt); }
-.perf-matrix th, .perf-matrix td { text-align:left; padding:var(--btn-padding-md); border-bottom:1px solid var(--bd); }
+.perf-matrix th, .perf-matrix td { text-align:left; padding:var(--sp-vh-cell); border-bottom:1px solid var(--bd); }
 .perf-matrix th { color:var(--muted); font-weight:600; }
 .perf-matrix-id { color:var(--muted); font-size:var(--fs-micro); }
 .perf-matrix-tag { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:var(--surf); color:var(--muted); }
@@ -214,7 +214,7 @@ export const contentDiagCSS: string = `
 .diag-dedup-group-head { display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:var(--fs-xs);font-weight:600;color:var(--txt);background:var(--surf);border-bottom:1px solid var(--bd); }
 .diag-dedup-group-fill { flex:1; }
 .diag-dedup-group-info { font-size:var(--fs-micro);color:var(--muted);font-weight:400; }
-.diag-dedup-file { display:flex;align-items:center;gap:4px;padding:var(--btn-padding-md);font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast); }
+.diag-dedup-file { display:flex;align-items:center;gap:4px;padding:var(--sp-vh-cell);font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast); }
 .diag-dedup-file-default { background:var(--hover); }
 .diag-dedup-file-name { flex:1;overflow:hidden;min-width:0; }
 .diag-dedup-file-name-text { color:var(--txt);font-size:var(--fs-xs);cursor:pointer; }
@@ -224,7 +224,7 @@ export const contentDiagCSS: string = `
 .diag-dedup-file-date { font-size:var(--fs-micro);color:var(--muted);flex-shrink:0; }
 .diag-dedup-recommend { font-size:var(--fs-micro);padding:0 var(--sp-1);border-radius:var(--radius-xs);background:color-mix(in srgb, var(--status-success) 12%, transparent);color:var(--status-success); }
 .diag-dedup-radio { flex-shrink:0;accent-color:var(--accent); }
-.diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:var(--btn-padding-md);font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast);border-top:1px solid var(--bd); }
+.diag-dedup-keep-all { display:flex;align-items:center;gap:4px;padding:var(--sp-vh-cell);font-size:var(--fs-xs);cursor:pointer;transition:background var(--tr-fast);border-top:1px solid var(--bd); }
 .diag-dedup-keep-all-label { color:var(--muted); }
 .diag-dedup-actions { display:flex;gap:6px;padding:var(--sp-vh-pane);border-top:1px solid var(--bd); }
 .diag-dedup-exec { flex:1;padding:7px 16px;border-radius:var(--radius-md);border:none;background:var(--accent);color:var(--bg);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }

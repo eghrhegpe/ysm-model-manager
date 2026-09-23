@@ -230,7 +230,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 545 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 551 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -559,12 +559,12 @@
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 443 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 500 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 510 |
-| toastThrottled | `frontend/src/views/app-tree/index.ts` | 68 |
-| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 315 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 469 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 477 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 598 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 605 |
+| toastThrottled | `frontend/src/views/app-tree/index.ts` | 69 |
+| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 321 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 475 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 483 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 604 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 611 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | atTlShowConfirm | `frontend/src/views/app-tree/toolbar-events.ts` | 49 |
@@ -574,14 +574,14 @@
 | atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 319 |
 | atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 325 |
 | atTlBindMoreMenu | `frontend/src/views/app-tree/toolbar-events.ts` | 336 |
-| advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 166 |
-| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 185 |
-| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 215 |
-| advFilterWarnWebDegraded | `frontend/src/views/app-tree/toolbar-search.ts` | 231 |
-| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 260 |
-| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 266 |
-| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 328 |
-| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 337 |
+| advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 181 |
+| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 200 |
+| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 230 |
+| advFilterWarnWebDegraded | `frontend/src/views/app-tree/toolbar-search.ts` | 246 |
+| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 275 |
+| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 281 |
+| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 348 |
+| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 357 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -623,7 +623,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 242 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 248 |
 
 ### `ui:card-density`
 

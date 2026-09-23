@@ -10,6 +10,7 @@ auto_fields:
   symbols_with_lines:
     - AdvFilterResult
     - AdvFilterValue
+    - AppliedAdvFilter
     - modalAdvFilter
     - parseFilterNumber
     - validateAdvFilter

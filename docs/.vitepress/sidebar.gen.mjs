@@ -258,6 +258,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-298：工具栏命令注册表与下拉无障碍统一",
+        "link": "/adr/ADR-298-toolbar-command-registry"
+      },
+      {
         "text": "ADR-297：水面模型倒影：隐藏 Reflector 借官方 RT + 水 shader 投影采样",
         "link": "/adr/ADR-297-water-planar-reflection"
       },

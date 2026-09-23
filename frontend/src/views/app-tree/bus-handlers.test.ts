@@ -213,15 +213,18 @@ async function bind(vm: VM): Promise<void> {
   await Promise.resolve();
 }
 
-describe("bindBusEvents — 批量启用/禁用", () => {
-  it("batch:enable-all → 只 toggle 当前禁用的条目", async () => {
+// ADR-298 D2：batch 启停不再经 bus，测试直调导出函数（同一模块实例，走动态 import 取）
+const { batchToggleAll } = await import("./bus-handlers.ts");
+
+describe("batchToggleAll — 批量启用/禁用（ADR-298 D2：直调，不再经 bus 中转）", () => {
+  it("enable=true → 只 toggle 当前禁用的条目", async () => {
     const vm = makeVM([
       makeEntry({ name: "a.ysm", fullPath: "/repo/a.ysm", banned: true }),
       makeEntry({ name: "b.ysm", fullPath: "/repo/b.ysm", banned: false }),
     ]);
     await bind(vm);
 
-    bus.emit("batch:enable-all");
+    await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
     await new Promise((r) => setTimeout(r, 0));
 
     // 仅 banned=true 的 a.ysm 被启用
@@ -230,14 +233,14 @@ describe("bindBusEvents — 批量启用/禁用", () => {
     expect(toasts.some((t) => t.msg.includes("全部启用: 1 成功"))).toBe(true);
   });
 
-  it("batch:disable-all → 只 toggle 当前启用的条目", async () => {
+  it("enable=false → 只 toggle 当前启用的条目", async () => {
     const vm = makeVM([
       makeEntry({ name: "a.ysm", fullPath: "/repo/a.ysm", banned: false }),
       makeEntry({ name: "b.ysm", fullPath: "/repo/b.ysm", banned: true }),
     ]);
     await bind(vm);
 
-    bus.emit("batch:disable-all");
+    await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], false);
     await new Promise((r) => setTimeout(r, 0));
 
     expect(ToggleEnableMock).toHaveBeenCalledTimes(1);
@@ -254,7 +257,7 @@ describe("bindBusEvents — 批量启用/禁用", () => {
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error("EACCES"));
 
-    bus.emit("batch:enable-all");
+    await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
     await new Promise((r) => setTimeout(r, 0));
 
     expect(toasts.some((t) => t.msg.includes("全部启用: 1 成功, 1 失败"))).toBe(true);
@@ -265,7 +268,7 @@ describe("bindBusEvents — 批量启用/禁用", () => {
     await bind(vm);
     vm.batchBusy = true;
 
-    bus.emit("batch:enable-all");
+    await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
     await new Promise((r) => setTimeout(r, 0));
 
     expect(ToggleEnableMock).not.toHaveBeenCalled();
@@ -276,7 +279,7 @@ describe("bindBusEvents — 批量启用/禁用", () => {
     vm.setRootAttr("ysm"); // YSM 树（默认）
     await bind(vm);
 
-    bus.emit("batch:enable-all");
+    await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
     await new Promise((r) => setTimeout(r, 0));
 
     expect(ToggleEnableMock).toHaveBeenCalledTimes(1);
@@ -291,7 +294,7 @@ describe("bindBusEvents — 批量启用/禁用", () => {
     vm.setRootAttr("resourcepack");
     await bind(vm);
 
-    bus.emit("batch:enable-all");
+    await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
     await new Promise((r) => setTimeout(r, 0));
 
     expect(ToggleEnableMock).toHaveBeenCalledTimes(1);

@@ -1,27 +1,28 @@
-// ===== 工具栏事件绑定 =====
+// ===== 工具栏事件绑定（表现层委托 → 命令表分派，ADR-298 D1）=====
+//
+// 本文件只做三件事：① 非下拉类控件（全选/仓库/排序/视图/搜索/筛选）的事件接线；
+// ② 三个 .dd-wrap 下拉的通用控制器接管（展开/ARIA/键盘，见 utils/dom/dropdown.ts）；
+// ③ `data-batch` / `data-more` 委托 → `runToolbarCommand` 表查找。
+//
+// 行为本体在 toolbar-commands.ts（命令注册表）；本文件不再持有任何菜单命令实现，
+// 原 ~80 行内联 async if-else 链（open-folder/import-file/import-dir/refresh/genindex）
+// 已整体迁入命令表，消灭「声明表裸字符串 ↔ 散落分派」的静默断链面。
 
-import { resolveAndroidRepoDir } from "@/backend/directory-picker.ts";
-import { isViewerMode } from "@/backend/platform.ts";
-import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { initDropdown } from "@/utils/dom/dropdown.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { flashBtn } from "@/utils/dom/feedback.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { getExts } from "@/utils/resource/extensions.ts";
-import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AuthorInfo } from "./authors.ts";
 import { updateSelectCount } from "./events.ts";
 import type { AppTree } from "./index.ts";
 import { getVsRows, type RenderMode } from "./render.ts";
+import { runToolbarCommand } from "./toolbar-commands.ts";
 // P1 修复（ADR-040）：搜索/筛选/导入逻辑已拆至 toolbar-search.ts
-import { openAdvFilterDialog, pickWebFilesAndImport } from "./toolbar-search.ts";
-import { spinnerHTML } from "./tpl.ts";
+import { openAdvFilterDialog } from "./toolbar-search.ts";
 
 type $Id = (id: string) => HTMLElement | null;
 
@@ -29,40 +30,6 @@ interface AtTlCtx {
   root: ShadowRoot;
   vm: AppTree;
   $: $Id;
-}
-
-async function atTlShowConfirm(
-  vm: AppTree,
-  api: () => Promise<string | null>,
-  importByType: (rtype: string, path: string) => Promise<unknown>,
-  rtype: string,
-  successMsg: string,
-): Promise<void> {
-  const path = await api();
-  if (!path) return;
-  // Go 侧 ImportByType 返回 error（非 string）：bindings 为 Promise<void>，
-  // 失败走 reject（@wailsio/runtime Call 语义），必须 try/catch 捕获，
-  // 不能用 resolve 值判错（那是旧 string 签名时代的残留，失败路径永远进不去）。
-  try {
-    await importByType(rtype, path);
-  } catch (e) {
-    const errMsg = e instanceof Error ? e.message : String(e);
-    bus.emit("toast:show", {
-      msg: t("tree.importFail", { msg: errMsg }),
-      duration: TOAST_MS.verbose,
-      type: "warn",
-    });
-    return;
-  }
-  const gen = vm._guard.current;
-  await vm._load();
-  if (vm._guard.stale(gen)) return;
-  vm._renderTree();
-  bus.emit("toast:show", {
-    msg: `✅ ${successMsg}`,
-    duration: TOAST_MS.success,
-    type: "success",
-  });
 }
 
 /** 每次展开重填（原 children.length 缓存闸已退役：_authors 异步加载完成前误触一次
@@ -174,8 +141,8 @@ function atTlBindAdvFilter(ctx: AtTlCtx): void {
       });
     });
   });
-  // 原 #af-clear 死绑定已随僵尸面板退役：清除入口 = 模态框 afv-clear（cleared 回执
-  // → advFilterClearAll 全清），未来命令表化时以 tree.filter.clear 命令复活。
+  // 清除入口 = 模态框 afv-clear（cleared 回执 → advFilterClearAll 全清）；
+  // 命令表落地后以 tree.filter.clear 命令复活（ADR-298 D1 挂载点已备）
 }
 
 function atTlBindAuthorMenu(ctx: AtTlCtx): () => void {
@@ -188,157 +155,28 @@ function atTlBindAuthorMenu(ctx: AtTlCtx): () => void {
   return initDropdown(ddWrap, { onOpen: () => fillAuthorMenu(menuAuthors, vm, $) });
 }
 
-function atTlBindBatchMenu(ctx: AtTlCtx): void {
+/**
+ * 下拉菜单项统一委托 → 命令表（ADR-298 D1）。
+ *
+ * 原实现是 batch 逐按钮 `addEventListener` + more 容器委托 + ~80 行内联 if-else 两种范式；
+ * 现统一为「容器委托 → `data-batch`/`data-more` 取值 → 命令表查找」。
+ * `stopPropagation` 保留：防冒泡到 wrap 触发收起逻辑（收起由 dropdown 控制器承担）。
+ */
+function atTlBindMenuCommands(ctx: AtTlCtx): void {
   const { $ } = ctx;
   const menuBatch = $("menu-batch");
-  if (!menuBatch) return;
-  menuBatch.querySelectorAll("[data-batch]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const action = (btn as HTMLElement).dataset.batch;
-      if (action === "enable-all") bus.emit("batch:enable-all");
-      else if (action === "disable-all") bus.emit("batch:disable-all");
-    });
-  });
-}
-
-async function atTlHandleImportFile(ctx: AtTlCtx): Promise<void> {
-  const { vm } = ctx;
-  const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
-  if (isViewerMode()) {
-    await pickWebFilesAndImport(
-      rtype,
-      () => vm._load(),
-      () => vm._renderTree(),
-    );
-    return;
-  }
-  const { SelectImportFile, ImportByType } = await backendGetApp();
-  const exts = getExts(rtype);
-  const extFilter = exts.length ? exts.map((e) => `*${e}`).join(";") : "*.*";
-  await atTlShowConfirm(
-    vm,
-    () =>
-      SelectImportFile(
-        `${t("tree.importFileFilter", { rtype })}|${extFilter}`,
-        t("tree.selectFileTitle", { rtype }),
-      ),
-    ImportByType,
-    rtype,
-    t("tree.importOk"),
-  );
-}
-
-async function atTlHandleImportDir(ctx: AtTlCtx): Promise<void> {
-  const { vm } = ctx;
-  const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
-  if (isWebPlatform()) {
-    const gen = vm._guard.current;
-    await pickWebFilesAndImport(
-      rtype,
-      () => vm._load(),
-      () => {
-        if (!vm._guard.stale(gen)) vm._renderTree();
-      },
-    );
-    return;
-  }
-  if (isViewerMode()) {
-    const dir = await resolveAndroidRepoDir();
-    if (!dir) return;
-    const gen = vm._guard.current;
-    await vm._load();
-    if (vm._guard.stale(gen)) return;
-    vm._renderTree();
-    return;
-  }
-  const { SelectDirectory, ImportByType } = await backendGetApp();
-  await atTlShowConfirm(vm, () => SelectDirectory(), ImportByType, rtype, t("tree.importDirOk"));
-}
-
-function atTlBindMoreMenu(ctx: AtTlCtx): void {
-  const { vm, $ } = ctx;
   const menuMore = $("menu-more");
-  if (!menuMore) return;
-  menuMore.addEventListener("click", (e) => {
+  const dispatch = (e: Event, attr: "batch" | "more"): void => {
     const target = e.target as HTMLElement | null;
-    const item = target ? target.closest("[data-more]") : null;
+    const item = target?.closest(`[data-${attr}]`) as HTMLElement | null;
     if (!item) return;
     e.stopPropagation();
-    const action = (item as HTMLElement).dataset.more;
-    void (async (): Promise<void> => {
-      if (action === "open-folder") {
-        if (isViewerMode()) {
-          await resolveAndroidRepoDir();
-          return;
-        }
-        if (!vm.snapshot.filesRoot) return;
-        const { OpenFolder } = await backendGetApp();
-        await OpenFolder(vm.snapshot.filesRoot);
-      } else if (action === "import-file") {
-        await atTlHandleImportFile(ctx);
-      } else if (action === "import-dir") {
-        await atTlHandleImportDir(ctx);
-      } else if (action === "refresh") {
-        const tree = $("tree");
-        if (tree) tree.innerHTML = spinnerHTML();
-        const gen = vm._guard.current;
-        await vm._load();
-        if (vm._guard.stale(gen)) return;
-        vm._renderTree();
-      } else if (action === "genindex") {
-        const btn = item as HTMLButtonElement;
-        // 捕获声明表渲染的完整内容（book 图标 + 文案）；finally 必须按原结构恢复，
-        // 原 btn.textContent = t(...) 会抹掉图标且菜单不重渲染永不归位（ADR-238 结案）
-        const origHtml = btn.innerHTML;
-        btn.innerHTML = UI_ICONS.refresh;
-        btn.disabled = true;
-        try {
-          const { GenerateRepoIndex, GetRepoRoot } = await backendGetApp();
-          const filesRoot = await GetRepoRoot(currentRepoType());
-          if (!filesRoot) {
-            bus.emit("toast:show", {
-              msg: t("tree.needStoragePath"),
-              duration: TOAST_MS.success,
-              type: "warn",
-            });
-            return;
-          }
-          const idx = await GenerateRepoIndex(filesRoot);
-          if (isWebPlatform() && typeof idx === "string") {
-            const blob = new Blob([idx], { type: "application/json;charset=utf-8" });
-            const a = document.createElement("a");
-            a.download = "index.json";
-            a.href = URL.createObjectURL(blob);
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(a.href);
-          }
-          bus.emit("toast:show", {
-            msg: t("tree.indexGenerated"),
-            duration: TOAST_MS.normal,
-            type: "success",
-          });
-        } catch (e) {
-          bus.emit("toast:show", {
-            msg: `❌ ${friendlyError(e)}`,
-            duration: TOAST_MS.verbose,
-            type: "error",
-          });
-        } finally {
-          btn.innerHTML = origHtml;
-          btn.disabled = false;
-        }
-      }
-    })().catch((err) => {
-      bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(err)}`,
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
-    });
-  });
+    const action = attr === "batch" ? item.dataset.batch : item.dataset.more;
+    if (!action) return;
+    runToolbarCommand(action, { vm: ctx.vm, $ }, item);
+  };
+  menuBatch?.addEventListener("click", (e) => dispatch(e, "batch"));
+  menuMore?.addEventListener("click", (e) => dispatch(e, "more"));
 }
 
 export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): () => void {
@@ -351,17 +189,16 @@ export function bindToolbarEvents(root: ShadowRoot, vm: AppTree): () => void {
   atTlBindViewMode(ctx);
   atTlBindSearch(ctx);
   atTlBindAdvFilter(ctx);
-  // 三个 .dd-wrap 下拉统一交通用控制器（ADR-238 无障碍统一）：
+  // 三个 .dd-wrap 下拉统一交通用控制器（ADR-298 D3）：
   // click 展开/收起 + ARIA 落位 + 键盘导航 + 外点关闭 + 互斥；
   // 原 hover 展开（dropdownHoverCSS）已退役——触屏生产形态（Android/viewer）下
   // hover 语义不成立，键盘此前完全无法打开菜单。
-  // 行为委托（atTlBindBatchMenu/atTlBindMoreMenu）绑在菜单容器自身，
+  // 命令委托（atTlBindMenuCommands）绑在菜单容器自身，
   // 生命周期随 shadow 内容重建（_renderLayout）自然终结，无泄漏面。
   const disposeAuthors = atTlBindAuthorMenu(ctx);
   const disposeBatch = initDropdown($("dd-batch"));
   const disposeMore = initDropdown($("dd-more"));
-  atTlBindBatchMenu(ctx);
-  atTlBindMoreMenu(ctx);
+  atTlBindMenuCommands(ctx);
   return () => {
     disposeAuthors();
     disposeBatch();

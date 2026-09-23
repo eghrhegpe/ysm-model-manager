@@ -22,6 +22,7 @@ const {
   getAndroidBridgeMock,
   isViewerModeMock,
   resolveAndroidRepoDirMock,
+  batchToggleAllMock,
 } = vi.hoisted(() => ({
   SearchModelsMock: vi.fn(),
   ListByTagMock: vi.fn(),
@@ -38,6 +39,7 @@ const {
   getAndroidBridgeMock: vi.fn(),
   isViewerModeMock: vi.fn().mockReturnValue(false), // 默认桌面（非查看器模式）
   resolveAndroidRepoDirMock: vi.fn(),
+  batchToggleAllMock: vi.fn(),
 }));
 
 vi.mock("@/backend/app.ts", () => ({
@@ -61,6 +63,13 @@ vi.mock("./render.ts", () => ({
   setRenderMode: setRenderModeMock,
   setRenderModeToRoot: vi.fn(),
   getVsRows: getVsRowsMock,
+}));
+
+// ADR-298 D2：batch 启停改为命令表直调 batchToggleAll（不再经 bus 中转），
+// 故此处替身该导出而非监听 bus 事件
+vi.mock("./bus-handlers.ts", () => ({
+  bindBusEvents: vi.fn(() => []),
+  batchToggleAll: batchToggleAllMock,
 }));
 
 vi.mock("@/utils/debug/debug.ts", () => ({
@@ -213,19 +222,15 @@ function makeVM(root: ShadowRoot): VM {
 // bus 事件收集器
 const toasts: Array<{ msg: string; type: string }> = [];
 const navs: string[] = [];
-const batchEvts: string[] = [];
 const offs: Array<() => void> = [];
 
 beforeEach(() => {
   toasts.length = 0;
   navs.length = 0;
-  batchEvts.length = 0;
   offs.forEach((fn) => fn());
   offs.length = 0;
   offs.push(bus.on("toast:show", (p) => toasts.push(p as { msg: string; type: string })));
   offs.push(bus.on("nav:changed", (p) => navs.push((p as { page: string }).page)));
-  offs.push(bus.on("batch:enable-all", () => batchEvts.push("enable-all")));
-  offs.push(bus.on("batch:disable-all", () => batchEvts.push("disable-all")));
 
   vi.clearAllMocks();
   GetRepoRootMock.mockResolvedValue("/repo");
@@ -724,7 +729,10 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
     getByTestId("tree-batch-enable")!.click();
     getByTestId("tree-batch-disable")!.click();
 
-    expect(batchEvts).toEqual(["enable-all", "disable-all"]);
+    // ADR-298 D2：直调 batchToggleAll(vm, true/false)，不再经 bus 中转
+    expect(batchToggleAllMock).toHaveBeenCalledTimes(2);
+    expect(batchToggleAllMock.mock.calls[0]![1]).toBe(true);
+    expect(batchToggleAllMock.mock.calls[1]![1]).toBe(false);
   });
 
   it("menu-more open-folder → OpenFolder(repoRoot)", async () => {

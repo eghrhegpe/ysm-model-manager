@@ -13,6 +13,7 @@ auto_fields:
     - appTreeStyle
     - AuthorInfo
     - batchRenameTpl
+    - batchToggleAll
     - bindBusEvents
     - bindToolbarEvents
     - bindTreeEvents
@@ -47,12 +48,16 @@ auto_fields:
     - ROW_H_LIST_NORMAL
     - rowHeightGrid
     - rowHeightList
+    - runToolbarCommand
     - selectSingle
     - SelectState
     - setRenderMode
     - setVsRows
     - spinnerHTML
     - toggleSelect
+    - TOOLBAR_COMMANDS
+    - ToolbarCommandCtx
+    - ToolbarCommandId
     - toolbarMenuTestids
     - treeCSS
     - TreeEntry

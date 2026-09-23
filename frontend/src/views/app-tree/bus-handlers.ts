@@ -24,8 +24,8 @@ function atBeStale(vm: AppTree, gen: number): boolean {
 export function bindBusEvents(vm: AppTree): Array<() => void> {
   const cleanups: Array<() => void> = [];
 
-  cleanups.push(bus.on("batch:enable-all", () => atBeHandleBatchEnableAll(vm)));
-  cleanups.push(bus.on("batch:disable-all", () => atBeHandleBatchDisableAll(vm)));
+  // batch:enable-all / batch:disable-all 已退役（ADR-298 D2）：两端同组件自产自销、
+  // 纯 4 跳绕路，改为工具栏命令表直调 batchToggleAll
   cleanups.push(
     bus.on("dir:rename", ({ dir }) => {
       void atBeHandleDirRename(vm, dir);
@@ -101,14 +101,6 @@ async function runBatchRename(
     duration: TOAST_MS.normal,
     type: fail > 0 ? "warn" : "success",
   });
-}
-
-function atBeHandleBatchEnableAll(vm: AppTree): void {
-  void batchToggleAll(vm, true);
-}
-
-function atBeHandleBatchDisableAll(vm: AppTree): void {
-  void batchToggleAll(vm, false);
 }
 
 async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
@@ -386,7 +378,14 @@ async function runBatchToggle(
   }
 }
 
-async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
+/**
+ * 批量启停（供工具栏命令表直调，ADR-298 D2）。
+ *
+ * 原路径是 `toolbar-events` emit `batch:enable-all` → 本文件 bus.on 接收，两端同组件
+ * 自产自销、纯 4 跳绕路；总线立法理由是「跨 Shadow 边界传数据」，此处不成立，故直调。
+ * 跨组件事件（dir:rename / tree:reload 等有视图外生产者）保持 bus 不变。
+ */
+export async function batchToggleAll(vm: AppTree, enable: boolean): Promise<void> {
   return runBatchToggle(vm, enable, {
     label: t("tree.allToggle", { action: enable ? t("tree.enable") : t("tree.disable") }),
   });

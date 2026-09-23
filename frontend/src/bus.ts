@@ -114,10 +114,8 @@ export interface BusEvents {
   "instance:clear": { name: string; rtype: string };
   // 批量操作
   "batch:rename": { paths: string[] };
-  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
-  "batch:enable-all": void;
-  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
-  "batch:disable-all": void;
+  // batch:enable-all / batch:disable-all 已退役（ADR-298 D2）：两端同组件自产自销
+  // （toolbar-events emit → bus-handlers 收），纯 4 跳绕路；改工具栏命令表直调 batchToggleAll。
   // 目录
   "dir:rename": { dir: string };
   "dir:recycle": { dir: string };
@@ -142,8 +140,6 @@ const VOID_EVENTS = [
   "tree:reload",
   "community:clear-cache",
   "sync:toggle:status",
-  "batch:enable-all",
-  "batch:disable-all",
   "repo:focus-search",
 ] as const satisfies readonly VoidEventName[];
 

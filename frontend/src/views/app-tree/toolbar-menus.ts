@@ -3,15 +3,18 @@
 // 范式对齐 ADR-021 声明式菜单 + ADR-238 图标语义名规范（context-menu/menu-defs.ts）：
 //   - 菜单项声明只描述「语义」：action（行为）、label（i18n）、icon（图标语义名）、divider
 //   - 渲染与图标解析由本层统一处理，调用侧不垫 SVG/emoji 字符串
-// 行为侧不变：toolbar-events.ts 仍靠 data-batch / data-more 委托，本表不碰事件逻辑。
+// 行为外置（ADR-298 D1）：本表只描述语义，行为实现经 action 联合类型指向命令注册表；
+// 声明侧写错 / 改名漏挂即 tsc 报错（原 action: string 与 if-else 分派无类型约束）。
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
 import type { UiIconName } from "@/utils/icon/ui-icons.ts";
+// 类型唯一事实源 = 命令注册表（ADR-298 D1）
+import type { ToolbarCommandId } from "./toolbar-commands.ts";
 
 /** 单个工具栏下拉菜单项声明（只描述语义，不垫渲染字符串） */
 interface ToolbarMenuItem {
-  /** 行为标识：data-batch / data-more 取值，toolbar-events.ts 按它分派 */
-  action: string;
+  /** 命令 id：data-batch / data-more 委托值，也即 toolbar-commands 注册表的键 */
+  action: ToolbarCommandId;
   /** 唯一 testid（ADR-133 G-1 契约；与 action 不必同名，勿机械拼凑） */
   testid: string;
   /** i18n 文案 key（渲染时经 t() 解析——模块加载冻结会让语言热切换后文案停留在旧语言） */

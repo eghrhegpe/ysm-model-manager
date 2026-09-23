@@ -40,6 +40,7 @@ perf:
   - concurrent
 invariant_anchors:
   - go/threejs/spec.go|collectBonePivots
+  - go/threejs/spec-cube.go|packFaceVertices
 status: active
 ---
 
@@ -85,7 +86,9 @@ status: active
   - P2-1 `repairBrokenParentChain` pivots 存在性检查：`pivots[name]` 不判存在性，缺失时拿到零值 `vec3{}`，LocalPosition 塌到原点。修复：取值判 `ok`，缺失时 `continue` 保留原 LocalPosition + log 告警（code_review P2-4 修正：只 log 不跳过，仍用零向量算 LocalPosition）。
   - P2-2 `attachArms` pivots 存在性检查：同 P2-1 模式，RightArm/LeftArm/Arm 缺 pivot 时 `break` 跳过 attach + log 告警。
   - P2-3 `fillMissingBones` pivots：已有意设计（纯 parent 引用骨骼无 pivot 时塌到原点 + log 告警），非 bug。
-  - P2-4/P2-5（parseUV 原始 Size / parseFaceUV 面序隐式契约）：待后续 deep 验证（Blockbench 交叉验证），本轮跳过。
+  - P2-4/P2-5（parseUV 原始 Size / parseFaceUV 面序隐式契约）：✅ 2026-09 已闭合（foxcar 贴图颠倒事故）——parseUV 仍基于原始 Size；parseFaceUV 面序契约经 GeoCube/GeoQuad 黄金参照核实，补齐 up/down 角点重排（见不变量「per-face/box UV 的 up/down 角点定向」）。
+
+- **per-face/box UV 的 up/down 角点定向（foxcar 贴图颠倒修复，2026-09；黄金参照 `upstream/LgeacyYesSteveModel` 的 GeoCube.java + GeoQuad.java）**：`expandBoxUV`/`parseFaceUV` 写入的是 **canonical 槽位** `s0=(u1,v1) s1=(u2,v1) s2=(u1,v2) s3=(u2,v2)`（face 序 east/west/up/down/south/north）；四侧面物理顶点序可直接消费，**up/down 必须在打包点（Go `packFaceVertices`、TS `mdCmBuildFace`，box/per-face 共享的单一出口）把槽位反转成 [s3,s2,s1,s0]**——本仓 up 顶点序 [P3,P7,P4,P8]、down [P2,P6,P1,P5] = GeoCube canonical（up [P4,P8,P7,P3]、down [P1,P5,P6,P2]）的位 [3,2,0,1]。box face 表改用 GeoCube 原始有符号坐标（up `(u+z, v, x, z)`、down `(u+z+x, v+z, x, -z)`），旧「负 fw/fh 技巧补偿」已退役：它只对 box 歪打正着，per-face 顶面/底面贴图前后颠倒（foxcar 551 个 cube 全 per-face、down 544 个负 uv_size）。**uv_size 有符号（负高 = v 反向采样），禁止 min/max 归一化**；mirror 保持在 canonical 槽位交换 u（u0↔u2、u4↔u6），经同一重排自然镜像。全链路 `tex.flipY=false`、v 即图像行域——角点错还会让 face-split 按错贴图区域采 AlphaIndex，连带把被遮盖面误判透明而隐藏。双端锁定：Go `spec_build_extra_test.go` 三个角点定向用例 + TS `cube-mesh.test.ts` 同构用例 + 契约 `tests/test_cube_uv_quad_vertex.ts`
 
 ## ADR-042 实施进度（2026-08-24 核对）
 

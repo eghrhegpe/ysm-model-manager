@@ -99,6 +99,86 @@ func TestParseFaceUV_QuadVertexOrder(t *testing.T) {
 	}
 }
 
+// TestBuildCubeMeshData_FaceUVUpDownCornerOrder 锁定 per-face UV 的 up/down 角点定向
+// （foxcar 贴图颠倒事故 2026-09）：
+// 黄金参照 GeoCube.java（up=[P4,P8,P7,P3] / down=[P1,P5,P6,P2]）+ GeoQuad.java
+// （非 mirror：vert0=(u2,v1),vert1=(u1,v1),vert2=(u1,v2),vert3=(u2,v2)）。
+// 我们 packFaceVertices 自己的顶点序（up [P3,P7,P4,P8] / down [P2,P6,P1,P5]）下，
+// up/down 必须按 [vert0=(u2,v2),vert1=(u1,v2),vert2=(u2,v1),vert3=(u1,v1)] 铺 UV，
+// 四个侧面（east/west/south/north）才是 (u1,v1),(u2,v1),(u1,v2),(u2,v2)。
+// 早期 parseFaceUV 对 6 面同序 → per-face 模型顶面/底面贴图前后颠倒；face-split
+// 按错区域采 alpha 又连带误判透明（被遮盖面隐藏）。
+//
+// 用例 texW=texH=64：
+//   - up   uv=[0,8]  uv_size=[8,8]（正尺寸，Blockbench up 惯例 533/543）
+//     u1=0, u2=0.125, v1=0.125, v2=0.25
+//   - down uv=[8,16] uv_size=[8,-8]（负尺寸，foxcar down 544/544 全负）
+//     u1=0.125, u2=0.25, v1=0.25, v2=0.125（有符号，不做 min/max 归一化）
+//   - east uv=[0,8] uv_size=[8,8] → 侧面序保持不变
+func TestBuildCubeMeshData_FaceUVUpDownCornerOrder(t *testing.T) {
+	faceUV := `{"east":{"uv":[0,8],"uv_size":[8,8]},` +
+		`"up":{"uv":[0,8],"uv_size":[8,8]},` +
+		`"down":{"uv":[8,16],"uv_size":[8,-8]}}`
+	c := types.Cube2D{
+		Origin: [3]float64{0, 0, 0}, Size: [3]float64{8, 8, 8},
+		Pivot: [3]float64{4, 4, 4}, PivotSet: true,
+		FaceUV: faceUV,
+	}
+	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
+	if md == nil {
+		t.Fatal("buildCubeMeshData 返回 nil")
+	}
+	// 每面 4 顶点 × 2 UV = 8；面序 east/west/up/down/south/north
+	assertFaceUV(t, md.Uvs, 0, [8]float64{0, 0.125, 0.125, 0.125, 0, 0.25, 0.125, 0.25}, "east(side)")
+	assertFaceUV(t, md.Uvs, 2, [8]float64{0.125, 0.25, 0, 0.25, 0.125, 0.125, 0, 0.125}, "up(reversed)")
+	assertFaceUV(t, md.Uvs, 3, [8]float64{0.25, 0.125, 0.125, 0.125, 0.25, 0.25, 0.125, 0.25}, "down(negative-size reversed)")
+}
+
+// TestBuildCubeMeshData_BoxUVUpDownParity 重构 expandBoxUV 为 GeoCube 原始 face 表后，
+// box UV 的 up/down 打包结果必须与旧「负 fw/fh 技巧」逐字节一致（box 模型零回归）。
+// 8³ cube @ uv[0,0]，tex64：
+//   - up 原始表 (u+z, v, x, z) = (8,0,8,8)：u1=.125,u2=.25,v1=0,v2=.125
+//   - down 原始表 (u+z+x, v+z, x, -z) = (16,8,8,-8)：u1=.25,u2=.375,v1=.125,v2=0
+func TestBuildCubeMeshData_BoxUVUpDownParity(t *testing.T) {
+	c := types.Cube2D{
+		Origin: [3]float64{0, 0, 0}, Size: [3]float64{8, 8, 8},
+		Pivot: [3]float64{4, 4, 4}, PivotSet: true,
+		UV: [2]float64{0, 0},
+	}
+	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
+	if md == nil {
+		t.Fatal("buildCubeMeshData 返回 nil")
+	}
+	assertFaceUV(t, md.Uvs, 2, [8]float64{0.25, 0.125, 0.125, 0.125, 0.25, 0, 0.125, 0}, "box up")
+	assertFaceUV(t, md.Uvs, 3, [8]float64{0.375, 0, 0.25, 0, 0.375, 0.125, 0.25, 0.125}, "box down")
+}
+
+// mirror per-face up：canonical 槽位水平翻转（u1↔u2）后再走 up 重排，
+// 等价于每顶点采样位置水平镜像（[（u1,v2）,（u2,v2）,（u1,v1）,（u2,v1）]）。
+func TestBuildCubeMeshData_FaceUVUpMirror(t *testing.T) {
+	faceUV := `{"up":{"uv":[0,8],"uv_size":[8,8]}}`
+	c := types.Cube2D{
+		Origin: [3]float64{0, 0, 0}, Size: [3]float64{8, 8, 8},
+		Pivot: [3]float64{4, 4, 4}, PivotSet: true,
+		FaceUV: faceUV, Mirror: true,
+	}
+	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
+	if md == nil {
+		t.Fatal("buildCubeMeshData 返回 nil")
+	}
+	assertFaceUV(t, md.Uvs, 2, [8]float64{0, 0.25, 0.125, 0.25, 0, 0.125, 0.125, 0.125}, "mirrored up")
+}
+
+func assertFaceUV(t *testing.T, uvs []float64, face int, want [8]float64, label string) {
+	t.Helper()
+	base := face * 8
+	for i := 0; i < 8; i++ {
+		if math.Abs(uvs[base+i]-want[i]) > 1e-9 {
+			t.Fatalf("%s face uvs[%d] = %v, 期望 %v（完整面=%v）", label, i, uvs[base+i], want[i], uvs[base:base+8])
+		}
+	}
+}
+
 // FaceUV 合法但无可识别面 + 存在 box UV → parseUV 回退 expandBoxUV（保留纹理，不全零）
 func TestParseUV_FaceUVNoFacesFallsBackToBoxUV(t *testing.T) {
 	var faces [6][8]float64

@@ -316,16 +316,23 @@ func expandBoxUV(uv [2]float64, sx, sy, sz, texW, texH float64, faces *[6][8]flo
 		fu, fv, fw, fh float64
 		f              int
 	}
+	// box UV face 表 = 黄金参照 GeoCube.java createFromPojoCube 的原始有符号坐标
+	// （face 序 east/west/up/down/south/north）。up/down 不再用负 fw/fh「技巧」
+	// 补偿顶点环绕序——角点重排统一在 packFaceVertices 按物理顶点序处理
+	// （box/per-face 单一出口，foxcar per-face 贴图颠倒事故 2026-09）。
+	// down 的 fh=-sz 是 GeoCube 原表语义（底面 v 轴反向）；uv 尺寸有符号，
+	// 不做 min/max 归一化（负 uv_size 的 per-face 同理）。
 	data := []uvData{
 		{u, v + sz, sz, sy, 0}, {u + sz + sx, v + sz, sz, sy, 1},
-		{u + sz + sx, v + sz, -sx, -sz, 2}, {u + sz + sx + sx, v, -sx, sz, 3},
+		{u + sz, v, sx, sz, 2}, {u + sz + sx, v + sz, sx, -sz, 3},
 		{u + sz + sz + sx, v + sz, sx, sy, 4}, {u + sz, v + sz, sx, sy, 5},
 	}
 	for _, d := range data {
-		// 四角 quad：顶点序 (u0,v0)(u1,v0)(u0,v1)(u1,v1)——对齐前端 cube-mesh.ts 与
-		// spec-builder.ts；此前写成对角重复 [u0,v0,u1,v1,u0,v0,u1,v1]，导致每面
-		// UV 退化为对角线性渐变（纹理被压成一条对角线 → 糊/纯色/方向怪异）。
-		// 前两个顶点是面上的 u0、后两个是 u1（v0 行在前、v1 行在后）。
+		// canonical 槽位四角：s0=(u0,v0) s1=(u1,v0) s2=(u0,v1) s3=(u1,v1)——
+		// 四侧面可直接用；up/down 的物理顶点环绕序与 GeoCube 相反，由
+		// packFaceVertices 统一反转槽位序（见该函数注释）。此前写成对角重复
+		// [u0,v0,u1,v1,u0,v0,u1,v1]，会导致每面 UV 退化为对角线性渐变
+		// （纹理被压成一条对角线 → 糊/纯色/方向怪异）。
 		faces[d.f] = [8]float64{
 			d.fu / texW, d.fv / texH, (d.fu + d.fw) / texW, d.fv / texH,
 			d.fu / texW, (d.fv + d.fh) / texH, (d.fu + d.fw) / texW, (d.fv + d.fh) / texH,
@@ -358,8 +365,9 @@ func parseFaceUV(faceUVStr string, faces *[6][8]float64, texW, texH float64) boo
 		if len(fd.UvSize) >= 2 {
 			fw, fh = fd.UvSize[0], fd.UvSize[1]
 		}
-		// 四角 quad：顶点序 (u0,v0)(u1,v0)(u0,v1)(u1,v1)——同 expandBoxUV 修复（对角
-		// 重复会导致面内 UV 退化为对角渐变，纹理糊/纯色/方向怪异）。
+		// canonical 槽位四角 (u0,v0)(u1,v0)(u0,v1)(u1,v1)：四侧面直接可用，
+		// up/down 由 packFaceVertices 按物理顶点序反转槽位（foxcar 贴图颠倒修复）。
+		// 对角重复会导致面内 UV 退化为对角渐变，纹理糊/纯色/方向怪异。
 		faces[fi] = [8]float64{
 			fu / texW, fv / texH, (fu + fw) / texW, fv / texH,
 			fu / texW, (fv + fh) / texH, (fu + fw) / texW, (fv + fh) / texH,

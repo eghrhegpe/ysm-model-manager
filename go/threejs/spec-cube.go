@@ -115,6 +115,16 @@ func packFaceVertices(lx, ly, lz, hx, hy, hz float64, faceUVs [6][8]float64, has
 		}
 		if hasUV {
 			uv := faceUVs[fd.f]
+			// up/down 角点重排（foxcar per-face 贴图颠倒修复，2026-09；黄金参照
+			// upstream/LgeacyYesSteveModel 的 GeoCube.java + GeoQuad.java）：
+			// GeoCube 物理顶点序 up=[P4,P8,P7,P3]、down=[P1,P5,P6,P2]，本仓为
+			// up=[P3,P7,P4,P8]、down=[P2,P6,P1,P5]（= canonical 位 [3,2,0,1]）。
+			// faceUVs 存 canonical 槽位 s0=(u1,v1) s1=(u2,v1) s2=(u1,v2) s3=(u2,v2)
+			// （四侧面直接可用），up/down 必须反转槽位序 [s3,s2,s1,s0] 才与物理顶点
+			// 对齐；mirror 在 canonical 槽位交换 u 后经同一重排自然水平镜像。
+			if fd.f == 2 || fd.f == 3 {
+				uv = [8]float64{uv[6], uv[7], uv[4], uv[5], uv[2], uv[3], uv[0], uv[1]}
+			}
 			uvs = append(uvs, uv[0], uv[1], uv[2], uv[3], uv[4], uv[5], uv[6], uv[7])
 		} else {
 			for i := 0; i < 8; i++ {

@@ -99,6 +99,50 @@ describe("buildCubeMeshData", () => {
     expect(mesh!.boneId).toBe("arm");
   });
 
+  /** 取某面 8 个 UV（面序 east/west/up/down/south/north） */
+  function faceUVs(mesh: NonNullable<ReturnType<typeof buildCubeMeshData>>, face: number): number[] {
+    return mesh.uvs.slice(face * 8, face * 8 + 8);
+  }
+
+  it("per-face UV：up/down 角点按 GeoCube 反向环绕序（foxcar 贴图颠倒回归）", () => {
+    // 黄金参照 GeoCube.java（up=[P4,P8,P7,P3]/down=[P1,P5,P6,P2]）+ GeoQuad.java。
+    // 本包 pack 顶点序 up=[P3,P7,P4,P8]/down=[P2,P6,P1,P5] → up/down 必须铺
+    // [(u2,v2),(u1,v2),(u2,v1),(u1,v1)]；侧面保持 [(u1,v1),(u2,v1),(u1,v2),(u2,v2)]。
+    // down 用负 uv_size（foxcar 544/544），有符号原始坐标不做 min/max 归一化。
+    const cube = buildCube({
+      pivot: [4, 4, 4],
+      pivotSet: true,
+      size: [8, 8, 8],
+      faceUV:
+        '{"east":{"uv":[0,8],"uv_size":[8,8]},' +
+        '"up":{"uv":[0,8],"uv_size":[8,8]},' +
+        '"down":{"uv":[8,16],"uv_size":[8,-8]}}',
+    });
+    const mesh = buildCubeMeshData(cube, bonePivot, 64, 64, "root", 0)!;
+    expect(faceUVs(mesh, 0)).toEqual([0, 0.125, 0.125, 0.125, 0, 0.25, 0.125, 0.25]); // east 侧面序不变
+    expect(faceUVs(mesh, 2)).toEqual([0.125, 0.25, 0, 0.25, 0.125, 0.125, 0, 0.125]); // up 反向
+    expect(faceUVs(mesh, 3)).toEqual([0.25, 0.125, 0.125, 0.125, 0.25, 0.25, 0.125, 0.25]); // down 负尺寸反向
+  });
+
+  it("box UV：up/down 打包结果与旧负 fw/fh 技巧逐值一致（box 模型零回归）", () => {
+    const cube = buildCube({ pivot: [4, 4, 4], pivotSet: true, size: [8, 8, 8], uv: [0, 0] });
+    const mesh = buildCubeMeshData(cube, bonePivot, 64, 64, "root", 0)!;
+    expect(faceUVs(mesh, 2)).toEqual([0.25, 0.125, 0.125, 0.125, 0.25, 0, 0.125, 0]);
+    expect(faceUVs(mesh, 3)).toEqual([0.375, 0, 0.25, 0, 0.375, 0.125, 0.25, 0.125]);
+  });
+
+  it("per-face UV + mirror：up 水平翻转后角点 = [(u1,v2),(u2,v2),(u1,v1),(u2,v1)]", () => {
+    const cube = buildCube({
+      pivot: [4, 4, 4],
+      pivotSet: true,
+      size: [8, 8, 8],
+      mirror: true,
+      faceUV: '{"up":{"uv":[0,8],"uv_size":[8,8]}}',
+    });
+    const mesh = buildCubeMeshData(cube, bonePivot, 64, 64, "root", 0)!;
+    expect(faceUVs(mesh, 2)).toEqual([0, 0.25, 0.125, 0.25, 0, 0.125, 0.125, 0.125]);
+  });
+
   it("localPosition = bonePivot - cubePivot（X 翻转口径）", () => {
     const cube = buildCube({
       origin: [2, 2, 2],

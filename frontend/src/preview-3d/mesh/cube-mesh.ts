@@ -207,20 +207,42 @@ function mdCmBuildFace(
       break;
   }
 
+  // up/down 角点重排（foxcar per-face 贴图颠倒修复，2026-09；黄金参照
+  // upstream/LgeacyYesSteveModel 的 GeoCube.java + GeoQuad.java，与 Go
+  // packFaceVertices 同构）：GeoCube 物理顶点序 up=[P4,P8,P7,P3]、
+  // down=[P1,P5,P6,P2]，本包为 up=[P3,P7,P4,P8]、down=[P2,P6,P1,P5]
+  // （= canonical 位 [3,2,0,1]）。uvData 存 canonical 槽位
+  // s0=(u1,v1) s1=(u2,v1) s2=(u1,v2) s3=(u2,v2)（四侧面直接可用），
+  // up/down 必须反转槽位序 [s3,s2,s1,s0]；mirror 在 canonical 槽位交换 u
+  // 后经同一重排自然水平镜像。
+  let packedUV: FaceUV8 = uvData;
+  if (faceKey === "up" || faceKey === "down") {
+    packedUV = [
+      uvData[6],
+      uvData[7],
+      uvData[4],
+      uvData[5],
+      uvData[2],
+      uvData[3],
+      uvData[0],
+      uvData[1],
+    ];
+  }
+
   const bi = out.positions.length / 3;
   for (let k = 0; k < v.length; k++) out.positions.push(v[k]);
   for (let r = 0; r < 4; r++) {
     out.normals.push(n[0], n[1], n[2]);
   }
   out.uvs.push(
-    uvData[0],
-    uvData[1],
-    uvData[2],
-    uvData[3],
-    uvData[4],
-    uvData[5],
-    uvData[6],
-    uvData[7],
+    packedUV[0],
+    packedUV[1],
+    packedUV[2],
+    packedUV[3],
+    packedUV[4],
+    packedUV[5],
+    packedUV[6],
+    packedUV[7],
   );
   out.indices.push(bi, bi + 2, bi + 1, bi + 2, bi + 3, bi + 1);
 }
@@ -400,12 +422,18 @@ function expandBoxUV(
     y = sy,
     z = sz;
 
+  // box UV face 表 = 黄金参照 GeoCube.java createFromPojoCube 的原始有符号坐标
+  // （face 序 east/west/up/down/south/north）。up/down 不再用负 fw/fh「技巧」
+  // 补偿顶点环绕序——角点重排统一在 mdCmBuildFace 按物理顶点序处理
+  // （box/per-face 单一出口，foxcar per-face 贴图颠倒事故 2026-09）。
+  // down 的 fh=-z 是 GeoCube 原表语义（底面 v 轴反向）；uv 尺寸有符号，
+  // 不做 min/max 归一化（负 uv_size 的 per-face 同理）。
   const uvData: { fu: number; fv: number; fw: number; fh: number; f: number }[] = [
     { fu: u, fv: v + z, fw: z, fh: y, f: 0 }, // East
     { fu: u + z + x, fv: v + z, fw: z, fh: y, f: 1 }, // West
-    { fu: u + z + x, fv: v + z, fw: -x, fh: -z, f: 2 }, // Up
-    { fu: u + z + x + x, fv: v, fw: -x, fh: z, f: 3 }, // Down
-    { fu: u + z + z + x, fv: v + z, fw: x, fh: y, f: 4 }, // South
+    { fu: u + z, fv: v, fw: x, fh: z, f: 2 }, // Up
+    { fu: u + z + x, fv: v + z, fw: x, fh: -z, f: 3 }, // Down
+    { fu: u + z + x + z, fv: v + z, fw: x, fh: y, f: 4 }, // South
     { fu: u + z, fv: v + z, fw: x, fh: y, f: 5 }, // North
   ];
 
@@ -414,6 +442,7 @@ function expandBoxUV(
     const v0 = d.fv / texH;
     const u1 = (d.fu + d.fw) / texW;
     const v1 = (d.fv + d.fh) / texH;
+    // canonical 槽位：四侧面直接用；up/down 由 mdCmBuildFace 反转槽位序。
     faces[d.f] = [u0, v0, u1, v0, u0, v1, u1, v1];
   }
   return true;
@@ -452,6 +481,7 @@ function parseFaceUV(
     const v0 = fv / texH;
     const u1 = (fu + fw) / texW;
     const v1 = (fv + fh) / texH;
+    // canonical 槽位：四侧面直接用；up/down 由 mdCmBuildFace 反转槽位序。
     faces[fi] = [u0, v0, u1, v0, u0, v1, u1, v1];
   }
   return true;

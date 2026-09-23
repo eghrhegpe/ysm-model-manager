@@ -668,6 +668,9 @@ invariant_anchors:
     - **`3px 0`×3**（`stat-row`/`md-row`/skeleton 作者行，纯垂直紧凑行）→ `var(--pad-v-2)`，−1px。基线 177→174。
     - **`0 5px`×4 标签/徽标**（`cr-tag`/`cr-card-local-count`/`link-badge`/`tag-author`）→ `0 var(--sp-1)`，−1px，**与 `.nm mark` 同款标签处理**。基线 174→170。
     - **`1px 4px`×3 紧凑标签**（`cr-platform-badge`/`gh-cr-del`/`tag`）→ `var(--pad-v-1) var(--sp-1)`（垂直 1px 档+横向 4px 档**两令牌拼接**），值等价。基线 170→167。
+    - **`6px 2px`×3 + `10px 12px`×1（诊断域，用户拍板 ±2px）**：`perf-total`/`perf-gantt-wrap`/`perf-asset-grid`(6px 2px)→`--sp-vh-perf`(+2px 垂直) + `diag-dedup-summary`(10px 12px)→`--sp-vh-pane`(−2px)，同域同语义。基线 167→163。
+    - **真按钮归位 ×4**：`sb-btn`/`nav-toggle`/`repo-sort`(4px 6px)→`--btn-padding-sm` + `footer-btn`(5px 8px)→`--btn-padding-md`，均−1px。**关键区分**：同样 `4px 6px` 里只有**真按钮**（`.sb-btn`/`.nav-toggle`/`.repo-sort`）归按钮档；`.pv-toggle-row`(容器行)/`.morph-item`(可点列表项)/`.dlg-input*`(输入框)/`.sidebar-list`(容器)**不归按钮档**（语义错位）——**「数值近」必须配「角色对」**。基线 163→159。
+    - **标签按钮 ×2**：`diag-sub-tab`/`oldest-stat-pill`(3px 10px)→`--btn-padding-std`(+1px)。基线 159→157。
     - **方法论（人工归位的安全判据）**：只收「语义明确 + 位移 ≤1px 或值等价 + 方向匹配」的。机械「最近令牌」算出的 76 条候选**大多方向残缺/语义错位**（如 `2px 2px`→`--pad-v-2` 丢横向、`0 0 6px`→纯垂直档）——**数值近 ≠ 角色对**，必须逐条看选择器确认。
 - ✅ **刀㉚ features 层执法：R8 HTML 字面量闸立法**（2026-09-20，本会话用户「锐评 /features」落地）：
   - **锐评总判**：features 纪律仓库天花板（R5 seam 零违例 / 全层零 `: any` 零 `@ts-ignore` / 跨 feature 依赖 DAG 无环 / 死代码仅 1 运行时孤儿导出），唯一结构性原罪 = **逻辑层私藏视图**——maintenance 三文件手写内联 style HTML 串、`_dots` 转圈状态挂 DOM 节点自定义属性。

@@ -1,11 +1,14 @@
 // ===== SunBeams — 日落光束 + 暖色 overlay（拆轴自 sky-capability.ts）=====
 // 原 SkyCapability 内嵌的 God Rays（两交叉锥形光束，ADR-107）与 Sunset Tint
 // （地平线暖色渐变 overlay）整体迁入本类。二者强耦合——tint 强度 = godRays 强度
-// 曲线、挂载决策共享（intensity>0 && enabled 同挂同卸）、detach/dispose 同步清理，
+// 曲线、挂载决策共享（intensity>0 同挂同卸）、detach/dispose 同步清理，
 // 故合成一个自包含类而非拆两个文件（拆两会引入类间协调，违反 light-cone 先例的
 // 「状态完全内聚、不反向依赖宿主」原则）。
 // 宿主 SkyCapability 持本类实例并委派；挂载判定语义与原实现逐行对齐
 // （sky-capability.test.ts 的 God Rays 挂载分支用例为契约）。
+// [锐评 F-1 收口] 原「挂载决策共享」含 `enabled` 一维，现该维已上移宿主
+// （`sky-capability.ts|syncBeams` 现读 envState.skyGodRaysEnabled）——本类判据
+// 只剩 intensity 这一**太阳角度**事实，不再承载开关语义。
 
 import * as THREE from "three";
 import { disposeObject3D } from "@/preview-3d/infra/safe-dispose.ts";

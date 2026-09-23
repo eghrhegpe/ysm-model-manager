@@ -1453,6 +1453,9 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
 > **方法沉淀**：想找出 cap 里所有「schema 键 + 私有镜像」，比逐行 grep 更有效的探针是
 > **给 `loadState` 补 `suspendEnvCallbacks()`**——凡是靠 env 回调维持同步的私有态都会失同步。
 > 这条探针既做对事（恢复期防重入双跑），又免费做体检。
+> **红相须实测**：本轮以 `git checkout <父提交> -- <三个实现文件>` 临时回退实现（保留新测试）
+> 跑出 **8 failed \| 98 passed**，逐条核对失败原因后 `git checkout HEAD --` 完整还原——
+> 确认八例各自命中预期缺陷，而非「碰巧红」。
 
 ### 23.2 收口依据：ADR-250 已推翻旧红线
 
@@ -1511,9 +1514,10 @@ legacy 中毒救回 ×2（旧档 `enabled=false`、旧档 `godRaysEnabled=true`�
 
 | 门禁 | 结果 |
 |------|------|
-| sky F-1 新锁对旧实现（红相） | **7 failed | 98 passed** |
+| sky F-1 新锁对旧实现（红相，实测） | **8 failed \| 98 passed**（八例逐条命中预期缺陷：僵尸门 ×2、别名无 envState 落点、幽灵键 ×2 仍进存档、legacy ×2 不回填、第三处镜像仍在） |
 | sky 收口后单文件 | **106 passed** |
 | `vitest --run src/preview-3d/` 全量 | **2881 passed / 158 files**（较 §22 再 +9） |
+| `vitest --run` 前端全量 | **6735 passed / 424 files** |
 | `npx tsc --noEmit` | EXIT 0 |
 | `npx vite build` | EXIT 0 |
 | `check-biome --files`（5 改动文件） | 通过 ✅ |

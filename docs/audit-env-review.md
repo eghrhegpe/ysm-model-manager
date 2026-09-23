@@ -1306,6 +1306,9 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
 
 ### 同族余项复核（§19.3 C 类的补课，结论见知识卡）
 
+> ⚠️ 本条对 `reflector` 的定级**已被 §22 推翻**：「两键恒同步故无症状」是只看了**有存档**路径
+> 的误判，`reflector` 实为**同族第二个活动级缺陷**（首启背离 + 凭空建镜）。保留原文以存证判词演变。
+
 - **`reflector` = shadow 的活体孪生，本轮未动手（待拍板）**：`buildReflector` 是**双门**
   `if (!this.enabled || !envState.reflectorEnabled) return;`，`getParams().enabled` 返回
   `this.enabled && envState.reflectorEnabled`。今日无症状只因 `saveState`/`loadState` 把
@@ -1313,15 +1316,17 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
   的档），私有门保持构造默认 `true` 而 `reflectorEnabled` 已恢复 → 开关显示 OFF 而 schema
   键 ON。**未随 F-1 一并动手的理由是语义而非工作量**：`reflectorEnabled` 默认 `false`
   而私有门默认 `true`（与 shadow 相反），合一会改变**用户可见的默认态**，须单独拍板取
-  「默认关」还是「默认开」。
+  「默认关」还是「默认开」。**（§22 修订：无需拍板——schema 侧有注释/邻座援引/不变式三重
+  佐证，私有侧零佐证；且定级过低：不止「存档缺 enabled 键」才发作，**首启无存档即发作**。）**
 - **`ground` = 僵尸私有门，非 live（暂不动）**：`getMasterNodeId()` 返回 `"ground-visible"`，
   总开关绑的是 `envState.groundVisible`；私有 `enabled` 全仓**无 UI 写口**（`setEnabled`
   虽存在但零生产调用方），生产恒 `true`。读起来吓人、实为惰性——与 shadow 的差别正在于
   **shadow 的私有门有 UI 写口而 ground 没有**（这也再次印证 F-1 的定级方法：判 live 与否
-  看**写口**，不只看字段是否存在）。
+  看**写口**，不只看字段是否存在）。**（§22 补充：ground 的私有门与 schema 侧 `groundVisible`
+  默认**同向**（皆 true），故不构成 reflector 那种「首启背离」——判 live 还须比对两侧默认值。）**
 - **`environment` = 原教旨形态，非漏网**：`getMasterNodeId` 返回 `"env-enabled"`，开关
-  明确设计为不入 envState（源码注释即「能力总开关（不入 envState…）」），是 ADR-196 L70
-  「能力级 enabled 不入 schema 红线」的有意保留。
+  明确设计为不入 envState（源码注释即「能力总开关（不入 envState…）」），是 ADR-196
+  「刀5」段「能力级 enabled 不入 schema 红线」的有意保留。
 
 ### 验证
 
@@ -1334,7 +1339,90 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
 | `check-biome --files`（8 文件） | ✅（2 处格式化自动修复后复检通过） |
 | 知识卡回写 | `preview_env_state.md`（F-1 收口条 / F-2 判词修订 / 键形分组 / 不变量并列例外 / 同族余项复核） |
 
-> 未修 / 未动（**登记在案，非遗漏**）：`reflector` 私有门合一（待拍板默认态语义）、
-> `ground` 僵尸门清理（无行为收益，可随手）、§18 遗留 G-7/G-8/G-9/G-3、§19.2 B 类手抄清单
+> 未修 / 未动（**登记在案，非遗漏**）：`ground` 僵尸门清理（无行为收益，可随手）、
+> §18 遗留 G-7/G-8/G-9/G-3、§19.2 B 类手抄清单
 > （`pp` 尤其**不可**改 `getPresetKeys`——其持久化键是无前缀方言，schema 驱动会改存档键名
 > 而破坏旧档）。
+
+---
+
+## §22 Reflector 单门收口（F-1 二度收口：推翻 §21 的定级，2026-09-22）
+
+> 轮次：用户「继续」后，我对 §21 遗留的「reflector 待拍板」自行取证结案。**结论是 §21 的
+> 定级错了**：reflector 不是「被兜住的历史病灶」，而是**同族第二个活动级缺陷**；
+> 且原以为需要用户拍板的「默认值冲突」**实为伪问题**（有证据可判，不需拍板）。TDD：新锁
+> 对旧实现 **8 failed**，实现后全绿。
+
+### 定级翻案的两条实证
+
+- **① 首启即背离（§21 说「恒同步」是样本偏差）**：§21 的论证「`saveState`/`loadState` 把
+  两键都写都读 → 恒同步」**只覆盖了有存档路径**。真正的漏洞在**无存档首启**：私有门
+  `opts.enabled ?? true`（registry 不传 → `true`）与 `env-state-schema.ts|reflectorEnabled`
+  默认 `false` **方向相反**，于是 `isEnabled()`（菜单 master toggle / env 一级行 headerToggle
+  的 `control.get`）读 **`true` → 显示 ON**，而 `buildReflector` 因 `reflectorEnabled === false`
+  **不建 mesh** → **显示 ON 却无镜面**。这与 fog 收口前的「master toggle 显示 ON 而
+  `scene.fog` 恒 null」是**逐字同病**，也与 §21 自己写的「shadow 症状靠 schema 键无人消费
+  暴露」并列——**同一病症的第二个暴露面**。
+- **② 冲突有证据可判（故无需拍板）**：`reflectorEnabled` 默认 `false` 是**刻意设计**，三重佐证——
+  schema 注释「倒影 = 每帧多一次整场重渲进 RT，不是白拿的」；`water-menu.ts` 邻座援引「与地面
+  `reflectorEnabled` 同纪律」；`reflection-chain-invariants.test.ts` 把「单平面镜默认关」列为
+  不变式。私有门 `true` 则**零佐证**（只是 registry 不传参的偶然产物）。
+  **判据：冲突时以有注释/有 ADR/有邻座援引的一方为准**——本条已写入知识卡方法论。
+
+### 🔴→✅ 连带收获：SSR 抑制环会**凭空建出用户从未开启的镜面**
+
+比「显示 ON 无镜面」更实质的一条，是追猎 `isEnabled()` 消费者时发现的：
+
+- **实证**：`postprocessing-capability.ts|applyReflectorSync` 压制时记录
+  `this.reflectorPrevEnabled = reflectorCap.isEnabled()`，解除时用它回放。旧 `isEnabled()` 恒
+  `true`，故**用户从未碰过开关**时记下的是 `true`——一个**用户从未表达过的意图**；
+  SSR 关闭还原即 `setEnabled(true)` → **镜子凭空出现**。
+- **为何既有测试没抓到**：现有的「reflector 原本就关」用例**先显式调了
+  `reflector.setEnabled(false)`**（用户表过态，prev 如实记 false），故旧实现也能通过。
+  **真正漏网的是「用户没表过态」这条路径**——补了它，实测在旧语义下转红（为防锁空转，
+  我用临时探针把 `isEnabled()` 改回 `return true` 复跑：**9 failed**，含本用例，确认非恒真）。
+- **为何这属于真缺陷而非设计**：SSR 压制是**功能语义**（重叠反射禁止），它只该**临时关闭**
+  用户已开的东西并**原样归还**；它不该**开启**用户没开的东西。旧语义把「归还」变成了「激活」。
+
+### 收口（与 fog/water/shadow 同法）
+
+1. 删私有 `enabled` 字段 + `opts.enabled`（退役测试 8 处构造传参；pp `makePair` 的
+   `enabled: true` 改为 seed `envState.reflectorEnabled: true`——语义等价且更贴真实链路）。
+2. `buildReflector` 单门：`if (!envState.reflectorEnabled) return;`。
+3. `setEnabled/isEnabled/getParams().enabled` 收敛为 schema 键别名（`setEnabledReflector`
+   保留，与 fog `setEnabledFog` 双件同法）。
+4. `saveState` 只写 6 个 schema 键，不再落无前缀 `enabled` 幽灵键。
+5. `loadState` 按 fog 先例**回填** legacy `enabled` → `reflectorEnabled`（仅当存档缺该 schema 键）。
+   注意原实现那条 `enabled` 分支是把幽灵键**写回私有门**，现改为写入 schema 键。
+6. 同步修正两处「把病灶当不变式」的测试文件：`reflection-chain-invariants.test.ts`
+   原本断言 `isEnabled()===true` 且 `getParams().enabled===false` **并加注说明 AND 关系**——
+   等于给病根发了备案；已改述并补「首启菜单读数与 schema 键同源」一例。
+
+### 回归锁
+
+`reflector-capability.test.ts`「能力总开关单门收口」describe 六例：僵尸门守卫
+（`expect("enabled" in cap).toBe(false)`）/ 别名双向同步（含**首启菜单读数必须为 false**）/
+直接写 envState 即驱动建拆 / 幽灵键不进存档 / legacy `enabled` 回填 / legacy 中毒救回；
+`reflection-chain-invariants.test.ts` 补「首启菜单读数同源」；
+`postprocessing-capability.test.ts` 补「用户从未开过 → 压制还原一轮后不得凭空冒镜」。
+
+### 验证
+
+| 门禁 | 结果 |
+|------|------|
+| reflector F-1 新锁对旧实现 | **8 failed | 30 passed** |
+| pp 连带锁对旧语义（探针实证非恒真） | **9 failed** |
+| `vitest --run src/preview-3d/caps/` | **979 passed / 25 files** |
+| `vitest --run src/preview-3d/` 全量 | **2872 passed / 158 files**（较 §21 再 +7） |
+| `npx tsc --noEmit` | EXIT 0 |
+| 知识卡回写 | `preview_env_state.md`（F-1 二度收口条 / 同族余项改判 / 不变量并入判据 / 键形分组） |
+
+### 方法层沉淀（本轮最有复用价值的两条）
+
+1. **判「私有门是否病灶」须三问**，缺一即误判：①有无 UI 写口；②**私有默认值与 schema 默认值
+   是否一致**；③零消费者扫描是否命中。§19.3 只问了①，§21 问了①③但把②看漏，故两次都没抓住
+   reflector——它的症状既不来自写口（弱），也不来自零消费者（键有消费者），而**只来自默认值相反**。
+2. **不变式测试也会成为病灶的掩体**：`reflection-chain-invariants.test.ts` 当年读 three 源码后
+   把 AND 关系**作为事实固化下来**（还加了「注意与构造 `enabled ?? true` 区分」的注脚），
+   复核时它的全绿被当成「此处无误」的证据。**复核既有测试时要问：这条不变式是在描述期望，
+   还是在给现状背书？**——描述「当前两值是什么关系」的断言，会把 bug 一起锁进去。

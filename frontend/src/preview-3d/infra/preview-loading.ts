@@ -29,7 +29,7 @@ export function renderLoadingState(
       ? `<div id="${barId}" style="height:100%;width:5%;background:var(--accent,#7c83ff);border-radius:var(--radius-xs);transition:width 0.06s linear"></div>`
       : '<div style="height:100%;width:30%;background:var(--accent,#7c83ff);border-radius:var(--radius-xs);animation:preview-prog 1.5s ease-in-out infinite"></div>';
   loadingEl.innerHTML =
-    '<div style="font-size:32px">' +
+    '<div style="font-size:var(--fs-xl)">' +
     icon +
     "</div><div>" +
     t(labelKey) +
@@ -40,7 +40,7 @@ export function renderLoadingState(
 
 /** 3D 预览加载失败：loadingEl 渲染失败提示 + 全局 toast 报错 */
 export function showLoadFailure(loadingEl: HTMLElement, e: unknown): void {
-  loadingEl.innerHTML = `<div style="font-size:32px">${UI_ICONS.warning}</div><div>${t("preview.loadFailed")}: ${esc(safeErrorMessage(e))}</div>`;
+  loadingEl.innerHTML = `<div style="font-size:var(--fs-xl)">${UI_ICONS.warning}</div><div>${t("preview.loadFailed")}: ${esc(safeErrorMessage(e))}</div>`;
   bus.emit("toast:show", {
     msg: `❌ ${friendlyError(e, t("preview.loadFailed"))}`,
     duration: TOAST_MS.long,

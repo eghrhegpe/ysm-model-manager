@@ -90,7 +90,7 @@ async function loadAndParseData(
 ): Promise<LoadResult> {
   const data = await voxelCall(path);
   if (!data?.groups?.length) {
-    ctx.loadingEl.innerHTML = `<div style="font-size:32px">${UI_ICONS.warning}</div><div>${t("preview.voxelEmpty")}</div>`;
+    ctx.loadingEl.innerHTML = `<div style="font-size:var(--fs-xl)">${UI_ICONS.warning}</div><div>${t("preview.voxelEmpty")}</div>`;
     return { ok: false, earlyResult: { dispose() {} } };
   }
   return { ok: true, data };

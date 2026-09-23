@@ -453,7 +453,7 @@ export function workshopHTML(): string {
     // 父窗口(wails://)与 iframe(外部真实域)本就不同源，补此标记不会让 iframe 反向访问父窗口。
     '<iframe id="ws-iframe" style="flex:1;border:none;background:var(--bg)" sandbox="allow-scripts allow-forms allow-popups allow-same-origin"></iframe>' +
     '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:var(--fs-base)">' +
-    '<div style="font-size:32px">' +
+    '<div style="font-size:var(--fs-xl)">' +
     UI_ICONS.blocked +
     "</div>" +
     "<div>" +

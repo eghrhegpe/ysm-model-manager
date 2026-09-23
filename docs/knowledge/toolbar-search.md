@@ -52,8 +52,8 @@ status: active
 
 ### `openAdvFilterDialog` — 高级筛选全流程编排（`toolbar-search.ts|openAdvFilterDialog`）
 
-1. **收集当前值**：从 inline 面板读取 keyword、minBones/maxBones、minCubes/maxCubes、minTex/maxTex
-2. **打开弹窗**：调用 `modalAdvFilter`（`dialog-adv-filter.md`），用户确认后回填 inline 面板
+1. **收集当前值**：从 vm 态读取预填（keyword = `snapshot.search`，数值六范围 + 标签 = `snapshot.advFilter`；状态真相源 = TreeState，原 `#adv-filter` 隐藏 input 僵尸面板已退役）
+2. **打开弹窗**：调用 `modalAdvFilter`（`dialog-adv-filter.md`）；用户确认后结果写回 vm 态（`vm.setAdvFilter` + keyword → `vm.setSearch`），清除回执（`{cleared:true}`）走 `advFilterClearAll` 全清
 3. **标签搜索**：如果有标签条件，调 `ListByTag(tag)` 获取标签路径集合
 4. **数值/关键词搜索**：如果有关键词或数值范围条件，调 `SearchModels(filesRoot, kw, minBones, ..., maxTex)` 获取后端结果
 5. **多线程统计角标**（网页版专用）：数值条件搜索时显示 `🧵×N ⚙️ x/y` 浮动角标证明 Worker 并行统计；完成后隐藏
@@ -76,9 +76,9 @@ status: active
 ## 流通链路
 
 ```
-用户点击 🔍 弹窗 → modalAdvFilter 采集条件
+用户点击 🔍 弹窗 → modalAdvFilter 采集条件（预填来自 vm 态）
   ↓
-回填 inline 面板（keyword + 6 个数值输入框）
+写回 vm 态（advFilter 六范围 + tag；keyword → search + srch DOM 双写）
   ↓
 （有标签）ListByTag → tagPaths
   ↓

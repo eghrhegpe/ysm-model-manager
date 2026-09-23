@@ -4,6 +4,7 @@
 // Worker 降级提示（consumeWebSearchDegraded + 3s 自动隐藏）、全空筛选早退
 // （advFilterEarlyEmpty）、网页版「导入文件」（pickWebFilesAndImport 的 change 链路）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { AppliedAdvFilter } from "@/features/dialogs/adv-filter-util.ts";
 import { openAdvFilterDialog, pickWebFilesAndImport } from "./toolbar-search.ts";
 import { getExts } from "@/utils/resource/extensions.ts";
 
@@ -52,8 +53,10 @@ interface SearchVM {
   _renderTree: ReturnType<typeof vi.fn>;
   search: string;
   filterPaths: Set<string> | null;
+  advFilter: AppliedAdvFilter;
   setSearch: (v: string) => void;
   setFilterPaths: (v: Set<string> | null) => void;
+  setAdvFilter: (v: AppliedAdvFilter) => void;
   snapshot: {
     readonly entries: unknown[];
     readonly search: string;
@@ -64,22 +67,31 @@ interface SearchVM {
     readonly rootAttr: string;
     readonly subdirAttr: string;
     readonly filesRoot: string;
+    readonly advFilter: AppliedAdvFilter;
   };
 }
 
-/** 构造工具栏 DOM（srch + 数值条件 inline 面板输入）与 vm 桩 */
+const EMPTY_ADV_FILTER: AppliedAdvFilter = {
+  minBones: null,
+  maxBones: null,
+  minCubes: null,
+  maxCubes: null,
+  minTex: null,
+  maxTex: null,
+  tag: "",
+};
+
+/** 构造工具栏 DOM（仅 srch——advFilter 状态已抬 vm，生产模板无 af-* DOM）与 vm 桩 */
 function setupDom(filesRoot = "/repo") {
   const host = document.createElement("div");
   host.innerHTML = `
     <input id="srch" value="狐" />
-    <input id="af-minBones" /><input id="af-maxBones" />
-    <input id="af-minCubes" /><input id="af-maxCubes" />
-    <input id="af-minTex" /><input id="af-maxTex" />
   `;
   document.body.appendChild(host);
   const $ = (id: string): HTMLElement | null => host.querySelector(`#${id}`);
   let searchVal = "";
   let filterPathsVal: Set<string> | null = null;
+  let advFilterVal: AppliedAdvFilter = { ...EMPTY_ADV_FILTER };
   const vm: SearchVM = {
     _filesRoot: filesRoot,
     _renderTree: vi.fn(),
@@ -87,8 +99,11 @@ function setupDom(filesRoot = "/repo") {
     set search(v: string) { searchVal = v; },
     get filterPaths() { return filterPathsVal; },
     set filterPaths(v: Set<string> | null) { filterPathsVal = v; },
+    get advFilter() { return advFilterVal; },
+    set advFilter(v: AppliedAdvFilter) { advFilterVal = v; },
     setSearch(v: string) { searchVal = v; },
     setFilterPaths(v: Set<string> | null) { filterPathsVal = v; },
+    setAdvFilter(v: AppliedAdvFilter) { advFilterVal = v; },
     get snapshot() {
       return {
         entries: [],
@@ -100,6 +115,7 @@ function setupDom(filesRoot = "/repo") {
         rootAttr: "ysm",
         subdirAttr: "",
         filesRoot: vm._filesRoot,
+        advFilter: advFilterVal,
       };
     },
   };

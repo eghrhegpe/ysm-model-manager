@@ -16,13 +16,6 @@ export const VIEW_TESTIDS: readonly string[] = [
   "tree-sel-all",
   "tree-sort",
   "tree-view-mode",
-  "tree-af-min-bones",
-  "tree-af-max-bones",
-  "tree-af-min-cubes",
-  "tree-af-max-cubes",
-  "tree-af-min-tex",
-  "tree-af-max-tex",
-  "tree-af-clear",
   "tree-repo",
   "tree-ftr-stat",
 ];
@@ -40,14 +33,6 @@ export function headerHTML(): string {
   ${renderDropdown("more")}
   <select class="sort-sel" id="sort" data-testid="tree-sort"><option value="name">${t("tree.sortName")}</option><option value="size">${t("tree.sortSize")}</option><option value="date">${t("tree.sortDate")}</option></select>
   <button class="btn-base sm" id="btn-view-mode" data-testid="tree-view-mode" title="${t("tree.toggleView")}">${UI_ICONS.menu}</button>
-</div>
-<div class="adv-filter" id="adv-filter" style="display:none">
-  <div class="adv-filter-row">
-    <label>${t("dialog.bones")}</label><input type="number" id="af-minBones" data-testid="tree-af-min-bones" placeholder="${t("dialog.min")}" class="af-inp" min="0"><span class="af-sep">—</span><input type="number" id="af-maxBones" data-testid="tree-af-max-bones" placeholder="${t("dialog.max")}" class="af-inp" min="0">
-    <label>${t("dialog.cubes")}</label><input type="number" id="af-minCubes" data-testid="tree-af-min-cubes" placeholder="${t("dialog.min")}" class="af-inp" min="0"><span class="af-sep">—</span><input type="number" id="af-maxCubes" data-testid="tree-af-max-cubes" placeholder="${t("dialog.max")}" class="af-inp" min="0">
-    <label>${t("tree.afTex")}</label><input type="number" id="af-minTex" data-testid="tree-af-min-tex" placeholder="${t("dialog.min")}" class="af-inp" min="0"><span class="af-sep">—</span><input type="number" id="af-maxTex" data-testid="tree-af-max-tex" placeholder="${t("dialog.max")}" class="af-inp" min="0">
-    <button class="btn-base sm" id="af-clear" data-testid="tree-af-clear" title="${t("tree.advFilterClearTip")}">${t("tree.advFilterClear")}</button>
-  </div>
 </div>
 </div>`;
 }

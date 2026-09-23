@@ -165,21 +165,8 @@ function atTlBindAdvFilter(ctx: AtTlCtx): void {
       });
     });
   });
-  $("af-clear")?.addEventListener("click", () => {
-    ["af-minBones", "af-maxBones", "af-minCubes", "af-maxCubes", "af-minTex", "af-maxTex"].forEach(
-      (id) => {
-        const el = $(id) as HTMLInputElement | null;
-        if (el) el.value = "";
-      },
-    );
-    const srchEl = $("srch") as HTMLInputElement | null;
-    if (srchEl) {
-      srchEl.value = "";
-      vm.setSearch("");
-    }
-    vm.setFilterPaths(null);
-    vm._renderTree();
-  });
+  // 原 #af-clear 死绑定已随僵尸面板退役：清除入口 = 模态框 afv-clear（cleared 回执
+  // → advFilterClearAll 全清），未来命令表化时以 tree.filter.clear 命令复活。
 }
 
 function atTlBindAuthorMenu(ctx: AtTlCtx): void {

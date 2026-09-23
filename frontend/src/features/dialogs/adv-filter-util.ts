@@ -15,6 +15,9 @@ export interface AdvFilterValue {
   tag: string;
 }
 
+/** 已应用的高级筛选条件快照：六数值范围 + 标签（keyword 不在内，真相源 = tree.search） */
+export type AppliedAdvFilter = Omit<AdvFilterValue, "keyword">;
+
 /**
  * 解析范围输入框数字：空 / 非数字 / 负数 → null（null 表示不限制）。
  * 与原 collect() 中 num() 行为一致。

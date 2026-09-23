@@ -11,7 +11,12 @@ import {
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { type AdvFilterValue, modalAdvFilter } from "@/features/dialogs/adv-filter.ts";
+import {
+  type AdvFilterResult,
+  type AdvFilterValue,
+  modalAdvFilter,
+} from "@/features/dialogs/adv-filter.ts";
+import type { AppliedAdvFilter } from "@/features/dialogs/adv-filter-util.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -62,94 +67,104 @@ function hideStatsBadge(): void {
   if (statsBadge) statsBadge.style.display = "none";
 }
 
-// --- advFilter* = dialog-adv-filter 子函数（openAdvFilterDialog 按 8 段拆出）---
+// 高级筛选状态：advFilter* 子函数（openAdvFilterDialog 按段拆出）
+// 状态真相源 = vm（TreeState.advFilter + search），不再寄生 #adv-filter 隐藏 input
+// （23d8868f9 状态容器化的补票；面板 DOM 已退役）。
 
+/** 条件是否视为未设置（null / undefined / 空串 → 不限制） */
 function advFilterIsUnset(v: unknown): boolean {
   return v == null || v === "";
 }
 
+/** 数值条件 → SearchModels 实参（未设置 = 0，Go 侧语义 0 即不限制） */
 function advFilterToNum(v: unknown): number {
   return v == null ? 0 : parseInt(String(v), 10) || 0;
 }
 
-function advFilterHasNumRange(rv: AdvFilterValue): boolean {
+function advFilterHasNumRange(adv: Partial<AppliedAdvFilter>): boolean {
   return (
-    !advFilterIsUnset(rv.minBones) ||
-    !advFilterIsUnset(rv.maxBones) ||
-    !advFilterIsUnset(rv.minCubes) ||
-    !advFilterIsUnset(rv.maxCubes) ||
-    !advFilterIsUnset(rv.minTex) ||
-    !advFilterIsUnset(rv.maxTex)
+    !advFilterIsUnset(adv.minBones) ||
+    !advFilterIsUnset(adv.maxBones) ||
+    !advFilterIsUnset(adv.minCubes) ||
+    !advFilterIsUnset(adv.maxCubes) ||
+    !advFilterIsUnset(adv.minTex) ||
+    !advFilterIsUnset(adv.maxTex)
   );
 }
 
-function advFilterHasRange(rv: AdvFilterValue, kw: string): boolean {
-  return advFilterHasNumRange(rv) || !!kw;
+function advFilterHasRange(adv: Partial<AppliedAdvFilter>, kw: string): boolean {
+  return advFilterHasNumRange(adv) || !!kw;
 }
 
-async function advFilterReadCurAndOpenDialog($: $Id): Promise<AdvFilterValue | null> {
-  const $v = (id: string): string => ($(id) as HTMLInputElement | null)?.value || "";
-  const cur: Record<string, string> = {
-    keyword: $v("srch"),
-    minBones: $v("af-minBones"),
-    maxBones: $v("af-maxBones"),
-    minCubes: $v("af-minCubes"),
-    maxCubes: $v("af-maxCubes"),
-    minTex: $v("af-minTex"),
-    maxTex: $v("af-maxTex"),
+/** 打开模态框：预填 = vm 已应用态（数值六范围 + 标签 + 关键词）；取消返回 null */
+async function advFilterReadCurAndOpenDialog(vm: AppTree): Promise<AdvFilterResult> {
+  const adv = vm.snapshot.advFilter;
+  const cur: Partial<AdvFilterValue> = {
+    keyword: vm.snapshot.search,
+    minBones: adv.minBones,
+    maxBones: adv.maxBones,
+    minCubes: adv.minCubes,
+    maxCubes: adv.maxCubes,
+    minTex: adv.minTex,
+    maxTex: adv.maxTex,
+    tag: adv.tag,
   };
   dbg("adv-filter", "dialog:open", { cur });
-  const result = await modalAdvFilter({
-    value: cur as unknown as Partial<AdvFilterValue>,
-  });
+  const result = await modalAdvFilter({ value: cur });
   dbg("adv-filter", "dialog:return", { result });
   if (!result) {
     dbg("adv-filter", "dialog:cancelled-or-null");
     return null;
   }
-  return result as AdvFilterValue;
+  return result;
 }
 
-interface advFilterBackfillResult {
-  kw: string;
-  hasTag: boolean;
-  hasNumRange: boolean;
-  isAllEmpty: boolean;
-}
-
-function advFilterBackfillInlinePanel(
+/** 把模态框应用结果写回 vm 态（advFilter + keyword→search），并派生判定量 */
+function advFilterApplyResult(
   $: $Id,
   rv: AdvFilterValue,
   vm: AppTree,
-): advFilterBackfillResult {
-  const setVal = (id: string, v: unknown): void => {
-    const el = $(id) as HTMLInputElement | null;
-    if (el) el.value = v == null ? "" : String(v);
-  };
-  setVal("af-minBones", rv.minBones);
-  setVal("af-maxBones", rv.maxBones);
-  setVal("af-minCubes", rv.minCubes);
-  setVal("af-maxCubes", rv.maxCubes);
-  setVal("af-minTex", rv.minTex);
-  setVal("af-maxTex", rv.maxTex);
+): { kw: string; hasTag: boolean; hasNumRange: boolean; isAllEmpty: boolean } {
+  vm.setAdvFilter({
+    minBones: rv.minBones,
+    maxBones: rv.maxBones,
+    minCubes: rv.minCubes,
+    maxCubes: rv.maxCubes,
+    minTex: rv.minTex,
+    maxTex: rv.maxTex,
+    tag: rv.tag,
+  });
   const srchEl = $("srch") as HTMLInputElement | null;
   if (srchEl && rv.keyword !== undefined) {
     srchEl.value = rv.keyword;
     vm.setSearch(rv.keyword);
   }
-  const kw = srchEl?.value || "";
-  const hasTag = !!(rv.tag && !(rv.tag === ""));
+  const kw = rv.keyword ?? "";
+  const hasTag = !!rv.tag;
   const hasNumRange = advFilterHasNumRange(rv);
-  const isAllEmpty =
-    !kw &&
-    !hasTag &&
-    advFilterIsUnset(rv.minBones) &&
-    advFilterIsUnset(rv.maxBones) &&
-    advFilterIsUnset(rv.minCubes) &&
-    advFilterIsUnset(rv.maxCubes) &&
-    advFilterIsUnset(rv.minTex) &&
-    advFilterIsUnset(rv.maxTex);
+  const isAllEmpty = !kw && !hasTag && !hasNumRange;
   return { kw, hasTag, hasNumRange, isAllEmpty };
+}
+
+/**
+ * tree.filter.clear 语义：关键词 + 高级条件 + 结果集全清并重渲染。
+ * 供模态框 cleared 回执复用；C 案命令表落地后即 tree.filter.clear 命令本体。
+ */
+export function advFilterClearAll($: $Id, vm: AppTree): void {
+  const srchEl = $("srch") as HTMLInputElement | null;
+  if (srchEl) srchEl.value = "";
+  vm.setSearch("");
+  vm.setAdvFilter({
+    minBones: null,
+    maxBones: null,
+    minCubes: null,
+    maxCubes: null,
+    minTex: null,
+    maxTex: null,
+    tag: "",
+  });
+  vm.setFilterPaths(null);
+  vm._renderTree();
 }
 
 function advFilterEarlyEmpty(vm: AppTree): void {
@@ -272,13 +287,18 @@ function advFilterToastAndRender(vm: AppTree): void {
   vm._renderTree();
 }
 
-// 打开弹窗版筛选器（应用结果到 inline 面板 + 后端搜索）
+// 打开弹窗版筛选器（预填/应用走 vm 态 + 后端搜索）
 export async function openAdvFilterDialog($: $Id, vm: AppTree): Promise<void> {
   dbg("adv-filter", "open:start", { filesRoot: vm.snapshot.filesRoot });
-  const rv = await advFilterReadCurAndOpenDialog($);
+  const rv = await advFilterReadCurAndOpenDialog(vm);
   if (!rv) return;
+  if ("cleared" in rv) {
+    // 清除回执：全清（关键词 + 高级条件 + 结果集）——afv-clear「清除全部」语义
+    advFilterClearAll($, vm);
+    return;
+  }
 
-  const { kw, hasTag, hasNumRange, isAllEmpty } = advFilterBackfillInlinePanel($, rv, vm);
+  const { kw, hasTag, hasNumRange, isAllEmpty } = advFilterApplyResult($, rv, vm);
   if (isAllEmpty) {
     advFilterEarlyEmpty(vm);
     return;

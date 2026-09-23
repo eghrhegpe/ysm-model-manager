@@ -4,6 +4,7 @@ import { can } from "@/backend/capabilities.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { rememberModelPath } from "@/core/model-path-store.ts";
+import type { AppliedAdvFilter } from "@/features/dialogs/adv-filter-util.ts";
 import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
 import { isPreviewOverlayActive } from "@/preview-3d/infra/overlay-active.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
@@ -125,6 +126,11 @@ export class AppTree extends WebComponentBase {
 
   setFilterPaths(paths: Set<string> | null): void {
     this._state.filterPaths = paths;
+  }
+
+  /** 已应用的高级筛选条件（数值范围 + 标签）；keyword 不入内，真相源 = search */
+  setAdvFilter(v: AppliedAdvFilter): void {
+    this._state.advFilter = v;
   }
 
   setRenderMode(mode: RenderMode): void {

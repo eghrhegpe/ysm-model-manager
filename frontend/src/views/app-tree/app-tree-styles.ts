@@ -26,14 +26,6 @@ export const treeCSS: string = `
 .hdr-spacer { flex:1; }
 .repo-bar-btn { padding:var(--pad-btn-tool) 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-tool); } /* 工具栏命令按钮 = txt（对齐 .btn-base 正典） */
 .repo-bar-btn:hover { background:var(--hover); }
-/* 高级筛选面板 */
-.adv-filter { border-top:1px solid var(--bd);padding:6px 8px 4px;background:var(--surf); }
-.adv-filter-row { display:flex;align-items:center;gap:4px;flex-wrap:wrap; }
-.adv-filter-row label { font-size:var(--fs-xs);color:var(--muted);white-space:nowrap;margin-left:6px; }
-.adv-filter-row label:first-child { margin-left:0; }
-.af-inp { width:56px;padding:var(--btn-padding-xs);font-size:var(--fs-xs);border:1px solid var(--bd);border-radius:var(--radius-sm);background:var(--bg);color:var(--txt);font-family:inherit; }
-.af-inp::placeholder { color:var(--muted);font-size:var(--fs-micro); }
-.af-sep { font-size:var(--fs-xs);color:var(--muted); }
 /* ===== 元数据标签（.tag-author/.tag-work/.tag-date）共享串 =====
    与 content-repo / app-preview 同源，防三份同构实现漂移；
    .fh/.fl 的域内排布规则在下方各自追加 */

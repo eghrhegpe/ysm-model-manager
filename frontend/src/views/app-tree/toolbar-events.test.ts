@@ -3,6 +3,7 @@
 //       作者菜单填充、批量按钮、更多菜单（打开文件夹/导入/刷新/生成索引）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
+import type { AppliedAdvFilter } from "@/features/dialogs/adv-filter-util.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import type { AppTree } from "./index.ts";
 
@@ -87,18 +88,11 @@ function makeRoot(): { root: ShadowRoot; get: (id: string) => HTMLElement | null
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `
     <input id="srch" data-testid="tree-srch" />
-    <input id="af-minBones" data-testid="tree-af-min-bones" />
-    <input id="af-maxBones" data-testid="tree-af-max-bones" />
-    <input id="af-minCubes" data-testid="tree-af-min-cubes" />
-    <input id="af-maxCubes" data-testid="tree-af-max-cubes" />
-    <input id="af-minTex" data-testid="tree-af-min-tex" />
-    <input id="af-maxTex" data-testid="tree-af-max-tex" />
     <button id="sel-all" data-testid="tree-sel-all">全选</button>
     <button id="btn-repo" data-testid="tree-repo">仓库</button>
     <select id="sort" data-testid="tree-sort"><option value="name">名称</option><option value="size">大小</option><option value="date">日期</option></select>
     <button id="btn-view-mode" data-testid="tree-view-mode">☰</button>
     <button id="btn-adv-filter" data-testid="tree-adv-filter">筛选</button>
-    <button id="af-clear" data-testid="tree-af-clear">清除</button>
     <div class="dd-wrap" id="dd-authors"><div id="menu-authors"></div></div>
     <div id="menu-batch">
       <button data-batch="enable-all" data-testid="tree-batch-enable">全部启用</button>
@@ -133,11 +127,13 @@ interface VM {
   renderMode: string;
   filterPaths: Set<string> | null;
   filesRoot: string | null;
+  advFilter: AppliedAdvFilter;
   setSearch: (v: string) => void;
   setSort: (v: string) => void;
   setFilterPaths: (v: Set<string> | null) => void;
   setRenderMode: (v: string) => void;
   setFilesRoot: (v: string | null) => void;
+  setAdvFilter: (v: AppliedAdvFilter) => void;
   snapshot: {
     readonly entries: unknown[];
     readonly search: string;
@@ -148,8 +144,19 @@ interface VM {
     readonly rootAttr: string;
     readonly subdirAttr: string;
     readonly filesRoot: string;
+    readonly advFilter: AppliedAdvFilter;
   };
 }
+
+const EMPTY_ADV_FILTER: AppliedAdvFilter = {
+  minBones: null,
+  maxBones: null,
+  minCubes: null,
+  maxCubes: null,
+  minTex: null,
+  maxTex: null,
+  tag: "",
+};
 
 function makeVM(root: ShadowRoot): VM {
   let searchVal = "";
@@ -157,6 +164,7 @@ function makeVM(root: ShadowRoot): VM {
   let renderModeVal = "list";
   let filterPathsVal: Set<string> | null = null;
   let filesRootVal: string | null = "/repo";
+  let advFilterVal: AppliedAdvFilter = { ...EMPTY_ADV_FILTER };
   const vm: VM = {
     _root: root,
     _rootAttr: "ysm",
@@ -176,11 +184,14 @@ function makeVM(root: ShadowRoot): VM {
     set filterPaths(v: Set<string> | null) { filterPathsVal = v; },
     get filesRoot() { return filesRootVal; },
     set filesRoot(v: string | null) { filesRootVal = v; },
+    get advFilter() { return advFilterVal; },
+    set advFilter(v: AppliedAdvFilter) { advFilterVal = v; },
     setSearch(v: string) { searchVal = v; },
     setSort(v: string) { sortVal = v; },
     setFilterPaths(v: Set<string> | null) { filterPathsVal = v; },
     setRenderMode(v: string) { renderModeVal = v; },
     setFilesRoot(v: string | null) { filesRootVal = v; },
+    setAdvFilter(v: AppliedAdvFilter) { advFilterVal = v; },
     get snapshot() {
       return {
         entries: [],
@@ -192,6 +203,7 @@ function makeVM(root: ShadowRoot): VM {
         rootAttr: "ysm",
         subdirAttr: "",
         filesRoot: filesRootVal ?? "",
+        advFilter: advFilterVal,
       };
     },
   };
@@ -237,20 +249,47 @@ afterEach(() => {
 });
 
 describe("bindToolbarEvents — 高级筛选弹窗", () => {
-  it("点击筛选按钮 → modalAdvFilter 收到当前输入框值", async () => {
+  it("点击筛选按钮 → modalAdvFilter 收到 vm 当前条件（search 喂 keyword）", async () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
-    (getByTestId("tree-srch") as HTMLInputElement).value = "Alex";
-    (getByTestId("tree-af-min-bones") as HTMLInputElement).value = "3";
+    vm.search = "Alex";
+    vm.advFilter = { ...EMPTY_ADV_FILTER, minBones: 3 };
     bindToolbarEvents(root, vm as unknown as AppTree);
 
     getByTestId("tree-adv-filter")!.click();
 
     expect(modalAdvFilterMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        value: expect.objectContaining({ keyword: "Alex", minBones: "3" }),
+        value: expect.objectContaining({ keyword: "Alex", minBones: 3 }),
       }),
     );
+  });
+
+  it("二次打开预填来自 vm 态（advFilter 状态抬升，僵尸 inline 面板退役）", async () => {
+    const { root, getByTestId } = makeRoot();
+    const vm = makeVM(root);
+    modalAdvFilterMock.mockResolvedValue({
+      keyword: "Alex",
+      minBones: 2,
+      maxBones: null,
+      minCubes: null,
+      maxCubes: null,
+      minTex: null,
+      maxTex: null,
+      tag: "",
+    });
+    bindToolbarEvents(root, vm as unknown as AppTree);
+    // 第一次应用：数值条件进 vm 态
+    getByTestId("tree-adv-filter")!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    // 第二次打开：预填必须来自 vm（生产模板中已无 af-* DOM 可喂）
+    modalAdvFilterMock.mockResolvedValue(null);
+    getByTestId("tree-adv-filter")!.click();
+    const prefilled = modalAdvFilterMock.mock.calls[1]![0] as {
+      value: Record<string, unknown>;
+    };
+    expect(prefilled.value.keyword).toBe("Alex");
+    expect(prefilled.value.minBones).toBe(2);
   });
 
   it("弹窗返回 null（取消）→ 不渲染树", async () => {
@@ -262,6 +301,27 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     await Promise.resolve();
 
     expect(vm._renderTree).not.toHaveBeenCalled();
+  });
+
+  it("弹窗返回 cleared → 关键词/筛选条件/结果集全清（含 srch DOM 与 vm 态）", async () => {
+    const { root, getByTestId } = makeRoot();
+    const vm = makeVM(root);
+    vm.filterPaths = new Set(["/a.ysm"]);
+    vm.search = "旧关键词";
+    vm.advFilter = { ...EMPTY_ADV_FILTER, minBones: 5, tag: "旧标签" };
+    (getByTestId("tree-srch") as HTMLInputElement).value = "旧关键词";
+    modalAdvFilterMock.mockResolvedValue({ cleared: true });
+    bindToolbarEvents(root, vm as unknown as AppTree);
+
+    getByTestId("tree-adv-filter")!.click();
+    await new Promise((r) => setTimeout(r, 0));
+
+    // cleared 回执 → advFilterClearAll 全清（srch DOM + vm.search + vm.advFilter + 结果集）
+    expect((getByTestId("tree-srch") as HTMLInputElement).value).toBe("");
+    expect(vm.search).toBe("");
+    expect(vm.advFilter).toEqual(EMPTY_ADV_FILTER);
+    expect(vm.filterPaths).toBeNull();
+    expect(vm._renderTree).toHaveBeenCalled();
   });
 
   it("弹窗返回全空条件 → 清空筛选并渲染", async () => {
@@ -288,7 +348,7 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     expect(vm._renderTree).toHaveBeenCalled();
   });
 
-  it("弹窗返回筛选值 → 回填 inline + SearchModels/ListByTag 交集", async () => {
+  it("弹窗返回筛选值 → 写回 vm 态 + SearchModels/ListByTag 交集", async () => {
     const { root, getByTestId } = makeRoot();
     const vm = makeVM(root);
     modalAdvFilterMock.mockResolvedValue({
@@ -311,7 +371,9 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     // 交集：tag ∩ search = /r/a.ysm
     expect(vm.filterPaths).toEqual(new Set(["/r/a.ysm"]));
     expect(vm.search).toBe("Alex");
-    expect((getByTestId("tree-af-min-bones") as HTMLInputElement).value).toBe("2");
+    expect(vm.advFilter.minBones).toBe(2);
+    expect(vm.advFilter.maxBones).toBe(10);
+    expect(vm.advFilter.tag).toBe("近代");
     expect(ListByTagMock).toHaveBeenCalledWith("近代");
     expect(SearchModelsMock).toHaveBeenCalledWith(
       "/repo",
@@ -583,23 +645,8 @@ describe("bindToolbarEvents — 导出/导航/搜索/排序/视图", () => {
     expect(vm.renderMode).toBe("list");
   });
 
-  it("af-clear → 清空全部输入与筛选", () => {
-    const { root, getByTestId } = makeRoot();
-    const vm = makeVM(root);
-    vm.filterPaths = new Set(["/r/a.ysm"]);
-    vm.search = "x";
-    (getByTestId("tree-af-min-bones") as HTMLInputElement).value = "5";
-    (getByTestId("tree-srch") as HTMLInputElement).value = "x";
-    bindToolbarEvents(root, vm as unknown as AppTree);
-
-    getByTestId("tree-af-clear")!.click();
-
-    expect((getByTestId("tree-af-min-bones") as HTMLInputElement).value).toBe("");
-    expect((getByTestId("tree-srch") as HTMLInputElement).value).toBe("");
-    expect(vm.search).toBe("");
-    expect(vm.filterPaths).toBeNull();
-    expect(vm._renderTree).toHaveBeenCalled();
-  });
+  // af-clear 僵尸用例已删：清除入口 = 模态框 afv-clear（cleared 回执 → advFilterClearAll，
+  // 语义由「弹窗返回 cleared」用例覆盖）
 });
 
 describe("bindToolbarEvents — 作者菜单", () => {

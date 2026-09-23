@@ -15,6 +15,7 @@ source_files:
   - frontend/src/preview-3d/adapters/shared-infra.ts
 tests:
   - frontend/src/preview-3d/adapters/shared-infra.test.ts
+  - frontend/src/preview-3d/caps/scene-capability-persist.test.ts
 auto_fields:
   symbols_with_lines:
     - applyModelDefaults
@@ -135,6 +136,7 @@ invariant_anchors:
 
 核心机制（`caps/scene-capability.ts` 的 `persistState/restoreState/restoreFields` 三件套）：
 - **键轨**：`localStorage["ysm-scene-cap-" + capId]`，JSON 序列化（如 `ysm-scene-cap-fog`）。
+- **restoreState 存档形态闸（2026-09-22 锐评 F-1 复审补）**：`restoreState` **只接受 JSON 对象**，其余（number/string/boolean/`null` 字面量/数组/损坏 JSON）一律返回 `null`（同「无存档」语义）。原实现只用 try/catch 包 `JSON.parse`，`JSON.parse("5")` 得 `5` 便原样当 `Record<string,unknown>` 返回；而各 cap 的 legacy 回填写 `!("xEnabled" in s)`，**`in` 对非对象真值抛 TypeError**，该异常被 `sceneCapabilityRegistry.loadAll()`（`scene-capability-registry.ts|loadAll`）的 per-cap try/catch 吞掉并 `continue` → **后续 cap 全部静默跳过恢复**（`ringLog` 无生产 sink，用户只见黑场景、零提示）。修法 = **收口在唯一入口**：一处闸住，9 个 cap 调用点全免疫（各调用点既有的 `if (!state) return` 早退天然接住非对象），各 cap 无需重写 typeof 守卫。回归锁 = `scene-capability-persist.test.ts`（9 例，覆盖四种非对象型 + 合法对象/空对象/往返自洽）。
 - **saveState**（写）：`persistState(capId, { this.enabled(能力级私有) + envState 参数字段 })` —— 从 envState **摘键**，不存全量。
   （2026-09：摘键可**派生化**——water 已改为逆历 `getPresetKeys("water")`，新增参数只进 schema；历史键名由 loadState 双轨吸收）
   （**能力级开关收口后的键形**：fog/water/shadow/reflector 已删私有 `enabled`，`saveState` **只写 schema 键**（含 `{fog,water,shadow,reflector}Enabled`），不再落无前缀 `enabled` 幽灵键；旧存档的 `enabled` 由 `loadState` 回填进对应 schema 键。**sky 亦已收口**（仅两枚开关键前缀化，兄弟键保持无前缀方言零迁移）。仍留旧键形的：ground/environment（见「不变量」末条）。）

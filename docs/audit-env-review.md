@@ -1515,12 +1515,16 @@ legacy 中毒救回 ×2（旧档 `enabled=false`、旧档 `godRaysEnabled=true`�
 | 门禁 | 结果 |
 |------|------|
 | sky F-1 新锁对旧实现（红相，实测） | **8 failed \| 98 passed**（八例逐条命中预期缺陷：僵尸门 ×2、别名无 envState 落点、幽灵键 ×2 仍进存档、legacy ×2 不回填、第三处镜像仍在） |
-| sky 收口后单文件 | **106 passed** |
-| `vitest --run src/preview-3d/` 全量 | **2881 passed / 158 files**（较 §22 再 +9） |
+| 复审补三例 + 存档形态闸对旧实现（红相，实测） | **14 failed \| 104 passed**（sky 11 + persist 3） |
+| sky 收口后单文件 | **106 → 109 passed**（复审补三例后） |
+| `restoreState` 形态闸单文件 | **9 passed** |
+| `vitest --run src/preview-3d/caps/` | **1000 passed / 26 files** |
+| `vitest --run src/preview-3d/` 全量 | **2893 passed / 159 files** |
 | `vitest --run` 前端全量 | **6735 passed / 424 files** |
 | `npx tsc --noEmit` | EXIT 0 |
 | `npx vite build` | EXIT 0 |
-| `check-biome --files`（5 改动文件） | 通过 ✅ |
+| `check-biome --files`（改动文件） | 通过 ✅ |
+| 独立子代理复审 | 七轴核实成立，2 项误报经实证驳回，1 项真缺陷已修 |
 | 全 29 枚 boolean schema 键生产者扫描 | **零幽灵键**（收口前 `skyGodRaysEnabled` 是唯一零写入者） |
 | 知识卡回写 | `preview_env_state.md`（sky 收口条 / 同族余项改判 / 并入判据补 sky / 键形分组 / light 注脚补两形态对比） |
 
@@ -1536,4 +1540,60 @@ legacy 中毒救回 ×2（旧档 `enabled=false`、旧档 `godRaysEnabled=true`�
 4. **诚实定级**：结构病 ≠ 活体故障。同一族的 reflector 有可复现的首启背离，sky 只有
    「将来任何第三条写路都会失效」的结构隐患。报告里必须写清是哪一种，否则方法层的
    「并入判据」会被误当成「凡私有门皆故障」。
+
+### 23.5 独立复审（子代理）与处置
+
+派独立子代理复核 `047f51808`，结论「**有保留地通过**」：中心主张七轴全部核实成立
+（真值源唯一 / 无私有字段 / 无幽灵键 / 旧档可恢复 / `syncBeams` 关闭路由严于旧实现 /
+`autoRotateOn` 退役方向正确 / 八例测试非空转），提 6 项问题。**逐条实证后：2 项误报、
+3 项确认（1 项已修、1 项补注释、1 项今无害）、1 项降级**。
+
+| # | 复审主张 | 实证结论 |
+|---|---------|---------|
+| 1 | `apply()` 丢了 `skyEnvironment` 门 → 关掉的 sky-IBL 被点亮 | **误报**。`sky-capability.ts\|apply` 该处现为 `if (envState.skyEnvironment) requestEnvironmentRefresh(true); else clearEnvironment();`——门在；且 `requestEnvironmentRefresh` 内另有 `if (!envState.skyEnvironment) return;` 自守。复审读的是 `requestEnvironmentRefresh` 被调用这一事实，未读调用点的条件 |
+| 2 | 裸 `in` 不防非对象存档 → 异常被 `loadAll` 吞、后续 cap 静默跳过 | **确认且已修**（见 23.6）。复审判「家族既有」正确——fog/shadow 同形 |
+| 3 | `getParams()` 缺 `enabled`，是「全仓唯一未跟齐」 | **降级**。实测 light/postprocessing 亦无（3/6 有、3/6 无），非唯一例外；且全仓零消费者，今日影响 0，不改 |
+| 4 | 关闭期间不 `sync()` 致锥体态陈旧 | **确认但有意**。已补注释说明「重开必经 `apply()` 重算，无残留脏渲染」 |
+| 5 | `SunBeams.sync()` 失去 `!group` 早退会 NPE | **误报**。`sun-beams.ts\|sync` 首行即 `if (!this.group) { /* 仅清 tint */ return; }`，早退在 |
+| 6 | 构造期 `manual` 封死未来预设通道 | **确认，今无害**。已补注释警示「日后给氛围预设加天空开关会静默失效」 |
+
+**复审另有价值的是它指出的 3 处测试缺口**（混合双形式档 / 恢复后关闭 / 同批兄弟键），
+已全部补齐（见 23.6），其中「同批兄弟键」正是**验证我 23.1 那个早退 `return` 是否吞键**
+的护栏——复审自己分析为安全，我补了测试钉住。
+
+> **方法沉淀**：**复审报告也要实证，不能照单全收**。本轮 6 项里 2 项是误报（第 1、5 项
+> 都是「该有的守卫其实在」，复审读到了调用事实却没读调用点的条件/函数首行）。
+> 反向也成立——它的第 2 项虽在旧代码里就有，但被我这次改动**新引入了一个可抛点**
+> （sky 此前走 `restoreFields` 的 `typeof` 分派天然免疫，是我新加的 legacy `in` 回填
+> 才让 sky 暴露在该路径下），这类「非我引入、但我放大了触发面」的关联必须认。
+> 判据：**逐条 grep 到行再定级，不按概率采信**。
+
+### 23.6 复审驱动的收口：`restoreState` 存档形态闸
+
+复审第 2 项经实测为**真缺陷**（探针实证：`localStorage.setItem("ysm-scene-cap-sky", "5")`
+→ `restoreState` 返回 `5` → `"skyEnabled" in 5` 抛
+`TypeError: Cannot use 'in' operator to search for 'skyEnabled' in 5`）。
+
+**后果链**：异常在 `loadState` 内抛出 → 被 `sceneCapabilityRegistry.loadAll()`
+的 per-cap try/catch 吞掉并 `continue` → **后续 cap 全部静默跳过恢复**；而 `ringLog`
+无生产 sink，用户只见黑场景、零提示。触发条件仅「手改 / 损坏的 localStorage」，
+正常路径写不出非对象存档。
+
+**修法选择：收口在唯一入口而非各 cap**。`restoreState` 是 9 个 cap `loadState` 的共同
+第一跳，且**各调用点已有的 `if (!state) return` 早退**恰好就是非对象该走的路——
+故把「存档必须是 JSON 对象（非 null / 非数组）」收在 `restoreState`，非对象真值一律
+返回 `null`（同「无存档」语义），一处修、9 点全免疫，各 cap 不必各写一遍 typeof 守卫。
+数组亦排除（`in` 对数组不抛错，但语义上不是存档对象）。
+
+回归锁 = 新建 `scene-capability-persist.test.ts` 九例（number/string/boolean/`null` 字面量
+/数组/损坏 JSON/键缺失/合法对象/空对象/往返自洽），红相实测 **3 failed**
+（number、string+boolean、数组），绿相 9 passed。
+
+**同轮补的三处测试缺口**（`sky-capability.test.ts`）：
+① 旧档 `skyEnabled=false` + `godRaysEnabled=true` → 恢复后**不挂天空、不挂光束、tint 同卸**
+且 `update(dt)` 冻结时间轴（原八例只有开态与救回，缺关态反向护栏）；
+② 同一 `setEnvState` 同批写 `skyEnabled` + 两枚兄弟键 → 早退 `return` 不得吞键；
+③ 混合双形式档 `{skyEnabled:true, enabled:false, ...}` → **新前缀键优先**，旧键不得覆盖。
+三项合计使 sky 单文件 106 → **109 passed**；对旧实现整体红相 **14 failed | 104 passed**。
+
 

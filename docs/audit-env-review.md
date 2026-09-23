@@ -851,7 +851,36 @@ reflector SSR 互斥通道），并回查 ADR-292 收口后 §1-§13 的过期�
 > `ground-migrations.ts`（130）/ `env-state.ts`（144）/ `env-dispatcher.ts`（141）/ `env.ts`（314）/
 > `env-state-schema.ts`（ground 组 21 键）。
 
-### 18.1 §4 / §13 既有判定复核
+### §18.0 S2-1 修复记录（2026-09-22 锐评轮次，timeline 拖动 PMREM 门控）
+
+**病根**：`renderCapTimeline` 的 `pointermove` 每帧调 `c.setValue(hour)` → `cap.setTime(v)` →
+`setEnvState({skyTimeOfDay, skyForceEnv:true}, {source:"manual"})` → 回调 `skyTimeOfDay` 分支
+`maybeRegenerateEnvironment` → `requestEnvironmentRefresh(true)` → `bakeEnvironment(true)`——
+**拖动期每帧 PMREM 全重建**（立方体贴图 + mip 模糊，重活）。
+
+**修复（已提交 `7fb1656c9`）**：
+1. `PreviewControlDef` 增 `onDragStart?` / `onDragEnd?`（timeline 专用相位回调）。
+2. `renderCapTimeline`：`pointerdown` → `onDragStart`（降为阈值门控）；`pointerup`/`pointercancel` →
+   `onDragEnd`（force 一次取当前帧图）；单击轨道跳转 → 直接 `onDragEnd`（离散提交，对齐原生 range
+   `change`）。
+3. `SkyCapability.setTime` 增 `opts.phase`：`"dragging"` → `forceEnv=false`（阈值门控），
+   `"settled"` → `forceEnv=true`（force 一次）；未传 phase 时保持 `forceEnv=true`（兼容旧调用方）。
+4. **门控统一（ADR-292 后结构修正）**：`bakeEnvironment` 的阈值门控从「装」侧（regenerateEnvironment）
+   收回到「烤」侧内部——`if (!force) { if (renderTarget && !dirty) return true; }`，
+   首帧（renderTarget=null）无条件烘焙。`regenerateEnvironment` 与 `bakeEnvironmentTexture`
+   委托同一 `bakeEnvironment`，自持装载 / env 取图两条路门控判定一致。
+5. **`skyForceEnv` 脉冲键写 `force:true`**：`resetEnvState` 清 `_writeSource` 后首帧 `skyForceEnv`
+   默认值 `true` 无来源标记，手动 `setEnvState` 被 `shouldOverwrite` 拒绝 → 相位语义失真。
+   `setTime` 写 `skyForceEnv` 走 `{source:"manual", force:true}`（脉冲键无用户手改足迹，force 安全，
+   同 `update(dt)` 的 auto-model 强制推进先例）。
+
+**TDD**：2 条新测试（phase 拖动相位 + 未传 phase 兼容），旧实现 1 failed，修复后 98/98 passed。
+
+**S2-6 定级**：`slide-menu.ts` 的 `refresh` 仍为裸 `renderTop()`（无 rAF 合批）。但 ADR-293 后
+`refresh` 调用频率已大幅下降（cap 订阅经 `listenerSet.subscribe → notify → menu.refresh` 改为
+**离散事件驱动**，非逐帧），N cap 同波触发 N 次 `renderTop` 的场景已不存在。维持观察，不修。
+
+### §18.1 §4 / §13 既有判定复核
 
 | 原判定 | 现状核实 | 结论 |
 |--------|----------|------|

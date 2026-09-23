@@ -32,7 +32,7 @@ ${metaTagCSS}
 .repo-bar-btn:hover { background:var(--hover); }
 .repo-spacer { flex:1; }
 .repo-btn { font-size:var(--fs-xs);padding:var(--btn-padding-tool-lg); }
-.repo-srch { width:160px;padding:var(--btn-padding-md);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0;transition:var(--tr-fast); }
+.repo-srch { width:160px;padding:var(--sp-vh-cell);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0;transition:var(--tr-fast); } /* 语义收口：搜索输入框非按钮，归容器档 */
 .repo-srch:focus { border-color:var(--accent); }
 .repo-sort { padding:var(--btn-padding-sm);border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-sm);cursor:pointer;margin-left:auto;transition:var(--tr-fast); }
 .repo-sort:hover { border-color:var(--accent);background:var(--hover); }

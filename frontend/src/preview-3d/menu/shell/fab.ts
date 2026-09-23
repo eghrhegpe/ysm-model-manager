@@ -66,7 +66,7 @@ export const YSW_FAB_CSS = `
 
 /* ===== 双端响应式：复用 MikuMikuAR 断点（ADR-057 §2.4） ===== */
 @media (max-width:480px){
-  .ysm-ovl-bar{padding:var(--btn-padding-md);gap:4px;flex-wrap:wrap}
+  .ysm-ovl-bar{padding:var(--sp-vh-cell);gap:4px;flex-wrap:wrap} /* 语义收口：overlay bar 容器行非按钮 */
   .preview-panel{width:min(78vw,260px)}
   .ysm-3d-popup{width:min(86vw,280px)}
 }

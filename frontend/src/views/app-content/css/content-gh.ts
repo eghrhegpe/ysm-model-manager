@@ -10,7 +10,7 @@ export const contentGhCSS: string = `
 #gh-results { flex:1;display:flex;flex-direction:column;overflow:hidden; }
 #gh-results-body { flex:1;overflow-y:auto;padding:0 12px 8px;will-change:scroll-position; }
 .gh-search-wrap { padding:2px 0 6px; }
-.gh-search { width:160px;padding:var(--btn-padding-md);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0; }
+.gh-search { width:160px;padding:var(--sp-vh-cell);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-base);outline:none;flex-shrink:0; } /* 语义收口：搜索输入框非按钮，归容器档 */
 .gh-search:focus { border-color:var(--accent); }
 .gh-loading-placeholder { padding:var(--sp-5);text-align:center;color:var(--muted);font-size:var(--fs-sm); }
 .gh-initial-hint { color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center; }

@@ -66,7 +66,7 @@ export const contentDiagCSS: string = `
 .diag-log-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .diag-log-bar-spacer { flex:1; }
 .diag-log-subtabs { display:flex; gap:2px; }
-.diag-sub-tab { padding:3px 10px; border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-sm); font-family:inherit; transition:var(--tr-fast); }
+.diag-sub-tab { padding:var(--btn-padding-std); border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-sm); font-family:inherit; transition:var(--tr-fast); }
 .diag-sub-tab:hover { background:var(--hover); color:var(--txt); }
 .diag-sub-tab.active { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }
 /* 筛选按钮：基础/hover/active 三条规则归 content-creator.ts 的共享选择器

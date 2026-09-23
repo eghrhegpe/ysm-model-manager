@@ -59,7 +59,7 @@ ${metaTagCSS}
 .oldest-health-ring-num { font-size:var(--fs-sm); font-weight:700; color:var(--txt); }
 .oldest-stats-divider { width:1px; height:20px; background:var(--bd); flex-shrink:0; }
 .oldest-stats-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-.oldest-stat-pill { padding:3px 10px; border:1px solid var(--bd); border-radius:var(--radius-xl); font-size:var(--fs-sm); color:var(--txt); background:var(--bg); white-space:nowrap; }
+.oldest-stat-pill { padding:var(--btn-padding-std); border:1px solid var(--bd); border-radius:var(--radius-xl); font-size:var(--fs-sm); color:var(--txt); background:var(--bg); white-space:nowrap; }
 .oldest-section { background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-xl); padding:12px 14px; }
 .oldest-section-title { font-size:var(--fs-md); font-weight:600; color:var(--txt); margin-bottom:8px; letter-spacing:.3px; }
 .oldest-section-title-sm { font-size:var(--fs-sm); font-weight:600; color:var(--txt); margin-bottom:4px; letter-spacing:.3px; }

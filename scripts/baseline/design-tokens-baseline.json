@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-23T11:55:18.470Z",
-  "count": 159,
+  "generated": "2026-09-23T11:57:27.091Z",
+  "count": 157,
   "note": "设计令牌存量债账本（ADR-256：已不参与门禁判定，只供 doctor 报告 / 收债排期）；清理后重跑 --update-baseline 收缩",
   "violations": [
     "frontend/css/components.css:144:css-padding",
@@ -81,7 +81,6 @@
     "frontend/src/views/app-content/css/content-diag.ts:230:css-padding",
     "frontend/src/views/app-content/css/content-diag.ts:231:css-padding",
     "frontend/src/views/app-content/css/content-diag.ts:30:css-padding",
-    "frontend/src/views/app-content/css/content-diag.ts:69:css-padding",
     "frontend/src/views/app-content/css/content-diag.ts:7:css-padding",
     "frontend/src/views/app-content/css/content-diag.ts:87:css-padding",
     "frontend/src/views/app-content/css/content-gh.ts:106:css-padding",
@@ -108,7 +107,6 @@
     "frontend/src/views/app-content/css/content-repo.ts:16:css-padding",
     "frontend/src/views/app-content/css/content-repo.ts:41:css-padding",
     "frontend/src/views/app-content/css/content-repo.ts:54:css-padding",
-    "frontend/src/views/app-content/css/content-repo.ts:62:css-padding",
     "frontend/src/views/app-content/css/content-repo.ts:63:css-padding",
     "frontend/src/views/app-content/css/content-stg.ts:15:css-padding",
     "frontend/src/views/app-content/css/content-stg.ts:42:css-padding",

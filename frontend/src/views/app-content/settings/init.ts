@@ -14,6 +14,7 @@ import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -465,11 +466,18 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
     const btn = root.getElementById("set-advanced-toggle");
     const card = root.getElementById("stg-files-card");
     if (!panel || !btn || !card) return;
+    // 图标与折叠箭头走 SVG 语义槽（ADR-238）：locale 只留纯文本，
+    // 箭头在「展开态→收起」与「收起态→展开」间切换方向
+    const setToggleLabel = (key: "settings.expand" | "settings.collapse"): void => {
+      const arrow = key === "settings.expand" ? UI_ICONS.chevronDown : UI_ICONS.chevronUp;
+      const html = `${UI_ICONS.folderOpen} ${t(key)} ${arrow}`;
+      btn.innerHTML = html;
+    };
     const isOpen = panel.classList.contains("adv-open");
     if (isOpen) {
       panel.classList.remove("adv-open");
       panel.classList.add("adv-closing");
-      btn.textContent = t("settings.expand");
+      setToggleLabel("settings.expand");
       card.style.gridColumn = "";
       setTimeout(() => {
         panel.classList.remove("adv-closing");
@@ -480,7 +488,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
       panel.style.display = "block";
       panel.classList.remove("adv-closing");
       panel.classList.add("adv-open");
-      btn.textContent = t("settings.collapse");
+      setToggleLabel("settings.collapse");
       card.style.gridColumn = "1 / -1";
     }
   });

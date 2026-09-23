@@ -146,6 +146,7 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
     titleIcon: "folder",
     placeholder: t("tree.inputFolderName"),
     okText: t("tree.mkdirOk"),
+    okIcon: "folder",
   });
   if (!name) return;
   try {
@@ -170,6 +171,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     titleIcon: "recycle",
     message: t("tree.dirRecycleConfirm", { dir }),
     okText: t("tree.dirRecycleOk"),
+    okIcon: "recycle",
     danger: true,
   });
   if (!confirmed) return;

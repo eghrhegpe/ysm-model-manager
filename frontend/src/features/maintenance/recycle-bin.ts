@@ -10,7 +10,7 @@ import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { UI_ICONS, type UiIconName } from "@/utils/icon/ui-icons.ts";
 import { type RESOURCE_TYPES, typeIconOf } from "@/utils/resource/types.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
 
@@ -80,7 +80,13 @@ function setupRecycleActions(
   const bindRecycleAction = (
     selector: string,
     opt: {
-      confirm?: { title: string; icon: string; message: string; okText: string };
+      confirm?: {
+        title: string;
+        titleIcon: UiIconName;
+        message: string;
+        okText: string;
+        okIcon?: UiIconName;
+      };
       binding: (path: string) => Promise<unknown>;
       toastKey: LocaleKey;
     },
@@ -126,9 +132,10 @@ function setupRecycleActions(
   bindRecycleAction(".recy-del", {
     confirm: {
       title: opts.t("recycle.deleteTitle"),
-      icon: "🗑️",
+      titleIcon: "delete",
       message: opts.t("recycle.deleteConfirm"),
       okText: opts.t("recycle.deleteOk"),
+      okIcon: "delete",
     },
     binding: (p) => opts.DeleteFromRecycle(p),
     toastKey: "recycle.deleted",
@@ -163,6 +170,7 @@ function onRecycleEmptyClick(opts: {
       titleIcon: "recycle",
       message: opts.t("recycle.emptyConfirm"),
       okText: opts.t("recycle.emptyOk"),
+      okIcon: "recycle",
       danger: true,
     });
     if (!confirmed) return;

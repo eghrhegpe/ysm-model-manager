@@ -4,6 +4,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
 import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { createDialog, type ModalLabels } from "./modal-core.ts";
 
@@ -14,6 +15,8 @@ export interface ModalSelectOptions {
   items: string[];
   placeholder?: string;
   okText?: string;
+  /** 确认按钮图标语义名（UI_ICONS 的 key，ADR-238；经 resolveIcon 渲染内联 SVG） */
+  okIcon?: UiIconName;
   /** 文案覆盖（优先级：okText > labels > i18n 默认） */
   labels?: ModalLabels;
 }
@@ -21,10 +24,12 @@ export interface ModalSelectOptions {
 function selectBoxBuilder(
   items: string[],
   okText: string | undefined,
+  okIcon: UiIconName | undefined,
   labels: ModalLabels | undefined,
 ): (box: HTMLElement) => void {
   const ok = okText || labels?.ok || t("dialog.ok");
   const cancel = labels?.cancel || t("dialog.cancelEsc");
+  const okIconSvg = okIcon ? resolveIcon(okIcon) : "";
   return (box): void => {
     // 标题行由 createDialog 统一渲染（ADR-190 D3）；本 builder 顺带统一为模板串风格
     box.innerHTML = `
@@ -33,7 +38,7 @@ function selectBoxBuilder(
       </select>
       <div class="dlg-footer dlg-footer-flush">
         <button id="ms-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancel)}</button>
-        <button id="ms-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${esc(ok)} (Enter)</button>
+        <button id="ms-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${okIconSvg ? `${okIconSvg} ` : ""}${esc(ok)} (Enter)</button>
       </div>`;
   };
 }
@@ -45,7 +50,7 @@ function selectBoxBuilder(
  */
 export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
   return new Promise((resolve) => {
-    const { title, titleIcon, items, okText, labels } = opts;
+    const { title, titleIcon, items, okText, okIcon, labels } = opts;
     const { box, close } = createDialog<string | null>({
       title,
       titleIcon,
@@ -53,7 +58,7 @@ export function modalSelect(opts: ModalSelectOptions): Promise<string | null> {
       tabIndex: -1,
       cancelValue: null,
       resolve,
-      buildBox: selectBoxBuilder(items, okText, labels),
+      buildBox: selectBoxBuilder(items, okText, okIcon, labels),
     });
     const select = box.querySelector("#ms-select") as HTMLSelectElement;
     select.focus();

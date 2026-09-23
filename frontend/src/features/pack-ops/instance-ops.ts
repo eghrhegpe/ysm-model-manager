@@ -120,6 +120,7 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
           titleIcon: "delete",
           message: t("inst.clearMessage", { name: insName, n: totalCount, type: typeLabel }),
           okText: t("inst.clearOk"),
+          okIcon: "delete",
           danger: true,
         });
         if (!confirmed) {

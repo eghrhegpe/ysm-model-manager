@@ -58,6 +58,7 @@ export const FILE_HANDLERS = {
         titleIcon: "package",
         items: names,
         okText: t("ctx.pushOkText"),
+        okIcon: "package",
       });
       if (!chosen) return;
       const match = instances.find((i) => i.Name === chosen);
@@ -89,6 +90,7 @@ export const FILE_HANDLERS = {
           name: (ctx.path || "").split(/[/\\]/).pop() || "",
         }),
         okText: t("ctx.recycleOkText"),
+        okIcon: "recycle",
         danger: true,
       });
       if (!ok2) return;

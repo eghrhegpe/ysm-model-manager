@@ -222,6 +222,7 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
             n: ctx.paths.length,
           }),
           okText: t("ctx.recycleOkText"),
+          okIcon: "recycle",
           danger: true,
         });
         if (!ok2) return;

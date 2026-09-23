@@ -340,7 +340,7 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
       '<div class="placeholder-box placeholder-box--roomy">' +
         t("content.emptyCreators") +
         '<br><br><button class="cr-local-btn" data-local-empty>' +
-        t("content.browseLocalModels") +
+        `${UI_ICONS.folderOpen} ${t("content.browseLocalModels")}` +
         "</button></div>",
     );
   }

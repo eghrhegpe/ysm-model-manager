@@ -18,6 +18,19 @@ import { groupStorageRootOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { cardRefreshers, getCfg, isBusy, setBusy, toastError } from "./store.ts";
 
+/**
+ * 目录卡片文案（icon + 路径/未选择文案）。
+ *
+ * 单列为 `render*` builder：① 结构（folderOpen 图标槽）在渲染层、locale 值纯文本；
+ * ② 路径是**外部数据**必须 `esc`；③ R8 模板闸按 `render*` 命名识别可信 HTML 源，
+ * 使调用侧保持「单调用赋值」形态（与 app-tree `renderRepoLabel` 同构）。
+ */
+function renderDirLabel(dir: string): string {
+  return dir
+    ? `${UI_ICONS.folderOpen} ${esc(dir)}`
+    : `${UI_ICONS.folderOpen} ${esc(t("settings.path.selectDir"))}`;
+}
+
 // 保存 cfg 辅助（保留各字段原值）
 // P1 修复（审核，配置回退）：保存前重读 Go 端最新配置作为未 patch 字段默认——
 // 原用模块级 cfg（initSettings 一次性加载的旧值），用户在其他入口改过字段后
@@ -62,7 +75,8 @@ export function bindPathClick(
   if (!el) return;
   const refresh = (): void => {
     const p = getPath();
-    el.textContent = p || t("settings.path.selectDir");
+    // 结构槽（folderOpen 图标）在渲染层，locale 已是纯文本；路径是外部数据须 esc
+    el.innerHTML = renderDirLabel(p);
     el.style.color = p ? "" : "var(--accent)";
   };
   cardRefreshers.push(refresh);

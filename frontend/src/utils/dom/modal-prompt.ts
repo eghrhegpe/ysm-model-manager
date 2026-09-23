@@ -4,6 +4,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { esc } from "@/utils/html/html.ts";
+import { resolveIcon } from "@/utils/icon/resolve.ts";
 import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { createDialog, type ModalLabels } from "./modal-core.ts";
 
@@ -14,6 +15,8 @@ export interface ModalPromptOptions {
   value?: string;
   placeholder?: string;
   okText?: string;
+  /** 确认按钮图标语义名（UI_ICONS 的 key，ADR-238；经 resolveIcon 渲染内联 SVG） */
+  okIcon?: UiIconName;
   /** 文案覆盖（优先级：okText > labels > i18n 默认） */
   labels?: ModalLabels;
 }
@@ -22,10 +25,12 @@ function promptBoxBuilder(
   value: string | undefined,
   placeholder: string | undefined,
   okText: string | undefined,
+  okIcon: UiIconName | undefined,
   labels: ModalLabels | undefined,
 ): (box: HTMLElement) => void {
   const ok = okText || labels?.ok || t("dialog.ok");
   const cancel = labels?.cancel || t("dialog.cancelEsc");
+  const okIconSvg = okIcon ? resolveIcon(okIcon) : "";
   return (box): void => {
     // 标题行由 createDialog 统一渲染（ADR-190 D3）
     box.innerHTML = `
@@ -33,7 +38,7 @@ function promptBoxBuilder(
       <div id="mp-err" class="dlg-err"></div>
       <div class="dlg-footer dlg-footer-flush">
         <button id="mp-cancel" data-testid="dlg-cancel" class="dlg-btn">${esc(cancel)}</button>
-        <button id="mp-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${esc(ok)} (Enter)</button>
+        <button id="mp-ok" data-testid="dlg-ok" class="dlg-btn dlg-btn-primary">${okIconSvg ? `${okIconSvg} ` : ""}${esc(ok)} (Enter)</button>
       </div>
     `;
   };
@@ -46,14 +51,14 @@ function promptBoxBuilder(
  */
 export function modalPrompt(opts: ModalPromptOptions): Promise<string | null> {
   return new Promise((resolve) => {
-    const { title, titleIcon, value, placeholder, okText, labels } = opts;
+    const { title, titleIcon, value, placeholder, okText, okIcon, labels } = opts;
     const { box, close } = createDialog<string | null>({
       title,
       titleIcon,
       tabIndex: 0,
       cancelValue: null,
       resolve,
-      buildBox: promptBoxBuilder(value, placeholder, okText, labels),
+      buildBox: promptBoxBuilder(value, placeholder, okText, okIcon, labels),
     });
     const input = box.querySelector("#mp-input") as HTMLInputElement;
     input.focus();

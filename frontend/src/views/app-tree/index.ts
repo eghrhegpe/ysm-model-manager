@@ -496,6 +496,7 @@ export class AppTree extends WebComponentBase {
         titleIcon: "delete",
         message: t("tree.batchDeleteConfirm", { n: paths.length }),
         okText: t("tree.deleteOk"),
+        okIcon: "delete",
         danger: true,
       }))
     )

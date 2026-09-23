@@ -664,6 +664,11 @@ invariant_anchors:
     - **修一个契约对账坑**：`--pad-v-2: 2px 0` 初版用 `0`（无单位），契约解析 `0` 为 null 导致 [2,null]≠[2,0] 失败——改 `0px`（CSS 中 `0`≡`0px`）即过。**组合档声明里横向 0 必须写 `0px`，不能写 `0`**（契约测试 literal 正则只认 `Npx`）。
     - **经验（D4 例外的判据）**：方向残缺值默认不建档（`8px 0`/`12px 0` 等低频仍如此），但 `2px 0`/`1px 0` 这类**语义统一 + 覆盖率≥5 的高频簇**可破例——判据是「是否形成语义簇」，不是「方向是否残缺」本身。
   - **大图标字号波次（2026-09-22，用户拍板「A：收 32px→--fs-xl」）**：剩 181 条中 3 处 `font-size:32px`（`preview-loading`×2 加载/失败图标、`app-content/tpl.ts:456` 的 `UI_ICONS.blocked` 空态、`litematic-adapter:93` 的 `UI_ICONS.warning` 错误）——全与 `.dp-placeholder .big-icon`(`--fs-xl`) **同构**（`<div style="font-size:Npx">` 包图标）。归 `var(--fs-xl)`(25px) **−7px 位移**（用户拍板接受），基线 181 → **177**。**留人工**：36px（`.empty .big`）−11px 过大、`.logo-icon` 20px 品牌、`.preview-fab` 20px 浮标——位移尺度是人工判据，32px/−7px 是「大图标可接受收缩」的上界限。
+  - **人工逐条归位波次（2026-09-22，用户拍板「逐条精审，完成小阶段即测即提交」）**：机械闸已到极限（剩余全是组合表之外的孤值），转人工按语义逐簇归位。**三批小阶段，基线 177 → 167**：
+    - **`3px 0`×3**（`stat-row`/`md-row`/skeleton 作者行，纯垂直紧凑行）→ `var(--pad-v-2)`，−1px。基线 177→174。
+    - **`0 5px`×4 标签/徽标**（`cr-tag`/`cr-card-local-count`/`link-badge`/`tag-author`）→ `0 var(--sp-1)`，−1px，**与 `.nm mark` 同款标签处理**。基线 174→170。
+    - **`1px 4px`×3 紧凑标签**（`cr-platform-badge`/`gh-cr-del`/`tag`）→ `var(--pad-v-1) var(--sp-1)`（垂直 1px 档+横向 4px 档**两令牌拼接**），值等价。基线 170→167。
+    - **方法论（人工归位的安全判据）**：只收「语义明确 + 位移 ≤1px 或值等价 + 方向匹配」的。机械「最近令牌」算出的 76 条候选**大多方向残缺/语义错位**（如 `2px 2px`→`--pad-v-2` 丢横向、`0 0 6px`→纯垂直档）——**数值近 ≠ 角色对**，必须逐条看选择器确认。
 - ✅ **刀㉚ features 层执法：R8 HTML 字面量闸立法**（2026-09-20，本会话用户「锐评 /features」落地）：
   - **锐评总判**：features 纪律仓库天花板（R5 seam 零违例 / 全层零 `: any` 零 `@ts-ignore` / 跨 feature 依赖 DAG 无环 / 死代码仅 1 运行时孤儿导出），唯一结构性原罪 = **逻辑层私藏视图**——maintenance 三文件手写内联 style HTML 串、`_dots` 转圈状态挂 DOM 节点自定义属性。
   - **立法**：`check-layering` 新增 **R8（防回退）**：features 生产文件禁 HTML 字符串/模板字面量（政策 ADR-190 D1a / ADR-208 D2 早立但从未执法，本条补闸）；存量 5 文件 76 处入基线（dialogs 三件套 + community render/show-repo-models，ADR-208「已知遗留」点名项，big-bang 在 ADR 里被显式反对），新增即红；行级豁免尾注 `// layering-allow: html`。扫描器 `htmlLiteralHits` = 手写词法态机（剥注释/抽字符串跨/模板插值嵌套），纯函数导出 + 合成样本契约测试直测，同 `matchImports`/`r7EdgeViolates` 防空转惯例。同号异策：与 check-redlines R8 勿混。

@@ -499,11 +499,13 @@ export class SkyCapability implements SceneCapability {
    *   阈值门控存在的理由：昼夜循环每帧推进 timeOfDay，无门控会**每帧全量 PMREM**
    *   （GPU 熔炉，见 sky-capability.test.ts 的云量回归）。故连续动画走阈值，
    *   离散的结构性变更（来源/预设切换）显式 force。
+   *   首帧（renderTarget 尚未建立）无条件烘焙——从无到有一律装载。
    * @returns 烘焙是否成功（成功则 this.renderTarget 可读）
    */
   private bakeEnvironment(force = false): boolean {
     if (!force) {
-      // 阈值门控：太阳高度角未显著变化时不重建（IBL 反射差异肉眼不可辨）
+      // 阈值门控：太阳高度角未显著变化时不重建（IBL 反射差异肉眼不可辨）。
+      // renderTarget 为 null（首次）时无条件烘焙——从无到有一律装载。
       const dirty =
         Math.abs(this.elevation - this.lastPmremElevation) >=
         SkyCapability.PMREM_ELEVATION_THRESHOLD;
@@ -533,6 +535,10 @@ export class SkyCapability implements SceneCapability {
    *
    * [ADR-292] envSource="sky" 时改用 {@link bakeEnvironmentTexture}：由 env 装载，
    * sky 不碰槽位（D1 所有权收口）。
+   * [锐评 S2-1 门控统一] 烘焙决策的唯一权威在 bakeEnvironment(force) 内部
+   * （force 或首帧才真烘焙；非 force 时按 lastPmremElevation 阈值门控）。
+   * 本方法（装）与 bakeEnvironmentTexture（烤）共享同一烘焙器，故自持装载 /
+   * env 取图两条路的「是否重烤」判定一致，不会各自为政。
    */
   private regenerateEnvironment(force = false): void {
     this.bakeEnvironment(force);
@@ -746,14 +752,30 @@ export class SkyCapability implements SceneCapability {
    *   setTime 都是用户主动调参，拖动即见 + 既有测试不改语义）；
    *   传 false 走阈值门控：太阳高度角变化 < PMREM_ELEVATION_THRESHOLD 不重建
    *   （昼夜循环 update(dt) 每帧调用，锐评 P1 GPU 熔炉修复）。
+   * @param opts.phase 相位标记（[锐评 S2-1]）：`"dragging"` = 拖动中（降为阈值门控，
+   *   PMREM 不逐帧全重建）；`"settled"` = 松手/离散动作（force 一次取当前帧图）。
+   *   未传 phase 时 forceEnv 仍按默认 true（兼容既有调用方与测试）。
+   *
+   * 实现：phase 仅写 envState，烘焙决策统一走 registerEnvCallback 的
+   * skyTimeOfDay/skyElevation/skyAzimuth 分支——单一烘焙决策点，避免双路径分叉。
    */
-  setTime(hour: number, opts?: { forceEnv?: boolean }): void {
-    const forceEnv = opts?.forceEnv ?? true;
+  setTime(hour: number, opts?: { forceEnv?: boolean; phase?: "dragging" | "settled" }): void {
+    const forceEnv = opts?.phase ? opts.phase !== "dragging" : (opts?.forceEnv ?? true);
     // ADR-196 收口：纯写 envState，渲染应用（syncSun/writeUniforms/PMREM 门控/godrays/tint）
     // 统一走 registerEnvCallback 的 skyTimeOfDay 分支。
+    // [锐评 S2-1] skyForceEnv 是烘焙决策的输入（与 skyTimeOfDay 同批写入），
+    // 烘焙判定由 callback 的 maybeRegenerateEnvironment(state) 读取，本方法不直调
+    // bakeEnvironmentTexture——保持单一决策点（callback），防 phase 语义在 cap 侧
+    // 双路径分叉。
+    // [守卫纪律] skyTimeOfDay 走 manual 无条件放行；skyForceEnv 是**脉冲键**——
+    // 首帧重置（resetEnvState 清 _writeSource）后其默认值 true 无来源标记，
+    // 手动写入被 shouldOverwrite 拒绝 → 相位语义失真（sharp review S2-1 实证）。
+    // force:true 跳过守卫，恢复脉冲键的无条件写入语义（同 update(dt) 的 auto-model
+    // 强制推进先例；普通调用方不得滥用 force 覆盖用户 manual 值——脉冲键无用户
+    // 手改足迹，force 安全）。
     setEnvState(
       { skyTimeOfDay: ((hour % 24) + 24) % 24, skyForceEnv: forceEnv },
-      { source: "manual" },
+      { source: "manual", force: true },
     );
   }
 

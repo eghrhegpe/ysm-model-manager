@@ -490,6 +490,9 @@ function renderCapTimeline(parent: HTMLElement, c: PreviewControlDef): void {
     dragging = true;
     band.setPointerCapture(e.pointerId);
     setFromPointer(e.clientX);
+    // [锐评 S2-1] 拖动期相位标记：天空 cap 侧据此降为阈值门控（PMREM 不逐帧全重建），
+    // 松手时 onDragEnd force 一次取当前帧图——对齐昼夜循环 update(dt) 的阈值门控语义。
+    c.onDragStart?.(numVal);
   });
   band.addEventListener("pointermove", (e: PointerEvent): void => {
     if (!dragging) return;
@@ -497,6 +500,8 @@ function renderCapTimeline(parent: HTMLElement, c: PreviewControlDef): void {
   });
   band.addEventListener("pointerup", (e: PointerEvent): void => {
     dragging = false;
+    // 松手 = 离散提交：force 一次（取当前帧的烘焙图）
+    c.onDragEnd?.(c.getValue() as number);
     try {
       band.releasePointerCapture(e.pointerId);
     } catch {
@@ -505,6 +510,7 @@ function renderCapTimeline(parent: HTMLElement, c: PreviewControlDef): void {
   });
   band.addEventListener("pointercancel", (): void => {
     dragging = false;
+    c.onDragEnd?.(c.getValue() as number);
   });
 
   row.append(head, band);

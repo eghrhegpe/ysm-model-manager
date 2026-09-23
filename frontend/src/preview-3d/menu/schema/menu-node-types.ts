@@ -91,6 +91,10 @@ export interface PreviewControlDef {
   getValue: () => number | string | boolean | null | number[];
   /** 设置值（框架调用，用户交互时触发；button 忽略） */
   setValue: (v: number | string | boolean) => void;
+  /** 拖拽开始（timeline 专用——相位标记：写入降为阈值门控，松手才 force 一次） */
+  onDragStart?(v: number | string | boolean): void;
+  /** 拖拽结束 / 单击跳转（timeline 专用——相位标记：离散提交 force 一次） */
+  onDragEnd?(v: number | string | boolean): void;
 }
 
 /* ============ 节点体系类型（ADR-195 刀2 自 menu/node-types.ts 下沉）============ */

@@ -1221,6 +1221,47 @@ describe("SkyCapability — 昼夜循环 autoRotate", () => {
     expect(fromScene).toHaveBeenCalledTimes(3);
     cap.dispose();
   });
+
+  it("[锐评 S2-1] setTime phase 拖动相位：dragging 走阈值门控（不重建），settled force 一次", () => {
+    const cap = newCap();
+    // 首帧装载（fromScene 1 次）——在 spy 安装前完成，不计入后续断言。
+    // 首帧 force=true（apply 直调），lastPmremElevation 同步为 elev(9h)≈49.5°。
+    cap.apply();
+    const fromScene = vi.spyOn(THREE.PMREMGenerator.prototype, "fromScene");
+    fromScene.mockClear();
+
+    // 9h→9.05h：高度角变化 |elev(9.05)-elev(9)|≈0.6° < 2° → 阈值门控不重建
+    cap.setTime(9.05, { phase: "dragging" });
+    expect(fromScene, "9h→9.05h 高度角变化 < 2° → 不重建").toHaveBeenCalledTimes(0);
+
+    // 9.05→9.1：|elev(9.1)-elev(9)|≈1.3° < 2° → 仍不重建
+    cap.setTime(9.1, { phase: "dragging" });
+    expect(fromScene, "累计 +0.1h ≈ 1.3° < 2° → 不重建").toHaveBeenCalledTimes(0);
+
+    // 9.1→9.2：|elev(9.2)-elev(9)|≈2.0° ≥ 2° → 阈值命中，重建一次
+    cap.setTime(9.2, { phase: "dragging" });
+    expect(fromScene, "9.2 跨阈值 ≈2.0° ≥ 2° → 重建").toHaveBeenCalledTimes(1);
+
+    // 9.2→10：|elev(10)-elev(9.2)|≈9.8° ≥ 2° → 再阈值命中
+    cap.setTime(10, { phase: "dragging" });
+    expect(fromScene, "10 跨阈值 9.8° ≥ 2° → 重建").toHaveBeenCalledTimes(2);
+
+    // 松手 settled：force 一次取当前帧图（即使高度角无变化）
+    cap.setTime(10, { phase: "settled" });
+    expect(fromScene, "settled 相位 force 一次").toHaveBeenCalledTimes(3);
+    cap.dispose();
+  });
+
+  it("[锐评 S2-1] setTime 未传 phase 时兼容旧语义：默认 forceEnv=true（既有调用方不降级）", () => {
+    const cap = newCap();
+    const fromScene = vi.spyOn(THREE.PMREMGenerator.prototype, "fromScene");
+    fromScene.mockClear();
+    cap.setTime(12); // 无 phase、无 forceEnv → 默认 force=true
+    expect(fromScene, "无 phase 默认 force=true（首次装载）").toHaveBeenCalledTimes(1);
+    cap.setTime(12.05); // 微调仍 force（兼容旧语义）
+    expect(fromScene, "无 phase 微调仍 force").toHaveBeenCalledTimes(2);
+    cap.dispose();
+  });
 });
 
 // ============ God Rays 挂载/卸载（真实分支）============

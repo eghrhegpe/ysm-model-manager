@@ -599,7 +599,7 @@ postprocessing cap 确认，列观察项）。
 ### 🟡 性能冗余（中优先级）
 | # | 位置 | 问题 | 建议 |
 |---|------|------|------|
-| S2-1 | sky-capability.ts:639 setTime | timeline 拖动 forceEnv 恒 true → 每帧 PMREM 全重建 | 拖动期降为阈值门控，松手 force 一次 |
+| S2-1 | sky-capability.ts setTime | ~~timeline 拖动 forceEnv 恒 true → 每帧 PMREM 全重建~~ **已修（2026-09-23）**：setTime 加 `phase` 相位（dragging 降阈值门控 / settled force 一次）+ bakeEnvironment 首帧无条件烘焙 + skyForceEnv 脉冲键补 force；sky-menu 接 onDragStart/onDragEnd 通道 | ✅ 落地，守卫 = sky-capability.test.ts S2-1 双例 |
 | S2-6 | slide-menu.ts:126 refresh | N cap 订阅 → N 次 renderTop 无合帧 | refresh 加 rAF 合批 |
 | S2-2 | sky writeUniforms | 全量 7 uniform 双写（sky+envSky），skyEnvironment 关闭时 envSky 是死 mesh | 仅写 changed 键 + 跳过未挂载 envSky |
 | E-1 | environment-capability.ts:46-60 applyEnvIntensity | 滑杆逐帧 → scene.traverse 全模型 + needsUpdate | 缓存受影响材质列表（复用 syncMeshIntensity 的 roots） |

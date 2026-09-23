@@ -25,7 +25,9 @@ function skyEnabledNode(cap: SkyCapability): PreviewMenuNode {
   };
 }
 
-/** 时间轴复杂控件（timeline——非纯数据，走 controls 通道节点承载） */
+/** 时间轴复杂控件（timeline——非纯数据，走 controls 通道节点承载）
+ *  [锐评 S2-1] 拖动相位：onDragStart 降为阈值门控（PMREM 不逐帧全重建），
+ *  onDragEnd / 单击跳转 force 一次取当前帧图——对齐昼夜循环 update(dt) 的门控语义。 */
 function skyTimelineControlsNode(cap: SkyCapability): PreviewMenuNode {
   const timeline: PreviewControlDef = {
     id: "sky-timeline",
@@ -33,7 +35,9 @@ function skyTimelineControlsNode(cap: SkyCapability): PreviewMenuNode {
     labelKey: "preview.skyTimeline",
     fallback: "光影时间轴",
     getValue: () => cap.getTimeOfDay(),
-    setValue: (v) => cap.setTime(v as number),
+    setValue: (v) => cap.setTime(v as number, { phase: "dragging" }),
+    onDragStart: (v) => cap.setTime(v as number, { phase: "dragging" }),
+    onDragEnd: (v) => cap.setTime(v as number, { phase: "settled" }),
   };
   return { id: "cap-node-sky-timeline", kind: "controls", controls: [timeline] };
 }

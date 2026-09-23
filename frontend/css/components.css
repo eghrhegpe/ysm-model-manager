@@ -659,5 +659,5 @@
 .mc-scan-empty { color:var(--muted);padding:var(--sp-1) 0; }
 .mc-scan-tip { font-size:var(--fs-xs);color:var(--muted);padding-top:2px; }
 .mc-scan-result-title { font-weight:600;margin-bottom:4px; }
-.mc-scan-path { padding:1px 0;display:flex;align-items:center;gap:6px;font-size:var(--fs-xs); }
+.mc-scan-path { padding:var(--pad-v-1);display:flex;align-items:center;gap:6px;font-size:var(--fs-xs); }
 .mc-scan-path-icon { color:var(--accent);flex-shrink:0; }

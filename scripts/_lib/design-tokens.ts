@@ -184,6 +184,10 @@ export const SP_FLOOR_PX = 4;
  *
  * ⚠️ 只收录**内容/按钮语义明确且覆盖率≥5** 的组合（ADR-295 D4 防膨胀口径）；
  * `8px 0`/`12px 0`/`12px 16px`/`0 8px` 这类低频或方向残缺值**不建档**（留存量债）。
+ * ⚠️ 例外（用户拍板 2026-09-22）：`2px 0`×14 / `1px 0`×6 —— 纯垂直呼吸簇
+ *   （hint 文本/列表行/错误行的「上下内边距 + 横向贴边 0」语义），覆盖率远超 D4 门槛，
+ *   故打破「方向残缺不建档」条目，建 `--pad-v-2`/`--pad-v-1`。其余方向残缺值（`8px 0`
+ *   等）仍不建档。
  */
 export const COMBO_PADDING_TOKENS: Readonly<Record<string, { token: string }>> = {
   "2px 8px": { token: "--btn-padding-tool-lg" },
@@ -196,6 +200,8 @@ export const COMBO_PADDING_TOKENS: Readonly<Record<string, { token: string }>> =
   "6px 12px": { token: "--sp-vh-hdr" },
   "8px 10px": { token: "--sp-vh-card" },
   "8px 2px": { token: "--sp-vh-perf" },
+  "2px 0": { token: "--pad-v-2" },
+  "1px 0": { token: "--pad-v-1" },
   "4px 12px": { token: "--btn-padding-filter-lg" },
   "6px 10px": { token: "--sp-vh-btn" },
   "8px 12px": { token: "--sp-vh-pane" },
@@ -220,6 +226,8 @@ export const COMBO_EXPANSION: Readonly<Record<string, readonly [number, number]>
   "--sp-vh-hdr": [6, 12],
   "--sp-vh-card": [8, 10],
   "--sp-vh-perf": [8, 2],
+  "--pad-v-2": [2, 0],
+  "--pad-v-1": [1, 0],
 };
 
 /**

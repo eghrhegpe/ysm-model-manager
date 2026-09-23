@@ -101,11 +101,11 @@ ${noAnimationsCSS}
    闸为何曾看不见：这些类所在的命名空间 lt- 在本域从未被定义过，检查 3 自推导域结构上不覆盖
    （2026-09 补检查 6「跨层存在性」才现形）。 */
 .lt-material-list { display:flex; flex-direction:column; gap:1px; }
-.lt-block-row { display:flex; align-items:center; gap:6px; padding:2px 0; font-size:var(--fs-xs); color:var(--txt); }
+.lt-block-row { display:flex; align-items:center; gap:6px; padding:var(--pad-v-2); font-size:var(--fs-xs); color:var(--txt); }
 .lt-color-swatch { width:10px; height:10px; border-radius:var(--radius-xs); flex-shrink:0; border:1px solid var(--bd); }
 .lt-block-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .lt-block-count { color:var(--muted); font-size:var(--fs-tiny); flex-shrink:0; }
-.lt-meta-row { display:flex; justify-content:space-between; gap:8px; padding:2px 0; font-size:var(--fs-xs); color:var(--txt); }
+.lt-meta-row { display:flex; justify-content:space-between; gap:8px; padding:var(--pad-v-2); font-size:var(--fs-xs); color:var(--txt); }
 .lt-meta-row > span:last-child { font-family:var(--font-mono); }
 .lt-meta-label { color:var(--muted); }
 `;

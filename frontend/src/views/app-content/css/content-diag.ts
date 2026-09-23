@@ -97,7 +97,7 @@ export const contentDiagCSS: string = `
 .perf-matrix-id { color:var(--muted); font-size:var(--fs-micro); }
 .perf-matrix-tag { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:var(--surf); color:var(--muted); }
 .perf-matrix-warn { color:var(--status-warning); }
-.perf-matrix-models { display:flex; flex-direction:column; gap:2px; padding:2px 0; }
+.perf-matrix-models { display:flex; flex-direction:column; gap:2px; padding:var(--pad-v-2); }
 .perf-matrix-model { display:flex; align-items:center; gap:8px; font-size:var(--fs-xs); }
 .perf-matrix-model-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); font-family:var(--font-mono); }
 .perf-matrix-model-detail { color:var(--muted); font-variant-numeric:tabular-nums; flex-shrink:0; font-family:var(--font-mono); }
@@ -191,11 +191,11 @@ export const contentDiagCSS: string = `
 .perf-badge-ok { color:var(--status-success);font-weight:600; }
 .perf-badge-warn { color:var(--status-warning); }
 .perf-tex-section { font-size:var(--fs-xs);color:var(--muted);padding:4px 2px;line-height:1.6; }
-.perf-tex-row { display:flex;align-items:center;gap:6px;padding:1px 0; }
+.perf-tex-row { display:flex;align-items:center;gap:6px;padding:var(--pad-v-1); }
 .perf-tex-name { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt); }
 .perf-tex-size { color:var(--muted);font-size:var(--fs-xs);flex-shrink:0; }
 .perf-ktx2-badge { font-size:var(--fs-micro);padding:0 3px;border-radius:var(--radius-xs);background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);flex-shrink:0; }
-.perf-tex-more { color:var(--muted);font-size:var(--fs-xs);padding:2px 0; }
+.perf-tex-more { color:var(--muted);font-size:var(--fs-xs);padding:var(--pad-v-2); }
 .perf-no-data { color:var(--muted);font-size:var(--fs-sm);padding:12px 2px;text-align:center; }
 .perf-no-hint { color:var(--muted);font-size:var(--fs-xs);padding:2px 2px 8px;text-align:center;opacity:.7; }
 .perf-trace-hint { color:var(--muted);font-size:var(--fs-xs);padding:4px 2px 8px;text-align:center;opacity:.6;border-top:1px solid var(--bd);margin-top:6px; }

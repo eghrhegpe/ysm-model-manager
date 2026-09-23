@@ -186,7 +186,7 @@ export function containerHTML(): string {
     // 摘要栏
     '<div class="sm-summary" style="display:flex;align-items:center;gap:8px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>' +
     // 列表容器
-    '<div class="sm-list" style="flex:1;overflow-y:auto;padding:2px 0"></div>' +
+    '<div class="sm-list" style="flex:1;overflow-y:auto;padding:var(--pad-v-2)"></div>' +
     "</div>"
   );
 }

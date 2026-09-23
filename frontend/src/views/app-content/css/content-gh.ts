@@ -144,7 +144,7 @@ export const contentGhCSS: string = `
 
 /* ===== 下载队列 ===== */
 .gh-queue-icon { color:var(--accent); }
-.gh-queue-error { padding:2px 0; font-size:var(--fs-sm); color:var(--status-error); }
+.gh-queue-error { padding:var(--pad-v-2); font-size:var(--fs-sm); color:var(--status-error); }
 .gh-queue-err-item { font-size:var(--fs-xs); color:var(--muted); padding:0 var(--sp-1); }
 .gh-queue-ellipsis { font-size:var(--fs-xs); color:var(--muted); padding:0 var(--sp-1); }
 .gh-queue-cancel { font-size:var(--fs-sm); color:var(--muted); }

@@ -154,7 +154,7 @@ function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[])
       "</div>";
     for (let i = 0; i < paths.length; i++) {
       html +=
-        "<div style='padding:1px 0;display:flex;align-items:center;gap:6px;font-size:var(--fs-xs)'>" +
+        "<div style='padding:var(--pad-v-1);display:flex;align-items:center;gap:6px;font-size:var(--fs-xs)'>" +
         "<span style='color:var(--accent);flex-shrink:0'>" +
         UI_ICONS.folder +
         "</span>" +

@@ -135,7 +135,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
   const componentCounts = model.componentCounts || [];
   const catSummary =
     roleTexCount > 0 || compTexCount > 0
-      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">${UI_ICONS.character} ${t("preview.roleTexCount", { role: roleTexCount, comp: compTexCount })}</div>`
+      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:var(--pad-v-1)">${UI_ICONS.character} ${t("preview.roleTexCount", { role: roleTexCount, comp: compTexCount })}</div>`
       : "";
   // L0 清单角色区块（每角色：纹理标题 + 尺寸）
   const subs = model.subModels || [];
@@ -144,7 +144,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
       ? subs
           .map((s) => {
             const texName = (model.textureNames || [])[s.texSlot ?? 0] || "—";
-            return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:var(--fs-sm)">
+            return `<div style="display:flex;align-items:center;gap:6px;padding:var(--pad-v-2);font-size:var(--fs-sm)">
         <span style="font-weight:600;color:var(--txt)">${UI_ICONS.character} ${esc(s.name)}</span>
         <span style="color:var(--muted)">${esc(texName)}</span>
         ${model.texWidth && model.texHeight ? `<span style="color:var(--muted)">${model.texWidth}×${model.texHeight}px</span>` : ""}
@@ -166,7 +166,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
   const subCount = model.subCount || 1;
   const extraCount = texCount > subCount ? texCount - subCount : 0;
   if (extraCount > 0) {
-    texMapHtml = `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0">${UI_ICONS.attach} ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
+    texMapHtml = `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:var(--pad-v-1)">${UI_ICONS.attach} ${t("preview.extraTextures", { extra: extraCount, total: texCount })}</div>`;
   }
   // Go FileInventory 权威归属清单（zip 模型专属，文件夹模型无此字段）：
   // 非零类目渲染为「图标 + 计数」芯片，tooltip 携带权威文件路径——前端只展示不判定。
@@ -192,7 +192,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
   );
   const invHtml =
     invChips.length > 0
-      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:1px 0;flex-wrap:wrap;gap:2px 8px">${UI_ICONS.package} ${t("preview.inventory")}${invChips.map((c) => `<span title="${esc(c.title)}">${c.icon} ${esc(c.label)}</span>`).join("")}</div>`
+      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:var(--pad-v-1);flex-wrap:wrap;gap:2px 8px">${UI_ICONS.package} ${t("preview.inventory")}${invChips.map((c) => `<span title="${esc(c.title)}">${c.icon} ${esc(c.label)}</span>`).join("")}</div>`
       : "";
   return `
 <div class="pv-card-section pv-section-blue">

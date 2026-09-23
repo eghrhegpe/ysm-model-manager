@@ -50,9 +50,9 @@ function renderStgBasicPaths(isViewer: boolean): string {
           <option value="hardlink" selected>${t("settings.links.hardlink")}</option>
           <option value="symlink">${t("settings.links.symlink")}</option>
         </select>
-        <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">${t("settings.links.copyHint")}</div>
-        <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">${t("settings.links.hardlinkHint")}</div>
-        <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>`,
+        <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)">${t("settings.links.copyHint")}</div>
+        <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)">${t("settings.links.hardlinkHint")}</div>
+        <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>`,
         {
           header: {
             forId: "set-link-mode",
@@ -71,9 +71,9 @@ function renderStgBasicPaths(isViewer: boolean): string {
           <option value="jsdelivr">${t("settings.mirror.jsdelivrOption")}</option>
           <option value="githubapi">GitHub API</option>
         </select>
-        <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.directHint")}</div>
-        <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.jsdelivrHint")}</div>
-        <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:2px 0;line-height:1.5">${t("settings.mirror.githubapiHint")}</div>`,
+        <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.directHint")}</div>
+        <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.jsdelivrHint")}</div>
+        <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.githubapiHint")}</div>`,
         { header: { forId: "set-mirror" }, delayMs: 120 },
       );
   return `<div class="section-title stg-title">${UI_ICONS.settings} ${t("settings.paths.title")}</div>
@@ -229,7 +229,7 @@ function renderStgFontFamily(): string {
       <option value="medium">${t("settings.fontSize.medium")}</option>
       <option value="large">${t("settings.fontSize.large")}</option>
     </select>
-    <div id="set-size-preview" style="display:flex;gap:8px;font-size:var(--fs-sm);color:var(--muted);padding:2px 0">
+    <div id="set-size-preview" style="display:flex;gap:8px;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)">
       <span>${t("settings.ui.body")} <b id="sz-base" style="color:var(--txt)">13px</b></span>
       <span>${t("settings.ui.buttonGap")} <b id="sz-space" style="color:var(--txt)">5px</b></span>
       <span>${t("settings.ui.buttonHeight")} <b id="sz-btn-h" style="color:var(--txt)">25px</b></span>

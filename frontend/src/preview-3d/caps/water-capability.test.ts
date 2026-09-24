@@ -10,7 +10,7 @@ import {
   type WaterPartRole,
 } from "./water-body-strategies.ts";
 import { WATER_WAVE_SEGMENTS } from "./water-state.ts";
-import { WaterCapability } from "./water-capability.ts";
+import { WaterCapability, WATER_UNIFORM_NAMES, WATER_FRAME_READ_KEYS } from "./water-capability.ts";
 import { WATER_PARAM_APPLIER_KEYS } from "./water-capability.ts";
 import { persistState, restoreState } from "./scene-capability.ts";
 import { isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";
@@ -1402,6 +1402,56 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     ).toEqual(new Set(WATER_PARAM_APPLIER_KEYS));
   });
 
+  it("[锐评 3.1 守卫] WATER_UNIFORM_NAMES 字面量登记与 onBeforeCompile 注入的 uniform 集一致", () => {
+    // setUniform 走 `mat.userData.shader.uniforms[name]` string key 后门——
+    // 拼错 uniform 名即静默失败（guard 只防 uniform 不存在，不防 typo）。
+    // 本测试锁：onBeforeCompile 里 `shader.uniforms.uXxx = {...}` 的 10 个名
+    // 必须全部登记在 WATER_UNIFORM_NAMES（单一登记点），未来加 uniform 忘登记即红。
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const shader = fakeShader() as unknown as THREE.WebGLProgramParametersWithUniforms;
+    cap["water"].top.material.onBeforeCompile(shader, undefined as unknown as THREE.WebGLRenderer);
+    const injected = Object.keys((shader.uniforms as Record<string, unknown>));
+    expect(injected.length, "注入的 uniform 集非空").toBeGreaterThan(0);
+    // 注入的每个 uniform 名都须在 WATER_UNIFORM_NAMES（漏登记 → 未受守卫 → 静默失效面）
+    for (const name of injected) {
+      expect(
+        (WATER_UNIFORM_NAMES as readonly string[]).includes(name),
+        `uniform ${name} 已在 shader 注入但因未登 WATER_UNIFORM_NAMES 而失去编译期守卫`,
+      ).toBe(true);
+    }
+    // 反向：登记的每个名都须真实注入（防登记了但 shader 没写 → 死登记）
+    for (const name of WATER_UNIFORM_NAMES) {
+      expect(shader.uniforms, `WATER_UNIFORM_NAMES 登记了 ${name} 但未注入`).toHaveProperty(name);
+    }
+  });
+
+  it("[锐评 3.3] WATER_FRAME_READ_KEYS 登记 = 无材质应用的键，且消费点在 update 现读 envState", () => {
+    // 结构证据链：
+    //  ① 登记的每个键都必须存在于分派表键集（否则登记悬空、空条目无处安放）
+    for (const key of WATER_FRAME_READ_KEYS) {
+      expect(
+        (WATER_PARAM_APPLIER_KEYS as readonly string[]).includes(key),
+        `WATER_FRAME_READ_KEYS 登记 ${key} 不在分派表键集（登记悬空）`,
+      ).toBe(true);
+    }
+    //  ② 行为实证：登记的键确实由 update 逐帧现读 envState——waveSpeed 驱动 waterTime 累加。
+    //     （未来登记集扩充时，此处须为每个新键补一条「update 现读该键」的行为断言，
+    //     否则登记只是声明、没有可观测出口。）
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const before = (cap as unknown as { waterTime: { value: number } }).waterTime.value;
+    cap.setWaveSpeed(2.0);
+    cap.update(1.0);
+    const after = (cap as unknown as { waterTime: { value: number } }).waterTime.value;
+    expect(after - before, "waveSpeed 变更 → update 累加速度随之变化（现读 envState 生效）").toBeCloseTo(
+      2.0,
+      5,
+    );
+  });
+
   // [锐评 D3 契约锁 2026-09-22] saveState 派生化（getPresetKeys 遍历）只覆盖**写侧**，
   // loadState 还原表仍是手写双轨清单——旧注释「读写两侧自动跟上」超额承诺了读侧
   //（e7c9e52fb 复审发现）。本行为锁补上读侧：schema 每键写偏离值 → save → reset →
@@ -1753,6 +1803,32 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     );
     cap.update(0.016);
     expect(cap["reflector"], "bias 未再变 → 载体幸存（防每帧重建抖动）").toBe(refl2);
+  });
+
+  it("[锐评 3.5] clipBias 死区内微变（|Δ| < 容差）→ 载体幸存不重建", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    cap.update(0.016);
+    const refl1 = cap["reflector"] as NonNullable<WaterCapability["reflector"]>;
+    // 默认 3 → 3.04（Δ=0.04 < 0.05 死区）：肉眼不可感的微调不应触发整场 RT 重建
+    cap.setWaterReflectionClipBias(3.04);
+    cap.update(0.016);
+    expect(cap["reflector"]).toBe(refl1);
+  });
+
+  it("[锐评 3.5] clipBias 死区外变化（|Δ| ≥ 容差）→ 弃载体重建", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    cap.update(0.016);
+    const refl1 = cap["reflector"] as NonNullable<WaterCapability["reflector"]>;
+    cap.setWaterReflectionClipBias(3.1);
+    cap.update(0.016);
+    const refl2 = cap["reflector"] as NonNullable<WaterCapability["reflector"]>;
+    expect(refl2).not.toBe(refl1);
   });
 
   it("默认关：update 不建载体（零开销纪律，与 reflectorEnabled 默认关同门）", () => {

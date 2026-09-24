@@ -146,6 +146,7 @@ auto_fields:
     - readLightParams
     - REFLECTION_MODES
     - ReflectionMode
+    - REFLECTOR_CLIP_BIAS_TOLERANCE
     - ReflectorCapability
     - registerWaterBodyStrategy
     - RenderModeCapability
@@ -183,8 +184,10 @@ auto_fields:
     - VolumetricCone
     - VolumetricDriver
     - VolumetricParams
+    - WATER_FRAME_READ_KEYS
     - WATER_MODES
     - WATER_PARAM_APPLIER_KEYS
+    - WATER_UNIFORM_NAMES
     - WATER_WAVE_SEGMENTS
     - WaterBody
     - WaterBodyStrategy
@@ -193,6 +196,7 @@ auto_fields:
     - WaterMode
     - WaterPartRole
     - WaterTopMesh
+    - WaterUniformName
   tests:
     - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
     - frontend/src/preview-3d/caps/ground-capability.test.ts

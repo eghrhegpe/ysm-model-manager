@@ -75,7 +75,7 @@ type WaterApplyCtx = {
   targets: (role: WaterPartRole) => THREE.Mesh[];
   /** 顶水面（承载波浪材质）：各形态 build 期统一塞入，恒存在 */
   top: WaterTopMesh;
-  setUniform: (mat: THREE.Material | undefined, name: string, value: number) => void;
+  setUniform: (mat: THREE.Material | undefined, name: WaterUniformName, value: number) => void;
 };
 /** 结构参数三键共享：查表执行 transformLinks（幂等，重复调用 no-op） */
 function applyStructuralProfile(ctx: WaterApplyCtx): void {
@@ -113,7 +113,7 @@ export const WATER_PARAM_APPLIER_KEYS = [
 const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> = {
   waterEnabled: () => {}, // 可见性由回调 syncWaterVisibility 单独承接
   waterMode: () => {}, // 形态切换由回调 rebuildWaterContainer 承接，不入本表
-  waterWaveSpeed: () => {}, // 无材质应用（仅 update 累加速度读值）
+  waterWaveSpeed: () => {}, // [锐评 3.3] 无材质应用——消费点在 update() 逐帧现读 envState（登记于 WATER_FRAME_READ_KEYS）
   waterWetness: ({ strategy, top, setUniform }) => {
     if (!strategy.wetnessGated) return;
     const eff = envState.waterOpacity * envState.waterWetness;
@@ -205,6 +205,49 @@ const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> 
   waterReflectionClipBias: () => {},
   waterReflectDisableWhenSSR: () => {},
 };
+
+// [锐评 3.1 守卫] 水 shader uniform 名的**唯一登记点**。
+// 历史：uniform 名在 onBeforeCompile 手抄一遍（初始化）、setUniform 再用 string key 写回——
+// 两份词典手抄，拼错即静默失败（guard 只防「uniform 不存在」，不防 typo）。
+// 现收编：本表是全量登记，setUniform 的 name 形参收窄为 WaterUniformName（编译期防 typo），
+// 测试「 injected uniform ⊆ WATER_UNIFORM_NAMES ∧ WATER_UNIFORM_NAMES ⊆ injected 」（双向）锁同步。
+export const WATER_UNIFORM_NAMES = [
+  // 波浪/形态（onBeforeCompile 初始化 + setUniform 写回）
+  "uTime",
+  "uSize",
+  "uHalfSize",
+  "uBaseOpacity",
+  "uRoundness",
+  "uChoppiness",
+  "uDetailStrength",
+  // ADR-297 倒影三件套（onBeforeCompile 初始化 + renderReflection/applyReflectionUniforms 每帧写）
+  "uReflTex",
+  "uReflMatrix",
+  "uReflStrength",
+] as const;
+
+/** setUniform 的合法 uniform 名（WATER_UNIFORM_NAMES 的类型投影）——拼错编译即红 */
+export type WaterUniformName = (typeof WATER_UNIFORM_NAMES)[number];
+
+/** [锐评 3.5] clipBias 重建死区（单位 = clipBias 自定义量级，非米制）。
+ *  schema `waterReflectionClipBias` 滑杆 step=0.1，拖满 0→10 有 ~100 个离散值——
+ *  每个都触发 Reflector + RT 重建的话，单次拖动会重建百次（几何/材质/RT 三件全建）。
+ *  死区 0.05：|Δbias| < 0.05 时镜像裁剪面位移肉眼不可感，跳过重建（保住内嵌 carry）。
+ *  与既有纪律一致：bias 实质变化（F-2 的 1.5 偏离 = Δ1.5）仍重建。 */
+export const REFLECTOR_CLIP_BIAS_TOLERANCE = 0.05;
+
+/**
+ * [锐评 3.3] 「无材质应用、由 render-loop 逐帧现读 envState」的 water 键登记表。
+ * 背景：`applyChangedParams` 分派表里这类键只有空条目（如 `waterWaveSpeed: () => {}`），
+ * 消费点在 `update(dt)` 逐帧现读 envState——但**没有任何一处显式登记这条路**，
+ * 维护者看到空条目只能人肉 grep `update()` 才知去向（隐性约定）。
+ * 本表把「这类键存在、且消费点必在 update」变成可验证的结构证据：
+ *  - 契约测试断言「本表条目 ∈ WATER_PARAM_APPLIER_KEYS」且「applier 是空条目」；
+ *  - 新加同类键（未来若有大水面仍需逐帧读 envState 的推导量）须在此登记，否则契约红。
+ * `update(dt)` 顶部的 `this.waterTime.value += dt * envState.waterWaveSpeed`（正式键：
+ * `waterWaveSpeed`）是当前唯一消费点。
+ */
+export const WATER_FRAME_READ_KEYS = ["waterWaveSpeed"] as const;
 
 export class WaterCapability implements SceneCapability {
   readonly id = "water";
@@ -616,7 +659,15 @@ export class WaterCapability implements SceneCapability {
    *  `reflectorClipBias` 不一致即弃旧建新（RT/材质具名释放，不泄漏）。 */
   private ensureReflector(): Reflector {
     const bias = envState.waterReflectionClipBias;
-    if (this.reflector && this.reflectorClipBias !== bias) {
+    // [锐评 3.5] clipBias 死区：偏差 < REFLECTOR_CLIP_BIAS_TOLERANCE 时视为未变、跳过重建。
+    // 背景：`water-reflection-clip-bias` 滑杆 step=0.1，拖动 0→10 会产生 ~100 个离散值——
+    // 每个都触发「弃载体 → 新 Reflector → 新 RT」整场重建（昂贵：几何 + 材质 + RT 纹理）。
+    // 而 |Δbias| < 0.05 时投影裁剪面的位移肉眼不可感（clipBias 是投影视空间量，非米制）。
+    // 死区仍保留「bias 实质变化 → 重建」语义（diff=0 与 diff=0.04 都不重建，符合预期）。
+    if (
+      this.reflector &&
+      Math.abs(this.reflectorClipBias - bias) >= REFLECTOR_CLIP_BIAS_TOLERANCE
+    ) {
       this.disposeReflector();
     }
     if (!this.reflector) {
@@ -768,8 +819,10 @@ export class WaterCapability implements SceneCapability {
   /** 顶水面 shader 的 uniform 就地写入——穿透 three 的 userData.shader 后门，统一收口。
    *  原实现每处各写一遍五层 `as unknown as` cast（拼错 uniform 名即静默失效，与 ADR-257 批判的
    *  mesh-name 寻址同病）；守卫：shader 尚未编译或 uniform 名不存在时静默跳过——
-   *  调用方均为「值已进 envState」的路径，重建时由 buildMaterial 读 envState 兜底。 */
-  private setUniform(mat: THREE.Material | undefined, name: string, value: number): void {
+   *  调用方均为「值已进 envState」的路径，重建时由 buildMaterial 读 envState 兜底。
+   *  [锐评 3.1] name 形参收窄为 WaterUniformName（WATER_UNIFORM_NAMES 类型投影）——
+   *  拼错 uniform 名编译即红，不再是 string 黑洞。 */
+  private setUniform(mat: THREE.Material | undefined, name: WaterUniformName, value: number): void {
     const u = (
       mat as unknown as {
         userData?: { shader?: { uniforms?: Record<string, { value: number } | undefined> } };

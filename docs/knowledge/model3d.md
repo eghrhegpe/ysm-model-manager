@@ -665,6 +665,7 @@ auto_fields:
     - recoverMountFailure
     - REFLECTION_MODES
     - ReflectionMode
+    - REFLECTOR_CLIP_BIAS_TOLERANCE
     - ReflectorCapability
     - registerBoneRaycast
     - registerBuiltScene
@@ -925,8 +926,10 @@ auto_fields:
     - vrmSemanticBoneMap
     - warnLargeModelIfNeeded
     - WasdReuse
+    - WATER_FRAME_READ_KEYS
     - WATER_MODES
     - WATER_PARAM_APPLIER_KEYS
+    - WATER_UNIFORM_NAMES
     - WATER_WAVE_SEGMENTS
     - WaterBody
     - WaterBodyStrategy
@@ -935,6 +938,7 @@ auto_fields:
     - WaterMode
     - WaterPartRole
     - WaterTopMesh
+    - WaterUniformName
     - WorkerBridge
     - WorkerErrorStrategy
     - workerMmdUpdateWithMixer

@@ -6,7 +6,7 @@
 // tpl-structure.test.ts 测**各页面模板采用工厂后**的成品结构。
 
 import { describe, it, expect } from "vitest";
-import { renderTabs, type TabsShell } from "./tabs-shell.ts";
+import { renderSubBar, renderTabs, type TabsShell } from "./tabs-shell.ts";
 
 /** 栏 + 面板拼平（仅用于本文件的结构断言；生产由调用方决定落位） */
 function flat(shell: TabsShell): string {
@@ -192,5 +192,38 @@ describe("renderTabs 产出契约（ADR-259 §2）", () => {
     ).toBe("");
     // ③ 有隐藏但未传文案 → 调用方未选择告知（repo 页现状），不擅自造文案
     expect(renderTabs({ prefix: "p", viewerMode: true, tabs: tabsHidden }).notice).toBe("");
+  });
+});
+
+// ===== renderSubBar 产出契约（ADR-300 §2.2 + §3 a11y 接线）=====
+describe("renderSubBar 产出契约", () => {
+  const bar = renderSubBar("logs", [
+    { id: "op", label: "操作" },
+    { id: "runtime", label: "运行时" },
+    { id: "trace", label: "剖析" },
+  ], "op");
+
+  it("bar 具 role=toolbar + aria-label（不套 tablist——顶层已是 tablist，嵌套反模式）", () => {
+    expect(bar).toContain('class="diag-sub-bar" data-sub-bar="logs" data-active-sub="op" role="toolbar"');
+    expect(bar).toContain("aria-label");
+    // 红线：绝不出现嵌套 tablist
+    expect(bar).not.toContain('role="tablist"');
+  });
+
+  it("pill 具 role=radio + aria-checked，激活项 checked=true", () => {
+    // 注意实际 DOM 顺序：class → data-sub → data-testid → role → aria-checked → tabindex
+    expect(bar).toContain('class="diag-sub-tab active" data-sub="op" data-testid="diag-sub-logs-op" role="radio" aria-checked="true" tabindex="0"');
+    expect(bar).toContain('class="diag-sub-tab" data-sub="runtime" data-testid="diag-sub-logs-runtime" role="radio" aria-checked="false" tabindex="-1"');
+    expect(bar).toContain('class="diag-sub-tab" data-sub="trace" data-testid="diag-sub-logs-trace" role="radio" aria-checked="false" tabindex="-1"');
+  });
+
+  it("roving tabindex：激活项 tabindex=0，其余 -1", () => {
+    expect(bar).toContain('class="diag-sub-tab active" data-sub="op" data-testid="diag-sub-logs-op" role="radio" aria-checked="true" tabindex="0"');
+    expect(bar).toContain('class="diag-sub-tab" data-sub="runtime" data-testid="diag-sub-logs-runtime" role="radio" aria-checked="false" tabindex="-1"');
+  });
+
+  it("派生 testid 与既有断言一致（tpl.test 同形的向后兼容）", () => {
+    expect(bar).toContain('data-testid="diag-sub-logs-op"');
+    expect(bar).toContain('data-testid="diag-sub-logs-runtime"');
   });
 });

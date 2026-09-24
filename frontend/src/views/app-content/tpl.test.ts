@@ -110,6 +110,9 @@ describe("app-content 模板", () => {
     expect(html).toContain("stg-web-repo-card");
     expect(html).toContain("web-repo-auth-btn");
     expect(html).toContain("web-repo-auth-status");
+    // 网页版只有文件来源入口，外层节标题不应继续声称可配置“路径”
+    expect(html).toContain(`${UI_ICONS.settings} 文件来源</div>`);
+    expect(html).not.toContain(`${UI_ICONS.settings} 路径配置</div>`);
   });
 
   it("settingsHTML Android（桥存在但非网页版）渲染本地路径卡而非 FSA 授权卡", () => {
@@ -130,6 +133,12 @@ describe("app-content 模板", () => {
 
   it("settingsHTML 桌面模式包含主题选择/默认页/高级设置网格", () => {
     const html = settingsHTML();
+    // 方案 A：一级菜单按用户任务命名，保留四个槽位，不恢复解析/鸣谢独立入口
+    expect(html).toContain(`data-tab="basic">${UI_ICONS.settings} 常规</button>`);
+    expect(html).toContain(`data-tab="ui">${UI_ICONS.appearance} 外观</button>`);
+    expect(html).toContain(`data-tab="ops">${UI_ICONS.joystick} 3D 与解析</button>`);
+    expect(html).not.toContain(`data-tab="basic">${UI_ICONS.settings} 基础设置</button>`);
+    expect(html).not.toContain(`data-tab="ui">${UI_ICONS.appearance} 界面与体验</button>`);
     // 桌面模式展示完整偏好：主题选择器、动画开关、默认启动页、文件存储高级网格
     expect(html).toContain("theme-picker");
     expect(html).toContain("set-animations");
@@ -151,6 +160,13 @@ describe("app-content 模板", () => {
     // 3D 操作键位网格已改单列（原 2 列挤压标签区至约 10 字宽，奇葩），回归防线锁定单列
     // 键位网格已改为 stg-grid 工厂小卡容器（与基础设置路径卡同构），不再内联 grid 列
     expect(html).toContain('id="td-keymap-grid" class="stg-grid"');
+    // 启动默认页属于「常规」，不属于「外观」
+    const basicTab = panelSlice(html, "stg-tab-basic", "stg-tab-ui");
+    const uiTab = panelSlice(html, "stg-tab-ui", "stg-tab-ops");
+    expect(basicTab).toContain('id="stg-default-page-card"');
+    expect(basicTab).toContain('id="set-default-page"');
+    expect(uiTab).not.toContain('id="stg-default-page-card"');
+    expect(uiTab).not.toContain('id="set-default-page"');
     // github/diagnostics/settings 可作启动页却在 UI 选不到（能力被 UI 阉割）
     const dpSel = html.slice(html.indexOf('id="set-default-page"'));
     const optVals = [...dpSel.slice(0, dpSel.indexOf("</select>")).matchAll(/<option value="([^"]+)"/g)].map(
@@ -164,20 +180,19 @@ describe("app-content 模板", () => {
       "diagnostics",
       "settings",
     ]);
-    // 组间距显式契约：未挂 .section-title 的组必须自带 stg-section，
-    // 否则与上方组贴死（两卡并排组曾因删了 section-title 丢失间隔）
-    expect(html).toContain("stg-grid stg-grid-2 stg-section");
+    // 无标题卡片组必须显式挂 stg-section，避免与上方组贴死
+    expect(html).toContain("stg-section");
     // .settings-group 的常量（margin-bottom / animation）已入类，
     // 内联仅保留 animation-delay——不得再把常量手写回模板（曾 7 处副本）
     expect(html).not.toContain("margin-bottom:12px;animation:card-in");
     expect(html).toContain('class="settings-group" style="animation-delay:');
     expect(html).toContain("set-advanced-grid");
-    // 2026-10 菜单收口：6 tab → 4 tab——旧「解析」「鸣谢」tab 槽退役，id 不得残留
+    // 6 tab → 4 tab 收口：旧「解析」「鸣谢」tab 槽退役，id 不得残留
     expect(html).not.toContain('data-tab="parser"');
     expect(html).not.toContain('data-tab="credits"');
     expect(html).not.toContain('id="stg-tab-parser"');
     expect(html).not.toContain('id="stg-tab-credits"');
-    // 3D 预览操作 + 解析开关收口进「操作」tab（不再混在界面与体验内）
+    // 3D 预览 + 解析开关收口进「3D 与解析」tab
     expect(html).toContain('data-tab="ops"');
     expect(html).toContain('id="stg-tab-ops"');
     const opsTab = panelSlice(html, "stg-tab-ops", "stg-tab-about");
@@ -190,10 +205,9 @@ describe("app-content 模板", () => {
     for (const mode of TD_ROT_MODE.values) {
       expect(opsTab, `旋转模式 ${mode} 未在本页产出`).toContain(`<option value="${mode}">`);
     }
-    const uiTab = panelSlice(html, "stg-tab-ui", "stg-tab-ops");
     expect(uiTab).not.toContain('id="td-camspeed"');
     expect(uiTab).not.toContain('id="td-keymap-grid"');
-    // worker 解析开关（FBX / MMD 逃生舱）收口进「操作」tab 的「解析」节，不在界面 tab 内
+    // worker 解析开关（FBX / MMD 逃生舱）收口进「3D 与解析」tab，不在外观 tab 内
     expect(opsTab).toContain("set-fbx-worker");
     expect(opsTab).toContain("set-mmd-worker");
     expect(uiTab).not.toContain("set-fbx-worker");
@@ -241,9 +255,10 @@ describe("app-content 模板", () => {
     expect(html).toContain(`data-tab="logs">${UI_ICONS.clipboard} 日志</button>`);
     expect(html).toContain(`data-tab="bench">${UI_ICONS.performance} 基准</button>`);
     expect(html).toContain(`data-tab="audit">${UI_ICONS.diagnose} 体检</button>`);
-    // 子 pill 走 renderSubBar 统一标记（data-sub + 派生 testid），且文案不带图标（§2.3 图标预算）
+    // 子 pill 走 renderSubBar 统一标记（data-sub + 派生 testid + a11y：role=radio/aria-checked/roving），
+    // 且文案不带图标（§2.3 图标预算）
     expect(html).toContain(
-      '<button class="diag-sub-tab active" data-sub="op" data-testid="diag-sub-logs-op">操作日志</button>',
+      '<button class="diag-sub-tab active" data-sub="op" data-testid="diag-sub-logs-op" role="radio" aria-checked="true" tabindex="0">操作日志</button>',
     );
     // 「跳过」全链路一枚 skip 图标（`tpl` chip ↔ logs.ts 行）；闪电不再兼任状态筛选
     expect(html).toContain(`data-status="skipped">${UI_ICONS.skip}`);

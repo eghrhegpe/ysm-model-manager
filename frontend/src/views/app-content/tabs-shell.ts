@@ -142,18 +142,22 @@ export interface SubTabSpec {
  * - 稳定测试钩子由 `group + id` 派生：`data-testid="diag-sub-<group>-<id>"`——同 renderTabs
  *   的 id 规则一样，模板与测试两侧不再靠人肉对齐。
  * - `data-active-sub` 初始化为激活项：bench 组读它作为运行模式源（ADR-300 §2.2 三读点收口）。
- * - 不套 `role="tablist"`：顶层 tabbar 已是 tablist，嵌套双 tablist 是 ARIA 反模式
- *   （ADR-300 §2.2；键盘化留 §3 遗留）。
+ * - **不套 `role="tablist"`**：顶层 tabbar 已是 tablist，嵌套双 tablist 是 ARIA 反模式。
+ *   采纳 ADR-300 §3 遗留点名的第一种姿势——`.diag-sub-bar` 为 `role="toolbar"` +
+ *   `aria-label="{group} 子切换"`，每个 pill 为 `role="radio"` + `aria-checked`
+ *   （互斥单选，非 tab 语义）；当前项 `tabindex="0"`（roving tabindex 基座），其余 `-1`。
+ *   键盘化由此处（bindSubBar）单点实现，见下方函数。
  */
 export function renderSubBar(
   group: string,
   items: readonly SubTabSpec[],
   activeId: string,
 ): string {
-  return `<div class="diag-sub-bar" data-sub-bar="${group}" data-active-sub="${activeId}">${items
+  const barLabel = `subbar-${group}`;
+  return `<div class="diag-sub-bar" data-sub-bar="${group}" data-active-sub="${activeId}" role="toolbar" aria-label="${barLabel}">${items
     .map(
       (t) =>
-        `<button class="diag-sub-tab${t.id === activeId ? " active" : ""}" data-sub="${t.id}" data-testid="diag-sub-${group}-${t.id}">${t.label}</button>`,
+        `<button class="diag-sub-tab${t.id === activeId ? " active" : ""}" data-sub="${t.id}" data-testid="diag-sub-${group}-${t.id}" role="radio" aria-checked="${t.id === activeId ? "true" : "false"}"${t.id === activeId ? ' tabindex="0"' : ' tabindex="-1"'}>${t.label}</button>`,
     )
     .join("")}</div>`;
 }
@@ -169,26 +173,103 @@ export function renderSubBar(
  *  - bench 组的行显隐**不走**本机制（那是 `.perf-mode-off` + `[data-perf-mode]` 的既有领地，
  *    ADR-278 §2.4——两套机制不互相覆盖）；bench 的 onSwitch 只负责触发 `applyPerfModeUI`。
  *
+ * 键盘化（ADR-300 §3 遗留，2026 接线）：bar 具 `role="toolbar"`（renderSubBar 产出）时，
+ * 挂 roving tabindex + 方向键（ArrowLeft/Right 循环、Home/End 首尾、Enter/Space 激活）。
+ * 兼容：手写夹具/旧模板的 `.diag-sub-bar` 无 role 属性 → 自动跳过键盘增强，仅保留点击。
+ *
  * 与页面级监听同理不做注销 API：pill 与面板同属 shadow 树生命周期，语言切换整页重建后重绑。
  */
 export function bindSubBar(root: ShadowRoot, group: string, onSwitch?: (id: string) => void): void {
   const bar = root.querySelector<HTMLElement>(`.diag-sub-bar[data-sub-bar="${group}"]`);
   if (!bar) return;
   const pills = [...bar.querySelectorAll<HTMLElement>(".diag-sub-tab")];
-  pills.forEach((pill) => {
-    pill.addEventListener("click", () => {
-      const id = pill.dataset.sub ?? "";
-      pills.forEach((b) => {
-        b.classList.toggle("active", b === pill);
-      });
-      bar.dataset.activeSub = id;
-      root
-        .querySelectorAll<HTMLElement>(`[data-sub-group="${group}"][data-sub-pane]`)
-        .forEach((pane) => {
-          const set = (pane.dataset.subPane ?? "").split(/\s+/);
-          pane.style.display = set.includes(id) ? "" : "none";
-        });
-      onSwitch?.(id);
+  if (!pills.length) return;
+
+  /** 迁移 active 选中态 + aria-checked + roving tabindex + 写 data-active-sub + 显隐/副作用 */
+  const activate = (pill: HTMLElement): void => {
+    const id = pill.dataset.sub ?? "";
+    pills.forEach((b) => {
+      const on = b === pill;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-checked", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;
     });
+    bar.dataset.activeSub = id;
+    root
+      .querySelectorAll<HTMLElement>(`[data-sub-group="${group}"][data-sub-pane]`)
+      .forEach((pane) => {
+        const set = (pane.dataset.subPane ?? "").split(/\s+/);
+        pane.style.display = set.includes(id) ? "" : "none";
+      });
+    onSwitch?.(id);
+  };
+
+  pills.forEach((pill) => {
+    pill.addEventListener("click", () => activate(pill));
+    // aria-hidden/disabled 的 pill 不参与 tab 序（防键盘落进隐形控件）
+    if (pill.tabIndex === -1 && pill.getAttribute("aria-disabled") === "true") {
+      pill.setAttribute("tabindex", "-1");
+    }
+  });
+
+  // —— 键盘导航（仅当 bar 具 renderSubBar 产出的 role="toolbar" 时启用；手写夹具跳过）——
+  if (bar.getAttribute("role") !== "toolbar") return;
+
+  // 可导航 pill（排除 aria-disabled="true"）——roving 圈在可用项内
+  const navPills = pills.filter((p) => p.getAttribute("aria-disabled") !== "true");
+  if (!navPills.length) return;
+
+  // 焦点索引自维护：`document.activeElement` 对 shadow 内聚焦元素会 retarget 回 host
+  // （规范行为），读它取到的是 docker/容器而非 pill——恒失准。用 focusin（bar 级委托）
+  // 单写点 + activate 同步 + keydown 的 target 兜底三路把 focusIdx 保持为「真实当前项」。
+  let focusIdx = navPills.findIndex((p) => p.classList.contains("active"));
+  bar.addEventListener("focusin", (e) => {
+    const idx = navPills.indexOf(e.target as HTMLElement);
+    if (idx !== -1) focusIdx = idx;
+  });
+
+  const focusIndex = (idx: number): void => {
+    const target = navPills[idx];
+    if (!target) return;
+    focusIdx = idx;
+    target.focus();
+  };
+
+  // 方向键移动 = 激活（radio 语义：移动即选中）同步聚焦
+  const moveTo = (idx: number): void => {
+    const target = navPills[(idx + navPills.length) % navPills.length];
+    if (!target) return;
+    activate(target);
+    focusIdx = navPills.indexOf(target);
+    target.focus();
+  };
+
+  bar.addEventListener("keydown", (e: KeyboardEvent) => {
+    // 真实键盘路径：e.target 是聚焦 pill；测试直接派发到 bar 时回落 focusIdx
+    const targetIdx = navPills.indexOf(e.target as HTMLElement);
+    const curIdx = targetIdx !== -1 ? targetIdx : focusIdx;
+    if (curIdx === -1) return; // 焦点从未落进本 bar（外部误触）→ 不接管
+    switch (e.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        e.preventDefault();
+        moveTo(curIdx + 1);
+        return;
+      case "ArrowLeft":
+      case "ArrowUp":
+        e.preventDefault();
+        moveTo(curIdx - 1);
+        return;
+      case "Home":
+        e.preventDefault();
+        focusIndex(0); // radiogroup 规范：Home/End 只移焦点、不改选中
+        return;
+      case "End":
+        e.preventDefault();
+        focusIndex(navPills.length - 1);
+        return;
+      default:
+        return;
+    }
   });
 }

@@ -1,5 +1,9 @@
 // ===== 站点视图 HTML 构建（纯函数，从 site-view.ts 拆出）=====
+//
+// 全部 HTML 以模板字面量拼装（与 views 层 tpl.ts / tpl-oldest.ts 同口径），
+// 不再手搓 `+` 字符串接龙。esc() 仍在插值点显式调用，保持「结构在代码、内容经转义」红线。
 
+import type { LocaleKey } from "@/core/i18n/t.ts";
 import { t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -56,34 +60,20 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
   const fallbackChar = cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?";
   const fallbackDiv = `<div class="cr-avatar cr-avatar-fallback">${fallbackChar}</div>`;
   const avatarHtml = hasAvatar
-    ? '<img class="cr-avatar" src="' +
-      esc(avatarCache[cr.name]) +
-      '" data-debug-avatar="' +
-      esc(cr.name) +
-      '" data-avatar-fallback="' +
-      fallbackChar +
-      '">'
+    ? `<img class="cr-avatar" src="${esc(avatarCache[cr.name])}" data-debug-avatar="${esc(
+        cr.name,
+      )}" data-avatar-fallback="${fallbackChar}">`
     : fallbackDiv;
 
-  const localBadge =
-    cr._fromLocal && authorCount > 0
-      ? '<span class="cr-card-local-count cr-card-local-jump" data-local-creator="' +
-        esc(cr.name) +
-        '" title="' +
-        t("content.viewLocalModels") +
-        '">' +
-        UI_ICONS.folder +
-        authorCount +
-        "</span>"
-      : cr._fromLocal
-        ? '<span class="cr-card-local-count cr-card-local-jump" data-local-creator="' +
-          esc(cr.name) +
-          '" title="' +
-          t("content.viewLocalModels") +
-          '">' +
-          UI_ICONS.folder +
-          "</span>"
-        : "";
+  const localBadge = cr._fromLocal
+    ? authorCount > 0
+      ? `<span class="cr-card-local-count cr-card-local-jump" data-local-creator="${esc(
+          cr.name,
+        )}" title="${t("content.viewLocalModels")}">${UI_ICONS.folder}${authorCount}</span>`
+      : `<span class="cr-card-local-count cr-card-local-jump" data-local-creator="${esc(
+          cr.name,
+        )}" title="${t("content.viewLocalModels")}">${UI_ICONS.folder}</span>`
+    : "";
 
   const platformBadges = (cr.type || "")
     .split(";")
@@ -93,72 +83,32 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
 
   // 🔍 搜索快捷按钮（与星标对称）：有站点搜索能力才渲染，点击联网搜索创作者，免进详情
   const searchBtn = site.searchUrl
-    ? '<span class="cr-card-search" data-search-creator="' +
-      esc(cr.name) +
-      '" title="' +
-      t("content.searchMoreModels") +
-      '">' +
-      UI_ICONS.search +
-      "</span>"
+    ? `<span class="cr-card-search" data-search-creator="${esc(
+        cr.name,
+      )}" title="${t("content.searchMoreModels")}">${UI_ICONS.search}</span>`
     : "";
 
-  const tierBar = tierRank ? '<div class="cr-card-tier-bar"></div>' : "";
+  const tierBar = tierRank ? `<div class="cr-card-tier-bar"></div>` : "";
   const dataSpin = tierRank ? ` data-spin="${tierRank}"` : "";
   const starIcon = isFaved(cr.name) ? "⭐" : "☆";
   const tagRole = getTagFromRole(cr.role);
   const tagIcon = getTagIconFromRole(cr.role);
 
   return (
-    '<div class="gh-card cr-creator-card cr-creator-card--grid"' +
-    ' tabindex="0"' +
-    ' style="animation-delay:' +
-    idx * 0.03 +
-    's"' +
-    ' data-name="' +
-    esc(cr.name) +
-    '"' +
-    ' data-tag="' +
-    esc(tagRole) +
-    '"' +
-    (tierRank ? ` data-tier="${esc(tierRank)}"` : "") +
-    ' title="' +
-    esc(t("content.searchFor", { name: cr.name })) +
-    '">' +
+    `<div class="gh-card cr-creator-card cr-creator-card--grid" tabindex="0" style="animation-delay:${
+      idx * 0.03
+    }s" data-name="${esc(cr.name)}" data-tag="${esc(tagRole)}"${
+      tierRank ? ` data-tier="${esc(tierRank)}"` : ""
+    } title="${esc(t("content.searchFor", { name: cr.name }))}">` +
     tierBar +
-    '<div class="cr-card-header">' +
-    '<div class="cr-avatar-container">' +
-    '<div class="cr-avatar-ring"' +
-    dataSpin +
-    "></div>" +
-    avatarHtml +
-    "</div>" +
-    '<div class="cr-card-name-row">' +
-    '<span class="cr-card-name">' +
-    esc(cr.name) +
-    "</span>" +
-    localBadge +
-    '<span class="cr-star-btn" data-star="' +
-    esc(cr.name) +
-    '">' +
-    starIcon +
-    "</span>" +
-    searchBtn +
-    "</div>" +
-    "</div>" +
-    '<div class="cr-card-desc">' +
-    esc(cr.desc) +
-    "</div>" +
-    '<div class="cr-card-footer">' +
-    platformBadges +
-    '<span class="cr-tag cr-tag-' +
-    esc(tagRole) +
-    '">' +
-    tagIcon +
-    " <span>" +
-    esc(tagRole) +
-    "</span>" +
-    "</div>" +
-    "</div>"
+    `<div class="cr-card-header"><div class="cr-avatar-container"><div class="cr-avatar-ring"${dataSpin}></div>${avatarHtml}</div>` +
+    `<div class="cr-card-name-row"><span class="cr-card-name">${esc(
+      cr.name,
+    )}</span>${localBadge}<span class="cr-star-btn" data-star="${esc(cr.name)}">${starIcon}</span>${searchBtn}</div></div>` +
+    `<div class="cr-card-desc">${esc(cr.desc)}</div>` +
+    `<div class="cr-card-footer">${platformBadges}<span class="cr-tag cr-tag-${esc(
+      tagRole,
+    )}">${tagIcon} <span>${esc(tagRole)}</span></span></div></div>`
   );
 }
 
@@ -167,61 +117,37 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
   const { esc, site, browseMode } = ctx;
   const presets = site.presetSearches ?? [];
   // 图标（UI_ICONS）在模板层拼装，i18n 值只留纯文本（ADR-238：结构在代码，内容在 i18n）。
+  const modeOpt = (
+    cls: string,
+    mode: "external" | "embed" | "window",
+    icon: string,
+    key: LocaleKey,
+  ) =>
+    `<span class="cr-mode-opt ${cls}${browseMode.v === mode ? " active" : ""}" data-mode="${mode}" title="${t(
+      key,
+    )}">${icon} ${t(key)}</span>`;
   return (
-    '<div class="cr-section">' +
-    '<span class="cr-section-title-lg">' +
-    UI_ICONS.search +
-    " " +
-    t("content.webSearchTerms") +
-    "</span>" +
-    '<span class="cr-section-sub">(' +
-    presets.length +
-    ")</span>" +
-    '<span class="cr-section-fill"></span>' +
-    '<button id="cr-mode-toggle" class="cr-mode-switch">' +
-    '<span class="cr-mode-opt cr-mode-ext' +
-    (browseMode.v === "external" ? " active" : "") +
-    '" data-mode="external" title="' +
-    t("content.modeExternal") +
-    '">' +
-    UI_ICONS.external +
-    " " +
-    t("content.modeExternal") +
-    "</span>" +
-    '<span class="cr-mode-opt cr-mode-emb' +
-    (browseMode.v === "embed" ? " active" : "") +
-    '" data-mode="embed" title="' +
-    t("content.modeEmbed") +
-    '">' +
-    UI_ICONS.search +
-    " " +
-    t("content.modeEmbed") +
-    "</span>" +
-    '<span class="cr-mode-opt cr-mode-win' +
-    (browseMode.v === "window" ? " active" : "") +
-    '" data-mode="window" title="' +
-    t("content.modeWindow") +
-    '">' +
-    UI_ICONS.window +
-    " " +
-    t("content.modeWindow") +
-    "</span>" +
-    "</button>" +
-    "</div>" +
-    '<div class="cr-preset-area">' +
+    `<div class="cr-section"><span class="cr-section-title-lg">${UI_ICONS.search} ${t(
+      "content.webSearchTerms",
+    )}</span><span class="cr-section-sub">(${
+      presets.length
+    })</span><span class="cr-section-fill"></span><button id="cr-mode-toggle" class="cr-mode-switch">` +
+    modeOpt("cr-mode-ext", "external", UI_ICONS.external, "content.modeExternal") +
+    modeOpt("cr-mode-emb", "embed", UI_ICONS.search, "content.modeEmbed") +
+    modeOpt("cr-mode-win", "window", UI_ICONS.window, "content.modeWindow") +
+    `</button></div>` +
+    `<div class="cr-preset-area">` +
     presets
       .map(
         (ps, i) =>
-          '<button class="cr-preset-btn" style="animation-delay:' +
-          stagger(i, 25, 300) +
-          'ms" data-q="' +
-          esc(ps.q || ps.label) +
-          '">' +
-          esc(ps.label) +
-          "</button>",
+          `<button class="cr-preset-btn" style="animation-delay:${stagger(
+            i,
+            25,
+            300,
+          )}ms" data-q="${esc(ps.q || ps.label)}">${esc(ps.label)}</button>`,
       )
       .join("") +
-    "</div>"
+    `</div>`
   );
 }
 
@@ -248,42 +174,26 @@ function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
     if (tag) tagSet.add(tag);
   });
   const tags = [...tagSet];
+  const filterBtn = (tag: string, delay: number, inner: string) =>
+    `<button class="cr-tag-filter-btn${
+      activeTag === tag ? " active" : ""
+    }" style="animation-delay:${delay}ms" data-tag="${esc(tag)}">${inner}</button>`;
   return (
-    '<div class="cr-tag-filter-row">' +
-    '<button class="cr-tag-filter-btn' +
-    (activeTag ? "" : " active") +
-    '" style="animation-delay:0ms" data-tag="">' +
-    t("content.filterAll") +
-    "</button>" +
-    '<button class="cr-tag-filter-btn' +
-    (activeTag === "creator" ? " active" : "") +
-    '" style="animation-delay:30ms" data-tag="creator">' +
-    t("content.filterCreator") +
-    "</button>" +
-    '<button class="cr-tag-filter-btn' +
-    (activeTag === "official" ? " active" : "") +
-    '" style="animation-delay:60ms" data-tag="official">' +
-    t("content.filterOfficial") +
-    "</button>" +
+    `<div class="cr-tag-filter-row">` +
+    filterBtn("", 0, t("content.filterAll")) +
+    filterBtn("creator", 30, t("content.filterCreator")) +
+    filterBtn("official", 60, t("content.filterOfficial")) +
     tags
       .filter((tag) => tag !== "creator" && tag !== "official")
-      .map(
-        (tag, i) =>
-          '<button class="cr-tag-filter-btn' +
-          (activeTag === tag ? " active" : "") +
-          '" style="animation-delay:' +
-          stagger(i + 3, 30, 300) +
-          'ms" data-tag="' +
-          esc(tag) +
-          '">' +
-          getTagIconFromRole(tag) +
-          " <span>" +
-          esc(tag) +
-          "</span>" +
-          "</button>",
+      .map((tag, i) =>
+        filterBtn(
+          tag,
+          stagger(i + 3, 30, 300),
+          `${getTagIconFromRole(tag)} <span>${esc(tag)}</span>`,
+        ),
       )
       .join("") +
-    "</div>"
+    `</div>`
   );
 }
 
@@ -293,32 +203,21 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
   const parts: string[] = [];
   // 标题栏始终显示，确保「更新配置」按钮可点击
   parts.push(
-    '<div class="cr-section cr-section-wrap">' +
-      '<span class="cr-section-title-lg">' +
-      UI_ICONS.appearance +
-      " " +
-      t("content.activeCreators") +
-      "</span>" +
-      '<span class="cr-section-sub" id="ws-cr-count">(' +
-      creators.length +
-      ")</span>" +
-      '<input type="text" id="ws-cr-search" class="cr-search-input" placeholder="' +
-      t("content.searchCreatorPlaceholder") +
-      '" value="' +
-      esc(ctx.searchKw) +
-      '">' +
-      '<span class="cr-section-fill"></span>' +
-      '<button class="cr-fetch-btn" title="' +
-      t("content.fetchConfigTitle") +
-      '">' +
-      UI_ICONS.download +
-      " " +
-      t("content.fetchConfig") +
-      "</button>" +
-      (ctx.viewerMode
+    `<div class="cr-section cr-section-wrap"><span class="cr-section-title-lg">${UI_ICONS.appearance} ${t(
+      "content.activeCreators",
+    )}</span><span class="cr-section-sub" id="ws-cr-count">(${
+      creators.length
+    })</span><input type="text" id="ws-cr-search" class="cr-search-input" placeholder="${t(
+      "content.searchCreatorPlaceholder",
+    )}" value="${esc(
+      ctx.searchKw,
+    )}"><span class="cr-section-fill"></span><button class="cr-fetch-btn" title="${t(
+      "content.fetchConfigTitle",
+    )}">${UI_ICONS.download} ${t("content.fetchConfig")}</button>${
+      ctx.viewerMode
         ? ""
-        : `<button class="cr-edit-btn">${UI_ICONS.edit} ${t("content.edit")}</button>`) +
-      "</div>",
+        : `<button class="cr-edit-btn">${UI_ICONS.edit} ${t("content.edit")}</button>`
+    }</div>`,
   );
   if (creators.length) {
     // 收藏置顶
@@ -337,11 +236,9 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
     parts.push(`<div class="cr-creator-grid" id="cr-creator-grid">${cardsHtml}</div>`);
   } else {
     parts.push(
-      '<div class="placeholder-box placeholder-box--roomy">' +
-        t("content.emptyCreators") +
-        '<br><br><button class="cr-local-btn" data-local-empty>' +
-        `${UI_ICONS.folderOpen} ${t("content.browseLocalModels")}` +
-        "</button></div>",
+      `<div class="placeholder-box placeholder-box--roomy">${t("content.emptyCreators")}<br><br><button class="cr-local-btn" data-local-empty>${
+        UI_ICONS.folderOpen
+      } ${t("content.browseLocalModels")}</button></div>`,
     );
   }
   return parts.join("");
@@ -350,59 +247,20 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
 /** 搜索词编辑卡列表 + 新增区（空 preset 也渲染，让用户能新增）。 */
 function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
   const { esc, site } = ctx;
-  let html =
-    '<div class="cr-section">' +
-    '<span class="cr-section-title-lg">' +
-    t("content.searchTerms") +
-    "</span>" +
-    "</div>";
+  let html = `<div class="cr-section"><span class="cr-section-title-lg">${t("content.searchTerms")}</span></div>`;
   (site.presetSearches || []).forEach((ps, idx) => {
     html +=
-      '<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="' +
-      idx +
-      '">' +
-      '<div class="cr-edit-card-head">' +
-      '<span class="cr-drag-handle">⠿</span>' +
-      '<span class="cr-preset-icon">' +
-      UI_ICONS.search +
-      "</span>" +
-      '<input data-idx="' +
-      idx +
-      '" data-fld="label" value="' +
-      esc(ps.label) +
-      '" class="cr-input cr-input-name" placeholder="' +
-      t("content.searchKeywordPlaceholder") +
-      '">' +
-      '<button data-idx="' +
-      idx +
-      '" class="cr-btn-icon cr-order-up" title="' +
-      t("content.moveUp") +
-      '">' +
-      UI_ICONS.chevronUp +
-      "</button>" +
-      '<button data-idx="' +
-      idx +
-      '" class="cr-btn-icon cr-order-down" title="' +
-      t("content.moveDown") +
-      '">' +
-      UI_ICONS.chevronDown +
-      "</button>" +
-      '<button data-idx="' +
-      idx +
-      '" class="cr-btn-icon cr-del-preset" title="' +
-      t("content.delete") +
-      '">' +
-      UI_ICONS.delete +
-      "</button>" +
-      "</div>" +
-      "</div>";
+      `<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="${idx}">` +
+      `<div class="cr-edit-card-head"><span class="cr-drag-handle">⠿</span><span class="cr-preset-icon">${UI_ICONS.search}</span>` +
+      `<input data-idx="${idx}" data-fld="label" value="${esc(ps.label)}" class="cr-input cr-input-name" placeholder="${t(
+        "content.searchKeywordPlaceholder",
+      )}">` +
+      `<button data-idx="${idx}" class="cr-btn-icon cr-order-up" title="${t("content.moveUp")}">${UI_ICONS.chevronUp}</button>` +
+      `<button data-idx="${idx}" class="cr-btn-icon cr-order-down" title="${t("content.moveDown")}">${UI_ICONS.chevronDown}</button>` +
+      `<button data-idx="${idx}" class="cr-btn-icon cr-del-preset" title="${t("content.delete")}">${UI_ICONS.delete}</button>` +
+      `</div></div>`;
   });
-  html +=
-    '<div class="cr-add-area">' +
-    '<button class="cr-add-preset">' +
-    t("content.addSearchTerm") +
-    "</button>" +
-    "</div>";
+  html += `<div class="cr-add-area"><button class="cr-add-preset">${t("content.addSearchTerm")}</button></div>`;
   return html;
 }
 
@@ -410,123 +268,52 @@ function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
 function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
   const { esc, creators, allSites } = ctx;
   let html =
-    '<div class="cr-section">' +
-    '<span class="cr-section-title-lg">' +
-    UI_ICONS.edit +
-    " " +
-    t("content.editCreators") +
-    "</span>" +
-    '<span class="cr-section-fill"></span>' +
-    '<button class="cr-save-btn cr-action-btn-accent">' +
-    t("content.save") +
-    "</button>" +
-    '<button class="cr-cancel-btn">' +
-    t("common.cancel") +
-    "</button>" +
-    "</div>" +
-    '<div class="cr-drop-zone" id="cr-drop-zone">' +
-    '<span class="cr-drop-icon">' +
-    UI_ICONS.import +
-    "</span>" +
-    '<span class="cr-drop-text">' +
-    t("content.dropZoneHint") +
-    "</span>" +
-    "</div>";
+    `<div class="cr-section"><span class="cr-section-title-lg">${UI_ICONS.edit} ${t(
+      "content.editCreators",
+    )}</span><span class="cr-section-fill"></span>` +
+    `<button class="cr-save-btn cr-action-btn-accent">${t("content.save")}</button>` +
+    `<button class="cr-cancel-btn">${t("common.cancel")}</button></div>` +
+    `<div class="cr-drop-zone" id="cr-drop-zone"><span class="cr-drop-icon">${UI_ICONS.import}</span>` +
+    `<span class="cr-drop-text">${t("content.dropZoneHint")}</span></div>`;
   creators.forEach((cr, idx) => {
     const roleEmoji = getTagIconFromRole(cr.role);
+    const roleOption = (value: string, label: string) =>
+      `<option value="${value}"${cr.role === value ? " selected" : ""}>${label}</option>`;
     html +=
-      '<div class="cr-edit-card" draggable="false" data-edit-idx="' +
-      idx +
-      '">' +
-      '<div class="cr-edit-card-head">' +
-      '<span class="cr-drag-handle">⠿</span>' +
-      '<span class="cr-edit-card-avatar">' +
-      roleEmoji +
-      "</span>" +
-      '<input data-idx="' +
-      idx +
-      '" data-fld="name" value="' +
-      esc(cr.name) +
-      '" class="cr-input cr-input-name" placeholder="' +
-      t("content.namePlaceholder") +
-      '">' +
-      '<button data-idx="' +
-      idx +
-      '" class="cr-btn-icon cr-del" title="' +
-      t("content.delete") +
-      '">' +
-      UI_ICONS.delete +
-      "</button>" +
-      "</div>" +
-      '<div class="cr-edit-card-body">' +
-      '<div class="cr-edit-card-row">' +
-      '<span class="cr-edit-label">' +
-      t("content.labelDesc") +
-      "</span>" +
-      '<input data-idx="' +
-      idx +
-      '" data-fld="desc" value="' +
-      esc(cr.desc) +
-      '" class="cr-input cr-input-desc" placeholder="' +
-      t("content.descPlaceholder") +
-      '">' +
-      "</div>" +
-      '<div class="cr-edit-card-row">' +
-      '<span class="cr-edit-label">' +
-      t("content.labelPlatform") +
-      "</span>" +
-      '<select data-idx="' +
-      idx +
-      '" data-fld="type" class="cr-input-type" multiple title="' +
-      t("content.multiSelectHint") +
-      '">' +
-      (allSites || [])
+      `<div class="cr-edit-card" draggable="false" data-edit-idx="${idx}">` +
+      `<div class="cr-edit-card-head"><span class="cr-drag-handle">⠿</span><span class="cr-edit-card-avatar">${roleEmoji}</span>` +
+      `<input data-idx="${idx}" data-fld="name" value="${esc(
+        cr.name,
+      )}" class="cr-input cr-input-name" placeholder="${t("content.namePlaceholder")}">` +
+      `<button data-idx="${idx}" class="cr-btn-icon cr-del" title="${t("content.delete")}">${UI_ICONS.delete}</button>` +
+      `</div><div class="cr-edit-card-body"><div class="cr-edit-card-row"><span class="cr-edit-label">${t(
+        "content.labelDesc",
+      )}</span>` +
+      `<input data-idx="${idx}" data-fld="desc" value="${esc(
+        cr.desc,
+      )}" class="cr-input cr-input-desc" placeholder="${t("content.descPlaceholder")}"></div>` +
+      `<div class="cr-edit-card-row"><span class="cr-edit-label">${t(
+        "content.labelPlatform",
+      )}</span>` +
+      `<select data-idx="${idx}" data-fld="type" class="cr-input-type" multiple title="${t(
+        "content.multiSelectHint",
+      )}">${(allSites || [])
         .map(
           (s) =>
-            '<option value="' +
-            esc(s.id) +
-            '"' +
-            (cr.type?.split(";").includes(s.id) ? " selected" : "") +
-            ">" +
-            esc(s.label) +
-            "</option>",
+            `<option value="${esc(s.id)}"${
+              cr.type?.split(";").includes(s.id) ? " selected" : ""
+            }>${esc(s.label)}</option>`,
         )
-        .join("") +
-      '</select><select data-idx="' +
-      idx +
-      '" data-fld="role" class="cr-input-role">' +
-      '<option value="creator"' +
-      (cr.role === "creator" ? " selected" : "") +
-      ">" +
-      t("content.roleCreator") +
-      "</option>" +
-      '<option value="official"' +
-      (cr.role === "official" ? " selected" : "") +
-      ">" +
-      t("content.roleOfficial") +
-      "</option>" +
-      '<option value="vup"' +
-      (cr.role === "vup" ? " selected" : "") +
-      ">VUP</option>" +
-      '<option value="oc"' +
-      (cr.role === "oc" ? " selected" : "") +
-      ">OC</option>" +
-      '<option value="repo"' +
-      (cr.role === "repo" ? " selected" : "") +
-      ">" +
-      t("content.roleRepo") +
-      "</option>" +
-      "</select>" +
-      "</div>" +
-      "</div>" +
-      "</div>";
+        .join("")}</select>` +
+      `<select data-idx="${idx}" data-fld="role" class="cr-input-role">${roleOption(
+        "creator",
+        t("content.roleCreator"),
+      )}${roleOption("official", t("content.roleOfficial"))}${roleOption("vup", "VUP")}${roleOption(
+        "oc",
+        "OC",
+      )}${roleOption("repo", t("content.roleRepo"))}</select></div></div></div>`;
   });
-  html +=
-    '<div class="cr-add-area">' +
-    '<button class="cr-add">' +
-    t("content.addCreator") +
-    "</button>" +
-    "</div>";
+  html += `<div class="cr-add-area"><button class="cr-add">${t("content.addCreator")}</button></div>`;
   return html;
 }
 
@@ -537,7 +324,7 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
  */
 export function buildSiteHtml(ctx: BuildSiteHtmlCtx): string {
   const parts: string[] = [];
-  parts.push('<div class="cr-scroll">');
+  parts.push(`<div class="cr-scroll">`);
 
   // 搜索词分区
   if (ctx.site.presetSearches?.length) {
@@ -551,6 +338,6 @@ export function buildSiteHtml(ctx: BuildSiteHtmlCtx): string {
     parts.push(buildSitePresetEditCards(ctx) + buildSiteCreatorEditCards(ctx));
   }
 
-  parts.push("</div>");
+  parts.push(`</div>`);
   return parts.join("");
 }

@@ -258,6 +258,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-300：诊断页标签导航单轴收口：看/测/诊三组与二级导航语法统一",
+        "link": "/adr/ADR-300-diagnostics-nav-axis-convergence"
+      },
+      {
         "text": "ADR-299：后处理 composer 惰性常驻——生命周期与每帧参与解耦（修订 ADR-250 §2.2）",
         "link": "/adr/ADR-299-postproc-composer-lazy-residency"
       },

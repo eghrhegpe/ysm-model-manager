@@ -22,6 +22,13 @@ export const ja: Record<string, string> = {
   "nav.resourceCategory": "リソース大分類",
   "nav.resourceType": "リソース種別",
 
+  // ── 文書層アクセシビリティラベル（a11y、static-a11y-labels.ts が起動時に現在言語で上書き）＋コンテキストメニュー ──
+  "a11y.appTitle": "YSM モデルマネージャー",
+  "a11y.skipNav": "ナビゲーションをスキップ",
+  "a11y.skipNavAria": "ナビゲーションをスキップしてメインコンテンツへ",
+  "a11y.mainNav": "メインナビゲーション",
+  "a11y.mainContent": "メインコンテンツ",
+  "contextMenu.ariaLabel": "コンテキストメニュー",
   // ── Common ──
   "common.loading": "読み込み中…",
   "common.loadFailed": "読み込みに失敗しました",
@@ -821,6 +828,7 @@ export const ja: Record<string, string> = {
   "syncManager.loadSyncStatusFailed": "同期状況の読み込みに失敗",
   "syncManager.pushed": "送信済み",
   "syncManager.pulled": "取得済み",
+  "syncManager.statusFiltersAria": "同期状況フィルタ",
   // P0 修正: 右クリックメニュー rtype ガード トースト（i18n 準拠）
   "ctx.emptyRtype": "パックにタイプ情報がありません、右クリック操作は無効です",
   "ctx.missingPath": "パックディレクトリが見つかりません",

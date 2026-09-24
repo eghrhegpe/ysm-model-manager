@@ -29,6 +29,13 @@ export const zhCN = {
   "nav.resourceCategory": "资源大类",
   "nav.resourceType": "资源类型",
 
+  // ── 文档层可达性标签（a11y，启动链经 static-a11y-labels.ts 覆写为当前语言）＋上下文菜单 ──
+  "a11y.appTitle": "YSM 模型管理器",
+  "a11y.skipNav": "跳过导航",
+  "a11y.skipNavAria": "跳过导航，直达主内容",
+  "a11y.mainNav": "主导航",
+  "a11y.mainContent": "主内容区",
+  "contextMenu.ariaLabel": "上下文菜单",
   // ── 通用 ──
   "common.loading": "加载中…",
   "common.loadFailed": "加载失败",
@@ -799,6 +806,7 @@ export const zhCN = {
   "syncManager.loadSyncStatusFailed": "同步状态加载失败",
   "syncManager.pushed": "已推送",
   "syncManager.pulled": "已拉取",
+  "syncManager.statusFiltersAria": "同步状态筛选",
   // P0 修复：右键菜单 rtype 守卫 toast（i18n 合规）
   "ctx.emptyRtype": "整合包缺少类型信息，右键操作已禁用",
   "ctx.missingPath": "整合包目录未找到",

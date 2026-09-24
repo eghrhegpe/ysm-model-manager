@@ -7,6 +7,7 @@ source_files:
   - frontend/src/app-modules.ts
   - frontend/src/theme-core.ts
   - frontend/src/startup-reveal.ts
+  - frontend/src/static-a11y-labels.ts
 auto_fields:
   symbols_with_lines:
     - applyTheme
@@ -14,6 +15,7 @@ auto_fields:
     - applyTimeTheme
     - initTheme
     - loadView
+    - localizeStaticA11yLabels
     - normalizeTheme
     - normalizeThemeAuto
     - revealMainWindow
@@ -26,6 +28,7 @@ auto_fields:
     - unregisterDevtools
   tests:
     - frontend/src/app-modules.test.ts
+    - frontend/src/static-a11y-labels.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -67,9 +70,9 @@ status: active
   - 静态导入轻量组件：`context-menu.ts` / `app-toast.ts`（失败直接报错，不 try/catch 以免静默吞错）
   - 动态导入重组件：`app-nav` / `app-tree` / `app-sidebar` / `app-content` / `app-sync-manager`（字面量路径确保 Vite 构建解析，`.catch` 输出 `console.warn` 告警不阻塞）——其中 `app-nav` 通过启动 IIFE（`await initI18n()` 后 `await import`）延迟加载，避免首帧渲染时 i18n bundle 尚未就绪导致 `[i18n]` 缺失 key 警告；`app-resource-manager` 已于 2026-08-24 删除
   - 右键菜单注册：`registerContextMenus()` 由 `app-content` 的 `connectedCallback` 直调（ADR-188 去壳后无 `core/handlers/global.ts` 汇编层；app-modules.ts 不直接调用）
-  - 主题：`applyTheme`（cyber/warm/pro/sakura/ocean/mint/system 白名单，system 跟随 `prefers-color-scheme`）挂 `window.applyTheme`；`initTheme` 从 Go `LoadAppConfig` 或 localStorage 读主题，**归一化后回写合法值**（白名单外回落 system，防脏值污染持久层）；`applyThemeAuto` 紧随 `initTheme` 后调用，按 `theme-auto` 重算（time 模式重启重算时段主题，P3 修复见 [theme](./theme.md)）；`applyUIPrefs`（定义在 `views/app-content/settings/ui-prefs.ts`，本文件启动 IIFE 内 import 调用）应用字号（`--fs-scale` 偏移，五档 −2/−1/0/+1/+2px）/字体/密度/动画开关（`.no-animations`）——真基准 `--fs-base-size` 单点定义于 variables.css `:root`，此处不再内联覆盖
+  - 主题：`applyTheme`（cyber/warm/pro/sakura/ocean/mint/system 白名单，system 跟随 `prefers-color-scheme`）挂 `window.applyTheme`；`initTheme` 从 Go `LoadAppConfig` 或 localStorage 读主题，**归一化后回写合法值**（白名单外回落 system，防脏值污染持久层）；`applyThemeAuto` 紧随 `initTheme` 后调用，按 `theme-auto` 重算（time 模式重启重算时段主题，P3 修复见 [theme](./theme.md)）；`applyUIPrefs`（定义在 `views/app-content/settings/ui-prefs.ts`，本文件启动 IIFE 内 import 调用）应用字号（`--fs-scale` 偏移，五档 −2/−1/0/+1/+2px）/字体/密度/动画开关（`.no-animations`，2026 a11y 并轨：OS `prefers-reduced-motion: reduce` 且用户未显式开动画时自动挂类——显式 `ui-animations=on` 尊重手动选择）——真基准 `--fs-base-size` 单点定义于 variables.css `:root`，此处不再内联覆盖
   - **文件级别名注册（ADR-146）**：`@/bus`→`./src/bus.ts`、`@/theme-core`→`./src/theme-core.ts` 在 `tsconfig.json` paths 白名单登记（`check-path-hygiene` R0 白名单 + 构建解析共同拦截），src 根文件用别名而非相对路径，`normalizeTheme`/`applyTheme`/`initTheme` 在 `theme-core.ts`（纯逻辑无顶层副作用），本文件 re-export 保持启动链稳定
-  - 启动 IIFE：`initTheme()` → `applyThemeAuto()` → `applyUIPrefs()` → `checkUpdateSilent()` 静默检查更新（**静态导入** `features/maintenance/version-updater.ts`，非动态 import）
+  - 启动 IIFE：`initTheme()` → `applyThemeAuto()` → `applyUIPrefs()` → `checkUpdateSilent()` 静默检查更新（**静态导入** `features/maintenance/version-updater.ts`，非动态 import）；启动步骤表另含 i18n 之后的 `a11y-labels` 步（`static-a11y-labels.ts|localizeStaticA11yLabels` 把 index.html 静态可达性标签——skip-link 文案/aria-label、app-nav、#main-content、`` `<title>` ``——覆写为当前 i18n 语言，静态 HTML 值仅为无 JS 兜底）
 - **窗口显示**：经 `startup-reveal.ts` 的 `revealMainWindow(show)` 控制——等待 DOM 升级 + 两帧 rAF 完成后调 `show()`；rAF 节流兜底 1.5s 超时强制显示（防止隐藏窗口下 Chromium/WebView2 节流导致窗口永久不可见）
   - 杂项：capture 阶段拦截旧版 document 拖拽处理器（`#ws-page` / `#dl-drop` / `.ws-page` 区域）；dev 模式（`?dev=1` 或 localStorage `_devtools`）启用 F12/Ctrl+Shift+I 打开 DevTools（`Window.OpenDevTools`）
 

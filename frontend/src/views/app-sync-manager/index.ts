@@ -72,6 +72,7 @@ export class AppSyncManager extends WebComponentBase {
   readonly _guard = createLoadGuard();
   _eventsBound = false;
   _clickHandler: ((e: Event) => void) | null = null;
+  _keyHandler: ((e: KeyboardEvent) => void) | null = null;
   /** 一次性 click 委托的 unsub（生命周期跟随元素连接，不随 _init——re-init 不得销毁委托） */
   _clickUnsub: (() => void) | undefined;
   private _unsubs: Array<() => void> = [];
@@ -256,6 +257,7 @@ export class AppSyncManager extends WebComponentBase {
     // 挂到 .sm-list（与 spinner/列表同容器），不挂组件根——脱离 .sm-container 会让错误 div
     // 落在布局/CSS 作用域外，排版异常（containerHTML 已在 _setupSkeleton 注入，.sm-list 此时必存在）
     const errDiv = document.createElement("div");
+    errDiv.setAttribute("role", "alert"); // a11y：渲染/加载失败须被屏幕阅读器即时播报（非 polite）
     errDiv.style.padding = "12px";
     errDiv.style.color = "var(--err)";
     errDiv.textContent = `${head}: ${safeErrorMessage(e)}`;

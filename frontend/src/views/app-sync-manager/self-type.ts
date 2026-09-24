@@ -48,6 +48,8 @@ export interface SyncManagerFields {
     | undefined;
   /** click handler 引用（一次性绑定后存储，供 disconnectedCallback 清理） */
   _clickHandler: ((e: Event) => void) | null;
+  /** keydown handler 引用（状态筛选 radio group 键盘委托，a11y 2026 复测补缺；清理同 click） */
+  _keyHandler: ((e: KeyboardEvent) => void) | null;
   /** click 委托 unsub（生命周期跟随元素连接，不随 _init——re-init 不得销毁委托） */
   _clickUnsub: (() => void) | undefined;
   /** 收窄 querySelector 返回类型（DOM 原生返回 Element，消费方需要 HTMLElement） */

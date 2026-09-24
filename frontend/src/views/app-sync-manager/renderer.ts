@@ -52,7 +52,7 @@ export function render(self: SyncRenderSelf): void {
     return;
   }
 
-  renderStatusTabs(self, statusTabsEl, collectCounts(self));
+  renderStatusTabs(self, collectCounts(self));
   renderScanDirs(self);
   applyFilter(self);
   renderListSafe(self, listEl);
@@ -127,7 +127,6 @@ function countOfAll(self: SyncRenderSelf, curCounts: TypeCounts): number {
 /** 渲染状态筛选栏（当前类型只读指示 + 六态页签） */
 function renderStatusTabs(
   self: SyncRenderSelf,
-  statusTabsEl: HTMLElement,
   counts: { typeCounts: Record<string, TypeCounts>; globalCounts: TypeCounts },
 ): void {
   const curCounts = self._selectedType
@@ -168,19 +167,28 @@ function renderStatusTabs(
   const curCfg = self._typeConfig.find((c) => c.id === self._selectedType);
   const curLabel = (curCfg && (shortLabelOf(curCfg.id) || curCfg.name)) || self._selectedType || "";
   const curIcon = curCfg?.icon || "📦";
-  statusTabsEl.innerHTML =
-    '<span class="sm-cur-type" data-rtype="' +
-    esc(self._selectedType || "") +
-    '" title="' +
-    t("syncManager.curTypeHint") +
-    '">' +
-    esc(curIcon) +
-    " " +
-    esc(curLabel) +
-    "</span>" +
-    statusDefs
+  // a11y 拆分（2026 复测补缺）：只读指示器非 radio，不入 radiogroup 组——
+  // 渲染目标由「.sm-status-tabs 单 innerHTML」拆为「.sm-cur-type-slot + .sm-status-radios 双槽」
+  const curTypeSlot = self.querySelector(".sm-cur-type-slot");
+  if (curTypeSlot) {
+    curTypeSlot.innerHTML = self._selectedType
+      ? '<span class="sm-cur-type" data-rtype="' +
+        esc(self._selectedType) +
+        '" title="' +
+        t("syncManager.curTypeHint") +
+        '">' +
+        esc(curIcon) +
+        " " +
+        esc(curLabel) +
+        "</span>"
+      : "";
+  }
+  const radiosEl = self.querySelector(".sm-status-radios");
+  if (radiosEl) {
+    radiosEl.innerHTML = statusDefs
       .map(([id, label, count]) => statusTabHTML(id, label, count, self._statusFilter === id))
       .join("");
+  }
 }
 
 /** 列表渲染 + 失败兜底（renderList 抛错不得中断整页渲染） */

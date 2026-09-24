@@ -7,6 +7,11 @@ import {
   statusColorOf,
   statusTabHTML,
   actionBtnHTML,
+  containerHTML,
+  itemHTML,
+  loadingHTML,
+  syncDirRowHTML,
+  type SyncItem,
 } from "./tpl.ts";
 
 describe("statusIconOf", () => {
@@ -85,5 +90,61 @@ describe("actionBtnHTML", () => {
     expect(actionBtnHTML("synced")).toBe("");
     expect(actionBtnHTML("disabled")).toBe("");
     expect(actionBtnHTML("unknown")).toBe("");
+  });
+});
+
+// ── a11y 模板标记（2026 复测补缺）─────────────────────────────────────────
+// 语义属性统一由模板层产出（模板生成原则）：渲染层/事件层不再逐元素手写 aria。
+// 对照仓内先例：tabs-shell.ts renderSubBar（diag 子切换 radio 行）同款「模板出属性」。
+describe("a11y 模板标记", () => {
+  it("statusTabHTML: role=radio + aria-checked + roving tabindex（激活 0，其余 -1）", () => {
+    expect(statusTabHTML("all", "全部", 3, true)).toContain(
+      'role="radio" aria-checked="true" tabindex="0"',
+    );
+    expect(statusTabHTML("synced", "已同步", 0, false)).toContain(
+      'role="radio" aria-checked="false" tabindex="-1"',
+    );
+  });
+
+  it("containerHTML: 筛选栏 = cur-type 槽位 + radiogroup（aria-label 走 i18n）", () => {
+    const html = containerHTML();
+    expect(html).toContain('class="sm-cur-type-slot"');
+    expect(html).toContain('class="sm-status-radios"');
+    expect(html).toContain('role="radiogroup"');
+    expect(html).toMatch(/class="sm-status-radios"[^>]*aria-label="[^"]+"/);
+  });
+
+  it("syncDirRowHTML: 箭头为原生 button（aria-expanded + 名称标签），目录图标装饰 aria-hidden", () => {
+    const item: SyncItem = {
+      path: "/d",
+      name: "Models",
+      status: "synced",
+      type: "ysm",
+      size: 0,
+      isDir: true,
+      children: [],
+    };
+    const open = syncDirRowHTML("d", item, true, 0, "/d");
+    expect(open).toContain('<button class="sm-dir-arrow" aria-expanded="true" aria-label="Models"');
+    expect(open).toContain('aria-hidden="true"');
+    expect(syncDirRowHTML("d", item, false, 0, "/d")).toContain('aria-expanded="false"');
+  });
+
+  it("itemHTML: 状态图标与文件图标均装饰（2 处 aria-hidden）", () => {
+    const item: SyncItem = {
+      path: "/f.pmx",
+      name: "f.pmx",
+      status: "missing",
+      type: "ysm",
+      icon: "💎",
+      size: 10,
+      isDir: false,
+    };
+    const html = itemHTML(item, 0);
+    expect(html.match(/aria-hidden="true"/g)?.length).toBe(2);
+  });
+
+  it("loadingHTML: role=status（屏幕阅读器自动播报加载态）", () => {
+    expect(loadingHTML()).toContain('role="status"');
   });
 });

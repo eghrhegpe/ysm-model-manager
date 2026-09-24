@@ -135,6 +135,7 @@ status: active
 - `animateNumber` 消费方：`app-tree/render.ts`、`app-sidebar/events.ts`（统计数字滚动）
 - `stagger` 消费方：`app-content/index.ts`、`app-sync-manager/tpl.ts`、`dialogs/batch-rename.ts`、`features/community/render.ts`、`app-content/site/render.ts`（卡片入场）
 - 全局开关：`views/app-content/settings/ui-prefs.ts`（经 `app-modules.ts` 启动链调用）按设置切换 `document.documentElement` 的 `no-animations` class；CSS 侧为**双层通配**——文档层 `variables.css` 的 `.no-animations *`，Shadow 层各域 adopt `utils/dom/css.ts` 的 `noAnimationsCSS`（`:host-context(.no-animations) *`）。漏带片段的 shadow 域由 `scripts/css-layer-check.ts` 检查 4 阻断（ADR-015 §2.4 约束 1 的可执行断言）
+- **a11y 并轨（2026 复测补缺）**：OS 层 `prefers-reduced-motion: reduce` 媒体查询并入 `no-animations` 开关——`applyUIPrefs` 单点判定「系统请求减少动态效果 **且** 用户未显式开动画（localStorage `ui-animations` 无 `"on"`）」即自动挂类；显式开动画尊重手动选择（意图优先于 OS 偏好）
 - **Molang 消费方**：
   - 解析阶段（`animation.ts`）：`parseAxisItem` / `parseKeyValue` / `extractKeyframe` 调用 `molang.ts` 的 `compileMolang`
   - 求值阶段（`animation-evaluator.ts`）：`resolveFramePost` / `evaluateKeyframes` / `evaluateClip` 调用编译后的 `MolangFn`

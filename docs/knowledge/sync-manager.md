@@ -68,6 +68,7 @@ auto_fields:
     - frontend/src/views/app-sync-manager/index.branches.test.ts
     - frontend/src/views/app-sync-manager/renderer.virtual.test.ts
     - frontend/src/views/app-sync-manager/tpl.test.ts
+    - frontend/src/views/app-sync-manager/a11y.dom.test.ts
     - frontend/src/views/app-sidebar/app-sidebar.sync.test.ts
     - frontend/src/views/app-sidebar/app-sidebar.component.test.ts
     - frontend/src/views/app-sidebar/events.test.ts
@@ -82,6 +83,7 @@ quick_intents:
   - sync:download:missing 缺包回拉
 quick_risk_lines:
   - 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource
+  - 状态筛选的 a11y 键盘语义只走 events.ts 单一 keydown 委托 + tpl.ts 模板出属性，禁止逐 tab 补 handler / 手搓 aria
 pitfalls:
   - app-sidebar 直接发 push/pull 请求 → 并发冲突 / 状态错乱；必须经 sync-manager 排队
   - PullSingleResource 未完成前刷新侧边栏 → 半同步状态显示；必须等 store 状态收敛
@@ -99,6 +101,7 @@ invariant_anchors:
   - frontend/src/views/app-sync-manager/network.ts|performSingleOp
   - frontend/src/views/app-sync-manager/store.ts|applyFilter
   - frontend/src/views/app-sync-manager/index.ts|_guard
+  - frontend/src/views/app-sync-manager/events.ts|bindDelegatedEvents
   - frontend/src/features/sync/sync.ts|runDownloadMissing
 status: active
 ---
@@ -122,6 +125,7 @@ status: active
 - **状态呈现**：`loadData` 拉取 `SyncItem[]` → `applyFilter`（`tabStatus` 把 `diverged` 折叠进 `missing` tab）→ `flattenRows` 展平为定高行数组 → `renderSlice` 窗口化渲染（只注入可见行 ± 缓冲）
 - **单文件 push/pull**：`performSingleOp` 顺序守卫 + `_singleBusy` 按钮视觉
 - **摘要栏**：`GetSyncScanDirs` 显示实际扫描目录 + `scan_dir_wide` 告警
+- **a11y 模板语义（2026 复测补缺）**：状态筛选栏 = `role="radiogroup"` + 六个 `role="radio"`（`aria-checked` + roving tabindex 由 `statusTabHTML` 模板随重渲染自动迁移）；目录行箭头为原生 `button` + `aria-expanded` + 名称标签；装饰图标 `aria-hidden`；加载态 `role="status"`；错误 div `role="alert"`。键盘半边 = `bindDelegatedEvents` 的单点 keydown 委托（方向键循环移动即激活、Home/End 只移焦点——仓内先例 `tabs-shell.ts` diag 子切换同口径），契约 `tpl.test.ts`（属性字符串）+ `a11y.dom.test.ts`（键盘行为）
 
 ### `app-sidebar`（整包级）
 - **`runPush`**：顺序 `for insName × for rtype` → `sync:download:missing` handler 后台安装缺失，等 `sync:download:done` token（30s 超时，skipped reject）
@@ -232,6 +236,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - **`_syncInProgress/_loading` 卸载时复位**：否则重挂载后按钮点击被静默 return
 - **Storage**：一律用 `safeGet/safeSet/safeRemove`（ADR-044），防隐私模式 `localStorage` 禁用抛错
 - **Go 绑定**：统一 `getApp()` 入口，禁止直调 `window.go.main.App.*`
+- **⚠️ a11y 属性模板生成原则（2026 复测补缺）**：本视图全部 a11y 属性由 `tpl.ts` 模板单点产出（renderer/events 层零手写 aria）；键盘委托唯一出口 = `events.ts|bindDelegatedEvents` 的 keydown 单委托——新增可交互元素先扩模板，不逐处打属性
 
 ## 相关
 

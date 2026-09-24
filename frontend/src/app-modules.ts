@@ -54,6 +54,7 @@ loadView("app-sync-manager", () => import("@/views/app-sync-manager/index.ts"));
 // ===== 全局主题控制 =====
 
 import { safeGet } from "@/utils/base/primitives/storage.ts";
+import { localizeStaticA11yLabels } from "./static-a11y-labels.ts";
 // 2026-08-17 神桶拆分：normalizeTheme/applyTheme/initTheme 已移至 theme-core.ts
 // （纯逻辑无顶层副作用，测试可独立 import）；本文件保留启动装配 + window 桥接。
 import { applyTheme, applyThemeAuto, initTheme, normalizeTheme } from "./theme-core.ts";
@@ -125,6 +126,13 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
           setLocaleHost(makeLocaleHost());
           return initI18n();
         },
+      },
+      {
+        // a11y（2026 复测补缺）：index.html 静态可达性标签（skip-link/app-nav/main-content/<title>）
+        // 的 i18n 覆写——须在 initI18n 之后（t() 才有当前语言包）
+        tag: "a11y-labels",
+        failMsg: "静态可达性标签本地化失败:",
+        run: localizeStaticA11yLabels,
       },
       {
         tag: "module",

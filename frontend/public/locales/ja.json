@@ -703,6 +703,7 @@
   "syncManager.loadSyncStatusFailed": "同期状況の読み込みに失敗",
   "syncManager.pushed": "送信済み",
   "syncManager.pulled": "取得済み",
+  "syncManager.statusFiltersAria": "同期状況フィルタ",
   "ctx.emptyRtype": "パックにタイプ情報がありません、右クリック操作は無効です",
   "ctx.missingPath": "パックディレクトリが見つかりません",
   "ctx.copyPathsOk": "{n} 個のパスをコピーしました",

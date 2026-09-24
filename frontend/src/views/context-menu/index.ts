@@ -2,6 +2,7 @@
 // 事件：menu:show, menu:hide
 // 监听：menu:show({ x, y, items: [{label, icon?, onClick}] })
 import { bus, type MenuItem } from "@/bus";
+import { t } from "@/core/i18n/t.ts";
 import { noAnimationsCSS } from "@/utils/dom/css.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -128,7 +129,7 @@ class ContextMenu extends WebComponentBase {
            压过普通内联声明）。 */
         ${noAnimationsCSS}
       </style>
-      <div class="menu" id="menu" role="menu" aria-label="context menu"></div>
+      <div class="menu" id="menu" role="menu"></div>
     `;
   }
 
@@ -138,6 +139,10 @@ class ContextMenu extends WebComponentBase {
 
   show(x: number, y: number, items: MenuItem[]): void {
     const menu = this._shadow.getElementById("menu") as HTMLElement;
+    // a11y（2026 复测补缺）：菜单可访问名按**打开时**的当前 i18n 语言覆写——
+    // 模板层不写死语言（原英文字面量 "context menu" 在 zh/ja 下与界面脱节），
+    // 每次 show 重置而非构建期一次性：语言切换后无需重建 shadow 根即生效
+    menu.setAttribute("aria-label", t("contextMenu.ariaLabel"));
     // 记录打开前焦点（hide 归还；host 自身/body 不入账——防归还闭环与整页焦点丢失）
     const docActive = document.activeElement;
     if (docActive && docActive !== this && docActive !== document.body) {

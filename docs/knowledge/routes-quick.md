@@ -205,7 +205,7 @@
 | 页面状态管理、page store | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | 一键安装、整合包拖拽导入 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-207, ADR-210 |
-| 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
+| 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | 状态筛选的 a11y 键盘语义只走 events.ts 单一 keydown 委托 + tpl.ts 模板出属性，禁止逐 tab 补 handler / 手搓 aria | - |
 | 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource | - |
 | 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:changed / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
 | 主题初始化、服务注册、检查更新 | [组件入口 app-modules](./app-modules.md) | - | - |

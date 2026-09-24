@@ -76,7 +76,19 @@ export function applyUIPrefs(): void {
   );
 
   // 动画
-  document.documentElement.classList.toggle("no-animations", !anim);
+  // a11y（2026 复测补缺）：OS 层 `prefers-reduced-motion: reduce` 并轨 .no-animations 开关——
+  // 系统请求减少动态效果且用户**未显式开启**动画（localStorage 无 "on"）时自动关动画；
+  // 用户在设置页显式开「on」则尊重手动选择（显式意图优先于 OS 偏好）。
+  // 读 globalThis 而非 window：node 测试环境无 window 但可 stub globalThis.matchMedia；
+  // 无 matchMedia（隐私/旧引擎）回退 false，行为与既往一致
+  const explicitAnimOn = safeGet("ui-animations") === "on";
+  const osReduce =
+    typeof globalThis.matchMedia === "function" &&
+    globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.documentElement.classList.toggle(
+    "no-animations",
+    !anim || (osReduce && !explicitAnimOn),
+  );
 }
 
 /** 初始化外观设置：应用偏好 + 绑定字号/字体/密度/动画/默认页变更 */

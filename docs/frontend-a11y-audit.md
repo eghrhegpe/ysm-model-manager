@@ -2,6 +2,8 @@
 
 > 调查日期：2026 年・范围：`frontend/src/**`（1001 个 TS 源文件）
 > 一句话结论：**基础设施已成体系，普及率却只有约三分之一**——关键入口（树、tab、模态框、下拉、菜单）已是高质量实装并有契约测试，但大量业务视图（尤其 diagnostics 面板、settings、sync-manager、app-preview 的大部分分支）尚未接入，且**全仓没有任何自动化无障碍门禁**守卫。
+>
+> **⚠️ 2026 复测更新见 §5**：app-sync-manager 已收口、诊断子 pill 已闭合、静态标签 i18n 与 reduced-motion 已并轨；**1 号建议（axe 自动化门禁）仍未实施**，为当前最大结构性风险。
 
 ---
 
@@ -92,7 +94,7 @@
 
 ### 3.3 已知遗留（文档已自行登记，非本次新发现）
 
-- `docs/knowledge/app_content_diagnostics.md`：诊断页**子 pill 无 role=tab / 无方向键**（嵌套 tablist 反模式 + 键盘可达性欠账），「待全站 a11y 专项」。
+- ~~`docs/knowledge/app_content_diagnostics.md`：诊断页**子 pill 无 role=tab / 无方向键**（嵌套 tablist 反模式 + 键盘可达性欠账），「待全站 a11y 专项」~~ **✅ 已闭合（2026-10，ADR-300 §3 遗留偿还，见 §5）**
 - `docs/knowledge/ui-slide-menu.md + utils-dom.md`：2026-08-29 a11y 审查登记的边界测试盲区。
 - `docs/UI-Design.md §17.2`：表格「列表/树 Arrow 导航 ❌ 未建立集中式框架」——**此项与现况不符**（app-tree 已实现 Arrow 导航），文档待更新。
 
@@ -111,3 +113,32 @@
 4. **小修文档**：UI-Design §17.2 的「未建立集中式框架」行更新为已部分落地；ADR-300 登记的诊断页 tab 遗留可并入专项。
 
 > 本次为只读调查，未改任何源码；如需推进其中任意建议（尤其 1 号自动化门禁），可作为独立任务继续。
+
+---
+
+## 5. 复测更新（2026，模板生成原则收口轮）
+
+> 复测口径与 §1.1 一致（含 HTML 的生产 TS 文件）：基线 **22/75 = 29.3%**（88 个旧统计中 13 个文件已随重构合并/删除）。
+> 本轮方针：**a11y 属性一律模板/原语产出，不手搓**（仓内既有先例：`tabs-shell.ts renderSubBar`、`utils/dom/modal-core`、`fab.ts createIconButton`）。
+
+### 5.1 已收口项
+
+| 项 | 落点 | 契约 |
+|---|---|---|
+| **app-sync-manager 全零组件收口** | 状态筛选栏 `role="radiogroup"` + 六 `role="radio"`（`aria-checked` / roving tabindex 由 `statusTabHTML` 模板随重渲染迁移）；目录箭头 span→原生 `button` + `aria-expanded` + 名称标签；装饰图标 `aria-hidden`；`loadingHTML` `role="status"`；`_showError` 错误 div `role="alert"`；键盘 = `events.ts` 单点 keydown 委托（方向键循环移动即激活、Home/End 只移焦点，diag 先例同口径） | `tpl.test.ts`（属性字符串）+ 新增 `a11y.dom.test.ts`（键盘行为，happy-dom） |
+| **诊断子 pill 遗留闭合**（§3.3 第一项） | `views/app-content/tabs-shell.ts` `renderSubBar` 产出 `role="toolbar"` + 每 pill `role="radio"`/`aria-checked`/roving + 方向键/Home/End 单点绑定（ADR-300 §3 遗留偿还，2026-10） | `tabs-shell.test.ts` 字符串 + `tabs-shell.dom.test.ts` 行为 |
+| **index.html 静态标签 i18n** | 新增 `src/static-a11y-labels.ts`（skip-link 文案/aria、app-nav、#main-content、`<title>` 四个静态标签），`app-modules.ts` 启动表 i18n 步之后挂 `a11y-labels` 步覆写；静态 HTML 值降为无 JS 兜底；语言包新增 `a11y.*` 五键（三语同步） | `static-a11y-labels.test.ts`（fake LocaleHost + 真 zh-CN 包） |
+| **context-menu 可访问名 i18n** | `show()` 时 `t("contextMenu.ariaLabel")` 覆写（模板层不再写死英文字面量） | — |
+| **`prefers-reduced-motion` 并轨** | `ui-prefs.ts applyUIPrefs` 单点：OS 请求减少动态效果且用户未显式开动画 → 自动挂 `.no-animations`（显式 on 优先）；node 测试经 `globalThis.matchMedia` stub 可驱动 | `app-modules.test.ts` 两新增用例 |
+
+复测后覆盖率：**24/75 = 32.0%**（app-sync-manager 由 0 标记文件 → 3）。8 个顶层 Web Component 中**零 a11y 组件已清零**。
+
+### 5.2 仍开放的缺口（按优先级）
+
+1. **无自动化 a11y 门禁**（§4 建议 1，最大结构性风险，未动）：`package.json` 无 axe-core/pa11y/jest-axe，`doctor`/pre-push 不扫 a11y——回归靠人工审查 + 契约测试局部兜底。
+2. **`app-preview` 8 个含 HTML 文件 + `site/*`/`tpl*` 桶**（§3.1 剩余大头）：3D 查看器分支 div/span 承载交互未全接 radio/role 语义。
+3. **`sr-only` 视觉隐藏文本零使用**：无屏幕阅读器专用文本通道（装饰图标暂由 aria-label 兜底，尚可）。
+4. **`UI-Design.md §17.2` 文档漂移**（§3.3 第三项，仍待小修）。
+5. 低危：`css/layout.css` 旧式壳三处 `outline:none` 被全局 `:focus-visible` box-shadow 覆盖（文本框 mouse 聚焦无可见环，惯例可接受）。
+
+> 本轮为「模板生成原则」收口轮：新增 a11y 全部经既有/扩展模板与原语产出，未手写 DOM 属性串；后续补 `app-preview` 建议同姿势（`tpl` 扩展 + 复用 `tabs-a11y`/`renderSubBar` 族原语），axe 门禁另立 ADR。

@@ -112,10 +112,17 @@ export function syncDirRowHTML(
     '" style="padding-left:' +
     indent +
     'px">' +
-    '<span class="sm-dir-arrow" style="flex-shrink:0;width:14px;text-align:center;cursor:pointer;color:var(--muted)">' +
+    // a11y（2026 复测补缺）：箭头由装饰 span 升为原生 button（键盘可达 + 原生 Enter/Space），
+    // 展开态走 aria-expanded，可访问名 = 文件夹名（屏幕阅读器读「名称，已展开/折叠」）；
+    // 点击冒泡到 ③ dir 行委托翻转（既有事件链不变，零新增 handler）
+    '<button class="sm-dir-arrow" aria-expanded="' +
+    shouldOpen +
+    '" aria-label="' +
+    esc(syncItem.name) +
+    '">' +
     arrow +
-    "</span>" +
-    '<span style="flex-shrink:0;font-size:var(--fs-base)">' +
+    "</button>" +
+    '<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">' +
     (syncItem.icon || "📁") +
     "</span>" +
     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
@@ -159,6 +166,13 @@ export function containerHTML(): string {
     // 见 app-preview/css.ts .pv-tab-active）——实心底 + accent 字在「二选一」场景才是强反馈，
     // 在「多并排筛选」场景则成噪音。
     ".sm-status-tab.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent)}" +
+    // a11y（2026 复测补缺）：目录箭头 span→button 后的原生 button 复位（样式归样式表，
+    // 行内 style 只留缩进等动态值）——继承行字号/行高，仅重置按钮自带外框
+    ".sm-dir-arrow{flex-shrink:0;width:14px;text-align:center;cursor:pointer;color:var(--muted);background:transparent;border:0;padding:0;font:inherit;line-height:1}" +
+    // 筛选栏重构：.sm-status-tabs（flex 行）= 只读类型指示槽位 + radiogroup；
+    // 指示器非 radio，不入 radiogroup 组（ARIA 规范：radiogroup 子节点应全为 radio）
+    ".sm-cur-type-slot{display:contents}" +
+    ".sm-status-radios{display:flex;gap:2px;flex:1;min-width:0}" +
     // 当前类型只读指示（原同样是行内 style=）
     ".sm-cur-type{display:inline-flex;align-items:center;gap:4px;padding:0 8px;color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;border-right:1px solid var(--bd);margin-right:6px}" +
     ".sm-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base);animation:fade-in .2s ease}" +
@@ -182,7 +196,14 @@ export function containerHTML(): string {
     "</style>" +
     '<div class="sm-wrap" style="display:flex;flex-direction:column;height:100%;overflow:hidden">' +
     // 状态筛选栏（类型选择已全局化到 nav 下拉，sm-cur-type 只读指示随本栏渲染）
-    '<div class="sm-status-tabs" style="display:flex;gap:2px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>' +
+    // a11y：radiogroup 语义 + aria-label（i18n）；六个状态页签是互斥筛选而非页面 tab，
+    // 走 radio 组（仓内先例 tabs-shell diag 子切换同族，且天然避开嵌套 tablist 红线）
+    '<div class="sm-status-tabs" style="display:flex;align-items:center;gap:2px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)">' +
+    '<span class="sm-cur-type-slot"></span>' +
+    '<div class="sm-status-radios" role="radiogroup" aria-label="' +
+    esc(t("syncManager.statusFiltersAria")) +
+    '"></div>' +
+    "</div>" +
     // 摘要栏
     '<div class="sm-summary" style="display:flex;align-items:center;gap:8px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>' +
     // 列表容器
@@ -191,12 +212,14 @@ export function containerHTML(): string {
   );
 }
 
-/**
- * 状态筛选标签 HTML
+/** 状态筛选标签 HTML
  * @param id - 筛选 ID (all/synced/missing/disabled/optional)
  * @param label - 标签文字
  * @param count - 数量
  * @param active - 是否选中
+ * a11y（2026 复测补缺）：模板层统一产出 radio 语义——role=radio + aria-checked +
+ * roving tabindex（激活项 0，其余 -1）。键盘半边由 events.ts 容器级 keydown 委托
+ * 消费本组模板（仓内先例：tabs-shell.ts renderSubBar 同款「模板出属性、事件出键盘」）。
  */
 export function statusTabHTML(id: string, label: string, count: number, active: boolean): string {
   const cls = active ? " active" : "";
@@ -206,6 +229,10 @@ export function statusTabHTML(id: string, label: string, count: number, active: 
     cls +
     '" data-status="' +
     id +
+    '" role="radio" aria-checked="' +
+    active +
+    '" tabindex="' +
+    (active ? "0" : "-1") +
     '">' +
     label +
     showCount +
@@ -235,12 +262,14 @@ export function itemHTML(item: SyncItem, indent: number): string {
     '" style="padding-left:' +
     indent +
     'px">' +
-    '<span style="flex-shrink:0;width:14px;text-align:center;color:' +
+    // a11y（2026 复测补缺）：状态图标（SVG）与文件图标（emoji）均为装饰，aria-hidden 降噪——
+    // 屏幕阅读器读「名称 + 大小」即可，行动语义由行内原生 button（push/pull）承担
+    '<span aria-hidden="true" style="flex-shrink:0;width:14px;text-align:center;color:' +
     statusColor +
     '">' +
     statusIcon +
     "</span>" +
-    '<span style="flex-shrink:0;font-size:var(--fs-base)">' +
+    '<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">' +
     (item.icon || "📦") +
     "</span>" +
     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
@@ -277,10 +306,13 @@ export function emptyHintHTML(msg: string): string {
 
 /**
  * 加载中
+ * a11y：role=status（隐式 aria-live=polite）——屏幕阅读器自动播报加载开始
  */
 export function loadingHTML(): string {
   return (
-    '<div class="sm-loading">' +
+    '<div class="sm-loading" role="status" aria-label="' +
+    esc(t("common.loading")) +
+    '">' +
     '<div class="sm-shimmer sm-shimmer-w80"></div>' +
     '<div class="sm-shimmer sm-shimmer-w60"></div>' +
     '<div class="sm-shimmer sm-shimmer-w70"></div>' +

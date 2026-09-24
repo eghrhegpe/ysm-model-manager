@@ -42,6 +42,8 @@ auto_fields:
     - frontend/src/views/app-sync-manager/index.test.ts
     - frontend/src/views/app-sync-manager/index.branches.test.ts
     - frontend/src/views/app-sync-manager/renderer.virtual.test.ts
+    - frontend/src/views/app-sync-manager/tpl.test.ts
+    - frontend/src/views/app-sync-manager/a11y.dom.test.ts
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:
@@ -82,6 +84,7 @@ status: active
 - `_init` 代际守卫 `_guard`（`createLoadGuard`，ADR-230 收口，原裸 `_gen` 计数退役）：每次进入 `_guard.next()`，`await` 类型配置与数据后若 `_guard.stale(gen)` 直接返回，丢弃 instance 快速切换产生的过期渲染与订阅
 - `renderer.ts` — 渲染层：`render`（**骨架幂等**：`.sm-list` 已存在则不重建，防丢滚动位置）→ 状态页签 / 摘要栏 → **行级虚拟滚动**（`flattenRows` 展平 + `renderSlice` 窗口化，行高 CSS 定、首帧实测校正以尊重用户 `--fs-scale`；零高度降级全量渲染）；`cleanupSyncVirtualScroll` 由 `disconnectedCallback` 与 `_init` 重建骨架前调用（与 app-tree 的 `cleanupVirtualScroll` 同款范式）
 - `tpl.ts` — 模板：`containerHTML`（骨架 + 定高行样式）/ `syncDirRowHTML` / `itemHTML` / `statusTabHTML` / `emptyHintHTML` / `loadingHTML` + `SyncItem` 类型；行高 `calc(var(--fs-sm) * 1.4 + 9px)` 定高（窗口化前提），缩进由渲染层按树深经 `padding-left` 注入（不再套逐级 wrapper）
+- **a11y（2026 复测补缺：本组件曾是 8 个顶层视图唯一零 a11y 标记者）**：语义属性全部**模板生成**（`tpl.ts`）——状态筛选栏 `role="radiogroup"` + 六 `role="radio"`（`aria-checked` / roving tabindex 随 `statusTabHTML` 重渲染自动迁移）；目录行箭头为原生 `button` + `aria-expanded` + 名称标签（点击冒泡走既有 ③ dir 行委托，零新增 handler）；装饰图标 `aria-hidden`；`loadingHTML` `role="status"`；`_showError` 错误 div `role="alert"`。键盘半边 = `events.ts` 单点 keydown 委托（方向键循环移动即激活 / Home·End 只移焦点，仓内先例 `tabs-shell.ts` 同口径）；契约 `tpl.test.ts`（属性字符串）+ `a11y.dom.test.ts`（键盘行为）
 
 ## 对外 API / 入口
 
@@ -112,6 +115,7 @@ status: active
 - **事件绑定一次性委托于组件根（light DOM）**：`events.ts` 的 `bindDelegatedEvents` 在 `_init` 单次执行，render 重建 DOM 不影响委托——消除原 `bindEvents` 每次 render 后 `.then` 全量重绑导致的并发双绑竞态（目录行点一次=翻转两次）；`btn` 分支须 `e.stopPropagation()` 防冒泡到父，恢复对等性
 - **⚠️ 委托生命周期跟随元素连接，不随 `_init`（2026-10 修复，曾致整页点击全死）**：click 委托的 unsub 曾误入 `_unsubs` 桶——`_init` 顶部会对 `_unsubs` 全量 unsub（本意清 bus 订阅），同元素第二次 `_init`（`instance` 属性变更）把委托连带销毁（`_clickHandler=null` + `_cbRef=undefined`），而 `_eventsBound` 仍 true → else 分支 `if(self._cbRef)` 不命中 → 委托永不重绑，状态页签/目录行/push/pull 点击全死。现委托 unsub 单独存 `_clickUnsub`，由 `disconnectedCallback` 统一清理（`index.ts` 有注释锚点）；`_unsubs` 桶只装生命周期跟随 `_init` 的 bus 订阅
 - **列表渲染窗口化三条不可回退（2026-10，治「上百个 MMD 模型显示诡异」）**：① **行必须等高**——`tpl.ts` 以 `height:calc(var(--fs-sm)*1.4+9px)` 定高（行不等高则窗口范围算不准），TS 侧首帧实测取整（用户 `--fs-scale` 可调，常量会漂）；② **行不得挂入场动画**——窗口化随滚动反复注入节点，`animation-fill-mode: both` 会持续重播成滚动闪烁（ADR-015 §2.4 约束 3 及该 ADR「已知例外」，模型树当年同因禁用子行淡入）；③ **`render` 不得重建 `.sm-list` 骨架**——重建即丢滚动位置（用户停在中段时列表弹回顶部）。效果：DOM 行数由视口决定、与条目数解耦，`paddingTop/Bottom` 撑出滚动总高保证末行可达
+- **a11y 属性模板生成原则（2026 复测补缺）**：本组件 a11y 属性只经 `tpl.ts` 模板产出，renderer/events 层禁止手搓 aria/逐元素打属性；键盘语义唯一出口 = `events.ts|bindDelegatedEvents` 的 keydown 单委托（新增可交互元素先扩模板）
 
 ## 已知限制 / 待治理（2026-08-24 审计）
 

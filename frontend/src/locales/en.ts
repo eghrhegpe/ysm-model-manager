@@ -20,6 +20,13 @@ export const en: Record<string, string> = {
   "nav.resourceCategory": "Resource Category",
   "nav.resourceType": "Resource Type",
 
+  // ── Document-layer accessibility labels (a11y, localized at startup via static-a11y-labels.ts) + context menu ──
+  "a11y.appTitle": "YSM Model Manager",
+  "a11y.skipNav": "Skip navigation",
+  "a11y.skipNavAria": "Skip navigation, go to main content",
+  "a11y.mainNav": "Main navigation",
+  "a11y.mainContent": "Main content",
+  "contextMenu.ariaLabel": "Context menu",
   // ── Common ──
   "common.loading": "Loading…",
   "common.loadFailed": "Failed to load",
@@ -822,6 +829,7 @@ export const en: Record<string, string> = {
   "syncManager.loadSyncStatusFailed": "Failed to load sync status",
   "syncManager.pushed": "Pushed",
   "syncManager.pulled": "Pulled",
+  "syncManager.statusFiltersAria": "Sync status filters",
   // P0 fix: context menu rtype guard toast (i18n compliance)
   "ctx.emptyRtype": "Pack missing type info, right-click ops disabled",
   "ctx.missingPath": "Pack directory not found",

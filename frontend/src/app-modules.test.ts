@@ -227,6 +227,28 @@ describe("applyUIPrefs 字号/密度/动画偏好", () => {
       restore();
     }
   });
+  // a11y（2026 复测补缺）：OS 层 prefers-reduced-motion 并轨 .no-animations 开关
+  const savedMatchMedia = globalThis.matchMedia as unknown;
+  it("OS 请求减少动态效果 + 用户未显式设置 → 自动关动画（跟随）", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    try {
+      applyUIPrefs();
+      expect(document.documentElement.classList.contains("no-animations")).toBe(true);
+    } finally {
+      vi.stubGlobal("matchMedia", savedMatchMedia);
+    }
+  });
+  it("OS 请求减少动态效果但用户显式开动画（ui-animations=on）→ 尊重手动选择", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    try {
+      localStorage.setItem("ui-animations", "on");
+      applyUIPrefs();
+      expect(document.documentElement.classList.contains("no-animations")).toBe(false);
+    } finally {
+      vi.stubGlobal("matchMedia", savedMatchMedia);
+      localStorage.removeItem("ui-animations");
+    }
+  });
 });
 
 afterAll(() => {

@@ -182,7 +182,7 @@ collectVisiblePredicates(controls)       // 纯函数，枚举带 visible 的控
 
 - **ADR-085**：本卡是其 S2 的补全，S1/S3 仍有效（`refreshDock` 在 `preview-menu/core.ts`）。
 - **`05fe24b7` 手工 refresh 链路**（`SceneCapability.subscribe?` + `rebuildEnvSubs` + `menu.refresh()`）：P1 的 `subscribeSettings` 是它的替代方向，但**尚未接入**——env 局部刷新仍在用旧链路，迁移是遗留项。
-- **`renderCapControls`**：controls 通道的**复杂件**渲染器（增量2a 起 `PreviewControlKind` 收窄为 5 种复杂 kind：button/image/timeline/histogram/preset-thumb）+ group 折叠 + visibleWhen 过滤；简单件（slider/toggle/select/color）不再经此通道，改由 `renderMenu` 节点原生 kind → `nodeControlToView` → `CapControlView` → `renderCap*` 渲染器直渲。**2026-09 归一**：cap 控件经 `PreviewMenuNode.controls`（`node-types.ts` 新 kind）原生进声明式节点树，settings/env 面板不再 `renderCustom` 套壳手调；`renderPreviewSchemaContent` 已删（其 field/divider/sectionTitle/controls/renderCustom 分支统一收编进 `renderMenu`，schema 面板路径传 `renderCustomDirect: true` 让 custom 直接填充）。
+- **`renderCapControls`**：controls 通道的**复杂件**渲染器（增量2a 起 `PreviewControlKind` 收窄为复杂件专用，2026-10 增量2c 再收窄为 4 种：image/timeline/histogram/preset-thumb——button 已迁节点原生 `kind:"button"` + `control`）+ group 折叠 + visibleWhen 过滤；简单件（slider/toggle/select/color）不再经此通道，改由 `renderMenu` 节点原生 kind → `nodeControlToView` → `CapControlView` → `renderCap*` 渲染器直渲。**2026-09 归一**：cap 控件经 `PreviewMenuNode.controls`（`node-types.ts` 新 kind）原生进声明式节点树，settings/env 面板不再 `renderCustom` 套壳手调；`renderPreviewSchemaContent` 已删（其 field/divider/sectionTitle/controls/renderCustom 分支统一收编进 `renderMenu`，schema 面板路径传 `renderCustomDirect: true` 让 custom 直接填充）。
 - **`restoreFields()`**（`scene-capability.ts`）：顺带收敛了各 cap `loadState` 的 `typeof` 样板，消除 `ground#sky` 的 jscpd 10 行重复块。**目前仅 sky-capability 接入**，ground/water 待跟进。
 
 ## 不变量

@@ -172,12 +172,15 @@ describe("app-content 模板", () => {
     expect(html).not.toContain("margin-bottom:12px;animation:card-in");
     expect(html).toContain('class="settings-group" style="animation-delay:');
     expect(html).toContain("set-advanced-grid");
-    // worker 解析开关收敛到独立「解析」tab（FBX / MMD PMX 逃生舱），不在界面 tab 内
-    expect(html).toContain('data-tab="parser"');
-    // 3D 预览操作已独立成「操作」tab（不再混在界面与体验内）
+    // 2026-10 菜单收口：6 tab → 4 tab——旧「解析」「鸣谢」tab 槽退役，id 不得残留
+    expect(html).not.toContain('data-tab="parser"');
+    expect(html).not.toContain('data-tab="credits"');
+    expect(html).not.toContain('id="stg-tab-parser"');
+    expect(html).not.toContain('id="stg-tab-credits"');
+    // 3D 预览操作 + 解析开关收口进「操作」tab（不再混在界面与体验内）
     expect(html).toContain('data-tab="ops"');
     expect(html).toContain('id="stg-tab-ops"');
-    const opsTab = panelSlice(html, "stg-tab-ops", "stg-tab-parser");
+    const opsTab = panelSlice(html, "stg-tab-ops", "stg-tab-about");
     expect(opsTab).toContain('id="td-camspeed"');
     expect(opsTab).toContain('id="td-keymap-grid"');
     // 值域 / 默认值 / 枚举消费 preview-3d/infra/settings-schema（ADR-303）：本页曾自写
@@ -190,11 +193,17 @@ describe("app-content 模板", () => {
     const uiTab = panelSlice(html, "stg-tab-ui", "stg-tab-ops");
     expect(uiTab).not.toContain('id="td-camspeed"');
     expect(uiTab).not.toContain('id="td-keymap-grid"');
-    expect(html).toContain('id="stg-tab-parser"');
-    expect(html).toContain("set-fbx-worker");
-    expect(html).toContain("set-mmd-worker");
+    // worker 解析开关（FBX / MMD 逃生舱）收口进「操作」tab 的「解析」节，不在界面 tab 内
+    expect(opsTab).toContain("set-fbx-worker");
+    expect(opsTab).toContain("set-mmd-worker");
     expect(uiTab).not.toContain("set-fbx-worker");
     expect(uiTab).not.toContain("set-mmd-worker");
+    // 「关于 + 鸣谢」合并 tab：版本/更新检查（About 节）与鸣谢小节（t("settings.credits") 节标题）同页
+    expect(html).toContain('id="stg-tab-about"');
+    const aboutTab = html.slice(html.indexOf('id="stg-tab-about"'));
+    expect(aboutTab).toContain('id="set-version"');
+    expect(aboutTab).toContain('id="set-check-update"');
+    expect(aboutTab).toContain("鸣谢");
     // 正文段落原语：禁止再内联复制 `color:var(--muted);line-height:1.7` 配方（应写 class="stg-desc"）
     expect(html).not.toContain("color:var(--muted);line-height:1.7");
     expect(html).toContain('class="stg-desc"');

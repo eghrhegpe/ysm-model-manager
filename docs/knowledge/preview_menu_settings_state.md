@@ -121,6 +121,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 - 新 cap 想进设置面板：只改自己文件加一个 `settingsOrder`，`preview-menu/settings.ts` 不动。
 - `collectSettingsCapControls()` 每次调用重取，**抹平 `group`**（设置面板是扁平视图，否则「高级」等折叠 section 会混进来）。
 - 已声明：RenderModeCapability 五件套 `rm-wireframe`(30) / `rm-blending`(31) / `rm-depth-test`(32) / `rm-side`(33) / `rm-depth-write`(34)。（pp-enabled / sky-env 曾声明 10/20，已退场：总开关归各自面板基座级，设置页画质分组不再复制——见 postprocessing-capability / sky-capability。）
+- **画质段按 cap 归属分小节（2026-10 菜单收口）**：`settings.ts|collectSettingsCapSections` 遍历 registry，对每个有 settingsOrder 控件的 cap 出「小节标题（`settings-cap-<capid>`，labelKey = cap 自报 `labelKey`）+ 该 cap 控件（cap 内升序）」；小节顺序 = registry 实例化顺序（不再全局 settingsOrder 交错），无控件的 cap 不出小节（标题不空挂）。零接线性质保留：新 cap 仍只加 `settingsOrder`，小节自动出现。契约锁定：`preview-state.test.ts` 的「画质段 cap 归属小节」用例（含 schema 层插入位置 + 扁平契约视图 `collectSettingsCapControls` 去小节标题断言）。
 
 ### P3 visible 规则
 

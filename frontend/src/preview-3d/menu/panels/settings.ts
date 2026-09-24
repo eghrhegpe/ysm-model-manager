@@ -183,8 +183,8 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
   return capPanelNodes(fromReg);
 }
 
-/** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（自动 cap 聚合）+ 脚注。
- *  每次面板渲染重构建（core.ts schemaBuilder），collectSettingsCapControls 内部实时遍历
+/** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（cap 归属小节自动聚合）+ 脚注。
+ *  每次面板渲染重构建（core.ts schemaBuilder），collectSettingsCapSections 内部实时遍历
  *  registry——「cap 后创建可见」由 schema 重建语义保证（对齐 ADR-125 P3）。 */
 export function buildSettingsSchema(
   _ctx: PreviewMenuCtx,
@@ -197,8 +197,11 @@ export function buildSettingsSchema(
     // [ADR-195 刀 2.5] 横切控件直产原生节点展开（桥接层退役）
     ...buildCrossCuttingNodes(),
     bsBuildSectionTitle("settings-quality-header", "preview.settingsQuality"),
-    // [ADR-195 刀 2.5] cap 聚合节点直接展开（collectSettingsCapControls 返回节点数组）
-    ...collectSettingsCapControls(),
+    // [2026-10 菜单收口] cap 归属小节：每个有 settingsOrder 控件的 cap = 小节标题 +
+    // 该 cap 控件——原扁平聚合剥掉 folder 壳后控件失去 cap 归属语境，用户/面板侧
+    // 都说不清「画质组里有什么、哪个开关属于哪个能力」；分小节由 registry 遍历派生，
+    // 零接线性质保留（新 cap 仍只加 settingsOrder，小节自动出现）
+    ...collectSettingsCapSections(),
     bsBuildNote(),
   ];
 }
@@ -266,50 +269,67 @@ export function buildCrossCuttingNodes(): PreviewMenuNode[] {
   ];
 }
 
-// ── 设置面板：自动 cap 聚合（ADR-125 P2）──
+// ── 设置面板：自动 cap 聚合（ADR-125 P2，2026-10 cap 归属分小节）──
 
 /**
- * 遍历全部已创建 cap，收集声明了 `settingsOrder` 的控件节点，升序并入设置面板。
+ * 单 cap 内收集声明了 `settingsOrder` 的控件节点：从 getMenuNodes 节点树递归展平
+ * （folder 壳不收、其 children 递归展平——真实 cap 的 settingsOrder 节点多为平铺
+ * 顶层，递归兜底 folder 内声明），cap 内按 settingsOrder 升序。
+ * 纯收集，不插小节标题——分小节是 section 层职责（collectSettingsCapSections）。
+ */
+function collectCapSettingsControls(cap: SceneCapability): PreviewMenuNode[] {
+  if (!cap.getMenuNodes) return [];
+  const out: PreviewMenuNode[] = [];
+  const walk = (nodes: PreviewMenuNode[]): void => {
+    for (const n of nodes) {
+      if (n.kind === "folder" && n.children) {
+        walk(n.children);
+        continue;
+      }
+      if (n.settingsOrder === undefined) continue;
+      out.push(n);
+    }
+  };
+  walk(cap.getMenuNodes());
+  return out.sort((a, b) => (a.settingsOrder ?? 0) - (b.settingsOrder ?? 0));
+}
+
+/**
+ * 画质段 cap 归属小节：每个有 settingsOrder 控件的 cap = 一小节
+ * （`settings-cap-<capid>` section 标题，labelKey = cap 自报名 + 该 cap 控件升序）。
+ * registry 实例化顺序 = 小节顺序（与 createAll 实例序同源，非全局 settingsOrder 交错）。
  *
- * [ADR-195 刀 2.5 全节点化] 返回 PreviewMenuNode[]（不再投影回控件定义）：
- *   - 全部 cap（10 个均已迁移）：从 getMenuNodes 节点树递归收集带 settingsOrder 的
- *     节点（folder 壳不收、其 children 递归展平）
- * 渲染侧由 renderMenu 直渲染节点（settings-quality 展开），不再包 controls 节点。
+ * 2026-10 菜单收口根治点：原扁平聚合（folder 壳被剥、控件裸摊）丢失 cap 归属语境——
+ * 用户/面板侧说不清「画质组里有什么、哪个开关属于哪个能力」。小节仍由 registry 遍历
+ * **自动派生**，零接线性质保留（新 cap 想进设置面板只加 `settingsOrder`，小节自动
+ * 出现，本文件与 cap 侧皆零改动）；未声明 settingsOrder 控件的 cap 不出小节
+ * （否则 pp 的 20 个高级控件会淹没它）。
  *
  * 其余设计要点（沿用）：
- *  - **settings 侧零接线**：新 cap 想进设置面板，只在自己文件里给控件加
- *    `settingsOrder`，本函数自动发现
  *  - **每次调用重取**：不在模块加载期缓存 cap 实例，规避 ADR-125 P3「声明期求值」
- *  - 未声明 settingsOrder 的控件不进设置面板（否则 pp 的 20 个高级控件会淹没它）
+ *  - [ADR-195 刀 2.5 全节点化] 返回 PreviewMenuNode[]，渲染侧 renderMenu 直渲染
  */
-export function collectSettingsCapControls(): PreviewMenuNode[] {
+export function collectSettingsCapSections(): PreviewMenuNode[] {
   const out: PreviewMenuNode[] = [];
   for (const cap of sceneCapabilityRegistry.getAll()) {
-    if (cap.getMenuNodes) {
-      // 递归展平 folder：settings 扁平视图不收 folder 壳，但其 children 可能带
-      // settingsOrder（fake/桥接节点同 group 控件被包 folder 时）。真实 cap 的
-      // settingsOrder 节点多为平铺顶层，递归兜底 folder 内声明。
-      const walk = (nodes: PreviewMenuNode[]): void => {
-        for (const n of nodes) {
-          if (n.kind === "folder" && n.children) {
-            walk(n.children);
-            continue;
-          }
-          if (n.settingsOrder === undefined) continue;
-          out.push(n);
-        }
-      };
-      walk(cap.getMenuNodes());
-    }
+    const capControls = collectCapSettingsControls(cap);
+    if (capControls.length === 0) continue;
+    out.push(bsBuildSectionTitle(`settings-cap-${cap.id}`, cap.labelKey));
+    out.push(...capControls);
   }
-  out.sort((a, b) => (a.settingsOrder ?? 0) - (b.settingsOrder ?? 0));
-  // 节点形态无 group 字段（folder 已剥）——无需抹平 group
   return out;
+}
+
+/** 画质段控件扁平列表（= collectSettingsCapSections 去掉小节标题；cap 归属顺序 ×
+ *  cap 内升序）。导出供契约测试断言 id 与顺序，无需 DOM。 */
+export function collectSettingsCapControls(): PreviewMenuNode[] {
+  return collectSettingsCapSections().filter((n) => n.kind !== "sectionTitle");
 }
 
 /** 设置面板全部控件节点（横切 + 聚合）；导出供契约测试断言 id 与顺序，无需 DOM。
  *  [ADR-195 刀 2.5] 统一 PreviewMenuNode[]：横切节点（buildCrossCuttingNodes 直产）
- *  与聚合节点同流。 */
+ *  与聚合节点同流。⚠️ 本函数是**控件扁平视图**——schema 层（buildSettingsSchema）
+ *  另经 collectSettingsCapSections 插入 cap 归属小节标题，两者不冲突。 */
 export function buildSettingsControls(): PreviewMenuNode[] {
   return [...buildCrossCuttingNodes(), ...collectSettingsCapControls()];
 }

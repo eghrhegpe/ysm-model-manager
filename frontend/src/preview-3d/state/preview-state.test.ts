@@ -21,6 +21,7 @@ import {
 import {
   buildCrossCuttingNodes,
   collectSettingsCapControls,
+  collectSettingsCapSections,
   buildSettingsControls,
   buildSettingsSchema,
   buildLightingSchema,
@@ -412,6 +413,55 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     expect(got.map((c) => c.id)).toEqual(["c-10", "c-30"]);
     // settings 扁平不收 folder 组（folder 壳被剥、其 children 递归展平）
     expect(got.every((c) => c.kind !== "folder")).toBe(true);
+  });
+
+  it("画质段 cap 归属小节：有 settingsOrder 控件的 cap 前插小节标题，无控件的 cap 不出现（2026-10 菜单收口）", () => {
+    const mk = (id: string, order: number | undefined): PreviewMenuNode => ({
+      id,
+      kind: "toggle",
+      labelKey: id as LocaleKey,
+      ...(order !== undefined ? { settingsOrder: order } : {}),
+      control: { get: () => false, set: vi.fn() },
+    });
+    const capA = makeFakeCap("capA", { nodes: [mk("a-20", 20)] });
+    const capB = makeFakeCap("capB", {
+      nodes: [
+        {
+          id: "b-folder",
+          kind: "folder",
+          labelKey: "preview.someGroup" as LocaleKey,
+          children: [mk("b-30", 30), mk("b-10", 10)],
+        },
+      ],
+    });
+    // 无 settingsOrder 控件的 cap → 不出小节（小节标题不得空挂）
+    mountCaps(capA, capB, makeFakeCap("plain", { nodes: [mk("p-plain", undefined)] }));
+
+    const sections = collectSettingsCapSections();
+    expect(sections.map((n) => n.id)).toEqual([
+      "settings-cap-capA",
+      "a-20",
+      "settings-cap-capB",
+      "b-10",
+      "b-30",
+    ]);
+    const headerA = sections[0]!;
+    expect(headerA.kind).toBe("sectionTitle");
+    // 小节标题 = cap 自报 labelKey（fake cap 的 labelKey = `cap.${id}`）——归属语境自动派生
+    expect(headerA.labelKey).toBe("cap.capA");
+    expect(sections[2]!.labelKey).toBe("cap.capB");
+
+    // schema 层同构：画质大标题 → cap 小节标题 → 控件（小节插在两者之间）
+    const ids = buildSettingsSchema({} as unknown as PreviewMenuCtx).map((n) => n.id);
+    expect(ids.indexOf("settings-quality-header")).toBeLessThan(ids.indexOf("settings-cap-capA"));
+    expect(ids.indexOf("settings-cap-capB")).toBeLessThan(ids.indexOf("b-10"));
+
+    // 扁平契约视图（collectSettingsCapControls）不含小节标题，顺序与分节一致
+    expect(collectSettingsCapControls().map((c) => c.id)).toEqual([
+      "a-20",
+      "b-10",
+      "b-30",
+    ]);
   });
 
   it("cap 缺席时不产生聚合控件；后挂载 cap schema 重建可见（惰性求值，非构建期冻结）", () => {

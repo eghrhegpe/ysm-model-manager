@@ -1,5 +1,11 @@
 // ===== tpl-settings.ts — settingsHTML 页面模板（从 tpl.ts 拆出，ADR-040 P1 第2轮拆分）=====
-// basic + ui 标签页在此；about + credits 已拆至 tpl-settings-about.ts
+// basic + ui + ops 标签页在此；about（含鸣谢小节）已拆至 tpl-settings-about.ts。
+// 2026-10 菜单收口（锐评 P1/P2）：6 tab → 4 tab（基础/界面与体验/操作/关于）——
+//   ① 「解析」（FBX/MMD worker 两个开关）降级为「操作」tab 的「解析」节：
+//      两个开关不值得占一个菜单槽，且并入 3D 域后「解析」节标题不再与 tab 名同名重复；
+//   ② 「鸣谢」（纯只读展示）降级为「关于」tab 的下段小节（aboutPageBody 组合）：
+//      设置菜单槽位语义 = 「这里能配置什么」，只读展示不占槽；「关于」含真实设置
+//      （更新检查间隔/检查更新/版本）保留 tab。
 
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
@@ -11,7 +17,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderTabs } from "@/views/app-content/tabs-shell.ts";
 import { navItems } from "@/views/app-nav/nav-items.ts";
 import { stgCard } from "./stg-card.ts";
-import { aboutBody, creditsBody } from "./tpl-settings-about.ts";
+import { aboutPageBody } from "./tpl-settings-about.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -415,9 +421,10 @@ ${renderStgFontFamily()}
 
 ${renderStgAnimDefault()}`;
 
-  const parserBody = renderStgParserWorkers();
-
-  const opsBody = `${renderStgPreview3d()}`;
+  // 「操作」tab = 3D 预览操作（相机/旋转/键位）+ 解析（FBX/MMD worker 开关，2026-10 自
+  // 独立「解析」tab 降级并入）——3D 域设置一处收口；「解析」节标题因此不再与 tab 名同名重复。
+  const opsBody = `${renderStgPreview3d()}
+${renderStgParserWorkers()}`;
 
   const { bar, panels } = renderTabs({
     prefix: "stg",
@@ -441,22 +448,12 @@ ${renderStgAnimDefault()}`;
         body: `<div class="stg-page">${opsBody}</div>`,
         panelStyle: "overflow-y:auto",
       },
-      {
-        id: "parser",
-        label: `${UI_ICONS.parser} ${t("settings.parser")}`,
-        body: `<div class="stg-page">${parserBody}</div>`,
-        panelStyle: "overflow-y:auto",
-      },
+      // 关于 + 鸣谢 合并 tab（aboutPageBody 自带 .stg-page 壳，不再外包；
+      // 鸣谢小节降级的理由见本文件头部 2026-10 菜单收口注释）
       {
         id: "about",
         label: `${UI_ICONS.info} ${t("settings.about")}`,
-        body: aboutBody(),
-        panelStyle: "overflow-y:auto",
-      },
-      {
-        id: "credits",
-        label: `${UI_ICONS.thanks} ${t("settings.credits")}`,
-        body: creditsBody(),
+        body: aboutPageBody(),
         panelStyle: "overflow-y:auto",
       },
     ],

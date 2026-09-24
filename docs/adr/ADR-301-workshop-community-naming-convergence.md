@@ -60,8 +60,23 @@
 ### 2.2 迁移安全（吸取 `page-store.ts` 教训）
 `PageName` 是编译期联合 + `VALID_PAGES` 运行时白名单双声明（`page-store.ts:16-26` 全量覆盖断言）。改名时两处 + `PAGE_REGISTRY` 键 + `nav-items.ts` 四处**必须同一提交闭合**，否则覆盖断言编译即红——这正是护栏，勿绕过。
 
-### 2.3 localStorage 别名（D2）
-`sanitizePage` 增加历史名映射表：`{ workshop: "community", github: "workshop" }`。⚠️ **迁移次序有坑**：`workshop` 旧值要映射到 `community`，而 `community` 又…不冲突；但 `github→workshop` 与 `workshop→community` 是**链式**（旧 `workshop` 语义已让位给新页），必须按**旧值快照一次性映射**，不能迭代替换（否则旧 `workshop` 先变 `community` 再被 `community`? 规则吞掉）。落地以 `page-store.test.ts` 补链式用例钉死。
+### 2.3 localStorage 别名（D2）——⚠️ 链式改名陷阱（对撞真实数据流后钉死）
+启动页 `nav_page` 落 localStorage，值即 `PageName`。方案甲是**语义置换**：旧 `workshop`(创作者频道页)→新名 `community`；旧 `github`(创意工坊页)→新名 `workshop`。注意 **`workshop` 同时出现在迁移的定义域与值域**（新 `workshop`=旧 `github`）。
+- **必须单趟快照映射** `{workshop→community, github→workshop}`，**严禁迭代替换**：否则旧 `github` 用户先 `→workshop`，再被 `workshop→community` 规则二次吞成 `community`（错，应落 `workshop`）。
+- 落地：`resolveInitialPage` 读 `nav_page` 时过一张 `LEGACY_PAGE_ALIASES: Record<string, PageName>` 一次性查表（仿 `resources→repository`），`page-store.test.ts` 补链式用例：旧 `github`→新 `workshop` 且**不得**二跳到 `community`。
+- 站内 `ysm-ws-*` 键（`workshop-tabs.ts:89` 等）：`ws-` 前缀语义本就是 workshop-site，改页名后前缀含义漂移——**按 §2.6 红线 2，保留旧键只读兼容**，比照 `workshop-browse-mode.ts:23-24` 旧 boolean 键范式，不做破坏性改名。
+
+### 2.3a 命名空间边界（D1/D3 的**前置硬裁决**，先于一切改名）
+实测：`"workshop"` 与 `"github"` 二词在全仓被**三个互不相干的命名空间**复用（`resource_types.json` 经核验不撞，是干净第四层）：
+
+| 命名空间 | `"workshop"` 语义 | `"github"` 语义 | 出处 | 本 ADR 可否动 |
+|---|---|---|---|---|
+| **① `PageName` 页 id**（前端导航） | 创作者频道页 | 创意工坊页 | `bus.ts:33-34` / `nav-items.ts:32-33` | ✅ 这是唯一收敛对象 |
+| **② Go CLI 命令** | `workshop` 子命令（站点管理） | – | `go/cli/workshop.go:9` | ❌ 冻结：CLI 契约，`docs/cli-commands.md` 事实源 |
+| **③ 站点/平台 id**（用户数据值） | – | `github` = 那个*站点* | `app_workshop.go:144` `ID:"github"`、`workshop_sites.json`、`creators.json` 的 `type` 段 | ❌ 冻结：Go 扫描产出的数据语义，穿「类型判定唯一事实源」红线 |
+
+**裁决**：本 ADR 的改名**严格限定在 ① 前端页 id 层**（及其派生：`init-*.ts` 文件名、`*HTML` 函数、`nav.*` 标签、i18n 键、`data-page` 钩子）。②③ 两层的 `workshop`/`github` 字面量**一个都不能碰**——`grep -rn '"github"' go/` 与 `resource_types` 类改动即越界。
+**推论**：不存在"全局 workshop→community"式改法；任何跨层统一替换都会把三层从"共享一处错位"改成"各自错位"，比现状更糟。落地第一步（§2.6 红线 0）：`grep -rn '\bworkshop\b\|\bgithub\b'` 全仓分类到 ①②③ 三桶，仅 ① 桶进入改名集。
 
 ### 2.4 GitHub / 创意工坊 之辨（D3 前置澄清）
 本 ADR 的边界判断：创意工坊页**同时**是「GitHub 仓库浏览」（数据源）与「创意工坊索引消费」（产品），`gh-` CSS、`init-github.ts`、`workshop.github*` 键三处用「github」、标签用「创意工坊」。**建议：保留 `github` 作为该页数据源层的正当命名**（features/community 的 repo 事件链、`show-repo-models.ts` 均按 GitHub 建模），仅统一**顶层 `PageName` 与导航标签**这一层——即 D1 对第二页可弱化为「只改标签轴不改文件名」。此取舍须拍板明确，避免为对齐强改 `init-github.ts` 而牵动 ADR-190 features/backend seam。

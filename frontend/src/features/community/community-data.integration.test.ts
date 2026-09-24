@@ -105,8 +105,9 @@ describe("loadCommunityData", () => {
     expect(c?.desc).toBe("本地描述");
   });
 
-  it("本地作者 desc 缺失 → 落空串而非 i18n 提示串（语言不污染数据面，锐评 P0-2b）", () => {
-    const merged = mergeLocalAuthorsInto([], [{ name: "无名作者" }]);
+  it("本地作者 desc 为空串 → 原样透传（语言不污染数据面；源头 Go/web 已同口径，锐评 P0-2b + 复核 N5）", () => {
+    // 输入形状逐字段对齐真生产者：go/scanner/scanner.go 与 backend/web-community.ts 现均给 desc: ""
+    const merged = mergeLocalAuthorsInto([], [{ name: "无名作者", desc: "" }]);
     const c = merged.find((x) => x.name === "无名作者");
     expect(c?._fromLocal).toBe(true);
     // 原实现写 t("community.fromLocal")——该 desc 会被 BySite 保存落盘

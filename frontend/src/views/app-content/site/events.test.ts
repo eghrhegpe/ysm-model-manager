@@ -24,7 +24,14 @@ const {
   busEmit: vi.fn(),
   busOn: vi.fn(() => () => {}),
   dbg: vi.fn(),
-  getCreatorIdentity: vi.fn((cr) => ({ icon: "🎭", label: cr.name + "(id)" })),
+  // tag 与 getTagFromRole 对齐：浮层身份行按 `identity.tag === getTagFromRole(role)` 判定
+  // 是否渲染（复核 N1），mock 缺 tag 会让身份行静默消失、与生产不符。
+  // 注：本文件 getTagFromRole 的 mock 签名是零参（恒返回「模型」），故此处同样零参调用。
+  getCreatorIdentity: vi.fn((cr) => ({
+    icon: "🎭",
+    label: cr.name + "(id)",
+    tag: getTagFromRole(),
+  })),
   getTagDisplayLabel: vi.fn((tag: string) => tag),
   getTagFromRole: vi.fn(() => "模型"),
   parseDescTags: vi.fn(() => []),
@@ -247,7 +254,9 @@ describe("bindBrowseEvents — 详情浮层", () => {
     expect(overlay).toBeTruthy();
     expect(overlay.textContent).toContain("A");
     expect(overlay.textContent).toContain("已下载 3 个模型");
-    // 锐评 P0-3：非标签式 desc（mock parseDescTags → []）必须展示全文，不再被吞
+    // 锐评 P0-3：非标签式 desc（本文件 mock parseDescTags → []）必须展示全文，不再被吞。
+    // ⚠️ 本文件的 parseDescTags 是 mock，**测不出「真描述的丢原文」**——真实链路的锁在
+    // events-desc.integration.test.ts（不 mock workshop-data），引用覆盖凭证时请看那边。
     expect(overlay.querySelector(".cr-detail-desc")?.textContent).toContain("好模型");
 
     // 关闭按钮 → 移除浮层

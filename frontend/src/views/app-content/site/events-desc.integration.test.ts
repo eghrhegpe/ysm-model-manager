@@ -122,3 +122,26 @@ describe("详情浮层 desc：真实解析链（复核 P1-2 / P0-3）", () => {
     expect(overlay.querySelector(".cr-detail-desc")?.textContent).toBe("来自本地仓库");
   });
 });
+
+describe("浮层 tag/身份行口径一致（复核 N1）", () => {
+  it("未知 role → chip 原样显示，且不渲染身份行（不得同时冒出「YSM 创作者」）", () => {
+    const { state, searchResults } = makeState([
+      { name: "A", role: "modeler", desc: "描述", type: "github" },
+    ] as LocalCreatorLike[]);
+    const overlay = openOverlay(state, searchResults);
+    expect(overlay.querySelector(".cr-tag")?.textContent).toContain("modeler");
+    expect(overlay.querySelector(".cr-detail-identity")).toBeNull();
+  });
+
+  it("已知 role → chip 与身份行同源真实 label；无 role → 身份行回退「YSM 创作者」", () => {
+    const known = makeState([{ name: "A", role: "vup", desc: "描述", type: "github" }] as LocalCreatorLike[]);
+    const overlay = openOverlay(known.state, known.searchResults);
+    expect(overlay.querySelector(".cr-tag")?.textContent).toContain("VTuber 创作者");
+    expect(overlay.querySelector(".cr-detail-identity")?.textContent).toContain("VTuber 创作者");
+
+    // 无 role：getTagFromRole 默认 "creator" 与 getCreatorIdentity 的 tag 一致 → 属已知身份
+    const plain = makeState([{ name: "A", desc: "描述", type: "github" }] as LocalCreatorLike[]);
+    const overlay2 = openOverlay(plain.state, plain.searchResults);
+    expect(overlay2.querySelector(".cr-detail-identity")?.textContent).toContain("YSM 创作者");
+  });
+});

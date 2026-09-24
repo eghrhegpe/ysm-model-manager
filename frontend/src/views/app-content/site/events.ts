@@ -35,6 +35,10 @@ function cmCrBuildDetailHtml(
   authorCountMap: Record<string, number>,
 ): { html: string; fallbackChar: string; isFav: boolean } {
   const identity = getCreatorIdentity(cr as CreatorIdentityInput);
+  // 身份行与 tag chip 同口径（复核 N1）：role 能映射到真实身份才渲染该行。未知 role 时
+  // getCreatorIdentity 会回退「YSM 创作者」，而 chip 已按 getTagDisplayLabel 原样显示该 role
+  // → 同一浮层自相矛盾。既定原则是「不冒充别的身份」，故整行省略而非改成回退文案。
+  const showIdentityRow = identity.tag === getTagFromRole(cr.role);
   const descTags = parseDescTags(cr.desc);
   const isFav = isFaved(cr.name);
   const localCount = authorCountMap[cr.name] || 0;
@@ -86,12 +90,14 @@ function cmCrBuildDetailHtml(
           .join("") +
         "</div>"
       : "") +
-    '<div class="cr-detail-identity">' +
-    identity.icon +
-    "<span>" +
-    esc(identity.label) +
-    "</span>" +
-    "</div>" +
+    (showIdentityRow
+      ? '<div class="cr-detail-identity">' +
+        identity.icon +
+        "<span>" +
+        esc(identity.label) +
+        "</span>" +
+        "</div>"
+      : "") +
     "</div>" +
     '<span class="cr-star-btn" data-star="' +
     esc(cr.name) +

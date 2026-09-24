@@ -1062,7 +1062,7 @@ describe("browserAdapter — 桥接增强边界/异常分支补全（审核补�
     expect(parsed[0].path).toBe("ysm/赵六/赵六.ysm"); // 相对 WEB_ROOT=/web
   });
 
-  it("ScanLocalAuthors 跨类型同作者 → type 用 ; 合并（来自本地仓库）", async () => {
+  it("ScanLocalAuthors 跨类型同作者 → type 用 ; 合并", async () => {
     await importWebFiles([new File([enc3.encode("Y")], "[王五]A.ysm")], "ysm");
     await importWebFiles([new File([enc3.encode("Y")], "[王五]B.ysm")], "litematic");
     const creators = (await browserAdapter.ScanLocalAuthors("")) as Array<{ name: string; type: string }>;

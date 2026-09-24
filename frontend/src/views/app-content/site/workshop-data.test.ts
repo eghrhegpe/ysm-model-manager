@@ -135,6 +135,10 @@ describe("getTagDisplayLabel（锐评 P0-4 / 复核 P1-3）", () => {
     expect(getTagDisplayLabel("modeler")).toBe("modeler");
     expect(getTagDisplayLabel("custom-role")).toBe("custom-role");
   });
+
+  it("空串入参 → 原样返回空串（锁定新出口的空值语义；签名不含 undefined，调用方须先经 getTagFromRole/cr.role 守卫）", () => {
+    expect(getTagDisplayLabel("")).toBe("");
+  });
 });
 
 describe("收藏工具", () => {

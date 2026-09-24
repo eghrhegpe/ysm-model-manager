@@ -4,9 +4,15 @@
 // 旋转工具已进一步拆至 quaternion.ts（ADR-040 ≤400 行红线），此处 re-export 保兼容。
 // ADR-052 P3: 坐标口径收敛——骨骼位置计算统一为此模块导出工具。
 
-import { CUBE_EPS } from "@/preview-3d/model/model3d-spec.ts";
 import type { Cube2D, MeshData, Vec3 } from "@/preview-3d/model/spec-builder.ts";
 import { eulerToQuaternion } from "./quaternion.ts";
+
+/**
+ * 立方体几何 epsilon（0.001）——本模块单点定义；与 Go threejs 的
+ * thicknessEpsilon（零厚度面 clamp）/ cubeEpsilon（同名 cube 合并）同值。
+ * 原 model3d-spec.ts 的 CUBE_EPS 随该死代码文件一并收敛于此（2026-09）。
+ */
+const CUBE_EPS = 0.001;
 
 /**
  * 计算骨骼本地位置（对齐 YSMViewer/C# ConvertBones 口径）。
@@ -34,7 +40,7 @@ export function computeBoneLocalPos(
 // 旋转工具 re-export（spec-builder.ts / model-group-builder.ts 仍自本文件取，消费方零改动）
 export { eulerToQuaternion, hasBoneRotation, isIdentityQuat } from "./quaternion.ts";
 
-/** 零厚度面修正值（避免 Three.js 渲染零面积面）——收敛于 model3d-spec.ts 的 CUBE_EPS 单点 */
+/** 零厚度面修正值（避免 Three.js 渲染零面积面）——本模块 CUBE_EPS 单点 */
 const THICKNESS_EPSILON = CUBE_EPS;
 
 /**
@@ -55,7 +61,7 @@ function assertFinite(vals: number[], label: string): boolean {
   return true;
 }
 
-/** 同名骨骼 cube 合并的浮点 epsilon ——收敛于 model3d-spec.ts 的 CUBE_EPS 单点 */
+/** 同名骨骼 cube 合并的浮点 epsilon ——本模块 CUBE_EPS 单点 */
 const CUBE_EPSILON = CUBE_EPS;
 
 type FaceUV8 = [number, number, number, number, number, number, number, number];

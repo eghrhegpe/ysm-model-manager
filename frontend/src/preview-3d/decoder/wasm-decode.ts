@@ -112,24 +112,6 @@ async function loadAvatarsForJson(ctx: InflightCtx, result: DecodedYsm): Promise
   }
 }
 
-function computeBoneTexRangeFromBones(bones: BedrockGeometry["bones"]): {
-  uvMaxW: number;
-  uvMaxH: number;
-} {
-  let uvMaxW = 2,
-    uvMaxH = 2;
-  for (const b of bones) {
-    for (const c of b.cubes || []) {
-      if (Array.isArray(c.uv) && c.uv.length >= 2) {
-        const [u, v] = c.uv;
-        if (u > uvMaxW) uvMaxW = u;
-        if (v > uvMaxH) uvMaxH = v;
-      }
-    }
-  }
-  return { uvMaxW, uvMaxH };
-}
-
 async function handleYsmJsonSpec(
   ctx: InflightCtx,
   result: DecodedYsm,
@@ -219,7 +201,7 @@ async function handleYsmJsonSpec(
       // 成功路径：URL 已赋给 result.geometry.textures，清空 pending 防误释放
       pendingBlobUrls.clear();
       const geo = result.geometry;
-      const { uvMaxW, uvMaxH } = computeBoneTexRangeFromBones(allBones);
+      const { uvMaxW, uvMaxH } = computeBoneTexRange(allBones);
       const boneTexW = Math.max(maxTexW, geo.texWidth, uvMaxW) || 64;
       const boneTexH = Math.max(maxTexH, geo.texHeight, uvMaxH) || 64;
       for (const b of allBones) {
@@ -424,34 +406,46 @@ function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
   return { textures, texNameMap, texLowerMap, texDimensions, maxTexW, maxTexH, avatars };
 }
 
-function computeBoneTexRange(parsed: BedrockGeometry): { uvMaxW: number; uvMaxH: number } {
+/**
+ * 估算骨骼集合的 UV 占用包围盒（像素域）。
+ * 仅用于诊断 _texWidth/_texHeight 与 texMappingLog 的 uvSize/finalSize；
+ * 渲染 UV 归一化仍以 geometry 声明的 texture_width/height 为准。
+ *
+ * 口径对齐 cube-mesh parseUV：faceUV 非空走 per-face（uv_size 有符号——负尺寸
+ * 表示该轴反向采样，真实占用区取 min/max 包围盒，foxcar down 面 544/551 负高；
+ * 旧实现 Math.abs(fv+|fh|) 把范围反向高估，且 faceUV cube 的占位 box uv 还会让
+ * 2*(sx+sz) 布局公式串扰）；faceUV 缺失/解析失败/无可识别面才回退 box 布局公式。
+ */
+function computeBoneTexRange(bones: BedrockGeometry["bones"]): { uvMaxW: number; uvMaxH: number } {
   let uvMaxW = 2,
     uvMaxH = 2;
-  for (const b of parsed.bones) {
+  const acc = (uEnd: number, vEnd: number): void => {
+    if (uEnd > uvMaxW) uvMaxW = uEnd;
+    if (vEnd > uvMaxH) uvMaxH = vEnd;
+  };
+  for (const b of bones) {
     for (const c of b.cubes || []) {
-      const [sx, sy, sz] = c.size;
-      if (Array.isArray(c.uv) && c.uv.length >= 2) {
-        const [u, v] = c.uv;
-        const maxU = u + 2 * (Math.abs(sx) + Math.abs(sz));
-        const maxV = v + Math.abs(sy) + Math.abs(sz);
-        if (maxU > uvMaxW) uvMaxW = maxU;
-        if (maxV > uvMaxH) uvMaxH = maxV;
-      } else if (c.faceUV) {
+      let faceHit = false;
+      if (c.faceUV) {
         try {
           const fd = JSON.parse(c.faceUV) as Record<string, { uv?: number[]; uv_size?: number[] }>;
           for (const fn of ["east", "west", "up", "down", "south", "north"]) {
             const f = fd[fn];
             if (!f?.uv) continue;
-            const fw = Math.abs(f.uv_size?.[0] || 0);
-            const fh = Math.abs(f.uv_size?.[1] || 0);
-            const uEnd = f.uv[0] + fw;
-            const vEnd = f.uv[1] + fh;
-            if (uEnd > uvMaxW) uvMaxW = uEnd;
-            if (vEnd > uvMaxH) uvMaxH = vEnd;
+            faceHit = true;
+            const fw = f.uv_size?.[0] ?? 0;
+            const fh = f.uv_size?.[1] ?? 0;
+            acc(Math.max(f.uv[0], f.uv[0] + fw), Math.max(f.uv[1], f.uv[1] + fh));
           }
-        } catch (_e) {
-          /* faceUV 解析失败由调用方 devLog，此处只算范围 */
+        } catch {
+          faceHit = false; // faceUV 非法 → 回退 box（与 parseUV 同口径）
         }
+      }
+      if (faceHit) continue;
+      if (Array.isArray(c.uv) && c.uv.length >= 2) {
+        const [sx, sy, sz] = c.size;
+        const [u, v] = c.uv;
+        acc(u + 2 * (Math.abs(sx) + Math.abs(sz)), v + Math.abs(sy) + Math.abs(sz));
       }
     }
   }
@@ -476,7 +470,7 @@ function processModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: n
         : ctx.orderedTexKeys[0] || null;
     const texUrl = texKey ? ctx.textures[texKey] : null;
 
-    const { uvMaxW, uvMaxH } = computeBoneTexRange(parsed);
+    const { uvMaxW, uvMaxH } = computeBoneTexRange(parsed.bones);
 
     const texDim = texKey ? ctx.texDimensions[texKey] : null;
     const actualTexW = texDim ? texDim.w : 0;

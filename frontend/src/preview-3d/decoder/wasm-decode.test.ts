@@ -245,6 +245,48 @@ describe("decodeYsmViaWasm .json 路径几何合并（ysm.json spec 格式）", 
     expect(result?.geometry?.textures?.length).toBe(1);
   });
 
+  it("per-face 负 uv_size 按有符号包围盒估纹理范围（不 abs 高估，foxcar down 面）", async () => {
+    // foxcar 544/551 个 down 面用负 uv_size 高度（v 轴反向采样）。
+    // 旧 Math.abs 把 vEnd 算成 fv+|fh|=16+8=24，真实占用区是 [fv+fh, fv]=[8,16]
+    // → vEnd=16。该值喂诊断 _texHeight（texMappingLog uvSize/finalSize），
+    // 高估会让诊断面板数字偏大；渲染归一化仍以 geometry 声明尺寸为准，不受影响。
+    // 走 ysm.json spec 路径（handleYsmJsonSpec → computeBoneTexRange）。
+    const negUvGeo = JSON.stringify({
+      format_version: "1.16.0",
+      "minecraft:geometry": [{
+        description: { identifier: "geometry.neguv" }, // 不声明 texture_width/height
+        bones: [{
+          name: "root",
+          cubes: [{
+            origin: [0, 0, 0],
+            size: [8, 8, 8],
+            uv: {
+              up: { uv: [0, 8], uv_size: [8, 8] },
+              down: { uv: [8, 16], uv_size: [8, -8] },
+            },
+          }],
+        }],
+      }],
+    });
+    decodeMemoryMock.mockResolvedValueOnce([
+      {
+        path: "ysm.json",
+        data: encoder.encode(JSON.stringify({
+          spec: {},
+          files: { player: { model: "models/main.json", texture: null } },
+          metadata: { authors: [] },
+          properties: {},
+          minecraft: { geometry: [] },
+        })),
+      },
+      { path: "models/main.json", data: encoder.encode(negUvGeo) },
+    ]);
+    const result = await decodeYsmViaWasm("/repo/neguv.ysm");
+    expect(result).not.toBeNull();
+    expect(result?.geometry?.bones?.[0]?._texWidth).toBe(16);
+    expect(result?.geometry?.bones?.[0]?._texHeight).toBe(16);
+  });
+
   it(".json 路径 modelFiles 不存在时走原始解析（不合并）", async () => {
     // 构造 minecraft:geometry 格式 JSON（非 ysm.json spec），parseYsmJsonDirect 走第 2 分支，返回无 _ysmMeta
     // 注意：parseYsmJsonDirect 检查 obj.minecraft.geometry[0]，需用嵌套结构

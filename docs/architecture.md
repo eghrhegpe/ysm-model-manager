@@ -356,7 +356,7 @@ readModelBytes(path) → Uint8Array        ← backend/read-model-bytes.ts（平
 |--------|------|------|
 | cube `inflate`/`mirror` 字段 | YSMParser 解码时已把 inflate 烘焙进几何尺寸、输出 json 无此字段；Go 原生解析 zip/7z/json 的**原始 json** 含这些字段但被丢弃 → 老模型（1.10+ Blockbench 导出，如 `inflate:0.01/-0.35`）尺寸偏小/纹理方向错 | `parse.go`+`types.Cube2D` 解析，`buildCubeMeshData` 消费（inflate 几何 origin-i/size+2i、mirror UV 水平翻转），对齐 Java GeoCube/GeoQuad 口径 |
 | box UV 尺寸基准 | Go 曾用**膨胀后**尺寸展开 box UV，C# 黄金参考（`csharp-builder.mjs`）先 `expandBoxUV(原始 sz)` 再 inflate → UV 范围漂移、贴图拉伸/塌缩 | `parseUV` 改传原始 `c.Size`；负 inflate 各轴 clamp 到 `thicknessEpsilon` 防面翻转 |
-| JS 兜底同步 | `model3d-spec.ts`（历史兜底，双边锁定测试）曾无 inflate/mirror 字段，与 Go 漂移 | SpecCube 补字段 + JS 构建应用同口径几何/UV 行为 + 镜像测试 |
+| JS 兜底同步 | `model3d-spec.ts`（历史兜底，双边锁定测试）曾无 inflate/mirror 字段，与 Go 漂移 | SpecCube 补字段 + JS 构建应用同口径几何/UV 行为 + 镜像测试。⚠️ 该兜底文件后因 UV 角点序与 Go 漂移且无生产调用，已于 2026-09 删除——网页兜底唯一出口 `cube-mesh.ts`（见 model3d 知识卡） |
 
 **已验证无差异的部分**（无需改）：负 `uv_size` 占比 48%（16472/34068 face 条目）——Go `parseFaceUV` 与 C# `getFaceUV` 逐行一致（负值直接参与计算产生镜像，不翻转 V）；M 前缀镜像骨骼（75/836，YSM 命名如 `MLeftArm→Arm`）——YSMParser 解码已输出完整独立骨骼链，Go 按普通骨骼处理即正确，无需特判；texSlot——两条路径均按组件序全局化。
 

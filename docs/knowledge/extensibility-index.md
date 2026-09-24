@@ -156,10 +156,10 @@ invariant_anchors:
 - 三块有限性检查同构 → `assertFinite(vals, label)` 守卫（低）。
 
 ### 2.9 `cube-mesh.ts` 6 面几何表 — ①硬编码
-- 6 面几何表写死 → 与 `model3d-spec.ts` 面序统一引用（中，改渲染语义需同步两处）。
+- 6 面几何表写死 → ~~与 `model3d-spec.ts` 面序统一引用~~ ✅ 2026-09 随 `model3d-spec.ts` 删除，几何表唯一存于 cube-mesh.ts（Go 侧 packFaceVertices 双端锁定）。
 
 ### 2.10 `cube-mesh.ts` epsilon 常量 — ②未抽离重复
-- `THICKNESS_EPSILON`/`CUBE_EPSILON` 同值 0.001，`model3d-spec.ts` 又存一份 `CUBE_EPS` → 单常量表导出（低）。
+- ~~`THICKNESS_EPSILON`/`CUBE_EPSILON` 同值 0.001，`model3d-spec.ts` 又存一份 `CUBE_EPS` → 单常量表导出~~ ✅ 2026-09 已收敛：`CUBE_EPS` 单点定义于 cube-mesh.ts（与 Go thicknessEpsilon/cubeEpsilon 同值），两处别名引用。
 
 ### 2.11 `cube-mesh.ts` `parseUV` — ⑥可插件化管线
 - `parseUV` 固定 if-else 链（faceUV→expandBoxUV→失败）→ UV 解析器注册表（中）。
@@ -192,7 +192,7 @@ invariant_anchors:
 ### 2.20 `model2d.ts` 头发调试启发式 — ①硬编码启发式
 - 头发调试启发式写死 → 见子代理汇报（低-中）。
 
-### 2.21 `model3d-spec.ts` — 与 `cube-mesh.ts` 面序/epsilon 重复（见 2.9/2.10）。
+### 2.21 ~~`model3d-spec.ts`~~ — ✅ 2026-09 已删除（与 cube-mesh.ts 面序/epsilon 重复且 UV 角点序与 Go 漂移，无生产调用；见 2.9/2.10）。
 
 ### 2.22 `quaternion.ts` — 已有 `isIdentityQuat` 但未被 mesh/mesh-builder/bone-raycast 复用（见 2.15）。
 

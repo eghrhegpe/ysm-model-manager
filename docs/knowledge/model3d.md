@@ -8,6 +8,9 @@ category: rendering
 source_files:
   - frontend/src/preview-3d/
   - frontend/src/views/app-preview/model3d-loader.ts
+tests:
+  - frontend/src/preview-3d/mesh/model3d.test.ts
+  - frontend/src/views/app-preview/model3d-loader.test.ts
 auto_fields:
   symbols_with_lines:
     - __resetLargeModelWarnForTest
@@ -928,8 +931,6 @@ auto_fields:
     - ysmSemanticBoneMap
     - YSW_FAB_CSS
     - zipFindEntry
-tests:
-  - frontend/src/preview-3d/model/model3d-spec.test.ts
 use_when:
   - 3D 渲染层
   - Three.js
@@ -962,7 +963,7 @@ quick_risk_lines:
   - dispose() 必须遍历子对象调用 geometry?.dispose() / material?.dispose() / texture?.dispose()，Object3D.remove() 不释放 WebGL 资源
   - 100MB 阈值是网页版唯一防线，低端设备（4GB RAM）峰值内存可能触顶 OOM
 pitfalls:
-  - 「Fatal trap#11」坐标口径必须对齐 YSMViewer：pivot X 取反；Go 端已正确实现，JS 兜底 model3d-spec.ts 的 cubePivot/cubeOrigin 与 Go 口径不一致（已废弃无运行时影响）
+  - 「Fatal trap#11」坐标口径必须对齐 YSMViewer：pivot X 取反；Go 端为唯一事实源，网页兜底 cube-mesh.ts 逐值同构。旧第二套 JS 兜底 model3d-spec.ts（cubePivot/cubeOrigin 与 Go 不一致）已于 2026-09 删除
   - mesh 级视锥剔除必须关闭（mesh.frustumCulled = false），否则骨骼旋转时扁平部件（如脸部）会误判不可见
   - dispose 必须完整执行：cancelAnimationFrame、移除 keydown/keyup/pointer/resize/fullscreenchange 监听、dispose geometry/material/texture，缺一即泄漏
   - 纹理绑定不得静默兜底：槽位越界/缺图应报错「纹理槽位缺失」+ 灰色占位，严禁「找第一张可用」贴错图
@@ -988,7 +989,7 @@ perf:
 
 - **模型加载与解码**（`model3d-loader.ts`）：`preloadModel(path)` → 缓存 → Go `GetModel3DSpec` → 失败兜 WASM `decodeYsmViaWasm` → 输出 `BedrockGeometry`（bones/cubes/materials/textures）；`textureCache` 引用计数池跨模型复用（同 URL 只 upload 一次 GPU）
 - **几何/骨骼/立方体**（`geometry.ts`/`cube-mesh.ts`/`mesh-builder.ts`/`bone-tools.ts`/`model-group-builder.ts`）：BedrockGeometry → Three.js Mesh（按骨骼组拆分、按面 alpha 分 split、perComponent 纹理 slot 绑定）；`BoneTree` 跨格式抽象；`semantic-bones.ts` 23 个语义骨骼 id（VRM/MMD/YSM 三格式统一，宽容缺省）
-  - **cube UV 双端逐值同构（foxcar 贴图颠倒修复，2026-09）**：网页兜底链（`spec-builder.ts → model-group-builder.ts → cube-mesh.ts`）的 `expandBoxUV`/`mdCmBuildFace` 必须与 Go `spec.go`/`packFaceVertices` 同构——canonical UV 槽位 + up/down 在打包点反转角点（负 uv_size 有符号、禁止归一化），细节与黄金参照见 [go-threejs](./go-threejs.md) 不变量「per-face/box UV 的 up/down 角点定向」；`model3d-spec.ts` 是死代码（仅自身测试引用），不在同步范围
+  - **cube UV 双端逐值同构（foxcar 贴图颠倒修复，2026-09）**：网页兜底链（`spec-builder.ts → model-group-builder.ts → cube-mesh.ts`）的 `expandBoxUV`/`mdCmBuildFace` 必须与 Go `spec.go`/`packFaceVertices` 同构——canonical UV 槽位 + up/down 在打包点反转角点（负 uv_size 有符号、禁止归一化），细节与黄金参照见 [go-threejs](./go-threejs.md) 不变量「per-face/box UV 的 up/down 角点定向」。旧 JS 兜底 `model3d-spec.ts`（角点序与 Go 漂移的第二套实现）已于 2026-09 删除，`CUBE_EPS` 单点并入 cube-mesh.ts；WASM 解码的诊断纹理范围估算（`wasm-decode.ts|computeBoneTexRange`）同口径——faceUV 优先且负 uv_size 取有符号包围盒
 - **材质与纹理**（`texture-loader.ts`/`texture-cache.ts`/`texture-alpha.ts`/`mc-tints.ts`）：`loadTextures` 并行 acquire + 50ms 轮询 complete（P2 修复加 15s 超时兜底，悬挂 URL 不再永久 pending）；KTX2 压缩管线（WASM BasisEncoder → base64 → Go `SaveCachedTexture` 缓存）
 - **渲染循环与性能**（`render-budget.ts`/`frustum-cull.ts`/`scene-stats.ts`/`screenshot.ts`/`screenshot-render.ts`）：perFrame 回调驱动 `update(dt)`（动画/感知/物理）；自适应像素比 / 帧率上限（GPU 饱和时预防性降档）；视锥裁剪（mesh 级 `frustumCulled=false`，骨骼旋转时扁平部件误判已修）；离屏多角度截图（front/45/side/back45）
   - **可见性属主分家（2026-09 修复）**：`Object3D.visible` 曾被三方共写而互相踩踏——① 视锥剔除（`cullModelGroups`）② 关剔除兜底（`restoreModelGroupsVisible`）③ 用户按模型隐藏（`sceneRegistry|setVisible`，落盘 `ysm:model-visible:<path>`）。`sceneRegistry.roots` 与 `frustum-cull.modelRoots` 是**同一批对象**（`register-built-scene|registerBuiltScene` 用 `scene.children` 差量捕获，捕获到的正是 adapter 里 `scene.add` + `registerModelRoot` 的同一个 rootGroup），故兜底原实现的无条件 `visible=true` 会在下一帧抹掉用户隐藏意图。现按**抑制态归属**（`_culled` 集合，范式同 postprocessing 的 `reflectorSuppressing`/ADR-247 D2）：剔除只处置非本模块隐藏的根并登记自己压下的，兜底只还原仍被自己压着的（`_culled` 空则零写）。**改动此处必须同时跑 `frustum-cull.test.ts` 与 `frustum-cull-visibility-ownership.test.ts`**——后者专测「隐藏意图不被剔除/兜底覆盖」。
@@ -1020,7 +1021,7 @@ perf:
 
 ## 不变量
 
-- **几何口径唯一事实源 = Go `GetModel3DSpec`**：前端 `model3d-spec.ts` 的 JS 兜底仅用于 parity 测试/Go 不可用时兜底，禁止私改几何计算口径（pivot X 取反等已在 Go 端实现）
+- **几何口径唯一事实源 = Go `GetModel3DSpec`**：网页兜底统一走 `cube-mesh.ts`（与 Go 逐值同构，双端测试锁定）；旧第二套 JS 兜底 `model3d-spec.ts buildSpecFromModel` 因 cubePivot/cubeOrigin 与 Go 口径漂移且无生产调用，已于 2026-09 删除，禁止再私改/私建几何计算口径（pivot X 取反等以 Go 端为准）
 - **纹理所有权归缓存池**：`loadTextures` acquire → 用完 `releaseTextureUrls`（引用 -1），禁止 `tex.dispose()`——LRU 失效三重后果（见 `3d-patterns.md` §7.1）
 - **dispose 必须完整遍历子对象**：`geometry?.dispose()` / `material?.dispose()` / `texture?.dispose()`；`Object3D.remove()` 不释放 WebGL 资源
 - **mesh 级 `frustumCulled = false`**：骨骼旋转时扁平部件（脸部）会误判不可见

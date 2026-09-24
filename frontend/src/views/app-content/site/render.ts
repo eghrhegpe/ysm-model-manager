@@ -94,6 +94,11 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
   const tagRole = getTagFromRole(cr.role);
   const tagIcon = getTagIconFromRole(cr.role);
 
+  // 锐评 P0-2b：desc 展示兜底从数据层上收视图层——mergeLocalAuthorsInto 不再把
+  // t("community.fromLocal") 写进 desc（语言串落盘污染数据面），本地条目以
+  // 空 desc 存储、渲染时按 _fromLocal 标记现取当前语言的提示。
+  const descText = cr.desc || (cr._fromLocal ? t("community.fromLocal") : "");
+
   return (
     `<div class="gh-card cr-creator-card cr-creator-card--grid" tabindex="0" style="animation-delay:${
       idx * 0.03
@@ -105,7 +110,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
     `<div class="cr-card-name-row"><span class="cr-card-name">${esc(
       cr.name,
     )}</span>${localBadge}<span class="cr-star-btn" data-star="${esc(cr.name)}">${starIcon}</span>${searchBtn}</div></div>` +
-    `<div class="cr-card-desc">${esc(cr.desc)}</div>` +
+    `<div class="cr-card-desc">${esc(descText)}</div>` +
     `<div class="cr-card-footer">${platformBadges}<span class="cr-tag cr-tag-${esc(
       tagRole,
     )}">${tagIcon} <span>${esc(tagRole)}</span></span></div></div>`

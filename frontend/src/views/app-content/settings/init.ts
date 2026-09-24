@@ -6,6 +6,7 @@
 import { getFsaAuthState, rescanFsaRoot, selectLocalRepo } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
+import type { LangCode } from "@/core/i18n/locale.ts";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { initVersionUpdater } from "@/features/maintenance/version-updater.ts";
 import { THEME_DARK } from "@/theme-core";
@@ -354,7 +355,7 @@ async function stgBindLangSwitch(
     langSelect.value = getLang();
     langSelect.addEventListener("change", async () => {
       try {
-        await setLang(langSelect.value as "zh-CN" | "en" | "ja");
+        await setLang(langSelect.value as LangCode);
       } catch (e) {
         toastErrorLocal(e);
       }
@@ -431,9 +432,8 @@ function stgBindWebFsa(root: ShadowRoot, isWebPlatformFn: typeof isWebPlatform):
  * @param root - 组件 shadow root
  */
 export async function initSettings(root: ShadowRoot): Promise<void> {
-  const { LoadAppConfig, SaveAppConfig, SetLinkMode } = await backendGetApp();
-  void SaveAppConfig;
-  void SetLinkMode;
+  // ADR-296 起 SaveAppConfig/SetLinkMode 由 stgBindLinkMode 自持解构，此处只取 LoadAppConfig
+  const { LoadAppConfig } = await backendGetApp();
   const cfgLoaded = await LoadAppConfig();
   resetSettingsStore(cfgLoaded);
 

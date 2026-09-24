@@ -46,12 +46,6 @@ export interface PreviewControlDef {
   fallback: string;
   /** 分组标题 i18n 键（同一 group 的连续控件归入一个可折叠 section；group 变化时插入 section header） */
   group?: string;
-  /**
-   * 设置面板聚合序号（ADR-125 P2）：定义后该控件自动并入 ⚙️ 设置面板，按本值升序排列。
-   * 未定义 = 不进设置面板（避免 pp 的 20 个高级控件淹没设置页）。
-   * cap 侧自声明即可，settings 侧零接线。
-   */
-  settingsOrder?: number;
   /** 条件显隐（B 轨纯函数谓词）：吃状态层快照 PreviewSnapshot（2026-09 放宽为 Partial——谓词只读自己关心的键，
    *  键存在性仍编译期守卫，未落地键报错），返回 false 时隐藏。
    *  与节点级 visibleWhen 同构，用于把 cap 控件条件显隐从「闭包依赖运行时 params」升级为「状态层快照驱动」，
@@ -189,9 +183,8 @@ export interface PreviewMenuNode {
   /** 控件辅助说明 i18n 键（[ADR-195] 自 PreviewControlDef.hintKey 同构——toggle/select/slider
    *  渲染在 label 右侧小字；节点直产即携带，节点渲染器经 spec/节点读取） */
   hintKey?: string;
-  /** [ADR-195 刀2] 设置面板聚合序号（自 PreviewControlDef.settingsOrder 同构）：定义后该
-   *  节点自动并入 ⚙️ 设置面板，按本值升序排列。settings 聚合 collectSettingsCapControls
-   *  对已迁移 cap 从节点树读取本字段（未迁移 cap 走旧控件定义 settingsOrder）。 */
+  /** [ADR-195 刀2] 设置面板聚合序号：定义后该节点自动并入 ⚙️ 设置面板，按本值升序排列。
+   *  cap 全部迁移，节点级 settingsOrder 为唯一入口。 */
   settingsOrder?: number;
   icon?: IconRef;
   /** 默认展开（folder 用；card 声明 collapsible:true 时也适用，缺省展开） */

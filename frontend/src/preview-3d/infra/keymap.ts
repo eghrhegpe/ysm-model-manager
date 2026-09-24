@@ -17,8 +17,9 @@ export const DEFAULT_TD_KEYMAP: Record<TdKeyAction, string> = {
   down: "ShiftLeft",
 };
 
-const TD_KEYMAP_KEY = "td-keymap";
-/** 相机移动速度持久化键（单一源：menu/settings.ts buildCameraSchema 同引用，防双源漂移） */
+/** 键位映射持久化键（单一源：settings/keymap.ts 读写与 loadTdKeymap 同引用，防裸字符串漂移） */
+export const TD_KEYMAP_KEY =
+  "td-keymap"; /** 相机移动速度持久化键（单一源：menu/settings.ts buildCameraSchema 同引用，防双源漂移） */
 export const TD_CAMSPEED_KEY = "td-cam-speed";
 /** 相机旋转模式持久化键（单一源：menu/settings.ts buildCameraSchema 同引用，防双源漂移） */
 export const TD_ROTMODE_KEY = "td-rot-mode";

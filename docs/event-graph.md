@@ -261,8 +261,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 383 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 410 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 384 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 411 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -318,7 +318,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 213 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 214 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 357 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
@@ -436,17 +436,17 @@
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 307 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
-| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 77 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 118 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 155 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 162 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 185 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 206 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 230 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 312 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 114 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 125 |
-| initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 144 |
+| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 78 |
+| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 119 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 156 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 163 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 186 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 207 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 231 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 313 |
+| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 110 |
+| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 121 |
+| initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 140 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 94 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 275 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 281 |
@@ -478,7 +478,7 @@
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 166 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 172 |
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 98 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 161 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 163 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 150 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |

@@ -4,6 +4,7 @@
 // 一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持。
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { TD_CAMSPEED_KEY, TD_KEYMAP_KEY, TD_ROTMODE_KEY } from "@/preview-3d/infra/keymap.ts";
 import { loadTdKeymap, type TdKeyAction } from "@/preview-3d/mesh/model3d.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -64,7 +65,7 @@ const tdKeyLabel = (code: string): string => {
 };
 
 const tdSaveKeymap = (km: Record<TdKeyAction, string>): void => {
-  safeSet("td-keymap", JSON.stringify(km));
+  safeSet(TD_KEYMAP_KEY, JSON.stringify(km));
 };
 
 function tdRenderKeymap(root: ShadowRoot): void {
@@ -134,7 +135,7 @@ function tdRenderKeymap(root: ShadowRoot): void {
 export function initKeymap(root: ShadowRoot): void {
   tdRenderKeymap(root);
   root.getElementById("td-keymap-reset")?.addEventListener("click", () => {
-    safeRemove("td-keymap");
+    safeRemove(TD_KEYMAP_KEY);
     tdRenderKeymap(root);
     bus.emit("toast:show", {
       msg: t("settings.keymap.resetDone"),
@@ -147,19 +148,19 @@ export function initKeymap(root: ShadowRoot): void {
   const csEl = root.getElementById("td-camspeed") as HTMLInputElement | null;
   const csVal = root.getElementById("td-camspeed-val");
   if (csEl) {
-    csEl.value = safeGet("td-cam-speed") || DEFAULT_CAM_SPEED;
+    csEl.value = safeGet(TD_CAMSPEED_KEY) || DEFAULT_CAM_SPEED;
     if (csVal) csVal.textContent = csEl.value;
     csEl.addEventListener("input", () => {
       if (csVal) csVal.textContent = csEl.value;
-      safeSet("td-cam-speed", csEl.value);
+      safeSet(TD_CAMSPEED_KEY, csEl.value);
     });
   }
   // 默认旋转模式
   const rmEl = root.getElementById("td-rotmode") as HTMLSelectElement | null;
   if (rmEl) {
-    rmEl.value = safeGet("td-rot-mode") === "free" ? "free" : "orbit";
+    rmEl.value = safeGet(TD_ROTMODE_KEY) === "free" ? "free" : "orbit";
     rmEl.addEventListener("change", () => {
-      safeSet("td-rot-mode", rmEl.value);
+      safeSet(TD_ROTMODE_KEY, rmEl.value);
     });
   }
 }

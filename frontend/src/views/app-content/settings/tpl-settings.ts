@@ -3,6 +3,7 @@
 
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
+import { SUPPORTED_LANGS } from "@/core/i18n/locale.ts";
 import { t } from "@/core/i18n/t.ts";
 import { THEME_VALID } from "@/theme-core";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -69,7 +70,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
         `<select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
           <option value="">${t("settings.mirror.directOption")}</option>
           <option value="jsdelivr">${t("settings.mirror.jsdelivrOption")}</option>
-          <option value="githubapi">GitHub API</option>
+          <option value="githubapi">${t("settings.mirror.nameGithubapi")}</option>
         </select>
         <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.directHint")}</div>
         <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.jsdelivrHint")}</div>
@@ -124,14 +125,18 @@ function renderStgLangSelect(): string {
   // 升格为 .stg-card 正典卡（设置页样式范式契约待修债 #1）：原手写 <div class="stg-card"> 未走
   // stgCard() 构造器，hdr 缺失、间距/圆角与正典卡不一致。单卡场景：hdr 标题即「语言」，
   // body 内 select+描述，不再另挂 .section-title（避免标题重复，与动画卡同构）。
+  // 选项从 SUPPORTED_LANGS 派生（label = 语言内生名，自名不经 t()——zh-CN 的 lang.* 死键
+  // 已在 49b5ce13d 删除，见 locale.ts L16-20 契约注）：原三行硬编码是注释宣称
+  // 「设置页下拉按 label 渲染」却未兑现的滞后实现，语言增删须双处同步。
+  const options = SUPPORTED_LANGS.map((l) => `<option value="${l.code}">${l.label}</option>`).join(
+    "\n      ",
+  );
   return stgCard(
     UI_ICONS.web,
     t("settings.language"),
     `<div style="display:flex;align-items:center;gap:8px">
     <select id="set-lang" class="stg-select" style="width:auto">
-      <option value="zh-CN">简体中文</option>
-      <option value="en">English</option>
-      <option value="ja">日本語</option>
+      ${options}
     </select>
     <span style="font-size:var(--fs-xs);color:var(--muted)">${t("settings.languageDesc")}</span>
   </div>`,

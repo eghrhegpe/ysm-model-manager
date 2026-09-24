@@ -132,6 +132,7 @@ auto_fields:
     - CameraControlBridge
     - CameraControlScene
     - cancelPendingEncodings
+    - CAP_CONTROL_RENDERERS
     - CapabilityId
     - CapabilityMap
     - CapControlView
@@ -161,6 +162,7 @@ auto_fields:
     - collectSettingsCapControls
     - collectVisiblePredicates
     - collectVmdBoneNames
+    - COMMON_NODE_FIELDS
     - compKey
     - componentsCss
     - componentsStyleSheet
@@ -406,6 +408,7 @@ auto_fields:
     - isSsrRenderActive
     - JavaModelFace
     - JavaModelResult
+    - KIND_SPECIFIC_FIELDS
     - KNOWN_PATHS
     - Ktx2EncodeRequest
     - Ktx2EncodeResponse
@@ -542,6 +545,7 @@ auto_fields:
     - multiModelSelectNode
     - MultiModelSelectOpts
     - nodeControlToView
+    - NodeViolation
     - normalizeEnvLegacyState
     - normalizeFbxScale
     - normalizeGroundLegacyState
@@ -680,6 +684,7 @@ auto_fields:
     - RendererHost
     - renderLoadingState
     - renderMenu
+    - RenderMenuDeps
     - RenderModeCapability
     - renderMultiAngle
     - RenderMultiAngleOptions
@@ -710,6 +715,13 @@ auto_fields:
     - resumeEnvCallbacks
     - rewriteVmdTracks
     - ringLog
+    - rmAppendButton
+    - rmAppendDecor
+    - rmAppendDynamicRow
+    - rmAppendField
+    - rmAppendLeaf
+    - rmAppendMaterialRow
+    - rmLabel
     - ROLE
     - roleBaseName
     - RolesSchemaDeps
@@ -867,6 +879,8 @@ auto_fields:
     - unregisterModelRoot
     - unregisterSchema
     - UpdateableScene
+    - validateNode
+    - validateNodeTree
     - valueNoise2
     - valueNoise4D
     - Vec3

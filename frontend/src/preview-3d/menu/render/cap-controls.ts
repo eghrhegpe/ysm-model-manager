@@ -5,7 +5,8 @@ import type { LocaleKey } from "@/core/i18n/t.ts";
 //
 // [ADR-195 刀 2.5 / 增量2a] 投影反转 + 通道收窄：简单控件（slider/toggle/select/color）渲染实现
 // 只吃统一 CapControlView（PreviewControlDef 的读取子集），由 render.ts 的 spec→view 适配器直供；
-// renderCapControls 的 controls 通道收窄为复杂件专用（button/image/timeline/histogram/preset-thumb），
+// renderCapControls 的 controls 通道收窄为复杂件专用（image/timeline/histogram/preset-thumb，
+// button 已迁节点原生 kind——rmAppendButton 按钮臂），
 // 复杂渲染器直吃 PreviewControlDef 全字段——原 def→view 适配（capControlToView）随之退役。单一渲染实现，薄适配，无中间类型。
 
 import { tOf } from "@/core/i18n/t.ts";
@@ -335,46 +336,6 @@ export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
   parent.appendChild(row);
 }
 
-/** button：label + 按钮（primary/ghost）+ 动态 hint；点击动作异步禁用防重复触发，stopPropagation 护栏在虚拟层不适用 */
-function renderCapButton(parent: HTMLElement, c: PreviewControlDef): void {
-  const row = document.createElement("div");
-  row.className = "slide-item cc-row";
-  row.dataset.testid = `cap-${c.id}`;
-  const label = document.createElement("span");
-  label.className = "slide-label cc-label-grow";
-  label.textContent = capLabel(c);
-  const btn = document.createElement("button");
-  const variant = c.button?.variant ?? "ghost";
-  btn.className = variant === "primary" ? "cc-btn cc-btn-primary" : "cc-btn cc-btn-ghost";
-  btn.textContent = c.button?.textKey ? tOf(c.button.textKey) : c.fallback;
-  const hint = document.createElement("span");
-  hint.className = "cc-hint cc-hint-45";
-  const syncHint = (): void => {
-    const v = c.button?.getHint ? c.button.getHint() : "";
-    hint.textContent = v ?? (c.button?.hintKey ? tOf(c.button.hintKey) : "");
-  };
-  syncHint();
-  let disabled = c.button?.disabled?.() ?? false;
-  btn.disabled = disabled;
-  btn.style.opacity = disabled ? "0.5" : "1";
-  btn.onclick = async (): Promise<void> => {
-    if (!c.button?.action) return;
-    if (btn.disabled) return;
-    btn.disabled = true;
-    btn.style.opacity = "0.5";
-    try {
-      await c.button.action();
-    } finally {
-      disabled = c.button?.disabled?.() ?? false;
-      btn.disabled = disabled;
-      btn.style.opacity = disabled ? "0.5" : "1";
-      syncHint();
-    }
-  };
-  row.append(label, btn, hint);
-  parent.appendChild(row);
-}
-
 /** image：全宽图片；无内容时跳过（不占位） */
 function renderCapImage(parent: HTMLElement, c: PreviewControlDef): void {
   const url = c.getValue() as string | null;
@@ -649,14 +610,12 @@ export function collectVisiblePredicates(controls: PreviewControlDef[]): Preview
  *  故不导出；如需单控件委托再恢复 export）。
  *  与 renderCapControls 循环体共享同一分派臂（exhaustive switch 单源），
  *  保证「整组渲染」与「单控件委托渲染」视觉/行为零分歧。
- *  [ADR-195 增量2a] 通道收窄为复杂件专用：仅 button/image/timeline/histogram/preset-thumb
- *  五臂（均直吃 PreviewControlDef，全字段承载）。简单 kind（divider/toggle/slider/select/color）
+ *  [ADR-195 增量2a] 通道收窄为复杂件专用：image/timeline/histogram/preset-thumb
+ *  四臂（均直吃 PreviewControlDef，全字段承载；button 已迁节点原生 kind）。
+ *  简单 kind（divider/toggle/slider/select/color）
  *  已从 PreviewControlKind 移除——简单件走节点原生渲染，capControlToView 随之退役。 */
 function renderCapControlSingle(parent: HTMLElement, c: PreviewControlDef): void {
   switch (c.kind) {
-    case "button":
-      renderCapButton(parent, c);
-      break;
     case "image":
       renderCapImage(parent, c);
       break;

@@ -3,15 +3,17 @@
 // environment 是刀2 最复杂一例——含 preset-thumb/image/histogram 复杂控件 + 组分裂修复：
 //   - background 组（use-as-background/intensity/histogram）在 getMenuControls 里被拆两段
 //     （ecBuildBasic 与末尾 ecBuildHistogram），节点化后正确合并进同一个 folder。
-//   - preset-thumb/image/histogram/button 的控件定义保持原样（含 group 字段），
+//   - preset-thumb/image/histogram 的控件定义保持原样（含 group 字段），
 //     进 controls 节点后由 renderCapControls 消费。
+//   - env-pick-hdr/env-clear-hdr 为原生 button 节点（rmAppendButton 按钮臂，
+//     PreviewControlDef 已无 button kind——复杂件仅余 image/timeline/histogram/preset-thumb）。
 // 顶层顺序：
 //   1. env-enabled toggle 原生（无 group——能力总开关）
 //   2. folder preview.envGroupPreset：env-preset → controls 通道节点
 //   3. folder preview.envGroupBackground：use-as-background toggle 原生 + intensity slider 原生
 //      + env-histogram → controls 通道节点（组分裂修复）
 //   4. folder preview.envGroupCustomHdr：env-hdr-preview → controls 节点（image）
-//      + env-pick-hdr/env-clear-hdr → controls 节点（button 打包）
+//      + env-pick-hdr/env-clear-hdr → 原生 button 节点
 // [双折叠头修复] folder 内 controls 通道控件一律去掉 group：folder 即折叠容器，
 //   若控件保留 group 会令 renderCapControls 按同名分组再建一个同名 cap-section →
 //   同组折叠头重复（预设/背景/自定义HDR 三处均曾双头）。ENV_GROUP_* 常量仅供 folder
@@ -119,7 +121,11 @@ function envHistogramControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
   return { id: "cap-group-env-histogram", kind: "controls", controls: [hist] };
 }
 
-/** 自定义 HDR 控件组：image 预览 + pick/clear 按钮（全部走 controls 通道） */
+/** 自定义 HDR 控件组：image 预览（controls 通道）+ pick/clear 原生 button 节点。
+ *  [ADR-195 走法甲收口] button 已可被节点 kind 承载（rmAppendButton 按钮臂，
+ *  锐评修复 2026-09-20）——不再经 controls 通道塞空桩 getValue/setValue，
+ *  对齐 ground-menu.ts textureButtonsNode 先例。PreviewControlDef 仅余
+ *  image/timeline/histogram/preset-thumb 四复杂件（button 已从 PreviewControlKind 移除）。 */
 function envCustomHdrControlsNodes(cap: EnvironmentCapability): PreviewMenuNode[] {
   const image: PreviewControlDef = {
     id: "env-hdr-preview",
@@ -132,15 +138,15 @@ function envCustomHdrControlsNodes(cap: EnvironmentCapability): PreviewMenuNode[
       /* 只读 */
     },
   };
-  const buttons: PreviewControlDef[] = [
+  return [
+    { id: "cap-group-env-hdr-preview", kind: "controls", controls: [image] },
     {
       id: "env-pick-hdr",
       kind: "button",
       labelKey: "preview.envPickHdr",
-      fallback: "自定义 HDR",
-      // [双折叠头修复] 按钮已在外层 customHdr folder 内，去掉 group 避免重复头
-      button: {
-        textKey: "preview.envPickHdrBtn",
+      // [双折叠头修复] 按钮已在外层 customHdr folder 内，无需 group
+      control: {
+        text: "preview.envPickHdrBtn",
         variant: "primary",
         action: async () => cap.onPickCustomHdr(),
         disabled: () => cap.isCustomHdrLoading(),
@@ -151,34 +157,20 @@ function envCustomHdrControlsNodes(cap: EnvironmentCapability): PreviewMenuNode[
         },
         hintKey: "preview.envPickHdrHint",
       },
-      getValue: () => "",
-      setValue: () => {
-        /* ignore */
-      },
     },
     {
       id: "env-clear-hdr",
       kind: "button",
       labelKey: "preview.envClearHdr",
-      fallback: "清除自定义 HDR",
-      // [双折叠头修复] 同上：按钮在外层 folder 内，去掉 group
-      button: {
-        textKey: "preview.envClearHdrBtn",
+      control: {
+        text: "preview.envClearHdrBtn",
         variant: "ghost",
         action: () => cap.onClearCustomHdr(),
         disabled: () => !cap.hasCustomHdr(),
         hintKey: "preview.envClearHdrHint",
         getHint: () => (cap.hasCustomHdr() ? "已清空将回到工作室预设" : ""),
       },
-      getValue: () => "",
-      setValue: () => {
-        /* ignore */
-      },
     },
-  ];
-  return [
-    { id: "cap-group-env-hdr-preview", kind: "controls", controls: [image] },
-    { id: "cap-group-env-hdr-buttons", kind: "controls", controls: buttons },
   ];
 }
 

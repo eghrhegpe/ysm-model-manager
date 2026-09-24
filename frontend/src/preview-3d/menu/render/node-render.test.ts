@@ -60,6 +60,44 @@ describe("renderMenu 新 kind", () => {
     expect(clicked).toEqual(["current"]);
   });
 
+  it("button: control 携按钮语义（text/variant/action/disabled/getHint/hintKey）时渲染行内真按钮（rmAppendButton 按钮臂——env pick/clear 迁节点 kind 的渲染契约）", () => {
+    let disabled = false;
+    const clicked: string[] = [];
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "env-pick-hdr",
+        kind: "button",
+        labelKey: "preview.envPickHdr",
+        control: {
+          text: "preview.envPickHdrBtn",
+          variant: "primary",
+          action: async () => { clicked.push("pick"); },
+          disabled: () => disabled,
+          getHint: () => (disabled ? "加载中…" : "已加载：foo"),
+          hintKey: "preview.envPickHdrHint",
+        },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-env-pick-hdr"]') as HTMLElement;
+    expect(row).not.toBeNull();
+    const btn = row.querySelector("button.cc-btn") as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.classList.contains("cc-btn-primary")).toBe(true);
+    // 按钮文案走 control.text（i18n key），与行 label（labelKey）分离
+    expect(btn.textContent).toBe(tOf("preview.envPickHdrBtn" as LocaleKey));
+    // hint 显示 getHint 动态结果（覆盖 hintKey）
+    expect(row.querySelector(".cc-hint")!.textContent).toBe("已加载：foo");
+    // 点击触发 action
+    btn.click();
+    expect(clicked).toEqual(["pick"]);
+    // disabled 时点击被忽略（异步禁用 + disabled() 双闸）
+    disabled = true;
+    btn.click();
+    expect(clicked).toEqual(["pick"]);
+  });
+
   it("toggle: 渲染 label + 开关行，点击翻转 control.set（归一后 cap 栈渲染，testid cap-xxx + label-toggle 结构）", () => {
     let on = false;
     const nodes: PreviewMenuNode[] = [
@@ -612,12 +650,11 @@ describe("renderMenu 新 kind", () => {
         kind: "controls",
         controls: [
           {
-            id: "env-pick-hdr",
-            kind: "button",
+            id: "env-timeline",
+            kind: "timeline",
             labelKey: "preview.envPickHdr",
             fallback: "自定义 HDR",
-            button: { textKey: "preview.envPickHdrBtn", action: () => {} },
-            getValue: () => null,
+            getValue: () => 12,
             setValue: () => {},
           },
           {
@@ -633,10 +670,11 @@ describe("renderMenu 新 kind", () => {
     ];
     const container = document.createElement("div");
     renderMenu(container, nodes, makeDeps() as any);
-    // [增量2a] controls 通道收窄为复杂件专用（button/image/timeline/histogram/preset-thumb），
-    // testid 前缀 cap-（renderCapControls 口径）；简单件（slider/color）已移出本通道，走节点原生渲染。
-    expect(container.querySelector('[data-testid="cap-env-pick-hdr"]')).not.toBeNull();
-    expect(container.querySelector(".cc-btn")).not.toBeNull();
+    // [增量2a] controls 通道收窄为复杂件专用（timeline/image/histogram/preset-thumb，
+    // button 已迁节点原生 kind），testid 前缀 cap-（renderCapControls 口径）；
+    // 简单件（slider/color）已移出本通道，走节点原生渲染。
+    expect(container.querySelector('[data-testid="cap-env-timeline"]')).not.toBeNull();
+    expect(container.querySelector(".cc-band")).not.toBeNull();
     expect(container.querySelector('[data-testid="cap-env-hdr-preview"]')).not.toBeNull();
   });
 

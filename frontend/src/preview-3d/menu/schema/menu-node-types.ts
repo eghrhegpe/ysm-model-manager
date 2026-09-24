@@ -21,12 +21,13 @@
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { IconRef } from "@/utils/icon/resolve.ts";
-/** 控件种类——controls 通道承载元素的 kind（[ADR-195 增量2a] 收窄为复杂件专用）。
- *  本类型只保留无法用 PreviewMenuNode 原生承载的复杂控件（button/image/timeline/
- *  histogram/preset-thumb）。简单控件（toggle/slider/select/color/divider）一律走
- *  节点原生 kind + PreviewControlSpec，不再经 controls 通道——消除「同一简单控件
- *  两套声明」的冗余，为增量2b 的 Spec/Def 统一铺路。 */
-export type PreviewControlKind = "button" | "image" | "timeline" | "histogram" | "preset-thumb";
+/** 控件种类——controls 通道承载元素的 kind（[ADR-195 增量2a] 收窄为复杂件专用；
+ *  2026-10 再收窄：button 已可被节点原生 kind 承载（rmAppendButton 按钮臂，
+ *  锐评修复 2026-09-20），从本联合移除、cap 按钮全部迁节点 kind——复杂件仅余
+ *  image/timeline/histogram/preset-thumb）。简单控件（toggle/slider/select/color/divider）
+ *  一律走节点原生 kind + PreviewControlSpec，不再经 controls 通道——消除「同一简单
+ *  控件两套声明」的冗余。 */
+export type PreviewControlKind = "image" | "timeline" | "histogram" | "preset-thumb";
 
 /**
  * 控件定义（[ADR-195 增量2a] 收窄为复杂件专用）：声明式，由 cap 栈渲染器渲染为 DOM，
@@ -58,21 +59,6 @@ export interface PreviewControlDef {
    *  [铁律收口] 3d菜单只允许 visibleWhen——A 轨 visible 闭包已整体删除（2026-09，ground/water 换皮完成），
    *  谓词只吃快照不摸 cap 实例，全仓唯一条件显隐入口。 */
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean;
-  /** button 配置（kind=button 时生效） */
-  button?: {
-    /** 按钮展示文案（i18n 键），为空则取 labelKey/fallback */
-    textKey?: string;
-    /** 按钮次级文案（i18n 键），展示按钮右侧小字（如已加载 HDR 文件名） */
-    hintKey?: string;
-    /** 读取当前右侧 hint 文案（动态覆盖 hintKey，如当前加载的 HDR 文件名） */
-    getHint?: () => string;
-    /** 按钮变种：primary 强调 / ghost 次按钮 */
-    variant?: "primary" | "ghost";
-    /** 点击回调。非 getValue/setValue 语义（按钮无"值"），统一单独挂 action */
-    action: () => void | Promise<void>;
-    /** 是否禁用（异步加载中禁用） */
-    disabled?: () => boolean;
-  };
   /** preset-thumb 配置（kind=preset-thumb 时生效） */
   thumb?: {
     size: number;
@@ -87,9 +73,9 @@ export interface PreviewControlDef {
     /** [预设冗余标签] true = 不渲染控件顶部 label（外层已用 folder 折叠头承载标题，省去内部重复标题行）。 */
     hideLabel?: boolean;
   };
-  /** 读取当前值（框架调用，渲染初始状态；button/image 忽略，image 可返回 null 跳过渲染） */
+  /** 读取当前值（框架调用，渲染初始状态；image 可返回 null 跳过渲染） */
   getValue: () => number | string | boolean | null | number[];
-  /** 设置值（框架调用，用户交互时触发；button 忽略） */
+  /** 设置值（框架调用，用户交互时触发） */
   setValue: (v: number | string | boolean) => void;
   /** 拖拽开始（timeline 专用——相位标记：写入降为阈值门控，松手才 force 一次） */
   onDragStart?(v: number | string | boolean): void;

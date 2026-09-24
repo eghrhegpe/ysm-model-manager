@@ -3,10 +3,11 @@ import type { PreviewControlDef } from "@/preview-3d/caps/scene-capability.ts";
 import { renderCapControls } from "@/preview-3d/menu/engine/core.ts";
 import type { LocaleKey } from "@/core/i18n/t.ts";
 
-// 工厂：构造 PreviewControlDef（[增量2a] 通道收窄为复杂件专用——button/image/timeline/
-// histogram/preset-thumb），简化用例书写。简单件（slider/select/toggle/color/divider）
-// 已从 PreviewControlKind 移除、不再经本通道，其渲染改由 node 路径直供 CapControlView
-// 渲染器测（见 cap-controls.test.ts），故本文件不再覆盖简单件。
+// 工厂：构造 PreviewControlDef（[增量2a] 通道收窄为复杂件专用——image/timeline/
+// histogram/preset-thumb；button 已迁节点原生 kind 2026-10，不再经本通道），简化用例书写。
+// 简单件（slider/select/toggle/color/divider）已从 PreviewControlKind 移除、不再经本通道，
+// 其渲染改由 node 路径直供 CapControlView 渲染器测（见 cap-controls.test.ts），
+// 故本文件不再覆盖简单件。
 const mk = (
   kind: PreviewControlDef["kind"],
   opts: {
@@ -14,7 +15,6 @@ const mk = (
     labelKey?: LocaleKey;
     fallback?: string;
     group?: string | undefined;
-    button?: NonNullable<PreviewControlDef["button"]>;
     thumb?: NonNullable<PreviewControlDef["thumb"]>;
     getValue?: () => number | string | boolean | null;
     setValue?: (v: number | string | boolean) => void;
@@ -26,7 +26,6 @@ const mk = (
   fallback: opts.fallback ?? `test-${kind}`,
   // 可选槽位仅真实存在时附带（exactOptional 收紧后避免显式 undefined 流入 PreviewControlDef）
   ...(opts.group !== undefined ? { group: opts.group } : {}),
-  ...(opts.button !== undefined ? { button: opts.button } : {}),
   ...(opts.thumb !== undefined ? { thumb: opts.thumb } : {}),
   getValue: opts.getValue ?? (() => (kind === "image" ? "http://x/y.png" : kind === "timeline" ? 12 : 0.5)),
   setValue: opts.setValue ?? (() => {}),
@@ -40,9 +39,9 @@ describe("renderCapControls", () => {
   it("基本分组：带 group 的控件归入同一 section", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("button", { id: "g1", group: "Sky" }),
-      mk("button", { id: "g2", group: "Sky" }),
-      mk("button", { id: "g3", group: "Sky" }),
+      mk("timeline", { id: "g1", group: "Sky" }),
+      mk("timeline", { id: "g2", group: "Sky" }),
+      mk("timeline", { id: "g3", group: "Sky" }),
     ]);
     // 1 个 section
     const sections = list.querySelectorAll(".cap-section");
@@ -60,8 +59,8 @@ describe("renderCapControls", () => {
   it("无 group 控件：直接挂到 list 顶层", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("button", { id: "t-top" }),
-      mk("button", { id: "s-top" }),
+      mk("timeline", { id: "t-top" }),
+      mk("timeline", { id: "s-top" }),
     ]);
     // 无 section
     expect(list.querySelectorAll(".cap-section").length).toBe(0);
@@ -76,9 +75,9 @@ describe("renderCapControls", () => {
   it("交替分组（A,B,A）：相同 group 归入同一 section（非连续也归并）", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("button", { id: "a1", group: "A" }),
-      mk("button", { id: "b1", group: "B" }),
-      mk("button", { id: "a2", group: "A" }),
+      mk("timeline", { id: "a1", group: "A" }),
+      mk("timeline", { id: "b1", group: "B" }),
+      mk("timeline", { id: "a2", group: "A" }),
     ]);
     const sections = list.querySelectorAll(".cap-section");
     // 只有 2 个 section（A 和 B 各一个，A 只出现一次）
@@ -103,7 +102,7 @@ describe("renderCapControls", () => {
   it("section 折叠/展开：header 点击切换 collapsed 状态", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("button", { group: "Sky" }),
+      mk("timeline", { group: "Sky" }),
     ]);
     const header = list.querySelector(".cap-section-header") as HTMLElement;
     const body = list.querySelector(".cap-section-body") as HTMLElement;
@@ -127,57 +126,8 @@ describe("renderCapControls", () => {
   });
 
   // ===== 复杂控件渲染（走通道）=====
-
-  it("button：渲染出 button", () => {
-    const list = mkList();
-    let clicked = false;
-    renderCapControls(list, [
-      mk("button", {
-        button: {
-          textKey: "preview.test.btn",
-          action: () => { clicked = true; },
-        },
-      }),
-    ]);
-    const btn = list.querySelector("button") as HTMLButtonElement;
-    expect(btn).not.toBeNull();
-    expect(btn.disabled).toBe(false);
-    // 点击
-    btn.click();
-    expect(clicked).toBe(true);
-  });
-
-  it("button（primary variant）：使用 primary 样式（有背景色）", () => {
-    const list = mkList();
-    renderCapControls(list, [
-      mk("button", {
-        button: { variant: "primary", action: () => {} },
-      }),
-    ]);
-    const btn = list.querySelector("button") as HTMLButtonElement;
-    // P1 批次2 cssText→类：primary 背景规则在注入样式表（.cc-btn-primary 含 var(--accent)），
-    // 断类归属 + 样式表原文两级（happy-dom 计算样式读 var(--accent) 背景不可靠）
-    expect(btn.classList.contains("cc-btn-primary")).toBe(true);
-    const btnSheet = [...document.querySelectorAll("style")].find((s) => s.textContent?.includes(".cc-btn-primary"));
-    expect(btnSheet?.textContent ?? "").toContain("var(--accent)");
-  });
-
-  it("button（disabled）：按钮禁用不执行 action", () => {
-    const list = mkList();
-    let clicked = false;
-    renderCapControls(list, [
-      mk("button", {
-        button: {
-          action: () => { clicked = true; },
-          disabled: () => true,
-        },
-      }),
-    ]);
-    const btn = list.querySelector("button") as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
-    btn.click();
-    expect(clicked).toBe(false);
-  });
+  // button 渲染测（text/variant/disabled/getHint）已随 PreviewControlKind 移除迁至
+  // node-render.test.ts 的 rmAppendButton 按钮臂用例——本文件不再覆盖 button。
 
   it("image：有 URL 时渲染 img", () => {
     const list = mkList();
@@ -266,9 +216,9 @@ describe("renderCapControls", () => {
   it("混合：group + 无 group 共存", () => {
     const list = mkList();
     renderCapControls(list, [
-      mk("button", { id: "top", group: undefined }),
-      mk("button", { id: "a1", group: "A" }),
-      mk("button", { id: "a2", group: "A" }),
+      mk("timeline", { id: "top", group: undefined }),
+      mk("timeline", { id: "a1", group: "A" }),
+      mk("timeline", { id: "a2", group: "A" }),
     ]);
     // 顶层：1 无 group 控件
     const topItems = Array.from(list.children).filter(

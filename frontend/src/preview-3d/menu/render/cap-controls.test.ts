@@ -5,7 +5,7 @@
 //     简单件不再经 renderCapControls，故本组直调渲染器。formatCapSliderValue 是纯函数（无 DOM 依赖），
 //     node 环境直接测四分支：h（钟点 → HH:MM）/ %（百分比）/ 带单位（拼接）/ 无单位（toFixed2）；
 //     该函数由 renderCapSlider 与 renderEnvLevel 摘要行共用——防两端分叉回归。
-//   · 复杂控件走 renderCapControls（button/image/timeline/histogram/preset-thumb），测分组显隐与 testid。
+//   · 复杂控件走 renderCapControls（image/timeline/histogram/preset-thumb；button 已迁节点原生 kind），测分组显隐与 testid。
 import { describe, it, expect, vi } from "vitest";
 import {
   capLabel,
@@ -58,16 +58,16 @@ describe("formatCapSliderValue", () => {
   });
 });
 
-// 复杂件 helper：renderCapControls 通道现仅承载复杂 kind，用 button 作显隐/testid 探针
-// （button 恒渲染行 + cap- testid，不受 getValue 影响；image 空值会跳过故不适合探针）。
-function btn(id: string, extra: Partial<PreviewControlDef> = {}): PreviewControlDef {
+// 复杂件 helper：renderCapControls 通道现仅承载复杂 kind（button 已迁节点原生 kind，
+// rmAppendButton 按钮臂），用 timeline 作显隐/testid 探针
+// （timeline 恒渲染行 + cap- testid，不受 getValue 影响；image 空值会跳过故不适合探针）。
+function probe(id: string, extra: Partial<PreviewControlDef> = {}): PreviewControlDef {
   return {
     id,
-    kind: "button",
+    kind: "timeline",
     labelKey: id as LocaleKey,
     fallback: id,
-    button: { action: () => {} },
-    getValue: () => null,
+    getValue: () => 12,
     setValue: () => {},
     ...extra,
   };
@@ -80,15 +80,15 @@ describe("renderCapControls — visibleWhen B 轨谓词", () => {
   it("传 snapshot 时按 visibleWhen 隐藏/显示", () => {
     const list = document.createElement("div");
     renderCapControls(list, [
-      btn("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
-      btn("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+      probe("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
+      probe("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
     ], snap("film"));
     expect(list.querySelector('[data-testid="cap-film-only"]')).not.toBeNull();
     expect(list.querySelector('[data-testid="cap-pool-only"]')).toBeNull();
     const list2 = document.createElement("div");
     renderCapControls(list2, [
-      btn("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
-      btn("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+      probe("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
+      probe("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
     ], snap("pool"));
     expect(list2.querySelector('[data-testid="cap-film-only"]')).toBeNull();
     expect(list2.querySelector('[data-testid="cap-pool-only"]')).not.toBeNull();
@@ -96,7 +96,7 @@ describe("renderCapControls — visibleWhen B 轨谓词", () => {
 
   it("无 snapshot 时 visibleWhen 被忽略，控件正常渲染（纯 B 轨容错：早期调用/DOM 冒烟不判藏）", () => {
     const list = document.createElement("div");
-    renderCapControls(list, [btn("x", { visibleWhen: () => false })]);
+    renderCapControls(list, [probe("x", { visibleWhen: () => false })]);
     expect(list.querySelector('[data-testid="cap-x"]')).not.toBeNull();
   });
 
@@ -105,23 +105,22 @@ describe("renderCapControls — visibleWhen B 轨谓词", () => {
     // film 快照下 pool-only 隐藏（与「传 snapshot 时按 visibleWhen 隐藏/显示」同构，锁定 B 轨唯一入口）
     const list = document.createElement("div");
     renderCapControls(list, [
-      btn("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+      probe("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
     ], snap("film"));
     expect(list.querySelector('[data-testid="cap-pool-only"]')).toBeNull();
   });
 });
 
 describe("renderCapControls — 复杂 kind testid 覆盖（增量2a 收窄后）", () => {
-  it("button/timeline/histogram/preset-thumb/image 都带 cap-<id> testid", () => {
+  it("timeline/histogram/preset-thumb/image 都带 cap-<id> testid（button 已迁节点原生 kind）", () => {
     const list = document.createElement("div");
     renderCapControls(list, [
-      { id: "c-btn", kind: "button", labelKey: "c" as LocaleKey, fallback: "c", button: { action: () => {} }, getValue: () => null, setValue: () => {} },
       { id: "c-time", kind: "timeline", labelKey: "c" as LocaleKey, fallback: "c", getValue: () => 12, setValue: () => {} },
       { id: "c-hist", kind: "histogram", labelKey: "c" as LocaleKey, fallback: "c", getValue: () => [1, 2, 3], setValue: () => {} },
       { id: "c-thumb", kind: "preset-thumb", labelKey: "c" as LocaleKey, fallback: "c", getValue: () => "x", setValue: () => {}, thumb: { size: 40, options: [{ value: "a", label: "a", getThumb: () => null }], activeValue: () => "a", onSelect: () => {} } },
       { id: "c-img", kind: "image", labelKey: "c" as LocaleKey, fallback: "c", getValue: () => "https://x/y.png", setValue: () => {} },
     ]);
-    for (const id of ["c-btn", "c-time", "c-hist", "c-thumb", "c-img"]) {
+    for (const id of ["c-time", "c-hist", "c-thumb", "c-img"]) {
       expect(list.querySelector(`[data-testid="cap-${id}"]`), `${id} 应有 cap- testid`).not.toBeNull();
     }
   });

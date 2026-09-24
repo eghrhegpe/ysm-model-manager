@@ -1002,12 +1002,13 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     expect(cap.getPresetId()).toBe("studio");
   });
 
-  it("customHdr folder 内 image + button 走 controls 通道节点", () => {
+  it("customHdr folder 内 image 走 controls 通道、pick/clear 为原生 button 节点（button 已迁节点 kind）", () => {
     const cap = newCap();
     const hdrFolder = cap.getMenuNodes().find((n) => n.id === "cap-group-env-custom-hdr")!;
     expect(hdrFolder.children!.map((c) => c.id)).toEqual([
       "cap-group-env-hdr-preview",
-      "cap-group-env-hdr-buttons",
+      "env-pick-hdr",
+      "env-clear-hdr",
     ]);
     // image controls 节点
     const previewNode = hdrFolder.children![0]!;
@@ -1015,24 +1016,19 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     const previewControls = typeof previewNode.controls === "function" ? previewNode.controls() : previewNode.controls;
     expect(previewControls![0]!.kind).toBe("image");
     expect(previewControls![0]!.id).toBe("env-hdr-preview");
-    // button controls 节点（pick + clear）
-    const btnNode = hdrFolder.children![1]!;
-    expect(btnNode.kind).toBe("controls");
-    const btnControls = typeof btnNode.controls === "function" ? btnNode.controls() : btnNode.controls;
-    expect(btnControls!.map((c) => c.id)).toEqual(["env-pick-hdr", "env-clear-hdr"]);
-    // pick button 语义
-    const pickBtn = btnControls![0]!;
+    // pick button 节点语义（control 按钮臂）
+    const pickBtn = hdrFolder.children![1]!;
     expect(pickBtn.kind).toBe("button");
-    expect(pickBtn.button!.variant).toBe("primary");
-    expect(pickBtn.button!.disabled!()).toBe(false);
-    // clear button 语义
-    const clearBtn = btnControls![1]!;
+    expect(pickBtn.control!.variant).toBe("primary");
+    expect(pickBtn.control!.disabled!()).toBe(false);
+    // clear button 节点语义
+    const clearBtn = hdrFolder.children![2]!;
     expect(clearBtn.kind).toBe("button");
-    expect(clearBtn.button!.variant).toBe("ghost");
-    expect(clearBtn.button!.disabled!()).toBe(true); // 无 custom HDR → 禁用
+    expect(clearBtn.control!.variant).toBe("ghost");
+    expect(clearBtn.control!.disabled!()).toBe(true); // 无 custom HDR → 禁用
     // 注入缓存后 clear 不再禁用
     (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(1, 1);
-    expect(clearBtn.button!.disabled!()).toBe(false);
+    expect(clearBtn.control!.disabled!()).toBe(false);
   });
 
   it("[双折叠头修复] folder children 内的 controls 通道控件不带 group（否则 renderCapControls 会同名重复建折叠头）", () => {
@@ -1044,8 +1040,8 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     const controlsNodes = folderNodes.flatMap((f) =>
       (f.children ?? []).filter((c) => c.kind === "controls"),
     );
-    // preset / histogram / customHdr(image + buttons) 四个 controls 节点
-    expect(controlsNodes).toHaveLength(4);
+    // preset / histogram / customHdr(image) 三个 controls 节点（button 已迁节点原生 kind）
+    expect(controlsNodes).toHaveLength(3);
     for (const on of controlsNodes) {
       const ctrls = typeof on.controls === "function" ? on.controls() : on.controls;
       for (const c of ctrls ?? []) {

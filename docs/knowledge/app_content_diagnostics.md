@@ -437,6 +437,23 @@ localPos: number[];
 - **a11y 接线（2026-10，ADR-300 §3 遗留偿还）**：`renderSubBar` 产出的 pill 行不再 plain button——`.diag-sub-bar` 赋 `role="toolbar"` + `aria-label`（**不套 role=tablist**：顶层 tabbar 已是 tablist，嵌套双 tablist 是 ARIA 反模式，维持 ADR-300 §2.2 红线）；每个 pill 赋 `role="radio"` + `aria-checked`（互斥单选语义，非 tab）+ roving tabindex（激活项 0 其余 -1）。`bindSubBar` 单点实现键盘：方向键 ArrowLeft/Right（↑↓ 等价）循环移动 + **移动即激活**（radio 语义，同步 aria-checked/data-active-sub/显隐/onSwitch）、Home/End 只移焦点不改选中（radiogroup 规范）。焦点索引**自维护**（focusin 单写 + activate 同步 + keydown target 兜底）——不读 `document.activeElement`（shadow 内聚焦元素会被 retarget 回 host，规范行为，读它恒失准）。**兼容**：手写夹具/旧模板的无 `role="toolbar"` bar 自动跳过键盘增强（仅点击可用，DOM 不被改写）。契约：`tabs-shell.test.ts` 字符串产出 + `tabs-shell.dom.test.ts`（happy-dom 行为，方向键/Home/End/兼容四组）；`tpl.test.ts` 成品断言同步升格含 a11y 属性。
 - **遗留（不阻塞，ADR-300 §3）**：`#diag-load-trace` 面板头与 trace pill 文案「加载剖析」同屏重复一次（原 tab 时代身份卡的尾巴，留待观察）。子 pill 键盘可达性已随上条接线，剩余的是 3D 菜单 MenuNode 的同类泛化（那属 preview-menu 域，非本页）。
 
+### 版面词典收口（2026-09-25，commit `966d6fa8c`）
+
+**一句话**：导航轴收敛后，三组**组内容器**仍是三套范式；本次把 layout 词汇收成一套字典，顺带治好「pill 行左边缘跨 tab 跳 12px」与「常驻栏其实不常驻」两个真 bug。
+
+- **病灶① 对齐漂移**：留白由各容器各自负责——bench 用 `.diag-pane`（自带 `padding:8px 12px`），logs/audit 无包裹层。于是同一条子 pill 行左边缘落在 **22px / 10px / 10px**（`--sp-vh-pane: var(--sp-2) var(--sp-3)` + `--btn-padding-std: 4px 10px`），切顶层 tab 横跳 12px、纵向下沉 8px。
+  → **收口**：padding 上交 `.diag-panel`（panelClass，渲染即 `.tab-body .diag-panel`），成为三 tab **唯一留白来源**；`.diag-pane` 零 padding。
+- **病灶② 常驻栏名不副实**：`.diag-pane` 自带 `overflow-y:auto`，而「常驻控制栏」正是它的子元素——内容一多照样滚出视野（`.diag-bar` 的 `flex-shrink:0` 在滚动容器内部无效）。
+  → **收口**：`.diag-pane` 改 `overflow:hidden`，滚动职责收给新词 `.diag-result { flex:1; min-height:0; overflow-y:auto }`。**`min-height:0` 不可省**：column flex 子项默认 `min-height:auto`，内容再长也不收缩，滚动条会被顶到 `.tab-body` 上——届时常驻栏照样跑偏。
+- **病灶③ 同义词双胞胎**（三条都有实证）：`.diag-log-row` 与 `.diag-bar-row` **逐字相同**；`.diag-log-bar` 与 `.diag-bar` 只差 padding；`.diag-sub-pane` 与 `.diag-pane` 只差 padding。→ 全部并入后者，`.diag-log-scroll` 泛化为 `.diag-result`。
+- **最终字典**（新布局一律走这套；面板只出留白、pane 只做分区，勿再造第二前缀）：
+  `.diag-panel`（留白 + 入场动画）> `.diag-pane`（纵向分区，可嵌套，overflow hidden）> pill 行 / `.diag-bar` > `.diag-bar-row` / `.diag-bar-hint` / `.diag-bar-spacer`；结果一律 `.diag-result`。
+- **命名/i18n 漂移**：`diag-perf-refresh-trace` → `diag-trace-refresh`（trace 已降级为 logs 组第三 pill，id 还叫 perf 前缀是误导）；体检组空态抽出 `diagnostics.auditIdle`（三语），不再借用 `perfIdle`「点上方按钮开始」。
+- **不改的东西**（这也是能一次过 255 tests 的原因）：元素 id、`data-sub-group`/`data-sub-pane`、`data-perf-mode`、`.perf-mode-off` 双轨显隐（bench 走 class、logs/audit 走集合——ADR-278 §2.4 有意分工，不动）。
+- **护栏**：`content-diag-classes.test.ts` 的契约扫描从 `diag-log-`/`diag-sub-` 扩到 **`diag-pane` / `diag-bar` / `diag-result`**，并加 must 抽样防空转——退回去立刻红；`tpl-structure.test.ts` 当场抓到我局中漏的一个 `</div>`（与 ADR-259 同款吞并，护栏真值回票价）。
+- **⚠️ 改 CSS 裸值前先跑 `node scripts/css-token-check.ts`**：它有基线文件 `scripts/.css-token-baseline.txt`，**改数值即算新增裸值**（我 pill gap 2px→4px 就被报 WARN）。`gap:var(--sp-1)` 才是正解（既过闸又不新增 WARN）；别去 `--rebuild-baseline`（会顺手把并行会话的存量债一起重建）。
+- **验证记录**：模板+CSS 契约 43 tests、诊断页 15 files/255 tests 全绿；`vite build` 绿；typecheck **本次文件零错**（全仓 4 处红灯属并行会话的 `site/` + `tabs-shell` 域，非本次改动）；i18n 1518 键三语对齐（改 locale TS 后须重跑 `generate-locale-json.ts`，否则 `vite build` 直接拦）；css-layer-check 0 ERROR；css-token-check 本次 0 条新增。
+
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

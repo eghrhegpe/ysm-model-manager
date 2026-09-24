@@ -1359,6 +1359,8 @@
   "preview.mmdMotion": "Motion",
   "preview.playEmpty": "No Built-in Animations",
   "preview.playNotice": "VMD motion copyright belongs to its distributor; check the terms before use.",
+  "preview.vmdPositionScale": "VMD Motion Scale",
+  "preview.vmdPositionScaleReset": "Reset Motion Scale (Auto)",
   "preview.playReload": "Rescan",
   "preview.mmdMorph": "Morph",
   "preview.vrcAvatar": "VRC Avatar",

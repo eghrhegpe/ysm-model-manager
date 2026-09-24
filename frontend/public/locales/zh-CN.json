@@ -1359,6 +1359,8 @@
   "preview.mmdMotion": "动作",
   "preview.playEmpty": "无内置动作",
   "preview.playNotice": "VMD 动作版权归配布者所有，使用前请确认配布条款。",
+  "preview.vmdPositionScale": "VMD 位移缩放",
+  "preview.vmdPositionScaleReset": "重置位移缩放（自动）",
   "preview.playReload": "重新扫描",
   "preview.mmdMorph": "表情",
   "preview.vrcAvatar": "VRC 头像",

@@ -17,6 +17,7 @@ source_files:
   - frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts
 auto_fields:
   symbols_with_lines:
+    - autoVmdPositionScale
     - buildVmdRetargetClip
     - buildVrmScene
     - collectVmdBoneNames
@@ -33,7 +34,9 @@ auto_fields:
     - matchSemanticBone
     - MMD_SEMANTIC_CANDIDATES
     - mmdSemanticBoneMap
+    - readVmdPositionScale
     - readVrmMeta
+    - rebuildVmdMotionClips
     - resolveSemanticBones
     - resolveVmdBindings
     - rewriteVmdTracks
@@ -69,7 +72,9 @@ auto_fields:
     - VrmMetaSummary
     - VrmModelInfoCtx
     - VrmPanelHooks
+    - VrmPositionScaleControl
     - vrmSemanticBoneMap
+    - writeVmdPositionScale
     - ysmSemanticBoneMap
 use_when:
   - 要把 MMD 的 .vmd 动作播到 VRM 模型上（或改对应的发现/加载逻辑）
@@ -144,6 +149,8 @@ ADR-306 表情通道（P2）：morph 轨道不再整体丢弃——幽灵 morph 
 - `collectVmdExpressionMap(present, expressionManager)` → MMD morph 名 → VRM preset（ADR-306 §2.1，`collectVmdMorphNames(vmd)` 喂 present；模型侧存在性过滤：preset 或原名任一解析不出轨道名即不进表）。
 - `rewriteVmdTracks(clip, plan, scale, expressionManager?)` → `{ tracks, droppedTracks, ikTracks }`（第 4 参缺省 = 不做表情改道）。
 - `createVrmFootIKController(boneTree, semanticBones)` → `{ apply(timeSeconds, targets), dispose() }`（semanticBones 含 toes 键时追加脚尖链 CCD）。
+- `autoVmdPositionScale(rig)` → 自动位移缩放（P3 单一事实源：`buildVmdRetargetClip` 缺省回退值 = 按身高外推、失败退 `VMD_POSITION_SCALE_DEFAULT`；校准滑块用它镜像「自动值」显示）。
+- **P3 位移缩放校准（ADR-243 锐评对账）**：`readVmdPositionScale()`/`writeVmdPositionScale(v)`（`vrm-adapter.ts`，经 `safeGet/safeSet/safeRemove` 持久化 `vmd.positionScale`，ADR-044）+ `rebuildVmdMotionClips(...)`（重建 `.vmd` 重定向 clip 并按 label 换绑活动 action，`.vrma` 条目对象保留不重放）。菜单走 MenuNode schema：`vrmMenuItems` 在 `o.positionScale.vmdCount>0` 时注入 `kind:"slider"` 节点（`onCommit` 松手才触发持久化 + 重建，拖动过程 `set` 空操作抑制）+ 复位按钮（清持久化回自动）。
 - 接入点：`vrm-adapter.ts` 的 `loadMotionClips()`；每帧在 `update()` 中**晚于** `vrm.update(dt)` 调 `vrmFootIK.apply(action.time, clip.footIK)`。表情轨道进 clip 后无需额外每帧代码——`vrm.update(dt)` 内的 `expressionManager.update()` 消费 `VRMExpression_*.weight`。
 - **采样源不变量（review 64c24cf3e P1 修复，1dc31247d）**：足 IK 的 targets 必须按 **live action 实播 clip** 反查（`motionClips.find(c => c.clip === motionClipOf(action))`），而非独立维护的索引——索引与 mixer 实际播放脱钩时（`select` 切动作后），身体 FK 与腿 IK 会来自不同动作，脚底打滑。`VrmMotionState.motionIdx` 已删除（脱钩根源）。
 - **three r185 API 注**：`AnimationAction` 的 `.clip` 属性已移除，clip 经**公开方法 `action.getClip()`** 读取；本仓统一走 `motionClipOf()`（vrm-adapter.ts），勿直接碰 three 私有字段 `_clip`（无跨版本契约，升级即静默失配）。
@@ -167,6 +174,7 @@ ADR-306 表情通道（P2）：morph 轨道不再整体丢弃——幽灵 morph 
 6. **写归一化骨 = 天然落在 `vrm.update()` 之前**（FK 通道）；足 IK 写**原始骨**则必须晚于它（归一化 → 原始是单向烘焙）。表情轨道同理：mixer 写 `VRMExpression_*.weight`，`vrm.update()` 内 `expressionManager.update()` 消费——每帧顺序契约零改动。
 7. **映射表覆盖性**：`VMD_RETARGET_CANDIDATES` 与 `VMD_RETARGET_UNMAPPED` 的并集须覆盖 `VRMHumanBoneList` 全 55 项——VRM 侧新增骨骼时靠这条测试拦住静默漏映射。
 8. **表情改道原地改名、不重建、不新造驱动器**（ADR-306 §2.2）：morph 轨道经 `expressionManager.getExpressionTrackName`（鸭子 `VmdExpressionManagerLike`）换成 `VRMExpression_<preset>.weight`，解析序 preset 优先、MMD 原名自定义表情兜底；模型缺该表情（两路都解析不出轨道名）→ 不进改道表 → 上游白名单跳过 → 计入 `droppedTracks`。感知层眨眼在 `animActive` 下由 `perceptionPauseRef` 自查静默（ADR-306 §2.3，不新增门控）。
+9. **位移缩放 k 在加载时 bake 进位移轨道（`scaleTranslationTrack`），非运行期旋钮**（ADR-243 锐评对账 P3）：改 k = 重跑 `buildVmdRetargetClip`（`rebuildVmdMotionClips`）+ 按 label 换绑活动 action。故校准滑块**只在 onCommit（松手）触发重建**、拖动过程抑制（`set` 空操作），避免每 tick 重解析 VMD。自动值单一事实源 = `autoVmdPositionScale`（`buildVmdRetargetClip` 回退与滑块显示共用，防两份算法漂移）。持久化走 `safeGet/safeSet`（`vmd.positionScale`，ADR-044）；`.vrma` 条目对象保留不重放（只换 `.vmd` 子集）。
 
 ## 相关
 

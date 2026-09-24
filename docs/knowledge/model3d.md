@@ -53,6 +53,7 @@ auto_fields:
     - AtmospherePresetId
     - attenuateAmbientForSky
     - AutoDanceOptions
+    - autoVmdPositionScale
     - bakeMeshFragments
     - BaseScene
     - BasisEncoderLike
@@ -661,8 +662,10 @@ auto_fields:
     - ReadFileBytes
     - readLightParams
     - readPmxStats
+    - readVmdPositionScale
     - readVrmMeta
     - rebuildDebug
+    - rebuildVmdMotionClips
     - recordLoadTrace
     - recoverMountFailure
     - REFLECTION_MODES
@@ -932,6 +935,7 @@ auto_fields:
     - VrmMetaSummary
     - VrmModelInfoCtx
     - VrmPanelHooks
+    - VrmPositionScaleControl
     - vrmSemanticBoneMap
     - warnLargeModelIfNeeded
     - WasdReuse
@@ -953,6 +957,7 @@ auto_fields:
     - WorkerErrorStrategy
     - workerMmdUpdateWithMixer
     - WriteSource
+    - writeVmdPositionScale
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
     - YsmAnimPlayer

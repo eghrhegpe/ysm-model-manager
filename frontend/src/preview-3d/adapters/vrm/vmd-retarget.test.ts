@@ -8,6 +8,7 @@ import * as THREE from "three";
 import type { VRMHumanBoneName } from "@pixiv/three-vrm-core";
 import { describe, expect, it } from "vitest";
 import {
+  autoVmdPositionScale,
   buildVmdRetargetClip,
   collectVmdBoneNames,
   collectVmdExpressionMap,
@@ -19,6 +20,7 @@ import {
   type VmdExpressionManagerLike,
   type VmdHumanoidRig,
 } from "./vmd-retarget.ts";
+import { VMD_POSITION_SCALE_DEFAULT } from "./vmd-retarget-map.ts";
 
 /** 表情轨道名解析桩（鸭子 VmdExpressionManagerLike）：まばたき→blink / あ→aa / にこり→happy */
 const EXPR_TRACK_NAME_MOCK: VmdExpressionManagerLike = {
@@ -352,6 +354,12 @@ describe("比例缩放", () => {
     const flat = makeStandingRig();
     flat.head?.position.set(0, 0.1, 0);
     expect(estimateVrmHeight(makeRig(flat))).toBeNull();
+  });
+
+  it("autoVmdPositionScale：站立（1.6m）⇒ 0.08；估算失败 ⇒ VMD_POSITION_SCALE_DEFAULT（P3 单一事实源）", () => {
+    expect(autoVmdPositionScale(makeRig(makeStandingRig()))).toBeCloseTo(0.08, 10);
+    // 缺 head ⇒ estimateVrmHeight 返 null ⇒ 精确回退 VMD_POSITION_SCALE_DEFAULT
+    expect(autoVmdPositionScale(makeRig(without(makeStandingRig(), "head")))).toBe(VMD_POSITION_SCALE_DEFAULT);
   });
 });
 

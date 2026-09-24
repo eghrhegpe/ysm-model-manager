@@ -176,6 +176,16 @@ export function estimateVrmHeight(rig: VmdHumanoidRig): number | null {
   return span / (HEAD_HEIGHT_RATIO - FOOT_HEIGHT_RATIO);
 }
 
+/**
+ * 自动位移缩放（ADR-243 锐评对账 P3 单一事实源）：`buildVmdRetargetClip` 未显式给
+ * `positionScale` 时的回退值——按身高外推，估算失败退 `VMD_POSITION_SCALE_DEFAULT`。
+ * 校准滑块（vrm-adapter）用它镜像「自动值」做显示，避免两处各算一份漂移。
+ */
+export function autoVmdPositionScale(rig: VmdHumanoidRig): number {
+  const height = estimateVrmHeight(rig);
+  return height === null ? VMD_POSITION_SCALE_DEFAULT : scaleForHeight(height);
+}
+
 // ---------------------------------------------------------------------------
 // 绑定解析
 // ---------------------------------------------------------------------------
@@ -521,12 +531,7 @@ export function buildVmdRetargetClip(
   // 无 expressionManager / 全不可映射时为空表，行为退化为 ADR-243 v1（morph 全丢弃）。
   const expressionMap = collectVmdExpressionMap(collectVmdMorphNames(vmd), exprMgr);
   const plan = resolveVmdBindings(collectVmdBoneNames(vmd), rig, expressionMap);
-  const positionScale =
-    opts.positionScale ??
-    (() => {
-      const height = estimateVrmHeight(rig);
-      return height === null ? VMD_POSITION_SCALE_DEFAULT : scaleForHeight(height);
-    })();
+  const positionScale = opts.positionScale ?? autoVmdPositionScale(rig);
 
   // 幽灵骨静止 position 必须填**目标归一化骨的局部位置**：buildAnimation 的
   // `basePosition + offset` 会把静止位置加进每条 position 轨道，填幽灵自己的坐标

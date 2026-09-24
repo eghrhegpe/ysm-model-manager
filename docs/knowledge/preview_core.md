@@ -26,6 +26,7 @@ auto_fields:
     - applyWorkerDecodedTextures
     - AssembledShell
     - AutoDanceOptions
+    - autoVmdPositionScale
     - BaseScene
     - BeatDetectorLike
     - BeatDetectorOptions
@@ -188,8 +189,10 @@ auto_fields:
     - PreviewScene
     - ReadFileBytes
     - readPmxStats
+    - readVmdPositionScale
     - readVrmMeta
     - readWebFile
+    - rebuildVmdMotionClips
     - recoverMountFailure
     - removeOwnHandle
     - RenderVrmBonePanel
@@ -272,8 +275,10 @@ auto_fields:
     - VrmMetaSummary
     - VrmModelInfoCtx
     - VrmPanelHooks
+    - VrmPositionScaleControl
     - webFsBindings
     - workerMmdUpdateWithMixer
+    - writeVmdPositionScale
     - YsmAdapterOptions
     - ysmMenuItems
     - YsmMenuItemsOpts

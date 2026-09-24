@@ -1538,6 +1538,8 @@ export const ja: Record<string, string> = {
   "preview.playEmpty": "内蔵アニメーションなし",
   "preview.playNotice":
     "VMDモーションの著作権は配布者に帰属します。使用前に配布規約をご確認ください。",
+  "preview.vmdPositionScale": "VMD 移動スケール",
+  "preview.vmdPositionScaleReset": "移動スケールをリセット（自動）",
   "preview.playReload": "再スキャン",
   "preview.mmdMorph": "モーフ",
   "preview.vrcAvatar": "VRCアバター",

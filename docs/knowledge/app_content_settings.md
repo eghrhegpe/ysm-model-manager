@@ -105,7 +105,8 @@ status: active
 - **复制到剪贴板必须消费布尔结果**（code_review 同批修复，宿主 instance-ops.ts 见 [global_handlers](./global-handlers.md)）：`copyText` 永不 reject，Clipboard API/execCommand 兜底失败只返回 false——`await copyText(text)` 丢弃返回值会在失败时误弹「已复制」假成功；须 `const ok = await copyText(text); if (!ok) { error toast; return; }`
   - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（字体三栏是已知待修债；语言选择已收敛至 stgCard 正典卡 ✅）
   - **tab 按钮 ↔ 面板同源**：设置页 tab 栏 + 面板均由 `renderTabs({prefix:"stg",buttonClass:"stg-tab",tabs:[...]})` 单一工厂产出（ADR-259 §3），`bindTabs` 从 DOM `data-tab` 派发，不再维护 `ids` 白名单；新增 tab 只需在 `tabs` 数组加一项
-  - **tab 结构（2026-10 菜单收口，方案 A）**：4 tab（常规/外观/3D 与解析/关于）。「解析」（FBX/MMD worker 开关）=「3D 与解析」tab 的「解析」节、不占独立槽；「鸣谢」（纯只读展示）=「关于」tab 下段小节，`tpl-settings-about.ts|aboutPageBody` 是「关于 + 鸣谢」页唯一组合根。「启动默认页面」归入「常规」，不归外观。槽位语义契约：菜单槽回答「这里能配置什么」——两个开关/只读展示不占槽；「关于」含真实设置（更新检查间隔/检查更新/版本）故保留 tab
+  - **tab 结构（2026-10 菜单收口，方案 A；2026-09 锐评改名）**：4 tab（常规/外观/**3D 预览**/关于），tab 文案键 = `settings.basic` / `settings.appearance` / `settings.tab3d` / `settings.about`。「解析」（FBX/MMD worker 开关）=「3D 预览」tab 内的「解析」折叠节、不占独立槽；「鸣谢」（纯只读展示）=「关于」tab 下段小节，`tpl-settings-about.ts|aboutPageBody` 是「关于 + 鸣谢」页唯一组合根。「启动默认页面」归入「常规」，不归外观。槽位语义契约：菜单槽回答「这里能配置什么」——两个开关/只读展示不占槽；「关于」含真实设置（更新检查间隔/检查更新/版本）故保留 tab
+    - ⚠️ 原第三个 tab 键名为 `settings.operations`（"操作"）而文案写「3D 与解析」——**键名与显示文案脱节**，且「3D 与解析」是「解析 tab 降级并入 3D」时的妥协拼接词，用户无法从名字推断内容，形成「猜 tab + 展开折叠」的双重隐藏。2026-09 已改名 `settings.tab3d` =「3D 预览」，键名与文案对齐，名字直接回答「这里配什么」。**新增 tab 时键名必须与其显示文案同义**，禁止留历史妥协名。
   - **设置页布局与交互硬化**：`.stg-page` 是 tab 面板唯一滚动容器，`settingsHTML` 不再给 tab-body 叠加 `overflow-y:auto`；`.stg-grid` 使用 `auto-fit + minmax(min(220px,100%),1fr)`，子项 `min-width:0`，卡片 header 可换行；键位网格额外使用 `.stg-keymap-grid { width:100%; }`，避免在 `setting-row` 的 `align-items:flex-start` 下被压成单列窄条。路径值、路径 picker、主题瓦片使用原生 `<button type="button">`；主题初始化/手动/自动切换同步 `.active` 与 `aria-pressed`。`renderStgBasicPaths` 仅在有实际路径卡时输出网格；Android viewer 不输出空「路径配置」区，Web viewer 保留文件来源标题但不输出空网格。
   - **解析与鸣谢渐进披露**：`tpl-settings.ts|renderStgParserWorkers` 与 `tpl-settings-about.ts|creditsSection` 使用默认收起的原生 `<details>`；worker checkbox 通过 `aria-labelledby` 同时说明格式/动作，并通过 `aria-describedby` 关联 hint。新增折叠区必须保留 summary 入口与原生键盘行为，不能用不可访问的 `div` 模拟。
   - **3D 键位编辑约定**：`keymap.ts|tdRenderKeymap` 捕获的是单个 `KeyboardEvent.code`，不是组合键；Esc 取消捕获。每个动作使用 `setting-row.stg-keybind-row` 单行呈现，按钮须是原生 button；普通态 aria-label 只表达“动作；快捷键 key”，并用 `aria-keyshortcuts`/`aria-describedby` 补充元信息，捕获态改为“动作：正在等待按键；Esc 取消”并不再宣称旧快捷键；`.stg-keymap-grid` 使用 `auto-fit + minmax(min(220px,100%),1fr)`，不设固定最大列数，键位按钮具备独立边框/背景/焦点样式。
@@ -120,7 +121,7 @@ status: active
 
 | 范式 | 唯一造法 | 适用 | 反例（待修债） |
 |------|----------|------|----------------|
-| 卡片（大/小卡） | `stgCard()`（`settings/stg-card.ts`） | 自包含功能块：hdr（图标+标题）+ body（值/控件）+ `stg-card-desc`（说明）+ `actions`（按钮）四区齐全；同族多选项用 `stg-grid` 平铺（如路径三卡、字体三卡、鸣谢卡） | 字体三栏（裸 `style="background:var(--surf);border:..."` 内联手写卡）、语言选择（手写 `<div class="stg-card">`，未走构造器）→ 间距/圆角/动画与正典卡不一致 |
+| 卡片（大/小卡） | `stgCard()`（单张）/ `stgCards()`（同族一组，延迟按序号派生）（`settings/stg-card.ts`） | 自包含功能块：hdr（图标+标题）+ body（值/控件）+ `stg-card-desc`（说明）+ `actions`（按钮）四区齐全；同族多选项用 `stg-grid` 平铺（如路径三卡、字体三卡、鸣谢卡） | 裸 `style="background:var(--surf);border:..."` 内联手写卡、手写 `<div class="stg-card">` 未走构造器 → 间距/圆角/动画与正典卡不一致。**2026-09 已清零**（字体三栏 / 语言选择 / About 五卡全部回填，见文末待修债），新增卡片若再出现裸样式即视为回退 |
 | 选择器瓦片 | `theme-card`（`.theme-picker` 内） | 同族多选项的「点选」场景（主题六选一） | 勿把普通卡片写成瓦片 |
 | 紧凑行组 | `settings-group` + `setting-row` | 单控件占用整行的紧凑参数：滑块/下拉/开关（相机速度、旋转模式、主题自动切换） | 勿把 2 字标签撑满整行却内容稀疏的项硬塞；确需并排时改用 `stg-grid` 小卡 |
 
@@ -137,13 +138,15 @@ status: active
 - `card-in`（`scale(.95)` 弹出）是 v1.7.6「Keyframe 合并 13→3」明确并入 `fadeSlideUp` 的**旧动画**，其唯一 shadow 层定义已删除；新增卡片/行组/行**不得再引用 `card-in`**（引用已删 keyframe 会静默失效，`css-layer-check` 检查 1/1b 阻断）。
 - 内联 `style="animation:..."` 的 keyframe 名必须在同 shadow 层有 `@keyframes` 定义（@keyframes 不穿 shadow，CSS 变量可穿）。
 - ⚠️ **注释体内不得写“星号+斜杠”**：会提前闭合注释，其后文本成为裸 CSS 并被当作选择器、吞掉紧随的 `{...}` 块——2026 实测吞掉 `@keyframes fadeSlideUp`，使全 shadow 入场动画（含本节全部范式）静默失效数月（`animationName` 仍显示名字、`getAnimations()` 为 0）。机检 `css-layer-check` 检查 5 + `content-css.test.ts` 单测。
+- **延迟值分界（2026-09 锐评 P2，防手填阶梯漂移）**：**组内**延迟 = 由 `stgCards(items, { startMs, step })` 按 `startMs + i * step` 派生，调用方**不写** `delayMs`；**页面级编排**延迟 = 单卡显式 `delayMs`（如存储卡 180 / 语言卡 240，表达「这一组整体在第几档入场」，非组序号）。此前全页散落 0/60/90/120/150/180/210/240/270/300 十一档手填字面量且两套步长混用，而鸣谢组却用 `60 * (i + 1)` 派生——同一件事两条标准，新增第七张卡时「下一个填多少」无规则。新增同族卡片**必须**走 `stgCards`，禁止再手填组内阶梯。
 
 ### 已知待修债（回填计划，按卡推进）
 
 1. ✅ `renderStgLangSelect()`（tpl-settings.ts）手写 `<div class="stg-card">` → 已回填为 `stgCard()`（hdr=语言标题，body=select+描述），单卡场景不再另挂 section-title（2026-09-15）。
 2. ✅ `renderStgFontFamily()`（tpl-settings.ts）三栏裸样式 `div` → 已回填为 `stg-grid` 内三张 `stgCard()`（字号/显示字体/密度各一卡，hdr 小标题+body 控件），与路径三卡同构（2026-09-15）。
 3. 主题自动切换 / 相机速度 / 旋转模式维持 `setting-row`（本就适合，不动）。
-> 剩余非正典卡：主题选择（`theme-card` 瓦片，属选择器范式，正确）、主题自动切换/相机速度/旋转模式（`setting-row`，属行组范式，正确）；**About 页（`aboutHTML`）的 features / 技术栈 / 链接 / 快速开始四组仍为裸样式手写卡**（`background:var(--surf);border:...`），用户 2026-09-15 明确暂不处理，列为遗留债。
+> 剩余非正典卡：主题选择（`theme-card` 瓦片，属选择器范式，正确）、主题自动切换/相机速度/旋转模式（`setting-row`，属行组范式，正确）。
+> 4. ✅ **About 五卡裸样式清零**（2026-09 锐评 P1）：`tpl-settings-about.ts|aboutSection` 的 features / 技术栈 / 链接 / 快速开始四组原为裸 `style="background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg)"`（圆角还用 `--radius-lg`，与审计 P1-2 收口后的 `--radius-card` 不同），版本卡更是直接手写 `<div class="stg-card">` 绕过构造器——**均违反本卡自己的「卡片唯一造法」红线**。现五张卡全部走 `stgCard()`/`stgCards()`，圆角/边框/动画由类单点供给；不等宽两列改用 `cardStyle: "flex:2 1 280px"` / `"flex:1 1 220px"` 声明并加 `flex-wrap`（原固定 `flex:2`/`flex:1` 在窄屏会挤爆），入场延迟并入 `stgCards` 派生。**至此设置页裸样式仿卡清零。**
 > 鸣谢（tpl-settings-about.ts `creditsSection()`，2026-10 菜单收口自独立 tab 降级为「关于」tab 下段小节）已数组化 + `stgCard`：灵感来源四张抽 `INSPIRATIONS` 数组、贡献者沿用 `CONTRIBUTORS` 数组，二者均 `map` 出 `stgCard()` 平铺于 `stg-grid`（2026-09-15）；加人/加灵感来源只改数据数组。
 > 背景：设置页跨多 ADR/PR 长出，`stgCard()` 是 ADR-040 拆分后才有的「正典卡片」，早于它的 section（主题/字体/相机/语言）从未回填，导致「卡片」在项目里实际有 3 种实现。此为存量债，非新增。
 ## 相关

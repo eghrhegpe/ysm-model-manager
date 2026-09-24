@@ -1,24 +1,29 @@
 // ===== tpl-settings-about.ts — 设置页「关于 + 鸣谢」tab 模板（从 tpl-settings.ts 拆出，ADR-040 P1）=====
 // 2026-10 菜单收口：「鸣谢」原为独立 tab，纯只读展示不值得占一个菜单槽（设置菜单的槽位
 // 语义契约 = 回答"这里能配置什么"）——降级为「关于」tab 的下段小节；「关于」含真实设置
-// （更新检查间隔/检查更新/版本）保留 tab。设置页 6 tab → 4 tab（与「解析」并入「3D 与解析」同批）。
+// （更新检查间隔/检查更新/版本）保留 tab。设置页 6 tab → 4 tab（与「解析」并入「3D 预览」同批）。
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { GH_DOCS, GH_RELEASES, GH_REPO } from "@/utils/base/pure/gh-links.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { stgCard } from "./stg-card.ts";
+import { stgCard, stgCards } from "./stg-card.ts";
 
 /** About 节（「关于」tab 上段：版本卡 / 更新检查 / 特性 / 技术栈 / 链接 / 快速开始）。
  *  不再挂「关于」节标题：tab 名即 About，再挂同名大标题是纯装饰（与「解析」节标题同类问题，
  *  2026-10 菜单收口一并消）。首组卡改 B 式 .stg-section 供 16px 顶距
- *  （.stg-page 契约 padding:0 20px 16px，顶部零垫——间距必须由组自身提供）。 */
+ *  （.stg-page 契约 padding:0 20px 16px，顶部零垫——间距必须由组自身提供）。
+ *
+ *  2026-09 样式范式收债：本段曾是本页最后一批「裸样式仿卡」——四张卡各写一份
+ *  `style="background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg)"`
+ *  （且圆角用 --radius-lg，与审计 P1-2 收口后的 --radius-card 不同），版本卡更是直接手写
+ *  `<div class="stg-card">` 绕过 stgCard() 构造器——均违反本页范式契约（卡片唯一造法）。
+ *  现五张卡全部走 stgCard()：圆角/边框/入场动画/标题行由类与构造器单点供给，
+ *  不等宽的两列改用 flex 比例经 cardStyle 声明（.stg-card 自带 min-width:0 保证可压缩），
+ *  并加 flex-wrap + 弹性基准让窄屏回落单列（原固定 flex:2/flex:1 在窄屏会挤爆）。 */
 export function aboutSection(): string {
-  return `<div class="stg-grid stg-section" style="margin-bottom:12px">
-  <div class="stg-card">
-    <div class="stg-card-hdr" style="display:flex;align-items:center;gap:8px">
-      <span>${UI_ICONS.info} ${t("about.appName")}</span>
-      <span id="set-version" style="font-size:var(--fs-lg);font-weight:700;color:var(--accent)">${t("common.loading")}</span>
-    </div>
-    <div class="stg-card-body" style="display:flex;flex-direction:column;gap:8px">
+  const versionCard = stgCard(
+    UI_ICONS.info,
+    t("about.appName"),
+    `<div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn-base sm stg-btn" id="set-check-update">${UI_ICONS.refresh} ${t("about.checkUpdate")}</button>
       <div class="setting-row" style="margin:0;padding:var(--sp-1) 0;background:none;border-radius:0">
         <span style="font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.clock} ${t("settings.updateCheck.title")}</span>
@@ -29,14 +34,23 @@ export function aboutSection(): string {
           <option value="0">${t("settings.updateCheck.off")}</option>
         </select>
       </div>
-    </div>
-  </div>
-</div>
+    </div>`,
+    {
+      header: {
+        titleSize: "md",
+        actions: `<span id="set-version" style="font-size:var(--fs-lg);font-weight:700;color:var(--accent)">${t("common.loading")}</span>`,
+      },
+      delayMs: 0,
+    },
+  );
 
-<div style="display:flex;gap:12px;margin-bottom:12px">
-  <div style="flex:2;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:60ms">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.tools} ${t("about.features")}</div>
-    <div class="stg-desc">
+  // 介绍两卡 / 链接两卡各为同族组，延迟按序号派生（startMs 60 / 120 是本页编排档位）
+  const introCards = stgCards(
+    [
+      {
+        icon: UI_ICONS.tools,
+        title: t("about.features"),
+        body: `<div class="stg-desc">
       <b>${t("about.appName")}</b> ${t("about.intro")}
       <br><br>
       ✅ ${t("about.f1")}<br>
@@ -46,43 +60,69 @@ export function aboutSection(): string {
       ✅ ${t("about.f5")}<br>
       ✅ ${t("about.f6")}<br>
       ✅ ${t("about.f7")}
-    </div>
-  </div>
-
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:90ms">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.gem} ${t("about.techStack")}</div>
-    <div class="stg-desc">
+    </div>`,
+        header: { titleSize: "md" },
+        cardStyle: "flex:2 1 280px",
+      },
+      {
+        icon: UI_ICONS.gem,
+        title: t("about.techStack"),
+        body: `<div class="stg-desc">
       <div>${UI_ICONS.bullet} ${t("about.tech1")}</div>
       <div>${UI_ICONS.bullet} ${t("about.tech2")}</div>
       <div>${UI_ICONS.bullet} Web Components + Shadow DOM</div>
       <div>${UI_ICONS.bullet} ${t("about.tech4")}</div>
       <div>${UI_ICONS.bullet} ${t("about.tech5")}</div>
       <div>${UI_ICONS.bullet} ${t("about.tech6")}</div>
-    </div>
-  </div>
-</div>
+    </div>`,
+        header: { titleSize: "md" },
+        cardStyle: "flex:1 1 220px",
+      },
+    ],
+    { startMs: 60 },
+  );
 
-<div style="display:flex;gap:12px;margin-bottom:12px">
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:120ms">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.package} ${t("about.links")}</div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.8">
+  const guideCards = stgCards(
+    [
+      {
+        icon: UI_ICONS.package,
+        title: t("about.links"),
+        body: `<div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.8">
       <div>${UI_ICONS.github} ${t("about.ghRepo")}：<a href="${GH_REPO}" target="_blank" style="color:var(--accent)">eghrhegpe/ysm-model-manager</a></div>
       <div>${UI_ICONS.clipboard} ${t("about.releases")}：<a href="${GH_RELEASES}" target="_blank" style="color:var(--accent)">${t("about.releasesLink")}</a></div>
       <div>${UI_ICONS.book} ${t("about.docs")}：<a href="${GH_DOCS}" target="_blank" style="color:var(--accent)">${t("about.docsLink")}</a></div>
       <div>${UI_ICONS.file} ${t("about.config")}：<code>${t("about.configPath")}</code></div>
-    </div>
-  </div>
-
-  <div style="flex:1;background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);padding:10px 14px;animation:fadeSlideUp var(--tr-enter) both;animation-delay:150ms">
-    <div style="font-size:var(--fs-md);font-weight:600;margin-bottom:6px">${UI_ICONS.hint} ${t("about.quickStart")}</div>
-    <div class="stg-desc">
+    </div>`,
+        header: { titleSize: "md" },
+        cardStyle: "flex:1 1 220px",
+      },
+      {
+        icon: UI_ICONS.hint,
+        title: t("about.quickStart"),
+        body: `<div class="stg-desc">
       <div>1. ${t("about.qs1")}</div>
       <div>2. ${t("about.qs2")}</div>
       <div>3. ${t("about.qs3")}</div>
       <div>4. ${t("about.qs4")}</div>
       <div>5. ${t("about.qs5")}</div>
-    </div>
-  </div>
+    </div>`,
+        header: { titleSize: "md" },
+        cardStyle: "flex:1 1 220px",
+      },
+    ],
+    { startMs: 120 },
+  );
+
+  return `<div class="stg-grid stg-section" style="margin-bottom:12px">
+  ${versionCard}
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+  ${introCards}
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+  ${guideCards}
 </div>`;
 }
 
@@ -132,34 +172,39 @@ const CONTRIBUTORS = [
 
 /** 灵感来源卡片组：stg-grid 平铺 + stgCard 正典卡（设置页样式范式契约） */
 function renderInspirations(): string {
-  const cards = INSPIRATIONS.map((it, i) => {
-    const linkHtml = it.link
-      ? `<br><a href="${it.link}" target="_blank" style="color:var(--accent)">${it.linkText}</a>`
-      : `<br>${it.linkText}`;
-    return stgCard(
-      it.icon,
-      t(it.titleKey),
-      `<div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">${t(it.descKey)}${linkHtml}</div>`,
-      { header: { titleSize: "md" }, delayMs: 60 * (i + 1) },
-    );
-  }).join("");
+  // 延迟由 stgCards 按序号派生（step 60 与原 `60 * (i + 1)` 手算值逐位一致，节奏不变）
+  const cards = stgCards(
+    INSPIRATIONS.map((it) => {
+      const linkHtml = it.link
+        ? `<br><a href="${it.link}" target="_blank" style="color:var(--accent)">${it.linkText}</a>`
+        : `<br>${it.linkText}`;
+      return {
+        icon: it.icon,
+        title: t(it.titleKey),
+        body: `<div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">${t(it.descKey)}${linkHtml}</div>`,
+        header: { titleSize: "md" },
+      };
+    }),
+    { startMs: 60, step: 60 },
+  );
   return `<div class="section-title stg-title">${UI_ICONS.target} ${t("credits.inspiration")}</div>
 <div class="stg-grid">${cards}</div>`;
 }
 
 /** 贡献者卡片组：stg-grid 平铺 + stgCard 正典卡（数组驱动，加人只改 CONTRIBUTORS） */
 function renderContributors(): string {
-  const cards = CONTRIBUTORS.map((c, i) =>
-    stgCard(
-      UI_ICONS.user,
-      c.name,
-      `<div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
+  const cards = stgCards(
+    CONTRIBUTORS.map((c) => ({
+      icon: UI_ICONS.user,
+      title: c.name,
+      body: `<div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.5">
       ${t(c.descKey)}<br>
       <a href="https://github.com/${c.github}" target="_blank" style="color:var(--accent)">@${c.github}</a>
     </div>`,
-      { header: { titleSize: "md" }, delayMs: 60 * (i + 1) },
-    ),
-  ).join("");
+      header: { titleSize: "md" },
+    })),
+    { startMs: 60, step: 60 },
+  );
   return `<div class="section-title stg-title">${UI_ICONS.thanks} ${t("credits.special")}</div>
 <div class="stg-grid">${cards}</div>`;
 }

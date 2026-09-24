@@ -60,3 +60,34 @@ export function stgCard(icon: string, title: string, body: string, opts: StgCard
   const styleAttr = styleParts.length ? ` style="${styleParts.join(";")}"` : "";
   return `<div class="stg-card"${idAttr}${styleAttr}>${stgCardHeader(icon, title, header)}<div class="stg-card-body">${body}</div></div>`;
 }
+
+// ===== 同族卡片组：入场延迟按序号派生（2026-09 锐评 P2）=====
+// 问题：此前每张卡的 delayMs 都是调用方手填的字面量，全页散落
+// 0/60/60/90/120/150/180/210/240/270/300 十一档，两套步长（组内 30、路径组 60）混用，
+// 而鸣谢两组却用 `60 * (i + 1)` 自动派生——同一件事两条标准。新增第七张卡时
+// 「下一个填多少」无规则可循，是典型的自动新增漂移点。
+// 分界：**组内延迟 = 序号派生**（本函数）；**页面级编排延迟 = 显式 delayMs**
+// （如存储卡 180 / 语言卡 240，那是「这一组整体何时入场」的编排决策，不属于组序号）。
+
+/** 同族卡片组默认入场延迟步长（ms）。 */
+export const STG_CARD_STEP_MS = 30;
+
+/** 组内单张卡的声明（供 {@link stgCards} 批量产出）。 */
+export interface StgCardSpec extends Omit<StgCardOpts, "delayMs" | "marginTop"> {
+  icon: string;
+  title: string;
+  body: string;
+}
+
+/** 批量产出一族卡片：animation-delay 由「起始 + 序号 × 步长」派生，调用方不再手填阶梯。 */
+export function stgCards(
+  items: readonly StgCardSpec[],
+  opts: { startMs?: number; step?: number } = {},
+): string {
+  const { startMs = 0, step = STG_CARD_STEP_MS } = opts;
+  return items
+    .map(({ icon, title, body, ...rest }, i) =>
+      stgCard(icon, title, body, { ...rest, delayMs: startMs + i * step }),
+    )
+    .join("");
+}

@@ -160,7 +160,10 @@ describe("app-content 模板", () => {
     // 方案 A：一级菜单按用户任务命名，保留四个槽位，不恢复解析/鸣谢独立入口
     expect(html).toContain(`data-tab="basic">${UI_ICONS.settings} 常规</button>`);
     expect(html).toContain(`data-tab="ui">${UI_ICONS.appearance} 外观</button>`);
-    expect(html).toContain(`data-tab="ops">${UI_ICONS.joystick} 3D 与解析</button>`);
+    // tab 名 2026-09 直白化：原「3D 与解析」（键名 settings.operations="操作"，键名与文案脱节）
+    // → 「3D 预览」（键名 settings.tab3d）。回归防线：不得退回妥协拼接名
+    expect(html).toContain(`data-tab="ops">${UI_ICONS.joystick} 3D 预览</button>`);
+    expect(html).not.toContain(`data-tab="ops">${UI_ICONS.joystick} 3D 与解析</button>`);
     expect(html).not.toContain(`data-tab="basic">${UI_ICONS.settings} 基础设置</button>`);
     expect(html).not.toContain(`data-tab="ui">${UI_ICONS.appearance} 界面与体验</button>`);
     // 桌面模式展示完整偏好：主题选择器、动画开关、默认启动页、文件存储高级网格
@@ -215,7 +218,7 @@ describe("app-content 模板", () => {
     expect(html).not.toContain('data-tab="credits"');
     expect(html).not.toContain('id="stg-tab-parser"');
     expect(html).not.toContain('id="stg-tab-credits"');
-    // 3D 预览 + 解析开关收口进「3D 与解析」tab
+    // 3D 预览 + 解析开关收口进「3D 预览」tab
     expect(html).toContain('data-tab="ops"');
     expect(html).toContain('id="stg-tab-ops"');
     const opsTab = panelSlice(html, "stg-tab-ops", "stg-tab-about");
@@ -231,7 +234,7 @@ describe("app-content 模板", () => {
     }
     expect(uiTab).not.toContain('id="td-camspeed"');
     expect(uiTab).not.toContain('id="td-keymap-grid"');
-    // worker 解析开关（FBX / MMD 逃生舱）收口进「3D 与解析」tab，不在外观 tab 内
+    // worker 解析开关（FBX / MMD 逃生舱）收口进「3D 预览」tab，不在外观 tab 内
     expect(opsTab).toContain("set-fbx-worker");
     expect(opsTab).toContain("set-mmd-worker");
     expect(uiTab).not.toContain("set-fbx-worker");
@@ -247,6 +250,42 @@ describe("app-content 模板", () => {
     expect(html).toContain('class="stg-desc"');
     // 桌面模式不显示网页版 FSA 授权卡片
     expect(html).not.toContain("web-repo-auth-btn");
+  });
+
+  it("设置页无裸样式仿卡：卡片一律走 stgCard/stgCards 构造器（2026-09 范式收债回归）", () => {
+    const html = settingsHTML();
+    // 裸样式仿卡配方原散落在 About 五卡 + 字体三栏 + 语言卡：各自复制
+    // `background:var(--surf);border:1px solid var(--bd);border-radius:...`，与正典 .stg-card
+    // 的间距/圆角/入场动画三处漂移。现已全部升格 stgCard()，此处钉死不得回退。
+    expect(html).not.toContain("background:var(--surf);border:1px solid var(--bd)");
+    expect(html).not.toContain("background: var(--surf);border:1px solid var(--bd)");
+    // About 五卡的圆角曾用 --radius-lg，与审计 P1-2 收口后的 --radius-card 不一致
+    const aboutTab2 = html.slice(html.indexOf('id="stg-tab-about"'));
+    expect(aboutTab2).not.toContain("--radius-lg");
+    // 每张卡必须有构造器产出的标题行（hdr 图标+标题合一，防再次漂移）
+    const cardCount = [...html.matchAll(/class="stg-card"/g)].length;
+    const hdrCount = [...html.matchAll(/class="stg-card-hdr"/g)].length;
+    expect(cardCount).toBeGreaterThan(0);
+    expect(hdrCount, "每张 .stg-card 都应带 stgCardHeader 产出的 hdr").toBe(cardCount);
+    // About 页关键 id 仍需在（升格为构造器时不得丢绑定钩子）
+    for (const id of ["set-version", "set-check-update", "set-update-check"]) {
+      expect(aboutTab2, `About 卡升格后丢失绑定钩子 #${id}`).toContain(`id="${id}"`);
+    }
+  });
+
+  it("同族卡片入场延迟由 stgCards 按序号派生，无手填阶梯漂移（2026-09 P2 回归）", () => {
+    const html = settingsHTML();
+    // 组内延迟 = startMs + i*step 派生：路径三卡 step 60 → 0/60/120；字体三卡 → 60/90/120
+    // 只统计 .stg-card 自身的延迟（.settings-group 行组另有 240/270/300 的页级档，不在此断言域）
+    const delays = [...html.matchAll(/class="stg-card"[^>]*?animation-delay:(\d+)ms/g)].map((m) =>
+      Number(m[1]),
+    );
+    expect(delays.length).toBeGreaterThan(0);
+    expect(delays).toContain(0);
+    expect(delays).toContain(60);
+    expect(delays).toContain(120);
+    // 防阶梯失控：卡片延迟不得超过页面编排上限（语言卡 240ms 为当前最大卡片档）
+    expect(Math.max(...delays)).toBeLessThanOrEqual(240);
   });
   it("diagnosticsHTML 包含诊断 Tab 与面板", () => {
     const html = diagnosticsHTML();

@@ -1,7 +1,9 @@
 // ===== tpl-settings.ts — settingsHTML 页面模板（从 tpl.ts 拆出，ADR-040 P1 第2轮拆分）=====
 // basic + ui + ops 标签页在此；about（含鸣谢小节）已拆至 tpl-settings-about.ts。
-// 2026-10 菜单收口（锐评方案 A）：6 tab → 4 tab（常规/外观/3D 与解析/关于）——
-//   ① 「解析」（FBX/MMD worker 两个开关）降级为「3D 与解析」tab 的「解析」节：
+// 2026-10 菜单收口（锐评方案 A）：6 tab → 4 tab（常规/外观/3D 预览/关于）——
+//   （2026-09 锐评：第三个 tab 名原为「3D 与解析」、键名却叫 settings.operations，已改名
+//    settings.tab3d = 「3D 预览」，键名与文案对齐，详本文件 settingsHTML 内注释）
+//   ① 「解析」（FBX/MMD worker 两个开关）降级为「3D 预览」tab 的「解析」节：
 //      两个开关不值得占一个菜单槽，且并入 3D 域后「解析」节标题不再与 tab 名同名重复；
 //   ② 「鸣谢」（纯只读展示）降级为「关于」tab 的下段小节（aboutPageBody 组合）：
 //      设置菜单槽位语义 = 「这里能配置什么」，只读展示不占槽；「关于」含真实设置
@@ -17,7 +19,7 @@ import { THEME_VALID } from "@/theme-core";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderTabs } from "@/views/app-content/tabs-shell.ts";
 import { navItems } from "@/views/app-nav/nav-items.ts";
-import { stgCard } from "./stg-card.ts";
+import { type StgCardSpec, stgCard, stgCards } from "./stg-card.ts";
 import { aboutPageBody } from "./tpl-settings-about.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -25,26 +27,24 @@ import { aboutPageBody } from "./tpl-settings-about.ts";
 export const VIEW_TESTIDS: readonly string[] = ["set-mc-path"];
 
 function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
-  const gameRootCard = isViewer
-    ? ""
-    : stgCard(
-        UI_ICONS.game,
-        t("settings.paths.gameRoot"),
-        `<button type="button" class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</button>
+  // 路径三卡为同族组，入场延迟由 stgCards 按序号派生（step 60ms，与其余组的 30ms 区分：
+  // 首屏三张大卡节奏放缓一档）。2026-09 前为手填 0/60/120 字面量。
+  const specs: StgCardSpec[] = [];
+  if (!isViewer) {
+    specs.push(
+      {
+        icon: UI_ICONS.game,
+        title: t("settings.paths.gameRoot"),
+        body: `<button type="button" class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</button>
         <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>`,
-        {
-          header: {
-            actions: `<button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button>`,
-          },
-          delayMs: 0,
+        header: {
+          actions: `<button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button>`,
         },
-      );
-  const linkCard = isViewer
-    ? ""
-    : stgCard(
-        UI_ICONS.link,
-        t("settings.links.title"),
-        `<select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
+      },
+      {
+        icon: UI_ICONS.link,
+        title: t("settings.links.title"),
+        body: `<select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
           <option value="copy">${t("settings.links.copy")}</option>
           <option value="hardlink" selected>${t("settings.links.hardlink")}</option>
           <option value="symlink">${t("settings.links.symlink")}</option>
@@ -52,20 +52,15 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
         <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)">${t("settings.links.copyHint")}</div>
         <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)">${t("settings.links.hardlinkHint")}</div>
         <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>`,
-        {
-          header: {
-            forId: "set-link-mode",
-            actions: `<button id="set-relink" class="btn-base sm">${UI_ICONS.refresh} ${t("settings.links.reapply")}</button>`,
-          },
-          delayMs: 60,
+        header: {
+          forId: "set-link-mode",
+          actions: `<button id="set-relink" class="btn-base sm">${UI_ICONS.refresh} ${t("settings.links.reapply")}</button>`,
         },
-      );
-  const mirrorCard = isViewer
-    ? ""
-    : stgCard(
-        UI_ICONS.web,
-        t("settings.mirror.title"),
-        `<select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
+      },
+      {
+        icon: UI_ICONS.web,
+        title: t("settings.mirror.title"),
+        body: `<select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
           <option value="">${t("settings.mirror.directOption")}</option>
           <option value="jsdelivr">${t("settings.mirror.jsdelivrOption")}</option>
           <option value="githubapi">${t("settings.mirror.nameGithubapi")}</option>
@@ -73,9 +68,11 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
         <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.directHint")}</div>
         <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.jsdelivrHint")}</div>
         <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.githubapiHint")}</div>`,
-        { header: { forId: "set-mirror" }, delayMs: 120 },
-      );
-  const cards = [gameRootCard, linkCard, mirrorCard].filter(Boolean).join("");
+        header: { forId: "set-mirror" },
+      },
+    );
+  }
+  const cards = stgCards(specs, { step: 60 });
   const title = t(isWebViewer ? "settings.paths.sourceTitle" : "settings.paths.title");
   if (!cards) {
     // Web viewer still needs the source section label before the FSA card below;
@@ -136,8 +133,10 @@ function renderStgLangSelect(): string {
   const options = SUPPORTED_LANGS.map((l) => `<option value="${l.code}">${l.label}</option>`).join(
     "\n      ",
   );
+  // 图标语义校正（2026-09 锐评 P3）：「语言」用 globe（🌍 国际化）而非 web（🌐 网络）——
+  // 后者已被下方「下载镜像源」卡占用，同屏两个相同字形表达不同语义是认知噪音。
   return stgCard(
-    UI_ICONS.web,
+    UI_ICONS.globe,
     t("settings.language"),
     `<div style="display:flex;align-items:center;gap:8px">
     <select id="set-lang" class="stg-select" style="width:auto">
@@ -229,10 +228,13 @@ function renderStgFontFamily(): string {
   // 三栏裸样式手写卡升格为 .stg-grid + .stgCard 正典卡（设置页样式范式契约待修债 #2）：
   // 原 <div style="background:var(--surf);border:..."> 三处间距/圆角/动画各自为政，已漂移；
   // 现与路径三卡同构（stg-grid 三列平铺，各卡 hdr 小标题 + body 控件）。
-  const sizeCard = stgCard(
-    UI_ICONS.ruler,
-    t("settings.fontSize"),
-    `<select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
+  // 字体三卡同族：延迟由序号派生（startMs 60 = 本组在「外观」tab 的入场档位，属页面级编排）
+  const fontCards = stgCards(
+    [
+      {
+        icon: UI_ICONS.ruler,
+        title: t("settings.fontSize"),
+        body: `<select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
       <option value="xsmall">${t("settings.fontSize.xsmall")}</option>
       <option value="small">${t("settings.fontSize.small")}</option>
       <option value="normal" selected>${t("settings.fontSize.normal")}</option>
@@ -245,45 +247,40 @@ function renderStgFontFamily(): string {
       <span>${t("settings.ui.buttonHeight")} <b id="sz-btn-h" style="color:var(--txt)">25px</b></span>
     </div>
     <div class="stg-desc">${t("settings.fontSizeHint")}</div>`,
-    {
-      header: { forId: "set-font-size", titleSize: "md" },
-      cardId: "stg-font-size-card",
-      delayMs: 60,
-    },
-  );
-  const displayCard = stgCard(
-    UI_ICONS.brush,
-    t("settings.font.creatorFont"),
-    `<select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
+        header: { forId: "set-font-size", titleSize: "md" },
+        cardId: "stg-font-size-card",
+      },
+      {
+        icon: UI_ICONS.brush,
+        title: t("settings.font.creatorFont"),
+        body: `<select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="kaiti" selected>${t("settings.font.kaiti")}</option>
       <option value="system">${t("settings.font.systemFont")}</option>
     </select>
     <div class="stg-desc">${t("settings.fontHint")}</div>`,
-    {
-      header: { forId: "set-display-font", titleSize: "md" },
-      cardId: "stg-font-display-card",
-      delayMs: 90,
-    },
-  );
-  const densityCard = stgCard(
-    UI_ICONS.payment,
-    t("settings.density"),
-    `<select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
+        header: { forId: "set-display-font", titleSize: "md" },
+        cardId: "stg-font-display-card",
+      },
+      {
+        // 图标语义校正（2026-09 锐评 P3）：原用 UI_ICONS.payment（信用卡）表达「卡片密度」——
+        // 字形与语义无关，用户需二次猜测。改 UI_ICONS.grid（四宫格，与紧密/稀疏的排版语义同构），
+        // 复用既有图标、零新增成本；与同组「字号=标尺 ruler」形成「度量类」视觉族。
+        icon: UI_ICONS.grid,
+        title: t("settings.density"),
+        body: `<select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
       <option value="compact" selected>${t("settings.density.compact")}</option>
       <option value="normal">${t("settings.density.normal")}</option>
     </select>
     <div class="stg-desc">${t("settings.densityHint")}</div>`,
-    {
-      header: { forId: "set-card-density", titleSize: "md" },
-      cardId: "stg-font-density-card",
-      delayMs: 120,
-    },
+        header: { forId: "set-card-density", titleSize: "md" },
+        cardId: "stg-font-density-card",
+      },
+    ],
+    { startMs: 60 },
   );
   return `<div class="section-title stg-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
 <div class="stg-grid">
-  ${sizeCard}
-  ${displayCard}
-  ${densityCard}
+  ${fontCards}
 </div>`;
 }
 
@@ -439,7 +436,7 @@ ${renderStgFontFamily()}
 
 ${renderStgAnimationSection()}`;
 
-  // 「3D 与解析」tab = 3D 预览设置（相机/旋转/键位）+ 解析（FBX/MMD worker 开关，2026-10 自
+  // 「3D 预览」tab = 3D 预览设置（相机/旋转/键位）+ 解析（FBX/MMD worker 开关，2026-10 自
   // 独立「解析」tab 降级并入）——3D 域设置一处收口；「解析」节标题因此不再与 tab 名同名重复。
   const opsBody = `${renderStgPreview3d()}
 ${renderStgParserWorkers()}`;
@@ -459,8 +456,13 @@ ${renderStgParserWorkers()}`;
         body: `<div class="stg-page">${uiBody}</div>`,
       },
       {
+        // tab 名直白化（2026-09 锐评 P2）：原键名 settings.operations（"操作"）与显示文案
+        // 「3D 与解析」早已脱节——键名是「操作」、界面写「3D 与解析」，AI 按 key 猜语义必错。
+        // 且该名是「解析 tab 降级并入 3D」时的妥协拼接词，用户无法从名字推断内容。
+        // 改 settings.tab3d =「3D 预览」：名字直接回答「这里配什么」，键名与文案对齐。
+        // 「解析」仍是 tab 内的折叠小节（settings.parser），不再与 tab 名重复。
         id: "ops",
-        label: `${UI_ICONS.joystick} ${t("settings.operations")}`,
+        label: `${UI_ICONS.joystick} ${t("settings.tab3d")}`,
         body: `<div class="stg-page">${opsBody}</div>`,
       },
       // 关于 + 鸣谢 合并 tab（aboutPageBody 自带 .stg-page 壳，不再外包；

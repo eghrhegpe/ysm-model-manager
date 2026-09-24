@@ -156,7 +156,14 @@ describe("app-content 模板", () => {
   });
 
   it("settingsHTML 桌面模式包含主题选择/默认页/高级设置网格", () => {
+    // tab 的 testid 由 id 派生（stg-tabbtn-* / stg-panel-*）：改名不会留下漂移的测试钩子。
+    // ⚠️ 前缀不得叫 stg-tab-*：`data-testid="stg-tab-general"` 的属性文本里天然含子串
+    // `id="stg-tab-general"`，按 `id="` 锚点切片（本文件 panelSlice）会先命中 tab 栏按钮
+    // 而非面板 —— 2026-09 实测把切片顶到 bar 上，靠前缀岔开才消掉。
     const html = settingsHTML();
+    expect(html).toContain('data-testid="stg-tabbtn-general"');
+    expect(html).toContain('data-testid="stg-panel-appearance"');
+    expect(html).not.toContain('data-testid="stg-tab-');
     // 方案 A：一级菜单按用户任务命名，保留四个槽位，不恢复解析/鸣谢独立入口
     // 「常规」图标=controls（旋钮）：齿轮是左侧一级导航的设置入口，二级 tab 复用会层级歧义
     expect(html).toContain(`data-tab="general">${UI_ICONS.controls} 常规</button>`);

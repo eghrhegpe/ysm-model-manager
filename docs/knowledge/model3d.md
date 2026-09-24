@@ -47,6 +47,7 @@ auto_fields:
     - ArmStats
     - assembleBoneSelectInfo
     - AssembledShell
+    - AssertCommonFieldIsExact
     - assertRevisionRange
     - ATMOSPHERE_PRESETS
     - AtmospherePresetId
@@ -264,6 +265,7 @@ auto_fields:
     - estimateVrmHeight
     - eulerToQuaternion
     - evaluateGpuLoad
+    - ExpectedCommonField
     - extractIKChainFromTree
     - extractLegChains
     - fbm2

@@ -14,6 +14,7 @@ import {
   type PreviewMenuNode,
   type PreviewMenuNodeKind,
 } from "@/preview-3d/menu/schema/node-types.ts";
+import type { NodeFor } from "@/preview-3d/menu/schema/node-validation.ts";
 import { createHeaderToggle } from "@/preview-3d/menu/shell/header-toggle.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import {
@@ -398,7 +399,17 @@ function appendFoldedShape(
   return false;
 }
 
-/** kind → 渲染分派签名（与 renderMenu 循环共用 container/node/deps/snapshot 四入参）。 */
+/** kind → 渲染分派签名（与 renderMenu 循环共用 container/node/deps/snapshot 四入参）。
+ *  [ADR-302 走法丙刀2] 按 kind 参数化：每个臂拿到的 node 是**该 kind 的窄类型**（`NodeFor<K>`）——
+ *  臂内读本 kind 专有字段有类型保障，读别的 kind 的字段直接编译报错（宽接口下二者都静默可读）。 */
+type MenuHandlerFor<K extends PreviewMenuNodeKind> = (
+  container: HTMLElement,
+  node: NodeFor<K>,
+  deps: RenderMenuDeps,
+  snapshot: ReturnType<typeof previewSnapshot>,
+) => void;
+
+/** 分派位点用的宽签名——仅 `dispatchMenuHandler` 消费（本文件唯一类型逃生舱的落点）。 */
 type MenuHandler = (
   container: HTMLElement,
   node: PreviewMenuNode,
@@ -407,10 +418,10 @@ type MenuHandler = (
 ) => void;
 
 // [ADR-195 复杂度收口] 表驱动分派取代 renderMenu 内 14 段 switch——认知复杂度 73→个位数。
-// 非 Partial Record 令 PreviewMenuNodeKind 联合新增而此处漏写即在编译期报错（TS2741），
-// 保留原 switch `default: never` 的穷尽守卫语义。card/folder 由 appendFoldedShape 前置接管，
-// 此二臂通常不可达（include 仅为满足联合穷尽，语义仍正确）。
-const MENU_HANDLERS: Record<PreviewMenuNodeKind, MenuHandler> = {
+// 映射类型令 PreviewMenuNodeKind 联合新增而此处漏写即在编译期报错（TS2741），
+// 保留原 switch `default: never` 的穷尽守卫语义；同时**逐臂窄化 node**（见 MenuHandlerFor）。
+// card/folder 由 appendFoldedShape 前置接管，此二臂通常不可达（include 仅为满足联合穷尽，语义仍正确）。
+const MENU_HANDLERS: { [K in PreviewMenuNodeKind]: MenuHandlerFor<K> } = {
   field: (c, n) => rmAppendField(c, n),
   button: (c, n, d) => rmAppendButton(c, n, d.actionCtx),
   row: (c, n, d) => rmAppendDynamicRow(c, n, d.actionCtx),
@@ -458,7 +469,11 @@ export function renderMenu(
     if (appendFoldedShape(container, node, deps)) continue;
     // 运行期 undefined 兜底：伪造 kind（as unknown as PreviewMenuNode，如 env.ts 节点）
     // 不在表内 → warn + 落叶行壳，防「拼错 kind 静默渲染成死行」，亦防 TypeError。
-    const handler: MenuHandler | undefined = MENU_HANDLERS[node.kind];
+    // 单一类型逃生舱（本文件唯一一处）：TS 无法把 `node.kind` 与表中键关联——node 是宽类型，
+    // 而表项要求「该 kind 的窄类型」（参数逆变），故此处断言一次。
+    // 安全性依据两条：① 表按 kind 穷尽（映射类型强制，漏 kind 编译期报错）；
+    // ② node 的字段与其 kind 相符由运行期门保证（validateAdapterItemIds warn + core/cap 两测试门）。
+    const handler = MENU_HANDLERS[node.kind] as MenuHandler | undefined;
     if (handler) {
       handler(container, node, deps, snapshot);
     } else {

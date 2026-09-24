@@ -23,9 +23,16 @@
 //  ③ core.ts validateAdapterItemIds —— adapter 外来节点入口 warn（非热路径，只在注入时跑）。
 import type { PreviewMenuNode, PreviewMenuNodeKind } from "./menu-node-types.ts";
 
-/** 全 kind 合法的通用字段（呈现 / 放置语义，与 kind 无关）。
- *  字段名由 `satisfies` 锁死（拼错/越界即编译期报错）；**完整性**由两测试门的真实树断言兜底
- *  ——漏登记某通用字段会让它在全 kind 被判违规，门立即变红（见 node-validation.test.ts）。 */
+/** 全 kind 合法的通用字段（呈现 / 放置 / **折叠形态**语义，与 kind 无关）。
+ *  字段名由 `satisfies` 锁死（拼错/越界即编译期报错）；**完整性**由 `AssertCommonFieldIsExact`
+ *  编译期断言（见文件下半）+ 两测试门的真实树断言双重兜底。
+ *
+ *  ⚠️ `children`/`defaultOpen`/`headerToggle` 属**通用字段**，不是 folder/panel/card 专有：
+ *  「形状前置」（`render.ts|appendFoldedShape` → `node-types.ts|isPreviewFolderNode`，判定式
+ *  `kind==="folder" || Array.isArray(children)`）**刻意与 kind 脱钩**（ADR-240）——任何带 `children`
+ *  的节点都会在 kind 分派**之前**被 `rmAppendFolder` 接管，而它无条件读 `defaultOpen`/`headerToggle`。
+ *  若把三者留在逐 kind 白名单，其余 kind 会被**误报**（2026-09 实证：`{kind:"panel", children,
+ *  defaultOpen:false}` 的折叠体真实生效、`headerToggle` 真实渲染出开关，却曾被本表判违规）。 */
 export const COMMON_NODE_FIELDS = [
   "id",
   "kind",
@@ -34,6 +41,9 @@ export const COMMON_NODE_FIELDS = [
   "hintKey",
   "settingsOrder",
   "icon",
+  "children",
+  "defaultOpen",
+  "headerToggle",
   "visibleWhen",
   "dockGroup",
 ] as const satisfies readonly (CommonNodeField | "kind")[];
@@ -64,11 +74,12 @@ export const COMMON_NODE_FIELDS = [
  * `as const` 保留字面量类型供类型层投影；`satisfies` 保住穷尽性（漏 kind / 拼错字段名 → 编译期报错）。
  */
 export const KIND_SPECIFIC_FIELDS = {
-  // appendFoldedShape → rmAppendFolder：可折叠 section + header 总开关
-  folder: ["defaultOpen", "headerToggle", "children"],
+  // 折叠容器：其「可折叠形态」完全由通用字段 children/defaultOpen/headerToggle 承载
+  // （形状前置，与 kind 脱钩，见 COMMON_NODE_FIELDS 注释），故本 kind 无专有字段。
+  folder: [],
   // 叶（rmAppendLeaf → makeRow）或折叠体（hasFoldedBody → rmAppendFolder）；
   // action 分支见 renderPreviewPanel ③
-  panel: ["children", "renderCustom", "schemaId", "action", "danger"],
+  panel: ["renderCustom", "schemaId", "action", "danger"],
   // 动作节点：rmBindLeafClick
   action: ["action", "danger"],
   // 控件节点：control → nodeControlToView → cap 栈渲染器
@@ -82,12 +93,12 @@ export const KIND_SPECIFIC_FIELDS = {
   // 键值对行：value = 显示值
   field: ["value"],
   // 动态列表行：value = 副标签附加信息（与 field 语义不同）、radio/badge 槽位、下钻 action
-  row: ["value", "radio", "badge", "headerToggle", "action", "rowDensity"],
+  row: ["value", "radio", "badge", "action", "rowDensity"],
   // 装饰节点
   divider: [],
   sectionTitle: [],
-  // 卡牌容器：children + 可选折叠
-  card: ["children", "collapsible", "defaultOpen"],
+  // 卡牌容器：仅 collapsible 为专有（读于 rmAppendCard）；children/defaultOpen 已归通用字段
+  card: ["collapsible"],
   // 组合行：eye 显隐 + opacity 滑条
   "material-row": ["eye", "opacity"],
   // cap 复杂控件组通道
@@ -103,11 +114,38 @@ type KindSpecificFieldOf<K extends PreviewMenuNodeKind> = (typeof KIND_SPECIFIC_
 
 /** 公共字段 = 宽接口字段全集 **减去** kind 与全部 kind 专有字段的并集（自动推导，无手写清单）。
  *  ⚠️ 推论：新增字段若忘了登记进 KIND_SPECIFIC_FIELDS，它会静默落进「公共字段」而逃过
- *  per-kind 判定——故新字段必须显式登记到某个 kind，或确认其真为全 kind 通用。 */
+ *  per-kind 判定——该缺口由下方 `AssertCommonFieldIsExact` **编译期封堵**（非仅注释提醒）。 */
 type CommonNodeField = Exclude<
   keyof PreviewMenuNode,
   "kind" | KindSpecificFieldOf<PreviewMenuNodeKind>
 >;
+
+/** 意图中的公共字段集（**手写锚点**，仅供下方精确性断言消费，不参与运行期）。 */
+export type ExpectedCommonField =
+  | "id"
+  | "labelKey"
+  | "label"
+  | "hintKey"
+  | "settingsOrder"
+  | "icon"
+  | "children"
+  | "defaultOpen"
+  | "headerToggle"
+  | "visibleWhen"
+  | "dockGroup";
+
+/** 编译期断言：推导公共集 ⇄ `ExpectedCommonField` **双向相等**才求值为 `true`；否则求值成
+ *  携带差集的对象类型——消费处（`node-validation.test.ts`）给 `true` 赋值即编译报错，
+ *  且错误信息直接指出是多登记（`unregistered`）还是漏登记（`missing`）了哪些字段。
+ *
+ *  封堵的缺口：`CommonNodeField` 由「全集减专有」自动推导，故新增字段若**既不入任何 kind、
+ *  也不进 `COMMON_NODE_FIELDS`**，它会静默落进公共集、逃过 per-kind 判定。本断言把这一步从
+ *  「静默通过」变成「编译期必须显式决定归属」——这是本模块「单一事实源」的闭环另一半。 */
+export type AssertCommonFieldIsExact = [CommonNodeField] extends [ExpectedCommonField]
+  ? [ExpectedCommonField] extends [CommonNodeField]
+    ? true
+    : { missing: Exclude<ExpectedCommonField, CommonNodeField> }
+  : { unregistered: Exclude<CommonNodeField, ExpectedCommonField> };
 
 /** 指定 kind 的窄类型：公共字段（保留原可选性）+ 该 kind 的专有字段（可选）。
  *

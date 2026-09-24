@@ -14,6 +14,7 @@ import { buildPreviewMenuRouters } from "@/preview-3d/menu/engine/core.ts";
 import { getSchema, listSchemas, resetSchemas } from "@/preview-3d/infra/schema-registry.ts";
 import type { PreviewMenuNode } from "./menu-node-types.ts";
 import {
+  type AssertCommonFieldIsExact,
   COMMON_NODE_FIELDS,
   KIND_SPECIFIC_FIELDS,
   type NodeFor,
@@ -345,5 +346,37 @@ describe("NodeFor<K> 窄类型（类型层派生 ⇄ 运行期表 交叉锁）",
     // 走法丙前提：既有无处不在的宽别名不被改动，窄类型仅是「可选前哨」
     const widened: PreviewMenuNode[] = [folder, row, custom];
     expect(widened).toHaveLength(3);
+  });
+});
+
+// ===================================================================
+// ④ 契约表自身的完整性——「单一事实源」闭环的另一半
+// ===================================================================
+describe("契约表完整性（ADR-302 单一事实源闭环）", () => {
+  it("形状前置字段（children/defaultOpen/headerToggle）对任意 kind 合法——P1 误报修复锁", () => {
+    // 锁定一个**真被踩到的误报**（2026-09 实证）：形状前置判定
+    // `kind==="folder" || Array.isArray(children)` 刻意与 kind 脱钩（ADR-240），
+    // 任何带 children 的节点都先于 kind 分派被 rmAppendFolder 接管，而它无条件读
+    // defaultOpen/headerToggle。故这三个字段属**通用字段**：留在逐 kind 白名单会对其余 kind 误报。
+    expect(
+      validateNode({
+        id: "p",
+        kind: "panel",
+        children: [],
+        defaultOpen: false,
+        headerToggle: { value: true, onChange: () => {} },
+      }),
+    ).toEqual([]);
+    expect(validateNode({ id: "r", kind: "row", children: [], defaultOpen: true })).toEqual([]);
+    expect(validateNode({ id: "a", kind: "action", children: [] })).toEqual([]);
+    expect(validateNode({ id: "cu", kind: "custom", children: [], defaultOpen: true })).toEqual([]);
+  });
+
+  it("编译期：推导公共集恰为 ExpectedCommonField（新字段未登记归属即在此报错）", () => {
+    // 类型级断言（运行期恒真）：若给 PreviewMenuNode 新增字段却既不入任何 kind、
+    // 也不进 COMMON_NODE_FIELDS，它会静默落进推导公共集 → 类型不再等于 true →
+    // 下列赋值编译失败，且错误信息直接指出缺哪些/多了哪些字段名。
+    const exact: AssertCommonFieldIsExact = true;
+    expect(exact).toBe(true);
   });
 });

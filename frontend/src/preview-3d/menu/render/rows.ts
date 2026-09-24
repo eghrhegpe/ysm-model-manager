@@ -11,6 +11,7 @@
 
 import { t, tOf } from "@/core/i18n/t.ts";
 import type { PreviewActionMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
+import type { NodeFor } from "@/preview-3d/menu/schema/node-validation.ts";
 import { createHeaderToggle } from "@/preview-3d/menu/shell/header-toggle.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { resolveLabel } from "@/utils/base/pure/label.ts";
@@ -92,7 +93,7 @@ function rmBindLeafClick(row: HTMLElement, node: PreviewMenuNode, deps: RenderMe
 }
 
 /** [子函数 2/6] field：键值对行（统计/信息展示） */
-export function rmAppendField(container: HTMLElement, node: PreviewMenuNode): void {
+export function rmAppendField(container: HTMLElement, node: NodeFor<"field">): void {
   const row = document.createElement("div");
   row.className = "slide-item field-row";
   row.dataset.testid = `preview-${node.id}`;
@@ -108,8 +109,12 @@ export function rmAppendField(container: HTMLElement, node: PreviewMenuNode): vo
   container.appendChild(row);
 }
 
-/** [模式⑥·提纯] button/row 共用行骨架：slide-item 行 + testid + 可选图标 + 空标签（jscpd 去重） */
-function rmMakeRowBase(node: PreviewMenuNode): { row: HTMLDivElement; lb: HTMLSpanElement } {
+/** [模式⑥·提纯] button/row 共用行骨架：slide-item 行 + testid + 可选图标 + 空标签（jscpd 去重）
+ *  [ADR-302 走法丙刀2] 形参收窄为「会读 rowDensity 的两个 kind」——正是共用本壳的 button/row。 */
+function rmMakeRowBase(node: NodeFor<"button"> | NodeFor<"row">): {
+  row: HTMLDivElement;
+  lb: HTMLSpanElement;
+} {
   const row = document.createElement("div");
   row.className = node.rowDensity === "compact" ? "slide-item rm-row-compact" : "slide-item";
   row.dataset.testid = `preview-${node.id}`;
@@ -133,7 +138,7 @@ function rmMakeRowBase(node: PreviewMenuNode): { row: HTMLDivElement; lb: HTMLSp
  *  variant/getHint，迫使地面贴图按钮绕道 controls 通道——此臂补齐后绕道退役。 */
 export function rmAppendButton(
   container: HTMLElement,
-  node: PreviewMenuNode,
+  node: NodeFor<"button">,
   actionCtx: PreviewActionMenuCtx,
 ): void {
   const { row, lb } = rmMakeRowBase(node);
@@ -179,7 +184,7 @@ export function rmAppendButton(
  *  表「整行点击下钻」） */
 export function rmAppendDynamicRow(
   container: HTMLElement,
-  node: PreviewMenuNode,
+  node: NodeFor<"row">,
   actionCtx: PreviewActionMenuCtx,
 ): void {
   const { row, lb } = rmMakeRowBase(node);
@@ -316,7 +321,7 @@ export function nodeControlToView(node: PreviewMenuNode, menu?: SlideMenuHandle)
 /** [子函数 5.75/6] material-row：组合控件行（label + eye 显隐 + opacity 滑条）——
  *  [doc:adr-126-p5] 审计 #3 组合行增强；eye/opacity 闭包经 bridge 下沉（对齐旧
  *  buildMaterialControls 语义：点击翻转显隐、滑条改透明度） */
-export function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNode): void {
+export function rmAppendMaterialRow(container: HTMLElement, node: NodeFor<"material-row">): void {
   const wrap = document.createElement("div");
   wrap.className = "slide-item rm-control-row";
   wrap.dataset.testid = `preview-${node.id}`;
@@ -362,7 +367,10 @@ export function rmAppendMaterialRow(container: HTMLElement, node: PreviewMenuNod
 }
 
 /** [子函数 6/6] divider + sectionTitle：两个轻量节点共用 tiny 子函数 */
-export function rmAppendDecor(container: HTMLElement, node: PreviewMenuNode): void {
+export function rmAppendDecor(
+  container: HTMLElement,
+  node: NodeFor<"divider"> | NodeFor<"sectionTitle">,
+): void {
   if (node.kind === "divider") {
     const hr = document.createElement("div");
     hr.dataset.testid = node.id;

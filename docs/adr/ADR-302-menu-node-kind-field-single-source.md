@@ -1,4 +1,4 @@
-# ADR-302：菜单节点类型不做一次性判别联合——以类型级字段表为单一事实源
+# ADR-302：菜单节点类型不做一次性判别联合——以运行期字段表为单一事实源（类型层派生）
 
 - **状态**：✅ 已采纳（Accepted）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
@@ -33,7 +33,9 @@
 **否决「一次性切判别联合」（走法甲）；采纳「类型级字段表单源 + 可选窄类型」的渐进走法（走法丙）**——即 ADR-195 走法乙精神在节点类型层的延伸。
 
 1. **不做**把 `PreviewMenuNode` 别名一次性替换为联合的迁移：实证代价 680 处编译错误，且今天**零真实违规**可抓（见 §4）。
-2. **建立类型级字段表为单一事实源**：逐 kind 字段集合以类型形式声明一次（类型级 `KindFields`），运行期 `KIND_SPECIFIC_FIELDS` 保持手写但由**编译期赋值断言**锁死与类型级表一致（类型在运行期被擦除，故只能「断言一致」而非「派生」）——消除「类型层与运行期门各写一份、可能漂移」的隐患。
+2. **建立字段表为单一事实源，方向为「运行期 const → 类型层派生」**：逐 kind 字段集合**只写一次**，落成运行期 `KIND_SPECIFIC_FIELDS`（`as const satisfies Record<PreviewMenuNodeKind, readonly (keyof PreviewMenuNode)[]>`——`as const` 保留字面量类型供类型层投影，`satisfies` 保住穷尽性与字段名拼写）；类型层经 `KindSpecificFieldOf<K>` → `CommonNodeField`（= 宽接口字段全集减 `kind` 与全部专有字段并集，自动推导）→ `NodeFor<K>` 依次派生。
+   - **方向不可反**：类型在运行期被擦除，故「类型表为源、运行期表由赋值断言锁死」最多只能做到**断言一致**（两张手写表 + 一道断言）；本方向则是**结构上不可能漂移**（只有一张手写表）。
+   - 自动推导引入一个副作用——新增字段若**既不入任何 kind、也不进 `COMMON_NODE_FIELDS`**，会静默落进公共集从而逃过 per-kind 判定。故另设 `AssertCommonFieldIsExact` 编译期断言（双向相等才为 `true`），把这一步从「静默通过」改为「编译期必须显式决定归属」。
 3. **提供可选窄类型 `NodeFor<K>`**（逐 kind 接口，或 `Extract` 派生）：新增构造点与渲染器逐 kind 处理器（`MENU_HANDLERS`）**可选用**它以取得内建收窄；`PreviewMenuNode` 宽别名维持不变，既有引用零改动。
 4. **保留运行期门**：类型层管不到动态与外来输入（adapter 注入项、cap 聚合树），故 `validateAdapterItemIds` warn 与两门测试**不因本 ADR 退役**——类型层与运行期门是**互补**关系，不是替代关系。
 5. **复评触发条件**：若出现「新代码仍漏过字段⇄kind 错配」的实证（即走法丙的编译期覆盖被证明不足），以 §4 的 **120 处生产侧清单**为已知成本，重新评估别名翻转。
@@ -55,6 +57,10 @@
 
 - 泛型遍历工具在联合下需改用 `in` 守卫 / `Extract`：`menu/schema/node-types.ts|collectPreviewLeafNodes`、`collectPreviewNodeIds`、`menu/engine/menu-graph.ts` 的树遍历、`menu/engine/core.ts|panelNodeToRow`。走法丙下不阻塞；若将来翻转别名，这些是**结构性改动点**（非机械替换）。
 - 判别联合会**丢失无法判别字面量的上下文类型**（实证 108 处 TS7006，集中在 spread 与变量 kind）：翻转时需逐个显式标注。这是宽接口今天白送的便利，属翻转的隐性成本。
+- **走法丙的收窄边界（2026-09 实施刀2 时实证得出）**：窄类型只适用于**按 kind 分派的叶路径**（`MENU_HANDLERS` 各臂 → `menu/render/rows.ts` 的叶原语），**不适用于「形状前置」的折叠路径**——`menu/render/render.ts|appendFoldedShape` 按 `menu/schema/node-types.ts|isPreviewFolderNode`（`kind==="folder" || Array.isArray(children)`）判定形态，**刻意与 kind 脱钩**（ADR-240），故 `rmAppendFolder`/`rmAppendCard` 天然是 kind 无关的，只能保持宽类型。
+  - 推论一（已随之修正）：`children`/`defaultOpen`/`headerToggle` **对任意 kind 都被读取**（任何带 `children` 的节点都会被形状前置渲染为折叠卡），故三者属**通用字段**而非 folder/panel/card 专有——把它们留在逐 kind 白名单里会对其余 kind 产生**误报**。
+  - 推论二：不要试图给折叠路径加 kind 判别式类型谓词——「带 children 即折叠」这一语义本身就跨 kind，谓词化只会把 ADR-240 的脱钩重新绑回 kind。
+- **校验粒度是 kind 级，不是路径级（已知取舍，非缺陷）**：白名单按 kind 建模，故「同一字段在不同消费路径下读 / 不读」的混合情形不报警——已确证两例：`custom` 的 `action`/`danger` 在 `renderCustomDirect: true`（schema 面板路径 `menu/engine/core.ts|renderPreviewPanel`）下被 `runCustomMount` 静默忽略；`button` 的 `action` 在 `control` 携带按钮语义时被 `rmAppendButton` 忽略。同理**公共字段不参与判定**，故「某公共字段在某个 kind 被忽略」也不报（如 `{kind:"divider", icon}`——`rmAppendDecor` 的 divider 臂不读 `icon`）。若将来要求完整检测，须升级为**路径级**校验（复杂度与收益需另行评估，不在本 ADR 范围）。
 
 ## 4. 数据溯源
 

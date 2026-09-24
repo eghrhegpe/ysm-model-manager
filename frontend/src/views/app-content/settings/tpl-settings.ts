@@ -9,6 +9,14 @@
 //      设置菜单槽位语义 = 「这里能配置什么」，只读展示不占槽；「关于」含真实设置
 //      （更新检查间隔/检查更新/版本）保留 tab；
 //   ③ 「启动默认页面」从外观迁至常规，避免启动导航行为混入视觉偏好。
+// 2026-09 tab id 命名脱钩收债：id 原为 basic/ui/ops，其中 ops 却显示「3D 预览」、ui 却显示
+//   「外观」——上一轮只把 i18n 键 operations→tab3d 改了，**同一个命名债的第二个载体
+//   TabSpec.id 原地未动**，而 id 才是 DOM `data-tab` / 面板 id `stg-tab-<id>` 的唯一锚点
+//   （测试钩子与未来深链接都抓它）。现 id = general/appearance/preview3d/about，并由
+//   `SettingsTabId` 联合类型 + `SETTINGS_TAB_META` 的 Record 形态在编译期兜住「新增 tab 必须
+//   同时给图标 + 文案键 + 面板体」，漏一处即报错。testid 由 id 派生（stg-tabbtn-<id> /
+//   stg-panel-<id>——前缀须与面板 DOM id 模板 `stg-tab-*` 岔开，否则 data-testid 属性文本
+//   会被 `id="` 锚点误命中），不再手写在模板里跟着 id 漂移。
 
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
@@ -16,8 +24,9 @@ import { SUPPORTED_LANGS } from "@/core/i18n/locale.ts";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { TD_CAM_SPEED, TD_ROT_MODE, type TdRotMode } from "@/preview-3d/infra/settings-schema.ts";
 import { THEME_VALID } from "@/theme-core";
+import { stagger } from "@/utils/animation/stagger.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { renderTabs } from "@/views/app-content/tabs-shell.ts";
+import { renderTabs, type TabSpec } from "@/views/app-content/tabs-shell.ts";
 import { navItems } from "@/views/app-nav/nav-items.ts";
 import { type StgCardSpec, stgCard, stgCards } from "./stg-card.ts";
 import { aboutPageBody } from "./tpl-settings-about.ts";
@@ -25,6 +34,54 @@ import { aboutPageBody } from "./tpl-settings-about.ts";
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
 export const VIEW_TESTIDS: readonly string[] = ["set-mc-path"];
+
+// ===== 设置页 tab 声明（唯一事实源：id / 图标 / 文案键 / 声明序在此一处）=====
+/** 设置页 tab id 联合；面板 id = `stg-tab-<id>`、按钮 testid = `stg-tab-<id>`。
+ *  新增 tab：改类型 + 改下方 Record（两处漏一即编译期报错）。 */
+export type SettingsTabId = "general" | "appearance" | "preview3d" | "about";
+
+/** tab 元信息。Record 形态 ⇒ 新增 tab 必须同时给图标与文案键（ADR-303 `Record<TdRotMode, …>`
+ *  同款护栏；无它则「加了 id 忘了图标」只在运行时表现为空白按钮）。 */
+const SETTINGS_TAB_META: Record<SettingsTabId, { icon: string; labelKey: LocaleKey }> = {
+  // 「常规」用 controls（旋钮/调节）而非 settings（齿轮）：齿轮是左侧一级导航的设置入口
+  // （nav-items.ts icon:"settings"），页内二级 tab 复用同形 → 「点齿轮」在两种层级间歧义。
+  general: { icon: UI_ICONS.controls, labelKey: "settings.general" },
+  appearance: { icon: UI_ICONS.appearance, labelKey: "settings.appearance" },
+  preview3d: { icon: UI_ICONS.joystick, labelKey: "settings.tab3d" },
+  about: { icon: UI_ICONS.info, labelKey: "settings.about" },
+};
+
+/**
+ * 按 id 产出 tab 声明：label 与 testid 均从 id 派生，id 改名不会留下漂移的钩子。
+ *
+ * ⚠️ buttonTestid 必须叫 `stg-tabbtn-*`：不能与面板 DOM id 模板 `stg-tab-*` 同名——
+ * `data-testid="stg-tab-general"` 里天然含子串 `id="stg-tab-general"`，会让测试/脚本按
+ * `id="` 锚点定位面板时先命中 tab 栏按钮（2026-09 实测把 panelSlice 切片顶到 bar 上）。
+ * 前缀岔开后两套命名空间互不误伤；bindTabs 运行期给按钮写的 DOM id 是 stg-tab-btn-*
+ *（也不同前缀），三者各据一词。
+ */
+function buildSettingsTabs(bodies: Record<SettingsTabId, string>): TabSpec<SettingsTabId>[] {
+  const entries = Object.entries(SETTINGS_TAB_META) as [
+    SettingsTabId,
+    { icon: string; labelKey: LocaleKey },
+  ][];
+  return entries.map(([id, meta]) => ({
+    id,
+    label: `${meta.icon} ${t(meta.labelKey)}`,
+    body: bodies[id],
+    buttonTestid: `stg-tabbtn-${id}`,
+    panelTestid: `stg-panel-${id}`,
+  }));
+}
+
+// ===== 组入场延迟编排（去魔数；派生值与改前逐位一致 ⇒ 零视觉变化）=====
+/** 行组步长（ms）：同一 tab 内相邻组的错峰间隔。注：不用 stagger 的默认 30ms——
+ *  本页组是一屏可见的大块，30ms 太快看不出节奏（历史沿用自上轮收敛）。 */
+const STG_GROUP_STEP_MS = 60;
+/** 页面级编排起点（ms）：各 tab 的首组入场档位；组内序号经 stagger 派生 */
+const STG_BAND = { appearance: 0, preview3d: 240 } as const;
+/** 第 i 个组的延迟值 */
+const groupDelay = (band: number, i: number): number => band + stagger(i, STG_GROUP_STEP_MS);
 
 function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
   // 路径三卡为同族组，入场延迟由 stgCards 按序号派生（step 60ms，与其余组的 30ms 区分：
@@ -58,7 +115,10 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
         },
       },
       {
-        icon: UI_ICONS.web,
+        // 图标用 download 而非 web（globe 的别名）：`web` 与语言卡的 `globe` 引用同一 GLOBE_PATH
+        // 常量（ui-icons.ts），渲染逐字节相同——同屏「语言」与「下载镜像源」曾是两个一模一样的
+        // 地球，2026-09 那次「语义校正」只换了变量名、零视觉产出。镜像源 = 下载来源，用 download。
+        icon: UI_ICONS.download,
         title: t("settings.mirror.title"),
         body: `<select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
           <option value="">${t("settings.mirror.directOption")}</option>
@@ -202,7 +262,7 @@ function renderStgThemePicker(): string {
     .join("");
 
   return `<!-- theme cards: dots bound to --bg/--accent/--bd via .theme-x scope -->
-<div class="settings-group" style="animation-delay:0ms">
+<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.appearance, 0)}ms">
   <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
     <span class="label">${UI_ICONS.appearance} ${t("settings.theme.select")}</span>
     <div class="theme-picker" id="theme-picker">${cards}</div>
@@ -212,7 +272,7 @@ function renderStgThemePicker(): string {
 
 function renderStgThemeAuto(): string {
   return `<!-- 自动切换：独立一栏 -->
-<div class="settings-group" style="animation-delay:60ms">
+<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.appearance, 1)}ms">
   <div class="setting-row">
     <label for="theme-auto" class="label">${UI_ICONS.clock} ${t("settings.theme.autoTitle")}</label>
     <select id="theme-auto" class="stg-select" style="width:auto">
@@ -355,7 +415,7 @@ function renderStgPreview3d(): string {
     .join("\n      ");
   return `<div class="section-title stg-title">${UI_ICONS.joystick} ${t("settings.preview3d.title")}</div>
 
-<div class="settings-group" style="animation-delay:240ms">
+<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.preview3d, 0)}ms">
   <div class="setting-row">
     <label for="td-camspeed" class="label">${UI_ICONS.video} ${t("settings.preview3d.camSpeed")}</label>
     <input type="range" id="td-camspeed" min="${TD_CAM_SPEED.min}" max="${TD_CAM_SPEED.max}" value="${TD_CAM_SPEED.default}" style="flex:1;accent-color:var(--accent,#7c83ff)">
@@ -364,7 +424,7 @@ function renderStgPreview3d(): string {
   <div class="stg-desc">${t("settings.preview3d.camSpeedHint")}</div>
 </div>
 
-<div class="settings-group" style="animation-delay:270ms">
+<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.preview3d, 1)}ms">
   <div class="setting-row">
     <label for="td-rotmode" class="label">${UI_ICONS.refresh} ${t("settings.preview3d.rotMode")}</label>
     <select id="td-rotmode" class="stg-select" style="width:auto">
@@ -374,7 +434,7 @@ function renderStgPreview3d(): string {
   <div class="stg-desc">${t("settings.preview3d.rotModeHint")}</div>
 </div>
 
-<div class="settings-group" style="animation-delay:300ms">
+<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.preview3d, 2)}ms">
   <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:8px">
     <span class="label">${UI_ICONS.game} ${t("settings.preview3d.keymap")}</span>
     <div id="td-keymap-grid" class="stg-grid stg-keymap-grid" style="gap:8px"></div>
@@ -421,12 +481,12 @@ export function settingsHTML(): string {
   const isViewer = isViewerMode();
   const isWebViewer = isWebPlatform();
 
-  const basicBody = `${renderStgBasicPaths(isViewer, isWebViewer)}
+  const generalBody = `${renderStgBasicPaths(isViewer, isWebViewer)}
   ${renderStgStorageCard(isWebViewer)}
 ${renderStgDefaultPageSection()}
 ${renderStgLangSelect()}`;
 
-  const uiBody = `<div class="section-title stg-title">${UI_ICONS.moon} ${t("settings.theme.title")}</div>
+  const appearanceBody = `<div class="section-title stg-title">${UI_ICONS.moon} ${t("settings.theme.title")}</div>
 
 ${renderStgThemePicker()}
 
@@ -438,41 +498,19 @@ ${renderStgAnimationSection()}`;
 
   // 「3D 预览」tab = 3D 预览设置（相机/旋转/键位）+ 解析（FBX/MMD worker 开关，2026-10 自
   // 独立「解析」tab 降级并入）——3D 域设置一处收口；「解析」节标题因此不再与 tab 名同名重复。
-  const opsBody = `${renderStgPreview3d()}
+  const previewBody = `${renderStgPreview3d()}
 ${renderStgParserWorkers()}`;
 
-  const { bar, panels } = renderTabs({
+  const { bar, panels } = renderTabs<SettingsTabId>({
     prefix: "stg",
     buttonClass: "stg-tab",
-    tabs: [
-      {
-        id: "basic",
-        label: `${UI_ICONS.settings} ${t("settings.basic")}`,
-        body: `<div class="stg-page">${basicBody}</div>`,
-      },
-      {
-        id: "ui",
-        label: `${UI_ICONS.appearance} ${t("settings.appearance")}`,
-        body: `<div class="stg-page">${uiBody}</div>`,
-      },
-      {
-        // tab 名直白化（2026-09 锐评 P2）：原键名 settings.operations（"操作"）与显示文案
-        // 「3D 与解析」早已脱节——键名是「操作」、界面写「3D 与解析」，AI 按 key 猜语义必错。
-        // 且该名是「解析 tab 降级并入 3D」时的妥协拼接词，用户无法从名字推断内容。
-        // 改 settings.tab3d =「3D 预览」：名字直接回答「这里配什么」，键名与文案对齐。
-        // 「解析」仍是 tab 内的折叠小节（settings.parser），不再与 tab 名重复。
-        id: "ops",
-        label: `${UI_ICONS.joystick} ${t("settings.tab3d")}`,
-        body: `<div class="stg-page">${opsBody}</div>`,
-      },
-      // 关于 + 鸣谢 合并 tab（aboutPageBody 自带 .stg-page 壳，不再外包；
-      // 鸣谢小节降级的理由见本文件头部 2026-10 菜单收口注释）
-      {
-        id: "about",
-        label: `${UI_ICONS.info} ${t("settings.about")}`,
-        body: aboutPageBody(),
-      },
-    ],
+    tabs: buildSettingsTabs({
+      general: `<div class="stg-page">${generalBody}</div>`,
+      appearance: `<div class="stg-page">${appearanceBody}</div>`,
+      preview3d: `<div class="stg-page">${previewBody}</div>`,
+      // 关于 + 鸣谢 合并 tab（aboutPageBody 自带 .stg-page 壳，不再外包）
+      about: aboutPageBody(),
+    }),
   });
   return `<div class="repo-wrap">${bar}${panels}</div>`;
 }

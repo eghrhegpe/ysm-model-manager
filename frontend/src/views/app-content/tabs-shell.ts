@@ -16,10 +16,14 @@
 //
 // 纯字符串（零依赖）：可 node 环境单测，也可被任意页面模板复用。
 
-/** 单个 tab 的声明：按钮文案 + 面板内容 + 该面板的差异项 */
-export interface TabSpec {
-  /** tab 标识。面板 id = `${prefix}-tab-${id}`（与 bindTabs 运行期查找约定同源） */
-  id: string;
+/** 单个 tab 的声明：按钮文案 + 面板内容 + 该面板的差异项。
+ *  @typeParam Id tab id 的字面量联合（调用方可传 `"general" | "about"` 等，让漏同步的
+ *  id 在编译期报错；不传回落 `string`，与既有调用方全兼容）。 */
+export interface TabSpec<Id extends string = string> {
+  /** tab 标识。面板 id = `${prefix}-tab-${id}`（与 bindTabs 运行期查找约定同源）。
+   *  ⚠️ id 必须与按钮显示文案同义：它是 DOM `data-tab` 与面板 id 的唯一锚点（测试钩子、
+   *  未来的深链接都抓它），留历史妥协名 = 把 ADR-305 治理过的命名脱钩病换个载体重犯。 */
+  id: Id;
   /** 按钮 inner HTML（图标 + 文案由调用方拼 UI_ICONS / t()） */
   label: string;
   /** 按钮 data-testid（如仓库页四个 tab 共用 content-tab） */
@@ -36,11 +40,11 @@ export interface TabSpec {
 }
 
 /** tab 壳声明：栏 + 面板组 */
-export interface TabsShellSpec {
+export interface TabsShellSpec<Id extends string = string> {
   /** 面板 id 前缀：面板 id = `${prefix}-tab-${id}` */
   prefix: string;
   /** tab 列表；首个即默认激活项。调用方须保证非空 */
-  tabs: readonly TabSpec[];
+  tabs: readonly TabSpec<Id>[];
   /** tab 栏（`.repo-tabs`）的 id */
   barId?: string;
   /** tab 栏的 data-testid */
@@ -79,7 +83,7 @@ export interface TabsShell {
 }
 
 /** 按声明产出「tab 栏 + 面板组（+ 查看器告知行）」；调用方负责外层容器与落位。 */
-export function renderTabs(spec: TabsShellSpec): TabsShell {
+export function renderTabs<Id extends string = string>(spec: TabsShellSpec<Id>): TabsShell {
   const {
     prefix,
     tabs,

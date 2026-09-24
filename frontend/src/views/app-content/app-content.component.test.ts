@@ -119,14 +119,14 @@ describe("app-content 生命周期配对", () => {
     // 含「3D 与解析」tab
     const stgTabs = el.shadowRoot?.querySelectorAll(".stg-tab") ?? [];
     expect(stgTabs.length).toBe(4);
-    expect(el.shadowRoot?.querySelector('.stg-tab[data-tab="ops"]')).not.toBeNull();
-    // 回归防线：点击「3D 与解析」tab 后其内容面板 #stg-tab-ops 必须可见（bindTabs 白名单需含 ops，
+    expect(el.shadowRoot?.querySelector('.stg-tab[data-tab="preview3d"]')).not.toBeNull();
+    // 回归防线：点击「3D 与解析」tab 后其内容面板 #stg-tab-preview3d 必须可见（bindTabs 白名单需含 ops，
     // 否则按钮在但内容区始终 hidden —— 曾因漏注册导致 e2e 看不见新 tab 界面）
-    const opsPanel = el.shadowRoot?.getElementById("stg-tab-ops") as HTMLElement | null;
+    const opsPanel = el.shadowRoot?.getElementById("stg-tab-preview3d") as HTMLElement | null;
     expect(opsPanel).not.toBeNull();
     // 初始 hidden（非首个 tab），点击后应移除 hidden 且 display 非空
     expect(opsPanel?.hasAttribute("hidden")).toBe(true);
-    (el.shadowRoot?.querySelector('.stg-tab[data-tab="ops"]') as HTMLElement).click();
+    (el.shadowRoot?.querySelector('.stg-tab[data-tab="preview3d"]') as HTMLElement).click();
     await flushAsyncTurns();
     expect(opsPanel?.hasAttribute("hidden")).toBe(false);
     expect(opsPanel?.style.display).not.toBe("none");

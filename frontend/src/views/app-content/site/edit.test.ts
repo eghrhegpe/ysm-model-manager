@@ -55,6 +55,7 @@ function makeState(over: Partial<SiteViewState> = {}): {
     ctx: null as unknown as SiteViewState["ctx"],
     activeTag: "",
     searchKw: "",
+    detachedCreators: [],
     ...over,
   };
   document.body.appendChild(searchResults);
@@ -218,6 +219,39 @@ describe("编辑态增删", () => {
     cleanup!();
   });
 
+  it("7b. 跨站点创作者删除 → 仅解除本站关联，不删 allCreators 条目，type 去本站段并入 detached（P1-2 锐评）", () => {
+    // type:"siteA;siteB" 的多站点创作者：在 A 站删除必须是「从 A 解除」——
+    // 若整删，Go 按站整存会把 B 站的条目也抹掉（跨站越权）。
+    // 注意 makeState 的 over 只覆盖 state.* 字段，返回的独立变量是默认值——
+    // 断言必须读 state.creators / state.allCreators。
+    const multiSite = {
+      id: 9,
+      name: "跨站",
+      desc: "",
+      type: "siteA;siteB",
+      role: "creator",
+    } as unknown as LocalCreatorLike;
+    const { state, searchResults, refresh } = makeState({
+      creators: [multiSite],
+      allCreators: [multiSite],
+    });
+    searchResults.innerHTML =
+      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="跨站"></div>' +
+      '<button class="cr-del" data-idx="0"></button>';
+    const cleanup = bindEditEvents(state, refresh);
+    expect(state.allCreators).toHaveLength(1);
+    expect(state.detachedCreators).toHaveLength(0);
+
+    searchResults.querySelector(".cr-del")!.dispatchEvent(new Event("click", { bubbles: true }));
+
+    // 条目仍在 allCreators（他站保留），type 已去本站段，进入 detached 待保存写回
+    expect(state.allCreators).toHaveLength(1);
+    expect(state.creators[0]!.type).toBe("siteB");
+    expect(state.detachedCreators.map((c) => c.name)).toEqual(["跨站"]);
+    expect(refresh).toHaveBeenCalled();
+    cleanup!();
+  });
+
   it("8. 新增创作者 → 追加到 creators 与 allCreators 并联调 refresh", () => {
     const { state, searchResults, refresh, allCreators } = makeState();
     mountToolbarDom(searchResults);
@@ -249,6 +283,31 @@ describe("编辑态增删", () => {
     await vi.waitFor(() => expect(backend.SaveWorkshopCreatorsBySite).toHaveBeenCalledTimes(1));
     const saved = backend.SaveWorkshopCreatorsBySite.mock.calls[0][1] as LocalCreatorLike[];
     expect(saved.map((c) => c.name)).toEqual(["Alice"]);
+    cleanup!();
+  });
+
+  it("10. 保存併入 detached 写回：跨站解除关联条目随 siteCreators 落盘，type 已无本站段（P1-2 锐评）", async () => {
+    // 场景：多站点创作者在 A 站删除 → detached 待写回 → 保存时必须併入，
+    // 否则 Go 按站整存（移除 type 含本站旧条目→追加新列表）会把 B 站的条目也抹掉。
+    const detached = {
+      id: 9,
+      name: "跨站",
+      desc: "",
+      type: "siteB", // 已去本站段（siteA 删除时解除）
+      role: "creator",
+    } as unknown as LocalCreatorLike;
+    const { state, searchResults } = makeState({ detachedCreators: [detached] });
+    searchResults.innerHTML =
+      '<button class="cr-save-btn"></button>' +
+      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>';
+    const cleanup = bindEditEvents(state, () => {});
+
+    searchResults.querySelector(".cr-save-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    await vi.waitFor(() => expect(backend.SaveWorkshopCreatorsBySite).toHaveBeenCalledTimes(1));
+    const saved = backend.SaveWorkshopCreatorsBySite.mock.calls[0][1] as LocalCreatorLike[];
+    // 本站 Alice + 解除关联的跨站条目（type=siteB）一并写回
+    expect(saved.map((c) => c.name)).toEqual(["Alice", "跨站"]);
+    expect(saved[1]?.type).toBe("siteB");
     cleanup!();
   });
 });

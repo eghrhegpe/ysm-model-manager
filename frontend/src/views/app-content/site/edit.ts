@@ -137,8 +137,15 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
         const siteCreators = creators.filter(
           (cr) => (cr.name || "").trim() && cr.type?.split(";").includes(site.id),
         );
+        // P1-2 锐评：跨站点创作者「解除本站关联」（type 去本站段）的写回——
+        // 若漏掉它们，Go 按站整存会移除磁盘上 type 含本站的所有旧条目（包括这些
+        // 仍属他站的创作者），导致他站条目被连带抹掉。保存时併入 siteCreators：
+        // type 已无本站段，Go 追加后本站不再命中、他站照常可见。
         const { SaveWorkshopCreatorsBySite } = await backendGetApp();
-        await SaveWorkshopCreatorsBySite(site.id, siteCreators);
+        await SaveWorkshopCreatorsBySite(site.id, [
+          ...siteCreators,
+          ...state.detachedCreators.filter((cr) => (cr.name || "").trim()),
+        ]);
         wsEditModeRef.v = false;
         busRef.emit("toast:show", {
           msg: t("workshop.action.saved"),
@@ -282,11 +289,22 @@ function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: 
       () => {
         eeSyncAllEditInputs(searchResults, creators, site);
         const idx = parseInt(btn.dataset.idx || "-1", 10);
-        if (creators[idx]) {
-          const realIdx = allCreators.indexOf(creators[idx]);
+        const cr = creators[idx];
+        if (!cr) return;
+        // P1-2 锐评：跨站点越权修复——type:"A;B" 的创作者在 A 站删除必须是「解除 A 关联」，
+        // 不得从 allCreators 全删：Go 按站整存（移除 type 含本站的旧条目→追加新列表）会把
+        // 属于 B 站的条目一并抹掉。多站条目：type 去本站段 + 移入 detached 待保存写回；
+        // 单站条目（或 type 缺失/空）：全量删除（本就只属本站，他站无依赖）。
+        const segs = (cr.type || "").split(";").filter(Boolean);
+        const belongsToOtherSites = segs.some((s) => s !== site.id);
+        if (belongsToOtherSites) {
+          cr.type = segs.filter((s) => s !== site.id).join(";");
+          state.detachedCreators.push(cr);
+        } else {
+          const realIdx = allCreators.indexOf(cr);
           if (realIdx >= 0) allCreators.splice(realIdx, 1);
-          refreshView();
         }
+        refreshView();
       },
       { signal: sig },
     );

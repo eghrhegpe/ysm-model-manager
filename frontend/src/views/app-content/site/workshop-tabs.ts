@@ -34,6 +34,9 @@ export interface WorkshopRefs {
   allCreatorsRef: { v: LocalCreator[] };
   repoAuthorsRef: { v: RepoAuthorLike[] };
   wsEditModeRef: { v: boolean };
+  /** P1-8 锐评：站点视图渲染入口，由 init-workshop 注入（原模块级 _showSiteView 单例——
+   *  旧实例迟到回调会读到新注入闭包，跨实例串扰；收进 refs 与 allSitesRef 同构，重建即新实例） */
+  showSiteViewRef: { v: (site: WorkshopSite | null) => void };
 }
 
 /** 创建创意工坊页的共享 ref 对象（单一入口，所有消费者共享同一实例） */
@@ -43,6 +46,7 @@ export function createWorkshopRefs(): WorkshopRefs {
     allCreatorsRef: { v: [] as LocalCreator[] },
     repoAuthorsRef: { v: [] as RepoAuthorLike[] },
     wsEditModeRef: { v: false },
+    showSiteViewRef: { v: () => {} },
   };
 }
 
@@ -67,7 +71,7 @@ export function initWorkshopTabs(
         const localAuthors = await loadLocalAuthors();
         if (localAuthors.length) {
           refs.allCreatorsRef.v = mergeLocalAuthorsInto(refs.allCreatorsRef.v, localAuthors);
-          _showSiteView(page.getCurrentSite());
+          refs.showSiteViewRef.v(page.getCurrentSite());
         }
       } catch {
         // 补充失败不影响首屏（首屏已可用），静默降级
@@ -91,7 +95,7 @@ export function initWorkshopTabs(
       safeSet("ysm-ws-last-tab", site.id);
       // tab 高亮 / roving tabindex / aria-selected 由 tabs-a11y 原语在 activate 时统一切换，
       // 此处只负责内容区重渲染（原手搓 querySelectorAll 去 active + add active 已收敛）。
-      _showSiteView(page.getCurrentSite());
+      refs.showSiteViewRef.v(page.getCurrentSite());
       // 首屏已渲染，后台补充本地扫描作者（STALE 缓存，通常立即返回）
       maybeEnrich();
     } catch (e) {
@@ -171,12 +175,6 @@ export function initWorkshopTabs(
     }, WS_TAB_LOAD_DELAY_MS),
   );
 }
-
-// 实际函数由 init-workshop.ts 注入
-// 【保留不 reset】initWorkshopPage 每次调用都覆盖 _showSiteView（init-workshop.ts:139），
-// 旧闭包残留但无实际泄漏风险（组件未重挂载时旧 host 也未销毁，闭包仍有效）。
-let _showSiteView: (site: WorkshopSite | null) => void = () => {};
-
-export function setShowSiteView(fn: (site: WorkshopSite | null) => void): void {
-  _showSiteView = fn;
-}
+// P1-8 锐评：渲染入口收进 refs.showSiteViewRef（init-workshop 注入），
+// 原模块级 setShowSiteView/_showSiteView 单例已删除——重建即新实例，
+// 旧实例迟到回调不再读到新闭包跨实例串扰。

@@ -17,27 +17,44 @@ const {
   openSite,
   bindSiteEvents,
   initWorkshopTabs,
-  setShowSiteView,
   createWorkshopRefs,
+  wsRefs,
   fillSearch,
-} = vi.hoisted(() => ({
-  getApp: vi.fn(),
-  eventsOn: vi.fn((_e: string, _cb: (...a: unknown[]) => void) => vi.fn()),
-  renderSiteView: vi.fn(() => vi.fn()),
-  showRepoModels: vi.fn(async () => {}),
-  extractAvatars: vi.fn(async () => {}),
-  openSite: vi.fn(),
-  bindSiteEvents: vi.fn(),
-  initWorkshopTabs: vi.fn(),
-  setShowSiteView: vi.fn(),
-  createWorkshopRefs: vi.fn(() => ({
-    allSitesRef: { v: [] as unknown[] },
-    allCreatorsRef: { v: [] as unknown[] },
-    repoAuthorsRef: { v: [] as unknown[] },
-    wsEditModeRef: { v: false },
-  })),
-  fillSearch: vi.fn(),
-}));
+} = vi.hoisted(() => {
+  const wsRefs: {
+    v: {
+      allSitesRef: { v: unknown[] };
+      allCreatorsRef: { v: unknown[] };
+      repoAuthorsRef: { v: unknown[] };
+      wsEditModeRef: { v: boolean };
+      showSiteViewRef: { v: unknown };
+    } | null;
+  } = { v: null };
+  return {
+    getApp: vi.fn(),
+    eventsOn: vi.fn((_e: string, _cb: (...a: unknown[]) => void) => vi.fn()),
+    renderSiteView: vi.fn(() => vi.fn()),
+    showRepoModels: vi.fn(async () => {}),
+    extractAvatars: vi.fn(async () => {}),
+    openSite: vi.fn(),
+    bindSiteEvents: vi.fn(),
+    initWorkshopTabs: vi.fn(),
+    createWorkshopRefs: vi.fn(() => {
+      const refs = {
+        allSitesRef: { v: [] as unknown[] },
+        allCreatorsRef: { v: [] as unknown[] },
+        repoAuthorsRef: { v: [] as unknown[] },
+        wsEditModeRef: { v: false },
+        // P1-8：渲染入口收进 refs.showSiteViewRef，测试经 wsRefs 容器取最新实例
+        showSiteViewRef: { v: null },
+      };
+      wsRefs.v = refs;
+      return refs;
+    }),
+    wsRefs,
+    fillSearch: vi.fn(),
+  };
+});
 
 vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("@/backend/runtime.ts", () => ({ Events: { On: eventsOn } }));
@@ -45,7 +62,7 @@ vi.mock("./site/site-view.ts", () => ({ renderSiteView }));
 vi.mock("@/features/community/show-repo-models.ts", () => ({ showRepoModels }));
 vi.mock("./site/workshop-avatar.ts", () => ({ extractAvatars }));
 vi.mock("./site/workshop-site-opener.ts", () => ({ openSite, bindSiteEvents }));
-vi.mock("./site/workshop-tabs.ts", () => ({ initWorkshopTabs, setShowSiteView, createWorkshopRefs }));
+vi.mock("./site/workshop-tabs.ts", () => ({ initWorkshopTabs, createWorkshopRefs }));
 vi.mock("@/features/community/community-data.ts", () => ({ fillSearch }));
 
 import { clearAvatars, getAvatar } from "@/features/community/creator-avatar-store.ts";
@@ -102,11 +119,12 @@ function makeHost(cardsHTML = "") {
   return { host: raw as unknown as AppContentHost, raw, el };
 }
 
-/** 取 setShowSiteView 注册进来的 showSiteView 闭包 */
+/** 取 initWorkshopPage 注入 refs.showSiteViewRef 的 showSiteView 闭包（P1-8：原 setShowSiteView 已删） */
 function getShowSiteView(): (site: unknown) => void {
-  const call = setShowSiteView.mock.calls.at(-1);
-  if (!call) throw new Error("setShowSiteView 未被调用");
-  return call[0] as (site: unknown) => void;
+  if (!wsRefs.v) throw new Error("createWorkshopRefs 未被调用");
+  const fn = wsRefs.v.showSiteViewRef.v;
+  if (typeof fn !== "function") throw new Error("showSiteViewRef 尚未注入");
+  return fn as (site: unknown) => void;
 }
 
 /**
@@ -168,8 +186,8 @@ describe("initWorkshopPage — 初始化装配", () => {
     expect(page).toBe(getPageState());
     expect(callArgs(bindSiteEvents, 0)[0]).toBe(raw.state.root);
     expect(callArgs(bindSiteEvents, 0)[1]).toBe(page);
-    expect(setShowSiteView).toHaveBeenCalledTimes(1);
-    expect(typeof callArgs(setShowSiteView, 0)[0]).toBe("function");
+    // P1-8：showSiteView 渲染入口收进 refs.showSiteViewRef（原 setShowSiteView 模块级单例已删）
+    expect(typeof wsRefs.v?.showSiteViewRef.v).toBe("function");
     // ADR-265：tabs 创建的延迟加载定时器必须经登记函数交回壳层持有——
     // 模拟登记：捕获 initWorkshopTabs 实参里的登记函数并实际执行，验证 timer 落到 host.state.workshopTimer
     const registrar = callArgs(initWorkshopTabs, 0)[3] as (t: ReturnType<typeof setTimeout>) => void;

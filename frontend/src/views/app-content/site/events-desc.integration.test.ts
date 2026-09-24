@@ -65,6 +65,7 @@ function makeState(creators: LocalCreatorLike[]): {
     ctx: null as unknown as SiteViewState["ctx"],
     activeTag: "",
     searchKw: "",
+    detachedCreators: [],
   };
   return { state, searchResults };
 }

@@ -32,7 +32,7 @@ import { createWorkshopPageState } from "./workshop-page-state.ts";
 import {
   createWorkshopRefs,
   initWorkshopTabs,
-  setShowSiteView,
+  type WorkshopRefs,
 } from "./workshop-tabs.ts";
 
 const site = { id: "bilibili", label: "B站", url: "https://bilibili.com" } as WorkshopSite;
@@ -52,11 +52,15 @@ function makeHost() {
   return { root, el };
 }
 
-/** 收集 setShowSiteView 注册进来的 showSiteView 闭包调用 */
-function spyShowSiteView(): { calls: Array<WorkshopSite | null>; restore: () => void } {
+/** 造带 showSiteView 收集器的 refs（P1-8：渲染入口收进 refs.showSiteViewRef，不再有全局 setShowSiteView） */
+function makeRefsWithShowSpy(): {
+  refs: WorkshopRefs;
+  calls: Array<WorkshopSite | null>;
+} {
   const calls: Array<WorkshopSite | null> = [];
-  setShowSiteView((s) => calls.push(s));
-  return { calls, restore: () => setShowSiteView(() => {}) };
+  const refs = createWorkshopRefs();
+  refs.showSiteViewRef.v = (s) => calls.push(s);
+  return { refs, calls };
 }
 
 /** 排空微任务（定时器回调是 async 链） */
@@ -73,7 +77,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  setShowSiteView(() => {});
   document.body.innerHTML = "";
 });
 
@@ -84,17 +87,16 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
       loadCommunityData.mockResolvedValue({ sites: [site], creators: [], authors: [] });
       const { root } = makeHost();
       const page = createWorkshopPageState();
-      const spy = spyShowSiteView();
+      const { refs, calls } = makeRefsWithShowSpy();
 
-      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      initWorkshopTabs(root, refs, page, () => {});
       expect(page.getCurrentSite()).toBeNull(); // 定时器未触发前不写
 
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
 
       expect(page.getCurrentSite()).toBe(site);
-      expect(spy.calls).toContain(site);
-      spy.restore();
+      expect(calls).toContain(site);
     } finally {
       vi.useRealTimers();
     }
@@ -111,19 +113,18 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
       });
       const { root, el } = makeHost();
       const page = createWorkshopPageState();
-      const spy = spyShowSiteView();
+      const { refs, calls } = makeRefsWithShowSpy();
 
-      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      initWorkshopTabs(root, refs, page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
 
-      spy.calls.length = 0;
+      calls.length = 0;
       (el.querySelector('[data-tab="afdian"]') as HTMLElement).click();
       await flushAsync();
 
       expect(page.getCurrentSite()).toBe(siteB);
-      expect(spy.calls.at(-1)).toBe(siteB);
-      spy.restore();
+      expect(calls.at(-1)).toBe(siteB);
     } finally {
       vi.useRealTimers();
     }
@@ -135,9 +136,9 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
       loadCommunityData.mockResolvedValue({ sites: [site], creators: [], authors: [] });
       const { root, el } = makeHost();
       const page = createWorkshopPageState();
-      const spy = spyShowSiteView();
+      const { refs, calls } = makeRefsWithShowSpy();
 
-      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      initWorkshopTabs(root, refs, page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
       expect(page.getCurrentSite()).toBe(site);
@@ -149,7 +150,7 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
       await flushAsync();
 
       expect(page.getCurrentSite()).toBe(before);
-      spy.restore();
+      expect(calls.length).toBe(1); // 早退不再触发重渲染
     } finally {
       vi.useRealTimers();
     }
@@ -162,16 +163,15 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
       loadLocalAuthors.mockResolvedValue([{ name: "本地作者", desc: "", type: "bilibili" }]);
       const { root } = makeHost();
       const page = createWorkshopPageState();
-      const spy = spyShowSiteView();
+      const { refs, calls } = makeRefsWithShowSpy();
 
-      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      initWorkshopTabs(root, refs, page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
 
       // enrich 完成会补一次重渲染，且必须仍是当前站点
-      expect(spy.calls.length).toBeGreaterThan(1);
-      expect(spy.calls.every((s) => s === site)).toBe(true);
-      spy.restore();
+      expect(calls.length).toBeGreaterThan(1);
+      expect(calls.every((s) => s === site)).toBe(true);
     } finally {
       vi.useRealTimers();
     }
@@ -216,9 +216,9 @@ describe("initWorkshopTabs — 站点 tab 可访问性（tabs-a11y 复用，收�
       loadCommunityData.mockResolvedValue({ sites: [site, siteB], creators: [], authors: [] });
       const { root, el } = makeHost();
       const page = createWorkshopPageState();
-      const spy = spyShowSiteView();
+      const { refs, calls } = makeRefsWithShowSpy();
 
-      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      initWorkshopTabs(root, refs, page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
 
@@ -232,7 +232,7 @@ describe("initWorkshopTabs — 站点 tab 可访问性（tabs-a11y 复用，收�
       // 无 localStorage 记忆 → 首个站点为初始激活项，roving tabindex 整组仅一个 0
       expect(tabs.map((b) => b.getAttribute("tabindex"))).toEqual(["0", "-1"]);
       expect(tabs.map((b) => b.getAttribute("aria-selected"))).toEqual(["true", "false"]);
-      spy.restore();
+      expect(calls).toContain(site);
     } finally {
       vi.useRealTimers();
     }
@@ -244,9 +244,9 @@ describe("initWorkshopTabs — 站点 tab 可访问性（tabs-a11y 复用，收�
       loadCommunityData.mockResolvedValue({ sites: [site, siteB], creators: [], authors: [] });
       const { root, el } = makeHost();
       const page = createWorkshopPageState();
-      const spy = spyShowSiteView();
+      const { refs, calls } = makeRefsWithShowSpy();
 
-      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      initWorkshopTabs(root, refs, page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
 
@@ -258,7 +258,7 @@ describe("initWorkshopTabs — 站点 tab 可访问性（tabs-a11y 复用，收�
       expect(tabs.map((b) => b.getAttribute("aria-selected"))).toEqual(["false", "true"]);
       expect(tabs.map((b) => b.getAttribute("tabindex"))).toEqual(["-1", "0"]);
       expect(page.getCurrentSite()).toBe(siteB);
-      spy.restore();
+      expect(calls.at(-1)).toBe(siteB);
     } finally {
       vi.useRealTimers();
     }
@@ -270,9 +270,9 @@ describe("initWorkshopTabs — 站点 tab 可访问性（tabs-a11y 复用，收�
       loadCommunityData.mockResolvedValue({ sites: [site, siteB], creators: [], authors: [] });
       const { root, el } = makeHost();
       const page = createWorkshopPageState();
-      const spy = spyShowSiteView();
+      const { refs, calls } = makeRefsWithShowSpy();
 
-      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      initWorkshopTabs(root, refs, page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
 
@@ -282,7 +282,7 @@ describe("initWorkshopTabs — 站点 tab 可访问性（tabs-a11y 复用，收�
       await flushAsync();
 
       expect(page.getCurrentSite()).toBe(siteB);
-      spy.restore();
+      expect(calls.at(-1)).toBe(siteB);
     } finally {
       vi.useRealTimers();
     }
@@ -295,9 +295,9 @@ describe("initWorkshopTabs — 站点 tab 可访问性（tabs-a11y 复用，收�
       loadCommunityData.mockResolvedValue({ sites: [site, siteB], creators: [], authors: [] });
       const { root, el } = makeHost();
       const page = createWorkshopPageState();
-      const spy = spyShowSiteView();
+      const { refs, calls } = makeRefsWithShowSpy();
 
-      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      initWorkshopTabs(root, refs, page, () => {});
       await vi.advanceTimersByTimeAsync(150);
       await flushAsync();
 
@@ -305,7 +305,7 @@ describe("initWorkshopTabs — 站点 tab 可访问性（tabs-a11y 复用，收�
       expect(tabs.map((b) => b.getAttribute("aria-selected"))).toEqual(["false", "true"]);
       expect(tabs.map((b) => b.getAttribute("tabindex"))).toEqual(["-1", "0"]);
       expect(page.getCurrentSite()).toBe(siteB);
-      spy.restore();
+      expect(calls).toContain(siteB);
     } finally {
       vi.useRealTimers();
     }

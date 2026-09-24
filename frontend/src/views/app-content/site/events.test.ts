@@ -3,7 +3,7 @@
 //  - 空状态按钮导航 / 创作者网格创建 / 预设搜索
 //  - 收藏点击（阻止冒泡 + 排序 + toast）/ 头像调试 / 详情浮层（关闭/搜索/查看本地）
 //  - 键盘导航 ←↑↓→ / storage 跨标签同步 + cleanup
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
@@ -63,6 +63,13 @@ vi.mock("@/backend/app.ts", () => ({ getApp }));
 
 import { bindBrowseEvents } from "./events.ts";
 import type { SiteViewState } from "./types.ts";
+
+/** bindBrowseEvents 的追踪版：cleanup 入桶，afterEach 统一调用（模拟产品路径的配对语义） */
+function trackedBind(state: SiteViewState, refresh: () => void): () => void {
+  const cleanup = bindBrowseEvents(state, refresh);
+  _boundCleanups.push(cleanup);
+  return cleanup;
+}
 
 const esc = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -130,17 +137,25 @@ beforeEach(() => {
   toggleFav.mockReturnValue(true);
 });
 
+/** 追踪 bindBrowseEvents 的 cleanup，集中到用例边界调用——产品路径 init-workshop 每次
+ *  渲染前必跑 runPrevSiteViewCleanup（监听恒配对），测试须模拟同样的配对语义，
+ *  否则 P1-8 闭包化后 storage 监听会跨用例残留堆积（旧模块级单例覆盖恰好掩盖了这一点）。 */
+const _boundCleanups: Array<() => void> = [];
+afterEach(() => {
+  for (const fn of _boundCleanups.splice(0)) fn();
+});
+
 describe("bindBrowseEvents — 基础绑定", () => {
   it("空状态按钮 → nav:changed 到 repository", () => {
     const { state } = makeState();
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     (state.searchResults.querySelector("[data-local-empty]") as HTMLElement).click();
     expect(busEmit).toHaveBeenCalledWith("nav:changed", { page: "repository" });
   });
 
   it("有创作者且非编辑模式 → 声明式 HTML 已包含卡片（grid 有子元素）", () => {
     const { state } = makeState();
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     const grid = state.searchResults.querySelector(".cr-creator-grid");
     expect(grid).toBeTruthy();
     expect(grid!.querySelectorAll(".cr-creator-card")).toHaveLength(1);
@@ -152,7 +167,7 @@ describe("bindBrowseEvents — 基础绑定", () => {
   it("预设搜索按钮 → openUrl(fillSearch)；无 searchUrl → 打开站点首页", () => {
     const { state } = makeState();
     const openUrl = state.openUrl as ReturnType<typeof vi.fn>;
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     (state.searchResults.querySelector(".cr-preset-btn") as HTMLElement).click();
     expect(openUrl).toHaveBeenCalledWith(
       "https://s/search?q=dog",
@@ -161,14 +176,14 @@ describe("bindBrowseEvents — 基础绑定", () => {
     // 无 searchUrl
     const s2 = makeState({ site: { url: "https://s", name: "S" } });
     const open2 = s2.state.openUrl as ReturnType<typeof vi.fn>;
-    bindBrowseEvents(s2.state, () => {});
+    trackedBind(s2.state, () => {});
     (s2.searchResults.querySelector(".cr-preset-btn") as HTMLElement).click();
     expect(open2).toHaveBeenCalledWith("https://s");
   });
 
   it("收藏点击 → toggleFav + toast + 卡片移到首部", () => {
     const { state, searchResults } = makeState();
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     const star = searchResults.querySelector(".cr-star-btn") as HTMLElement;
     const grid = searchResults.querySelector("#cr-creator-grid") as HTMLElement;
     const card = searchResults.querySelector(".gh-card") as HTMLElement;
@@ -188,7 +203,7 @@ describe("bindBrowseEvents — 基础绑定", () => {
   it("搜索快捷按钮 → openUrl(fillSearch(site.searchUrl, 名))，且不触发详情", () => {
     const { state, searchResults } = makeState();
     const openUrl = state.openUrl as ReturnType<typeof vi.fn>;
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     (searchResults.querySelector(".cr-card-search") as HTMLElement).click();
     expect(openUrl).toHaveBeenCalledWith("https://s/search?q=A");
     // 未弹出详情浮层
@@ -198,14 +213,14 @@ describe("bindBrowseEvents — 基础绑定", () => {
   it("搜索快捷按钮（无 searchUrl）→ openUrl(site.url) 兜底", () => {
     const s2 = makeState({ site: { url: "https://s", name: "S" } });
     const open2 = s2.state.openUrl as ReturnType<typeof vi.fn>;
-    bindBrowseEvents(s2.state, () => {});
+    trackedBind(s2.state, () => {});
     (s2.searchResults.querySelector(".cr-card-search") as HTMLElement).click();
     expect(open2).toHaveBeenCalledWith("https://s");
   });
 
   it("📁本地徽章点击 → repo:search-creator，且不触发详情", () => {
     const { state, searchResults } = makeState();
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     (searchResults.querySelector(".cr-card-local-jump") as HTMLElement).click();
     expect(busEmit).toHaveBeenCalledWith("repo:search-creator", "A");
     // 未弹出详情浮层
@@ -214,7 +229,7 @@ describe("bindBrowseEvents — 基础绑定", () => {
 
   it("头像调试点击 → getApp DebugExtractCreatorAvatar + dbg", async () => {
     const { state, searchResults } = makeState();
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     (searchResults.querySelector("[data-debug-avatar]") as HTMLElement).click();
     await waitFor(() => dbg.mock.calls.length > 0);
     expect(dbg.mock.calls[0]![0]).toBe("avatar-debug");
@@ -223,7 +238,7 @@ describe("bindBrowseEvents — 基础绑定", () => {
 
   it("头像加载失败（error）→ 用 data-avatar-fallback 字母替换 img", () => {
     const { state, searchResults } = makeState();
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     const img = searchResults.querySelector("[data-debug-avatar]") as HTMLImageElement;
     img.dispatchEvent(new Event("error"));
     const fallback = searchResults.querySelector(".cr-avatar-fallback");
@@ -234,7 +249,7 @@ describe("bindBrowseEvents — 基础绑定", () => {
 
   it("storage 同步：ysm-fav-creators 事件 → 星标同步 + cleanup 移除监听", () => {
     const { state, searchResults } = makeState();
-    const cleanup = bindBrowseEvents(state, () => {});
+    const cleanup = trackedBind(state, () => {});
     (loadFavs as ReturnType<typeof vi.fn>).mockReturnValue(["A"]);
     window.dispatchEvent(new StorageEvent("storage", { key: "ysm-fav-creators" }));
     // ADR-238：星标改走 SVG 语义图标（已收藏 = starFilled，svg 带 fill 属性）
@@ -254,7 +269,7 @@ describe("bindBrowseEvents — 基础绑定", () => {
 describe("bindBrowseEvents — 详情浮层", () => {
   it("点击创作者卡片 → 浮层含名称/收藏/本地模型/操作按钮", () => {
     const { state, searchResults } = makeState();
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     const card = searchResults.querySelector(".gh-card") as HTMLElement;
     card.click();
     const overlay = searchResults.querySelector(".cr-detail-overlay") as HTMLElement;
@@ -275,7 +290,7 @@ describe("bindBrowseEvents — 详情浮层", () => {
     const { state, searchResults } = makeState({
       creators: [{ name: "A", role: "modeler", desc: "", type: "github", _fromLocal: true }],
     });
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     (searchResults.querySelector(".gh-card") as HTMLElement).click();
     const overlay = searchResults.querySelector(".cr-detail-overlay") as HTMLElement;
     expect(overlay.querySelector(".cr-detail-desc")?.textContent).toBe("来自本地仓库");
@@ -283,7 +298,7 @@ describe("bindBrowseEvents — 详情浮层", () => {
 
   it("浮层 [data-local] → repo:search-creator；[data-search] → openUrl 搜索", () => {
     const { state, searchResults } = makeState();
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     (searchResults.querySelector(".gh-card") as HTMLElement).click();
     const overlay = searchResults.querySelector(".cr-detail-overlay") as HTMLElement;
 
@@ -298,7 +313,7 @@ describe("bindBrowseEvents — 详情浮层", () => {
 
   it("点击收藏按钮 → 不弹浮层（stopPropagation）", () => {
     const { state, searchResults } = makeState();
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     const star = searchResults.querySelector(".cr-star-btn") as HTMLElement;
     star.click();
     expect(searchResults.querySelector(".cr-detail-overlay")).toBeNull();
@@ -321,7 +336,7 @@ describe("bindBrowseEvents — 键盘导航", () => {
   it("ArrowDown → focus 下一张；ArrowUp → 上一张；Enter → click", () => {
     const { state, searchResults } = makeState();
     document.body.appendChild(searchResults); // focus 需要元素挂载
-    bindBrowseEvents(state, () => {});
+    trackedBind(state, () => {});
     const [c1, c2] = makeGridCards(searchResults);
     const grid = searchResults.querySelector(".cr-creator-grid") as HTMLElement;
     c1.focus();
@@ -349,7 +364,7 @@ describe("bindBrowseEvents — 浏览模式「点谁用谁」", () => {
   it("点击 cr-mode-opt[data-mode] → setBrowseMode(该mode) + 触发重渲染", () => {
     const { state, searchResults } = makeState();
     const refresh = vi.fn();
-    bindBrowseEvents(state, refresh);
+    trackedBind(state, refresh);
     const winBtn = searchResults.querySelector(
       '.cr-mode-opt[data-mode="window"]',
     ) as HTMLElement;

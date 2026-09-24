@@ -92,6 +92,8 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
     ctx,
     activeTag,
     searchKw,
+    // P1-2 锐评：跨站点创作者「解除本站关联」的暂存列表（保存时写回，维持他站可见）
+    detachedCreators: [],
   };
   const unsubs: CleanupFn[] = [];
   unsubs.push(bindBrowseEvents(state, refreshView));

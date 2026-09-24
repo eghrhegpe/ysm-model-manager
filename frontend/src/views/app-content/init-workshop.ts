@@ -31,7 +31,7 @@ import type { AppContentHost } from "./host.ts";
 import { extractAvatars } from "./site/workshop-avatar.ts";
 import { createWorkshopPageState } from "./site/workshop-page-state.ts";
 import { bindSiteEvents, openSite } from "./site/workshop-site-opener.ts";
-import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./site/workshop-tabs.ts";
+import { createWorkshopRefs, initWorkshopTabs } from "./site/workshop-tabs.ts";
 import { workshopTpl } from "./tpl-workshop.ts";
 
 /**
@@ -164,7 +164,8 @@ export function initWorkshopPage(host: AppContentHost): void {
   };
 
   // 注册 showSiteView 给 tabs 模块使用（必须在 initWorkshopTabs 之前）
-  setShowSiteView(showSiteView);
+  // P1-8 锐评：渲染入口收进 refs（原 setShowSiteView 模块级单例已删），重建即新实例
+  refs.showSiteViewRef.v = showSiteView;
 
   // 初始化 Tab
   // 定时器交回壳层持有（ADR-265）：清理点在 _render 开头（早于本 init），归属不变，

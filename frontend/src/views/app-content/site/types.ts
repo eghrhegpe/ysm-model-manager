@@ -72,6 +72,11 @@ export interface SiteViewState {
   activeTag: string;
   /** 创作者搜索关键词（localStorage 持久化） */
   searchKw: string;
+  /** 编辑态「解除本站关联」的跨站点创作者（P1-2 锐评：type:"A;B" 在 A 站删除=从 A 解除，
+   *  不得从 allCreators 全删——否则 Go 按站整存会把 B 站的条目也抹掉）。
+   *  删除时改 type 去本站段 + 推入本列表；保存时随 siteCreators 一并写回（type 已无本站段，
+   *  Go 追加后维持他站可见、本站不再命中）。取消编辑不落盘、列表随重渲染自然丢弃。 */
+  detachedCreators: LocalCreatorLike[];
 }
 
 /** bindXxxEvents 函数的统一返回：清理函数，主入口聚合成单一 cleanup */

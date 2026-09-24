@@ -22,8 +22,9 @@ import {
   toggleFav,
 } from "./workshop-data.ts";
 
-// storage 监听器模块私有变量（防泄漏，bindBrowseEvents 返回的 cleanup 会清）
-let _storageSyncFn: ((e: StorageEvent) => void) | null = null;
+// storage 监听器原先的模块级 let _storageSyncFn 是「假装单例」：bindBrowseEvents 每次覆盖它，
+// A 视图注册 → B 视图覆盖 → A 的 cleanup 会误删 B 的监听（removeEventListener 拿到的是 B 的引用）。
+// P1-8 锐评：监听器引用收进 bindBrowseEvents 闭包随 cleanup 返回，谁注册谁清理，互不干扰。
 
 // 浮层焦点陷阱释放函数的注册表（P0-3 锐评：aria-modal 声明了模态却无 trapFocus）。
 // WeakMap 随元素 GC 回收，不污染 HTMLElement 全局类型；所有浮层关闭路径统一释放
@@ -503,17 +504,13 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
   );
   cmBbBindKeyboardNav(searchResults);
 
-  if (_storageSyncFn) {
-    window.removeEventListener("storage", _storageSyncFn);
-  }
-  _storageSyncFn = cmSeMakeSyncFn(searchResults);
-  window.addEventListener("storage", _storageSyncFn);
+  // P1-8 锐评：storage 监听器收进闭包——谁注册谁清理。原模块级单例在 A/B 视图快速切换时
+  // A 的 cleanup 会误删 B 的监听（模块变量已指向 B）。现引用私有化，互不干扰。
+  const storageSyncFn = cmSeMakeSyncFn(searchResults);
+  window.addEventListener("storage", storageSyncFn);
 
   return () => {
     disposed = true;
-    if (_storageSyncFn) {
-      window.removeEventListener("storage", _storageSyncFn);
-      _storageSyncFn = null;
-    }
+    window.removeEventListener("storage", storageSyncFn);
   };
 }

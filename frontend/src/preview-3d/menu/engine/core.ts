@@ -35,6 +35,7 @@ import {
   renderMenu,
 } from "@/preview-3d/menu/render/render.ts";
 import type {
+  NodeFor,
   PreviewActionMenuCtx,
   PreviewMenuCtx,
   PreviewMenuNode,
@@ -500,16 +501,20 @@ function panelNodeToRow(
   ) {
     headerToggle = { value: cap.isEnabled(), onChange: (v) => cap.setEnabled(v) };
   }
-  return {
+  // 窄类型断言（ADR-302 走法丙）：kind/字段配对编译期校验；headerToggle 按存在性展开
+  // （exactOptionalPropertyTypes 下 undefined 不得显式赋值，替代原 `as PreviewMenuNode` cast）
+  const row: NodeFor<"row"> = {
     id: node.id,
-    icon: node.icon,
+    // exactOptionalPropertyTypes：可选字段按存在性展开（icon/headerToggle 皆禁显式 undefined）
+    ...(node.icon ? { icon: node.icon } : {}),
     // 无 labelKey 的动态面板名（switch 候选文件名等）→ 明文走 label，勿把 id 塞进 labelKey
     ...(node.labelKey ? { labelKey: node.labelKey } : { label: node.label ?? node.id }),
     kind: "row",
     rowDensity: "compact",
-    headerToggle,
+    ...(headerToggle ? { headerToggle } : {}),
     action: (actCtx) => actCtx.navigate?.(makePanelViewFn(node)),
-  } as PreviewMenuNode;
+  };
+  return row;
 }
 
 /** [ADR-241] rootView 显式声明：每 panel → row + headerToggle 的组根视图工厂 */

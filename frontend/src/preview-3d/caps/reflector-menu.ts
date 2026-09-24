@@ -35,7 +35,7 @@ function rcBuildParamsFolder(cap: ReflectorCapability): NodeFor<"folder"> {
     key: RangedKey,
     getValue: () => number,
     setValue: (v: number) => void,
-  ): PreviewMenuNode => ({
+  ): NodeFor<"slider"> => ({
     id,
     kind: "slider",
     labelKey,

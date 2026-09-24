@@ -12,7 +12,11 @@ import { t } from "@/core/i18n/t.ts";
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { type ModelEntry, sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import { renderAdapterPanelContent, renderMenu } from "@/preview-3d/menu/render/render.ts";
-import type { PreviewActionMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
+import type {
+  NodeFor,
+  PreviewActionMenuCtx,
+  PreviewMenuNode,
+} from "@/preview-3d/menu/schema/node-types.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { switchNormPath } from "@/preview-3d/menu/shell/switch.ts";
 import { MENU_ERROR_NOTE_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
@@ -224,7 +228,7 @@ function panelEntryRow(
     makePanelView: (node: PreviewMenuNode) => SlideMenuView;
   },
   prefix = "motion-entry",
-): PreviewMenuNode {
+): NodeFor<"row"> {
   return {
     id: `${prefix}-${item.id}`,
     kind: "row",

@@ -12,7 +12,7 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { SceneStats } from "@/preview-3d/infra/scene-stats.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
+import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 
 /** 统计面板的稳定 id（merger/schema 引用；渲染为 data-testid="preview-stats-panel"） */
 export const STATS_PANEL_ID = "stats-panel";
@@ -26,13 +26,13 @@ export function hasSceneStats(s: SceneStats): boolean {
 export function buildStatsPanel(
   stats: SceneStats,
   extraFields?: PreviewMenuNode[],
-): PreviewMenuNode {
+): NodeFor<"panel"> {
   const field = (
     id: string,
     labelKey: LocaleKey,
     value: number,
     visible = true,
-  ): PreviewMenuNode => ({
+  ): NodeFor<"field"> => ({
     id,
     kind: "field",
     labelKey,

@@ -40,7 +40,6 @@ function makeState(over: Partial<SiteViewState> = {}): {
   const state: SiteViewState = {
     esc: (s: unknown) => String(s),
     searchResults,
-    creatorView: document.createElement("div"),
     allSites: [],
     allCreators,
     repoAuthors: [],
@@ -227,7 +226,29 @@ describe("编辑态增删", () => {
     searchResults.querySelector(".cr-add")!.dispatchEvent(new Event("click", { bubbles: true }));
     expect(allCreators).toHaveLength(2);
     expect(state.creators).toHaveLength(2);
+    // 锐评 P0-2a：新增行不写 i18n 默认文案（t 在此被 mock 成返回 key 本身——
+    // 若回退旧实现，这里会拿到 "workshop.newCreatorName" 这种语言串并落盘）
+    expect(state.creators[1].name).toBe("");
+    expect(state.creators[1].desc).toBe("");
     expect(refresh).toHaveBeenCalled();
+    cleanup!();
+  });
+
+  it("9. 保存挡掉空名条目（新增未命名行不落盘，锐评 P0-2a）", async () => {
+    const { state, searchResults } = makeState();
+    searchResults.innerHTML =
+      '<button class="cr-add"></button>' +
+      '<button class="cr-save-btn"></button>' +
+      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>';
+    const cleanup = bindEditEvents(state, () => {});
+
+    searchResults.querySelector(".cr-add")!.dispatchEvent(new Event("click", { bubbles: true }));
+    expect(state.creators).toHaveLength(2);
+
+    searchResults.querySelector(".cr-save-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    await vi.waitFor(() => expect(backend.SaveWorkshopCreatorsBySite).toHaveBeenCalledTimes(1));
+    const saved = backend.SaveWorkshopCreatorsBySite.mock.calls[0][1] as LocalCreatorLike[];
+    expect(saved.map((c) => c.name)).toEqual(["Alice"]);
     cleanup!();
   });
 });

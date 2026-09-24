@@ -244,10 +244,22 @@ describe("bindBrowseEvents — 详情浮层", () => {
     expect(overlay).toBeTruthy();
     expect(overlay.textContent).toContain("A");
     expect(overlay.textContent).toContain("已下载 3 个模型");
+    // 锐评 P0-3：非标签式 desc（mock parseDescTags → []）必须展示全文，不再被吞
+    expect(overlay.querySelector(".cr-detail-desc")?.textContent).toContain("好模型");
 
     // 关闭按钮 → 移除浮层
     (overlay.querySelector("[data-close]") as HTMLElement).click();
     expect(searchResults.querySelector(".cr-detail-overlay")).toBeNull();
+  });
+
+  it("本地条目空 desc → 浮层回退当前语言提示（锐评 P0-2b）", () => {
+    const { state, searchResults } = makeState({
+      creators: [{ name: "A", role: "modeler", desc: "", type: "github", _fromLocal: true }],
+    });
+    bindBrowseEvents(state, () => {});
+    (searchResults.querySelector(".gh-card") as HTMLElement).click();
+    const overlay = searchResults.querySelector(".cr-detail-overlay") as HTMLElement;
+    expect(overlay.querySelector(".cr-detail-desc")?.textContent).toBe("来自本地仓库");
   });
 
   it("浮层 [data-local] → repo:search-creator；[data-search] → openUrl 搜索", () => {

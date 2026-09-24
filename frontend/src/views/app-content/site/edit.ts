@@ -132,7 +132,11 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
           site.presetSearches = newPresets;
         }
         eeSyncAllEditInputs(searchResults, creators, site);
-        const siteCreators = creators.filter((cr) => cr.type?.split(";").includes(site.id));
+        // 锐评 P0-2a 配套：空名条目（cr-add 新增后未改名）不落盘——防未填写的占位行
+        // 变垃圾数据；语言串不再当默认名（见 eeBindCreatorsEdit 的 cr-add）。
+        const siteCreators = creators.filter(
+          (cr) => (cr.name || "").trim() && cr.type?.split(";").includes(site.id),
+        );
         const { SaveWorkshopCreatorsBySite } = await backendGetApp();
         await SaveWorkshopCreatorsBySite(site.id, siteCreators);
         wsEditModeRef.v = false;
@@ -291,9 +295,12 @@ function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: 
     "click",
     () => {
       eeSyncAllEditInputs(searchResults, creators, site);
+      // 锐评 P0-2a：新增条目不以 i18n 文案当默认 name/desc（原 t("workshop.newCreatorName")
+      // 会被保存路径落盘，语言串污染 creators.json）；空值交给编辑卡 placeholder 引导，
+      // 未填名的条目在保存时被挡在门外（见 eeBindToolbarBtns 的空名过滤）。
       creators.push({
-        name: t("workshop.newCreatorName"),
-        desc: t("workshop.newCreatorDesc"),
+        name: "",
+        desc: "",
         type: site.id,
         tag: "",
       } as LocalCreatorLike);

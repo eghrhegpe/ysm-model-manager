@@ -97,8 +97,12 @@ function cmCrBuildDetailHtml(
     "</span>" +
     "</div>" +
     '<div class="cr-detail-desc">' +
-    descTags.map((tag) => `<span class="cr-desc-tag">#${esc(tag)}</span>`).join("") +
-    (!descTags.length ? esc(cr.desc) : "") +
+    (descTags.length
+      ? descTags.map((tag) => `<span class="cr-desc-tag">#${esc(tag)}</span>`).join("")
+      : // 锐评 P0-3：descTags 现仅在确为标签串时非空（单段/长句均回 []），此分支即全文兜底——
+        // 原逻辑对任意非空 desc 都只渲染 chips 且丢弃原文。
+        // 锐评 P0-2b：本地条目空 desc 在此现取当前语言提示，而非数据层落 i18n 串。
+        esc(cr.desc || (cr._fromLocal ? t("community.fromLocal") : ""))) +
     "</div>" +
     '<div class="cr-detail-row cr-local-card">' +
     '<span class="cr-local-icon">' +

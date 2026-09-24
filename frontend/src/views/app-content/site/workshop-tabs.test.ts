@@ -42,7 +42,6 @@ function makeHost() {
   el.innerHTML = `
     <div id="ws-tabs"></div>
     <div id="ws-search-results"></div>
-    <div id="ws-creator-view"></div>
   `;
   // 假 ShadowRoot：普通 div 无 getElementById，补一个按 id 查询的实现
   (el as unknown as { getElementById: (id: string) => Element | null }).getElementById = (
@@ -172,6 +171,25 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
       expect(spy.calls.length).toBeGreaterThan(1);
       expect(spy.calls.every((s) => s === site)).toBe(true);
       spy.restore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("无站点（配置为空）→ 空态提示指向导入，不再引导「导出站点」（锐评 P0-1）", async () => {
+    vi.useFakeTimers();
+    try {
+      loadCommunityData.mockResolvedValue({ sites: [], creators: [], authors: [], failed: false });
+      const { root, el } = makeHost();
+
+      initWorkshopTabs(root, createWorkshopRefs(), createWorkshopPageState(), () => {});
+      await vi.advanceTimersByTimeAsync(150);
+      await flushAsync();
+
+      // t 被 mock 成返回 key 本身 → 直接断言 key，锁定「恢复路径 = 导入」
+      const hint = el.querySelector("#ws-tabs")?.textContent ?? "";
+      expect(hint).toContain("workshop.importSite");
+      expect(hint).not.toContain("workshop.exportSite");
     } finally {
       vi.useRealTimers();
     }

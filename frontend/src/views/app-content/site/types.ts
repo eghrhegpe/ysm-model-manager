@@ -13,7 +13,6 @@ export type RepoAuthorLike = string | { Name?: string; Count?: number };
 export interface RenderSiteViewCtx {
   esc: (s: unknown) => string;
   searchResults: HTMLElement;
-  creatorView: HTMLElement;
   allSites: WorkshopSite[];
   allCreators: LocalCreatorLike[];
   repoAuthors: RepoAuthorLike[];
@@ -51,7 +50,6 @@ export interface SiteViewState {
   // 来自 ctx 解构（RenderSiteViewCtx）
   esc: (s: unknown) => string;
   searchResults: HTMLElement;
-  creatorView: HTMLElement;
   allSites: WorkshopSite[];
   allCreators: LocalCreatorLike[];
   repoAuthors: RepoAuthorLike[];

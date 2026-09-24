@@ -145,14 +145,16 @@ export function initWorkshopTabs(
           // 空态提示（e2e 反推）：原实现 sites 为空时永久停留 loading 占位，
           // 加载失败/无配置用户无感知——显示「暂无数据」并允许手动导入站点配置；
           // 加载失败则提示「加载失败」（ADR-082 续：区分失败与真无数据，不再空白无感知）
+          // 锐评 P0-1 修复：原此处 import 图标配「导出站点」文案——恢复路径指反了门
+          //（空配置的正确解法是导入，不是导出空数据），图标与文案一并对齐 importSite。
           const emptyText = data.failed ? t("common.loadFailed") : t("common.empty");
           tabsEl.innerHTML =
             '<span style="padding:var(--btn-padding-filter-lg);font-size:var(--fs-sm);color:var(--muted)">' +
             emptyText +
             " " +
-            UI_ICONS.upload +
+            UI_ICONS.import +
             " " +
-            t("workshop.exportSite") +
+            t("workshop.importSite") +
             "</span>";
         }
       } catch (e) {

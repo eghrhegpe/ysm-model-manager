@@ -21,7 +21,6 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
   const {
     esc,
     searchResults,
-    creatorView,
     allCreators,
     allSites,
     repoAuthors,
@@ -35,7 +34,6 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
   } = ctx;
 
   searchResults.innerHTML = "";
-  creatorView.style.display = "none";
 
   const creators = allCreators.filter((cr) => cr.type?.split(";").includes(site.id));
 
@@ -79,7 +77,6 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
   const state: SiteViewState = {
     esc,
     searchResults,
-    creatorView,
     allSites,
     allCreators,
     repoAuthors,

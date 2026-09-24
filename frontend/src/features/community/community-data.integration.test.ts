@@ -105,6 +105,14 @@ describe("loadCommunityData", () => {
     expect(c?.desc).toBe("本地描述");
   });
 
+  it("本地作者 desc 缺失 → 落空串而非 i18n 提示串（语言不污染数据面，锐评 P0-2b）", () => {
+    const merged = mergeLocalAuthorsInto([], [{ name: "无名作者" }]);
+    const c = merged.find((x) => x.name === "无名作者");
+    expect(c?._fromLocal).toBe(true);
+    // 原实现写 t("community.fromLocal")——该 desc 会被 BySite 保存落盘
+    expect(c?.desc).toBe("");
+  });
+
   it("Go 绑定失败 -> 降级为空数据不抛", async () => {
     mocks.DefaultWorkshopSites.mockRejectedValue(new Error("net down"));
     const data = await loadCommunityData();

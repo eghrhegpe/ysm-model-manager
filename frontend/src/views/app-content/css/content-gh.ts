@@ -1,6 +1,8 @@
 // ===== 工坊 GitHub 族 CSS（gh-* 全族：页面布局/模型列表行/仓库头部/站点视图/
-// 创作者编辑行/错误页/下载队列）。2026-09 自 content-diag.ts 按页面域拆分（锐评 P3）：
+// 错误页/下载队列）。2026-09 自 content-diag.ts 按页面域拆分（锐评 P3）：
 // diag 与 gh 是两个页面域，原文跨界混居导致 26KB 单文件两头维护。
+// 2026-09 锐评复核：原「创作者列表（GitHub 侧栏）」「创作者编辑行」两块 `.gh-creator-*` /
+// `.gh-cr-*` 全族已无生产者（GitHub 侧栏早已改仓库卡网格），随锐评 P1-6 删除。
 export const contentGhCSS: string = `
 /* ===== 创意工坊 GitHub (gh-) ===== */
 .gh-page { flex:1; display:flex; overflow:hidden; position:relative; }
@@ -61,19 +63,11 @@ export const contentGhCSS: string = `
 .gh-popup-icon { font-size:var(--fs-lg); width:20px; text-align:center; flex-shrink:0; }
 .gh-popup-label { font-size:var(--fs-base); color:var(--txt); } /* 审计 P2-6：删 --txt 冗余回退（6 主题已定义） */
 
-/* 创作者列表（GitHub 侧栏） */
+/* 站点侧栏头部（gh-left-head 系列与 gh-left-foot 仍在用） */
 .gh-left-head { padding:4px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap; }
 .gh-left-head-label { font-size:var(--fs-sm);font-weight:600;color:var(--muted); }
 .gh-left-head-spacer { flex:1; }
 .gh-left-foot { padding:4px 12px 8px;font-size:var(--fs-micro);color:var(--muted); }
-.gh-creators-list { flex:1; overflow-y:auto; padding:var(--sp-vh-hdr); display:flex; flex-direction:column; gap:4px; }
-.gh-creator-card { display:flex; align-items:center; gap:8px; padding:var(--sp-vh-btn); border-radius:var(--radius-md); border:1px solid var(--bd); background:var(--surf); cursor:pointer; transition:var(--tr-fast); }
-.gh-creator-card:hover { border-color:var(--accent); background:var(--hover); }
-.gh-creator-icon { font-size:var(--fs-lg); width:22px; text-align:center; flex-shrink:0; }
-.gh-creator-body { flex:1; min-width:0; }
-.gh-creator-name { font-size:var(--fs-base); font-weight:600; color:var(--txt); }
-.gh-creator-desc { font-size:var(--fs-xs); color:var(--muted); margin-top:1px; }
-.gh-creator-action { font-size:var(--fs-base); color:var(--muted); flex-shrink:0; }
 
 /* ===== 模型列表行 ===== */
 .gh-empty { padding:var(--sp-3); text-align:center; color:var(--muted); font-size:var(--fs-sm); }
@@ -122,16 +116,6 @@ export const contentGhCSS: string = `
 .gh-action-btn-muted { color:var(--muted); }
 .gh-save-btn { padding:4px 14px; border-radius:var(--radius-md); border:none; background:var(--accent); color:var(--bg); cursor:pointer; font-size:var(--fs-base); }
 .gh-hint-text { font-size:var(--fs-micro); color:var(--muted); padding:0 12px 4px; }
-
-/* ===== 创作者编辑行（GitHub 侧栏编辑） ===== */
-.gh-cr-row { display:flex; align-items:center; gap:3px; padding:4px 6px; border-radius:var(--radius-sm); border:1px solid var(--bd); font-size:var(--fs-sm); margin:1px 12px; }
-.gh-cr-input { flex:2; min-width:30px; padding:var(--btn-padding-xs); border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; font-size:var(--fs-sm); }
-.gh-cr-input-name { color:var(--txt); }
-.gh-cr-input-desc { color:var(--muted); font-size:var(--fs-xs); }
-.gh-cr-input-type { flex:1; min-width:30px; padding:var(--btn-padding-xs); border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--accent); font-size:var(--fs-xs); text-align:center; }
-.gh-cr-del { padding:var(--pad-v-1) var(--sp-1); border-radius:var(--radius-xs); border:1px solid transparent; background:transparent; color:var(--status-error); cursor:pointer; font-size:var(--fs-sm); }
-.gh-cr-add-area { padding:var(--btn-padding-filter-lg); }
-.gh-cr-add { padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px dashed var(--bd); background:transparent; color:var(--accent); cursor:pointer; font-size:var(--fs-sm); width:100%; }
 
 .gh-empty-site { flex:1; overflow-y:auto; padding:var(--sp-3); color:var(--muted); font-size:var(--fs-sm); }
 .gh-site-link { color:var(--accent); }

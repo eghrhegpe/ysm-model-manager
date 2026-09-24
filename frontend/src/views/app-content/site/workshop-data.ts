@@ -50,14 +50,28 @@ export function getTagFromRole(role?: string): string {
   return role || "creator";
 }
 
+/** 「标签式描述」单段长度上限：超出即视为普通描述文本，不切碎成 #chip */
+const TAG_STYLE_MAX_SEG_LEN = 12;
+
 // ===== 描述标签解析 =====
+/**
+ * 解析描述中的标签片段。**仅当描述确为标签串时返回非空**。
+ * 判定口径：按「、/，」切分后 ≥2 段，且每段长度 ≤ TAG_STYLE_MAX_SEG_LEN。
+ *
+ * 锐评 P0-3 修两处 landmine：
+ *  - 原切分字符类含 **ASCII 逗号**，英文描述（"cool models, fast updates"）被当标签
+ *    切碎——逗号属正常句读，现只认顿号「、」与全角逗号「，」；
+ *  - 原单段描述也返回 1 个片段 → 详情浮层把整句包成单个 #chip 并**丢弃原文**
+ *    （`!descTags.length ? esc(desc) : ""`），现单段/长句返回 []，调用方回退全文展示。
+ */
 export function parseDescTags(desc?: string): string[] {
   if (!desc) return [];
-  return desc
-    .split(/[、，,]/)
+  const segs = desc
+    .split(/[、，]/)
     .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 6);
+    .filter(Boolean);
+  if (segs.length < 2 || segs.some((s) => s.length > TAG_STYLE_MAX_SEG_LEN)) return [];
+  return segs.slice(0, 6);
 }
 
 // ===== 收藏工具 =====

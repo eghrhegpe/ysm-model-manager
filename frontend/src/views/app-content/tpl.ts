@@ -416,17 +416,6 @@ export function workshopHTML(): string {
     "</div>" +
     "</div>" +
     "</div>" +
-    '<div id="ws-creator-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">' +
-    '<div style="padding:var(--sp-vh-pane);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd)">' +
-    '<span style="font-size:var(--fs-base);font-weight:600;color:var(--txt)" id="ws-cr-title">' +
-    UI_ICONS.appearance +
-    " " +
-    t("workshop.activeCreators") +
-    "</span>" +
-    '<span style="font-size:var(--fs-micro);color:var(--muted);margin-left:auto">creators/</span>' +
-    "</div>" +
-    '<div class="ws-creators-list" id="ws-cr-list"></div>' +
-    "</div>" +
     "</div>" +
     "</div>" +
     '<div id="ws-browser" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:absolute;inset:0;z-index:10;background:var(--bg)">' +

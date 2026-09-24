@@ -4,7 +4,6 @@ import type {
   WorkshopCreator,
   WorkshopSite,
 } from "@/bindings/ysm-model-manager/go/types/models.ts";
-import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { invalidateCache, withCached } from "@/utils/cache/with-cached.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -190,7 +189,10 @@ export function mergeLocalAuthorsInto(
     } else if (la?.name) {
       creators.push({
         name: la.name,
-        desc: la.desc || t("community.fromLocal"),
+        // 锐评 P0-2b：desc 不再落 i18n 语言串（原 t("community.fromLocal")）——
+        // 该字段会经 SaveWorkshopCreatorsBySite 落盘，把展示语言写进数据面；
+        // 「来自本地仓库」提示改由视图层按 _fromLocal 标记现取当前语言（render/events）。
+        desc: la.desc || "",
         type: la.type || "",
         _fromLocal: true,
       });

@@ -81,7 +81,7 @@ status: active
 
 - `site-view.ts` — `renderSiteView`：组装 `SiteViewState` 后委托 `site/` 子模块渲染与绑定；行内编辑选择器排除预设卡片（`[data-idx][data-fld]:not([data-edit='preset'])`，防预设 label 输入污染创作者对象，P2 修复）；拖拽 drop 用 `realIdx` 在 `allCreators` 全量数组上重排（防站点子集覆盖清空其他站点，P2 修复）
 - `site/types.ts` / `site/render.ts` / `site/events.ts` / `site/edit.ts` / `site/drag.ts` — 状态类型 `SiteViewState` / `CleanupFn`、`createCrCard`（**声明式：返回 HTML 字符串，零 DOM**）+ `buildSiteHtml` 渲染、`bindBrowseEvents` 浏览交互、`bindEditEvents` 编辑模式（AbortController signal 贯穿 7 个 eeBind* 全部监听，cleanup 真实解绑幂等）、`bindDragEvents` 卡片拖拽排序；各 bind 均返回 `CleanupFn`
-- `workshop-data.ts` — 工坊纯数据工具：`getCreatorIdentity` / `getTagFromRole` / `parseDescTags` / 收藏 `loadFavs` / `isFaved` / `toggleFav`（localStorage `ysm-fav-creators`，写入函数 `saveFavs` 为模块内私有）
+- `workshop-data.ts` — 工坊纯数据工具：`getCreatorIdentity` / `getTagFromRole` / `parseDescTags`（**只认「标签式描述」**：顿号/全角逗号切分 + ≥2 段且每段 ≤12 字符才返回片段，否则返回 `[]` 由详情层回退全文；ASCII 逗号不参与切分）/ 收藏 `loadFavs` / `isFaved` / `toggleFav`（localStorage `ysm-fav-creators`，写入函数 `saveFavs` 为模块内私有）
 - `workshop-browse-mode.ts` — 浏览模式 ref：`BrowseModeRef{ v }` 单源（与 `wsEditModeRef:{v}` 同构），经 `ctx.browseMode` 贯穿到渲染高亮与 `openUrl`，`setBrowseMode` 只改 `.v` + localStorage → 一处 set、处处一致
 
 ## 对外 API / 入口
@@ -106,6 +106,10 @@ status: active
 
 - **站点游标只经 `WorkshopPageState` 读写（ADR-263）**：`initWorkshopTabs(host, refs, page)` / `bindSiteEvents(host, page)` 收页作用域句柄，**不得**回到 `host.state.currentSite`（该字段已删除，写了也编译不过）。⚠️ **收益边界**：两模块**仍收 `host`**（需 `root` 查 DOM、tabs 还要写 `workshopTimer`），故“越界写入编译不过”**只对站点游标成立**；盘踞 `host` 的其他字段（含 `workshopTimer`）仍然可写，接口级封堵属已知遗留
 - **创作者卡片声明式通道**（2026-09 收口）：创作者卡片 HTML 由 `buildSiteHtml` 内经 `createCrCard` 直接产出并嵌入 `#cr-creator-grid`，`site/events.ts` **不再**查 grid 后 `appendChild`（原 `cmBbPopulateCreatorGrid` 已删）——grid 存亡与卡片内容同归 `buildSiteHtml`（编辑态不渲染网格的守卫随之归位）；头部头像加载失败一律走 `data-avatar-fallback` 属性 + `bindAvatarFallback` 单点实现（grid 卡片与详情浮层共用，仅 fallback class 不同）
+- **持久化字段禁写 i18n 文案**（2026-09 锐评 P0-2 收口）：`name` / `desc` 经 `SaveWorkshopCreatorsBySite` 落 `creators.json`，**不得**写入 `t(...)` 语言串——`community-data.ts|mergeLocalAuthorsInto` 的本地作者空 desc 落 `""`（「来自本地仓库」提示由 `site/render.ts|createCrCard` 与 `site/events.ts|cmCrBuildDetailHtml` 按 `_fromLocal` 标记**现取当前语言**）、`site/edit.ts|eeBindCreatorsEdit` 的 `cr-add` 新增行落空 name/desc（由编辑卡 placeholder 引导），且保存路径过滤空名条目；对应 `workshop.newCreatorName` / `workshop.newCreatorDesc` 两键已从三语包删除
+- **筛选行展示文案 vs 过滤键分离**（锐评 P0-4）：`.cr-tag-filter-btn` 动态标签的显示文案走 `getCreatorIdentity({ role: tag }).label`（i18n 单源，未知 tag 回退 YSM 创作者），`data-tag` 保持原始 role id——**label 是展示层，data-tag 是数据语义**，二者不得互相顶替；站点空态引导指向 `workshop.importSite`（导入），不得写 `exportSite`（历史 bug：上传图标配「导出站点」，恢复路径指反）
+
+- **单内容区（无第二创作者面板）**：`#ws-creator-view` / `.ws-creators-list` / `creatorView` 句柄链已于 2026-09 锐评 P1 删除——那是旧双栏布局残骸（JS 恒置 `display:none`、无任何填充者，连 CSS 规则都缺），页面内容只经 `#ws-search-results`，`RenderSiteViewCtx` / `SiteViewState` 不再有 `creatorView` 字段；要加并列面板须重开设计评审，不得复活临时容器
 
 ## 相关
 

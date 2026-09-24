@@ -20,10 +20,8 @@ import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.
 function makeCtx(over: Partial<RenderSiteViewCtx> = {}): {
   ctx: RenderSiteViewCtx;
   searchResults: HTMLElement;
-  creatorView: HTMLElement;
 } {
   const searchResults = document.createElement("div");
-  const creatorView = document.createElement("div");
   const allCreators: LocalCreatorLike[] = [
     { name: "高产甲", type: "siteA;official" } as LocalCreatorLike,
     { name: "低产乙", type: "siteA" } as LocalCreatorLike,
@@ -32,7 +30,6 @@ function makeCtx(over: Partial<RenderSiteViewCtx> = {}): {
   const ctx: RenderSiteViewCtx = {
     esc: (s: unknown) => String(s),
     searchResults,
-    creatorView,
     allSites: [],
     allCreators,
     repoAuthors: [{ Name: "高产甲", Count: 9 }, { Name: "低产乙", Count: 1 }],
@@ -51,8 +48,7 @@ function makeCtx(over: Partial<RenderSiteViewCtx> = {}): {
     ...over,
   };
   document.body.appendChild(searchResults);
-  document.body.appendChild(creatorView);
-  return { ctx, searchResults, creatorView };
+  return { ctx, searchResults };
 }
 
 const site: WorkshopSite = { id: "siteA", label: "测试站" } as WorkshopSite;
@@ -63,11 +59,10 @@ beforeEach(() => {
 });
 
 describe("renderSiteView 编排壳", () => {
-  it("1. 渲染 HTML 到 searchResults 并隐藏 creatorView", () => {
-    const { ctx, searchResults, creatorView } = makeCtx();
+  it("1. 渲染 HTML 到 searchResults（单内容区，无鬼面板）", () => {
+    const { ctx, searchResults } = makeCtx();
     renderSiteView(site, ctx);
     expect(searchResults.innerHTML).toContain("cr-scroll");
-    expect(creatorView.style.display).toBe("none");
   });
 
   it("2. 只保留 type 含本站 id 的创作者（ws-cr-count=2）", () => {

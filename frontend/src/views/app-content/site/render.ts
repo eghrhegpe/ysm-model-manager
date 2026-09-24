@@ -11,7 +11,7 @@ import { getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import type { LocalCreatorLike, RepoAuthorLike } from "./types.ts";
 import type { BrowseModeRef } from "./workshop-browse-mode.ts";
-import { getTagFromRole, loadFavs } from "./workshop-data.ts";
+import { getCreatorIdentity, getTagFromRole, loadFavs } from "./workshop-data.ts";
 
 /** 创作者卡片工厂上下文 */
 export interface CrCardCtx {
@@ -194,7 +194,10 @@ function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
         filterBtn(
           tag,
           stagger(i + 3, 30, 300),
-          `${getTagIconFromRole(tag)} <span>${esc(tag)}</span>`,
+          // 锐评 P0-4：原直接显原始 role id（ja/en 用户看到裸 "vup"/"oc"），
+          // 改走 getCreatorIdentity 的 i18n label 单源——未知 tag 自动回退 YSM 创作者。
+          // data-tag 仍用原始 id（过滤键 = 数据语义），label 仅展示层。
+          `${getTagIconFromRole(tag)} <span>${esc(getCreatorIdentity({ role: tag }).label)}</span>`,
         ),
       )
       .join("") +

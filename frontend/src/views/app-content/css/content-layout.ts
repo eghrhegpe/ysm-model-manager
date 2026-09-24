@@ -195,9 +195,9 @@ ${wsIconCSS}
 .ws-dl-selected[disabled], .ws-btn-sm[disabled] { opacity:.4;cursor:default; }
 .ws-dl-selected[disabled]:hover, .ws-btn-sm[disabled]:hover { background:transparent; }
 .ws-filter-btn { position:relative; }
-.ws-back, .cr-back-btn, .cr-back-repo, .ws-btn, .ws-btn-txt,
+.ws-back, .ws-btn, .ws-btn-txt,
 .ws-back-repo { padding:var(--btn-padding-std);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-base);font-family:inherit; }
-.ws-back:hover, .cr-back-btn:hover, .cr-back-repo:hover, .ws-btn:hover, .ws-btn-txt:hover,
+.ws-back:hover, .ws-btn:hover, .ws-btn-txt:hover,
 .ws-back-repo:hover { background:var(--hover); }
 .ws-open-btn { padding:var(--btn-padding-std);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .ws-open-btn:hover { background:var(--hover); }

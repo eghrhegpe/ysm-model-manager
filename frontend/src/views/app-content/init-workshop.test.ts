@@ -83,7 +83,6 @@ function makeHost(cardsHTML = "") {
   const el = document.createElement("div");
   el.innerHTML = `
     <div id="ws-search-results"></div>
-    <div id="ws-creator-view"></div>
     ${cardsHTML}
   `;
   // 假 ShadowRoot：普通 div 无 getElementById，补一个按 id 查询的实现
@@ -208,7 +207,7 @@ describe("initWorkshopPage — 初始化装配", () => {
   // 早退分支（骨架缺失）语义固定：page 尚未创建，initWorkshopTabs / bindSiteEvents 都未接线。
   // 这与旧实现的 `host.state.currentSite = null` 同样被跳过——行为等价，非回归。
   it("骨架缺失早退 → 不创建页作用域、不接线子模块（与旧置空路径同样被跳过）", () => {
-    const el = document.createElement("div"); // 无 #ws-search-results / #ws-creator-view
+    const el = document.createElement("div"); // 无 #ws-search-results（骨架缺失）
     (el as unknown as { getElementById: (id: string) => Element | null }).getElementById = (
       id: string,
     ) => el.querySelector(`#${id}`);
@@ -235,7 +234,6 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     const ctx = args0[1] as any;
     expect(calledSite).toBe(site);
     expect(ctx.searchResults).toBe(el.querySelector("#ws-search-results"));
-    expect(ctx.creatorView).toBe(el.querySelector("#ws-creator-view"));
     expect(ctx.allSites).toEqual([]); // refs.allSitesRef.v
     expect(ctx.wsEditModeRef).toEqual({ v: false });
     expect(ctx.repoModelCache).toBe(raw_workshopCache(host));

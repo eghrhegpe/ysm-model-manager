@@ -4,13 +4,19 @@
 // t() 由 test-setup 全局查表 mock（zhCN）；workshop-data / workshop-icons 用 hoisted mock 隔离。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { getTagFromRole, getTagIconFromRole, loadFavs } = vi.hoisted(() => ({
+const { getTagFromRole, getTagIconFromRole, loadFavs, getCreatorIdentity } = vi.hoisted(() => ({
   getTagFromRole: vi.fn((role?: string) => role || "creator"),
   getTagIconFromRole: vi.fn(() => "🏷️"),
   loadFavs: vi.fn<() => string[]>(() => []),
+  // 锐评 P0-4：筛选行动态 tag 的展示 label 走身份单源（原直接显裸 role id）
+  getCreatorIdentity: vi.fn((cr: { role?: string }) => ({
+    label: `ID:${cr.role ?? "creator"}`,
+    icon: "🎭",
+    tag: cr.role || "creator",
+  })),
 }));
 
-vi.mock("./workshop-data.ts", () => ({ getTagFromRole, loadFavs }));
+vi.mock("./workshop-data.ts", () => ({ getTagFromRole, loadFavs, getCreatorIdentity }));
 vi.mock("@/utils/icon/workshop-icons.ts", () => ({
   getSiteIcon: vi.fn(() => "🌐"),
   getTagIconFromRole,
@@ -122,6 +128,11 @@ describe("buildSiteHtml 浏览态", () => {
     const root = renderHtml(makeCtx({ creators, activeTag: "official" }));
     const btns = [...root.querySelectorAll<HTMLElement>(".cr-tag-filter-btn")];
     expect(btns.map((b) => b.dataset.tag)).toEqual(["", "creator", "official", "vup"]);
+    // 锐评 P0-4：动态 tag 按钮的展示文案走 getCreatorIdentity 的 i18n label 单源，
+    // 不再是裸 role id（ja/en 用户曾直接看到 "vup"/"oc"）；data-tag 仍为过滤键原始 id。
+    const vupBtn = root.querySelector<HTMLElement>('.cr-tag-filter-btn[data-tag="vup"]');
+    expect(vupBtn?.textContent).toContain("ID:vup");
+    expect(vupBtn?.dataset.tag).toBe("vup");
     expect(
       root.querySelector('.cr-tag-filter-btn[data-tag="official"]')?.classList.contains("active"),
     ).toBe(true);
@@ -288,5 +299,22 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     const c2 = parseCardHtml(createCrCard(creators[2], ctx));
     expect(c2.dataset.tier).toBeUndefined();
     expect(c2.querySelector(".cr-card-tier-bar")).toBeNull();
+  });
+
+  it("14. 本地条目空 desc → 卡片回退 i18n 提示（数据面不落语言串，锐评 P0-2b）", () => {
+    const cr = { name: "本地甲", desc: "", _fromLocal: true } as LocalCreatorLike;
+    const card = parseCardHtml(createCrCard(cr, cardCtx([cr], { avatarCache: {} })));
+    expect(card.querySelector(".cr-card-desc")?.textContent).toBe("来自本地仓库");
+
+    // 非本地条目空 desc → 留白（不冒充本地来源）
+    const plain = { name: "普通乙", desc: "" } as LocalCreatorLike;
+    const card2 = parseCardHtml(createCrCard(plain, cardCtx([plain], { avatarCache: {} })));
+    expect(card2.querySelector(".cr-card-desc")?.textContent).toBe("");
+  });
+
+  it("15. 非空 desc 优先于本地提示（真实描述不被兜底覆盖）", () => {
+    const cr = { name: "本地丙", desc: "真实描述", _fromLocal: true } as LocalCreatorLike;
+    const card = parseCardHtml(createCrCard(cr, cardCtx([cr], { avatarCache: {} })));
+    expect(card.querySelector(".cr-card-desc")?.textContent).toBe("真实描述");
   });
 });

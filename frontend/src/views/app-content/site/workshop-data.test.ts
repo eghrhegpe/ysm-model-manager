@@ -88,8 +88,29 @@ describe("parseDescTags", () => {
     expect(parseDescTags("")).toEqual([]);
   });
 
-  it("按顿号/逗号切分、去空白、过滤空串", () => {
-    expect(parseDescTags(" 模型、 捏人 , 皮肤 ，vup")).toEqual(["模型", "捏人", "皮肤", "vup"]);
+  it("按顿号/全角逗号切分、去空白、过滤空串", () => {
+    expect(parseDescTags(" 模型、 捏人 ， 皮肤 ，vup")).toEqual(["模型", "捏人", "皮肤", "vup"]);
+  });
+
+  it("ASCII 逗号不参与切分（英文描述不再被碎成标签）", () => {
+    // 锐评 P0-3：逗号属正常句读——切碎会让详情层丢弃全文
+    expect(parseDescTags("cool models, fast updates")).toEqual([]);
+    // 顿号仍切分，段内夹带的 ASCII 逗号原样保留
+    expect(parseDescTags(" 模型、 捏人 , 皮肤 ，vup")).toEqual(["模型", "捏人 , 皮肤", "vup"]);
+  });
+
+  it("单段描述不视为标签串（回退全文展示，不再吞成单个 #chip）", () => {
+    expect(parseDescTags("模型")).toEqual([]);
+    expect(parseDescTags("cool models fast updates")).toEqual([]);
+  });
+
+  it("短片段多段 → 仍按标签串渲染（内容以 chips 呈现，不丢文本）", () => {
+    expect(parseDescTags("只玩模型，从不捏人")).toEqual(["只玩模型", "从不捏人"]);
+  });
+
+  it("超长段（>12 字符）判为普通描述 → 空数组（回退全文）", () => {
+    expect(parseDescTags("这是一个相当长的描述片段超过上限、另一个也不短")).toEqual([]);
+    expect(parseDescTags("a very long english sentence here、b")).toEqual([]);
   });
 
   it("最多保留 6 个标签", () => {

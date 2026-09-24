@@ -444,9 +444,9 @@
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 207 |
 | relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 231 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 313 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 109 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 120 |
-| initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |
+| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 148 |
+| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 159 |
+| initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 178 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 94 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 275 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 281 |
@@ -454,10 +454,10 @@
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 309 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 331 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 358 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 156 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 167 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 182 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 194 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 159 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 170 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 185 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 197 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
@@ -603,7 +603,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 181 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 184 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

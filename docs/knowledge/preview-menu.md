@@ -6,6 +6,7 @@ adr:
   - ADR-132
   - ADR-195
   - ADR-276
+  - ADR-305
 category: rendering
 source_files:
   - frontend/src/preview-3d/menu/schema/menu-node-types.ts
@@ -218,6 +219,7 @@ status: active
 - **行内按钮样式单源（`MENU_BTN_CSS`）**：`render.ts` 的 radio/badge 与 cap 控件共用 `.cc-btn` 族，规则住在 `menu-styles.ts|MENU_BTN_CSS`，行/控件两条渲染路径**各自插值**——不可只让 cap 栈注入（`ensureCapStyles()` 唯一调用点是 `renderCapControls()`）：纯 row 面板（roles 角色列表，不渲染任何 cap 控件）拿不到规则 ⇒ `<button>` 回落 UA 默认**不透明白底 + 2px 黑框**（2026-09-16 实测 `background=rgb(240,240,240)`、`box 21×20`）。守卫：`menu-styles.test.ts`（常量内容 + 两消费方真插值）+ `roles.test.ts` 断言菜单样式表含 `.cc-btn-ghost`。
 - **row 槽位图标走语义名（ADR-238）**：`radio` 渲染 `radioOn`（外环+圆心）/`radioOff`（空环）SVG 图标，`badge.icon` 为 `IconRef`（roles 工具=`tools`、switch 追加=`add`）——不再用 `●/○/⚙/➕` 字形拼凑（几何随字体漂移，且 `.cc-btn-ghost` 的圆角矩形边框被误当「外圈」）。激活色用**双类锚定** `.rm-radio-btn.row-radio-active`（同为单类时后者胜，曾把 accent 吃掉）；按钮本体 18px 正圆、无边框、透明底（`.rm-radio-btn`）。
 - **调试日志门控（2026-09）**：菜单装配与渲染关键路径经 `utils/debug/debug.ts|dbg()` 打点，统一 tag `preview-menu`（`mountPreviewRootMenu` 的 mount/shell built/routers built/adapter items update/open panel/disposed）与 `preview-menu-render`（`renderMenu` 的 start/每节点 rendering node/complete）。复用全局 dbg 机制：`?nodebug=1` 全局关闭，日志进 `window._DBG_RING` 环形缓冲（排查「某节点没渲染出来」先看 rendering node 是否含目标 id，再查其 `visibleWhen`）。**调试日志用完即删是 AGENTS.md 通则，本处为常驻诊断锚点非临时打点。**
+- **命名脱钩裁定（ADR-305，2026-09-24）**：preview-3D 菜单三命名族——envState schema 键 = **存储标识符**（默认不改名；改名须带存档迁移 + ADR 词系 + ADR-286 分派表同步）、labelKey = **用户可见语义标识符**（命名跟控件语义走，掉前缀/缩写/语义改名均合法）、菜单工厂 join（`caps/*-menu.ts|buildWaterNodes` 等）= 唯一语义拼接点（`LocaleKey × RangedKey` 类型锁定）。**审查判据（ADR-305 D2）：命名脱钩项当且仅当「用户可见文案错/误导」才构成缺陷；labelKey 名 ≠ schema 键名本身不是缺陷**——38 对同构件（water 8 / postprocessing 20 / 体积光 5 / sky 3 / ground 2，清单见 ADR-305 D4）普查文案三语全对，统一裁定「不动」；新产生的脱钩不需登记，按判据自动裁定。P2-2（waterFilmDensity↔waterWetness）为该族首例，收口注释在 `caps/water-menu.ts|buildWaterNodes` 的 water-wetness 拼接点。
 ## 相关
 
 - `docs/preview-menu-overview.md`（3D 预览菜单系统全景图：分层架构 + 数据流 + ADR 索引 + 调试指南 + 快速上手）

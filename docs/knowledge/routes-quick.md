@@ -544,11 +544,11 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| mountPreviewRootMenu 挂载 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276 |
-| PreviewMenuNode 声明式菜单 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276 |
-| renderMenu 单一渲染器 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276 |
-| schema-registry 面板注册 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276 |
-| visibleWhen 谓词 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276 |
+| mountPreviewRootMenu 挂载 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
+| PreviewMenuNode 声明式菜单 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
+| renderMenu 单一渲染器 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
+| schema-registry 面板注册 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
+| visibleWhen 谓词 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
 
 ## 🎯 预览状态层契约
 

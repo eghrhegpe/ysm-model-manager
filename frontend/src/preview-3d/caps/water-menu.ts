@@ -123,6 +123,9 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       kind: "folder",
       labelKey: WATER_GROUP_LOOK,
       children: [
+        // [锐评 P2-2 裁定收口，ADR-305 D1/D2] labelKey 跟用户可见语义（水膜浓度），envState
+        //  键是存储标识符（ADR-257 wetnessGated 词系）——脱钩是**设计**：语义拼接点在此，
+        //  审查判据 = 用户可见文案正确性，不是键名同形（改名零收益，3 语言包 + 此处 churn）。
         wSliderNode(
           "water-wetness",
           "preview.waterFilmDensity",

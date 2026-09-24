@@ -82,14 +82,22 @@ describe("buildCubeMeshData", () => {
     expect(mesh!.positions).not.toContain(-5);
   });
 
-  it("mirror=true → UV 水平翻转（每面 u0↔u2、u4↔u6）", () => {
+  it("mirror=true → east/west 矩形互换后各自水平翻转（Blockbench mirror 两步）", () => {
+    // 黄金参照 blockbench cube.js updateUV mirror_uv（L1298-1316）：
+    // ① 每面矩形自身水平翻转；② east 与 west (from,size) 整体互换。
+    // 1×1×1 cube @ tex16，box uv[0,0]：非 mirror east u∈[0,.0625]、
+    // west fu=1 → u∈[.0625,.125]。旧实现只做 ①（b.uvs[0]==a.uvs[2]），
+    // 缺 ② → mirror 对称件左右臂贴图互换（女仆左臂青条事故）。
     const a = buildCubeMeshData(buildCube({ uv: [0, 0] }), bonePivot, 16, 16, "root", 0)!;
     const b = buildCubeMeshData(buildCube({ uv: [0, 0], mirror: true }), bonePivot, 16, 16, "root", 0)!;
-    // East 面（前 8 个 UV 值）u 分量交换：镜像后 b[0]=a[2]、b[2]=a[0]（v 分量不变）
-    // 若 mirror 分支被删，b 与 a 全等，本断言必失败——验证真实翻转行为
-    expect(b!.uvs[0]).toBe(a!.uvs[2]);
-    expect(b!.uvs[2]).toBe(a!.uvs[0]);
-    expect(b!.uvs[1]).toBe(a!.uvs[1]);
+    // mirror east = 非 mirror west（索引 8..15）翻转：u0↔u2
+    expect(b.uvs[0]).toBe(a.uvs[8 + 2]);
+    expect(b.uvs[2]).toBe(a.uvs[8 + 0]);
+    // mirror west = 非 mirror east 翻转
+    expect(b.uvs[8]).toBe(a.uvs[2]);
+    expect(b.uvs[10]).toBe(a.uvs[0]);
+    // v 分量不参与翻转/互换
+    expect(b.uvs[1]).toBe(a.uvs[9]);
   });
 
   it('meshID = boneID + "_" + cubeIdx', () => {
@@ -129,6 +137,25 @@ describe("buildCubeMeshData", () => {
     const mesh = buildCubeMeshData(cube, bonePivot, 64, 64, "root", 0)!;
     expect(faceUVs(mesh, 2)).toEqual([0.25, 0.125, 0.125, 0.125, 0.25, 0, 0.125, 0]);
     expect(faceUVs(mesh, 3)).toEqual([0.375, 0, 0.25, 0, 0.375, 0.125, 0.25, 0.125]);
+  });
+
+  it("box UV + mirror：east/west 矩形互换 + 六面逐面翻转（女仆左臂青条回归）", () => {
+    // 与 Go TestBuildCubeMeshData_BoxMirrorEastWestSwap 同构双锁。
+    // 8³ cube @ box uv[0,0] tex64，mirror 后打包结果（face 序 east/west/up/down/south/north）：
+    const cube = buildCube({
+      pivot: [4, 4, 4],
+      pivotSet: true,
+      size: [8, 8, 8],
+      uv: [0, 0],
+      mirror: true,
+    });
+    const mesh = buildCubeMeshData(cube, bonePivot, 64, 64, "root", 0)!;
+    expect(faceUVs(mesh, 0)).toEqual([0.375, 0.125, 0.25, 0.125, 0.375, 0.25, 0.25, 0.25]);
+    expect(faceUVs(mesh, 1)).toEqual([0.125, 0.125, 0, 0.125, 0.125, 0.25, 0, 0.25]);
+    expect(faceUVs(mesh, 2)).toEqual([0.125, 0.125, 0.25, 0.125, 0.125, 0, 0.25, 0]);
+    expect(faceUVs(mesh, 3)).toEqual([0.25, 0, 0.375, 0, 0.25, 0.125, 0.375, 0.125]);
+    expect(faceUVs(mesh, 4)).toEqual([0.5, 0.125, 0.375, 0.125, 0.5, 0.25, 0.375, 0.25]);
+    expect(faceUVs(mesh, 5)).toEqual([0.25, 0.125, 0.125, 0.125, 0.25, 0.25, 0.125, 0.25]);
   });
 
   it("per-face UV + mirror：up 水平翻转后角点 = [(u1,v2),(u2,v2),(u1,v1),(u2,v1)]", () => {

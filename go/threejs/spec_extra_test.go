@@ -451,10 +451,14 @@ func TestBuildCubeMeshData_InflateClamp(t *testing.T) {
 }
 
 func TestBuildCubeMeshData_Mirror(t *testing.T) {
-	// Blockbench mirror（P2 修复）：UV 水平翻转（u 交换），对齐 Java GeoQuad。
-	// cube 8x8x8 @ origin[0,0,0]，box UV [0,0]：
-	//   East face u0=0/64=0, u1=8/64=0.125（无 mirror）
-	//   mirror 后 u0/u1 交换 → u0=0.125, u1=0
+	// Blockbench mirror 两步语义（黄金参照 blockbench cube.js updateUV
+	// box_uv mirror_uv 分支 L1298-1316）：
+	//   ① 每面矩形自身水平翻转；② east 与 west 矩形整体互换。
+	// 旧实现只做 ①（对齐 Java GeoQuad 的侧面理解不完整），缺 ② → mirror 对称件
+	// 左右臂贴图互换（女仆左臂青条事故）。本测锁定 ②。
+	// cube 8x8x8 @ origin[0,0,0]，box UV [0,0]，tex64：
+	//   非 mirror east u∈[0,.125]、west u∈[.25,.375]
+	//   mirror 后物理 east 贴 west 矩形翻转值：u0=.375, u2=.25
 	c := types.Cube2D{
 		Origin: [3]float64{0, 0, 0},
 		Size:   [3]float64{8, 8, 8},
@@ -465,15 +469,23 @@ func TestBuildCubeMeshData_Mirror(t *testing.T) {
 	if md == nil {
 		t.Fatal("有效 cube 应返回非 nil")
 	}
-	u0Plain, u1Plain := md.Uvs[0], md.Uvs[2]
-	if u0Plain == u1Plain {
-		t.Fatal("非 mirror 的 u0/u1 应不同（测试前提不成立）")
+	eastU0, eastU2, westU0, westU2 := md.Uvs[0], md.Uvs[2], md.Uvs[8], md.Uvs[10]
+	if eastU0 == eastU2 || westU0 == westU2 {
+		t.Fatal("非 mirror 的 east/west 自身 u应对不同（测试前提不成立）")
+	}
+	if eastU0 != 0 || westU0 != 0.25 {
+		t.Fatalf("非 mirror 基线偏移: east u0=%v（期望0）west u0=%v（期望.25）", eastU0, westU0)
 	}
 	c.Mirror = true
 	mdMirror := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if mdMirror.Uvs[0] != u1Plain || mdMirror.Uvs[2] != u0Plain {
-		t.Errorf("mirror 后 UV 应水平翻转: 期望 u0=%v u1=%v, 实际 u0=%v u1=%v",
-			u1Plain, u0Plain, mdMirror.Uvs[0], mdMirror.Uvs[2])
+	// mirror east = 非mirror west 翻转（u0↔u2）；mirror west = 非mirror east 翻转
+	if mdMirror.Uvs[0] != westU2 || mdMirror.Uvs[2] != westU0 {
+		t.Errorf("mirror east 应贴 west 矩形翻转值: 期望 u0=%v u2=%v, 实际 u0=%v u2=%v",
+			westU2, westU0, mdMirror.Uvs[0], mdMirror.Uvs[2])
+	}
+	if mdMirror.Uvs[8] != eastU2 || mdMirror.Uvs[10] != eastU0 {
+		t.Errorf("mirror west 应贴 east 矩形翻转值: 期望 u0=%v u2=%v, 实际 u0=%v u2=%v",
+			eastU2, eastU0, mdMirror.Uvs[8], mdMirror.Uvs[10])
 	}
 }
 

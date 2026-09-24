@@ -287,6 +287,16 @@ export function buildCubeMeshData(
   ];
   const hasUV = parseUV(c, faceUVs, c.size[0], c.size[1], c.size[2], texW, texH);
   if (c.mirror) {
+    // Blockbench mirror_uv 完整语义（黄金参照 blockbench cube.js updateUV
+    // L1298-1316；女仆 01_taisho_maid 左臂青条事故 2026-09，全仓普查 3439 个
+    // mirror cube 均走 box UV）：① 每面矩形自身水平翻转；② east 与 west 矩形
+    // 整体互换（up/down/south/north 不参与）——物理 east 面必须贴 west 翻转后
+    // 的 UV。旧实现只有 ① 缺 ② → 对称件左右臂贴图互换。①②可交换（整面互换
+    // 与逐面翻转作用域不相交），此处先互换再逐面翻转，与 Go spec.go 同构，
+    // 逐顶点等价见 cube-mesh.test「box UV + mirror」六面锁定。
+    const tmpEast = faceUVs[0];
+    faceUVs[0] = faceUVs[1];
+    faceUVs[1] = tmpEast;
     for (let fi = 0; fi < 6; fi++) {
       const tmp0 = faceUVs[fi][0];
       faceUVs[fi][0] = faceUVs[fi][2];

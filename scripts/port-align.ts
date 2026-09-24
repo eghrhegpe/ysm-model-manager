@@ -32,12 +32,12 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { run } from "../_lib/proc.ts";
+import { run } from "./_lib/proc.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, "..");
-const CUBE_MESH_TS = resolve(REPO_ROOT, "frontend/src/preview-3d/cube-mesh.ts");
+const CUBE_MESH_TS = resolve(REPO_ROOT, "frontend/src/preview-3d/mesh/cube-mesh.ts");
 
 // esbuild 解析：port-align.ts 在仓库根，从 frontend/ 向上走 Node 模块解析，
 // 找到 esbuild/bin/esbuild。不硬编码 node_modules 路径，兼容 hoisting。
@@ -242,6 +242,96 @@ function oracleEuler(rx: number, ry: number, rz: number) {
 }
 
 // ============================================================
+// 2b. UV 权威 oracle（box=Blockbench face_list / per-face=GeckoLib GeoCube）
+// ============================================================
+// 像素矩形 [x1,y1,x2,y2]，有符号（负尺寸承载角点定向）；null=该面未声明。
+type Rect = [number, number, number, number] | null;
+const FACE_NAMES = ["east", "west", "up", "down", "south", "north"];
+const UV_TOL = 1e-9; // UV 为像素/纹理尺寸的浮点除法，双端同源运算只容 ulp 级差
+
+// box UV：Blockbench cube.js face_list 展开表（face 序 east/west/up/down/south/north）。
+// 注意 up/down 用**全负 fw/fh**（右→左、下→上）把物理角点定向编进矩形，故
+// rectToFaceUV 可直接映射 canonical 槽——与本仓 expandBoxUV 的 GeoCube 表
+// （down 仅 fh=-z + 打包点 mdCmBuildFace 槽位反转）逐顶点等价，由 Go
+// TestBuildCubeMeshData_BoxUVUpDownParity 锁定；两套写法是同一几何的两种编码。
+function oracleBoxFaceRects(s: any): Rect[] {
+  const u = s.uv[0] ?? 0;
+  const v = s.uv[1] ?? 0;
+  const x = s.size[0],
+    y = s.size[1],
+    z = s.size[2];
+  const rects: Rect[] = [
+    [u, v + z, u + z, v + z + y], // east:  fu=u,      fv=v+z, fw=z,  fh=y
+    [u + z + x, v + z, u + z + x + z, v + z + y], // west:  fu=u+z+x,  fv=v+z, fw=z,  fh=y
+    [u + z + x, v + z, u + z, v], // up:    fu=u+z+x,  fv=v+z, fw=-x, fh=-z
+    [u + z + 2 * x, v, u + z + x, v + z], // down:  fu=u+z+2x, fv=v,   fw=-x, fh=z（面宽 x，勿写成 -z——非方正 x≠z 即露馅）
+    [u + z + x + z, v + z, u + z + x + z + x, v + z + y], // south: fu=u+2z+x, fv=v+z, fw=x,  fh=y
+    [u + z, v + z, u + z + x, v + z + y], // north: fu=u+z,    fv=v+z, fw=x,  fh=y
+  ];
+  if (s.mirror) {
+    // mirror_uv = Blockbench cube.js updateUV L1298-1316 两步：
+    // ① 每面 from.x+=size.x;size.x*=-1（矩形水平翻转，[x1,y1,x2,y2]→[x2,y1,x1,y2]）；
+    // ② east/west 的 (from,size) 整体互换（up/down/south/north 不参与）。
+    for (let i = 0; i < rects.length; i++) {
+      const r = rects[i]!;
+      rects[i] = [r[2], r[1], r[0], r[3]];
+    }
+    const t = rects[0] ?? null;
+    rects[0] = rects[1] ?? null;
+    rects[1] = t;
+  }
+  return rects;
+}
+
+// per-face UV：矩形直接来自 {uv,uv_size}（GeckoLib GeoCube createFromPojoCube）。
+// mirror 同 box 两步；但普查 89787 cubes 中 per-face+mirror 真实模型 0 例，
+// 无法由上游/目视交叉实证，本仓锁定口径 = 逐面水平翻转 + east/west 矩形互换（与 box 路径同构），
+// oracle 只验「双端实现与该锁定口径不漂移」；分歧若复活先补普查再裁决。
+function oraclePerFaceRects(s: any): Rect[] {
+  const rects: Rect[] = FACE_NAMES.map((name) => {
+    const f = s.faceUVMap?.[name];
+    if (!f) return null;
+    let x1 = f.uv[0];
+    const y1 = f.uv[1];
+    let w = f.size[0];
+    const h = f.size[1];
+    if (s.mirror) {
+      x1 += w;
+      w *= -1;
+    }
+    return [x1, y1, x1 + w, y1 + h];
+  });
+  if (s.mirror) {
+    // east/west 矩形整体互换；缺面（null）随槽位一起换，保持对称语义
+    const t = rects[0] ?? null;
+    rects[0] = rects[1] ?? null;
+    rects[1] = t;
+  }
+  return rects;
+}
+
+// 像素矩形 → 本仓打包口径的每面 8 UV。
+// 本仓六面物理顶点序与 Blockbench three_custom.js setShape 完全一致（east
+// v0..v3 = (to,to,to)/(to,to,from)/(to,from,to)/(to,from,from)，其余五面
+// 同），故矩形四角直接落槽位：v0=(x1,y1) v1=(x2,y1) v2=(x1,y2) v3=(x2,y2)。
+// reverseTopBottom（per-face 路径）：up/down 再按 GeckoLib 顶点序做
+// [s3,s2,s1,s0] 反转。box 路径不需要——Blockbench face_list 的 up/down
+// 已用负尺寸把角点定向编进矩形（与本仓「正尺寸矩形 + 反转」逐顶点等价，
+// 由 Go TestBuildCubeMeshData_BoxUVUpDownParity 锁定），故 box 直接映射。
+// v 用本仓 flipY=false 口径（v=y/texH），Blockbench 顶点映射写 1-y/ph 是因
+// three.js 纹理默认 flipY=true，采样行域等价。
+function rectToFaceUV(rect: Rect, texW: number, texH: number, reverseTopBottom = false): number[] {
+  if (!rect) return [0, 0, 0, 0, 0, 0, 0, 0];
+  const [x1, y1, x2, y2] = rect;
+  const s0 = [x1 / texW, y1 / texH];
+  const s1 = [x2 / texW, y1 / texH];
+  const s2 = [x1 / texW, y2 / texH];
+  const s3 = [x2 / texW, y2 / texH];
+  const slots = reverseTopBottom ? [s3, s2, s1, s0] : [s0, s1, s2, s3];
+  return [...slots[0]!, ...slots[1]!, ...slots[2]!, ...slots[3]!];
+}
+
+// ============================================================
 // 3. 比对工具
 // ============================================================
 const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
@@ -284,6 +374,33 @@ function matchQuat(actual: number[], expected: number[]) {
 function matchVec3(actual: number[], expected: number[], name: string) {
   const d = Math.max(...actual.map((v, i) => Math.abs(v - expected[i]!)));
   return d <= TOL ? null : `${name} ${actual.map(r4)} vs ${expected.map(r4)} (Δ=${r4(d)})`;
+}
+
+// 6 面 × 8 UV 逐值比对（actual = md.uvs 全长 48；expected = 六面像素矩形）
+function matchAllFaceUVs(
+  actual: number[],
+  expectedRects: Rect[],
+  texW: number,
+  texH: number,
+  reverseTopBottom: boolean,
+) {
+  for (let fi = 0; fi < 6; fi++) {
+    const want = rectToFaceUV(
+      expectedRects[fi] ?? null,
+      texW,
+      texH,
+      reverseTopBottom && (fi === 2 || fi === 3),
+    );
+    for (let k = 0; k < 8; k++) {
+      const got = actual[fi * 8 + k]!;
+      if (Math.abs(got - want[k]!) > UV_TOL) {
+        return `${FACE_NAMES[fi]} uv[${k}]=${r4(got)} 期望 ${r4(want[k]!)}（面实际=${actual
+          .slice(fi * 8, fi * 8 + 8)
+          .map(r4)} 期望=${want.map(r4)}）`;
+      }
+    }
+  }
+  return null;
 }
 
 // ============================================================
@@ -334,6 +451,85 @@ function makeSpec(
     cubeTexH: 0,
     faceUV: "",
     uv: [],
+    texSlot: 0,
+  };
+}
+
+// ── UV corpus（Phase 3）──────────────────────────────────────
+// box：方正/非方正（非方正暴露 x/z 槽位互换类错误）× uv_offset 零/非零 × mirror
+const UV_BOX_SIZES = [
+  [8, 8, 8],
+  [6, 8, 10],
+];
+const UV_BOX_OFFSETS = [
+  [0, 0],
+  [3, 7],
+];
+
+// per-face：每面给互不相同的像素矩形（任何面错位都立刻可见），uv_size 符号
+// 方案覆盖普查到的真实形态（down 负高 = foxcar；负宽 = 普查 5 千+ 例）。
+const PERFACE_BASE: Record<string, { uv: [number, number]; size: [number, number] }> = {
+  east: { uv: [0, 8], size: [8, 8] },
+  west: { uv: [16, 8], size: [8, 8] },
+  up: { uv: [8, 0], size: [8, 8] },
+  down: { uv: [24, 8], size: [8, 8] },
+  south: { uv: [32, 8], size: [8, 8] },
+  north: { uv: [40, 8], size: [8, 8] },
+};
+const PERFACE_SIGN_SCHEMES = [
+  { name: "全正尺寸", mutate: () => {} },
+  {
+    name: "down 负高(foxcar)",
+    mutate: (m: typeof PERFACE_BASE) => {
+      m.down!.uv = [24, 16];
+      m.down!.size = [8, -8];
+    },
+  },
+  {
+    name: "east 负宽",
+    mutate: (m: typeof PERFACE_BASE) => {
+      m.east!.uv = [8, 8];
+      m.east!.size = [-8, 8];
+    },
+  },
+] as const;
+// 缺面形态：只声明 east/up，其余 4 面零填充（非 mirror；mirror+缺面语义
+// 见 oraclePerFaceRects 注释，普查 0 例不专门构造）
+const PERFACE_PARTIAL: Record<string, { uv: [number, number]; size: [number, number] }> = {
+  east: PERFACE_BASE.east!,
+  up: PERFACE_BASE.up!,
+};
+
+function makeUVSpec(
+  mode: "box" | "perface",
+  size: number[],
+  mirror: boolean,
+  faceUVMap?: Record<string, { uv: [number, number]; size: [number, number] }>,
+  boxOffset?: number[],
+) {
+  return {
+    origin: [0, 0, 0],
+    size: [...size],
+    pivot: [size[0]! / 2, size[1]! / 2, size[2]! / 2],
+    pivotSet: true,
+    rotation: [0, 0, 0],
+    inflate: 0,
+    mirror,
+    cubeTexW: 0,
+    cubeTexH: 0,
+    // 线协议：TS 实现 parseFaceUV 只认 {face:{uv,uv_size}}——结构化的 size
+    // 必须转成 uv_size 键，直接 JSON.stringify(size) 会让 fw/fh 解析为 0。
+    faceUV:
+      mode === "perface" && faceUVMap
+        ? JSON.stringify(
+            Object.fromEntries(
+              Object.entries(faceUVMap).map(([k, v]) => [k, { uv: v.uv, uv_size: v.size }]),
+            ),
+          )
+        : "",
+    uv: mode === "box" ? [...(boxOffset ?? [0, 0])] : [],
+    // 结构化 per-face 仅供电 oracle 直读（TS 实现消费上面的 faceUV 线协议）
+    faceUVMap: faceUVMap ?? null,
     texSlot: 0,
   };
 }
@@ -421,6 +617,67 @@ for (const rotation of ROTATIONS) {
   }
 }
 
+// Phase 3: UV 对拍（box=Blockbench face_list 直接映射；per-face=GeckoLib
+// 角点，up/down 槽位反转；mirror × uv_size 符号全覆盖）
+console.log(
+  "\n── Phase 3: UV（box 走 Blockbench face_list / per-face 走 GeckoLib 角点 × mirror × uv_size 符号）──",
+);
+let uvCases = 0;
+let uvPass = 0;
+function runUVCase(label: string, s: any, expectedRects: Rect[], reverseTopBottom = false) {
+  uvCases++;
+  const md = buildCubeMeshData(
+    s,
+    { x: BONE_PIVOT[0], y: BONE_PIVOT[1], z: BONE_PIVOT[2] },
+    TEX,
+    TEX,
+    "bone",
+    0,
+  );
+  if (!md) {
+    failures.push({ phase: "uv", label, why: "buildCubeMeshData 返回 null" });
+    return;
+  }
+  const err = matchAllFaceUVs(md.uvs, expectedRects, TEX, TEX, reverseTopBottom);
+  if (err) {
+    failures.push({ phase: "uv", label, why: err });
+  } else {
+    uvPass++;
+  }
+}
+
+// 3a. box UV：size × offset × mirror（Blockbench face_list 已编码角点，直接映射）
+for (const size of UV_BOX_SIZES) {
+  for (const offset of UV_BOX_OFFSETS) {
+    for (const mirror of [false, true]) {
+      const s = makeUVSpec("box", size, mirror, undefined, offset);
+      runUVCase(`box size=${size} off=${offset} mirror=${mirror}`, s, oracleBoxFaceRects(s));
+    }
+  }
+}
+
+// 3b. per-face 全六面声明：uv_size 符号方案 × mirror（GeckoLib 角点口径，up/down 反转）
+for (const scheme of PERFACE_SIGN_SCHEMES) {
+  for (const mirror of [false, true]) {
+    const faceUVMap = structuredClone(PERFACE_BASE);
+    scheme.mutate(faceUVMap);
+    const s = makeUVSpec("perface", [8, 8, 8], mirror, faceUVMap);
+    runUVCase(
+      `per-face 全面 scheme=${scheme.name} mirror=${mirror}`,
+      s,
+      oraclePerFaceRects(s),
+      true,
+    );
+  }
+}
+
+// 3c. per-face 缺面（非 mirror）：未声明 4 面零填充 + up 角点口径同全面
+{
+  const faceUVMap = structuredClone(PERFACE_PARTIAL);
+  const s = makeUVSpec("perface", [8, 8, 8], false, faceUVMap);
+  runUVCase("per-face 缺面(仅 east/up) mirror=false", s, oraclePerFaceRects(s), true);
+}
+
 // ============================================================
 // 6. 覆盖矩阵 + 分歧报告
 // ============================================================
@@ -438,6 +695,11 @@ console.log(`  rotation 轴数:   ${ROTATIONS.length} 向量 → ${JSON.stringif
 console.log(`  size 零厚度:     ${SIZES.length} 组 (正常 / Z=0 clamp)`);
 console.log(`  cube 组合数:     ${cubeCases}`);
 console.log(`  euler 扫点数:    ${eulerCases}`);
+console.log(`  UV box 组合:     ${UV_BOX_SIZES.length * UV_BOX_OFFSETS.length * 2}（方正/非方正 × offset 零/非零 × mirror）`);
+console.log(
+  `  UV per-face:     ${PERFACE_SIGN_SCHEMES.length * 2 + 1}（${PERFACE_SIGN_SCHEMES.length} 符号方案 × mirror + 缺面零填充）`,
+);
+console.log(`  UV 扫点合计:     ${uvCases}（每案 6 面 × 8 UV 逐值）`);
 
 const exitCode = failures.length === 0 ? 0 : 1;
 if (failures.length > 0) {
@@ -447,11 +709,11 @@ if (failures.length > 0) {
     console.log(`       ↳ ${f.why}`);
   }
 } else {
-  console.log("\n✅ 全绿：合成 corpus 下 TS 端口与 Blockbench 权威 oracle 完全一致。");
+  console.log("\n✅ 全绿：合成 corpus 下 TS 端口与权威 oracle（box=Blockbench / per-face=GeckoLib）完全一致。");
 }
 
 console.log(
-  `\n汇总: cube ${cubePass}/${cubeCases} 通过, euler ${eulerPass}/${eulerCases} 通过, 分歧 ${failures.length}`,
+  `\n汇总: cube ${cubePass}/${cubeCases}, euler ${eulerPass}/${eulerCases}, uv ${uvPass}/${uvCases}, 分歧 ${failures.length}`,
 );
 cleanup();
 process.exit(exitCode);

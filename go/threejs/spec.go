@@ -216,6 +216,18 @@ func buildCubeMeshData(c types.Cube2D, bonePivot vec3, texW, texH float64, boneI
 	var faceUVs [6][8]float64
 	hasUV := parseUV(c, &faceUVs, c.Size[0], c.Size[1], c.Size[2], texW, texH)
 	if c.Mirror {
+		// Blockbench mirror_uv 完整语义（黄金参照 upstream/blockbench-master
+		// js/outliner/types/cube.js updateUV L1298-1316；女仆 01_taisho_maid
+		// 左臂青条事故 2026-09，普查实证全仓 3439 个 mirror cube 均走 box UV）：
+		//   ① 每面矩形自身水平翻转（from.x += size.x; size.x *= -1）；
+		//   ② east 与 west 的矩形整体互换（face_list[0]/[1] 的 from/size 交换，
+		//      up/down/south/north 不参与）——物理 east 面必须贴 west 翻转后的
+		//      UV 矩形。旧实现只有 ① 缺 ② → 对称件左右臂贴图互换。
+		// ① 与 ② 可交换（整面互换与逐面翻转作用域不相交），代码先互换后逐面
+		// 翻转，结果与 Blockbench 加工序逐顶点等价（见
+		// TestBuildCubeMeshData_BoxMirrorEastWestSwap）。per-face + mirror
+		// 全仓 0 例（普查实证），同路径处理保持防御一致。
+		faceUVs[0], faceUVs[1] = faceUVs[1], faceUVs[0]
 		for fi := 0; fi < 6; fi++ {
 			faceUVs[fi][0], faceUVs[fi][2] = faceUVs[fi][2], faceUVs[fi][0]
 			faceUVs[fi][4], faceUVs[fi][6] = faceUVs[fi][6], faceUVs[fi][4]

@@ -169,6 +169,58 @@ func TestBuildCubeMeshData_FaceUVUpMirror(t *testing.T) {
 	assertFaceUV(t, md.Uvs, 2, [8]float64{0, 0.25, 0.125, 0.25, 0, 0.125, 0.125, 0.125}, "mirrored up")
 }
 
+// TestBuildCubeMeshData_BoxMirrorEastWestSwap 锁定 box UV mirror 的完整 Blockbench
+// 语义（女仆 01_taisho_maid 左臂青条事故 2026-09，普查实证 3439 个 mirror cube
+// 全走 box UV 路径）。黄金参照 upstream/blockbench-master js/outliner/types/cube.js
+// updateUV box_uv + mirror_uv 分支（L1298-1316），mirror 是两步：
+//  1. 每面矩形自身水平翻转（from.x += size.x; size.x *= -1）；
+//  2. east 与 west 的 (from,size) 整体互换——物理 east 面贴 west 矩形翻转后的 UV。
+//
+// 旧实现只做步骤 1（每面 canonical 槽位 u 交换），缺步骤 2 → 对称件左右臂贴图
+// 互换。up/down 不参与互换（Blockbench face_list 只交换 face_list[0]/[1]）。
+//
+// 用例 8³ cube @ box uv=[0,0]，tex64。非 mirror box 展开（face 序
+// east/west/up/down/south/north，fu 分别 0/16/8/16/24/8）经「互换 + 逐面翻转」后
+// 的**打包结果**（up/down 仍走角点反转）：
+func TestBuildCubeMeshData_BoxMirrorEastWestSwap(t *testing.T) {
+	c := types.Cube2D{
+		Origin: [3]float64{0, 0, 0}, Size: [3]float64{8, 8, 8},
+		Pivot: [3]float64{4, 4, 4}, PivotSet: true,
+		UV:     [2]float64{0, 0},
+		Mirror: true,
+	}
+	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
+	if md == nil {
+		t.Fatal("buildCubeMeshData 返回 nil")
+	}
+	// east = west 原矩形（fu=16 → u∈[.25,.375]）翻转：s0/s2 取右缘 .375，s1/s3 取左缘 .25
+	assertFaceUV(t, md.Uvs, 0, [8]float64{0.375, 0.125, 0.25, 0.125, 0.375, 0.25, 0.25, 0.25}, "mirror east(=west flipped)")
+	// west = east 原矩形（fu=0 → u∈[0,.125]）翻转：s0/s2 取右缘 .125，s1/s3 取左缘 0
+	assertFaceUV(t, md.Uvs, 1, [8]float64{0.125, 0.125, 0, 0.125, 0.125, 0.25, 0, 0.25}, "mirror west(=east flipped)")
+	// up/down 不互换，只自翻转，再走角点反转（与 Blockbench face_list 镜像表逐顶点核对）
+	assertFaceUV(t, md.Uvs, 2, [8]float64{0.125, 0.125, 0.25, 0.125, 0.125, 0, 0.25, 0}, "mirror up(self flip)")
+	assertFaceUV(t, md.Uvs, 3, [8]float64{0.25, 0, 0.375, 0, 0.25, 0.125, 0.375, 0.125}, "mirror down(self flip)")
+	// south/north 同样只自翻转
+	assertFaceUV(t, md.Uvs, 4, [8]float64{0.5, 0.125, 0.375, 0.125, 0.5, 0.25, 0.375, 0.25}, "mirror south(self flip)")
+	assertFaceUV(t, md.Uvs, 5, [8]float64{0.25, 0.125, 0.125, 0.125, 0.25, 0.25, 0.125, 0.25}, "mirror north(self flip)")
+
+	// 关键回归断言：mirror east 必须等于**非 mirror west** 的逐面翻转值，
+	// 而非非 mirror east 自己翻转（旧错误行为）。
+	plain := buildCubeMeshData(types.Cube2D{
+		Origin: [3]float64{0, 0, 0}, Size: [3]float64{8, 8, 8},
+		Pivot: [3]float64{4, 4, 4}, PivotSet: true,
+		UV: [2]float64{0, 0},
+	}, vec3{}, 64, 64, "b1", 0)
+	if md.Uvs[0] != plain.Uvs[8+2] || md.Uvs[2] != plain.Uvs[8+0] {
+		t.Errorf("mirror east u 应取自非 mirror west 翻转: 得 %v/%v, 期望 %v/%v",
+			md.Uvs[0], md.Uvs[2], plain.Uvs[8+2], plain.Uvs[8+0])
+	}
+	if md.Uvs[0] == plain.Uvs[2] {
+		t.Errorf("mirror east 不得只翻转自己（缺 east/west 互换回归）: u0=%v 与非 mirror east u1=%v 相同",
+			md.Uvs[0], plain.Uvs[2])
+	}
+}
+
 func assertFaceUV(t *testing.T, uvs []float64, face int, want [8]float64, label string) {
 	t.Helper()
 	base := face * 8

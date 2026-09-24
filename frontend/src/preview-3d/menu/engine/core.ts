@@ -39,6 +39,8 @@ import type {
   PreviewMenuCtx,
   PreviewMenuNode,
 } from "@/preview-3d/menu/schema/node-types.ts";
+// [2026-10 字段契约门] adapter 注入点校验 kind/字段配对（零依赖叶，不引入渲染热路径成本）
+import { validateNodeTree } from "@/preview-3d/menu/schema/node-validation.ts";
 import { ensureFabStyles } from "@/preview-3d/menu/shell/fab.ts";
 import {
   createSlideMenu,
@@ -527,6 +529,9 @@ function makeRootView(
     // rows 在每次渲染时重算（与迁移前一致）：headerToggle.value 读的是当次 cap.isEnabled()
     // 最新状态，若在工厂外一次性算好，重新渲染会拿到陈旧开关值。
     render: (list) => {
+      // [清空归属·2026-10] SlideMenuView.render 幂等契约要求自清空（shell 不再代清）——
+      // 本路径此前依赖 smRenderTop 代清，是 5 个 production 视图里唯一未自清的（契约违规）。
+      list.replaceChildren();
       const rows = groupItems.map((node) => panelNodeToRow(node, deps.ctx, deps.makePanelViewFn));
       renderMenu(list, rows, renderMenuDeps);
     },
@@ -672,7 +677,10 @@ function bindPreviewTapToggle(
   return (): void => tapAbort.abort();
 }
 
-/** setAdapterItems 的 id 冲突守卫（ADR-085 S1）：发现重复/冲突抛错阻断 */
+/** setAdapterItems 的 id 冲突守卫（ADR-085 S1）：发现重复/冲突抛错阻断；
+ *  [2026-10 字段契约门] 另校验 kind/字段配对（node-validation.validateNodeTree）——
+ *  与 id 冲突不同，字段错配**只 warn 不 throw**：适配器外来节点，阻断挂载比告警更糟
+ *  （渲染器本就静默忽略越界字段，此处把静默变可见）。跑在注入点而非渲染热路径。 */
 function validateAdapterItemIds(items: PreviewMenuNode[]): void {
   const seen = new Set<string>();
   for (const it of items) {
@@ -683,6 +691,11 @@ function validateAdapterItemIds(items: PreviewMenuNode[]): void {
       throw new Error(`[preview-menu] setAdapterItems id "${it.id}" 与 CORE_MENU_ITEMS 冲突`);
     }
     seen.add(it.id);
+  }
+  for (const v of validateNodeTree(items)) {
+    console.warn(
+      `[preview-menu] adapter 项 "${v.id}"（kind=${v.kind}）携带该 kind 不支持的字段: ${v.fields.join(", ")}（渲染器会忽略）`,
+    );
   }
 }
 

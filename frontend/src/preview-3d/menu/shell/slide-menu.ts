@@ -34,7 +34,9 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 export interface SlideMenuView {
   /** 视图标题（写入标题栏；根级即菜单名） */
   title: string;
-  /** 渲染该视图内容到 list（每次进入/刷新都会调用，须幂等） */
+  /** 渲染该视图内容到 list（每次进入/刷新都会调用，须幂等）——
+   *  **清空归属在视图**：render 须自行清空 list（`list.replaceChildren()` / `innerHTML=""`）
+   *  再 append；shell 的 smRenderTop 不再代清（2026-10 收口，消除双重清空）。 */
   render(list: HTMLElement): void;
 }
 
@@ -232,7 +234,9 @@ function smRenderTop(
   const active = document.activeElement;
   const focusedIdx = active ? Array.from(list.children).indexOf(active) : -1;
 
-  list.innerHTML = "";
+  // [清空归属·2026-10 收口] shell 不再代清 list——清空唯一归属 = 各 SlideMenuView.render
+  // （幂等契约，见 SlideMenuView 注释）。此前此处 `list.innerHTML=""` 与视图自清空重复，
+  // 每次渲染白跑一次 DOM 清空；且会掩盖「视图忘了自清空」的重复 append 类缺陷。
   title.textContent = top.title;
   const atRoot = stack.length <= 1;
   // 根级 = SVG 关闭图标；子级 = 字面 glyph「←」（图标库暂无「返回」语义名，见文件头 §1.4 记债）。

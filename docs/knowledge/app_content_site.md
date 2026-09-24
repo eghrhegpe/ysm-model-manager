@@ -22,6 +22,7 @@ auto_fields:
     - buildSiteHtml
     - BuildSiteHtmlCtx
     - CleanupFn
+    - computeCreatorTiers
     - CrCardCtx
     - createBrowseModeRef
     - createCrCard

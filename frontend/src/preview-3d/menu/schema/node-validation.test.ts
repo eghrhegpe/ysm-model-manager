@@ -176,8 +176,8 @@ describe("validateNode 正例（合法组合不误报）", () => {
     const shared: Record<string, number> = {};
     for (const [f, c] of Object.entries(counts)) if (c > 1) shared[f] = c;
     expect(shared).toEqual(EXPECTED_SHARING);
-    // 防门空转：表里确实有 16 个 kind，且确有字段被登记（表被清空即报红）
-    expect(Object.keys(KIND_SPECIFIC_FIELDS)).toHaveLength(16);
+    // 防门空转：表里确实有 17 个 kind（含 2026-10 菜单收口新增的 note 脚注），且确有字段被登记（表被清空即报红）
+    expect(Object.keys(KIND_SPECIFIC_FIELDS)).toHaveLength(17);
     expect(Object.keys(counts).length).toBeGreaterThan(0);
   });
 });

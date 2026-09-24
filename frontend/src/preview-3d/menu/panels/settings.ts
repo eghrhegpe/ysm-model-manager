@@ -16,6 +16,8 @@ import { tOf } from "@/core/i18n/t.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { TD_CAM_SPEED, TD_PIXEL_RATIO, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
+import { renderCapSelect, renderCapSlider } from "@/preview-3d/menu/render/cap-controls.ts";
+import { nodeControlToView } from "@/preview-3d/menu/render/render.ts";
 import type {
   NodeFor,
   PreviewMenuCtx,
@@ -336,9 +338,35 @@ export function buildSettingsControls(): PreviewMenuNode[] {
 
 // ── 通用节点工厂 ──
 
-/** 性能档位 select（低/中/高/自定义）：切档 = 数据表套用（perf-presets.ts）+ 面板刷新。
- *  自定义 = 不套用，保持用户手调。档位表是纯数据，新增档位/参数零代码接线。
- *  声明式 select 节点（control.get/set 闭包 + onChange 刷新），不再手写 DOM 壳。 */
+/** [2026-10 菜单收口] 切档后的定点刷新：档位表只改两条状态层路径
+ *  （render.maxFps / render.maxPixelRatio），故只重渲受影响的两个兄弟控件行
+ *  （fps select / 分辨率 slider），不再 menu.refresh() 全板重建——
+ *  ① 全板重建牵动订阅重绑闸（ADR-293 P0 的 501 次自激教训就出在 refresh 路径上）；
+ *  ② 用户刚操作完的档位 select DOM 被销毁 → 焦点/滚动位丢失（键盘 a11y 回归）。
+ *  行经初绘渲染器（renderCapSelect/renderCapSlider）原位重渲——值渲染逻辑单一事实源，
+ *  不写旁路回填；当前栈顶非设置面板（行查无）时天然 no-op。 */
+function refreshPresetSiblings(menu?: SlideMenuHandle): void {
+  if (!menu) return;
+  const list = menu.list;
+  for (const node of buildCrossCuttingNodes()) {
+    if (node.id !== "settings-fps" && node.id !== "settings-pixel-ratio") continue;
+    const old = list.querySelector<HTMLElement>(`[data-testid="cap-${node.id}"]`);
+    // 「行在 list 里」而非 isConnected（detached 测试树同样合法；菜单 dispose 后
+    // 行无 parent 天然跳过）
+    if (!old?.parentElement) continue;
+    const fresh = document.createElement("div");
+    const view = nodeControlToView(node, menu);
+    if (node.kind === "slider") renderCapSlider(fresh, view);
+    else if (node.kind === "select") renderCapSelect(fresh, view);
+    else continue;
+    old.replaceWith(fresh.firstElementChild as HTMLElement);
+  }
+}
+
+/** 性能档位 select（低/中/高/自定义）：切档 = 数据表套用（perf-presets.ts）+ 兄弟控件
+ *  定点刷新（refreshPresetSiblings）。自定义 = 不套用，保持用户手调（值不变，重渲幂等）。
+ *  档位表是纯数据，新增档位/参数零代码接线。声明式 select 节点（control.get/set 闭包），
+ *  不再手写 DOM 壳。 */
 function bsBuildPerfPresetRow(menu?: SlideMenuHandle): NodeFor<"select"> {
   const LEVELS: Array<{ value: PerfLevel; labelKey: string }> = [
     { value: "low", labelKey: "preview.settingsPerfLow" },
@@ -357,8 +385,9 @@ function bsBuildPerfPresetRow(menu?: SlideMenuHandle): NodeFor<"select"> {
       get: (): unknown => getPerfPreset(),
       set: (v): void => {
         setPerfPreset(v as PerfLevel);
-        // 切档后兄弟控件（fps/分辨率/Bloom）显示值已变——重渲染当前面板
-        menu?.refresh();
+        // [2026-10 菜单收口] 切档后只定点重渲受影响的兄弟行（fps select / 分辨率 slider），
+        // 不再全板 menu.refresh()（订阅重绑闸 + 焦点/滚动位丢失，ADR-293 P0 教训所在路径）
+        refreshPresetSiblings(menu);
       },
     },
   };
@@ -368,10 +397,12 @@ function bsBuildSectionTitle(id: string, labelKey: LocaleKey): NodeFor<"sectionT
   return { id, kind: "sectionTitle", labelKey };
 }
 
-function bsBuildNote(): NodeFor<"sectionTitle"> {
+/** 脚注（[2026-10 菜单收口] 独立 `note` kind：小号弱色无分隔线，不再穿 sectionTitle 衣服——
+ *  脚注不是分节标题，语义错位会让渲染器/样式无从区分「该给多大视觉权重」） */
+function bsBuildNote(): NodeFor<"note"> {
   return {
     id: "settings-note",
-    kind: "sectionTitle",
+    kind: "note",
     labelKey: "preview.settingsNote",
   };
 }

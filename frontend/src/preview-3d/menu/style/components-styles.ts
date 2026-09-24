@@ -550,6 +550,15 @@ ${wsIconCSS}
     letter-spacing: 0.3px;
 }
 
+/* ===== note 脚注（2026-10 菜单收口：脚注独立 kind，不再穿 .section-title 衣服）=====
+   小号弱色、无分隔线——辅助文案不抢分节标题的视觉权重 */
+.menu-note {
+    font-size: calc(10px + var(--fs-scale));
+    color: var(--muted);
+    padding: 4px var(--uih-content-px) 6px;
+    line-height: 1.5;
+}
+
 /* ===== Collapsible 通用折叠组件 ===== */
 .collapsible-wrapper {
     margin-bottom: 2px;

@@ -1,6 +1,6 @@
 // ===== node-validation.ts — PreviewMenuNode per-kind 字段契约的运行期校验器 =====
 //
-// 背景（锐评核实结论）：PreviewMenuNode 是宽接口（25 字段 × 16 kind），`kind` 非 TS 判别器
+// 背景（锐评核实结论）：PreviewMenuNode 是宽接口（25 字段 × 17 kind），`kind` 非 TS 判别器
 // （单一 interface + 字符串联合，非 discriminated union）——可以写 `{ kind:"field", radio:{…} }`
 // 编译通过、渲染器静默忽略。既有校验只有 validateAdapterItemIds 的「id 唯一性」，
 // renderMenu 只兜底「未知 kind」，**字段与 kind 错配零捕获**。

@@ -258,6 +258,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-304：3D 预览设置持久化边界：机器本地 localStorage，不入 Go config 重置/迁移范围",
+        "link": "/adr/ADR-304-3d-prefs-machine-local-boundary"
+      },
+      {
         "text": "ADR-303：3D 预览持久化偏好规格单一源",
         "link": "/adr/ADR-303-preview-persist-spec-single-source"
       },

@@ -242,6 +242,21 @@ describe("renderMenu 新 kind", () => {
     expect(container.querySelector('[data-testid="preview-stat-bones"]')).not.toBeNull();
   });
 
+  it("note: 渲染脚注行（.menu-note 类，与 sectionTitle 的 .section-title 分离——2026-10 菜单收口）", () => {
+    const nodes: PreviewMenuNode[] = [
+      { id: "fn-note", kind: "note", label: "辅助文案" },
+      { id: "sec-x", kind: "sectionTitle", label: "小节标题" },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const note = container.querySelector('[data-testid="fn-note"]') as HTMLElement | null;
+    expect(note).not.toBeNull();
+    expect(note!.className).toBe("menu-note");
+    expect(note!.textContent).toBe("辅助文案");
+    const sec = container.querySelector('[data-testid="sec-x"]') as HTMLElement | null;
+    expect(sec!.className).toBe("section-title");
+  });
+
   it("folder: 默认展开（defaultOpen=true），body 可见", () => {
     const nodes: PreviewMenuNode[] = [
       {

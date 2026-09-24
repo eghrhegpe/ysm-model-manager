@@ -389,6 +389,17 @@ export function rmAppendDecor(
   container.appendChild(st);
 }
 
+/** [2026-10 菜单收口] note：脚注/辅助文案行（小号弱色，无分隔线——与 sectionTitle 的
+ *  「分节标题」语义分离，原设置页脚注穿 sectionTitle 衣服的问题根治）。
+ *  渲染口径同 rmAppendDecor：无 labelKey 时明文直出，统一走 rmLabel。 */
+export function rmAppendNote(container: HTMLElement, node: NodeFor<"note">): void {
+  const st = document.createElement("div");
+  st.dataset.testid = node.id;
+  st.textContent = rmLabel(node);
+  st.className = "menu-note";
+  container.appendChild(st);
+}
+
 /** [子函数 6/6] 叶节点：panel / action / custom —— 直接走 makeRow + navigate/action */
 export function rmAppendLeaf(
   container: HTMLElement,

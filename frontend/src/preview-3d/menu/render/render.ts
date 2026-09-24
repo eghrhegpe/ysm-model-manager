@@ -37,6 +37,7 @@ import {
   rmAppendField,
   rmAppendLeaf,
   rmAppendMaterialRow,
+  rmAppendNote,
   rmLabel,
 } from "./rows.ts";
 
@@ -440,6 +441,7 @@ const MENU_HANDLERS: { [K in PreviewMenuNodeKind]: MenuHandlerFor<K> } = {
   },
   divider: (c, n) => rmAppendDecor(c, n),
   sectionTitle: (c, n) => rmAppendDecor(c, n),
+  note: (c, n) => rmAppendNote(c, n),
   custom: (c, n, d) => {
     if (d.renderCustomDirect && n.renderCustom) {
       dbg("preview-menu-render", "rendering custom node", { id: n.id });

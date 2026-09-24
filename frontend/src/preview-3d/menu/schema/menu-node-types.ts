@@ -103,6 +103,8 @@ export type PreviewMenuNodeKind =
   | "row" // 列表行（纹理/材质/bone 等动态列表）
   | "divider"
   | "sectionTitle"
+  | "note" // [2026-10 菜单收口] 脚注/辅助文案行（小号弱色、无分隔线）——原设置页脚注穿 sectionTitle 衣服
+  // （bsBuildNote），语义误用；note 是独立装饰 kind，公共字段 labelKey/label 承载文案
   // [可折叠卡] card 支持 collapsible:true → 变成可折叠卡牌（顶行标题箭头 + 内容区折叠），
   // 与 env 顶层 cap 卡 / cap 子视图分组（原 folder 的扁平折叠头）同一盒式折叠视觉；collapsible 缺省不可折叠。
   | "card" // [ADR-195 终态] 卡牌分组容器：顶行标题+分隔线+内容区，把同级行按语义聚拢（collapsible:true 时可折叠，统一折叠视觉）
@@ -333,6 +335,8 @@ export const KIND_SPECIFIC_FIELDS = {
   // 装饰节点
   divider: [],
   sectionTitle: [],
+  // 脚注（rmAppendNote 渲染）：文案走公共字段 labelKey/label，无专有字段
+  note: [],
   // 卡牌容器：仅 collapsible 为专有（读于 rmAppendCard）；children/defaultOpen 已归通用字段
   card: ["collapsible"],
   // 组合行：eye 显隐 + opacity 滑条

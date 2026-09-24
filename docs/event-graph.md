@@ -178,7 +178,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 73 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 214 |
 
 ### `menu:show`
 
@@ -219,9 +219,9 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 65 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 179 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 242 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 245 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 223 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 260 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 87 |
 
@@ -229,7 +229,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 52 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 193 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 194 |
 
 ### `package:selected`
 
@@ -271,7 +271,7 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 107 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 272 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 303 |
 
@@ -280,8 +280,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 181 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 327 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 184 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 330 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -466,19 +466,19 @@
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 114 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 143 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 150 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 223 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 230 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 246 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 158 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 294 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 224 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 231 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 247 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 161 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 297 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 129 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 139 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 145 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 155 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 166 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 172 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 98 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 163 |
+| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 156 |
+| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 167 |
+| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 173 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 100 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 165 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 150 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |

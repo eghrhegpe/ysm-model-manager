@@ -726,6 +726,7 @@ auto_fields:
     - rmAppendField
     - rmAppendLeaf
     - rmAppendMaterialRow
+    - rmAppendNote
     - rmLabel
     - ROLE
     - roleBaseName

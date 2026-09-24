@@ -387,6 +387,44 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     expect(sel!.options.length).toBe(4);
   });
 
+  it("性能档位切档定点刷新：只重渲 fps/分辨率兄弟行，不调全板 menu.refresh（2026-10 菜单收口）", () => {
+    const list = document.createElement("div");
+    const refreshSpy = vi.fn();
+    const menuStub = { list, refresh: refreshSpy } as unknown as import("@/preview-3d/menu/shell/slide-menu.ts").SlideMenuHandle;
+    const schema = buildSettingsSchema({} as unknown as PreviewMenuCtx, menuStub);
+    renderMenu(list, schema, renderMenuStubDeps);
+
+    const fpsRow0 = list.querySelector<HTMLElement>('[data-testid="cap-settings-fps"]');
+    const ratioRow0 = list.querySelector<HTMLElement>('[data-testid="cap-settings-pixel-ratio"]');
+    expect(fpsRow0).not.toBeNull();
+    expect(ratioRow0).not.toBeNull();
+
+    const preset = schema.find((n) => n.id === "settings-perf-preset")!;
+    preset.control!.set!("high"); // 档位表套用：fps=120 / ratio=1.5
+
+    // ① 全板 refresh 不再被调（ADR-293 P0 教训所在路径；旧实现即此处自激源）
+    expect(refreshSpy).not.toHaveBeenCalled();
+    // ② 兄弟行原位替换：旧行离 list、新行在 list（测试树 detached，用 parentElement 判在否）
+    expect(fpsRow0!.parentElement).toBeNull();
+    expect(ratioRow0!.parentElement).toBeNull();
+    const fpsRow1 = list.querySelector<HTMLElement>('[data-testid="cap-settings-fps"]');
+    const ratioRow1 = list.querySelector<HTMLElement>('[data-testid="cap-settings-pixel-ratio"]');
+    expect(fpsRow1).not.toBe(fpsRow0);
+    expect(fpsRow1!.parentElement).toBe(list);
+    // ③ 值经初绘渲染器原位重渲（单一事实源，无旁路回填）：新 select 显示 120、新 slider aria-valuenow=1.5
+    expect(fpsRow1!.querySelector("select")!.value).toBe("120");
+    expect(ratioRow1!.querySelector(".cs-bar")!.getAttribute("aria-valuenow")).toBe("1.5");
+    expect(getStateValue("render.maxFps")).toBe(120);
+    expect(getStateValue("render.maxPixelRatio")).toBe(1.5);
+    // ④ 栈顶非设置面板（行查无）时天然 no-op：不抛、不落盘外行为、不 refresh
+    const emptyList = document.createElement("div");
+    const emptyMenu = { list: emptyList, refresh: vi.fn() } as unknown as import("@/preview-3d/menu/shell/slide-menu.ts").SlideMenuHandle;
+    const preset2 = buildSettingsSchema({} as unknown as PreviewMenuCtx, emptyMenu).find((n) => n.id === "settings-perf-preset")!;
+    preset2.control!.set!("low");
+    expect(getStateValue("render.maxFps")).toBe(30);
+    expect((emptyMenu as unknown as { refresh: ReturnType<typeof vi.fn> }).refresh).not.toHaveBeenCalled();
+  });
+
   it("自动聚合：仅收 settingsOrder 声明项，升序且剥 folder 壳", () => {
     const mk = (id: string, order: number | undefined): PreviewMenuNode => ({
       id,

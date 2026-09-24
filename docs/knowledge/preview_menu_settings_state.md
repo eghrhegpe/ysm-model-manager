@@ -122,6 +122,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 - `collectSettingsCapControls()` 每次调用重取，**抹平 `group`**（设置面板是扁平视图，否则「高级」等折叠 section 会混进来）。
 - 已声明：RenderModeCapability 五件套 `rm-wireframe`(30) / `rm-blending`(31) / `rm-depth-test`(32) / `rm-side`(33) / `rm-depth-write`(34)。（pp-enabled / sky-env 曾声明 10/20，已退场：总开关归各自面板基座级，设置页画质分组不再复制——见 postprocessing-capability / sky-capability。）
 - **画质段按 cap 归属分小节（2026-10 菜单收口）**：`settings.ts|collectSettingsCapSections` 遍历 registry，对每个有 settingsOrder 控件的 cap 出「小节标题（`settings-cap-<capid>`，labelKey = cap 自报 `labelKey`）+ 该 cap 控件（cap 内升序）」；小节顺序 = registry 实例化顺序（不再全局 settingsOrder 交错），无控件的 cap 不出小节（标题不空挂）。零接线性质保留：新 cap 仍只加 `settingsOrder`，小节自动出现。契约锁定：`preview-state.test.ts` 的「画质段 cap 归属小节」用例（含 schema 层插入位置 + 扁平契约视图 `collectSettingsCapControls` 去小节标题断言）。
+- **面板脚注独立 `note` kind（2026-10 菜单收口）**：设置页尾注（「3D 预览设置由 3D 预览设置层管理」）原穿 `sectionTitle` 衣服（`bsBuildNote`），脚注被渲染成分节标题——视觉权重错位。现 kind 词表增 `note`（`menu-node-types.ts` 联合 + `KIND_SPECIFIC_FIELDS` 表 17 项，`node-render.test.ts` 锁 `.menu-note` 与 `.section-title` 类分离）；`bsBuildNote` 改 `NodeFor<"note">`。新增辅助文案一律 `note`，勿再借 `sectionTitle`。
 
 ### P3 visible 规则
 
@@ -134,7 +135,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 - `PERF_PRESETS`：低/中/高三档 → `StatePath → 值`（路径类型 `typeof KNOWN_PATHS[number]` 编译期守卫）。只控有状态层路径的性能项：`render.maxFps` / `render.maxPixelRatio`。wireframe/pmrem/**bloom** 是视觉项不进表；frustumCull 是纯优化（无画质损失）恒开不进表。
 - `applyPerfPreset(level)`：遍历表走 `setStateValue`（cap 缺席的派生路径静默跳过）；**custom 不套用**（保持用户手调，零副作用）。
 - `setPerfPreset(level)`：持久化（键 `ysm_3d_perfPreset`）+ 套用；`getPerfPreset()` 无存档回 `medium`。
-- 设置面板性能组**顶部**档位 select（低/中/高/自定义，`settings-perf-preset` 节点），切档套用后 `menu?.refresh()` 刷新兄弟控件显示。
+- 设置面板性能组**顶部**档位 select（低/中/高/自定义，`settings-perf-preset` 节点）。切档套用后**定点刷新**（2026-10 菜单收口）：档位表只改 `render.maxFps`/`render.maxPixelRatio` 两条状态路径，故 `settings.ts|refreshPresetSiblings` 只把 fps select / 分辨率 slider 两兄弟行经初绘渲染器（`renderCapSelect`/`renderCapSlider`）原位重渲，不再全板 `menu.refresh()`（全板重建牵动订阅重绑闸——ADR-293 P0 501 次自激教训所在路径，且丢焦点/滚动位）；栈顶非设置面板时行查无天然 no-op。契约：`preview-state.test.ts`「性能档位切档定点刷新」用例（旧行离 list、新行经渲染器重显 120/1.5、`refresh` spy 零调用）。
 - 进入预览时 `mount-preview-core` 在 `loadAll → applyModelPreset(模型类别)` **之后**调 `applyPerfPreset(getPerfPreset())`——用户显式档位最后覆盖模型预设。
 
 ### P5 归属判定：横切项 vs cap 自报项（2026-09-07 翻明）

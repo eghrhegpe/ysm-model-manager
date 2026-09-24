@@ -2,6 +2,8 @@
 //
 // P0 整改：代际守卫封装为 createRepoRenderGuard() 工厂，消除模块级可变全局。
 // 模块级 defaultRepoGuard 保持既有消费者零改动。
+// ADR-190 D1a / R8 销账：头部 HTML 模板归 views/app-content/tpl-workshop.ts，经 tpl 参数注入；
+// init-github.ts 同属 views，直接消费同一模板。
 
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
@@ -10,8 +12,7 @@ import { stripDisableSuffix } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { bindRepoEvents } from "./events.ts";
-import type { WorkshopModel } from "./render.ts";
-import { countMissing, renderRepoHeaderHTML } from "./render.ts";
+import { countMissing, type RepoTpl, type WorkshopModel } from "./render.ts";
 
 /**
  * 仓库渲染代际守卫：每次用户请求递增，await 后若已被更新调用超越
@@ -58,7 +59,7 @@ const defaultRepoGuard = createRepoRenderGuard();
 
 /**
  * 显示 GitHub 仓库模型列表（比对本地已有文件）
- * 包含：本地扫描、sourceLabel构建、countMissing、renderRepoHeaderHTML、bindRepoEvents
+ * 包含：本地扫描、mirror 读取、countMissing、tpl.repoHeaderHTML、bindRepoEvents
  *
  * @param esc - HTML 转义函数
  * @param prevRepoEventsCleanup - 读「前一次绑定清理」的 getter（页内可替换槽，ADR-260）
@@ -69,6 +70,7 @@ const defaultRepoGuard = createRepoRenderGuard();
  * @param models - 模型列表
  * @param source - 数据源标识（"raw" | "jsd" | "api"）
  * @param searchResults - 搜索结果容器 DOM 元素
+ * @param tpl - 仓库页 DOM 模板（ADR-190 D1a，组合根注入 workshopTpl；内部重秀原样透传）
  * @param rtype - 资源类型（缺省取 currentRepoType()，GitHub 页显式传 YSM）
  * @param internalRefresh - 是否内部重秀（doneTimer 回跳）
  * @param guard - 代际守卫（缺省走模块级 defaultRepoGuard）
@@ -83,6 +85,7 @@ export async function showRepoModels(
   models: WorkshopModel[],
   source: string,
   searchResults: HTMLElement,
+  tpl: RepoTpl,
   rtype?: string,
   internalRefresh = false,
   guard: RepoRenderGuard = defaultRepoGuard,
@@ -126,27 +129,14 @@ export async function showRepoModels(
   // 重排 raw/jsd/api 顺序（jsdelivr 直通会令 ResolveSavePath 解析失败、回退失效、子目录被扁平化）
   const dlPrefix = `https://raw.githubusercontent.com/${repo}/main/`;
 
-  const sourceLabel =
-    (source === "raw"
-      ? '<span class="link-badge link-badge-raw">raw</span>'
-      : source === "jsd"
-        ? '<span class="link-badge link-badge-jsd">⚡jsd</span>'
-        : source === "api"
-          ? '<span class="link-badge link-badge-api">API</span>'
-          : "") +
-    (mirror === "jsdelivr"
-      ? '<span class="link-badge link-badge-cdn">⚡CDN</span>'
-      : mirror === "githubapi"
-        ? '<span class="link-badge link-badge-ghapi">🐙API</span>'
-        : "");
-
   const missingCount = countMissing(models, localMap);
 
   if (myGen !== guard.generation) return; // 已有更新调用，丢弃
-  searchResults.innerHTML = renderRepoHeaderHTML({
-    esc,
+  // 头部模板归 views（ADR-190 D1a）：source/mirror 作纯数据传入，徽章派生在 tpl 内收口
+  searchResults.innerHTML = tpl.repoHeaderHTML({
     repo,
-    sourceLabel,
+    source,
+    mirror,
     modelsLength: models.length,
     missingCount,
   });
@@ -181,6 +171,7 @@ export async function showRepoModels(
         models,
         source,
         searchResults,
+        tpl,
         effectiveRtype,
         // 内部 doneTimer 重秀：不 bump 代际、仅当仍是最新用户目标时才渲染
         //（code_review #3：防止旧仓迟到重秀杀掉用户新切仓在途扫描）

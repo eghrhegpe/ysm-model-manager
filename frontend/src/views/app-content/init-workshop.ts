@@ -32,6 +32,7 @@ import { extractAvatars } from "./site/workshop-avatar.ts";
 import { createWorkshopPageState } from "./site/workshop-page-state.ts";
 import { bindSiteEvents, openSite } from "./site/workshop-site-opener.ts";
 import { createWorkshopRefs, initWorkshopTabs, setShowSiteView } from "./site/workshop-tabs.ts";
+import { workshopTpl } from "./tpl-workshop.ts";
 
 /**
  * 创建创意工坊页的共享 ref 对象——单一入口，tabs / showSiteView / edit 等全部从此处取。
@@ -136,6 +137,7 @@ export function initWorkshopPage(host: AppContentHost): void {
           models as WorkshopModel[],
           source,
           searchResults,
+          workshopTpl,
         );
       },
       fillSearch,

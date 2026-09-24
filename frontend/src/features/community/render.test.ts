@@ -6,7 +6,6 @@ import {
   isModelMissing,
   countMissing,
   filterModels,
-  renderRepoHeaderHTML,
   type WorkshopModel,
 } from "./render.ts";
 
@@ -86,40 +85,6 @@ describe("filterModels", () => {
   it("关键词 + 仅缺失叠加", () => {
     const r = filterModels(models, "角色", false, partial);
     expect(r.map((m) => m.name)).toEqual(["角色B.ysm"]);
-  });
-});
-
-describe("renderRepoHeaderHTML", () => {
-  const base = {
-    esc: (s: string) => s,
-    repo: "repo",
-    sourceLabel: "",
-    modelsLength: 3,
-    missingCount: 0,
-  };
-
-  it("缺失数 >0 时显示下载徽章", () => {
-    const html = renderRepoHeaderHTML({ ...base, missingCount: 2 });
-    // ADR-238：图标由 emoji ⬇️ 改走 SVG。断言「缺失徽章里有 SVG 且紧跟数字 2」——
-    // 比断言某个具体 path 稳（图标库改路径不该弄红本测试），又比「包含任意 svg」严
-    // （后者会放过「徽章里换成了别的图标」这类真回归）。
-    expect(html).toMatch(/gh-model-badge-missing"[^>]*><svg class="ws-icon"[\s\S]*?<\/svg>\s*2</);
-    expect(html).toContain("模型 3");
-  });
-
-  it("缺失数 =0 时不渲染缺失徽章（下载按钮的图标恒常存在）", () => {
-    const html = renderRepoHeaderHTML({ ...base, missingCount: 0 });
-    expect(html).not.toContain("gh-model-badge-missing");
-  });
-
-  it("仓库名经 esc 转义", () => {
-    const html = renderRepoHeaderHTML({
-      ...base,
-      esc: (s) => s.replace(/</g, "&lt;"),
-      repo: "a<b",
-    });
-    expect(html).toContain("a&lt;b");
-    expect(html).not.toContain("a<b");
   });
 });
 

@@ -1,8 +1,10 @@
 // ===== 创意工坊模型列表渲染（类型化版 — ADR-014 P3 features）=====
 // DOM API，非字符串拼接
+// ADR-190 D1a / R8 销账：仓库页头部字符串模板已外移 views/app-content/tpl-workshop.ts，
+// 本文件只保留 RepoTpl/RepoHeaderData 契约 + 行级 DOM 构建（buildModelRow）
+
 import { t } from "@/core/i18n/t.ts";
 import { formatBytes } from "@/utils/format/format.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 
@@ -178,70 +180,26 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
 }
 
 /**
- * 生成仓库模型页面的头部 HTML（含返回按钮、计数、筛选按钮等）
+ * 仓库模型页头部模板的纯数据入参。
+ * source：列表数据源（"raw" | "jsd" | "api" | 未知串）；
+ * mirror：镜像配置（"jsdelivr" | "githubapi" | ""，GitHub 页恒为 ""）。
+ * 来源/镜像徽章的展示派生全部归 views 模板，features 不拼 HTML。
  */
-export function renderRepoHeaderHTML(params: {
-  esc: (s: string) => string;
+export interface RepoHeaderData {
   repo: string;
-  sourceLabel: string;
+  source: string;
+  mirror: string;
   modelsLength: number;
   missingCount: number;
-}): string {
-  const { esc, repo, sourceLabel, modelsLength, missingCount } = params;
-  return (
-    '<div class="gh-header">' +
-    // 行1: 返回 | 模型计数徽章
-    '<div class="gh-header-top">' +
-    '<button class="btn-base sm gh-back-repo" data-testid="gh-back">' +
-    UI_ICONS.back +
-    " " +
-    t("common.back") +
-    "</button>" +
-    '<span class="gh-section-fill"></span>' +
-    '<span class="gh-model-badge gh-model-badge-total">' +
-    t("gh.modelCount", { n: modelsLength }) +
-    "</span>" +
-    (missingCount > 0
-      ? `<span class="gh-model-badge gh-model-badge-missing">${UI_ICONS.download} ${missingCount}</span>`
-      : "") +
-    "</div>" +
-    // 行2: 仓库名（独占）+ 来源
-    '<div class="gh-header-repo">' +
-    '<span class="gh-repo-name">' +
-    ICONS.PACKAGE +
-    " " +
-    esc(repo) +
-    "</span>" +
-    // sourceLabel 由本地三元链构建（raw/jsdelivr/githubapi），不含用户数据，直接注入 HTML
-    sourceLabel +
-    "</div>" +
-    // 行3: 搜索（placeholder 为纯文本提示——emoji 装饰跨平台渲染不一致，且是 ADR-238 债，不塞）
-    '<div class="gh-search-wrap">' +
-    '<input id="gh-repo-srch" class="gh-search" type="text" data-testid="gh-srch" placeholder="' +
-    t("gh.searchPlaceholder") +
-    '">' +
-    "</div>" +
-    // 行4: 操作按钮
-    '<div class="gh-header-actions">' +
-    '<label class="btn-base sm gh-select-all" data-testid="gh-select-all"><input type="checkbox"> ' +
-    UI_ICONS.checkbox +
-    " " +
-    t("common.selectAll") +
-    "</label>" +
-    '<button class="btn-base sm gh-toggle-missing" data-testid="gh-toggle">' +
-    UI_ICONS.folder +
-    " " +
-    t("gh.showMissingOnly") +
-    "</button>" +
-    '<span class="gh-section-fill"></span>' +
-    '<button class="btn-base sm gh-dl-selected" data-testid="gh-dl-selected" disabled>' +
-    UI_ICONS.download +
-    " " +
-    t("gh.downloadSelected", { n: 0 }) +
-    "</button>" +
-    "</div>" +
-    '<div id="gh-queue-status" class="gh-queue-status"></div>' +
-    '<div id="gh-repo-list" data-testid="gh-list"></div>' +
-    "</div>"
-  );
+}
+
+/**
+ * 仓库页 DOM 模板注入契约（ADR-190 D1a：DOM 模板归 views，组合根注入；features 不自渲染。
+ * 先例 AdvFilterTpl / BatchRenameTpl）。
+ * views/app-content/tpl-workshop.ts 提供实现；工坊页经 showRepoModels 注入，
+ * GitHub 页（init-github.ts，本属 views）直接消费同一模板。
+ */
+export interface RepoTpl {
+  /** 仓库模型页头部（含返回按钮、计数、来源徽章、筛选按钮、列表挂载点） */
+  repoHeaderHTML: (d: RepoHeaderData) => string;
 }

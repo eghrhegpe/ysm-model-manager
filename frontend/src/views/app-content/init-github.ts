@@ -3,8 +3,7 @@
 import { t } from "@/core/i18n/t.ts";
 import { tryFetchModels } from "@/features/community/data.ts";
 import { bindRepoEvents } from "@/features/community/events.ts";
-import type { WorkshopModel } from "@/features/community/render.ts";
-import { countMissing, renderRepoHeaderHTML } from "@/features/community/render.ts";
+import { countMissing, type WorkshopModel } from "@/features/community/render.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -15,6 +14,7 @@ import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts"
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AppContentHost } from "./host.ts";
 import type { RepoCacheEntry } from "./state.ts";
+import { workshopTpl } from "./tpl-workshop.ts";
 
 /**
  * GitHub 页占位消息（加载/空/错误）统一构造器。
@@ -219,7 +219,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
 }
 
 /**
- * 渲染仓库模型表头：dlPrefix/sourceLabel/countMissing + renderRepoHeaderHTML，
+ * 渲染仓库模型表头：dlPrefix/countMissing + workshopTpl.repoHeaderHTML，
  * 清理前次 _repoEventsCleanup（失败 dbg 不阻断），bindRepoEvents 委托 + renderList。
  */
 async function githubRenderModels(
@@ -233,20 +233,13 @@ async function githubRenderModels(
     const resultsBody = ctx.resultsBody;
     // 同上：下载 URL 统一 raw，镜像优先级由 Go 端 mirror 配置统一重排
     const dlPrefix = `https://raw.githubusercontent.com/${repo}/main/`;
-    const sourceLabel =
-      source === "raw"
-        ? '<span class="link-badge link-badge-raw">raw</span>'
-        : source === "jsd"
-          ? '<span class="link-badge link-badge-jsd">⚡jsd</span>'
-          : source === "api"
-            ? '<span class="link-badge link-badge-api">API</span>'
-            : "";
     const missingCount = countMissing(models, localMap);
     if (resultsBody) {
-      resultsBody.innerHTML = renderRepoHeaderHTML({
-        esc: (s) => escUtil(s),
+      // GitHub 页无镜像徽章（与工坊页共享模板，mirror 恒传 ""）
+      resultsBody.innerHTML = workshopTpl.repoHeaderHTML({
         repo,
-        sourceLabel,
+        source,
+        mirror: "",
         modelsLength: models.length,
         missingCount,
       });

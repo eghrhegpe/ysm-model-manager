@@ -2,11 +2,13 @@
 // showRepoModels 是「Go 桥本地扫描 + header 渲染 + 事件绑定」的装配层：
 // 模式 4：mock getApp 阻断 Wails 桥；模式 3：mock bindRepoEvents（阻断 events.ts
 // 的 modal/下载队列/虚拟列表重 import 链）与 dbg；currentRepoType 状态外提 mock。
-// render.ts 的 countMissing / renderRepoHeaderHTML 走真实实现（断言 innerHTML 实际产物）。
+// render.ts 的 countMissing 走真实实现；header 模板经 workshopTpl 注入（ADR-190 D1a，
+// 测试直接复用生产模板，零桩漂移——断言 innerHTML 实际产物）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
+import { workshopTpl } from "@/views/app-content/tpl-workshop.ts";
 import type { WorkshopModel } from "./render.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
 
@@ -78,6 +80,7 @@ function setup() {
       over.models ?? models,
       over.source ?? "raw",
       searchResults,
+      workshopTpl,
       over.rtype,
     );
   return { searchResults, setRepoEventsCleanup, setCurrentSite, models, run };
@@ -106,7 +109,7 @@ describe("showRepoModels", () => {
     expect(app.GetRepoRoot).toHaveBeenCalledWith("ysm");
     expect(app.ClearScanCache).toHaveBeenCalledTimes(1);
     expect(app.ScanModelEntriesWithLabel).toHaveBeenCalledWith("/repo/root", RESOURCE_TYPE_LABELS.ysm);
-    // header 渲染（真实 renderRepoHeaderHTML）：repo 名 + raw/CDN 徽章 + 缺失徽章
+    // header 渲染（真实 workshopTpl）：repo 名 + raw/CDN 徽章 + 缺失徽章
     const html = searchResults.innerHTML;
     expect(html).toContain("gh-header");
     expect(html).toContain("user/repo");

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { initKeymap } from "./keymap.ts";
+import { TD_KEYMAP_REGISTRY } from "@/preview-3d/infra/keymap.ts";
+import { cleanupKeymap, initKeymap } from "./keymap.ts";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -89,10 +90,23 @@ beforeEach(() => {
 });
 
 describe("initKeymap", () => {
-  it("renders 6 action rows in grid", () => {
+  it("renders one row for every registry action", () => {
     const { root, grid } = makeRoot();
     initKeymap(root);
-    expect(grid.children.length).toBe(6);
+    expect(grid.children.length).toBe(TD_KEYMAP_REGISTRY.length);
+    expect([...grid.children].map((row) => (row as HTMLElement).dataset.keymapAction)).toEqual(
+      TD_KEYMAP_REGISTRY.map((spec) => spec.action),
+    );
+  });
+
+  it("renders one compact row per binding instead of nested cards", () => {
+    const { root, grid } = makeRoot();
+    initKeymap(root);
+    const rows = [...grid.querySelectorAll(".stg-keybind-row")];
+    expect(rows).toHaveLength(6);
+    expect(grid.querySelector(".stg-card")).toBeNull();
+    expect(rows[0]?.querySelector(".label")?.textContent).toBe("前移");
+    expect(rows[0]?.querySelector("button")?.textContent).toBe("W");
   });
 
   it("displays correct labels for key codes", () => {
@@ -100,6 +114,35 @@ describe("initKeymap", () => {
     initKeymap(root);
     const firstBtn = grid.querySelector("button");
     expect(firstBtn?.textContent).toBe("W"); // KeyW → "W"
+  });
+
+  it("exposes the action, current key, and shortcut metadata", () => {
+    const { root, grid } = makeRoot();
+    initKeymap(root);
+    const firstBtn = grid.querySelector("button");
+    expect(firstBtn?.getAttribute("type")).toBe("button");
+    expect(firstBtn?.getAttribute("aria-label")).toContain("前移");
+    expect(firstBtn?.getAttribute("aria-label")).toContain("快捷键");
+    expect(firstBtn?.getAttribute("aria-label")).toContain("W");
+    expect(firstBtn?.getAttribute("aria-label")).not.toContain("点击后可重绑");
+    expect(firstBtn?.getAttribute("aria-keyshortcuts")).toBe("W");
+    expect(firstBtn?.getAttribute("aria-describedby")).toBe("td-keymap-hint");
+  });
+
+  it("announces capture state and Escape restores the binding", () => {
+    const { root, grid } = makeRoot();
+    initKeymap(root);
+    const firstBtn = grid.querySelector("button") as HTMLButtonElement;
+    firstBtn.click();
+    expect(firstBtn.textContent).toContain("按键");
+    expect(firstBtn.getAttribute("aria-label")).toContain("前移");
+    expect(firstBtn.getAttribute("aria-label")).toContain("等待按键");
+    expect(firstBtn.getAttribute("aria-label")).toContain("Esc");
+    expect(firstBtn.hasAttribute("aria-keyshortcuts")).toBe(false);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { code: "Escape" }));
+    expect(grid.querySelector("button")?.textContent).toBe("W");
+    cleanupKeymap();
   });
 
   it("shows fallback dash for empty key code", () => {

@@ -41,10 +41,12 @@ function makeRoot(savedTheme = "cyber", savedAuto = "off") {
   });
   const picker = document.createElement("div");
   picker.id = "theme-picker";
-  const card1 = document.createElement("div");
+  const card1 = document.createElement("button");
+  card1.type = "button";
   card1.className = "theme-card";
   card1.dataset.theme = "cyber";
-  const card2 = document.createElement("div");
+  const card2 = document.createElement("button");
+  card2.type = "button";
   card2.className = "theme-card";
   card2.dataset.theme = "warm";
   // 每卡三个色点（data-var 声明）——供色点回填回归测试断言
@@ -95,20 +97,26 @@ describe("initThemeSection", () => {
     expect(applyTheme).toHaveBeenCalledWith("cyber");
   });
 
-  it("card click applies theme + saves + disables auto", () => {
-    const { root, card2 } = makeRoot("cyber");
+  it("card click applies theme + saves + disables auto + updates aria-pressed", () => {
+    const { root, card1, card2 } = makeRoot("cyber");
     initThemeSection(root);
+    expect(card1.getAttribute("aria-pressed")).toBe("true");
+    expect(card2.getAttribute("aria-pressed")).toBe("false");
     applyTheme.mockClear();
     card2.click();
     expect(applyTheme).toHaveBeenCalledWith("warm");
     expect(safeSet).toHaveBeenCalledWith("theme", "warm");
     expect(safeSet).toHaveBeenCalledWith("theme-auto", "off");
+    expect(card1.getAttribute("aria-pressed")).toBe("false");
+    expect(card2.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("auto=system applies system theme", () => {
-    const { root } = makeRoot("cyber", "system");
+    const { root, card1, card2 } = makeRoot("cyber", "system");
     initThemeSection(root);
     expect(applyTheme).toHaveBeenCalledWith("system");
+    expect(card1.getAttribute("aria-pressed")).toBe("false");
+    expect(card2.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("auto=time 白天 → applyTimeTheme 返回 warm，应用 warm + 写 theme=warm", () => {

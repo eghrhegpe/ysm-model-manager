@@ -3,12 +3,12 @@
 // _activeCapture 随本段迁移（原 init.ts 模块级）：单一捕获守卫——同一时刻仅允许
 // 一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持。
 import { bus } from "@/bus";
-import { t } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { TD_KEYMAP_REGISTRY, type TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import { TD_CAM_SPEED, TD_KEYMAP_KEY, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
-import { loadTdKeymap, type TdKeyAction } from "@/preview-3d/mesh/model3d.ts";
+import { loadTdKeymap } from "@/preview-3d/mesh/model3d.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { stgCard } from "./stg-card.ts";
 
 // 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持
 let _activeCapture: ((e: KeyboardEvent) => void) | null = null;
@@ -24,20 +24,19 @@ export function cleanupKeymap(): void {
   }
 }
 
-// 魔法数值收敛：键位按钮最小宽度、成功/冲突提示 toast 时长（ms）。
+// 键位提示 toast 时长（ms）。
 // 相机速度默认值不在此——已归 `preview-3d/infra/settings-schema.ts` 的 TD_CAM_SPEED（ADR-303）。
-const KEY_BTN_MIN_WIDTH = "64px";
 const TOAST_SUCCESS_MS = TOAST_MS.quick;
 const TOAST_WARN_MS = TOAST_MS.info;
 
-const TD_ACTIONS: Array<{ key: TdKeyAction; label: string }> = [
-  { key: "forward", label: t("settings.keymap.actionForward") },
-  { key: "back", label: t("settings.keymap.actionBack") },
-  { key: "left", label: t("settings.keymap.actionLeft") },
-  { key: "right", label: t("settings.keymap.actionRight") },
-  { key: "up", label: t("settings.keymap.actionUp") },
-  { key: "down", label: t("settings.keymap.actionDown") },
-];
+const TD_ACTION_LABEL_KEYS = {
+  forward: "settings.keymap.actionForward",
+  back: "settings.keymap.actionBack",
+  left: "settings.keymap.actionLeft",
+  right: "settings.keymap.actionRight",
+  up: "settings.keymap.actionUp",
+  down: "settings.keymap.actionDown",
+} satisfies Record<TdKeyAction, LocaleKey>;
 
 const tdKeyLabel = (code: string): string => {
   if (!code) return "—";
@@ -63,6 +62,41 @@ const tdKeyLabel = (code: string): string => {
   return map[code] || code;
 };
 
+/** aria-keyshortcuts 使用标准键名；显示文本仍由 tdKeyLabel 负责本地化。 */
+const tdKeyShortcut = (code: string): string => {
+  if (!code) return "";
+  if (code.startsWith("Key")) return code.slice(3);
+  if (code.startsWith("Digit")) return code.slice(5);
+  if (code.startsWith("Numpad")) return `Numpad${code.slice(6)}`;
+  if (code === "ShiftLeft" || code === "ShiftRight") return "Shift";
+  if (code === "ControlLeft" || code === "ControlRight") return "Control";
+  if (code === "AltLeft" || code === "AltRight") return "Alt";
+  return code;
+};
+
+const setKeyButtonState = (
+  button: HTMLButtonElement,
+  actionLabel: string,
+  code: string,
+  capturing = false,
+): void => {
+  const keyLabel = tdKeyLabel(code);
+  const shortcut = tdKeyShortcut(code);
+  button.textContent = capturing ? t("settings.keymap.pressKey") : keyLabel;
+  button.setAttribute("aria-describedby", "td-keymap-hint");
+  if (capturing) {
+    button.setAttribute("aria-label", t("settings.keymap.captureAria", { label: actionLabel }));
+    button.removeAttribute("aria-keyshortcuts");
+    return;
+  }
+  button.setAttribute(
+    "aria-label",
+    t("settings.keymap.bindingAria", { label: actionLabel, key: shortcut || keyLabel }),
+  );
+  if (shortcut) button.setAttribute("aria-keyshortcuts", shortcut);
+  else button.removeAttribute("aria-keyshortcuts");
+};
+
 const tdSaveKeymap = (km: Record<TdKeyAction, string>): void => {
   safeSet(TD_KEYMAP_KEY, JSON.stringify(km));
 };
@@ -75,21 +109,28 @@ function tdRenderKeymap(root: ShadowRoot): void {
   if (!grid) return;
   const km = loadTdKeymap();
   grid.innerHTML = "";
-  TD_ACTIONS.forEach(({ key, label }) => {
-    // 每张键位 = 一张工厂小卡（hdr=方向名，body=当前键按钮），平铺在 stg-grid 容器，
-    // 对齐基础设置「路径配置」卡组合——自包含、可组合、不浪费整行宽度。
-    const btnHtml = `<button class="btn-base sm" style="min-width:${KEY_BTN_MIN_WIDTH};width:100%"></button>`;
-    const card = document.createElement("div");
-    card.innerHTML = stgCard("", label, btnHtml, { header: { titleSize: "base" } });
-    const btn = card.querySelector("button");
-    if (!btn) return;
+  TD_KEYMAP_REGISTRY.forEach(({ action: key }) => {
+    const label = t(TD_ACTION_LABEL_KEYS[key]);
+    // 键位是单值快捷键，不需要卡片 header/body 两层结构；复用紧凑行范式，减少视觉噪音。
+    const row = document.createElement("div");
+    row.className = "setting-row stg-keybind-row";
+    row.dataset.keymapAction = key;
+
+    const labelEl = document.createElement("span");
+    labelEl.className = "label";
+    labelEl.textContent = label;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn-base sm stg-keybind-button";
+    row.append(labelEl, btn);
+
     // 按键标签经 textContent 回填（非 innerHTML 插值）：km[key] 来自 localStorage，
     // 若被污染可携带任意 HTML/JS（tdKeyLabel 对未知值原样透传）——textContent 零注入面
-    btn.textContent = tdKeyLabel(km[key]);
+    setKeyButtonState(btn, label, km[key]);
     btn.addEventListener("click", () => {
       // 取消上一次未完成的捕获，保证同一时刻仅一个
       cleanupKeymap();
-      btn.textContent = t("settings.keymap.pressKey");
+      setKeyButtonState(btn, label, km[key], true);
       const onKey = (ev: KeyboardEvent): void => {
         // 设置页已卸载（root 失效或 grid 不存在）则放弃捕获，先判后拦截，杜绝全局 keydown 劫持
         if (!_activeRoot?.getElementById("td-keymap-grid")) {
@@ -104,10 +145,15 @@ function tdRenderKeymap(root: ShadowRoot): void {
           return;
         }
         const cur = loadTdKeymap();
-        const conflict = TD_ACTIONS.find((a) => a.key !== key && cur[a.key] === ev.code);
+        const conflict = TD_KEYMAP_REGISTRY.find(
+          ({ action }) => action !== key && cur[action] === ev.code,
+        );
         if (conflict) {
           bus.emit("toast:show", {
-            msg: t("settings.keymap.conflict", { key: tdKeyLabel(ev.code), label: conflict.label }),
+            msg: t("settings.keymap.conflict", {
+              key: tdKeyLabel(ev.code),
+              label: t(TD_ACTION_LABEL_KEYS[conflict.action]),
+            }),
             duration: TOAST_WARN_MS,
             type: "warn",
           });
@@ -126,7 +172,7 @@ function tdRenderKeymap(root: ShadowRoot): void {
       _activeCapture = onKey;
       document.addEventListener("keydown", onKey, true);
     });
-    grid.appendChild(card);
+    grid.appendChild(row);
   });
 }
 

@@ -53,7 +53,7 @@ pitfalls:
   #   → `bad indentation of a sequence entry`）。含引号的长值统一用双引号整体包裹 + 内部 `\"` 转义。
   #   正文里的 `**...**` 不受影响。
   - "卡片唯一造法 = `stgCard()`：新增/重构「卡片型」设置项（hdr 图标+标题 / body 值或控件 / `stg-card-desc` 说明 / `actions` 按钮四区）一律走 `frontend/src/views/app-content/settings/stg-card.ts` 的 `stgCard()` 构造器，禁止手写 `<div class=\"stg-card\">` 或裸 `style=\"background:var(--surf);border:...\"` 仿卡——后者三处间距/圆角/动画各自为政，迟早漂移（见样式范式契约）"
-  - "三范式各有边界，禁止混搭：卡片=`stgCard()`（含 `stg-grid` 平铺的同族小卡如键位/路径）；选择器瓦片=`theme-card`（主题六选一，已在 `.theme-picker` 内）；紧凑单控件=`settings-group`+`setting-row`（滑块/下拉/开关，如相机速度、旋转模式、主题自动切换）。不要把单控件塞进 `stg-card`、也不要把同族多选项拆成行组"
+  - "三范式各有边界，禁止混搭：卡片=`stgCard()`（含 `stg-grid` 平铺的同族小卡，如路径/字体/鸣谢）；选择器瓦片=`theme-card`（主题六选一，已在 `.theme-picker` 内）；紧凑单控件=`settings-group`+`setting-row`（滑块/下拉/开关，以及键位动作行）。键位是快捷键单值，不得为每个动作嵌套一张 `stg-card`"
 
 use_when:
   - 设置页
@@ -106,6 +106,10 @@ status: active
   - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（字体三栏是已知待修债；语言选择已收敛至 stgCard 正典卡 ✅）
   - **tab 按钮 ↔ 面板同源**：设置页 tab 栏 + 面板均由 `renderTabs({prefix:"stg",buttonClass:"stg-tab",tabs:[...]})` 单一工厂产出（ADR-259 §3），`bindTabs` 从 DOM `data-tab` 派发，不再维护 `ids` 白名单；新增 tab 只需在 `tabs` 数组加一项
   - **tab 结构（2026-10 菜单收口，方案 A）**：4 tab（常规/外观/3D 与解析/关于）。「解析」（FBX/MMD worker 开关）=「3D 与解析」tab 的「解析」节、不占独立槽；「鸣谢」（纯只读展示）=「关于」tab 下段小节，`tpl-settings-about.ts|aboutPageBody` 是「关于 + 鸣谢」页唯一组合根。「启动默认页面」归入「常规」，不归外观。槽位语义契约：菜单槽回答「这里能配置什么」——两个开关/只读展示不占槽；「关于」含真实设置（更新检查间隔/检查更新/版本）故保留 tab
+  - **设置页布局与交互硬化**：`.stg-page` 是 tab 面板唯一滚动容器，`settingsHTML` 不再给 tab-body 叠加 `overflow-y:auto`；`.stg-grid` 使用 `auto-fit + minmax(min(220px,100%),1fr)`，子项 `min-width:0`，卡片 header 可换行；键位网格额外使用 `.stg-keymap-grid { width:100%; }`，避免在 `setting-row` 的 `align-items:flex-start` 下被压成单列窄条。路径值、路径 picker、主题瓦片使用原生 `<button type="button">`；主题初始化/手动/自动切换同步 `.active` 与 `aria-pressed`。`renderStgBasicPaths` 仅在有实际路径卡时输出网格；Android viewer 不输出空「路径配置」区，Web viewer 保留文件来源标题但不输出空网格。
+  - **解析与鸣谢渐进披露**：`tpl-settings.ts|renderStgParserWorkers` 与 `tpl-settings-about.ts|creditsSection` 使用默认收起的原生 `<details>`；worker checkbox 通过 `aria-labelledby` 同时说明格式/动作，并通过 `aria-describedby` 关联 hint。新增折叠区必须保留 summary 入口与原生键盘行为，不能用不可访问的 `div` 模拟。
+  - **3D 键位编辑约定**：`keymap.ts|tdRenderKeymap` 捕获的是单个 `KeyboardEvent.code`，不是组合键；Esc 取消捕获。每个动作使用 `setting-row.stg-keybind-row` 单行呈现，按钮须是原生 button；普通态 aria-label 只表达“动作；快捷键 key”，并用 `aria-keyshortcuts`/`aria-describedby` 补充元信息，捕获态改为“动作：正在等待按键；Esc 取消”并不再宣称旧快捷键；`.stg-keymap-grid` 使用 `auto-fit + minmax(min(220px,100%),1fr)`，不设固定最大列数，键位按钮具备独立边框/背景/焦点样式。
+   - **键位 registry 单一事实源**：`preview-3d/infra/keymap.ts|TD_KEYMAP_REGISTRY` 统一声明 action/defaultCode/group/order/fallbackCodes，并派生 `TdKeyAction` 与 `DEFAULT_TD_KEYMAP`；设置页只保留 `Record<TdKeyAction, LocaleKey>` 标签映射并在渲染时调用 `t()`，输入层从 registry 的 fallbackCodes 派生回退表。新增动作先改 registry，禁止重新在 settings/input/infra 各写一份动作列表；未来 3D 菜单须通过 `MenuNode` schema 适配，不复制设置页 HTML。
   - **本页 3D 卡片的值域/默认/枚举消费 `preview-3d/infra/settings-schema.ts`**（ADR-303）：相机速度 range 的 `min/max/value`、旋转模式 `<option>` 集均由 `TD_CAM_SPEED` / `TD_ROT_MODE` 派生，文案键经 `Record<TdRotMode, LocaleKey>` 表（schema 加模式即编译期报错）；禁止在本页重写裸字面量——曾与 3D ⚙ 面板 + 读取层多处副本漂移
 
 ## 样式范式契约（UI 一致性）
@@ -116,7 +120,7 @@ status: active
 
 | 范式 | 唯一造法 | 适用 | 反例（待修债） |
 |------|----------|------|----------------|
-| 卡片（大/小卡） | `stgCard()`（`settings/stg-card.ts`） | 自包含功能块：hdr（图标+标题）+ body（值/控件）+ `stg-card-desc`（说明）+ `actions`（按钮）四区齐全；同族多选项用 `stg-grid` 平铺（路径三卡、键位六卡） | 字体三栏（裸 `style="background:var(--surf);border:..."` 内联手写卡）、语言选择（手写 `<div class="stg-card">`，未走构造器）→ 间距/圆角/动画与正典卡不一致 |
+| 卡片（大/小卡） | `stgCard()`（`settings/stg-card.ts`） | 自包含功能块：hdr（图标+标题）+ body（值/控件）+ `stg-card-desc`（说明）+ `actions`（按钮）四区齐全；同族多选项用 `stg-grid` 平铺（如路径三卡、字体三卡、鸣谢卡） | 字体三栏（裸 `style="background:var(--surf);border:..."` 内联手写卡）、语言选择（手写 `<div class="stg-card">`，未走构造器）→ 间距/圆角/动画与正典卡不一致 |
 | 选择器瓦片 | `theme-card`（`.theme-picker` 内） | 同族多选项的「点选」场景（主题六选一） | 勿把普通卡片写成瓦片 |
 | 紧凑行组 | `settings-group` + `setting-row` | 单控件占用整行的紧凑参数：滑块/下拉/开关（相机速度、旋转模式、主题自动切换） | 勿把 2 字标签撑满整行却内容稀疏的项硬塞；确需并排时改用 `stg-grid` 小卡 |
 

@@ -152,6 +152,18 @@ describe("bindInputHandlers", () => {
     expect(ev.defaultPrevented).toBe(false);
   });
 
+  it("onKeyDown：重绑 down 后旧右 Shift 不再作为 fallback", () => {
+    localStorage.setItem("td-keymap", JSON.stringify({ down: "KeyF" }));
+    const opts = mkOptions();
+    const handlers = bindInputHandlers(opts);
+    const ev = new KeyboardEvent("keydown", { key: "Shift", code: "ShiftRight", cancelable: true });
+    handlers.onKeyDown(ev);
+
+    expect(opts.keys.down).toBeUndefined();
+    expect(ev.defaultPrevented).toBe(false);
+    localStorage.removeItem("td-keymap");
+  });
+
   it("onKeyDown：无关键 q（KeyQ）→ 不激活任何动作、不阻止默认", () => {
     const opts = mkOptions();
     const handlers = bindInputHandlers(opts);

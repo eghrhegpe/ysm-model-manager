@@ -91,6 +91,7 @@ export const contentStgCSS: string = `
   font-family: inherit;
   transition: var(--btn-transition);
   white-space: nowrap;
+  max-width: 100%;
 }
 .stg-select:hover { background: var(--hover); }
 .stg-select:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
@@ -106,14 +107,29 @@ export const contentStgCSS: string = `
    历史坑：界面上 tab 的两卡组曾直接吐裸 .stg-grid，与上方行组零间距——
    因为空白一直由 .section-title 的 padding 隐式提供，一旦不挂标题就没间隔了。 */
 .stg-section { margin-top: 16px; }
-.stg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.stg-details { margin-top:16px; border:1px solid var(--bd); border-radius:var(--radius-card); background:var(--surf); overflow:hidden; }
+.stg-details-summary { display:flex; align-items:center; gap:6px; padding:var(--sp-vh-pane); cursor:pointer; list-style:none; color:var(--txt); font-size:var(--fs-sm); font-weight:600; user-select:none; }
+.stg-details-summary::-webkit-details-marker { display:none; }
+.stg-details-summary::after { content:"+"; margin-left:auto; color:var(--muted); font-size:var(--fs-lg); line-height:1; }
+.stg-details[open] > .stg-details-summary::after { content:"−"; }
+.stg-details-summary:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.stg-details-body { padding:0 var(--sp-vh-pane) var(--sp-vh-pane); }
+.stg-details-body > .settings-group:first-child,
+.stg-details-body > .section-title:first-child { margin-top:0; padding-top:0; }
+.stg-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap:10px; }
+.stg-grid > * { min-width:0; }
+.stg-keymap-grid { width:100%; grid-template-columns:repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
+.stg-keybind-button { min-width:64px; width:auto; flex:0 0 auto; border:1px solid var(--bd); background:var(--bg); }
+.stg-keybind-button:hover { border-color:var(--accent); background:var(--hover); }
+.stg-keybind-button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 /* 2 列变体：需要并排的设置卡 */
-.stg-grid-2 { grid-template-columns: repeat(2, 1fr); }
-.stg-card { background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-card); overflow:hidden; animation:fadeSlideUp var(--tr-enter) both; } /* 审计 P1-2：卡片圆角收口 --radius-card */
-.stg-card-hdr { display:flex;align-items:center;gap:6px; padding:var(--sp-vh-pane); font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--surf); }
-.stg-card-body { padding:var(--sp-vh-pane); }
-.stg-path-val { display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:var(--radius-md); cursor:pointer; font-size:var(--fs-sm); color:var(--txt); background:var(--bg); transition:border-color var(--tr-fast), background var(--tr-fast); width:100%; box-sizing:border-box; min-height:0; }
+.stg-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stg-card { background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-card); overflow:hidden; animation:fadeSlideUp var(--tr-enter) both; min-width:0; } /* 审计 P1-2：卡片圆角收口 --radius-card */
+.stg-card-hdr { display:flex;align-items:center;gap:6px; flex-wrap:wrap; padding:var(--sp-vh-pane); font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--surf); min-width:0; }
+.stg-card-body { padding:var(--sp-vh-pane); min-width:0; }
+.stg-path-val { appearance:none; display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:var(--radius-md); cursor:pointer; font-family:inherit; font-size:var(--fs-sm); color:var(--txt); background:var(--bg); text-align:left; transition:border-color var(--tr-fast), background var(--tr-fast); width:100%; box-sizing:border-box; min-height:0; }
 .stg-path-val:hover { border-color:var(--accent); background:var(--hover); }
+.stg-path-val:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .stg-path-val.derived:hover { border-color:var(--accent); background:var(--hover); }
 .stg-path-val.derived::before { content:"📁 "; }
 .stg-card-hint { font-size:var(--fs-xs); color:var(--muted); margin-bottom:6px; }
@@ -122,8 +138,9 @@ export const contentStgCSS: string = `
 .stg-adv-reset { margin-left:auto; }
 .stg-card-overridden { border-color:var(--accent); }
 .stg-custom-badge { font-size:var(--fs-micro);color:var(--accent); }
-.stg-path-picker { display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:var(--radius-md); cursor:pointer; font-size:var(--fs-xs); color:var(--txt); background:var(--bg); transition:border-color var(--tr-fast), background var(--tr-fast); width:100%; box-sizing:border-box; min-height:0; }
+.stg-path-picker { appearance:none; display:flex; align-items:center; gap:4px; padding:var(--pad-btn-secondary) 10px; border:1px solid var(--bd); border-radius:var(--radius-md); cursor:pointer; font-family:inherit; font-size:var(--fs-xs); color:var(--txt); background:var(--bg); text-align:left; transition:border-color var(--tr-fast), background var(--tr-fast); width:100%; box-sizing:border-box; min-height:0; }
 .stg-path-picker:hover { border-color:var(--accent); background:var(--hover); }
+.stg-path-picker:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 @keyframes advPanelIn { from { opacity:0; max-height:0; } to { opacity:1; max-height:600px; } }
 @keyframes advPanelOut { from { opacity:1; max-height:600px; } to { opacity:0; max-height:0; } }
 #set-advanced-panel { overflow:hidden; }
@@ -146,7 +163,9 @@ export const contentStgCSS: string = `
    margin 与 padding 不相叠，只能靠选择器消掉其中一份；此处保留标题的 padding-top。
    （与上面的左右 padding 无关：本条管垂直间距。） */
 .settings-group:has(+ .section-title) { margin-bottom: 0; }
-.setting-row { display:flex; align-items:center; justify-content:space-between; padding:var(--sp-vh-pane); background:var(--surf); border-radius:var(--radius-md); margin-bottom:4px; font-size:var(--fs-md); animation:fadeSlideUp var(--tr-enter) both; }
+.setting-row { display:flex; align-items:center; justify-content:space-between; padding:var(--sp-vh-pane); background:var(--surf); border-radius:var(--radius-md); margin-bottom:4px; font-size:var(--fs-md); animation:fadeSlideUp var(--tr-enter) both; min-width:0; }
+/* 键位项独立于通用设置行：避免标签和按钮共享厚重卡片背景。 */
+.stg-keybind-row { margin-bottom:0; background:transparent; border:1px solid var(--bd); border-radius:var(--radius-md); }
 .setting-row .label { color:var(--txt); }
 .setting-row .value { color:var(--txt); } /* 值 = 正文（与 .td-camspeed-val 同口径）；.meta 仍 muted */
 

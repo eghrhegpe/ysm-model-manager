@@ -20,7 +20,7 @@
 import type * as THREE from "three";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts";
 import { isInputBlocked } from "@/utils/dom/input-block-stack.ts";
-import { loadTdKeymap, type TdKeyAction } from "./keymap.ts";
+import { loadTdKeymap, TD_KEYMAP_REGISTRY, type TdKeyAction } from "./keymap.ts";
 import type { PostprocessingLike } from "./postprocessing.ts";
 
 // ---------------------------------------------------------------------------
@@ -58,18 +58,11 @@ export interface InputHandlers {
 // 键位 → 动作 判定（与 keymap.ts 同源：键位存 KeyboardEvent.code）
 // ---------------------------------------------------------------------------
 
-/** 方向键双轨映射：箭头 + 小键盘 → 平移动作（与 WASD 并存，FPS 惯例；
- *  Numpad 为键位体系切 code 后的向后兼容——704cd5b1 review P3） */
-const ARROW_TO_ACTION: Partial<Record<string, TdKeyAction>> = {
-  ArrowUp: "forward",
-  ArrowDown: "back",
-  ArrowLeft: "left",
-  ArrowRight: "right",
-  Numpad8: "forward",
-  Numpad2: "back",
-  Numpad4: "left",
-  Numpad6: "right",
-};
+/** Registry 提供的方向键/小键盘双轨（与 WASD 并存，FPS 惯例）。 */
+const FALLBACK_TO_ACTION = new Map<string, TdKeyAction>();
+for (const spec of TD_KEYMAP_REGISTRY) {
+  for (const code of spec.fallbackCodes) FALLBACK_TO_ACTION.set(code, spec.action);
+}
 
 /** 修饰键左右对称对（Shift/Ctrl/Alt）：自定义 down=ShiftLeft 时按右 Shift 也生效 */
 const MODIFIER_SIDE_PAIRS: Array<[string, string]> = [
@@ -91,7 +84,7 @@ function codeActivatesAction(
 ): boolean {
   const bound = keymap[action];
   if (code === bound) return true;
-  if (ARROW_TO_ACTION[code] === action) return true;
+  if (FALLBACK_TO_ACTION.get(code) === action) return true;
   for (const [left, right] of MODIFIER_SIDE_PAIRS) {
     if ((code === left && bound === right) || (code === right && bound === left)) return true;
   }
@@ -138,12 +131,12 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
     if (isEditableTarget(e.target)) return;
     const code = e.code;
     let hit = false;
-    (Object.keys(keymap) as TdKeyAction[]).forEach((action) => {
+    for (const { action } of TD_KEYMAP_REGISTRY) {
       if (codeActivatesAction(code, action, keymap)) {
         opts.keys[action] = true;
         hit = true;
       }
-    });
+    }
     // 命中动作才拦截默认行为；但不阻止修饰键本身（对齐原实现：Shift 只记录按键状态，
     // preventDefault 仅用于字符/方向/空格等，防止滚动与字符输入）
     if (hit) heldCodes.add(code);
@@ -152,12 +145,12 @@ export function bindInputHandlers(opts: InputOptions): InputHandlers {
   const onKeyUp = (e: KeyboardEvent): void => {
     const code = e.code;
     heldCodes.delete(code);
-    (Object.keys(keymap) as TdKeyAction[]).forEach((action) => {
-      if (!codeActivatesAction(code, action, keymap)) return;
+    for (const { action } of TD_KEYMAP_REGISTRY) {
+      if (!codeActivatesAction(code, action, keymap)) continue;
       // 双轨键修复（704cd5b1 review P2）：W+ArrowUp 同向 / ShiftLeft+ShiftRight 对称——
       // 释放其中一键时，只要仍有其他物理键持有该动作就保持，否则清除
       opts.keys[action] = [...heldCodes].some((c) => codeActivatesAction(c, action, keymap));
-    });
+    }
   };
   document.addEventListener("keydown", onKeyDown);
   document.addEventListener("keyup", onKeyUp);

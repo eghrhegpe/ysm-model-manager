@@ -79,12 +79,13 @@ export interface BoneMaps {
 }
 
 // 键位/相机偏好 re-export 兼容
-export type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
+export type { TdKeyAction, TdKeymapSpec } from "@/preview-3d/infra/keymap.ts";
 export {
   DEFAULT_TD_KEYMAP,
   loadTdCamSpeed,
   loadTdKeymap,
   loadTdRotMode,
+  TD_KEYMAP_REGISTRY,
 } from "@/preview-3d/infra/keymap.ts";
 
 // ADR-052 P3 落地：截图功能通用化至 screenshot.ts 纯函数 + 适配器 screenshot() 能力；

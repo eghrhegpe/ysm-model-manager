@@ -78,9 +78,29 @@ describe("app-content 模板", () => {
   it("settingsHTML 包含设置面板骨架", () => {
     const html = settingsHTML();
     expect(html).toContain("settings");
-    expect(html).toContain("set-mc-path");
+    expect(html).toMatch(/<button[^>]*class="stg-path-val"[^>]*id="set-mc-path"/);
+    expect(html).toMatch(/<button[^>]*class="stg-path-val"[^>]*id="set-files-root"/);
+    expect(html).toMatch(/<button[^>]*class="theme-card[^"]*"[^>]*data-theme=/);
     expect(html).toContain("set-link-mode");
-    expect(html).toContain("set-files-root");
+    // .stg-page 是设置面板唯一滚动容器；tab-body 不再重复承担 overflow。
+    expect(html).not.toMatch(/class="tab-body"[^>]*style="[^"]*overflow-y:auto/);
+  });
+
+  it("解析与鸣谢使用默认收起的原生 details，worker 开关有完整可访问名称", () => {
+    const html = settingsHTML();
+    const parserTag = html.match(/<details[^>]*class="stg-details stg-parser-details"[^>]*>/)?.[0] ?? "";
+    const creditsTag = html.match(/<details[^>]*class="stg-details stg-credits-details"[^>]*>/)?.[0] ?? "";
+    expect(parserTag).not.toContain("open");
+    expect(creditsTag).not.toContain("open");
+    expect(html).toMatch(/<summary[^>]*class="stg-details-summary"[^>]*>[\s\S]*?解析/);
+    expect(html).toMatch(/<summary[^>]*class="stg-details-summary"[^>]*>[\s\S]*?鸣谢/);
+
+    const fbxTag = html.match(/<input[^>]*id="set-fbx-worker"[^>]*>/)?.[0] ?? "";
+    const mmdTag = html.match(/<input[^>]*id="set-mmd-worker"[^>]*>/)?.[0] ?? "";
+    expect(fbxTag).toContain('aria-labelledby="stg-fbx-worker-label stg-fbx-worker-action"');
+    expect(fbxTag).toContain('aria-describedby="stg-fbx-worker-hint"');
+    expect(mmdTag).toContain('aria-labelledby="stg-mmd-worker-label stg-mmd-worker-action"');
+    expect(mmdTag).toContain('aria-describedby="stg-mmd-worker-hint"');
   });
 
   it("settingsHTML Android 查看器模式隐藏游戏根目录/链接模式/下载镜像源卡片，保留本地文件存储卡", () => {
@@ -98,6 +118,8 @@ describe("app-content 模板", () => {
     // 下载镜像源卡片 Android 模式隐藏——浏览器下载走 fetchWithFallback 三路回退，不依赖该配置
     expect(html).not.toContain("set-mirror");
     expect(html).not.toContain("mirror-hint-");
+    // viewer 下不再输出误导性的空「路径配置」区；本地存储卡仍由后续 renderStgStorageCard 产出
+    expect(html).not.toContain("路径配置");
     // 语言/主题等纯前端偏好卡片保留
     expect(html).toContain("set-lang");
   });
@@ -111,8 +133,10 @@ describe("app-content 模板", () => {
     expect(html).toContain("web-repo-auth-btn");
     expect(html).toContain("web-repo-auth-status");
     // 网页版只有文件来源入口，外层节标题不应继续声称可配置“路径”
-    expect(html).toContain(`${UI_ICONS.settings} 文件来源</div>`);
-    expect(html).not.toContain(`${UI_ICONS.settings} 路径配置</div>`);
+    const basicTab = panelSlice(html, "stg-tab-basic", "stg-tab-ui");
+    expect(basicTab).toContain(`${UI_ICONS.settings} 文件来源</div>`);
+    expect(basicTab).not.toContain(`${UI_ICONS.settings} 路径配置</div>`);
+    expect(basicTab).not.toContain('class="stg-grid"');
   });
 
   it("settingsHTML Android（桥存在但非网页版）渲染本地路径卡而非 FSA 授权卡", () => {
@@ -157,9 +181,8 @@ describe("app-content 模板", () => {
     expect(animHdr).toMatch(/stg-card-hdr[\s\S]*?id="set-animations"/);
     const dpHdr = html.slice(html.indexOf('id="stg-default-page-card"'));
     expect(dpHdr).toMatch(/stg-card-hdr[\s\S]*?id="set-remember-page"/);
-    // 3D 操作键位网格已改单列（原 2 列挤压标签区至约 10 字宽，奇葩），回归防线锁定单列
-    // 键位网格已改为 stg-grid 工厂小卡容器（与基础设置路径卡同构），不再内联 grid 列
-    expect(html).toContain('id="td-keymap-grid" class="stg-grid"');
+    // 键位网格已改为 stg-grid 工厂小卡容器（与基础设置路径卡同构），列数由响应式 CSS 决定
+    expect(html).toContain('id="td-keymap-grid" class="stg-grid stg-keymap-grid"');
     // 启动默认页属于「常规」，不属于「外观」
     const basicTab = panelSlice(html, "stg-tab-basic", "stg-tab-ui");
     const uiTab = panelSlice(html, "stg-tab-ui", "stg-tab-ops");
@@ -198,6 +221,7 @@ describe("app-content 模板", () => {
     const opsTab = panelSlice(html, "stg-tab-ops", "stg-tab-about");
     expect(opsTab).toContain('id="td-camspeed"');
     expect(opsTab).toContain('id="td-keymap-grid"');
+    expect(opsTab).toContain('id="td-keymap-hint"');
     // 值域 / 默认值 / 枚举消费 preview-3d/infra/settings-schema（ADR-303）：本页曾自写
     // 一份裸字面量，与 ⚙ 面板 + 读取层三份副本漂移（改一处漏一处即拖了没反应）
     expect(opsTab).toContain(`min="${TD_CAM_SPEED.min}" max="${TD_CAM_SPEED.max}"`);

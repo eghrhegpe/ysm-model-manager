@@ -30,7 +30,7 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
     : stgCard(
         UI_ICONS.game,
         t("settings.paths.gameRoot"),
-        `<div class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</div>
+        `<button type="button" class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</button>
         <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>`,
         {
           header: {
@@ -75,12 +75,19 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
         <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.githubapiHint")}</div>`,
         { header: { forId: "set-mirror" }, delayMs: 120 },
       );
-  return `<div class="section-title stg-title">${UI_ICONS.settings} ${t(isWebViewer ? "settings.paths.sourceTitle" : "settings.paths.title")}</div>
+  const cards = [gameRootCard, linkCard, mirrorCard].filter(Boolean).join("");
+  const title = t(isWebViewer ? "settings.paths.sourceTitle" : "settings.paths.title");
+  if (!cards) {
+    // Web viewer still needs the source section label before the FSA card below;
+    // Android viewer has no path cards here, so do not render an empty misleading section.
+    return isWebViewer
+      ? `<div class="section-title stg-title">${UI_ICONS.settings} ${title}</div>`
+      : "";
+  }
+  return `<div class="section-title stg-title">${UI_ICONS.settings} ${title}</div>
 
 <div class="stg-grid">
-    ${gameRootCard}
-    ${linkCard}
-    ${mirrorCard}
+    ${cards}
   </div>`;
 }
 
@@ -102,7 +109,7 @@ function renderStgStorageCard(isWebViewer: boolean): string {
     : stgCard(
         UI_ICONS.folder,
         t("settings.storage.title"),
-        `<div class="stg-path-val" id="set-files-root">${t("common.loading")}</div>
+        `<button type="button" class="stg-path-val" id="set-files-root">${t("common.loading")}</button>
      <div class="stg-card-desc">${t("settings.storage.desc")}</div>
      <div id="set-advanced-panel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px">${t("settings.path.customHint")}</div>
@@ -188,10 +195,10 @@ function renderStgThemePicker(): string {
         (v) =>
           `<span data-var="${v}" style="width:8px;height:8px;border-radius:50%;border:1px solid var(--muted);background:var(--${v})"></span>`,
       ).join("");
-      return `<div class="theme-card theme-${theme}" data-theme="${theme}">
+      return `<button type="button" class="theme-card theme-${theme}" data-theme="${theme}" aria-pressed="false">
         <div style="display:flex;gap:2px;margin-bottom:2px">${swatches}</div>
         <span style="font-size:var(--fs-xs);font-weight:600;color:var(--txt)">${icon} ${label}</span>
-      </div>`;
+      </button>`;
     })
     .join("");
 
@@ -373,38 +380,44 @@ function renderStgPreview3d(): string {
 <div class="settings-group" style="animation-delay:300ms">
   <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:8px">
     <span class="label">${UI_ICONS.game} ${t("settings.preview3d.keymap")}</span>
-    <div id="td-keymap-grid" class="stg-grid" style="gap:8px"></div>
+    <div id="td-keymap-grid" class="stg-grid stg-keymap-grid" style="gap:8px"></div>
   </div>
-  <div class="stg-desc">${t("settings.preview3d.keymapHint")}</div>
+  <div class="stg-desc" id="td-keymap-hint">${t("settings.preview3d.keymapHint")}</div>
   <div style="margin-top:8px"><button class="btn-base sm" id="td-keymap-reset">${UI_ICONS.undo} ${t("settings.preview3d.resetKeys")}</button></div>
 </div>`;
 }
 
 function renderStgParserWorkers(): string {
-  return `<div class="section-title stg-title">${UI_ICONS.parser} ${t("settings.parser")}</div>
-<div class="settings-group" style="animation-delay:0ms">
-  <div class="stg-desc">${t("settings.parserDesc")}</div>
-</div>
+  return `<details class="stg-details stg-parser-details">
+  <summary class="stg-details-summary">${UI_ICONS.parser} ${t("settings.parser")}</summary>
+  <div class="stg-details-body">
+    <div class="settings-group" style="animation-delay:0ms">
+      <div class="stg-desc">${t("settings.parserDesc")}</div>
+    </div>
 
-<div class="settings-group" style="animation-delay:60ms">
-  <div class="setting-row">
-    <span class="label">${UI_ICONS.parser} ${t("settings.preview3d.fbxWorker")}</span>
-    <label class="stg-label" style="gap:8px">
-      <input type="checkbox" id="set-fbx-worker"> ${t("settings.preview3d.workerCheck")}
-    </label>
-  </div>
-  <div class="stg-desc">${t("settings.preview3d.fbxWorkerHint")}</div>
-</div>
+    <div class="settings-group" style="animation-delay:60ms">
+      <div class="setting-row">
+        <span class="label" id="stg-fbx-worker-label">${UI_ICONS.parser} ${t("settings.preview3d.fbxWorker")}</span>
+        <label class="stg-label" for="set-fbx-worker" style="gap:8px">
+          <input type="checkbox" id="set-fbx-worker" aria-labelledby="stg-fbx-worker-label stg-fbx-worker-action" aria-describedby="stg-fbx-worker-hint">
+          <span id="stg-fbx-worker-action">${t("settings.preview3d.workerCheck")}</span>
+        </label>
+      </div>
+      <div class="stg-desc" id="stg-fbx-worker-hint">${t("settings.preview3d.fbxWorkerHint")}</div>
+    </div>
 
-<div class="settings-group" style="animation-delay:120ms">
-  <div class="setting-row">
-    <span class="label">${UI_ICONS.parser} ${t("settings.preview3d.mmdWorker")}</span>
-    <label class="stg-label" style="gap:8px">
-      <input type="checkbox" id="set-mmd-worker"> ${t("settings.preview3d.workerCheck")}
-    </label>
+    <div class="settings-group" style="animation-delay:120ms">
+      <div class="setting-row">
+        <span class="label" id="stg-mmd-worker-label">${UI_ICONS.parser} ${t("settings.preview3d.mmdWorker")}</span>
+        <label class="stg-label" for="set-mmd-worker" style="gap:8px">
+          <input type="checkbox" id="set-mmd-worker" aria-labelledby="stg-mmd-worker-label stg-mmd-worker-action" aria-describedby="stg-mmd-worker-hint">
+          <span id="stg-mmd-worker-action">${t("settings.preview3d.workerCheck")}</span>
+        </label>
+      </div>
+      <div class="stg-desc" id="stg-mmd-worker-hint">${t("settings.preview3d.mmdWorkerHint")}</div>
+    </div>
   </div>
-  <div class="stg-desc">${t("settings.preview3d.mmdWorkerHint")}</div>
-</div>`;
+</details>`;
 }
 
 export function settingsHTML(): string {
@@ -439,19 +452,16 @@ ${renderStgParserWorkers()}`;
         id: "basic",
         label: `${UI_ICONS.settings} ${t("settings.basic")}`,
         body: `<div class="stg-page">${basicBody}</div>`,
-        panelStyle: "overflow-y:auto",
       },
       {
         id: "ui",
         label: `${UI_ICONS.appearance} ${t("settings.appearance")}`,
         body: `<div class="stg-page">${uiBody}</div>`,
-        panelStyle: "overflow-y:auto",
       },
       {
         id: "ops",
         label: `${UI_ICONS.joystick} ${t("settings.operations")}`,
         body: `<div class="stg-page">${opsBody}</div>`,
-        panelStyle: "overflow-y:auto",
       },
       // 关于 + 鸣谢 合并 tab（aboutPageBody 自带 .stg-page 壳，不再外包；
       // 鸣谢小节降级的理由见本文件头部 2026-10 菜单收口注释）
@@ -459,7 +469,6 @@ ${renderStgParserWorkers()}`;
         id: "about",
         label: `${UI_ICONS.info} ${t("settings.about")}`,
         body: aboutPageBody(),
-        panelStyle: "overflow-y:auto",
       },
     ],
   });

@@ -165,12 +165,15 @@ function renderContributors(): string {
 }
 
 /** Credits 小节（「关于」tab 下段：灵感来源 + 特别鸣谢，2026-10 自独立 tab 降级）。
- *  顶部挂「鸣谢」节标题与上方 About 节分界（.section-title A 式自带 16px 顶距单供）；
- *  纯只读展示，tab 内滚动到底才到，零操作成本。 */
+ *  以原生 details 默认收起，保留可发现的摘要入口，避免只读卡片把 About 首屏拉得过长。 */
 export function creditsSection(): string {
-  return `<div class="section-title stg-title">${UI_ICONS.thanks} ${t("settings.credits")}</div>
-${renderInspirations()}
-${renderContributors()}`;
+  return `<details class="stg-details stg-credits-details">
+  <summary class="stg-details-summary">${UI_ICONS.thanks} ${t("settings.credits")}</summary>
+  <div class="stg-details-body">
+    ${renderInspirations()}
+    ${renderContributors()}
+  </div>
+</details>`;
 }
 
 /** 「关于 + 鸣谢」合并 tab 体（.stg-page 壳由本函数产出；renderTabs 的 about 项 body 直用，

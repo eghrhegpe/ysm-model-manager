@@ -38,6 +38,14 @@ function probeThemeSwatch(theme: string): Record<(typeof SWATCH_VARS)[number], s
   }
 }
 
+function syncThemeCards(themePicker: ParentNode, activeTheme: string | null): void {
+  themePicker.querySelectorAll<HTMLElement>(".theme-card").forEach((card) => {
+    const active = card.dataset.theme === activeTheme;
+    card.classList.toggle("active", active);
+    card.setAttribute("aria-pressed", String(active));
+  });
+}
+
 /** 初始化主题段：主题卡片点击切换 + 自动切换下拉框 */
 export function initThemeSection(root: ShadowRoot): void {
   // 主题卡片：直接点击切换
@@ -53,14 +61,12 @@ export function initThemeSection(root: ShadowRoot): void {
         if (v && v in sw) dot.style.background = sw[v as keyof typeof sw];
       });
     });
-    themePicker.querySelectorAll(".theme-card").forEach((card) => {
-      card.classList.toggle("active", (card as HTMLElement).dataset.theme === savedTheme);
+    const cards = [...themePicker.querySelectorAll<HTMLElement>(".theme-card")];
+    syncThemeCards(themePicker, savedTheme);
+    cards.forEach((card) => {
       card.addEventListener("click", () => {
-        themePicker.querySelectorAll(".theme-card").forEach((c) => {
-          c.classList.remove("active");
-        });
-        card.classList.add("active");
-        const themeName = (card as HTMLElement).dataset.theme || "";
+        const themeName = card.dataset.theme || "";
+        syncThemeCards(themePicker, themeName);
         applyTheme(themeName);
         safeSet("theme", themeName);
         // P2 修复：主题切后同步到 ysm_config.json，保持 localStorage ↔ JSON 一致
@@ -109,19 +115,13 @@ export function initThemeSection(root: ShadowRoot): void {
         applyTheme("system");
         safeSet("theme", "system");
         // 更新卡片选中态
-        if (themePicker)
-          themePicker.querySelectorAll(".theme-card").forEach((c) => {
-            c.classList.remove("active");
-          });
+        if (themePicker) syncThemeCards(themePicker, null);
       } else if (mode === "time") {
         // P2 修复：applyTimeTheme 返回实际主题（warm/cyber）并写入 theme 键——
         // 原实现写 "time" 非法值，重启后 initTheme 归一化为 system，按时间段模式被静默降级
         const themeName = applyTimeTheme();
         safeSet("theme", themeName);
-        if (themePicker)
-          themePicker.querySelectorAll(".theme-card").forEach((c) => {
-            c.classList.remove("active");
-          });
+        if (themePicker) syncThemeCards(themePicker, null);
       }
       // "off" 时不改变当前主题，等用户手动点卡片
       // P4 修复：自动模式变更同步 ysm_config.json（theme-auto 落盘）
@@ -144,9 +144,11 @@ export function initThemeSection(root: ShadowRoot): void {
     // 初始化：如果 savedAuto 是 system/time，应用对应主题
     if (savedAuto === "system") {
       applyTheme("system");
+      if (themePicker) syncThemeCards(themePicker, null);
     } else if (savedAuto === "time") {
       const themeName = applyTimeTheme();
       safeSet("theme", themeName);
+      if (themePicker) syncThemeCards(themePicker, null);
     } else {
       applyTheme(savedTheme);
     }

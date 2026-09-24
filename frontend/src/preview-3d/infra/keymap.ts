@@ -1,39 +1,77 @@
 // ===== 3D 操作键位 / 相机偏好（从 model3d.ts 拆出，ADR-040 P1）=====
-// 纯 localStorage 工具函数，无 Three.js 依赖，可独立单测。
-// 原 model3d.ts L70-115，已迁移至此；model3d.ts 保留 re-export 兼容。
-//
-// [ADR-303] 键 + 值域 + 默认值的唯一声明处是 `./settings-schema.ts`——本文件只做
-// 「读盘 + clamp + 回退」，不再自持键常量或值域字面量（曾与两处 UI 面三份副本漂移）。
+// 纯 localStorage 与键位规格工具，无 i18n / DOM / Three.js 依赖，可独立单测。
+// 键位动作、默认物理键、显示分组、顺序与输入 fallback 均由本文件 registry 派生。
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { TD_CAM_SPEED, TD_KEYMAP_KEY, TD_ROT_MODE } from "./settings-schema.ts";
 
-// ── 类型 ──────────────────────────────────────────
+// ── 键位规格 registry（动作/默认键/分组/顺序/fallback 单一事实源）─────────
 
-export type TdKeyAction = "forward" | "back" | "left" | "right" | "up" | "down";
+export interface TdKeymapSpec {
+  readonly action: string;
+  readonly defaultCode: string;
+  readonly group: string;
+  readonly order: number;
+  readonly fallbackCodes: readonly string[];
+}
 
-/** 默认键位以 KeyboardEvent.code 存储（物理键，跨键盘布局一致） */
-export const DEFAULT_TD_KEYMAP: Record<TdKeyAction, string> = {
-  forward: "KeyW",
-  back: "KeyS",
-  left: "KeyA",
-  right: "KeyD",
-  up: "Space",
-  down: "ShiftLeft",
-};
+/** 有序键位规格；新增动作只在此处追加，UI 与输入层按 registry 派生。 */
+export const TD_KEYMAP_REGISTRY = [
+  {
+    action: "forward",
+    defaultCode: "KeyW",
+    group: "movement",
+    order: 0,
+    fallbackCodes: ["ArrowUp", "Numpad8"],
+  },
+  {
+    action: "back",
+    defaultCode: "KeyS",
+    group: "movement",
+    order: 1,
+    fallbackCodes: ["ArrowDown", "Numpad2"],
+  },
+  {
+    action: "left",
+    defaultCode: "KeyA",
+    group: "movement",
+    order: 2,
+    fallbackCodes: ["ArrowLeft", "Numpad4"],
+  },
+  {
+    action: "right",
+    defaultCode: "KeyD",
+    group: "movement",
+    order: 3,
+    fallbackCodes: ["ArrowRight", "Numpad6"],
+  },
+  { action: "up", defaultCode: "Space", group: "movement", order: 4, fallbackCodes: [] },
+  { action: "down", defaultCode: "ShiftLeft", group: "movement", order: 5, fallbackCodes: [] },
+] as const satisfies readonly TdKeymapSpec[];
+
+export type TdKeyAction = (typeof TD_KEYMAP_REGISTRY)[number]["action"];
+
+/** 默认键位由 registry 派生，存储值使用 KeyboardEvent.code。 */
+export const DEFAULT_TD_KEYMAP: Record<TdKeyAction, string> = TD_KEYMAP_REGISTRY.reduce(
+  (out, spec) => {
+    out[spec.action] = spec.defaultCode;
+    return out;
+  },
+  {} as Record<TdKeyAction, string>,
+);
 
 // ── 读取函数（非法/缺失回退默认）──────────────────
 
-/** 读取用户自定义键位（无/非法时回退默认） */
+/** 读取用户自定义键位（无/非法时回退默认；未知持久化字段被忽略）。 */
 export function loadTdKeymap(): Record<TdKeyAction, string> {
   const raw = safeGet(TD_KEYMAP_KEY);
   if (raw) {
     try {
-      const parsed = JSON.parse(raw) as Partial<Record<TdKeyAction, string>>;
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
       const merged: Record<TdKeyAction, string> = { ...DEFAULT_TD_KEYMAP };
-      (Object.keys(DEFAULT_TD_KEYMAP) as TdKeyAction[]).forEach((k) => {
-        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        if (typeof parsed[k] === "string" && parsed[k]!.length > 0) merged[k] = parsed[k]!;
-      });
+      for (const spec of TD_KEYMAP_REGISTRY) {
+        const value = parsed[spec.action];
+        if (typeof value === "string" && value.length > 0) merged[spec.action] = value;
+      }
       return merged;
     } catch {
       /* JSON 解析失败回退默认 */

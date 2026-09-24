@@ -81,16 +81,16 @@ vi.mock("@/backend/platform-web.ts", async (importOriginal) => {
 function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
   const el = document.createElement("div");
   el.innerHTML = `
-    <div id="set-mc-path"></div>
-    <div id="set-files-root"></div>
+    <button type="button" id="set-mc-path"></button>
+    <button type="button" id="set-files-root"></button>
     <div id="set-advanced-toggle"></div>
     <div id="set-advanced-panel"></div>
     <div id="set-advanced-grid"></div>
     <div id="stg-files-card"></div>
     <button id="set-mc-detect"></button>
     <div id="theme-picker">
-      <div class="theme-card" data-theme="cyber"></div>
-      <div class="theme-card" data-theme="dark"></div>
+      <button type="button" class="theme-card" data-theme="cyber"></button>
+      <button type="button" class="theme-card" data-theme="dark"></button>
     </div>
     <select id="theme-auto">
       <option value="off">off</option><option value="system">system</option><option value="time">time</option>
@@ -862,7 +862,9 @@ describe("initSettings — 高级面板路径设置/重置", () => {
     const { root } = makeRoot();
     await initSettings(root);
     const grid = root.getElementById("set-advanced-grid") as HTMLElement;
-    (grid.querySelector('.stg-path-picker[data-rtype="ysm"]') as HTMLElement).click();
+    const picker = grid.querySelector('.stg-path-picker[data-rtype="ysm"]') as HTMLElement;
+    expect(picker.tagName).toBe("BUTTON");
+    picker.click();
     await waitFor(() => setRootFn.mock.calls.length > 0);
     expect(setRootFn).toHaveBeenCalledWith("ysm", "/pick");
     await waitFor(() => root.querySelector(".stg-adv-reset"));

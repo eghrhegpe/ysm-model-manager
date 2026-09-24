@@ -50,6 +50,55 @@ describe("content-css 聚合层", () => {
 });
 
 describe("设置页组间距契约（content-stg）", () => {
+  it(".stg-grid 使用可收缩列，窄屏不把卡片压成三列", () => {
+    expect(contentStgCSS).toMatch(
+      /\.stg-grid\s*\{[^}]*repeat\(auto-fit,\s*minmax\(min\(220px,\s*100%\),\s*1fr\)\)/,
+    );
+    expect(contentStgCSS).toMatch(/\.stg-grid\s*>\s*\*\s*\{[^}]*min-width:\s*0/);
+    expect(contentStgCSS).toMatch(/\.stg-card-hdr\s*\{[^}]*flex-wrap:\s*wrap/);
+  });
+
+  it("键位网格使用无固定上限的 auto-fit 列数", () => {
+    expect(contentStgCSS).toMatch(
+      /\.stg-keymap-grid\s*\{[^}]*width:\s*100%[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(min\(220px,\s*100%\),\s*1fr\)\)/,
+    );
+    expect(contentStgCSS).not.toMatch(
+      /\.stg-keymap-grid\s*\{[^}]*grid-template-columns:\s*repeat\([123],/,
+    );
+  });
+
+  it("键位动作使用单行紧凑控件而非嵌套卡片", () => {
+    expect(contentStgCSS).toMatch(/\.stg-keybind-row\s*\{[^}]*margin-bottom:\s*0/);
+    const rowBlock = contentStgCSS.match(/\.stg-keybind-row\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(rowBlock).toMatch(/background:\s*transparent/);
+    expect(rowBlock).toMatch(/border:\s*1px solid/);
+    const buttonBlock = contentStgCSS.match(/\.stg-keybind-button\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(buttonBlock).toMatch(/min-width:\s*64px/);
+    expect(buttonBlock).toMatch(/width:\s*auto/);
+    expect(buttonBlock).toMatch(/border:/);
+    expect(buttonBlock).toMatch(/background:/);
+    expect(contentStgCSS).toMatch(/\.stg-keybind-button:focus-visible\s*\{/);
+  });
+
+  it("设置页主题卡与路径按钮具备原生控件的视觉重置和 focus 样式", () => {
+    const themeBlock = contentUtilCSS.match(/\.theme-card\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(themeBlock).toMatch(/appearance:\s*none/);
+    expect(themeBlock).toMatch(/font-family:\s*inherit/);
+    expect(contentUtilCSS).toMatch(/\.theme-card:focus-visible\s*\{/);
+    const pathBlock = contentStgCSS.match(/\.stg-path-val\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(pathBlock).toMatch(/appearance:\s*none/);
+    expect(contentStgCSS).toMatch(/\.stg-path-val:focus-visible\s*\{/);
+  });
+
+  it("设置页原生 details 提供摘要、内边距和键盘 focus 契约", () => {
+    const detailsBlock = contentStgCSS.match(/\.stg-details\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(detailsBlock).toMatch(/border:/);
+    expect(detailsBlock).toMatch(/border-radius:/);
+    expect(contentStgCSS).toMatch(/\.stg-details-summary\s*\{[^}]*list-style:\s*none/);
+    expect(contentStgCSS).toMatch(/\.stg-details-summary:focus-visible\s*\{/);
+    expect(contentStgCSS).toMatch(/\.stg-details-body\s*\{[^}]*padding:/);
+  });
+
   it(".stg-section 提供显式组间距；.stg-grid-2 为两列变体", () => {
     // 不能再依赖 .section-title{padding:16px 16px 8px} 隐式撑间隔：
     // 卡片自带 card-hdr 的组不挂标题，缺了那根「间隔柱」就会与上方贴死

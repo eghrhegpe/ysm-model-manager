@@ -28,13 +28,14 @@ vi.mock("@/backend/platform-web.ts", () => ({
 /** 从设置页 HTML 中抽出每张主题卡片的 data-theme 与三个色点的 data-var 声明 */
 function parseCards(html: string): { theme: string; vars: string[] }[] {
   const cards: { theme: string; vars: string[] }[] = [];
-  // 以 .theme-card + data-theme="x" 联合锚切卡片壳（防页面其他 data-theme 元素混入），
-  // 取其首个内层 div（色点容器）里的 data-var 声明
-  const cardRe = /class="theme-card[^"]*"\s+data-theme="([^"]+)"[^>]*>\s*<div[^>]*>([\s\S]*?)<\/div>/g;
+  // 主题卡必须是原生 button，同时继续锁定 data-theme 联合锚与三色点声明
+  const cardRe = /<button\b([^>]*\bclass="theme-card[^"]*"[^>]*)>\s*<div[^>]*>([\s\S]*?)<\/div>/g;
   let m: RegExpExecArray | null;
   while ((m = cardRe.exec(html)) !== null) {
+    const theme = m[1].match(/data-theme="([^"]+)"/)?.[1];
+    if (!theme) continue;
     const vars = [...m[2].matchAll(/data-var="([a-z-]+)"/g)].map((c) => c[1]);
-    cards.push({ theme: m[1], vars });
+    cards.push({ theme, vars });
   }
   return cards;
 }

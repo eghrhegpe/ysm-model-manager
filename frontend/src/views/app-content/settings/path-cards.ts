@@ -248,13 +248,13 @@ export function initAdvancedGrid(
           : "") +
         "</div>" +
         '<div class="stg-card-body">' +
-        '<div class="stg-path-picker" data-rtype="' +
+        '<button type="button" class="stg-path-picker" data-rtype="' +
         at.rtype +
         '" title="' +
         t("settings.path.clickToChange") +
         '">' +
         esc(String(currentPath)) +
-        "</div>" +
+        "</button>" +
         "</div></div>";
     }
     grid.innerHTML = html;

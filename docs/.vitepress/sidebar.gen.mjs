@@ -258,6 +258,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-302：菜单节点类型不做一次性判别联合——以类型级字段表为单一事实源",
+        "link": "/adr/ADR-302-menu-node-kind-field-single-source"
+      },
+      {
         "text": "ADR-301：创作者频道与创意工坊命名轴收敛",
         "link": "/adr/ADR-301-workshop-community-naming-convergence"
       },

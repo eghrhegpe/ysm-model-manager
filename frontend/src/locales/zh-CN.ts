@@ -137,9 +137,9 @@ export const zhCN = {
 
   // ── 设置页 ──
   "settings.title": "设置",
-  "settings.basic": "基础设置",
-  "settings.appearance": "界面与体验",
-  "settings.operations": "操作",
+  "settings.basic": "常规",
+  "settings.appearance": "外观",
+  "settings.operations": "3D 与解析",
   "settings.parser": "解析",
   "settings.parserDesc":
     "3D 模型解析引擎设置。两种格式默认走主线程解析（稳定基线）；开启 worker 后解析移入 Web Worker，异常时自动回退主线程，也可随时在此手动关闭。",
@@ -150,6 +150,7 @@ export const zhCN = {
 
   // ── 设置 - 基础 ──
   "settings.paths.title": "路径配置",
+  "settings.paths.sourceTitle": "文件来源",
   "settings.paths.gameRoot": "游戏根目录",
   "settings.paths.autoSearch": "自动搜索",
   "settings.paths.gameRootDesc": "用于整合包同步，不影响文件存储位置",

@@ -129,9 +129,9 @@ export const en: Record<string, string> = {
   // ── Settings Page ──
   "settings.title": "Settings",
   "settings.basic": "General",
-  "settings.appearance": "Appearance & Experience",
+  "settings.appearance": "Appearance",
   "settings.parser": "Parsing",
-  "settings.operations": "Operations",
+  "settings.operations": "3D & Parsing",
   "settings.parserDesc":
     "3D model parsing engine settings. Both formats parse on the main thread by default (stable baseline); when enabled, parsing moves into a Web Worker with automatic fallback to the main thread on errors, and you can disable it manually here anytime.",
   "settings.about": "About",
@@ -141,6 +141,7 @@ export const en: Record<string, string> = {
 
   // ── Settings - General ──
   "settings.paths.title": "Path Configuration",
+  "settings.paths.sourceTitle": "File Source",
   "settings.paths.gameRoot": "Game Root Directory",
   "settings.paths.autoSearch": "Auto Search",
   "settings.paths.gameRootDesc": "Used for modpack sync, does not affect file storage location",

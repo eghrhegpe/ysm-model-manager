@@ -1,11 +1,12 @@
 // ===== tpl-settings.ts — settingsHTML 页面模板（从 tpl.ts 拆出，ADR-040 P1 第2轮拆分）=====
 // basic + ui + ops 标签页在此；about（含鸣谢小节）已拆至 tpl-settings-about.ts。
-// 2026-10 菜单收口（锐评 P1/P2）：6 tab → 4 tab（基础/界面与体验/操作/关于）——
-//   ① 「解析」（FBX/MMD worker 两个开关）降级为「操作」tab 的「解析」节：
+// 2026-10 菜单收口（锐评方案 A）：6 tab → 4 tab（常规/外观/3D 与解析/关于）——
+//   ① 「解析」（FBX/MMD worker 两个开关）降级为「3D 与解析」tab 的「解析」节：
 //      两个开关不值得占一个菜单槽，且并入 3D 域后「解析」节标题不再与 tab 名同名重复；
 //   ② 「鸣谢」（纯只读展示）降级为「关于」tab 的下段小节（aboutPageBody 组合）：
 //      设置菜单槽位语义 = 「这里能配置什么」，只读展示不占槽；「关于」含真实设置
-//      （更新检查间隔/检查更新/版本）保留 tab。
+//      （更新检查间隔/检查更新/版本）保留 tab；
+//   ③ 「启动默认页面」从外观迁至常规，避免启动导航行为混入视觉偏好。
 
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
@@ -23,7 +24,7 @@ import { aboutPageBody } from "./tpl-settings-about.ts";
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
 export const VIEW_TESTIDS: readonly string[] = ["set-mc-path"];
 
-function renderStgBasicPaths(isViewer: boolean): string {
+function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
   const gameRootCard = isViewer
     ? ""
     : stgCard(
@@ -74,7 +75,7 @@ function renderStgBasicPaths(isViewer: boolean): string {
         <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.githubapiHint")}</div>`,
         { header: { forId: "set-mirror" }, delayMs: 120 },
       );
-  return `<div class="section-title stg-title">${UI_ICONS.settings} ${t("settings.paths.title")}</div>
+  return `<div class="section-title stg-title">${UI_ICONS.settings} ${t(isWebViewer ? "settings.paths.sourceTitle" : "settings.paths.title")}</div>
 
 <div class="stg-grid">
     ${gameRootCard}
@@ -279,7 +280,7 @@ function renderStgFontFamily(): string {
 </div>`;
 }
 
-function renderStgAnimDefault(): string {
+function renderStgAnimationSection(): string {
   // 开关放卡片标题行（actions，与「游戏根目录 / 自动搜索」同构），
   // body 只留说明——曾左右各写一句同义描述（信息量 1、占用 2，重复描述）。
   const animCard = stgCard(
@@ -297,6 +298,11 @@ function renderStgAnimDefault(): string {
     },
   );
 
+  // 本组没有 section-title（卡片自带标题），用 stg-section 保留组间上间距。
+  return `<div class="stg-section">${animCard}</div>`;
+}
+
+function renderStgDefaultPageSection(): string {
   // 启动默认页：升格为 .stg-card（与「游戏根目录」「文件存储」「语言」同属卡片口径）——
   // 原用 .settings-group 裸行组，无卡片框、两侧 padding:0 16px 缩进，夹在一堆 .stg-card
   // 之间视觉断裂（跨口径混搭）。body 内用 .setting-row 保持行内两端对齐。
@@ -326,10 +332,8 @@ function renderStgAnimDefault(): string {
     },
   );
 
-  // 两卡并排：.stg-grid-2 命名类（不再内联 grid-template-columns）。
-  // stg-section 补上组间上间距：本组未挂 .section-title（卡片自带 card-hdr），
-  // 而组间空白一直由该标题的 padding 隐式提供——不补会与上方行组贴死。
-  return `<div class="stg-grid stg-grid-2 stg-section">${animCard}${defaultPageCard}</div>`;
+  // 本组没有 section-title（卡片自带标题），用 stg-section 保留组间上间距。
+  return `<div class="stg-section">${defaultPageCard}</div>`;
 }
 
 /** 旋转模式 → 设置页文案键（ADR-303 §2：schema 只供值，文案键域归各面）。
@@ -407,8 +411,9 @@ export function settingsHTML(): string {
   const isViewer = isViewerMode();
   const isWebViewer = isWebPlatform();
 
-  const basicBody = `${renderStgBasicPaths(isViewer)}
+  const basicBody = `${renderStgBasicPaths(isViewer, isWebViewer)}
   ${renderStgStorageCard(isWebViewer)}
+${renderStgDefaultPageSection()}
 ${renderStgLangSelect()}`;
 
   const uiBody = `<div class="section-title stg-title">${UI_ICONS.moon} ${t("settings.theme.title")}</div>
@@ -419,9 +424,9 @@ ${renderStgThemeAuto()}
 
 ${renderStgFontFamily()}
 
-${renderStgAnimDefault()}`;
+${renderStgAnimationSection()}`;
 
-  // 「操作」tab = 3D 预览操作（相机/旋转/键位）+ 解析（FBX/MMD worker 开关，2026-10 自
+  // 「3D 与解析」tab = 3D 预览设置（相机/旋转/键位）+ 解析（FBX/MMD worker 开关，2026-10 自
   // 独立「解析」tab 降级并入）——3D 域设置一处收口；「解析」节标题因此不再与 tab 名同名重复。
   const opsBody = `${renderStgPreview3d()}
 ${renderStgParserWorkers()}`;

@@ -131,9 +131,9 @@ export const ja: Record<string, string> = {
   // ── Settings Page ──
   "settings.title": "設定",
   "settings.basic": "一般",
-  "settings.appearance": "外観と体験",
+  "settings.appearance": "外観",
   "settings.parser": "パーサー",
-  "settings.operations": "操作",
+  "settings.operations": "3D と解析",
   "settings.parserDesc":
     "3D モデル解析エンジンの設定。両形式とも既定ではメインスレッドで解析（安定ベースライン）。有効にすると解析は Web Worker に移り、異常時は自動でメインスレッドにフォールバック。ここでいつでも手動で無効化できます。",
   "settings.about": "概要",
@@ -143,6 +143,7 @@ export const ja: Record<string, string> = {
 
   // ── Settings - General ──
   "settings.paths.title": "パス設定",
+  "settings.paths.sourceTitle": "ファイルソース",
   "settings.paths.gameRoot": "ゲームルートディレクトリ",
   "settings.paths.autoSearch": "自動検索",
   "settings.paths.gameRootDesc": "統合パックの同期に使用します。ファイルの保存場所には影響しません",

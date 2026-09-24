@@ -21,6 +21,7 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type {
+  NodeFor,
   PreviewControlDef,
   PreviewMenuNode,
 } from "@/preview-3d/menu/schema/menu-node-types.ts";
@@ -43,7 +44,7 @@ const ENV_GROUP_CUSTOM_HDR: LocaleKey = "preview.envGroupCustomHdr";
  * ⚠️ 与「预设」folder 的分工：来源选**走哪条取图通路**（预设 Canvas / 跟随天空 / 自定义 HDR），
  * 预设选**具体哪张图**。故本节点置于 preset folder **之外**（顶层），避免被误读为预设的子选项。
  */
-function envSourceNode(cap: EnvironmentCapability): PreviewMenuNode {
+function envSourceNode(cap: EnvironmentCapability): NodeFor<"select"> {
   return {
     id: "env-source",
     kind: "select",
@@ -71,7 +72,7 @@ const ENV_PRESET_LABEL_KEY: Record<string, LocaleKey> = {
   forest: "preview.presetQuickForest",
 };
 /** 预设缩略图复杂控件（preset-thumb——非纯数据，走 controls 通道节点承载） */
-function envPresetControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
+function envPresetControlsNode(cap: EnvironmentCapability): NodeFor<"controls"> {
   const preset: PreviewControlDef = {
     id: "env-preset",
     kind: "preset-thumb",
@@ -106,7 +107,7 @@ function envPresetControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
 }
 
 /** 直方图复杂控件（histogram——非纯数据，走 controls 通道节点承载） */
-function envHistogramControlsNode(cap: EnvironmentCapability): PreviewMenuNode {
+function envHistogramControlsNode(cap: EnvironmentCapability): NodeFor<"controls"> {
   const hist: PreviewControlDef = {
     id: "env-histogram",
     kind: "histogram",
@@ -175,7 +176,7 @@ function envCustomHdrControlsNodes(cap: EnvironmentCapability): PreviewMenuNode[
 }
 
 /** 预设组 folder（preset-thumb 复杂控件） */
-function envBuildPresetFolder(cap: EnvironmentCapability): PreviewMenuNode {
+function envBuildPresetFolder(cap: EnvironmentCapability): NodeFor<"folder"> {
   return {
     id: "cap-group-env-preset",
     kind: "folder",
@@ -185,7 +186,7 @@ function envBuildPresetFolder(cap: EnvironmentCapability): PreviewMenuNode {
 }
 
 /** 背景组 folder（use-as-background toggle + intensity slider + histogram controls）——组分裂修复 */
-function envBuildBackgroundFolder(cap: EnvironmentCapability): PreviewMenuNode {
+function envBuildBackgroundFolder(cap: EnvironmentCapability): NodeFor<"folder"> {
   return {
     id: "cap-group-env-background",
     kind: "folder",
@@ -217,7 +218,7 @@ function envBuildBackgroundFolder(cap: EnvironmentCapability): PreviewMenuNode {
 }
 
 /** 自定义 HDR 组 folder（image 预览 + pick/clear 按钮） */
-function envBuildCustomHdrFolder(cap: EnvironmentCapability): PreviewMenuNode {
+function envBuildCustomHdrFolder(cap: EnvironmentCapability): NodeFor<"folder"> {
   return {
     id: "cap-group-env-custom-hdr",
     kind: "folder",

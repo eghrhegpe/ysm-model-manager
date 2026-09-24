@@ -3,7 +3,7 @@
 // 改控件定义只动此文件，不触碰 Three 装配核。
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { PreviewControlDef } from "./scene-capability.ts";
 import type { SkyCapability } from "./sky-capability.ts";
@@ -13,7 +13,7 @@ const SKY_GROUP_ADVANCED: LocaleKey = "preview.skyGroupAdvanced"; // 高级（�
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
 
 /** 天空能力总开关 toggle（环境一级行 headerToggle 语义由消费者抽 master） */
-function skyEnabledNode(cap: SkyCapability): PreviewMenuNode {
+function skyEnabledNode(cap: SkyCapability): NodeFor<"toggle"> {
   return {
     id: "sky-enabled",
     kind: "toggle",
@@ -28,7 +28,7 @@ function skyEnabledNode(cap: SkyCapability): PreviewMenuNode {
 /** 时间轴复杂控件（timeline——非纯数据，走 controls 通道节点承载）
  *  [锐评 S2-1] 拖动相位：onDragStart 降为阈值门控（PMREM 不逐帧全重建），
  *  onDragEnd / 单击跳转 force 一次取当前帧图——对齐昼夜循环 update(dt) 的门控语义。 */
-function skyTimelineControlsNode(cap: SkyCapability): PreviewMenuNode {
+function skyTimelineControlsNode(cap: SkyCapability): NodeFor<"controls"> {
   const timeline: PreviewControlDef = {
     id: "sky-timeline",
     kind: "timeline",

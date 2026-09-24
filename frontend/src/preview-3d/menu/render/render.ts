@@ -10,11 +10,11 @@ import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { getSchema } from "@/preview-3d/infra/schema-registry.ts";
 import {
   isPreviewFolderNode,
+  type NodeFor,
   type PreviewActionMenuCtx,
   type PreviewMenuNode,
   type PreviewMenuNodeKind,
 } from "@/preview-3d/menu/schema/node-types.ts";
-import type { NodeFor } from "@/preview-3d/menu/schema/node-validation.ts";
 import { createHeaderToggle } from "@/preview-3d/menu/shell/header-toggle.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import {

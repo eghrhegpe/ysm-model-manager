@@ -27,7 +27,7 @@
 import type * as THREE from "three";
 import { makeBonePanelRenderer } from "@/preview-3d/adapters/vrm/vrm-bone-ui.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
+import type { NodeFor } from "@/preview-3d/menu/schema/node-types.ts";
 
 /**
  * 骨骼面板清理引用（4 adapter 共用统一接口，ADR-074 S2）。
@@ -59,7 +59,7 @@ export interface BonesPanelItemOpts {
  * renderCustom 把 renderer 的 cleanup 同时交给两方：return 给渲染器（面板级生命周期），
  * 写回 caller 的 cleanupRef（模型级 dispose 兜底）。两者持同一函数，幂等。
  */
-export function makeBonesPanelItem(opts: BonesPanelItemOpts): PreviewMenuNode {
+export function makeBonesPanelItem(opts: BonesPanelItemOpts): NodeFor<"panel"> {
   return {
     id: "bones",
     icon: "bone",

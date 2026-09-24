@@ -261,3 +261,143 @@ export interface PreviewMenuNode {
    *  新增 cap 控件零接线：cap 自报控件即可进任意声明式面板。 */
   controls?: PreviewControlDef[] | (() => PreviewControlDef[]);
 }
+
+// ===================== per-kind 字段契约（[ADR-302] 单一事实源）=====================
+// 契约与其类型层投影同址于本模块：运行期 COMMON_NODE_FIELDS / KIND_SPECIFIC_FIELDS 是**唯一**
+// 手写清单，NodeFor<K> / AssertCommonFieldIsExact 由它派生（改字段只改表，结构上不可能漂移）。
+// 运行期校验器（validateNode / validateNodeTree）见 ./node-validation.ts。
+/** 全 kind 合法的通用字段（呈现 / 放置 / **折叠形态**语义，与 kind 无关）。
+ *  字段名由 `satisfies` 锁死（拼错/越界即编译期报错）；**完整性**由 `AssertCommonFieldIsExact`
+ *  编译期断言（见文件下半）+ 两测试门的真实树断言双重兜底。
+ *
+ *  ⚠️ `children`/`defaultOpen`/`headerToggle` 属**通用字段**，不是 folder/panel/card 专有：
+ *  「形状前置」（`render.ts|appendFoldedShape` → `node-types.ts|isPreviewFolderNode`，判定式
+ *  `kind==="folder" || Array.isArray(children)`）**刻意与 kind 脱钩**（ADR-240）——任何带 `children`
+ *  的节点都会在 kind 分派**之前**被 `rmAppendFolder` 接管，而它无条件读 `defaultOpen`/`headerToggle`。
+ *  若把三者留在逐 kind 白名单，其余 kind 会被**误报**（2026-09 实证：`{kind:"panel", children,
+ *  defaultOpen:false}` 的折叠体真实生效、`headerToggle` 真实渲染出开关，却曾被本表判违规）。 */
+export const COMMON_NODE_FIELDS = [
+  "id",
+  "kind",
+  "labelKey",
+  "label",
+  "hintKey",
+  "settingsOrder",
+  "icon",
+  "children",
+  "defaultOpen",
+  "headerToggle",
+  "visibleWhen",
+  "dockGroup",
+] as const satisfies readonly (CommonNodeField | "kind")[];
+
+/**
+ * 各 kind 的专有字段白名单（不含 COMMON_NODE_FIELDS）。
+ *
+ * 判定依据 = 渲染器实际读取面（render.ts 各 rmAppend* / appendFoldedShape 分支 +
+ * rows.ts 各叶原语 + core.ts makePreviewMenuRow）——某字段不在该 kind 的渲染分支里
+ * 被读取，即「挂了也不生效」的静默浪费，属契约外字段。空数组 = 该 kind 无专有字段。
+ *
+ * 逐项读取面实证（2026-10 按渲染器源码逐函数核对，非按「当前用到什么」反推）：
+ *  - `rowDensity` 读于 `rows.ts|rmMakeRowBase`（button/row 共用行壳的入口），故 **button 亦合法**；
+ *  - `danger` **仅**读于 `core.ts|makePreviewMenuRow`（叶节点 makeRow 路径），故只对
+ *    panel/action/custom 合法——button 走 rmMakeRowBase、row 走 rmAppendDynamicRow，二者均不读 danger。
+ *    ⚠️ 现状：全仓无任一 PreviewMenuNode 实际设置 danger（声明+读取齐备但无用例）；
+ *    若将来要让 button/row 也支持红字，须先在对应 rmAppend* 里补读取，再入本表。
+ *  - `action`：rmBindLeafClick（panel/action/custom）+ rmAppendButton 整行臂 + rmAppendDynamicRow（row）
+ *    + renderPreviewPanel 分支③（panel）；
+ *  - `value`：rmAppendField（显示值）/ rmAppendDynamicRow（副标签）；`control`：rmAppendButton +
+ *    nodeControlToView（slider/toggle/select/color）；`eye`/`opacity`：rmAppendMaterialRow；
+ *    `radio`/`badge`/`headerToggle`：rmAppendDynamicRow（headerToggle 亦见 render.ts|rmAppendFolder）；
+ *    `children`/`defaultOpen`：rmAppendFolder + rmAppendCard；`collapsible`：rmAppendCard 独有；
+ *    `schemaId`/`renderCustom`/`controls`：renderAdapterPanelContent / appendFoldedShape / controls 臂。
+ *
+ * **[ADR-302 走法丙] 本 const 是 per-kind 字段契约的唯一事实源**：运行期校验（`validateNode`）
+ * 与类型层窄类型（`NodeFor<K>`）**都从它派生**——改字段只改这一处，两表无漂移可能。
+ * `as const` 保留字面量类型供类型层投影；`satisfies` 保住穷尽性（漏 kind / 拼错字段名 → 编译期报错）。
+ */
+export const KIND_SPECIFIC_FIELDS = {
+  // 折叠容器：其「可折叠形态」完全由通用字段 children/defaultOpen/headerToggle 承载
+  // （形状前置，与 kind 脱钩，见 COMMON_NODE_FIELDS 注释），故本 kind 无专有字段。
+  folder: [],
+  // 叶（rmAppendLeaf → makeRow）或折叠体（hasFoldedBody → rmAppendFolder）；
+  // action 分支见 renderPreviewPanel ③
+  panel: ["renderCustom", "schemaId", "action", "danger"],
+  // 动作节点：rmBindLeafClick
+  action: ["action", "danger"],
+  // 控件节点：control → nodeControlToView → cap 栈渲染器
+  slider: ["control"],
+  toggle: ["control"],
+  select: ["control"],
+  // 两形态（rows.ts|rmAppendButton）：有按钮语义 control → 行内真按钮；无 → 整行 action。
+  // rowDensity 经 rmMakeRowBase 生效；danger 不经此路（见上「逐项读取面实证」）
+  button: ["control", "action", "rowDensity"],
+  color: ["control"],
+  // 键值对行：value = 显示值
+  field: ["value"],
+  // 动态列表行：value = 副标签附加信息（与 field 语义不同）、radio/badge 槽位、下钻 action
+  row: ["value", "radio", "badge", "action", "rowDensity"],
+  // 装饰节点
+  divider: [],
+  sectionTitle: [],
+  // 卡牌容器：仅 collapsible 为专有（读于 rmAppendCard）；children/defaultOpen 已归通用字段
+  card: ["collapsible"],
+  // 组合行：eye 显隐 + opacity 滑条
+  "material-row": ["eye", "opacity"],
+  // cap 复杂控件组通道
+  controls: ["controls"],
+  // 逃生舱：renderCustom 直填容器；列表语义下走 rmAppendLeaf（读 action/danger）
+  custom: ["renderCustom", "action", "danger"],
+} as const satisfies Record<PreviewMenuNodeKind, readonly (keyof PreviewMenuNode)[]>;
+
+// ===== [ADR-302 走法丙] 类型层投影：由上面的 const 派生，非第二份手写清单 =====
+
+/** K 的专有字段字面量联合（由 KIND_SPECIFIC_FIELDS 派生——改字段只改表） */
+type KindSpecificFieldOf<K extends PreviewMenuNodeKind> = (typeof KIND_SPECIFIC_FIELDS)[K][number];
+
+/** 公共字段 = 宽接口字段全集 **减去** kind 与全部 kind 专有字段的并集（自动推导，无手写清单）。
+ *  ⚠️ 推论：新增字段若忘了登记进 KIND_SPECIFIC_FIELDS，它会静默落进「公共字段」而逃过
+ *  per-kind 判定——该缺口由下方 `AssertCommonFieldIsExact` **编译期封堵**（非仅注释提醒）。 */
+type CommonNodeField = Exclude<
+  keyof PreviewMenuNode,
+  "kind" | KindSpecificFieldOf<PreviewMenuNodeKind>
+>;
+
+/** 意图中的公共字段集（**手写锚点**，仅供下方精确性断言消费，不参与运行期）。 */
+export type ExpectedCommonField =
+  | "id"
+  | "labelKey"
+  | "label"
+  | "hintKey"
+  | "settingsOrder"
+  | "icon"
+  | "children"
+  | "defaultOpen"
+  | "headerToggle"
+  | "visibleWhen"
+  | "dockGroup";
+
+/** 编译期断言：推导公共集 ⇄ `ExpectedCommonField` **双向相等**才求值为 `true`；否则求值成
+ *  携带差集的对象类型——消费处（`node-validation.test.ts`）给 `true` 赋值即编译报错，
+ *  且错误信息直接指出是多登记（`unregistered`）还是漏登记（`missing`）了哪些字段。
+ *
+ *  封堵的缺口：`CommonNodeField` 由「全集减专有」自动推导，故新增字段若**既不入任何 kind、
+ *  也不进 `COMMON_NODE_FIELDS`**，它会静默落进公共集、逃过 per-kind 判定。本断言把这一步从
+ *  「静默通过」变成「编译期必须显式决定归属」——这是本模块「单一事实源」的闭环另一半。 */
+export type AssertCommonFieldIsExact = [CommonNodeField] extends [ExpectedCommonField]
+  ? [ExpectedCommonField] extends [CommonNodeField]
+    ? true
+    : { missing: Exclude<ExpectedCommonField, CommonNodeField> }
+  : { unregistered: Exclude<CommonNodeField, ExpectedCommonField> };
+
+/** 指定 kind 的窄类型：公共字段（保留原可选性）+ 该 kind 的专有字段（可选）。
+ *
+ *  用途（**可选，非强制**）：新增构造点写 `{ … } satisfies NodeFor<"folder">` 即得编译期字段校验
+ *  （把「字段挂了不生效」前移到编译器）；渲染器逐 kind 处理器可据此取得内建收窄。
+ *
+ *  设计约束（ADR-302 走法丙）：**`PreviewMenuNode` 宽别名保持不变**——既有引用零改动，
+ *  故本类型是「可选的编译期前哨」而非强制路径；运行期门（`validateAdapterItemIds` warn +
+ *  core/cap 两测试门）继续为动态与外来输入兜底，两者互补而非替代。 */
+export type NodeFor<K extends PreviewMenuNodeKind> = Pick<PreviewMenuNode, CommonNodeField> & {
+  kind: K;
+} & Partial<Pick<PreviewMenuNode, KindSpecificFieldOf<K>>>;

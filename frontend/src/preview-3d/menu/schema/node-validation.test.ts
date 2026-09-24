@@ -18,6 +18,8 @@ import {
   COMMON_NODE_FIELDS,
   KIND_SPECIFIC_FIELDS,
   type NodeFor,
+} from "./menu-node-types.ts";
+import {
   validateNode,
   validateNodeTree,
 } from "./node-validation.ts";

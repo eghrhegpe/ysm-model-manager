@@ -14,6 +14,7 @@
 
 // [ADR-195 刀2] 自共享叶 re-export 类型（caps 与 menu 消费同一契约）
 export type {
+  NodeFor,
   PreviewActionMenuCtx,
   PreviewControlSpec,
   PreviewDockGroup,

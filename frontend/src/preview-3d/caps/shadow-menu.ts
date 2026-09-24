@@ -9,7 +9,7 @@
 //   - 参数组 folder（preview.shadowGroupParams）：soft/map-size/bias/normal-bias/camera-size
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { ShadowCapability } from "./shadow-capability.ts";
 
@@ -24,7 +24,7 @@ const MAP_SIZE_OPTIONS: Array<{ value: string; label: string; labelKey?: LocaleK
 ];
 
 /** shadow-enabled toggle（真能力总开关；直达面板首行即切，不升 headerToggle） */
-function shcEnabledNode(cap: ShadowCapability): PreviewMenuNode {
+function shcEnabledNode(cap: ShadowCapability): NodeFor<"toggle"> {
   return {
     id: "shadow-enabled",
     kind: "toggle",
@@ -38,7 +38,7 @@ function shcEnabledNode(cap: ShadowCapability): PreviewMenuNode {
 }
 
 /** 参数组 folder（soft/map-size/bias/normal-bias/camera-size） */
-function shcBuildParamsFolder(cap: ShadowCapability): PreviewMenuNode {
+function shcBuildParamsFolder(cap: ShadowCapability): NodeFor<"folder"> {
   const children: PreviewMenuNode[] = [
     {
       id: "shadow-soft",

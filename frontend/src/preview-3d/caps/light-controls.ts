@@ -18,7 +18,7 @@
 // 运行时值 import：动态 folder 标题需要已 i18n 的灯名（tOf）。core/i18n 不依赖上层，
 // 无环；preview-3d 多处已有同款先例。
 import { type LocaleKey, tOf } from "@/core/i18n/t.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { LightCapability, LightKey } from "./light-capability.ts";
 import { FLATTEN_MAP, type LightType, type VolumetricDriver } from "./light-presets.ts";
@@ -93,7 +93,7 @@ export const LIGHT_MASTER_NODE_ID = "light-enabled";
  *  同口径——旧注释宣称「与 shadow 同构」实为双轨（shadow-enabled 仍是 cap 私有态，同病另刀）。
  *  本节点经 getMasterNodeId 升场景组根视图 headerToggle，二级面板渲染时由 capPanelNodes 按
  *  LIGHT_MASTER_NODE_ID filter 掉，防一二级双份。 */
-function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
+function lightEnabledNode(cap: LightCapability): NodeFor<"toggle"> {
   return {
     id: LIGHT_MASTER_NODE_ID,
     kind: "toggle",
@@ -111,7 +111,7 @@ function lightEnabledNode(cap: LightCapability): PreviewMenuNode {
  *  不入 LightParams/FLATTEN_MAP（那映射的是「灯光参数面」，线框不是灯光参数），
  *  直接挂 schema 布尔键，持久化走顶层 helperVisible 键（light-persist.ts）。
  *  默认 true = 现状观感（线框随各灯开关），此开关只增加撤销权。 */
-function lightHelperNode(cap: LightCapability): PreviewMenuNode {
+function lightHelperNode(cap: LightCapability): NodeFor<"toggle"> {
   return {
     id: "light-helper",
     kind: "toggle",
@@ -261,7 +261,7 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
  *  [ADR-290] 锥体驱动源由卡内「驱动灯光」select（lightVolumetricDriver，schema 化 +
  *  入存档）显式决定：auto = 槽位顺序第一盏启用的 spot；显式槽位 = 严格绑定（前提不满足
  *  则无锥）。hint 告知「需一盏启用的聚光灯」前提。 */
-function spotVolCardNode(cap: LightCapability): PreviewMenuNode {
+function spotVolCardNode(cap: LightCapability): NodeFor<"card"> {
   return {
     id: SPOT_VOL_CARD,
     kind: "card",

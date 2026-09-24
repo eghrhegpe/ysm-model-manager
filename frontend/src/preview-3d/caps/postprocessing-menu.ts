@@ -7,7 +7,7 @@
 //   → pp-ssao-enabled 基座 → SSAO 文件夹 → Reflection 文件夹 → SSR 文件夹
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type {
   PostprocessingCapability,
@@ -50,7 +50,7 @@ const REFLECTION_MODE_OPTIONS: ReadonlyArray<{
 // （回归守卫：postprocessing-capability.test.ts 的顶层结构与子节点读写断言）。
 
 /** pp-enabled 基座 toggle（无 group）：总开关。 */
-function enabledNode(cap: PostprocessingCapability): PreviewMenuNode {
+function enabledNode(cap: PostprocessingCapability): NodeFor<"toggle"> {
   return {
     id: "pp-enabled",
     kind: "toggle",
@@ -63,7 +63,7 @@ function enabledNode(cap: PostprocessingCapability): PreviewMenuNode {
 }
 
 /** Color 文件夹：toneMapping select + exposure slider。 */
-function colorFolder(cap: PostprocessingCapability): PreviewMenuNode {
+function colorFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
   return {
     id: "cap-group-postprocessing-color",
     kind: "folder",
@@ -94,7 +94,7 @@ function colorFolder(cap: PostprocessingCapability): PreviewMenuNode {
 }
 
 /** pp-bloom-enabled 基座 toggle（无 group）：辉光总开关。 */
-function bloomEnabledNode(cap: PostprocessingCapability): PreviewMenuNode {
+function bloomEnabledNode(cap: PostprocessingCapability): NodeFor<"toggle"> {
   return {
     id: "pp-bloom-enabled",
     kind: "toggle",
@@ -107,7 +107,7 @@ function bloomEnabledNode(cap: PostprocessingCapability): PreviewMenuNode {
 }
 
 /** Bloom 文件夹：strength/threshold/radius slider + follow toggle。 */
-function bloomFolder(cap: PostprocessingCapability): PreviewMenuNode {
+function bloomFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
   return {
     id: "cap-group-postprocessing-bloom",
     kind: "folder",
@@ -157,7 +157,7 @@ function bloomFolder(cap: PostprocessingCapability): PreviewMenuNode {
 }
 
 /** pp-ssao-enabled 基座 toggle（无 group）：环境光遮蔽总开关。 */
-function ssaoEnabledNode(cap: PostprocessingCapability): PreviewMenuNode {
+function ssaoEnabledNode(cap: PostprocessingCapability): NodeFor<"toggle"> {
   return {
     id: "pp-ssao-enabled",
     kind: "toggle",
@@ -170,7 +170,7 @@ function ssaoEnabledNode(cap: PostprocessingCapability): PreviewMenuNode {
 }
 
 /** SSAO 文件夹：radius/mindist/maxdist slider。 */
-function ssaoFolder(cap: PostprocessingCapability): PreviewMenuNode {
+function ssaoFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
   return {
     id: "cap-group-postprocessing-ssao",
     kind: "folder",
@@ -211,7 +211,7 @@ function ssaoFolder(cap: PostprocessingCapability): PreviewMenuNode {
 }
 
 /** Reflection 文件夹：mode select + reflector-disable toggle。 */
-function reflectionFolder(cap: PostprocessingCapability): PreviewMenuNode {
+function reflectionFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
   return {
     id: "cap-group-postprocessing-reflection",
     kind: "folder",
@@ -241,7 +241,7 @@ function reflectionFolder(cap: PostprocessingCapability): PreviewMenuNode {
 }
 
 /** SSR 文件夹：opacity/maxdistance/thickness slider + blur/attenuation/fresnel/bouncing toggle。 */
-function ssrFolder(cap: PostprocessingCapability): PreviewMenuNode {
+function ssrFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
   return {
     id: "cap-group-postprocessing-ssr",
     kind: "folder",

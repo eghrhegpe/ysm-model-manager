@@ -10,8 +10,11 @@
 // 溯源注释随函数逐字搬迁——注释是资料，未删改语义。
 
 import { t, tOf } from "@/core/i18n/t.ts";
-import type { PreviewActionMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
-import type { NodeFor } from "@/preview-3d/menu/schema/node-validation.ts";
+import type {
+  NodeFor,
+  PreviewActionMenuCtx,
+  PreviewMenuNode,
+} from "@/preview-3d/menu/schema/node-types.ts";
 import { createHeaderToggle } from "@/preview-3d/menu/shell/header-toggle.ts";
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { resolveLabel } from "@/utils/base/pure/label.ts";

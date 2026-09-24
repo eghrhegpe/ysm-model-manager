@@ -11,7 +11,7 @@
 // visibleWhen 谓词（B 轨快照驱动）原样挂节点。
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCapability } from "./ground-capability.ts";
@@ -54,7 +54,7 @@ function colorNode(
   param: GroundMatParam,
   getValue: () => number,
   setValue: (v: number) => void,
-): PreviewMenuNode {
+): NodeFor<"color"> {
   return {
     id,
     kind: "color",
@@ -73,7 +73,7 @@ function sliderNode(
   param: GroundMatParam,
   slider: { min: number; max: number; step: number; unit?: string },
   control: { get: () => number; set: (v: number) => void },
-): PreviewMenuNode {
+): NodeFor<"slider"> {
   return {
     id,
     kind: "slider",
@@ -125,7 +125,7 @@ function textureButtonsNode(cap: GroundCapability): PreviewMenuNode[] {
  *  （syncGeometry → PlaneGeometry 换装 + GridHelper 重建）与持久化，却纯靠存档通路活着；
  *  水面尺寸滑杆早已可达而地面不能改，拖大 waterSize 即水陆脱锚。
  *  值域一律 getParamRange（ADR-283 单源），落地归 ground 回调单路径（setter 只写状态）。 */
-function groundBuildGridFolder(cap: GroundCapability): PreviewMenuNode {
+function groundBuildGridFolder(cap: GroundCapability): NodeFor<"folder"> {
   return {
     id: "cap-group-ground-grid",
     kind: "folder",
@@ -175,7 +175,7 @@ function groundBuildGridFolder(cap: GroundCapability): PreviewMenuNode {
 
 /** 材质组 folder：mat-source + 原生 color/slider 按原控件顺序排布，
  *  texture/clear 按钮位插原生 button 节点（保序保语义）。 */
-function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
+function groundBuildMatFolder(cap: GroundCapability): NodeFor<"folder"> {
   const children: PreviewMenuNode[] = [
     {
       id: "ground-mat-source",
@@ -296,7 +296,7 @@ function groundBuildMatFolder(cap: GroundCapability): PreviewMenuNode {
 
 /** ADR-249 §2.3 叠加层 folder：独立透明格线层（正交于来源/样式两轴）。
  *  style 为 none 时子控件全隐（与材质组同一 paramVisible 思路：可见 ⇔ 生效）。 */
-function groundBuildOverlayFolder(cap: GroundCapability): PreviewMenuNode {
+function groundBuildOverlayFolder(cap: GroundCapability): NodeFor<"folder"> {
   const overlayOn = (s: Partial<PreviewSnapshot>): boolean => s["env.groundOverlay"] !== "none";
   const children: PreviewMenuNode[] = [
     {

@@ -3,7 +3,7 @@
 // 改控件定义只动此文件，不触碰 Three 装配核。
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
-import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { WaterCapability } from "./water-capability.ts";
@@ -32,7 +32,7 @@ function wSliderNode(
   slider: { min: number; max: number; step: number; unit?: string },
   control: { get: () => number; set: (v: number) => void },
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-): PreviewMenuNode {
+): NodeFor<"slider"> {
   return {
     id,
     kind: "slider",
@@ -56,7 +56,7 @@ function wColorNode(
   getValue: () => number,
   setValue: (v: number) => void,
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
-): PreviewMenuNode {
+): NodeFor<"color"> {
   return {
     id,
     kind: "color",

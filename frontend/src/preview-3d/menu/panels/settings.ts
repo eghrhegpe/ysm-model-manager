@@ -16,7 +16,11 @@ import { tOf } from "@/core/i18n/t.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/infra/keymap.ts";
-import type { PreviewMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
+import type {
+  NodeFor,
+  PreviewMenuCtx,
+  PreviewMenuNode,
+} from "@/preview-3d/menu/schema/node-types.ts";
 import type { SlideMenuHandle } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { getPerfPreset, type PerfLevel, setPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 import { getStateValue, setStateValue } from "@/preview-3d/state/preview-state.ts";
@@ -314,7 +318,7 @@ export function buildSettingsControls(): PreviewMenuNode[] {
 /** 性能档位 select（低/中/高/自定义）：切档 = 数据表套用（perf-presets.ts）+ 面板刷新。
  *  自定义 = 不套用，保持用户手调。档位表是纯数据，新增档位/参数零代码接线。
  *  声明式 select 节点（control.get/set 闭包 + onChange 刷新），不再手写 DOM 壳。 */
-function bsBuildPerfPresetRow(menu?: SlideMenuHandle): PreviewMenuNode {
+function bsBuildPerfPresetRow(menu?: SlideMenuHandle): NodeFor<"select"> {
   const LEVELS: Array<{ value: PerfLevel; labelKey: string }> = [
     { value: "low", labelKey: "preview.settingsPerfLow" },
     { value: "medium", labelKey: "preview.settingsPerfMedium" },
@@ -339,11 +343,11 @@ function bsBuildPerfPresetRow(menu?: SlideMenuHandle): PreviewMenuNode {
   };
 }
 
-function bsBuildSectionTitle(id: string, labelKey: LocaleKey): PreviewMenuNode {
+function bsBuildSectionTitle(id: string, labelKey: LocaleKey): NodeFor<"sectionTitle"> {
   return { id, kind: "sectionTitle", labelKey };
 }
 
-function bsBuildNote(): PreviewMenuNode {
+function bsBuildNote(): NodeFor<"sectionTitle"> {
   return {
     id: "settings-note",
     kind: "sectionTitle",

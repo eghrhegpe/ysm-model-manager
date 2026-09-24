@@ -18,6 +18,7 @@ import type {
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { renderMenu } from "@/preview-3d/menu/render/render.ts";
 import type {
+  NodeFor,
   PreviewActionMenuCtx,
   PreviewMenuCtx,
   PreviewMenuNode,
@@ -187,7 +188,7 @@ function envCapSubview(cap: SceneCapability): SlideMenuView {
 }
 
 /** 一级 cap 行：icon + label + 可选 headerToggle + 整行 action 下钻参数页 */
-function envCapRow(cap: SceneCapability): PreviewMenuNode {
+function envCapRow(cap: SceneCapability): NodeFor<"row"> {
   const master = capMasterNode(cap);
   return {
     id: `env-cap-${cap.id}`,

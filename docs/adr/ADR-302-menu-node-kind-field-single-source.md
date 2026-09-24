@@ -61,6 +61,9 @@
   - 推论一（已随之修正）：`children`/`defaultOpen`/`headerToggle` **对任意 kind 都被读取**（任何带 `children` 的节点都会被形状前置渲染为折叠卡），故三者属**通用字段**而非 folder/panel/card 专有——把它们留在逐 kind 白名单里会对其余 kind 产生**误报**。
   - 推论二：不要试图给折叠路径加 kind 判别式类型谓词——「带 children 即折叠」这一语义本身就跨 kind，谓词化只会把 ADR-240 的脱钩重新绑回 kind。
 - **校验粒度是 kind 级，不是路径级（已知取舍，非缺陷）**：白名单按 kind 建模，故「同一字段在不同消费路径下读 / 不读」的混合情形不报警——已确证两例：`custom` 的 `action`/`danger` 在 `renderCustomDirect: true`（schema 面板路径 `menu/engine/core.ts|renderPreviewPanel`）下被 `runCustomMount` 静默忽略；`button` 的 `action` 在 `control` 携带按钮语义时被 `rmAppendButton` 忽略。同理**公共字段不参与判定**，故「某公共字段在某个 kind 被忽略」也不报（如 `{kind:"divider", icon}`——`rmAppendDecor` 的 divider 臂不读 `icon`）。若将来要求完整检测，须升级为**路径级**校验（复杂度与收益需另行评估，不在本 ADR 范围）。
+- **窄类型的推荐接入形态**：不要逐字面量包壳（`menuNode({…})` 会淹没「菜单即数据」的声明式观感），而是**给单节点工厂注返回类型**——`function fcMasterToggleNode(cap): NodeFor<"toggle">`。零运行期开销、零嵌套噪音，一行换取该工厂产出的编译期字段校验；多形态聚合器（返回 `PreviewMenuNode[]`）不适用。
+  - 收益实证（实施中真实发生）：注窄**当场抓出一个命名谎言**——`menu/panels/settings.ts|bsBuildPerfPresetRow` 这类名含 `Row` 而实际返回 `kind: "select"` 的工厂，编译器以 `TS2322 '"select"' is not assignable to '"row"'` 直接点名。**不下断言就没人会发现名字在骗人**——这是「把字段/形态错配前移到编译器」的直接收益。
+  - 代价实证：**零上下文类型损失**。过程中曾出现成片 `TS7006`（形参隐式 any），一度被误读为「窄类型的固有代价」；实为缺 `NodeFor` import 使返回类型退化成错误类型所致的**级联假象**，补 import 后全数消失（最小探针并列对照组全清）。教训已入 `skills/pitfalls.md` #22——引用 §4 的 108 处 TS7006 时勿与这类假象混为一谈。
 
 ## 4. 数据溯源
 

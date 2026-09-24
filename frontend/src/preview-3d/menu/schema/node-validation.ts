@@ -15,12 +15,12 @@
 //    （每次 refresh 遍历全树逐字段校验是白付成本）——只在①测试门②adapter 注入点消费。
 //
 // 消费点：
-//  ① node-validation.test.ts —— 走 CORE_MENU_ITEMS + core 面板 builder + schema-registry
+//  ① node-validation.test.ts（core 侧）—— 走 CORE_MENU_ITEMS + core 面板 builder + schema-registry
 //     断言零违规（正向门），并用自检用例证明校验非摆设（负向控制）。
-//  ② core.ts validateAdapterItemIds —— adapter 外来节点入口 warn（非热路径，只在注入时跑）。
-//
-// 未覆盖（诚实标注）：cap 侧 getMenuNodes() 产出的树需实例化 cap 才能取得，
-// 本门不构造 cap，故 cap 树不在静态门范围内（由②的注入点 warn + 各 cap 自身测试兜底）。
+//  ② caps/cap-menu-trees.test.ts（cap 侧）—— sceneCapabilityRegistry.createAll 实例化全部内置 cap，
+//     逐个校验 getMenuNodes() 产出的树（cap 树是菜单节点大头，core 门跑不到）。
+//     两门合起来覆盖「core 手写节点 + cap 自产节点」的全量菜单树；各自带防门空转断言。
+//  ③ core.ts validateAdapterItemIds —— adapter 外来节点入口 warn（非热路径，只在注入时跑）。
 import type { PreviewMenuNode, PreviewMenuNodeKind } from "./menu-node-types.ts";
 
 /** 全 kind 合法的通用字段（呈现 / 放置语义，与 kind 无关） */

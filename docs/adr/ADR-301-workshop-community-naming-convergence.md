@@ -52,6 +52,14 @@
 | D3 | Go 绑定类型 `WorkshopSite`/`WorkshopCreator` 是否改名——**独立评估，默认本次不动**（触「类型判定唯一事实源」红线，收益不足以覆盖 Go 侧回归面）；仅当 D1 落地且 Go 侧无消费者歧义时再议 | 边界 | 高 | 📝 待拍板（倾向**暂不动 Go 类型**，先做前端 id/i18n/CSS 对齐） |
 | D4 | i18n `workshop.*` 命名空间按「哪页用哪键」拆分：创作者频道页键归 `community.*`、创意工坊(GitHub)页键留 `workshop.*` 或归 `github.*`——三语同步，`locales-consistency.test.ts` 兜底 | 文案 | 中 | 📝 待拍板 |
 
+### 2.0a 落地修订（2026-09-24 实施时定，编译器实证驱动）
+拍板「立即落地 D1+D2 最小闭环」后，编译器 + 数据流实证迫使把 D1 拆为**两刀**，本次只做第一刀：
+
+- **D1-a（本次做）`workshop → community`**：创作者频道页 id 归标签本名。**关键红利**：单改使 `workshop` 从 `PageName` 联合**消失** →（①）所有 `page:"workshop"` / `{id:"workshop"}` 处 `tsc` 当场逼红逐个修正，**零静默漏网**；（②）历史 `nav_page="workshop"` 变成**无歧义纯别名**（比照 `resources→repository`），`sanitizePage` 先查别名表即可，**不需迁移 flag、不破坏 core 纯读函数契约**。
+- **D1-b（暂缓）`github → workshop`**：**主动推迟**。理由：它把 `workshop` 重新引入为合法值，与 D1-a 的别名 `workshop→community` 撞**语义歧义**（旧 `workshop`=创作者页 / 新 `workshop`=工坊页 运行时不可分），正是 §2.3 链式陷阱；且 `id:github` **忠于数据源（GitHub），无 ID 层矛盾**（仅与产品名「创意工坊」有语义张力，靠标签 `nav.workshop` 表达即可，不靠 id 说谎）。真·「看得懂吗」的核心错位（创作者页挂着 `workshop` 名）已由 D1-a 消除。
+- **D2（本次随 D1-a 做）**：`sanitizePage` 前置 `LEGACY_PAGE_ALIASES = { workshop: "community" }` 一次性查表；因 `workshop` 已非合法值，别名与合法值集无交，天然无歧义。`page-store.test.ts` 补：`nav_page="workshop"` → 解析为 `community`。
+- **D3 冻结**（§2.3a：Go CLI/站点 id 不碰）、**D4 推迟**（纯文案债，单独一行 churn 不值当）——维持上表建议不变。
+
 ### 2.1 命名真相源：标签优先
 确立原则：**当 `id`、文件名、类型名与用户可见标签冲突时，一律以标签为准回改其余四项**（标签是给用户的契约，id/文件名是给开发者的，可迁移）。据此：
 - 创作者频道页：`PageName` `workshop → community`；页面代码 `init-workshop.ts → init-community.ts`、`workshopHTML → communityHTML`；CSS 前缀已是 `cr-`（creator，正名）保留；`views/app-content/site/` 目录归属此页。

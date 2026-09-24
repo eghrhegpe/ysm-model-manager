@@ -22,7 +22,6 @@ auto_fields:
     - _getWasmBinary
     - _getWasmBinaryMt
     - _resetSingletons
-    - aboutHTML
     - actionBtnHTML
     - AdaptiveRenderBudget
     - addDisposableListener
@@ -296,7 +295,6 @@ auto_fields:
     - createYsmAnimPlayer
     - CreatorIdentity
     - CreatorIdentityInput
-    - creditsHTML
     - CtxShowPayload
     - Cube2D
     - cubeVec

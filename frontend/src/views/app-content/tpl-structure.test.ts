@@ -29,6 +29,7 @@ import {
   repositoryHTML,
   workshopHTML,
 } from "./tpl.ts";
+import { settingsHTML } from "./settings/tpl-settings.ts";
 
 /** 全部页面模板（用于 ① 配平） */
 const PAGE_TEMPLATES: Array<[string, () => string]> = [
@@ -37,6 +38,7 @@ const PAGE_TEMPLATES: Array<[string, () => string]> = [
   ["diagnosticsHTML", diagnosticsHTML],
   ["githubHTML", githubHTML],
   ["workshopHTML", workshopHTML],
+  ["settingsHTML", settingsHTML],
 ];
 
 /**
@@ -50,6 +52,7 @@ const TABBED_PAGES: Array<[string, () => string, string]> = [
   ["instancesHTML", instancesHTML, "ins"],
   ["diagnosticsHTML", diagnosticsHTML, "diag"],
   ["githubHTML", githubHTML, "gh"],
+  ["settingsHTML", settingsHTML, "stg"],
 ];
 
 /** 统计 `<div>` / `</div>`（本仓模板不使用自闭合 `<div/>`） */
@@ -71,7 +74,7 @@ function depthBefore(html: string, needle: string): number {
 /** 页面里全部 tab 按钮的 data-tab（按出现顺序） */
 function buttonTabs(html: string): string[] {
   // 允许 class 与 data-tab 之间存在其它属性（如仓库页四个 tab 共用 data-testid="content-tab"）
-  return [...html.matchAll(/<button class="repo-tab[^"]*"[^>]*data-tab="([^"]+)"/g)].map((m) => m[1] as string);
+  return [...html.matchAll(/<button class="(?:repo-tab|stg-tab)[^"]*"[^>]*data-tab="([^"]+)"/g)].map((m) => m[1] as string);
 }
 
 /** 页面里全部面板：{ id 后段, class } */

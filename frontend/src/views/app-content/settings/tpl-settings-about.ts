@@ -4,11 +4,10 @@ import { GH_DOCS, GH_RELEASES, GH_REPO } from "@/utils/base/pure/gh-links.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { stgCard } from "./stg-card.ts";
 
-/** About 标签页（版本/特性/技术栈/链接/快速上手） */
-export function aboutHTML(): string {
-  return `<!-- stg-tab-about -->
-<div class="tab-body" id="stg-tab-about" style="display:none;overflow-y:auto">
-<div class="stg-page" style="padding:16px 20px">
+/** About 标签页体（renderTabs 工厂负责 tab-body 壳）。顶部间距归 .section-title 单供
+ *  （.stg-page 契约 padding:0 20px 16px，内联 padding-top 会叠成 32px——content-css.test 钉死）。 */
+export function aboutBody(): string {
+  return `<div class="stg-page">
 
 <div class="section-title stg-title">${UI_ICONS.info} ${t("settings.about")}</div>
 
@@ -84,10 +83,7 @@ export function aboutHTML(): string {
     </div>
   </div>
 </div>
-
-</div>
-</div>
-<!-- /stg-tab-about -->`;
+</div>`;
 }
 
 /** 灵感来源（改这里加项；i18n 见 credits.* + 对应外链） */
@@ -168,14 +164,10 @@ function renderContributors(): string {
 <div class="stg-grid">${cards}</div>`;
 }
 
-/** Credits 标签页（灵感来源/特别感谢） */
-export function creditsHTML(): string {
-  return `<!-- stg-tab-credits -->
-<div class="tab-body" id="stg-tab-credits" style="display:none;overflow-y:auto">
-<div class="stg-page" style="padding:16px 20px">
+/** Credits 标签页体（renderTabs 工厂负责 tab-body 壳；顶部间距归 .section-title 单供） */
+export function creditsBody(): string {
+  return `<div class="stg-page">
 ${renderInspirations()}
 ${renderContributors()}
-</div>
-</div>
-<!-- /stg-tab-credits -->`;
+</div>`;
 }

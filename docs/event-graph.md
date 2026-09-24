@@ -219,7 +219,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 65 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 179 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 229 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 233 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 223 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 260 |
@@ -280,8 +280,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 168 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 314 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 172 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 318 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -464,13 +464,13 @@
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 127 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 114 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 139 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 146 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 219 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 226 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 242 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 145 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 281 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 143 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 150 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 223 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 230 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 246 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 149 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 285 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 129 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 139 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 145 |

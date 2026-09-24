@@ -14,6 +14,13 @@ import { recycleHTML, renderRecycleListHtml } from "./tpl-recycle.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
+/** id 边界切片：定位面板起止（renderTabs 输出 id="stg-tab-xxx"） */
+function panelSlice(html: string, id: string, nextId: string): string {
+  const start = html.indexOf(`id="${id}"`);
+  const end = html.indexOf(`id="${nextId}"`);
+  return html.slice(start, end);
+}
+
 const { getAndroidBridgeMock, isViewerModeMock, isWebPlatformMock, canBindingMock } = vi.hoisted(
   () => ({
     getAndroidBridgeMock: vi.fn().mockReturnValue(null), // 默认桌面（无 Android 桥）
@@ -169,16 +176,15 @@ describe("app-content 模板", () => {
     // 3D 预览操作已独立成「操作」tab（不再混在界面与体验内）
     expect(html).toContain('data-tab="ops"');
     expect(html).toContain('id="stg-tab-ops"');
-    const opsTab = html.slice(html.indexOf('<!-- stg-tab-ops -->'), html.indexOf('<!-- /stg-tab-ops -->'));
+    const opsTab = panelSlice(html, "stg-tab-ops", "stg-tab-parser");
     expect(opsTab).toContain('id="td-camspeed"');
     expect(opsTab).toContain('id="td-keymap-grid"');
-    const uiTab2 = html.slice(html.indexOf('<!-- stg-tab-ui -->'), html.indexOf('<!-- /stg-tab-ui -->'));
-    expect(uiTab2).not.toContain('id="td-camspeed"');
-    expect(uiTab2).not.toContain('id="td-keymap-grid"');
+    const uiTab = panelSlice(html, "stg-tab-ui", "stg-tab-ops");
+    expect(uiTab).not.toContain('id="td-camspeed"');
+    expect(uiTab).not.toContain('id="td-keymap-grid"');
     expect(html).toContain('id="stg-tab-parser"');
     expect(html).toContain("set-fbx-worker");
     expect(html).toContain("set-mmd-worker");
-    const uiTab = html.slice(html.indexOf("<!-- stg-tab-ui -->"), html.indexOf("<!-- /stg-tab-ui -->"));
     expect(uiTab).not.toContain("set-fbx-worker");
     expect(uiTab).not.toContain("set-mmd-worker");
     // 正文段落原语：禁止再内联复制 `color:var(--muted);line-height:1.7` 配方（应写 class="stg-desc"）

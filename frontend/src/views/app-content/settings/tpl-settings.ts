@@ -7,24 +7,14 @@ import { SUPPORTED_LANGS } from "@/core/i18n/locale.ts";
 import { t } from "@/core/i18n/t.ts";
 import { THEME_VALID } from "@/theme-core";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { renderTabs } from "@/views/app-content/tabs-shell.ts";
 import { navItems } from "@/views/app-nav/nav-items.ts";
 import { stgCard } from "./stg-card.ts";
-import { aboutHTML, creditsHTML } from "./tpl-settings-about.ts";
+import { aboutBody, creditsBody } from "./tpl-settings-about.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
 export const VIEW_TESTIDS: readonly string[] = ["set-mc-path"];
-
-function renderStgTabs(): string {
-  return `<div class="repo-tabs">
-<button class="stg-tab active" data-tab="basic">${UI_ICONS.settings} ${t("settings.basic")}</button>
-<button class="stg-tab" data-tab="ui">${UI_ICONS.appearance} ${t("settings.appearance")}</button>
-<button class="stg-tab" data-tab="ops">${UI_ICONS.joystick} ${t("settings.operations")}</button>
-<button class="stg-tab" data-tab="parser">${UI_ICONS.parser} ${t("settings.parser")}</button>
-<button class="stg-tab" data-tab="about">${UI_ICONS.info} ${t("settings.about")}</button>
-<button class="stg-tab" data-tab="credits">${UI_ICONS.thanks} ${t("settings.credits")}</button>
-</div>`;
-}
 
 function renderStgBasicPaths(isViewer: boolean): string {
   const gameRootCard = isViewer
@@ -395,19 +385,6 @@ function renderStgParserWorkers(): string {
 </div>`;
 }
 
-function renderStgTabBody(tabId: string, display: string, body: string): string {
-  // 激活 tab 传空 display → 不回写 inline，回落 .tab-body{display:flex}(content-stg.ts:102)，
-  // 与 bindTabs.activate 置 "" 的行为一致；隐藏 tab 才显式 "none"。
-  const style = `overflow-y:auto${display ? `;display:${display}` : ""}`;
-  return `<!-- stg-tab-${tabId} -->
-<div class="tab-body" id="stg-tab-${tabId}" style="${style}">
-<div class="stg-page">
-${body}
-</div>
-</div>
-<!-- /stg-tab-${tabId} -->`;
-}
-
 export function settingsHTML(): string {
   const isViewer = isViewerMode();
   const isWebViewer = isWebPlatform();
@@ -430,14 +407,47 @@ ${renderStgAnimDefault()}`;
 
   const opsBody = `${renderStgPreview3d()}`;
 
-  return `<div class="repo-wrap">
-${renderStgTabs()}
-${renderStgTabBody("basic", "", basicBody)}
-${renderStgTabBody("ui", "none", uiBody)}
-${renderStgTabBody("parser", "none", parserBody)}
-${renderStgTabBody("ops", "none", opsBody)}
-${aboutHTML()}
-${creditsHTML()}
-
-</div>`;
+  const { bar, panels } = renderTabs({
+    prefix: "stg",
+    buttonClass: "stg-tab",
+    tabs: [
+      {
+        id: "basic",
+        label: `${UI_ICONS.settings} ${t("settings.basic")}`,
+        body: `<div class="stg-page">${basicBody}</div>`,
+        panelStyle: "overflow-y:auto",
+      },
+      {
+        id: "ui",
+        label: `${UI_ICONS.appearance} ${t("settings.appearance")}`,
+        body: `<div class="stg-page">${uiBody}</div>`,
+        panelStyle: "overflow-y:auto",
+      },
+      {
+        id: "ops",
+        label: `${UI_ICONS.joystick} ${t("settings.operations")}`,
+        body: `<div class="stg-page">${opsBody}</div>`,
+        panelStyle: "overflow-y:auto",
+      },
+      {
+        id: "parser",
+        label: `${UI_ICONS.parser} ${t("settings.parser")}`,
+        body: `<div class="stg-page">${parserBody}</div>`,
+        panelStyle: "overflow-y:auto",
+      },
+      {
+        id: "about",
+        label: `${UI_ICONS.info} ${t("settings.about")}`,
+        body: aboutBody(),
+        panelStyle: "overflow-y:auto",
+      },
+      {
+        id: "credits",
+        label: `${UI_ICONS.thanks} ${t("settings.credits")}`,
+        body: creditsBody(),
+        panelStyle: "overflow-y:auto",
+      },
+    ],
+  });
+  return `<div class="repo-wrap">${bar}${panels}</div>`;
 }

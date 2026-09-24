@@ -52,23 +52,25 @@ export const contentDiagCSS: string = `
   100% { top:4px; left:50%; transform:translateX(-50%); }
 }
 
-.diag-panel { animation: diagPanelIn .2s ease; }
+/* ADR-259 + 2026-09-25 版面收口：.diag-panel 既是入场动画钩子，也是**三 tab 唯一的留白来源**。
+   此前留白由各组容器内 padding 各自负责（bench 的 .diag-pane 是 8px 12px，logs / audit 无），
+   于是同一条子 pill 行在三个 tab 里左边缘分别落在 22px / 10px / 10px——切 tab 横跳 12px。
+   现在收成：面板 .diag-panel 出留白 → .diag-pane 出纵向分区（零 padding）→ 全页同一起跑线。 */
+.diag-panel { padding:var(--sp-vh-pane); min-height:0; animation: diagPanelIn .2s ease; }
 @keyframes diagPanelIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
-/* 日志面板工具栏：两行语义分组（2026-09-17 版面收口，搜索框 2026-09-28 上移；
-   ADR-300 §2.2 起视图切换升为组内 pill 行、不再住工具栏）。
+/* 日志工具栏的两行语义分组（2026-09-17 版面收口，搜索框 2026-09-28 上移）：
    行1 = 搜索框 + 动作（刷新/复制/清空）；行2 = 状态筛选 chips + 操作类型下拉。
    演进：9 按钮 + 1 输入框挤单行时，flex:1 的 spacer 把「清空」（破坏性动作）与筛选 chips
    划成一组、却把刷新/复制推到行尾——视觉分组 ≠ 功能分组；且 spacer 自身会随
    flex-wrap 折行，窄宽下右侧动作组被挤散。
-   .diag-log-row 为布局类，由 content-diag-classes.test.ts 强制同步。 */
-.diag-log-bar { display:flex; flex-direction:column; gap:4px; padding:var(--btn-padding-filter-lg); border-bottom:1px solid var(--bd); flex-shrink:0; }
-.diag-log-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
-.diag-log-bar-spacer { flex:1; }
+   2026-09-25：工具栏类沿用全页统一词汇 .diag-bar / .diag-bar-row（见下方三件套区），
+   原 .diag-log-bar / .diag-log-row / .diag-log-bar-spacer 退役——.diag-log-row 与既有的
+   .diag-bar-row **逐字相同**，留着就是两份真相。 */
 /* 组内二级导航（ADR-300 §2.2）：renderSubBar 产出的 pill 行——全页唯一的「页内再分屏」形态。
-   容器是布局类（仿 .diag-log-subtabs 前身职责）；.diag-sub-pane 是子面板竖排容器
-   （激活时 display 回落本规则，非激活由 bindSubBar 置 inline none）。 */
-.diag-sub-bar { display:flex; align-items:center; gap:2px; padding:var(--btn-padding-std); flex-shrink:0; flex-wrap:wrap; }
-.diag-sub-pane { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+   gap 2px→4px（2026-09-25）：pill 带 1px 描边，2px 下相邻边框近乎连体；取同页筛选 chips
+  （.diag-log-filter）的 gap:4px 同档。
+   子分区容器不再另立门户（原 .diag-sub-pane）→ 并入 .diag-pane（见下方三件套区）。 */
+.diag-sub-bar { display:flex; align-items:center; gap:var(--sp-1); padding:var(--btn-padding-std); flex-shrink:0; flex-wrap:wrap; }
 .diag-sub-tab { padding:var(--btn-padding-std); border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-sm); font-family:inherit; transition:var(--tr-fast); }
 .diag-sub-tab:hover { background:var(--hover); color:var(--txt); }
 .diag-sub-tab.active { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }
@@ -85,8 +87,8 @@ export const contentDiagCSS: string = `
 /* 操作类型下拉（2026-09-28 纵向筛选）：与状态 chips 同排、与搜索框同款度量；
    max-width 封顶防长标签（「全部操作」多语）把 chips 挤走，margin-left:auto 推到行尾与 chips 分离。 */
 .diag-log-op-filter { font-size:var(--fs-sm); padding:var(--btn-padding-xs); border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); max-width:150px; margin-left:auto; }
-.diag-log-scroll { overflow-y:auto; flex:1; }
-/* ADR-259：布局基线归 .tab-body（面板即 .tab-body）；.diag-panel 只留入场动画钩子（见上方 diagPanelIn） */
+/* ADR-259：布局基线归 .tab-body（面板即 .tab-body）；.diag-panel 除入场动画钩子外，
+   2026-09-25 起兼作三 tab 的唯一留白来源（见上方 .diag-panel 规则处注释）。 */
 .diag-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; font-size:var(--fs-md); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); flex-shrink:0; }
 .stat-row { font-size:var(--fs-md); color:var(--txt); padding:var(--pad-v-2); display:flex; justify-content:space-between; }
 .diag-stat { padding:var(--sp-3); font-size:var(--fs-base); display:block; text-align:center; }
@@ -105,23 +107,35 @@ export const contentDiagCSS: string = `
 .perf-matrix-model-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); font-family:var(--font-mono); }
 .perf-matrix-model-detail { color:var(--muted); font-variant-numeric:tabular-nums; flex-shrink:0; font-family:var(--font-mono); }
 
-/* ===== 诊断页通用布局三件套（2026-09-21 由 .perf-wrap/.perf-controls/.perf-row/.perf-hint 泛化，ADR-288）=====
-   全页 tab 共用「上栏常驻 + 结果独立」骨架：
-     .diag-pane      = 纵向容器（flex:1，结果随内容滚）
-     .diag-bar       = 常驻控制栏（border-bottom + flex-shrink:0，不随结果滚走）
-     .diag-bar-row   = 栏内语义行（flex-wrap）
-     .diag-bar-hint  = 栏内说明行（独占一行，弱化）
-   改名理由：前缀 perf- 名不副实（health / sync-conflict 同样要用）；规则逐字未变。
+/* ===== 诊断页通用布局词典（2026-09-21 由 .perf-* 泛化，ADR-288；2026-09-25 收口为唯一词汇）=====
+   全页三 tab 共用同一副骨架，逐层只做一件事：
+     .diag-panel   = 面板本体（.tab-body 的面板类）—— **唯一留白来源**（padding）
+     .diag-pane    = 纵向分区（pill 行 + 常驻栏 + 结果区）—— **自身不滚动**（overflow:hidden）
+     .diag-bar     = 常驻控制栏（border-bottom + flex-shrink:0）
+     .diag-bar-row = 栏内语义行（flex-wrap）
+     .diag-bar-hint= 栏内说明行（独占一行，弱化）
+     .diag-result  = 结果区 —— **唯一滚动**（flex:1 + min-height:0 + overflow-y:auto）
+   2026-09-25 收口动机（三条，均可实证）：
+    ① .diag-pane 原自带 overflow-y:auto，而常驻栏正是它的子元素 → 内容一多，宣称「常驻」
+      的控制栏照样滚出视野；滚动职责收给 .diag-result 后「常驻」才名副其实。
+    ② .diag-sub-pane（audit / logs-trace 用）与 .diag-pane（bench 用）是同义两份，只差一个
+      padding——正是那 12px 把基准组的 pill 行推到 22px（另两组 10px）。现二合一，
+      padding 上交 .diag-panel。
+    ③ .diag-log-row 与 .diag-bar-row 逐字相同，一并退役（老名字见上方日志工具栏注释）。
    历史：这几个类 2026-09 之前**无任何规则**（类名空头支票），控件靠 UA 默认 inline 流换行，
    分组不可见、窄屏折行语义全散；当时按日志工具栏已验证的范式补的规则。
-   ⚠️ 新布局一律抄这四个类；tpl 里出现的类必须在 shadow 层有规则（css-layer-check 判定域自推导）。 */
-.diag-pane { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:var(--sp-vh-pane); }
+   ⚠️ 新布局一律抄这几个类；tpl 里出现的类必须在 shadow 层有规则（css-layer-check 判定域自推导）。 */
+.diag-pane { flex:1; min-height:0; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
 .diag-bar { display:flex; flex-direction:column; gap:4px; padding:0 0 6px; border-bottom:1px solid var(--bd); flex-shrink:0; }
 .diag-bar-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .diag-bar-row > input[type="text"] { flex:1; min-width:180px; }
+.diag-bar-spacer { flex:1; }
 /* 提示行：.diag-bar-row 是 flex 容器，flex-basis:100% 让说明文字独占一行，
    与栏内控件行同语义但无交互权重（不可点、不截断 title）。 */
 .diag-bar-hint { flex-basis:100%; color:var(--muted); font-size:var(--fs-xs); line-height:1.4; }
+/* 结果区 = 唯一滚动容器。min-height:0 不可省：column flex 子项默认 min-height:auto，
+   内容再长也不收缩，滚动条会被顶到 .tab-body 上——届时「常驻栏」又会跟着滚。 */
+.diag-result { flex:1; min-height:0; overflow-y:auto; }
 /* ADR-278 §2.4：基准模式显隐走 class，与查看器降级的 inline display:none 分工不冲突（inline 胜过 class） */
 .perf-mode-off { display: none; }
 

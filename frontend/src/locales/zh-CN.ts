@@ -144,7 +144,7 @@ export const zhCN = {
   // ── 设置页 ──
   // [ADR-305 D5 预留键] 诊断组/设置页重构（ADR-300 S2 热区）预留，勿删（登记口径见 i18n.md 死键待删批次）
   "settings.title": "设置",
-  "settings.basic": "常规",
+  "settings.general": "常规",
   "settings.appearance": "外观",
   "settings.tab3d": "3D 预览",
   "settings.parser": "解析",
@@ -531,6 +531,9 @@ export const zhCN = {
   "diagnostics.perfTrendNoData": "暂无趋势数据——运行两次以上 single-bench 后展示折线图",
   "diagnostics.perfRunning": "运行中…",
   "diagnostics.perfIdle": "点上方按钮开始；结果将显示在此处",
+  // 体检组（health / sync-conflict）空态：此前借用 perfIdle「点上方按钮开始」——文案碰巧能读，
+  // 但键名把「体检」叫成「性能」，改体检文案时要翻的是 bench 的键。单独成语义。
+  "diagnostics.auditIdle": "点上方按钮开始体检；结果将显示在此处",
   // perfMode/perfModeHint/perfRecord 已随 ADR-300 §2.2/§2.4 退役（模式下拉与「性能记录」tab 双双消失）
   "diagnostics.perfFail": "执行失败",
   "diagnostics.loadTraceRefresh": "刷新加载剖析",

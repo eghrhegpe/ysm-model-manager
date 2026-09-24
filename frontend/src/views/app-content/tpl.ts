@@ -176,25 +176,26 @@ export function diagnosticsHTML(): string {
         // ADR-300 §2.1：日志三态（操作/运行时/加载剖析）= 已收集数据的被动查看，全组跨平台
         //（加载剖析读内存 store，ADR-278 §2.5 豁免原样携带）。子 pill 行由 renderSubBar 单点
         // 产出（§2.2）；工具栏与清空按可见集合门控——trace 下工具栏整体退场，clear 只在 op 露面。
-        body: `  ${renderSubBar(
-          "logs",
-          [
-            { id: "op", label: t("diagnostics.opsLog") },
-            { id: "runtime", label: t("diagnostics.runtimeLog") },
-            { id: "trace", label: t("diagnostics.pillTrace") },
-          ],
-          "op",
-        )}
-  <div class="diag-log-bar" data-sub-group="logs" data-sub-pane="op runtime">
-    <div class="diag-log-row">
-      <input id="diag-log-search" class="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
-      <span class="diag-log-bar-spacer"></span>
-      <button class="btn-base sm" id="diag-refresh">${t("diagnostics.refresh")}</button>
-      <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
-      <button class="btn-base sm" id="diag-clear" data-sub-group="logs" data-sub-pane="op">${t("diagnostics.clearLog")}</button>
-    </div>
-    <div class="diag-log-row">
-      <div class="diag-log-filter" id="diag-log-filter">
+        body: `  <div class="diag-pane">
+    ${renderSubBar(
+      "logs",
+      [
+        { id: "op", label: t("diagnostics.opsLog") },
+        { id: "runtime", label: t("diagnostics.runtimeLog") },
+        { id: "trace", label: t("diagnostics.pillTrace") },
+      ],
+      "op",
+    )}
+    <div class="diag-bar" data-sub-group="logs" data-sub-pane="op runtime">
+      <div class="diag-bar-row">
+        <input id="diag-log-search" class="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
+        <span class="diag-bar-spacer"></span>
+        <button class="btn-base sm" id="diag-refresh">${t("diagnostics.refresh")}</button>
+        <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
+        <button class="btn-base sm" id="diag-clear" data-sub-group="logs" data-sub-pane="op">${t("diagnostics.clearLog")}</button>
+      </div>
+      <div class="diag-bar-row">
+        <div class="diag-log-filter" id="diag-log-filter">
         <button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
         <button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
         <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
@@ -210,18 +211,19 @@ export function diagnosticsHTML(): string {
           <option value="delete">${t("diagnostics.opDelete")}</option>
           <option value="ui">${t("diagnostics.opUI")}</option>
         </select>
+        </div>
       </div>
     </div>
-  </div>
-  <div id="diag-log-list" data-testid="diag-log-list" class="diag-log-scroll" data-sub-group="logs" data-sub-pane="op"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
-  <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none" data-sub-group="logs" data-sub-pane="runtime"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>
-  <div class="diag-sub-pane" data-sub-group="logs" data-sub-pane="trace" style="display:none">
-    <div class="diag-log-bar">
-      <div class="diag-log-row">
-        <button class="btn-base sm" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>
+    <div class="diag-result" id="diag-log-list" data-testid="diag-log-list" data-sub-group="logs" data-sub-pane="op"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
+    <div class="diag-result" id="diag-runtime-list" data-testid="diag-runtime" style="display:none" data-sub-group="logs" data-sub-pane="runtime"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>
+    <div class="diag-pane" data-sub-group="logs" data-sub-pane="trace" style="display:none">
+      <div class="diag-bar">
+        <div class="diag-bar-row">
+          <button class="btn-base sm" id="diag-trace-refresh">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>
+        </div>
       </div>
+      <div class="diag-result" id="diag-load-trace"></div>
     </div>
-    <div id="diag-load-trace"></div>
   </div>`,
       },
       {
@@ -290,9 +292,9 @@ export function diagnosticsHTML(): string {
         <div class="diag-bar-hint">${t("diagnostics.perfScanBenchHint")}</div>
       </div>
     </div>
-    <div id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out" data-perf-mode="scan"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div class="diag-result" id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div class="diag-result" id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div class="diag-result" id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out" data-perf-mode="scan"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
@@ -302,39 +304,41 @@ export function diagnosticsHTML(): string {
         // 元素 id 与两段式结构一字不动（历次重构压测试面的成功经验，ADR-278 §3）。
         desktopOnly: true,
         label: `${UI_ICONS.diagnose} ${t("diagnostics.tabAudit")}`,
-        body: `  ${renderSubBar(
-          "audit",
-          [
-            { id: "health", label: t("diagnostics.pillHealth") },
-            { id: "sync", label: t("diagnostics.syncConflict") },
-          ],
-          "health",
-        )}
-  <div class="diag-sub-pane" data-sub-group="audit" data-sub-pane="health">
-    <div class="diag-bar" id="diag-health-bar">
-      <div class="diag-bar-row">
-        <button class="btn-base accent" id="diag-scan-health" data-testid="diag-scan-health">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
+        body: `  <div class="diag-pane">
+    ${renderSubBar(
+      "audit",
+      [
+        { id: "health", label: t("diagnostics.pillHealth") },
+        { id: "sync", label: t("diagnostics.syncConflict") },
+      ],
+      "health",
+    )}
+    <div class="diag-pane" data-sub-group="audit" data-sub-pane="health">
+      <div class="diag-bar" id="diag-health-bar">
+        <div class="diag-bar-row">
+          <button class="btn-base accent" id="diag-scan-health" data-testid="diag-scan-health">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
+        </div>
+        <div class="diag-bar-row">
+          <div class="diag-bar-hint">${t("diagnostics.healthHint")}</div>
+        </div>
       </div>
-      <div class="diag-bar-row">
-        <div class="diag-bar-hint">${t("diagnostics.healthHint")}</div>
-      </div>
+      <div class="diag-result" id="diag-health-list" data-testid="diag-health-list"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.auditIdle")}</div></div>
     </div>
-    <div id="diag-health-list" data-testid="diag-health-list"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-  </div>
-  <div class="diag-sub-pane" data-sub-group="audit" data-sub-pane="sync" style="display:none">
-    <div class="diag-bar" id="diag-sync-bar">
-      <div class="diag-bar-row">
-        <label for="sync-rtype">${UI_ICONS.package} ${t("diagnostics.selectResourceType")}</label>
-        <select id="sync-rtype" class="diag-config-select" data-testid="sync-rtype"></select>
-        <label for="sync-instance">${UI_ICONS.game} ${t("diagnostics.selectInstance")}</label>
-        <select id="sync-instance" class="diag-config-select" data-testid="sync-instance"></select>
-        <button class="btn-base accent" id="diag-scan-sync-conflict" data-testid="diag-scan-sync-conflict">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
+    <div class="diag-pane" data-sub-group="audit" data-sub-pane="sync" style="display:none">
+      <div class="diag-bar" id="diag-sync-bar">
+        <div class="diag-bar-row">
+          <label for="sync-rtype">${UI_ICONS.package} ${t("diagnostics.selectResourceType")}</label>
+          <select id="sync-rtype" class="diag-config-select" data-testid="sync-rtype"></select>
+          <label for="sync-instance">${UI_ICONS.game} ${t("diagnostics.selectInstance")}</label>
+          <select id="sync-instance" class="diag-config-select" data-testid="sync-instance"></select>
+          <button class="btn-base accent" id="diag-scan-sync-conflict" data-testid="diag-scan-sync-conflict">${UI_ICONS.search} ${t("diagnostics.scanSyncConflict")}</button>
+        </div>
+        <div class="diag-bar-row">
+          <div class="diag-bar-hint">${t("diagnostics.scanHint")}</div>
+        </div>
       </div>
-      <div class="diag-bar-row">
-        <div class="diag-bar-hint">${t("diagnostics.scanHint")}</div>
-      </div>
+      <div class="diag-result" id="diag-sync-conflict-list" data-testid="diag-sync-conflict-list"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.auditIdle")}</div></div>
     </div>
-    <div id="diag-sync-conflict-list" data-testid="diag-sync-conflict-list"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
     ],

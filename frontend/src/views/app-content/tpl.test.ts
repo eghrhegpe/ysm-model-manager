@@ -133,7 +133,7 @@ describe("app-content 模板", () => {
     expect(html).toContain("web-repo-auth-btn");
     expect(html).toContain("web-repo-auth-status");
     // 网页版只有文件来源入口，外层节标题不应继续声称可配置“路径”
-    const basicTab = panelSlice(html, "stg-tab-basic", "stg-tab-ui");
+    const basicTab = panelSlice(html, "stg-tab-general", "stg-tab-appearance");
     expect(basicTab).toContain(`${UI_ICONS.settings} 文件来源</div>`);
     expect(basicTab).not.toContain(`${UI_ICONS.settings} 路径配置</div>`);
     expect(basicTab).not.toContain('class="stg-grid"');
@@ -158,14 +158,15 @@ describe("app-content 模板", () => {
   it("settingsHTML 桌面模式包含主题选择/默认页/高级设置网格", () => {
     const html = settingsHTML();
     // 方案 A：一级菜单按用户任务命名，保留四个槽位，不恢复解析/鸣谢独立入口
-    expect(html).toContain(`data-tab="basic">${UI_ICONS.settings} 常规</button>`);
-    expect(html).toContain(`data-tab="ui">${UI_ICONS.appearance} 外观</button>`);
+    // 「常规」图标=controls（旋钮）：齿轮是左侧一级导航的设置入口，二级 tab 复用会层级歧义
+    expect(html).toContain(`data-tab="general">${UI_ICONS.controls} 常规</button>`);
+    expect(html).toContain(`data-tab="appearance">${UI_ICONS.appearance} 外观</button>`);
     // tab 名 2026-09 直白化：原「3D 与解析」（键名 settings.operations="操作"，键名与文案脱节）
     // → 「3D 预览」（键名 settings.tab3d）。回归防线：不得退回妥协拼接名
-    expect(html).toContain(`data-tab="ops">${UI_ICONS.joystick} 3D 预览</button>`);
-    expect(html).not.toContain(`data-tab="ops">${UI_ICONS.joystick} 3D 与解析</button>`);
-    expect(html).not.toContain(`data-tab="basic">${UI_ICONS.settings} 基础设置</button>`);
-    expect(html).not.toContain(`data-tab="ui">${UI_ICONS.appearance} 界面与体验</button>`);
+    expect(html).toContain(`data-tab="preview3d">${UI_ICONS.joystick} 3D 预览</button>`);
+    expect(html).not.toContain(`data-tab="preview3d">${UI_ICONS.joystick} 3D 与解析</button>`);
+    expect(html).not.toContain(`data-tab="general">${UI_ICONS.controls} 基础设置</button>`);
+    expect(html).not.toContain(`data-tab="appearance">${UI_ICONS.appearance} 界面与体验</button>`);
     // 桌面模式展示完整偏好：主题选择器、动画开关、默认启动页、文件存储高级网格
     expect(html).toContain("theme-picker");
     expect(html).toContain("set-animations");
@@ -187,8 +188,8 @@ describe("app-content 模板", () => {
     // 键位网格已改为 stg-grid 工厂小卡容器（与基础设置路径卡同构），列数由响应式 CSS 决定
     expect(html).toContain('id="td-keymap-grid" class="stg-grid stg-keymap-grid"');
     // 启动默认页属于「常规」，不属于「外观」
-    const basicTab = panelSlice(html, "stg-tab-basic", "stg-tab-ui");
-    const uiTab = panelSlice(html, "stg-tab-ui", "stg-tab-ops");
+    const basicTab = panelSlice(html, "stg-tab-general", "stg-tab-appearance");
+    const uiTab = panelSlice(html, "stg-tab-appearance", "stg-tab-preview3d");
     expect(basicTab).toContain('id="stg-default-page-card"');
     expect(basicTab).toContain('id="set-default-page"');
     expect(uiTab).not.toContain('id="stg-default-page-card"');
@@ -219,9 +220,9 @@ describe("app-content 模板", () => {
     expect(html).not.toContain('id="stg-tab-parser"');
     expect(html).not.toContain('id="stg-tab-credits"');
     // 3D 预览 + 解析开关收口进「3D 预览」tab
-    expect(html).toContain('data-tab="ops"');
-    expect(html).toContain('id="stg-tab-ops"');
-    const opsTab = panelSlice(html, "stg-tab-ops", "stg-tab-about");
+    expect(html).toContain('data-tab="preview3d"');
+    expect(html).toContain('id="stg-tab-preview3d"');
+    const opsTab = panelSlice(html, "stg-tab-preview3d", "stg-tab-about");
     expect(opsTab).toContain('id="td-camspeed"');
     expect(opsTab).toContain('id="td-keymap-grid"');
     expect(opsTab).toContain('id="td-keymap-hint"');

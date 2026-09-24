@@ -1120,7 +1120,6 @@ auto_fields:
     - setPerfPreset
     - setRenderMode
     - setSceneCapabilityLookup
-    - setShowSiteView
     - setStateValue
     - SettingsCfg
     - settingsHTML

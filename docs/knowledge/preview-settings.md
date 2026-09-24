@@ -22,6 +22,7 @@ auto_fields:
     - BedrockBone
     - BedrockCube
     - BedrockModel
+    - bindPreviewTabs
     - buildBoneExportRow
     - buildStatsCard
     - buildToggleRow

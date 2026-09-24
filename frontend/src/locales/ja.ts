@@ -137,7 +137,7 @@ export const ja: Record<string, string> = {
   // ── Settings Page ──
   // [ADR-305 D5 reserved key] reserved for diagnostics/settings refactor (ADR-300 S2 hot zone), do not delete
   "settings.title": "設定",
-  "settings.basic": "一般",
+  "settings.general": "一般",
   "settings.appearance": "外観",
   "settings.parser": "パーサー",
   "settings.tab3d": "3D プレビュー",
@@ -542,6 +542,8 @@ export const ja: Record<string, string> = {
     "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",
   "diagnostics.perfRunning": "実行中…",
   "diagnostics.perfIdle": "上のボタンで開始；結果はここに表示されます",
+  // 診断グループ（health / sync-conflict）の空状態：従来 perfIdle を流用していた
+  "diagnostics.auditIdle": "上のボタンで診断を開始；結果はここに表示されます",
   // perfMode/perfModeHint/perfRecord は ADR-300 §2.2/§2.4 で退役（モードドロップダウンと「パフォー
   // マンス記録」タブがいずれも消滅）
   "diagnostics.perfFail": "実行に失敗しました",

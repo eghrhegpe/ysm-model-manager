@@ -135,7 +135,7 @@ export const en: Record<string, string> = {
   // ── Settings Page ──
   // [ADR-305 D5 reserved key] reserved for diagnostics/settings refactor (ADR-300 S2 hot zone), do not delete
   "settings.title": "Settings",
-  "settings.basic": "General",
+  "settings.general": "General",
   "settings.appearance": "Appearance",
   "settings.parser": "Parsing",
   "settings.tab3d": "3D Preview",
@@ -546,6 +546,8 @@ export const en: Record<string, string> = {
   "diagnostics.perfTrendNoData": "No trend yet — run single-bench twice or more to show the chart",
   "diagnostics.perfRunning": "Running…",
   "diagnostics.perfIdle": "Click the button above to start; results will appear here",
+  // Audit group (health / sync-conflict) empty state: previously reused perfIdle.
+  "diagnostics.auditIdle": "Click the button above to start the audit; results will appear here",
   // perfMode/perfModeHint/perfRecord retired with ADR-300 §2.2/§2.4 (mode dropdown & "Perf Records" tab both gone)
   "diagnostics.perfFail": "Execution failed",
   "diagnostics.loadTraceRefresh": "Refresh Load Trace",

@@ -110,7 +110,7 @@ function makeRoot(): ShadowRoot {
   const el = document.createElement("div");
   el.innerHTML = `
     <button class="diag-btn" id="diag-perf-run">运行</button>
-    <button class="diag-btn" id="diag-perf-refresh-trace">刷新</button>
+    <button class="diag-btn" id="diag-trace-refresh">刷新</button>
     ${benchSubBar("single")}
     <input id="diag-perf-model">
     <input id="diag-perf-iter">
@@ -757,7 +757,7 @@ describe("加载剖析面板", () => {
     clearLoadTraces();
     const root = makeRoot();
     initPerfPanel(root, esc);
-    (root.getElementById("diag-perf-refresh-trace") as HTMLElement).click();
+    (root.getElementById("diag-trace-refresh") as HTMLElement).click();
     await Promise.resolve();
     const out = root.getElementById("diag-load-trace") as HTMLElement;
     expect(out.textContent).toContain("暂无加载记录");

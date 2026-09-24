@@ -51,7 +51,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 189 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 190 |
 
 ### `batch:rename`
 
@@ -219,7 +219,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 65 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 179 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 266 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 267 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 260 |
@@ -280,8 +280,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 198 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 353 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 199 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 354 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -464,27 +464,27 @@
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 127 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 114 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 143 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 150 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 224 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 157 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 231 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 247 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 169 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 320 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 238 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 254 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 170 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 321 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 129 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 139 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 145 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 156 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 167 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 173 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 100 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 165 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 104 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 169 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 150 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 200 |
-| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 41 |
-| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 66 |
+| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 42 |
+| routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 67 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 122 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 42 |

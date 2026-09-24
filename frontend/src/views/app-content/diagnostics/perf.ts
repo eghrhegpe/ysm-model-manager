@@ -258,8 +258,10 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   root
     .getElementById("diag-perf-scan-bench")
     ?.addEventListener("click", () => void runScanBench(root, esc));
+  // 加载剖析刷新：ADR-300 §2.2 起 record/trace 降级为 **logs 组**第三 pill，id 跟着落户
+  // logs（原 diag-perf-refresh-trace 是 tab 还在 bench 那会儿的名字，留在 logs 组是误导）
   root
-    .getElementById("diag-perf-refresh-trace")
+    .getElementById("diag-trace-refresh")
     ?.addEventListener("click", () => renderLoadTraceSection(root, esc));
 }
 

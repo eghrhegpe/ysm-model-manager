@@ -47,7 +47,7 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
       <button class="diag-sub-tab" data-sub="runtime">运行时</button>
       <button class="diag-sub-tab" data-sub="trace">剖析</button>
     </div>
-    <div class="diag-log-bar" data-sub-group="logs" data-sub-pane="op runtime">
+    <div class="diag-bar" data-sub-group="logs" data-sub-pane="op runtime">
       <button id="diag-refresh"></button>
       <button id="diag-copy"></button>
       <button id="diag-clear" data-sub-group="logs" data-sub-pane="op"></button>
@@ -70,8 +70,8 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
     </div>
     <div id="diag-log-list" data-sub-group="logs" data-sub-pane="op"></div>
     <div id="diag-runtime-list" data-sub-group="logs" data-sub-pane="runtime" style="display:none"></div>
-    <div class="diag-sub-pane" data-sub-group="logs" data-sub-pane="trace" style="display:none">
-      <button id="diag-perf-refresh-trace"></button>
+    <div class="diag-pane" data-sub-group="logs" data-sub-pane="trace" style="display:none">
+      <button id="diag-trace-refresh"></button>
       <div id="diag-load-trace"></div>
     </div>
     <div id="diag-tab-audit"><div class="diag-bar" id="diag-health-bar"><div class="diag-bar-row"><button id="diag-scan-health"></button></div></div><div id="diag-health-list"></div></div>
@@ -425,7 +425,7 @@ describe("initDiagnostics — 日志面板", () => {
     const opList = root.getElementById("diag-log-list") as HTMLElement;
     const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
     const clearBtn = root.getElementById("diag-clear") as HTMLElement;
-    const toolbar = root.querySelector(".diag-log-bar") as HTMLElement;
+    const toolbar = root.querySelector('[data-sub-group="logs"][data-sub-pane="op runtime"]') as HTMLElement;
     const tracePane = root.querySelector('[data-sub-pane="trace"]') as HTMLElement;
     // 初始：op 激活，runtime 隐藏，清空可见
     expect(opList.style.display).not.toBe("none");
@@ -904,7 +904,7 @@ describe("initDiagnostics — 日志子屏与查看器降级", () => {
     }
     // 加载剖析读内存 store、零 Go/CLI 依赖 → 跨模式可用，入口不得隐藏（ADR-278 §2.5）
     expect(
-      (root.getElementById("diag-perf-refresh-trace") as HTMLElement).style.display,
+      (root.getElementById("diag-trace-refresh") as HTMLElement).style.display,
     ).not.toBe("none");
     // ADR-300 §2.5（D3）：web 端「沉默消失」变「可见缺席」——告知行在成品里存在
     expect(root.querySelector(".repo-tabs-notice")).not.toBeNull();
@@ -987,7 +987,7 @@ describe("initDiagnostics — trace 面板进入语义（2026-09）", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     expect(
-      (root.getElementById("diag-perf-refresh-trace") as HTMLElement).style.display,
+      (root.getElementById("diag-trace-refresh") as HTMLElement).style.display,
     ).not.toBe("none");
   });
 });

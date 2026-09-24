@@ -72,8 +72,8 @@ auto_fields:
     - RepoCacheEntry
     - repositoryHTML
     - resetAvatarConfigLoaded
-    - setShowSiteView
     - settingsHTML
+    - SettingsTabId
     - SubscriptionBucket
     - VIEW_TESTIDS
     - workshopHTML

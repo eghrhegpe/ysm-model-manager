@@ -95,15 +95,28 @@ describe("诊断页日志工具栏：HTML 类名必须有 CSS 规则", () => {
     },
   );
 
-  it("日志工具栏所有 diag-log-* / diag-sub-* 类均有规则（防再次误删）", () => {
-    // ADR-300 §2.2：diag-sub- 前缀整族入闸（tab 按钮 / bar 容器 / pane 面板）——
+  it("诊断页布局词典与工具栏类均有规则（防再次误删）", () => {
+    // ADR-300 §2.2：diag-sub- 前缀整族入闸（tab 按钮 / bar 容器）——
     // 子导航是统一语法，规则丢一发就全体裸渲染，正是本文件立因的那类静默回归。
+    // 2026-09-25：布局词典（.diag-pane / .diag-bar* / .diag-result）一并入闸——它们替换了退役的
+    // .diag-sub-pane / .diag-log-bar / .diag-log-row / .diag-log-scroll。这套词汇曾因「两套同义词
+    // 并存」把基准组的 pill 行推偏 12px 且让常驻栏随内容滚走，退回去的成本由本用例兜住。
     const cls = [
       ...classesWithPrefix(html, "diag-log-"),
       ...classesWithPrefix(html, "diag-sub-"),
+      ...classesWithPrefix(html, "diag-pane"),
+      ...classesWithPrefix(html, "diag-bar"),
+      ...classesWithPrefix(html, "diag-result"),
     ];
-    // 自检：子导航三件套必须真的被抽到（防前缀改名让本用例悄悄空转）
-    for (const must of ["diag-sub-tab", "diag-sub-bar", "diag-sub-pane"]) {
+    // 自检：各词必须真的被抽到（防前缀改名让本用例悄悄空转）
+    for (const must of [
+      "diag-sub-tab",
+      "diag-sub-bar",
+      "diag-pane",
+      "diag-bar",
+      "diag-bar-row",
+      "diag-result",
+    ]) {
       expect(cls, `扫描面丢失 ${must}`).toContain(must);
     }
     // 排除仅作 JS 钩子、无需样式的占位类（当前无；若新增请显式登记并说明）

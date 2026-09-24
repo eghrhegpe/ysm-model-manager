@@ -16,6 +16,8 @@ auto_fields:
     - BedrockBone
     - BedrockCube
     - BedrockModel
+    - bigIconHTML
+    - bindPreviewTabs
     - BoneBounds
     - BoneEntry
     - BoundsOpts
@@ -49,6 +51,7 @@ auto_fields:
     - DetailGenGuard
     - drawMiniView
     - drawView
+    - errorPlaceholderHTML
     - fillAuthorsAsync
     - getRegisteredRoutes
     - HitZone
@@ -78,6 +81,9 @@ auto_fields:
     - openFullPreview
     - openModel3DFullscreen
     - OpenModel3DOptions
+    - pageShellHTML
+    - PlaceholderHint
+    - placeholderHTML
     - playNodes
     - Prefer3DState
     - preloadModel
@@ -91,6 +97,7 @@ auto_fields:
     - PreviewRoot
     - PreviewRouterCtx
     - PreviewShowFn
+    - PreviewTabSpec
     - readFileBytes
     - registerReRoute
     - registerYsmModelSchema
@@ -130,6 +137,7 @@ auto_fields:
     - SummaryAuthor
     - summaryCardHTML
     - SummaryConfigMenu
+    - tabbedShellHTML
     - VrmMaterialControlBridge
     - vrmModelInfoNodes
     - vrmShotNodes

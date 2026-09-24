@@ -256,6 +256,8 @@ test.describe("诊断页", () => {
     // 2026-09-28 再收口：搜索框上移行1（按激活子 tab 分派），行2 只剩筛选 chips。
     // 2026-09-24 ADR-300 §2.2：子 tab 从 .diag-log-bar 内的 .diag-log-subtabs **升为独立
     // .diag-sub-bar 行**，与 bench/audit 组共用单点语法——它现在落在工具栏上方、工具栏外。
+    // 2026-09-25：版面词典收口，原 .diag-log-bar / .diag-log-row 退役 → .diag-bar / .diag-bar-row
+    // （.diag-log-row 与既有的 .diag-bar-row 本就逐字相同，留着是两份真相）。
     // 本用例随之改锁：pill 行置顶（子 tab 不再挤在工具栏行1），行1 = 搜索 + 三动作，行2 = 筛选。
     const layout = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
@@ -268,11 +270,10 @@ test.describe("诊断页", () => {
         return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
       };
       const rows = [
-        // ⚠️ 精确锁定 op/runtime 工具栏那条 .diag-log-bar：ADR-300 后日志面板内有**两根**
-        // .diag-log-bar（另一根在 display:none 的 trace 子面板里，只装刷新按钮）——泛选会
+        // ⚠️ 精确锁定 op/runtime 工具栏那条 .diag-bar：ADR-300 后日志面板内有**两根**
+        // .diag-bar（另一根在 display:none 的 trace 子面板里，只装刷新按钮）——泛选会
         // 把隐藏的 trace 行也算进来（querySelectorAll 无视 display），rows 变 3 而误红。
-        ...(root?.querySelectorAll('.diag-log-bar[data-sub-pane="op runtime"] .diag-log-row') ??
-          []),
+        ...(root?.querySelectorAll('.diag-bar[data-sub-pane="op runtime"] .diag-bar-row') ?? []),
       ] as HTMLElement[];
       return {
         rows: rows.map((el) => {

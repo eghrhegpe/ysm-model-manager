@@ -5,6 +5,12 @@
 //   2. 在 registry.add() 注册一行
 // 菜单/持久化/生命周期全部由框架驱动，零手工 wiring。
 
+import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import {
+  ENV_STATE_SCHEMA,
+  type EnvState,
+  type EnvStateKey,
+} from "@/preview-3d/state/env-state-schema.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import type { IconRef } from "@/utils/icon/resolve.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
@@ -355,6 +361,58 @@ export function restoreFields(
         applied = true;
       }
     }
+  }
+  return applied;
+}
+
+/**
+ * [锐评 P0 收口 2026-09] 读侧派生化：从 env-state schema 按键集直接恢复标量字段，
+ * 取代 cap 内「手写 canonical 键清单」这种与 saveState 派生化（getPresetKeys）缺位半截的写法。
+ *
+ * 模式：每个 canonical 键经**唯一写入口** `setEnvState` 落值（自动走 clampFieldValue 值域钳制
+ * + 写入中间件豁免），与 saveState 同一条写管道——新增 schema 标量键只要落在目标 group（如
+ * "water"），读侧零登记即可随 saveState 自动 round-trip，不再依赖手写还原表。
+ *
+ * ⚠️ 设计边界（与 saveState 派生化对齐，不越界）：
+ *  - 仅覆盖 **canonical `water*` 标量键**（schema type ∈ number/boolean）。枚举键（waterMode）
+ *    由调用方用 oneOf 白名单单独接（防脏枚举值直漏 cap setter，与写侧 clampFieldValue 的
+ *    枚举收敛同纪律）；历史旧方言别名（size/level/mode/…）是存档兼容层，仍须手写映射，不在此。
+ *  - current 值短路：envState 已是该键默认值（大多场景遗留存档无此键）则跳过，省一次无谓写。
+ *  - 全程 `{ source: "manual", skipMiddleware: true }`：与 loadState 其余恢复分支同口径
+ *    （存档恢复显式豁免「手改即 custom」类中间件，防把用户预设误打 custom）。
+ *
+ * @returns 至少一个键落值返回 true（与 restoreFields 语义一致，便于统一早退判定）。
+ */
+export function restoreBySchema(
+  state: Record<string, unknown> | null,
+  keys: readonly EnvStateKey[],
+): boolean {
+  if (!state) return false;
+  let applied = false;
+  for (const key of keys) {
+    if (!key.startsWith("water")) continue; // 仅水面 canonical 键（防御性，调用方已过滤 group）
+    const def = ENV_STATE_SCHEMA[key] as { type: string } | undefined;
+    if (!def) continue;
+    const v = state[key];
+    // 类型不匹配（脏存档/旧方言缺省）→ 跳过，保持该键 schema 默认（setEnvState 兜底同口径）
+    if (def.type === "number") {
+      if (typeof v !== "number") continue;
+      if ((envState as unknown as Record<string, unknown>)[key] === v) continue;
+      setEnvState({ [key]: v } as Partial<EnvState>, {
+        source: "manual",
+        skipMiddleware: true,
+      });
+      applied = true;
+    } else if (def.type === "boolean") {
+      if (typeof v !== "boolean") continue;
+      if ((envState as unknown as Record<string, unknown>)[key] === v) continue;
+      setEnvState({ [key]: v } as Partial<EnvState>, {
+        source: "manual",
+        skipMiddleware: true,
+      });
+      applied = true;
+    }
+    // enum / 其他类型键不在此处理（调用方单独接）
   }
   return applied;
 }

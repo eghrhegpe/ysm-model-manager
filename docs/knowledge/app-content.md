@@ -31,7 +31,8 @@ source_files:
   - frontend/src/utils/icon/workshop-icons.ts
 auto_fields:
   symbols_with_lines:
-    - aboutBody
+    - aboutPageBody
+    - aboutSection
     - AppContentHost
     - AppContentState
     - appContentStyle
@@ -46,7 +47,7 @@ auto_fields:
     - contentUtilCSS
     - createWorkshopPageState
     - createWorkshopRefs
-    - creditsBody
+    - creditsSection
     - diagnosticsHTML
     - extractAvatars
     - getSiteIcon

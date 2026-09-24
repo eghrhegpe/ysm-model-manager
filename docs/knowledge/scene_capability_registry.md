@@ -150,6 +150,7 @@ auto_fields:
     - registerWaterBodyStrategy
     - RenderModeCapability
     - repetitionScore
+    - restoreBySchema
     - restoreFields
     - restoreLightParams
     - restoreState

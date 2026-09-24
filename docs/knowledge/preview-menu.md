@@ -43,6 +43,7 @@ auto_fields:
     - collectPreviewLeafNodes
     - collectPreviewNodeIds
     - collectSettingsCapControls
+    - collectSettingsCapSections
     - collectVisiblePredicates
     - COMMON_NODE_FIELDS
     - CORE_MENU_ITEMS

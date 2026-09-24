@@ -31,6 +31,7 @@ import {
   type EnvPlacement,
   oneOf,
   persistState,
+  restoreBySchema,
   restoreFields,
   restoreState,
   type SceneCapability,
@@ -998,47 +999,30 @@ export class WaterCapability implements SceneCapability {
           ? (state.water as Record<string, unknown>)
           : null;
       const w = (nested ?? state) as Record<string, unknown>;
+      // [锐评 P0 收口 2026-09] canonical `water*` 标量键读侧派生化：直接读 schema 键集恢复，
+      // 与 saveState（getPresetKeys("water")）同源派生——新增 water 标量键无需再回本处登记。
+      // restoreBySchema 只接 number/boolean 两类 canonical 键；枚举 / 子域开关 / legacy 旧方言
+      // 仍由下方手写还原器承接（存档兼容层，不自动）。
+      restoreBySchema(w, getPresetKeys("water"));
       restoreFields(w, {
         // 子域开关：仅当取到嵌套对象时 w.enabled 才是子域开关（顶层 enabled=已退役的
-        // 能力级幽灵键，不再消费——见本方法头注）
-        ...(nested
-          ? { enabled: { boolean: (v) => this.setWaterEnabled(v) } }
-          : { waterEnabled: { boolean: (v) => this.setWaterEnabled(v) } }),
+        // 能力级幽灵键，不再消费——见本方法头注）。flat 格式的 waterEnabled 已由上方
+        // restoreBySchema 经 schema 键集恢复，此处仅留嵌套 legacy 的 enabled 别名。
+        ...(nested ? { enabled: { boolean: (v) => this.setWaterEnabled(v) } } : {}),
         // 新旧键双轨（restoreFields 对缺失键安全跳过；实际存档只含一种方言）
         mode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
         waterMode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
+        // legacy 旧方言别名（ADR-272/257 前的旧名；写侧已规范为 water*）——仅兼容旧存档，不自动
         wetness: { number: (v) => this.setWetness(v) },
-        waterWetness: { number: (v) => this.setWetness(v) },
-        waterColor: { number: (v) => this.setWaterColor(v) },
-        waterOpacity: { number: (v) => this.setWaterOpacity(v) },
         normalStrength: { number: (v) => this.setNormalStrength(v) },
-        waterNormalStrength: { number: (v) => this.setNormalStrength(v) },
         waveSpeed: { number: (v) => this.setWaveSpeed(v) },
-        waterWaveSpeed: { number: (v) => this.setWaveSpeed(v) },
         choppiness: { number: (v) => this.setChoppiness(v) },
-        waterChoppiness: { number: (v) => this.setChoppiness(v) },
-        // ADR-257：水面高度键（跨形态通用，新旧键双轨与其余参数同惯例）
         level: { number: (v) => this.setLevel(v) },
-        waterLevel: { number: (v) => this.setLevel(v) },
         clarity: { number: (v) => this.setClarity(v) },
-        waterClarity: { number: (v) => this.setClarity(v) },
-        // ADR-272 扩展：写侧已规范为 waterSize（旧存档的 size 键在上方 restoreFields 已吸收）
-        waterSize: { number: (v) => this.setWaterSize(v) },
         poolHeight: { number: (v) => this.setPoolHeight(v) },
-        waterPoolHeight: { number: (v) => this.setPoolHeight(v) },
         poolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
-        waterPoolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
         poolWallColor: { number: (v) => this.setPoolWallColor(v) },
-        waterPoolWallColor: { number: (v) => this.setPoolWallColor(v) },
         poolRoundness: { number: (v) => this.setPoolRoundness(v) },
-        waterPoolRoundness: { number: (v) => this.setPoolRoundness(v) },
-        // ADR-297 倒影键（全为新键，无 legacy 方言，单轨直连）
-        waterReflectionEnabled: { boolean: (v) => this.setWaterReflectionEnabled(v) },
-        waterReflectionStrength: { number: (v) => this.setWaterReflectionStrength(v) },
-        waterReflectionResolution: { number: (v) => this.setWaterReflectionResolution(v) },
-        // [锐评 F-2] bias 新键（D3 契约锁点名登记，漏即红）
-        waterReflectionClipBias: { number: (v) => this.setWaterReflectionClipBias(v) },
-        waterReflectDisableWhenSSR: { boolean: (v) => this.setWaterReflectDisableWhenSSR(v) },
       });
       // ADR-257 迁移：旧存档没有 waterLevel 键（旧语义里「水面 y == 池深 h」）。
       // pool 用户兜底为 waterPoolHeight 以保持原有观感；film 用户沿用默认 0.01（与旧硬编码一致）。

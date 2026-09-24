@@ -161,6 +161,7 @@ auto_fields:
     - collectPreviewNodeIds
     - collectSceneStats
     - collectSettingsCapControls
+    - collectSettingsCapSections
     - collectVisiblePredicates
     - collectVmdBoneNames
     - COMMON_NODE_FIELDS
@@ -711,6 +712,7 @@ auto_fields:
     - resolveSemanticBones
     - resolveSemanticMorphs
     - resolveVmdBindings
+    - restoreBySchema
     - restoreFields
     - restoreLightParams
     - restoreModelGroupsVisible

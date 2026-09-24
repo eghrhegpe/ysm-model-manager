@@ -23,6 +23,7 @@ auto_fields:
     - CapControlView
     - capLabel
     - collectSettingsCapControls
+    - collectSettingsCapSections
     - collectVisiblePredicates
     - disposeSceneCapSubscriptions
     - EnvPlacement
@@ -49,6 +50,7 @@ auto_fields:
     - renderCapSlider
     - renderCapToggle
     - resetSettingsListeners
+    - restoreBySchema
     - restoreFields
     - restoreState
     - ringLog

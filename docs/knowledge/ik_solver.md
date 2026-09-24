@@ -103,13 +103,18 @@ status: active
   勿随手放开 `j=0`，也勿只在一处改链根（两消费方共用 `extractLegChains` 正是防这个）。
 - **极向量独立于 CCD 角度项**：`angle >= 1e-6` 包裹的只是旋转项；极向量项始终执行（零夹角时
   旋转跳过、pole 照常 → 末端已到位仍可矫正肘/膝姿态）。`applyPoleConstraint` 内部有轴退化早退。
-- 退化保护：关节与末端重合（toEnd 退化）→ 整个关节跳过（含 pole）；方向相反（轴退化）→ 跳过旋转。
-- 测试锚点：ik-solver.test.ts 以闭式数值断言固化上述语义（含"target=末端现位 → pole 独立执行"用例）；
-  mmd-foot-ik.test.ts 断言链长 4（有父骨）/ 3（回退路径）。
+- 退化保护：关节与末端重合（toEnd 退化）→ 整个关节跳过（含 pole）；方向相反/近共线
+  （轴退化，叉积 lengthSq < 1e-8）→ **确定性回退轴**（`toEnd×世界Y`，仍退化再 `toEnd×世界X`）
+  + 步长封顶 π−0.05（整 180° 翻转病态且一步冲过目标）。旧契约「轴退化跳过旋转」会让垂直
+  抬脚时整关节冻结、近共线时微小叉积被数值噪声主导而甩反侧——实机校准已改（ADR-243 §2.8，
+  探针见 `frontend/src/preview-3d/bone/vrm-foot-ik-quality.test.ts`：S1 抬脚残差 0.55→0.13）。
+- 测试锚点：ik-solver.test.ts 以闭式数值断言固化上述语义（含"target=末端现位 → pole 独立执行"、
+  "轴退化 → 回退轴继续逼近"用例）；mmd-foot-ik.test.ts 断言链长 4（有父骨）/ 3（回退路径）。
 
 ## 相关
 
 - ADR-072（工具层纯净）/ ADR-066（babylon-mmd 提及）/ ADR-243 §2.8（链根取直接父骨 + VMD 足 IK 驱动）
 - 知识卡：`vmd_vrm_retarget.md`（VRM 侧消费方）、`bone-tools.md`
 - frontend/src/preview-3d/bone/bone-tools.ts、bone/semantic-bones.ts、bone/leg-chain.ts、
-  bone/vrm-foot-ik.ts、bone/ik-solver.test.ts、bone/mmd-foot-ik.test.ts、bone/vrm-foot-ik.test.ts
+  bone/vrm-foot-ik.ts、bone/ik-solver.test.ts、bone/mmd-foot-ik.test.ts、bone/vrm-foot-ik.test.ts、
+  bone/vrm-foot-ik-quality.test.ts

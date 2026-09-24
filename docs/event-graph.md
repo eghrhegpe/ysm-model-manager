@@ -454,10 +454,10 @@
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 309 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 331 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 358 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 147 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 158 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 173 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 185 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 156 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 167 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 182 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 194 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
@@ -603,7 +603,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 172 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 181 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

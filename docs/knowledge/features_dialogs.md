@@ -24,6 +24,7 @@ auto_fields:
   symbols_with_lines:
     - __resetModalStateForTest
     - AdvFilterResult
+    - AdvFilterTpl
     - AdvFilterValue
     - BatchEntry
     - BatchItem

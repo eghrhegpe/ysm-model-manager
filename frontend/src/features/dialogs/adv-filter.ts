@@ -5,11 +5,10 @@
 // 后端约束：当前 Go SearchModels 只支持 (minBones, maxBones, minCubes, maxCubes, minTex, maxTex) 6 个范围 + 1 个关键字；
 //   不支持文件大小、排序（避免展示无效控件）
 // ADR-190 D2 注入真化 + ADR-208 D1（R5 门禁）：生产默认 getApp 经 backend-deps seam 单出口
+// ADR-190 D1a / R8 销账：表单 HTML 模板已外移 views/app-tree/tpl-adv-filter.ts，经 opts.tpl 注入
 
 import { t } from "@/core/i18n/t.ts";
 import { createDialog } from "@/utils/dom/modal-core.ts";
-import { esc } from "@/utils/html/html.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
 import { dialogsGetApp } from "./dialogs-deps.ts";
 
@@ -19,11 +18,6 @@ export type { AdvFilterValue } from "./adv-filter-util.ts";
 
 export type AdvFilterResult = AdvFilterValue | { cleared: true } | null;
 
-/**
- * 弹出高级筛选弹窗
- * @param opts 初始值
- * @returns 筛选条件对象，取消返回 null；清除时返回 { cleared: true }
- */
 /** 收集弹窗输入 → AdvFilterValue（骨骼/立方体/纹理 数字解析 + 关键字/标签去空格） */
 function advFilterCollect(
   box: HTMLDivElement,
@@ -50,60 +44,14 @@ function advFilterCollect(
   };
 }
 
-/** 渲染弹窗表单 HTML（纯函数，无 DOM 副作用；标题行由 createDialog 统一渲染 — ADR-190 D3；样式全部走 components.css） */
-function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
-  return `
-      <div class="afv-form">
-        <div>
-          <label for="afv-kw" class="afv-label">${UI_ICONS.search} ${t("dialog.keyword")}</label>
-          <input id="afv-kw" class="afv-input-kw" maxlength="100" value="${esc(v.keyword || "")}" placeholder="${t("dialog.matchAll")}">
-        </div>
-
-        <div class="afv-grid">
-          <div>
-            <label for="afv-minBones" class="afv-label">${UI_ICONS.bone} ${t("dialog.bones")}</label>
-            <div class="afv-range-row">
-              <input id="afv-minBones" type="number" min="0" value="${esc(String(v.minBones ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
-              <span class="afv-sep">—</span>
-              <input id="afv-maxBones" type="number" min="0" value="${esc(String(v.maxBones ?? ""))}" placeholder="${t("dialog.max")}" aria-label="${t("dialog.bones")} ${t("dialog.max")}" class="afv-inp">
-            </div>
-          </div>
-          <div>
-            <label for="afv-minCubes" class="afv-label">${UI_ICONS.unknown} ${t("dialog.cubes")}</label>
-            <div class="afv-range-row">
-              <input id="afv-minCubes" type="number" min="0" value="${esc(String(v.minCubes ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
-              <span class="afv-sep">—</span>
-              <input id="afv-maxCubes" type="number" min="0" value="${esc(String(v.maxCubes ?? ""))}" placeholder="${t("dialog.max")}" aria-label="${t("dialog.cubes")} ${t("dialog.max")}" class="afv-inp">
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label for="afv-minTex" class="afv-label">${UI_ICONS.image} ${t("dialog.textureSize")}</label>
-          <div class="afv-range-row">
-            <input id="afv-minTex" type="number" min="0" value="${esc(String(v.minTex ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
-            <span class="afv-sep">—</span>
-            <input id="afv-maxTex" type="number" min="0" value="${esc(String(v.maxTex ?? ""))}" placeholder="${t("dialog.max")}" aria-label="${t("dialog.textureSize")} ${t("dialog.max")}" class="afv-inp">
-          </div>
-        </div>
-
-        <div>
-          <label for="afv-tag" class="afv-label">${UI_ICONS.tag} ${t("dialog.tags")}</label>
-          <div class="afv-range-row">
-            <input id="afv-tag" maxlength="30" value="${esc(v.tag || "")}" placeholder="${t("dialog.tagPlaceholder")}" class="afv-inp">
-            <span id="afv-tag-hint" class="afv-tag-hint"></span>
-          </div>
-        </div>
-      </div>
-
-      <div id="afv-err" class="dlg-err"></div>
-
-      <div class="dlg-footer afv-footer">
-        <button id="afv-clear" class="dlg-btn afv-clear">${UI_ICONS.clean} ${t("dialog.clearAll")}</button>
-        <button id="afv-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
-        <button id="afv-ok" class="dlg-btn dlg-btn-primary">${UI_ICONS.search} ${t("dialog.applyEnter")}</button>
-      </div>
-    `;
+/**
+ * DOM 模板注入契约（ADR-190 D1a：DOM 模板归 views，组合根注入；features 不自渲染。
+ * 先例 BatchRenameTpl / RecycleDeps.renderListHtml）。
+ * views/app-tree/tpl-adv-filter.ts 提供实现。
+ */
+export interface AdvFilterTpl {
+  /** 弹窗内容区表单（标题行由 createDialog 统一渲染 — ADR-190 D3；样式全部走 components.css） */
+  formHTML: (v: Partial<AdvFilterValue>) => string;
 }
 
 /** 绑定弹窗交互：清除/取消/应用/Enter + 已有标签提示异步加载 */
@@ -168,13 +116,19 @@ function bindAdvFilterEvents(
   });
 }
 
-export function modalAdvFilter(
-  opts: {
-    value?: Partial<AdvFilterValue>;
-    /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
-    getApp?: GetAppFn;
-  } = {},
-): Promise<AdvFilterResult> {
+/**
+ * 弹出高级筛选弹窗
+ * @param opts.value 初始值（预填 vm 已应用态）
+ * @param opts.tpl DOM 模板（ADR-190 D1a，组合根注入 advFilterTpl）
+ * @returns 筛选条件对象，取消返回 null；清除时返回 { cleared: true }
+ */
+export function modalAdvFilter(opts: {
+  value?: Partial<AdvFilterValue>;
+  /** DOM 模板注入（ADR-190 D1a）：组合根传 views/app-tree/tpl-adv-filter.ts 的 advFilterTpl，features 无默认模板 */
+  tpl: AdvFilterTpl;
+  /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
+  getApp?: GetAppFn;
+}): Promise<AdvFilterResult> {
   return new Promise((resolve) => {
     const v = opts.value || {};
     const { overlay, box, close } = createDialog<AdvFilterResult>({
@@ -187,7 +141,7 @@ export function modalAdvFilter(
       cancelValue: null,
       resolve,
       buildBox: (el) => {
-        el.innerHTML = buildAdvFilterFormHTML(v);
+        el.innerHTML = opts.tpl.formHTML(v);
       },
     });
 

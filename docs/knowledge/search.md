@@ -19,6 +19,7 @@ auto_fields:
     - __setStatsRunnerForTest
     - advFilterClearAll
     - AdvFilterResult
+    - AdvFilterTpl
     - AdvFilterValue
     - App.AnalyzeBedrockModel
     - App.AnalyzeBedrockModelEntry

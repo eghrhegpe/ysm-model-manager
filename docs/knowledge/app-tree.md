@@ -9,6 +9,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - advFilterClearAll
+    - advFilterTpl
     - AppTree
     - appTreeStyle
     - AuthorInfo

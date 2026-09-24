@@ -26,6 +26,7 @@ import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 import { getExts } from "@/utils/resource/extensions.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AppTree } from "./index.ts";
+import { advFilterTpl } from "./tpl-adv-filter.ts";
 
 // P1 批次11:统计角标样式(cssText 抽类;挂 document.body light DOM,head 注入适用)
 const tsCss = `
@@ -110,7 +111,7 @@ async function advFilterReadCurAndOpenDialog(vm: AppTree): Promise<AdvFilterResu
     tag: adv.tag,
   };
   dbg("adv-filter", "dialog:open", { cur });
-  const result = await modalAdvFilter({ value: cur });
+  const result = await modalAdvFilter({ value: cur, tpl: advFilterTpl });
   dbg("adv-filter", "dialog:return", { result });
   if (!result) {
     dbg("adv-filter", "dialog:cancelled-or-null");

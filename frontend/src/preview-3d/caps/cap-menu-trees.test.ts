@@ -42,10 +42,14 @@ describe("cap 侧菜单树 per-kind 字段契约（零违规门）", () => {
     // ⚠️ 必须补 shadowMap：test-setup 的全局 Fake WebGLRenderer 无该字段，而
     // ShadowCapability 构造期读 `renderer.shadowMap.enabled`（快照旧值）→ 不补则构造抛错，
     // 被 createAll 的 try/catch 静默吞掉（ringLog warn）→ shadow 缺席且本门无声漏过。
-    const renderer = new THREE.WebGLRenderer() as THREE.WebGLRenderer & {
-      shadowMap: { enabled: boolean; type: number; needsUpdate: boolean };
-    };
-    renderer.shadowMap = { enabled: false, type: 0, needsUpdate: false };
+    // 经 unknown 桥接赋最小字段（勿用交叉类型——那要求伪造完整 WebGLShadowMap 的
+    // autoUpdate/render 等成员，属为测试撒谎）。
+    const renderer = new THREE.WebGLRenderer();
+    (
+      renderer as unknown as {
+        shadowMap: { enabled: boolean; type: number; needsUpdate: boolean };
+      }
+    ).shadowMap = { enabled: false, type: 0, needsUpdate: false };
     const camera = new THREE.PerspectiveCamera();
     const caps = sceneCapabilityRegistry.createAll({ scene, renderer, camera });
 

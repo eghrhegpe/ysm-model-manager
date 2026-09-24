@@ -1,7 +1,7 @@
 // ===== 设置页 + 通用 tab-body（从 frontend/css/components.css 迁入 shadow）=====
 // 根因：components.css 仅经 index.html 全局 <link> 加载，<app-content> 用 Shadow DOM
 // （adoptedStyleSheets=[contentCSS]），全局 link 被 shadow 边界阻断，导致 .stg-* / .tab-body
-// 在 shadow 内零样式（基础设置页卡片/网格/标题/路径值裸奔，tab 无 flex 布局）。
+// 在 shadow 内零样式（设置页卡片/网格/标题/路径值裸奔，tab 无 flex 布局）。
 // 本文件将 settings 独占样式 + 跨 tab 复用的 .tab-body 收口进 shadow 组合层。
 // 注意：.dlg-* / .afv-* / .mc-pick-* / .br-* 等全局 document 层 dialogs 样式仍留 components.css。
 export const contentStgCSS: string = `
@@ -102,12 +102,12 @@ export const contentStgCSS: string = `
 /* 设置页「组」间距契约（两种组，各取其一的间距来源，勿叠加）：
      A. 带标题的组 → 标题行用 .section-title（自带 padding:16px 16px 16px）撑开上方空白；
      B. 无标题的组 → 容器自身挂 .stg-section（margin-top:16px）。
-   卡片自带 card-hdr 的组（如「行为与动画」+「启动默认页」）走 B。
+   卡片自带 card-hdr 的组（如「行为与动画」或「启动默认页」）走 B。
    历史坑：界面上 tab 的两卡组曾直接吐裸 .stg-grid，与上方行组零间距——
    因为空白一直由 .section-title 的 padding 隐式提供，一旦不挂标题就没间隔了。 */
 .stg-section { margin-top: 16px; }
 .stg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-/* 2 列变体：两张卡并排（如「行为与动画」+「启动默认页」） */
+/* 2 列变体：需要并排的设置卡 */
 .stg-grid-2 { grid-template-columns: repeat(2, 1fr); }
 .stg-card { background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-card); overflow:hidden; animation:fadeSlideUp var(--tr-enter) both; } /* 审计 P1-2：卡片圆角收口 --radius-card */
 .stg-card-hdr { display:flex;align-items:center;gap:6px; padding:var(--sp-vh-pane); font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--surf); }

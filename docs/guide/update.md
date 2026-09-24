@@ -50,7 +50,7 @@ outline: [2, 3]
 A：不会。配置独立保存在 `%APPDATA%\YSM-Model-Manager\ysm_config.json`，覆盖升级不影响。
 
 **Q：自动更新没反应 / 失败？**
-A：确认网络可访问 GitHub；国内网络可在「设置 → 基础设置 → 下载镜像源」切换 ⚡ jsDelivr CDN。失败会有 toast 提示具体原因。
+A：确认网络可访问 GitHub；国内网络可在「设置 → 常规 → 下载镜像源」切换 ⚡ jsDelivr CDN。失败会有 toast 提示具体原因。
 
 **Q：检查更新有频率限制吗？**
 A：自动检查每 6 小时最多一次；设置页「🔄 检查更新」手动检查不受限制。

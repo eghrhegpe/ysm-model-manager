@@ -1,15 +1,15 @@
 // ===== tpl-settings-about.ts — 设置页「关于 + 鸣谢」tab 模板（从 tpl-settings.ts 拆出，ADR-040 P1）=====
 // 2026-10 菜单收口：「鸣谢」原为独立 tab，纯只读展示不值得占一个菜单槽（设置菜单的槽位
 // 语义契约 = 回答"这里能配置什么"）——降级为「关于」tab 的下段小节；「关于」含真实设置
-// （更新检查间隔/检查更新/版本）保留 tab。设置页 6 tab → 4 tab（与「解析」并入「操作」同批）。
+// （更新检查间隔/检查更新/版本）保留 tab。设置页 6 tab → 4 tab（与「解析」并入「3D 与解析」同批）。
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { GH_DOCS, GH_RELEASES, GH_REPO } from "@/utils/base/pure/gh-links.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { stgCard } from "./stg-card.ts";
 
 /** About 节（「关于」tab 上段：版本卡 / 更新检查 / 特性 / 技术栈 / 链接 / 快速开始）。
- *  不再挂「关于」节标题：tab 名即 About，再挂同名大标题是纯装饰（与「解析」tab 同名
- *  标题同类问题，2026-10 菜单收口一并消）。首组卡改 B 式 .stg-section 供 16px 顶距
+ *  不再挂「关于」节标题：tab 名即 About，再挂同名大标题是纯装饰（与「解析」节标题同类问题，
+ *  2026-10 菜单收口一并消）。首组卡改 B 式 .stg-section 供 16px 顶距
  *  （.stg-page 契约 padding:0 20px 16px，顶部零垫——间距必须由组自身提供）。 */
 export function aboutSection(): string {
   return `<div class="stg-grid stg-section" style="margin-bottom:12px">

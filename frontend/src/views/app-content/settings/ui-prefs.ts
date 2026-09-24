@@ -1,4 +1,4 @@
-// ===== 设置页：界面与体验设置（ADR-040 拆分自 init.ts）=====
+// ===== 设置页：外观/界面偏好设置（ADR-040 拆分自 init.ts）=====
 // 读取/应用 UI 偏好（localStorage），统一走 safeGet/safeSet——
 // 隐私模式（存储禁用）下抛错会中断 initSettings（applyUIPref 是 init 同步执行的一部分）。
 import { bus } from "@/bus";
@@ -79,7 +79,7 @@ export function applyUIPrefs(): void {
   document.documentElement.classList.toggle("no-animations", !anim);
 }
 
-/** 初始化界面与体验设置：应用偏好 + 绑定字号/字体/密度/动画/默认页变更 */
+/** 初始化外观设置：应用偏好 + 绑定字号/字体/密度/动画/默认页变更 */
 export function initUiPrefs(root: ShadowRoot): void {
   const applyUIPref = (): void => {
     applyUIPrefs();

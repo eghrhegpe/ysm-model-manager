@@ -115,12 +115,12 @@ describe("app-content 生命周期配对", () => {
     // settings 页渲染：.stg-tab 存在、仓库页 .repo-tab 不渲染
     expect(el.shadowRoot?.querySelector(".stg-tab")).not.toBeNull();
     expect(el.shadowRoot?.querySelector(".repo-tab")).toBeNull();
-    // 设置页 4 个 tab（基础/界面/操作/关于；2026-10 菜单收口：解析并入操作、鸣谢并入关于），
-    // 含「操作」tab
+    // 设置页 4 个 tab（常规/外观/3D 与解析/关于；2026-10 菜单收口方案 A：解析并入 3D 与解析、鸣谢并入关于），
+    // 含「3D 与解析」tab
     const stgTabs = el.shadowRoot?.querySelectorAll(".stg-tab") ?? [];
     expect(stgTabs.length).toBe(4);
     expect(el.shadowRoot?.querySelector('.stg-tab[data-tab="ops"]')).not.toBeNull();
-    // 回归防线：点击「操作」tab 后其内容面板 #stg-tab-ops 必须可见（bindTabs 白名单需含 ops，
+    // 回归防线：点击「3D 与解析」tab 后其内容面板 #stg-tab-ops 必须可见（bindTabs 白名单需含 ops，
     // 否则按钮在但内容区始终 hidden —— 曾因漏注册导致 e2e 看不见新 tab 界面）
     const opsPanel = el.shadowRoot?.getElementById("stg-tab-ops") as HTMLElement | null;
     expect(opsPanel).not.toBeNull();

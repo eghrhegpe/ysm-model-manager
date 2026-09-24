@@ -434,8 +434,8 @@
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 203 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 307 |
-| initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
-| initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
+| initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
+| initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 77 |
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 118 |
 | emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 155 |

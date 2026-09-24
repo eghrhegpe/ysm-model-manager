@@ -50,6 +50,7 @@ auto_fields:
     - frontend/src/utils/animation/animation.test.ts
     - frontend/src/utils/animation/stagger.test.ts
     - frontend/src/utils/animation/animation-controller.test.ts
+    - frontend/src/preview-3d/model/ysm-animation-player.test.ts
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -62,6 +63,7 @@ quick_risk_lines:
 pitfalls:
   - 手写关键帧插值 → 与基岩官方行为不一致、T-pose 漂移；必须经 evaluateClip
   - Molang 表达式缓存键不完整 → 相同逻辑不同骨骼重复求值；缓存 key 必须含 clip/bone 标识
+  - 旋转角度喂 Euler 时 X/Z 互换（误写 Euler.set(rz,ry,rx,'ZYX')）→ Bedrock X 旋转绕到 Z 轴、反之亦然：手臂外展偏向一侧、狐狸分支（wb/RightArm2/LeftArm2）姿态整体反转（wine_fox 真实文件 32/39 clip 受影响、最大偏差 180°，2026-09 修复）；角度必须按自身轴名直喂 Euler(rx,ry,rz,'ZYX')
 use_when:
   - 动画
   - 骨骼动画
@@ -169,7 +171,7 @@ status: active
 - 播放循环（RAF）由消费方组件自行管理并须在卸载时 cancelAnimationFrame；曾有的 AnimationPlayer 封装类因长期无消费方已在死代码清理中移除，如需播放器请基于 evaluateClip 重建
 - **求值链路运行时消费方**（2026-08-21 更新）：`evaluateClip` 由 YSM 动画播放器消费（`preview-3d/model/ysm-animation-player.ts`，ADR-100 L1-L3，每帧求值局部变换驱动骨骼 Group，层级由 Three.js 场景树传播）；`parseBedrockAnimationJSON` 消费方 `preview-3d/decoder/wasm-decode.ts`（+loader.ts，ADR-137 归位）与 `ysm-adapter.ts`（动画扫描）；`animateNumber` 实际返回取消函数 `() => void`（**JSDoc 已标注 `@returns 取消函数`**），消费方 app-tree/render.ts、app-sidebar/events.ts **忽略取消函数**（快速连续渲染叠加未清理 timer，P3 观察）；`isMolang` 已删除（旧文"死代码"断言过时——已彻底移除）
 - **层级传播归 Three.js**（2026-09 更新）：`evaluateClip` 原非 localOnly 分支（欧拉角相加/向量相加的简化层级传播）零业务消费者且实现与注释不符，已随 2026-09 清理删除——播放器只取局部变换，层级传播由 Three.js Object3D 场景树完成
-- **旋转通道口径（2026-08-24 定版）**：`parseBedrockAnimationJSON` 出口的 rotation 通道统一做**度→弧度 + X/Y 取负、Z 不取负**换算（`convertRotationKeyframes`，对齐上游 ModernYSM/TLM 共同口径 `RawBoneKeyFrame.init` + `RotationValue.convert`）；Molang 动态轴包求值后换算闭包（molang 三角函数按度求值）。此前缺失导致 bedrock 的度被当弧度直喂 Euler（45°→2578°），是预览角色乱飞根因。下游全弧度域：player 直接 `Euler(rz,ry,rx,'ZYX')`；位移通道保持像素原值 + X 取负叠加 pivot（player 层做）。测试夹具手工构造的 Keyframe 绕过解析层，须自备弧度值
+- **旋转通道口径（2026-08-24 定版，2026-09 修正喂角）**：`parseBedrockAnimationJSON` 出口的 rotation 通道统一做**度→弧度 + X/Y 取负、Z 不取负**换算（`convertRotationKeyframes`，对齐上游 ModernYSM/TLM 共同口径 `RawBoneKeyFrame.init` + `RotationValue.convert`）；Molang 动态轴包求值后换算闭包（molang 三角函数按度求值）。此前缺失导致 bedrock 的度被当弧度直喂 Euler（45°→2578°），是预览角色乱飞根因。下游全弧度域：player 按轴名直喂 `Euler(rx,ry,rz,'ZYX')`（Rz·Ry·Rx，对齐 Go spec.go / quaternion.ts / Blockbench euler_order='ZYX' / ModernYSM `eulerZYXToQuaternion`）；早期误写 `Euler(rz,ry,rx)` 使 X/Z 角互换（见 pitfalls）。位移通道保持像素原值 + X 取负叠加 pivot（player 层做）。测试夹具手工构造的 Keyframe 绕过解析层，须自备弧度值
 - **消费方文件名漂移已修正**（2026-08-09；2026-08-31 ADR-137 再迁 decoder/wasm-decode.ts）：`parseBedrockAnimationJSON` 消费方为 `preview-3d/decoder/wasm-decode.ts`（+loader.ts，旧文 preview-wasm.ts 已过时）；stagger 消费方含 `app-content/site/render.ts`（旧文 site-view.ts 过时）；测试文件均为 `.ts`（旧文 .js 过时）
 
 ## ADR-015 UI 动效实施进度（v1.7.6 已全部落地）

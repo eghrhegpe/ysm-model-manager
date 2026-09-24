@@ -184,6 +184,64 @@ describe("createYsmAnimPlayer", () => {
     expect(finalQ.angleTo(targetQ)).toBeLessThan(0.1);
   });
 
+  /** 恒姿 rotation clip 工厂（post 为「已 convert」弧度值，对齐真实解析管线产物） */
+  function makeConstRotClip(name: string, rot: [number, number, number], length = 1): AnimationClip {
+    return {
+      name,
+      loop: true,
+      length,
+      bones: {
+        root: {
+          rotation: [
+            { time: 0, post: rot, pre: [0, 0, 0], lerp: "linear" },
+            { time: length, post: rot, pre: rot, lerp: "linear" },
+          ],
+        },
+      },
+    };
+  }
+
+  /** 跑足帧数让 L3 alpha 收敛到 1 */
+  function converge(player: ReturnType<typeof createYsmAnimPlayer>): void {
+    player.apply(0);
+    for (let i = 0; i < 100; i++) player.apply(0.1);
+  }
+
+  it("旋转轴映射: Bedrock X 旋转最终绕 X 轴（不被错喂到 Z）", () => {
+    const bone = makeBone("root");
+    // Bedrock 原始 bx=30° → 解析层 convert：rx = -30°rad
+    const rot: [number, number, number] = [-Math.PI / 6, 0, 0];
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeConstRotClip("x", rot)]);
+    converge(player);
+    const expected = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 6, 0, 0, "ZYX"));
+    expect(bone.quaternion.angleTo(expected)).toBeLessThan(0.01);
+    // 若错喂，X 旋转会跑到 Z 轴上
+    expect(Math.abs(bone.quaternion.z)).toBeLessThan(0.01);
+  });
+
+  it("旋转轴映射: Bedrock Z 旋转最终绕 Z 轴（不被错喂到 X）", () => {
+    const bone = makeBone("root");
+    // Bedrock 原始 bz=45° → convert：rz = +45°rad
+    const rot: [number, number, number] = [0, 0, Math.PI / 4];
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeConstRotClip("z", rot)]);
+    converge(player);
+    const expected = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI / 4, "ZYX"));
+    expect(bone.quaternion.angleTo(expected)).toBeLessThan(0.01);
+    expect(Math.abs(bone.quaternion.x)).toBeLessThan(0.01);
+  });
+
+  it("旋转轴映射: 三轴非零姿态与 quaternion.ts / Go spec.go 的 Rz·Ry·Rx 口径一致", () => {
+    const bone = makeBone("root");
+    // Bedrock 原始 [30,20,40]° → convert [-30,-20,+40]°rad
+    const rot: [number, number, number] = [-Math.PI / 6, -Math.PI / 9, (2 * Math.PI) / 9];
+    const player = createYsmAnimPlayer(new Map([["root", bone]]), [makeConstRotClip("xyz", rot)]);
+    converge(player);
+    const expected = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(-Math.PI / 6, -Math.PI / 9, (2 * Math.PI) / 9, "ZYX"),
+    );
+    expect(bone.quaternion.angleTo(expected)).toBeLessThan(0.01);
+  });
+
   it("slerp: dispose 后重新 apply 从当前姿态重新开始插值", () => {
     const bone = makeBone("root");
     const clip: AnimationClip = {

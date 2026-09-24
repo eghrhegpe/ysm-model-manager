@@ -727,6 +727,7 @@
 | 返回键未消费 | - | 直接退出应用；必须在有弹窗时 consume back 事件 |
 | 手写关键帧插值 | - | 与基岩官方行为不一致、T-pose 漂移；必须经 evaluateClip |
 | Molang 表达式缓存键不完整 | - | 相同逻辑不同骨骼重复求值；缓存 key 必须含 clip/bone 标识 |
+| 旋转角度喂 Euler 时 X/Z 互换（误写 Euler.set(rz,ry,rx,'ZYX')）→ Bedrock X 旋转绕到 Z 轴、反之亦然：手臂外展偏向一侧、狐狸分支（wb/RightArm2/LeftArm2）姿态整体反转（wine_fox 真实文件 32/39 clip 受影响、最大偏差 180°，2026-09 修复）；角度必须按自身轴名直喂 Euler(rx,ry,rz,'ZYX') | - | - |
 | 在仓库页直接调 doDedup | - | 缺上下文、无法展示冲突视图；必须走 diagnostics 页 initDiagnostics |
 | 性能 trace 未释放 | - | 长时占用内存；file-bench / perf-trace 完成后必须 stop 回收 |
 | 子组件持 *App 字段 | - | 对象级循环依赖、GC 无法回收；必须经回调注入 |

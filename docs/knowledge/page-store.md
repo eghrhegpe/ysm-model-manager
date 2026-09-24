@@ -9,6 +9,7 @@ auto_fields:
   symbols_with_lines:
     - isValidPage
     - resolveInitialPage
+    - sanitizePage
   tests:
     - frontend/src/core/page-store.test.ts
 quick_groups:

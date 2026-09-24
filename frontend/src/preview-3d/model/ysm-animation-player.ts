@@ -162,7 +162,12 @@ function mdApApplyPose(dt: number, state: MdApState, ctx: MdApCtx): void {
 
     if (transform?.rotation) {
       const [rx, ry, rz] = transform.rotation;
-      scratch.quat.setFromEuler(scratch.euler.set(rz, ry, rx, "ZYX"));
+      // Rz(rz)·Ry(ry)·Rx(rx) ZYX intrinsic——角度按自身轴名直喂：
+      // 对齐 Go spec.go eulerToQuaternion / mesh/quaternion.ts（ADR-042 §2.1）、
+      // Blockbench Format.euler_order='ZYX'、ModernYSM MathUtil.eulerZYXToQuaternion。
+      // 早期误写 set(rz,ry,rx) 使 X/Z 角互换：Bedrock X 旋转绕到 Z 轴、反之亦然，
+      // 表现为手臂外展偏向一侧、狐狸分支（wb/Arm2/Leg2）姿态整体反转。
+      scratch.quat.setFromEuler(scratch.euler.set(rx, ry, rz, "ZYX"));
     } else {
       scratch.quat.copy(base.quat);
     }

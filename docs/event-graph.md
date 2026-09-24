@@ -190,7 +190,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/context-menu/index.ts` | 71 |
+| connectedCallback | `frontend/src/views/context-menu/index.ts` | 72 |
 
 ### `model:select`
 
@@ -273,7 +273,7 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 272 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 303 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 305 |
 
 ### `repo:search-creator`
 
@@ -298,7 +298,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 326 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 328 |
 
 ### `stats:refresh`
 
@@ -324,8 +324,8 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 315 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 222 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 241 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 223 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 242 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 98 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 125 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 194 |
@@ -336,7 +336,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 283 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 285 |
 
 ### `sync:download:done`
 
@@ -384,8 +384,8 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | (顶层) | `frontend/src/app-modules.ts` | 29 |
-| runStartupSteps | `frontend/src/app-modules.ts` | 88 |
-| (顶层) | `frontend/src/app-modules.ts` | 166 |
+| runStartupSteps | `frontend/src/app-modules.ts` | 89 |
+| (顶层) | `frontend/src/app-modules.ts` | 174 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
@@ -501,7 +501,7 @@
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 304 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 309 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 318 |
-| _showError | `frontend/src/views/app-sync-manager/index.ts` | 265 |
+| _showError | `frontend/src/views/app-sync-manager/index.ts` | 267 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 52 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 60 |
 | loadData | `frontend/src/views/app-sync-manager/store.ts` | 77 |

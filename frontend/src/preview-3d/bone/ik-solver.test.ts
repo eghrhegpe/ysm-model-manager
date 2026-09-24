@@ -178,15 +178,16 @@ describe("solveIK 退化与钳制分支", () => {
     expect(result.distance).toBeCloseTo(7); // 链长 3，目标 10
   });
 
-  it("方向相反（旋转轴退化）→ 跳过旋转，关节保持单位四元数", () => {
+  it("方向相反（旋转轴退化）→ 确定性回退轴，末端继续逼近目标（不再冻结）", () => {
     const { chain, joints } = makeChain();
-    const [j1, j2] = joints;
+    const [j1] = joints;
     const result = solveIK(chain, new THREE.Vector3(-4, 0, 0), { iterations: 5 });
-    // toEnd 与 toTarget 反向 → angle=π 但 crossVectors 零向量 → continue
-    expect(j1.quaternion.w).toBeCloseTo(1);
-    expect(j2.quaternion.w).toBeCloseTo(1);
+    // 旧契约（轴退化跳过）：末端冻结在 x=3、distance=7 ⇒ 垂直抬脚时「整腿不动」的病灶。
+    // 新契约：toEnd 与 toTarget 反向（angle=π）时叉积归零 → 确定性回退轴（toEnd×世界Y→世界X）
+    //  + 步长封顶 π−0.05 ⇒ j1 翻 ~180°，末端从 7 逼近到可达边界 ≈ 3（|4−3| 触达不到更深）。
+    expect(Math.abs(j1.quaternion.w)).toBeLessThan(0.2);
     expect(result.achieved).toBe(false);
-    expect(result.distance).toBeCloseTo(7);
+    expect(result.distance).toBeCloseTo(3, 0);
   });
 
   it("damping=0 → 零旋转幅度跳过，骨骼完全不动", () => {

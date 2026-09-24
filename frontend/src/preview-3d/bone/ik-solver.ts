@@ -37,6 +37,9 @@ const _poleChainDir = new THREE.Vector3();
 const _poleToPole = new THREE.Vector3();
 const _poleAxis = new THREE.Vector3();
 const _poleQuat = new THREE.Quaternion();
+/** 共线退化回退轴（世界参考）：主选 Y（腿链竖直主导时叉积必退化才走到 X） */
+const _ikWorldUp = new THREE.Vector3(0, 1, 0);
+const _ikWorldX = new THREE.Vector3(1, 0, 0);
 
 // ---------------------------------------------------------------------------
 // 类型
@@ -94,6 +97,8 @@ export interface IKResult {
  *       - 极向量约束（若启用）：独立于 CCD 角度项执行，末端已对齐时仍生效（肘/膝姿态矫正）
  *       - 计算使两向量对齐所需的旋转（绕关节的局部 Z 轴）
  *       - 应用旋转（经 minAngle/maxAngle 钳制、damping 衰减）
+ *       - 叉积退化（≈180° 共线）→ 确定性回退轴（toEnd×世界Y→世界X）+ 步长封顶 π−0.05，
+ *         防「垂直抬脚整关节冻结」与「近共线微小叉积甩反侧」（见 solveIK 内联注释）
  * 2. 检查末端是否收敛（distance < tolerance），是则提前退出
  * 3. 返回结果
  */
@@ -138,14 +143,24 @@ export function solveIK(chain: IKChain, target: THREE.Vector3, config: IKConfig 
       const dot = Math.max(-1, Math.min(1, toEnd.dot(toTarget)));
       const angle = Math.acos(dot);
 
-      // CCD 旋转项：方向对齐（angle<1e-6）/ 轴退化 / 钳制零角 → 跳过旋转（极向量不受影响）
+      // CCD 旋转项：方向已对齐（angle<1e-6）→ 跳过旋转（极向量不受影响）
       if (angle >= 1e-6) {
         // 旋转轴：关节→末端 × 关节→目标（垂直于两向量构成的平面）
         axis.crossVectors(toEnd, toTarget);
-        if (axis.lengthSq() >= 1e-10) {
+        let clampedAngle = Math.max(minAng, Math.min(maxAng, angle)) * damping;
+        if (axis.lengthSq() < 1e-8) {
+          // ★ 近共线（≈180°）退化：叉积归零（恰共线）或被数值噪声主导（近共线）——
+          // 原实现「axis 太小就跳过」⇒ 垂直抬脚时整关节冻结（残差钉死、腿不动），
+          // 或近共线时微小叉积的方向随机 ⇒ 膝盖甩反侧。改取确定性回退轴：
+          // 优先 toEnd×世界Y（腿链竖直主导时 Y 叉积退化），再 toEnd×世界X；
+          // 并把步长封顶 π−0.05——整 180° 翻转病态且一步就冲过目标，
+          // 朝向由后续轮次与极向量（poleTarget）继续收敛决定。
+          axis.crossVectors(toEnd, _ikWorldUp);
+          if (axis.lengthSq() < 1e-8) axis.crossVectors(toEnd, _ikWorldX);
+          clampedAngle = Math.min(clampedAngle, Math.PI - 0.05);
+        }
+        if (axis.lengthSq() >= 1e-12) {
           axis.normalize();
-          // 钳制角度到关节约束范围
-          const clampedAngle = Math.max(minAng, Math.min(maxAng, angle)) * damping;
           if (Math.abs(clampedAngle) >= 1e-8) {
             // 将旋转轴转换为关节局部空间并应用旋转
             joint.quaternion.premultiply(quat.setFromAxisAngle(axis, clampedAngle));

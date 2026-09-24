@@ -275,6 +275,26 @@ describe("playNodes（[doc:adr-126-p5-收尾] 播放面板声明式节点）", (
     expect(empty?.value).toBe("请放 .vrma 到模型同目录");
     expect(empty?.value).not.toContain("CustomAnim");
   });
+
+  // [ADR-243 锐评对账 P1a] 版权提示：bridge.notice 存在时常态/空态尾部都追加提示 field
+  it("notice 配置：常态尾部追加 play-notice field（版权/条款提示）", () => {
+    const bridge = makeBridge({ notice: "VMD 动作版权归配布者所有" });
+    const nodes = playNodes(bridge);
+    const notice = nodes.find((n) => n.id === "play-notice");
+    expect(notice).toMatchObject({ kind: "field", value: "VMD 动作版权归配布者所有" });
+    expect(nodes[nodes.length - 1].id).toBe("play-notice"); // 尾部，不抢播放控件位置
+  });
+
+  it("notice 配置：空态同样追加（空态引导与版权提示不互斥）", () => {
+    const bridge = makeBridge({ clips: [], notice: "notice-text" });
+    const nodes = playNodes(bridge);
+    expect(nodes.some((n) => n.id === "play-notice")).toBe(true);
+  });
+
+  it("notice 缺省：不产 play-notice 节点（MMD/YSM 桥未设置时零影响）", () => {
+    expect(playNodes(makeBridge()).some((n) => n.id === "play-notice")).toBe(false);
+    expect(playNodes(makeBridge({ clips: [] })).some((n) => n.id === "play-notice")).toBe(false);
+  });
 });
 
 describe("边界条件", () => {

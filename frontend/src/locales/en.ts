@@ -193,6 +193,8 @@ export const en: Record<string, string> = {
   "settings.linkModeConfirmMessage":
     "This will relink {n} modpack(s) in {val} mode. It may take a while. Continue?",
   "settings.keymap.pressKey": "Press key…",
+  "settings.keymap.bindingAria": "{label}; shortcut {key}",
+  "settings.keymap.captureAria": "{label}: waiting for a key; Esc to cancel",
   "settings.keymap.conflict": '{key} is already used by "{label}"',
   "settings.keymap.bound": "{label} → {key}",
   "settings.keymap.resetDone": "Default keys restored",
@@ -275,9 +277,9 @@ export const en: Record<string, string> = {
   "settings.preview3d.free": "Free Camera",
   "settings.preview3d.rotModeHint":
     "Default camera mode when 3D preview opens; can be switched in-preview.",
-  "settings.preview3d.keymap": "Key Bindings (click then press a key to rebind)",
+  "settings.preview3d.keymap": "Key Bindings (click, then press one key to rebind)",
   "settings.preview3d.keymapHint":
-    "Arrow keys always work as a fallback; changes apply immediately to the next 3D preview.",
+    "Click a binding, then press one key; Esc cancels. Arrow keys always work as a fallback; changes apply immediately to the next 3D preview.",
   "settings.preview3d.resetKeys": "Reset Key Bindings",
   "settings.preview3d.workerCheck": "Enable worker",
   "settings.preview3d.fbxWorker": "FBX Worker Parsing",
@@ -1534,6 +1536,8 @@ export const en: Record<string, string> = {
   "preview.mmdPlay": "Play",
   "preview.mmdMotion": "Motion",
   "preview.playEmpty": "No Built-in Animations",
+  "preview.playNotice":
+    "VMD motion copyright belongs to its distributor; check the terms before use.",
   "preview.playReload": "Rescan",
   "preview.mmdMorph": "Morph",
   "preview.vrcAvatar": "VRC Avatar",

@@ -53,6 +53,9 @@ export interface MmdPlayBridge {
   /** 空态引导文案（各格式自报；缺省走 playNodes 的 MMD 默认文案）——
    *  MMD=CustomAnim/VMD-VPD，VRM=同目录 .vrma。避免 VRM 复用时提示 MMD 专有路径。 */
   emptyHint?: string;
+  /** 常驻提示（各格式自报；缺省不渲染）——VRM 侧用于 VMD 动作版权/使用条款提醒
+   *  （ADR-243 锐评对账 P1a：大量配布モーション条款写明「MMD 以外使用禁止」，雷区立牌）。 */
+  notice?: string;
 }
 
 /** 材质控制桥：复用 mmd-materials.ts 纯逻辑层（显隐/透明/详情），DOM 渲染在视图层（ADR-072） */

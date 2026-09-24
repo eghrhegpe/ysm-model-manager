@@ -125,7 +125,7 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
         },
       });
     }
-    return nodes;
+    return appendPlayNotice(nodes, bridge);
   }
   // 正常态：播放/暂停 toggle + 动作 select（多动作时）。
   // 注：不再追加 animDir 路径 field——有动作可播时用户已在操作动作，磁盘绝对路径无操作价值
@@ -157,6 +157,21 @@ export function playNodes(bridge: MmdPlayBridge): PreviewMenuNode[] {
       },
     });
   }
+  return appendPlayNotice(nodes, bridge);
+}
+
+/** [ADR-243 锐评对账 P1a] bridge.notice 存在时尾部追加版权提示 field（空态/常态共用；缺省零影响） */
+function appendPlayNotice(
+  nodes: PreviewMenuNode[],
+  bridge: Pick<MmdPlayBridge, "notice">,
+): PreviewMenuNode[] {
+  if (!bridge.notice) return nodes;
+  nodes.push({
+    id: "play-notice",
+    kind: "field" as const,
+    labelKey: "preview.playNotice",
+    value: bridge.notice,
+  });
   return nodes;
 }
 

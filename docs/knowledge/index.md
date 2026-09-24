@@ -259,7 +259,7 @@
 | 🏗 preview_env_state | 3D 预览统一状态层 envState（ADR-196） | architecture | gpu-bound | 3D 预览场景参数（天空/地面/水面/雾/阴影/反射/环境/后处理/灯光）在哪读哪写, cap 参数为何不存 this.params（ADR-196 统一状态层）, 新增 cap 参数字段要动哪里（env-state-schema.ts）, 排查 cap 参数改动没生效 / 被预设覆盖 |
 | 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
 | 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
-| 🍃 vmd_vrm_retarget | VMD→VRM 动作重定向 vmd-retarget | leaf | — | 要把 MMD 的 .vmd 动作播到 VRM 模型上（或改对应的发现/加载逻辑）, 要增删骨骼映射（MMD 骨名 → VRM humanoid 骨名）, 排查「VMD 动作在 VRM 上腿部不动 / 轨道为空 / 动作卡点顿挫」 |
+| 🍃 vmd_vrm_retarget | VMD→VRM 动作重定向 vmd-retarget | leaf | — | 要把 MMD 的 .vmd 动作播到 VRM 模型上（或改对应的发现/加载逻辑）, 要增删骨骼/表情映射（MMD 骨名/morph 名 → VRM humanoid 骨 / expression preset）, 排查「VMD 动作在 VRM 上腿部不动 / 轨道为空 / 动作卡点顿挫」, 排查「VMD 带表情帧但 VRM 脸不动（表情通道）」 |
 | 🏗 volumetric_cone | 体积光锥 VolumetricCone（真锥体网格 + Fresnel） | architecture | — | 体积光, 光锥, 聚光灯可见光柱, volumetric / cone, 边缘辉光 / fresnel |
 | 🍃 water | 水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线） | leaf | — | 改水面波浪 / 颜色 / 透明度 / 水位 / 尺寸 / 池体参数, 找不到水面的 normalMap, 拖水面尺寸滑块卡顿 / 水面几何重建, 改滑杆范围 / 参数值域（range / uiRange）, 新增水体形态（海洋 / 喷泉 / 大水面）, 改水面模型倒影 / 镜像 RT / fresnel 混合 |
 

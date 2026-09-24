@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-306：VMD morph 重定向到 VRM expression（表情通道）",
+        "link": "/adr/ADR-306-vmd-morph-vrm-expression"
+      },
+      {
         "text": "ADR-305：preview-3D 菜单命名脱钩裁定：三命名族稳定契约",
         "link": "/adr/ADR-305-menu-naming-decoupling-contract"
       },

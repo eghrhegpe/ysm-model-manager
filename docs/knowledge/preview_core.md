@@ -65,6 +65,8 @@ auto_fields:
     - closeUnusedDecodedBitmaps
     - collectAllWebEntries
     - collectVmdBoneNames
+    - collectVmdExpressionMap
+    - collectVmdMorphNames
     - concurrentMap
     - createAutoDanceController
     - createBeatDetector
@@ -243,13 +245,17 @@ auto_fields:
     - typeFromWebDir
     - unloadSessionModel
     - UpdateableScene
+    - VMD_EXPRESSION_CANDIDATES
+    - VMD_EXPRESSION_UNMAPPED
     - VMD_FOOT_IK_CANDIDATES
     - VMD_POSITION_SCALE_DEFAULT
     - VMD_REFERENCE_HEIGHT
     - VMD_RETARGET_CANDIDATES
     - VMD_RETARGET_UNMAPPED
     - VMD_ROOT_TRANSLATION_CANDIDATES
+    - VMD_TOE_ROTATION_CANDIDATES
     - VmdBindingPlan
+    - VmdExpressionManagerLike
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
@@ -258,6 +264,7 @@ auto_fields:
     - VrmAdapterDeps
     - VrmBonePanelCtx
     - VrmDataPort
+    - VrmExpressionPreset
     - vrmMenuItems
     - VrmMenuItemsOpts
     - VrmMetaInfo

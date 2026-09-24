@@ -206,10 +206,6 @@ export function bindSubBar(root: ShadowRoot, group: string, onSwitch?: (id: stri
 
   pills.forEach((pill) => {
     pill.addEventListener("click", () => activate(pill));
-    // aria-hidden/disabled 的 pill 不参与 tab 序（防键盘落进隐形控件）
-    if (pill.tabIndex === -1 && pill.getAttribute("aria-disabled") === "true") {
-      pill.setAttribute("tabindex", "-1");
-    }
   });
 
   // —— 键盘导航（仅当 bar 具 renderSubBar 产出的 role="toolbar" 时启用；手写夹具跳过）——
@@ -220,7 +216,7 @@ export function bindSubBar(root: ShadowRoot, group: string, onSwitch?: (id: stri
   if (!navPills.length) return;
 
   // 焦点索引自维护：`document.activeElement` 对 shadow 内聚焦元素会 retarget 回 host
-  // （规范行为），读它取到的是 docker/容器而非 pill——恒失准。用 focusin（bar 级委托）
+  // （规范行为），读它取到的是 host/容器而非 pill——恒失准。用 focusin（bar 级委托）
   // 单写点 + activate 同步 + keydown 的 target 兜底三路把 focusIdx 保持为「真实当前项」。
   let focusIdx = navPills.findIndex((p) => p.classList.contains("active"));
   bar.addEventListener("focusin", (e) => {

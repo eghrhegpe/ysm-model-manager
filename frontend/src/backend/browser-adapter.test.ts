@@ -983,13 +983,14 @@ describe("browserAdapter — 作者扫描/仓库索引（ADR-049 Batch 3：基�
     expect(authors[1].Count).toBe(1);
   });
 
-  it("ScanLocalAuthors 提取 [作者] 并带 type 标签（来自本地仓库）", async () => {
+  it("ScanLocalAuthors 提取 [作者] 并带 type 标签（desc 留空，文案归展示层）", async () => {
     await importWebFiles([new File([enc.encode("Y")], "[王五]角色.ysm")], "ysm");
     const creators = (await browserAdapter.ScanLocalAuthors("")) as Array<{ name: string; type: string; desc: string }>;
     expect(creators).toHaveLength(1);
     expect(creators[0].name).toBe("王五");
     expect(creators[0].type).toBe("ysm");
-    expect(creators[0].desc).toBe("来自本地仓库");
+    // 锐评 P0-2 治本：desc 不落界面文案（与 go/scanner/scanner.go 同口径）
+    expect(creators[0].desc).toBe("");
   });
 
   it("GenerateRepoIndex 返回 index.json 内容（相对路径正斜杠）", async () => {

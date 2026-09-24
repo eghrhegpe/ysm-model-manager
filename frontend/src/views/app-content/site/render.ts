@@ -11,7 +11,7 @@ import { getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import type { LocalCreatorLike, RepoAuthorLike } from "./types.ts";
 import type { BrowseModeRef } from "./workshop-browse-mode.ts";
-import { getCreatorIdentity, getTagFromRole, loadFavs } from "./workshop-data.ts";
+import { getTagDisplayLabel, getTagFromRole, loadFavs } from "./workshop-data.ts";
 
 /** 创作者卡片工厂上下文 */
 export interface CrCardCtx {
@@ -93,6 +93,9 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
   const starIcon = isFaved(cr.name) ? "⭐" : "☆";
   const tagRole = getTagFromRole(cr.role);
   const tagIcon = getTagIconFromRole(cr.role);
+  // 锐评 P0-4 / 复核 P1-3：tag 展示文案走 i18n 单源（未知 tag 原样），与筛选行同口径；
+  // class 仍用原始 id（`.cr-tag-<role>` 样式语义），data-tag 同为原始 id（过滤键）。
+  const tagLabel = getTagDisplayLabel(tagRole);
 
   // 锐评 P0-2b：desc 展示兜底从数据层上收视图层——mergeLocalAuthorsInto 不再把
   // t("community.fromLocal") 写进 desc（语言串落盘污染数据面），本地条目以
@@ -113,7 +116,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
     `<div class="cr-card-desc">${esc(descText)}</div>` +
     `<div class="cr-card-footer">${platformBadges}<span class="cr-tag cr-tag-${esc(
       tagRole,
-    )}">${tagIcon} <span>${esc(tagRole)}</span></span></div></div>`
+    )}">${tagIcon} <span>${esc(tagLabel)}</span></span></div></div>`
   );
 }
 
@@ -194,10 +197,9 @@ function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
         filterBtn(
           tag,
           stagger(i + 3, 30, 300),
-          // 锐评 P0-4：原直接显原始 role id（ja/en 用户看到裸 "vup"/"oc"），
-          // 改走 getCreatorIdentity 的 i18n label 单源——未知 tag 自动回退 YSM 创作者。
-          // data-tag 仍用原始 id（过滤键 = 数据语义），label 仅展示层。
-          `${getTagIconFromRole(tag)} <span>${esc(getCreatorIdentity({ role: tag }).label)}</span>`,
+          // 锐评 P0-4 / 复核 P1-3：展示文案走 getTagDisplayLabel 单源（已知身份 → i18n label；
+          // 未知 tag 原样显示，不冒充 YSM 创作者）；data-tag 仍用原始 id（过滤键 = 数据语义）。
+          `${getTagIconFromRole(tag)} <span>${esc(getTagDisplayLabel(tag))}</span>`,
         ),
       )
       .join("") +

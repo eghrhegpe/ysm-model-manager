@@ -5,7 +5,8 @@ export const contentCreatorCSS: string = `
 .cr-tag-game { background:var(--tag-game-bg);color:var(--tag-game); }
 .cr-tag-vup { background:var(--tag-vup-bg);color:var(--tag-vup); }
 .cr-tag-oc { background:var(--tag-oc-bg);color:var(--tag-oc); }
-.cr-tag-filter-row { display:flex;gap:4px;margin:0 0 8px;flex-wrap:wrap;align-items:center; }
+/* .cr-tag-filter-row 的容器度量定义在后段单处（2026-09 锐评 P1-7：原此处与后段各一份，
+   属性互补导致 margin+padding 双叠加；现已单点化）。 */
 /* 多按钮筛选组统一范式（同 shadow 根共享：content-creator + content-diag）。
    .diag-log-fbtn 复用本组规则、仅覆盖字号（见 content-diag.ts）；
    app-sync-manager 的 .sm-status-tab 因跨 shadow 根，样式逐值同款但需各自持有。

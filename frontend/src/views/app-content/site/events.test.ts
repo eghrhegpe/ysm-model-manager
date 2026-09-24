@@ -11,6 +11,7 @@ const {
   busOn,
   dbg,
   getCreatorIdentity,
+  getTagDisplayLabel,
   getTagFromRole,
   parseDescTags,
   loadFavs,
@@ -24,6 +25,7 @@ const {
   busOn: vi.fn(() => () => {}),
   dbg: vi.fn(),
   getCreatorIdentity: vi.fn((cr) => ({ icon: "🎭", label: cr.name + "(id)" })),
+  getTagDisplayLabel: vi.fn((tag: string) => tag),
   getTagFromRole: vi.fn(() => "模型"),
   parseDescTags: vi.fn(() => []),
   loadFavs: vi.fn(() => []),
@@ -38,6 +40,7 @@ vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/utils/debug/debug.ts", () => ({ dbg }));
 vi.mock("./workshop-data.ts", () => ({
   getCreatorIdentity,
+  getTagDisplayLabel,
   getTagFromRole,
   parseDescTags,
   loadFavs,

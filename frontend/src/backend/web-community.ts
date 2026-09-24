@@ -311,7 +311,9 @@ async function scanWebLocalAuthors(): Promise<WorkshopCreator[]> {
         existing.type = existing.type ? `${existing.type};${rtype}` : rtype;
       }
     } else {
-      result.push({ name: a, desc: "来自本地仓库", type: rtype });
+      // desc 留空：界面文案不进数据面（与 go/scanner/scanner.go 同口径，锐评 P0-2 治本），
+      // 「来自本地仓库」由创作者频道展示层按 _fromLocal 取当前语言。
+      result.push({ name: a, desc: "", type: rtype });
     }
   }
   return result;
@@ -443,8 +445,10 @@ export const webCommunityBindings = {
     // 移除该站点旧条目（type 分号分隔精确段匹配，对齐 Go app_workshop.go
     // inTypeSegments——原 includes(siteID + ";") 会把 "ba;c" 误配 siteID="a"）
     const kept = all.filter((c) => {
-      const t = c.type || "";
-      return !t.split(";").includes(siteID);
+      // 勿命名为 t：本文件顶部 import 了 i18n 的 t()，遮蔽后回调里写 t("...") 会静默变成
+      // 属性访问/崩溃（复核 P2-4）。
+      const typeSeg = c.type || "";
+      return !typeSeg.split(";").includes(siteID);
     });
     saveWebCreators([...kept, ...siteCreators]);
     return Promise.resolve();

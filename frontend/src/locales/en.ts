@@ -713,7 +713,6 @@ export const en: Record<string, string> = {
   // ── Workshop ──
   "workshop.exportSite": "Export Site",
   "workshop.importSite": "Import Site",
-  "workshop.activeCreators": "Active Creators",
   "workshop.noEmbed": "This site does not allow embedded browsing",
   "workshop.openWindow": "Open in Window (Proxy Mode)",
   "workshop.openExternal": "Open in System Browser",

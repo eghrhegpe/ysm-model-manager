@@ -710,7 +710,6 @@ export const ja: Record<string, string> = {
   // ── Workshop ──
   "workshop.exportSite": "サイトをエクスポート",
   "workshop.importSite": "サイトをインポート",
-  "workshop.activeCreators": "アクティブなクリエイター",
   "workshop.noEmbed": "このサイトは埋め込み表示を許可していません",
   "workshop.openWindow": "ウィンドウで開く（プロキシモード）",
   "workshop.openExternal": "システムブラウザで開く",

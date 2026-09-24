@@ -26,6 +26,7 @@ vi.mock("@/core/i18n/t.ts", () => ({ t: (k: string) => k }));
 vi.mock("@/bus", () => ({ bus: { emit: vi.fn() } }));
 
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { createWorkshopPageState } from "./workshop-page-state.ts";
 
 import {
@@ -187,9 +188,19 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
       await flushAsync();
 
       // t 被 mock 成返回 key 本身 → 直接断言 key，锁定「恢复路径 = 导入」
-      const hint = el.querySelector("#ws-tabs")?.textContent ?? "";
+      const tabsEl = el.querySelector("#ws-tabs") as HTMLElement;
+      const hint = tabsEl.textContent ?? "";
       expect(hint).toContain("workshop.importSite");
       expect(hint).not.toContain("workshop.exportSite");
+      // 图标半边同样要锁：回退成 upload 图标应红（复核「假锁」#4）。
+      // 断言用 polyline points 属性而非整串 SVG——innerHTML 往返会被 happy-dom 规范化
+      // （自闭合 → 显式闭合），整串比对必然误报；两点串是 upload(上箭头)/import(下箭头) 的唯一差异。
+      const importMarker = UI_ICONS.import.match(/points="[^"]+"/)?.[0] ?? "";
+      const uploadMarker = UI_ICONS.upload.match(/points="[^"]+"/)?.[0] ?? "";
+      expect(importMarker).not.toBe(""); // 前置：图标确有可判别标记
+      expect(importMarker).not.toBe(uploadMarker);
+      expect(tabsEl.innerHTML).toContain(importMarker);
+      expect(tabsEl.innerHTML).not.toContain(uploadMarker);
     } finally {
       vi.useRealTimers();
     }

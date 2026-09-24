@@ -1,26 +1,28 @@
 // ===== 站点视图 HTML 构建组件测试（G-1 — ADR-035 / Design.md §19.1）=====
 // 纯函数 buildSiteHtml / createCrCard：浏览态/编辑态/空态分支、搜索词分区、
 // 模式切换 active 类、标签过滤行、收藏置顶排序、排名分档/本地徽章/头像/平台徽章分支。
-// t() 由 test-setup 全局查表 mock（zhCN）；workshop-data / workshop-icons 用 hoisted mock 隔离。
+// t() 由 test-setup 全局查表 mock（zhCN）；workshop-data / workshop-icons 用 hoisted mock 隔离，
+// 但**身份映射（getCreatorIdentity / getTagDisplayLabel）走真实实现**——它们是 i18n label 与
+// 「未知 tag 原样」规则的唯一真值源，整段 mock 掉等于没锁（复核 P1-3 假锁批评）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { getTagFromRole, getTagIconFromRole, loadFavs, getCreatorIdentity } = vi.hoisted(() => ({
+const { getTagFromRole, getTagIconFromRole, loadFavs } = vi.hoisted(() => ({
   getTagFromRole: vi.fn((role?: string) => role || "creator"),
   getTagIconFromRole: vi.fn(() => "🏷️"),
   loadFavs: vi.fn<() => string[]>(() => []),
-  // 锐评 P0-4：筛选行动态 tag 的展示 label 走身份单源（原直接显裸 role id）
-  getCreatorIdentity: vi.fn((cr: { role?: string }) => ({
-    label: `ID:${cr.role ?? "creator"}`,
-    icon: "🎭",
-    tag: cr.role || "creator",
-  })),
 }));
 
-vi.mock("./workshop-data.ts", () => ({ getTagFromRole, loadFavs, getCreatorIdentity }));
-vi.mock("@/utils/icon/workshop-icons.ts", () => ({
-  getSiteIcon: vi.fn(() => "🌐"),
-  getTagIconFromRole,
-}));
+vi.mock("./workshop-data.ts", async () => {
+  const actual = await vi.importActual<typeof import("./workshop-data.ts")>("./workshop-data.ts");
+  return { ...actual, getTagFromRole, loadFavs };
+});
+vi.mock("@/utils/icon/workshop-icons.ts", async () => {
+  // ICONS 必须为真：真实 getCreatorIdentity 用它填充 icon 字段
+  const actual = await vi.importActual<typeof import("@/utils/icon/workshop-icons.ts")>(
+    "@/utils/icon/workshop-icons.ts",
+  );
+  return { ...actual, getSiteIcon: vi.fn(() => "🌐"), getTagIconFromRole };
+});
 
 import { buildSiteHtml, createCrCard } from "./render.ts";
 import type { BuildSiteHtmlCtx, CrCardCtx } from "./render.ts";
@@ -128,10 +130,11 @@ describe("buildSiteHtml 浏览态", () => {
     const root = renderHtml(makeCtx({ creators, activeTag: "official" }));
     const btns = [...root.querySelectorAll<HTMLElement>(".cr-tag-filter-btn")];
     expect(btns.map((b) => b.dataset.tag)).toEqual(["", "creator", "official", "vup"]);
-    // 锐评 P0-4：动态 tag 按钮的展示文案走 getCreatorIdentity 的 i18n label 单源，
+    // 锐评 P0-4：动态 tag 按钮的展示文案走真实 getTagDisplayLabel（i18n label 单源），
     // 不再是裸 role id（ja/en 用户曾直接看到 "vup"/"oc"）；data-tag 仍为过滤键原始 id。
     const vupBtn = root.querySelector<HTMLElement>('.cr-tag-filter-btn[data-tag="vup"]');
-    expect(vupBtn?.textContent).toContain("ID:vup");
+    expect(vupBtn?.textContent).toContain("VTuber 创作者");
+    expect(vupBtn?.textContent).not.toContain("vup"); // 裸 id 不再露给用户
     expect(vupBtn?.dataset.tag).toBe("vup");
     expect(
       root.querySelector('.cr-tag-filter-btn[data-tag="official"]')?.classList.contains("active"),
@@ -141,6 +144,17 @@ describe("buildSiteHtml 浏览态", () => {
     // activeTag 为空 → 「全部」按钮 active
     const root2 = renderHtml(makeCtx({ creators }));
     expect(root2.querySelector('.cr-tag-filter-btn[data-tag=""]')?.classList.contains("active")).toBe(true);
+  });
+
+  it("3b. 未知 tag → 原样显示（不冒充 YSM 创作者，否则文案与 data-tag 过滤语义不符）", () => {
+    const creators = [{ name: "丙", role: "modeler" }] as LocalCreatorLike[];
+    const root = renderHtml(makeCtx({ creators }));
+    const btn = root.querySelector<HTMLElement>('.cr-tag-filter-btn[data-tag="modeler"]');
+    expect(btn?.textContent).toContain("modeler");
+    expect(btn?.textContent).not.toContain("YSM 创作者");
+    // 卡片 tag 与筛选行同口径（复核 P1-3：同一 tag 曾两种呈现）
+    const cardTag = root.querySelector(".cr-creator-card .cr-tag");
+    expect(cardTag?.textContent).toContain("modeler");
   });
 
   it("4. viewerMode → 隐藏编辑入口按钮，保留更新配置按钮", () => {
@@ -316,5 +330,13 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     const cr = { name: "本地丙", desc: "真实描述", _fromLocal: true } as LocalCreatorLike;
     const card = parseCardHtml(createCrCard(cr, cardCtx([cr], { avatarCache: {} })));
     expect(card.querySelector(".cr-card-desc")?.textContent).toBe("真实描述");
+  });
+
+  it("16. 卡片 tag 显示 i18n label，class 仍按原始 role id（复核 P1-3 另一半）", () => {
+    const cr = { name: "丁", role: "vup" } as LocalCreatorLike;
+    const card = parseCardHtml(createCrCard(cr, cardCtx([cr], { avatarCache: {} })));
+    const tag = card.querySelector(".cr-tag");
+    expect(tag?.textContent).toContain("VTuber 创作者");
+    expect(tag?.className).toContain("cr-tag-vup"); // 样式 key 仍是原始 id
   });
 });

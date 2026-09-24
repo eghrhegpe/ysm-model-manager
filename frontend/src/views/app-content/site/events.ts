@@ -13,6 +13,7 @@ import type { BrowseMode } from "./workshop-browse-mode.ts";
 import {
   type CreatorIdentityInput,
   getCreatorIdentity,
+  getTagDisplayLabel,
   getTagFromRole,
   isFaved,
   loadFavs,
@@ -62,7 +63,9 @@ function cmCrBuildDetailHtml(
         '">' +
         getTagIconFromRole(cr.role) +
         " <span>" +
-        esc(getTagFromRole(cr.role)) +
+        // 锐评 P0-4 / 复核 P1-3：展示文案走 i18n 单源（未知 tag 原样），与卡片/筛选行同口径；
+        // class 仍用原始 role id。
+        esc(getTagDisplayLabel(getTagFromRole(cr.role))) +
         "</span>" +
         "</span>"
       : "") +

@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   getCreatorIdentity,
+  getTagDisplayLabel,
   getTagFromRole,
   parseDescTags,
   loadFavs,
@@ -113,9 +114,26 @@ describe("parseDescTags", () => {
     expect(parseDescTags("a very long english sentence here、b")).toEqual([]);
   });
 
-  it("最多保留 6 个标签", () => {
-    const desc = Array.from({ length: 8 }, (_, i) => `tag${i}`).join("、");
-    expect(parseDescTags(desc)).toHaveLength(6);
+  it("段数 > 6 → 回退全文（不截断丢尾；复核 P1-2）", () => {
+    const eight = Array.from({ length: 8 }, (_, i) => `tag${i}`).join("、");
+    // 原实现 slice(0,6) 让第 7/8 段在浮层静默消失（浮层「有片段即只渲染 chips」）
+    expect(parseDescTags(eight)).toEqual([]);
+    const six = Array.from({ length: 6 }, (_, i) => `tag${i}`).join("、");
+    expect(parseDescTags(six)).toEqual(["tag0", "tag1", "tag2", "tag3", "tag4", "tag5"]);
+  });
+});
+
+describe("getTagDisplayLabel（锐评 P0-4 / 复核 P1-3）", () => {
+  it("已知 role → i18n label（与 getCreatorIdentity 单源）", () => {
+    expect(getTagDisplayLabel("vup")).toBe("VTuber 创作者");
+    expect(getTagDisplayLabel("oc")).toBe("OC 原创角色");
+    expect(getTagDisplayLabel("official")).toBe("官方IP模型库");
+    expect(getTagDisplayLabel("creator")).toBe("YSM 创作者");
+  });
+
+  it("未知 tag → 原样返回（不得冒充 YSM 创作者，否则文案与 data-tag 过滤语义不符）", () => {
+    expect(getTagDisplayLabel("modeler")).toBe("modeler");
+    expect(getTagDisplayLabel("custom-role")).toBe("custom-role");
   });
 });
 

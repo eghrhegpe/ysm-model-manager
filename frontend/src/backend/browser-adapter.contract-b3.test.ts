@@ -92,7 +92,7 @@ describe("B3 契约 — ListModelAuthors（对齐 go/scanner/scanner.go:265）",
 // Go 类型合并规则：existing.Type 不含 rtype 时 `Type += ";" + rtype`（分隔符 ;）
 // ===========================================================================
 describe("B3 契约 — ScanLocalAuthors（对齐 go/scanner/scanner.go:297）", () => {
-  it("提取 [作者] 并带 type 标签（desc=来自本地仓库，字段名小写对齐 Go WorkshopCreator）", async () => {
+  it("提取 [作者] 并带 type 标签（desc 留空，字段名小写对齐 Go WorkshopCreator）", async () => {
     await putModel("[王五]角色.ysm");
     const creators = (await browserAdapter.ScanLocalAuthors("")) as Array<{
       name: string;
@@ -102,7 +102,8 @@ describe("B3 契约 — ScanLocalAuthors（对齐 go/scanner/scanner.go:297）",
     expect(creators).toHaveLength(1);
     expect(creators[0].name).toBe("王五");
     expect(creators[0].type).toBe("ysm");
-    expect(creators[0].desc).toBe("来自本地仓库");
+    // desc 留空：界面文案不进数据面（Go 侧 scanner.go 同口径，锐评 P0-2 治本）
+    expect(creators[0].desc).toBe("");
   });
 
   it("同作者跨不同类型 → Type 用 ; 合并（与 Go `;` 分隔符一致）", async () => {

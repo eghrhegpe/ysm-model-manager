@@ -242,7 +242,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 69 |
+| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 70 |
 
 ### `repo:focus-search`
 
@@ -269,8 +269,8 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
-| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 104 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 269 |
+| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 105 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 270 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 303 |
@@ -432,8 +432,8 @@
 | dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 93 |
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
-| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 200 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 304 |
+| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 201 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 305 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 77 |
@@ -477,8 +477,8 @@
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 155 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 166 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 172 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 100 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 152 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 98 |
+| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 161 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 150 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |

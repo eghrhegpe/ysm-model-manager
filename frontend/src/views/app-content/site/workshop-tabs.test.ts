@@ -177,3 +177,108 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
     }
   });
 });
+
+describe("initWorkshopTabs — 站点 tab 可访问性（tabs-a11y 复用，收敛手搓高亮）", () => {
+  const siteB = { id: "afdian", label: "爱发电", url: "https://afdian.com" } as WorkshopSite;
+
+  it("动态生成后：tablist/tab/aria-controls/roving tabindex 全套注入（不再是全应用唯一无 ARIA 的 tab 栏）", async () => {
+    vi.useFakeTimers();
+    try {
+      loadCommunityData.mockResolvedValue({ sites: [site, siteB], creators: [], authors: [] });
+      const { root, el } = makeHost();
+      const page = createWorkshopPageState();
+      const spy = spyShowSiteView();
+
+      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      await vi.advanceTimersByTimeAsync(150);
+      await flushAsync();
+
+      const tabs = [...el.querySelectorAll<HTMLElement>("#ws-tabs .repo-tab")];
+      expect(el.querySelector("#ws-tabs")?.getAttribute("role")).toBe("tablist");
+      expect(tabs.map((b) => b.getAttribute("role"))).toEqual(["tab", "tab"]);
+      expect(tabs.map((b) => b.getAttribute("aria-controls"))).toEqual([
+        "ws-search-results",
+        "ws-search-results",
+      ]);
+      // 无 localStorage 记忆 → 首个站点为初始激活项，roving tabindex 整组仅一个 0
+      expect(tabs.map((b) => b.getAttribute("tabindex"))).toEqual(["0", "-1"]);
+      expect(tabs.map((b) => b.getAttribute("aria-selected"))).toEqual(["true", "false"]);
+      spy.restore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("点击切换 → active/aria-selected/tabindex 互斥迁移由原语统一持有（高亮循环已删）", async () => {
+    vi.useFakeTimers();
+    try {
+      loadCommunityData.mockResolvedValue({ sites: [site, siteB], creators: [], authors: [] });
+      const { root, el } = makeHost();
+      const page = createWorkshopPageState();
+      const spy = spyShowSiteView();
+
+      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      await vi.advanceTimersByTimeAsync(150);
+      await flushAsync();
+
+      (el.querySelector('#ws-tabs [data-tab="afdian"]') as HTMLElement).click();
+      await flushAsync();
+
+      const tabs = [...el.querySelectorAll<HTMLElement>("#ws-tabs .repo-tab")];
+      expect(tabs.map((b) => b.classList.contains("active"))).toEqual([false, true]);
+      expect(tabs.map((b) => b.getAttribute("aria-selected"))).toEqual(["false", "true"]);
+      expect(tabs.map((b) => b.getAttribute("tabindex"))).toEqual(["-1", "0"]);
+      expect(page.getCurrentSite()).toBe(siteB);
+      spy.restore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("方向键 ArrowRight → 焦点移动并自动激活（键盘可达性回归红线）", async () => {
+    vi.useFakeTimers();
+    try {
+      loadCommunityData.mockResolvedValue({ sites: [site, siteB], creators: [], authors: [] });
+      const { root, el } = makeHost();
+      const page = createWorkshopPageState();
+      const spy = spyShowSiteView();
+
+      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      await vi.advanceTimersByTimeAsync(150);
+      await flushAsync();
+
+      const alpha = el.querySelector('#ws-tabs [data-tab="bilibili"]') as HTMLElement;
+      alpha.focus();
+      alpha.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      await flushAsync();
+
+      expect(page.getCurrentSite()).toBe(siteB);
+      spy.restore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("恢复上次 tab：记忆命中项为初始激活（seeded active → aria/tabindex 对齐）", async () => {
+    vi.useFakeTimers();
+    try {
+      localStorage.setItem("ysm-ws-last-tab", "afdian");
+      loadCommunityData.mockResolvedValue({ sites: [site, siteB], creators: [], authors: [] });
+      const { root, el } = makeHost();
+      const page = createWorkshopPageState();
+      const spy = spyShowSiteView();
+
+      initWorkshopTabs(root, createWorkshopRefs(), page, () => {});
+      await vi.advanceTimersByTimeAsync(150);
+      await flushAsync();
+
+      const tabs = [...el.querySelectorAll<HTMLElement>("#ws-tabs .repo-tab")];
+      expect(tabs.map((b) => b.getAttribute("aria-selected"))).toEqual(["false", "true"]);
+      expect(tabs.map((b) => b.getAttribute("tabindex"))).toEqual(["-1", "0"]);
+      expect(page.getCurrentSite()).toBe(siteB);
+      spy.restore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

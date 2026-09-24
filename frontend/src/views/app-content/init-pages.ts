@@ -16,6 +16,7 @@ import { initDiagnostics } from "@/views/app-content/diagnostics/init.ts";
 import { initSettings } from "@/views/app-content/settings/init.ts";
 import { cleanupKeymap } from "@/views/app-content/settings/keymap.ts";
 import type { AppContentHost } from "./host.ts";
+import { bindTabA11y } from "./tabs-a11y.ts";
 
 /**
  * 初始化诊断页
@@ -125,59 +126,8 @@ export function initRepositoryPage(host: AppContentHost): void {
  * @param prefix 面板 id 前缀：面板 id = `${prefix}-tab-${data-tab}`
  */
 export function bindTabs(host: AppContentHost, tabSelector: string, prefix: string): void {
-  const tabs = Array.from(host.state.root.querySelectorAll<HTMLElement>(tabSelector));
-  if (!tabs.length) return;
-
-  // 真值源 = 按钮自身的 data-tab（由 renderTabs 工厂保证与面板 id 同源）。
-  // 无 data-tab 的按钮切不出任何面板——静默跳过等于埋一个「点了没反应」的哑按钮，故响亮告警。
-  // 重复 data-tab 违反「一个面板只由一个 tab 控制」的 WAI-ARIA Tabs 契约（双 aria-controls），
-  // 且激活循环会双处理同一面板——响亮告警（与 ADR-259 契约违规告警同口径）并去重。
-  const ids: string[] = [];
-  const seenIds = new Set<string>();
-  for (const btn of tabs) {
-    const id = btn.dataset.tab ?? "";
-    if (!id) {
-      logWarn("tabs", `${prefix}: tab 按钮缺 data-tab，已跳过（该按钮不可切换）`, btn);
-      continue;
-    }
-    if (seenIds.has(id)) {
-      logWarn(
-        "tabs",
-        `${prefix}: 重复 data-tab="${id}"（两个按钮控制同一面板，违反 ARIA Tabs，已去重）`,
-        btn,
-      );
-      continue;
-    }
-    seenIds.add(id);
-    ids.push(id);
-    if (!host.state.root.getElementById(`${prefix}-tab-${id}`)) {
-      logWarn("tabs", `${prefix}: 缺面板 #${prefix}-tab-${id}（按钮在但内容区将空白）`);
-    }
-  }
-  if (!ids.length) return;
-
-  // ARIA 语义化：tablist + tab + tabpanel（一次性注入，避免重复 setAttribute）
-  const tabList = tabs[0].parentElement;
-  if (tabList && tabList.getAttribute("role") !== "tablist") {
-    tabList.setAttribute("role", "tablist");
-  }
-  tabs.forEach((btn, i) => {
-    const tabId = btn.dataset.tab ?? "";
-    if (!tabId) return; // 缺 data-tab：派生循环已告警，此处跳过
-    const panelId = `${prefix}-tab-${tabId}`;
-    btn.setAttribute("role", "tab");
-    btn.setAttribute("id", `${prefix}-tab-btn-${tabId}`);
-    btn.setAttribute("aria-controls", panelId);
-    // roving tabindex：仅首个「可见」tab 拿 0（i===0 且非 display:none），防被隐藏按钮抢焦点
-    const isVisible = btn.style.display !== "none";
-    btn.setAttribute("tabindex", i === 0 && isVisible ? "0" : "-1");
-    const panel = host.state.root.getElementById(panelId);
-    if (panel) {
-      panel.setAttribute("role", "tabpanel");
-      panel.setAttribute("aria-labelledby", btn.id);
-      if (i !== 0) panel.setAttribute("hidden", "");
-    }
-  });
+  const root = host.state.root;
+  const panelId = (id: string): string => `${prefix}-tab-${id}`;
 
   // P3 收敛（审核）：tab 懒初始化分发由查表替代 if/else-if 链，与 app-preview 的 PREVIEW_HANDLERS 同构模式对齐
   type TabInitFn = (h: AppContentHost, c: HTMLElement) => Promise<unknown>;
@@ -186,94 +136,80 @@ export function bindTabs(host: AppContentHost, tabSelector: string, prefix: stri
     dedup: initDedupTab,
     oldest: initOldestTab,
   };
-
   const inited: Record<string, boolean> = {};
+  // 去重后的 tab id 列表：onBound 每次 attach 回填，供面板 display 翻转与懒初始化使用。
+  let ids: string[] = [];
 
-  /** 切 tab 核心逻辑（click/keyboard 共用） */
-  const activate = async (targetBtn: HTMLElement): Promise<void> => {
-    const tab = targetBtn.dataset.tab || "";
-    // 切换按钮态
-    tabs.forEach((t, _i) => {
-      const isActive = t === targetBtn;
-      t.classList.toggle("active", isActive);
-      t.setAttribute("aria-selected", String(isActive));
-      t.setAttribute("tabindex", isActive ? "0" : "-1"); // roving tabindex
-    });
-    // 切换内容卡
-    ids.forEach((id) => {
-      const el = host.state.root.getElementById(`${prefix}-tab-${id}`);
-      if (!el) return;
-      if (id === tab) {
-        el.style.display = "";
-        el.removeAttribute("hidden");
-      } else {
-        el.style.display = "none";
-        el.setAttribute("hidden", "");
-      }
-    });
-    // 首次切换到非默认 tab 时初始化内容
-    if (!inited[tab] && tab !== ids[0]) {
-      const container = host.state.root.getElementById(`${prefix}-tab-${tab}`);
-      if (!container) return;
-      // P3 修复（审核，陷阱 #3）：懒初始化是 async 链（动态 import / 业务 init），
-      // 原在 await 前就置 inited=true 且无 try/catch——动态导入失败或 init 抛错时
-      // tab 永久卡死（重试被 inited 拦截）且无用户反馈。先置位防并发重复初始化，
-      // catch 中复位以允许重试并 toast 提示（ADR-044 ①：async handler 最外层必有 catch）。
-      inited[tab] = true;
-      try {
-        const initFn = TAB_INIT[tab];
-        if (initFn) {
-          const cleanup = await initFn(host, container);
-          if (typeof cleanup === "function") host.subs.addPage(cleanup as () => void);
+  // 可访问性半边（tablist/tab 语义 + roving tabindex + 键盘导航 + 点击分派）委托共享原语
+  // tabs-a11y；此处只保留静态页专属的面板侧契约（tabpanel 语义 + display/hidden 翻转 + 懒初始化 + 缺面板告警）。
+  bindTabA11y({
+    root,
+    tabSelector,
+    panelId,
+    validate: true,
+    // 每次绑定后为「去重后的按钮集合」补面板侧静态语义：按钮 id（供 aria-labelledby）、
+    // panel role、非首个面板初始 hidden；缺面板响亮告警（按钮在但内容区必空白）。
+    onBound: (nav, boundIds) => {
+      ids = boundIds;
+      nav.forEach((btn, i) => {
+        const id = btn.dataset.tab ?? "";
+        btn.id = `${prefix}-tab-btn-${id}`;
+        const panel = root.getElementById(panelId(id));
+        if (!panel) {
+          logWarn("tabs", `${prefix}: 缺面板 #${panelId(id)}（按钮在但内容区将空白）`);
+          return;
         }
-      } catch (e) {
-        inited[tab] = false;
-        bus.emit("toast:show", {
-          msg: `❌ ${friendlyError(e, t("common.loadFailed"))}`,
-          duration: TOAST_MS.verbose,
-          type: "error",
-        });
+        panel.setAttribute("role", "tabpanel");
+        panel.setAttribute("aria-labelledby", btn.id);
+        if (i !== 0) {
+          panel.style.display = "none";
+          panel.setAttribute("hidden", "");
+        }
+      });
+    },
+    // 激活副作用：翻面板 display/hidden + 首次切到非默认 tab 时懒初始化（原 activate 的 ②③）。
+    // 按钮 active 类 / aria-selected / roving tabindex 的互斥迁移已由原语在 activate 前统一处理。
+    onActivate: (_btn, tab) => {
+      ids.forEach((id) => {
+        const el = root.getElementById(panelId(id));
+        if (!el) return;
+        if (id === tab) {
+          el.style.display = "";
+          el.removeAttribute("hidden");
+        } else {
+          el.style.display = "none";
+          el.setAttribute("hidden", "");
+        }
+      });
+      if (!inited[tab] && tab !== ids[0]) {
+        const container = root.getElementById(panelId(tab));
+        if (!container) return;
+        // P3 修复（审核，陷阱 #3）：懒初始化是 async 链（动态 import / 业务 init），
+        // 原在 await 前就置 inited=true 且无 try/catch——动态导入失败或 init 抛错时
+        // tab 永久卡死（重试被 inited 拦截）且无用户反馈。先置位防并发重复初始化，
+        // catch 中复位以允许重试并 toast 提示（ADR-044 ①：async handler 最外层必有 catch）。
+        inited[tab] = true;
+        void (async (): Promise<void> => {
+          try {
+            const initFn = TAB_INIT[tab];
+            if (initFn) {
+              const cleanup = await initFn(host, container);
+              if (typeof cleanup === "function") host.subs.addPage(cleanup as () => void);
+            }
+          } catch (e) {
+            inited[tab] = false;
+            bus.emit("toast:show", {
+              msg: `${UI_ICONS.error} ${friendlyError(e, t("common.loadFailed"))}`,
+              duration: TOAST_MS.verbose,
+              type: "error",
+            });
+          }
+        })();
+        // 注意：resourcepacks/shaderpacks/blueprint/MMD/VRC/LITEMATIC 六个
+        // initResourcePacks 分支已删除（P2 审计：tpl 无对应 repo-tab 按钮与容器 id，
+        // 双重复死不可达；资源类型切换改由 app-nav 资源切换器重渲染 <app-tree>）。
       }
-      // 注意：resourcepacks/shaderpacks/blueprint/MMD/VRC/LITEMATIC 六个
-      // initResourcePacks 分支已删除（P2 审计：tpl 无对应 repo-tab 按钮与容器 id，
-      // 双重复死不可达；资源类型切换改由 app-nav 资源切换器重渲染 <app-tree>）。
-      // wrapper（features/resource-packs.ts）保留作兼容层，见 resource-packs 知识卡。
-    }
-  };
-
-  tabs.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      btn.focus();
-      void activate(btn);
-    });
-    // WAI-ARIA Tabs 键盘模式
-    btn.addEventListener("keydown", (e) => {
-      const vis = tabs.filter((t) => t.style.display !== "none");
-      const vIdx = Math.max(0, vis.indexOf(btn));
-      let next: HTMLElement | undefined;
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        next = vis[(vIdx + 1) % vis.length];
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        next = vis[(vIdx - 1 + vis.length) % vis.length];
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        next = vis[0];
-      } else if (e.key === "End") {
-        e.preventDefault();
-        next = vis[vis.length - 1];
-      } else if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        void activate(btn);
-        return;
-      }
-      if (next) {
-        next.focus();
-        // 自动激活（WAI-ARIA automatic activation 模式：切 tab 即切换内容）
-        void activate(next);
-      }
-    });
+    },
   });
 }
 

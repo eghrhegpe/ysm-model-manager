@@ -15,6 +15,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc as escUtil } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getSiteIcon } from "@/utils/icon/workshop-icons.ts";
+import { bindTabA11y } from "@/views/app-content/tabs-a11y.ts";
 import type { RepoAuthorLike } from "./site-view.ts";
 import type { WorkshopPageState } from "./workshop-page-state.ts";
 
@@ -86,11 +87,8 @@ export function initWorkshopTabs(
       if (!site) return;
       page.setCurrentSite(site);
       safeSet("ysm-ws-last-tab", site.id);
-      // tab 切换高亮
-      root.querySelectorAll(".repo-tab").forEach((t) => {
-        t.classList.remove("active");
-      });
-      root.querySelector(`[data-tab="${siteType}"]`)?.classList.add("active");
+      // tab 高亮 / roving tabindex / aria-selected 由 tabs-a11y 原语在 activate 时统一切换，
+      // 此处只负责内容区重渲染（原手搓 querySelectorAll 去 active + add active 已收敛）。
       _showSiteView(page.getCurrentSite());
       // 首屏已渲染，后台补充本地扫描作者（STALE 缓存，通常立即返回）
       maybeEnrich();
@@ -116,22 +114,33 @@ export function initWorkshopTabs(
         // 动态生成 Tab
         const tabsEl = root.getElementById("ws-tabs");
         if (tabsEl && data.sites.length) {
+          // 恢复上次选中的 tab（用于决定首个激活项，与 bindTabA11y 的 pre-seeded active 对齐）
+          const last = safeGet("ysm-ws-last-tab");
+          const initial = data.sites.find((s) => s.id === last) || data.sites[0];
           tabsEl.innerHTML = "";
-          data.sites.forEach((s, i) => {
+          data.sites.forEach((s) => {
             const btn = document.createElement("button");
-            btn.className = `repo-tab${i === 0 ? " active" : ""}`;
+            btn.className = `repo-tab${s.id === initial.id ? " active" : ""}`;
             btn.dataset.tab = s.id;
             btn.innerHTML = `${getSiteIcon(s.id)} ${escUtil(s.label)}`;
-            btn.addEventListener("click", () => showCreatorsBySite(s.id));
             tabsEl.appendChild(btn);
           });
-          // 默认显示第一个（复用本次已加载数据，避免 showCreatorsBySite 二次拉取）
-          if (data.sites[0]) {
-            // 恢复上次选中的 tab
-            const last = safeGet("ysm-ws-last-tab") || data.sites[0].id;
-            const target = data.sites.find((s) => s.id === last) || data.sites[0];
-            await showCreatorsBySite(target.id, data);
-          }
+          // 可访问性 + 点击/键盘分派交共享原语（与仓库/设置页同一份 ARIA/roving/键盘真值）：
+          // 站点 tab 是「动态生成 + 单一内容区」，套不进 bindTabs 的静态面板契约，但同样
+          // 需要 tablist/tab 语义、roving tabindex、方向键导航——原语只接管这些，内容切换走 onActivate。
+          // 选择器限定在 #ws-tabs 内，避免误伤同 shadow 下其他页的 .repo-tab。
+          bindTabA11y({
+            root,
+            tabSelector: "#ws-tabs .repo-tab",
+            panelId: () => "ws-search-results",
+            validate: true,
+            onActivate: (btn) => {
+              const id = btn.dataset.tab ?? "";
+              if (id) void showCreatorsBySite(id);
+            },
+          });
+          // 默认显示初始站点（复用本次已加载数据，避免 showCreatorsBySite 二次拉取）
+          if (initial) await showCreatorsBySite(initial.id, data);
         } else if (tabsEl) {
           // 空态提示（e2e 反推）：原实现 sites 为空时永久停留 loading 占位，
           // 加载失败/无配置用户无感知——显示「暂无数据」并允许手动导入站点配置；

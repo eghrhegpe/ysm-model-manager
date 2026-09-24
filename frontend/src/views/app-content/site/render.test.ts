@@ -101,7 +101,7 @@ describe("buildSiteHtml 浏览态", () => {
     expect(root.querySelector(".cr-preset-area")).toBeNull();
   });
 
-  it("2. 有创作者 → 计数 + 搜索框回填 searchKw + 收藏置顶排序（就地排序）", () => {
+  it("2. 有创作者 → 计数 + 搜索框回填 searchKw + 收藏置顶排序（P2-8 不再就地改入参）", () => {
     loadFavs.mockReturnValue(["乙"]);
     const creators = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
     const ctx = makeCtx({ creators, searchKw: "猫" });
@@ -110,11 +110,12 @@ describe("buildSiteHtml 浏览态", () => {
     expect(
       (root.querySelector("#ws-cr-search") as HTMLInputElement).value,
     ).toBe("猫");
-    // buildSiteHtml 在 ctx.creators 上就地排序（共享数组副作用），收藏置顶
-    expect(creators.map((c) => c.name)).toEqual(["乙", "甲"]);
+    // P2-8 锐评：buildSiteHtml 不再就地改 ctx.creators（纯函数），收藏置顶体现在渲染顺序
+    expect(creators.map((c) => c.name)).toEqual(["甲", "乙"]);
     const grid = root.querySelector("#cr-creator-grid");
     expect(grid).toBeTruthy();
-    // 声明式契约：卡片由 buildSiteHtml 直接产出（不再留空 grid 交由 events 填充）
+    // 声明式契约：卡片由 buildSiteHtml 直接产出（不再留空 grid 交由 events 填充），
+    // 渲染顺序 = 收藏置顶优先（乙在前）
     expect(grid!.querySelectorAll(".cr-creator-card")).toHaveLength(2);
     expect(grid!.querySelector(".cr-card-name")?.textContent).toBe("乙");
     expect(root.querySelector(".placeholder-box")).toBeNull();
@@ -325,6 +326,22 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     const c2 = parseCardHtml(createCrCard(creators[2], cardCtx({ authorCountMap: counts, tier: tiers["丙"] })));
     expect(c2.dataset.tier).toBeUndefined();
     expect(c2.querySelector(".cr-card-tier-bar")).toBeNull();
+  });
+
+  it("13b. tier 图例：有分档卡才渲染，含两档 swatch 与 i18n 文案；位次语义 = 相对排名（全 0 时首作者仍 gold，图例照渲）", () => {
+    // 有分档：计数 {甲:10, 乙:9} → 甲 gold、乙 silver
+    const c1 = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
+    const root1 = renderHtml(makeCtx({ creators: c1, authorCountMap: { 甲: 10, 乙: 9 } }));
+    const legend1 = root1.querySelector('[data-testid="cr-tier-legend"]');
+    expect(legend1).toBeTruthy();
+    expect(legend1?.querySelector(".cr-tier-swatch--gold")).toBeTruthy();
+    expect(legend1?.querySelector(".cr-tier-swatch--silver")).toBeTruthy();
+    expect(legend1?.textContent).toContain("Top 10%");
+    expect(legend1?.textContent).toContain("Top 25%");
+    // computeCreatorTiers 按相对位次分档（全 0 时首作者 pct=0 → gold）——图例语义忠实于该位次规则
+    const c2 = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
+    const root2 = renderHtml(makeCtx({ creators: c2, authorCountMap: {} }));
+    expect(root2.querySelector('[data-testid="cr-tier-legend"]')).toBeTruthy();
   });
 
   it("14. 本地条目空 desc → 卡片回退 i18n 提示（数据面不落语言串，锐评 P0-2b）", () => {

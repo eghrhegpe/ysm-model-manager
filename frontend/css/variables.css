@@ -255,6 +255,10 @@
   --tree-row-grid: 28px;
   --tree-row-list: 24px;
   --sm-optional: #f9a826;
+  /* 创作者荣誉分档（P0-2 锐评：不再寄生 warn 橙 --sm-optional / 文字灰 --muted）。
+     金 = 本地模型数 Top 10%，银 = Top 25%（computeCreatorTiers 产出，纯装饰位——2px 色条 + 头像光环，非文字，无 WCAG 文字对比要求）。 */
+  --tier-gold: #e8b63c;
+  --tier-silver: #9aa7b4;
   /* 间距变量 — 按钮/tab padding-V 使用，随字号缩放 */
   --space-sm: calc(4px + var(--fs-scale) * 0.35);
   --space-md: calc(5px + var(--fs-scale) * 0.42);

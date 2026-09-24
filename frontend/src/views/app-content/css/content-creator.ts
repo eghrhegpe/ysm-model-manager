@@ -94,15 +94,15 @@ export const contentCreatorCSS: string = `
 .cr-card-tier-bar {
   position:absolute;top:0;left:0;right:0;height:2px;opacity:.6;transition:opacity var(--tr-normal);
 }
-.cr-creator-card--grid[data-tier="gold"] .cr-card-tier-bar { background:var(--sm-optional); }
-.cr-creator-card--grid[data-tier="silver"] .cr-card-tier-bar { background:var(--muted); }
+.cr-creator-card--grid[data-tier="gold"] .cr-card-tier-bar { background:var(--tier-gold); }
+.cr-creator-card--grid[data-tier="silver"] .cr-card-tier-bar { background:var(--tier-silver); }
 .cr-creator-card--grid[data-tier="gold"] .cr-avatar-ring {
-  background:conic-gradient(from 0deg,var(--sm-optional),transparent 60%,var(--sm-optional));
-  box-shadow:0 0 6px color-mix(in srgb,var(--sm-optional) 40%,transparent);
+  background:conic-gradient(from 0deg,var(--tier-gold),transparent 60%,var(--tier-gold));
+  box-shadow:0 0 6px color-mix(in srgb,var(--tier-gold) 40%,transparent);
 }
 .cr-creator-card--grid[data-tier="silver"] .cr-avatar-ring {
-  background:conic-gradient(from 0deg,var(--muted),transparent 60%,var(--muted));
-  box-shadow:0 0 6px color-mix(in srgb,var(--muted) 25%,transparent);
+  background:conic-gradient(from 0deg,var(--tier-silver),transparent 60%,var(--tier-silver));
+  box-shadow:0 0 6px color-mix(in srgb,var(--tier-silver) 25%,transparent);
 }
 .cr-creator-card--grid:not([data-tier]) .cr-avatar-ring {
   background:conic-gradient(from 0deg,var(--accent),transparent 60%,var(--accent));
@@ -169,7 +169,7 @@ export const contentCreatorCSS: string = `
 .cr-platform-badge { font-size:var(--fs-micro);padding:var(--pad-v-1) var(--sp-1);border-radius:var(--radius-xs);line-height:12px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd); }
 .cr-card-search { cursor:pointer;font-size:var(--fs-sm);transition:transform var(--tr-normal);flex-shrink:0; }
 .cr-card-search:hover { transform:scale(1.15); }
-.cr-star-btn { cursor:pointer;font-size:var(--fs-sm);color:var(--sm-optional);transition:transform var(--tr-normal);flex-shrink:0; } /* ADR-238：星标走 SVG 语义图标（currentColor），金色与 tier 条 --sm-optional 同源 */
+.cr-star-btn { cursor:pointer;font-size:var(--fs-sm);color:var(--sm-optional);transition:transform var(--tr-normal);flex-shrink:0; } /* ADR-238：星标走 SVG 语义图标（currentColor），收藏金色沿用 --sm-optional；tier 荣誉色已独立为 --tier-gold/--tier-silver（P0-2） */
 .cr-star-btn:hover { transform:scale(1.15); }
 
 /* ===== 预设搜索 ===== */
@@ -251,6 +251,22 @@ export const contentCreatorCSS: string = `
   align-items:center;
   margin:0 0 8px;
 }
+
+/* ===== tier 图例（P0-1/P2-1 锐评：gold/silver 语义不再哑默，有分档卡才渲染） ===== */
+.cr-tier-legend {
+  display:flex;align-items:center;gap:12px;
+  padding:0 0 var(--sp-2);
+}
+.cr-tier-legend-item {
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:var(--fs-xs);color:var(--muted);
+}
+.cr-tier-swatch {
+  width:10px;height:10px;border-radius:var(--radius-xs);
+  flex-shrink:0;
+}
+.cr-tier-swatch--gold { background:var(--tier-gold); }
+.cr-tier-swatch--silver { background:var(--tier-silver); }
 .cr-drop-zone {
   display:flex;align-items:center;justify-content:center;gap:8px;
   padding:12px 16px;margin:4px 0 8px;

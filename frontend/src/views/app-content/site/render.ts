@@ -66,7 +66,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
     ? authorCount > 0
       ? `<span class="cr-card-local-count cr-card-local-jump" data-local-creator="${esc(
           cr.name,
-        )}" title="${t("content.viewLocalModels")}">${UI_ICONS.folder}${authorCount}</span>`
+        )}" title="${t("content.localModelsCount", { n: authorCount })}">${UI_ICONS.folder}${authorCount}</span>`
       : `<span class="cr-card-local-count cr-card-local-jump" data-local-creator="${esc(
           cr.name,
         )}" title="${t("content.viewLocalModels")}">${UI_ICONS.folder}</span>`
@@ -157,13 +157,13 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
   );
 }
 
-/** 收藏置顶排序（就地修改 ctx.creators 共享数组，副作用原样保留）。 */
+/** 收藏置顶排序（P2-8 锐评：不再就地改 ctx.creators——buildSiteHtml 保持纯函数无副作用。返回新数组）。 */
 function sortCreatorsFavedFirst(
   creators: LocalCreatorLike[],
   authorCountMap: Record<string, number>,
-): void {
+): LocalCreatorLike[] {
   const faved = loadFavs();
-  creators.sort((a, b) => {
+  return [...creators].sort((a, b) => {
     const af = faved.includes(a.name) ? 1 : 0;
     const bf = faved.includes(b.name) ? 1 : 0;
     if (af !== bf) return bf - af;
@@ -227,6 +227,30 @@ function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
   );
 }
 
+/**
+ * tier 图例行（P0-1/P2-1 锐评）：原 gold/silver 只有 2px 色条 + 光环，无任何文字
+ * 说明其「按本地模型数排名」的语义——无图例时用户无法得知这两档凭什么区分。
+ * 有任一 gold/silver 分档卡才渲染（纯展示，不参与过滤）。
+ */
+function buildTierLegendRow(
+  creators: LocalCreatorLike[],
+  authorCountMap: Record<string, number>,
+): string {
+  const tiers = computeCreatorTiers(creators, authorCountMap);
+  const hasTierCard = creators.some((cr) => tiers[cr.name]);
+  if (!hasTierCard) return "";
+  return (
+    `<div class="cr-tier-legend" data-testid="cr-tier-legend">` +
+    `<span class="cr-tier-legend-item"><span class="cr-tier-swatch cr-tier-swatch--gold"></span>${t(
+      "content.tierGold",
+    )}</span>` +
+    `<span class="cr-tier-legend-item"><span class="cr-tier-swatch cr-tier-swatch--silver"></span>${t(
+      "content.tierSilver",
+    )}</span>` +
+    `</div>`
+  );
+}
+
 /** 创作者浏览区：标题栏 + 收藏置顶 + 标签行 + grid / 空态。 */
 function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
   const { esc, creators, authorCountMap } = ctx;
@@ -250,14 +274,16 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
     }</div>`,
   );
   if (creators.length) {
-    // 收藏置顶
-    sortCreatorsFavedFirst(creators, authorCountMap);
+    // P2-8：sortCreatorsFavedFirst 返回新数组——不再就地改 ctx.creators（原数组保持 allCreators 过滤序）
+    const sortedCreators = sortCreatorsFavedFirst(creators, authorCountMap);
     parts.push(buildSiteTagFilterRow(ctx));
     // 声明式生成创作者卡片（不再留空 grid 给 events 填充）
     // 分档预计算一次（O(n log n)）；stagger 延迟取展示位次——收藏置顶卡按视觉顺序入场
     //（旧实现按产量名次计延迟，置顶卡入场乱序），且经 stagger() 带 300ms 封顶
     const tiers = computeCreatorTiers(creators, authorCountMap);
-    const cardsHtml = creators
+    // P0-1/P2-1 锐评：tier 无图例、排序依据不可见——有分档卡才渲染迷你图例行
+    parts.push(buildTierLegendRow(creators, authorCountMap));
+    const cardsHtml = sortedCreators
       .map((cr, i) =>
         createCrCard(cr, {
           esc: ctx.esc,

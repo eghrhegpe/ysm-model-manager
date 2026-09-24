@@ -5,6 +5,7 @@ import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { qs, qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getSiteIcon, getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -23,6 +24,11 @@ import {
 
 // storage 监听器模块私有变量（防泄漏，bindBrowseEvents 返回的 cleanup 会清）
 let _storageSyncFn: ((e: StorageEvent) => void) | null = null;
+
+// 浮层焦点陷阱释放函数的注册表（P0-3 锐评：aria-modal 声明了模态却无 trapFocus）。
+// WeakMap 随元素 GC 回收，不污染 HTMLElement 全局类型；所有浮层关闭路径统一释放
+// （data-close / data-search / Esc / 遮罩点击），防 doc keydown 监听残留。
+const _overlayTrapReleases = new WeakMap<HTMLElement, () => void>();
 
 // ============================================================
 // cmCr* 共用包级函数：详情浮层创建 + 内部 4 子事件绑定
@@ -152,12 +158,14 @@ function cmCrBindOverlayEvents(
     ev.stopPropagation();
     const now = toggleFav(cr.name);
     // 星标切 SVG 双态（ADR-238）：用闭包按钮引用改写——点进 SVG 内部时 ev.target 是
-    // SVGElement，旧 `instanceof HTMLElement` 守卫会漏更新图标
-    if (overlayStar) overlayStar.innerHTML = now ? UI_ICONS.starFilled : UI_ICONS.star;
+    // SVGElement，旧 `instanceof HTMLElement` 守卫会漏更新图标。icon 先取到局部变量再赋
+    // innerHTML（RHS 为预构建 SVG 常量，命中 R8 豁免「预构建 HTML 变量」）
+    const starHtml = now ? UI_ICONS.starFilled : UI_ICONS.star;
+    if (overlayStar) overlayStar.innerHTML = starHtml;
     const cardStar = searchResults.querySelector(
       `.cr-star-btn[data-star="${CSS.escape(cr.name)}"]`,
     );
-    if (cardStar) cardStar.innerHTML = now ? UI_ICONS.starFilled : UI_ICONS.star;
+    if (cardStar) cardStar.innerHTML = starHtml;
     busRef.emit("toast:show", {
       msg: now ? t("content.favAdded") : t("content.favRemoved"),
       duration: TOAST_MS.quick,
@@ -165,11 +173,16 @@ function cmCrBindOverlayEvents(
     });
   });
 
-  overlay.querySelector("[data-close]")?.addEventListener("click", () => overlay.remove());
+  overlay.querySelector("[data-close]")?.addEventListener("click", () => {
+    // P0-3 锐评：关闭路径统一释放 trap（防 doc keydown 监听残留），remove 前先 release
+    _overlayTrapReleases.get(overlay)?.();
+    overlay.remove();
+  });
 
   const searchBtn = qs<HTMLElement>(overlay, "[data-search]");
   if (searchBtn) {
     searchBtn.addEventListener("click", () => {
+      _overlayTrapReleases.get(overlay)?.();
       overlay.remove();
       if (site.searchUrl && openUrl) {
         openUrl(fillSearch(site.searchUrl, searchBtn.dataset.search || ""));
@@ -180,6 +193,7 @@ function cmCrBindOverlayEvents(
   const localBtn = overlay.querySelector("[data-local]");
   if (localBtn) {
     localBtn.addEventListener("click", () => {
+      _overlayTrapReleases.get(overlay)?.();
       overlay.remove();
       busRef.emit("repo:search-creator", cr.name);
     });
@@ -213,6 +227,9 @@ function cmCrCreateDetailOverlay(
   overlay.tabIndex = -1;
   const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const close = () => {
+    // P0-3 锐评：aria-modal 承诺了模态，必须 trapFocus（Tab 不许逃到页面背后）；
+    // 关闭即释放，防 doc keydown 监听残留（WeakMap 注册表见模块头）
+    _overlayTrapReleases.get(overlay)?.();
     overlay.remove();
     opener?.focus?.();
   };
@@ -231,6 +248,10 @@ function cmCrCreateDetailOverlay(
   if (detailImg) {
     bindAvatarFallback(detailImg, "cr-avatar cr-detail-avatar-text", fallbackChar);
   }
+  // P0-3 锐评：trapFocusAcrossShadow 是专为「overlay 挂 shadow root、需穿透深焦解析」设计的
+  // 跨 Shadow 版本（modal-core.trapFocus 的 document.activeElement 判定对 shadow 内元素恒失效）。
+  // 注册进 WeakMap，供 close / data-close / data-search / data-local 各关闭路径统一释放。
+  _overlayTrapReleases.set(overlay, trapFocusAcrossShadow(overlay));
   return overlay;
 }
 
@@ -284,7 +305,9 @@ function cmBbBindStarBtns(searchResults: HTMLElement, busRef: typeof bus): void 
       e.stopPropagation();
       const name = btn.dataset.star || "";
       const now = toggleFav(name);
-      btn.innerHTML = now ? UI_ICONS.starFilled : UI_ICONS.star;
+      // 预构建 SVG 常量先取到局部变量（R8 豁免：RHS=裸变量，无三元/拼接）
+      const starHtml = now ? UI_ICONS.starFilled : UI_ICONS.star;
+      btn.innerHTML = starHtml;
       const card = btn.closest(".gh-card");
       if (card) {
         const grid2 = card.closest(".cr-creator-grid");
@@ -417,7 +440,9 @@ function cmBbBindKeyboardNav(searchResults: HTMLElement): void {
 function cmSeSyncFavButtons(searchResults: HTMLElement): void {
   const favs = loadFavs();
   qsa<HTMLElement>(searchResults, ".cr-star-btn").forEach((btn) => {
-    btn.innerHTML = favs.includes(btn.dataset.star || "") ? UI_ICONS.starFilled : UI_ICONS.star;
+    // 预构建 SVG 常量先取到局部变量（R8 豁免：RHS=裸变量）
+    const starHtml = favs.includes(btn.dataset.star || "") ? UI_ICONS.starFilled : UI_ICONS.star;
+    btn.innerHTML = starHtml;
   });
 }
 

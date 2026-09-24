@@ -294,7 +294,9 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
     {
       id: "env-preset-bar",
       kind: "select",
-      labelKey: "preview.envPresetThumbnail",
+      // [锐评 P2-1] 原「预设预览」是缩略图控件文案（envPresetThumbnail 给 hideLabel 的
+      // thumb 控件专用），挂快捷 select 语义错位——复用既有组标题键「预设」（零新增键）
+      labelKey: "preview.envGroupPreset",
       control: {
         options: PRESET_ORDER.map((p) => ({
           value: p.id,

@@ -125,6 +125,7 @@
   "settings.language": "言語",
   "settings.languageDesc": "UIの言語を切り替えます。ページの再読み込みが必要です。",
   "settings.paths.title": "パス設定",
+  "settings.paths.sourceTitle": "ファイルソース",
   "settings.paths.gameRoot": "ゲームルートディレクトリ",
   "settings.paths.autoSearch": "自動検索",
   "settings.paths.gameRootDesc": "統合パックの同期に使用します。ファイルの保存場所には影響しません",

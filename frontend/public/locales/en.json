@@ -125,6 +125,7 @@
   "settings.language": "Language",
   "settings.languageDesc": "Switch UI language. Page reload required.",
   "settings.paths.title": "Path Configuration",
+  "settings.paths.sourceTitle": "File Source",
   "settings.paths.gameRoot": "Game Root Directory",
   "settings.paths.autoSearch": "Auto Search",
   "settings.paths.gameRootDesc": "Used for modpack sync, does not affect file storage location",

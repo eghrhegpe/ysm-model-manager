@@ -125,6 +125,7 @@
   "settings.language": "语言",
   "settings.languageDesc": "切换界面语言，需重新加载页面生效",
   "settings.paths.title": "路径配置",
+  "settings.paths.sourceTitle": "文件来源",
   "settings.paths.gameRoot": "游戏根目录",
   "settings.paths.autoSearch": "自动搜索",
   "settings.paths.gameRootDesc": "用于整合包同步，不影响文件存储位置",

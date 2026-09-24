@@ -53,6 +53,12 @@ export interface TabsShellSpec {
    * 单点在此而非各页 init：避免「远处的选择器名单」与 tpl 声明漂移（ADR-259 §2.1）；
    * 只藏按钮不藏 tab 会留下空壳 tab（pitfalls：满屏引导空态却点不着东西）。 */
   viewerMode?: boolean;
+  /** viewerMode 且确有 desktopOnly tab 被隐藏时，在 tab 栏**外**产出的一行告知
+   *（ADR-300 §2.5：网页版从「沉默消失」变「可见缺席」）。不传则不产出。
+   * ⚠️ 落位在 `.repo-tabs`（role=tablist）之后、面板组之前——tablist 内只应含
+   * role=tab 元素（ADR-258 §2.4 ARIA 红线），故告知行由 renderTabs 单独产出、
+   * 调用方拼在 bar 与 panels 之间，不得塞进 bar。文案 i18n 归调用方页面键域。 */
+  viewerNotice?: string;
 }
 
 /**
@@ -67,11 +73,23 @@ export interface TabsShell {
   bar: string;
   /** 面板组（每个 tab 一个 `.tab-body`，首个可见、其余 display:none） */
   panels: string;
+  /** 查看器告知行（ADR-300 §2.5）：仅当 viewerMode 且确有 desktopOnly 被隐藏且调用方
+   * 传了 viewerNotice 时非空；落位 = bar 与 panels 之间。其余情形恒为 ""。 */
+  notice: string;
 }
 
-/** 按声明产出「tab 栏 + 面板组」两半；调用方负责外层容器与二者落位。 */
+/** 按声明产出「tab 栏 + 面板组（+ 查看器告知行）」；调用方负责外层容器与落位。 */
 export function renderTabs(spec: TabsShellSpec): TabsShell {
-  const { prefix, tabs, barId, barTestid, buttonClass = "repo-tab", panelClass, viewerMode } = spec;
+  const {
+    prefix,
+    tabs,
+    barId,
+    barTestid,
+    buttonClass = "repo-tab",
+    panelClass,
+    viewerMode,
+    viewerNotice,
+  } = spec;
   // desktopOnly 只在 viewerMode 下生效；首个**可见** tab 才是默认激活项（原语义不变）
   const visible = tabs.filter((t) => !(viewerMode && t.desktopOnly));
 
@@ -95,5 +113,11 @@ export function renderTabs(spec: TabsShellSpec): TabsShell {
     })
     .join("");
 
-  return { bar, panels };
+  // 告知行只在「真的藏了东西」时产出（ADR-300 §2.5）：全可见的页/桌面模式零噪音
+  const notice =
+    viewerMode && viewerNotice && visible.length < tabs.length
+      ? `<div class="repo-tabs-notice">${viewerNotice}</div>`
+      : "";
+
+  return { bar, panels, notice };
 }

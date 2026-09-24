@@ -11,6 +11,9 @@ ${metaTagCSS}
 .repo-tab { padding:var(--pad-nav) 14px;border-radius:var(--radius-md) var(--radius-md) 0 0;border:1px solid transparent;border-bottom:2px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-nav);font-family:inherit;transition:var(--tr-normal);white-space:nowrap;min-height:var(--touch-min);animation:fadeSlideDown var(--tr-enter) both; }
 .repo-tab:hover { color:var(--txt);background:var(--hover); }
 .repo-tab.active { color:var(--accent);background:var(--surf);border-color:var(--bd) var(--bd) var(--accent) var(--bd);border-bottom-color:var(--accent);margin-bottom:-1px;font-weight:600; }
+/* ADR-300 §2.5（D3）：查看器告知行——落位在 tablist 外（renderTabs.notice 产出，
+   调用方拼在 bar 与 panels 之间），仅当确有 desktopOnly tab 被隐藏时出现 */
+.repo-tabs-notice { padding:var(--btn-padding-sm) var(--sp-3);font-size:var(--fs-sm);color:var(--muted);border-bottom:1px solid var(--bd);flex-shrink:0; }
 .ins-sidebar { width:var(--sidebar-w);flex:none; }
 .ins-content { flex:1;display:flex;flex-direction:column;overflow:hidden; }
 .ins-model-list .sec-title { font-size:var(--fs-sm);color:var(--muted);padding:4px 2px 2px;text-transform:uppercase;letter-spacing:.5px;margin-top:4px; }

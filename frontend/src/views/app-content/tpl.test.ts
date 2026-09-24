@@ -11,6 +11,7 @@ import {
 } from "./tpl.ts";
 import { settingsHTML } from "./settings/tpl-settings.ts";
 import { recycleHTML, renderRecycleListHtml } from "./tpl-recycle.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
 const { getAndroidBridgeMock, isViewerModeMock, isWebPlatformMock, canBindingMock } = vi.hoisted(
@@ -200,6 +201,37 @@ describe("app-content 模板", () => {
     expect(html).toContain('id="diag-sync-bar"');
     expect(html).toContain('id="diag-sync-conflict-list"');
     expect(html).toContain('class="diag-pane"');
+  });
+  // ===== ADR-300 S1：顶层 tab 名词化 / 父子同名消解 / skipped 专用图标（zh 默认语言，先例同「清空回收站」） =====
+  it("诊断页顶层 tab 名词化，skipped chip 用专用图标不蹭闪电（桌面零告知噪音）", () => {
+    const html = diagnosticsHTML();
+    // 顶层「日志」让出与子 pill「操作日志」的父子同名；顶层按钮 = 图标 + 新文案
+    expect(html).toContain(`data-tab="log">${UI_ICONS.clipboard} 日志</button>`);
+    expect(html).toContain('<button class="diag-sub-tab active" data-log="op">操作日志</button>');
+    expect(html).toContain(`data-tab="bench">${UI_ICONS.performance} 基准</button>`);
+    // 「跳过」全链路一枚 skip 图标（`tpl` chip ↔ logs.ts 行）；闪电不再兼任状态筛选
+    expect(html).toContain(`data-status="skipped">${UI_ICONS.skip}`);
+    expect(html).not.toContain(`data-status="skipped">${UI_ICONS.performance}`);
+    // 桌面模式无任何东西被藏 → 告知行零噪音（ADR-300 §2.5）
+    expect(html).not.toContain("repo-tabs-notice");
+  });
+  it("网页版诊断页产出「仅桌面版」告知行，且落位在 tab 栏与面板之间", () => {
+    isViewerModeMock.mockReturnValue(true);
+    try {
+      const html = diagnosticsHTML();
+      expect(html).toContain(
+        '<div class="repo-tabs-notice">性能基准与仓库体检仅桌面版可用</div>',
+      );
+      // 成品落位：bar 之后、首个面板之前（tablist 外的 ARIA 红线由工厂测试另钉）
+      const bar = html.indexOf('<div class="repo-tabs"');
+      const notice = html.indexOf('class="repo-tabs-notice"');
+      const panel = html.indexOf('id="diag-tab-log"');
+      expect(bar).toBeGreaterThanOrEqual(0);
+      expect(notice).toBeGreaterThan(bar);
+      expect(notice).toBeLessThan(panel);
+    } finally {
+      isViewerModeMock.mockReturnValue(false);
+    }
   });
   it("日志工具栏含「操作类型」纵向筛选下拉（选项集 = OP_META 七类 + 全部）", () => {
     const html = diagnosticsHTML();

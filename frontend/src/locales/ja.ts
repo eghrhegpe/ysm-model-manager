@@ -13,7 +13,8 @@ export const ja: Record<string, string> = {
   "nav.viewer": "3D プレビュー",
   "nav.community": "クリエイター",
   "nav.workshop": "ワークショップ",
-  "nav.diagnostics": "診断と競合",
+  // ADR-300 D4：競合処理は「監査」グループに統合され、「と競合」接尾辞は退役
+  "nav.diagnostics": "診断",
   "nav.settings": "設定",
   "nav.preview": "プレビュー",
   "nav.collapse": "ナビを畳む",
@@ -336,6 +337,11 @@ export const ja: Record<string, string> = {
   "instances.emptyHint": "左の統合パックをクリックしてモデルを表示",
 
   // ── Diagnostics Page ──
+  // ADR-300 §2.4：トップレベルタブは名詞化（tabLog は子ピルと同名の「操作ログ」を使っていた）
+  "diagnostics.tabLog": "ログ",
+  "diagnostics.tabBench": "ベンチマーク",
+  "diagnostics.viewerDesktopOnlyNotice":
+    "ベンチマークとリポジトリ監査はデスクトップ版でのみ利用できます",
   "diagnostics.opsLog": "操作ログ",
   "diagnostics.runtimeLog": "ランタイムログ",
   "diagnostics.copyLog": "ログをコピー",
@@ -526,7 +532,6 @@ export const ja: Record<string, string> = {
   "diagnostics.perfMode": "実行方法",
   "diagnostics.perfModeHint":
     "実行方法 = どのベンチマークコマンドを使うか；隣の「何を測るか」= 今回測る範囲。両者は独立：コマンドを選んでから範囲を決めます",
-  "diagnostics.perfRunBench": "ベンチ実行",
   "diagnostics.perfRecord": "パフォーマンス記録",
   "diagnostics.perfFail": "実行に失敗しました",
   "diagnostics.loadTraceRefresh": "ロード解析を更新",

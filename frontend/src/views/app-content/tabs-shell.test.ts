@@ -158,4 +158,39 @@ describe("renderTabs 产出契约（ADR-259 §2）", () => {
       expect(shell.panels).toContain('id="demo-tab-alpha"');
     }
   });
+
+  // ===== viewerNotice：查看器告知行单点（ADR-300 §2.5）=====
+  it("viewerMode + 确有 desktopOnly 被藏 + 传了 viewerNotice → 产出一行，且落位在 tablist 外", () => {
+    const shell = renderTabs({
+      prefix: "demo",
+      viewerMode: true,
+      viewerNotice: "仅桌面版可用",
+      tabs: [
+        { id: "alpha", label: "A", body: "AAA" },
+        { id: "beta", label: "B", body: "BBB", desktopOnly: true },
+      ],
+    });
+    expect(shell.notice).toBe('<div class="repo-tabs-notice">仅桌面版可用</div>');
+    // ARIA 红线（ADR-258 §2.4）：告知行绝不得混入 .repo-tabs（role=tablist）内部
+    expect(shell.bar).not.toContain("repo-tabs-notice");
+    expect(shell.bar).not.toContain("仅桌面版可用");
+  });
+
+  it("告知行三不产：无隐藏项 / 非 viewer / 未传文案（repo 页等保持零行为变化）", () => {
+    const tabsHidden = [
+      { id: "a", label: "A", body: "" },
+      { id: "b", label: "B", body: "", desktopOnly: true },
+    ];
+    // ① 没有东西被藏（viewerMode=false）→ 桌面零噪音
+    expect(
+      renderTabs({ prefix: "p", viewerNotice: "N", tabs: tabsHidden }).notice,
+    ).toBe("");
+    // ② viewer 但声明里无 desktopOnly → 无缺席可告知
+    expect(
+      renderTabs({ prefix: "p", viewerMode: true, viewerNotice: "N", tabs: [{ id: "a", label: "A", body: "" }] })
+        .notice,
+    ).toBe("");
+    // ③ 有隐藏但未传文案 → 调用方未选择告知（repo 页现状），不擅自造文案
+    expect(renderTabs({ prefix: "p", viewerMode: true, tabs: tabsHidden }).notice).toBe("");
+  });
 });

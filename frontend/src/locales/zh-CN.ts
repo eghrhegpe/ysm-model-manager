@@ -20,7 +20,8 @@ export const zhCN = {
   "nav.viewer": "3D 预览",
   "nav.community": "创作者频道",
   "nav.workshop": "创意工坊",
-  "nav.diagnostics": "诊断与冲突",
+  // ADR-300 D4：冲突处置已被「体检」分组收编（S2 落地），“与冲突”后缀随之退役
+  "nav.diagnostics": "诊断",
   "nav.settings": "设置",
   "nav.preview": "预览版",
   "nav.collapse": "收起导航",
@@ -334,6 +335,11 @@ export const zhCN = {
   "instances.emptyHint": "点击左侧整合包查看模型",
 
   // ── 诊断页 ──
+  // ADR-300 §2.4：顶层 tab 名词化——tabLog 是容器名（原借「操作日志」与子 pill 父子同名）；
+  // tabBench 接原 perfRunBench「跑基准」（动宾降回按钮层，键随迁退役）
+  "diagnostics.tabLog": "日志",
+  "diagnostics.tabBench": "基准",
+  "diagnostics.viewerDesktopOnlyNotice": "性能基准与仓库体检仅桌面版可用",
   "diagnostics.opsLog": "操作日志",
   "diagnostics.runtimeLog": "运行时日志",
   "diagnostics.copyLog": "复制日志",
@@ -515,7 +521,6 @@ export const zhCN = {
   // 一句话说清两个下拉的关系：模式选「命令」，测什么选「范围」——原先两个「单模型」撞名又耦合
   "diagnostics.perfModeHint":
     "怎么跑 = 用哪种基准命令；旁边「测什么」= 这次测多大范围。两者独立：先选命令，再圈范围",
-  "diagnostics.perfRunBench": "跑基准",
   "diagnostics.perfRecord": "性能记录",
   "diagnostics.perfFail": "执行失败",
   "diagnostics.loadTraceRefresh": "刷新加载剖析",

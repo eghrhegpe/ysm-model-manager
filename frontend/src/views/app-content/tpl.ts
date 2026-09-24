@@ -159,15 +159,18 @@ export function diagnosticsHTML(): string {
   // 「一个共享 .tab-body 包 8 个 .diag-panel」，2026-09-17 因漏一个 </div> 使面板被
   // 前一面板吞并，切任何 tab 都只剩空 tab 栏（skills/pitfalls.md #20）。
   // 现与其他页同构：每 tab 一个 .tab-body；panelClass 只保留入场动画钩子。
-  const { bar, panels } = renderTabs({
+  const { bar, panels, notice } = renderTabs({
     prefix: "diag",
     panelClass: "diag-panel",
     viewerMode: isViewerMode(),
+    // ADR-300 §2.5（D3）：网页版从「沉默消失」变「可见缺席」
+    viewerNotice: t("diagnostics.viewerDesktopOnlyNotice"),
     tabs: [
       {
         id: "log",
         panelTestid: "diag-log",
-        label: `${UI_ICONS.clipboard} ${t("diagnostics.opsLog")}`,
+        // ADR-300 §2.4：顶层名词化，「操作日志」一词还给子 pill（父子同名消解）
+        label: `${UI_ICONS.clipboard} ${t("diagnostics.tabLog")}`,
         body: `  <div class="diag-log-bar">
     <div class="diag-log-row">
       <div class="diag-log-subtabs">
@@ -186,7 +189,7 @@ export function diagnosticsHTML(): string {
         <button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
         <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
         <button class="diag-log-fbtn" data-status="warn">${UI_ICONS.warning} ${t("diagnostics.warn")}</button>
-        <button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.performance} ${t("diagnostics.skipped")}</button>
+        <button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.skip} ${t("diagnostics.skipped")}</button>
         <select id="diag-log-op-filter" class="diag-log-op-filter">
           <option value="all">${t("diagnostics.opAll")}</option>
           <option value="import">${t("diagnostics.opImport")}</option>
@@ -207,7 +210,8 @@ export function diagnosticsHTML(): string {
         id: "bench",
         // ADR-278 §2.5：整 tab 桌面专属——它的每个入口都是 CLI，只藏按钮会留空壳 tab
         desktopOnly: true,
-        label: `${UI_ICONS.performance} ${t("diagnostics.perfRunBench")}`,
+        // ADR-300 §2.4：tab 文案名词化（原 perfRunBench「跑基准」是动宾，动词还给按钮层）
+        label: `${UI_ICONS.performance} ${t("diagnostics.tabBench")}`,
         // ADR-278 §2.7：公共区（测什么 / 排序 / 最多跑几个）**模式无关常驻**——single 与 conc
         // 在 Go 侧由同一个 registerPerfTargetFlags 注册，是同一套参数面；把公共参数埋进
         // data-perf-mode 行里（"两个模式都显示"）正是臃肿与漂移之源。
@@ -340,7 +344,8 @@ export function diagnosticsHTML(): string {
       },
     ],
   });
-  return `<div class="repo-wrap">${bar}${panels}</div>`;
+  // notice 落位在 bar 与 panels 之间（tablist 外，ADR-300 §2.5 / ADR-258 §2.4）
+  return `<div class="repo-wrap">${bar}${notice}${panels}</div>`;
 }
 
 /* ===== GitHub 仓库页面 ===== */

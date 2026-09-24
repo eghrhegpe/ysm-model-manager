@@ -335,6 +335,11 @@ export const en: Record<string, string> = {
   "instances.emptyHint": "Click a modpack on the left to view models",
 
   // ── Diagnostics Page ──
+  // ADR-300 §2.4: top-level tabs as nouns (tabLog was borrowing "Operation Log" — same name as its sub-pill)
+  "diagnostics.tabLog": "Logs",
+  "diagnostics.tabBench": "Benchmarks",
+  "diagnostics.viewerDesktopOnlyNotice":
+    "Benchmarks and repository audits are available in the desktop app only",
   "diagnostics.opsLog": "Operation Log",
   "diagnostics.runtimeLog": "Runtime Log",
   "diagnostics.copyLog": "Copy log",
@@ -531,7 +536,6 @@ export const en: Record<string, string> = {
   "diagnostics.perfMode": "How to run",
   "diagnostics.perfModeHint":
     "How to run = which benchmark command; \u201cWhat to test\u201d alongside = how wide this run goes. They are independent: pick the command, then the scope",
-  "diagnostics.perfRunBench": "Benchmark",
   "diagnostics.perfRecord": "Perf Records",
   "diagnostics.perfFail": "Execution failed",
   "diagnostics.loadTraceRefresh": "Refresh Load Trace",

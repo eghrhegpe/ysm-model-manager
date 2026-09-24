@@ -1,7 +1,7 @@
 import { t } from "@/core/i18n/t.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
-import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
@@ -9,7 +9,8 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { extOf, VOXEL_RPC_BY_EXT } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { cleanupVoxel3D, createLitematic3D } from "./litematic-3d.ts";
-import type { PreviewRoot } from "./utils.ts";
+import { bigIconHTML, errorPlaceholderHTML, placeholderHTML, tabbedShellHTML } from "./tpl.ts";
+import { bindPreviewTabs, type PreviewRoot } from "./utils.ts";
 
 function fmtTime(ms: number): string {
   if (!ms || ms <= 0) return "未知";
@@ -229,34 +230,25 @@ export async function showLitematic(ctx: PreviewRoot, path: string): Promise<voi
   const basename = path.split(/[/\\]/).pop() || "";
   const savedTab = safeGet("lt_previewTab") || "detail";
 
-  ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <div class="pv-tab-row">
-    <button class="pv-tab ${savedTab === "detail" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="detail">${UI_ICONS.clipboard} ${t("preview.detailTab")}</button>
-    <button class="pv-tab ${savedTab === "material" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="material">${UI_ICONS.voxel} ${t("preview.materialList")}</button>
-  </div>
-  <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}>
-    <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div><div class="dp-hint">${t("preview.parsingLitematica")}...</div></div>
-  </div>
-  <div id="preview-material"${savedTab !== "material" ? ' style="display:none"' : ""}></div>
-</div>
-<button class="preview-fab" id="btn-lt-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>`;
-
-  // Tab 切换
-  const switchTab = (tab: string): void => {
-    safeSet("lt_previewTab", tab);
-    ctx.root.querySelectorAll(".pv-tab").forEach((btn) => {
-      const isActive = (btn as HTMLElement).dataset.tab === tab;
-      btn.classList.toggle("pv-tab-active", isActive);
-      btn.classList.toggle("pv-tab-inactive", !isActive);
-    });
-    const detail = ctx.root.getElementById("preview-detail");
-    const material = ctx.root.getElementById("preview-material");
-    if (detail) detail.style.display = tab === "detail" ? "" : "none";
-    if (material) material.style.display = tab === "material" ? "" : "none";
-  };
-  ctx.root.querySelectorAll(".pv-tab").forEach((btn) => {
-    (btn as HTMLElement).onclick = (): void => switchTab((btn as HTMLElement).dataset.tab || "");
+  ctx.root.innerHTML = tabbedShellHTML({
+    tabs: [
+      { key: "detail", icon: UI_ICONS.clipboard, label: t("preview.detailTab") },
+      { key: "material", icon: UI_ICONS.voxel, label: t("preview.materialList") },
+    ],
+    active: savedTab,
+    panes: [
+      {
+        key: "detail",
+        body: placeholderHTML({
+          lead: bigIconHTML(UI_ICONS.refresh),
+          hints: [`${t("preview.parsingLitematica")}...`],
+        }),
+      },
+      { key: "material", body: "" },
+    ],
+    fabHTML: `\n<button class="preview-fab" id="btn-lt-3d" title="${t("preview.title3d")}" aria-label="${t("preview.title3d")}"><span class="preview-ic">${UI_ICONS.appearance}</span></button>`,
   });
+  bindPreviewTabs(ctx.root, "lt_previewTab");
 
   // 3D FAB 按钮（对齐 YSM/VRM/MMD 的 preview-fab 标配形态，ADR-072 D3；
   // 原 tab 式 #btn-lt-3d-tab 未并入 FAB 体系，P2 统一）
@@ -283,7 +275,7 @@ export async function showLitematic(ctx: PreviewRoot, path: string): Promise<voi
     if (litematicGuard.stale(gen)) return;
     const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) {
-      detailDiv.innerHTML = `<div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>`;
+      detailDiv.innerHTML = errorPlaceholderHTML(safeErrorMessage(e));
     }
   }
 }

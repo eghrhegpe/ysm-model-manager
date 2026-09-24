@@ -4,6 +4,7 @@
 // 已归位 preview-3d/decoder/utils.ts——本文件只留视图接口与状态。
 
 import type { LoadGuard } from "@/utils/async/load-guard.ts";
+import { safeSet } from "@/utils/base/primitives/storage.ts";
 
 /** 预览上下文（index.ts AppPreview 类实现的接口，子模块以最小面引用） */
 /** 渲染容器 + 生命周期（detail/litematic-meta/skeleton 消费 root，skeleton 消费 unsubs） */
@@ -74,4 +75,28 @@ export interface PreviewRouterCtx {
   root: ShadowRoot;
   /** 预览代际守卫：快速点 A→B 时丢弃过期加载的渲染，防并发覆盖 */
   previewGuard: LoadGuard;
+}
+
+/**
+ * 绑定 .pv-tab 点击切换（detail.ts / litematic-meta.ts 原逐字双份手抄的唯一出口）。
+ * 点击 → 落盘 storageKey → 切按钮 pv-tab-active/inactive 类 → #preview-<key> 面板显隐。
+ * 面板 id 约定 = `preview-` + 按钮 data-tab，与 tabbedShellHTML 输出一致。
+ */
+export function bindPreviewTabs(root: ParentNode, storageKey: string): void {
+  root.querySelectorAll<HTMLElement>(".pv-tab").forEach((btn) => {
+    btn.onclick = (): void => {
+      const tab = btn.dataset.tab || "";
+      safeSet(storageKey, tab);
+      root.querySelectorAll<HTMLElement>(".pv-tab").forEach((b) => {
+        const isActive = b.dataset.tab === tab;
+        b.classList.toggle("pv-tab-active", isActive);
+        b.classList.toggle("pv-tab-inactive", !isActive);
+      });
+      root.querySelectorAll<HTMLElement>(".pv-tab").forEach((b) => {
+        const key = b.dataset.tab || "";
+        const pane = root.querySelector<HTMLElement>(`#preview-${key}`);
+        if (pane) pane.style.display = key === tab ? "" : "none";
+      });
+    };
+  });
 }

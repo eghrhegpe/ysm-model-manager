@@ -8,7 +8,7 @@ import { t } from "@/core/i18n/t.ts";
 import { cacheGet, cacheSet } from "@/preview-3d/decoder/model-cache.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
-import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { describeVersionRange } from "@/utils/format/pack-format.ts";
@@ -20,8 +20,15 @@ import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
 import { showCard } from "./card-shell.ts";
 import { openModel3DFullscreen } from "./preview-library.ts";
 import { loadModel2D } from "./skeleton.ts";
+import {
+  bigIconHTML,
+  errorPlaceholderHTML,
+  pageShellHTML,
+  placeholderHTML,
+  tabbedShellHTML,
+} from "./tpl.ts";
 import { summaryCardHTML, type YsmSummary } from "./tpl-summary.ts";
-import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
+import { bindPreviewTabs, type DetailGenGuard, type PreviewCtx } from "./utils.ts";
 
 /** 显示模型详情（YSM 模型） */
 export async function showModelDetail(
@@ -30,30 +37,26 @@ export async function showModelDetail(
 ): Promise<void> {
   const gen = ctx.detailGen.next();
   const savedTab = safeGet("ysm_previewTab") || "detail";
-  ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <div class="pv-tab-row">
-    <button class="pv-tab ${savedTab === "detail" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="detail">${UI_ICONS.file} ${t("preview.detailTab")}</button>
-    <button class="pv-tab ${savedTab === "skeleton" ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="skeleton">${UI_ICONS.build} ${t("preview.tab.skeleton")}</button>
-  </div>
-  <div id="preview-detail"${savedTab !== "detail" ? ' style="display:none"' : ""}><h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3><div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div><div class="dp-hint">${t("preview.parsing")}...</div></div></div>
-  <div id="preview-skeleton"${savedTab !== "skeleton" ? ' style="display:none"' : ""}></div>
-</div>`;
-
-  const switchTab = (tab: string): void => {
-    safeSet("ysm_previewTab", tab);
-    ctx.root.querySelectorAll(".pv-tab").forEach((btn) => {
-      const isActive = (btn as HTMLElement).dataset.tab === tab;
-      btn.classList.toggle("pv-tab-active", isActive);
-      btn.classList.toggle("pv-tab-inactive", !isActive);
-    });
-    const detail = ctx.root.getElementById("preview-detail");
-    const skel = ctx.root.getElementById("preview-skeleton");
-    if (detail) detail.style.display = tab === "detail" ? "" : "none";
-    if (skel) skel.style.display = tab === "skeleton" ? "" : "none";
-  };
-  ctx.root.querySelectorAll(".pv-tab").forEach((btn) => {
-    (btn as HTMLElement).onclick = (): void => switchTab((btn as HTMLElement).dataset.tab || "");
+  ctx.root.innerHTML = tabbedShellHTML({
+    tabs: [
+      { key: "detail", icon: UI_ICONS.file, label: t("preview.detailTab") },
+      { key: "skeleton", icon: UI_ICONS.build, label: t("preview.tab.skeleton") },
+    ],
+    active: savedTab,
+    panes: [
+      {
+        key: "detail",
+        body:
+          `<h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>` +
+          placeholderHTML({
+            lead: bigIconHTML(UI_ICONS.refresh),
+            hints: [`${t("preview.parsing")}...`],
+          }),
+      },
+      { key: "skeleton", body: "" },
+    ],
   });
+  bindPreviewTabs(ctx.root, "ysm_previewTab");
 
   // 预热缩略图缓存（loadModel2D / 列表视图复用）
   await ctx.loadPreviewImage(path);
@@ -243,12 +246,13 @@ export async function showSimplePreview(
   const iconHtml = renderIconHtml(opts?.icon || "☀️");
   const label = opts?.label || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
-  ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${iconHtml} ${esc(label)}</h3>
-  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+  ctx.root.innerHTML = pageShellHTML({
+    icon: iconHtml,
+    title: label,
+    body: `<div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename || "")}</strong></div>
-  </div>
-</div>`;
+  </div>`,
+  });
 }
 
 /** 显示光影包详情（lang/en_US.lang 提取显示名 + 配置项简介），对齐资源管理器渲染口径 */
@@ -261,10 +265,14 @@ export async function showShaderpack(
   const iconHtml = renderIconHtml(opts?.icon || "☀️");
   const label = opts?.label || t("preview.shaderPack");
   const basename = path.split(/[/\\]/).pop() || "";
-  ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${iconHtml} ${esc(label)}</h3>
-  <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div><div class="dp-hint">${t("preview.parsing")}...</div></div>
-</div>`;
+  ctx.root.innerHTML = pageShellHTML({
+    icon: iconHtml,
+    title: label,
+    body: placeholderHTML({
+      lead: bigIconHTML(UI_ICONS.refresh),
+      hints: [`${t("preview.parsing")}...`],
+    }),
+  });
   try {
     const { ReadShaderpackLang } = await backendGetApp();
     const spMeta = await ReadShaderpackLang(path);
@@ -280,19 +288,21 @@ export async function showShaderpack(
     const desc = descs.length
       ? descs.join("\n")
       : `${UI_ICONS.package} 光影包 (${Object.keys(entries).length} 项配置)`;
-    ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${iconHtml} ${esc(label)}</h3>
-  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
+    ctx.root.innerHTML = pageShellHTML({
+      icon: iconHtml,
+      title: label,
+      body: `<div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(displayName)}</strong></div>
     <div style="color:var(--muted);line-height:1.6;white-space:pre-wrap">${esc(desc)}</div>
-  </div>
-</div>`;
+  </div>`,
+    });
   } catch (e) {
     if (ctx.detailGen.stale(gen)) return;
-    ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${iconHtml} ${esc(label)}</h3>
-  <div class="dp-placeholder"><div class="big-icon">${UI_ICONS.warning}</div><div class="dp-hint">${t("preview.readFailed")}: ${esc(safeErrorMessage(e))}</div></div>
-</div>`;
+    ctx.root.innerHTML = pageShellHTML({
+      icon: iconHtml,
+      title: label,
+      body: errorPlaceholderHTML(safeErrorMessage(e)),
+    });
   }
 }
 // ADR-072 D3：showVrmMeta / showMmdPreview 已拆至 detail-3d.ts（3D 入口与 2D 详情分离）

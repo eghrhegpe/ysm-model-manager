@@ -59,6 +59,88 @@ export function modelDetailHTML(meta: ModelDetailMeta | null): string {
 </div>`;
 }
 
+// ===== 页面骨架四件套（3a 收口：原散在 card-shell/detail/maid/litematic/router 的
+// 手写 preview-content 壳 / dp-placeholder 占位 / tab 壳逐份复制，统一由此出口） =====
+
+/** 占位块大图标槽 */
+export function bigIconHTML(icon: string): string {
+  return `<div class="big-icon">${icon}</div>`;
+}
+
+/** 占位 hint 行：string = 标准 dp-hint；对象形态可挂 attrs（maid head 行内样式特化） */
+export type PlaceholderHint = string | { html: string; attrs?: string };
+
+/** 居中占位块（加载 / 错误 / 空态通用容器，CSS 见 css.ts .dp-placeholder*）。
+ *  lead：首元素**原样 HTML**——标准用法传 bigIconHTML(icon)；maid 封面态传裸 <img>。
+ *  hints：多条 dp-hint（内容原样 HTML，调用方自行 esc）。head：紧凑头部变体。 */
+export function placeholderHTML(opts: {
+  lead?: string;
+  hints?: PlaceholderHint[];
+  head?: boolean;
+}): string {
+  const cls = opts.head ? "dp-placeholder dp-placeholder--head" : "dp-placeholder";
+  const hints = (opts.hints ?? [])
+    .map((h) =>
+      typeof h === "string"
+        ? `<div class="dp-hint">${h}</div>`
+        : `<div class="dp-hint"${h.attrs ? ` ${h.attrs}` : ""}>${h.html}</div>`,
+    )
+    .join("");
+  return `<div class="${cls}">${opts.lead ?? ""}${hints}</div>`;
+}
+
+/** 标准读取失败占位（warning 图标 + 「读取失败: <消息>」）；message 为原始文本，内部转义 */
+export function errorPlaceholderHTML(message: string): string {
+  return placeholderHTML({
+    lead: bigIconHTML(UI_ICONS.warning),
+    hints: [`${t("preview.readFailed")}: ${esc(message)}`],
+  });
+}
+
+/** 预览页统一骨架：#preview-content > h3(icon + title) + body。title 内部转义，body 原样 */
+export function pageShellHTML(opts: { icon: string; title: string; body: string }): string {
+  return `<div class="content" id="preview-content">
+  <h3>${opts.icon} ${esc(opts.title)}</h3>
+  ${opts.body}
+</div>`;
+}
+
+/** Tab 描述（key 同时派生面板 id：#preview-<key>） */
+export interface PreviewTabSpec {
+  key: string;
+  icon: string;
+  label: string;
+}
+
+/** 多 Tab 预览页骨架（YSM 详情/投影共用）：tab-row + 每 key 一个 #preview-<key> 面板，
+ *  非激活面板带 style="display:none"；fabHTML 尾挂在壳外（litematic 3D FAB）。
+ *  点击事件用 utils.ts 的 bindPreviewTabs(root, storageKey) 绑定。 */
+export function tabbedShellHTML(opts: {
+  tabs: PreviewTabSpec[];
+  active: string;
+  panes: Array<{ key: string; body: string }>;
+  fabHTML?: string;
+}): string {
+  const tabBtns = opts.tabs
+    .map(
+      (tab) =>
+        `    <button class="pv-tab ${opts.active === tab.key ? "pv-tab-active" : "pv-tab-inactive"}" data-tab="${tab.key}">${tab.icon} ${esc(tab.label)}</button>`,
+    )
+    .join("\n");
+  const panes = opts.panes
+    .map(
+      (p) =>
+        `  <div id="preview-${p.key}"${opts.active !== p.key ? ' style="display:none"' : ""}>${p.body}</div>`,
+    )
+    .join("\n");
+  return `<div class="content" id="preview-content">
+  <div class="pv-tab-row">
+${tabBtns}
+  </div>
+${panes}
+</div>${opts.fabHTML ?? ""}`;
+}
+
 /** 模型统计卡片（statsCardHTML 入参的几何视图） */
 export interface StatsCardModel {
   boneCount: number;

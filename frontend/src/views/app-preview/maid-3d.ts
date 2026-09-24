@@ -29,7 +29,13 @@ import { loadModelData } from "./loader.ts";
 import { type ModelLike, preloadModel } from "./model3d-loader.ts";
 import { type OpenerOptions, registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { componentCountsFromSpec } from "./skeleton-render.ts";
-import { type StatsCardModel, statsCardHTML } from "./tpl.ts";
+import {
+  bigIconHTML,
+  pageShellHTML,
+  placeholderHTML,
+  type StatsCardModel,
+  statsCardHTML,
+} from "./tpl.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
 import { readFileBytes } from "./view-shell.ts";
 import { registerYsmModelSchema, ysmShotNodes } from "./ysm-controls.ts";
@@ -237,17 +243,24 @@ function dpRenderPanel(
   // 样式对齐资源包详情（detail.ts:171）：96px、圆角、边框、pixelated。
   const coverHtml = previewUri
     ? `<img src="${esc(previewUri)}" alt="" style="width:96px;height:96px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">`
-    : `<div class="big-icon">${UI_ICONS.model}</div>`;
-  ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${UI_ICONS.model} ${t("preview.modelInfo")}</h3>
-  <div class="dp-placeholder dp-placeholder--head">
-    ${coverHtml}
-    <div class="dp-hint" style="font-weight:600">${esc(basename)}</div>
-    <div class="dp-hint">Bedrock Edition Model</div>
-  </div>
+    : bigIconHTML(UI_ICONS.model);
+  ctx.root.innerHTML = pageShellHTML({
+    icon: UI_ICONS.model,
+    title: t("preview.modelInfo"),
+    body: `${placeholderHTML({
+      head: true,
+      lead: coverHtml,
+      hints: [{ html: esc(basename), attrs: 'style="font-weight:600"' }, "Bedrock Edition Model"],
+    })}
   ${statsHTML}
-  ${detailHtml ? `<div class="pv-card" style="margin-top:8px">${detailHtml}</div>` : !statsHTML ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.warning} 无法读取模型数据</div>` : ""}
-</div>`;
+  ${
+    detailHtml
+      ? `<div class="pv-card" style="margin-top:8px">${detailHtml}</div>`
+      : !statsHTML
+        ? `<div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.warning} 无法读取模型数据</div>`
+        : ""
+  }`,
+  });
 
   // ADR-253 D7：3D 入口 FAB 已删——3D 统一从左下角 nav-fab 进入
   // （maid 已注册为路由类型 openMaidFullscreen，nav-fab 可直达）。
@@ -268,15 +281,22 @@ export async function showMaidPreview(
   const gen = ctx.detailGen.next();
   const basename = path.split(/[/\\]/).pop() || path;
   // 先显示加载状态
-  ctx.root.innerHTML = `<div class="content" id="preview-content">
-  <h3>${UI_ICONS.model} ${t("preview.modelInfo")}</h3>
-  <div class="dp-placeholder dp-placeholder--head">
-    <div class="big-icon">${UI_ICONS.model}</div>
-    <div class="dp-hint">${esc(basename)}</div>
-    <div class="dp-hint">${t("preview.bedrockModel")}</div>
-    <div class="dp-hint" style="margin-top:8px;font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.refresh} ${t("preview.analyzingModel")}</div>
-  </div>
-</div>`;
+  ctx.root.innerHTML = pageShellHTML({
+    icon: UI_ICONS.model,
+    title: t("preview.modelInfo"),
+    body: placeholderHTML({
+      head: true,
+      lead: bigIconHTML(UI_ICONS.model),
+      hints: [
+        esc(basename),
+        t("preview.bedrockModel"),
+        {
+          html: `${UI_ICONS.refresh} ${t("preview.analyzingModel")}`,
+          attrs: 'style="margin-top:8px;font-size:var(--fs-sm);color:var(--muted)"',
+        },
+      ],
+    }),
+  });
 
   // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
 

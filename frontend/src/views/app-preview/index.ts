@@ -30,7 +30,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { PREVIEW_CLEANUP, PREVIEW_INVALIDATE } from "./preview-registry.ts";
 import { routeModelPreview, routePackInfo } from "./preview-router.ts";
 import { closeActive3DOverlay } from "./skeleton.ts";
-import { modelDetailHTML } from "./tpl.ts";
+import { bigIconHTML, modelDetailHTML, placeholderHTML } from "./tpl.ts";
 import type { PreviewCtx } from "./utils.ts";
 
 // 注册缓存淘汰回调：释放 blob URL（Set 去重：重复 URL 只 revoke 一次，revoke 幂等无害）
@@ -99,12 +99,11 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
           }
         } catch (e) {
           logError("preview", "加载失败", e);
-          this.root.innerHTML =
-            '<div class="content"><div class="dp-placeholder"><div class="big-icon">' +
-            UI_ICONS.warning +
-            '</div><div class="dp-hint">' +
-            t("preview.loadFailed") +
-            "</div></div></div>";
+          // 保留无 id 外壳（历史形态：此态不挂 #preview-content，追加逻辑走 root 兜底）
+          this.root.innerHTML = `<div class="content">${placeholderHTML({
+            lead: bigIconHTML(UI_ICONS.warning),
+            hints: [t("preview.loadFailed")],
+          })}</div>`;
         }
       }),
     );

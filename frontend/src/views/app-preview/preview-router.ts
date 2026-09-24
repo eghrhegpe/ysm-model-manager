@@ -23,6 +23,7 @@ import {
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { showSimplePreview } from "./detail.ts";
 import { PREVIEW_HANDLERS } from "./preview-registry.ts";
+import { bigIconHTML, pageShellHTML, placeholderHTML } from "./tpl.ts";
 import type { PreviewCtx, PreviewRouterCtx } from "./utils.ts";
 
 /**
@@ -94,7 +95,11 @@ export async function routePackInfo(
   dirPath: string,
 ): Promise<void> {
   const gen = ctx.previewGuard.current;
-  ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.package} ${t("preview.pack")}</h3><div class="dp-placeholder"><div class="big-icon">${UI_ICONS.refresh}</div></div></div>`;
+  ctx.root.innerHTML = pageShellHTML({
+    icon: UI_ICONS.package,
+    title: t("preview.pack"),
+    body: placeholderHTML({ lead: bigIconHTML(UI_ICONS.refresh) }),
+  });
 
   try {
     const { GetPackInfo } = await backendGetApp();
@@ -104,20 +109,33 @@ export async function routePackInfo(
 
     if (!pack || (!pack.name && !pack.description)) {
       const folderName = dirPath.split(/[/\\]/).filter(Boolean).pop() || dirPath;
-      ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.folder} ${t("preview.folder")}</h3><div class="model-detail-title" style="font-size:var(--fs-md);font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:12px 0"><div class="dp-hint">${t("preview.folderNoInfo")}</div></div></div>`;
+      ctx.root.innerHTML = pageShellHTML({
+        icon: UI_ICONS.folder,
+        title: t("preview.folder"),
+        // 占位容器保留单点 padding 内联样式（全目录唯一，不值得进 placeholderHTML API 面）
+        body: `<div class="model-detail-title" style="font-size:var(--fs-md);font-weight:600">${esc(folderName)}</div><div class="dp-placeholder" style="padding:var(--sp-3) 0"><div class="dp-hint">${t("preview.folderNoInfo")}</div></div>`,
+      });
       return;
     }
 
-    ctx.root.innerHTML = `<div class="content" id="preview-content">
-<h3>${UI_ICONS.package} ${t("preview.pack")}</h3>
-${pack.imageBase64 ? `<div class="preview-thumb"><img src="${esc(pack.imageBase64)}" alt="封面"></div>` : ""}
+    ctx.root.innerHTML = pageShellHTML({
+      icon: UI_ICONS.package,
+      title: t("preview.pack"),
+      body: `${pack.imageBase64 ? `<div class="preview-thumb"><img src="${esc(pack.imageBase64)}" alt="封面"></div>` : ""}
 <div class="model-detail-title" style="font-size:var(--fs-lg);font-weight:700">${esc(pack.name || "")}</div>
-${pack.description ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-top:6px;line-height:1.6">${esc(pack.description)}</div>` : ""}
-</div>`;
+${pack.description ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-top:6px;line-height:1.6">${esc(pack.description)}</div>` : ""}`,
+    });
   } catch {
     // P2 修复：catch 分支同样比对代际
     if (ctx.previewGuard.stale(gen)) return;
-    ctx.root.innerHTML = `<div class="content" id="preview-content"><h3>${UI_ICONS.folder} ${t("preview.folder")}</h3><div class="dp-placeholder"><div class="big-icon">${UI_ICONS.folder}</div><div class="dp-hint">${t("preview.packReadFailed")}</div></div></div>`;
+    ctx.root.innerHTML = pageShellHTML({
+      icon: UI_ICONS.folder,
+      title: t("preview.folder"),
+      body: placeholderHTML({
+        lead: bigIconHTML(UI_ICONS.folder),
+        hints: [t("preview.packReadFailed")],
+      }),
+    });
   }
 }
 

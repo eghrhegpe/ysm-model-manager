@@ -3,7 +3,15 @@
 // 覆盖：modelDetailHTML（占位/错误/正常+转义）、statsCardHTML（格式后缀/徽标/多纹理）
 import { describe, it, expect } from "vitest";
 import { DECODE_SOURCE } from "@/preview-3d/decoder/utils.ts";
-import { modelDetailHTML, statsCardHTML } from "./tpl.ts";
+import {
+  bigIconHTML,
+  errorPlaceholderHTML,
+  modelDetailHTML,
+  pageShellHTML,
+  placeholderHTML,
+  statsCardHTML,
+  tabbedShellHTML,
+} from "./tpl.ts";
 
 describe("modelDetailHTML", () => {
   it("null → 占位提示", () => {
@@ -187,5 +195,106 @@ describe("statsCardHTML", () => {
       "/repo/a.zip",
     );
     expect(html).not.toContain("包内文件");
+  });
+});
+
+// ===== 页面骨架四件套（ADR：收口 28 具手写 preview-content 壳，3a 批次） =====
+describe("pageShellHTML", () => {
+  it("渲染 #preview-content 壳 + h3（图标 + 转义标题）+ body 原样", () => {
+    const html = pageShellHTML({ icon: "<svg></svg>", title: "<x>", body: "<p>b</p>" });
+    expect(html).toContain('<div class="content" id="preview-content">');
+    expect(html).toContain("<h3><svg></svg> &lt;x&gt;</h3>");
+    expect(html).toContain("<p>b</p>");
+  });
+});
+
+describe("bigIconHTML / placeholderHTML", () => {
+  it("bigIconHTML 包 big-icon 槽", () => {
+    expect(bigIconHTML("ICO")).toBe('<div class="big-icon">ICO</div>');
+  });
+
+  it("lead + 多 hint 原样注入", () => {
+    const html = placeholderHTML({ lead: bigIconHTML("ICO"), hints: ["a", "b"] });
+    expect(html).toBe(
+      '<div class="dp-placeholder"><div class="big-icon">ICO</div><div class="dp-hint">a</div><div class="dp-hint">b</div></div>',
+    );
+  });
+
+  it("无参 → 空占位容器（router 文件夹无信息态无图标）", () => {
+    expect(placeholderHTML({})).toBe('<div class="dp-placeholder"></div>');
+  });
+
+  it("head → 紧凑头部修饰类（maid 封面态，maid-3d.test 钉死字节串）", () => {
+    expect(placeholderHTML({ head: true, lead: "X" })).toBe(
+      '<div class="dp-placeholder dp-placeholder--head">X</div>',
+    );
+  });
+
+  it("对象形态 hint → 挂自定义 attrs（maid head 行内样式特化）", () => {
+    const html = placeholderHTML({
+      head: true,
+      hints: [{ html: "name", attrs: 'style="font-weight:600"' }, "Bedrock"],
+    });
+    expect(html).toBe(
+      '<div class="dp-placeholder dp-placeholder--head"><div class="dp-hint" style="font-weight:600">name</div><div class="dp-hint">Bedrock</div></div>',
+    );
+  });
+});
+
+describe("errorPlaceholderHTML", () => {
+  it("warning 图标 + readFailed 前缀 + 消息转义", () => {
+    const html = errorPlaceholderHTML("<boom>");
+    expect(html).toContain('class="dp-placeholder"');
+    expect(html).toContain("读取失败");
+    expect(html).toContain("&lt;boom&gt;");
+  });
+});
+
+describe("tabbedShellHTML", () => {
+  const tabs = [
+    { key: "detail", icon: "I1", label: "详情" },
+    { key: "material", icon: "I2", label: "材料" },
+  ];
+
+  it("tab 激活态 + pane 显隐 + body 注入", () => {
+    const html = tabbedShellHTML({
+      tabs,
+      active: "detail",
+      panes: [
+        { key: "detail", body: "D" },
+        { key: "material", body: "M" },
+      ],
+    });
+    expect(html).toContain('data-tab="detail"');
+    expect(html).toContain("pv-tab-active");
+    expect(html).toContain('<div id="preview-detail">D</div>');
+    expect(html).toContain('<div id="preview-material" style="display:none">M</div>');
+  });
+
+  it("非默认 tab 激活时对应 pane 无 display:none", () => {
+    const html = tabbedShellHTML({
+      tabs,
+      active: "material",
+      panes: [
+        { key: "detail", body: "D" },
+        { key: "material", body: "M" },
+      ],
+    });
+    expect(html).toContain('<div id="preview-detail" style="display:none">D</div>');
+    expect(html).toContain('<div id="preview-material">M</div>');
+  });
+
+  it("fabHTML 尾挂（litematic 3D FAB）；缺省不挂", () => {
+    expect(
+      tabbedShellHTML({
+        tabs,
+        active: "detail",
+        panes: [{ key: "detail", body: "" }],
+        fabHTML: "<button>3D</button>",
+      }),
+    ).toContain("<button>3D</button>");
+    expect(
+      tabbedShellHTML({ tabs, active: "detail", panes: [{ key: "detail", body: "" }] }),
+    ).not.toContain("preview-fab");
   });
 });

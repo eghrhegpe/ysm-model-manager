@@ -78,6 +78,21 @@ function collectFactoryTabIds(text: string) {
   return out;
 }
 
+/**
+ * 收集 app-preview tabbedShellHTML 产出的面板 id：`preview-<tab.key>`。
+ * 模板里是表达式（`id="preview-${p.key}"`，YSM 详情/投影双 tab 壳收口后唯一出口），
+ * 静态扫描不可见。按调用点 tabs 声明 `{ key: "xxx", icon: ... }` 的 key 字面量配对
+ * 固定前缀 preview- 放行（key 紧邻 icon 限定为 tab 声明，避免误收同名对象字段）。
+ */
+function collectShellPaneIds(text: string): Set<string> {
+  const out = new Set<string>();
+  if (!text.includes("tabbedShellHTML(")) return out;
+  for (const m of text.matchAll(/\{\s*key:\s*"([a-zA-Z0-9_-]+)"\s*,\s*icon:/g)) {
+    out.add(`preview-${m[1]}`);
+  }
+  return out;
+}
+
 function main() {
   // ADR-043 fail-closed：SRC_DIR 缺失 = 扫描不完整，必须显式失败而非空结果假绿
   if (!fs.existsSync(SRC_DIR)) {
@@ -114,6 +129,7 @@ function main() {
   for (const f of files) {
     const text = fs.readFileSync(f as string, "utf8");
     for (const pid of collectFactoryTabIds(text)) factoryPanelIds.add(pid);
+    for (const pid of collectShellPaneIds(text)) factoryPanelIds.add(pid);
     for (const [id, line] of collectRefs(text)) {
       if (!refs.has(id)) refs.set(id, []);
       refs.get(id).push({ file: f, line });
@@ -122,8 +138,8 @@ function main() {
 
   // 交叉核对：引用但无定义 → 断链。
   // 例外（工厂产出 id）：renderTabs 按 `${prefix}-tab-${tab.id}` 产出面板 id（ADR-259），
-  // 模板里是表达式而非字面量，静态扫描看不见。此处按**同文件内 prefix × tab id 的具体配对**
-  // 放行（不放行跨文件笛卡尔积），未配对的引用仍判断链（保留本闸的牙）。
+  // tabbedShellHTML 按 `preview-<tab.key>` 产出预览面板 id——模板里均为表达式而非字面量，
+  // 静态扫描看不见。此处按调用点字面量配对放行，未配对的引用仍判断链（保留本闸的牙）。
   const isFactoryTabId = (id: string): boolean => factoryPanelIds.has(id);
   const broken: any[] = [];
   for (const [id, occ] of refs) {

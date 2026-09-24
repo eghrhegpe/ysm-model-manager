@@ -629,8 +629,6 @@
   "workshop.rateLimited": "GitHub API 频率限制，请稍后重试",
   "workshop.fetchFailed": "拉取失败",
   "workshop.updateConfig": "🌐 更新配置",
-  "workshop.newCreatorName": "新作者",
-  "workshop.newCreatorDesc": "描述",
   "workshop.exportWebUnsupported": "网页版暂不支持导出站点配置，请使用桌面版",
   "workshop.action.exported": "📤 站点已导出: {path}",
   "workshop.exportFailed": "导出失败",

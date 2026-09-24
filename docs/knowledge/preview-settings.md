@@ -155,7 +155,13 @@ status: active
 |------|------|------|------|
 | `ysm_showBoneLabels` | 2D 骨骼名显示 | `true`（未存即开） | `skeleton-render.ts::buildToggleRow` |
 | `ysm_3d_maxFps` | 帧率上限（0=不限，负数回退 60） | `60` | `render-budget.ts` |
-| `ysm_3d_maxPixelRatio` | 像素比上限（clamp [0.5, 2]） | `1.5` | `render-budget.ts` |
+| `ysm_3d_maxPixelRatio` | 像素比上限（clamp `[min,max]`，规格见 schema） | `1.5` | 规格 `settings-schema.ts` / 读取 `render-budget.ts` |
+| `td-cam-speed` | 相机移动速度（越界/非法回退默认，不截断） | `20` | 规格 `settings-schema.ts` / 读取 `keymap.ts` |
+| `td-rot-mode` | 相机旋转模式（`orbit` 环绕 / `free` 自身） | `orbit` | 规格 `settings-schema.ts` / 读取 `keymap.ts` |
+| `td-keymap` | 3D 移动键位映射（JSON，值表 `DEFAULT_TD_KEYMAP`） | 默认键位表 | `keymap.ts`（键常量 `settings-schema.ts`） |
+
+> **[ADR-303] 3D 持久化偏好规格单一源**：`td-cam-speed` / `td-rot-mode` / `ysm_3d_maxPixelRatio` 的**键 + 值域 + 步进 + 默认 + 枚举**唯一声明处 = `preview-3d/infra/settings-schema.ts`。消费面——主设置页（`views/app-content/settings/tpl-settings.ts` 的 range/select）、3D ⚙ 面板（`menu/panels/settings.ts` 的 `buildCameraSchema` / `buildCrossCuttingNodes`）、读取层（`infra/keymap.ts` / `infra/render-budget.ts`）——**只消费不复制**；改值域/默认只动 schema（曾多处各写一份裸字面量：改一处漏一处即滑块可拖到区间外、读取层 clamp 回退默认，表现为「拖了没反应且无报错」）。两面文案键域仍各自独立（schema 有意不带 `labelKey`）。
+> ⚠️ 自适应降采样的地板 `MIN_PIXEL_RATIO`（`render-budget.ts`）**不在 schema**——它是运行时自动降级的地板，与「用户可设上限」是两个旋钮（ADR-303 §2 明确不合并）。
 
 > `render.wireframe` / `env.pmrem` / `env.waterMode` / `env.groundMatSource` 由对应 `SceneCapability` 自行 `saveState`，状态层**不落盘**（ADR-125 P1 防双写红线）；`ui.activeComponent` 是 per-scene 会话态，`resetActiveComponent()` 在预览 dispose 时复位。
 
@@ -168,7 +174,7 @@ status: active
 | 2D 缩放 | 画布缩放系数（交互态，滚轮，[0.2,10]） | `1` | `skeleton.ts` / `zoom.ts` |
 | 2D 旋转 | 画布 Y 轴旋转（交互态，拖拽，模 360） | `0` | `skeleton.ts` / `zoom.ts` |
 | 帧率上限 | 3D 渲染节流（0=不限） | `60` | `render-budget.ts` |
-| 像素比上限 | 渲染分辨率上限（clamp [0.5,2]） | `1.5` | `render-budget.ts` |
+| 像素比上限 | 渲染分辨率上限（clamp `[min,max]`） | `1.5` | 规格 `settings-schema.ts` / 读取 `render-budget.ts` |
 | 视锥剔除 | `render.frustumCull`（状态层直管） | 待确认 | `preview-state.ts` |
 | 后处理开关 | `pp-enabled`（postprocessing cap 自报 → 写 `envState.ppEnabled`） | `false` | `postprocessing-menu.ts` |
 | 线框模式 | `render.wireframe`（wireframe cap） | `false` | `preview-state.ts` |

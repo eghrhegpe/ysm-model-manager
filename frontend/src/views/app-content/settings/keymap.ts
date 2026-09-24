@@ -4,7 +4,7 @@
 // 一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持。
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { TD_CAMSPEED_KEY, TD_KEYMAP_KEY, TD_ROTMODE_KEY } from "@/preview-3d/infra/keymap.ts";
+import { TD_CAM_SPEED, TD_KEYMAP_KEY, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
 import { loadTdKeymap, type TdKeyAction } from "@/preview-3d/mesh/model3d.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -24,9 +24,8 @@ export function cleanupKeymap(): void {
   }
 }
 
-// 魔法数值收敛：相机速度默认值（与 preview-3d/keymap.ts loadTdCamSpeed 默认 20 同源）、键位按钮最小宽度、
-// 成功/冲突提示 toast 时长（ms）
-const DEFAULT_CAM_SPEED = "20";
+// 魔法数值收敛：键位按钮最小宽度、成功/冲突提示 toast 时长（ms）。
+// 相机速度默认值不在此——已归 `preview-3d/infra/settings-schema.ts` 的 TD_CAM_SPEED（ADR-303）。
 const KEY_BTN_MIN_WIDTH = "64px";
 const TOAST_SUCCESS_MS = TOAST_MS.quick;
 const TOAST_WARN_MS = TOAST_MS.info;
@@ -148,19 +147,20 @@ export function initKeymap(root: ShadowRoot): void {
   const csEl = root.getElementById("td-camspeed") as HTMLInputElement | null;
   const csVal = root.getElementById("td-camspeed-val");
   if (csEl) {
-    csEl.value = safeGet(TD_CAMSPEED_KEY) || DEFAULT_CAM_SPEED;
+    csEl.value = safeGet(TD_CAM_SPEED.key) || String(TD_CAM_SPEED.default);
     if (csVal) csVal.textContent = csEl.value;
     csEl.addEventListener("input", () => {
       if (csVal) csVal.textContent = csEl.value;
-      safeSet(TD_CAMSPEED_KEY, csEl.value);
+      safeSet(TD_CAM_SPEED.key, csEl.value);
     });
   }
   // 默认旋转模式
   const rmEl = root.getElementById("td-rotmode") as HTMLSelectElement | null;
   if (rmEl) {
-    rmEl.value = safeGet(TD_ROTMODE_KEY) === "free" ? "free" : "orbit";
+    rmEl.value =
+      safeGet(TD_ROT_MODE.key) === TD_ROT_MODE.free ? TD_ROT_MODE.free : TD_ROT_MODE.orbit;
     rmEl.addEventListener("change", () => {
-      safeSet(TD_ROTMODE_KEY, rmEl.value);
+      safeSet(TD_ROT_MODE.key, rmEl.value);
     });
   }
 }

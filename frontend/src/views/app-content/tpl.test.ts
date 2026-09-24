@@ -11,6 +11,7 @@ import {
 } from "./tpl.ts";
 import { settingsHTML } from "./settings/tpl-settings.ts";
 import { recycleHTML, renderRecycleListHtml } from "./tpl-recycle.ts";
+import { TD_CAM_SPEED, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
@@ -179,6 +180,13 @@ describe("app-content 模板", () => {
     const opsTab = panelSlice(html, "stg-tab-ops", "stg-tab-parser");
     expect(opsTab).toContain('id="td-camspeed"');
     expect(opsTab).toContain('id="td-keymap-grid"');
+    // 值域 / 默认值 / 枚举消费 preview-3d/infra/settings-schema（ADR-303）：本页曾自写
+    // 一份裸字面量，与 ⚙ 面板 + 读取层三份副本漂移（改一处漏一处即拖了没反应）
+    expect(opsTab).toContain(`min="${TD_CAM_SPEED.min}" max="${TD_CAM_SPEED.max}"`);
+    expect(opsTab).toContain(`value="${TD_CAM_SPEED.default}"`);
+    for (const mode of TD_ROT_MODE.values) {
+      expect(opsTab, `旋转模式 ${mode} 未在本页产出`).toContain(`<option value="${mode}">`);
+    }
     const uiTab = panelSlice(html, "stg-tab-ui", "stg-tab-ops");
     expect(uiTab).not.toContain('id="td-camspeed"');
     expect(uiTab).not.toContain('id="td-keymap-grid"');

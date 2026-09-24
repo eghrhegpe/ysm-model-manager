@@ -258,6 +258,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-303：3D 预览持久化偏好规格单一源",
+        "link": "/adr/ADR-303-preview-persist-spec-single-source"
+      },
+      {
         "text": "ADR-302：菜单节点类型不做一次性判别联合——以运行期字段表为单一事实源（类型层派生）",
         "link": "/adr/ADR-302-menu-node-kind-field-single-source"
       },

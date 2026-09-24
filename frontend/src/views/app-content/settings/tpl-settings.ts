@@ -4,7 +4,8 @@
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { SUPPORTED_LANGS } from "@/core/i18n/locale.ts";
-import { t } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { TD_CAM_SPEED, TD_ROT_MODE, type TdRotMode } from "@/preview-3d/infra/settings-schema.ts";
 import { THEME_VALID } from "@/theme-core";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderTabs } from "@/views/app-content/tabs-shell.ts";
@@ -325,14 +326,26 @@ function renderStgAnimDefault(): string {
   return `<div class="stg-grid stg-grid-2 stg-section">${animCard}${defaultPageCard}</div>`;
 }
 
+/** 旋转模式 → 设置页文案键（ADR-303 §2：schema 只供值，文案键域归各面）。
+ *  `Record<TdRotMode, LocaleKey>` 形态——schema 新增模式时此处编译期报错，逼出文案同步。 */
+const ROT_MODE_LABEL: Record<TdRotMode, LocaleKey> = {
+  orbit: "settings.preview3d.orbit",
+  free: "settings.preview3d.free",
+};
+
 function renderStgPreview3d(): string {
+  // 值域 / 默认值 / 枚举全部消费 settings-schema（ADR-303）：曾与 3D ⚙ 面板 + 读取层
+  // 三处各写一份裸字面量，改一处漏一处即「拖了没反应且无报错」。
+  const rotOptions = TD_ROT_MODE.values
+    .map((v) => `<option value="${v}">${t(ROT_MODE_LABEL[v])}</option>`)
+    .join("\n      ");
   return `<div class="section-title stg-title">${UI_ICONS.joystick} ${t("settings.preview3d.title")}</div>
 
 <div class="settings-group" style="animation-delay:240ms">
   <div class="setting-row">
     <label for="td-camspeed" class="label">${UI_ICONS.video} ${t("settings.preview3d.camSpeed")}</label>
-    <input type="range" id="td-camspeed" min="2" max="200" value="20" style="flex:1;accent-color:var(--accent,#7c83ff)">
-    <span id="td-camspeed-val" style="min-width:28px;text-align:right;color:var(--txt)">20</span>
+    <input type="range" id="td-camspeed" min="${TD_CAM_SPEED.min}" max="${TD_CAM_SPEED.max}" value="${TD_CAM_SPEED.default}" style="flex:1;accent-color:var(--accent,#7c83ff)">
+    <span id="td-camspeed-val" style="min-width:28px;text-align:right;color:var(--txt)">${TD_CAM_SPEED.default}</span>
   </div>
   <div class="stg-desc">${t("settings.preview3d.camSpeedHint")}</div>
 </div>
@@ -341,8 +354,7 @@ function renderStgPreview3d(): string {
   <div class="setting-row">
     <label for="td-rotmode" class="label">${UI_ICONS.refresh} ${t("settings.preview3d.rotMode")}</label>
     <select id="td-rotmode" class="stg-select" style="width:auto">
-      <option value="orbit">${t("settings.preview3d.orbit")}</option>
-      <option value="free">${t("settings.preview3d.free")}</option>
+      ${rotOptions}
     </select>
   </div>
   <div class="stg-desc">${t("settings.preview3d.rotModeHint")}</div>

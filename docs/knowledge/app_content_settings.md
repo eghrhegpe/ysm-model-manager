@@ -105,6 +105,7 @@ status: active
 - **复制到剪贴板必须消费布尔结果**（code_review 同批修复，宿主 instance-ops.ts 见 [global_handlers](./global-handlers.md)）：`copyText` 永不 reject，Clipboard API/execCommand 兜底失败只返回 false——`await copyText(text)` 丢弃返回值会在失败时误弹「已复制」假成功；须 `const ok = await copyText(text); if (!ok) { error toast; return; }`
   - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（字体三栏是已知待修债；语言选择已收敛至 stgCard 正典卡 ✅）
   - **tab 按钮 ↔ 面板同源**：设置页 tab 栏 + 面板均由 `renderTabs({prefix:"stg",buttonClass:"stg-tab",tabs:[...]})` 单一工厂产出（ADR-259 §3），`bindTabs` 从 DOM `data-tab` 派发，不再维护 `ids` 白名单；新增 tab 只需在 `tabs` 数组加一项
+  - **本页 3D 卡片的值域/默认/枚举消费 `preview-3d/infra/settings-schema.ts`**（ADR-303）：相机速度 range 的 `min/max/value`、旋转模式 `<option>` 集均由 `TD_CAM_SPEED` / `TD_ROT_MODE` 派生，文案键经 `Record<TdRotMode, LocaleKey>` 表（schema 加模式即编译期报错）；禁止在本页重写裸字面量——曾与 3D ⚙ 面板 + 读取层多处副本漂移
 
 ## 样式范式契约（UI 一致性）
 

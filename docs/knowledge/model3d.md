@@ -842,10 +842,13 @@ auto_fields:
     - switchTabHighlightBg
     - switchToSession
     - syncLightTargetFromContent
-    - TD_CAMSPEED_KEY
+    - TD_CAM_SPEED
     - TD_KEYMAP_KEY
-    - TD_ROTMODE_KEY
+    - TD_PIXEL_RATIO
+    - TD_ROT_MODE
     - TdKeyAction
+    - TdNumericSpec
+    - TdRotMode
     - teardown
     - TeardownLevel
     - teardownSharedInfra

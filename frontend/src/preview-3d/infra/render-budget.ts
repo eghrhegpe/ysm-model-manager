@@ -1,20 +1,22 @@
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import type { GpuLoadSample } from "./gpu-load.ts";
 import { resolveGpuLoadLimits } from "./gpu-load-calibrate.ts";
+import { TD_PIXEL_RATIO } from "./settings-schema.ts";
 
-const PREVIEW_MAX_PIXEL_RATIO_DEFAULT = 1.5;
-// 存储键单一事实来源（code review P3：preview-menu 设置面板写同一键——不再双份硬编码）
-export const MAX_PIXEL_RATIO_KEY = "ysm_3d_maxPixelRatio";
+const PREVIEW_MAX_PIXEL_RATIO_DEFAULT = TD_PIXEL_RATIO.default;
+// 存储键单一事实来源（ADR-303：规格归 settings-schema；此处保留原导出名供
+// preview-state / 测试复用——派生值而非第二份字面量）
+export const MAX_PIXEL_RATIO_KEY = TD_PIXEL_RATIO.key;
 
-/** 读取用户设置的渲染分辨率上限（设置面板 slider 持久化）；缺省 1.5。
- *  clamp 到滑块范围 [0.5, 2]（code review P3：陈旧/手改 localStorage 值
- *  （"0.01"/"100"）不产生离谱像素比——与设置面板显示/控件一致）。 */
+/** 读取用户设置的渲染分辨率上限（设置面板 slider 持久化）；缺省见 TD_PIXEL_RATIO.default。
+ *  clamp 到控件值域 [min, max]（陈旧/手改 localStorage 值（"0.01"/"100"）不产生
+ *  离谱像素比——与设置面板显示/控件同源，规格见 ADR-303）。 */
 export function getMaxPixelRatio(): number {
   const v = safeGet(MAX_PIXEL_RATIO_KEY);
   if (v === null) return PREVIEW_MAX_PIXEL_RATIO_DEFAULT;
   const n = Number(v);
   return Number.isFinite(n) && n > 0
-    ? Math.min(2, Math.max(0.5, n))
+    ? Math.min(TD_PIXEL_RATIO.max, Math.max(TD_PIXEL_RATIO.min, n))
     : PREVIEW_MAX_PIXEL_RATIO_DEFAULT;
 }
 

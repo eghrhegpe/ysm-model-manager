@@ -4,8 +4,9 @@
 // 渲染链路级交互测试见 litematic-3d.test.ts「camera 面板」组（真实 SlideMenu 弹层）。
 import { describe, expect, it, vi } from "vitest";
 import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
+import { TD_CAM_SPEED, TD_PIXEL_RATIO, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
 import type { PreviewMenuCtx } from "@/preview-3d/menu/schema/node-types.ts";
-import { buildCameraSchema } from "./settings.ts";
+import { buildCameraSchema, buildCrossCuttingNodes } from "./settings.ts";
 
 function makeBridge(): CameraControlBridge & { orbit: boolean; speed: number; resets: number } {
   return {
@@ -53,28 +54,36 @@ describe("buildCameraSchema（ADR-193 第一刀：声明式三节点）", () => 
     expect(nodes.map((n) => n.id)).toEqual(["camera-orbit", "camera-speed", "camera-reset"]);
   });
 
-  it("orbit select：get 读桥、set 写桥 + 持久化 td-rot-mode", () => {
+  it("orbit select：get 读桥、set 写桥 + 持久化（键/枚举消费 settings-schema）", () => {
     const bridge = makeBridge();
     const node = buildCameraSchema(makeCtx(bridge))[0]!;
     expect(node.control!.options).toEqual([
-      { value: "orbit", label: "环绕", labelKey: "preview.cameraRotationOrbit" },
-      { value: "free", label: "自身", labelKey: "preview.cameraRotationFree" },
+      { value: TD_ROT_MODE.orbit, label: "环绕", labelKey: "preview.cameraRotationOrbit" },
+      { value: TD_ROT_MODE.free, label: "自身", labelKey: "preview.cameraRotationFree" },
     ]);
-    expect(node.control!.get!(undefined)).toBe("orbit");
-    node.control!.set!("free");
+    expect(node.control!.get!(undefined)).toBe(TD_ROT_MODE.orbit);
+    node.control!.set!(TD_ROT_MODE.free);
     expect(bridge.orbit).toBe(false);
-    expect(localStorage.getItem("td-rot-mode")).toBe("free");
+    expect(localStorage.getItem(TD_ROT_MODE.key)).toBe(TD_ROT_MODE.free);
   });
 
-  it("speed slider：min/max 对齐旧 buildCameraControls 口径（2-200），set 写桥 + 持久化", () => {
+  it("speed slider：min/max/step 消费 settings-schema（ADR-303 收口三份副本），set 写桥 + 持久化", () => {
     const bridge = makeBridge();
     const node = buildCameraSchema(makeCtx(bridge))[1]!;
-    expect(node.control!.min).toBe(2);
-    expect(node.control!.max).toBe(200);
+    expect(node.control!.min).toBe(TD_CAM_SPEED.min);
+    expect(node.control!.max).toBe(TD_CAM_SPEED.max);
+    expect(node.control!.step).toBe(TD_CAM_SPEED.step);
     expect(node.control!.get!(undefined)).toBe(30);
     node.control!.set!(55);
     expect(bridge.speed).toBe(55);
-    expect(localStorage.getItem("td-cam-speed")).toBe("55");
+    expect(localStorage.getItem(TD_CAM_SPEED.key)).toBe("55");
+  });
+
+  it("像素比上限 slider：值域消费 settings-schema（与 render-budget clamp 同源）", () => {
+    const node = buildCrossCuttingNodes().find((n) => n.id === "settings-pixel-ratio")!;
+    expect(node.control!.min).toBe(TD_PIXEL_RATIO.min);
+    expect(node.control!.max).toBe(TD_PIXEL_RATIO.max);
+    expect(node.control!.step).toBe(TD_PIXEL_RATIO.step);
   });
 
   it("reset button：action 经桥触发 reset（桥每渲染重取，不捕获过期实例）", () => {
@@ -92,8 +101,8 @@ describe("buildCameraSchema（ADR-193 第一刀：声明式三节点）", () => 
     const ctx = makeCtx(cur as ReturnType<typeof makeBridge>);
     const dyn = { ...ctx, getCamBridge: () => cur };
     const node = buildCameraSchema(dyn)[0]!;
-    expect(node.control!.get!(undefined)).toBe("orbit");
+    expect(node.control!.get!(undefined)).toBe(TD_ROT_MODE.orbit);
     cur = b;
-    expect(node.control!.get!(undefined)).toBe("free");
+    expect(node.control!.get!(undefined)).toBe(TD_ROT_MODE.free);
   });
 });

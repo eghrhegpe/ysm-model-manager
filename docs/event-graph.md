@@ -51,7 +51,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 189 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 187 |
 
 ### `batch:rename`
 
@@ -444,9 +444,9 @@
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 207 |
 | relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 231 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 313 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 110 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 121 |
-| initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 140 |
+| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 109 |
+| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 120 |
+| initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 139 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 94 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 275 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 281 |

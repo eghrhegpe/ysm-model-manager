@@ -103,7 +103,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 |------|------|--------|
 | `render.frustumCull` | `isFrustumCullEnabled/setFrustumCullEnabled`（`frustum-cull.ts`） | 本层管（键 `ysm_3d_frustumCull`） |
 | `render.maxFps` | `MAX_FPS_KEY` | 本层管，写入后**必须** `invalidateMaxFpsCache()`（rAF 热路径有模块级缓存） |
-| `render.maxPixelRatio` | `MAX_PIXEL_RATIO_KEY` | 本层管 |
+| `render.maxPixelRatio` | `MAX_PIXEL_RATIO_KEY`（派生自 `infra/settings-schema.ts::TD_PIXEL_RATIO.key`） | 本层管 |
 | `render.wireframe` | RenderModeCapability `rm-wireframe`（幽灵船 `wireframe-toggle` 已收口） | 不落盘 |
 | `env.pmrem` | sky cap `sky-env` | 不落盘 |
 

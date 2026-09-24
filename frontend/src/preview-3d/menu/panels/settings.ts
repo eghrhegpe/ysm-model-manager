@@ -15,7 +15,7 @@ import type { LocaleKey } from "@/core/i18n/t.ts";
 import { tOf } from "@/core/i18n/t.ts";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
-import { TD_CAMSPEED_KEY, TD_ROTMODE_KEY } from "@/preview-3d/infra/keymap.ts";
+import { TD_CAM_SPEED, TD_PIXEL_RATIO, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
 import type {
   NodeFor,
   PreviewMenuCtx,
@@ -32,8 +32,9 @@ import { safeSet } from "@/utils/base/primitives/storage.ts";
 
 /** 相机面板 schema（ADR-193 第一刀：renderCustom 逃生舱退役）：
  *  旋转模式 select / 速度 slider / 重置 button 三声明式节点，control 闭包经
- *  ctx.getCamBridge() 惰性取桥（禁构建期捕获，对齐 ADR-125 P3「禁止构建期求值」口径），
- *  持久化键 td-rot-mode / td-cam-speed 与旧 buildCameraControls 逐字对齐。 */
+ *  ctx.getCamBridge() 惰性取桥（禁构建期捕获，对齐 ADR-125 P3「禁止构建期求值」口径）。
+ *  持久化键 / 值域 / 枚举全部消费 `infra/settings-schema.ts`（ADR-303：与主设置页同源，
+ *  曾三处各写一份裸字面量——改一处漏一处即「拖了没反应且无报错」）。 */
 export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
   return [
     {
@@ -42,14 +43,14 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       labelKey: "preview.cameraRotation",
       control: {
         options: [
-          { value: "orbit", label: "环绕", labelKey: "preview.cameraRotationOrbit" },
-          { value: "free", label: "自身", labelKey: "preview.cameraRotationFree" },
+          { value: TD_ROT_MODE.orbit, label: "环绕", labelKey: "preview.cameraRotationOrbit" },
+          { value: TD_ROT_MODE.free, label: "自身", labelKey: "preview.cameraRotationFree" },
         ],
-        get: () => (ctx.getCamBridge().getOrbit() ? "orbit" : "free"),
+        get: () => (ctx.getCamBridge().getOrbit() ? TD_ROT_MODE.orbit : TD_ROT_MODE.free),
         set: (v) => {
-          const orbit = v === "orbit";
+          const orbit = v === TD_ROT_MODE.orbit;
           ctx.getCamBridge().setOrbit(orbit);
-          safeSet(TD_ROTMODE_KEY, orbit ? "orbit" : "free");
+          safeSet(TD_ROT_MODE.key, orbit ? TD_ROT_MODE.orbit : TD_ROT_MODE.free);
         },
       },
     },
@@ -58,13 +59,13 @@ export function buildCameraSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
       kind: "slider",
       labelKey: "preview.cameraSpeed",
       control: {
-        min: 2,
-        max: 200,
-        step: 1,
+        min: TD_CAM_SPEED.min,
+        max: TD_CAM_SPEED.max,
+        step: TD_CAM_SPEED.step,
         get: () => ctx.getCamBridge().getSpeed(),
         set: (n) => {
           ctx.getCamBridge().setSpeed(Number(n));
-          safeSet(TD_CAMSPEED_KEY, String(n));
+          safeSet(TD_CAM_SPEED.key, String(n));
         },
       },
     },
@@ -251,9 +252,9 @@ export function buildCrossCuttingNodes(): PreviewMenuNode[] {
       labelKey: "preview.settingsMaxPixelRatio",
       label: "渲染分辨率上限",
       control: {
-        min: 0.5,
-        max: 2,
-        step: 0.25,
+        min: TD_PIXEL_RATIO.min,
+        max: TD_PIXEL_RATIO.max,
+        step: TD_PIXEL_RATIO.step,
         unit: "x",
         get: () => getStateValue("render.maxPixelRatio") as number,
         // 拖动是高频写入：跳过通知，避免每 0.25 步进触发面板重算

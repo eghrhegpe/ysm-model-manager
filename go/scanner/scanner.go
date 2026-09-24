@@ -848,7 +848,10 @@ func mergeOrAppendCreator(result *[]types.WorkshopCreator, author, rtype string,
 	idx := len(*result)
 	*result = append(*result, types.WorkshopCreator{
 		Name: author,
-		Desc: "来自本地仓库",
+		// Desc 留空（不写「来自本地仓库」这类界面文案）：本结果会被前端并入创作者列表，
+		// 语言串进数据面即随 SaveWorkshopCreatorsBySite 落盘，且写死中文会让 en/ja 用户看到
+		// 中文。展示层按 _fromLocal 标记取当前语言（锐评 P0-2 治本，web 侧 web-community.ts 同口径）。
+		Desc: "",
 		Type: rtype,
 	})
 	nameIndex[author] = idx

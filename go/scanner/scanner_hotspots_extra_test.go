@@ -205,8 +205,10 @@ func TestScanLocalAuthors_Branches(t *testing.T) {
 			t.Errorf("作者E Type = %q, 应包含 %q（跨类型合并）", e.Type, want)
 		}
 	}
-	if e.Desc != "来自本地仓库" {
-		t.Errorf("作者E Desc = %q, 期望 '来自本地仓库'", e.Desc)
+	// Desc 必须为空：界面文案不得进数据面（锐评 P0-2 治本；原本断言写死「来自本地仓库」，
+	// 结果把语言串钉进契约，en/ja 用户看到中文）
+	if e.Desc != "" {
+		t.Errorf("作者E Desc = %q, 期望空串（文案归展示层按 _fromLocal 现取当前语言）", e.Desc)
 	}
 	fc := findCreatorByName(creators, "作者F")
 	if fc == nil {

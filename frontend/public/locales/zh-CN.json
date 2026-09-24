@@ -598,7 +598,6 @@
   "content.foundCount": "找到 {n} 个",
   "workshop.exportSite": "导出站点",
   "workshop.importSite": "导入站点",
-  "workshop.activeCreators": "活跃创作者",
   "workshop.noEmbed": "此站点不允许内嵌浏览",
   "workshop.openWindow": "在窗口中打开（代理模式）",
   "workshop.openExternal": "在系统浏览器中打开",

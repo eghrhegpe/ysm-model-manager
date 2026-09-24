@@ -17,7 +17,7 @@ import "./context-menus.setup.ts";
 import { bus } from "@/bus";
 import type { MenuItem, CtxShowPayload, ToastPayload } from "@/bus";
 import { registerContextMenus } from "./context-menus.ts";
-import { MENU_DEFS, type MenuAction } from "./menu-defs.ts";
+import { MENU_DEFS, type MenuItemDef, type MenuAction } from "./menu-defs.ts";
 import { HANDLERS, createContextMenuHandlers } from "./context-menu-handlers.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -72,7 +72,7 @@ describe("registerContextMenus 四类菜单声明", () => {
     expectItemsMatchDef(payload, "dir");
   });
 
-  it("workshop：items 载荷与 MENU_DEFS 一致（4 条展示项全 noop，ADR-208 D3）", () => {
+  it("workshop：items 载荷与 MENU_DEFS 一致（4 条展示项全 header kind，noop 假动作已退役）", () => {
     const payload = showMenu("workshop", payloadCtx("workshop"));
     expectItemsMatchDef(payload, "workshop");
   });
@@ -88,7 +88,7 @@ describe("registerContextMenus 四类菜单声明", () => {
     const declared = new Set<string>();
     for (const def of MENU_DEFS) {
       for (const it of def.items) {
-        if (it.action) declared.add(it.action);
+        if (it.kind === "action") declared.add(it.action);
       }
     }
     const registered = new Set(Object.keys(handlers));
@@ -119,12 +119,12 @@ describe("registerContextMenus 四类菜单声明", () => {
     }
   });
 
-  it("查看器模式 → batch 菜单剔除调 Wails binding 的动作", () => {
+  it("查看器模式 → batch 菜单剔除调 Wails binding 的动作（标题项无 action，不参与过滤）", () => {
     isViewerModeMock.mockReturnValue(true);
     try {
       const payload = showMenu("batch", payloadCtx("batch"));
       const actions = payload.items.filter((i) => i.action).map((i) => i.action);
-      expect(actions).toEqual(["noop", "batch.copy-paths", "batch.export-list"]);
+      expect(actions).toEqual(["batch.copy-paths", "batch.export-list"]);
     } finally {
       isViewerModeMock.mockReturnValue(false);
     }
@@ -151,7 +151,12 @@ describe("registerContextMenus 四类菜单声明", () => {
       const batchPayload = showMenu("batch", payloadCtx("batch"));
       const batchActions = batchPayload.items.filter((i) => i.action).map((i) => i.action);
       expect(batchActions).toEqual(
-        expect.arrayContaining(["batch.move", "batch.copy", "noop", "batch.copy-paths", "batch.export-list"]),
+        expect.arrayContaining([
+          "batch.move",
+          "batch.copy",
+          "batch.copy-paths",
+          "batch.export-list",
+        ]),
       );
     } finally {
       canMock.mockReturnValue(false);
@@ -301,6 +306,7 @@ describe("声明式菜单节点级 visibleWhen（菜单即数据 P1 扩展）", 
     const def = MENU_DEFS.find((d) => d.type === PROBE_DEF_TYPE);
     if (!def) throw new Error("missing batch def");
     def.items.push({
+      kind: "action",
       // 探针 action 不属于 MENU_ACTIONS：显式越界（as MenuAction）注入运行时探针，
       // 与下方 HANDLERS`as Record<string, unknown>` 逃生舱同一模式，测完 pop 清理。
       action: PROBE_ACTION as MenuAction,
@@ -421,10 +427,8 @@ describe("file.rename 的 ysm.json visibleWhen 守卫", () => {
 describe("buildMenuItems divider 折叠（单一事实源收口）", () => {
   const PROBE_TYPE = "__test_divider_fold__" as unknown as CtxShowPayload["type"];
 
-  function pushDef(
-    items: Array<{ divider?: boolean; label?: () => string; visibleWhen?: (ctx: CtxShowPayload) => boolean }>,
-  ) {
-    MENU_DEFS.push({ type: PROBE_TYPE, items: items as never });
+  function pushDef(items: MenuItemDef[]) {
+    MENU_DEFS.push({ type: PROBE_TYPE, items });
   }
   function popDef() {
     const i = MENU_DEFS.findIndex((d) => d.type === PROBE_TYPE);
@@ -445,10 +449,10 @@ describe("buildMenuItems divider 折叠（单一事实源收口）", () => {
 
   it("数据中连续 divider → 全部折叠（冗余相邻消除）", () => {
     pushDef([
-      { label: () => "A" },
-      { divider: true },
-      { divider: true },
-      { label: () => "B" },
+      { kind: "header", label: () => "A" },
+      { kind: "divider" },
+      { kind: "divider" },
+      { kind: "header", label: () => "B" },
     ]);
     const payload = showMenu(PROBE_TYPE);
     assertDividersCollapsed(payload.items);
@@ -457,11 +461,11 @@ describe("buildMenuItems divider 折叠（单一事实源收口）", () => {
 
   it("首/尾 divider → 移除，中间单 divider 保留", () => {
     pushDef([
-      { divider: true },
-      { label: () => "A" },
-      { divider: true },
-      { label: () => "B" },
-      { divider: true },
+      { kind: "divider" },
+      { kind: "header", label: () => "A" },
+      { kind: "divider" },
+      { kind: "header", label: () => "B" },
+      { kind: "divider" },
     ]);
     const payload = showMenu(PROBE_TYPE);
     assertDividersCollapsed(payload.items);
@@ -473,12 +477,14 @@ describe("buildMenuItems divider 折叠（单一事实源收口）", () => {
   });
 
   it("visibleWhen 隐藏相邻项 → 原本不相邻的 divider 变相邻并折叠", () => {
+    // 隐藏项必须是 action kind（visibleWhen 只活在 action 分支）；借用真实已注册
+    // action（file.copy-path）避免触发失配 console.warn
     pushDef([
-      { label: () => "A" },
-      { divider: true },
-      { label: () => "B", visibleWhen: () => false }, // 被隐藏，使两个 divider 相邻
-      { divider: true },
-      { label: () => "C" },
+      { kind: "header", label: () => "A" },
+      { kind: "divider" },
+      { kind: "action", action: "file.copy-path", label: () => "B", visibleWhen: () => false },
+      { kind: "divider" },
+      { kind: "header", label: () => "C" },
     ]);
     const payload = showMenu(PROBE_TYPE);
     assertDividersCollapsed(payload.items);
@@ -498,28 +504,52 @@ describe("createContextMenuHandlers — 独立 handlers 实例隔离", () => {
 
   it("实例包含所有 MENU_ACTIONS 的 handler", () => {
     const { HANDLERS } = createContextMenuHandlers();
-    expect(typeof HANDLERS.noop).toBe("function");
     expect(typeof HANDLERS["instance.open-folder"]).toBe("function");
     expect(typeof HANDLERS["batch.move"]).toBe("function");
     expect(typeof HANDLERS["batch.recycle"]).toBe("function");
     expect(typeof HANDLERS["file.rename"]).toBe("function");
     expect(typeof HANDLERS["dir.mkdir"]).toBe("function");
   });
+
+  it("noop 假动作已退役（kind 判别后标题项不占 action 空间）", () => {
+    const { HANDLERS } = createContextMenuHandlers();
+    expect("noop" in HANDLERS).toBe(false);
+    // 声明表中不得再有任何 action:"noop" 项——收集为 string 域再断言
+    // （MenuAction 联合已无 noop，与 "noop" 直接比较会被 TS2367 拦下，正是退役的编译期证据）
+    const actions: string[] = [];
+    for (const def of MENU_DEFS) {
+      for (const item of def.items) {
+        if (item.kind === "action") actions.push(item.action);
+      }
+    }
+    expect(actions).not.toContain("noop");
+  });
 });
 
 // ===== ADR-245 守卫：menu-defs 的 icon 必须为 UI_ICONS 语义名（无彩色 emoji 残留）=====
+// 扩展：label 也不得夹带 emoji——emoji 表意一律迁移到 icon 字段（如 workshop 信息行 📄→file）。
+// EMOJI 只匹配 emoji/杂项符号频段（含变体选择符），放过 …—“”等合法排版标点与 CJK。
 describe("ADR-245 — menu-defs icon 语义名化（无 emoji）", () => {
   const KNOWN = new Set(Object.keys(UI_ICONS));
+  const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/u;
 
   for (const def of MENU_DEFS) {
     for (const item of def.items) {
-      if (!item.icon || item.divider) continue;
-      const iconName = item.icon; // 收窄：闭包外固定，避免 TS 丢失收窄
-      const idLabel = `${def.type}.${item.action ?? "title"}`;
-      it(`${idLabel} icon="${iconName}" 为合法语义名`, () => {
-        // emoji（非 ASCII 语义名）一律视为残留，须迁移为 UI_ICONS 语义名
-        expect(KNOWN.has(iconName)).toBe(true);
-        expect(iconName.match(/[^\x00-\x7F]/)).toBeNull();
+      if (item.kind === "divider") continue;
+      if (item.icon) {
+        const iconName = item.icon; // 收窄：闭包外固定，避免 TS 丢失收窄
+        const idLabel = `${def.type}.${item.kind === "action" ? item.action : "header"}`;
+        it(`${idLabel} icon="${iconName}" 为合法语义名`, () => {
+          // emoji（非 ASCII 语义名）一律视为残留，须迁移为 UI_ICONS 语义名
+          expect(KNOWN.has(iconName)).toBe(true);
+          expect(iconName.match(/[^\x00-\x7F]/)).toBeNull();
+        });
+      }
+      // label 求值防 emoji：用各类型的样例 ctx 渲染一次，断言结果无 emoji/图标字符
+      const probeLabel = `${def.type}.${item.kind === "action" ? item.action : "header"}`;
+      it(`${probeLabel} label 无 emoji 残留（表意走 icon 字段）`, () => {
+        const rendered = item.label(payloadCtx(def.type));
+        expect(EMOJI.test(rendered), `label 含 emoji 字符: ${rendered}`).toBe(false);
       });
     }
   }

@@ -30,12 +30,12 @@ export const VIEWER_WEB_ACTION_BINDINGS: Readonly<Record<string, string>> = {
 };
 
 /**
- * 纯前端右键动作集（2026-XX P3 收敛）：不调 Wails binding（DOM/剪贴板/下载
+ * 纯前端右键动作集：不调 Wails binding（DOM/剪贴板/下载
  * 已下沉 utils/dom），viewer 模式恒可达。原 `context-menus.ts` 硬编码
  * `VIEWER_OK_ACTIONS` 收敛至此，成为「viewer 可达性」单一事实源的一部分。
+ * noop 假动作已退役（menu-defs kind 判别后标题项不占 action 空间，不再入集）。
  */
 export const VIEWER_PURE_ACTIONS: ReadonlySet<string> = new Set([
-  "noop",
   "batch.copy-paths",
   "batch.export-list",
   "file.copy-path",

@@ -14,6 +14,7 @@ source_files:
   - frontend/src/features/pack-ops/instance-ops.ts
 auto_fields:
   symbols_with_lines:
+    - BatchCtx
     - ContextMenuHandlers
     - createContextMenuHandlers
     - DIR_HANDLERS
@@ -23,11 +24,13 @@ auto_fields:
     - getMenuDef
     - HANDLERS
     - HandlerTable
+    - InstanceCtx
     - isUnsafeFolderName
     - MENU_DEFS
     - MenuAction
     - MenuCtx
     - MenuDef
+    - MenuItemDef
     - refreshUI
     - registerContextMenus
     - registerInstanceOps
@@ -74,15 +77,15 @@ status: active
 
 ## 概览
 
-右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`features/context-menu/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `menu:show` 载荷，`views/context-menu/index.ts` 是纯渲染容器。五类菜单（整合包 instance / 多选 batch / 文件 file / 目录 dir / 工坊模型 workshop，ADR-208 D3 将 community 域右键幽灵菜单收编）覆盖重命名、移动、复制、推送到整合包、标签编辑、回收站、打开位置、复制路径、导出清单等全部右键操作；workshop 为纯展示项（名称/路径/哈希/大小挂 `noop`，label 由 ctx 动态生成）。整合包两项（导出清单 / 清空）只派发事件，真正执行落在 `features/pack-ops/instance-ops.ts`。
+右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`features/context-menu/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `menu:show` 载荷，`views/context-menu/index.ts` 是纯渲染容器。五类菜单（整合包 instance / 多选 batch / 文件 file / 目录 dir / 工坊模型 workshop，ADR-208 D3 将 community 域右键幽灵菜单收编）覆盖重命名、移动、复制、推送到整合包、标签编辑、回收站、打开位置、复制路径、导出清单等全部右键操作；`MenuItemDef` 为 kind 判别联合（`divider | header | action`），workshop 是 4 条 `kind:"header"` 纯信息行（名称/路径/哈希/大小，label 由 ctx 动态生成、表意走 icon 字段、体积走 `utils/format formatBytes`——noop 假动作已退役，标题项不占 action 空间）。整合包两项（导出清单 / 清空）只派发事件，真正执行落在 `features/pack-ops/instance-ops.ts`。
 
 ## 核心职责
 
 - `views/context-menu/index.ts` — `<context-menu>` Shadow DOM 渲染容器：监听 `menu:show({ x, y, items })` 渲染菜单项（label/icon/danger/divider，逐项 `itemSlideIn` 入场动画）、绑定点击回调（`try/finally` 包裹 `onClick`，抛异常也必 `hide()` 防菜单残留）、视口边界检测（先移到 -9999px 离屏测量再经 `requestAnimationFrame` 定位，避免跳变）；**WCAG 2.1 合规**：容器 `role="menu"` + 菜单项 `role="menuitem"` + 键盘导航（ArrowUp/Down 循环移动焦点、Enter/Space 激活、Esc 关闭），show() 后焦点自动定位首个菜单项；document 级 click/contextmenu 关闭菜单
 - `features/context-menu/context-menus.ts` — 注册与编排层（orchestrator，仅消费）：`registerContextMenus(unsubs)` 监听 `ctx:show` → `buildMenuItems` 组装后派发 `menu:show`，unsub 收进传入数组；`HANDLERS` 经 `context-menu-handlers.ts` import（不再本地持有）；filter 链：① `visibleWhen` ② viewer-mode 守卫（`canWebAction` 两关 AND）
-- `features/context-menu/context-menu-handlers.ts` — **HANDLERS 行为表**（`context-menu-handlers.ts|HANDLERS`，action id → handler，经 `FILE_HANDLERS`/`DIR_HANDLERS` 子表展开）覆盖 `noop` / `instance.*` / `batch.*` / `file.*` / `dir.*`，与 `menu-defs.ts` 声明一一对应；dir/file 拆分在 `context-menu-dir-handlers.ts` / `context-menu-file-handlers.ts`，共享工具在 `context-menu-shared.ts`。**行为 toast/弹窗文案全量 i18n**（2026-08-30 P3 收敛：handler 层 48 处裸中文 → `ctx.*` key，三语言包同步）——`runBatchFileOp` 从「中文 verb/message」改为 `BATCH_TPL` mode 模板表（move/copy 的 progress/okAll/okPartial/failAll/dialog 文案集中定义），file/dir/shared handler 一律 `tOf()` 多级兜底（缺失键回落 FALLBACK_LANG=en 语言包，ADR-210 D3 起 tr() 根除）；viewer-mode 过滤收敛为单一 `canWebAction(action)`（来自 `backend/capabilities.ts`，ADR-203 D3 自原 `utils/dom/capabilities.ts` 迁入，2026-08-30 P3 收敛——纯前端动作 `VIEWER_PURE_ACTIONS` 恒可达 + binding 走 `can()` 探测）；下载操作委托 `utils/dom/download-text.ts`（P2-2）；工具函数 `refreshUI()`（派发 `tree:reload` + `stats:refresh`）、`toast()`、`toastError()`（错误 toast 统一入口：`❌ friendlyError(e)` 模板 + long 时长，2026-08-30 收敛 handler 层 12 处行内模板）、`isUnsafeFolderName`（禁止 `..`/绝对路径/Windows 非法字符/保留设备名/尾随点空格，2026-09-06 锐评 #9 扩展，口径镜像 Go fsutil——见知识卡 win-filename-rules）、`resolveDstDir()`（move/copy 四处共用：弹窗输入 → 安全检查 → `GetRepoRoot(YSM)` → 拼目标目录，取消/失败返回 null）及其上的 `runSingleOp()`（2026-09-06 锐评 P2：file.move/copy + dir.move/copy 四胞胎 handler 收敛为同一模板——调用方只传路径/rtype/binding/弹窗标题/成功文案，与 batch 侧 `runBatchFileOp` + `BATCH_TPL` 同一屋檐）；连点防护从单一 `_batchBusy` 模块 flag 改为按 verb 独立闭包（`moveBusy / copyBusy / recycleBusy`）——同一 verb 连点互斥，不同 verb 可并发；复制类动作（`batch.copy-paths` / `file.copy-path`）统一走 `utils/dom/clipboard.ts copyText`（Clipboard API + textarea fallback）
+- `features/context-menu/context-menu-handlers.ts` — **HANDLERS 行为表**（`context-menu-handlers.ts|HANDLERS`，action id → handler，经 `FILE_HANDLERS`/`DIR_HANDLERS`/`INSTANCE_HANDLERS`/`BATCH_HANDLERS` 四子表展开）覆盖 `instance.*` / `batch.*` / `file.*` / `dir.*`（noop 假动作已退役），与 `menu-defs.ts` 声明一一对应；dir/file 拆分在 `context-menu-dir-handlers.ts` / `context-menu-file-handlers.ts`，共享工具在 `context-menu-shared.ts`。**表级 ctx 窄化全家平权**（P2-1 + P2-2，锐评 #4 收口）：`FileCtx`/`DirCtx`/`InstanceCtx`/`BatchCtx` 各以 `Omit<MenuCtx, 对立域字段>` 编译期防跨表误取（instance 不得读 dir/paths/count/workshop，batch 不得读 path/instanceName/subdir/dir/workshop）；workshop 全 header 无 handler 无表可窄。**行为 toast/弹窗文案全量 i18n**（2026-08-30 P3 收敛：handler 层 48 处裸中文 → `ctx.*` key，三语言包同步）——`runBatchFileOp` 从「中文 verb/message」改为 `BATCH_TPL` mode 模板表（move/copy 的 progress/okAll/okPartial/failAll/dialog 文案集中定义），file/dir/shared handler 一律 `tOf()` 多级兜底（缺失键回落 FALLBACK_LANG=en 语言包，ADR-210 D3 起 tr() 根除）；viewer-mode 过滤收敛为单一 `canWebAction(action)`（来自 `backend/capabilities.ts`，ADR-203 D3 自原 `utils/dom/capabilities.ts` 迁入，2026-08-30 P3 收敛——纯前端动作 `VIEWER_PURE_ACTIONS` 恒可达 + binding 走 `can()` 探测）；下载操作委托 `utils/dom/download-text.ts`；工具函数 `refreshUI()`（派发 `tree:reload` + `stats:refresh`）、`toast()`、`toastError()`（错误 toast 统一入口：`❌ friendlyError(e)` 模板 + long 时长，2026-08-30 收敛 handler 层 12 处行内模板）、`isUnsafeFolderName`（禁止 `..`/绝对路径/Windows 非法字符/保留设备名/尾随点空格，2026-09-06 锐评 #9 扩展，口径镜像 Go fsutil——见知识卡 win-filename-rules）、`resolveDstDir()`（move/copy 四处共用：弹窗输入 → 安全检查 → `GetRepoRoot(YSM)` → 拼目标目录，取消/失败返回 null）及其上的 `runSingleOp()`（2026-09-06 锐评 P2：file.move/copy + dir.move/copy 四胞胎 handler 收敛为同一模板——调用方只传路径/rtype/binding/弹窗标题/成功文案，与 batch 侧 `runBatchFileOp` + `BATCH_TPL` 同一屋檐）；连点防护从单一 `_batchBusy` 模块 flag 改为按 verb 独立闭包（`moveBusy / copyBusy / recycleBusy`）——同一 verb 连点互斥，不同 verb 可并发；复制类动作（`batch.copy-paths` / `file.copy-path`）统一走 `utils/dom/clipboard.ts copyText`（Clipboard API + textarea fallback）
 - 异常兜底（0b1f6a9）：`file.recycle` / `file.push-to-pack` / `file.edit-tags` 的**外层** await 链各自套 `try/catch`（内层 Go 调用另有一层 catch），弹窗被抢占结算或 bindings 加载失败都会转成 `friendlyError` toast，不再冒泡成 unhandledrejection
-- `features/context-menu/menu-defs.ts` — 声明式菜单规格（ADR-021 B 层）：`MENU_DEFS` 五类菜单的完整声明 + `getMenuDef(type)`；加菜单项只改这里。instance/batch 首项为 `noop` 标题项（label 由 ctx 动态生成）；workshop 类（ADR-208 D3）4 条纯展示项全挂 `noop`（`ctx.workshop?.name` 等动态 label，与 instance/batch 标题项同款模式）`MenuItemDef.label` 已收紧为纯函数式 `(ctx) => string`（2026-08-30 删除死 string 分支）——所有声明 `() => t("menu.xxx")` 或 `(ctx) => 动态`，让「label 必须经 i18n 或 ctx 动态生成」成为**类型级约束**，防新增裸字符串 label 漏 i18n。文案经 `t()` 严格入口 + 缺失键多级兜底（current → FALLBACK_LANG=en → 裸 key，发版前漏译显示可读文案；`tr()` 双入口随 ADR-210 D3 根除）。`MenuItemDef.visibleWhen?: (ctx) => boolean` 节点级显隐守卫（与 3D 菜单 `PreviewMenuNode.visibleWhen` 同构，吃 ctx 快照、纯函数），filter 在 `buildMenuItems` 中**先于 viewer-mode 守卫**求值（两关 AND；未定义时行为不变）
+- `features/context-menu/menu-defs.ts` — 声明式菜单规格（ADR-021 B 层）：`MENU_DEFS` 五类菜单的完整声明 + `getMenuDef(type)`；加菜单项只改这里。**`MenuItemDef` 为 kind 判别联合**（锐评 #7 收口，对齐 preview-3d `PreviewMenuNode.kind` 范式）：`"divider"`（零字段）| `"header"`（label + 可选 icon，纯展示行——instance/batch 标题与 workshop 信息行，**noop 假动作已退役，标题不再占 action 空间**）| `"action"`（action/label/icon/danger/visibleWhen 五件套，唯一带行为分支）——跨 kind 误填编译期即红。`label` 纯函数式 `(ctx) => string`（2026-08-30 删除死 string 分支）：所有声明 `() => t("menu.xxx")` 或 `(ctx) => 动态`，「label 必须经 i18n 或 ctx 动态生成」是**类型级约束**；表意符号一律走 `icon` 字段（ADR-245 语义名 + `context-menus.test.ts` 遍历声明断言 label 无 emoji 残留），workshop 体积走 `utils/format formatBytes`。文案经 `t()` 严格入口 + 缺失键多级兜底（current → FALLBACK_LANG=en → 裸 key，发版前漏译显示可读文案；`tr()` 双入口随 ADR-210 D3 根除）。`visibleWhen?: (ctx) => boolean` 节点级显隐守卫只活在 action 分支（与 3D 菜单 `PreviewMenuNode.visibleWhen` 同构，吃 ctx 快照、纯函数），filter 在 `buildMenuItems` 中**先于 viewer-mode 守卫**求值（两关 AND；未定义时行为不变）
 - `features/pack-ops/instance-ops.ts` — 整合包两个重活的落地方：`instance:export-list` 走 `requireMcRoot` → `ListVersionInstances` → `GetSubDirMap` 按 rtype 分组 `ListFileNames` → 清单写剪贴板；`instance:clear` 走 `CountInstanceResources`（统计失败显式报错，不静默当空）→ `modalConfirm` → `ClearInstanceResources` → `stats:refresh`
 
 ## 对外 API / 入口
@@ -104,7 +107,7 @@ status: active
 
 ## 不变量
 
-- 菜单结构只允许在 `menu-defs.ts` 修改；`MenuItemDef.action` 与 `HANDLERS` 表一一对应，`buildMenuItems` 对失配 action 打 `console.warn`，契约测试遍历声明断言零警告（缺 handler 会测试失败）；**待办（P2）**：升级为直接对账声明表 vs handler 表，不再依赖 spy
+- 菜单结构只允许在 `menu-defs.ts` 修改；`MenuItemDef` action 分支的 `action` 与 `HANDLERS` 表一一对应（`HandlerTable = Record<MenuAction, ...>` 注解穷举 + 各域子表 `Extract<MenuAction, \`域.${string}\`>` satisfies 双向钉死；noop 退役后 action 空间无假动作），`buildMenuItems` 对失配 action 打 `console.warn`，契约测试遍历声明断言零警告（缺 handler 会测试失败）；**待办（P2）**：升级为直接对账声明表 vs handler 表，不再依赖 spy
 - `visibleWhen` 与 viewer-mode 全局过滤 AND：两边都通过才出现在 items；与 3D `PreviewMenuNode.visibleWhen`（[doc:adr-126-p4-d]）语义同构（都吃状态快照/ctx 快照的纯函数谓词），共享「声明式菜单唯一条件守卫口」精神面。**2026-09-06 起有真实消费者**（file.rename 的 ysm.json 守卫），不再是零消费机制
 - `CtxShowPayload` 不携带 `banned`（2026-09-06 出契约）：树行启用/禁用切换走 app-tree 自己的 `.ck` 事件链，与右键菜单无关——原字段发射端携带、全链零消费
 - `registerContextMenus(unsubs)` 只由 `app-content` 的 `connectedCallback` 调用一次且必须把 unsub 收进数组，禁止组件内重复注册（事件无守卫注册反模式，ADR-008）

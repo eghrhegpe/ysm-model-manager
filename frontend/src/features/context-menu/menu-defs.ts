@@ -1,27 +1,43 @@
 // ===== 声明式菜单规格（ADR-021 B 层）=====
 // 唯一事实来源：context-menus.ts 从本表生成 menu:show 载荷；
 // 测试遍历本表断言结构与行为，加菜单项只改这里，测试自动覆盖。
-// 2026-XX P1 扩展（与 preview-3d PreviewMenuNode.visibleWhen 对齐）：
-// 节点级 `visibleWhen` 谓词吃 ctx 快照（与 AGENTS.md「3d菜单只允许 visibleWhen」
-// 的精神面一致），实现右键菜单与3D 菜单的声明式语义统一；未定义时行为不变。
+// kind 判别联合（锐评 #7 收口，对齐 preview-3d PreviewMenuNode.kind 判别范式）：
+//   - "divider" 纯分隔线，无任何字段；
+//   - "header"  纯展示行（instance/batch 标题、workshop 信息行）——不占 action 空间，
+//     假动作 `noop` 已从 MENU_ACTIONS 退役（标题不再是「行为标识为无」的 action）；
+//   - "action"  唯一带行为的分支：visibleWhen 只活在 action 上，viewer-mode 守卫只过滤它。
+// 三分支各自字段自洽，跨 kind 误填（如 divider 写 label）编译期即红。
 import type { CtxShowPayload } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { formatBytes } from "@/utils/format/format.ts";
 import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 
-/** 菜单项声明：结构（label/icon/danger/divider）+ 行为标识（action）+ 节点级显隐守卫 */
-interface MenuItemDef {
+/** 分隔线条目 */
+interface MenuDividerItemDef {
+  kind: "divider";
+}
+
+/** 标题/信息条目：纯展示行，label 吃 ctx 快照动态渲染，表意走 icon 字段（禁 emoji 夹带） */
+interface MenuHeaderItemDef {
+  kind: "header";
+  /** 展示文案：按 ctx 动态生成（实例名/工坊信息等数据行），表意符号走 icon 字段 */
+  label: (ctx: CtxShowPayload) => string;
+  icon?: UiIconName;
+}
+
+/** 行为条目：声明结构（label/icon/danger）+ 行为标识（action）+ 节点级显隐守卫 */
+interface MenuActionItemDef {
+  kind: "action";
   /** 行为标识：context-menus.ts 查 handler 表绑定 onClick；必须属于 MENU_ACTIONS（编译期约束） */
-  action?: MenuAction;
+  action: MenuAction;
   /**
-   * 静态文案或按 ctx 动态生成（如标题项）；divider 项省略。
-   * 2026-XX 收紧：原 `string | ((ctx) => string)` 的 string 分支已无消费者
-   * （所有声明均函数式：`() => t(<key>)` 或 `(ctx) => 动态`），
-   * 收紧为纯函数式让「label 必须经 i18n 或 ctx 动态生成」成为类型级约束。
+   * 文案按 ctx 动态生成（i18n `t()` 或 ctx 快照）。
+   * 纯函数式 = 「label 必须经 i18n 或 ctx 动态生成」的类型级约束，防裸字符串漏 i18n
+   * （2026-08-30 收紧：原 string 分支已无消费者，删除死分支）。
    */
-  label?: (ctx: CtxShowPayload) => string;
+  label: (ctx: CtxShowPayload) => string;
   icon?: UiIconName;
   danger?: boolean;
-  divider?: boolean;
   /**
    * 节点级可见性谓词：返回 false 则该 item 不出现在 menu:show 载荷。
    * 与 preview-3d/menu/schema/node-types.ts 的 `PreviewMenuNode.visibleWhen`
@@ -30,6 +46,9 @@ interface MenuItemDef {
    */
   visibleWhen?: (ctx: CtxShowPayload) => boolean;
 }
+
+/** 菜单项声明：kind 判别三分支（divider | header | action） */
+export type MenuItemDef = MenuDividerItemDef | MenuHeaderItemDef | MenuActionItemDef;
 
 /** 单类菜单的完整声明 */
 export interface MenuDef {
@@ -41,11 +60,11 @@ export interface MenuDef {
  * action 联合唯一事实来源（P2 收窄）：HANDLERS 断言覆盖它，
  * MenuItemDef.action 收窄为它 —— MENU_DEFS ⊂ MENU_ACTIONS ⊂ HANDLERS 三层由编译期钉死。
  * 新增/改名 action 漏挂 handler 或拼错即 typecheck 报错，不再等到运行时 warn。
- * 不导出（knip 死代码契约）：运行时消费者已收窄为 type-only（context-menu-handlers.ts L12），
+ * 不导出（knip 死代码契约）：运行时消费者已收窄为 type-only（context-menu-file-handlers.ts L14），
  * 仅 MenuAction 类型派生需要它留在模块作用域。
+ * noop 假动作已退役：标题项走 kind:"header"，不占 action 空间。
  */
 const MENU_ACTIONS = [
-  "noop",
   "instance.open-folder",
   "instance.export-list",
   "instance.clear",
@@ -71,32 +90,36 @@ const MENU_ACTIONS = [
   "dir.recycle",
 ] as const;
 
-/** 合法菜单 action 联合：MENU_DEFS 声明 / HANDLERS 注册双约束的公共类型 */
+/** 合法菜单 action 联合：MENU_DEFS 声明 / HANDLERS 表键双约束的公共类型 */
 export type MenuAction = (typeof MENU_ACTIONS)[number];
 
-/** 四类右键菜单的声明式规格（唯一事实来源） */
+/** 五类右键菜单的声明式规格（唯一事实来源） */
 export const MENU_DEFS: MenuDef[] = [
   {
     type: "instance",
     items: [
       {
-        action: "noop",
-        label: (ctx) => `📦 ${ctx.instanceName || ""}${ctx.rtype ? ` (${ctx.rtype})` : ""}`,
+        kind: "header",
+        icon: "package",
+        label: (ctx) => `${ctx.instanceName || ""}${ctx.rtype ? ` (${ctx.rtype})` : ""}`,
       },
-      { divider: true },
+      { kind: "divider" },
       {
+        kind: "action",
         action: "instance.open-folder",
         label: () => t("menu.openFolder"),
         icon: "folderOpen",
       },
-      { divider: true },
+      { kind: "divider" },
       {
+        kind: "action",
         action: "instance.export-list",
         label: () => t("menu.copyModelList"),
         icon: "file",
       },
-      { divider: true },
+      { kind: "divider" },
       {
+        kind: "action",
         action: "instance.clear",
         label: () => t("menu.clearPack"),
         icon: "delete",
@@ -108,23 +131,35 @@ export const MENU_DEFS: MenuDef[] = [
     type: "batch",
     items: [
       {
-        action: "noop",
+        kind: "header",
         label: (ctx) => t("menu.batchSelected", { count: ctx.count || 0 }),
       },
-      { divider: true },
-      { action: "batch.rename", label: () => t("menu.batchRename"), icon: "cut" },
-      { action: "batch.move", label: () => t("menu.moveTo"), icon: "folderOpen" },
-      { action: "batch.copy", label: () => t("menu.copyTo"), icon: "clipboard" },
-      { divider: true },
+      { kind: "divider" },
       {
+        kind: "action",
+        action: "batch.rename",
+        label: () => t("menu.batchRename"),
+        icon: "cut",
+      },
+      { kind: "action", action: "batch.move", label: () => t("menu.moveTo"), icon: "folderOpen" },
+      { kind: "action", action: "batch.copy", label: () => t("menu.copyTo"), icon: "clipboard" },
+      { kind: "divider" },
+      {
+        kind: "action",
         action: "batch.recycle",
         label: () => t("menu.recycle"),
         icon: "recycle",
         danger: true,
       },
-      { divider: true },
-      { action: "batch.copy-paths", label: () => t("menu.copyPaths"), icon: "clipboard" },
+      { kind: "divider" },
       {
+        kind: "action",
+        action: "batch.copy-paths",
+        label: () => t("menu.copyPaths"),
+        icon: "clipboard",
+      },
+      {
+        kind: "action",
         action: "batch.export-list",
         label: () => t("menu.exportList"),
         icon: "file",
@@ -137,34 +172,39 @@ export const MENU_DEFS: MenuDef[] = [
       // ysm.json 是模型目录清单（ADR-038 D3，Go fileops / web-fs 后端双侧硬拒）——
       // visibleWhen 首个真实消费者：菜单层直接不给出死动作，替代 handler 内 toast 教育
       {
+        kind: "action",
         action: "file.rename",
         label: () => t("menu.rename"),
         icon: "cut",
         visibleWhen: (ctx) => (ctx.path || "").split(/[/\\]/).pop()?.toLowerCase() !== "ysm.json",
       },
-      { action: "file.move", label: () => t("menu.moveTo"), icon: "folderOpen" },
-      { action: "file.copy", label: () => t("menu.copyTo"), icon: "clipboard" },
+      { kind: "action", action: "file.move", label: () => t("menu.moveTo"), icon: "folderOpen" },
+      { kind: "action", action: "file.copy", label: () => t("menu.copyTo"), icon: "clipboard" },
       {
+        kind: "action",
         action: "file.push-to-pack",
         label: () => t("menu.pushToPack"),
         icon: "package",
       },
-      { divider: true },
-      { action: "file.edit-tags", label: () => t("menu.editTags"), icon: "tag" },
-      { divider: true },
+      { kind: "divider" },
+      { kind: "action", action: "file.edit-tags", label: () => t("menu.editTags"), icon: "tag" },
+      { kind: "divider" },
       {
+        kind: "action",
         action: "file.recycle",
         label: () => t("menu.recycle"),
         icon: "recycle",
         danger: true,
       },
       {
+        kind: "action",
         action: "file.reveal",
         label: () => t("menu.openFileLocation"),
         icon: "folderOpen",
       },
-      { divider: true },
+      { kind: "divider" },
       {
+        kind: "action",
         action: "file.copy-path",
         label: () => t("menu.copyFilePath"),
         icon: "clipboard",
@@ -174,19 +214,21 @@ export const MENU_DEFS: MenuDef[] = [
   {
     type: "dir",
     items: [
-      { action: "dir.rename", label: () => t("menu.rename"), icon: "cut" },
+      { kind: "action", action: "dir.rename", label: () => t("menu.rename"), icon: "cut" },
       {
+        kind: "action",
         action: "dir.batch-rename",
         label: () => t("menu.batchRename"),
         icon: "edit",
       },
-      { divider: true },
-      { action: "dir.move", label: () => t("menu.moveTo"), icon: "folderOpen" },
-      { action: "dir.copy", label: () => t("menu.copyTo"), icon: "clipboard" },
-      { divider: true },
-      { action: "dir.mkdir", label: () => t("menu.newSubfolder"), icon: "folder" },
-      { divider: true },
+      { kind: "divider" },
+      { kind: "action", action: "dir.move", label: () => t("menu.moveTo"), icon: "folderOpen" },
+      { kind: "action", action: "dir.copy", label: () => t("menu.copyTo"), icon: "clipboard" },
+      { kind: "divider" },
+      { kind: "action", action: "dir.mkdir", label: () => t("menu.newSubfolder"), icon: "folder" },
+      { kind: "divider" },
       {
+        kind: "action",
         action: "dir.recycle",
         label: () => t("menu.recycle"),
         icon: "recycle",
@@ -196,28 +238,17 @@ export const MENU_DEFS: MenuDef[] = [
   },
   {
     // 创意工坊模型行右键（community/events.ts 发射 ctx:show type="workshop"，ADR-208 D3）：
-    // 纯展示项（名称/路径/哈希/大小），行为挂 noop——与 instance/batch 标题项同款模式，
-    // 替代原 community 域手搓 menu:show + 空 onClick 的幽灵菜单（视觉行为等价）。
+    // 纯展示信息行（名称/路径/哈希/大小），kind:"header" 判别——不再借 noop 假动作，
+    // 表意走 icon 字段（ADR-245 语义名），体积走 utils/format formatBytes（自适应档位）。
     type: "workshop",
     items: [
+      { kind: "header", icon: "file", label: (ctx) => ctx.workshop?.name ?? "" },
+      { kind: "header", icon: "folderOpen", label: (ctx) => ctx.workshop?.path ?? "" },
+      { kind: "header", icon: "key", label: (ctx) => ctx.workshop?.hash || "—" },
       {
-        action: "noop",
-        label: (ctx) => `📄 ${ctx.workshop?.name ?? ""}`,
-      },
-      {
-        action: "noop",
-        label: (ctx) => `📂 ${ctx.workshop?.path ?? ""}`,
-      },
-      {
-        action: "noop",
-        label: (ctx) => `🔐 ${ctx.workshop?.hash || "—"}`,
-      },
-      {
-        action: "noop",
-        label: (ctx) => {
-          const size = ctx.workshop?.size ?? 0;
-          return size > 0 ? `📏 ${(size / 1024).toFixed(0)}KB` : "📏 ?KB";
-        },
+        kind: "header",
+        icon: "ruler",
+        label: (ctx) => formatBytes(ctx.workshop?.size ?? 0) || "—",
       },
     ],
   },

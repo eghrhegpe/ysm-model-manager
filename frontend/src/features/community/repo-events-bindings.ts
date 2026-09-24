@@ -121,7 +121,7 @@ export function cmReBindContextMenu(ctx: CmReCtx, listeners: ListenerRef[]): voi
       const name = row.dataset.name || "";
       const m = models.find((x) => x.name === name);
       if (!m) return;
-      // ADR-208 D3：右键展示项移植 menu-defs（type "workshop"，4 条纯展示项挂 noop）——
+      // ADR-208 D3：右键展示项移植 menu-defs（type "workshop"，4 条纯展示行 kind:"header"）——
       // ctx:show 走 orchestrator 过滤链（visibleWhen 护栏 / canWebAction / divider 折叠），
       // 杀灭裸发 menu:show + 空 onClick 幽灵菜单 + m.size! 非空断言
       // （exactOptionalPropertyTypes：条件携带可选字段，不显式传 undefined）

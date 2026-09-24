@@ -122,16 +122,16 @@ describe("canWebAction — 右键 action 在 web/viewer 模式下的可达性（
 describe("VIEWER_PURE_ACTIONS — 纯前端动作在 viewer 模式恒可达（P3 收敛）", () => {
   it("白名单即 context-menus.ts 原 VIEWER_OK_ACTIONS（零漂移断言）", () => {
     // 原 context-menus.ts 硬编码 VIEWER_OK_ACTIONS 收敛到此；新增纯前端
-    // 右键动作必须加到这里，测试断言集合精确等于声明
+    // 右键动作必须加到这里，测试断言集合精确等于声明。
+    // noop 假动作已退役（menu-defs kind 判别后标题项不占 action 空间，不再入集）
     expect([...VIEWER_PURE_ACTIONS].sort()).toEqual(
-      ["batch.copy-paths", "batch.export-list", "file.copy-path", "noop"].sort(),
+      ["batch.copy-paths", "batch.export-list", "file.copy-path"].sort(),
     );
   });
 
   it("纯前端动作不依赖 can()——桌面 binding 全不可用仍可达", () => {
     vi.stubGlobal(KEY, "browser");
     // web 下纯前端动作（DOM/剪贴板）恒可达
-    expect(canWebAction("noop")).toBe(true);
     expect(canWebAction("batch.copy-paths")).toBe(true);
     expect(canWebAction("batch.export-list")).toBe(true);
     expect(canWebAction("file.copy-path")).toBe(true);
@@ -141,5 +141,7 @@ describe("VIEWER_PURE_ACTIONS — 纯前端动作在 viewer 模式恒可达（P3
     vi.stubGlobal(KEY, "go"); // 桌面 can() 恒 true，但不该让未知动作漏过
     expect(canWebAction("file.recycle")).toBe(false); // 有 binding 但不在 VIEWER_WEB_ACTION_BINDINGS
     expect(canWebAction("instance.clear")).toBe(false);
+    // 退役假动作兜底：noop 不属任何可达集，误传即 false
+    expect(canWebAction("noop")).toBe(false);
   });
 });

@@ -168,7 +168,7 @@ export function payloadCtx(type: CtxShowPayload["type"]): CtxShowPayload {
   return base;
 }
 
-/** 断言 items 载荷与声明逐条一致（结构 + label 求值） */
+/** 断言 items 载荷与声明逐条一致（kind 判别 + label 求值） */
 export function expectItemsMatchDef(
   payload: { x: number; y: number; items: MenuItem[] },
   type: CtxShowPayload["type"],
@@ -181,12 +181,20 @@ export function expectItemsMatchDef(
   expect(payload.items).toHaveLength(def.items.length);
   def.items.forEach((d, i) => {
     const item = payload.items[i];
-    if (d.divider) {
+    if (d.kind === "divider") {
       expect(item).toEqual({ divider: true });
       return;
     }
-    expect(item.label).toBe(typeof d.label === "function" ? d.label(payloadCtx(type)) : d.label);
+    expect(item.label).toBe(d.label(payloadCtx(type)));
     expect(item.icon).toBe(d.icon);
+    if (d.kind === "header") {
+      // 标题项 = 纯展示行（kind 判别，noop 假动作已退役）：无 action、无 onClick、无 danger
+      expect(item.action).toBeUndefined();
+      expect(item.onClick).toBeUndefined();
+      expect(item.danger).toBeUndefined();
+      return;
+    }
+    expect(item.action).toBe(d.action);
     expect(item.danger).toBe(d.danger);
     expect(typeof item.onClick).toBe("function");
   });

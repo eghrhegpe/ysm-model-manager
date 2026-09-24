@@ -58,7 +58,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 199 |
+| createContextMenuHandlers | `frontend/src/features/context-menu/context-menu-handlers.ts` | 203 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -92,7 +92,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 91 |
+| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 94 |
 
 ### `dir:batch-rename`
 
@@ -147,7 +147,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 192 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 194 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -159,7 +159,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 182 |
+| runBatchFileOp | `frontend/src/features/context-menu/context-menu-handlers.ts` | 184 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -185,7 +185,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 92 |
+| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 95 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -270,7 +270,7 @@
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 104 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 334 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 269 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 303 |
@@ -432,8 +432,8 @@
 | dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 93 |
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
-| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 231 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 369 |
+| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 200 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 304 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 56 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 67 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 77 |

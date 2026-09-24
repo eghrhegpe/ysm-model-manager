@@ -70,6 +70,13 @@ export type MenuCtx = import("@/bus").CtxShowPayload & { paths: string[] };
 // dir 发射的条件展开），因此 dir-handler 的 `ctx.dir || ""` 防守保留，行为与结构均不变。
 export type FileCtx = Omit<MenuCtx, "dir">;
 export type DirCtx = Omit<MenuCtx, "path">;
+// P2-2 平权（锐评 #4 收口）：instance/batch 补与 file/dir 同构的表级窄化——
+//   instance 归 path/rtype/subdir/instanceName（open-folder 与 file 家族共享 path 是既成事实），
+//   不得读写 dir 域（dir）、batch 域（paths/count）、workshop 展示载荷；
+//   batch 归 paths/count/rtype，不得读写 path/instanceName/subdir（instance/file 域）、
+//   dir（dir 域）、workshop（展示载荷）。workshop 菜单 4 行全 kind:"header" 无 handler，无表可窄。
+export type InstanceCtx = Omit<MenuCtx, "dir" | "paths" | "count" | "workshop">;
+export type BatchCtx = Omit<MenuCtx, "dir" | "path" | "instanceName" | "subdir" | "workshop">;
 
 /** 右键菜单 handler 表（instance + batch + merge file/dir） */
 export type HandlerTable = Record<MenuAction, (ctx: MenuCtx) => void>;
@@ -90,7 +97,7 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
   const recycleBusy = createBusyLock();
 
   async function runBatchFileOp(
-    ctx: MenuCtx,
+    ctx: BatchCtx,
     op: {
       mode: BatchMode;
       binding: "MoveModelFile" | "CopyModelFile";
@@ -155,13 +162,8 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
     }
   }
 
-  /** 行为 handler 表（instance + batch + merge file/dir）；satisfies 断言覆盖 MENU_ACTIONS，漏挂拼错即编译错误 */
-  const HANDLERS: HandlerTable = {
-    noop: () => {},
-    ...FILE_HANDLERS,
-    ...DIR_HANDLERS,
-
-    // ── instance ──
+  /** instance 类子表（P2-2：InstanceCtx 编译期防跨表误读 dir/paths/count/workshop 字段） */
+  const INSTANCE_HANDLERS = {
     "instance.open-folder": async (ctx) => {
       if (!ctx.path) {
         toast(t("ctx.missingPath"), TOAST_MS.normal, "error");
@@ -194,8 +196,10 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
         rtype: ctx.rtype,
       });
     },
+  } satisfies Record<Extract<MenuAction, `instance.${string}`>, (ctx: InstanceCtx) => void>;
 
-    // ── batch ──
+  /** batch 类子表（P2-2：BatchCtx 编译期防跨表误读 path/instanceName/subdir/dir/workshop 字段） */
+  const BATCH_HANDLERS = {
     "batch.rename": (ctx) => bus.emit("batch:rename", { paths: ctx.paths }),
     "batch.move": (ctx) =>
       runBatchFileOp(ctx, {
@@ -272,7 +276,16 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
       downloadTextFile(names, `model-list-${new Date().toISOString().slice(0, 10)}.txt`);
       toast(t("ctx.exportListOk", { n: ctx.paths.length }), TOAST_MS.success);
     },
-  } satisfies Record<MenuAction, (ctx: MenuCtx) => void>;
+  } satisfies Record<Extract<MenuAction, `batch.${string}`>, (ctx: BatchCtx) => void>;
+
+  /** 行为 handler 表（instance + batch + file + dir 四子表合并）；HandlerTable 注解覆盖
+   *  MENU_ACTIONS 全集，漏挂拼错即编译错误。noop 假动作已退役（标题项 kind:"header" 无行为） */
+  const HANDLERS: HandlerTable = {
+    ...FILE_HANDLERS,
+    ...DIR_HANDLERS,
+    ...INSTANCE_HANDLERS,
+    ...BATCH_HANDLERS,
+  };
 
   return { HANDLERS };
 }

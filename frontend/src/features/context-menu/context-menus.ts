@@ -20,19 +20,17 @@ type MenuCtx = import("./context-menu-handlers.ts").MenuCtx;
  * 安全求值节点级 visibleWhen：谓词可能抛异常（如访问 ctx.foo.bar 而 foo 为 undefined），
  * 若直接炸穿会拖垮整条菜单渲染。此处异常兜底为「不可见 + console.warn」，
  * 单条谓词 bug 不应让整份菜单消失（ADR-021 B 层 P1 扩展护栏）。
+ * kind 判别后 visibleWhen 只活在 action 分支，签名随之收窄（divider/header 无此字段）。
  */
 function isItemVisible(
-  item: { action?: string; visibleWhen?: (ctx: MenuCtx) => boolean },
+  item: { action: string; visibleWhen?: (ctx: MenuCtx) => boolean },
   ctx: MenuCtx,
 ): boolean {
   if (!item.visibleWhen) return true;
   try {
     return item.visibleWhen(ctx);
   } catch (err) {
-    console.warn(
-      `[context-menus] visibleWhen 抛异常（action=${item.action ?? "divider"}），按不可见处理`,
-      err,
-    );
+    console.warn(`[context-menus] visibleWhen 抛异常（action=${item.action}），按不可见处理`, err);
     return false;
   }
 }
@@ -43,39 +41,44 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
   const paths = ctx.paths || [];
   const norm: MenuCtx = { ...ctx, paths };
   const isViewer = isViewerMode();
-  // 过滤链（自上而下 AND，任一失败即丢弃）：
-  //   1. 节点级 visibleWhen(ctx)（菜单即数据 P1 扩展；未定义 → 通过；抛异常 → 不可见）
+  // 过滤链（自上而下 AND，任一失败即丢弃）——kind 判别后只有 action 分支过守卫：
+  //   1. 节点级 visibleWhen(ctx)（菜单即数据；未定义 → 通过；抛异常 → 不可见）
   //   2. viewer-mode 全局过滤（canWebAction 单一判定：纯前端 + binding 探测）
-  // divider 折叠在此处（filter 之后）统一收口，渲染层 views/context-menu/index.ts 不再做去重。
+  //   divider/header 纯展示行无行为，不占 action 空间、不参与守卫过滤。
   const items = def.items.filter((item) => {
+    if (item.kind !== "action") return true;
     if (!isItemVisible(item, norm)) return false;
-    if (item.divider) return true;
-    if (!item.action) return true;
     if (!isViewer) return true;
     return canWebAction(item.action);
   });
   // divider 折叠：移除首/尾 divider 与相邻（连续）divider，避免渲染层出现多余/重复分割线。
   // 渲染层 show() 仅 item.divider → <hr>，无折叠逻辑，故折叠在此处（菜单即数据）收口。
   const collapsed = items.filter((it, i) => {
-    if (!it.divider) return true;
-    const prev = items[i - 1];
+    if (it.kind !== "divider") return true;
     const next = items[i + 1];
-    const prevDivider = prev?.divider === true;
-    const nextDivider = next?.divider === true;
-    const atEdge = i === 0 || next === undefined;
-    return !(prevDivider || nextDivider || atEdge);
+    return !(
+      items[i - 1]?.kind === "divider" ||
+      next?.kind === "divider" ||
+      i === 0 ||
+      next === undefined
+    );
   });
-  return collapsed.map((item) => {
-    if (item.divider) return { divider: true };
-    const label = item.label ? item.label(norm) : undefined;
-    const action = item.action;
-    const handler = action ? HANDLERS[action] : undefined;
-    if (action && !handler) {
+  return collapsed.map((item): MenuItem => {
+    if (item.kind === "divider") return { divider: true };
+    const label = item.label(norm);
+    if (item.kind === "header") {
+      // 标题行：无 action 无 onClick（noop 假动作已退役；载荷契约仍是 bus MenuItem）
+      const out: MenuItem = { label };
+      if (item.icon) out.icon = item.icon;
+      return out;
+    }
+    const handler = HANDLERS[item.action];
+    if (!handler) {
       // menu-defs.ts 的 action 与 HANDLERS 表键失配（测试应断言零警告）
-      console.warn(`[context-menus] 未注册 action: ${action}（见 menu-defs.ts）`);
+      console.warn(`[context-menus] 未注册 action: ${item.action}（见 menu-defs.ts）`);
     }
     const out: MenuItem = {
-      action,
+      action: item.action,
       label,
       onClick: handler ? () => handler(norm) : undefined,
     };

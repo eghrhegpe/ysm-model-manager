@@ -60,7 +60,7 @@ export interface CtxShowPayload {
   rtype?: string;
   /** MMD 用途子目录（全局 repo_subdir 选择，MMD 类型可选子目录；阶段 1 打开文件夹精确化） */
   subdir?: string;
-  /** 创意工坊模型右键展示载荷（ADR-208 D3：幽灵菜单移植 menu-defs，4 条展示项挂 noop） */
+  /** 创意工坊模型右键展示载荷（ADR-208 D3：幽灵菜单移植 menu-defs，4 条纯展示行 kind:"header"——noop 假动作已退役） */
   workshop?: { name: string; path: string; hash?: string; size?: number };
 }
 

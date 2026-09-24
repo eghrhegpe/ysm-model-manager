@@ -164,6 +164,8 @@ auto_fields:
     - collectSettingsCapSections
     - collectVisiblePredicates
     - collectVmdBoneNames
+    - collectVmdExpressionMap
+    - collectVmdMorphNames
     - COMMON_NODE_FIELDS
     - compKey
     - componentsCss
@@ -848,9 +850,11 @@ auto_fields:
     - syncLightTargetFromContent
     - TD_CAM_SPEED
     - TD_KEYMAP_KEY
+    - TD_KEYMAP_REGISTRY
     - TD_PIXEL_RATIO
     - TD_ROT_MODE
     - TdKeyAction
+    - TdKeymapSpec
     - TdNumericSpec
     - TdRotMode
     - teardown
@@ -895,13 +899,17 @@ auto_fields:
     - valueNoise2
     - valueNoise4D
     - Vec3
+    - VMD_EXPRESSION_CANDIDATES
+    - VMD_EXPRESSION_UNMAPPED
     - VMD_FOOT_IK_CANDIDATES
     - VMD_POSITION_SCALE_DEFAULT
     - VMD_REFERENCE_HEIGHT
     - VMD_RETARGET_CANDIDATES
     - VMD_RETARGET_UNMAPPED
     - VMD_ROOT_TRANSLATION_CANDIDATES
+    - VMD_TOE_ROTATION_CANDIDATES
     - VmdBindingPlan
+    - VmdExpressionManagerLike
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
@@ -913,6 +921,7 @@ auto_fields:
     - VrmAdapterDeps
     - VrmBonePanelCtx
     - VrmDataPort
+    - VrmExpressionPreset
     - VrmFootIKController
     - VrmMaterialDetail
     - VrmMaterialListItem
@@ -1017,7 +1026,7 @@ perf:
 ## 核心职责
 
 - **模型加载与解码**（`model3d-loader.ts`）：`preloadModel(path)` → 缓存 → Go `GetModel3DSpec` → 失败兜 WASM `decodeYsmViaWasm` → 输出 `BedrockGeometry`（bones/cubes/materials/textures）；`textureCache` 引用计数池跨模型复用（同 URL 只 upload 一次 GPU）
-- **几何/骨骼/立方体**（`geometry.ts`/`cube-mesh.ts`/`mesh-builder.ts`/`bone-tools.ts`/`model-group-builder.ts`）：BedrockGeometry → Three.js Mesh（按骨骼组拆分、按面 alpha 分 split、perComponent 纹理 slot 绑定）；`BoneTree` 跨格式抽象；`semantic-bones.ts` 23 个语义骨骼 id（VRM/MMD/YSM 三格式统一，宽容缺省）
+- **几何/骨骼/立方体**（`geometry.ts`/`cube-mesh.ts`/`mesh-builder.ts`/`bone-tools.ts`/`model-group-builder.ts`）：BedrockGeometry → Three.js Mesh（按骨骼组拆分、按面 alpha 分 split、perComponent 纹理 slot 绑定）；`BoneTree` 跨格式抽象；`semantic-bones.ts` 语义骨骼 id 集（VRM/MMD/YSM 三格式统一，宽容缺省；含 toes——ADR-306 P1b 起脚尖链 CCD 需要）
   - **cube UV 双端逐值同构（foxcar 贴图颠倒修复，2026-09）**：网页兜底链（`spec-builder.ts → model-group-builder.ts → cube-mesh.ts`）的 `expandBoxUV`/`mdCmBuildFace` 必须与 Go `spec.go`/`packFaceVertices` 同构——canonical UV 槽位 + up/down 在打包点反转角点（负 uv_size 有符号、禁止归一化），细节与黄金参照见 [go-threejs](./go-threejs.md) 不变量「per-face/box UV 的 up/down 角点定向」。旧 JS 兜底 `model3d-spec.ts`（角点序与 Go 漂移的第二套实现）已于 2026-09 删除，`CUBE_EPS` 单点并入 cube-mesh.ts；WASM 解码的诊断纹理范围估算（`wasm-decode.ts|computeBoneTexRange`）同口径——faceUV 优先且负 uv_size 取有符号包围盒
 - **材质与纹理**（`texture-loader.ts`/`texture-cache.ts`/`texture-alpha.ts`/`mc-tints.ts`）：`loadTextures` 并行 acquire + 50ms 轮询 complete（P2 修复加 15s 超时兜底，悬挂 URL 不再永久 pending）；KTX2 压缩管线（WASM BasisEncoder → base64 → Go `SaveCachedTexture` 缓存）
 - **渲染循环与性能**（`render-budget.ts`/`frustum-cull.ts`/`scene-stats.ts`/`screenshot.ts`/`screenshot-render.ts`）：perFrame 回调驱动 `update(dt)`（动画/感知/物理）；自适应像素比 / 帧率上限（GPU 饱和时预防性降档）；视锥裁剪（mesh 级 `frustumCulled=false`，骨骼旋转时扁平部件误判已修）；离屏多角度截图（front/45/side/back45）

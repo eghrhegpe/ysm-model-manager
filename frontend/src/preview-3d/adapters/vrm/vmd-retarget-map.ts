@@ -7,8 +7,9 @@
 //
 // v1 显式丢弃的 MMD 骨骼（VRM 无对应，或需按轴混合易引入扭曲）：
 //   - 扭骨：左腕捩/右腕捩（上腕扭转）、左手捩/右手捩（手腕扭转）、左肩捩/右肩捩
-//   - IK 骨：左足ＩＫ/右足ＩＫ、左つま先ＩＫ/右つま先ＩＫ（IK 目标，非 FK 骨；
-//     其 VMD 关键帧活在 position 通道，当作 FK 旋转源只会得到恒等轨道）
+//   - IK 骨：左足ＩＫ/右足ＩＫ（IK 目标，非 FK 骨；其 VMD 关键帧活在 position 通道，
+//     当作 FK 旋转源只会得到恒等轨道）；左つま先ＩＫ/右つま先ＩＫ 例外——关键帧活在
+//     quaternion 通道（P1b 补映射，见 VMD_TOE_ROTATION_CANDIDATES），不在此列
 //   - 形变辅助骨：足D/ひざD/足首D/足先EX
 //   - 整体根：全ての親、グルーブ（グルーブ 仅作位移兜底，见 VMD_ROOT_TRANSLATION）
 //
@@ -140,6 +141,18 @@ export const VMD_ROOT_TRANSLATION_CANDIDATES: readonly string[] = [
 export const VMD_FOOT_IK_CANDIDATES: Readonly<Record<"left" | "right", readonly string[]>> = {
   left: ["左足ＩＫ", "左足IK", "leftFootIK", "LeftFootIK"],
   right: ["右足ＩＫ", "右足IK", "rightFootIK", "RightFootIK"],
+};
+
+/**
+ * 脚尖旋转源候选名（ADR-243 锐评对账 P1b，顺序即优先级）。
+ *
+ * 与足ＩＫ不同：MMD 的 つま先ＩＫ 关键帧活在 **quaternion** 通道（作者手调的脚尖俯仰），
+ * 是合法的 FK 旋转源——映射到 VRM `leftToes`/`rightToes` 即可复用标准重定向管线，
+ * 不需要 IK。踮脚/高跟鞋类动作的脚尖姿态由此救回。
+ */
+export const VMD_TOE_ROTATION_CANDIDATES: Readonly<Record<"left" | "right", readonly string[]>> = {
+  left: ["左つま先ＩＫ", "左つま先IK", "leftToeIK", "LeftToeIK"],
+  right: ["右つま先ＩＫ", "右つま先IK", "rightToeIK", "RightToeIK"],
 };
 
 /** MMD 单位 → 米的默认缩放（MMD 标准模型 ≈ 20 单位高 ≈ 1.6 m；ADR-243 §2.5） */

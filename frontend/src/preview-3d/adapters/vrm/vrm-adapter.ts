@@ -77,6 +77,7 @@ async function vrmDiag(
   }
 }
 
+import { t } from "@/core/i18n/t.ts";
 import type { MmdPlayBridge } from "@/preview-3d/infra/content-bridges.ts";
 import {
   getVrmMaterialDetail,
@@ -455,8 +456,12 @@ async function loadVmdClips(
       const vmd = await VmdObject.ParseFromBuffer(
         bytesToArrayBuffer(base64ToBytes(b64) as Uint8Array),
       );
-      const retarget = buildVmdRetargetClip(vmd, vrm.humanoid);
-      // 一条 FK 轨道都建不起来（VMD 驱动的骨名本模型一个都没有）→ 不产条目，
+      // 表情通道（ADR-306 §2.2）：传 expressionManager 使可映射 morph 改道进 clip；
+      // 无 expressionManager（VRM0 / 该面缺席）→ null ⇒ 退化为 ADR-243 v1（morph 全丢弃）。
+      const retarget = buildVmdRetargetClip(vmd, vrm.humanoid, {
+        expressionManager: vrm.expressionManager ?? null,
+      });
+      // 一条轨道都建不起来（VMD 驱动的骨名本模型一个都没有、morph 也全不可映射）→ 不产条目，
       // 否则播放面板会多出「点了没反应」的空动作
       if (retarget.clip.tracks.length === 0) continue;
       clips.push({
@@ -700,6 +705,7 @@ function Stage4MenuPanels(
               motion.motionAction.paused = !motion.motionPlaying;
             },
             animDir: null,
+            notice: VRM_PLAY_NOTICE,
           }
         : null,
     perception: { state: perception.perceptionState, caps: perception.perceptionCaps },
@@ -1013,6 +1019,13 @@ const VRM_PLAY_EMPTY_HINT =
   "未找到动作文件。把 .vrma / .vmd 放到该模型所在目录即可（同目录自动发现）；MMD 动作库（CustomAnim）里的 .vmd 也会自动重定向到本模型。";
 
 /**
+ * [ADR-243 锐评对账 P1a] VMD 动作版权常驻提示：MMD 配布モーション条款常含「MMD 以外使用禁止」
+ * 等限制，重定向播放属灰色地带——工具层不裁决合规性，但雷区立牌。走 i18n（`preview.playNotice`），
+ * MmdPlayBridge.notice 缺省不渲染，MMD/YSM 桥零影响。
+ */
+const VRM_PLAY_NOTICE = t("preview.playNotice");
+
+/**
  * [ADR-242 后续] 无动作时的空播放桥：clips 空 → playNodes 走空态引导分支。
  * 面板须显示引导而非消失（对齐 MMD 固定表项行为）。
  */
@@ -1025,6 +1038,7 @@ function emptyVrmPlayBridge(): MmdPlayBridge {
     select: () => {},
     animDir: null,
     emptyHint: VRM_PLAY_EMPTY_HINT,
+    notice: VRM_PLAY_NOTICE,
   };
 }
 

@@ -213,6 +213,7 @@ function makeFakeVmd(
     | [string, number, [number, number, number]]
     | [string, number, [number, number, number], [number, number, number, number]]
   >,
+  morphs: Array<{ morphName: string; frameNumber: number; weight: number }> = [],
 ): unknown {
   const reader = <T>(items: T[]) => ({
     length: items.length,
@@ -232,7 +233,7 @@ function makeFakeVmd(
         interpolation: new Array(16).fill(20),
       })),
     ),
-    morphKeyFrames: reader([]),
+    morphKeyFrames: reader(morphs),
   };
 }
 
@@ -266,6 +267,10 @@ function makeFakeVrm(humanoidNodes: Record<string, THREE.Object3D> = {}) {
       return null;
     },
     setValue: vi.fn(),
+    // ADR-306：retarget 会对 manager 调 getExpressionTrackName（.bind）——fake 面必须齐
+    getExpressionTrackName: vi.fn((name: string) =>
+      name === "blink" ? "VRMExpression_blink.weight" : null,
+    ),
   };
   const result = {
     scene,
@@ -545,6 +550,7 @@ async function buildWithMotion(opts: {
   vmdReject?: boolean;
   humanoidNodes?: Record<string, THREE.Object3D>;
   readVmd?: string | null;
+  extraSceneNodes?: THREE.Object3D[];
 }): Promise<{
   content: Awaited<ReturnType<typeof buildVrmScene>>;
   // 显式 `| undefined`（非可选属性）：exactOptionalPropertyTypes 下不许把 undefined 赋给 `play?`
@@ -556,6 +562,11 @@ async function buildWithMotion(opts: {
   // PropertyBinding 只会打一条警告后静默失效（真实 loader 把 normalizedHumanBonesRoot
   // 挂在 gltf.scene 下，见 ADR-243 §2.2）
   for (const node of Object.values(nodes)) {
+    if (!node.parent) vrm.scene.add(node);
+  }
+  // ADR-306：表情轨道（VRMExpression_<name>.weight）的绑定对象挂进 mixer root，
+  // mixer 每帧直写 `weight` 属性——断言 e2e 的唯一观察点
+  for (const node of opts.extraSceneNodes ?? []) {
     if (!node.parent) vrm.scene.add(node);
   }
   // GLTFLoader.parse 同时服务主模型与 .vrma：第 1 次是主模型，之后按 .vrma 处理
@@ -707,6 +718,67 @@ describe("VMD 动作加载与重定向（ADR-243）", () => {
 
     // 轴系翻转（x 取反）+ 贝塞尔插值 ⇒ 四元数必然离开恒等
     expect(Math.abs(arm.quaternion.w - 1)).toBeGreaterThan(0.01);
+    content.dispose();
+  });
+
+  // ── 表情通道（ADR-306 §2.2）：可映射 morph 改道进 clip，AnimationMixer 每帧直写
+  //    `VRMExpression_<name>.weight`——e2e 断言挂在 mixer root 的表情对象上 ──
+
+  it("VMD まばたき 帧 → 改道表情轨道被 mixer 驱动（mid-time 权重 0< w <0.5）", async () => {
+    const nodes = makeNormalizedNodes();
+    // 真实 VRMExpression 构造即 `this.weight = 0`（three-vrm-core）；three 的
+    // PropertyBinding.bind 要求目标属性**已存在**（undefined 即报 not-found 跳过写入），
+    // 故 fake 载体对象必须初始化 weight
+    const exprObj = new THREE.Object3D() as THREE.Object3D & { weight: number };
+    exprObj.name = "VRMExpression_blink"; // 与 fake getExpressionTrackName 的返回值对齐
+    exprObj.weight = 0;
+    const { content } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/wave.vmd"],
+      vmd: makeFakeVmd(
+        [
+          ["左腕", 0, [0, 0, 0], [0, 0, 0, 1]],
+          ["左腕", 30, [0, 0, 0], [0.6, 0, 0, 0.8]],
+        ],
+        [
+          { morphName: "まばたき", frameNumber: 0, weight: 0.5 },
+          { morphName: "まばたき", frameNumber: 30, weight: 0 },
+        ],
+      ),
+      humanoidNodes: nodes,
+      extraSceneNodes: [exprObj],
+    });
+
+    content.update(0.5); // 0s(0.5) → 1s(0) 线性插值 ⇒ 0.5s 处 ≈ 0.25
+
+    expect(exprObj.weight, "mixer 应把改道表情轨道写进 VRMExpression_blink.weight").toBeGreaterThan(0.1);
+    expect(exprObj.weight).toBeLessThan(0.4);
+    content.dispose();
+  });
+
+  it("不可映射 morph 名（作者自定义）→ 表情载体永不被驱动（轨道未进 clip）", async () => {
+    const nodes = makeNormalizedNodes();
+    const exprObj = new THREE.Object3D() as THREE.Object3D & { weight: number };
+    exprObj.name = "VRMExpression_blink";
+    exprObj.weight = 0; // 初值哨兵：mixer 从未写入 ⇒ 停 0
+    const { content, play } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/wave.vmd"],
+      vmd: makeFakeVmd(
+        [
+          ["左腕", 0, [0, 0, 0], [0, 0, 0, 1]],
+          ["左腕", 30, [0, 0, 0], [0.6, 0, 0, 0.8]],
+        ],
+        [{ morphName: "作者自定义", frameNumber: 0, weight: 1 }],
+      ),
+      humanoidNodes: nodes,
+      extraSceneNodes: [exprObj],
+    });
+
+    // 条目仍在（FK 轨道撑住了 clip）——只是表情通道静默缺席
+    expect(play?.clips.map((c) => c.label)).toEqual(["wave"]);
+
+    content.update(0.5);
+    // 作者自定义 morph 不在候选表 → 不改道，clip 无表情轨道 ⇒ 载体 weight 恒为初值 0
+    expect(exprObj.weight).toBe(0);
     content.dispose();
   });
 
@@ -1430,6 +1502,27 @@ describe("桥消费（material / play / screenshot / 感知 update）", () => {
     bridge!.select!(1);
     bridge!.select!(99);
     expect(bridge!.currentIndex!()).toBe(1);
+    // [ADR-243 锐评对账 P1a] 有动作的常态桥也必须带版权提示（配布条款雷区立牌）
+    expect(bridge!.notice).toBeTruthy();
+    content.dispose();
+  });
+
+  it("play 桥：空态桥同样带 notice（版权提示与空态引导不互斥）", async () => {
+    const vrm = makeFakeVrm();
+    hoisted.parseMock.mockImplementation(() => ({ userData: { vrm } }));
+    hoisted.readBytesMock.mockResolvedValue(btoa("VRM"));
+    hoisted.listPathsMock.mockResolvedValue(["/vrm/t.vrm"]);
+    let bridge: Record<string, unknown> | null = null;
+    const panels = makePanels();
+    panels.playNodes = (b) => {
+      bridge = b as unknown as Record<string, unknown>;
+      return [];
+    };
+    const { ctx } = makeCtx();
+    const content = await buildVrmScene(ctx, "/vrm/t.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock, panels: panels, listAllFilePaths: hoisted.listPathsMock });
+    expect(bridge).not.toBeNull();
+    expect(bridge!.emptyHint).toBeTruthy(); // 空态引导在
+    expect(bridge!.notice).toBeTruthy(); // 版权提示也在
     content.dispose();
   });
 

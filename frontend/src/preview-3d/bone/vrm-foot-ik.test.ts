@@ -243,3 +243,113 @@ describe("dispose", () => {
     expect(solveIKMock).not.toHaveBeenCalled();
   });
 });
+
+// ── 脚尖链（ADR-243 P1b：つま先ＩＫ 驱动 leftToes/rightToes）──
+
+/** 单脚尖两骨：foot(±0.1,0,0.1) → toe(+0.12,0,0)，脚尖静止世界 z = 0.1 */
+function makeToe(offsetX: number) {
+  const foot = new THREE.Object3D();
+  foot.position.set(offsetX, 0, 0.1);
+  const toe = new THREE.Object3D();
+  toe.position.set(0, -0.02, 0.12);
+  foot.add(toe);
+  return { foot, toe };
+}
+
+/** VRM 双脚尖形态：hips → 大腿 → 膝 → 踝 → 脚尖（toe 链根取踝） */
+function makeVrmToeRig() {
+  const { tree, semanticBones, left, right, pelvis } = makeVrmLegRig();
+  const leftToe = makeToe(0.1);
+  const rightToe = makeToe(-0.1);
+  left.foot.add(leftToe.toe);
+  right.foot.add(rightToe.toe);
+
+  // 既有树 + 4 个脚尖节点（toe 骨挂在 foot 下）
+  for (const [id, parentId, object] of [
+    ["leftToes", "leftFoot", leftToe.toe],
+    ["rightToes", "rightFoot", rightToe.toe],
+  ] as const) {
+    tree.byId.set(id, { id, name: id, parentId, object });
+  }
+
+  const toeSemantic: SemanticBoneMap = {
+    ...semanticBones,
+    leftToes: { id: "leftToes", object: leftToe.toe },
+    rightToes: { id: "rightToes", object: rightToe.toe },
+  };
+  return { tree, semanticBones: toeSemantic, left, right, leftToe, rightToe, pelvis };
+}
+
+describe("脚尖链驱动（ADR-243 P1b）", () => {
+  it("无脚尖语义 → 零影响：只有腿链，行为与 v1 完全一致", () => {
+    const { tree, semanticBones } = makeVrmLegRig();
+    const controller = createVrmFootIKController(tree, semanticBones);
+
+    controller.apply(0, { left: fixedSampler([0, 0.2, 0]), right: null });
+
+    expect(solveIKMock).toHaveBeenCalledTimes(1); // 只有腿
+  });
+
+  it("有脚尖语义：每侧追加一次 toe 链 solveIK（链 = [踝, 脚尖]）", () => {
+    const { tree, semanticBones, left, right, leftToe, rightToe, pelvis } = makeVrmToeRig();
+    const controller = createVrmFootIKController(tree, semanticBones);
+
+    controller.apply(0, {
+      left: fixedSampler([0, 0.2, 0]),
+      right: fixedSampler([0, 0, 0]),
+    });
+
+    // 腿链 2 次 + 脚尖链 2 次
+    expect(solveIKMock).toHaveBeenCalledTimes(4);
+    const calls = solveIKMock.mock.calls;
+    // 按腿分组：左腿 → 左脚尖 → 右腿 → 右脚尖（脚尖跟在自身足 IK 之后）
+    // 腿链 4 节，链根 = 骨盆（ADR-243 §2.8）
+    expect(calls[0][0]).toEqual([pelvis, left.root, left.knee, left.foot]);
+    // 左脚尖链：链根 = 踝（endEffector 同链尾）
+    const toeCall = calls[1];
+    expect(toeCall[0]).toHaveLength(2);
+    expect(toeCall[0][0]).toBe(left.foot);
+    expect(toeCall[0][1]).toBe(leftToe.toe);
+    const toeCallR = calls[3];
+    expect(toeCallR[0][0]).toBe(right.foot);
+    expect(toeCallR[0][1]).toBe(rightToe.toe);
+  });
+
+  it("toe 目标 = 脚尖静止世界 + 同一采样偏移（与腿共用 sampler，钳制参数独立更保守）", () => {
+    const { tree, semanticBones } = makeVrmToeRig();
+    const controller = createVrmFootIKController(tree, semanticBones);
+
+    controller.apply(0, { left: fixedSampler([0.05, 0.1, -0.02]), right: null });
+
+    // 单侧驱动：第 1 次 = 左腿，第 2 次 = 左脚尖链
+    expect(solveIKMock).toHaveBeenCalledTimes(2);
+    const [toeChain, toeTarget, toeCfg] = solveIKMock.mock.calls[1];
+    expect(toeChain).toHaveLength(2);
+    // 脚尖静止世界 = foot(0.1, 0, 0) + toe(0, -0.02, 0.12) = (0.1, -0.02, 0.12)
+    expect(toeTarget.x).toBeCloseTo(0.15, 6);
+    expect(toeTarget.y).toBeCloseTo(0.08, 6);
+    expect(toeTarget.z).toBeCloseTo(0.1, 6);
+    // 脚尖钳制比腿保守（两节链小角度足矣，防 CCD 大步长把脚尖甩上天）
+    expect(toeCfg?.maxAngle).toBeLessThan(Math.PI / 3);
+    expect(toeCfg?.minAngle).toBeGreaterThan(-Math.PI / 3);
+  });
+
+  it("采样失败（false）→ 脚尖链同样跳过", () => {
+    const { tree, semanticBones } = makeVrmToeRig();
+    const controller = createVrmFootIKController(tree, semanticBones);
+
+    controller.apply(0, { left: { sample: () => false }, right: null });
+
+    expect(solveIKMock).not.toHaveBeenCalled();
+  });
+
+  it("dispose 后脚尖链也不再驱动", () => {
+    const { tree, semanticBones } = makeVrmToeRig();
+    const controller = createVrmFootIKController(tree, semanticBones);
+    controller.dispose();
+
+    controller.apply(0, { left: fixedSampler([0, 0.2, 0]), right: null });
+
+    expect(solveIKMock).not.toHaveBeenCalled();
+  });
+});

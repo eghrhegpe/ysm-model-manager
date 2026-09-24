@@ -78,11 +78,29 @@ const IK_CONFIG: IKConfig = {
   maxAngle: Math.PI / 3,
 };
 
+/**
+ * 脚尖链求解参数（ADR-243 P1b：つま先ＩＫ）。两节链 `[踝, 脚尖]` 只有一个自由关节，
+ * 角度空间小：钳制收紧到 ±π/6 防 CCD 单步把脚尖甩翻（比腿链保守）；`j >= 1` 遍历
+ * 约束下链根（踝）锚定，旋转全部落在脚尖关节——正是 MMD つま先ＩＫ 的语义
+ * （足跟着地、以踝为轴翘脚尖）。
+ */
+const TOE_IK_CONFIG: IKConfig = {
+  iterations: 4,
+  tolerance: 0.005,
+  damping: 0.6,
+  minAngle: -Math.PI / 6,
+  maxAngle: Math.PI / 6,
+};
+
 interface Leg {
   side: "left" | "right";
   chain: THREE.Object3D[];
   /** 足骨在**静止位姿**下的世界位置（创建期快照；见文件头公式） */
   restWorld: THREE.Vector3;
+  /** 脚尖链 `[踝, 脚尖]`（模型无 toes 语义骨时为 null；链根踝 = 锚点不旋转） */
+  toeChain: THREE.Object3D[] | null;
+  /** 脚尖骨在**静止位姿**下的世界位置（创建期快照，与 restWorld 同纪律） */
+  toeRestWorld: THREE.Vector3 | null;
 }
 
 /**
@@ -100,7 +118,30 @@ export function createVrmFootIKController(
   for (const leg of extractLegChains(boneTree, semanticBones)) {
     const restWorld = new THREE.Vector3();
     leg.endEffector.getWorldPosition(restWorld);
-    legs.push({ side: leg.side, chain: leg.chain, restWorld });
+    // 脚尖链：踝 → toes 语义骨（模型缺 toes / 父子关系不符 → null，v1 行为不变）。
+    // solveIK 遍历 j>=1 跳过链根 ⇒ 链根取踝，旋转全部落在脚尖关节（踝锚定）。
+    const toesEntry = semanticBones?.[leg.side === "left" ? "leftToes" : "rightToes"];
+    let toeChain: THREE.Object3D[] | null = null;
+    let toeRestWorld: THREE.Vector3 | null = null;
+    if (toesEntry?.object) {
+      const toesNode = boneTree?.byId.get(toesEntry.id);
+      // 防乱挂：toes 的 parent 必须就是踝（MMD/VRM 通例），否则跳过不猜
+      const ankleNode = boneTree?.byId.get(leg.endEffectorId ?? "");
+      if (toesNode?.object && ankleNode && toesNode.parentId === ankleNode.id) {
+        toeChain = [leg.endEffector, toesNode.object];
+        toeRestWorld = new THREE.Vector3();
+        toesNode.object.getWorldPosition(toeRestWorld);
+      }
+    }
+    legs.push({
+      side: leg.side,
+      chain: leg.chain,
+      restWorld,
+      // Leg 契约要求 toeChain/toeRestWorld 必在（可为 null）——缺脚趾链的腿填 null，
+      // 不用条件 spread（产物类型变 optional 字段，赋给 Leg 报类型错）
+      toeChain,
+      toeRestWorld,
+    });
   }
   if (legs.length === 0) return NOOP_CONTROLLER;
 
@@ -116,6 +157,12 @@ export function createVrmFootIKController(
         if (!sampler?.sample(timeSeconds, offset)) continue;
         target.copy(leg.restWorld).add(offset);
         solveIK(leg.chain, target, IK_CONFIG);
+        // 脚尖链：目标 = 脚尖静止世界 + 同一偏移（つま先ＩＫ 与 足ＩＫ 共享同一 IK 目标，
+        // MMD 源模型里 つま先ＩＫ 也是足ＩＫ 的子关节，位移源一致）
+        if (leg.toeChain && leg.toeRestWorld) {
+          target.copy(leg.toeRestWorld).add(offset);
+          solveIK(leg.toeChain, target, TOE_IK_CONFIG);
+        }
       }
     },
     dispose(): void {

@@ -17,6 +17,8 @@ export interface LegChain {
   chain: IKChain;
   /** 链末端（踝）；与 `chain[chain.length - 1]` 同一引用 */
   endEffector: THREE.Object3D;
+  /** 链末端（踝）在树中的 id（`chain[chain.length - 1]` 的树节点键；脚尖链等后继提取用） */
+  endEffectorId: string;
 }
 
 /** 语义骨 id 查表（缺项返回 null） */
@@ -64,7 +66,12 @@ export function extractLegChains(
       (chainRootId !== upperLegId ? extractIKChainFromTree(boneTree, upperLegId, footId) : null);
     if (!chain || chain.length < 2) continue;
 
-    legs.push({ side: def.side, chain, endEffector: chain[chain.length - 1] });
+    legs.push({
+      side: def.side,
+      chain,
+      endEffector: chain[chain.length - 1],
+      endEffectorId: footId,
+    });
   }
   return legs;
 }

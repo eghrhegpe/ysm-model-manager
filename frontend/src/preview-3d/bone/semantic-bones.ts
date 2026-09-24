@@ -42,6 +42,8 @@ export type SemanticBoneId =
   | "rightLowerLeg"
   | "leftFoot"
   | "rightFoot"
+  | "leftToes"
+  | "rightToes"
   | "center";
 
 /** 全部语义骨骼 id（稳定顺序：躯干 → 头颈 → 四肢；消费方遍历用） */
@@ -69,6 +71,8 @@ export const SEMANTIC_BONE_IDS: readonly SemanticBoneId[] = [
   "rightLowerLeg",
   "leftFoot",
   "rightFoot",
+  "leftToes",
+  "rightToes",
 ];
 
 /** 语义骨骼解析结果：语义 → 格式内骨骼（object 可直接改变换；缺失 = 该语义缺省） */
@@ -235,6 +239,10 @@ export const MMD_SEMANTIC_CANDIDATES: Record<SemanticBoneId, readonly string[]> 
     "rightFoot",
     "RightFoot",
   ],
+  // 脚趾 FK 骨（ADR-306 P1b）：MMD 通例 左/右つま先；故意不含 ＩＫ 变体
+  // （つま先ＩＫ 是 IK 目标骨，quaternion 通道走 vmd-retarget 改道，不是 FK 语义落点）
+  leftToes: ["左つま先", "左つま先２", "左つま先2", "left toes", "LeftToes", "leftToes"],
+  rightToes: ["右つま先", "右つま先２", "右つま先2", "right toes", "RightToes", "rightToes"],
 };
 
 // ---------------------------------------------------------------------------
@@ -487,6 +495,9 @@ const YSM_SEMANTIC_CANDIDATES: Record<SemanticBoneId, readonly string[]> = {
     "rFoot",
     "rAnkle",
   ],
+  // 脚趾（ADR-306 P1b：VRM foot IK 脚趾链落点）；YSM 通例 humanoid 命名 + 日文变体
+  leftToes: ["leftToes", "left_toes", "LeftToes", "left toes", "左つま先", "L_Toes", "lToes"],
+  rightToes: ["rightToes", "right_toes", "RightToes", "right toes", "右つま先", "R_Toes", "rToes"],
 };
 
 /**

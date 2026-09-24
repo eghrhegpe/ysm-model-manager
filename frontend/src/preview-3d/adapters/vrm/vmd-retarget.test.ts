@@ -10,13 +10,27 @@ import { describe, expect, it } from "vitest";
 import {
   buildVmdRetargetClip,
   collectVmdBoneNames,
+  collectVmdExpressionMap,
   estimateVrmHeight,
   resolveVmdBindings,
   rewriteVmdTracks,
   scaleForHeight,
   type VmdBindingPlan,
+  type VmdExpressionManagerLike,
   type VmdHumanoidRig,
 } from "./vmd-retarget.ts";
+
+/** 表情轨道名解析桩（鸭子 VmdExpressionManagerLike）：まばたき→blink / あ→aa / にこり→happy */
+const EXPR_TRACK_NAME_MOCK: VmdExpressionManagerLike = {
+  getExpressionTrackName: (name) =>
+    (
+      {
+        まばたき: "VRMExpression_blink.weight",
+        あ: "VRMExpression_aa.weight",
+        にこり: "VRMExpression_happy.weight",
+      } as Record<string, string>
+    )[name] ?? null,
+};
 
 // ---------------------------------------------------------------------------
 // 假 VMD（鸭子类型）
@@ -216,6 +230,105 @@ describe("resolveVmdBindings", () => {
     const plan = resolveVmdBindings(new Set(["左腕"]), makeRig(makeStandingRig()));
     expect(plan.footIK).toEqual({ left: null, right: null });
   });
+
+  // ── 脚尖旋转源（ADR-243 锐评对账 P1b：つま先ＩＫ quaternion 通道）──
+
+  it("つま先ＩＫ 命中 toe 旋转源（全角 ＩＫ 为主，半角变体兜底）", () => {
+    const plan = resolveVmdBindings(
+      new Set(["左つま先ＩＫ", "右つま先IK", "左腕"]),
+      makeRig(makeStandingRig()),
+    );
+    expect(plan.toeRotation).toEqual({ left: "左つま先ＩＫ", right: "右つま先IK" });
+    // toe 源不进旋转绑定（它只是「改道到 toes」的路标，绑定仍走 leftToes 候选）
+    expect(plan.bindings.map((b) => b.mmd)).toEqual(["左腕"]);
+  });
+
+  it("VMD 未驱动 つま先ＩＫ → toe 旋转源双侧 null", () => {
+    const plan = resolveVmdBindings(new Set(["左つま先"]), makeRig(makeStandingRig()));
+    expect(plan.toeRotation).toEqual({ left: null, right: null });
+  });
+
+  // ── 表情映射解析（ADR-306 §2.1/§2.2）──
+
+  it("morph 名解析：VMD 实际驱动 ∩ 候选表 → preset → 改道表（ghost morph 表用）", () => {
+    const morphs = collectVmdExpressionMap(
+      new Set(["まばたき", "あ", "作者自定义", "にこり"]),
+      EXPR_TRACK_NAME_MOCK,
+    );
+    expect(morphs.get("まばたき")).toBe("blink");
+    expect(morphs.get("あ")).toBe("aa");
+    expect(morphs.get("にこり")).toBe("happy");
+    expect(morphs.has("作者自定义")).toBe(false);
+  });
+
+  it("无 expressionManager → 空 map（ADR-243 v1 行为：morph 全丢弃）", () => {
+    const morphs = collectVmdExpressionMap(new Set(["まばたき"]), null);
+    expect(morphs.size).toBe(0);
+  });
+
+  it("幽灵网格 morph 表只填可映射子集（键进表做上游白名单，不可映射的继续被上游跳过）", () => {
+    const nodes = makeStandingRig();
+    const vmd = makeFakeVmd(
+      [bone("左腕", 0)],
+      [
+        { morphName: "まばたき", frameNumber: 0, weight: 0 },
+        { morphName: "作者自定义", frameNumber: 0, weight: 0 },
+      ],
+    );
+    const { clip } = buildVmdRetargetClip(vmd, makeRig(nodes), {
+      positionScale: 1,
+      expressionManager: EXPR_TRACK_NAME_MOCK,
+    });
+    const names = clip.tracks.map((t) => t.name);
+    expect(names).toContain("VRMExpression_blink.weight");
+    expect(names.some((n) => n.includes("morphTargetInfluences"))).toBe(false);
+    expect(names.some((n) => n.includes("作者自定义"))).toBe(false);
+  });
+
+  it("纯表情 VMD（零可映射骨）→ 早退分支不吞表情轨道，clip 只装表情轨道", () => {
+    const nodes = makeStandingRig();
+    // 无 bone（collectVmdBoneNames 空 ⇒ 幽灵骨零条），只有可映射 morph ⇒ 走主路径产出纯表情 clip。
+    // 两帧让 duration > 0（单帧在 t=0 ⇒ duration 0，无意义）
+    const vmd = makeFakeVmd(
+      [],
+      [
+        { morphName: "まばたき", frameNumber: 0, weight: 0.5 },
+        { morphName: "まばたき", frameNumber: 30, weight: 0 },
+      ],
+    );
+    const { clip } = buildVmdRetargetClip(vmd, makeRig(nodes), {
+      positionScale: 1,
+      expressionManager: EXPR_TRACK_NAME_MOCK,
+    });
+    const names = clip.tracks.map((t) => t.name);
+    expect(names).toEqual(["VRMExpression_blink.weight"]); // 只有表情轨道，无骨骼轨道
+    expect(clip.duration).toBeGreaterThan(0);
+  });
+
+  it("纯表情 VMD 但无 expressionManager → 退化为空 clip（ADR-243 v1：morph 全丢弃）", () => {
+    const nodes = makeStandingRig();
+    const vmd = makeFakeVmd(
+      [],
+      [{ morphName: "まばたき", frameNumber: 0, weight: 0.5 }],
+    );
+    const { clip, report } = buildVmdRetargetClip(vmd, makeRig(nodes), {
+      positionScale: 1,
+      // 无 expressionManager
+    });
+    expect(clip.tracks).toHaveLength(0);
+    // 无 manager ⇒ expressionMap 空 ⇒ 幽灵 morph 表白名单空 ⇒ 上游 buildMorphAnimation
+    // 直接跳过该 morph（从未进源轨道），故 rewrite 阶段无源轨道可丢 → droppedTracks = 0。
+    // 「丢弃」发生在 ghost 表层面，不是 rewrite 计数层面——两口径不重叠。
+    expect(report.droppedTracks).toBe(0);
+  });
+
+  it("toe 旋转源改道：左つま先ＩＫ quaternion 轨道绑到 leftToes 归一化骨", () => {
+    const nodes = makeStandingRig();
+    const plan = resolveVmdBindings(new Set(["左つま先ＩＫ"]), makeRig(nodes));
+    expect(plan.toeRotation.left).toBe("左つま先ＩＫ");
+    // 改道路由：MMD 名 → toes 节点（quaternion 通道落点）
+    expect(plan.toeNodesByMmd.get("左つま先ＩＫ")).toBe(nodes.leftToes);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -254,6 +367,10 @@ function makePlan(overrides: Partial<VmdBindingPlan> = {}): VmdBindingPlan {
     translationTarget: makeNode("hips", [0, 0.8, 0]),
     translationBase: new THREE.Vector3(0, 0.8, 0),
     footIK: { left: null, right: null },
+    toeRotation: { left: null, right: null },
+    toeNodesByMmd: new Map(),
+    morphNameByIndex: new Map(),
+    morphPresetByMmd: new Map(),
     ...overrides,
   };
 }
@@ -367,6 +484,103 @@ describe("rewriteVmdTracks", () => {
     expect(ikTracks).toEqual({ left: null, right: null });
     expect(droppedTracks).toBe(1);
   });
+
+  // ── 表情轨道改道（ADR-306 §2.2）──
+
+  /** 表情轨道改道面（窄接口，鸭子类型 VRMExpressionManager.getExpressionTrackName） */
+  function makeExprMgr(tracks: Record<string, string | null>) {
+    return { getExpressionTrackName: (name: string) => tracks[name] ?? null };
+  }
+
+  it("morph 轨道查改道表：命中 → 原地改名进 clip（VRMExpression_<name>.weight）", () => {
+    const track = new THREE.NumberKeyframeTrack(".morphTargetInfluences[0]", [0, 1], [0, 1]);
+    const plan = makePlan({
+      morphNameByIndex: new Map([[0, "まばたき"]]),
+    });
+    const expr = makeExprMgr({ まばたき: "VRMExpression_blink.weight" });
+
+    const { tracks, droppedTracks } = rewriteVmdTracks(
+      new THREE.AnimationClip("", -1, [track]),
+      plan,
+      1,
+      expr,
+    );
+
+    expect(tracks).toHaveLength(1);
+    expect(tracks[0]).toBe(track); // 原地改名，不重建
+    expect(tracks[0]?.name).toBe("VRMExpression_blink.weight");
+    expect(droppedTracks).toBe(0);
+  });
+
+  it("morph 轨道未命中（不可映射名 / 无 expressionManager）→ 常规丢弃", () => {
+    const track = new THREE.NumberKeyframeTrack(".morphTargetInfluences[3]", [0], [0.5]);
+    const plan = makePlan({ morphNameByIndex: new Map([[3, "作者自定义モーフ"]]) });
+
+    // 无 expressionManager：行为与 ADR-243 v1 完全一致（全部丢弃）
+    const r1 = rewriteVmdTracks(new THREE.AnimationClip("", -1, [track]), plan, 1);
+    expect(r1.tracks).toEqual([]);
+    expect(r1.droppedTracks).toBe(1);
+
+    // 有 manager 但该 morph 不可映射（getExpressionTrackName → null）
+    const expr = makeExprMgr({});
+    const r2 = rewriteVmdTracks(new THREE.AnimationClip("", -1, [track]), plan, 1, expr);
+    expect(r2.tracks).toEqual([]);
+    expect(r2.droppedTracks).toBe(1);
+  });
+
+  it("morph 轨道索引不在改道表 → 丢弃（防上游索引漂移时错绑到无关表情）", () => {
+    const track = new THREE.NumberKeyframeTrack(".morphTargetInfluences[9]", [0], [1]);
+    const plan = makePlan({ morphNameByIndex: new Map([[0, "まばたき"]]) });
+    const expr = makeExprMgr({ まばたき: "VRMExpression_blink.weight" });
+
+    const { tracks, droppedTracks } = rewriteVmdTracks(
+      new THREE.AnimationClip("", -1, [track]),
+      plan,
+      1,
+      expr,
+    );
+    expect(tracks).toEqual([]);
+    expect(droppedTracks).toBe(1);
+  });
+
+  // ── つま先ＩＫ quaternion 改道（ADR-243 锐评对账 P1b）──
+
+  it("つま先ＩＫ quaternion 轨道改道绑到 toes 节点：原地改 name 保贝塞尔", () => {
+    const toesNode = makeNode("leftToes", [0.1, 0.02, 0.1]);
+    const sentinel = (): string => "sentinel";
+    const track = quatTrack(".bones[左つま先ＩＫ].quaternion");
+    setInterpolant(track, sentinel);
+
+    const plan = makePlan({
+      toeRotation: { left: "左つま先ＩＫ", right: null },
+      toeNodesByMmd: new Map([["左つま先ＩＫ", toesNode]]),
+    });
+    const { tracks, droppedTracks } = rewriteVmdTracks(
+      new THREE.AnimationClip("", -1, [track]),
+      plan,
+      1,
+    );
+
+    expect(tracks).toHaveLength(1);
+    expect(tracks[0]).toBe(track); // 同一对象：贝塞尔覆写存活
+    expect(tracks[0]?.name).toBe(`${toesNode.uuid}.quaternion`);
+    expect(droppedTracks).toBe(0);
+  });
+
+  it("つま先ＩＫ position 轨道仍丢弃（它不是 IK 目标载体）", () => {
+    const track = new THREE.VectorKeyframeTrack(".bones[左つま先ＩＫ].position", [0], [0, 0, 0]);
+    const plan = makePlan({
+      toeRotation: { left: "左つま先ＩＫ", right: null },
+      toeNodesByMmd: new Map([["左つま先ＩＫ", makeNode("leftToes", [0, 0, 0])]]),
+    });
+    const { tracks, droppedTracks } = rewriteVmdTracks(
+      new THREE.AnimationClip("", -1, [track]),
+      plan,
+      1,
+    );
+    expect(tracks).toEqual([]);
+    expect(droppedTracks).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -385,6 +599,9 @@ const E2E_VMD = makeFakeVmd(
     // 第 30 帧偏移 (1,2,3) → 轴系翻转 (1,2,-3) → 按 k 缩放
     bone("左足ＩＫ", 0, [0, 0, 0]),
     bone("左足ＩＫ", 30, [1, 2, 3]),
+    // つま先ＩＫ（P1b）：quaternion 通道的手调脚尖俯仰，改道 leftToes
+    bone("左つま先ＩＫ", 0, [0, 0, 0], [0, 0, 0, 1]),
+    bone("左つま先ＩＫ", 30, [0, 0, 0], [0.2, 0, 0, 0.98]),
   ],
   // morph 入表 ⇒ 幽灵网格若漏置 morphTargetDictionary，上游解引用即抛（回归哨兵）
   [{ morphName: "まばたき", frameNumber: 0, weight: 0 }],
@@ -424,9 +641,9 @@ describe("buildVmdRetargetClip", () => {
     });
 
     expect(clip.tracks.every((t) => !t.name.includes("morphTargetInfluences"))).toBe(true);
-    // 2 条入表骨（仅 quaternion 通道）+ 1 条 hips 位移
+    // 2 条入表骨（仅 quaternion 通道）+ 1 条 hips 位移 + 1 条 つま先ＩＫ 改道 leftToes（P1b）
     expect(report.bindings).toHaveLength(2);
-    expect(clip.tracks).toHaveLength(3);
+    expect(clip.tracks).toHaveLength(4);
   });
 
   it("缺省缩放由身高估算（标准站姿 ⇒ 0.08）", () => {
@@ -496,5 +713,17 @@ describe("buildVmdRetargetClip", () => {
     );
 
     expect(footIK).toEqual({ left: null, right: null });
+  });
+
+  // ── つま先ＩＫ 改道端到端（P1b）──
+
+  it("つま先ＩＫ quaternion 改道到 leftToes：轴系翻转 + 贝塞尔存活", () => {
+    const nodes = makeStandingRig();
+    const { clip } = buildVmdRetargetClip(E2E_VMD, makeRig(nodes), { positionScale: 0.5 });
+
+    const toe = trackByName(clip, `${nodes.leftToes?.uuid}.quaternion`);
+    // 第 2 帧（index 4..7）：(0.2, 0, 0, 0.98) → (-0.2, 0, 0, 0.98)
+    expectValues(toe.values, [-0.2, 0, 0, 0.98], 4);
+    expect(Object.hasOwn(toe, "createInterpolant")).toBe(true);
   });
 });

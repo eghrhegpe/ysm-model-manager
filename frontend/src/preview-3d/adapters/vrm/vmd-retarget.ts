@@ -18,12 +18,14 @@
 import { buildAnimation, type VmdObject } from "@moeru/three-mmd";
 import type { VRMHumanBoneName } from "@pixiv/three-vrm-core";
 import * as THREE from "three";
+import { VMD_EXPRESSION_CANDIDATES } from "./vmd-expression-map.ts";
 import {
   VMD_FOOT_IK_CANDIDATES,
   VMD_POSITION_SCALE_DEFAULT,
   VMD_REFERENCE_HEIGHT,
   VMD_RETARGET_CANDIDATES,
   VMD_ROOT_TRANSLATION_CANDIDATES,
+  VMD_TOE_ROTATION_CANDIDATES,
 } from "./vmd-retarget-map.ts";
 
 /** 归一化骨骼访问面（`vrm.humanoid` 天然满足；窄接口便于单测注入假体） */
@@ -56,6 +58,21 @@ export interface VmdRetargetOptions {
    * 估算失败回退 {@link VMD_POSITION_SCALE_DEFAULT}。
    */
   positionScale?: number;
+  /**
+   * 表情轨道名解析（ADR-306 §2.2）：鸭子类型的 `VRMExpressionManager.getExpressionTrackName`
+   * （`name → VRMExpression_<preset>.weight | null`）。缺省 null = 不做表情改道（morph 全丢弃，
+   * ADR-243 v1 行为）。传 `vrm.expressionManager` 即启用。
+   */
+  expressionManager?: VmdExpressionManagerLike | null;
+}
+
+/**
+ * 表情轨道名解析窄面（ADR-306 §2.2）：鸭子类型 `VRMExpressionManager` 的单方法面
+ * （`getExpressionTrackName: name → VRMExpression_<preset>.weight | null`），不必
+ * import three-vrm-core 类型本身。适配器侧直接传 `vrm.expressionManager` 即满足。
+ */
+export interface VmdExpressionManagerLike {
+  getExpressionTrackName(name: string): string | null;
 }
 
 /** 单条成功建立的骨骼映射（仅本模块内使用——经 VmdBindingPlan 对外暴露） */
@@ -78,6 +95,22 @@ export interface VmdBindingPlan {
   readonly translationBase: THREE.Vector3 | null;
   /** 命中的 VMD 足 IK 骨名（null = 该侧无 IK 骨；不参与旋转绑定，仅摘目标轨道） */
   readonly footIK: Readonly<Record<"left" | "right", string | null>>;
+  /**
+   * 命中的 つま先ＩＫ 骨名（null = 该侧无；ADR-243 锐评对账 P1b）。
+   * 与足ＩＫ相反：つま先ＩＫ关键帧活在 **quaternion** 通道，是合法 FK 旋转源，
+   * 改道绑定到 `leftToes`/`rightToes` 归一化骨（路由见 toeNodesByMmd）。
+   */
+  readonly toeRotation: Readonly<Record<"left" | "right", string | null>>;
+  /** つま先ＩＫ MMD 名 → toes 归一化节点（quaternion 通道改道落点） */
+  readonly toeNodesByMmd: ReadonlyMap<string, THREE.Object3D>;
+  /**
+   * morph 轨道索引 → MMD morph 名（ADR-306 §2.2 改道表）。
+   * 只含**可映射**的 morph 名（幽灵网格 morph 表与上游轨道索引同源），rewrite 阶段
+   * 经 `expressionManager.getExpressionTrackName` 换成 `VRMExpression_<preset>.weight`。
+   */
+  readonly morphNameByIndex: ReadonlyMap<number, string>;
+  /** MMD morph 名 → VRM preset（ADR-306 §2.1；改道解析时优先走 preset，原名为自定义表情兜底） */
+  readonly morphPresetByMmd: ReadonlyMap<string, string>;
 }
 
 /** 重定向诊断报告（仅本模块内使用——经 VmdRetargetResult 对外暴露） */
@@ -112,6 +145,9 @@ const FOOT_HEIGHT_RATIO = 0.05;
 
 /** buildAnimation 产出的骨骼轨道名（`index.js` `_createTrack(`${targetName}.position`)`） */
 const BONE_TRACK_NAME = /^\.bones\[(.+)\]\.(position|quaternion)$/;
+
+/** buildMorphAnimation 产出的表情轨道名（`index.js:4093` `.morphTargetInfluences[N]`） */
+const MORPH_TRACK_NAME = /^\.morphTargetInfluences\[(\d+)\]$/;
 
 const _probeHead = new THREE.Vector3();
 const _probeFoot = new THREE.Vector3();
@@ -152,6 +188,44 @@ export function collectVmdBoneNames(vmd: VmdObject): Set<string> {
   return names;
 }
 
+/** VMD 实际驱动的 morph 名集合（同 collectVmdBoneNames 的 morph 版） */
+export function collectVmdMorphNames(vmd: VmdObject): Set<string> {
+  const names = new Set<string>();
+  const frames = vmd.morphKeyFrames;
+  for (let i = 0; i < frames.length; i++) names.add(frames.get(i).morphName);
+  return names;
+}
+
+/**
+ * VMD morph 名 → VRM preset 改道表（ADR-306 §2.1/§2.2）。
+ *
+ * `collectVmdMorphNames(vmd) ∩ 候选表` 后**再过一道模型侧存在性检查**——preset 在
+ * `expressionManager` 上解析不出轨道名（模型缺该表情）就不进表，幽灵网格不填该键，
+ * 上游白名单自然跳过，不会产出落到不存在的 `VRMExpression_*.weight` 上的死轨道。
+ *
+ * @param present VMD 实际驱动的 morph 名（collectVmdMorphNames）
+ * @param expressionManager 表情轨道名解析（鸭子类型 getExpressionTrackName；null = 不做表情改道）
+ * @returns MMD morph 名 → VRM preset 名
+ */
+export function collectVmdExpressionMap(
+  present: ReadonlySet<string>,
+  expressionManager: VmdExpressionManagerLike | null | undefined,
+): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!expressionManager) return map;
+  const resolve = expressionManager.getExpressionTrackName.bind(expressionManager);
+  for (const [preset, candidates] of Object.entries(VMD_EXPRESSION_CANDIDATES) as Array<
+    [string, readonly string[]]
+  >) {
+    const mmd = candidates.find((c) => present.has(c));
+    if (mmd === undefined) continue;
+    // 模型侧存在性：preset 或原始名任一能解析出轨道名才改道（模型缺该表情 → 不进表）
+    if (resolve(preset) === null && resolve(mmd) === null) continue;
+    map.set(mmd, preset);
+  }
+  return map;
+}
+
 /**
  * 按候选表解析绑定（ADR-243 §2.3/§2.4）。
  * 三重过滤：VRM 侧存在该归一化骨 → VMD 侧命中候选名 → 该 MMD 骨未被先前的 VRM 骨认领
@@ -160,6 +234,7 @@ export function collectVmdBoneNames(vmd: VmdObject): Set<string> {
 export function resolveVmdBindings(
   present: ReadonlySet<string>,
   rig: VmdHumanoidRig,
+  expressionMap: ReadonlyMap<string, string> = new Map(),
 ): VmdBindingPlan {
   const bindings: VmdBoneBinding[] = [];
   const nodesByMmd = new Map<string, THREE.Object3D>();
@@ -188,6 +263,24 @@ export function resolveVmdBindings(
     right: VMD_FOOT_IK_CANDIDATES.right.find((c) => present.has(c)) ?? null,
   };
 
+  // つま先ＩＫ（P1b）：quaternion 通道的合法 FK 源，改道绑定到 toes 归一化骨。
+  // 改道而非进主候选表的理由：候选表以「VRM 骨 → MMD 名」为向，而 つま先ＩＫ 与
+  // 左つま先 可能同时存在（作者脚尖手调 + 模型自带 toe FK），改道表可独立优先。
+  const toeNodesByMmd = new Map<string, THREE.Object3D>();
+  const toeRotation: Record<"left" | "right", string | null> = { left: null, right: null };
+  const toeTargets: Record<"left" | "right", VRMHumanBoneName> = {
+    left: "leftToes",
+    right: "rightToes",
+  };
+  for (const side of ["left", "right"] as const) {
+    const mmd = VMD_TOE_ROTATION_CANDIDATES[side].find((c) => present.has(c)) ?? null;
+    toeRotation[side] = mmd;
+    if (mmd) {
+      const toesNode = rig.getNormalizedBoneNode(toeTargets[side]);
+      if (toesNode) toeNodesByMmd.set(mmd, toesNode);
+    }
+  }
+
   return {
     bindings,
     nodesByMmd,
@@ -195,6 +288,12 @@ export function resolveVmdBindings(
     translationTarget: translationSource ? hipsNode : null,
     translationBase: translationSource && hipsNode ? hipsNode.position.clone() : null,
     footIK,
+    toeRotation,
+    toeNodesByMmd,
+    // 表情改道表（ADR-306 §2.2）：morph 名 → preset。轨道索引 → 名的映射在主入口
+    // 填幽灵 morph 表时建立（索引 = 填表顺序，与上游 buildMorphAnimation 的写回一致）。
+    morphNameByIndex: new Map([...expressionMap.keys()].map((mmd, i) => [i, mmd] as const)),
+    morphPresetByMmd: expressionMap,
   };
 }
 
@@ -205,15 +304,23 @@ export function resolveVmdBindings(
 /**
  * 构造承载幽灵骨的 SkinnedMesh。
  *
- * ⚠️ `morphTargetDictionary` 必须显式置空对象：`buildAnimation` 无条件调用
- * `buildMorphAnimation`，其首行是 `mesh.morphTargetDictionary[morphName]`——而普通
- * `BufferGeometry` 不带 morph 属性 ⇒ three 的 Mesh 构造后该字段停在 `undefined`
- * ⇒ 解引用抛 TypeError。置空对象即让全部 morph 轨道被跳过（表情通道不在本次范围）。
+ * ⚠️ `morphTargetDictionary` 必须显式置对象（不可留 undefined）：`buildAnimation` 无条件
+ * 调用 `buildMorphAnimation`，其首行是 `mesh.morphTargetDictionary[morphName]`——普通
+ * `BufferGeometry` 不带 morph 属性 ⇒ three 的 Mesh 构造后该字段停在 `undefined` ⇒ 解引用
+ * 抛 TypeError。填「可映射子集」（ADR-306 §2.2）后上游按键白名单过滤：可映射 morph 产出
+ * `.morphTargetInfluences[N]` 轨道（随后被改道），不可映射的继续被上游跳过。
  */
-function createGhostMesh(bones: THREE.Bone[]): THREE.SkinnedMesh {
+function createGhostMesh(
+  bones: THREE.Bone[],
+  morphNames: readonly string[] = [],
+): THREE.SkinnedMesh {
   const mesh = new THREE.SkinnedMesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
   mesh.bind(new THREE.Skeleton(bones));
-  mesh.morphTargetDictionary = {};
+  const morphTargetDictionary: Record<string, number> = {};
+  morphNames.forEach((name, i) => {
+    morphTargetDictionary[name] = i;
+  });
+  mesh.morphTargetDictionary = morphTargetDictionary;
   return mesh;
 }
 
@@ -252,6 +359,8 @@ export function rewriteVmdTracks(
   source: THREE.AnimationClip,
   plan: VmdBindingPlan,
   positionScale: number,
+  /** 表情轨道名解析（ADR-306 §2.2）；缺省 = 不做表情改道（morph 全丢弃，ADR-243 v1 行为） */
+  expressionManager?: VmdExpressionManagerLike | null,
 ): {
   tracks: THREE.KeyframeTrack[];
   droppedTracks: number;
@@ -266,15 +375,46 @@ export function rewriteVmdTracks(
   let droppedTracks = 0;
 
   for (const track of source.tracks) {
+    // 表情轨道（ADR-306 §2.2）：`.morphTargetInfluences[N]` → `VRMExpression_<preset>.weight`
+    // 原地改名进 clip，由 AnimationMixer 统一驱动（官方 .vrma 同路）。索引不在改道表
+    // （不可映射名 / 无 expressionManager）→ 常规丢弃，与 ADR-243 v1 行为一致。
+    const morphMatched = MORPH_TRACK_NAME.exec(track.name);
+    if (morphMatched) {
+      const mmd = plan.morphNameByIndex.get(Number(morphMatched[1]));
+      // 解析序：preset 优先（表语义），MMD 原名为自定义表情兜底（模型恰好同名的自定义
+      // expression）。两者都解析不出轨道名（模型缺该表情 / 无 expressionManager）→ 丢弃。
+      const preset = mmd ? plan.morphPresetByMmd.get(mmd) : undefined;
+      const em = expressionManager ?? null;
+      const trackName =
+        mmd && em
+          ? ((preset ? em.getExpressionTrackName(preset) : null) ?? em.getExpressionTrackName(mmd))
+          : null;
+      if (trackName) {
+        // 原地改名（与骨骼轨道同一条纪律）；morph 轨道是裸 NumberKeyframeTrack（无贝塞尔
+        // 覆写），改名零损失
+        track.name = trackName;
+        tracks.push(track);
+      } else {
+        droppedTracks++;
+      }
+      continue;
+    }
     const matched = BONE_TRACK_NAME.exec(track.name);
     if (!matched) {
-      droppedTracks++; // morph 轨道（`.morphTargetInfluences[i]`）——表情走另一个决策
+      droppedTracks++; // 非骨骼非表情轨道（相机/灯光等，本管线不管）
       continue;
     }
     const mmd = matched[1];
     const channel = matched[2];
 
     if (channel === "quaternion") {
+      // つま先ＩＫ 改道（P1b）：quaternion 是合法 FK 源，落点改为 toes 归一化骨
+      const toesNode = plan.toeNodesByMmd.get(mmd);
+      if (toesNode) {
+        track.name = `${toesNode.uuid}.quaternion`;
+        tracks.push(track);
+        continue;
+      }
       const node = plan.nodesByMmd.get(mmd);
       if (!node) {
         droppedTracks++;
@@ -376,7 +516,11 @@ export function buildVmdRetargetClip(
   rig: VmdHumanoidRig,
   opts: VmdRetargetOptions = {},
 ): VmdRetargetResult {
-  const plan = resolveVmdBindings(collectVmdBoneNames(vmd), rig);
+  const exprMgr = opts.expressionManager ?? null;
+  // 表情改道（ADR-306 §2.1/§2.2）：VMD morph 名 ∩ 候选表 ∩ 模型侧存在性 → preset 映射。
+  // 无 expressionManager / 全不可映射时为空表，行为退化为 ADR-243 v1（morph 全丢弃）。
+  const expressionMap = collectVmdExpressionMap(collectVmdMorphNames(vmd), exprMgr);
+  const plan = resolveVmdBindings(collectVmdBoneNames(vmd), rig, expressionMap);
   const positionScale =
     opts.positionScale ??
     (() => {
@@ -401,11 +545,20 @@ export function buildVmdRetargetClip(
   if (plan.translationSource && plan.translationBase) {
     pushGhost(plan.translationSource, plan.translationBase);
   }
+  // つま先ＩＫ（P1b）：quaternion 通道的 FK 源也要进幽灵骨架，否则上游按骨架名白名单
+  // 过滤时直接 skip，改道路由拿不到轨道。静止位置同源 toes 节点（position 通道不会用）。
+  for (const mmd of [plan.toeRotation.left, plan.toeRotation.right]) {
+    const toesNode = mmd ? plan.toeNodesByMmd.get(mmd) : undefined;
+    if (mmd && toesNode) pushGhost(mmd, toesNode.position);
+  }
   // 幽灵 IK 骨：静止位置**置零**（见 rewriteVmdTracks 的 position ①），因此产出的轨道
   // 值就是「相对 bind 的偏移」本身，无需再减基准。这两条轨道随后被摘出，不会进 clip。
   for (const mmd of [plan.footIK.left, plan.footIK.right]) {
     if (mmd) pushGhost(mmd, _zeroOrigin);
   }
+  // 幽灵 morph 表（ADR-306 §2.2）：只填可映射子集做上游白名单——键序即轨道索引，
+  // 与 plan.morphNameByIndex（同源 expressionMap.keys()）严格对齐。
+  const ghostMorphs = [...expressionMap.keys()];
 
   const report: VmdRetargetReport = {
     bindings: plan.bindings,
@@ -415,14 +568,15 @@ export function buildVmdRetargetClip(
   };
 
   let source: THREE.AnimationClip;
-  if (ghostBones.length === 0) {
-    // 无可用映射时也统计被丢弃的轨道，避免诊断面板把「全不可映射」误读为「0 丢弃」：
-    // 用空幽灵骨架（零骨 + 空 morph 表）跑真实 buildAnimation——上游 buildSkeletalAnimation
-    // 按 mesh.skeleton.bones 名单过滤、buildMorphAnimation 按 morphTargetDictionary 过滤，
-    // 零骨空表 ⇒ 源轨道全被滤掉（droppedTracks = 源全量），与 rewriteVmdTracks 统计口径一致。
+  if (ghostBones.length === 0 && ghostMorphs.length === 0) {
+    // 无骨也无可映射 morph（ADR-306：零骨但有表情轨道时走主路径，clip 只装表情轨道）：
+    // 用空幽灵骨架跑真实 buildAnimation 统计被丢弃的轨道，避免诊断面板把「全不可映射」
+    // 误读为「0 丢弃」——上游 buildSkeletalAnimation 按 mesh.skeleton.bones 名单过滤、
+    // buildMorphAnimation 按 morphTargetDictionary 过滤，零骨空表 ⇒ 源轨道全被滤掉
+    // （droppedTracks = 源全量），与 rewriteVmdTracks 统计口径一致。
     // ⚠️ 不能传 null：buildSkeletalAnimation 无条件读 mesh.skeleton.bones，会 TypeError。
-    source = buildAnimation(vmd, createGhostMesh([]));
-    const { droppedTracks } = rewriteVmdTracks(source, plan, positionScale);
+    source = buildAnimation(vmd, createGhostMesh([], ghostMorphs));
+    const { droppedTracks } = rewriteVmdTracks(source, plan, positionScale, exprMgr);
     return {
       clip: new THREE.AnimationClip("vmd-retarget", 0, []),
       report: { ...report, droppedTracks },
@@ -430,7 +584,7 @@ export function buildVmdRetargetClip(
     };
   }
 
-  const ghostMesh = createGhostMesh(ghostBones);
+  const ghostMesh = createGhostMesh(ghostBones, ghostMorphs);
   try {
     source = buildAnimation(vmd, ghostMesh);
   } finally {
@@ -438,7 +592,12 @@ export function buildVmdRetargetClip(
     (ghostMesh.material as THREE.Material).dispose();
   }
 
-  const { tracks, droppedTracks, ikTracks } = rewriteVmdTracks(source, plan, positionScale);
+  const { tracks, droppedTracks, ikTracks } = rewriteVmdTracks(
+    source,
+    plan,
+    positionScale,
+    exprMgr,
+  );
   return {
     // duration 传 -1 → AnimationClip 构造函数按过滤后的轨道重算时长
     clip: new THREE.AnimationClip("vmd-retarget", -1, tracks),

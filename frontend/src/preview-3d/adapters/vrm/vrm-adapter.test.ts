@@ -1671,7 +1671,7 @@ describe("P3 positionScale 校准（ADR-243 锐评对账）", () => {
     expect(readVmdPositionScale()).toBe(0.3);
   });
 
-  it("vrmMenuItems：positionScale 控制且 vmdCount>0 → 滑块 + 复位按钮（onCommit→set / 复位→resetToAuto）", () => {
+  it("vrmMenuItems：positionScale 控制且 vmdCount>0 → 动作面板 children 内滑块 + 复位按钮（onCommit→set / 复位→resetToAuto）", () => {
     const control = { vmdCount: 2, current: () => 0.1, set: vi.fn(), resetToAuto: vi.fn() };
     const items = vrmMenuItems({
       screenshot: null,
@@ -1693,8 +1693,14 @@ describe("P3 positionScale 校准（ADR-243 锐评对账）", () => {
       play: null,
       positionScale: control,
     });
-    const slider = items.find((i) => i.id === "vmd-position-scale");
-    const reset = items.find((i) => i.id === "vmd-position-scale-reset");
+    // 根项白名单（check-menu-health ROOT_KINDS）：滑块/按钮是叶子，必须挂动作面板 children——
+    // 曾经的根项写法既违规又不可达（motionDetailView 只列 kind==="panel" 的 motion 项）
+    expect(
+      items.map((i) => i.kind).filter((k) => k !== "panel" && k !== "action" && k !== "divider"),
+    ).toEqual([]);
+    const play = items.find((i) => i.id === "vrma-play");
+    const slider = play?.children?.find((i) => i.id === "vmd-position-scale");
+    const reset = play?.children?.find((i) => i.id === "vmd-position-scale-reset");
     expect(slider?.kind).toBe("slider");
     expect(reset?.kind).toBe("button");
     // 滑块 get = 当前有效值；onCommit（松手）才 set（重建）——拖动过程抑制
@@ -1725,8 +1731,9 @@ describe("P3 positionScale 校准（ADR-243 锐评对账）", () => {
       },
       play: null,
     });
-    expect(items.find((i) => i.id === "vmd-position-scale")).toBeUndefined();
-    expect(items.find((i) => i.id === "vmd-position-scale-reset")).toBeUndefined();
+    const play = items.find((i) => i.id === "vrma-play");
+    expect(play?.children?.some((c) => c.id === "vmd-position-scale")).toBe(false);
+    expect(play?.children?.some((c) => c.id === "vmd-position-scale-reset")).toBe(false);
   });
 
   it("rebuildVmdMotionClips：换掉 vmd 条目、保留 vrma 条目、活动动作按 label 重绑新 clip 并保播放态", async () => {

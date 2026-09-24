@@ -1208,9 +1208,46 @@ const VRM_PLAY_EMPTY_NODE: PreviewMenuNode = {
   value: VRM_PLAY_EMPTY_HINT,
 };
 
+/** [ADR-243 锐评对账 P3] 位移缩放校准叶子节点（滑块 + 复位）：仅当有 VMD 重定向动作时露出
+ *  （.vrma 不受 positionScale 影响）。滑块 onCommit（松手）才重建换绑——拖动过程抑制
+ *  （set 空操作），避免每 tick 重解析 VMD。
+ *  ⚠️ 必须挂面板 children（叶子层）：根项只允许 panel/action/divider（check-menu-health
+ *  ROOT_KINDS），根项滑块既违规又不可达（motionDetailView 只列 kind==="panel" 的 motion 项）。 */
+function vmdPositionScaleNodes(ps: VrmPositionScaleControl): PreviewMenuNode[] {
+  return [
+    {
+      id: "vmd-position-scale",
+      labelKey: "preview.vmdPositionScale",
+      kind: "slider",
+      control: {
+        min: 0,
+        max: 0.4,
+        step: 0.005,
+        get: () => ps.current(),
+        set: () => {
+          /* 拖动抑制：重建归 onCommit 一次 */
+        },
+        onCommit: (v: number) => {
+          ps.set(Number(v));
+        },
+        unit: "x",
+      },
+    },
+    {
+      id: "vmd-position-scale-reset",
+      labelKey: "preview.vmdPositionScaleReset",
+      kind: "button",
+      action: (): void => {
+        ps.resetToAuto();
+      },
+    },
+  ];
+}
+
 /**
  * VRM 声明式根菜单专属项（ADR-076 v2 Phase 2）：🦴 骨骼 + 🎨 材质。
  * 提取为可导出表：适配器与测试共用同一份真实数组（对齐 MikuMikuAR），加菜单项只改这里。
+ * 根项白名单：只出 panel/action/divider（控件类节点挂对应面板 children）。
  */
 export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
   const items: PreviewMenuNode[] = [
@@ -1259,6 +1296,11 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
   // playNodes 未注入时兜底空态 field：面板恒有渲染通道（items.test 契约：panel 必有
   // renderCustom/children/schemaId 三选一，空 children 会被判为静默空面板）。
   const playChildren = o.panels?.playNodes?.(o.play ?? emptyVrmPlayBridge());
+  // [ADR-243 锐评对账 P3] 位移缩放校准挂动作面板 children（叶子层，见 vmdPositionScaleNodes）：
+  // 仅当有 VMD 重定向动作时露出（.vrma 不受 positionScale 影响）。
+  const posScaleNodes =
+    o.positionScale && o.positionScale.vmdCount > 0 ? vmdPositionScaleNodes(o.positionScale) : [];
+  const playPanelChildren = [...(playChildren ?? []), ...posScaleNodes];
   items.push({
     id: "vrma-play",
     icon: "play",
@@ -1266,7 +1308,8 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
     kind: "panel",
     dockGroup: "motion", // 底栏 💃 动作组（对齐 MMD）
     // [doc:adr-126-p5-收尾] play 面板声明式化：children = playNodes（复用 MMD，经 panels 注入）
-    children: playChildren && playChildren.length > 0 ? playChildren : [VRM_PLAY_EMPTY_NODE],
+    // + P3 位移缩放校准叶子（两通道皆空时兜底空态 field，保证面板恒有渲染通道）
+    children: playPanelChildren.length > 0 ? playPanelChildren : [VRM_PLAY_EMPTY_NODE],
   });
   if (o.perception) {
     items.push({
@@ -1277,39 +1320,6 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       dockGroup: "motion",
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
       children: perceptionNodes(o.perception!.state, o.perception!.caps),
-    });
-  }
-  // [ADR-243 锐评对账 P3] 位移缩放校准：仅当有 VMD 重定向动作时露出（.vrma 不受 positionScale 影响）。
-  // 滑块 onCommit（松手）才重建换绑——拖动过程抑制（set 空操作），避免每 tick 重解析 VMD。
-  if (o.positionScale && o.positionScale.vmdCount > 0) {
-    const ps = o.positionScale;
-    items.push({
-      id: "vmd-position-scale",
-      labelKey: "preview.vmdPositionScale",
-      kind: "slider",
-      dockGroup: "motion",
-      control: {
-        min: 0,
-        max: 0.4,
-        step: 0.005,
-        get: () => ps.current(),
-        set: () => {
-          /* 拖动抑制：重建归 onCommit 一次 */
-        },
-        onCommit: (v: number) => {
-          ps.set(Number(v));
-        },
-        unit: "x",
-      },
-    });
-    items.push({
-      id: "vmd-position-scale-reset",
-      labelKey: "preview.vmdPositionScaleReset",
-      kind: "button",
-      dockGroup: "motion",
-      action: (): void => {
-        ps.resetToAuto();
-      },
     });
   }
   return items;

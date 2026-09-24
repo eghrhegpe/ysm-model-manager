@@ -85,7 +85,7 @@ pitfalls:
   - 重建 KeyframeTrack（而非原地改 track.name）会静默丢掉 MMD 逐轴贝塞尔插值——视觉卡点顿挫且不报错
   - 幽灵网格 morphTargetDictionary 不可留 undefined（上游 buildMorphAnimation 解引用必抛）；填「可映射子集」= ADR-306 表情改道，空对象 = v1 行为（morph 全丢弃）
   - 足 IK 的「足静止世界位置」必须创建期快照；每帧现读会自反馈漂移
-  - 轨道绑 uuid 而非 name（归一化节点名是 Normalized_ + 模型作者自定义骨名，可能含空格/日文）；表情轨道例外——绑 `VRMExpression_<preset>` name（载体对象由 VRM 规范命名）
+  - 轨道绑 uuid 而非 name（归一化节点名是 Normalized_ + 模型作者自定义骨名，可能含空格/日文）；表情轨道例外——绑 `VRMExpression_` 前缀 + preset 名的 name（载体对象由 VRM 规范命名）
   - 表情载体对象（VRMExpression_*）的 `.weight` 必须预初始化（真实 VRMExpression 构造即 weight=0）——three PropertyBinding.bind 遇 undefined 属性即 not-found 静默停写
   - 脚趾链 CCD（vrm-foot-ik）防乱挂校验：toes 的 parent 必须就是踝骨（leg endEffector），否则跳过不猜
 quick_groups:
@@ -174,7 +174,7 @@ ADR-306 表情通道（P2）：morph 轨道不再整体丢弃——幽灵 morph 
 6. **写归一化骨 = 天然落在 `vrm.update()` 之前**（FK 通道）；足 IK 写**原始骨**则必须晚于它（归一化 → 原始是单向烘焙）。表情轨道同理：mixer 写 `VRMExpression_*.weight`，`vrm.update()` 内 `expressionManager.update()` 消费——每帧顺序契约零改动。
 7. **映射表覆盖性**：`VMD_RETARGET_CANDIDATES` 与 `VMD_RETARGET_UNMAPPED` 的并集须覆盖 `VRMHumanBoneList` 全 55 项——VRM 侧新增骨骼时靠这条测试拦住静默漏映射。
 8. **表情改道原地改名、不重建、不新造驱动器**（ADR-306 §2.2）：morph 轨道经 `expressionManager.getExpressionTrackName`（鸭子 `VmdExpressionManagerLike`）换成 `VRMExpression_<preset>.weight`，解析序 preset 优先、MMD 原名自定义表情兜底；模型缺该表情（两路都解析不出轨道名）→ 不进改道表 → 上游白名单跳过 → 计入 `droppedTracks`。感知层眨眼在 `animActive` 下由 `perceptionPauseRef` 自查静默（ADR-306 §2.3，不新增门控）。
-9. **位移缩放 k 在加载时 bake 进位移轨道（`scaleTranslationTrack`），非运行期旋钮**（ADR-243 锐评对账 P3）：改 k = 重跑 `buildVmdRetargetClip`（`rebuildVmdMotionClips`）+ 按 label 换绑活动 action。故校准滑块**只在 onCommit（松手）触发重建**、拖动过程抑制（`set` 空操作），避免每 tick 重解析 VMD。自动值单一事实源 = `autoVmdPositionScale`（`buildVmdRetargetClip` 回退与滑块显示共用，防两份算法漂移）。持久化走 `safeGet/safeSet`（`vmd.positionScale`，ADR-044）；`.vrma` 条目对象保留不重放（只换 `.vmd` 子集）。
+9. **位移缩放 k 在加载时 bake 进位移轨道（`scaleTranslationTrack`），非运行期旋钮**（ADR-243 锐评对账 P3）：改 k = 重跑 `buildVmdRetargetClip`（`rebuildVmdMotionClips`）+ 按 label 换绑活动 action。故校准滑块**只在 onCommit（松手）触发重建**、拖动过程抑制（`set` 空操作），避免每 tick 重解析 VMD。自动值单一事实源 = `autoVmdPositionScale`（`buildVmdRetargetClip` 回退与滑块显示共用，防两份算法漂移）。持久化走 `safeGet/safeSet`（`vmd.positionScale`，ADR-044）；`.vrma` 条目对象保留不重放（只换 `.vmd` 子集）。**菜单归属**：`vrm-adapter.ts|vmdPositionScaleNodes` 产出的滑块 + 复位须挂 `vrma-play` 面板 `children`（叶子层）——根项白名单只允许 panel/action/divider（`check-menu-health` 的 ROOT_KINDS），写成根项既违规又不可达（`motionDetailView` 只列 `kind==="panel"` 的 motion 项），面板 children 两通道皆空时才回退 `VRM_PLAY_EMPTY_NODE` 空态。
 
 ## 相关
 

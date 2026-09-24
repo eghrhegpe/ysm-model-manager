@@ -72,11 +72,13 @@ node scripts/commit-with-check.ts -m "<msg>" # 一键验证+提交（按 staged 
 node scripts/commit-with-check.ts -m "<msg>" --files <paths...>   # 白名单直取文件/目录，无需先 git add，防止并行会话手改的 docs 文件并卷进提交；
 # git mv类改动，直接 `git commit`，否则rename 的 delete 半身（旧路径）会被挡在门外；坚持用 --files 则旧路径+新路径必须都进白名单，提交后 `git ls-tree HEAD <旧目录>/` 验空。
 git commit -m "<type>: <简短描述>" -- <自己的文件...> # 因并行会话而导致门禁失败时,调用 git commit（含 `--only` 文件/目录路径限定完成提交。先 git status --short 确认只含自己的文件。
-git push --verbose 2>&1 | Select-Object -Last 50   # 推送者需全数查看所有异常情况如何处理，不分你我。
-gh run view  #推送后,使用gh 盯GitHub ci，视情况决定修复或报告。
 
 # 怕文件未保存？
 git show --stat xx文件 & git log -S xx文件& git diff HEAD xx文件
+
+#请示用户后进行：
+git push --verbose 2>&1 | Select-Object -Last 50   # 推送者需查看所有异常情况如何处理。
+gh run view  #推送后,使用gh 盯GitHub ci，视情况决定修复或报告。
 
 # 回退
 git log --oneline -5 -- <file>      # 这文件最近谁提交过

@@ -24,6 +24,7 @@ import {
   errorHTML,
   getOutBox,
   type PerfIdentity,
+  readActiveBenchMode,
   renderLoadFailure,
   sectionHeader,
   setBusy,
@@ -198,12 +199,12 @@ export function syncPerfBaselineControls(root: ShadowRoot): void {
   const raw =
     (root.getElementById("diag-perf-rtype") as HTMLSelectElement | null)?.value.trim() ?? "";
   const isModel = parsePerfTargetValue(raw)?.target === "model";
+  // 模式一次读好再进循环（ADR-300 §2.2 唯一读出口；原 #diag-perf-mode 下拉已退役）
+  const mode = readActiveBenchMode(root);
   for (const id of BASELINE_CONTROL_IDS) {
     // 双维门禁（ADR-262 D8 × ADR-278 §2.6）：基准只在「单模型目标集」有意义，而本函数
     // 也被 rtype change / 选项填充回调独立触发——此时必须读当前模式兼并判定，否则
     // scan/conc 下动一下选择器就把载荷不读的基准控件解禁了（§2.6 要清的同一笔账）。
-    const mode =
-      (root.getElementById("diag-perf-mode") as HTMLSelectElement | null)?.value || "single";
     const el = root.getElementById(id) as HTMLInputElement | null;
     if (el) el.disabled = !isModel || mode !== "single";
   }

@@ -1779,7 +1779,7 @@ export const autoSidebar = [
             "link": "/knowledge/adr"
           },
           {
-            "text": "诊断与冲突页 diagnostics",
+            "text": "诊断页 diagnostics",
             "link": "/knowledge/app_content_diagnostics"
           },
           {

@@ -112,7 +112,7 @@ status: active
 
 ## 概览
 
-`app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工坊（github）、诊断与冲突（diagnostics/oldest）、设置（settings）。它监听 `nav:changed` 整块重渲染当前页，也是全部全局事件 handler 的唯一注册点（致命陷阱 #2 的解法）。
+`app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工坊（github）、诊断（diagnostics/oldest，导航文案旧名「诊断与冲突」已随冲突 tab 退役收口为「诊断」）、设置（settings）。它监听 `nav:changed` 整块重渲染当前页，也是全部全局事件 handler 的唯一注册点（致命陷阱 #2 的解法）。
 
 构造器不再硬编码 `"repository"`，而是与 `app-nav` 两处同源调用 `resolveInitialPage()`（`core/page-store.ts`）：`app-content` 经 `app-modules.ts` 动态加载，可能晚于 `app-nav` 派发的初始 `nav:changed`，事件被吞后若硬编码首页，会让 UI 实际渲染页与 `app-nav` 脱节。旧版全局 DnD 曾依赖 `page === "repository"` 守卫，现仓库页 DnD 已改为 `app-tree` 组件级绑定，不再受该守卫影响。
 
@@ -122,7 +122,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 
 > **子域拆分（2026-08-31，ADR-138 同批）**：诊断页 / 设置页 / 站点视图已拆为独立子卡——
 > 本卡只持编排、模板、样式层、共享数据与工坊装配。见：
-> - [诊断与冲突页 `app_content_diagnostics`](./app_content_diagnostics.md) — `diagnostics/` 全子模块
+> - [诊断页 `app_content_diagnostics`](./app_content_diagnostics.md) — `diagnostics/` 全子模块
 > - [设置页 `app_content_settings`](./app_content_settings.md) — `settings/` 全子模块
 > - [创意工坊站点视图 `app_content_site`](./app_content_site.md) — `site/` + `site-view.ts` + `workshop-data` / `workshop-browse-mode`
 

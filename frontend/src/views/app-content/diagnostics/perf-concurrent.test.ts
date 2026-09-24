@@ -47,7 +47,12 @@ function makeRoot(): ShadowRoot {
     <button id="diag-perf-run"></button>
     <input id="diag-perf-model" value="">
     <input id="diag-perf-iter" value="3">
-    <select id="diag-perf-mode"><option value="conc">并发基准</option></select>
+    <!-- bench 子 pill 行 = 模式源（ADR-300 §2.2，原模式下拉退役）：本夹具表达 conc 激活态 -->
+    <div class="diag-sub-bar" data-sub-bar="bench" data-active-sub="conc">
+      <button class="diag-sub-tab" data-sub="single" data-testid="diag-sub-bench-single">单模型</button>
+      <button class="diag-sub-tab active" data-sub="conc" data-testid="diag-sub-bench-conc">批量并发</button>
+      <button class="diag-sub-tab" data-sub="scan" data-testid="diag-sub-bench-scan">引擎对照</button>
+    </div>
     <select id="diag-perf-rtype"><option value="">单模型</option><option value="__repo__">全库扁平</option></select>
     <input id="diag-perf-max" value="5">
     <input id="diag-perf-baseline-save" type="checkbox">

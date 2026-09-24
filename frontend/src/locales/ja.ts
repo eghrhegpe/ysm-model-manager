@@ -340,6 +340,10 @@ export const ja: Record<string, string> = {
   // ADR-300 §2.4：トップレベルタブは名詞化（tabLog は子ピルと同名の「操作ログ」を使っていた）
   "diagnostics.tabLog": "ログ",
   "diagnostics.tabBench": "ベンチマーク",
+  // ADR-300 §2.1/§2.4: 監査グループのトップ名＋ピール短名詞ラベル
+  "diagnostics.tabAudit": "監査",
+  "diagnostics.pillHealth": "リポジトリ健全性",
+  "diagnostics.pillTrace": "ロード解析",
   "diagnostics.viewerDesktopOnlyNotice":
     "ベンチマークとリポジトリ監査はデスクトップ版でのみ利用できます",
   "diagnostics.opsLog": "操作ログ",
@@ -529,10 +533,8 @@ export const ja: Record<string, string> = {
     "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",
   "diagnostics.perfRunning": "実行中…",
   "diagnostics.perfIdle": "上のボタンで開始；結果はここに表示されます",
-  "diagnostics.perfMode": "実行方法",
-  "diagnostics.perfModeHint":
-    "実行方法 = どのベンチマークコマンドを使うか；隣の「何を測るか」= 今回測る範囲。両者は独立：コマンドを選んでから範囲を決めます",
-  "diagnostics.perfRecord": "パフォーマンス記録",
+  // perfMode/perfModeHint/perfRecord は ADR-300 §2.2/§2.4 で退役（モードドロップダウンと「パフォー
+  // マンス記録」タブがいずれも消滅）
   "diagnostics.perfFail": "実行に失敗しました",
   "diagnostics.loadTraceRefresh": "ロード解析を更新",
   "diagnostics.loadTraceTitle": "ロード解析",

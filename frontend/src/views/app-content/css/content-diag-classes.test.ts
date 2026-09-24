@@ -95,11 +95,17 @@ describe("诊断页日志工具栏：HTML 类名必须有 CSS 规则", () => {
     },
   );
 
-  it("日志工具栏所有 diag-log-* / diag-sub-tab 类均有规则（防再次误删）", () => {
+  it("日志工具栏所有 diag-log-* / diag-sub-* 类均有规则（防再次误删）", () => {
+    // ADR-300 §2.2：diag-sub- 前缀整族入闸（tab 按钮 / bar 容器 / pane 面板）——
+    // 子导航是统一语法，规则丢一发就全体裸渲染，正是本文件立因的那类静默回归。
     const cls = [
       ...classesWithPrefix(html, "diag-log-"),
-      ...classesWithPrefix(html, "diag-sub-tab"),
+      ...classesWithPrefix(html, "diag-sub-"),
     ];
+    // 自检：子导航三件套必须真的被抽到（防前缀改名让本用例悄悄空转）
+    for (const must of ["diag-sub-tab", "diag-sub-bar", "diag-sub-pane"]) {
+      expect(cls, `扫描面丢失 ${must}`).toContain(must);
+    }
     // 排除仅作 JS 钩子、无需样式的占位类（当前无；若新增请显式登记并说明）
     const exempt = new Set<string>();
     const missing = cls.filter((c) => !exempt.has(c) && !hasSubstantiveRule(css, c));

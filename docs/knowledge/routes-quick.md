@@ -135,7 +135,7 @@
 | 模型解析、zip / 7z / 纹理 / 动画 | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
 | 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | ADR-218, ADR-219 |
 | 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) | 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较 | - |
-| 日志查看、性能分析 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
+| 日志查看、性能分析 | [诊断页 diagnostics](./app_content_diagnostics.md) | - | - |
 | 容器解析、container_entries | [统一容器桥接层 go/container](./go-container.md) | 容器内多模型枚举必须走 go/container，前端禁止手写 zip 内文件枚举 | ADR-068, ADR-069 |
 | 扫描模型、ScanModelEntries | [扫描核心 go/scanner](./go-scanner.md) | 容器指纹缓存失效需调 ClearScanCache | - |
 | 搜索、筛选、关键词 / 标签 / 数值三路交集 | [搜索筛选编排 search](./search.md) | 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑 | - |
@@ -143,7 +143,7 @@
 | 同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) | - | - |
 | 同步状态、app-sync-manager | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 文件监听、文件变化、刷新 | [文件监听 go/watcher](./go-watcher.md) | 文件变更监听必须走 go/watcher 的事件流，禁止轮询文件系统 | - |
-| 诊断页、仓库体检、冲突 / 去重 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | 去重 / 体检必须经 diagnostics 页发起，禁止在其他页直接调 doDedup | - |
+| 诊断页、仓库体检、冲突 / 去重 | [诊断页 diagnostics](./app_content_diagnostics.md) | 去重 / 体检必须经 diagnostics 页发起，禁止在其他页直接调 doDedup | - |
 | 整合包分类、路由、location 路由 | [分类路由与回归护栏](./classify-routing.md) | 资源整合包分类必须走 go/packs/classify.go 的 ClassifyResource，前端禁止手写分类逻辑 | ADR-093 |
 | 整合包实例、版本实例、VersionInstance | [整合包实例 go/instance](./go-instance.md) | 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑 | - |
 | 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | ADR-064 |
@@ -156,10 +156,10 @@
 | CLI 搜索、命令行搜索、search 命令 | [CLI 搜索命令 search](./go-cli-search.md) | CLI 搜索必须复用 go/cli 的 SearchModels 后端，禁止 CLI 层手写搜索逻辑 | - |
 | filepath.WalkDir 路径安全 | [去重 go/dedup](./go-dedup.md) | - | - |
 | Geometry 存档、基岩版 bedrock | [Geometry 存档 go/geometry](./go-geometry.md) | Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip | ADR-068 |
-| initDiagnostics、createDedupSession | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
+| initDiagnostics、createDedupSession | [诊断页 diagnostics](./app_content_diagnostics.md) | - | - |
 | IsRecycleDir 守卫 | [去重 go/dedup](./go-dedup.md) | - | - |
 | last-wins / priority 裁决 | [分类路由与回归护栏](./classify-routing.md) | - | ADR-093 |
-| oldest 资历排行 | [诊断与冲突页 diagnostics](./app_content_diagnostics.md) | - | - |
+| oldest 资历排行 | [诊断页 diagnostics](./app_content_diagnostics.md) | - | - |
 | parse.go / archive.go | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
 | runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
 | SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |

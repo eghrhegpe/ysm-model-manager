@@ -339,6 +339,10 @@ export const zhCN = {
   // tabBench 接原 perfRunBench「跑基准」（动宾降回按钮层，键随迁退役）
   "diagnostics.tabLog": "日志",
   "diagnostics.tabBench": "基准",
+  // ADR-300 §2.1/§2.4：三组结构收口——tabAudit 体检组顶层名；pill 层纯名词短标签（父子同名消解）
+  "diagnostics.tabAudit": "体检",
+  "diagnostics.pillHealth": "仓库健康",
+  "diagnostics.pillTrace": "加载剖析",
   "diagnostics.viewerDesktopOnlyNotice": "性能基准与仓库体检仅桌面版可用",
   "diagnostics.opsLog": "操作日志",
   "diagnostics.runtimeLog": "运行时日志",
@@ -517,11 +521,7 @@ export const zhCN = {
   "diagnostics.perfTrendNoData": "暂无趋势数据——运行两次以上 single-bench 后展示折线图",
   "diagnostics.perfRunning": "运行中…",
   "diagnostics.perfIdle": "点上方按钮开始；结果将显示在此处",
-  "diagnostics.perfMode": "怎么跑",
-  // 一句话说清两个下拉的关系：模式选「命令」，测什么选「范围」——原先两个「单模型」撞名又耦合
-  "diagnostics.perfModeHint":
-    "怎么跑 = 用哪种基准命令；旁边「测什么」= 这次测多大范围。两者独立：先选命令，再圈范围",
-  "diagnostics.perfRecord": "性能记录",
+  // perfMode/perfModeHint/perfRecord 已随 ADR-300 §2.2/§2.4 退役（模式下拉与「性能记录」tab 双双消失）
   "diagnostics.perfFail": "执行失败",
   "diagnostics.loadTraceRefresh": "刷新加载剖析",
   "diagnostics.loadTraceTitle": "加载剖析",

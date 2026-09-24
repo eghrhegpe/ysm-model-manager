@@ -54,18 +54,21 @@ export const contentDiagCSS: string = `
 
 .diag-panel { animation: diagPanelIn .2s ease; }
 @keyframes diagPanelIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
-/* 日志面板工具栏：两行语义分组（2026-09-17 版面收口，搜索框 2026-09-28 上移）。
-   行1 = 视图切换（操作/运行时）+ 搜索框 + 动作（刷新/复制/清空）；行2 = 状态筛选 chips。
+/* 日志面板工具栏：两行语义分组（2026-09-17 版面收口，搜索框 2026-09-28 上移；
+   ADR-300 §2.2 起视图切换升为组内 pill 行、不再住工具栏）。
+   行1 = 搜索框 + 动作（刷新/复制/清空）；行2 = 状态筛选 chips + 操作类型下拉。
    演进：9 按钮 + 1 输入框挤单行时，flex:1 的 spacer 把「清空」（破坏性动作）与筛选 chips
    划成一组、却把刷新/复制推到行尾——视觉分组 ≠ 功能分组；且 spacer 自身会随
    flex-wrap 折行，窄宽下右侧动作组被挤散。
-   2026-09-28 再收口：搜索框本质是「视图范围」控件（按激活子 tab 分派过滤），与
-   「操作/运行时」子 tab 同属一层语义，随之上移行1 紧跟子 tab；行2 只剩纯筛选 chips。
    .diag-log-row 为布局类，由 content-diag-classes.test.ts 强制同步。 */
 .diag-log-bar { display:flex; flex-direction:column; gap:4px; padding:var(--btn-padding-filter-lg); border-bottom:1px solid var(--bd); flex-shrink:0; }
 .diag-log-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .diag-log-bar-spacer { flex:1; }
-.diag-log-subtabs { display:flex; gap:2px; }
+/* 组内二级导航（ADR-300 §2.2）：renderSubBar 产出的 pill 行——全页唯一的「页内再分屏」形态。
+   容器是布局类（仿 .diag-log-subtabs 前身职责）；.diag-sub-pane 是子面板竖排容器
+   （激活时 display 回落本规则，非激活由 bindSubBar 置 inline none）。 */
+.diag-sub-bar { display:flex; align-items:center; gap:2px; padding:var(--btn-padding-std); flex-shrink:0; flex-wrap:wrap; }
+.diag-sub-pane { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
 .diag-sub-tab { padding:var(--btn-padding-std); border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-sm); font-family:inherit; transition:var(--tr-fast); }
 .diag-sub-tab:hover { background:var(--hover); color:var(--txt); }
 .diag-sub-tab.active { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }

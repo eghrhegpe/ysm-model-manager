@@ -168,7 +168,7 @@ describe("_render — 页面分支", () => {
     expect(el.shadowRoot.querySelector(".stg-tab")).not.toBeNull();
     el.state.current = "diagnostics";
     el._render();
-    expect(el.shadowRoot.querySelector("#diag-tab-log")).not.toBeNull();
+    expect(el.shadowRoot.querySelector("#diag-tab-logs")).not.toBeNull();
     el.state.current = "workshop";
     el._render();
     expect(el.shadowRoot.querySelector("#ws-tabs")).not.toBeNull();

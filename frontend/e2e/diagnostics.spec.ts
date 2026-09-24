@@ -2,11 +2,15 @@
 // ADR-258 把诊断页左栏分段收敛为顶部统一 repo-tab，旧选择器 `.diag-btn[data-diag]` 已随之废弃，
 // 本 spec 同步改写（原版仍在等 `.diag-btn` 渲染，10s 必然超时——已失效）。
 //
-// 常驻回归防线（2026-09-17 事故）：diagnosticsHTML() 曾漏一个 </div>，`#diag-tab-log` 把后续
-// 7 个面板全吞进自己内部；bindTabs 切页时把 `#diag-tab-log` 置 display:none，嵌在里面的面板
+// 常驻回归防线（2026-09-17 事故）：diagnosticsHTML() 曾漏一个 </div>，首个面板把后续
+// 7 个面板全吞进自己内部；bindTabs 切页时把外层面板置 display:none，嵌在里面的面板
 // 一并消失 —— 切任何 tab 都只剩空白。单元层的子串断言对此失明（面板 id 仍在字符串里，
 // toContain 恒真），**只有真实浏览器的可见性/布局判定能抓**，故「切到每个 tab 后该面板真实可见」
 // 列为常驻用例。
+// ADR-300 S2：顶层 6 tab 重划为 3 个意图组（logs / bench / audit），组内二级导航统一为
+// 子 pill（renderSubBar 产出，testid = diag-sub-<group>-<id>；原 bench 模式轴与 record/scan
+// 顶层 tab 退役）。吞并事故的防线随组保留，并下探一层：新增「逐组逐 pill 点击 → 该子屏
+// 内容容器真实可见」常驻用例。
 // diagnostics 组件在 app-content shadowRoot 内渲染，用 evaluate 穿透。
 
 import { expect, type Page, test } from "./fixture.ts";
@@ -21,18 +25,50 @@ import {
   TARGET_REPO_SIZE_REAL,
 } from "./perf-fixtures.ts";
 
-/** 顶部 repo-tab 的 data-tab 全集（与 tpl.ts diagnosticsHTML 一一对应） */
-const DIAG_TABS = [
-  "log",
-  // ADR-278 §2.1：single / conc 两态合并为 bench（模式选择器切三态），hist / trace 合并为 record
-  "bench",
-  // ADR-278 §2.7：引擎对照退出模式轴，自成一个独立 tab（CLI 侧它只有 --iterations）
-  "scan",
-  // gui tab 已随 a1e26419d「砍除 gui-flow 面板」下线（Go 命令保留）；此处曾漂移一个提交周期
-  "record",
-  "health",
-  "sync-conflict",
-] as const;
+/**
+ * 顶层 repo-tab 的 data-tab 全集（与 tpl.ts diagnosticsHTML 一一对应）。
+ * ADR-300 §2.1（S2 落地）：6 tab → 3 个意图组——日志 logs / 基准 bench / 体检 audit，
+ * 组内以子 pill 切换（§2.2 单点语法）。旧形态 log/bench/scan/record/health/sync-conflict
+ * 六平级 tab 与 bench 模式轴下拉均已退役。gui tab 早已随 a1e26419d「砍除 gui-flow 面板」
+ * 下线（Go 命令保留），此处曾漂移一个提交周期——教训保留，见下方 DIAG_TAB_COUNT 派生。
+ */
+const DIAG_TABS = ["logs", "bench", "audit"] as const;
+
+/**
+ * 三组子 pill → 该子屏的**内容容器** id（ADR-300 §2.1 组表）。
+ * pill 稳定钩子由 renderSubBar 派生：testid = `diag-sub-<group>-<id>`。
+ *  - logs：操作列表 / 运行时列表 / 加载剖析容器（trace 子屏自带刷新条，判 list 容器）
+ *  - bench：三个运行按钮各自随 data-perf-mode 行门控显隐（single/conc/scan 各自唯一露面）
+ *  - audit：两段式常驻栏（health / sync 子面板各自包一根 bar）
+ */
+const DIAG_SUB_PILLS: ReadonlyArray<{
+  group: (typeof DIAG_TABS)[number];
+  pills: ReadonlyArray<{ sub: string; container: string }>;
+}> = [
+  {
+    group: "logs",
+    pills: [
+      { sub: "op", container: "diag-log-list" },
+      { sub: "runtime", container: "diag-runtime-list" },
+      { sub: "trace", container: "diag-load-trace" },
+    ],
+  },
+  {
+    group: "bench",
+    pills: [
+      { sub: "single", container: "diag-perf-run" },
+      { sub: "conc", container: "diag-perf-conc-run" },
+      { sub: "scan", container: "diag-perf-scan-bench" },
+    ],
+  },
+  {
+    group: "audit",
+    pills: [
+      { sub: "health", container: "diag-health-bar" },
+      { sub: "sync", container: "diag-sync-bar" },
+    ],
+  },
+];
 
 /** tab 就绪等待数**派生自 DIAG_TABS**——上一行清单与本数字是同一事实的两个副本时，
  * 退役/新增 tab 只改一处必漂移（gui 教训）；故禁止再写 `>= 6` 这类字面量。 */
@@ -46,6 +82,26 @@ function panelMeasuredVisible(page: Page, id: string): Promise<boolean> {
     if (!panel) return false;
     const rect = panel.getBoundingClientRect();
     return getComputedStyle(panel).display !== "none" && rect.width > 0 && rect.height > 0;
+  }, id);
+}
+
+/**
+ * 任意元素**真实可见**（ADR-300 S2 的 pill 级防线）：panelMeasuredVisible 只认顶层 tab
+ * 面板（id=diag-tab-<组>），子屏内容容器走本判定——getBoundingClientRect 非零 + 祖先链
+ * （含子面板本身）无 display:none。pill 接线失灵 / 行门控（.perf-mode-off）盖错行 /
+ * 子面板被吞并，都会在这里现形。
+ */
+function elementMeasuredVisible(page: Page, id: string): Promise<boolean> {
+  return page.evaluate((n: string) => {
+    const root = document.querySelector("app-content")?.shadowRoot;
+    const el = root?.getElementById(n) ?? null;
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    for (let cur: HTMLElement | null = el; cur !== null; cur = cur.parentElement) {
+      if (getComputedStyle(cur).display === "none") return false;
+    }
+    return true;
   }, id);
 }
 
@@ -66,6 +122,12 @@ async function clickBySelector(page: Page, selector: string): Promise<void> {
     const root = document.querySelector("app-content")?.shadowRoot;
     (root?.querySelector(sel) as HTMLElement | null)?.click();
   }, selector);
+}
+
+/** 点 bench 组子 pill（ADR-300 §2.2：模式切换的唯一载体，原模式下拉已退役）。
+ *  生产链路 bindSubBar → 写 data-active-sub → onSwitch → applyPerfModeUI 重放行门控。 */
+async function clickBenchPill(page: Page, sub: "single" | "conc" | "scan"): Promise<void> {
+  await clickBySelector(page, `[data-testid="diag-sub-bench-${sub}"]`);
 }
 
 test.describe("诊断页", () => {
@@ -94,7 +156,7 @@ test.describe("诊断页", () => {
       };
     });
     expect(info.ids).toEqual([...DIAG_TABS]);
-    expect(info.active).toEqual(["log"]);
+    expect(info.active).toEqual(["logs"]);
   });
 
   test("切到每个 tab → 该面板真实可见（空白页回归防线）", async ({ page }) => {
@@ -109,7 +171,28 @@ test.describe("诊断页", () => {
     }
   });
 
-  test("record tab 引导空态：未加载模型时展示「暂无加载记录」+ 引导提示（内容回归防线）", async ({
+  test("组内逐 pill 点击 → 该子屏内容容器真实可见（ADR-300 §2.2 二级导航回归防线）", async ({
+    page,
+  }) => {
+    // 顶层 tab 判「组不空白」，本用例下探一层判「组内切换真的换了屏」：
+    // pill 点击经 bindSubBar 写 active + 显隐子面板 / applyPerfModeUI 重放行门控，
+    // 任一环节断线（testid 漂移、data-sub-pane 集合漏挂、data-perf-mode 行盖错），
+    // 对应容器就会在点它那一枚 pill 后仍不可见。
+    for (const { group, pills } of DIAG_SUB_PILLS) {
+      await clickBySelector(page, `.repo-tab[data-tab="${group}"]`);
+      for (const { sub, container } of pills) {
+        await clickBySelector(page, `[data-testid="diag-sub-${group}-${sub}"]`);
+        await expect
+          .poll(() => elementMeasuredVisible(page, container), {
+            timeout: 5000,
+            message: `切到「${group}/${sub}」pill 后容器 #${container} 不可见（疑 pill 接线或门控失灵）`,
+          })
+          .toBe(true);
+      }
+    }
+  });
+
+  test("logs 组 trace pill 引导空态：未加载模型时展示「暂无加载记录」+ 引导提示（内容回归防线）", async ({
     page,
   }) => {
     // f8b70b360 核心卖点「trace 进即渲染 + 引导空态」在真实浏览器无防回归防线：
@@ -117,7 +200,10 @@ test.describe("诊断页", () => {
     //（tpl-structure.test.ts:4-9 自白过同一教训）。可断言选择器来自 perf-trace.ts 空态分支：
     //   #diag-load-trace > .perf-no-data（t("diagnostics.loadTraceNoData")）
     //   #diag-load-trace > .perf-no-hint（t("diagnostics.loadTraceHint")）
-    await clickBySelector(page, `.repo-tab[data-tab="record"]`);
+    // ADR-300 §2.1：加载剖析自顶层 tab 迁入 logs 组第三子 pill——进组 tab 再点 pill，
+    // bindSubBar("logs") 的 onSwitch 承接原 record tab 的「进入即重渲染」语义（§2.6 红线 5）。
+    await clickBySelector(page, `.repo-tab[data-tab="logs"]`);
+    await clickBySelector(page, `[data-testid="diag-sub-logs-trace"]`);
     // ⚠️ 语种前置：本仓 e2e 钉 locale: "en-US"（防 CI 系统语言翻车），文案断言必须用 en 包口径；
     // 写死 zh-CN 文案的用例（含 8054ef324 旧版）在此环境下必红。
     // 空态文案——断言不能写死 zh-CN（实际渲染 en 包），锁三语并集，不赌具体语种。
@@ -134,7 +220,7 @@ test.describe("诊断页", () => {
           ),
         {
           timeout: 5000,
-          message: "record tab 空态未渲染（疑 i18n 键缺失或面板被吞并）",
+          message: "trace pill 空态未渲染（疑 i18n 键缺失或面板被吞并）",
         },
       )
       .toMatch(/暂无加载记录|No load records yet|ロード記録なし/);
@@ -162,11 +248,15 @@ test.describe("诊断页", () => {
     ).resolves.toBe(0);
   });
 
-  test("日志工具栏两行语义分组：行1=子tab+搜索+动作，行2=筛选", async ({ page }) => {
+  test("日志组版面：子 pill 行置顶 + 工具栏两行语义分组（行1=搜索+动作，行2=筛选）", async ({
+    page,
+  }) => {
     // 2026-09-17 版面收口（方案 A）：9 按钮 + 1 输入框挤单行时分组语义错乱（清空与筛选同组、
     // 刷新/复制被 spacer 推远），且 spacer 随 flex-wrap 折行挤散动作组。
-    // 2026-09-28 再收口：搜索框上移行1、紧跟子 tab（搜索按激活子 tab 分派，属「视图范围」
-    // 语义，与子 tab 同层），行2 只剩筛选 chips。本用例锁两行结构与归属。
+    // 2026-09-28 再收口：搜索框上移行1（按激活子 tab 分派），行2 只剩筛选 chips。
+    // 2026-09-24 ADR-300 §2.2：子 tab 从 .diag-log-bar 内的 .diag-log-subtabs **升为独立
+    // .diag-sub-bar 行**，与 bench/audit 组共用单点语法——它现在落在工具栏上方、工具栏外。
+    // 本用例随之改锁：pill 行置顶（子 tab 不再挤在工具栏行1），行1 = 搜索 + 三动作，行2 = 筛选。
     const layout = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
       const rect = (
@@ -178,14 +268,18 @@ test.describe("诊断页", () => {
         return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
       };
       const rows = [
-        ...(root?.querySelectorAll(".diag-log-bar .diag-log-row") ?? []),
+        // ⚠️ 精确锁定 op/runtime 工具栏那条 .diag-log-bar：ADR-300 后日志面板内有**两根**
+        // .diag-log-bar（另一根在 display:none 的 trace 子面板里，只装刷新按钮）——泛选会
+        // 把隐藏的 trace 行也算进来（querySelectorAll 无视 display），rows 变 3 而误红。
+        ...(root?.querySelectorAll('.diag-log-bar[data-sub-pane="op runtime"] .diag-log-row') ??
+          []),
       ] as HTMLElement[];
       return {
         rows: rows.map((el) => {
           const r = el.getBoundingClientRect();
           return { top: r.top, bottom: r.bottom };
         }),
-        subTabs: rect(".diag-log-subtabs"),
+        subBar: rect('.diag-sub-bar[data-sub-bar="logs"]'),
         refresh: rect("#diag-refresh"),
         copy: rect("#diag-copy"),
         clear: rect("#diag-clear"),
@@ -195,6 +289,8 @@ test.describe("诊断页", () => {
         skipChip: rect('.diag-log-fbtn[data-status="skipped"]'),
       };
     });
+    // 子 pill 行（ADR-300 单点语法）必须存在——缺失即整条导航回归
+    expect(layout.subBar).not.toBeNull();
     expect(layout.rows).toHaveLength(2);
     // 显式守卫收窄类型（biome 禁非空断言）：单行旧范式下 rows 为空，此处先炸即抓到回归
     const [row1, row2] = layout.rows;
@@ -207,20 +303,21 @@ test.describe("诊断页", () => {
       if (!r) throw new Error(`日志工具栏缺少元素：${name}`);
       return r;
     };
+    // 子 pill 行整行在工具栏行1 上方（组内二级导航独立成行，不再混进动作行）
+    const subBar = box("subBar", layout.subBar);
+    expect(subBar.bottom).toBeLessThanOrEqual(row1.top);
     // 行1 严格位于行2 上方（互不重叠）
     expect(row1.bottom).toBeLessThanOrEqual(row2.top);
-    // 行1 归属：子 tab + 搜索框 + 三个动作按钮
-    const subTabs = box("subTabs", layout.subTabs);
+    // 行1 归属：搜索框 + 三个动作按钮（子 tab 已移出，不在此行）
     const search = box("search", layout.search);
     const refresh = box("refresh", layout.refresh);
     const copy = box("copy", layout.copy);
     const clear = box("clear", layout.clear);
-    for (const r of [subTabs, search, refresh, copy, clear]) {
+    for (const r of [search, refresh, copy, clear]) {
       expect(r.top).toBeGreaterThanOrEqual(row1.top);
       expect(r.bottom).toBeLessThanOrEqual(row1.bottom);
     }
-    // 行1 语义次序：导航靠左，搜索吃掉空档（spacer 前），动作被顶到右侧、破坏性「清空」殿后
-    expect(subTabs.right).toBeLessThan(search.left);
+    // 行1 语义次序：搜索吃掉空档（spacer 前），动作被顶到右侧、破坏性「清空」殿后
     expect(search.left).toBeLessThan(refresh.left);
     expect(refresh.left).toBeLessThan(copy.left);
     expect(copy.left).toBeLessThan(clear.left);
@@ -238,7 +335,9 @@ test.describe("诊断页", () => {
     expect(box("skipChip", layout.skipChip).right).toBeLessThanOrEqual(opFilter.left);
   });
 
-  test("单模型 tab：类型选择器选项来自 registry（前端不写死类型表）", async ({ page }) => {
+  test("bench 组 · 单模型 pill：类型选择器选项来自 registry（前端不写死类型表）", async ({
+    page,
+  }) => {
     // ADR-262 D3：矩阵的类型选项必须来自 Go/registry（resource_types.json 单一事实源），
     // 前端只读不判。选择器除固定的「单模型」「全部类型」外，应出现 mock 注册表里的类型。
     // ⚠️ 只列 **cliAnalyzable** 的类型（`8d448bb3f` 起的口径：不可分析的类型进了选择器也跑不了）；
@@ -265,7 +364,9 @@ test.describe("诊断页", () => {
     expect(info.text).toContain("YSM 模型");
   });
 
-  test("单模型 tab：基准三件套就位，且切到矩阵模式即禁用（ADR-262 D8）", async ({ page }) => {
+  test("bench 组 · 单模型 pill：基准三件套就位，且切到矩阵模式即禁用（ADR-262 D8）", async ({
+    page,
+  }) => {
     // 背景缺陷「永远没有好还是坏的判定」的最后一环：退化门禁早已实现、ParamSpec 也已登记，
     // 但 GUI 从未传过 --baseline/--save-baseline，用户看不到「比上次好还是坏」。
     // 这里断言入口真实可交互，且与矩阵模式互斥（Go 侧对矩阵模式的基准参数是明确拒绝的）。
@@ -318,12 +419,14 @@ test.describe("诊断页", () => {
     expect(after.disabledAtStart).toBe(true);
   });
 
-  test("并发基准 tab：入口就位（并发度 / 每类上限 / 运行）（ADR-262 D5）", async ({ page }) => {
+  test("并发基准 pill（bench 组）：入口就位（并发度 / 每类上限 / 运行）（ADR-262 D5）", async ({
+    page,
+  }) => {
     // 背景缺陷：concurrent-bench 此前**只有文本**，GUI 里连入口都没有——
     // 「串行 vs 并行的实测加速比」是主动压测的第一手数据，必须能从界面取到。
     await clickBySelector(page, '.repo-tab[data-tab="bench"]');
-    // ADR-278 §2.1：并发控件不再独占 tab——切「跑基准」后把模式选择器拨到 conc（控件随模式显隐）
-    await setShadowSelect(page, "diag-perf-mode", "conc");
+    // ADR-300 §2.2：模式轴 = bench 组子 pill——点「批量并发」pill（控件随行门控显隐）
+    await clickBenchPill(page, "conc");
     const probe = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
       const pick = (id: string) =>
@@ -343,9 +446,9 @@ test.describe("诊断页", () => {
       };
     });
     if (!probe.present) throw new Error("未找到并发基准入口（diag-perf-conc-*）");
-    // tab 真的切过去了（面板可见，不是被吞进别的 tab）——可见性走 expect.poll：
-    // clickBySelector 是同步点击，display 翻转可能滞后，同文件日志子 tab 互斥可见用例
-    // （L293-295）即此范式，慢 runner 下同步探测会读到切换前的 DOM 态造成 flaky。
+    // 模式真的切过去了（并发控件随 pill 露面，不是被行门控盖住）——可见性走 expect.poll：
+    // clickBySelector 是同步点击，display 翻转可能滞后，同文件「日志子 pill 互斥可见」用例
+    // 即此范式，慢 runner 下同步探测会读到切换前的 DOM 态造成 flaky。
     await expect
       .poll(
         () =>
@@ -379,10 +482,12 @@ test.describe("诊断页", () => {
     ).not.toMatch(/\d/);
   });
 
-  test("日志子 tab：操作日志与运行时日志互斥可见", async ({ page }) => {
+  test("日志子 pill：操作日志与运行时日志互斥可见", async ({ page }) => {
     // 默认：操作日志可见、运行时隐藏
     expect(await panelDisplay(page)).toEqual({ op: true, runtime: false });
-    await clickBySelector(page, '.diag-sub-tab[data-log="runtime"]');
+    // ADR-300 §2.2：logs 组子 tab 行统一走 renderSubBar——点 op/runtime 子 pill（原 data-log
+    // 私有属性与 .diag-log-subtabs 容器随单点语法退役），bindSubBar 按 data-sub-pane 集合显隐。
+    await clickBySelector(page, `[data-testid="diag-sub-logs-runtime"]`);
     await expect
       .poll(() => panelDisplay(page), { timeout: 5000 })
       .toEqual({ op: false, runtime: true });
@@ -452,7 +557,8 @@ async function setShadowValue(page: Page, testid: string, value: string): Promis
   );
 }
 
-/** 设置 shadowRoot 内 <select> 的值并派发 change（模式判定在运行时读值，故需 change 让联动生效） */
+/** 设置 shadowRoot 内 <select> 的值并派发 change（目标集/排序联动在运行时读值，故需 change 让回调生效；
+ *  原 bench 模式轴也是这条路，ADR-300 §2.2 后模式改走 clickBenchPill，本 helper 只剩真 select） */
 async function setShadowSelect(page: Page, testid: string, value: string): Promise<void> {
   await page.evaluate(
     ({ id, v }: { id: string; v: string }) => {
@@ -557,7 +663,7 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     await clickBySelector(page, '.repo-tab[data-tab="bench"]');
   });
 
-  test("单模型 tab：阶段条 + 基准判决行按载荷渲染，无 i18n 占位符残留", async ({ page }) => {
+  test("单模型 pill：阶段条 + 基准判决行按载荷渲染，无 i18n 占位符残留", async ({ page }) => {
     await installCliMock(page, { "single-bench": { data: SINGLE_BENCH_SAVED } });
     await setShadowValue(page, "diag-perf-model", "./ysm/player.ysm");
     await clickBySelector(page, '[data-testid="diag-perf-run"]');
@@ -590,7 +696,7 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     for (const hint of SINGLE_BENCH_SAVED.hints) expect(got.text).not.toContain(hint);
   });
 
-  test("单模型 tab：退化判决在真实浏览器里渲染红条与逐阶段明细", async ({ page }) => {
+  test("单模型 pill：退化判决在真实浏览器里渲染红条与逐阶段明细", async ({ page }) => {
     // 合成退化样本：结构取自真实载荷，数字为构造的「超阈值退化」（真实夹具太小，落在噪声下限内）
     const regressed = {
       ...SINGLE_BENCH_SAVED,
@@ -626,10 +732,11 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     expect(PLACEHOLDER_LEAK.test(got.text)).toBe(false);
   });
 
-  test("并发基准 tab：档位表与判决徽标按载荷渲染，Go 中文建议不上屏", async ({ page }) => {
+  test("并发基准 pill：档位表与判决徽标按载荷渲染，Go 中文建议不上屏", async ({ page }) => {
     await installCliMock(page, { "concurrent-bench": { data: CONC_BENCH_REAL } });
     await clickBySelector(page, '.repo-tab[data-tab="bench"]');
-    await setShadowSelect(page, "diag-perf-mode", "conc");
+    // ADR-300 §2.2：切并发模式 = 点 bench 组「批量并发」子 pill（原模式下拉退役）
+    await clickBenchPill(page, "conc");
     await clickBySelector(page, '[data-testid="diag-perf-conc-run"]');
 
     await waitForCount(page, ".perf-conc-verdict", CONC_BENCH_REAL.parallel.length);
@@ -755,7 +862,7 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
 // 生产路径静默回退 Go。若界面把「没测到」渲染成 0.00ms，读者会得到**与事实相反**的结论
 // （「快到测不出」）。故这里用真 CLI 载荷同时锁两面：默认构建（Rust 未采集）与
 // rust_backend 构建（两端实测 + 一致性）。
-test.describe("诊断页 · 引擎对照 scan-bench 真实载荷渲染（ADR-262 D3）", () => {
+test.describe("诊断页 · 引擎对照 scan-bench（bench 组子 pill）真实载荷渲染（ADR-262 D3 × ADR-300 §2.1）", () => {
   test.beforeEach(async ({ page }) => {
     await gotoApp(page);
     await navItem(page, "diagnostics").click();
@@ -767,8 +874,10 @@ test.describe("诊断页 · 引擎对照 scan-bench 真实载荷渲染（ADR-262
       DIAG_TAB_COUNT,
       { timeout: 10000, polling: 200 },
     );
-    // ADR-278 §2.7：引擎对照已退出模式轴，现为**独立 top tab**，直接点 tab 名进入
-    await clickBySelector(page, '.repo-tab[data-tab="scan"]');
+    // ADR-300 §2.1（D1 拍板）：引擎对照自顶层平级 tab 迁入 bench 组第三子 pill——
+    // 点组 tab 进 bench，再点 scan pill（其参数面随 data-perf-mode="scan" 整行露面）
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
+    await clickBenchPill(page, "scan");
   });
 
   /**
@@ -873,8 +982,9 @@ test.describe("诊断页 · 引擎对照 scan-bench 真实载荷渲染（ADR-262
 });
 
 // ── ADR-278 §2.6 bench 语义诚实层（真实浏览器链路）──────────────────
-// jsdom 层已钉住改写逻辑；这层的增量价值 = 「用户拨选择器 → change 事件 → 界面当场改口」
-// 的完整时序（含目标集异步填充后的重放），及三语环境下只锁语义关键词、不锁拼接形态。
+// jsdom 层已钉住改写逻辑；这层的增量价值 = 「用户点组内子 pill → bindSubBar 写模式源 →
+// applyPerfModeUI 重放 → 界面当场改口」的完整时序（含目标集异步填充后的重放），
+// 及三语环境下只锁语义关键词、不锁拼接形态。（ADR-300 §2.2：模式轴载体已从下拉换成 pill。）
 test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () => {
   test.beforeEach(async ({ page }) => {
     await gotoApp(page);
@@ -909,26 +1019,27 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
 
   // ⚠️ 语种口径：playwright.config 把浏览器钉在 locale: "en-US"（防 CI 系统语言翻车），
   // 文案断言一律用 en 包关键词；zh-CN 只在注释里留对照。语义关键词不锁拼接形态（同单测降噪原则）。
-  test("引擎对照独立成 tab：迭代框自带 rescan 口径，不随模式改口（ADR-278 §2.7）", async ({
+  test("引擎对照子 pill：迭代框自带 rescan 口径，不与 single 共用（ADR-278 §2.7 × ADR-300 §2.1）", async ({
     page,
   }) => {
     const single = await readHonesty(page);
     expect(single.iter).toContain("How many runs"); // zh：跑几次
     expect(single.target).toContain("What to test");
-    // scan 已退出模式轴：它不是模式，而是一个独立 tab——切过去看它自己的框
-    await clickBySelector(page, '.repo-tab[data-tab="scan"]');
+    // scan 是 bench 组第三子 pill（beforeEach 已进 bench 组、默认 single）——点 scan pill
+    // 切进它自己的参数面，读它自带的迭代框
+    await clickBenchPill(page, "scan");
     const scanIter = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
       return root?.querySelector('[data-testid="diag-perf-scan-iter"]')?.id ?? "";
     });
-    // 迭代框是 scan tab **自己的** id，不再与 single 共用 #diag-perf-iter
+    // 迭代框是 scan 子面板 **自己的** id，不再与 single 共用 #diag-perf-iter
     expect(scanIter).toBe("diag-perf-scan-iter");
   });
 
-  test("切 conc：目标集标签改为 Which to test，且单模型回落伴随可见 toast（不再静默改选择）", async ({
+  test("切 conc pill：目标集标签改为 Which to test，且单模型回落伴随可见 toast（不再静默改选择）", async ({
     page,
   }) => {
-    await setShadowSelect(page, "diag-perf-mode", "conc");
+    await clickBenchPill(page, "conc");
     const got = await readHonesty(page);
     expect(got.target).toContain("Which to test"); // zh：测哪些
     // toast 用 data-testid="toast" 稳定钩子（同 toast.spec.ts）；⚠️ 它在 <app-toast> 的 **shadowRoot**
@@ -943,7 +1054,7 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
     expect(toastShown).toBe(true);
   });
 
-  test("两个模式运行按钮各自带「测什么对象」hint（scan 已独立成 tab，其 scope 说明写在 tab 内）", async ({
+  test("两个模式运行按钮各自带「测什么对象」hint（scan 为 bench 组第三子 pill，其 hint 由 tpl 直写不进派生面）", async ({
     page,
   }) => {
     const got = await readHonesty(page);

@@ -3,17 +3,17 @@
 // 本文件保留 initDiagnostics 编排壳，并 re-export createDedupSession 保持外部 import 路径（./diagnostics/init.ts）不变
 
 import { can } from "@/backend/capabilities.ts";
-import { isViewerMode } from "@/backend/platform.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { bindSubBar } from "@/views/app-content/tabs-shell.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { initSyncConflictPanel } from "./conflicts.ts";
 import { copyWithToast } from "./copy-toast.ts";
 import { initHealthPanel } from "./health.ts";
 import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
-import { initPerfPanel, renderLoadTraceSection } from "./perf.ts";
+import { applyPerfModeUI, initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 
 // 对外 API 兼容：createDedupSession 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）
 export { createDedupSession } from "./dedup.ts";
@@ -51,30 +51,36 @@ function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
   });
 }
 
-/** 当前日志子 tab 是否运行时日志（决定刷新/复制取哪个列表、清空是否可见） */
-function dgInIsRuntimeLog(root: ShadowRoot): boolean {
-  const active = root.querySelector(".diag-sub-tab.active") as HTMLElement | null;
-  return active?.dataset.log === "runtime";
+/** 日志组当前激活子屏（op / runtime / trace）。
+ *  ⚠️ 读取**限定在 logs 组 pill 行内**——ADR-300 §2.2 后 .diag-sub-tab 是三组共享类，
+ *  全局查第一个 .active 会串线到 bench/audit 组（原 data-log 私有属性随单点语法退役）。 */
+function dgInLogsActiveSub(root: ShadowRoot): string {
+  const active = root.querySelector<HTMLElement>(
+    '.diag-sub-bar[data-sub-bar="logs"] .diag-sub-tab.active',
+  );
+  return active?.dataset.sub ?? "op";
 }
 
-/** 切换日志子 tab（op / runtime）：显隐两个列表 + 控制清空按钮可见性 */
-function dgInBindLogSubTabs(root: ShadowRoot, esc: EscFn): void {
-  root.querySelectorAll(".diag-sub-tab").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      root.querySelectorAll(".diag-sub-tab").forEach((b) => {
-        b.classList.toggle("active", b === btn);
-      });
-      const isRuntime = (btn as HTMLElement).dataset.log === "runtime";
-      const opList = root.getElementById("diag-log-list");
-      const rtList = root.getElementById("diag-runtime-list");
-      if (opList) opList.style.display = isRuntime ? "none" : "";
-      if (rtList) rtList.style.display = isRuntime ? "" : "none";
-      const clearBtn = root.getElementById("diag-clear");
-      if (clearBtn) clearBtn.style.display = isRuntime ? "none" : "";
-      if (isRuntime) loadRuntimeLogs(root, esc);
-      else loadDiagnosticsLogs(root, esc);
-    });
+/** 当前日志子屏是否运行时日志（决定刷新/复制取哪个列表；清空可见性已声明进 data-sub-pane="op"） */
+function dgInIsRuntimeLog(root: ShadowRoot): boolean {
+  return dgInLogsActiveSub(root) === "runtime";
+}
+
+/**
+ * 三组子 pill 接线（ADR-300 §2.2 单点语法）：显隐机制在 bindSubBar（tabs-shell），
+ * 这里只登记各组激活副作用——
+ *  - logs：切屏即拉数据（进屏即渲染，与 trace 的进入语义同口径）；
+ *  - bench：模式源已收口 data-active-sub，切 pill = 重放行门控/门禁/标签（applyPerfModeUI）；
+ *  - audit：纯显隐（两段式面板各自 init 常驻，无需副作用）。
+ */
+function dgInBindSubBars(root: ShadowRoot, esc: EscFn): void {
+  bindSubBar(root, "logs", (id) => {
+    if (id === "runtime") loadRuntimeLogs(root, esc);
+    else if (id === "trace") renderLoadTraceSection(root, esc);
+    else loadDiagnosticsLogs(root, esc);
   });
+  bindSubBar(root, "bench", () => applyPerfModeUI(root));
+  bindSubBar(root, "audit");
 }
 
 /** 复制当前激活日志列表文本（op / runtime 二选一） */
@@ -145,31 +151,6 @@ function dgInInitScanPanels(root: ShadowRoot, esc: EscFn): void {
   );
 }
 
-/** 查看器/网页版：隐藏扫描入口按钮（tab 本体已由 renderTabs(desktopOnly) 在模板层单点隐）。
- * 本函数只剩「面板内局部控件」这一类无法声明进 TabSpec 的收窄；
- * 加载剖析（diag-perf-refresh-trace）**不**隐藏：其数据是 3D 适配器写内存 store
- * （getLoadTraces()，零 Go/CLI 依赖），跨模式可用——连它一起藏曾把唯一可用入口藏掉。 */
-function dgInHideDesktopOnly(root: ShadowRoot): void {
-  if (!isViewerMode()) return;
-  // ADR-278 §2.5：conflict / health / sync-conflict / bench 四个 tab 整 tab 隐藏已下沉
-  // tpl 声明处（desktopOnly: true → renderTabs(viewerMode) 产出时直接不渲染），
-  // 此处不再持有一份远处的选择器名单——那正是与 tpl 漂移的那只手。
-  for (const id of [
-    // ADR-288：扫描入口已由「结果容器内的按钮」迁到**常驻栏**（bar 内按钮 + 结果区两段式），
-    // 故这里隐的是栏本体——栏内即入口，隐栏等价隐入口（tab 本体在 desktopOnly 下已整块不渲染，
-    // 此为二道防线；init.test 钉的是元素自身 style 非仅继承不可见）
-    "diag-health-bar",
-    "diag-sync-bar",
-    // ADR-278 §2.7：引擎对照已是独立 desktopOnly tab，其运行按钮同样按 id 显式隐一次
-    // （与上面两条同口径：tab 本体不渲染 + 面板内控件再隐）
-    "diag-perf-scan-bench",
-    // 加载剖析（diag-perf-refresh-trace）不在此列：零 Go/CLI 依赖、跨模式可用——连它一起藏
-    // 曾把「唯一跨模式可用面板」的唯一入口藏掉（2026-09 修正，与本函数本意反向成立）。
-  ]) {
-    const el = root.getElementById(id);
-    if (el) el.style.display = "none";
-  }
-}
 function dgInBindLogFilter(root: ShadowRoot, esc: EscFn): void {
   root.querySelectorAll(".diag-log-fbtn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -225,8 +206,12 @@ function dgInBindLogSearch(root: ShadowRoot, esc: EscFn): void {
 function dgInBindTraceTab(root: ShadowRoot, esc: EscFn): void {
   // 初始化即渲染：语言切换重建面板后同样能恢复（本函数由 initDiagnostics 统一调用）
   renderLoadTraceSection(root, esc);
-  root.querySelector<HTMLElement>('.repo-tab[data-tab="record"]')?.addEventListener("click", () => {
-    renderLoadTraceSection(root, esc);
+  // ADR-300 §2.6 红线：record 降级为 logs 组第三 pill 后，原 `.repo-tab[data-tab="record"]`
+  // 选择器会 optional-chain 成静默失灵。pill 内的进入重渲染已归 bindSubBar("logs") 的
+  // onSwitch；这里承接的是另一半——trace 已选中时再点 logs 顶层 tab（数据在背后被 3D 预览
+  // 刷新过，重进要看得到最新一份）。
+  root.querySelector<HTMLElement>('.repo-tab[data-tab="logs"]')?.addEventListener("click", () => {
+    if (dgInLogsActiveSub(root) === "trace") renderLoadTraceSection(root, esc);
   });
 }
 
@@ -237,14 +222,13 @@ function dgInBindTraceTab(root: ShadowRoot, esc: EscFn): void {
  */
 
 export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
-  dgInHideDesktopOnly(root);
   dgInBindRefreshClear(root, esc);
   dgInBindCopyPanel(root);
   dgInBindCopyRows(root);
   dgInInitScanPanels(root, esc);
   initPerfPanel(root, esc);
   dgInBindTraceTab(root, esc);
-  dgInBindLogSubTabs(root, esc);
+  dgInBindSubBars(root, esc);
   loadDiagnosticsLogs(root, esc);
   dgInBindLogFilter(root, esc);
   dgInBindLogOpFilter(root, esc);

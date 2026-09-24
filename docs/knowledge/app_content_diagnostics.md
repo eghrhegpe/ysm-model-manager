@@ -1,6 +1,6 @@
 ---
 kind: app_content_diagnostics
-name: 诊断与冲突页 diagnostics
+name: 诊断页 diagnostics
 tier: architecture
 category: ui
 source_files:
@@ -17,6 +17,7 @@ source_files:
   - frontend/src/views/app-content/diagnostics/perf-trace.ts
 auto_fields:
   symbols_with_lines:
+    - applyPerfModeUI
     - BASELINE_CONTROL_IDS
     - bindPerfCopyHandlers
     - CLIResp
@@ -40,6 +41,7 @@ auto_fields:
     - PerfIdentity
     - perfScopeHint
     - populatePerfTargetOptions
+    - readActiveBenchMode
     - renderHealthReport
     - renderLoadTraceSection
     - runHealthAudit
@@ -82,13 +84,13 @@ invariant_anchors:
 status: active
 ---
 
-# 诊断与冲突页 diagnostics
+# 诊断页 diagnostics
 
 ## 概览
 
-`diagnostics/` 是 `app-content` 的「诊断与冲突」页子域，顶部 **5 个** `repo-tab`（log / bench / record / health / sync-conflict——ADR-258 由左栏分段收敛而来，ADR-278 再把「机制导向」的性能五兄弟重划为「动作（bench）× 产物（record）」；gui tab 已随 a1e26419d「砍除 gui-flow 面板」下线；conflict tab 于 2026-09-21 下线，见下文「冲突检测（跨实例同名扫描）退役」），由主卡 `app-content` 的 `init-pages.ts` 经 `bindTabs(host, ".repo-tab", "diag", [...])` 接入全站统一范式分发初始化。内部高内聚：`init.ts` 汇聚全部子模块，子模块之间只依赖 `logs.ts`（操作日志渲染），对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据）。
+`diagnostics/` 是 `app-content` 的「诊断」页子域，顶部 **3 个意图组** `repo-tab`（logs 日志 / bench 基准 / audit 体检——ADR-258 由左栏分段收敛为顶 tab，ADR-278 按「动作×产物」重划性能五兄弟，ADR-300 S2 再按用户意图收口为三组：logs(操作/运行时/加载剖析) · bench(单模型/批量并发/引擎对照) · audit(仓库健康/同步冲突)，组内子屏统一走 `tabs-shell.ts` 的 renderSubBar/bindSubBar pill 语法），由主卡 `app-content` 的 `init-pages.ts` 经 `bindTabs(host, ".repo-tab", "diag")` 接入全站统一范式分发初始化。内部高内聚：`init.ts` 汇聚全部子模块，子模块之间只依赖 `logs.ts`（操作日志渲染），对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据）。
 
-> 导航结构演进（ADR-258）：原左栏 `diag-left`（6 个 `diag-btn` + 复制/刷新/清空）已删除，分段提升为顶部 `repo-tab`；日志合并为 1 个 tab（op/runtime 子 tab 切换），性能拆为 single/gui/hist/trace 4 个 tab；清空按钮归位日志面板工具栏且仅操作日志视图可见（仅 `ClearImportLogs` 生效，运行时日志无清空后端能力）。
+> 导航结构演进（ADR-258 → ADR-278 → ADR-300）：原左栏 `diag-left`（6 个 `diag-btn` + 复制/刷新/清空）删除、分段提升为顶部 `repo-tab`；gui tab 随「砍除 gui-flow 面板」下线、conflict tab 2026-09-21 退役；ADR-300 把 record（加载剖析）降为 logs 组第三 pill、scan（引擎对照）降为 bench 组第三 pill、health+sync-conflict 并为 audit 组，桌面专属（desktopOnly）声明从控件级/子页级统一抬到**组级**（bench/audit 两组，web 版 renderTabs 整组不渲染 + 告知行说明）。清空按钮归位日志工具栏且仅操作日志子屏可见（`data-sub-pane="op"` 声明式门控，仅 `ClearImportLogs` 生效）。
 
 ## 核心职责
 
@@ -416,6 +418,24 @@ localPos: number[];
 - **教训**：`PERF_UNREAD_TARGETS` 是「枚举不读面」，只适合「在少数静态目标集不读」的控件；「除某类外全不读」的控件必须显式判断，塞表里必然方向反或漏枚举。
 - **为什么不整组隐藏**：基准三件套已由 `syncPerfBaselineControls` 按目标集置灰，且 ADR-278 §2.6 明确倾向「置灰 + title 说清」而非隐藏（隐藏=用户不知道有这个功能）。故维持置灰体系。
 - **布局**：单模型专属行（路径框 / 跑几次 / 上限 / 基准 / 运行按钮）已挪成连续一块，与并发的（并发路数 / 上限 / 运行按钮）分开——选哪种模式就看哪块，不再交错穿插。
+
+### ADR-300 诊断页导航轴收敛（S1 2026-09-23 · S2/S3 2026-09-24 全落）
+
+**一句话**：六顶层 tab 按用户意图收口为三组（日志/基准/体检），组内子屏统一 pill 语法，模式下拉退役，web 版缺席从「沉默消失」变「可见告知」。
+
+- **S1（文案图标刀，commit `cd95ffbe6`）**：顶层 tab 名词化（`diagnostics.tabLog`「日志」/`tabBench`「基准」，原借用「操作日志」与父子同名消解；`perfRunBench`「跑基准」动宾还给按钮层、键退役）；skipped 筛选 chip 从蹭 `performance` 闪电换成专用 `UI_ICONS.skip`；`nav.diagnostics`「诊断与冲突」→「诊断」（冲突 tab 早已退役，标题拖着僵尸词）。
+- **D3 告知行**：`renderTabs` 新增 `viewerNotice` 入参与 `TabsShell.notice` 出口——**只在 viewer 且真藏了东西时**产出 `.repo-tabs-notice` 一行，落位在 tablist **外**（bar 与 panels 之间，ADR-258 §2.4 ARIA 红线）；CSS 归 `content-repo.ts`。
+- **S2（结构刀）**：
+  - `tabs-shell.ts` 新增 `renderSubBar(group, items, activeId)` + `bindSubBar(root, group, onSwitch)`——全页「页内再分屏」唯一语法。pill 行 DOM：`.diag-sub-bar[data-sub-bar=<g>][data-active-sub=<id>]` > `.diag-sub-tab[data-sub=<id>][data-testid=diag-sub-<g>-<id>]`（testid 派生自 group+id，**不进步行字面量注册表** VIEW_TESTIDS——`test_testid_contract.ts` 只认字面量，先例 app-tree 菜单项；契约由 `tpl.test.ts` 在成品 HTML 上钉）。**不套 role=tablist**（顶层 tabbar 已是 tablist，嵌套是 ARIA 反模式，键盘化留 ADR-300 §3）。激活态属性初版名为 `data-active-mode`（S2），S3 正名为 `data-active-sub`——logs/audit 组的激活项不是「模式」，通用语法不该带 bench 倾向命名。
+  - 面板显隐约定：`data-sub-group="<g>" data-sub-pane="<id>[ <id2>…]"`，`data-sub-pane` 是**可见集合**——单项即普通面板（trace `"trace"`），多项即常驻共享行（日志工具栏 `"op runtime"`、清空 `"op"`）。初始态模板 inline `display:none`，激活置空回落 CSS。**bench 组的行显隐不走这套**（`.perf-mode-off` + `[data-perf-mode]` 是 bench 的既有领地，ADR-278 §2.4 两机制不互相覆盖）。
+  - 三组落位：logs = op/runtime + **trace（原 record tab 降级，读内存 store 的跨平台豁免随迁）**；bench = single/conc + **scan（原独立 tab 降级为第三 pill；公共区行改 `data-perf-mode="single conc"`，scan 下整体退场——修订 ADR-278 §2.7 结构判据、保留其内容判据）**；audit = health/sync（`diag-*-bar`/`diag-*-list` 元素 id 与 ADR-288 两段式一字未动）。desktopOnly 抬到组级，`dgInHideDesktopOnly` 四散点名单退化为 web 端零命中的死码（S3 删）。
+  - **模式源收口**：`#diag-perf-mode` 下拉退役，`perf-common.ts|readActiveBenchMode(root)` 成为唯一读出口（读 pill 行 `data-active-sub`，兜底 single），原三读点（perf.ts apply / perf.ts model:select 带入 / perf-single-bench.ts 基准门禁）全部走它；`perf.ts|applyPerfModeUI(root)` 是 bench pill 切换的重放入口（WeakMap 登记，`init.ts|dgInBindSubBars` 接线）。
+  - **静默失灵红线（ADR-300 §2.6）**：旧 `dgInBindTraceTab` 的 `.repo-tab[data-tab="record"]` 选择器在 record 降级后会 optional-chain 成点了没反应——迁为两个载体：pill 切换（bindSubBar onSwitch→render）+ logs 顶层 tab 点击且 trace 激活（重进语义），`init.test.ts`「双载体都吃最新一份」钉死。
+  - 护栏同步：`perf-mode.test.ts` 夹具换 pill 行 + `switchMode` 复刻 bindSubBar 三步；大刀护栏扫描域从 `bench+scan+record` 三段收成 `bench→audit` 一段锚点，SHARED_CONTROLS/SCAN_TAB_CONTROLS 两个例外桶退役（公共区与 scan 行如今都有行归属，二判据自洽）；`content-diag-classes.test.ts` 前缀扩到 `diag-sub-`（tab/bar/pane 整族入闸 + 防正则空转抽样）。
+- **S3 清扫（已落）**：删 `dgInHideDesktopOnly`——desktopOnly 抬到组级后其按 id 打补丁的名单是 web 端零命中的死码（面板根本不渲染，getElementById 恒 null），隐藏职责单点归 renderTabs；配套把「桌面模式入口保持可见」旧测试从重言式（验 init 事后不改 style）改锚真实模板正向不变量（三组齐在 + 无告知行，与 viewer 测试互为镜像）。新增 **pill 值域 ↔ data-perf-mode 门禁对账护栏**（perf-mode.test.ts）：门禁值无 pill 承接 = 永不激活的死行、pill 无行引用 = 点了全场无响应的空转 pill，两个方向当场红——它是控件级大刀护栏在 ADR-300 后的行级另一半。
+- **验证记录**：app-content 全套 44 files / 628 tests 绿（含迁移后的 init/perf/perf-concurrent/perf-mode/tpl/tabs-shell/content-diag-classes/methods）；vite build + typecheck + 双 tsconfig + biome 全绿；testid 契约 84 钩子无孤儿；e2e/diagnostics.spec.ts 静态迁移（DIAG_TABS 三组 + DIAG_SUB_PILLS 逐 pill 可见性用例 + clickBenchPill 替 setShadowSelect，Playwright 实跑留待设备窗口）。
+- **遗留（不阻塞，ADR-300 §3）**：子 pill 无 role=tab / 无方向键（嵌套 tablist 反模式与键盘可达性的欠账，待全站 a11y 专项）；`#diag-load-trace` 面板头与 trace pill 文案「加载剖析」同屏重复一次（原 tab 时代身份卡的尾巴，留待观察）。
+
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

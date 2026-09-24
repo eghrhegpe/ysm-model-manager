@@ -338,6 +338,10 @@ export const en: Record<string, string> = {
   // ADR-300 §2.4: top-level tabs as nouns (tabLog was borrowing "Operation Log" — same name as its sub-pill)
   "diagnostics.tabLog": "Logs",
   "diagnostics.tabBench": "Benchmarks",
+  // ADR-300 §2.1/§2.4: audit group top-level name + short noun sub-pill labels
+  "diagnostics.tabAudit": "Audits",
+  "diagnostics.pillHealth": "Repo Health",
+  "diagnostics.pillTrace": "Load Trace",
   "diagnostics.viewerDesktopOnlyNotice":
     "Benchmarks and repository audits are available in the desktop app only",
   "diagnostics.opsLog": "Operation Log",
@@ -533,10 +537,7 @@ export const en: Record<string, string> = {
   "diagnostics.perfTrendNoData": "No trend yet — run single-bench twice or more to show the chart",
   "diagnostics.perfRunning": "Running…",
   "diagnostics.perfIdle": "Click the button above to start; results will appear here",
-  "diagnostics.perfMode": "How to run",
-  "diagnostics.perfModeHint":
-    "How to run = which benchmark command; \u201cWhat to test\u201d alongside = how wide this run goes. They are independent: pick the command, then the scope",
-  "diagnostics.perfRecord": "Perf Records",
+  // perfMode/perfModeHint/perfRecord retired with ADR-300 §2.2/§2.4 (mode dropdown & "Perf Records" tab both gone)
   "diagnostics.perfFail": "Execution failed",
   "diagnostics.loadTraceRefresh": "Refresh Load Trace",
   "diagnostics.loadTraceTitle": "Load Analysis",

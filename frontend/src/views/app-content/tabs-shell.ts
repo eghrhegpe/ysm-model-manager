@@ -121,3 +121,74 @@ export function renderTabs(spec: TabsShellSpec): TabsShell {
 
   return { bar, panels, notice };
 }
+
+// ===== 组内二级导航（ADR-300 §2.2：全页子切换只有一种 pill 语法）=====
+//
+// 与 renderTabs/bindTabs 同一分工：本文件管**产出与激活机制**，页面 init 只管接线与副作用。
+// 立因：诊断页曾并存两套「页内再分屏」语法（log 组 pill 按钮 vs bench 组 select 模式轴），
+// 用户在同一页要学两遍；pill 是唯一升格形态，select 退役（ADR-300 D2）。
+
+/** 子 pill 声明（文案不带图标——顶层 tab 独享图标预算，ADR-300 §2.3） */
+export interface SubTabSpec {
+  /** 子面板标识，落为按钮 `data-sub="<id>"`；面板侧以 `data-sub-pane="<id>[ …]"` 认领 */
+  id: string;
+  /** pill 文案（纯文本，i18n 由调用方解析后传入） */
+  label: string;
+}
+
+/**
+ * 产出一条子 pill 行（组内二级导航的**唯一**标记出口）。
+ *
+ * - 稳定测试钩子由 `group + id` 派生：`data-testid="diag-sub-<group>-<id>"`——同 renderTabs
+ *   的 id 规则一样，模板与测试两侧不再靠人肉对齐。
+ * - `data-active-sub` 初始化为激活项：bench 组读它作为运行模式源（ADR-300 §2.2 三读点收口）。
+ * - 不套 `role="tablist"`：顶层 tabbar 已是 tablist，嵌套双 tablist 是 ARIA 反模式
+ *   （ADR-300 §2.2；键盘化留 §3 遗留）。
+ */
+export function renderSubBar(
+  group: string,
+  items: readonly SubTabSpec[],
+  activeId: string,
+): string {
+  return `<div class="diag-sub-bar" data-sub-bar="${group}" data-active-sub="${activeId}">${items
+    .map(
+      (t) =>
+        `<button class="diag-sub-tab${t.id === activeId ? " active" : ""}" data-sub="${t.id}" data-testid="diag-sub-${group}-${t.id}">${t.label}</button>`,
+    )
+    .join("")}</div>`;
+}
+
+/**
+ * 接线一条子 pill 行：点击 → 迁移 active、写 `data-active-sub`、按集合显隐组内面板、跑副作用。
+ *
+ * 面板显隐约定（与 bindTabs 的 display 翻转口径同源）：
+ *  - 组内元素带 `data-sub-group="<group>" data-sub-pane="<id>[ <id2> …]"`；
+ *  - `data-sub-pane` 是**可见集合**——一个元素可在多个子态下常驻（如日志工具栏
+ *    `"op runtime"`），单项即普通面板（`"trace"`）；初始态由模板 inline `display:none`
+ *    表达，激活置空回落 CSS，非激活置 none。
+ *  - bench 组的行显隐**不走**本机制（那是 `.perf-mode-off` + `[data-perf-mode]` 的既有领地，
+ *    ADR-278 §2.4——两套机制不互相覆盖）；bench 的 onSwitch 只负责触发 `applyPerfModeUI`。
+ *
+ * 与页面级监听同理不做注销 API：pill 与面板同属 shadow 树生命周期，语言切换整页重建后重绑。
+ */
+export function bindSubBar(root: ShadowRoot, group: string, onSwitch?: (id: string) => void): void {
+  const bar = root.querySelector<HTMLElement>(`.diag-sub-bar[data-sub-bar="${group}"]`);
+  if (!bar) return;
+  const pills = [...bar.querySelectorAll<HTMLElement>(".diag-sub-tab")];
+  pills.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const id = pill.dataset.sub ?? "";
+      pills.forEach((b) => {
+        b.classList.toggle("active", b === pill);
+      });
+      bar.dataset.activeSub = id;
+      root
+        .querySelectorAll<HTMLElement>(`[data-sub-group="${group}"][data-sub-pane]`)
+        .forEach((pane) => {
+          const set = (pane.dataset.subPane ?? "").split(/\s+/);
+          pane.style.display = set.includes(id) ? "" : "none";
+        });
+      onSwitch?.(id);
+    });
+  });
+}

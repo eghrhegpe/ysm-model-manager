@@ -25,6 +25,20 @@ export const BASELINE_CONTROL_IDS: readonly string[] = [
   "diag-perf-baseline-th",
 ];
 
+/** 运行模式**唯一**读取出口（ADR-300 §2.2）：#diag-perf-mode 下拉退役，模式源 = bench 组
+ *  子 pill 行（renderSubBar 产标记、bindSubBar 激活时写 `data-active-sub`）。原三读点
+ * （perf.ts apply / perf.ts model:select 带入 / 本模块基准门禁）收口到这一个函数——
+ * 禁止再写第二种读法。兜底 "single"：零 DOM 夹具与异常态沿用旧 select 首项默认语义。 */
+export function readActiveBenchMode(root: ShadowRoot): string {
+  const bar = root.querySelector<HTMLElement>('.diag-sub-bar[data-sub-bar="bench"]');
+  if (!bar) return "single";
+  return (
+    bar.dataset.activeSub ||
+    bar.querySelector<HTMLElement>(".diag-sub-tab.active")?.dataset.sub ||
+    "single"
+  );
+}
+
 // ===== 区段头（带可选复制按钮）=====
 
 /**

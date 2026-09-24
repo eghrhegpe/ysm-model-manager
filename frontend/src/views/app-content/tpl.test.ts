@@ -186,14 +186,23 @@ describe("app-content 模板", () => {
     expect(html).toContain('class="stg-desc"');
     // 桌面模式不显示网页版 FSA 授权卡片
     expect(html).not.toContain("web-repo-auth-btn");
-  });  it("diagnosticsHTML 包含诊断 Tab 与面板", () => {
+  });
+  it("diagnosticsHTML 包含诊断 Tab 与面板", () => {
     const html = diagnosticsHTML();
-    expect(html).toContain('data-tab="log"');
-    expect(html).toContain('data-tab="health"');
-    expect(html).toContain('id="diag-tab-log"');
+    // ADR-300 §2.1：三组顶层 tab（日志/基准/体检），原六 tab 收口
+    expect(html).toContain('data-tab="logs"');
+    expect(html).toContain('data-tab="bench"');
+    expect(html).toContain('data-tab="audit"');
+    // 降级不是删除：record 退成 logs 组 pill、scan 退成 bench 组 pill（§2.1），旧顶层 id 不得残留
+    expect(html).not.toContain('data-tab="record"');
+    expect(html).not.toContain('data-tab="scan"');
+    expect(html).not.toContain('data-tab="sync-conflict"');
+    expect(html).toContain('id="diag-tab-logs"');
     expect(html).toContain('id="diag-scan-health"');
     expect(html).toContain('id="diag-clear"');
-    expect(html).toContain('data-tab="sync-conflict"');
+    // ADR-300 §2.2：子 pill 稳定钩子由 renderSubBar 从 group+id 派生
+    expect(html).toContain('data-testid="diag-sub-bench-scan"');
+    expect(html).toContain('data-testid="diag-sub-audit-sync"');
     // ADR-288 D2：两个只读扫描是「常驻栏 + 结果区」两段式（栏内即入口）。
     // ⚠️ 结构不变量（按钮必须在栏内、不得住结果容器）由 conflicts/health 的 dead-end
     // 墓碑用例以真实 DOM 关系钉死；此处只做模板层存在性断言。
@@ -202,13 +211,17 @@ describe("app-content 模板", () => {
     expect(html).toContain('id="diag-sync-conflict-list"');
     expect(html).toContain('class="diag-pane"');
   });
-  // ===== ADR-300 S1：顶层 tab 名词化 / 父子同名消解 / skipped 专用图标（zh 默认语言，先例同「清空回收站」） =====
+  // ===== ADR-300 S1+S2：顶层 tab 名词化 / 父子同名消解 / 子 pill 单点语法 / skipped 专用图标 =====
   it("诊断页顶层 tab 名词化，skipped chip 用专用图标不蹭闪电（桌面零告知噪音）", () => {
     const html = diagnosticsHTML();
     // 顶层「日志」让出与子 pill「操作日志」的父子同名；顶层按钮 = 图标 + 新文案
-    expect(html).toContain(`data-tab="log">${UI_ICONS.clipboard} 日志</button>`);
-    expect(html).toContain('<button class="diag-sub-tab active" data-log="op">操作日志</button>');
+    expect(html).toContain(`data-tab="logs">${UI_ICONS.clipboard} 日志</button>`);
     expect(html).toContain(`data-tab="bench">${UI_ICONS.performance} 基准</button>`);
+    expect(html).toContain(`data-tab="audit">${UI_ICONS.diagnose} 体检</button>`);
+    // 子 pill 走 renderSubBar 统一标记（data-sub + 派生 testid），且文案不带图标（§2.3 图标预算）
+    expect(html).toContain(
+      '<button class="diag-sub-tab active" data-sub="op" data-testid="diag-sub-logs-op">操作日志</button>',
+    );
     // 「跳过」全链路一枚 skip 图标（`tpl` chip ↔ logs.ts 行）；闪电不再兼任状态筛选
     expect(html).toContain(`data-status="skipped">${UI_ICONS.skip}`);
     expect(html).not.toContain(`data-status="skipped">${UI_ICONS.performance}`);
@@ -225,7 +238,7 @@ describe("app-content 模板", () => {
       // 成品落位：bar 之后、首个面板之前（tablist 外的 ARIA 红线由工厂测试另钉）
       const bar = html.indexOf('<div class="repo-tabs"');
       const notice = html.indexOf('class="repo-tabs-notice"');
-      const panel = html.indexOf('id="diag-tab-log"');
+      const panel = html.indexOf('id="diag-tab-logs"');
       expect(bar).toBeGreaterThanOrEqual(0);
       expect(notice).toBeGreaterThan(bar);
       expect(notice).toBeLessThan(panel);

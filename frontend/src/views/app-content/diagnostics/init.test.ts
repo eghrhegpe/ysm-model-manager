@@ -36,43 +36,46 @@ const esc = (s: unknown): string =>
 
 function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
   const el = document.createElement("div");
+  // ADR-300 §2.2 同形：logs 组 = 子 pill 行（bindSubBar 的唯一接线面）+ 门控工具栏 + 三态面板。
+  // 工具栏 data-sub-pane="op runtime"（trace 下整体退场）、清空 data-sub-pane="op"（可见集合语义）。
   el.innerHTML = `
-    <div id="diag-refresh"></div>
-    <div id="diag-clear"></div>
-    <div id="diag-copy"></div>
-    <button id="diag-perf-refresh-trace"></button>
-    <div id="diag-load-trace"></div>
-    <div id="diag-perf-hist-row"></div>
-    <div id="diag-perf-hist"></div>
-    <button class="repo-tab" data-tab="log">日志</button>
+    <button class="repo-tab" data-tab="logs">日志</button>
     <button class="repo-tab" data-tab="bench">基准</button>
-    <button class="repo-tab" data-tab="record">记录</button>
-    <button class="repo-tab" data-tab="health">体检</button>
-    <button class="repo-tab" data-tab="sync-conflict">同步</button>
-    <button class="diag-sub-tab active" data-log="op">操作</button>
-    <button class="diag-sub-tab" data-log="runtime">运行时</button>
-    <div id="diag-tab-log">
-      <div id="diag-log-list"></div>
-      <div id="diag-runtime-list" style="display:none"></div>
+    <button class="repo-tab" data-tab="audit">体检</button>
+    <div class="diag-sub-bar" data-sub-bar="logs" data-active-sub="op">
+      <button class="diag-sub-tab active" data-sub="op">操作</button>
+      <button class="diag-sub-tab" data-sub="runtime">运行时</button>
+      <button class="diag-sub-tab" data-sub="trace">剖析</button>
     </div>
-    <div id="diag-tab-health"><div class="diag-bar" id="diag-health-bar"><div class="diag-bar-row"><button id="diag-scan-health"></button></div></div><div id="diag-health-list"></div></div>
-    <div id="diag-tab-sync-conflict"><div class="diag-bar" id="diag-sync-bar"><div class="diag-bar-row"><select id="sync-rtype"></select><select id="sync-instance"></select><button id="diag-scan-sync-conflict"></button></div></div><div id="diag-sync-conflict-list"></div></div>
-    <button class="diag-log-fbtn" data-status="all">全部</button>
-    <button class="diag-log-fbtn" data-status="success">成功</button>
-    <button class="diag-log-fbtn" data-status="failed">失败</button>
-    <button class="diag-log-fbtn" data-status="warn">警告</button>
-    <button class="diag-log-fbtn" data-status="skipped">跳过</button>
-    <input id="diag-log-search">
-    <select id="diag-log-op-filter">
-      <option value="all">全部操作</option>
-      <option value="import">导入</option>
-      <option value="scan">扫描</option>
-      <option value="download">下载</option>
-      <option value="sync">同步</option>
-      <option value="rename">重命名</option>
-      <option value="delete">删除</option>
-      <option value="ui">界面</option>
-    </select>
+    <div class="diag-log-bar" data-sub-group="logs" data-sub-pane="op runtime">
+      <button id="diag-refresh"></button>
+      <button id="diag-copy"></button>
+      <button id="diag-clear" data-sub-group="logs" data-sub-pane="op"></button>
+      <input id="diag-log-search">
+      <select id="diag-log-op-filter">
+        <option value="all">全部操作</option>
+        <option value="import">导入</option>
+        <option value="scan">扫描</option>
+        <option value="download">下载</option>
+        <option value="sync">同步</option>
+        <option value="rename">重命名</option>
+        <option value="delete">删除</option>
+        <option value="ui">界面</option>
+      </select>
+      <button class="diag-log-fbtn active" data-status="all">全部</button>
+      <button class="diag-log-fbtn" data-status="success">成功</button>
+      <button class="diag-log-fbtn" data-status="failed">失败</button>
+      <button class="diag-log-fbtn" data-status="warn">警告</button>
+      <button class="diag-log-fbtn" data-status="skipped">跳过</button>
+    </div>
+    <div id="diag-log-list" data-sub-group="logs" data-sub-pane="op"></div>
+    <div id="diag-runtime-list" data-sub-group="logs" data-sub-pane="runtime" style="display:none"></div>
+    <div class="diag-sub-pane" data-sub-group="logs" data-sub-pane="trace" style="display:none">
+      <button id="diag-perf-refresh-trace"></button>
+      <div id="diag-load-trace"></div>
+    </div>
+    <div id="diag-tab-audit"><div class="diag-bar" id="diag-health-bar"><div class="diag-bar-row"><button id="diag-scan-health"></button></div></div><div id="diag-health-list"></div></div>
+    <div id="diag-tab-audit-sync"><div class="diag-bar" id="diag-sync-bar"><div class="diag-bar-row"><select id="sync-rtype"></select><select id="sync-instance"></select><button id="diag-scan-sync-conflict"></button></div></div><div id="diag-sync-conflict-list"></div></div>
   `;
   (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
     (id: string) => el.querySelector(`#${id}`);
@@ -287,7 +290,7 @@ describe("initDiagnostics — 日志面板", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
-    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    (root.querySelector('.diag-sub-tab[data-sub="runtime"]') as HTMLElement).click();
     await waitFor(() => rtList.textContent!.includes("watcher started"));
     const opCalls = opFn.mock.calls.length;
     const input = root.getElementById("diag-log-search") as HTMLInputElement;
@@ -304,7 +307,7 @@ describe("initDiagnostics — 日志面板", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
-    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    (root.querySelector('.diag-sub-tab[data-sub="runtime"]') as HTMLElement).click();
     await waitFor(() => rtList.textContent!.includes("watcher started"));
     const input = root.getElementById("diag-log-search") as HTMLInputElement;
     input.value = "zzz-nothing";
@@ -324,7 +327,7 @@ describe("initDiagnostics — 日志面板", () => {
     });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    (root.querySelector('.diag-sub-tab[data-sub="runtime"]') as HTMLElement).click();
     const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
     await waitFor(() => rtList.textContent!.includes("自动同步完成"));
     const opCalls = opFn.mock.calls.length;
@@ -348,7 +351,7 @@ describe("initDiagnostics — 日志面板", () => {
     });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    (root.querySelector('.diag-sub-tab[data-sub="runtime"]') as HTMLElement).click();
     const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
     await waitFor(() => rtList.textContent!.includes("已启动"));
     // 搜 tag 名（消息里也含，但 Tag 字段独立并入命中域后语义更明确）
@@ -364,7 +367,7 @@ describe("initDiagnostics — 日志面板", () => {
     mockApp({ GetImportLogs: opFn, GetRuntimeLogs: vi.fn(() => [{ Message: "ok", Timestamp: 1 }]) });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
-    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    (root.querySelector('.diag-sub-tab[data-sub="runtime"]') as HTMLElement).click();
     await waitFor(() =>
       (root.getElementById("diag-runtime-list") as HTMLElement).textContent!.includes("ok"),
     );
@@ -393,7 +396,7 @@ describe("initDiagnostics — 日志面板", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     // 切到 runtime 子 tab
-    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    (root.querySelector('.diag-sub-tab[data-sub="runtime"]') as HTMLElement).click();
     await waitFor(() =>
       (root.getElementById("diag-runtime-list") as HTMLElement).textContent!.includes(
         "watcher ok",
@@ -416,26 +419,41 @@ describe("initDiagnostics — 日志面板", () => {
     );
   });
 
-  it("日志子 tab 切换 → op/runtime 列表显隐 + 清空按钮可见性联动", () => {
+  it("日志子屏切换（ADR-300 §2.2）→ op/runtime/trace 三态：列表显隐 + 工具栏与清空联动", () => {
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     const opList = root.getElementById("diag-log-list") as HTMLElement;
     const rtList = root.getElementById("diag-runtime-list") as HTMLElement;
     const clearBtn = root.getElementById("diag-clear") as HTMLElement;
+    const toolbar = root.querySelector(".diag-log-bar") as HTMLElement;
+    const tracePane = root.querySelector('[data-sub-pane="trace"]') as HTMLElement;
     // 初始：op 激活，runtime 隐藏，清空可见
     expect(opList.style.display).not.toBe("none");
     expect(rtList.style.display).toBe("none");
     expect(clearBtn.style.display).not.toBe("none");
-    // 切到 runtime 子 tab
-    (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).click();
+    // 切到 runtime 子屏
+    (root.querySelector('.diag-sub-tab[data-sub="runtime"]') as HTMLElement).click();
     expect(opList.style.display).toBe("none");
     expect(rtList.style.display).not.toBe("none");
     expect(clearBtn.style.display).toBe("none"); // 运行时日志无清空能力
+    expect(toolbar.style.display).not.toBe("none"); // 工具栏归 op+runtime 常驻
+    expect(tracePane.style.display).toBe("none");
     expect(
-      (root.querySelector('.diag-sub-tab[data-log="runtime"]') as HTMLElement).classList.contains(
+      (root.querySelector('.diag-sub-tab[data-sub="runtime"]') as HTMLElement).classList.contains(
         "active",
       ),
     ).toBe(true);
+    // 切到 trace：工具栏（连带刷新/复制/清空/搜索/筛选）整体退场——trace 有自己的刷新按钮
+    (root.querySelector('.diag-sub-tab[data-sub="trace"]') as HTMLElement).click();
+    expect(toolbar.style.display).toBe("none");
+    expect(clearBtn.style.display).toBe("none");
+    expect(tracePane.style.display).not.toBe("none");
+    expect(root.querySelector<HTMLElement>('.diag-sub-bar[data-sub-bar="logs"]')!.dataset.activeSub).toBe("trace");
+    // 切回 op：一切恢复（激活是幂等迁移，不是一次性改动）
+    (root.querySelector('.diag-sub-tab[data-sub="op"]') as HTMLElement).click();
+    expect(toolbar.style.display).not.toBe("none");
+    expect(clearBtn.style.display).not.toBe("none");
+    expect(opList.style.display).not.toBe("none");
   });
 });
 describe("startDedup（会话工厂 createDedupSession）", () => {
@@ -862,24 +880,25 @@ describe("initDiagnostics — 扫描栏接线（ADR-288 D2/D3：进页面即备�
   });
 });
 
-describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
-  it("查看器模式（isViewerMode=true）→ 桌面专属 top tab 整块不渲染，扫描入口缺席", () => {
+describe("initDiagnostics — 日志子屏与查看器降级", () => {
+  it("查看器模式（isViewerMode=true）→ 桌面专属组整块不渲染，扫描/基准入口缺席", () => {
     isViewerMode.mockReturnValue(true);
     const { root, el } = makeRoot();
     // 降级已下沉模板层：用**真实成品模板**覆盖夹具，钉 renderTabs(viewerMode, desktopOnly)
     // 新链——手拼夹具测不到「声明处即真相」（旧测试只验 init 事后改 style）。
     el.innerHTML = diagnosticsHTML();
     initDiagnostics(root, esc);
-    // 桌面专属 top tab（两个只读扫描 + bench + scan，ADR-278 §2.5/§2.7）：按钮与面板整块缺席
-    for (const name of ["health", "sync-conflict", "bench", "scan"]) {
+    // ADR-300 §2.1/§2.5：desktopOnly 收口到组级——基准组（含 single/conc/scan 三 pill）与
+    // 体检组（health/sync 二 pill）整块缺席，旧六 tab 时代的散点名单退役
+    for (const name of ["bench", "audit"]) {
       expect(root.querySelector(`.repo-tab[data-tab="${name}"]`)).toBeNull();
       expect(root.getElementById(`diag-tab-${name}`)).toBeNull();
     }
-    // 跨模式可用项照常在场：log / record
-    expect(root.querySelector('.repo-tab[data-tab="log"]')).not.toBeNull();
-    expect(root.querySelector('.repo-tab[data-tab="record"]')).not.toBeNull();
+    // 跨模式可用项照常在场：logs 组 + 其第三子屏 trace（加载剖析读内存 store，豁免随迁）
+    expect(root.querySelector('.repo-tab[data-tab="logs"]')).not.toBeNull();
+    expect(root.querySelector('.diag-sub-tab[data-sub="trace"]')).not.toBeNull();
     // 扫描入口是**常驻栏**（ADR-288 D2）：栏本体在缺席面板内同样不存在
-    // （若未来控件拆出 tab，dgInHideDesktopOnly 仍按 id 隐栏）
+    // （组级 desktopOnly 让整块面板不渲染，栏随面板一起消失，无需再按 id 逐个隐）
     for (const id of ["diag-health-bar", "diag-sync-bar", "diag-perf-scan-bench"]) {
       expect(root.getElementById(id)).toBeNull();
     }
@@ -887,17 +906,23 @@ describe("initDiagnostics — 日志子 tab 与查看器降级", () => {
     expect(
       (root.getElementById("diag-perf-refresh-trace") as HTMLElement).style.display,
     ).not.toBe("none");
+    // ADR-300 §2.5（D3）：web 端「沉默消失」变「可见缺席」——告知行在成品里存在
+    expect(root.querySelector(".repo-tabs-notice")).not.toBeNull();
   });
 
-  it("桌面模式（isViewerMode=false）→ 桌面专属入口保持可见", () => {
-    const { root } = makeRoot();
+  it("桌面模式（isViewerMode=false）→ 桌面专属组面板照常渲染（desktopOnly 仅在 viewer 生效）", () => {
+    const { root, el } = makeRoot();
+    // 与 viewer 测试互为镜像：钉的是**同一 renderTabs 声明**的另一半——desktopOnly 是
+    // 「isViewerMode 才裁」的条件声明，桌面端三组齐在。旧版此测试验 init 事后不改 style，
+    // 是重言式（没有东西会去改）；改锚真实模板的正向不变量才有判别力。
+    el.innerHTML = diagnosticsHTML();
     initDiagnostics(root, esc);
-    expect(
-      (root.getElementById("diag-health-bar") as HTMLElement).style.display,
-    ).not.toBe("none");
-    expect(
-      (root.getElementById("diag-sync-bar") as HTMLElement).style.display,
-    ).not.toBe("none");
+    for (const name of ["logs", "bench", "audit"]) {
+      expect(root.querySelector(`.repo-tab[data-tab="${name}"]`), `桌面缺 ${name} tab`).not.toBeNull();
+      expect(root.getElementById(`diag-tab-${name}`), `桌面缺 ${name} 面板`).not.toBeNull();
+    }
+    // 桌面端不出告知行（renderTabs 只在真藏了东西的 viewer 模式产出 notice）
+    expect(root.querySelector(".repo-tabs-notice")).toBeNull();
   });
 });
 
@@ -920,22 +945,22 @@ describe("initDiagnostics — trace 面板进入语义（2026-09）", () => {
     const out = root.getElementById("diag-load-trace") as HTMLElement;
     await waitFor(() => expect(out.textContent).toContain("player.ysm"));
     clearLoadTraces();
-    // 后半：记录清空 → 同函数重渲出引导空态（进即渲染是渲染调用，不是状态缓存）
-    (root.querySelector('.repo-tab[data-tab="record"]') as HTMLElement).click();
-    await waitFor(() =>
-      expect(out.textContent).toContain("暂无加载记录"),
-    );
+    // 后半：记录清空 → 切进 trace 子屏（bindSubBar onSwitch 链路）重渲出引导空态
+    //（进即渲染是渲染调用，不是状态缓存；ADR-300 §2.1：record 降级为 logs 组第三 pill）
+    (root.querySelector('.diag-sub-tab[data-sub="trace"]') as HTMLElement).click();
+    await waitFor(() => expect(out.textContent).toContain("暂无加载记录"));
   });
 
-  it("进 record tab 取最新快照：后写入的记录在 tab 再次渲染时可见", async () => {
-    // 锁 click handler 的「每次进 tab 取最新快照」半语义——这是 init.ts:199-200 注释
-    // 明确写的与 TAB_INIT 懒加载表的核心区别，此前无测试锁定
+  it("进 trace 取最新快照：pill 切换与 logs 组重进两个载体都吃「最新一份」（ADR-300 §2.6 红线）", async () => {
+    // 锁「每次进子屏取最新快照」语义——init.ts 注释写明的与 TAB_INIT 懒加载表的核心区别。
+    // 旧载体 .repo-tab[data-tab="record"] 已随降级消失；若迁移时漏接 logs 顶层 tab 这一半，
+    // optional-chain 会静默失灵（点 tab 不再重渲），此测试即它的墓碑。
     const { root } = makeRoot();
     initDiagnostics(root, esc);
     const out = root.getElementById("diag-load-trace") as HTMLElement;
     // 此刻 store 为空：先确认渲染的是空态（非「init 后未渲染」）
     await waitFor(() => expect(out.textContent).toContain("暂无加载记录"));
-    // 模拟「先 init、后加载、再进 tab」：3D 适配器在 init 之后才写入 store
+    // 载体一：pill 切换（3D 适配器在 init 之后写入 store → 切进 trace 看到 vrm）
     recordLoadTrace({
       ts: Date.now(),
       format: "vrm",
@@ -943,9 +968,18 @@ describe("initDiagnostics — trace 面板进入语义（2026-09）", () => {
       stages: [{ name: "加载", ms: 8, status: "ok" }],
       ok: true,
     });
-    // 再次进 tab（click 触发 handler）→ 取到最新快照，渲染出 vrm 卡片
-    (root.querySelector('.repo-tab[data-tab="record"]') as HTMLElement).click();
+    (root.querySelector('.diag-sub-tab[data-sub="trace"]') as HTMLElement).click();
     await waitFor(() => expect(out.textContent).toContain("test.vrm"));
+    // 载体二：trace 已激活时点 logs 顶层 tab（重进页面组）→ 再写入的 pmx 也要可见
+    recordLoadTrace({
+      ts: Date.now(),
+      format: "pmx",
+      path: "./pmx/dance.pmx",
+      stages: [{ name: "加载", ms: 5, status: "ok" }],
+      ok: true,
+    });
+    (root.querySelector('.repo-tab[data-tab="logs"]') as HTMLElement).click();
+    await waitFor(() => expect(out.textContent).toContain("dance.pmx"));
   });
 
   it("查看器模式：trace 刷新入口不隐藏（纯内存 store，不依赖 Go/CLI）", () => {

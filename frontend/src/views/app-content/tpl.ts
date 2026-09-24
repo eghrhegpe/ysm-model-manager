@@ -4,7 +4,7 @@ import { isViewerMode } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { renderTabs, type TabSpec } from "./tabs-shell.ts";
+import { renderSubBar, renderTabs, type TabSpec } from "./tabs-shell.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -38,8 +38,10 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-conc-workers",
   // ADR-278 §2.2：单模型 / 并发**共用**同一套目标集 / 排序控件（即上方登记的 #diag-perf-rtype /
   // #diag-perf-order）——原 diag-perf-conc-target / diag-perf-conc-order 两份 DOM 已删除
-  // ADR-278 §2.1：基准模式选择器（单模型 / 并发 / 引擎对照），e2e 靠它切模式
-  "diag-perf-mode",
+  // ADR-300 §2.2（D2）：#diag-perf-mode 下拉退役，模式切换由组内子 pill 承载。
+  // 子 pill 钩子 testid 为 `diag-sub-<group>-<id>` **派生**（renderSubBar 单点产出，与 DOM 同源）——
+  // 派生值不进步行字面量注册表（test_testid_contract 的收集面只认字面量，先例：app-tree 菜单项），
+  // 其契约由 tpl.test.ts 在成品 HTML 上钉（testid + data-sub 双写断言）。
   // ADR-262 D5：性能面板真实载荷渲染断言要能点到运行按钮与结果容器
   "diag-perf-run",
   "diag-perf-model",
@@ -167,21 +169,29 @@ export function diagnosticsHTML(): string {
     viewerNotice: t("diagnostics.viewerDesktopOnlyNotice"),
     tabs: [
       {
-        id: "log",
+        id: "logs",
         panelTestid: "diag-log",
         // ADR-300 §2.4：顶层名词化，「操作日志」一词还给子 pill（父子同名消解）
         label: `${UI_ICONS.clipboard} ${t("diagnostics.tabLog")}`,
-        body: `  <div class="diag-log-bar">
+        // ADR-300 §2.1：日志三态（操作/运行时/加载剖析）= 已收集数据的被动查看，全组跨平台
+        //（加载剖析读内存 store，ADR-278 §2.5 豁免原样携带）。子 pill 行由 renderSubBar 单点
+        // 产出（§2.2）；工具栏与清空按可见集合门控——trace 下工具栏整体退场，clear 只在 op 露面。
+        body: `  ${renderSubBar(
+          "logs",
+          [
+            { id: "op", label: t("diagnostics.opsLog") },
+            { id: "runtime", label: t("diagnostics.runtimeLog") },
+            { id: "trace", label: t("diagnostics.pillTrace") },
+          ],
+          "op",
+        )}
+  <div class="diag-log-bar" data-sub-group="logs" data-sub-pane="op runtime">
     <div class="diag-log-row">
-      <div class="diag-log-subtabs">
-        <button class="diag-sub-tab active" data-log="op">${t("diagnostics.opsLog")}</button>
-        <button class="diag-sub-tab" data-log="runtime">${t("diagnostics.runtimeLog")}</button>
-      </div>
       <input id="diag-log-search" class="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
       <span class="diag-log-bar-spacer"></span>
       <button class="btn-base sm" id="diag-refresh">${t("diagnostics.refresh")}</button>
       <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
-      <button class="btn-base sm" id="diag-clear">${t("diagnostics.clearLog")}</button>
+      <button class="btn-base sm" id="diag-clear" data-sub-group="logs" data-sub-pane="op">${t("diagnostics.clearLog")}</button>
     </div>
     <div class="diag-log-row">
       <div class="diag-log-filter" id="diag-log-filter">
@@ -203,8 +213,16 @@ export function diagnosticsHTML(): string {
       </div>
     </div>
   </div>
-  <div id="diag-log-list" data-testid="diag-log-list" class="diag-log-scroll"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
-  <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>`,
+  <div id="diag-log-list" data-testid="diag-log-list" class="diag-log-scroll" data-sub-group="logs" data-sub-pane="op"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
+  <div id="diag-runtime-list" class="diag-log-scroll" data-testid="diag-runtime" style="display:none" data-sub-group="logs" data-sub-pane="runtime"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>
+  <div class="diag-sub-pane" data-sub-group="logs" data-sub-pane="trace" style="display:none">
+    <div class="diag-log-bar">
+      <div class="diag-log-row">
+        <button class="btn-base sm" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>
+      </div>
+    </div>
+    <div id="diag-load-trace"></div>
+  </div>`,
       },
       {
         id: "bench",
@@ -212,19 +230,23 @@ export function diagnosticsHTML(): string {
         desktopOnly: true,
         // ADR-300 §2.4：tab 文案名词化（原 perfRunBench「跑基准」是动宾，动词还给按钮层）
         label: `${UI_ICONS.performance} ${t("diagnostics.tabBench")}`,
-        // ADR-278 §2.7：公共区（测什么 / 排序 / 最多跑几个）**模式无关常驻**——single 与 conc
-        // 在 Go 侧由同一个 registerPerfTargetFlags 注册，是同一套参数面；把公共参数埋进
-        // data-perf-mode 行里（"两个模式都显示"）正是臃肿与漂移之源。
-        // ADR-278 §2.3：取样上限**有意不合并**——单模型深测默认 5 / 并发广度扫默认 20 是两个真实口径
-        // （故 max 仍是两行：一条给 single、一条给 conc，各自默认值不同）。
+        // ADR-300 §2.1（D1 拍板）：引擎对照自顶层平级 tab 迁为本组第三个子 pill——
+        // 保留 ADR-278 §2.7 内容判据（自有参数面：仅迭代数，从不触碰目标集/排序，公共区
+        // 在 scan 下随 data-perf-mode 整体退场「碰不到 = 诚实」），修订其结构判据。
+        // ADR-278 §2.3：取样上限**有意不合并**——单模型深测默认 5 / 并发广度扫默认 20
+        // 是两个真实口径（max 仍是两行，各随模式显隐）。
         body: `  <div class="diag-pane">
+    ${renderSubBar(
+      "bench",
+      [
+        { id: "single", label: t("diagnostics.perfModeOptSingle") },
+        { id: "conc", label: t("diagnostics.perfModeOptConc") },
+        { id: "scan", label: t("diagnostics.perfScanBench") },
+      ],
+      "single",
+    )}
     <div class="diag-bar">
-      <div class="diag-bar-row">
-        <label for="diag-perf-mode" title="${t("diagnostics.perfModeHint")}">${t("diagnostics.perfMode")}</label>
-        <select id="diag-perf-mode" class="diag-config-select" data-testid="diag-perf-mode">
-          <option value="single">${t("diagnostics.perfModeOptSingle")}</option>
-          <option value="conc">${t("diagnostics.perfModeOptConc")}</option>
-        </select>
+      <div class="diag-bar-row" data-perf-mode="single conc">
         <label for="diag-perf-rtype" id="diag-perf-target-label" data-testid="diag-perf-target-label">${t("diagnostics.perfTarget")}</label>
         <select id="diag-perf-rtype" class="diag-config-select" data-testid="diag-perf-rtype">
           <option value="">${t("diagnostics.perfTargetModel")}</option>
@@ -259,55 +281,36 @@ export function diagnosticsHTML(): string {
       <div class="diag-bar-row" data-perf-mode="conc">
         <button class="btn-base accent" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
       </div>
-    </div>
-    <div id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-  </div>`,
-      },
-      {
-        id: "scan",
-        // ADR-278 §2.7：引擎对照**退出模式轴单独成 tab**。它测的是「扫一遍仓库」
-        // （Go vs Rust 对照），而 single/conc 测的是「解析一个模型」——输入/阶段/可比对象
-        // 全不同。CLI 侧 scan-bench 只有 --iterations + --format，**根本没有目标集参数**，
-        // 把它当「第三种范围」列在模式下拉里是错误分类。
-        desktopOnly: true,
-        label: `${UI_ICONS.performance} ${t("diagnostics.perfScanBench")}`,
-        body: `  <div class="diag-pane">
-    <div class="diag-bar">
-      <div class="diag-bar-row">
+      <div class="diag-bar-row" data-perf-mode="scan">
         <button class="btn-base accent" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
         <label for="diag-perf-scan-iter" id="diag-perf-scan-iter-label" data-testid="diag-perf-scan-iter-label">${t("diagnostics.perfIterations")}</label>
         <input id="diag-perf-scan-iter" type="number" min="1" step="1" value="3" data-testid="diag-perf-scan-iter">
       </div>
-      <div class="diag-bar-row">
+      <div class="diag-bar-row" data-perf-mode="scan">
         <div class="diag-bar-hint">${t("diagnostics.perfScanBenchHint")}</div>
       </div>
     </div>
-    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out" data-perf-mode="scan"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
-        id: "record",
-        label: `${UI_ICONS.note} ${t("diagnostics.perfRecord")}`,
-        // 加载剖析（内存 store → 进即渲染）
-        body: `  <div class="diag-pane">
-    <div class="diag-bar">
-      <div class="diag-bar-row">
-        <button class="btn-base" id="diag-perf-refresh-trace">${UI_ICONS.search} ${t("diagnostics.loadTraceRefresh")}</button>
-      </div>
-    </div>
-    <div id="diag-load-trace"></div>
-  </div>`,
-      },
-      {
-        id: "health",
+        id: "audit",
+        // ADR-300 §2.1：health 与 sync-conflict 是「扫描 → 处置」一对——同触发范式
+        //（ADR-288 D2 两段式）、同跨平台属性、同段 CSS 词汇，合组收口；
+        // 元素 id 与两段式结构一字不动（历次重构压测试面的成功经验，ADR-278 §3）。
         desktopOnly: true,
-        label: `${UI_ICONS.diagnose} ${t("diagnostics.healthTitle")}`,
-        // ADR-288 D2：「参数栏常驻 + 结果独立」两段式。⚠️ 启动按钮**必须**住在 bar 内，不得
-        // 放回结果容器——结果渲染走 list.innerHTML 整块替换，而 app-content 按页缓存面板
-        // （init 仅 isNew 跑）⇒ 按钮一旦被覆盖就**会话内不再复活**（原实现即此 dead-end：
-        // 体检一次后再也无法复检，只能重载应用）。
-        body: `  <div class="diag-pane">
+        label: `${UI_ICONS.diagnose} ${t("diagnostics.tabAudit")}`,
+        body: `  ${renderSubBar(
+          "audit",
+          [
+            { id: "health", label: t("diagnostics.pillHealth") },
+            { id: "sync", label: t("diagnostics.syncConflict") },
+          ],
+          "health",
+        )}
+  <div class="diag-sub-pane" data-sub-group="audit" data-sub-pane="health">
     <div class="diag-bar" id="diag-health-bar">
       <div class="diag-bar-row">
         <button class="btn-base accent" id="diag-scan-health" data-testid="diag-scan-health">${UI_ICONS.diagnose} ${t("diagnostics.healthRun")}</button>
@@ -317,16 +320,8 @@ export function diagnosticsHTML(): string {
       </div>
     </div>
     <div id="diag-health-list" data-testid="diag-health-list"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-  </div>`,
-      },
-      {
-        id: "sync-conflict",
-        desktopOnly: true,
-        label: `${UI_ICONS.refresh} ${t("diagnostics.syncConflict")}`,
-        // ADR-288 D2/D3：参数栏常驻（页面挂载即填充下拉），结果只写结果区。
-        // 原实现把「引导空态 + 按钮」放结果容器内，点它才渲染参数面板，面板内再点一次才扫描
-        // （三次点击，且首次零信息增量）；扫描一次后按钮被结果整块覆盖 → 换实例/复扫不可达。
-        body: `  <div class="diag-pane">
+  </div>
+  <div class="diag-sub-pane" data-sub-group="audit" data-sub-pane="sync" style="display:none">
     <div class="diag-bar" id="diag-sync-bar">
       <div class="diag-bar-row">
         <label for="sync-rtype">${UI_ICONS.package} ${t("diagnostics.selectResourceType")}</label>

@@ -12,7 +12,7 @@ import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { getLastModelPath } from "@/core/model-path-store.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import type { EscFn } from "./logs.ts";
-import { BASELINE_CONTROL_IDS, bindPerfCopyHandlers } from "./perf-common.ts";
+import { BASELINE_CONTROL_IDS, bindPerfCopyHandlers, readActiveBenchMode } from "./perf-common.ts";
 import { runConcurrentBench } from "./perf-concurrent.ts";
 import {
   PERF_TARGET_REPO,
@@ -26,13 +26,16 @@ import { renderLoadTraceSection } from "./perf-trace.ts";
 export { renderLoadTraceSection } from "./perf-trace.ts";
 
 const _perfModelSync = new Map<ShadowRoot, () => void>();
+/** root → 模式重放函数（initPerfPanel 装配；applyPerfModeUI 是 bench pill 切换的唯一入口） */
+const _perfModeApply = new WeakMap<ShadowRoot, () => void>();
 
 /**
  * 基准模式的 i18n 接线单点（ADR-278 §2.6）：模式 → 文案键的**唯一事实源**。
  * 维护约定：新增模式只改下面三张表 + 补一个 `perfModeName*`，**禁止**再为某模式开平行
  * 后缀键（如 perfScopeHintXxx）——那会把「加一个模式 = 改 N 处」的债重新养回来。
- * （表内只列**模式轴上的**模式——scan 已据 §2.7 退轴成独立 tab，其 hint 由 tpl 直写
- *  perfScanBenchHint，不在派生面，2026-09-22 复审清算。）
+ * （表内只列**读共享控件的模式**——scan 自 ADR-300 §2.1 起是 bench 组第三子 pill，
+ *  行可见性上轴、参数面仍不碰共享控件（公共区在 scan 下整行退场，ADR-278 §2.7 内容判据
+ *  原样成立），故不入派生面，其 hint 由 tpl 直写 perfScanBenchHint。）
  */
 const PERF_MODE_NAMES: Record<string, LocaleKey> = {
   single: "diagnostics.perfModeNameSingle",
@@ -42,7 +45,9 @@ const PERF_MODE_NAMES: Record<string, LocaleKey> = {
 /** 控件 id → **不读它**的模式集（真相源 = 各命令模块的 read*：perf-single-bench / perf-concurrent）。
  * 未登记 = 所有模式都读；登记了则在列出的模式下置 disabled——
  * 「可见但被忽略」与「同控件跨模式改义」是 §2.6 要清的同一笔账的两面。
- * ⚠️ ADR-278 §2.7：引擎对照已退出模式轴（独立 tab），故本表不再有 scan 列。 */
+ * ⚠️ 本表不设 scan 列：引擎对照（bench 组第三 pill，ADR-300 §2.1）的参数面根本不碰这些
+ * 共享控件——公共区在 scan 下随 data-perf-mode 整行退场（ADR-278 §2.7 内容判据），
+ * 「碰不到」比「可见但置灰」更诚实，无需登记。 */
 export const PERF_UNREAD_MODES: Record<string, readonly string[]> = {
   "diag-perf-model": ["conc"],
   "diag-perf-order": [], // 公共区常驻：两种模式都读排序（ADR-278 §2.7 前是 ["scan"]）
@@ -91,11 +96,13 @@ export function perfScopeHint(mode: string): string {
 }
 
 /**
- * 基准模式接线（ADR-278 §2.1 / §2.3）：单模型 / 并发 / 引擎对照三选一，只呈现该模式那一套控件。
+ * 基准模式接线（ADR-278 §2.1 / §2.3 × ADR-300 §2.2）：bench 组三 pill（单模型 / 批量并发 /
+ * 引擎对照）三选一，只呈现该模式那一套控件。模式源 = 子 pill 行 `data-active-sub`，
+ * 唯一读出口 readActiveBenchMode（原 #diag-perf-mode 下拉已退役）。
  *
- * 显隐走 **class**（`.perf-mode-off`）而非 inline style：查看器降级 `dgInHideDesktopOnly` 用的是
- * inline `display:none`，而 inline 胜过 class —— 故模式接线**不可能**把查看器藏掉的桌面专属按钮又
- * 「显示」回来。两种机制各司其职（ADR-278 §2.4），不是巧合。
+ * 显隐走 **class**（`.perf-mode-off`）而非 inline style：bindSubBar 的子面板显隐用的是
+ * inline `display`，两种机制作用对象不重叠（bench 组无 data-sub-pane，行门控独此一家）——
+ * 互不覆盖，各司其职（ADR-278 §2.4 的口径随模式源迁移原样成立）。
  *
  * 并发模式还要禁用目标集里的「单模型」选项：并发基准没有模型路径输入框，选了必然缺载荷参数
  * （`perf-concurrent.ts` 原本只是静默 `return null`）。这里把它变成**可见的不可选**，并把已选中的值
@@ -114,10 +121,8 @@ export function perfScopeHint(mode: string): string {
  * 全库扁平 → 不重复弹）。
  */
 function initPerfMode(root: ShadowRoot): () => void {
-  const modeEl = root.getElementById("diag-perf-mode") as HTMLSelectElement | null;
   const apply = (): void => {
-    if (!modeEl) return;
-    const mode = modeEl.value || "single";
+    const mode = readActiveBenchMode(root);
     root.querySelectorAll<HTMLElement>("[data-perf-mode]").forEach((el) => {
       const modes = (el.dataset.perfMode ?? "").split(/\s+/);
       el.classList.toggle("perf-mode-off", !modes.includes(mode));
@@ -191,9 +196,14 @@ function initPerfMode(root: ShadowRoot): () => void {
       toast(t("diagnostics.perfConcTargetFallback"));
     }
   };
-  modeEl?.addEventListener("change", apply);
   apply();
   return apply;
+}
+
+/** bench 模式的外界重放入口（ADR-300 §2.2）：bench 组 bindSubBar 的 onSwitch 是唯一消费者——
+ *  pill 点击已写好 data-active-sub，这里读取并重放行门控 / 控件门禁 / 标签改写。未装配即调用 = 无操作。 */
+export function applyPerfModeUI(root: ShadowRoot): void {
+  _perfModeApply.get(root)?.();
 }
 
 /** 初始化性能面板（基准三模式 / 加载剖析） */
@@ -212,9 +222,8 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
     const unsub = bus.on("model:select", (p) => {
       const sel = p as ModelSelectPayload;
       if (sel.isDir) return; // 目录不是可测单模型文件，跳过
-      const modeEl = root.getElementById("diag-perf-mode") as HTMLSelectElement | null;
-      // 缺省（夹具/异常态无 mode select）按 single 处理，不因 DOM 缺失而静默不填充
-      if ((modeEl?.value ?? "single") !== "single") return; // 并发 / 引擎对照无模型路径输入框
+      // 模式唯一读出口；夹具/异常态无 pill 行时兜底 single，不因 DOM 缺失而静默不填充
+      if (readActiveBenchMode(root) !== "single") return; // 并发 / 引擎对照无模型路径输入框
       const inp = root.getElementById("diag-perf-model") as HTMLInputElement | null;
       if (inp && !inp.value.trim()) inp.value = sel.path;
     });
@@ -227,6 +236,7 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   // 不写第二份」）：故只有这一次填充（includeModel=true —— 单模型选项只在单模型模式可选，
   // 由 initPerfMode 在切到并发 / 引擎对照时禁用）。
   const applyPerfMode = initPerfMode(root);
+  _perfModeApply.set(root, applyPerfMode); // bench pill 切换经 applyPerfModeUI 重放（ADR-300 §2.2）
   void populatePerfTargetOptions(root, "diag-perf-rtype", true).then(() => {
     syncPerfBaselineControls(root);
     // 填充会重建 <option>，单模型选项的 disabled 随之丢失 → 重放一次模式态
@@ -242,8 +252,9 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   root
     .getElementById("diag-perf-conc-run")
     ?.addEventListener("click", () => void runConcurrentBench(root, esc));
-  // 扫描引擎对照（ADR-278 §2.7：已退出模式轴，在独立 scan tab 内挂线）：
-  // Go/Rust 对照的实测归属归 Go，前端只提交迭代次数 + 渲染载荷
+  // 扫描引擎对照（ADR-278 §2.7 内容判据 × ADR-300 §2.1：现为 bench 组第三子 pill，
+  // 独立参数面随 data-perf-mode="scan" 显隐）：Go/Rust 对照的实测归属归 Go，
+  // 前端只提交迭代次数 + 渲染载荷
   root
     .getElementById("diag-perf-scan-bench")
     ?.addEventListener("click", () => void runScanBench(root, esc));

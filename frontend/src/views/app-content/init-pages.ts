@@ -21,8 +21,10 @@ import { bindTabA11y } from "./tabs-a11y.ts";
 /**
  * 初始化诊断页
  * 顶部 tab 走全站统一 bindTabs 范式（ARIA/键盘/懒加载），与仓库页同构。
- * 左栏分段已在 ADR-258 收敛为顶部 repo-tab：
- *   log(日志,含op/runtime子tab) / single / gui / conc / hist / trace / conflict / health / sync-conflict
+ * ADR-300 S2：六 tab 收口为三个意图组（logs 日志 / bench 基准 / audit 体检），
+ * 组内子屏走 tabs-shell 的统一 pill 语法（renderSubBar/bindSubBar）——
+ *   logs(操作/运行时/加载剖析) / bench(单模型/批量并发/引擎对照) / audit(仓库健康/同步冲突)
+ * （更早的左栏分段→顶 tab 演进见 ADR-258，模式轴重划见 ADR-278。）
  */
 export function initDiagnosticsPage(host: AppContentHost): void {
   bindTabs(host, ".repo-tab", "diag");

@@ -1,7 +1,7 @@
 # ADR-300：诊断页标签导航单轴收口：看/测/诊三组与二级导航语法统一
 
 - **状态**：✅ 已采纳（Accepted，2026-09-24；D1–D4 全票拍板，见 §2.0）
-- **实施状态**：未开工（下一步 S1 文案图标刀，见 §2.7；进度记知识卡 `docs/knowledge/app_content_diagnostics.md`）
+- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）——`docs/knowledge/app_content_diagnostics.md`「ADR-300 诊断页导航轴收敛」节
 - **日期**：2026-09-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-258](./ADR-258-diagnostics-nav-top-tabs.md)（左栏→顶部 tab）、[ADR-259](./ADR-259-tab-structure-single-source.md)（renderTabs 结构单点）、[ADR-278](./ADR-278-diagnostics-perf-ia.md)（性能面板内轴收敛；本 ADR 接其 §3「扫描聚合轴」遗留）、[ADR-285](./ADR-285-bench-usability-copy-diff-plan.md)（P1-2/P1-3 待拍板项由本 ADR 吸收）、[ADR-288](./ADR-288-diagnostics-scan-bar-persistent.md)（常驻栏两段式，全部保留）、`docs/knowledge/app_content_diagnostics.md`

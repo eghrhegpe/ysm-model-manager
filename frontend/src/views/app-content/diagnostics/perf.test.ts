@@ -78,12 +78,40 @@ const SINGLE_STRUCTURED_BASELINE = {
   },
 };
 
+/**
+ * bench 组子 pill 行（ADR-300 §2.2 单点语法）：与 tpl.ts 的 renderSubBar("bench", …) 产出同形——
+ * 模式源 = data-active-sub（原 #diag-perf-mode 下拉已从生产 DOM 退役），testid 派生
+ * `diag-sub-bench-<id>`。
+ */
+function benchSubBar(activeSub: string): string {
+  const pill = (id: string, label: string): string =>
+    `<button class="diag-sub-tab${id === activeSub ? " active" : ""}" data-sub="${id}" data-testid="diag-sub-bench-${id}">${label}</button>`;
+  return (
+    `<div class="diag-sub-bar" data-sub-bar="bench" data-active-sub="${activeSub}">` +
+    `${pill("single", "单模型")}${pill("conc", "批量并发")}${pill("scan", "引擎对照")}</div>`
+  );
+}
+
+/**
+ * 切模式 = 复刻生产链路的 pill 态（ADR-300 §2.2）：bindSubBar 点击翻 .active 类并写
+ * data-active-sub，随后经 onSwitch 调 applyPerfModeUI。测试夹具不经 bindSubBar 接线，
+ * 这里两步都补；需要重放行门控/禁用时由调用点再补 applyPerfModeUI(root)。
+ */
+function setBenchMode(root: ShadowRoot, mode: string): void {
+  const bar = root.querySelector<HTMLElement>('.diag-sub-bar[data-sub-bar="bench"]');
+  if (!bar) throw new Error("夹具缺 bench 子 pill 行（模式源）");
+  bar.dataset.activeSub = mode;
+  bar
+    .querySelectorAll<HTMLElement>(".diag-sub-tab")
+    .forEach((b) => b.classList.toggle("active", b.dataset.sub === mode));
+}
+
 function makeRoot(): ShadowRoot {
   const el = document.createElement("div");
   el.innerHTML = `
     <button class="diag-btn" id="diag-perf-run">运行</button>
     <button class="diag-btn" id="diag-perf-refresh-trace">刷新</button>
-    <select id="diag-perf-mode"><option value="single">单模型</option><option value="conc">批量并发</option><option value="scan">引擎对照</option></select>
+    ${benchSubBar("single")}
     <input id="diag-perf-model">
     <input id="diag-perf-iter">
     <select id="diag-perf-rtype"><option value="">（单模型，按路径）</option></select>
@@ -625,8 +653,9 @@ describe("进阶 P2：订阅 model:select 实时带入路径（ADR-221 延伸）
   it("并发 / 引擎对照模式下不带入（无模型路径输入框）", () => {
     const root = makeRoot();
     initPerfPanel(root, esc);
-    const modeEl = root.getElementById("diag-perf-mode") as HTMLSelectElement;
-    modeEl.value = "conc";
+    // 模式源 = bench 子 pill 行（ADR-300 §2.2）：bus 回调只经 readActiveBenchMode 读 pill 态，
+    // 无行门控可断言，故只翻 pill（不调 applyPerfModeUI）。
+    setBenchMode(root, "conc");
     bus.emit("model:select", { path: "D:\\repo\\ysm\\player.ysm" });
     expect((root.getElementById("diag-perf-model") as HTMLInputElement).value).toBe("");
   });

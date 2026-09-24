@@ -129,7 +129,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 
 - 新 ADR 走 `node scripts/new-adr.ts "标题" [...]`（不手写编号）；状态：`📝 提议中（新 ADR 默认，待拍板）/ ✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代`；触及既有 ADR 时在对方首部标「被 [ADR-NNN] 取代」。
 - **ADR 只记决策方向和理由，不记实施进度**。实施进度（哪步做了哪步没做）写进知识卡——知识卡有 `check-knowledge-drift` 自动检测，ADR 没有。ADR 状态字段只记生命周期（提议中/已采纳/部分采纳/已废弃/已取代），不记"§2.3 仍排期"这类待办状态——这类状态和实际严重脱节（ADR-042 案例：记录"四项未建模"，实际三项已落地、一项无需实现）。
-- 审核流水线 / 反模式 / 致命陷阱 / 治理红线 / 防御范式 → 已拆分至三处：治理红线 = `skills/governance-rules.md`（10 条前端规则手册，R1–R10）、致命陷阱 = `skills/pitfalls.md`（20 条事故教训手册）、审核流水线 + 三份 Checklist（代码审查 / 跨平台 / 前端 3D）= `docs/adr/ADR-109-code-review-checklist.md`。原 `docs/audit-framework.md` 已于 2026-09 文档调整中删除（内容拆分归位）。
+- 审核流水线 / 反模式 / 致命陷阱 / 治理红线 / 防御范式 → 已拆分至三处：治理红线 = `skills/governance-rules.md`（10 条前端规则手册，R1–R10）、致命陷阱 = `skills/pitfalls.md`（21 条事故教训手册）、审核流水线 + 三份 Checklist（代码审查 / 跨平台 / 前端 3D）= `docs/adr/ADR-109-code-review-checklist.md`。原 `docs/audit-framework.md` 已于 2026-09 文档调整中删除（内容拆分归位）。
 - **铁律**：改完代码同步知识卡（`check-knowledge-drift` 由钩子自动兜底）。
 - 收敛闭环默认：子代理审核修复 → CodeReview 独立审查 → pre-commit 自动检测。
 

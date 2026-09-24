@@ -16,6 +16,7 @@ import type { PreviewMenuNode } from "./menu-node-types.ts";
 import {
   COMMON_NODE_FIELDS,
   KIND_SPECIFIC_FIELDS,
+  type NodeFor,
   validateNode,
   validateNodeTree,
 } from "./node-validation.ts";
@@ -194,5 +195,155 @@ describe("真实菜单树 per-kind 字段契约（零违规门）", () => {
     expect(violations, `registry 面板节点存在 kind/字段错配：${JSON.stringify(violations)}`).toEqual(
       [],
     );
+  });
+});
+
+// ===================================================================
+// ③ [ADR-302 走法丙] NodeFor<K> 窄类型：类型层由运行期表派生（非第二份清单）
+// ===================================================================
+describe("NodeFor<K> 窄类型（类型层派生 ⇄ 运行期表 交叉锁）", () => {
+  it("逐 kind 用 NodeFor<K> 构造的节点，在运行期门零违规", () => {
+    // 本用例即「单一事实源」的交叉锁：左侧类型由 KIND_SPECIFIC_FIELDS 派生，
+    // 右侧 validateNodeTree 是同一张表的运行期消费——派生一旦断裂，两侧必分叉。
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "nf",
+        kind: "folder",
+        defaultOpen: true,
+        headerToggle: { value: true, onChange: () => {} },
+        children: [],
+      } satisfies NodeFor<"folder">,
+      {
+        id: "np",
+        kind: "panel",
+        schemaId: "s",
+        action: () => {},
+        danger: true,
+        children: [],
+      } satisfies NodeFor<"panel">,
+      { id: "na", kind: "action", action: () => {}, danger: true } satisfies NodeFor<"action">,
+      {
+        id: "nsl",
+        kind: "slider",
+        control: { get: () => 1, set: () => {} },
+      } satisfies NodeFor<"slider">,
+      {
+        id: "ntg",
+        kind: "toggle",
+        control: { get: () => true, set: () => {} },
+      } satisfies NodeFor<"toggle">,
+      {
+        id: "nse",
+        kind: "select",
+        control: { get: () => "a", set: () => {} },
+      } satisfies NodeFor<"select">,
+      {
+        id: "ncl",
+        kind: "color",
+        control: { get: () => "a", set: () => {} },
+      } satisfies NodeFor<"color">,
+      {
+        id: "nb",
+        kind: "button",
+        control: { action: () => {} },
+        action: () => {},
+        rowDensity: "compact",
+      } satisfies NodeFor<"button">,
+      { id: "nfi", kind: "field", value: 1 } satisfies NodeFor<"field">,
+      {
+        id: "nr",
+        kind: "row",
+        value: "v",
+        radio: { active: true, title: "t", onClick: () => {} },
+        headerToggle: { value: false, onChange: () => {} },
+        action: () => {},
+        rowDensity: "compact",
+      } satisfies NodeFor<"row">,
+      { id: "nd", kind: "divider" } satisfies NodeFor<"divider">,
+      { id: "nst", kind: "sectionTitle" } satisfies NodeFor<"sectionTitle">,
+      {
+        id: "nca",
+        kind: "card",
+        collapsible: true,
+        defaultOpen: true,
+        children: [],
+      } satisfies NodeFor<"card">,
+      {
+        id: "nm",
+        kind: "material-row",
+        eye: { get: () => true, set: () => {} },
+        opacity: { get: () => 100, set: () => {} },
+      } satisfies NodeFor<"material-row">,
+      { id: "nct", kind: "controls", controls: [] } satisfies NodeFor<"controls">,
+      {
+        id: "ncu",
+        kind: "custom",
+        renderCustom: () => {},
+        action: () => {},
+        danger: true,
+      } satisfies NodeFor<"custom">,
+    ];
+    // 防门空转：覆盖全部 16 kind（新增 kind 未纳入本表即数量不符）
+    const kinds = new Set(nodes.map((n) => n.kind));
+    expect(kinds.size, "应覆盖全部 PreviewMenuNodeKind").toBe(16);
+    expect(validateNodeTree(nodes)).toEqual([]);
+  });
+
+  it("类型层负向：NodeFor<K> 拒绝该 kind 的契约外字段（指令失效即 tsc 直接报错）", () => {
+    // 这些 @ts-expect-error 是**编译期断言**（运行时零成本）：若将来某 kind 的字段集被误放宽，
+    // 指令变「未使用」→ tsc 报错 TS2578。
+    //
+    // ⚠️ 陷阱（2026-09 实证踩中）：tsconfig 开了 `exactOptionalPropertyTypes`，故**赋值 `undefined`
+    // 本身就会报错**——若用 `control: undefined` 之类写法，指令被「拒绝 undefined」这个错满足，
+    // 于是**无论字段归属对错都恒绿**（门空转）。故此处一律填**真值**，让唯一可能的错因就是
+    // 「该字段不属于本 kind」的过量属性错误。负控验证见文件末注释。
+    // @ts-expect-error control 非 folder 专有字段
+    const a: NodeFor<"folder"> = { id: "a", kind: "folder", control: {} };
+    // ⚠️ 多行字面量的过量属性错误报在**属性行**上，而 @ts-expect-error 只作用于紧邻下一行
+    // （2026-09 实证：指令写在 const 行会让 const 行报 TS2578「未使用」、属性行报 TS2353 漏网）。
+    const b: NodeFor<"slider"> = {
+      id: "b",
+      kind: "slider",
+      // @ts-expect-error eye 仅 material-row 专有
+      eye: { get: () => true, set: () => {} },
+    };
+    const c: NodeFor<"field"> = {
+      id: "c",
+      kind: "field",
+      // @ts-expect-error radio 仅 row 专有
+      radio: { active: true, title: "t", onClick: () => {} },
+    };
+    // @ts-expect-error controls 仅 controls kind 专有
+    const d: NodeFor<"button"> = { id: "d", kind: "button", controls: [] };
+    // @ts-expect-error collapsible 仅 card 专有
+    const e: NodeFor<"folder"> = { id: "e", kind: "folder", collapsible: true };
+    expect([a.kind, b.kind, c.kind, d.kind, e.kind]).toEqual([
+      "folder",
+      "slider",
+      "field",
+      "button",
+      "folder",
+    ]);
+  });
+
+  it("类型层正向：公共字段与各 kind 合法专有字段均被接受，且窄类型可赋回宽别名", () => {
+    const folder: NodeFor<"folder"> = {
+      id: "a",
+      kind: "folder",
+      label: "plain",
+      settingsOrder: 1,
+      children: [],
+    };
+    const row: NodeFor<"row"> = { id: "b", kind: "row", value: 1, rowDensity: "compact" };
+    const custom: NodeFor<"custom"> = {
+      id: "c",
+      kind: "custom",
+      renderCustom: () => {},
+      danger: true,
+    };
+    expect([folder.kind, row.kind, custom.kind]).toEqual(["folder", "row", "custom"]);
+    // 走法丙前提：既有无处不在的宽别名不被改动，窄类型仅是「可选前哨」
+    const widened: PreviewMenuNode[] = [folder, row, custom];
+    expect(widened).toHaveLength(3);
   });
 });

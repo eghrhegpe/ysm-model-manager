@@ -545,6 +545,7 @@ auto_fields:
     - multiModelSelectNode
     - MultiModelSelectOpts
     - nodeControlToView
+    - NodeFor
     - NodeViolation
     - normalizeEnvLegacyState
     - normalizeFbxScale

@@ -132,6 +132,26 @@ describe("buildCubeMeshData", () => {
     expect(faceUVs(mesh, 3)).toEqual([0.25, 0.125, 0.125, 0.125, 0.25, 0.25, 0.125, 0.25]); // down 负尺寸反向
   });
 
+  it("per-face UV 空对象/零有效面：回退 box UV（对齐 Go parseFaceUV parsed 布尔，真实库 15_kluonoa 实证）", () => {
+    // 真实模型 15_kluonoa main.json mingpai cube 声明 "uv":{}。Go parseFaceUV
+    // 零有效面返回 false → 回退 box UV（uv=[0,0] 零值）展开；TS 旧实现恒返回
+    // true 导致六面全 0（纹理角点拉伸）。双端必须一致。
+    const expectedEast = [0, 0.125, 0.125, 0.125, 0, 0.25, 0.125, 0.25];
+    const expectedWest = [0.25, 0.125, 0.375, 0.125, 0.25, 0.25, 0.375, 0.25];
+
+    for (const emptyFaceUV of ["{}", '{"east":{}}']) {
+      const cube = buildCube({
+        pivot: [4, 4, 4],
+        pivotSet: true,
+        size: [8, 8, 8],
+        faceUV: emptyFaceUV,
+      });
+      const mesh = buildCubeMeshData(cube, bonePivot, 64, 64, "root", 0)!;
+      expect(faceUVs(mesh, 0), `faceUV=${emptyFaceUV} east`).toEqual(expectedEast);
+      expect(faceUVs(mesh, 1), `faceUV=${emptyFaceUV} west`).toEqual(expectedWest);
+    }
+  });
+
   it("box UV：up/down 打包结果与旧负 fw/fh 技巧逐值一致（box 模型零回归）", () => {
     const cube = buildCube({ pivot: [4, 4, 4], pivotSet: true, size: [8, 8, 8], uv: [0, 0] });
     const mesh = buildCubeMeshData(cube, bonePivot, 64, 64, "root", 0)!;

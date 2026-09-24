@@ -53,6 +53,26 @@ func TestParseFaceUV_ValidButNoFaces(t *testing.T) {
 	}
 }
 
+// TestParseUV_EmptyFaceObjectFallsBackToBoxUV 锁定真实库实证分歧
+// （15_kluonoa main.json mingpai cube 声明 "uv":{}）：空对象 / 面名合法但
+// uv 缺失 → parseFaceUV 返回 false → parseUV 回退 box UV（c.UV 零值 [0,0]
+// 展开）。TS cube-mesh.parseFaceUV 同构双锁（parsed 布尔）。
+func TestParseUV_EmptyFaceObjectFallsBackToBoxUV(t *testing.T) {
+	for _, faceUV := range []string{"{}", `{"east":{}}`} {
+		var faces [6][8]float64
+		c := types.Cube2D{FaceUV: faceUV, UV: [2]float64{0, 0}}
+		if ok := parseUV(c, &faces, 8, 8, 8, 64, 64); !ok {
+			t.Errorf("FaceUV=%s 零有效面 → 应回退 box UV 并返回 true", faceUV)
+			continue
+		}
+		// east: box[0,0] 8³ cube → (0, 8/64, 8/64, 8/64, 0, 16/64, 8/64, 16/64)
+		wantEast := [8]float64{0, 0.125, 0.125, 0.125, 0, 0.25, 0.125, 0.25}
+		if faces[0] != wantEast {
+			t.Errorf("FaceUV=%s east = %v, 期望 box 回退 %v", faceUV, faces[0], wantEast)
+		}
+	}
+}
+
 // TestParseFaceUV_QuadVertexOrder 锁定 b62f5913 修复（parseFaceUV 侧）：
 // parseFaceUV 写入的 [8]float64 四角顶点序必须是
 //

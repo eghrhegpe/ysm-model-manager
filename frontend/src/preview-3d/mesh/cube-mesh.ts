@@ -479,6 +479,10 @@ function parseFaceUV(
   }
 
   const faceNames = ["east", "west", "up", "down", "south", "north"];
+  // parsed 布尔对齐 Go parseFaceUV：零个有效面（"uv":{}、{"east":{}} 等）
+  // 返回 false，让 parseUV 回退 box UV。真实库 15_kluonoa mingpai 实证，
+  // 真实库审计（YSM_UV_AUDIT_ROOT）锁定该回退与 Go 逐值一致。
+  let parsed = false;
   for (let fi = 0; fi < faceNames.length; fi++) {
     const fd = faceData[faceNames[fi]];
     if (!fd?.uv || fd.uv.length < 2) continue;
@@ -499,6 +503,7 @@ function parseFaceUV(
     const v1 = (fv + fh) / texH;
     // canonical 槽位：四侧面直接用；up/down 由 mdCmBuildFace 反转槽位序。
     faces[fi] = [u0, v0, u1, v0, u0, v1, u1, v1];
+    parsed = true;
   }
-  return true;
+  return parsed;
 }

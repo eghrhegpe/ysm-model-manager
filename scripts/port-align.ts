@@ -506,6 +506,7 @@ function makeUVSpec(
   mirror: boolean,
   faceUVMap?: Record<string, { uv: [number, number]; size: [number, number] }>,
   boxOffset?: number[],
+  inflate = 0,
 ) {
   return {
     origin: [0, 0, 0],
@@ -513,7 +514,7 @@ function makeUVSpec(
     pivot: [size[0]! / 2, size[1]! / 2, size[2]! / 2],
     pivotSet: true,
     rotation: [0, 0, 0],
-    inflate: 0,
+    inflate,
     mirror,
     cubeTexW: 0,
     cubeTexH: 0,
@@ -624,13 +625,20 @@ console.log(
 );
 let uvCases = 0;
 let uvPass = 0;
-function runUVCase(label: string, s: any, expectedRects: Rect[], reverseTopBottom = false) {
+function runUVCase(
+  label: string,
+  s: any,
+  expectedRects: Rect[],
+  reverseTopBottom = false,
+  texW = TEX,
+  texH = TEX,
+) {
   uvCases++;
   const md = buildCubeMeshData(
     s,
     { x: BONE_PIVOT[0], y: BONE_PIVOT[1], z: BONE_PIVOT[2] },
-    TEX,
-    TEX,
+    texW,
+    texH,
     "bone",
     0,
   );
@@ -638,7 +646,7 @@ function runUVCase(label: string, s: any, expectedRects: Rect[], reverseTopBotto
     failures.push({ phase: "uv", label, why: "buildCubeMeshData 返回 null" });
     return;
   }
-  const err = matchAllFaceUVs(md.uvs, expectedRects, TEX, TEX, reverseTopBottom);
+  const err = matchAllFaceUVs(md.uvs, expectedRects, texW, texH, reverseTopBottom);
   if (err) {
     failures.push({ phase: "uv", label, why: err });
   } else {
@@ -678,6 +686,101 @@ for (const scheme of PERFACE_SIGN_SCHEMES) {
   runUVCase("per-face 缺面(仅 east/up) mirror=false", s, oraclePerFaceRects(s), true);
 }
 
+// 3d. 纹理尺寸变体（texW≠texH / 非 2 幂 / 高清 256+）：归一化分母每面独立
+const TEX_VARIANTS: [number, number][] = [
+  [64, 32],
+  [32, 64],
+  [256, 512],
+  [48, 80], // 非 2 幂（真实库存在，分母错配必露馅）
+  [512, 512],
+];
+for (const [tw, th] of TEX_VARIANTS) {
+  const boxS = makeUVSpec("box", [6, 8, 10], false, undefined, [3, 5]);
+  runUVCase(`box tex=${tw}x${th} 非方正+offset`, boxS, oracleBoxFaceRects(boxS), false, tw, th);
+  const pfMap = structuredClone(PERFACE_BASE);
+  const pfS = makeUVSpec("perface", [8, 8, 8], false, pfMap);
+  runUVCase(`per-face tex=${tw}x${th}`, pfS, oraclePerFaceRects(pfS), true, tw, th);
+}
+
+// 3e. inflate 不污染 UV：inflate 只改几何（origin/size），UV 仍按声明原 size
+// 展开（Go spec.go parseUV 传 c.Size 原值；inflate 与 UV 必须解耦）。
+for (const inflate of [-1, 1.5, 3]) {
+  const s = makeUVSpec("box", [6, 8, 10], false, undefined, [3, 7], inflate);
+  runUVCase(`box inflate=${inflate} UV 仍按原 size`, s, oracleBoxFaceRects(s));
+}
+
+// 3f. 空 faceUV 对象回退 box UV（真实库 15_kluonoa mingpai "uv":{} 实证；
+// 解析层产物：faceUV="{}" 且 uv 为零值 [0,0] → parseFaceUV 零有效面返回
+// false → parseUV 回退 box [0,0] 展开，双端 parsed 布尔锁定）。
+for (const emptyFaceUV of ["{}", '{"east":{}}']) {
+  const s = {
+    origin: [0, 0, 0],
+    size: [8, 8, 8],
+    pivot: [4, 4, 4],
+    pivotSet: true,
+    rotation: [0, 0, 0],
+    inflate: 0,
+    mirror: false,
+    cubeTexW: 0,
+    cubeTexH: 0,
+    faceUV: emptyFaceUV,
+    uv: [0, 0],
+    faceUVMap: null,
+    texSlot: 0,
+  };
+  runUVCase(`空 faceUV 对象 ${emptyFaceUV} → box[0,0] 回退`, s, oracleBoxFaceRects(s));
+}
+
+// 3g. seeded 随机批量：非方正小数 size × offset × mirror × 纹理尺寸（box），
+// 非方正 x≠z 专杀轴互换类错误（port-align 重建期 down 轴错即被此类案拦出）。
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rng = mulberry32(20260924);
+const rnd = (lo: number, hi: number) => lo + rng() * (hi - lo);
+const RAND_BOX_N = 120;
+for (let i = 0; i < RAND_BOX_N; i++) {
+  // 约 8% 概率某轴零厚度（UV 该轴宽 0，几何层另行 clamp，对拍仍成立）
+  const size = [rnd(0.5, 12), rnd(0.5, 12), rnd(0.5, 12)].map((v) =>
+    rng() < 0.08 ? 0 : Math.round(v * 100) / 100,
+  );
+  const offset = [Math.round(rnd(0, 30) * 10) / 10, Math.round(rnd(0, 30) * 10) / 10];
+  const [tw, th] = TEX_VARIANTS[Math.floor(rng() * TEX_VARIANTS.length)]!;
+  const mirror = rng() < 0.3;
+  const s = makeUVSpec("box", size, mirror, undefined, offset);
+  runUVCase(`box 随机#${i} sz=${size} off=${offset} mir=${mirror} tex=${tw}x${th}`, s, oracleBoxFaceRects(s), false, tw, th);
+}
+
+// 3h. seeded 随机 per-face 批量：随机矩形/负符号/随机缺面（非 mirror；
+// per-face+mirror 真实库普查 0 例，box mirror 由 3a/3g 覆盖）。
+const RAND_PF_N = 60;
+const PF_FACES = ["east", "west", "up", "down", "south", "north"];
+for (let i = 0; i < RAND_PF_N; i++) {
+  const size = [rnd(1, 12), rnd(1, 12), rnd(1, 12)].map((v) => Math.round(v * 100) / 100);
+  const map: Record<string, { uv: [number, number]; size: [number, number] }> = {};
+  for (const name of PF_FACES) {
+    if (rng() < 0.12) continue; // 随机缺面
+    const w = Math.round(rnd(1, 9) * 100) / 100;
+    const h = Math.round(rnd(1, 9) * 100) / 100;
+    // 约 20% 负宽 / 20% 负高（有符号 uv_size，禁止 min/max 归一化）
+    map[name] = {
+      uv: [Math.round(rnd(0, 40) * 100) / 100, Math.round(rnd(0, 40) * 100) / 100],
+      size: [rng() < 0.2 ? -w : w, rng() < 0.2 ? -h : h],
+    };
+  }
+  if (Object.keys(map).length === 0) map.east = { uv: [0, 0], size: [8, 8] };
+  const [tw, th] = TEX_VARIANTS[Math.floor(rng() * TEX_VARIANTS.length)]!;
+  const s = makeUVSpec("perface", size, false, map);
+  runUVCase(`per-face 随机#${i} faces=${Object.keys(map).length} tex=${tw}x${th}`, s, oraclePerFaceRects(s), true, tw, th);
+}
+
 // ============================================================
 // 6. 覆盖矩阵 + 分歧报告
 // ============================================================
@@ -699,6 +802,10 @@ console.log(`  UV box 组合:     ${UV_BOX_SIZES.length * UV_BOX_OFFSETS.length 
 console.log(
   `  UV per-face:     ${PERFACE_SIGN_SCHEMES.length * 2 + 1}（${PERFACE_SIGN_SCHEMES.length} 符号方案 × mirror + 缺面零填充）`,
 );
+console.log(`  UV 纹理变体:     ${TEX_VARIANTS.length * 2}（${TEX_VARIANTS.map(([w, h]) => `${w}×${h}`).join("/")}，box+per-face 各一）`);
+console.log(`  UV inflate 解耦: 3（inflate=-1/1.5/3，UV 按原 size 不变）`);
+console.log(`  UV 空对象回退:   2（{} / {"east":{}} → box[0,0]）`);
+console.log(`  UV 随机批量:     ${RAND_BOX_N + RAND_PF_N}（box ${RAND_BOX_N} 含零厚度/小数/mirror/混 tex + per-face ${RAND_PF_N} 含负符号/随机缺面）`);
 console.log(`  UV 扫点合计:     ${uvCases}（每案 6 面 × 8 UV 逐值）`);
 
 const exitCode = failures.length === 0 ? 0 : 1;

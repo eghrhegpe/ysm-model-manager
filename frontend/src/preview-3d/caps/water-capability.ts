@@ -110,10 +110,14 @@ export const WATER_PARAM_APPLIER_KEYS = [
   "waterReflectionClipBias",
   "waterReflectDisableWhenSSR",
 ] as const;
+/** 结构性空条目（无材质应用）：可见性/形态/波纹速度/倒影门控均由回调或逐帧渲染循环承接，
+ *  此处零材质写。同一函数身份供反向机检——空条目全集 == 结构承接 ∪ 逐帧现读登记表
+ *  （`WATER_NOOP_APPLIER_KEYS`），新增空键必须在两处登记之一表态，否则契约测试即红。 */
+const NOOP_APPLIER: (ctx: WaterApplyCtx) => void = () => {};
 const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> = {
-  waterEnabled: () => {}, // 可见性由回调 syncWaterVisibility 单独承接
-  waterMode: () => {}, // 形态切换由回调 rebuildWaterContainer 承接，不入本表
-  waterWaveSpeed: () => {}, // [锐评 3.3] 无材质应用——消费点在 update() 逐帧现读 envState（登记于 WATER_FRAME_READ_KEYS）
+  waterEnabled: NOOP_APPLIER, // 可见性由回调 syncWaterVisibility 单独承接
+  waterMode: NOOP_APPLIER, // 形态切换由回调 rebuildWaterContainer 承接，不入本表
+  waterWaveSpeed: NOOP_APPLIER, // [锐评 3.3] 无材质应用——消费点在 update() 逐帧现读 envState（登记于 WATER_FRAME_READ_KEYS）
   waterWetness: ({ strategy, top, setUniform }) => {
     if (!strategy.wetnessGated) return;
     const eff = envState.waterOpacity * envState.waterWetness;
@@ -197,13 +201,13 @@ const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) => void> 
   },
   // ADR-297 倒影五键：结构性空条目——门控/权重/RT 边长/镜面高度/裁剪偏置全部由
   // renderReflection / ensureReflector 逐帧现读 envState（真值源单一，派发侧零材质写，
-  // waterWaveSpeed 同口径）。clipBias 虽烘进 Reflector 闭包不可就地改，但「弃载体懒建」
+  // waterWaveSpeed 同口径，均登记于 WATER_FRAME_READ_KEYS）。clipBias 虽烘进 Reflector 闭包不可就地改，但「弃载体懒建」
   // 收敛在 ensureReflector 的现读比对里（锐评 F-2），派发侧同样无需动作。
-  waterReflectionEnabled: () => {},
-  waterReflectionStrength: () => {},
-  waterReflectionResolution: () => {},
-  waterReflectionClipBias: () => {},
-  waterReflectDisableWhenSSR: () => {},
+  waterReflectionEnabled: NOOP_APPLIER,
+  waterReflectionStrength: NOOP_APPLIER,
+  waterReflectionResolution: NOOP_APPLIER,
+  waterReflectionClipBias: NOOP_APPLIER,
+  waterReflectDisableWhenSSR: NOOP_APPLIER,
 };
 
 // [锐评 3.1 守卫] 水 shader uniform 名的**唯一登记点**。
@@ -238,16 +242,38 @@ export const REFLECTOR_CLIP_BIAS_TOLERANCE = 0.05;
 
 /**
  * [锐评 3.3] 「无材质应用、由 render-loop 逐帧现读 envState」的 water 键登记表。
- * 背景：`applyChangedParams` 分派表里这类键只有空条目（如 `waterWaveSpeed: () => {}`），
- * 消费点在 `update(dt)` 逐帧现读 envState——但**没有任何一处显式登记这条路**，
- * 维护者看到空条目只能人肉 grep `update()` 才知去向（隐性约定）。
- * 本表把「这类键存在、且消费点必在 update」变成可验证的结构证据：
- *  - 契约测试断言「本表条目 ∈ WATER_PARAM_APPLIER_KEYS」且「applier 是空条目」；
- *  - 新加同类键（未来若有大水面仍需逐帧读 envState 的推导量）须在此登记，否则契约红。
- * `update(dt)` 顶部的 `this.waterTime.value += dt * envState.waterWaveSpeed`（正式键：
- * `waterWaveSpeed`）是当前唯一消费点。
+ * 背景：`applyChangedParams` 分派表里这类键只有空条目（`NOOP_APPLIER` 身份），
+ * 消费点在逐帧渲染循环现读 envState——若不显式登记，维护者看到空条目只能人肉
+ * grep `update()` 才知去向（隐性约定）。本表把「这类键存在、且消费点必在渲染循环」
+ * 变成可验证的结构证据：
+ *  - 契约测试①断言「本表条目 ∈ WATER_PARAM_APPLIER_KEYS」（登记不悬空）；
+ *  - 契约测试③反向闭包断言「分派表空条目全集 == 结构承接 ∪ 本表」（见
+ *    WATER_NOOP_APPLIER_KEYS）——新加空键不在此登记即红；
+ *  - 新加同类键（未来若有大水面仍需逐帧读 envState 的推导量）须在此登记。
+ * 键与消费点：`waterWaveSpeed` = `update(dt)` 顶部逐帧累加（无条件）；
+ * ADR-297 倒影五键 = `renderReflection / ensureReflector / applyReflectionUniforms`
+ * （均自 update 驱动；宿主 renderer/camera 缺席时倒影子系统整体失效、无载体即不读，
+ * 逐帧现读属性不变——门控键 `waterReflectDisableWhenSSR` 读 pp 键现算，同纪律）。
+ * 行为实证：waveSpeed 见 [锐评 3.3] ②用例；倒影五键见 ADR-297 用例组
+ * （「水位/分辨率/强度逐帧现读」「[锐评 F-2] clipBias 弃载体重建」「[锐评 3.5] 死区」
+ * 「SSR 抑制真值表」「无宿主/默认关」门控用例）。
  */
-export const WATER_FRAME_READ_KEYS = ["waterWaveSpeed"] as const;
+export const WATER_FRAME_READ_KEYS = [
+  "waterWaveSpeed",
+  "waterReflectionEnabled",
+  "waterReflectionStrength",
+  "waterReflectionResolution",
+  "waterReflectionClipBias",
+  "waterReflectDisableWhenSSR",
+] as const;
+
+/** [锐评 3.3 ③ 反向闭包] 分派表空条目（NOOP_APPLIER 身份命中）键全集——机器派生，不手写。
+ *  契约测试断言其与「结构承接（waterEnabled/waterMode，回调 syncWaterVisibility /
+ *  rebuildWaterContainer 承接）∪ WATER_FRAME_READ_KEYS」集合相等：新增空键必须二选一
+ *  登记（结构承接改注释归因，或入逐帧现读表），否则即红。 */
+export const WATER_NOOP_APPLIER_KEYS = (
+  Object.keys(WATER_PARAM_APPLIERS) as WaterParamKey[]
+).filter((k) => WATER_PARAM_APPLIERS[k] === NOOP_APPLIER);
 
 export class WaterCapability implements SceneCapability {
   readonly id = "water";
@@ -360,7 +386,8 @@ export class WaterCapability implements SceneCapability {
       shader.uniforms.uHalfSize = { value: envState.waterSize / 2 };
       shader.uniforms.uSize = { value: envState.waterSize };
       shader.uniforms.uChoppiness = { value: envState.waterChoppiness };
-      // 微细节法线强度（原 normalScale 槽位的替代；值域 0-1，由 ground-normal-strength 驱动）
+      // 微细节法线强度（原 normalScale 槽位的替代；值域 0-1，由 water 组键 `waterNormalStrength`
+      // 驱动——菜单控件 water-normal-strength；旧「ground-normal-strength 驱动」为水面拆分前口径）
       shader.uniforms.uDetailStrength = { value: envState.waterNormalStrength };
       shader.uniforms.uBaseOpacity = { value: mat.opacity };
       // ADR-297 倒影三件套：贴图 + 镜面投影矩阵 + 权重。默认 0 = 混合块整体跳过——

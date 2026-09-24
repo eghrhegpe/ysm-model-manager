@@ -15,6 +15,7 @@ import { GroundCapability } from "@/preview-3d/caps/ground-capability.ts";
 import { ReflectorCapability } from "@/preview-3d/caps/reflector-capability.ts";
 import { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
 import { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
+import { ENV_PRESETS } from "@/preview-3d/caps/environment-state.ts";
 import type { LocaleKey } from "@/core/i18n/t.ts";
 
 /** 构造最小 PreviewMenuCtx（测试用） */
@@ -329,7 +330,13 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     const menu = makeMenu();
     menusToDispose.add(menu);
     const preset = buildEnvSchema(makeCtx(), menu)[0]!;
-    expect(preset.control!.options).toHaveLength(5); // studio/sunset/night/forest/sky
+    // [锐评 P0-2] 成员机检：快捷预设 select 的 id 集与 ENV_PRESETS 键集恒等（排序是
+    // PRESET_ORDER 的 UI 手写选择，**成员**是契约）——环境面板 preset-thumb select 经
+    // Object.keys(ENV_PRESETS) 派生会自动收录新预设，若此处不同步补 PRESET_ORDER 会
+    // 出现「env 面板有、快捷 select 无」的双源漂移，本用例即红。
+    expect(new Set((preset.control!.options ?? []).map((o) => o.value))).toEqual(
+      new Set(Object.keys(ENV_PRESETS)),
+    );
     // [暗线 A 收口] 面板构建即订阅 env cap（rebuildEnvSubs）：断言 env cap 被订阅且监听即接 menu.refresh，
     // 取代原 applyPreset 直接调 menu.refresh 的接线（真实 cap 经 listenerSet 自 notify 触发此监听）。
     expect(envListeners.size).toBe(1);

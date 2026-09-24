@@ -10,7 +10,12 @@ import {
   type WaterPartRole,
 } from "./water-body-strategies.ts";
 import { WATER_WAVE_SEGMENTS } from "./water-state.ts";
-import { WaterCapability, WATER_UNIFORM_NAMES, WATER_FRAME_READ_KEYS } from "./water-capability.ts";
+import {
+  WaterCapability,
+  WATER_UNIFORM_NAMES,
+  WATER_FRAME_READ_KEYS,
+  WATER_NOOP_APPLIER_KEYS,
+} from "./water-capability.ts";
 import { WATER_PARAM_APPLIER_KEYS } from "./water-capability.ts";
 import { persistState, restoreState } from "./scene-capability.ts";
 import { isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";
@@ -1427,7 +1432,7 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     }
   });
 
-  it("[锐评 3.3] WATER_FRAME_READ_KEYS 登记 = 无材质应用的键，且消费点在 update 现读 envState", () => {
+  it("[锐评 3.3] WATER_FRAME_READ_KEYS 登记 = 无材质应用的键，且消费点在渲染循环逐帧现读 envState", () => {
     // 结构证据链：
     //  ① 登记的每个键都必须存在于分派表键集（否则登记悬空、空条目无处安放）
     for (const key of WATER_FRAME_READ_KEYS) {
@@ -1436,9 +1441,10 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
         `WATER_FRAME_READ_KEYS 登记 ${key} 不在分派表键集（登记悬空）`,
       ).toBe(true);
     }
-    //  ② 行为实证：登记的键确实由 update 逐帧现读 envState——waveSpeed 驱动 waterTime 累加。
-    //     （未来登记集扩充时，此处须为每个新键补一条「update 现读该键」的行为断言，
-    //     否则登记只是声明、没有可观测出口。）
+    //  ② 行为实证：waveSpeed 由 update 逐帧现读 envState——驱动 waterTime 累加。
+    //     倒影五键的逐帧现读行为实证由 ADR-297 用例组承担（「水位/分辨率/强度逐帧现读」、
+    //     「[锐评 F-2] clipBias 弃载体重建」、「[锐评 3.5] 死区」、「SSR 抑制真值表」、
+    //     「无宿主/默认关」门控用例）——登记只指消费点，行为证据不在此重复。
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
@@ -1450,6 +1456,22 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
       2.0,
       5,
     );
+  });
+
+  it("[锐评 3.3 ③] 分派表空条目全集 == 结构承接 ∪ 逐帧现读登记（反向闭包，防新空键静默漏登记）", () => {
+    // 水/形态两键的消费点在回调侧（syncWaterVisibility / rebuildWaterContainer 承接），
+    // 其余空条目一律须登记于 WATER_FRAME_READ_KEYS。新增空键不表态 → 本测试点名即红。
+    const structuralKeys = ["waterEnabled", "waterMode"];
+    const expected = new Set([...structuralKeys, ...WATER_FRAME_READ_KEYS]);
+    const actual = new Set<string>(WATER_NOOP_APPLIER_KEYS);
+    expect(
+      [...expected].filter((k) => !actual.has(k)),
+      `结构承接/逐帧现读已声明、applier 却不是空条目（${JSON.stringify([...expected])} vs 实际空条目 ${JSON.stringify(WATER_NOOP_APPLIER_KEYS)}——实现漂移须同步登记）`,
+    ).toEqual([]);
+    expect(
+      [...actual].filter((k) => !expected.has(k)),
+      `空条目未登记（新键须二选一：结构承接归因 或 入 WATER_FRAME_READ_KEYS）`,
+    ).toEqual([]);
   });
 
   // [锐评 D3 契约锁 2026-09-22] saveState 派生化（getPresetKeys 遍历）只覆盖**写侧**，

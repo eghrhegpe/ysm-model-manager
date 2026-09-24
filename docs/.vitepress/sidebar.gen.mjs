@@ -235,6 +235,10 @@ export const autoSidebar = [
         "link": "/event-graph"
       },
       {
+        "text": "前端无障碍普及率调查报告",
+        "link": "/frontend-a11y-audit"
+      },
+      {
         "text": "preview-3d 巡检追踪器",
         "link": "/preview-3d-review-tracker"
       },

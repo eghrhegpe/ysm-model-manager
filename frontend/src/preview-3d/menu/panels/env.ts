@@ -152,14 +152,20 @@ function envCapSubNodes(cap: SceneCapability): PreviewMenuNode[] {
 
 /**
  * cap 参数子视图渲染依赖桩（模块级，不引用 per-call 闭包态）：子视图内容全为控件
- * 节点/folder/controls——renderMenu 分派对 `panel`/`action`/`custom` 才触达 makeRow/
- * makePanelView，此路恒不达，故二者仅作「不该发生」的不变量占位（makePanelView 抛错
- * 即断言「子视图混入了导航节点」）；menu.refresh 承 refreshOnChange 语义（cap 控件经
- * onChange 闭包自刷新，此处少用）；actionCtx 供子视图内 button/row action 消费。
+ * 节点/folder/controls——renderMenu 分派对 `panel`/`action`/`custom`/`row` 才触达
+ * makeRow/makePanelView，此路恒不达，故二者**双双抛错**即「不该发生」的装弹不变量
+ * （[锐评 P0-3] 原 makeRow 静默回裸 div——cap 若混入 row 节点，用户看到的是空白行
+ * 而非断言；caps 各菜单工厂现行零 row/panel/action/custom 产出，装弹无存量代价）。
+ * menu.refresh 承 refreshOnChange 语义（cap 控件经 onChange 闭包自刷新，此处少用）；
+ * actionCtx 供子视图内 button/row action 消费。
  * 旧实现在 envCapSubview 内每次下钻点击现造——上提为常量消除重复构造与噪音强转。
  */
 const ENV_SUBVIEW_DEPS = {
-  makeRow: (): HTMLDivElement => document.createElement("div"),
+  makeRow: (): never => {
+    throw new Error(
+      "cap 参数子视图不应含 panel/action/row/custom 节点（cap getMenuNodes 直产契约）",
+    );
+  },
   makePanelView: (): never => {
     throw new Error("cap 参数子视图不应含 panel/action/row 节点（cap getMenuNodes 直产）");
   },

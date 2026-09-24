@@ -28,6 +28,7 @@ auto_fields:
     - registerWaterBodyStrategy
     - WATER_FRAME_READ_KEYS
     - WATER_MODES
+    - WATER_NOOP_APPLIER_KEYS
     - WATER_PARAM_APPLIER_KEYS
     - WATER_UNIFORM_NAMES
     - WATER_WAVE_SEGMENTS
@@ -57,11 +58,11 @@ pitfalls:
   - '⏰ 升级 three ≥ r190 前必读：buildWaveWaterMaterial 的 assertRevisionRange allowed 窗口为 [185,190)（water-capability.ts）——r190 起 water 材质构造会故意 throw（registry 工厂兜底使 cap 缺失，拒绝静默降级）。升级时须重新审计 wave shader 注入的 chunk 锚点（common / normal_fragment_maps 在 onBeforeCompile 期仍存在）后收窄/前移窗口，不可无脑放行'
   - '**透明度预设失效（已修复 2026-09）**：`applyChangedParams` 中 `waterOpacity` 变更路径只更新 `top.material.opacity`，漏同步 shader uniform `uBaseOpacity`。shader 用 `min(gl_FragColor.a, uBaseOpacity)` clamp 透明度，`uBaseOpacity` 固化在构建期，导致增大 opacity 不生效（减小偶然正常）。修复：补调 `syncBaseOpacityUniform`，与 `waterWetness` 路径同口径'
   - '**派发键是类型化键域（2026-09）**：`EnvCallback.changed` 为 `Set<EnvStateKey>`，`changed.has("拼错")` 编译不过；新增参数必须先在 `env-state-schema.ts` 声明（含 `group: "water"`），否则派发链与持久化都抓不到它'
-  - '**water 持久化由 schema 派生**：`saveState` 遍历 `getPresetKeys("water")`（不再手抄键表）；写侧统一 `water*` 规范键，历史键名 `size` / `pool*` 由 `loadState` 双轨吸收——新增参数只需进 schema，读侧按需补别名'
+  - '**water 持久化由 schema 派生**：`saveState` 遍历 `getPresetKeys("water")`（不再手抄键表）；写侧统一 `water*` 规范键，历史键名 `size` / `pool*` 由 `loadState` 双轨吸收——新增参数只需进 schema，读侧按需补别名。**legacy 别名还原表是带退役时钟的兼容层**（锐评 P1-2）：新存档恒为纯规范键（legacy 分支只在「water 键无存档」时读 ground 旧记录），用户任一次 saveState 刷新后即永久走新记录——该表**只减不增、不得新增别名**，退役判定 = 用户面 legacy 存档刷新周期届满（发布一个维护周期后），届时整表连同 ground legacy 解包段一起删，勿长期挂着无时钟的兼容层'
   - '**uniform 一律经 `setUniform(mat, name, value)` 写入**（原五处 `as unknown as { userData.shader }` 深挖已收口）：`onBeforeCompile` 未跑或 uniform 名拼错时静默跳过，故改动后须以「uniform 实际取到值」的断言兜底，不能只断言 envState'
   - '**uniform 名唯一登记 = `water-capability.ts|WATER_UNIFORM_NAMES`（锐评 3.1，2026-09-23）**：`setUniform` 的 name 形参收窄为 `WaterUniformName`（该表的类型投影），onBeforeCompile 注入的 uniform 集与登记表双向对账（测试「注入 ⊆ 登记 ∧ 登记 ⊆ 注入」）——新增 uniform 忘登记即红，拼错统一名编译期即红，不再是 string 黑洞'
   - '**RT 重建死区（锐评 3.5，2026-09-23）**：`ensureReflector` 的 clipBias 比对带容差 `REFLECTOR_CLIP_BIAS_TOLERANCE = 0.05`——|Δbias| < 0.05 视为未变、跳过弃载体重建。背景：`water-reflection-clip-bias` 滑杆 step=0.1，无死区则单次拖动触发 ~100 次 Reflector+RT 重建（几何/材质/RT 三件全建）。死区不破「bias 实质变化 → 重建」语义（F-2 的 1.5 偏离 = Δ1.5 仍重建）'
-  - '**逐帧现读键的显式登记 = `water-capability.ts|WATER_FRAME_READ_KEYS`（锐评 3.3，2026-09-23）**：`waterWaveSpeed` 在分派表是空条目（无材质应用）、消费点在 `update(dt)` 逐帧现读 envState——这条路曾无人登记（维护者只能人肉 grep）。现登记表 + 契约测试锁定「登记键 ∈ 分派表 && 行为实证 update 现读生效」；未来加同类键（逐帧读 envState 的推导量）须进表，否则契约红'
+  - '**逐帧现读键的显式登记 = `water-capability.ts|WATER_FRAME_READ_KEYS`（锐评 3.3，2026-09-23；2026-10 扩容）**：`waterWaveSpeed` + ADR-297 倒影五键在分派表是空条目（无材质应用）、消费点在渲染循环逐帧现读 envState——这条路曾无人登记（维护者只能人肉 grep）。现登记表 + 契约测试锁定「登记键 ∈ 分派表 && 行为实证现读生效」（waveSpeed = [锐评 3.3] ② 用例；倒影五键 = ADR-297 用例组「水位/分辨率/强度逐帧现读」「[锐评 F-2] 弃载体重建」「[锐评 3.5] 死区」「SSR 抑制真值表」「无宿主/默认关」）。**反向闭包**：`WATER_NOOP_APPLIER_KEYS`（锐评 3.3 ③）机器派生分派表空条目全集，断言其 == 结构承接（waterEnabled/waterMode）∪ 逐帧现读表——未来加同类空键必须二选一登记，否则契约红'
   - '**值域改一处生效（ADR-283）**：滑杆 `min/max/step` 由 `getParamRange(key)` 从 schema 取，cap 内不再有值域字面量；写侧钳制在 `setEnvState` 唯一入口。改范围请改 `ENV_STATE_SCHEMA.xxx.range`（合法域）/ `uiRange`（展示域），**不要在 menu 或 setter 里写死**'
   - '**setter 不再 clamp（ADR-283）**：`setWaterOpacity` 等一律只 `setEnvState({...})`；若要加保护请补 schema `range`，写回 setter 即造出第二事实源'
   - '**水面开关单门（2026-09-22，fog 先例同法）**：启停唯一真值源 = `envState.waterEnabled`，`SceneCapability.setEnabled/isEnabled` 是其别名出口。原私有 `this.enabled` 为僵尸门——registry ctx 无 `enabled` 字段 ⇒ 生产恒 true、无任何 UI 写口、却经 saveState 持久化幽灵键；且 `loadState` 首段曾把 ground 嵌套 legacy 的 `water.enabled` 直写进它：**中毒即永久锁死水面，菜单开关显示 ON 也救不回**。现私有字段退役（守卫 = 测试断言 `"enabled" in cap === false`），幽灵键不再落盘也不再消费，同一存档翻开关即可复现'
@@ -130,12 +131,18 @@ invariant_anchors:
    结构参数就地改 transform（`applyProfile`）、参数字段就地改 material / uniform、开关只切可见性。
    setter 只写 `envState`，不各自就地改渲染。参数应用已由 if 瀑布收敛为模块级
    `WATER_PARAM_APPLIERS: Record<WaterParamKey, applier>` **逐键分派表**（`water-capability.ts`）：
-   `Record` 对 water 组全键编译期强制表态（`waterEnabled`/`waterMode`/`waterWaveSpeed` 为显式 no-op 声明），
+   `Record` 对 water 组全键编译期强制表态（`waterEnabled`/`waterMode`/`waterWaveSpeed` 及 ADR-297 倒影五键
+   为显式 no-op 声明，共享 `NOOP_APPLIER` 同一函数身份），
    **新增 water 参数 = schema 声明 + 表内加一条目，漏接编译期即红**；条目间写互不相交字段，
    派发序无关结果（守卫测试：乱序全量 patch ≡ 单键逐发快照一致）。
    原 `findTopWater`/`syncBaseOpacityUniform` 私有 helper 已随瀑布退役（顶水面恒为 `water.top`）。
    **uniform 名唯一登记** = `WATER_UNIFORM_NAMES`（`setUniform` 形参即其类型投影，拼错编译红；
-   注入集与登记表双向对账测试），**逐帧现读键**（无材质应用、消费点在 update）= `WATER_FRAME_READ_KEYS`（当前 `waterWaveSpeed`）。
+   注入集与登记表双向对账测试），**逐帧现读键**（无材质应用、消费点在渲染循环逐帧现读）= `WATER_FRAME_READ_KEYS`
+（`waterWaveSpeed` + ADR-297 倒影五键；waveSpeed 由 `update` 无条件累加，倒影五键由
+`renderReflection / ensureReflector` 现读、宿主缺席时子系统整体失效）。
+**反向闭包机检**（锐评 3.3 ③）= `WATER_NOOP_APPLIER_KEYS`（NOOP_APPLIER 身份命中，机器派生）：
+断言「分派表空条目全集 == 结构承接（waterEnabled/waterMode，回调承接）∪ 逐帧现读表」——
+新增空键必须二选一登记，漏登记契约即红。
 6. **模型倒影（ADR-297）**：`ensureReflector` 懒建官方 `Reflector` 载体但**不挂进场景**——只借
    它「镜像相机 + 斜裁剪 + 整场渲进 RT」管线。`update(dt)` 每帧 `renderReflection`：镜面平面
    即水面（`position.y` 跟随 `waterLevel`），驱动 `onBeforeRender` 渲 RT 期间**临时隐藏整个水根**

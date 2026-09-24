@@ -318,7 +318,8 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     await flushPromises();
     expect(friendlyError).toHaveBeenCalledWith(expect.any(Error), "workshop.exportFailed");
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
-      msg: "❌ disk boom|workshop.exportFailed",
+      // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
+      msg: "disk boom|workshop.exportFailed",
       duration: TOAST_MS.verbose,
       type: "error",
     });
@@ -364,7 +365,8 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     b.btn("ws-import-btn").click();
     await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
-      msg: "❌ parse boom|content.importFailed",
+      // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
+      msg: "parse boom|content.importFailed",
       duration: TOAST_MS.verbose,
       type: "error",
     });

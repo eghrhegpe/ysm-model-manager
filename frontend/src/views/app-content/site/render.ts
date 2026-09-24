@@ -19,8 +19,11 @@ export interface CrCardCtx {
   isFaved: (name: string) => boolean;
   authorCountMap: Record<string, number>;
   avatarCache?: Record<string, string> | null;
-  creators: LocalCreatorLike[];
   site: WorkshopSite;
+  /** 展示位次（调用方按排序后展示序计）：stagger 入场延迟 = stagger(staggerIdx)，带 300ms 封顶 */
+  staggerIdx: number;
+  /** 排名分档：经 computeCreatorTiers 预计算（一次 O(n log n)），替代卡内逐张全量排序 */
+  tier: "" | "gold" | "silver";
 }
 
 /** buildSiteHtml 依赖的渲染上下文 */
@@ -47,14 +50,8 @@ export interface BuildSiteHtmlCtx {
 
 /** 创作者卡片工厂 */
 export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
-  const { esc, isFaved, authorCountMap, avatarCache, creators, site } = ctx;
+  const { esc, isFaved, authorCountMap, avatarCache, site, staggerIdx, tier: tierRank } = ctx;
   const authorCount = authorCountMap[cr.name] || 0;
-  const sorted = [...creators].sort(
-    (a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0),
-  );
-  const idx = sorted.indexOf(cr);
-  const pct = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
-  const tierRank = pct < 0.1 ? "gold" : pct < 0.25 ? "silver" : "";
   const hasAvatar = avatarCache?.[cr.name];
 
   const fallbackChar = cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?";
@@ -90,7 +87,8 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
 
   const tierBar = tierRank ? `<div class="cr-card-tier-bar"></div>` : "";
   const dataSpin = tierRank ? ` data-spin="${tierRank}"` : "";
-  const starIcon = isFaved(cr.name) ? "⭐" : "☆";
+  // 星标双态走 UI_ICONS 语义图标（ADR-238）：实心 .ws-icon[fill] 切换，空心描边，随主题 currentColor
+  const starIcon = isFaved(cr.name) ? UI_ICONS.starFilled : UI_ICONS.star;
   const tagRole = getTagFromRole(cr.role);
   const tagIcon = getTagIconFromRole(cr.role);
   // 锐评 P0-4 / 复核 P1-3：tag 展示文案走 i18n 单源（未知 tag 原样），与筛选行同口径；
@@ -103,9 +101,9 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
   const descText = cr.desc || (cr._fromLocal ? t("community.fromLocal") : "");
 
   return (
-    `<div class="gh-card cr-creator-card cr-creator-card--grid" tabindex="0" style="animation-delay:${
-      idx * 0.03
-    }s" data-name="${esc(cr.name)}" data-tag="${esc(tagRole)}"${
+    `<div class="gh-card cr-creator-card cr-creator-card--grid" tabindex="0" style="animation-delay:${stagger(
+      staggerIdx,
+    )}ms" data-name="${esc(cr.name)}" data-tag="${esc(tagRole)}"${
       tierRank ? ` data-tier="${esc(tierRank)}"` : ""
     } title="${esc(t("content.searchFor", { name: cr.name }))}">` +
     tierBar +
@@ -173,6 +171,28 @@ function sortCreatorsFavedFirst(
   });
 }
 
+/**
+ * 创作者排名分档（纯函数）：产量降序百分位——前 10% gold、前 25% silver，
+ * 单次 O(n log n)。调用方（buildSiteBrowseSection）预计算一次后按 name 取值，
+ * 替代原「每张卡片内对全量列表重新排序」的 O(n² log n) 写法。
+ * 单作者 → pct=0 → gold（与旧实现语义一致）。
+ */
+export function computeCreatorTiers(
+  creators: LocalCreatorLike[],
+  authorCountMap: Record<string, number>,
+): Record<string, "" | "gold" | "silver"> {
+  const sorted = [...creators].sort(
+    (a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0),
+  );
+  const total = sorted.length;
+  const out: Record<string, "" | "gold" | "silver"> = {};
+  sorted.forEach((cr, idx) => {
+    const pct = total > 1 ? idx / (total - 1) : 0;
+    out[cr.name] = pct < 0.1 ? "gold" : pct < 0.25 ? "silver" : "";
+  });
+  return out;
+}
+
 /** 分类标签过滤按钮行：固定 全部/creator/official + 动态角色标签。 */
 function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
   const { esc, creators, activeTag } = ctx;
@@ -234,15 +254,22 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
     sortCreatorsFavedFirst(creators, authorCountMap);
     parts.push(buildSiteTagFilterRow(ctx));
     // 声明式生成创作者卡片（不再留空 grid 给 events 填充）
-    const cardCtx: CrCardCtx = {
-      esc: ctx.esc,
-      isFaved: ctx.isFaved,
-      authorCountMap: ctx.authorCountMap,
-      avatarCache: ctx.avatarCache,
-      creators,
-      site: ctx.site,
-    };
-    const cardsHtml = creators.map((cr) => createCrCard(cr, cardCtx)).join("");
+    // 分档预计算一次（O(n log n)）；stagger 延迟取展示位次——收藏置顶卡按视觉顺序入场
+    //（旧实现按产量名次计延迟，置顶卡入场乱序），且经 stagger() 带 300ms 封顶
+    const tiers = computeCreatorTiers(creators, authorCountMap);
+    const cardsHtml = creators
+      .map((cr, i) =>
+        createCrCard(cr, {
+          esc: ctx.esc,
+          isFaved: ctx.isFaved,
+          authorCountMap: ctx.authorCountMap,
+          avatarCache: ctx.avatarCache,
+          site: ctx.site,
+          staggerIdx: i,
+          tier: tiers[cr.name] ?? "",
+        }),
+      )
+      .join("");
     parts.push(`<div class="cr-creator-grid" id="cr-creator-grid">${cardsHtml}</div>`);
   } else {
     parts.push(
@@ -261,7 +288,7 @@ function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
   (site.presetSearches || []).forEach((ps, idx) => {
     html +=
       `<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="${idx}">` +
-      `<div class="cr-edit-card-head"><span class="cr-drag-handle">⠿</span><span class="cr-preset-icon">${UI_ICONS.search}</span>` +
+      `<div class="cr-edit-card-head"><span class="cr-drag-handle">${UI_ICONS.dragHandle}</span><span class="cr-preset-icon">${UI_ICONS.search}</span>` +
       `<input data-idx="${idx}" data-fld="label" value="${esc(ps.label)}" class="cr-input cr-input-name" placeholder="${t(
         "content.searchKeywordPlaceholder",
       )}">` +
@@ -291,7 +318,7 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
       `<option value="${value}"${cr.role === value ? " selected" : ""}>${label}</option>`;
     html +=
       `<div class="cr-edit-card" draggable="false" data-edit-idx="${idx}">` +
-      `<div class="cr-edit-card-head"><span class="cr-drag-handle">⠿</span><span class="cr-edit-card-avatar">${roleEmoji}</span>` +
+      `<div class="cr-edit-card-head"><span class="cr-drag-handle">${UI_ICONS.dragHandle}</span><span class="cr-edit-card-avatar">${roleEmoji}</span>` +
       `<input data-idx="${idx}" data-fld="name" value="${esc(
         cr.name,
       )}" class="cr-input cr-input-name" placeholder="${t("content.namePlaceholder")}">` +

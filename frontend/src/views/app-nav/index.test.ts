@@ -330,7 +330,7 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     expect(openModel3DFullscreen).toHaveBeenCalledWith("/m/a.pmx");
     expect(openEmpty3DFullscreen).not.toHaveBeenCalled();
     expect(errSpy).toHaveBeenCalled();
-    expect(toastSpy.mock.calls[0][0]).toMatchObject({ type: "error", msg: "❌ 打开 3D 失败" });
+    expect(toastSpy.mock.calls[0][0]).toMatchObject({ type: "error", msg: "打开 3D 失败" });
     offToast();
     errSpy.mockRestore();
     unmountElement(el);

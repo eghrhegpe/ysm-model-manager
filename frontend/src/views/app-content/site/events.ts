@@ -102,7 +102,7 @@ function cmCrBuildDetailHtml(
     '<span class="cr-star-btn" data-star="' +
     esc(cr.name) +
     '">' +
-    (isFav ? "⭐" : "☆") +
+    (isFav ? UI_ICONS.starFilled : UI_ICONS.star) +
     "</span>" +
     "</div>" +
     '<div class="cr-detail-desc">' +
@@ -147,14 +147,17 @@ function cmCrBindOverlayEvents(
   fillSearch: (tpl: string, q: string) => string,
   busRef: typeof bus,
 ): void {
-  overlay.querySelector("[data-star]")?.addEventListener("click", (ev) => {
+  const overlayStar = qs<HTMLElement>(overlay, "[data-star]");
+  overlayStar?.addEventListener("click", (ev) => {
     ev.stopPropagation();
     const now = toggleFav(cr.name);
-    if (ev.target instanceof HTMLElement) ev.target.textContent = now ? "⭐" : "☆";
+    // 星标切 SVG 双态（ADR-238）：用闭包按钮引用改写——点进 SVG 内部时 ev.target 是
+    // SVGElement，旧 `instanceof HTMLElement` 守卫会漏更新图标
+    if (overlayStar) overlayStar.innerHTML = now ? UI_ICONS.starFilled : UI_ICONS.star;
     const cardStar = searchResults.querySelector(
       `.cr-star-btn[data-star="${CSS.escape(cr.name)}"]`,
     );
-    if (cardStar) cardStar.textContent = now ? "⭐" : "☆";
+    if (cardStar) cardStar.innerHTML = now ? UI_ICONS.starFilled : UI_ICONS.star;
     busRef.emit("toast:show", {
       msg: now ? t("content.favAdded") : t("content.favRemoved"),
       duration: TOAST_MS.quick,
@@ -281,7 +284,7 @@ function cmBbBindStarBtns(searchResults: HTMLElement, busRef: typeof bus): void 
       e.stopPropagation();
       const name = btn.dataset.star || "";
       const now = toggleFav(name);
-      btn.textContent = now ? "⭐" : "☆";
+      btn.innerHTML = now ? UI_ICONS.starFilled : UI_ICONS.star;
       const card = btn.closest(".gh-card");
       if (card) {
         const grid2 = card.closest(".cr-creator-grid");
@@ -414,7 +417,7 @@ function cmBbBindKeyboardNav(searchResults: HTMLElement): void {
 function cmSeSyncFavButtons(searchResults: HTMLElement): void {
   const favs = loadFavs();
   qsa<HTMLElement>(searchResults, ".cr-star-btn").forEach((btn) => {
-    btn.textContent = favs.includes(btn.dataset.star || "") ? "⭐" : "☆";
+    btn.innerHTML = favs.includes(btn.dataset.star || "") ? UI_ICONS.starFilled : UI_ICONS.star;
   });
 }
 

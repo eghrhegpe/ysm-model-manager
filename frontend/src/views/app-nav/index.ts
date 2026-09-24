@@ -148,7 +148,8 @@ function anBindViewerFab(shadowRoot: ShadowRoot, viewerFabClick: () => Promise<v
       void viewerFabClick().catch((e) => {
         logError("app-nav", "打开 3D 失败", e);
         bus.emit("toast:show", {
-          msg: "❌ 打开 3D 失败",
+          // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
+          msg: "打开 3D 失败",
           duration: TOAST_MS.normal,
           type: "error",
         });
@@ -258,7 +259,10 @@ class AppNav extends WebComponentBase {
       <div class="menu">
         <div class="menu-head" data-menu-head title="${this._collapsed ? t("nav.expand") : t("nav.collapse")}">
           <div class="menu-label">${UI_ICONS.navigate} ${t("nav.label")}</div>
-          <button class="nav-toggle" data-testid="nav-toggle" title="${this._collapsed ? t("nav.expand") : t("nav.collapse")}">${this._collapsed ? "»" : "«"}</button>
+          <button class="nav-toggle" data-testid="nav-toggle" title="${this._collapsed ? t("nav.expand") : t("nav.collapse")}">${
+            // 折叠/展开箭头走语义 SVG（ADR-238，原 «» 文本字符）：1em 随按钮字号
+            this._collapsed ? UI_ICONS.chevronRight : UI_ICONS.chevronLeft
+          }</button>
         </div>
         <div class="nav-repo-sel" data-testid="nav-repo-sel">
           <select id="nav-group-select" data-testid="nav-group-select" title="${t("nav.resourceCategory")}"></select>

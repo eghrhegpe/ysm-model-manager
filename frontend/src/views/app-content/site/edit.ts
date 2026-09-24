@@ -148,7 +148,8 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
         refreshView();
       } catch (e) {
         busRef.emit("toast:show", {
-          msg: `❌ ${friendlyError(e, t("workshop.saveFailed"))}`,
+          // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
+          msg: friendlyError(e, t("workshop.saveFailed")),
           duration: TOAST_MS.verbose,
           type: "error",
         });
@@ -221,7 +222,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
 
         if (changed) {
           busRef.emit("toast:show", {
-            msg: `🌐 ${logs.join(" · ")}`,
+            msg: logs.join(" · "), // 成功态图标由 type=success 驱动，原文案 🌐 前缀属冗余装饰
             duration: TOAST_MS.verbose,
             type: "success",
           });
@@ -242,7 +243,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
               ? t("workshop.indexMissing")
               : err.message === "RateLimited"
                 ? t("workshop.rateLimited")
-                : `🌐 ${friendlyError(e, t("workshop.fetchFailed"))}`;
+                : friendlyError(e, t("workshop.fetchFailed"));
         busRef.emit("toast:show", {
           msg: errMsg,
           duration: TOAST_MS.long,

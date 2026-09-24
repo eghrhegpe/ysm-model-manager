@@ -41,6 +41,12 @@ const UI_ICONS_FILE = path.join(ROOT, "frontend/src/utils/icon/ui-icons.ts");
   assert.equal(suggestIconName("⚠️"), "warning", "⚠️ 应建议 warning");
   assert.equal(suggestIconName("🔍"), "search", "🔍 应建议 search");
   assert.equal(suggestIconName("🗑️"), "delete", "🗑️ 应建议 delete");
+  // 2026-09 创作者菜单收口批次：星标双态 / 左右 chevron / 拖拽手柄（原 emoji/文本字符存量）
+  assert.equal(suggestIconName("⭐"), "starFilled", "⭐ 应建议 starFilled");
+  assert.equal(suggestIconName("☆"), "star", "☆ 应建议 star");
+  assert.equal(suggestIconName("«"), "chevronLeft", "« 应建议 chevronLeft");
+  assert.equal(suggestIconName("»"), "chevronRight", "» 应建议 chevronRight");
+  assert.equal(suggestIconName("⠿"), "dragHandle", "⠿ 应建议 dragHandle");
   // 未收录 → null（宁可不建议，也不猜错语义）
   assert.equal(suggestIconName("🦄"), null, "未收录字形应返回 null");
   assert.equal(suggestIconName(""), null, "空串应返回 null");

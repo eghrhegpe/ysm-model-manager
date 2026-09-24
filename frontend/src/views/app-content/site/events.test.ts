@@ -5,6 +5,7 @@
 //  - 键盘导航 ←↑↓→ / storage 跨标签同步 + cleanup
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 const {
   busEmit,
@@ -82,9 +83,9 @@ function makeState(overrides: Record<string, unknown> = {}): {
           </div>
           <div class="cr-card-name-row">
             <span class="cr-card-name">A</span>
-            <span class="cr-card-local-count cr-card-local-jump" data-local-creator="A" title="查看本地模型">📁3</span>
-            <span class="cr-star-btn" data-star="A">☆</span>
-            <span class="cr-card-search" data-search-creator="A" title="搜索更多模型">🔍</span>
+            <span class="cr-card-local-count cr-card-local-jump" data-local-creator="A" title="查看本地模型">${UI_ICONS.folder}3</span>
+            <span class="cr-star-btn" data-star="A">${UI_ICONS.star}</span>
+            <span class="cr-card-search" data-search-creator="A" title="搜索更多模型">${UI_ICONS.search}</span>
           </div>
         </div>
         <div class="cr-card-desc">好模型</div>
@@ -174,7 +175,10 @@ describe("bindBrowseEvents — 基础绑定", () => {
     grid.appendChild(card);
     star.click();
     expect(toggleFav).toHaveBeenCalledWith("A");
-    expect(star.textContent).toBe("⭐");
+    // ADR-238：星标改走 SVG 语义图标（已收藏 = starFilled，svg 带 fill 属性）
+    const starSvg = star.querySelector("svg");
+    expect(starSvg).toBeTruthy();
+    expect(starSvg?.hasAttribute("fill")).toBe(true);
     expect(busEmit).toHaveBeenCalledWith(
       "toast:show",
       expect.objectContaining({ msg: expect.stringContaining("已收藏") }),
@@ -233,7 +237,10 @@ describe("bindBrowseEvents — 基础绑定", () => {
     const cleanup = bindBrowseEvents(state, () => {});
     (loadFavs as ReturnType<typeof vi.fn>).mockReturnValue(["A"]);
     window.dispatchEvent(new StorageEvent("storage", { key: "ysm-fav-creators" }));
-    expect(searchResults.querySelector(".cr-star-btn")!.textContent).toBe("⭐");
+    // ADR-238：星标改走 SVG 语义图标（已收藏 = starFilled，svg 带 fill 属性）
+    const syncedStar = searchResults.querySelector(".cr-star-btn")!.querySelector("svg");
+    expect(syncedStar).toBeTruthy();
+    expect(syncedStar?.hasAttribute("fill")).toBe(true);
 
     cleanup();
     window.dispatchEvent(new StorageEvent("storage", { key: "ysm-fav-creators" }));

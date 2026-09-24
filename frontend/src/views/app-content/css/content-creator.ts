@@ -169,7 +169,7 @@ export const contentCreatorCSS: string = `
 .cr-platform-badge { font-size:var(--fs-micro);padding:var(--pad-v-1) var(--sp-1);border-radius:var(--radius-xs);line-height:12px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd); }
 .cr-card-search { cursor:pointer;font-size:var(--fs-sm);transition:transform var(--tr-normal);flex-shrink:0; }
 .cr-card-search:hover { transform:scale(1.15); }
-.cr-star-btn { cursor:pointer;font-size:var(--fs-sm);transition:transform var(--tr-normal);flex-shrink:0; }
+.cr-star-btn { cursor:pointer;font-size:var(--fs-sm);color:var(--sm-optional);transition:transform var(--tr-normal);flex-shrink:0; } /* ADR-238：星标走 SVG 语义图标（currentColor），金色与 tier 条 --sm-optional 同源 */
 .cr-star-btn:hover { transform:scale(1.15); }
 
 /* ===== 预设搜索 ===== */

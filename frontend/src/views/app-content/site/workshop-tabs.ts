@@ -19,8 +19,10 @@ import { bindTabA11y } from "@/views/app-content/tabs-a11y.ts";
 import type { RepoAuthorLike } from "./site-view.ts";
 import type { WorkshopPageState } from "./workshop-page-state.ts";
 
-/** 创意工坊 Tab 延迟加载毫秒数（等首帧渲染后再异步拉数据） */
-const WS_TAB_LOAD_DELAY_MS = 100;
+/** 创意工坊 Tab 延迟加载毫秒数（0 = 当前任务结束后立即拉数据；保留定时器机制供壳层
+ *  清理槽（ADR-265）在重渲染时取消在途加载。原 100ms 人为首屏延迟已删：loading 占位
+ *  本身就是首帧，延迟无收益纯成本） */
+const WS_TAB_LOAD_DELAY_MS = 0;
 
 /**
  * 创意工坊页的共享 ref 集合——单一事实来源。
@@ -96,7 +98,7 @@ export function initWorkshopTabs(
       // P2 修复（审核）：async handler 最外层 catch 出口（ADR-044 ①）——
       // loadCommunityData/showSiteView 抛错原逸出为 unhandled rejection
       bus.emit("toast:show", {
-        msg: `❌ ${(e as Error)?.message || t("workshop.loadCommunityFailed")}`,
+        msg: (e as Error)?.message || t("workshop.loadCommunityFailed"), // ADR-267：error 图标由 type 驱动
         duration: TOAST_MS.normal,
         type: "error",
       });
@@ -161,7 +163,7 @@ export function initWorkshopTabs(
         // P3 修复（审核）：定时器回调最外层 catch 出口——原 loadCommunityData 在 try 外，
         // getApp 失败逸出 unhandled rejection（与 showCreatorsBySite 同出口）
         bus.emit("toast:show", {
-          msg: `❌ ${(e as Error)?.message || t("workshop.loadCommunityFailed")}`,
+          msg: (e as Error)?.message || t("workshop.loadCommunityFailed"), // ADR-267：error 图标由 type 驱动
           duration: TOAST_MS.normal,
           type: "error",
         });

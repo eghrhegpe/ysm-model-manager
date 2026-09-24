@@ -143,7 +143,8 @@ export function bindSiteEvents(root: ShadowRoot, page: WorkshopPageState): void 
       });
     } catch (e) {
       bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e, t("workshop.exportFailed"))}`,
+        // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
+        msg: friendlyError(e, t("workshop.exportFailed")),
         duration: TOAST_MS.verbose,
         type: "error",
       });
@@ -170,7 +171,8 @@ export function bindSiteEvents(root: ShadowRoot, page: WorkshopPageState): void 
       });
     } catch (e) {
       bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e, t("content.importFailed"))}`,
+        // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
+        msg: friendlyError(e, t("content.importFailed")),
         duration: TOAST_MS.verbose,
         type: "error",
       });

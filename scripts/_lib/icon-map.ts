@@ -187,6 +187,14 @@ export const EMOJI_TO_ICON: Readonly<Record<string, string>> = {
   "🖊️": "edit",
   "↑": "chevronUp",
   "↓": "chevronDown",
+  // 左右 chevron（app-nav 折叠按钮原为 «» 文本字符，2026-09 创作者菜单锐评收口）：
+  "«": "chevronLeft",
+  "»": "chevronRight",
+  // 收藏星标双态（创作者卡片星标按钮原为 "⭐"/"☆" 硬编码字符，同批收编）：
+  "⭐": "starFilled",
+  "☆": "star",
+  // 拖拽手柄（编辑卡原为盲文字符 ⠿=U+283F，落在门禁五段扫描范围外，登记作建议入口）：
+  "⠿": "dragHandle",
   "⏰": "clock",
   "🕒": "clock",
   "⏳": "refresh",

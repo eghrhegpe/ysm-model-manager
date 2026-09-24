@@ -371,6 +371,24 @@ export const UI_ICONS = {
   // ── 排序/方向 ──
   chevronUp: svg('<polyline points="6 15 12 9 18 15"/>'),
   chevronDown: svg('<polyline points="6 9 12 15 18 9"/>'),
+  // 左右 chevron（app-nav 折叠/展开按钮原为 «» 文本字符，ADR-238 收编；与 chevronUp/Down 同族）
+  chevronLeft: svg('<polyline points="15 18 9 12 15 6"/>'),
+  chevronRight: svg('<polyline points="9 18 15 12 9 6"/>'),
+
+  // 收藏星标双态（创作者卡片收藏按钮，原 "⭐"/"☆" 硬编码字符，ADR-238 收编）：
+  // 实心走 svg(_, true) 的 .ws-icon[fill] 切换，空心描边。
+  star: svg(
+    '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  ),
+  starFilled: svg(
+    '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+    true,
+  ),
+  // 拖拽手柄（编辑卡手柄原为盲文字符 ⠿——U+283F 在门禁五段扫描范围外，属盲区存量；
+  // 两列六点的 grip 是拖拽排序的通行隐喻）
+  dragHandle: svg(
+    '<circle cx="9" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.3" fill="currentColor" stroke="none"/>',
+  ),
 } satisfies Record<string, string>;
 
 /**

@@ -107,15 +107,22 @@ describe("removePerFrame 引用失配留痕（可观测性）", () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 
-  // 回归：节流时间戳初值原为 0，而 performance.now() 在页面/测试早期本身就小于节流窗
+  // 回归：节流时间戳初值原为 0，而页面/测试早期时钟落在节流窗内
   // （实测 ~830ms < 5000ms）⇒ `now - 0 > 5000` 为假 ⇒ **首条告警被吞**。
   // 对「注销失配」「首帧卡顿」这类首现即最该可见的信号，静默失败等于没有此告警。
   // 现初值为 null（从未告警过）→ 首条恒放行。
   it("首条失配告警不被节流吞掉（early-clock 回归）", () => {
-    // 断言前置：确认当前时钟确实落在节流窗内（否则本用例失去意义）
-    expect(performance.now()).toBeLessThan(5000);
-    registerPerFrame(() => {});
-    removePerFrame(() => {}); // 首次失配
-    expect(warnSpy).toHaveBeenCalledTimes(1);
+    // 时钟钉死在节流窗内（原实测 ~830ms）。原实现用 `expect(performance.now()) < 5000` 做前置断言，
+    // 依赖进程启动快慢——慢机单独跑已 7.3s、全量跑 14s+ 出窗 ⇒ 必挂，且判别力随机器漂移。
+    // removePerFrame 调用时才读 performance.now()（render-host.ts），mockReturnValue 即确定性入窗：
+    // 若初值回归 0，830 - 0 < 5000 ⇒ 首条被吞 ⇒ 本用例在任何机器上都失败。
+    const nowSpy = vi.spyOn(performance, "now").mockReturnValue(830);
+    try {
+      registerPerFrame(() => {});
+      removePerFrame(() => {}); // 首次失配
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });

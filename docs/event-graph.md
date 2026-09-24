@@ -51,7 +51,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 187 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 189 |
 
 ### `batch:rename`
 
@@ -219,7 +219,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 65 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 179 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 245 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 264 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 260 |
@@ -280,8 +280,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 184 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 330 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 196 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 349 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -469,8 +469,8 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 224 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 231 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 247 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 161 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 297 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 167 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 316 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 129 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 139 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 145 |

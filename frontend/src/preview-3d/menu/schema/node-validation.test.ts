@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CORE_MENU_ITEMS } from "@/preview-3d/menu/engine/defs.ts";
 import { buildPreviewMenuRouters } from "@/preview-3d/menu/engine/core.ts";
 import { getSchema, listSchemas, resetSchemas } from "@/preview-3d/infra/schema-registry.ts";
-import type { PreviewMenuNode } from "./menu-node-types.ts";
+import type { PreviewMenuNode, PreviewMenuNodeKind } from "./menu-node-types.ts";
 import {
   type AssertCommonFieldIsExact,
   COMMON_NODE_FIELDS,
@@ -143,6 +143,42 @@ describe("validateNode 正例（合法组合不误报）", () => {
         expect(common.has(f), `kind "${kind}" 的专有字段 "${f}" 与通用集重叠`).toBe(false);
       }
     }
+  });
+
+  it("跨 kind 共用图恒等于预期（任意「放宽某 kind 字段集」都会改图 → 完整守卫）", () => {
+    // 先说清契约表的真实形状：它是**多对多**关系，不是「一个字段一个归属」——`action` 被 5 个 kind
+    // 合法共用（面板/动作/按钮/行/自定义），`control` 同理（4 种控件 + 按钮）。2026-09 曾误按
+    // 「字段唯一归属」写下成对互斥断言，被 `action` 当场证伪（失败信息点名 panel ⇄ action）——
+    // **共用是设计，不是漂移**。
+    //
+    // 但共用图恰好给了「任意放宽」一个**完整**守卫：往任意 kind 的字段集里加任意字段 F，共用图必然变化——
+    //   · F 此前无人登记 → 图中**新增**一项；
+    //   · F 此前只属一个 kind → F **变成**共用项（或在图中新增）；
+    //   · F 此前已共用 → 该项**计数 +1**。
+    // 三种情形都逃不掉下面的 deep-equal。于是本用例 + 编译期 `AssertCommonFieldIsExact` +
+    // `satisfies readonly (keyof PreviewMenuNode)[]` 三者合起来，穷举了全部改宽方式：
+    //   加通用字段 / 加他 kind 专有字段 / 加接口里没登记的字段 / 加不存在的字段名。
+    //
+    // ⚠️ 类型级「每 kind 一条 @ts-expect-error」负控**不能**替代本用例：它只覆盖「用**被断言的
+    // 那个**字段放宽」（2026-09 负控实证：给 slider 加 radio 时，测 opacity 的指令仍绿）。
+    const EXPECTED_SHARING: Record<string, number> = {
+      action: 5, // panel, action, button, row, custom
+      control: 5, // slider, toggle, select, color, button
+      danger: 3, // panel, action, custom
+      renderCustom: 2, // panel, custom
+      rowDensity: 2, // button, row
+      value: 2, // field, row（语义不同：字段值 vs 行副标签，见 ADR-302 §3）
+    };
+    const counts: Record<string, number> = {};
+    for (const fields of Object.values(KIND_SPECIFIC_FIELDS)) {
+      for (const f of fields) counts[f] = (counts[f] ?? 0) + 1;
+    }
+    const shared: Record<string, number> = {};
+    for (const [f, c] of Object.entries(counts)) if (c > 1) shared[f] = c;
+    expect(shared).toEqual(EXPECTED_SHARING);
+    // 防门空转：表里确实有 16 个 kind，且确有字段被登记（表被清空即报红）
+    expect(Object.keys(KIND_SPECIFIC_FIELDS)).toHaveLength(16);
+    expect(Object.keys(counts).length).toBeGreaterThan(0);
   });
 });
 
@@ -327,6 +363,136 @@ describe("NodeFor<K> 窄类型（类型层派生 ⇄ 运行期表 交叉锁）",
       "button",
       "folder",
     ]);
+  });
+
+  it("类型层负控铺满 16/16：每个 kind 各拒一个契约外字段（误放宽即 TS2578）", () => {
+    // 与上一用例的分工：上例抽查几个 kind 并演示两处陷阱；本例把负控**铺满全部 kind**。
+    // 理由：「某个 kind 的字段集被误放宽」不会触发任何其它门——`AssertCommonFieldIsExact` 只管
+    // 公共侧；运行期交叉锁只保证「生产树不违反**当前**表」，对表本身被改宽零感知（ADR-302 §4）。
+    // 故类型级负控是**该 kind 拒绝语义**的直接证据：拿它断言的**那个**字段去放宽该 kind 的字段集，
+    // 指令即变「未使用」→ tsc 报 TS2578。
+    // ⚠️ 边界（勿过度声称）：负控**只**覆盖「用被断言的那个字段放宽」这一种情形——2026-09 负控实证：
+    // 给 slider 加 `radio` 时，断言 `opacity` 的指令仍绿。**任意放宽**的完整覆盖见上方「跨 kind 共用图
+    // 恒等」用例（运行期）+ 编译期 `AssertCommonFieldIsExact` 与 `satisfies readonly (keyof
+    // PreviewMenuNode)[]`，四者合起来穷举了全部改宽方式。
+    // 值一律**真值**（禁 undefined，见 skills/pitfalls.md #21 规则 2）；多行字面量指令置属性行（规则 3）。
+    const folder: NodeFor<"folder"> = {
+      id: "neg-folder",
+      kind: "folder",
+      // @ts-expect-error radio 仅 row 专有
+      radio: { active: true, title: "t", onClick: () => {} },
+    };
+    const panel: NodeFor<"panel"> = {
+      id: "neg-panel",
+      kind: "panel",
+      // @ts-expect-error eye 仅 material-row 专有
+      eye: { get: () => true, set: () => {} },
+    };
+    const action: NodeFor<"action"> = {
+      id: "neg-action",
+      kind: "action",
+      // @ts-expect-error controls 仅 controls kind 专有
+      controls: [],
+    };
+    const slider: NodeFor<"slider"> = {
+      id: "neg-slider",
+      kind: "slider",
+      // @ts-expect-error opacity 仅 material-row 专有
+      opacity: { get: () => 1, set: () => {} },
+    };
+    const toggle: NodeFor<"toggle"> = {
+      id: "neg-toggle",
+      kind: "toggle",
+      // @ts-expect-error collapsible 仅 card 专有
+      collapsible: true,
+    };
+    const select: NodeFor<"select"> = {
+      id: "neg-select",
+      kind: "select",
+      // @ts-expect-error rowDensity 仅 button/row 专有
+      rowDensity: "compact",
+    };
+    const color: NodeFor<"color"> = {
+      id: "neg-color",
+      kind: "color",
+      // @ts-expect-error value 仅 field/row 专有
+      value: "x",
+    };
+    const button: NodeFor<"button"> = {
+      id: "neg-button",
+      kind: "button",
+      // @ts-expect-error controls 仅 controls kind 专有
+      controls: [],
+    };
+    const fieldNode: NodeFor<"field"> = {
+      id: "neg-field",
+      kind: "field",
+      // @ts-expect-error eye 仅 material-row 专有
+      eye: { get: () => true, set: () => {} },
+    };
+    const row: NodeFor<"row"> = {
+      id: "neg-row",
+      kind: "row",
+      // @ts-expect-error controls 仅 controls kind 专有
+      controls: [],
+    };
+    const divider: NodeFor<"divider"> = {
+      id: "neg-divider",
+      kind: "divider",
+      // @ts-expect-error divider 专有字段集为空（仅公共字段合法）
+      value: "x",
+    };
+    const sectionTitle: NodeFor<"sectionTitle"> = {
+      id: "neg-section-title",
+      kind: "sectionTitle",
+      // @ts-expect-error sectionTitle 专有字段集为空（仅公共字段合法）
+      danger: true,
+    };
+    const card: NodeFor<"card"> = {
+      id: "neg-card",
+      kind: "card",
+      // @ts-expect-error rowDensity 仅 button/row 专有
+      rowDensity: "compact",
+    };
+    const materialRow: NodeFor<"material-row"> = {
+      id: "neg-material-row",
+      kind: "material-row",
+      // @ts-expect-error radio 仅 row 专有
+      radio: { active: true, title: "t", onClick: () => {} },
+    };
+    const controlsKind: NodeFor<"controls"> = {
+      id: "neg-controls",
+      kind: "controls",
+      // @ts-expect-error value 仅 field/row 专有
+      value: "x",
+    };
+    const custom: NodeFor<"custom"> = {
+      id: "neg-custom",
+      kind: "custom",
+      // @ts-expect-error eye 仅 material-row 专有
+      eye: { get: () => true, set: () => {} },
+    };
+    // 消费全部 16 条（兼防「删掉一条负控没人发现」）：每条窄类型都可赋回宽形态
+    const all: Array<NodeFor<PreviewMenuNodeKind>> = [
+      folder,
+      panel,
+      action,
+      slider,
+      toggle,
+      select,
+      color,
+      button,
+      fieldNode,
+      row,
+      divider,
+      sectionTitle,
+      card,
+      materialRow,
+      controlsKind,
+      custom,
+    ];
+    expect(all, "负控必须铺满全部 kind，少一条即该 kind 失去唯一守卫").toHaveLength(16);
+    expect(new Set(all.map((n) => n.kind)).size).toBe(16);
   });
 
   it("类型层正向：公共字段与各 kind 合法专有字段均被接受，且窄类型可赋回宽别名", () => {

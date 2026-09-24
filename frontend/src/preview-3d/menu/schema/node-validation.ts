@@ -39,9 +39,23 @@ export const COMMON_NODE_FIELDS: readonly (keyof PreviewMenuNode)[] = [
 /**
  * 各 kind 的专有字段白名单（不含 COMMON_NODE_FIELDS）。
  *
- * 判定依据 = 渲染器实际读取面（render.ts 各 rmAppend* / appendFoldedShape 分支）——
- * 某字段不在该 kind 的渲染分支里被读取，即「挂了也不生效」的静默浪费，
- * 属契约外字段。空数组 = 该 kind 无专有字段（纯装饰/纯文本节点）。
+ * 判定依据 = 渲染器实际读取面（render.ts 各 rmAppend* / appendFoldedShape 分支 +
+ * rows.ts 各叶原语 + core.ts makePreviewMenuRow）——某字段不在该 kind 的渲染分支里
+ * 被读取，即「挂了也不生效」的静默浪费，属契约外字段。空数组 = 该 kind 无专有字段。
+ *
+ * 逐项读取面实证（2026-10 按渲染器源码逐函数核对，非按「当前用到什么」反推）：
+ *  - `rowDensity` 读于 `rows.ts|rmMakeRowBase`（button/row 共用行壳的入口），故 **button 亦合法**；
+ *  - `danger` **仅**读于 `core.ts|makePreviewMenuRow`（叶节点 makeRow 路径），故只对
+ *    panel/action/custom 合法——button 走 rmMakeRowBase、row 走 rmAppendDynamicRow，二者均不读 danger。
+ *    ⚠️ 现状：全仓无任一 PreviewMenuNode 实际设置 danger（声明+读取齐备但无用例）；
+ *    若将来要让 button/row 也支持红字，须先在对应 rmAppend* 里补读取，再入本表。
+ *  - `action`：rmBindLeafClick（panel/action/custom）+ rmAppendButton 整行臂 + rmAppendDynamicRow（row）
+ *    + renderPreviewPanel 分支③（panel）；
+ *  - `value`：rmAppendField（显示值）/ rmAppendDynamicRow（副标签）；`control`：rmAppendButton +
+ *    nodeControlToView（slider/toggle/select/color）；`eye`/`opacity`：rmAppendMaterialRow；
+ *    `radio`/`badge`/`headerToggle`：rmAppendDynamicRow（headerToggle 亦见 render.ts|rmAppendFolder）；
+ *    `children`/`defaultOpen`：rmAppendFolder + rmAppendCard；`collapsible`：rmAppendCard 独有；
+ *    `schemaId`/`renderCustom`/`controls`：renderAdapterPanelContent / appendFoldedShape / controls 臂。
  */
 export const KIND_SPECIFIC_FIELDS: Record<PreviewMenuNodeKind, readonly (keyof PreviewMenuNode)[]> =
   {
@@ -50,19 +64,20 @@ export const KIND_SPECIFIC_FIELDS: Record<PreviewMenuNodeKind, readonly (keyof P
     // 叶（rmAppendLeaf → makeRow）或折叠体（hasFoldedBody → rmAppendFolder）；
     // action 分支见 renderPreviewPanel ③
     panel: ["children", "renderCustom", "schemaId", "action", "danger"],
-    // 动作节点：rmBindLeafClick / rmBindActionClick
+    // 动作节点：rmBindLeafClick
     action: ["action", "danger"],
     // 控件节点：control → nodeControlToView → cap 栈渲染器
     slider: ["control"],
     toggle: ["control"],
     select: ["control"],
-    // 两形态（render.ts rmAppendButton）：有按钮语义 control → 行内真按钮；无 → 整行 action
-    button: ["control", "action", "danger"],
+    // 两形态（rows.ts|rmAppendButton）：有按钮语义 control → 行内真按钮；无 → 整行 action。
+    // rowDensity 经 rmMakeRowBase 生效；danger 不经此路（见上「逐项读取面实证」）
+    button: ["control", "action", "rowDensity"],
     color: ["control"],
     // 键值对行：value = 显示值
     field: ["value"],
     // 动态列表行：value = 副标签附加信息（与 field 语义不同）、radio/badge 槽位、下钻 action
-    row: ["value", "radio", "badge", "headerToggle", "action", "danger", "rowDensity"],
+    row: ["value", "radio", "badge", "headerToggle", "action", "rowDensity"],
     // 装饰节点
     divider: [],
     sectionTitle: [],
@@ -72,8 +87,8 @@ export const KIND_SPECIFIC_FIELDS: Record<PreviewMenuNodeKind, readonly (keyof P
     "material-row": ["eye", "opacity"],
     // cap 复杂控件组通道
     controls: ["controls"],
-    // 逃生舱：renderCustom 直填容器（无 children 时 rmAppendLeaf 行壳）
-    custom: ["renderCustom"],
+    // 逃生舱：renderCustom 直填容器；列表语义下走 rmAppendLeaf（读 action/danger）
+    custom: ["renderCustom", "action", "danger"],
   };
 
 /** 校验单节点：返回违规的专有字段名（空数组 = 合规）。不递归 children。 */

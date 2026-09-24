@@ -58,6 +58,21 @@ describe("validateNode 自检（负向控制）", () => {
     const out = validateNodeTree(tree);
     expect(out).toEqual([{ id: "bad-leaf", kind: "divider", fields: ["value"] }]);
   });
+
+  it("精确性：只认渲染器真正读取的字段——button/row 的 danger 未被读取 → 判契约外", () => {
+    // danger 仅读于 core.ts|makePreviewMenuRow（叶节点 makeRow 路径，panel/action/custom），
+    // button 走 rmMakeRowBase、row 走 rmAppendDynamicRow 均不读它。
+    expect(
+      validateNode({ id: "b", kind: "button", danger: true } as unknown as PreviewMenuNode),
+    ).toEqual(["danger"]);
+    expect(
+      validateNode({ id: "r", kind: "row", danger: true } as unknown as PreviewMenuNode),
+    ).toEqual(["danger"]);
+    // 反证：同样 danger 在 action（makeRow 路径）合法
+    expect(validateNode({ id: "a", kind: "action", danger: true } as unknown as PreviewMenuNode)).toEqual(
+      [],
+    );
+  });
 });
 
 // ===================================================================
@@ -84,6 +99,21 @@ describe("validateNode 正例（合法组合不误报）", () => {
       validateNode({ id: "p", kind: "panel", children: [], schemaId: "x", action: () => {} }),
     ).toEqual([]);
     expect(validateNode({ id: "c", kind: "controls", controls: [] })).toEqual([]);
+  });
+
+  it("button 带 rowDensity（rmMakeRowBase 共用行壳）、custom 带 action/danger（rmAppendLeaf）均合法", () => {
+    expect(
+      validateNode({ id: "b", kind: "button", rowDensity: "compact", action: () => {} }),
+    ).toEqual([]);
+    expect(
+      validateNode({
+        id: "cu",
+        kind: "custom",
+        renderCustom: () => {},
+        action: () => {},
+        danger: true,
+      }),
+    ).toEqual([]);
   });
 
   it("通用字段（labelKey/label/icon/visibleWhen/dockGroup/settingsOrder/hintKey）全 kind 合法", () => {

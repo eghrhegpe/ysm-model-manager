@@ -258,6 +258,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-301：创作者频道与创意工坊命名轴收敛",
+        "link": "/adr/ADR-301-workshop-community-naming-convergence"
+      },
+      {
         "text": "ADR-300：诊断页标签导航单轴收口：看/测/诊三组与二级导航语法统一",
         "link": "/adr/ADR-300-diagnostics-nav-axis-convergence"
       },

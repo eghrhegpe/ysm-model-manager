@@ -11,6 +11,7 @@ import type { CtxShowPayload } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import type { UiIconName } from "@/utils/icon/ui-icons.ts";
+import { shortLabelOf } from "@/utils/resource/short-label.ts";
 
 /** 分隔线条目 */
 interface MenuDividerItemDef {
@@ -114,14 +115,22 @@ export const MENU_DEFS: MenuDef[] = [
       {
         kind: "action",
         action: "instance.export-list",
-        label: () => t("menu.copyModelList"),
+        // 文案参数化（锐评「整合包菜单」收口，2026-09）：原「复制模型清单」写死"模型"，
+        // 实际导出的是**当前 rtype** 的资源清单（instance-ops 按 rtype 限定目录，P0 修复）。
+        // 停在光影包/蓝图卡片上说"复制模型清单"是语义塌陷——label 吃 ctx，类型走
+        // shortLabelOf（i18n 感知的资源类型短标签；勿用 RESOURCE_TYPE_LABELS，那是
+        // 中文全名硬编码，en/ja 下会注入中文）。rtype 缺失时短标签兜底 YSM，与既有
+        // 展示层口径一致（handler 层仍硬拒空 rtype，此处只求文案不塌陷）。
+        label: (ctx) => t("menu.copyModelList", { type: shortLabelOf(ctx.rtype || "") }),
         icon: "file",
       },
       { kind: "divider" },
       {
         kind: "action",
         action: "instance.clear",
-        label: () => t("menu.clearPack"),
+        // 同上：清空只清当前 rtype 的资源（instance-ops.ts L96-102 P0 修复明文拒绝
+        // fallback 全类型），文案必须跟着类型走，否则危险操作挂在 implicit 上下文上。
+        label: (ctx) => t("menu.clearPack", { type: shortLabelOf(ctx.rtype || "") }),
         icon: "delete",
         danger: true,
       },

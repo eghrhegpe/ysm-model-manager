@@ -196,6 +196,39 @@ describe("菜单项点击行为", () => {
     });
   });
 
+  // ===== 文案参数化回归锁（锐评「整合包菜单」收口，2026-09）=====
+  // 病灶：instance 两项操作（导出清单/清空）按当前 rtype 收窄执行（instance-ops P0 修复
+  // 明文拒绝 fallback 全类型），原 label 写死「模型」——停在 shaderpack/blueprint 卡片上
+  // 菜单文案说谎，且清空是 danger 操作。断言：文案随 ctx.rtype 变化，不再恒含「模型」。
+  describe("instance 文案跟随 rtype（label 吃 ctx 不忽略 ctx）", () => {
+    function labelsFor(rtype: string): (string | undefined)[] {
+      menuShows.length = 0; // showMenu 断言每次恰好 1 条 menu:show，多次调用需先清
+      const payload = showMenu("instance", { ...payloadCtx("instance"), rtype });
+      return ["instance.export-list", "instance.clear"].map(
+        (a) => payload.items.find((i) => i.action === a)?.label,
+      );
+    }
+
+    it("shaderpack 卡片 → 文案含「光影包」短标签，不再恒写「模型」", () => {
+      const [exportLabel, clearLabel] = labelsFor(RESOURCE_TYPES.SHADER);
+      expect(exportLabel).toContain("光影包");
+      expect(clearLabel).toContain("光影包");
+      expect(exportLabel).not.toContain("模型");
+      expect(clearLabel).not.toContain("模型");
+    });
+
+    it("ysm 卡片 → 短标签为 YSM（与类型徽章口径一致，非全名）", () => {
+      const [exportLabel, clearLabel] = labelsFor(RESOURCE_TYPES.YSM);
+      expect(exportLabel).toContain("YSM");
+      expect(clearLabel).toContain("YSM");
+    });
+
+    it("rtype 漂移 → 文案随类型词变化（同一菜单两次弹出仅此差异）", () => {
+      expect(labelsFor(RESOURCE_TYPES.BLUEPRINT)).toEqual(["复制蓝图清单", "清空此整合包的蓝图"]);
+      expect(labelsFor(RESOURCE_TYPES.SHADER)).not.toEqual(labelsFor(RESOURCE_TYPES.BLUEPRINT));
+    });
+  });
+
   it("instance 打开文件夹 → getApp().OpenInstanceFolder", async () => {
     const payload = showMenu("instance", { ...payloadCtx("instance"), path: "/packs/x" });
     const item = payload.items.find((i) => i.action === "instance.open-folder");

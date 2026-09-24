@@ -77,7 +77,7 @@ status: active
 
 ## 概览
 
-右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`features/context-menu/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `menu:show` 载荷，`views/context-menu/index.ts` 是纯渲染容器。五类菜单（整合包 instance / 多选 batch / 文件 file / 目录 dir / 工坊模型 workshop，ADR-208 D3 将 community 域右键幽灵菜单收编）覆盖重命名、移动、复制、推送到整合包、标签编辑、回收站、打开位置、复制路径、导出清单等全部右键操作；`MenuItemDef` 为 kind 判别联合（`divider | header | action`），workshop 是 4 条 `kind:"header"` 纯信息行（名称/路径/哈希/大小，label 由 ctx 动态生成、表意走 icon 字段、体积走 `utils/format formatBytes`——noop 假动作已退役，标题项不占 action 空间）。整合包两项（导出清单 / 清空）只派发事件，真正执行落在 `features/pack-ops/instance-ops.ts`。
+右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`features/context-menu/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `menu:show` 载荷，`views/context-menu/index.ts` 是纯渲染容器。五类菜单（整合包 instance / 多选 batch / 文件 file / 目录 dir / 工坊模型 workshop，ADR-208 D3 将 community 域右键幽灵菜单收编）覆盖重命名、移动、复制、推送到整合包、标签编辑、回收站、打开位置、复制路径、导出清单等全部右键操作；`MenuItemDef` 为 kind 判别联合（`divider | header | action`），workshop 是 4 条 `kind:"header"` 纯信息行（名称/路径/哈希/大小，label 由 ctx 动态生成、表意走 icon 字段、体积走 `utils/format formatBytes`——noop 假动作已退役，标题项不占 action 空间）。整合包两项（导出清单 / 清空）只派发事件，真正执行落在 `features/pack-ops/instance-ops.ts`；其菜单文案 `t("menu.copyModelList", {type})` / `t("menu.clearPack", {type})` 跟随当前 rtype 短标签（2026-09 锐评收口，见不变量）。
 
 ## 核心职责
 
@@ -114,6 +114,7 @@ status: active
 - 菜单项 label/icon 一律过 `_esc`（委托 utils/dom/html.ts 的 `esc`）转义；移动/复制目标文件夹名过 `isUnsafeFolderName` 安全过滤
 - 每个 async handler 的最外层 await 链都要有 catch 出口——右键菜单点击是「发射后不管」调用，未捕获异常只会变成 unhandledrejection，用户看不到任何反馈。**已全量补齐**（P2 修复）：batch.move/batch.copy/batch.recycle 补外层 catch，file.move/file.copy/dir.move/dir.copy 的 `resolveDstDir`/`getApp` 与 file.reveal 的 `getApp` 纳入 try——原实现 `getApp`（import 失败 rethrow）与 `resolveDstDir`（内含 GetRepoRoot）在 try 外，reject 时 rejection 逸出
 - `ysm.json` 禁止单文件重命名（ADR-038 D3）：守卫在**声明层**——`menu-defs.ts` 的 `file.rename` 项挂 `visibleWhen`（path 末段 ysm.json 大小写不敏感 → 隐藏整项，2026-09-06 自 handler 内 toast 教育上移，首个真实消费者）；后端 Go fileops / web-fs.ts 双侧硬拒保留兜底，`ctx.renameYsmJson` i18n 键已删
+- **instance 两项按 rtype 收窄的操作（export-list / clear），菜单文案必须跟随类型**（2026-09 锐评「整合包菜单」收口）：执行层只处理当前 rtype 的资源（`instance-ops.ts` P0 修复明文拒绝 fallback 全类型），静态「模型清单/模型」文案停在 shaderpack/blueprint 卡片上即语义说谎（且 clear 是 danger 操作）。实现：`menu-defs.ts` 两项 label 走 `(ctx) => t("menu.xxx", { type: shortLabelOf(ctx.rtype || "") })`——类型词必须用 `utils/resource/short-label.ts` 的 `shortLabelOf`（i18n 感知，en/ja 返回对应语言短标签），**禁用 `RESOURCE_TYPE_LABELS`**（中文全名硬编码，外语界面注入中文）；三语 locale 的 `{type}` 占位符由 locales-consistency 测试校验对齐；回归锁见 `context-menus.test.ts`「instance 文案跟随 rtype」describe。同型推广：新增按 rtype 收窄的操作菜单项时，凡文案含类型暗示（"模型"等）一律走 `{type}` 插值，不写死
 - `<context-menu>` 的 `bus.on` 与 document 级 click/contextmenu/keydown 监听在 `disconnectedCallback` 成对清理
 - 键盘导航（Arrow/Enter/Escape，2026-09-05 code_review 补强）三条不变量：
   1. **shadow 深焦解析**：`document.activeElement` 对 shadow DOM 内聚焦元素 retarget 成 host（`<context-menu>` 本体），`items.indexOf(active)`/`classList.contains("item")` 对 host 恒 false → 方向键/Enter 整体失效。必须沿 `shadowRoot.activeElement` 下钻取真实聚焦项（范式同 `utils/dom/focus-restore.ts` 的 trapFocusAcrossShadow）——此坑在 jsdom/happy-dom 下因不实现 retargeting 而测不出，须显式断言 `shadowRoot.activeElement`

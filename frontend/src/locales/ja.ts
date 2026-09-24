@@ -112,8 +112,8 @@ export const ja: Record<string, string> = {
 
   // ── Context Menu ──
   "menu.openFolder": "フォルダを開く",
-  "menu.copyModelList": "モデルリストをコピー",
-  "menu.clearPack": "このパックのモデルをクリア",
+  "menu.copyModelList": "{type}リストをコピー",
+  "menu.clearPack": "このパックの{type}をクリア",
   "menu.batchSelected": "{count} 個のファイルを選択中",
   "menu.batchRename": "一括リネーム…",
   "menu.moveTo": "移動先…",

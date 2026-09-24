@@ -119,8 +119,8 @@ export const zhCN = {
 
   // ── 右键菜单 ──
   "menu.openFolder": "打开文件夹",
-  "menu.copyModelList": "复制模型清单",
-  "menu.clearPack": "清空此整合包的模型",
+  "menu.copyModelList": "复制{type}清单",
+  "menu.clearPack": "清空此整合包的{type}",
   "menu.batchSelected": "已选中 {count} 个文件",
   "menu.batchRename": "批量重命名…",
   "menu.moveTo": "移动到…",

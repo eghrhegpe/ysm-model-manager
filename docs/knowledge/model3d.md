@@ -843,6 +843,7 @@ auto_fields:
     - switchToSession
     - syncLightTargetFromContent
     - TD_CAMSPEED_KEY
+    - TD_KEYMAP_KEY
     - TD_ROTMODE_KEY
     - TdKeyAction
     - teardown

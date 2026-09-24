@@ -382,7 +382,7 @@ function registerSliceSchema(
   rawGroups: VoxelData["groups"],
   groupMeshes: LitematicMeshSet["groupMeshes"],
   sliceKey: string, // per-scene 唯一 key（多模型并存防互相覆盖——5329a347 review P2）
-): PreviewMenuNode {
+): NodeFor<"panel"> {
   registerSchema(sliceKey, buildSliceSchema(sizeInfo, rawGroups, groupMeshes));
   return {
     id: "slice",

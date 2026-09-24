@@ -1008,7 +1008,6 @@ auto_fields:
     - RenderMultiAngleOptions
     - RenderOptions
     - renderPreviewPanel
-    - renderRepoHeaderHTML
     - RenderResult
     - renderSiteView
     - RenderSiteViewCtx

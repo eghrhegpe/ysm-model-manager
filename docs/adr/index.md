@@ -16,21 +16,20 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 7 |
+| [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 274 |
+| [✅ 已采纳](#已采纳) | 275 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（7）
+### 📝 提议中（6）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-305](./ADR-305-menu-naming-decoupling-contract.md) | preview-3D 菜单命名脱钩裁定：三命名族稳定契约 | 📝 提议中 |
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
@@ -56,11 +55,12 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（274）
+### ✅ 已采纳（275）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-306](./ADR-306-vmd-morph-vrm-expression.md) | VMD morph 重定向到 VRM expression（表情通道） | ✅ 已采纳 |
+| [ADR-305](./ADR-305-menu-naming-decoupling-contract.md) | preview-3D 菜单命名脱钩裁定：三命名族稳定契约 | ✅ 已采纳 |
 | [ADR-304](./ADR-304-3d-prefs-machine-local-boundary.md) | 3D 预览设置持久化边界：机器本地 localStorage，不入 Go config 重置/迁移范围 | ✅ 已采纳 |
 | [ADR-303](./ADR-303-preview-persist-spec-single-source.md) | 3D 预览持久化偏好规格单一源 | ✅ 已采纳 |
 | [ADR-302](./ADR-302-menu-node-kind-field-single-source.md) | 菜单节点类型不做一次性判别联合——以运行期字段表为单一事实源（类型层派生） | ✅ 已采纳 |
@@ -360,7 +360,7 @@ permalink: /adr/
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | ADR-306 | VMD morph 重定向到 VRM expression（表情通道） | ✅ 已采纳 | 2026-09-24 |
-| ADR-305 | preview-3D 菜单命名脱钩裁定：三命名族稳定契约 | 📝 提议中 | 2026-09-24 |
+| ADR-305 | preview-3D 菜单命名脱钩裁定：三命名族稳定契约 | ✅ 已采纳 | 2026-09-24 |
 | ADR-304 | 3D 预览设置持久化边界：机器本地 localStorage，不入 Go config 重置/迁移范围 | ✅ 已采纳 | 2026-09-24 |
 | ADR-303 | 3D 预览持久化偏好规格单一源 | ✅ 已采纳 | 2026-09-24 |
 | ADR-302 | 菜单节点类型不做一次性判别联合——以运行期字段表为单一事实源（类型层派生） | ✅ 已采纳 | 2026-09-24 |

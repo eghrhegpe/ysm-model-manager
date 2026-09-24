@@ -85,10 +85,11 @@ auto_fields:
     - QueueFileDonePayload
     - QueueFileStartPayload
     - QueueStatusPayload
-    - renderRepoHeaderHTML
     - RepoEventsContext
     - RepoEventsHandle
+    - RepoHeaderData
     - RepoRenderGuard
+    - RepoTpl
     - resetProgress
     - resume
     - rollbackToIdle

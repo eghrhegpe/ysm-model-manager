@@ -31,7 +31,6 @@ export const en: Record<string, string> = {
   "common.loading": "Loading…",
   "common.loadFailed": "Failed to load",
   "common.refresh": "Refresh",
-  "common.import": "Import",
   "common.cancel": "Cancel",
   "common.search": "Search",
   "common.empty": "No data yet",
@@ -134,6 +133,7 @@ export const en: Record<string, string> = {
   "menu.newSubfolder": "New Subfolder…",
 
   // ── Settings Page ──
+  // [ADR-305 D5 reserved key] reserved for diagnostics/settings refactor (ADR-300 S2 hot zone), do not delete
   "settings.title": "Settings",
   "settings.basic": "General",
   "settings.appearance": "Appearance",
@@ -302,7 +302,6 @@ export const en: Record<string, string> = {
   "import.processError": "Import processing error, please retry",
   "import.contextRouteUnavailable":
     "Page context routing unavailable, fell back to content inference",
-  "import.addedToQueue": "Added to queue: {n} files",
   "import.failed": "Import failed",
   "import.ysmJsonHint":
     "ysm.json is the model manifest. Please drag the entire model folder (including geometry/animations/textures) to import as a group",
@@ -979,6 +978,7 @@ export const en: Record<string, string> = {
   "diagnostics.selectResourceType": "Select Resource Type",
   "diagnostics.conflictTypeContent": "Content Modified",
   "diagnostics.conflictTypeBoth": "Added in Both",
+  // [ADR-305 D5 reserved key] reserved for ADR-300 S2 diagnostics group refactor, do not delete
   "diagnostics.healthTitle": "Repo Health Audit",
   "diagnostics.healthHint":
     "Static health audit: completeness, cache, resources, dedup (no load-time measurement; same source as CLI health-report)",
@@ -1028,7 +1028,6 @@ export const en: Record<string, string> = {
   // ── Error Messages ──
   "error.fallback": "Operation failed",
   "error.unknown": "Unknown error",
-  "error.networkOffline": "🌐 No network connection. Please check your network and try again",
   "error.noIndex": "📭 This repository has no index.json (Workshop index not yet built)",
   "error.dataFormat": "Unexpected data format",
   "error.invalidArg": "Invalid argument",
@@ -1127,8 +1126,6 @@ export const en: Record<string, string> = {
   "preview.noTypeModel": "(no models of this type)",
   "preview.roleNoDetail": "(nothing to view for this character)",
   "preview.switchTypeTab": "Type",
-  "preview.roleModelSection": "Model",
-  "preview.roleMotionSection": "Motion",
   "preview.appendModel": "Append to scene",
   "preview.cooperateCrossType":
     "Same-scene append only supports the same type; switched to a new model ({from} → {to})",

@@ -40,7 +40,6 @@ export const zhCN = {
   "common.loading": "加载中…",
   "common.loadFailed": "加载失败",
   "common.refresh": "刷新",
-  "common.import": "导入",
   "common.cancel": "取消",
   "common.search": "搜索",
   "common.empty": "暂无数据",
@@ -143,6 +142,7 @@ export const zhCN = {
   "menu.newSubfolder": "新建子文件夹…",
 
   // ── 设置页 ──
+  // [ADR-305 D5 预留键] 诊断组/设置页重构（ADR-300 S2 热区）预留，勿删（登记口径见 i18n.md 死键待删批次）
   "settings.title": "设置",
   "settings.basic": "常规",
   "settings.appearance": "外观",
@@ -303,7 +303,6 @@ export const zhCN = {
   "import.fileTooLargeSkipped": "「{name}」超过 {mb}MB 上限，已跳过",
   "import.processError": "导入处理出错，请重试",
   "import.contextRouteUnavailable": "页面上下文路由不可用，已按内容推断落盘",
-  "import.addedToQueue": "已加入队列: {n} 个文件",
   "import.failed": "导入失败",
   "import.ysmJsonHint":
     "ysm.json 是模型清单，请拖入整个模型文件夹（含 geometry/动画/纹理，将整组导入）",
@@ -954,6 +953,7 @@ export const zhCN = {
   "diagnostics.selectResourceType": "选择资源类型",
   "diagnostics.conflictTypeContent": "内容修改冲突",
   "diagnostics.conflictTypeBoth": "双端新增冲突",
+  // [ADR-305 D5 预留键] ADR-300 S2 诊断组重构预留（「仓库健康审计」标题），勿删
   "diagnostics.healthTitle": "仓库健康审计",
   "diagnostics.healthHint":
     "静态健康审计：完整性、缓存、资源、去重（不含加载耗时；与 CLI health-report 同源）",
@@ -1002,7 +1002,6 @@ export const zhCN = {
   // ── 错误消息 ──
   "error.fallback": "操作失败",
   "error.unknown": "未知错误",
-  "error.networkOffline": "🌐 无网络连接，请检查网络后重试",
   "error.noIndex": "📭 该仓库没有 index.json（尚未建立创意工坊索引）",
   "error.dataFormat": "数据格式异常",
   "error.invalidArg": "参数无效",
@@ -1098,8 +1097,6 @@ export const zhCN = {
   "preview.noTypeModel": "（该类型暂无模型）",
   "preview.roleNoDetail": "（该角色无可查看项）",
   "preview.switchTypeTab": "类型",
-  "preview.roleModelSection": "模型",
-  "preview.roleMotionSection": "动作",
   "preview.appendModel": "追加到场景",
   "preview.cooperateCrossType": "同台追加仅支持同类型，已切换为新模型（{from} → {to}）",
   "preview.backendUnavailable": "后端暂不可用，无法打开 3D 预览",

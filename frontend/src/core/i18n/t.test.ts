@@ -37,7 +37,7 @@ beforeEach(() => {
   __resetI18nResidualsForTest(); // 重置残留占位符告警节流（替代 vi.resetModules 状态隔离）
   getBundle.mockReturnValue({
     "nav.repository": "模型仓库",
-    "import.addedToQueue": "已加入队列: {n} 个文件",
+    "recycle.fileCount": "已加入队列: {n} 个文件", // 夹具替身（原键 import.addedToQueue 已随 ADR-305 D5 死键批次删除；插值语义不变）
     "import.date": "年月",
   });
 });
@@ -48,7 +48,7 @@ describe("t()", () => {
   });
 
   it("参数插值：{n} 被替换", () => {
-    expect(t("import.addedToQueue", { n: 3 })).toBe("已加入队列: 3 个文件");
+    expect(t("recycle.fileCount", { n: 3 })).toBe("已加入队列: 3 个文件");
   });
 
   it("缺失 key → 返回 key 本身 + warnMissingKey", () => {
@@ -69,10 +69,10 @@ describe("t()", () => {
   it("残留占位符守卫：模板含 {n} 而漏传参 → 裸文本上屏 + 按签名告警一次", () => {
     const warn = stubConsoleWarn();
     try {
-      expect(t("import.addedToQueue")).toBe("已加入队列: {n} 个文件");
+      expect(t("recycle.fileCount")).toBe("已加入队列: {n} 个文件");
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("残留插值占位符"));
       const callsAfterFirst = warn.mock.calls.length;
-      t("import.addedToQueue"); // 同签名第二次 → 静默
+      t("recycle.fileCount"); // 同签名第二次 → 静默
       expect(warn.mock.calls.length).toBe(callsAfterFirst);
     } finally {
       warn.mockRestore();
@@ -82,7 +82,7 @@ describe("t()", () => {
   it("残留占位符守卫：参数覆盖占位符 → 无告警", () => {
     const warn = stubConsoleWarn();
     try {
-      expect(t("import.addedToQueue", { n: 2 })).toBe("已加入队列: 2 个文件");
+      expect(t("recycle.fileCount", { n: 2 })).toBe("已加入队列: 2 个文件");
       expect(warn).not.toHaveBeenCalled();
     } finally {
       warn.mockRestore();

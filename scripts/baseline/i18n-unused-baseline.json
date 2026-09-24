@@ -1,9 +1,8 @@
 {
-  "generated": "2026-09-24T13:11:48.914Z",
-  "count": 22,
+  "generated": "2026-09-24T22:45:33.158Z",
+  "count": 17,
   "note": "i18n 未使用键存量基线——门禁只拦新增；清理后重跑 --update-baseline 收缩",
   "unused": [
-    "dead:common.import",
     "dead:diagnostics.healthTitle",
     "dead:error.noIndex",
     "dead:import.mmdSubdir",
@@ -18,11 +17,7 @@
     "dead:skeleton.currentBinding",
     "dead:skeleton.slots",
     "test-only:content.errNoIndex",
-    "test-only:error.networkOffline",
-    "test-only:import.addedToQueue",
     "test-only:preview.metric.boneCount",
-    "test-only:preview.roleModelSection",
-    "test-only:preview.roleMotionSection",
     "test-only:preview.timeOfDay",
     "test-only:workshop.github"
   ]

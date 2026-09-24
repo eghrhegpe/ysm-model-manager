@@ -22,7 +22,7 @@ const ysmDetailTree: PreviewMenuNode[] = [
       {
         id: "model-section",
         kind: "folder",
-        labelKey: "preview.roleModelSection",
+        labelKey: "preview.modelInfo",
         defaultOpen: true,
         dockGroup: "model",
         children: [
@@ -63,7 +63,7 @@ const ysmDetailTree: PreviewMenuNode[] = [
       {
         id: "motion-section",
         kind: "folder",
-        labelKey: "preview.roleMotionSection",
+        labelKey: "preview.mmdPlay",
         dockGroup: "motion",
         children: [
           {

@@ -33,7 +33,6 @@ export const ja: Record<string, string> = {
   "common.loading": "読み込み中…",
   "common.loadFailed": "読み込みに失敗しました",
   "common.refresh": "更新",
-  "common.import": "インポート",
   "common.cancel": "キャンセル",
   "common.search": "検索",
   "common.empty": "データなし",
@@ -136,6 +135,7 @@ export const ja: Record<string, string> = {
   "menu.newSubfolder": "新規サブフォルダ…",
 
   // ── Settings Page ──
+  // [ADR-305 D5 reserved key] reserved for diagnostics/settings refactor (ADR-300 S2 hot zone), do not delete
   "settings.title": "設定",
   "settings.basic": "一般",
   "settings.appearance": "外観",
@@ -304,7 +304,6 @@ export const ja: Record<string, string> = {
   "import.processError": "インポート処理エラー。再試行してください",
   "import.contextRouteUnavailable":
     "ページのコンテキストルーティングが利用できないため、内容推測でフォールバックしました",
-  "import.addedToQueue": "キューに追加されました：{n} ファイル",
   "import.failed": "インポートに失敗しました",
   "import.ysmJsonHint":
     "ysm.jsonはモデルのマニフェストです。geometry／アニメーション／テクスチャを含むモデルフォルダ全体をドラッグして、グループとしてインポートしてください",
@@ -978,6 +977,7 @@ export const ja: Record<string, string> = {
   "diagnostics.selectResourceType": "リソースタイプを選択",
   "diagnostics.conflictTypeContent": "内容変更競合",
   "diagnostics.conflictTypeBoth": "両方に追加競合",
+  // [ADR-305 D5 reserved key] reserved for ADR-300 S2 diagnostics group refactor, do not delete
   "diagnostics.healthTitle": "リポジトリ健全性監査",
   "diagnostics.healthHint":
     "静的健全性監査：完全性・キャッシュ・リソース・重複（読込時間は含まない；CLI health-report と同一ソース）",
@@ -1027,8 +1027,6 @@ export const ja: Record<string, string> = {
   // ── Error Messages ──
   "error.fallback": "操作に失敗しました",
   "error.unknown": "不明なエラー",
-  "error.networkOffline":
-    "🌐 ネットワークに接続されていません。ネットワークを確認して再試行してください",
   "error.noIndex":
     "📭 このリポジトリには index.json がありません（ワークショップインデックスがまだ構築されていません）",
   "error.dataFormat": "データ形式が正しくありません",
@@ -1129,8 +1127,6 @@ export const ja: Record<string, string> = {
   "preview.noTypeModel": "（この種類のモデルなし）",
   "preview.roleNoDetail": "（表示できる項目がありません）",
   "preview.switchTypeTab": "タイプ",
-  "preview.roleModelSection": "モデル",
-  "preview.roleMotionSection": "モーション",
   "preview.appendModel": "シーンに追加",
   "preview.cooperateCrossType":
     "同一シーンへの追加は同一タイプのみ対応です。新しいモデルに切り替えました（{from} → {to}）",

@@ -744,8 +744,6 @@ export const en: Record<string, string> = {
   "workshop.rateLimited": "GitHub API rate limit reached, please retry later",
   "workshop.fetchFailed": "Fetch failed",
   "workshop.updateConfig": "🌐 Update Config",
-  "workshop.newCreatorName": "New Creator",
-  "workshop.newCreatorDesc": "Description",
   "workshop.exportWebUnsupported":
     "Exporting site config is not supported on web, use the desktop app",
   "workshop.action.exported": "📤 Site exported: {path}",

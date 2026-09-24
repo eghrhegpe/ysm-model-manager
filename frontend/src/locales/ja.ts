@@ -741,8 +741,6 @@ export const ja: Record<string, string> = {
   "workshop.rateLimited": "GitHub API レート制限です。後で再試行してください",
   "workshop.fetchFailed": "取得に失敗しました",
   "workshop.updateConfig": "🌐 設定を更新",
-  "workshop.newCreatorName": "新しいクリエイター",
-  "workshop.newCreatorDesc": "説明",
   "workshop.exportWebUnsupported":
     "ウェブ版ではサイト設定のエクスポートはサポートされていません。デスクトップ版を使用してください",
   "workshop.action.exported": "📤 サイトをエクスポートしました: {path}",

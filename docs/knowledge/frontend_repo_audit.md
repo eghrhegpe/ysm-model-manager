@@ -159,7 +159,6 @@ auto_fields:
     - buildSiteHtml
     - BuildSiteHtmlCtx
     - buildSpecFromGeometryJSON
-    - buildSpecFromModel
     - buildStatsCard
     - buildStatsPanel
     - buildToggleRow
@@ -299,7 +298,6 @@ auto_fields:
     - CreatorIdentityInput
     - creditsHTML
     - CtxShowPayload
-    - CUBE_EPS
     - Cube2D
     - cubeVec
     - cullModelGroups
@@ -1171,13 +1169,8 @@ auto_fields:
     - sniffTexSize
     - solveIK
     - Spec3D
-    - SpecBone
     - SpecBone3D
-    - SpecBuildResult
-    - SpecCube
-    - SpecMeshData
     - SpecMeshGroup3D
-    - SpecModelInput
     - spinnerHTML
     - splitMeshByFaceAlpha
     - stagger

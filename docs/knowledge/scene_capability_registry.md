@@ -105,8 +105,11 @@ auto_fields:
     - LEGACY_CANVAS_PATTERNS
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
+    - LIGHT_AMBIENT_FOLDER_ID
     - LIGHT_MASTER_NODE_ID
+    - LIGHT_SLOT_FOLDER_ID
     - LIGHT_SLOTS
+    - LIGHT_VOL_CARD_ID
     - LightCapability
     - lightDirToPosition
     - lightEnvKeys
@@ -114,6 +117,7 @@ auto_fields:
     - LightKey
     - LightParams
     - LightSlot
+    - lightSlotLabelKey
     - LightType
     - lowFreqMask
     - luminanceHistogram

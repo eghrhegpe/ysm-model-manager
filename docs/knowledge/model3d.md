@@ -111,7 +111,6 @@ auto_fields:
     - buildSharedInfra
     - buildSkyNodes
     - buildSpecFromGeometryJSON
-    - buildSpecFromModel
     - buildStatsPanel
     - buildSwitchNodes
     - buildVmdRetargetClip
@@ -191,7 +190,6 @@ auto_fields:
     - CreateWorkerBridgeOpts
     - createWorkerParser
     - createYsmAnimPlayer
-    - CUBE_EPS
     - Cube2D
     - cullModelGroups
     - customHdrThumbnail
@@ -415,8 +413,11 @@ auto_fields:
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
     - LegChain
+    - LIGHT_AMBIENT_FOLDER_ID
     - LIGHT_MASTER_NODE_ID
+    - LIGHT_SLOT_FOLDER_ID
     - LIGHT_SLOTS
+    - LIGHT_VOL_CARD_ID
     - LightCapability
     - lightDirToPosition
     - lightEnvKeys
@@ -424,6 +425,7 @@ auto_fields:
     - LightKey
     - LightParams
     - LightSlot
+    - lightSlotLabelKey
     - LightType
     - LipSyncCallback
     - LipSyncOptions
@@ -782,13 +784,8 @@ auto_fields:
     - smoothStep
     - solveIK
     - Spec3D
-    - SpecBone
     - SpecBone3D
-    - SpecBuildResult
-    - SpecCube
-    - SpecMeshData
     - SpecMeshGroup3D
-    - SpecModelInput
     - splitMeshByFaceAlpha
     - spotDistanceAttenuation
     - Stage1bCtx

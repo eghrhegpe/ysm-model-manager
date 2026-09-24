@@ -15,7 +15,9 @@
 //   类型专属参数（锥角/半影/距离/衰减）按当前灯 type 条件显示；类型 select 带
 //   refreshOnChange → 切换后重建节点树，参数区随之增减。
 
-import type { LocaleKey } from "@/core/i18n/t.ts";
+// 运行时值 import：动态 folder 标题需要已 i18n 的灯名（tOf）。core/i18n 不依赖上层，
+// 无环；preview-3d 多处已有同款先例。
+import { type LocaleKey, tOf } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { LightCapability, LightKey } from "./light-capability.ts";
@@ -40,6 +42,14 @@ const LIGHT_SLOTS: Array<{ value: string; label: string; labelKey: LocaleKey }> 
   { value: "rim", label: "轮廓灯", labelKey: "preview.rimLight" },
 ];
 
+/** 单灯 folder 标题键：与「编辑灯光」select 选项同源——编辑谁，folder 就叫谁
+ *  （修复「选了补灯、全文却无一处显示正在改谁」的 subject 丢失）。 */
+export function lightSlotLabelKey(which: LightKey): LocaleKey {
+  const hit = LIGHT_SLOTS.find((o) => o.value === which);
+  if (!hit) throw new Error(`unknown light slot: ${which}`);
+  return hit.labelKey;
+}
+
 /** 灯光类型选项（每盏灯可自由切换） */
 const LIGHT_TYPE_OPTIONS: Array<{ value: LightType; label: string; labelKey: LocaleKey }> = [
   { value: "directional", label: "方向光", labelKey: "preview.lightTypeDirectional" },
@@ -61,8 +71,17 @@ const VOLUMETRIC_DRIVER_OPTIONS: Array<{
 
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
 
-const LIGHT_PARAMS_GROUP = "preview.lightGroupParams";
+// [作用域三组分治 2026-09] 原单 folder「cap-group-light-params」是作用域垃圾桶：
+// 单灯轴 / 场景环境光 / 后处理体积光混装一筐，筐名还不告诉你筐里混了什么。拆三组，
+// 组 id 导出供测试深度寻址共用（与 LIGHT_MASTER_NODE_ID 同口径，防平行手抄字符串）。
+/** 聚光灯/体积光折叠卡 id（沿用旧卡 id，保住 folderCollapsedState 折叠记忆） */
 const SPOT_VOL_CARD = "cap-group-spot-vol";
+/** 单灯 folder（标题随编辑槽位动态变化） */
+export const LIGHT_SLOT_FOLDER_ID = "cap-group-light-slot";
+/** 环境光 folder（场景级独立轴） */
+export const LIGHT_AMBIENT_FOLDER_ID = "cap-group-light-ambient";
+/** 聚光灯/体积光折叠卡（后处理级，顶层独立成组） */
+export const LIGHT_VOL_CARD_ID = SPOT_VOL_CARD;
 
 /** 能力总开关节点 id：本文件（产节点）/ LightCapability.getMasterNodeId（声明）/
  *  面板 filter（消费）三方共用的唯一常量——裸字符串散在三处即平行手抄，改名时
@@ -351,9 +370,13 @@ function ambientNodes(cap: LightCapability): PreviewMenuNode[] {
 }
 
 /** 完整参数面板节点树：light-enabled 能力总开关（首行）+ 编辑灯选择（三灯按钮）
- *  + [ADR-293] light-helper 线框可见性开关 + 统一设置条（类型/颜色/强度/方位角/仰角
- *  + 类型专属参数）+ 环境光 + 体积光卡。 */
+ *  + [ADR-293] light-helper 线框可见性开关 + 三作用域分组 + 分隔线 + 全盘重置按钮。
+ *  [作用域三组分治 2026-09] 原「cap-group-light-params」单 folder 把单灯轴、场景环境光、
+ *  后处理体积光混装一筐，按作用域拆三组：单灯 folder 标题 = 当前编辑槽位（明文 label，
+ *  与 select 选项同源）；环境光 / 体积光各自成组；全盘重置移出分组放 divider 之后——
+ *  按钮作用域是「三盏灯 + 环境光 + 体积光」整体，位置必须明示，不许藏在任一组内。 */
 export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
+  const which = cap.getActiveLight();
   return [
     lightEnabledNode(cap),
     // [light-type-switch] 顶栏三灯按钮：选择当前编辑的灯，其下统一设置条读写该灯
@@ -365,30 +388,39 @@ export function buildLightNodes(cap: LightCapability): PreviewMenuNode[] {
         options: LIGHT_SLOTS,
         get: () => cap.getActiveLight(),
         set: (v) => cap.setActiveLight(v as LightKey),
-        // 切换编辑对象 → 重建节点树（设置条各闭包绑定新槽位）
+        // 切换编辑对象 → 重建节点树（设置条各闭包绑定新槽位，folder 标题随动）
         refreshOnChange: true,
       },
     },
     // [ADR-293] 视口线框总闸（编辑焦点之下、参数组之上——它管「怎么看」不管「怎么亮」）
     lightHelperNode(cap),
     {
-      id: "cap-group-light-params",
+      // 单灯 folder：标题走明文 label（labelKey 不支持插值，resolveLabel 直取 locale 表），
+      // 文案与 select 选项同源；故不设 labelKey（i18n 缺 key 回退不适用数据明文）。
+      id: LIGHT_SLOT_FOLDER_ID,
       kind: "folder",
-      labelKey: LIGHT_PARAMS_GROUP,
-      children: [
-        ...unifiedLightNodes(cap),
-        ...ambientNodes(cap),
-        spotVolCardNode(cap),
-        {
-          // [ADR-282] 取代原「灯光预设」下拉：重置锚定模型无关的 DEFAULT_LIGHT_PARAMS。
-          // 旧下拉列的是 ModelType 枚举（YSM方块/VRM角色/…），实际只含三个光强数字，
-          // 且选中任一项（含「默认」）会设 manualPreset 永久冻结后续模型预设——已删。
-          id: "light-reset",
-          kind: "button",
-          labelKey: "preview.lightReset",
-          action: () => cap.resetLightParams(),
-        },
-      ],
+      label: tOf(lightSlotLabelKey(which)),
+      children: unifiedLightNodes(cap),
+    },
+    {
+      // 场景级独立轴（三盏灯之外的底色光），与单灯 folder 分治
+      id: LIGHT_AMBIENT_FOLDER_ID,
+      kind: "folder",
+      labelKey: "preview.ambientGroup",
+      children: ambientNodes(cap),
+    },
+    spotVolCardNode(cap),
+    // 全盘重置与三组分隔：作用域是全部灯光，不许藏在任一组内（位置即作用域声明）
+    { id: "light-reset-divider", kind: "divider" },
+    {
+      // [ADR-282] 取代原「灯光预设」下拉：重置锚定模型无关的 DEFAULT_LIGHT_PARAMS。
+      // 旧下拉列的是 ModelType 枚举（YSM方块/VRM角色/…），实际只含三个光强数字，
+      // 且选中任一项（含「默认」）会设 manualPreset 永久冻结后续模型预设——已删。
+      id: "light-reset",
+      kind: "button",
+      labelKey: "preview.lightResetAll",
+      hintKey: "preview.lightResetAllHint",
+      action: () => cap.resetLightParams(),
     },
   ];
 }

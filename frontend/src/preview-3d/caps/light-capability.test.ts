@@ -6,6 +6,15 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { LightCapability, spotDistanceAttenuation } from "./light-capability.ts";
+// [作用域三组分治] 组 id 由实现侧导出：测试与实现共用同一常量，防两边平行手抄同一字符串
+// （同 LIGHT_MASTER_NODE_ID 的处理口径）。
+import {
+  LIGHT_AMBIENT_FOLDER_ID,
+  LIGHT_SLOT_FOLDER_ID,
+  LIGHT_VOL_CARD_ID,
+  lightSlotLabelKey,
+} from "./light-controls.ts";
+import { tOf } from "@/core/i18n/t.ts";
 import {
   DEFAULT_LIGHT_PARAMS,
   FLATTEN_MAP,
@@ -41,12 +50,28 @@ function newCap(opts: { enabled?: boolean; target?: THREE.Vector3; targetHeight?
   });
 }
 
-/** 参数组 folder 节点：[ADR-293] 顶层新增 light-helper 总开关后不再在固定下标
- *  （结构断言按 id 寻址，防节点增删的索引漂移误伤）。 */
-function paramsFolder(cap: LightCapability): PreviewMenuNode {
-  const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-light-params");
-  expect(folder).toBeDefined();
-  return folder!;
+/** 按 id 深度寻址任意节点（后可断言其所在组）。
+ *  [作用域三组分治 2026-09] 原 `cap-group-light-params` 单 folder 已被拆为
+ *  「单灯 folder / 环境光 folder / 体积光卡」三组——旧 helper 假定「除总开关外一切在
+ *  同一 folder 的 children 里」，该前提作废。改为深度寻址：按 id 找节点，与它身处哪
+ *  一组解耦（层级重排不再连锁打断全部用例），组归属由结构专用用例单独钉。 */
+function findNode(cap: LightCapability, id: string): PreviewMenuNode {
+  const walk = (ns: PreviewMenuNode[]): PreviewMenuNode | undefined => {
+    for (const n of ns) {
+      if (n.id === id) return n;
+      const hit = n.children ? walk(n.children) : undefined;
+      if (hit) return hit;
+    }
+    return undefined;
+  };
+  const found = walk(cap.getMenuNodes());
+  expect(found, `缺菜单节点 ${id}`).toBeDefined();
+  return found!;
+}
+
+/** 顶层节点 id 序列（不含 children） */
+function topIds(cap: LightCapability): string[] {
+  return cap.getMenuNodes().map((n) => n.id);
 }
 
 /** 三盏灯统一的「全部字段」基线（构造 LightInstanceParams 的部分覆盖用） */
@@ -367,27 +392,55 @@ describe("LightCapability — 灯光与模型类别解耦（ADR-282）", () => {
 describe("LightCapability — getMenuNodes 分组（节点化后 group 由 folder 表达）", () => {
   beforeEach(() => resetEnvState());
 
-  it("主灯之外的节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
+  it("[作用域三组分治] 顶层 = 总开关 + 编辑槽位 + 辅助线 + 三组 + 分隔 + 重置按钮", () => {
     const cap = newCap();
-    const nodes = cap.getMenuNodes();
-    // light-enabled 能力总开关 + [light-type-switch] light-select（编辑哪盏灯）+ [ADR-293] light-helper
-    expect(nodes[0]!.id).toBe("light-enabled");
-    expect(nodes[1]!.id).toBe("light-select");
-    expect(nodes[2]!.id).toBe("light-helper");
-    // 其余节点在 folder children 内
-    const folder = paramsFolder(cap);
-    expect(folder.kind).toBe("folder");
-    const childIds = folder.children!.map((c: { id: string }) => c.id);
-    // 三盏灯的开关不再平铺在 folder 外层：统一设置条按当前槽位产出 light-<which>-*
-    expect(childIds).toContain("light-key-enabled");
-    expect(childIds).toContain("light-ambient");
-    // [ADR-282] 原 light-preset 下拉已删，代之以「重置灯光」按钮
-    expect(childIds).toContain("light-reset");
-    expect(childIds).not.toContain("light-preset");
-    // [ADR-246 D3] 聚光灯 + 体积光收进同一可折叠卡（不再平铺、不做输入隐藏）
-    expect(childIds).toContain("cap-group-spot-vol");
-    // folder labelKey 对应原 group
-    expect(folder.labelKey).toBe("preview.lightGroupParams");
+    expect(topIds(cap)).toEqual([
+      "light-enabled",
+      "light-select",
+      "light-helper",
+      LIGHT_SLOT_FOLDER_ID,
+      LIGHT_AMBIENT_FOLDER_ID,
+      LIGHT_VOL_CARD_ID,
+      "light-reset-divider",
+      "light-reset",
+    ]);
+  });
+
+  it("[作用域三组分治] 每组只装本作用域的控件（原单 folder 混装退场）", () => {
+    const cap = newCap();
+    const ids = (n: PreviewMenuNode): string[] => n.children!.map((c) => c.id);
+    // 单灯 folder：只有当前槽位的设置条，不许夹带全局轴
+    const slot = findNode(cap, LIGHT_SLOT_FOLDER_ID);
+    expect(slot.kind).toBe("folder");
+    expect(ids(slot)).toContain("light-key-enabled");
+    expect(ids(slot)).not.toContain("light-ambient");
+    expect(ids(slot)).not.toContain(LIGHT_VOL_CARD_ID);
+    // 环境光 folder：恰两轴
+    expect(ids(findNode(cap, LIGHT_AMBIENT_FOLDER_ID))).toEqual([
+      "light-ambient-color",
+      "light-ambient",
+    ]);
+    // [ADR-282] 原 light-preset 下拉已删
+    expect(ids(slot)).not.toContain("light-preset");
+    // 重置按钮作用域是全盘 → 不许藏在任一组内（位置须明示）
+    expect(topIds(cap)).toContain("light-reset");
+    expect(ids(slot)).not.toContain("light-reset");
+  });
+
+  // 修复「迷」的核心：用户选了补灯，但旧 UI 全文无一处显示自己在改谁。
+  it("[作用域三组分治] 单灯 folder 标题随编辑槽位变化（subject 不再丢失）", () => {
+    const cap = newCap();
+    const title = (): unknown => findNode(cap, LIGHT_SLOT_FOLDER_ID).label;
+    // 动态走明文 label（labelKey 不支持插值），且与 select 选项同源
+    expect(findNode(cap, LIGHT_SLOT_FOLDER_ID).labelKey).toBeUndefined();
+    expect(title()).toBe(tOf(lightSlotLabelKey("key")));
+    cap.setActiveLight("fill");
+    expect(title()).toBe(tOf(lightSlotLabelKey("fill")));
+    cap.setActiveLight("rim");
+    expect(title()).toBe(tOf(lightSlotLabelKey("rim")));
+    // 三槽位标题互不相同（退化成常量标题则此断言先红）
+    const titles = (["key", "fill", "rim"] as const).map((w) => tOf(lightSlotLabelKey(w)));
+    expect(new Set(titles).size).toBe(3);
   });
 });
 
@@ -396,10 +449,9 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
   beforeEach(() => resetEnvState());
 
   function spotVolCard(cap: LightCapability): PreviewMenuNode {
-    const folder = paramsFolder(cap);
-    const card = folder.children!.find((c: PreviewMenuNode) => c.id === "cap-group-spot-vol");
-    expect(card).toBeDefined();
-    return card!;
+    const card = findNode(cap, LIGHT_VOL_CARD_ID);
+    expect(card.kind).toBe("card");
+    return card;
   }
 
   it("是 collapsible card，体积光全量控件收进卡内；聚光灯参数由统一设置条按 type 展开", () => {
@@ -432,7 +484,7 @@ describe("LightCapability — 聚光灯与体积光折叠卡", () => {
     // 「聚光灯」改为把某盏灯的 type 设为 spot，其专属参数（锥角/半影/距离/衰减）随统一设置条展开。
     // 等价断言：切到 spot 后同一套设置条里出现这些控件。
     cap.setLightParams("key", { type: "spot" });
-    const expanded = paramsFolder(cap).children!.map((c) => c.id);
+    const expanded = findNode(cap, LIGHT_SLOT_FOLDER_ID).children!.map((c) => c.id);
     expect(expanded).toContain("light-key-angle");
     expect(expanded).toContain("light-key-penumbra");
     expect(expanded).toContain("light-key-distance");
@@ -674,10 +726,10 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     expect(cap.getMenuNodes().map((n) => n.id)).toContain("light-enabled");
   });
 
-  it("完整树 = light-enabled 能力总开关 + light-select 编辑灯选择 + light-helper 线框开关 + 参数组 folder（统一设置条 + 折叠卡）", () => {
+  it("完整树 = 总开关 + 编辑灯选择 + helper 开关 + 单灯 folder + 环境光 folder + 体积光卡 + 分隔 + 重置", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(4);
+    expect(nodes).toHaveLength(8);
     // light-enabled 能力总开关（isEnabled/setEnabled；[ADR-293] 真值源 envState.lightEnabled）
     expect(nodes[0]!.kind).toBe("toggle");
     expect(nodes[0]!.id).toBe("light-enabled");
@@ -700,29 +752,33 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     nodes[2]!.control!.set!(false);
     expect(envState.lightHelperVisible).toBe(false);
     nodes[2]!.control!.set!(true);
-    // 参数组 folder：统一设置条（当前槽位 key，默认 directional 故无锥角/衰减控件）
-    // + 环境光 + 聚光灯/体积光折叠卡 + 重置按钮（[ADR-282] 取代原预设下拉）
-    const folder = nodes[3]!;
-    expect(folder.kind).toBe("folder");
-    expect(folder.labelKey).toBe("preview.lightGroupParams");
-    expect(folder.children!.map((c: PreviewMenuNode) => c.id)).toEqual([
+    // 单灯 folder：统一设置条（当前槽位 key，默认 directional 故无锥角/衰减控件）
+    const slotFolder = nodes[3]!;
+    expect(slotFolder.kind).toBe("folder");
+    expect(slotFolder.id).toBe(LIGHT_SLOT_FOLDER_ID);
+    expect(slotFolder.children!.map((c: PreviewMenuNode) => c.id)).toEqual([
       "light-key-type",
       "light-key-enabled",
       "light-key-color",
       "light-key-intensity",
       "light-key-azimuth",
       "light-key-elevation",
-      "light-ambient-color",
-      "light-ambient",
-      "cap-group-spot-vol",
-      "light-reset",
     ]);
+    // 环境光 folder（场景级独立轴）
+    expect(nodes[4]!.kind).toBe("folder");
+    expect(nodes[4]!.id).toBe(LIGHT_AMBIENT_FOLDER_ID);
+    // 体积光卡（后处理级，顶层独立成组）
+    expect(nodes[5]!.kind).toBe("card");
+    expect(nodes[5]!.id).toBe(LIGHT_VOL_CARD_ID);
+    // 全盘重置在 divider 之后、任何分组之外（位置即作用域声明）
+    expect(nodes[6]!.kind).toBe("divider");
+    expect(nodes[7]!.id).toBe("light-reset");
+    expect(nodes[7]!.kind).toBe("button");
   });
 
   it("[锐评根治 2026-10] ambient 颜色控件读写联动（幽灵字段退场：参数面 ≡ 控件面）", () => {
     const cap = newCap();
-    const folder = paramsFolder(cap);
-    const color = folder.children!.find((c: PreviewMenuNode) => c.id === "light-ambient-color")!;
+    const color = findNode(cap, "light-ambient-color");
     expect(color.kind).toBe("color");
     color.control!.set!(0x8899aa);
     expect(cap.getParams().ambient.color).toBe(0x8899aa);
@@ -739,11 +795,10 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const nodes = cap.getMenuNodes();
     // [light-type-switch] 原平铺的 light-fill 开关 → 先切编辑槽位，再操作该槽位的统一设置条
     nodes[1]!.control!.set!("fill");
-    const folder = paramsFolder(cap);
-    const fill = folder.children!.find((c: PreviewMenuNode) => c.id === "light-fill-enabled")!;
+    const fill = findNode(cap, "light-fill-enabled");
     fill.control!.set!(false);
     expect(cap.getParams().fill.enabled).toBe(false);
-    const ambient = folder.children!.find((c: PreviewMenuNode) => c.id === "light-ambient")!;
+    const ambient = findNode(cap, "light-ambient");
     ambient.control!.set!(1.5);
     expect(cap.getParams().ambient.intensity).toBe(1.5);
   });
@@ -754,8 +809,7 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     cap.setLightParams("fill", { intensity: 3.3 });
     expect(cap.getParams().key.intensity).toBe(4.2);
 
-    const folder = paramsFolder(cap);
-    const reset = folder.children!.find((c: PreviewMenuNode) => c.id === "light-reset")!;
+    const reset = findNode(cap, "light-reset");
     expect(reset.kind).toBe("button");
     reset.action!({} as never);
 
@@ -1388,9 +1442,9 @@ describe("LightCapability — 菜单控件联动", () => {
   it("toggle/slider/select 全部读写联动（节点 control 闭包）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // 每次按需重取节点树：切槽位/切类型都会重建参数区（refreshOnChange 由消费端触发）
-    const by = (id: string) =>
-      paramsFolder(cap).children!.find((c: PreviewMenuNode) => c.id === id)!;
+    // 每次按需重取节点树：切槽位/切类型都会重建参数区（refreshOnChange 由消费端触发）；
+    // [作用域三组分治] 控件分布在单灯 folder / 环境光 folder / 体积光卡三组，深度寻址不关心层级
+    const by = (id: string) => findNode(cap, id);
     nodes[0]!.control!.set!(false);
     expect(nodes[0]!.control!.get!(undefined)).toBe(false);
     // [light-type-switch] 原平铺的 light-fill/light-rim 开关 → 切编辑槽位后由统一设置条读写
@@ -1422,8 +1476,7 @@ describe("LightCapability — 菜单控件联动", () => {
     cap.setLightParams("rim", { intensity: 5.5 });
     expect(cap.getParams().rim.intensity).toBe(5.5);
 
-    const folder = paramsFolder(cap);
-    const resetNode = folder.children!.find((c: PreviewMenuNode) => c.id === "light-reset")!;
+    const resetNode = findNode(cap, "light-reset");
     expect(resetNode.kind).toBe("button");
     resetNode.action!({} as never);
 

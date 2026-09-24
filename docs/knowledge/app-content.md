@@ -158,7 +158,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - `app-nav` 是 `nav:changed` 的主要派发源；本组件与 `PageStore` 监听 `nav:changed`（本组件切页整块重渲染，`PageStore` 单向更新状态；2026-08-17 起单事件模型，见知识卡 `app_nav`、`page_store`）
 - `<app-preview>` 由本模块顶部副作用静态导入完成注册，仓库页模板直接放置元素（见知识卡 `app_preview`）
 - `package:selected` 由 `app-sidebar` 卡片点击派发，本组件据此挂载 `<app-sync-manager instance=...>`（见知识卡 `app_sidebar`、`app_sync_manager`）。**2026-09 起为复用语义**：`mountSyncManager` 首次注入元素、后续仅改 `instance`/`default-type` 属性，实例跨整合包存活（组件 `attributeChangedCallback` 已支持 instance 变更）；切包由组件内 `_resetViewState()` 复位视图状态
-- 仓库页事件绑定与卡片渲染委托 `features/community/events.ts`（`bindRepoEvents`）与 `features/community/render.ts`；其 cleanup 为**异步**，由两页（github/workshop）各自持页内可替换槽并 `host.subs.addPage` 登记（ADR-260，**不再**存 `state.repoEventsCleanup` 字段、也不经注入链）；工坊模型列表接入定高虚拟滚动（`virtual-list.ts`，社区上线后索引可顶 2000 级）
+- 仓库页事件绑定与卡片渲染委托 `features/community/events.ts`（`bindRepoEvents`）与 `features/community/render.ts`；其 cleanup 为**异步**，由两页（github / community，后者旧 id `workshop`，ADR-301）各自持页内可替换槽并 `host.subs.addPage` 登记（ADR-260，**不再**存 `state.repoEventsCleanup` 字段、也不经注入链）；工坊模型列表接入定高虚拟滚动（`virtual-list.ts`，社区上线后索引可顶 2000 级）
 - 所有 Go 调用统一走 `getApp()`（见知识卡 `wails_bridge`）；跨组件通信走 bus（见知识卡 `event_bus`）
 
 ## 不变量

@@ -10,6 +10,7 @@
 // 读写统一走 safeGet/safeSet/safeRemove（隐私模式安全）。
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { sanitizePage } from "@/core/page-store.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
@@ -45,7 +46,9 @@ export function initDefaultPagePrefs(root: ShadowRoot): void {
   // 用户看到 A 而实际启动是 B，是比原 bug 更隐蔽的货不对板）
   const configured = safeGet("ui-default-page");
   const remember = isRememberMode(configured);
-  if (!remember && configured) sel.value = configured;
+  // 回显也过 sanitizePage：legacy 值（如 ADR-301 改名前的 workshop）归位到现名（community），
+  // 与 resolveInitialPage 完全同源——否则下拉框选项（navItems 派生）无 legacy 值 → 回显停空、货不对板。
+  if (!remember && configured) sel.value = sanitizePage(configured);
   syncUi(remember);
 
   rememberInput.addEventListener("change", () => {

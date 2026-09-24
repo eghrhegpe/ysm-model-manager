@@ -20,7 +20,7 @@ function makeRoot(): ShadowRoot {
     <input type="checkbox" id="set-remember-page">
     <select id="set-default-page">
       <option value="instances">instances</option>
-      <option value="workshop">workshop</option>
+      <option value="community">community</option>
       <option value="repository">repository</option>
     </select>
   `;
@@ -56,12 +56,22 @@ describe("initDefaultPagePrefs — 回填", () => {
   });
 
   it("有配置值 → 固定模式：开关不勾选、下拉框启用并回显该页", () => {
-    localStorage.setItem("ui-default-page", "workshop");
+    localStorage.setItem("ui-default-page", "community");
     const root = makeRoot();
     initDefaultPagePrefs(root);
     expect(getInput(root).checked).toBe(false);
     expect(getSel(root).disabled).toBe(false);
-    expect(getSel(root).value).toBe("workshop");
+    expect(getSel(root).value).toBe("community");
+  });
+
+  it("legacy workshop 配置值回显归位 community（ADR-301 D2，与启动读同源）", () => {
+    // 盲点回归锁：真实下拉框由 navItems 派生（已无 workshop 选项），
+    // 若回显直接赋原值会停空、货不对板——必须过 sanitizePage 归位。
+    localStorage.setItem("ui-default-page", "workshop");
+    const root = makeRoot();
+    initDefaultPagePrefs(root);
+    expect(getInput(root).checked).toBe(false);
+    expect(getSel(root).value).toBe("community");
   });
 });
 
@@ -85,11 +95,11 @@ describe("initDefaultPagePrefs — 记忆开关联动", () => {
     const root = makeRoot();
     initDefaultPagePrefs(root);
     const sel = getSel(root);
-    sel.value = "workshop";
+    sel.value = "community";
     const input = getInput(root);
     input.checked = false;
     input.dispatchEvent(new Event("change"));
-    expect(localStorage.getItem("ui-default-page")).toBe("workshop");
+    expect(localStorage.getItem("ui-default-page")).toBe("community");
     expect(sel.disabled).toBe(false);
     expect(busEmit).toHaveBeenCalledWith(
       "toast:show",
@@ -124,7 +134,7 @@ describe("initDefaultPagePrefs — 固定页下拉框", () => {
     const root = makeRoot();
     initDefaultPagePrefs(root);
     const sel = getSel(root);
-    sel.value = "workshop";
+    sel.value = "community";
     sel.dispatchEvent(new Event("change"));
     expect(localStorage.getItem("ui-default-page")).toBeNull();
   });

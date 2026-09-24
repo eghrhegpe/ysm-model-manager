@@ -45,7 +45,7 @@ status: active
 ## 核心职责
 
 - `app-nav.ts` — `<app-nav>` 组件：渲染导航项并绑定点击派发 `nav:changed`（写 localStorage `nav_page` + `bus.emit("nav:changed")`）；监听 `nav:changed` 更新高亮；启动时读 `localStorage.getItem("nav_page")` 恢复页面（旧值 `resources` 兼容映射为 `repository`，默认 `repository`）；经 `getApp()` 调 `GetAppVersion` 异步填充版本号
-- **折叠/展开（`_collapsed` + `data-collapsed`）**：折叠收成 48px 常驻窄条（仅图标 + 展开按钮，`nav-toggle` 常驻可见防意外找不回导航）；折叠态持久化 localStorage `nav_collapsed`（`safeGet`/`safeSet`）；触发区是整行 `.menu-head`（label + 箭头统一响应，`cursor:pointer`，扩大点击范围）；`setCollapsed(collapsed, persist=true)` 公开接口——`persist=false` 不落盘，原留给 workshop 页自动折叠，现无调用方（2026-08-12 移除自动折叠后仅手动路径）
+- **折叠/展开（`_collapsed` + `data-collapsed`）**：折叠收成 48px 常驻窄条（仅图标 + 展开按钮，`nav-toggle` 常驻可见防意外找不回导航）；折叠态持久化 localStorage `nav_collapsed`（`safeGet`/`safeSet`）；触发区是整行 `.menu-head`（label + 箭头统一响应，`cursor:pointer`，扩大点击范围）；`setCollapsed(collapsed, persist=true)` 公开接口——`persist=false` 不落盘，原留给创作者频道页（`community`，旧 id `workshop`，ADR-301）自动折叠，现无调用方（2026-08-12 移除自动折叠后仅手动路径）
 
 ## 对外 API / 入口
 
@@ -69,7 +69,7 @@ status: active
 - `nav:changed` 的派发源头（app-nav 点击/启动恢复、程序化切页方如 app-sidebar/app-tree/repo:search-creator 流程）；高亮状态只由 `nav:changed` 回环驱动，不本地抢跑
 - `app-content` 消费侧同样以 `isValidPage` 拒绝非法 page（P3 口径对齐：app-nav / app-content 两个消费点全守卫，防 `state.current` 写脏 + DnD 遮罩守卫误判）
 - `_unsub` 在 `disconnectedCallback` 清理；localStorage 写入包 try/catch 防隐私模式异常（**读路径 `resolveInitialPage` 同样包 try/catch**，P2 修复：隐私模式 getItem 抛错会使 app-nav/app-content 构造失败）
-- 折叠态是**纯用户手动状态**：2026-08-12 起不再有按页面自动折叠/恢复逻辑（app-content 曾对 workshop 页自动折叠，已移除——避免覆盖用户手动折叠记忆），`nav_collapsed` 只由 `setCollapsed` 手动路径写入
+- 折叠态是**纯用户手动状态**：2026-08-12 起不再有按页面自动折叠/恢复逻辑（app-content 曾对创作者频道页（旧 id `workshop`，现 `community`）自动折叠，已移除——避免覆盖用户手动折叠记忆），`nav_collapsed` 只由 `setCollapsed` 手动路径写入
 - 样式走 CSS 变量（`var(--bg)` / `var(--accent)` 等），动画受 `.no-animations` 全局开关约束
 
 ## 相关

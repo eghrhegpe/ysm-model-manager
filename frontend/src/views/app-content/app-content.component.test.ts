@@ -168,7 +168,7 @@ describe("app-content 生命周期配对", () => {
     onMock.mockClear();
     const el = mountCustomElement("app-content");
     await waitFor(() => el.shadowRoot?.querySelector(".repo-tab") !== null); // init 落定
-    bus.emit("nav:changed", { page: "workshop" });
+    bus.emit("nav:changed", { page: "community" });
     await waitFor(() => onMock.mock.calls.some((c) => c[0] === "config-loaded")); // 正等结果：订阅注册
     expect(onMock).toHaveBeenCalledWith("config-loaded", expect.any(Function));
     const unsub = onMock.mock.results[0]?.value as ReturnType<typeof vi.fn>;
@@ -182,7 +182,7 @@ describe("app-content 生命周期配对", () => {
     onMock.mockClear();
     const el2 = mountCustomElement("app-content");
     await waitFor(() => el2.shadowRoot?.querySelector(".repo-tab") !== null); // init 落定
-    bus.emit("nav:changed", { page: "workshop" });
+    bus.emit("nav:changed", { page: "community" });
     await waitFor(() => onMock.mock.calls.some((c) => c[0] === "config-loaded")); // 正等结果：重新注册
     expect(onMock).toHaveBeenCalledWith("config-loaded", expect.any(Function));
     unmountElement(el2);

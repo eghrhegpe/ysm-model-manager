@@ -27,7 +27,8 @@ export interface PageDefinition {
 export const PAGE_REGISTRY: Record<PageName, PageDefinition> = {
   repository: { html: repositoryHTML, init: initRepositoryPage },
   instances: { html: instancesHTML, init: initInstancesPage },
-  workshop: { html: workshopHTML, init: initWorkshopPage },
+  // 创作者频道页（ADR-301 D1-a：id workshop→community；文件名/函数名暂随 D1-b 一并评估，本次不动）
+  community: { html: workshopHTML, init: initWorkshopPage },
   github: { html: githubHTML, init: initGithubPage },
   diagnostics: { html: diagnosticsHTML, init: initDiagnosticsPage },
   settings: { html: settingsHTML, init: initSettingsPage },

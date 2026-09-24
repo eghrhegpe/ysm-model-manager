@@ -1,9 +1,9 @@
-// ===== E2E 测试：创意工坊页（workshop，ADR-037 覆盖深化）=====
-// 验证导航到创意工坊后的真实交互：
+// ===== E2E 测试：创作者频道页（id=community，ADR-037 覆盖深化；ADR-301 命名归位）=====
+// 验证导航到创作者频道后的真实交互：
 //   1. 站点 tab 动态渲染（mock DefaultWorkshopSites 2 个站点）
 //   2. 默认选中第一个站点（B站）并显示其内容视图
 // 断言基于 data-testid 稳定钩子（ADR-133 阶段 C+：原走 #id，与契约通道脱节）——
-// workshop 组件在 app-content shadowRoot 内。
+// 创作者频道组件在 app-content shadowRoot 内。
 import { expect, type Page, test } from "./fixture.ts";
 import { gotoApp, navItem } from "./helpers.ts";
 
@@ -16,12 +16,12 @@ async function shadowEl(page: Page, testid: string): Promise<string | null> {
   }, testid);
 }
 
-test.describe("创意工坊页", () => {
+test.describe("创作者频道页", () => {
   test.beforeEach(async ({ page }) => {
     await gotoApp(page);
-    // 语义定位（原 nth(2)：导航项显隐/重排即错位，且 workshop→github 结构相近会静默假绿）
-    await navItem(page, "workshop").click();
-    // 等待 workshop 初始化（站点 tab 渲染）
+    // 语义定位（原 nth(2)：导航项显隐/重排即错位，且 community→github 结构相近会静默假绿）
+    await navItem(page, "community").click();
+    // 等待创作者频道初始化（站点 tab 渲染）
     await page.waitForFunction(
       () => {
         const content = document.querySelector("app-content");
@@ -33,7 +33,7 @@ test.describe("创意工坊页", () => {
     );
   });
 
-  test("创意工坊 → 站点 tab 动态渲染（mock 2 站点）", async ({ page }) => {
+  test("创作者频道 → 站点 tab 动态渲染（mock 2 站点）", async ({ page }) => {
     const tabCount = await page.evaluate(() => {
       // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
       const content = document.querySelector("app-content")!;
@@ -53,7 +53,7 @@ test.describe("创意工坊页", () => {
     expect(firstTab).toContain("B站");
   });
 
-  test("创意工坊 → 默认选中第一个站点并显示内容视图", async ({ page }) => {
+  test("创作者频道 → 默认选中第一个站点并显示内容视图", async ({ page }) => {
     // 默认选中第一个 tab（active class）
     const firstActive = await page.evaluate(() => {
       // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
@@ -80,7 +80,7 @@ test.describe("创意工坊页", () => {
     expect(loadingGone).toBe(true);
   });
 
-  test("创意工坊 → 点击 GitHub 站点 tab → 内容切换", async ({ page }) => {
+  test("创作者频道 → 点击 GitHub 站点 tab → 内容切换", async ({ page }) => {
     // 点击第二个 tab（GitHub）
     await page.evaluate(() => {
       // biome-ignore lint/style/noNonNullAssertion: e2e DOM 断言,元素缺失测试即失败
@@ -112,7 +112,7 @@ test.describe("创意工坊页", () => {
     );
   });
 
-  test("创意工坊 → 创作者卡片渲染（mock LoadWorkshopCreators）", async ({ page }) => {
+  test("创作者频道 → 创作者卡片渲染（mock LoadWorkshopCreators）", async ({ page }) => {
     // 等待创作者卡片渲染（site/render.ts createCrCard → .cr-creator-card；
     // 容器不固定，直接查 shadowRoot 内任意卡片）
     await page.waitForFunction(

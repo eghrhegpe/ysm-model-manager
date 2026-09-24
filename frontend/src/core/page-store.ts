@@ -8,7 +8,7 @@ import { safeGet } from "@/utils/base/primitives/storage.ts";
 const VALID_PAGES = [
   "repository",
   "instances",
-  "workshop",
+  "community",
   "github",
   "diagnostics",
   "settings",
@@ -30,10 +30,25 @@ export function isValidPage(v: unknown): v is PageName {
   return typeof v === "string" && (VALID_PAGES as readonly string[]).includes(v);
 }
 
-/** 启动恢复的宽容解析：历史名 resources 映射回 repository，未知值兜底 repository
- *  （仅服务 resolveInitialPage；运行时广播走 isValidPage 严格拒绝） */
-function sanitizePage(v: string | null): PageName {
-  if (v === "resources") return "repository";
+/** 历史页名 → 现名别名表（启动恢复用；ADR-301 D2）。
+ *  - `resources`：早期页名（既有）
+ *  - `workshop`：创作者频道页 ADR-301 D1-a 改名前的 id，归位到 `community`。
+ *    ⚠️ D1-b（`github→workshop`）暂缓，故 `workshop` 当前**不是**任何合法 PageName，
+ *    别名 `workshop→community` 与合法值集无交集 → 历史 `nav_page="workshop"` 无歧义。
+ *    若未来做 D1-b（workshop 重新成为合法值），此别名会与「新 workshop 值」撞语义，
+ *    须同步改用一次性迁移 flag，勿只加映射（见 ADR-301 §2.0a / §2.3）。 */
+const LEGACY_PAGE_ALIASES: Record<string, PageName> = {
+  resources: "repository",
+  workshop: "community",
+};
+
+/** 启动恢复的宽容解析：历史名经别名表归位，未知值兜底 repository
+ *  （服务 resolveInitialPage 与设置页回显；运行时广播走 isValidPage 严格拒绝）。
+ *  导出面：设置页「固定页」下拉框回显 legacy 值时也须过此函数——否则别名迁移
+ *  只治启动读、不治 UI 回显（legacy workshop 存值 + community 选项 = 货不对板）。 */
+export function sanitizePage(v: string | null): PageName {
+  const alias: PageName | undefined = v ? LEGACY_PAGE_ALIASES[v] : undefined;
+  if (alias) return alias;
   return isValidPage(v) ? v : "repository";
 }
 

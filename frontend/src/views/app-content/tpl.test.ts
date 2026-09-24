@@ -151,7 +151,7 @@ describe("app-content 模板", () => {
     expect(optVals).toEqual([
       "repository",
       "instances",
-      "workshop",
+      "community",
       "github",
       "diagnostics",
       "settings",

@@ -20,8 +20,8 @@ test.describe("设置页", () => {
   });
 
   test("导航到创作者频道页", async ({ page }) => {
-    // id="workshop" 的 UI 文案是「创作者频道」（历史命名错位，见 helpers.ts NavPage）
-    const creators = navItem(page, "workshop");
+    // id="community" 的 UI 文案是「创作者频道」（ADR-301 D1-a 命名归位，见 helpers.ts NavPage）
+    const creators = navItem(page, "community");
     await creators.click();
     await expect(creators).toHaveClass(/active/, { timeout: 5000 });
   });

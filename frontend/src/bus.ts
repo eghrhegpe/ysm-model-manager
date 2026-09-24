@@ -30,8 +30,8 @@ export interface MenuItem {
 export type PageName =
   | "repository"
   | "instances"
-  | "workshop"
-  | "github"
+  | "community" // 创作者频道页（ADR-301 D1-a：原 `workshop` 与标签 nav.community 归位；历史值经 sanitizePage 别名迁移）
+  | "github" // 创意工坊页（ADR-301 D1-b 暂缓：id 忠于数据源 GitHub，标签 nav.workshop 表达产品名）
   | "diagnostics"
   | "settings";
 

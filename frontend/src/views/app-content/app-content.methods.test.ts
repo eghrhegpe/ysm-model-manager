@@ -160,7 +160,7 @@ describe("_render — 页面分支", () => {
     unmountElement(el);
   });
 
-  it("settings → .stg-tab；diagnostics/oldest → 诊断页；workshop → #ws-tabs；github → #gh-grid", async () => {
+  it("settings → .stg-tab；diagnostics/oldest → 诊断页；community → #ws-tabs；github → #gh-grid", async () => {
     const el = mountContent();
     await flushAsyncTurns();
     el.state.current = "settings";
@@ -169,7 +169,7 @@ describe("_render — 页面分支", () => {
     el.state.current = "diagnostics";
     el._render();
     expect(el.shadowRoot.querySelector("#diag-tab-logs")).not.toBeNull();
-    el.state.current = "workshop";
+    el.state.current = "community";
     el._render();
     expect(el.shadowRoot.querySelector("#ws-tabs")).not.toBeNull();
     el.state.current = "github";
@@ -405,7 +405,7 @@ describe("事件订阅", () => {
   });
 });
 
-describe("github / workshop 页真实路径（经 _render → PAGE_REGISTRY）", () => {
+describe("github / community 页真实路径（经 _render → PAGE_REGISTRY）", () => {
   it("github 无仓库 → 「暂无 GitHub 仓库」占位", async () => {
     const el = mountCustomElement("app-content") as unknown as ContentEl;
     await flushAsyncTurns();
@@ -449,7 +449,7 @@ describe("github / workshop 页真实路径（经 _render → PAGE_REGISTRY）",
     unmountElement(el);
   });
 
-  it("workshop 空站点 → 不生成 tab；有站点 → 生成 tab + 默认显示第一个", async () => {
+  it("community 空站点 → 不生成 tab；有站点 → 生成 tab + 默认显示第一个", async () => {
     const el = mountCustomElement("app-content") as unknown as ContentEl;
     await flushAsyncTurns();
     vi.mocked(loadCommunityData).mockResolvedValue({
@@ -460,7 +460,7 @@ describe("github / workshop 页真实路径（经 _render → PAGE_REGISTRY）",
       creators: [],
       authors: [],
     });
-    el.state.current = "workshop";
+    el.state.current = "community";
     el._render();
     // initWorkshopPage 用 setTimeout(100) 延迟加载站点——原 sleep(200) 换条件轮询
     await waitFor(() => {
@@ -477,7 +477,7 @@ describe("github / workshop 页真实路径（经 _render → PAGE_REGISTRY）",
     unmountElement(el);
   });
 
-  it("workshop: 创作者数据异步加载 → ref 引用一致性（stale closure 防回归）", async () => {
+  it("community: 创作者数据异步加载 → ref 引用一致性（stale closure 防回归）", async () => {
     // —— 设计意图：本次 bug 就是 initWorkshopTabs 写入的 ref 与 showSiteView 读取的 ref
     // 不是同一个对象实例，导致 tabs 更新了 .v 但视图闭包永远读到原始空数组。
     // 此用例显式断言：loadCommunityData 返回的 creators/authors 被 renderSiteView 收到的
@@ -501,7 +501,7 @@ describe("github / workshop 页真实路径（经 _render → PAGE_REGISTRY）",
       authors: mockAuthors,
     });
 
-    el.state.current = "workshop";
+    el.state.current = "community";
     el._render();
     // 原 sleep(300)：setTimeout(100) 延迟加载 + 内部 async 完成后 renderSiteView 才收到带数据的 ctx——
     // 改条件轮询直接等目标状态（creators/authors 都进入最后一次调用的 ctx），与机器速度解耦
@@ -547,7 +547,7 @@ describe("github / workshop 页真实路径（经 _render → PAGE_REGISTRY）",
         .addEventListener("click", () => ctx.openUrl(site.url));
       return () => {};
     });
-    el.state.current = "workshop";
+    el.state.current = "community";
     el._render();
     // 原 sleep(200)：等 initWorkshopTabs 的 setTimeout(100) 延迟加载落地——改条件轮询
     await waitFor(() => el.shadowRoot.querySelector(".cr-site-card") !== null);

@@ -433,28 +433,28 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
   });
 
   it("启动恢复广播不污染 nav_page（配置默认页≠最后停留页时，恢复值不得写盘）", async () => {
-    // 污染场景：设置项 ui-default-page=settings（优先级①）压过 nav_page=workshop（②）——
+    // 污染场景：设置项 ui-default-page=settings（优先级①）压过 nav_page=community（②）——
     // app-nav 启动恢复广播 nav:changed(settings) 后，handler 若写盘会把「最后停留页」
-    // 篡改成 settings；用户日后清除设置项时恢复点从 workshop 漂移成 settings（静默漂移）。
+    // 篡改成 settings；用户日后清除设置项时恢复点从 community 漂移成 settings（静默漂移）。
     localStorage.setItem("ui-default-page", "settings");
-    localStorage.setItem("nav_page", "workshop");
+    localStorage.setItem("nav_page", "community");
     const { el, root } = mountNav();
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
     await flushAsyncTurns(); // 排空：等启动恢复微任务广播 + handler 处理完（init 落定，非墙钟 sleep）
-    // ⚠️ 负向断言（L444 期望 nav_page 保持 workshop 不被改写）：当前恢复链（connectedCallback→queueMicrotask→同步 handler）
+    // ⚠️ 负向断言（L444 期望 nav_page 保持 community 不被改写）：当前恢复链（connectedCallback→queueMicrotask→同步 handler）
     // 零定时器，排空即走满窗口；若日后恢复链引入 setTimeout，本用例会静默假绿——须改回负向 sleep 或补排空后复断
-    expect(localStorage.getItem("nav_page")).toBe("workshop"); // 缺陷态：被写成 "settings"
+    expect(localStorage.getItem("nav_page")).toBe("community"); // 缺陷态：被写成 "settings"
     unmountElement(el);
   });
 
   it("用户点击导航项仍正常写盘 nav_page（收敛写点不丢真实导航事实）", async () => {
     const { el, root } = mountNav();
     await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
-    // 桌面模式 6 项：[repository, instances, workshop, github, diagnostics, settings]——点 workshop（异值迁移）
+    // 桌面模式 6 项：[repository, instances, community, github, diagnostics, settings]——点 community（异值迁移）
     (getAllByTestId(root, "nav-item")[2] as HTMLElement).click();
-    // 正等结果：写入 nav_page=workshop（初值 null → workshop 真过渡）
-    await waitFor(() => localStorage.getItem("nav_page") === "workshop");
-    expect(localStorage.getItem("nav_page")).toBe("workshop");
+    // 正等结果：写入 nav_page=community（初值 null → community 真过渡）
+    await waitFor(() => localStorage.getItem("nav_page") === "community");
+    expect(localStorage.getItem("nav_page")).toBe("community");
     unmountElement(el);
   });
 });

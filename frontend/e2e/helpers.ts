@@ -6,13 +6,14 @@ import { expect, type Locator, type Page } from "@playwright/test";
 
 /**
  * 导航页 id —— 与 app-nav/index.ts 的 items[].id 同源，渲染为 data-page 属性。
- * 注意历史命名错位（非笔误）：id="workshop" 的 UI 文案是「创作者频道」，
- * id="github" 的 UI 文案才是「创意工坊」。以 id 为准，勿按文案推断。
+ * 命名史（ADR-301）：曾长期 id="workshop"=创作者频道、id="github"=创意工坊（id 与文案错位）。
+ * D1-a 已把创作者频道页 id 归位为 `community`；创意工坊页 id 仍为 `github`（忠于数据源，
+ * 产品名「创意工坊」由标签表达，D1-b 暂缓）。仍以 id 为准定位，勿按文案推断。
  */
 export type NavPage =
   | "repository"
   | "instances"
-  | "workshop"
+  | "community"
   | "github"
   | "diagnostics"
   | "settings";

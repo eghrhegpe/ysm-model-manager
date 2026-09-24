@@ -23,9 +23,9 @@ describe("resolveInitialPage（localStorage 恢复）", () => {
   });
 
   it("设置项启动默认页优先于上次停留页", () => {
-    localStorage.setItem("ui-default-page", "workshop");
+    localStorage.setItem("ui-default-page", "community");
     localStorage.setItem("nav_page", "settings");
-    expect(resolveInitialPage()).toBe("workshop");
+    expect(resolveInitialPage()).toBe("community");
   });
 
   it("仅设置项存在时用设置项", () => {
@@ -48,6 +48,14 @@ describe("resolveInitialPage（localStorage 恢复）", () => {
     expect(resolveInitialPage()).toBe("repository");
   });
 
+  it("历史页面名 workshop 经别名归位 community（ADR-301 D2）", () => {
+    localStorage.setItem("nav_page", "workshop");
+    expect(resolveInitialPage()).toBe("community");
+    localStorage.clear();
+    localStorage.setItem("ui-default-page", "workshop");
+    expect(resolveInitialPage()).toBe("community");
+  });
+
   it("未知值回退仓库页防死页（P2 修复：遗留/损坏 localStorage）", () => {
     localStorage.setItem("ui-default-page", "bogus");
     expect(resolveInitialPage()).toBe("repository");
@@ -68,9 +76,13 @@ describe("resolveInitialPage（localStorage 恢复）", () => {
 
 describe("isValidPage 运行时守卫", () => {
   it("六页合法（与 PageName 联合同源——VALID_PAGES 是类型源）", () => {
-    for (const p of ["repository", "instances", "workshop", "github", "diagnostics", "settings"]) {
+    for (const p of ["repository", "instances", "community", "github", "diagnostics", "settings"]) {
       expect(isValidPage(p)).toBe(true);
     }
+  });
+
+  it("历史名 workshop 不再是合法 PageName（仅存于别名表，ADR-301 D1-a）", () => {
+    expect(isValidPage("workshop")).toBe(false);
   });
 
   it("未知值 / 非字符串拒绝", () => {

@@ -29,7 +29,7 @@ export function navItems(): NavItem[] {
   return [
     { id: "repository", icon: "book", key: "nav.repository" },
     ...(isViewer ? [] : [{ id: "instances", icon: "game", key: "nav.instances" } as NavItem]),
-    { id: "workshop", icon: "appearance", key: "nav.community" },
+    { id: "community", icon: "appearance", key: "nav.community" },
     { id: "github", icon: "parser", key: "nav.workshop" },
     { id: "diagnostics", icon: "tools", key: "nav.diagnostics" },
     { id: "settings", icon: "settings", key: "nav.settings" },

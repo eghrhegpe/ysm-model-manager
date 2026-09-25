@@ -5,6 +5,7 @@ tier: leaf
 adr:
   - ADR-243
   - ADR-306
+  - ADR-309
 category: rendering
 status: active
 source_files:
@@ -118,6 +119,8 @@ invariant_anchors:
 
 VRM 生态长期缺动作：MMD 圈产 `.vmd`、动捕产 FBX，几乎无人专门产 `.vrma`。本卡对应的模块把 **VMD 身体 FK 重定向到 VRM humanoid 归一化骨骼**，让 VRM 预览直接吃 MMD 动作（ADR-243）。
 
+ADR-309 把「锐评 P1-P7」七处播放语义错位收口：P1 切动作先复位（`resetNormalizedPose` + `resetValues`）；P2 lookAt 让道条件 = `animActive && drivesEyes`（带眼轨 VMD 让道，否则盯摄像头）；P3/P5 自动缩放创建期快照 + 原地 rescale（免重读/重解析/换绑）；P4 IK 开关时间轴进采样器（`propertyKeyFrames.ikStates` → `isEnabled`，关闭段 CCD 跳过）；P6 库动作只进列表不自动播（`origin: "local"|"library"`，自动播选首条 local）；P7 表情映射表内容纠错（真顔/ウィーンク 显式不映射，雰囲気 补回 relaxed）。
+
 管线：
 
 ```
@@ -144,17 +147,17 @@ ADR-306 表情通道（P2）：morph 轨道不再整体丢弃——幽灵 morph 
 | `adapters/vrm/vmd-retarget.ts` | 纯逻辑：绑定解析 / 表情映射解析（`collectVmdExpressionMap`）/ 幽灵骨架（骨 + morph 白名单）/ 轨道重写（含 morph 改道）/ 足 IK 目标采样器 |
 | `bone/vrm-foot-ik.ts` | VMD 足ＩＫ → CCD 求解（写**原始骨**，晚于 `vrm.update`）；脚尖链（ADR-306 P1b：`semanticBones["leftToes"/"rightToes"]` + 防乱挂校验，`TOE_IK_CONFIG` 钳制比腿保守） |
 | `bone/leg-chain.ts` | 腿链提取（链根取大腿的**直接父骨**，`endEffectorId` = 足骨），MMD 待机锚地与 VRM 足 IK 共用 |
-| `adapters/vrm/vrm-adapter.ts` | 接入：`loadMotionClips`（同目录 `.vrma` + `.vmd`，追加 `CustomAnim` 动作库；`.vmd` 经 `buildVmdRetargetClip` 传 `expressionManager` 启用表情通道）+ 每帧驱动 |
+| `adapters/vrm/vrm-adapter.ts` | 接入：`loadMotionClips`（同目录 `.vrma` + `.vmd`（local），追加 `CustomAnim` 动作库 `.vmd`（library）；`.vmd` 经 `buildVmdRetargetClip` 传 `expressionManager` 启用表情通道；**ADR-309 D6：自动播只选 local 条目，库动作只进列表**）+ 每帧驱动（**ADR-309 D2：lookAt 让道** `autoUpdate = !(animActive && drivesEyes)`） |
 
 ## 对外 API / 入口
 
-- `buildVmdRetargetClip(vmd, rig, opts)` → `{ clip, report, footIK }`——**主入口**。`rig` 传 `vrm.humanoid`（结构上满足窄接口 `VmdHumanoidRig`）。`opts.expressionManager`（鸭子类型 `VmdExpressionManagerLike`，传 `vrm.expressionManager ?? null` 即启用 ADR-306 表情通道；缺省 null = ADR-243 v1 行为，morph 全丢弃）。
+- `buildVmdRetargetClip(vmd, rig, opts)` → `{ clip, report, footIK, posTracks, drivesEyes }`——**主入口**。`rig` 传 `vrm.humanoid`（结构上满足窄接口 `VmdHumanoidRig`）。`opts.expressionManager`（鸭子类型 `VmdExpressionManagerLike`，传 `vrm.expressionManager ?? null` 即启用 ADR-306 表情通道；缺省 null = ADR-243 v1 行为，morph 全丢弃）。`drivesEyes`（ADR-309 D2）= 该 clip 是否驱动眼骨（leftEye/rightEye quaternion 轨道命中映射表），供每帧 lookAt 让道门控。
 - `resolveVmdBindings(present, rig, expressionMap?)` → `VmdBindingPlan`（诊断面板与测试直读；`expressionMap` 缺省空表）。
 - `collectVmdExpressionMap(present, expressionManager)` → MMD morph 名 → VRM preset（ADR-306 §2.1，`collectVmdMorphNames(vmd)` 喂 present；模型侧存在性过滤：preset 或原名任一解析不出轨道名即不进表）。
 - `rewriteVmdTracks(clip, plan, scale, expressionManager?)` → `{ tracks, droppedTracks, ikTracks }`（第 4 参缺省 = 不做表情改道）。
 - `createVrmFootIKController(boneTree, semanticBones)` → `{ apply(timeSeconds, targets), dispose() }`（semanticBones 含 toes 键时追加脚尖链 CCD）。
 - `autoVmdPositionScale(rig)` → 自动位移缩放（P3 单一事实源：`buildVmdRetargetClip` 缺省回退值 = 按身高外推、失败退 `VMD_POSITION_SCALE_DEFAULT`；校准滑块用它镜像「自动值」显示）。
-- **P3 位移缩放校准（ADR-243 锐评对账）**：`readVmdPositionScale()`/`writeVmdPositionScale(v)`（`vrm-adapter.ts`，经 `safeGet/safeSet/safeRemove` 持久化 `vmd.positionScale`，ADR-044）+ `rebuildVmdMotionClips(...)`（重建 `.vmd` 重定向 clip 并按 label 换绑活动 action，`.vrma` 条目对象保留不重放）。菜单走 MenuNode schema：`vrmMenuItems` 在 `o.positionScale.vmdCount>0` 时注入 `kind:"slider"` 节点（`onCommit` 松手才触发持久化 + 重建，拖动过程 `set` 空操作抑制）+ 复位按钮（清持久化回自动）。
+- **P3 位移缩放校准（ADR-309 D5：锐评 P3/P5 收口）**：`readVmdPositionScale()`/`writeVmdPositionScale(v)`（`vrm-adapter.ts`，经 `safeGet/safeSet/safeRemove` 持久化 `vmd.positionScale`，ADR-044）+ `rescaleVmdMotionClips(motion, k)`（**原地**重缩放全部 VMD 位移轨道，O(值总数)，零 IO / 零重解析 / 零换绑——轨道 values 被 mixer interpolant 与 IK 采样器共享引用，下一帧即生效）。菜单走 MenuNode schema：`vrmMenuItems` 在 `o.positionScale.vmdCount>0` 时注入 `kind:"slider"` 节点（拖动 `set` 逐 tick 实时 rescale，`onCommit` 松手才落盘持久化）+ 复位按钮（清持久化回创建期 `autoPositionScale` 快照）。
 - 接入点：`vrm-adapter.ts` 的 `loadMotionClips()`；每帧在 `update()` 中**晚于** `vrm.update(dt)` 调 `vrmFootIK.apply(action.time, clip.footIK)`。表情轨道进 clip 后无需额外每帧代码——`vrm.update(dt)` 内的 `expressionManager.update()` 消费 `VRMExpression_*.weight`。
 - **采样源不变量（review 64c24cf3e P1 修复，1dc31247d）**：足 IK 的 targets 必须按 **live action 实播 clip** 反查（`motionClips.find(c => c.clip === motionClipOf(action))`），而非独立维护的索引——索引与 mixer 实际播放脱钩时（`select` 切动作后），身体 FK 与腿 IK 会来自不同动作，脚底打滑。`VrmMotionState.motionIdx` 已删除（脱钩根源）。
 - **three r185 API 注**：`AnimationAction` 的 `.clip` 属性已移除，clip 经**公开方法 `action.getClip()`** 读取；本仓统一走 `motionClipOf()`（vrm-adapter.ts），勿直接碰 three 私有字段 `_clip`（无跨版本契约，升级即静默失配）。
@@ -178,9 +181,13 @@ ADR-306 表情通道（P2）：morph 轨道不再整体丢弃——幽灵 morph 
 6. **写归一化骨 = 天然落在 `vrm.update()` 之前**（FK 通道）；足 IK 写**原始骨**则必须晚于它（归一化 → 原始是单向烘焙）。表情轨道同理：mixer 写 `VRMExpression_*.weight`，`vrm.update()` 内 `expressionManager.update()` 消费——每帧顺序契约零改动。
 7. **映射表覆盖性**：`VMD_RETARGET_CANDIDATES` 与 `VMD_RETARGET_UNMAPPED` 的并集须覆盖 `VRMHumanBoneList` 全 55 项——VRM 侧新增骨骼时靠这条测试拦住静默漏映射。
 8. **表情改道原地改名、不重建、不新造驱动器**（ADR-306 §2.2）：morph 轨道经 `expressionManager.getExpressionTrackName`（鸭子 `VmdExpressionManagerLike`）换成 `VRMExpression_<preset>.weight`，解析序 preset 优先、MMD 原名自定义表情兜底；模型缺该表情（两路都解析不出轨道名）→ 不进改道表 → 上游白名单跳过 → 计入 `droppedTracks`。感知层眨眼在 `animActive` 下由 `perceptionPauseRef` 自查静默（ADR-306 §2.3，不新增门控）。
-9. **位移缩放 k 在加载时 bake 进位移轨道（`scaleTranslationTrack`），非运行期旋钮**（ADR-243 锐评对账 P3）：改 k = 重跑 `buildVmdRetargetClip`（`rebuildVmdMotionClips`）+ 按 label 换绑活动 action。故校准滑块**只在 onCommit（松手）触发重建**、拖动过程抑制（`set` 空操作），避免每 tick 重解析 VMD。自动值单一事实源 = `autoVmdPositionScale`（`buildVmdRetargetClip` 回退与滑块显示共用，防两份算法漂移）。持久化走 `safeGet/safeSet`（`vmd.positionScale`，ADR-044）；`.vrma` 条目对象保留不重放（只换 `.vmd` 子集）。**菜单归属**：`vrm-adapter.ts|vmdPositionScaleNodes` 产出的滑块 + 复位须挂 `vrma-play` 面板 `children`（叶子层）——根项白名单只允许 panel/action/divider（`check-menu-health` 的 ROOT_KINDS），写成根项既违规又不可达（`motionDetailView` 只列 `kind==="panel"` 的 motion 项），面板 children 两通道皆空时才回退 `VRM_PLAY_EMPTY_NODE` 空态。
+9. **位移缩放 k 在加载时 bake 进位移轨道（`scaleTranslationTrack`），改值走 `rescaleVmdMotionClips` 原地改写**（ADR-309 D5 锐评 P3/P5 收口）：轨道 values 被 mixer interpolant 与 IK 采样器共享引用（three `KeyframeTrack.createInterpolant` 构造时持 `track.values`），原地改写下一帧即生效，**免重读、免重解析、免换绑 action**（同一 action 对象存活，播放进度不重置）。`raw` 快照（烘焙前 k=1 原值）存在 `VmdPositionTrackHandle`，任意 k 换算 = `base + (raw − base) × k`，可逆、免 kOld。自动值单一事实源 = `autoVmdPositionScale`（创建期快照 `autoPositionScale`，`loadMotionClips` 首帧 mixer.update 前读归一化骨 rest 位姿，全生命周期复用，防动画中途重读被污染）。持久化走 `safeGet/safeSet`（`vmd.positionScale`，ADR-044）；`.vrma` 条目无位移句柄（posTracks 空），天然不受影响。**菜单归属**：`vrm-adapter.ts|vmdPositionScaleNodes` 产出的滑块 + 复位须挂 `vrma-play` 面板 `children`（叶子层）——根项白名单只允许 panel/action/divider（`check-menu-health` 的 ROOT_KINDS），面板 children 两通道皆空时才回退 `VRM_PLAY_EMPTY_NODE` 空态。**拖动实时**：滑块 `set` 逐 tick 调 `rescaleVmdMotionClips`，`onCommit` 松手才落盘；`resetToAuto` = 清持久化 + rescale 回 `autoPositionScale`。
+10. **P2 lookAt 让道**（ADR-309 D2）：`vrm.lookAt.autoUpdate` 每帧 = `!(animActive && currentEntry.drivesEyes)`。带眼轨（leftEye/rightEye quaternion）的 VMD 动作 → lookAt 早退（`VRMLookAt.update` 官方实现），眼骨完全交给 mixer；无眼轨/待机态 → lookAt 照常盯摄像头。`drivesEyes` 由重定向器按绑定表 eye 骨 uuid + clip 轨道匹配判定（非字符串猜测）。`.vrma` 条目恒 false（官方 clip 无眼轨）。
+11. **P4 IK 开关时间轴**（ADR-309 D4）：`extractVmdIkTimeline` 从 `vmd.propertyKeyFrames[].ikStates`（`[boneName, enabled][]`）提取单侧开关段表（`{ from, to, on }[]`，升序无重叠）。MMD 侧该骨 IK 关闭的段落 → `FootIKSampler.isEnabled(t)` 返回 false → `vrm-foot-ik.ts` 的 CCD `apply` 跳过该侧（足回 FK 自然位，与 MMD 关 IK 表现一致）。全程 on（最常见）退化为单段 `[0, Infinity)`，零额外成本；>512 keyframes 性能护栏退化为全程 on。无 `propertyKeyFrames` 数据（旧 VMD / `.vrma`）→ `isEnabled` 缺省 = 全程启用，行为不变。
+12. **P6 库动作不自动播**（ADR-309 D6）：`VrmMotionClipEntry.origin`（`"local"` = 模型同目录 / `"library"` = MMD 动作库 CustomAnim）+ `path`。`loadMotionClips` 自动播语义：有 local 条目（`.vrma`/local `.vmd`）⇒ 播首条 local；仅 library 条目 ⇒ **不自动播**（白模待机），库动作只出现在选择列表，由用户显式 select。理由：CustomAnim 是跨模型共享资产（配布条款雷区），自动播 = 替用户做出处置。
+13. **P1 切动作先复位**（ADR-309 D1）：`select` 切换动作：`stop()` 旧 action → `vrm.humanoid.resetNormalizedPose()`（归一化骨回 rest）→ `vrm.expressionManager?.resetValues()`（表情权重清零）→ 新 action `play()`。防未覆盖骨残留旧姿势（横移 MMD 侧 `skeleton.pose()` + `action.reset()` 纪律）。同 index 早退不复位（`play-bridge` select 的 `curIdx === i` 短路）。
 
 ## 相关
 
-- ADR-243（重定向决策 + 足 IK 推导 + 两期实施注记）、ADR-306（VMD morph → VRM expression 表情通道，含 P1b 脚尖链 CCD）、ADR-081（语义骨骼层）、ADR-231（preview-3d adapters 层）、ADR-242（菜单空态）
-- 知识卡：`bone-tools.md`、`ysm-anim-pipeline.md`、`3d-patterns.md`
+- ADR-243（重定向决策 + 足 IK 推导 + 两期实施注记）、ADR-306（VMD morph → VRM expression 表情通道，含 P1b 脚尖链 CCD）、**ADR-309（锐评 P1-P7 播放语义收口）**、ADR-081（语义骨骼层）、ADR-231（preview-3d adapters 层）、ADR-242（菜单空态）、ADR-230（代际守卫唯一出口）
+- 知识卡：`bone-tools.md`、`ysm-anim-pipeline.md`、`3d-patterns.md`、`model3d.md`、`preview_core.md`

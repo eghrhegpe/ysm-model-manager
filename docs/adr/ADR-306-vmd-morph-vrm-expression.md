@@ -60,15 +60,15 @@ v1 覆盖（preset → MMD 候选名，顺序即优先级）：
 | VRM preset | MMD 候选名 |
 |---|---|
 | `aa` / `ih` / `ou` / `ee` / `oh` | `あ` / `い` / `う` / `え` / `お` |
-| `blink` | `まばたき`、`ウィンク`（双侧 wink 都映 blink，权重相同时近似闭眼） |
+| `blink` | `まばたき`（*ADR-309 D7 修正：`ウィンク`/`ウインク` 移除——MMD 配布里绝大多数是**单眼**，映双眼 blink 会两眼错闭；单眼 wink 归二期 `blinkLeft`/`blinkRight`*） |
 | `happy` | `笑い`、`にこり`、`にっこり`、`笑顔` |
-| `angry` | `怒り`、`真顔`、`怒り顔` |
+| `angry` | `怒り`、`怒り顔`（*ADR-309 D7 修正：`真顔` 移除——MMD 作者用 `真顔` 表示「清脸/恢复默认」，非生气；VRM preset 无对应物*） |
 | `sad` | `悲しい`、`困る`、`困り顔`、`悲しい顔` |
-| `relaxed` | `なごみ`、`雰囲気`、`照れ` |
+| `relaxed` | `なごみ`、`雰囲気`、`照れ`（*ADR-309 D7 补正：`雰囲気` 原文即有，代码落地时漏收，已补回*） |
 | `surprised` | `びっくり`、`驚き` |
 | `neutral` | — （不映射：neutral 语义是「素颜基准」，驱动它会压掉其他表情） |
 
-不映射的 preset 显式记原因（与骨骼表的 `VMD_RETARGET_UNMAPPED` 同法）。**blink 族特例**：`ウィンク右`/`ウインク` 等单眼眨眼在 VRM 有 `blinkLeft`/`blinkRight`，v1 只映射双眼 `blink`，单眼归已知遗留（MMD 单眼 wink 帧较少见，收益/复杂度比不划算）。
+不映射的 preset 显式记原因（与骨骼表的 `VMD_RETARGET_UNMAPPED` 同法）。**blink 族特例**（*ADR-309 D7 修正*）：`ウィンク右`/`ウインク` 等单眼眨眼在 VRM 有 `blinkLeft`/`blinkRight`，v1 只映射双眼 `blink`（`まばたき`），单眼 wink 归二期已知遗留（MMD 单眼 wink 帧较少见，收益/复杂度比不划算；且无左右标注的 `ウィンク` 配布里多为单眼，映双眼 blink 反成视觉错误）。
 
 ### 2.2 摘轨改道在重定向器内完成（不改上游、不新建驱动器）
 
@@ -90,7 +90,7 @@ VMD 表情帧里的 `まばたき` 与感知层眨眼（`blink.ts`）语义撞�
 
 **Out（明确不在本次）**：
 - **自定义表情名**：VRM 模型带非 preset 自定义 expression 时，映射表不覆盖（preset 表是封闭集，自定义名要读模型才知道，收益小）；
-- **单眼 wink**（`blinkLeft`/`blinkRight`）：MMD 单眼 wink 帧少见，归已知遗留；
+- **单眼 wink**（`blinkLeft`/`blinkRight`）：MMD 单眼 wink 帧少见，归已知遗留（*ADR-309 D7 起 `ウィンク`/`ウインク` 亦不再映双眼 blink，单眼 wink 统一归二期*）；
 - **MMD 侧 morph 面板联动**：MMD 适配器自己的 morph 通道不走本表；
 - **口型感知层（lipSync）**：VMD 有口型帧时同样由轨道驱动，`animActive` 互斥已覆盖。
 

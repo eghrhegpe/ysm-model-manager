@@ -1084,8 +1084,8 @@ perf:
 - `frontend/src/preview-3d/` — 全部 3D 渲染工具
 - `frontend/src/views/app-preview/model3d-loader.ts` — 模型加载入口
 - `frontend/src/views/app-preview/skeleton.ts` — 2D 预览 + 3D 升级
-- 知识卡：`preview_core`、`3d_patterns`、`export`
-- ADR-129（3D 渲染层升格）、ADR-178（能力接口拆分）、ADR-101（纹理缓存 + release 模式）、ADR-136（纹理加载器归位）
+- 知识卡：`preview_core`、`3d_patterns`、`export`、`vmd_vrm_retarget`
+- ADR-129（3D 渲染层升格）、ADR-178（能力接口拆分）、ADR-101（纹理缓存 + release 模式）、ADR-136（纹理加载器归位）、ADR-309（VRM 播 VMD 播放语义收口）
 
 ---
 

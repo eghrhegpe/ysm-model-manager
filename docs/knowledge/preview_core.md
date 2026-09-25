@@ -385,8 +385,8 @@ pitfalls:
 - `frontend/src/preview-3d/caps/` — 10 个场景能力
 - `frontend/src/views/app-preview/skeleton.ts` — 2D 骨骼渲染 + 单例 3D overlay 钩子
 - `frontend/src/views/app-preview/preview-library.ts` — 3D 全屏路由
-- 知识卡：`app_preview`、`model3d`、`3d_patterns`、`pointer_events`
-- ADR-066（统一预览核心）、ADR-178（能力接口拆分）、ADR-093（多模型同框）、ADR-073（能力注册表）
+- 知识卡：`app_preview`、`model3d`、`3d_patterns`、`pointer_events`、`vmd_vrm_retarget`
+- ADR-066（统一预览核心）、ADR-178（能力接口拆分）、ADR-093（多模型同框）、ADR-073（能力注册表）、ADR-309（VRM 播 VMD 播放语义收口：lookAt 让道 / IK 开关时间轴 / 库动作不自动播）
 
 ---
 

@@ -43,6 +43,24 @@
 **已知遗留**：
 - `PAGE_REGISTRY` 的 `html()` 签名保留为「首次挂载渲染」兼容，不强制一次性迁移全部页面；可先迁移高频页（repository/settings），低频页维持现状（惰性挂载 + 首次 show 渲染）。
 
+## 3.5 边界澄清（2026-09-25 收债拍板）：重连语义归属各组件自担
+
+「常驻」指**面板节点缓存**（app-content 不重建 `.page` DOM），不等于**组件跳过生命周期**：
+同页重放 `nav:changed` 与跨页往返仍会触发面板 detach/attach，断连/重连回调完整执行
+（appendChild 对已挂载节点是 DOM move）。由此两条边界：
+
+- **app-tree：重连恢复视觉、不省加载**。滚动位置经 scroll 持续快照、重连后回写（补齐
+  §3「滚动位置跨页保留」承诺——断连回调时元素已分离，scrollTop 恒读 0，只能在滚动事件
+  里持续记录）；搜索词回填 input（过滤态本就按存活的 state.search 渲染，回填仅消除
+  「框空但结果已过滤」的显示失同步）。`_load()` 照跑：树不消费 watcher 增量，重连加载是
+  分离期间文件变更的唯一补采口，不可为省 RPC 而跳过。
+- **app-preview：重连即重置为瞬态空壳（有意例外）**。断连已释放 WebGL（PREVIEW_CLEANUP），
+  不做「重连重驱上次模型」——切页返回自动重载 WASM/纹理是浪费，且「上次选中」可能早已
+  过时；详情随 `model:select` 驱动，树侧选中态跨页保留，回来一点即回。
+
+同页重放短路（缓存面板仍 isConnected 时 `_render` 直接 return）已消除冗余重挂的主源头，
+见知识卡 `app-content.md`。
+
 ## 4. 数据溯源
 
 - 2026-08-26 `frontend_repo_audit.md`：dedup 模块级全局竞态隐患点名。

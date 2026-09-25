@@ -84,7 +84,7 @@
 |------|------|----|
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 134 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 132 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 138 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 283 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 307 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 319 |
@@ -204,13 +204,13 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 577 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 617 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
 | initPerfPanel | `frontend/src/views/app-content/diagnostics/perf.ts` | 222 |
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 83 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 88 |
 
 ### `nav:changed`
 
@@ -222,7 +222,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 266 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 263 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 269 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 87 |
 
 **订阅方（on）：**
@@ -236,8 +236,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 84 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 249 |
+| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 90 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 255 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -323,7 +323,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 358 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 315 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 317 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 223 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 242 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 98 |
@@ -350,14 +350,14 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 140 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 161 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 162 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 154 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 155 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -486,7 +486,7 @@
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 42 |
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 67 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 125 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 131 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 42 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 75 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 94 |
@@ -494,13 +494,13 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 167 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 157 |
 | beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 120 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 254 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 260 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 266 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 298 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 304 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 309 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 318 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 256 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 262 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 268 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 300 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 306 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 311 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 320 |
 | _showError | `frontend/src/views/app-sync-manager/index.ts` | 267 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 52 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 60 |
@@ -534,11 +534,11 @@
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 500 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 510 |
 | toastThrottled | `frontend/src/views/app-tree/index.ts` | 70 |
-| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 325 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 500 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 508 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 630 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 637 |
+| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 365 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 540 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 548 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 670 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 677 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | runImport | `frontend/src/views/app-tree/toolbar-commands.ts` | 60 |
@@ -579,7 +579,7 @@
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 112 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 318 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -596,7 +596,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 252 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 270 |
 
 ### `ui:card-density`
 

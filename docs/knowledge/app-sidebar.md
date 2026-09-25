@@ -36,6 +36,7 @@ auto_fields:
     - sidebarCSS
     - SidebarHost
     - SidebarInstance
+    - SYNC_TYPE_ALL
     - VIEW_TESTIDS
   tests:
     - frontend/src/features/community/data.test.ts

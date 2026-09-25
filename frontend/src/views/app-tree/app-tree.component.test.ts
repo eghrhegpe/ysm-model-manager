@@ -72,4 +72,40 @@ describe("app-tree 生命周期配对", () => {
     await sleep(150);
     expect(loadSpy).not.toHaveBeenCalled(); // 订阅已随 disconnectedCallback 清理
   });
+
+  it("重连 → 滚动位置与搜索词恢复（ADR-163「滚动位置跨页保留」承诺补齐）", async () => {
+    // 条目带 abc 前缀：搜索过滤后仍有内容，滚动位置恢复不被空态清零
+    loadSpy.mockResolvedValue({
+      filesRoot: "/repo",
+      entries: Array.from({ length: 5 }, (_, i) => ({
+        name: `abc_model_${i}.ysm`,
+        path: `abc_model_${i}.ysm`,
+        fullPath: `/repo/abc_model_${i}.ysm`,
+        size: 1024,
+        modTime: 0,
+        banned: false,
+        type: "ysm",
+      })),
+    });
+    const el = mountCustomElement("app-tree");
+    await waitFor(() => el.shadowRoot?.getElementById("tree") !== null);
+    await sleep(100); // 等 _load + _renderTree 落定
+    // 制造视觉状态：搜索词经 input 事件同步入 state（setSearch 同步，防抖只管重渲染）
+    const srch = el.shadowRoot?.getElementById("srch") as HTMLInputElement;
+    srch.value = "abc";
+    srch.dispatchEvent(new Event("input", { bubbles: true }));
+    // 滚动快照：程序化 set scrollTop 不派发 scroll 事件（真实浏览器/测试同口径需真实滚动流），
+    // 手动 dispatch 模拟；快照监听在 connectedCallback 注册、随断连退订
+    const tree = el.shadowRoot?.getElementById("tree") as HTMLElement;
+    tree.scrollTop = 120;
+    tree.dispatchEvent(new Event("scroll"));
+    // 断开重连（模拟切页往返的面板 detach/attach）
+    el.remove();
+    document.body.appendChild(el);
+    await waitFor(() => el.shadowRoot?.getElementById("tree") !== null); // 重挂完成
+    await sleep(150); // 等 _load + _renderTree + 恢复
+    expect((el.shadowRoot?.getElementById("srch") as HTMLInputElement).value).toBe("abc");
+    expect(el.shadowRoot?.getElementById("tree")?.scrollTop).toBe(120);
+    unmountElement(el);
+  });
 });

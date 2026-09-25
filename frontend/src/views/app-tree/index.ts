@@ -88,8 +88,14 @@ export class AppTree extends WebComponentBase {
   private _shortcutOffs: Array<() => void> = [];
   /** 批量删除进行中（防连点 Delete 二次触发） */
   private _deleting = false;
-  /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更） */
+  /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更；重连时为 true，
+   *  connectedCallback 借它走「恢复」分支而非从零起步） */
   private _ready = false;
+  /** 分离前树滚动位置快照（重连恢复，补齐 ADR-163「滚动位置跨页保留」承诺）：
+   *  常驻面板 detach/attach 仍走完整断连/重连，_renderLayout + _renderTree 重建 DOM
+   *  把 scrollTop 归零——用户「切页回来滚到顶」。数据新鲜度不在此省：树不消费 watcher
+   *  增量，重连 _load 是分离期间文件变更的唯一补采口，只恢复视觉不跳过加载 */
+  private _savedScrollTop = 0;
   /** root 属性切换代际守卫（ADR-230）：快速切换时丢弃过期加载的渲染 */
   _guard = createLoadGuard();
 
@@ -215,6 +221,8 @@ export class AppTree extends WebComponentBase {
     // 挂载代际捕获：二次挂载时若 root 在途被切换（attributeChangedCallback 已推进代际），
     // 丢弃本代过期 _load 的渲染，防旧类型数据覆盖新树（绑定逻辑不受影响，容器不变）
     const gen = this._guard.next();
+    // 重连判据（disconnected→connected 同实例：_ready 已置位）——恢复分离前视觉状态
+    const isRemount = this._ready;
 
     Object.assign(this._state.dirOpen, safeGetJSON<Record<string, boolean>>("dirOpenState", {}));
 
@@ -236,6 +244,16 @@ export class AppTree extends WebComponentBase {
       // 事件委托绑定（只一次，虚拟滚动换 innerHTML 仍有效）
       const treeEl = this._root.getElementById("tree");
       if (treeEl) this._unsubs.push(bindTreeEvents(treeEl, this));
+
+      // 滚动位置持续快照（随 _unsubs 断连退订）：断连回调触发时元素已分离、scrollTop
+      // 恒读 0——分离前最后一次机会只有滚动事件本身，故在此持续记录，重连时恢复
+      if (treeEl) {
+        const onTreeScroll = (): void => {
+          this._savedScrollTop = treeEl.scrollTop;
+        };
+        treeEl.addEventListener("scroll", onTreeScroll);
+        this._unsubs.push(() => treeEl.removeEventListener("scroll", onTreeScroll));
+      }
 
       // 键盘快捷键（走 key-router 注册表单点分发，ADR-308 D1 收编：原 document 手挂
       // listener 已退役；提前注册——异步 _load 期间 disconnect 也能经
@@ -264,7 +282,12 @@ export class AppTree extends WebComponentBase {
       await this._load();
       // 挂载期间 root 在途切换（attributeChangedCallback 已推进代际）→ 丢弃本代渲染
       //（不 return：事件绑定/订阅与渲染解耦，容器不变，后续逻辑照常执行）
-      if (!this._guard.stale(gen)) this._renderTree();
+      if (!this._guard.stale(gen)) {
+        this._renderTree();
+        // 重连恢复滚动位置（搜索词回填一并进行）——须在本代渲染成功上屏后；catch 失败态
+        // 与属性快照差补载路径不恢复（前者无位置可回、后者 root/subdir 已变旧位置失义）
+        if (isRemount) this._restoreRemountState();
+      }
       // 时序收敛（审计 c）：root/subdir 在挂载期间切换 → 快照差量触发补载最新值，
       // 取代原 _pendingRoot 事后纠错（原实现 attributeChanged 未 ready 分支不推进代际，
       // 首代渲染不被丢弃 → 需 pendingRoot 补载纠错 + 未连接 setAttribute 冗余双加载）。
@@ -274,11 +297,28 @@ export class AppTree extends WebComponentBase {
       }
     } catch (e) {
       logError("app-tree", "Init Error", e);
+      // 失败态树无位置可回：清快照防陈旧值污染下次重连恢复
+      this._savedScrollTop = 0;
       const tree = this._root?.getElementById("tree");
       if (tree) tree.innerHTML = treeLoadFailedHTML();
       toastThrottled(e, t("tree.treeLoadFailed"));
     } finally {
       this._ready = true;
+    }
+  }
+
+  /** 重连恢复分离前视觉状态（补齐 ADR-163「滚动位置跨页保留」承诺）：
+   *  滚动位置回写 + 搜索词回填。过滤结果本就按 _state.search 渲染（实例存活、_renderLayout
+   *  不触碰 state），回填 input 只是消除「框空但结果已过滤」的显示失同步，不 dispatch 事件。 */
+  private _restoreRemountState(): void {
+    const treeEl = this._root.getElementById("tree");
+    if (treeEl && this._savedScrollTop > 0) {
+      treeEl.scrollTop = this._savedScrollTop;
+    }
+    this._savedScrollTop = 0;
+    if (this._state.search) {
+      const srch = this._root.getElementById("srch") as HTMLInputElement | null;
+      if (srch) srch.value = this._state.search;
     }
   }
 

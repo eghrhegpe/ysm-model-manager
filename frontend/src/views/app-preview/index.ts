@@ -75,6 +75,11 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
   }
 
   connectedCallback(): void {
+    // 重连即重置为空壳是**有意为之的瞬态语义**（ADR-163 边界声明，2026-09 拍板）：
+    // 常驻面板 detach/attach 走完整断连/重连，此处 _render 清壳 + disconnectedCallback
+    // 的 PREVIEW_CLEANUP 已释放 WebGL——不做「重连重驱上次模型」（getLastModelPath）
+    // 是刻意不加：切页返回自动重载 WASM/纹理是浪费，且「上次选中」可能早已过时。
+    // 详情随选中驱动（model:select），树侧选中态跨页保留，回来一点即回。
     this._render();
 
     // 跨生命周期防累积（对齐 app-tree:107 的 connected 重置范式）

@@ -689,6 +689,8 @@
   "sidebar.pullFailed": "Pull failed: {msg}",
   "sidebar.packSkipped": "{n} skipped (sync in progress)",
   "sidebar.packTimedOut": "{n} timed out",
+  "sidebar.pushSkippedReason": "Push skipped (a sync is already in progress): {ins}/{rt}",
+  "sidebar.pushTimeoutReason": "Push timed out: {ins}/{rt}",
   "resource.loadFailed": "Resource load failed",
   "rtype.pack": "Resource Pack",
   "rtype.shader": "Shader Pack",

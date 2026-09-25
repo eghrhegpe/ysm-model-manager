@@ -689,6 +689,8 @@
   "sidebar.pullFailed": "プルに失敗: {msg}",
   "sidebar.packSkipped": "{n} スキップ（同期中）",
   "sidebar.packTimedOut": "{n} タイムアウト",
+  "sidebar.pushSkippedReason": "プッシュがスキップされました（同期が進行中）：{ins}/{rt}",
+  "sidebar.pushTimeoutReason": "プッシュがタイムアウトしました：{ins}/{rt}",
   "resource.loadFailed": "リソース読み込み失敗",
   "rtype.pack": "リソースパック",
   "rtype.shader": "シェーダーパック",

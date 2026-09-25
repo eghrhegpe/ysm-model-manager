@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **304** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **305** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 6 |
+| [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
 | [✅ 已采纳](#已采纳) | 275 |
@@ -26,10 +26,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（6）
+### 📝 提议中（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-307](./ADR-307-settings-page-p2-hardening.md) | 设置页 P2 硬化：tab 样式去重 / viewer 区块缺席告知 / 非 3D 设置项 schema 化 | 📝 提议中 |
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
@@ -359,6 +360,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-307 | 设置页 P2 硬化：tab 样式去重 / viewer 区块缺席告知 / 非 3D 设置项 schema 化 | 📝 提议中 | 2026-09-25 |
 | ADR-306 | VMD morph 重定向到 VRM expression（表情通道） | ✅ 已采纳 | 2026-09-24 |
 | ADR-305 | preview-3D 菜单命名脱钩裁定：三命名族稳定契约 | ✅ 已采纳 | 2026-09-24 |
 | ADR-304 | 3D 预览设置持久化边界：机器本地 localStorage，不入 Go config 重置/迁移范围 | ✅ 已采纳 | 2026-09-24 |

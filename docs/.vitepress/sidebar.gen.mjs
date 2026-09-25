@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-307：设置页 P2 硬化：tab 样式去重 / viewer 区块缺席告知 / 非 3D 设置项 schema 化",
+        "link": "/adr/ADR-307-settings-page-p2-hardening"
+      },
+      {
         "text": "ADR-306：VMD morph 重定向到 VRM expression（表情通道）",
         "link": "/adr/ADR-306-vmd-morph-vrm-expression"
       },

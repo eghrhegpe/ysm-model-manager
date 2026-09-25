@@ -127,7 +127,7 @@ function setupRecycleActions(
           if (guard.stale(opGen)) return;
           if (item) item.classList.remove("leaving");
           btn.disabled = false;
-          opts.onShowToast(`❌ ${friendlyError(e)}`, TOAST_ACTION_ERR_MS, "error");
+          opts.onShowToast(friendlyError(e), TOAST_ACTION_ERR_MS, "error");
         }
       };
     });
@@ -186,12 +186,12 @@ function onRecycleEmptyClick(opts: {
     try {
       const { EmptyRecycleBin } = await opts.getApp();
       const n = Number(await EmptyRecycleBin("")) || 0; // 旧桥可能返回 undefined，兜底防「undefined 个文件」
-      opts.onShowToast(`♻️ ${opts.t("recycle.cleared", { n })}`, TOAST_EMPTY_OK_MS, "success");
+      opts.onShowToast(opts.t("recycle.cleared", { n }), TOAST_EMPTY_OK_MS, "success");
       opts.loadRecycleBin();
       bus.emit("stats:refresh");
       bus.emit("tree:reload");
     } catch (e) {
-      opts.onShowToast(`❌ ${friendlyError(e)}`, TOAST_EMPTY_ERR_MS, "error");
+      opts.onShowToast(friendlyError(e), TOAST_EMPTY_ERR_MS, "error");
     } finally {
       opts.setEmptyBusy(false);
     }

@@ -208,14 +208,14 @@ function cmDqHandleQueueEnded(ctx: CmDqCtx, s: DownloadState): void {
     wrap.className = "gh-queue-error-wrap";
     const title = document.createElement("div");
     title.className = "gh-queue-error";
-    title.innerHTML = `${UI_ICONS.warning} ${t("downloadQueue.failedListTitle", { n: s.errorList.length })}`;
+    title.innerHTML = `${UI_ICONS.error} ${t("downloadQueue.failedListTitle", { n: s.errorList.length })}`;
     wrap.appendChild(title);
     for (const e of s.errorList.slice(0, 5)) {
       const item = document.createElement("div");
       item.className = "gh-queue-err-item";
       // renderDisplayName 为受信任格式化（内部已 esc 原文），ctx.esc(err) 转义用户
       // 数据——拼接无注入面（与 render.ts buildModelRow 的 nameSpan 同款模式）
-      item.innerHTML = `❌ ${renderDisplayName(e.name)}: ${ctx.esc(e.err)}`;
+      item.innerHTML = `${UI_ICONS.error} ${renderDisplayName(e.name)}: ${ctx.esc(e.err)}`;
       wrap.appendChild(item);
     }
     if (s.errorList.length > 5) {
@@ -229,7 +229,7 @@ function cmDqHandleQueueEnded(ctx: CmDqCtx, s: DownloadState): void {
   if (cancelled) {
     const cancelSpan = document.createElement("span");
     cancelSpan.className = "gh-queue-cancel";
-    cancelSpan.innerHTML = `${UI_ICONS.stop} ${t("downloadQueue.cancelled")}`;
+    cancelSpan.innerHTML = `${UI_ICONS.close} ${t("downloadQueue.cancelled")}`;
     cmDqCleanupProgressUI(ctx, summary || cancelSpan);
   } else {
     cmDqCleanupProgressUI(ctx, summary || undefined);

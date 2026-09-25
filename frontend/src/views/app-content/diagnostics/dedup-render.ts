@@ -76,14 +76,14 @@ ${rtResult.icon} ${rtResult.label}
 
       html += `<div class="diag-dedup-group">
 <div class="diag-dedup-group-head">
-<span>${UI_ICONS.attach} ${t("diagnostics.group", { n: gi + 1 })}</span>
+<span>${UI_ICONS.folder} ${t("diagnostics.group", { n: gi + 1 })}</span>
 <span class="diag-dedup-group-fill"></span>
 <span class="diag-dedup-group-info">${t("diagnostics.groupInfo", { n: files.length, size: totalSize })}</span>
 </div>`;
       html += renderGroupFilesHtml(files, defaultIdx, gi, esc);
       html += `<label class="diag-dedup-keep-all">
 <input type="radio" name="dedup-keep-${gi}" value="-1" class="diag-dedup-radio">
-<span class="diag-dedup-keep-all-label">${UI_ICONS.shuffle} ${t("diagnostics.keepAll")}</span>
+<span class="diag-dedup-keep-all-label">${UI_ICONS.save} ${t("diagnostics.keepAll")}</span>
 </label>`;
       html += `</div>`;
     }

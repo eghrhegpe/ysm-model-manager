@@ -102,6 +102,8 @@ function atTlBindViewMode(ctx: AtTlCtx): void {
   if (!viewModeBtn) return;
   // 图标一律走 UI_ICONS 常量 + 三元选择（红线 R8 白名单形态，勿拼模板串）；
   // 原 textContent="☰"/"▦" 文本字符在绑定瞬间处决模板渲染的 SVG，双轨打架（ADR-238 结案）
+  // 借用说明：图标集无独立「列表」语义名（2026-09 审计登记），列表态借用 menu（☰
+  // 即列表/汉堡）；图标集补入 list 字形后改此处与 icon-map 对拍，勿擅改。
   const applyViewModeIcon = (mode: RenderMode): void => {
     const icon = mode === "list" ? UI_ICONS.grid : UI_ICONS.menu;
     viewModeBtn.innerHTML = icon;

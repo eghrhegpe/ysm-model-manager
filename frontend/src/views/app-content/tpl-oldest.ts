@@ -98,7 +98,7 @@ function renderOldestCardsHtml(sorted4: ModelEntry[]): string {
           renderDisplayName(e.Name) +
           "</div>" +
           '<div class="oldest-card-meta"><span>' +
-          UI_ICONS.ruler +
+          UI_ICONS.package +
           " " +
           formatBytes(e.Size) +
           "</span><span>" +
@@ -213,7 +213,7 @@ export function renderOldestPage(entries: ModelEntry[], stats: RepoStats): strin
     totalFiles +
     "</span>" +
     '<span class="oldest-stat-pill">' +
-    UI_ICONS.ruler +
+    UI_ICONS.package +
     " " +
     formatBytes(totalSize) +
     "</span>" +
@@ -229,7 +229,7 @@ export function renderOldestPage(entries: ModelEntry[], stats: RepoStats): strin
     "</span></div></div>" +
     '<div class="oldest-section">' +
     '<div class="oldest-section-title">' +
-    UI_ICONS.rank +
+    UI_ICONS.oldest +
     " " +
     t("repo.tab.oldest") +
     "</div>" +

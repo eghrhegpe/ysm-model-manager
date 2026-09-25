@@ -136,7 +136,7 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
       presets.length
     })</span><span class="cr-section-fill"></span><button id="cr-mode-toggle" class="cr-mode-switch">` +
     modeOpt("cr-mode-ext", "external", UI_ICONS.external, "content.modeExternal") +
-    modeOpt("cr-mode-emb", "embed", UI_ICONS.search, "content.modeEmbed") +
+    modeOpt("cr-mode-emb", "embed", UI_ICONS.web, "content.modeEmbed") +
     modeOpt("cr-mode-win", "window", UI_ICONS.window, "content.modeWindow") +
     `</button></div>` +
     `<div class="cr-preset-area">` +

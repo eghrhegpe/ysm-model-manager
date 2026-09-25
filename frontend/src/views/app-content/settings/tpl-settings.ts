@@ -549,7 +549,7 @@ function renderStgFontFamily(startMs: number, cardStep: number): string {
     ],
     { startMs, step: cardStep },
   );
-  return `<div class="section-title stg-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
+  return `<div class="section-title stg-title">${UI_ICONS.edit} ${t("settings.font.title")}</div>
 <div class="stg-grid">
   ${fontCards}
 </div>`;
@@ -640,7 +640,7 @@ function renderStgPreview3d(startMs: number, cardStep: number): string {
     .join("\n        ");
 
   const camSpeedCard = stgCard(
-    UI_ICONS.video,
+    UI_ICONS.camera,
     t("settings.preview3d.camSpeed"),
     `<div class="setting-row" style="background:none;padding:var(--sp-vh-pane);animation:none">
       <input type="range" id="td-camspeed" min="${TD_CAM_SPEED.min}" max="${TD_CAM_SPEED.max}" value="${TD_CAM_SPEED.default}" style="flex:1;accent-color:var(--accent,#7c83ff)">
@@ -749,7 +749,7 @@ export function settingsHTML(): string {
 
   // 语言卡归「外观」（显示偏好），排在字体与布局之后、行为与动画之前
   // 外观 tab：主题选择器（行组）→ 主题自动（行组）→ 字体三卡（卡组 cardCount 3）→ 语言 → 动画
-  const appearanceBody = `<div class="section-title stg-title">${UI_ICONS.moon} ${t("settings.theme.title")}</div>
+  const appearanceBody = `<div class="section-title stg-title">${UI_ICONS.appearance} ${t("settings.theme.title")}</div>
 
 ${stgUnits([
   { render: (startMs) => renderStgThemePicker(startMs) },

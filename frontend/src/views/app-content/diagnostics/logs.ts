@@ -49,7 +49,7 @@ const OP_META: Record<string, { label: string; icon: string }> = {
   sync: { label: t("diagnostics.opSync"), icon: UI_ICONS.refresh },
   rename: { label: t("diagnostics.opRename"), icon: UI_ICONS.edit },
   delete: { label: t("diagnostics.opDelete"), icon: UI_ICONS.delete },
-  ui: { label: t("diagnostics.opUI"), icon: UI_ICONS.warning },
+  ui: { label: t("diagnostics.opUI"), icon: UI_ICONS.menu },
 };
 
 /** 未知 op 回退到通用标签，避免显示裸英文 */
@@ -252,7 +252,7 @@ function dgLsFilterRuntimeLogs(logs: RuntimeLogLike[], root: ShadowRoot): Runtim
     });
 }
 
-/** 运行时日志状态图标：按推断 Level 映射（与操作日志 dgLsMakeStatusLabel 同口径；无 Level 时 joystick 兜底） */
+/** 运行时日志状态图标：按推断 Level 映射（与操作日志 dgLsMakeStatusLabel 同口径；无 Level 时 note 兜底） */
 function dgLsRuntimeStatusIcon(l: RuntimeLogLike): { icon: string; cls: string } {
   switch (l.Level) {
     case "error":
@@ -266,7 +266,7 @@ function dgLsRuntimeStatusIcon(l: RuntimeLogLike): { icon: string; cls: string }
     case "info":
       return { icon: UI_ICONS.success, cls: "info" };
     default:
-      return { icon: UI_ICONS.joystick, cls: "unknown" };
+      return { icon: UI_ICONS.note, cls: "unknown" };
   }
 }
 

@@ -5,7 +5,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { formatBytes } from "@/utils/format/format.ts";
-import { ICONS } from "@/utils/icon/workshop-icons.ts";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -149,7 +149,7 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
   // P4（审核发现）：`m.size || 0` 属 truthiness 数值判断，按数值守卫范式用 ?? 0
   sizeSpan.textContent = formatBytes(m.size ?? 0);
   metaCell.appendChild(sizeSpan);
-  const searchBtn = createIconBtn(ICONS.SEARCH, "search-bili", t("workshop.bilibiliSearch"));
+  const searchBtn = createIconBtn(UI_ICONS.search, "search-bili", t("workshop.bilibiliSearch"));
   searchBtn.dataset.testid = "gh-search-bili";
   metaCell.appendChild(searchBtn);
   row.appendChild(metaCell);
@@ -160,10 +160,10 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
   if (exists) {
     const badge = document.createElement("span");
     badge.className = "gh-badge";
-    badge.innerHTML = `${ICONS.CHECKMARK} ${t("workshop.exists")}`;
+    badge.innerHTML = `${UI_ICONS.success} ${t("workshop.exists")}`;
     actionsCell.appendChild(badge);
   } else {
-    const dlBtn = createIconBtn(ICONS.DOWNLOAD, "download");
+    const dlBtn = createIconBtn(UI_ICONS.download, "download");
     dlBtn.classList.add("gh-dl-btn");
     dlBtn.dataset.testid = "gh-dl";
     dlBtn.dataset.url = dlPrefix + m.path.replace(/\\/g, "/");

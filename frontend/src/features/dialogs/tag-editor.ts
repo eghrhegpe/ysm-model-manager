@@ -93,7 +93,7 @@ function dgTeBuildBoxHTML(modelPath: string): string {
     </div>
 
     <details class="te-suggest-details">
-      <summary class="te-suggest-summary">${UI_ICONS.clipboard} ${t("dialog.existingTags")}</summary>
+      <summary class="te-suggest-summary">${UI_ICONS.tag} ${t("dialog.existingTags")}</summary>
       <div id="te-suggest" class="te-suggest-wrap"></div>
     </details>
 

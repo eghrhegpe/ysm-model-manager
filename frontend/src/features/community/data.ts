@@ -89,17 +89,17 @@ function buildFetchModelsAttempts(repo: string, mirror: MirrorStrategy): FetchAt
     {
       name: "raw",
       url: `https://raw.githubusercontent.com/${repo}/main/index.json`,
-      label: "⏳ 正在连接 raw.githubusercontent.com…",
+      label: "正在连接 raw.githubusercontent.com…",
     },
     {
       name: "jsd",
       url: `https://cdn.jsdelivr.net/gh/${repo}@main/index.json`,
-      label: "⏳ 正在连接 cdn.jsdelivr.net…",
+      label: "正在连接 cdn.jsdelivr.net…",
     },
     {
       name: "api",
       url: `https://api.github.com/repos/${repo}/contents/index.json`,
-      label: "⏳ 正在连接 api.github.com…",
+      label: "正在连接 api.github.com…",
     },
   ];
   if (mirror === "jsdelivr") return [attempts[1], attempts[0], attempts[2]];
@@ -221,7 +221,7 @@ export async function tryFetchModels(
 ): Promise<FetchModelsResult> {
   // 构造三个镜像源并按策略排序
   const sorted = buildFetchModelsAttempts(repo, mirror);
-  if (onProgress) onProgress(10, "⏳ 连接镜像源…");
+  if (onProgress) onProgress(10, "连接镜像源…");
 
   // 竞速期间共享状态（fetchModelsOne 写 / 延时启动与汇总读）；整体 ctrl 统一取消：
   // 成功胜出与 raw404 确定性早退都走 ctrl.abort()，在途 fetch 与延时启动同步终止
@@ -232,7 +232,7 @@ export async function tryFetchModels(
   };
   const TIMEOUT = 8000;
 
-  if (onProgress) onProgress(10, "⏳ 发出首个请求…");
+  if (onProgress) onProgress(10, "发出首个请求…");
 
   // 延时并发：第一个请求立即发出，后续每 2 秒启动一个（不等前一个完成）
   // 兼顾速度（jsDelivr 可能 1 秒内响应）和带宽（不一次性发 3 个请求）
@@ -241,12 +241,12 @@ export async function tryFetchModels(
   // 唤醒且下方 aborted 检查拦截，不再发出迟到/孤儿请求
   const p2 = delayUntil(2000, state.ctrl.signal).then(() => {
     if (state.ctrl.signal.aborted) throw new Error("race settled");
-    if (onProgress) onProgress(30, "⏳ 发出第二个请求…");
+    if (onProgress) onProgress(30, "发出第二个请求…");
     return fetchModelsOne(sorted[1], state, TIMEOUT);
   });
   const p3 = delayUntil(4000, state.ctrl.signal).then(() => {
     if (state.ctrl.signal.aborted) throw new Error("race settled");
-    if (onProgress) onProgress(50, "⏳ 发出第三个请求…");
+    if (onProgress) onProgress(50, "发出第三个请求…");
     return fetchModelsOne(sorted[2], state, TIMEOUT);
   });
 
@@ -254,7 +254,7 @@ export async function tryFetchModels(
   try {
     const result = await Promise.any([p1, p2, p3]);
     state.ctrl.abort(); // 胜出：终止仍在途/未启动的请求
-    if (onProgress) onProgress(100, "✅ 加载完成");
+    if (onProgress) onProgress(100, "加载完成");
     // 过滤回收站条目：.recycle 段下的"已删/待清理"文件不进下载列表（防下载剥段平铺根 + 语义上本就不该下载）
     return {
       models: (result.models as Array<{ path?: unknown }>).filter(

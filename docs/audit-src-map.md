@@ -15,7 +15,7 @@
 |----|------|
 | `avatar/` | 创作者头像提取与缓存 〔源码 7: avatar.go avatar_decode.go avatar_extract.go avatar_extract_container.go avatar_extract_json.go a… · 测试 6 · 子目录 1: testdata/〕 |
 | `ccheck/` | 契约核验工具（emit/parity 测试支撑） 〔源码 1: ccheck.go · 测试 2〕 |
-| `cli/` | CLI 命令（脱离 GUI 的模型管理/诊断/缓存操作，入口 main.go 经 cli.RunCLI 接线） 〔源码 28 · 测试 18〕 |
+| `cli/` | CLI 命令（脱离 GUI 的模型管理/诊断/缓存操作，入口 main.go 经 cli.RunCLI 接线） 〔源码 32 · 测试 29〕 |
 | `conc/` | 通用泛型并行工具（`Parallel[T,R]`，worker 池 + 序号还原，预期收敛 `internal/app` 三处手写并发） 〔源码 1: pool.go · 测试 1〕 |
 | `config/` | 运行阈值配置共享单持有点（ADR-091 D12：atomic 存 provider，取代 4 包各自 configFunc） 〔源码 1: config.go · 测试 1〕 |
 | `container/` | 统一容器桥接层（zip/7z/目录 Entry-Reader 抽象，ADR-068） 〔源码 2: container.go encoding.go · 测试 4〕 |
@@ -23,11 +23,11 @@
 | `download/` | 纯下载逻辑（不依赖 Wails runtime） 〔源码 1: download.go · 测试 8〕 |
 | `executil/` | 外部进程工具（HideWindow 平台双实现，收敛自三处副本） 〔源码 2: hidewindow_other.go hidewindow_windows.go · 测试 3〕 |
 | `fileops/` | 文件操作 + 预览提取 + 包信息（ADR-003 P3 下沉） 〔源码 4: fileops.go fileops_enable.go fileops_preview.go folder_import.go · 测试 10〕 |
-| `fsutil/` | 目录遍历工具（WalkDir 集中管理） 〔源码 11: b64.go bom.go copy.go crossdevice_other.go crossdevice_windows.go format.go hardlink_other.go har… · 测试 12〕 |
+| `fsutil/` | 目录遍历工具（WalkDir 集中管理） 〔源码 12: b64.go bom.go copy.go crossdevice_other.go crossdevice_windows.go dirsize.go format.go hardlink_o… · 测试 13〕 |
 | `geometry/` | Bedrock Geometry JSON 解析（ZIP/7z 提取，防炸弹限制） 〔源码 4: archive.go maid_l0.go parse.go ysm_parser.go · 测试 19 · 子目录 1: testdata/〕 |
 | `importer/` | 资源导入策略接口与内置实现 〔源码 3: detect_tail.go importer.go importer_file.go · 测试 12〕 |
 | `installer/` | 模型安装 〔源码 2: installer.go lock_tracker.go · 测试 6〕 |
-| `instance/` | 整合包实例同步状态组装（ADR-003 补充下沉） 〔源码 2: instance.go sync_items_cache.go · 测试 3〕 |
+| `instance/` | 整合包实例同步状态组装（ADR-003 补充下沉） 〔源码 3: instance.go status_counts.go sync_items_cache.go · 测试 4〕 |
 | `internal/` | Go 内部工具（testutil 测试工具） 〔子目录 1: testutil/〕 |
 | `launcher/` | 桌面启动器（HMCL/PCL/Minecraft）实例自动检测 〔源码 1: detect.go · 测试 1〕 |
 | `litematic/` | Litematica 投影文件 (.litematic) 解析与预览数据 〔源码 10: bedrock.go block_colors.go block_ids.go block_ids_data.go nbt.go palette.go parser.go schematic.g… · 测试 9 · 子目录 1: gen/〕 |
@@ -37,11 +37,11 @@
 | `recycle/` | 回收站管理 〔源码 2: recycle.go recycle_clean.go · 测试 12〕 |
 | `repoaudit/` | 仓库健康审计核心（GUI 绑定层与 CLI 共用，防双轨口径漂移） 〔源码 1: repoaudit.go · 测试 3〕 |
 | `rustbridge/` | Windows Rust 扫描 DLL 的嵌入、校验、加载与窄 ABI 适配层 〔源码 7: bridge_cgo.go bridge_windows.go common.go doc.go embedded_windows.go types.go types_windows.go · 测试 1 · 子目录 2: bin/ static-lib/〕 |
-| `scanner/` | 模型扫描 + 作者提取 + 仓库索引（ADR-003 P2 Logic Sinking） 〔源码 3: rust_backend.go rust_backend_stub.go scanner.go · 测试 15〕 |
-| `sync/` | 整合包同步 〔源码 9: conflict.go sync.go sync_cache.go sync_diff.go sync_dirlevel.go sync_discovery.go sync_hash.go sy… · 测试 21〕 |
+| `scanner/` | 模型扫描 + 作者提取 + 仓库索引（ADR-003 P2 Logic Sinking） 〔源码 4: rust_backend.go rust_backend_stub.go scan_engine.go scanner.go · 测试 16〕 |
+| `sync/` | 整合包同步 〔源码 9: conflict.go sync.go sync_cache.go sync_diff.go sync_dirlevel.go sync_discovery.go sync_hash.go sy… · 测试 22〕 |
 | `tags/` | 模型标签持久化存储 〔源码 1: tags.go · 测试 4〕 |
 | `texture_cache/` | 纹理缓存管理（KTX2/PNG 缓存，支持后台编码与快速命中） 〔源码 1: texture_cache.go · 测试 2〕 |
-| `threejs/` | 3D 骨骼计算（对齐 YSMViewer 口径） 〔源码 3: spec-bones.go spec-cube.go spec.go · 测试 7〕 |
+| `threejs/` | 3D 骨骼计算（对齐 YSMViewer 口径） 〔源码 3: spec-bones.go spec-cube.go spec.go · 测试 8〕 |
 | `types/` | 共享类型 + 注册表 〔源码 3: bedrock.go config.go types.go · 测试 5 · 子目录 1: registry/〕 |
 | `updater/` | 自动更新 〔源码 3: updater.go updater_other.go updater_windows.go · 测试 8〕 |
 | `version/` | 版本号 〔源码 1: version.go · 测试 1〕 |
@@ -56,7 +56,7 @@
 
 | 包 | 用途 |
 |----|------|
-| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 44 · 测试 45 · 子目录 1: install/〕 |
+| `app/` | Wails Binding 入口（app.go / resource_bindings.go） 〔源码 44 · 测试 46 · 子目录 1: install/〕 |
 
 <!-- /GEN: internal-structure -->
 
@@ -72,10 +72,10 @@
 | `locales/` | 前端 i18n 多语言资源包（en.ts / ja.ts / zh-CN.ts），UI 文案按语言加载的 locale JSON 〔源码 3: en.ts ja.ts zh-CN.ts〕 |
 | `parsers/` | 前端解析簇（ADR-170 下沉）：YSM 头/NBT/资源包元数据/体素颜色/纹理提取 〔源码 15 · 测试 9〕 |
 | `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 1: deferred.ts · 子目录 14: adapters/ bone/ caps/ decoder/ infra/ materials/ menu/ mesh/ model/ screenshot/ shader-patches/ state/ texture/ vendor/〕 |
-| `services/` | 服务注册（registry.ts） 〔源码 2: cli-bridge.ts resource-registry.ts · 测试 2〕 |
+| `services/` | 服务注册（registry.ts） 〔源码 1: cli-bridge.ts · 测试 1〕 |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） 〔源码 14 · 测试 5〕 |
 | `utils/` | 工具函数（display / fmt / dom / icon / summarize / model3d） 〔源码 2: health-report.ts types-re-export.ts · 测试 1 · 子目录 12: animation/ async/ base/ cache/ debug/ dom/ format/ html/ icon/ model-name/ resource/ storage/〕 |
-| `views/` | 页面级视图组件（app-content / app-tree / app-preview 等） 〔源码 1: backend-deps.ts · 子目录 9: app-content/ app-nav/ app-preview/ app-sidebar/ app-sync-manager/ app-toast/ app-tree/ context-menu/ css/〕 |
+| `views/` | 页面级视图组件（app-content / app-tree / app-preview 等） 〔源码 2: backend-deps.ts config-write.ts · 测试 1 · 子目录 9: app-content/ app-nav/ app-preview/ app-sidebar/ app-sync-manager/ app-toast/ app-tree/ context-menu/ css/〕 |
 | `wasm/` | WASM 生成数据（base64 豁免文件） 〔源码 9: parser-shared.ts ysm-glue-data-mt.js ysm-glue-data.js ysm-parser.ts ysm-wasm-data-mt.d.ts ysm-was… · 测试 2〕 |
 | `workers/` | Web Worker 批量统计（searchWebModels 数值条件走 Worker 线程，主线程零解析负载） 〔源码 4: coi-sw.ts stats-core.ts stats-protocol.ts stats.worker.ts · 测试 3〕 |
 | `app-modules.boot.test.ts` | app-modules 本体 boot 级启动装配测试（vi.resetModules 反复求值顶层副作用：服务注册/四视图装配/启动 IIFE 降级/系统主题跟随/devtools 接线） |
@@ -85,6 +85,9 @@
 | `bus.ts` | 事件总线 |
 | `startup-reveal.test.ts` | 首屏显示时序与幂等行为回归测试 |
 | `startup-reveal.ts` | 桌面端首屏就绪后再显示窗口，避免启动阶段旧 UI 或黑色背景闪现 |
+| `static-a11y-labels.test.ts` | ⚠️ 用途待补（在 docs/audit-src-map.md 本表补一句） |
+| `static-a11y-labels.ts` | ⚠️ 用途待补（在 docs/audit-src-map.md 本表补一句） |
+| `theme-core.test.ts` | ⚠️ 用途待补（在 docs/audit-src-map.md 本表补一句） |
 | `theme-core.ts` | 主题系统核心（normalizeTheme / applyTheme / initTheme + 隐私模式兜底） |
 
 <!-- /GEN: frontend-structure -->
@@ -106,7 +109,6 @@
 | `SOUL.md` | Agent 人格定义（Who You Are） |
 | `TOOLS.md` | Agent 本地工具/环境纪要（skills 上层个性化） |
 | `USER.md` | 用户画像记录（autoclaw human-profile schema） |
-| `audit-report.md` | 用户指南 vs 前端实际功能审计快照（非正式文档，一次性产物） |
 | `creators.json` | 创作者数据 |
 | `embed.go` | 内嵌资源声明（embed 文件系统） |
 | `main.go` | 程序入口（薄壳，GUI 构建） |

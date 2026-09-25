@@ -211,7 +211,7 @@ function dgCfBuildSyncConflictRows(conflicts: DgCfFileConflict[], esc: EscFn): s
 <span class="conflict-ver">${conflictTypeLabel}</span>
 </div>`;
     html += `<div class="conflict-ins" style="animation-delay:${delay + 15}ms">
-&nbsp;&nbsp;📏 ${esc(String(c.localSize))} ↔ ${esc(String(c.remoteSize))} | 💡 ${suggestedLabel}
+&nbsp;&nbsp;${UI_ICONS.package} ${esc(String(c.localSize))} ↔ ${esc(String(c.remoteSize))} | ${UI_ICONS.hint} ${suggestedLabel}
 </div>`;
   });
   return html;
@@ -247,16 +247,17 @@ async function dgCfExecuteResolve(
       });
       return;
     }
-    let resultMsg = `✅ ${t("diagnostics.resolvedCount", { n: result.resolved || 0 })}`;
+    // 内容仅 t() 文案 + 后端数字（可信），图标走 UI_ICONS SVG（ADR-238）——单次 innerHTML
+    // 赋值（非 +=）无注入面，也不触发「读改写」反模式
+    let resultMsg = `${UI_ICONS.success} ${t("diagnostics.resolvedCount", { n: result.resolved || 0 })}`;
     if (result.failed > 0)
-      resultMsg += ` | ❌ ${t("diagnostics.failedCount", { n: result.failed })}`;
+      resultMsg += ` | ${UI_ICONS.error} ${t("diagnostics.failedCount", { n: result.failed })}`;
     if (result.manual > 0)
-      resultMsg += ` | ⚠️ ${t("diagnostics.manualCount", { n: result.manual })}`;
-    // appendChild + textContent：杜绝「读改写 innerHTML +=」反模式（每次全量重解析 + 未来引入用户可写串时的注入面）
+      resultMsg += ` | ${UI_ICONS.warning} ${t("diagnostics.manualCount", { n: result.manual })}`;
     const okDiv = document.createElement("div");
     okDiv.className = "stat-row diag-msg diag-msg-success";
     okDiv.style.marginTop = "12px";
-    okDiv.textContent = resultMsg;
+    okDiv.innerHTML = resultMsg;
     list.appendChild(okDiv);
     // 1.5s 后自动复扫（resolve 后刷新冲突态）。守卫：用户已离开诊断页（list 分离）
     // 则作废这次迟到的复扫——省一次后端 RPC，也避免向分离 DOM 写 innerHTML。
@@ -269,7 +270,7 @@ async function dgCfExecuteResolve(
     const errDiv = document.createElement("div");
     errDiv.className = "stat-row diag-msg diag-msg-error";
     errDiv.style.marginTop = "12px";
-    errDiv.textContent = `❌ ${String(err)}`; // textContent 天然防注入，无需 esc()
+    errDiv.innerHTML = `${UI_ICONS.error} ${esc(String(err))}`; // 图标走 SVG；err 为后端消息，esc() 防注入
     list.appendChild(errDiv);
   }
 }

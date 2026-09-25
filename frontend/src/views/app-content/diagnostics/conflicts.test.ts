@@ -398,7 +398,9 @@ describe("同步冲突解决（do-resolve-btn）", () => {
     await waitFor(() => expect(list.querySelector("#do-resolve-btn")).toBeTruthy());
     (list.querySelector("#do-resolve-btn") as HTMLElement).click();
     await waitFor(() => expect(list.textContent).toContain("网络中断"));
-    expect(list.innerHTML).toContain("❌");
+    // msgRowHTML(error) 外壳自带 error SVG；断言用稳定前缀片段（浏览器 innerHTML 归一会
+    // 自关闭标签 → `<circle …/>` 与 `<circle …></circle>` 形态不一，避免直接比整串 SVG）
+    expect(list.innerHTML).toContain('<circle cx="12" cy="12" r="10"');
     expect(detectFn).toHaveBeenCalledTimes(1); // 无复扫
   });
 

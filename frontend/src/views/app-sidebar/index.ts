@@ -6,8 +6,6 @@ import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import { sidebarCSS } from "./sidebar-css.ts";
 
 // 模块级样式表（shadow 根装配，含 HMR 注册；见 utils/dom/shadow-style.ts）。
@@ -16,7 +14,6 @@ const appSidebarStyle = createShadowStyle(sidebarCSS, "app-sidebar");
 
 export { appSidebarStyle };
 
-import { t } from "@/core/i18n/t.ts";
 import { bindPackCardDnD } from "@/features/dnd/pack-dnd.ts";
 import type { SidebarInstance } from "./data.ts";
 import { bindCardEvents, bindFooter, type SidebarHost } from "./events.ts";
@@ -93,15 +90,6 @@ class AppSidebar extends WebComponentBase {
     if (name === "rtype" && oldVal !== newVal && newVal) {
       this._rtype = newVal;
       this._reload();
-      // 更新导入按钮文字
-      const btn = this._root.querySelector(".sidebar-import-all");
-      if (btn) {
-        btn.innerHTML =
-          UI_ICONS.import +
-          " " +
-          t("sidebar.installAll") +
-          (RESOURCE_TYPE_LABELS[this._rtype] || t("format.resources"));
-      }
     }
   }
 

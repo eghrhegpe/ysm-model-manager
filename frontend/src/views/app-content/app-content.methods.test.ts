@@ -587,7 +587,7 @@ describe("github / community 页真实路径（经 _render → PAGE_REGISTRY）"
     // renderSiteView mock：渲染可交互卡片 + 模式切换按钮（真实实现内部同样绑定 ctx.openUrl）
     vi.mocked(renderSiteView).mockImplementation((site, ctx) => {
       ctx.searchResults.innerHTML =
-        `<button id="cr-mode-toggle"><span class="cr-mode-opt cr-mode-ext active">${UI_ICONS.external} 外链</span><span class="cr-mode-opt cr-mode-emb">${UI_ICONS.search} 内嵌</span><span class="cr-mode-opt cr-mode-win">${UI_ICONS.window} 窗口</span></button>` +
+        `<button id="cr-mode-toggle"><span class="cr-mode-opt cr-mode-ext active">${UI_ICONS.external} 外链</span><span class="cr-mode-opt cr-mode-emb">${UI_ICONS.web} 内嵌</span><span class="cr-mode-opt cr-mode-win">${UI_ICONS.window} 窗口</span></button>` +
         `<div class="cr-site-card">${site.label}</div>`;
       ctx.searchResults
         .querySelector(".cr-site-card")!

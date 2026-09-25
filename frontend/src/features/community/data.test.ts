@@ -97,7 +97,7 @@ describe("tryFetchModels 成功路径（并发竞速取最快）", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       "https://raw.githubusercontent.com/owner/repo/main/index.json",
     );
-    expect(progress).toHaveBeenCalledWith(100, "✅ 加载完成");
+    expect(progress).toHaveBeenCalledWith(100, "加载完成");
   });
 
   it("mirror='jsdelivr'：jsd 源作为首个请求", async () => {

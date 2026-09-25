@@ -7,6 +7,11 @@ import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
 import { bus } from "@/bus";
 import type { SyncItem } from "./tpl.ts";
 
+// UI_ICONS 断言片段：浏览器 innerHTML 归一自关闭标签（`<polyline …/>` → `<polyline …></polyline>`），
+// 整串 toContain 匹配不到，统一用「class + 开标签」稳定前缀片段做断言。
+const CHEVRON_DOWN_SNIP = '<svg class="ws-icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"';
+const CHEVRON_RIGHT_SNIP = '<svg class="ws-icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"';
+
 // getApp 全绑定 mock（P1 修复：mocks 提为 vi.hoisted 可引用，原内联 vi.fn 无法精确断言）
 const { mocks } = vi.hoisted(() => {
   const mocks = {
@@ -226,7 +231,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // 文件夹行仍在，且箭头变为 ▾（dirs 数不变——children 是 .sm-file 行）
     dirs = el.querySelectorAll(".sm-dir");
     expect(dirs.length).toBe(3);
-    expect((dirs[0] as HTMLElement).querySelector(".sm-dir-arrow")?.textContent).toBe("▾");
+    expect((dirs[0] as HTMLElement).querySelector(".sm-dir-arrow")?.innerHTML).toContain(CHEVRON_DOWN_SNIP);
     // 展开后 SceneModel 的 children 行（舞台）以 .sm-file 渲染，data-path 为完整路径
     const filesAfter = Array.from(el.querySelectorAll(".sm-file")).map((f) => (f as HTMLElement).dataset.path || "");
     expect(filesAfter).toEqual(expect.arrayContaining(["SceneModel/舞台.pmx"]));
@@ -417,7 +422,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     await waitFor(() => el.querySelectorAll(".sm-file").length === 2);
     dirs = el.querySelectorAll(".sm-dir");
     const arrow = (dirs[0] as HTMLElement).querySelector(".sm-dir-arrow");
-    expect(arrow?.textContent).toBe("▾");
+    expect(arrow?.innerHTML).toContain(CHEVRON_DOWN_SNIP);
     expect(el.querySelectorAll(".sm-file").length).toBe(2);
     expect(Array.from(el.querySelectorAll(".sm-file")).map((f) => f.textContent || "")).toEqual(
       expect.arrayContaining([expect.stringContaining("建筑.nbt"), expect.stringContaining("建筑.schematic")]),
@@ -427,7 +432,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // 正等结果：折叠后 children 隐藏（.sm-file 归零）
     await waitFor(() => el.querySelectorAll(".sm-file").length === 0);
     dirs = el.querySelectorAll(".sm-dir");
-    expect((dirs[0] as HTMLElement).querySelector(".sm-dir-arrow")?.textContent).toBe("▸");
+    expect((dirs[0] as HTMLElement).querySelector(".sm-dir-arrow")?.innerHTML).toContain(CHEVRON_RIGHT_SNIP);
     expect(el.querySelectorAll(".sm-file").length).toBe(0);
     unmountElement(el);
   });
@@ -794,7 +799,7 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // 正等结果：展开后 children 渲染 1 行
     await waitFor(() => el.querySelectorAll(".sm-file").length === 1);
     expect(el.querySelectorAll(".sm-file").length).toBe(1);
-    expect(el.querySelector(".sm-dir .sm-dir-arrow")?.textContent).toBe("▾");
+    expect(el.querySelector(".sm-dir .sm-dir-arrow")?.innerHTML).toContain(CHEVRON_DOWN_SNIP);
     unmountElement(el);
   });
 });

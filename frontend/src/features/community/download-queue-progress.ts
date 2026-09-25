@@ -230,7 +230,7 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
       if (s.errorList.length > 0) {
         summary = document.createElement("div");
         summary.className = "gh-queue-error";
-        summary.innerHTML = `${UI_ICONS.warning} ${t("downloadQueue.failedCount", { n: s.errorList.length })}`;
+        summary.innerHTML = `${UI_ICONS.error} ${t("downloadQueue.failedCount", { n: s.errorList.length })}`;
       }
       ctx.onTimedCompletion(summary);
     }, COMPLETE_DELAY_MS);

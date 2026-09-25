@@ -270,7 +270,7 @@
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 120 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 303 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 116 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 115 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 305 |
 
 ### `repo:search-creator`
@@ -333,7 +333,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 108 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 107 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 285 |
 
 ### `sync:download:done`
@@ -544,7 +544,7 @@
 | runImport | `frontend/src/views/app-tree/toolbar-commands.ts` | 178 |
 | runImport | `frontend/src/views/app-tree/toolbar-commands.ts` | 196 |
 | runToolbarCommand | `frontend/src/views/app-tree/toolbar-commands.ts` | 219 |
-| atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 137 |
+| atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 139 |
 | advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 182 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 201 |
 | advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 231 |

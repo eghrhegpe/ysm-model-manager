@@ -94,6 +94,9 @@ export const UI_ICONS = {
   upload: svg(
     '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
   ),
+  // ⚠️ 字形与 download 逐字节相同（📥 与 ⬇️ 在现行图标集共用同一下载轮廓）——
+  // 2026-09 图标审计登记项：若要区分「导入」语义须换独立字形，届时先改此处，
+  // 再经 scripts/_lib/icon-map.ts + tests/test_ui_icons.ts 契约对拍同步。当前有意保持。
   import: svg(
     '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/>',
   ),
@@ -218,6 +221,8 @@ export const UI_ICONS = {
   bone: svg(
     '<path d="M7 10a2.5 2.5 0 1 1 2-4 2.5 2.5 0 1 1 4 2l3 3a2.5 2.5 0 1 1 2 4 2.5 2.5 0 1 1-4 2l-3-3a2.5 2.5 0 1 1-2-4z"/>',
   ),
+  // ⚠️ 字形与 voxel 逐字节相同（🧊 未知资源与 🧱 立方体共用同一立方体轮廓）——
+  // 2026-09 图标审计登记项：同上，有意保持；改字形时同步 icon-map + 契约测试。
   voxel: svg(
     '<path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5"/><line x1="12" y1="12" x2="12" y2="22"/>',
   ),

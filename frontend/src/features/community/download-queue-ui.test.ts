@@ -230,7 +230,9 @@ describe("createDownloadQueue UI 层", () => {
     expect(qs.children.length).toBe(1);
     expect(qs.firstElementChild?.className).toBe("gh-queue-error-wrap");
     expect(qs.innerHTML).toContain("1 个文件下载失败");
-    expect(qs.innerHTML).toContain("❌");
+    // error SVG 断言：浏览器 innerHTML 归一自关闭标签（`<circle …/>` → `<circle …></circle>`），
+    // 用稳定开标签前缀片段做断言（与 UI_ICONS.error 的 circle+双line 形态一一对应）
+    expect(qs.innerHTML).toContain('<circle cx="12" cy="12" r="10"');
     ctrl.destroy();
   });
 

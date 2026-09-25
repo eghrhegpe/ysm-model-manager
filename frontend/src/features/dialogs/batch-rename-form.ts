@@ -178,7 +178,7 @@ function dgBrBindReplaceTab(shell: DgBrShell): void {
   presetsBtn?.addEventListener("click", (): void => {
     const show = presetsMenu?.style.display !== "flex";
     if (presetsMenu) presetsMenu.style.display = show ? "flex" : "none";
-    presetsBtn.textContent = `📋 ${show ? t("dialog.collapse") : t("dialog.presets")}`;
+    presetsBtn.innerHTML = `${UI_ICONS.clipboard} ${show ? t("dialog.collapse") : t("dialog.presets")}`;
   });
   presetsMenu?.querySelectorAll(".br-preset").forEach((el) => {
     el.addEventListener("click", (): void => {
@@ -302,7 +302,7 @@ function dgBrBindApplyClick(
         type: "error",
       });
     } finally {
-      btn.textContent = `📝 ${t("dialog.doRename")}`;
+      btn.innerHTML = `${UI_ICONS.edit} ${t("dialog.doRename")}`;
       btn.disabled = false;
       closeFn();
     }

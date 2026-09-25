@@ -157,7 +157,7 @@ async function promptUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Pro
   // P3 修复（code_review）：10s 对慢网大文件不够，拉到 60s，保证覆盖整个下载窗口
   if (!statusEl) {
     bus.emit("toast:show", {
-      msg: `⬇️ ${t("update.downloading", { version: info.latest })}`,
+      msg: `${t("update.downloading", { version: info.latest })}`,
       duration: TOAST_MS.sticky,
       type: "info",
     });
@@ -192,7 +192,7 @@ export async function checkUpdateSilent(): Promise<void> {
     markChecked();
     if (info?.available) {
       bus.emit("toast:show", {
-        msg: `📦 ${t("update.found", { latest: info.latest, current: info.current })}`,
+        msg: `${t("update.found", { latest: info.latest, current: info.current })}`,
         duration: TOAST_MS.persist,
         type: "info",
         click: () => {
@@ -236,7 +236,7 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
     // tpl-settings-about.ts）——检查结束用**同一个串**还原。原实现用
     // `textContent = "🔄 检查更新"` 还原，会把按钮从 SVG 图标**降级成 emoji**（且文案硬编码）。
     const idleHTML = btn.innerHTML;
-    btn.innerHTML = `${UI_ICONS.clock} ${t("update.status.checking")}`;
+    btn.innerHTML = `${UI_ICONS.refresh} ${t("update.status.checking")}`;
     btn.disabled = true;
     // P3（审核，资源）：超时计时器句柄——CheckUpdate 先返回时若不清理，计时器会
     // 悬挂 30s 才空转（reject 已 settled 的 Promise 虽无害但属资源泄漏）；

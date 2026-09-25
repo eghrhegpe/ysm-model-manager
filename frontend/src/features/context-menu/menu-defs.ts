@@ -253,10 +253,10 @@ export const MENU_DEFS: MenuDef[] = [
     items: [
       { kind: "header", icon: "file", label: (ctx) => ctx.workshop?.name ?? "" },
       { kind: "header", icon: "folderOpen", label: (ctx) => ctx.workshop?.path ?? "" },
-      { kind: "header", icon: "key", label: (ctx) => ctx.workshop?.hash || "—" },
+      { kind: "header", icon: "lockClosed", label: (ctx) => ctx.workshop?.hash || "—" },
       {
         kind: "header",
-        icon: "ruler",
+        icon: "package",
         label: (ctx) => formatBytes(ctx.workshop?.size ?? 0) || "—",
       },
     ],

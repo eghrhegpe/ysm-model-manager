@@ -179,7 +179,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
       if (ctx.getCurrentRepo() !== repo) return;
       if (resultsBody) {
         resultsBody.innerHTML =
-          ghPlaceholder("❌ " + t("downloads.noModelList")) +
+          ghPlaceholder(UI_ICONS.error + " " + t("downloads.noModelList")) +
           '<div style="text-align:center;padding:var(--sp-2)"><button class="btn-base sm ws-btn-txt" id="gh-open-repo-dl">' +
           UI_ICONS.external +
           " " +
@@ -200,7 +200,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
             : t("workshop.githubLoadFailed");
     if (resultsBody) {
       resultsBody.innerHTML =
-        ghPlaceholder("❌ " + escUtil(msg)) +
+        ghPlaceholder(UI_ICONS.error + " " + escUtil(msg)) +
         '<div style="text-align:center;padding:var(--sp-2)"><button class="btn-base sm ws-btn-txt" id="gh-open-repo">' +
         UI_ICONS.external +
         " " +

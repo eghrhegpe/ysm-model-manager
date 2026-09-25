@@ -446,7 +446,7 @@ export function workshopHTML(): string {
     '<div class="ws-browser" id="ws-browser">' +
     '<div class="ws-browser-bar">' +
     '<button class="btn-base sm ws-back" id="ws-back">' +
-    UI_ICONS.navigate +
+    UI_ICONS.back +
     " " +
     t("common.back") +
     "</button>" +

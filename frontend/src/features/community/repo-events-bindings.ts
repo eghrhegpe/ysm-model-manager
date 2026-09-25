@@ -9,7 +9,6 @@ import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { ICONS } from "@/utils/icon/workshop-icons.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";
 import { communityGetApp } from "./community-deps.ts";
 import { buildDownloadTasks, classifyDownloadSize } from "./download-tasks.ts";
@@ -154,7 +153,7 @@ async function cmReHandleSingleDownload(
   const decision = classifyDownloadSize(size);
   if (decision === "reject") {
     bus.emit("toast:show", {
-      msg: `📏 ${t("workshop.fileTooLarge")}`,
+      msg: `${t("workshop.fileTooLarge")}`,
       duration: TOAST_MS.normal,
       type: "warn",
     });
@@ -165,7 +164,7 @@ async function cmReHandleSingleDownload(
     try {
       ok = await modalConfirm({
         title: t("workshop.largeFile"),
-        titleIcon: "ruler",
+        titleIcon: "package",
         message: `${(size / 1024 / 1024).toFixed(1)}MB，${t("workshop.confirmDownload")}`,
         okText: t("workshop.download"),
       });
@@ -183,11 +182,11 @@ async function cmReHandleSingleDownload(
     cmReUpdateSelectedUI(ctx);
   }
 
-  btn.innerHTML = ICONS.HOURGLASS;
+  btn.innerHTML = UI_ICONS.refresh;
   try {
     await queue.enqueue([{ url, saveDir: "", name: cbName, size }]);
   } finally {
-    btn.innerHTML = ICONS.DOWNLOAD;
+    btn.innerHTML = UI_ICONS.download;
   }
 }
 

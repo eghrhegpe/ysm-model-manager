@@ -24,7 +24,7 @@ function dgRnBuildHeaderBtn(): HTMLButtonElement {
   btn.id = "rn-from-header";
   btn.className = "dlg-btn-sm";
   btn.title = t("dialog.readHeaderTitle");
-  btn.textContent = `📖 ${t("dialog.readHeader")}`;
+  btn.innerHTML = `${UI_ICONS.book} ${t("dialog.readHeader")}`;
   return btn;
 }
 
@@ -45,7 +45,7 @@ function dgRnBuildBoxHTML(parsed: ReturnType<typeof parseModelName>, currentName
       </div>
       <div class="dlg-footer" style="margin-top:2px">
         <button id="rn-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
-        <button id="rn-ok" class="dlg-btn dlg-btn-primary">${UI_ICONS.cut} ${t("dialog.renameEnter")}</button>
+        <button id="rn-ok" class="dlg-btn dlg-btn-primary">${UI_ICONS.edit} ${t("dialog.renameEnter")}</button>
       </div>
       <div id="rn-err" class="dlg-err"></div>
     `;
@@ -61,7 +61,7 @@ function dgRnBindReadHeaderBtn(
   (box.querySelector("#rn-from-header") as HTMLElement).onclick = async (): Promise<void> => {
     if (!filePath) {
       const tipsEl = box.querySelector("#rn-tips") as HTMLElement;
-      tipsEl.textContent = `⚠️ ${t("dialog.notImported")}`;
+      tipsEl.innerHTML = `${UI_ICONS.warning} ${t("dialog.notImported")}`;
       tipsEl.style.display = "block";
       return;
     }
@@ -79,7 +79,7 @@ function dgRnBindReadHeaderBtn(
           authorEl.value = header.authorName;
         }
         if (header.tips) {
-          tipsEl.textContent = `📝 ${header.tips}`;
+          tipsEl.innerHTML = `${UI_ICONS.note} ${esc(header.tips)}`;
           tipsEl.style.display = "block";
         } else {
           tipsEl.style.display = "none";
@@ -89,13 +89,13 @@ function dgRnBindReadHeaderBtn(
     } catch (_) {
       const tipsEl = box.querySelector("#rn-tips") as HTMLElement | null;
       if (tipsEl) {
-        tipsEl.textContent = `⚠️ ${t("dialog.readFailed")}`;
+        tipsEl.innerHTML = `${UI_ICONS.warning} ${t("dialog.readFailed")}`;
         tipsEl.style.display = "block";
       }
     } finally {
       const btn = box.querySelector("#rn-from-header") as HTMLButtonElement | null;
       if (btn) {
-        btn.textContent = `📖 ${t("dialog.readHeader")}`;
+        btn.innerHTML = `${UI_ICONS.book} ${t("dialog.readHeader")}`;
         btn.disabled = false;
       }
     }

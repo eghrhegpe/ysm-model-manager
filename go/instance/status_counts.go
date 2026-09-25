@@ -117,6 +117,10 @@ func foldUnit(st *types.InstanceStatus, it types.ResourceSyncItem) {
 //     missing，或 dirLevel 根下散文件）；
 //   - 无 children 但 Path 是磁盘上的目录（fileLevel 资源包夹这类整夹缺失，面板链
 //     不为其建 children）：用 DiffFolderContents 以空实例侧 diff 出夹内全部文件；
+//     若夹内没有任何「可推送的受支持文件」（如只含 pack.mcmeta 的资源包夹），
+//     **退回目录路径本身**——分类计数已把它算作 1 个待推送单元，清单必须至少有
+//     对应条目，否则「徽章有数、一键安装无动作」属静默漏装（宁可见失败/交由
+//     install 侧文件夹分支处理，也不静默丢弃）；
 //   - disabled 子项被排除（同 foldUnit：禁用内容不推送）。
 func pushFilePaths(it types.ResourceSyncItem) []string {
 	if len(it.Children) > 0 {
@@ -143,7 +147,9 @@ func pushFilePaths(it types.ResourceSyncItem) []string {
 				out = append(out, d.AbsPath)
 			}
 		}
-		return out
+		if len(out) > 0 {
+			return out
+		}
 	}
 	return []string{it.Path}
 }

@@ -208,6 +208,43 @@ func TestBuildInstanceStatusCounts_RepoBannedUnitIsDisabled(t *testing.T) {
 	}
 }
 
+// TestBuildInstanceStatusCounts_MissingFolderNeverSilentlyDropped 整夹缺失单元在
+// 清单里必须至少有一条对应路径（「徽章有数、清单空」= 一键安装静默漏装）：
+// 资源包夹（fileLevel，面板链不为其建 children，夹内只有 pack.mcmeta 这类非模型文件）
+// 的推送路径退回目录本身，交由 install 侧文件夹分支/明确报错处理。
+func TestBuildInstanceStatusCounts_MissingFolderNeverSilentlyDropped(t *testing.T) {
+	sub := registry.SubDirMap("resourcepack")
+	if sub == "" {
+		t.Skip("resourcepack 无 instanceDir 配置，跳过")
+	}
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	instRoot := filepath.Join(base, "inst")
+	instDir := filepath.Join(instRoot, filepath.FromSlash(sub))
+	// 仓库侧存在资源包夹（只含 pack.mcmeta），实例侧整夹缺失
+	writeFile(t, filepath.Join(globalDir, "PackA", "pack.mcmeta"), `{"pack":{"pack_format":15}}`)
+
+	ins := types.VersionInstance{Name: "t", VersionDir: instRoot, CustomDir: instDir}
+	got := BuildInstanceStatusCounts(
+		[]types.VersionInstance{ins},
+		[]registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}},
+		map[string]string{"resourcepack": globalDir},
+	)
+	if len(got) != 1 {
+		t.Fatalf("应返回 1 个实例状态，实际 %d", len(got))
+	}
+	st := got[0]
+	if st.MissingCount != 1 {
+		t.Fatalf("整夹缺失应为 1 个待推送单元，实际 %d（其余项：%+v）", st.MissingCount, st)
+	}
+	if len(st.Missing) == 0 {
+		t.Fatalf("计数 %d 但清单为空 = 一键安装静默漏装（契约要求至少 1 条路径）", st.MissingCount)
+	}
+	if st.Status != "missing" {
+		t.Fatalf("Status 应为 missing，实际 %q", st.Status)
+	}
+}
+
 // sortedCopy 复制并排序，屏蔽实现内部排序策略差异
 func sortedCopy(in []string) []string {
 	out := append([]string(nil), in...)

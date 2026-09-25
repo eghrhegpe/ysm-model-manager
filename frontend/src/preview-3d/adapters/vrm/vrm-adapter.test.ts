@@ -209,7 +209,7 @@ import {
   buildVrmScene,
   readVmdPositionScale,
   readVrmMeta,
-  rebuildVmdMotionClips,
+  rescaleVmdMotionClips,
   type VrmPanelHooks,
   vrmMenuItems,
   vrmMetaSummary,
@@ -1697,8 +1697,8 @@ describe("P3 positionScale 校准（ADR-243 锐评对账）", () => {
     expect(readVmdPositionScale()).toBe(0.3);
   });
 
-  it("vrmMenuItems：positionScale 控制且 vmdCount>0 → 动作面板 children 内滑块 + 复位按钮（onCommit→set / 复位→resetToAuto）", () => {
-    const control = { vmdCount: 2, current: () => 0.1, set: vi.fn(), resetToAuto: vi.fn() };
+  it("vrmMenuItems：positionScale 控制且 vmdCount>0 → 动作面板 children 内滑块 + 复位按钮（拖动 set / 松手 onCommit / 复位 resetToAuto）", () => {
+    const control = { vmdCount: 2, current: () => 0.1, set: vi.fn(), onCommit: vi.fn(), resetToAuto: vi.fn() };
     const items = vrmMenuItems({
       screenshot: null,
       modelInfo: { modelName: "t", boneCount: 1, materialCount: 1 },
@@ -1729,10 +1729,13 @@ describe("P3 positionScale 校准（ADR-243 锐评对账）", () => {
     const reset = play?.children?.find((i) => i.id === "vmd-position-scale-reset");
     expect(slider?.kind).toBe("slider");
     expect(reset?.kind).toBe("button");
-    // 滑块 get = 当前有效值；onCommit（松手）才 set（重建）——拖动过程抑制
+    // 锐评 P5：滑块 get = 当前有效值；拖动逐 tick set（原地 rescale）；松手 onCommit 落盘
     expect(slider?.control?.get?.(undefined)).toBe(0.1);
-    slider?.control?.onCommit?.(0.2);
+    slider?.control?.set?.(0.2); // 拖动 tick
     expect(control.set).toHaveBeenCalledWith(0.2);
+    slider?.control?.onCommit?.(0.2); // 松手
+    expect(control.onCommit).toHaveBeenCalledWith(0.2);
+    // 复位按钮 → resetToAuto（清持久化回自动 + rescale）
     reset?.action?.({} as never);
     expect(control.resetToAuto).toHaveBeenCalled();
   });
@@ -1762,91 +1765,44 @@ describe("P3 positionScale 校准（ADR-243 锐评对账）", () => {
     expect(play?.children?.some((c) => c.id === "vmd-position-scale-reset")).toBe(false);
   });
 
-  it("rebuildVmdMotionClips：换掉 vmd 条目、保留 vrma 条目、活动动作按 label 重绑新 clip 并保播放态", async () => {
+  it("锐评 P5：rescaleVmdMotionClips 原地改写 vmd 条目位移轨道（vrma 不受影响、同 label 保留）", () => {
     const nodes = makeNormalizedNodes();
     const vrm = makeFakeVrm(nodes);
     for (const n of Object.values(nodes)) vrm.scene.add(n);
     const mixer = new THREE.AnimationMixer(vrm.scene);
     const vrmaClip = new THREE.AnimationClip("vrma", -1, []);
-    const oldVmdClip = new THREE.AnimationClip("wave-old", -1, []);
-    const motion: {
-      motionClips: Array<{ label: string; clip: THREE.AnimationClip; footIK: null; source: "vrma" | "vmd" }>;
-      motionMixer: THREE.AnimationMixer;
-      motionAction: THREE.AnimationAction;
-      motionPlaying: boolean;
-    } = {
+    // 造一个含 hips position 轨道的 vmd clip（模拟重定向产物）
+    const vmdClip = new THREE.AnimationClip("wave", 2, [
+      new THREE.VectorKeyframeTrack(`${nodes.hips.uuid}.position`, [0, 1, 2], [0, 0, 0, 0, 1, 0]),
+    ]);
+    // 构造 posTracks 句柄：raw = 烘焙前 k=1 值快照
+    const posTracks = [
+      { track: vmdClip.tracks[0] as THREE.KeyframeTrack, base: new THREE.Vector3(0, 0, 0), raw: new Float32Array([0, 0, 0, 0, 1, 0]) },
+    ];
+    const motion = {
       motionClips: [
-        { label: "idle", clip: vrmaClip, footIK: null, source: "vrma" },
-        { label: "wave", clip: oldVmdClip, footIK: null, source: "vmd" },
+        { label: "idle", clip: vrmaClip, footIK: null, source: "vrma" as const, posTracks: [] },
+        { label: "wave", clip: vmdClip, footIK: null, source: "vmd" as const, posTracks },
       ],
       motionMixer: mixer,
-      motionAction: mixer.clipAction(oldVmdClip), // 活动的是 vmd clip
+      motionAction: mixer.clipAction(vmdClip),
       motionPlaying: true,
+      autoPositionScale: 0.08,
+      guard: { invalidate: vi.fn() } as never,
     };
-    motion.motionAction.play();
+    const action = motion.motionAction as THREE.AnimationAction;
+    action.play();
 
-    // 重建：listVmdPaths 只列 .vmd；parseVmdMock 产真轨道；positionScale=0.5 烘焙
-    hoisted.getCustomAnimPathMock.mockResolvedValue(null);
-    hoisted.listPathsMock.mockImplementation((dir: string) =>
-      Promise.resolve(dir === "/vrm" ? ["/vrm/wave.vmd"] : []),
-    );
-    hoisted.readBytesMock.mockImplementation(() => Promise.resolve(btoa("VMD")));
-    hoisted.parseVmdMock.mockResolvedValue(
-      makeFakeVmd([
-        ["左腕", 0, [0, 0, 0]],
-        ["左腕", 30, [1, 2, 3]],
-      ]),
-    );
-
-    await rebuildVmdMotionClips(motion, vrm as unknown as Parameters<typeof rebuildVmdMotionClips>[1], "/vrm/test.vrm", hoisted.readBytesMock, hoisted.listPathsMock, 0.5);
-
-    // vrma 条目对象保留；vmd 条目被新 clip 对象替换
+    // 初始 k=1 已 bake：values = [0,0,0, 0,1,0]
+    rescaleVmdMotionClips(motion as never, 0.5);
+    const values = (vmdClip.tracks[0] as THREE.VectorKeyframeTrack).values;
+    expect(values[3]).toBe(0);
+    expect(values[4]).toBeCloseTo(0.5); // 1 * 0.5
+    expect(values[5]).toBe(0);
+    // 再 rescale 回 k=1（幂等验证）
+    rescaleVmdMotionClips(motion as never, 1.0);
+    expect(values[4]).toBeCloseTo(1);
+    // vrma 条目不受影响
     expect(motion.motionClips[0].clip).toBe(vrmaClip);
-    expect(motion.motionClips[1].source).toBe("vmd");
-    const newVmdClip = motion.motionClips[1].clip;
-    expect(newVmdClip).not.toBe(oldVmdClip);
-    expect(newVmdClip.tracks.length).toBeGreaterThan(0);
-    // 活动动作重绑到新 vmd clip（同 label），且保持播放态
-    expect(motion.motionAction).toBe(mixer.clipAction(newVmdClip));
-    expect(motion.motionPlaying).toBe(true);
-    expect(motion.motionAction.isRunning()).toBe(true);
-  });
-
-  it("rebuildVmdMotionClips：活动的是 .vrma（对象未变）→ 不碰其 action（避免从头重放）", async () => {
-    const nodes = makeNormalizedNodes();
-    const vrm = makeFakeVrm(nodes);
-    for (const n of Object.values(nodes)) vrm.scene.add(n);
-    const mixer = new THREE.AnimationMixer(vrm.scene);
-    const vrmaClip = new THREE.AnimationClip("idle", -1, []);
-    const vmdClip = new THREE.AnimationClip("wave", -1, []);
-    const motion: {
-      motionClips: Array<{ label: string; clip: THREE.AnimationClip; footIK: null; source: "vrma" | "vmd" }>;
-      motionMixer: THREE.AnimationMixer;
-      motionAction: THREE.AnimationAction;
-      motionPlaying: boolean;
-    } = {
-      motionClips: [
-        { label: "idle", clip: vrmaClip, footIK: null, source: "vrma" },
-        { label: "wave", clip: vmdClip, footIK: null, source: "vmd" },
-      ],
-      motionMixer: mixer,
-      motionAction: mixer.clipAction(vrmaClip), // 活动的是 vrma
-      motionPlaying: true,
-    };
-    const sameAction = motion.motionAction;
-    motion.motionAction.play();
-
-    hoisted.getCustomAnimPathMock.mockResolvedValue(null);
-    hoisted.listPathsMock.mockImplementation((dir: string) =>
-      Promise.resolve(dir === "/vrm" ? ["/vrm/wave.vmd"] : []),
-    );
-    hoisted.readBytesMock.mockImplementation(() => Promise.resolve(btoa("VMD")));
-    hoisted.parseVmdMock.mockResolvedValue(makeFakeVmd([])); // 空 vmd → 重建后无 vmd 轨道，条目被丢
-
-    await rebuildVmdMotionClips(motion, vrm as unknown as Parameters<typeof rebuildVmdMotionClips>[1], "/vrm/test.vrm", hoisted.readBytesMock, hoisted.listPathsMock, 0.5);
-
-    // vrma 活动动作对象不变（同一 action 实例，未从头重放）
-    expect(motion.motionAction).toBe(sameAction);
-    expect(motion.motionAction.isRunning()).toBe(true);
   });
 });

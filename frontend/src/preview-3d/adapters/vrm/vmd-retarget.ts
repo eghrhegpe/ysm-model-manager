@@ -67,6 +67,51 @@ export interface VmdRetargetOptions {
 }
 
 /**
+ * 可原地重缩放的位移轨道（锐评 P5）：hips 位移轨（base = 该骨静止局部位置）+
+ * 足 IK 目标轨（base = 零）。`raw` 是烘焙前（k=1）的值快照——buildAnimation 产出即
+ * 「静止位置 + 偏移」，与 k 无关。任意缩放换算都是同一个仿射式：
+ *
+ *   value(k) = base + (raw − base) × k
+ *
+ * 故重缩放**不需要旧 k、不需要重解析 VMD、不需要重建 clip / 换绑 action**：
+ * 轨道 values 被 mixer 的 interpolant 与 IK 采样器共享引用（three interpolant 构造时
+ * 持有 `track.values`），原地改写下一帧即生效。
+ */
+export interface VmdPositionTrackHandle {
+  readonly track: THREE.KeyframeTrack;
+  /** 缩放基准（hips = 归一化骨静止局部位置；IK 目标 = 零向量） */
+  readonly base: THREE.Vector3;
+  /** 烘焙前（k=1）值快照（与 track.values 同维） */
+  readonly raw: Float32Array;
+}
+
+/**
+ * 把已烘焙的位移轨道从当前缩放原地改写为新缩放 k（锐评 P5：O(值总数)，零 IO）。
+ * 前提：`raw` 快照存在（buildVmdRetargetClip 产物均自带）；k 相同则跳过。
+ *
+ * @returns 实际改写的 track 数
+ */
+export function rescaleVmdPositionTracks(
+  handles: readonly VmdPositionTrackHandle[],
+  k: number,
+): number {
+  let n = 0;
+  for (const { track, base, raw } of handles) {
+    const values = track.values;
+    const bx = base.x;
+    const by = base.y;
+    const bz = base.z;
+    for (let i = 0; i < values.length && i < raw.length; i += 3) {
+      values[i] = bx + (raw[i] - bx) * k;
+      values[i + 1] = by + (raw[i + 1] - by) * k;
+      values[i + 2] = bz + (raw[i + 2] - bz) * k;
+    }
+    n++;
+  }
+  return n;
+}
+
+/**
  * 表情轨道名解析窄面（ADR-306 §2.2）：鸭子类型 `VRMExpressionManager` 的单方法面
  * （`getExpressionTrackName: name → VRMExpression_<preset>.weight | null`），不必
  * import three-vrm-core 类型本身。适配器侧直接传 `vrm.expressionManager` 即满足。
@@ -130,6 +175,12 @@ export interface VmdRetargetResult {
   readonly report: VmdRetargetReport;
   /** 足 IK 目标采样器（供 VRM 侧 CCD 求解；ADR-243 §2.8 方案 A） */
   readonly footIK: VmdFootIKTargets;
+  /**
+   * 位移轨道重缩放句柄（锐评 P5）：hips 位移轨 + 足 IK 目标轨，`raw` 为烘焙前 k=1 快照。
+   * 适配器把它存进动作条目，缩放滑块经 {@link rescaleVmdPositionTracks} 原地改写——
+   * 免重读、免重解析、免换绑。无位移通道时为空数组。
+   */
+  readonly posTracks: readonly VmdPositionTrackHandle[];
 }
 
 /** 无 IK 目标的常态值（模型未驱动 IK 骨 / 无可用映射时复用，避免各处重复构造） */
@@ -364,6 +415,9 @@ function scaleTranslationTrack(
  *
  * 绑 `uuid` 而非 `name`：归一化节点名是 `"Normalized_" + <模型作者自定义骨名>`，
  * 可能含空格/日文，而 `PropertyBinding.findNode` 同时匹配 `name` 与 `uuid` ⇒ uuid 零歧义。
+ *
+ * `posTracks`（锐评 P5）：烘焙前快照每条位移轨的 values（k=1 原值）作为 `raw`，
+ * 供 {@link rescaleVmdPositionTracks} 任意重缩放（不改 times、不换轨、不重建 clip）。
  */
 export function rewriteVmdTracks(
   source: THREE.AnimationClip,
@@ -376,12 +430,15 @@ export function rewriteVmdTracks(
   droppedTracks: number;
   /** 摘出的足 IK 目标轨道（未进 clip；null = 该侧无目标） */
   ikTracks: Readonly<Record<"left" | "right", THREE.KeyframeTrack | null>>;
+  /** 位移轨道重缩放句柄（hips 轨 + 双侧 IK 轨；raw = 烘焙前 k=1 快照） */
+  posTracks: VmdPositionTrackHandle[];
 } {
   const tracks: THREE.KeyframeTrack[] = [];
   const ikTracks: { left: THREE.KeyframeTrack | null; right: THREE.KeyframeTrack | null } = {
     left: null,
     right: null,
   };
+  const posTracks: VmdPositionTrackHandle[] = [];
   let droppedTracks = 0;
 
   for (const track of source.tracks) {
@@ -441,6 +498,7 @@ export function rewriteVmdTracks(
     const side = mmd === plan.footIK.left ? "left" : mmd === plan.footIK.right ? "right" : null;
     if (side) {
       // 幽灵 IK 骨静止位置为零 ⇒ 轨道值即「相对 bind 的偏移」，直接整体按 k 缩放
+      posTracks.push({ track, base: _zeroOrigin, raw: track.values.slice(0) });
       scaleTranslationTrack(track, _zeroOrigin, positionScale);
       ikTracks[side] = track;
       continue;
@@ -453,12 +511,13 @@ export function rewriteVmdTracks(
       droppedTracks++;
       continue;
     }
+    posTracks.push({ track, base: translationBase, raw: track.values.slice(0) });
     scaleTranslationTrack(track, translationBase, positionScale);
     track.name = `${translationTarget.uuid}.position`;
     tracks.push(track);
   }
 
-  return { tracks, droppedTracks, ikTracks };
+  return { tracks, droppedTracks, ikTracks, posTracks };
 }
 
 // ---------------------------------------------------------------------------
@@ -586,6 +645,7 @@ export function buildVmdRetargetClip(
       clip: new THREE.AnimationClip("vmd-retarget", 0, []),
       report: { ...report, droppedTracks },
       footIK: NO_FOOT_IK,
+      posTracks: [],
     };
   }
 
@@ -597,7 +657,7 @@ export function buildVmdRetargetClip(
     (ghostMesh.material as THREE.Material).dispose();
   }
 
-  const { tracks, droppedTracks, ikTracks } = rewriteVmdTracks(
+  const { tracks, droppedTracks, ikTracks, posTracks } = rewriteVmdTracks(
     source,
     plan,
     positionScale,
@@ -608,5 +668,6 @@ export function buildVmdRetargetClip(
     clip: new THREE.AnimationClip("vmd-retarget", -1, tracks),
     report: { ...report, droppedTracks },
     footIK: toFootIKTargets(ikTracks),
+    posTracks,
   };
 }

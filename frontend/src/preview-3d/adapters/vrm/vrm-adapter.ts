@@ -51,12 +51,15 @@ import {
 } from "@/preview-3d/menu/panels/perception-controls.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
+import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { base64ToBytes, bytesToArrayBuffer } from "@/utils/base/primitives/base64.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
 import {
   autoVmdPositionScale,
   buildVmdRetargetClip,
+  rescaleVmdPositionTracks,
   type VmdFootIKTargets,
+  type VmdPositionTrackHandle,
 } from "./vmd-retarget.ts";
 import { buildVrmBoneTree } from "./vrm-bone.ts";
 
@@ -314,14 +317,30 @@ interface VrmMotionClipEntry {
   clip: THREE.AnimationClip;
   /** VMD 足ＩＫ 目标（`.vrma` 无此通道 ⇒ null）；由 Stage5 每帧喂给 VRM 足 IK 控制器 */
   footIK: VmdFootIKTargets | null;
-  /** 来源（P3 重建换绑用）：`.vrma` 官方动作 / `.vmd` 重定向动作——重建 positionScale 只换 vmd 子集 */
+  /** 来源：`.vrma` 官方动作 / `.vmd` 重定向动作 */
   source: "vrma" | "vmd";
+  /**
+   * 位移轨道重缩放句柄（锐评 P5）：VMD 重定向产物自带（hips 位移轨 + 足 IK 目标轨，
+   * 含烘焙前 k=1 快照）；`.vrma` 条目前置缩放语义不适用 ⇒ 空数组。缩放滑块经
+   * {@link rescaleVmdMotionClips} 原地改写，免重读/重解析/换绑。
+   */
+  posTracks: readonly VmdPositionTrackHandle[];
 }
 interface VrmMotionState {
   motionClips: VrmMotionClipEntry[];
   motionMixer: THREE.AnimationMixer | null;
   motionAction: THREE.AnimationAction | null;
   motionPlaying: boolean;
+  /**
+   * 自动位移缩放**创建期快照**（锐评 P3）：build 期模型处于 rest 位姿时算一次，
+   * 复位/重建路径一律用该值——动画中途重算会读到被动画污染的归一化骨世界位置。
+   */
+  autoPositionScale: number;
+  /**
+   * 加载代际守卫（锐评 P5 / ADR-230）：dispose 调 `invalidate()` 使在途
+   * `loadMotionClips` 的结果不落地（防对已释放场景继续写 motionClips/换绑）。
+   */
+  guard: LoadGuard;
 }
 interface VrmPerceptionState {
   perceptionState: PerceptionState;
@@ -438,6 +457,7 @@ async function loadVrmaClips(
         clip: createVRMAnimationClip(anims[0], vrm),
         footIK: null, // .vrma 自带完整腿部数据（含 IK 已烘好的 FK），无需外部求解
         source: "vrma",
+        posTracks: [], // 官方动作轨道是 VRM 规范产物，无「位移烘焙缩放」语义
       });
     } catch {
       /* 单个 .vrma 解析失败 → 跳过其余照常 */
@@ -481,6 +501,7 @@ async function loadVmdClips(
         clip: retarget.clip,
         footIK: retarget.footIK,
         source: "vmd",
+        posTracks: retarget.posTracks,
       });
     } catch {
       /* 单个 .vmd 解析失败 → 跳过其余照常 */
@@ -539,20 +560,36 @@ async function listVmdPaths(
  *
  * 磁盘枚举一律走 Go 交付的 `listAllFilePaths`——前端不自行扫描磁盘（AGENTS.md 归属红线）。
  * 逐文件读取（VMD 个头不大）；若将来动作库批量变大，可对齐 MMD 侧改走批量读。
+ *
+ * 锐评 P3/P5：自动缩放在**创建期**（首帧 mixer.update 前，模型 rest 位姿）快照进
+ * `autoPositionScale`；加载全程挂代际守卫（ADR-230），dispose 后在途结果不落地。
  */
 async function loadMotionClips(
   vrm: VRM,
   path: string,
   readFn: (p: string) => Promise<string | null>,
   listAllFilePaths?: (dir: string) => Promise<string[] | null>,
-  /** 位移缩放覆盖（ADR-243 锐评对账 P3）：undefined = 按身高自动估算 */
+  /** 位移缩放覆盖（ADR-243 锐评对账 P3）：undefined = 用创建期自动估算 */
   positionScale?: number,
 ): Promise<VrmMotionState> {
   const motionClips: VrmMotionClipEntry[] = [];
   let motionMixer: THREE.AnimationMixer | null = null;
   let motionAction: THREE.AnimationAction | null = null;
   const motionPlaying = true;
-  if (!listAllFilePaths) return { motionClips, motionMixer, motionAction, motionPlaying };
+  const guard = createLoadGuard();
+  // P3：此刻模型尚未跑过任何 mixer.update（load 先于 Stage5 构造 IK 控制器与首帧
+  // update），读到的归一化骨世界位置即 rest 值——快照一次，全生命周期复用
+  const autoPositionScale = autoVmdPositionScale(vrm.humanoid);
+  const state: VrmMotionState = {
+    motionClips,
+    motionMixer: null,
+    motionAction: null,
+    motionPlaying,
+    autoPositionScale,
+    guard,
+  };
+  if (!listAllFilePaths) return state;
+  const gen = guard.next();
   try {
     const dirPath = path.replace(/[^/\\]*$/, "").replace(/[/\\]$/, "");
     const files = (await listAllFilePaths(dirPath)) || [];
@@ -560,17 +597,25 @@ async function loadMotionClips(
     const vmdPaths = await listVmdPaths(path, listAllFilePaths);
 
     motionClips.push(...(await loadVrmaClips(vrmaPaths, readFn, vrm)));
-    motionClips.push(...(await loadVmdClips(vmdPaths, readFn, vrm, positionScale)));
+    motionClips.push(
+      ...(await loadVmdClips(vmdPaths, readFn, vrm, positionScale ?? autoPositionScale)),
+    );
+
+    // P5 代际守卫：dispose 期间 invalidate() 使本代过期——在途结果不再写入 state
+    //（motionMixer/motionAction 保持 null，下游 update 循环对空动作安全跳过）
+    if (guard.stale(gen)) return state;
 
     if (motionClips.length > 0) {
       motionMixer = new THREE.AnimationMixer(vrm.scene);
       motionAction = motionMixer.clipAction(motionClips[0].clip);
       motionAction.play();
+      state.motionMixer = motionMixer;
+      state.motionAction = motionAction;
     }
   } catch {
     /* 目录不可列 → 白模降级，不阻断模型渲染 */
   }
-  return { motionClips, motionMixer, motionAction, motionPlaying };
+  return state;
 }
 
 // ---------------------------------------------------------------------------
@@ -596,47 +641,15 @@ export function writeVmdPositionScale(v: number | null): void {
 }
 
 /**
- * 重建 VMD 重定向 clip 并换绑运行中的 mixer（P3 校准滑块 onCommit 触发）。
- * `.vrma` 条目不受 positionScale 影响、对象保留不动；仅重建 `.vmd` 子集。
- * 若当前活动动作是被换掉的重定向 clip，按 label 重绑到新 clip 对象（保播放态）；
- * 活动的是 .vrma（对象未变）则不碰其 action（避免从头重放）。
+ * 锐评 P5：缩放滑块改值 → **原地**重缩放全部 VMD 位移轨道（O(值总数)，零 IO /
+ * 零重解析 / 零换绑）。`.vrma` 条目无位移句柄（posTracks 空），天然不受影响。
+ * 活动动作保留同一 action 对象（轨道 values 被 mixer interpolant 与 IK 采样器共享引用，
+ * 下一帧即生效）——替代原先「重读整库 + 重建 clip + 换绑 action」的重路径。
  */
-export async function rebuildVmdMotionClips(
-  motion: VrmMotionState,
-  vrm: VRM,
-  path: string,
-  readFn: (p: string) => Promise<string | null>,
-  listAllFilePaths?: (dir: string) => Promise<string[] | null>,
-  positionScale?: number,
-): Promise<void> {
-  const vmdPaths = await listVmdPaths(path, listAllFilePaths);
-  const newEntries = await loadVmdClips(vmdPaths, readFn, vrm, positionScale);
-  const activeClip = motion.motionAction ? motionClipOf(motion.motionAction) : null;
-  const activeWasVmd =
-    activeClip != null &&
-    motion.motionClips.some((e) => e.source === "vmd" && e.clip === activeClip);
-  const activeLabel = activeWasVmd
-    ? motion.motionClips.find((e) => e.clip === activeClip)?.label
-    : undefined;
-  const wasPlaying = motion.motionPlaying;
-  // 换绑：保留 .vrma、整体替换 .vmd 子集
-  const vrmaEntries = motion.motionClips.filter((e) => e.source !== "vmd");
-  motion.motionClips.length = 0;
-  motion.motionClips.push(...vrmaEntries, ...newEntries);
-  if (activeWasVmd && motion.motionMixer) {
-    // 按 label 找新 clip 对象（重定向重建产生新 AnimationClip 实例）；找不到（该 vmd 全不可映射
-    // 被丢弃）则回退首个可用条目
-    const match =
-      activeLabel != null
-        ? (newEntries.find((e) => e.label === activeLabel) ?? motion.motionClips[0])
-        : motion.motionClips[0];
-    if (match) {
-      motion.motionAction?.stop();
-      const newAction = motion.motionMixer.clipAction(match.clip);
-      newAction.play();
-      newAction.paused = !wasPlaying;
-      motion.motionAction = newAction;
-    }
+export function rescaleVmdMotionClips(motion: VrmMotionState, k: number): void {
+  for (const entry of motion.motionClips) {
+    if (entry.source !== "vmd" || entry.posTracks.length === 0) continue;
+    rescaleVmdPositionTracks(entry.posTracks, k);
   }
 }
 /** 取 action 实播的 clip。three r185 起 AnimationAction 不再暴露 `.clip` 属性，
@@ -738,7 +751,8 @@ function Stage4MenuPanels(
   panels: VrmPanelHooks | undefined,
   ctx: PreviewBuildCtx,
   artifacts: VrmBuildArtifacts,
-  deps: VrmAdapterDeps,
+  // P5 后 Stage4 不再直接消费 deps（rescale 原地改写无 IO）；_deps 前缀标记为保留参数位
+  _deps: VrmAdapterDeps,
 ): PreviewMenuNode[] {
   const { boneAssy, vrmMaterials, motion, perception, meta } = artifacts;
   const { bonePanelRef, boneTree } = boneAssy;
@@ -757,35 +771,27 @@ function Stage4MenuPanels(
     materialCount: vrmMaterials.length,
     meta,
   };
-  // [ADR-243 锐评对账 P3] 位移缩放校准控制：仅当有 VMD 重定向动作时可用（.vrma 不受影响）。
-  // 改值 = 持久化 + 重建 .vmd clip 换绑（k 在加载时 bake，非运行期旋钮）。
+  // [ADR-243 锐评对账 P3/P5] 位移缩放校准控制：仅当有 VMD 重定向动作时可用（.vrma 不受影响）。
+  // P3：自动值用**创建期快照** motion.autoPositionScale（模型 rest 位姿算一次，动画中途
+  // 重读归一化骨世界位置会被污染）。P5：改值 = 原地 rescale（O(值总数)零 IO），
+  // 拖动逐 tick 实时生效；松手（onCommit）才落盘持久化。
   const vmdCount = motionClips.filter((c) => c.source === "vmd").length;
   const positionScale =
     vmdCount > 0
       ? {
           vmdCount,
-          // 当前有效值：持久化覆写 ?? 自动估算（镜像 buildVmdRetargetClip 的回退，单一事实源）
-          current: () => readVmdPositionScale() ?? autoVmdPositionScale(vrm.humanoid),
+          // 当前有效值：持久化覆写 ?? 创建期自动快照（P3 单一事实源，不再每次重算）
+          current: () => readVmdPositionScale() ?? motion.autoPositionScale,
           set: (v: number): void => {
-            writeVmdPositionScale(v);
-            void rebuildVmdMotionClips(
-              motion,
-              vrm,
-              path,
-              deps.readFileBytes,
-              deps.listAllFilePaths,
-              v,
-            );
+            // 拖动实时：原地改写轨道（values 被 interpolant 共享引用，下一帧即生效）
+            rescaleVmdMotionClips(motion, v);
+          },
+          onCommit: (v: number | null): void => {
+            if (v != null) writeVmdPositionScale(v);
           },
           resetToAuto: (): void => {
             writeVmdPositionScale(null);
-            void rebuildVmdMotionClips(
-              motion,
-              vrm,
-              path,
-              deps.readFileBytes,
-              deps.listAllFilePaths,
-            );
+            rescaleVmdMotionClips(motion, motion.autoPositionScale);
           },
         }
       : undefined;
@@ -979,6 +985,8 @@ function makeVrmDisposer(deps: VrmDisposeDeps): () => void {
   const { vrm, boneAssy, motion, perception, vrmFootIK, path, port } = deps;
   const { bonePanelRef } = boneAssy;
   const { motionMixer } = motion;
+  // P5 代际守卫：dispose 使在途 loadMotionClips 的结果不落地（ADR-230）
+  motion.guard.invalidate();
   const { breath, gaze, blink, footIK, useNativeLookAt } = perception;
   return (): void => {
     try {
@@ -1097,6 +1105,7 @@ export async function buildVrmScene(
     perception,
     meta,
   };
+  // P5 后 Stage4 不再直接消费 deps（rescale 原地改写，无 IO）；保留参数位供未来扩展
   const menuItems = Stage4MenuPanels(path, deps.panels, ctx, artifacts, deps);
   return Stage5BuildResult(ctx, path, deps.port, artifacts, menuItems);
 }
@@ -1134,20 +1143,22 @@ export interface VrmMenuItemsOpts {
     state: PerceptionState;
     caps: PerceptionCapability[];
   };
-  /** [ADR-243 锐评对账 P3] 位移缩放校准控制：仅当有 VMD 重定向动作（vmdCount>0）时注入；
-   *  滑块改值 = 持久化 + 重建 .vmd clip 换绑（k 加载时 bake，非运行期旋钮）。 */
+  /** [ADR-243 锐评对账 P3/P5] 位移缩放校准控制：仅当有 VMD 重定向动作（vmdCount>0）时注入；
+   *  拖动逐 tick 原地 rescale（P5），松手落盘（onCommit），复位回创建期自动快照（P3）。 */
   positionScale?: VrmPositionScaleControl | undefined;
 }
 
-/** P3 位移缩放校准控制面（Stage4 组装、vrmMenuItems 消费；测试可假实现遍历真实菜单表） */
+/** P3/P5 位移缩放校准控制面（Stage4 组装、vrmMenuItems 消费；测试可假实现遍历真实菜单表） */
 export interface VrmPositionScaleControl {
   /** VMD 重定向动作条目数（>0 才渲染滑块） */
   vmdCount: number;
-  /** 当前有效值：持久化覆写 ?? 自动估算（镜像 buildVmdRetargetClip 回退，单一事实源） */
+  /** 当前有效值：持久化覆写 ?? 创建期自动快照（P3，单一事实源） */
   current: () => number;
-  /** 用户校准值：持久化 + 重建 .vmd clip 换绑（异步，fire-and-forget） */
+  /** 用户校准值：原地 rescale 位移轨道（同步，O(值总数)，P5 拖动实时） */
   set: (v: number) => void;
-  /** 清除持久化覆写，回自动估算并重建 */
+  /** 松手/点击轨道后的离散落盘（null = 清除回自动） */
+  onCommit?: (v: number | null) => void;
+  /** 清除持久化覆写，回创建期自动快照并 rescale */
   resetToAuto: () => void;
 }
 
@@ -1215,9 +1226,9 @@ const VRM_PLAY_EMPTY_NODE: PreviewMenuNode = {
   value: VRM_PLAY_EMPTY_HINT,
 };
 
-/** [ADR-243 锐评对账 P3] 位移缩放校准叶子节点（滑块 + 复位）：仅当有 VMD 重定向动作时露出
- *  （.vrma 不受 positionScale 影响）。滑块 onCommit（松手）才重建换绑——拖动过程抑制
- *  （set 空操作），避免每 tick 重解析 VMD。
+/** [ADR-243 锐评对账 P5] 位移缩放校准叶子节点（滑块 + 复位）：仅当有 VMD 重定向动作时露出
+ *  （.vrma 不受 positionScale 影响）。拖动逐 tick 实时 rescale（set），松手落盘（onCommit）——
+ *  替换原先「拖动抑制 + 松手重建整库重读」的重路径。
  *  ⚠️ 必须挂面板 children（叶子层）：根项只允许 panel/action/divider（check-menu-health
  *  ROOT_KINDS），根项滑块既违规又不可达（motionDetailView 只列 kind==="panel" 的 motion 项）。 */
 function vmdPositionScaleNodes(ps: VrmPositionScaleControl): PreviewMenuNode[] {
@@ -1231,11 +1242,14 @@ function vmdPositionScaleNodes(ps: VrmPositionScaleControl): PreviewMenuNode[] {
         max: 0.4,
         step: 0.005,
         get: () => ps.current(),
-        set: () => {
-          /* 拖动抑制：重建归 onCommit 一次 */
+        set: (v: unknown) => {
+          // 拖动实时：原地改写位移轨道（O(值总数)），下一帧渲染即见新缩放
+          const n = Number(v);
+          if (Number.isFinite(n)) ps.set(n);
         },
         onCommit: (v: number) => {
-          ps.set(Number(v));
+          // 松手/点击轨道/键盘步进后离散落盘（拖动期间的 rescale 已完成）
+          ps.onCommit?.(v);
         },
         unit: "x",
       },

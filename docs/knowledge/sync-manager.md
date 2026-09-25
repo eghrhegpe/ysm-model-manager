@@ -114,7 +114,7 @@ status: active
 - **层级渲染**：通过 `GetInstanceSyncStatus` 拉取该实例下该 rtype 的全部条目（`SyncItem[]`），逐节点递归渲染，`isDir` 支持目录级展开/折叠
 - **逐文件 push/pull**：单行内嵌按钮，由 `network.ts` 的 `performSingleOp` 顺序守卫执行
 - **整包同步在 sidebar**：`app-sidebar` 底部菜单走 `sync:download:missing` handler 编排后台安装，与本组件的**逐文件操作**分工解耦
-- **计数口径统一（ADR-310，2026-09）**：sidebar 徽章已换线到本面板链（`go/instance.BuildInstanceStatusCounts` 折 `BuildSyncItems`），红 = `missing ∪ diverged`、橙 = `optional ∪ legacy`、`disabled` 单独计；但**一键安装读的 `Missing` 仍是仓库侧文件级清单**（一个缺夹展开多条文件路径，`len(Missing)` 可 > `MissingCount`，**也可为 0**——夹内无可装文件时计数仍 1，该夹只能靠本面板行内推送 `PushSingleResourceToInstance`（folder-aware）修）——徽章数只看 Go 的计数字段，别再用数组长度
+- **计数口径统一（ADR-310，2026-09）**：sidebar 徽章已换线到本面板链（`go/instance.BuildInstanceStatusCounts` 折 `BuildSyncItems`），红 = `missing ∪ diverged`、橙 = `optional ∪ legacy`、`disabled` 单独计；但**一键安装读的 `Missing` 仍是仓库侧文件级清单**（一个缺夹展开多条文件路径，`len(Missing)` 与计数无固定关系；夹内无可逐文件安装的文件时整夹落在 `MissingDirs`，一键安装同样调用本卡 `PushSingleResourceToInstance` 这条 folder-aware 路径，故计数单元全都有安装动作）——徽章数只看 Go 的计数字段，别再用数组长度
 
 > **差异化定位**：`go-sync.md` 描述 Go 端同步算法（哈希对比/冲突/重链接），`app-sidebar.md` 描述侧边栏 UI，`app-sync-manager.md` 描述同步面板；本 feature 卡专注**跨组件端到端同步编排视角**——用户从 sidebar 选整合包 → sync-manager 展示状态 → 逐文件/整包 push/pull 的全链路。
 

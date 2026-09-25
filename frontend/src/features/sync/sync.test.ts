@@ -21,6 +21,7 @@ const mocks = {
   GetResourceInstanceStatus: appFn("GetResourceInstanceStatus"),
   InstallModelTo: appFn("InstallModelTo"),
   InstallResourceToInstance: appFn("InstallResourceToInstance"),
+  PushSingleResourceToInstance: appFn("PushSingleResourceToInstance"),
   GetRepoRoot: appFn("GetRepoRoot"),
   InvalidateScanCache: appFn("InvalidateScanCache"),
   SyncModelToggleStatus: appFn("SyncModelToggleStatus"),
@@ -111,6 +112,34 @@ describe("registerSync — sync:download:missing", () => {
     expect(doneEvents.length).toBe(1);
     expect(doneEvents[0].token).toBe("t1");
     expect(reloadEvents.length).toBeGreaterThan(0);
+    expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
+  });
+
+  it("ADR-310：MissingDirs 走 folder-aware 推送，不喂逐条 Install", async () => {
+    const repo = MOCK_DATA.GetRepoRoot;
+    // 仅目录单元（夹内无可逐文件安装的受支持文件，如只含 pack.mcmeta 的资源包夹）
+    mocks.GetResourceInstanceStatus.mockResolvedValue([
+      { Name: "PackA", Missing: [], MissingDirs: [`${repo}/rpA`] },
+      { Name: "PackB", Missing: [], MissingDirs: [] },
+    ]);
+    mocks.PushSingleResourceToInstance.mockResolvedValue(undefined);
+    await register();
+    const { toasts } = spyEvents();
+
+    bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "resourcepack", token: "t9" });
+    await flushPromises();
+    await flushPromises();
+
+    // 关键：目录必须走整夹推送（对目录走 InstallDir 装该夹本身），
+    // 喂给 InstallResourceToInstance 会装成它的父目录（过度安装，ADR-310 §3）
+    expect(mocks.PushSingleResourceToInstance).toHaveBeenCalledWith(
+      "resourcepack",
+      "PackA",
+      `${repo}/rpA`,
+    );
+    expect(mocks.InstallResourceToInstance).not.toHaveBeenCalled();
+    expect(mocks.InstallModelTo).not.toHaveBeenCalled();
+    // 整夹安装计入成功数（徽章有数 ⇒ 一键安装有动作）
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
   });
 

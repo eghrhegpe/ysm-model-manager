@@ -32,6 +32,7 @@ async function runDownloadMissing(
     GetResourceInstanceStatus,
     InstallModelTo,
     InstallResourceToInstance,
+    PushSingleResourceToInstance,
     GetRepoRoot,
     InvalidateScanCache,
   } = await syncGetApp();
@@ -50,14 +51,25 @@ async function runDownloadMissing(
   let totalFail = 0;
   for (const ins of targets) {
     const st = (allStatuses || []).find((s) => s.Name === ins.Name);
-    if (!st?.Missing?.length) continue;
-    for (const srcPath of st.Missing) {
+    if (!st?.Missing?.length && !st?.MissingDirs?.length) continue;
+    for (const srcPath of st.Missing ?? []) {
       try {
         if (rtype === RESOURCE_TYPES.YSM) {
           await InstallModelTo(srcPath, ins.CustomDir);
         } else {
           await InstallResourceToInstance(rtype, srcPath, ins.Name);
         }
+        totalOk++;
+      } catch {
+        totalFail++;
+      }
+    }
+    // ADR-310：夹内没有可逐文件安装的受支持文件时，Go 把整个夹放进 MissingDirs——
+    // 必须走 folder-aware 的 PushSingleResourceToInstance（面板行内推送同一条路，
+    // 对目录走 InstallDir 装该夹本身）；喂给上面的逐条 Install 会装成它的父目录。
+    for (const dirPath of st.MissingDirs ?? []) {
+      try {
+        await PushSingleResourceToInstance(rtype, ins.Name, dirPath);
         totalOk++;
       } catch {
         totalFail++;

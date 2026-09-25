@@ -116,6 +116,9 @@ status: active
    - **键位 registry 单一事实源**：`preview-3d/infra/keymap.ts|TD_KEYMAP_REGISTRY` 统一声明 action/defaultCode/group/order/fallbackCodes，并派生 `TdKeyAction` 与 `DEFAULT_TD_KEYMAP`；设置页只保留 `Record<TdKeyAction, LocaleKey>` 标签映射并在渲染时调用 `t()`，输入层从 registry 的 fallbackCodes 派生回退表。新增动作先改 registry，禁止重新在 settings/input/infra 各写一份动作列表；未来 3D 菜单须通过 `MenuNode` schema 适配，不复制设置页 HTML。
   - **本页 3D 卡片的值域/默认/枚举消费 `preview-3d/infra/settings-schema.ts`**（ADR-303）：相机速度 range 的 `min/max/value`、旋转模式 `<option>` 集均由 `TD_CAM_SPEED` / `TD_ROT_MODE` 派生，文案键经 `Record<TdRotMode, LocaleKey>` 表（schema 加模式即编译期报错）；禁止在本页重写裸字面量——曾与 3D ⚙ 面板 + 读取层多处副本漂移
   - **镜像源枚举消费 `views/app-content/settings/settings-schema.ts`**（ADR-307 D3 扩编，2026-10）：`set-mirror` 的 `<option>` 行与 `mirror-hint-<语义值>` 说明块均由 `MIRROR_SOURCES.map` 派生（`tpl-settings.ts|mirrorCardBody` + `MIRROR_UI` Record——schema 加成员即编译期逼出 UI 值/文案键同步），`mirror-hint-*` 的 id 与 `init.ts|applyMirrorHints` 约定同源；**禁止在模板手写 option 裸列**——曾出现「schema 有、下拉框静默没有」的半截接线（加第四个镜像源时下拉框缺席且无报错）。hint 块排版统一 `.stg-hint-block`（content-stg.ts，只管排版不带显隐，display 由 `init.ts|applyHintVisibility` 按值切），勿再内联复制 `font-size/color/padding` 配方
+   - **外观/更新域值域消费 `views/app-content/settings/settings-schema.ts`**（ADR-307 D3 扩编，2026-10）：字号五档 / 卡片密度二档 / 创作者字体二值 / 更新检查间隔（ms）枚举 + 默认值（`FONT_SIZE_LEVELS` / `DENSITY_LEVELS` / `DISPLAY_FONTS` / `UPDATE_CHECK_INTERVALS` 及对应 `*_DEFAULT`）收编入 schema，模板 `<option>` 由枚举 `.map` 派生（文案键经各消费面 `Record<枚举, LocaleKey>` 表——schema 加档位即编译期报错），`ui-prefs.ts` 的 `scaleMap` 收紧为 `Record<FontSizeLevel, string>`、密度白名单接 `DENSITY_LEVELS`、各回退字面量引 `*_DEFAULT`，`init.ts` 更新检查缺省回退引 `UPDATE_CHECK_DEFAULT`。⚠️ `features/maintenance/version-updater.ts` 的 `CHECK_INTERVAL`（6h）属跨域副本（features 不得反向 import views 叶），须与 `UPDATE_CHECK_DEFAULT` 手工保持相等（注释互指）
+   - **单卡 / 卡组「页面级编排档」命名常量表**（2026-10 锐评 P2 收口）：各 tab 的单卡 / 卡组入场档位不再写裸 ms 字面量，改为查表——`tpl-settings.ts` 的 `STG_ENV_DELAY`（storage 180 / defaultPage 210）与 `STG_APPEARANCE_DELAY`（fontFamily 60 / lang 150 / animation 180）、`tpl-settings-about.ts` 的 `STG_ABOUT_DELAY`（version 0 / intro 60 / guide 120 / credits 60）。行组档（theme/themeAuto/preview3d）由 `STG_BAND` + `STG_GROUP_STEP_MS` 收口，组内档由 `stgCards(startMs, step)` 派生。**「加一张卡」= 查该 tab 档表填下一个语义档**（撞车风险降为查表）；数值与改前逐位一致（零视觉变化）。⚠️ 这是「现值收口」非「节奏统一」——把 env 的 180/210 归一成「tab 内组序号 × 统一 STEP」会改变现有节奏，属视觉决策，未拍板
+   - **3D 预览 tab 三行已升格正典卡**（2026-10 卡片流收口）：`tpl-settings.ts|renderStgPreview3d` 的相机速度 / 旋转模式 / 键位映射三行自裸 `.settings-group` 行组升格为 `.stg-card`（`stg-camspeed-card` / `stg-rotmode-card` / `stg-keymap-card`，经 `stgCard()` 构造器），与 env / appearance / about 各 tab 卡片口径统一。卡内行组用 `.stg-keybind-row`（键位项专属透明底 + 边框）避免卡中卡双层背景；首卡挂 `.stg-section` 供 16px 顶距；测试钩子（`td-camspeed` / `td-rotmode` / `td-keymap-grid` / `td-keymap-reset`）全保留；入场延迟仍走 `STG_BAND.preview3d`（0/60/120）不重排节奏。回归测试 `tpl.test.ts`「3D 预览 tab 三行组已升格正典卡」钉死不得回退行组范式
 
 ## 样式范式契约（UI 一致性）
 
@@ -127,7 +130,7 @@ status: active
 |------|----------|------|----------------|
 | 卡片（大/小卡） | `stgCard()`（单张）/ `stgCards()`（同族一组，延迟按序号派生）（`settings/stg-card.ts`） | 自包含功能块：hdr（图标+标题）+ body（值/控件）+ `stg-card-desc`（说明）+ `actions`（按钮）四区齐全；同族多选项用 `stg-grid` 平铺（如路径三卡、字体三卡、鸣谢卡） | 裸 `style="background:var(--surf);border:..."` 内联手写卡、手写 `<div class="stg-card">` 未走构造器 → 间距/圆角/动画与正典卡不一致。**2026-09 已清零**（字体三栏 / 语言选择 / About 五卡全部回填，见文末待修债），新增卡片若再出现裸样式即视为回退 |
 | 选择器瓦片 | `theme-card`（`.theme-picker` 内） | 同族多选项的「点选」场景（主题六选一） | 勿把普通卡片写成瓦片 |
-| 紧凑行组 | `settings-group` + `setting-row` | 单控件占用整行的紧凑参数：滑块/下拉/开关（相机速度、旋转模式、主题自动切换） | 勿把 2 字标签撑满整行却内容稀疏的项硬塞；确需并排时改用 `stg-grid` 小卡 |
+| 紧凑行组 | `settings-group` + `setting-row` | 单控件占用整行的紧凑参数：滑块/下拉/开关（**2026-10 起仅余「主题自动切换」与「解析」details 内 worker 开关；相机速度 / 旋转模式 / 键位映射已升格卡片**） | 勿把 2 字标签撑满整行却内容稀疏的项硬塞；确需并排时改用 `stg-grid` 小卡 |
 
 ### 判定口诀
 
@@ -148,8 +151,8 @@ status: active
 
 1. ✅ `renderStgLangSelect()`（tpl-settings.ts）手写 `<div class="stg-card">` → 已回填为 `stgCard()`（hdr=语言标题，body=select+描述），单卡场景不再另挂 section-title（2026-09-15）。
 2. ✅ `renderStgFontFamily()`（tpl-settings.ts）三栏裸样式 `div` → 已回填为 `stg-grid` 内三张 `stgCard()`（字号/显示字体/密度各一卡，hdr 小标题+body 控件），与路径三卡同构（2026-09-15）。
-3. 主题自动切换 / 相机速度 / 旋转模式维持 `setting-row`（本就适合，不动）。
-> 剩余非正典卡：主题选择（`theme-card` 瓦片，属选择器范式，正确）、主题自动切换/相机速度/旋转模式（`setting-row`，属行组范式，正确）。
+3. 主题自动切换维持 `setting-row`（本就适合，不动）；**相机速度 / 旋转模式 / 键位映射 2026-10 已升格 `stgCard()` 正典卡**（卡片流收口，回归测试钉死）。
+> 剩余非正典卡：主题选择（`theme-card` 瓦片，属选择器范式，正确）、主题自动切换（`setting-row`，属行组范式，正确）、解析 details 内 FBX/MMD worker 开关（`setting-row`，折叠区内部，正确）。
 > 4. ✅ **About 五卡裸样式清零**（2026-09 锐评 P1）：`tpl-settings-about.ts|aboutSection` 的 features / 技术栈 / 链接 / 快速开始四组原为裸 `style="background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg)"`（圆角还用 `--radius-lg`，与审计 P1-2 收口后的 `--radius-card` 不同），版本卡更是直接手写 `<div class="stg-card">` 绕过构造器——**均违反本卡自己的「卡片唯一造法」红线**。现五张卡全部走 `stgCard()`/`stgCards()`，圆角/边框/动画由类单点供给；不等宽两列改用 `cardStyle: "flex:2 1 280px"` / `"flex:1 1 220px"` 声明并加 `flex-wrap`（原固定 `flex:2`/`flex:1` 在窄屏会挤爆），入场延迟并入 `stgCards` 派生。**至此设置页裸样式仿卡清零。**
 > 鸣谢（tpl-settings-about.ts `creditsSection()`，2026-10 菜单收口自独立 tab 降级为「关于」tab 下段小节）已数组化 + `stgCard`：灵感来源四张抽 `INSPIRATIONS` 数组、贡献者沿用 `CONTRIBUTORS` 数组，二者均 `map` 出 `stgCard()` 平铺于 `stg-grid`（2026-09-15）；加人/加灵感来源只改数据数组。
 > 背景：设置页跨多 ADR/PR 长出，`stgCard()` 是 ADR-040 拆分后才有的「正典卡片」，早于它的 section（主题/字体/相机/语言）从未回填，导致「卡片」在项目里实际有 3 种实现。此为存量债，非新增。

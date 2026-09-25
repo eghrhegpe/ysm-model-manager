@@ -123,6 +123,19 @@ const STG_BAND: Partial<Record<SettingsTabId, number>> = { appearance: 0, previe
 const groupDelay = (band: number | undefined, i: number): number =>
   (band ?? 0) + stagger(i, STG_GROUP_STEP_MS);
 
+// ===== 单卡 / 卡组「页面级编排档」命名常量（去魔数：渲染函数引语义名，不写裸 ms）=====
+// 病：此前各 tab 的单卡 / 卡组入场档位散为裸字面量（env 的 storage 180 / defaultPage 210、
+// appearance 的 lang 150 / animation 180 / 字体组 60…），靠注释口头约定。加一张卡「下一个
+// 档填多少」无规则可循，是自动新增漂移点（2026-10 锐评 P2）。
+// 治：每 tab 一张命名档表——「加一张卡」= 查表填下一个语义档（撞车风险降为查表），
+// 数值与改前逐位一致 ⇒ 零视觉变化。⚠️ 这是「现值收口」非「节奏统一」：把 env 的
+// 180/210 归一成「tab 内组序号 × 统一 STEP」会改变现有节奏，属视觉决策，留 ADR 拍板。
+// 行组档（theme/themeAuto/preview3d 行组）已由 STG_BAND + STG_GROUP_STEP_MS 收口，不在此表。
+/** env tab 单卡档（基础路径卡组 0 起步由 stgCards 内部派生，不在此表） */
+const STG_ENV_DELAY = { storage: 180, defaultPage: 210 } as const;
+/** appearance tab 单卡档 + 字体组起点档（主题 0 / 自动 60 经 STG_BAND.appearance 行组派生） */
+const STG_APPEARANCE_DELAY = { fontFamily: 60, lang: 150, animation: 180 } as const;
+
 /** 设置页平台态：桌面 / 安卓查看器 / 网页查看器（isViewer + isWebViewer 两 flag 表达三态，集中归一） */
 type SettingsPlatform = "desktop" | "androidViewer" | "webViewer";
 
@@ -287,7 +300,7 @@ function renderStgStorageCard(p: SettingsPlatform): string {
           header: { spaceBetween: false, titleSize: "base" },
           cardId: "stg-web-repo-card",
           marginTop: 8,
-          delayMs: 180,
+          delayMs: STG_ENV_DELAY.storage,
         },
       )
     : stgCard(
@@ -305,7 +318,7 @@ function renderStgStorageCard(p: SettingsPlatform): string {
           },
           cardId: "stg-files-card",
           marginTop: 8,
-          delayMs: 180,
+          delayMs: STG_ENV_DELAY.storage,
         },
       );
 }
@@ -337,7 +350,7 @@ function renderStgLangSelect(): string {
     {
       header: { titleSize: "md" },
       cardId: "stg-lang-card",
-      delayMs: 150,
+      delayMs: STG_APPEARANCE_DELAY.lang,
     },
   );
 }
@@ -508,7 +521,7 @@ function renderStgFontFamily(): string {
         cardId: "stg-font-density-card",
       },
     ],
-    { startMs: 60 },
+    { startMs: STG_APPEARANCE_DELAY.fontFamily },
   );
   return `<div class="section-title stg-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
 <div class="stg-grid">
@@ -530,7 +543,7 @@ function renderStgAnimationSection(): string {
       </label>`,
       },
       cardId: "stg-anim-card",
-      delayMs: 180,
+      delayMs: STG_APPEARANCE_DELAY.animation,
     },
   );
 
@@ -564,7 +577,7 @@ function renderStgDefaultPageSection(): string {
       </label>`,
       },
       cardId: "stg-default-page-card",
-      delayMs: 210,
+      delayMs: STG_ENV_DELAY.defaultPage,
     },
   );
 
@@ -580,41 +593,74 @@ const ROT_MODE_LABEL: Record<TdRotMode, LocaleKey> = {
 };
 
 function renderStgPreview3d(): string {
-  // 值域 / 默认值 / 枚举全部消费 settings-schema（ADR-303）：曾与 3D ⚙ 面板 + 读取层
-  // 三处各写一份裸字面量，改一处漏一处即「拖了没反应且无报错」。
+  // 2026-10 卡片流收口：三个 3D 设置行（相机速度 / 旋转模式 / 键位映射）自裸 .settings-group
+  // 行组升格为 .stg-card 正典卡（与 env / appearance / about 各 tab 卡片口径统一）——
+  // 行组范式「左右边缘与卡片/标题不齐 + 背景厚度不一」的视觉断裂收口。
+  // 口径细则：
+  //   ① 首卡自带 .stg-section 顶距（B 式，与 stg-card.ts|stgCard 同口径，防贴顶）；
+  //   ② 卡内行组用 .stg-keybind-row 类（键位项专属：透明底 + 边框，避免标签/按钮共享
+  //      厚重卡片背景，与 content-stg.ts|.stg-keybind-row 契约一致）；
+  //   ③ 值域 / 默认值 / 枚举仍消费 settings-schema（ADR-303）：min/max/value/rotOptions
+  //      全部 schema 派生，升卡不改数据面；
+  //   ④ 入场延迟仍走 STG_BAND.preview3d（行组档位 0/60/120）——升卡不重排节奏。
+  // 测试钩子（td-camspeed / td-rotmode / td-keymap-grid / td-keymap-reset）全保留。
+  // 旋转模式 option 由 schema 枚举派生（ROT_MODE_LABEL Record 锁文案键域，同 ADR-303 §2）。
   const rotOptions = TD_ROT_MODE.values
     .map((v) => `<option value="${v}">${t(ROT_MODE_LABEL[v])}</option>`)
-    .join("\n      ");
-  // 不再挂「3D 预览」节标题：tab 名即「3D 预览」（settings.preview3d），面板首行再写一遍同名
-  // 大标题是纯装饰——与「解析」节标题同类病，aboutPageBody 已按同口径不挂「关于」标题。
-  // 首组改 B 式 .stg-section 供 16px 顶距：.stg-page 契约 padding:0 20px 16px 顶部零垫，
-  // 原本的顶距一直由这个被删的 section-title 的 padding 隐式提供（删它不补类就贴顶）。
-  return `<div class="settings-group stg-section" style="animation-delay:${groupDelay(STG_BAND.preview3d, 0)}ms">
-  <div class="setting-row">
-    <label for="td-camspeed" class="label">${UI_ICONS.video} ${t("settings.preview3d.camSpeed")}</label>
-    <input type="range" id="td-camspeed" min="${TD_CAM_SPEED.min}" max="${TD_CAM_SPEED.max}" value="${TD_CAM_SPEED.default}" style="flex:1;accent-color:var(--accent,#7c83ff)">
-    <span id="td-camspeed-val" style="min-width:28px;text-align:right;color:var(--txt)">${TD_CAM_SPEED.default}</span>
-  </div>
-  <div class="stg-desc">${t("settings.preview3d.camSpeedHint")}</div>
-</div>
+    .join("\n        ");
 
-<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.preview3d, 1)}ms">
-  <div class="setting-row">
-    <label for="td-rotmode" class="label">${UI_ICONS.refresh} ${t("settings.preview3d.rotMode")}</label>
-    <select id="td-rotmode" class="stg-select" style="width:auto">
-      ${rotOptions}
-    </select>
-  </div>
-  <div class="stg-desc">${t("settings.preview3d.rotModeHint")}</div>
-</div>
+  const camSpeedCard = stgCard(
+    UI_ICONS.video,
+    t("settings.preview3d.camSpeed"),
+    `<div class="setting-row" style="background:none;padding:var(--sp-vh-pane);animation:none">
+      <input type="range" id="td-camspeed" min="${TD_CAM_SPEED.min}" max="${TD_CAM_SPEED.max}" value="${TD_CAM_SPEED.default}" style="flex:1;accent-color:var(--accent,#7c83ff)">
+      <span id="td-camspeed-val" style="min-width:28px;text-align:right;color:var(--txt)">${TD_CAM_SPEED.default}</span>
+    </div>
+    <div class="stg-card-desc">${t("settings.preview3d.camSpeedHint")}</div>`,
+    {
+      header: { spaceBetween: false, titleSize: "md" },
+      cardId: "stg-camspeed-card",
+      cardStyle: `animation-delay:${groupDelay(STG_BAND.preview3d, 0)}ms`,
+    },
+  );
 
-<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.preview3d, 2)}ms">
-  <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:8px">
-    <span class="label">${UI_ICONS.game} ${t("settings.preview3d.keymap")}</span>
-    <div id="td-keymap-grid" class="stg-grid stg-keymap-grid" style="gap:8px"></div>
-  </div>
-  <div class="stg-desc" id="td-keymap-hint">${t("settings.preview3d.keymapHint")}</div>
-  <div style="margin-top:8px"><button class="btn-base sm" id="td-keymap-reset">${UI_ICONS.undo} ${t("settings.preview3d.resetKeys")}</button></div>
+  const rotModeCard = stgCard(
+    UI_ICONS.refresh,
+    t("settings.preview3d.rotMode"),
+    `<div class="setting-row" style="background:none;padding:var(--sp-vh-pane);animation:none">
+      <select id="td-rotmode" class="stg-select" style="width:auto">
+        ${rotOptions}
+      </select>
+    </div>
+    <div class="stg-card-desc">${t("settings.preview3d.rotModeHint")}</div>`,
+    {
+      header: { spaceBetween: false, titleSize: "md" },
+      cardId: "stg-rotmode-card",
+      marginTop: 8,
+      cardStyle: `animation-delay:${groupDelay(STG_BAND.preview3d, 1)}ms`,
+    },
+  );
+
+  const keymapCard = stgCard(
+    UI_ICONS.game,
+    t("settings.preview3d.keymap"),
+    `<div class="setting-row stg-keybind-row" style="align-items:flex-start;flex-direction:column;gap:8px;background:none;padding:var(--sp-vh-pane);animation:none">
+      <div id="td-keymap-grid" class="stg-grid stg-keymap-grid" style="gap:8px"></div>
+    </div>
+    <div class="stg-card-desc" id="td-keymap-hint">${t("settings.preview3d.keymapHint")}</div>
+    <div style="margin-top:8px"><button class="btn-base sm" id="td-keymap-reset">${UI_ICONS.undo} ${t("settings.preview3d.resetKeys")}</button></div>`,
+    {
+      header: { spaceBetween: false, titleSize: "md" },
+      cardId: "stg-keymap-card",
+      marginTop: 8,
+      cardStyle: `animation-delay:${groupDelay(STG_BAND.preview3d, 2)}ms`,
+    },
+  );
+
+  // 三卡平铺（与字体三卡同构）；.stg-section 首组顶距由 camSpeedCard 的 stg-section 承载
+  return `<div class="stg-section">${camSpeedCard}
+${rotModeCard}
+${keymapCard}
 </div>`;
 }
 

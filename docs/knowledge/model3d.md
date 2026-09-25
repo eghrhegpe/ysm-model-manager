@@ -272,6 +272,7 @@ auto_fields:
     - ExpectedCommonField
     - extractIKChainFromTree
     - extractLegChains
+    - extractVmdIkTimeline
     - fbm2
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
@@ -917,6 +918,7 @@ auto_fields:
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
+    - VmdIkTimeline
     - VmdPositionTrackHandle
     - VmdRetargetOptions
     - VmdRetargetResult

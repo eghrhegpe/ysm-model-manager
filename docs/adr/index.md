@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **306** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **307** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 8 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 275 |
+| [✅ 已采纳](#已采纳) | 276 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -57,10 +57,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（275）
+### ✅ 已采纳（276）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-309](./ADR-309-vrm-vmd-p1-p7.md) | VRM 播 VMD 播放语义收口（锐评 P1-P7 七处修法落定） | ✅ 已采纳 |
 | [ADR-306](./ADR-306-vmd-morph-vrm-expression.md) | VMD morph 重定向到 VRM expression（表情通道） | ✅ 已采纳 |
 | [ADR-305](./ADR-305-menu-naming-decoupling-contract.md) | preview-3D 菜单命名脱钩裁定：三命名族稳定契约 | ✅ 已采纳 |
 | [ADR-304](./ADR-304-3d-prefs-machine-local-boundary.md) | 3D 预览设置持久化边界：机器本地 localStorage，不入 Go config 重置/迁移范围 | ✅ 已采纳 |
@@ -361,6 +362,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-309 | VRM 播 VMD 播放语义收口（锐评 P1-P7 七处修法落定） | ✅ 已采纳 | 2026-09-25 |
 | ADR-308 | 键盘原语收敛与全局快捷键注册表 | 📝 提议中 | 2026-09-25 |
 | ADR-307 | 设置页 P2 硬化：tab 样式去重 / viewer 区块缺席告知 / 非 3D 设置项 schema 化 | 📝 提议中 | 2026-09-25 |
 | ADR-306 | VMD morph 重定向到 VRM expression（表情通道） | ✅ 已采纳 | 2026-09-24 |

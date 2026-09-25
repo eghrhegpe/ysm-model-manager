@@ -26,6 +26,7 @@ auto_fields:
     - createVrmFootIKController
     - estimateVrmHeight
     - extractLegChains
+    - extractVmdIkTimeline
     - FootIKSampler
     - FootIKSamplers
     - getSemanticBone
@@ -60,6 +61,7 @@ auto_fields:
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
+    - VmdIkTimeline
     - VmdPositionTrackHandle
     - VmdRetargetOptions
     - VmdRetargetResult

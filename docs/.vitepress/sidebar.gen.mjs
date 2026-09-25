@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-309：VRM 播 VMD 播放语义收口（锐评 P1-P7 七处修法落定）",
+        "link": "/adr/ADR-309-vrm-vmd-p1-p7"
+      },
+      {
         "text": "ADR-308：键盘原语收敛与全局快捷键注册表",
         "link": "/adr/ADR-308-keyboard-primitive-convergence"
       },

@@ -341,6 +341,22 @@ describe("app-content 模板", () => {
     // 现两族统一 STG_BAND.preview3d=0 → 0/60/120 同步
     expect(Math.max(...delays)).toBeLessThanOrEqual(120);
   });
+
+  it("3D 预览 tab 三行组已升格正典卡（2026-10 卡片流收口回归：不得回退行组范式）", () => {
+    const html = settingsHTML();
+    const p3d = panelSlice(html, "stg-tab-preview3d", "stg-tab-aboutUpdate");
+    // 三个 3D 行（相机速度 / 旋转模式 / 键位映射）各升格为 .stg-card，带构造器产出的 hdr 标题行
+    for (const id of ["stg-camspeed-card", "stg-rotmode-card", "stg-keymap-card"]) {
+      expect(p3d, `3D 升卡后丢失卡片外壳 #${id}`).toContain(`id="${id}"`);
+    }
+    // 测试钩子（slider / select / keymap grid / reset 按钮）全保留（绑定不随升卡漂移）
+    for (const id of ["td-camspeed", "td-camspeed-val", "td-rotmode", "td-keymap-grid", "td-keymap-reset"]) {
+      expect(p3d, `3D 升卡后丢失绑定钩子 #${id}`).toContain(`id="${id}"`);
+    }
+    // 升卡后 3D 三行不再以裸 .settings-group 行组形态出现（解析 details 内的行组除外）：
+    // 相机/旋转/键位三卡 body 内的 setting-row 均带 background:none（卡内透明行，避免卡中卡双层底）
+    expect(p3d).toContain('class="setting-row" style="background:none');
+  });
   it("diagnosticsHTML 包含诊断 Tab 与面板", () => {
     const html = diagnosticsHTML();
     // ADR-300 §2.1：三组顶层 tab（日志/基准/体检），原六 tab 收口

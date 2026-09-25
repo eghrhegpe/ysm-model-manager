@@ -8,6 +8,11 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { UPDATE_CHECK_INTERVALS, type UpdateCheckInterval } from "./settings-schema.ts";
 import { stgCard, stgCards } from "./stg-card.ts";
 
+// ===== 单卡 / 卡组「页面级编排档」命名常量（去魔数；口径同 tpl-settings.ts|STG_ENV_DELAY）=====
+// aboutUpdate tab 各入场单元档位：versionCard 0 / 介绍组 60 / 引导组 120 / 鸣谢组 60。
+// 数值与改前逐位一致（零视觉变化）；「加一组」= 查表填下一个语义档。
+const STG_ABOUT_DELAY = { version: 0, intro: 60, guide: 120, credits: 60 } as const;
+
 // 更新检查间隔（ms）→ i18n 键（ADR-307 D3 扩编消费面：option 值域归 settings-schema，
 // 文案键归本面——Record<UpdateCheckInterval,…> 形态 schema 加档位此处编译期报错）。
 const UPDATE_CHECK_LABEL: Record<UpdateCheckInterval, LocaleKey> = {
@@ -53,7 +58,7 @@ export function aboutSection(): string {
         titleSize: "md",
         actions: `<span id="set-version" style="font-size:var(--fs-lg);font-weight:700;color:var(--accent)">${t("common.loading")}</span>`,
       },
-      delayMs: 0,
+      delayMs: STG_ABOUT_DELAY.version,
     },
   );
 
@@ -92,7 +97,7 @@ export function aboutSection(): string {
         cardStyle: "flex:1 1 220px",
       },
     ],
-    { startMs: 60 },
+    { startMs: STG_ABOUT_DELAY.intro },
   );
 
   const guideCards = stgCards(
@@ -123,7 +128,7 @@ export function aboutSection(): string {
         cardStyle: "flex:1 1 220px",
       },
     ],
-    { startMs: 120 },
+    { startMs: STG_ABOUT_DELAY.guide },
   );
 
   return `<div class="stg-grid stg-section" style="margin-bottom:12px">
@@ -198,7 +203,7 @@ function renderInspirations(): string {
         header: { titleSize: "md" },
       };
     }),
-    { startMs: 60, step: 60 },
+    { startMs: STG_ABOUT_DELAY.credits, step: 60 },
   );
   return `<div class="section-title stg-title">${UI_ICONS.target} ${t("credits.inspiration")}</div>
 <div class="stg-grid">${cards}</div>`;
@@ -216,7 +221,7 @@ function renderContributors(): string {
     </div>`,
       header: { titleSize: "md" },
     })),
-    { startMs: 60, step: 60 },
+    { startMs: STG_ABOUT_DELAY.credits, step: 60 },
   );
   return `<div class="section-title stg-title">${UI_ICONS.thanks} ${t("credits.special")}</div>
 <div class="stg-grid">${cards}</div>`;

@@ -3,7 +3,7 @@
 // 触发 ctx:show → 断言 menu:show 载荷与 menu-defs.ts 声明一致；
 // 点击 item → 断言 handler 发出正确的 bus 事件 / getApp 调用。
 //
-// ⚠️ ADR-187 D5 修订（2026-09-05）：vitest isolate:true（vitest.config.ts L26，
+// ⚠️ ADR-187 D5 修订（2026-09-05）：vitest isolate:true（vitest.config.ts 的 `isolate: true` 开关，
 // 2026-08-22 迁移）下每文件独立 worker + 模块图，拆分无跨文件时序耦合——
 // 原「isolate:false 全局时序耦合」例外依据在配置层已失效。1076 行拆 3 文件：
 //   - context-menus.setup.ts：mock 矩阵 + DOM stub + bus 收集数组唯一事实源
@@ -226,6 +226,38 @@ describe("菜单项点击行为", () => {
     it("rtype 漂移 → 文案随类型词变化（同一菜单两次弹出仅此差异）", () => {
       expect(labelsFor(RESOURCE_TYPES.BLUEPRINT)).toEqual(["复制蓝图清单", "清空此整合包的蓝图"]);
       expect(labelsFor(RESOURCE_TYPES.SHADER)).not.toEqual(labelsFor(RESOURCE_TYPES.BLUEPRINT));
+    });
+
+    it("header 标题行与 action 行同口径：都用短标签，不直插原始 rtype ID", () => {
+      // 病灶（2026-09 锐评）：header 原写 `(${ctx.rtype})` 直插原始 ID，于是 MMD 卡片上
+      // 同一张菜单并存「测试整合包 (EntityPlayer)」与「复制MMD清单」——相邻两行对同一
+      // 类型各叫各的。断言口径统一，且原始 ID 不再出现在任何 label 里。
+      menuShows.length = 0;
+      const payload = showMenu("instance", {
+        ...payloadCtx("instance"),
+        rtype: RESOURCE_TYPES.MMD,
+      });
+      const header = payload.items.find((i) => i.header);
+      expect(header?.label).toBe("测试整合包 (MMD)");
+      expect(header?.label).not.toContain("EntityPlayer");
+      // 同菜单 action 行同样用 MMD 短标签（口径一致的正向锚点）
+      const exportLabel = payload.items.find((i) => i.action === "instance.export-list")?.label;
+      expect(exportLabel).toContain("MMD");
+      expect(exportLabel).not.toContain("EntityPlayer");
+    });
+
+    it("header 与 action 共用同一份短标签口径（非各自映射）", () => {
+      // 反向锚点：对每个会漂移的 rtype，header 的类型词必须等于该项 action 文案里的类型词
+      for (const rtype of [RESOURCE_TYPES.MMD, RESOURCE_TYPES.SHADER, RESOURCE_TYPES.BLUEPRINT]) {
+        menuShows.length = 0;
+        const payload = showMenu("instance", { ...payloadCtx("instance"), rtype });
+        const header = payload.items.find((i) => i.header)?.label ?? "";
+        const exportLabel = payload.items.find((i) => i.action === "instance.export-list")?.label ?? "";
+        // 类型词 = header 括号内的内容；它必须出现在 action 文案中（同源短标签）
+        const typeWord = header.match(/\(([^)]*)\)/)?.[1] ?? "";
+        expect(typeWord).not.toBe("");
+        expect(exportLabel).toContain(typeWord);
+      }
     });
   });
 

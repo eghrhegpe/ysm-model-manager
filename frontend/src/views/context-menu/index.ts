@@ -3,7 +3,7 @@
 // 监听：menu:show({ x, y, items: [{label, icon?, onClick}] })
 import { bus, type MenuItem } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { noAnimationsCSS } from "@/utils/dom/css.ts";
+import { noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
@@ -44,9 +44,11 @@ class ContextMenu extends WebComponentBase {
       // 焦点不在本菜单（Tab 逃逸 / 外部点击后菜单未关 / 空 items 未聚焦）→ 不接管
       // 方向键/Enter：防劫持页面滚动/光标、防误触发页面上恰好同 class 的元素
       if (!activeEl || !menu.contains(activeEl)) return;
-      const items = Array.from(menu.querySelectorAll<HTMLElement>(".item")).filter(
-        (el) => el.style.display !== "none",
-      );
+      // 只取真正可激活的项：`.item-header` 是纯展示标题行（见 show() 渲染分支），
+      // 混进序列会让方向键停在无动作行、Enter 激活空动作
+      const items = Array.from(
+        menu.querySelectorAll<HTMLElement>(".item:not(.item-header)"),
+      ).filter((el) => el.style.display !== "none");
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
         if (items.length === 0) return;
@@ -117,6 +119,13 @@ class ContextMenu extends WebComponentBase {
         .item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
         .item.danger:hover { background: var(--status-error); color: var(--bg); }
         .item .icon { font-size: var(--fs-base); width: 16px; text-align: center; }
+        /* 标题行（header:true）：纯展示，不是可激活项。复用 .item 的排版（flex/gap/
+           padding）但抹掉一切「可点」信号——否则鼠标悬停会高亮、光标变手型，
+           用户点下去却什么也不发生（2026-09 锐评实测：instance/batch 首行、
+           workshop 四行信息全是这种假可点行）。选择器与 .item:hover 同特异度，
+           靠源序在后覆盖，勿上移。 */
+        .item-header { cursor: default; color: var(--muted); font-size: var(--fs-xs); }
+        .item-header:hover { background: none; color: var(--muted); }
         .divider {
           border: none;
           border-top: 1px solid var(--bd);
@@ -127,6 +136,10 @@ class ContextMenu extends WebComponentBase {
         /* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts）
            覆盖 .menu（menuPop）与菜单项内联 style 的 itemSlideIn（!important 作者声明
            压过普通内联声明）。 */
+        /* SVG 图标尺寸（ADR-238）：resolveIcon 喂入 .ws-icon SVG，须就地 adopt——
+           CSS 不穿透 shadow 边界，漏带则图标退回 24×24 viewBox 默认尺寸（实测坑，
+           同范式 app-nav/tpl.ts:126、content-layout.ts:120） */
+        ${wsIconCSS}
         ${noAnimationsCSS}
       </style>
       <div class="menu" id="menu" role="menu"></div>
@@ -164,8 +177,21 @@ class ContextMenu extends WebComponentBase {
         // 「行为标识（测试按此匹配）」，此前只存在于 JS 层，e2e 只能按 i18n 文案
         // filter（改文案/切 locale 即静默失效）；输出属性后定位与文案彻底解耦。
         const action = item.action ? ` data-action="${this._esc(item.action)}"` : "";
+        const anim = `animation: itemSlideIn .15s ease ${i * 25}ms both;`;
+        // 标题行（header:true）：纯展示，不是可激活项。挂 role="menuitem"/tabindex
+        // 会把它播报成菜单项、并让方向键停在无动作行上（Enter 激活一个空动作）；
+        // 也去掉了 data-testid="ctx-item"——那个 testid 的语义是「可点的菜单项」。
+        // role="presentation" 保留其文本可读性，同时不再冒充 menuitem。
+        if (item.header) {
+          return `
+        <div class="item item-header" role="presentation" data-idx="${i}" style="${anim}">
+          ${icon ? `<span class="icon">${icon}</span>` : ""}
+          <span>${label}</span>
+        </div>
+      `;
+        }
         return `
-        <div class="item ${danger}" role="menuitem" tabindex="${i === 0 ? "0" : "-1"}" data-testid="ctx-item" data-idx="${i}"${action} style="animation: itemSlideIn .15s ease ${i * 25}ms both;">
+        <div class="item ${danger}" role="menuitem" tabindex="${i === 0 ? "0" : "-1"}" data-testid="ctx-item" data-idx="${i}"${action} style="${anim}">
           ${icon ? `<span class="icon">${icon}</span>` : ""}
           <span>${label}</span>
         </div>

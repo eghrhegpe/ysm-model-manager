@@ -102,7 +102,12 @@ export const MENU_DEFS: MenuDef[] = [
       {
         kind: "header",
         icon: "package",
-        label: (ctx) => `${ctx.instanceName || ""}${ctx.rtype ? ` (${ctx.rtype})` : ""}`,
+        // 类型词同样走 shortLabelOf，与下方两项 action 同口径（2026-09 锐评「整合包菜单」
+        // 收口的漏网处）：原先直插 ctx.rtype **原始 ID**，同一条菜单里于是并存
+        // 「测试整合包 (EntityPlayer)」与「复制MMD清单」——相邻两行对同一个类型各叫各的。
+        // rtype 缺失时不追加括号（handler 层已硬拒空 rtype，此处只求文案不塌陷）。
+        label: (ctx) =>
+          `${ctx.instanceName || ""}${ctx.rtype ? ` (${shortLabelOf(ctx.rtype)})` : ""}`,
       },
       { kind: "divider" },
       {

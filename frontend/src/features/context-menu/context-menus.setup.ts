@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== context-menus 测试共享基建（ADR-187 D5 修订：isolate:true 后拆分可行）=====
-// vitest isolate:true（vitest.config.ts L26，2026-08-22 迁移）下每文件独立 worker + 模块图，
+// vitest isolate:true（vitest.config.ts 的 `isolate: true` 开关，2026-08-22 迁移）下每文件独立 worker + 模块图，
 // 拆分无跨文件时序耦合。本模块是 mock 矩阵 + DOM stub + 收集数组的唯一事实源：
 //   - mocks 用普通模块级 const（⚠️ 禁用 vi.hoisted，见下方红线），只 export getMocks() 访问器；
 //     消费方 import 本模块（副作用：vi.mock 注册）后解构访问器使用。
@@ -188,12 +188,17 @@ export function expectItemsMatchDef(
     expect(item.label).toBe(d.label(payloadCtx(type)));
     expect(item.icon).toBe(d.icon);
     if (d.kind === "header") {
-      // 标题项 = 纯展示行（kind 判别，noop 假动作已退役）：无 action、无 onClick、无 danger
+      // 标题项 = 纯展示行（kind 判别，noop 假动作已退役）：无 action、无 onClick、无 danger。
+      // header:true 是渲染层的判别位——views/context-menu 据此不挂 role="menuitem"/
+      // tabindex/点击绑定，也不给 hover 高亮（否则标题行伪装成可点项，点了却无事发生）。
+      expect(item.header).toBe(true);
       expect(item.action).toBeUndefined();
       expect(item.onClick).toBeUndefined();
       expect(item.danger).toBeUndefined();
       return;
     }
+    // 行为项不得携带 header 位（否则渲染层会把它降级成不可激活的展示行）
+    expect(item.header).toBeUndefined();
     expect(item.action).toBe(d.action);
     expect(item.danger).toBe(d.danger);
     expect(typeof item.onClick).toBe("function");

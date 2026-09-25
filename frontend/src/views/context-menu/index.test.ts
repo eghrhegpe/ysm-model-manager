@@ -74,6 +74,58 @@ describe("<context-menu> 渲染", () => {
   });
 });
 
+// ===== 标题行（header:true）不得伪装成可激活菜单项（2026-09 锐评实测缺陷）=====
+// 病灶：kind:"header" 纯展示行被一律渲染成 role="menuitem" + tabindex + .item:hover
+// 高亮 + onclick 绑定 —— 屏幕阅读器播报成「菜单项」，鼠标悬停像可点，点下去只关菜单。
+// instance/batch 首行与 workshop 四行信息行全中招。
+describe("<context-menu> 标题行（header:true）语义", () => {
+  it("标题行不挂 role=menuitem / tabindex，不占可激活集合", () => {
+    const el = showMenu([{ label: "测试整合包 (MMD)", header: true }, { label: "复制清单" }]);
+    const header = el.shadowRoot!.querySelector<HTMLElement>(".item-header")!;
+    expect(header).not.toBeNull();
+    expect(header.getAttribute("role")).not.toBe("menuitem");
+    expect(header.hasAttribute("tabindex")).toBe(false);
+    // 可激活集合恰 1 项（只有真正的 action 行）
+    expect(el.shadowRoot!.querySelectorAll('[role="menuitem"]')).toHaveLength(1);
+  });
+
+  it("标题行不输出 ctx-item testid（该 testid 语义 = 可点的菜单项）", () => {
+    const el = showMenu([{ label: "工坊模型.ysm", header: true }, { label: "复制路径" }]);
+    const items = el.shadowRoot!.querySelectorAll('[data-testid="ctx-item"]');
+    expect(items).toHaveLength(1);
+    // e2e 按 ctx-item 定位点击目标，标题行混入会让 .first() 点到无动作行
+    expect(items[0]!.textContent).toContain("复制路径");
+  });
+
+  it("标题行点击不触发任何 onClick 且不抛错", () => {
+    const onClick = vi.fn();
+    const el = showMenu([{ label: "标题", header: true }, { label: "A", onClick }]);
+    expect(() =>
+      (el.shadowRoot!.querySelector(".item-header") as HTMLElement).click(),
+    ).not.toThrow();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("方向键序列跳过标题行（不在无动作行上停留）", () => {
+    const el = showMenu([
+      { label: "标题", header: true },
+      { label: "A", onClick: vi.fn() },
+      { label: "B", onClick: vi.fn() },
+    ]);
+    const actionable = [
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>(".item:not(.item-header)"),
+    ];
+    expect(actionable).toHaveLength(2);
+    actionable[0]!.focus();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    // 从 A 向上循环 → B（跳过标题行），而非停在标题行
+    let active = document.activeElement as Element | null;
+    if (active?.shadowRoot) active = el.shadowRoot?.activeElement ?? null;
+    expect(active).toBe(actionable[1]);
+    expect((active as HTMLElement).classList.contains("item-header")).toBe(false);
+  });
+});
+
 describe("<context-menu> 交互", () => {
   it("点击 item 触发对应 onClick 并 hide", () => {
     const onClick = vi.fn();

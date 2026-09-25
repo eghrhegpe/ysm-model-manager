@@ -92,7 +92,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 94 |
+| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 96 |
 
 ### `dir:batch-rename`
 
@@ -185,12 +185,12 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 95 |
+| registerContextMenus | `frontend/src/features/context-menu/context-menus.ts` | 97 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/context-menu/index.ts` | 72 |
+| connectedCallback | `frontend/src/views/context-menu/index.ts` | 74 |
 
 ### `model:select`
 

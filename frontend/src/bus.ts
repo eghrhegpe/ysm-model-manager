@@ -20,6 +20,10 @@ export interface MenuItem {
   action?: string | undefined;
   label?: string | undefined;
   divider?: boolean;
+  /** 纯展示标题行（menu-defs.ts 的 kind:"header"）。渲染器据此不挂
+   *  role="menuitem"/tabindex/点击绑定——标题行不是可激活项，不该被 SR 播报为
+   *  「菜单项」，也不该进键盘 Tab/方向键序列（否则 Enter 会激活一个空动作）。 */
+  header?: boolean;
   icon?: string;
   danger?: boolean;
   onClick?: (() => void) | undefined;

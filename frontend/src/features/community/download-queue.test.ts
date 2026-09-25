@@ -3,7 +3,7 @@
 // 每个用例通过 vi.resetModules() + 动态 import 获得全新模块实例，
 // 彻底隔离模块级 STATE（含 errorList），避免跨用例状态泄漏。
 //
-// ⚠️ ADR-187 D5 修订（2026-09-05）：vitest isolate:true（vitest.config.ts L26，
+// ⚠️ ADR-187 D5 修订（2026-09-05）：vitest isolate:true（vitest.config.ts 的 `isolate: true` 开关，
 // 2026-08-22 迁移）下每文件独立 worker + 模块图——原例外条款依据的
 // 「isolate:false 共享 mock 引用」在配置层已失效。952 行拆 2 文件（复制式，本文件
 // 为状态层；UI 层见 download-queue-ui.test.ts）；beforeEach 动态 import 绑定文件级

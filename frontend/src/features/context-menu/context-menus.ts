@@ -67,8 +67,10 @@ function buildMenuItems(ctx: CtxShowPayload): MenuItem[] {
     if (item.kind === "divider") return { divider: true };
     const label = item.label(norm);
     if (item.kind === "header") {
-      // 标题行：无 action 无 onClick（noop 假动作已退役；载荷契约仍是 bus MenuItem）
-      const out: MenuItem = { label };
+      // 标题行：无 action 无 onClick（noop 假动作已退役；载荷契约仍是 bus MenuItem）。
+      // header:true 供渲染层判别——标题行不是可激活项，不得挂 role="menuitem"/tabindex
+      // 或点击绑定（否则 SR 播报成「菜单项」、方向键停在无动作行上）。
+      const out: MenuItem = { label, header: true };
       if (item.icon) out.icon = item.icon;
       return out;
     }

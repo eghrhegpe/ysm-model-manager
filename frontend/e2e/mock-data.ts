@@ -120,10 +120,12 @@ export const MOCK_DATA = {
     { Name: "1.21-NeoForge", VersionDir: "/e2e/mc/1.21-NeoForge" },
   ],
   GetResourceInstanceStatus: [
-    // 对齐 models.ts 必填字段（CustomDir/Status/Disabled/Files）——
+    // 对齐 models.ts 必填字段（CustomDir/Status/Disabled/Files/MissingCount）——
     // 缺字段会让依赖排序/状态分支的 e2e 掩盖真实现问题（子代理审计 P2）。
     // Status 契约值域："complete" | "missing" | "extra"（models.ts 注释），
     // Files 契约：CustomFileInfo[] | null——"ok"/0 属漂移值，E2E 会命中生产不存在的状态
+    // MissingCount 契约（ADR-310）：面板单元级待推送数（≠ Missing 文件清单长度），
+    // 侧栏徽章只认它——与 Status:"complete" 必须一致（0），否则 e2e 自相矛盾
     {
       Name: "1.20.1-Fabric",
       VersionDir: "/e2e/mc/1.20.1-Fabric",
@@ -131,6 +133,7 @@ export const MOCK_DATA = {
       Status: "complete",
       Disabled: [],
       Files: [],
+      MissingCount: 0,
       Missing: [],
       Extra: [],
       Synced: 0,
@@ -143,6 +146,7 @@ export const MOCK_DATA = {
       Status: "complete",
       Disabled: [],
       Files: [],
+      MissingCount: 0,
       Missing: [],
       Extra: [],
       Synced: 0,

@@ -2,7 +2,7 @@
 // ===== formatBytes / sizeColor / fmtDate 格式化工具测试 =====
 // 覆盖：formatBytes 边界（NaN/0/各量级）、sizeColor 三分区、fmtDate 的 NaN 守卫与三种日期形态
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { formatBytes, sizeColor, fmtDate, formatClock } from "./format.ts";
+import { formatBytes, sizeColor, fmtDate, formatClock, shortenPath } from "./format.ts";
 
 describe("formatBytes — 文件大小格式化", () => {
   it("NaN / undefined / null → 空串", () => {
@@ -152,5 +152,31 @@ describe("formatClock — HH:MM:SS 时刻（诊断页审计 C12 单点）", () =
     vi.setSystemTime(now);
     const out = formatClock(now.getTime());
     expect(out).toMatch(/:\d{2}:\d{2}/);
+  });
+});
+
+describe("shortenPath — 长路径保留末段（侧栏 footer 游戏根目录）", () => {
+  it("空串 → 空串", () => {
+    expect(shortenPath("")).toBe("");
+  });
+
+  it("段数不足 maxSegs → 原样返回", () => {
+    expect(shortenPath("/mc/root")).toBe("/mc/root");
+    expect(shortenPath("C:\\mc")).toBe("C:\\mc");
+    expect(shortenPath("")).toBe("");
+  });
+
+  it("Windows 长路径 → …\\末两段（分隔符跟随原路径）", () => {
+    expect(shortenPath("C:\\Users\\me\\AppData\\Roaming\\.minecraft")).toBe(
+      "…\\Roaming\\.minecraft",
+    );
+  });
+
+  it("POSIX 长路径 → …/末两段", () => {
+    expect(shortenPath("/home/me/.minecraft")).toBe("…/me/.minecraft");
+  });
+
+  it("自定义 maxSegs", () => {
+    expect(shortenPath("C:\\a\\b\\c\\d", 3)).toBe("…\\b\\c\\d");
   });
 });

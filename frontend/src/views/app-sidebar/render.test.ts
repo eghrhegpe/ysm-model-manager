@@ -69,15 +69,21 @@ describe("renderVersionCards", () => {
 });
 
 describe("instanceCardHeaderHTML 徽章 chips（真实实现）", () => {
-  it("synced>0 → green 标签；extra>0 → orange 标签", () => {
+  it("synced>0 → green 标签；extra>0 → orange 标签（title 语义锚点 = 面板既有文案）", () => {
     const html = instanceCardHeaderHTML("P", 3, 0, 2, "extra");
-    expect(html).toContain('<span class="tag green" data-role="synced-count">3</span>');
-    expect(html).toContain('<span class="tag orange" data-role="extra-count">2</span>');
+    expect(html).toContain(
+      '<span class="tag green" data-role="synced-count" title="已同步">3</span>',
+    );
+    expect(html).toContain(
+      '<span class="tag orange" data-role="extra-count" title="可拉取">2</span>',
+    );
   });
 
-  it("missing>0 && hasMod → red 标签", () => {
+  it("missing>0 && hasMod → red 标签（title=待推送）", () => {
     const html = instanceCardHeaderHTML("P", 0, 5, 0, "missing", 0, true);
-    expect(html).toContain('<span class="tag red" data-role="missing-count">5</span>');
+    expect(html).toContain(
+      '<span class="tag red" data-role="missing-count" title="待推送">5</span>',
+    );
   });
 
   it("missing>0 && !hasMod → 不显示 red 标签，改显 noMods 灰标签（带 rtype 标签）", () => {
@@ -102,9 +108,11 @@ describe("instanceCardHeaderHTML 徽章 chips（真实实现）", () => {
     expect(html).toContain('<span class="tag gray" data-role="no-mods">无VRM</span>');
   });
 
-  it("hasMod && 全零 → 显 '0' 标签（带 data-role）", () => {
+  it("hasMod && 全零 → 显 success SVG 标签（带 data-role + 完全同步 title，不再裸显 0）", () => {
     const html = instanceCardHeaderHTML("P", 0, 0, 0, "complete");
-    expect(html).toContain('<span class="tag" data-role="all-synced">0</span>');
+    expect(html).toContain('<span class="tag" data-role="all-synced" title="完全同步">');
+    expect(html).toContain('<svg class="ws-icon"'); // emoji 字形被设计令牌闸拦，走 SVG 体系
+    expect(html).not.toContain(">0</span>");
   });
 
   it("状态计数以 data-role 落 DOM，且 📦 收口为可定位的 .pkg-icon / .instance-card-pkg-count", () => {

@@ -31,6 +31,17 @@ export function sizeColor(b: number): string {
   return "sz-red";
 }
 
+/** 长路径 → 保留末 maxSegs 段的短形式（如 …\Roaming\.minecraft）。
+ * 分隔符跟随原路径（含 `\` 用 `\`，否则 `/`）；段数不足 maxSegs 原样返回；
+ * 空串返回空串。侧栏 footer 游戏根目录等窄容器展示用——完整路径交由 title 承载。 */
+export function shortenPath(p: string, maxSegs = 2): string {
+  if (!p) return "";
+  const sep = p.includes("\\") ? "\\" : "/";
+  const segs = p.split(/[\\/]+/).filter(Boolean);
+  if (segs.length <= maxSegs) return p;
+  return `…${sep}${segs.slice(-maxSegs).join(sep)}`;
+}
+
 // ===== 日期格式化 =====
 
 /** 时间戳 → 友好日期：今天显时间，今年显 M月D日，往年显 YYYY/M/D */

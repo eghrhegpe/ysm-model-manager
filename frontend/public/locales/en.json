@@ -123,7 +123,7 @@
   "settings.env": "Environment",
   "settings.appearance": "Appearance",
   "settings.parser": "Parsing",
-  "settings.tab3d": "3D Preview",
+  "settings.preview3d": "3D Preview",
   "settings.parserDesc": "3D model parsing engine settings. Both formats parse on the main thread by default (stable baseline); when enabled, parsing moves into a Web Worker with automatic fallback to the main thread on errors, and you can disable it manually here anytime.",
   "settings.aboutUpdate": "Updates & about",
   "settings.credits": "Credits",

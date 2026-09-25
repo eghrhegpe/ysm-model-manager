@@ -84,7 +84,7 @@
 |------|------|----|
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 134 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 129 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 132 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 283 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 307 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 319 |
@@ -222,7 +222,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 266 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 260 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 263 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 87 |
 
 **订阅方（on）：**
@@ -236,8 +236,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 83 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 246 |
+| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 84 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 249 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -486,7 +486,7 @@
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 42 |
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 67 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 122 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 125 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 42 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 75 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 94 |

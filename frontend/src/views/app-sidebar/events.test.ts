@@ -339,7 +339,9 @@ describe("bindFooter", () => {
     const btn = root.getElementById("btn-mc") as HTMLElement;
     await waitFor(() => expect(app.SaveAppConfig).toHaveBeenCalled());
     expect(btn.querySelector("b")).toBeNull(); // textContent 两态都含 /detected，元素查询才辨得出生成态
-    expect(btn.textContent).toBe(" <b>x</b>/detected");
+    // 新契约（shortenPath）：展示为末两段短形式（esc 后落位），完整路径由 title 承载
+    expect(btn.textContent).toBe(" …/b>/detected");
+    expect(btn.title).toBe("<b>x</b>/detected");
   });
 });
 

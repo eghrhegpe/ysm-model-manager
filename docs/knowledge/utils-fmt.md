@@ -10,6 +10,7 @@ auto_fields:
     - fmtDate
     - formatBytes
     - formatClock
+    - shortenPath
     - sizeColor
 quick_groups:
   - 跨组件通信与页面

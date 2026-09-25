@@ -189,16 +189,24 @@ export function instanceCardHeaderHTML(
   rtype = RESOURCE_TYPES.YSM,
 ): string {
   const allZero = synced === 0 && missing === 0 && extra === 0;
+  // 徽章补 title 语义锚点（颜色码不自解释——绿/红/橙三色图例此前只存在于文档）：
+  // 文案复用同步面板既有 key（已同步/待推送/可拉取），零新增 i18n；侧栏 extra 的
+  // 用户操作即「拉取」，与面板 optional（可拉取）语义吻合。裸 `0` 改 success SVG + 完全同步
+  // title——「0 什么？」不再需要猜（emoji 字形 ✓ 被设计令牌闸拦，走 utils/icon SVG 体系）。
   const chips =
-    (synced > 0 ? `<span class="tag green" data-role="synced-count">${synced}</span> ` : "") +
-    (missing > 0 && hasMod
-      ? `<span class="tag red" data-role="missing-count">${missing}</span> `
+    (synced > 0
+      ? `<span class="tag green" data-role="synced-count" title="${t("syncManager.status.synced")}">${synced}</span> `
       : "") +
-    (extra > 0 ? `<span class="tag orange" data-role="extra-count">${extra}</span>` : "") +
+    (missing > 0 && hasMod
+      ? `<span class="tag red" data-role="missing-count" title="${t("syncManager.status.missing")}">${missing}</span> `
+      : "") +
+    (extra > 0
+      ? `<span class="tag orange" data-role="extra-count" title="${t("syncManager.status.optional")}">${extra}</span> `
+      : "") +
     (!hasMod
       ? `<span class="tag gray" data-role="no-mods">${t("sidebar.noMods", { type: noModLabelOf(rtype) })}</span>`
       : allZero
-        ? `<span class="tag" data-role="all-synced">0</span>`
+        ? `<span class="tag" data-role="all-synced" title="${t("sidebar.syncFully")}">${UI_ICONS.success}</span>`
         : "");
   return `<div class="instance-card-header">
 <div class="card-name-row"><span class="name">${esc(name)}</span></div>

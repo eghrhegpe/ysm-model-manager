@@ -57,6 +57,9 @@ ${btnBaseCSS}
   border: 1px solid var(--bd); background: transparent;
   color: var(--txt); cursor: pointer; font-size: calc(var(--fs-base) - 2px); font-family: var(--font-ui);
   text-align: center; transition: background var(--tr-fast);
+  /* 游戏根目录按钮：文本槽兜底单行 + 省略（展示已由 shortenPath 收成末两段，
+     此处只防「长单段/长文件夹名」残留溢出；完整路径在 title） */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .footer-btn:hover { background: var(--hover); }
 /* 骨架屏 */

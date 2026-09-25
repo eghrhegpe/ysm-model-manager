@@ -8,6 +8,7 @@ import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { toastEmptyRtype } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { shortenPath } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -87,7 +88,9 @@ function bindCardClickHandler(
       // 2026-09 定位降级：app-content 现已复用同一 <app-sync-manager> 实例（只改属性），
       // 重复 emit 不再导致「丢状态/闪烁」——本状态机退化为省掉无谓事件扩散的优化，
       // 不再是防回归的救命稻草（勿再以「没有它就会丢状态」为由给它加复杂度）。
-      // 点击允许 fallback 到 YSM（预览/选择无害），与右键拒绝 fallback 形成对称设计
+      // ⚠️ 行为口径：点击/右键/restore 三路径**统一严格拦截**空 rtype（见上方 :77 P1 修复），
+      // 不存在「点击容错、右键拒绝」的对称设计——下方 emitKey 构造中的
+      // `instances[0]?.rtype || currentRepoType()` 仅为去重 key 的字符串兜底，非行为 fallback。
       host.setLastEmittedPkg(`${st.instances[0]?.rtype || currentRepoType()}:${pkg.name}`);
       safeSet(`sb_selectedName_${pkg.rtype || currentRepoType()}`, pkg.name);
     }
@@ -265,12 +268,18 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
         const cfg = await LoadAppConfig();
         if (cfg.mcRoot) {
           // 路径是外部数据（配置/磁盘枚举），文本槽必 esc——R8 模板插值卫生回归锁见 events.test.ts
-          btn.innerHTML = `${UI_ICONS.game} ${esc(cfg.mcRoot)}`;
+          // 展示用 shortenPath 保留末两段（…\Roaming\.minecraft），完整路径交 title——
+          // 原全量绝对路径在窄侧栏溢出/截断不可读；点击仍跳设置页（btn.onclick 上方）。
+          btn.innerHTML = `${UI_ICONS.game} ${esc(shortenPath(cfg.mcRoot))}`;
+          btn.title = cfg.mcRoot;
+          btn.setAttribute("aria-label", `${t("sidebar.configGameDir")}: ${cfg.mcRoot}`);
         } else {
           // 没设置时自动检测：用第一个有效路径
           const paths = await GetMinecraftPaths();
           if (paths?.length) {
-            btn.innerHTML = `${UI_ICONS.game} ${esc(paths[0])}`;
+            btn.innerHTML = `${UI_ICONS.game} ${esc(shortenPath(paths[0]))}`;
+            btn.title = paths[0];
+            btn.setAttribute("aria-label", `${t("sidebar.configGameDir")}: ${paths[0]}`);
             const theme = safeGet("theme") || "dark";
             await SaveAppConfig(
               cfg.filesRoot || "",
@@ -282,10 +291,15 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
             );
           } else {
             btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;
+            // 复位路径残留（按钮长生命周期，配置被清空后 title/aria 不再指旧路径）
+            btn.title = t("sidebar.configGameDir");
+            btn.removeAttribute("aria-label");
           }
         }
       } catch (e) {
         btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;
+        btn.title = t("sidebar.configGameDir");
+        btn.removeAttribute("aria-label");
         logWarn("sidebar", "MC detection", e);
       }
     })();

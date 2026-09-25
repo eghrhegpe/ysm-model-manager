@@ -109,7 +109,7 @@ invariant_anchors:
 
 ## 实施进度（随源码演进，ADR 只记方向不记进度）
 
-- ✅ helper 四件套落地（menu-test-helpers.ts 独立叶）+ 基线初始化（首版 336 处/35 文件 → 示范收敛后 320 处/34 文件）。
-- ✅ 示范收敛 `fog-capability.test.ts`：16 处债务清零（index-access 12→0、ordered-snapshot 2→0、exact-length 2→0），38 测试全绿。改写形态可直接照抄：顶层/子组成员 → `nodeIds/childIds + .sort()` 集合；逐成员 kind → `findNodeById(id).kind` 行为断言；`getMenuNodes()[1]!` → `findNodeById` 递归（跨层一步到叶）；「恰有两个选项」→ 选项 value 集合断言（指名缺项而非报数字）。
-- 🔄 存量债务：余 34 文件共 320 处（light/postprocessing/shadow/sky/water 等大 cap 测试为重灾区）——**触碰即还债**：改哪个 cap 菜单就顺手收敛哪个测试文件，`--update` 收紧基线。不做一次性大 churn（ADR-208 反 big-bang 同范式）。
-- 门禁已接 pre-push 域闸（debt 型）+ DOMAIN_BLOCK_CHECKS 双向锁 + 契约测试九项。
+- ✅ 全量收敛完成：37 文件 290 处债务清零，基线 0/0（commit 717c9052f）。
+- ✅ typecheck 红灯修复：删 5 文件未用 helper import + MenuItemShape.children 收窄为 PreviewMenuNode[]（commit 0b8b60887）。
+- ✅ 契约测试补强：SCENE_GRAPH_MARKERS 豁免路径 2 条 fixture（commit 42850f4a7），13/13 check 全过。
+- **已知局限（ADR-311 D3「漏报接受」）**：SCENE_GRAPH_MARKERS 启发式偏宽——裸子串 `Scene` 可命中 `PreviewScene` 等无关标识符；index-access 仅查匹配后 80 字符窗口，若真菜单树断言恰在窗口内含标记词会被静默放行（闸对该行失明）。exact-length 前窗检查对 `expect(scene.children).toHaveLength(N)` 形态无效（lazy 组从 `children` 起不含接收者），靠后窗兜底。

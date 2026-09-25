@@ -16,21 +16,20 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 9 |
+| [📝 提议中](#提议中) | 8 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 276 |
+| [✅ 已采纳](#已采纳) | 277 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（9）
+### 📝 提议中（8）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-310](./ADR-310-instance-sync-count-single-source.md) | 整合包同步计数口径统一 | 📝 提议中 |
 | [ADR-308](./ADR-308-keyboard-primitive-convergence.md) | 键盘原语收敛与全局快捷键注册表 | 📝 提议中 |
 | [ADR-307](./ADR-307-settings-page-p2-hardening.md) | 设置页 P2 硬化：tab 样式去重 / viewer 区块缺席告知 / 非 3D 设置项 schema 化 | 📝 提议中 |
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
@@ -58,10 +57,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（276）
+### ✅ 已采纳（277）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-310](./ADR-310-instance-sync-count-single-source.md) | 整合包同步计数口径统一 | ✅ 已采纳 |
 | [ADR-309](./ADR-309-vrm-vmd-p1-p7.md) | VRM 播 VMD 播放语义收口（锐评 P1-P7 七处修法落定） | ✅ 已采纳 |
 | [ADR-306](./ADR-306-vmd-morph-vrm-expression.md) | VMD morph 重定向到 VRM expression（表情通道） | ✅ 已采纳 |
 | [ADR-305](./ADR-305-menu-naming-decoupling-contract.md) | preview-3D 菜单命名脱钩裁定：三命名族稳定契约 | ✅ 已采纳 |
@@ -363,7 +363,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-310 | 整合包同步计数口径统一 | 📝 提议中 | 2026-09-25 |
+| ADR-310 | 整合包同步计数口径统一 | ✅ 已采纳 | 2026-09-25 |
 | ADR-309 | VRM 播 VMD 播放语义收口（锐评 P1-P7 七处修法落定） | ✅ 已采纳 | 2026-09-25 |
 | ADR-308 | 键盘原语收敛与全局快捷键注册表 | 📝 提议中 | 2026-09-25 |
 | ADR-307 | 设置页 P2 硬化：tab 样式去重 / viewer 区块缺席告知 / 非 3D 设置项 schema 化 | 📝 提议中 | 2026-09-25 |

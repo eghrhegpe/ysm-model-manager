@@ -66,6 +66,7 @@ function makeState(creators: LocalCreatorLike[]): {
     activeTag: "",
     searchKw: "",
     detachedCreators: [],
+    editSnapshot: null,
   };
   return { state, searchResults };
 }

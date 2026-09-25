@@ -5,6 +5,7 @@ import * as m from "@/features/community/community-data.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -17,6 +18,21 @@ import { joinSiteIds, parseSiteIds } from "./workshop-data.ts";
 
 interface FilterStateShell {
   activeTag: string;
+}
+
+// ===== P1-3a 锐评：编辑态 dirty 守卫 =====
+// 快照 = 本站创作者 + 预设搜索词的可编辑字段序列化；退出编辑前比较判定「未保存变更」。
+// 刻意序列化**可编辑子集**（name/desc/type/role + preset label），不整对象快照——
+// 运行时附加字段（_fromLocal/_fromCommunity）不属于用户可改数据，计入会造成假 dirty。
+function takeEditSnapshot(creators: LocalCreatorLike[], site: SiteViewState["site"]): string {
+  const creatorsView = creators.map((cr) => ({
+    name: cr.name || "",
+    desc: cr.desc || "",
+    type: cr.type || "",
+    role: cr.role || "",
+  }));
+  const presets = (site.presetSearches || []).map((p) => ({ label: p.label || "" }));
+  return JSON.stringify({ creatorsView, presets });
 }
 
 /** 单个输入控件 → creators[idx][fld] 回写。
@@ -125,6 +141,8 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
     "click",
     () => {
       wsEditModeRef.v = true;
+      // P1-3a：进入编辑态取基线快照（此后任何修改都会让 dirty 判定成立）
+      state.editSnapshot = takeEditSnapshot(creators, site);
       refreshView();
     },
     { signal: sig },
@@ -132,8 +150,22 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
 
   searchResults.querySelector(".cr-cancel-btn")?.addEventListener(
     "click",
-    () => {
+    async () => {
+      // P1-3a 锐评：dirty 守卫——编辑 5 行后点取消/切走，原实现静默丢弃全部修改。
+      // 有未保存变更 → modalConfirm；确认才退出（并清快照），取消则留在编辑态。
+      const snapshot = state.editSnapshot;
+      const dirty = snapshot !== null && takeEditSnapshot(creators, site) !== snapshot;
+      if (dirty) {
+        const ok = await modalConfirm({
+          title: t("workshop.discardTitle"),
+          message: t("workshop.discardMessage"),
+          okText: t("workshop.discardConfirm"),
+          danger: true,
+        });
+        if (!ok) return;
+      }
       wsEditModeRef.v = false;
+      state.editSnapshot = null;
       refreshView();
     },
     { signal: sig },
@@ -180,6 +212,8 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
           ...state.detachedCreators.filter((cr) => (cr.name || "").trim()),
         ]);
         wsEditModeRef.v = false;
+        // P1-3a：保存成功即视为无 dirty（下次进入编辑态重新取快照）
+        state.editSnapshot = null;
         busRef.emit("toast:show", {
           msg: t("workshop.action.saved"),
           duration: TOAST_MS.success,

@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const backend = vi.hoisted(() => ({
   SaveWorkshopPresetsBySite: vi.fn(async (_siteId: string, _presets: unknown[]) => {}),
   SaveWorkshopCreatorsBySite: vi.fn(async (_siteId: string, _creators: unknown[]) => {}),
+  modalConfirm: vi.fn(async () => true),
 }));
 
 vi.mock("@/views/backend-deps.ts", () => ({
@@ -14,6 +15,11 @@ vi.mock("@/views/backend-deps.ts", () => ({
     SaveWorkshopPresetsBySite: backend.SaveWorkshopPresetsBySite,
     SaveWorkshopCreatorsBySite: backend.SaveWorkshopCreatorsBySite,
   }),
+}));
+
+// P1-3a：edit.ts 的取消按钮 dirty 守卫消费 modalConfirm——mock 默认确认，逐用例覆盖拒绝路径
+vi.mock("@/utils/dom/modal-confirm.ts", () => ({
+  modalConfirm: backend.modalConfirm,
 }));
 
 vi.mock("@/core/i18n/t.ts", () => ({ t: (k: string) => k }));
@@ -56,6 +62,7 @@ function makeState(over: Partial<SiteViewState> = {}): {
     activeTag: "",
     searchKw: "",
     detachedCreators: [],
+    editSnapshot: null,
     ...over,
   };
   document.body.appendChild(searchResults);
@@ -66,6 +73,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   backend.SaveWorkshopPresetsBySite.mockReset();
   backend.SaveWorkshopCreatorsBySite.mockReset();
+  backend.modalConfirm.mockReset();
+  backend.modalConfirm.mockResolvedValue(true);
   document.body.innerHTML = "";
   window.localStorage.clear();
 });
@@ -365,6 +374,63 @@ describe("编辑态增删", () => {
     // 本站 Alice + 解除关联的跨站条目（type=siteB）一并写回
     expect(saved.map((c) => c.name)).toEqual(["Alice", "跨站"]);
     expect(saved[1]?.type).toBe("siteB");
+    cleanup!();
+  });
+
+  it("11. 编辑态 dirty 守卫：修改后取消 → modalConfirm；确认退出 / 拒绝留在编辑态（P1-3a 锐评）", async () => {
+    const { state, searchResults, refresh } = makeState();
+    // 进入编辑态（cr-edit-btn → 取基线快照）+ 渲染编辑工具栏（含取消按钮）
+    searchResults.innerHTML =
+      '<button class="cr-edit-btn"></button>' +
+      '<button class="cr-cancel-btn"></button>' +
+      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>';
+    const cleanup = bindEditEvents(state, refresh);
+
+    searchResults.querySelector(".cr-edit-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    expect(state.wsEditModeRef.v).toBe(true);
+    expect(state.editSnapshot).not.toBeNull();
+
+    // 修改 name → dirty 成立
+    const nameInput = searchResults.querySelector('input[data-fld="name"]') as HTMLInputElement;
+    nameInput.value = "Bob";
+    nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    // 取消 → modalConfirm 确认 → 退出编辑态
+    backend.modalConfirm.mockResolvedValueOnce(true);
+    searchResults.querySelector(".cr-cancel-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    await vi.waitFor(() => expect(backend.modalConfirm).toHaveBeenCalledTimes(1));
+    expect(state.wsEditModeRef.v).toBe(false);
+    expect(state.editSnapshot).toBeNull();
+    expect(refresh).toHaveBeenCalled();
+
+    // 再次进入编辑态（新基线），修改后取消但拒绝确认 → 留在编辑态
+    searchResults.querySelector(".cr-edit-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    const nameInput2 = searchResults.querySelector('input[data-fld="name"]') as HTMLInputElement;
+    nameInput2.value = "Cara";
+    nameInput2.dispatchEvent(new Event("input", { bubbles: true }));
+    backend.modalConfirm.mockResolvedValueOnce(false);
+    searchResults.querySelector(".cr-cancel-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    await vi.waitFor(() => expect(backend.modalConfirm).toHaveBeenCalledTimes(2));
+    expect(state.wsEditModeRef.v).toBe(true); // 拒绝 → 仍在编辑态
+    cleanup!();
+  });
+
+  it("12. 编辑态无修改取消 → 不弹 modalConfirm（dirty 为假，快速退出）（P1-3a 锐评）", async () => {
+    const { state, searchResults, refresh } = makeState();
+    searchResults.innerHTML =
+      '<button class="cr-edit-btn"></button>' +
+      '<button class="cr-cancel-btn"></button>' +
+      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>';
+    const cleanup = bindEditEvents(state, refresh);
+
+    searchResults.querySelector(".cr-edit-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    expect(state.editSnapshot).not.toBeNull();
+
+    // 未修改直接取消 → 不弹确认
+    searchResults.querySelector(".cr-cancel-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    await Promise.resolve();
+    expect(backend.modalConfirm).not.toHaveBeenCalled();
+    expect(state.wsEditModeRef.v).toBe(false);
     cleanup!();
   });
 });

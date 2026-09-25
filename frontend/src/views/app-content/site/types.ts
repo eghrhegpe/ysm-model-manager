@@ -77,6 +77,10 @@ export interface SiteViewState {
    *  删除时改 type 去本站段 + 推入本列表；保存时随 siteCreators 一并写回（type 已无本站段，
    *  Go 追加后维持他站可见、本站不再命中）。取消编辑不落盘、列表随重渲染自然丢弃。 */
   detachedCreators: LocalCreatorLike[];
+  /** 编辑态基线快照（P1-3a 锐评 dirty 守卫）：进入编辑态时对本站创作者 + 预设搜索词的
+   *  序列化快照；退出（取消）前比较 JSON 是否变更，非空则确认——防编辑 5 行后误丢。
+   *  null = 尚未进入编辑态 / 已保存 / 已确认丢弃。 */
+  editSnapshot: string | null;
 }
 
 /** bindXxxEvents 函数的统一返回：清理函数，主入口聚合成单一 cleanup */

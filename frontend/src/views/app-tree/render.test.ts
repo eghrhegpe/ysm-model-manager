@@ -40,31 +40,50 @@ function treeKeys(root: Record<string, unknown>): string[] {
 }
 
 describe("buildTree 排序", () => {
+  // 断言统一走 flattenVisible 行序——treeKeys 的 Object.keys().sort() 自排序
+  // 曾让三个排序用例对任何实现都通过（2026-09 排序比较器漏实现 size/date 被掩盖的真因）
   it("name 排序按字典序", () => {
     const root = buildTree(
       [entry("b.ysm", "b.ysm"), entry("a.ysm", "a.ysm"), entry("c.ysm", "c.ysm")],
       "name",
       null,
     );
-    expect(treeKeys(root)).toEqual(["a.ysm", "b.ysm", "c.ysm"]);
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    expect(rows.map((r) => r.key)).toEqual(["a.ysm", "b.ysm", "c.ysm"]);
   });
 
-  it("size 排序降序", () => {
+  it("size 排序降序（文件名字典序与期望相反，防断言空转）", () => {
     const root = buildTree(
-      [entry("small.ysm", "small.ysm", 100), entry("big.ysm", "big.ysm", 5000)],
+      [entry("a.ysm", "a.ysm", 100), entry("b.ysm", "b.ysm", 9000)],
       "size",
       null,
     );
-    expect(treeKeys(root)).toEqual(["big.ysm", "small.ysm"]);
+    const rows = flattenVisible(root, "", "", "size", {}, 0, "grid");
+    expect(rows.map((r) => r.key)).toEqual(["b.ysm", "a.ysm"]);
   });
 
-  it("date 排序降序", () => {
+  it("date 排序降序（文件名字典序与期望相反）", () => {
     const root = buildTree(
-      [entry("old.ysm", "old.ysm", 0, 100), entry("new.ysm", "new.ysm", 0, 500)],
+      [entry("a.ysm", "a.ysm", 0, 100), entry("b.ysm", "b.ysm", 0, 900)],
       "date",
       null,
     );
-    expect(treeKeys(root)).toEqual(["new.ysm", "old.ysm"]);
+    const rows = flattenVisible(root, "", "", "date", {}, 0, "grid");
+    expect(rows.map((r) => r.key)).toEqual(["b.ysm", "a.ysm"]);
+  });
+
+  it("size 模式：目录仍按名称排且在文件前（目录无 size 语义，聚合归 Go）", () => {
+    const root = buildTree(
+      [
+        entry("z.ysm", "z.ysm", 999999),
+        entry("a.ysm", "a.ysm", 1),
+        entry("m.txt", "mfolder/m.txt"),
+      ],
+      "size",
+      null,
+    );
+    const rows = flattenVisible(root, "", "", "size", {}, 0, "grid");
+    expect(rows.map((r) => r.key)).toEqual(["mfolder", "z.ysm", "a.ysm"]);
   });
 
   it("文件夹始终排在文件前（name 模式）", () => {
@@ -73,7 +92,8 @@ describe("buildTree 排序", () => {
       "name",
       null,
     );
-    expect(treeKeys(root)).toEqual(["a.ysm", "folder"]);
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    expect(rows.map((r) => r.key)).toEqual(["folder", "a.ysm"]);
   });
 });
 

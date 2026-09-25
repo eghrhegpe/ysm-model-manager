@@ -374,3 +374,97 @@ describe("handleTreeDrop — oversize 过滤", () => {
     unsub();
   });
 });
+
+// ===== dragleave / dragend 提示收口（2026-09 收债：判定反转修复）=====
+// 旧实现：树内移动反收提示（被 dragover 重显掩盖成闪烁）、真离开/拖出窗口反 return
+// 提示滞留，且无 dragend 兜底——「拖过树再在外松手」.tree-drop-hint 永久滞留。
+describe("dragleave / dragend 提示收口", () => {
+  function setup(): {
+    hint: HTMLElement;
+    tree: HTMLElement;
+    deep: HTMLElement;
+    outside: HTMLElement;
+    cleanup: () => void;
+    host: HTMLElement;
+  } {
+    const host = document.createElement("app-tree");
+    const sr = host.attachShadow({ mode: "open" });
+    sr.innerHTML =
+      '<div id="tree"><div class="item"><span>deep target</span></div></div>' +
+      '<div class="tree-drop-hint"></div>';
+    document.body.appendChild(host);
+    const outside = document.createElement("div");
+    document.body.appendChild(outside);
+    const tree = sr.getElementById("tree") as HTMLElement;
+    const deep = tree.querySelector(".item span") as HTMLElement;
+    const hint = sr.querySelector(".tree-drop-hint") as HTMLElement;
+    const cleanup = bindTreeDnD(tree);
+    return { hint, tree, deep, outside, cleanup, host };
+  }
+
+  /** 先 dragover 到树内让 hint 进入显示态（前置条件） */
+  function showHint(deep: HTMLElement): void {
+    const over = makeDragEvent("dragover", { types: ["Files"] });
+    Object.defineProperty(over, "target", { value: deep, configurable: true });
+    document.dispatchEvent(over);
+  }
+
+  function dragLeave(target: Node, relatedTarget: EventTarget | null): void {
+    const ev = makeDragEvent("dragleave", { relatedTarget });
+    Object.defineProperty(ev, "target", { value: target, configurable: true });
+    document.dispatchEvent(ev);
+  }
+
+  it("树内元素间移动（relatedTarget 在树内）→ 提示保持", () => {
+    const { hint, deep, cleanup, host } = setup();
+    showHint(deep);
+    expect(hint.style.display).toBe("flex");
+    const inner = document.createElement("span");
+    (deep.parentElement as HTMLElement).appendChild(inner);
+    dragLeave(deep, inner); // 去向仍在同一树内
+    expect(hint.style.display, "树内移动不应收提示").toBe("flex");
+    cleanup();
+    host.remove();
+  });
+
+  it("拖离树（relatedTarget 为树外元素）→ 提示收起", () => {
+    const { hint, deep, outside, cleanup, host } = setup();
+    showHint(deep);
+    dragLeave(deep, outside);
+    expect(hint.style.display, "真正离开树应收提示").toBe("none");
+    cleanup();
+    host.remove();
+  });
+
+  it("拖出窗口（relatedTarget null）→ 提示收起", () => {
+    const { hint, deep, cleanup, host } = setup();
+    showHint(deep);
+    dragLeave(deep, null);
+    expect(hint.style.display).toBe("none");
+    cleanup();
+    host.remove();
+  });
+
+  it("drop 落在树外 → 提示仍收起（旧实现早退滞留）", () => {
+    const { hint, deep, outside, cleanup, host } = setup();
+    showHint(deep);
+    const drop = makeDragEvent("drop", { types: ["Files"] });
+    Object.defineProperty(drop, "target", { value: outside, configurable: true });
+    document.dispatchEvent(drop);
+    expect(hint.style.display).toBe("none");
+    cleanup();
+    host.remove();
+  });
+
+  it("dragend → 提示收起，cleanup 移除 dragend 监听", () => {
+    const { hint, deep, cleanup, host } = setup();
+    showHint(deep);
+    document.dispatchEvent(new Event("dragend"));
+    expect(hint.style.display).toBe("none");
+    const removeSpy = vi.spyOn(document, "removeEventListener");
+    cleanup();
+    expect(removeSpy).toHaveBeenCalledWith("dragend", expect.any(Function));
+    removeSpy.mockRestore();
+    host.remove();
+  });
+});

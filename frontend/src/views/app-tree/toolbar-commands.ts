@@ -17,6 +17,7 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -150,6 +151,14 @@ export const TOOLBAR_COMMANDS = {
     const { vm, $ } = ctx;
     const tree = $("tree");
     if (tree) tree.innerHTML = spinnerHTML();
+    // 手动刷新就是为「外部改了文件」准备的：先清 Go 扫描缓存（30s TTL 内不清则
+    // _load 拿到旧缓存，刷新无效），对齐 bus 事件链 reload() 的口径（2026-09 收债）
+    try {
+      const App = await backendGetApp();
+      if (App.ClearScanCache) await App.ClearScanCache();
+    } catch (e) {
+      logWarn("tree", "refresh ClearScanCache:", e);
+    }
     const gen = vm._guard.current;
     await vm._load();
     if (vm._guard.stale(gen)) return;

@@ -17,6 +17,9 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
   ListVersionInstances: vi.fn().mockResolvedValue([]),
   SyncCustomToRepo: vi.fn().mockResolvedValue(undefined),
+  // 属性变更重载链（mountTree 复用主路径）的必经口：vitest mock 对未定义导出的
+  // 属性访问直接抛错，缺它会让 _attrChangeReloadAsync 在 _load 前中断（假绿/假红）
+  ClearScanCache: vi.fn().mockResolvedValue(undefined),
 }));
 
 // registry.ts 已删（架构锐评 P1-2 修正版）：组件测试改标准 vi.mock 注入，
@@ -27,7 +30,8 @@ vi.mock("./loader.ts", async (importOriginal) => {
 });
 
 import { bus } from "@/bus";
-import { loadEntries } from "./loader.ts";
+import { loadEntries, type TreeEntry } from "./loader.ts";
+import { createTreeRenderCtx, updateStat } from "./render.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
 import { sleep, waitFor } from "@/test-utils/wait.ts";
 import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
@@ -106,6 +110,62 @@ describe("app-tree 生命周期配对", () => {
     await sleep(150); // 等 _load + _renderTree + 恢复
     expect((el.shadowRoot?.getElementById("srch") as HTMLInputElement).value).toBe("abc");
     expect(el.shadowRoot?.getElementById("tree")?.scrollTop).toBe(120);
+    unmountElement(el);
+  });
+});
+
+describe("updateStat 计数动画（2026-09 收债：先读后写 data-total）", () => {
+  const mkEntry = (p: string): TreeEntry => ({
+    name: p,
+    path: p,
+    fullPath: `/repo/${p}`,
+    size: 0,
+    modTime: 0,
+    banned: false,
+    type: "",
+  });
+
+  it("total 变化 → 动画接管（旧实现写后再读恒等，动画永不触发）", async () => {
+    const ctx = createTreeRenderCtx();
+    const el = document.createElement("span");
+    // 首帧：无旧值（oldTotal=0）→ 直接落文本
+    updateStat(ctx, el, [mkEntry("a"), mkEntry("b")]);
+    expect(el.textContent).toContain("共 2 项");
+    expect(el.dataset.total).toBe("2");
+    // 二帧 total 变化：动画句柄登记、终值文案延迟落位
+    updateStat(ctx, el, [mkEntry("a"), mkEntry("b"), mkEntry("c"), mkEntry("d"), mkEntry("e")]);
+    expect(el.dataset.total).toBe("5");
+    expect(ctx.statAnim.has(el), "total 变化应走 animateNumber 分支").toBe(true);
+    await sleep(800); // 动画(700ms)结束后 updateStat 落终值文案
+    expect(el.textContent).toContain("共 5 项");
+    expect(ctx.statAnim.has(el)).toBe(false);
+  });
+});
+
+describe("root/subdir 属性变更（mountTree 复用主路径）", () => {
+  it("同任务双属性变更合并为一次重载（microtask 合并）", async () => {
+    const el = mountCustomElement("app-tree");
+    await waitFor(() => el.shadowRoot?.querySelector("#tree") !== null);
+    await sleep(50); // 首挂 _load 落定
+    const calls = vi.mocked(loadEntries).mock.calls.length;
+    el.setAttribute("root", "MMD");
+    el.setAttribute("subdir", "stage");
+    await sleep(60); // microtask 合并 + async 重载链
+    expect(vi.mocked(loadEntries).mock.calls.length).toBe(calls + 1);
+    expect(el.getAttribute("root")).toBe("MMD");
+    unmountElement(el);
+  });
+
+  it("同值 setAttribute 不触发重载（oldVal === newVal 拦下）", async () => {
+    const el = mountCustomElement("app-tree");
+    await waitFor(() => el.shadowRoot?.querySelector("#tree") !== null);
+    await sleep(50);
+    el.setAttribute("root", "ysm"); // 首次设置：null → "ysm"，真实变更
+    await sleep(60);
+    const calls = vi.mocked(loadEntries).mock.calls.length;
+    el.setAttribute("root", "ysm"); // 同值重放：repo:rtype-changed 重复 emit 的形态
+    await sleep(60);
+    expect(vi.mocked(loadEntries).mock.calls.length).toBe(calls);
     unmountElement(el);
   });
 });

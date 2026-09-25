@@ -84,12 +84,17 @@ async function runBatchRename(
   let ok = 0,
     fail = 0;
   const { RenameFile } = await backendGetApp();
-  for (const r of renames) {
-    try {
-      await RenameFile(r.oldPath || "", r.newName);
-      ok++;
-    } catch {
-      fail++;
+  // BATCH=8 + allSettled（对齐 runBatchToggle 范式，2026-09 收债）：原串行
+  // for...of await 逐条 IPC，大选中集阻塞主线程；allSettled 保逐项 ok/fail 不短路
+  const BATCH = 8;
+  for (let i = 0; i < renames.length; i += BATCH) {
+    const batch = renames.slice(i, i + BATCH);
+    const results = await Promise.allSettled(
+      batch.map((r) => RenameFile(r.oldPath || "", r.newName)),
+    );
+    for (const r of results) {
+      if (r.status === "fulfilled") ok++;
+      else fail++;
     }
   }
   vm.selectState.keys.clear();
@@ -175,12 +180,17 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     const allFiles = await ListAllFilePaths(absDir);
     let count = 0;
     const errors: string[] = [];
-    for (const p of allFiles || []) {
-      try {
-        await MoveToRecycle(p);
-        count++;
-      } catch (ex) {
-        errors.push(`${p.split(/[/\\]/).pop()}: ${String(ex)}`);
+    // BATCH=8 + allSettled（对齐 runBatchToggle 范式，2026-09 收债）：原串行逐条
+    // MoveToRecycle，大目录 IPC 排队；errors 仍带文件名（results 与 batch 按下标配对）
+    const files = allFiles || [];
+    const BATCH = 8;
+    for (let i = 0; i < files.length; i += BATCH) {
+      const batch = files.slice(i, i + BATCH);
+      const results = await Promise.allSettled(batch.map((p) => MoveToRecycle(p)));
+      for (let j = 0; j < results.length; j++) {
+        const r = results[j];
+        if (r.status === "fulfilled") count++;
+        else errors.push(`${batch[j].split(/[/\\]/).pop()}: ${String(r.reason)}`);
       }
     }
     try {
@@ -276,7 +286,10 @@ async function reload(vm: AppTree): Promise<void> {
   } catch (e) {
     logWarn("app-tree", "ClearScanCache:", e);
   }
-  const gen = vm._guard.current;
+  // next() 而非 current（2026-09 收债）：tree:reload 有七个发射源，并发 reload 各自
+  // 推进代际——后发者使先发者在途扫描 stale 弃渲染，单飞收敛；current 捕获会让并发
+  // 双方同代都过 stale 检查 → 双份清缓存 + 双份全量重扫 + 双渲染
+  const gen = vm._guard.next();
   try {
     const rtype = vm.snapshot.rootAttr || "";
     const r = vm.snapshot.subdirAttr

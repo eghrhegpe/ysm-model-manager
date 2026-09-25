@@ -99,6 +99,10 @@ export class AppTree extends WebComponentBase {
   /** root 属性切换代际守卫（ADR-230）：快速切换时丢弃过期加载的渲染 */
   _guard = createLoadGuard();
 
+  /** 属性变更重载合并句柄：同任务内 root+subdir 成对变更（mountTree 复用路径）
+   *  只放行 microtask 末尾一次全价重扫，避免中间态（如 root 已新、subdir 尚旧）空转一整轮 */
+  private _attrReloadQueued = false;
+
   /** 渲染上下文（实例级，含 WeakMap 缓存） */
   treeRenderCtx: TreeRenderCtx = createTreeRenderCtx();
 
@@ -349,8 +353,15 @@ export class AppTree extends WebComponentBase {
       this._guard.invalidate();
       return;
     }
-    const gen = this._guard.next();
-    void this._attrChangeReloadAsync(gen);
+    // microtask 合并：mountTree 复用路径先改 root 再改 subdir（或反向），同步任务内
+    // 两次回调只应在两属性都落位后重载一次——gen 在 microtask 里捕获即终值代际
+    if (this._attrReloadQueued) return;
+    this._attrReloadQueued = true;
+    queueMicrotask(() => {
+      this._attrReloadQueued = false;
+      const gen = this._guard.next();
+      void this._attrChangeReloadAsync(gen);
+    });
   }
 
   private async _attrChangeReloadAsync(gen: number): Promise<void> {

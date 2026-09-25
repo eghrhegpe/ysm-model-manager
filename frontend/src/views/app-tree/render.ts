@@ -280,12 +280,21 @@ export function flattenVisible(
         .map((k) => ({ key: k, node: top.node[k] as TreeNode | TreeEntry }))
         .filter(({ node }) => node && typeof node === "object");
       entries.sort((a, b) => {
-        const aIsDir = !(a.node && (a.node as TreeNode)._e);
-        const bIsDir = !(b.node && (b.node as TreeNode)._e);
-        if (aIsDir !== bIsDir) return aIsDir ? -1 : 1;
+        const aEntry = a.node && (a.node as TreeNode)._e;
+        const bEntry = b.node && (b.node as TreeNode)._e;
+        // 目录恒在前
+        if (!aEntry !== !bEntry) return aEntry ? 1 : -1;
         const aName = a.key.toLowerCase();
         const bName = b.key.toLowerCase();
-        return sort === "date" ? 0 : aName < bName ? -1 : aName > bName ? 1 : 0;
+        const byName = aName < bName ? -1 : aName > bName ? 1 : 0;
+        // 目录无独立 size/modTime（子树聚合归 Go），目录间恒按名称；
+        // 文件按所选键降序（大→小 / 新→旧），同键回退名称稳定序
+        if (!aEntry || sort === "name") return byName;
+        const ae = aEntry as TreeEntry;
+        const be = bEntry as TreeEntry;
+        if (sort === "size") return (be.size || 0) - (ae.size || 0) || byName;
+        if (sort === "date") return (be.modTime || 0) - (ae.modTime || 0) || byName;
+        return byName;
       });
       top.childKeys = entries.map((e) => e.key);
     }
@@ -559,9 +568,10 @@ export function updateStat(ctx: TreeRenderCtx, el: HTMLElement | null, entries: 
     totalSize += e.size || 0;
   });
   const newText = t("tree.statSummary", { total, enabled, size: formatBytes(totalSize) });
-  // code_review 3413288be 段 C #1（P3）：data-total 无条件写（与可见文案是否变化
-  // 无关）——多选期间 updateStat 被跳过 + 选中文案不写 dataset → dataset.total 冻结
-  // 在预选值，取消选择后 oldTotal 取到从未显示过的计数 → 错误起点计数动画
+  // data-total 双职责：① e2e 属性通道无条件写（code_review 3413288be 段 C #1：多选期间
+  // updateStat 被跳过也要保持 dataset 新鲜）；② 计数动画的起点——必须**先读后写**，
+  // 写后再读恒等于新值，`oldTotal !== total` 恒假、animateNumber 永不触发（2026-09 收债）。
+  const oldTotal = parseInt(el.dataset.total || "0", 10) || 0;
   el.dataset.total = String(total);
   // 先取消在途动画与定时器：连续触发时旧动画中间值会干扰下一次 textContent 判断，定时器堆积
   const prev = ctx.statAnim.get(el);
@@ -571,9 +581,8 @@ export function updateStat(ctx: TreeRenderCtx, el: HTMLElement | null, entries: 
     ctx.statAnim.delete(el);
   }
   if (el.textContent !== newText) {
-    // P1.3 修复：原 `match(/(\d+)\s*项/)` 硬编码中文「项」，en/ja locale 失效；
-    // 改读 data-total 属性通道（与 events.ts 的 data-count 同源思路，ADR-133 导向）。
-    const oldTotal = parseInt(el.dataset.total || "0", 10) || 0;
+    // 动画起点 = 上面写入前捕获的 oldTotal（P1.3 修复：原 `match(/(\d+)\s*项/)` 硬编码
+    // 中文「项」，en/ja locale 失效；属性通道取向保留，起点读取随之修正）
     if (oldTotal > 0 && oldTotal !== total && total > 0) {
       const cancel = animateNumber(el, total, 700);
       const timer = setTimeout(() => {

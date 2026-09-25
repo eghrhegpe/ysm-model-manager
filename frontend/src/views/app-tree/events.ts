@@ -381,9 +381,12 @@ function atTeBindRenameInput(ctx: AtTeCtx): () => void {
         // 已不存在的路径（误删风险）。
         vm.selectState.keys.clear();
         vm.selectState.lastKey = null;
-        await vm._load();
-        vm._renderTree();
         bus.emit("stats:refresh");
+        // 守卫（2026-09 收债）：改名 IPC 在途切类型时丢弃过期渲染，防旧类型
+        // entries 覆盖新树（对齐删除链 stale 检查）
+        const gen = vm._guard.current;
+        await vm._load();
+        if (!vm._guard.stale(gen)) vm._renderTree();
       })
       .catch((err) => {
         bus.emit("toast:show", {
@@ -492,7 +495,13 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     }
     if (ok > 0) {
       // ⚠️ 不直接 mutate Go 端原始 entry 对象，reload 取真值防幽灵状态
+      const gen = vm._guard.current;
       await vm._load();
+      // 渲染补齐 + 守卫（2026-09 收债）：原依赖 YSM 链 sync:toggle:status 的
+      // tree:reload 兜底刷新——非 YSM 类型勾选态陈旧到下次任意重渲，sync 忙锁
+      // 命中（sync.ts 入口拦）时 YSM 也会断；本地重渲走 buildCache 快路径
+      if (vm._guard.stale(gen)) return;
+      vm._renderTree();
       if ((vm.snapshot.rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
         bus.emit("sync:toggle:status");
       }

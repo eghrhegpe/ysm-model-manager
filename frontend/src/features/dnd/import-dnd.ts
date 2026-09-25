@@ -145,20 +145,11 @@ export function bindTreeDnD(
     ".tree-drop-hint",
   );
 
-  // WebView2 在 Shadow DOM 内的 drop 事件存在已知限制（overflow:auto 容器吞 drop），
-  // 因此在 document 层监听，通过 e.target 判断是否命中 app-tree 子树。
-  // 这样 drop 事件不受 ShadowRoot 边界影响，始终能触发。
-  const isInTree = (event: Event): boolean => {
-    if (event.composedPath().some((node) => node === container || node === hintEl)) {
-      return true;
-    }
-    const el = event.target;
-    if (!el) return false;
-    const node = el as Node;
-    // 向上遍历 shadow boundary。⚠️ 必须用 parentNode 而非 parentElement：
-    // parentElement 遇 shadow 边界顶部返回 null（ShadowRoot 非 Element），
-    // 对 shadow DOM 内任何深层目标都判 false → 真实拖放永不触发。
-    // parentNode 会经 host 跨出 shadow root，继续上溯到容器。
+  // 判断任意节点是否落在容器/hint 子树内（含 shadow 边界上溯）。
+  // ⚠️ 必须用 parentNode 而非 parentElement：parentElement 遇 shadow 边界顶部
+  // 返回 null（ShadowRoot 非 Element）；parentNode 会经 host 跨出 shadow root。
+  const isNodeInTree = (node: Node | null): boolean => {
+    if (!node) return false;
     let current: Node | null = node;
     while (current) {
       if (current === container || current === hintEl) return true;
@@ -170,6 +161,20 @@ export function bindTreeDnD(
       current = current instanceof ShadowRoot ? current.host : null;
     }
     return false;
+  };
+
+  // WebView2 在 Shadow DOM 内的 drop 事件存在已知限制（overflow:auto 容器吞 drop），
+  // 因此在 document 层监听，通过 e.target 判断是否命中 app-tree 子树。
+  // 这样 drop 事件不受 ShadowRoot 边界影响，始终能触发。
+  const isInTree = (event: Event): boolean => {
+    if (event.composedPath().some((node) => node === container || node === hintEl)) {
+      return true;
+    }
+    return isNodeInTree(event.target as Node | null);
+  };
+
+  const hideHint = (): void => {
+    if (hintEl) hintEl.style.display = "none";
   };
 
   const onDragOver = (e: DragEvent): void => {
@@ -187,20 +192,22 @@ export function bindTreeDnD(
   };
 
   const onDragLeave = (e: DragEvent): void => {
-    if (!isInTree(e)) return;
-    if (
-      !(
-        e.currentTarget === e.relatedTarget ||
-        (e.relatedTarget as HTMLElement | null)?.closest?.(
-          container.tagName === "APP-TREE" ? "app-tree" : ".list",
-        )
-      )
-    )
-      return;
-    if (hintEl) hintEl.style.display = "none";
+    // 去向（relatedTarget）仍落在树内 = 树内元素间移动 → 提示保持；
+    // null（拖出窗口）或树外元素 = 真正离开 → 收提示。
+    // 旧实现判定写反且用 closest（不跨 shadow 边界恒 null），叠加无 dragend 兜底，
+    // 「拖过树再在外松手」提示永久滞留（2026-09 收债）。
+    if (isNodeInTree(e.relatedTarget as Node | null)) return;
+    hideHint();
+  };
+
+  const onDragEnd = (): void => {
+    // 拖拽会话结束兜底（应用内拖源在源元素触发；OS 文件拖出窗口松手由
+    // dragleave relatedTarget=null 收口，此处兜非标准时序）
+    hideHint();
   };
 
   const onDrop = (e: DragEvent): void => {
+    hideHint(); // 无论落点是否在树内都收提示（树外 drop 旧实现早退滞留）
     if (!isInTree(e)) return;
     dbg("dnd", "drop fired", {
       files: e.dataTransfer?.files?.length ?? 0,
@@ -208,7 +215,6 @@ export function bindTreeDnD(
       types: e.dataTransfer?.types ? [...e.dataTransfer.types] : [],
       hasFiles: !!(e.dataTransfer?.files && e.dataTransfer.files.length > 0),
     });
-    if (hintEl) hintEl.style.display = "none";
     const rt = typeof rtype === "function" ? rtype() : rtype;
     void handleTreeDrop(e, isBusy, setBusy, rt).catch((err) => {
       logError("tree-dnd", "拖放处理失败", err);
@@ -225,10 +231,12 @@ export function bindTreeDnD(
   document.addEventListener("dragover", onDragOver);
   document.addEventListener("dragleave", onDragLeave);
   document.addEventListener("drop", onDrop);
+  document.addEventListener("dragend", onDragEnd);
   dbg("dnd", "bound listeners to document");
   return () => {
     document.removeEventListener("dragover", onDragOver);
     document.removeEventListener("dragleave", onDragLeave);
     document.removeEventListener("drop", onDrop);
+    document.removeEventListener("dragend", onDragEnd);
   };
 }

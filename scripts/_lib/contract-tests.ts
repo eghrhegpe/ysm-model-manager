@@ -72,9 +72,6 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // ADR-311 菜单测试布局快照闸（check-menu-test-layout）——扫描域为菜单区测试文件，
   // 结论建在前端菜单测试上（frontend 域）；扫描核在 scripts 工具自身（tests 域）
   "test_check_menu_test_layout.ts": ["frontend", "tests"],
-  // ADR-311 菜单测试布局快照闸（check-menu-test-layout）——扫描域为菜单区测试文件，
-  // 结论建在前端菜单测试上（frontend 域）；扫描核在 scripts 工具自身（tests 域）
-  "test_check_menu_test_layout.ts": ["frontend", "tests"],
   "test_e2e_location_contract.ts": ["frontend"],
   "test_html_integrity.ts": ["frontend"],
   // R8 模板闸扫描核（scripts/_lib/innerhtml-hygiene.ts）——纯函数核在 tests 域，

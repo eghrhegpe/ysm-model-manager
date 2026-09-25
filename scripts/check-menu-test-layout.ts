@@ -108,8 +108,9 @@ function lineOf(starts: number[], pos: number): number {
   let hi = starts.length - 1;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
-    // starts 下标恒在界内（二分收敛）；无 noUncheckedIndexedAccess，直接读
-    if (starts[mid] <= pos) lo = mid;
+    // starts 下标恒在界内（二分收敛，`?? 0` 是运行时不可达的兜底）；scripts/tsconfig.json
+    // 开着 noUncheckedIndexedAccess——不兜底则本工具自身过不了 scripts 域的 tsc（ADR-312 同批修复）
+    if ((starts[mid] ?? 0) <= pos) lo = mid;
     else hi = mid - 1;
   }
   return lo + 1; // 1-based

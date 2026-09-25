@@ -179,6 +179,8 @@ status: active
 
 ## 不变量
 
+- **dirOpen 持久化按 rtype 命名空间（2026-09 收债）**：localStorage `dirOpenState` 值为 `{ [rtype]: { 相对目录: bool } }`（`index.ts` 的 `readScopedDirOpen`/`writeScopedDirOpen` 单点读写）——原平铺键不分类型，不同类型同名目录互相串展开态。旧平铺值无法判定来源，读侧直接忽略（重新展开一次即重建新形态）。
+- **tree:set-search 监听 + 冷启动 pending 消费（2026-09 收债）**：listener 填词后 `takePendingTreeSearch()` 清残；`connectedCallback` 挂载段对称 take 消费（`repo:search-creator` 在 app-tree chunk 未加载时 emit 落空的兜底，词槽在 `utils/dom/search-pending.ts`，写侧 app-content **先 set 再 emit**——bus 同步派发，顺序保证 listener 命中路径能 take 清残）。填词动作单点 `applySearchToInput`（value + input 事件派发，走统一防抖渲染入口）。
 - **文件行键空间契约（ADR-222，2026-09-10）**：file 行的 `TreeRow.key` = **磁盘完整路径**，统一经 `entry-key.ts` 的 `entryKey(e)`（= `e.fullPath || e.path`）取值；与 DOM `data-fullpath`（`row-common.ts` 的 `fp`）、`selectState.keys` / `lastKey`（选中态）**三者同源**。folder 行 key 仍为树内拼接路径（仅服务 `dirOpen` 展开态与 `data-dir` 自洽闭环，不参与选中/批量，**有意的非对称**）。历史病灶：file 行 key 曾用树内拼接路径 `${prefix}/${name}`，与选中态的磁盘路径分裂，致 6 处 `indexOf`/`has` 静默失配且不抛错——Shift 范围选择、右键菜单批量判定、键盘 ↑↓ 导航（`currentIdx` 恒 -1）、全选按钮（`allSelected` 恒 false 且把相对键**混入**选中集污染批量删除）、双击重命名行定位。修复须三处同源，**禁止任何一处另写 `fullPath || path` 表达式**。回归绊线：`render.test.ts`「文件行 key 用 fullPath」+ E2E `tree-multiselect.spec.ts`
 - **渲染层对 `loader.ts` 只许 type-only 依赖**：5 个组件测试 `vi.mock("./loader.ts")` 仅为替换 `loadEntries`，渲染层若值依赖 loader 会在 mock 下取到 `undefined` 并崩整树渲染（实施中已实际触发 20 条测试批量失败）。需被渲染层复用的 `TreeEntry` 派生函数放独立零依赖叶模块（如 `entry-key.ts`），勿并入 `loader.ts`
 - 文件名显示统一走 `renderDisplayName()`（治理红线 4.3）；搜索态走 `hl(e.name, search)`（utils/dom/html.ts，同源转义但美化样式在搜索时丢失——P3 观察）

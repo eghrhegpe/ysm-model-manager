@@ -145,7 +145,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 ## 对外 API / 入口
 
 - 自定义元素：`<app-content>`
-- 监听 bus：`nav:changed`（切页整块重渲染，**同页重放短路**：缓存面板仍 `isConnected` 时直接 return——appendChild 对已挂载节点是 DOM move，会触发 app-tree 断连重连（全量重扫 RPC）与 app-preview 重连自清（详情面板清成空壳）；lang:changed / 装配失败路径先 `clearPanels` 面板已分离，天然绕过短路照常重建。判据用 isConnected 而非同页键，2026-09 收债）；`index.ts` 注释明示「不再每次 nav:changed 清扫描缓存」——30s 缓存由导入/同步/下载等实际数据变更处失效，见 `go-scanner.md`/`go-watcher.md`、`repo:switch-tab`、`repo:search-creator`（emit `nav:changed` 切仓库页后 emit `tree:set-search`——app-tree 已挂直达现存树，同页重放时经短路免重挂）、`package:selected`（instances 页注入 `<app-sync-manager>`）、`repo:rtype-changed`、`avatar:refresh`
+- 监听 bus：`nav:changed`（切页整块重渲染，**同页重放短路**：缓存面板仍 `isConnected` 时直接 return——appendChild 对已挂载节点是 DOM move，会触发 app-tree 断连重连（全量重扫 RPC）与 app-preview 重连自清（详情面板清成空壳）；lang:changed / 装配失败路径先 `clearPanels` 面板已分离，天然绕过短路照常重建。判据用 isConnected 而非同页键，2026-09 收债）；`index.ts` 注释明示「不再每次 nav:changed 清扫描缓存」——30s 缓存由导入/同步/下载等实际数据变更处失效，见 `go-scanner.md`/`go-watcher.md`、`repo:switch-tab`、`repo:search-creator`（**先 `setPendingTreeSearch(name)` 再 emit** `nav:changed` 切仓库页 + emit `tree:set-search`——app-tree 已挂直达现存树，同页重放时经短路免重挂；app-tree chunk 未加载（元素未升级）时 emit 落空，词留 `utils/dom/search-pending.ts` 的一次性 pending，由 app-tree 挂载段 take 消费（focus-pending 同族，2026-09 收债；listener 命中路径也 take 清残，防迟到误填））、`package:selected`（instances 页注入 `<app-sync-manager>`）、`repo:rtype-changed`、`avatar:refresh`
 - 派发 bus：`nav:changed`、`repo:rtype-changed`、`toast:show`（settings/init.ts 的 FSA 重扫/授权流派发 `tree:reload`——刷新树走 reload 链，含 ClearScanCache）
 - 全局 handler 注册：`connectedCallback` 末尾经 `globalUnsubs` 数组逐个调用 `registerPageStore` / `registerSync` / `registerContextMenus` / `registerInstanceOps` / `registerAndroidEvents`（ADR-188 后无 `core/handlers/global.ts` 汇编壳，五组 handler 由本组件直接编排，unsub 全部收进数组）；仓库页 DnD 由 `app-tree` 组件内部 `bindTreeDnD` 绑定，不在此注册
 - Wails 运行时事件：`Events.On("config-loaded")` 触发头像重提取，用模块级 `_avatarConfigLoadedRegistered` / `_avatarConfigLoadedUnsub` 保证只注册一次，`disconnectedCallback` 回收并复位 flag
@@ -180,5 +180,5 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - `frontend/src/core/page-store.ts` — `resolveInitialPage` / `sanitizePage` 纯函数（页面名校验 + 启动初始页解析），无状态持有（原 `PageStore` 经 ADR-209 移除）
 - `frontend/src/features/community/` — 仓库页数据/渲染/事件/下载队列（`data.ts` / `render.ts` / `events.ts` / `download-queue.ts`，`bindRepoEvents`、`tryFetchModels` 等由 index.ts 调用）
 - `frontend/src/views/app-content/site/` — 创意工坊站点视图子模块，与 `features/community/` 并存，index.ts 同时引用两套，改动前先确认归属
-- `frontend/src/views/app-tree/index.ts` — `setPendingTreeSearch` 搜索词交接
+- `frontend/src/utils/dom/search-pending.ts` — `setPendingTreeSearch`/`takePendingTreeSearch` 搜索词一次性 pending（repo:search-creator 冷启动兜底，原卡曾描述 app-tree 持此符号——实为此轮新建，旧描述系漂移）
 - 知识卡：`app_nav`、`app_preview`、`app_sidebar`、`app_sync_manager`、`event_bus`、`page_store`、`wails_bridge`

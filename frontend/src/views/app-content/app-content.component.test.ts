@@ -48,6 +48,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 }));
 
 import { bus } from "@/bus";
+import { takePendingTreeSearch } from "@/utils/dom/search-pending.ts";
 import "./index.ts"; // 触发 customElements.define("app-content")
 import { sleep, waitFor, mountCustomElement, unmountElement } from "@/test-utils/index.ts";
 
@@ -209,6 +210,22 @@ describe("app-content 生命周期配对", () => {
     await waitFor(() => el.shadowRoot?.querySelector("app-tree") !== null);
     await flushAsyncTurns(); // 排空：initRepositoryPage.mountTree 同步替换后无第二实例
     expect(el.shadowRoot?.querySelectorAll("app-tree").length).toBe(1);
+    unmountElement(el);
+  });
+});
+
+describe("repo:search-creator 冷启动 pending（2026-09 收债：search-pending 通道）", () => {
+  // 本文件不 define app-tree（元素在 DOM 但未升级）——恰是「chunk 未加载」的真实冷启动形态：
+  // connectedCallback 未跑、bus 监听不存在，emit 落空
+  it("冷启动形态：emit 落空 → 写侧词留存 pending 待挂载消费（先 set 再 emit 的顺序保证）", async () => {
+    const el = mountCustomElement("app-content");
+    await waitFor(() => el.shadowRoot?.querySelector("app-tree") !== null);
+    await flushAsyncTurns();
+    bus.emit("repo:search-creator", "hakurei");
+    await flushAsyncTurns();
+    expect(takePendingTreeSearch()).toBe("hakurei");
+    // take 即清：不残留到未来挂载迟到误填
+    expect(takePendingTreeSearch()).toBe(null);
     unmountElement(el);
   });
 });

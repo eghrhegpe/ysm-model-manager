@@ -294,8 +294,10 @@ function atTeBindContextMenu(ctx: AtTeCtx): () => void {
       e.preventDefault();
       e.stopPropagation();
       const fullPath = fl.dataset.fullpath || fl.dataset.path;
-      const nameEl = fl.querySelector(".nm");
-      const name = nameEl?.textContent?.replace(/^\S+\s/, "") || "";
+      // 菜单名 = 磁盘 basename（2026-09 收债）：原 `.nm` textContent 剥首词是「图标
+      // 内嵌文本」时代的遗留，图标独立 .ficon 后对含空格名误剥（"My Model.ysm" →
+      // "Model.ysm"）；右键菜单的操作对象就是磁盘文件，basename 语义无歧义
+      const name = (fullPath || "").split(/[/\\]/).pop() || "";
       const selectedPaths = getVsRows(ctx.treeRenderCtx, container)
         .filter((r) => r.type === "file" && vm.selectState.keys.has(r.key))
         .map((r) => r.key);

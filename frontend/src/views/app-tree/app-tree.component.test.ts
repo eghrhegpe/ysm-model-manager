@@ -31,6 +31,8 @@ vi.mock("./loader.ts", async (importOriginal) => {
 
 import { bus } from "@/bus";
 import { loadEntries, type TreeEntry } from "./loader.ts";
+import type { AppTree } from "./index.ts";
+import { setPendingTreeSearch, takePendingTreeSearch } from "@/utils/dom/search-pending.ts";
 import { createTreeRenderCtx, updateStat } from "./render.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
 import { sleep, waitFor } from "@/test-utils/wait.ts";
@@ -166,6 +168,86 @@ describe("root/subdir 属性变更（mountTree 复用主路径）", () => {
     el.setAttribute("root", "ysm"); // 同值重放：repo:rtype-changed 重复 emit 的形态
     await sleep(60);
     expect(vi.mocked(loadEntries).mock.calls.length).toBe(calls);
+    unmountElement(el);
+  });
+});
+
+
+describe("dirOpen 持久化按 rtype 隔离（2026-09 收债）", () => {
+  function mountWithRoot(root: string): AppTree {
+    const el = document.createElement("app-tree") as unknown as AppTree;
+    el.setAttribute("root", root);
+    document.body.appendChild(el);
+    return el;
+  }
+
+  afterEach(() => {
+    localStorage.removeItem("dirOpenState");
+    document.body.innerHTML = "";
+  });
+
+  it("嵌套形态：只恢复当前 rtype 的展开态", async () => {
+    localStorage.setItem(
+      "dirOpenState",
+      JSON.stringify({ ysm: { folderA: true }, mmd: { folderB: true } }),
+    );
+    const el = mountWithRoot("ysm");
+    await waitFor(() => el.shadowRoot?.querySelector("#tree") !== null);
+    await sleep(30);
+    expect(el.dirOpen).toEqual({ folderA: true });
+    unmountElement(el);
+  });
+
+  it("旧平铺形态（跨类型串的祸源）→ 忽略不恢复", async () => {
+    localStorage.setItem("dirOpenState", JSON.stringify({ folderA: true }));
+    const el = mountWithRoot("ysm");
+    await waitFor(() => el.shadowRoot?.querySelector("#tree") !== null);
+    await sleep(30);
+    expect(el.dirOpen).toEqual({});
+    unmountElement(el);
+  });
+
+  it("toggleDir 写回嵌套形态且保留其他 rtype 子集", async () => {
+    localStorage.setItem("dirOpenState", JSON.stringify({ mmd: { folderB: true } }));
+    const el = mountWithRoot("ysm");
+    await waitFor(() => el.shadowRoot?.querySelector("#tree") !== null);
+    await sleep(30);
+    el.toggleDir("x");
+    const stored = JSON.parse(localStorage.getItem("dirOpenState") || "{}");
+    expect(stored).toEqual({ mmd: { folderB: true }, ysm: { x: true } });
+    unmountElement(el);
+  });
+});
+
+
+describe("tree:set-search 冷启动 pending（2026-09 收债：search-pending 通道）", () => {
+  afterEach(() => {
+    setPendingTreeSearch(null);
+    document.body.innerHTML = "";
+  });
+
+  it("挂载前落 pending → 挂载段消费：搜索框填词 + input 事件派发（app-tree chunk 未加载时 emit 落空的兜底）", async () => {
+    setPendingTreeSearch("miko");
+    const el = document.createElement("app-tree") as unknown as AppTree;
+    document.body.appendChild(el);
+    await waitFor(() => el.shadowRoot?.querySelector("#tree") !== null);
+    const srch = el.shadowRoot?.getElementById("srch") as HTMLInputElement;
+    expect(srch.value).toBe("miko");
+    // take 即清：不残留到未来挂载
+    expect(takePendingTreeSearch()).toBe(null);
+    unmountElement(el);
+  });
+
+  it("listener 命中路径 take 清残：emit 后 pending 不残留", async () => {
+    setPendingTreeSearch("stale");
+    const el = document.createElement("app-tree") as unknown as AppTree;
+    document.body.appendChild(el);
+    await waitFor(() => el.shadowRoot?.querySelector("#tree") !== null);
+    await sleep(20);
+    bus.emit("tree:set-search", "fresh");
+    const srch = el.shadowRoot?.getElementById("srch") as HTMLInputElement;
+    expect(srch.value).toBe("fresh");
+    expect(takePendingTreeSearch()).toBe(null);
     unmountElement(el);
   });
 });

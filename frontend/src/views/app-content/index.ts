@@ -3,6 +3,7 @@
 import { bus } from "@/bus";
 import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
+import { setPendingTreeSearch } from "@/utils/dom/search-pending.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -63,7 +64,11 @@ class AppContent extends WebComponentBase {
       bus.on("repo:search-creator", (name) => {
         // 先切到仓库页面（_render 同步创建 <app-tree>，其 connectedCallback 注册 tree:set-search 监听）
         bus.emit("nav:changed", { page: "repository" });
-        // 渲染完成后发射搜索事件——app-tree 已挂载，bus 监听就绪
+        // 冷启动兜底（focus-pending 同族）：app-tree chunk 走动态 import，元素未升级
+        // 时下行 emit 落空（监听未注册），词进 pending 由挂载段 take 消费；已挂载场景
+        // listener 命中后 take 清残。必须先 set 再 emit（bus 同步派发，顺序反了 listener
+        // take 到的是 null，pending 会残留到未来挂载迟到误填）
+        setPendingTreeSearch(name);
         bus.emit("tree:set-search", name);
       }),
     );

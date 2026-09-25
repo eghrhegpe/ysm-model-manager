@@ -15,6 +15,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { takeRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 import { registerShortcut } from "@/utils/dom/key-router.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
+import { takePendingTreeSearch } from "@/utils/dom/search-pending.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -58,6 +59,35 @@ export const VIEW_TESTIDS: readonly string[] = ["tree-root"];
 // —— 全局扩展（已随 WeakMap 改造移除）——
 // 原 declare global 伪字段 _vsCleanup/_vsRows/_vsMode/_vsResizeObserver 已收敛至
 // render.ts vsStates WeakMap（getVsRows/getVsMode 访问）；_treeAuthors 为死字段（无读取方）随删。
+
+// —— dirOpen 持久化：{ [rtype]: { 相对目录: 展开态 } } 命名空间形态 ——
+// 2026-09 收债：原平铺键（{ 相对目录: bool }）不分 rtype，不同类型同名目录互相
+// 串展开态。旧平铺值无法判定来源类型，读侧直接忽略（用户重新展开一次即重建新形态，
+// 代价小于跨类型污染）；空对象 {} 两态同形（every 空数组恒真），读写均无歧义。
+type DirOpenStore = Record<string, Record<string, boolean>>;
+
+function isScopedDirOpenStore(v: unknown): v is DirOpenStore {
+  if (!v || typeof v !== "object") return false;
+  return Object.values(v as Record<string, unknown>).every(
+    (x) =>
+      !!x &&
+      typeof x === "object" &&
+      !Array.isArray(x) &&
+      Object.values(x as Record<string, unknown>).every((b) => typeof b === "boolean"),
+  );
+}
+
+function readScopedDirOpen(rtype: string): Record<string, boolean> {
+  const stored = safeGetJSON<unknown>("dirOpenState", {});
+  return isScopedDirOpenStore(stored) ? { ...(stored[rtype] || {}) } : {};
+}
+
+function writeScopedDirOpen(rtype: string, dirs: Record<string, boolean>): void {
+  const stored = safeGetJSON<unknown>("dirOpenState", {});
+  const next: DirOpenStore = isScopedDirOpenStore(stored) ? stored : {};
+  next[rtype] = { ...dirs };
+  safeSet("dirOpenState", JSON.stringify(next));
+}
 
 // 挂载/补载失败 toast 节流（对齐 loader.ts 同款模式）：innerHTML 重建（类型切换）可高频
 // 触发挂载失败，5s 内只提示一次防刷屏。
@@ -133,7 +163,7 @@ export class AppTree extends WebComponentBase {
         if (nk !== dir && nk.startsWith(prefix)) delete this._state.dirOpen[key];
       }
     }
-    safeSet("dirOpenState", JSON.stringify(this._state.dirOpen));
+    writeScopedDirOpen(this._state.rootAttr, this._state.dirOpen);
   }
 
   setFilterPaths(paths: Set<string> | null): void {
@@ -228,7 +258,7 @@ export class AppTree extends WebComponentBase {
     // 重连判据（disconnected→connected 同实例：_ready 已置位）——恢复分离前视觉状态
     const isRemount = this._ready;
 
-    Object.assign(this._state.dirOpen, safeGetJSON<Record<string, boolean>>("dirOpenState", {}));
+    Object.assign(this._state.dirOpen, readScopedDirOpen(this._state.rootAttr));
 
     // code_review 47e68917b #1（P2）：恢复 render-mode 持久化水化——TreeState 重构删了
     // `_renderMode = getRenderMode()` 实例字段后，TreeState.renderMode 硬编码默认
@@ -272,13 +302,16 @@ export class AppTree extends WebComponentBase {
       // 监听创作者详情→搜索本地模型
       this._unsubs.push(
         bus.on("tree:set-search", (name) => {
-          const srch = this._root?.getElementById("srch") as HTMLInputElement | null;
-          if (srch) {
-            srch.value = name;
-            srch.dispatchEvent(new Event("input", { bubbles: true }));
-          }
+          this.applySearchToInput(name);
+          // 写侧（repo:search-creator）已挂载路径会先 setPending 再 emit——take 清残，
+          // 防 pending 残留到未来挂载迟到误填旧词
+          takePendingTreeSearch();
         }),
       );
+      // 冷启动 pending 消费（repo:search-creator 在 chunk 未加载时 emit 落空的兜底）：
+      // 与上方 listener 共用同一套填词动作；take 互斥防双触发
+      const pendingSearch = takePendingTreeSearch();
+      if (pendingSearch) this.applySearchToInput(pendingSearch);
 
       // 延迟加载作者列表（不影响树渲染）
       this._loadAuthorsAsync();
@@ -308,6 +341,16 @@ export class AppTree extends WebComponentBase {
       toastThrottled(e, t("tree.treeLoadFailed"));
     } finally {
       this._ready = true;
+    }
+  }
+
+  /** 搜索词灌入工具栏输入框并派发 input（走统一防抖渲染入口）。
+   *  消费方：tree:set-search listener 与冷启动 pending 消费（search-pending.ts） */
+  private applySearchToInput(word: string): void {
+    const srch = this._root?.getElementById("srch") as HTMLInputElement | null;
+    if (srch) {
+      srch.value = word;
+      srch.dispatchEvent(new Event("input", { bubbles: true }));
     }
   }
 

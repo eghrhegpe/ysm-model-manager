@@ -53,7 +53,8 @@ function fileRow(path: string, name: string, ckOn = true): HTMLDivElement {
   row.className = "fl";
   row.dataset.fullpath = path;
   row.innerHTML =
-    `<span class="nm">🏷 ${name}</span>` +
+    `<span class="ficon">📦</span>` +
+    `<span class="nm">${name}</span>` +
     `<span class="ck${ckOn ? " on" : ""}" data-fullpath="${path}"></span>` +
     `<span class="ha-preview" data-path="${path}"></span>` +
     `<span class="ha-copy" data-path="${path}"></span>`;
@@ -762,6 +763,25 @@ describe("contextmenu 右键菜单", () => {
         type: "file",
         path: "/repo/a.ysm",
         name: "a.ysm",
+        rtype: "ysm",
+      },
+    ]);
+  });
+
+  it("含空格文件名 → name 为完整磁盘 basename（2026-09 收债：旧 .nm 文本剥前缀误伤）", () => {
+    const h = makeHarness();
+    h.container.appendChild(fileRow("/repo/My Model.ysm", "My Model.ysm", false));
+    bindTreeEvents(h.container, h.vm);
+    h.container
+      .querySelector(".fl")!
+      .dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    expect(emitted("ctx:show")).toEqual([
+      {
+        x: 0,
+        y: 0,
+        type: "file",
+        path: "/repo/My Model.ysm",
+        name: "My Model.ysm",
         rtype: "ysm",
       },
     ]);

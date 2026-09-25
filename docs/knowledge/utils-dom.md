@@ -76,12 +76,14 @@ auto_fields:
     - registerShortcut
     - rememberTrigger
     - returnFocus
+    - setPendingTreeSearch
     - setRepoSearchFocusPending
     - ShadowStyle
     - ShortcutCombo
     - ShortcutSpec
     - stripPathSegments
     - tabBtnCSS
+    - takePendingTreeSearch
     - takeRepoSearchFocusPending
     - toast
     - TOAST_MS

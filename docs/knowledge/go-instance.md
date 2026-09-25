@@ -7,6 +7,7 @@ source_files:
   - go/instance/
 auto_fields:
   symbols_with_lines:
+    - BuildInstanceStatusCounts
     - BuildSyncItems
     - InvalidateSyncItemsCache
     - RegisterInvalidationHook
@@ -40,7 +41,7 @@ status: active
 
 ## 概览
 
-`go/instance/` 包处理整合包（Minecraft 版本实例）的资源同步项构建，是 `app_install.go` 中 `GetInstanceSyncStatus` Binding 的下沉逻辑。
+`go/instance/` 包处理整合包（Minecraft 版本实例）的资源同步项构建与侧栏计数折叠，是 `internal/app/app_install_instance.go` 中 `GetInstanceSyncStatus` / `GetResourceInstanceStatus` Binding 的下沉逻辑（ADR-310 后侧栏计数亦归本包）。
 
 ## 核心职责
 
@@ -49,10 +50,11 @@ status: active
 ## 对外 API / 入口
 
 - `BuildSyncItems(ins, rtypes, repoRoots)` — 构建实例的资源同步项（供同步管理界面展示）；dirLevel 类型（YSM/MMD/蓝图）走 `ysmsync.SyncResourcesDirLevelScan`（注入 `scanner.ScanEntriesWithHit` 复用刷新已缓存的组根扫描结果，消除重复全树 Walk），file-level 类型走 `ysmsync.SyncResources`（ADR-064 相对路径口径）；非 `CompareGlobalInstanceHashes`（知识卡旧文漂移已修正）。每个 dirLevel 文件夹的子条目通过 `DiffFolderContentsScan` 做内容级 diff（全局侧复用组根扫描反推，实例侧走 `collectFolderFiles`，已叠 30s 同步目录扫描缓存）。**2026-08-24 新增 30s 同步结果缓存**：`BuildSyncItems` 最终结果按 `实例名+VersionDir+subtype+roots+rtypes` 缓存（TTL 跟随 `scanner.EffectiveCacheTTL()`，写入时刻求值，默认 30s），失效钩子由 app 层 ServiceStartup 显式调 `RegisterInvalidationHook()` 挂到 `scanner.OnCacheInvalidated`（2026-08-26 起不再隐式 `init()` 注册，内部 `sync.Once` 幂等）；`SyncModelToggleStatus`、Push/Pull、`SyncCustomToRepo`、`RelinkCustomDir` 等不走 scanner 失效的入口显式调 `InvalidateSyncItemsCache()`；**`ImportModelFile*` 落在 Go 侧 `ClearScanCache()` 统一收口**，不依赖前端事后失效。
+- `BuildInstanceStatusCounts(instances, rtypes, filesRoots) []types.InstanceStatus`（`status_counts.go`，**ADR-310 侧栏计数薄入口**）— 逐实例折 `BuildSyncItems` 的**顶层展示单元**（不递归 children，避免面板父+子重复计数）：`synced`→`Synced`；`missing | diverged`→`MissingCount`（学面板 `tabStatus` 把内容分叉折叠进红）；`optional | legacy`→`Extra`（legacy 在容器聚合里同样算 hasPull）；`disabled`→`Disabled`（中立，不驱动红/橙）。**三份清单粒度刻意不同**：`Missing` 保持**仓库侧文件级绝对路径**（缺夹按 `children`／`DiffFolderContents` 展开成夹内文件，供 `runDownloadMissing` 逐条 `Install` 的一键安装契约；故 `len(Missing)` 可 > `MissingCount`，计数只认 `MissingCount`），`Extra`/`Disabled` 为实例侧单元路径。`CustomDir` 单类型时 = `FindInstDir` 解析的实例子目录（与 `processOneResourceType` 同源）。零新增判定逻辑：diff／禁用／聚合全部复用面板链，30s 缓存随之命中；`GetResourceInstanceStatus` / `GetInstanceStatus` 两绑定换线到此处，签名不变
 
 ## 与其他子系统关系
 
-- `internal/app/app_install.go`：薄壳调用（`GetInstanceSyncStatus`）
+- `internal/app/app_install_instance.go`：薄壳调用（`GetInstanceSyncStatus` 面板链；`GetResourceInstanceStatus` / `GetInstanceStatus` 侧栏计数，ADR-310 换线）
 - `go/types/`：`VersionInstance` / `ResourceSyncItem` / `ResourceTypeInfo`（本包定义）
 - `go/sync/`：同步比对（`SyncResources`）
 

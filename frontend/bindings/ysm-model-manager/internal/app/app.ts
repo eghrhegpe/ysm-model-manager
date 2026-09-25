@@ -432,6 +432,10 @@ export function GetImportLogs(): $CancellablePromise<types$0.ImportLog[] | null>
  * ========== 状态同步 ==========
  * GetInstanceStatus 获取整合包状态（按资源类型限定路径）
  * rtype: 资源类型 ID，用于解析特定子目录；为空时使用 ins.CustomDir（向后兼容）
+ * 
+ * ADR-310（2026-09）：旧 compareHashMode/compareRelKeyMode 私链退役，本入口与
+ * GetResourceInstanceStatus 共用面板链计数（go/instance.BuildInstanceStatusCounts）。
+ * rtype 为空的历史模式（ins.CustomDir 全类型扫）无任何前端消费者，随旧链一并退役。
  */
 export function GetInstanceStatus(mcRoot: string, repoDir: string, rtype: string): $CancellablePromise<types$0.InstanceStatus[] | null> {
     return $Call.ByID(4224028016, mcRoot, repoDir, rtype);
@@ -492,8 +496,9 @@ export function GetRepoRoot(rtype: string): $CancellablePromise<string> {
 }
 
 /**
- * GetResourceInstanceStatus 按资源类型获取整合包同步状态
- * 统一走 GetInstanceStatus 路径，通过 rtype 限定实例侧扫描子目录 + 仓库侧扩展名过滤
+ * GetResourceInstanceStatus 按资源类型获取整合包同步状态（ADR-310 侧栏唯一计数入口）
+ * 计数与清单口径全部下沉面板链（BuildSyncItems → 顶层单元折叠），本层只做
+ * mcRoot/仓库根解析 + HasMod 补充，不再自带任何 diff/禁用/聚合判定。
  */
 export function GetResourceInstanceStatus(rtype: string, mcRoot: string, repoDir: string): $CancellablePromise<types$0.InstanceStatus[] | null> {
     return $Call.ByID(779607888, rtype, mcRoot, repoDir);

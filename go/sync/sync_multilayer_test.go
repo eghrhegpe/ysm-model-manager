@@ -8,11 +8,9 @@ package sync
 import (
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
-	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -429,64 +427,9 @@ func TestPullResources_MultiLayerMixed(t *testing.T) {
 	}
 }
 
-// ===== GetInstanceStatus 多层路径测试（relKey 回退）=====
-
-func TestGetInstanceStatus_MultiLayerRelKey(t *testing.T) {
-	// 场景：非哈希类型（如 relKey 回退）的多层路径同步状态
-	// 使用空 rtype 让 GetInstanceStatus 走旧路径，用 relKey 对比
-	repoDir := t.TempDir()
-	instDir := t.TempDir()
-
-	// 仓库：多层嵌套
-	os.MkdirAll(filepath.Join(repoDir, "subdir", "modelA"), 0755)
-	os.WriteFile(filepath.Join(repoDir, "subdir", "modelA", "pack.zip"), []byte("A"), 0644)
-	os.WriteFile(filepath.Join(repoDir, "root.zip"), []byte("R"), 0644)
-
-	// 实例：subdir/modelA 同步，root.zip 缺失
-	os.MkdirAll(filepath.Join(instDir, "subdir", "modelA"), 0755)
-	os.WriteFile(filepath.Join(instDir, "subdir", "modelA", "pack.zip"), []byte("A"), 0644)
-
-	// 自定义 scanFn 模拟无哈希场景（返回空哈希）
-	scanFn := func(dir string) []types.ModelEntry {
-		var entries []types.ModelEntry
-		filepath.Walk(dir, func(p string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() {
-				return nil
-			}
-			rel, _ := filepath.Rel(dir, p)
-			entries = append(entries, types.ModelEntry{
-				Name: info.Name(),
-				Path: p,
-				Size: info.Size(),
-				Hash: "", // 空哈希 → 走 relKey 回退
-			})
-			_ = rel
-			return nil
-		})
-		sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
-		return entries
-	}
-	listFn := func(mcRoot string) []types.VersionInstance {
-		return []types.VersionInstance{
-			{Name: "test", CustomDir: instDir, VersionDir: instDir},
-		}
-	}
-
-	results := GetInstanceStatusWith("mcRoot", repoDir, "", scanFn, listFn)
-	if len(results) != 1 {
-		t.Fatalf("应有 1 个实例，got %d", len(results))
-	}
-	ins := results[0]
-
-	// root.zip 应归入 Missing（仓库有但实例没有）
-	if len(ins.Missing) != 1 {
-		t.Fatalf("应有 1 个 Missing（root.zip），got %d: %v", len(ins.Missing), ins.Missing)
-	}
-	missingPath := ins.Missing[0]
-	if !strings.HasSuffix(missingPath, "root.zip") {
-		t.Errorf("Missing 应为 root.zip，got %s", missingPath)
-	}
-}
+// ===== GetInstanceStatus 多层路径测试（relKey 回退）已随 ADR-310 退役：
+// 侧栏计数改走面板链（go/instance.BuildInstanceStatusCounts），多层路径口径
+// 由 TestBuildInstanceStatusCounts_DirLevelFoldAndLists 覆盖 =====
 
 // ===== 端到端：Push + Pull 循环 =====
 

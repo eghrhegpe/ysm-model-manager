@@ -10,8 +10,8 @@ import (
 	"ysm-model-manager/go/types/registry"
 )
 
-// ListVersionsFunc 列出版本实例（函数类型，测试时可注入 mock）
-type ListVersionsFunc func(mcRoot string) []types.VersionInstance
+// ListVersionsFunc 已随 ADR-310 退役：唯一注入点 GetInstanceStatusWith 删除后无消费者
+// （侧栏计数改走 go/instance.BuildInstanceStatusCounts，实例清单由 thin shell 注入）。
 
 func ListVersions(mcRoot string) []types.VersionInstance {
 	// 1. 自身就是 instances 目录（子目录中含 .minecraft/）

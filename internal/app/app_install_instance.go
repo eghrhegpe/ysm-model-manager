@@ -145,53 +145,26 @@ func (a *App) clearInstanceDir(dir string, rtype string, filesRoot string) int {
 // ========== 状态同步 ==========
 // GetInstanceStatus 获取整合包状态（按资源类型限定路径）
 // rtype: 资源类型 ID，用于解析特定子目录；为空时使用 ins.CustomDir（向后兼容）
+//
+// ADR-310（2026-09）：旧 compareHashMode/compareRelKeyMode 私链退役，本入口与
+// GetResourceInstanceStatus 共用面板链计数（go/instance.BuildInstanceStatusCounts）。
+// rtype 为空的历史模式（ins.CustomDir 全类型扫）无任何前端消费者，随旧链一并退役。
 func (a *App) GetInstanceStatus(mcRoot, repoDir, rtype string) []types.InstanceStatus {
-	// 扫描日志带类型标签，与前端术语一致
-	label := "模型"
-	if rt := registry.RegistryType(rtype); rt != nil {
-		label = rt.Name
+	if mcRoot == "" || repoDir == "" || rtype == "" {
+		return []types.InstanceStatus{}
 	}
-	scanFn := func(dir string) []types.ModelEntry { return a.ScanModelEntriesWithLabel(dir, label) }
-	return ysmsync.GetInstanceStatus(mcRoot, repoDir, rtype, scanFn)
+	return a.buildInstanceStatusCounts(rtype, repoDir, a.ListVersionInstances(mcRoot))
 }
 
-// GetResourceInstanceStatus 按资源类型获取整合包同步状态
-// 统一走 GetInstanceStatus 路径，通过 rtype 限定实例侧扫描子目录 + 仓库侧扩展名过滤
+// GetResourceInstanceStatus 按资源类型获取整合包同步状态（ADR-310 侧栏唯一计数入口）
+// 计数与清单口径全部下沉面板链（BuildSyncItems → 顶层单元折叠），本层只做
+// mcRoot/仓库根解析 + HasMod 补充，不再自带任何 diff/禁用/聚合判定。
 func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.InstanceStatus {
 	if mcRoot == "" || rtype == "" {
 		return []types.InstanceStatus{}
 	}
 
-	// 扫描日志带类型标签，与前端术语一致
-	label := ""
-	if rt := registry.RegistryType(rtype); rt != nil {
-		label = rt.Name
-	}
-
-	// 按资源类型扩展名过滤的 scanFn：仓库侧只收集本类型文件
-	typeExts := registry.SupportedExtsForType(rtype)
-	extSet := make(map[string]bool, len(typeExts))
-	for _, e := range typeExts {
-		extSet[strings.ToLower(e)] = true
-	}
-
-	scanFn := func(dir string) []types.ModelEntry {
-		all := a.ScanModelEntriesWithLabel(dir, label)
-		if len(extSet) == 0 {
-			return all
-		}
-		// 仅保留本类型扩展名的文件（排除 .recycle 等已由 ScanModelEntries 处理的情况）
-		// 使用 e.Ext（scanner 已从去 .ban/.disabled 后的路径计算），避免 filepath.Ext(e.Name) 把 .ban 当扩展名
-		filtered := make([]types.ModelEntry, 0, len(all))
-		for _, e := range all {
-			if extSet[strings.ToLower(e.Ext)] {
-				filtered = append(filtered, e)
-			}
-		}
-		return filtered
-	}
-
-	// 统一走 GetInstanceStatus：rtype 限定实例侧扫描子目录
+	// 统一走 GetRepoRoot 兜底：repoDir 为空时按 rtype 解析仓库根
 	if repoDir == "" {
 		var gErr error
 		repoDir, gErr = a.GetRepoRoot(rtype)
@@ -204,12 +177,12 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 		return []types.InstanceStatus{}
 	}
 
-	results := ysmsync.GetInstanceStatus(mcRoot, repoDir, rtype, scanFn)
+	instances := a.ListVersionInstances(mcRoot)
+	results := a.buildInstanceStatusCounts(rtype, repoDir, instances)
 
 	// 补充 HasMod 检测：检查整合包的 mods 目录是否包含指定类型的模组
 	if len(results) > 0 {
-		instances := a.ListVersionInstances(mcRoot)
-		insMap := make(map[string]*types.VersionInstance)
+		insMap := make(map[string]*types.VersionInstance, len(instances))
 		for i := range instances {
 			insMap[instances[i].Name] = &instances[i]
 		}
@@ -222,6 +195,39 @@ func (a *App) GetResourceInstanceStatus(rtype, mcRoot, repoDir string) []types.I
 	}
 
 	return results
+}
+
+// buildInstanceStatusCounts 组装依赖（资源类型注册表 / 仓库根 / 实例清单）后调用
+// go/instance.BuildInstanceStatusCounts。rtype 路径限定沿用 resourceTypesForSync，
+// 与 GetInstanceSyncStatus（面板链）保持同一份过滤语义，避免两侧根目录口径漂移。
+// 实例清单由调用方注入（已 ListVersionInstances 一次，HasMod 后处理复用同一份）。
+func (a *App) buildInstanceStatusCounts(rtype, repoDir string, instances []types.VersionInstance) []types.InstanceStatus {
+	reg := registry.LoadRegistry()
+	if reg == nil || len(reg.ResourceTypes) == 0 {
+		return []types.InstanceStatus{}
+	}
+	filtered := resourceTypesForSync(reg.ResourceTypes, rtype)
+	if len(filtered) == 0 {
+		return []types.InstanceStatus{}
+	}
+
+	roots := make(map[string]string, len(filtered))
+	if repoDir != "" {
+		// 调用方已解析出本类型的仓库根（侧栏 loader 传的就是 GetRepoRoot 结果）
+		roots[rtype] = repoDir
+	} else {
+		for _, rt := range filtered {
+			r, fErr := a.filesRootForSync(rt.ID)
+			if fErr != nil {
+				// 尽力而为：缺根的类型不参与计数，落日志供诊断
+				log.Printf("[instance-status] 获取 %s 同步根失败: %v", rt.ID, fErr)
+				continue
+			}
+			roots[rt.ID] = r
+		}
+	}
+
+	return instance.BuildInstanceStatusCounts(instances, filtered, roots)
 }
 
 func (a *App) SyncModelToggleStatus(instanceCustomDir, filesRoot string) (int, int, error) {

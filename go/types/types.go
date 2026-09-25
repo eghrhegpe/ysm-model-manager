@@ -208,16 +208,28 @@ type CustomFileInfo struct {
 }
 
 // InstanceStatus 整合包状态
+//
+// 计数口径（ADR-310，2026-09 收敛）：三处计数均为**面板链单元级**
+// （go/instance.BuildInstanceStatusCounts 折面板 BuildSyncItems 产物）——
+// dirLevel 类型 1 个模型夹 = 1 个单元，fileLevel 类型 1 个文件 = 1 个单元；
+// diverged（内容分叉）按面板 store.tabStatus 折叠进 MissingCount（红=待推送）。
+// 三份清单粒度**刻意不同**：Missing 是仓库侧**文件级绝对路径**
+// （一键安装 features/sync/sync.ts runDownloadMissing 逐条 Install 的契约，
+//
+//	整夹缺失会展开成夹内文件；故长度 ≠ MissingCount，计数只认 MissingCount）；
+//
+// Extra/Disabled 是实例侧单元路径（前端仅取长度与展示）。
 type InstanceStatus struct {
-	Name      string           `json:"Name"`
-	CustomDir string           `json:"CustomDir"`
-	Status    string           `json:"Status"`  // "complete" | "missing" | "extra"
-	Synced    int              `json:"Synced"`  // 已同步文件数（Files 长度，前端排序用）
-	Missing   []string         `json:"Missing"` // 完整路径
-	Extra     []string         `json:"Extra"`   // 文件名（供展示）
-	Disabled  []string         `json:"Disabled"`
-	HasMod    bool             `json:"HasMod"` // 当前资源类型对应的 mod 是否存在
-	Files     []CustomFileInfo `json:"Files"`  // custom 目录下每个文件的链接类型
+	Name         string           `json:"Name"`
+	CustomDir    string           `json:"CustomDir"`
+	Status       string           `json:"Status"`       // "complete" | "missing" | "extra"（红优先）
+	Synced       int              `json:"Synced"`       // 已同步单元数（前端排序用）
+	MissingCount int              `json:"MissingCount"` // 待推送单元数 = missing + diverged（源见上）
+	Missing      []string         `json:"Missing"`      // 仓库侧文件级绝对路径（一键安装）
+	Extra        []string         `json:"Extra"`        // 实例侧独有单元路径
+	Disabled     []string         `json:"Disabled"`     // 实例侧禁用（.ban/.disabled）单元路径
+	HasMod       bool             `json:"HasMod"`       // 当前资源类型对应的 mod 是否存在
+	Files        []CustomFileInfo `json:"Files"`        // 已废弃：旧链填充的链接类型清单，前端零消费者（ADR-296 实证），不再填
 }
 
 type AppError struct {

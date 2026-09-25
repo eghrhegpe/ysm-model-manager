@@ -524,7 +524,6 @@ auto_fields:
     - GROUP_TYPE_OPTIONS
     - groupCollected
     - groupLabelOf
-    - groupMmdVariants
     - groupStorageRootOf
     - GroupTypeOption
     - handleInstanceDrop
@@ -783,7 +782,6 @@ auto_fields:
     - mmdSemanticBoneMap
     - mmdSemanticMorphMap
     - mmdShotNodes
-    - MmdVariantGroups
     - MmdZipConfig
     - mockMenuHandle
     - modalAdvFilter

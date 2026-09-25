@@ -490,7 +490,7 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 94 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 145 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 167 |
-| doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 157 |
+| doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 147 |
 | beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 118 |
 | runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 252 |
 | runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 258 |

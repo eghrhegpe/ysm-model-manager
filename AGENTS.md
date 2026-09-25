@@ -5,6 +5,32 @@
 > 3d菜单只允许使用：  MenuNode schema，新增的UI功能须可被 MenuNode schema菜单调用。
 > 菜单逻辑测试断言遵循 ADR-311 三分法：行为不变量逐条硬断言；成员归属用 `findNodeById`/`childIds` 配集合判据（仓内惯例 `.sort()).toEqual([...].sort())`，禁有序快照/位置索引）；顺序与计数仅产品决策可写，须行内 `// layout-assert: <理由>`。执法闸 `scripts/check-menu-test-layout.ts`（基线只减不增）+ 知识卡 `menu_test_assertion.md`。
 
+## ⚡ 5 分钟上手（TL;DR——细节以正文对应章节为准，冲突时正文优先）
+
+**项目**：Go (Wails v3) 桌面 + 原生 TS (Web Components / Shadow DOM) 前端，Three.js + WASM 做 3D 预览；类型判定单一事实源 = `resource_types.json` + Go。
+
+**改完立刻验**（按改动域裁剪，跑绿再交）：
+
+| 改了什么 | 命令 |
+|---------|------|
+| Go | `go build ./...` |
+| 前端 | `cd frontend && npx vite build && npm run typecheck` |
+| 前端非测试文件 | `node scripts/check-biome.ts --files <改动文件...>` |
+| 只改文档 | `node scripts/doctor.ts --docs`（秒级） |
+| 发版前 | `node scripts/doctor.ts`（全量） |
+
+**提交**：`node scripts/commit-with-check.ts -m "<type>: <描述>" --files <路径...>`——并行会话期必用 `--files`，防止卷入他人在途改动。
+
+**三条回归红线**（踩了门禁会红，正文同名章节有完整理由）：
+
+1. **前端只读不判**——类型判定 / 筛选 / 去重 / 聚合归 Go 侧 + `resource_types.json`；前端不扫磁盘、不重算归属语义（→「职责归属——前端 vs Go」）。
+2. **import 只从具体文件进**——非精确同目录一律 `@/<顶层目录>/具体文件`，禁止 `@/dir` 裸目录聚口；features 生产文件不直引 `backend/app.ts`、不写 HTML 字面量，一律走 `*-deps.ts` seam（→「features→backend seam」「前端 import 路径约定」）。
+3. **绑定只走一条命令**——`cd frontend && npm run generate:bindings`（已内置 `-ts`）；根目录裸跑报 Missing script，漏 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`（→「职责归属——前端 vs Go」）。
+
+**查与救**：查业务知识先 `docs/knowledge/routes-quick.md`；查陌生函数 / 走错路径 →「场景路由（快速对号入座）」；改崩了先 `git diff HEAD <file>` 自查，处置步骤见「损害控制」表。
+
+**元规则**：ADR 与源码注释里的「病」是决策时的历史快照，**≠ 当前状态**——判断现状只认当前源码树；改完代码必须同步知识卡（`check-knowledge-drift` 钩子兜底）。
+
 ## 工作准则（长效）
 
 - **自主推进**：要开始新工作或修复现有问题时，持续推进，直到用户的目标完成，在目标方向上自主推进。 并且能把下一步变成可审查结果的工作。涉及多种方案时，可以先让子代理核实一轮再询问用户或自行推进。

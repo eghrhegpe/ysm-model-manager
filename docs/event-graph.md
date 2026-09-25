@@ -270,7 +270,7 @@
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 120 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 303 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 118 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 116 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 305 |
 
 ### `repo:search-creator`
@@ -333,7 +333,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 110 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 108 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 285 |
 
 ### `sync:download:done`

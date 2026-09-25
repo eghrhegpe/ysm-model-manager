@@ -103,15 +103,35 @@ const STG_BAND: Partial<Record<SettingsTabId, number>> = { appearance: 0, previe
 const groupDelay = (band: number | undefined, i: number): number =>
   (band ?? 0) + stagger(i, STG_GROUP_STEP_MS);
 
-function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
+/** 设置页平台态：桌面 / 安卓查看器 / 网页查看器（isViewer + isWebViewer 两 flag 表达三态，集中归一） */
+type SettingsPlatform = "desktop" | "androidViewer" | "webViewer";
+
+/** 路径相关卡片的平台能力单一事实源（ADR-307 D2 查实修正收口）：
+ * 能力事实（哪张卡在哪些平台真能用）只在此声明，渲染函数与测试一律消费此处，不再各自手搓 flag。
+ * - mc-path 与 storage 同走 directory-picker resolveAndroidRepoDir（Java 桥 requestStoragePermission →
+ *   系统授权页 → 授权后定位 /storage/emulated/0/YSM-Model-Manager），是真授权入口，故同含 androidViewer；
+ * - mc-path 网页版不渲染（指向 /web 虚拟根，与 webRepo FSA 卡语义重叠）；
+ * - links/mirror 纯桌面/网络概念，查看器（安卓+网页）无意义。 */
+const PATH_CARD_PLATFORMS: Record<"mc-path" | "links" | "mirror" | "storage", SettingsPlatform[]> =
+  {
+    "mc-path": ["desktop", "androidViewer"],
+    links: ["desktop"],
+    mirror: ["desktop"],
+    storage: ["desktop", "androidViewer", "webViewer"],
+  };
+
+const resolveSettingsPlatform = (isViewer: boolean, isWebViewer: boolean): SettingsPlatform =>
+  isWebViewer ? "webViewer" : isViewer ? "androidViewer" : "desktop";
+
+const cardSupportedOn = (id: keyof typeof PATH_CARD_PLATFORMS, p: SettingsPlatform): boolean =>
+  PATH_CARD_PLATFORMS[id].includes(p);
+
+function renderStgBasicPaths(p: SettingsPlatform): string {
   // 路径三卡为同族组，入场延迟由 stgCards 按序号派生（step 60ms，与其余组的 30ms 区分：
   // 首屏三张大卡节奏放缓一档）。2026-09 前为手填 0/60/120 字面量。
   const specs: StgCardSpec[] = [];
-  // mc-path（游戏根目录）：桌面 + 安卓 viewer 通用——安卓 viewer 点击走 directory-picker.ts
-  // resolveAndroidRepoDir（未授权弹系统授权页、授权后定位 /storage/emulated/0/YSM-Model-Manager），
-  // 是查看器模式的真授权入口，严禁隐藏（ADR-307 D2 查实修正：原 if(!isViewer) 整体消失把这条
-  // 入口一并埋了）；网页版不渲染（mc-path 会指向 /web 虚拟根，与 webRepo FSA 授权卡语义重叠）。
-  if (!isWebViewer) {
+  // 游戏根目录：桌面 + 安卓 viewer 通用（网页版不渲染，见 PATH_CARD_PLATFORMS）
+  if (cardSupportedOn("mc-path", p)) {
     specs.push({
       icon: UI_ICONS.game,
       title: t("settings.paths.gameRoot"),
@@ -122,8 +142,8 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
       },
     });
   }
-  // 链接模式 / 下载镜像源：纯桌面 / 网络概念，查看器模式（安卓 + 网页版）无意义 → 不渲染
-  if (!isViewer) {
+  // 链接模式 / 下载镜像源：纯桌面 / 网络概念，查看器模式无意义（网页版+安卓 viewer 均不渲染）
+  if (cardSupportedOn("links", p)) {
     specs.push(
       {
         icon: UI_ICONS.link,
@@ -161,12 +181,12 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
   }
   const cards = stgCards(specs, { step: 60 });
   // viewer 模式（安卓 + 网页版）段标题统一为「文件来源」，桌面为「路径配置」——
-  // 与「这里是可配置路径 vs 这里只有来源入口」语义对齐，避免 viewer 下声称「路径配置」却无本地路径卡
-  const title = t(isViewer ? "settings.paths.sourceTitle" : "settings.paths.title");
+  // 与「这里是可配置路径 vs 这里只有来源入口」语义对齐
+  const title = t(p !== "desktop" ? "settings.paths.sourceTitle" : "settings.paths.title");
   if (!cards) {
-    // Web viewer still needs the source section label before the FSA card below;
-    // Android viewer now has the mc-path card（授权入口），不再走此空分支。
-    return isWebViewer
+    // 仅网页版无本地路径卡（mc-path/links/mirror 全关），仍输出「文件来源」节标题给下方 FSA 卡；
+    // 安卓 viewer 现含 mc-path 授权卡，不再走此空分支
+    return p === "webViewer"
       ? `<div class="section-title stg-title">${UI_ICONS.settings} ${title}</div>`
       : "";
   }
@@ -177,8 +197,8 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
   </div>`;
 }
 
-function renderStgStorageCard(isWebViewer: boolean): string {
-  return isWebViewer
+function renderStgStorageCard(p: SettingsPlatform): string {
+  return p === "webViewer"
     ? stgCard(
         UI_ICONS.folder,
         t("settings.webRepo.title"),
@@ -513,10 +533,10 @@ function renderStgParserWorkers(): string {
 
 export function settingsHTML(): string {
   const isViewer = isViewerMode();
-  const isWebViewer = isWebPlatform();
+  const p = resolveSettingsPlatform(isViewer, isWebPlatform());
 
-  const envBody = `${renderStgBasicPaths(isViewer, isWebViewer)}
-  ${renderStgStorageCard(isWebViewer)}
+  const envBody = `${renderStgBasicPaths(p)}
+  ${renderStgStorageCard(p)}
 ${renderStgDefaultPageSection()}`;
 
   // 语言卡归「外观」（显示偏好），排在字体与布局之后、行为与动画之前

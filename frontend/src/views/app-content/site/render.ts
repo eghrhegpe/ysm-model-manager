@@ -324,6 +324,57 @@ function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
   return html;
 }
 
+/**
+ * 单张创作者编辑卡 HTML（P1-3b 抽离：buildSiteCreatorEditCards 循环体 → 纯函数，
+ * 供编辑态「新增」走局部 DOM 渲染复用，避免整树重建丢焦点）。
+ * 注意 idx 是**编辑视图索引**（creators 过滤后数组的下标），对应 data-edit-idx/data-idx。
+ */
+export function buildCreatorEditCard(
+  cr: LocalCreatorLike,
+  idx: number,
+  allSites: WorkshopSite[],
+  esc: (s: unknown) => string,
+): string {
+  const roleEmoji = getTagIconFromRole(cr.role);
+  const roleOption = (value: string, label: string) =>
+    `<option value="${value}"${cr.role === value ? " selected" : ""}>${label}</option>`;
+  return (
+    `<div class="cr-edit-card" draggable="false" data-edit-idx="${idx}">` +
+    `<div class="cr-edit-card-head"><span class="cr-drag-handle">${UI_ICONS.dragHandle}</span><span class="cr-edit-card-avatar">${roleEmoji}</span>` +
+    `<input data-idx="${idx}" data-fld="name" value="${esc(
+      cr.name,
+    )}" class="cr-input cr-input-name" placeholder="${t("content.namePlaceholder")}">` +
+    `<button data-idx="${idx}" class="cr-btn-icon cr-del" title="${t("content.delete")}">${UI_ICONS.delete}</button>` +
+    `</div><div class="cr-edit-card-body"><div class="cr-edit-card-row"><span class="cr-edit-label">${t(
+      "content.labelDesc",
+    )}</span>` +
+    `<input data-idx="${idx}" data-fld="desc" value="${esc(
+      cr.desc,
+    )}" class="cr-input cr-input-desc" placeholder="${t("content.descPlaceholder")}"></div>` +
+    `<div class="cr-edit-card-row"><span class="cr-edit-label">${t(
+      "content.labelPlatform",
+    )}</span>` +
+    // P1-5 锐评：平台字段原用 `<select multiple>`（Ctrl/Cmd 多选、移动端不可用、
+    // 50px 高小框滚动 5 个 option，与浏览态 badge 视觉完全脱节）——改为可点击 badge 组：
+    // 每个站点一个 chip，点击切换选中（toggle type 段），与浏览态 .cr-platform-badge 同语义。
+    `<div class="cr-site-chip-group" data-fld="type" data-idx="${idx}">${(allSites || [])
+      .map(
+        (s) =>
+          `<button type="button" class="cr-site-chip${
+            parseSiteIds(cr.type).includes(s.id) ? " active" : ""
+          }" data-site-id="${esc(s.id)}" title="${esc(s.label)}">${esc(s.label)}</button>`,
+      )
+      .join("")}</div>` +
+    `<select data-idx="${idx}" data-fld="role" class="cr-input-role">${roleOption(
+      "creator",
+      t("content.roleCreator"),
+    )}${roleOption("official", t("content.roleOfficial"))}${roleOption("vup", "VUP")}${roleOption(
+      "oc",
+      "OC",
+    )}${roleOption("repo", t("content.roleRepo"))}</select></div></div></div>`
+  );
+}
+
 /** 创作者编辑区：保存/取消/dropzone + 各创作者编辑卡 + 新增区。 */
 function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
   const { esc, creators, allSites } = ctx;
@@ -336,43 +387,7 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
     `<div class="cr-drop-zone" id="cr-drop-zone"><span class="cr-drop-icon">${UI_ICONS.import}</span>` +
     `<span class="cr-drop-text">${t("content.dropZoneHint")}</span></div>`;
   creators.forEach((cr, idx) => {
-    const roleEmoji = getTagIconFromRole(cr.role);
-    const roleOption = (value: string, label: string) =>
-      `<option value="${value}"${cr.role === value ? " selected" : ""}>${label}</option>`;
-    html +=
-      `<div class="cr-edit-card" draggable="false" data-edit-idx="${idx}">` +
-      `<div class="cr-edit-card-head"><span class="cr-drag-handle">${UI_ICONS.dragHandle}</span><span class="cr-edit-card-avatar">${roleEmoji}</span>` +
-      `<input data-idx="${idx}" data-fld="name" value="${esc(
-        cr.name,
-      )}" class="cr-input cr-input-name" placeholder="${t("content.namePlaceholder")}">` +
-      `<button data-idx="${idx}" class="cr-btn-icon cr-del" title="${t("content.delete")}">${UI_ICONS.delete}</button>` +
-      `</div><div class="cr-edit-card-body"><div class="cr-edit-card-row"><span class="cr-edit-label">${t(
-        "content.labelDesc",
-      )}</span>` +
-      `<input data-idx="${idx}" data-fld="desc" value="${esc(
-        cr.desc,
-      )}" class="cr-input cr-input-desc" placeholder="${t("content.descPlaceholder")}"></div>` +
-      `<div class="cr-edit-card-row"><span class="cr-edit-label">${t(
-        "content.labelPlatform",
-      )}</span>` +
-      // P1-5 锐评：平台字段原用 `<select multiple>`（Ctrl/Cmd 多选、移动端不可用、
-      // 50px 高小框滚动 5 个 option，与浏览态 badge 视觉完全脱节）——改为可点击 badge 组：
-      // 每个站点一个 chip，点击切换选中（toggle type 段），与浏览态 .cr-platform-badge 同语义。
-      `<div class="cr-site-chip-group" data-fld="type" data-idx="${idx}">${(allSites || [])
-        .map(
-          (s) =>
-            `<button type="button" class="cr-site-chip${
-              parseSiteIds(cr.type).includes(s.id) ? " active" : ""
-            }" data-site-id="${esc(s.id)}" title="${esc(s.label)}">${esc(s.label)}</button>`,
-        )
-        .join("")}</div>` +
-      `<select data-idx="${idx}" data-fld="role" class="cr-input-role">${roleOption(
-        "creator",
-        t("content.roleCreator"),
-      )}${roleOption("official", t("content.roleOfficial"))}${roleOption("vup", "VUP")}${roleOption(
-        "oc",
-        "OC",
-      )}${roleOption("repo", t("content.roleRepo"))}</select></div></div></div>`;
+    html += buildCreatorEditCard(cr, idx, allSites, esc);
   });
   html += `<div class="cr-add-area"><button class="cr-add">${t("content.addCreator")}</button></div>`;
   return html;

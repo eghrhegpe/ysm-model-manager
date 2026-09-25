@@ -241,15 +241,32 @@ describe("编辑态增删", () => {
     cleanup!();
   });
 
-  it("7. 删除创作者 → 从 allCreators 移除并联调 refresh", () => {
+  it("7. 删除创作者 → 数组移除 + DOM 卡片移除 + 索引重编号（P1-3b 局部渲染，不再整树 refresh）", () => {
     const { state, searchResults, refresh, allCreators } = makeState();
-    mountToolbarDom(searchResults);
+    // 两卡：data-edit-idx=0（Alice）/1（Bob），删除 0 号后 Bob 应重编号为 0
+    searchResults.innerHTML =
+      '<button class="cr-edit-btn"></button>' +
+      '<button class="cr-cancel-btn"></button>' +
+      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice">' +
+      '<button class="cr-del" data-idx="0"></button></div>' +
+      '<div class="cr-edit-card" data-edit-idx="1"><input data-idx="1" data-fld="name" value="Bob"></div>';
     const cleanup = bindEditEvents(state, refresh);
-    expect(allCreators).toHaveLength(1);
+    expect(allCreators).toHaveLength(1); // makeState 默认 1 个；DOM 是额外夹具，数组以 state 为准
+    // 补第二个到数组，让 idx=1 存在
+    state.creators.push({ id: 2, name: "Bob", desc: "", type: "siteA" } as unknown as LocalCreatorLike);
+    state.allCreators.push(state.creators[1]!);
 
-    searchResults.querySelector(".cr-del")!.dispatchEvent(new Event("click", { bubbles: true }));
-    expect(allCreators).toHaveLength(0);
-    expect(refresh).toHaveBeenCalled();
+    searchResults.querySelector('.cr-del[data-idx="0"]')!.dispatchEvent(new Event("click", { bubbles: true }));
+
+    // 数组移除 Alice，Bob 前移
+    expect(allCreators.map((c) => c.name)).toEqual(["Bob"]);
+    // DOM：Alice 卡移除、Bob 卡重编号为 0，且其内部 input data-idx 同步
+    const cards = searchResults.querySelectorAll<HTMLElement>(".cr-edit-card");
+    expect(cards).toHaveLength(1);
+    expect(cards[0]?.dataset.editIdx).toBe("0");
+    expect((cards[0]?.querySelector('input[data-fld="name"]') as HTMLInputElement).dataset.idx).toBe("0");
+    // P1-3b：不整树重建（refresh 不被调）
+    expect(refresh).not.toHaveBeenCalled();
     cleanup!();
   });
 
@@ -270,23 +287,26 @@ describe("编辑态增删", () => {
       allCreators: [multiSite],
     });
     searchResults.innerHTML =
-      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="跨站"></div>' +
-      '<button class="cr-del" data-idx="0"></button>';
+      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="跨站">' +
+      '<button class="cr-del" data-idx="0"></button></div>';
     const cleanup = bindEditEvents(state, refresh);
     expect(state.allCreators).toHaveLength(1);
     expect(state.detachedCreators).toHaveLength(0);
 
     searchResults.querySelector(".cr-del")!.dispatchEvent(new Event("click", { bubbles: true }));
 
-    // 条目仍在 allCreators（他站保留），type 已去本站段，进入 detached 待保存写回
+    // 条目仍在 allCreators（他站保留），type 已去本站段，进入 detached 待保存写回；
+    // DOM 卡片移除（本站视图不再显示），不整树重建
     expect(state.allCreators).toHaveLength(1);
-    expect(state.creators[0]!.type).toBe("siteB");
+    expect(state.creators).toHaveLength(0);
+    expect(state.creators[0]).toBeUndefined();
     expect(state.detachedCreators.map((c) => c.name)).toEqual(["跨站"]);
-    expect(refresh).toHaveBeenCalled();
+    expect(searchResults.querySelector(".cr-edit-card")).toBeNull();
+    expect(refresh).not.toHaveBeenCalled();
     cleanup!();
   });
 
-  it("8. 新增创作者 → 追加到 creators 与 allCreators 并联调 refresh", () => {
+  it("8. 新增创作者 → 数组追加 + DOM 新卡插入 + 焦点落到新卡 name（P1-3b 局部渲染）", () => {
     const { state, searchResults, refresh, allCreators } = makeState();
     mountToolbarDom(searchResults);
     const cleanup = bindEditEvents(state, refresh);
@@ -298,7 +318,15 @@ describe("编辑态增删", () => {
     // 若回退旧实现，这里会拿到 "workshop.newCreatorName" 这种语言串并落盘）
     expect(state.creators[1].name).toBe("");
     expect(state.creators[1].desc).toBe("");
-    expect(refresh).toHaveBeenCalled();
+    // P1-3b：DOM 出现新卡且编号正确，不整树重建（焦点保持）
+    const newCard = searchResults.querySelector(
+      '.cr-edit-card[data-edit-idx="1"]',
+    ) as HTMLElement | null;
+    expect(newCard).toBeTruthy();
+    expect(
+      (newCard?.querySelector('input[data-fld="name"]') as HTMLInputElement).dataset.idx,
+    ).toBe("1");
+    expect(refresh).not.toHaveBeenCalled();
     cleanup!();
   });
 

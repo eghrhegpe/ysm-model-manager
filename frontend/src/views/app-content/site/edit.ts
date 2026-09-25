@@ -13,6 +13,7 @@ import { allResourceTypes } from "@/utils/resource/schema.ts";
 import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { bindDragSort, type DragStateShell } from "./edit-drag.ts";
+import { buildCreatorEditCard } from "./render.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
 import { joinSiteIds, parseSiteIds } from "./workshop-data.ts";
 
@@ -332,7 +333,21 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
   );
 }
 
-function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: AbortSignal): void {
+// ===== P1-3b 锐评：编辑态局部 DOM 操作 =====
+// 删除/新增不再整树 refreshView（整树重建会把用户正在输入的焦点归零，连续编辑体验断裂）。
+// 局部操作后**按 DOM 顺序重编号**创作家卡的 data-edit-idx 与其内全部 data-idx——
+// 数组已同步（splice/push），DOM 序号必须跟着变，否则后续保存的 syncFieldToCreator
+// 会把「第 N 张卡」的输入写进错误的数组槽。
+function reindexCreatorCards(searchResults: HTMLElement): void {
+  qsa<HTMLElement>(searchResults, ".cr-edit-card:not([data-edit='preset'])").forEach((card, i) => {
+    card.dataset.editIdx = String(i);
+    qsa<HTMLElement>(card, "[data-idx]").forEach((el) => {
+      el.dataset.idx = String(i);
+    });
+  });
+}
+
+function eeBindCreatorsEdit(state: SiteViewState, sig: AbortSignal): void {
   const { searchResults, creators, allCreators, site } = state;
 
   qsa<HTMLElement>(
@@ -390,7 +405,10 @@ function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: 
           const realIdx = allCreators.indexOf(cr);
           if (realIdx >= 0) allCreators.splice(realIdx, 1);
         }
-        refreshView();
+        // P1-3b：局部 DOM 移除 + 数组 splice + 重编号，不整树重建（保焦点）
+        creators.splice(idx, 1);
+        btn.closest(".cr-edit-card")?.remove();
+        reindexCreatorCards(searchResults);
       },
       { signal: sig },
     );
@@ -409,8 +427,24 @@ function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: 
         type: site.id,
         tag: "",
       } as LocalCreatorLike);
-      allCreators.push(creators[creators.length - 1]);
-      refreshView();
+      const newCr = creators.at(-1);
+      if (!newCr) return; // push 后必然存在，守卫仅为类型收窄（biome 禁 ! 断言）
+      allCreators.push(newCr);
+      // P1-3b：局部 DOM append 新卡（buildCreatorEditCard 纯函数），不整树重建（保焦点）
+      const newIdx = creators.length - 1;
+      const newCardHtml = buildCreatorEditCard(newCr, newIdx, state.allSites, state.esc);
+      const addArea = searchResults.querySelector(".cr-add-area");
+      if (addArea) {
+        addArea.insertAdjacentHTML("beforebegin", newCardHtml);
+      } else {
+        searchResults.insertAdjacentHTML("beforeend", newCardHtml);
+      }
+      reindexCreatorCards(searchResults);
+      // 焦点落到新卡 name 输入，连续「新增」不丢操作链
+      const newName = searchResults.querySelector(
+        `.cr-edit-card:not([data-edit='preset'])[data-edit-idx="${newIdx}"] input[data-fld="name"]`,
+      ) as HTMLInputElement | null;
+      newName?.focus();
     },
     { signal: sig },
   );
@@ -601,7 +635,7 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
 
   eeBindToolbarBtns(state, refreshView, sig);
   eeBindFetchBtn(state, refreshView, sig);
-  eeBindCreatorsEdit(state, refreshView, sig);
+  eeBindCreatorsEdit(state, sig);
   eeBindCreatorsDrag(state, refreshView, ds, sig);
   eeBindPresetsEdit(state, refreshView, sig);
   eeBindPresetsDrag(state, refreshView, ds, sig);

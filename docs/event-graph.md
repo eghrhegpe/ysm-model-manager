@@ -84,7 +84,7 @@
 |------|------|----|
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 134 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 138 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 139 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 283 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 309 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 321 |
@@ -222,7 +222,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 266 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 274 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 275 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 87 |
 
 **订阅方（on）：**
@@ -236,8 +236,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 90 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 260 |
+| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 91 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 261 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -317,10 +317,10 @@
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 197 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 115 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 244 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 103 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 362 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 91 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 350 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 83 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 156 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 313 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 223 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 242 |
@@ -445,13 +445,13 @@
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 152 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 166 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 185 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 104 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 285 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 291 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 314 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 320 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 343 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 363 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 92 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 273 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 279 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 302 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 308 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 331 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 351 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 174 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 185 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 205 |
@@ -484,12 +484,12 @@
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 42 |
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 67 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 131 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 132 |
 | (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 42 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 75 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 94 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 145 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 167 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 65 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 84 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 135 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 147 |
 | beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 118 |
 | runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 252 |

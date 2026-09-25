@@ -414,7 +414,7 @@ export function workshopHTML(): string {
     "</span>" +
     "</div>" +
     // 站点配置导入/导出工具栏（index.ts ws-export-btn / ws-import-btn 绑定）
-    '<div style="display:flex;gap:6px;padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd);flex-shrink:0">' +
+    '<div class="ws-toolbar">' +
     '<button class="btn-base sm" id="ws-export-btn" title="' +
     t("workshop.exportSiteTitle") +
     '">' +
@@ -432,10 +432,10 @@ export function workshopHTML(): string {
     "</div>" +
     '<div class="tab-body" id="cr-tab-creators">' +
     '<div class="cr-page" id="ws-page">' +
-    '<div class="cr-right" style="width:100%;flex:1;display:flex;flex-direction:column;overflow:hidden" id="ws-right">' +
+    '<div class="cr-right ws-right" id="ws-right">' +
     '<div class="cr-right-inner" id="ws-right-inner">' +
-    '<div id="ws-search-view" data-testid="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
-    '<div id="ws-search-results" data-testid="ws-search-results" style="flex:1;overflow-y:auto;padding:0 var(--sp-3) var(--sp-2)">' +
+    '<div class="ws-search-view" id="ws-search-view" data-testid="ws-search-view">' +
+    '<div class="ws-search-results" id="ws-search-results" data-testid="ws-search-results">' +
     '<div style="color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center">' +
     t("common.loading") +
     "</div>" +
@@ -443,7 +443,7 @@ export function workshopHTML(): string {
     "</div>" +
     "</div>" +
     "</div>" +
-    '<div id="ws-browser" style="display:none;flex:1;flex-direction:column;overflow:hidden;position:absolute;inset:0;z-index:10;background:var(--bg)">' +
+    '<div class="ws-browser" id="ws-browser">' +
     '<div class="ws-browser-bar">' +
     '<button class="btn-base sm ws-back" id="ws-back">' +
     UI_ICONS.navigate +
@@ -465,8 +465,8 @@ export function workshopHTML(): string {
     // [ADR-077] allow-same-origin 必需：缺此标记时 iframe origin 被强制为 null（opaque origin），
     // 登录站 SPA（如模之屋 aplaybox）的 fetch/XHR 会被浏览器 CORS 拦截白屏；
     // 父窗口(wails://)与 iframe(外部真实域)本就不同源，补此标记不会让 iframe 反向访问父窗口。
-    '<iframe id="ws-iframe" style="flex:1;border:none;background:var(--bg)" sandbox="allow-scripts allow-forms allow-popups allow-same-origin"></iframe>' +
-    '<div id="ws-blocked" style="display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:var(--fs-base)">' +
+    '<iframe class="ws-iframe" id="ws-iframe" sandbox="allow-scripts allow-forms allow-popups allow-same-origin"></iframe>' +
+    '<div class="ws-blocked" id="ws-blocked">' +
     '<div style="font-size:var(--fs-xl)">' +
     UI_ICONS.blocked +
     "</div>" +

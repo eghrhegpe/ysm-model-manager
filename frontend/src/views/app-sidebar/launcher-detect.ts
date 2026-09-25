@@ -8,7 +8,6 @@
 import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalPicker } from "@/utils/dom/modal-picker.ts";
 import { modalSelect } from "@/utils/dom/modal-select.ts";
@@ -16,6 +15,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { writeAppConfig } from "@/views/config-write.ts";
 
 interface LauncherInstance {
   launcher: string;
@@ -46,22 +46,12 @@ const toastError = (error: unknown): void => {
   });
 };
 
-/** 保存 mcRoot（其余配置项沿用当前值原样回写；theme 取全局主题缺省 dark）；
- *  app 可传已取好的绑定引用（调用方顺手 LoadAppConfig 时免二次动态 import） */
-async function saveMcRoot(
-  mcRoot: string,
-  app?: Awaited<ReturnType<typeof backendGetApp>>,
-): Promise<void> {
-  const App = app ?? (await backendGetApp());
-  const latest = await App.LoadAppConfig();
-  await App.SaveAppConfig(
-    latest.filesRoot || "",
-    latest.resourcepackRoot || "",
-    mcRoot,
-    latest.linkMode || "copy",
-    safeGet("theme") || "dark",
-    safeGet("theme-auto") || "",
-  );
+/** 保存 mcRoot（其余配置项走 writeAppConfig 重读最新落盘值；theme 缺省自 localStorage
+ *  回落 THEME_DARK）。原手抄六位置实参硬编码 `"dark"`——该值不在 THEME_VALID 内，
+ *  落盘后 initTheme 的 normalizeTheme 会静默归一成 "system"（用户只改游戏目录，
+ *  主题却被改成跟随系统）。 */
+async function saveMcRoot(mcRoot: string): Promise<void> {
+  await writeAppConfig({ mcRoot });
 }
 
 /** 🔍 自动搜索常见 MC 安装位置（多结果弹选择器） */
@@ -89,7 +79,7 @@ export async function runMcSearch(guard: BusyGuard): Promise<void> {
       });
       if (!selected) return;
     }
-    await saveMcRoot(selected, App);
+    await saveMcRoot(selected);
     bus.emit("stats:refresh");
     bus.emit("toast:show", {
       msg: t("content.mcPathSet", { path: selected }),
@@ -154,12 +144,12 @@ export async function runLauncherDetect(guard: BusyGuard): Promise<void> {
 
     const latest = await App.LoadAppConfig();
     const previousMcRoot = latest.mcRoot || "";
-    await saveMcRoot(selection.instance.gameRoot, App);
+    await saveMcRoot(selection.instance.gameRoot);
     if (selection.useAsYsmRoot) {
       try {
         await App.SetResourceRoot(RESOURCE_TYPES.YSM, selection.instance.customDir);
       } catch (error) {
-        await saveMcRoot(previousMcRoot, App); // 失败回滚 mcRoot，不留半套配置
+        await saveMcRoot(previousMcRoot); // 失败回滚 mcRoot，不留半套配置
         throw error;
       }
     }

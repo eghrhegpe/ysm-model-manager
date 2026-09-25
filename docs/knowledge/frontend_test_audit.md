@@ -96,7 +96,9 @@ invariant_anchors:
 ## 覆盖盲区（对照 views）
 
 - **sync-manager 执行链路**：审计时（2026-08-26）仅 e2e 页面切换、未覆盖 push/pull 执行；**✅ 已由 `frontend/src/features/sync/sync.test.ts`（351 行 / 13 case，覆盖 download-missing + toggle-status 的成功/失败/并发守卫/配置缺失/边界）补齐**——执行逻辑归单测守护，e2e 仍只测「按钮可见 + 页切换」（sync-manager.spec.ts）。
-- **recycle-bin / import-queue / community**：三条用户高交互路径**仍完全无 e2e**——补测优先级 P3（截至本轮仍未补）。
+- **recycle-bin**：审计时列「完全无 e2e」。**✅ 已于本轮（2026-09）补 `frontend/e2e/recycle-bin.spec.ts`**——覆盖 repository 页 → recycle 子 tab 切换 + 清空/刷新控件真实可见 + 条目级 restore/delete 钩子（有条目时）。`npx playwright test recycle-bin.spec.ts` → 2 passed。
+- **community（创作者频道页）**：审计时列「完全无 e2e」系**快照过期**——实际 `frontend/e2e/workshop.spec.ts` 早已覆盖（navItem("community") → ws-tabs 站点 tab 动态渲染 + 默认选中）。执行逻辑另由 community/*.test.ts 单测守护。
+- **import-queue（= community download-queue）**：**仍无 e2e 且当前无法低flake补测**——源码 `features/community/download-queue*.ts` / roles-views / slide-menu **无任何 data-testid 钩子**（grep `dlq|import|queue|download` testid = 0 命中），仅用 innerHTML+UI_ICONS 渲染。补 e2e 需先给 download-queue UI 加 testid（属源码改动，超出本轮测试范围）；其执行逻辑已由 `download-queue.test.ts` + `download-queue-ui.test.ts` + `download-queue-store.test.ts` 单测覆盖。结论：**该盲区应标为「受阻：待源码插桩」，而非「未补」**——盲写 CSS/XPath e2e 违反 AGENTS.md 禁 flake 原则，属假覆盖。
 
 ## 不变量
 

@@ -12,6 +12,7 @@ import { shortenPath } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { writeAppConfig } from "@/views/config-write.ts";
 import type { SidebarInstance } from "./data.ts";
 import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";
 
@@ -275,7 +276,7 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
     };
     (async () => {
       try {
-        const { LoadAppConfig, SaveAppConfig, GetMinecraftPaths } = await backendGetApp();
+        const { LoadAppConfig, GetMinecraftPaths } = await backendGetApp();
         const cfg = await LoadAppConfig();
         if (cfg.mcRoot) {
           // 路径是外部数据（配置/磁盘枚举），文本槽必 esc——R8 模板插值卫生回归锁见 events.test.ts
@@ -291,15 +292,9 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
             btn.innerHTML = `${UI_ICONS.game} ${esc(shortenPath(paths[0]))}`;
             btn.title = paths[0];
             btn.setAttribute("aria-label", `${t("sidebar.configGameDir")}: ${paths[0]}`);
-            const theme = safeGet("theme") || "dark";
-            await SaveAppConfig(
-              cfg.filesRoot || "",
-              cfg.resourcepackRoot || "",
-              paths[0],
-              cfg.linkMode || "copy",
-              theme,
-              safeGet("theme-auto") || "",
-            );
+            // 配置落盘走 views 级唯一实参点（ADR-313）。原手抄六位置实参硬编码
+            // `"dark"`——不在 THEME_VALID 内，落盘后被 normalizeTheme 静默转成 system
+            await writeAppConfig({ mcRoot: paths[0] });
           } else {
             btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;
             // 复位路径残留（按钮长生命周期，配置被清空后 title/aria 不再指旧路径）

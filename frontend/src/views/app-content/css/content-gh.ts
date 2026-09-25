@@ -22,7 +22,10 @@ export const contentGhCSS: string = `
 .gh-card.active { border-color:var(--accent); background:var(--accent); color:var(--bg); box-shadow:var(--card-shadow-hover, none); }
 .gh-card .name { font-size:var(--fs-md); font-weight:var(--fw-bold); color:var(--txt); font-family:var(--font-display); overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .gh-card .name + .meta { margin-top:1px; font-size:var(--fs-xs); color:var(--muted); }
-.gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
+/* 2026-09 锐评 P2-2 补完：.cr-creator-card--grid:hover 的头像 rotate(-8deg) 已删，
+   但创作者卡是双 class（gh-card + cr-creator-card--grid，render.ts createCrCard），
+   此条 .gh-card:hover .cr-avatar 会让旋转借 gh-card 选择器存活——一并删除。
+   .gh-card-icon 旋转保留（仅 GitHub 仓库卡自有的图标装饰，不在创作者菜单范围）。 */
 .gh-card-body { flex:1; min-width:0; }
 .gh-header { border-bottom:1px solid var(--bd);flex-shrink:0; }
 .gh-header-top { display:flex;align-items:center;gap:8px;padding:var(--sp-vh-pane); }

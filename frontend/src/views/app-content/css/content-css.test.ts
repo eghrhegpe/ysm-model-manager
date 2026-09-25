@@ -305,3 +305,26 @@ describe("诊断页起跑线契约", () => {
     expect(contentDiagCSS).not.toMatch(/\.diag-result\s*\{[^}]*padding:/);
   });
 });
+
+// ===== 创作者头像 hover 旋转回归锁（2026-09 锐评 P2-2 补完）=====
+// 背景：P2-2 删除了 .cr-creator-card--grid:hover 的头像 rotate(-8deg)，但创作者卡是
+// 双 class（gh-card + cr-creator-card--grid，render.ts createCrCard）——若有人在
+// content-gh.ts 写 .gh-card:hover .cr-avatar { rotate } ，旋转会借 gh-card 选择器
+// 复活且不被 creator 叶的测试发现（2026-09 实测：content-gh.ts L25 曾存活此规则）。
+describe("创作者头像旋转跨类泄露防护", () => {
+  it("任何含 .cr-avatar 的规则不得带 rotate（creator + gh 两叶合并扫描）", () => {
+    const combined = (contentCreatorCSS + contentGhCSS).replace(/\/\*[\s\S]*?\*\//g, "");
+    // 逐规则扫描：剥注释后本两叶无嵌套 at-rule（@keyframes 在 layout 叶），括号配对即可。
+    const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+    const offenders: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = ruleRe.exec(combined)) !== null) {
+      const sel = m[1]!;
+      const body = m[2]!;
+      if (sel.includes(".cr-avatar") && body.includes("rotate")) {
+        offenders.push(`${sel.trim()} { ${body.trim()} }`);
+      }
+    }
+    expect(offenders, `头像旋转规则泄露（P2-2 应已删除）：\n${offenders.join("\n")}`).toEqual([]);
+  });
+});

@@ -5,9 +5,7 @@
 import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { THEME_DARK } from "@/theme-core";
 import { logWarn } from "@/utils/base/primitives/log.ts";
-import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalPicker } from "@/utils/dom/modal-picker.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -16,7 +14,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { ResourceType } from "@/utils/resource/schema.ts";
 import { groupStorageRootOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { LINK_MODE_DEFAULT } from "./settings-schema.ts";
+import { writeAppConfig } from "@/views/config-write.ts";
 import { cardRefreshers, getCfg, isBusy, setBusy, toastError } from "./store.ts";
 
 /**
@@ -41,6 +39,10 @@ function renderDirLabel(dir: string): string {
 // `SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto)` 六位置实参，
 // 而 Go 端签名是六个同型 string：位置错了类型系统看不见（历史 P3「闭包旧值覆盖 linkMode」/
 // P4「theme-auto 漏落盘」都是这种手抄配方咬出来的）。全页（含本函数）现只剩这一处实参。
+// 2026-10 锐评第九轮（ADR-313）：实参点本身也上移 views/config-write.ts 成为
+// **跨视图**唯一出口（app-sidebar 两处同款手抄配方曾硬编码 "dark"/"copy" 字面量，
+// 其中 "dark" 不在 THEME_VALID 内、落盘后被 normalizeTheme 静默转成 system 的 bug）。
+// 本函数保留为 settings 域包装：补上「保存成功后同步模块级 cfg 内存快照」这一步。
 export async function saveCfg(patch: {
   filesRoot?: string;
   rpRoot?: string;
@@ -50,27 +52,13 @@ export async function saveCfg(patch: {
   theme?: string;
   themeAuto?: string;
 }): Promise<void> {
-  const { LoadAppConfig, SaveAppConfig } = await backendGetApp();
-  let latest = getCfg();
-  try {
-    latest = await LoadAppConfig();
-  } catch {
-    /* 重读失败退化为内存 cfg（尽力而为） */
-  }
-  const theme = patch.theme !== undefined ? patch.theme : safeGet("theme") || THEME_DARK;
-  const themeAuto = patch.themeAuto !== undefined ? patch.themeAuto : safeGet("theme-auto") || "";
-  await SaveAppConfig(
-    patch.filesRoot !== undefined ? patch.filesRoot : latest.filesRoot || "",
-    patch.rpRoot !== undefined ? patch.rpRoot : latest.resourcepackRoot || "",
-    patch.mcRoot !== undefined ? patch.mcRoot : latest.mcRoot || "",
-    patch.linkMode !== undefined ? patch.linkMode : latest.linkMode || LINK_MODE_DEFAULT,
-    theme,
-    themeAuto,
-  );
-  if (patch.filesRoot !== undefined) getCfg().filesRoot = patch.filesRoot;
-  if (patch.rpRoot !== undefined) getCfg().resourcepackRoot = patch.rpRoot;
-  if (patch.mcRoot !== undefined) getCfg().mcRoot = patch.mcRoot;
-  if (patch.linkMode !== undefined) getCfg().linkMode = patch.linkMode;
+  const resolved = await writeAppConfig(patch);
+  // 内存快照同步：只回写被 patch 的字段（未 patch 字段保持原值，与 resolved 的重读值
+  // 可能不同——调用方不应假定内存与磁盘全等，只有被 patch 的字段是权威的）
+  if (patch.filesRoot !== undefined) getCfg().filesRoot = resolved.filesRoot;
+  if (patch.rpRoot !== undefined) getCfg().resourcepackRoot = resolved.rpRoot;
+  if (patch.mcRoot !== undefined) getCfg().mcRoot = resolved.mcRoot;
+  if (patch.linkMode !== undefined) getCfg().linkMode = resolved.linkMode;
 }
 
 // 工具：绑定路径卡片点击

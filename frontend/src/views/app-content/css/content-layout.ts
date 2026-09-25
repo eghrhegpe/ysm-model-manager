@@ -124,4 +124,14 @@ ${wsIconCSS}
 .ws-back:hover, .ws-btn-txt:hover { background:var(--hover); }
 .ws-open-btn { padding:var(--btn-padding-std);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .ws-open-btn:hover { background:var(--hover); }
+
+/* ===== 工坊页布局（2026-09 自 tpl.ts workshopHTML 行内收编——结构在代码、样式在 CSS）===== */
+.ws-right { width:100%; } /* .cr-right 已供 flex 三件套（flex:1/column/overflow），行内只多 width:100% */
+.ws-search-view { flex:1;display:flex;flex-direction:column;overflow:hidden; }
+.ws-search-results { flex:1;overflow-y:auto;padding:0 var(--sp-3) var(--sp-2); }
+.ws-browser { display:none;flex:1;flex-direction:column;overflow:hidden;position:absolute;inset:0;z-index:10;background:var(--bg); } /* 显隐由 JS 内联 style.display 切换（workshop-site-opener），内联优先于本类默认 none */
+.ws-browser-bar { display:flex;align-items:center;gap:6px;padding:var(--sp-vh-pane);border-bottom:1px solid var(--bd);flex-shrink:0; } /* 原死类名：模板在用、CSS 无规则 → 顺手补上（2026-09 体检） */
+.ws-iframe { flex:1;border:none;background:var(--bg); }
+.ws-blocked { display:none;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--muted);font-size:var(--fs-base); } /* 同 .ws-browser：显隐走 JS 内联 */
+.ws-toolbar { display:flex;gap:6px;padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd);flex-shrink:0; }
 `;

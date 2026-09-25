@@ -3,11 +3,10 @@
 // 隐私模式（存储禁用）下 localStorage 抛错会中断 initSettings、整页失效。
 // 原局部 themeGet/themeSet 收敛为共享工具（app-modules 启动链同源实现）。
 
-import { applyTheme, applyTimeTheme } from "@/theme-core";
+import { applyTheme, applyTimeTheme, THEME_DARK } from "@/theme-core";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
-import { getCfg } from "./store.ts";
+import { saveCfg } from "./path-cards.ts";
 
 // applyTimeTheme / 时段常量已下沉至 theme-core.ts（设置页与启动链共用单源，P3 修复重启失效）
 
@@ -49,7 +48,9 @@ function syncThemeCards(themePicker: ParentNode, activeTheme: string | null): vo
 /** 初始化主题段：主题卡片点击切换 + 自动切换下拉框 */
 export function initThemeSection(root: ShadowRoot): void {
   // 主题卡片：直接点击切换
-  const savedTheme = safeGet("theme") || "cyber";
+  // 缺省回退引 THEME_DARK（theme-core 单一来源）：原 "cyber" 字面量与本页其余保存点
+  // （init.ts / path-cards.ts 均 `|| THEME_DARK`）同语义两种拼法——改默认主题时漏一处即漂移
+  const savedTheme = safeGet("theme") || THEME_DARK;
   const themePicker = root.getElementById("theme-picker");
   if (themePicker) {
     // 色点回填：shadow 内 var() 只会拿到当前主题，逐主题探针取真实色写 inline（见 probeThemeSwatch）
@@ -76,15 +77,10 @@ export function initThemeSection(root: ShadowRoot): void {
         // P4 修复（theme-auto 落盘）：点击卡片 = 手动选主题 = 自动模式关闭 → themeAuto="off"
         void (async () => {
           try {
-            const { SaveAppConfig } = await backendGetApp();
-            await SaveAppConfig(
-              getCfg().filesRoot || "",
-              getCfg().resourcepackRoot || "",
-              getCfg().mcRoot || "",
-              getCfg().linkMode || "copy",
-              themeName,
-              "off",
-            );
+            // 配置落盘走 saveCfg 唯一出口（未传字段取重读的最新 Go 配置）。原手抄六位置实参
+            // 吃 getCfg() 快照、linkMode 还用 "copy" 字面量兜底（本页其余点均引 LINK_MODE_DEFAULT）；
+            // themeAuto="off" = 点卡片即手动选主题 → 自动模式关闭（P4 口径）
+            await saveCfg({ theme: themeName, themeAuto: "off" });
           } catch (e) {
             logWarn(
               "settings",
@@ -127,15 +123,9 @@ export function initThemeSection(root: ShadowRoot): void {
       // P4 修复：自动模式变更同步 ysm_config.json（theme-auto 落盘）
       void (async () => {
         try {
-          const { SaveAppConfig } = await backendGetApp();
-          await SaveAppConfig(
-            getCfg().filesRoot || "",
-            getCfg().resourcepackRoot || "",
-            getCfg().mcRoot || "",
-            getCfg().linkMode || "copy",
-            safeGet("theme") || "cyber",
-            mode,
-          );
+          // theme 缺省由 saveCfg 自 localStorage 兜底：system/time 分支上面已 safeSet("theme", …)，
+          // off 分支沿用当前定格主题——与原先显式传入 `safeGet("theme") || THEME_DARK` 等价
+          await saveCfg({ themeAuto: mode });
         } catch (e) {
           logWarn("settings", "自动主题模式保存到配置失败", e);
         }

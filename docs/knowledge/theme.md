@@ -20,9 +20,11 @@ auto_fields:
     - normalizeThemeAuto
     - SYSTEM_DARK_THEME
     - SYSTEM_LIGHT_THEME
+    - Theme
     - THEME_AUTO_VALID
     - THEME_DARK
     - THEME_VALID
+    - ThemeCard
     - timeThemeForHour
     - unregisterDevtools
 quick_groups:
@@ -61,6 +63,7 @@ status: active
 ## 核心职责
 
 - `applyTheme(mode)`：校验合法性（非法值回落 `system`），先移除全部 6 个 `theme-*` 类再按模式添加；`system` 模式按 `matchMedia("(prefers-color-scheme: dark)")` 选 `theme-cyber`（暗）或 `theme-warm`（亮）的映射走 `SYSTEM_DARK_THEME`/`SYSTEM_LIGHT_THEME` 常量（原三元硬编码，2026-09 提常量单点可改）；挂载为 `window.applyTheme` 供设置页调用
+- **类型护栏（2026-10 锐评第七轮）**：`THEME_VALID` 是 `as const` 元组，导出 `Theme`（含 system）与 `ThemeCard`（去 system，卡片/图标/文案表键域）两个联合；`normalizeTheme` 返回 `Theme`，白名单判定收口在单一守卫 `isTheme`（`readonly` 元组下不再收宽 `string`，两处各写 `as` 强转是漂移温床）。下游「值 → 图标/文案」表必须写 `Record<ThemeCard, …>`——加主题漏键即编译期红（此前 `Record<string, …>` 只能运行时回落裸主题名）
 - `initTheme()`：动态 import `LoadAppConfig` 读取 Go 配置，取 `localStorage.getItem("theme") || cfg.theme || THEME_DARK`（THEME_DARK = "cyber"）并回写 localStorage；`LoadAppConfig` 失败时 catch 回退 localStorage 或默认暗色，不阻塞启动
 - 系统主题监听：`matchMedia` change 事件仅在 localStorage 主题为 `system` 时重应用，并 toast 提示「已跟随系统切换至深/浅色主题」
 - `timeThemeForHour(hour)` / `applyTimeTheme()`：纯函数时段判定（6:00–17:59 → warm，其余 → cyber）+ 应用并返回主题名；2026-09 自设置页 `theme.ts` 下沉至 theme-core（设置页与启动链共用单源，原两份时段逻辑漂移）
@@ -96,7 +99,7 @@ status: active
 - **设置页主题读写同样走 safe 包装**（P3 修复：`themeGet`/`themeSet` 与 app-modules 的 safeGet/safeSet 同口径——原设置页裸 localStorage 在隐私模式下抛错中断 initSettings、主题卡片整页失效）
 - UI 偏好修改只操作 CSS 变量与类名（`--fs-scale`/`no-animations`），不直接改各 `--fs-*` 计算值；`--fs-base-size` 是唯一真基准——核心 7 个 + 语义 6 个 `--fs-*` 全派生自它，故「调基准」与「调偏移」是两个正交杠杆（前者设计级、后者用户级）
 - **P3 修复**（2026-09）：`theme-auto="time"` 按时间自动切换现已全链生效——启动链 `applyThemeAuto()` 读 `theme-auto`，`time` 模式按当前时刻重算时段主题并回写 `theme` 键（白天设 time 夜间重启不再定格亮色）。
-- **P4 修复**（2026-09，本会话落地）：**theme-auto 落盘同步**——扩 `AppConfig.ThemeAuto` + `SaveAppConfig` 六参签名；设置页 auto 下拉 change / 卡片点击均调 SaveAppConfig 同步 theme-auto；initTheme 从 cfg.themeAuto 兜底恢复 localStorage（localStorage 被清理后可从 ysm_config.json 回退）。
+- **P4 修复**（2026-09，本会话落地）：**theme-auto 落盘同步**——扩 `AppConfig.ThemeAuto` + `SaveAppConfig` 六参签名；设置页 auto 下拉 change / 卡片点击均同步 theme-auto（2026-10 锐评第八轮起统一经 `views/app-content/settings/path-cards.ts|saveCfg`，设置域唯一 SaveAppConfig 实参点，patch 语义 + 保存前重读最新）；initTheme 从 cfg.themeAuto 兜底恢复 localStorage（localStorage 被清理后可从 ysm_config.json 回退）。
 
 ## 相关
 

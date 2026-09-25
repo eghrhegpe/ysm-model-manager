@@ -96,6 +96,23 @@ describe("app-content 模板", () => {
     expect(html).not.toMatch(/class="tab-body"[^>]*style="[^"]*overflow-y:auto/);
   });
 
+  it("下拉配方收口：块级 select 走 .stg-select-block，无内联宽度配方", () => {
+    // 2026-10 锐评第七轮：`style="width:100%;margin-bottom:6px"` 曾在 5 处内联复制（字号卡那处
+    // 漂成 4px），行内下拉另有 4 处零效果的 `width:auto`。现全部收编为类，本测试锁住配方单源。
+    const html = settingsHTML();
+    for (const id of [
+      "set-mirror",
+      "set-link-mode",
+      "set-font-size",
+      "set-display-font",
+      "set-card-density",
+    ]) {
+      expect(html).toMatch(new RegExp(`<select[^>]*id="${id}"[^>]*class="stg-select stg-select-block"`));
+    }
+    // 任何 select 都不再带内联宽度（行内下拉默认 intrinsic 宽，.stg-select 无宽度声明）
+    expect(html).not.toMatch(/<select[^>]*style="[^"]*width/);
+  });
+
   it("解析与鸣谢使用默认收起的原生 details，worker 开关有完整可访问名称", () => {
     const html = settingsHTML();
     const parserTag = html.match(/<details[^>]*class="stg-details stg-parser-details"[^>]*>/)?.[0] ?? "";

@@ -32,15 +32,23 @@ function renderDirLabel(dir: string): string {
     : `${UI_ICONS.folderOpen} ${esc(t("settings.path.selectDir"))}`;
 }
 
-// 保存 cfg 辅助（保留各字段原值）
+// 保存 cfg 辅助（保留各字段原值）——设置页写配置的**唯一出口**。
 // P1 修复（审核，配置回退）：保存前重读 Go 端最新配置作为未 patch 字段默认——
 // 原用模块级 cfg（initSettings 一次性加载的旧值），用户在其他入口改过字段后
-// 二次保存会把新值静默覆盖回退（如先改 mcRoot 再改 rpRoot，mcRoot 被旧值覆盖）
+// 二次保存会把新值静默覆盖回退（如先改 mcRoot 再改 rpRoot，mcRoot 被旧值覆盖）。
+// 2026-10 锐评第八轮扩编：patch 面从「路径四字段」扩到全字段（+theme/themeAuto）——
+// 此前主题段（theme.ts ×2）与链接模式段（init.ts）绕开本函数各手抄一份
+// `SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto)` 六位置实参，
+// 而 Go 端签名是六个同型 string：位置错了类型系统看不见（历史 P3「闭包旧值覆盖 linkMode」/
+// P4「theme-auto 漏落盘」都是这种手抄配方咬出来的）。全页（含本函数）现只剩这一处实参。
 export async function saveCfg(patch: {
   filesRoot?: string;
   rpRoot?: string;
   mcRoot?: string;
   linkMode?: string;
+  /** 缺省取 localStorage 当前值（各写入方均先 safeSet 再 saveCfg，语义与显式传入等价） */
+  theme?: string;
+  themeAuto?: string;
 }): Promise<void> {
   const { LoadAppConfig, SaveAppConfig } = await backendGetApp();
   let latest = getCfg();
@@ -49,14 +57,15 @@ export async function saveCfg(patch: {
   } catch {
     /* 重读失败退化为内存 cfg（尽力而为） */
   }
-  const theme = safeGet("theme") || THEME_DARK;
+  const theme = patch.theme !== undefined ? patch.theme : safeGet("theme") || THEME_DARK;
+  const themeAuto = patch.themeAuto !== undefined ? patch.themeAuto : safeGet("theme-auto") || "";
   await SaveAppConfig(
     patch.filesRoot !== undefined ? patch.filesRoot : latest.filesRoot || "",
     patch.rpRoot !== undefined ? patch.rpRoot : latest.resourcepackRoot || "",
     patch.mcRoot !== undefined ? patch.mcRoot : latest.mcRoot || "",
     patch.linkMode !== undefined ? patch.linkMode : latest.linkMode || LINK_MODE_DEFAULT,
     theme,
-    safeGet("theme-auto") || "",
+    themeAuto,
   );
   if (patch.filesRoot !== undefined) getCfg().filesRoot = patch.filesRoot;
   if (patch.rpRoot !== undefined) getCfg().resourcepackRoot = patch.rpRoot;
@@ -328,7 +337,7 @@ export function initMcDetect(root: ShadowRoot): void {
     if (isBusy()) return; // 防连点：检测进行中忽略后续点击
     setBusy(true);
     try {
-      const { GetMinecraftPaths, SaveAppConfig } = await backendGetApp();
+      const { GetMinecraftPaths } = await backendGetApp();
       const paths = await GetMinecraftPaths();
       if (!paths?.length) {
         bus.emit("toast:show", {
@@ -344,16 +353,9 @@ export function initMcDetect(root: ShadowRoot): void {
         selected = await showPathPicker(paths);
         if (!selected) return; // 用户取消
       }
-      const theme = safeGet("theme") || THEME_DARK;
-      await SaveAppConfig(
-        getCfg().filesRoot || "",
-        getCfg().resourcepackRoot || "",
-        selected,
-        getCfg().linkMode || LINK_MODE_DEFAULT,
-        theme,
-        safeGet("theme-auto") || "",
-      );
-      getCfg().mcRoot = selected as string; // 语义上此处非空（单路径为 paths[0]，多路径已 return null）
+      // 走 saveCfg 唯一出口（patch 语义：未传字段取重读的最新配置，顺带更新内存 cfg.mcRoot）——
+      // 原手抄六位置实参用的是 getCfg() 快照，正是 saveCfg 注释里 P1 修过的「旧值覆盖」形态
+      await saveCfg({ mcRoot: selected });
       cardRefreshers.forEach((fn) => {
         fn();
       });

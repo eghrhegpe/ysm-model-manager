@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { initSettings } from "./init.ts";
+import { saveCfg } from "./path-cards.ts";
 import { t } from "@/core/i18n/t.ts";
 
 const {
@@ -206,7 +207,7 @@ describe("initSettings — 初始化", () => {
     await initSettings(root);
     (root.getElementById("set-mc-path") as HTMLElement).click();
     await waitFor(() => saveFn.mock.calls.length > 0);
-    // SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme)
+    // SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto) —— 六位置实参
     expect(saveFn.mock.calls[0]![2]).toBe("/pick");
     expect(busEmit).toHaveBeenCalledWith(
       "toast:show",
@@ -293,7 +294,8 @@ describe("initSettings — 链接模式与重链接", () => {
     // ADR-296 D5：发任何 RPC 前先弹确认框；文案含新模式与计数（insB 无 Exists 被过滤 → 1 个）
     await waitFor(() => document.querySelector("[data-testid='dlg-ok']"));
     const msg = document.querySelector(".dlg-msg") as HTMLElement;
-    expect(msg.textContent).toContain("hardlink");
+    // 用户可见模式名过文案表（tpl-settings|LINK_MODE_UI.labelKey）——回归到裸枚举即红
+    expect(msg.textContent).toContain(t("settings.links.hardlink"));
     expect(msg.textContent).toContain("1 个");
     expect(setLinkFn).not.toHaveBeenCalled();
     (document.querySelector("[data-testid='dlg-ok']") as HTMLElement).click();
@@ -302,7 +304,7 @@ describe("initSettings — 链接模式与重链接", () => {
     expect(saveFn).toHaveBeenCalled();
     expect(busEmit).toHaveBeenCalledWith(
       "toast:show",
-      expect.objectContaining({ msg: expect.stringContaining("hardlink") }),
+      expect.objectContaining({ msg: expect.stringContaining(t("settings.links.hardlink")) }),
     );
     // 确认后自动 relink（change 自持 busy 锁调 Inner）
     await waitFor(() => relinkFn.mock.calls.length > 0);
@@ -1209,5 +1211,44 @@ describe("initSettings — 网页版 FSA 授权（stgBindWebFsa）", () => {
     } finally {
       restore();
     }
+  });
+});
+
+describe("saveCfg — 设置域唯一配置出口（patch 语义，锐评第八轮）", () => {
+  it("未传字段取重读的最新配置，只覆盖 patch 字段（防旧值覆盖）", async () => {
+    const saveFn = vi.fn();
+    mockApp({
+      // 首次加载（initSettings）与保存前重读返回不同值：模拟「用户在其他入口改过字段」
+      LoadAppConfig: vi
+        .fn()
+        .mockResolvedValueOnce({
+          filesRoot: "/old",
+          resourcepackRoot: "/old-rp",
+          mcRoot: "/old-mc",
+          linkMode: "copy",
+        })
+        .mockResolvedValue({
+          filesRoot: "/latest",
+          resourcepackRoot: "/latest-rp",
+          mcRoot: "/latest-mc",
+          linkMode: "hardlink",
+        }),
+      SaveAppConfig: saveFn,
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    localStorage.setItem("theme", "ocean");
+    await saveCfg({ mcRoot: "/new-mc" });
+    // filesRoot/rpRoot/linkMode 取重读值（非 initSettings 快照），仅 mcRoot 被 patch
+    expect(saveFn).toHaveBeenCalledWith("/latest", "/latest-rp", "/new-mc", "hardlink", "ocean", "");
+  });
+
+  it("theme / themeAuto 可经 patch 覆盖（主题段与链接模式段共用的出口字段）", async () => {
+    const saveFn = vi.fn();
+    mockApp({ SaveAppConfig: saveFn });
+    const { root } = makeRoot();
+    await initSettings(root);
+    await saveCfg({ theme: "warm", themeAuto: "off" });
+    expect(saveFn).toHaveBeenCalledWith("/repo", "", "", "copy", "warm", "off");
   });
 });

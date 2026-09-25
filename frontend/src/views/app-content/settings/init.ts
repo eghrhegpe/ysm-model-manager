@@ -9,9 +9,7 @@ import { bus } from "@/bus";
 import type { LangCode } from "@/core/i18n/locale.ts";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { initVersionUpdater } from "@/features/maintenance/version-updater.ts";
-import { THEME_DARK } from "@/theme-core";
 import { logWarn } from "@/utils/base/primitives/log.ts";
-import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -24,6 +22,7 @@ import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-c
 import {
   LINK_MODE_DEFAULT,
   LINK_MODES,
+  type LinkMode,
   MIRROR_SOURCES,
   type MirrorSource,
   UPDATE_CHECK_DEFAULT,
@@ -31,6 +30,9 @@ import {
 import type { SettingsCfg } from "./store.ts";
 import { getCfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
 import { initThemeSection } from "./theme.ts";
+// 链接模式用户可见名（下拉 option 与确认框/toast 共用单表，见 tpl-settings.ts|LINK_MODE_UI）。
+// 模板模块只导出纯数据表，无副作用（本 import 不触发渲染）。
+import { LINK_MODE_UI } from "./tpl-settings.ts";
 import { initUiPrefs } from "./ui-prefs.ts";
 import { initWorkerPrefs } from "./worker-prefs.ts";
 
@@ -72,6 +74,19 @@ function applyMirrorHints(root: ShadowRoot, activeKey: string): void {
 function mirrorName(raw: string): string {
   const key: MirrorSource = raw === "" ? "direct" : (raw as MirrorSource);
   return t(MIRROR_I18N_KEY[key]);
+}
+
+/** 下拉值 → LinkMode 归一（值域外的脏值回落 schema 默认）。
+ *  选项由 settings-schema|LINK_MODES 派生，正常必命中；归一保住两件事：
+ *  ① 文案表索引不做裸 `as` 强转（脏值不会取出 undefined 文案）；
+ *  ② 存量脏 linkMode 下 applyHintVisibility 不再把所有 hint 全隐藏（回落默认档可见）。 */
+function normalizeLinkMode(raw: string): LinkMode {
+  return (LINK_MODES as readonly string[]).includes(raw) ? (raw as LinkMode) : LINK_MODE_DEFAULT;
+}
+
+/** 链接模式用户可见名（下拉 option / 确认框 / toast 同一文案表，杜绝裸枚举进用户视野） */
+function linkModeName(raw: string): string {
+  return t(LINK_MODE_UI[normalizeLinkMode(raw)].labelKey);
 }
 
 /** 镜像源切换：写回 Go 端 + success toast；失败走 toastErrorLocal；并切换提示显隐 */
@@ -262,8 +277,8 @@ function stgBindLinkMode(
   toastErrorLocal: typeof toastError,
 ): void {
   // 缺省回退默认值引 schema 单一来源（ADR-307 D3 扩编）：原 "copy" 字面量散在 init +
-  // path-cards 各写一份，改默认漏一处即回退值漂移。
-  const linkMode = cfgLocal.linkMode || LINK_MODE_DEFAULT;
+  // path-cards 各写一份，改默认漏一处即回退值漂移。归一后脏值回落默认档（hint 不再全隐）。
+  const linkMode = normalizeLinkMode(cfgLocal.linkMode || LINK_MODE_DEFAULT);
   applyHintVisibility(root, "lm-hint", linkMode, LINK_MODES);
 
   const linkSelect = root.getElementById("set-link-mode") as HTMLSelectElement | null;
@@ -283,7 +298,9 @@ function stgBindLinkMode(
       }
       setBusyLocal(true);
       const oldVal = curVal;
-      const val = linkSelect.value;
+      // 归一为 LinkMode（下拉选项由 schema 派生，正常必命中）：下游「写 cfg / 进文案表」
+      // 共用同一收窄值，不再各自 string 化（cfgLocal.linkMode 也从此不会吃到域外裸值）
+      const val = normalizeLinkMode(linkSelect.value);
       applyHintVisibility(root, "lm-hint", val, LINK_MODES);
       try {
         // 确认前先数实例（与 relinkAllInstancesInner 的 Exists && Name 同口径），
@@ -305,7 +322,8 @@ function stgBindLinkMode(
         const confirmed = await modalConfirm({
           title: t("settings.linkModeConfirmTitle"),
           titleIcon: "warning",
-          message: t("settings.linkModeConfirmMessage", { val, n }),
+          // 用户可见模式名过文案表（原塞裸枚举 → 中文界面出现「重新链接为 symlink 模式」）
+          message: t("settings.linkModeConfirmMessage", { val: linkModeName(val), n }),
           danger: true,
         });
         if (!confirmed) {
@@ -315,21 +333,15 @@ function stgBindLinkMode(
           applyHintVisibility(root, "lm-hint", oldVal, LINK_MODES);
           return;
         }
-        const { SaveAppConfig, SetLinkMode } = await backendGetApp();
-        const theme = safeGet("theme") || THEME_DARK;
-        await SaveAppConfig(
-          cfgLocal.filesRoot || "",
-          cfgLocal.resourcepackRoot || "",
-          cfgLocal.mcRoot || "",
-          val,
-          theme,
-          safeGet("theme-auto") || "",
-        );
+        const { SetLinkMode } = await backendGetApp();
+        // 配置落盘走 saveCfg 唯一出口（patch 语义：未传字段取**重读**的最新 Go 配置，
+        // theme/themeAuto 由该函数自 localStorage 兜底）——原手抄六位置实参吃的是 cfgLocal
+        // 快照，正是 saveCfg 注释里 P1 修过的「旧值覆盖」形态；链接模式同步进内存 cfg 亦由它完成
+        await saveCfg({ linkMode: val });
         await SetLinkMode(val);
-        cfgLocal.linkMode = val;
         curVal = val;
         bus.emit("toast:show", {
-          msg: t("settings.linkModeSwitched", { val }),
+          msg: t("settings.linkModeSwitched", { val: linkModeName(val) }),
           duration: TOAST_MS.success,
           type: "success",
         });
@@ -454,7 +466,8 @@ function stgBindWebFsa(root: ShadowRoot, isWebPlatformFn: typeof isWebPlatform):
  * @param root - 组件 shadow root
  */
 export async function initSettings(root: ShadowRoot): Promise<void> {
-  // ADR-296 起 SaveAppConfig/SetLinkMode 由 stgBindLinkMode 自持解构，此处只取 LoadAppConfig
+  // ADR-296 起 SetLinkMode 由 stgBindLinkMode 自持解构，此处只取 LoadAppConfig；
+  // 配置落盘统一走 path-cards.ts|saveCfg（全页唯一 SaveAppConfig 实参点）
   const { LoadAppConfig } = await backendGetApp();
   const cfgLoaded = await LoadAppConfig();
   resetSettingsStore(cfgLoaded);

@@ -20,6 +20,8 @@ vi.mock("@/backend/app.ts", () => ({
 }));
 
 vi.mock("@/theme-core", () => ({
+  // 缺省主题常量（theme.ts 现引 THEME_DARK 而非 "cyber" 字面量——mock 须同步导出）
+  THEME_DARK: "cyber",
   applyTheme: (...a: unknown[]) => applyTheme(...(a as [string])),
   // mock applyTimeTheme 复刻真实行为：取返回值 + 调 applyTheme（否则 applyTheme 调 0 次）
   applyTimeTheme: () => {

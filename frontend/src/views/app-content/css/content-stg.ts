@@ -25,25 +25,15 @@ export const contentStgCSS: string = `
 .stg-title {
   /* 间距归 .section-title，勿在此加 margin */
 }
-.stg-group {
-  margin-bottom: 12px;
-}
-.stg-val {
-  font-size:var(--fs-xs);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 240px;
-}
+/* 2026-10 锐评第九轮：本段曾并存 11 条零消费者规则（.stg-group / .stg-val / .stg-hint /
+   .stg-hint-hidden / .stg-hint-warn / .stg-radio-row / .stg-sub-title / .stg-ml-auto /
+   .stg-grid-2 / .stg-card-hint / .stg-card-acts）——逐个 grep 全仓（模板 + JS 引用）实证
+   无消费者后删除；其中 .stg-grid-2 还被 content-css.test.ts 反向上了测试保险（已同批撤除）。
+   保留者均有实证消费者：.stg-desc（正文段落）/ .stg-hint-block（控件附属说明）/.stg-btn（关于页）。 */
 .stg-btn {
   font-size:var(--fs-xs);
 }
-.stg-hint {
-  font-size:var(--fs-micro);
-  color: var(--muted);
-  padding: 2px 0 0 0;
-}
-/* .stg-desc：设置页「正文段落」原语（比 .stg-hint 大一号、行高更松，用于节级导语 / 卡片正文）。
+/* .stg-desc：设置页「正文段落」原语（用于节级导语 / 卡片正文）。
    立类因：内联 'font-size:var(--fs-sm);color:var(--muted);line-height:1.7' 配方曾在 4 处复制
    （解析 tab 导语 + 关于页三张卡）——无单一来源，且裸 div 拿不到入场动画。
    只管排版，不带 margin/动画：作为顶层条目时应包进 .settings-group（供 12px 下间距 + 入场动画），
@@ -64,34 +54,12 @@ export const contentStgCSS: string = `
   padding: var(--pad-v-2);
   line-height: 1.5;
 }
-/* ⚠️ 已废弃（勿用）：与 .section-title 叠加得 32px 双重上间距。
-   .section-title 自带 padding-top:16px，再叠 margin-top:16px = 双份。
-   设置页改用 .section-title 单供间距（A 式）；无标题组用 .stg-section（B 式）。
-   历史：本类曾用于「字体与布局」「3D 预览」「鸣谢」三处，均有双间距 bug。 */
-.stg-sub-title {
-  margin-top: 0;
-}
-.stg-radio-row {
-  display: flex;
-  gap: 8px;
-  padding: var(--sp-1) 0;
-}
 .stg-label {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size:var(--fs-sm);
   cursor: pointer;
-}
-.stg-hint-hidden {
-  font-size:var(--fs-micro);
-  color: var(--muted);
-  padding: 2px 0 0 0;
-  display: none;
-}
-.stg-hint-warn {
-  font-size:var(--fs-micro);
-  color: var(--status-error);
 }
 .stg-select {
   padding: var(--btn-padding-sm);
@@ -108,9 +76,12 @@ export const contentStgCSS: string = `
 }
 .stg-select:hover { background: var(--hover); }
 .stg-select:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
-.stg-ml-auto {
-  margin-left: auto;
-}
+/* .stg-select-block：卡片体内「块级下拉」配方（占满卡片宽 + 与下方说明留一档间距）。
+   立类因（2026-10 锐评第七轮）：width:100% + margin-bottom:6px 曾在 5 处内联复制
+   （镜像源/链接模式/字号/字体/密度），且字号卡那一处漂成 4px——同 .stg-hint-block 收 6 处
+   内联配方债同款病，只是当时只收了 hint 一族。行内下拉（语言/自动主题/启动默认页/旋转模式）
+   不再写 width:auto：.stg-select 本就无宽度声明，select 默认 intrinsic，该内联是零效果噪音。 */
+.stg-select-block { width: 100%; margin-bottom: 6px; }
 
 /* ===== 设置页卡片/路径样式（settings 独占） ===== */
 /* 设置页「组」间距契约（两种组，各取其一的间距来源，勿叠加）：
@@ -135,8 +106,6 @@ export const contentStgCSS: string = `
 .stg-keybind-button { min-width:64px; width:auto; flex:0 0 auto; border:1px solid var(--bd); background:var(--bg); }
 .stg-keybind-button:hover { border-color:var(--accent); background:var(--hover); }
 .stg-keybind-button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-/* 2 列变体：需要并排的设置卡 */
-.stg-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .stg-card { background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-card); overflow:hidden; animation:fadeSlideUp var(--tr-enter) both; min-width:0; } /* 审计 P1-2：卡片圆角收口 --radius-card */
 .stg-card-hdr { display:flex;align-items:center;gap:6px; flex-wrap:wrap; padding:var(--sp-vh-pane); font-size:var(--fs-sm); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); background:var(--surf); min-width:0; }
 .stg-card-body { padding:var(--sp-vh-pane); min-width:0; }
@@ -145,8 +114,6 @@ export const contentStgCSS: string = `
 .stg-path-val:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .stg-path-val.derived:hover { border-color:var(--accent); background:var(--hover); }
 .stg-path-val.derived::before { content:"📁 "; }
-.stg-card-hint { font-size:var(--fs-xs); color:var(--muted); margin-bottom:6px; }
-.stg-card-acts { display:flex; gap:4px; }
 .stg-card-desc { font-size:var(--fs-xs); color:var(--muted); margin-top:6px; line-height:1.4; }
 .stg-adv-reset { margin-left:auto; }
 .stg-card-overridden { border-color:var(--accent); }

@@ -214,6 +214,18 @@ const KNOWN_NO_CSS_CLASSES = new Set([
   "gray",
   "br-preset",
   "br-file-cb",
+  // 2026-10 新增（设置页锐评收债期实测报出，逐一核实均为「合法无规则类」）：
+  //   stg-parser-details / stg-credits-details — 设置页 details 折叠区的**标记类**：外观与
+  //     显隐由共类 .stg-details 承载，这两类只负责「与 base 区分」（tpl.test.ts 按 class 文本
+  //     抓锚点 + 后续单独微调内部动画），刻意不留规则
+  //   gh-select-all — workshop 批量选择行：外观由共类 .btn-base 承载，被 JS 选择器
+  //     （repo-events-bindings.ts 的 ".gh-select-all input[type=checkbox]"）与 render.ts 白名单消费
+  //   gh-queue-status — workshop 下载队列容器：样式按 **id** 定义（content-gh.ts 的
+  //     #gh-queue-status / #gh-queue-status.show），类名是模板冗余标记，id 选择器已覆盖
+  "stg-parser-details",
+  "stg-credits-details",
+  "gh-select-all",
+  "gh-queue-status",
 ]);
 
 // 提取 CSS 文本中的类名（.foo / .foo-bar）。
@@ -497,7 +509,8 @@ for (const dom of SHADOW_DOMAINS) {
 // 噪声换不到信号；合法无规则类一律经 KNOWN_NO_CSS_CLASSES 显式登记（逐类附理由）。
 // 保守口径：document 层定义**不穿透 shadow 边界**，此处「定义过即放行」，宁漏勿误报。
 const globalClassUniverse = new Set<string>();
-for (const classes of domainCssClasses.values()) for (const c of classes) globalClassUniverse.add(c);
+for (const classes of domainCssClasses.values())
+  for (const c of classes) globalClassUniverse.add(c);
 const documentLayerFiles = walk("frontend/css", {
   exts: [".css"],
   skipDir: () => false,

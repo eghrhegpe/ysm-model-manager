@@ -31,7 +31,7 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { SUPPORTED_LANGS } from "@/core/i18n/locale.ts";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { TD_CAM_SPEED, TD_ROT_MODE, type TdRotMode } from "@/preview-3d/infra/settings-schema.ts";
-import { THEME_AUTO_VALID, THEME_VALID } from "@/theme-core";
+import { THEME_AUTO_VALID, THEME_VALID, type ThemeCard } from "@/theme-core";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderTabs, type TabSpec } from "@/views/app-content/tabs-shell.ts";
@@ -183,7 +183,7 @@ function mirrorCardBody(): string {
     (s) =>
       `<div id="mirror-hint-${s}" class="stg-hint-block"${s === MIRROR_DEFAULT ? "" : ' style="display:none"'}>${t(MIRROR_UI[s].hintKey)}</div>`,
   ).join("\n        ");
-  return `<select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
+  return `<select id="set-mirror" class="stg-select stg-select-block">
           ${options}
         </select>
         ${hints}`;
@@ -208,34 +208,42 @@ function mcPathCardSpec(): StgCardSpec {
   };
 }
 
+// ===== 链接模式：值 → 用户可见文案（模板与 init 的 toast/确认框共用单表）=====
+// 值域由 settings-schema|LINK_MODES 派生（ADR-307 D3 扩编，与 MIRROR_UI 同口径）：加第四种
+// 链接模式只改 schema 一处，Record 文案表编译期逼出同步；默认 selected = LINK_MODE_DEFAULT。
+// 本表 2026-10（锐评第七轮）自 linksCardSpec 局部提升为模块级并导出：此前只有模板一面消费，
+// 而 init.ts|stgBindLinkMode 的确认框 / toast 直接把裸枚举（copy/hardlink/symlink）塞进
+// `{val}`——中文界面弹出「重新链接为 symlink 模式」，是全页唯一一处**用户可见值未过文案表**
+// 的裸奔。同枚举两张表（如镜像源的 optionKey 与 nameKey）是这种分裂的前车之鉴，故单表共用。
+/** 链接模式 → { labelKey: 用户可见名（下拉 option 与 toast/确认框共用）; hintKey: 卡内说明 } */
+export const LINK_MODE_UI: Record<
+  LinkMode,
+  { labelKey: LocaleKey; hintKey: LocaleKey; hintColor?: "error" }
+> = {
+  copy: { labelKey: "settings.links.copy", hintKey: "settings.links.copyHint" },
+  hardlink: { labelKey: "settings.links.hardlink", hintKey: "settings.links.hardlinkHint" },
+  // symlink 的 hint 带错误色（与 copy/hardlink 中性提示区分——symlink 失败概率最高）
+  symlink: {
+    labelKey: "settings.links.symlink",
+    hintKey: "settings.links.symlinkHint",
+    hintColor: "error",
+  },
+};
+
 function linksCardSpec(): StgCardSpec {
   // 链接模式：纯桌面 / 网络概念，查看器模式无意义（网页版+安卓 viewer 均不渲染）。
   // hint 块排版走 .stg-hint-block（2026-10 收 6 处内联配方债）。
-  // option / hint 值域由 settings-schema|LINK_MODES 派生（ADR-307 D3 扩编，与 MIRROR_UI 同口径）：
-  // 加第四种链接模式只改 schema 一处，Record 文案表编译期逼出同步；默认 selected = LINK_MODE_DEFAULT。
-  // hint 显隐与镜像源不同：模板里 lm-hint-* 全部 display:none（无默认可见项），
-  // 由 init.ts|applyHintVisibility 按当前 linkMode 揭示对应项——保持原静态态，不改变观感。
-  const LINK_UI: Record<
-    LinkMode,
-    { optionKey: LocaleKey; hintKey: LocaleKey; hintColor?: "error" }
-  > = {
-    copy: { optionKey: "settings.links.copy", hintKey: "settings.links.copyHint" },
-    hardlink: { optionKey: "settings.links.hardlink", hintKey: "settings.links.hardlinkHint" },
-    // symlink 的 hint 带错误色（与 copy/hardlink 中性提示区分——symlink 失败概率最高）
-    symlink: {
-      optionKey: "settings.links.symlink",
-      hintKey: "settings.links.symlinkHint",
-      hintColor: "error",
-    },
-  };
+  // hint 显隐：模板里仅默认档（copy）可见，其余 display:none；init.ts|applyHintVisibility 按
+  // 当前 linkMode 揭示对应项（与镜像源同口径。旧注释称「全部 display:none、无默认可见项」，
+  // 与实现和 tpl.test.ts 断言相反，属 2026-10 收债期的过期描述，一并校正）。
   const lmOptions = LINK_MODES.map(
     (m) =>
-      `<option value="${m}"${m === LINK_MODE_DEFAULT ? " selected" : ""}>${t(LINK_UI[m].optionKey)}</option>`,
+      `<option value="${m}"${m === LINK_MODE_DEFAULT ? " selected" : ""}>${t(LINK_MODE_UI[m].labelKey)}</option>`,
   ).join("\n      ");
   const lmHints = LINK_MODES.map((m) => {
-    const text = t(LINK_UI[m].hintKey);
+    const text = t(LINK_MODE_UI[m].hintKey);
     const inner =
-      LINK_UI[m].hintColor === "error"
+      LINK_MODE_UI[m].hintColor === "error"
         ? `<span style="color:var(--status-error)">${text}</span>`
         : text;
     return `<div id="lm-hint-${m}" class="stg-hint-block"${m === LINK_MODE_DEFAULT ? "" : ' style="display:none"'}>${inner}</div>`;
@@ -243,7 +251,7 @@ function linksCardSpec(): StgCardSpec {
   return {
     icon: UI_ICONS.link,
     title: t("settings.links.title"),
-    body: `<select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
+    body: `<select id="set-link-mode" class="stg-select stg-select-block">
       ${lmOptions}
     </select>
     ${lmHints}`,
@@ -355,7 +363,7 @@ function renderStgLangSelect(startMs: number): string {
     UI_ICONS.globe,
     t("settings.language"),
     `<div style="display:flex;align-items:center;gap:8px">
-    <select id="set-lang" class="stg-select" style="width:auto">
+    <select id="set-lang" class="stg-select">
       ${options}
     </select>
     <span style="font-size:var(--fs-xs);color:var(--muted)">${t("settings.languageDesc")}</span>
@@ -377,7 +385,10 @@ function renderStgLangSelect(startMs: number): string {
 // 真实色由 theme.ts initThemeSection 用 document 探针逐主题取回填 inline；
 // 此处 var(--${v}) 仅作回退底色（探针不可用时仍有三点不裸奔）。
 const THEME_SWATCH_VARS = ["bg", "accent", "bd"] as const;
-const THEME_ICON: Record<string, string> = {
+/** 主题 → 图标键。`Record<ThemeCard, …>` 形态：theme-core|THEME_VALID 加主题时此处漏键即
+ *  编译期红（2026-10 锐评第七轮收编——原 `Record<string, string>` 松键只能靠 `?? UI_ICONS.dot`
+ *  运行时兜底，加主题漏一处表现为「卡片裸点图标 + 裸主题名」静默漂移）。 */
+const THEME_ICON: Record<ThemeCard, keyof typeof UI_ICONS> = {
   warm: "sun",
   sakura: "sakura",
   mint: "mint",
@@ -385,12 +396,12 @@ const THEME_ICON: Record<string, string> = {
   cyber: "moon",
   ocean: "ocean",
 };
-/** 主题 → 标签 i18n 键（静态映射，与 THEME_ICON 平行）。
+/** 主题 → 标签 i18n 键（静态映射，与 THEME_ICON 平行，同 `Record<ThemeCard, …>` 护栏）。
  *  原为 ``t(`settings.theme.${theme}` as Parameters<typeof t>[0])`` 动态拼接，两处弊病：
  *  ① 六个键在静态扫描里全被判死（check-i18n-unused 的 constructed 假阳性——
  *     该脚本注释的前提是「本仓该形态为 0 处」，动态拼接即破坏它）；
  *  ② `as` 强转绕过键名类型校验（拼错不报错）。改静态映射后两者皆消。 */
-const THEME_LABEL_KEY: Record<string, Parameters<typeof t>[0]> = {
+const THEME_LABEL_KEY: Record<ThemeCard, LocaleKey> = {
   warm: "settings.theme.warm",
   sakura: "settings.theme.sakura",
   mint: "settings.theme.mint",
@@ -431,11 +442,12 @@ const DISPLAY_FONT_LABEL: Record<DisplayFont, LocaleKey> = {
 };
 
 function renderStgThemePicker(startMs: number): string {
-  const cards = THEME_VALID.filter((theme) => theme !== "system")
+  // 键域收窄：filter 带类型谓词把 "system" 摘掉后 theme 落进 ThemeCard——图标/文案表按下标取
+  // 必命中（无 `?? UI_ICONS.dot` / `labelKey ? … : theme` 运行时兜底，漏键在编译期就红）。
+  const cards = THEME_VALID.filter((theme): theme is ThemeCard => theme !== "system")
     .map((theme) => {
-      const icon = UI_ICONS[THEME_ICON[theme] as keyof typeof UI_ICONS] ?? UI_ICONS.dot;
-      const labelKey = THEME_LABEL_KEY[theme];
-      const label = labelKey ? t(labelKey) : theme;
+      const icon = UI_ICONS[THEME_ICON[theme]];
+      const label = t(THEME_LABEL_KEY[theme]);
       // --bd 是 10-12% 透明 color-mix，直接作底色会隐没在卡片上——统一加 muted 描边保证三点半可辨
       const swatches = THEME_SWATCH_VARS.map(
         (v) =>
@@ -467,7 +479,7 @@ function renderStgThemeAuto(startMs: number): string {
 <div class="settings-group" style="animation-delay:${startMs}ms">
   <div class="setting-row">
     <label for="theme-auto" class="label">${UI_ICONS.clock} ${t("settings.theme.autoTitle")}</label>
-    <select id="theme-auto" class="stg-select" style="width:auto">
+    <select id="theme-auto" class="stg-select">
       ${autoOptions}
     </select>
   </div>
@@ -499,7 +511,7 @@ function renderStgFontFamily(startMs: number, cardStep: number): string {
       {
         icon: UI_ICONS.ruler,
         title: t("settings.fontSize"),
-        body: `<select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
+        body: `<select id="set-font-size" class="stg-select stg-select-block">
       ${fontSizeOptions}
     </select>
     <div id="set-size-preview" style="display:flex;gap:8px;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)">
@@ -514,7 +526,7 @@ function renderStgFontFamily(startMs: number, cardStep: number): string {
       {
         icon: UI_ICONS.brush,
         title: t("settings.font.creatorFont"),
-        body: `<select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
+        body: `<select id="set-display-font" class="stg-select stg-select-block">
       ${displayFontOptions}
     </select>
     <div class="stg-desc">${t("settings.fontHint")}</div>`,
@@ -527,7 +539,7 @@ function renderStgFontFamily(startMs: number, cardStep: number): string {
         // 复用既有图标、零新增成本；与同组「字号=标尺 ruler」形成「度量类」视觉族。
         icon: UI_ICONS.grid,
         title: t("settings.density"),
-        body: `<select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
+        body: `<select id="set-card-density" class="stg-select stg-select-block">
       ${densityOptions}
     </select>
     <div class="stg-desc">${t("settings.densityHint")}</div>`,
@@ -577,7 +589,7 @@ function renderStgDefaultPageSection(startMs: number): string {
     t("settings.defaultPage"),
     `<div class="setting-row" style="padding:0;background:none;animation:none">
       <label for="set-default-page" class="label">${t("settings.defaultPage.fixed")}</label>
-      <select id="set-default-page" class="stg-select" style="width:auto">
+      <select id="set-default-page" class="stg-select">
         ${navItems()
           .map((it) => `<option value="${it.id}">${t(it.key)}</option>`)
           .join("\n        ")}
@@ -646,7 +658,7 @@ function renderStgPreview3d(startMs: number, cardStep: number): string {
     UI_ICONS.refresh,
     t("settings.preview3d.rotMode"),
     `<div class="setting-row" style="background:none;padding:var(--sp-vh-pane);animation:none">
-      <select id="td-rotmode" class="stg-select" style="width:auto">
+      <select id="td-rotmode" class="stg-select">
         ${rotOptions}
       </select>
     </div>

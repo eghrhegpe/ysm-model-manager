@@ -21,9 +21,11 @@ auto_fields:
     - revealMainWindow
     - SYSTEM_DARK_THEME
     - SYSTEM_LIGHT_THEME
+    - Theme
     - THEME_AUTO_VALID
     - THEME_DARK
     - THEME_VALID
+    - ThemeCard
     - timeThemeForHour
     - unregisterDevtools
   tests:

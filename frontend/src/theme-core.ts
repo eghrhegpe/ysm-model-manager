@@ -22,10 +22,25 @@ const DAY_START_HOUR = 6;
 const DAY_END_HOUR = 18;
 
 // 主题白名单（applyTheme 与 initTheme 共用，防两处口径漂移）
-// 导出供测试引用：设置页主题卡片的 data-theme 集合必须与此一致（防「加主题忘加卡片」）
-export const THEME_VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"];
+// 导出供测试引用：设置页主题卡片的 data-theme 集合必须与此一致（防「加主题忘加卡片」）。
+// 2026-10 as const 收编（锐评第七轮）：此前 `string[]` 使下游「值→图标/文案」表只能是
+// `Record<string, …>` 松键——加主题漏一处只在运行时回落到裸主题名（`?? UI_ICONS.dot` /
+// `labelKey ? … : theme`），与 ADR-307 D3 立法前的 MIRROR 半截接线同款病。现由联合类型
+// 兜住：消费面写 `Record<ThemeCard, …>`，漏键即编译期红（ADR-303 `Record<TdRotMode, …>` 同构）。
+export const THEME_VALID = ["cyber", "warm", "pro", "sakura", "ocean", "mint", "system"] as const;
+/** 主题联合（含 system）：system 是「跟随系统」的入口值，不是一张可选卡片。 */
+export type Theme = (typeof THEME_VALID)[number];
+/** 主题卡片 / 图标 / 文案表的键域 = 主题联合去掉 system（system 的映射归自动模式下拉）。 */
+export type ThemeCard = Exclude<Theme, "system">;
 // class 清理列表由 THEME_VALID 推导，新增主题无需再手抄第二份（原 applyTheme 手抄双份是漂移源）
 const THEME_CLASSES = THEME_VALID.filter((t) => t !== "system").map((t) => `theme-${t}`);
+
+// 白名单判定：Set 查表 + 类型守卫（`THEME_VALID.includes(string)` 在 readonly 元组下不再收宽
+// string，故收口为单一守卫，normalizeTheme / applyTheme 共用——两处各写一次 as 强转是漂移温床）
+const THEME_SET: ReadonlySet<string> = new Set<string>(THEME_VALID);
+function isTheme(v: string): v is Theme {
+  return THEME_SET.has(v);
+}
 
 // P4 修复：主题自动模式白名单（off/system/time），供 initTheme 兜底 + 设置页校验
 export const THEME_AUTO_VALID = ["off", "system", "time"] as const;
@@ -38,12 +53,13 @@ export function normalizeThemeAuto(mode: string): (typeof THEME_AUTO_VALID)[numb
 }
 
 /** 主题归一化：白名单外一律回落 system（P2 修复后持久层也只写合法值） */
-export function normalizeTheme(mode: string): string {
-  return THEME_VALID.includes(mode) ? mode : "system";
+export function normalizeTheme(mode: string): Theme {
+  return isTheme(mode) ? mode : "system";
 }
 
-export function applyTheme(mode: string): void {
-  if (!THEME_VALID.includes(mode)) mode = "system";
+export function applyTheme(raw: string): void {
+  // 归一为联合类型局部量后分支（原实现直接改写入参 string，模式比较无类型收窄）
+  const mode: Theme = isTheme(raw) ? raw : "system";
   document.body.classList.remove(...THEME_CLASSES);
   if (mode === "system") {
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -55,12 +71,12 @@ export function applyTheme(mode: string): void {
 }
 
 /** 纯函数时段判定：6:00–17:59 → warm，其余 → cyber（设置页与启动链共用单源） */
-export function timeThemeForHour(hour: number): string {
+export function timeThemeForHour(hour: number): Theme {
   return hour >= DAY_START_HOUR && hour < DAY_END_HOUR ? "warm" : "cyber";
 }
 
 /** 时间段主题切换：应用当前时段主题并返回其名（warm 白天 / cyber 夜晚） */
-export function applyTimeTheme(): string {
+export function applyTimeTheme(): Theme {
   const themeName = timeThemeForHour(new Date().getHours());
   applyTheme(themeName);
   return themeName;

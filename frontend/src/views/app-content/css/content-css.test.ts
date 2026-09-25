@@ -99,12 +99,13 @@ describe("设置页组间距契约（content-stg）", () => {
     expect(contentStgCSS).toMatch(/\.stg-details-body\s*\{[^}]*padding:/);
   });
 
-  it(".stg-section 提供显式组间距；.stg-grid-2 为两列变体", () => {
+  it(".stg-section 提供显式组间距", () => {
     // 不能再依赖 .section-title{padding:16px 16px 8px} 隐式撑间隔：
     // 卡片自带 card-hdr 的组不挂标题，缺了那根「间隔柱」就会与上方贴死
     expect(contentCSS).toContain(".stg-section {");
     expect(contentStgCSS).toMatch(/\.stg-section\s*\{\s*margin-top:\s*16px/);
-    expect(contentStgCSS).toMatch(/\.stg-grid-2\s*\{[^}]*repeat\(2/);
+    // .stg-grid-2（两列变体）2026-10 锐评第九轮删除：零消费者，原断言是给死类上的保险
+    expect(contentStgCSS).not.toMatch(/\.stg-grid-2\s*\{/);
   });
 
   it(".stg-section 与 .section-title 间距同源（16px），避免两种组间距不一致", () => {
@@ -133,13 +134,25 @@ describe("设置页组间距契约（content-stg）", () => {
     expect(block).not.toMatch(/animation/);
   });
 
-  it(".stg-sub-title 不再叠加 margin-top（防与 .section-title 双重 16px）", () => {
-    // 历史 bug：「字体与布局」「3D 预览」「鸣谢」同时挂 .section-title + .stg-sub-title，
-    // .section-title 的 padding-top:16px 与 .stg-sub-title 的 margin-top:16px 叠加 = 32px。
-    // 现 .stg-sub-title 归零（类保留兼容，但不提供间距）。
-    // 匹配 0 / 0px 两种写法（归零即可，勿再给正间距）
-    const m = contentStgCSS.match(/\.stg-sub-title\s*\{\s*margin-top:\s*(\d+)(?:px)?;/);
-    expect(m?.[1]).toBe("0");
+  it("死类不入 CSS 资产（2026-10 锐评第九轮清出的 11 条不得回流）", () => {
+    // 这批类（.stg-group/.stg-val/.stg-hint/.stg-hint-hidden/.stg-hint-warn/.stg-radio-row/
+    // .stg-sub-title/.stg-ml-auto/.stg-grid-2/.stg-card-hint/.stg-card-acts）逐个 grep 全仓实证
+    // 零消费者后删除——.stg-sub-title 那条「归零保留兼容」正是化石层叠的典型：留着就会被当 API。
+    for (const cls of [
+      "stg-group",
+      "stg-val",
+      "stg-hint",
+      "stg-hint-hidden",
+      "stg-hint-warn",
+      "stg-radio-row",
+      "stg-sub-title",
+      "stg-ml-auto",
+      "stg-grid-2",
+      "stg-card-hint",
+      "stg-card-acts",
+    ]) {
+      expect(contentStgCSS).not.toMatch(new RegExp(`\\.${cls}\\s*\\{`));
+    }
   });
 
   it(".stg-title 不提供 margin（标题下间距单一来源 = .section-title 的 padding-bottom）", () => {

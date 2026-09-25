@@ -893,8 +893,11 @@ describe("initDiagnostics — 日志子屏与查看器降级", () => {
       expect(root.querySelector(`.repo-tab[data-tab="${name}"]`)).toBeNull();
       expect(root.getElementById(`diag-tab-${name}`)).toBeNull();
     }
-    // 跨模式可用项照常在场：logs 组 + 其第三子屏 trace（加载剖析读内存 store，豁免随迁）
-    expect(root.querySelector('.repo-tab[data-tab="logs"]')).not.toBeNull();
+    // 跨模式可用项照常在场：logs 组 + 其第三子屏 trace（加载剖析读内存 store，豁免随迁）。
+    // viewer 退化态（声明 3 组 / 可见 1 组）顶层 tab 栏整块缺席（renderTabs degrade-only 判据）：
+    // logs 按钮随之不在 DOM——缺席的是**栏**不是内容，面板与组内子 pill 照常产出
+    expect(root.querySelector('.repo-tab[data-tab="logs"]')).toBeNull();
+    expect(root.getElementById("diag-tab-logs")).not.toBeNull();
     expect(root.querySelector('.diag-sub-tab[data-sub="trace"]')).not.toBeNull();
     // 扫描入口是**常驻栏**（ADR-288 D2）：栏本体在缺席面板内同样不存在
     // （组级 desktopOnly 让整块面板不渲染，栏随面板一起消失，无需再按 id 逐个隐）

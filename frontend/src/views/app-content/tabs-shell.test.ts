@@ -141,10 +141,49 @@ describe("renderTabs 产出契约（ADR-259 §2）", () => {
         { id: "beta", label: "B", body: "BBB" },
       ],
     });
-    // 旧口径下 alpha 带 active、beta 隐藏——现在 alpha 直接不渲染，beta 成为首位可见
-    expect(shell.bar).toContain('<button class="repo-tab tab-btn active" data-tab="beta">');
+    // 退化态（declare>1 而可见只剩 1）bar 整块缺席——单选项 tab 栏是噪音，
+    // 激活语义随之转移到面板侧：
     // 首个可见面板不写 display（回落 .tab-body{display:flex}），否则查看器下面板全灰
+    expect(shell.bar).toBe("");
     expect(shell.panels).toContain('<div class="tab-body" id="demo-tab-beta">');
+  });
+
+  // ===== 退化态钉死：declare>1 而 viewer 可见 ≤1 → bar 整块缺席（degrade-only，不误伤常驻单 tab 页）=====
+  it("declare 3 / viewer 可见 1 → bar 缺席（多 tab 降级为单 tab 时不再产出单按钮 tablist）", () => {
+    const shell = renderTabs({
+      prefix: "diag",
+      viewerMode: true,
+      tabs: [
+        { id: "logs", label: "L", body: "LLL" },
+        { id: "bench", label: "B", body: "BBB", desktopOnly: true },
+        { id: "audit", label: "A", body: "AAA", desktopOnly: true },
+      ],
+    });
+    expect(shell.bar).toBe("");
+    // 缺席的是**栏**，不是内容：唯一面板照常产出、首个不写 display；告知行照常（与 bar 解耦）
+    expect(shell.panels).toContain('<div class="tab-body" id="diag-tab-logs">');
+    expect(shell.panels).not.toContain("diag-tab-bench");
+    expect(shell.panels).not.toContain("diag-tab-audit");
+  });
+
+  it("viewerMode + 传了 viewerNotice 的退化态 → 告知行照常产出（与 bar 缺席互不牵连）", () => {
+    const shell = renderTabs({
+      prefix: "diag",
+      viewerMode: true,
+      viewerNotice: "仅桌面版可用",
+      tabs: [
+        { id: "logs", label: "L", body: "LLL" },
+        { id: "bench", label: "B", body: "BBB", desktopOnly: true },
+      ],
+    });
+    expect(shell.bar).toBe("");
+    expect(shell.notice).toBe('<div class="repo-tabs-notice">仅桌面版可用</div>');
+    expect(shell.panels).toContain('id="diag-tab-logs"');
+  });
+
+  it("常驻单 tab 页（declare==1）不受退化判据波及——bar 照常产出，零行为变化", () => {
+    const shell = renderTabs({ prefix: "gh", tabs: [{ id: "repos", label: "R", body: "RRR" }] });
+    expect(shell.bar).toContain('<button class="repo-tab tab-btn active" data-tab="repos">');
   });
 
   it("viewerMode 缺省/false → desktopOnly 照常渲染（桌面模式零行为变化）", () => {

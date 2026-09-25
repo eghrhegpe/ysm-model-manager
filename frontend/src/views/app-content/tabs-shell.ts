@@ -73,7 +73,8 @@ export interface TabsShellSpec<Id extends string = string> {
  * display 口径正确），**相邻性 / 落位属调用方的布局职责**。
  */
 export interface TabsShell {
-  /** `.repo-tabs` 栏（含全部按钮，首个 active） */
+  /** `.repo-tabs` 栏（含全部按钮，首个 active）；退化态（声明 >1 个 tab 而 viewerMode 可见
+   * ≤1 个）恒为 `""`——栏整块缺席，但面板与 notice 照常产出（见 renderTabs 判据注释）。 */
   bar: string;
   /** 面板组（每个 tab 一个 `.tab-body`，首个可见、其余 display:none） */
   panels: string;
@@ -97,20 +98,24 @@ export function renderTabs<Id extends string = string>(spec: TabsShellSpec<Id>):
   // desktopOnly 只在 viewerMode 下生效；首个**可见** tab 才是默认激活项（原语义不变）
   const visible = tabs.filter((t) => !(viewerMode && t.desktopOnly));
 
-  // ⚠️ 已知待办（2026-09-25 实测后撤回，待拍板）：网页版下 bench/audit 整 tab 隐藏后只剩
-  // logs 一项，此时仍产出「只装一个按钮」的 role=tablist——tab 的意义在相对选择，单选项的
-  // tab 栏是噪音。但实测判据 `tabs.length > 1 && visible.length <= 1` 会**一并卷进仓库页**
-  // （网页版同样只剩 tree），涉及 4 条既有契约测试（tpl.test 的查看器/repository 断言、
-  // tabs-shell 的「首个 desktopOnly 让位」断言），属跨页 DOM 契约变更，非热路径小改动——
-  // 故此处保持原状，等拍板后连同测试一起改。届时要改的是本函数，不在各页另写判据。
+  // 退化态单点收口（2026-09 拍板落地）：「声明 >1 个 tab、viewerMode 下可见只剩 1 个」时
+  // tab 栏整块缺席——单选项的 tablist 是噪音（tab 的价值在相对选择，只有一项时点按无意义）。
+  // 判据 degrade-only（要求 `tabs.length > 1`）：常驻单 tab 页（github 1 个、instances 1 个）
+  // 与空 tabs 防御分支（`:111` 契约：空栏仍产出）零行为变化，只收「多 → 1 的退化」。
+  // 缺席的是**栏**不是内容：面板照常产出（首个不写 display 回落 `.tab-body`），viewerNotice
+  // 告知行照常（自包含块，与 bar 解耦）；运行期 bindTabA11y 查按钮集合为空静默 no-op，
+  // diagnostics 顶层按钮监听（init.ts `?.` optional-chain）同样静默跳过。
+  const showBar = !(tabs.length > 1 && visible.length <= 1);
   const barAttrs =
     (barId ? ` id="${barId}"` : "") + (barTestid ? ` data-testid="${barTestid}"` : "");
-  const bar = `<div class="repo-tabs"${barAttrs}>${visible
-    .map(
-      (tab, i) =>
-        `<button class="${buttonClass} tab-btn${i === 0 ? " active" : ""}"${tab.buttonTestid ? ` data-testid="${tab.buttonTestid}"` : ""} data-tab="${tab.id}">${tab.label}</button>`,
-    )
-    .join("")}</div>`;
+  const bar = showBar
+    ? `<div class="repo-tabs"${barAttrs}>${visible
+        .map(
+          (tab, i) =>
+            `<button class="${buttonClass} tab-btn${i === 0 ? " active" : ""}"${tab.buttonTestid ? ` data-testid="${tab.buttonTestid}"` : ""} data-tab="${tab.id}">${tab.label}</button>`,
+        )
+        .join("")}</div>`
+    : "";
 
   const panelCls = panelClass ? `tab-body ${panelClass}` : "tab-body";
   const panels = visible

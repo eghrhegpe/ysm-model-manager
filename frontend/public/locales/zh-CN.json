@@ -596,7 +596,7 @@
   "content.addCreator": "➕ 新增",
   "content.namePlaceholder": "创作者名称",
   "content.labelDesc": "描述",
-  "content.descPlaceholder": "关键词、顿号分隔",
+  "content.descPlaceholder": "短关键词、顿号分隔（8 字以内才会以标签展示）",
   "content.labelPlatform": "平台",
   "content.multiSelectHint": "Ctrl+点击多选",
   "content.roleCreator": "创作者",

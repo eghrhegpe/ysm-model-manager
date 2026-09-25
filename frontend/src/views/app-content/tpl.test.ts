@@ -64,8 +64,10 @@ describe("app-content 模板", () => {
     expect(html).not.toContain('data-tab="recycle"');
     expect(html).not.toContain('data-tab="dedup"');
     expect(html).not.toContain('data-tab="oldest"');
-    // 文件树 tab 保留（导入 tab 已从模板中移除）
-    expect(html).toContain('data-tab="tree"');
+    // 文件树 tab 保留（导入 tab 已从模板中移除）：viewer 退化态（声明 4 / 可见 1）tab 栏整块
+    // 缺席——按钮不再在场，但面板照常产出（唯一面板 = 直接内容，无需切换语义）
+    expect(html).toContain('id="repo-tab-tree"');
+    expect(html).not.toContain('<button class="repo-tab');
     isViewerModeMock.mockReturnValue(false);
   });
 
@@ -351,19 +353,18 @@ describe("app-content 模板", () => {
     // 桌面模式无任何东西被藏 → 告知行零噪音（ADR-300 §2.5）
     expect(html).not.toContain("repo-tabs-notice");
   });
-  it("网页版诊断页产出「仅桌面版」告知行，且落位在 tab 栏与面板之间", () => {
+  it("网页版诊断页产出「仅桌面版」告知行，且落位在首个面板之前（tablist 外的 ARIA 红线由工厂测试另钉）", () => {
     isViewerModeMock.mockReturnValue(true);
     try {
       const html = diagnosticsHTML();
       expect(html).toContain(
         '<div class="repo-tabs-notice">性能基准与仓库体检仅桌面版可用</div>',
       );
-      // 成品落位：bar 之后、首个面板之前（tablist 外的 ARIA 红线由工厂测试另钉）
-      const bar = html.indexOf('<div class="repo-tabs"');
+      // 成品落位：告知行直接贴在首个面板之前（tablist 外；降级态下 bar 整块缺席——
+      // 告知行自包含，缺席的栏不牵连它；「缺失功能」分隔条反而更突出）
       const notice = html.indexOf('class="repo-tabs-notice"');
       const panel = html.indexOf('id="diag-tab-logs"');
-      expect(bar).toBeGreaterThanOrEqual(0);
-      expect(notice).toBeGreaterThan(bar);
+      expect(notice).toBeGreaterThan(0);
       expect(notice).toBeLessThan(panel);
     } finally {
       isViewerModeMock.mockReturnValue(false);

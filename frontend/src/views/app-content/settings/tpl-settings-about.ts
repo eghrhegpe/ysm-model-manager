@@ -64,8 +64,9 @@ function aboutSection(): string {
   )}
 </div>`;
 
-  // 介绍两卡 / 链接两卡各为同族组，延迟由 stgUnits 注入起始 + 组内序号 × step 派生
-  const introCards = (startMs: number): string =>
+  // 介绍两卡 / 链接两卡各为同族组，延迟由 stgUnits 注入起始 + 组内序号 × cardStep 派生
+  // （cardStep 经 stgUnits 传入——禁止内部硬编码 step，防「单元表声明 + 内部步长」双源）
+  const introCards = (startMs: number, cardStep: number): string =>
     `<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">
   ${stgCards(
     [
@@ -101,11 +102,11 @@ function aboutSection(): string {
         cardStyle: "flex:1 1 220px",
       },
     ],
-    { startMs },
+    { startMs, step: cardStep },
   )}
 </div>`;
 
-  const guideCards = (startMs: number): string =>
+  const guideCards = (startMs: number, cardStep: number): string =>
     `<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">
   ${stgCards(
     [
@@ -135,14 +136,14 @@ function aboutSection(): string {
         cardStyle: "flex:1 1 220px",
       },
     ],
-    { startMs },
+    { startMs, step: cardStep },
   )}
 </div>`;
 
   return stgUnits([
     { render: versionCard },
-    { cardCount: 2, render: introCards },
-    { cardCount: 2, render: guideCards },
+    { cardCount: 2, cardStep: 30, render: introCards },
+    { cardCount: 2, cardStep: 30, render: guideCards },
   ]);
 }
 

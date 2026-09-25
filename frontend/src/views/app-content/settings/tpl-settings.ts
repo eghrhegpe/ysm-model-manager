@@ -275,14 +275,15 @@ const BASIC_PATH_CARD_SPECS: ReadonlyArray<{
   { id: "mirror", spec: mirrorCardSpec },
 ];
 
-function renderStgBasicPaths(p: SettingsPlatform, startMs: number): string {
-  // 路径三卡为同族组，入场延迟由 stgCards 按（平台过滤后的）序号派生（step 60ms，与其余组
-  // 的 30ms 区分：首屏三张大卡节奏放缓一档）。2026-09 前为手填 0/60/120 字面量；
-  // 2026-10 起 startMs 由 stgUnits 编排器按声明顺序注入（本 tab 首单元恒 0）。
+function renderStgBasicPaths(p: SettingsPlatform, startMs: number, cardStep: number): string {
+  // 路径三卡为同族组，入场延迟由 stgCards 按（平台过滤后的）序号派生（组内步长 = 单元表
+  // cardStep 60，首屏三张大卡节奏放缓一档；2026-09 前为手填 0/60/120 字面量）。
+  // 2026-10 起 startMs/cardStep 均由 stgUnits 注入（本 tab 首单元 startMs 恒 0；
+  // ⚠️ 步长经 stgUnits 传入——禁止内部硬编码 step:60 造成「单元表声明 + 内部步长」双源）。
   const specs = BASIC_PATH_CARD_SPECS.filter((it) => cardSupportedOn(it.id, p)).map((it) =>
     it.spec(),
   );
-  const cards = stgCards(specs, { startMs, step: 60 });
+  const cards = stgCards(specs, { startMs, step: cardStep });
   // viewer 模式（安卓 + 网页版）段标题统一为「文件来源」，桌面为「路径配置」——
   // 与「这里是可配置路径 vs 这里只有来源入口」语义对齐
   const title = t(p !== "desktop" ? "settings.paths.sourceTitle" : "settings.paths.title");
@@ -473,11 +474,12 @@ function renderStgThemeAuto(startMs: number): string {
 </div>`;
 }
 
-function renderStgFontFamily(startMs: number): string {
+function renderStgFontFamily(startMs: number, cardStep: number): string {
   // 三栏裸样式手写卡升格为 .stg-grid + .stgCard 正典卡（设置页样式范式契约待修债 #2）：
   // 原 <div style="background:var(--surf);border:..."> 三处间距/圆角/动画各自为政，已漂移；
   // 现与路径三卡同构（stg-grid 三列平铺，各卡 hdr 小标题 + body 控件）。
-  // 字体三卡同族：延迟由序号派生（startMs 60 = 本组在「外观」tab 的入场档位，属页面级编排）。
+  // 字体三卡同族：延迟 = startMs + i×cardStep（startMs/cardStep 由 stgUnits 注入，
+  // 步长经参数传入——禁止内部硬编码 step，防「单元表声明 + 内部步长」双源）。
   // option 值域由 settings-schema 派生（ADR-307 D3 扩编：字号/字体/密度三张裸列收编——
   // 加档位改 schema 一处，Record 文案表编译期逼同步；selected 项 = schema 默认值）。
   const fontSizeOptions = FONT_SIZE_LEVELS.map(
@@ -533,7 +535,7 @@ function renderStgFontFamily(startMs: number): string {
         cardId: "stg-font-density-card",
       },
     ],
-    { startMs },
+    { startMs, step: cardStep },
   );
   return `<div class="section-title stg-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
 <div class="stg-grid">
@@ -604,7 +606,7 @@ const ROT_MODE_LABEL: Record<TdRotMode, LocaleKey> = {
   free: "settings.preview3d.free",
 };
 
-function renderStgPreview3d(startMs: number): string {
+function renderStgPreview3d(startMs: number, cardStep: number): string {
   // 2026-10 卡片流收口：三个 3D 设置行（相机速度 / 旋转模式 / 键位映射）自裸 .settings-group
   // 行组升格为 .stg-card 正典卡（与 env / appearance / about 各 tab 卡片口径统一）——
   // 行组范式「左右边缘与卡片/标题不齐 + 背景厚度不一」的视觉断裂收口。
@@ -614,8 +616,11 @@ function renderStgPreview3d(startMs: number): string {
   //      厚重卡片背景，与 content-stg.ts|.stg-keybind-row 契约一致）；
   //   ③ 值域 / 默认值 / 枚举仍消费 settings-schema（ADR-303）：min/max/value/rotOptions
   //      全部 schema 派生，升卡不改数据面；
-  //   ④ 入场延迟 2026-10 起由 stgUnits 编排器注入（本 tab 首单元 startMs=0，三卡组内
-  //      step 60 → 0/60/120 大卡节奏，与升卡前 STG_BAND.preview3d 档位一致，不重排节奏）。
+  //   ④ 入场延迟 2026-10 起由 stgUnits 注入：startMs 为本 tab 首单元起始（0），组内步长
+  //      = 单元表 cardStep（60）→ 0/60/120 大卡节奏，与升卡前 STG_BAND.preview3d 档位一致；
+  //      ⚠️ 步长经 stgUnits 传入（cardStep 参数）——禁止内部硬编码 +60/+120（2026-10 P1-2：
+  //      曾「单元表声明 cardStep + 内部硬编码」双源，改步长一处不跟、details 起始撞车且
+  //      测试 details 剔除正则掩盖）。
   // 测试钩子（td-camspeed / td-rotmode / td-keymap-grid / td-keymap-reset）全保留。
   // 旋转模式 option 由 schema 枚举派生（ROT_MODE_LABEL Record 锁文案键域，同 ADR-303 §2）。
   const rotOptions = TD_ROT_MODE.values
@@ -650,7 +655,7 @@ function renderStgPreview3d(startMs: number): string {
       header: { spaceBetween: false, titleSize: "md" },
       cardId: "stg-rotmode-card",
       marginTop: 8,
-      cardStyle: `animation-delay:${startMs + 60}ms`,
+      cardStyle: `animation-delay:${startMs + cardStep}ms`,
     },
   );
 
@@ -666,7 +671,7 @@ function renderStgPreview3d(startMs: number): string {
       header: { spaceBetween: false, titleSize: "md" },
       cardId: "stg-keymap-card",
       marginTop: 8,
-      cardStyle: `animation-delay:${startMs + 120}ms`,
+      cardStyle: `animation-delay:${startMs + 2 * cardStep}ms`,
     },
   );
 
@@ -724,7 +729,7 @@ export function settingsHTML(): string {
     {
       cardCount: pathCardCount,
       cardStep: 60,
-      render: (startMs) => renderStgBasicPaths(p, startMs),
+      render: (startMs, cardStep) => renderStgBasicPaths(p, startMs, cardStep),
     },
     { render: (startMs) => renderStgStorageCard(p, startMs) },
     { render: (startMs) => renderStgDefaultPageSection(startMs) },
@@ -737,7 +742,11 @@ export function settingsHTML(): string {
 ${stgUnits([
   { render: (startMs) => renderStgThemePicker(startMs) },
   { render: (startMs) => renderStgThemeAuto(startMs) },
-  { cardCount: 3, render: (startMs) => renderStgFontFamily(startMs) },
+  {
+    cardCount: 3,
+    cardStep: 30,
+    render: (startMs, cardStep) => renderStgFontFamily(startMs, cardStep),
+  },
   { render: (startMs) => renderStgLangSelect(startMs) },
   { render: (startMs) => renderStgAnimationSection(startMs) },
 ])}`;
@@ -747,7 +756,11 @@ ${stgUnits([
   // preview3d tab：三张 3D 设置卡（卡组，cardStep 60 大卡节奏）→ 解析 details（折叠区，
   // 内部另起 0 档——展开时才播，不参与首屏竞争）
   const previewBody = stgUnits([
-    { cardCount: 3, cardStep: 60, render: (startMs) => renderStgPreview3d(startMs) },
+    {
+      cardCount: 3,
+      cardStep: 60,
+      render: (startMs, cardStep) => renderStgPreview3d(startMs, cardStep),
+    },
     { render: () => renderStgParserWorkers() },
   ]);
 

@@ -115,6 +115,30 @@ describe("checkUpdateSilent", () => {
     expect(toasts).toHaveLength(0);
   });
 
+  it("缺省回退间隔 = 6h 数值语义（与 views|settings-schema|UPDATE_CHECK_DEFAULT 跨域对齐）", async () => {
+    // 2026-10 P1-1 护栏：曾注释宣称「契约测试锁定 6h」但无数值断言——改一边漂移不被测出。
+    // CHECK_INTERVAL_DEFAULT_MS 须与 settings-schema.ts|UPDATE_CHECK_DEFAULT（21600000）相等
+    // （features 不得 import views 叶，数值语义在此断言锁定）。
+    const { CHECK_INTERVAL_DEFAULT_MS } = await import("./version-updater.ts");
+    expect(CHECK_INTERVAL_DEFAULT_MS).toBe(6 * 60 * 60 * 1000); // 21600000
+    expect(CHECK_INTERVAL_DEFAULT_MS).toBe(21600000);
+  });
+
+  it("配置读取失败/缺 updateCheckIntervalMs → 回退 6h 缺省（频次边界行为）", async () => {
+    // LoadAppConfig 未 mock（throw）→ catch 回退 CHECK_INTERVAL_DEFAULT_MS；
+    // 上次检查恰在 6h 前（now - 21600000 - 1）→ canCheck 通过、真正执行检查。
+    // 注意：有新版本时发 toast（与用例「有新版本 → 发可点击 toast」同形），不断言空
+    localStorage.setItem(CHECK_KEY, String(Date.now() - 21600001));
+    const { checkUpdateSilent } = await import("./version-updater.ts");
+    await checkUpdateSilent();
+    expect(mocks.CheckUpdate).toHaveBeenCalledTimes(1);
+    // 6h 边界（now - 21600000 + 1 仍在限制内）→ 跳过，未检查
+    localStorage.setItem(CHECK_KEY, String(Date.now() - 21600000 + 1));
+    vi.clearAllMocks();
+    await checkUpdateSilent();
+    expect(mocks.CheckUpdate).not.toHaveBeenCalled();
+  });
+
   it("Android（存在 wails 桥）→ 跳过更新检查（ADR-047 平台守卫）", async () => {
     const original = (window as unknown as { wails?: unknown }).wails;
     (window as unknown as { wails?: unknown }).wails = {

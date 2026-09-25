@@ -104,10 +104,12 @@ export function stgCards(
 // 统一步长：组间恒 step（默认 60，即旧 STG_GROUP_STEP_MS）；组内步长由卡组自声
 // （默认 30，旧 STG_CARD_STEP_MS；大卡组可声明 60——语义「卡组内视觉节奏」，与组间 60 不混）。
 
-/** 编排单元声明：render 接收本单元（组）的起始延迟（ms），返回该单元 HTML。 */
+/** 编排单元声明：render 接收本单元（组）的起始延迟与组内步长（ms），返回该单元 HTML。 */
 export interface StgUnitSpec {
-  /** 渲染本单元：接收派生好的起始延迟，内部对行组写 animation-delay / 对卡组作 stgCards startMs。 */
-  render: (startMs: number) => string;
+  /** 渲染本单元：接收派生好的起始延迟与卡组组内步长（单卡/行组忽略 cardStep）。
+   *  卡组内部对 stgCards 传 `step: cardStep`，或直接 `startMs + i*cardStep` 派生——
+   *  组内步长与单元表声明单源，禁止内部再硬编码步长。 */
+  render: (startMs: number, cardStep: number) => string;
   /** 卡组卡数（组内序号 × cardStep 派生）；行组/单卡省略（按 1 槽）。 */
   cardCount?: number;
   /** 卡组组内步长（默认 30）；仅当 cardCount 声明时有效。 */
@@ -124,9 +126,9 @@ export function stgUnits(units: readonly StgUnitSpec[], opts: { step?: number } 
   let startMs = 0;
   const parts: string[] = [];
   for (const u of units) {
-    parts.push(u.render(startMs));
     const n = u.cardCount ?? 1;
     const cardStep = u.cardStep ?? STG_CARD_STEP_MS;
+    parts.push(u.render(startMs, cardStep));
     startMs += (n - 1) * cardStep + step;
   }
   return parts.join("\n");

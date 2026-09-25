@@ -104,8 +104,8 @@ describe("stgUnits（页面级编排：有序单元表按声明顺序自动派�
       {
         cardCount: 3,
         cardStep: 30,
-        render: (s) =>
-          [0, 1, 2].map((i) => `<div style="animation-delay:${s + i * 30}ms">c${i}</div>`).join(""),
+        render: (s, step) =>
+          [0, 1, 2].map((i) => `<div style="animation-delay:${s + i * step}ms">c${i}</div>`).join(""),
       },
       { render: (s) => `<div style="animation-delay:${s}ms">next</div>` },
     ]);
@@ -120,8 +120,8 @@ describe("stgUnits（页面级编排：有序单元表按声明顺序自动派�
       {
         cardCount: 4,
         cardStep: 30,
-        render: (s) =>
-          [0, 1, 2, 3].map((i) => `<div style="animation-delay:${s + i * 30}ms">c${i}</div>`).join(""),
+        render: (s, step) =>
+          [0, 1, 2, 3].map((i) => `<div style="animation-delay:${s + i * step}ms">c${i}</div>`).join(""),
       },
       { render: (s) => `<div style="animation-delay:${s}ms">next</div>` },
     ]);
@@ -140,5 +140,21 @@ describe("stgUnits（页面级编排：有序单元表按声明顺序自动派�
       { step: 30 },
     );
     expect(delaysOf(html)).toEqual([0, 30]);
+  });
+
+  it("render 收到声明的 cardStep：卡组组内步长单源（2026-10 P1-2 回归）", () => {
+    // 防双源：曾单元表声明 cardStep:60 但 render 内部硬编码 +60/+120——
+    // 改单元表步长时 render 内部不跟，档位漂移且 details 剔除正则掩盖。
+    const html = stgUnits([
+      {
+        cardCount: 3,
+        cardStep: 60,
+        render: (s, step) =>
+          [0, 1, 2].map((i) => `<div style="animation-delay:${s + i * step}ms">c${i}</div>`).join(""),
+      },
+      { render: (s) => `<div style="animation-delay:${s}ms">next</div>` },
+    ]);
+    // cardStep 60 → 组内 0/60/120，推进 (3-1)×60+60=180 → 下一组 180
+    expect(delaysOf(html)).toEqual([0, 60, 120, 180]);
   });
 });

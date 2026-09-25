@@ -84,7 +84,6 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
     : "";
 
   const tierBar = tierRank ? `<div class="cr-card-tier-bar"></div>` : "";
-  const dataSpin = tierRank ? ` data-spin="${tierRank}"` : "";
   // 星标双态走 UI_ICONS 语义图标（ADR-238）：实心 .ws-icon[fill] 切换，空心描边，随主题 currentColor
   const starIcon = isFaved(cr.name) ? UI_ICONS.starFilled : UI_ICONS.star;
   const tagRole = getTagFromRole(cr.role);
@@ -105,7 +104,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
       tierRank ? ` data-tier="${esc(tierRank)}"` : ""
     } title="${esc(t("content.searchFor", { name: cr.name }))}">` +
     tierBar +
-    `<div class="cr-card-header"><div class="cr-avatar-container"><div class="cr-avatar-ring"${dataSpin}></div>${avatarHtml}</div>` +
+    `<div class="cr-card-header"><div class="cr-avatar-container"><div class="cr-avatar-ring"></div>${avatarHtml}</div>` +
     `<div class="cr-card-name-row"><span class="cr-card-name">${esc(
       cr.name,
     )}</span>${localBadge}<span class="cr-star-btn" data-star="${esc(cr.name)}">${starIcon}</span>${searchBtn}</div></div>` +

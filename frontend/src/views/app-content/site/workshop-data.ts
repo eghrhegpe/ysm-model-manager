@@ -50,8 +50,9 @@ export function getTagFromRole(role?: string): string {
   return role || "creator";
 }
 
-/** 「标签式描述」单段长度上限：超出即视为普通描述文本，不切碎成 #chip */
-const TAG_STYLE_MAX_SEG_LEN = 12;
+/** 「标签式描述」单段长度上限（P1-7 锐评：原 12 字符会把「高产作者，模型质量好，更新勤快」
+ *  这类半句话切碎成 #chip——中文 12 字足以构成半句；收紧到 8 字，真标签串特征才判标签）。 */
+const TAG_STYLE_MAX_SEG_LEN = 8;
 /** 「标签式描述」段数上限：超出即回退全文（不截断——截断会让尾部片段在浮层静默消失） */
 const TAG_STYLE_MAX_SEG_COUNT = 6;
 

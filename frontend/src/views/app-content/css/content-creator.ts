@@ -74,8 +74,8 @@ export const contentCreatorCSS: string = `
   box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
   outline:none;
 }
-.cr-creator-card--grid:hover .cr-card-tier-bar { opacity:1; }
-.cr-creator-card--grid:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
+/* P2-2 锐评：hover 只保留「选中信号」三件套（border/bg/shadow/位移），
+   砍掉头像 rotate(-8deg) 装饰噪音——浏览列表是理性操作，旋转不是反馈是彩蛋 */
 /* 筛选隐藏态：淡出 + 折叠 */
 .cr-creator-card--grid.cr-card-hidden {
   opacity:0;
@@ -87,12 +87,12 @@ export const contentCreatorCSS: string = `
   border-width:0;
   overflow:hidden;
   pointer-events:none;
-  animation:none !important;
   transition:opacity var(--tr-normal), transform var(--tr-normal), max-height var(--tr-normal), min-height var(--tr-normal), padding var(--tr-normal), margin var(--tr-normal), border-width var(--tr-normal);
 }
-/* tier 色条 */
+/* tier 色条（P2-1 锐评：原 2px/opacity:.6 承载「顶级创作者」强断言几乎不可见，
+   且 hover 才显形=需要猜；改 3px 常驻 opacity:1——荣誉信号常驻可见，删 hover 显形规则） */
 .cr-card-tier-bar {
-  position:absolute;top:0;left:0;right:0;height:2px;opacity:.6;transition:opacity var(--tr-normal);
+  position:absolute;top:0;left:0;right:0;height:3px;opacity:1;transition:opacity var(--tr-normal);
 }
 .cr-creator-card--grid[data-tier="gold"] .cr-card-tier-bar { background:var(--tier-gold); }
 .cr-creator-card--grid[data-tier="silver"] .cr-card-tier-bar { background:var(--tier-silver); }
@@ -112,10 +112,7 @@ export const contentCreatorCSS: string = `
 /* 头像（跨域复用：.cr-avatar 亦在 gh-card 中用到） */
 .cr-avatar { width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-base);font-weight:700;color:var(--muted);background:var(--surf);z-index:1;transition:all var(--tr-normal); }
 .cr-avatar-container { position:relative;display:inline-flex;flex-shrink:0;align-self:flex-start;width:28px;height:28px;margin:6px; }
-/* 光环 transform 0.4s：有意慢于 --tr-* 最长档（--tr-enter 0.25s），与 .8s ring-spin 配套；
-   令牌体系无 0.4s 档，故用 tr-exempt 标记留档（UI-Design.md §7「说明为何非它不可」口径）。 */
-.cr-avatar-ring { position:absolute;inset:-2px;border-radius:50%;pointer-events:none;transition:transform .4s ease; /* tr-exempt: 与 .8s ring-spin 配套的慢起转 */ }
-.cr-avatar-ring[data-spin]:hover { animation:ring-spin .8s linear infinite; }
+.cr-avatar-ring { position:absolute;inset:-2px;border-radius:50%;pointer-events:none;transition:transform var(--tr-normal); }
 
 /* 卡片头部：头像 + 名称行 */
 .cr-card-header {
@@ -237,7 +234,9 @@ export const contentCreatorCSS: string = `
 .cr-site-chip.active { border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent); }
 .cr-btn-icon { font-size:var(--fs-base);padding:0 var(--sp-1);background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit; }
 .cr-btn-icon:hover { color:var(--txt); }
-.cr-edit-label { font-size:var(--fs-xs);color:var(--muted);width:28px;flex-shrink:0; }
+/* P2-4 锐评：label 原固定 28px——中文「描述/平台」两字在 fs-xs 下挤贴左缘、
+   像无表线的半成品表格。改 auto + min-width：单字标签窄、双字/长标签自适应，不再挤爆 */
+.cr-edit-label { font-size:var(--fs-xs);color:var(--muted);width:auto;min-width:28px;flex-shrink:0; }
 .cr-add-area { padding:4px 0 12px; }
 .cr-add-area button, .cr-add-preset {
   padding:var(--btn-padding-filter);border-radius:var(--radius-md);border:1px dashed var(--bd);

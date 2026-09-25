@@ -278,7 +278,8 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     expect(card.querySelector(".cr-card-search")).toBeNull();
     expect(card.dataset.tier).toBe("gold");
     expect(card.querySelector(".cr-card-tier-bar")).toBeTruthy();
-    expect(card.querySelector(".cr-avatar-ring")?.getAttribute("data-spin")).toBe("gold");
+    // P2-2 锐评：光环常转（data-spin + ring-spin hover）已删——avatar-ring 不再携带 data-spin
+    expect(card.querySelector(".cr-avatar-ring")?.getAttribute("data-spin")).toBeNull();
   });
 
   it("11. 本地徽章三态：有数量 / 无数量 / 非本地不渲染", () => {
@@ -345,6 +346,24 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     const c2 = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
     const root2 = renderHtml(makeCtx({ creators: c2, authorCountMap: {} }));
     expect(root2.querySelector('[data-testid="cr-tier-legend"]')).toBeTruthy();
+  });
+
+  it("13c. computeCreatorTiers 边界（P2-9 锐评）：空表 / 单作者 / 全 0 并列位次稳定", () => {
+    // 空表 → 空对象
+    expect(computeCreatorTiers([], {})).toEqual({});
+    // 单作者 pct=0 → gold（既有语义：唯一作者恒顶级）
+    expect(computeCreatorTiers([{ name: "独" }] as LocalCreatorLike[], {})["独"]).toBe("gold");
+    // 全 0 并列：两作者 count 均 0 → 首作者 gold、次作者无（相对位次，不因并列提升）
+    const allZero = computeCreatorTiers(
+      [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[],
+      {},
+    );
+    expect(allZero["甲"]).toBe("gold");
+    expect(allZero["乙"]).toBe("");
+    // 输入数组不被就地排序（P2-8 纯化精神延伸到分档函数）
+    const input = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
+    computeCreatorTiers(input, { 甲: 1, 乙: 9 });
+    expect(input.map((c) => c.name)).toEqual(["甲", "乙"]);
   });
 
   it("14. 本地条目空 desc → 卡片回退 i18n 提示（数据面不落语言串，锐评 P0-2b）", () => {

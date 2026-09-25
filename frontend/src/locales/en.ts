@@ -712,7 +712,7 @@ export const en: Record<string, string> = {
   "content.addCreator": "➕ Add",
   "content.namePlaceholder": "Creator name",
   "content.labelDesc": "Description",
-  "content.descPlaceholder": "Keywords, comma separated",
+  "content.descPlaceholder": "Short tags, comma separated (≤8 chars shown as chips)",
   "content.labelPlatform": "Platform",
   "content.multiSelectHint": "Ctrl+Click to multi-select",
   "content.roleCreator": "Creator",

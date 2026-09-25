@@ -133,10 +133,10 @@ describe("app-content 模板", () => {
     expect(html).toContain("web-repo-auth-btn");
     expect(html).toContain("web-repo-auth-status");
     // 网页版只有文件来源入口，外层节标题不应继续声称可配置“路径”
-    const basicTab = panelSlice(html, "stg-tab-general", "stg-tab-appearance");
-    expect(basicTab).toContain(`${UI_ICONS.settings} 文件来源</div>`);
-    expect(basicTab).not.toContain(`${UI_ICONS.settings} 路径配置</div>`);
-    expect(basicTab).not.toContain('class="stg-grid"');
+    const envTab = panelSlice(html, "stg-tab-env", "stg-tab-appearance");
+    expect(envTab).toContain(`${UI_ICONS.settings} 文件来源</div>`);
+    expect(envTab).not.toContain(`${UI_ICONS.settings} 路径配置</div>`);
+    expect(envTab).not.toContain('class="stg-grid"');
   });
 
   it("settingsHTML Android（桥存在但非网页版）渲染本地路径卡而非 FSA 授权卡", () => {
@@ -161,19 +161,26 @@ describe("app-content 模板", () => {
     // `id="stg-tab-general"`，按 `id="` 锚点切片（本文件 panelSlice）会先命中 tab 栏按钮
     // 而非面板 —— 2026-09 实测把切片顶到 bar 上，靠前缀岔开才消掉。
     const html = settingsHTML();
-    expect(html).toContain('data-testid="stg-tabbtn-general"');
+    expect(html).toContain('data-testid="stg-tabbtn-env"');
     expect(html).toContain('data-testid="stg-panel-appearance"');
     expect(html).not.toContain('data-testid="stg-tab-');
     // 方案 A：一级菜单按用户任务命名，保留四个槽位，不恢复解析/鸣谢独立入口
-    // 「常规」图标=controls（旋钮）：齿轮是左侧一级导航的设置入口，二级 tab 复用会层级歧义
-    expect(html).toContain(`data-tab="general">${UI_ICONS.controls} 常规</button>`);
-    expect(html).toContain(`data-tab="appearance">${UI_ICONS.appearance} 外观</button>`);
+    // 2026-09-25 语义收债三条：槽名必须回答「这里能配什么」、键名与文案同义、
+    // tab 图标不得与左侧一级导航同形（否则跨两级同形 = 同一字形两种语义）
+    // ① 「常规」是零信息量抽屉（键名 settings.general 与「常规」同样脱钩）→ env / 环境
+    expect(html).toContain(`data-tab="env">${UI_ICONS.folder} 环境</button>`);
+    expect(html).not.toContain(`data-tab="general">${UI_ICONS.controls} 常规</button>`);
+    expect(html).not.toContain(`data-tab="general">${UI_ICONS.controls} 基础设置</button>`);
+    // ② 「外观」图标 = brush（绘制）：appearance（圆脸笑脸）同时是一级导航「社区」的图标
+    expect(html).toContain(`data-tab="appearance">${UI_ICONS.brush} 外观</button>`);
+    expect(html).not.toContain(`data-tab="appearance">${UI_ICONS.appearance} 界面与体验</button>`);
     // tab 名 2026-09 直白化：原「3D 与解析」（键名 settings.operations="操作"，键名与文案脱节）
     // → 「3D 预览」（键名 settings.tab3d）。回归防线：不得退回妥协拼接名
-    expect(html).toContain(`data-tab="preview3d">${UI_ICONS.joystick} 3D 预览</button>`);
+    expect(html).toContain(`data-tab="preview3d">${UI_ICONS.voxel} 3D 预览</button>`);
     expect(html).not.toContain(`data-tab="preview3d">${UI_ICONS.joystick} 3D 与解析</button>`);
-    expect(html).not.toContain(`data-tab="general">${UI_ICONS.controls} 基础设置</button>`);
-    expect(html).not.toContain(`data-tab="appearance">${UI_ICONS.appearance} 界面与体验</button>`);
+    // ③ 「关于」tab 含真实设置（更新检查间隔 / 立即检查更新）→ 名字必须答「能配什么」
+    expect(html).toContain(`data-tab="aboutUpdate">${UI_ICONS.info} 更新与关于</button>`);
+    expect(html).not.toContain(`data-tab="about">${UI_ICONS.info} 关于</button>`);
     // 桌面模式展示完整偏好：主题选择器、动画开关、默认启动页、文件存储高级网格
     expect(html).toContain("theme-picker");
     expect(html).toContain("set-animations");
@@ -194,13 +201,17 @@ describe("app-content 模板", () => {
     expect(dpHdr).toMatch(/stg-card-hdr[\s\S]*?id="set-remember-page"/);
     // 键位网格已改为 stg-grid 工厂小卡容器（与基础设置路径卡同构），列数由响应式 CSS 决定
     expect(html).toContain('id="td-keymap-grid" class="stg-grid stg-keymap-grid"');
-    // 启动默认页属于「常规」，不属于「外观」
-    const basicTab = panelSlice(html, "stg-tab-general", "stg-tab-appearance");
+    // 启动默认页属于「环境」，不属于「外观」
+    const envTab = panelSlice(html, "stg-tab-env", "stg-tab-appearance");
     const uiTab = panelSlice(html, "stg-tab-appearance", "stg-tab-preview3d");
-    expect(basicTab).toContain('id="stg-default-page-card"');
-    expect(basicTab).toContain('id="set-default-page"');
+    expect(envTab).toContain('id="stg-default-page-card"');
+    expect(envTab).toContain('id="set-default-page"');
     expect(uiTab).not.toContain('id="stg-default-page-card"');
     expect(uiTab).not.toContain('id="set-default-page"');
+    // 语言是**显示偏好**，归「外观」而非「环境」（2026-09-25 收债：曾挂在零信息量的「常规」里）
+    expect(envTab).not.toContain('id="stg-lang-card"');
+    expect(uiTab).toContain('id="stg-lang-card"');
+    expect(uiTab).toContain('id="set-lang"');
     // github/diagnostics/settings 可作启动页却在 UI 选不到（能力被 UI 阉割）
     const dpSel = html.slice(html.indexOf('id="set-default-page"'));
     const optVals = [...dpSel.slice(0, dpSel.indexOf("</select>")).matchAll(/<option value="([^"]+)"/g)].map(
@@ -219,7 +230,8 @@ describe("app-content 模板", () => {
     // .settings-group 的常量（margin-bottom / animation）已入类，
     // 内联仅保留 animation-delay——不得再把常量手写回模板（曾 7 处副本）
     expect(html).not.toContain("margin-bottom:12px;animation:card-in");
-    expect(html).toContain('class="settings-group" style="animation-delay:');
+    // （允许 settings-group 带附加类，如 3D 预览首组补的 stg-section）
+    expect(html).toMatch(/class="settings-group[^"]*" style="animation-delay:/);
     expect(html).toContain("set-advanced-grid");
     // 6 tab → 4 tab 收口：旧「解析」「鸣谢」tab 槽退役，id 不得残留
     expect(html).not.toContain('data-tab="parser"');
@@ -229,7 +241,7 @@ describe("app-content 模板", () => {
     // 3D 预览 + 解析开关收口进「3D 预览」tab
     expect(html).toContain('data-tab="preview3d"');
     expect(html).toContain('id="stg-tab-preview3d"');
-    const opsTab = panelSlice(html, "stg-tab-preview3d", "stg-tab-about");
+    const opsTab = panelSlice(html, "stg-tab-preview3d", "stg-tab-aboutUpdate");
     expect(opsTab).toContain('id="td-camspeed"');
     expect(opsTab).toContain('id="td-keymap-grid"');
     expect(opsTab).toContain('id="td-keymap-hint"');
@@ -247,9 +259,10 @@ describe("app-content 模板", () => {
     expect(opsTab).toContain("set-mmd-worker");
     expect(uiTab).not.toContain("set-fbx-worker");
     expect(uiTab).not.toContain("set-mmd-worker");
-    // 「关于 + 鸣谢」合并 tab：版本/更新检查（About 节）与鸣谢小节（t("settings.credits") 节标题）同页
-    expect(html).toContain('id="stg-tab-about"');
-    const aboutTab = html.slice(html.indexOf('id="stg-tab-about"'));
+    // 「更新与关于」（含鸣谢小节）合并 tab：版本/更新检查（About 节）与鸣谢小节同页。
+    // 2026-09-25 改名：旧「关于」不回答「这里能配什么」（本 tab 含真实设置）→ aboutUpdate
+    expect(html).toContain('id="stg-tab-aboutUpdate"');
+    const aboutTab = html.slice(html.indexOf('id="stg-tab-aboutUpdate"'));
     expect(aboutTab).toContain('id="set-version"');
     expect(aboutTab).toContain('id="set-check-update"');
     expect(aboutTab).toContain("鸣谢");
@@ -268,7 +281,7 @@ describe("app-content 模板", () => {
     expect(html).not.toContain("background:var(--surf);border:1px solid var(--bd)");
     expect(html).not.toContain("background: var(--surf);border:1px solid var(--bd)");
     // About 五卡的圆角曾用 --radius-lg，与审计 P1-2 收口后的 --radius-card 不一致
-    const aboutTab2 = html.slice(html.indexOf('id="stg-tab-about"'));
+    const aboutTab2 = html.slice(html.indexOf('id="stg-tab-aboutUpdate"'));
     expect(aboutTab2).not.toContain("--radius-lg");
     // 每张卡必须有构造器产出的标题行（hdr 图标+标题合一，防再次漂移）
     const cardCount = [...html.matchAll(/class="stg-card"/g)].length;

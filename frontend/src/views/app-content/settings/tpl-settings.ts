@@ -1,5 +1,5 @@
 // ===== tpl-settings.ts — settingsHTML 页面模板（从 tpl.ts 拆出，ADR-040 P1 第2轮拆分）=====
-// basic + ui + ops 标签页在此；about（含鸣谢小节）已拆至 tpl-settings-about.ts。
+// env + appearance + preview3d 标签页在此；aboutUpdate（含鸣谢小节）已拆至 tpl-settings-about.ts。
 // 2026-10 菜单收口（锐评方案 A）：6 tab → 4 tab（常规/外观/3D 预览/关于）——
 //   （2026-09 锐评：第三个 tab 名原为「3D 与解析」、键名却叫 settings.operations，已改名
 //    settings.tab3d = 「3D 预览」，键名与文案对齐，详本文件 settingsHTML 内注释）
@@ -9,10 +9,15 @@
 //      设置菜单槽位语义 = 「这里能配置什么」，只读展示不占槽；「关于」含真实设置
 //      （更新检查间隔/检查更新/版本）保留 tab；
 //   ③ 「启动默认页面」从外观迁至常规，避免启动导航行为混入视觉偏好。
+// 2026-09-25 第二轮语义收债（锐评：槽名答不了「这里能配什么」+ 图标跨层级撞形）：
+//   id = general/appearance/preview3d/about → env/appearance/preview3d/aboutUpdate，
+//   i18n 键 settings.general→settings.env（「环境」）、settings.about→settings.aboutUpdate
+//   （「更新与关于」）；语言卡自「环境」迁至「外观」；「3D 预览」tab 内同名节标题删除；
+//   三个 tab 图标校正（folder / brush / voxel，消与一级导航「社区」的同形歧义）。
 // 2026-09 tab id 命名脱钩收债：id 原为 basic/ui/ops，其中 ops 却显示「3D 预览」、ui 却显示
 //   「外观」——上一轮只把 i18n 键 operations→tab3d 改了，**同一个命名债的第二个载体
 //   TabSpec.id 原地未动**，而 id 才是 DOM `data-tab` / 面板 id `stg-tab-<id>` 的唯一锚点
-//   （测试钩子与未来深链接都抓它）。现 id = general/appearance/preview3d/about，并由
+//   （测试钩子与未来深链接都抓它）。现 id = env/appearance/preview3d/aboutUpdate，并由
 //   `SettingsTabId` 联合类型 + `SETTINGS_TAB_META` 的 Record 形态在编译期兜住「新增 tab 必须
 //   同时给图标 + 文案键 + 面板体」，漏一处即报错。testid 由 id 派生（stg-tabbtn-<id> /
 //   stg-panel-<id>——前缀须与面板 DOM id 模板 `stg-tab-*` 岔开，否则 data-testid 属性文本
@@ -36,19 +41,31 @@ import { aboutPageBody } from "./tpl-settings-about.ts";
 export const VIEW_TESTIDS: readonly string[] = ["set-mc-path"];
 
 // ===== 设置页 tab 声明（唯一事实源：id / 图标 / 文案键 / 声明序在此一处）=====
-/** 设置页 tab id 联合；面板 id = `stg-tab-<id>`、按钮 testid = `stg-tab-<id>`。
+/** 设置页 tab id 联合；面板 id = `stg-tab-<id>`、按钮 testid = `stg-tabbtn-<id>`。
  *  新增 tab：改类型 + 改下方 Record（两处漏一即编译期报错）。 */
-export type SettingsTabId = "general" | "appearance" | "preview3d" | "about";
+export type SettingsTabId = "env" | "appearance" | "preview3d" | "aboutUpdate";
 
 /** tab 元信息。Record 形态 ⇒ 新增 tab 必须同时给图标与文案键（ADR-303 `Record<TdRotMode, …>`
- *  同款护栏；无它则「加了 id 忘了图标」只在运行时表现为空白按钮）。 */
+ *  同款护栏；无它则「加了 id 忘了图标」只在运行时表现为空白按钮）。
+ *
+ *  2026-09-25 菜单语义收债（两条同源病：槽名答不了「这里能配什么」+ 图标与一级导航撞形）：
+ *   ① `general`→`env`：旧名「常规」是零信息量抽屉（路径/链接/镜像源/存储/启动页无一与
+ *      「常规」同义），键名 `settings.general` 与显示文案同样脱钩 → 一并改名 `settings.env`
+ *      （「环境」= 东西放哪、怎么拉、开机去哪）。**语言随之迁出本 tab**（显示偏好，归外观）。
+ *   ② `about`→`aboutUpdate`：本 tab 除只读展示外含真实设置（更新检查间隔 / 立即检查更新），
+ *      旧名「关于」不回答「这里能配什么」 → 键名 `settings.aboutUpdate`「更新与关于」。
+ *   ③ 图标：`appearance`（圆脸笑脸）同时被一级导航「社区」占用（nav-items.ts），跨两级同形
+ *      = 同一字形两种语义 → 外观 tab 改 `brush`；`controls`（三滑块）挂在没有滑块的常规 tab、
+ *      真正有滑块的相机速度却在 3D tab → 3D 预览改 `voxel`（立方体），常规改 `folder`。 */
 const SETTINGS_TAB_META: Record<SettingsTabId, { icon: string; labelKey: LocaleKey }> = {
-  // 「常规」用 controls（旋钮/调节）而非 settings（齿轮）：齿轮是左侧一级导航的设置入口
+  // 「环境」用 folder（本地落点）而非 settings（齿轮）：齿轮是左侧一级导航的设置入口
   // （nav-items.ts icon:"settings"），页内二级 tab 复用同形 → 「点齿轮」在两种层级间歧义。
-  general: { icon: UI_ICONS.controls, labelKey: "settings.general" },
-  appearance: { icon: UI_ICONS.appearance, labelKey: "settings.appearance" },
-  preview3d: { icon: UI_ICONS.joystick, labelKey: "settings.tab3d" },
-  about: { icon: UI_ICONS.info, labelKey: "settings.about" },
+  env: { icon: UI_ICONS.folder, labelKey: "settings.env" },
+  appearance: { icon: UI_ICONS.brush, labelKey: "settings.appearance" },
+  // 3D 预览用 voxel（立方体）而非 joystick（手柄=输入操作）：本 tab 配的是「看的方式」
+  // （相机/旋转/键位/解析），不是手柄映射
+  preview3d: { icon: UI_ICONS.voxel, labelKey: "settings.tab3d" },
+  aboutUpdate: { icon: UI_ICONS.info, labelKey: "settings.aboutUpdate" },
 };
 
 /**
@@ -78,10 +95,13 @@ function buildSettingsTabs(bodies: Record<SettingsTabId, string>): TabSpec<Setti
 /** 行组步长（ms）：同一 tab 内相邻组的错峰间隔。注：不用 stagger 的默认 30ms——
  *  本页组是一屏可见的大块，30ms 太快看不出节奏（历史沿用自上轮收敛）。 */
 const STG_GROUP_STEP_MS = 60;
-/** 页面级编排起点（ms）：各 tab 的首组入场档位；组内序号经 stagger 派生 */
-const STG_BAND = { appearance: 0, preview3d: 240 } as const;
-/** 第 i 个组的延迟值 */
-const groupDelay = (band: number, i: number): number => band + stagger(i, STG_GROUP_STEP_MS);
+/** 页面级编排起点（ms）：各 tab 的首组入场档位；组内序号经 stagger 派生。
+ *  `Partial<Record<SettingsTabId, number>>` 而非 `as const` 字面量对象——后者不校验键名
+ *  （拼错 tab id 静默变 undefined → 动画档位乱跳）；Partial 允许「只有行组型 tab 才声明」。 */
+const STG_BAND: Partial<Record<SettingsTabId, number>> = { appearance: 0, preview3d: 240 };
+/** 第 i 个组的延迟值（band 缺省 0 = 首屏立即入场） */
+const groupDelay = (band: number | undefined, i: number): number =>
+  (band ?? 0) + stagger(i, STG_GROUP_STEP_MS);
 
 function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
   // 路径三卡为同族组，入场延迟由 stgCards 按序号派生（step 60ms，与其余组的 30ms 区分：
@@ -195,6 +215,9 @@ function renderStgLangSelect(): string {
   );
   // 图标语义校正（2026-09 锐评 P3）：「语言」用 globe（🌍 国际化）而非 web（🌐 网络）——
   // 后者已被下方「下载镜像源」卡占用，同屏两个相同字形表达不同语义是认知噪音。
+  // 归属校正（2026-09-25）：语言是**显示偏好**，原挂在「常规」（零信息量抽屉）里，
+  // 用户找语言的第一直觉是「外观」→ 迁至外观 tab，排在字体组之后、动画卡之前，
+  // delay 150 接入外观 tab 的编排档位（主题0 / 自动60 / 字体60-120 / 语言150 / 动画180）。
   return stgCard(
     UI_ICONS.globe,
     t("settings.language"),
@@ -207,7 +230,7 @@ function renderStgLangSelect(): string {
     {
       header: { titleSize: "md" },
       cardId: "stg-lang-card",
-      delayMs: 240,
+      delayMs: 150,
     },
   );
 }
@@ -413,9 +436,11 @@ function renderStgPreview3d(): string {
   const rotOptions = TD_ROT_MODE.values
     .map((v) => `<option value="${v}">${t(ROT_MODE_LABEL[v])}</option>`)
     .join("\n      ");
-  return `<div class="section-title stg-title">${UI_ICONS.joystick} ${t("settings.preview3d.title")}</div>
-
-<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.preview3d, 0)}ms">
+  // 不再挂「3D 预览」节标题：tab 名即「3D 预览」（settings.tab3d），面板首行再写一遍同名
+  // 大标题是纯装饰——与「解析」节标题同类病，aboutPageBody 已按同口径不挂「关于」标题。
+  // 首组改 B 式 .stg-section 供 16px 顶距：.stg-page 契约 padding:0 20px 16px 顶部零垫，
+  // 原本的顶距一直由这个被删的 section-title 的 padding 隐式提供（删它不补类就贴顶）。
+  return `<div class="settings-group stg-section" style="animation-delay:${groupDelay(STG_BAND.preview3d, 0)}ms">
   <div class="setting-row">
     <label for="td-camspeed" class="label">${UI_ICONS.video} ${t("settings.preview3d.camSpeed")}</label>
     <input type="range" id="td-camspeed" min="${TD_CAM_SPEED.min}" max="${TD_CAM_SPEED.max}" value="${TD_CAM_SPEED.default}" style="flex:1;accent-color:var(--accent,#7c83ff)">
@@ -448,11 +473,11 @@ function renderStgParserWorkers(): string {
   return `<details class="stg-details stg-parser-details">
   <summary class="stg-details-summary">${UI_ICONS.parser} ${t("settings.parser")}</summary>
   <div class="stg-details-body">
-    <div class="settings-group" style="animation-delay:0ms">
+    <div class="settings-group" style="animation-delay:${groupDelay(0, 0)}ms">
       <div class="stg-desc">${t("settings.parserDesc")}</div>
     </div>
 
-    <div class="settings-group" style="animation-delay:60ms">
+    <div class="settings-group" style="animation-delay:${groupDelay(0, 1)}ms">
       <div class="setting-row">
         <span class="label" id="stg-fbx-worker-label">${UI_ICONS.parser} ${t("settings.preview3d.fbxWorker")}</span>
         <label class="stg-label" for="set-fbx-worker" style="gap:8px">
@@ -463,7 +488,7 @@ function renderStgParserWorkers(): string {
       <div class="stg-desc" id="stg-fbx-worker-hint">${t("settings.preview3d.fbxWorkerHint")}</div>
     </div>
 
-    <div class="settings-group" style="animation-delay:120ms">
+    <div class="settings-group" style="animation-delay:${groupDelay(0, 2)}ms">
       <div class="setting-row">
         <span class="label" id="stg-mmd-worker-label">${UI_ICONS.parser} ${t("settings.preview3d.mmdWorker")}</span>
         <label class="stg-label" for="set-mmd-worker" style="gap:8px">
@@ -481,11 +506,11 @@ export function settingsHTML(): string {
   const isViewer = isViewerMode();
   const isWebViewer = isWebPlatform();
 
-  const generalBody = `${renderStgBasicPaths(isViewer, isWebViewer)}
+  const envBody = `${renderStgBasicPaths(isViewer, isWebViewer)}
   ${renderStgStorageCard(isWebViewer)}
-${renderStgDefaultPageSection()}
-${renderStgLangSelect()}`;
+${renderStgDefaultPageSection()}`;
 
+  // 语言卡归「外观」（显示偏好），排在字体与布局之后、行为与动画之前
   const appearanceBody = `<div class="section-title stg-title">${UI_ICONS.moon} ${t("settings.theme.title")}</div>
 
 ${renderStgThemePicker()}
@@ -493,6 +518,8 @@ ${renderStgThemePicker()}
 ${renderStgThemeAuto()}
 
 ${renderStgFontFamily()}
+
+${renderStgLangSelect()}
 
 ${renderStgAnimationSection()}`;
 
@@ -505,11 +532,11 @@ ${renderStgParserWorkers()}`;
     prefix: "stg",
     buttonClass: "stg-tab",
     tabs: buildSettingsTabs({
-      general: `<div class="stg-page">${generalBody}</div>`,
+      env: `<div class="stg-page">${envBody}</div>`,
       appearance: `<div class="stg-page">${appearanceBody}</div>`,
       preview3d: `<div class="stg-page">${previewBody}</div>`,
-      // 关于 + 鸣谢 合并 tab（aboutPageBody 自带 .stg-page 壳，不再外包）
-      about: aboutPageBody(),
+      // 更新与关于（含鸣谢小节，aboutPageBody 自带 .stg-page 壳，不再外包）
+      aboutUpdate: aboutPageBody(),
     }),
   });
   return `<div class="repo-wrap">${bar}${panels}</div>`;

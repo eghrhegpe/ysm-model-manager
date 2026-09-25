@@ -135,13 +135,13 @@ export const en: Record<string, string> = {
   // ── Settings Page ──
   // [ADR-305 D5 reserved key] reserved for diagnostics/settings refactor (ADR-300 S2 hot zone), do not delete
   "settings.title": "Settings",
-  "settings.general": "General",
+  "settings.env": "Environment",
   "settings.appearance": "Appearance",
   "settings.parser": "Parsing",
   "settings.tab3d": "3D Preview",
   "settings.parserDesc":
     "3D model parsing engine settings. Both formats parse on the main thread by default (stable baseline); when enabled, parsing moves into a Web Worker with automatic fallback to the main thread on errors, and you can disable it manually here anytime.",
-  "settings.about": "About",
+  "settings.aboutUpdate": "Updates & about",
   "settings.credits": "Credits",
   "settings.language": "Language",
   "settings.languageDesc": "Switch UI language. Page reload required.",
@@ -268,7 +268,6 @@ export const en: Record<string, string> = {
   "settings.defaultPage.rememberCheck": "Remember and restore the last page",
   "settings.defaultPage.fixed": "Pinned start page",
   "settings.defaultPageHint": "When memory is off, startup always opens the page selected below.",
-  "settings.preview3d.title": "3D Preview Controls",
   "settings.preview3d.camSpeed": "Camera Move Speed",
   "settings.preview3d.camSpeedHint":
     "WASD movement speed in free camera mode; synced with the in-preview slider.",
@@ -351,6 +350,10 @@ export const en: Record<string, string> = {
   "diagnostics.tabAudit": "Audits",
   "diagnostics.pillHealth": "Repo Health",
   "diagnostics.pillTrace": "Load Trace",
+  // aria-label of each sub-pill bar (renderSubBar takes it as a required arg — read aloud by screen readers)
+  "diagnostics.subBarLogs": "Log sub-screens",
+  "diagnostics.subBarBench": "Benchmark modes",
+  "diagnostics.subBarAudit": "Audit items",
   "diagnostics.viewerDesktopOnlyNotice":
     "Benchmarks and repository audits are available in the desktop app only",
   "diagnostics.opsLog": "Operation Log",

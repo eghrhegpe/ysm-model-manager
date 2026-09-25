@@ -137,13 +137,13 @@ export const ja: Record<string, string> = {
   // ── Settings Page ──
   // [ADR-305 D5 reserved key] reserved for diagnostics/settings refactor (ADR-300 S2 hot zone), do not delete
   "settings.title": "設定",
-  "settings.general": "一般",
+  "settings.env": "環境",
   "settings.appearance": "外観",
   "settings.parser": "パーサー",
   "settings.tab3d": "3D プレビュー",
   "settings.parserDesc":
     "3D モデル解析エンジンの設定。両形式とも既定ではメインスレッドで解析（安定ベースライン）。有効にすると解析は Web Worker に移り、異常時は自動でメインスレッドにフォールバック。ここでいつでも手動で無効化できます。",
-  "settings.about": "概要",
+  "settings.aboutUpdate": "更新と概要",
   "settings.credits": "クレジット",
   "settings.language": "言語",
   "settings.languageDesc": "UIの言語を切り替えます。ページの再読み込みが必要です。",
@@ -270,7 +270,6 @@ export const ja: Record<string, string> = {
   "settings.defaultPage.rememberCheck": "前回開いていたページを記憶して復元する",
   "settings.defaultPage.fixed": "起動ページを固定",
   "settings.defaultPageHint": "記憶をオフにすると、起動時は下で選んだページを常に開きます。",
-  "settings.preview3d.title": "3D プレビュー操作",
   "settings.preview3d.camSpeed": "カメラ移動速度",
   "settings.preview3d.camSpeedHint":
     "フリーカメラ（自分モード）での WASD 移動速度。プレビュー内スライダーと同期。",
@@ -353,6 +352,10 @@ export const ja: Record<string, string> = {
   "diagnostics.tabAudit": "監査",
   "diagnostics.pillHealth": "リポジトリ健全性",
   "diagnostics.pillTrace": "ロード解析",
+  // 子ピル行の aria-label（renderSubBar の必須引数。スクリーンリーダーが読み上げる）
+  "diagnostics.subBarLogs": "ログのサブ画面",
+  "diagnostics.subBarBench": "ベンチマークモード",
+  "diagnostics.subBarAudit": "監査項目",
   "diagnostics.viewerDesktopOnlyNotice":
     "ベンチマークとリポジトリ監査はデスクトップ版でのみ利用できます",
   "diagnostics.opsLog": "操作ログ",

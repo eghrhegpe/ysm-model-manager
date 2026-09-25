@@ -29,7 +29,10 @@ export function navItems(): NavItem[] {
   return [
     { id: "repository", icon: "book", key: "nav.repository" },
     ...(isViewer ? [] : [{ id: "instances", icon: "game", key: "nav.instances" } as NavItem]),
-    { id: "community", icon: "appearance", key: "nav.community" },
+    // 图标曾用 appearance（圆脸笑脸）：它与设置页二级 tab「外观」引用同一个 UI_ICONS 常量
+    // → 左侧一级「社区」与设置页内「外观」跨两级同形、两种语义（与「点齿轮层级歧义」同类病）。
+    // 社区 = 一群人，改 users，字形与语义同时归位。
+    { id: "community", icon: "users", key: "nav.community" },
     { id: "github", icon: "parser", key: "nav.workshop" },
     { id: "diagnostics", icon: "tools", key: "nav.diagnostics" },
     { id: "settings", icon: "settings", key: "nav.settings" },

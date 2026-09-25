@@ -120,8 +120,10 @@ const STG_GROUP_STEP_MS = 60;
  *  （拼错 tab id 静默变 undefined → 动画档位乱跳）；Partial 允许「只有行组型 tab 才声明」。
  *  ⚠️ preview3d 恒 0（2026-10 收债）：原 240 是单页编排时代的历史锚——同 tab 底部「解析」
  *  details 组吃 band 0（0/60/120），切 tab 时底部先亮、顶部行组 240/300/360 才入场（编排倒挂），
- *  且每次切 tab 白等 240ms 才见首行。两族统一经 STG_BAND.preview3d 同源取 0，0/60/120 同步。 */
-const STG_BAND: Partial<Record<SettingsTabId, number>> = { appearance: 0, preview3d: 0 };
+ *  且每次切 tab 白等 240ms 才见首行。两族统一经 STG_BAND.preview3d 同源取 0，0/60/120 同步。
+ *  ⚠️ appearance 已整体迁入 STG_APPEARANCE_DELAY（2026-10：行组+卡组+单卡统一一张表），
+ *  本表仅余 preview3d 一族。 */
+const STG_BAND: Partial<Record<SettingsTabId, number>> = { preview3d: 0 };
 /** 第 i 个组的延迟值（band 缺省 0 = 首屏立即入场） */
 const groupDelay = (band: number | undefined, i: number): number =>
   (band ?? 0) + stagger(i, STG_GROUP_STEP_MS);
@@ -130,14 +132,23 @@ const groupDelay = (band: number | undefined, i: number): number =>
 // 病：此前各 tab 的单卡 / 卡组入场档位散为裸字面量（env 的 storage 180 / defaultPage 210、
 // appearance 的 lang 150 / animation 180 / 字体组 60…），靠注释口头约定。加一张卡「下一个
 // 档填多少」无规则可循，是自动新增漂移点（2026-10 锐评 P2）。
-// 治：每 tab 一张命名档表——「加一张卡」= 查表填下一个语义档（撞车风险降为查表），
-// 数值与改前逐位一致 ⇒ 零视觉变化。⚠️ 这是「现值收口」非「节奏统一」：把 env 的
-// 180/210 归一成「tab 内组序号 × 统一 STEP」会改变现有节奏，属视觉决策，留 ADR 拍板。
-// 行组档（theme/themeAuto/preview3d 行组）已由 STG_BAND + STG_GROUP_STEP_MS 收口，不在此表。
+// 治：每 tab 一张命名档表——「加一张卡」= 查表填下一个语义档（撞车风险降为查表）。
+// ⚠️ 这是「现值收口」非「节奏统一」：把 env 的 180/210 归一成「tab 内组序号 × 统一 STEP」
+// 会改变现有节奏，属视觉决策，留 ADR 拍板。
+// ⚠️ appearance 档表含行组（theme/themeAuto）：2026-10 修撞车——原 auto 行组走
+// STG_BAND 派生（60ms）与字体组首卡（startMs 60）同刻入场（两套机制互不感知），
+// 现将 appearance 全部单元（行组+卡组+单卡）收进一张表并错开档位（auto 30）。
 /** env tab 单卡档（基础路径卡组 0 起步由 stgCards 内部派生，不在此表） */
 const STG_ENV_DELAY = { storage: 180, defaultPage: 210 } as const;
-/** appearance tab 单卡档 + 字体组起点档（主题 0 / 自动 60 经 STG_BAND.appearance 行组派生） */
-const STG_APPEARANCE_DELAY = { fontFamily: 60, lang: 150, animation: 180 } as const;
+/** appearance tab 编排档（行组 theme/themeAuto + 卡组 fontFamily + 单卡 lang/animation）：
+ *  全单元同表 ⇒ 档位唯一性可断言（tpl.test.ts），加单元查表填档不撞车 */
+const STG_APPEARANCE_DELAY = {
+  theme: 0,
+  themeAuto: 30,
+  fontFamily: 60,
+  lang: 150,
+  animation: 180,
+} as const;
 
 /** 设置页平台态：桌面 / 安卓查看器 / 网页查看器（isViewer + isWebViewer 两 flag 表达三态，集中归一） */
 type SettingsPlatform = "desktop" | "androidViewer" | "webViewer";
@@ -463,7 +474,7 @@ function renderStgThemePicker(): string {
     .join("");
 
   return `<!-- theme cards: dots bound to --bg/--accent/--bd via .theme-x scope -->
-<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.appearance, 0)}ms">
+<div class="settings-group" style="animation-delay:${STG_APPEARANCE_DELAY.theme}ms">
   <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
     <span class="label">${UI_ICONS.appearance} ${t("settings.theme.select")}</span>
     <div class="theme-picker" id="theme-picker">${cards}</div>
@@ -478,7 +489,7 @@ function renderStgThemeAuto(): string {
     (m) => `<option value="${m}">${t(THEME_AUTO_LABEL[m])}</option>`,
   ).join("\n      ");
   return `<!-- 自动切换：独立一栏 -->
-<div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.appearance, 1)}ms">
+<div class="settings-group" style="animation-delay:${STG_APPEARANCE_DELAY.themeAuto}ms">
   <div class="setting-row">
     <label for="theme-auto" class="label">${UI_ICONS.clock} ${t("settings.theme.autoTitle")}</label>
     <select id="theme-auto" class="stg-select" style="width:auto">

@@ -9,9 +9,10 @@ import { UPDATE_CHECK_INTERVALS, type UpdateCheckInterval } from "./settings-sch
 import { stgCard, stgCards } from "./stg-card.ts";
 
 // ===== 单卡 / 卡组「页面级编排档」命名常量（去魔数；口径同 tpl-settings.ts|STG_ENV_DELAY）=====
-// aboutUpdate tab 各入场单元档位：versionCard 0 / 介绍组 60 / 引导组 120 / 鸣谢组 60。
-// 数值与改前逐位一致（零视觉变化）；「加一组」= 查表填下一个语义档。
-const STG_ABOUT_DELAY = { version: 0, intro: 60, guide: 120, credits: 60 } as const;
+// aboutUpdate tab 各入场单元档位：versionCard 0 / 介绍组 60 / 引导组 150 / 鸣谢组 60。
+// ⚠️ guide 原 120 与 intro 组第三卡（60+2×30=120）撞车（两个卡组各自 startMs 互不感知），
+// 2026-10 修：120→150（150/180/210 与 intro 60/90/120 全错开）；「加一组」= 查表填档。
+const STG_ABOUT_DELAY = { version: 0, intro: 60, guide: 150, credits: 60 } as const;
 
 // 更新检查间隔（ms）→ i18n 键（ADR-307 D3 扩编消费面：option 值域归 settings-schema，
 // 文案键归本面——Record<UpdateCheckInterval,…> 形态 schema 加档位此处编译期报错）。

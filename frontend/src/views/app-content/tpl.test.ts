@@ -349,6 +349,37 @@ describe("app-content 模板", () => {
     expect(Math.max(...delays)).toBeLessThanOrEqual(120);
   });
 
+  it("设置页各 tab 顶层入场单元延迟互不重复（2026-10 档位唯一性断言：防两机制撞车）", () => {
+    // 病：编排档由两套机制各算各的（STG_BAND 行组 / stgCards 卡组 startMs），曾出现
+    // appearance「主题自动 60」与「字体组首卡 60」同刻、about「intro 第三卡 120」与
+    // 「guide 首卡 120」同刻——同屏两个单元同时淡入（无编译期护栏）。
+    // 断言口径：只统计**顶层可见单元**（.stg-card / .settings-group，且不在 <details> 内）——
+    // 折叠区（解析/鸣谢 details）默认收起、入场动画仅在展开时播，不参与首屏竞争。
+    // 实现：按 tab 切片 → 剔除 <details>…</details> 内容 → 收集 animation-delay 断言无重复。
+    const html = settingsHTML();
+    const tabs: Array<[name: string, anchor: string, nextAnchor: string]> = [
+      ["env", "stg-tab-env", "stg-tab-appearance"],
+      ["appearance", "stg-tab-appearance", "stg-tab-preview3d"],
+      ["preview3d", "stg-tab-preview3d", "stg-tab-aboutUpdate"],
+      // aboutUpdate 在面板序列末位（无下一面板锚），切片取至面板区结束
+      ["aboutUpdate", "stg-tab-aboutUpdate", ""],
+    ];
+    for (const [name, anchor, nextAnchor] of tabs) {
+      const start = html.indexOf(`id="${anchor}"`);
+      expect(start, `${name} tab 面板缺失`).toBeGreaterThan(-1);
+      const sliceEnd = nextAnchor ? html.indexOf(`id="${nextAnchor}"`, start) : undefined;
+      const panel = html.slice(start, sliceEnd && sliceEnd > start ? sliceEnd : undefined);
+      // 剔除 <details> 折叠区（解析/鸣谢内部动画不在首屏竞争域）
+      const withoutDetails = panel.replace(/<details[\s\S]*?<\/details>/g, "");
+      const delays = [...withoutDetails.matchAll(/animation-delay:(\d+)ms/g)].map((m) => Number(m[1]));
+      const dup = [...new Set(delays.filter((d, i) => delays.indexOf(d) !== i))];
+      expect(
+        dup,
+        `${name} tab 顶层入场单元存在同刻档位（重复 ${dup.join("/")}ms）：查命名档表错开`,
+      ).toEqual([]);
+    }
+  });
+
   it("链接模式 option/hint 由 LINK_MODES 派生：默认 copy selected，symlink hint 带错误色 span（2026-10 收债）", () => {
     const html = settingsHTML();
     // option 值域随 schema 枚举：缺任一模式即「下拉框静默没有」（与镜像源同款半截接线病）。

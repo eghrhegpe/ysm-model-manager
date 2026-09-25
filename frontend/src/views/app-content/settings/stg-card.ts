@@ -91,3 +91,43 @@ export function stgCards(
     )
     .join("");
 }
+
+// ===== 页面级编排：有序单元表按声明顺序自动派生档位（2026-10 方案 A 落地）=====
+// 病（锐评 P2 深化）：此前编排档由三套机制各算各的（STG_BAND 行组 / stgCards 卡组
+// startMs / 单卡 delayMs），互不感知 → appearance「主题自动 60」与「字体组首卡 60」
+// 同刻、about「intro 第三卡 120」与「guide 首卡 120」同刻。命名档表（STG_*_DELAY）
+// 只治「裸字面量」，未治「两套步长 + 手填档位」。
+// 治：本编排器接管——每 tab 一张有序单元表，按声明顺序自动累加槽位：
+//   单元起始 = 前序累计；单卡/行组占 1 槽（+step），卡组占 (n-1)×cardStep+step 槽
+//   （组内末卡之后恒留 step 空隙给下一组，故任何卡数都零撞车）。
+//   加卡/加组 = 表里加一项，顺序即档位——零思考、零手算、零撞车。
+// 统一步长：组间恒 step（默认 60，即旧 STG_GROUP_STEP_MS）；组内步长由卡组自声
+// （默认 30，旧 STG_CARD_STEP_MS；大卡组可声明 60——语义「卡组内视觉节奏」，与组间 60 不混）。
+
+/** 编排单元声明：render 接收本单元（组）的起始延迟（ms），返回该单元 HTML。 */
+export interface StgUnitSpec {
+  /** 渲染本单元：接收派生好的起始延迟，内部对行组写 animation-delay / 对卡组作 stgCards startMs。 */
+  render: (startMs: number) => string;
+  /** 卡组卡数（组内序号 × cardStep 派生）；行组/单卡省略（按 1 槽）。 */
+  cardCount?: number;
+  /** 卡组组内步长（默认 30）；仅当 cardCount 声明时有效。 */
+  cardStep?: number;
+}
+
+/**
+ * 按声明顺序派生出每个单元的起始延迟并渲染。
+ * 槽位规则：起始 = 前序累计；单卡/行组推进 step；卡组推进 (n-1)×cardStep + step。
+ * 返回各单元 HTML 以换行拼接（与手写模板的换行形态一致）。
+ */
+export function stgUnits(units: readonly StgUnitSpec[], opts: { step?: number } = {}): string {
+  const step = opts.step ?? 60;
+  let startMs = 0;
+  const parts: string[] = [];
+  for (const u of units) {
+    parts.push(u.render(startMs));
+    const n = u.cardCount ?? 1;
+    const cardStep = u.cardStep ?? STG_CARD_STEP_MS;
+    startMs += (n - 1) * cardStep + step;
+  }
+  return parts.join("\n");
+}

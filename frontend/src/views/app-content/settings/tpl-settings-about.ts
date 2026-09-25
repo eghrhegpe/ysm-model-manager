@@ -6,13 +6,7 @@ import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { GH_DOCS, GH_RELEASES, GH_REPO } from "@/utils/base/pure/gh-links.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { UPDATE_CHECK_INTERVALS, type UpdateCheckInterval } from "./settings-schema.ts";
-import { stgCard, stgCards } from "./stg-card.ts";
-
-// ===== 单卡 / 卡组「页面级编排档」命名常量（去魔数；口径同 tpl-settings.ts|STG_ENV_DELAY）=====
-// aboutUpdate tab 各入场单元档位：versionCard 0 / 介绍组 60 / 引导组 150 / 鸣谢组 60。
-// ⚠️ guide 原 120 与 intro 组第三卡（60+2×30=120）撞车（两个卡组各自 startMs 互不感知），
-// 2026-10 修：120→150（150/180/210 与 intro 60/90/120 全错开）；「加一组」= 查表填档。
-const STG_ABOUT_DELAY = { version: 0, intro: 60, guide: 150, credits: 60 } as const;
+import { stgCard, stgCards, stgUnits } from "./stg-card.ts";
 
 // 更新检查间隔（ms）→ i18n 键（ADR-307 D3 扩编消费面：option 值域归 settings-schema，
 // 文案键归本面——Record<UpdateCheckInterval,…> 形态 schema 加档位此处编译期报错）。
@@ -42,7 +36,13 @@ function renderUpdateCheckOptions(): string {
  *  不等宽的两列改用 flex 比例经 cardStyle 声明（.stg-card 自带 min-width:0 保证可压缩），
  *  并加 flex-wrap + 弹性基准让窄屏回落单列（原固定 flex:2/flex:1 在窄屏会挤爆）。 */
 function aboutSection(): string {
-  const versionCard = stgCard(
+  // 2026-10 方案 A：整段改由 stgUnits 编排（声明顺序即档位）——版本卡 → 介绍卡组 →
+  // 引导卡组；卡组占 (n-1)×step+step 槽，组间恒留 60ms 空隙，末卡不撞下一组。
+  // 槽位自动派生结果：版本 0 / 介绍 60·90 / 引导 150·180（原 STG_ABOUT_DELAY 手填
+  // 值 0/60/150 正是这两组各占 (2-1)×30+60 槽的自然结果——手填表退役，规则接管）。
+  const versionCard = (startMs: number): string =>
+    `<div class="stg-grid stg-section" style="margin-bottom:12px">
+  ${stgCard(
     UI_ICONS.info,
     t("about.appName"),
     `<div style="display:flex;flex-direction:column;gap:8px">
@@ -59,12 +59,15 @@ function aboutSection(): string {
         titleSize: "md",
         actions: `<span id="set-version" style="font-size:var(--fs-lg);font-weight:700;color:var(--accent)">${t("common.loading")}</span>`,
       },
-      delayMs: STG_ABOUT_DELAY.version,
+      delayMs: startMs,
     },
-  );
+  )}
+</div>`;
 
-  // 介绍两卡 / 链接两卡各为同族组，延迟按序号派生（startMs 60 / 120 是本页编排档位）
-  const introCards = stgCards(
+  // 介绍两卡 / 链接两卡各为同族组，延迟由 stgUnits 注入起始 + 组内序号 × step 派生
+  const introCards = (startMs: number): string =>
+    `<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+  ${stgCards(
     [
       {
         icon: UI_ICONS.tools,
@@ -98,10 +101,13 @@ function aboutSection(): string {
         cardStyle: "flex:1 1 220px",
       },
     ],
-    { startMs: STG_ABOUT_DELAY.intro },
-  );
+    { startMs },
+  )}
+</div>`;
 
-  const guideCards = stgCards(
+  const guideCards = (startMs: number): string =>
+    `<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+  ${stgCards(
     [
       {
         icon: UI_ICONS.package,
@@ -129,20 +135,15 @@ function aboutSection(): string {
         cardStyle: "flex:1 1 220px",
       },
     ],
-    { startMs: STG_ABOUT_DELAY.guide },
-  );
-
-  return `<div class="stg-grid stg-section" style="margin-bottom:12px">
-  ${versionCard}
-</div>
-
-<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">
-  ${introCards}
-</div>
-
-<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px">
-  ${guideCards}
+    { startMs },
+  )}
 </div>`;
+
+  return stgUnits([
+    { render: versionCard },
+    { cardCount: 2, render: introCards },
+    { cardCount: 2, render: guideCards },
+  ]);
 }
 
 /** 灵感来源（改这里加项；i18n 见 credits.* + 对应外链） */
@@ -191,6 +192,7 @@ const CONTRIBUTORS = [
 
 /** 灵感来源卡片组：stg-grid 平铺 + stgCard 正典卡（设置页样式范式契约） */
 function renderInspirations(): string {
+  // 折叠区（stg-credits-details）展开时才播内部动画，起点恒 0——不参与顶层编排竞争。
   // 延迟由 stgCards 按序号派生（step 60 与原 `60 * (i + 1)` 手算值逐位一致，节奏不变）
   const cards = stgCards(
     INSPIRATIONS.map((it) => {
@@ -204,7 +206,7 @@ function renderInspirations(): string {
         header: { titleSize: "md" },
       };
     }),
-    { startMs: STG_ABOUT_DELAY.credits, step: 60 },
+    { step: 60 },
   );
   return `<div class="section-title stg-title">${UI_ICONS.target} ${t("credits.inspiration")}</div>
 <div class="stg-grid">${cards}</div>`;
@@ -222,7 +224,7 @@ function renderContributors(): string {
     </div>`,
       header: { titleSize: "md" },
     })),
-    { startMs: STG_ABOUT_DELAY.credits, step: 60 },
+    { step: 60 },
   );
   return `<div class="section-title stg-title">${UI_ICONS.thanks} ${t("credits.special")}</div>
 <div class="stg-grid">${cards}</div>`;

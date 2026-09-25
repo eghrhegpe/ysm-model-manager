@@ -53,7 +53,7 @@ import {
   MIRROR_SOURCES,
   type MirrorSource,
 } from "./settings-schema.ts";
-import { type StgCardSpec, stgCard, stgCards } from "./stg-card.ts";
+import { type StgCardSpec, stgCard, stgCards, stgUnits } from "./stg-card.ts";
 import { aboutPageBody } from "./tpl-settings-about.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -111,44 +111,17 @@ function buildSettingsTabs(bodies: Record<SettingsTabId, string>): TabSpec<Setti
   }));
 }
 
-// ===== 组入场延迟编排（去魔数；派生值与改前逐位一致 ⇒ 零视觉变化）=====
-/** 行组步长（ms）：同一 tab 内相邻组的错峰间隔。注：不用 stagger 的默认 30ms——
- *  本页组是一屏可见的大块，30ms 太快看不出节奏（历史沿用自上轮收敛）。 */
+// ===== 组入场延迟编排（2026-10 方案 A：声明顺序即档位）=====
+// 顶层单元编排已整体迁入 stg-card.ts|stgUnits（有序单元表按声明顺序自动累加槽位派生，
+// 加卡/加组 = 表加一项，零手算、零撞车）。本表仅余 preview3d「解析」折叠区的**内部**
+// 行组档：details 默认收起、展开时才播，内部三行组按 band 0 + 60ms 步长错峰
+// （0/60/120，与顶部三卡同节奏，2026-10 收债后不再有 240ms 残锚/编排倒挂）。
+/** 折叠区内部行组步长（ms）：解析 details 内三行组的错峰间隔。 */
 const STG_GROUP_STEP_MS = 60;
-/** 页面级编排起点（ms）：各 tab 的首组入场档位；组内序号经 stagger 派生。
- *  `Partial<Record<SettingsTabId, number>>` 而非 `as const` 字面量对象——后者不校验键名
- *  （拼错 tab id 静默变 undefined → 动画档位乱跳）；Partial 允许「只有行组型 tab 才声明」。
- *  ⚠️ preview3d 恒 0（2026-10 收债）：原 240 是单页编排时代的历史锚——同 tab 底部「解析」
- *  details 组吃 band 0（0/60/120），切 tab 时底部先亮、顶部行组 240/300/360 才入场（编排倒挂），
- *  且每次切 tab 白等 240ms 才见首行。两族统一经 STG_BAND.preview3d 同源取 0，0/60/120 同步。
- *  ⚠️ appearance 已整体迁入 STG_APPEARANCE_DELAY（2026-10：行组+卡组+单卡统一一张表），
- *  本表仅余 preview3d 一族。 */
 const STG_BAND: Partial<Record<SettingsTabId, number>> = { preview3d: 0 };
 /** 第 i 个组的延迟值（band 缺省 0 = 首屏立即入场） */
 const groupDelay = (band: number | undefined, i: number): number =>
   (band ?? 0) + stagger(i, STG_GROUP_STEP_MS);
-
-// ===== 单卡 / 卡组「页面级编排档」命名常量（去魔数：渲染函数引语义名，不写裸 ms）=====
-// 病：此前各 tab 的单卡 / 卡组入场档位散为裸字面量（env 的 storage 180 / defaultPage 210、
-// appearance 的 lang 150 / animation 180 / 字体组 60…），靠注释口头约定。加一张卡「下一个
-// 档填多少」无规则可循，是自动新增漂移点（2026-10 锐评 P2）。
-// 治：每 tab 一张命名档表——「加一张卡」= 查表填下一个语义档（撞车风险降为查表）。
-// ⚠️ 这是「现值收口」非「节奏统一」：把 env 的 180/210 归一成「tab 内组序号 × 统一 STEP」
-// 会改变现有节奏，属视觉决策，留 ADR 拍板。
-// ⚠️ appearance 档表含行组（theme/themeAuto）：2026-10 修撞车——原 auto 行组走
-// STG_BAND 派生（60ms）与字体组首卡（startMs 60）同刻入场（两套机制互不感知），
-// 现将 appearance 全部单元（行组+卡组+单卡）收进一张表并错开档位（auto 30）。
-/** env tab 单卡档（基础路径卡组 0 起步由 stgCards 内部派生，不在此表） */
-const STG_ENV_DELAY = { storage: 180, defaultPage: 210 } as const;
-/** appearance tab 编排档（行组 theme/themeAuto + 卡组 fontFamily + 单卡 lang/animation）：
- *  全单元同表 ⇒ 档位唯一性可断言（tpl.test.ts），加单元查表填档不撞车 */
-const STG_APPEARANCE_DELAY = {
-  theme: 0,
-  themeAuto: 30,
-  fontFamily: 60,
-  lang: 150,
-  animation: 180,
-} as const;
 
 /** 设置页平台态：桌面 / 安卓查看器 / 网页查看器（isViewer + isWebViewer 两 flag 表达三态，集中归一） */
 type SettingsPlatform = "desktop" | "androidViewer" | "webViewer";
@@ -302,13 +275,14 @@ const BASIC_PATH_CARD_SPECS: ReadonlyArray<{
   { id: "mirror", spec: mirrorCardSpec },
 ];
 
-function renderStgBasicPaths(p: SettingsPlatform): string {
+function renderStgBasicPaths(p: SettingsPlatform, startMs: number): string {
   // 路径三卡为同族组，入场延迟由 stgCards 按（平台过滤后的）序号派生（step 60ms，与其余组
-  // 的 30ms 区分：首屏三张大卡节奏放缓一档）。2026-09 前为手填 0/60/120 字面量。
+  // 的 30ms 区分：首屏三张大卡节奏放缓一档）。2026-09 前为手填 0/60/120 字面量；
+  // 2026-10 起 startMs 由 stgUnits 编排器按声明顺序注入（本 tab 首单元恒 0）。
   const specs = BASIC_PATH_CARD_SPECS.filter((it) => cardSupportedOn(it.id, p)).map((it) =>
     it.spec(),
   );
-  const cards = stgCards(specs, { step: 60 });
+  const cards = stgCards(specs, { startMs, step: 60 });
   // viewer 模式（安卓 + 网页版）段标题统一为「文件来源」，桌面为「路径配置」——
   // 与「这里是可配置路径 vs 这里只有来源入口」语义对齐
   const title = t(p !== "desktop" ? "settings.paths.sourceTitle" : "settings.paths.title");
@@ -326,7 +300,7 @@ function renderStgBasicPaths(p: SettingsPlatform): string {
   </div>`;
 }
 
-function renderStgStorageCard(p: SettingsPlatform): string {
+function renderStgStorageCard(p: SettingsPlatform, startMs: number): string {
   return p === "webViewer"
     ? stgCard(
         UI_ICONS.folder,
@@ -338,7 +312,7 @@ function renderStgStorageCard(p: SettingsPlatform): string {
           header: { spaceBetween: false, titleSize: "base" },
           cardId: "stg-web-repo-card",
           marginTop: 8,
-          delayMs: STG_ENV_DELAY.storage,
+          delayMs: startMs,
         },
       )
     : stgCard(
@@ -356,12 +330,12 @@ function renderStgStorageCard(p: SettingsPlatform): string {
           },
           cardId: "stg-files-card",
           marginTop: 8,
-          delayMs: STG_ENV_DELAY.storage,
+          delayMs: startMs,
         },
       );
 }
 
-function renderStgLangSelect(): string {
+function renderStgLangSelect(startMs: number): string {
   // 升格为 .stg-card 正典卡（设置页样式范式契约待修债 #1）：原手写 <div class="stg-card"> 未走
   // stgCard() 构造器，hdr 缺失、间距/圆角与正典卡不一致。单卡场景：hdr 标题即「语言」，
   // body 内 select+描述，不再另挂 .section-title（避免标题重复，与动画卡同构）。
@@ -388,7 +362,7 @@ function renderStgLangSelect(): string {
     {
       header: { titleSize: "md" },
       cardId: "stg-lang-card",
-      delayMs: STG_APPEARANCE_DELAY.lang,
+      delayMs: startMs,
     },
   );
 }
@@ -455,7 +429,7 @@ const DISPLAY_FONT_LABEL: Record<DisplayFont, LocaleKey> = {
   system: "settings.font.systemFont",
 };
 
-function renderStgThemePicker(): string {
+function renderStgThemePicker(startMs: number): string {
   const cards = THEME_VALID.filter((theme) => theme !== "system")
     .map((theme) => {
       const icon = UI_ICONS[THEME_ICON[theme] as keyof typeof UI_ICONS] ?? UI_ICONS.dot;
@@ -474,7 +448,7 @@ function renderStgThemePicker(): string {
     .join("");
 
   return `<!-- theme cards: dots bound to --bg/--accent/--bd via .theme-x scope -->
-<div class="settings-group" style="animation-delay:${STG_APPEARANCE_DELAY.theme}ms">
+<div class="settings-group" style="animation-delay:${startMs}ms">
   <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px">
     <span class="label">${UI_ICONS.appearance} ${t("settings.theme.select")}</span>
     <div class="theme-picker" id="theme-picker">${cards}</div>
@@ -482,14 +456,14 @@ function renderStgThemePicker(): string {
 </div>`;
 }
 
-function renderStgThemeAuto(): string {
+function renderStgThemeAuto(startMs: number): string {
   // 自动模式 option 由 theme-core|THEME_AUTO_VALID 派生（白名单单一事实源；文案键经
   // THEME_AUTO_LABEL Record——加模式此处编译期报错，同 MIRROR_UI 口径）。
   const autoOptions = THEME_AUTO_VALID.map(
     (m) => `<option value="${m}">${t(THEME_AUTO_LABEL[m])}</option>`,
   ).join("\n      ");
   return `<!-- 自动切换：独立一栏 -->
-<div class="settings-group" style="animation-delay:${STG_APPEARANCE_DELAY.themeAuto}ms">
+<div class="settings-group" style="animation-delay:${startMs}ms">
   <div class="setting-row">
     <label for="theme-auto" class="label">${UI_ICONS.clock} ${t("settings.theme.autoTitle")}</label>
     <select id="theme-auto" class="stg-select" style="width:auto">
@@ -499,7 +473,7 @@ function renderStgThemeAuto(): string {
 </div>`;
 }
 
-function renderStgFontFamily(): string {
+function renderStgFontFamily(startMs: number): string {
   // 三栏裸样式手写卡升格为 .stg-grid + .stgCard 正典卡（设置页样式范式契约待修债 #2）：
   // 原 <div style="background:var(--surf);border:..."> 三处间距/圆角/动画各自为政，已漂移；
   // 现与路径三卡同构（stg-grid 三列平铺，各卡 hdr 小标题 + body 控件）。
@@ -559,7 +533,7 @@ function renderStgFontFamily(): string {
         cardId: "stg-font-density-card",
       },
     ],
-    { startMs: STG_APPEARANCE_DELAY.fontFamily },
+    { startMs },
   );
   return `<div class="section-title stg-title">${UI_ICONS.geometry} ${t("settings.font.title")}</div>
 <div class="stg-grid">
@@ -567,7 +541,7 @@ function renderStgFontFamily(): string {
 </div>`;
 }
 
-function renderStgAnimationSection(): string {
+function renderStgAnimationSection(startMs: number): string {
   // 开关放卡片标题行（actions，与「游戏根目录 / 自动搜索」同构），
   // body 只留说明——曾左右各写一句同义描述（信息量 1、占用 2，重复描述）。
   const animCard = stgCard(
@@ -581,7 +555,7 @@ function renderStgAnimationSection(): string {
       </label>`,
       },
       cardId: "stg-anim-card",
-      delayMs: STG_APPEARANCE_DELAY.animation,
+      delayMs: startMs,
     },
   );
 
@@ -589,7 +563,7 @@ function renderStgAnimationSection(): string {
   return `<div class="stg-section">${animCard}</div>`;
 }
 
-function renderStgDefaultPageSection(): string {
+function renderStgDefaultPageSection(startMs: number): string {
   // 启动默认页：升格为 .stg-card（与「游戏根目录」「文件存储」「语言」同属卡片口径）——
   // 原用 .settings-group 裸行组，无卡片框、两侧 padding:0 16px 缩进，夹在一堆 .stg-card
   // 之间视觉断裂（跨口径混搭）。body 内用 .setting-row 保持行内两端对齐。
@@ -615,7 +589,7 @@ function renderStgDefaultPageSection(): string {
       </label>`,
       },
       cardId: "stg-default-page-card",
-      delayMs: STG_ENV_DELAY.defaultPage,
+      delayMs: startMs,
     },
   );
 
@@ -630,7 +604,7 @@ const ROT_MODE_LABEL: Record<TdRotMode, LocaleKey> = {
   free: "settings.preview3d.free",
 };
 
-function renderStgPreview3d(): string {
+function renderStgPreview3d(startMs: number): string {
   // 2026-10 卡片流收口：三个 3D 设置行（相机速度 / 旋转模式 / 键位映射）自裸 .settings-group
   // 行组升格为 .stg-card 正典卡（与 env / appearance / about 各 tab 卡片口径统一）——
   // 行组范式「左右边缘与卡片/标题不齐 + 背景厚度不一」的视觉断裂收口。
@@ -640,7 +614,8 @@ function renderStgPreview3d(): string {
   //      厚重卡片背景，与 content-stg.ts|.stg-keybind-row 契约一致）；
   //   ③ 值域 / 默认值 / 枚举仍消费 settings-schema（ADR-303）：min/max/value/rotOptions
   //      全部 schema 派生，升卡不改数据面；
-  //   ④ 入场延迟仍走 STG_BAND.preview3d（行组档位 0/60/120）——升卡不重排节奏。
+  //   ④ 入场延迟 2026-10 起由 stgUnits 编排器注入（本 tab 首单元 startMs=0，三卡组内
+  //      step 60 → 0/60/120 大卡节奏，与升卡前 STG_BAND.preview3d 档位一致，不重排节奏）。
   // 测试钩子（td-camspeed / td-rotmode / td-keymap-grid / td-keymap-reset）全保留。
   // 旋转模式 option 由 schema 枚举派生（ROT_MODE_LABEL Record 锁文案键域，同 ADR-303 §2）。
   const rotOptions = TD_ROT_MODE.values
@@ -658,7 +633,7 @@ function renderStgPreview3d(): string {
     {
       header: { spaceBetween: false, titleSize: "md" },
       cardId: "stg-camspeed-card",
-      cardStyle: `animation-delay:${groupDelay(STG_BAND.preview3d, 0)}ms`,
+      cardStyle: `animation-delay:${startMs}ms`,
     },
   );
 
@@ -675,7 +650,7 @@ function renderStgPreview3d(): string {
       header: { spaceBetween: false, titleSize: "md" },
       cardId: "stg-rotmode-card",
       marginTop: 8,
-      cardStyle: `animation-delay:${groupDelay(STG_BAND.preview3d, 1)}ms`,
+      cardStyle: `animation-delay:${startMs + 60}ms`,
     },
   );
 
@@ -691,7 +666,7 @@ function renderStgPreview3d(): string {
       header: { spaceBetween: false, titleSize: "md" },
       cardId: "stg-keymap-card",
       marginTop: 8,
-      cardStyle: `animation-delay:${groupDelay(STG_BAND.preview3d, 2)}ms`,
+      cardStyle: `animation-delay:${startMs + 120}ms`,
     },
   );
 
@@ -739,27 +714,42 @@ export function settingsHTML(): string {
   const isViewer = isViewerMode();
   const p = resolveSettingsPlatform(isViewer, isWebPlatform());
 
-  const envBody = `${renderStgBasicPaths(p)}
-  ${renderStgStorageCard(p)}
-${renderStgDefaultPageSection()}`;
+  // ===== 各 tab 按有序单元表编排（stgUnits：声明顺序即档位，2026-10 方案 A）=====
+  // 渲染函数不再手填 startMs/delayMs——stgUnits 按声明顺序自动累加槽位派生并传入
+  // render(startMs)。加卡/加组 = 表加一项，零手算、零撞车（槽位规则见 stg-card.ts|stgUnits）。
+  // 环境 tab：路径卡组（桌面三卡 0/60/120；安卓仅 mc-path 一卡；网页零卡）→ 存储卡 → 启动默认页
+  // 卡组槽数随平台派生（PATH_CARD_PLATFORMS 过滤后实卡数）——stgUnits 据此推进后续档位
+  const pathCardCount = BASIC_PATH_CARD_SPECS.filter((it) => cardSupportedOn(it.id, p)).length;
+  const envBody = stgUnits([
+    {
+      cardCount: pathCardCount,
+      cardStep: 60,
+      render: (startMs) => renderStgBasicPaths(p, startMs),
+    },
+    { render: (startMs) => renderStgStorageCard(p, startMs) },
+    { render: (startMs) => renderStgDefaultPageSection(startMs) },
+  ]);
 
   // 语言卡归「外观」（显示偏好），排在字体与布局之后、行为与动画之前
+  // 外观 tab：主题选择器（行组）→ 主题自动（行组）→ 字体三卡（卡组 cardCount 3）→ 语言 → 动画
   const appearanceBody = `<div class="section-title stg-title">${UI_ICONS.moon} ${t("settings.theme.title")}</div>
 
-${renderStgThemePicker()}
-
-${renderStgThemeAuto()}
-
-${renderStgFontFamily()}
-
-${renderStgLangSelect()}
-
-${renderStgAnimationSection()}`;
+${stgUnits([
+  { render: (startMs) => renderStgThemePicker(startMs) },
+  { render: (startMs) => renderStgThemeAuto(startMs) },
+  { cardCount: 3, render: (startMs) => renderStgFontFamily(startMs) },
+  { render: (startMs) => renderStgLangSelect(startMs) },
+  { render: (startMs) => renderStgAnimationSection(startMs) },
+])}`;
 
   // 「3D 预览」tab = 3D 预览设置（相机/旋转/键位）+ 解析（FBX/MMD worker 开关，2026-10 自
   // 独立「解析」tab 降级并入）——3D 域设置一处收口；「解析」节标题因此不再与 tab 名同名重复。
-  const previewBody = `${renderStgPreview3d()}
-${renderStgParserWorkers()}`;
+  // preview3d tab：三张 3D 设置卡（卡组，cardStep 60 大卡节奏）→ 解析 details（折叠区，
+  // 内部另起 0 档——展开时才播，不参与首屏竞争）
+  const previewBody = stgUnits([
+    { cardCount: 3, cardStep: 60, render: (startMs) => renderStgPreview3d(startMs) },
+    { render: () => renderStgParserWorkers() },
+  ]);
 
   const { bar, panels } = renderTabs<SettingsTabId>({
     prefix: "stg",

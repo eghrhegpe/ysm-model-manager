@@ -308,7 +308,8 @@ describe("app-content 模板", () => {
 
   it("同族卡片入场延迟由 stgCards 按序号派生，无手填阶梯漂移（2026-09 P2 回归）", () => {
     const html = settingsHTML();
-    // 组内延迟 = startMs + i*step 派生：路径三卡 step 60 → 0/60/120；字体三卡 → 60/90/120
+    // 组内延迟 = startMs + i*step 派生：路径三卡 step 60 → 0/60/120；字体三卡 → 120/150/180
+    // （2026-10 方案 A：startMs 由 stgUnits 按声明顺序注入，字体组不再是外观 tab 首单元）
     // 只统计 .stg-card 自身的延迟（.settings-group 行组的页面级档位不在此断言域）
     const delays = [...html.matchAll(/class="stg-card"[^>]*?animation-delay:(\d+)ms/g)].map((m) =>
       Number(m[1]),
@@ -317,8 +318,9 @@ describe("app-content 模板", () => {
     expect(delays).toContain(0);
     expect(delays).toContain(60);
     expect(delays).toContain(120);
-    // 防阶梯失控：卡片延迟不得超过页面编排上限（鸣谢灵感第四卡 240ms 为当前最大卡片档）
-    expect(Math.max(...delays)).toBeLessThanOrEqual(240);
+    // 防阶梯失控：顶层卡延迟不得超过页面编排上限（2026-10 方案 A 后外观 tab 动画卡
+    // 300ms 为最大可见档；鸣谢折叠区内部卡不参与首屏，不计入——正则只扫 .stg-card 外层）
+    expect(Math.max(...delays)).toBeLessThanOrEqual(300);
   });
 
   it("镜像源 option/hint 由 MIRROR_SOURCES 派生：存在性随 schema，默认直连 hint 初始可见（2026-10 收债）", () => {
@@ -349,14 +351,25 @@ describe("app-content 模板", () => {
     expect(Math.max(...delays)).toBeLessThanOrEqual(120);
   });
 
-  it("设置页各 tab 顶层入场单元延迟互不重复（2026-10 档位唯一性断言：防两机制撞车）", () => {
-    // 病：编排档由两套机制各算各的（STG_BAND 行组 / stgCards 卡组 startMs），曾出现
-    // appearance「主题自动 60」与「字体组首卡 60」同刻、about「intro 第三卡 120」与
-    // 「guide 首卡 120」同刻——同屏两个单元同时淡入（无编译期护栏）。
-    // 断言口径：只统计**顶层可见单元**（.stg-card / .settings-group，且不在 <details> 内）——
-    // 折叠区（解析/鸣谢 details）默认收起、入场动画仅在展开时播，不参与首屏竞争。
-    // 实现：按 tab 切片 → 剔除 <details>…</details> 内容 → 收集 animation-delay 断言无重复。
+  it("设置页各 tab 顶层入场单元延迟：派生序列精确 + 互不重复（2026-10 方案 A 档位回归）", () => {
+    // 方案 A（2026-10）：顶层编排整体迁入 stgUnits——有序单元表按声明顺序自动累加槽位
+    // （单卡/行组 +60；卡组 + (n-1)×cardStep + 60）。本测试锁定**派生结果**：
+    // ① 各 tab 顶层可见单元（.stg-card / .settings-group，剔除 <details> 折叠区——
+    //    解析/鸣谢默认收起、展开时才播，不参与首屏竞争）延迟序列必须与声明顺序派生一致；
+    // ② 序列内互不重复（零撞车）。
+    // 防回退：若有人把手填档位/裸 delayMs 塞回模板（绕过 stgUnits），序列漂移即红。
     const html = settingsHTML();
+    // 期望序列（随声明顺序自动派生；DESKTOP 平台）：
+    //   env        ：路径卡组(0/60/120) → 存储卡(180) → 默认页(240)
+    //   appearance ：主题(0) → 自动(60) → 字体卡组(120/150/180) → 语言(240) → 动画(300)
+    //   preview3d  ：相机(0) → 旋转(60) → 键位(120)（解析 details 折叠区被剔除）
+    //   aboutUpdate：版本(0) → 介绍卡组(60/90) → 引导卡组(150/180)
+    const expected: Record<string, number[]> = {
+      env: [0, 60, 120, 180, 240],
+      appearance: [0, 60, 120, 150, 180, 240, 300],
+      preview3d: [0, 60, 120],
+      aboutUpdate: [0, 60, 90, 150, 180],
+    };
     const tabs: Array<[name: string, anchor: string, nextAnchor: string]> = [
       ["env", "stg-tab-env", "stg-tab-appearance"],
       ["appearance", "stg-tab-appearance", "stg-tab-preview3d"],
@@ -372,11 +385,9 @@ describe("app-content 模板", () => {
       // 剔除 <details> 折叠区（解析/鸣谢内部动画不在首屏竞争域）
       const withoutDetails = panel.replace(/<details[\s\S]*?<\/details>/g, "");
       const delays = [...withoutDetails.matchAll(/animation-delay:(\d+)ms/g)].map((m) => Number(m[1]));
+      expect(delays, `${name} tab 顶层档位与声明顺序派生不一致`).toEqual(expected[name]);
       const dup = [...new Set(delays.filter((d, i) => delays.indexOf(d) !== i))];
-      expect(
-        dup,
-        `${name} tab 顶层入场单元存在同刻档位（重复 ${dup.join("/")}ms）：查命名档表错开`,
-      ).toEqual([]);
+      expect(dup, `${name} tab 顶层入场单元存在同刻档位（重复 ${dup.join("/")}ms）`).toEqual([]);
     }
   });
 

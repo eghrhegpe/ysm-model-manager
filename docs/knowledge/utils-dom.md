@@ -29,6 +29,7 @@ auto_fields:
     - disposeTooltipCore
     - downloadTextFile
     - dropdownBaseCSS
+    - DropdownHandle
     - DropdownOptions
     - ensureTooltipStyles
     - findCollisions

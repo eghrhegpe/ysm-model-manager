@@ -156,3 +156,53 @@ describe("initDropdown — onOpen / 互斥 / dispose", () => {
     dispose();
   });
 });
+
+describe("initDropdown — handle.close（程序化收起，2026-09 句柄扩展）", () => {
+  it("展开后 close() → display none + aria-expanded false；重复 close 幂等 no-op", () => {
+    const { host, $ } = makeFixture();
+    const handle = initDropdown($("dd1"));
+    $("btn1").click();
+    expect($("btn1").getAttribute("aria-expanded")).toBe("true");
+    handle.close();
+    expect($("btn1").getAttribute("aria-expanded")).toBe("false");
+    expect($("menu1").style.display).toBe("none");
+    handle.close(); // 已关 → 幂等，不抛不翻转
+    expect($("btn1").getAttribute("aria-expanded")).toBe("false");
+    handle();
+    host.remove();
+  });
+
+  it("close 后控制器状态完整可恢复：trigger 点击仍可正常展开", () => {
+    const { host, $ } = makeFixture();
+    const handle = initDropdown($("dd1"));
+    $("btn1").click();
+    handle.close();
+    $("btn1").click();
+    expect($("btn1").getAttribute("aria-expanded")).toBe("true");
+    expect($("menu1").style.display).toBe("block");
+    handle();
+    host.remove();
+  });
+
+  it("close 清空互斥槽：关 A 后开 B 不再触发 A 的陈旧 close（多下拉互斥契约不破）", () => {
+    const { host, $ } = makeFixture();
+    const d1 = initDropdown($("dd1"));
+    const d2 = initDropdown($("dd2"));
+    $("btn1").click();
+    d1.close();
+    $("btn2").click();
+    expect($("btn2").getAttribute("aria-expanded")).toBe("true");
+    expect($("btn1").getAttribute("aria-expanded")).toBe("false");
+    d1();
+    d2();
+    host.remove();
+  });
+
+  it("结构缺失 → noop 句柄：close() 可安全调用不抛", () => {
+    const host = document.createElement("div");
+    const handle = initDropdown(host);
+    expect(typeof handle.close).toBe("function");
+    handle.close();
+    handle();
+  });
+});

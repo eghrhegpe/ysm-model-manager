@@ -74,15 +74,13 @@ export function restoreCheckboxes(
 }
 
 // ---------- closeAllMenus ----------
-/** 程序化收起（兼容既有调用点）：菜单容器 display 复位。
- *  ARIA 状态由 dropdown 控制器在自身 close 路径同步；此处仅兜底 display，
- *  故同步重置 aria-expanded，避免「display 已关但 aria 仍为 true」的状态脱钩。 */
-function closeAllMenus(pushMenu: HTMLElement, pullMenu: HTMLElement): void {
-  for (const menu of [pushMenu, pullMenu]) {
-    menu.style.display = "none";
-    const trigger = menu.closest(".dd-wrap")?.querySelector("button");
-    trigger?.setAttribute("aria-expanded", "false");
-  }
+/** 程序化收起两个同步下拉：统一走 dropdown 控制器句柄的 .close()（幂等：已关 no-op，
+ *  状态/ARIA 单源留在控制器内——2026-09 收口：原实现手改 display:none + 重置 aria-expanded，
+ *  绕过控制器留了状态脱钩后门，ADR-298 D3「收起全权交通用控制器」的漏网，已退役）。
+ *  焦点归还不归本函数管：菜单项点击路径的收起已由控制器 onMenuClick close(restoreFocus) 完成。 */
+function closeAllMenus(pushClose: () => void, pullClose: () => void): void {
+  pushClose();
+  pullClose();
 }
 
 // ---------- getSelected ----------
@@ -200,8 +198,7 @@ function handleSyncMenuClick(
   verb: SyncVerb,
   e: Event,
   btn: HTMLButtonElement,
-  pushMenu: HTMLElement,
-  pullMenu: HTMLElement,
+  closeAll: () => void,
   root: ShadowRoot,
   getInstances: () => SidebarInstance[],
   syncInProgress: { val: boolean },
@@ -212,7 +209,7 @@ function handleSyncMenuClick(
     root,
     getInstances(),
     syncInProgress,
-    () => closeAllMenus(pushMenu, pullMenu),
+    closeAll,
     btn,
   );
   if (!selected) return;
@@ -353,9 +350,11 @@ export function bindSyncSelected(
     disposePush();
     disposePull();
   });
+  // 程序化收起统一走控制器句柄（closeAllMenus 见上方）：不再手改 display / aria-expanded
+  const closeAllMenusBoth = (): void => closeAllMenus(disposePush.close, disposePull.close);
 
   pushMenu.addEventListener("click", (e) =>
-    handleSyncMenuClick("push", e, pushBtn, pushMenu, pullMenu, root, getInstances, {
+    handleSyncMenuClick("push", e, pushBtn, closeAllMenusBoth, root, getInstances, {
       get val() {
         return getSyncInProgress();
       },
@@ -365,7 +364,7 @@ export function bindSyncSelected(
     }),
   );
   pullMenu.addEventListener("click", (e) =>
-    handleSyncMenuClick("pull", e, pullBtn, pushMenu, pullMenu, root, getInstances, {
+    handleSyncMenuClick("pull", e, pullBtn, closeAllMenusBoth, root, getInstances, {
       get val() {
         return getSyncInProgress();
       },

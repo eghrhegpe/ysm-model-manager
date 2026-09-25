@@ -222,7 +222,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 266 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 269 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 274 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 87 |
 
 **订阅方（on）：**
@@ -237,7 +237,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 90 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 255 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 260 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -323,7 +323,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 358 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 313 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 223 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 242 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 98 |
@@ -349,15 +349,15 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 140 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 162 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 138 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 160 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 155 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 153 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -493,14 +493,14 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 145 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 167 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 157 |
-| beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 120 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 255 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 261 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 267 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 299 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 305 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 310 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
+| beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 118 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 252 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 258 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 264 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 296 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 302 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 307 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
 | _showError | `frontend/src/views/app-sync-manager/index.ts` | 267 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 52 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 60 |
@@ -579,7 +579,7 @@
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 116 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 317 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 314 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

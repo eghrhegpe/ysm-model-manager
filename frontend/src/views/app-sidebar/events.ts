@@ -171,9 +171,14 @@ export function bindCardEvents(
   state.instances = instances;
   const st = state;
 
-  // 如果监听的 list 元素没变，用旧的 handler 引用避免重复绑定
+  // 如果监听的 list 元素没变，复用旧 handler 引用避免重复绑定。
+  // 可达性契约（2026-09 锐评收口：原「unreachable」注释纠偏）——
+  // 生产路径不可达：renderCards 先行 cardCleanup()，cleanup 会 bindStates.delete(root)，
+  // 下次 bindCardEvents 拿不到旧 state，走下方全新绑定路径；
+  // 无 cleanup 直接重绑时 state 仍在（st.click 非 null）→ 走本分支早退，
+  // 否则同一 list 会第二次 addEventListener，单击双 emit。本分支行为由
+  // events.test.ts「无 cleanup 重绑」用例锁死（listener 计数 + 数据新鲜度）。
   if (st.list === list && st.click && st.ctx) {
-    /* unreachable — renderCards 先行清理旧 cleanup，此分支仅防御未来重绑顺序变化 */
     restoreSelectedCard(root, instances, host);
     return () => {};
   }

@@ -103,6 +103,30 @@ describe("bindCardEvents — list 复用数据陈旧回归（P2）", () => {
     expect(emitMock).toHaveBeenLastCalledWith("package:selected", B[0]);
   });
 
+  // 锐评收口（2026-09）：list 复用早退分支的「listener 去重」前提锁。
+  // 上方用例只锁数据新鲜度；若早退分支被删，无 cleanup 重绑会第二次 addEventListener——
+  // 去重状态机会掩盖点击路径的双 emit（h2 的键被 h1 先置位），唯有 listener 计数辨得出。
+  // spy 打在实际被委托的 #sidebar-instance-list 元素上，以「重绑期间新增监听数 = 0」锁死分支存在。
+  it("无 cleanup 重绑 → 早退分支防 listener 重复（重绑期间零新监听注册，数据仍新鲜）", () => {
+    const A = [instance("A1"), instance("A2")];
+    const { container } = mount(A);
+    (container.querySelector(".instance-card-header") as HTMLElement).click();
+
+    // 首绑完成后打 spy；renderVersionCards 的注册（若有）进基线，只量 bindCardEvents 的增量
+    const addSpy = vi.spyOn(container, "addEventListener");
+    const B = [instance("B1"), instance("B2")];
+    renderVersionCards(container, B);
+    const afterRender = addSpy.mock.calls.length;
+    bindCardEvents(container.getRootNode() as ShadowRoot, B, mockHost);
+    const addedByBind = addSpy.mock.calls.length - afterRender;
+    addSpy.mockRestore();
+    expect(addedByBind).toBe(0); // 早退分支命中：同一 list 不二次注册 click/contextmenu
+
+    // 数据新鲜度双锁：旧闭包读 state.instances（重绑时已刷新为 B）
+    (container.querySelector(".instance-card-header") as HTMLElement).click();
+    expect(emitMock).toHaveBeenLastCalledWith("package:selected", B[0]);
+  });
+
   // P1 修复回归护栏（b4e00a6d）：点击空 rtype 实例 → 拦截并 toast，不 emit package:selected。
   // 此前静默兜底成 YSM，MMD 实例 rtype 漏传时右侧同步面板 default-type 错成 YSM。
   it("点击无 rtype 实例 → 不 emit package:selected，emit toast 报错", () => {
@@ -226,6 +250,17 @@ describe("emitKey 键格式（makeEmitKey 单一事实源）", () => {
     await flushRaf();
     // P3 分支：设 emitKey 后 return（toast 拦截）——键仍须为 `${mmd}:${X1}`
     expect(mockHost.getLastEmittedPkg()).toBe("mmd:X1");
+  });
+
+  // P2-2 语义锁（CodeReview 06fee1553）：键前缀 = instances[0]?.rtype（列表 rtype），
+  // 而非被点击实例自带 rtype。生产列表同 rtype 下两口径不可区分，混合场景人工锁死实现语义——
+  // 若未来有人「修正」为取被点击实例 rtype，此用例炸红（行为口径在 events.ts 点击路径注释钉死）。
+  it("点击路径键前缀 = instances[0].rtype，非被点击实例自身 rtype", () => {
+    const mixed = [instance("A1"), instance("B1")];
+    mixed[0]!.rtype = "mmd"; // 首实例 mmd、被点击实例 B1 保持 ysm
+    const { container } = mount(mixed);
+    (container.querySelectorAll(".instance-card-header")[1] as HTMLElement).click();
+    expect(mockHost.getLastEmittedPkg()).toBe("mmd:B1"); // 不是 "ysm:B1"
   });
 });
 

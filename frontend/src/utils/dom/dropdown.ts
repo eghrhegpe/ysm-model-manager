@@ -20,6 +20,16 @@ export interface DropdownOptions {
   onOpen?: () => void;
 }
 
+/**
+ * initDropdown 句柄（function-with-properties 形态，既有调用点零改动）：
+ * - 调用本身 = dispose（解绑全部监听，内联样式交还 CSS）；
+ * - `.close()` = 控制器路径程序化收起（幂等：已关时 no-op；不回焦——回焦由
+ *   控制器自身 close(restoreFocus) 路径管理，见 Esc / 菜单项点击）。
+ * 消费方需要「程序化收起」时一律走 .close()，禁止手动改 display / aria-expanded
+ * （2026-09 收口：app-sidebar closeAllMenus 手改 DOM 的后门已退役，状态/ARIA 单源留在控制器）。
+ */
+export type DropdownHandle = (() => void) & { close(): void };
+
 /** 当前打开的下拉关闭器（模块级登记 = 同页多下拉互斥的最小实现） */
 let _closeActive: (() => void) | null = null;
 
@@ -29,17 +39,22 @@ let _closeActive: (() => void) | null = null;
  * 结构约定（dropdownBaseCSS / toolbar-menus renderDropdown 的产物形态）：
  *   - trigger = wrap 内首个 button（`.dd-wrap > button`）
  *   - 菜单 = `.dd-menu`，其内可点击项为 `.dd-item`（回退到任意 button）
- * 结构缺失 / wrap 为 null → 静默 no-op（返回可调用 dispose），容忍渐进接管。
+ * 结构缺失 / wrap 为 null → 静默 no-op（返回可调用且带 close 的空句柄），容忍渐进接管。
  *
- * @returns dispose：解绑全部监听（click/keydown/外点）并把内联样式交还 CSS
+ * @returns DropdownHandle：调用本身 = dispose（解绑全部监听 click/keydown/外点，内联样式交还 CSS）；
+ *         句柄 `.close()` = 控制器路径程序化收起（幂等，不回焦）
  */
 export function initDropdown(
   wrap: HTMLElement | null | undefined,
   opts?: DropdownOptions,
-): () => void {
+): DropdownHandle {
   const trigger = wrap?.querySelector<HTMLElement>("button");
   const menu = wrap?.querySelector<HTMLElement>(".dd-menu");
-  if (!wrap || !trigger || !menu) return () => {};
+  if (!wrap || !trigger || !menu) {
+    const noop = (() => {}) as DropdownHandle;
+    noop.close = () => {};
+    return noop;
+  }
 
   trigger.setAttribute("aria-haspopup", "menu");
   trigger.setAttribute("aria-expanded", "false");
@@ -141,7 +156,7 @@ export function initDropdown(
   menu.addEventListener("click", onMenuClick, true);
   document.addEventListener("click", onDocClick);
 
-  return () => {
+  const dispose = (() => {
     if (_closeActive === close) _closeActive = null;
     trigger.removeEventListener("click", onTriggerClick);
     wrap.removeEventListener("keydown", onWrapKeydown);
@@ -150,5 +165,7 @@ export function initDropdown(
     // 内联样式交还 CSS：dispose 后 display 复位由 dropdownBaseCSS 的 display:none 接管
     menu.style.display = "";
     trigger.removeAttribute("aria-expanded");
-  };
+  }) as DropdownHandle;
+  dispose.close = () => close(false);
+  return dispose;
 }

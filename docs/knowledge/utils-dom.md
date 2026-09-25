@@ -73,6 +73,7 @@ auto_fields:
     - setRepoSearchFocusPending
     - ShadowStyle
     - stripPathSegments
+    - tabBtnCSS
     - takeRepoSearchFocusPending
     - toast
     - TOAST_MS

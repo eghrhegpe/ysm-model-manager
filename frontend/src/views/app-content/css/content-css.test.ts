@@ -271,3 +271,24 @@ describe("居中空态块单一原语（A 族收敛，2026-09 体检）", () => 
     expect(contentCreatorCSS).not.toMatch(/\.cr-empty-site\s*\{/);
   });
 });
+
+// ===== 诊断页起跑线契约（2026-09-25 收口）=====
+// 与上方「间距同源」用例同族：防的是两种留白来源并存 → 同一屏出现多条左起跑线。
+describe("诊断页起跑线契约", () => {
+  it("子 pill 行左右不留白：与常驻栏/结果区同落 .diag-panel 的 12px", () => {
+    // 此前 .diag-sub-bar 用 --btn-padding-std（4px 10px）→ pill 行落在 22px，
+    // 而它管辖的 .diag-bar / .diag-result 左右 padding 均为 0 → 落在 12px，
+    // 导航比自己的栏右移 10px，三 tab 一致地错位。
+    const rule = contentDiagCSS.match(/\.diag-sub-bar\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(rule).toMatch(/padding:\s*var\(--sp-1\)\s+0/);
+    expect(rule).not.toContain("--btn-padding-std");
+  });
+
+  it("留白唯一来源：.diag-bar 与 .diag-result 均不带左右 padding", () => {
+    // 「常驻栏滚走」那次收口把滚动交给 .diag-result 后，留白上交 .diag-panel；
+    // 若此处再长出左右 padding，起跑线就重新分裂成 12 / 22 / 28 三档。
+    expect(contentDiagCSS).toMatch(/\.diag-bar\s*\{[^}]*padding:\s*0 0 6px/);
+    expect(contentDiagCSS).toMatch(/\.diag-result\s*\{[^}]*flex:1/);
+    expect(contentDiagCSS).not.toMatch(/\.diag-result\s*\{[^}]*padding:/);
+  });
+});

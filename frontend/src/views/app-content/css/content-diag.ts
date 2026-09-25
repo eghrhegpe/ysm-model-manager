@@ -69,8 +69,12 @@ export const contentDiagCSS: string = `
 /* 组内二级导航（ADR-300 §2.2）：renderSubBar 产出的 pill 行——全页唯一的「页内再分屏」形态。
    gap 2px→4px（2026-09-25）：pill 带 1px 描边，2px 下相邻边框近乎连体；取同页筛选 chips
   （.diag-log-filter）的 gap:4px 同档。
-   子分区容器不再另立门户（原 .diag-sub-pane）→ 并入 .diag-pane（见下方三件套区）。 */
-.diag-sub-bar { display:flex; align-items:center; gap:var(--sp-1); padding:var(--btn-padding-std); flex-shrink:0; flex-wrap:wrap; }
+   子分区容器不再另立门户（原 .diag-sub-pane）→ 并入 .diag-pane（见下方三件套区）。
+   2026-09-25 起跑线归位：padding 由 --btn-padding-std（4px 10px）改 --sp-1 0——**左右归零**。
+   原来 pill 行自带左右 10px，落在 22px 起跑线，而它管辖的 .diag-bar / .diag-result 在 12px
+   （二者左右 padding 均为 0，留白只来自 .diag-panel）——导航比它自己的栏右移 10px，三 tab
+   一致地错位。现在三档同落 12px：留白唯一来源 = .diag-panel（版面词典 §1，见下方三件套区）。 */
+.diag-sub-bar { display:flex; align-items:center; gap:var(--sp-1); padding:var(--sp-1) 0; flex-shrink:0; flex-wrap:wrap; }
 .diag-sub-tab { padding:var(--btn-padding-std); border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-sm); font-family:inherit; transition:var(--tr-fast); }
 .diag-sub-tab:hover { background:var(--hover); color:var(--txt); }
 .diag-sub-tab.active { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }

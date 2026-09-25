@@ -12,6 +12,9 @@ import { renderSubBar, renderTabs, type TabSpec } from "./tabs-shell.ts";
 // （id 保留给 handler / CSS 锚点，testid 独占测试通道，二者同名以消除认知负担）。
 export const VIEW_TESTIDS: readonly string[] = [
   "content-tab",
+  // 诊断页顶层 tab 按钮（三个 tab 共用，与仓库页 content-tab 同形；此前诊断页是唯一
+  // 没给顶层 tab 留钩子的页，测试只能靠 .repo-tab 的 data-tab 属性去抓 class）
+  "diag-tab",
   "diag-log",
   "diag-log-list",
   "diag-runtime",
@@ -170,6 +173,7 @@ export function diagnosticsHTML(): string {
     tabs: [
       {
         id: "logs",
+        buttonTestid: "diag-tab",
         panelTestid: "diag-log",
         // ADR-300 §2.4：顶层名词化，「操作日志」一词还给子 pill（父子同名消解）
         label: `${UI_ICONS.clipboard} ${t("diagnostics.tabLog")}`,
@@ -185,6 +189,7 @@ export function diagnosticsHTML(): string {
         { id: "trace", label: t("diagnostics.pillTrace") },
       ],
       "op",
+      t("diagnostics.subBarLogs"),
     )}
     <div class="diag-bar" data-sub-group="logs" data-sub-pane="op runtime">
       <div class="diag-bar-row">
@@ -228,6 +233,7 @@ export function diagnosticsHTML(): string {
       },
       {
         id: "bench",
+        buttonTestid: "diag-tab",
         // ADR-278 §2.5：整 tab 桌面专属——它的每个入口都是 CLI，只藏按钮会留空壳 tab
         desktopOnly: true,
         // ADR-300 §2.4：tab 文案名词化（原 perfRunBench「跑基准」是动宾，动词还给按钮层）
@@ -246,6 +252,7 @@ export function diagnosticsHTML(): string {
         { id: "scan", label: t("diagnostics.perfScanBench") },
       ],
       "single",
+      t("diagnostics.subBarBench"),
     )}
     <div class="diag-bar">
       <div class="diag-bar-row" data-perf-mode="single conc">
@@ -299,6 +306,7 @@ export function diagnosticsHTML(): string {
       },
       {
         id: "audit",
+        buttonTestid: "diag-tab",
         // ADR-300 §2.1：health 与 sync-conflict 是「扫描 → 处置」一对——同触发范式
         //（ADR-288 D2 两段式）、同跨平台属性、同段 CSS 词汇，合组收口；
         // 元素 id 与两段式结构一字不动（历次重构压测试面的成功经验，ADR-278 §3）。
@@ -312,6 +320,7 @@ export function diagnosticsHTML(): string {
         { id: "sync", label: t("diagnostics.syncConflict") },
       ],
       "health",
+      t("diagnostics.subBarAudit"),
     )}
     <div class="diag-pane" data-sub-group="audit" data-sub-pane="health">
       <div class="diag-bar" id="diag-health-bar">

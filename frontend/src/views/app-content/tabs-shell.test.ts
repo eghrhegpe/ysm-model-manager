@@ -197,17 +197,31 @@ describe("renderTabs 产出契约（ADR-259 §2）", () => {
 
 // ===== renderSubBar 产出契约（ADR-300 §2.2 + §3 a11y 接线）=====
 describe("renderSubBar 产出契约", () => {
-  const bar = renderSubBar("logs", [
-    { id: "op", label: "操作" },
-    { id: "runtime", label: "运行时" },
-    { id: "trace", label: "剖析" },
-  ], "op");
+  // aria-label 必传第 4 参：读屏念它，值由调用方 i18n 后传入（本模块零依赖纯字符串）
+  const bar = renderSubBar(
+    "logs",
+    [
+      { id: "op", label: "操作" },
+      { id: "runtime", label: "运行时" },
+      { id: "trace", label: "剖析" },
+    ],
+    "op",
+    "日志子屏",
+  );
 
   it("bar 具 role=toolbar + aria-label（不套 tablist——顶层已是 tablist，嵌套反模式）", () => {
     expect(bar).toContain('class="diag-sub-bar" data-sub-bar="logs" data-active-sub="op" role="toolbar"');
-    expect(bar).toContain("aria-label");
+    // 强断言：aria-label 落到传入的文案上，不再是 toContain("aria-label") 那种只证明属性存在
+    expect(bar).toContain('aria-label="日志子屏"');
     // 红线：绝不出现嵌套 tablist
     expect(bar).not.toContain('role="tablist"');
+  });
+
+  it("红线：aria-label 不得回落到硬编码的 subbar-<group> 英文标识", () => {
+    // 2026-09-25 收债：原实现写死 `subbar-${group}`，读屏对中文用户念英文 id。
+    // 本用例钉死「忘了传 i18n 就退回英文」这条路被堵死（参数必传 + 无默认值）。
+    expect(bar).not.toContain('aria-label="subbar-logs"');
+    expect(bar).not.toContain("subbar-");
   });
 
   it("pill 具 role=radio + aria-checked，激活项 checked=true", () => {

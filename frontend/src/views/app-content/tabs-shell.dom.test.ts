@@ -16,7 +16,7 @@ function mountBar(group: string, ids: string[], activeId: string): ShadowRoot {
   const host = document.createElement("div");
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML =
-    renderSubBar(group, ids.map((id) => ({ id, label: id })), activeId) +
+    renderSubBar(group, ids.map((id) => ({ id, label: id })), activeId, `${group} 子切换`) +
     `<div data-sub-group="${group}" data-sub-pane="${ids.join(" ")}">pane</div>`;
   document.body.appendChild(host);
   return root;
@@ -121,7 +121,7 @@ describe("bindSubBar 键盘化（renderSubBar 产出的真 bar）", () => {
     const host = document.createElement("div");
     const r2 = host.attachShadow({ mode: "open" });
     r2.innerHTML =
-      renderSubBar(GROUP, IDS.map((id) => ({ id, label: id })), "op") +
+      renderSubBar(GROUP, IDS.map((id) => ({ id, label: id })), "op", `${GROUP} 子切换`) +
       `<div data-sub-group="${GROUP}" data-sub-pane="${IDS.join(" ")}">pane</div>`;
     document.body.appendChild(host);
     const calls: string[] = [];

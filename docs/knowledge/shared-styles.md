@@ -13,6 +13,7 @@ auto_fields:
     - focusVisibleCSS
     - metaTagCSS
     - noAnimationsCSS
+    - tabBtnCSS
     - treeCSS
     - wsIconCSS
 quick_groups:

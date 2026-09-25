@@ -97,6 +97,12 @@ export function renderTabs<Id extends string = string>(spec: TabsShellSpec<Id>):
   // desktopOnly 只在 viewerMode 下生效；首个**可见** tab 才是默认激活项（原语义不变）
   const visible = tabs.filter((t) => !(viewerMode && t.desktopOnly));
 
+  // ⚠️ 已知待办（2026-09-25 实测后撤回，待拍板）：网页版下 bench/audit 整 tab 隐藏后只剩
+  // logs 一项，此时仍产出「只装一个按钮」的 role=tablist——tab 的意义在相对选择，单选项的
+  // tab 栏是噪音。但实测判据 `tabs.length > 1 && visible.length <= 1` 会**一并卷进仓库页**
+  // （网页版同样只剩 tree），涉及 4 条既有契约测试（tpl.test 的查看器/repository 断言、
+  // tabs-shell 的「首个 desktopOnly 让位」断言），属跨页 DOM 契约变更，非热路径小改动——
+  // 故此处保持原状，等拍板后连同测试一起改。届时要改的是本函数，不在各页另写判据。
   const barAttrs =
     (barId ? ` id="${barId}"` : "") + (barTestid ? ` data-testid="${barTestid}"` : "");
   const bar = `<div class="repo-tabs"${barAttrs}>${visible
@@ -147,18 +153,21 @@ export interface SubTabSpec {
  *   的 id 规则一样，模板与测试两侧不再靠人肉对齐。
  * - `data-active-sub` 初始化为激活项：bench 组读它作为运行模式源（ADR-300 §2.2 三读点收口）。
  * - **不套 `role="tablist"`**：顶层 tabbar 已是 tablist，嵌套双 tablist 是 ARIA 反模式。
- *   采纳 ADR-300 §3 遗留点名的第一种姿势——`.diag-sub-bar` 为 `role="toolbar"` +
- *   `aria-label="{group} 子切换"`，每个 pill 为 `role="radio"` + `aria-checked`
- *   （互斥单选，非 tab 语义）；当前项 `tabindex="0"`（roving tabindex 基座），其余 `-1`。
- *   键盘化由此处（bindSubBar）单点实现，见下方函数。
+ *   采纳 ADR-300 §3 遗留点名的第一种姿势——`.diag-sub-bar` 为 `role="toolbar"`，每个 pill 为
+ *   `role="radio"` + `aria-checked`（互斥单选，非 tab 语义）；当前项 `tabindex="0"`
+ *   （roving tabindex 基座），其余 `-1`。键盘化由此处（bindSubBar）单点实现，见下方函数。
+ * - **`ariaLabel` 必传**（2026-09-25 收债）：它是读屏唯一念出来的东西，原实现写死
+ *   `subbar-${group}`（英文），中文/日文用户听到的是一串英文 id——无障碍标签不是内部标识。
+ *   本模块维持「零依赖纯字符串」（node 可单测），故 i18n 由调用方解析后传入，不在此 import t()。
+ *   不设默认值是刻意的：留回落口＝把「忘了传」变成静默的英文裸奔。
  */
 export function renderSubBar(
   group: string,
   items: readonly SubTabSpec[],
   activeId: string,
+  ariaLabel: string,
 ): string {
-  const barLabel = `subbar-${group}`;
-  return `<div class="diag-sub-bar" data-sub-bar="${group}" data-active-sub="${activeId}" role="toolbar" aria-label="${barLabel}">${items
+  return `<div class="diag-sub-bar" data-sub-bar="${group}" data-active-sub="${activeId}" role="toolbar" aria-label="${ariaLabel}">${items
     .map(
       (t) =>
         `<button class="diag-sub-tab${t.id === activeId ? " active" : ""}" data-sub="${t.id}" data-testid="diag-sub-${group}-${t.id}" role="radio" aria-checked="${t.id === activeId ? "true" : "false"}"${t.id === activeId ? ' tabindex="0"' : ' tabindex="-1"'}>${t.label}</button>`,

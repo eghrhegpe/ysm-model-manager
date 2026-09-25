@@ -74,8 +74,7 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
       <button id="diag-trace-refresh"></button>
       <div id="diag-load-trace"></div>
     </div>
-    <div id="diag-tab-audit"><div class="diag-bar" id="diag-health-bar"><div class="diag-bar-row"><button id="diag-scan-health"></button></div></div><div id="diag-health-list"></div></div>
-    <div id="diag-tab-audit-sync"><div class="diag-bar" id="diag-sync-bar"><div class="diag-bar-row"><select id="sync-rtype"></select><select id="sync-instance"></select><button id="diag-scan-sync-conflict"></button></div></div><div id="diag-sync-conflict-list"></div></div>
+    <div id="diag-tab-audit"><div class="diag-bar" id="diag-health-bar"><div class="diag-bar-row"><button id="diag-scan-health"></button></div></div><div id="diag-health-list"></div><div class="diag-bar" id="diag-sync-bar"><div class="diag-bar-row"><select id="sync-rtype"></select><select id="sync-instance"></select><button id="diag-scan-sync-conflict"></button></div></div><div id="diag-sync-conflict-list"></div></div>
   `;
   (el as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
     (id: string) => el.querySelector(`#${id}`);

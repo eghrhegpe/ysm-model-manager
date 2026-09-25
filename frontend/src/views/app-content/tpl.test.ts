@@ -12,6 +12,7 @@ import {
 import { settingsHTML } from "./settings/tpl-settings.ts";
 import { recycleHTML, renderRecycleListHtml } from "./tpl-recycle.ts";
 import { TD_CAM_SPEED, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
+import { MIRROR_SOURCES } from "@/views/app-content/settings/settings-schema.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
@@ -178,7 +179,8 @@ describe("app-content 模板", () => {
     expect(html).toContain(`data-tab="appearance">${UI_ICONS.brush} 外观</button>`);
     expect(html).not.toContain(`data-tab="appearance">${UI_ICONS.appearance} 界面与体验</button>`);
     // tab 名 2026-09 直白化：原「3D 与解析」（键名 settings.operations="操作"，键名与文案脱节）
-    // → 「3D 预览」（键名 settings.tab3d）。回归防线：不得退回妥协拼接名
+    // → 「3D 预览」（键名 2026-10 自 settings.tab3d 再对齐 id 同名 = settings.preview3d）。
+    // 回归防线：不得退回妥协拼接名
     expect(html).toContain(`data-tab="preview3d">${UI_ICONS.voxel} 3D 预览</button>`);
     expect(html).not.toContain(`data-tab="preview3d">${UI_ICONS.joystick} 3D 与解析</button>`);
     // ③ 「关于」tab 含真实设置（更新检查间隔 / 立即检查更新）→ 名字必须答「能配什么」
@@ -300,7 +302,7 @@ describe("app-content 模板", () => {
   it("同族卡片入场延迟由 stgCards 按序号派生，无手填阶梯漂移（2026-09 P2 回归）", () => {
     const html = settingsHTML();
     // 组内延迟 = startMs + i*step 派生：路径三卡 step 60 → 0/60/120；字体三卡 → 60/90/120
-    // 只统计 .stg-card 自身的延迟（.settings-group 行组另有 240/270/300 的页级档，不在此断言域）
+    // 只统计 .stg-card 自身的延迟（.settings-group 行组的页面级档位不在此断言域）
     const delays = [...html.matchAll(/class="stg-card"[^>]*?animation-delay:(\d+)ms/g)].map((m) =>
       Number(m[1]),
     );
@@ -308,8 +310,36 @@ describe("app-content 模板", () => {
     expect(delays).toContain(0);
     expect(delays).toContain(60);
     expect(delays).toContain(120);
-    // 防阶梯失控：卡片延迟不得超过页面编排上限（语言卡 240ms 为当前最大卡片档）
+    // 防阶梯失控：卡片延迟不得超过页面编排上限（鸣谢灵感第四卡 240ms 为当前最大卡片档）
     expect(Math.max(...delays)).toBeLessThanOrEqual(240);
+  });
+
+  it("镜像源 option/hint 由 MIRROR_SOURCES 派生：存在性随 schema，默认直连 hint 初始可见（2026-10 收债）", () => {
+    const html = settingsHTML();
+    // id 与 init.ts|applyMirrorHints 的 `mirror-hint-<成员>` 约定同源，缺一枚即静默断链；
+    // option/hint 存在性必须随 schema 派生（此前模板手写裸列 = 「schema 有、下拉框静默没有」）
+    for (const s of MIRROR_SOURCES) {
+      expect(html, `镜像源 ${s} 缺 hint 块`).toContain(`id="mirror-hint-${s}"`);
+    }
+    // option 值域：direct 用空串（UI 层约定，init.ts|mirrorName 归一），其余用语义值
+    expect(html).toMatch(/<option value="">[^<]*直连/);
+    expect(html).toContain('<option value="jsdelivr">');
+    expect(html).toContain('<option value="githubapi">');
+    // 默认项（MIRROR_DEFAULT=direct）初始可见、其余 display:none——init 载入按实值纠正前的静态态
+    expect(html).toContain('id="mirror-hint-direct" class="stg-hint-block">');
+    expect(html).toContain('id="mirror-hint-jsdelivr" class="stg-hint-block" style="display:none"');
+    expect(html).toContain('id="mirror-hint-githubapi" class="stg-hint-block" style="display:none"');
+  });
+
+  it("3D 预览 tab 行组 0ms 起步：行组与解析 details 两族同带（240 残锚收债）", () => {
+    const html = settingsHTML();
+    const p3d = panelSlice(html, "stg-tab-preview3d", "stg-tab-aboutUpdate");
+    const delays = [...p3d.matchAll(/animation-delay:(\d+)ms/g)].map((m) => Number(m[1]));
+    expect(delays.length).toBeGreaterThan(0);
+    expect(delays).toContain(0);
+    // 曾 240 起步：切 tab 白等 240ms 才见首行，且底部解析组（band 0）先亮于顶部行组（编排倒挂）。
+    // 现两族统一 STG_BAND.preview3d=0 → 0/60/120 同步
+    expect(Math.max(...delays)).toBeLessThanOrEqual(120);
   });
   it("diagnosticsHTML 包含诊断 Tab 与面板", () => {
     const html = diagnosticsHTML();

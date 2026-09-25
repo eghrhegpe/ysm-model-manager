@@ -1,5 +1,8 @@
 // ===== tpl-settings.ts — settingsHTML 页面模板（从 tpl.ts 拆出，ADR-040 P1 第2轮拆分）=====
 // env + appearance + preview3d 标签页在此；aboutUpdate（含鸣谢小节）已拆至 tpl-settings-about.ts。
+// 2026-10 锐评收尾：tab 文案键 settings.tab3d → settings.preview3d（与 TabSpec.id 同名对齐——
+//   「tab」前缀描述的是「这是个 tab」而非「这里配什么」，与 settings.operations 同病根）；
+//   镜像源 option/hint 接 MIRROR_SOURCES 派生（存在性随 schema，此前是半截接线，见 mirrorCardBody）。
 // 2026-10 菜单收口（锐评方案 A）：6 tab → 4 tab（常规/外观/3D 预览/关于）——
 //   （2026-09 锐评：第三个 tab 名原为「3D 与解析」、键名却叫 settings.operations，已改名
 //    settings.tab3d = 「3D 预览」，键名与文案对齐，详本文件 settingsHTML 内注释）
@@ -33,6 +36,7 @@ import { stagger } from "@/utils/animation/stagger.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderTabs, type TabSpec } from "@/views/app-content/tabs-shell.ts";
 import { navItems } from "@/views/app-nav/nav-items.ts";
+import { MIRROR_DEFAULT, MIRROR_SOURCES, type MirrorSource } from "./settings-schema.ts";
 import { type StgCardSpec, stgCard, stgCards } from "./stg-card.ts";
 import { aboutPageBody } from "./tpl-settings-about.ts";
 
@@ -64,7 +68,7 @@ const SETTINGS_TAB_META: Record<SettingsTabId, { icon: string; labelKey: LocaleK
   appearance: { icon: UI_ICONS.brush, labelKey: "settings.appearance" },
   // 3D 预览用 voxel（立方体）而非 joystick（手柄=输入操作）：本 tab 配的是「看的方式」
   // （相机/旋转/键位/解析），不是手柄映射
-  preview3d: { icon: UI_ICONS.voxel, labelKey: "settings.tab3d" },
+  preview3d: { icon: UI_ICONS.voxel, labelKey: "settings.preview3d" },
   aboutUpdate: { icon: UI_ICONS.info, labelKey: "settings.aboutUpdate" },
 };
 
@@ -97,8 +101,11 @@ function buildSettingsTabs(bodies: Record<SettingsTabId, string>): TabSpec<Setti
 const STG_GROUP_STEP_MS = 60;
 /** 页面级编排起点（ms）：各 tab 的首组入场档位；组内序号经 stagger 派生。
  *  `Partial<Record<SettingsTabId, number>>` 而非 `as const` 字面量对象——后者不校验键名
- *  （拼错 tab id 静默变 undefined → 动画档位乱跳）；Partial 允许「只有行组型 tab 才声明」。 */
-const STG_BAND: Partial<Record<SettingsTabId, number>> = { appearance: 0, preview3d: 240 };
+ *  （拼错 tab id 静默变 undefined → 动画档位乱跳）；Partial 允许「只有行组型 tab 才声明」。
+ *  ⚠️ preview3d 恒 0（2026-10 收债）：原 240 是单页编排时代的历史锚——同 tab 底部「解析」
+ *  details 组吃 band 0（0/60/120），切 tab 时底部先亮、顶部行组 240/300/360 才入场（编排倒挂），
+ *  且每次切 tab 白等 240ms 才见首行。两族统一经 STG_BAND.preview3d 同源取 0，0/60/120 同步。 */
+const STG_BAND: Partial<Record<SettingsTabId, number>> = { appearance: 0, preview3d: 0 };
 /** 第 i 个组的延迟值（band 缺省 0 = 首屏立即入场） */
 const groupDelay = (band: number | undefined, i: number): number =>
   (band ?? 0) + stagger(i, STG_GROUP_STEP_MS);
@@ -126,6 +133,49 @@ const resolveSettingsPlatform = (isViewer: boolean, isWebViewer: boolean): Setti
 const cardSupportedOn = (id: keyof typeof PATH_CARD_PLATFORMS, p: SettingsPlatform): boolean =>
   PATH_CARD_PLATFORMS[id].includes(p);
 
+// ===== 镜像源 UI 映射（schema 语义值 → UI 值 / 文案键；ADR-307 D3 消费面收口）=====
+// Record<MirrorSource, …> ⇒ MIRROR_SOURCES 加成员时此处编译期报错，逼出 option/hint 同步。
+// 原模板三行 <option> 手写裸列 = schema 宣称「option 渲染单一来源」却未接线的半截工程：
+// 加第四个镜像源会出现「schema 有、下拉框静默没有」。option 与 hint 块改由 MIRROR_SOURCES.map
+// 派生（存在性 + 顺序随 schema）；direct 的 UI 值 = ""（存储层同，归一逻辑见 settings-schema.ts 注），
+// 默认项（MIRROR_DEFAULT）hint 初始可见、其余 display:none（init.ts|applyMirrorHints 载入按实值纠正）。
+const MIRROR_UI: Record<
+  MirrorSource,
+  { uiValue: string; optionKey: LocaleKey; hintKey: LocaleKey }
+> = {
+  direct: {
+    uiValue: "",
+    optionKey: "settings.mirror.directOption",
+    hintKey: "settings.mirror.directHint",
+  },
+  jsdelivr: {
+    uiValue: "jsdelivr",
+    optionKey: "settings.mirror.jsdelivrOption",
+    hintKey: "settings.mirror.jsdelivrHint",
+  },
+  githubapi: {
+    uiValue: "githubapi",
+    optionKey: "settings.mirror.nameGithubapi",
+    hintKey: "settings.mirror.githubapiHint",
+  },
+};
+
+/** 镜像源卡 body：option 行 + `mirror-hint-<语义值>` 说明块（id 与 init.ts|applyMirrorHints 的
+ *  `mirror-hint-<MIRROR_SOURCES 成员>` 约定同源——改名即静默断链的双端在此钉死）。 */
+function mirrorCardBody(): string {
+  const options = MIRROR_SOURCES.map(
+    (s) => `<option value="${MIRROR_UI[s].uiValue}">${t(MIRROR_UI[s].optionKey)}</option>`,
+  ).join("\n          ");
+  const hints = MIRROR_SOURCES.map(
+    (s) =>
+      `<div id="mirror-hint-${s}" class="stg-hint-block"${s === MIRROR_DEFAULT ? "" : ' style="display:none"'}>${t(MIRROR_UI[s].hintKey)}</div>`,
+  ).join("\n        ");
+  return `<select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
+          ${options}
+        </select>
+        ${hints}`;
+}
+
 function renderStgBasicPaths(p: SettingsPlatform): string {
   // 路径三卡为同族组，入场延迟由 stgCards 按序号派生（step 60ms，与其余组的 30ms 区分：
   // 首屏三张大卡节奏放缓一档）。2026-09 前为手填 0/60/120 字面量。
@@ -146,6 +196,9 @@ function renderStgBasicPaths(p: SettingsPlatform): string {
   if (cardSupportedOn("links", p)) {
     specs.push(
       {
+        // hint 块排版走 .stg-hint-block（2026-10 收 6 处内联配方债——原 font-size/color/padding
+        // 配方在此与 mirror-hint 两族各写一份且已漂移）；LINK_MODE_KEYS 仍在 init.ts 本地，
+        // 链接模式全量 schema 化归 ADR-307 D3 扩编，本批只收排版不扩编。
         icon: UI_ICONS.link,
         title: t("settings.links.title"),
         body: `<select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
@@ -153,9 +206,9 @@ function renderStgBasicPaths(p: SettingsPlatform): string {
           <option value="hardlink" selected>${t("settings.links.hardlink")}</option>
           <option value="symlink">${t("settings.links.symlink")}</option>
         </select>
-        <div id="lm-hint-copy" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)">${t("settings.links.copyHint")}</div>
-        <div id="lm-hint-hardlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)">${t("settings.links.hardlinkHint")}</div>
-        <div id="lm-hint-symlink" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>`,
+        <div id="lm-hint-copy" class="stg-hint-block" style="display:none">${t("settings.links.copyHint")}</div>
+        <div id="lm-hint-hardlink" class="stg-hint-block" style="display:none">${t("settings.links.hardlinkHint")}</div>
+        <div id="lm-hint-symlink" class="stg-hint-block" style="display:none"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>`,
         header: {
           forId: "set-link-mode",
           actions: `<button id="set-relink" class="btn-base sm">${UI_ICONS.refresh} ${t("settings.links.reapply")}</button>`,
@@ -167,14 +220,7 @@ function renderStgBasicPaths(p: SettingsPlatform): string {
         // 地球，2026-09 那次「语义校正」只换了变量名、零视觉产出。镜像源 = 下载来源，用 download。
         icon: UI_ICONS.download,
         title: t("settings.mirror.title"),
-        body: `<select id="set-mirror" class="stg-select" style="width:100%;margin-bottom:6px">
-          <option value="">${t("settings.mirror.directOption")}</option>
-          <option value="jsdelivr">${t("settings.mirror.jsdelivrOption")}</option>
-          <option value="githubapi">${t("settings.mirror.nameGithubapi")}</option>
-        </select>
-        <div id="mirror-hint-direct" style="font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.directHint")}</div>
-        <div id="mirror-hint-jsdelivr" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.jsdelivrHint")}</div>
-        <div id="mirror-hint-githubapi" style="display:none;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2);line-height:1.5">${t("settings.mirror.githubapiHint")}</div>`,
+        body: mirrorCardBody(),
         header: { forId: "set-mirror" },
       },
     );
@@ -465,7 +511,7 @@ function renderStgPreview3d(): string {
   const rotOptions = TD_ROT_MODE.values
     .map((v) => `<option value="${v}">${t(ROT_MODE_LABEL[v])}</option>`)
     .join("\n      ");
-  // 不再挂「3D 预览」节标题：tab 名即「3D 预览」（settings.tab3d），面板首行再写一遍同名
+  // 不再挂「3D 预览」节标题：tab 名即「3D 预览」（settings.preview3d），面板首行再写一遍同名
   // 大标题是纯装饰——与「解析」节标题同类病，aboutPageBody 已按同口径不挂「关于」标题。
   // 首组改 B 式 .stg-section 供 16px 顶距：.stg-page 契约 padding:0 20px 16px 顶部零垫，
   // 原本的顶距一直由这个被删的 section-title 的 padding 隐式提供（删它不补类就贴顶）。
@@ -502,11 +548,11 @@ function renderStgParserWorkers(): string {
   return `<details class="stg-details stg-parser-details">
   <summary class="stg-details-summary">${UI_ICONS.parser} ${t("settings.parser")}</summary>
   <div class="stg-details-body">
-    <div class="settings-group" style="animation-delay:${groupDelay(0, 0)}ms">
+    <div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.preview3d, 0)}ms">
       <div class="stg-desc">${t("settings.parserDesc")}</div>
     </div>
 
-    <div class="settings-group" style="animation-delay:${groupDelay(0, 1)}ms">
+    <div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.preview3d, 1)}ms">
       <div class="setting-row">
         <span class="label" id="stg-fbx-worker-label">${UI_ICONS.parser} ${t("settings.preview3d.fbxWorker")}</span>
         <label class="stg-label" for="set-fbx-worker" style="gap:8px">
@@ -517,7 +563,7 @@ function renderStgParserWorkers(): string {
       <div class="stg-desc" id="stg-fbx-worker-hint">${t("settings.preview3d.fbxWorkerHint")}</div>
     </div>
 
-    <div class="settings-group" style="animation-delay:${groupDelay(0, 2)}ms">
+    <div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.preview3d, 2)}ms">
       <div class="setting-row">
         <span class="label" id="stg-mmd-worker-label">${UI_ICONS.parser} ${t("settings.preview3d.mmdWorker")}</span>
         <label class="stg-label" for="set-mmd-worker" style="gap:8px">

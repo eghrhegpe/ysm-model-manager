@@ -140,7 +140,7 @@ export const ja: Record<string, string> = {
   "settings.env": "環境",
   "settings.appearance": "外観",
   "settings.parser": "パーサー",
-  "settings.tab3d": "3D プレビュー",
+  "settings.preview3d": "3D プレビュー",
   "settings.parserDesc":
     "3D モデル解析エンジンの設定。両形式とも既定ではメインスレッドで解析（安定ベースライン）。有効にすると解析は Web Worker に移り、異常時は自動でメインスレッドにフォールバック。ここでいつでも手動で無効化できます。",
   "settings.aboutUpdate": "更新と概要",

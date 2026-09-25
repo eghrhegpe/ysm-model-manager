@@ -53,6 +53,17 @@ export const contentStgCSS: string = `
   color: var(--muted);
   line-height: 1.7;
 }
+/* .stg-hint-block：select 下方「按当前值切换显隐」的说明块（init.ts|applyHintVisibility 切
+   display，本类只管排版、不带显隐）。立类因：lm-hint-* / mirror-hint-* 的
+   'font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)' 曾 6 处内联复制且两族
+   漂移（line-height 一有一无）。与 .stg-desc 分立：desc 是节级正文（无 padding、1.7 行高），
+   hint-block 是控件附属说明（padding 与控件顶齐、1.5 行高）。 */
+.stg-hint-block {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  padding: var(--pad-v-2);
+  line-height: 1.5;
+}
 /* ⚠️ 已废弃（勿用）：与 .section-title 叠加得 32px 双重上间距。
    .section-title 自带 padding-top:16px，再叠 margin-top:16px = 双份。
    设置页改用 .section-title 单供间距（A 式）；无标题组用 .stg-section（B 式）。

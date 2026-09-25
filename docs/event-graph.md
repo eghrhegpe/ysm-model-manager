@@ -218,7 +218,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 66 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 190 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 191 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 266 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
@@ -316,9 +316,9 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 87 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 197 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 115 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 227 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 229 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 94 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 358 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 360 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 313 |
@@ -427,7 +427,7 @@
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 28 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 39 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 45 |
-| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 99 |
+| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 100 |
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 181 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 229 |
@@ -436,22 +436,22 @@
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 87 |
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 132 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 169 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 176 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 199 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 220 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 244 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 328 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 170 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 178 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 201 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 222 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 246 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 331 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 152 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 166 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 185 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 95 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 276 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 282 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 304 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 310 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 332 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 359 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 305 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 334 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 361 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 174 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 185 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 205 |
@@ -577,8 +577,8 @@
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 118 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 223 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 116 |
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 402 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 430 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 405 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 433 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 314 |
 
 **订阅方（on）：**

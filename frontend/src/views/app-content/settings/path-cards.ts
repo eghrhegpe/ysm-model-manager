@@ -280,7 +280,8 @@ export function initAdvancedGrid(
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: `❌ ${friendlyError((e as Error)?.message || e, t("settings.saveFailed"))}`,
+            // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
+            msg: friendlyError((e as Error)?.message || e, t("settings.saveFailed")),
             duration: TOAST_MS.verbose,
             type: "error",
           });
@@ -308,7 +309,8 @@ export function initAdvancedGrid(
           });
         } catch (e) {
           bus.emit("toast:show", {
-            msg: `❌ ${friendlyError((e as Error)?.message || e, t("settings.resetFailed"))}`,
+            // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
+            msg: friendlyError((e as Error)?.message || e, t("settings.resetFailed")),
             duration: TOAST_MS.verbose,
             type: "error",
           });

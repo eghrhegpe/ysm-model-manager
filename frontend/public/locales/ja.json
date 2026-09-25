@@ -599,7 +599,6 @@
   "content.labelDesc": "説明",
   "content.descPlaceholder": "短いキーワード、カンマ区切り（8 文字以内でタグ表示）",
   "content.labelPlatform": "プラットフォーム",
-  "content.multiSelectHint": "Ctrl+クリックで複数選択",
   "content.roleCreator": "クリエイター",
   "content.roleOfficial": "公式",
   "content.roleRepo": "リポジトリ",

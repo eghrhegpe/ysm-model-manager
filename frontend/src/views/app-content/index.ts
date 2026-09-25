@@ -179,7 +179,8 @@ class AppContent extends WebComponentBase {
   private _pageInitFailed(e: unknown): void {
     logError("app-content", "页面初始化失败", e);
     bus.emit("toast:show", {
-      msg: `❌ ${t("content.pageLoadFailed")}: ${friendlyError(e)}`,
+      // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
+      msg: `${t("content.pageLoadFailed")}: ${friendlyError(e)}`,
       duration: TOAST_MS.long,
       type: "error",
     });

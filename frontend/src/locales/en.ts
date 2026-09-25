@@ -715,7 +715,6 @@ export const en: Record<string, string> = {
   "content.labelDesc": "Description",
   "content.descPlaceholder": "Short tags, comma separated (≤8 chars shown as chips)",
   "content.labelPlatform": "Platform",
-  "content.multiSelectHint": "Ctrl+Click to multi-select",
   "content.roleCreator": "Creator",
   "content.roleOfficial": "Official",
   "content.roleRepo": "Repository",

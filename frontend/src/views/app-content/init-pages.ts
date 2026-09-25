@@ -343,7 +343,8 @@ export async function initSettingsPage(host: AppContentHost): Promise<void> {
   } catch (e) {
     logError("settings", "初始化失败", e);
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(e, t("content.settingsInitFailed"))}`,
+      // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
+      msg: friendlyError(e, t("content.settingsInitFailed")),
       duration: TOAST_MS.long,
       type: "error",
     });

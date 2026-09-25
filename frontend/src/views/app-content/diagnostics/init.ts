@@ -43,7 +43,8 @@ function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
       });
     } catch (e) {
       bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e, t("diagnostics.clearFailed"))}`,
+        // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
+        msg: friendlyError(e, t("diagnostics.clearFailed")),
         duration: TOAST_MS.verbose,
         type: "error",
       });

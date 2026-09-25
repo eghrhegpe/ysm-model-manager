@@ -130,7 +130,8 @@ function stgBindUpdateInterval(
         await SaveThresholds(Number(updateCheckSelect.value), cfgLocal.logMaxEntries || 500);
         cfgLocal.updateCheckIntervalMs = Number(updateCheckSelect.value);
         bus.emit("toast:show", {
-          msg: `✅ ${t("settings.updateCheck.saved")}`,
+          // ADR-267：状态图标由 type 驱动，msg 不带 ✅ 前缀
+          msg: t("settings.updateCheck.saved"),
           duration: TOAST_MS.success,
           type: "success",
         });
@@ -167,7 +168,8 @@ async function relinkOneInstance(
 function emitRelinkToast(total: number, failed: number): void {
   if (total === 0) {
     bus.emit("toast:show", {
-      msg: failed > 0 ? `⚠️ ${t("settings.relinkFailed", { failed })}` : t("settings.relinkNone"),
+      // ADR-267：状态图标由 type 驱动，msg 不带 ⚠️ 前缀
+      msg: failed > 0 ? t("settings.relinkFailed", { failed }) : t("settings.relinkNone"),
       duration: TOAST_MS.normal,
       type: failed > 0 ? "error" : "info",
     });
@@ -242,7 +244,8 @@ async function relinkAllInstances(
     await relinkAllInstancesInner();
   } catch (e) {
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(e)}`,
+      // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
+      msg: friendlyError(e),
       duration: TOAST_MS.long,
       type: "error",
     });

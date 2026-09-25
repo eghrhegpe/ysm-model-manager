@@ -821,7 +821,7 @@ describe("initDiagnostics — 清空日志门禁与失败", () => {
     expect(clearFn).not.toHaveBeenCalled();
   });
 
-  it("ClearImportLogs 拒绝 → ❌ 清除失败 error toast", async () => {
+  it("ClearImportLogs 拒绝 → 清除失败 error toast（ADR-267：msg 不带 ❌ 前缀）", async () => {
     mockApp({ ClearImportLogs: vi.fn(() => Promise.reject(new Error("boom"))) });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
@@ -836,7 +836,8 @@ describe("initDiagnostics — 清空日志门禁与失败", () => {
       ),
     );
     const call = busEmit.mock.calls.find((c) => (c[1] as { msg: string }).msg.includes("清除日志失败"));
-    expect((call![1] as { msg: string }).msg.startsWith("❌")).toBe(true);
+    // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
+    expect((call![1] as { msg: string }).msg.startsWith("❌")).toBe(false);
   });
 });
 

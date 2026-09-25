@@ -697,7 +697,6 @@ export const zhCN = {
   "content.labelDesc": "描述",
   "content.descPlaceholder": "短关键词、顿号分隔（8 字以内才会以标签展示）",
   "content.labelPlatform": "平台",
-  "content.multiSelectHint": "Ctrl+点击多选",
   "content.roleCreator": "创作者",
   "content.roleOfficial": "官方",
   "content.roleRepo": "仓库",

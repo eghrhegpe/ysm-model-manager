@@ -339,10 +339,12 @@ export interface ImportLog {
  * diverged（内容分叉）按面板 store.tabStatus 折叠进 MissingCount（红=待推送）。
  * 三份清单粒度**刻意不同**：Missing 是仓库侧**文件级绝对路径**
  * （一键安装 features/sync/sync.ts runDownloadMissing 逐条 Install 的契约，
- * 
- * 	整夹缺失会展开成夹内文件；故长度 ≠ MissingCount，计数只认 MissingCount）；
- * 
- * Extra/Disabled 是实例侧单元路径（前端仅取长度与展示）。
+ * 整夹缺失会展开成夹内文件；已排序去重）——**绝不含目录**（目录路径在 install 侧
+ * 语义错误：isDir 类型会 InstallDir 其父目录=过度安装，fileLevel 类型必判不支持格式）；
+ * 故长度 ≠ MissingCount（可短、**可为空**：夹内无可推送受支持文件时单元仍计 1，
+ * 该夹只能由面板单行推送 PushSingleResourceToInstance 修，一键安装不承担）。
+ * Extra/Disabled 是**单元**路径：Extra = 实例侧独有的单元；Disabled = 禁用单元，
+ * 可能是实例侧 `.ban` 文件，也可能是仓库侧 `.ban` 单元（未展开、不推送）。
  */
 export interface InstanceStatus {
     "Name": string;
@@ -364,7 +366,7 @@ export interface InstanceStatus {
     "MissingCount": number;
 
     /**
-     * 仓库侧文件级绝对路径（一键安装）
+     * 仓库侧文件级绝对路径（一键安装；无目录）
      */
     "Missing": string[] | null;
 
@@ -374,7 +376,7 @@ export interface InstanceStatus {
     "Extra": string[] | null;
 
     /**
-     * 实例侧禁用（.ban/.disabled）单元路径
+     * 禁用单元路径（实例侧或仓库侧 .ban；未展开）
      */
     "Disabled": string[] | null;
 

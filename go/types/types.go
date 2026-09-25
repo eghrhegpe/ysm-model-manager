@@ -215,19 +215,21 @@ type CustomFileInfo struct {
 // diverged（内容分叉）按面板 store.tabStatus 折叠进 MissingCount（红=待推送）。
 // 三份清单粒度**刻意不同**：Missing 是仓库侧**文件级绝对路径**
 // （一键安装 features/sync/sync.ts runDownloadMissing 逐条 Install 的契约，
-//
-//	整夹缺失会展开成夹内文件；故长度 ≠ MissingCount，计数只认 MissingCount）；
-//
-// Extra/Disabled 是实例侧单元路径（前端仅取长度与展示）。
+// 整夹缺失会展开成夹内文件；已排序去重）——**绝不含目录**（目录路径在 install 侧
+// 语义错误：isDir 类型会 InstallDir 其父目录=过度安装，fileLevel 类型必判不支持格式）；
+// 故长度 ≠ MissingCount（可短、**可为空**：夹内无可推送受支持文件时单元仍计 1，
+// 该夹只能由面板单行推送 PushSingleResourceToInstance 修，一键安装不承担）。
+// Extra/Disabled 是**单元**路径：Extra = 实例侧独有的单元；Disabled = 禁用单元，
+// 可能是实例侧 `.ban` 文件，也可能是仓库侧 `.ban` 单元（未展开、不推送）。
 type InstanceStatus struct {
 	Name         string           `json:"Name"`
 	CustomDir    string           `json:"CustomDir"`
 	Status       string           `json:"Status"`       // "complete" | "missing" | "extra"（红优先）
 	Synced       int              `json:"Synced"`       // 已同步单元数（前端排序用）
 	MissingCount int              `json:"MissingCount"` // 待推送单元数 = missing + diverged（源见上）
-	Missing      []string         `json:"Missing"`      // 仓库侧文件级绝对路径（一键安装）
+	Missing      []string         `json:"Missing"`      // 仓库侧文件级绝对路径（一键安装；无目录）
 	Extra        []string         `json:"Extra"`        // 实例侧独有单元路径
-	Disabled     []string         `json:"Disabled"`     // 实例侧禁用（.ban/.disabled）单元路径
+	Disabled     []string         `json:"Disabled"`     // 禁用单元路径（实例侧或仓库侧 .ban；未展开）
 	HasMod       bool             `json:"HasMod"`       // 当前资源类型对应的 mod 是否存在
 	Files        []CustomFileInfo `json:"Files"`        // 已废弃：旧链填充的链接类型清单，前端零消费者（ADR-296 实证），不再填
 }

@@ -60,10 +60,15 @@ func BuildInstanceStatusCounts(
 		for j := range items {
 			foldUnit(&st, items[j])
 		}
-		// map 迭代序在 sync 层不保证，排序保证列表每次刷新顺序稳定（前端 diff/展示友好）
+		// map 迭代序在 sync 层不保证，排序保证列表每次刷新顺序稳定（前端 diff/展示友好）；
+		// 排序后压重：面板链「混合夹」会同时产出平铺文件叶与容器 marker 子项，
+		// 同一文件重复列示（见 go-instance 卡已知限制），导入一键安装清单会重复安装
 		sort.Strings(st.Missing)
 		sort.Strings(st.Extra)
 		sort.Strings(st.Disabled)
+		st.Missing = dedupeSorted(st.Missing)
+		st.Extra = dedupeSorted(st.Extra)
+		st.Disabled = dedupeSorted(st.Disabled)
 		// Status 取「红优先」——与 loader.ts 自派生口径一致（有待推送差异就不再是绿/橙）
 		switch {
 		case st.MissingCount > 0:
@@ -76,6 +81,23 @@ func BuildInstanceStatusCounts(
 		results = append(results, st)
 	}
 	return results
+}
+
+// dedupeSorted 就地压缩已排序切片中的相邻重复项（调用方须先 sort）。
+// 必要性：面板链的「混合夹」既把平铺模型文件登记为独立叶子、又经 absorbSelfMarker
+// 并入容器子项，同一文件会出现两次（面板侧表现为同名两行）；侧栏若原样带进
+// 一键安装清单就会重复安装同一文件。此处只去重清单，不改单元计数。
+func dedupeSorted(in []string) []string {
+	if len(in) < 2 {
+		return in
+	}
+	out := in[:1]
+	for _, s := range in[1:] {
+		if s != out[len(out)-1] {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // statusCustomDir 解析实例侧扫描目录（单类型走 FindInstDir，多类型退回 ins.CustomDir）
@@ -110,30 +132,30 @@ func foldUnit(st *types.InstanceStatus, it types.ResourceSyncItem) {
 //
 // 一键安装（runDownloadMissing）逐条 Install，契约是文件而非夹；因此：
 //   - 单元带 children（dirLevel 模型夹的 buildDirLevelChildren 产物，或嵌套容器）：
-//     递归取 status ∈ {missing, diverged} 的**文件**条目——它们的 Path 由
-//     DiffFolderContentsScan 给出，缺失/分叉都指向仓库侧（dd.AbsPath=gEntry），
+//     递归取 status ∈ {missing, diverged} 的子项——它们的 Path 由
+//     DiffFolderContentsScan 给出，缺失/分叉都指向仓库侧（d.AbsPath=gEntry），
 //     正是「推上去能修好」的那份源文件；
 //   - 无 children 的文件单元：Path 本身即仓库侧文件路径（fileLevel 的 SyncResources
 //     missing，或 dirLevel 根下散文件）；
-//   - 无 children 但 Path 是磁盘上的目录（fileLevel 资源包夹这类整夹缺失，面板链
-//     不为其建 children）：用 DiffFolderContents 以空实例侧 diff 出夹内全部文件；
-//     若夹内没有任何「可推送的受支持文件」（如只含 pack.mcmeta 的资源包夹），
-//     **退回目录路径本身**——分类计数已把它算作 1 个待推送单元，清单必须至少有
-//     对应条目，否则「徽章有数、一键安装无动作」属静默漏装（宁可见失败/交由
-//     install 侧文件夹分支处理，也不静默丢弃）；
+//   - 无 children 但 Path 是磁盘上的目录（fileLevel 资源包夹，或 dirLevel 里
+//     children 为空的叶子夹——如 maids 包内的文件均不被 IsTypeModelFile 命中）：
+//     用 DiffFolderContents 以空实例侧 diff 出夹内文件；
 //   - disabled 子项被排除（同 foldUnit：禁用内容不推送）。
+//
+// ⚠️ 绝不吐目录路径：本清单的消费端是「逐条 Install」，而目录路径在 install 侧语义
+// 是错的——`InstallResourceToInstance` 对 isDir 类型走 `InstallDir(filepath.Dir(src))`，
+// 传目录会把它**父目录**整棵装进实例（过度安装）；fileLevel 类型则落到
+// `installer.Install(dir)`，`isSupportedModelExt("")` 必判不支持（必然失败）。
+// 因此「夹内无可推送文件」时返回空清单——这是 ADR-310 §3 记明的计数/清单粒度差
+// （单元算 1，可装文件 0），面板可用 `PushSingleResourceToInstance`（folder-aware）
+// 单行推送该夹，侧栏一键安装不承担此路径。
 func pushFilePaths(it types.ResourceSyncItem) []string {
 	if len(it.Children) > 0 {
 		var out []string
 		for i := range it.Children {
 			ch := it.Children[i]
-			switch ch.Status {
-			case types.SyncStatusMissing, types.SyncStatusDiverged:
-				if len(ch.Children) > 0 {
-					out = append(out, pushFilePaths(ch)...)
-					continue
-				}
-				out = append(out, ch.Path)
+			if ch.Status == types.SyncStatusMissing || ch.Status == types.SyncStatusDiverged {
+				out = append(out, pushFilePaths(ch)...)
 			}
 		}
 		return out
@@ -147,9 +169,7 @@ func pushFilePaths(it types.ResourceSyncItem) []string {
 				out = append(out, d.AbsPath)
 			}
 		}
-		if len(out) > 0 {
-			return out
-		}
+		return out
 	}
 	return []string{it.Path}
 }

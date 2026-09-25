@@ -208,40 +208,153 @@ func TestBuildInstanceStatusCounts_RepoBannedUnitIsDisabled(t *testing.T) {
 	}
 }
 
-// TestBuildInstanceStatusCounts_MissingFolderNeverSilentlyDropped 整夹缺失单元在
-// 清单里必须至少有一条对应路径（「徽章有数、清单空」= 一键安装静默漏装）：
-// 资源包夹（fileLevel，面板链不为其建 children，夹内只有 pack.mcmeta 这类非模型文件）
-// 的推送路径退回目录本身，交由 install 侧文件夹分支/明确报错处理。
-func TestBuildInstanceStatusCounts_MissingFolderNeverSilentlyDropped(t *testing.T) {
-	sub := registry.SubDirMap("resourcepack")
+// TestBuildInstanceStatusCounts_MissingListIsFileLevelOnly 清单必须恒为仓库侧**文件级**
+// 路径——绝不吐目录。反例（子代理审计 D1/D2，均为真实可达形态）：
+//   - D1 容器子位的 dirLevel 叶子夹 children 为空（maid-model 夹内 assets/**.json 不被
+//     IsTypeModelFile 命中）→ 旧实现直接吐夹路径；该夹路径经 sync.ts → InstallResourceToInstance
+//     对 isDir 类型会走 InstallDir(其父目录)，把**兄弟模型包整棵**装进实例（过度安装），
+//     夹直接位于仓库根时则落到 installer.Install(目录) → 必判「不支持的文件类型」；
+//   - D2 fileLevel 资源包夹（isDir=false）夹内只有 pack.mcmeta → 展开为空，同样不得吐目录。
+//
+// 计数照旧把该单元算 1（与面板可见行一致）；「单元 1 / 可装文件 0」是 ADR-310 §3
+// 记明的粒度差，面板可单行推送（PushSingleResourceToInstance 支持文件夹），侧栏一键安装不负责。
+func TestBuildInstanceStatusCounts_MissingListIsFileLevelOnly(t *testing.T) {
+	assertNoDirEntries := func(t *testing.T, label string, paths []string) {
+		t.Helper()
+		for _, p := range paths {
+			if fi, err := os.Stat(p); err == nil && fi.IsDir() {
+				t.Fatalf("%s：清单不得含目录路径，实际含 %s", label, p)
+			}
+		}
+	}
+
+	t.Run("D1 容器子位的空 children 叶子夹", func(t *testing.T) {
+		sub := registry.SubDirMap("maid-model")
+		if sub == "" {
+			t.Skip("maid-model 无 instanceDir 配置，跳过")
+		}
+		base := t.TempDir()
+		globalDir := filepath.Join(base, "global")
+		instRoot := filepath.Join(base, "inst")
+		// 仓库：中间目录 vendor 下的模型夹 packA（仅含 pack.mcmeta + 不被类型白名单命中的 json）
+		writeFile(t, filepath.Join(globalDir, "vendor", "packA", "pack.mcmeta"), `{"pack":{"pack_format":15}}`)
+		writeFile(t, filepath.Join(globalDir, "vendor", "packA", "assets", "ns", "maid_model.json"), `{}`)
+
+		ins := types.VersionInstance{
+			Name:       "t",
+			VersionDir: instRoot,
+			CustomDir:  filepath.Join(instRoot, filepath.FromSlash(sub)),
+		}
+		st := BuildInstanceStatusCounts(
+			[]types.VersionInstance{ins},
+			[]registry.ResourceType{{ID: "maid-model", Icon: "🧹"}},
+			map[string]string{"maid-model": globalDir},
+		)[0]
+		if st.MissingCount == 0 {
+			t.Fatalf("该夹应被面板链判为待推送单元，实际 MissingCount=0（状态 %q）", st.Status)
+		}
+		assertNoDirEntries(t, "D1", st.Missing)
+		// 夹内文件（pack.mcmeta / assets/**.json）均不被 maid-model 类型白名单命中 →
+		// 单元算 1、可装文件 0：ADR-310 §3 记明的粒度差（不是漏装——面板可单行推送该夹，
+		// 一键安装走文件清单故确无可装项），旧实现此处的目录路径才是真缺陷
+		if len(st.Missing) != 0 {
+			t.Fatalf("夹内无可推送文件，清单应为空，实际 %v", st.Missing)
+		}
+	})
+
+	t.Run("D2 资源包夹无可推送文件", func(t *testing.T) {
+		sub := registry.SubDirMap("resourcepack")
+		if sub == "" {
+			t.Skip("resourcepack 无 instanceDir 配置，跳过")
+		}
+		base := t.TempDir()
+		globalDir := filepath.Join(base, "global")
+		instRoot := filepath.Join(base, "inst")
+		writeFile(t, filepath.Join(globalDir, "rpA", "pack.mcmeta"), `{"pack":{"pack_format":15}}`)
+
+		ins := types.VersionInstance{
+			Name:       "t",
+			VersionDir: instRoot,
+			CustomDir:  filepath.Join(instRoot, filepath.FromSlash(sub)),
+		}
+		st := BuildInstanceStatusCounts(
+			[]types.VersionInstance{ins},
+			[]registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}},
+			map[string]string{"resourcepack": globalDir},
+		)[0]
+		if st.MissingCount != 1 {
+			t.Fatalf("资源包夹缺失应计 1 个单元，实际 %d", st.MissingCount)
+		}
+		if st.Status != "missing" {
+			t.Fatalf("Status 应为 missing，实际 %q", st.Status)
+		}
+		assertNoDirEntries(t, "D2", st.Missing)
+		// pack.mcmeta 不是 resourcepack 的模型文件（白名单仅 .zip/.7z）、夹内无 zip →
+		// 单元算 1、可装文件 0（同 D1：粒度差，不吐目录）
+		if len(st.Missing) != 0 {
+			t.Fatalf("夹内无可推送文件，清单应为空，实际 %v", st.Missing)
+		}
+	})
+}
+
+// TestBuildInstanceStatusCounts_ListDeduped 混合夹（自身含平铺模型文件 + 子夹）在面板链里
+// 会把同一平铺文件重复列示两次（absorbSelfMarker 并入 + 独立叶子共存，见知识卡已知限制），
+// 清单必须去重——否则一键安装对同一文件装两遍、条数与实际待装数不符。
+func TestBuildInstanceStatusCounts_ListDeduped(t *testing.T) {
+	sub := registry.SubDirMap("EntityPlayer")
 	if sub == "" {
-		t.Skip("resourcepack 无 instanceDir 配置，跳过")
+		t.Skip("EntityPlayer 无 instanceDir 配置，跳过")
 	}
 	base := t.TempDir()
 	globalDir := filepath.Join(base, "global")
 	instRoot := filepath.Join(base, "inst")
-	instDir := filepath.Join(instRoot, filepath.FromSlash(sub))
-	// 仓库侧存在资源包夹（只含 pack.mcmeta），实例侧整夹缺失
-	writeFile(t, filepath.Join(globalDir, "PackA", "pack.mcmeta"), `{"pack":{"pack_format":15}}`)
+	// 混合夹 A：自身平铺文件 flat.pmx + 子夹 B/deep.pmx，实例侧整夹缺失
+	writeFile(t, filepath.Join(globalDir, "A", "flat.pmx"), "flat")
+	writeFile(t, filepath.Join(globalDir, "A", "B", "deep.pmx"), "deep")
 
-	ins := types.VersionInstance{Name: "t", VersionDir: instRoot, CustomDir: instDir}
-	got := BuildInstanceStatusCounts(
-		[]types.VersionInstance{ins},
-		[]registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}},
-		map[string]string{"resourcepack": globalDir},
-	)
-	if len(got) != 1 {
-		t.Fatalf("应返回 1 个实例状态，实际 %d", len(got))
+	ins := types.VersionInstance{
+		Name:       "t",
+		VersionDir: instRoot,
+		CustomDir:  filepath.Join(instRoot, filepath.FromSlash(sub)),
 	}
-	st := got[0]
+	st := BuildInstanceStatusCounts(
+		[]types.VersionInstance{ins},
+		[]registry.ResourceType{{ID: "EntityPlayer", Icon: "🧍"}},
+		map[string]string{"EntityPlayer": globalDir},
+	)[0]
+
 	if st.MissingCount != 1 {
-		t.Fatalf("整夹缺失应为 1 个待推送单元，实际 %d（其余项：%+v）", st.MissingCount, st)
+		t.Fatalf("整夹缺失应计 1 个单元，实际 %d", st.MissingCount)
+	}
+	seen := map[string]bool{}
+	for _, p := range st.Missing {
+		if seen[p] {
+			t.Fatalf("清单重复条目 %s（全清单 %v）——会导致重复安装", p, st.Missing)
+		}
+		seen[p] = true
 	}
 	if len(st.Missing) == 0 {
-		t.Fatalf("计数 %d 但清单为空 = 一键安装静默漏装（契约要求至少 1 条路径）", st.MissingCount)
+		t.Fatal("两个平铺/子夹文件都缺失，清单不应为空")
 	}
-	if st.Status != "missing" {
-		t.Fatalf("Status 应为 missing，实际 %q", st.Status)
+	if !sort.StringsAreSorted(st.Missing) {
+		t.Fatalf("去重后仍须有序，实际 %v", st.Missing)
+	}
+	// 钉住上游 quirk 的存在性证据（证明本测试非空转）：面板链顶层容器子项里
+	// flat.pmx 重复出现，侧栏清单去重后只剩一条
+	raw := BuildSyncItems(&ins, []registry.ResourceType{{ID: "EntityPlayer", Icon: "🧍"}},
+		map[string]string{"EntityPlayer": globalDir}, "")
+	flat := filepath.Join(globalDir, "A", "flat.pmx")
+	dup := 0
+	for i := range raw {
+		for j := range raw[i].Children {
+			if raw[i].Children[j].Path == flat {
+				dup++
+			}
+		}
+	}
+	t.Logf("面板链顶层单元 %d 个；flat.pmx 在子项出现 %d 次；侧栏清单 %v", len(raw), dup, st.Missing)
+	if dup < 2 {
+		t.Skipf("面板链本次未复现重复列示（dup=%d）——该回归防的是 absorbSelfMarker 混合夹形态，形态变化时此断言自然失效", dup)
 	}
 }
 

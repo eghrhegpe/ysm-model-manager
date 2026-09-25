@@ -324,6 +324,7 @@ export const zhCN = {
   "repo.tab.tree": "文件树",
   "repo.tab.dedup": "去重",
   "repo.tab.oldest": "资历最深",
+  "repo.viewerDesktopOnlyNotice": "回收站、去重与资历最深仅桌面版可用",
   "repo.score": "仓库评分",
   "oldest.monthly": "月度活动",
   "oldest.daily": "每日推荐",

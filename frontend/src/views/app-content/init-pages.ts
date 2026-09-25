@@ -28,7 +28,7 @@ import { bindTabA11y } from "./tabs-a11y.ts";
  */
 export function initDiagnosticsPage(host: AppContentHost): void {
   bindTabs(host, ".repo-tab", "diag");
-  initDiagnostics(host.state.root, (s) => esc(String(s || "")));
+  initDiagnostics(host.state.root, (s) => esc(s == null ? "" : String(s)));
 }
 
 /**
@@ -265,7 +265,12 @@ async function initDedupTab(
   if (panel) dedup.initConfig(panel);
   const doDedup = (): void => {
     const listEl = container.querySelector("#dedup-result-list");
-    if (listEl) dedup.start(listEl as HTMLElement, (s: unknown) => esc(String(s || "")), dedupType);
+    if (listEl)
+      dedup.start(
+        listEl as HTMLElement,
+        (s: unknown) => esc(s == null ? "" : String(s)),
+        dedupType,
+      );
   };
   container.querySelector("#dedup-start-btn")?.addEventListener("click", doDedup);
   // 全局类型切换时自动复扫

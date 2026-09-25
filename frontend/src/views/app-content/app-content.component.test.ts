@@ -188,4 +188,27 @@ describe("app-content 生命周期配对", () => {
     expect(onMock).toHaveBeenCalledWith("config-loaded", expect.any(Function));
     unmountElement(el2);
   });
+
+  it("同页重放 nav:changed → 不重挂面板（app-preview 内容保留；曾因 appendChild move 触发重连自清）", async () => {
+    const el = mountCustomElement("app-content");
+    await waitFor(() => el.shadowRoot?.querySelector(".page") !== null); // init 落定
+    // 往预览面板 shadow 内塞标记：若发生重挂，app-preview connectedCallback 会把
+    // shadow innerHTML 清成空壳（modelDetailHTML(null)），标记消失即暴露重挂
+    const preview = el.shadowRoot?.querySelector("app-preview") as HTMLElement;
+    expect(preview).toBeTruthy();
+    (preview.shadowRoot as ShadowRoot).innerHTML = '<div id="keep-me"></div>';
+    // 同页重放：点击已激活 nav 项 / repo:search-creator 已在仓库页的真实形态
+    bus.emit("nav:changed", { page: "repository" });
+    await flushAsyncTurns();
+    expect((preview.shadowRoot as ShadowRoot).querySelector("#keep-me")).not.toBeNull();
+    unmountElement(el);
+  });
+
+  it("仓库页落定后仅挂一个 app-tree（模板留空，初始挂载单点归 mountTree）", async () => {
+    const el = mountCustomElement("app-content");
+    await waitFor(() => el.shadowRoot?.querySelector("app-tree") !== null);
+    await flushAsyncTurns(); // 排空：initRepositoryPage.mountTree 同步替换后无第二实例
+    expect(el.shadowRoot?.querySelectorAll("app-tree").length).toBe(1);
+    unmountElement(el);
+  });
 });

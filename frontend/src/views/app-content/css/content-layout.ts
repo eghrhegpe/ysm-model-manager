@@ -65,8 +65,11 @@ ${FADE_SLIDE_LEFT}
 
 .repo-layout-wrap { flex:1; }
 
-/* ===== 仓库外壳骨架（.repo-layout / .repo-wrap）——所有 repo-wrap 页共用 ===== */
+/* ===== 仓库外壳骨架（.repo-layout / .repo-left / .repo-wrap）——所有 repo-wrap 页共用 ===== */
 .repo-layout { flex:1; display:flex; overflow:hidden; height:100%; }
+/* 仅仓库页使用：面板组（tab 面板落位处）与预览面板、拖拽柄并排 */
+.repo-left { flex:1; display:flex; flex-direction:column; min-width:0; }
+.preview-resize-handle { width:4px; cursor:col-resize; background:transparent; transition:background var(--tr-fast); flex-shrink:0; }
 
 /* ===== 统一按钮系统 .btn-base（utils/dom/css.ts 注入） ===== */
 ${btnBaseCSS}

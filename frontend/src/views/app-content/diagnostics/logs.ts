@@ -11,7 +11,7 @@ import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { statRowHTML } from "./status-row.ts";
 
-/** 转义函数签名（单一事实源 = utils/html/html.ts 的 esc；调用方以 (s) => esc(String(s || "")) 包装适配） */
+/** 转义函数签名（单一事实源 = utils/html/html.ts 的 esc；调用方以 (s) => esc(s == null ? "" : String(s)) 包装适配（勿退回 String(s || "")——数字 0/false 会被吞成空串）） */
 export type EscFn = (s: unknown) => string;
 
 // P3 修复（子代理审计，代际守卫；ADR-230 收口为全仓唯一守卫出口）：日志加载模块级守卫——

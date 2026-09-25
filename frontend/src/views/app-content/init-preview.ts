@@ -2,6 +2,15 @@
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import type { AppContentHost } from "./host.ts";
 
+/** 预览面板宽度夹取范围与默认值（恢复与 onMove 共用，防两处魔法数漂移） */
+const PREVIEW_W_MIN = 160;
+const PREVIEW_W_MAX = 500;
+const PREVIEW_W_DEFAULT = 240;
+
+function clampPreviewWidth(w: number): number {
+  return Math.max(PREVIEW_W_MIN, Math.min(PREVIEW_W_MAX, w));
+}
+
 /**
  * 初始化预览面板拖拽调整宽度
  * @param host - app-content 组件实例
@@ -22,12 +31,16 @@ export function initPreviewResize(host: AppContentHost): void {
     return;
   }
 
-  // 从 localStorage 恢复宽度
+  // 宽度真值单点在此：localStorage 恢复（模板不再写死 width / var 死引用）。
+  // 脏值（parseInt NaN）回落默认宽，不写无效 style
   const savedWidth = safeGet("preview-width");
-  if (savedWidth) {
-    const w = Math.max(160, Math.min(500, parseInt(savedWidth, 10)));
-    preview.style.width = `${w}px`;
-  }
+  const parsed = savedWidth ? parseInt(savedWidth, 10) : Number.NaN;
+  preview.style.width = `${Number.isFinite(parsed) ? clampPreviewWidth(parsed) : PREVIEW_W_DEFAULT}px`;
+
+  // pointerdown 绑定与 handle 元素同寿命（handle 随面板世代新建）——幂等守卫防
+  // 同世代多次进入本函数时在同一个 handle 上累积 handler
+  if (handle.dataset.resizeBound) return;
+  handle.dataset.resizeBound = "1";
 
   let resizing = false;
   handle.addEventListener("pointerdown", (e) => {
@@ -42,7 +55,7 @@ export function initPreviewResize(host: AppContentHost): void {
   const onMove = (e: PointerEvent): void => {
     if (!resizing) return;
     const rect = preview.getBoundingClientRect();
-    const newW = Math.max(160, Math.min(500, rect.right - e.clientX));
+    const newW = clampPreviewWidth(rect.right - e.clientX);
     preview.style.width = `${newW}px`;
   };
   const onUp = (e: PointerEvent): void => {

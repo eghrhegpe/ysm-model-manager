@@ -270,7 +270,7 @@
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 107 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 272 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 277 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 305 |
@@ -433,7 +433,7 @@
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 176 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 203 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 307 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 312 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 88 |

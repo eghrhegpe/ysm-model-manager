@@ -3,7 +3,6 @@
 import { isViewerMode } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { renderSubBar, renderTabs, type TabSpec } from "./tabs-shell.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -76,8 +75,10 @@ export function repositoryHTML(): string {
       id: "tree",
       buttonTestid: "content-tab",
       label: `${UI_ICONS.folder} ${t("repo.tab.tree")}`,
-      // 默认 YSM 文件树（预览在外层共享）
-      body: `<app-tree root="${RESOURCE_TYPES.YSM}" style="flex:1;min-width:0"></app-tree>`,
+      // body 留空：初始挂载全权归 initRepositoryPage.mountTree（localStorage 恢复 rtype/subdir）。
+      // 此前模板硬编码 <app-tree root="YSM">，而 init 必然无条件替换 innerHTML——首挂必经历
+      // 「app-tree connect（发起扫描 RPC）→ 立即销毁」，模板默认值沦为死的第二真值源
+      body: "",
     },
   ];
   // 桌面专属 tab（回收站/查重/最旧模型依赖 MoveToRecycle/FindDuplicateFiles 等，
@@ -110,16 +111,27 @@ export function repositoryHTML(): string {
   );
   // tab 结构由 renderTabs 单点产出（ADR-259）：栏与面板**分产**，落位在此决定——
   // 面板组挂 .repo-left（与预览面板并列），故不与 tab 栏相邻
-  const { bar, panels } = renderTabs({ prefix: "repo", tabs, viewerMode: isViewerMode() });
+  const { bar, panels, notice } = renderTabs({
+    prefix: "repo",
+    tabs,
+    viewerMode: isViewerMode(),
+    // ADR-300 §2.5：查看器「可见缺席」——desktopOnly tab 被隐藏时在 tablist 外告知
+    //（与诊断页同构；此前仓库页缺席此告知，网页版三个 tab 静默消失且 tab 栏整块退化缺席）
+    viewerNotice: t("repo.viewerDesktopOnlyNotice"),
+  });
+  // notice 落位在 bar 与 repo-layout 之间（tablist 外，ADR-300 §2.5 / ADR-258 §2.4）
   return (
     '<div class="repo-wrap">' +
     bar +
-    '<div class="repo-layout" style="flex:1;display:flex;overflow:hidden">' +
-    '<div class="repo-left" style="flex:1;display:flex;flex-direction:column;min-width:0">' +
+    notice +
+    '<div class="repo-layout">' +
+    '<div class="repo-left">' +
     panels +
     "</div>" +
-    '<div class="preview-resize-handle" id="preview-resize-handle" style="width:4px;cursor:col-resize;background:transparent;transition:background var(--tr-fast);flex-shrink:0"></div>' +
-    '<app-preview id="app-preview" style="width:var(--preview-width,240px);flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
+    '<div class="preview-resize-handle" id="preview-resize-handle"></div>' +
+    // 宽度真值单点归 init-preview（localStorage 恢复/拖拽持久化）——此处不再写
+    // var(--preview-width,240px)（全仓无 producer 的死引用）
+    '<app-preview id="app-preview" style="flex-shrink:0;border-left:1px solid var(--bd)"></app-preview>' +
     "</div>" +
     "</div>"
   );

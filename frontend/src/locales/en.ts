@@ -323,6 +323,7 @@ export const en: Record<string, string> = {
   "repo.tab.tree": "File Tree",
   "repo.tab.dedup": "Deduplicate",
   "repo.tab.oldest": "Longest Tenure",
+  "repo.viewerDesktopOnlyNotice": "Recycle Bin, Deduplicate and Longest Tenure are desktop-only",
   "repo.score": "Repository Score",
   "oldest.monthly": "Monthly Activity",
   "oldest.daily": "Daily Picks",

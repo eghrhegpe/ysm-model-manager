@@ -116,7 +116,7 @@ export function initWorkshopPage(host: AppContentHost): void {
       openSite(root, site, browseModeRef.v, url);
     };
     const ctx: RenderSiteViewCtx = {
-      esc: (s) => esc(String(s || "")),
+      esc: (s) => esc(s == null ? "" : String(s)),
       searchResults,
       allSites: refs.allSitesRef.v,
       allCreators: refs.allCreatorsRef.v,
@@ -124,7 +124,7 @@ export function initWorkshopPage(host: AppContentHost): void {
       wsEditModeRef: refs.wsEditModeRef,
       showRepoModels: async (repo, models, source) => {
         await showRepoModels(
-          (s) => esc(String(s || "")),
+          (s) => esc(s == null ? "" : String(s)),
           _repoEventsCleanup,
           (fn: (() => Promise<void>) | null) => {
             _repoEventsCleanup = fn;

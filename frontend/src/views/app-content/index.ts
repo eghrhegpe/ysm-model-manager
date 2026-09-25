@@ -124,6 +124,12 @@ class AppContent extends WebComponentBase {
     try {
       const page = PAGE_REGISTRY[this.state.current] ?? PAGE_REGISTRY.instances;
       const cached = this.state.getCachedPanel(this.state.current);
+      // 同页重放短路（2026-09 收债）：点击已激活 nav 项 / repo:search-creator 已在仓库页会重放
+      // nav:changed——面板仍连接时 appendChild 对已挂载节点是 DOM move，会触发 app-tree 断连重连
+      // （全量重扫 RPC）与 app-preview 重连自清（详情面板被清成空壳）。
+      // 判据用 isConnected 而非同页键：lang:changed 与装配失败路径都先 clearPanels（面板已
+      // 分离），天然绕过短路照常重建。
+      if (cached?.isConnected) return;
       const isNew = !cached;
       let panel: HTMLElement;
       if (cached) {

@@ -11,9 +11,10 @@ import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
 // 去重会话工厂 mock 走hoisted：init-pages 在模块内部创建会话，测试需捕获其方法做断言
-const { dedupStartMock, dedupInitConfigMock } = vi.hoisted(() => ({
+const { dedupStartMock, dedupInitConfigMock, dedupLastScannedMock } = vi.hoisted(() => ({
   dedupStartMock: vi.fn(),
   dedupInitConfigMock: vi.fn(),
+  dedupLastScannedMock: vi.fn((): string | null => null),
 }));
 
 vi.mock("@wailsio/runtime", () => ({
@@ -67,6 +68,7 @@ vi.mock("./diagnostics/dedup.ts", () => ({
     start: dedupStartMock,
     getConfig: vi.fn(() => ({ strategy: "deep_hash", keepPolicy: "oldest", priorityPath: "" })),
     resetConfig: vi.fn(),
+    lastScannedType: dedupLastScannedMock,
   }),
 }));
 vi.mock("@/features/maintenance/recycle-bin.ts", () => ({ initRecycleBin: vi.fn() }));
@@ -245,6 +247,51 @@ describe("仓库 tab 懒初始化（init-pages.ts|bindTabs）", () => {
     // 原 sleep(20)：等 rtype 订阅再次触发 startDedup——改条件轮询
     await waitFor(() => dedupStartMock.mock.calls.length >= 2);
     expect(dedupStartMock).toHaveBeenCalledTimes(2);
+    unmountElement(el);
+  });
+
+  it("dedup 感知性绑定：面板隐藏时切类型不扫，切回时按 lastScannedType 补扫（P2-2 收债）", async () => {
+    const el = mountContent();
+    await flushAsyncTurns();
+    el.state.current = "repository";
+    el._render();
+    // 首次激活 dedup tab（懒初始化落位 onShow；此刻面板可见）
+    const dedupBtn = el.shadowRoot.querySelector('.repo-tab[data-tab="dedup"]') as HTMLElement;
+    dedupBtn.click();
+    await waitFor(() => el.shadowRoot.getElementById("dedup-start-btn") !== null);
+    // 模拟「已扫过 ysm」：记账在会话层（mock start 内部记账不可见，直接控 lastScannedType）
+    dedupLastScannedMock.mockReturnValue("ysm");
+    // 切走 → dedup 面板 hidden；隐藏态切类型 = 零扫描（全价 SHA256 不再后台空转）
+    const treeBtn = el.shadowRoot.querySelector('.repo-tab[data-tab="tree"]') as HTMLElement;
+    treeBtn.click();
+    dedupStartMock.mockClear();
+    bus.emit("repo:rtype-changed", "mmd");
+    await flushAsyncTurns();
+    expect(dedupStartMock).not.toHaveBeenCalled();
+    // 切回 dedup tab → onShow 校验 dedupType(mmd) ≠ lastScanned(ysm) → 补扫 mmd
+    dedupBtn.click();
+    await waitFor(() => dedupStartMock.mock.calls.length >= 1);
+    expect(dedupStartMock).toHaveBeenCalledWith(expect.anything(), expect.anything(), "mmd");
+    unmountElement(el);
+  });
+
+  it("dedup 从未扫过（lastScannedType null）→ 切进面板不自动开跑（维持手动开始语义）", async () => {
+    const el = mountContent();
+    await flushAsyncTurns();
+    el.state.current = "repository";
+    el._render();
+    dedupLastScannedMock.mockReturnValue(null);
+    const dedupBtn = el.shadowRoot.querySelector('.repo-tab[data-tab="dedup"]') as HTMLElement;
+    dedupBtn.click();
+    await waitFor(() => el.shadowRoot.getElementById("dedup-start-btn") !== null);
+    // 隐藏态切类型（不扫）→ 切回：null 账（从未扫过）不触发自动扫描
+    const treeBtn = el.shadowRoot.querySelector('.repo-tab[data-tab="tree"]') as HTMLElement;
+    treeBtn.click();
+    dedupStartMock.mockClear();
+    bus.emit("repo:rtype-changed", "mmd");
+    dedupBtn.click();
+    await flushAsyncTurns();
+    expect(dedupStartMock).not.toHaveBeenCalled();
     unmountElement(el);
   });
 });

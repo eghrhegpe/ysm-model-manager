@@ -68,6 +68,48 @@ describe("createDedupSession — exec 重入守卫", () => {
   });
 });
 
+describe("createDedupSession — 感知性记账 lastScannedType（P2-2 收债）", () => {
+  it("初始 null（从未扫过）→ start 后记为发起类型", async () => {
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => groupJson),
+      MoveToRecycle: vi.fn(async () => {}),
+    });
+    const dedup = createDedupSession();
+    expect(dedup.lastScannedType()).toBeNull();
+    const list = document.createElement("div");
+    await dedup.start(list, esc, "mmd");
+    expect(dedup.lastScannedType()).toBe("mmd");
+  });
+
+  it("busy 拦截的重入不改账：扫描 A 进行中发起 B，账上仍是 A", async () => {
+    // FindDuplicateFiles 挂起 = busy 长期置位；期间发起的第二次 start 被守卫拦截。
+    // 挂起句柄走数组（对齐既有用例的 resolvers 模式）——闭包赋值会让 TS 流分析
+    // 把标量窄化成恒 null，`release?.()` 报 never 不可调用
+    const releaseFns: Array<() => void> = [];
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(
+        () =>
+          new Promise((res) => {
+            releaseFns.push(() => res(groupJson));
+          }),
+      ),
+      MoveToRecycle: vi.fn(async () => {}),
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    const first = dedup.start(list, esc, "ysm");
+    await waitFor(() => releaseFns.length > 0); // busy 已置位、扫描挂起中
+    expect(dedup.lastScannedType()).toBe("ysm");
+    await dedup.start(list, esc, "mmd"); // busy 命中 → 静默早退，账不动
+    expect(dedup.lastScannedType()).toBe("ysm");
+    releaseFns.shift()?.();
+    await first;
+    expect(dedup.lastScannedType()).toBe("ysm");
+  });
+});
+
 describe("createDedupSession — 配置面板绑定", () => {
   it("面板 change/input 实时写入会话 config，且会话间隔离", () => {
     const dedup = createDedupSession();

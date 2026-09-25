@@ -132,13 +132,18 @@ export function bindTabs(host: AppContentHost, tabSelector: string, prefix: stri
   const panelId = (id: string): string => `${prefix}-tab-${id}`;
 
   // P3 收敛（审核）：tab 懒初始化分发由查表替代 if/else-if 链，与 app-preview 的 PREVIEW_HANDLERS 同构模式对齐
-  type TabInitFn = (h: AppContentHost, c: HTMLElement) => Promise<unknown>;
+  // initFn 返回值双形态：cleanup 函数（历史契约）或 { cleanup?, onShow? } 对象——onShow 是
+  // 「每次激活」副作用句柄（与懒初始化「仅一次」正交），随初始化闭包落位、随面板世代消亡
+  type TabInitResult = (() => void) | null | { cleanup?: (() => void) | null; onShow?: () => void };
+  type TabInitFn = (h: AppContentHost, c: HTMLElement) => Promise<TabInitResult>;
   const TAB_INIT: Record<string, TabInitFn> = {
     recycle: initRecycleTab,
     dedup: initDedupTab,
     oldest: initOldestTab,
   };
   const inited: Record<string, boolean> = {};
+  // 已初始化 tab 的每次激活副作用（tab → onShow 句柄）：懒初始化完成后落位
+  const showFns: Record<string, () => void> = {};
   // 去重后的 tab id 列表：onBound 每次 attach 回填，供面板 display 翻转与懒初始化使用。
   let ids: string[] = [];
 
@@ -183,6 +188,9 @@ export function bindTabs(host: AppContentHost, tabSelector: string, prefix: stri
           el.setAttribute("hidden", "");
         }
       });
+      // 已初始化 tab 的每次激活副作用（onShow）：与「仅一次」的懒初始化正交——
+      // 激活是重复事件，showFns 随初始化落位，首次激活（懒初始化路径）不触发
+      if (inited[tab]) showFns[tab]?.();
       if (!inited[tab] && tab !== ids[0]) {
         const container = root.getElementById(panelId(tab));
         if (!container) return;
@@ -195,8 +203,13 @@ export function bindTabs(host: AppContentHost, tabSelector: string, prefix: stri
           try {
             const initFn = TAB_INIT[tab];
             if (initFn) {
-              const cleanup = await initFn(host, container);
-              if (typeof cleanup === "function") host.subs.addPage(cleanup as () => void);
+              const result = await initFn(host, container);
+              if (typeof result === "function") {
+                host.subs.addPage(result as () => void);
+              } else if (result && typeof result === "object") {
+                if (typeof result.cleanup === "function") host.subs.addPage(result.cleanup);
+                if (typeof result.onShow === "function") showFns[tab] = result.onShow;
+              }
             }
           } catch (e) {
             inited[tab] = false;
@@ -234,13 +247,18 @@ async function initRecycleTab(
 
 /**
  * 初始化去重组 tab：配置面板 + 开始去重按钮 + 全局类型切换自动复扫。
- * 返回组件卸载时需执行的清理函数（bus 订阅取消）。
+ * 返回 { cleanup, onShow }：cleanup = 组件卸载时执行的清理（bus 订阅取消）；
+ * onShow = 每次激活面板时的补扫校验（bindTabs showFns 落位，激活是重复事件）。
  * P3 修复：配置面板独立容器，扫描结果只写 result-list，不被 innerHTML 覆盖销毁。
+ * P2-2 收债（感知性绑定）：自动复扫只在面板**可见**时触发——隐藏面板的全价 SHA256
+ * 扫描（go/dedup 无指纹缓存，每次全库读盘+哈希）是零价值纯成本；不可见时只更新
+ * dedupType，补扫由 onShow 在用户切进面板时按需发起（看得见进度）。快速连切被 busy
+ * 拦截的扫描由下次激活兜底（lastScannedType 记账在 start 内部，拦截不覆盖）。
  */
 async function initDedupTab(
   _host: AppContentHost,
   container: HTMLElement,
-): Promise<(() => void) | null> {
+): Promise<{ cleanup: () => void; onShow: () => void }> {
   // 每宿主一个去重会话：busy/exec 重入守卫与去重配置收进会话闭包，跨 tab 开关/类型切换复用同一配置
   const dedup = createDedupSession();
   let dedupType = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
@@ -273,14 +291,21 @@ async function initDedupTab(
       );
   };
   container.querySelector("#dedup-start-btn")?.addEventListener("click", doDedup);
-  // 全局类型切换时自动复扫
+  // 全局类型切换时自动复扫——感知性绑定：仅面板可见时（bindTabs 以 hidden 属性翻转可见性）
   const unsub = bus.on("repo:rtype-changed", (rt) => {
     if (rt !== dedupType) {
       dedupType = rt;
-      doDedup();
+      if (!container.hidden) doDedup();
     }
   });
-  return unsub;
+  // 每次激活的补扫校验：面板里显示的结果必须属于当前类型。
+  // 从未扫过（lastScannedType null）不自动开跑——维持现状「进入面板手动开始」的语义，
+  // 只消除「扫过 A 后切到 B 再切回看到 A 的旧结果」的误导
+  const onShow = (): void => {
+    const scanned = dedup.lastScannedType();
+    if (scanned !== null && dedupType !== scanned) doDedup();
+  };
+  return { cleanup: unsub, onShow };
 }
 
 /**

@@ -39,6 +39,8 @@ export interface DedupSession {
   start(list: HTMLElement, esc: EscFn, rtype?: string): Promise<void>;
   getConfig(): Readonly<DedupConfigShape>;
   resetConfig(): void;
+  /** 最近一次**确定发起**的扫描类型（null = 从未扫过）；busy 拦截的重入不改此账 */
+  lastScannedType(): string | null;
 }
 
 /**
@@ -51,6 +53,8 @@ export function createDedupSession(): DedupSession {
     busy: false, // startDedup 重入守卫：大量 await，快速连点并发扫描会互相覆盖并重复移入回收站
     execBusy: false, // exec 重入守卫：执行期间大量 MoveToRecycle await，重复点击并行二次删除
     config: { ...DEDUP_DEFAULTS } as DedupConfigShape,
+    /** 最近一次确定发起的扫描类型（start 内 busy 置位后记账；null = 从未扫过） */
+    scannedType: null as string | null,
   };
 
   function getConfig(): Readonly<DedupConfigShape> {
@@ -221,6 +225,9 @@ export function createDedupSession(): DedupSession {
     // ① 重入守卫：busy 命中直接返回；整段包 try/finally，busy 仅在此单点复位
     if (state.busy) return;
     state.busy = true;
+    // 感知性记账（2026-09 P2-2 收债）：busy 置位 = 本次扫描确定发起，此刻记类型最准——
+    // 记账若放调用方「调 start 前」，busy 拦截的重入会把账记错（类型已新、扫描仍旧）
+    state.scannedType = rtype ?? "";
     try {
       // ① 类型元数据同步派生自 resource_types.json（ADR-269 D3④：废 loadResourceRegistry RPC 旁路，
       // 无异步加载 → 原 try/catch 降级路径随之退役）
@@ -261,5 +268,5 @@ export function createDedupSession(): DedupSession {
     }
   }
 
-  return { initConfig, start, getConfig, resetConfig };
+  return { initConfig, start, getConfig, resetConfig, lastScannedType: () => state.scannedType };
 }

@@ -270,7 +270,7 @@
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 107 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 277 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 295 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 305 |
@@ -317,7 +317,7 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 115 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 228 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 94 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 358 |
@@ -432,8 +432,8 @@
 | dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 99 |
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 176 |
-| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 203 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 312 |
+| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 216 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 337 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 88 |
@@ -578,7 +578,7 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 112 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 116 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 317 |
 
 **订阅方（on）：**

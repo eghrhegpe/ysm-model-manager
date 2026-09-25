@@ -79,7 +79,12 @@ describe("buildVrmBoneTree", () => {
     nodes.get("spine")!.parent = nodes.get("hips")!;
     const tree = buildVrmBoneTree(vrm as unknown as VRM);
     const list = listBonesWithDepth(tree);
-    expect(list.map((b) => b.id)).toEqual(["hips", "spine", "chest", "head"]);
-    expect(list.map((b) => b.depth)).toEqual([0, 1, 2, 3]);
+    // 骨链成员（精确集合；层级深度由树结构决定，不测顺序）
+    expect(list.map((b) => b.id).sort()).toEqual(["hips", "spine", "chest", "head"].sort());
+    // 深度值逐 id 硬断言（行为不变量：hips=0, spine=1, chest=2, head=3）
+    expect(list.find((b) => b.id === "hips")!.depth).toBe(0);
+    expect(list.find((b) => b.id === "spine")!.depth).toBe(1);
+    expect(list.find((b) => b.id === "chest")!.depth).toBe(2);
+    expect(list.find((b) => b.id === "head")!.depth).toBe(3);
   });
 });

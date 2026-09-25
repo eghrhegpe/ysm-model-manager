@@ -133,8 +133,8 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
       snapshots: [{ name: "default", snapshot: DEFAULT_SNAP }],
     });
     expect(graph.coverage).toBe("full");
-    // 与单一事实源 menu/sanctioned.ts 同源，且 bones 在册
-    expect(graph.sanctionedProcedural.map((p) => p.id)).toEqual(["bones"]);
+    // 与单一事实源 menu/sanctioned.ts 同源，且 bones 在册（成员集合断言，非有序快照）
+    expect(graph.sanctionedProcedural.map((p) => p.id).sort()).toEqual(["bones"].sort());
     // 每项自带 ADR 依据（报告读者可追溯「凭什么例外」，而非无据白名单）
     for (const p of graph.sanctionedProcedural) {
       expect(p.decidedBy).toMatch(/ADR-\d+/);

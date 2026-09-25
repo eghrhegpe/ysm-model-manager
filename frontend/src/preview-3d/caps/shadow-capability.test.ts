@@ -10,6 +10,7 @@ import { LightCapability } from "./light-capability.ts";
 import { restoreState } from "./scene-capability.ts";
 import type { SceneCapability, SceneCapabilityLookup } from "./scene-capability.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
+import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 // ADR-196：构造即注册全局 env 回调、仅 dispose 注销；与 ground/sky/water 同侪一致，
 // afterEach 清空防 cap 泄漏跨测试（O(N²) 回调累积超时隐患）。
@@ -701,16 +702,16 @@ describe("ShadowCapability — getMenuNodes 结构（节点化后 group 由 fold
 
   it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const nodes = cap.getMenuNodes();
-    expect(nodes[0]!.id).toBe("shadow-enabled");
-    const folder = nodes[1]!;
+    const master = findNodeById(cap.getMenuNodes(), "shadow-enabled");
+    expect(master.id).toBe("shadow-enabled");
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-shadow-params");
     expect(folder.kind).toBe("folder");
-    const childIds = folder.children!.map((c) => c.id);
-    expect(childIds).toContain("shadow-soft");
-    expect(childIds).toContain("shadow-map-size");
-    expect(childIds).toContain("shadow-bias");
-    expect(childIds).toContain("shadow-normal-bias");
-    expect(childIds).toContain("shadow-camera-size");
+    const ids = childIds(folder);
+    expect(ids).toContain("shadow-soft");
+    expect(ids).toContain("shadow-map-size");
+    expect(ids).toContain("shadow-bias");
+    expect(ids).toContain("shadow-normal-bias");
+    expect(ids).toContain("shadow-camera-size");
     expect(folder.labelKey).toBe("preview.shadowGroupParams");
   });
 
@@ -726,29 +727,29 @@ describe("ShadowCapability — getMenuNodes 结构（节点化后 group 由 fold
 
   it("分辨率选择同步（节点 control 闭包）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const folder = cap.getMenuNodes()[1]!;
-    const mapSizeNode = folder.children!.find((c) => c.id === "shadow-map-size")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-shadow-params");
+    const mapSizeNode = findNodeById(folder.children!, "shadow-map-size");
     mapSizeNode.control!.set!("2048");
     expect(cap.getMapSize()).toBe(2048);
   });
 
   it("软阴影开关同步（节点 control 闭包）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const folder = cap.getMenuNodes()[1]!;
-    const softNode = folder.children!.find((c) => c.id === "shadow-soft")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-shadow-params");
+    const softNode = findNodeById(folder.children!, "shadow-soft");
     softNode.control!.set!(true);
     expect(cap.isSoft()).toBe(true);
   });
 
   it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const folder = cap.getMenuNodes()[1]!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-shadow-params");
     for (const [id, key] of [
       ["shadow-bias", "shadowBias"],
       ["shadow-normal-bias", "shadowNormalBias"],
       ["shadow-camera-size", "shadowCameraSize"],
     ] as const) {
-      const c = folder.children!.find((x) => x.id === id)!.control!;
+      const c = findNodeById(folder.children!, id).control!;
       expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
         getParamRange(key),
       );
@@ -757,10 +758,10 @@ describe("ShadowCapability — getMenuNodes 结构（节点化后 group 由 fold
 
   it("bias / normalBias / cameraSize 滑块同步（节点 control 闭包）", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
-    const folder = cap.getMenuNodes()[1]!;
-    folder.children!.find((c) => c.id === "shadow-bias")!.control!.set!(-0.002);
-    folder.children!.find((c) => c.id === "shadow-normal-bias")!.control!.set!(0.06);
-    folder.children!.find((c) => c.id === "shadow-camera-size")!.control!.set!(25);
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-shadow-params");
+    findNodeById(folder.children!, "shadow-bias").control!.set!(-0.002);
+    findNodeById(folder.children!, "shadow-normal-bias").control!.set!(0.06);
+    findNodeById(folder.children!, "shadow-camera-size").control!.set!(25);
     expect(cap.getBias()).toBe(-0.002);
     expect(cap.getNormalBias()).toBe(0.06);
     expect(cap.getCameraSize()).toBe(25);
@@ -777,35 +778,32 @@ describe("ShadowCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
   it("完整树 = shadow-enabled 平铺 toggle + 参数组 folder（soft/select/3 slider）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(2);
-    expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.id).toBe("shadow-enabled");
-    expect(nodes[0]!.hintKey).toBe("preview.shadowEnabledHint");
-    nodes[0]!.control!.set!(true);
+    // 顶层 2 节点成员（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(["shadow-enabled", "cap-group-shadow-params"].sort());
+    const master = findNodeById(nodes, "shadow-enabled");
+    expect(master.kind).toBe("toggle");
+    expect(master.hintKey).toBe("preview.shadowEnabledHint");
+    master.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    const folder = nodes[1]!;
+    const folder = findNodeById(nodes, "cap-group-shadow-params");
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.shadowGroupParams");
-    expect(folder.children!.map((c) => c.id)).toEqual([
-      "shadow-soft",
-      "shadow-map-size",
-      "shadow-bias",
-      "shadow-normal-bias",
-      "shadow-camera-size",
-    ]);
-    expect(folder.children!.map((c) => c.kind)).toEqual([
-      "toggle",
-      "select",
-      "slider",
-      "slider",
-      "slider",
-    ]);
+    // 参数组 5 子成员（精确集合，不测顺序）
+    expect(childIds(folder).sort()).toEqual(
+      ["shadow-soft", "shadow-map-size", "shadow-bias", "shadow-normal-bias", "shadow-camera-size"].sort(),
+    );
+    // 各子 kind（逐 id 硬断言）
+    expect(findNodeById(folder.children!, "shadow-soft").kind).toBe("toggle");
+    expect(findNodeById(folder.children!, "shadow-map-size").kind).toBe("select");
+    expect(findNodeById(folder.children!, "shadow-bias").kind).toBe("slider");
+    expect(findNodeById(folder.children!, "shadow-normal-bias").kind).toBe("slider");
+    expect(findNodeById(folder.children!, "shadow-camera-size").kind).toBe("slider");
   });
 
   it("hintKey 节点字段透传（shadow-map-size 等）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
-    const mapSize = folder.children!.find((c) => c.id === "shadow-map-size")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-shadow-params");
+    const mapSize = findNodeById(folder.children!, "shadow-map-size");
     expect(mapSize.hintKey).toBe("preview.shadowMapSizeDesc");
     expect(mapSize.control!.options!.length).toBe(4);
     mapSize.control!.set!("2048");
@@ -814,8 +812,8 @@ describe("ShadowCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
 
   it("slider 节点读写闭包直连 cap", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
-    const bias = folder.children!.find((c) => c.id === "shadow-bias")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-shadow-params");
+    const bias = findNodeById(folder.children!, "shadow-bias");
     expect(bias.control!.get!(undefined)).toBe(cap.getBias());
     bias.control!.set!(0.0008);
     expect(cap.getBias()).toBe(0.0008);

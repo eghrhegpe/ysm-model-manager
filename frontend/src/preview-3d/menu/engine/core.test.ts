@@ -60,8 +60,8 @@ describe("CORE_MENU_ITEMS 表结构", () => {
     expect(CORE_MENU_ITEMS.find((d) => d.id === "camera")?.dockGroup).toBe("scene");
     // [doc:adr-126-p4-d] 双轨归一：可见性统一 visibleWhen 谓词（sharedOnly 等布尔已删）
     expect(typeof CORE_MENU_ITEMS.find((d) => d.id === "camera")?.visibleWhen).toBe("function");
-    // 独立 switch 项已撤除（2026-08-21 合并）：模型组 core 项仅 roles，面板底部内嵌加载入口
-    expect(CORE_MENU_ITEMS.filter((d) => d.dockGroup === "model").map((d) => d.id)).toEqual(["roles"]);
+    // 独立 switch 项已撤除（2026-08-21 合并）：模型组 core 项仅 roles（成员集合断言，非有序快照）
+    expect(CORE_MENU_ITEMS.filter((d) => d.dockGroup === "model").map((d) => d.id).sort()).toEqual(["roles"].sort());
   });
 });
 

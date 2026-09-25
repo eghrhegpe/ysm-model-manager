@@ -9,6 +9,7 @@ import {
   PostprocessingCapability,
   DEFAULT_POSTPROC_PARAMS,
 } from "./postprocessing-capability.ts";
+import { findNodeById, nodeIds, childIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
 import { POSTPROC_PERSIST_FIELDS, PP_PARAMS_TO_ENV } from "./postprocessing-state.ts";
 import type { LightCapability } from "./light-capability.ts";
@@ -59,16 +60,10 @@ function stubLightCap(opts: { opacity?: number } = {}) {
   } as unknown as LightCapability;
 }
 
-/** 递归查找节点树中的节点（postprocessing 节点树：顶层 + folder children） */
+/** 递归查找节点树中的节点（postprocessing 节点树：顶层 + folder children）。
+ *  转发至共享 findNodeById（menu-test-helpers，ADR-311 D2），保留 nodes 直传签名。 */
 function findNode(nodes: import("@/preview-3d/menu/schema/menu-node-types.ts").PreviewMenuNode[], id: string): import("@/preview-3d/menu/schema/menu-node-types.ts").PreviewMenuNode | undefined {
-  for (const n of nodes) {
-    if (n.id === id) return n;
-    if (n.children) {
-      const found = findNode(n.children, id);
-      if (found) return found;
-    }
-  }
-  return undefined;
+  return findNodeById(nodes, id);
 }
 
 function newCap(opts: { enabled?: boolean; params?: Partial<import("./postprocessing-capability.ts").PostprocessingParams> } = {}) {
@@ -323,32 +318,48 @@ describe("PostprocessingCapability — getMenuNodes 结构（节点化后 group 
   it("顶层结构：3 基座 toggle + 5 文件夹（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(8);
-    // 基座级 toggle
-    expect(nodes[0].id).toBe("pp-enabled");
-    expect(nodes[0].kind).toBe("toggle");
-    expect(nodes[2].id).toBe("pp-bloom-enabled");
-    expect(nodes[2].kind).toBe("toggle");
-    expect(nodes[4].id).toBe("pp-ssao-enabled");
-    expect(nodes[4].kind).toBe("toggle");
+    // 成员归属（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(
+      [
+        "pp-enabled",
+        "cap-group-postprocessing-color",
+        "pp-bloom-enabled",
+        "cap-group-postprocessing-bloom",
+        "pp-ssao-enabled",
+        "cap-group-postprocessing-ssao",
+        "cap-group-postprocessing-reflection",
+        "cap-group-postprocessing-ssr",
+      ].sort(),
+    );
+    // 基座级 toggle（逐 id 硬断言）
+    const ppEnabled = findNodeById(nodes, "pp-enabled");
+    expect(ppEnabled.kind).toBe("toggle");
+    const ppBloom = findNodeById(nodes, "pp-bloom-enabled");
+    expect(ppBloom.kind).toBe("toggle");
+    const ppSsao = findNodeById(nodes, "pp-ssao-enabled");
+    expect(ppSsao.kind).toBe("toggle");
     // 5 个 folder
-    expect(nodes[1].kind).toBe("folder");
-    expect(nodes[3].kind).toBe("folder");
-    expect(nodes[5].kind).toBe("folder");
-    expect(nodes[6].kind).toBe("folder");
-    expect(nodes[7].kind).toBe("folder");
-    // folder labelKey 对应原 group
-    expect(nodes[1].labelKey).toBe("preview.postprocessingGroupColor");
-    expect(nodes[3].labelKey).toBe("preview.postprocessingGroupBloom");
-    expect(nodes[5].labelKey).toBe("preview.postprocessingGroupSsao");
-    expect(nodes[6].labelKey).toBe("preview.postprocessingGroupReflection");
-    expect(nodes[7].labelKey).toBe("preview.postprocessingGroupSsr");
+    const capColor = findNodeById(nodes, "cap-group-postprocessing-color");
+    expect(capColor.kind).toBe("folder");
+    expect(capColor.labelKey).toBe("preview.postprocessingGroupColor");
+    const capBloom = findNodeById(nodes, "cap-group-postprocessing-bloom");
+    expect(capBloom.kind).toBe("folder");
+    expect(capBloom.labelKey).toBe("preview.postprocessingGroupBloom");
+    const capSsao = findNodeById(nodes, "cap-group-postprocessing-ssao");
+    expect(capSsao.kind).toBe("folder");
+    expect(capSsao.labelKey).toBe("preview.postprocessingGroupSsao");
+    const capReflection = findNodeById(nodes, "cap-group-postprocessing-reflection");
+    expect(capReflection.kind).toBe("folder");
+    expect(capReflection.labelKey).toBe("preview.postprocessingGroupReflection");
+    const capSsr = findNodeById(nodes, "cap-group-postprocessing-ssr");
+    expect(capSsr.kind).toBe("folder");
+    expect(capSsr.labelKey).toBe("preview.postprocessingGroupSsr");
   });
 
   it("toggle 开关同步状态（节点 control 闭包）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const enabledNode = nodes.find((n) => n.id === "pp-enabled")!;
+    const enabledNode = findNodeById(nodes, "pp-enabled");
     enabledNode.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
     enabledNode.control!.set!(false);
@@ -1406,76 +1417,78 @@ describe("PostprocessingCapability — getMenuNodes（ADR-195 刀2 cap 直产节
   it("顶层结构：3 基座 toggle + 5 文件夹，顺序与 getMenuControls 渲染等价", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(8);
-
+    // 成员归属（精确集合）
+    expect(nodeIds(nodes).sort()).toEqual(
+      [
+        "pp-enabled",
+        "cap-group-postprocessing-color",
+        "pp-bloom-enabled",
+        "cap-group-postprocessing-bloom",
+        "pp-ssao-enabled",
+        "cap-group-postprocessing-ssao",
+        "cap-group-postprocessing-reflection",
+        "cap-group-postprocessing-ssr",
+      ].sort(),
+    );
     // 基座级 toggle（无 children）
-    expect(nodes[0].id).toBe("pp-enabled");
-    expect(nodes[0].kind).toBe("toggle");
-
+    const ppEnabled = findNodeById(nodes, "pp-enabled");
+    expect(ppEnabled.kind).toBe("toggle");
+    expect(ppEnabled.children).toBeUndefined();
     // Color 文件夹
-    expect(nodes[1].kind).toBe("folder");
-    expect(nodes[1].id).toBe("cap-group-postprocessing-color");
-    expect((nodes[1] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupColor");
-
-    expect(nodes[2].id).toBe("pp-bloom-enabled");
-    expect(nodes[2].kind).toBe("toggle");
-
+    const capColor = findNodeById(nodes, "cap-group-postprocessing-color");
+    expect(capColor.kind).toBe("folder");
+    expect(capColor.labelKey).toBe("preview.postprocessingGroupColor");
+    // Bloom toggle
+    const ppBloom = findNodeById(nodes, "pp-bloom-enabled");
+    expect(ppBloom.kind).toBe("toggle");
     // Bloom 文件夹
-    expect(nodes[3].kind).toBe("folder");
-    expect(nodes[3].id).toBe("cap-group-postprocessing-bloom");
-    expect((nodes[3] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupBloom");
-
-    expect(nodes[4].id).toBe("pp-ssao-enabled");
-    expect(nodes[4].kind).toBe("toggle");
-
+    const capBloom = findNodeById(nodes, "cap-group-postprocessing-bloom");
+    expect(capBloom.kind).toBe("folder");
+    expect(capBloom.labelKey).toBe("preview.postprocessingGroupBloom");
+    // SSAO toggle
+    const ppSsao = findNodeById(nodes, "pp-ssao-enabled");
+    expect(ppSsao.kind).toBe("toggle");
     // SSAO 文件夹
-    expect(nodes[5].kind).toBe("folder");
-    expect(nodes[5].id).toBe("cap-group-postprocessing-ssao");
-    expect((nodes[5] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupSsao");
-
+    const capSsao = findNodeById(nodes, "cap-group-postprocessing-ssao");
+    expect(capSsao.kind).toBe("folder");
+    expect(capSsao.labelKey).toBe("preview.postprocessingGroupSsao");
     // Reflection 文件夹
-    expect(nodes[6].kind).toBe("folder");
-    expect(nodes[6].id).toBe("cap-group-postprocessing-reflection");
-    expect((nodes[6] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupReflection");
-
+    const capReflection = findNodeById(nodes, "cap-group-postprocessing-reflection");
+    expect(capReflection.kind).toBe("folder");
+    expect(capReflection.labelKey).toBe("preview.postprocessingGroupReflection");
     // SSR 文件夹
-    expect(nodes[7].kind).toBe("folder");
-    expect(nodes[7].id).toBe("cap-group-postprocessing-ssr");
-    expect((nodes[7] as { labelKey?: string }).labelKey).toBe("preview.postprocessingGroupSsr");
+    const capSsr = findNodeById(nodes, "cap-group-postprocessing-ssr");
+    expect(capSsr.kind).toBe("folder");
+    expect(capSsr.labelKey).toBe("preview.postprocessingGroupSsr");
   });
 
   it("Bloom 文件夹子节点 pp-bloom-strength 读写闭包直连 cap", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const bloomFolder = nodes.find((n) => n.id === "cap-group-postprocessing-bloom") as unknown as {
-      children?: Array<{ id?: string; control?: { get: () => unknown; set: (v: unknown) => void } }>;
-    };
-    const children = bloomFolder.children!;
-    const strengthNode = children.find((n) => n.id === "pp-bloom-strength");
+    const bloomFolder = findNodeById(nodes, "cap-group-postprocessing-bloom");
+    const children = childIds(bloomFolder);
+    expect(children).toContain("pp-bloom-strength");
+    const strengthNode = findNodeById(nodes, "pp-bloom-strength");
 
-    expect(strengthNode).toBeDefined();
     // 初始值
-    expect(strengthNode!.control!.get()).toBe(cap.getParams().bloomStrength);
+    expect(strengthNode.control!.get!(undefined)).toBe(cap.getParams().bloomStrength);
     // set 闭包直连 cap
-    strengthNode!.control!.set(2.5);
+    strengthNode.control!.set!(2.5);
     expect(cap.getParams().bloomStrength).toBe(2.5);
     // get 读取最新
-    expect(strengthNode!.control!.get()).toBe(2.5);
+    expect(strengthNode.control!.get!(undefined)).toBe(2.5);
   });
 
   it("pp-enabled 基座 toggle 读写闭包直连 cap", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const enabledNode = nodes.find((n) => n.id === "pp-enabled") as unknown as {
-      control?: { get: () => unknown; set: (v: unknown) => void };
-    };
+    const enabledNode = findNodeById(nodes, "pp-enabled");
 
-    expect(enabledNode).toBeDefined();
     expect(cap.isEnabled()).toBe(false);
-    expect(enabledNode.control!.get()).toBe(false);
-    enabledNode.control!.set(true);
+    expect(enabledNode.control!.get!(undefined)).toBe(false);
+    enabledNode.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    enabledNode.control!.set(false);
+    enabledNode.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
   });
 });

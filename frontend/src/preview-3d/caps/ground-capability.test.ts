@@ -6,6 +6,7 @@ import { GroundCapability } from "./ground-capability.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
+import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCanvasStyle, GroundSurfaceMode } from "./ground-surface-spec.ts";
 import {
@@ -471,16 +472,16 @@ describe("GroundCapability — 菜单控件联动", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const nodes = cap.getMenuNodes();
-    const visibleNode = nodes[0]!;
+    const visibleNode = findNodeById(nodes, "ground-visible");
     visibleNode.control!.set!(false);
     expect(cap.getVisible()).toBe(false);
     expect(visibleNode.control!.get!(undefined)).toBe(false);
-    const sourceNode = nodes.find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "ground-mat-source")!;
+    const sourceNode = findNodeById(nodes.find((n) => n.id === "cap-group-ground-material")!.children!, "ground-mat-source");
     sourceNode.control!.set!("canvas");
     expect(cap.getSourceKind()).toBe("canvas");
     expect(sourceNode.control!.get!(undefined)).toBe("canvas");
     // ADR-254：样式 select 的值 = **材质预设**；选它会一次性套用形状 + 配色
-    const styleNode = nodes.find((n) => n.id === "cap-group-ground-material")!.children!.find((c) => c.id === "ground-mat-canvas-style")!;
+    const styleNode = findNodeById(nodes.find((n) => n.id === "cap-group-ground-material")!.children!, "ground-mat-canvas-style");
     styleNode.control!.set!("grass");
     expect(cap.getMaterialPreset()).toBe("grass");
     expect(cap.getCanvasStyle()).toBe("grass");
@@ -602,23 +603,33 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(5);
-    expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.id).toBe("ground-visible");
-    nodes[0]!.control!.set!(false);
+    // 5 顶层项成员（精确集合；总数 = 集合成员数自然保证）
+    expect(nodeIds(nodes).sort()).toEqual(
+      [
+        "ground-visible",
+        "ground-grid-visible",
+        "cap-group-ground-grid",
+        "cap-group-ground-material",
+        "cap-group-ground-overlay",
+      ].sort(),
+    );
+    // 平铺 toggle 逐 id 硬断言
+    const visible = findNodeById(nodes, "ground-visible");
+    expect(visible.kind).toBe("toggle");
+    visible.control!.set!(false);
     expect(cap.getVisible()).toBe(false);
     // 2026-09-19：参考网格（GridHelper 层）独立开关——旧网格层长期无出口的补齐
-    expect(nodes[1]!.kind).toBe("toggle");
-    expect(nodes[1]!.id).toBe("ground-grid-visible");
+    const gridVisible = findNodeById(nodes, "ground-grid-visible");
+    expect(gridVisible.kind).toBe("toggle");
     // 锐评 P3（2026-09-21）：网格几何四键（size/divisions/双色）补 UI 出口
-    const gridFolder = nodes.find((n) => n.id === "cap-group-ground-grid")!;
+    const gridFolder = findNodeById(nodes, "cap-group-ground-grid");
     expect(gridFolder.kind).toBe("folder");
     expect(gridFolder.labelKey).toBe("preview.groundGroupGrid");
-    const folder = nodes.find((n) => n.id === "cap-group-ground-material")!;
+    const folder = findNodeById(nodes, "cap-group-ground-material");
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.groundGroupMaterial");
     // ADR-249 §2.3 叠加层 folder（独立于材质组）
-    const overlayFolder = nodes.find((n) => n.id === "cap-group-ground-overlay")!;
+    const overlayFolder = findNodeById(nodes, "cap-group-ground-overlay");
     expect(overlayFolder.kind).toBe("folder");
     expect(overlayFolder.id).toBe("cap-group-ground-overlay");
     expect(overlayFolder.labelKey).toBe("preview.groundGroupOverlay");
@@ -627,18 +638,18 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
   it("材质 folder 混排原生节点（含 texture/clear 原生 button 节点）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
-    const source = folder.children!.find((c) => c.id === "ground-mat-source")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-ground-material");
+    const source = findNodeById(folder.children!, "ground-mat-source");
     expect(source.kind).toBe("select");
     source.control!.set!("canvas");
     expect(cap.getSourceKind()).toBe("canvas");
-    const style = folder.children!.find((c) => c.id === "ground-mat-canvas-style")!;
+    const style = findNodeById(folder.children!, "ground-mat-canvas-style");
     style.control!.set!("marble");
     expect(cap.getCanvasStyle()).toBe("marble");
     // 锐评修复：texture/clear 从 controls 通道回归原生 button 节点（variant/getHint 由
     // rmAppendButton 按钮臂承载，不再需要绕道）
-    const pick = folder.children!.find((c) => c.id === "ground-mat-texture")!;
-    const clear = folder.children!.find((c) => c.id === "ground-mat-clear")!;
+    const pick = findNodeById(folder.children!, "ground-mat-texture");
+    const clear = findNodeById(folder.children!, "ground-mat-clear");
     expect(pick.kind).toBe("button");
     expect(clear.kind).toBe("button");
     expect(pick.visibleWhen?.({ "env.groundSourceKind": "texture" })).toBe(true);
@@ -648,12 +659,12 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
   it("原生 color/slider 节点读写闭包直连 cap", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
-    const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-ground-material");
+    const color = findNodeById(folder.children!, "ground-mat-color");
     expect(color.kind).toBe("color");
     color.control!.set!(0xff8800);
     expect(cap.getMatColor()).toBe(0xff8800);
-    const density = folder.children!.find((c) => c.id === "ground-mat-density")!;
+    const density = findNodeById(folder.children!, "ground-mat-density");
     density.control!.set!(4);
     expect(cap.getMatDensity()).toBe(4);
   });
@@ -661,8 +672,8 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
   it("visibleWhen 谓词挂原生节点（canvas 模式下材质控件可见；none 隐藏）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
-    const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
-    const color = folder.children!.find((c) => c.id === "ground-mat-color")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-ground-material");
+    const color = findNodeById(folder.children!, "ground-mat-color");
     // ADR-252：由两轴派生模式，canvas/marble 下可见
     expect(color.visibleWhen?.({ "env.groundSourceKind": "canvas", "env.groundCanvasStyle": "marble" })).toBe(true);
     expect(color.visibleWhen?.({ "env.groundSourceKind": "none" })).toBe(false);

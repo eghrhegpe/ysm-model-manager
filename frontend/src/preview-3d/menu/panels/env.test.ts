@@ -13,6 +13,7 @@ import { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.
 import { FogCapability } from "@/preview-3d/caps/fog-capability.ts";
 import { GroundCapability } from "@/preview-3d/caps/ground-capability.ts";
 import { ReflectorCapability } from "@/preview-3d/caps/reflector-capability.ts";
+import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
 import { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
 import { ENV_PRESETS } from "@/preview-3d/caps/environment-state.ts";
@@ -178,14 +179,16 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(schema[0]!.id).toBe("env-preset-bar");
     expect(schema[0]!.kind).toBe("select");
     // 卡壳层：sky 归「基础」、fog 归「氛围」（各 cap 自报 getEnvPlacement.section，env.ts 不指派）
-    expect(schema.slice(1).map((n) => n.id)).toEqual(["env-card-basic", "env-card-atmosphere"]);
+    // 卡片成员（精确集合；order 排序不测）
+    expect(schema.slice(1).map((n) => n.id).sort()).toEqual(["env-card-basic", "env-card-atmosphere"].sort());
     expect(schema.slice(1).every((n) => n.kind === "card")).toBe(true);
     expect(schema.slice(1).map((n) => n.labelKey)).toEqual([
       "preview.envSectionBasic",
       "preview.envSectionAtmosphere",
     ]);
     const rows = capRows(schema);
-    expect(rows.map((n) => n.id)).toEqual(["env-cap-sky", "env-cap-fog"]);
+    // cap 行成员（精确集合）
+    expect(rows.map((n) => n.id).sort()).toEqual(["env-cap-sky", "env-cap-fog"].sort());
     // 每行是 row 节点（icon + label + action 下钻），带 chevron 语义由 action 表达
     expect(rows.every((n) => n.kind === "row" && typeof n.action === "function")).toBe(true);
     expect(schema.every((n) => n.renderCustom === undefined)).toBe(true);
@@ -443,7 +446,8 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     // light 被排除；其余 7 个（含未登记的 aurora）全入选
     expect(rows.map((r) => r.id)).not.toContain("env-cap-light");
     // 基础卡按 order：sky10 < aurora15 < ground20 < water30；氛围卡：environment10<fog20<reflector30
-    expect(rows.map((r) => r.id)).toEqual([
+    // cap 行成员（精确集合；order 排序不测）
+    expect(rows.map((r) => r.id).sort()).toEqual([
       "env-cap-sky",
       "env-cap-aurora",
       "env-cap-ground",
@@ -451,7 +455,7 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
       "env-cap-environment",
       "env-cap-fog",
       "env-cap-reflector",
-    ]);
+    ].sort());
     // aurora 归入它自报的「基础」卡（分组亦由自报 section 决定，非 env.ts 指派）
     const basicCard = schema.find((n) => n.id === "env-card-basic")!;
     expect((basicCard.children ?? []).map((c) => c.id)).toContain("env-cap-aurora");

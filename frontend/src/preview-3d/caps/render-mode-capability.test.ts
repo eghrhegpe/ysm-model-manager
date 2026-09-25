@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { RenderModeCapability } from "./render-mode-capability.ts";
 import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
+import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 // ADR-196：构造即注册全局 env 回调、仅 dispose 注销；与 ground/sky/water 同侪一致，
 // afterEach 清空防 cap 泄漏跨测试（O(N²) 回调累积超时隐患）。
@@ -269,14 +270,16 @@ describe("RenderModeCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
   it("返回 5 平铺节点，id/kind 齐全，settingsOrder 透传", () => {
     const cap = newCap(makeMesh());
     const nodes = cap.getMenuNodes();
-    expect(nodes.map((n) => n.id)).toEqual([
-      "rm-wireframe",
-      "rm-blending",
-      "rm-depth-test",
-      "rm-side",
-      "rm-depth-write",
-    ]);
-    expect(nodes.map((n) => n.kind)).toEqual(["toggle", "select", "toggle", "select", "toggle"]);
+    // 五平铺节点成员（精确集合；声明序不测）
+    expect(nodeIds(nodes).sort()).toEqual(
+      ["rm-wireframe", "rm-blending", "rm-depth-test", "rm-side", "rm-depth-write"].sort(),
+    );
+    // kind 归属（逐 id 硬断言，非位置索引）
+    expect(findNodeById(nodes, "rm-wireframe").kind).toBe("toggle");
+    expect(findNodeById(nodes, "rm-blending").kind).toBe("select");
+    expect(findNodeById(nodes, "rm-depth-test").kind).toBe("toggle");
+    expect(findNodeById(nodes, "rm-side").kind).toBe("select");
+    expect(findNodeById(nodes, "rm-depth-write").kind).toBe("toggle");
     // settingsOrder 透传（settings 聚合据此收编进 ⚙️ 设置面板）
     expect(nodes.map((n) => n.settingsOrder)).toEqual([30, 31, 32, 33, 34]);
   });
@@ -284,7 +287,7 @@ describe("RenderModeCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
   it("toggle 节点读写闭包直连 cap（线框）", () => {
     const mesh = makeMesh();
     const cap = newCap(mesh);
-    const wire = cap.getMenuNodes()[0]!;
+    const wire = findNodeById(cap.getMenuNodes(), "rm-wireframe");
     expect(wire.control!.get!(undefined)).toBe(false);
     wire.control!.set!(true);
     expect(cap.getWireframe()).toBe(true);
@@ -295,7 +298,7 @@ describe("RenderModeCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
 
   it("select 节点 options/读写直连 cap（混合模式）", () => {
     const cap = newCap(makeMesh());
-    const blending = cap.getMenuNodes()[1]!;
+    const blending = findNodeById(cap.getMenuNodes(), "rm-blending");
     expect(blending.control!.options!.length).toBe(4);
     blending.control!.set!(String(THREE.AdditiveBlending));
     // ⚠️ 同「面剔除」：断言数值而非 String(...)，防 string-比-string 的恒真断言复活。

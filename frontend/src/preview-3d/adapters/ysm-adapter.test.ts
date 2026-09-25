@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { AnimationClip } from "@/utils/animation/animation.ts";
+import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
@@ -524,8 +525,9 @@ describe("ysmMenuItems 表契约", () => {
     ]);
     const items = ysmMenuItems(directMenuOpts({ panels: { shotNodes } }));
     const shot = items.find((i) => i.id === "shot") as MenuItemShape;
+    // shot children 成员（精确集合；shotNodes 注入产物，行数 = 注入数）
     expect(shot.children?.length).toBe(1);
-    expect(shot.children?.[0]!.id).toBe("ysm-shot-current");
+    expect(findNodeById(shot.children!, "ysm-shot-current").id).toBe("ysm-shot-current");
     expect(shotNodes).toHaveBeenCalledTimes(1);
 
     const bare = ysmMenuItems(directMenuOpts()).find((i) => i.id === "shot") as MenuItemShape;
@@ -569,15 +571,17 @@ describe("ysmMenuItems 表契约", () => {
       }),
     );
     const perc = items.find((i) => i.id === "perception") as MenuItemShape;
-    expect(perc.children?.[0]!.id).toBe("perception-breath");
-    expect(perc.children?.[0]!.kind).toBe("toggle");
-    expect(perc.children?.[0]!.control?.get?.(undefined)).toBe(true);
-    perc.children?.[0]!.control?.set?.(false);
+    // perception children 成员（caps 1 → 恰 1 个 toggle）
+    const breathNode = findNodeById(perc.children!, "perception-breath");
+    expect(breathNode.kind).toBe("toggle");
+    expect(breathNode.control?.get?.(undefined)).toBe(true);
+    breathNode.control?.set?.(false);
     expect(state.breath).toBe(false);
 
     const emptyItems = ysmMenuItems(directMenuOpts({ perception: { state, caps: [] } }));
     const emptyPerc = emptyItems.find((i) => i.id === "perception") as MenuItemShape;
-    expect(emptyPerc.children?.[0]!.id).toBe("perception-empty");
+    // 空态 children 成员（精确集合）
+    expect(findNodeById(emptyPerc.children!, "perception-empty").id).toBe("perception-empty");
   });
 });
 
@@ -785,10 +789,10 @@ describe("感知能力派生（build 路径）", () => {
       preload: makePreload(spec).preload,
     });
     const perc = (handle.menuItems ?? []).find((i) => i.id === "perception") as MenuItemShape;
-    const breath = perc.children?.[0];
-    expect(breath?.id).toBe("perception-breath");
-    expect(breath?.kind).toBe("toggle");
-    expect(breath?.control?.get?.(undefined)).toBe(true);
+    // perception children 成员（语义骨命中 → breath toggle）
+    const breath = findNodeById(perc.children!, "perception-breath");
+    expect(breath.kind).toBe("toggle");
+    expect(breath.control?.get?.(undefined)).toBe(true);
     // play 项同时存在（内嵌 clip）
     expect(menuIds(handle)).toContain("ysm-play");
     handle.dispose();
@@ -805,7 +809,8 @@ describe("感知能力派生（build 路径）", () => {
       readTextFile: vi.fn(async () => null),
     });
     const perc = (handle.menuItems ?? []).find((i) => i.id === "perception") as MenuItemShape;
-    expect(perc.children?.[0]?.id).toBe("perception-empty");
+    // 空态 children 成员（精确集合）
+    expect(findNodeById(perc.children!, "perception-empty").id).toBe("perception-empty");
     expect(menuIds(handle)).not.toContain("ysm-play");
     handle.dispose();
   });
@@ -827,7 +832,8 @@ describe("感知能力派生（build 路径）", () => {
     expect(h.createBreath).not.toHaveBeenCalled();
     expect(listAllFilePaths).not.toHaveBeenCalled(); // 整段特性裁剪
     const perc = (handle.menuItems ?? []).find((i) => i.id === "perception") as MenuItemShape;
-    expect(perc.children?.[0]?.id).toBe("perception-empty");
+    // 空态 children 成员（精确集合）
+    expect(findNodeById(perc.children!, "perception-empty").id).toBe("perception-empty");
     expect(menuIds(handle)).not.toContain("ysm-play");
     handle.dispose();
   });

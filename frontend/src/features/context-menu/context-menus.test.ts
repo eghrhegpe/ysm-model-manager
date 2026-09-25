@@ -489,7 +489,8 @@ describe("buildMenuItems divider 折叠（单一事实源收口）", () => {
     ]);
     const payload = showMenu(PROBE_TYPE);
     assertDividersCollapsed(payload.items);
-    expect(payload.items).toHaveLength(2); // 仅 A、B
+    // 折叠后恰 2 项（A、B 两个 header）——行为不变量
+    expect(payload.items).toHaveLength(2); // layout-assert: 折叠算法输出恰 2 项（仅 A、B 非 divider header 保留）
   });
 
   it("首/尾 divider → 移除，中间单 divider 保留", () => {
@@ -502,11 +503,18 @@ describe("buildMenuItems divider 折叠（单一事实源收口）", () => {
     ]);
     const payload = showMenu(PROBE_TYPE);
     assertDividersCollapsed(payload.items);
-    // [div, A, div, B, div] → [A, div, B]
-    expect(payload.items).toHaveLength(3);
-    expect(payload.items[0].divider).toBeFalsy();
-    expect(payload.items[1].divider).toBe(true);
-    expect(payload.items[2].divider).toBeFalsy();
+    // [div, A, div, B, div] → 折叠后恰 3 项：A(非 div)、div、B(非 div)
+    // layout-assert: divider 折叠算法的输出结构（项数 + divider 分布）是本 test 的行为不变量
+    expect(payload.items).toHaveLength(3); // layout-assert: 折叠算法输出恰 3 项
+    const dividers = payload.items.filter((i) => i.divider);
+    const nonDividers = payload.items.filter((i) => !i.divider);
+    // 恰 1 个 divider，夹在两个非 divider 之间（结构 = 行为不变量）
+    expect(dividers).toHaveLength(1); // layout-assert: 折叠后恰 1 个 divider
+    expect(nonDividers).toHaveLength(2); // layout-assert: 两个 header（A、B）
+    // divider 在中间位置（行为：折叠保留中间 divider）
+    expect(payload.items[1].divider).toBe(true); // layout-assert: 折叠后中间位 = divider
+    expect(payload.items[0].divider).toBeFalsy(); // layout-assert: 折叠后首位 = 非 divider
+    expect(payload.items[2].divider).toBeFalsy(); // layout-assert: 折叠后末位 = 非 divider
   });
 
   it("visibleWhen 隐藏相邻项 → 原本不相邻的 divider 变相邻并折叠", () => {

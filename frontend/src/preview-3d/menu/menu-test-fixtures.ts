@@ -3,6 +3,8 @@
 // 原先在 preview-menu.roles/items/menu/health/node-render 五个测试文件各持一份
 // 26 行近似拷贝——health.test（ADR-128 冒烟）入列时 jscpd 配对爆表。抽此处共享，
 // 变体差异（如 items 的 fakeCap getCap）经 overrides / 本地薄包装表达。
+// （纯树遍历断言 helper 不在此——见 menu-test-helpers.ts，本文件顶层 import 有
+//  preview-state 副作用，`@vitest-environment node` 测试勿引，ADR-311 D2。）
 import { vi } from "vitest";
 import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import type { PreviewMenuCtx } from "@/preview-3d/menu/schema/node-types.ts";

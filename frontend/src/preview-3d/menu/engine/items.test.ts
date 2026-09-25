@@ -474,7 +474,8 @@ describe("面板渲染（安全 panel 逐个打开）", () => {
     // [doc:adr-126-p5-收尾] play 走 playNodes 声明式 children：toggle（播放/暂停）+ select（动作）
     // 渲染由 renderMenu 单测覆盖（preview-menu-node-render.test.ts），此处断言节点结构
     const playNode = mmdMenuItems(fakeMmdOpts()).find((d) => d.id === "play");
-    expect(playNode?.children?.map((c) => c.id)).toEqual(["play-toggle", "play-select"]);
+    // play 面板 children 成员（精确集合；声明序不测）
+    expect(playNode?.children?.map((c) => c.id).sort()).toEqual(["play-toggle", "play-select"].sort());
     expect(playNode?.children?.some((c) => c.kind === "toggle")).toBe(true);
     expect(playNode?.children?.some((c) => c.kind === "select")).toBe(true);
     const { overlay, handle } = mountWith(mmdMenuItems(fakeMmdOpts()));

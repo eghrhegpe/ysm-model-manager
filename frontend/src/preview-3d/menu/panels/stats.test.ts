@@ -30,7 +30,7 @@ describe("buildStatsPanel", () => {
     expect(panel.icon).toBe("chart");
     expect(panel.dockGroup).toBe("model");
     expect(panel.id).toBe("stats-panel");
-    expect(panel.children).toHaveLength(6);
+    expect(panel.children).toHaveLength(6); // layout-assert: 统计面板恰 6 个 field 行（产品决策：骨骼/网格/三角面/材质/纹理/表情）
     const fields = panel.children!;
     const ids = fields.map((f) => f.id);
     expect(ids).toEqual([

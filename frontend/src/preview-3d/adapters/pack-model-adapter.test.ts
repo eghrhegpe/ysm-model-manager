@@ -37,6 +37,7 @@ import {
   packTextureLabel,
   type PackDeps,
 } from "./pack-model-adapter.ts";
+import { findNodeById } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 /** 构造假 Java 模型 */
 function makeJavaModel(overrides: Partial<{
@@ -456,13 +457,14 @@ describe("pack-model 专属纹理段（ADR-159 续）", () => {
     // 顶层含 sectionTitle + 2 row（3 面去重 → 2 纹理），且 dockGroup:"stats" 供 mergeStatsMenuItems 抽出
     expect(items.filter((n) => n.id === "pack-textures-title").length).toBe(1);
     const rows = items.filter((n) => n.id.startsWith("pack-tex-"));
-    expect(rows).toHaveLength(2);
+    // 2 行成员（精确集合，不测顺序；行数由 3 面去重后的纹理数决定，是数据不变量）
+    expect(rows.map((n) => n.id).sort()).toEqual(["pack-tex-0", "pack-tex-1"].sort());
     expect(rows.every((n) => n.kind === "row" && n.dockGroup === "stats")).toBe(true);
     // 首现序 + 短名（musketmod:item/blunderbuss）+ 引用面数 + 完整 png 条目
-    const first = rows[0]!;
+    const first = findNodeById(rows, "pack-tex-0");
     expect(first.label).toBe("musketmod:item/blunderbuss");
     expect(first.value).toBe("2 面 · assets/musketmod/textures/item/blunderbuss.png");
-    const second = rows[1]!;
+    const second = findNodeById(rows, "pack-tex-1");
     expect(second.value).toBe("1 面 · assets/musketmod/textures/item/musket.png");
     preview.dispose!();
   });
@@ -571,9 +573,12 @@ describe("packMenuItems 纯函数契约", () => {
     const cubes = items.find((n) => n.id === "pack-cubes-field");
     expect(cubes?.value).toBe(6);
     expect(cubes?.dockGroup).toBe("stats");
-    expect(items.filter((n) => n.id.startsWith("pack-tex-"))).toHaveLength(2);
+    // 2 纹理行成员（精确集合，不测顺序；行数由 2 张纹理确定，是数据不变量）
+    expect(items.filter((n) => n.id.startsWith("pack-tex-")).map((n) => n.id).sort()).toEqual(
+      ["pack-tex-0", "pack-tex-1"].sort(),
+    );
     // 首现序 + 引用面数文案（与 build 级断言同口径）
-    expect(items.find((n) => n.id === "pack-tex-0")?.value).toBe(
+    expect(findNodeById(items, "pack-tex-0")?.value).toBe(
       "2 面 · assets/minecraft/textures/block/dirt.png",
     );
   });

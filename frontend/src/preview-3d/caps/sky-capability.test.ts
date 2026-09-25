@@ -19,6 +19,7 @@ import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-sc
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { restoreState } from "./scene-capability.ts";
+import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 
 // ADR-196 单例化：SkyCapability 构造即注册 envState 回调（dispatch 广播），
@@ -318,23 +319,26 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
   it("基座级节点平铺 + 高级 folder（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
+    // 成员归属（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(["sky-enabled", "cap-node-sky-timeline", "cap-group-sky-advanced"].sort());
     // 0: sky-enabled 能力总开关 toggle（env 一级行 headerToggle 源）
-    expect(nodes[0]!.id).toBe("sky-enabled");
-    expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.control!.get!(undefined)).toBe(true);
+    const master = findNodeById(nodes, "sky-enabled");
+    expect(master.kind).toBe("toggle");
+    expect(master.control!.get!(undefined)).toBe(true);
     expect(cap.getMasterNodeId()).toBe("sky-enabled");
     // 1: timeline controls 通道
-    expect(nodes[1]!.kind).toBe("controls");
+    const tlNode = findNodeById(nodes, "cap-node-sky-timeline");
+    expect(tlNode.kind).toBe("controls");
     // 2: 高级 folder（[ADR-292 D4] 原 sky-env「环境贴图」toggle 已删除，folder 提到 index 2）
-    const folder = nodes[2]!;
+    const folder = findNodeById(nodes, "cap-group-sky-advanced");
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.skyGroupAdvanced");
-    const childIds = folder.children!.map((c) => c.id);
-    expect(childIds).toContain("sky-cloud");
-    expect(childIds).toContain("sky-sun-intensity");
-    expect(childIds).toContain("sky-sun-disc");
-    expect(childIds).toContain("sky-auto-rotate");
-    expect(childIds).toContain("sky-godrays");
+    const childIdSet = childIds(folder);
+    expect(childIdSet).toContain("sky-cloud");
+    expect(childIdSet).toContain("sky-sun-intensity");
+    expect(childIdSet).toContain("sky-sun-disc");
+    expect(childIdSet).toContain("sky-auto-rotate");
+    expect(childIdSet).toContain("sky-godrays");
   });
 
   it("[ADR-292 D4] 天空面板**不再**暴露 scene.environment 开关（写者唯一归 env 的来源选择）", () => {
@@ -350,33 +354,33 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
     };
     walk(nodes);
     expect(allIds).not.toContain("sky-env");
-    // 顶层只剩 3 项：总开关 + timeline + 高级 folder
-    expect(nodes).toHaveLength(3);
+    // 顶层 = 总开关 + timeline + 高级 folder（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(["sky-enabled", "cap-node-sky-timeline", "cap-group-sky-advanced"].sort());
   });
 
   it("时间轴控件与云量滑块联动状态（controls 通道 + 高级 folder，节点 control 闭包）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const tlNode = nodes[1]!;
+    const tlNode = findNodeById(nodes, "cap-node-sky-timeline");
     const tl = (typeof tlNode.controls === "function" ? tlNode.controls() : tlNode.controls)![0]!;
     tl.setValue(20);
     expect(cap.getTimeOfDay()).toBe(20);
     expect(tl.getValue()).toBe(20);
-    const folder = nodes[2]!;
-    const cloudNode = folder.children!.find((c) => c.id === "sky-cloud")!;
+    const folder = findNodeById(nodes, "cap-group-sky-advanced");
+    const cloudNode = findNodeById(folder.children!, "sky-cloud");
     cloudNode.control!.set!(0.8);
     expect(cap.getCloudCoverage()).toBe(0.8);
   });
 
   it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[2]!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-sky-advanced");
     for (const [id, key] of [
       ["sky-cloud", "skyCloudCoverage"],
       ["sky-sun-intensity", "skySunIntensityScale"],
       ["sky-sun-disc", "skySunDiscScale"],
     ] as const) {
-      const c = folder.children!.find((x) => x.id === id)!.control!;
+      const c = findNodeById(folder.children!, id).control!;
       expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
         getParamRange(key),
       );
@@ -388,21 +392,21 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
 
   it("太阳耦合滑块与昼夜循环控件联动（高级 folder，节点 control 闭包）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[2]!;
-    const intensityNode = folder.children!.find((c) => c.id === "sky-sun-intensity")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-sky-advanced");
+    const intensityNode = findNodeById(folder.children!, "sky-sun-intensity");
     intensityNode.control!.set!(1.1);
     expect(cap.getSunIntensityScale()).toBe(1.1);
     expect(intensityNode.control!.get!(undefined)).toBe(1.1);
-    const discNode = folder.children!.find((c) => c.id === "sky-sun-disc")!;
+    const discNode = findNodeById(folder.children!, "sky-sun-disc");
     discNode.control!.set!(0.3);
     expect(cap.getSunDiscScale()).toBe(0.3);
-    const rotateNode = folder.children!.find((c) => c.id === "sky-auto-rotate")!;
+    const rotateNode = findNodeById(folder.children!, "sky-auto-rotate");
     rotateNode.control!.set!(true);
     expect(cap.isAutoRotating()).toBe(true);
     expect(rotateNode.control!.get!(undefined)).toBe(true);
     rotateNode.control!.set!(false);
     expect(cap.isAutoRotating()).toBe(false);
-    const godraysNode = folder.children!.find((c) => c.id === "sky-godrays")!;
+    const godraysNode = findNodeById(folder.children!, "sky-godrays");
     godraysNode.control!.set!(true);
     expect(cap.isGodRaysEnabled()).toBe(true);
     expect(godraysNode.control!.get!(undefined)).toBe(true);
@@ -508,9 +512,8 @@ describe("SkyCapability — God Rays（体积光束）", () => {
 
   it("getMenuNodes 包含 sky-godrays toggle（高级 folder）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[2]!;
-    const godraysNode = folder.children!.find((c) => c.id === "sky-godrays")!;
-    expect(godraysNode).toBeDefined();
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-sky-advanced");
+    const godraysNode = findNodeById(folder.children!, "sky-godrays");
     expect(godraysNode.kind).toBe("toggle");
     expect(godraysNode.control!.get!(undefined)).toBe(false);
   });
@@ -1360,41 +1363,41 @@ describe("SkyCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
   it("完整树 = sky-enabled 总开关 + timeline controls 节点 + 高级 folder（sky-env 随 ADR-292 D4 退场）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
+    // 成员归属（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(["sky-enabled", "cap-node-sky-timeline", "cap-group-sky-advanced"].sort());
     // 0: sky-enabled 能力总开关 toggle（env 一级行 headerToggle 源）
-    expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.id).toBe("sky-enabled");
-    expect(nodes[0]!.control!.get!(undefined)).toBe(true);
-    nodes[0]!.control!.set!(false);
+    const master = findNodeById(nodes, "sky-enabled");
+    expect(master.kind).toBe("toggle");
+    expect(master.control!.get!(undefined)).toBe(true);
+    master.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
     // 1: timeline controls 通道（复杂控件）
-    expect(nodes[1]!.kind).toBe("controls");
-    const tl = typeof nodes[1]!.controls === "function" ? nodes[1]!.controls() : nodes[1]!.controls;
+    const tlNode = findNodeById(nodes, "cap-node-sky-timeline");
+    expect(tlNode.kind).toBe("controls");
+    const tl = typeof tlNode.controls === "function" ? tlNode.controls() : tlNode.controls;
     expect(tl![0]!.kind).toBe("timeline");
     expect(tl![0]!.id).toBe("sky-timeline");
     // timeline 是 timeOfDay 的唯一控件（sky-time slider 已删）：读写仍直连 cap
     expect(tl![0]!.getValue!()).toBe(cap.getTimeOfDay());
     tl![0]!.setValue!(9);
     expect(cap.getTimeOfDay()).toBe(9);
-    // 2: 高级 folder（[ADR-292 D4] 原 sky-env toggle 已删，folder 提到 index 2）
-    const folder = nodes[2]!;
+    // 2: 高级 folder（[ADR-292 D4] 原 sky-env toggle 已删）
+    const folder = findNodeById(nodes, "cap-group-sky-advanced");
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.skyGroupAdvanced");
-    expect(folder.children!.map((c) => c.id)).toEqual([
-      "sky-cloud",
-      "sky-sun-intensity",
-      "sky-sun-disc",
-      "sky-auto-rotate",
-      "sky-godrays",
-    ]);
+    // 高级组内 5 轴成员（精确集合，不测顺序）
+    expect(childIds(folder).sort()).toEqual(
+      ["sky-cloud", "sky-sun-intensity", "sky-sun-disc", "sky-auto-rotate", "sky-godrays"].sort(),
+    );
   });
 
   it("高级组节点读写闭包直连 cap（cloud/godrays）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[2]!;
-    const cloud = folder.children!.find((c) => c.id === "sky-cloud")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-sky-advanced");
+    const cloud = findNodeById(folder.children!, "sky-cloud");
     cloud.control!.set!(0.6);
     expect(cap.getCloudCoverage()).toBeCloseTo(0.6, 5);
-    const godrays = folder.children!.find((c) => c.id === "sky-godrays")!;
+    const godrays = findNodeById(folder.children!, "sky-godrays");
     godrays.control!.set!(true);
     expect(cap.isGodRaysEnabled()).toBe(true);
   });

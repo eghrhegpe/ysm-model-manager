@@ -25,6 +25,7 @@ import { MODEL_DEFAULTS, toModelType } from "@/preview-3d/state/model-defaults.t
 import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
+import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 // PMREMGenerator 扩展 mock：全局 setup 的 Fake 只有 fromScene，本文件需 fromEquirectangular
 vi.mock("three", async (importOriginal) => {
@@ -827,19 +828,20 @@ describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由
   it("非总开关节点全部嵌套在 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // env-enabled 平铺
-    expect(nodes[0]!.id).toBe("env-enabled");
+    // env-enabled 平铺（逐 id 硬断言）
+    const master = findNodeById(nodes, "env-enabled");
+    expect(master.id).toBe("env-enabled");
     // 其余节点在 folder children 内
-    const bgFolder = nodes.find((n) => n.id === "cap-group-env-background")!;
+    const bgFolder = findNodeById(nodes, "cap-group-env-background");
     expect(bgFolder.kind).toBe("folder");
     expect(bgFolder.labelKey).toBe("preview.envGroupBackground");
-    const bgChildIds = bgFolder.children!.map((c) => c.id);
+    const bgChildIds = childIds(bgFolder);
     expect(bgChildIds).toContain("env-use-as-background");
     expect(bgChildIds).toContain("env-intensity");
     expect(bgChildIds).toContain("cap-group-env-histogram");
-    // folder labelKey 对应原 group
-    expect(nodes[2]!.labelKey).toBe("preview.envGroupPreset");
-    expect(nodes.find((n) => n.id === "cap-group-env-custom-hdr")!.labelKey).toBe(
+    // folder labelKey 对应原 group（逐 id 硬断言）
+    expect(findNodeById(nodes, "cap-group-env-preset").labelKey).toBe("preview.envGroupPreset");
+    expect(findNodeById(nodes, "cap-group-env-custom-hdr").labelKey).toBe(
       "preview.envGroupCustomHdr",
     );
   });
@@ -847,7 +849,7 @@ describe("EnvironmentCapability — getMenuNodes 结构（节点化后 group 由
   it("toggle 开关操作同步状态（节点 control 闭包）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const enabledNode = nodes.find((n) => n.id === "env-enabled")!;
+    const enabledNode = findNodeById(nodes, "env-enabled");
     expect(enabledNode.control!.get!(undefined)).toBe(true);
     enabledNode.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
@@ -938,57 +940,65 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
   it("完整树 = env-enabled 平铺 toggle + env-source select + preset/background/customHdr 三 folder（组分裂修复：background 含 histogram）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // 5 顶层项：总开关 + [ADR-292 D3] 来源选择 + 三 folder
-    expect(nodes).toHaveLength(5);
-    // 0: env-enabled toggle 原生（能力总开关，无 group）
-    expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.id).toBe("env-enabled");
-    nodes[0]!.control!.set!(false);
+    // 5 顶层项成员（精确集合，不测顺序；总数 = 集合成员数自然保证）
+    expect(nodeIds(nodes).sort()).toEqual(
+      [
+        "env-enabled",
+        "env-source",
+        "cap-group-env-preset",
+        "cap-group-env-background",
+        "cap-group-env-custom-hdr",
+      ].sort(),
+    );
+    // env-enabled toggle 原生（能力总开关，无 group）
+    const master = findNodeById(nodes, "env-enabled");
+    expect(master.kind).toBe("toggle");
+    master.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
-    nodes[0]!.control!.set!(true);
+    master.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    // 1: [ADR-292 D3] env-source select——来源决定「谁供图」，紧随总开关
-    expect(nodes[1]!.kind).toBe("select");
-    expect(nodes[1]!.id).toBe("env-source");
-    // 2: preset folder
-    expect(nodes[2]!.kind).toBe("folder");
-    expect(nodes[2]!.labelKey).toBe("preview.envGroupPreset");
+    // [ADR-292 D3] env-source select——来源决定「谁供图」
+    const source = findNodeById(nodes, "env-source");
+    expect(source.kind).toBe("select");
+    // preset folder
+    const presetFolder = findNodeById(nodes, "cap-group-env-preset");
+    expect(presetFolder.kind).toBe("folder");
+    expect(presetFolder.labelKey).toBe("preview.envGroupPreset");
     // background folder（组分裂修复：含 use-as-background + intensity + histogram）
-    const bgFolder = nodes.find((n) => n.id === "cap-group-env-background")!;
+    const bgFolder = findNodeById(nodes, "cap-group-env-background");
     expect(bgFolder.kind).toBe("folder");
     expect(bgFolder.labelKey).toBe("preview.envGroupBackground");
-    expect(bgFolder.children!.map((c) => c.id)).toEqual([
-      "env-use-as-background",
-      "env-intensity",
-      "cap-group-env-histogram",
-    ]);
+    // 组内成员（精确集合，不测顺序）
+    expect(childIds(bgFolder).sort()).toEqual(
+      ["env-use-as-background", "env-intensity", "cap-group-env-histogram"].sort(),
+    );
     // background 组内 toggle/slider 原生节点读写闭包直连 cap
-    const useAsBg = bgFolder.children![0]!;
+    const useAsBg = findNodeById(bgFolder.children!, "env-use-as-background");
     expect(useAsBg.kind).toBe("toggle");
     expect(useAsBg.hintKey).toBe("preview.envUseAsBackgroundHint");
     useAsBg.control!.set!(true);
     expect(cap.isUseAsBackground()).toBe(true);
-    const intensity = bgFolder.children![1]!;
+    const intensity = findNodeById(bgFolder.children!, "env-intensity");
     expect(intensity.kind).toBe("slider");
     intensity.control!.set!(2.5);
     expect(cap.getIntensity()).toBe(2.5);
     // background 组内 histogram controls 节点
-    const histNode = bgFolder.children![2]!;
+    const histNode = findNodeById(bgFolder.children!, "cap-group-env-histogram");
     expect(histNode.kind).toBe("controls");
     const histControls = typeof histNode.controls === "function" ? histNode.controls() : histNode.controls;
     expect(histControls![0]!.kind).toBe("histogram");
     expect(histControls![0]!.id).toBe("env-histogram");
-    // 4: customHdr folder
-    expect(nodes[4]!.kind).toBe("folder");
-    expect(nodes[4]!.labelKey).toBe("preview.envGroupCustomHdr");
+    // customHdr folder
+    const hdrFolderTop = findNodeById(nodes, "cap-group-env-custom-hdr");
+    expect(hdrFolderTop.kind).toBe("folder");
+    expect(hdrFolderTop.labelKey).toBe("preview.envGroupCustomHdr");
   });
 
   it("preset folder 内 preset-thumb 走 controls 通道节点（控件定义内嵌）", () => {
     const cap = newCap();
-    const presetFolder = cap.getMenuNodes().find((n) => n.id === "cap-group-env-preset")!;
-    const thumbNode = presetFolder.children![0]!;
+    const presetFolder = findNodeById(cap.getMenuNodes(), "cap-group-env-preset");
+    const thumbNode = findNodeById(presetFolder.children!, "cap-group-env-preset-thumb");
     expect(thumbNode.kind).toBe("controls");
-    expect(thumbNode.id).toBe("cap-group-env-preset-thumb");
     const controls = typeof thumbNode.controls === "function" ? thumbNode.controls() : thumbNode.controls;
     expect(controls![0]!.kind).toBe("preset-thumb");
     expect(controls![0]!.id).toBe("env-preset");
@@ -1004,25 +1014,24 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
 
   it("customHdr folder 内 image 走 controls 通道、pick/clear 为原生 button 节点（button 已迁节点 kind）", () => {
     const cap = newCap();
-    const hdrFolder = cap.getMenuNodes().find((n) => n.id === "cap-group-env-custom-hdr")!;
-    expect(hdrFolder.children!.map((c) => c.id)).toEqual([
-      "cap-group-env-hdr-preview",
-      "env-pick-hdr",
-      "env-clear-hdr",
-    ]);
+    const hdrFolder = findNodeById(cap.getMenuNodes(), "cap-group-env-custom-hdr");
+    // 组内成员（精确集合，不测顺序）
+    expect(childIds(hdrFolder).sort()).toEqual(
+      ["cap-group-env-hdr-preview", "env-pick-hdr", "env-clear-hdr"].sort(),
+    );
     // image controls 节点
-    const previewNode = hdrFolder.children![0]!;
+    const previewNode = findNodeById(hdrFolder.children!, "cap-group-env-hdr-preview");
     expect(previewNode.kind).toBe("controls");
     const previewControls = typeof previewNode.controls === "function" ? previewNode.controls() : previewNode.controls;
     expect(previewControls![0]!.kind).toBe("image");
     expect(previewControls![0]!.id).toBe("env-hdr-preview");
     // pick button 节点语义（control 按钮臂）
-    const pickBtn = hdrFolder.children![1]!;
+    const pickBtn = findNodeById(hdrFolder.children!, "env-pick-hdr");
     expect(pickBtn.kind).toBe("button");
     expect(pickBtn.control!.variant).toBe("primary");
     expect(pickBtn.control!.disabled!()).toBe(false);
     // clear button 节点语义
-    const clearBtn = hdrFolder.children![2]!;
+    const clearBtn = findNodeById(hdrFolder.children!, "env-clear-hdr");
     expect(clearBtn.kind).toBe("button");
     expect(clearBtn.control!.variant).toBe("ghost");
     expect(clearBtn.control!.disabled!()).toBe(true); // 无 custom HDR → 禁用
@@ -1036,6 +1045,7 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     const nodes = cap.getMenuNodes();
     // 遍历三个 folder 内所有 controls 通道节点里的控件，断言 group 未定义
     const folderNodes = nodes.filter((n) => n.kind === "folder");
+    // folder 数量（精确计数；成员已由上方完整树集合断言覆盖）
     expect(folderNodes).toHaveLength(3);
     const controlsNodes = folderNodes.flatMap((f) =>
       (f.children ?? []).filter((c) => c.kind === "controls"),

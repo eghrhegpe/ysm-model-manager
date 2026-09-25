@@ -7,6 +7,7 @@ import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts"
 import { TD_CAM_SPEED, TD_PIXEL_RATIO, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
 import type { PreviewMenuCtx } from "@/preview-3d/menu/schema/node-types.ts";
 import { buildCameraSchema, buildCrossCuttingNodes } from "./settings.ts";
+import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 function makeBridge(): CameraControlBridge & { orbit: boolean; speed: number; resets: number } {
   return {
@@ -49,9 +50,13 @@ function makeCtx(bridge: ReturnType<typeof makeBridge>): PreviewMenuCtx {
 describe("buildCameraSchema（ADR-193 第一刀：声明式三节点）", () => {
   it("产出 select/slider/button 三节点，零 renderCustom（逃生舱通道退役）", () => {
     const nodes = buildCameraSchema(makeCtx(makeBridge()));
-    expect(nodes.map((n) => n.kind)).toEqual(["select", "slider", "button"]);
+    // 三节点 kind 归属（逐 id 硬断言，非位置索引）
+    expect(findNodeById(nodes, "camera-orbit").kind).toBe("select");
+    expect(findNodeById(nodes, "camera-speed").kind).toBe("slider");
+    expect(findNodeById(nodes, "camera-reset").kind).toBe("button");
     expect(nodes.every((n) => n.renderCustom === undefined)).toBe(true);
-    expect(nodes.map((n) => n.id)).toEqual(["camera-orbit", "camera-speed", "camera-reset"]);
+    // 三节点成员（精确集合；声明序不测）
+    expect(nodeIds(nodes).sort()).toEqual(["camera-orbit", "camera-speed", "camera-reset"].sort());
   });
 
   it("orbit select：get 读桥、set 写桥 + 持久化（键/枚举消费 settings-schema）", () => {

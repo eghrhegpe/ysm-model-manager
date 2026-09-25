@@ -448,7 +448,8 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     mountCaps(cap);
 
     const got = collectSettingsCapControls();
-    expect(got.map((c) => c.id)).toEqual(["c-10", "c-30"]);
+    // 控件成员（精确集合；settingsOrder 排序后顺序不测，顺序由 schema 源码锁定）
+    expect(got.map((c) => c.id).sort()).toEqual(["c-10", "c-30"].sort());
     // settings 扁平不收 folder 组（folder 壳被剥、其 children 递归展平）
     expect(got.every((c) => c.kind !== "folder")).toBe(true);
   });
@@ -476,30 +477,31 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     mountCaps(capA, capB, makeFakeCap("plain", { nodes: [mk("p-plain", undefined)] }));
 
     const sections = collectSettingsCapSections();
-    expect(sections.map((n) => n.id)).toEqual([
+    // 分节成员（精确集合；小节标题与控件的交错顺序由 schema 源码锁定，不测）
+    expect(sections.map((n) => n.id).sort()).toEqual([
       "settings-cap-capA",
       "a-20",
       "settings-cap-capB",
       "b-10",
       "b-30",
-    ]);
-    const headerA = sections[0]!;
+    ].sort());
+    const headerA = sections.find((n) => n.id === "settings-cap-capA")!;
     expect(headerA.kind).toBe("sectionTitle");
     // 小节标题 = cap 自报 labelKey（fake cap 的 labelKey = `cap.${id}`）——归属语境自动派生
     expect(headerA.labelKey).toBe("cap.capA");
-    expect(sections[2]!.labelKey).toBe("cap.capB");
+    expect(sections.find((n) => n.id === "settings-cap-capB")!.labelKey).toBe("cap.capB");
 
     // schema 层同构：画质大标题 → cap 小节标题 → 控件（小节插在两者之间）
     const ids = buildSettingsSchema({} as unknown as PreviewMenuCtx).map((n) => n.id);
     expect(ids.indexOf("settings-quality-header")).toBeLessThan(ids.indexOf("settings-cap-capA"));
     expect(ids.indexOf("settings-cap-capB")).toBeLessThan(ids.indexOf("b-10"));
 
-    // 扁平契约视图（collectSettingsCapControls）不含小节标题，顺序与分节一致
-    expect(collectSettingsCapControls().map((c) => c.id)).toEqual([
+    // 扁平契约视图（collectSettingsCapControls）不含小节标题，成员集合与分节一致
+    expect(collectSettingsCapControls().map((c) => c.id).sort()).toEqual([
       "a-20",
       "b-10",
       "b-30",
-    ]);
+    ].sort());
   });
 
   it("cap 缺席时不产生聚合控件；后挂载 cap schema 重建可见（惰性求值，非构建期冻结）", () => {
@@ -592,7 +594,8 @@ describe("P2 单渲染器 — 设置面板为纯数据节点", () => {
     const lighting = buildLightingSchema({ getCap: () => lightCap } as unknown as PreviewMenuCtx);
     // 面板首行不再是能力总开关——被 filter 掉（总开关已升场景组根视图 headerToggle）
     expect(lighting.map((n) => n.id)).not.toContain("light-enabled");
-    expect(lighting.map((n) => n.id)).toEqual(["light-key"]);
+    // 面板成员（精确集合 = 非总开关节点）
+    expect(lighting.map((n) => n.id).sort()).toEqual(["light-key"].sort());
   });
 
   // [ADR-293 复核 P0] 回归：面板渲染栈内同步重入的 notify 闭环。离散变更 → cap.notify
@@ -635,7 +638,8 @@ describe("P3 visible 规则 — 条件显隐可集中枚举（B 轨 visibleWhen 
     const gated: PreviewControlDef = {
       ...plain, id: "b", visibleWhen: () => false,
     };
-    expect(collectVisiblePredicates([plain, gated]).map((c) => c.id)).toEqual(["b"]);
+    // 谓词控件成员（精确集合 = 带 visibleWhen 的控件）
+    expect(collectVisiblePredicates([plain, gated]).map((c) => c.id).sort()).toEqual(["b"].sort());
   });
 
   it("聚合到设置面板的控件如带 visibleWhen，谓词仍可枚举（不被抹平丢失）", () => {
@@ -648,7 +652,8 @@ describe("P3 visible 规则 — 条件显隐可集中枚举（B 轨 visibleWhen 
     // [ADR-195 刀 2.5] collectSettingsCapControls 返回 PreviewMenuNode[]；
     // 节点自带 visibleWhen，直产节点即携带（bridge 退役，无投影环节）。
     const visibleNodes = collectSettingsCapControls().filter((n) => n.visibleWhen !== undefined);
-    expect(visibleNodes.map((n) => n.id)).toEqual(["c-gated"]);
+    // 谓词节点成员（精确集合）
+    expect(visibleNodes.map((n) => n.id).sort()).toEqual(["c-gated"].sort());
   });
 });
 

@@ -11,6 +11,7 @@ import {
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import * as THREE from "three";
+import { findNodeById } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 /** 最小 spec（单组件）：1 个 modelGroup，2 根骨骼，2 个纹理槽 */
 function makeSpec(overrides: { models?: unknown[] } = {}) {
@@ -59,9 +60,9 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
     const nodes = buildYsmModelSchema(ctx, snap(-1), sessionActive(-1));
     // 单组件 → 无 select
     expect(nodes.some((n) => n.kind === "select")).toBe(false);
-    // 统计
-    expect(nodes[0]).toMatchObject({ id: "ysm-stats-bones", kind: "field", value: "2 根" });
-    expect(nodes[1]).toMatchObject({ id: "ysm-stats-cubes", kind: "field", value: "3 个" });
+    // 统计（逐 id 硬断言，非位置索引）
+    expect(findNodeById(nodes, "ysm-stats-bones")).toMatchObject({ id: "ysm-stats-bones", kind: "field", value: "2 根" });
+    expect(findNodeById(nodes, "ysm-stats-cubes")).toMatchObject({ id: "ysm-stats-cubes", kind: "field", value: "3 个" });
     // 纹理行
     const texNodes = nodes.filter((n) => n.kind === "row");
     expect(texNodes.length).toBe(2);

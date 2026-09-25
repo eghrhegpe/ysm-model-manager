@@ -11,6 +11,7 @@ import type { YsmModel, YsmContentHandle } from "@/preview-3d/infra/content-brid
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 const mocks = vi.hoisted(() => ({
   preloadModel: vi.fn(),
@@ -152,7 +153,8 @@ describe("buildYsmScene（shared 装配）", () => {
 
     // ADR-076 v2 Phase 2：适配器经 ctx.menu.setAdapterItems 注入 model / 截图 / 骨骼 / 感知 四项
     const items = registeredItems(preview);
-    expect(items.map((i) => i.id)).toEqual(["model", "shot", "bones", "perception"]);
+    // 注入面板成员（精确集合；声明序不测）
+    expect(items.map((i) => i.id).sort()).toEqual(["model", "shot", "bones", "perception"].sort());
     items.forEach((i) => expect(i.kind).toBe("panel"));
     // [doc:adr-126-p4-b + p5-a] panel 渲染通道三选一：renderCustom / children / schemaId（受控 registry）
     items.forEach((i) =>
@@ -448,11 +450,12 @@ describe("ysmMenuItems 独立菜单表测试", () => {
       },
     };
     const items = ysmMenuItems(opts);
-    expect(items.map((i) => i.id)).toEqual(["model", "shot", "bones"]);
+    // 面板成员（精确集合；声明序不测）
+    expect(items.map((i) => i.id).sort()).toEqual(["model", "shot", "bones"].sort());
     // model/shot 归 model 组；bones 归 motion 组（骨骼是动作驱动目标）
-    expect(items[0].dockGroup).toBe("model");
-    expect(items[1].dockGroup).toBe("model");
-    expect(items[2].dockGroup).toBe("motion");
+    expect(items.find((i) => i.id === "model")!.dockGroup).toBe("model");
+    expect(items.find((i) => i.id === "shot")!.dockGroup).toBe("model");
+    expect(items.find((i) => i.id === "bones")!.dockGroup).toBe("motion");
     items.forEach((i) => {
       expect(i.kind).toBe("panel");
       // [doc:adr-126-p4-b + p5-a] panel 渲染通道三选一：renderCustom / children / schemaId（受控 registry）

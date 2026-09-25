@@ -7,6 +7,7 @@ import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
+import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 // ADR-196：构造即注册全局 env 回调、仅 dispose 注销；与 ground/sky/water 同侪一致，
 // afterEach 清空防 cap 泄漏跨测试（O(N²) 回调累积超时隐患）。
@@ -191,15 +192,16 @@ describe("ReflectorCapability — getMenuNodes 结构（节点化后 group 由 f
   it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // master toggle 在顶层
-    expect(nodes[0]!.id).toBe("reflector-enabled");
+    // master toggle 在顶层（逐 id 硬断言）
+    const master = findNodeById(nodes, "reflector-enabled");
+    expect(master.id).toBe("reflector-enabled");
     // 其余节点在 folder children 内
-    const folder = nodes[1]!;
+    const folder = findNodeById(nodes, "cap-group-reflector-params");
     expect(folder.kind).toBe("folder");
-    const childIds = folder.children!.map((c) => c.id);
-    expect(childIds).toContain("reflector-opacity");
-    expect(childIds).toContain("reflector-resolution");
-    expect(childIds).toContain("reflector-size");
+    const ids = childIds(folder);
+    expect(ids).toContain("reflector-opacity");
+    expect(ids).toContain("reflector-resolution");
+    expect(ids).toContain("reflector-size");
     // folder 的 labelKey 对应原 group
     expect(folder.labelKey).toBe("preview.reflectorGroupParams");
   });
@@ -221,25 +223,22 @@ describe("ReflectorCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
   it("完整树 = master toggle 原生节点 + 参数组 folder（3 slider）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(2);
-    // master toggle
-    expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.id).toBe("reflector-enabled");
+    // 顶层 2 节点成员（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(["reflector-enabled", "cap-group-reflector-params"].sort());
+    const master = findNodeById(nodes, "reflector-enabled");
+    expect(master.kind).toBe("toggle");
     // [锐评 F-1] master toggle 读数 = schema 键（默认关，与 water 同纪律）
-    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
-    nodes[0]!.control!.set!(true);
+    expect(master.control!.get!(undefined)).toBe(false);
+    master.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    nodes[0]!.control!.set!(false);
+    master.control!.set!(false);
     expect(cap.isEnabled()).toBe(false);
     // 参数组 folder
-    const folder = nodes[1]!;
+    const folder = findNodeById(nodes, "cap-group-reflector-params");
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.reflectorGroupParams");
-    expect(folder.children!.map((c) => c.id)).toEqual([
-      "reflector-opacity",
-      "reflector-resolution",
-      "reflector-size",
-    ]);
+    // 参数组 3 子成员（精确集合，不测顺序）
+    expect(childIds(folder).sort()).toEqual(["reflector-opacity", "reflector-resolution", "reflector-size"].sort());
     // 全部原生节点（reflector 无复杂控件，不走 controls 通道）
     expect(folder.children!.every((c) => c.kind === "slider")).toBe(true);
   });
@@ -247,16 +246,18 @@ describe("ReflectorCapability — getMenuNodes（ADR-195 刀2 cap 直产节点�
   it("剔除 master 后的子树（env 二级 body 语义）：仅参数组 folder", () => {
     const cap = newCap();
     const rest = cap.getMenuNodes().filter((n) => n.id !== cap.getMasterNodeId());
-    expect(rest).toHaveLength(1);
-    expect(rest[0]!.kind).toBe("folder");
-    expect(rest[0]!.children!.some((c) => c.id === "reflector-enabled")).toBe(false);
+    // 剔除后成员 = 仅参数组 folder（集合断言）
+    expect(nodeIds(rest).sort()).toEqual(["cap-group-reflector-params"].sort());
+    const folder = findNodeById(rest, "cap-group-reflector-params");
+    expect(folder.kind).toBe("folder");
+    expect(folder.children!.some((c) => c.id === "reflector-enabled")).toBe(false);
   });
 
   it("slider 节点读写闭包直连 cap 参数", () => {
-    setEnvState({ reflectorOpacity: 0.75 }, { source: 'manual' });
+    setEnvState({ reflectorOpacity: 0.75 }, { source: "manual" });
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
-    const opacity = folder.children!.find((c) => c.id === "reflector-opacity")!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-reflector-params");
+    const opacity = findNodeById(folder.children!, "reflector-opacity");
     expect(opacity.control!.get!(undefined)).toBe(0.75);
     opacity.control!.set!(0.42);
     expect(cap.getParams().opacity).toBe(0.42);
@@ -378,13 +379,13 @@ describe("ReflectorCapability — 菜单控件联动（节点 control 闭包）"
 
   it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-reflector-params");
     for (const [id, key] of [
       ["reflector-opacity", "reflectorOpacity"],
       ["reflector-resolution", "reflectorResolution"],
       ["reflector-size", "reflectorSize"],
     ] as const) {
-      const c = folder.children!.find((x) => x.id === id)!.control!;
+      const c = findNodeById(folder.children!, id).control!;
       expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
         getParamRange(key),
       );
@@ -393,8 +394,8 @@ describe("ReflectorCapability — 菜单控件联动（节点 control 闭包）"
 
   it("opacity/resolution/size 滑块读写联动", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
-    const by = (id: string) => folder.children!.find((c) => c.id === id)!;
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-reflector-params");
+    const by = (id: string) => findNodeById(folder.children!, id);
     by("reflector-opacity").control!.set!(0.9);
     expect(by("reflector-opacity").control!.get!(undefined)).toBe(0.9);
     by("reflector-resolution").control!.set!(2048);

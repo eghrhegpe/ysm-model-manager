@@ -128,8 +128,14 @@ interface PatternSpec {
   rule: Rule;
   re: RegExp;
   /** 二次过滤：匹配文本满足谓词才计违规（如窗口含 sort 即集合惯例 → 放行） */
-  accept: (m: RegExpMatchArray) => boolean;
+  accept: (m: RegExpExecArray) => boolean;
 }
+
+/** THREE / DOM 场景图标记词：匹配文本含其一即非菜单树（cap 测试中 `as THREE.Mesh`、
+ *  `scene.getObjectByName(...)`、`document.querySelector` 等——同一 `.children[0]`
+ *  在 cap 测试里既可能是 PreviewMenuNode 也可能是 Three.js 场景对象，无法纯靠接收者
+ *  词表区分；加入类型锚定启发式，零误报成本——真菜单树断言绝不写 THREE/DOM 标记词）。 */
+const SCENE_GRAPH_MARKERS = /(?:as\s+THREE\.|instanceof\s+THREE\.|THREE\.\w+|document\.|querySelector|Object3D|Scene|getByName|\.scene\b)/;
 
 const PATTERNS: PatternSpec[] = [
   {
@@ -147,16 +153,34 @@ const PATTERNS: PatternSpec[] = [
   },
   {
     // 菜单名词接收者的精确长度断言；toHaveLength(0)（行为式）与 .length 参数（规格驱动）天然不匹配
+    // 匹配文本含 THREE/DOM 场景图标记 → 放行（scene.children 是 THREE.Object3D[] 非菜单树）
     rule: "exact-length",
     re: /((?:nodes|children|menuItems|items|controls|options|rows|leaves|sliceItems)\b[^;\n]{0,80}?)\.toHaveLength\(\s*([1-9]\d*)\s*\)/gs,
-    accept: (m) => !/\.length\b/.test(m[1] ?? ""),
+    accept: (m) => {
+      const ctx = m[1] ?? "";
+      if (/\.(length)\b/.test(ctx)) return false;
+      if (SCENE_GRAPH_MARKERS.test(ctx)) return false;
+      // 后窗 80 字符内出现场景图标记 → 放行（与 index-access 对称）
+      const after = (m.input ?? "").slice(m.index + m[0].length, m.index + m[0].length + 80);
+      if (SCENE_GRAPH_MARKERS.test(after)) return false;
+      return true;
+    },
   },
   {
+    // 菜单名词位置索引；匹配后 80 字符内出现 THREE/DOM 场景图标记 → 放行
+    // （同一 `.children[0]` 在 cap 测试里既可能是 PreviewMenuNode 也可能是
+    //  THREE.Object3D——`as THREE.Mesh` / `instanceof THREE` / `getObjectByName`
+    //  等类型锚定词在匹配右侧；真菜单树断言绝不写这些标记词）
     rule: "index-access",
     re: /\b(?:nodes|children|menuItems|items|roots|leaves|sliceItems)\s*!?\s*(?:\?\.)?\s*\[\s*\d+\s*\]/gs,
-    accept: () => true,
+    accept: (m) => {
+      const ctx = (m.input ?? "").slice(m.index + m[0].length, m.index + m[0].length + 80);
+      if (SCENE_GRAPH_MARKERS.test(ctx)) return false;
+      return true;
+    },
   },
   {
+    // getMenuNodes()[N] 是**菜单专属 API**（无 THREE 场景图同名词），不加标记词过滤
     rule: "index-access",
     re: /getMenuNodes\(\)\s*!?\s*\[\s*\d+\s*\]/gs,
     accept: () => true,

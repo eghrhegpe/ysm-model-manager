@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ysmShotNodes, type YsmControlsContext } from "./ysm-controls.ts";
+import { findNodeById } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 // 截图链路（Wails 绑定 SaveScreenshotFile）在 node 测试环境不可用——
 // mock saveScreenshot 隔离副作用，只验证 ysmShotNodes 的 action 触发截图调用
@@ -65,11 +66,12 @@ describe("ysmShotNodes（P4-B-2 声明式节点）", () => {
   it("产出 6 个 button 节点（ysm- 前缀 id）", () => {
     const nodes = ysmShotNodes(makeCtx());
     expect(nodes.length).toBe(6);
-    expect(nodes.map((n) => n.id)).toEqual([
+    // 六按钮成员（精确集合；声明序不测）
+    expect(nodes.map((n) => n.id).sort()).toEqual([
       "ysm-shot-current", "ysm-shot-front", "ysm-shot-45", "ysm-shot-side", "ysm-shot-back45", "ysm-shot-all",
-    ]);
+    ].sort());
     expect(nodes.every((n) => n.kind === "button")).toBe(true);
-    expect(nodes[0].icon).toBe("camera");
+    expect(findNodeById(nodes, "ysm-shot-current").icon).toBe("camera");
   });
 
   it("screenshot 未定义（undefined，ctx 可选字段）时仍产出 6 按钮（面板常驻，走 fallback）", () => {
@@ -80,7 +82,7 @@ describe("ysmShotNodes（P4-B-2 声明式节点）", () => {
 
   it("action 触发截图调用（saveScreenshot 被 mock，fire-and-forget）", async () => {
     const nodes = ysmShotNodes(makeCtx());
-    const action = nodes[0].action!;
+    const action = findNodeById(nodes, "ysm-shot-current").action!;
     const actionCtx = { toast: vi.fn(), closeAllOverlays: vi.fn() };
     // action 是 fire-and-forget（void saveShot），内部 async 链路——等 microtask 冲刷后断言
     action(actionCtx);

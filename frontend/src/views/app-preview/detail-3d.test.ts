@@ -273,14 +273,19 @@ describe("showMorphPreview CustomMorph 入口卡", () => {
     expect(items.length).toBe(2);
     // 当前 path 高亮（修复后走 .active class：内联 style 既表达不了 :hover，
     // 又因缺分号把 font-weight 并进非法声明整体丢弃）
-    expect(items[0].classList.contains("active")).toBe(true);
-    expect(items[1].classList.contains("active")).toBe(false);
+    const activeItem = ctx.root.querySelector<HTMLElement>(".morph-item.active");
+    expect(activeItem).not.toBeNull();
+    expect(activeItem!.classList.contains("active")).toBe(true);
+    // 非当前项无 active
+    const inactiveItems = Array.from(ctx.root.querySelectorAll<HTMLElement>(".morph-item")).filter((el) => !el.classList.contains("active"));
+    expect(inactiveItems.length).toBe(1);
+    expect(inactiveItems[0].classList.contains("active")).toBe(false);
     // hover/高亮规则本体在 shared previewCSS（CSS 收口 91b90c87d 迁出内联 <style>，
     // adoptedStyleSheets 不进 innerHTML——改查样式表本体，语义等价）
     expect(previewCSS).toContain(".morph-item:hover");
     expect(previewCSS).toContain(".morph-item.active");
     // 点击兄弟项 → 带 rtype 的 model:select
-    items[1].click();
+    inactiveItems[0].click();
     expect(emitted("model:select")).toEqual([
       { path: "/repo/morphs/b.vpd", isDir: false, rtype: "CustomMorph" },
     ]);
@@ -318,7 +323,10 @@ describe("showStagePreview StageAnim 入口卡", () => {
     expect(html).toContain("包含: 2 动作 / 1 音频 / 1 配置");
     const items = ctx.root.querySelectorAll<HTMLElement>(".stage-item");
     expect(items.length).toBe(4);
-    items[2].click(); // 音频项
+    // 音频项 = 含 bgm.mp3 的 .stage-item（DOM 选择器定位，非位置索引）
+    const audioItem = Array.from(ctx.root.querySelectorAll<HTMLElement>(".stage-item")).find((el) => el.innerHTML.includes("bgm.mp3"));
+    expect(audioItem).not.toBeNull();
+    audioItem!.click();
     expect(emitted("model:select")).toEqual([
       { path: "/repo/stage/x/bgm.mp3", isDir: false, rtype: "StageAnim" },
     ]);

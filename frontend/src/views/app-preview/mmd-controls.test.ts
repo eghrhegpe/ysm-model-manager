@@ -18,6 +18,7 @@ import {
   setMmdMaterialVisible,
   setMmdMaterialOpacity,
 } from "@/preview-3d/materials/mmd-materials.ts";
+import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 function makeCtx() {
   // MMD 的 SkinnedMesh 是多材质数组（材料列表按数组访问 mats[i]）
@@ -93,12 +94,15 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
   it("产出 2 行 field：名称 + 骨骼/材质/表情计数，纯数据零 DOM", () => {
     const { ctx } = makeCtx();
     const nodes = mmdModelInfoNodes(ctx);
-    expect(nodes.length).toBe(2);
-    expect(nodes[0]).toMatchObject({ id: "mmd-model-name", kind: "field", value: "子言.pmx" });
-    expect(nodes[1]).toMatchObject({ id: "mmd-model-overview", kind: "field" });
-    expect(nodes[1].value).toContain("364"); // 骨骼
-    expect(nodes[1].value).toContain("28");  // 材质
-    expect(nodes[1].value).toContain("55");  // 表情
+    // 基础 2 行成员（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(["mmd-model-name", "mmd-model-overview"].sort());
+    const nameNode = findNodeById(nodes, "mmd-model-name");
+    expect(nameNode).toMatchObject({ kind: "field", value: "子言.pmx" });
+    const overviewNode = findNodeById(nodes, "mmd-model-overview");
+    expect(overviewNode).toMatchObject({ kind: "field" });
+    expect(overviewNode.value).toContain("364"); // 骨骼
+    expect(overviewNode.value).toContain("28");  // 材质
+    expect(overviewNode.value).toContain("55");  // 表情
     // 纯数据：不碰 DOM（G3 收口后 nodes 为唯一通道，命令式旧轨已删）
     expect(document.body.innerHTML).toBe("");
   });
@@ -107,7 +111,8 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
     const names = ["初音ミク.pmx", "Miku.pmd"];
     for (const name of names) {
       const { ctx } = makeCtxWithName(name);
-      expect(mmdModelInfoNodes(ctx)[0].value).toBe(name);
+      const nameNode = findNodeById(mmdModelInfoNodes(ctx), "mmd-model-name");
+      expect(nameNode.value).toBe(name);
     }
   });
 
@@ -119,9 +124,8 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
       zipModelCandidates: ["/repo/multi.zip!/miku.pmx", "/repo/multi.zip!/zuko.pmx"],
       switchTo,
     });
-    // 首节点 = select（多候选时）
-    const sel = nodes[0];
-    expect(sel.id).toBe("mmd-model-select");
+    // select 节点（多候选时前置）
+    const sel = findNodeById(nodes, "mmd-model-select");
     expect(sel.kind).toBe("select");
     expect(sel.control?.options?.map((o) => o.value)).toEqual([
       "/repo/multi.zip!/miku.pmx",
@@ -136,7 +140,8 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
     const { ctx } = makeCtx();
     const nodes = mmdModelInfoNodes(ctx);
     expect(nodes.some((n) => n.kind === "select")).toBe(false);
-    expect(nodes.length).toBe(2);
+    // 基础 2 行成员（精确集合）
+    expect(nodeIds(nodes).sort()).toEqual(["mmd-model-name", "mmd-model-overview"].sort());
   });
 
   it("PMX 头部规约（modelName/comment）：文件名≠内嵌名时补内嵌名行，comment 非空时补规约行", () => {
@@ -147,16 +152,16 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
       englishComment: "No resale",
     });
     const nodes = mmdModelInfoNodes(ctx);
-    // 基础 2 行 field + 内嵌名 + 规约 = 4 行
-    expect(nodes.length).toBe(4);
-    expect(nodes[2]).toMatchObject({
-      id: "mmd-model-embedded-name",
+    // 基础 2 行 field + 内嵌名 + 规约 = 4 行成员（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(
+      ["mmd-model-name", "mmd-model-overview", "mmd-model-embedded-name", "mmd-model-comment"].sort(),
+    );
+    expect(findNodeById(nodes, "mmd-model-embedded-name")).toMatchObject({
       kind: "field",
       labelKey: "preview.modelEmbeddedName",
       value: "子言_Rigged",
     });
-    expect(nodes[3]).toMatchObject({
-      id: "mmd-model-comment",
+    expect(findNodeById(nodes, "mmd-model-comment")).toMatchObject({
       kind: "field",
       labelKey: "preview.modelComment",
       value: "禁止贩卖\n禁止二次配布改模",
@@ -166,7 +171,8 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
   it("内嵌名与文件名一致 → 不补内嵌名行（避免重复）；comment 空 → 不补规约行", () => {
     const { ctx } = makeCtxWithHeader({ modelName: "子言.pmx", comment: "" });
     const nodes = mmdModelInfoNodes(ctx);
-    expect(nodes.length).toBe(2);
+    // 基础 2 行成员（精确集合）
+    expect(nodeIds(nodes).sort()).toEqual(["mmd-model-name", "mmd-model-overview"].sort());
     expect(nodes.some((n) => n.id === "mmd-model-embedded-name")).toBe(false);
     expect(nodes.some((n) => n.id === "mmd-model-comment")).toBe(false);
   });
@@ -174,13 +180,14 @@ describe("mmdModelInfoNodes（P4-B-1 声明式节点）", () => {
   it("头部缺失（header undefined）→ 不崩，保持基础 2 行 field", () => {
     const { ctx } = makeCtxWithName("子言.pmx");
     const nodes = mmdModelInfoNodes(ctx);
-    expect(nodes.length).toBe(2);
+    // 基础 2 行成员（精确集合）
+    expect(nodeIds(nodes).sort()).toEqual(["mmd-model-name", "mmd-model-overview"].sort());
   });
 
   it("comment 用英文注释兜底（中文 comment 空时取 englishComment）", () => {
     const { ctx } = makeCtxWithHeader({ modelName: "子言.pmx", comment: "", englishComment: "CC-BY-NC" });
     const nodes = mmdModelInfoNodes(ctx);
-    expect(nodes[2]).toMatchObject({ id: "mmd-model-comment", value: "CC-BY-NC" });
+    expect(findNodeById(nodes, "mmd-model-comment")).toMatchObject({ value: "CC-BY-NC" });
   });
 });
 
@@ -189,12 +196,12 @@ describe("mmdShotNodes（P4-B-1 声明式节点）", () => {
     const { ctx } = makeCtx();
     const screenshotFn = vi.fn(() => Promise.resolve("b64"));
     const nodes = mmdShotNodes(ctx, screenshotFn);
-    expect(nodes.length).toBe(6);
-    expect(nodes.map((n) => n.id)).toEqual([
-      "mmd-shot-current", "mmd-shot-front", "mmd-shot-45", "mmd-shot-side", "mmd-shot-back45", "mmd-shot-all",
-    ]);
+    // 6 节点成员（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(
+      ["mmd-shot-current", "mmd-shot-front", "mmd-shot-45", "mmd-shot-side", "mmd-shot-back45", "mmd-shot-all"].sort(),
+    );
     expect(nodes.every((n) => n.kind === "button")).toBe(true);
-    expect(nodes[0].icon).toBe("camera");
+    expect(findNodeById(nodes, "mmd-shot-current").icon).toBe("camera");
   });
 
   it("screenshotFn 为 null → 返回空数组（面板不渲染，与 fillMmdShotPanel 一致）", () => {
@@ -223,9 +230,10 @@ describe("playNodes（[doc:adr-126-p5-收尾] 播放面板声明式节点）", (
   it("多动作：toggle（播放/暂停）+ select（动作），闭包读写 bridge", () => {
     const bridge = makeBridge();
     const nodes = playNodes(bridge);
-    expect(nodes.map((n) => n.id)).toEqual(["play-toggle", "play-select"]);
-    const toggle = nodes.find((n) => n.id === "play-toggle")!;
-    const sel = nodes.find((n) => n.id === "play-select")!;
+    // 2 节点成员（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(["play-toggle", "play-select"].sort());
+    const toggle = findNodeById(nodes, "play-toggle");
+    const sel = findNodeById(nodes, "play-select");
     // toggle 初始 off → set(true) 播放 → get true
     expect(toggle.control?.get?.(undefined)).toBe(false);
     toggle.control?.set?.(true);
@@ -240,15 +248,20 @@ describe("playNodes（[doc:adr-126-p5-收尾] 播放面板声明式节点）", (
   it("单动作：仅 toggle，无 select", () => {
     const bridge = makeBridge({ clips: [{ label: "only" }] });
     const nodes = playNodes(bridge);
-    expect(nodes.map((n) => n.id)).toEqual(["play-toggle"]);
+    // 仅 1 节点成员（精确集合）
+    expect(nodeIds(nodes).sort()).toEqual(["play-toggle"].sort());
   });
 
   it("无动作：空态 field + 重新扫描 button（requestReload 触发）", () => {
     const bridge = makeBridge({ clips: [] });
     const nodes = playNodes(bridge);
-    expect(nodes[0]).toMatchObject({ id: "play-empty", kind: "field" });
-    expect(nodes[1]).toMatchObject({ id: "play-reload", kind: "button" });
-    nodes[1].action!({ toast: vi.fn(), closeAllOverlays: vi.fn() });
+    // 空态 2 节点成员（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(["play-empty", "play-reload"].sort());
+    const empty = findNodeById(nodes, "play-empty");
+    expect(empty).toMatchObject({ kind: "field" });
+    const reload = findNodeById(nodes, "play-reload");
+    expect(reload).toMatchObject({ kind: "button" });
+    reload.action!({ toast: vi.fn(), closeAllOverlays: vi.fn() });
     expect(bridge.requestReload).toHaveBeenCalled();
   });
 

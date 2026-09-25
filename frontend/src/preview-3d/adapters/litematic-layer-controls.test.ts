@@ -14,6 +14,7 @@ import { renderMenu, renderPreviewPanel, type PreviewMenuRouters } from "@/previ
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import type { PreviewBuildCtx } from "./mount-preview-core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
+import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -54,14 +55,14 @@ async function buildScene(): Promise<{
   const ctx = makeMockCtx();
   const content = await buildLitematicScene(ctx, "/a.litematic", mockVoxelCall);
   const items = content.menuItems ?? [];
-  const panel = items[0]!;
+  const panel = findNodeById(items, "slice");
   const sliceKey = panel.schemaId!; // per-scene 唯一 key（5329a347 review P2：不再固定 "litematic-slice"）
   const builder = getSchema(sliceKey)!;
   return { ctx, content, panel, sliceKey, nodes: builder(previewSnapshot()) };
 }
 
 const nodeById = (nodes: PreviewMenuNode[], id: string): PreviewMenuNode =>
-  nodes.find((n) => n.id === id)!;
+  findNodeById(nodes, id);
 
 /** 经模式 select 的 get/set 闭包驱动切片模式（真源 = shell，与生产 select change 同路径） */
 function setMode(nodes: PreviewMenuNode[], mode: string): void {
@@ -107,10 +108,13 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
 
   it("builder 产出：divider + 轴 select + 模式 select + 3 个条件 slider", async () => {
     const { nodes } = await buildScene();
-    expect(nodes.map((n) => n.id)).toEqual([
-      "slice-divider", "slice-axis", "slice-mode",
-      "slice-layer", "slice-range-start", "slice-range-end",
-    ]);
+    // 节点成员（精确集合；builder 声明序不测）
+    expect(nodeIds(nodes).sort()).toEqual(
+      [
+        "slice-divider", "slice-axis", "slice-mode",
+        "slice-layer", "slice-range-start", "slice-range-end",
+      ].sort(),
+    );
     const axis = nodeById(nodes, "slice-axis");
     expect(axis.kind).toBe("select");
     expect(axis.control!.options!.map((o) => o.value)).toEqual(["Y", "X", "Z"]);
@@ -129,7 +133,8 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     const { nodes } = await buildScene();
     const { nodes: again } = await buildScene();
     expect(again).not.toBe(nodes);
-    expect(again.map((n) => n.id)).toEqual(nodes.map((n) => n.id));
+    // 成员集合不变（非单例重建）
+    expect(nodeIds(again).sort()).toEqual(nodeIds(nodes).sort());
   });
 
   it("轴 select：set 更新闭包轴 + 重置层值，重建节点后 slider max 随轴刷新", async () => {
@@ -195,17 +200,20 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     const { nodes } = await buildScene();
     const visible = (s: ReturnType<typeof previewSnapshot>): PreviewMenuNode[] =>
       nodes.filter((n) => !n.visibleWhen || n.visibleWhen(s));
-    expect(visible(previewSnapshot()).map((n) => n.id)).toEqual([
-      "slice-divider", "slice-axis", "slice-mode",
-    ]);
+    // all 态：仅基础三节点可见（slider 全隐藏）
+    expect(nodeIds(visible(previewSnapshot())).sort()).toEqual(
+      ["slice-divider", "slice-axis", "slice-mode"].sort(),
+    );
     setMode(nodes, "single");
-    expect(visible(previewSnapshot()).map((n) => n.id)).toEqual([
-      "slice-divider", "slice-axis", "slice-mode", "slice-layer",
-    ]);
+    // single 态：+ slice-layer
+    expect(nodeIds(visible(previewSnapshot())).sort()).toEqual(
+      ["slice-divider", "slice-axis", "slice-mode", "slice-layer"].sort(),
+    );
     setMode(nodes, "range");
-    expect(visible(previewSnapshot()).map((n) => n.id)).toEqual([
-      "slice-divider", "slice-axis", "slice-mode", "slice-range-start", "slice-range-end",
-    ]);
+    // range 态：+ slice-range-start + slice-range-end
+    expect(nodeIds(visible(previewSnapshot())).sort()).toEqual(
+      ["slice-divider", "slice-axis", "slice-mode", "slice-range-start", "slice-range-end"].sort(),
+    );
   });
 
   it("renderMenu 真渲染器：slider 显隐随切片模式（shell 闭包）变化（range+number 联动）", async () => {

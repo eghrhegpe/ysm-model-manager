@@ -23,6 +23,7 @@ import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schem
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
+import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 afterEach(() => {
   try { localStorage.clear(); } catch { /* noop */ }
@@ -90,22 +91,32 @@ describe("WaterCapability", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(6);
-    expect(nodes[0].id).toBe("water-enabled");
-    expect(nodes.slice(1).map((n) => n.kind)).toEqual([
-      "folder",
-      "folder",
-      "folder",
-      "folder",
-      "folder",
-    ]);
-    expect(nodes.slice(1).map((n) => n.labelKey)).toEqual([
-      "preview.waterGroupForm",
-      "preview.waterGroupLook",
-      "preview.waterGroupPool",
-      "preview.waterGroupWave",
-      "preview.waterGroupReflect",
-    ]);
+    // 成员归属（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(
+      [
+        "water-enabled",
+        "cap-group-water-form",
+        "cap-group-water-look",
+        "cap-group-water-pool",
+        "cap-group-water-wave",
+        "cap-group-water-reflect",
+      ].sort(),
+    );
+    const master = findNodeById(nodes, "water-enabled");
+    expect(master.kind).toBe("toggle");
+    const folders = nodes.slice(1);
+    expect(folders.map((n) => n.kind).sort()).toEqual(
+      ["folder", "folder", "folder", "folder", "folder"].sort(),
+    );
+    expect(folders.map((n) => n.labelKey).sort()).toEqual(
+      [
+        "preview.waterGroupForm",
+        "preview.waterGroupLook",
+        "preview.waterGroupPool",
+        "preview.waterGroupWave",
+        "preview.waterGroupReflect",
+      ].sort(),
+    );
   });
 
   it("getMasterNodeId 返回 water-enabled 使 env 面板能在行首渲染开关", () => {
@@ -118,10 +129,10 @@ describe("WaterCapability", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
-    const look = nodes[2]!;
-    const pool = nodes[3]!;
-    const wetness = look.children!.find((c) => c.id === "water-wetness")!;
-    const poolHeight = pool.children!.find((c) => c.id === "water-pool-height")!;
+    const look = findNodeById(nodes, "cap-group-water-look");
+    const pool = findNodeById(nodes, "cap-group-water-pool");
+    const wetness = findNodeById(look.children!, "water-wetness");
+    const poolHeight = findNodeById(pool.children!, "water-pool-height");
     const snap = (mode: string) => ({ "env.waterMode": mode } as Partial<PreviewSnapshot>);
     expect(wetness.visibleWhen?.(snap("film"))).toBe(true);
     expect(poolHeight.visibleWhen?.(snap("film"))).toBe(false);
@@ -1095,27 +1106,10 @@ describe("WaterCapability — 菜单控件全联动", () => {
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
     expect(countControls(nodes)).toBe(20);
-    const form = nodes[1]!;
-    const look = nodes[2]!;
-    const pool = nodes[3]!;
-    const wave = nodes[4]!;
-    const reflect = nodes[5]!;
-    const by = (id: string) => {
-      for (const arr of [
-        nodes,
-        form.children!,
-        look.children!,
-        pool.children!,
-        wave.children!,
-        reflect.children!,
-      ]) {
-        const found = arr.find((c) => c.id === id);
-        if (found) return found;
-      }
-      throw new Error(`node ${id} not found`);
-    };
-    nodes[0]!.control!.set!(false);
-    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
+    const by = (id: string) => findNodeById(nodes, id);
+    const master = by("water-enabled");
+    master.control!.set!(false);
+    expect(master.control!.get!(undefined)).toBe(false);
     by("water-mode").control!.set!("pool");
     expect(by("water-mode").control!.get!(undefined)).toBe("pool");
     by("water-size").control!.set!(140);
@@ -1168,38 +1162,43 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
   it("完整树 = enabled 平铺 toggle + 5 组 folder（form/look/pool/wave/reflect）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(6);
-    expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.id).toBe("water-enabled");
-    nodes[0]!.control!.set!(false);
+    // 成员归属（精确集合，不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(
+      [
+        "water-enabled",
+        "cap-group-water-form",
+        "cap-group-water-look",
+        "cap-group-water-pool",
+        "cap-group-water-wave",
+        "cap-group-water-reflect",
+      ].sort(),
+    );
+    const master = findNodeById(nodes, "water-enabled");
+    expect(master.kind).toBe("toggle");
+    master.control!.set!(false);
     expect(cap.getWaterEnabled()).toBe(false);
-    expect(nodes.slice(1).map((n) => n.labelKey)).toEqual([
-      "preview.waterGroupForm",
-      "preview.waterGroupLook",
-      "preview.waterGroupPool",
-      "preview.waterGroupWave",
-      "preview.waterGroupReflect",
-    ]);
-    const look = nodes[2]!;
-    expect(look.children!.map((c) => c.id)).toEqual([
-      "water-wetness",
-      "water-color",
-      "water-opacity",
-      "water-normal-strength",
-      "water-clarity",
-      "water-choppiness",
-    ]);
+    const look = findNodeById(nodes, "cap-group-water-look");
+    expect(childIds(look).sort()).toEqual(
+      [
+        "water-wetness",
+        "water-color",
+        "water-opacity",
+        "water-normal-strength",
+        "water-clarity",
+        "water-choppiness",
+      ].sort(),
+    );
   });
 
   it("film/pool visibleWhen 谓词挂节点", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const look = nodes[2]!;
-    const wetness = look.children!.find((c) => c.id === "water-wetness")!;
+    const look = findNodeById(nodes, "cap-group-water-look");
+    const wetness = findNodeById(look.children!, "water-wetness");
     expect(wetness.visibleWhen?.({ "env.waterMode": "film" })).toBe(true);
     expect(wetness.visibleWhen?.({ "env.waterMode": "pool" })).toBe(false);
-    const pool = nodes[3]!;
-    const height = pool.children!.find((c) => c.id === "water-pool-height")!;
+    const pool = findNodeById(nodes, "cap-group-water-pool");
+    const height = findNodeById(pool.children!, "water-pool-height");
     expect(height.visibleWhen?.({ "env.waterMode": "pool" })).toBe(true);
     expect(height.visibleWhen?.({ "env.waterMode": "film" })).toBe(false);
   });
@@ -1207,8 +1206,8 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
   it("clarity 滑块仅 pool 模式可见（film 下 inert，ADR-257 审核 Item 7 消歧义）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const look = nodes[2]!;
-    const clarity = look.children!.find((c) => c.id === "water-clarity")!;
+    const look = findNodeById(nodes, "cap-group-water-look");
+    const clarity = findNodeById(look.children!, "water-clarity");
     expect(clarity.visibleWhen).toBeDefined();
     expect(clarity.visibleWhen?.({ "env.waterMode": "pool" })).toBe(true);
     expect(clarity.visibleWhen?.({ "env.waterMode": "film" })).toBe(false);
@@ -1217,12 +1216,12 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
   it("color/slider 节点读写闭包直连 cap", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    const look = nodes[2]!;
-    const color = look.children!.find((c) => c.id === "water-color")!;
+    const look = findNodeById(nodes, "cap-group-water-look");
+    const color = findNodeById(look.children!, "water-color");
     expect(color.kind).toBe("color");
     color.control!.set!(0x3355aa);
     expect(cap.getWaterColor()).toBe(0x3355aa);
-    const opacity = look.children!.find((c) => c.id === "water-opacity")!;
+    const opacity = findNodeById(look.children!, "water-opacity");
     opacity.control!.set!(0.6);
     expect(cap.getWaterOpacity()).toBeCloseTo(0.6, 5);
   });
@@ -1313,12 +1312,10 @@ describe("WaterCapability — 水面/容器解耦：waterLevel（ADR-257 A 档�
   it("菜单 ground-water-level 在 film 与 pool 下均可见（无 visibleWhen 门控）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
-    const nodes = cap.getMenuNodes();
-    const form = nodes[1]!;
-    const level = form.children!.find((c) => c.id === "water-level");
-    expect(level).toBeDefined();
-    expect(level!.visibleWhen).toBeUndefined(); // 关键：不带模式门控
-    level!.control!.set!(0.77);
+    const form = findNodeById(cap.getMenuNodes(), "cap-group-water-form");
+    const level = findNodeById(form.children!, "water-level");
+    expect(level.visibleWhen).toBeUndefined(); // 关键：不带模式门控
+    level.control!.set!(0.77);
     expect(cap.getLevel()).toBeCloseTo(0.77, 5);
   });
 });
@@ -1584,15 +1581,14 @@ describe("WaterCapability — waterSize UI 入口与零重建（ADR-272）", () 
 
   it("菜单 ground-water-size：form 组、跨形态无 visibleWhen、双向直连 cap", () => {
     const cap = new WaterCapability({ scene: new THREE.Scene() });
-    const form = cap.getMenuNodes()[1]!;
-    const size = form.children!.find((c) => c.id === "water-size");
-    expect(size).toBeDefined();
-    expect(size!.kind).toBe("slider");
-    expect(size!.labelKey).toBe("preview.waterSize");
-    expect(size!.visibleWhen, "与 ground-water-level 同款：film/pool 通用").toBeUndefined();
-    size!.control!.set!(140);
+    const form = findNodeById(cap.getMenuNodes(), "cap-group-water-form");
+    const size = findNodeById(form.children!, "water-size");
+    expect(size.kind).toBe("slider");
+    expect(size.labelKey).toBe("preview.waterSize");
+    expect(size.visibleWhen, "与 ground-water-level 同款：film/pool 通用").toBeUndefined();
+    size.control!.set!(140);
     expect(cap.getWaterSize()).toBe(140);
-    expect(size!.control!.get!(undefined)).toBe(140);
+    expect(size.control!.get!(undefined)).toBe(140);
   });
 
   it("pool：size 变更零重建——10 个 mesh 与各自 geometry 全部同一实例，仅 transform 更新", () => {
@@ -2048,16 +2044,18 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
   it("reflect 组树形：主开 + 四从控（强度/分辨率/裁剪偏置/SSR 抑制），从控按主开 visibleWhen 出场", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
-    const reflect = cap.getMenuNodes()[5]!;
-    expect(reflect.id).toBe("cap-group-water-reflect");
-    expect(reflect.children!.map((c) => c.id)).toEqual([
-      "water-reflection",
-      "water-reflection-strength",
-      "water-reflection-resolution",
-      "water-reflection-clip-bias",
-      "water-reflect-ssr-suppress",
-    ]);
-    const main = reflect.children![0]!;
+    const reflect = findNodeById(cap.getMenuNodes(), "cap-group-water-reflect");
+    // 成员归属（精确集合，不测顺序）
+    expect(childIds(reflect).sort()).toEqual(
+      [
+        "water-reflection",
+        "water-reflection-strength",
+        "water-reflection-resolution",
+        "water-reflection-clip-bias",
+        "water-reflect-ssr-suppress",
+      ].sort(),
+    );
+    const main = findNodeById(reflect.children!, "water-reflection");
     expect(main.visibleWhen, "主开无谓词（组头常驻）").toBeUndefined();
     const snap = (on: boolean) => ({ "env.waterReflectionEnabled": on }) as Partial<PreviewSnapshot>;
     for (const sub of reflect.children!.slice(1)) {

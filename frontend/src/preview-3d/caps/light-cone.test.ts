@@ -41,7 +41,7 @@ function expectedBaseRadius(height: number, sp: LightInstanceParams): number {
 describe("VolumetricCone — 真锥体几何", () => {
   it("单个 ConeGeometry（不再是两交叉 PlaneGeometry）", () => {
     const { group } = makeCone();
-    expect(group.children).toHaveLength(1);
+    expect(group.children).toHaveLength(1); // layout-assert: 锥体 = 恰 1 个 ConeGeometry mesh（产品决策：单锥体，非交叉面片）
     const mesh = meshOf(group);
     expect(mesh.geometry.type).toBe("ConeGeometry");
   });

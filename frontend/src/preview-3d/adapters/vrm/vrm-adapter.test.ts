@@ -1748,9 +1748,8 @@ describe("P3 positionScale 校准（ADR-243 锐评对账）", () => {
     });
     // 根项白名单（check-menu-health ROOT_KINDS）：滑块/按钮是叶子，必须挂动作面板 children——
     // 曾经的根项写法既违规又不可达（motionDetailView 只列 kind==="panel" 的 motion 项）
-    expect(
-      items.map((i) => i.kind).filter((k) => k !== "panel" && k !== "action" && k !== "divider"),
-    ).toEqual([]);
+    // 行为不变量：根项 kind 只能是 panel/action/divider（白名单）
+    expect(items.every((i) => i.kind === "panel" || i.kind === "action" || i.kind === "divider")).toBe(true);
     const play = items.find((i) => i.id === "vrma-play");
     const slider = play?.children?.find((i) => i.id === "vmd-position-scale");
     const reset = play?.children?.find((i) => i.id === "vmd-position-scale-reset");

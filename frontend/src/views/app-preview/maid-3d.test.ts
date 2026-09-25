@@ -176,7 +176,7 @@ describe("showMaidPreview 车万女仆详情", () => {
     // metadata.name 合法携带 "Eanes"（彩虹六号同人），会误伤。
     const rows = Array.from(ctx.root.querySelectorAll(".pv-section-blue .pv-card-row") ?? []);
     const texts = rows.map((r) => (r.textContent ?? "").replace(/\s+/g, " ").trim());
-    expect(rows).toHaveLength(1);
+    expect(rows).toHaveLength(1); // layout-assert: 无组件 spec → 恰 1 个聚合行（产品决策：蓝卡回落为单一大字行）
     expect(texts[0]).toContain("196");
     expect(texts[0]).toContain("922");
     expect(texts[0]).not.toContain("骨骼 ·"); // 无「N 骨骼 · M 立方体」逐组件行句式

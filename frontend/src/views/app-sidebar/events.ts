@@ -35,6 +35,12 @@ interface CardBindState {
 }
 const bindStates = new WeakMap<ShadowRoot, CardBindState>();
 
+/** 去重键构造单一事实源：返回 `${rtype}:${name}`。
+ * 点击 / restore 各路径一律走本函数，禁止手拼（换分隔符/丢前缀会静默破坏去重状态机）。 */
+function makeEmitKey(rtype: string, name: string): string {
+  return `${rtype}:${name}`;
+}
+
 /** 构建卡片点击处理器闭包（心跳式：高亮 + 涟漪 + 去重状态机 + 空 rtype 拦截）。
  * 引用 root（高亮/涟漪作用于完整列表与头部）与 st（读写最新实例与绑定态）。
  * P1/P2/P2-1 修复注释随闭包迁移，见原 bindCardEvents。 */
@@ -91,15 +97,15 @@ function bindCardClickHandler(
       // ⚠️ 行为口径：点击/右键/restore 三路径**统一严格拦截**空 rtype（见上方 :77 P1 修复），
       // 不存在「点击容错、右键拒绝」的对称设计——下方 emitKey 构造中的
       // `instances[0]?.rtype || currentRepoType()` 仅为去重 key 的字符串兜底，非行为 fallback。
-      host.setLastEmittedPkg(`${st.instances[0]?.rtype || currentRepoType()}:${pkg.name}`);
+      host.setLastEmittedPkg(makeEmitKey(st.instances[0]?.rtype || currentRepoType(), pkg.name));
       safeSet(`sb_selectedName_${pkg.rtype || currentRepoType()}`, pkg.name);
     }
   };
 }
 
 /** 构建卡片右键处理器闭包（ctx:show 菜单弹出，rtype/path 缺失拦截）。
- * 仅消费 st（最新实例数据）；root 保留作签名对称，右键路径不直接触 root。 */
-function bindCardContextHandler(_root: ShadowRoot, st: CardBindState): (e: MouseEvent) => void {
+ * 仅消费 st（最新实例数据）。root 参数已删除（2026-09 收口：零消费的签名对称装饰参数）。 */
+function bindCardContextHandler(st: CardBindState): (e: MouseEvent) => void {
   return (e: MouseEvent): void => {
     const target = e.target as HTMLElement | null;
     if (!target) return;
@@ -179,7 +185,7 @@ export function bindCardEvents(
   }
 
   const clickHandler = bindCardClickHandler(root, st, host);
-  const contextHandler = bindCardContextHandler(root, st);
+  const contextHandler = bindCardContextHandler(st);
 
   list.addEventListener("click", clickHandler);
   list.addEventListener("contextmenu", contextHandler);
@@ -233,7 +239,7 @@ function restoreSelectedCard(
       // P2 修复：仅选中项实际变化时才 emit——原每次重载都重发。
       // 2026-09：app-content 已改为复用同一 <app-sync-manager> 实例（同值 setAttribute
       // 被组件 oldVal===newVal 拦下），重复 emit 不再有丢状态代价，此处仅省事件扩散。
-      const emitKey = `${rtypeKey}:${savedName}`;
+      const emitKey = makeEmitKey(rtypeKey, savedName);
       if (host.getLastEmittedPkg() !== emitKey) {
         const pkg = instances[idx];
         // P3 修复：与点击路径同构——空 rtype 拦截报错，不 emit。

@@ -1,5 +1,8 @@
 // ===== sidebar 数据层 =====
 
+/** 推送/拉取下拉「全部类型」项的 data-sync-type 值（单一事实源） */
+export const SYNC_TYPE_ALL = "all";
+
 /** sidebar 整合包实例（loader 转换后的渲染格式） */
 export interface SidebarInstance {
   name: string;

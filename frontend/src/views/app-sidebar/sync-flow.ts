@@ -10,7 +10,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { ALL_RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { SidebarInstance } from "./data.ts";
+import { type SidebarInstance, SYNC_TYPE_ALL } from "./data.ts";
 
 // 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰
 // 通过 getter 注入实例属性，生命周期随组件（见 sync.test.ts）
@@ -98,7 +98,7 @@ function getSelected(root: ShadowRoot, instances: SidebarInstance[]): string[] {
 
 // ---------- resolveTypes ----------
 function resolveTypes(rt: string): string[] {
-  return rt === "all" ? ALL_RESOURCE_TYPES : [rt];
+  return rt === SYNC_TYPE_ALL ? ALL_RESOURCE_TYPES : [rt];
 }
 
 // ---------- beginSync ----------
@@ -142,14 +142,15 @@ async function pushOne(insName: string, rt: string): Promise<void> {
       unsub();
       if (timer) clearTimeout(timer);
       if (payload.skipped) {
-        reject(kindError(`推送被跳过（已有同步进行中）: ${insName}/${rt}`, "skipped"));
+        // 诊断文案走 i18n（内部错误信息；被日志/面板消费时不注入中文硬编码）
+        reject(kindError(t("sidebar.pushSkippedReason", { ins: insName, rt }), "skipped"));
       } else {
         resolve();
       }
     });
     timer = setTimeout(() => {
       unsub();
-      reject(kindError(`推送超时: ${insName}/${rt}`, "timeout"));
+      reject(kindError(t("sidebar.pushTimeoutReason", { ins: insName, rt }), "timeout"));
     }, SYNC_TIMEOUT_MS);
     bus.emit("sync:download:missing", { instanceName: insName, rtype: rt, token });
   });
@@ -216,7 +217,7 @@ function handleSyncMenuClick(
   );
   if (!selected) return;
   const types = resolveTypes(
-    (e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || "all",
+    (e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || SYNC_TYPE_ALL,
   );
   if (verb === "push") {
     void runPush(selected, types, btn, syncInProgress);
@@ -330,10 +331,8 @@ async function runPull(
 export function bindSyncSelected(
   root: ShadowRoot,
   getInstances: () => SidebarInstance[],
-  _getCardCleanup: () => (() => void) | null,
-  _setCardCleanup: (fn: (() => void) | null) => void,
   /** 下拉控制器 dispose 的归集口（替代原 docClick 单槽存取器对，ADR-298 D3） */
-  _setDropdownCleanup: (fn: () => void) => void,
+  setDropdownCleanup: (fn: () => void) => void,
   getSyncInProgress: () => boolean,
   setSyncInProgress: (v: boolean) => void,
 ): void {
@@ -350,7 +349,7 @@ export function bindSyncSelected(
   const pullWrap = pullMenu.closest(".dd-wrap") as HTMLElement | null;
   const disposePush = initDropdown(pushWrap);
   const disposePull = initDropdown(pullWrap);
-  _setDropdownCleanup(() => {
+  setDropdownCleanup(() => {
     disposePush();
     disposePull();
   });

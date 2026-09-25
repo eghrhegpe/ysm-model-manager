@@ -196,6 +196,39 @@ describe("restoreSelectedCard 去重状态机（P2 复核修复回归护栏）",
   });
 });
 
+// ① 收口回归（锐评 2026-09）：emitKey 字符串构造散在 3 处（点击 / restore 构造 /
+// restore P3 分支消费），收口为 makeEmitKey 单一事实源。本组用例锁定键格式
+// `${rtype}:${name}`——防未来某处重新手拼（换分隔符/丢 rtype 前缀都会在此炸红）。
+describe("emitKey 键格式（makeEmitKey 单一事实源）", () => {
+  const flushRaf = (): Promise<void> =>
+    new Promise((resolve) => requestAnimationFrame(() => resolve()));
+
+  it("点击路径去重键 = `${rtype}:${name}`", () => {
+    const { container } = mount([instance("B1"), instance("B2")]);
+    (container.querySelectorAll(".instance-card-header")[0] as HTMLElement).click();
+    // instances[0].rtype="ysm"，点击 B1 → 键须精确为 "ysm:B1"
+    expect(mockHost.getLastEmittedPkg()).toBe("ysm:B1");
+  });
+
+  it("restore 路径去重键 = `${rtypeKey}:${savedName}`（与点击路径同构）", async () => {
+    localStorage.setItem("sb_selectedName_resourcepack", "RP1");
+    const rp = instance("RP1");
+    rp.rtype = "resourcepack";
+    mount([rp]);
+    await flushRaf();
+    expect(mockHost.getLastEmittedPkg()).toBe("resourcepack:RP1");
+  });
+
+  it("restore 兜底：首实例 rtype 为空 → 键走 currentRepoType 回落，格式不变", async () => {
+    currentRepoTypeMock.mockReturnValue("mmd");
+    localStorage.setItem("sb_selectedName_mmd", "X1");
+    mount([{ ...instance("X1"), rtype: "" }]);
+    await flushRaf();
+    // P3 分支：设 emitKey 后 return（toast 拦截）——键仍须为 `${mmd}:${X1}`
+    expect(mockHost.getLastEmittedPkg()).toBe("mmd:X1");
+  });
+});
+
 // P3 补测（审核）：原绑定状态为模块级共享变量（_lastList/_clickHandler/currentInstances），
 // 多实例并存时 A 重绑会移除 B 的监听、点击数据被 B 覆盖（幽灵状态）。修复后状态收敛到
 // 每 ShadowRoot 的 WeakMap，实例间互不干扰。

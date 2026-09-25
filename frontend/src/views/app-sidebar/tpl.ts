@@ -10,6 +10,7 @@ import {
   RESOURCE_TYPES,
   typeIconOf,
 } from "@/utils/resource/types.ts";
+import { SYNC_TYPE_ALL } from "./data.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -130,7 +131,7 @@ function typeMenuItemsHTML(): string {
     " " +
     esc(text) +
     "</div>";
-  let html = render("all", UI_ICONS.package, t("sidebar.allTypes"));
+  let html = render(SYNC_TYPE_ALL, UI_ICONS.package, t("sidebar.allTypes"));
   // 从 ALL_RESOURCE_TYPES（注册表单一事实来源）驱动生成：
   // 已配置类型按原顺序渲染，注册表新增类型无展示配置时兜底追加，避免菜单与注册表漂移
   const configured = new Set(SYNC_TYPE_MENU.map((m) => m.id));

@@ -149,10 +149,6 @@ class AppSidebar extends WebComponentBase {
     bindSyncSelected(
       this._root,
       () => this._instances,
-      () => this._cardCleanup,
-      (fn) => {
-        this._cardCleanup = fn;
-      },
       (fn) => {
         this._dropdownCleanup = fn;
       },

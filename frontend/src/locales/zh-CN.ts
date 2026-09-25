@@ -793,6 +793,9 @@ export const zhCN = {
   "sidebar.pullFailed": "拉取失败: {msg}",
   "sidebar.packSkipped": "{n} 个被跳过（同步进行中）",
   "sidebar.packTimedOut": "{n} 个超时",
+  // sidebar 推送诊断文案（sync-flow.ts 内部错误信息；被未来日志/面板消费时不注入中文硬编码）
+  "sidebar.pushSkippedReason": "推送被跳过（已有同步进行中）：{ins}/{rt}",
+  "sidebar.pushTimeoutReason": "推送超时：{ins}/{rt}",
 
   // ── 资源管理器 ──
   "resource.loadFailed": "资源加载失败",

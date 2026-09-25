@@ -814,6 +814,9 @@ export const en: Record<string, string> = {
   "sidebar.pullFailed": "Pull failed: {msg}",
   "sidebar.packSkipped": "{n} skipped (sync in progress)",
   "sidebar.packTimedOut": "{n} timed out",
+  // sidebar push diagnostics (internal error messages in sync-flow.ts; i18n'd so future log/panel consumers don't get hardcoded Chinese)
+  "sidebar.pushSkippedReason": "Push skipped (a sync is already in progress): {ins}/{rt}",
+  "sidebar.pushTimeoutReason": "Push timed out: {ins}/{rt}",
 
   // ── Resource Manager ──
   "resource.loadFailed": "Resource load failed",

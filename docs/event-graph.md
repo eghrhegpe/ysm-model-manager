@@ -323,7 +323,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 358 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 166 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 317 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 223 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 242 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 98 |
@@ -494,13 +494,13 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 167 |
 | doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 157 |
 | beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 120 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 256 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 262 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 268 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 300 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 306 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 311 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 320 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 255 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 261 |
+| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 267 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 299 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 305 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 310 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
 | _showError | `frontend/src/views/app-sync-manager/index.ts` | 267 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 52 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 60 |
@@ -579,7 +579,7 @@
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 112 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 318 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 317 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

@@ -813,6 +813,9 @@ export const ja: Record<string, string> = {
   "sidebar.pullFailed": "プルに失敗: {msg}",
   "sidebar.packSkipped": "{n} スキップ（同期中）",
   "sidebar.packTimedOut": "{n} タイムアウト",
+  // sidebar プッシュ診断文言（sync-flow.ts 内部エラー；将来ログ/パネルで消費されても中国語ハードコードを注入しない）
+  "sidebar.pushSkippedReason": "プッシュがスキップされました（同期が進行中）：{ins}/{rt}",
+  "sidebar.pushTimeoutReason": "プッシュがタイムアウトしました：{ins}/{rt}",
 
   // ── Resource Manager ──
   "resource.loadFailed": "リソース読み込み失敗",

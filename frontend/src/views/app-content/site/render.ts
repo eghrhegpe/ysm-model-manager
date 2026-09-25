@@ -262,12 +262,12 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
       "content.searchCreatorPlaceholder",
     )}" value="${esc(
       ctx.searchKw,
-    )}"><span class="cr-section-fill"></span><button class="cr-fetch-btn" title="${t(
+    )}"><span class="cr-section-fill"></span><button class="btn-base sm cr-fetch-btn" title="${t(
       "content.fetchConfigTitle",
     )}">${UI_ICONS.download} ${t("content.fetchConfig")}</button>${
       ctx.viewerMode
         ? ""
-        : `<button class="cr-edit-btn">${UI_ICONS.edit} ${t("content.edit")}</button>`
+        : `<button class="btn-base sm cr-edit-btn">${UI_ICONS.edit} ${t("content.edit")}</button>`
     }</div>`,
   );
   if (creators.length) {
@@ -382,8 +382,8 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
     `<div class="cr-section"><span class="cr-section-title-lg">${UI_ICONS.edit} ${t(
       "content.editCreators",
     )}</span><span class="cr-section-fill"></span>` +
-    `<button class="cr-save-btn cr-action-btn-accent">${t("content.save")}</button>` +
-    `<button class="cr-cancel-btn">${t("common.cancel")}</button></div>` +
+    `<button class="btn-base sm accent cr-save-btn">${t("content.save")}</button>` +
+    `<button class="btn-base sm cr-cancel-btn">${t("common.cancel")}</button></div>` +
     `<div class="cr-drop-zone" id="cr-drop-zone"><span class="cr-drop-icon">${UI_ICONS.import}</span>` +
     `<span class="cr-drop-text">${t("content.dropZoneHint")}</span></div>`;
   creators.forEach((cr, idx) => {

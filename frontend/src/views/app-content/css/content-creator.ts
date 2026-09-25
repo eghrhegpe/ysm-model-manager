@@ -27,8 +27,6 @@ export const contentCreatorCSS: string = `
    .cr-section / .cr-section-title-lg / .cr-section-sub / .cr-action-btn-accent 的同选择器
    两处定义合并为本文件后段单处（间距按合并前实际计算值保留）。 */
 
-.cr-edit-btn { font-size:var(--fs-xs);padding:var(--btn-padding-sm);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-family:inherit; } /* 主操作按钮文字 = txt（对齐 .btn-base 正典） */
-.cr-edit-btn:hover { background:var(--hover); }
 .cr-mode-switch { display:inline-flex;border:1px solid var(--bd);border-radius:var(--radius-md) 6px 0 0;border-bottom:none;overflow:hidden;cursor:pointer;margin-right:2px;flex-shrink:0;align-self:stretch;background:transparent;padding:0;appearance:none;-webkit-appearance:none;font:inherit;color:inherit; }
 .cr-mode-opt { padding:var(--btn-padding-sm);font-size:var(--fs-xs);font-family:inherit;transition:var(--tr-fast);color:var(--muted);background:var(--bg);cursor:pointer;display:flex;align-items:center; }
 .cr-mode-opt:hover { color:var(--txt);background:var(--hover); }
@@ -285,14 +283,10 @@ export const contentCreatorCSS: string = `
 }
 .cr-drop-icon { font-size:var(--fs-nav); }
 .cr-drop-text { font-size:var(--fs-xs); }
-.cr-fetch-btn, .cr-edit-btn, .cr-save-btn, .cr-cancel-btn {
-  padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);border:1px solid var(--bd);
-  background:transparent;color:var(--txt);cursor:pointer;
-  font-size:var(--fs-xs);font-family:inherit;transition:var(--tr-fast);
-}
-.cr-fetch-btn:hover, .cr-edit-btn:hover, .cr-save-btn:hover, .cr-cancel-btn:hover { background:var(--hover); }
-.cr-action-btn-accent { color:var(--accent);border-color:var(--accent); }
-.cr-action-btn-accent:hover { background:var(--accent);color:var(--bg); }
+/* 按钮收敛（2026-09 锐评 P1）：4 个描边按钮组已走 .btn-base.sm（render.ts 双类名，
+   cr-* 锚点类保留供 JS 选择器），此处仅补 btn-base.sm 不提供的 tool-lg 横向 padding
+   与 --fs-xs 字号差异；border/背景/cursor/transition 等全量属性由 btn-base 承接 */
+.cr-fetch-btn, .cr-edit-btn, .cr-save-btn, .cr-cancel-btn { padding:var(--btn-padding-tool-lg);font-size:var(--fs-xs); }
 
 .cr-section-fill { flex:1; }
 .cr-section-wrap { flex-wrap:wrap; }

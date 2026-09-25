@@ -39,6 +39,7 @@ function makeState(over: Partial<SiteViewState> = {}): {
   const searchResults = document.createElement("div");
   const allCreators: LocalCreatorLike[] = [
     { id: 1, name: "Alice", desc: "helper", type: "siteA", role: "creator" } as unknown as LocalCreatorLike,
+    { id: 2, name: "Bob", desc: "dom-text-mismatch", type: "siteA", role: "creator" } as unknown as LocalCreatorLike,
   ];
   const creators: LocalCreatorLike[] = [...allCreators];
   const site = { id: "siteA", label: "测试站", presetSearches: [{ label: "旧词", q: "" }] } as WorkshopSite;
@@ -143,6 +144,20 @@ describe("eeApplyFilters 过滤逻辑", () => {
     cleanup!();
   });
 
+  it("2c. 数据层优先：DOM 文案与 creators 数据层不一致时按数据层命中（2026-09 锐评 P2 数据层化回归锁）", () => {
+    const { state, searchResults } = makeState();
+    mountFilterDom(searchResults);
+    const cleanup = bindEditEvents(state, () => {});
+    const input = searchResults.querySelector("#ws-cr-search") as HTMLInputElement;
+    // fixture：Bob 的 DOM 文案是 "main"，数据层 desc 是 "dom-text-mismatch"
+    input.value = "mismatch";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    const cards = searchResults.querySelectorAll(".gh-card[data-name]");
+    expect(cards[0].classList.contains("cr-card-hidden")).toBe(true); // Alice 无 mismatch
+    expect(cards[1].classList.contains("cr-card-hidden")).toBe(false); // Bob 按数据层 desc 命中（DOM "main" 不含 mismatch）
+    cleanup!();
+  });
+
   it("3. 标签过滤：点 official → 仅 official 卡可见", () => {
     const { state, searchResults } = makeState();
     mountFilterDom(searchResults);
@@ -160,7 +175,7 @@ describe("eeApplyFilters 过滤逻辑", () => {
 describe("保存流程（eeSyncAllEditInputs 回写 + 落盘）", () => {
   function mountEditDom(searchResults: HTMLElement): void {
     searchResults.innerHTML =
-      '<button class="cr-save-btn"></button>' +
+      '<button class="btn-base sm cr-save-btn"></button>' +
       '<div class="cr-edit-card" data-edit-idx="0">' +
       '<input data-idx="0" data-fld="name" value="Alice">' +
       '<input data-idx="0" data-fld="desc" value="helper">' +
@@ -203,7 +218,7 @@ describe("保存流程（eeSyncAllEditInputs 回写 + 落盘）", () => {
       ],
     });
     state.searchResults.innerHTML =
-      '<button class="cr-save-btn"></button>' +
+      '<button class="btn-base sm cr-save-btn"></button>' +
       '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>' +
       '<div class="cr-edit-card" data-edit-idx="1"><input data-idx="1" data-fld="name" value="Bob"></div>';
     const cleanup = bindEditEvents(state, () => {});
@@ -211,6 +226,7 @@ describe("保存流程（eeSyncAllEditInputs 回写 + 落盘）", () => {
     state.searchResults.querySelector(".cr-save-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
     await vi.waitFor(() => expect(backend.SaveWorkshopCreatorsBySite).toHaveBeenCalledTimes(1));
     const saved = backend.SaveWorkshopCreatorsBySite.mock.calls[0][1] as LocalCreatorLike[];
+    // 他站作者排除：Bob 的 type=siteB 不含本站 siteA，不落盘
     expect(saved.map((c) => c.name)).toEqual(["Alice"]);
     cleanup!();
   });
@@ -219,8 +235,8 @@ describe("保存流程（eeSyncAllEditInputs 回写 + 落盘）", () => {
 describe("编辑态增删", () => {
   function mountToolbarDom(searchResults: HTMLElement): void {
     searchResults.innerHTML =
-      '<button class="cr-edit-btn"></button>' +
-      '<button class="cr-cancel-btn"></button>' +
+      '<button class="btn-base sm cr-edit-btn"></button>' +
+      '<button class="btn-base sm cr-cancel-btn"></button>' +
       '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>' +
       '<button class="cr-add"></button>' +
       '<button class="cr-del" data-idx="0"></button>';
@@ -245,16 +261,13 @@ describe("编辑态增删", () => {
     const { state, searchResults, refresh, allCreators } = makeState();
     // 两卡：data-edit-idx=0（Alice）/1（Bob），删除 0 号后 Bob 应重编号为 0
     searchResults.innerHTML =
-      '<button class="cr-edit-btn"></button>' +
-      '<button class="cr-cancel-btn"></button>' +
+      '<button class="btn-base sm cr-edit-btn"></button>' +
+      '<button class="btn-base sm cr-cancel-btn"></button>' +
       '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice">' +
       '<button class="cr-del" data-idx="0"></button></div>' +
       '<div class="cr-edit-card" data-edit-idx="1"><input data-idx="1" data-fld="name" value="Bob"></div>';
     const cleanup = bindEditEvents(state, refresh);
-    expect(allCreators).toHaveLength(1); // makeState 默认 1 个；DOM 是额外夹具，数组以 state 为准
-    // 补第二个到数组，让 idx=1 存在
-    state.creators.push({ id: 2, name: "Bob", desc: "", type: "siteA" } as unknown as LocalCreatorLike);
-    state.allCreators.push(state.creators[1]!);
+    expect(allCreators).toHaveLength(2); // makeState 默认 Alice+Bob 两个；DOM 是额外夹具，数组以 state 为准
 
     searchResults.querySelector('.cr-del[data-idx="0"]')!.dispatchEvent(new Event("click", { bubbles: true }));
 
@@ -312,13 +325,14 @@ describe("编辑态增删", () => {
     const cleanup = bindEditEvents(state, refresh);
 
     searchResults.querySelector(".cr-add")!.dispatchEvent(new Event("click", { bubbles: true }));
-    expect(allCreators).toHaveLength(2);
-    expect(state.creators).toHaveLength(2);
+    expect(allCreators).toHaveLength(3);
+    expect(state.creators).toHaveLength(3);
     // 锐评 P0-2a：新增行不写 i18n 默认文案（t 在此被 mock 成返回 key 本身——
     // 若回退旧实现，这里会拿到 "workshop.newCreatorName" 这种语言串并落盘）
-    expect(state.creators[1].name).toBe("");
-    expect(state.creators[1].desc).toBe("");
-    // P1-3b：DOM 出现新卡且编号正确，不整树重建（焦点保持）
+    // fixture 已有 Alice(idx0)+Bob(idx1)，cr-add 追加的第三行为空名 → 断言 idx=2
+    expect(state.creators[2].name).toBe("");
+    expect(state.creators[2].desc).toBe("");
+    // P1-3b：DOM 出现新卡（按 DOM 序重编号：Alice 卡 + 新卡 → 新卡 = idx1），不整树重建（焦点保持）
     const newCard = searchResults.querySelector(
       '.cr-edit-card[data-edit-idx="1"]',
     ) as HTMLElement | null;
@@ -364,19 +378,22 @@ describe("编辑态增删", () => {
 
   it("9. 保存挡掉空名条目（新增未命名行不落盘，锐评 P0-2a）", async () => {
     const { state, searchResults } = makeState();
+    // DOM 与 creators 一一对应（Alice idx0 + Bob idx1）——真实编辑态由
+    // buildSiteCreatorEditCards 保证；cr-add 新增的第三行才落空名
     searchResults.innerHTML =
       '<button class="cr-add"></button>' +
-      '<button class="cr-save-btn"></button>' +
-      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>';
+      '<button class="btn-base sm cr-save-btn"></button>' +
+      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>' +
+      '<div class="cr-edit-card" data-edit-idx="1"><input data-idx="1" data-fld="name" value="Bob"></div>';
     const cleanup = bindEditEvents(state, () => {});
 
     searchResults.querySelector(".cr-add")!.dispatchEvent(new Event("click", { bubbles: true }));
-    expect(state.creators).toHaveLength(2);
+    expect(state.creators).toHaveLength(3);
 
     searchResults.querySelector(".cr-save-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
     await vi.waitFor(() => expect(backend.SaveWorkshopCreatorsBySite).toHaveBeenCalledTimes(1));
     const saved = backend.SaveWorkshopCreatorsBySite.mock.calls[0][1] as LocalCreatorLike[];
-    expect(saved.map((c) => c.name)).toEqual(["Alice"]);
+    expect(saved.map((c) => c.name)).toEqual(["Alice", "Bob"]);
     cleanup!();
   });
 
@@ -392,16 +409,16 @@ describe("编辑态增删", () => {
     } as unknown as LocalCreatorLike;
     const { state, searchResults } = makeState({ detachedCreators: [detached] });
     searchResults.innerHTML =
-      '<button class="cr-save-btn"></button>' +
+      '<button class="btn-base sm cr-save-btn"></button>' +
       '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>';
     const cleanup = bindEditEvents(state, () => {});
 
     searchResults.querySelector(".cr-save-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
     await vi.waitFor(() => expect(backend.SaveWorkshopCreatorsBySite).toHaveBeenCalledTimes(1));
     const saved = backend.SaveWorkshopCreatorsBySite.mock.calls[0][1] as LocalCreatorLike[];
-    // 本站 Alice + 解除关联的跨站条目（type=siteB）一并写回
-    expect(saved.map((c) => c.name)).toEqual(["Alice", "跨站"]);
-    expect(saved[1]?.type).toBe("siteB");
+    // 本站 Alice+Bob + 解除关联的跨站条目（type=siteB）一并写回
+    expect(saved.map((c) => c.name)).toEqual(["Alice", "Bob", "跨站"]);
+    expect(saved[2]?.type).toBe("siteB");
     cleanup!();
   });
 
@@ -409,8 +426,8 @@ describe("编辑态增删", () => {
     const { state, searchResults, refresh } = makeState();
     // 进入编辑态（cr-edit-btn → 取基线快照）+ 渲染编辑工具栏（含取消按钮）
     searchResults.innerHTML =
-      '<button class="cr-edit-btn"></button>' +
-      '<button class="cr-cancel-btn"></button>' +
+      '<button class="btn-base sm cr-edit-btn"></button>' +
+      '<button class="btn-base sm cr-cancel-btn"></button>' +
       '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>';
     const cleanup = bindEditEvents(state, refresh);
 
@@ -446,8 +463,8 @@ describe("编辑态增删", () => {
   it("12. 编辑态无修改取消 → 不弹 modalConfirm（dirty 为假，快速退出）（P1-3a 锐评）", async () => {
     const { state, searchResults, refresh } = makeState();
     searchResults.innerHTML =
-      '<button class="cr-edit-btn"></button>' +
-      '<button class="cr-cancel-btn"></button>' +
+      '<button class="btn-base sm cr-edit-btn"></button>' +
+      '<button class="btn-base sm cr-cancel-btn"></button>' +
       '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>';
     const cleanup = bindEditEvents(state, refresh);
 

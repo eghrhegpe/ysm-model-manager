@@ -96,13 +96,22 @@ function eeApplyFilters(
   searchResults: HTMLElement,
   searchInput: HTMLInputElement | null,
   fs: FilterStateShell,
+  creators: LocalCreatorLike[],
 ): void {
   const kw = (searchInput?.value || "").trim().toLowerCase();
   const cards = qsa<HTMLElement>(searchResults, ".gh-card[data-name]");
+  // 数据层化（2026-09 锐评 P2）：desc 判定改读 creators 数据层（按 name 匹配卡，
+  // 同 render.ts createCrCard 的 desc 口径——本地条目 _fromLocal 时现取 i18n 提示），
+  // 不再读 .cr-card-desc DOM 文案（文案经 esc()/i18n 渲染后与数据层可能不同）；
+  // 数据层查无（DOM 有卡但 creators 缺该 name，如测试 fixture）时兜底读 DOM，向后兼容。
   let visible = 0;
   cards.forEach((card) => {
     const name = (card.dataset.name || "").toLowerCase();
-    const desc = (card.querySelector(".cr-card-desc")?.textContent || "").toLowerCase();
+    const creator = creators.find((c) => c.name.toLowerCase() === name);
+    const desc =
+      creator !== undefined
+        ? (creator.desc || (creator._fromLocal ? t("community.fromLocal") : "")).toLowerCase()
+        : (card.querySelector(".cr-card-desc")?.textContent || "").toLowerCase();
     const cardTag = (card.dataset.tag || "").toLowerCase();
     const matchName = !kw || name.includes(kw) || desc.includes(kw);
     const matchTag = !fs.activeTag || fs.activeTag === cardTag;
@@ -564,7 +573,7 @@ function eeBindPresetsDrag(
 }
 
 function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: AbortSignal): void {
-  const { searchResults } = state;
+  const { searchResults, creators } = state;
 
   const searchInput = searchResults.querySelector("#ws-cr-search") as HTMLInputElement | null;
   if (searchInput) {
@@ -572,7 +581,7 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
       "input",
       () => {
         safeSet("ysm-ws-search-kw", searchInput.value);
-        eeApplyFilters(searchResults, searchInput, fs);
+        eeApplyFilters(searchResults, searchInput, fs, creators);
       },
       { signal: sig },
     );
@@ -598,7 +607,7 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
           b === searchResults.querySelector('.cr-tag-filter-btn[data-tag=""]'),
         );
       });
-      eeApplyFilters(searchResults, searchInput, fs);
+      eeApplyFilters(searchResults, searchInput, fs, creators);
     },
     { signal: sig },
   );
@@ -612,13 +621,13 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
         searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((b) => {
           b.classList.toggle("active", b === btn);
         });
-        eeApplyFilters(searchResults, searchInput, fs);
+        eeApplyFilters(searchResults, searchInput, fs, creators);
       },
       { signal: sig },
     );
   });
 
-  eeApplyFilters(searchResults, searchInput, fs);
+  eeApplyFilters(searchResults, searchInput, fs, creators);
 }
 
 /**

@@ -9,20 +9,19 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SidebarInstance } from "./data.ts";
 
-/** Go 端实例同步状态（绑定类型局部视图，字段以 Go struct 为准） */
+/** Go 端实例同步状态（绑定类型局部视图，字段以 Go struct 为准）
+ *  ADR-310：计数为面板链**单元级**（dirLevel=模型夹 / fileLevel=文件），
+ *  `MissingCount` 已含 diverged 折叠（红=待推送）；`Missing` 是仓库侧文件级
+ *  路径清单（一键安装契约），长度可大于 MissingCount，不得当计数用。
+ *  `Extra`/`Disabled` 为实例侧单元路径（本层只取长度与展示）。 */
 interface InstanceStatusView {
   Name?: string;
+  MissingCount?: number;
   Missing?: string[];
   Extra?: string[];
+  Disabled?: string[];
   Synced?: number;
   HasMod?: boolean;
-}
-
-/** MMD 变体聚合结果 */
-export interface MmdVariantGroups {
-  missingGroups: string[];
-  extraGroups: string[];
-  variantMap: Record<string, { items: string[]; count: number }>;
 }
 
 /** 在途去重表（2026-08-21）：同 rtype 的并发 loadInstances 共享一次请求——
@@ -86,44 +85,35 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
       statusMap[s.Name] = s as InstanceStatusView;
     });
 
-    const isMmd = rtypeActual === RESOURCE_TYPES.MMD;
-
     const instances: SidebarInstance[] = rawInstances.map((ins) => {
       const st: InstanceStatusView = statusMap[ins.Name] || {};
       const missingList = st.Missing || [];
       const extraList = st.Extra || [];
+      const disabledList = st.Disabled || [];
+      // ADR-310：badge 数取 Go 聚合的单元数（MMD 等 dirLevel 类型的变体聚合
+      // 已在 Go 面板链完成，前端不再本地重算——职责红线：聚合归 Go）
+      const missingTotal = st.MissingCount || 0;
+      const extraTotal = extraList.length;
+      const disabledTotal = disabledList.length;
       const syncedTotal = st.Synced || 0;
-
-      // MMD 类型：将属于同一父文件夹的 .pmx 变体聚合成 variantGroups
-      let variantGroups: MmdVariantGroups | null = null;
-      let flatMissing = missingList;
-      let flatExtra = extraList;
-
-      if (isMmd) {
-        variantGroups = groupMmdVariants(missingList, extraList);
-        // 用聚合后的组数替代原始条目数（卡片徽章显示组数而非文件数）
-        flatMissing = variantGroups.missingGroups;
-        flatExtra = variantGroups.extraGroups;
-      }
 
       return {
         name: ins.Name,
         dir: ins.VersionDir || "",
         exists: ins.Exists,
         hasMod: Boolean(st.HasMod),
-        status: flatMissing.length > 0 ? "missing" : flatExtra.length > 0 ? "extra" : "complete",
+        status: missingTotal > 0 ? "missing" : extraTotal > 0 ? "extra" : "complete",
         synced: syncedTotal,
-        missing: flatMissing.length,
-        extra: flatExtra.length,
-        disabled: 0,
+        missing: missingTotal,
+        extra: extraTotal,
+        disabled: disabledTotal,
         rtype: rtypeActual,
-        variantGroups: isMmd ? variantGroups : null,
         // 仅存原始路径，展开卡片时按需构建对象
-        _missingPaths: flatMissing,
-        _extraPaths: flatExtra,
+        _missingPaths: missingList,
+        _extraPaths: extraList,
         items: {
           synced: [],
-          disabled: [],
+          disabled: disabledList,
         },
       };
     });
@@ -161,55 +151,4 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
     });
     return [];
   }
-}
-
-/**
- * 对 MMD 类型，按父文件夹聚合 .pmx 变体文件。
- * 返回 { missingGroups, extraGroups, variantMap }
- *   - missingGroups/extraGroups: string[] 聚合后的代表路径（父文件夹路径）
- *   - variantMap: { [folderPath]: string[] } 文件夹下的变体文件路径列表
- */
-export function groupMmdVariants(missingList: string[], extraList: string[]): MmdVariantGroups {
-  const variantMap: Record<string, { items: string[]; count: number }> = {};
-  const collect = (paths: string[]): void => {
-    paths.forEach((fp) => {
-      const parts = fp.replace(/\\/g, "/").split("/");
-      if (parts.length < 2) {
-        // 单层路径，无父文件夹
-        const key = fp;
-        if (!variantMap[key]) variantMap[key] = { items: [], count: 0 };
-        variantMap[key].items.push(fp);
-        variantMap[key].count++;
-        return;
-      }
-      // 父文件夹路径（去掉最后一级文件名）
-      const parent = parts.slice(0, -1).join("/");
-      const key = parent;
-      if (!variantMap[key]) variantMap[key] = { items: [], count: 0 };
-      variantMap[key].items.push(fp);
-      variantMap[key].count++;
-    });
-  };
-  collect(missingList);
-  collect(extraList);
-
-  // 生成聚合后的组列表
-  const missingGroups: string[] = [];
-  const extraGroups: string[] = [];
-  // seen 必须按 missing/extra 各自独立：共享会导致同父文件夹「缺失+多余」时 extra 组被 missing 去重污染而漏组
-  const assign = (paths: string[], target: string[]): void => {
-    const seen: Record<string, boolean> = {};
-    paths.forEach((fp) => {
-      const parts = fp.replace(/\\/g, "/").split("/");
-      const parent = parts.length >= 2 ? parts.slice(0, -1).join("/") : fp;
-      if (!seen[parent]) {
-        seen[parent] = true;
-        target.push(parent);
-      }
-    });
-  };
-  assign(missingList, missingGroups);
-  assign(extraList, extraGroups);
-
-  return { missingGroups, extraGroups, variantMap };
 }

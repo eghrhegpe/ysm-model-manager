@@ -34,7 +34,6 @@ function instance(over: Partial<SidebarInstance>): SidebarInstance {
     extra: 0,
     disabled: 0,
     rtype: "ysm",
-    variantGroups: null,
     _missingPaths: [],
     _extraPaths: [],
     items: { synced: [] },

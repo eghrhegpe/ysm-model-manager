@@ -7,7 +7,11 @@
  *  维持视图内常量，不升级为共享层。未来若他视图出现同 token 再评估上提。 */
 export const SYNC_TYPE_ALL = "all";
 
-/** sidebar 整合包实例（loader 转换后的渲染格式） */
+/** sidebar 整合包实例（loader 转换后的渲染格式）
+ *
+ *  计数口径（ADR-310）：`synced`/`missing`/`extra`/`disabled` 均为 Go 面板链的
+ *  **单元级**计数（dirLevel=模型夹，fileLevel=文件）；`missing` 已含 diverged 折叠
+ *  （红=待推送）。旧前端本地 MMD 变体聚合（groupMmdVariants）已删除——聚合归 Go。 */
 export interface SidebarInstance {
   name: string;
   dir: string;
@@ -19,12 +23,9 @@ export interface SidebarInstance {
   extra: number;
   disabled: number;
   rtype: string;
-  variantGroups: {
-    missingGroups: string[];
-    extraGroups: string[];
-    variantMap: Record<string, { items: string[]; count: number }>;
-  } | null;
+  /** 仓库侧文件级路径清单（一键安装/详情用；长度 ≠ missing 计数，勿当数用） */
   _missingPaths: string[];
+  /** 实例侧独有单元路径清单 */
   _extraPaths: string[];
   /** loader 生成 { synced, disabled }；fallback 模拟数据为 { synced, missing, extra }——宽松化以兼容两者 */
   items: {

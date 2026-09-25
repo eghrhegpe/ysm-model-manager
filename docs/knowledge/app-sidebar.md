@@ -23,12 +23,10 @@ auto_fields:
     - BusyGuard
     - EmitDedupe
     - footerHTML
-    - groupMmdVariants
     - headerHTML
     - instanceCardHeaderHTML
     - listContainerHTML
     - loadInstances
-    - MmdVariantGroups
     - renderVersionCards
     - restoreCheckboxes
     - runLauncherDetect
@@ -85,7 +83,7 @@ status: active
 - `index.ts` — `<app-sidebar>` 生命周期编排：`observedAttributes: ["rtype"]`、订阅刷新事件、全选/同步所选（推送走 `sync:download:missing` 事件 + correlation token，拉取直调 `PullResourceFromInstance`）、`_reload` 带 `_loading` 并发守卫。**构造函数 rtype 缺省读 `currentRepoType()`**（P1 修复：tpl.ts 挂载 `<app-sidebar>` 不传 rtype 属性，此前恒回落 YSM，整合包标题首屏显示 `(ysm)` 须手动切导航标签才被 `repo:rtype-changed` 纠正；现与仓库页 `initRepositoryPage` 的 `savedRtype` 恢复逻辑对齐，首屏即正确）。**同步所选由一组包级助手承载（2026-08-26 批4.0 扁平化，非 withEventTimeout；原名 `asb*` 前缀已删除）**：`handlePushMenuClick`/`handlePullMenuClick` 只做入闸（`beginSync`）+ 取类型 + `void runPush`/`runPull` 收口；推送并发原语拆为 `waitBusQuiet`（等同步归位防竞态）、错误归类走 `kindError`/`pushErrorKind`
 - `tpl.ts` — 布局模板：`headerHTML` / `footerHTML` / `listContainerHTML` / `instanceCardHeaderHTML`（版本卡片头）
 - `data.ts` — 数据层类型：`SidebarInstance` 接口
-- `loader.ts` — `loadInstances(rtype)`：调 Go 拉取实例与同步状态并转换为渲染格式（含 MMD `.pmx` 变体按父文件夹聚合 `groupMmdVariants`），前后派发 `loading:start` / `loading:end`；**同 rtype 在途请求合并**（2026-08-21：`_inflight` 表按归一后 rtype 键去重并发调用，空 rtype 回退 ysm 同键——配合 go/scanner 在途合并，治点击整合包时多组件并发触发的重复扫描刷屏）
+- `loader.ts` — `loadInstances(rtype)`：调 Go 拉取实例与同步状态并转换为渲染格式，前后派发 `loading:start` / `loading:end`；**同 rtype 在途请求合并**（2026-08-21：`_inflight` 表按归一后 rtype 键去重并发调用，空 rtype 回退 ysm 同键——配合 go/scanner 在途合并，治点击整合包时多组件并发触发的重复扫描刷屏）。**计数口径 ADR-310（2026-09）**：徽章三数直接取 Go 的 `Synced` / `MissingCount`（含 diverged 折叠）/ `Extra.length`，`disabled` 取 `Disabled.length`（旧硬编码 `disabled: 0` 已废）；`Missing` 是仓库侧**文件级**路径清单（长度 ≠ `MissingCount`，勿当计数用，一键安装消费它）——**旧前端本地 MMD 变体聚合 `groupMmdVariants` 已删除**（聚合归 Go 面板链）
 - `render.ts` — `renderVersionCards`：卡片逐个 `createElement` 入场（40ms 阶梯延迟）；**空态（`instances` 为空）渲染就地配置入口**——🔍 自动搜索 + 🎮 HMCL / PCL 两按钮（`data-sidebar-mc-search` / `data-sidebar-launcher-detect`），走列表事件委托在 `events.ts` 拦截
 - `events.ts` — `bindCardEvents`（事件委托在 `#sidebar-instance-list`，点击派发 `package:selected`、右键派发 `ctx:show` type=instance；localStorage `sb_selectedName_<rtype>` 恢复选中；点击 handler 顶部先拦截空态两按钮再进卡片逻辑）+ `bindFooter`（MC 路径按钮、完全同步计数动画）
 - `launcher-detect.ts` — 空态就地配 mcRoot 两入口（**自 settings/launcher-detection.ts 搬家，2026-08-29**；settings 版按钮 + MutationObserver 注入已删，`app-modules.ts` 不再注册）：`runMcSearch`（`GetMinecraftPaths` 扫常见安装位，多结果 `modalSelect` 选择）与 `runLauncherDetect`（`pickDirectory` 选启动器目录 → `DetectLauncherInstances` 解析 HMCL/PCL/Minecraft 多实例 → 弹层选实例 → `SaveAppConfig` 写 mcRoot，勾选「用作 YSM 根目录」时 `SetResourceRoot("ysm", customDir)`，失败回滚 mcRoot）；成功后派发 `stats:refresh`（sidebar 防抖重载实例列表）。模块级 `_busy` 守卫两类入口并发（都在改 mcRoot）。实例选择弹层原为自建 overlay 骨架，已在 2026-08-29 审核修复中收敛为 `modalPicker`（复用统一弹窗脚手架：单例/焦点陷阱/Esc/退场动画），流程文案走 `launcher.*` i18n keys（见知识卡 `dialog_modal`）
@@ -111,6 +109,8 @@ status: active
 
 ## 不变量
 
+- 三徽章计数与面板链**同源**（ADR-310）：`synced`/`missing`/`extra`/`disabled` 均为 Go 单元级计数（dirLevel=模型夹、fileLevel=文件），红徽章已含 diverged 折叠（内容分叉学面板 `tabStatus` 归红，不补第四色）；列表内容 `array.length` **不再是**徽章数（`Missing` 为文件级一键安装清单）
+- 禁用项（`.ban`）只进 `disabled` 计数与 `items.disabled`，不驱动红/橙徽章——与面板 `aggregateStatus`「disabled 中立」一致，避免「禁用=有差异」误导
 - `bus.on` 订阅全部收进 `_unsubs` 并在 `disconnectedCallback` 清理；`_cardCleanup` / `_packDndCleanup`（document 级 DnD）/ `_docClickHandler`（document 级）同步清理
 - `_loading` 守卫防止并发 `_reload`（`_reloadGen` 代数校验丢弃过期结果 + `_pendingReload` 补跑最新 rtype）；`_syncInProgress` 守卫防止推送/拉取并发触发；`stats:refresh` 走 300ms 防抖
 - **实例级** `_checkedSets`（`AppSidebar` 实例字段 `private _checkedSets = new Map<string, Set<string>>()`，定义在 `index.ts`，非模块级——模块级会跨组件实例共享、成泄漏源；sync-flow.ts 仅经 `getCheckedSets()` 回调读）按 rtype 隔离跨重渲染持久化勾选状态（实例级 = 组件 GC 自动回收）；事件绑定用事件委托 + 「list 未变则复用 handler」——**该复用分支生产不可达**（`_cardCleanup` 先置空 `_lastList`），实际每次 reload 都是「全量摘监听→重绑」，监听不累积（防泄漏语义成立，与「复用」描述有出入）
@@ -119,7 +119,7 @@ status: active
 
 ## 相关
 
-- `internal/app/app_install.go` — `GetResourceInstanceStatus` / `PullResourceFromInstance` / `InstallModelTo` binding
+- `internal/app/app_install_instance.go` — `GetResourceInstanceStatus`（侧栏唯一计数入口，ADR-310 后内部走 `go/instance.BuildInstanceStatusCounts`）/ `GetInstanceStatus`（旧别名，同链）/ `PullResourceFromInstance` binding；`internal/app/app_install_import.go` — `InstallModelTo` binding
 - `go/sync/` — 整合包同步核心逻辑
 - 知识卡：`app_content`、`app_sync_manager`、`context_menu`、`go_sync`、`app_modules`
 

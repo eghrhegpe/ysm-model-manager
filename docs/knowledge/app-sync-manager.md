@@ -111,6 +111,7 @@ status: active
 - **代际守卫唯一出口 `_guard`（ADR-230）**：2026-09 删除并存的手搓 `private _initGen`（语义不等价——`_guard.invalidate()` 打不进早期 bail）。禁止再引入第二套计数；`app-sidebar` 侧的 `_reloadGen` 同属待并轨项
 - 模块级 `_lastSelectedType` 跨实例记住上次选中类型（整合包间共享），并以 localStorage 键 `ysm_syncLastType` 持久化
 - 状态六态（synced/missing/disabled/optional/legacy/all）与 Go 端 `go/sync` 返回的状态字段一一对应，前端不自造状态
+- **本面板链是全仓同步计数的单一事实源（ADR-310，2026-09）**：侧栏三徽章已换线到同一产物（`go/instance.BuildInstanceStatusCounts` 折 `BuildSyncItems`），MMD 变体聚合不再由前端本地重算。折叠规则：侧栏红 = `missing ∪ diverged`（学本卡 `tabStatus`），橙 = `optional ∪ legacy`，`disabled` 单独计数**不驱动红/橙**（与 `aggregateStatus`「disabled 中立」一致）。已知展示口径差（记录在案、不修）：`collectCounts` 对 dirLevel 树**父单元与子文件重复计数**（徽标数 = 可见行数），故侧栏「单元数」可能小于本面板 `total`
 - 组件 `define` 前先 `customElements.get` 守卫，防 HMR / 重复 import 重复注册
 - **事件绑定一次性委托于组件根（light DOM）**：`events.ts` 的 `bindDelegatedEvents` 在 `_init` 单次执行，render 重建 DOM 不影响委托——消除原 `bindEvents` 每次 render 后 `.then` 全量重绑导致的并发双绑竞态（目录行点一次=翻转两次）；`btn` 分支须 `e.stopPropagation()` 防冒泡到父，恢复对等性
 - **⚠️ 委托生命周期跟随元素连接，不随 `_init`（2026-10 修复，曾致整页点击全死）**：click 委托的 unsub 曾误入 `_unsubs` 桶——`_init` 顶部会对 `_unsubs` 全量 unsub（本意清 bus 订阅），同元素第二次 `_init`（`instance` 属性变更）把委托连带销毁（`_clickHandler=null` + `_cbRef=undefined`），而 `_eventsBound` 仍 true → else 分支 `if(self._cbRef)` 不命中 → 委托永不重绑，状态页签/目录行/push/pull 点击全死。现委托 unsub 单独存 `_clickUnsub`，由 `disconnectedCallback` 统一清理（`index.ts` 有注释锚点）；`_unsubs` 桶只装生命周期跟随 `_init` 的 bus 订阅

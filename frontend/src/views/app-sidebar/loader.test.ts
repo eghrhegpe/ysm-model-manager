@@ -1,14 +1,14 @@
 // @vitest-environment node
-// ===== sidebar MMD 变体聚合纯函数测试 =====
-// groupMmdVariants：按父文件夹聚合 .pmx 变体 / 单层路径自身为组 / Windows 分隔符归一 / 去重。
-// loadInstances：失败路径 toast（loading 孤儿已删除）。
+// ===== sidebar 数据加载层测试 =====
+// loadInstances：失败路径 toast / 在途去重 / force 绕过 / ADR-310 计数消费口径。
+// （旧 groupMmdVariants 前端本地聚合已删除——MMD 变体聚合回归 Go 面板链）
 import { describe, it, expect, vi } from "vitest";
-import { groupMmdVariants, loadInstances } from "./loader.ts";
+import { loadInstances } from "./loader.ts";
 import { bus } from "@/bus";
 
 // 阻断 Wails runtime 加载链：loader.ts 顶部静态 import bindings → @wailsio/runtime
 // （其 drag.js 在模块加载时访问 window，jsdom teardown 后延迟回调触发
-// "window is not defined" 环境噪声）。groupMmdVariants 是纯函数不依赖 bindings，mock 安全。
+// "window is not defined" 环境噪声）。
 vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   LoadAppConfig: vi.fn(),
   ListVersionInstances: vi.fn(),
@@ -20,55 +20,6 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 // mock 整个 app.ts 使 loadInstances 直接拿到 mock bindings。
 const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
 vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
-
-describe("groupMmdVariants", () => {
-  it("按父文件夹聚合 missing/extra 变体", () => {
-    const r = groupMmdVariants(
-      ["char/a.pmx", "char/b.pmx"],
-      ["char/c.pmx"],
-    );
-    expect(r.missingGroups).toEqual(["char"]);
-    expect(r.extraGroups).toEqual(["char"]);
-    expect(r.variantMap["char"]).toEqual({
-      items: ["char/a.pmx", "char/b.pmx", "char/c.pmx"],
-      count: 3,
-    });
-  });
-
-  it("单层路径无父文件夹 → 自身为组", () => {
-    const r = groupMmdVariants(["solo.pmx"], []);
-    expect(r.missingGroups).toEqual(["solo.pmx"]);
-    expect(r.variantMap["solo.pmx"].items).toEqual(["solo.pmx"]);
-    expect(r.variantMap["solo.pmx"].count).toBe(1);
-  });
-
-  it("Windows 分隔符归一为 / 后聚合（items 保留原始路径供展示）", () => {
-    const r = groupMmdVariants(["dir\\sub\\a.pmx"], []);
-    expect(r.missingGroups).toEqual(["dir/sub"]);
-    expect(r.variantMap["dir/sub"].items).toEqual(["dir\\sub\\a.pmx"]);
-  });
-
-  it("同父文件夹缺失+多余 → missing 与 extra 组都保留（seen 隔离）", () => {
-    const r = groupMmdVariants(
-      ["char/a.pmx", "char/b.pmx"],
-      ["char/c.pmx", "other/d.pmx"],
-    );
-    expect(r.missingGroups).toEqual(["char"]);
-    expect(r.extraGroups.sort()).toEqual(["char", "other"]);
-  });
-
-  it("多个目录分别聚合，组列表去重", () => {
-    const r = groupMmdVariants(["x/a.pmx", "x/b.pmx", "y/c.pmx"], []);
-    expect(r.missingGroups.sort()).toEqual(["x", "y"]);
-  });
-
-  it("空列表 → 空组与空 map", () => {
-    const r = groupMmdVariants([], []);
-    expect(r.missingGroups).toEqual([]);
-    expect(r.extraGroups).toEqual([]);
-    expect(Object.keys(r.variantMap)).toHaveLength(0);
-  });
-});
 
 describe("loadInstances", () => {
   /** 设置 getAppMock 返回 mock bindings，返回各 mock 函数供测试配置 */
@@ -124,9 +75,10 @@ describe("loadInstances", () => {
     ]);
     GetRepoRoot.mockResolvedValue("/repo");
     GetResourceInstanceStatus.mockResolvedValue([
-      { Name: "NoMod", Missing: ["x"], Extra: [], Synced: 5, HasMod: false },
-      { Name: "A", Missing: [], Extra: [], Synced: 3, HasMod: true },
-      { Name: "B", Missing: [], Extra: [], Synced: 9, HasMod: true },
+      // ADR-310：计数取 Go 的 MissingCount（单元级），非 Missing 清单长度
+      { Name: "NoMod", MissingCount: 1, Missing: ["x"], Extra: [], Synced: 5, HasMod: false },
+      { Name: "A", MissingCount: 0, Missing: [], Extra: [], Synced: 3, HasMod: true },
+      { Name: "B", MissingCount: 0, Missing: [], Extra: [], Synced: 9, HasMod: true },
     ]);
     const result = await loadInstances("ysm");
     // hasMod 优先；同 hasMod 按 synced 降序；无 mod 排最后
@@ -135,6 +87,46 @@ describe("loadInstances", () => {
     expect(result[2].hasMod).toBe(false);
     expect(result[2].status).toBe("missing");
     expect(result[2].missing).toBe(1);
+  });
+
+  it("ADR-310：badge 数取 Go 单元计数（≠清单长度），disabled 计数被消费", async () => {
+    const { LoadAppConfig, ListVersionInstances, GetResourceInstanceStatus, GetRepoRoot } = mockBindings();
+    LoadAppConfig.mockResolvedValue({ mcRoot: "/mc" });
+    ListVersionInstances.mockResolvedValue([{ Name: "A", VersionDir: "/v/a", Exists: true }]);
+    GetRepoRoot.mockResolvedValue("/repo");
+    GetResourceInstanceStatus.mockResolvedValue([
+      {
+        Name: "A",
+        // 1 个缺失模型夹（单元）→ 展开成 3 条仓库侧文件路径；另有 2 个实例独有、1 个禁用
+        MissingCount: 1,
+        Missing: ["/repo/m/model.pmx", "/repo/m/tex.pmd", "/repo/m/extra.pmx"],
+        Extra: ["/inst/m3", "/inst/m4"],
+        Disabled: ["/inst/banned.pmx.ban"],
+        Synced: 7,
+        HasMod: true,
+      },
+    ]);
+    const [ins] = await loadInstances("ysm");
+    expect(ins.missing).toBe(1); // 单元数，不是 3
+    expect(ins.extra).toBe(2);
+    expect(ins.disabled).toBe(1); // 不再硬编码 0
+    expect(ins.synced).toBe(7);
+    expect(ins.status).toBe("missing");
+    expect(ins._missingPaths).toHaveLength(3); // 一键安装用的文件级清单保持完整
+    expect(ins._extraPaths).toEqual(["/inst/m3", "/inst/m4"]);
+    expect(ins.items.disabled).toEqual(["/inst/banned.pmx.ban"]);
+  });
+
+  it("ADR-310：diverged 已在 Go 折叠进 MissingCount（无第四态），状态红优先于橙", async () => {
+    const { LoadAppConfig, ListVersionInstances, GetResourceInstanceStatus, GetRepoRoot } = mockBindings();
+    LoadAppConfig.mockResolvedValue({ mcRoot: "/mc" });
+    ListVersionInstances.mockResolvedValue([{ Name: "A", VersionDir: "/v/a", Exists: true }]);
+    GetRepoRoot.mockResolvedValue("/repo");
+    GetResourceInstanceStatus.mockResolvedValue([
+      { Name: "A", MissingCount: 1, Missing: ["/repo/m/x.pmx"], Extra: ["/inst/e"], Synced: 0, HasMod: true },
+    ]);
+    const [ins] = await loadInstances("ysm");
+    expect(ins.status).toBe("missing"); // 红优先，橙不得盖过
   });
 
   it("并发同 rtype → 在途去重：只发一次状态请求（空 rtype 归一到 ysm 同键）", async () => {

@@ -218,7 +218,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 65 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 179 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 185 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 266 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
@@ -261,8 +261,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 399 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 426 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 400 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 427 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -318,7 +318,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 227 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 228 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 94 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 358 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
@@ -431,19 +431,19 @@
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 45 |
 | dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 99 |
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 170 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 176 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 203 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 307 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
-| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 87 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 132 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 169 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 176 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 199 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 220 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 244 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 328 |
+| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 88 |
+| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 133 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 170 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 177 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 200 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 221 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 245 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 329 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 152 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 166 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 185 |

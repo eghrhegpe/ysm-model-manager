@@ -281,6 +281,7 @@
   "repo.tab.tree": "ファイルツリー",
   "repo.tab.dedup": "重複排除",
   "repo.tab.oldest": "最古参",
+  "repo.viewerDesktopOnlyNotice": "ゴミ箱・重複排除・最古参はデスクトップ版のみ利用可能",
   "repo.score": "リポジトリスコア",
   "oldest.monthly": "月間アクティビティ",
   "oldest.daily": "デイリーピック",

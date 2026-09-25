@@ -16,6 +16,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { ResourceType } from "@/utils/resource/schema.ts";
 import { groupStorageRootOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { LINK_MODE_DEFAULT } from "./settings-schema.ts";
 import { cardRefreshers, getCfg, isBusy, setBusy, toastError } from "./store.ts";
 
 /**
@@ -53,7 +54,7 @@ export async function saveCfg(patch: {
     patch.filesRoot !== undefined ? patch.filesRoot : latest.filesRoot || "",
     patch.rpRoot !== undefined ? patch.rpRoot : latest.resourcepackRoot || "",
     patch.mcRoot !== undefined ? patch.mcRoot : latest.mcRoot || "",
-    patch.linkMode !== undefined ? patch.linkMode : latest.linkMode || "copy",
+    patch.linkMode !== undefined ? patch.linkMode : latest.linkMode || LINK_MODE_DEFAULT,
     theme,
     safeGet("theme-auto") || "",
   );
@@ -346,7 +347,7 @@ export function initMcDetect(root: ShadowRoot): void {
         getCfg().filesRoot || "",
         getCfg().resourcepackRoot || "",
         selected,
-        getCfg().linkMode || "copy",
+        getCfg().linkMode || LINK_MODE_DEFAULT,
         theme,
         safeGet("theme-auto") || "",
       );

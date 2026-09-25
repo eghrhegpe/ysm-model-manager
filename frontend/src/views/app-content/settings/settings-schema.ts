@@ -24,6 +24,17 @@ export const MIRROR_SOURCES = [
 /** 默认镜像源（direct = 直连）。 */
 export const MIRROR_DEFAULT: MirrorSource = "direct";
 
+/** 链接模式枚举（整合包 relink 的三种模式：复制 / 硬链接 / 符号链接）。
+ *  option 渲染 / hint 显隐顺序的单一来源（替代 init.ts 本地 LINK_MODE_KEYS 副本——
+ *  与 MIRROR_SOURCES 同款病：加第四种模式时 hint 显隐与模板 option 漏一处即静默漂移）。
+ *  注意与「存储层 linkMode」区分：本枚举是 UI 下拉值域，path-cards.ts|saveCfg 的
+ *  patch.linkMode 与 cfg.linkMode 同写同读本值域（缺省回退 copy）。 */
+export const LINK_MODES = ["copy", "hardlink", "symlink"] as const;
+export type LinkMode = (typeof LINK_MODES)[number];
+
+/** 默认链接模式（copy = 复制，最通用兜底）。 */
+export const LINK_MODE_DEFAULT: LinkMode = "copy";
+
 // ===== ADR-307 D3 扩编（2026-10 锐评收债）：外观/更新域值域收编 =====
 // 此前这些值域散在「模板裸 <option> + ui-prefs.ts 本地 scaleMap/白名单 + init.ts 默认字面量」
 // 三处各写一份——与镜像源 option 半截接线同款病（加档位/改默认漏一处即静默漂移）。

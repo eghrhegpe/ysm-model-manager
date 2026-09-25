@@ -12,7 +12,7 @@ import {
 import { settingsHTML } from "./settings/tpl-settings.ts";
 import { recycleHTML, renderRecycleListHtml } from "./tpl-recycle.ts";
 import { TD_CAM_SPEED, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
-import { MIRROR_SOURCES } from "@/views/app-content/settings/settings-schema.ts";
+import { LINK_MODES, MIRROR_SOURCES } from "@/views/app-content/settings/settings-schema.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { WailsAndroidBridge } from "@/backend/platform.ts";
 
@@ -56,6 +56,11 @@ describe("app-content 模板", () => {
     expect(html).toContain('data-tab="recycle"');
     expect(html).toContain('data-tab="dedup"');
     expect(html).toContain('data-tab="oldest"');
+    // 模板不再硬编码 app-tree：初始挂载全权归 initRepositoryPage.mountTree（localStorage 恢复），
+    // 否则首挂必经历「app-tree connect（扫描 RPC）→ init 立即替换销毁」的无谓双 mount
+    expect(html).not.toContain("<app-tree");
+    // 桌面模式零告知噪音（viewerNotice 仅在真藏了 desktopOnly tab 时产出）
+    expect(html).not.toContain("repo-tabs-notice");
   });
 
   it("repositoryHTML 查看器模式隐藏回收站/查重/最旧模型 tab（依赖本地文件系统操作）", () => {
@@ -69,6 +74,8 @@ describe("app-content 模板", () => {
     // 缺席——按钮不再在场，但面板照常产出（唯一面板 = 直接内容，无需切换语义）
     expect(html).toContain('id="repo-tab-tree"');
     expect(html).not.toContain('<button class="repo-tab');
+    // ADR-300 §2.5「可见缺席」：desktopOnly tab 被静默隐藏时必须在 tablist 外告知（与诊断页同构）
+    expect(html).toContain("repo-tabs-notice");
     isViewerModeMock.mockReturnValue(false);
   });
 
@@ -340,6 +347,26 @@ describe("app-content 模板", () => {
     // 曾 240 起步：切 tab 白等 240ms 才见首行，且底部解析组（band 0）先亮于顶部行组（编排倒挂）。
     // 现两族统一 STG_BAND.preview3d=0 → 0/60/120 同步
     expect(Math.max(...delays)).toBeLessThanOrEqual(120);
+  });
+
+  it("链接模式 option/hint 由 LINK_MODES 派生：默认 copy selected，symlink hint 带错误色 span（2026-10 收债）", () => {
+    const html = settingsHTML();
+    // option 值域随 schema 枚举：缺任一模式即「下拉框静默没有」（与镜像源同款半截接线病）。
+    // 默认模式带 selected 属性，故断言用宽松正则（允许 value 后跟 " selected"）。
+    for (const m of LINK_MODES) {
+      expect(html, `链接模式 ${m} 缺 option`).toContain(`value="${m}"`);
+      expect(html, `链接模式 ${m} 缺 hint 块`).toContain(`id="lm-hint-${m}"`);
+    }
+    // 默认项（LINK_MODE_DEFAULT=copy）selected，其余无
+    expect(html).toMatch(/<option value="copy" selected>/);
+    expect(html).not.toMatch(/<option value="hardlink" selected/);
+    // 静态态：默认模式（copy）hint 无 style（可见），其余 display:none——
+    // init.ts|applyHintVisibility 按实值纠正前的静态态（与镜像源 default-direct 可见同口径）
+    expect(html).toContain('id="lm-hint-copy" class="stg-hint-block">');
+    expect(html).toContain('id="lm-hint-hardlink" class="stg-hint-block" style="display:none"');
+    expect(html).toContain('id="lm-hint-symlink" class="stg-hint-block" style="display:none"');
+    // symlink hint 带错误色 span（symlink 失败概率最高，与 copy/hardlink 中性提示区分）
+    expect(html).toContain('<span style="color:var(--status-error)">');
   });
 
   it("3D 预览 tab 三行组已升格正典卡（2026-10 卡片流收口回归：不得回退行组范式）", () => {

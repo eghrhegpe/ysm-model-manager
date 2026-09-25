@@ -46,6 +46,9 @@ import {
   FONT_SIZE_DEFAULT,
   FONT_SIZE_LEVELS,
   type FontSizeLevel,
+  LINK_MODE_DEFAULT,
+  LINK_MODES,
+  type LinkMode,
   MIRROR_DEFAULT,
   MIRROR_SOURCES,
   type MirrorSource,
@@ -223,19 +226,43 @@ function mcPathCardSpec(): StgCardSpec {
 
 function linksCardSpec(): StgCardSpec {
   // 链接模式：纯桌面 / 网络概念，查看器模式无意义（网页版+安卓 viewer 均不渲染）。
-  // hint 块排版走 .stg-hint-block（2026-10 收 6 处内联配方债）；LINK_MODE_KEYS 仍在
-  // init.ts 本地，链接模式全量 schema 化归 ADR-307 D3 扩编。
+  // hint 块排版走 .stg-hint-block（2026-10 收 6 处内联配方债）。
+  // option / hint 值域由 settings-schema|LINK_MODES 派生（ADR-307 D3 扩编，与 MIRROR_UI 同口径）：
+  // 加第四种链接模式只改 schema 一处，Record 文案表编译期逼出同步；默认 selected = LINK_MODE_DEFAULT。
+  // hint 显隐与镜像源不同：模板里 lm-hint-* 全部 display:none（无默认可见项），
+  // 由 init.ts|applyHintVisibility 按当前 linkMode 揭示对应项——保持原静态态，不改变观感。
+  const LINK_UI: Record<
+    LinkMode,
+    { optionKey: LocaleKey; hintKey: LocaleKey; hintColor?: "error" }
+  > = {
+    copy: { optionKey: "settings.links.copy", hintKey: "settings.links.copyHint" },
+    hardlink: { optionKey: "settings.links.hardlink", hintKey: "settings.links.hardlinkHint" },
+    // symlink 的 hint 带错误色（与 copy/hardlink 中性提示区分——symlink 失败概率最高）
+    symlink: {
+      optionKey: "settings.links.symlink",
+      hintKey: "settings.links.symlinkHint",
+      hintColor: "error",
+    },
+  };
+  const lmOptions = LINK_MODES.map(
+    (m) =>
+      `<option value="${m}"${m === LINK_MODE_DEFAULT ? " selected" : ""}>${t(LINK_UI[m].optionKey)}</option>`,
+  ).join("\n      ");
+  const lmHints = LINK_MODES.map((m) => {
+    const text = t(LINK_UI[m].hintKey);
+    const inner =
+      LINK_UI[m].hintColor === "error"
+        ? `<span style="color:var(--status-error)">${text}</span>`
+        : text;
+    return `<div id="lm-hint-${m}" class="stg-hint-block"${m === LINK_MODE_DEFAULT ? "" : ' style="display:none"'}>${inner}</div>`;
+  }).join("\n    ");
   return {
     icon: UI_ICONS.link,
     title: t("settings.links.title"),
     body: `<select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="copy">${t("settings.links.copy")}</option>
-      <option value="hardlink" selected>${t("settings.links.hardlink")}</option>
-      <option value="symlink">${t("settings.links.symlink")}</option>
+      ${lmOptions}
     </select>
-    <div id="lm-hint-copy" class="stg-hint-block" style="display:none">${t("settings.links.copyHint")}</div>
-    <div id="lm-hint-hardlink" class="stg-hint-block" style="display:none">${t("settings.links.hardlinkHint")}</div>
-    <div id="lm-hint-symlink" class="stg-hint-block" style="display:none"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>`,
+    ${lmHints}`,
     header: {
       forId: "set-link-mode",
       actions: `<button id="set-relink" class="btn-base sm">${UI_ICONS.refresh} ${t("settings.links.reapply")}</button>`,

@@ -22,7 +22,13 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { initDefaultPagePrefs } from "./default-page.ts";
 import { initKeymap } from "./keymap.ts";
 import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-cards.ts";
-import { MIRROR_SOURCES, type MirrorSource, UPDATE_CHECK_DEFAULT } from "./settings-schema.ts";
+import {
+  LINK_MODE_DEFAULT,
+  LINK_MODES,
+  MIRROR_SOURCES,
+  type MirrorSource,
+  UPDATE_CHECK_DEFAULT,
+} from "./settings-schema.ts";
 import type { SettingsCfg } from "./store.ts";
 import { getCfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
 import { initThemeSection } from "./theme.ts";
@@ -33,8 +39,8 @@ import { initWorkerPrefs } from "./worker-prefs.ts";
 const ADV_COLLAPSE_MS = 200;
 
 // 镜像源 / 链接模式提示条 key（与 <*-hint-<key>> 显隐、i18n 名映射一致）。
-// MIRROR_KEYS 已迁 settings-schema.ts 的 MIRROR_SOURCES（ADR-307 D3：枚举单一来源，去本地副本）。
-const LINK_MODE_KEYS = ["copy", "hardlink", "symlink"] as const;
+// 枚举单一来源 = settings-schema.ts：MIRROR_SOURCES / LINK_MODES（ADR-307 D3 收债，
+// 本地 MIRROR_KEYS + LINK_MODE_KEYS 副本已删——加成员漏 hint 显隐即编译期红）。
 
 // 镜像名 → i18n 键（替代三元链）。键收紧为 MirrorSource 联合——加镜像源漏文案键即编译期红，
 // 不再靠运行时 ?? 兜底掩盖漏键（ADR-307 D3 收口 B3 真瓶颈）。
@@ -253,8 +259,10 @@ function stgBindLinkMode(
   setBusyLocal: typeof setBusy,
   toastErrorLocal: typeof toastError,
 ): void {
-  const linkMode = cfgLocal.linkMode || "copy";
-  applyHintVisibility(root, "lm-hint", linkMode, LINK_MODE_KEYS);
+  // 缺省回退默认值引 schema 单一来源（ADR-307 D3 扩编）：原 "copy" 字面量散在 init +
+  // path-cards 各写一份，改默认漏一处即回退值漂移。
+  const linkMode = cfgLocal.linkMode || LINK_MODE_DEFAULT;
+  applyHintVisibility(root, "lm-hint", linkMode, LINK_MODES);
 
   const linkSelect = root.getElementById("set-link-mode") as HTMLSelectElement | null;
   if (linkSelect) {
@@ -268,13 +276,13 @@ function stgBindLinkMode(
       // 新模式（模式实际未变），直到用户下次操作前 UI/真相分叉（审查 E 项）。
       if (isBusyLocal()) {
         linkSelect.value = curVal;
-        applyHintVisibility(root, "lm-hint", curVal, LINK_MODE_KEYS);
+        applyHintVisibility(root, "lm-hint", curVal, LINK_MODES);
         return;
       }
       setBusyLocal(true);
       const oldVal = curVal;
       const val = linkSelect.value;
-      applyHintVisibility(root, "lm-hint", val, LINK_MODE_KEYS);
+      applyHintVisibility(root, "lm-hint", val, LINK_MODES);
       try {
         // 确认前先数实例（与 relinkAllInstancesInner 的 Exists && Name 同口径），
         // 供文案展示工作量；mcRoot 为空跳过计数（n=0，relink 段随后自会提示
@@ -302,7 +310,7 @@ function stgBindLinkMode(
           // 取消：回退 select 与 hint，不发任何 RPC、不弹模式切换 toast（静默，
           // 比 instance-ops 样板少一条 cancelled toast 噪音）
           linkSelect.value = oldVal;
-          applyHintVisibility(root, "lm-hint", oldVal, LINK_MODE_KEYS);
+          applyHintVisibility(root, "lm-hint", oldVal, LINK_MODES);
           return;
         }
         const { SaveAppConfig, SetLinkMode } = await backendGetApp();

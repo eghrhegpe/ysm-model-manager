@@ -89,7 +89,7 @@ function repoHeaderHTML(d: RepoHeaderData): string {
     t("gh.downloadSelected", { n: 0 }) +
     "</button>" +
     "</div>" +
-    '<div id="gh-queue-status" class="gh-queue-status"></div>' +
+    '<div id="gh-queue-status" class="gh-queue-status" data-testid="download-queue"></div>' +
     '<div id="gh-repo-list" data-testid="gh-list"></div>' +
     "</div>"
   );

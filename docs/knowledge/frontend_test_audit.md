@@ -98,7 +98,11 @@ invariant_anchors:
 - **sync-manager 执行链路**：审计时（2026-08-26）仅 e2e 页面切换、未覆盖 push/pull 执行；**✅ 已由 `frontend/src/features/sync/sync.test.ts`（351 行 / 13 case，覆盖 download-missing + toggle-status 的成功/失败/并发守卫/配置缺失/边界）补齐**——执行逻辑归单测守护，e2e 仍只测「按钮可见 + 页切换」（sync-manager.spec.ts）。
 - **recycle-bin**：审计时列「完全无 e2e」。**✅ 已于本轮（2026-09）补 `frontend/e2e/recycle-bin.spec.ts`**——覆盖 repository 页 → recycle 子 tab 切换 + 清空/刷新控件真实可见 + 条目级 restore/delete 钩子（有条目时）。`npx playwright test recycle-bin.spec.ts` → 2 passed。
 - **community（创作者频道页）**：审计时列「完全无 e2e」系**快照过期**——实际 `frontend/e2e/workshop.spec.ts` 早已覆盖（navItem("community") → ws-tabs 站点 tab 动态渲染 + 默认选中）。执行逻辑另由 community/*.test.ts 单测守护。
-- **import-queue（= community download-queue）**：**仍无 e2e 且当前无法低flake补测**——源码 `features/community/download-queue*.ts` / roles-views / slide-menu **无任何 data-testid 钩子**（grep `dlq|import|queue|download` testid = 0 命中），仅用 innerHTML+UI_ICONS 渲染。补 e2e 需先给 download-queue UI 加 testid（属源码改动，超出本轮测试范围）；其执行逻辑已由 `download-queue.test.ts` + `download-queue-ui.test.ts` + `download-queue-store.test.ts` 单测覆盖。结论：**该盲区应标为「受阻：待源码插桩」，而非「未补」**——盲写 CSS/XPath e2e 违反 AGENTS.md 禁 flake 原则，属假覆盖。
+- **import-queue（= community / github 仓库模型页 download-queue）**：
+  - **✅ 已完成 UI 插桩**：`frontend/src/views/app-content/tpl-workshop.ts:92` 给仓库模型页头模板的 `#gh-queue-status` 容器加 `data-testid="download-queue"`（行为中性：容器常驻 DOM、CSS `display:none` 除非 `.show`，不接事件、不影响渲染/降级路径）；同头模板 `:86` 的 `.gh-dl-selected` 下载触发按钮本就带 `data-testid="gh-dl-selected"`。两钩子为后续 e2e 提供稳定定位锚点。
+  - **❌ 稳定 e2e 仍受阻——根因是「网络门控渲染」而非「缺 testid」**：仓库模型页头（`workshopTpl.repoHeaderHTML`，含 `#gh-queue-status`）仅在 `tryFetchModels` **成功**后由 `githubRenderModels` / `showRepoModels` 写入 DOM；而 `tryFetchModels`（`features/community/data.ts:217`）是前端直连 `raw.githubusercontent.com` 的 `fetch` 竞速，**非 Go binding**、不在 `e2e/mock-data.ts` 单源覆盖内。离线 e2e 下该 fetch 必失败 → 走「no model list」占位分支，**仓库页头永不渲染** → `download-queue` 容器在 e2e 中恒为 0（已用三路递归 shadow 深扫验证：community→站点 tab→创作者卡、community→创作者卡、github→`[data-repo]` 卡 三种路径均 0 命中；并确认 `mock-data.ts:189` 的 `LoadGitHubRepos:[]` 使 github 页无仓库卡可点）。
+  - **执行逻辑已由单测守护**：`download-queue.test.ts` + `download-queue-ui.test.ts` + `download-queue-store.test.ts` 覆盖队列状态机/UI/存储。
+  - **结论**：盲区标为「**受阻：待 tryFetchModels 可注入/加 route 模拟**」——在 `tryFetchModels` 被抽象为可注入数据源（或 e2e 加 `page.route` 模拟 raw.githubusercontent.com 抓取）之前，仓库模型页头不可达，硬写 e2e 必 flake/恒 0，违背 AGENTS.md 禁 flake 原则。插桩先行，待渲染门控解除即可零成本接入。
 
 ## 不变量
 

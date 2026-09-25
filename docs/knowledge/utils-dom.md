@@ -10,6 +10,7 @@ auto_fields:
     - __getTriggerForTest
     - __resetInputBlockStackForTest
     - __resetModalStateForTest
+    - __resetShortcutsForTest
     - attachStyleSheetMarker
     - attachTooltip
     - btnBaseCSS
@@ -17,6 +18,7 @@ auto_fields:
     - clearTrigger
     - closeActiveDialog
     - closeDlg
+    - comboMatches
     - CopyResult
     - copyText
     - createDialog
@@ -29,12 +31,14 @@ auto_fields:
     - dropdownBaseCSS
     - DropdownOptions
     - ensureTooltipStyles
+    - findCollisions
     - findTabbableAcrossShadow
     - FLASH_DURATION_MS
     - flashBtn
     - FlashOptions
     - FocusRestoreManager
     - focusVisibleCSS
+    - formatAriaKeyShortcuts
     - friendlyError
     - getStackDepth
     - initDropdown
@@ -43,6 +47,7 @@ auto_fields:
     - isEditableTarget
     - isFileExistsError
     - isInputBlocked
+    - listShortcuts
     - makeLocaleHost
     - metaTagCSS
     - modalConfirm
@@ -68,10 +73,13 @@ auto_fields:
     - qsa
     - refreshAdoptedStyleSheets
     - registerDlg
+    - registerShortcut
     - rememberTrigger
     - returnFocus
     - setRepoSearchFocusPending
     - ShadowStyle
+    - ShortcutCombo
+    - ShortcutSpec
     - stripPathSegments
     - tabBtnCSS
     - takeRepoSearchFocusPending

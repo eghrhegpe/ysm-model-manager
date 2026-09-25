@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-308：键盘原语收敛与全局快捷键注册表",
+        "link": "/adr/ADR-308-keyboard-primitive-convergence"
+      },
+      {
         "text": "ADR-307：设置页 P2 硬化：tab 样式去重 / viewer 区块缺席告知 / 非 3D 设置项 schema 化",
         "link": "/adr/ADR-307-settings-page-p2-hardening"
       },

@@ -74,7 +74,7 @@ status: active
   - **文件级别名注册（ADR-146）**：`@/bus`→`./src/bus.ts`、`@/theme-core`→`./src/theme-core.ts` 在 `tsconfig.json` paths 白名单登记（`check-path-hygiene` R0 白名单 + 构建解析共同拦截），src 根文件用别名而非相对路径，`normalizeTheme`/`applyTheme`/`initTheme` 在 `theme-core.ts`（纯逻辑无顶层副作用），本文件 re-export 保持启动链稳定
   - 启动 IIFE：`initTheme()` → `applyThemeAuto()` → `applyUIPrefs()` → `checkUpdateSilent()` 静默检查更新（**静态导入** `features/maintenance/version-updater.ts`，非动态 import）；启动步骤表另含 i18n 之后的 `a11y-labels` 步（`static-a11y-labels.ts|localizeStaticA11yLabels` 把 index.html 静态可达性标签——skip-link 文案/aria-label、app-nav、#main-content、`` `<title>` ``——覆写为当前 i18n 语言，静态 HTML 值仅为无 JS 兜底）
 - **窗口显示**：经 `startup-reveal.ts` 的 `revealMainWindow(show)` 控制——等待 DOM 升级 + 两帧 rAF 完成后调 `show()`；rAF 节流兜底 1.5s 超时强制显示（防止隐藏窗口下 Chromium/WebView2 节流导致窗口永久不可见）
-  - 杂项：capture 阶段拦截旧版 document 拖拽处理器（`#ws-page` / `#dl-drop` / `.ws-page` 区域）；dev 模式（`?dev=1` 或 localStorage `_devtools`）启用 F12/Ctrl+Shift+I 打开 DevTools（`Window.OpenDevTools`）
+  - 杂项：capture 阶段拦截旧版 document 拖拽处理器（`#ws-page` / `#dl-drop` / `.ws-page` 区域）；dev 模式（`?dev=1` 或 localStorage `_devtools`）启用 F12/Ctrl+Shift+I 打开 DevTools（`Window.OpenDevTools`）——键位走 `utils/dom/key-router.ts|registerShortcut` 注册表（spec `devtools`，ADR-308 D1 收编；原手挂 document keydown listener 已退役，`unregisterDevtools` 经 dispose 句柄解除，末个 shortcut 摘除 document 监听，根治 vi.resetModules 跨用例残留污染）
 
 ## 对外 API / 入口
 

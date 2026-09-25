@@ -118,7 +118,7 @@ status: active
 
 ## 对外 API / 入口
 
-- `AppTree` 生命周期：`connectedCallback`（渲染布局 → 绑定工具栏/事件委托/键盘 → `_unsubs` 收集 bus 订阅）→ `disconnectedCallback`（清理订阅 / keydown / 虚拟滚动）
+- `AppTree` 生命周期：`connectedCallback`（渲染布局 → 绑定工具栏/事件委托/键盘 → `_unsubs` 收集 bus 订阅）→ `disconnectedCallback`（清理订阅 / 快捷键 dispose（key-router）/ 虚拟滚动）
   - `_unsubs` 仅收集 bus 订阅（`bindBusEvents` 返回的 unsub 数组 + `bus.on("tree:set-search")`），DOM 委托事件（click/contextmenu，通过 `addEventListener` 绑定于 `#tree` 等容器）随 ShadowRoot detach 自动清理，不进入 `_unsubs`
 - `_load` — 加载条目数据；`_renderTree` — 渲染树（grid/list 双模式）
 - 搜索状态：`_search`（关键词字符串）和 `_filterPaths`（精确路径 Set）共同驱动树过滤
@@ -133,8 +133,10 @@ status: active
 
 渲染时，搜索态走 `hl(e.name, search)`（utils/dom/html.ts）高亮命中文字，非搜索态走 `renderDisplayName()`（治理红线 4.3）。
 - **MMD 子目录分组展示（ADR-094/096 演进，2026-09-03 修正）**：当前为**扁平化架构**——各 MMD 类型（SceneModel/CustomAnim 等）是独立顶级类型，`resource_types.json` 的 `GROUP_TYPE_OPTIONS` 全部 `subdir: ""`，`app-nav` 双下拉永不写非空 subdir（`repo_subdir` 恒落空值，`loader.ts` 的 `targetType = subdir || rtype` 是防御性写法）。`subdir` 属性通道 + `repo:subdir-changed` 事件是 ADR-094「子目录选择」的半迁移残留——知识卡不再宣称 subdir 参与路径拼接；`loader.ts` 的 `loadEntries(rtype, subdir)` 在 subdir 非空时以 subdir 覆盖 rtype 查表（GetRepoRoot("SceneModel") 而非 "mmd" 拼接），组名分组效果由 Go 扫描根即子目录根达成。**修改提醒**：任何文件夹操作（bus-handlers dir:rename/mkdir/recycle/batch-rename、events 右键、index 键盘删除）统一用 `vm._rootAttr || RESOURCE_TYPES.YSM` 即当前视图真实类型（root 就是完整 rtype），不要自行拼接 subdir 路径。
-- `_initKeyboardShortcuts` / `_deleteSelected` — 键盘快捷键 / 批量删除
-- **3D 全屏快捷键门禁**：`_onKeydown` 开头调用 `isPreviewOverlayActive()`（`ui/overlay-active.ts`，ADR-175 M1 契约收编的权威查询——内部查 `document.getElementById("ysm-overlay-3d")`，常量见 `ui/ui-constants.ts`）——3D 全屏打开期间树面板不接管任何全局按键（Ctrl+F 不抢焦点、Delete 不误删选中模型、方向键不与 3D 相机平移冲突）；overlay 移除后快捷键恢复。禁止组件裸查 overlay DOM，统一走该查询函数
+- `views/app-tree/index.ts|_initKeyboardShortcuts` / `views/app-tree/index.ts|_deleteSelected` — 键盘快捷键（key-router 注册表，ADR-308 D1）/ 批量删除。
+  - 全局组合键走 `utils/dom/key-router.ts|registerShortcut` 注册表单点分发：`tree:find`（Ctrl+F / Meta+F → 聚焦搜索框）/ `tree:delete`（Delete / Del → 批量删除）/ `tree:nav-down`（ArrowDown）/ `tree:nav-up`（ArrowUp → 行导航）。原「document 单点 keydown 委托 + `_onKeydown` 串接三段」写法已退役；`_shortcutOffs` 收集各 spec 的 dispose 句柄，`disconnectedCallback` 逐个解除（防 keydown 监听泄漏），HMR 重入先解除旧代际再注册（防同 id 注册表碰撞告警）。
+  - **语义收紧（ADR-308 D1 收编副作用，已知）**：方向键裸键匹配 = 无修饰键（原实现漏查 shift，Shift+方向键导航不再生效——按 ARIA 列表导航规范收紧）；Delete 同理。碰撞从「约定」变「检测」由注册表 `key-router` 负责，新增组合键不得绕过注册表手挂 document listener。
+- **3D 全屏快捷键门禁**：`views/app-tree/index.ts|_initKeyboardShortcuts` 的 `yieldTo3D` 门禁 = `!isPreviewOverlayActive()`（`preview-3d/infra/overlay-active.ts`，ADR-175 M1 契约收编的权威查询——内部查 `document.getElementById("ysm-overlay-3d")`，常量见 `preview-3d/infra/ui-constants.ts`），作为 key-router 各 spec 的 `when` 谓词——3D 全屏打开期间树面板不接管任何全局按键（Ctrl+F 不抢焦点、Delete 不误删选中模型、方向键不与 3D 相机平移冲突）；overlay 移除后快捷键恢复。禁止组件裸查 overlay DOM，统一走该查询函数
 - 子模块：`bus-handlers.ts`（事件处理）/ `events.ts`（委托）/ `render.ts`（含虚拟滚动，原独立 virtual-scroll.ts 已并入）/ `loader.ts`（数据加载抽象层）/ `authors.ts`（作者列表加载）/ `toolbar-events.ts`（工具栏 UI 绑定）
 
 ### 渲染性能要点（2026-08-24）

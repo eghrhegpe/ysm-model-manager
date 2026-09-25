@@ -8,6 +8,7 @@ import { registerErrorDiary } from "@/core/error-diary.ts";
 import { initI18n, setLocaleHost } from "@/core/i18n/locale.ts";
 import { checkUpdateSilent } from "@/features/maintenance/version-updater.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { registerShortcut } from "@/utils/dom/key-router.ts";
 import { makeLocaleHost } from "@/utils/dom/locale-host.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { applyUIPrefs } from "@/views/app-content/settings/ui-prefs.ts";
@@ -188,29 +189,32 @@ const _devtoolsFlag = safeGet("_devtools") === "1";
 const _devMode =
   (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("dev")) ||
   _devtoolsFlag;
-// 具名 handler：可被 unregisterDevtools 移除（测试反复求值本模块时，
-// vi.resetModules 清模块缓存但不清 document 上残留的 listener，叠加注册
-// 会导致跨用例污染——devtools「未启用」用例被前一个 _devMode=true 用例
-// 残留的 listener 触发 Window.OpenDevTools()）。
+// F12 / Ctrl+Shift+I 走全局快捷键注册表（key-router，ADR-308 D1 收编）：
+// 组合匹配由注册表单点分发；dispose 随注册表在末个 shortcut 摘除 document 监听，
+// 不再手搓 document.addEventListener 残留（测试反复求值时 vi.resetModules 清模块缓存
+// 但不清旧代际 document 监听——注册表 dispose + 末个摘除契约根治该跨用例污染，
+// 旧「具名 handler + removeEventListener」写法已退役）。
 const _devtoolsKeydown = (e: KeyboardEvent) => {
-  if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
-    e.preventDefault();
-    try {
-      Window.OpenDevTools();
-    } catch (e) {
-      // 仅开发/调试环境；失败留痕不中断（如 Wails 桥未就绪）
-      console.warn("[app-modules] OpenDevTools 失败:", e);
-    }
+  e.preventDefault();
+  try {
+    Window.OpenDevTools();
+  } catch (e) {
+    // 仅开发/调试环境；失败留痕不中断（如 Wails 桥未就绪）
+    console.warn("[app-modules] OpenDevTools 失败:", e);
   }
 };
+let _devtoolsOff: (() => void) | null = null;
 if (_devMode && typeof document !== "undefined") {
-  document.addEventListener("keydown", _devtoolsKeydown);
+  _devtoolsOff = registerShortcut({
+    id: "devtools",
+    combo: ["F12", "Ctrl+Shift+I"],
+    handler: _devtoolsKeydown,
+  });
 }
-/** 测试清理钩子：移除 devtools keydown listener（生产环境无需调用）。 */
+/** 测试清理钩子：解除 devtools 快捷键注册（生产环境无需调用）。 */
 export function unregisterDevtools(): void {
-  if (typeof document !== "undefined") {
-    document.removeEventListener("keydown", _devtoolsKeydown);
-  }
+  _devtoolsOff?.();
+  _devtoolsOff = null;
 }
 
 // ===== 控制台 debugGetSpec 钩子（ADR-214）=====

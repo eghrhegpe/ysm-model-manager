@@ -13,6 +13,7 @@ import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { takeRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
+import { registerShortcut } from "@/utils/dom/key-router.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -83,7 +84,8 @@ export class AppTree extends WebComponentBase {
   _toggleBusy = false;
   /** 搜索防抖 timer（实例级，HMR 重入时可被 disconnectedCallback 清理） */
   _searchTimer: ReturnType<typeof setTimeout> | null = null;
-  private _keydownHandler: EventListener | null = null;
+  /** 全局快捷键注册表 dispose 句柄（key-router，ADR-308 D1；随 disconnectedCallback 逐个解除） */
+  private _shortcutOffs: Array<() => void> = [];
   /** 批量删除进行中（防连点 Delete 二次触发） */
   private _deleting = false;
   /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更） */
@@ -235,8 +237,9 @@ export class AppTree extends WebComponentBase {
       const treeEl = this._root.getElementById("tree");
       if (treeEl) this._unsubs.push(bindTreeEvents(treeEl, this));
 
-      // 键盘快捷键（只用 document + this._root，提前注册——异步 _load 期间 disconnect
-      // 也能经 disconnectedCallback 正常移除，避免 keydown 监听泄漏）
+      // 键盘快捷键（走 key-router 注册表单点分发，ADR-308 D1 收编：原 document 手挂
+      // listener 已退役；提前注册——异步 _load 期间 disconnect 也能经
+      // disconnectedCallback 逐个 dispose，避免组合键/监听泄漏）
       this._initKeyboardShortcuts();
 
       // 仓库页 DnD 绑定（组件级，ADR-060）；透传当前树类型作导入落盘上下文。
@@ -334,9 +337,11 @@ export class AppTree extends WebComponentBase {
       clearTimeout(this._searchTimer);
       this._searchTimer = null;
     }
-    if (this._keydownHandler) {
-      document.removeEventListener("keydown", this._keydownHandler);
-      this._keydownHandler = null;
+    if (this._shortcutOffs.length) {
+      this._shortcutOffs.forEach((off) => {
+        off();
+      });
+      this._shortcutOffs = [];
     }
     const treeEl = this._root.getElementById("tree");
     if (treeEl) {
@@ -427,23 +432,50 @@ export class AppTree extends WebComponentBase {
     // 注意：_authors 仅作组件字段保留（曾写 _root._treeAuthors 伪字段，死写无读取方已删）
   }
 
-  // ========== 键盘快捷键 ==========
+  // ========== 键盘快捷键（key-router 注册表，ADR-308 D1）==========
+  // 原 document 单点 keydown 委托 + _onKeydown 串接三段（find/delete/arrow）已收编为
+  // 注册表 4 条 spec——全局组合键仲裁从「约定」变「检测」（key-router 碰撞告警），
+  // 且 3D 全屏让路（ADR-175 M1）以 when 门禁表达（统一走 overlay-active 权威查询，不裸查 DOM）。
   private _initKeyboardShortcuts(): void {
-    this._keydownHandler = (e: Event) => {
-      void this._onKeydown(e as KeyboardEvent);
-    };
-    document.addEventListener("keydown", this._keydownHandler);
-  }
-
-  private async _onKeydown(e: KeyboardEvent): Promise<void> {
+    // HMR 重入：先解除旧代际 spec（同 id 重复注册会触发注册表碰撞告警）
+    this._shortcutOffs.forEach((off) => {
+      off();
+    });
+    this._shortcutOffs = [];
     // 3D 全屏会话激活时让路：Ctrl+F 会把用户踢去树面板搜索框、Delete 会误删选中
     // 模型、方向键与 3D 相机平移冲突——3D 打开期间树面板不接管任何全局按键。
-    // 契约收编（ADR-175 M1）：统一走 ui/overlay-active 权威查询，不裸查 DOM。
-    if (isPreviewOverlayActive()) return;
-    const target = e.target as HTMLElement | null;
-    if (this._onKeyFind(e)) return;
-    if (await this._onKeyDelete(e, target)) return;
-    this._onKeyArrowNav(e, target);
+    const yieldTo3D = (): boolean => !isPreviewOverlayActive();
+    this._shortcutOffs = [
+      registerShortcut({
+        id: "tree:find",
+        combo: ["Ctrl+F", "Meta+F"],
+        when: yieldTo3D,
+        handler: (e) => {
+          e.preventDefault();
+          this.focusSearch();
+        },
+      }),
+      registerShortcut({
+        id: "tree:delete",
+        combo: ["Delete", "Del"],
+        when: yieldTo3D,
+        handler: (e) => void this._onKeyDelete(e, e.target as HTMLElement | null),
+      }),
+      // 方向键为列表导航语义（B 级 bindListKeyboard 泛化候选，暂原样收编）；
+      // 裸键匹配 = 无修饰键（原实现放行 Shift+方向键属漏查，此处按 ARIA 规范收紧）
+      registerShortcut({
+        id: "tree:nav-down",
+        combo: "ArrowDown",
+        when: yieldTo3D,
+        handler: (e) => this._onKeyArrowNav(e, e.target as HTMLElement | null),
+      }),
+      registerShortcut({
+        id: "tree:nav-up",
+        combo: "ArrowUp",
+        when: yieldTo3D,
+        handler: (e) => this._onKeyArrowNav(e, e.target as HTMLElement | null),
+      }),
+    ];
   }
 
   /** 聚焦仓库搜索框（ADR-223：nav repo:focus-search + Ctrl+F 共用入口） */
@@ -453,15 +485,6 @@ export class AppTree extends WebComponentBase {
       srch.focus();
       srch.select();
     }
-  }
-
-  private _onKeyFind(e: KeyboardEvent): boolean {
-    if ((e.ctrlKey || e.metaKey) && e.key === "f") {
-      e.preventDefault();
-      this.focusSearch();
-      return true;
-    }
-    return false;
   }
 
   private async _onKeyDelete(e: KeyboardEvent, target: HTMLElement | null): Promise<boolean> {

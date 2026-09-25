@@ -204,7 +204,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 554 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 577 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -383,9 +383,9 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/app-modules.ts` | 29 |
-| runStartupSteps | `frontend/src/app-modules.ts` | 89 |
-| (顶层) | `frontend/src/app-modules.ts` | 174 |
+| (顶层) | `frontend/src/app-modules.ts` | 30 |
+| runStartupSteps | `frontend/src/app-modules.ts` | 90 |
+| (顶层) | `frontend/src/app-modules.ts` | 175 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
@@ -533,12 +533,12 @@
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 443 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 500 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 510 |
-| toastThrottled | `frontend/src/views/app-tree/index.ts` | 69 |
-| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 322 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 477 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 485 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 607 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 614 |
+| toastThrottled | `frontend/src/views/app-tree/index.ts` | 70 |
+| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 325 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 500 |
+| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 508 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 630 |
+| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 637 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | runImport | `frontend/src/views/app-tree/toolbar-commands.ts` | 60 |
@@ -596,7 +596,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 249 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 252 |
 
 ### `ui:card-density`
 

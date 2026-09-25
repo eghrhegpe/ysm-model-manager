@@ -19,6 +19,7 @@ auto_fields:
     - bindEditEvents
     - BrowseMode
     - BrowseModeRef
+    - buildCreatorEditCard
     - buildSiteHtml
     - BuildSiteHtmlCtx
     - CleanupFn

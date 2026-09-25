@@ -261,8 +261,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 384 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 411 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 388 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 415 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -318,7 +318,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 214 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 218 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 357 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
@@ -436,14 +436,14 @@
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 307 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
-| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 78 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 119 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 156 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 163 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 186 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 207 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 231 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 313 |
+| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 82 |
+| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 123 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 160 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 167 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 190 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 211 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 235 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 317 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 152 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 166 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 185 |
@@ -463,12 +463,12 @@
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 127 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 179 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 217 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 224 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 298 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 305 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 321 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 180 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 218 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 225 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 299 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 306 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 322 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 169 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 320 |
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 129 |

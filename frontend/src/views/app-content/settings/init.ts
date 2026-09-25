@@ -22,6 +22,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { initDefaultPagePrefs } from "./default-page.ts";
 import { initKeymap } from "./keymap.ts";
 import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-cards.ts";
+import { MIRROR_SOURCES, type MirrorSource } from "./settings-schema.ts";
 import type { SettingsCfg } from "./store.ts";
 import { getCfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
 import { initThemeSection } from "./theme.ts";
@@ -31,12 +32,13 @@ import { initWorkerPrefs } from "./worker-prefs.ts";
 // 高级面板折叠动画时长（ms）——与 CSS 过渡时长一致（魔法数值收敛）
 const ADV_COLLAPSE_MS = 200;
 
-// 镜像源 / 链接模式提示条 key（与 <*-hint-<key>> 显隐、i18n 名映射一致）
-const MIRROR_KEYS = ["direct", "jsdelivr", "githubapi"] as const;
+// 镜像源 / 链接模式提示条 key（与 <*-hint-<key>> 显隐、i18n 名映射一致）。
+// MIRROR_KEYS 已迁 settings-schema.ts 的 MIRROR_SOURCES（ADR-307 D3：枚举单一来源，去本地副本）。
 const LINK_MODE_KEYS = ["copy", "hardlink", "symlink"] as const;
 
-// 镜像名 → i18n 键（替代三元链）
-const MIRROR_I18N_KEY: Record<string, LocaleKey> = {
+// 镜像名 → i18n 键（替代三元链）。键收紧为 MirrorSource 联合——加镜像源漏文案键即编译期红，
+// 不再靠运行时 ?? 兜底掩盖漏键（ADR-307 D3 收口 B3 真瓶颈）。
+const MIRROR_I18N_KEY: Record<MirrorSource, LocaleKey> = {
   jsdelivr: "settings.mirror.nameJsdelivr",
   githubapi: "settings.mirror.nameGithubapi",
   direct: "settings.mirror.nameDirect",
@@ -57,12 +59,14 @@ function applyHintVisibility(
 
 /** 镜像提示显隐封装 */
 function applyMirrorHints(root: ShadowRoot, activeKey: string): void {
-  applyHintVisibility(root, "mirror-hint", activeKey, MIRROR_KEYS);
+  applyHintVisibility(root, "mirror-hint", activeKey, MIRROR_SOURCES);
 }
 
-/** 镜像名 i18n 文案（默认 direct） */
-function mirrorName(val: string): string {
-  return t(MIRROR_I18N_KEY[val] ?? "settings.mirror.nameDirect");
+/** 镜像名 i18n 文案。select.value 可能是 ""（UI 层 direct 的空值约定，settings-schema.ts 注释），
+ *  归一为 "direct" 再索引联合映射；值域外的裸值靠 select 选项约束，不再 ?? 兜底掩盖漏键 */
+function mirrorName(raw: string): string {
+  const key: MirrorSource = raw === "" ? "direct" : (raw as MirrorSource);
+  return t(MIRROR_I18N_KEY[key]);
 }
 
 /** 镜像源切换：写回 Go 端 + success toast；失败走 toastErrorLocal；并切换提示显隐 */

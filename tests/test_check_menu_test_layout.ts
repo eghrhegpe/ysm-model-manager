@@ -111,6 +111,40 @@ check("R-L3 索引：nodes[i]/nodes![i]/getMenuNodes()[i] 命中；[0] 亦计", 
   );
 });
 
+check(
+  "SCENE_GRAPH_MARKERS 豁免：含 THREE 标记词的 index-access 不报",
+  () => {
+    // 场景图 nodes（THREE.Object3D 子节点）的索引访问不应被菜单布局闸命中
+    assert.deepEqual(
+      hitLines(
+        `const mesh = scene.children[0] as THREE.Mesh;`,
+        "index-access",
+      ),
+      [],
+    );
+    assert.deepEqual(
+      hitLines(
+        `const obj = group.children[1] as THREE.Object3D;`,
+        "index-access",
+      ),
+      [],
+      "THREE.Object3D 标记在匹配后 80 字符内 → 豁免",
+    );
+  },
+);
+
+check("SCENE_GRAPH_MARKERS 不泛化：真菜单树 index-access 仍命中", () => {
+  // 菜单树节点（PreviewMenuNode[]）的位置索引仍应被 R-L3 命中
+  // （无 THREE/DOM 标记词 → 不豁免）
+  assert.deepEqual(
+    hitLines(
+      `const folder = nodes[1]!;`,
+      "index-access",
+    ),
+    [1],
+  );
+});
+
 check("豁免注记：layout-assert: <理由> 放行；无注记或空理由仍报", () => {
   assert.deepEqual(
     hitLines(

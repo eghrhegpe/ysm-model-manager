@@ -537,7 +537,7 @@ export class GroundCapability implements SceneCapability {
           // 口径对齐 infra/preview-loading showLoadFailure：bus 发 toast，cap 不直接碰 DOM。
           dbg("ground-tex-load-fail", { name: file.name });
           bus.emit("toast:show", {
-            msg: `❌ ${t("preview.groundMatLoadFailed")}: ${file.name}`,
+            msg: `${t("preview.groundMatLoadFailed")}: ${file.name}`,
             duration: TOAST_MS.normal,
             type: "error",
           });

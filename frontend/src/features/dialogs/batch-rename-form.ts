@@ -49,7 +49,7 @@ function dgBrApplyReplace(
       if (cnt2 && !cnt2.dataset.regexErr) {
         cnt2.dataset.regexErr = "1";
         bus.emit("toast:show", {
-          msg: `⚠️ ${t("dialog.regexInvalid")}`,
+          msg: `${t("dialog.regexInvalid")}`,
           duration: TOAST_MS.normal,
           type: "warn",
         });
@@ -278,7 +278,7 @@ function dgBrBindApplyClick(
     });
     if (dup) {
       bus.emit("toast:show", {
-        msg: `❌ ${t("dialog.renameConflict", { name: dup.newName })}`,
+        msg: `${t("dialog.renameConflict", { name: dup.newName })}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });
@@ -297,7 +297,7 @@ function dgBrBindApplyClick(
       );
     } catch (e) {
       bus.emit("toast:show", {
-        msg: `❌ ${t("dialog.batchRenameFailed")}: ${friendlyError(e)}`,
+        msg: `${t("dialog.batchRenameFailed")}: ${friendlyError(e)}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });

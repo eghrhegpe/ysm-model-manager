@@ -61,7 +61,7 @@ export async function handleTreeDrop(
       const files = Array.from(e.dataTransfer?.files || []);
       if (files.length === 0) {
         bus.emit("toast:show", {
-          msg: "⚠️ 网页版暂不支持文件夹导入，请拖入 .ysm 等模型文件",
+          msg: "网页版暂不支持文件夹导入，请拖入 .ysm 等模型文件",
           duration: TOAST_MS.verbose,
           type: "warn",
         });
@@ -90,7 +90,7 @@ export async function handleTreeDrop(
     const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
     if (oversized.length > 0) {
       bus.emit("toast:show", {
-        msg: `⚠️ ${oversized.length} 个文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限已跳过（${oversized[0].file.name}${oversized.length > 1 ? " 等" : ""}）`,
+        msg: `${oversized.length} 个文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限已跳过（${oversized[0].file.name}${oversized.length > 1 ? " 等" : ""}）`,
         duration: TOAST_MS.long,
         type: "warn",
       });
@@ -221,7 +221,7 @@ export function bindTreeDnD(
       bus.emit("toast:show", {
         // 显式化：friendlyError 展示 Go 结构化错误（ADR-082 续），
         // 未归类 Code 透传 Reason/Suggestion 并剥离内部路径
-        msg: `❌ ${t("import.processError")}: ${friendlyError(err)}`,
+        msg: `${t("import.processError")}: ${friendlyError(err)}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });

@@ -102,7 +102,7 @@ async function runBatchRename(
   await reload(vm);
   bus.emit("stats:refresh");
   bus.emit("toast:show", {
-    msg: `✅ ${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
+    msg: `${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
     duration: TOAST_MS.normal,
     type: fail > 0 ? "warn" : "success",
   });
@@ -130,7 +130,7 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
     bus.emit("stats:refresh");
   } catch (e) {
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(e)}`,
+      msg: `${friendlyError(e)}`,
       duration: TOAST_MS.normal,
       type: "error",
     });
@@ -155,7 +155,7 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
     await reload(vm);
   } catch (e) {
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(e)}`,
+      msg: `${friendlyError(e)}`,
       duration: TOAST_MS.normal,
       type: "error",
     });
@@ -212,7 +212,7 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     });
   } catch (e) {
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(e)}`,
+      msg: `${friendlyError(e)}`,
       duration: TOAST_MS.normal,
       type: "error",
     });
@@ -243,7 +243,7 @@ async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void>
     );
   } catch (e) {
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(e)}`,
+      msg: `${friendlyError(e)}`,
       duration: TOAST_MS.normal,
       type: "error",
     });
@@ -265,7 +265,7 @@ async function atBeHandleBatchRename(vm: AppTree, paths: string[]): Promise<void
     );
   } catch (e) {
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(e)}`,
+      msg: `${friendlyError(e)}`,
       duration: TOAST_MS.normal,
       type: "error",
     });
@@ -307,7 +307,7 @@ async function reload(vm: AppTree): Promise<void> {
     logWarn("bus", "reload 失败:", err);
     vm.entries = [];
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(err, t("tree.reloadFailed"))}`,
+      msg: `${friendlyError(err, t("tree.reloadFailed"))}`,
       duration: TOAST_MS.long,
       type: "error",
     });
@@ -382,7 +382,7 @@ async function runBatchToggle(
     });
   } catch (err) {
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(err)}`,
+      msg: `${friendlyError(err)}`,
       duration: TOAST_MS.normal,
       type: "error",
     });

@@ -115,7 +115,7 @@ describe("runLauncherDetect", () => {
     }
   });
 
-  it("实例检测失败 → error toast（❌ 统一出口）", async () => {
+  it("实例检测失败 → error toast（ADR-298：type 驱动图标，msg 无 ❌ 前缀）", async () => {
     const app = mockApp({
       DetectLauncherInstances: vi.fn().mockRejectedValue(new Error("detect boom")),
     });
@@ -126,7 +126,7 @@ describe("runLauncherDetect", () => {
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("error");
-      expect((toasts[0].msg || "").startsWith("❌")).toBe(true);
+      expect((toasts[0].msg || "").startsWith("❌")).toBe(false);
     } finally {
       off();
     }

@@ -30,7 +30,7 @@ function toastLoadError(err: unknown): void {
   if (now - _lastErrorToastAt < ERROR_TOAST_MIN_GAP) return;
   _lastErrorToastAt = now;
   bus.emit("toast:show", {
-    msg: `❌ ${t("tree.loadFailed")}: ${friendlyError(err, t("tree.repoLoadFailed"))}`,
+    msg: `${t("tree.loadFailed")}: ${friendlyError(err, t("tree.repoLoadFailed"))}`,
     duration: TOAST_MS.long,
     type: "error",
   });

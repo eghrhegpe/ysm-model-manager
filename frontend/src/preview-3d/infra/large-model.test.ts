@@ -52,7 +52,7 @@ describe("warnLargeModelIfNeeded", () => {
     const [evt, payload] = spy.mock.calls[0] as [string, { type: string; msg: string }];
     expect(evt).toBe("toast:show");
     expect(payload.type).toBe("warn");
-    expect(payload.msg).toContain("⚠️");
+    expect(payload.msg).not.toContain("⚠️"); // ADR-298：type 驱动 warn 图标，msg 无前缀
   });
 
   it("同路径重复调用 → 只提示一次（防 toast 轰炸）", () => {

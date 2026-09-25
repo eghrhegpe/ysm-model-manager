@@ -217,7 +217,7 @@ export function runToolbarCommand(action: string, ctx: ToolbarCommandCtx, el: HT
   if (!cmd) return;
   void Promise.resolve(cmd(ctx, el)).catch((err) => {
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(err)}`,
+      msg: `${friendlyError(err)}`,
       duration: TOAST_MS.verbose,
       type: "error",
     });

@@ -180,7 +180,7 @@ class AppToast extends WebComponentBase {
           // P3 修复（审核发现）：内部反馈统一走 bus——原 this.show 绕过 bus，
           // error-diary 的 toast:show 监听收不到（用户可见错误漏出日记链）
           bus.emit("toast:show", {
-            msg: `✅ ${translate("toast.undone")}`,
+            msg: `${translate("toast.undone")}`,
             duration: OK_TOAST_MS,
             type: "success",
           });

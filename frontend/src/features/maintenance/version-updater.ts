@@ -166,7 +166,7 @@ async function promptUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Pro
     await doUpdate(info, statusEl);
   } catch (e) {
     bus.emit("toast:show", {
-      msg: `❌ ${t("update.failed")}: ${friendlyError(e)}`,
+      msg: `${t("update.failed")}: ${friendlyError(e)}`,
       duration: TOAST_MS.long,
       type: "error",
     });
@@ -201,7 +201,7 @@ export async function checkUpdateSilent(): Promise<void> {
           // 错误边界不对称，ADR-044 ①）
           promptUpdate(info, null).catch((e) => {
             bus.emit("toast:show", {
-              msg: `❌ ${friendlyError(e)}`,
+              msg: `${friendlyError(e)}`,
               duration: TOAST_MS.long,
               type: "error",
             });
@@ -258,7 +258,7 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
       if (!info?.available) {
         bus.emit("toast:show", {
           // null（绑定契约允许）视为不可用；info?.current ?? "" 兜底避免空括号
-          msg: `✅ ${t("update.latest", { version: info?.current ?? "" })}`,
+          msg: `${t("update.latest", { version: info?.current ?? "" })}`,
           duration: TOAST_MS.normal,
           type: "success",
         });
@@ -267,7 +267,7 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
       await promptUpdate(info, btn);
     } catch (e) {
       bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e)}`,
+        msg: `${friendlyError(e)}`,
         duration: TOAST_MS.long,
         type: "error",
       });

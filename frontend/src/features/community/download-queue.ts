@@ -334,7 +334,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
   } catch (e) {
     rollbackToIdle();
     bus.emit("toast:show", {
-      msg: `❌ ${t("workshop.enqueueFailed")}: ${safeErrorMessage(e)}`,
+      msg: `${t("workshop.enqueueFailed")}: ${safeErrorMessage(e)}`,
       duration: TOAST_MS.verbose,
       type: "error",
     });

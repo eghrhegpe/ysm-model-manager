@@ -145,7 +145,7 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
   } catch (err) {
     // 失败不静默：显示空整合包列表会误导用户以为没装实例
     bus.emit("toast:show", {
-      msg: `❌ ${t("sidebar.loadFailed")}: ${friendlyError(err, t("sidebar.loadFailedDetail"))}`,
+      msg: `${t("sidebar.loadFailed")}: ${friendlyError(err, t("sidebar.loadFailedDetail"))}`,
       duration: TOAST_MS.long,
       type: "error",
     });

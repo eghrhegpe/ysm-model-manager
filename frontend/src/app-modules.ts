@@ -28,7 +28,7 @@ export const loadView = (name: string, importer: () => Promise<unknown>): Promis
     .catch((e) => {
       console.warn(`[module] 组件加载失败: ${name}`, e);
       bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e, "组件加载失败")}`,
+        msg: `${friendlyError(e, "组件加载失败")}`,
         duration: TOAST_MS.long,
         type: "error",
       });

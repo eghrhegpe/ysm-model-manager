@@ -135,7 +135,7 @@ function atTlBindAdvFilter(ctx: AtTlCtx): void {
     dbg("adv-filter", "btn:click");
     openAdvFilterDialog($, vm).catch((e) => {
       bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e, t("tree.advFilterFail"))}`,
+        msg: `${friendlyError(e, t("tree.advFilterFail"))}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });

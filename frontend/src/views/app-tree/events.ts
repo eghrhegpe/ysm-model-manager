@@ -134,7 +134,7 @@ function atTeOpenAuthor(author: string): void {
     .catch((err) => {
       logWarn("tree", "OpenInBrowser 失败:", err);
       bus.emit("toast:show", {
-        msg: `❌ ${t("tree.browserFailed")}`,
+        msg: `${t("tree.browserFailed")}`,
         duration: TOAST_MS.normal,
         type: "error",
       });
@@ -190,7 +190,7 @@ function atTeClickRowCopy(_ctx: AtTeCtx, e: MouseEvent, haCopy: HTMLElement): bo
     })
     .catch(() => {
       bus.emit("toast:show", {
-        msg: `❌ ${t("tree.copyFailed")}`,
+        msg: `${t("tree.copyFailed")}`,
         duration: TOAST_MS.success,
         type: "error",
       });
@@ -392,7 +392,7 @@ function atTeBindRenameInput(ctx: AtTeCtx): () => void {
       })
       .catch((err) => {
         bus.emit("toast:show", {
-          msg: `❌ ${friendlyError(err, t("ctx.renameFail"))}`,
+          msg: `${friendlyError(err, t("ctx.renameFail"))}`,
           duration: TOAST_MS.verbose,
           type: "error",
         });
@@ -519,7 +519,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     });
   } catch (err) {
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(err, t("tree.batchToggleFail"))}`,
+      msg: `${friendlyError(err, t("tree.batchToggleFail"))}`,
       duration: TOAST_MS.long,
       type: "error",
     });

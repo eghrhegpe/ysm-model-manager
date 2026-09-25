@@ -253,7 +253,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(el.selectState.lastKey).toBeNull();
     await waitFor(() => toastCalls().some(([ev]) => ev === "toast:show"));
     expect(getToast()).toMatchObject({
-      msg: "✅ " + t("tree.deleted", { ok: 2, fail: 0 }),
+      msg: t("tree.deleted", { ok: 2, fail: 0 }),
       type: "success",
     });
     // 重载后树仍渲染
@@ -279,7 +279,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     dispatchKey("Delete");
     await waitFor(() => toastCalls().some(([ev]) => ev === "toast:show"));
     expect(getToast()).toMatchObject({
-      msg: "✅ " + t("tree.deleted", { ok: 1, fail: 1 }),
+      msg: t("tree.deleted", { ok: 1, fail: 1 }),
       type: "success",
     });
   });
@@ -330,7 +330,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     getAppMock.mockRejectedValueOnce(new Error("bridge down"));
     dispatchKey("Delete");
     await waitFor(() => toastCalls().some(([ev]) => ev === "toast:show"));
-    expect(getToast()!.msg.startsWith("❌")).toBe(true);
+    expect(getToast()!.msg.startsWith("❌")).toBe(false);
     expect(bindings.DeleteResourcePack).not.toHaveBeenCalled();
     expect(el.selectState.keys.size).toBe(2); // 失败不清空选中
     expect(el.shadowRoot!.getElementById("tree")).not.toBeNull();

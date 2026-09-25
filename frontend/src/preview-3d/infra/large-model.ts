@@ -63,7 +63,7 @@ export function warnLargeModelIfNeeded(bytes: number, path: string): void {
   const sizeMb = Math.round(bytes / (1024 * 1024));
   const peakMb = Math.round((bytes * PEAK_MEMORY_FACTOR) / (1024 * 1024));
   bus.emit("toast:show", {
-    msg: `⚠️ ${t("preview.largeModelWarn", { size: sizeMb, peak: peakMb })}`,
+    msg: `${t("preview.largeModelWarn", { size: sizeMb, peak: peakMb })}`,
     duration: TOAST_MS.verbose,
     type: "warn",
   });

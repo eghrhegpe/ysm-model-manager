@@ -98,7 +98,7 @@ function toastThrottled(e: unknown, fallback: string): void {
   if (now - _lastMountErrorToastAt < MOUNT_ERROR_TOAST_MIN_GAP) return;
   _lastMountErrorToastAt = now;
   bus.emit("toast:show", {
-    msg: `❌ ${friendlyError(e, fallback)}`,
+    msg: `${friendlyError(e, fallback)}`,
     duration: TOAST_MS.long,
     type: "error",
   });
@@ -417,7 +417,7 @@ export class AppTree extends WebComponentBase {
     } catch (e) {
       logError("app-tree", "root change Error", e);
       bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e)}`,
+        msg: `${friendlyError(e)}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });
@@ -722,14 +722,14 @@ export class AppTree extends WebComponentBase {
       if (this._guard.stale(gen)) return; // P2-1 root 切换/新加载已发起 → 丢弃过期渲染
       this._renderTree();
       bus.emit("toast:show", {
-        msg: `✅ ${t("tree.deleted", { ok, fail: fail || 0 })}`,
+        msg: `${t("tree.deleted", { ok, fail: fail || 0 })}`,
         duration: TOAST_MS.normal,
         type: "success",
       });
     } catch (e) {
       // P2 修复：getApp/删除/刷新任一环节失败都要有出口，避免 unhandled rejection 静默
       bus.emit("toast:show", {
-        msg: `❌ ${friendlyError(e)}`,
+        msg: `${friendlyError(e)}`,
         duration: TOAST_MS.long,
         type: "error",
       });

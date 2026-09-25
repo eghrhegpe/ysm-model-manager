@@ -40,7 +40,7 @@ export interface BusyGuard {
 
 const toastError = (error: unknown): void => {
   bus.emit("toast:show", {
-    msg: `❌ ${friendlyError(error)}`,
+    msg: `${friendlyError(error)}`,
     duration: TOAST_MS.verbose,
     type: "error",
   });

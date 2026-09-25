@@ -187,7 +187,7 @@ export function createImportSession(): ImportSession {
     } catch (e) {
       console.error("[import-web] importWebFiles 失败:", e);
       bus.emit("toast:show", {
-        msg: `❌ ${t("import.processError")}: ${friendlyError(e)}`,
+        msg: `${t("import.processError")}: ${friendlyError(e)}`,
         duration: TOAST_MS.verbose,
         type: "error",
       });

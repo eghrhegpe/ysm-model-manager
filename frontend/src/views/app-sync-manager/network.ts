@@ -58,7 +58,7 @@ export async function performSingleOp(
   } catch (e) {
     if (!self.isConnected) return;
     bus.emit("toast:show", {
-      msg: `❌ ${friendlyError(e)}`,
+      msg: `${friendlyError(e)}`,
       duration: TOAST_MS.normal,
       type: "error",
     });

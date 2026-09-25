@@ -13,7 +13,6 @@ import { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.
 import { FogCapability } from "@/preview-3d/caps/fog-capability.ts";
 import { GroundCapability } from "@/preview-3d/caps/ground-capability.ts";
 import { ReflectorCapability } from "@/preview-3d/caps/reflector-capability.ts";
-import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
 import { WaterCapability } from "@/preview-3d/caps/water-capability.ts";
 import { ENV_PRESETS } from "@/preview-3d/caps/environment-state.ts";

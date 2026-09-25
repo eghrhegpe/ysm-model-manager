@@ -4,7 +4,7 @@
 import { describe, it, expect } from "vitest";
 import { renderCapToggle } from "@/preview-3d/menu/render/cap-controls.ts";
 import { nodeControlToView } from "@/preview-3d/menu/render/render.ts";
-import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
+import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import { morphNodes, type MorphMeshLike } from "./morph-controls.ts";
 
 /** 三表情 mesh：微笑(0)/怒(1)/哀(2)，怒已激活（1），其余 0 */

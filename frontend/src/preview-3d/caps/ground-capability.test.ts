@@ -6,7 +6,7 @@ import { GroundCapability } from "./ground-capability.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
-import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
+import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCanvasStyle, GroundSurfaceMode } from "./ground-surface-spec.ts";
 import {

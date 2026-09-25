@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { AnimationClip } from "@/utils/animation/animation.ts";
-import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
+import { findNodeById } from "@/preview-3d/menu/menu-test-helpers.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
@@ -479,7 +479,7 @@ type MenuItemShape = {
   kind: string;
   dockGroup?: string;
   schemaId?: string;
-  children?: Array<{ id: string; kind: string; label?: string; control?: { get?: (v?: unknown) => unknown; set?: (v: unknown) => void } }>;
+  children?: import("@/preview-3d/menu/schema/menu-node-types.ts").PreviewMenuNode[];
 };
 
 function directMenuOpts(over: Partial<Parameters<typeof ysmMenuItems>[0]> = {}) {

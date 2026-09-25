@@ -11,7 +11,6 @@ import type { YsmModel, YsmContentHandle } from "@/preview-3d/infra/content-brid
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 const mocks = vi.hoisted(() => ({
   preloadModel: vi.fn(),

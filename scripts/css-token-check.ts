@@ -28,6 +28,10 @@
  *   node scripts/css-token-check.ts --strict   # WARN 也 exit 1（接 pre-push 前需先清空 allow 外命中）
  *   YSM_SKIP_TOKEN_CHECK=1 node ...            # 逃生阀
  *
+ * 依赖：node:fs / node:path / node:url + 仓内 _lib/css-layer-utils.ts / _lib/scan-files.ts（零外部依赖）
+ * 设计意图：UI-Design.md §10「禁止硬编码」的可执行断言——规范靠记忆必漂移（--card-padding 有真值仍被
+ *   手抄、--shadow-* 被裸盒阴影绕过），本闸把「视图层裸值」变成阻断信号，适用场景 = pre-push 前端域门禁。
+ *
  * 退出码：默认 0；--strict 且存在 WARN → 1。
  */
 
@@ -244,9 +248,8 @@ function extractClassContext(
     // 跳过伪命中：模板字符串内联 HTML/CSS（body 含引号/尖括号说明是字符串内容，非真实 shadow CSS 块；
     // 内联 style 由 extractInlineBare 单独处理）。selector 含引号/尖括号同理跳过。
     if (/["'<>]/.test(selector) || /["'<>]/.test(body)) continue;
-    // 取主类名（首个 .foo）
-    const clsMatch = selector.match(/\.([\w-]+)/);
-    const cls = clsMatch ? clsMatch[1] : selector;
+    // 取主类名（首个 .foo）；noUncheckedIndexedAccess 下 match 组仍是 string|undefined，?? 兜 selector
+    const cls = selector.match(/\.([\w-]+)/)?.[1] ?? selector;
     const props: { prop: string; raw: string }[] = [];
     for (const pm of body.matchAll(BARE_VALUE_RE)) {
       const prop = (pm[1] ?? "").trim();

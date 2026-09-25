@@ -696,6 +696,8 @@ export const en: Record<string, string> = {
   "content.filterCreator": "Creators",
   "content.filterOfficial": "Official",
   "content.emptyCreators": "No creators yet",
+  "content.noMatchCreators": "No creators match the filter",
+  "content.clearFilter": "Clear Filter",
   "content.tierGold": "Top 10% by local models",
   "content.tierSilver": "Top 25%",
   "content.browseLocalModels": "Browse Local Models",

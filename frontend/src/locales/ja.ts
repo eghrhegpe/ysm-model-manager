@@ -691,6 +691,8 @@ export const ja: Record<string, string> = {
   "content.filterCreator": "クリエイター",
   "content.filterOfficial": "公式",
   "content.emptyCreators": "クリエイターがいません",
+  "content.noMatchCreators": "条件に一致するクリエイターがいません",
+  "content.clearFilter": "フィルターをクリア",
   "content.tierGold": "ローカルモデル数 Top 10%",
   "content.tierSilver": "Top 25%",
   "content.browseLocalModels": "ローカルモデルを参照",

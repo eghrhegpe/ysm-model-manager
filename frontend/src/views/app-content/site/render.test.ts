@@ -94,7 +94,7 @@ describe("buildSiteHtml 浏览态", () => {
     // 空态走居中空态原语（content-layout .placeholder-box--roomy），不再是站点私有的 .cr-empty-site
     expect(root.querySelector(".placeholder-box.placeholder-box--roomy")).toBeTruthy();
     expect(root.querySelector("[data-local-empty]")).toBeTruthy();
-    expect(root.querySelector("#ws-cr-count")?.textContent).toBe("(0)");
+    expect(root.querySelector("#ws-cr-count")?.textContent).toBe("(0/0)");
     expect(root.querySelector(".cr-fetch-btn")).toBeTruthy();
     expect(root.querySelector(".cr-edit-btn")).toBeTruthy();
     expect(root.querySelector(".cr-tag-filter-row")).toBeNull();
@@ -106,7 +106,7 @@ describe("buildSiteHtml 浏览态", () => {
     const creators = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
     const ctx = makeCtx({ creators, searchKw: "猫" });
     const root = renderHtml(ctx);
-    expect(root.querySelector("#ws-cr-count")?.textContent).toBe("(2)");
+    expect(root.querySelector("#ws-cr-count")?.textContent).toBe("(2/2)");
     expect(
       (root.querySelector("#ws-cr-search") as HTMLInputElement).value,
     ).toBe("猫");
@@ -217,7 +217,7 @@ describe("buildSiteHtml 编辑态", () => {
     expect(cards[0]?.getAttribute("data-edit-idx")).toBe("0");
   });
 
-  it("8. 编辑态创作者卡：name/desc 回填 + type 多选 selected 命中 + role 单选 selected", () => {
+  it("8. 编辑态创作者卡：name/desc 回填 + type badge 组 active 命中 + role 单选 selected（P1-5）", () => {
     const site = { id: "siteA" } as WorkshopSite;
     const allSites = [
       { id: "siteA", label: "站点A" },
@@ -228,10 +228,13 @@ describe("buildSiteHtml 编辑态", () => {
     const card = root.querySelector(".cr-edit-card:not([data-edit='preset'])") as HTMLElement;
     expect((card.querySelector('input[data-fld="name"]') as HTMLInputElement).value).toBe("甲");
     expect((card.querySelector('input[data-fld="desc"]') as HTMLInputElement).value).toBe("描述甲");
-    const typeSel = card.querySelector('select[data-fld="type"]') as HTMLSelectElement;
-    expect(typeSel.options).toHaveLength(2);
-    expect(typeSel.options[0]?.selected).toBe(true);
-    expect(typeSel.options[1]?.selected).toBe(false);
+    // P1-5：platform 控件从 `<select multiple>` 改 badge 组——不再有 select[data-fld="type"]
+    const typeGroup = card.querySelector('.cr-site-chip-group[data-fld="type"]') as HTMLElement;
+    expect(typeGroup).toBeTruthy();
+    const chips = [...typeGroup.querySelectorAll<HTMLElement>(".cr-site-chip")];
+    expect(chips.map((c) => c.dataset.siteId)).toEqual(["siteA", "siteB"]);
+    expect(chips[0]?.classList.contains("active")).toBe(true); // type="siteA" 命中
+    expect(chips[1]?.classList.contains("active")).toBe(false);
     const roleSel = card.querySelector('select[data-fld="role"]') as HTMLSelectElement;
     expect([...roleSel.options].find((o) => o.selected)?.value).toBe("official");
   });

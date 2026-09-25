@@ -90,6 +90,22 @@ export function getTagDisplayLabel(tag: string): string {
   return identity.tag === tag ? identity.label : tag;
 }
 
+// ===== 站点归属 type 解析（P1-6 锐评：多值属性分号压扁的反范式——解析单点收口） =====
+/**
+ * type 字段是「创作者所属站点」的分号分隔多值（Go 契约：`"site1;site2"`）。
+ * 全仓消费点曾各自 split/join（P1-6 统计 7 处），语义如「过滤 belongs / 展示 badge /
+ * 编辑多选 selected」各有微差；收口为纯函数单点，消费方统一调用。
+ * 返回去空段的有序站点 id 数组；空/undefined 输入 → []。
+ */
+export function parseSiteIds(type?: string): string[] {
+  return (type || "").split(";").filter(Boolean);
+}
+
+/** parseSiteIds 的逆：站点 id 数组 → 分号串（空数组 → ""）。 */
+export function joinSiteIds(ids: string[]): string {
+  return ids.filter(Boolean).join(";");
+}
+
 // ===== 收藏工具 =====
 export function loadFavs(): string[] {
   return safeGetJSON<string[]>(STORAGE_KEY, []);

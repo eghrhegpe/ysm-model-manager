@@ -32,10 +32,12 @@ auto_fields:
     - getTagDisplayLabel
     - getTagFromRole
     - isFaved
+    - joinSiteIds
     - loadBrowseMode
     - loadFavs
     - LocalCreatorLike
     - parseDescTags
+    - parseSiteIds
     - renderSiteView
     - RenderSiteViewCtx
     - RepoAuthorLike

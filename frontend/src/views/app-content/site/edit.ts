@@ -13,14 +13,17 @@ import type { WorkshopPresetSearch } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { bindDragSort, type DragStateShell } from "./edit-drag.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
+import { joinSiteIds, parseSiteIds } from "./workshop-data.ts";
 
 interface FilterStateShell {
   activeTag: string;
 }
 
-/** 单个输入控件 → creators[idx][fld] 回写（SELECT 多选拼 ";"，其余带 value 的控件 trim 后直写）。
- *  2026-09 锐评 P0：原 SELECT/INPUT 分支在 eeSyncAllEditInputs 与 eeBindCreatorsEdit 重复 2 处，抽此处收口。
- *  非 select 统一走 value 兜底（HTMLInputElement / HTMLTextAreaElement 等），兑现注释「其余 trim 后直写」。 */
+/** 单个输入控件 → creators[idx][fld] 回写。
+ *  SELECT 多选拼 ";" 已退役（P1-5 锐评：platform 多选控件改 badge 组）；badge 组
+ *  （.cr-site-chip-group[data-fld]）按组内 active chip 的 data-site-id 收拢为分号串；
+ *  其余带 value 的控件 trim 后直写。2026-09 锐评 P0：原 SELECT/INPUT 分支在
+ *  eeSyncAllEditInputs 与 eeBindCreatorsEdit 重复 2 处，抽此处收口。 */
 function syncFieldToCreator(
   inp: HTMLElement,
   creators: LocalCreatorLike[],
@@ -28,11 +31,19 @@ function syncFieldToCreator(
   fld: string,
 ): void {
   if (!creators[idx]) return;
-  if (inp instanceof HTMLSelectElement) {
-    creators[idx][fld] = Array.from(inp.selectedOptions)
-      .map((o) => o.value)
-      .filter(Boolean)
-      .join(";");
+  if (inp.classList.contains("cr-site-chip-group")) {
+    // P1-5：badge 组 → 组内 active chip 的站点 id 集合 → 分号串
+    creators[idx][fld] = joinSiteIds(
+      [...inp.querySelectorAll<HTMLElement>(".cr-site-chip.active")]
+        .map((chip) => chip.dataset.siteId || "")
+        .filter(Boolean),
+    );
+  } else if (inp instanceof HTMLSelectElement) {
+    creators[idx][fld] = joinSiteIds(
+      Array.from(inp.selectedOptions)
+        .map((o) => o.value)
+        .filter(Boolean),
+    );
   } else if ("value" in inp && typeof inp.value === "string") {
     creators[idx][fld] = inp.value.trim();
   }
@@ -82,7 +93,29 @@ function eeApplyFilters(
     if (matchName && matchTag) visible++;
   });
   const countEl = searchResults.querySelector("#ws-cr-count");
+  // P1-4 锐评：计数格式统一为 (visible/total)——原初始态 `(N)` 与筛选后 `(5/12)` 跳变；
+  // 筛选结果无可见卡时网格全折叠成空白，用户以为是页面坏了 → 显式空态 + 清除按钮出口。
   if (countEl) countEl.textContent = `(${visible}/${cards.length})`;
+  // 空态容器：布局于网格之后（全折叠时 grid 高度收缩，空态紧贴标题栏），id 供切换复用
+  let emptyEl = searchResults.querySelector<HTMLElement>("#cr-filter-empty");
+  if (visible === 0 && cards.length > 0) {
+    if (!emptyEl) {
+      emptyEl = document.createElement("div");
+      emptyEl.id = "cr-filter-empty";
+      emptyEl.className = "placeholder-box placeholder-box--roomy";
+      emptyEl.dataset.testid = "cr-filter-empty";
+      emptyEl.innerHTML =
+        t("content.noMatchCreators") +
+        '<br><button class="cr-local-btn" data-clear-filter>' +
+        t("content.clearFilter") +
+        "</button>";
+      const grid = searchResults.querySelector("#cr-creator-grid");
+      (grid || searchResults).appendChild(emptyEl);
+      // 清除按钮走事件委托已在 eeBindGithubFilter 里绑定（点击即复位筛选）
+    }
+  } else if (emptyEl) {
+    emptyEl.remove();
+  }
 }
 
 function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: AbortSignal): void {
@@ -135,7 +168,7 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
         // 锐评 P0-2a 配套：空名条目（cr-add 新增后未改名）不落盘——防未填写的占位行
         // 变垃圾数据；语言串不再当默认名（见 eeBindCreatorsEdit 的 cr-add）。
         const siteCreators = creators.filter(
-          (cr) => (cr.name || "").trim() && cr.type?.split(";").includes(site.id),
+          (cr) => (cr.name || "").trim() && parseSiteIds(cr.type).includes(site.id),
         );
         // P1-2 锐评：跨站点创作者「解除本站关联」（type 去本站段）的写回——
         // 若漏掉它们，Go 按站整存会移除磁盘上 type 含本站的所有旧条目（包括这些
@@ -283,6 +316,25 @@ function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: 
     );
   });
 
+  // P1-5 锐评：platform badge 组点击切换选中（type 段的 site 归属）——
+  // 与浏览态 badge 同语义；点已选中的 chip 即解除该站归属（可到空，保存时由空名/空归属过滤兜底）。
+  qsa<HTMLElement>(
+    searchResults,
+    ".cr-edit-card:not([data-edit='preset']) .cr-site-chip-group",
+  ).forEach((group) => {
+    group.addEventListener(
+      "click",
+      (e) => {
+        const chip = (e.target as HTMLElement).closest<HTMLElement>(".cr-site-chip");
+        if (!chip) return;
+        chip.classList.toggle("active");
+        const idx = parseInt(group.dataset.idx || "-1", 10);
+        syncFieldToCreator(group, creators, idx, "type");
+      },
+      { signal: sig },
+    );
+  });
+
   qsa<HTMLElement>(searchResults, ".cr-del").forEach((btn) => {
     btn.addEventListener(
       "click",
@@ -295,10 +347,10 @@ function eeBindCreatorsEdit(state: SiteViewState, refreshView: () => void, sig: 
         // 不得从 allCreators 全删：Go 按站整存（移除 type 含本站的旧条目→追加新列表）会把
         // 属于 B 站的条目一并抹掉。多站条目：type 去本站段 + 移入 detached 待保存写回；
         // 单站条目（或 type 缺失/空）：全量删除（本就只属本站，他站无依赖）。
-        const segs = (cr.type || "").split(";").filter(Boolean);
+        const segs = parseSiteIds(cr.type);
         const belongsToOtherSites = segs.some((s) => s !== site.id);
         if (belongsToOtherSites) {
-          cr.type = segs.filter((s) => s !== site.id).join(";");
+          cr.type = joinSiteIds(segs.filter((s) => s !== site.id));
           state.detachedCreators.push(cr);
         } else {
           const realIdx = allCreators.indexOf(cr);
@@ -457,6 +509,31 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
       { signal: sig },
     );
   }
+
+  // P1-4 锐评：零结果空态的「清除筛选」出口——复位关键词 + 标签 + 计数 + 移除空态。
+  // 空态按钮在 eeApplyFilters 动态创建（#cr-filter-empty），此处用文档级事件委托
+  //（searchResults 容器），空态节点创建后可点击，重渲染后仍可命中。
+  searchResults.addEventListener(
+    "click",
+    (e) => {
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest("[data-clear-filter]")) return;
+      fs.activeTag = "";
+      safeSet("ysm-ws-active-tag", "");
+      if (searchInput) {
+        searchInput.value = "";
+        safeSet("ysm-ws-search-kw", "");
+      }
+      searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((b) => {
+        b.classList.toggle(
+          "active",
+          b === searchResults.querySelector('.cr-tag-filter-btn[data-tag=""]'),
+        );
+      });
+      eeApplyFilters(searchResults, searchInput, fs);
+    },
+    { signal: sig },
+  );
 
   qsa<HTMLElement>(searchResults, ".cr-tag-filter-btn").forEach((btn) => {
     btn.addEventListener(

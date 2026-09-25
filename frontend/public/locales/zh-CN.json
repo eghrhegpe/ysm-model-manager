@@ -580,6 +580,8 @@
   "content.filterCreator": "创作者",
   "content.filterOfficial": "官方",
   "content.emptyCreators": "暂无创作者",
+  "content.noMatchCreators": "没有符合条件的创作者",
+  "content.clearFilter": "清除筛选",
   "content.tierGold": "本地模型数 Top 10%",
   "content.tierSilver": "Top 25%",
   "content.browseLocalModels": "浏览本地模型",

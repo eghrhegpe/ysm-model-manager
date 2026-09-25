@@ -10,6 +10,8 @@ import {
   loadFavs,
   isFaved,
   toggleFav,
+  parseSiteIds,
+  joinSiteIds,
 } from "./workshop-data.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 
@@ -120,6 +122,30 @@ describe("parseDescTags", () => {
     expect(parseDescTags(eight)).toEqual([]);
     const six = Array.from({ length: 6 }, (_, i) => `tag${i}`).join("、");
     expect(parseDescTags(six)).toEqual(["tag0", "tag1", "tag2", "tag3", "tag4", "tag5"]);
+  });
+});
+
+describe("parseSiteIds / joinSiteIds（P1-6 锐评：type 分号多值收口）", () => {
+  it("parseSiteIds 切分去空段：标准多站串 / 单站 / 空串 / undefined", () => {
+    expect(parseSiteIds("bilibili;afdian")).toEqual(["bilibili", "afdian"]);
+    expect(parseSiteIds("github")).toEqual(["github"]);
+    expect(parseSiteIds("")).toEqual([]);
+    expect(parseSiteIds(undefined)).toEqual([]);
+  });
+
+  it("parseSiteIds 容忍前导/尾随/连续分号（脏数据不产生空段）", () => {
+    expect(parseSiteIds(";bilibili;;afdian;")).toEqual(["bilibili", "afdian"]);
+  });
+
+  it("joinSiteIds 为 parseSiteIds 逆操作：空数组 → 空串，过滤空段", () => {
+    expect(joinSiteIds(["bilibili", "afdian"])).toBe("bilibili;afdian");
+    expect(joinSiteIds([])).toBe("");
+    expect(joinSiteIds(["", "bilibili", "", "afdian"])).toBe("bilibili;afdian");
+  });
+
+  it("往返不变量：joinSiteIds(parseSiteIds(x)) 去脏后语义不变", () => {
+    expect(joinSiteIds(parseSiteIds(";a;;b;"))).toBe("a;b");
+    expect(joinSiteIds(parseSiteIds("a;b"))).toBe("a;b");
   });
 });
 

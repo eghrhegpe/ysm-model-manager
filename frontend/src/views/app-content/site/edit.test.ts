@@ -109,6 +109,31 @@ describe("eeApplyFilters 过滤逻辑", () => {
     cleanup!();
   });
 
+  it("2b. 筛选零结果 → 空态容器出现 + 计数 (0/2)；清除按钮复位关键词与标签（P1-4 锐评）", () => {
+    const { state, searchResults } = makeState();
+    mountFilterDom(searchResults);
+    const cleanup = bindEditEvents(state, () => {});
+    const input = searchResults.querySelector("#ws-cr-search") as HTMLInputElement;
+
+    // 关键词打不到任何卡 → 零结果空态
+    input.value = "zzz-no-such";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    const empty = searchResults.querySelector("#cr-filter-empty");
+    expect(empty).toBeTruthy();
+    expect(empty?.querySelector("[data-clear-filter]")).toBeTruthy();
+    expect(searchResults.querySelector("#ws-cr-count")?.textContent).toContain("(0/2)");
+
+    // 清除按钮 → 关键词复位 + 空态移除 + 计数回到全量
+    (empty!.querySelector("[data-clear-filter]") as HTMLElement).click();
+    expect(searchResults.querySelector("#cr-filter-empty")).toBeNull();
+    expect(input.value).toBe("");
+    expect(searchResults.querySelector("#ws-cr-count")?.textContent).toContain("(2/2)");
+    const cards = searchResults.querySelectorAll(".gh-card[data-name]");
+    expect(cards[0].classList.contains("cr-card-hidden")).toBe(false);
+    expect(cards[1].classList.contains("cr-card-hidden")).toBe(false);
+    cleanup!();
+  });
+
   it("3. 标签过滤：点 official → 仅 official 卡可见", () => {
     const { state, searchResults } = makeState();
     mountFilterDom(searchResults);
@@ -265,6 +290,38 @@ describe("编辑态增删", () => {
     expect(state.creators[1].name).toBe("");
     expect(state.creators[1].desc).toBe("");
     expect(refresh).toHaveBeenCalled();
+    cleanup!();
+  });
+
+  it("8b. platform badge 点击切换 → type 段增减 + chip active 态（P1-5 锐评：多选控件改 badge 组）", () => {
+    const site = { id: "siteA" } as WorkshopSite;
+    const { state, searchResults } = makeState({
+      site,
+      creators: [
+        { id: 1, name: "Alice", desc: "", type: "siteA", role: "creator" } as unknown as LocalCreatorLike,
+      ],
+      allCreators: [
+        { id: 1, name: "Alice", desc: "", type: "siteA", role: "creator" } as unknown as LocalCreatorLike,
+      ],
+    });
+    // badge 组：siteA 已选中（active），siteB 未选中
+    searchResults.innerHTML =
+      '<div class="cr-edit-card" data-edit-idx="0">' +
+      '<div class="cr-site-chip-group" data-idx="0" data-fld="type">' +
+      '<button class="cr-site-chip active" data-site-id="siteA">站点A</button>' +
+      '<button class="cr-site-chip" data-site-id="siteB">站点B</button>' +
+      "</div></div>";
+    const cleanup = bindEditEvents(state, () => {});
+
+    // 点击 siteB → 加入归属，type 变 "siteA;siteB"
+    const chipB = searchResults.querySelector('[data-site-id="siteB"]') as HTMLElement;
+    chipB.click();
+    expect(chipB.classList.contains("active")).toBe(true);
+    expect(state.creators[0]!.type).toBe("siteA;siteB");
+
+    // 点击 siteA → 解除归属，type 变 "siteB"（保留他站）
+    (searchResults.querySelector('[data-site-id="siteA"]') as HTMLElement).click();
+    expect(state.creators[0]!.type).toBe("siteB");
     cleanup!();
   });
 

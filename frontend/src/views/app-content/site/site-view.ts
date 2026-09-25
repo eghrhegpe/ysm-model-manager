@@ -8,7 +8,7 @@ import { bindEditEvents } from "./edit.ts";
 import { bindBrowseEvents } from "./events.ts";
 import { buildSiteHtml } from "./render.ts";
 import type { CleanupFn, RenderSiteViewCtx, SiteViewState } from "./types.ts";
-import { isFaved } from "./workshop-data.ts";
+import { isFaved, parseSiteIds } from "./workshop-data.ts";
 
 export type { LocalCreatorLike, RenderSiteViewCtx, RepoAuthorLike } from "./types.ts";
 
@@ -35,7 +35,7 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
 
   searchResults.innerHTML = "";
 
-  const creators = allCreators.filter((cr) => cr.type?.split(";").includes(site.id));
+  const creators = allCreators.filter((cr) => parseSiteIds(cr.type).includes(site.id));
 
   // 作者模型计数查找表
   const authorCountMap: Record<string, number> = {};

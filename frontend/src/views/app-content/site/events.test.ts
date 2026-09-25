@@ -46,15 +46,23 @@ const {
 
 vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/utils/debug/debug.ts", () => ({ dbg }));
-vi.mock("./workshop-data.ts", () => ({
-  getCreatorIdentity,
-  getTagDisplayLabel,
-  getTagFromRole,
-  parseDescTags,
-  loadFavs,
-  isFaved,
-  toggleFav,
-}));
+vi.mock("./workshop-data.ts", async () => {
+  // partial mock：标签/收藏函数按既有 hoisted mock 注入；parseSiteIds 保留真实现
+  //（P1-6 收口后 events 消费它——整段 mock 不导出会炸「No export defined on mock」）
+  const actual = await vi.importActual<typeof import("./workshop-data.ts")>(
+    "./workshop-data.ts",
+  );
+  return {
+    ...actual,
+    getCreatorIdentity,
+    getTagDisplayLabel,
+    getTagFromRole,
+    parseDescTags,
+    loadFavs,
+    isFaved,
+    toggleFav,
+  };
+});
 vi.mock("@/utils/icon/workshop-icons.ts", () => ({
   getSiteIcon,
   getTagIconFromRole,

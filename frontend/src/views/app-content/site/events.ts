@@ -19,6 +19,7 @@ import {
   isFaved,
   loadFavs,
   parseDescTags,
+  parseSiteIds,
   toggleFav,
 } from "./workshop-data.ts";
 
@@ -83,9 +84,7 @@ function cmCrBuildDetailHtml(
     "</div>" +
     (cr.type
       ? '<div class="cr-detail-platforms">' +
-        cr.type
-          .split(";")
-          .filter(Boolean)
+        parseSiteIds(cr.type)
           .map(
             (platform: string) =>
               '<span class="cr-platform-badge">' +

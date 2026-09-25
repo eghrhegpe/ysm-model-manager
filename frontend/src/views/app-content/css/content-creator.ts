@@ -222,11 +222,19 @@ export const contentCreatorCSS: string = `
   color:var(--txt);font-size:var(--fs-sm);font-family:inherit;outline:none;
 }
 .cr-input:focus { background:var(--surf); }
-.cr-input-type { flex:1;height:auto;min-height:50px;padding:var(--btn-padding-xs);border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit; }
-.cr-input-type:focus { border-color: var(--accent); }
 .cr-input-desc { font-size: var(--fs-xs); }
 .cr-input-role { width:auto;min-width:70px;padding:var(--btn-padding-xs);border-radius:var(--radius-sm);border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:var(--fs-xs);font-family:inherit; }
 .cr-input-role:focus { border-color: var(--accent); }
+/* P1-5 锐评：platform 编辑控件从 select multiple 改可点击 badge 组——与浏览态
+   .cr-platform-badge 同语义（站点归属的多选标签），点击切换选中态 */
+.cr-site-chip-group { display:flex;flex-wrap:wrap;gap:4px;flex:1; }
+.cr-site-chip {
+  font-size:var(--fs-xs);padding:var(--pad-v-1) var(--sp-2);border-radius:var(--radius-sm);
+  border:1px solid var(--bd);background:var(--surf);color:var(--muted);
+  cursor:pointer;font-family:inherit;transition:var(--tr-fast);
+}
+.cr-site-chip:hover { border-color:var(--accent);color:var(--txt); }
+.cr-site-chip.active { border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent); }
 .cr-btn-icon { font-size:var(--fs-base);padding:0 var(--sp-1);background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit; }
 .cr-btn-icon:hover { color:var(--txt); }
 .cr-edit-label { font-size:var(--fs-xs);color:var(--muted);width:28px;flex-shrink:0; }

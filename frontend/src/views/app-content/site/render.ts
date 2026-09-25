@@ -11,7 +11,7 @@ import { getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import type { LocalCreatorLike, RepoAuthorLike } from "./types.ts";
 import type { BrowseModeRef } from "./workshop-browse-mode.ts";
-import { getTagDisplayLabel, getTagFromRole, loadFavs } from "./workshop-data.ts";
+import { getTagDisplayLabel, getTagFromRole, loadFavs, parseSiteIds } from "./workshop-data.ts";
 
 /** 创作者卡片工厂上下文 */
 export interface CrCardCtx {
@@ -72,9 +72,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
         )}" title="${t("content.viewLocalModels")}">${UI_ICONS.folder}</span>`
     : "";
 
-  const platformBadges = (cr.type || "")
-    .split(";")
-    .filter(Boolean)
+  const platformBadges = parseSiteIds(cr.type)
     .map((platform: string) => `<span class="cr-platform-badge">${esc(platform)}</span>`)
     .join("");
 
@@ -259,7 +257,7 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
   parts.push(
     `<div class="cr-section cr-section-wrap"><span class="cr-section-title-lg">${UI_ICONS.appearance} ${t(
       "content.activeCreators",
-    )}</span><span class="cr-section-sub" id="ws-cr-count">(${
+    )}</span><span class="cr-section-sub" id="ws-cr-count">(${creators.length}/${
       creators.length
     })</span><input type="text" id="ws-cr-search" class="cr-search-input" placeholder="${t(
       "content.searchCreatorPlaceholder",
@@ -358,16 +356,17 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
       `<div class="cr-edit-card-row"><span class="cr-edit-label">${t(
         "content.labelPlatform",
       )}</span>` +
-      `<select data-idx="${idx}" data-fld="type" class="cr-input-type" multiple title="${t(
-        "content.multiSelectHint",
-      )}">${(allSites || [])
+      // P1-5 锐评：平台字段原用 `<select multiple>`（Ctrl/Cmd 多选、移动端不可用、
+      // 50px 高小框滚动 5 个 option，与浏览态 badge 视觉完全脱节）——改为可点击 badge 组：
+      // 每个站点一个 chip，点击切换选中（toggle type 段），与浏览态 .cr-platform-badge 同语义。
+      `<div class="cr-site-chip-group" data-fld="type" data-idx="${idx}">${(allSites || [])
         .map(
           (s) =>
-            `<option value="${esc(s.id)}"${
-              cr.type?.split(";").includes(s.id) ? " selected" : ""
-            }>${esc(s.label)}</option>`,
+            `<button type="button" class="cr-site-chip${
+              parseSiteIds(cr.type).includes(s.id) ? " active" : ""
+            }" data-site-id="${esc(s.id)}" title="${esc(s.label)}">${esc(s.label)}</button>`,
         )
-        .join("")}</select>` +
+        .join("")}</div>` +
       `<select data-idx="${idx}" data-fld="role" class="cr-input-role">${roleOption(
         "creator",
         t("content.roleCreator"),

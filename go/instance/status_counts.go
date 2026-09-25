@@ -49,11 +49,12 @@ func BuildInstanceStatusCounts(
 	for i := range instances {
 		ins := &instances[i]
 		st := types.InstanceStatus{
-			Name:      ins.Name,
-			CustomDir: statusCustomDir(ins, rtypes),
-			Missing:   []string{},
-			Extra:     []string{},
-			Disabled:  []string{},
+			Name:        ins.Name,
+			CustomDir:   statusCustomDir(ins, rtypes),
+			Missing:     []string{},
+			MissingDirs: []string{},
+			Extra:       []string{},
+			Disabled:    []string{},
 		}
 		// 面板链产物：单元树（dirLevel 已树化，顶层即展示单元）+ 缓存
 		items := BuildSyncItems(ins, rtypes, filesRoots, "")
@@ -64,9 +65,11 @@ func BuildInstanceStatusCounts(
 		// 排序后压重：面板链「混合夹」会同时产出平铺文件叶与容器 marker 子项，
 		// 同一文件重复列示（见 go-instance 卡已知限制），导入一键安装清单会重复安装
 		sort.Strings(st.Missing)
+		sort.Strings(st.MissingDirs)
 		sort.Strings(st.Extra)
 		sort.Strings(st.Disabled)
 		st.Missing = dedupeSorted(st.Missing)
+		st.MissingDirs = dedupeSorted(st.MissingDirs)
 		st.Extra = dedupeSorted(st.Extra)
 		st.Disabled = dedupeSorted(st.Disabled)
 		// Status 取「红优先」——与 loader.ts 自派生口径一致（有待推送差异就不再是绿/橙）
@@ -119,7 +122,9 @@ func foldUnit(st *types.InstanceStatus, it types.ResourceSyncItem) {
 		st.Synced++
 	case types.SyncStatusMissing, types.SyncStatusDiverged:
 		st.MissingCount++
-		st.Missing = append(st.Missing, pushFilePaths(it)...)
+		files, dirs := pushTargets(it)
+		st.Missing = append(st.Missing, files...)
+		st.MissingDirs = append(st.MissingDirs, dirs...)
 	case types.SyncStatusOptional, types.SyncStatusLegacy:
 		st.Extra = append(st.Extra, it.Path)
 	case types.SyncStatusDisabled:
@@ -128,48 +133,50 @@ func foldUnit(st *types.InstanceStatus, it types.ResourceSyncItem) {
 	}
 }
 
-// pushFilePaths 把一个「待推送」单元展开成仓库侧文件级绝对路径。
+// pushTargets 把一个「待推送」单元展开为两路安装目标（ADR-310 §3 落地形态）：
 //
-// 一键安装（runDownloadMissing）逐条 Install，契约是文件而非夹；因此：
-//   - 单元带 children（dirLevel 模型夹的 buildDirLevelChildren 产物，或嵌套容器）：
-//     递归取 status ∈ {missing, diverged} 的子项——它们的 Path 由
-//     DiffFolderContentsScan 给出，缺失/分叉都指向仓库侧（d.AbsPath=gEntry），
-//     正是「推上去能修好」的那份源文件；
-//   - 无 children 的文件单元：Path 本身即仓库侧文件路径（fileLevel 的 SyncResources
-//     missing，或 dirLevel 根下散文件）；
-//   - 无 children 但 Path 是磁盘上的目录（fileLevel 资源包夹，或 dirLevel 里
-//     children 为空的叶子夹——如 maids 包内的文件均不被 IsTypeModelFile 命中）：
-//     用 DiffFolderContents 以空实例侧 diff 出夹内文件；
+//	files —— 仓库侧**文件级**绝对路径，走逐条 Install（一键安装主路）；
+//	dirs  —— 仓库侧**目录单元**：夹内没有任何可逐文件安装的受支持文件时（如只含
+//	         pack.mcmeta 的资源包夹、内容全不被 IsTypeModelFile 命中的 maid-model 夹），
+//	         整夹交给 folder-aware 的 `PushSingleResourceToInstance`（面板行内推送同一条路）。
+//
+// 两路必须分开：`Missing` 的消费端逐条 `Install`，目录路径在那里语义是错的——
+// `InstallResourceToInstance` 对 isDir 类型走 `InstallDir(filepath.Dir(src))`，传目录会把
+// 其**父目录**整棵装进实例（过度安装，实证 `resource_bindings.go` 的 `needsFolder` 分支）；
+// fileLevel 类型则落到 `installer.Install(dir)`，`isSupportedModelExt("")` 必判不支持。
+// 而 `PushSingleResource` 对目录走 `InstallDirLocked(该目录)`（sync_push.go 的 os.Stat 分支），
+// 装的正是这个夹——语义正确、无过度安装。
+//
+// 展开规则：
+//   - 有 children（dirLevel 模型夹 / 嵌套容器）：递归取 status ∈ {missing, diverged} 的子项；
+//   - 无 children 的文件单元：Path 本身（fileLevel missing，或 dirLevel 根下散文件）；
+//   - 无 children 且 Path 是目录：先 `DiffFolderContents`（实例侧空串）展开夹内文件；
+//     展开为空则整夹进 dirs（**不退化成把目录塞进 Missing**）；
 //   - disabled 子项被排除（同 foldUnit：禁用内容不推送）。
-//
-// ⚠️ 绝不吐目录路径：本清单的消费端是「逐条 Install」，而目录路径在 install 侧语义
-// 是错的——`InstallResourceToInstance` 对 isDir 类型走 `InstallDir(filepath.Dir(src))`，
-// 传目录会把它**父目录**整棵装进实例（过度安装）；fileLevel 类型则落到
-// `installer.Install(dir)`，`isSupportedModelExt("")` 必判不支持（必然失败）。
-// 因此「夹内无可推送文件」时返回空清单——这是 ADR-310 §3 记明的计数/清单粒度差
-// （单元算 1，可装文件 0），面板可用 `PushSingleResourceToInstance`（folder-aware）
-// 单行推送该夹，侧栏一键安装不承担此路径。
-func pushFilePaths(it types.ResourceSyncItem) []string {
+func pushTargets(it types.ResourceSyncItem) (files, dirs []string) {
 	if len(it.Children) > 0 {
-		var out []string
 		for i := range it.Children {
 			ch := it.Children[i]
 			if ch.Status == types.SyncStatusMissing || ch.Status == types.SyncStatusDiverged {
-				out = append(out, pushFilePaths(ch)...)
+				f, d := pushTargets(ch)
+				files = append(files, f...)
+				dirs = append(dirs, d...)
 			}
 		}
-		return out
+		return files, dirs
 	}
 	if fi, err := os.Stat(it.Path); err == nil && fi.IsDir() {
-		var out []string
 		// 实例侧传空串：该夹在实例侧不存在，全部文件按 missing 列出。
 		// 复用面板同一条 diff 实现（DiffFolderContents），不另写扩展名过滤口径。
 		for _, d := range ysmsync.DiffFolderContents(it.Path, "", it.Type) {
 			if d.Status == types.SyncStatusMissing || d.Status == types.SyncStatusDiverged {
-				out = append(out, d.AbsPath)
+				files = append(files, d.AbsPath)
 			}
 		}
-		return out
+		if len(files) == 0 {
+			dirs = append(dirs, it.Path)
+		}
+		return files, dirs
 	}
-	return []string{it.Path}
+	return []string{it.Path}, nil
 }

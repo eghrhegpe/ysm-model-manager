@@ -255,10 +255,10 @@ func TestBuildInstanceStatusCounts_MissingListIsFileLevelOnly(t *testing.T) {
 		}
 		assertNoDirEntries(t, "D1", st.Missing)
 		// 夹内文件（pack.mcmeta / assets/**.json）均不被 maid-model 类型白名单命中 →
-		// 单元算 1、可装文件 0：ADR-310 §3 记明的粒度差（不是漏装——面板可单行推送该夹，
-		// 一键安装走文件清单故确无可装项），旧实现此处的目录路径才是真缺陷
-		if len(st.Missing) != 0 {
-			t.Fatalf("夹内无可推送文件，清单应为空，实际 %v", st.Missing)
+		// 无逐文件安装目标，整夹进 MissingDirs（由 folder-aware 的 PushSingleResourceToInstance
+		// 安装该夹本身；绝不能塞 Missing——install 侧会把目录当文件并装其父目录）
+		if len(st.MissingDirs) != 1 || st.MissingDirs[0] != filepath.Join(globalDir, "vendor", "packA") {
+			t.Fatalf("整夹应进 MissingDirs（仓库侧目录单元），实际 %v", st.MissingDirs)
 		}
 	})
 
@@ -290,9 +290,10 @@ func TestBuildInstanceStatusCounts_MissingListIsFileLevelOnly(t *testing.T) {
 		}
 		assertNoDirEntries(t, "D2", st.Missing)
 		// pack.mcmeta 不是 resourcepack 的模型文件（白名单仅 .zip/.7z）、夹内无 zip →
-		// 单元算 1、可装文件 0（同 D1：粒度差，不吐目录）
-		if len(st.Missing) != 0 {
-			t.Fatalf("夹内无可推送文件，清单应为空，实际 %v", st.Missing)
+		// 整夹进 MissingDirs（one-click 经 PushSingleResourceToInstance 整夹安装，
+		// 不再出现「徽章有数、一键安装无动作」）
+		if len(st.MissingDirs) != 1 || st.MissingDirs[0] != filepath.Join(globalDir, "rpA") {
+			t.Fatalf("资源包夹应进 MissingDirs，实际 %v", st.MissingDirs)
 		}
 	})
 }

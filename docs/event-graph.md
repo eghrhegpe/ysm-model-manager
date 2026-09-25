@@ -313,8 +313,8 @@
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 183 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 132 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
-| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
-| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
+| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 87 |
+| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 197 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 115 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 227 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 94 |
@@ -341,8 +341,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 119 |
-| handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 122 |
+| handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 131 |
+| handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 134 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -360,7 +360,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync/sync.ts` | 222 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 234 |
 
 ### `sync:toggle:status`
 
@@ -374,7 +374,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync/sync.ts` | 224 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 236 |
 
 ### `toast:show`
 
@@ -574,8 +574,8 @@
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 116 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 184 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
-| handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 106 |
-| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 211 |
+| handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 118 |
+| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 223 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 116 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 402 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 430 |

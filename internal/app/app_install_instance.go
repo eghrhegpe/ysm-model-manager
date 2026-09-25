@@ -492,6 +492,26 @@ func (a *App) GetSyncScanDirs(rtype, instanceName string) (types.SyncScanDirs, e
 
 // ========== 整合包全类型同步状态 ==========
 
+// resourceTypesForSync 按 rtype 过滤同步类型清单：rtype 非空只保留该类型，
+// 避免 BuildSyncItems 扫不存在的其他类型目录；rtype 为空透传全集。
+// 未知 rtype 返回空切片（消费端按类型过滤后本就是空列表，等价且省全盘扫描）。
+// 只构造局部切片副本、绝不就地截断入参——LoadRegistry 返回进程级缓存单例，
+// 就地 `[:0]` 截断会把共享注册表永久裁剪为 ≤1 类型，后续所有 LoadRegistry 消费方
+// （LoadResourceTypes/GetAllRepoRoots/EnsureStorageDirs…）只见残缺清单
+// （code_review 67929360 P2：子代理核出共享单例被就地截断的既有隐患）。
+func resourceTypesForSync(all []registry.ResourceType, rtype string) []registry.ResourceType {
+	if rtype == "" {
+		return all
+	}
+	filtered := make([]registry.ResourceType, 0, 1)
+	for _, rt := range all {
+		if rt.ID == rtype {
+			filtered = append(filtered, rt)
+		}
+	}
+	return filtered
+}
+
 // GetInstanceSyncStatus 整合包同步状态（组装逻辑已下沉 go/instance，此处仅注入依赖）
 func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype string) ([]types.ResourceSyncItem, error) {
 	cfg := a.LoadAppConfig()
@@ -505,22 +525,11 @@ func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype s
 		return nil, fmt.Errorf("资源类型注册表为空")
 	}
 
-	// rtype 路径限定：非空时只保留该类型，避免扫不存在的其他类型目录。
-	// 只过滤局部切片副本——LoadRegistry 返回进程级缓存单例，就地 `[:0]` 截断
-	// 会把共享注册表永久裁剪为 ≤1 类型，后续所有 LoadRegistry 消费方（
-	// LoadResourceTypes/GetAllRepoRoots/EnsureStorageDirs…）只见残缺清单
-	//（code_review 67929360 P2：子代理核出共享单例被就地截断的既有隐患）。
-	var filtered = reg.ResourceTypes
-	if rtype != "" {
-		filtered = append([]registry.ResourceType(nil), reg.ResourceTypes...)
-		filtered = filtered[:0]
-		for _, rt := range reg.ResourceTypes {
-			if rt.ID == rtype {
-				filtered = append(filtered, rt)
-				break
-			}
-		}
-	}
+	// rtype 路径限定：非空时只扫该类型（roots 与 BuildSyncItems 同用 filtered，
+	// 口径一致）。2026-09 死代码修复：本段原构造 filtered 却把全集 reg.ResourceTypes
+	// 传给 BuildSyncItems——注释宣称的路径限定从未生效，每次调用全类型扫盘，
+	// 正确性全靠前端 store.ts 按 item.type 过滤兜底。helper 细则见 resourceTypesForSync。
+	filtered := resourceTypesForSync(reg.ResourceTypes, rtype)
 
 	// 找整合包目录
 	targetIns, err := a.findInstance(cfg.McRoot, instanceName)
@@ -530,7 +539,7 @@ func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype s
 
 	// 收集各资源类型的仓库根目录（同步基准：subDirGrouping 类型用 group 根，与仓库树对齐）
 	roots := map[string]string{}
-	for _, rt := range reg.ResourceTypes {
+	for _, rt := range filtered {
 		r, fErr := a.filesRootForSync(rt.ID)
 		if fErr != nil {
 			// 尽力而为：缺根的类型不参与同步项构建，落日志供诊断
@@ -540,6 +549,6 @@ func (a *App) GetInstanceSyncStatus(instanceName string, subtype string, rtype s
 		roots[rt.ID] = r
 	}
 
-	items := instance.BuildSyncItems(targetIns, reg.ResourceTypes, roots, subtype)
+	items := instance.BuildSyncItems(targetIns, filtered, roots, subtype)
 	return items, nil
 }

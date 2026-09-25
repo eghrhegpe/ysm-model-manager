@@ -290,9 +290,9 @@ status: active
 
 ### 整合包同步与链接模式（app_install.go / resource_bindings.go）
 
-- `GetInstanceStatus(mcRoot, repoDir) → types.InstanceStatus[]` — 获取整合包同步状态
-- `GetResourceInstanceStatus(rtype, mcRoot, repoDir) → types.InstanceStatus[]` — 按资源类型获取同步状态（repoDir 仅 YSM 类型生效）
-- `GetInstanceSyncStatus(instanceName) → string` — 获取整合包下所有资源类型的同步状态（扁平列表 JSON）
+- `GetInstanceStatus(mcRoot, repoDir, rtype) → types.InstanceStatus[]` — 获取整合包同步状态（rtype 限定实例侧扫描子目录；空时用 ins.CustomDir 向后兼容）
+- `GetResourceInstanceStatus(rtype, mcRoot, repoDir) → types.InstanceStatus[]` — 按资源类型获取同步状态（repoDir 对任意 rtype 生效，仅空串时回退 GetRepoRoot(rtype)——旧文「仅 YSM 类型生效」为假断言，2026-09 核验修正）
+- `GetInstanceSyncStatus(instanceName, subtype, rtype) → types.ResourceSyncItem[]` — 获取整合包同步状态层级树（JSON struct，非字符串；rtype 非空只扫该类型，空=全集；前端 store.ts 另按 item.type 过滤兜底）
 - `SyncResources(rtype, instanceName) → string` — 获取全局 ↔ 整合包的资源同步状态
 - `SyncModelToggleStatus(instanceCustomDir, repoRoot) → [number, number]` — 同步模型启用/禁用状态
 - `PushResourceToInstance(rtype, instanceName) → number` — 将全局缺失的资源推送到整合包，返回数量

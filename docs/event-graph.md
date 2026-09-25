@@ -82,7 +82,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 134 |
+| cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 133 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 139 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 283 |
@@ -270,7 +270,7 @@
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 120 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 303 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 118 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 305 |
 
 ### `repo:search-creator`
@@ -333,7 +333,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 119 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 110 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 285 |
 
 ### `sync:download:done`
@@ -390,11 +390,11 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 96 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 312 |
 | cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 336 |
-| cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 70 |
-| cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 82 |
-| cmReHandleSingleDownload | `frontend/src/features/community/repo-events-bindings.ts` | 156 |
-| cmReBindRowClick | `frontend/src/features/community/repo-events-bindings.ts` | 206 |
-| cmReBindRowClick | `frontend/src/features/community/repo-events-bindings.ts` | 240 |
+| cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 69 |
+| cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 81 |
+| cmReHandleSingleDownload | `frontend/src/features/community/repo-events-bindings.ts` | 155 |
+| cmReBindRowClick | `frontend/src/features/community/repo-events-bindings.ts` | 205 |
+| cmReBindRowClick | `frontend/src/features/community/repo-events-bindings.ts` | 239 |
 | dgBrApplyReplace | `frontend/src/features/dialogs/batch-rename-form.ts` | 51 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 266 |
 | dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 280 |

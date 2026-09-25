@@ -1,7 +1,7 @@
 # 🧱 YSM 模型管理器
 
-> > 像 Steam 创意工坊一样，管理你的 Minecraft YSM 模型。
-> > [https://eghrhegpe.github.io/ysm-model-manager/](https://eghrhegpe.github.io/ysm-model-manager/)
+> 像 Steam 创意工坊一样，管理你的 Minecraft YSM 模型。
+> [https://eghrhegpe.github.io/ysm-model-manager/](https://eghrhegpe.github.io/ysm-model-manager/)
 
 **技术栈**：Go (Wails v3) + 原生 HTML/CSS/TS (Web Components + Shadow DOM) + Three.js + YSMParser WASM
 
@@ -50,14 +50,13 @@
 
 <p align="center"><img src="docs/public/preview/模型仓库.png" width="80%" alt="模型仓库"></p>
 
-- 扫描9类模型文件，支持`.zip` / `.7z` 按 SHA256 去重）
+- 扫描 9 类模型文件，支持 `.zip` / `.7z`（按 SHA256 去重）
 - 树形文件夹浏览 + 拖拽即移动
-  p`/`.7z` （按 SHA256 去重）
-- 树形文件夹浏览 + 拖拽即可导入到当前仓库页。
+- 拖拽文件到仓库页即可导入
 - 搜索高亮 + 多字段排序（名称 / 大小 / 日期）
-- 文件大小颜色：<1MB 绿色，1~3MB 默认，>3ban红色
+- 文件大小颜色：<1MB 绿色，1~3MB 默认，>3MB 红色
 - 日期美化（今天显示时间，今年显示月日，往年显示完整日期）
-- 启用 / 禁用切换（`.ban` 后缀），复选框批量操作
+- 启用 / 禁用切换（`.disabled` 后缀，兼容历史 `.ban`），复选框批量操作
 - 文件夹开关（全部启用 / 全部禁用 / 混合翻转）
 - 右键菜单：禁用/启用、模型详情、打开文件夹
 - 📇 **生成 GitHub 索引**：扫描仓库生成 `index.json`，提交后即可在线浏览
@@ -86,7 +85,7 @@
 - 批量安装缺失 / 上传新模型到仓库
 - **文件监听器**（`fsnotify`）：仓库文件加/删 `.disabled` 时自动同步到所有整合包，无需手动操作
 - 状态同步：仓库启用/禁用 → 自动同步到所有整合包 custom 目录
-- 禁用模型自动隐藏（不出现在缺失列表），已安装自动加 `.ban`
+- 禁用模型自动隐藏（不出现在缺失列表），已安装自动加 `.disabled`
 - 硬链接跨分区会报错并提示切换复制模式（不自动降级）
 - 游戏运行时文件被锁定自动跳过，退出后下次触发自动重试
 

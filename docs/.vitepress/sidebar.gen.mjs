@@ -1951,6 +1951,10 @@ export const autoSidebar = [
             "link": "/knowledge/test-utils"
           },
           {
+            "text": "testid 契约与 VIEW_TESTIDS 注册表",
+            "link": "/knowledge/testid_contract"
+          },
+          {
             "text": "工具栏搜索编排 toolbar-search",
             "link": "/knowledge/toolbar-search"
           },

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 193 张知识卡
+> 总计: 194 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -281,7 +281,7 @@
 - **volumetric_cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），四轴分离：
 
-## ui（41 张）
+## ui（42 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -325,6 +325,7 @@
 | 🍃 shared-styles | 共享样式 shared-styles | leaf | — | 共享样式, 按钮样式, btn-base, focus-visible, tree 样式, Shadow DOM 样式, CSS 变量 |
 | 🍃 survey_emoji_icons | emoji/UI_ICONS 摸排方法论 | leaf | — | emoji 残留摸排, UI_ICONS 消费分布, 孤儿图标盘点, 图标迁移审计 |
 | 🏗 test-utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture | — | 测试工具, testid, getByTestId, waitFor, sleep, flaky, 异步等待, 组件测试 |
+| 🏗 testid_contract | testid 契约与 VIEW_TESTIDS 注册表 | architecture | — | 在 frontend/src 任何位置新增 data-testid / dataset.testid / buttonTestid / panelTestid, 修改某个视图的 VIEW_TESTIDS 数组, testid 契约测试报 ORPHAN 或 MISSING, 想给诊断页/仓库页/工坊等顶层 tab 补测试钩子 |
 | 🍃 toolbar-search | 工具栏搜索编排 toolbar-search | leaf | — | 搜索编排, 高级筛选, 关键词搜索, 数值范围搜索, 标签过滤, 多线程统计角标, 降级提示 |
 | 🍃 ui-slide-menu | ADR 去桶化 slide-menu 外壳组件 | leaf | — | slide-menu, slide 菜单, 去桶化, 两级菜单, 轻量导航栈, createSlideMenu |
 | 🏗 ui_components | UI 组件簇（原 ui 收容所，已归位） | architecture | — | UI 组件, 卡片组件, 加载动画, 滑块, 幻灯片菜单 |
@@ -365,6 +366,7 @@
 - **shared-styles**（共享样式 shared-styles）：两个样式模块为 Shadow DOM 组件提供可复用的 CSS 字符串：`utils/dom/css.ts` 导出全应用统一的按钮体系 `.btn-base`、通用 focus-visible 规则、`.ws-icon` 图标规则与 `.n…
 - **survey_emoji_icons**（emoji/UI_ICONS 摸排方法论）：ADR-238 把 emoji 当 UI 图标迁移成 SVG（`UI_ICONS` + `.ws-icon`）。摸排「还有哪些 emoji 残留 / 哪些图标没被用」时，**不要**几十次零散 grep——仓库已有现成工具，一次运行出全貌。
 - **test-utils**（测试工具 test-utils（G-1 抗脆弱测试基础设施））：`frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / UI-Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 …
+- **testid_contract**（testid 契约与 VIEW_TESTIDS 注册表）：`tests/test_testid_contract.ts`（ADR-133 阶段 B）是前端测试钩子的红线门禁：所有 `data-testid`
 - **toolbar-search**（工具栏搜索编排 toolbar-search）：`toolbar-search.ts` 是 YSM 前端搜索/筛选/导入逻辑的编排核心（从 `toolbar-events.ts` 拆出，ADR-040 P1）。它管理从用户输入到搜索结果渲染的完整链路：弹窗交互 → 后端搜索 → 标签交集…
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/preview-3d/menu/shell/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 s…
 - **ui_components**（UI 组件簇（原 ui 收容所，已归位））：原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front…

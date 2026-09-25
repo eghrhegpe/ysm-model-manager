@@ -652,6 +652,18 @@
 |----------|--------|----------|----------|
 | sleep 替换为 waitFor / 负向定时器窗口断言 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 
+## 🎯 frontend/src 内所有 data-testid 字面量
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 给页面顶层 tab 按钮加测试钩子 | [testid 契约与 VIEW_TESTIDS 注册表](./testid_contract.md) | VIEW_TESTIDS 数组内注释出现 `]` | - |
+
+## 🎯 各视图 VIEW_TESTIDS 数组声明
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 给子 pill 行加稳定测试钩子（renderSubBar 已派生 data-testid） | [testid 契约与 VIEW_TESTIDS 注册表](./testid_contract.md) | 新增 testid 忘记登记 VIEW_TESTIDS | - |
+
 ## 🎯 preview-3d
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -1071,6 +1083,9 @@
 | 将 init 落定硬凑成 waitFor 条件会与组件内部实现耦合，条件易碎 | - | - |
 | 将负向定时器窗口换成短 sleep 会导致防抖真坏了也漏报 | - | - |
 | testid 值禁止含空格或大小写混排（UI-Design.md §19.1），本层未做入口校验（P3） | - | - |
+| VIEW_TESTIDS 数组字面量（含其内部注释）禁止出现裸 ——契约测试用非贪婪正则 `export const VIEW_TESTIDS ... = [([\s\S]*?)]` 取数组体，遇到注释里的第一个 `]` 会提前截断，导致数组后半段全部失注册、集体被判 ORPHAN（2026-09-25 实证：tpl.ts 注释 `.repo-tab[data-tab=...]` 触发整页 diag-*/ws-* 失注册） | `]` | - |
+| 命中 KEY_PREFIXES 的 testid 必须进某视图的 VIEW_TESTIDS，否则判 ORPHAN | - | - |
+| 注册了却不出现在任何源码字面量（data-testid / dataset.testid / buttonTestid / panelTestid）→ 判 MISSING（G-1 删钩子能红，靠 seen 集不包含 VIEW_TESTIDS 自身保证） | - | - |
 | 手写重复 DOM | - | 样式不一致、缺可访问性；必须复用组件簇 |
 | 组件簇内定义自定义元素 | - | 与全仓 Web Components 规范冲突；本簇只做 helper 函数 |
 | 把新文件塞回 | `frontend/src/ui/` | 目录已于 ADR-220 解散，不存在 |

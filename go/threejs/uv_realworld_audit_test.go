@@ -208,7 +208,9 @@ func auditModel(s *uvAuditStats, model types.BedrockModel, where string) {
 			// （真实库 15_kluonoa mingpai 实证），此处按 Go 现状对拍并计数 emptyFace。
 			var rects [6]uvAuditRect
 			mode := "none"
-			if c.FaceUV != "" {
+			// switch 链（gocritic ifElseChain 收口，2026-09）：模式判定三分支语义不变
+			switch {
+			case c.FaceUV != "":
 				if decl, ok := parseFaceUVDecl(c.FaceUV); ok {
 					rects = declRects(decl)
 					validFaces := 0
@@ -239,11 +241,11 @@ func auditModel(s *uvAuditStats, model types.BedrockModel, where string) {
 						s.noUV++
 					}
 				}
-			} else if len(c.UV) >= 2 {
+			case len(c.UV) >= 2:
 				rects = bbFaceRects(c.UV[0], c.UV[1], c.Size[0], c.Size[1], c.Size[2])
 				mode = "box"
 				s.box++
-			} else {
+			default:
 				s.noUV++
 			}
 			if c.Mirror && mode != "none" {
@@ -254,7 +256,7 @@ func auditModel(s *uvAuditStats, model types.BedrockModel, where string) {
 			// 走黄金参照 GeoQuad 复刻。per-face+mirror：BB（矩形互换）与 GC（顶点组
 			// 互换+法线翻转）是两套不同编码，真实库该组合计数为 0（旧普查 332 模型
 			// 实证），跳过逐值对拍，仅由③尺寸守恒兜底，避免拿错参照误报。
-			if !(mode == "perface" && c.Mirror) {
+			if mode != "perface" || !c.Mirror {
 				for fi := 0; fi < 6; fi++ {
 					var want [8]float64
 					if mode == "perface" {

@@ -85,7 +85,21 @@ function validate() {
   const errors = [];
   const cfg = configPath();
   if (cfg === null) {
-    // 首次运行或纯净环境无配置文件，属合法状态，不视为违规
+    // 首次运行/本地纯净环境无配置文件属合法状态，不视为违规；
+    // 但 CI 下缺失配置 = 零覆盖假绿（审计卡 frontend_test_audit §中低优先级，
+    // test_config_defaults 假绿），必须显式 FAIL 而非静默通过。
+    const inCI = !!(process.env.CI || process.env.GITHUB_ACTIONS);
+    if (inCI) {
+      console.error(
+        "FAILED: 未在 CI 环境找到任何 AppConfig（候选路径见 configPath()：" +
+          "APPData/YSM-Model-Manager/ysm_config.json 或仓库根 ysm_config.json），" +
+          "配置结构校验零覆盖——请在本工作流注入真实或 mock 配置后再跑。",
+      );
+      process.exit(1);
+    }
+    console.log(
+      "SKIP: 本地首次运行无 AppConfig，跳过结构校验（CI 下会强制 FAIL）",
+    );
     return errors;
   }
 

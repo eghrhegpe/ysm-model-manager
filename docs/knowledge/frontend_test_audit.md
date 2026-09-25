@@ -84,9 +84,9 @@ invariant_anchors:
 
 - test_scripts_json 12 脚本串行 spawn 最坏 720s timeout，可并行化或排除已知慢脚本
 - test_cli_doc_parity:81 硬编码命令数下限 `>=38` 手动维护易忘
-- test_config_defaults CI 无 UserConfigDir 时整体跳过 = 零覆盖假绿，建议强制 FAIL 或显式 skip 标注
+- test_config_defaults CI 无 UserConfigDir 时整体跳过 = 零覆盖假绿，**✅ 已于本轮（2026-09）修复**：`cfg === null` 分支在 CI（`CI`/`GITHUB_ACTIONS`）下显式 `process.exit(1)` + 明确报错；本地首次运行打印 `SKIP` 标注并 exit 0（合法首跑不误伤）。
 - node:assert 与 node:assert/strict 混用；check-knowledge-drift-affected ROOT 用 process.cwd() 应改 import.meta.url
-- e2e 残留 2 处 waitForTimeout：preview.spec.ts:321、file-tree.spec.ts:40（后者有轮询兜底纯冗余）
+- e2e 残留 waitForTimeout（**本轮 2026-09 复核现状**）：审计快照记「2 处」数量仍准，但**行号已漂移**——`preview.spec.ts:321→246`、`file-tree.spec.ts:40→42`（均为固定 sleep 后跟轮询，属 flake 源）。`sidebar-menu.spec.ts:42/63` 的 `waitForTimeout` 在 `while` 轮询循环内作轮询节拍，**非固定等待、非 flake 源，不动**。✅ 本轮已删除 preview/file-tree 两处固定 sleep，改由后续 `waitForPreviewEl`/`waitForTreeCount` 轮询吸收。
 - e2e 文本定位器 4 处硬编码文案（已选 N）：tree-multiselect `已选\s*(\d+)`、context-menu「已复制到剪贴板」、workshop「B站」、diagnostics「No logs yet」——locale 固定 en-US 下可接受，i18n 化时需同步
 
 ## 治理复核
@@ -95,7 +95,8 @@ invariant_anchors:
 
 ## 覆盖盲区（对照 views）
 
-sync-manager 仅覆盖页面切换未覆盖实际 push/pull 执行链路；recycle-bin / import-queue / community 三条用户高交互路径完全无 e2e——补测优先级 P3。
+- **sync-manager 执行链路**：审计时（2026-08-26）仅 e2e 页面切换、未覆盖 push/pull 执行；**✅ 已由 `frontend/src/features/sync/sync.test.ts`（351 行 / 13 case，覆盖 download-missing + toggle-status 的成功/失败/并发守卫/配置缺失/边界）补齐**——执行逻辑归单测守护，e2e 仍只测「按钮可见 + 页切换」（sync-manager.spec.ts）。
+- **recycle-bin / import-queue / community**：三条用户高交互路径**仍完全无 e2e**——补测优先级 P3（截至本轮仍未补）。
 
 ## 不变量
 

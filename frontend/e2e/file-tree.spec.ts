@@ -38,9 +38,7 @@ test.describe("文件树交互", () => {
     });
     expect(changed).toBe(true);
 
-    // 等待文件树重建完成
-    await page.waitForTimeout(500);
-
+    // 轮询等待文件树重建完成（waitForTreeCount 内部轮询，禁固定 waitForTimeout 防慢环境脆）
     // 验证切换后文件树仍渲染（新类型 mock 数据可能不同，但 tree-file 应存在）
     const fileCount = await waitForTreeCount(page, "tree-file", 5000);
     expect(fileCount).toBeGreaterThan(0);

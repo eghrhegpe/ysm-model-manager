@@ -243,9 +243,8 @@ test.describe("模型详情预览页（app-preview）", () => {
     const contentFound = await waitForPreviewEl(page, "#preview-content", 8000);
     expect(contentFound).toBe(true);
 
-    await page.waitForTimeout(500);
-
-    // 硬断言：预览区不白屏（preview-content 仍存在）
+    // 稳定性断言：预览区不白屏（preview-content 持续存在，轮询 3s 吸收渲染抖动，
+    // 替代固定 waitForTimeout(500) 防慢环境 flake）
     const stillThere = await waitForPreviewEl(page, "#preview-content", 3000);
     expect(stillThere).toBe(true);
   });

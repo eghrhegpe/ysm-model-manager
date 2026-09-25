@@ -57,7 +57,7 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
     id: "btn-batch",
     menuId: "menu-batch",
     buttonLabelKey: "tree.batch",
-    buttonIcon: "performance",
+    buttonIcon: "tools",
     items: [
       {
         action: "enable-all",
@@ -83,7 +83,7 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
         action: "import-file",
         testid: "tree-more-import-file",
         labelKey: "tree.moreImportFile",
-        icon: "file",
+        icon: "import",
       },
       {
         action: "import-dir",
@@ -95,7 +95,7 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
         action: "open-folder",
         testid: "tree-more-open-folder",
         labelKey: "tree.moreOpenFolder",
-        icon: "folderOpen",
+        icon: "external",
         dividerBefore: true,
       },
       {

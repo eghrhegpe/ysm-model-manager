@@ -125,7 +125,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void): 
         }
       } catch (e) {
         busRef.emit("toast:show", {
-          msg: `❌ ${friendlyError(e, t("content.importFailed"))}`,
+          msg: friendlyError(e, t("content.importFailed")),
           duration: TOAST_MS.verbose,
           type: "error",
         });

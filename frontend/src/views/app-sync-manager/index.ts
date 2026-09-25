@@ -265,7 +265,7 @@ export class AppSyncManager extends WebComponentBase {
     if (listEl) listEl.appendChild(errDiv);
     else this.appendChild(errDiv);
     bus.emit("toast:show", {
-      msg: `${UI_ICONS.error} ${friendlyError(e, head)}`,
+      msg: friendlyError(e, head),
       duration: TOAST_MS.long,
       type: "error",
     });

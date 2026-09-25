@@ -35,12 +35,12 @@ export const STATUS_ICON: Record<string, UiIconName> = {
   all: "chart", // 仅 tab 使用（"全部"不是行状态）
   synced: "success",
   legacy: "link",
-  missing: "download",
+  missing: "upload",
   // diverged（本/远端均有改动，需处理）取 `warning` 而不另造 `diff`：语义即「需注意」，
   // 且行色已由 STATUS_COLOR 标为 --accent —— 本次迁移零新增图标。
   diverged: "warning",
   disabled: "blocked",
-  optional: "upload",
+  optional: "download",
 };
 
 export const STATUS_COLOR: Record<string, string> = {
@@ -101,7 +101,7 @@ export function syncDirRowHTML(
 ): string {
   const sizeStr = syncItem.size > 0 ? formatBytes(syncItem.size) : "";
   const actionBtn = actionBtnHTML(syncItem.status);
-  const arrow = shouldOpen ? "▾" : "▸";
+  const arrow = shouldOpen ? UI_ICONS.chevronDown : UI_ICONS.chevronRight;
   return (
     '<div class="sm-item sm-dir" data-path="' +
     esc(opPath || path) +
@@ -123,7 +123,7 @@ export function syncDirRowHTML(
     arrow +
     "</button>" +
     '<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">' +
-    (syncItem.icon || "📁") +
+    (syncItem.icon || UI_ICONS.folder) +
     "</span>" +
     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
     renderFormattedText(syncItem.name) +
@@ -270,7 +270,7 @@ export function itemHTML(item: SyncItem, indent: number): string {
     statusIcon +
     "</span>" +
     '<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">' +
-    (item.icon || "📦") +
+    (item.icon || UI_ICONS.package) +
     "</span>" +
     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
     renderFormattedText(item.name) +

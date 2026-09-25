@@ -28,7 +28,7 @@ function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
             </div>
           </div>
           <div>
-            <label for="afv-minCubes" class="afv-label">${UI_ICONS.unknown} ${t("dialog.cubes")}</label>
+            <label for="afv-minCubes" class="afv-label">${UI_ICONS.voxel} ${t("dialog.cubes")}</label>
             <div class="afv-range-row">
               <input id="afv-minCubes" type="number" min="0" value="${esc(String(v.minCubes ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
               <span class="afv-sep">—</span>

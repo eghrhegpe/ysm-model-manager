@@ -227,7 +227,7 @@ export function bindTabs(host: AppContentHost, tabSelector: string, prefix: stri
           } catch (e) {
             inited[tab] = false;
             bus.emit("toast:show", {
-              msg: `${UI_ICONS.error} ${friendlyError(e, t("common.loadFailed"))}`,
+              msg: friendlyError(e, t("common.loadFailed")),
               duration: TOAST_MS.verbose,
               type: "error",
             });

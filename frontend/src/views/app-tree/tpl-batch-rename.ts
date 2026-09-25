@@ -42,11 +42,11 @@ function buildFormHTML(dir: string, total: number, changed: number): string {
   </label>
   <button id="br-presets" class="dlg-btn-accent">${UI_ICONS.clipboard} ${t("dialog.presets")}</button>
   <div id="br-presets-menu" class="dlg-presets-menu">
-    <div class="br-preset dlg-preset-chip" data-find="(\\d{4}-\\d{2})" data-replace="" data-regex="1">${UI_ICONS.error} ${t("dialog.presetRemoveYear")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="-v\\d+(?=.)" data-replace="" data-regex="1">${UI_ICONS.error} ${t("dialog.presetRemoveVersion")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="(\\d{4}-\\d{2})" data-replace="" data-regex="1">${UI_ICONS.cut} ${t("dialog.presetRemoveYear")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="-v\\d+(?=.)" data-replace="" data-regex="1">${UI_ICONS.cut} ${t("dialog.presetRemoveVersion")}</div>
     <div class="br-preset dlg-preset-chip" data-find="【(.+?)】" data-replace="[$1]" data-regex="1">${t("dialog.presetBrackets")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="[(.+?)]【(.+?)】" data-replace="$1-$2" data-regex="1">${UI_ICONS.label} ${t("dialog.presetFlatten")}</div>
-    <div class="br-preset dlg-preset-chip" data-find="\\s+" data-replace="_" data-regex="1">${UI_ICONS.link} ${t("dialog.presetSpaceUnderscore")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="[(.+?)]【(.+?)】" data-replace="$1-$2" data-regex="1">${UI_ICONS.tools} ${t("dialog.presetFlatten")}</div>
+    <div class="br-preset dlg-preset-chip" data-find="\\s+" data-replace="_" data-regex="1">${UI_ICONS.edit} ${t("dialog.presetSpaceUnderscore")}</div>
   </div>
 </div>
 <div id="br-preview" class="dlg-preview"></div>
@@ -76,7 +76,7 @@ function buildPreviewHTML(rows: BrRowView[]): string {
   ${
     r.selected && r.changed
       ? `<span class="br-name br-name-old" title="${esc(r.name)}">${esc(r.name)}</span>
-  <span class="br-arrow">→</span>
+  <span class="br-arrow">${UI_ICONS.chevronRight}</span>
   <span class="br-name br-name-new" title="${esc(r.newName)}">${esc(r.newName)}</span>`
       : `<span class="br-name-plain" style="opacity:${r.selected ? 1 : 0.5}">${esc(r.name)}</span>`
   }

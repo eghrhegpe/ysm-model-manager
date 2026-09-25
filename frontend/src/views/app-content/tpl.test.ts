@@ -103,12 +103,13 @@ describe("app-content 模板", () => {
     expect(mmdTag).toContain('aria-describedby="stg-mmd-worker-hint"');
   });
 
-  it("settingsHTML Android 查看器模式隐藏游戏根目录/链接模式/下载镜像源卡片，保留本地文件存储卡", () => {
+  it("settingsHTML Android 查看器模式保留游戏根目录（授权入口）/本地文件存储卡，隐藏链接模式/下载镜像源卡片", () => {
     isViewerModeMock.mockReturnValue(true); // Android：查看器模式、有 Java 桥、非网页版
     getAndroidBridgeMock.mockReturnValue({ requestStoragePermission: vi.fn() } as unknown as WailsAndroidBridge);
     const html = settingsHTML();
-    expect(html).not.toContain("set-mc-path");
-    expect(html).not.toContain("set-mc-detect");
+    // 游戏根目录卡保留——安卓 viewer 是 Java 桥授权入口（点选走 requestStoragePermission + 仓库定位），严禁隐藏
+    expect(html).toContain("set-mc-path");
+    expect(html).toContain("set-mc-detect");
     expect(html).not.toContain("set-link-mode");
     expect(html).not.toContain("set-relink");
     // 本地文件存储路径卡片保留——Android 走 Java 桥授权与仓库定位，非网页版 FSA
@@ -118,7 +119,7 @@ describe("app-content 模板", () => {
     // 下载镜像源卡片 Android 模式隐藏——浏览器下载走 fetchWithFallback 三路回退，不依赖该配置
     expect(html).not.toContain("set-mirror");
     expect(html).not.toContain("mirror-hint-");
-    // viewer 下不再输出误导性的空「路径配置」区；本地存储卡仍由后续 renderStgStorageCard 产出
+    // viewer 下「环境」tab 路径段改为「文件来源」标题 + mc-path 卡（可见缺席），不再整段沉默消失；标题不含「路径配置」
     expect(html).not.toContain("路径配置");
     // 语言/主题等纯前端偏好卡片保留
     expect(html).toContain("set-lang");
@@ -139,7 +140,7 @@ describe("app-content 模板", () => {
     expect(envTab).not.toContain('class="stg-grid"');
   });
 
-  it("settingsHTML Android（桥存在但非网页版）渲染本地路径卡而非 FSA 授权卡", () => {
+  it("settingsHTML Android（桥存在但非网页版）渲染游戏根+本地路径卡而非 FSA 授权卡", () => {
     // 回归：仅网页版才渲染需 showDirectoryPicker 的 FSA 卡；
     // Android 有 Java 桥但 isWebPlatform=false，应渲染 files 卡，避免报"浏览器不支持 FSA"
     isViewerModeMock.mockReturnValue(true);
@@ -148,8 +149,8 @@ describe("app-content 模板", () => {
     const html = settingsHTML();
     expect(html).not.toContain("web-repo-auth-btn");
     expect(html).not.toContain("stg-web-repo-card");
-    // Android 作为 viewer 隐藏游戏根/链接卡，但保留本地文件路径卡（走 Java 桥授权 + 仓库定位）
-    expect(html).not.toContain("set-mc-path");
+    // Android 作为 viewer 保留游戏根目录卡（授权入口）/本地文件路径卡，隐藏链接卡（走 Java 桥授权 + 仓库定位）
+    expect(html).toContain("set-mc-path");
     expect(html).not.toContain("set-link-mode");
     expect(html).toContain("stg-files-card");
     expect(html).toContain("set-files-root");

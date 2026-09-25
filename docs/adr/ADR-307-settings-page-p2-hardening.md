@@ -32,6 +32,8 @@
 - 引入 **section 级缺席**机制：路径/存储段在 `isViewer` 时不返回空串，改调共享 `renderAbsentSection(noticeKey)` 产出一行 muted 占位（文案如「此平台无路径/存储配置」），落位与 ADR-300 告知行同哲学（可见缺席，非沉默消失）。
 - 粒度扩展：`desktopOnly` 维持 tab 级（留给未来整 tab 才通用的场景），新增 section 级 `viewerAbsent` 标记供各渲染函数本地判定——**输入端（哪些 section 在 viewer 下无意义）由 Go/调用方声明，展示端（空串 vs 占位告知）由前端消费**，不回退到「前端按平台手搓空判断」。
 
+> ⚠️ **查实修正（2026-09-25，实施前源码复查，推翻上款假设）**：上款「路径/存储段在 viewer 下无意义 → absent 占位」**不成立**。复查 `directory-picker.ts:18-66` + `path-cards.ts:67-95 bindPathClick` 证实：安卓 viewer 下 `set-files-root`（存储卡）与 `set-mc-path`（路径卡）点击均走 `pickDirectory()` → `resolveAndroidRepoDir()`——**未授权弹 warn toast + `bridge.requestStoragePermission()` 跳系统「所有文件访问」授权页，授权后 `GetDefaultRepoRoot` 自动定位 `/storage/emulated/0/YSM-Model-Manager`**（ADR-046 P2 已落地，Java 桥而非 Go 侧权限请求）。即 **storage 卡与 mc-path 卡是 viewer 下的真授权入口，不是缺席 section，严禁 absent 占位**。真正该 absent 的只有 `links`/`mirror` 卡（链接模式 / 下载镜像源是桌面 / 网络概念，安卓无意义）。原「路径 / 存储段整体 absent」裁定作废，落地以本注脚为准：**storage 卡（set-files-root）与 mc-path 卡保留（授权定位入口）；`links`/`mirror` 卡 absent**；`renderStgBasicPaths` 当前 `if(!isViewer) return ""` 整体消失是**过度隐藏**（埋了同样可用的 mc-path 卡），须拆 `isViewer` 守卫到卡片粒度，而非整体回空串。
+
 **D3 — 非 3D 设置项收编进 settings-schema（ADR-303 同款护栏）**：
 - 扩展 `settings-schema` 覆盖非 3D 域：`MirrorSource`（jsdelivr/githubapi/direct 联合）、`FontFamily`、`UiDensity`、`UpdateCheckInterval`（6/12/24/'off' 联合）等，值域/默认值/枚举同源声明。
 - `MIRROR_I18N_KEY` 键收紧为 `Record<MirrorSource, LocaleKey>`——`string`→联合后，加镜像源漏文案即编译期红；其余非 3D 项的「值↔文案键」映射照搬 `Record<TdRotMode, LocaleKey>` 形态。

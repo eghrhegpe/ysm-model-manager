@@ -107,17 +107,24 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
   // 路径三卡为同族组，入场延迟由 stgCards 按序号派生（step 60ms，与其余组的 30ms 区分：
   // 首屏三张大卡节奏放缓一档）。2026-09 前为手填 0/60/120 字面量。
   const specs: StgCardSpec[] = [];
+  // mc-path（游戏根目录）：桌面 + 安卓 viewer 通用——安卓 viewer 点击走 directory-picker.ts
+  // resolveAndroidRepoDir（未授权弹系统授权页、授权后定位 /storage/emulated/0/YSM-Model-Manager），
+  // 是查看器模式的真授权入口，严禁隐藏（ADR-307 D2 查实修正：原 if(!isViewer) 整体消失把这条
+  // 入口一并埋了）；网页版不渲染（mc-path 会指向 /web 虚拟根，与 webRepo FSA 授权卡语义重叠）。
+  if (!isWebViewer) {
+    specs.push({
+      icon: UI_ICONS.game,
+      title: t("settings.paths.gameRoot"),
+      body: `<button type="button" class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</button>
+        <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>`,
+      header: {
+        actions: `<button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button>`,
+      },
+    });
+  }
+  // 链接模式 / 下载镜像源：纯桌面 / 网络概念，查看器模式（安卓 + 网页版）无意义 → 不渲染
   if (!isViewer) {
     specs.push(
-      {
-        icon: UI_ICONS.game,
-        title: t("settings.paths.gameRoot"),
-        body: `<button type="button" class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</button>
-        <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>`,
-        header: {
-          actions: `<button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button>`,
-        },
-      },
       {
         icon: UI_ICONS.link,
         title: t("settings.links.title"),
@@ -153,10 +160,12 @@ function renderStgBasicPaths(isViewer: boolean, isWebViewer: boolean): string {
     );
   }
   const cards = stgCards(specs, { step: 60 });
-  const title = t(isWebViewer ? "settings.paths.sourceTitle" : "settings.paths.title");
+  // viewer 模式（安卓 + 网页版）段标题统一为「文件来源」，桌面为「路径配置」——
+  // 与「这里是可配置路径 vs 这里只有来源入口」语义对齐，避免 viewer 下声称「路径配置」却无本地路径卡
+  const title = t(isViewer ? "settings.paths.sourceTitle" : "settings.paths.title");
   if (!cards) {
     // Web viewer still needs the source section label before the FSA card below;
-    // Android viewer has no path cards here, so do not render an empty misleading section.
+    // Android viewer now has the mc-path card（授权入口），不再走此空分支。
     return isWebViewer
       ? `<div class="section-title stg-title">${UI_ICONS.settings} ${title}</div>`
       : "";
@@ -531,6 +540,9 @@ ${renderStgParserWorkers()}`;
   const { bar, panels } = renderTabs<SettingsTabId>({
     prefix: "stg",
     buttonClass: "stg-tab",
+    // 半截接线补全（ADR-307 D2）：isViewer 已算却未传给 renderTabs → 对齐 ADR-300 §2.5
+    // 机制；settings 当前无 desktopOnly tab，tab 级告知行暂不触发，机制接好即零视觉变化
+    viewerMode: isViewer,
     tabs: buildSettingsTabs({
       env: `<div class="stg-page">${envBody}</div>`,
       appearance: `<div class="stg-page">${appearanceBody}</div>`,

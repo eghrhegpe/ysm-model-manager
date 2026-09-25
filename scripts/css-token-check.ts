@@ -130,7 +130,7 @@ const CHECKED_PROPS = [
 //   - TS 类型字段（width: number / height: string）——本正则要求数值带单位或纯数字，天然排除 `number`
 //   - 相对值 auto / 100% / 50% 等（百分比/auto 非硬编码绝对尺寸，不在本闸范围，避免淹没信号）
 // 例：padding:10px 12px ✗ / padding:var(--sp-3) ✓（前置过滤）/ width:100% ✓（相对，放行）/ z-index:10 ✗
-const BARE_VALUE_RE = /(?:^|[\s;])((?:--)?[a-z-]+)\s*:\s*((?:[^;{]*?))(?=[;}])/gi;
+const BARE_VALUE_RE = /(?:^|[\s;])((?:--)?[a-z-]+)\s*:\s*((?:[^;{]*?))(?=[;}]|$)/gi;
 // 绝对数值 token：带 px/rem/vh/vw/pt 或纯数字（不含 % / auto / number / string）
 const ABSOLUTE_NUM =
   /(?:^|[\s,(])(?:-?\d+(?:\.\d+)?(?:px|rem|vh|vw|pt|em)|-?\d+(?!\w))(?=[\s,)]|$)/;

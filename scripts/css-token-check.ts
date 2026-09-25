@@ -124,6 +124,17 @@ const CHECKED_PROPS = [
   "height",
 ];
 
+/**
+ * 纯零值判定：padding/margin/gap/border-radius 的各段均为 0/0px（重置语义）。
+ * 零不承载随字号缩放的间距信息、无令牌可归，报 WARN 属误报类；
+ * width/height:0 有布局语义（隐藏占位）、z-index:0 ≠ auto，均不放行。
+ */
+function isZeroOnlyValue(prop: string, raw: string): boolean {
+  if (!["padding", "margin", "gap", "border-radius"].includes(prop)) return false;
+  const parts = raw.trim().split(/\s+/);
+  return parts.length > 0 && parts.every((t) => /^0(px)?$/.test(t));
+}
+
 // 裸「绝对数值」判定：属性位后跟带绝对单位的数值（px/rem/vh/vw/pt）或纯数字（无单位，如 z-index:10）。
 // 排除：
 //   - var()/calc(var()（已由调用方前置过滤）
@@ -218,6 +229,13 @@ const TOKEN_CHECK_ALLOW = new Set<string>([
   "model-card-sm:min-width:200px",
   "instance-card-pkg-count:min-width:0px",
   "af-inp:width:56px",
+  // 装饰性微尺寸与重置（css-token 账收口 2026-09-25 登记）：
+  // 分档色条 / 图例色板 / 拖拽把手 / 无装饰重置——物理微像素或纯重置语义，不属字号缩放体系
+  "cr-card-tier-bar:height:3px",
+  "cr-tier-swatch:width:10px",
+  "cr-tier-swatch:height:10px",
+  "preview-resize-handle:width:4px",
+  "sm-dir-arrow:width:14px",
   // 预览域（preview-3d）全豁免：独立渲染栈，其裸值体系审计已排除（不在本闸范围）
   "preview-3d:all",
 ]);
@@ -258,6 +276,8 @@ function extractClassContext(
       // 裸值判定：raw 里不含 var( 且不含 calc(var(
       if (/var\(\s*--/.test(raw)) continue;
       if (/calc\(\s*var\(/.test(raw)) continue;
+      // 纯零值放行：重置语义无缩放信息（border-radius:0 / padding:0 等）
+      if (isZeroOnlyValue(prop, raw)) continue;
       // 只报绝对数值（px/rem/vh/pt 或纯数字）；排除相对值（100% / auto）/ TS 类型（number）
       if (!ABSOLUTE_NUM.test(raw)) continue;
       props.push({ prop, raw });
@@ -357,7 +377,7 @@ for (const f of files) {
 
 // 重建基线
 if (REBUILD) {
-  fs.writeFileSync(BASELINE_FILE, allHits.slice().sort().join("\n") + "\n", "utf-8");
+  fs.writeFileSync(BASELINE_FILE, `${allHits.slice().sort().join("\n")}\n`, "utf-8");
   console.log(
     `[css-token-check] 基线已重建：${allHits.length} 条（写入 ${path.relative(ROOT, BASELINE_FILE)}）`,
   );
@@ -365,7 +385,7 @@ if (REBUILD) {
 }
 // 首次运行（无基线）→ 自动建基线，使门禁可落地而不被存量淹没
 if (!fs.existsSync(BASELINE_FILE) && allHits.length > 0) {
-  fs.writeFileSync(BASELINE_FILE, allHits.slice().sort().join("\n") + "\n", "utf-8");
+  fs.writeFileSync(BASELINE_FILE, `${allHits.slice().sort().join("\n")}\n`, "utf-8");
   console.log(
     `[css-token-check] 首次运行：已建基线 ${allHits.length} 条（${path.relative(ROOT, BASELINE_FILE)}）。后续仅报基线外新增裸值；存量收敛后跑 --rebuild-baseline 更新。`,
   );

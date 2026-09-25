@@ -42,7 +42,7 @@ describe("toolbar-menus 声明式菜单（icon 语义名声明式）", () => {
       expect(html).toContain(`data-testid="${testid}"`);
     }
     // open-folder（dividerBefore）前有分隔线
-    const divider = '<div style="border-top:1px solid var(--bd);margin:2px 0"></div>';
+    const divider = '<div style="border-top:1px solid var(--bd);margin:var(--pad-v-2)"></div>';
     expect(html).toContain(divider);
     const divIdx = html.indexOf(divider);
     expect(divIdx).toBeGreaterThan(html.indexOf('data-more="import-dir"'));

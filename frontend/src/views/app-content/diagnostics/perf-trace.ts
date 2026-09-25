@@ -150,7 +150,7 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
 
   container.innerHTML =
     sectionHeader(UI_ICONS.search, t("diagnostics.loadTraceTitle")) +
-    `<div class="perf-trace-meta" style="padding:6px 2px 0">${t("diagnostics.loadTraceCount", { n: traces.length, max: 50 })}</div>` +
+    `<div class="perf-trace-meta" style="padding:var(--pad-nav) 2px 0">${t("diagnostics.loadTraceCount", { n: traces.length, max: 50 })}</div>` +
     blocks +
     hiddenHtml +
     `<div class="perf-trace-hint">${t("diagnostics.loadTraceHint")}</div>`;

@@ -124,7 +124,7 @@ export function renderDropdown(key: ToolbarMenuKey): string {
   const itemsHtml = def.items
     .map((it) => {
       const gap = it.dividerBefore
-        ? '<div style="border-top:1px solid var(--bd);margin:2px 0"></div>'
+        ? '<div style="border-top:1px solid var(--bd);margin:var(--pad-v-2)"></div>'
         : "";
       const icon = it.icon ? `${resolveIcon(it.icon)} ` : "";
       return `${gap}<button class="dd-item" data-${attr}="${it.action}" data-testid="${it.testid}">${icon}${t(it.labelKey)}</button>`;

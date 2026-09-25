@@ -290,7 +290,7 @@ async function initDedupTab(
     "</button>" +
     "</div>" +
     '<div id="dedup-config-panel" style="padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd)"></div>' +
-    '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>' +
+    '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:var(--pad-v-8)"></div>' +
     "</div>";
   const panel = container.querySelector("#dedup-config-panel") as HTMLElement | null;
   if (panel) dedup.initConfig(panel);

@@ -50,8 +50,8 @@ invariant_anchors:
 
 - **扫描域**：`frontend/src` 全部 `.ts`（含 `preview-3d`，域内豁免），展开 `${X}` 共享样式常量后剥离注释+字符串再判定
 - **受检属性**：`padding` / `margin` / `gap` / `border-radius` / `box-shadow` / `z-index` / `width` / `height`
-- **裸值判定**：带绝对单位（px/rem/vh/vw/pt）或纯数字（z-index）；排除相对值（100%/auto）、TS 类型字段（number）
-- **基线模式**：首次运行自动写 `scripts/.css-token-baseline.txt`（当前 416 条存量）；后续只报基线外**新增**裸值，避免一次性几百条误报淹没信号
+- **裸值判定**：带绝对单位（px/rem/vh/vw/pt）或纯数字（z-index）；排除相对值（100%/auto）、TS 类型字段（number）、纯零值（`padding/margin/gap/border-radius` 各段全 0——重置语义无缩放信息，`width/height/z-index:0` 有布局语义不放行）
+- **基线模式**：首次运行自动写 `scripts/.css-token-baseline.txt`（当前 347 条存量；2026-09-25 黄区 23 条收口 + 零值误判 11 条随闸修出账）；后续只报基线外**新增**裸值，避免一次性几百条误报淹没信号
 - **接入**：`pre-push-gate.ts` 前端域块（`frontend-domain.ts`），`blockPolicy:"debt"`（存量债只报告不阻断）
 
 ## 对外 API
@@ -73,6 +73,7 @@ YSM_SKIP_TOKEN_CHECK=1 node scripts/css-token-check.ts  # 逃生阀
 ## 不变量
 
 - 基线文件是「存量债快照」，不手改——靠 `--rebuild-baseline` 更新（存量收敛后跑）
+- 纯零值（`isZeroOnlyValue`）恒放行、不入基线：0 不随字号缩放，无令牌可归
 - `TOKEN_CHECK_ALLOW` 集登记合法裸值（图标槽/内容图/物理像素），移除即触发 WARN 倒逼复核
 - `preview-3d` 域恒豁免（独立渲染栈，不在本闸范围）
 - 颜色裸值不自动令牌化（语义需人工判定）

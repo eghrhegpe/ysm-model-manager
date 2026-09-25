@@ -172,7 +172,7 @@ export function containerHTML(): string {
     // 筛选栏重构：.sm-status-tabs（flex 行）= 只读类型指示槽位 + radiogroup；
     // 指示器非 radio，不入 radiogroup 组（ARIA 规范：radiogroup 子节点应全为 radio）
     ".sm-cur-type-slot{display:contents}" +
-    ".sm-status-radios{display:flex;gap:2px;flex:1;min-width:0}" +
+    ".sm-status-radios{display:flex;gap:var(--sp-1);flex:1;min-width:0}" +
     // 当前类型只读指示（原同样是行内 style=）
     ".sm-cur-type{display:inline-flex;align-items:center;gap:4px;padding:0 8px;color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;border-right:1px solid var(--bd);margin-right:6px}" +
     ".sm-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base);animation:fade-in .2s ease}" +

@@ -45,7 +45,7 @@ function aboutSection(): string {
   ${stgCard(
     UI_ICONS.info,
     t("about.appName"),
-    `<div style="display:flex;flex-direction:column;gap:8px">
+    `<div style="display:flex;flex-direction:column;gap:var(--sp-2)">
       <button class="btn-base sm stg-btn" id="set-check-update">${UI_ICONS.refresh} ${t("about.checkUpdate")}</button>
       <div class="setting-row" style="margin:0;padding:var(--sp-1) 0;background:none;border-radius:0">
         <span style="font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.clock} ${t("settings.updateCheck.title")}</span>

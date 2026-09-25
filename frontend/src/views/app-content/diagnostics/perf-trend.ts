@@ -98,7 +98,7 @@ export function renderPerfTrendSection(esc: EscFn): string {
     head +
     `<div class="perf-trend" style="padding:var(--sp-vh-perf)">
 <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;width:100%;height:auto">${grid}${polys}</svg>
-<div class="perf-legend" style="display:flex;flex-wrap:wrap;padding:4px 2px 0">${legend}</div>
+<div class="perf-legend" style="display:flex;flex-wrap:wrap;padding:var(--sp-1) 2px 0">${legend}</div>
 </div>`
   );
 }

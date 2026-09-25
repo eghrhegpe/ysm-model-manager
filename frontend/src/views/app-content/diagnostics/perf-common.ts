@@ -65,7 +65,7 @@ export function sectionHeader(
       ? `<span class="perf-section-ms" title="${t("diagnostics.perfCliTimingHint")}">${UI_ICONS.clock}${timingMs.toFixed(2)}ms</span>`
       : "";
   const wrapper = rawText !== undefined ? ` data-perf-raw="${encodeURIComponent(rawText)}"` : "";
-  return `<div class="perf-section" style="margin-top:10px;font-size:var(--fs-sm);font-weight:600;color:var(--txt);display:flex;align-items:center;gap:6px"${wrapper}>
+  return `<div class="perf-section" style="margin-top:10px;font-size:var(--fs-sm);font-weight:600;color:var(--txt);display:flex;align-items:center;gap:var(--sp-icon-text)"${wrapper}>
 <span>${icon}</span><span>${label}</span>${timingTag}${copyBtn}</div>`;
 }
 

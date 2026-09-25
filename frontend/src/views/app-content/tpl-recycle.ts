@@ -17,7 +17,7 @@ export function recycleHTML(): string {
 <button class="btn-base sm" id="recy-refresh" style="margin-left:auto">${UI_ICONS.refresh} ${t("common.refresh")}</button>
 <button class="btn-base danger sm" id="recy-empty">${UI_ICONS.recycle} ${t("recycle.empty")}</button>
 </div>
-<div id="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+<div id="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-1)"></div>
 </div>`;
 }
 
@@ -31,7 +31,7 @@ export function renderRecycleListHtml(entries: RecycleBinEntry[]): string {
       const name = e.Name.replace(/\.(ysm|zip|7z)\.(disabled|ban)$/i, ".$1");
       const size = Number.isFinite(e.Size) ? formatBytes(e.Size as number) : "?";
       return `<div class="recy-item" data-testid="recy-item" style="animation-delay:${stagger(i, 25, 400)}ms;display:flex;flex-direction:column;gap:2px;padding:5px 8px;border-radius:var(--radius-sm);background:var(--bg);font-size:var(--fs-sm)">
-<div style="display:flex;align-items:center;gap:6px">
+<div style="display:flex;align-items:center;gap:var(--sp-icon-text)">
 <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt);cursor:pointer" title="${t("common.viewDetail", { name: esc(e.Path) })}" data-path="${esc(e.Path)}">${renderDisplayName(name)}</span>
 <span style="font-size:var(--fs-xs);color:var(--muted)">${size}</span>
 <button class="recy-restore" data-testid="recy-restore" data-path="${esc(e.Path)}" style="padding:var(--btn-padding-sm);border-radius:var(--radius-xs);border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;font-size:var(--fs-xs)">${UI_ICONS.undo} ${t("recycle.restore")}</button>

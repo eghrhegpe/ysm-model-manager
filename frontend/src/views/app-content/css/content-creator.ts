@@ -224,7 +224,7 @@ export const contentCreatorCSS: string = `
 .cr-input-role:focus { border-color: var(--accent); }
 /* P1-5 锐评：platform 编辑控件从 select multiple 改可点击 badge 组——与浏览态
    .cr-platform-badge 同语义（站点归属的多选标签），点击切换选中态 */
-.cr-site-chip-group { display:flex;flex-wrap:wrap;gap:4px;flex:1; }
+.cr-site-chip-group { display:flex;flex-wrap:wrap;gap:var(--sp-1);flex:1; }
 .cr-site-chip {
   font-size:var(--fs-xs);padding:var(--pad-v-1) var(--sp-2);border-radius:var(--radius-sm);
   border:1px solid var(--bd);background:var(--surf);color:var(--muted);
@@ -261,11 +261,11 @@ export const contentCreatorCSS: string = `
 
 /* ===== tier 图例（P0-1/P2-1 锐评：gold/silver 语义不再哑默，有分档卡才渲染） ===== */
 .cr-tier-legend {
-  display:flex;align-items:center;gap:12px;
+  display:flex;align-items:center;gap:var(--sp-3);
   padding:0 0 var(--sp-2);
 }
 .cr-tier-legend-item {
-  display:inline-flex;align-items:center;gap:5px;
+  display:inline-flex;align-items:center;gap:var(--sp-1);
   font-size:var(--fs-xs);color:var(--muted);
 }
 .cr-tier-swatch {

@@ -435,7 +435,7 @@ export function workshopHTML(): string {
     '<div class="cr-right" style="width:100%;flex:1;display:flex;flex-direction:column;overflow:hidden" id="ws-right">' +
     '<div class="cr-right-inner" id="ws-right-inner">' +
     '<div id="ws-search-view" data-testid="ws-search-view" style="flex:1;display:flex;flex-direction:column;overflow:hidden">' +
-    '<div id="ws-search-results" data-testid="ws-search-results" style="flex:1;overflow-y:auto;padding:0 12px 8px">' +
+    '<div id="ws-search-results" data-testid="ws-search-results" style="flex:1;overflow-y:auto;padding:0 var(--sp-3) var(--sp-2)">' +
     '<div style="color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center">' +
     t("common.loading") +
     "</div>" +

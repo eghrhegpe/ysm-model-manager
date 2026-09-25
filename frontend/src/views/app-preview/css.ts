@@ -78,7 +78,7 @@ h3 { font-size: var(--fs-base); font-weight: 600; color: var(--txt); text-transf
 .dp-stats { margin-top:10px; }
 
 /* === 兄弟列表 hover 规则（detail-3d.ts morph-item / detail.ts pack-model-item）=== */
-.morph-item{padding:4px 6px;cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-base);display:flex;align-items:center;gap:6px}
+.morph-item{padding:var(--sp-1) var(--pad-nav);cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-base);display:flex;align-items:center;gap:var(--sp-icon-text)}
 .morph-item:hover{background:var(--hover)} /* 审计 P0-4：亮色主题下白叠白 = 无 hover 反馈，改 var(--hover) 跨主题恒可见 */
 .morph-item.active{background:color-mix(in srgb,var(--status-success) 15%,transparent);color:var(--status-success);font-weight:600}
 .pack-model-item:hover{background:var(--hover)} /* 审计 P0-4：同上 */

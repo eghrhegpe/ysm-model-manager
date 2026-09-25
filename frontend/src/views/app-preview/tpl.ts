@@ -274,7 +274,7 @@ export function statsCardHTML(model: StatsCardModel, modelPath: string): string 
   );
   const invHtml =
     invChips.length > 0
-      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:var(--pad-v-1);flex-wrap:wrap;gap:2px 8px">${UI_ICONS.package} ${t("preview.inventory")}${invChips.map((c) => `<span title="${esc(c.title)}">${c.icon} ${esc(c.label)}</span>`).join("")}</div>`
+      ? `<div class="pv-card-row" style="font-size:var(--fs-xs);color:var(--muted);padding:var(--pad-v-1);flex-wrap:wrap;gap:2px var(--sp-2)">${UI_ICONS.package} ${t("preview.inventory")}${invChips.map((c) => `<span title="${esc(c.title)}">${c.icon} ${esc(c.label)}</span>`).join("")}</div>`
       : "";
   return `
 <div class="pv-card-section pv-section-blue">

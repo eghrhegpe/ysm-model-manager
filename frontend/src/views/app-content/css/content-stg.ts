@@ -121,7 +121,7 @@ export const contentStgCSS: string = `
    因为空白一直由 .section-title 的 padding 隐式提供，一旦不挂标题就没间隔了。 */
 .stg-section { margin-top: 16px; }
 .stg-details { margin-top:16px; border:1px solid var(--bd); border-radius:var(--radius-card); background:var(--surf); overflow:hidden; }
-.stg-details-summary { display:flex; align-items:center; gap:6px; padding:var(--sp-vh-pane); cursor:pointer; list-style:none; color:var(--txt); font-size:var(--fs-sm); font-weight:600; user-select:none; }
+.stg-details-summary { display:flex; align-items:center; gap:var(--sp-icon-text); padding:var(--sp-vh-pane); cursor:pointer; list-style:none; color:var(--txt); font-size:var(--fs-sm); font-weight:600; user-select:none; }
 .stg-details-summary::-webkit-details-marker { display:none; }
 .stg-details-summary::after { content:"+"; margin-left:auto; color:var(--muted); font-size:var(--fs-lg); line-height:1; }
 .stg-details[open] > .stg-details-summary::after { content:"−"; }

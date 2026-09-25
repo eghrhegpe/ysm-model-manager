@@ -262,6 +262,14 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-312：死 CSS 反向闸——定义侧零消费者类纳入 css-layer-check 检查 7",
+        "link": "/adr/ADR-312-dead-css-reverse-gate"
+      },
+      {
+        "text": "ADR-311：菜单测试断言三分法契约（渐进执法）",
+        "link": "/adr/ADR-311-menu-test-assertion-trichotomy"
+      },
+      {
         "text": "ADR-310：整合包同步计数口径统一",
         "link": "/adr/ADR-310-instance-sync-count-single-source"
       },
@@ -1925,6 +1933,10 @@ export const autoSidebar = [
           {
             "text": "知识库×前端语义脱节审计",
             "link": "/knowledge/knowledge_frontend_drift_audit"
+          },
+          {
+            "text": "菜单测试断言三分法",
+            "link": "/knowledge/menu_test_assertion"
           },
           {
             "text": "模块级全局状态治理",

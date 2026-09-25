@@ -1,0 +1,135 @@
+{
+  "_comment": "菜单测试布局快照断言债务基线（ADR-311 D3，key=文件，值=规则→命中数）。仅允许减少，不允许增加。更新: node scripts/check-menu-test-layout.ts --update（新增需 --force）",
+  "note": "（--update 收紧）",
+  "generatedAt": "2026-09-25",
+  "counts": {
+    "frontend/src/preview-3d/menu/engine/core.test.ts": {
+      "ordered-snapshot": 1
+    },
+    "frontend/src/preview-3d/menu/engine/items.test.ts": {
+      "ordered-snapshot": 1
+    },
+    "frontend/src/preview-3d/menu/engine/menu-graph.test.ts": {
+      "ordered-snapshot": 1
+    },
+    "frontend/src/preview-3d/menu/panels/camera-schema.test.ts": {
+      "ordered-snapshot": 2
+    },
+    "frontend/src/preview-3d/menu/panels/env.test.ts": {
+      "ordered-snapshot": 3
+    },
+    "frontend/src/preview-3d/menu/panels/material-controls.test.ts": {
+      "ordered-snapshot": 1,
+      "index-access": 7
+    },
+    "frontend/src/preview-3d/menu/panels/morph-controls.test.ts": {
+      "ordered-snapshot": 1,
+      "index-access": 10
+    },
+    "frontend/src/preview-3d/menu/panels/perception-controls.test.ts": {
+      "ordered-snapshot": 4,
+      "index-access": 2
+    },
+    "frontend/src/preview-3d/menu/panels/stats.test.ts": {
+      "exact-length": 1
+    },
+    "frontend/src/preview-3d/caps/environment-capability.test.ts": {
+      "index-access": 19,
+      "exact-length": 1,
+      "ordered-snapshot": 2
+    },
+    "frontend/src/preview-3d/caps/ground-capability.test.ts": {
+      "index-access": 6,
+      "exact-length": 1
+    },
+    "frontend/src/preview-3d/caps/light-capability.test.ts": {
+      "exact-length": 2,
+      "index-access": 39,
+      "ordered-snapshot": 2
+    },
+    "frontend/src/preview-3d/caps/light-cone.test.ts": {
+      "index-access": 2,
+      "exact-length": 1
+    },
+    "frontend/src/preview-3d/caps/postprocessing-capability.test.ts": {
+      "exact-length": 2,
+      "index-access": 37
+    },
+    "frontend/src/preview-3d/caps/reflector-capability.test.ts": {
+      "index-access": 11,
+      "exact-length": 1,
+      "ordered-snapshot": 1
+    },
+    "frontend/src/preview-3d/caps/render-mode-capability.test.ts": {
+      "ordered-snapshot": 2,
+      "index-access": 2
+    },
+    "frontend/src/preview-3d/caps/shadow-capability.test.ts": {
+      "index-access": 13,
+      "exact-length": 1,
+      "ordered-snapshot": 2
+    },
+    "frontend/src/preview-3d/caps/sky-capability.test.ts": {
+      "index-access": 21,
+      "exact-length": 1,
+      "ordered-snapshot": 1
+    },
+    "frontend/src/preview-3d/caps/water-capability.test.ts": {
+      "exact-length": 2,
+      "index-access": 22,
+      "ordered-snapshot": 3
+    },
+    "frontend/src/preview-3d/adapters/litematic-layer-controls.test.ts": {
+      "index-access": 1,
+      "ordered-snapshot": 4
+    },
+    "frontend/src/preview-3d/adapters/pack-model-adapter.test.ts": {
+      "index-access": 11,
+      "exact-length": 2
+    },
+    "frontend/src/preview-3d/adapters/preview-menu.test.ts": {
+      "index-access": 5
+    },
+    "frontend/src/preview-3d/adapters/vrm/vrm-adapter.test.ts": {
+      "ordered-snapshot": 1
+    },
+    "frontend/src/preview-3d/adapters/vrm/vrm-bone.test.ts": {
+      "ordered-snapshot": 1
+    },
+    "frontend/src/preview-3d/adapters/ysm-3d.test.ts": {
+      "ordered-snapshot": 2,
+      "index-access": 3
+    },
+    "frontend/src/preview-3d/adapters/ysm-adapter.test.ts": {
+      "index-access": 9
+    },
+    "frontend/src/preview-3d/state/preview-state.test.ts": {
+      "ordered-snapshot": 6
+    },
+    "frontend/src/views/app-preview/detail-3d.test.ts": {
+      "index-access": 4
+    },
+    "frontend/src/views/app-preview/maid-3d.test.ts": {
+      "exact-length": 1
+    },
+    "frontend/src/views/app-preview/mmd-controls.test.ts": {
+      "index-access": 13,
+      "ordered-snapshot": 3
+    },
+    "frontend/src/views/app-preview/skeleton-fill-panel.test.ts": {
+      "index-access": 2
+    },
+    "frontend/src/views/app-preview/vrm-controls.test.ts": {
+      "ordered-snapshot": 4,
+      "index-access": 9
+    },
+    "frontend/src/views/app-preview/ysm-controls.test.ts": {
+      "ordered-snapshot": 1,
+      "index-access": 2
+    },
+    "frontend/src/features/context-menu/context-menus.test.ts": {
+      "exact-length": 2,
+      "index-access": 3
+    }
+  }
+}

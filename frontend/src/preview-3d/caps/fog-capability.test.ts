@@ -6,6 +6,14 @@ import { FogCapability } from "./fog-capability.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks, isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";
+// ADR-311 三分法 D2：布局断言 helper——归属用 childIds/nodeIds 配集合判据，
+// 定位用 findNodeById（替代 nodes[i]! 位置索引；菜单项增删/重排不再让测试指错）。
+import {
+  assertNoDuplicateIds,
+  childIds,
+  findNodeById,
+  nodeIds,
+} from "@/preview-3d/menu/menu-test-helpers.ts";
 
 // ADR-196：构造即注册全局 env 回调、仅 dispose 注销；与 ground/sky/water 同侪一致，
 // afterEach 清空防 cap 泄漏跨测试（O(N²) 回调累积超时隐患）。
@@ -260,25 +268,22 @@ describe("FogCapability — getMenuNodes 结构（节点化后 group 由 folder 
   it("非总开关节点全部嵌套在参数组 folder 内（节点化后 group 由 folder 承载）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // master toggle 在顶层
-    expect(nodes[0]!.id).toBe("fog-enabled");
-    // 其余节点在 folder children 内
-    const folder = nodes[1]!;
+    // ADR-311 收敛示范：master 与参数组都是「成员」断言（按 id 定位 + 精确集合），
+    // 不锁位置——env.ts envCapSubNodes 本就按 id 剔除 master，顶层顺序非契约。
+    expect(findNodeById(nodes, "fog-enabled").kind).toBe("toggle");
+    const folder = findNodeById(nodes, "cap-group-fog-params");
     expect(folder.kind).toBe("folder");
-    const childIds = folder.children!.map((c) => c.id);
-    expect(childIds).toContain("fog-color");
-    expect(childIds).toContain("fog-mode");
-    expect(childIds).toContain("fog-density");
-    expect(childIds).toContain("fog-near");
-    expect(childIds).toContain("fog-far");
+    // 精确集合：五参数全在且无多余（原 toContain×5 只测「不少」不测「不多」，集合更严）
+    expect(childIds(folder).sort()).toEqual(
+      ["fog-color", "fog-density", "fog-far", "fog-mode", "fog-near"].sort(),
+    );
     // folder 的 labelKey 对应原 group
     expect(folder.labelKey).toBe("preview.fogGroupParams");
   });
 
   it("toggle 开关同步状态（节点 control 闭包）", () => {
     const cap = newCap();
-    const nodes = cap.getMenuNodes();
-    const enabledNode = nodes.find((n) => n.id === "fog-enabled")!;
+    const enabledNode = findNodeById(cap.getMenuNodes(), "fog-enabled");
     enabledNode.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
     expect(enabledNode.control!.get!(undefined)).toBe(true);
@@ -288,8 +293,7 @@ describe("FogCapability — getMenuNodes 结构（节点化后 group 由 folder 
 
   it("模式选择同步（节点 control 闭包）", () => {
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
-    const modeNode = folder.children!.find((c) => c.id === "fog-mode")!;
+    const modeNode = findNodeById(cap.getMenuNodes(), "fog-mode");
     modeNode.control!.set!("exp2");
     expect(cap.getMode()).toBe("exp2");
   });
@@ -301,74 +305,74 @@ describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
   it("完整树 = master toggle 原生节点 + 参数组 folder（color/select/3 slider）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    expect(nodes).toHaveLength(2);
-    // master toggle
-    expect(nodes[0]!.kind).toBe("toggle");
-    expect(nodes[0]!.id).toBe("fog-enabled");
-    // 默认关雾：master toggle get 反映 envState.fogEnabled（false）
-    expect(nodes[0]!.control!.get!(undefined)).toBe(false);
-    nodes[0]!.control!.set!(true);
+    assertNoDuplicateIds(nodes);
+    // ADR-311：顶层是「成员」——master + 参数组 folder 恰好两个，按 id 集合断言（顺序非契约）
+    expect(nodeIds(nodes).sort()).toEqual(
+      ["cap-group-fog-params", "fog-enabled"].sort(),
+    );
+    // master toggle 行为：默认关雾，control get/set 反映 envState.fogEnabled
+    const master = findNodeById(nodes, "fog-enabled");
+    expect(master.kind).toBe("toggle");
+    expect(master.control!.get!(undefined)).toBe(false);
+    master.control!.set!(true);
     expect(cap.isEnabled()).toBe(true);
-    // 参数组 folder
-    const folder = nodes[1]!;
+    // 参数组 folder 归属：五参数精确集合（无多无少，重排不敏感）
+    const folder = findNodeById(nodes, "cap-group-fog-params");
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.fogGroupParams");
-    expect(folder.children!.map((c) => c.id)).toEqual([
-      "fog-color",
-      "fog-mode",
-      "fog-density",
-      "fog-near",
-      "fog-far",
-    ]);
-    // 全原生节点（color/select/slider；fog 无复杂控件不走 controls 通道）
-    expect(folder.children!.map((c) => c.kind)).toEqual([
-      "color",
-      "select",
-      "slider",
-      "slider",
-      "slider",
-    ]);
+    expect(childIds(folder).sort()).toEqual(
+      ["fog-color", "fog-density", "fog-far", "fog-mode", "fog-near"].sort(),
+    );
+    // 全原生节点（color/select/slider；fog 无复杂控件不走 controls 通道）——
+    // kind 是每个成员自身的行为契约，按 id 逐条硬断言而非有序 kind 数组
+    expect(findNodeById(nodes, "fog-color").kind).toBe("color");
+    expect(findNodeById(nodes, "fog-mode").kind).toBe("select");
+    expect(findNodeById(nodes, "fog-density").kind).toBe("slider");
+    expect(findNodeById(nodes, "fog-near").kind).toBe("slider");
+    expect(findNodeById(nodes, "fog-far").kind).toBe("slider");
   });
 
   it("剔除 master 后的子树（env 二级 body 语义）：仅参数组 folder", () => {
     const cap = newCap();
     const rest = cap.getMenuNodes().filter((n) => n.id !== cap.getMasterNodeId());
-    expect(rest).toHaveLength(1);
-    expect(rest[0]!.children!.some((c) => c.id === "fog-enabled")).toBe(false);
+    // 成员集合断言：剔除 master 后顶层恰好只剩参数组 folder
+    expect(nodeIds(rest).sort()).toEqual(["cap-group-fog-params"]);
+    // master 不残留在任何子级（行为：filter 语义正确性）
+    expect(childIds(findNodeById(rest, "cap-group-fog-params"))).not.toContain("fog-enabled");
   });
 
   it("color/select/slider 节点读写闭包直连 cap", () => {
     setEnvState({ fogMode: "exp2" }, { source: 'manual' });
     const cap = newCap();
-    const folder = cap.getMenuNodes()[1]!;
-    const color = folder.children!.find((c) => c.id === "fog-color")!;
+    const color = findNodeById(cap.getMenuNodes(), "fog-color");
     expect(color.kind).toBe("color");
     expect(color.control!.get!(undefined)).toBe(0xaac4e8);
     color.control!.set!(0xff0000);
     expect(cap.getColor()).toBe(0xff0000);
     // select 模式
-    const mode = folder.children!.find((c) => c.id === "fog-mode")!;
-    expect(mode.control!.options).toHaveLength(2);
+    const mode = findNodeById(cap.getMenuNodes(), "fog-mode");
+    // 成员而非计数：断言「模式恰好是 linear/exp2 两枚举」（THREE.Fog 协议事实），
+    // 新雾型加入时此断言指名缺项，而非 toHaveLength(2) 只报数字
+    expect(mode.control!.options!.map((o) => o.value).sort()).toEqual(["exp2", "linear"]);
     mode.control!.set!("linear");
     expect(cap.getMode()).toBe("linear");
     // slider 密度
-    const density = folder.children!.find((c) => c.id === "fog-density")!;
+    const density = findNodeById(cap.getMenuNodes(), "fog-density");
     density.control!.set!(0.03);
     expect(cap.getDensity()).toBe(0.03);
   });
 
   it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
     const cap = newCap();
-    const children = cap.getMenuNodes()[1]!.children!;
+    const nodes = cap.getMenuNodes();
     const pairs = [
       ["fog-density", "fogDensity"],
       ["fog-near", "fogNear"],
       ["fog-far", "fogFar"],
     ] as const;
     for (const [id, key] of pairs) {
-      const node = children.find((c) => c.id === id);
-      expect(node, `缺菜单节点 ${id}`).toBeDefined();
-      const c = node!.control!;
+      // findNodeById 自带未命中失败信息（替代手搓 find+toBeDefined 两段）
+      const c = findNodeById(nodes, id).control!;
       const range = getParamRange(key);
       expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }, `${id} 值域应来自 schema`).toEqual(
         range,
@@ -378,19 +382,19 @@ describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
 
   it("mode select 选项带 labelKey（i18n 三语，不硬编码中文）", () => {
     const cap = newCap();
-    const mode = cap.getMenuNodes()[1]!.children!.find((c) => c.id === "fog-mode")!;
-    expect(mode.control!.options!.map((o) => o.labelKey)).toEqual([
-      "preview.fogModeLinear",
+    const mode = findNodeById(cap.getMenuNodes(), "fog-mode");
+    expect(mode.control!.options!.map((o) => o.labelKey).sort()).toEqual([
       "preview.fogModeExp2",
-    ]);
+      "preview.fogModeLinear",
+    ].sort());
   });
 
   it("near/far 仅 linear 可见、density 仅 exp2 可见（visibleWhen 吃 env.fogMode 快照）", () => {
     const cap = newCap();
-    const children = cap.getMenuNodes()[1]!.children!;
+    const nodes = cap.getMenuNodes();
     // 快照已收窄为精确联合（锐评 F-3），夹具参数随之收紧——旧 `string` 下拼错 mode 恒漏过
     const vis = (id: string, mode: "exp2" | "linear") =>
-      children.find((c) => c.id === id)!.visibleWhen!({ "env.fogMode": mode });
+      findNodeById(nodes, id).visibleWhen!({ "env.fogMode": mode });
     // exp2：density 可见，near/far 隐藏
     expect(vis("fog-density", "exp2")).toBe(true);
     expect(vis("fog-near", "exp2")).toBe(false);

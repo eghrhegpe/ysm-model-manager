@@ -10,11 +10,16 @@ source_files:
   - scripts/_lib/css-layer-utils.ts
 auto_fields:
   symbols_with_lines:
+    - DeadCssFinding
+    - dynamicClassHint
     - expandStyleInterpolations
+    - extractSelectorClasses
+    - findDeadCssClasses
     - findStrayCommentClose
     - findUndefinedAnywhereClasses
     - hasMotionDeclaration
     - hasNoAnimationsBridge
+    - maskSelectorClasses
     - readConstLiteral
     - resolveImportAbs
     - runFrontendDomain

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 194 张知识卡
+> 总计: 195 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -281,7 +281,7 @@
 - **volumetric_cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），四轴分离：
 
-## ui（42 张）
+## ui（43 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -316,6 +316,7 @@
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
 | 🍃 icon_kit | icon-kit 多源图标（已并入 UI_ICONS） | leaf | — | icon-kit, 多源图标, renderIcon, emoji 图标源, 图标字体 |
 | 🏗 knowledge_frontend_drift_audit | 知识库×前端语义脱节审计 | architecture | — | 知识库脱节, 幽灵事件, nav:changed, invariant_anchors, status 字段, 机制锚, 卡片漂移 |
+| 🍃 menu_test_assertion | 菜单测试断言三分法 | leaf | — | 写 / 改 3D 菜单（cap/adapter/panel/state）测试，断言节点树结构, 菜单测试因加项、删项、重排而集体崩——判断该断言是否属于脆弱布局断言, 新增 cap/菜单节点后，测试该怎么写才不再随菜单变化而改, 看到 check-menu-test-layout 门禁红（新增布局快照断言超基线）, 评审菜单测试时，分不清「行为断言」与「布局快照」 |
 | 🍃 module_global_state | 模块级全局状态治理 | leaf | — | 模块级全局状态, 全局 Map 泛滥, reset 测试钩子, 单例收敛 |
 | 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | gpu-bound | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
 | 🏗 preview_menu_session_key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, sessionId |
@@ -357,6 +358,7 @@
 - **frontend_naming**（前端命名章程（黑话治理））：2026-09 ADR-161「渲染会话词汇章程」实施时扩大扫描 `frontend/src` 404 个生产 TS 文件，发现命名黑话远超章程六类，按模式统计：
 - **frontend_repo_audit**（前端 TS 整包审计）：2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全…
 - **knowledge_frontend_drift_audit**（知识库×前端语义脱节审计）：2026-09-05 三子代理串行只读锐评（views+features / preview-3d+parsers / core+ui+utils+backend），主模型逐条抽查背书。审计对象：`docs/knowledge` 166 张…
+- **menu_test_assertion**（菜单测试断言三分法）：菜单 UI 逻辑（cap 的 `getMenuNodes()` 树、adapter 产树、state 层控制项顺序）变化频繁，手写「布局快照」断言（有序 id 数组 `toEqual`、精确 `toHaveLength`、`nodes[i]…
 - **module_global_state**（模块级全局状态治理）：2026-09-04 锐评续刀 + ADR-178 期间对「模块级全局状态」的系统评估：modal 单例槽位试点收敛成功（`ModalSlotState`），locale/web-store 查证后**停止推广**（无净收益）。本卡沉淀判断…
 - **multi_model_select**（多模型选择菜单原语 multiModelSelectNode）：跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的
 - **preview_menu_session_key**（preview-menu-session-key）：3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台

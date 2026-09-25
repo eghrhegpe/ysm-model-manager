@@ -69,6 +69,12 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_check_ctx_menu_i18n.ts": ["frontend"],
   "test_check_layering.ts": ["frontend"],
   "test_check_menu_health.ts": ["frontend"],
+  // ADR-311 菜单测试布局快照闸（check-menu-test-layout）——扫描域为菜单区测试文件，
+  // 结论建在前端菜单测试上（frontend 域）；扫描核在 scripts 工具自身（tests 域）
+  "test_check_menu_test_layout.ts": ["frontend", "tests"],
+  // ADR-311 菜单测试布局快照闸（check-menu-test-layout）——扫描域为菜单区测试文件，
+  // 结论建在前端菜单测试上（frontend 域）；扫描核在 scripts 工具自身（tests 域）
+  "test_check_menu_test_layout.ts": ["frontend", "tests"],
   "test_e2e_location_contract.ts": ["frontend"],
   "test_html_integrity.ts": ["frontend"],
   // R8 模板闸扫描核（scripts/_lib/innerhtml-hygiene.ts）——纯函数核在 tests 域，
@@ -282,6 +288,12 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_check_complexity.ts": ["scripts/check-complexity.ts"],
   "test_check_type_safety.ts": ["scripts/check-type-safety.ts"],
   "test_check_params.ts": ["scripts/check-params.ts"],
+  // ADR-311 菜单测试布局闸：扫菜单区测试文件的布局快照形态 + 基线对账（只减不增）
+  "test_check_menu_test_layout.ts": [
+    "scripts/check-menu-test-layout.ts",
+    "docs/.menu-test-layout-baseline.json",
+    "tests/test_check_menu_test_layout.ts",
+  ],
   // 裸标签规则锁死：判定口径来自 VitePress 真实 markdown-it 逐例实测，改脚本即须复验
   "test_check_doc_markup.ts": ["scripts/check-doc-markup.ts"],
   "test_complexity_parity.ts": ["scripts/check-complexity.ts", "go/ccheck/", "tests/parity/"],

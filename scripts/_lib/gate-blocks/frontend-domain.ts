@@ -86,6 +86,27 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
   });
   // 菜单表违规 = hard（默认）：ctx.record() 已自动置 blocked，无需重复手动设
 
+  // ADR-311：菜单测试「布局快照断言」防回退闸——只减不增基线，新增有序 id/kind toEqual、
+  // 精确 toHaveLength、nodes[i] 索引即回归阻断。存量 336 处（35 文件）在基线内不阻断，
+  // 随触碰收敛。债务型（同 css-token-check），故 blockPolicy=debt：超基线只 WARN 不 blocked，
+  // 避免在渐进执法未完成时把整条前端域锁死（闸本身 exit 1，供人/AI 显式看到回归信号）。
+  const tMl = Date.now();
+  const ml = await ctx.shAsync("node scripts/check-menu-test-layout.ts --json");
+  const mlz = tryParseSummary(ml.out);
+  const mlOk = ml.rc === 0;
+  ctx.record("node scripts/check-menu-test-layout.ts --json", mlOk, {
+    time: Date.now() - tMl,
+    raw: ml.out,
+    note:
+      mlz === null
+        ? "输出解析失败（scripts/check-menu-test-layout.ts 缺失？）"
+        : mlOk
+          ? `菜单布局债 ${mlz.total} 处在基线内（${mlz.files} 文件）`
+          : `新增布局快照断言 ${mlz.regressions} 处超基线（ADR-311 三分法：归属用集合断言、定位用 findNodeById）`,
+    tail: mlOk ? "" : ml.out.trim().split("\n").slice(-8).join("\n"),
+    blockPolicy: "debt",
+  });
+
   // 右键菜单 i18n key 门禁（2026-09-01 新增）：menu-defs.ts / context-menu*-handlers.ts
   // 里所有字面量 t("key")（原文 tr("key")）必须存在于 zh-CN 基准包，否则运行时静默回退。
   // 与 check-menu-health 同口径——漏 i18n 破坏菜单文案契约，硬阻断。

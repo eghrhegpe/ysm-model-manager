@@ -48,6 +48,7 @@ auto_fields:
     - assembleBoneSelectInfo
     - AssembledShell
     - AssertCommonFieldIsExact
+    - assertNoDuplicateIds
     - assertRevisionRange
     - ATMOSPHERE_PRESETS
     - AtmospherePresetId
@@ -141,6 +142,7 @@ auto_fields:
     - capLabel
     - captureTextureName
     - checkRevision
+    - childIds
     - clampFieldValue
     - clampPoolRoundness
     - cleanupPreview
@@ -292,6 +294,7 @@ auto_fields:
     - filmStrategy
     - filterAnimFiles
     - findAncestorBoneId
+    - findNodeById
     - fitCameraToRoots
     - fitCameraToScene
     - flagsForAlpha
@@ -550,6 +553,7 @@ auto_fields:
     - MultiModelSelectOpts
     - nodeControlToView
     - NodeFor
+    - nodeIds
     - NodeViolation
     - normalizeEnvLegacyState
     - normalizeFbxScale

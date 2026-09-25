@@ -10,6 +10,21 @@ export function esc(s: string | null | undefined): string {
     .replace(/'/g, "&#39;");
 }
 
+/**
+ * 非字符串入参的转义适配（EscFn 形状 `(s: unknown) => string`）。
+ *
+ * 立因（2026-09 锐评收债）：诊断页的生产接线（`views/app-content/init-pages.ts` 的
+ * `(s) => esc(s == null ? "" : String(s))`）与 14 处测试夹具各自手写同义实现，而夹具已
+ * **分裂成三种转义表**（3 实体 / 4 实体 / 5 实体）——「测试绿」因而无法证明生产渲染正确
+ * （`>` 与 `'` 在两版夹具里根本不转义）。收成此单点后，生产与夹具消费同一函数，
+ * 转义表改动不可能再单向漂移。
+ *
+ * 与 `esc` 的唯一差别是**入参收窄**：`null/undefined → ""`、其余 `String(s)` 后走同一张表。
+ */
+export function escUnknown(s: unknown): string {
+  return esc(s == null ? "" : String(s));
+}
+
 // ===== 搜索高亮（返回 HTML 字符串）=====
 
 /**

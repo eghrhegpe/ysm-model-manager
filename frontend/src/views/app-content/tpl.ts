@@ -311,9 +311,9 @@ export function diagnosticsHTML(): string {
         <div class="diag-bar-hint">${t("diagnostics.perfScanBenchHint")}</div>
       </div>
     </div>
-    <div class="diag-result" id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-    <div class="diag-result" id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
-    <div class="diag-result" id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out" data-perf-mode="scan"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.perfIdle")}</div></div>
+    <div class="diag-result" id="diag-perf-single" data-testid="diag-perf-single" data-perf-mode="single"><div class="stat-row stat-row-idle">${t("diagnostics.perfIdle")}</div></div>
+    <div class="diag-result" id="diag-perf-conc-out" data-testid="diag-perf-conc-out" data-perf-mode="conc"><div class="stat-row stat-row-idle">${t("diagnostics.perfIdle")}</div></div>
+    <div class="diag-result" id="diag-perf-scan-bench-out" data-testid="diag-perf-scan-bench-out" data-perf-mode="scan"><div class="stat-row stat-row-idle">${t("diagnostics.perfIdle")}</div></div>
   </div>`,
       },
       {
@@ -343,7 +343,7 @@ export function diagnosticsHTML(): string {
           <div class="diag-bar-hint">${t("diagnostics.healthHint")}</div>
         </div>
       </div>
-      <div class="diag-result" id="diag-health-list" data-testid="diag-health-list"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.auditIdle")}</div></div>
+      <div class="diag-result" id="diag-health-list" data-testid="diag-health-list"><div class="stat-row stat-row-idle">${t("diagnostics.auditIdle")}</div></div>
     </div>
     <div class="diag-pane" data-sub-group="audit" data-sub-pane="sync" style="display:none">
       <div class="diag-bar" id="diag-sync-bar">
@@ -358,7 +358,7 @@ export function diagnosticsHTML(): string {
           <div class="diag-bar-hint">${t("diagnostics.scanHint")}</div>
         </div>
       </div>
-      <div class="diag-result" id="diag-sync-conflict-list" data-testid="diag-sync-conflict-list"><div class="stat-row" style="padding:var(--sp-vh-block);color:var(--muted);font-size:var(--fs-sm);text-align:center;flex-direction:column;gap:12px">${t("diagnostics.auditIdle")}</div></div>
+      <div class="diag-result" id="diag-sync-conflict-list" data-testid="diag-sync-conflict-list"><div class="stat-row stat-row-idle">${t("diagnostics.auditIdle")}</div></div>
     </div>
   </div>`,
       },

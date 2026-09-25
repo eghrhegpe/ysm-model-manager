@@ -95,6 +95,10 @@ export const contentDiagCSS: string = `
    2026-09-25 起兼作三 tab 的唯一留白来源（见上方 .diag-panel 规则处注释）。 */
 .diag-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; font-size:var(--fs-md); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); flex-shrink:0; }
 .stat-row { font-size:var(--fs-md); color:var(--txt); padding:var(--pad-v-2); display:flex; justify-content:space-between; }
+/* 空态占位行（perf/audit 结果区初始态，tpl 5 处 idle 提示共用）：原为逐字内联 style ×5，
+   gap:12px 裸值恰是 css-token-check 的 5 条新增 WARN（基线只收了 gap:6px/8px 旧值）。
+   收成单点后裸值一并归 --sp-3（12px @ 基准，值等价）；.stat-row 同特异性下后置覆盖。 */
+.stat-row-idle { padding:var(--sp-vh-block); color:var(--muted); font-size:var(--fs-sm); text-align:center; flex-direction:column; gap:var(--sp-3); }
 .diag-stat { padding:var(--sp-3); font-size:var(--fs-base); display:block; text-align:center; }
 .diag-stat-muted { color:var(--muted); }
 .diag-stat-error { color: var(--status-error); }

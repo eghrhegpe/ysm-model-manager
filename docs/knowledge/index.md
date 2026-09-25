@@ -395,7 +395,7 @@
 | 🏗 test_tax_reduction | 测试税减负三刀方法论 | architecture | — | 测试税, 测试文件过大, mock 复印机, 双胞胎测试, 墓碑测试, stubBlobUrls, 夹具沉淀 |
 | 🏗 utils-array | 数组工具 moveItem | architecture | — | 数组排序, 拖拽排序, moveItem, 列表 reorder |
 | 🍃 utils-display | 文件名显示 display | leaf | — | 文件名显示, renderDisplayName, 作者标签, 作品标签, 文件名着色, 搜索高亮 |
-| 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
+| 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, escUnknown, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
 | 🏗 utils-errors | 错误处理 errors | architecture | — | 错误提示, 友好错误, friendlyError, toast 文案, 报错翻译, 网络错误, 文件被占用 |
 | 🏗 utils-export | 截图与导出 export | architecture | memory-heavy, gpu-bound | 截图, 导出 PNG, 多角度截图, 预览缓存淘汰, blob URL 释放 |
 | 🏗 utils-extensions | 扩展名映射 extensions | architecture | — | 扩展名, 支持的文件类型, 拖拽过滤, RESOURCE_EXTS, ALL_EXTS, 导入过滤, 扩展名归属 |

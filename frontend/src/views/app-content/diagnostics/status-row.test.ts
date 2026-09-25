@@ -9,13 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { msgRowHTML, statRowHTML } from "./status-row.ts";
 
-const esc = (s: unknown): string =>
-  String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 describe("msgRowHTML（diag-msg 族：padding12 + fs-sm，左对齐）", () => {
   it("无图标：只包外壳 —— 逐字复刻 conflicts.ts / dedup-render.ts 的占位行", () => {

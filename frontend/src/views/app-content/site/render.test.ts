@@ -29,12 +29,7 @@ import type { BuildSiteHtmlCtx, CrCardCtx } from "./render.ts";
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import type { LocalCreatorLike } from "./site-view.ts";
 
-const esc = (s: unknown): string =>
-  String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 /** 解析 buildSiteHtml 产物 */
 function renderHtml(ctx: BuildSiteHtmlCtx): HTMLElement {

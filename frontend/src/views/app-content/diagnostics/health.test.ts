@@ -10,8 +10,7 @@ import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
 const { getApp } = vi.hoisted(() => ({ getApp: vi.fn() }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 /** 构造一份合法体检报告（PowerShell 少引号转义，用对象拼接） */
 function buildReport(): HealthReport {
@@ -127,10 +126,13 @@ describe("renderHealthReport", () => {
 
   it("目录路径转义", () => {
     const r = buildReport();
-    r.directory = '/repo/<b>evil</b>';
+    r.directory = "/repo/<b>evil</b>";
     const html = renderHealthReport(r, esc);
+    // 夹具已与生产同源（utils/html|escUnknown，5 实体表）：`<` 与 `>` 都必须转义。
+    // 此前手写夹具只转 `<`，本断言便跟着写成 `&lt;b>evil`——把夹具的残缺转义表当契约锁住了，
+    // 生产实际输出 `&lt;b&gt;`，测试绿而生产未被验证（2026-09 锐评收债实证）。
     expect(html).not.toContain("<b>evil");
-    expect(html).toContain("&lt;b>evil");
+    expect(html).toContain("&lt;b&gt;evil&lt;/b&gt;");
   });
 });
 

@@ -14,8 +14,7 @@ vi.mock("@/views/backend-deps.ts", () => ({
 import { bindBrowseEvents } from "./events.ts";
 import type { LocalCreatorLike, SiteViewState } from "./types.ts";
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 /** 真实 DOM 夹具：一张卡片（.gh-card[data-name]）+ 收藏/头像等被绑定块忽略的容器 */
 function makeState(creators: LocalCreatorLike[]): {

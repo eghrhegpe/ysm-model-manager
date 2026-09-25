@@ -79,8 +79,7 @@ function trackedBind(state: SiteViewState, refresh: () => void): () => void {
   return cleanup;
 }
 
-const esc = (s: string): string =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 function makeState(overrides: Record<string, unknown> = {}): {
   state: SiteViewState;

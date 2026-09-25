@@ -18,8 +18,7 @@ const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
 vi.mock("@/services/cli-bridge.ts", () => ({ executeCLI }));
 vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 function makeRoot(): ShadowRoot {
   const el = document.createElement("div");

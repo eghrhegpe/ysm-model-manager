@@ -7,6 +7,7 @@ source_files:
   - frontend/src/features/maintenance/version-updater.ts
 auto_fields:
   symbols_with_lines:
+    - CHECK_INTERVAL_DEFAULT_MS
     - checkUpdateSilent
     - initVersionUpdater
     - UpdateInfo

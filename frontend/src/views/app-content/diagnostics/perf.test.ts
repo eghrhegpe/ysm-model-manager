@@ -20,8 +20,11 @@ const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
 vi.mock("@/services/cli-bridge.ts", () => ({ executeCLI }));
 vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
+// 点击后的等待一律走 flushPromises（排空微任务链，宏任务边界后必然完成）——
+// 原 `new Promise(r => setTimeout(r, 10))` 是固定墙钟猜测：链路若变长/变慢就得加毫秒，
+// 而微任务排空与机器快慢无关（2026-09 锐评收债）。
+import { flushPromises } from "@/test-utils/wait.ts";
 
 // 对齐 Go singleBenchJSON（single-bench --format json）：前端直接消费结构化载荷，
 // 不再反解析中文人类文案（旧夹具的自由文本形态已退役）
@@ -157,7 +160,7 @@ describe("single-bench 面板", () => {
     initPerfPanel(root, esc);
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     // 必须走结构化 JSON 出口：旧实现只发 model/iterations，靠正则解析中文文案
     expect(executeCLI).toHaveBeenCalledWith(
       "single-bench",
@@ -189,7 +192,7 @@ describe("single-bench 面板", () => {
     initPerfPanel(root, esc);
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./x.ysm";
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     const out = root.getElementById("diag-perf-single") as HTMLElement;
     expect(out.textContent).toContain("需要 --model"); // 展示后端错误 message
   });
@@ -204,7 +207,7 @@ describe("single-bench 面板", () => {
     initPerfPanel(root, esc);
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./x.ysm";
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     const out = root.getElementById("diag-perf-single") as HTMLElement;
     expect(out.querySelector(".diag-stat-error")).toBeTruthy();
   });
@@ -222,7 +225,7 @@ describe("single-bench 面板", () => {
       (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./y.ysm";
       (root.getElementById("diag-perf-run") as HTMLElement).click();
     };
-    run(); await new Promise((r) => setTimeout(r, 10));
+    run(); await flushPromises();
     // 仅 1 条历史：无趋势折线（<2 条提示）
     const out1 = root.getElementById("diag-perf-single") as HTMLElement;
     // ⚠️ 不能用 `not.toContain("<svg")` —— ADR-238 后**图标本身也是 SVG**；
@@ -230,7 +233,7 @@ describe("single-bench 面板", () => {
     // <polyline>（钟摆），与趋势图同名元素撞判据。改用趋势图独有特征
     // `<svg width="560"`（perf-trend 固定画布宽），这才是本测试真正要锁的语义。
     expect(out1.innerHTML).not.toContain('<svg width="560"');
-    run(); await new Promise((r) => setTimeout(r, 10));
+    run(); await flushPromises();
     // ≥2 条：渲染趋势 SVG 折线
     const out2 = root.getElementById("diag-perf-single") as HTMLElement;
     expect(out2.innerHTML).toContain('<svg width="560"');
@@ -251,7 +254,7 @@ describe("single-bench 面板", () => {
     initPerfPanel(root, esc);
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./z.ysm";
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     const out = root.getElementById("diag-perf-single") as HTMLElement;
     const val = out.querySelector(".perf-bar-val") as HTMLElement;
     expect(val.textContent).toContain("✅");
@@ -270,7 +273,7 @@ describe("single-bench 面板", () => {
     initPerfPanel(root, esc);
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./legacy.ysm";
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     const out = root.getElementById("diag-perf-single") as HTMLElement;
     expect(out.textContent).toContain("YSM"); // format 回落标签
     expect(out.textContent).toContain("① 文件读取");
@@ -295,7 +298,7 @@ describe("single-bench 面板", () => {
     initPerfPanel(root, esc);
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./dir";
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     const out = root.getElementById("diag-perf-single") as HTMLElement;
     const val = out.querySelector(".perf-bar-val") as HTMLElement;
     expect(val.textContent).toContain("❌");
@@ -321,7 +324,7 @@ describe("single-bench 面板", () => {
     initPerfPanel(root, esc);
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./z.ysm";
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     const out = root.getElementById("diag-perf-single") as HTMLElement;
 
     // 归属徽标逐阶段如实展示（Go / Rust / WASM / Three 不再是黑箱）
@@ -351,7 +354,7 @@ describe("single-bench 基准入口与判决（ADR-262 D8）", () => {
 
   async function run(root: ShadowRoot): Promise<HTMLElement> {
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     return root.getElementById("diag-perf-single") as HTMLElement;
   }
 
@@ -687,11 +690,11 @@ describe("性能面板复制按钮 — 面板重建后仍工作（perfCopyBound 
     initPerfPanel(root, esc);
     (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./player.ysm";
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     const copyBtn1 = root.querySelector<HTMLElement>("[data-perf-copy]");
     expect(copyBtn1).toBeTruthy();
     copyBtn1!.click();
-    await new Promise((r) => setTimeout(r, 0));
+    await flushPromises();
     expect(writeText).toHaveBeenCalledTimes(1);
 
     // 模拟面板重建：移除 diag-perf-single 容器并重建（clearPanels → panel.remove() 语义）
@@ -706,12 +709,12 @@ describe("性能面板复制按钮 — 面板重建后仍工作（perfCopyBound 
 
     // 再跑一次 → 新容器内出现复制按钮，点击仍应复制
     (root.getElementById("diag-perf-run") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 10));
+    await flushPromises();
     const copyBtn2 = root.querySelector<HTMLElement>("[data-perf-copy]");
     expect(copyBtn2).toBeTruthy();
     writeText.mockClear();
     copyBtn2!.click();
-    await new Promise((r) => setTimeout(r, 0));
+    await flushPromises();
     // 修复前：模块级 perfCopyBound=true 阻止重绑 → 新容器复制委托缺失（writeText 0 次）
     expect(writeText).toHaveBeenCalledTimes(1);
   });

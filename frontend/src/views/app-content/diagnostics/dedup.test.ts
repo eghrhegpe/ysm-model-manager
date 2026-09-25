@@ -15,8 +15,7 @@ const { busEmit, getApp } = vi.hoisted(() => ({
 vi.mock("@/bus", () => ({ bus: { emit: busEmit } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 beforeEach(() => {
   vi.resetAllMocks();

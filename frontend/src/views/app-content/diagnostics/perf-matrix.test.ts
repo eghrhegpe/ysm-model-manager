@@ -32,8 +32,8 @@ vi.mock("@/utils/resource/schema.ts", async (importOriginal) => {
   return { ...actual, resourceTypesById: perfRegistry };
 });
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
+import { flushPromises } from "@/test-utils/wait.ts";
 
 function makeRoot(): ShadowRoot {
   const el = document.createElement("div");
@@ -229,7 +229,8 @@ function setOrder(root: ShadowRoot, value: string): void {
 
 async function run(root: ShadowRoot): Promise<HTMLElement> {
   (root.getElementById("diag-perf-run") as HTMLElement).click();
-  await new Promise((r) => setTimeout(r, 10));
+  // 微任务排空（见 perf.test.ts 同款注释）：替掉原 `setTimeout(r, 10)` 固定墙钟等待
+  await flushPromises();
   return root.getElementById("diag-perf-single") as HTMLElement;
 }
 

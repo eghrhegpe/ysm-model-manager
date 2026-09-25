@@ -20,8 +20,8 @@ vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 import { initPerfPanel } from "./perf.ts";
 import { scanBenchParsePayload } from "./perf-scan-bench.ts";
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
+import { flushPromises } from "@/test-utils/wait.ts";
 
 // 引擎块提为具名常量：载荷里的数组按下标取会撞 noUncheckedIndexedAccess（`engines[0]` 可能是
 // undefined），断言要么能用常量直接引用、要么就得套断言——常量最直白。
@@ -88,7 +88,8 @@ function makeRoot(): ShadowRoot {
 
 function clickAndFlush(root: ShadowRoot): Promise<void> {
   (root.getElementById("diag-perf-scan-bench") as HTMLElement).click();
-  return new Promise((r) => setTimeout(r, 10));
+  // 微任务排空（见 perf.test.ts 同款注释）：替掉原 `setTimeout(r, 10)` 固定墙钟等待
+  return flushPromises();
 }
 
 function outRoot(root: ShadowRoot): HTMLElement {

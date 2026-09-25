@@ -268,7 +268,7 @@
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 120 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 308 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 303 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 127 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 305 |
@@ -410,13 +410,13 @@
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 189 |
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 298 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 158 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 167 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 193 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 202 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 223 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 258 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 268 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 159 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 168 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 194 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 203 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 224 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 259 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 269 |
 | mountRootMenu | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 691 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 169 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
@@ -431,7 +431,7 @@
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 181 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 229 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 350 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 345 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 87 |

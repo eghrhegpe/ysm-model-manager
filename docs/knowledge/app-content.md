@@ -167,7 +167,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - 所有 `bus.on` 订阅与页面级拆除统一注册进 `SubscriptionBucket`（`addPage` / `addGlobal` / `setNavUnsub`；`addPage` 收 `() => void | Promise<void>`，ADR-260），在 `disconnectedCallback` 与 `lang:changed` 全量重建时清空。⚠️ **页面级桶不在 `_render()` 开头清**——ADR-163 面板常驻、每页 init 只跑一次，切页清订阅会造「DOM 还在、事件已死」的僵尸页（ADR-260 §2.5）；`document` 级 resize 监听先移除再重绑
 - **幂等订阅用 `addPageOnce(key, fn)` / `addGlobalOnce(key, fn)`，不要自己开布尔标志**（ADR-261）：key 集合与订阅集合**同寿命**（`drainPage` / `cleanupAll` 一并清），故 lang:changed 重建后天然可重注册，无需任何外部复位。旧模式（`state.insListenerReg` / `.avatarRefreshRegistered` + `index.ts` 手工复位）已退役——它的不变量维护点横跨页与协调器两处，漏复位即「语言热切换后页面永久失去监听」（僵尸页同族）。⚠️ 幂等**须跨 init 调用**持存：闭包变量做不到（每次 init 新闭包），这也是不能「删了守卫了事」的原因（导出入口被二次调用也必须幂等，测试已锁定）
 - `_render()` 内页面 init 分发整体包 try/catch：init 抛错不中断调用方，转 `console.error` + `toast:show` 反馈用户而非静默
-- 样式走 `adoptedStyleSheets` + CSS 变量，无硬编码颜色；`innerHTML` 拼接统一过 `_esc` / `esc`
+- 样式走 `adoptedStyleSheets` + CSS 变量，无硬编码颜色；`innerHTML` 拼接统一过 `_esc` / `esc`；**页面级把 esc 传给渲染函数时统一用 `escUnknown`**（`utils/html/html.ts` 的 `EscFn` 形状适配单点，诊断页 / 去重面板接线），不再写 `(s) => esc(s == null ? "" : String(s))` 内联 lambda——测试夹具曾各手写一份并分裂成 3 / 4 / 5 实体三种转义表
 - 页面级临时缓存（`_workshopCache` / `_githubCache`）与 `_workshopTimer` 定时器在 `disconnectedCallback` 清空
 - 站点搜索带词链接必须**真传**到底层打开调用：`ctx.openUrl(url)` → `openSite(host, site, mode, url)` 的 `url` 不得丢弃
 - 浏览模式收敛为**单源 ref**：`browseMode` 存为 `BrowseModeRef{ v }`，经 `ctx.browseMode` 贯穿到 `renderSiteView` 高亮与 `openUrl`→`openSite`，`setBrowseMode` 只改 `.v` + localStorage → 一处 set、处处一致，无值拷贝 stale

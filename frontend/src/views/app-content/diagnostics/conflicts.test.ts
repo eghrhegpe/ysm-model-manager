@@ -22,8 +22,7 @@ vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 /**
  * 夹具对齐**真实 tpl**（ADR-288 D2 两段式）：栏内含选择器与扫描按钮，结果区是栏的**兄弟**。

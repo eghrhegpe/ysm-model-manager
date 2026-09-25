@@ -6,7 +6,7 @@
 //  - 日志渲染：分组徽标 / 空态 / 抛错兜底（import + runtime）
 //  - startDedup：单类型/全类型目录扫描 / 无目录 / 无重复 / exec 移入回收站 / 取消
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { waitFor } from "@/test-utils/index.ts";
+import { flushPromises, waitFor } from "@/test-utils/wait.ts";
 import { initDiagnostics, createDedupSession } from "./init.ts";
 import { clearLoadTraces, recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { diagnosticsHTML } from "@/views/app-content/tpl.ts";
@@ -31,8 +31,7 @@ vi.mock("@/backend/platform.ts", async (importOriginal) => {
   };
 });
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
   const el = document.createElement("div");
@@ -253,8 +252,9 @@ describe("initDiagnostics — 日志面板", () => {
     input.value = "abc";
     input.dispatchEvent(new Event("input"));
     expect(fn.mock.calls.length).toBe(1); // 未到 300ms 不触发
-    await new Promise((r) => setTimeout(r, 350));
-    expect(fn.mock.calls.length).toBeGreaterThanOrEqual(2);
+    // 防抖命中改条件轮询：原 `setTimeout(r, 350)` 对 300ms 防抖只余 50ms 余量（慢机器真红），
+    // 且防抖阈值若调整，定值睡眠会静默变成「测了个别的数」（2026-09 锐评收债）
+    await waitFor(() => fn.mock.calls.length >= 2);
   });
 
   it("搜索命中报错内容 / 目标路径（不再只匹配模型名）", async () => {
@@ -373,7 +373,9 @@ describe("initDiagnostics — 日志面板", () => {
     const opCalls = opFn.mock.calls.length;
     const chip = root.querySelector('.diag-log-fbtn[data-status="success"]') as HTMLElement;
     chip.click();
-    await new Promise((r) => setTimeout(r, 50));
+    // 负向断言（运行时子屏筛选不得顺带重拉操作日志）：排空微任务即可判定——
+    // 若错误路径存在，它也走同一批微任务，无需再用 50ms 定值去"赌"
+    await flushPromises();
     expect(opFn.mock.calls.length).toBe(opCalls);
     expect(chip.classList.contains("active")).toBe(true);
   });
@@ -796,7 +798,8 @@ describe("initDiagnostics — 复制面板与行内复制", () => {
     const list = root.getElementById("diag-log-list") as HTMLElement;
     await waitFor(() => expect(list.querySelector(".log-copy")).toBeTruthy());
     (list.querySelector(".log-copy") as HTMLElement).click();
-    await new Promise((r) => setTimeout(r, 20));
+    // 负向断言：早退分支同步返回，排空微任务足以证明剪贴板未被触碰
+    await flushPromises();
     expect(writeText).not.toHaveBeenCalled();
   });
 });

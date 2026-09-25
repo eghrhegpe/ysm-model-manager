@@ -36,8 +36,7 @@ vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 // toast 原语走 bus.emit("toast:show")；本文件锁「并发回落有提示」，mock bus 以免真弹
 vi.mock("@/bus", () => ({ bus: { emit: vi.fn(), on: vi.fn() } }));
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
 
 /** 夹具对齐 tpl.ts 的 bench 组（ADR-300 §2.2）：子 pill 行是模式源（原下拉退役）+ 按模式分行的控件 + 结果容器 */
 function makeRoot(mode = "single"): ShadowRoot {

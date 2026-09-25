@@ -17,8 +17,8 @@ vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
 import { concParsePayload } from "./perf-concurrent.ts";
 import { initPerfPanel } from "./perf.ts";
 
-const esc = (s: unknown): string =>
-  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+import { escUnknown as esc } from "@/utils/html/html.ts";
+import { flushPromises } from "@/test-utils/wait.ts";
 
 /** 对齐 Go concurrentBenchJSON（concurrent-bench --format json）的真实载荷 */
 const CONC_PAYLOAD = {
@@ -75,7 +75,8 @@ function makeRoot(): ShadowRoot {
 
 function clickAndFlush(root: ShadowRoot): Promise<void> {
   (root.getElementById("diag-perf-conc-run") as HTMLElement).click();
-  return new Promise((r) => setTimeout(r, 10));
+  // 微任务排空（见 perf.test.ts 同款注释）：替掉原 `setTimeout(r, 10)` 固定墙钟等待
+  return flushPromises();
 }
 
 beforeEach(() => {

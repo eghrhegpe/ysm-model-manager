@@ -17,7 +17,6 @@ import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
-import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { initDefaultPagePrefs } from "./default-page.ts";
 import { initKeymap } from "./keymap.ts";
@@ -397,7 +396,10 @@ async function applyFsaState(
           String(r.imported),
         );
       }
-      bus.emit("repo:rtype-changed", RESOURCE_TYPES.YSM);
+      // 2026-09 收债：此处要的是「重扫后刷新树」，不是类型切换——改发 tree:reload
+      //（app-tree reload 链含 ClearScanCache）。原借 repo:rtype-changed 同值重放，
+      // mountTree 改复用实例后被 oldVal===newVal 拦下，刷新语义即失效。
+      bus.emit("tree:reload");
     }
   } catch {
     // 自愈失败静默
@@ -424,7 +426,8 @@ async function onWebRepoAuthClick(
         .replace("{imported}", String(r.imported))
         .replace("{failed}", String(r.failed));
     }
-    bus.emit("repo:rtype-changed", RESOURCE_TYPES.YSM);
+    // 2026-09 收债：同上——刷新树走 tree:reload，不再借同值 rtype-changed
+    bus.emit("tree:reload");
   } catch (e) {
     if (statusEl) statusEl.textContent = friendlyError(e);
   } finally {

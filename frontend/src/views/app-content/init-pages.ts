@@ -92,8 +92,21 @@ export function initRepositoryPage(host: AppContentHost): void {
   const treeBody = root.getElementById("repo-tab-tree");
 
   // 重建文件树：按 rtype + 可选 subdir（mmd 子目录）挂载 app-tree
+  // 复用优先（2026-09 收债，同 mountSyncManager 范式）：app-tree 的
+  // attributeChangedCallback 负责属性变更重载（含清扫描缓存 + 代际守卫），
+  // 树内搜索词/排序/选择/滚动状态跨类型切换存活；旧 innerHTML 整体重建
+  // 每次丢弃全部视图状态，且让组件的属性机制沦为无生产调用点的防御性死代码。
+  // 同值 setAttribute 被 oldVal === newVal 拦下——repo:rtype-changed 的同值重放零成本
+  // （「强制刷新」语义已改走 tree:reload，见 settings/init.ts）。
   const mountTree = (rtype: string, subdir: string): void => {
     if (!treeBody) return;
+    const existing = treeBody.querySelector("app-tree");
+    if (existing) {
+      existing.setAttribute("root", rtype);
+      if (subdir) existing.setAttribute("subdir", subdir);
+      else existing.removeAttribute("subdir");
+      return;
+    }
     treeBody.innerHTML =
       '<app-tree root="' +
       esc(rtype) +

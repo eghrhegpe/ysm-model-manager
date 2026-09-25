@@ -12,7 +12,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
 import type { AppContentHost } from "./host.ts";
-import { bindTabs, initInstancesPage } from "./init-pages.ts";
+import { bindTabs, initInstancesPage, initRepositoryPage } from "./init-pages.ts";
 import { AppContentState } from "./state.ts";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
 
@@ -202,5 +202,60 @@ describe("initInstancesPage：同步面板复用而非重建", () => {
     bus.emit("package:selected", { name: "packA", rtype: "" });
     const content = root.getElementById("ins-content") as HTMLElement;
     expect(content.querySelector("app-sync-manager")).toBeNull();
+  });
+});
+
+describe("initRepositoryPage：mountTree 复用实例改属性（2026-09 收债）", () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+    localStorage.removeItem("repo_rtype");
+    localStorage.removeItem("repo_subdir");
+  });
+
+  afterEach(() => {
+    localStorage.removeItem("repo_rtype");
+    localStorage.removeItem("repo_subdir");
+  });
+
+  function setup(): { host: AppContentHost; root: ShadowRoot } {
+    const { host, root } = makeHost();
+    root.innerHTML = '<div class="tab-body" id="repo-tab-tree"></div>';
+    return { host, root };
+  }
+
+  it("rtype 变更 → 同一 app-tree 实例更新 root 属性，不重建", () => {
+    const { host, root } = setup();
+    initRepositoryPage(host);
+    const first = root.querySelector("app-tree");
+    expect(first).not.toBeNull();
+    bus.emit("repo:rtype-changed", "MMD");
+    const second = root.querySelector("app-tree");
+    expect(second).toBe(first);
+    expect(first!.getAttribute("root")).toBe("MMD");
+    host.subs.cleanupAll();
+  });
+
+  it("同值 rtype 重放 → 零成本短路（元素与属性均不变）", () => {
+    const { host, root } = setup();
+    initRepositoryPage(host);
+    const first = root.querySelector("app-tree");
+    bus.emit("repo:rtype-changed", "MMD");
+    bus.emit("repo:rtype-changed", "MMD");
+    expect(root.querySelector("app-tree")).toBe(first);
+    expect(first!.getAttribute("root")).toBe("MMD");
+    host.subs.cleanupAll();
+  });
+
+  it("subdir：localStorage 恢复进属性，切回根清 subdir 属性", () => {
+    localStorage.setItem("repo_subdir", "stage");
+    const { host, root } = setup();
+    initRepositoryPage(host);
+    const tree = root.querySelector("app-tree");
+    expect(tree!.getAttribute("subdir")).toBe("stage");
+    // app-nav apply() 的真实时序：先落盘 repo_subdir 再 emit
+    localStorage.setItem("repo_subdir", "");
+    bus.emit("repo:rtype-changed", "YSM");
+    expect(tree!.hasAttribute("subdir")).toBe(false);
+    host.subs.cleanupAll();
   });
 });

@@ -149,7 +149,7 @@ status: active
 
 ## 响应式属性与代际守卫
 
-- `observedAttributes` 声明 `root`（资源类型根）+ `subdir`（ADR-094 子类型子目录）；`attributeChangedCallback` 响应属性变更触发 `_load` → `_renderTree` 重新加载并渲染
+- `observedAttributes` 声明 `root`（资源类型根）+ `subdir`（ADR-094 子类型子目录）；`attributeChangedCallback` 响应属性变更触发 `ClearScanCache` + `_load` → `_renderTree` 重新加载并渲染。**生产主路径（2026-09 收债）**：`init-pages.ts|mountTree` 改为**复用实例改属性**（同 mountSyncManager 范式）——树内搜索/排序/选择/滚动状态跨类型切换存活；同任务内 root+subdir 成对变更经 **microtask 合并**只放行一次全价重扫（`_attrReloadQueued` 句柄，gen 在 microtask 里捕获即终值代际）；同值 setAttribute 被 `oldVal === newVal` 拦下（repo:rtype-changed 同值重放零成本，「强制刷新」语义归 `tree:reload`）
 - 挂载时序保护（2026-09 收敛，取代原 `_pendingRoot` 机制）：`connectedCallback` 入口捕获 `initRoot/initSubdir` 快照，`_ready` 标志区分首次挂载与后续属性变更——`attributeChangedCallback` 在挂载未完成（`!_ready || !isConnected`）时仅同步属性 + `_guard.next()` 作废在途首代渲染（不启动加载）；`connectedCallback` 的 `_load` 完成后按**快照差量**（当前属性 ≠ 入口快照）判定补载一次最新 root。收益：未连接 setAttribute 单次加载（旧实现双加载 + 冗余 ClearScanCache）、挂载期间切换无「新 rootAttr + 旧 entries」错配帧
 - **重连恢复（2026-09 收债，ADR-163 §3.5）**：常驻面板 detach/attach 仍走完整断连/重连——`_ready` 作重连判据，重连渲染成功上屏后 `_restoreRemountState()` 恢复滚动位置 + 回填搜索词。⚠️ 滚动快照靠 **scroll 事件持续记录**（scroll 监听随 `_unsubs` 退订），**不能**在 disconnectedCallback 里读 scrollTop——断连回调触发时元素已分离，真实浏览器 scrollTop 恒读 0（happy-dom 不归零，测试测不出此坑）。`_load()` 照跑不可省：树不消费 watcher 增量，重连加载是分离期间文件变更的唯一补采口；catch 失败态清快照，root/subdir 快照差补载路径不恢复（旧位置已失义）
 - 代际守卫 `_guard = createLoadGuard()`（ADR-230 全仓唯一代际守卫出口，`utils/async/load-guard.ts`；原 `_gen` 裸计数已退役并入此出口）：`next()` 每次加载开头自增取号、`stale(gen)` 在 await 返回后代数已过期时直接 return（不写 DOM、不绑监听）、`invalidate()` 在 cleanup 时使所有在途请求失效（防幽灵写入/监听泄漏）、`current` 读取当前代数——异步 `_load` 完成后用 `_guard.stale(gen)` 校验，若期间 root 已切换则丢弃本次过期加载的渲染（防旧类型数据覆盖新类型树），是 app-tree 多资源类型快速切换的核心机制；挂载/补载失败走 `toastThrottled`（5s 节流，对齐 loader.ts 模式）
@@ -161,7 +161,7 @@ status: active
 | 功能 | 触发元素 | 说明 |
 |------|----------|------|
 | 高级筛选弹窗 | `#btn-adv-filter` 点击 → `openAdvFilterDialog`（toolbar-search.ts） | 弹窗输入关键词/标签/骨骼/立方体/纹理数值范围，回填 inline 面板并调用后端 SearchModels |
-| 排序下拉 | `#sort` change | name/size/date 排序 |
+| 排序下拉 | `#sort` change | name/size/date 排序（name/目录恒按名称；文件 size/date **降序**，同键回退名称序——目录无独立 size/modTime 语义，子树聚合归 Go。⚠️ 2026-09 前比较器漏实现 size/date 档，`render.test.ts` 的 `treeKeys` 用 `Object.keys().sort()` 自排序致用例对任何实现通过，断言必须走 `flattenVisible` 行序且数据须使字典序 ≠ 期望序） |
 | 视图模式切换 | `#btn-view-mode` click | grid ⇄ list 切换，持久化到 localStorage |
 | 作者下拉菜单 | `#menu-authors` pointerenter/click → `fillAuthorMenu` | 点击作者名自动填入搜索框并触发搜索 |
 | 全选 / 反选 | `#sel-all` click | 基于当前可见行切换 `selectState.keys` |

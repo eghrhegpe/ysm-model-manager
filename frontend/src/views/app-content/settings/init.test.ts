@@ -1140,13 +1140,15 @@ describe("initSettings — 网页版 FSA 授权（stgBindWebFsa）", () => {
     );
   });
 
-  it("web 平台 + 授权态 granted → 自动重扫 + 状态含导入数 + repo:rtype-changed", async () => {
+  it("web 平台 + 授权态 granted → 自动重扫 + 状态含导入数 + tree:reload", async () => {
     isWebPlatformMock.mockReturnValue(true);
     getFsaAuthStateMock.mockResolvedValue("granted");
     rescanFsaRootMock.mockResolvedValue({ ok: true, imported: 3, failed: 0, dir: "/lr" });
     const { root } = makeRoot();
     await initSettings(root);
-    await waitFor(() => busEmit.mock.calls.some((c) => c[0] === "repo:rtype-changed"));
+    // 2026-09 收债：刷新语义改发 tree:reload（原借同值 repo:rtype-changed，
+    // mountTree 复用实例后被 oldVal===newVal 拦下，刷新即失效）
+    await waitFor(() => busEmit.mock.calls.some((c) => c[0] === "tree:reload"));
     expect(rescanFsaRootMock).toHaveBeenCalledTimes(1);
     expect((root.getElementById("web-repo-auth-status") as HTMLElement).textContent).toContain("3");
   });
@@ -1173,7 +1175,7 @@ describe("initSettings — 网页版 FSA 授权（stgBindWebFsa）", () => {
     expect(selectLocalRepoMock).not.toHaveBeenCalled();
   });
 
-  it("web 平台点击授权：成功 → repo:rtype-changed + 按钮恢复", async () => {
+  it("web 平台点击授权：成功 → tree:reload + 按钮恢复", async () => {
     isWebPlatformMock.mockReturnValue(true);
     selectLocalRepoMock.mockResolvedValue({ ok: true, imported: 5, failed: 1, dir: "/lr" });
     const restore = await stubPicker();
@@ -1181,7 +1183,7 @@ describe("initSettings — 网页版 FSA 授权（stgBindWebFsa）", () => {
     try {
       await initSettings(root);
       (root.getElementById("web-repo-auth-btn") as HTMLElement).click();
-      await waitFor(() => busEmit.mock.calls.some((c) => c[0] === "repo:rtype-changed"));
+      await waitFor(() => busEmit.mock.calls.some((c) => c[0] === "tree:reload"));
       const btn = root.getElementById("web-repo-auth-btn") as HTMLButtonElement;
       const status = root.getElementById("web-repo-auth-status") as HTMLElement;
       expect(btn.disabled).toBe(false); // finally 恢复

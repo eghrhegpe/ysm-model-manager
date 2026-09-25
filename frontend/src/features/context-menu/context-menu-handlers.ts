@@ -75,8 +75,8 @@ export type DirCtx = Omit<MenuCtx, "path">;
 //   不得读写 dir 域（dir）、batch 域（paths/count）、workshop 展示载荷；
 //   batch 归 paths/count/rtype，不得读写 path/instanceName/subdir（instance/file 域）、
 //   dir（dir 域）、workshop（展示载荷）。workshop 菜单 4 行全 kind:"header" 无 handler，无表可窄。
-export type InstanceCtx = Omit<MenuCtx, "dir" | "paths" | "count" | "workshop">;
-export type BatchCtx = Omit<MenuCtx, "dir" | "path" | "instanceName" | "subdir" | "workshop">;
+type InstanceCtx = Omit<MenuCtx, "dir" | "paths" | "count" | "workshop">;
+type BatchCtx = Omit<MenuCtx, "dir" | "path" | "instanceName" | "subdir" | "workshop">;
 
 /** 右键菜单 handler 表（instance + batch + merge file/dir） */
 export type HandlerTable = Record<MenuAction, (ctx: MenuCtx) => void>;

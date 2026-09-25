@@ -14,7 +14,6 @@ source_files:
   - frontend/src/features/pack-ops/instance-ops.ts
 auto_fields:
   symbols_with_lines:
-    - BatchCtx
     - ContextMenuHandlers
     - createContextMenuHandlers
     - DIR_HANDLERS
@@ -24,7 +23,6 @@ auto_fields:
     - getMenuDef
     - HANDLERS
     - HandlerTable
-    - InstanceCtx
     - isUnsafeFolderName
     - MENU_DEFS
     - MenuAction

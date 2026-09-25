@@ -166,7 +166,6 @@ auto_fields:
     - collectVisiblePredicates
     - collectVmdBoneNames
     - collectVmdExpressionMap
-    - collectVmdMorphNames
     - COMMON_NODE_FIELDS
     - compKey
     - componentsCss
@@ -269,10 +268,8 @@ auto_fields:
     - estimateVrmHeight
     - eulerToQuaternion
     - evaluateGpuLoad
-    - ExpectedCommonField
     - extractIKChainFromTree
     - extractLegChains
-    - extractVmdIkTimeline
     - fbm2
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
@@ -670,7 +667,6 @@ auto_fields:
     - recoverMountFailure
     - REFLECTION_MODES
     - ReflectionMode
-    - REFLECTOR_CLIP_BIAS_TOLERANCE
     - ReflectorCapability
     - registerBoneRaycast
     - registerBuiltScene
@@ -918,7 +914,6 @@ auto_fields:
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
-    - VmdIkTimeline
     - VmdPositionTrackHandle
     - VmdRetargetOptions
     - VmdRetargetResult
@@ -939,7 +934,6 @@ auto_fields:
     - VrmMetaSummary
     - VrmModelInfoCtx
     - VrmPanelHooks
-    - VrmPositionScaleControl
     - vrmSemanticBoneMap
     - warnLargeModelIfNeeded
     - WasdReuse

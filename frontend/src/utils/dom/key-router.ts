@@ -145,14 +145,6 @@ export function listShortcuts(): readonly ShortcutSpec[] {
   return registry.slice();
 }
 
-/** 组合键 → aria-keyshortcuts 标准写法（空格分隔，如 "Ctrl+F F12"）；帮助页与声明源共用。 */
-export function formatAriaKeyShortcuts(specs: readonly Pick<ShortcutSpec, "combo">[]): string {
-  return specs
-    .flatMap((s) => specCombos(s))
-    .map((c) => c.toUpperCase().replace(/^(WIN|OS)(\+)/, "META$2"))
-    .join(" ");
-}
-
 /** 测试钩子：清空注册表并摘除 document 监听（vi.resetModules 跨代际卫生）。 */
 export function __resetShortcutsForTest(): void {
   registry.length = 0;

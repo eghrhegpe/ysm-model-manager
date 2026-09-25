@@ -146,7 +146,6 @@ auto_fields:
     - readLightParams
     - REFLECTION_MODES
     - ReflectionMode
-    - REFLECTOR_CLIP_BIAS_TOLERANCE
     - ReflectorCapability
     - registerWaterBodyStrategy
     - RenderModeCapability

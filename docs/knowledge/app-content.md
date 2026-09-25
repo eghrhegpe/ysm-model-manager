@@ -32,7 +32,6 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - aboutPageBody
-    - aboutSection
     - AppContentHost
     - AppContentState
     - appContentStyle
@@ -47,7 +46,6 @@ auto_fields:
     - contentUtilCSS
     - createWorkshopPageState
     - createWorkshopRefs
-    - creditsSection
     - diagnosticsHTML
     - extractAvatars
     - getSiteIcon
@@ -73,7 +71,6 @@ auto_fields:
     - repositoryHTML
     - resetAvatarConfigLoaded
     - settingsHTML
-    - SettingsTabId
     - SubscriptionBucket
     - VIEW_TESTIDS
     - workshopHTML

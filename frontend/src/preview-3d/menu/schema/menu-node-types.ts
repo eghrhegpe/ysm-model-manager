@@ -361,7 +361,7 @@ type CommonNodeField = Exclude<
 >;
 
 /** 意图中的公共字段集（**手写锚点**，仅供下方精确性断言消费，不参与运行期）。 */
-export type ExpectedCommonField =
+type ExpectedCommonField =
   | "id"
   | "labelKey"
   | "label"

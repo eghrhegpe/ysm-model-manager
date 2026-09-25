@@ -24,7 +24,6 @@ auto_fields:
     - getWaterBodyStrategy
     - INNER_WALL_OPACITY_FACTOR
     - poolStrategy
-    - REFLECTOR_CLIP_BIAS_TOLERANCE
     - registerWaterBodyStrategy
     - WATER_FRAME_READ_KEYS
     - WATER_MODES

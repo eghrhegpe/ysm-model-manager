@@ -40,7 +40,7 @@ function renderUpdateCheckOptions(): string {
  *  现五张卡全部走 stgCard()：圆角/边框/入场动画/标题行由类与构造器单点供给，
  *  不等宽的两列改用 flex 比例经 cardStyle 声明（.stg-card 自带 min-width:0 保证可压缩），
  *  并加 flex-wrap + 弹性基准让窄屏回落单列（原固定 flex:2/flex:1 在窄屏会挤爆）。 */
-export function aboutSection(): string {
+function aboutSection(): string {
   const versionCard = stgCard(
     UI_ICONS.info,
     t("about.appName"),
@@ -229,7 +229,7 @@ function renderContributors(): string {
 
 /** Credits 小节（「关于」tab 下段：灵感来源 + 特别鸣谢，2026-10 自独立 tab 降级）。
  *  以原生 details 默认收起，保留可发现的摘要入口，避免只读卡片把 About 首屏拉得过长。 */
-export function creditsSection(): string {
+function creditsSection(): string {
   return `<details class="stg-details stg-credits-details">
   <summary class="stg-details-summary">${UI_ICONS.thanks} ${t("settings.credits")}</summary>
   <div class="stg-details-body">

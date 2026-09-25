@@ -1204,7 +1204,7 @@ export interface VrmMenuItemsOpts {
 }
 
 /** P3/P5 位移缩放校准控制面（Stage4 组装、vrmMenuItems 消费；测试可假实现遍历真实菜单表） */
-export interface VrmPositionScaleControl {
+interface VrmPositionScaleControl {
   /** VMD 重定向动作条目数（>0 才渲染滑块） */
   vmdCount: number;
   /** 当前有效值：持久化覆写 ?? 创建期自动快照（P3，单一事实源） */

@@ -67,7 +67,6 @@ auto_fields:
     - collectAllWebEntries
     - collectVmdBoneNames
     - collectVmdExpressionMap
-    - collectVmdMorphNames
     - concurrentMap
     - createAutoDanceController
     - createBeatDetector
@@ -88,7 +87,6 @@ auto_fields:
     - Error
     - estimateTexGpuBytes
     - estimateVrmHeight
-    - extractVmdIkTimeline
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
     - FbxDataPort
@@ -264,7 +262,6 @@ auto_fields:
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
-    - VmdIkTimeline
     - VmdPositionTrackHandle
     - VmdRetargetOptions
     - VmdRetargetResult
@@ -279,7 +276,6 @@ auto_fields:
     - VrmMetaSummary
     - VrmModelInfoCtx
     - VrmPanelHooks
-    - VrmPositionScaleControl
     - webFsBindings
     - workerMmdUpdateWithMixer
     - writeVmdPositionScale

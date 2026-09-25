@@ -63,7 +63,7 @@ export const VIEW_TESTIDS: readonly string[] = ["set-mc-path"];
 // ===== 设置页 tab 声明（唯一事实源：id / 图标 / 文案键 / 声明序在此一处）=====
 /** 设置页 tab id 联合；面板 id = `stg-tab-<id>`、按钮 testid = `stg-tabbtn-<id>`。
  *  新增 tab：改类型 + 改下方 Record（两处漏一即编译期报错）。 */
-export type SettingsTabId = "env" | "appearance" | "preview3d" | "aboutUpdate";
+type SettingsTabId = "env" | "appearance" | "preview3d" | "aboutUpdate";
 
 /** tab 元信息。Record 形态 ⇒ 新增 tab 必须同时给图标与文案键（ADR-303 `Record<TdRotMode, …>`
  *  同款护栏；无它则「加了 id 忘了图标」只在运行时表现为空白按钮）。

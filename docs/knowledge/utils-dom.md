@@ -39,7 +39,6 @@ auto_fields:
     - FlashOptions
     - FocusRestoreManager
     - focusVisibleCSS
-    - formatAriaKeyShortcuts
     - friendlyError
     - getStackDepth
     - initDropdown

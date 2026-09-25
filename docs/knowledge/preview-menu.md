@@ -53,7 +53,6 @@ auto_fields:
     - disposeCustomCleanups
     - disposeEnvSubscriptions
     - disposeSceneCapSubscriptions
-    - ExpectedCommonField
     - formatCapSliderValue
     - hasSceneStats
     - isPreviewFolderNode

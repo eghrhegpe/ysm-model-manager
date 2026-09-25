@@ -238,7 +238,7 @@ export type WaterUniformName = (typeof WATER_UNIFORM_NAMES)[number];
  *  每个都触发 Reflector + RT 重建的话，单次拖动会重建百次（几何/材质/RT 三件全建）。
  *  死区 0.05：|Δbias| < 0.05 时镜像裁剪面位移肉眼不可感，跳过重建（保住内嵌 carry）。
  *  与既有纪律一致：bias 实质变化（F-2 的 1.5 偏离 = Δ1.5）仍重建。 */
-export const REFLECTOR_CLIP_BIAS_TOLERANCE = 0.05;
+const REFLECTOR_CLIP_BIAS_TOLERANCE = 0.05;
 
 /**
  * [锐评 3.3] 「无材质应用、由 render-loop 逐帧现读 envState」的 water 键登记表。

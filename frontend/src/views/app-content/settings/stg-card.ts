@@ -70,7 +70,7 @@ export function stgCard(icon: string, title: string, body: string, opts: StgCard
 // （如存储卡 180 / 语言卡 240，那是「这一组整体何时入场」的编排决策，不属于组序号）。
 
 /** 同族卡片组默认入场延迟步长（ms）。 */
-export const STG_CARD_STEP_MS = 30;
+const STG_CARD_STEP_MS = 30;
 
 /** 组内单张卡的声明（供 {@link stgCards} 批量产出）。 */
 export interface StgCardSpec extends Omit<StgCardOpts, "delayMs" | "marginTop"> {

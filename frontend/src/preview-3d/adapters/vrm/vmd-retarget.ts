@@ -99,7 +99,7 @@ export interface VmdPositionTrackHandle {
  * 段表按时间轴升序、无重叠；恒定 `on`（作者全程开 IK，最常见）退化为单段
  * `[0, Infinity)`，零额外成本。
  */
-export interface VmdIkTimeline {
+interface VmdIkTimeline {
   readonly side: "left" | "right";
   /** 时间轴升序、互不重叠的开关段（`on` = 该段内 IK 生效） */
   readonly segments: readonly { from: number; to: number; on: boolean }[];
@@ -127,7 +127,7 @@ export interface VmdIkTimeline {
  * @param clipDurationSeconds clip 时长（尾段补到该值；循环播放语义见上）
  * @returns 时间轴，或 null（无 IK 骨）
  */
-export function extractVmdIkTimeline(
+function extractVmdIkTimeline(
   vmd: VmdObject,
   ikBoneNames: readonly (string | null)[],
   side: "left" | "right",
@@ -373,7 +373,7 @@ export function collectVmdBoneNames(vmd: VmdObject): Set<string> {
 }
 
 /** VMD 实际驱动的 morph 名集合（同 collectVmdBoneNames 的 morph 版） */
-export function collectVmdMorphNames(vmd: VmdObject): Set<string> {
+function collectVmdMorphNames(vmd: VmdObject): Set<string> {
   const names = new Set<string>();
   const frames = vmd.morphKeyFrames;
   for (let i = 0; i < frames.length; i++) names.add(frames.get(i).morphName);

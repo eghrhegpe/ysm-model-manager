@@ -78,14 +78,13 @@ export interface BoneMaps {
   childrenMap: Map<string, string[]>;
 }
 
-// 键位/相机偏好 re-export 兼容
-export type { TdKeyAction, TdKeymapSpec } from "@/preview-3d/infra/keymap.ts";
+// 键位/相机偏好 re-export 兼容（2026-09-25 收缩：TD_KEYMAP_REGISTRY / TdKeyAction /
+// TdKeymapSpec 无消费者移出 re-export 面——knip 死代码基线门禁点名；消费者一律直引 infra/keymap.ts）
 export {
   DEFAULT_TD_KEYMAP,
   loadTdCamSpeed,
   loadTdKeymap,
   loadTdRotMode,
-  TD_KEYMAP_REGISTRY,
 } from "@/preview-3d/infra/keymap.ts";
 
 // ADR-052 P3 落地：截图功能通用化至 screenshot.ts 纯函数 + 适配器 screenshot() 能力；

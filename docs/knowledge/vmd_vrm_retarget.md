@@ -23,11 +23,9 @@ auto_fields:
     - buildVrmScene
     - collectVmdBoneNames
     - collectVmdExpressionMap
-    - collectVmdMorphNames
     - createVrmFootIKController
     - estimateVrmHeight
     - extractLegChains
-    - extractVmdIkTimeline
     - FootIKSampler
     - FootIKSamplers
     - getSemanticBone
@@ -62,7 +60,6 @@ auto_fields:
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
-    - VmdIkTimeline
     - VmdPositionTrackHandle
     - VmdRetargetOptions
     - VmdRetargetResult
@@ -77,7 +74,6 @@ auto_fields:
     - VrmMetaSummary
     - VrmModelInfoCtx
     - VrmPanelHooks
-    - VrmPositionScaleControl
     - vrmSemanticBoneMap
     - writeVmdPositionScale
     - ysmSemanticBoneMap

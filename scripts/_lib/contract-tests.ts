@@ -106,6 +106,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gen_routes_quick_pitfall.ts": ["docs", "tests"],
   "test_check_path_hygiene.ts": ["frontend", "tests"],
   "test_check_mock_paths.ts": ["frontend", "tests"],
+  // 应用配置写唯一实参点（ADR-313）：扫 frontend/src 生产文件的 SaveAppConfig 调点 +
+  // import 绑定 + 出口主题字面量——frontend 生产代码变更即须复核
+  "test_config_write_single_exit.ts": ["frontend", "tests"],
   "test_api_break.ts": ["tests"],
   "test_auto_import.ts": ["tests"],
   // 守卫跨三端：scripts 工具自身 + Go 侧 ADR-047 守卫信号（internal/app）+ 前端黑名单/bindings
@@ -259,6 +262,8 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "frontend/package.json",
     "docs/.mock-path-exempt.json",
   ],
+  // 应用配置写唯一实参点（ADR-313）：出口文件即不变量本体，改它须触发本锁
+  "test_config_write_single_exit.ts": ["frontend/src/views/config-write.ts"],
   "test_api_break.ts": ["scripts/api-break.ts"],
   "test_auto_import.ts": [
     "scripts/auto-import-lexer.ts",

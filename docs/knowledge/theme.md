@@ -99,7 +99,7 @@ status: active
 - **设置页主题读写同样走 safe 包装**（P3 修复：`themeGet`/`themeSet` 与 app-modules 的 safeGet/safeSet 同口径——原设置页裸 localStorage 在隐私模式下抛错中断 initSettings、主题卡片整页失效）
 - UI 偏好修改只操作 CSS 变量与类名（`--fs-scale`/`no-animations`），不直接改各 `--fs-*` 计算值；`--fs-base-size` 是唯一真基准——核心 7 个 + 语义 6 个 `--fs-*` 全派生自它，故「调基准」与「调偏移」是两个正交杠杆（前者设计级、后者用户级）
 - **P3 修复**（2026-09）：`theme-auto="time"` 按时间自动切换现已全链生效——启动链 `applyThemeAuto()` 读 `theme-auto`，`time` 模式按当前时刻重算时段主题并回写 `theme` 键（白天设 time 夜间重启不再定格亮色）。
-- **P4 修复**（2026-09，本会话落地）：**theme-auto 落盘同步**——扩 `AppConfig.ThemeAuto` + `SaveAppConfig` 六参签名；设置页 auto 下拉 change / 卡片点击均同步 theme-auto（2026-10 锐评第八轮起统一经 `views/app-content/settings/path-cards.ts|saveCfg`，设置域唯一 SaveAppConfig 实参点，patch 语义 + 保存前重读最新）；initTheme 从 cfg.themeAuto 兜底恢复 localStorage（localStorage 被清理后可从 ysm_config.json 回退）。
+- **P4 修复**（2026-09，本会话落地）：**theme-auto 落盘同步**——扩 `AppConfig.ThemeAuto` + `SaveAppConfig` 六参签名；设置页 auto 下拉 change / 卡片点击均同步 theme-auto（2026-10 锐评第八轮起统一经 `views/app-content/settings/path-cards.ts|saveCfg` → 第九轮 ADR-313 上移 `views/config-write.ts|writeAppConfig`，全仓唯一 `SaveAppConfig` 实参点，patch 语义 + 保存前重读最新）；initTheme 从 cfg.themeAuto 兜底恢复 localStorage（localStorage 被清理后可从 ysm_config.json 回退）。⚠️ 同批清出真实缺陷：`app-sidebar` 两处自抄配方的 `safeGet("theme") || "dark"` 写入非法值 `"dark"`（`THEME_VALID` 无此值）→ 落盘后 `initTheme` 经 `normalizeTheme` 静默归一成 `"system"`（用户只改游戏目录、主题却变「跟随系统」）；现一律引 `THEME_DARK`。
 
 ## 相关
 

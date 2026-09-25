@@ -170,9 +170,12 @@ describe("runLauncherDetect", () => {
       (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
       await p;
 
-      // SaveAppConfig 六参（filesRoot/resourcepackRoot 原样回写，theme 缺省 dark，themeAuto 空串保留）
+      // SaveAppConfig 六参（filesRoot/resourcepackRoot 原样回写，theme 缺省 THEME_DARK="cyber"，
+      // themeAuto 空串保留）——ADR-313：原硬编码 "dark" 不在 THEME_VALID 内，落盘后被
+      // normalizeTheme 静默转成 system（用户只改游戏目录、主题却被改成跟随系统）
       expect(app.SaveAppConfig).toHaveBeenCalledTimes(1);
-      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "dark", "");
+      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "cyber", "");
+      expect(app.SaveAppConfig.mock.calls[0]![4]).not.toBe("dark"); // 回归锁：非法主题字面量不得再出现
       // 默认勾选「用作 YSM 根目录」→ SetResourceRoot
       expect(app.SetResourceRoot).toHaveBeenCalledTimes(1);
       expect(app.SetResourceRoot).toHaveBeenCalledWith("ysm", "/mc/custom");
@@ -199,7 +202,7 @@ describe("runLauncherDetect", () => {
     (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
     await p;
     expect(app.SaveAppConfig).toHaveBeenCalledTimes(1);
-    expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "dark", "");
+    expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "cyber", "");
     expect(app.SetResourceRoot).not.toHaveBeenCalled();
   });
 
@@ -249,7 +252,7 @@ describe("runMcSearch", () => {
     const { events: stats, off: offStats } = watchBus("stats:refresh");
     try {
       await runMcSearch(mockGuard);
-      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/auto/minecraft", "copy", "dark", "");
+      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/auto/minecraft", "copy", "cyber", "");
       expect(stats).toHaveLength(1);
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("success");

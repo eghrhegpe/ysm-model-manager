@@ -17,7 +17,7 @@ export function recycleHTML(): string {
 <button class="btn-base sm" id="recy-refresh" style="margin-left:auto">${UI_ICONS.refresh} ${t("common.refresh")}</button>
 <button class="btn-base danger sm" id="recy-empty">${UI_ICONS.recycle} ${t("recycle.empty")}</button>
 </div>
-<div id="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-1)"></div>
+<div id="recy-list" data-testid="recy-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-1)"></div>
 </div>`;
 }
 

@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-313：应用配置写唯一实参点：SaveAppConfig 六位置实参统一上移 views/config-write.ts",
+        "link": "/adr/ADR-313-saveappconfig-views-config-write-ts"
+      },
+      {
         "text": "ADR-312：死 CSS 反向闸——定义侧零消费者类纳入 css-layer-check 检查 7",
         "link": "/adr/ADR-312-dead-css-reverse-gate"
       },

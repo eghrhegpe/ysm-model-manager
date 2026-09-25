@@ -50,9 +50,11 @@ test.describe("回收站", () => {
     await clickBySelector(page, '.repo-tab[data-tab="recycle"]');
 
     // 轮询等待列表容器就绪（含 0 条目的空态也算就绪）
+    // 用 data-testid 而非 id 通道（ADR-133 阶段 C+ 门禁：e2e 禁 id 定位——
+    // id 属运行期可变锚点，testid 是稳定契约钩子）
     const listReady = await page.evaluate(() => {
       const root = document.querySelector("app-content")?.shadowRoot;
-      return Boolean(root?.querySelector("#recy-list"));
+      return Boolean(root?.querySelector('[data-testid="recy-list"]'));
     }, undefined);
     expect(listReady).toBe(true);
 

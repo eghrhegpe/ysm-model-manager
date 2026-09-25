@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **310** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **311** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 280 |
+| [✅ 已采纳](#已采纳) | 281 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -56,10 +56,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（280）
+### ✅ 已采纳（281）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-313](./ADR-313-saveappconfig-views-config-write-ts.md) | 应用配置写唯一实参点：SaveAppConfig 六位置实参统一上移 views/config-write.ts | ✅ 已采纳 |
 | [ADR-312](./ADR-312-dead-css-reverse-gate.md) | 死 CSS 反向闸——定义侧零消费者类纳入 css-layer-check 检查 7 | ✅ 已采纳 |
 | [ADR-311](./ADR-311-menu-test-assertion-trichotomy.md) | 菜单测试断言三分法契约（渐进执法） | ✅ 已采纳 |
 | [ADR-310](./ADR-310-instance-sync-count-single-source.md) | 整合包同步计数口径统一 | ✅ 已采纳 |
@@ -365,6 +366,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-313 | 应用配置写唯一实参点：SaveAppConfig 六位置实参统一上移 views/config-write.ts | ✅ 已采纳 | 2026-09-25 |
 | ADR-312 | 死 CSS 反向闸——定义侧零消费者类纳入 css-layer-check 检查 7 | ✅ 已采纳 | 2026-09-25 |
 | ADR-311 | 菜单测试断言三分法契约（渐进执法） | ✅ 已采纳 | 2026-09-25 |
 | ADR-310 | 整合包同步计数口径统一 | ✅ 已采纳 | 2026-09-25 |

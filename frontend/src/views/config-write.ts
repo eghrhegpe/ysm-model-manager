@@ -22,7 +22,9 @@
 import { THEME_DARK } from "@/theme-core";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { LINK_MODE_DEFAULT } from "@/views/app-content/settings/settings-schema.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
+// 精确同目录（views/ 根）：写 `./` 而非别名（check-path-hygiene R5）；且 R5 白名单
+// 只认 `*-deps.ts`，故本文件不得直连 backend/app.ts，只能经此转发。
+import { backendGetApp } from "./backend-deps.ts";
 
 /**
  * 应用配置补丁：只列出希望覆盖的字段，未列字段取**重读**的当前落盘值。

@@ -42,7 +42,7 @@ quick_intents:
   - 界面偏好、字号、worker-prefs
   - settings/init / keymap / store
 quick_risk_lines:
-  - 配置落盘一律走 path-cards.ts|saveCfg（patch 语义 + 保存前重读最新，设置域唯一 SaveAppConfig 实参点）；偏好类读写一律 safeGet/safeSet，禁止裸 localStorage
+  - 配置落盘一律走 `views/config-write.ts|writeAppConfig(patch)`（跨视图唯一实参点，ADR-313）；设置域内部可走薄包装 `path-cards.ts|saveCfg`（额外同步内存 cfg）。patch 语义 = 只覆盖显式传入字段、其余取保存前重读最新；偏好类读写一律 safeGet/safeSet，禁止裸 localStorage
   - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（2026-10 已清零，新增即回退）
 pitfalls:
   - 各组件各自读写 localStorage → 值不同步、设置页显示与页面行为不一致；必须经 store 单点
@@ -74,8 +74,8 @@ status: active
 
 ## 核心职责
 
-- `init.ts` — 设置页 `initSettings`：直接解构 bindings（`LoadAppConfig` / `SaveAppConfig` / `SelectDirectory` / `GetMinecraftPaths` / `SetLinkMode`），配置变更派发 `config:updated` / `stats:refresh` / `toast:show`，并接入 `initVersionUpdater`；「启动默认页面」下拉读写 localStorage `ui-default-page`，显示值兜底 `repository`（与 `resolveInitialPage` 的兜底一致）
-- `store.ts` — 设置存储桥接：`LoadAppConfig` / `SaveAppConfig`（`backend/app.ts`）+ `core/context-menu-shared.ts` 共享
+- `init.ts` — 设置页 `initSettings`：解构 bindings（`LoadAppConfig` / `GetMinecraftPaths` 等；**不再持有 `SaveAppConfig`**，落盘统一走 `saveCfg` → `views/config-write.ts|writeAppConfig`），配置变更派发 `config:updated` / `stats:refresh` / `toast:show`，并接入 `initVersionUpdater`；「启动默认页面」下拉读写 localStorage `ui-default-page`，显示值兜底 `repository`（与 `resolveInitialPage` 的兜底一致）
+- `store.ts` — 设置页模块级共享状态（`cfg` / `cardRefreshers` / `busy` / `resetSettingsStore`），仅 `import type { AppBindings }` 取配置类型；**不持有任何绑定调用**（曾误记为「设置存储桥接 LoadAppConfig/SaveAppConfig」，实为纯状态容器）
 - `keymap.ts` — 键位绑定编辑（依赖 `preview-3d/mesh/model3d.ts` 的 `loadTdKeymap`，相机快捷键与 3D 预览键位同源）
 - `path-cards.ts` — 路径配置卡片（目录选择器 `utils/dom/directory-picker` + 类型条目同步读 `utils/resource/schema.ts` 的 `resourceTypesById`，ADR-269 D3④）
 - `theme.ts` — 主题设置（写 `window.applyTheme` + localStorage，见知识卡 `theme`）
@@ -125,7 +125,8 @@ status: active
   - **主题域类型护栏（2026-10 锐评第七轮）**：`theme-core.ts|THEME_VALID` 收为 `as const` 元组并导出 `Theme` / `ThemeCard` 联合；`tpl-settings.ts` 的 `THEME_ICON` / `THEME_LABEL_KEY` 表必须是 `Record<ThemeCard, …>`——加主题漏键即编译期红。此前两表是 `Record<string, …>` 松键，漏键只在运行时回落 `?? UI_ICONS.dot` / `labelKey ? … : theme`（裸图标 + 裸主题名）静默漂移。默认主题一律引 `THEME_DARK`，禁止 `"cyber"` 字面量（`theme.ts` 曾两处裸写，同页其余保存点却引常量）。
   - **链接模式用户可见名单表（2026-10 锐评第七轮）**：`tpl-settings.ts|LINK_MODE_UI`（导出，模板与 init 共用）是模式名唯一来源——下拉 option、确认框 `settings.linkModeConfirmMessage`、toast `settings.linkModeSwitched` 三者同取 `labelKey`；**禁止把裸枚举塞进 `{val}`**（中文界面曾出现「重新链接为 symlink 模式」，全页唯一用户可见值裸奔点）。下拉值须经 `init.ts|normalizeLinkMode` 归一后再进文案表/写 cfg。
   - **`.stg-select-block` = 卡片体内块级下拉配方**（2026-10 锐评第七轮）：占满卡片宽 + margin-bottom 6px 单点声明，此前 5 处各写内联 `style="width:100%;margin-bottom:6px"`（字号卡还漂成 4px）；行内下拉不写 `width:auto`（`.stg-select` 无宽度声明、默认 intrinsic，该内联零效果）。
-  - **配置落盘唯一出口 `path-cards.ts|saveCfg`**（2026-10 锐评第八轮）：patch 语义（只覆盖显式传入字段，其余取保存前**重读**的最新 Go 配置）+ 全字段（filesRoot/rpRoot/mcRoot/linkMode/theme/themeAuto），并同步内存 cfg。设置域曾四处手抄 `SaveAppConfig(六个同型 string)`（位置错了类型系统看不见——P3「闭包旧值覆盖 linkMode」/ P4「theme-auto 漏落盘」都是它咬的）。现设置域仅 `saveCfg` 一处实参点；⚠️ **残留**：`views/app-sidebar/{launcher-detect,events}.ts` 仍各手抄一份，收敛需先定共享出口落点（跨视图直接 import 会把设置页模块拖进侧栏 chunk），须单独立项。
+  - **配置落盘唯一出口上移 `views/config-write.ts|writeAppConfig`**（2026-10 锐评第八轮建立 `saveCfg` → 第九轮 ADR-313 上移）：跨视图唯一实参点，patch 语义（只覆盖显式传入字段，其余取保存前**重读**的最新 Go 配置）+ 全字段（filesRoot/rpRoot/mcRoot/linkMode/theme/themeAuto），返回实际写入六元组。设置域 `path-cards.ts|saveCfg` 降为薄包装（补 `getCfg()` 内存同步）。曾四处手抄 `SaveAppConfig(六个同型 string)`（位置错了类型系统看不见——P3「闭包旧值覆盖 linkMode」/ P4「theme-auto 漏落盘」都是它咬的）。⚠️ 历史残留已清：`views/app-sidebar/{launcher-detect,events}.ts` 两处手抄配方各自硬编码 `"dark"` 主题字面量，而 `THEME_VALID` 里**没有 `"dark"`**（合法缺省 `THEME_DARK = "cyber"`）——落盘后被 `normalizeTheme` 静默归一成 `system`，用户只改游戏目录、主题却被改成跟随系统。**执法**：`tests/test_config_write_single_exit.ts` 锁「生产代码 `SaveAppConfig(` 调点恰好一处且必须在出口文件」「非出口不得 import 该绑定」「出口不得裸写 `"dark"`」。
+  - **出口层位为何在 `views/` 根而非 `features/`**（ADR-313 D1）：出口需引「配置字段值域」零依赖纯数据叶（`settings-schema.ts|LINK_MODE_DEFAULT`），而 features 不得反向 import views——下沉 features 就得再抄一份值域，正是要消灭的漂移源。`config-write.ts` 与 `backend-deps.ts` 同列（views 层组合根）；因 check-layering R5 白名单只认 `*-deps.ts`，它**不得**直连 `backend/app.ts`，只经 `backend-deps.ts` 转发。出口保持**无状态**（不碰 settings 的 store），内存快照同步归 `saveCfg`。
   - **死 CSS 反向闸已接线（2026-10 锐评第九轮 → ADR-312）**：`css-layer-check` 新增**检查 7（ERROR）**——「定义了、但全仓无任何消费者」的类即死类；判定 = 选择器位提取（`_lib/css-layer-utils.ts|extractSelectorClasses`）+ 消费者语料 token 搜索（定义源选择器位掩码，语料排除 `docs/` / `scripts/` / `upstream/` 三类假存活源），动态拼接族走 `KNOWN_DEAD_CSS_EXEMPT` **显式登记**（前缀启发式只给线索、不自动放行）。本页 `content-stg.ts` 是该闸立项时清出的第一批（`.stg-group` / `.stg-val` / `.stg-hint` / `.stg-hint-hidden` / `.stg-hint-warn` / `.stg-radio-row` / `.stg-sub-title` / `.stg-ml-auto` / `.stg-grid-2` / `.stg-card-hint` / `.stg-card-acts`；`.stg-grid-2` 原有的反向测试保险已改为「死类不得回流」断言）。⚠️ **别再给废弃类写「保留兼容」**——留着就会被当 API 用；确属动态拼接才登记豁免，并在注释里写明构造点。
 
 ## 样式范式契约（UI 一致性）

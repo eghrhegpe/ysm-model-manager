@@ -16,7 +16,15 @@ import { maintenanceGetApp } from "./maintenance-deps.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
-export const VIEW_TESTIDS: readonly string[] = ["recy-item", "recy-restore", "recy-del"];
+// `recy-list`（列表容器）由 views/app-content/tpl-recycle.ts 的 recycleHTML 产出，
+// 2026-09-25 为 e2e 补：原 spec 用 #recy-list id 定位，被 e2e 定位通道门禁判 MISSING
+// （id 属运行期可变锚点）——族内声明仍归此处，保持 recy-* 单一注册点。
+export const VIEW_TESTIDS: readonly string[] = [
+  "recy-item",
+  "recy-restore",
+  "recy-del",
+  "recy-list",
+];
 
 const LEAVE_ANIM_MS = 150;
 const TOAST_ACTION_OK_MS = TOAST_MS.success;

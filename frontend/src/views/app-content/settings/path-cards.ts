@@ -30,7 +30,7 @@ function renderDirLabel(dir: string): string {
     : `${UI_ICONS.folderOpen} ${esc(t("settings.path.selectDir"))}`;
 }
 
-// 保存 cfg 辅助（保留各字段原值）——设置页写配置的**唯一出口**。
+// 保存 cfg 辅助——设置域写配置出口（薄包装）。
 // P1 修复（审核，配置回退）：保存前重读 Go 端最新配置作为未 patch 字段默认——
 // 原用模块级 cfg（initSettings 一次性加载的旧值），用户在其他入口改过字段后
 // 二次保存会把新值静默覆盖回退（如先改 mcRoot 再改 rpRoot，mcRoot 被旧值覆盖）。
@@ -38,11 +38,11 @@ function renderDirLabel(dir: string): string {
 // 此前主题段（theme.ts ×2）与链接模式段（init.ts）绕开本函数各手抄一份
 // `SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto)` 六位置实参，
 // 而 Go 端签名是六个同型 string：位置错了类型系统看不见（历史 P3「闭包旧值覆盖 linkMode」/
-// P4「theme-auto 漏落盘」都是这种手抄配方咬出来的）。全页（含本函数）现只剩这一处实参。
-// 2026-10 锐评第九轮（ADR-313）：实参点本身也上移 views/config-write.ts 成为
+// P4「theme-auto 漏落盘」都是这种手抄配方咬出来的）。
+// 2026-10 锐评第九轮（ADR-313）：实参点本身也上移 views/config-write.ts，成为
 // **跨视图**唯一出口（app-sidebar 两处同款手抄配方曾硬编码 "dark"/"copy" 字面量，
 // 其中 "dark" 不在 THEME_VALID 内、落盘后被 normalizeTheme 静默转成 system 的 bug）。
-// 本函数保留为 settings 域包装：补上「保存成功后同步模块级 cfg 内存快照」这一步。
+// 本函数降为 settings 域包装：补上「保存成功后同步模块级 cfg 内存快照」这一步。
 export async function saveCfg(patch: {
   filesRoot?: string;
   rpRoot?: string;

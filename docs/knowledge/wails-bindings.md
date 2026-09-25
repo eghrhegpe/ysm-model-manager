@@ -216,7 +216,7 @@ status: active
 ### 配置与环境（app_config.go）
 
 - `LoadAppConfig() → types.AppConfig` — 加载应用配置（FilesRoot/RpRoot/McRoot/链接模式/主题）
-- `SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto) → void` — 保存应用配置。linkMode 写盘前经 `install.SanitizeLinkMode` 软校验（ADR-296 D6）：空串=未传参（orDefault 保留旧值）；非法值（手改 config.json 等）不 reject 整个保存、回落旧值——入口 fail-closed 会误伤「只想改 mcRoot/theme、原样回写 linkMode」的多数调用方（同卡 SetLinkMode 硬校验拒脏值）；loadAppConfig 加载侧软校验不交 SyncLinkMode 污染内存快照，非法值留 log 走默认 copy。P4 修复（2026-09）：加 `themeAuto` 第六参，自动模式（off/system/time）落盘同步 ysm_config.json，localStorage 被清理后可从配置恢复。
+- `SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto) → void` — 保存应用配置。linkMode 写盘前经 `install.SanitizeLinkMode` 软校验（ADR-296 D6）：空串=未传参（orDefault 保留旧值）；非法值（手改 config.json 等）不 reject 整个保存、回落旧值——入口 fail-closed 会误伤「只想改 mcRoot/theme、原样回写 linkMode」的多数调用方（同卡 SetLinkMode 硬校验拒脏值）；loadAppConfig 加载侧软校验不交 SyncLinkMode 污染内存快照，非法值留 log 走默认 copy。P4 修复（2026-09）：加 `themeAuto` 第六参，自动模式（off/system/time）落盘同步 ysm_config.json，localStorage 被清理后可从配置恢复。⚠️ **前端调用侧**：六个参数同为 `string`，位置错位类型系统看不见——前端**唯一实参点**为 `frontend/src/views/config-write.ts|writeAppConfig(patch)`（ADR-313，patch 语义 + 保存前重读最新值），由 `tests/test_config_write_single_exit.ts` 机器执法（生产代码 `SaveAppConfig(` 调点恰好一处）；禁止各 view 手抄六位置实参（历史事故：`theme` 传 `"dark"` 非法值被 `normalizeTheme` 静默归一成 `system`；闭包旧值覆盖 `linkMode`；`themeAuto` 漏落盘）。
 - `SetDownloadMirror(mirror) → void` — 设置下载镜像源
 - `GetSubDirMap() → Record<string,string>` — 资源类型→子目录映射表（前端右键菜单等场景使用）
 - `GetMinecraftPaths() → string[]` — 返回探测到的候选 Minecraft 目录

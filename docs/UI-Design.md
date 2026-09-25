@@ -378,8 +378,7 @@ style="animation-delay:${stagger(i)}ms"
 
 | 文件             | 给谁用                             |
 | ---------------- | ---------------------------------- |
-| `variables.css`  | 全局 :root + 主题变量              |
-| `layout.css`     | 主 grid 布局、顶栏、侧栏、预览面板 |
+| `variables.css`  | 全局 :root + 主题变量 + 主题 color-scheme 语义 |
 | `components.css` | 跨组件通用类（仅非 Shadow DOM）    |
 | `content-css.ts` | `app-content` 的所有子组件样式     |
 | `sidebar-css.ts` | `app-sidebar` 的所有子组件样式     |
@@ -953,7 +952,7 @@ G-1 抗脆弱测试基础设施（ADR-035）——测试断言稳定语义而非
 - 视频: [AI做的UI设计为什么总是很丑？3套解决方案](https://www.bilibili.com/video/BV1GpEs6gEgL/)
 - 主题变量与实装主题列表: `frontend/src/app-modules.ts`（VALID 数组 :47）
 - 类型化事件总线契约: `frontend/src/bus.ts`（`BusEvents` :53-107）
-- 全局 CSS 变量: `frontend/css/variables.css` / `layout.css` / `components.css` / `transitions.css`
+- 全局 CSS 变量: `frontend/css/variables.css` / `components.css` / `transitions.css`（原 `layout.css` 已于 2026-10 整表删除：旧光 DOM 外壳样式，零消费者）
 - 共享样式片段: `frontend/src/utils/dom/css.ts`（`btnBaseCSS` / `focusVisibleCSS` / `wsIconCSS` / `noAnimationsCSS`）
 - 组件注册入口: `frontend/src/app-modules.ts`
 - 组件源码: `frontend/src/views/*`（9 个自定义元素，详见 §15）

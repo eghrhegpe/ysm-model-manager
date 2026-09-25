@@ -61,8 +61,6 @@ describe("componentsCss 字号/尺寸随 --fs-scale 缩放", () => {
   const FONT_TOKENS = [
     "--uih-font-ui",
     "--uih-font-ui-sm",
-    "--uih-font-ui-xs",
-    "--uih-font-title",
     "--uih-font-lg",
     "--uih-cs-label-font-size",
   ];
@@ -78,10 +76,7 @@ describe("componentsCss 字号/尺寸随 --fs-scale 缩放", () => {
   // 尺寸类：图标与行高须一同缩放，否则字号放大后图标撑破固定行高
   const SIZED_TOKENS = [
     "--uih-slide-icon-size",
-    "--uih-collapsible-icon-size",
-    "--uih-preset-chip-icon-size",
     "--uih-slide-item-min-height",
-    "--uih-preset-chip-height",
   ];
   for (const name of SIZED_TOKENS) {
     it(`${name} 经 --fs-scale 派生`, () => {
@@ -108,11 +103,12 @@ describe("componentsCss 字号/尺寸随 --fs-scale 缩放", () => {
   it("token 总数收敛（防单次消费的间接层回潮）", () => {
     const names = [...componentsCss.matchAll(/(--uih-[\w-]+):/g)].map((m) => m[1]);
     const unique = new Set(names);
-    // 2026-09 收敛后 19 个（含 --uih-font-lg / --uih-card-bg 必要补入，
-    // 并清掉与 --radius-xs 重复的 --uih-cs-bar-radius）；断言取**精确值**而非宽松
+    // 2026-10 死类清理后 13 个（原 19 个中 6 个随死类规则一并退役：--uih-card-bg /
+    // --uih-font-title / --uih-font-ui-xs / --uih-preset-chip-height /
+    // --uih-preset-chip-icon-size / --uih-collapsible-icon-size）；断言取**精确值**而非宽松
     // 上限——实测宽限 25 时注入 `--uih-font-bad: 13px` 能溜过（加 token 是最常见的
     // 回潮形态）。新增合法 token 时同步改此数字：强制走一次「这真有必要吗」的判断。
-    expect(unique.size).toBe(19);
+    expect(unique.size).toBe(13);
   });
 
   // 收敛的实质判据：**零引用 token 一律是间接层噪音**（定义完从不 var() 它）。

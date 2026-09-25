@@ -51,14 +51,14 @@ status: active
 
 - `parseModelName(raw: string): ParsedModelName` — 解析文件名为 `{ raw, isBanned, author, work, chara, date, ext }`；`[作者]`/`[[作者]]`、`【作品】`/`《作品》` 三组括号经 `BRACKET_STYLES` 注册表统一（parse 与 render 共用 `bracketRe`，新增风格只改一处）；`YYYY[-_.]MM` 日期；`.ban` 后缀标记封禁文件
 - `renderDisplayName(raw: string, opts?: unknown): string` — **治理红线函数**，所有 UI 文件名展示必经：`[...]`/【...】/《...》→ `.tag-work` span，日期 → `.tag-date` span，其余部分走 `renderFormattedText` 做 § 分节符着色；封禁文件直接返回转义后的原文
-- `renderModelName(raw, options?: { tpl?, showExt? })` — renderDisplayName 的别名包装，`showExt: true` 追加 `.tag-ext` 扩展名后缀
-- `renderModelNameWithHighlight(raw, keyword?, options?)` — 在纯文本高亮（`<mark>`）后**逐段转义重组**返回（P2 修复：原实现直接拼接高亮结果，文件名含 `<script>`/`<img onerror>` 可注入 HTML，是 display 管线唯一未转义输出口；现策略拆出 `<mark>…</mark>` 段、内容 esc 后重组，扩展名标签同样 esc）
+- `renderModelName(raw, options?: { tpl?, showExt? })` — ⚠️ **本项已失效（2026-10 实证）**：全仓不存在 `renderModelName` / `showExt` 标识符，它曾提供的「`showExt:true` 追加 `.tag-ext` 扩展名后缀」随之消失（`.tag-ext` 类亦无生产者，已由 ADR-312 死 CSS 反向闸删除）。文件名展示的现行出口见上一条 `renderDisplayName`
+- `renderModelNameWithHighlight(raw, keyword?, options?)` — ⚠️ **本项已失效（2026-10 实证）**：函数已不在仓内；关键词高亮的现行实现是 `utils/html/html.ts`（转义 + `<mark>` 包裹全部命中段）
 
 ## 与其他子系统关系
 
 - 消费方（文件名展示点全覆盖）：`app-tree`（row-tpl / row-tpl-list / render）、`features/import-queue`、`features/recycle-bin`、`features/oldest-models`、`features/community`（render / download-queue / diagnostics）
 - 依赖 `utils/mc-format.ts` 的 `renderFormattedText` 做 § 分节符着色
-- `.tag-work` / `.tag-date` / `.tag-author` / `.tag-ext` 的样式在各组件 CSS 中定义，颜色走 CSS 变量（--meta-author / --meta-work / --meta-date）
+- `.tag-work` / `.tag-date` / `.tag-author` 的样式在各组件 CSS 中定义，颜色走 CSS 变量（--meta-author / --meta-work / --meta-date）。**`.tag-ext` 不存在**（扩展名后缀从未有消费者，2026-10 随 ADR-312 死 CSS 反向闸删除）
 
 ## 不变量
 

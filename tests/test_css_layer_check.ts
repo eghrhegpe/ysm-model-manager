@@ -13,6 +13,8 @@
  *   2. 不存在的常量保持原样（不因 tooling 变化制造新假阳性）
  *   3b. 共享样式常量（非 @keyframes，如 dropdownBaseCSS）同样展开——否则其定义对检查 3 静默不可见
  *   8. 检查 6 跨层存在性：在「所有 shadow 域 CSS ∪ document 层 CSS」都无定义 → 报出；已定义 / 已豁免 → 不报
+ *   9. 检查 7 死 CSS 反向闸：选择器位提取（不误收 TS 属性访问/注释）、掩码保真（字符串引用不被掩）、
+ *      无消费者才报、前缀拼接族**不**自动豁免（只给线索，豁免走显式登记）
  *   4. resolveImportAbs：相对路径解析 / 裸包导入排除（裸包不参与 shadow CSS 组装）
  *   5. readConstLiteral 可读跨行字符串字面量
  *
@@ -27,10 +29,13 @@ import { fileURLToPath } from "node:url";
 import { dropdownBaseCSS, noAnimationsCSS } from "../frontend/src/utils/dom/css.ts";
 import {
   expandStyleInterpolations,
+  extractSelectorClasses,
+  findDeadCssClasses,
   findStrayCommentClose,
   findUndefinedAnywhereClasses,
   hasMotionDeclaration,
   hasNoAnimationsBridge,
+  maskSelectorClasses,
   readConstLiteral,
   resolveImportAbs,
 } from "../scripts/_lib/css-layer-utils.ts";
@@ -185,15 +190,89 @@ const crossUsed = new Map<string, Map<string, string>>([
 const crossDefined = new Set(["md-row"]); // 定义在本域 CSS 层
 const crossExempt = new Set(["stage-item"]); // 合法无规则（全内联承载）
 assert.deepEqual(
-  findUndefinedAnywhereClasses(crossUsed, crossDefined, crossExempt).map((f) => `${f.domain}:${f.cls}`),
+  findUndefinedAnywhereClasses(crossUsed, crossDefined, crossExempt).map(
+    (f) => `${f.domain}:${f.cls}`,
+  ),
   ["app-preview:lt-color-swatch"],
   "任何 CSS 层都无定义 → 报出；已定义 / 已豁免 → 不报",
 );
 assert.deepEqual(
-  findUndefinedAnywhereClasses(crossUsed, crossDefined, new Set([...crossExempt, "lt-color-swatch"])),
+  findUndefinedAnywhereClasses(
+    crossUsed,
+    crossDefined,
+    new Set([...crossExempt, "lt-color-swatch"]),
+  ),
   [],
   "豁免集命中即静默（合法无规则类的唯一出口）",
 );
 console.log("  ✓ 检查 6 判定：跨层存在性（任何 CSS 层都无定义 → 报；已定义/已豁免 → 不报）");
 
-console.log("\nOK: css-layer-check 插值展开契约（回归锁 9 条）");
+// 9) 检查 7：死 CSS 反向闸——「定义了、但全仓无任何消费者」
+//    病因（2026-10 锐评）：检查 3/6 只管「用了没定义」一个方向，反方向无闸 → 化石层只增不减
+//    （layout.css 整表 400 行零消费者、mc-pick-* 改用 modalPicker 后整族留在原地）。
+//    判定基线建立在「选择器位提取 + 消费者语料」两件事上，二者都极易写错（写错的方向不同）：
+//      ① 提取过宽 → TS 属性访问 `this.root` 被当成类 → 假 ERROR（用户不再信任闸门）
+//      ② 掩码过宽 → 定义源里的 `class="foo"` 也被掩掉 → 真活类被判死 → 假 ERROR
+//    故两条都在此钉死。
+{
+  // ① 提取：只认选择器位（`.` 前是空白/逗号/行首/选择器组合符）
+  const src = [
+    "export const XCSS = `",
+    ".card { color: red }",
+    ".card > .body, .body.foot { padding: 0 }",
+    "`;",
+    "this.root.style.color = 'red';",
+    "deps.styleSheets.filter((s) => s != null);",
+    "const sel = document.querySelector('.quoted-only');",
+    "/* 注释里的 .ghost-not-a-class 不算定义 */",
+  ].join("\n");
+  const extracted = extractSelectorClasses(src);
+  assert.ok(extracted.has("card"), "选择器位 .card 应被收下");
+  assert.ok(extracted.has("body"), "逗号后的选择器 .body 应被收下");
+  assert.ok(!extracted.has("root"), "TS 属性访问 this.root 不得被当成类（假 ERROR 防线）");
+  assert.ok(!extracted.has("filter"), "TS 属性访问 .filter 不得被当成类（假 ERROR 防线）");
+  assert.ok(!extracted.has("ghost-not-a-class"), "注释里的类名不得算定义（注释洗白防线）");
+  assert.ok(
+    !extracted.has("quoted-only"),
+    "引号内的选择器是**消费者**（querySelector）不是定义，不得混进定义集",
+  );
+
+  // ② 掩码：定义源的选择器位掩掉，字符串引用（class="foo" / querySelector(".foo")）保留
+  const masked = maskSelectorClasses(".card { color: red }\nconst h = 'class=\"card\"';");
+  assert.ok(!/\.card\s*\{/.test(masked), "选择器位 .card 应被掩掉（定义不能自我证明存活）");
+  assert.ok(masked.includes('class="card"'), '字符串里的 class="card" 必须保留（真消费者证据）');
+
+  // ③ 判定：无消费者 → 死；有消费者 / 已豁免 → 静默
+  const defs = [{ file: "a.css", classes: new Set(["dead-one", "alive-in-template", "exempted"]) }];
+  const corpus = '<div class="alive-in-template"></div>';
+  assert.deepEqual(
+    findDeadCssClasses(defs, corpus, new Set(["exempted"])).map((f) => f.cls),
+    ["dead-one"],
+    "定义无消费者 → 报死；模板消费 / 显式豁免 → 静默",
+  );
+  assert.deepEqual(
+    findDeadCssClasses(defs, corpus, new Set(["exempted", "dead-one"])),
+    [],
+    "豁免集命中即静默（动态拼接族的唯一出口）",
+  );
+
+  // ④ 动态拼接线索只作提示，不自动豁免（前缀同族不同名会误伤，实测 sidebar-${verb}-selected）
+  // 串接拼出模板串字面量：避免本文件自身被 `noTemplateCurlyInString` 判违规（仓内既有惯例）
+  const dynCorpus = "el.classList.add(`ysw-ovl-" + "${" + "kind}`);";
+  const dyn = findDeadCssClasses(
+    [{ file: "a.ts", classes: new Set(["ysw-ovl-shotitem"]) }],
+    dynCorpus,
+    new Set(),
+  );
+  assert.equal(dyn.length, 1, "前缀拼接族**不得**自动豁免（须显式登记理由）");
+  assert.equal(dyn[0]?.dynHint, "ysw-ovl-", "应给出拼接前缀线索供人工核实");
+  assert.ok(
+    !/(?<![\w-])ysw-ovl-shotitem(?![\w-])/.test("ysw-ovl-shotitem-x"),
+    "token 边界：不得让 ysw-ovl-shotitem-x 冒充 ysw-ovl-shotitem 的消费者",
+  );
+  console.log(
+    "  ✓ 检查 7 判定：死 CSS 反向闸（选择器位提取 / 掩码保真 / 无消费者才报 / 豁免静默）",
+  );
+}
+
+console.log("\nOK: css-layer-check 契约（插值展开 + 检查 5/6/7 判定，回归锁 11 条）");

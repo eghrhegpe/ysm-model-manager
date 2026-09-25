@@ -22,6 +22,12 @@
  *   [ERROR] 有 animation/transition 的 shadow 域未 adopt `.no-animations` 通配桥
  *           → 「关闭动画」开关在该域静默失效（文档层规则不穿透 shadow 边界，见 ADR-015
  *             §2.4 约束 1「用户关闭时零动画」）
+ *   [WARN]  跨层存在性：用了、但**全仓任何 CSS 层**都没定义的类（检查 6，判定域=在用侧）
+ *   [ERROR] **死 CSS 反向闸**：定义了、但全仓没有任何消费者的类（检查 7，判定域=定义侧）
+ *           → 检查 6 的对偶。立因（2026-10 锐评实测）：本闸此前只管「用了没定义」一个方向，
+ *             「定义了没人用」无闸 → 化石层只增不减（实测 layout.css 整表 400 行零消费者、
+ *             components.css 的 mc-pick-* 与 mc-scan-* 在改用 modalPicker 后整族留在原地，而
+ *             知识卡早已写「.mc-pick-* 类已删」——文案删了样式没删，两处事实源长期背离）
  *
  * 发现机制（全自动，无手写域清单）：
  *   递归遍历 frontend/src/views/_（每个视图目录），凡目录内任一 .ts 命中 shadow 样式标记
@@ -47,11 +53,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  dynamicClassHint,
   expandStyleInterpolations,
+  extractSelectorClasses,
+  findDeadCssClasses,
   findStrayCommentClose,
   findUndefinedAnywhereClasses,
   hasMotionDeclaration,
   hasNoAnimationsBridge,
+  maskSelectorClasses,
 } from "./_lib/css-layer-utils.ts";
 import { walk } from "./_lib/scan-files.ts";
 
@@ -527,6 +537,128 @@ for (const finding of findUndefinedAnywhereClasses(
   warnCount++;
   problems.push(
     `[WARN] ${finding.domain}: tpl ${finding.file} 使用类 '${finding.cls}' 但全仓任何 CSS 层（shadow 域 ∪ frontend/css/*.css）均无定义（疑似错名/漏定义；若为内联承载的合法无规则类，登记 KNOWN_NO_CSS_CLASSES）`,
+  );
+}
+
+// ── 检查 7（ERROR）：定义了但全仓无消费者的类（死 CSS 反向闸）──
+// 检查 6 的**对偶**：6 管「用了没定义」（错名/漏迁），7 管「定义了没人用」（化石层）。
+// 立因与实测见文件头「检查项」注释。判定算法与边界写在 _lib/css-layer-utils.ts 的
+// extractSelectorClasses / maskSelectorClasses / findDeadCssClasses 上（有契约测试锁定）。
+//
+// 豁免一律**显式逐类登记**（`KNOWN_DEAD_CSS_EXEMPT`，每条附理由），不用前缀启发式自动放行：
+// 实测前缀判定会把 `sidebar-${verb}-selected` 栽给 `sidebar-header`（同前缀不同族），
+// 自动豁免会静默吞掉真死类。前缀线索只作告警里的**提示**（`dynamicClassHint`）。
+const KNOWN_DEAD_CSS_EXEMPT = new Set<string>([
+  // theme-* 由模板串动态拼接，全仓不以字面量出现：
+  //   theme-core.ts `theme-${t}`/`theme-${mode}`、theme.ts 探针 `theme-${theme}`、
+  //   tpl-settings.ts 主题卡 `class="theme-card theme-${theme}"`。
+  // 只有六者中「没被任何字面量/测试提到」的那个会落到这里（现为 mint）。
+  "theme-mint",
+  // preview-ic--*：fab.ts `ic.classList.add(\`preview-ic--${opts.icon}\`)` + KNOWN_ICON_CLASSES
+  // 白名单（cam/rot/close/panel-hide/panel-show）；cam/close 另有 fab.test.ts 字面量断言，
+  // 余三者仅动态可达，故登记。
+  "preview-ic--rot",
+  "preview-ic--panel-hide",
+  "preview-ic--panel-show",
+  // cr-tag-*：site/render.ts `class="cr-tag cr-tag-${esc(kind)}"` 动态拼接（kind ∈ game/vup/oc…）
+  "cr-tag-game",
+  "cr-tag-oc",
+]);
+
+/** 承载 CSS 的源文件标记（比函数头注释里的发现规则宽一档：`[A-Za-z0-9_]*CSS` 收下
+ *  `YSW_TOOLTIP_CSS` / `MENU_ERROR_NOTE_CSS` 这类全大写命名；`:host`/adoptedStyleSheets
+ *  兜底程序化拼装的 shadow 样式）。 */
+const CSS_ASSET_MARKER =
+  /export const [A-Za-z0-9_]*CSS[A-Za-z0-9_]*\s*[:=]|:host\b|adoptedStyleSheets/;
+
+/** 消费者语料：只取**可能真实消费类名**的代码/模板文件。刻意排除三类（均为实测假存活源）：
+ *  - `docs/`：知识卡/审计文档里的 `.foo` 只是叙述，不产生 DOM 节点；
+ *  - `scripts/`：治理脚本把旧选择器当**模式串**引用（实测 `tb-btn` 仅靠 check-redlines
+ *    的一句正则续命，而全仓已无该 DOM）；
+ *  - `upstream/`：第三方 vendor 自带上古样式表，同名纯属巧合（实测 `topbar` 靠 upstream 存活）。 */
+const DEAD_CSS_CORPUS_EXTS = [
+  ".ts",
+  ".tsx",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".html",
+  ".go",
+  ".json",
+  ".vue",
+];
+const DEAD_CSS_CORPUS_SKIP = new Set([
+  "node_modules",
+  "dist",
+  "dist-web",
+  "dist-verify",
+  "coverage",
+  "release",
+  "build",
+  "target",
+  "test-results",
+  "e2e-report",
+  "docs",
+  "scripts",
+  "upstream",
+  ".cache",
+  ".dsh",
+  ".vitepress",
+]);
+
+const cssAssetFiles = (
+  walk(path.join(ROOT, "frontend/src"), {
+    exts: [".ts"],
+    skipDir: () => false,
+    skipFile: (n) => n.endsWith(".test.ts"),
+  }) as string[]
+).filter((f) => {
+  try {
+    return CSS_ASSET_MARKER.test(fs.readFileSync(f, "utf8"));
+  } catch {
+    return false;
+  }
+});
+
+const deadCssDefs: { file: string; classes: Set<string> }[] = [];
+const deadCssSourceSet = new Set<string>();
+for (const abs of [...documentLayerFiles.map((f) => path.resolve(ROOT, f)), ...cssAssetFiles]) {
+  deadCssSourceSet.add(path.resolve(abs));
+  let txt = "";
+  try {
+    txt = fs.readFileSync(abs, "utf8");
+  } catch {
+    continue;
+  }
+  deadCssDefs.push({
+    file: path.relative(ROOT, abs).split(path.sep).join("/"),
+    classes: extractSelectorClasses(txt),
+  });
+}
+
+let deadCssCorpus = "";
+for (const abs of walk(ROOT, {
+  exts: DEAD_CSS_CORPUS_EXTS,
+  skipDir: (n) => n.startsWith(".") || DEAD_CSS_CORPUS_SKIP.has(n),
+  skipFile: () => false,
+}) as string[]) {
+  let txt = "";
+  try {
+    txt = fs.readFileSync(abs, "utf8");
+  } catch {
+    continue;
+  }
+  // 定义源自身的选择器位掩掉（否则每条规则都自我证明「有消费者」），其余原样
+  deadCssCorpus += `\n${deadCssSourceSet.has(path.resolve(abs)) ? maskSelectorClasses(txt) : txt}`;
+}
+
+for (const f of findDeadCssClasses(deadCssDefs, deadCssCorpus, KNOWN_DEAD_CSS_EXEMPT)) {
+  errorCount++;
+  const hint = f.dynHint ?? dynamicClassHint(f.cls, deadCssCorpus);
+  problems.push(
+    `[ERROR] 死 CSS：类 '${f.cls}' 定义于 ${f.file}，但全仓无任何消费者（改类名/重构后遗留的旧规则）` +
+      `${hint ? `；疑似由 '${hint}' 前缀动态拼接应用，请核实` : ""}` +
+      `。修法：删除该规则；确为动态应用则登记 KNOWN_DEAD_CSS_EXEMPT 并写明理由`,
   );
 }
 

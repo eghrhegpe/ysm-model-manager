@@ -21,20 +21,8 @@ export const slideMenuCss = `/* ===== 🥉 slide-menu 外壳样式（自 MikuMik
   --uih-slide-divider: rgba(255, 255, 255, 0.08);
 }
 
-/* 定位容器：底部居中（替代原 .ysm-3d-popup 的定位职责；卡片视觉交给 .menu-wrapper） */
-.ysm-slide-popup {
-  position: absolute;
-  left: 50%;
-  bottom: 84px;
-  transform: translateX(-50%);
-  width: 280px;
-  max-height: min(60vh, 420px);
-  z-index: 25;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 卡片本体：玻璃质感对齐 ysm 3D HUD（fab.ts .ysm-3d-popup），与 MikuMikuAR 实心卡不同——
+/* 卡片本体：玻璃质感对齐 ysm 3D HUD（fab.ts 原 .ysm-3d-popup 一族；该旧浮层样式已随
+   ADR-312 死 CSS 反向闸删除，此处仅保留视觉口径作为对照），与 MikuMikuAR 实心卡不同——
    3D 浮层需透出场景，且不受 app 主题影响（主题无关，统一深色玻璃）。 */
 .menu-wrapper.slide-menu {
   display: flex;

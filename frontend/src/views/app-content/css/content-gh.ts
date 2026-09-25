@@ -1,5 +1,5 @@
-// ===== 工坊 GitHub 族 CSS（gh-* 全族：页面布局/模型列表行/仓库头部/站点视图/
-// 错误页/下载队列）。2026-09 自 content-diag.ts 按页面域拆分（锐评 P3）：
+// ===== 工坊 GitHub 族 CSS（gh-* 全族：页面布局/模型列表行/仓库头部/
+// 下载队列）。2026-09 自 content-diag.ts 按页面域拆分（锐评 P3）：
 // diag 与 gh 是两个页面域，原文跨界混居导致 26KB 单文件两头维护。
 // 2026-09 锐评复核：原「创作者列表（GitHub 侧栏）」「创作者编辑行」两块 `.gh-creator-*` /
 // `.gh-cr-*` 全族已无生产者（GitHub 侧栏早已改仓库卡网格），随锐评 P1-6 删除。
@@ -23,17 +23,7 @@ export const contentGhCSS: string = `
 .gh-card .name { font-size:var(--fs-md); font-weight:var(--fw-bold); color:var(--txt); font-family:var(--font-display); overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .gh-card .name + .meta { margin-top:1px; font-size:var(--fs-xs); color:var(--muted); }
 .gh-card:hover .cr-avatar { transform:rotate(-8deg) scale(1.05); }
-.gh-card-icon { font-size:var(--fs-nav); width:24px; text-align:center; flex-shrink:0; transition:transform var(--tr-normal); }
-.gh-card:hover .gh-card-icon { transform:rotate(-8deg) scale(1.1); }
 .gh-card-body { flex:1; min-width:0; }
-.gh-card-label { font-size:var(--fs-base); font-weight:600; color:var(--txt); }
-.gh-card.active .gh-card-label { color:var(--bg); }
-.gh-card-desc { font-size:var(--fs-xs); color:var(--muted); margin-top:0; }
-.gh-card.active .gh-card-desc { color:var(--bg); }
-.gh-card-external { width:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);color:var(--muted);cursor:pointer;border-left:1px solid var(--bd);transition:var(--tr-fast); }
-.gh-card-external:hover { color:var(--accent);background:var(--hover); }
-.gh-card.active .gh-card-external { border-left-color:var(--accent);color:var(--accent); }
-.gh-section-title { font-size:var(--fs-md);font-weight:600;color:var(--txt);padding:8px 12px 4px; }
 .gh-header { border-bottom:1px solid var(--bd);flex-shrink:0; }
 .gh-header-top { display:flex;align-items:center;gap:8px;padding:var(--sp-vh-pane); }
 .gh-header-repo { display:flex;align-items:center;gap:8px;padding:0 12px 8px; }
@@ -41,27 +31,14 @@ export const contentGhCSS: string = `
 .gh-section-fill { flex:1; }
 .gh-back-repo { font-size:var(--fs-sm);padding:var(--btn-padding-sm);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-family:inherit; }
 .gh-back-repo:hover { background:var(--hover); }
-.gh-btn-txt { border-color:transparent; }
 .gh-repo-name { font-size:var(--fs-md);font-weight:600;color:var(--txt);flex:1; }
 .gh-model-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius:var(--radius-pill); font-size: var(--fs-xs); font-weight: 600; }
 .gh-model-badge-total { background: var(--surf); color: var(--txt); }
 .gh-model-badge-missing { background: color-mix(in srgb, var(--status-error) 12%, transparent); color: var(--status-error); }
 /* toggle-missing 激活态 */
 .gh-toggle-missing.active { border-color:var(--accent);color:var(--accent); }
-/* .gh-btn-sm 已合并到 .btn-sm */
-.gh-btn-muted { color:var(--muted); }
-.gh-btn-muted:disabled { opacity:.4;cursor:not-allowed;pointer-events:none; }
-.gh-btn-accent { color:var(--accent);border-color:var(--accent); }
-.gh-btn-accent:hover { background:var(--accent);color:var(--bg); }
 .gh-dl-selected { color:var(--accent);border-color:var(--accent); }
 .gh-dl-selected:hover { background:var(--accent);color:var(--bg); }
-
-/* 二级菜单 */
-.gh-popup { position:fixed; z-index:var(--z-popover); background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-lg); padding:var(--sp-1); box-shadow:var(--shadow-lg); min-width:140px; } /* 审计 P2-2/P2-6：box-shadow 走 --shadow-lg，删 --surf/--bd 冗余回退（6 主题已定义） */
-.gh-popup-item { display:flex; align-items:center; gap:8px; padding:var(--sp-vh-btn); border-radius:var(--radius-md); cursor:pointer; transition:background var(--tr-fast); }
-.gh-popup-item:hover { background:var(--hover,#ffffff15); }
-.gh-popup-icon { font-size:var(--fs-lg); width:20px; text-align:center; flex-shrink:0; }
-.gh-popup-label { font-size:var(--fs-base); color:var(--txt); } /* 审计 P2-6：删 --txt 冗余回退（6 主题已定义） */
 
 /* 站点侧栏头部（gh-left-head 系列与 gh-left-foot 仍在用） */
 .gh-left-head { padding:4px 12px 4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap; }
@@ -100,32 +77,6 @@ export const contentGhCSS: string = `
 .gh-header { flex:1; overflow-y:auto; padding:0 12px; }
 .gh-header > :last-child { padding-bottom:12px; }
 
-/* ===== 站点卡片分组标题 ===== */
-.gh-section-title { font-size:var(--fs-xs); font-weight:600; color:var(--muted); padding:8px 8px 2px; }
-
-/* ===== 站点视图 ===== */
-.gh-scroll { flex:1; overflow-y:auto; }
-
-.gh-section { padding:6px 12px 4px; display:flex; align-items:center; gap:4px; }
-.gh-section-title-lg { font-size:var(--fs-sm); font-weight:600; color:var(--txt); }
-.gh-section-sub { font-size:var(--fs-xs); color:var(--muted); }
-.gh-preset-area { padding:8px 12px 4px; display:flex; gap:4px; flex-wrap:wrap; }
-.gh-preset-btn { padding:var(--btn-padding-sm); border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--surf); color:var(--accent); cursor:pointer; font-size:var(--fs-xs); }
-.gh-action-btn { padding:var(--btn-padding-filter); border-radius:var(--radius-md); border:1px solid var(--bd); background:transparent; cursor:pointer; font-size:var(--fs-base); }
-.gh-action-btn-accent { color:var(--accent); }
-.gh-action-btn-muted { color:var(--muted); }
-.gh-save-btn { padding:4px 14px; border-radius:var(--radius-md); border:none; background:var(--accent); color:var(--bg); cursor:pointer; font-size:var(--fs-base); }
-.gh-hint-text { font-size:var(--fs-micro); color:var(--muted); padding:0 12px 4px; }
-
-.gh-empty-site { flex:1; overflow-y:auto; padding:var(--sp-3); color:var(--muted); font-size:var(--fs-sm); }
-.gh-site-link { color:var(--accent); }
-
-/* ===== 错误页 ===== */
-.gh-error-page { padding:var(--sp-3); text-align:center; }
-.gh-error-msg { color:var(--txt); font-size:var(--fs-sm); line-height:1.6; } /* 错误正文须可读,muted 属误用（2026-09 层级口径） */
-.gh-error-hint { font-size:var(--fs-xs); opacity:.6; }
-.gh-back-btn { padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; font-size:var(--fs-sm); }
-
 /* ===== 下载队列 ===== */
 .gh-queue-icon { color:var(--accent); }
 .gh-queue-error { padding:var(--pad-v-2); font-size:var(--fs-sm); color:var(--status-error); }
@@ -136,8 +87,6 @@ export const contentGhCSS: string = `
 .gh-progress-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--fs-sm); }
 .gh-progress-pct { font-size:var(--fs-xs); color:var(--txt); flex-shrink:0; } /* 百分比 = 读数（error 变体下条覆盖） */
 .gh-progress-remain { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
-.gh-cancel-btn { width:20px; height:20px; border-radius:50%; border:none; background:color-mix(in srgb, var(--muted) 15%, transparent); color:var(--muted); cursor:pointer; font-size:var(--fs-base); flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:background var(--tr-normal); }
-.gh-cancel-btn:hover { background:color-mix(in srgb, var(--muted) 30%, transparent); }
 .gh-progress-bar-wrap { margin-top:3px; height:4px; border-radius:var(--radius-xs); background:var(--bd); overflow:hidden; }
 .gh-progress-fill { height:100%; width:0%; border-radius:var(--radius-xs); background:var(--accent); transition:width 0.06s linear; box-shadow:0 0 4px var(--accent); animation:breathe-subtle 4s ease-in-out infinite;will-change:filter,box-shadow; }
 .gh-progress-pct.gh-progress-error { color:var(--status-error); }

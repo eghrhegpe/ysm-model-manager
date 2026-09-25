@@ -25,7 +25,7 @@
  * - 颜色变量：--bg, --surf, --card, --accent, --txt, --muted, --bd
  * - 状态变量：--status-success, --status-error, --size-ok, --size-large
  * - 元数据变量：--meta-author, --meta-work, --meta-date
- * - 布局变量：--sidebar-width, --preview-width
+ * - 布局变量：--preview-width
  * - 字体变量：--fs-*, --fw-*, --font-*
  * - 间距变量：--space-*, --pad-*
  * - 按钮变量：--btn-radius, --btn-padding-*, --btn-transition
@@ -53,6 +53,14 @@
  *   原 --act（选中态二级色）已全量退役删除；按钮若常态已占 --hover，改为「常态 transparent、
  *   悬停 --hover」反向取值，勿再新增第三级色。本文件末尾注释保留 --act 仅为历史审计留存。
  */
+
+/* ===== 主题明暗语义（原生控件跟随） =====
+   原在 layout.css，2026-10 随「旧光 DOM 外壳样式表」删除一并迁入本文件——它是 layout.css
+   里**唯一仍有消费者**的规则（theme-core 把 theme-* 类挂 document.body）。
+   color-scheme 让原生控件（滚动条 / 表单 / select 下拉 / 输入法候选）跟随主题明暗，
+   必须与主题类同层定义，故与主题变量同居本文件；加主题时此处同步归类，勿漏。 */
+.theme-cyber,.theme-pro,.theme-ocean { color-scheme: dark; }
+.theme-warm,.theme-sakura,.theme-mint { color-scheme: light; }
 
 /* ===== 赛博霓虹（默认深色） ===== */
 :root,
@@ -237,14 +245,12 @@
 
 /* 布局变量 — 共享布局变量提升到 :root */
 :root {
-  --sidebar-width: 300px;
-  /* 注：--sidebar-w（无 -width）是 gh/creator 域 shadow 内左栏专用宽（200px，content-layout.ts:14 定义），
-     与 --sidebar-width（300px，#root grid 列宽）命名仅差一字、语义不同，刻意保留双令牌避免误用。
-     二者若需收敛，先确认 gh/creator 左栏从 200→300 的观感影响（审计 P1-7）。 */
+  /* 预览面板宽度（消费者：app-preview/css.ts 的 .pv-preview 容器；文档对账锚点见
+     check-design-tokens --docs，权威 fallback 取自 app-content/tpl.ts 注释里的 var(...) 示例）。
+     2026-10：同块的 --sidebar-width / --topbar-h 已随 frontend/css/layout.css（旧光 DOM 外壳
+     样式表）一并删除——外壳早已迁入 app-nav / app-content 两个 shadow 组件，这两个令牌的
+     消费者只剩 layout.css 自己的 #root grid 与 .topbar，删除后全仓零引用。 */
   --preview-width: 240px;
-  /* 顶栏高度（审计 P1-5）：原 layout.css 硬编码 44px，字号放大后顶栏内容挤压溢出。
-     接入 --fs-scale 随字号缩放，与 --sp-* / --pad-* 同构。 */
-  --topbar-h: calc(44px + var(--fs-scale) * 0.5);
   --card-padding: 6px 10px;
   --card-gap: 6px;
   --card-pad-y: 6px;
@@ -293,7 +299,7 @@
   --fs-filter: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 12px @ 基准（筛选标签 sm-status-tab）*/
   --fs-btn-primary: calc(var(--fs-base-size) + var(--fs-scale)); /* 13px @ 基准（主要操作按钮 hdr-btn, dlg-btn）*/
   --fs-btn-secondary: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 12px @ 基准（次要/行内按钮 sm-item-btn）*/
-  --fs-btn-tool: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 12px @ 基准（工具栏小按钮 repo-bar-btn, btn-base.sm）*/
+  --fs-btn-tool: calc(var(--fs-base-size) - 1px + var(--fs-scale)); /* 12px @ 基准（工具栏小按钮 .btn-base.sm；原举例 .repo-bar-btn 已随 ADR-312 死 CSS 反向闸删除）*/
 
   /* 语义化垂直间距 — 按 UI 角色，随字号比例缩放 */
   --pad-nav: calc(6px + var(--fs-scale) * 0.5);

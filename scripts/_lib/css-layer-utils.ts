@@ -268,3 +268,105 @@ export function findUndefinedAnywhereClasses(
   }
   return out;
 }
+
+/**
+ * 选择器位类名提取（css-layer-check 检查 7 的纯函数抽出）。
+ *
+ * **为什么不能沿用 extractClasses 的裸正则**：检查 7 的输入是承载 CSS 的 **TS 源文件**
+ * （`export const XxxCSS = \`…\``），而 TS 代码里 `.foo` 绝大多数是**属性访问**
+ * （`this.root` / `deps.styleSheets.filter` / `import.meta`）——裸正则会把 `root`、
+ * `filter`、`meta` 当成「定义过的类」，再被判「无消费者」而变成假阳性。
+ *
+ * 判定：`.` 之前不得是标识符字符 / 右括号 / 引号 / 反引号 / 点号——
+ *   - TS 属性访问 `x.foo`（前是标识符）、`fn().foo`（前是 `)`）、链式 `a.b.c`（前是 `.`）→ 排除
+ *   - 字符串里的 `querySelector(".foo")`（前是引号）→ 排除（那是**消费者**，不是定义）
+ *   - CSS 选择器 `.foo`（前是空白 / `,` / `>` / `+` / `~` / 行首）→ 收下
+ * 边界（有意）：`#id.foo`、`.a.foo` 这类复合选择器里的第二个类**收不到**——宁漏勿误报
+ * （漏收只让该类的死判定更保守，误收会直接产出假 ERROR）。
+ */
+export function extractSelectorClasses(src: string): Set<string> {
+  const classes = new Set<string>();
+  const re = /(?<![\w)\]"'.`])\.[a-zA-Z][a-zA-Z0-9-]*/g;
+  for (const m of stripCssComments(src).matchAll(re)) {
+    const cls = m[0].slice(1);
+    if (!cls.endsWith("-")) classes.add(cls);
+  }
+  return classes;
+}
+
+/**
+ * 掩掉选择器位类名（替换为 NUL），供「消费者语料」判定：定义源文件自己写下的
+ * `.foo { … }` 选择器**不算**它自己的消费者（否则每个定义都自我证明存活）。
+ * 字符串里的 `class="foo"` / `querySelector(".foo")` / `classList.add("foo")`
+ * 不受影响（它们前面是引号或没有点号），仍是有效消费者证据。
+ */
+export function maskSelectorClasses(src: string): string {
+  return stripCssComments(src).replace(/(?<![\w)\]"'.`])\.[a-zA-Z][a-zA-Z0-9-]*/g, "\u0000");
+}
+
+/** _lib 内部：剥块注释与行注释（类名提取不被注释里的 `.foo` 洗白）。 */
+function stripCssComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(?<![:/])\/\/[^\n]*/g, "");
+}
+
+/** 类名是否作为**独立 token** 出现在语料中（`-`/词字符作边界：`.foo` 不匹配 `foo-bar`）。 */
+function containsClassToken(corpus: string, cls: string): boolean {
+  const esc = cls.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\w-])${esc}(?![\\w-])`).test(corpus);
+}
+
+/**
+ * 动态拼接提示：类名是否可由「前缀 + 变量」构造——`classList.add(\`前缀${x}\`)` /
+ * `className = "前缀" + x` / `class="前缀${x}"`。仅作**提示**（附在死类告警里帮人核实），
+ * **不作为豁免依据**：实测前缀判定会把 `sidebar-${verb}-selected` 误栽给 `sidebar-header`
+ * （同前缀、不同族）——自动豁免会静默吞掉真死类，故豁免一律走显式登记表。
+ */
+export function dynamicClassHint(cls: string, corpus: string): string | null {
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  for (let i = cls.indexOf("-"); i > 0; i = cls.indexOf("-", i + 1)) {
+    const prefix = cls.slice(0, i + 1);
+    const p = esc(prefix);
+    if (new RegExp(`${p}\\$\\{|${p}["']\\s*\\+|\\+\\s*["']${p}`).test(corpus)) return prefix;
+  }
+  return null;
+}
+
+export interface DeadCssFinding {
+  /** 定义源文件（相对仓库根，正斜杠） */
+  file: string;
+  /** 定义了但全仓无消费者的类名 */
+  cls: string;
+  /** 疑似动态拼接前缀（仅提示，非豁免依据）；无则 null */
+  dynHint: string | null;
+}
+
+/**
+ * 死 CSS 反向判定（css-layer-check 检查 7 的纯函数抽出）。
+ *
+ * 与 `findUndefinedAnywhereClasses`（检查 6）互为**对偶**：
+ *   - 检查 6：用了、但全仓没有任何 CSS 层定义 → 漏定义 / 错名
+ *   - 检查 7：定义了、但全仓没有任何消费者 → 化石层（改名/重构后留下的旧规则）
+ *
+ * 消费者判定 = 「类名作为独立 token 出现在语料里」。语料刻意**不做**类名启发式解析
+ * （不做 `class="…"` 定点匹配）：任何形式的引用（模板属性、`classList.add("x")`、
+ * `querySelector(".x")`、测试断言、Go 侧模板串）都算消费者——**宁漏勿误报**。
+ *
+ * @param definitions 定义源 → 该源里选择器位定义的类名集合
+ * @param corpus      消费者语料（定义源的选择器位已被 maskSelectorClasses 掩掉）
+ * @param exempt      显式豁免集（动态拼接族等，逐类附理由登记）
+ */
+export function findDeadCssClasses(
+  definitions: ReadonlyArray<{ file: string; classes: ReadonlySet<string> }>,
+  corpus: string,
+  exempt: ReadonlySet<string>,
+): DeadCssFinding[] {
+  const out: DeadCssFinding[] = [];
+  for (const def of definitions) {
+    for (const cls of [...def.classes].sort()) {
+      if (exempt.has(cls)) continue;
+      if (containsClassToken(corpus, cls)) continue;
+      out.push({ file: def.file, cls, dynHint: dynamicClassHint(cls, corpus) });
+    }
+  }
+  return out;
+}

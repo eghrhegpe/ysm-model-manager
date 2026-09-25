@@ -17,9 +17,8 @@ export const contentDiagCSS: string = `
    unknown = 无 Level 字段的旧数据/兜底，与 muted 同档。 */
 .log-row .log-status.info { color:var(--txt); }
 .log-row .log-status.unknown { color:var(--muted); }
-.log-row .log-op { font-size:var(--fs-xs); padding:0 var(--sp-1); border-radius:var(--radius-sm); background:color-mix(in srgb, var(--accent) 18%, transparent); color:var(--accent); flex-shrink:0; }
-/* 运行时日志 tag 徽标（ADR-289）：Go 捕获层提取的行首方括号前缀，与 .log-op 同范式
-   （操作日志出 Operation、运行时日志出 Tag，两者都是「这条日志属于哪个子系统」）。 */
+/* 运行时日志 tag 徽标（ADR-289）：Go 捕获层提取的行首方括号前缀，
+   运行时日志出 Tag，标注「这条日志属于哪个子系统」。 */
 .log-row .log-tag { font-size:var(--fs-xs); padding:0 var(--sp-1); margin-right:4px; border-radius:var(--radius-sm); background:color-mix(in srgb, var(--muted) 22%, transparent); color:var(--muted); flex-shrink:0; }
 .log-row .log-msg { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--txt); }
 .log-row .log-time { font-size:var(--fs-xs); color:var(--muted); flex-shrink:0; }
@@ -93,7 +92,6 @@ export const contentDiagCSS: string = `
 .diag-log-op-filter { font-size:var(--fs-sm); padding:var(--btn-padding-xs); border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); max-width:150px; margin-left:auto; }
 /* ADR-259：布局基线归 .tab-body（面板即 .tab-body）；.diag-panel 除入场动画钩子外，
    2026-09-25 起兼作三 tab 的唯一留白来源（见上方 .diag-panel 规则处注释）。 */
-.diag-panel-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; font-size:var(--fs-md); font-weight:600; color:var(--txt); border-bottom:1px solid var(--bd); flex-shrink:0; }
 .stat-row { font-size:var(--fs-md); color:var(--txt); padding:var(--pad-v-2); display:flex; justify-content:space-between; }
 /* 空态占位行（perf/audit 结果区初始态，tpl 5 处 idle 提示共用）：原为逐字内联 style ×5，
    gap:12px 裸值恰是 css-token-check 的 5 条新增 WARN（基线只收了 gap:6px/8px 旧值）。
@@ -102,7 +100,6 @@ export const contentDiagCSS: string = `
 .diag-stat { padding:var(--sp-3); font-size:var(--fs-base); display:block; text-align:center; }
 .diag-stat-muted { color:var(--muted); }
 .diag-stat-error { color: var(--status-error); }
-.perf-gui-est { font-size:var(--fs-micro); padding:0 var(--sp-1); border-radius:var(--radius-xs); background:color-mix(in srgb, var(--status-warning) 20%, transparent); color:var(--status-warning); flex-shrink:0; }
 /* 类型矩阵（ADR-262 D3）：表格 + 逐模型明细；未采集/阶段不符用 warning 色显式标注 */
 .perf-matrix { width:100%; border-collapse:collapse; margin:6px 0; font-size:var(--fs-xs); color:var(--txt); }
 .perf-matrix th, .perf-matrix td { text-align:left; padding:var(--sp-vh-cell); border-bottom:1px solid var(--bd); }
@@ -204,9 +201,6 @@ export const contentDiagCSS: string = `
 .perf-sb-parity-bad { color:var(--status-error); font-weight:600; }
 .perf-sb-diff { font-size:var(--fs-xs); color:var(--muted); word-break:break-all; padding-left:10px; }
 .perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-card); background:var(--surf); padding:var(--sp-vh-btn); margin:4px 0; animation: conflictRowIn .3s ease both; } /* 审计 P1-2：卡片圆角收口 --radius-card */
-.perf-hist-head { display:block; font-size:var(--fs-sm); color:var(--txt); margin-bottom:2px; }
-.perf-hist-head code { background:var(--bg); padding:0 var(--sp-1); border-radius:var(--radius-xs); font-size:var(--fs-xs); }
-.perf-hist-body { display:block; font-size:var(--fs-xs); color:var(--muted); white-space:pre-wrap; }
 
 /* ===== 加载剖析面板 ===== */
 .perf-trace-meta { font-size:var(--fs-xs);color:var(--muted);word-break:break-all; }

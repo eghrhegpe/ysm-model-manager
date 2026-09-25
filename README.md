@@ -293,8 +293,7 @@ ysm-model-manager/
 │   ├── web.html               —— 网页版 Spike 入口
 │   ├── vite.web.config.ts     —— 网页版构建配置
 │   ├── css/
-│   │   ├── variables.css      —— CSS 变量（4 套主题 + 字体系统）
-│   │   ├── layout.css         —— 主布局 + 侧栏
+│   │   ├── variables.css      —— CSS 变量（6 套主题 + 字体系统 + 主题 color-scheme）
 │   │   ├── components.css     —— 全局组件样式（部分已迁移至 Shadow DOM）
 │   │   └── transitions.css    —— 过渡动画
 │   └── src/

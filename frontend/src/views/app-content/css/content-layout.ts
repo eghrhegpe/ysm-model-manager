@@ -26,7 +26,7 @@ export const contentLayoutCSS: string = `
 @keyframes fade-in { from{opacity:0} to{opacity:1} }
 /* 以下 4 个 keyframes 为 components.css 全局副本的 shadow 本地化：
    document 层定义的 keyframes 不穿透 Shadow DOM 边界，shadow 内 .stg-card / .setting-row /
-   .gh-card / .repo-tab / .recy-item / .rm-* 等引用的 fadeSlide* 与 breathe-subtle 必须在本层重定义。
+   .gh-card / .repo-tab / .recy-item 等引用的 fadeSlide* 与 breathe-subtle 必须在本层重定义。
    components.css 的全局副本仅服务 document 层光 DOM（dialog 等），两处定义并存但作用域不同。 */
 /* 注意：以下本地化 keyframe 必须与 frontend/css/components.css 全局副本逐字节一致
    （translateY(6px)/translateY(-4px)/translateX(-8px)），否则 document 层 dialog 与
@@ -41,12 +41,6 @@ ${FADE_SLIDE_LEFT}
 /* 标题与内容同层入场：标题恒定 0ms 起播（class 内显式声明），卡片经内联 animation-delay
    从 0/60/120ms… 错峰起播——标题永不晚于其下方卡片，切 tab 观感连贯（无「标题先弹、内容再滑」割裂）。 */
 .section-title { font-size:var(--fs-lg); font-weight:600; color:var(--txt); padding:16px 16px 16px; animation:fadeSlideUp var(--tr-enter) both; animation-delay:0ms; }
-.stat-card { flex:1; background:var(--surf); border:1px solid var(--bd); border-radius:var(--radius-xl); padding:var(--sp-4); }
-/* .num bump 用回弹缓动（overshoot 1.56）：令牌三档均 ease/ease-out 直落、无回弹档 → 保留硬编码 */
-.stat-card .num { font-size:var(--fs-xl); font-weight:700; color:var(--accent); transition:transform .2s cubic-bezier(.34,1.56,.64,1); }
-.stat-card .num.bump { transform:scale(1.15); }
-.stat-card .label { font-size:var(--fs-base); color:var(--muted); margin-top:2px; }
-.stat-card .sub { font-size:var(--fs-sm); color:var(--txt); margin-top:6px; }
 
 /* ===== 居中空态/加载态块（A 族唯一原语）=====
    形状 = 占满剩余空间 + 双向居中 + 竖排 + muted + 8px 间隙。
@@ -61,9 +55,6 @@ ${FADE_SLIDE_LEFT}
 .placeholder-box .big { font-size:var(--fs-xl); }
 /* 大面积留白变体（工坊站点空态等整页空场用；行内空态不加） */
 .placeholder-box--roomy { padding:48px 20px; }
-.ptag { font-size:var(--fs-xs); background:var(--tag-amber-bg); color:var(--tag-amber); padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); }
-
-.repo-layout-wrap { flex:1; }
 
 /* ===== 仓库外壳骨架（.repo-layout / .repo-left / .repo-wrap）——所有 repo-wrap 页共用 ===== */
 .repo-layout { flex:1; display:flex; overflow:hidden; height:100%; }
@@ -82,40 +73,6 @@ ${noAnimationsCSS}
 
 /* ===== 通用卡片系统（元老页原型 → 全项目复用） ===== */
 /* ring-fill 动画已废弃，health-ring 改用 breathe-subtle */
-
-/* 基础卡片 — 所有卡片的基础 */
-.model-card {
-  background:var(--card);
-  border:1px solid var(--bd);
-  border-radius:var(--radius-card);
-  padding:var(--card-padding);
-  text-align:left;
-  cursor:pointer;
-  transition:var(--tr-normal);
-  box-shadow:var(--card-shadow, none);
-}
-.model-card:hover {
-  border-color:var(--accent);
-  background:var(--hover);
-  box-shadow:var(--card-shadow-hover, none);
-}
-.model-card .name {
-  font-size:var(--fs-base);
-  font-weight:600;
-  color:var(--txt);
-  font-family:var(--font-display);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.model-card .meta {
-  font-size:var(--fs-xs);
-  color:var(--muted);
-  margin-top:2px;
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-}
 
 /* 紧凑卡片 — 网格布局（2列/3列） */
 .model-card-sm {
@@ -150,27 +107,6 @@ ${noAnimationsCSS}
   gap:6px;
 }
 
-/* 推荐卡片 — 带悬浮动效 */
-.rec-card {
-  background:var(--surf);
-  border:1px solid var(--bd);
-  border-radius:var(--radius-xl);
-  padding:14px 16px;
-  text-align:left;
-  min-width:200px;
-  cursor:default;
-  /* 回弹缓动（overshoot 1.56）：令牌无回弹档 → 保留硬编码（同上） */
-  transition:transform .25s cubic-bezier(.34,1.56,.64,1);
-}
-.rec-card:hover {
-  transform:scale(1.02) translateY(-2px);
-}
-.rec-card .name { font-size:var(--fs-base); font-weight:600; color:var(--txt); font-family:var(--font-display); margin-bottom:2px; }
-.rec-card .hint { font-size:var(--fs-xs); color:var(--muted); margin-top:4px; }
-.rec-card .actions { display:flex; gap:4px; margin-top:6px; }
-.rec-card .actions button { font-size:var(--fs-xs); padding:var(--btn-padding-tool-lg); border-radius:var(--radius-sm); border:1px solid var(--bd); background:transparent; color:var(--txt); cursor:pointer; transition:var(--tr-fast); } /* 主操作按钮 = txt（hover 变 accent 仍作状态反馈） */
-.rec-card .actions button:hover { border-color:var(--accent); color:var(--accent); background:var(--hover); }
-
 .health-ring { width:80px; height:80px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:calc(16px + var(--fs-scale)); font-weight:700; position:relative; }
 .health-ring { animation:breathe-subtle 4s ease-in-out infinite;will-change:filter; }
 .health-ring-inner { position:absolute; inset:6px; border-radius:50%; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-direction:column; }
@@ -178,30 +114,14 @@ ${noAnimationsCSS}
 .health-tag.good { background:color-mix(in srgb, var(--status-success) 12%, transparent); color:var(--status-success); }
 .health-tag.ok { background:color-mix(in srgb, var(--sm-optional) 12%, transparent); color:var(--sm-optional); }
 .health-tag.bad { background:color-mix(in srgb, var(--status-error) 12%, transparent); color:var(--status-error); }
-.stat-pill { display:inline-flex; align-items:center; gap:3px; padding:var(--btn-padding-tool-lg); border-radius:var(--radius-xl); background:var(--surf); border:1px solid var(--bd); font-size:var(--fs-xs); color:var(--muted); }
-
-/* 通用工具按钮（repo/gh/workshop 三处共享的 .btn-sm 家族） */
-.btn-sm,.ws-btn-sm,.gh-btn-sm { padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-xs);font-family:inherit;transition:var(--tr-fast);white-space:nowrap; }
-.btn-sm:hover,.ws-btn-sm:hover,.gh-btn-sm:hover { background:var(--hover); }
-.btn-sm[disabled] { opacity:.4;cursor:default; }
-.btn-sm[disabled]:hover { background:transparent; }
 
 /* SVG icons（跨域复用）——规则本体已上收到 @/utils/dom/css.ts 的 wsIconCSS
    （ADR-238： icons sweeper 之外的每个 shadow 根都要 adopt 它，见下方插值） */
 ${wsIconCSS}
 
 /* ===== 工坊（workshop）通用工具按钮类（归位自 content-creator.ts，跨 creator/gh 复用） ===== */
-.ws-btn-muted { color:var(--muted); }
-.ws-btn-muted:hover { color:var(--txt); }
-.ws-btn-accent { color:var(--accent);border-color:color-mix(in srgb, var(--accent) 33%, transparent);background:color-mix(in srgb, var(--accent) 13%, transparent); }
-.ws-btn-accent:hover { background:color-mix(in srgb, var(--accent) 25%, transparent); }
-.ws-dl-selected[disabled], .ws-btn-sm[disabled] { opacity:.4;cursor:default; }
-.ws-dl-selected[disabled]:hover, .ws-btn-sm[disabled]:hover { background:transparent; }
-.ws-filter-btn { position:relative; }
-.ws-back, .ws-btn, .ws-btn-txt,
-.ws-back-repo { padding:var(--btn-padding-std);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-base);font-family:inherit; }
-.ws-back:hover, .ws-btn:hover, .ws-btn-txt:hover,
-.ws-back-repo:hover { background:var(--hover); }
+.ws-back, .ws-btn-txt { padding:var(--btn-padding-std);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-base);font-family:inherit; }
+.ws-back:hover, .ws-btn-txt:hover { background:var(--hover); }
 .ws-open-btn { padding:var(--btn-padding-std);border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--accent);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 .ws-open-btn:hover { background:var(--hover); }
 `;

@@ -21,10 +21,6 @@ export const treeCSS: string = `
 .hdr-search-row { margin-bottom:2px; }
 .hdr-search-row .srch-inp { width:100%; }
 .hdr-btn-row { justify-content:flex-start; flex-wrap:wrap; }
-.hdr-label { font-size:var(--fs-base);font-weight:600;color:var(--txt);flex-shrink:0; }
-.hdr-spacer { flex:1; }
-.repo-bar-btn { padding:var(--pad-btn-tool) 8px;border-radius:var(--radius-sm);border:1px solid var(--bd);background:transparent;color:var(--txt);cursor:pointer;font-size:var(--fs-btn-tool); } /* 工具栏命令按钮 = txt（对齐 .btn-base 正典） */
-.repo-bar-btn:hover { background:var(--hover); }
 /* ===== 元数据标签（.tag-author/.tag-work/.tag-date）共享串 =====
    与 content-repo / app-preview 同源，防三份同构实现漂移；
    .fh/.fl 的域内排布规则在下方各自追加 */
@@ -42,11 +38,6 @@ ${focusVisibleCSS}
    原 hover 展开串 dropdownHoverCSS 已退役——触屏生产形态下 hover 语义不成立；
    .dd-item.flash 保留在上方为本视图 feedback 特化，不随共享以维持无动画观感 */
 ${dropdownBaseCSS}
-.batch-dropdown { position: relative; }
-.batch-menu { position: absolute; top: 100%; left: 0; z-index: var(--z-popover); background: var(--card); border: 1px solid var(--bd); border-radius:var(--radius-md); padding:var(--pad-btn-tool); min-width: 120px; box-shadow: var(--shadow-md); } /* 审计 P2-2/P2-4：box-shadow 走 --shadow-md，z-index 走 --z-popover（与 content-repo 同档） */
-.batch-item { display: block; width: 100%; text-align: left; padding:var(--btn-padding-std); border: none; border-radius:var(--radius-sm); margin-bottom: 1px; font-size: var(--fs-sm); color: var(--txt); cursor: pointer; background: transparent; font-family: inherit; }
-.batch-item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
-.srch-row { display: flex; align-items: center; gap: 6px; }
 .srch-inp { flex: 1; padding: 5px 8px; border-radius:var(--radius-md); border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-base); outline: none; font-family: inherit; }
 .srch-inp::placeholder { color: var(--muted); }
 .sort-sel { padding: 5px 6px; border-radius: var(--radius-sm); border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-sm); outline: none; font-family: inherit; cursor: pointer; }
@@ -79,7 +70,7 @@ ${dropdownBaseCSS}
 .fh .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
 /* .tag-author/.tag-work/.tag-date 的外观与色标全部由共享 metaTagCSS 承载（本串在下方插值）；
    本处不再另立 scoped 基础规则（旧 .fh .nm .tag-* 的 base 行与 metaTagCSS L115 逐值相同，
-   已冗余删除）。域特有仅剩 .tag-ext（扩展名灰标）与 .nm mark 高亮。 */
+   已冗余删除）。域内仅剩 .nm mark 高亮。 */
 .fh .nm mark { background: color-mix(in srgb, var(--sm-optional) 27%, transparent); color: var(--sm-optional); border-radius: var(--radius-xs); padding: 0 var(--sp-1); }
 .fh.locked { opacity: .5; }
 .fh.locked .nm { color: var(--muted); }
@@ -124,8 +115,7 @@ ${dropdownBaseCSS}
 .fl .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family:var(--font-mono); }
 /* .fl 与 .fh 同：.tag-author/.tag-work/.tag-date 外观与色标走共享 metaTagCSS（本串在下方插值），
    原 .nm-tag/.nm-bracket 别名选择器为死代码（renderDisplayName 只产出 .tag-*），2026-09 删除；
-   scoped base 行同 .fh 侧冗余删除。域特有仅剩 .tag-ext（扩展名灰标）。 */
-.fl .nm .tag-ext { color: var(--muted); font-size: 0.85em; }
+   scoped base 行同 .fh 侧冗余删除。 */
 .fl .nm.ysm { color: var(--txt); }
 .fl .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; font-family:var(--font-mono); text-shadow:0 1px 2px rgba(0,0,0,.12); }
 .fl .sz.sz-green { color: var(--size-ok,#a6e3a1); }
@@ -141,7 +131,6 @@ ${dropdownBaseCSS}
 .tag-dot { font-size:var(--fs-micro); margin-right: 2px; opacity: .7; vertical-align: middle; }
 .ftr { padding:var(--sp-vh-pane); border-top: 1px solid var(--bd); display: flex; gap: 6px; align-items: center; }
 .ftr .stat { font-size: var(--fs-sm); color: var(--muted); margin-right: auto; }
-.type-bar { padding:2px 12px;gap:4px;display:flex;align-items:center;border-bottom:1px solid var(--bd); }
 
 /* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
 ${wsIconCSS}

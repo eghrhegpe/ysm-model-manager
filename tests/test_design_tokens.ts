@@ -590,18 +590,14 @@ console.log("  ✓ isCommentLine: 三种注释形态");
   // [范围补齐 2026-09] 文档层 CSS（frontend/css/*.css）加入扫描域回归锁。
   // 此前闸只 walk(frontend/src, exts:[".ts"])，5 个手写样式表从未被扫——实测藏 60 条
   // （components.css 单文件 49）。此处复现 CLI 的第二个 walk 调用并断言覆盖。
+  // 2026-10：layout.css 作为「旧光 DOM 外壳样式表」整表删除（全表零消费者，唯一存活的
+  // 主题 color-scheme 规则已迁 variables.css），文档层由 5 张收敛为 4 张。
   const cssScanned = walk(path.join(ROOT, "frontend/css"), {
     exts: [".css"],
     skipDir: () => false,
   }) as string[];
   const cssNames = new Set(cssScanned.map((p) => path.basename(p)));
-  for (const f of [
-    "variables.css",
-    "layout.css",
-    "components.css",
-    "dialogs.css",
-    "transitions.css",
-  ]) {
+  for (const f of ["variables.css", "components.css", "dialogs.css", "transitions.css"]) {
     assert.ok(cssNames.has(f), `文档层 CSS 必须被扫到：${f}（范围回归锁）`);
   }
   console.log("  ✓ 扫描范围: src 的 css/ 目录 + 文档层 frontend/css/ 均被覆盖");

@@ -56,6 +56,8 @@ import { stagger } from './utils/stagger.js';
 el.style.animationDelay = `${stagger(i)}ms`;
 ```
 
+> ⚠️ **方式 A 已作废（[ADR-312](./ADR-312-dead-css-reverse-gate.md)，2026-10）**：`.stagger-in` 全族规则在仓内零消费者（交错入场实际全走方式 B），已由 `css-layer-check` 检查 7（死 CSS 反向闸）删除。**新增交错入场一律走方式 B**，勿再按本节旧文新增 `.stagger-in` 类（该闸会直接判死类 ERROR）。
+
 ### 2.3 设计令牌
 
 动画所用视觉参数一律取自 CSS 变量（主题系统），不得硬编码：

@@ -13,48 +13,22 @@ import {
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
 
 export const YSW_FAB_CSS = `
-/* ===== 3D overlay 控制层样式（挂 document.body 的 light DOM 顶栏按钮/下拉/标签） =====
+/* ===== 3D overlay 控制层样式（挂 document.body 的 light DOM 顶栏按钮） =====
    注：overlay 根容器类名已随 ADR-175 M1 改为 .mpc-overlay（mount-preview-core 挂载，
    见 preview-3d/adapters/mount-preview-core.ts）。 */
 
-/* ===== 3D overlay 控制层（顶栏按钮/下拉/标签，light DOM） ===== */
-.ysm-ovl-bar{display:flex;align-items:center;gap:8px;padding:var(--sp-vh-hdr);background:rgba(0,0,0,.3);flex-shrink:0;pointer-events:auto;position:relative;z-index:10}
-.ysm-ovl-spacer{flex:1}
+/* ===== 3D overlay 控制层（顶栏按钮，light DOM） ===== */
 .ysm-ovl-btn{font-size:var(--fs-sm);padding:var(--btn-padding-sm);border-radius:var(--radius-sm);border:1px solid var(--bd);background:rgba(0,0,0,.3);color:var(--txt);cursor:pointer;font-family:inherit;white-space:nowrap;transition:var(--tr-fast)}
 .ysm-ovl-btn:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
 .ysm-ovl-btn:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#7c83ff) 35%,transparent)}
-.ysm-ovl-select{font-size:var(--fs-sm);padding:var(--btn-padding-xs);border-radius:var(--radius-sm);border:1px solid var(--bd);background:rgba(0,0,0,.3);color:var(--txt);cursor:pointer;font-family:inherit}
-.ysm-ovl-select:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#7c83ff) 35%,transparent)}
-.ysm-ovl-label{font-size:var(--fs-sm);color:var(--muted)}
-.ysm-ovl-val{font-size:var(--fs-sm);color:var(--txt);min-width:20px}
-.ysm-ovl-slider{width:80px;margin:0 4px;cursor:pointer;accent-color:var(--accent,#7c83ff)}
-.ysm-ovl-shotwrap{position:relative;display:inline-block;margin-right:8px}
-.ysm-ovl-shotmenu{display:none;position:absolute;top:100%;left:0;z-index:100;background:var(--card);border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--sp-1) 0;min-width:120px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
-.ysm-ovl-shotitem{padding:var(--btn-padding-filter-lg);font-size:var(--fs-sm);color:var(--txt);cursor:pointer;white-space:nowrap;transition:var(--tr-fast)}
-.ysm-ovl-shotitem:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
 
-/* ===== 3D 信息面板（原内联布局，移入 CSS 以便响应式覆盖宽度） ===== */
-.preview-panel{position:absolute;top:0;right:0;bottom:0;width:260px;background:var(--card);border-left:1px solid var(--bd);overflow-y:auto;padding:10px 12px;font-size:var(--fs-sm);color:var(--txt);z-index:5}
-
-/* ===== 底部导航 + 分类弹窗（紧凑工具型外观）=====
+/* ===== 底部导航（紧凑工具型外观）=====
    3D 全屏无常驻侧栏，功能经底部导航按域分组。 */
 .preview-dock-nav{position:absolute;left:12px;bottom:12px;display:flex;gap:2px;padding:var(--sp-1);border-radius:var(--radius-sm);background:var(--surf);border:1px solid var(--bd);box-shadow:0 3px 10px rgba(0,0,0,.28);z-index:20}
 .preview-dock-navbtn{display:flex;align-items:center;min-width:0;padding:var(--sp-vh-btn);border-radius:var(--radius-xs);border:1px solid transparent;background:transparent;color:var(--txt);cursor:pointer;font-family:inherit;font-size:var(--fs-sm);line-height:1.2;transition:var(--tr-fast)}
 .preview-dock-navbtn .preview-ic{display:none}
 .preview-dock-navbtn:hover{background:var(--hover);color:var(--txt)}
-.preview-dock-navbtn--on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent);border-color:var(--accent)}
 .preview-dock-navlabel{white-space:nowrap}
-.ysm-3d-popup{position:absolute;left:50%;bottom:68px;transform:translateX(-50%);width:280px;max-height:min(60vh,420px);overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:var(--radius-md);background:var(--card);border:1px solid var(--bd);box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:25;color:var(--txt);font-size:var(--fs-sm);box-sizing:border-box}
-.ysm-3d-popsec{font-weight:600;font-size:var(--fs-sm);color:var(--txt);margin:8px 0 4px;padding-top:6px;border-top:1px solid var(--bd)}
-.ysm-3d-popsec:first-child{border-top:none;padding-top:0;margin-top:0}
-.ysm-3d-poprow{display:flex;align-items:center;gap:8px}
-.ysm-3d-poplabel{font-size:var(--fs-sm);color:var(--muted);white-space:nowrap}
-.ysm-3d-popselect{flex:1;font-size:var(--fs-sm);padding:var(--btn-padding-sm);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);cursor:pointer;font-family:inherit}
-.ysm-3d-popslider{flex:1;accent-color:var(--accent,#7c83ff);cursor:pointer}
-.ysm-3d-popval{font-size:var(--fs-sm);color:var(--txt);min-width:24px;text-align:right}
-.ysm-3d-popbtn{font-size:var(--fs-sm);padding:var(--btn-padding-md);border-radius:var(--radius-md);border:1px solid var(--bd);background:var(--bg);color:var(--txt);cursor:pointer;font-family:inherit;text-align:left;transition:var(--tr-fast)}
-.ysm-3d-popbtn:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
-.ysm-3d-popbtn--row{width:100%;margin:1px 0}
 
 /* ===== 图标语义类（light DOM + Shadow DOM 均生效；shadow DOM 内由父级 .preview-fab .preview-ic 兜底）===== */
 .preview-ic{display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
@@ -64,19 +38,10 @@ export const YSW_FAB_CSS = `
 .preview-ic--panel-hide::before{content:"◀"}
 .preview-ic--panel-show::before{content:"▶"}
 
-/* ===== 双端响应式：复用 MikuMikuAR 断点（ADR-057 §2.4） ===== */
-@media (max-width:480px){
-  .ysm-ovl-bar{padding:var(--sp-vh-cell);gap:4px;flex-wrap:wrap} /* 语义收口：overlay bar 容器行非按钮 */
-  .preview-panel{width:min(78vw,260px)}
-  .ysm-3d-popup{width:min(86vw,280px)}
-}
-@media (orientation:landscape) and (max-height:500px){
-  .ysm-ovl-bar{padding:var(--btn-padding-tool-lg);gap:6px}
-}
 /* 触控热区扩到 44px（Apple HIG），透明叠加不改视觉高度 */
 @media (pointer:coarse){
-  .ysm-ovl-btn,.ysm-ovl-select,.ysm-ovl-shotitem{min-height:44px}
-  .preview-dock-navbtn,.ysm-3d-popbtn{min-height:44px}
+  .ysm-ovl-btn{min-height:44px}
+  .preview-dock-navbtn{min-height:44px}
 }
 `;
 

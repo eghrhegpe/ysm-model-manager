@@ -23,7 +23,6 @@ export const contentCreatorCSS: string = `
 .cr-right-inner { flex:1; display:flex; flex-direction:column; overflow:hidden; }
 .cr-scroll { flex:1; overflow-y:auto; padding:var(--sp-vh-pane); }
 
-.cr-action-btn { font-size:var(--fs-sm);padding:var(--btn-padding-tool-lg);border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;cursor:pointer;font-family:inherit;transition:var(--tr-fast); }
 /* 2026-09 锐评 P1 收口：.cr-action-btn-muted 无消费者已删；
    .cr-section / .cr-section-title-lg / .cr-section-sub / .cr-action-btn-accent 的同选择器
    两处定义合并为本文件后段单处（间距按合并前实际计算值保留）。 */

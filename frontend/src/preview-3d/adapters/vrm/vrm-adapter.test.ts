@@ -279,9 +279,13 @@ function makeNormalizedNodes(): Record<string, THREE.Object3D> {
 /** 构造假 VRM；`humanoidNodes` 供 VMD 重定向读取归一化骨（缺省 = 模型无任何 humanoid 骨） */
 function makeFakeVrm(humanoidNodes: Record<string, THREE.Object3D> = {}) {
   const scene = new THREE.Scene();
+  // 锐评 P1：select 切换动作前调 resetNormalizedPose（归一化骨回 rest）+ resetValues（表情清零）
+  const resetNormalizedPose = vi.fn();
+  const resetValues = vi.fn();
   const humanoid = {
     humanBones: {} as Record<string, THREE.Bone | null>,
     getNormalizedBoneNode: (name: string): THREE.Object3D | null => humanoidNodes[name] ?? null,
+    resetNormalizedPose,
   };
   const lookAt = { target: null as THREE.Object3D | null };
   const exprMgr = {
@@ -294,6 +298,7 @@ function makeFakeVrm(humanoidNodes: Record<string, THREE.Object3D> = {}) {
     getExpressionTrackName: vi.fn((name: string) =>
       name === "blink" ? "VRMExpression_blink.weight" : null,
     ),
+    resetValues,
   };
   const result = {
     scene,
@@ -307,6 +312,9 @@ function makeFakeVrm(humanoidNodes: Record<string, THREE.Object3D> = {}) {
       version: "1.0.0",
     },
     update: vi.fn(),
+    // 测试断言口（非契约字段）
+    _resetNormalizedPose: resetNormalizedPose,
+    _resetValues: resetValues,
   };
   return result;
 }
@@ -578,6 +586,8 @@ async function buildWithMotion(opts: {
   content: Awaited<ReturnType<typeof buildVrmScene>>;
   // 显式 `| undefined`（非可选属性）：exactOptionalPropertyTypes 下不许把 undefined 赋给 `play?`
   play: MmdPlayBridge | undefined;
+  /** 本次构建用的 fake VRM（锐评 P1 断言口：_resetNormalizedPose / _resetValues） */
+  vrm: ReturnType<typeof makeFakeVrm>;
 }> {
   const nodes = opts.humanoidNodes ?? makeNormalizedNodes();
   const vrm = makeFakeVrm(nodes);
@@ -625,7 +635,7 @@ async function buildWithMotion(opts: {
 
   const { ctx } = makeCtx();
   const content = await buildVrmScene(ctx, "/vrm/test.vrm", { port: makePort(), readFileBytes: hoisted.readBytesMock, panels: panels, listAllFilePaths: hoisted.listPathsMock });
-  return { content, play: captured.play };
+  return { content, play: captured.play, vrm };
 }
 
 describe("VMD 动作加载与重定向（ADR-243）", () => {
@@ -828,6 +838,22 @@ describe("VMD 动作加载与重定向（ADR-243）", () => {
     const [, targets] = hoisted.footIKController.apply.mock.calls[0];
     expect(targets.left).not.toBeNull();
     expect(targets.right).toBeNull(); // 右足未出现在 VMD ⇒ 不猜
+    content.dispose();
+  });
+
+  it("锐评 P1：select 切换动作 → 归一化骨/表情先复位（防未覆盖骨残留旧姿势，横移 MMD 侧 skeleton.pose 纪律）", async () => {
+    // 顺序：.vrma 先入列（idle），.vmd 随后（wave）——切到 wave 时 idle 驱动过而
+    // wave 未驱动的骨不应残留 idle 末帧姿势
+    const { content, play, vrm } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/idle.vrma", "/vrm/wave.vmd"],
+      vmd: makeFakeVmd(VMD_FRAMES),
+    });
+    play?.select!(1);
+    expect(vrm._resetNormalizedPose, "切动作前归一化骨须复位到 rest").toHaveBeenCalledTimes(1);
+    expect(vrm._resetValues, "切动作前表情权重须清零（防笑脸冻帧）").toHaveBeenCalledTimes(1);
+    // 同 index 早退分支不复位（幂等切换零副作用）
+    play?.select!(1);
+    expect(vrm._resetNormalizedPose).toHaveBeenCalledTimes(1);
     content.dispose();
   });
 

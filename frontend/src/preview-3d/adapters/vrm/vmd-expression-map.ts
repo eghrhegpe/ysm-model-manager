@@ -5,6 +5,12 @@
 // 和骨骼完全不同，混表会让两个本就庞大的表互相拖累（ADR-306 §2.1）。
 //
 // 纯数据 + 纯类型：零 DOM / 零 backend / 零 three（ADR-072 工具层纯净；可 node 环境单测）。
+//
+// MMD 侧显式不映射的名（不进候选，自然落入丢弃通道）：
+//   - `真顔`：MMD 作者的「清脸」morph（恢复默认表情），VRM preset 无对应物——早期 v1
+//     误映 angry（每次清脸都在生气，比面瘫刺眼），锐评对账（P7）删除。
+//   - `ウィンク`/`ウインク`（无左右标注）：MMD 配布里绝大多数是**单眼** wink，映双眼
+//     blink 会两只眼一起错闭；单眼 wink 归二期 `blinkLeft`/`blinkRight` 候选（ADR-306 §3.3）。
 
 /** VRM 标准 expression preset 名（VRMExpressionPresetName 的可映射子集） */
 export type VrmExpressionPreset =
@@ -40,13 +46,14 @@ export const VMD_EXPRESSION_CANDIDATES: Readonly<
   ou: ["う"],
   ee: ["え"],
   oh: ["お"],
-  // 眨眼：双眼 wink 也映 blink（权重相同时近似闭眼）；单眼 wink v1 不映射
-  blink: ["まばたき", "ウィンク", "ウインク"],
-  // 表情：MMD 常用名 → VRM 情感 preset
+  // 眨眼：只映射双眼「まばたき」。MMD 的 wink/ウィンク 绝大多数是单眼，映双眼 blink
+  // 会两眼一起错闭；单眼 wink 归二期 blinkLeft/blinkRight（ADR-306 §3.3）
+  blink: ["まばたき"],
+  // 表情：MMD 常用名 → VRM 情感 preset（「真顔」是清脸 morph、无 VRM 对应，不映射）
   happy: ["笑い", "にこり", "にっこり", "笑顔"],
-  angry: ["怒り", "真顔", "怒り顔"],
+  angry: ["怒り", "怒り顔"],
   sad: ["悲しい", "困る", "困り顔", "悲しい顔"],
-  relaxed: ["なごみ", "照れ"],
+  relaxed: ["なごみ", "雰囲気", "照れ"],
   surprised: ["びっくり", "驚き"],
 };
 

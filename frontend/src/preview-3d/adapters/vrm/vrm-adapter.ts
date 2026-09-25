@@ -833,6 +833,13 @@ function Stage4MenuPanels(
               if (cur && motionClips[i].clip === motionClipOf(cur)) return;
               if (!motionMixer) return;
               motion.motionAction?.stop();
+              // 锐评 P1：切动作前把归一化骨拉回 rest + 表情权重清零（横移 MMD 侧
+              // `skeleton.pose()` 纪律）。重定向 clip 的轨道只覆盖**该 VMD 驱动过**的骨——
+              // 未覆盖骨会留在旧 action 的末帧值，且归一化骨每帧单向烘回原始骨 ⇒
+              // 残留姿势永久投影（如「手指锁死在上一段舞蹈的抓握姿势」）。复位后
+              // 新 action 首帧由 mixer.update 重写覆盖骨，未覆盖骨干净停在 rest。
+              vrm.humanoid.resetNormalizedPose();
+              vrm.expressionManager?.resetValues();
               const newAction = motionMixer.clipAction(motionClips[i].clip);
               motion.motionAction = newAction;
               motion.motionAction.play();

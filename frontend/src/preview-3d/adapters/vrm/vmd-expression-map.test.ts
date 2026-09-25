@@ -14,15 +14,24 @@ describe("VMD_EXPRESSION_CANDIDATES", () => {
     expect(VMD_EXPRESSION_CANDIDATES.oh).toContain("お");
   });
 
-  it("眨眼候选：まばたき 为主，双眼 wink 兜底", () => {
-    expect(VMD_EXPRESSION_CANDIDATES.blink?.[0]).toBe("まばたき");
-    expect(VMD_EXPRESSION_CANDIDATES.blink).toContain("ウィンク");
+  it("眨眼候选：只映射双眼「まばたき」（单眼 wink 归二期 blinkLeft/Right，ADR-306 §3.3）", () => {
+    expect(VMD_EXPRESSION_CANDIDATES.blink).toEqual(["まばたき"]);
   });
 
   it("情感 preset 候选非空", () => {
     for (const preset of ["happy", "angry", "sad", "relaxed", "surprised"] as const) {
       expect(VMD_EXPRESSION_CANDIDATES[preset]?.length).toBeGreaterThan(0);
     }
+  });
+
+  it("锐评 P7 对账：真顔 不映 angry（清脸 morph 无 VRM 对应）、wink 不映 blink（单眼错闭）、relaxed 补回 雰囲気", () => {
+    expect(VMD_EXPRESSION_CANDIDATES.angry).not.toContain("真顔");
+    for (const preset of ["blink", "angry", "happy", "sad", "relaxed", "surprised"] as const) {
+      for (const c of VMD_EXPRESSION_CANDIDATES[preset] ?? []) {
+        expect(c, `候选「${c}」误入 ${preset}`).not.toMatch(/ウィンク|ウインク|真顔/);
+      }
+    }
+    expect(VMD_EXPRESSION_CANDIDATES.relaxed).toContain("雰囲気");
   });
 
   it("候选名跨 preset 唯一（防一个 morph 名静默命中多个 preset）", () => {

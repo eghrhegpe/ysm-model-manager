@@ -118,6 +118,25 @@ export const metaTagCSS = `
 .tag-date { color:var(--meta-date,#f1fa8c);background:color-mix(in srgb,var(--meta-date,#f1fa8c) 12%,transparent); }
 `;
 /**
+ * 通用 tab 按钮外观基类（ADR-307 D1）。设置页 `.stg-tab` 与仓库页 `.repo-tab` 的
+ * 18 个布局/外观属性 + `:hover` + `.active` 逐字段同构,抽此基类去重——改 tab 外观只动一处。
+ *
+ * ⚠️ 本串**不含 `animation`**：动画 keyframe 由各消费方自挂(`.stg-tab`→`stgTabIn`、
+ * `.repo-tab`→`fadeSlideDown`),因为设置页在 ShadowRoot 内只能引用 shadow 本地 keyframe,
+ * 仓库页在 light DOM 用全局 keyframe,两作用域的 keyframe 名不能合并(强加同名会令其中一侧
+ * 静默失效)。故 keyframe 名保留两份、各作用域自管,本串只承载与动画无关的外观。
+ *
+ * 消费方:content-stg.ts(`.stg-tab`)与 content-repo.ts(`.repo-tab`),各在自身 stylesheet 拼
+ * `${tabBtnCSS}` 后,`.stg-tab`/`.repo-tab` 仅追加 `animation:` 即可。
+ */
+export const tabBtnCSS = `
+.tab-btn {
+  padding:var(--pad-nav) 14px;border-radius:var(--radius-md) var(--radius-md) 0 0;border:1px solid transparent;border-bottom:2px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-nav);font-family:inherit;transition:var(--tr-normal);white-space:nowrap;min-height:var(--touch-min);
+}
+.tab-btn:hover { color:var(--txt);background:var(--hover); }
+.tab-btn.active { color:var(--accent);background:var(--surf);border-color:var(--bd) var(--bd) var(--accent) var(--bd);border-bottom-color:var(--accent);margin-bottom:-1px;font-weight:600; }
+`;
+/**
  * `.no-animations` 在 Shadow DOM 内的通配桥（ADR-015 §2.4 约束 1：用户关闭时零动画）。
  *
  * ⚠️ 为什么必须每个 Shadow 根各自 adopt：`.no-animations` 类挂在 `documentElement`

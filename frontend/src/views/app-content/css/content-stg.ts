@@ -1,3 +1,5 @@
+import { tabBtnCSS } from "@/utils/dom/css.ts";
+
 // ===== 设置页 + 通用 tab-body（从 frontend/css/components.css 迁入 shadow）=====
 // 根因：components.css 仅经 index.html 全局 <link> 加载，<app-content> 用 Shadow DOM
 // （adoptedStyleSheets=[contentCSS]），全局 link 被 shadow 边界阻断，导致 .stg-* / .tab-body
@@ -169,11 +171,11 @@ export const contentStgCSS: string = `
 .setting-row .label { color:var(--txt); }
 .setting-row .value { color:var(--txt); } /* 值 = 正文（与 .td-camspeed-val 同口径）；.meta 仍 muted */
 
-/* ===== 设置页 tab 按钮（从 content-repo.ts 拆出，设置页资产不归仓库域托管） ===== */
-/* 本地化 keyframe：shadow 内引用全局 fadeSlideDown 不生效（keyframes 不穿 shadow），故本地定义 stgTabIn */
-.stg-tab { padding:var(--pad-nav) 14px;border-radius:var(--radius-md) var(--radius-md) 0 0;border:1px solid transparent;border-bottom:2px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-nav);font-family:inherit;transition:var(--tr-normal);white-space:nowrap;min-height:var(--touch-min);animation:stgTabIn var(--tr-enter) both; }
-.stg-tab:hover { color:var(--txt);background:var(--hover); }
-.stg-tab.active { color:var(--accent);background:var(--surf);border-color:var(--bd) var(--bd) var(--accent) var(--bd);border-bottom-color:var(--accent);margin-bottom:-1px;font-weight:600; }
+/* ===== 设置页 tab 按钮（外观基类见 utils/dom/css.ts 的 tabBtnCSS，ADR-307 D1 去重） ===== */
+/* 仅挂动画：shadow 内只能引用本地 keyframe（keyframes 不穿 shadow），故 stgTabIn 留本文件；
+   布局/外观/hover/active 由 .tab-btn 基类统一承载，仓库页 .repo-tab 同享，改外观只动一处。 */
+${tabBtnCSS}
+.stg-tab { animation:stgTabIn var(--tr-enter) both; }
 @keyframes stgTabIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
 
 `;

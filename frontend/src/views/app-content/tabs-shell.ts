@@ -108,7 +108,7 @@ export function renderTabs<Id extends string = string>(spec: TabsShellSpec<Id>):
   const bar = `<div class="repo-tabs"${barAttrs}>${visible
     .map(
       (tab, i) =>
-        `<button class="${buttonClass}${i === 0 ? " active" : ""}"${tab.buttonTestid ? ` data-testid="${tab.buttonTestid}"` : ""} data-tab="${tab.id}">${tab.label}</button>`,
+        `<button class="${buttonClass} tab-btn${i === 0 ? " active" : ""}"${tab.buttonTestid ? ` data-testid="${tab.buttonTestid}"` : ""} data-tab="${tab.id}">${tab.label}</button>`,
     )
     .join("")}</div>`;
 

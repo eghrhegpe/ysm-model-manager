@@ -2,15 +2,16 @@
 // 注：原「热力图」13 条死 CSS 规则已于 838a9bb2f 删除（勿在此注释点名类前缀——
 // extractClasses 会读到注释文本致已删类「复活」为已定义，削弱死 CSS 信号）；
 // 资历最深页的热力图样式实际由 tpl-oldest.ts 的柱状图内联承载。
-import { metaTagCSS } from "@/utils/dom/css.ts";
+import { metaTagCSS, tabBtnCSS } from "@/utils/dom/css.ts";
 
 export const contentRepoCSS: string = `
 ${metaTagCSS}
+${tabBtnCSS}
 .repo-wrap { display:flex;flex-direction:column;flex:1;overflow:hidden; }
 .repo-tabs { display:flex;gap:2px;padding:4px 12px 0;border-bottom:1px solid var(--bd);flex-shrink:0;overflow-x:auto;flex-wrap:nowrap; }
-.repo-tab { padding:var(--pad-nav) 14px;border-radius:var(--radius-md) var(--radius-md) 0 0;border:1px solid transparent;border-bottom:2px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-nav);font-family:inherit;transition:var(--tr-normal);white-space:nowrap;min-height:var(--touch-min);animation:fadeSlideDown var(--tr-enter) both; }
-.repo-tab:hover { color:var(--txt);background:var(--hover); }
-.repo-tab.active { color:var(--accent);background:var(--surf);border-color:var(--bd) var(--bd) var(--accent) var(--bd);border-bottom-color:var(--accent);margin-bottom:-1px;font-weight:600; }
+/* 外观基类见 utils/dom/css.ts 的 tabBtnCSS（ADR-307 D1 去重）：布局/外观/hover/active 统一承载；
+   本类仅挂动画——仓库页在 light DOM 用全局 fadeSlideDown（keyframes 不穿 shadow），故引用全局名 */
+.repo-tab { animation:fadeSlideDown var(--tr-enter) both; }
 /* ADR-300 §2.5（D3）：查看器告知行——落位在 tablist 外（renderTabs.notice 产出，
    调用方拼在 bar 与 panels 之间），仅当确有 desktopOnly tab 被隐藏时出现 */
 .repo-tabs-notice { padding:var(--btn-padding-sm) var(--sp-3);font-size:var(--fs-sm);color:var(--muted);border-bottom:1px solid var(--bd);flex-shrink:0; }

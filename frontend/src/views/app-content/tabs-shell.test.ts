@@ -73,9 +73,9 @@ describe("renderTabs 产出契约（ADR-259 §2）", () => {
 
   it("首个按钮带 active、其余不带", () => {
     const html = flat(renderTabs(SPEC));
-    expect(html).toContain('<button class="repo-tab active" data-tab="alpha">');
-    expect(html).toContain('<button class="repo-tab" data-tab="beta">');
-    expect(html).toContain('<button class="repo-tab" data-tab="gamma">');
+    expect(html).toContain('<button class="repo-tab tab-btn active" data-tab="alpha">');
+    expect(html).toContain('<button class="repo-tab tab-btn" data-tab="beta">');
+    expect(html).toContain('<button class="repo-tab tab-btn" data-tab="gamma">');
   });
 
   it("div 开合配平，且全部面板等深同层（未被彼此吞并）", () => {
@@ -102,8 +102,8 @@ describe("renderTabs 产出契约（ADR-259 §2）", () => {
       }),
     );
     expect(html).toContain('<div class="repo-tabs" id="x-tabs" data-testid="x-tabs-tid">');
-    expect(html).toContain('<button class="stg-tab active" data-tab="one">1</button>');
-    expect(html).toContain('<button class="stg-tab" data-tab="two">2</button>');
+    expect(html).toContain('<button class="stg-tab tab-btn active" data-tab="one">1</button>');
+    expect(html).toContain('<button class="stg-tab tab-btn" data-tab="two">2</button>');
     expect(html).toContain('<div class="tab-body diag-panel" id="x-tab-one" data-testid="one-tid">1</div>');
     expect(html).toContain('<div class="tab-body diag-panel" id="x-tab-two" style="display:none">2</div>');
   });
@@ -142,7 +142,7 @@ describe("renderTabs 产出契约（ADR-259 §2）", () => {
       ],
     });
     // 旧口径下 alpha 带 active、beta 隐藏——现在 alpha 直接不渲染，beta 成为首位可见
-    expect(shell.bar).toContain('<button class="repo-tab active" data-tab="beta">');
+    expect(shell.bar).toContain('<button class="repo-tab tab-btn active" data-tab="beta">');
     // 首个可见面板不写 display（回落 .tab-body{display:flex}），否则查看器下面板全灰
     expect(shell.panels).toContain('<div class="tab-body" id="demo-tab-beta">');
   });

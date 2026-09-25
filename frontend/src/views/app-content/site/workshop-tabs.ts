@@ -126,7 +126,7 @@ export function initWorkshopTabs(
           tabsEl.innerHTML = "";
           data.sites.forEach((s) => {
             const btn = document.createElement("button");
-            btn.className = `repo-tab${s.id === initial.id ? " active" : ""}`;
+            btn.className = `repo-tab tab-btn${s.id === initial.id ? " active" : ""}`;
             btn.dataset.tab = s.id;
             btn.innerHTML = `${getSiteIcon(s.id)} ${escUtil(s.label)}`;
             tabsEl.appendChild(btn);

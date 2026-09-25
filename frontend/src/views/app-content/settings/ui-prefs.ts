@@ -11,15 +11,25 @@ import {
   ROW_H_LIST_COMPACT,
   ROW_H_LIST_NORMAL,
 } from "@/views/app-tree/render.ts";
+import {
+  DENSITY_DEFAULT,
+  DENSITY_LEVELS,
+  type DensityLevel,
+  DISPLAY_FONT_DEFAULT,
+  FONT_SIZE_DEFAULT,
+  type FontSizeLevel,
+} from "./settings-schema.ts";
 
 // 魔法数值收敛：偏好变更成功 toast 展示时长（ms）
 const TOAST_DURATION_MS = TOAST_MS.quick;
 
 /** 应用 UI 偏好到 CSS 变量（字号/字体/密度/动画）——启动链与设置页共用（ADR-040 拆分去重） */
 export function applyUIPrefs(): void {
-  const fontSize = safeGet("ui-font-size") || "normal";
-  const displayFont = safeGet("ui-display-font") || "kaiti";
-  const density = safeGet("ui-card-density") || "compact";
+  // 默认值/回退引 settings-schema 单一来源（ADR-307 D3 扩编）：原 "normal"/"kaiti"/"compact"
+  // 字面量散在 applyUIPrefs + initUiPrefs 两处，改默认漏一处即回退值漂移。
+  const fontSize = safeGet("ui-font-size") || FONT_SIZE_DEFAULT;
+  const displayFont = safeGet("ui-display-font") || DISPLAY_FONT_DEFAULT;
+  const density = safeGet("ui-card-density") || DENSITY_DEFAULT;
   const anim = safeGet("ui-animations") !== "off";
 
   // 基准字号 — 通过 --fs-scale 控制，CSS 自动缩放所有 --fs-*（含语义字号）与 --space-*
@@ -37,14 +47,19 @@ export function applyUIPrefs(): void {
     document.documentElement.style.removeProperty(v);
   });
   // 五档偏移：极小 −2px / 小 −1px / 标准 0 / 大 +1px / 很大 +2px
-  const scaleMap: Record<string, string> = {
+  // 值域 = FONT_SIZE_LEVELS（schema 单一来源）；px 语义映射归本消费面。
+  // Record<FontSizeLevel, …>：schema 加档此处编译期报错（与 MIRROR_UI 同款护栏）。
+  const scaleMap: Record<FontSizeLevel, string> = {
     xsmall: "-2px",
     small: "-1px",
     normal: "0px",
     medium: "1px",
     large: "2px",
   };
-  document.documentElement.style.setProperty("--fs-scale", scaleMap[fontSize] || "0px");
+  document.documentElement.style.setProperty(
+    "--fs-scale",
+    scaleMap[fontSize as FontSizeLevel] ?? "0px",
+  );
   // --fs-base-size（真基准）单点定义在 frontend/css/variables.css 的 :root，此处不再内联覆盖
 
   // 创作者名字字体
@@ -137,13 +152,13 @@ export function initUiPrefs(root: ShadowRoot): void {
   };
 
   // 初始化 UI 控件值（2026-09 锐评 P3：`&&` 空值短路 + 重复 getElementById + 双断言 → 守卫赋值，
-  // 与本文件其余 `if (el)` 惯例对齐）
+  // 与本文件其余 `if (el)` 惯例对齐；回退值 2026-10 起引 schema 默认，与 applyUIPrefs 同源）
   const fontSizeSel = root.querySelector<HTMLSelectElement>("#set-font-size");
-  if (fontSizeSel) fontSizeSel.value = safeGet("ui-font-size") || "normal";
+  if (fontSizeSel) fontSizeSel.value = safeGet("ui-font-size") || FONT_SIZE_DEFAULT;
   const displayFontSel = root.querySelector<HTMLSelectElement>("#set-display-font");
-  if (displayFontSel) displayFontSel.value = safeGet("ui-display-font") || "kaiti";
+  if (displayFontSel) displayFontSel.value = safeGet("ui-display-font") || DISPLAY_FONT_DEFAULT;
   const cardDensitySel = root.querySelector<HTMLSelectElement>("#set-card-density");
-  if (cardDensitySel) cardDensitySel.value = safeGet("ui-card-density") || "compact";
+  if (cardDensitySel) cardDensitySel.value = safeGet("ui-card-density") || DENSITY_DEFAULT;
   const animationsInput = root.querySelector<HTMLInputElement>("#set-animations");
   if (animationsInput) animationsInput.checked = safeGet("ui-animations") !== "off";
   // 启动默认页面（记忆开关 + 固定页下拉框二态回填）已收编至 default-page.ts：
@@ -176,7 +191,12 @@ export function initUiPrefs(root: ShadowRoot): void {
 
   // 卡片密度变更
   root.getElementById("set-card-density")?.addEventListener("change", (e) => {
-    const val = (e.target as HTMLSelectElement).value === "normal" ? "normal" : "compact";
+    // 白名单 = DENSITY_LEVELS（schema 单一来源）：值域内原样写回，域外回退默认
+    // （原 `=== "normal" ? "normal" : "compact"` 是二值域特化硬编码，加第三档即静默归 compact）。
+    const raw = (e.target as HTMLSelectElement).value;
+    const val: DensityLevel = DENSITY_LEVELS.includes(raw as DensityLevel)
+      ? (raw as DensityLevel)
+      : DENSITY_DEFAULT;
     safeSet("ui-card-density", val);
     applyUIPref();
     // 广播密度变更：app-tree 订阅后重排虚拟滚动（行高随密度变化需重算），

@@ -22,7 +22,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { initDefaultPagePrefs } from "./default-page.ts";
 import { initKeymap } from "./keymap.ts";
 import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-cards.ts";
-import { MIRROR_SOURCES, type MirrorSource } from "./settings-schema.ts";
+import { MIRROR_SOURCES, type MirrorSource, UPDATE_CHECK_DEFAULT } from "./settings-schema.ts";
 import type { SettingsCfg } from "./store.ts";
 import { getCfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
 import { initThemeSection } from "./theme.ts";
@@ -112,8 +112,12 @@ function stgBindUpdateInterval(
 ): void {
   const updateCheckSelect = root.getElementById("set-update-check") as HTMLSelectElement | null;
   if (updateCheckSelect) {
+    // 缺省回退默认值引 schema 单一来源（ADR-307 D3 扩编）——原裸 21600000 字面量与模板
+    // option 首项 + version-updater 6h 兜底三处各写一份，改默认漏此处即回退值漂移。
     updateCheckSelect.value = String(
-      cfgLocal.updateCheckIntervalMs == null ? 21600000 : cfgLocal.updateCheckIntervalMs,
+      cfgLocal.updateCheckIntervalMs == null
+        ? UPDATE_CHECK_DEFAULT
+        : cfgLocal.updateCheckIntervalMs,
     );
     updateCheckSelect.addEventListener("change", async () => {
       try {

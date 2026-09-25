@@ -36,7 +36,8 @@ auto_fields:
     - mmdSemanticBoneMap
     - readVmdPositionScale
     - readVrmMeta
-    - rebuildVmdMotionClips
+    - rescaleVmdMotionClips
+    - rescaleVmdPositionTracks
     - resolveSemanticBones
     - resolveVmdBindings
     - rewriteVmdTracks
@@ -59,6 +60,7 @@ auto_fields:
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
+    - VmdPositionTrackHandle
     - VmdRetargetOptions
     - VmdRetargetResult
     - VrmAdapterDeps

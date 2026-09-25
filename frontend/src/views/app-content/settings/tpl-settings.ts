@@ -31,12 +31,25 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { SUPPORTED_LANGS } from "@/core/i18n/locale.ts";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { TD_CAM_SPEED, TD_ROT_MODE, type TdRotMode } from "@/preview-3d/infra/settings-schema.ts";
-import { THEME_VALID } from "@/theme-core";
+import { THEME_AUTO_VALID, THEME_VALID } from "@/theme-core";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderTabs, type TabSpec } from "@/views/app-content/tabs-shell.ts";
 import { navItems } from "@/views/app-nav/nav-items.ts";
-import { MIRROR_DEFAULT, MIRROR_SOURCES, type MirrorSource } from "./settings-schema.ts";
+import {
+  DENSITY_DEFAULT,
+  DENSITY_LEVELS,
+  type DensityLevel,
+  DISPLAY_FONT_DEFAULT,
+  DISPLAY_FONTS,
+  type DisplayFont,
+  FONT_SIZE_DEFAULT,
+  FONT_SIZE_LEVELS,
+  type FontSizeLevel,
+  MIRROR_DEFAULT,
+  MIRROR_SOURCES,
+  type MirrorSource,
+} from "./settings-schema.ts";
 import { type StgCardSpec, stgCard, stgCards } from "./stg-card.ts";
 import { aboutPageBody } from "./tpl-settings-about.ts";
 
@@ -176,55 +189,74 @@ function mirrorCardBody(): string {
         ${hints}`;
 }
 
-function renderStgBasicPaths(p: SettingsPlatform): string {
-  // 路径三卡为同族组，入场延迟由 stgCards 按序号派生（step 60ms，与其余组的 30ms 区分：
-  // 首屏三张大卡节奏放缓一档）。2026-09 前为手填 0/60/120 字面量。
-  const specs: StgCardSpec[] = [];
+// ===== 基础路径三卡（grid 成员）声明式 spec 表（2026-10 形态统一）=====
+// 三卡原为「mc-path 单独 if / links+mirror 合并 if / storage 独立函数」三种手写形态并存，
+// 加一张卡要挑对 if 写进去（无编译期护栏）。现统一经 spec 表 .map 产出：
+// 加一张基础路径卡 = 写一个 spec 函数 + 表加一项 + PATH_CARD_PLATFORMS 加一行
+// （后者 Record 键联合编译期强制平台声明）。storage 不参与本表——它 grid 下方独立全宽
+// （webViewer 为 FSA 卡），形态与 grid 成员不同，仍走 renderStgStorageCard。
+function mcPathCardSpec(): StgCardSpec {
   // 游戏根目录：桌面 + 安卓 viewer 通用（网页版不渲染，见 PATH_CARD_PLATFORMS）
-  if (cardSupportedOn("mc-path", p)) {
-    specs.push({
-      icon: UI_ICONS.game,
-      title: t("settings.paths.gameRoot"),
-      body: `<button type="button" class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</button>
-        <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>`,
-      header: {
-        actions: `<button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button>`,
-      },
-    });
-  }
-  // 链接模式 / 下载镜像源：纯桌面 / 网络概念，查看器模式无意义（网页版+安卓 viewer 均不渲染）
-  if (cardSupportedOn("links", p)) {
-    specs.push(
-      {
-        // hint 块排版走 .stg-hint-block（2026-10 收 6 处内联配方债——原 font-size/color/padding
-        // 配方在此与 mirror-hint 两族各写一份且已漂移）；LINK_MODE_KEYS 仍在 init.ts 本地，
-        // 链接模式全量 schema 化归 ADR-307 D3 扩编，本批只收排版不扩编。
-        icon: UI_ICONS.link,
-        title: t("settings.links.title"),
-        body: `<select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
-          <option value="copy">${t("settings.links.copy")}</option>
-          <option value="hardlink" selected>${t("settings.links.hardlink")}</option>
-          <option value="symlink">${t("settings.links.symlink")}</option>
-        </select>
-        <div id="lm-hint-copy" class="stg-hint-block" style="display:none">${t("settings.links.copyHint")}</div>
-        <div id="lm-hint-hardlink" class="stg-hint-block" style="display:none">${t("settings.links.hardlinkHint")}</div>
-        <div id="lm-hint-symlink" class="stg-hint-block" style="display:none"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>`,
-        header: {
-          forId: "set-link-mode",
-          actions: `<button id="set-relink" class="btn-base sm">${UI_ICONS.refresh} ${t("settings.links.reapply")}</button>`,
-        },
-      },
-      {
-        // 图标用 download 而非 web（globe 的别名）：`web` 与语言卡的 `globe` 引用同一 GLOBE_PATH
-        // 常量（ui-icons.ts），渲染逐字节相同——同屏「语言」与「下载镜像源」曾是两个一模一样的
-        // 地球，2026-09 那次「语义校正」只换了变量名、零视觉产出。镜像源 = 下载来源，用 download。
-        icon: UI_ICONS.download,
-        title: t("settings.mirror.title"),
-        body: mirrorCardBody(),
-        header: { forId: "set-mirror" },
-      },
-    );
-  }
+  return {
+    icon: UI_ICONS.game,
+    title: t("settings.paths.gameRoot"),
+    body: `<button type="button" class="stg-path-val" id="set-mc-path" data-testid="set-mc-path">${t("common.loading")}</button>
+      <div class="stg-card-desc">${t("settings.paths.gameRootDesc")}</div>`,
+    header: {
+      actions: `<button class="btn-base sm" id="set-mc-detect">${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button>`,
+    },
+  };
+}
+
+function linksCardSpec(): StgCardSpec {
+  // 链接模式：纯桌面 / 网络概念，查看器模式无意义（网页版+安卓 viewer 均不渲染）。
+  // hint 块排版走 .stg-hint-block（2026-10 收 6 处内联配方债）；LINK_MODE_KEYS 仍在
+  // init.ts 本地，链接模式全量 schema 化归 ADR-307 D3 扩编。
+  return {
+    icon: UI_ICONS.link,
+    title: t("settings.links.title"),
+    body: `<select id="set-link-mode" class="stg-select" style="width:100%;margin-bottom:6px">
+      <option value="copy">${t("settings.links.copy")}</option>
+      <option value="hardlink" selected>${t("settings.links.hardlink")}</option>
+      <option value="symlink">${t("settings.links.symlink")}</option>
+    </select>
+    <div id="lm-hint-copy" class="stg-hint-block" style="display:none">${t("settings.links.copyHint")}</div>
+    <div id="lm-hint-hardlink" class="stg-hint-block" style="display:none">${t("settings.links.hardlinkHint")}</div>
+    <div id="lm-hint-symlink" class="stg-hint-block" style="display:none"><span style="color:var(--status-error)">${t("settings.links.symlinkHint")}</span></div>`,
+    header: {
+      forId: "set-link-mode",
+      actions: `<button id="set-relink" class="btn-base sm">${UI_ICONS.refresh} ${t("settings.links.reapply")}</button>`,
+    },
+  };
+}
+
+function mirrorCardSpec(): StgCardSpec {
+  // 图标用 download 而非 web（globe 的别名）：`web` 与语言卡的 `globe` 引用同一 GLOBE_PATH
+  // 常量（ui-icons.ts），渲染逐字节相同——同屏「语言」与「下载镜像源」曾是两个一模一样的
+  // 地球，2026-09 那次「语义校正」只换了变量名、零视觉产出。镜像源 = 下载来源，用 download。
+  return {
+    icon: UI_ICONS.download,
+    title: t("settings.mirror.title"),
+    body: mirrorCardBody(),
+    header: { forId: "set-mirror" },
+  };
+}
+
+const BASIC_PATH_CARD_SPECS: ReadonlyArray<{
+  id: keyof typeof PATH_CARD_PLATFORMS;
+  spec: () => StgCardSpec;
+}> = [
+  { id: "mc-path", spec: mcPathCardSpec },
+  { id: "links", spec: linksCardSpec },
+  { id: "mirror", spec: mirrorCardSpec },
+];
+
+function renderStgBasicPaths(p: SettingsPlatform): string {
+  // 路径三卡为同族组，入场延迟由 stgCards 按（平台过滤后的）序号派生（step 60ms，与其余组
+  // 的 30ms 区分：首屏三张大卡节奏放缓一档）。2026-09 前为手填 0/60/120 字面量。
+  const specs = BASIC_PATH_CARD_SPECS.filter((it) => cardSupportedOn(it.id, p)).map((it) =>
+    it.spec(),
+  );
   const cards = stgCards(specs, { step: 60 });
   // viewer 模式（安卓 + 网页版）段标题统一为「文件来源」，桌面为「路径配置」——
   // 与「这里是可配置路径 vs 这里只有来源入口」语义对齐
@@ -341,6 +373,37 @@ const THEME_LABEL_KEY: Record<string, Parameters<typeof t>[0]> = {
   ocean: "settings.theme.ocean",
 };
 
+// ===== 值域文案表（ADR-307 D3 扩编消费面：值→文案归各面，Record 护栏逼 schema 加成员同步）=====
+// 原为模板里手写裸 <option> 列——加一档/改默认漏一处即「下拉框静默没有」或「默认值漂移」。
+// 现 option 全部由 schema 枚举 .map 派生（存在性 + 顺序 + selected 默认项随 schema）。
+/** 主题自动模式 → i18n 键（白名单 = theme-core.ts|THEME_AUTO_VALID，本表 Record 形态锁死键域）。 */
+const THEME_AUTO_LABEL: Record<(typeof THEME_AUTO_VALID)[number], LocaleKey> = {
+  off: "settings.theme.autoOff",
+  system: "settings.theme.autoSystem",
+  time: "settings.theme.autoTime",
+};
+
+/** 字号五档 → i18n 键（Record<FontSizeLevel,…>：schema 加档此处编译期报错）。 */
+const FONT_SIZE_LABEL: Record<FontSizeLevel, LocaleKey> = {
+  xsmall: "settings.fontSize.xsmall",
+  small: "settings.fontSize.small",
+  normal: "settings.fontSize.normal",
+  medium: "settings.fontSize.medium",
+  large: "settings.fontSize.large",
+};
+
+/** 卡片密度 → i18n 键。 */
+const DENSITY_LABEL: Record<DensityLevel, LocaleKey> = {
+  compact: "settings.density.compact",
+  normal: "settings.density.normal",
+};
+
+/** 创作者名字体 → i18n 键。 */
+const DISPLAY_FONT_LABEL: Record<DisplayFont, LocaleKey> = {
+  kaiti: "settings.font.kaiti",
+  system: "settings.font.systemFont",
+};
+
 function renderStgThemePicker(): string {
   const cards = THEME_VALID.filter((theme) => theme !== "system")
     .map((theme) => {
@@ -369,14 +432,17 @@ function renderStgThemePicker(): string {
 }
 
 function renderStgThemeAuto(): string {
+  // 自动模式 option 由 theme-core|THEME_AUTO_VALID 派生（白名单单一事实源；文案键经
+  // THEME_AUTO_LABEL Record——加模式此处编译期报错，同 MIRROR_UI 口径）。
+  const autoOptions = THEME_AUTO_VALID.map(
+    (m) => `<option value="${m}">${t(THEME_AUTO_LABEL[m])}</option>`,
+  ).join("\n      ");
   return `<!-- 自动切换：独立一栏 -->
 <div class="settings-group" style="animation-delay:${groupDelay(STG_BAND.appearance, 1)}ms">
   <div class="setting-row">
     <label for="theme-auto" class="label">${UI_ICONS.clock} ${t("settings.theme.autoTitle")}</label>
     <select id="theme-auto" class="stg-select" style="width:auto">
-      <option value="off">${t("settings.theme.autoOff")}</option>
-      <option value="system">${t("settings.theme.autoSystem")}</option>
-      <option value="time">${t("settings.theme.autoTime")}</option>
+      ${autoOptions}
     </select>
   </div>
 </div>`;
@@ -386,18 +452,28 @@ function renderStgFontFamily(): string {
   // 三栏裸样式手写卡升格为 .stg-grid + .stgCard 正典卡（设置页样式范式契约待修债 #2）：
   // 原 <div style="background:var(--surf);border:..."> 三处间距/圆角/动画各自为政，已漂移；
   // 现与路径三卡同构（stg-grid 三列平铺，各卡 hdr 小标题 + body 控件）。
-  // 字体三卡同族：延迟由序号派生（startMs 60 = 本组在「外观」tab 的入场档位，属页面级编排）
+  // 字体三卡同族：延迟由序号派生（startMs 60 = 本组在「外观」tab 的入场档位，属页面级编排）。
+  // option 值域由 settings-schema 派生（ADR-307 D3 扩编：字号/字体/密度三张裸列收编——
+  // 加档位改 schema 一处，Record 文案表编译期逼同步；selected 项 = schema 默认值）。
+  const fontSizeOptions = FONT_SIZE_LEVELS.map(
+    (v) =>
+      `<option value="${v}"${v === FONT_SIZE_DEFAULT ? " selected" : ""}>${t(FONT_SIZE_LABEL[v])}</option>`,
+  ).join("\n      ");
+  const displayFontOptions = DISPLAY_FONTS.map(
+    (v) =>
+      `<option value="${v}"${v === DISPLAY_FONT_DEFAULT ? " selected" : ""}>${t(DISPLAY_FONT_LABEL[v])}</option>`,
+  ).join("\n      ");
+  const densityOptions = DENSITY_LEVELS.map(
+    (v) =>
+      `<option value="${v}"${v === DENSITY_DEFAULT ? " selected" : ""}>${t(DENSITY_LABEL[v])}</option>`,
+  ).join("\n      ");
   const fontCards = stgCards(
     [
       {
         icon: UI_ICONS.ruler,
         title: t("settings.fontSize"),
         body: `<select id="set-font-size" class="stg-select" style="width:100%;margin-bottom:4px">
-      <option value="xsmall">${t("settings.fontSize.xsmall")}</option>
-      <option value="small">${t("settings.fontSize.small")}</option>
-      <option value="normal" selected>${t("settings.fontSize.normal")}</option>
-      <option value="medium">${t("settings.fontSize.medium")}</option>
-      <option value="large">${t("settings.fontSize.large")}</option>
+      ${fontSizeOptions}
     </select>
     <div id="set-size-preview" style="display:flex;gap:8px;font-size:var(--fs-sm);color:var(--muted);padding:var(--pad-v-2)">
       <span>${t("settings.ui.body")} <b id="sz-base" style="color:var(--txt)">13px</b></span>
@@ -412,8 +488,7 @@ function renderStgFontFamily(): string {
         icon: UI_ICONS.brush,
         title: t("settings.font.creatorFont"),
         body: `<select id="set-display-font" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="kaiti" selected>${t("settings.font.kaiti")}</option>
-      <option value="system">${t("settings.font.systemFont")}</option>
+      ${displayFontOptions}
     </select>
     <div class="stg-desc">${t("settings.fontHint")}</div>`,
         header: { forId: "set-display-font", titleSize: "md" },
@@ -426,8 +501,7 @@ function renderStgFontFamily(): string {
         icon: UI_ICONS.grid,
         title: t("settings.density"),
         body: `<select id="set-card-density" class="stg-select" style="width:100%;margin-bottom:6px">
-      <option value="compact" selected>${t("settings.density.compact")}</option>
-      <option value="normal">${t("settings.density.normal")}</option>
+      ${densityOptions}
     </select>
     <div class="stg-desc">${t("settings.densityHint")}</div>`,
         header: { forId: "set-card-density", titleSize: "md" },

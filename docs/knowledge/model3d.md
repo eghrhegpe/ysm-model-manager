@@ -665,7 +665,6 @@ auto_fields:
     - readVmdPositionScale
     - readVrmMeta
     - rebuildDebug
-    - rebuildVmdMotionClips
     - recordLoadTrace
     - recoverMountFailure
     - REFLECTION_MODES
@@ -704,6 +703,8 @@ auto_fields:
     - reportPatchIssue
     - RepresentativeSnapshot
     - requireSharedInfra
+    - rescaleVmdMotionClips
+    - rescaleVmdPositionTracks
     - resetEncoderState
     - resetEnvState
     - resetLoopState
@@ -916,6 +917,7 @@ auto_fields:
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
+    - VmdPositionTrackHandle
     - VmdRetargetOptions
     - VmdRetargetResult
     - VolumetricCone

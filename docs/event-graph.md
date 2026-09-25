@@ -261,8 +261,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 388 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 415 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 392 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 419 |
 | anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
@@ -318,7 +318,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 75 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 185 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 111 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 218 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 222 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 357 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 93 |
@@ -412,13 +412,13 @@
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 189 |
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 298 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 156 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 165 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 191 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 200 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 221 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 256 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 266 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 158 |
+| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 167 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 193 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 202 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 223 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 258 |
+| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 268 |
 | mountRootMenu | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 691 |
 | beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 169 |
 | guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
@@ -437,13 +437,13 @@
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 82 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 123 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 160 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 167 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 190 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 211 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 235 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 317 |
+| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 127 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 164 |
+| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 171 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 194 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 215 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 239 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 321 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 152 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 166 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 185 |
@@ -454,10 +454,10 @@
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 309 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 331 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 358 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 159 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 170 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 174 |
 | initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 185 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 197 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 205 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 217 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
@@ -603,7 +603,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 184 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 204 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

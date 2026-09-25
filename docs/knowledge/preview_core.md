@@ -192,11 +192,12 @@ auto_fields:
     - readVmdPositionScale
     - readVrmMeta
     - readWebFile
-    - rebuildVmdMotionClips
     - recoverMountFailure
     - removeOwnHandle
     - RenderVrmBonePanel
     - requireSharedInfra
+    - rescaleVmdMotionClips
+    - rescaleVmdPositionTracks
     - resetSceneInfra
     - resolveMmdZipConfig
     - resolveVmdBindings
@@ -262,6 +263,7 @@ auto_fields:
     - VmdFootIKTarget
     - VmdFootIKTargets
     - VmdHumanoidRig
+    - VmdPositionTrackHandle
     - VmdRetargetOptions
     - VmdRetargetResult
     - VrmAdapterDeps

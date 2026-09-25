@@ -5,7 +5,23 @@
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { GH_DOCS, GH_RELEASES, GH_REPO } from "@/utils/base/pure/gh-links.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { UPDATE_CHECK_INTERVALS, type UpdateCheckInterval } from "./settings-schema.ts";
 import { stgCard, stgCards } from "./stg-card.ts";
+
+// 更新检查间隔（ms）→ i18n 键（ADR-307 D3 扩编消费面：option 值域归 settings-schema，
+// 文案键归本面——Record<UpdateCheckInterval,…> 形态 schema 加档位此处编译期报错）。
+const UPDATE_CHECK_LABEL: Record<UpdateCheckInterval, LocaleKey> = {
+  21600000: "settings.updateCheck.option6h",
+  43200000: "settings.updateCheck.option12h",
+  86400000: "settings.updateCheck.option24h",
+  0: "settings.updateCheck.off",
+};
+
+function renderUpdateCheckOptions(): string {
+  return UPDATE_CHECK_INTERVALS.map(
+    (ms) => `<option value="${ms}">${t(UPDATE_CHECK_LABEL[ms])}</option>`,
+  ).join("\n          ");
+}
 
 /** About 节（「关于」tab 上段：版本卡 / 更新检查 / 特性 / 技术栈 / 链接 / 快速开始）。
  *  不再挂「关于」节标题：tab 名即 About，再挂同名大标题是纯装饰（与「解析」节标题同类问题，
@@ -28,10 +44,7 @@ export function aboutSection(): string {
       <div class="setting-row" style="margin:0;padding:var(--sp-1) 0;background:none;border-radius:0">
         <span style="font-size:var(--fs-sm);color:var(--muted)">${UI_ICONS.clock} ${t("settings.updateCheck.title")}</span>
         <select id="set-update-check" class="stg-select" style="width:auto;font-size:var(--fs-sm);padding:var(--btn-padding-xs)">
-          <option value="21600000">${t("settings.updateCheck.option6h")}</option>
-          <option value="43200000">${t("settings.updateCheck.option12h")}</option>
-          <option value="86400000">${t("settings.updateCheck.option24h")}</option>
-          <option value="0">${t("settings.updateCheck.off")}</option>
+          ${renderUpdateCheckOptions()}
         </select>
       </div>
     </div>`,

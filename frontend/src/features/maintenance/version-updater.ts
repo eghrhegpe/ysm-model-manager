@@ -26,7 +26,9 @@ export interface UpdateInfo {
 
 /** 频次限制 key */
 const CHECK_KEY = "ysm_lastUpdateCheck";
-/** 最短检查间隔（6 小时）——配置缺省回退值（ADR-062 §2.3：设置页可写 updateCheckIntervalMs） */
+/** 最短检查间隔（6 小时）——配置缺省回退值（ADR-062 §2.3：设置页可写 updateCheckIntervalMs）。
+ *  ⚠️ 跨域副本：本常量须与 views 层 settings-schema.ts|UPDATE_CHECK_DEFAULT（6h）手工保持相等
+ *  （features 域不得反向 import views 叶，契约测试锁定 6h 语义）。 */
 const CHECK_INTERVAL = 6 * 60 * 60 * 1000;
 /** 手动检查超时（30s，防 Go 端 CheckUpdate 网络挂起时按钮永久「检查中」） */
 const CHECK_TIMEOUT = 30 * 1000;

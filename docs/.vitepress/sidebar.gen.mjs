@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-310：整合包同步计数口径统一",
+        "link": "/adr/ADR-310-instance-sync-count-single-source"
+      },
+      {
         "text": "ADR-309：VRM 播 VMD 播放语义收口（锐评 P1-P7 七处修法落定）",
         "link": "/adr/ADR-309-vrm-vmd-p1-p7"
       },

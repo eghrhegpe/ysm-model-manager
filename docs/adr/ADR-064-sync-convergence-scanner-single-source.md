@@ -4,6 +4,7 @@
 - **日期**：2026-08-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/knowledge/go-sync.md`、`go/sync/sync.go`、`go/sync/sync_hash.go`、`go/sync/sync_dirlevel.go`、`go/sync/sync_push.go`、`go/scanner/scanner.go`、`go/instance/instance.go`
+- **后继**：[ADR-310](./ADR-310-instance-sync-count-single-source.md) 明确本 ADR §2.4「保留两条策略」的豁免边界——仅对比算法选型，不含计数聚合口径；计数统一另案裁决
 
 ---
 

@@ -43,6 +43,12 @@ export interface VmdHumanoidRig {
 export interface VmdFootIKTarget {
   /** 采样时间（秒，与重定向 clip 同一时间轴）→ 写入 out；无可用数据返回 false */
   sample(timeSeconds: number, out: THREE.Vector3): boolean;
+  /**
+   * ADR-309 D4（锐评 P4）：IK 开关时间轴查询。返回 false = 该时刻 MMD 侧该骨 IK 关闭
+   * （propertyKeyFrames 的 ikStates），CCD 求解器应跳过该侧。缺省 undefined = 全程启用
+   * （`.vrma` 与无 ikStates 数据的旧 VMD 零影响）。
+   */
+  isEnabled?: (t: number) => boolean;
 }
 
 /** 双侧足 IK 目标（某侧为 null = 该 VMD 未含该侧 IK 骨） */
@@ -86,6 +92,108 @@ export interface VmdPositionTrackHandle {
 }
 
 /**
+ * ADR-309 D4（锐评 P4）：IK 骨单侧开关时间轴（MMD propertyKeyFrames.ikStates 的
+ * 提取产物）。区间为**秒**，与重定向 clip 同时间轴；语义 = MMD 侧「该骨 IK 生效区间」
+ * ——关闭段里 CCD 求解器应跳过（足回到 FK 自然位，与 MMD 关闭 IK 时表现一致）。
+ *
+ * 段表按时间轴升序、无重叠；恒定 `on`（作者全程开 IK，最常见）退化为单段
+ * `[0, Infinity)`，零额外成本。
+ */
+export interface VmdIkTimeline {
+  readonly side: "left" | "right";
+  /** 时间轴升序、互不重叠的开关段（`on` = 该段内 IK 生效） */
+  readonly segments: readonly { from: number; to: number; on: boolean }[];
+}
+
+/**
+ * 从 VMD 的 `propertyKeyFrames` 提取足 IK 骨的开关时间轴（ADR-309 D4）。
+ *
+ * 数据源：`vmd.propertyKeyFrames[i].ikStates`（`[boneName, enabled][]`）——MMD 侧
+ * 作者在每帧标「这帧左足 IK 开/关」，上游按 **属性变更** 生成 propertyKeyFrame，
+ * 故段表粒度 = keyframe 粒度（非逐帧），上限 = propertyKeyFrameCount。
+ *
+ * 语义约定：
+ * - 首个 keyframe 之前：默认 **on**（MMD 播放起点 IK 默认生效，与 MMD 侧一致）；
+ * - 尾段延伸到 `Infinity`（clip 循环播放时开关状态保持最后一帧的值）；
+ * - `ikBoneNames` 为 null/空（VMD 未驱动任何足 IK 骨）→ 返回 null。
+ *
+ * 性能护栏：keyframe 数 > 512 时直接退化为「全程 on」——ikStates 抖动到这种
+ * 密度的 VMD 属极端例外，段表线性查会成为每帧热路径负担，宁可丢开关语义
+ * 保住帧率（CCD 求解本来就有开销）。
+ *
+ * @param vmd 已解析的 VMD（propertyKeyFrames 缺席按「全程 on」处理）
+ * @param ikBoneNames 该侧对应的 IK 骨 MMD 名（footIK.left / footIK.right，命中即查）
+ * @param side 腿侧
+ * @param clipDurationSeconds clip 时长（尾段补到该值；循环播放语义见上）
+ * @returns 时间轴，或 null（无 IK 骨）
+ */
+export function extractVmdIkTimeline(
+  vmd: VmdObject,
+  ikBoneNames: readonly (string | null)[],
+  side: "left" | "right",
+  clipDurationSeconds: number,
+): VmdIkTimeline | null {
+  const targets = ikBoneNames.filter((n): n is string => n != null);
+  if (targets.length === 0) return null;
+  const frames = (
+    vmd as unknown as {
+      propertyKeyFrames?: readonly {
+        frameNumber: number;
+        ikStates: readonly (readonly [string, boolean])[];
+      }[];
+    }
+  ).propertyKeyFrames;
+  if (!frames || frames.length === 0) {
+    return { side, segments: [{ from: 0, to: Infinity, on: true }] };
+  }
+  // 性能护栏：密度超限 → 退化全程 on（极端 VMD 的抖动 ikStates 不值得每帧线性查）
+  if (frames.length > 512) {
+    return { side, segments: [{ from: 0, to: Infinity, on: true }] };
+  }
+  const targetSet = new Set(targets);
+  // 找该侧 IK 骨的首个 off keyframe（无 → 全程 on，最常见，零额外成本）
+  let hasOff = false;
+  for (const f of frames) {
+    for (const [name, enabled] of f.ikStates) {
+      if (targetSet.has(name) && !enabled) {
+        hasOff = true;
+        break;
+      }
+    }
+    if (hasOff) break;
+  }
+  if (!hasOff) {
+    return { side, segments: [{ from: 0, to: Infinity, on: true }] };
+  }
+  // 有 off 段：逐 keyframe 生成区间（升序、无重叠）
+  const fps = 30; // MMD 标准帧率
+  const segments: { from: number; to: number; on: boolean }[] = [];
+  let prevT = 0;
+  let prevOn = true;
+  for (const f of frames) {
+    let on = true;
+    for (const [name, enabled] of f.ikStates) {
+      if (targetSet.has(name)) {
+        on = enabled;
+        break;
+      }
+    }
+    const t = f.frameNumber / fps;
+    if (on === prevOn) continue; // 无变化不切段
+    if (prevT < t) segments.push({ from: prevT, to: t, on: prevOn });
+    prevT = t;
+    prevOn = on;
+  }
+  // 尾段补到 clip 时长（循环播放时保持末帧状态）
+  segments.push({
+    from: prevT,
+    to: clipDurationSeconds > prevT ? clipDurationSeconds : Infinity,
+    on: prevOn,
+  });
+  return { side, segments };
+}
+
+/**
  * 把已烘焙的位移轨道从当前缩放原地改写为新缩放 k（锐评 P5：O(值总数)，零 IO）。
  * 前提：`raw` 快照存在（buildVmdRetargetClip 产物均自带）；k 相同则跳过。
  *
@@ -109,6 +217,15 @@ export function rescaleVmdPositionTracks(
     n++;
   }
   return n;
+}
+
+/** 查询单侧 IK 开关时间轴：t 落在某 `on` 段内返回 true，否则 false */
+function isIkEnabled(timeline: VmdIkTimeline | null, t: number): boolean {
+  if (!timeline) return true;
+  for (const seg of timeline.segments) {
+    if (t >= seg.from && t < seg.to && seg.on) return true;
+  }
+  return false;
 }
 
 /**
@@ -181,6 +298,12 @@ export interface VmdRetargetResult {
    * 免重读、免重解析、免换绑。无位移通道时为空数组。
    */
   readonly posTracks: readonly VmdPositionTrackHandle[];
+  /**
+   * ADR-309 D2（锐评 P2）：该 clip 是否驱动眼骨（左目/右目 quaternion 轨道命中映射表）。
+   * 为 true 时 VRM 侧每帧把 `lookAt.autoUpdate` 置 false，眼骨完全交给 mixer；
+   * 为 false 时 lookAt 照常盯摄像头。
+   */
+  readonly drivesEyes: boolean;
 }
 
 /** 无 IK 目标的常态值（模型未驱动 IK 骨 / 无可用映射时复用，避免各处重复构造） */
@@ -531,13 +654,16 @@ interface InterpolantLike {
 }
 
 /**
- * 把摘出的 IK 轨道包成采样器。
+ * 把摘出的 IK 轨道包成采样器（含 ADR-309 D4 的 IK 开关时间轴）。
  *
  * ⚠️ 走 `track.createInterpolant()` 而**不是**自己插值：上游把 MMD 逐轴贝塞尔挂在
  * 这个实例方法上（与 §2.2 同一条红线），自己线性插值会让抬脚轨迹出现卡点。
  * `evaluate` 的 t 超界行为在不同 three 版本间不一致，故显式 clamp 到首末关键帧。
  */
-function createFootIKTarget(track: THREE.KeyframeTrack): VmdFootIKTarget {
+function createFootIKTarget(
+  track: THREE.KeyframeTrack,
+  timeline: VmdIkTimeline | null,
+): VmdFootIKTarget {
   const factory = track as unknown as { createInterpolant?: () => unknown };
   const interpolant = (
     typeof factory.createInterpolant === "function" ? factory.createInterpolant() : null
@@ -553,19 +679,22 @@ function createFootIKTarget(track: THREE.KeyframeTrack): VmdFootIKTarget {
       out.set(buf[0], buf[1], buf[2]);
       return true;
     },
+    // ADR-309 D4：有开关时间轴时挂 isEnabled（CCD 关闭段跳过该侧）
+    ...(timeline ? { isEnabled: (t: number) => isIkEnabled(timeline, t) } : {}),
   };
 }
 
-/** 摘出的轨道 → 对外采样器（缺侧为 null） */
+/** 摘出的轨道 → 对外采样器（缺侧为 null；附 ADR-309 D4 的 IK 开关时间轴） */
 function toFootIKTargets(
   ikTracks: Readonly<Record<"left" | "right", THREE.KeyframeTrack | null>>,
+  timelines: Readonly<Record<"left" | "right", VmdIkTimeline | null>>,
 ): VmdFootIKTargets {
   const left = ikTracks.left;
   const right = ikTracks.right;
   if (!left && !right) return NO_FOOT_IK;
   return {
-    left: left ? createFootIKTarget(left) : null,
-    right: right ? createFootIKTarget(right) : null,
+    left: left ? createFootIKTarget(left, timelines.left) : null,
+    right: right ? createFootIKTarget(right, timelines.right) : null,
   };
 }
 
@@ -646,6 +775,7 @@ export function buildVmdRetargetClip(
       report: { ...report, droppedTracks },
       footIK: NO_FOOT_IK,
       posTracks: [],
+      drivesEyes: false,
     };
   }
 
@@ -663,11 +793,35 @@ export function buildVmdRetargetClip(
     positionScale,
     exprMgr,
   );
+  const clip = new THREE.AnimationClip("vmd-retarget", -1, tracks);
+
+  // ADR-309 D2：drivesEyes = 映射表命中的眼骨（leftEye/rightEye）是否被该 VMD 驱动。
+  // 轨道名是 uuid（§2.2 纪律），不能拿字符串里找 "leftEye"——查绑定表 + 节点 uuid。
+  const eyeUuids = new Set(
+    plan.bindings
+      .filter((b) => b.vrm === "leftEye" || b.vrm === "rightEye")
+      .map((b) => plan.nodesByMmd.get(b.mmd)?.uuid)
+      .filter((u): u is string => u != null),
+  );
+  const drivesEyes = [...eyeUuids].some((uuid) =>
+    clip.tracks.some((t) => t.name === `${uuid}.quaternion`),
+  );
+
+  // ADR-309 D4：IK 开关时间轴（propertyKeyFrames.ikStates）
+  const ikTimelines: Record<"left" | "right", VmdIkTimeline | null> = {
+    left: plan.footIK.left
+      ? extractVmdIkTimeline(vmd, [plan.footIK.left], "left", clip.duration)
+      : null,
+    right: plan.footIK.right
+      ? extractVmdIkTimeline(vmd, [plan.footIK.right], "right", clip.duration)
+      : null,
+  };
+
   return {
-    // duration 传 -1 → AnimationClip 构造函数按过滤后的轨道重算时长
-    clip: new THREE.AnimationClip("vmd-retarget", -1, tracks),
+    clip,
     report: { ...report, droppedTracks },
-    footIK: toFootIKTargets(ikTracks),
+    footIK: toFootIKTargets(ikTracks, ikTimelines),
     posTracks,
+    drivesEyes,
   };
 }

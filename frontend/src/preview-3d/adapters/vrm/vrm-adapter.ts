@@ -325,6 +325,19 @@ interface VrmMotionClipEntry {
    * {@link rescaleVmdMotionClips} 原地改写，免重读/重解析/换绑。
    */
   posTracks: readonly VmdPositionTrackHandle[];
+  /**
+   * ADR-309 D2（锐评 P2）：该 clip 是否驱动眼骨（左目/右目 quaternion 轨道命中映射表）。
+   * 每帧 update：`lookAt.autoUpdate = !(animActive && drivesEyes)`——带眼轨的动作让道
+   * VMD 眼轨（lookAt 早退），无眼轨/待机态 lookAt 照常盯摄像头。
+   */
+  drivesEyes: boolean;
+  /**
+   * ADR-309 D6（锐评 P6）：动作来源域。`local` = 模型同目录（.vrma/.vmd）、
+   * `library` = MMD 动作库（CustomAnim）。自动播只选 local；库动作只进列表。
+   */
+  origin: "local" | "library";
+  /** 动作文件完整路径（诊断/版权提示用） */
+  path: string;
 }
 interface VrmMotionState {
   motionClips: VrmMotionClipEntry[];
@@ -402,7 +415,6 @@ async function Stage1ReadParse(
   const metaVersion = vrm.meta.metaVersion;
   if (metaVersion === "0") ParseGlbVrm0(vrm, gltf);
   else ParseGlbVrm1(vrm, gltf);
-  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   requireSharedInfra(ctx).scene.add(vrm.scene);
   registerModelRoot(vrm.scene);
   ctx.loadingEl.remove();
@@ -458,6 +470,12 @@ async function loadVrmaClips(
         footIK: null, // .vrma 自带完整腿部数据（含 IK 已烘好的 FK），无需外部求解
         source: "vrma",
         posTracks: [], // 官方动作轨道是 VRM 规范产物，无「位移烘焙缩放」语义
+        // ADR-309 D2：.vrma 的 humanoid 轨道不驱动眼骨（官方 clip 无眼轨）⇒ false，
+        // lookAt 行为与现状一致
+        drivesEyes: false,
+        // ADR-309 D6：同目录 .vrma = local 来源
+        origin: "local",
+        path: vp,
       });
     } catch {
       /* 单个 .vrma 解析失败 → 跳过其余照常 */
@@ -477,6 +495,8 @@ async function loadVmdClips(
   vrm: VRM,
   /** 位移缩放覆盖（ADR-243 锐评对账 P3）：undefined = 按身高自动估算；给定则烘焙进位移轨道 */
   positionScale?: number,
+  /** ADR-309 D6（锐评 P6）：动作来源域（local = 模型同目录 / library = MMD 动作库） */
+  origin: "local" | "library" = "local",
 ): Promise<VrmMotionClipEntry[]> {
   const clips: VrmMotionClipEntry[] = [];
   for (const vp of paths) {
@@ -502,6 +522,9 @@ async function loadVmdClips(
         footIK: retarget.footIK,
         source: "vmd",
         posTracks: retarget.posTracks,
+        drivesEyes: retarget.drivesEyes,
+        origin,
+        path: vp,
       });
     } catch {
       /* 单个 .vmd 解析失败 → 跳过其余照常 */
@@ -525,29 +548,31 @@ async function listCustomAnimVmd(
 }
 
 /**
- * `.vmd` 路径枚举（模型同目录 ∪ MMD 动作库，去重）——加载与 P3 重建共用同一事实源，
- * 防「加载用一套、重建用另一套」漂移。磁盘枚举一律走 Go 交付的 listAllFilePaths（归属红线）。
+ * `.vmd` 路径枚举（模型同目录 + MMD 动作库，去重）——ADR-309 D6（锐评 P6）：
+ * local/library 分列返回（自动播只选 local；库动作只进列表，不自动播）。
+ * 磁盘枚举一律走 Go 交付的 listAllFilePaths（归属红线）。
  */
-async function listVmdPaths(
+async function listVmdPathLists(
   path: string,
   listAllFilePaths?: (dir: string) => Promise<string[] | null>,
-): Promise<string[]> {
-  if (!listAllFilePaths) return [];
+): Promise<{ local: string[]; library: string[] }> {
+  if (!listAllFilePaths) return { local: [], library: [] };
   try {
     const dirPath = path.replace(/[^/\\]*$/, "").replace(/[/\\]$/, "");
     const files = (await listAllFilePaths(dirPath)) || [];
-    const vmdPaths = files.filter((p) => p.toLowerCase().endsWith(".vmd"));
+    const local = files.filter((p) => p.toLowerCase().endsWith(".vmd"));
     // 追加动作库来源并去重（同目录已发现的路径不再重复解析）
-    const seen = new Set(vmdPaths.map((p) => p.toLowerCase()));
+    const seen = new Set(local.map((p) => p.toLowerCase()));
+    const library: string[] = [];
     for (const p of await listCustomAnimVmd(listAllFilePaths)) {
       const key = p.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      vmdPaths.push(p);
+      library.push(p);
     }
-    return vmdPaths;
+    return { local, library };
   } catch {
-    return [];
+    return { local: [], library: [] };
   }
 }
 
@@ -594,23 +619,46 @@ async function loadMotionClips(
     const dirPath = path.replace(/[^/\\]*$/, "").replace(/[/\\]$/, "");
     const files = (await listAllFilePaths(dirPath)) || [];
     const vrmaPaths = files.filter((p) => p.toLowerCase().endsWith(".vrma"));
-    const vmdPaths = await listVmdPaths(path, listAllFilePaths);
+    const vmdLists = await listVmdPathLists(path, listAllFilePaths);
 
     motionClips.push(...(await loadVrmaClips(vrmaPaths, readFn, vrm)));
+    // P6：local .vmd 先入库（同目录），library .vmd 随后（动作库），各自带 origin 标记
     motionClips.push(
-      ...(await loadVmdClips(vmdPaths, readFn, vrm, positionScale ?? autoPositionScale)),
+      ...(await loadVmdClips(
+        vmdLists.local,
+        readFn,
+        vrm,
+        positionScale ?? autoPositionScale,
+        "local",
+      )),
+    );
+    motionClips.push(
+      ...(await loadVmdClips(
+        vmdLists.library,
+        readFn,
+        vrm,
+        positionScale ?? autoPositionScale,
+        "library",
+      )),
     );
 
     // P5 代际守卫：dispose 期间 invalidate() 使本代过期——在途结果不再写入 state
     //（motionMixer/motionAction 保持 null，下游 update 循环对空动作安全跳过）
     if (guard.stale(gen)) return state;
 
-    if (motionClips.length > 0) {
+    // P6：自动播只选 local 条目（同目录 .vrma/.vmd）；库动作只进列表不自动播
+    const firstLocal = motionClips.find((e) => e.origin === "local");
+    if (firstLocal) {
       motionMixer = new THREE.AnimationMixer(vrm.scene);
-      motionAction = motionMixer.clipAction(motionClips[0].clip);
+      motionAction = motionMixer.clipAction(firstLocal.clip);
       motionAction.play();
       state.motionMixer = motionMixer;
       state.motionAction = motionAction;
+    } else if (motionClips.length > 0) {
+      // 只有 library 条目：建 mixer（供用户手动 select），但不自动 play
+      motionMixer = new THREE.AnimationMixer(vrm.scene);
+      state.motionMixer = motionMixer;
+      // motionAction 保持 null（不自动播）：select() 时再 clipAction+play
     }
   } catch {
     /* 目录不可列 → 白模降级，不阻断模型渲染 */
@@ -705,7 +753,6 @@ function buildPerception(
   const gaze: ReturnType<typeof createGazeController> | null = useNativeLookAt
     ? null
     : createGazeController();
-  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   if (useNativeLookAt && ctx.camera) vrm.lookAt!.target = ctx.camera;
   const exprMgr = vrm.expressionManager;
   const blinkExpressionNames = exprMgr
@@ -799,7 +846,6 @@ function Stage4MenuPanels(
     panels,
     modelInfo,
     modelPath: path,
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     screenshot: () =>
       Promise.resolve(
         screenshotFromRenderer(requireSharedInfra(ctx).renderer, ctx.scene, ctx.camera),
@@ -879,8 +925,7 @@ function applyIdlePerception(dt: number, deps: VrmIdlePerceptionDeps): void {
     if (perceptionState.breath) breath.apply(dt, semanticBones);
     // gaze 不挂全局暂停标志（摄像机追踪，非动画优先级）——保留本层 !animActive 守卫
     if (!animActive && !useNativeLookAt && perceptionState.gaze)
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      gaze!.apply(dt, semanticBones, requireSharedInfra(ctx).camera.position);
+      gaze?.apply(dt, semanticBones, requireSharedInfra(ctx).camera.position);
   }
   footIK.apply(dt, !animActive);
 }
@@ -934,6 +979,18 @@ function makeVrmUpdater(deps: VrmUpdateDeps): (dt: number) => void {
     perceptionPauseRef.paused = animActive;
     if (!vrm.scene.visible) return;
     if (motionMixer) motionMixer.update(dt);
+
+    // ADR-309 D2（锐评 P2）：lookAt 让道条件 = animActive && 当前动作 drivesEyes——
+    // 带眼轨的 VMD 动作把 lookAt.autoUpdate 置 false（VRMLookAt.update 早退），
+    // 眼骨完全交给 mixer 眼轨；无眼轨动作/待机态恢复 true，lookAt 照常盯摄像头。
+    if (vrm.lookAt) {
+      const liveAction = motion.motionAction;
+      const currentEntry = liveAction
+        ? motionClips.find((c) => c.clip === motionClipOf(liveAction))
+        : null;
+      vrm.lookAt.autoUpdate = !(animActive && currentEntry?.drivesEyes === true);
+    }
+
     vrm.update(dt);
     // #9 全局暂停标志：动画激活时 breath/blink 自查静默，取代散布的 `!animActive` 守卫。
     applyIdlePerception(dt, { perception, semanticBones, animActive, ctx });
@@ -1002,7 +1059,6 @@ function makeVrmDisposer(deps: VrmDisposeDeps): () => void {
     vrmFootIK.dispose();
     motionMixer?.stopAllAction();
     motionMixer?.uncacheRoot(vrm.scene);
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     if (useNativeLookAt) vrm.lookAt!.target = null;
     const texCount = countSceneTextures(vrm.scene);
     VRMUtils.deepDispose(vrm.scene);
@@ -1060,7 +1116,6 @@ function Stage5BuildResult(
       path,
       port,
     }),
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     screenshot: () =>
       Promise.resolve(
         screenshotFromRenderer(requireSharedInfra(ctx).renderer, ctx.scene, ctx.camera),
@@ -1339,8 +1394,7 @@ export function vrmMenuItems(o: VrmMenuItemsOpts): PreviewMenuNode[] {
       labelKey: "preview.perception",
       kind: "panel",
       dockGroup: "motion",
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      children: perceptionNodes(o.perception!.state, o.perception!.caps),
+      children: perceptionNodes(o.perception.state, o.perception.caps),
     });
   }
   return items;

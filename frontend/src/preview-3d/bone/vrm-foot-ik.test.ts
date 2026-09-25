@@ -11,7 +11,7 @@ import * as THREE from "three";
 import type { BoneNode, BoneTree } from "./bone-tools.ts";
 import { solveIK } from "./ik-solver.ts";
 import type { SemanticBoneMap } from "./semantic-bones.ts";
-import { createVrmFootIKController, type FootIKSampler } from "./vrm-foot-ik.ts";
+import { createVrmFootIKController, type FootIKSampler, type FootIKSamplers } from "./vrm-foot-ik.ts";
 
 vi.mock("./ik-solver.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./ik-solver.ts")>();
@@ -351,5 +351,63 @@ describe("脚尖链驱动（ADR-243 P1b）", () => {
     controller.apply(0, { left: fixedSampler([0, 0.2, 0]), right: null });
 
     expect(solveIKMock).not.toHaveBeenCalled();
+  });
+});
+
+// ── ADR-309 D4（锐评 P4）：IK 开关时间轴（propertyKeyFrames.ikStates）──
+
+describe("IK 开关时间轴（ADR-309 D4 / 锐评 P4）", () => {
+  it("isEnabled 返回 false → 该侧跳过 solveIK（足回 FK 自然位）", () => {
+    const { tree, semanticBones, left } = makeVrmLegRig();
+    const controller = createVrmFootIKController(tree, semanticBones);
+    left.knee.rotation.x = 0.5; // FK 已把膝摆开，CCD 跳过时应保持
+
+    const targets: FootIKSamplers = {
+      left: {
+        sample: (_t, out) => {
+          out.set(0, 0.3, 0);
+          return true;
+        },
+        isEnabled: () => false, // MMD 侧该时刻左足 IK 关闭
+      },
+      right: null,
+    };
+    controller.apply(0, targets);
+
+    expect(solveIKMock).not.toHaveBeenCalled();
+    // 膝保持 FK 位（未被 CCD 改）
+    expect(left.knee.rotation.x).toBeCloseTo(0.5, 6);
+  });
+
+  it("缺省 isEnabled（旧 VMD / .vrma）→ 全程求解，行为不变", () => {
+    const { tree, semanticBones } = makeVrmLegRig();
+    const controller = createVrmFootIKController(tree, semanticBones);
+
+    controller.apply(0, { left: fixedSampler([0, 0.3, 0]), right: null });
+
+    expect(solveIKMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("isEnabled 按时间轴分段：on 段求解、off 段跳过", () => {
+    const { tree, semanticBones } = makeVrmLegRig();
+    const controller = createVrmFootIKController(tree, semanticBones);
+
+    const targets: FootIKSamplers = {
+      left: {
+        sample: (_t, out) => {
+          out.set(0, 0.3, 0);
+          return true;
+        },
+        // 0~5s on，5~10s off
+        isEnabled: (t) => t < 5 || t >= 10,
+      },
+      right: null,
+    };
+
+    controller.apply(2, targets);
+    expect(solveIKMock).toHaveBeenCalledTimes(1); // on 段
+
+    controller.apply(7, targets);
+    expect(solveIKMock).toHaveBeenCalledTimes(1); // off 段不增
   });
 });

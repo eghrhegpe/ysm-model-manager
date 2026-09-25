@@ -43,6 +43,12 @@ import type { SemanticBoneMap } from "./semantic-bones.ts";
  */
 export interface FootIKSampler {
   sample(timeSeconds: number, out: THREE.Vector3): boolean;
+  /**
+   * ADR-309 D4（锐评 P4）：IK 开关时间轴查询（源自 MMD propertyKeyFrames.ikStates）。
+   * 返回 false = 该时刻 MMD 侧该骨 IK 关闭，CCD 求解应跳过该侧（足回到 FK 自然位）。
+   * 缺省 undefined = 全程启用（`.vrma` 与无 ikStates 数据的旧 VMD 零影响）。
+   */
+  isEnabled?: (t: number) => boolean;
 }
 
 /** 双侧足目标（null = 该侧无 IK 数据） */
@@ -154,7 +160,11 @@ export function createVrmFootIKController(
       if (!targets) return;
       for (const leg of legs) {
         const sampler = targets[leg.side];
-        if (!sampler?.sample(timeSeconds, offset)) continue;
+        if (!sampler) continue;
+        // ADR-309 D4（锐评 P4）：IK 开关时间轴——MMD 侧该骨 IK 关闭的段落，
+        // CCD 跳过该侧（足回到 FK 自然位，与 MMD 关 IK 时表现一致）
+        if (sampler.isEnabled && !sampler.isEnabled(timeSeconds)) continue;
+        if (!sampler.sample(timeSeconds, offset)) continue;
         target.copy(leg.restWorld).add(offset);
         solveIK(leg.chain, target, IK_CONFIG);
         // 脚尖链：目标 = 脚尖静止世界 + 同一偏移（つま先ＩＫ 与 足ＩＫ 共享同一 IK 目标，

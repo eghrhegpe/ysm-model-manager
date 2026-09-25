@@ -841,6 +841,33 @@ describe("VMD 动作加载与重定向（ADR-243）", () => {
     content.dispose();
   });
 
+  it("锐评 P6：动作库（CustomAnim）vmd 只进列表不自动播；local vmd 仍自动播", async () => {
+    // local .vmd + 库 .vmd 混合：列表全进，自动播选 local（库不越权）
+    // ⚠️ libFiles 的目录须含 "CustomAnim"（buildWithMotion 的 mock 据此路由动作库列表）
+    const { content, play } = await buildWithMotion({
+      files: ["/vrm/test.vrm", "/vrm/wave.vmd"],
+      libFiles: ["/repo/CustomAnim/lib.vmd"],
+      animDir: "/repo/CustomAnim",
+      vmd: makeFakeVmd(VMD_FRAMES),
+    });
+
+    expect(play?.clips.map((c) => c.label)).toEqual(["wave", "lib"]);
+    content.dispose();
+  });
+
+  it("锐评 P6：仅库动作（无 local vmd / 无 vrma）→ 库动作进列表但不自动播", async () => {
+    // 只有 library .vmd：列表含库动作，白模待机（无 local 条目 ⇒ 不自动播）
+    const { content, play } = await buildWithMotion({
+      files: ["/vrm/test.vrm"],
+      libFiles: ["/repo/CustomAnim/lib.vmd"],
+      animDir: "/repo/CustomAnim",
+      vmd: makeFakeVmd(VMD_FRAMES),
+    });
+
+    expect(play?.clips.map((c) => c.label)).toEqual(["lib"]);
+    content.dispose();
+  });
+
   it("锐评 P1：select 切换动作 → 归一化骨/表情先复位（防未覆盖骨残留旧姿势，横移 MMD 侧 skeleton.pose 纪律）", async () => {
     // 顺序：.vrma 先入列（idle），.vmd 随后（wave）——切到 wave 时 idle 驱动过而
     // wave 未驱动的骨不应残留 idle 末帧姿势

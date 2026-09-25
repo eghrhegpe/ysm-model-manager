@@ -734,4 +734,82 @@ describe("buildVmdRetargetClip", () => {
     expectValues(toe.values, [-0.2, 0, 0, 0.98], 4);
     expect(Object.hasOwn(toe, "createInterpolant")).toBe(true);
   });
+
+  // ── ADR-309 D4（锐评 P4）：IK 开关时间轴 ──
+
+  it("P4：propertyKeyFrames.ikStates 含左足ＩＫ off 段 → footIK.left.isEnabled 正确判断", () => {
+    const vmd = makeFakeVmd(
+      [
+        bone("左足ＩＫ", 0, [0, 0, 0]),
+        bone("左足ＩＫ", 30, [0.5, 0, 0]),
+      ],
+      [],
+    );
+    // 注入 propertyKeyFrames：0~5s IK on，5~10s off
+    (vmd as unknown as { propertyKeyFrames: unknown[] }).propertyKeyFrames = [
+      { frameNumber: 0, ikStates: [["左足ＩＫ", true], ["右足ＩＫ", true]] },
+      { frameNumber: 150, ikStates: [["左足ＩＫ", false], ["右足ＩＫ", true]] },
+      { frameNumber: 300, ikStates: [["左足ＩＫ", true], ["右足ＩＫ", true]] },
+    ];
+
+    const { footIK } = buildVmdRetargetClip(vmd, makeRig(makeStandingRig()), { positionScale: 1 });
+    const left = footIK.left;
+    if (!left) throw new Error("左足ＩＫ 未被摘出");
+    if (!left.isEnabled) throw new Error("isEnabled 未挂");
+    // 0~5s on
+    expect(left.isEnabled(0)).toBe(true);
+    expect(left.isEnabled(4.9)).toBe(true);
+    // 5~10s off
+    expect(left.isEnabled(5)).toBe(false);
+    expect(left.isEnabled(7)).toBe(false);
+    // 10s 后回到 on
+    expect(left.isEnabled(10)).toBe(true);
+    expect(left.isEnabled(15)).toBe(true);
+  });
+
+  it("P4：propertyKeyFrames 无 ikStates 数据（旧 VMD）→ 全程 on（isEnabled 缺省或缺，采样器正常）", () => {
+    const { footIK } = buildVmdRetargetClip(E2E_VMD, makeRig(makeStandingRig()), {
+      positionScale: 1,
+    });
+    const left = footIK.left;
+    if (!left) throw new Error("左足ＩＫ 未被摘出");
+    // 无 propertyKeyFrames 数据 → isEnabled 缺省或全程 true
+    if (left.isEnabled) {
+      expect(left.isEnabled(0)).toBe(true);
+      expect(left.isEnabled(100)).toBe(true);
+    }
+    // 采样器本身正常
+    const out = new THREE.Vector3();
+    expect(left.sample(0.5, out)).toBe(true);
+  });
+
+  // ── ADR-309 D2（锐评 P2）：drivesEyes 判定 ──
+
+  it("P2：VMD 含左目/右目 quaternion 轨道 → drivesEyes=true", () => {
+    // rig 需含眼骨节点（映射表 leftEye→左目）
+    const nodes = { ...makeStandingRig(), leftEye: makeNode("leftEye", [0, 1.35, 0]), rightEye: makeNode("rightEye", [0, 1.35, 0]) };
+    const vmd = makeFakeVmd(
+      [
+        bone("左腕", 0, [0, 0, 0], [0, 0, 0, 1]),
+        bone("左目", 0, [0, 0, 0], [0, 0, 0, 1]),
+        bone("右目", 30, [0, 0, 0], [0, 0.1, 0, 0.995]),
+      ],
+      [],
+    );
+    const { drivesEyes } = buildVmdRetargetClip(vmd, makeRig(nodes), {
+      positionScale: 1,
+    });
+    expect(drivesEyes).toBe(true);
+  });
+
+  it("P2：VMD 无眼骨（普通舞蹈动作）→ drivesEyes=false", () => {
+    const vmd = makeFakeVmd([
+      bone("左腕", 0, [0, 0, 0]),
+      bone("右腕", 30, [0, 0, 0]),
+    ]);
+    const { drivesEyes } = buildVmdRetargetClip(vmd, makeRig(makeStandingRig()), {
+      positionScale: 1,
+    });
+    expect(drivesEyes).toBe(false);
+  });
 });

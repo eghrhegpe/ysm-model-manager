@@ -84,3 +84,14 @@ status: active
 ## 符号索引
 
 > 符号列表见 frontmatter `auto_fields.symbols_with_lines`。
+
+## 桌面端故障排查（2026-09-26 beta.26 升级实证）
+
+- **启动崩 0x800700AA（error creating controller / requested resource is in use）**：
+  ① 代码面——Wails beta.26 时序下 `ServiceStartup` 阶段同步创建第二个窗口（plaza 预热）会与主窗口并发
+  `CreateCoreWebView2Controller`，后到者必崩（已修：预热挂主窗口 `WindowRuntimeReady` 后，app.go）；
+  ② 环境面——WebView2 默认 UDF = `%AppData%\<exe文件名>\EBWebView`（edge/chromium.go|Embed，DataPath 空时的回退），
+  崩溃循环会把该目录搞进坏状态，此后**同一 exe 名必崩、改名即活**（生产/dev 构建无差别）。
+  处置：关闭应用后删除/改名 `%AppData%\<exe文件名>` 目录（仅 WebView2 缓存，应用配置在
+  `%AppData%\YSM-Model-Manager\`（无 .exe）不受影响）。排障经验：同源码同 flags 构建到不同路径可分离
+  「代码问题 vs UDF 状态问题」。

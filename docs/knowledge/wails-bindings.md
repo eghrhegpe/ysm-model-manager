@@ -441,3 +441,8 @@ status: active
 - [event_bus](./event-bus.md) — 前端事件总线（进度/完成事件订阅）
 - 致命陷阱 §二 #1（改 Go 未重建）、#5（Binding 函数名写错）、#7（三入口重复注册）
 - 治理红线 §三.2（Wails 调用统一走 getApp()）
+
+## 生成器版本行为差异（alpha2.105 → beta.26，2026-09-26 升级实证）
+
+- **`time.Time` 不再生成独立 `bindings/time` 包**：beta.26 生成器将 `time.Time` 字段内联为 `string`（如 `go/sync/models.ts` 的 `localModTime`/`remoteModTime`），`bindings/time/` 目录随之删除。前端无消费方受影响；后续新增含 `time.Time` 的 model 字段同理，前端类型按 `string` 消费。
+- Models 计数 85 → 84（time 包消失所致），方法/枚举计数不变；app.ts 内联注：生成器不再输出 `// @ts-ignore: Unused imports` 头。

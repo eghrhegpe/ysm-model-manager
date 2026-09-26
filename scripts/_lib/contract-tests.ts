@@ -66,6 +66,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_rust_bridge_tags.ts": ["go"],
   // —— frontend ——
   "test_bus_contract.ts": ["frontend"],
+  // check-a11y 覆盖基线守卫（ADR-308 D3）——扫描域为 frontend/src 生产 .ts；
+  // 守卫核在 scripts 工具自身（tests 域），同 test_check_menu_test_layout 注记
+  "test_check_a11y.ts": ["frontend", "tests"],
   "test_check_ctx_menu_i18n.ts": ["frontend"],
   "test_check_layering.ts": ["frontend"],
   "test_check_menu_health.ts": ["frontend"],
@@ -428,6 +431,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/check-deadcode-baseline.ts",
   ],
   "test_css_layer_check.ts": ["scripts/css-layer-check.ts"],
+  "test_check_a11y.ts": ["scripts/check-a11y.ts"],
   // i18n 未使用键：判定层（点分 token 抽取 + 三级判定）与 CLI 接线同属敏感源；
   // 三包键数对账（test 块 7 读 zh-CN/ja 断言 nZh===nEn、nJa===nEn），故三包全列——
   // 仅改 zh-CN.ts/ja.ts 也须触发（review bb94909f9 P3-7）。

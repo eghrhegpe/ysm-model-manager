@@ -1,12 +1,12 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"ysm-model-manager/go/logs"
-	"ysm-model-manager/go/repoaudit"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -36,7 +36,7 @@ func TestFindDuplicateFiles_Guard(t *testing.T) {
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 
 	// 根内路径应通过守卫（即使无重复也返回空切片而非 error）
-	groups, err := a.FindDuplicateFiles(root)
+	groups, err := a.FindDuplicateFiles(root, "")
 	if err != nil {
 		t.Fatalf("根内路径不应报错: %v", err)
 	}
@@ -46,11 +46,18 @@ func TestFindDuplicateFiles_Guard(t *testing.T) {
 	// 显式丢弃（_ =）既消除 ineffassign，又不绑死实现返回 nil 还是空切片。
 	_ = groups
 
-	// 根外路径应被守卫拒绝
+	// 根外路径应被守卫拒绝，且错误为结构化 AppError（INVALID_PATH，friendlyError 可映射 i18n）
 	outside := filepath.Join(base, "..", "outside")
-	_, err = a.FindDuplicateFiles(outside)
+	_, err = a.FindDuplicateFiles(outside, "")
 	if err == nil {
-		t.Error("根外路径应被守卫拒绝返回 error")
+		t.Fatal("根外路径应被守卫拒绝返回 error")
+	}
+	var appErr types.AppError
+	if !errors.As(err, &appErr) {
+		t.Fatalf("守卫错误应为 AppError, got %T: %v", err, err)
+	}
+	if appErr.Code != types.ErrInvalidPath {
+		t.Errorf("AppError.Code = %q, 期望 %q", appErr.Code, types.ErrInvalidPath)
 	}
 }
 
@@ -74,7 +81,7 @@ func TestFindDuplicateFiles_Basic(t *testing.T) {
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
-	groups, err := a.FindDuplicateFiles(root)
+	groups, err := a.FindDuplicateFiles(root, "")
 	if err != nil {
 		t.Fatalf("FindDuplicateFiles 失败: %v", err)
 	}
@@ -87,8 +94,8 @@ func TestFindDuplicateFiles_Basic(t *testing.T) {
 	}
 }
 
-// TestFindDuplicateFiles_WithConfig 测试自定义去重配置
-func TestFindDuplicateFiles_WithConfig(t *testing.T) {
+// TestFindDuplicateFiles_WithStrategy 测试策略 token 直传（typed 收口后不再是 JSON 文本协议）
+func TestFindDuplicateFiles_WithStrategy(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
@@ -102,29 +109,39 @@ func TestFindDuplicateFiles_WithConfig(t *testing.T) {
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
-	// 配置：name_size 策略（文件名+大小，快速但不精确）
-	groups, err := a.FindDuplicateFiles(root, `{"strategy":"name_size"}`)
+	// name_size 策略（文件名+大小）：a/b 同内容但文件名不同 → 不成组。
+	// 期望 0 组即可判别策略 token 确实生效——deep_hash（默认档）对同内容文件会返回 1 组。
+	groups, err := a.FindDuplicateFiles(root, "name_size")
 	if err != nil {
 		t.Fatalf("FindDuplicateFiles 失败: %v", err)
 	}
-	// name_size 模式下同名同大小才算重复，内容相同但文件名不同不算
 	if len(groups) != 0 {
-		t.Fatalf("name_size 模式下文件名不同不应去重, got %d 组", len(groups))
+		t.Fatalf("name_size 模式下文件名不同不应成组, got %d 组", len(groups))
 	}
 }
 
-// TestFindDuplicateFiles_InvalidConfig 测试无效配置返回错误
-func TestFindDuplicateFiles_InvalidConfig(t *testing.T) {
+// TestFindDuplicateFiles_NoDupNilFree 测试「无重复 = 空数组而非 null」契约：
+// 前端 dedup-scan 的 null 分支仅防御结构异常，Go 成功路径必须恒返回非 nil 切片。
+func TestFindDuplicateFiles_NoDupNilFree(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("unique"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
-	_, err := a.FindDuplicateFiles(root, `invalid json`)
-	if err == nil {
-		t.Error("无效配置应返回 error")
+	groups, err := a.FindDuplicateFiles(root, "deep_hash")
+	if err != nil {
+		t.Fatalf("FindDuplicateFiles 失败: %v", err)
+	}
+	if groups == nil {
+		t.Fatal("无重复时应返回空切片（非 nil），否则前端 null 防御分支被误触发")
+	}
+	if len(groups) != 0 {
+		t.Fatalf("无重复时期望 0 组, got %d", len(groups))
 	}
 }
 
@@ -244,116 +261,6 @@ func TestRepoHealthAudit_EmptyPath(t *testing.T) {
 		t.Error("空路径应返回 error")
 	}
 }
-
-// TestRepoHealthAuditAll_NoRoots 测试无配置根时返回错误
-func TestRepoHealthAuditAll_NoRoots(t *testing.T) {
-	a := resourceApp(t, types.AppConfig{})
-	_, err := a.RepoHealthAuditAll()
-	if err == nil {
-		t.Error("无配置根时应返回 error")
-	}
-}
-
-// TestRepoHealthAuditAll_MultiType 测试多类型根合并体检
-func TestRepoHealthAuditAll_MultiType(t *testing.T) {
-	base := t.TempDir()
-	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
-	rpRoot := filepath.Join(base, registry.GroupStorageRoot("resourcepack"))
-	for _, r := range []string{ysmRoot, rpRoot} {
-		if err := os.MkdirAll(r, 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := os.WriteFile(filepath.Join(ysmRoot, "a.ysm"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(rpRoot, "pack.zip"), []byte("zip"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	a := resourceApp(t, types.AppConfig{
-		FilesRoot:        base,
-		ResourcepackRoot: rpRoot,
-	})
-	report, err := a.RepoHealthAuditAll()
-	if err != nil {
-		t.Fatalf("多类型体检失败: %v", err)
-	}
-	if report.Resources.TotalFiles < 2 {
-		t.Errorf("应合并发现至少 2 个文件, got %d", report.Resources.TotalFiles)
-	}
-	if len(report.Resources.ByType) < 2 {
-		t.Errorf("应包含至少 2 种类型统计, got %v", report.Resources.ByType)
-	}
-}
-
-// TestMergeAuditResults_Deterministic 测试合并结果确定性（排序稳定）
-func TestMergeAuditResults_Deterministic(t *testing.T) {
-	r1 := repoaudit.HealthReport{
-		Resources: repoaudit.ResourceSummary{TotalFiles: 10, ByType: map[string]int{"a": 5, "b": 5}},
-		Score:     80,
-	}
-	r2 := repoaudit.HealthReport{
-		Resources: repoaudit.ResourceSummary{TotalFiles: 20, ByType: map[string]int{"c": 20}},
-		Score:     90,
-	}
-
-	results := []auditResult{
-		{rtype: "b", report: r1, err: nil},
-		{rtype: "a", report: r2, err: nil},
-	}
-
-	// 多次调用应产生相同结果（按 rtype 排序）
-	var first *repoaudit.HealthReport
-	for i := 0; i < 10; i++ {
-		merged := mergeAuditResults(results, "2026-01-01T00:00:00Z")
-		if i == 0 {
-			first = merged
-			continue
-		}
-		if merged.Score != first.Score ||
-			merged.Resources.TotalFiles != first.Resources.TotalFiles {
-			t.Fatalf("第 %d 次合并结果不一致", i)
-		}
-		// ByType map 遍历序不定，但合并后键值应一致
-		for k, v := range first.Resources.ByType {
-			if merged.Resources.ByType[k] != v {
-				t.Fatalf("ByType[%s] 不一致: %d vs %d", k, merged.Resources.ByType[k], v)
-			}
-		}
-	}
-}
-
-// TestMergeAuditResults_ErrorHandling 测试合并时错误处理
-func TestMergeAuditResults_ErrorHandling(t *testing.T) {
-	results := []auditResult{
-		{rtype: "ok", report: repoaudit.HealthReport{Resources: repoaudit.ResourceSummary{TotalFiles: 5}, Score: 100}, err: nil},
-		{rtype: "fail", report: repoaudit.HealthReport{}, err: assertError("some error")},
-	}
-
-	merged := mergeAuditResults(results, "2026-01-01T00:00:00Z")
-	if len(merged.Warnings) == 0 {
-		t.Fatal("应包含错误类型的警告")
-	}
-	found := false
-	for _, w := range merged.Warnings {
-		if len(w) > 0 && w[0] == '[' {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("警告应包含类型前缀格式 [type] error, got %v", merged.Warnings)
-	}
-}
-
-func assertError(msg string) error {
-	return &testError{msg}
-}
-
-type testError struct{ msg string }
-
-func (e *testError) Error() string { return e.msg }
 
 // TestInstallResourceToInstance_Guard 测试路径守卫
 func TestInstallResourceToInstance_Guard(t *testing.T) {

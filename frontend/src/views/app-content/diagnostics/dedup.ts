@@ -161,13 +161,14 @@ export function createDedupSession(): DedupSession {
       return;
     }
 
-    // ③ 逐目录扫描
+    // ③ 逐目录扫描（strategy token 直传；keepPolicy/priorityPath 只活在会话配置里，
+    // 由 dedup-policy 在渲染/勾选阶段消费，不随扫描请求穿 Go——锐评①收口）
     const { allResults, earlyExit } = await scanEachDirectory(
       targets,
       list,
       esc,
       FindDuplicateFiles,
-      getConfig,
+      getConfig().strategy,
     );
     if (earlyExit) return;
 

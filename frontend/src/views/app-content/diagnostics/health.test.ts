@@ -285,6 +285,18 @@ describe("runHealthAudit", () => {
     expect(list.innerHTML).toContain("数据源");
   });
 
+  it("GetRepoRoot 空串（未配置仓库根）→ 配置引导，不发起体检 RPC（锐评⑦）", async () => {
+    const auditMock = vi.fn(() => buildReport());
+    getApp.mockResolvedValue({
+      RepoHealthAudit: auditMock,
+      GetRepoRoot: vi.fn(async () => ""),
+    });
+    const list = document.createElement("div");
+    await runHealthAudit(list, esc);
+    await waitFor(() => expect(list.innerHTML).toContain("请先配置资源目录"));
+    expect(auditMock).not.toHaveBeenCalled();
+  });
+
   it("后端业务错误（Go error 通道）→ 展示原文案（非'解析失败'）", async () => {
     getApp.mockResolvedValue({
       RepoHealthAudit: vi.fn(() => Promise.reject(new Error("路径超出仓库目录"))),

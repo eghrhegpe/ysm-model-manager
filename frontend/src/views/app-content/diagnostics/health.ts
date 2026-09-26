@@ -1,7 +1,8 @@
 // ===== 诊断页：仓库体检（runHealthAudit） =====
 // ADR-040 按职责切文件：体检 / 去重（dedup.ts）/ 冲突扫描（conflicts.ts）并列。
-// 数据源：Go 端 RepoHealthAuditAll（go/repoaudit 全仓库审计，GUI/CLI 同源消双轨）——
-// 前端不再自算健康分，只做展示。
+// 数据源：Go 端 RepoHealthAudit（go/repoaudit 单类型仓库审计，GUI/CLI 同源消双轨）——
+// 前端不再自算健康分，只做展示。刻意不用 RepoHealthAuditAll（合并报告泛泛且全扫耗时，
+// 该孤儿绑定已于 2026-09 对接锐评③连同 GetAllRepoRoots 一并删除）。
 
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
@@ -60,6 +61,15 @@ export async function runHealthAudit(
 
     const { RepoHealthAudit, GetRepoRoot } = await backendGetApp();
     const filesRoot = await GetRepoRoot(currentRepoType());
+    // 未配置仓库根（GetRepoRoot 契约：desktop 未配置时返回空串，见 resource_bindings.go）
+    // → 走配置引导而非发起注定失败的 RPC；Go 侧空串兜底错误由此在 GUI 链路不可达。
+    // 与 conflicts 的 configGameDir 同构（输入端「未配置」态由 UI 引导，锐评⑦）。
+    if (!filesRoot) {
+      list.innerHTML = msgRowHTML("error", t("diagnostics.configResourceDir"), esc, {
+        icon: UI_ICONS.warning,
+      });
+      return;
+    }
     const report = parseHealthReport(await RepoHealthAudit(filesRoot));
     if (!report) {
       list.innerHTML = msgRowHTML("error", t("diagnostics.healthParseFailed"), esc, {

@@ -7,9 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
-	"time"
 
 	"ysm-model-manager/go/dedup"
 	"ysm-model-manager/go/fileops"
@@ -175,20 +173,6 @@ func (a *App) GetRepoRoot(rtype string) (string, error) {
 		return root, nil
 	}
 	return "", nil
-}
-
-// GetAllRepoRoots 遍历所有注册资源类型，返回 rtype → root 映射（供跨类型搜索）。
-// 仅返回目录真实存在且可访问的类型；空 root/不存在的目录跳过。
-func (a *App) GetAllRepoRoots() map[string]string {
-	registry := typereg.LoadRegistry()
-	result := make(map[string]string, len(registry.ResourceTypes))
-	for _, rt := range registry.ResourceTypes {
-		root, _ := a.GetRepoRoot(rt.ID)
-		if root != "" {
-			result[rt.ID] = root
-		}
-	}
-	return result
 }
 
 // filesRootForSync 返回资源类型的整合包同步基准目录（FilesRoot/{group}/{storageSubDir}）。
@@ -423,24 +407,18 @@ func marshalJSONIndent(tag string, v interface{}, fallback string) string {
 }
 
 // FindDuplicateFiles 扫描目录返回所有重复文件分组。
-// 失败 → error（非 {error} 字符串），调用方 catch 即可区分失败与无重复。
-func (a *App) FindDuplicateFiles(dir string, configStr ...string) ([]dedup.Group, error) {
+// strategy：哈希算法 token（deep_hash/quick_hash/name_size，值域契约锁
+// go/dedup/strategy_test.go TestNewHashAlgorithm_FrontendTokens；空串 = 默认 DeepHash）。
+// 失败 → error（非 {error} 字符串），调用方 catch 即可区分失败与无重复；
+// 成功恒非 nil（go/dedup 恒以 []Group{} 起步，无重复 = 空数组），前端 null 分支仅防御结构异常。
+// 2026-09 对接锐评①：原 (dir, configStr ...string) JSON 文本协议退役——Go 只认哈希策略，
+// keepPolicy/priorityPath 是纯前端保留决策（dedup-policy），不再假借后端配置结构搭车。
+func (a *App) FindDuplicateFiles(dir string, strategy string) ([]dedup.Group, error) {
 	if !a.isPathInRootOrSelf(dir) {
-		return nil, fmt.Errorf("路径超出仓库目录")
+		return nil, types.AppError{Code: types.ErrInvalidPath, Operation: "去重扫描", Reason: "路径超出仓库目录"}
 	}
 
-	// 解析配置（统一入口 go/types.ParseDedupConfig）
-	var dedupConfig *types.DedupConfig
-	if len(configStr) > 0 {
-		cfg, err := types.ParseDedupConfig(configStr[0])
-		if err != nil {
-			log.Printf("[dedup] 配置解析失败: %v", err)
-			return nil, fmt.Errorf("配置解析失败: %w", err)
-		}
-		dedupConfig = cfg
-	}
-
-	groups, err := dedup.FindDuplicateFiles(dir, true, dedupConfig)
+	groups, err := dedup.FindDuplicateFiles(dir, true, &types.DedupConfig{Strategy: strategy})
 	if err != nil {
 		log.Printf("[dedup] FindDuplicateFiles 扫描失败: %v", err)
 		return nil, err
@@ -455,12 +433,14 @@ func (a *App) InvalidateScanCache() {
 
 // RepoHealthAudit 一键全仓体检（审计 + 去重），返回 typed HealthReport。
 // 与 CLI health-report 同源（go/repoaudit 唯一实现），GUI/CLI 双端消双轨。
+// dir 为空属「未配置仓库目录」引导态：GUI 侧 health.ts 以 GetRepoRoot 空串前置拦截
+// （文案走 i18n），此处裸错误仅作后端兜底；根外路径是防篡改守卫，走结构化 AppError。
 func (a *App) RepoHealthAudit(dir string) (*repoaudit.HealthReport, error) {
 	if dir == "" {
 		return nil, fmt.Errorf("请先配置仓库目录")
 	}
 	if !a.isPathInRootOrSelf(dir) {
-		return nil, fmt.Errorf("路径超出仓库目录")
+		return nil, types.AppError{Code: types.ErrInvalidPath, Operation: "仓库体检", Reason: "路径超出仓库目录"}
 	}
 	abs, err := filepath.Abs(dir)
 	if err != nil {
@@ -472,86 +452,6 @@ func (a *App) RepoHealthAudit(dir string) (*repoaudit.HealthReport, error) {
 		return nil, err
 	}
 	return &report, nil
-}
-
-// auditResult 单类型审计结果（RepoHealthAuditAll → mergeAuditResults 的中间载体）
-type auditResult struct {
-	rtype  string
-	report repoaudit.HealthReport
-	err    error
-}
-
-// mergeAuditResults 合并各类型审计结果：资源汇总 + 分数加权 + 警告汇集。
-// 先按 rtype 排序再合并——同输入恒同输出（ADR-119 确定性契约；原 map 随机
-// 遍历导致 Warnings 顺序与 Cache 取值随运行漂移，与 scanner.go:760 专门修的
-// "同输入不同输出"同一性质）。
-func mergeAuditResults(results []auditResult, timestamp string) *repoaudit.HealthReport {
-	sorted := append([]auditResult(nil), results...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].rtype < sorted[j].rtype })
-
-	merged := repoaudit.HealthReport{
-		Timestamp: timestamp,
-		Directory: "（全仓库）",
-		Resources: repoaudit.ResourceSummary{ByType: make(map[string]int)},
-	}
-	scoreSum := 0
-	scoreCount := 0
-	for _, r := range sorted {
-		if r.err != nil {
-			merged.Warnings = append(merged.Warnings, fmt.Sprintf("[%s] %v", r.rtype, r.err))
-			continue
-		}
-		merged.Resources.TotalFiles += r.report.Resources.TotalFiles
-		merged.Resources.TotalSize += r.report.Resources.TotalSize
-		for k, v := range r.report.Resources.ByType {
-			merged.Resources.ByType[k] += v
-		}
-		if r.report.Resources.LargestSize > merged.Resources.LargestSize {
-			merged.Resources.LargestFile = r.report.Resources.LargestFile
-			merged.Resources.LargestSize = r.report.Resources.LargestSize
-		}
-		merged.Completeness.Checked += r.report.Completeness.Checked
-		merged.Completeness.Valid += r.report.Completeness.Valid
-		merged.Completeness.Invalid += r.report.Completeness.Invalid
-		merged.Dedup.Groups += r.report.Dedup.Groups
-		merged.Dedup.ExtraFiles += r.report.Dedup.ExtraFiles
-		merged.Dedup.Reclaim += r.report.Dedup.Reclaim
-		merged.Warnings = append(merged.Warnings, r.report.Warnings...)
-		scoreSum += r.report.Score * r.report.Resources.TotalFiles
-		scoreCount += r.report.Resources.TotalFiles
-	}
-	// 缓存全局唯一（texture_cache），只取一次——排序后"第一个有效结果"亦确定
-	for _, r := range sorted {
-		if r.err == nil {
-			merged.Cache = r.report.Cache
-			break
-		}
-	}
-	if scoreCount > 0 {
-		merged.Score = scoreSum / scoreCount
-	}
-	// Verdict 与 Score 同点派生（锐评④单源）：全仓审计都失败时 scoreCount==0，
-	// Score 保持零值——verdict 随之落 bad，前端无需再对 0 特判
-	merged.Verdict = repoaudit.ScoreVerdict(merged.Score)
-	if merged.Completeness.Checked > 0 {
-		merged.Completeness.Percentage = float64(merged.Completeness.Valid) / float64(merged.Completeness.Checked) * 100
-	}
-	return &merged
-}
-
-// RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。
-// 无有效目录时返回错误。
-func (a *App) RepoHealthAuditAll() (*repoaudit.HealthReport, error) {
-	roots := a.GetAllRepoRoots()
-	if len(roots) == 0 {
-		return nil, fmt.Errorf("请先配置仓库目录")
-	}
-	results := make([]auditResult, 0, len(roots))
-	for rtype, root := range roots {
-		rpt, err := repoaudit.HealthReportFor(root)
-		results = append(results, auditResult{rtype: rtype, report: rpt, err: err})
-	}
-	return mergeAuditResults(results, time.Now().UTC().Format(time.RFC3339)), nil
 }
 
 // InstallResourceToInstance 将资源文件安装到指定整合包

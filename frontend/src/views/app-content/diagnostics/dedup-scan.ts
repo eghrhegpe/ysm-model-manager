@@ -5,7 +5,6 @@
 import { t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type {
-  DedupConfigShape,
   DedupRegType,
   FindDuplicateFilesFn,
   GetRepoRootFn,
@@ -40,13 +39,13 @@ export async function collectTargets(
   return targets;
 }
 
-/** ③ 逐目录 FindDuplicateFiles 扫描（progress占位 + err判别{error}假绿） */
+/** ③ 逐目录 FindDuplicateFiles 扫描（progress占位 + err判别；strategy token 直传，锐评①收口） */
 export async function scanEachDirectory(
   targets: ScanTarget[],
   list: HTMLElement,
   esc: EscFn,
   FindDuplicateFiles: FindDuplicateFilesFn,
-  getConfig: () => Readonly<DedupConfigShape>,
+  strategy: string,
 ): Promise<{ allResults: ScanGroupResult[]; earlyExit: boolean }> {
   const allResults: ScanGroupResult[] = [];
   for (let i = 0; i < targets.length; i++) {
@@ -61,14 +60,17 @@ export async function scanEachDirectory(
       }),
     );
     await new Promise((r) => setTimeout(r, 10));
-    const configStr = JSON.stringify(getConfig());
-    const groups = await FindDuplicateFiles(target.dir, configStr);
+    const groups = await FindDuplicateFiles(target.dir, strategy);
     if (!groups) {
+      // Go 成功路径恒返回非 nil（无重复 = 空数组，go/dedup/dedup.go result 起步即 []Group{}，
+      // 契约锁 internal/app TestFindDuplicateFiles_NoDupNilFree）——null 只可能是绑定层
+      // 结构异常，按扫描失败显式报错。此前手拼的 {reason:"扫描返回空"} 既写死中文又被
+      // t() 静默吞参（scanFailed 键无占位符），双重无意义。
       list.innerHTML =
         '<div class="stat-row diag-msg diag-msg-error" style="justify-content:center">' +
         UI_ICONS.error +
         " " +
-        t("diagnostics.scanFailed", { reason: "扫描返回空" }) +
+        t("diagnostics.scanFailed") +
         "</div>";
       return { allResults, earlyExit: true };
     }

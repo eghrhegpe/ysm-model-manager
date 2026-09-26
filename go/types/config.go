@@ -1,7 +1,5 @@
 package types
 
-import "encoding/json"
-
 // AppConfig 应用持久化配置
 // 独立路径下沉为 CustomRoots map（ADR-095）：以资源类型 id 为 key（如 "ysm"→"D:/.../ysm"），
 // 取代过去 YsmRoot/ResourcepackRoot/... 7 个独立字段，避免资源类型膨胀时结构体硬编码。
@@ -81,14 +79,15 @@ type WorkshopCreator struct {
 	Role string `json:"role,omitempty"`
 }
 
-// DedupConfig 去重功能配置
+// DedupConfig 去重功能配置。
+// 2026-09 对接锐评①收敛：Go 侧仅消费哈希策略（dedup.NewHashAlgorithm，值域契约锁
+// go/dedup/strategy_test.go TestNewHashAlgorithm_FrontendTokens）。保留策略/优先路径
+// 是前端 dedup-policy 的 UI 决策，原 KeepPolicy/PriorityPath 搭车字段已删——
+// 结构体只描述 Go 真正消费的输入，杜绝「字段在 Go 零读者」的假共享。
 type DedupConfig struct {
-	// Strategy 去重策略: "hash" (深度哈希，精确但慢), "name_size" (文件名+大小，快速但不精确)
+	// Strategy 去重策略: "deep_hash" (SHA256，精确但慢), "quick_hash" (MD5，较快),
+	// "name_size" (文件名+大小，最快但不精确)；空串/历史 token "hash" 回退 deep_hash
 	Strategy string `json:"strategy"`
-	// KeepPolicy 保留策略: "oldest" (最早修改), "newest" (最新修改), "path" (指定路径优先)
-	KeepPolicy string `json:"keepPolicy"`
-	// PriorityPath 当 KeepPolicy 为 "path" 时，优先保留的路径前缀
-	PriorityPath string `json:"priorityPath"`
 }
 
 // SyncConfig 同步功能配置
@@ -143,19 +142,4 @@ type PackModelDetail struct {
 type PackModelDetailList struct {
 	Models []PackModelDetail `json:"models"`
 	Total  int               `json:"total"`
-}
-
-// ParseDedupConfig 解析去重配置 JSON 字符串（绑定层 configStr 的统一入口）。
-// raw 为空串 → 返回 nil,nil（未配置，消费端走默认行为）；非法 JSON → 返回错误。
-// 提取为公共函数，避免 FindDuplicateFiles / CountDuplicates 等入口各自内联 json.Unmarshal
-// 造成解析语义漂移。
-func ParseDedupConfig(raw string) (*DedupConfig, error) {
-	if raw == "" {
-		return nil, nil
-	}
-	var cfg DedupConfig
-	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
 }

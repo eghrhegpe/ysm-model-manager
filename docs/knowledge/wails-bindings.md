@@ -397,11 +397,10 @@ status: active
 - `ReadLitematicMeta(path) → string` — 读取投影文件元数据（作者/时间/版本/方块统计/预览图）
 - `GetLitematicVoxelData(path) → string` — 读取投影文件体素数据（按颜色分组的方块位置）
 - `SetVoxelMaxBlocks(limit) → void` — 设置 3D 体素渲染上限，0=恢复默认 200000
-- `FindDuplicateFiles(dir, configStr) → string` — 扫描目录返回所有重复文件分组（JSON 字符串）
-  - 可选入参 `configStr`：去重配置 JSON（`{"strategy","keepPolicy","priorityPath"}`），经 `go/types.ParseDedupConfig` 解析（空串→未配置）
-  - **返回契约**：成功 → `DedupGroup[]`（数组）；失败 → `{"error": string}`（对象，非数组）
-  - 失败场景：路径守卫拒绝（`isPathInRootOrSelf` 返回 false）、底层 dedup 扫描异常（根符号链接/权限错误）
-  - 前端解析：`JSON.parse` 后 `Array.isArray` 区分成功/失败，失败时走 `t("diagnostics.scanFailed", ...)` 兜底展示
+- `FindDuplicateFiles(dir, strategy) → Group[]` — 扫描目录返回所有重复文件分组（typed struct；2026-09 对接锐评①收口：`configStr` JSON 文本协议退役）
+  - 入参 `strategy`：哈希算法 token（`deep_hash`/`quick_hash`/`name_size`，值域契约锁 `go/dedup/strategy_test.go` TestNewHashAlgorithm_FrontendTokens；空串/历史 token "hash" → 默认 DeepHash）
+  - **返回契约**：成功 → `Group[]`（恒非 nil，无重复 = 空数组，契约锁 internal/app TestFindDuplicateFiles_NoDupNilFree）；失败 → Promise reject（error 通道）
+  - `keepPolicy`/`priorityPath` 是纯前端保留决策（dedup-policy），不随扫描请求穿 Go；路径守卫拒绝走 AppError（INVALID_PATH）
 - `CountDuplicateFiles(dir) → string` — 快速统计重复文件数量
   - **返回契约**：成功 → `{"groups": number, "extra": number}`；失败 → `{"error": string}`
   - 失败场景同上；前端解析方式同上

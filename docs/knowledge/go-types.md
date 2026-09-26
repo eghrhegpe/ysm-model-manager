@@ -169,7 +169,7 @@ quick_groups:
 quick_intents:
   - 共享类型、AppConfig、配置
   - 注册表、扩展名、LinkType、BedrockModel
-  - LoadRegistry/ParseDedupConfig
+  - LoadRegistry/DedupConfig
 quick_risk_lines:
   - 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义
 pitfalls:
@@ -187,7 +187,7 @@ use_when:
 invariant_anchors:
   - go/types/registry/resource.go|LoadRegistry
   - go/types/config.go|AppConfig
-  - go/types/config.go|ParseDedupConfig
+  - go/types/config.go|DedupConfig
   - go/types/registry/resource.go|ResourceType
   - go/types/registry/extensions.go|ShouldHashExt
   - go/types/types.go|ErrorCode
@@ -205,7 +205,8 @@ status: active
 ## 核心职责
 
 - `types.go` — 跨包数据结构：ModelEntry（含 **SubDir 字段，ADR-096 P1**：MMD 用途子目录分组，`json:"subdir,omitempty"`）、VersionInstance、**InstanceStatus（ADR-310 计数口径：`Synced`/`MissingCount` 为面板链「单元级」计数——dirLevel=模型夹、fileLevel=文件，`MissingCount` 已含 diverged 折叠；`Missing` 是仓库侧**文件级**路径清单（一键安装契约，长度可 > 计数）；`Extra`/`Disabled` 为实例侧单元路径；`Files` 为前端零消费者死字段（ADR-296 实证），新链不再填）**、ResourceSyncResult、SyncStatus、ImportLog、LinkType、AppError、CustomFileInfo、WindowState、AuthorInfo、SearchResult、**ErrorCode（结构化错误码，ADR-051 落地）**、**LogLevel（日志级别）**、**DownloadTask/QueueStatusInfo（下载队列契约 DTO，ADR-145：自 internal/app 下沉——go/cli 定义 AppService 接口需引用，不下沉则 cli 反向依赖 app 成死结；JSON tag 原样保留 → bindings 零漂移）**；**`ValidLinkMode(mode) bool`（ADR-296 D6）——链接模式值域全仓唯一事实源，复用 `LinkCopy/LinkHard/LinkSym` 前三常量**（`LinkUnknown` 是检测返回值非可配置模式，故排除）；`install.IsValidLinkMode` 薄转发 + `go/cli/install.go` 双轨共用，消灭两份内联值域表漂移（依赖方向合法：ADR-145 禁 cli→internal/app，但双轨皆可 import types）
-- `config.go` — AppConfig（FilesRoot/各类型 Root/LinkMode/Theme/Mirror/VoxelMaxBlocks/窗口状态）、PackInfo、WorkshopSite、WorkshopCreator；**`ParseDedupConfig`**（绑定层 configStr 的统一解析入口：空串→nil,nil「未配置」、非法 JSON→错误；`FindDuplicateFiles` 依赖它，消多个绑定入口各自内联 json.Unmarshal 的解析语义双轨漂移）。注意：`SyncConfig` 结构体仅供 `go/sync.SyncResourcesWithConfig` 使用，**暂无绑定层解析入口**——`ParseSyncConfig` 曾引入但因无消费者被删（d22368ad），同步配置链保持休眠
+- `config.go` — AppConfig（FilesRoot/各类型 Root/LinkMode/Theme/Mirror/VoxelMaxBlocks/窗口状态）、PackInfo、WorkshopSite、WorkshopCreator；`config.go` 中的 `ParseDedupConfig`（绑定层 configStr 统一解析入口）已于 2026-09 对接锐评①随 JSON 文本协议一并删除——`FindDuplicateFiles` 改 strategy token 直传，`DedupConfig` 结构同步收敛至仅 Strategy 字段（keepPolicy/priorityPath 是纯前端决策，不再假借后端配置结构搭车）。
+  注意：`SyncConfig` 结构体仅供 `go/sync.SyncResourcesWithConfig` 使用，**暂无绑定层解析入口**——`ParseSyncConfig` 曾引入但因无消费者被删（d22368ad），同步配置链保持休眠
 - `resource.go` — 注册表加载（LoadRegistry），编译期嵌入基线 `bundledRegistryJSON`（根包 `embed.go` 经 `SetBundledRegistryJSON` 注入，单源 = 仓库根 `resource_types.json`，取代旧 `resource_types_embed.go` 手工副本）；PackMeta/FormatRange、LitematicMeta/LitematicVoxelData/VoxelGroup、**`ResourceType.ZipEntries []ZipEntryMatch`（ADR-067 内容指纹）**
 - `extensions.go` — 注册表驱动的扩展名与子目录查询
 - `bedrock.go` — BedrockModel/Bone2D/Cube2D（2D 摘要与 3D 构建共用）

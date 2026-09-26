@@ -115,7 +115,7 @@ ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑
 | `Build3DSpecFromGeometryJSON` | app_model.go:410 | screenshot-render.ts:99、model3d-loader.ts:97、spec-builder.ts:156 | ✅ |
 | `DetectConflicts` | app_sync.go:15 | diagnostics/conflicts.ts:247 | ✅ |
 | `ResolveConflicts` | app_sync.go:59 | diagnostics/conflicts.ts:407 | ✅ |
-| `FindDuplicateFiles` | resource_bindings.go:504 | diagnostics/dedup.ts:276 | ✅ |
+| `FindDuplicateFiles` | resource_bindings.go | diagnostics/dedup-scan.ts（2026-09 对接锐评①：入参 configStr JSON 文本协议→strategy token 直传，Go 侧 DedupConfig 随之删至仅 Strategy 字段） | ✅ |
 
 > `GetModel3DSpec` 与 `Build3DSpecFromGeometryJSON` 输出同为 Spec3D 形状、消费方重叠（screenshot-render / model3d-loader），必须同批切换——前者 P0 而后者留 P1 会导致同一文件改两遍。后者入参 geometryJSON 是 JSON 文本，不违规（红线只管返回值）。
 
@@ -131,7 +131,7 @@ ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑
 | `GetVoxelDataInContainer` | container_entries.go:110 | pack-3d.ts:45 等 | ✅ |
 | `ListPackModels` / `ListPackModelsDetail` | resourcepack_models.go:73/100 | pack-3d.ts:45 | ✅ |
 | `RepoHealthAudit` | resource_bindings.go:535 | health-report.ts:48、health.ts:35、oldest-models.ts:66 | ✅ |
-| `RepoHealthAuditAll` | resource_bindings.go:556 | health.ts（注释明说全仓泛泛、实战走单仓） | ✅ |
+| `RepoHealthAuditAll` | 已删（2026-09-26 对接锐评③：前端零消费者、CLI health-report 走 HealthReportFor 单仓，孤儿绑定连同 GetAllRepoRoots/mergeAuditResults 一并退役） | — | ✅ |
 | `GetSyncScanDirs` | app_install_instance.go:527 | sync-manager/store.ts:56 | ✅ |
 | `GetInstanceSyncStatus` | app_install_instance.go:570 | sync-manager/store.ts:48 | ✅ |
 | `SyncResources` | app_install_instance.go:352 | sync-manager/index.ts、store.ts | ✅ |

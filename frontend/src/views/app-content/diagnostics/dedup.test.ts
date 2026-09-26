@@ -68,6 +68,20 @@ describe("createDedupSession — exec 重入守卫", () => {
 });
 
 describe("createDedupSession — 感知性记账 lastScannedType（P2-2 收债）", () => {
+  it("扫描请求直传 strategy token（锐评①收口：不再 JSON 文本协议）", async () => {
+    const findFn = vi.fn(() => groupJson);
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: findFn,
+      MoveToRecycle: vi.fn(async () => {}),
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    await dedup.start(list, esc, "ysm");
+    await waitFor(() => findFn.mock.calls.length > 0);
+    expect(findFn).toHaveBeenCalledWith("/repo", "deep_hash");
+  });
+
   it("初始 null（从未扫过）→ start 后记为发起类型", async () => {
     getApp.mockResolvedValue({
       GetRepoRoot: vi.fn(() => "/repo"),

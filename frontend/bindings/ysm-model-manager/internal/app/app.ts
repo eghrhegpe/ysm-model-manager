@@ -341,10 +341,15 @@ export function ExtractYsmSummary(path: string): $CancellablePromise<ysm$0.YsmSu
 
 /**
  * FindDuplicateFiles 扫描目录返回所有重复文件分组。
- * 失败 → error（非 {error} 字符串），调用方 catch 即可区分失败与无重复。
+ * strategy：哈希算法 token（deep_hash/quick_hash/name_size，值域契约锁
+ * go/dedup/strategy_test.go TestNewHashAlgorithm_FrontendTokens；空串 = 默认 DeepHash）。
+ * 失败 → error（非 {error} 字符串），调用方 catch 即可区分失败与无重复；
+ * 成功恒非 nil（go/dedup 恒以 []Group{} 起步，无重复 = 空数组），前端 null 分支仅防御结构异常。
+ * 2026-09 对接锐评①：原 (dir, configStr ...string) JSON 文本协议退役——Go 只认哈希策略，
+ * keepPolicy/priorityPath 是纯前端保留决策（dedup-policy），不再假借后端配置结构搭车。
  */
-export function FindDuplicateFiles(dir: string, ...configStr: string[]): $CancellablePromise<dedup$0.Group[] | null> {
-    return $Call.ByID(1295941240, dir, configStr);
+export function FindDuplicateFiles(dir: string, strategy: string): $CancellablePromise<dedup$0.Group[] | null> {
+    return $Call.ByID(1295941240, dir, strategy);
 }
 
 /**
@@ -361,14 +366,6 @@ export function FindPreviewImage(modelPath: string): $CancellablePromise<string>
  */
 export function GenerateRepoIndex(repoPath: string): $CancellablePromise<string> {
     return $Call.ByID(1563740856, repoPath);
-}
-
-/**
- * GetAllRepoRoots 遍历所有注册资源类型，返回 rtype → root 映射（供跨类型搜索）。
- * 仅返回目录真实存在且可访问的类型；空 root/不存在的目录跳过。
- */
-export function GetAllRepoRoots(): $CancellablePromise<{ [_ in string]?: string } | null> {
-    return $Call.ByID(454948853);
 }
 
 /**
@@ -1013,17 +1010,11 @@ export function RenameFile(oldPath: string, newName: string): $CancellablePromis
 /**
  * RepoHealthAudit 一键全仓体检（审计 + 去重），返回 typed HealthReport。
  * 与 CLI health-report 同源（go/repoaudit 唯一实现），GUI/CLI 双端消双轨。
+ * dir 为空属「未配置仓库目录」引导态：GUI 侧 health.ts 以 GetRepoRoot 空串前置拦截
+ * （文案走 i18n），此处裸错误仅作后端兜底；根外路径是防篡改守卫，走结构化 AppError。
  */
 export function RepoHealthAudit(dir: string): $CancellablePromise<repoaudit$0.HealthReport | null> {
     return $Call.ByID(3995157004, dir);
-}
-
-/**
- * RepoHealthAuditAll 全仓库体检：遍历所有已配置资源类型根目录，合并审计结果。
- * 无有效目录时返回错误。
- */
-export function RepoHealthAuditAll(): $CancellablePromise<repoaudit$0.HealthReport | null> {
-    return $Call.ByID(2158058199);
 }
 
 /**

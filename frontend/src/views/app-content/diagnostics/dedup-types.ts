@@ -48,6 +48,9 @@ export interface ScanGroupResult {
 
 // ===== 绑定注入类型 =====
 export type GetRepoRootFn = (rtype: string) => Promise<string>;
-export type FindDuplicateFilesFn = (dir: string, configStr: string) => Promise<DedupGroup[] | null>;
+// 锐评①（2026-09 对接收口）：FindDuplicateFiles 已从 (dir, configStr JSON 文本协议)
+// 收口为 (dir, strategy token) 直传——keepPolicy/priorityPath 是纯前端保留决策
+// （dedup-policy.ts），只存在于会话 config，不再随扫描请求搭车穿 Go。
+export type FindDuplicateFilesFn = (dir: string, strategy: string) => Promise<DedupGroup[] | null>;
 export type MoveToRecycleFn = (path: string) => Promise<void>;
 export type DedupRegType = Record<string, ResourceType>;

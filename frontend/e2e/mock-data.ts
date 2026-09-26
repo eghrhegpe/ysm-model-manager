@@ -276,7 +276,6 @@ export const MOCK_DATA = {
   ExtractYsmSummary: undefined,
   FindDuplicateFiles: undefined,
   FindPreviewImage: undefined,
-  GetAllRepoRoots: undefined,
   GetAllowedCLICommands: undefined,
   GetConfigPath: undefined,
   GetDefaultRepoRoot: undefined,
@@ -338,7 +337,6 @@ export const MOCK_DATA = {
   RemoveDir: undefined,
   RenameDir: undefined,
   RepoHealthAudit: undefined,
-  RepoHealthAuditAll: undefined, // 全仓库体检（binding 重生成后补键，契约断言）
   ResetResourceRoot: undefined,
   ResetWorkshopConfigs: undefined,
   RestartApplication: undefined,

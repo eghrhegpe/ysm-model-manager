@@ -792,7 +792,6 @@ export const en: Record<string, string> = {
   "sidebar.loadFailed": "Failed to load modpack list",
   "sidebar.loadFailedDetail": "Failed to read modpack",
   "sidebar.allTypes": "All Types",
-  "sidebar.installAll": "Install All",
   "sidebar.pushSelected": "Push Selected",
   "sidebar.pullSelected": "Pull Selected",
   "sidebar.syncFully": "Fully Synced",
@@ -1677,7 +1676,6 @@ export const en: Record<string, string> = {
   // ── Model detail formatting (summarize) ──
   "format.license": "License",
   "format.unlabeled": "Unlabeled",
-  "format.resources": "Resources",
   "format.links": "Links",
   "format.homepage": "Homepage",
   "format.donate": "Donate",

@@ -791,7 +791,6 @@ export const ja: Record<string, string> = {
   "sidebar.loadFailed": "統合パック一覧の読み込みに失敗しました",
   "sidebar.loadFailedDetail": "統合パックの読み取りに失敗しました",
   "sidebar.allTypes": "すべての種類",
-  "sidebar.installAll": "すべてインストール",
   "sidebar.pushSelected": "選択をプッシュ",
   "sidebar.pullSelected": "選択をプル",
   "sidebar.syncFully": "完全同期",
@@ -1676,7 +1675,6 @@ export const ja: Record<string, string> = {
   // ── モデル詳細の整形（summarize）──
   "format.license": "ライセンス",
   "format.unlabeled": "未記載",
-  "format.resources": "リソース",
   "format.links": "リンク",
   "format.homepage": "ホームページ",
   "format.donate": "支援",

@@ -771,7 +771,6 @@ export const zhCN = {
   "sidebar.loadFailed": "整合包列表加载失败",
   "sidebar.loadFailedDetail": "读取整合包失败",
   "sidebar.allTypes": "全部类型",
-  "sidebar.installAll": "一键安装",
   "sidebar.pushSelected": "推送所选",
   "sidebar.pullSelected": "拉取所选",
   "sidebar.syncFully": "完全同步",
@@ -1635,7 +1634,6 @@ export const zhCN = {
   // ── 模型详情格式化（summarize）──
   "format.license": "许可",
   "format.unlabeled": "未标注",
-  "format.resources": "资源",
   "format.links": "链接",
   "format.homepage": "主页",
   "format.donate": "赞助",

@@ -236,6 +236,10 @@ const TOKEN_CHECK_ALLOW = new Set<string>([
   "cr-tier-swatch:height:10px",
   "preview-resize-handle:width:4px",
   "sm-dir-arrow:width:14px",
+  // 图标槽定尺寸（ADR-238 .ws-icon 唯一尺寸出处 utils/dom/css.ts）：
+  // 1em 随字号缩放，属「图标槽」语义非布局间距——不入 sp 梯
+  "ws-icon:width:1em",
+  "ws-icon:height:1em",
   // 预览域（preview-3d）全豁免：独立渲染栈，其裸值体系审计已排除（不在本闸范围）
   "preview-3d:all",
 ]);

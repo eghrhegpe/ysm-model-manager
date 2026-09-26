@@ -2,8 +2,6 @@ frontend/src/preview-3d/infra/preview-loading.ts::__inline__::height:3px
 frontend/src/preview-3d/infra/preview-loading.ts::__inline__::width:200px
 frontend/src/utils/dom/css.ts::.dd-menu::box-shadow:0 4px 12px rgba(0,0,0,.3)
 frontend/src/utils/dom/css.ts::.dd-menu::z-index:100
-frontend/src/utils/dom/css.ts::.ws-icon::height:1em
-frontend/src/utils/dom/css.ts::.ws-icon::width:1em
 frontend/src/utils/dom/tooltip.ts::.ysw-tooltip::box-shadow:0 4px 14px rgba(0,0,0,.35)
 frontend/src/views/app-content/css/content-creator.ts::.cr-add-area::padding:4px 0 12px
 frontend/src/views/app-content/css/content-creator.ts::.cr-avatar-container::height:32px
@@ -72,7 +70,6 @@ frontend/src/views/app-content/css/content-diag.ts::.diag-dedup-rt::gap:4px
 frontend/src/views/app-content/css/content-diag.ts::.diag-dedup-rt::padding:6px 12px 2px
 frontend/src/views/app-content/css/content-diag.ts::.diag-log-filter::gap:4px
 frontend/src/views/app-content/css/content-diag.ts::.diag-pane::gap:8px
-frontend/src/views/app-content/css/content-diag.ts::.diag-panel-header::padding:10px 16px
 frontend/src/views/app-content/css/content-diag.ts::.log-row::gap:6px
 frontend/src/views/app-content/css/content-diag.ts::.log-row::padding:3px 16px
 frontend/src/views/app-content/css/content-diag.ts::.log-status::width:20px
@@ -101,9 +98,6 @@ frontend/src/views/app-content/css/content-diag.ts::.perf-tex-row::gap:6px
 frontend/src/views/app-content/css/content-diag.ts::.perf-tex-section::padding:4px 2px
 frontend/src/views/app-content/css/content-diag.ts::.perf-trace-hint::padding:4px 2px 8px
 frontend/src/views/app-content/css/content-gh.ts::.#gh-results-body::padding:0 12px 8px
-frontend/src/views/app-content/css/content-gh.ts::.gh-cancel-btn::height:20px
-frontend/src/views/app-content/css/content-gh.ts::.gh-cancel-btn::width:20px
-frontend/src/views/app-content/css/content-gh.ts::.gh-card-external::width:32px
 frontend/src/views/app-content/css/content-gh.ts::.gh-grid::gap:4px
 frontend/src/views/app-content/css/content-gh.ts::.gh-header-actions::gap:8px
 frontend/src/views/app-content/css/content-gh.ts::.gh-header-actions::padding:0 12px 8px
@@ -111,7 +105,6 @@ frontend/src/views/app-content/css/content-gh.ts::.gh-header-repo::gap:8px
 frontend/src/views/app-content/css/content-gh.ts::.gh-header-repo::padding:0 12px 8px
 frontend/src/views/app-content/css/content-gh.ts::.gh-header-top::gap:8px
 frontend/src/views/app-content/css/content-gh.ts::.gh-header::padding:0 12px
-frontend/src/views/app-content/css/content-gh.ts::.gh-hint-text::padding:0 12px 4px
 frontend/src/views/app-content/css/content-gh.ts::.gh-initial-hint::padding:12px 0
 frontend/src/views/app-content/css/content-gh.ts::.gh-left-foot::padding:4px 12px 8px
 frontend/src/views/app-content/css/content-gh.ts::.gh-left-head::gap:4px
@@ -120,32 +113,21 @@ frontend/src/views/app-content/css/content-gh.ts::.gh-meta::gap:6px
 frontend/src/views/app-content/css/content-gh.ts::.gh-model-badge::gap:4px
 frontend/src/views/app-content/css/content-gh.ts::.gh-model-badge::padding:2px 10px
 frontend/src/views/app-content/css/content-gh.ts::.gh-name-wrap::gap:6px
-frontend/src/views/app-content/css/content-gh.ts::.gh-popup-item::gap:8px
-frontend/src/views/app-content/css/content-gh.ts::.gh-preset-area::gap:4px
-frontend/src/views/app-content/css/content-gh.ts::.gh-preset-area::padding:8px 12px 4px
 frontend/src/views/app-content/css/content-gh.ts::.gh-progress-bar-wrap::height:4px
 frontend/src/views/app-content/css/content-gh.ts::.gh-progress-row::gap:4px
 frontend/src/views/app-content/css/content-gh.ts::.gh-row::gap:8px
-frontend/src/views/app-content/css/content-gh.ts::.gh-save-btn::padding:4px 14px
 frontend/src/views/app-content/css/content-gh.ts::.gh-search-wrap::padding:2px 0 6px
 frontend/src/views/app-content/css/content-gh.ts::.gh-search::width:160px
-frontend/src/views/app-content/css/content-gh.ts::.gh-section-title::padding:8px 12px 4px
-frontend/src/views/app-content/css/content-gh.ts::.gh-section-title::padding:8px 8px 2px
-frontend/src/views/app-content/css/content-gh.ts::.gh-section::gap:4px
-frontend/src/views/app-content/css/content-gh.ts::.gh-section::padding:6px 12px 4px
 frontend/src/views/app-content/css/content-gh.ts::.ws-icon::height:14px
 frontend/src/views/app-content/css/content-gh.ts::.ws-icon::width:14px
-frontend/src/views/app-content/css/content-layout.ts::.actions::gap:4px
 frontend/src/views/app-content/css/content-layout.ts::.health-tag::padding:2px 10px
-frontend/src/views/app-content/css/content-layout.ts::.meta::gap:6px
 frontend/src/views/app-content/css/content-layout.ts::.meta::gap:6px
 frontend/src/views/app-content/css/content-layout.ts::.placeholder-box--roomy::padding:48px 20px
 frontend/src/views/app-content/css/content-layout.ts::.placeholder-box::gap:8px
-frontend/src/views/app-content/css/content-layout.ts::.rec-card::padding:14px 16px
 frontend/src/views/app-content/css/content-layout.ts::.section-title::padding:16px 16px 16px
-frontend/src/views/app-content/css/content-layout.ts::.stat-pill::gap:3px
-frontend/src/views/app-content/css/content-layout.ts::.ws-icon::height:1em
-frontend/src/views/app-content/css/content-layout.ts::.ws-icon::width:1em
+frontend/src/views/app-content/css/content-layout.ts::.ws-browser-bar::gap:6px
+frontend/src/views/app-content/css/content-layout.ts::.ws-browser::z-index:10
+frontend/src/views/app-content/css/content-layout.ts::.ws-toolbar::gap:6px
 frontend/src/views/app-content/css/content-repo.ts::.meta::gap:6px
 frontend/src/views/app-content/css/content-repo.ts::.oldest-card-meta::gap:6px
 frontend/src/views/app-content/css/content-repo.ts::.oldest-cards-row::gap:6px
@@ -159,15 +141,11 @@ frontend/src/views/app-content/css/content-repo.ts::.oldest-stats-divider::width
 frontend/src/views/app-content/css/content-repo.ts::.oldest-stats-row::gap:6px
 frontend/src/views/app-content/css/content-repo.ts::.repo-tabs::gap:2px
 frontend/src/views/app-content/css/content-repo.ts::.repo-tabs::padding:4px 12px 0
-frontend/src/views/app-content/css/content-stg.ts::.stg-card-acts::gap:4px
 frontend/src/views/app-content/css/content-stg.ts::.stg-card-hdr::gap:6px
 frontend/src/views/app-content/css/content-stg.ts::.stg-grid::gap:10px
-frontend/src/views/app-content/css/content-stg.ts::.stg-hint-hidden::padding:2px 0 0 0
-frontend/src/views/app-content/css/content-stg.ts::.stg-hint::padding:2px 0 0 0
 frontend/src/views/app-content/css/content-stg.ts::.stg-label::gap:4px
 frontend/src/views/app-content/css/content-stg.ts::.stg-path-picker::gap:4px
 frontend/src/views/app-content/css/content-stg.ts::.stg-path-val::gap:4px
-frontend/src/views/app-content/css/content-stg.ts::.stg-radio-row::gap:8px
 frontend/src/views/app-content/css/content-util.ts::.gh-grid::padding:4px 6px
 frontend/src/views/app-content/css/content-util.ts::.theme-card::gap:4px
 frontend/src/views/app-content/css/content-util.ts::.theme-picker::gap:6px
@@ -207,10 +185,7 @@ frontend/src/views/app-content/tpl-oldest.ts::__inline__::width:calc(50% - 3px)
 frontend/src/views/app-content/tpl-recycle.ts::__inline__::gap:2px
 frontend/src/views/app-content/tpl-recycle.ts::__inline__::gap:8px
 frontend/src/views/app-content/tpl-recycle.ts::__inline__::padding:5px 8px
-frontend/src/views/app-content/tpl.ts::__inline__::gap:6px
-frontend/src/views/app-content/tpl.ts::__inline__::gap:8px
 frontend/src/views/app-content/tpl.ts::__inline__::padding:12px 0
-frontend/src/views/app-content/tpl.ts::__inline__::z-index:10
 frontend/src/views/app-nav/tpl.ts::.host::width:160px
 frontend/src/views/app-nav/tpl.ts::.icon::width:20px
 frontend/src/views/app-nav/tpl.ts::.icon::width:20px
@@ -228,8 +203,6 @@ frontend/src/views/app-nav/tpl.ts::.nav-viewer-fab::margin:2px 6px 6px
 frontend/src/views/app-nav/tpl.ts::.nav-viewer-fab::margin:2px 8px 6px
 frontend/src/views/app-nav/tpl.ts::.nav-viewer-fab::padding:8px 0
 frontend/src/views/app-nav/tpl.ts::.version::padding:10px 14px
-frontend/src/views/app-nav/tpl.ts::.ws-icon::height:1em
-frontend/src/views/app-nav/tpl.ts::.ws-icon::width:1em
 frontend/src/views/app-preview/css.ts::.dp-hints::gap:6px
 frontend/src/views/app-preview/css.ts::.dp-placeholder--head::padding:4px 0 8px
 frontend/src/views/app-preview/css.ts::.dp-placeholder::padding:24px 0
@@ -249,8 +222,6 @@ frontend/src/views/app-preview/css.ts::.pv-loading-bar::height:60px
 frontend/src/views/app-preview/css.ts::.pv-tab-row::gap:2px
 frontend/src/views/app-preview/css.ts::.pv-toggle-row::gap:4px
 frontend/src/views/app-preview/css.ts::.pv-toggle-row::padding:4px 6px
-frontend/src/views/app-preview/css.ts::.ws-icon::height:1em
-frontend/src/views/app-preview/css.ts::.ws-icon::width:1em
 frontend/src/views/app-preview/detail-3d.ts::__inline__::gap:2px
 frontend/src/views/app-preview/detail-3d.ts::__inline__::gap:4px
 frontend/src/views/app-preview/detail-3d.ts::__inline__::gap:4px
@@ -292,8 +263,6 @@ frontend/src/views/app-sidebar/sidebar-css.ts::.footer-stats::gap:2px
 frontend/src/views/app-sidebar/sidebar-css.ts::.instance-card-pkg-count::gap:4px
 frontend/src/views/app-sidebar/sidebar-css.ts::.list::padding:4px 6px
 frontend/src/views/app-sidebar/sidebar-css.ts::.sk-line::height:12px
-frontend/src/views/app-sidebar/sidebar-css.ts::.ws-icon::height:1em
-frontend/src/views/app-sidebar/sidebar-css.ts::.ws-icon::width:1em
 frontend/src/views/app-sidebar/tpl.ts::__inline__::gap:4px
 frontend/src/views/app-sidebar/tpl.ts::__inline__::gap:6px
 frontend/src/views/app-sync-manager/tpl.ts::.sm-cur-type::gap:4px
@@ -309,8 +278,6 @@ frontend/src/views/app-toast/index.ts::.toast-container::gap:8px
 frontend/src/views/app-toast/index.ts::.toast::box-shadow:0 6px 20px rgba(0,0,0,.4)
 frontend/src/views/app-toast/index.ts::.toast::gap:10px
 frontend/src/views/app-toast/index.ts::.toast::padding:10px 16px
-frontend/src/views/app-toast/index.ts::.ws-icon::height:1em
-frontend/src/views/app-toast/index.ts::.ws-icon::width:1em
 frontend/src/views/app-tree/app-tree-styles.ts::.ar::width:12px
 frontend/src/views/app-tree/app-tree-styles.ts::.ar::width:12px
 frontend/src/views/app-tree/app-tree-styles.ts::.ck::height:12px
@@ -333,12 +300,7 @@ frontend/src/views/app-tree/app-tree-styles.ts::.hover-actions::gap:2px
 frontend/src/views/app-tree/app-tree-styles.ts::.list::padding:6px 0
 frontend/src/views/app-tree/app-tree-styles.ts::.sort-sel::padding:5px 6px
 frontend/src/views/app-tree/app-tree-styles.ts::.srch-inp::padding:5px 8px
-frontend/src/views/app-tree/app-tree-styles.ts::.srch-row::gap:6px
 frontend/src/views/app-tree/app-tree-styles.ts::.tree-drop-hint::gap:6px
-frontend/src/views/app-tree/app-tree-styles.ts::.type-bar::gap:4px
-frontend/src/views/app-tree/app-tree-styles.ts::.type-bar::padding:2px 12px
-frontend/src/views/app-tree/app-tree-styles.ts::.ws-icon::height:1em
-frontend/src/views/app-tree/app-tree-styles.ts::.ws-icon::width:1em
 frontend/src/views/app-tree/tpl-batch-rename.ts::__inline__::gap:3px
 frontend/src/views/context-menu/index.ts::.divider::margin:3px 8px
 frontend/src/views/context-menu/index.ts::.icon::width:16px

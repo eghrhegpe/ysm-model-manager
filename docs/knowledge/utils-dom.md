@@ -13,6 +13,7 @@ auto_fields:
     - __resetShortcutsForTest
     - attachStyleSheetMarker
     - attachTooltip
+    - bindRoving
     - btnBaseCSS
     - calcVisibleRange
     - clearTrigger
@@ -76,6 +77,9 @@ auto_fields:
     - registerShortcut
     - rememberTrigger
     - returnFocus
+    - RovingHandle
+    - RovingPreset
+    - RovingSpec
     - setPendingTreeSearch
     - setRepoSearchFocusPending
     - ShadowStyle

@@ -315,7 +315,7 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 87 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 197 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 115 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 118 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 244 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 91 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 350 |
@@ -326,7 +326,7 @@
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 244 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 103 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 130 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 204 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 205 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 105 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 386 |
 
@@ -367,7 +367,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 375 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 376 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 103 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 508 |
 
@@ -509,16 +509,16 @@
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 104 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 132 |
 | atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 157 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 208 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 214 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 231 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 245 |
-| atBeHandleBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 267 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 309 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 325 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 333 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 378 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 384 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 209 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 215 |
+| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 232 |
+| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 246 |
+| atBeHandleBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 268 |
+| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 310 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 326 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 334 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 379 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 385 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 76 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 84 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 109 |
@@ -576,7 +576,7 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 118 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 223 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 116 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 119 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 417 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 445 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 314 |

@@ -17,7 +17,6 @@
 
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { filterTestDupes, matchDrift, normPair, pairsFrom } from "./_lib/jscpd-pairs.ts";
 import { ROOT } from "./_lib/scan-files.ts";
@@ -109,7 +108,13 @@ function main() {
     );
     process.exit(3);
   }
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "jscpd-go-"));
+  // 报告落点放工作区内 node_modules/.cache（gitignored）而非 os.tmpdir()：
+  // 2026-09 环境实证——被 spawn 的原生 jscpd.exe 在 %TEMP% 写报告遭「拒绝访问 (os error 5)」
+  // （Node/pwsh 自身写 %TEMP% 不受限，唯原生二进制受限；工作区内落盘成功 1.76s 全扫 go/）。
+  // JSCPD 二进制在 node_modules 内，走到本行必然存在该目录（上方 existsSync 已守）。
+  const cacheBase = path.join(ROOT, "node_modules", ".cache", "jscpd-go");
+  fs.mkdirSync(cacheBase, { recursive: true });
+  const tmp = fs.mkdtempSync(path.join(cacheBase, "run-"));
   try {
     const report = runJscpd(tmp);
     if (report === null) return; // runJscpd 已置 exitCode=3；finally 清理 tmp 后退出

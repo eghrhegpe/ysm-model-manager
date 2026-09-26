@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 195 张知识卡
+> 总计: 196 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -133,7 +133,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（48 张）
+## go（49 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -187,6 +187,7 @@
 | 🏗 reference | win-filename-rules | architecture | — | 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）, 判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） |
 | 🏗 rustbridge | Rust 桥 rustbridge | architecture | io-bound, concurrent | Rust 扫描器, rust_backend, 桥 DLL, Wails 后端迁移 Rust |
 | 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 调用后端, getApp, 方法签名, app.ts 绑定 |
+| 🏗 ysm-wasi | WASI 解码器 spike（wazero 内存直解，node 桥退役候选） | architecture | — | WASI / wazero / 内存直解, node 子进程退役, .ysm 加密解码依赖 |
 
 ### 摘要
 
@@ -236,6 +237,7 @@
 - **install_domain_split**（install 域切分经验：切纯域不硬切复合域（耦合度门槛判断））：ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /…
 - **reference**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
+- **ysm-wasi**（WASI 解码器 spike（wazero 内存直解，node 桥退役候选））：2026-09-27 最小验证完成：**把 YSMParser 重编成 emscripten standalone（非真 WASI 目标）+ wazero 纯 Go 运行时内存直解，node 子进程桥可整条退役**。12 个真实 .ysm（…
 
 ## rendering（19 张）
 

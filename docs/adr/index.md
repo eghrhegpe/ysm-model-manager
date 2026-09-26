@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **313** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **314** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 6 |
+| [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
 | [✅ 已采纳](#已采纳) | 284 |
@@ -26,10 +26,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（6）
+### 📝 提议中（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-316](./ADR-316-wasi-wazero-go-node.md) | WASI 解码器生产化：wazero 纯 Go 宿主退役 Node 子进程桥 | 📝 提议中 |
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
@@ -368,6 +369,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-316 | WASI 解码器生产化：wazero 纯 Go 宿主退役 Node 子进程桥 | 📝 提议中 | 2026-09-27 |
 | ADR-315 | 水/VRM 适配层拆真缝收编 | ✅ 已采纳 | 2026-09-26 |
 | ADR-314 | 诊断页长任务取消通道：ctx 贯穿 + Wails 原生 CancellablePromise | ✅ 已采纳 | 2026-09-26 |
 | ADR-313 | 应用配置写唯一实参点：SaveAppConfig 六位置实参统一上移 views/config-write.ts | ✅ 已采纳 | 2026-09-25 |

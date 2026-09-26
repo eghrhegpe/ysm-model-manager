@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-316：WASI 解码器生产化：wazero 纯 Go 宿主退役 Node 子进程桥",
+        "link": "/adr/ADR-316-wasi-wazero-go-node"
+      },
+      {
         "text": "ADR-315：水/VRM 适配层拆真缝收编",
         "link": "/adr/ADR-315-vrm"
       },
@@ -1823,6 +1827,10 @@ export const autoSidebar = [
           {
             "text": "Wails Binding API 总览 internal/app",
             "link": "/knowledge/wails-bindings"
+          },
+          {
+            "text": "WASI 解码器 spike（wazero 内存直解，node 桥退役候选）",
+            "link": "/knowledge/ysm-wasi"
           }
         ]
       },

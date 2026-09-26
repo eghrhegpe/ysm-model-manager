@@ -53,6 +53,7 @@
 | schema 键冲突、ADR-132 | [preview-menu-session-key](./preview_menu_session_key.md) | - | ADR-132 |
 | schema 注册、per-scene、多模型同框 | [preview-menu-session-key](./preview_menu_session_key.md) | schema 注册必须用 per-scene 键，禁止跨场景共用 schema key | ADR-132 |
 | VRM 动画播放、VRMA | [统一 3D 预览核心 preview-core](./preview_core.md) | 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update() | ADR-125 |
+| WASI 解码、wazero、node 退役 | [WASI 解码器 spike（wazero 内存直解，node 桥退役候选）](./ysm-wasi.md) | 解析器改动（collectToMemory）在本仓 vendored 副本内，上游同步时需重放 | - |
 | WASM 解析器、YSMParser、ysm 解码 | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析 | - |
 | YSM 动画管线、基岩动画 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | YSM 动画必须走 ysm-anim-pipeline 的解析-求值-注入三段，禁止前端手写动画解析 | - |
 | ysm-animation-player、molang | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
@@ -1129,6 +1130,11 @@
 | WASM 更新需双向同步：WASM 资产（两个 *-data.js）与模组侧同一 C++ 源码但导出面不同，更新需逐端同步重出 | - | - |
 | UV 解析多种形态： 兼容数组 `[x,y]`、对象 `{uv,uv_size}`、JSON 字符串 faceUV、兜底 `[0,0]`，贴图错位优先排查此处而非几何本身 | `parseBedrockGeometryFromJSON` | - |
 | texture slot 绑定规则：第 i 个模型 | - | 第 i 个纹理，错位需按此顺序排查 |
+| emscripten -sSTANDALONE_WASM 默认 -sFILESYSTEM=0 且无 path_open 导入——saveToDirectory/fopen 必然 abort，产物必须内存直出 | - | - |
+| standalone 默认 --no-growable-memory --initial-heap=16MB——大模型 OOM→bad_alloc→std::terminate（unreachable）；必须 -sALLOW_MEMORY_GROWTH=1 | - | - |
+| emscripten -fexceptions 走 JS 垫片（env.invoke_* + __cxa_throw），wazero 原理上无法复刻（宿主不能撕 wasm 调用栈）；必须 -fwasm-exceptions（native EH）或 -fignore-exceptions | - | - |
+| wazero v1.12 的 native EH 仅支持 exnref 且验证器对复杂 exnref 模块 panic（markLocalInit nil map）——生产化前需 wazero 升级或走 -fignore-exceptions | - | - |
+| wazero 实例化会自动跑 _start（WASI command 约定），CLI11 空参 throw=trap；必须 WithStartFunctions() 清空 + 手动调 __wasm_call_ctors | - | - |
 | 手写 YSM 字节流解析 | - | 与 YSMParser WASM 输出不一致；必须经 ysm-wasm |
 | wasmBinary 未释放 | - | 内存泄漏；必须复用 wasm 实例并释放 |
 | Worker 内静态 import WASM 数据模块 | - | 另一变体成 1.5MB 死重；必须动态 import |

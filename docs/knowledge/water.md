@@ -25,11 +25,7 @@ auto_fields:
     - INNER_WALL_OPACITY_FACTOR
     - poolStrategy
     - registerWaterBodyStrategy
-    - WATER_FRAME_READ_KEYS
     - WATER_MODES
-    - WATER_NOOP_APPLIER_KEYS
-    - WATER_PARAM_APPLIER_KEYS
-    - WATER_UNIFORM_NAMES
     - WATER_WAVE_SEGMENTS
     - WaterBody
     - WaterBodyStrategy
@@ -38,7 +34,6 @@ auto_fields:
     - WaterMode
     - WaterPartRole
     - WaterTopMesh
-    - WaterUniformName
 use_when:
   - 改水面波浪 / 颜色 / 透明度 / 水位 / 尺寸 / 池体参数
   - 找不到水面的 normalMap

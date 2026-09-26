@@ -294,6 +294,7 @@
   "oldest.heatmapTip": "{month}: {count} 个文件",
   "oldest.daysAgo": "{n} 天前",
   "oldest.noPicks": "暂无推荐",
+  "oldest.statsFailed": "统计加载失败",
   "dedup.sha256Hint": "按 SHA256 哈希分组，每组只保留一个，其余移入回收站",
   "dedup.startDedup": "开始去重",
   "instances.tab.versions": "版本列表",

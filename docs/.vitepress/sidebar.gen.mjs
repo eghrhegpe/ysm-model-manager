@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-315：水/VRM 适配层拆真缝收编",
+        "link": "/adr/ADR-315-vrm"
+      },
+      {
         "text": "ADR-314：诊断页长任务取消通道：ctx 贯穿 + Wails 原生 CancellablePromise",
         "link": "/adr/ADR-314-ctx-wails-cancellablepromise"
       },

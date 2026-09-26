@@ -21,6 +21,9 @@ auto_fields:
     - AllocEntry
     - App.GetVoxelDataInContainer
     - App.ListContainerEntries
+    - applyAnimationFootIK
+    - applyBlinkPerception
+    - applyIdlePerception
     - applyModelDefaults
     - applyVPDToMesh
     - applyWorkerDecodedTextures
@@ -47,6 +50,7 @@ auto_fields:
     - BuildNbtVoxelData
     - BuildNbtVoxelDataFromRoot
     - buildPackScene
+    - buildPerception
     - buildPmxScene
     - BuildSchematicVoxelData
     - BuildSchematicVoxelDataFromRoot
@@ -127,6 +131,9 @@ auto_fields:
     - LitematicAdapterDeps
     - LitematicBuildOpts
     - LiveSessionEntry
+    - loadMotionClips
+    - loadVmdClips
+    - loadVrmaClips
     - makeBonePanelRenderer
     - makeFbxAdapter
     - makeLitematicAdapter
@@ -269,13 +276,19 @@ auto_fields:
     - VrmBonePanelCtx
     - VrmDataPort
     - VrmExpressionPreset
+    - VrmIdlePerceptionDeps
     - vrmMenuItems
     - VrmMenuItemsOpts
     - VrmMetaInfo
     - vrmMetaSummary
     - VrmMetaSummary
     - VrmModelInfoCtx
+    - VrmMotionClipEntry
+    - VrmMotionState
     - VrmPanelHooks
+    - VrmPerceptionState
+    - VrmPositionScaleControl
+    - VrmUpdateDeps
     - webFsBindings
     - workerMmdUpdateWithMixer
     - writeVmdPositionScale

@@ -11,6 +11,7 @@ auto_fields:
     - loadOldestModel
     - ModelEntry
     - OldestDeps
+    - OldestModelHandle
     - renderOldestPage
     - RepoStats
   tests:

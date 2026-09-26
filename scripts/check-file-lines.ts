@@ -29,6 +29,24 @@ const RULES: { file: string; maxLines: number; adr: string; why: string }[] = [
     adr: "ADR-171 §2.2 / ADR-227",
     why: "983→1047 膨胀后经 preview-shell / session-ledger 抽取降至 1007（ADR-227 P1）；红线随之下调锁死膨胀，超限须沿真缝拆分或发新 ADR 放宽",
   },
+  {
+    // ADR-315 D3：水能力沿真缝拆三刀（分派表→water-params.ts / 倒影子系统→water-reflect.ts /
+    // 类体留水 cap，原 4 组导出经 re-export 垫片保持消费者 import 零改动）后实测 845 行。
+    // 红线 860 = 实测 + ~2% 余量（防后续注释增补自然回弹），扩肥须沿真缝再拆或发新 ADR。
+    file: "frontend/src/preview-3d/caps/water-capability.ts",
+    maxLines: 860,
+    adr: "ADR-315 D1/D3",
+    why: "1132 行巨型文件沿真缝拆三刀（分派表 water-params / 倒影 water-reflect / 类体留 cap）降至 845；红线锁死再膨胀，超限须沿真缝拆分或发新 ADR",
+  },
+  {
+    // ADR-315 D3：VRM 适配器沿真缝拆三刀（动作通道→vrm-motion.ts / 感知层→vrm-perception.ts /
+    // 菜单工厂→vrm-menu.ts，解析/meta/build 编排留主文件，原导出经 re-export 垫片保持
+    // 30+ 消费者 import 零改动）后实测 767 行。红线 790 = 实测 + ~3% 余量。
+    file: "frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts",
+    maxLines: 790,
+    adr: "ADR-315 D2/D3",
+    why: "1401 行巨型文件沿真缝拆三刀（动作 vrm-motion / 感知 vrm-perception / 菜单 vrm-menu）降至 767；红线锁死再膨胀，超限须沿真缝拆分或发新 ADR",
+  },
 ];
 
 const flags = parseArgs(process.argv.slice(2), { bools: ["json"] });
@@ -59,13 +77,19 @@ type Violation = { file: string; lines: number; maxLines: number; adr: string; w
 const ADVISORY_RULES: { glob: (rel: string) => boolean; maxLines: number; label: string }[] = [
   {
     // _lib 共享层 > 400 → 失去「薄」特性，须沿真缝拆分
-    glob: (rel) => rel.startsWith("scripts/_lib/") && rel.endsWith(".ts") && !rel.endsWith(".test.ts"),
+    glob: (rel) =>
+      rel.startsWith("scripts/_lib/") && rel.endsWith(".ts") && !rel.endsWith(".test.ts"),
     maxLines: 400,
     label: "_lib 共享层",
   },
   {
     // scripts 顶层 > 700 → 单体脚本肥膘，须拆分或抽 _lib
-    glob: (rel) => rel.startsWith("scripts/") && rel.endsWith(".ts") && !rel.startsWith("scripts/_lib/") && !rel.startsWith("scripts/gate-blocks/") && !rel.startsWith("scripts/hooks/"),
+    glob: (rel) =>
+      rel.startsWith("scripts/") &&
+      rel.endsWith(".ts") &&
+      !rel.startsWith("scripts/_lib/") &&
+      !rel.startsWith("scripts/gate-blocks/") &&
+      !rel.startsWith("scripts/hooks/"),
     maxLines: 700,
     label: "scripts 顶层",
   },
@@ -83,7 +107,8 @@ for (const r of RULES) {
     continue;
   }
   checked.push(r.file);
-  if (lines > r.maxLines) violations.push({ file: r.file, lines, maxLines: r.maxLines, adr: r.adr, why: r.why });
+  if (lines > r.maxLines)
+    violations.push({ file: r.file, lines, maxLines: r.maxLines, adr: r.adr, why: r.why });
 }
 
 // ── ADVISORY_RULES（glob 扫描，超限软告警，不阻断） ──
@@ -102,7 +127,8 @@ for (const rel of advisoryFiles) {
     if (!ar.glob(rel)) continue;
     const lines = countLines(rel);
     if (lines === null) continue;
-    if (lines > ar.maxLines) advisories.push({ file: rel, lines, maxLines: ar.maxLines, label: ar.label });
+    if (lines > ar.maxLines)
+      advisories.push({ file: rel, lines, maxLines: ar.maxLines, label: ar.label });
   }
 }
 
@@ -118,8 +144,18 @@ if (json) {
           advisoryFiles: advisoryFiles.length,
           advisories: advisories.length,
         },
-        violations: violations.map((v) => ({ file: v.file, lines: v.lines, maxLines: v.maxLines, adr: v.adr })),
-        advisories: advisories.map((a) => ({ file: a.file, lines: a.lines, maxLines: a.maxLines, label: a.label })),
+        violations: violations.map((v) => ({
+          file: v.file,
+          lines: v.lines,
+          maxLines: v.maxLines,
+          adr: v.adr,
+        })),
+        advisories: advisories.map((a) => ({
+          file: a.file,
+          lines: a.lines,
+          maxLines: a.maxLines,
+          label: a.label,
+        })),
       },
       null,
       2,
@@ -132,20 +168,51 @@ if (!violations.length) {
   console.log(`[check-file-lines] ✅ ${checked.length} 个受控文件均在红线内`);
 }
 for (const v of violations) {
-  console.error(`❌ ${v.file}: ${v.lines} 行 > 上限 ${v.maxLines}（超 ${v.lines - v.maxLines} 行）`);
+  console.error(
+    `❌ ${v.file}: ${v.lines} 行 > 上限 ${v.maxLines}（超 ${v.lines - v.maxLines} 行）`,
+  );
   console.error(`   决策依据: ${v.adr}。${v.why}`);
 }
 
 // D3 肥膘软告警（非阻断，仅 WARN 列表）
 if (advisories.length) {
-  console.warn(`[check-file-lines] ⚠️  ${advisories.length} 个文件超肥膘阈值（软告警，不阻断；驱动拆分排期）：`);
-  for (const a of advisories) console.warn(`   ${a.label} ${a.file}: ${a.lines} 行 > 阈值 ${a.maxLines}`);
+  console.warn(
+    `[check-file-lines] ⚠️  ${advisories.length} 个文件超肥膘阈值（软告警，不阻断；驱动拆分排期）：`,
+  );
+  for (const a of advisories)
+    console.warn(`   ${a.label} ${a.file}: ${a.lines} 行 > 阈值 ${a.maxLines}`);
 } else {
   console.log(`[check-file-lines] ✅ 肥膘扫描无超限（scripts/_lib ≤400、scripts 顶层 ≤700）`);
 }
 
+// ── 报错即文档（ADR-315 执行 3）：违规/告警各附可执行的下一步指引，
+//    新人 / AI 会话读报错即知修法，不必先翻 AGENTS.md 再找对应章节 ──
 if (violations.length) {
-  console.error("[check-file-lines] 阻断：行数红线违规（修法：沿对应 ADR 真缝拆分，或发新 ADR 放宽上限）");
+  console.error(
+    `[check-file-lines] 阻断：行数红线违规。
+   修复指引（二选一，须拍板后动手）：
+   ① 沿真缝拆分（默认路径，零行为变更）：按模块内「纯表 / 独立子系统 / 类体」边界
+      抽 2-3 个同目录 seam 文件，原导出经 re-export 垫片保持消费者 import 零改动；
+      先查该文件的 ADR 历史（why 字段的「决策依据」）确认既有真缝，勿另开平行模块。
+      参考先例：ADR-227（mount-preview-core 拆 preview-shell / session-ledger）、
+      ADR-315（water-capability 拆 water-params / water-reflect；vrm-adapter 拆
+      vrm-motion / vrm-perception / vrm-menu）。
+   ② 发新 ADR 放宽上限：node scripts/new-adr.ts "<标题>" 占号 → 正文写清「为何放宽 +
+      拆分为何不可行 / 排期」→ 本文件 RULES 条目 adr/why 同步登记新 ADR 编号。
+   拆分后同步：RULES maxLines 按实测 + ~2% 余量下调锁红（防再膨胀），
+   并跑 node scripts/check-file-lines.ts 验证绿。
+   知识卡同步铁律：改完代码同步知识卡（check-knowledge-drift 钩子兜底）。`,
+  );
   process.exit(1);
+}
+if (advisories.length) {
+  console.error(
+    `[check-file-lines] 肥膘排期情报（软告警不阻断）：
+   处理入口：按「_lib 共享层 / scripts 顶层」标签分组排期，优先拆「已超阈值最久」者
+   （_lib design-tokens.ts 1391 > 400 是当前最胖）；拆分沿真缝抽「纯表 / 纯函数簇 /
+   格式化输出」，原入口保留 re-export 垫片（同 ADR-315 口径）。
+   排期登记：拆分排期写入对应知识卡（check-knowledge-drift 自动检测），勿写 ADR
+   （ADR 只记决策方向，不记实施进度——AGENTS.md 铁律）。`,
+  );
 }
 process.exit(0);

@@ -303,7 +303,9 @@ check("[2026-09-15 分层] 叶子白名单自 PreviewMenuNodeKind 推导（单�
 });
 
 check("[2026-09-15 分层] 真实仓库：vrma-play-empty 归类叶子、不计入根项", () => {
-  const { roots, leaves } = parseFileNodes("frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts");
+  // [ADR-315 D2③] VRM 菜单节点工厂已拆至 vrm-menu.ts（vrm-adapter.ts 仅剩 re-export 垫片，
+  // 静态扫描解析不到节点源）——本检查改为扫 seam 真文件。
+  const { roots, leaves } = parseFileNodes("frontend/src/preview-3d/adapters/vrm/vrm-menu.ts");
   assert.ok(
     !roots.some((i) => i.id === "vrma-play-empty"),
     "独立 const 叶子不得计入根菜单项（否则 kind:field 被按根白名单误报）",

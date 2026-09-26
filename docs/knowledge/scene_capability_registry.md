@@ -17,6 +17,7 @@ auto_fields:
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
     - applyOverlayMaterial
+    - applyReflectionUniforms
     - attenuateAmbientForSky
     - bindFieldRestorers
     - buildEnvironmentNodes
@@ -35,6 +36,7 @@ auto_fields:
     - CapabilityId
     - CapabilityMap
     - clampPoolRoundness
+    - createWaterReflectState
     - customHdrThumbnail
     - DeepPartial
     - DEFAULT_GROUND_SURFACE_PARAMS
@@ -42,8 +44,10 @@ auto_fields:
     - DEFAULT_POSTPROC_PARAMS
     - derandomize
     - derandomizeDual
+    - disposeReflector
     - drawEnvEquirect
     - effectiveParamsOf
+    - ensureReflector
     - ENV_PRESETS
     - EnvBorrowedTextures
     - EnvironmentCapability
@@ -145,10 +149,12 @@ auto_fields:
     - rcMasterToggleNode
     - readLightParams
     - REFLECTION_MODES
+    - reflectionActive
     - ReflectionMode
     - ReflectorCapability
     - registerWaterBodyStrategy
     - RenderModeCapability
+    - renderReflection
     - repetitionScore
     - restoreBySchema
     - restoreFields
@@ -187,14 +193,19 @@ auto_fields:
     - WATER_MODES
     - WATER_NOOP_APPLIER_KEYS
     - WATER_PARAM_APPLIER_KEYS
+    - WATER_PARAM_APPLIERS
     - WATER_UNIFORM_NAMES
     - WATER_WAVE_SEGMENTS
+    - WaterApplyCtx
     - WaterBody
     - WaterBodyStrategy
     - WaterBuildContext
     - WaterCapability
     - WaterMode
+    - WaterParamKey
     - WaterPartRole
+    - WaterReflectCtx
+    - WaterReflectState
     - WaterTopMesh
     - WaterUniformName
   tests:

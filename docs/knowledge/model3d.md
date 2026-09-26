@@ -34,11 +34,15 @@ auto_fields:
     - AntiRepeatDualOptions
     - AntiRepeatOptions
     - AntiRepeatStrategy
+    - applyAnimationFootIK
+    - applyBlinkPerception
     - applyGroundSurfaceAppearance
     - applyGroundSurfaceStructural
+    - applyIdlePerception
     - applyModelDefaults
     - applyOverlayMaterial
     - applyPerfPreset
+    - applyReflectionUniforms
     - applyRotationIfNonIdentity
     - applyVPDToMesh
     - applyWasdCameraMotion
@@ -102,6 +106,7 @@ auto_fields:
     - buildNote
     - buildOrderedTexKeys
     - buildPackScene
+    - buildPerception
     - buildPmxScene
     - buildPostprocessingNodes
     - buildPostprocessingSchema
@@ -197,6 +202,7 @@ auto_fields:
     - createSlideMenu
     - createTextureDecoder
     - createVrmFootIKController
+    - createWaterReflectState
     - createWorkerBridge
     - CreateWorkerBridgeOpts
     - createWorkerParser
@@ -231,6 +237,7 @@ auto_fields:
     - disposeMaterial
     - disposeMmdMesh
     - disposeObject3D
+    - disposeReflector
     - disposeSceneCapSubscriptions
     - disposeSceneMeshes
     - disposeTextureDecoder
@@ -243,6 +250,7 @@ auto_fields:
     - Endianness
     - ensureFabStyles
     - ensureOverlayShell
+    - ensureReflector
     - ensureViewContainer
     - ENV_PRESETS
     - ENV_STATE_SCHEMA
@@ -454,6 +462,7 @@ auto_fields:
     - LiveSessionEntry
     - LoadingProgressMode
     - loadMcTints
+    - loadMotionClips
     - loadTdCamSpeed
     - loadTdKeymap
     - loadTdRotMode
@@ -463,6 +472,8 @@ auto_fields:
     - LoadTraceFormat
     - LoadTraceStage
     - LoadTraceTexture
+    - loadVmdClips
+    - loadVrmaClips
     - lowFreqMask
     - luminanceHistogram
     - makeBonePanelRenderer
@@ -670,6 +681,7 @@ auto_fields:
     - recordLoadTrace
     - recoverMountFailure
     - REFLECTION_MODES
+    - reflectionActive
     - ReflectionMode
     - ReflectorCapability
     - registerBoneRaycast
@@ -699,6 +711,7 @@ auto_fields:
     - renderMultiAngle
     - RenderMultiAngleOptions
     - renderPreviewPanel
+    - renderReflection
     - RenderVrmBonePanel
     - repetitionScore
     - reportPatchIssue
@@ -929,6 +942,7 @@ auto_fields:
     - VrmDataPort
     - VrmExpressionPreset
     - VrmFootIKController
+    - VrmIdlePerceptionDeps
     - VrmMaterialDetail
     - VrmMaterialListItem
     - vrmMenuItems
@@ -937,22 +951,32 @@ auto_fields:
     - vrmMetaSummary
     - VrmMetaSummary
     - VrmModelInfoCtx
+    - VrmMotionClipEntry
+    - VrmMotionState
     - VrmPanelHooks
+    - VrmPerceptionState
+    - VrmPositionScaleControl
     - vrmSemanticBoneMap
+    - VrmUpdateDeps
     - warnLargeModelIfNeeded
     - WasdReuse
     - WATER_FRAME_READ_KEYS
     - WATER_MODES
     - WATER_NOOP_APPLIER_KEYS
     - WATER_PARAM_APPLIER_KEYS
+    - WATER_PARAM_APPLIERS
     - WATER_UNIFORM_NAMES
     - WATER_WAVE_SEGMENTS
+    - WaterApplyCtx
     - WaterBody
     - WaterBodyStrategy
     - WaterBuildContext
     - WaterCapability
     - WaterMode
+    - WaterParamKey
     - WaterPartRole
+    - WaterReflectCtx
+    - WaterReflectState
     - WaterTopMesh
     - WaterUniformName
     - WorkerBridge

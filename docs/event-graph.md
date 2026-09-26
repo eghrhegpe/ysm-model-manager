@@ -197,8 +197,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 56 |
-| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 207 |
+| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 57 |
+| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 209 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 247 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
@@ -310,7 +310,7 @@
 | (顶层) | `frontend/src/features/import/executor.ts` | 56 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 185 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 123 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 191 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 193 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 132 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 87 |
@@ -409,7 +409,7 @@
 | (顶层) | `frontend/src/features/import/executor.ts` | 51 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 189 |
-| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 306 |
+| initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 309 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 159 |
 | promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 168 |
 | checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 194 |
@@ -431,7 +431,7 @@
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 181 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 229 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 345 |
+| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 346 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
 | initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 102 |
@@ -572,7 +572,7 @@
 | (顶层) | `frontend/src/features/import/executor.ts` | 57 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 184 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 124 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 192 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 194 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 118 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 223 |

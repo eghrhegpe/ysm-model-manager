@@ -109,6 +109,10 @@ export const MENU_DEFS: MenuDef[] = [
         label: (ctx) =>
           `${ctx.instanceName || ""}${ctx.rtype ? ` (${shortLabelOf(ctx.rtype)})` : ""}`,
       },
+      // 分组策略（2026-09 锐评「整合包菜单」减肥）：divider 只放在「语义组」边界——
+      // 标题行之后一条（探查组 open-folder + export-list 同组并排）、danger 组
+      // （clear）之前一条。禁止逐动作画线的斑马纹（3 动作 4 线时菜单更像表格）。
+      // 新增 action 先定归属组，跨组才加线，组内并排。
       { kind: "divider" },
       {
         kind: "action",
@@ -116,7 +120,6 @@ export const MENU_DEFS: MenuDef[] = [
         label: () => t("menu.openFolder"),
         icon: "folderOpen",
       },
-      { kind: "divider" },
       {
         kind: "action",
         action: "instance.export-list",

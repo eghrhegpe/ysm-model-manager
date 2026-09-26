@@ -293,5 +293,7 @@ export function createContextMenuHandlers(): ContextMenuHandlers {
 /** 模块级默认 handlers（生产代码消费方零改动） */
 const defaultHandlers = createContextMenuHandlers();
 
-/** @deprecated 使用 defaultHandlers.HANDLERS 或 createContextMenuHandlers() 注入 */
+/** 模块级共享 handler 表：生产走单一实例（busy 锁 moveBusy/copyBusy/recycleBusy 全进程共享）；
+ * 测试文件向此表注入/清理探针 action（防止泄漏进后续用例）。
+ * 需要独立实例（隔离 busy 锁、测试注入互不干扰）时用 createContextMenuHandlers() 创建。 */
 export const HANDLERS = defaultHandlers.HANDLERS;

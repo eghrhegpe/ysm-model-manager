@@ -53,7 +53,6 @@ auto_fields:
     - App.FindDuplicateFiles
     - App.FindPreviewImage
     - App.GenerateRepoIndex
-    - App.GetAllRepoRoots
     - App.GetAppVersion
     - App.GetConfigPath
     - App.GetDefaultRepoRoot
@@ -104,7 +103,6 @@ auto_fields:
     - App.RenameDir
     - App.RenameFile
     - App.RepoHealthAudit
-    - App.RepoHealthAuditAll
     - App.ResetResourceRoot
     - App.ResetWorkshopConfigs
     - App.RestartApplication

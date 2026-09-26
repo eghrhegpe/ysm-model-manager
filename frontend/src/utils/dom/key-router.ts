@@ -11,6 +11,19 @@
 // 边界：本注册表只管 **combo 组合键**（一次按键事件即完成语义）。键状态类输入
 // （WASD 长按/双轨键，preview-3d input-and-animation 的 keydown+keyup）与一次性捕获
 // （设置页键位改绑 capture）语义不同，不进本注册表。
+//
+// 在册散点（显式豁免清单，ADR-308 D3）：以下 document 级 keydown 为有意维持现状的
+// 已知散点，由 scripts/check-a11y.ts 的 scatter 上限基线（docs/.a11y-baseline.json）
+// 钉住**不增**——新增组合键一律走 registerShortcut；新增散点须先收紧/扩写基线留痕。
+//   - preview-3d/adapters/mount-preview-core.ts（Esc ×2）：3D 会话 escH，canvas 不可
+//     聚焦挂 document；D2 拍板「外壳语义 Escape 保留独立监听」，随会话生命周期挂摘
+//   - preview-3d/adapters/ysm-adapter.ts（F）：3D 调试切换，同 escH 挂载理由
+//   - preview-3d/infra/input-and-animation.ts（WASD）：键状态类，D1 边界明文不进注册表
+//   - utils/dom/trap-focus-across-shadow.ts（Tab）：焦点陷阱循环管理，非 combo 语义
+//   - views/app-content/settings/keymap.ts：键位改绑一次性捕获（capture），D1 边界明文
+//   - views/app-preview/zoom.ts（Esc）：浮层随开关挂摘，收编收益待议
+//   - views/context-menu/index.ts（Esc/导航）：实例生命周期随菜单开关挂摘，注册表静态
+//     注册模型不合（动态挂摘语义）
 
 import { logWarn } from "@/utils/base/primitives/log.ts";
 

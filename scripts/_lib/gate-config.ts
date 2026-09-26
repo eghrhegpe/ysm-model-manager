@@ -90,6 +90,11 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
   { tool: "css-layer-check.ts", args: ["--strict"], blockPolicy: "hard" },
+  // a11y 覆盖基线守卫（ADR-308 D3，2026-09-26 接线）：coverage 计数下限（aria-* 按属性名 /
+  // role / tabindex / prefers-reduced-motion，只增不减）+ document 级 keydown 散点上限
+  // （只减不增，key-router.ts 唯一合法出口豁免）。hard 依据：确定性正则 + baseline 即存量
+  // 本身，不存在「存量债冒充」；配套 tests/test_check_a11y.ts（纯核直测防空转假绿）。
+  { tool: "check-a11y.ts", blockPolicy: "hard" },
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
   // 设计令牌守规（2026-09 接线）：与 css-layer-check 互补——后者管「样式定义在哪一层生效」，
   // 本闸管「样式值是否走了令牌」。全量模式不传 --files（无 diff 上下文）→ 走 `--baseline`：
@@ -157,6 +162,9 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   // 不置 scopedFiles：本闸是「全仓键使用面」分析，单文件无法独立判定（见脚本头注释）。
   { tool: "check-i18n-unused.ts", args: ["--baseline"], blockPolicy: "debt" },
   { tool: "event-graph.ts", args: ["--strict"], blockPolicy: "hard" },
+  // a11y 基线守卫（ADR-308 D3）：见 ALL_STATIC_TOOLS 同项注释。无 scopedFiles——
+  // 基线是全仓计数守卫，单文件无法独立判定。
+  { tool: "check-a11y.ts", blockPolicy: "hard" },
   { tool: "check-toast-duration.ts", blockPolicy: "debt" },
   { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-file-lines.ts", blockPolicy: "hard" },
@@ -176,7 +184,12 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   // push / CI 实况确认无假阻断，再议升 hard（ADR-256 D5）。
   // scopedFiles: true —— 脚本已 import _lib/changed-scope.ts 并接 --files（准入条件满足），
   // 由 tests/test_gate_config.ts 的 scopedFiles 契约断言兜底。
-  { tool: "check-design-tokens.ts", args: ["--added-lines"], blockPolicy: "debt", scopedFiles: true },
+  {
+    tool: "check-design-tokens.ts",
+    args: ["--added-lines"],
+    blockPolicy: "debt",
+    scopedFiles: true,
+  },
   // ── 三档位阈值扫描器（2026-09-13 接线）──
   // 此前是「无守护债务」：仓库 32 个 check-*.ts 中这 3 个无任何自动化入口，只能手动跑
   // （实证：views 域 10 个 🟥 复杂度档长期无人拦，见 pre_push_gate.md 门禁覆盖边界）。

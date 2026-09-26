@@ -27,7 +27,6 @@ auto_fields:
     - App.ExtractYSMHeaderFromBase64
     - App.ExtractYsmSummary
     - App.FindDuplicateFiles
-    - App.GetAllRepoRoots
     - App.GetDefaultRepoRoot
     - App.GetInstanceStatus
     - App.GetInstanceSyncStatus
@@ -60,7 +59,6 @@ auto_fields:
     - App.ReadShaderpackLang
     - App.RelinkAllInstanceResources
     - App.RepoHealthAudit
-    - App.RepoHealthAuditAll
     - App.ResetResourceRoot
     - App.ResolveConflicts
     - App.SaveScreenshotFile

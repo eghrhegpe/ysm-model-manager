@@ -1,0 +1,38 @@
+{
+  "_comment": "a11y 覆盖基线（ADR-308 D3）：coverage=各指标出现次数下限（只增不减），scatter=document 级 keydown 散点文件→次数上限（只减不增；utils/dom/key-router.ts 为唯一合法出口已豁免不入册，在册文件=有意维持现状的已知散点，豁免理由见 key-router.ts 头注）。收紧: node scripts/check-a11y.ts --update；放松需 --force 并在提交说明附理由。",
+  "generatedAt": "2026-09-26",
+  "coverage": {
+    "role": 29,
+    "tabindex": 59,
+    "aria-modal": 7,
+    "aria-label": 29,
+    "aria-valuenow": 2,
+    "aria-valuemin": 1,
+    "aria-valuemax": 1,
+    "aria-checked": 10,
+    "aria-labelledby": 5,
+    "aria-live": 3,
+    "aria-atomic": 1,
+    "aria-selected": 15,
+    "aria-haspopup": 1,
+    "aria-expanded": 9,
+    "aria-keyshortcuts": 5,
+    "aria-hidden": 8,
+    "aria-describedby": 3,
+    "aria-pressed": 2,
+    "prefers-reduced-motion": 2,
+    "aria-controls": 1,
+    "aria-disabled": 5,
+    "aria-current": 2,
+    "aria-level": 4
+  },
+  "scatter": {
+    "preview-3d/adapters/mount-preview-core.ts": 2,
+    "preview-3d/adapters/ysm-adapter.ts": 1,
+    "preview-3d/infra/input-and-animation.ts": 1,
+    "utils/dom/trap-focus-across-shadow.ts": 1,
+    "views/app-content/settings/keymap.ts": 1,
+    "views/app-preview/zoom.ts": 1,
+    "views/context-menu/index.ts": 1
+  }
+}

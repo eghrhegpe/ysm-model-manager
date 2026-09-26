@@ -109,7 +109,6 @@ auto_fields:
     - PackMetaView
     - PackModelDetail
     - PackModelDetailList
-    - ParseDedupConfig
     - QueueStatusInfo
     - RegistryType
     - RenderableTextureExts

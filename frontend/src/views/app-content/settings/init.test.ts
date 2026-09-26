@@ -1002,7 +1002,7 @@ describe("initSettings — relink 收尾分支（busy / 全跳过 / 外层失败
     expect(listInstances).toHaveBeenCalledTimes(1);
   });
 
-  it("busy 进行中改链接模式 → 同步回退 select 与 hint，不弹确认框（ADR-296 D5 审查 E）", async () => {
+  it("busy 进行中改链接模式 → 回退 select 与 hint，不弹确认框（ADR-296 D5 审查 E）", async () => {
     const saveFn = vi.fn();
     mockApp({
       ListVersionInstances: vi.fn(() => new Promise(() => {})), // 永不 resolve → busy 锁卡住
@@ -1021,8 +1021,9 @@ describe("initSettings — relink 收尾分支（busy / 全跳过 / 外层失败
     const sel = root.getElementById("set-link-mode") as HTMLSelectElement;
     sel.value = "hardlink";
     sel.dispatchEvent(new Event("change"));
-    // 回滚是 change 回调顶部同步完成的：同一宏任务后即可断言
-    expect(sel.value).toBe("copy");
+    // 回退发生在 withBusy 拒绝分支（微任务）——行为不变量是「回退发生 + 不弹确认框」，
+    // 不锁「同一宏任务同步完成」的实现时序（2026-10 withBusy 收编后回退异步完成）
+    await waitFor(() => expect(sel.value).toBe("copy"));
     expect((root.getElementById("lm-hint-hardlink") as HTMLElement).style.display).toBe("none");
     expect((root.getElementById("lm-hint-copy") as HTMLElement).style.display).toBe("block");
     expect(saveFn).not.toHaveBeenCalled();

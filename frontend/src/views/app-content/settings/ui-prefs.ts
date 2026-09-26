@@ -17,6 +17,7 @@ import {
   type DensityLevel,
   DISPLAY_FONT_DEFAULT,
   FONT_SIZE_DEFAULT,
+  FONT_SIZE_LEVELS,
   type FontSizeLevel,
 } from "./settings-schema.ts";
 
@@ -31,7 +32,6 @@ export function applyUIPrefs(): void {
   const displayFont = safeGet("ui-display-font") || DISPLAY_FONT_DEFAULT;
   const density = safeGet("ui-card-density") || DENSITY_DEFAULT;
   const anim = safeGet("ui-animations") !== "off";
-
   // 基准字号 — 通过 --fs-scale 控制，CSS 自动缩放所有 --fs-*（含语义字号）与 --space-*
   // 先清除旧版直接设 --fs-* 的内联值（避免覆盖 calc()）
   [
@@ -48,6 +48,11 @@ export function applyUIPrefs(): void {
   });
   // 五档偏移：极小 −2px / 小 −1px / 标准 0 / 大 +1px / 很大 +2px
   // 值域 = FONT_SIZE_LEVELS（schema 单一来源）；px 语义映射归本消费面。
+  // 白名单收窄与下方 density 同口径（原 `as FontSizeLevel ?? "0px"` 双兜底是全文件仅有的
+  // 例外形态——脏 localStorage 值回落默认档，不再靠 ?? 静默接住）。
+  const fontSizeVal: FontSizeLevel = FONT_SIZE_LEVELS.includes(fontSize as FontSizeLevel)
+    ? (fontSize as FontSizeLevel)
+    : FONT_SIZE_DEFAULT;
   // Record<FontSizeLevel, …>：schema 加档此处编译期报错（与 MIRROR_UI 同款护栏）。
   const scaleMap: Record<FontSizeLevel, string> = {
     xsmall: "-2px",
@@ -56,10 +61,7 @@ export function applyUIPrefs(): void {
     medium: "1px",
     large: "2px",
   };
-  document.documentElement.style.setProperty(
-    "--fs-scale",
-    scaleMap[fontSize as FontSizeLevel] ?? "0px",
-  );
+  document.documentElement.style.setProperty("--fs-scale", scaleMap[fontSizeVal]);
   // --fs-base-size（真基准）单点定义在 frontend/css/variables.css 的 :root，此处不再内联覆盖
 
   // 创作者名字字体
@@ -152,14 +154,15 @@ export function initUiPrefs(root: ShadowRoot): void {
   };
 
   // 初始化 UI 控件值（2026-09 锐评 P3：`&&` 空值短路 + 重复 getElementById + 双断言 → 守卫赋值，
-  // 与本文件其余 `if (el)` 惯例对齐；回退值 2026-10 起引 schema 默认，与 applyUIPrefs 同源）
-  const fontSizeSel = root.querySelector<HTMLSelectElement>("#set-font-size");
+  // 与本文件其余 `if (el)` 惯例对齐；回退值 2026-10 起引 schema 默认，与 applyUIPrefs 同源。
+  // 2026-10 锐评收编：querySelector → getElementById（与 init.ts/path-cards.ts 全域口径统一））
+  const fontSizeSel = root.getElementById("set-font-size") as HTMLSelectElement | null;
   if (fontSizeSel) fontSizeSel.value = safeGet("ui-font-size") || FONT_SIZE_DEFAULT;
-  const displayFontSel = root.querySelector<HTMLSelectElement>("#set-display-font");
+  const displayFontSel = root.getElementById("set-display-font") as HTMLSelectElement | null;
   if (displayFontSel) displayFontSel.value = safeGet("ui-display-font") || DISPLAY_FONT_DEFAULT;
-  const cardDensitySel = root.querySelector<HTMLSelectElement>("#set-card-density");
+  const cardDensitySel = root.getElementById("set-card-density") as HTMLSelectElement | null;
   if (cardDensitySel) cardDensitySel.value = safeGet("ui-card-density") || DENSITY_DEFAULT;
-  const animationsInput = root.querySelector<HTMLInputElement>("#set-animations");
+  const animationsInput = root.getElementById("set-animations") as HTMLInputElement | null;
   if (animationsInput) animationsInput.checked = safeGet("ui-animations") !== "off";
   // 启动默认页面（记忆开关 + 固定页下拉框二态回填）已收编至 default-page.ts：
   // initDefaultPagePrefs——曾在此处裸写 `safeGet(...) || "repository"`，

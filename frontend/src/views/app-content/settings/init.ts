@@ -28,11 +28,11 @@ import {
   UPDATE_CHECK_DEFAULT,
 } from "./settings-schema.ts";
 import type { SettingsCfg } from "./store.ts";
-import { getCfg, isBusy, resetSettingsStore, setBusy, toastError } from "./store.ts";
+import { getCfg, resetSettingsStore, toastError, withBusy } from "./store.ts";
 import { initThemeSection } from "./theme.ts";
-// 链接模式用户可见名（下拉 option 与确认框/toast 共用单表，见 tpl-settings.ts|LINK_MODE_UI）。
-// 模板模块只导出纯数据表，无副作用（本 import 不触发渲染）。
-import { LINK_MODE_UI } from "./tpl-settings.ts";
+// 链接模式用户可见名（下拉 option 与确认框/toast 共用单表）。双消费面共享映射住 ui-maps.ts
+//（2026-10 自 tpl-settings.ts 迁出——绑定层不再反向 import 模板层）。
+import { LINK_MODE_UI } from "./ui-maps.ts";
 import { initUiPrefs } from "./ui-prefs.ts";
 import { initWorkerPrefs } from "./worker-prefs.ts";
 
@@ -246,34 +246,27 @@ async function relinkAllInstancesInner(): Promise<void> {
 }
 
 /**
- * 重链接所有整合包（公共出口，busy 守卫 + 外层错误 toast）：
- * isBusy → setBusy → relinkAllInstancesInner → finally 释放。供「重新链接」按钮调用。
+ * 重链接所有整合包（公共出口）：withBusy 守卫 + 外层错误 toast——未获得锁（重入）静默返回，
+ * task 内自理 try/catch，锁的获取/释放由 withBusy 机制保证。供「重新链接」按钮调用。
  */
-async function relinkAllInstances(
-  isBusyLocal: typeof isBusy,
-  setBusyLocal: typeof setBusy,
-): Promise<void> {
-  if (isBusyLocal()) return;
-  setBusyLocal(true);
-  try {
-    await relinkAllInstancesInner();
-  } catch (e) {
-    bus.emit("toast:show", {
-      // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
-      msg: friendlyError(e),
-      duration: TOAST_MS.long,
-      type: "error",
-    });
-  } finally {
-    setBusyLocal(false);
-  }
+async function relinkAllInstances(): Promise<void> {
+  await withBusy(async () => {
+    try {
+      await relinkAllInstancesInner();
+    } catch (e) {
+      bus.emit("toast:show", {
+        // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
+        msg: friendlyError(e),
+        duration: TOAST_MS.long,
+        type: "error",
+      });
+    }
+  });
 }
 
 function stgBindLinkMode(
   root: ShadowRoot,
   cfgLocal: SettingsCfg,
-  isBusyLocal: typeof isBusy,
-  setBusyLocal: typeof setBusy,
   toastErrorLocal: typeof toastError,
 ): void {
   // 缺省回退默认值引 schema 单一来源（ADR-307 D3 扩编）：原 "copy" 字面量散在 init +
@@ -288,77 +281,75 @@ function stgBindLinkMode(
     // 均以此为准；仅在保存成功后推进（闭包变量，勿用 cfg 初值快照当旧值）
     let curVal = linkMode;
     linkSelect.addEventListener("change", async () => {
-      // ADR-296 D5：change 全程 busy 守卫（与 relink 按钮共锁）；busy 期间忽略并
-      // **当场回退** select 与 hint 到上次生效值——吞掉不回滚会让下拉停显示未生效的
-      // 新模式（模式实际未变），直到用户下次操作前 UI/真相分叉（审查 E 项）。
-      if (isBusyLocal()) {
+      // ADR-296 D5：change 全程 busy 守卫（与 relink 按钮共锁）；未获得锁（busy 期间重入）
+      // 当场回退 select 与 hint 到上次生效值——吞掉不回滚会让下拉停显示未生效的新模式
+      //（模式实际未变），直到用户下次操作前 UI/真相分叉（审查 E 项）。
+      const acquired = await withBusy(async () => {
+        const oldVal = curVal;
+        // 归一为 LinkMode（下拉选项由 schema 派生，正常必命中）：下游「写 cfg / 进文案表」
+        // 共用同一收窄值，不再各自 string 化（cfgLocal.linkMode 也从此不会吃到域外裸值）
+        const val = normalizeLinkMode(linkSelect.value);
+        applyHintVisibility(root, "lm-hint", val, LINK_MODES);
+        try {
+          // 确认前先数实例（与 relinkAllInstancesInner 的 Exists && Name 同口径），
+          // 供文案展示工作量；mcRoot 为空跳过计数（n=0，relink 段随后自会提示
+          // 「请先设置游戏根目录」）；计数失败不拦确认框，退化为 n=0。
+          let n = 0;
+          try {
+            const { LoadAppConfig, ListVersionInstances } = await backendGetApp();
+            const cfg2 = await LoadAppConfig();
+            const mcRoot = cfg2.mcRoot || "";
+            if (mcRoot) {
+              n = ((await ListVersionInstances(mcRoot)) || []).filter(
+                (ins) => ins.Exists && ins.Name,
+              ).length;
+            }
+          } catch {
+            /* 计数失败静默：n=0 仍可读，用户照样能决策 */
+          }
+          const confirmed = await modalConfirm({
+            title: t("settings.linkModeConfirmTitle"),
+            titleIcon: "warning",
+            // 用户可见模式名过文案表（原塞裸枚举 → 中文界面出现「重新链接为 symlink 模式」）
+            message: t("settings.linkModeConfirmMessage", { val: linkModeName(val), n }),
+            danger: true,
+          });
+          if (!confirmed) {
+            // 取消：回退 select 与 hint，不发任何 RPC、不弹模式切换 toast（静默，
+            // 比 instance-ops 样板少一条 cancelled toast 噪音）
+            linkSelect.value = oldVal;
+            applyHintVisibility(root, "lm-hint", oldVal, LINK_MODES);
+            return;
+          }
+          const { SetLinkMode } = await backendGetApp();
+          // 配置落盘走 saveCfg 唯一出口（patch 语义：未传字段取**重读**的最新 Go 配置，
+          // theme/themeAuto 由该函数自 localStorage 兜底）——原手抄六位置实参吃的是 cfgLocal
+          // 快照，正是 saveCfg 注释里 P1 修过的「旧值覆盖」形态；链接模式同步进内存 cfg 亦由它完成
+          await saveCfg({ linkMode: val });
+          await SetLinkMode(val);
+          curVal = val;
+          bus.emit("toast:show", {
+            msg: t("settings.linkModeSwitched", { val: linkModeName(val) }),
+            duration: TOAST_MS.success,
+            type: "success",
+          });
+          // 本回调持锁中，直调无守卫的 Inner——relinkAllInstances 的 withBusy 会因判忙
+          // 直接拒绝；锁统一由 withBusy finally 释放，覆盖整个 relink 段
+          await relinkAllInstancesInner();
+        } catch (e) {
+          toastErrorLocal(e);
+        }
+      });
+      if (!acquired) {
         linkSelect.value = curVal;
         applyHintVisibility(root, "lm-hint", curVal, LINK_MODES);
-        return;
-      }
-      setBusyLocal(true);
-      const oldVal = curVal;
-      // 归一为 LinkMode（下拉选项由 schema 派生，正常必命中）：下游「写 cfg / 进文案表」
-      // 共用同一收窄值，不再各自 string 化（cfgLocal.linkMode 也从此不会吃到域外裸值）
-      const val = normalizeLinkMode(linkSelect.value);
-      applyHintVisibility(root, "lm-hint", val, LINK_MODES);
-      try {
-        // 确认前先数实例（与 relinkAllInstancesInner 的 Exists && Name 同口径），
-        // 供文案展示工作量；mcRoot 为空跳过计数（n=0，relink 段随后自会提示
-        // 「请先设置游戏根目录」）；计数失败不拦确认框，退化为 n=0。
-        let n = 0;
-        try {
-          const { LoadAppConfig, ListVersionInstances } = await backendGetApp();
-          const cfg2 = await LoadAppConfig();
-          const mcRoot = cfg2.mcRoot || "";
-          if (mcRoot) {
-            n = ((await ListVersionInstances(mcRoot)) || []).filter(
-              (ins) => ins.Exists && ins.Name,
-            ).length;
-          }
-        } catch {
-          /* 计数失败静默：n=0 仍可读，用户照样能决策 */
-        }
-        const confirmed = await modalConfirm({
-          title: t("settings.linkModeConfirmTitle"),
-          titleIcon: "warning",
-          // 用户可见模式名过文案表（原塞裸枚举 → 中文界面出现「重新链接为 symlink 模式」）
-          message: t("settings.linkModeConfirmMessage", { val: linkModeName(val), n }),
-          danger: true,
-        });
-        if (!confirmed) {
-          // 取消：回退 select 与 hint，不发任何 RPC、不弹模式切换 toast（静默，
-          // 比 instance-ops 样板少一条 cancelled toast 噪音）
-          linkSelect.value = oldVal;
-          applyHintVisibility(root, "lm-hint", oldVal, LINK_MODES);
-          return;
-        }
-        const { SetLinkMode } = await backendGetApp();
-        // 配置落盘走 saveCfg 唯一出口（patch 语义：未传字段取**重读**的最新 Go 配置，
-        // theme/themeAuto 由该函数自 localStorage 兜底）——原手抄六位置实参吃的是 cfgLocal
-        // 快照，正是 saveCfg 注释里 P1 修过的「旧值覆盖」形态；链接模式同步进内存 cfg 亦由它完成
-        await saveCfg({ linkMode: val });
-        await SetLinkMode(val);
-        curVal = val;
-        bus.emit("toast:show", {
-          msg: t("settings.linkModeSwitched", { val: linkModeName(val) }),
-          duration: TOAST_MS.success,
-          type: "success",
-        });
-        // 本回调已持 busy 锁，调无守卫的 Inner——若走带守卫的 relinkAllInstances
-        // 会因判忙直接 return；锁统一由本回调 finally 释放，覆盖整个 relink 段
-        await relinkAllInstancesInner();
-      } catch (e) {
-        toastErrorLocal(e);
-      } finally {
-        setBusyLocal(false);
       }
     });
   }
 
   const relinkBtn = root.getElementById("set-relink");
   if (relinkBtn) {
-    relinkBtn.addEventListener("click", () => relinkAllInstances(isBusyLocal, setBusyLocal));
+    relinkBtn.addEventListener("click", () => relinkAllInstances());
   }
 }
 
@@ -534,7 +525,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   stgBindMirrorSelect(root, getCfg(), toastError);
   stgBindUpdateInterval(root, getCfg(), toastError);
-  stgBindLinkMode(root, getCfg(), isBusy, setBusy, toastError);
+  stgBindLinkMode(root, getCfg(), toastError);
 
   void stgBindShowVersion(root);
   initVersionUpdater(root);

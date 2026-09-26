@@ -317,8 +317,8 @@
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 197 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 118 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 244 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 91 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 350 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 92 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 328 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 83 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 156 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 313 |
@@ -440,22 +440,22 @@
 | emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 193 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 216 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 237 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 261 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 343 |
+| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 257 |
+| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 331 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 152 |
 | tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 166 |
 | initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 185 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 92 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 273 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 279 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 302 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 308 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 331 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 351 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 174 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 185 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 205 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 217 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 251 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 257 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 280 |
+| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 286 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 309 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 329 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 177 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 188 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 208 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 220 |
 | initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
@@ -577,8 +577,8 @@
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 118 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 223 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 119 |
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 417 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 445 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 408 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 436 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 314 |
 
 **订阅方（on）：**
@@ -603,7 +603,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 204 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 207 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

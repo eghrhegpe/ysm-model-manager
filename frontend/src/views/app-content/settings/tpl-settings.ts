@@ -48,13 +48,12 @@ import {
   type FontSizeLevel,
   LINK_MODE_DEFAULT,
   LINK_MODES,
-  type LinkMode,
   MIRROR_DEFAULT,
   MIRROR_SOURCES,
-  type MirrorSource,
 } from "./settings-schema.ts";
 import { type StgCardSpec, stgCard, stgCards, stgUnits } from "./stg-card.ts";
 import { aboutPageBody } from "./tpl-settings-about.ts";
+import { LINK_MODE_UI, MIRROR_UI } from "./ui-maps.ts";
 
 // ADR-133 阶段 B/C+：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -146,33 +145,10 @@ const resolveSettingsPlatform = (isViewer: boolean, isWebViewer: boolean): Setti
 const cardSupportedOn = (id: keyof typeof PATH_CARD_PLATFORMS, p: SettingsPlatform): boolean =>
   PATH_CARD_PLATFORMS[id].includes(p);
 
-// ===== 镜像源 UI 映射（schema 语义值 → UI 值 / 文案键；ADR-307 D3 消费面收口）=====
-// Record<MirrorSource, …> ⇒ MIRROR_SOURCES 加成员时此处编译期报错，逼出 option/hint 同步。
-// 原模板三行 <option> 手写裸列 = schema 宣称「option 渲染单一来源」却未接线的半截工程：
-// 加第四个镜像源会出现「schema 有、下拉框静默没有」。option 与 hint 块改由 MIRROR_SOURCES.map
-// 派生（存在性 + 顺序随 schema）；direct 的 UI 值 = ""（存储层同，归一逻辑见 settings-schema.ts 注），
-// 默认项（MIRROR_DEFAULT）hint 初始可见、其余 display:none（init.ts|applyMirrorHints 载入按实值纠正）。
-const MIRROR_UI: Record<
-  MirrorSource,
-  { uiValue: string; optionKey: LocaleKey; hintKey: LocaleKey }
-> = {
-  direct: {
-    uiValue: "",
-    optionKey: "settings.mirror.directOption",
-    hintKey: "settings.mirror.directHint",
-  },
-  jsdelivr: {
-    uiValue: "jsdelivr",
-    optionKey: "settings.mirror.jsdelivrOption",
-    hintKey: "settings.mirror.jsdelivrHint",
-  },
-  githubapi: {
-    uiValue: "githubapi",
-    optionKey: "settings.mirror.nameGithubapi",
-    hintKey: "settings.mirror.githubapiHint",
-  },
-};
-
+// ===== 镜像源卡 body（值→文案映射在 ui-maps.ts|MIRROR_UI，模板消费派生渲染）=====
+// option 与 hint 块由 MIRROR_SOURCES.map 派生（存在性 + 顺序随 schema；加成员编译期逼出
+// ui-maps 文案同步）；默认项（MIRROR_DEFAULT）hint 初始可见、其余 display:none
+//（init.ts|applyMirrorHints 载入按实值纠正）。
 /** 镜像源卡 body：option 行 + `mirror-hint-<语义值>` 说明块（id 与 init.ts|applyMirrorHints 的
  *  `mirror-hint-<MIRROR_SOURCES 成员>` 约定同源——改名即静默断链的双端在此钉死）。 */
 function mirrorCardBody(): string {
@@ -208,28 +184,8 @@ function mcPathCardSpec(): StgCardSpec {
   };
 }
 
-// ===== 链接模式：值 → 用户可见文案（模板与 init 的 toast/确认框共用单表）=====
-// 值域由 settings-schema|LINK_MODES 派生（ADR-307 D3 扩编，与 MIRROR_UI 同口径）：加第四种
-// 链接模式只改 schema 一处，Record 文案表编译期逼出同步；默认 selected = LINK_MODE_DEFAULT。
-// 本表 2026-10（锐评第七轮）自 linksCardSpec 局部提升为模块级并导出：此前只有模板一面消费，
-// 而 init.ts|stgBindLinkMode 的确认框 / toast 直接把裸枚举（copy/hardlink/symlink）塞进
-// `{val}`——中文界面弹出「重新链接为 symlink 模式」，是全页唯一一处**用户可见值未过文案表**
-// 的裸奔。同枚举两张表（如镜像源的 optionKey 与 nameKey）是这种分裂的前车之鉴，故单表共用。
-/** 链接模式 → { labelKey: 用户可见名（下拉 option 与 toast/确认框共用）; hintKey: 卡内说明 } */
-export const LINK_MODE_UI: Record<
-  LinkMode,
-  { labelKey: LocaleKey; hintKey: LocaleKey; hintColor?: "error" }
-> = {
-  copy: { labelKey: "settings.links.copy", hintKey: "settings.links.copyHint" },
-  hardlink: { labelKey: "settings.links.hardlink", hintKey: "settings.links.hardlinkHint" },
-  // symlink 的 hint 带错误色（与 copy/hardlink 中性提示区分——symlink 失败概率最高）
-  symlink: {
-    labelKey: "settings.links.symlink",
-    hintKey: "settings.links.symlinkHint",
-    hintColor: "error",
-  },
-};
-
+// ===== 链接模式卡：option 由 LINK_MODES 派生，值→文案表在 ui-maps.ts|LINK_MODE_UI =====
+// （与 toast/确认框共用单表，2026-10 迁 ui-maps——多消费面共享映射不再住模板文件）
 function linksCardSpec(): StgCardSpec {
   // 链接模式：纯桌面 / 网络概念，查看器模式无意义（网页版+安卓 viewer 均不渲染）。
   // hint 块排版走 .stg-hint-block（2026-10 收 6 处内联配方债）。

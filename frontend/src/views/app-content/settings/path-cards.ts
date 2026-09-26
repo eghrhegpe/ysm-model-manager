@@ -15,7 +15,8 @@ import type { ResourceType } from "@/utils/resource/schema.ts";
 import { groupStorageRootOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { writeAppConfig } from "@/views/config-write.ts";
-import { cardRefreshers, getCfg, isBusy, setBusy, toastError } from "./store.ts";
+import { stgCard } from "./stg-card.ts";
+import { cardRefreshers, getCfg, toastError, withBusy } from "./store.ts";
 
 /**
  * 目录卡片文案（icon + 路径/未选择文案）。
@@ -78,28 +79,27 @@ export function bindPathClick(
     el.style.color = p ? "" : "var(--accent)";
   };
   cardRefreshers.push(refresh);
-  el.addEventListener("click", async () => {
-    if (isBusy()) return; // 防连点：目录选择进行中忽略后续点击
-    setBusy(true);
-    try {
-      // 平台分支：桌面 Wails Dialog / Android 授权检查+路径输入（ADR-046 P2）
-      const pickResult = await pickDirectory();
-      if (!pickResult.ok) return;
-      await onSelect(pickResult.dir);
-      refresh();
-      refreshAdvanced();
-      bus.emit("stats:refresh");
-      bus.emit("toast:show", {
-        msg: t("settings.path.updated"),
-        duration: TOAST_MS.success,
-        type: "success",
-      });
-    } catch (e) {
-      // P2 修复：pickDirectory/onSelect 失败要有出口，避免 unhandled rejection 静默
-      toastError(e);
-    } finally {
-      setBusy(false);
-    }
+  el.addEventListener("click", () => {
+    // 防连点：目录选择进行中忽略后续点击（withBusy 未获得锁即静默返回）
+    void withBusy(async () => {
+      try {
+        // 平台分支：桌面 Wails Dialog / Android 授权检查+路径输入（ADR-046 P2）
+        const pickResult = await pickDirectory();
+        if (!pickResult.ok) return;
+        await onSelect(pickResult.dir);
+        refresh();
+        refreshAdvanced();
+        bus.emit("stats:refresh");
+        bus.emit("toast:show", {
+          msg: t("settings.path.updated"),
+          duration: TOAST_MS.success,
+          type: "success",
+        });
+      } catch (e) {
+        // P2 修复：pickDirectory/onSelect 失败要有出口，避免 unhandled rejection 静默
+        toastError(e);
+      }
+    });
   });
   refresh();
 }
@@ -120,22 +120,12 @@ async function showPathPicker(paths: string[]): Promise<string | null> {
 function showScanTooltip(root: ShadowRoot, anchor: HTMLElement, paths: string[]): HTMLElement {
   const rect = anchor.getBoundingClientRect();
   const tip = document.createElement("div");
-  // id 保持 mc-scan-tooltip：init.test.ts 经 getElementById 驱动 hover/泄漏回归断言
+  // id 保持 mc-scan-tooltip：init.test.ts 经 getElementById 驱动 hover/泄漏回归断言。
+  // 样式走 components.css|.mc-scan-tooltip（2026-10 锐评收编：本函数原 60 行内联配方与该类
+  // 重复造轮子——类版圆角/阴影/宽高走主题语义变量，随主题联动；left/top 定位是动态计算，
+  // 唯二保留的内联样式）。挂载点在主文档（host.parentElement/document.body），全局类可达。
   tip.id = "mc-scan-tooltip";
-  tip.style.position = "fixed";
-  tip.style.zIndex = "var(--z-toast)";
-  tip.style.background = "var(--surf)";
-  tip.style.border = "1px solid var(--bd)";
-  tip.style.borderRadius = "8px";
-  tip.style.padding = "10px 14px";
-  tip.style.fontSize = "var(--fs-sm)";
-  tip.style.color = "var(--txt)";
-  tip.style.boxShadow = "0 4px 16px rgba(0,0,0,.3)";
-  tip.style.maxWidth = "420px";
-  tip.style.maxHeight = "350px";
-  tip.style.overflowY = "auto";
-  tip.style.pointerEvents = "none";
-  tip.style.lineHeight = "1.6";
+  tip.className = "mc-scan-tooltip";
   tip.style.left = `${Math.max(4, rect.left)}px`;
   tip.style.top = `${rect.bottom + 4}px`;
 
@@ -213,49 +203,37 @@ export function initAdvancedGrid(
   const refreshAdvanced = async (): Promise<void> => {
     const grid = root.getElementById("set-advanced-grid");
     if (!grid) return;
-    let html = "";
-    for (const at of advancedTypes) {
-      const canOverride = !!at.cfgKey;
-      const overridePath = canOverride ? cfgStr(at.cfgKey) : "";
-      const defaultPath = getCfg().filesRoot
-        ? `${getCfg().filesRoot}/${groupStorageRootOf(at.rtype) || at.rtype || ""}`
-        : t("settings.path.notSetStorage");
-      const currentPath = overridePath || defaultPath;
-      const isOverridden = !!overridePath;
-      html +=
-        '<div class="stg-card' +
-        (isOverridden ? " stg-card-overridden" : "") +
-        '">' +
-        '<div class="stg-card-hdr">' +
-        "<span>" +
-        at.icon +
-        "</span><span>" +
-        at.name +
-        "</span>" +
-        (isOverridden
-          ? `<span class="stg-custom-badge">${t("settings.path.customized")}</span>`
-          : "") +
-        (isOverridden
-          ? '<button class="btn-base sm stg-adv-reset" data-rtype="' +
-            at.rtype +
-            '" style="font-size:var(--fs-btn-tool);padding:var(--btn-padding-sm)">' +
-            UI_ICONS.undo +
-            " " +
-            t("settings.path.default") +
-            "</button>"
-          : "") +
-        "</div>" +
-        '<div class="stg-card-body">' +
-        '<button type="button" class="stg-path-picker" data-rtype="' +
-        at.rtype +
-        '" title="' +
-        t("settings.path.clickToChange") +
-        '">' +
-        esc(String(currentPath)) +
-        "</button>" +
-        "</div></div>";
-    }
-    grid.innerHTML = html;
+    // 2026-10 锐评收编：手写 stg-card 字符串拼接退役，走 stgCard() 正典构造器
+    //（知识卡「卡片唯一造法」契约——原 hdr「图标/名称拆独立 span」正是 stg-card.ts 立法
+    // 要防的漂移形态，且「已清零」盘点当年漏了本动态渲染路径）。
+    // 保持原视觉口径：spaceBetween:false（badge/重置钮紧跟标题，不推右）、titleSize:"base"
+    //（沿用 .stg-card-hdr 基类 fs-sm）；name/rtype 补 esc（注册表数据此前裸插，防御性加强）。
+    grid.innerHTML = advancedTypes
+      .map((at) => {
+        const canOverride = !!at.cfgKey;
+        const overridePath = canOverride ? cfgStr(at.cfgKey) : "";
+        const defaultPath = getCfg().filesRoot
+          ? `${getCfg().filesRoot}/${groupStorageRootOf(at.rtype) || at.rtype || ""}`
+          : t("settings.path.notSetStorage");
+        const currentPath = overridePath || defaultPath;
+        const isOverridden = !!overridePath;
+        return stgCard(
+          at.icon,
+          esc(at.name),
+          `<button type="button" class="stg-path-picker" data-rtype="${esc(at.rtype)}" title="${t("settings.path.clickToChange")}">${esc(String(currentPath))}</button>`,
+          {
+            header: {
+              spaceBetween: false,
+              titleSize: "base",
+              actions: isOverridden
+                ? `<span class="stg-custom-badge">${t("settings.path.customized")}</span><button class="btn-base sm stg-adv-reset" data-rtype="${esc(at.rtype)}" style="font-size:var(--fs-btn-tool);padding:var(--btn-padding-sm)">${UI_ICONS.undo} ${t("settings.path.default")}</button>`
+                : "",
+            },
+            cardClass: isOverridden ? "stg-card-overridden" : "",
+          },
+        );
+      })
+      .join("");
 
     // 点击路径文字更改路径
     grid.querySelectorAll(".stg-path-picker").forEach((el) => {
@@ -321,44 +299,43 @@ export function initAdvancedGrid(
 // 游戏路径 - 自动搜索 + hover 扫描提示
 export function initMcDetect(root: ShadowRoot): void {
   const detectBtn = root.getElementById("set-mc-detect");
-  detectBtn?.addEventListener("click", async () => {
-    if (isBusy()) return; // 防连点：检测进行中忽略后续点击
-    setBusy(true);
-    try {
-      const { GetMinecraftPaths } = await backendGetApp();
-      const paths = await GetMinecraftPaths();
-      if (!paths?.length) {
-        bus.emit("toast:show", {
-          msg: t("settings.mc.noFound"),
-          duration: TOAST_MS.normal,
-          type: "warn",
+  detectBtn?.addEventListener("click", () => {
+    // 防连点：检测进行中忽略后续点击（withBusy 未获得锁即静默返回）
+    void withBusy(async () => {
+      try {
+        const { GetMinecraftPaths } = await backendGetApp();
+        const paths = await GetMinecraftPaths();
+        if (!paths?.length) {
+          bus.emit("toast:show", {
+            msg: t("settings.mc.noFound"),
+            duration: TOAST_MS.normal,
+            type: "warn",
+          });
+          return;
+        }
+        // 只有一个直接使用，多个让用户选
+        let selected: string | null = paths[0];
+        if (paths.length > 1) {
+          selected = await showPathPicker(paths);
+          if (!selected) return; // 用户取消
+        }
+        // 走 saveCfg 唯一出口（patch 语义：未传字段取重读的最新配置，顺带更新内存 cfg.mcRoot）——
+        // 原手抄六位置实参用的是 getCfg() 快照，正是 saveCfg 注释里 P1 修过的「旧值覆盖」形态
+        await saveCfg({ mcRoot: selected });
+        cardRefreshers.forEach((fn) => {
+          fn();
         });
-        return;
+        bus.emit("stats:refresh");
+        bus.emit("toast:show", {
+          msg: t("content.mcPathSet", { path: selected }),
+          duration: TOAST_MS.normal,
+          type: "success",
+        });
+      } catch (e) {
+        // P2 修复：GetMinecraftPaths/SaveAppConfig 失败要有出口，避免 unhandled rejection 静默
+        toastError(e);
       }
-      // 只有一个直接使用，多个让用户选
-      let selected: string | null = paths[0];
-      if (paths.length > 1) {
-        selected = await showPathPicker(paths);
-        if (!selected) return; // 用户取消
-      }
-      // 走 saveCfg 唯一出口（patch 语义：未传字段取重读的最新配置，顺带更新内存 cfg.mcRoot）——
-      // 原手抄六位置实参用的是 getCfg() 快照，正是 saveCfg 注释里 P1 修过的「旧值覆盖」形态
-      await saveCfg({ mcRoot: selected });
-      cardRefreshers.forEach((fn) => {
-        fn();
-      });
-      bus.emit("stats:refresh");
-      bus.emit("toast:show", {
-        msg: t("content.mcPathSet", { path: selected }),
-        duration: TOAST_MS.normal,
-        type: "success",
-      });
-    } catch (e) {
-      // P2 修复：GetMinecraftPaths/SaveAppConfig 失败要有出口，避免 unhandled rejection 静默
-      toastError(e);
-    } finally {
-      setBusy(false);
-    }
+    });
   });
   // hover 时预加载并显示扫描到的所有路径 + 搜索范围
   let _scanTooltip: HTMLElement | null = null;

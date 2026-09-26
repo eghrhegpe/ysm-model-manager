@@ -655,6 +655,27 @@ function runChecks() {
     "rtype 分支应消费 types 注册表查询（IsDirLevelSync/IsYsmEntryJSON/RegistryType().Detector/SupportedExtsForType）；新增类型只改 resource_types.json",
   );
 
+  // W9（范式契约执法，2026-10 立法）：settings 域「卡片唯一造法 = stgCard()」——生产文件
+  // 禁手写卡片结构族 class 字面量（stg-card 外壳 / -hdr / -body，含附加类如 -overridden）。
+  // stg-card-desc（body 内说明块）不在构造器管辖内，合法手写，正则排除；stg-card.ts 构造器
+  // 本体豁免；测试文件豁免（断言构造器输出属合法消费）；注释行豁免（历史说明合法提及）。
+  // 背景：知识卡「手写卡片已清零」的宣称曾因无闸兜底在动态渲染路径
+  // （path-cards|initAdvancedGrid）上失真——本闸把「新增即回退」从条文变机器执法。
+  add(
+    "W9",
+    "settings hand-written stg-card markup",
+    rgTracked('class="stg-card(?:-hdr|-body|[" ])', "frontend/src/views/app-content/settings", [
+      "*.ts",
+    ])
+      .filter((l) => {
+        const [f] = parseRgLine(l);
+        return !f.includes(".test.") && !f.replace(/\\/g, "/").endsWith("stg-card.ts");
+      })
+      .filter((l) => !/:\d+:\s*\/\//.test(l))
+      .filter((l) => !/:\d+:\s*\*/.test(l)),
+    "卡片结构一律走 stg-card.ts|stgCard() 构造器（icon/title/body/header 参数化），禁手写 stg-card/-hdr/-body 字面量",
+  );
+
   return results;
 }
 

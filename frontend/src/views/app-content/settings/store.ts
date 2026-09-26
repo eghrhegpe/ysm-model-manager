@@ -25,12 +25,27 @@ export function getCfg(): SettingsCfg {
 /** 所有路径卡片的刷新函数列表（绑定后收集，重排/重置时统一调用） */
 export const cardRefreshers: Array<() => void> = [];
 
-// 异步按钮防连点：目录选择/自动检测/重新链接进行中忽略后续点击（finally 释放）
+// 异步按钮防连点：目录选择/自动检测/重新链接进行中忽略后续点击。
+// 2026-10 锐评收编：三段手写（isBusy 检查 + setBusy(true) + finally 复位）机制化为 withBusy()——
+// 「带不带守卫」「锁何时释放」从注释约定变机制保证（原四处调用方各自手写，linkMode 回调
+// 持锁后误调带守卫函数会自锁死，此类易错点随 isBusy/setBusy 导出退役而消失）。
 let busy = false;
-export const isBusy = (): boolean => busy;
-export const setBusy = (v: boolean): void => {
-  busy = v;
-};
+
+/**
+ * 串行化执行：未持锁则置忙运行 task 并在结束后释放（task 抛出也释放，异常向调用方传播），
+ * 返回是否获得锁。调用方拿 false 走拒绝分支（如链接模式下拉的当场回退），不再自持锁。
+ * task 内部自理 try/catch + 错误 toast——本函数只管锁，不管错误出口。
+ */
+export async function withBusy(task: () => Promise<void>): Promise<boolean> {
+  if (busy) return false;
+  busy = true;
+  try {
+    await task();
+    return true;
+  } finally {
+    busy = false;
+  }
+}
 
 /** 重置模块级状态（initSettings 开头调用；重复执行时清空上次残留） */
 export function resetSettingsStore(next: SettingsCfg): void {

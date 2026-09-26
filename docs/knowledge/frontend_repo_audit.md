@@ -596,7 +596,6 @@ auto_fields:
     - invalidateScenePreview
     - invalidateVrmPreview
     - isActiveStatus
-    - isBusy
     - isContainerExt
     - isCrossOriginIsolated
     - isEditableTarget
@@ -1109,7 +1108,6 @@ auto_fields:
     - setActive3DClose
     - setBoneNodeVisible
     - setBoneVisible
-    - setBusy
     - setFrustumCullEnabled
     - setLang
     - setLastSelectedType

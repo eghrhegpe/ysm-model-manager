@@ -9,6 +9,7 @@ source_files:
   - frontend/src/views/app-content/settings/path-cards.ts
   - frontend/src/views/app-content/settings/store.ts
   - frontend/src/views/app-content/settings/theme.ts
+  - frontend/src/views/app-content/settings/ui-maps.ts
   - frontend/src/views/app-content/settings/ui-prefs.ts
   - frontend/src/views/app-content/settings/worker-prefs.ts
 auto_fields:
@@ -25,12 +26,13 @@ auto_fields:
     - initThemeSection
     - initUiPrefs
     - initWorkerPrefs
-    - isBusy
+    - LINK_MODE_UI
+    - MIRROR_UI
     - resetSettingsStore
     - saveCfg
-    - setBusy
     - SettingsCfg
     - toastError
+    - withBusy
   tests:
     - frontend/src/views/app-content/settings/init.test.ts
     - frontend/src/views/app-content/settings/keymap.test.ts
@@ -43,7 +45,9 @@ quick_intents:
   - settings/init / keymap / store
 quick_risk_lines:
   - 配置落盘一律走 `views/config-write.ts|writeAppConfig(patch)`（跨视图唯一实参点，ADR-313）；设置域内部可走薄包装 `path-cards.ts|saveCfg`（额外同步内存 cfg）。patch 语义 = 只覆盖显式传入字段、其余取保存前重读最新；偏好类读写一律 safeGet/safeSet，禁止裸 localStorage
-  - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（2026-10 已清零，新增即回退）
+  - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（2026-10 含动态渲染路径 initAdvancedGrid 全清零；执法闸 = check-redlines W9，新增即红）
+  - 异步操作防连点一律 `store.ts|withBusy(task)`（返回是否获得锁，false 走拒绝分支如 UI 当场回退）；`isBusy/setBusy` 已退役，禁手写「检查+置忙+finally 复位」三段
+  - 「值→文案」多消费面共享映射表住 `ui-maps.ts`（MIRROR_UI / LINK_MODE_UI）；schema 加成员漏文案键编译期红，禁模板手写 option 裸列
 pitfalls:
   - 各组件各自读写 localStorage → 值不同步、设置页显示与页面行为不一致；必须经 store 单点
   - 键位未持久化 → 重启恢复默认；必须经 store 的 safeSet 落盘
@@ -52,7 +56,7 @@ pitfalls:
   #   → `unidentified alias`，与 Markdown 粗体无关）；② 值**不要以 `"` 开头后中途闭合**（会被当字符串定界符
   #   → `bad indentation of a sequence entry`）。含引号的长值统一用双引号整体包裹 + 内部 `\"` 转义。
   #   正文里的 `**...**` 不受影响。
-  - "卡片唯一造法 = `stgCard()`：新增/重构「卡片型」设置项（hdr 图标+标题 / body 值或控件 / `stg-card-desc` 说明 / `actions` 按钮四区）一律走 `frontend/src/views/app-content/settings/stg-card.ts` 的 `stgCard()` 构造器，禁止手写 `<div class=\"stg-card\">` 或裸 `style=\"background:var(--surf);border:...\"` 仿卡——后者三处间距/圆角/动画各自为政，迟早漂移（见样式范式契约）"
+  - "卡片唯一造法 = `stgCard()`：新增/重构「卡片型」设置项（hdr 图标+标题 / body 值或控件 / `stg-card-desc` 说明 / `actions` 按钮四区）一律走 `frontend/src/views/app-content/settings/stg-card.ts` 的 `stgCard()` 构造器，禁止手写 `<div class=\"stg-card\">` 或裸 `style=\"background:var(--surf);border:...\"` 仿卡——后者三处间距/圆角/动画各自为政，迟早漂移（见样式范式契约）。**执法闸 = check-redlines W9**（扫 settings 生产文件的 stg-card/-hdr/-body 结构字面量，豁免 stg-card.ts 本体与测试）——「清零」宣称曾因无闸兜底在动态渲染路径（path-cards|initAdvancedGrid）上失真，2026-10 收编后真清零，新增即机器回退"
   - "三范式各有边界，禁止混搭：卡片=`stgCard()`（含 `stg-grid` 平铺的同族小卡，如路径/字体/鸣谢）；选择器瓦片=`theme-card`（主题六选一，已在 `.theme-picker` 内）；紧凑单控件=`settings-group`+`setting-row`（滑块/下拉/开关，以及键位动作行）。键位是快捷键单值，不得为每个动作嵌套一张 `stg-card`"
 
 use_when:
@@ -100,10 +104,11 @@ status: active
 - 配置变更三事件（`config:updated` / `stats:refresh` / `toast:show`）必须齐全，否则改配置后界面不刷新
 - `ui-default-page` 显示值兜底 `repository`，与 `resolveInitialPage` 的兜底一致
 - 主题写回必须过白名单（cyber/warm/pro/sakura/ocean/mint/system），防脏值污染持久层
-- **链接模式切换 = 确认框 + 全程持锁 + 增量进度**（ADR-296 D5，`init.ts|stgBindLinkMode` / `relinkAllInstancesInner`）：change 回调顶部纳入 `isBusy/setBusy` 守卫（与「重新链接」按钮共锁，busy 期间忽略点击、不弹确认框），发任何 RPC 前先 `ListVersionInstances` 计数并弹 `modalConfirm`（danger；mcRoot 空/计数失败退化 n=0 不拦确认）；**取消必须回退 `linkSelect.value` 与 hint 到上次生效值**（闭包 `curVal` 仅在保存成功后推进，勿用 cfg 初值快照当旧值）且零 RPC、零切换 toast；确认后 relink 段调无守卫的 `relinkAllInstancesInner`（公共出口 `relinkAllInstances` 仍带守卫，供按钮复用——拆 Inner 而非加 skipBusyGuard 参数，锁语义单点）。逐实例增量 toast `settings.relinkProgress{done}/{total}`，末个实例让位终态汇总不重发、单实例无中间进度。测试注意：modalConfirm 结算走退场动画定时器（~120ms），取消回退断言必须 `waitFor` 而非裸 `setTimeout(0)`
-- **路径选择走统一 `modalPicker` 脚手架**（2026-09-05 code_review 修复 8cfbf2e7）：path-cards 多路径选择不再自建手写 modal（`.mc-pick-item`/`.mc-pick-cancel` 类已删），测试须驱动共享 DOM 契约——行 `[data-testid="pick-item"]`（`data-idx` 定位）、取消 `[data-testid="dlg-cancel"]`；扫描提示 tooltip 的 id 保持 `mc-scan-tooltip`（init.test.ts 经 `getElementById` 驱动 hover/泄漏回归断言，改名即测试断裂）
+- **链接模式切换 = 确认框 + 全程持锁 + 增量进度**（ADR-296 D5，`init.ts|stgBindLinkMode` / `relinkAllInstancesInner`）：change 回调全程纳入 `withBusy` 守卫（与「重新链接」按钮共锁，busy 期间忽略变更、不弹确认框），发任何 RPC 前先 `ListVersionInstances` 计数并弹 `modalConfirm`（danger；mcRoot 空/计数失败退化 n=0 不拦确认）；**取消必须回退 `linkSelect.value` 与 hint 到上次生效值**（闭包 `curVal` 仅在保存成功后推进，勿用 cfg 初值快照当旧值）且零 RPC、零切换 toast；确认后 relink 段调无守卫的 `relinkAllInstancesInner`（公共出口 `relinkAllInstances` 自带 withBusy，供按钮复用——拆 Inner 而非加 skipBusyGuard 参数，锁语义单点）。逐实例增量 toast `settings.relinkProgress{done}/{total}`，末个实例让位终态汇总不重发、单实例无中间进度。测试注意：modalConfirm 结算走退场动画定时器（~120ms），取消回退断言必须 `waitFor` 而非裸 `setTimeout(0)`
+- **路径选择走统一 `modalPicker` 脚手架**（2026-09-05 code_review 修复 8cfbf2e7）：path-cards 多路径选择不再自建手写 modal（`.mc-pick-item`/`.mc-pick-cancel` 类已删），测试须驱动共享 DOM 契约——行 `[data-testid="pick-item"]`（`data-idx` 定位）、取消 `[data-testid="dlg-cancel"]`；扫描提示 tooltip 的 id 保持 `mc-scan-tooltip`（init.test.ts 经 `getElementById` 驱动 hover/泄漏回归断言，改名即测试断裂），外壳样式 2026-10 起走 `components.css|.mc-scan-tooltip` 类（该类 ADR-049 期建立后一直是死类、TS 侧 60 行内联配方重复造轮子，收编即激活；`left/top` 定位仍由 JS 动态计算）
 - **复制到剪贴板必须消费布尔结果**（code_review 同批修复，宿主 instance-ops.ts 见 [global_handlers](./global-handlers.md)）：`copyText` 永不 reject，Clipboard API/execCommand 兜底失败只返回 false——`await copyText(text)` 丢弃返回值会在失败时误弹「已复制」假成功；须 `const ok = await copyText(text); if (!ok) { error toast; return; }`
-  - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（字体三栏 / 语言选择均已于 2026-09 回填正典卡，现无存量债）
+  - 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（字体三栏 / 语言选择已于 2026-09 回填正典卡；**高级面板 `path-cards.ts|initAdvancedGrid` 的动态渲染 2026-10 收编**——原手写 hdr「图标/名称拆独立 span」正是构造器立法要防的漂移形态；执法闸 = check-redlines W9）
+  - **异步操作防连点一律 `store.ts|withBusy(task)`**（2026-10 锐评收编）：未持锁则置忙运行 task 并在结束后释放（task 抛出也释放，异常向调用方传播由其 toast），返回是否获得锁；调用方拿 false 走拒绝分支（如链接模式下拉的当场回退）。原 `isBusy/setBusy` 导出已退役——四处手写「检查+置忙+finally 复位」三段（bindPathClick / initMcDetect / relinkAllInstances / linkMode change）收敛为机制，新入口不再面临「带不带守卫」易错题。行为注意：拒绝分支回退发生在**微任务**（withBusy 拒绝即返回），测试断言用 `waitFor`、勿锁「同一宏任务同步回退」的实现时序
   - **tab 按钮 ↔ 面板同源**：设置页 tab 栏 + 面板均由 `renderTabs({prefix:"stg",buttonClass:"stg-tab",tabs:[...]})` 单一工厂产出（ADR-259 §3），`bindTabs` 从 DOM `data-tab` 派发，不再维护 `ids` 白名单；新增 tab 只需在 `tabs` 数组加一项
   - **tab 结构（2026-10 菜单收口，方案 A；2026-09-25 锐评改名 + 语义收债）**：4 tab（**环境**/外观/**3D 预览**/更新与关于），tab 文案键 = `settings.env` / `settings.appearance` / `settings.preview3d` / `settings.aboutUpdate`。「解析」（FBX/MMD worker 开关）=「3D 预览」tab 内的「解析」折叠节、不占独立槽；「鸣谢」（纯只读展示）=「更新与关于」tab 下段小节，`tpl-settings-about.ts|aboutPageBody` 是「更新与关于 + 鸣谢」页唯一组合根。「启动默认页面」归入「环境」，不归外观；**「语言」显示偏好随之迁出环境、归入「外观」**（用户第一直觉在外观，旧挂「常规」违反「槽位回答这里能配什么」）。槽位语义契约：菜单槽回答「这里能配置什么」——两个开关/只读展示不占槽；「更新与关于」含真实设置（更新检查间隔/检查更新/版本）故保留 tab
     - ⚠️ 原第三个 tab 键名为 `settings.operations`（"操作"）而文案写「3D 与解析」——**键名与显示文案脱节**，且「3D 与解析」是「解析 tab 降级并入 3D」时的妥协拼接词，用户无法从名字推断内容，形成「猜 tab + 展开折叠」的双重隐藏。2026-09 已改名 `settings.tab3d` =「3D 预览」，键名与文案对齐，名字直接回答「这里配什么」；**2026-10 再对齐 id 同名 = `settings.preview3d`**（`tab` 前缀描述的是「这是个 tab」而非「这里配什么」，与 operations 同病根——键名必须与 `TabSpec.id` 同义，非「这是第几个 tab」）。**新增 tab 时键名必须与其显示文案同义**，禁止留历史妥协名。
@@ -115,15 +120,15 @@ status: active
   - **3D 键位编辑约定**：`keymap.ts|tdRenderKeymap` 捕获的是单个 `KeyboardEvent.code`，不是组合键；Esc 取消捕获。每个动作使用 `setting-row.stg-keybind-row` 单行呈现，按钮须是原生 button；普通态 aria-label 只表达“动作；快捷键 key”，并用 `aria-keyshortcuts`/`aria-describedby` 补充元信息，捕获态改为“动作：正在等待按键；Esc 取消”并不再宣称旧快捷键；`.stg-keymap-grid` 使用 `auto-fit + minmax(min(220px,100%),1fr)`，不设固定最大列数，键位按钮具备独立边框/背景/焦点样式。
    - **键位 registry 单一事实源**：`preview-3d/infra/keymap.ts|TD_KEYMAP_REGISTRY` 统一声明 action/defaultCode/group/order/fallbackCodes，并派生 `TdKeyAction` 与 `DEFAULT_TD_KEYMAP`；设置页只保留 `Record<TdKeyAction, LocaleKey>` 标签映射并在渲染时调用 `t()`，输入层从 registry 的 fallbackCodes 派生回退表。新增动作先改 registry，禁止重新在 settings/input/infra 各写一份动作列表；未来 3D 菜单须通过 `MenuNode` schema 适配，不复制设置页 HTML。
   - **本页 3D 卡片的值域/默认/枚举消费 `preview-3d/infra/settings-schema.ts`**（ADR-303）：相机速度 range 的 `min/max/value`、旋转模式 `<option>` 集均由 `TD_CAM_SPEED` / `TD_ROT_MODE` 派生，文案键经 `Record<TdRotMode, LocaleKey>` 表（schema 加模式即编译期报错）；禁止在本页重写裸字面量——曾与 3D ⚙ 面板 + 读取层多处副本漂移
-  - **镜像源枚举消费 `views/app-content/settings/settings-schema.ts`**（ADR-307 D3 扩编，2026-10）：`set-mirror` 的 `<option>` 行与 `mirror-hint-<语义值>` 说明块均由 `MIRROR_SOURCES.map` 派生（`tpl-settings.ts|mirrorCardBody` + `MIRROR_UI` Record——schema 加成员即编译期逼出 UI 值/文案键同步），`mirror-hint-*` 的 id 与 `init.ts|applyMirrorHints` 约定同源；**禁止在模板手写 option 裸列**——曾出现「schema 有、下拉框静默没有」的半截接线（加第四个镜像源时下拉框缺席且无报错）。hint 块排版统一 `.stg-hint-block`（content-stg.ts，只管排版不带显隐，display 由 `init.ts|applyHintVisibility` 按值切），勿再内联复制 `font-size/color/padding` 配方
-   - **链接模式枚举消费 `views/app-content/settings/settings-schema.ts`**（ADR-307 D3 扩编，2026-10）：`set-link-mode` 的 `<option>` 行与 `lm-hint-<模式>` 说明块由 `LINK_MODES`（copy/hardlink/symlink）`.map` 派生（`tpl-settings.ts|linksCardSpec` + `LINK_UI` Record——schema 加模式即编译期逼出 option/文案键同步；symlink hint 带错误色 span 经 `LINK_UI.hintColor` 声明），默认 `selected` = `LINK_MODE_DEFAULT`（copy），静态态默认模式 hint 可见、其余 display:none（init.ts|applyHintVisibility 按实值纠正，与镜像源 default-direct 可见同口径）。`init.ts` 本地 `LINK_MODE_KEYS` 副本已删改引 `LINK_MODES`；`init.ts`/`path-cards.ts` 的 linkMode 缺省回退引 `LINK_MODE_DEFAULT`（原 `"copy"` 字面量三处各写一份已收口）
+  - **镜像源枚举消费 `views/app-content/settings/settings-schema.ts`**（ADR-307 D3 扩编，2026-10）：`set-mirror` 的 `<option>` 行与 `mirror-hint-<语义值>` 说明块均由 `MIRROR_SOURCES.map` 派生（`tpl-settings.ts|mirrorCardBody` + `ui-maps.ts|MIRROR_UI` Record——schema 加成员即编译期逼出 UI 值/文案键同步），`mirror-hint-*` 的 id 与 `init.ts|applyMirrorHints` 约定同源；**禁止在模板手写 option 裸列**——曾出现「schema 有、下拉框静默没有」的半截接线（加第四个镜像源时下拉框缺席且无报错）。hint 块排版统一 `.stg-hint-block`（content-stg.ts，只管排版不带显隐，display 由 `init.ts|applyHintVisibility` 按值切），勿再内联复制 `font-size/color/padding` 配方
+   - **链接模式枚举消费 `views/app-content/settings/settings-schema.ts`**（ADR-307 D3 扩编，2026-10）：`set-link-mode` 的 `<option>` 行与 `lm-hint-<模式>` 说明块由 `LINK_MODES`（copy/hardlink/symlink）`.map` 派生（`tpl-settings.ts|linksCardSpec` + `ui-maps.ts|LINK_MODE_UI` Record——schema 加模式即编译期逼出 option/文案键同步；symlink hint 带错误色 span 经 `LINK_MODE_UI.hintColor` 声明），默认 `selected` = `LINK_MODE_DEFAULT`（copy），静态态默认模式 hint 可见、其余 display:none（init.ts|applyHintVisibility 按实值纠正，与镜像源 default-direct 可见同口径）。`init.ts` 本地 `LINK_MODE_KEYS` 副本已删改引 `LINK_MODES`；`init.ts`/`path-cards.ts` 的 linkMode 缺省回退引 `LINK_MODE_DEFAULT`（原 `"copy"` 字面量三处各写一份已收口）
    - **外观/更新域值域消费 `views/app-content/settings/settings-schema.ts`**（ADR-307 D3 扩编，2026-10）：字号五档 / 卡片密度二档 / 创作者字体二值 / 更新检查间隔（ms）枚举 + 默认值（`FONT_SIZE_LEVELS` / `DENSITY_LEVELS` / `DISPLAY_FONTS` / `UPDATE_CHECK_INTERVALS` 及对应 `*_DEFAULT`）收编入 schema，模板 `<option>` 由枚举 `.map` 派生（文案键经各消费面 `Record<枚举, LocaleKey>` 表——schema 加档位即编译期报错），`ui-prefs.ts` 的 `scaleMap` 收紧为 `Record<FontSizeLevel, string>`、密度白名单接 `DENSITY_LEVELS`、各回退字面量引 `*_DEFAULT`，`init.ts` 更新检查缺省回退引 `UPDATE_CHECK_DEFAULT`。⚠️ `features/maintenance/version-updater.ts` 的 `CHECK_INTERVAL_DEFAULT_MS`（已 export，6h）属跨域副本（features 不得反向 import views 叶），须与 `UPDATE_CHECK_DEFAULT` 手工保持相等；`version-updater.test.ts`「缺省回退间隔 = 6h 数值语义」用例断言 `=== 21600000` + 频次边界行为（2026-10 子代理审核 P1-1 护栏：曾注释宣称契约测试锁定 6h 但无数值断言，漂移不被测出）
    - **顶层入场编排 = `stg-card.ts|stgUnits` 表驱动**（2026-10 方案 A 落地，取代 STG_*_DELAY 命名表）：每 tab 一张有序单元表（`settingsHTML` 的 env/appearance/preview3d body、`tpl-settings-about.ts|aboutSection`），按声明顺序自动累加槽位派生起始延迟——单卡/行组占 1 槽（+60ms），卡组占 `(n-1)×cardStep+step` 槽（组内末卡后恒留 step 空隙，任何卡数零撞车）。渲染函数签名带 `startMs`，不再手填 delayMs/startMs/裸字面量。**加卡/加组 = 表加一项，顺序即档位，零思考、零撞车**。卡组步长：默认 30（小卡紧凑），大卡组自声明 60（如路径组、preview3d 三卡）——「卡组内节奏」语义与组间 60 不混
    - **顶层档位精确序列 + 唯一性回归断言**（`tpl.test.ts`）：锁定各 tab 顶层可见单元（`.stg-card` / `.settings-group`，剔除 `<details>` 折叠区——解析/鸣谢默认收起、动画仅展开时播不参与首屏竞争）的派生序列：env `[0,60,120,180,240]`、appearance `[0,60,120,150,180,240,300]`、preview3d `[0,60,120]`、aboutUpdate `[0,60,90,150,180]`（DESKTOP）。序列漂移（有人绕回 stgUnits 手填档位）或同 tab 撞车即红。病源回顾：旧三套机制（STG_BAND 行组 / stgCards 卡组 startMs / 单卡 delayMs）互不感知，曾现 appearance「自动 60」与「字体首卡 60」同刻、about「intro 第三卡 120」与「guide 首卡 120」同刻——方案 A 统一接管后根除
    - **3D 预览 tab 三行已升格正典卡**（2026-10 卡片流收口）：`tpl-settings.ts|renderStgPreview3d` 的相机速度 / 旋转模式 / 键位映射三行自裸 `.settings-group` 行组升格为 `.stg-card`（`stg-camspeed-card` / `stg-rotmode-card` / `stg-keymap-card`，经 `stgCard()` 构造器），与 env / appearance / about 各 tab 卡片口径统一。卡内行组用 `.stg-keybind-row`（键位项专属透明底 + 边框）避免卡中卡双层背景；首卡挂 `.stg-section` 供 16px 顶距；测试钩子（`td-camspeed` / `td-rotmode` / `td-keymap-grid` / `td-keymap-reset`）全保留；入场延迟由 stgUnits 注入（本 tab 首单元 startMs=0，卡组内 step 60 → 0/60/120）。回归测试 `tpl.test.ts`「3D 预览 tab 三行组已升格正典卡」钉死不得回退行组范式。⚠️ 解析 details 折叠区内部三行组仍走 `STG_BAND.preview3d` + `groupDelay`（band 0 + 60ms 步长，展开时才播，不参与顶层竞争）
 
   - **主题域类型护栏（2026-10 锐评第七轮）**：`theme-core.ts|THEME_VALID` 收为 `as const` 元组并导出 `Theme` / `ThemeCard` 联合；`tpl-settings.ts` 的 `THEME_ICON` / `THEME_LABEL_KEY` 表必须是 `Record<ThemeCard, …>`——加主题漏键即编译期红。此前两表是 `Record<string, …>` 松键，漏键只在运行时回落 `?? UI_ICONS.dot` / `labelKey ? … : theme`（裸图标 + 裸主题名）静默漂移。默认主题一律引 `THEME_DARK`，禁止 `"cyber"` 字面量（`theme.ts` 曾两处裸写，同页其余保存点却引常量）。
-  - **链接模式用户可见名单表（2026-10 锐评第七轮）**：`tpl-settings.ts|LINK_MODE_UI`（导出，模板与 init 共用）是模式名唯一来源——下拉 option、确认框 `settings.linkModeConfirmMessage`、toast `settings.linkModeSwitched` 三者同取 `labelKey`；**禁止把裸枚举塞进 `{val}`**（中文界面曾出现「重新链接为 symlink 模式」，全页唯一用户可见值裸奔点）。下拉值须经 `init.ts|normalizeLinkMode` 归一后再进文案表/写 cfg。
+  - **链接模式用户可见名单表（2026-10 锐评第七轮；2026-10 收编迁 `ui-maps.ts`）**：`ui-maps.ts|LINK_MODE_UI`（模板与 init 共用）是模式名唯一来源——下拉 option、确认框 `settings.linkModeConfirmMessage`、toast `settings.linkModeSwitched` 三者同取 `labelKey`；**禁止把裸枚举塞进 `{val}`**（中文界面曾出现「重新链接为 symlink 模式」，全页唯一用户可见值裸奔点）。下拉值须经 `init.ts|normalizeLinkMode` 归一后再进文案表/写 cfg。双消费面共享的「值→文案」映射表一律住 `ui-maps.ts`（同 `MIRROR_UI`）——原 `LINK_MODE_UI` 住 `tpl-settings.ts` 曾迫使 init 反向 import 模板层，已消
   - **`.stg-select-block` = 卡片体内块级下拉配方**（2026-10 锐评第七轮）：占满卡片宽 + margin-bottom 6px 单点声明，此前 5 处各写内联 `style="width:100%;margin-bottom:6px"`（字号卡还漂成 4px）；行内下拉不写 `width:auto`（`.stg-select` 无宽度声明、默认 intrinsic，该内联零效果）。
   - **配置落盘唯一出口上移 `views/config-write.ts|writeAppConfig`**（2026-10 锐评第八轮建立 `saveCfg` → 第九轮 ADR-313 上移）：跨视图唯一实参点，patch 语义（只覆盖显式传入字段，其余取保存前**重读**的最新 Go 配置）+ 全字段（filesRoot/rpRoot/mcRoot/linkMode/theme/themeAuto），返回实际写入六元组。设置域 `path-cards.ts|saveCfg` 降为薄包装（补 `getCfg()` 内存同步）。曾四处手抄 `SaveAppConfig(六个同型 string)`（位置错了类型系统看不见——P3「闭包旧值覆盖 linkMode」/ P4「theme-auto 漏落盘」都是它咬的）。⚠️ 历史残留已清：`views/app-sidebar/{launcher-detect,events}.ts` 两处手抄配方各自硬编码 `"dark"` 主题字面量，而 `THEME_VALID` 里**没有 `"dark"`**（合法缺省 `THEME_DARK = "cyber"`）——落盘后被 `normalizeTheme` 静默归一成 `system`，用户只改游戏目录、主题却被改成跟随系统。**执法**：`tests/test_config_write_single_exit.ts` 锁「生产代码 `SaveAppConfig(` 调点恰好一处且必须在出口文件」「非出口不得 import 该绑定」「出口不得裸写 `"dark"`」。
   - **出口层位为何在 `views/` 根而非 `features/`**（ADR-313 D1）：出口需引「配置字段值域」零依赖纯数据叶（`settings-schema.ts|LINK_MODE_DEFAULT`），而 features 不得反向 import views——下沉 features 就得再抄一份值域，正是要消灭的漂移源。`config-write.ts` 与 `backend-deps.ts` 同列（views 层组合根）；因 check-layering R5 白名单只认 `*-deps.ts`，它**不得**直连 `backend/app.ts`，只经 `backend-deps.ts` 转发。出口保持**无状态**（不碰 settings 的 store），内存快照同步归 `saveCfg`。
@@ -137,7 +142,7 @@ status: active
 
 | 范式 | 唯一造法 | 适用 | 反例（待修债） |
 |------|----------|------|----------------|
-| 卡片（大/小卡） | `stgCard()`（单张）/ `stgCards()`（同族一组，延迟按序号派生）（`settings/stg-card.ts`） | 自包含功能块：hdr（图标+标题）+ body（值/控件）+ `stg-card-desc`（说明）+ `actions`（按钮）四区齐全；同族多选项用 `stg-grid` 平铺（如路径三卡、字体三卡、鸣谢卡） | 裸 `style="background:var(--surf);border:..."` 内联手写卡、手写 `<div class="stg-card">` 未走构造器 → 间距/圆角/动画与正典卡不一致。**2026-09 已清零**（字体三栏 / 语言选择 / About 五卡全部回填，见文末待修债），新增卡片若再出现裸样式即视为回退 |
+| 卡片（大/小卡） | `stgCard()`（单张）/ `stgCards()`（同族一组，延迟按序号派生）（`settings/stg-card.ts`） | 自包含功能块：hdr（图标+标题）+ body（值/控件）+ `stg-card-desc`（说明）+ `actions`（按钮）四区齐全；同族多选项用 `stg-grid` 平铺（如路径三卡、字体三卡、鸣谢卡） | 裸 `style="background:var(--surf);border:..."` 内联手写卡、手写 `<div class="stg-card">` 未走构造器 → 间距/圆角/动画与正典卡不一致。**2026-10 全清零**（静态模板 2026-09 回填；动态渲染 `path-cards.ts|initAdvancedGrid` 2026-10 收编），执法闸 = `check-redlines W9`，新增手写结构族即红 |
 | 选择器瓦片 | `theme-card`（`.theme-picker` 内） | 同族多选项的「点选」场景（主题六选一） | 勿把普通卡片写成瓦片 |
 | 紧凑行组 | `settings-group` + `setting-row` | 单控件占用整行的紧凑参数：滑块/下拉/开关（**2026-10 起仅余「主题自动切换」与「解析」details 内 worker 开关；相机速度 / 旋转模式 / 键位映射已升格卡片**） | 勿把 2 字标签撑满整行却内容稀疏的项硬塞；确需并排时改用 `stg-grid` 小卡 |
 

@@ -37,6 +37,8 @@ export interface StgCardOpts {
   header?: StgCardHeaderOpts;
   /** .stg-card 的 id（如 "stg-files-card"，供测试/定位）。 */
   cardId?: string;
+  /** 附加到外壳的额外类（空格分隔，如 "stg-card-overridden"——高级面板覆盖态）。 */
+  cardClass?: string;
   /** 进入动画延迟（ms），与原手写 animation-delay 一致。 */
   delayMs?: number;
   /** 卡片上外边距（px），如存储卡 margin-top:8px。 */
@@ -51,14 +53,15 @@ export interface StgCardOpts {
  * 标题行走 stgCardHeader（杜绝图标+标题漂移），body 始终被 `.stg-card-body` 包裹。
  */
 export function stgCard(icon: string, title: string, body: string, opts: StgCardOpts = {}): string {
-  const { header = {}, cardId = "", delayMs, marginTop, cardStyle = "" } = opts;
+  const { header = {}, cardId = "", cardClass = "", delayMs, marginTop, cardStyle = "" } = opts;
+  const classAttr = ` class="stg-card${cardClass ? ` ${cardClass}` : ""}"`;
   const idAttr = cardId ? ` id="${cardId}"` : "";
   const styleParts: string[] = [];
   if (delayMs !== undefined) styleParts.push(`animation-delay:${delayMs}ms`);
   if (marginTop !== undefined) styleParts.push(`margin-top:${marginTop}px`);
   if (cardStyle) styleParts.push(cardStyle);
   const styleAttr = styleParts.length ? ` style="${styleParts.join(";")}"` : "";
-  return `<div class="stg-card"${idAttr}${styleAttr}>${stgCardHeader(icon, title, header)}<div class="stg-card-body">${body}</div></div>`;
+  return `<div${classAttr}${idAttr}${styleAttr}>${stgCardHeader(icon, title, header)}<div class="stg-card-body">${body}</div></div>`;
 }
 
 // ===== 同族卡片组：入场延迟按序号派生（2026-09 锐评 P2）=====

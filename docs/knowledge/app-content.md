@@ -62,7 +62,6 @@ auto_fields:
     - initWorkshopPage
     - initWorkshopTabs
     - instancesHTML
-    - LINK_MODE_UI
     - openSite
     - PAGE_REGISTRY
     - PageDefinition

@@ -78,6 +78,16 @@ describe("stgCard", () => {
     expect(html).not.toMatch(/<div class="stg-card"\s+>/);
   });
 
+  it("cardClass 附加外壳类（stg-card-overridden 高级面板场景），单一 class 属性", () => {
+    const html = stgCard(ICON, TITLE, "", { cardClass: "stg-card-overridden" });
+    expect(html).toMatch(/^<div class="stg-card stg-card-overridden">/);
+  });
+
+  it("cardClass 缺省/空串不产生尾随空格", () => {
+    expect(stgCard(ICON, TITLE, "")).toMatch(/^<div class="stg-card">/);
+    expect(stgCard(ICON, TITLE, "", { cardClass: "" })).toMatch(/^<div class="stg-card">/);
+  });
+
   it("header 选项透传给 stgCardHeader（forId 生成 label）", () => {
     const html = stgCard(ICON, TITLE, "", { header: { forId: "set-link-mode" } });
     expect(html).toContain('<label for="set-link-mode"');

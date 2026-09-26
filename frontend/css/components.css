@@ -571,12 +571,15 @@
   pointer-events: none;
 }
 
-/* ===== 设置页扫描提示浮层（document.body 下） ===== */
+/* ===== 设置页扫描提示浮层（document.body 下；消费者 = settings/path-cards.ts|showScanTooltip，
+   2026-10 收编：此前 TS 侧 60 行内联配方与本类重复造轮子，类建立后一直无消费者） ===== */
 .mc-scan-tooltip {
   position:fixed;z-index:var(--z-toast);
   background:var(--surf);border:1px solid var(--bd);border-radius:var(--radius-lg);
   padding:10px 14px;font-size:var(--fs-sm);color:var(--txt);
   box-shadow:var(--shadow-lg);
-  max-width:var(--dlg-width-sm);max-height:var(--dlg-max-h);overflow-y:auto;
+  /* max-height 走固定 350px 而非 --dlg-max-h：气泡是紧凑路径列表（原内联行为），
+     非弹窗——85vh 会让长列表气泡拉到近满屏 */
+  max-width:var(--dlg-width-sm);max-height:350px;overflow-y:auto;
   pointer-events:none;line-height:1.6;
 }

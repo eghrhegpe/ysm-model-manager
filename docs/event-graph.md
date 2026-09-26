@@ -178,7 +178,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 78 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 214 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 212 |
 
 ### `menu:show`
 
@@ -220,8 +220,8 @@
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 66 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 191 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 266 |
-| anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
+| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 50 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 222 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 280 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 87 |
 
@@ -229,7 +229,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 53 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 194 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
 
 ### `package:selected`
 
@@ -249,7 +249,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindNavItems | `frontend/src/views/app-nav/index.ts` | 58 |
+| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 56 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -261,7 +261,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 126 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -269,9 +269,9 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 120 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 303 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 214 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 130 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 305 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 307 |
 
 ### `repo:search-creator`
 
@@ -291,12 +291,12 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 129 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 127 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 328 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 330 |
 
 ### `stats:refresh`
 
@@ -322,8 +322,8 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 83 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 156 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 313 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 223 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 242 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 225 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 244 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 103 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 130 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 204 |
@@ -334,7 +334,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 122 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 285 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 287 |
 
 ### `sync:download:done`
 
@@ -477,7 +477,7 @@
 | bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 173 |
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 104 |
 | initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 169 |
-| anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 150 |
+| anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 148 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 200 |
@@ -499,7 +499,7 @@
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 302 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 307 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
-| _showError | `frontend/src/views/app-sync-manager/index.ts` | 267 |
+| _showError | `frontend/src/views/app-sync-manager/index.ts` | 269 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 52 |
 | performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 60 |
 | loadData | `frontend/src/views/app-sync-manager/store.ts` | 77 |

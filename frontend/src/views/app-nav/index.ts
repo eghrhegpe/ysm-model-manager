@@ -7,6 +7,7 @@ import { getLastModelPath } from "@/core/model-path-store.ts";
 import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { bindRoving } from "@/utils/dom/bind-roving.ts";
 import { setRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -43,45 +44,42 @@ export const VIEW_TESTIDS: readonly string[] = [
 // NavItem / navItems 单一事实源已拆至 ./nav-items.ts（叶模块，无组件副作用）；
 // 本文件经上方 export {} 重导出，消费方导入路径不变。
 
+/** 激活导航页（点击与键盘 Enter/Space 共享；ADR-223 focus flag 分支归一）。 */
+function anActivateNavPage(page: PageName): void {
+  safeSet("nav_page", page);
+  bus.emit("nav:changed", { page });
+  // ADR-223：repository 激活 → 置 pending flag + 发 repo:focus-search
+  // （app-tree 已挂直达；未挂则挂载时 connectedCallback 消费）；非 repository → 清 flag 防残。
+  // 替原 queueMicrotask(_focusRepoSearch) 的 DOM 穿透 + 25ms 轮询。
+  if (page === "repository") {
+    setRepoSearchFocusPending(true);
+    bus.emit("repo:focus-search");
+  } else {
+    setRepoSearchFocusPending(false);
+  }
+}
+
 function anBindNavItems(shadowRoot: ShadowRoot): void {
   const navItems = Array.from(shadowRoot.querySelectorAll<HTMLElement>(".nav-item"));
   navItems.forEach((el) => {
-    const activate = (): void => {
-      const page = el.dataset.page as PageName;
-      safeSet("nav_page", page);
-      bus.emit("nav:changed", { page });
-      // ADR-223：repository 激活 → 置 pending flag + 发 repo:focus-search
-      // （app-tree 已挂直达；未挂则挂载时 connectedCallback 消费）；非 repository → 清 flag 防残。
-      // 替原 queueMicrotask(_focusRepoSearch) 的 DOM 穿透 + 25ms 轮询。
-      if (page === "repository") {
-        setRepoSearchFocusPending(true);
-        bus.emit("repo:focus-search");
-      } else {
-        setRepoSearchFocusPending(false);
-      }
-    };
-    el.onclick = activate;
-    el.addEventListener("keydown", (e) => {
-      const idx = navItems.indexOf(el);
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        e.preventDefault();
-        const next =
-          e.key === "ArrowDown"
-            ? (idx + 1) % navItems.length
-            : (idx - 1 + navItems.length) % navItems.length;
-        navItems[next].focus();
-      } else if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        activate();
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        navItems[0].focus();
-      } else if (e.key === "End") {
-        e.preventDefault();
-        navItems[navItems.length - 1].focus();
-      }
-    });
+    el.onclick = (): void => anActivateNavPage(el.dataset.page as PageName);
   });
+  // 键盘原语收敛（ADR-308 D2）：逐项 keydown → .menu 容器级 bindRoving。
+  // .menu 每次 render 全量 innerHTML 重建 → 监听无堆积；.nav-repo-sel 双原生 select
+  // 方向键归原生语义（原语 isEditable 含 SELECT 守卫，不劫持）。
+  const menu = shadowRoot.querySelector<HTMLElement>(".menu");
+  if (menu) {
+    bindRoving({
+      root: shadowRoot,
+      container: menu,
+      itemSelector: ".nav-item",
+      preset: "tab",
+      orientation: "vertical",
+      cyclic: true,
+      stateAttr: null,
+      onActivate: (item) => anActivateNavPage(item.dataset.page as PageName),
+    });
+  }
 }
 
 function anBindDualSelects(shadowRoot: ShadowRoot): void {

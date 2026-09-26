@@ -112,6 +112,38 @@ describe("initDropdown — 键盘契约", () => {
     dispose();
     host.remove();
   });
+  it("容器级派发兜底（ADR-308 D2：无前置焦点时 ArrowDown 从 roving 位序走，非跳首项）", () => {
+    const { host, root, $ } = makeFixture();
+    const dispose = initDropdown($("dd1"));
+    const menu = $("menu1");
+    const items = [...menu.querySelectorAll("button")] as HTMLElement[];
+    $("btn1").click(); // 展开并焦首项
+    key(items[1]!, "ArrowDown"); // 焦点 0→1
+    key(items[2]!, "ArrowDown"); // 焦点到末项
+    key(menu, "ArrowDown"); // 容器级派发（无目标项命中，activeElement = 末项）：循环回首
+    expect(root.activeElement).toBe(items[0]);
+    dispose();
+    host.remove();
+  });
+
+  it("Enter/Space 落在项上经原语接管激活（等价原生 button click：收起 + 回焦 trigger）", () => {
+    const { host, root, $ } = makeFixture();
+    const dispose = initDropdown($("dd1"));
+    const menu = $("menu1");
+    const items = [...menu.querySelectorAll("button")] as HTMLElement[];
+    const clicked = vi.fn();
+    items[1]!.addEventListener("click", clicked);
+    $("btn1").click();
+    items[1]!.focus();
+    const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    items[1]!.dispatchEvent(enter);
+    expect(enter.defaultPrevented).toBe(true); // 原语消费
+    expect(clicked).toHaveBeenCalledTimes(1); // onActivate → item.click()
+    expect($("btn1").getAttribute("aria-expanded")).toBe("false"); // 菜单项点击 → 收起
+    expect(root.activeElement).toBe($("btn1")); // 焦点回 trigger
+    dispose();
+    host.remove();
+  });
 });
 
 describe("initDropdown — onOpen / 互斥 / dispose", () => {

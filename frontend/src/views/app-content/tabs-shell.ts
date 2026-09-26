@@ -15,6 +15,9 @@
 // 的 `style.display = "" / "none"` 翻转口径一致。
 //
 // 纯字符串（零依赖）：可 node 环境单测，也可被任意页面模板复用。
+// 键盘原语例外（ADR-308 D2）：bindSubBar 的键盘段依赖 bind-roving（DOM 原语层）。
+
+import { bindRoving } from "@/utils/dom/bind-roving.ts";
 
 /** 单个 tab 的声明：按钮文案 + 面板内容 + 该面板的差异项。
  *  @typeParam Id tab id 的字面量联合（调用方可传 `"general" | "about"` 等，让漏同步的
@@ -230,60 +233,39 @@ export function bindSubBar(root: ShadowRoot, group: string, onSwitch?: (id: stri
   if (bar.getAttribute("role") !== "toolbar") return;
 
   // 可导航 pill（排除 aria-disabled="true"）——roving 圈在可用项内
-  const navPills = pills.filter((p) => p.getAttribute("aria-disabled") !== "true");
-  if (!navPills.length) return;
+  if (!pills.some((p) => p.getAttribute("aria-disabled") !== "true")) return;
 
-  // 焦点索引自维护：`document.activeElement` 对 shadow 内聚焦元素会 retarget 回 host
-  // （规范行为），读它取到的是 host/容器而非 pill——恒失准。用 focusin（bar 级委托）
-  // 单写点 + activate 同步 + keydown 的 target 兜底三路把 focusIdx 保持为「真实当前项」。
-  let focusIdx = navPills.findIndex((p) => p.classList.contains("active"));
-  bar.addEventListener("focusin", (e) => {
-    const idx = navPills.indexOf(e.target as HTMLElement);
-    if (idx !== -1) focusIdx = idx;
+  // ADR-308 D2：roving 键盘原语接管（替代 focusin 三路自维护 focusIdx——target-based +
+  // stateIndex 兜底 + activeElementBase 三路等效且更少失准路径；aria-disabled 过滤走
+  // itemsOf live 提供器，属性后补也即时生效）
+  const roving = bindRoving({
+    root,
+    container: bar,
+    itemSelector: ".diag-sub-tab",
+    itemsOf: (c) =>
+      Array.from(c.querySelectorAll<HTMLElement>(".diag-sub-tab")).filter(
+        (p) => p.getAttribute("aria-disabled") !== "true",
+      ),
+    preset: "radio", // 移动即激活（radio 语义）
+    orientation: "both",
+    cyclic: true,
+    homeEnd: false, // Home/End 走下方独立小监听（radiogroup 规范：只移焦点不激活）
+    activeElementBase: true, // 冻结契约：bar 级派发（target=bar）时以实际焦点为基准（末项循环回首测试）
+    stateAttr: null, // aria-checked/roving 由 activate 统一写（原语不重复落位）
+    initialIndex: pills.findIndex((p) => p.classList.contains("active")),
+    onActivate: (pill) => activate(pill),
   });
 
-  const focusIndex = (idx: number): void => {
-    const target = navPills[idx];
-    if (!target) return;
-    focusIdx = idx;
-    target.focus();
-  };
-
-  // 方向键移动 = 激活（radio 语义：移动即选中）同步聚焦
-  const moveTo = (idx: number): void => {
-    const target = navPills[(idx + navPills.length) % navPills.length];
-    if (!target) return;
-    activate(target);
-    focusIdx = navPills.indexOf(target);
-    target.focus();
-  };
-
+  // Home/End：只移焦点不激活（radiogroup 规范），roving 随焦点迁移（Tab 单停靠点）
   bar.addEventListener("keydown", (e: KeyboardEvent) => {
-    // 真实键盘路径：e.target 是聚焦 pill；测试直接派发到 bar 时回落 focusIdx
-    const targetIdx = navPills.indexOf(e.target as HTMLElement);
-    const curIdx = targetIdx !== -1 ? targetIdx : focusIdx;
-    if (curIdx === -1) return; // 焦点从未落进本 bar（外部误触）→ 不接管
-    switch (e.key) {
-      case "ArrowRight":
-      case "ArrowDown":
-        e.preventDefault();
-        moveTo(curIdx + 1);
-        return;
-      case "ArrowLeft":
-      case "ArrowUp":
-        e.preventDefault();
-        moveTo(curIdx - 1);
-        return;
-      case "Home":
-        e.preventDefault();
-        focusIndex(0); // radiogroup 规范：Home/End 只移焦点、不改选中
-        return;
-      case "End":
-        e.preventDefault();
-        focusIndex(navPills.length - 1);
-        return;
-      default:
-        return;
-    }
+    if (e.key !== "Home" && e.key !== "End") return;
+    e.preventDefault();
+    const navPills = Array.from(bar.querySelectorAll<HTMLElement>(".diag-sub-tab")).filter(
+      (p) => p.getAttribute("aria-disabled") !== "true",
+    );
+    const target = e.key === "Home" ? navPills[0] : navPills[navPills.length - 1];
+    if (!target) return;
+    target.focus();
+    roving.syncIndex(navPills.indexOf(target));
   });
 }

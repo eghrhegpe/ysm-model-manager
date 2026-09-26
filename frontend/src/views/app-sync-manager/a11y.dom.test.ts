@@ -2,13 +2,13 @@
 // ===== app-sync-manager a11y 行为契约（状态筛选 radio group 键盘化，2026 复测补缺）=====
 // 背景：app-sync-manager 曾是 8 个顶层视图里唯一零 a11y 标记的组件。现由**模板层**
 // （tpl.ts）统一产出语义属性（radiogroup / role=radio / aria-checked / roving tabindex /
-// 目录箭头原生 button + aria-expanded），本文件锁**行为**半边——events.ts 容器级
-// keydown 委托下的键盘语义（仓内先例：tabs-shell.dom.test.ts 同款姿势）：
+// 目录箭头原生 button + aria-expanded），本文件锁**行为**半边——键盘语义已收敛至
+// bind-roving 原语（ADR-308 D2，events.ts 容器级委托 + when 门控，重渲染自愈）：
 //   - 初始 roving tabindex：激活项 0，其余 -1（模板随重渲染自动迁移，测试断言迁移结果）
 //   - ArrowRight/Down 循环「移动即激活」（radio 语义：_statusFilter 迁移 + 同步重渲染）
 //   - ArrowLeft/Up 反向循环；ArrowRight 到尾回绕到首
-//   - Home/End 只移焦点不激活（radiogroup 规范，与 diag 子切换先例同口径）
-//   - 原生 click 激活路径（Enter/Space 在真浏览器触发 button click → 点击委托②接管）
+//   - Home/End 只移焦点不激活（radiogroup 规范，与 diag 子切换先例同口径，独立小监听）
+//   - Enter/Space 原语接管激活（等价原生 button click → 点击委托②）
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mountCustomElement } from "@/test-utils/render.ts";
 import { waitFor } from "@/test-utils/wait.ts";
@@ -145,5 +145,26 @@ describe("状态筛选 radio group（模板产出属性 + 事件层键盘委托�
     expect(list).not.toBeNull();
     pressKey(list!, "ArrowRight");
     expect(el._statusFilter).toBe("all");
+  });
+
+  it("收敛 bind-roving（ADR-308 D2）：容器级 keydown 兜底——无焦点时以 stateIndex 为基准移动", async () => {
+    const el = await mount();
+    const group = el.querySelector<HTMLElement>(".sm-status-radios")!;
+    group.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
+    );
+    expect(el._statusFilter).toBe("synced");
+    expect(radioOf(el, "synced"), "焦点应落在重渲染后的新 synced 节点").toBe(document.activeElement);
+  });
+
+  it("收敛 bind-roving（ADR-308 D2）：Enter 原语接管激活（等价原生 button click）", async () => {
+    const el = await mount();
+    const missing = radioOf(el, "missing");
+    missing.focus();
+    const evt = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    missing.dispatchEvent(evt);
+    expect(evt.defaultPrevented).toBe(true); // 原语消费 keydown（preventDefault）
+    expect(el._statusFilter).toBe("missing");
+    expect(radioOf(el, "missing"), "焦点应落在重渲染后的新 missing 节点").toBe(document.activeElement);
   });
 });

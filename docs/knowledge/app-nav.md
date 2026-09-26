@@ -64,13 +64,20 @@ status: active
 
 ## 不变量
 
-- `nav_page`（「最后停留页」持久化源）写点收敛为**用户导航事实**：nav-item 点击（`anBindNavItems` 直接写盘）+ 广播 handler 仅「值迁移」时写盘（`isTransition` 门控）。启动恢复广播/同值重放（`nav:changed(resolveInitialPage())`）**不写盘**——`ui-default-page` 设置项生效时恢复值来自设置（优先级①），写盘会把 `nav_page`（优先级②源）污染成设置值，日后清除设置项时恢复点静默漂移（workshop→settings 场景，P2 修复 2026-09）
+- `nav_page`（「最后停留页」持久化源）写点收敛为**用户导航事实**：nav-item 点击（`anBindNavKeyboard`（原 `anBindNavItems`，ADR-308 D2 收敛改名） 直接写盘）+ 广播 handler 仅「值迁移」时写盘（`isTransition` 门控）。启动恢复广播/同值重放（`nav:changed(resolveInitialPage())`）**不写盘**——`ui-default-page` 设置项生效时恢复值来自设置（优先级①），写盘会把 `nav_page`（优先级②源）污染成设置值，日后清除设置项时恢复点静默漂移（workshop→settings 场景，P2 修复 2026-09）
 - 启动恢复页面的 `nav:changed` 用 `queueMicrotask` 延迟派发——但**生产环境 app-content 为动态 import**（app-modules.ts 动态 import app-content），恢复事件实际在 app-content 订阅前触发而丢失；首屏不丢的真正保证来自 app-content 构造器 `resolveInitialPage` 兜底（知识卡旧文把 queueMicrotask 描述为首屏保证，实为动态 import 下失效，漂移已修正）
 - `nav:changed` 的派发源头（app-nav 点击/启动恢复、程序化切页方如 app-sidebar/app-tree/repo:search-creator 流程）；高亮状态只由 `nav:changed` 回环驱动，不本地抢跑
 - `app-content` 消费侧同样以 `isValidPage` 拒绝非法 page（P3 口径对齐：app-nav / app-content 两个消费点全守卫，防 `state.current` 写脏 + DnD 遮罩守卫误判）
 - `_unsub` 在 `disconnectedCallback` 清理；localStorage 写入包 try/catch 防隐私模式异常（**读路径 `resolveInitialPage` 同样包 try/catch**，P2 修复：隐私模式 getItem 抛错会使 app-nav/app-content 构造失败）
 - 折叠态是**纯用户手动状态**：2026-08-12 起不再有按页面自动折叠/恢复逻辑（app-content 曾对创作者频道页（旧 id `workshop`，现 `community`）自动折叠，已移除——避免覆盖用户手动折叠记忆），`nav_collapsed` 只由 `setCollapsed` 手动路径写入
 - 样式走 CSS 变量（`var(--bg)` / `var(--accent)` 等），动画受 `.no-animations` 全局开关约束
+
+## 键盘导航（ADR-308 D2 收敛至 bind-roving 原语，2026-09-30）
+
+- 顶部导航 6 项 `.an-item` 键盘化 = `index.ts` 调 `utils/dom/bind-roving.ts` 的 `bindRoving`（preset `tab` + cyclic + `activeElementBase:true`（按键基准=实际焦点，焦点丢失回退原语锚点）+ `stateAttr:null`（导航项无 ARIA 角色，原语只维护 roving tabindex）+ `itemSelector ".an-item"` + `when` 门控）；↑↓ 循环移动（移动即激活 = 委托 click → 既有切页/高亮/nav:changed 链，键盘路径零复制）、Home/End 跳端、Enter/Space 再激活原生 button click
+- 仓库 `<select>` 下拉按键**原样保留**（原语编辑目标守卫含 SELECT：方向键/Enter 归原生控件，不劫持）
+- 卸载 `disconnectedCallback` 经 `_clickUnsub` 链调 `_roving?.dispose()`，键位全寂
+- 契约：`app-nav.test.ts` 冻结 22 条零修改 + 新增 2 条（容器级派发兜底 = activeElementBase 基准回绕、Enter 原语接管 = defaultPrevented + 点击委托）
 
 ## 相关
 

@@ -283,23 +283,49 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     const spy = vi.fn();
     const offNav = bus.on("nav:changed", spy);
 
-    items[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+    // ADR-308 D2 容器级收敛：监听落 .menu 容器（bind-roving），真实键控事件必然
+    // bubbles；原逐项监听时事件在 item 本体即被消费，bubbles 与否无所谓。行为断言不变。
+    items[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
     expect(focusSpies[1]).toHaveBeenCalledTimes(1);
-    items[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+    items[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
     expect(focusSpies[0]).toHaveBeenCalledTimes(1);
-    items[1].dispatchEvent(new KeyboardEvent("keydown", { key: "End" }));
+    items[1].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
     expect(focusSpies[items.length - 1]).toHaveBeenCalledTimes(1);
-    items[items.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
+    items[items.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
     expect(focusSpies[0]).toHaveBeenCalledTimes(2);
 
     // Enter / Space 都触发激活（与 click 同链路：safeSet + nav:changed）。
     // 用 settings 项而非 repository——repository 激活会触发 focusRepoSearch 的
     // 500ms 后台重试链，泄漏到后续用例干扰 document.querySelector 断言。
-    items[items.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    items[items.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     expect(spy).toHaveBeenCalledWith({ page: "settings" });
-    items[items.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+    items[items.length - 1].dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
     expect(spy).toHaveBeenCalledTimes(2);
     offNav();
+    unmountElement(el);
+  });
+
+  it("键盘原语（bind-roving，ADR-308 D2）：roving 初态 items[0]=0 余 -1；容器级派发有兜底；select 不被劫持", async () => {
+    const { el, root } = mountNav();
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    const items = getAllByTestId(root, "nav-item") as HTMLElement[];
+    const menu = root.querySelector(".menu") as HTMLElement;
+
+    // roving 初态：bindRoving 接管后仅首项 tabindex 0（原全 0 → Tab 单停靠点改进）
+    expect(items.map((i) => i.tabIndex)).toEqual([0, -1, -1, -1, -1, -1]);
+
+    // 容器级派发（无前置焦点）：ArrowDown 走 stateIndex 兜底（base 0 → next 1）
+    const focusSpies = items.map((i) => vi.spyOn(i, "focus"));
+    menu.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    expect(focusSpies[1]).toHaveBeenCalledTimes(1);
+
+    // 原生 select 方向键不被劫持（.nav-repo-sel 双 select，回归防线）
+    const sel = root.querySelector("#nav-group-select") as HTMLSelectElement;
+    sel.focus();
+    const selEvt = new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true });
+    sel.dispatchEvent(selEvt);
+    expect(selEvt.defaultPrevented).toBe(false);
+    expect(items.map((i) => i.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]); // select 按键未再迁移（仍停在容器 ArrowDown 后的 items[1]）
     unmountElement(el);
   });
 

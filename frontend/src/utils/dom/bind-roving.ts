@@ -8,9 +8,15 @@
 // 现状消费方：app-sidebar 整合包卡片列表（preset "list"，垂直，移动即激活——
 // 激活 = 派发到既有点击委托路径，高亮/涟漪/去重/持久化零复制）；
 // 3D slide-menu（preset "tab"，垂直，cyclic + activeElementBase + itemsOf +
-// stateAttr:null——无 role 容器不写 ARIA 位；外壳语义 Escape 保留独立监听）。
-// 后续收敛对象：tabs-shell bindSubBar / sync-manager radio-group /
-// app-nav / dropdown（按 ADR-308 D2 接入顺序拍板后推进）。
+// stateAttr:null——无 role 容器不写 ARIA 位；外壳语义 Escape 保留独立监听）；
+// app-nav 顶部导航（preset "tab" + cyclic + stateAttr:null，容器级键派发 +
+// activeElementBase；SELECT 可编辑守卫让路）；
+// tabs-shell 子栏（preset "radio" + cyclic + homeEnd:false + stateAttr:null，
+// focusin 三路同步退役，独立 Home/End 小监听只移焦点不激活）；
+// dropdown 菜单（preset "tab" + cyclic + activeElementBase + stateAttr:null，
+// itemsOf 实时菜单项，独立 Escape 小监听关闭回焦）；
+// sync-manager 状态筛选 radio（preset "radio" + cyclic + homeEnd:false +
+// stateAttr:null，容器=组件根委托式挂点 + when 门控重渲染自愈）。
 
 export type RovingPreset = "radio" | "tab" | "list";
 
@@ -102,7 +108,10 @@ export function bindRoving(spec: RovingSpec): RovingHandle {
 
   const isEditable = (el: HTMLElement | null): boolean =>
     el instanceof HTMLElement &&
-    (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+    (el.tagName === "INPUT" ||
+      el.tagName === "TEXTAREA" ||
+      el.tagName === "SELECT" ||
+      el.isContentEditable);
 
   let onKeydown: ((e: KeyboardEvent) => void) | null = null;
   /** 实注册监听：Element 的 addEventListener 无泛型 EventMap 重载（仅字符串版收

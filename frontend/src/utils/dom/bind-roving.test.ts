@@ -238,6 +238,19 @@ describe("when 门控与防御", () => {
     expect(h.items[1].tabIndex).toBe(-1);
   });
 
+  it("可编辑目标（卡内 SELECT，app-nav .nav-repo-sel）按键不接管", () => {
+    const onMove = vi.fn();
+    const h = setup(3, { onMove });
+    const select = document.createElement("select");
+    h.container.appendChild(select);
+    select.focus();
+    const e = key(select, "ArrowDown");
+    expect(onMove).not.toHaveBeenCalled();
+    expect(h.root.activeElement).toBe(select); // 原生 select 方向键语义保留
+    expect(h.items[0].tabIndex).toBe(0); // roving 未迁移
+    expect(e.defaultPrevented).toBe(false); // 不 preventDefault（不劫持原生行为）
+  });
+
   it("焦点不在任何 item 内（target=container）时以 stateIndex 为基准移动", () => {
     const h = setup(3);
     key(h.items[0], "ArrowDown"); // stateIndex → 1

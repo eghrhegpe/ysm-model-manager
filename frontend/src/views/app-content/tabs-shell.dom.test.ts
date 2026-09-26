@@ -133,6 +133,32 @@ describe("bindSubBar 键盘化（renderSubBar 产出的真 bar）", () => {
     bar.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
     expect(calls).toEqual(["runtime"]);
   });
+
+  it("Enter/Space 落在 pill 上激活该项（bindRoving 接管，等价原生 button click）", () => {
+    const runtime = root.querySelector<HTMLElement>('.diag-sub-tab[data-sub="runtime"]')!;
+    runtime.focus();
+    const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    runtime.dispatchEvent(enter);
+    expect(enter.defaultPrevented).toBe(true); // keydown 被原语消费
+    expect(activeSub(root, GROUP)).toBe("runtime");
+    expect(currentPill(root, GROUP)).toBe("runtime");
+    const space = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+    runtime.dispatchEvent(space);
+    expect(space.defaultPrevented).toBe(true);
+    // Space 激活同一项（幂等，roving 不迁移）
+    expect(activeSub(root, GROUP)).toBe("runtime");
+  });
+
+  it("ArrowRight 跳过 aria-disabled pill（roving 圈在可用项内）", () => {
+    const bar = root.querySelector<HTMLElement>(`.diag-sub-bar[data-sub-bar="${GROUP}"]`)!;
+    const runtime = bar.querySelector<HTMLElement>('.diag-sub-tab[data-sub="runtime"]')!;
+    runtime.setAttribute("aria-disabled", "true");
+    const op = root.querySelector<HTMLElement>('.diag-sub-tab[data-sub="op"]')!;
+    op.focus();
+    pressKey(root, GROUP, "ArrowRight");
+    expect(root.activeElement?.getAttribute("data-sub")).toBe("trace"); // 跳过 runtime
+    expect(activeSub(root, GROUP)).toBe("trace");
+  });
 });
 
 describe("bindSubBar 兼容性：无 role=toolbar 的手写夹具", () => {

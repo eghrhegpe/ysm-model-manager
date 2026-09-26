@@ -5,6 +5,7 @@
 // 依赖方向收敛为：leaf → self-type（纯类型），index → leaf（运行值）。index re-export 保持旧出口兼容。
 
 import type { LoadGuard } from "@/utils/async/load-guard.ts";
+import type { RovingHandle } from "@/utils/dom/bind-roving.ts";
 import type { SyncItem } from "./tpl.ts";
 
 /** 自定义字段（子模块通过 SyncManagerSelf 读写） */
@@ -48,8 +49,10 @@ export interface SyncManagerFields {
     | undefined;
   /** click handler 引用（一次性绑定后存储，供 disconnectedCallback 清理） */
   _clickHandler: ((e: Event) => void) | null;
-  /** keydown handler 引用（状态筛选 radio group 键盘委托，a11y 2026 复测补缺；清理同 click） */
+  /** keydown handler 引用（Home/End 独立小监听：radiogroup 规范只移焦点不激活；清理同 click） */
   _keyHandler: ((e: KeyboardEvent) => void) | null;
+  /** 状态筛选 radio group 键盘原语句柄（bind-roving 收敛，ADR-308 D2；unsub 时 dispose） */
+  _keyRoving: RovingHandle | null;
   /** click 委托 unsub（生命周期跟随元素连接，不随 _init——re-init 不得销毁委托） */
   _clickUnsub: (() => void) | undefined;
   /** 收窄 querySelector 返回类型（DOM 原生返回 Element，消费方需要 HTMLElement） */

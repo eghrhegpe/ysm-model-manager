@@ -13,6 +13,9 @@
 // 展开方式与 CSS 的分工：基础 display:none 在 `dropdownBaseCSS`（utils/dom/css.ts），
 // JS 改内联 style.display 优先级更高（既有约定）。历史 hover 展开串已随本案退役
 // （hover + JS 控制互斥打架的问题整体消解）。
+// 键盘导航段已收敛至 bind-roving 原语（ADR-308 D2，见 initDropdown 内 roving 配置）。
+
+import { bindRoving } from "./bind-roving.ts";
 
 /** initDropdown 选项 */
 export interface DropdownOptions {
@@ -99,35 +102,30 @@ export function initDropdown(
     open();
   };
 
-  // Enter/Space 在原生 <button> 上合成 click → trigger 监听天然覆盖，无需额外 keydown 分支。
-  const onWrapKeydown = (e: KeyboardEvent): void => {
+  // 键盘导航收敛至 bind-roving 原语（ADR-308 D2）：↑↓循环 / Home/End / Enter·Space 激活
+  // （activeElementBase = 旧实现语义：基准取实际焦点，展开即焦首项后零门槛续走；
+  // 激活走原生 click → onMenuClick capture 收口，焦点归还 trigger）。
+  // 展开门控经 when 保留（旧 onWrapKeydown 的 isOpen 门控）。
+  const roving = bindRoving({
+    root: wrap.getRootNode() as ShadowRoot | Document,
+    container: wrap, // 旧监听挂 wrap（trigger 级按键亦在圈内）；itemsOf 仍只认菜单项
+    itemSelector: ".dd-item, button, [role=menuitem]", // 名义值（itemsOf 提供实时列表）
+    itemsOf: () => itemEls(),
+    preset: "tab",
+    orientation: "vertical",
+    cyclic: true,
+    activeElementBase: true,
+    stateAttr: null, // menuitem 无 ARIA 选中位，纯 roving tabindex
+    when: () => isOpen(),
+    onActivate: (item) => item.click(),
+  });
+
+  // Esc 是控制器（外壳）语义——关闭并回焦 trigger，不入 roving 原语。
+  const onWrapEscape = (e: KeyboardEvent): void => {
+    if (e.key !== "Escape") return;
     if (!isOpen()) return;
-    const items = itemEls();
-    if (items.length === 0) return;
-    const active = wrap.getRootNode() as ShadowRoot | Document;
-    const focused = active.activeElement as HTMLElement | null;
-    switch (e.key) {
-      case "Escape":
-        e.preventDefault();
-        close(true);
-        return;
-      case "ArrowDown":
-      case "ArrowUp":
-      case "Home":
-      case "End":
-        break;
-      default:
-        return;
-    }
     e.preventDefault();
-    const cur = focused ? items.indexOf(focused) : -1;
-    let next: number;
-    if (e.key === "ArrowDown") next = cur < 0 ? 0 : (cur + 1) % items.length;
-    else if (e.key === "ArrowUp")
-      next = cur < 0 ? items.length - 1 : (cur - 1 + items.length) % items.length;
-    else if (e.key === "Home") next = 0;
-    else next = items.length - 1;
-    items[next]?.focus();
+    close(true);
   };
 
   // 点击菜单项 → 收起 + 焦点归还 trigger。
@@ -152,14 +150,15 @@ export function initDropdown(
   };
 
   trigger.addEventListener("click", onTriggerClick);
-  wrap.addEventListener("keydown", onWrapKeydown);
+  wrap.addEventListener("keydown", onWrapEscape); // roving 监听由 bindRoving 自行挂 wrap
   menu.addEventListener("click", onMenuClick, true);
   document.addEventListener("click", onDocClick);
 
   const dispose = (() => {
     if (_closeActive === close) _closeActive = null;
     trigger.removeEventListener("click", onTriggerClick);
-    wrap.removeEventListener("keydown", onWrapKeydown);
+    wrap.removeEventListener("keydown", onWrapEscape);
+    roving.dispose(); // 解 bindRoving 的 wrap keydown 监听
     menu.removeEventListener("click", onMenuClick, true);
     document.removeEventListener("click", onDocClick);
     // 内联样式交还 CSS：dispose 后 display 复位由 dropdownBaseCSS 的 display:none 接管

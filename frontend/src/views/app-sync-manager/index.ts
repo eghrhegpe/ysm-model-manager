@@ -11,6 +11,7 @@ import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import type { RovingHandle } from "@/utils/dom/bind-roving.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
@@ -73,6 +74,7 @@ export class AppSyncManager extends WebComponentBase {
   _eventsBound = false;
   _clickHandler: ((e: Event) => void) | null = null;
   _keyHandler: ((e: KeyboardEvent) => void) | null = null;
+  _keyRoving: RovingHandle | null = null;
   /** 一次性 click 委托的 unsub（生命周期跟随元素连接，不随 _init——re-init 不得销毁委托） */
   _clickUnsub: (() => void) | undefined;
   private _unsubs: Array<() => void> = [];

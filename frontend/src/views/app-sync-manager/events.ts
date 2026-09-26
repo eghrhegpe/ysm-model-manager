@@ -6,6 +6,7 @@
 // 依赖 DAG：index → events → network（单行按钮触发 push/pull）
 // events ←→ network 无循环：events 通过回调调用 network
 
+import { bindRoving } from "@/utils/dom/bind-roving.ts";
 import type { SyncManagerSelf } from "./self-type.ts";
 
 export type EventSelf = SyncManagerSelf;
@@ -81,54 +82,46 @@ export function bindDelegatedEvents(self: EventSelf, cb: EventCallbacks): () => 
     self.addEventListener("click", onClick);
   }
 
-  // keydown 委托（a11y，2026 复测补缺）：状态筛选 radio group 键盘导航——与 click 委托
-  // 同款「一次性绑定到组件根」：render 重建 .sm-status-radios innerHTML 不影响（closest
-  // 动态查找）。键盘语义（仓内先例 tabs-shell bindSubBar 同口径）：
-  //   ArrowRight/Down、ArrowLeft/Up = 循环移动**且激活**（radio 语义，点选走既有 ② 点击委托）
-  //   Home/End = 只移焦点不激活（radiogroup 规范）
-  // 激活 = 对目标 radio 调 .click()（doRender 同步重渲染后旧节点被替换，须按 data-status
-  // 重查再 focus——roving tabindex 由模板随重渲染自动迁移，本层不手写属性）
+  // keydown（a11y，2026 复测补缺；2026-09 收敛至 bind-roving 原语，ADR-308 D2）：
+  // 状态筛选 radio group 键盘导航——roving 原语接管方向键（radio 语义：移动即激活，
+  // 激活 = 点目标 → 既有 ② 点击委托走 _statusFilter 迁移 + doRender 同步重渲染 →
+  // 按 data-status 重查新节点再 focus）+ Enter/Space（等价原生 button click）。
+  // Home/End 走 radiogroup 规范「只移焦点不激活」——原语 homeEnd 关闭，独立小监听接管。
+  // 容器 = 组件根 self（委托式挂点：.sm-status-radios 可能尚未渲染——itemsOf 实时
+  // 查询 + when 门控天然自愈重渲染/骨架未出）；aria-checked 与 roving tabindex 由
+  // 模板随重渲染自动迁移（stateAttr:null，原语不写 ARIA 位）。
   if (!self._keyHandler) {
-    const onKey = (e: KeyboardEvent): void => {
-      const target = e.target;
-      if (!(target instanceof Element)) return;
-      if (!target.closest(".sm-status-radios")) return;
+    const onHomeEnd = (e: KeyboardEvent): void => {
+      if (e.key !== "Home" && e.key !== "End") return;
+      if (!(e.target instanceof Element) || !e.target.closest(".sm-status-radios")) return;
       if (!self._cbRef) return;
+      e.preventDefault();
       const radios = Array.from(self.querySelectorAll(".sm-status-tab")) as HTMLElement[];
       if (!radios.length) return;
-      // 焦点在 radio 本体上（radiogroup 规范：组内仅 roving tabindex 项可被键盘聚焦）；
-      // indexOf 走引用相等（与 findIndex(r => r === target) 同语义，biome useIndexOf）
-      const idx = radios.indexOf(target as HTMLElement);
-      if (idx < 0) return;
-      const focusAndActivate = (next: number): void => {
-        const status = radios[next].dataset.status || "";
+      (e.key === "Home" ? radios[0] : radios[radios.length - 1])?.focus();
+    };
+    self._keyHandler = onHomeEnd;
+    self.addEventListener("keydown", onHomeEnd);
+    self._keyRoving = bindRoving({
+      root: document,
+      container: self,
+      itemSelector: ".sm-status-tab",
+      preset: "radio",
+      orientation: "both",
+      cyclic: true,
+      homeEnd: false,
+      stateAttr: null,
+      when: (e) =>
+        e.target instanceof Element &&
+        e.target.closest(".sm-status-radios") !== null &&
+        self._cbRef != null,
+      onActivate: (item) => {
+        const status = item.dataset.status || "";
         const slot = () => self.querySelector(`.sm-status-tab[data-status="${status}"]`);
         slot()?.click(); // 点击委托②：_statusFilter 迁移 + doRender 同步重渲染
         slot()?.focus(); // 重渲染后的新节点（旧焦点节点已被 innerHTML 替换）
-      };
-      switch (e.key) {
-        case "ArrowRight":
-        case "ArrowDown":
-          e.preventDefault();
-          focusAndActivate((idx + 1) % radios.length);
-          break;
-        case "ArrowLeft":
-        case "ArrowUp":
-          e.preventDefault();
-          focusAndActivate((idx - 1 + radios.length) % radios.length);
-          break;
-        case "Home":
-          e.preventDefault();
-          radios[0]?.focus();
-          break;
-        case "End":
-          e.preventDefault();
-          radios[radios.length - 1]?.focus();
-          break;
-      }
-    };
-    self._keyHandler = onKey;
-    self.addEventListener("keydown", onKey);
+      },
+    });
   }
 
   return () => {
@@ -139,6 +132,10 @@ export function bindDelegatedEvents(self: EventSelf, cb: EventCallbacks): () => 
     if (self._keyHandler) {
       self.removeEventListener("keydown", self._keyHandler);
       self._keyHandler = null;
+    }
+    if (self._keyRoving) {
+      self._keyRoving.dispose(); // 解 bindRoving 挂在组件根的 keydown 监听
+      self._keyRoving = null;
     }
     // code_review 47e68917b #3（P2）：unsub 需与 disconnectedCallback 对齐清 cbRef——
     // 否则重连后 _eventsBound=true 且 _cbRef=undefined，else 分支 `if (self._cbRef)`

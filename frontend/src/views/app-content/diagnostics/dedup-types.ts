@@ -13,6 +13,9 @@ export interface DedupConfigShape {
 }
 
 export const DEDUP_DEFAULTS: Readonly<DedupConfigShape> = Object.freeze({
+  // strategy 默认 deep_hash：Go 侧 strategy.go NewHashAlgorithm 对 "deep_hash" 有**显式 case**
+  // （非 default 兜底），契约锁见 go/dedup/strategy_test.go TestNewHashAlgorithm_FrontendTokens。
+  // keepPolicy/priorityPath 仅前端消费（dedup-policy.ts 决定保留哪个），Go 不应用它们。
   strategy: "deep_hash",
   keepPolicy: "oldest",
   priorityPath: "",

@@ -116,6 +116,8 @@ function buildReport() {
     timestamp: "2026-08-21T00:00:00Z",
     directory: "/repo",
     score: 85,
+    // 锐评④：verdict 为 Go 单源判定字段（绑定必填），夹具补齐
+    verdict: "good",
     completeness: { checked: 10, valid: 9, invalid: 1, percentage: 90 },
     cache: { cache_dir: "/cache", cache_files: 5, cache_size: 1024 },
     resources: { total_files: 12, total_size: 2048, by_type: { model: 10, texture: 2 } },
@@ -532,7 +534,10 @@ describe("startDedup（会话工厂 createDedupSession）", () => {
     });
     const list = document.createElement("div");
     await dedup.start(list, esc, "ysm");
-    await waitFor(() => list.textContent!.includes("去重失败"));
+    // 低优先③：friendlyError 契约——Go 中文错误直接透传（不加译文前缀，同 health 口径）；
+    // 英文/无码错误才会拿到「去重失败: 」前缀（conflicts.test 有钉）
+    await waitFor(() => expect(list.textContent).toContain("磁盘错误"));
+    expect(list.innerHTML).toContain("diag-msg-error");
   });
 
   it("文件名点击 → bus model:select", async () => {

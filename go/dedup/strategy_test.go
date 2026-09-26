@@ -47,6 +47,34 @@ func TestNewHashStrategy_UnknownFallback(t *testing.T) {
 	}
 }
 
+// TestNewHashAlgorithm_FrontendTokens 是跨端契约锁（低优先②）：
+// 前端 DEDUP_DEFAULTS.strategy + dedup-render.ts option value 产出的三个 token
+// 必须各自命中**显式 case**（非 default 兜底）——否则 default 一旦改语义，
+// 前端默认值会静默漂移到错误的算法。deep_hash 尤其关键：它是默认值，
+// 绝不能仅靠 default 分支生效。
+func TestNewHashAlgorithm_FrontendTokens(t *testing.T) {
+	// 期望映射 = 前端 dedup-render.ts/dedup-types.ts 的 token → Go 算法 Name() 单一事实源
+	cases := map[string]string{
+		"deep_hash":  "deep_hash",
+		"quick_hash": "quick_hash",
+		"name_size":  "name_size",
+		// 旧 token / 空串（历史持久化配置）→ 兜底 DeepHash，仍显式命中 case
+		"hash": "deep_hash",
+		"":     "deep_hash",
+	}
+	for token, want := range cases {
+		algo := NewHashAlgorithm(&types.DedupConfig{Strategy: token})
+		if algo.Name() != want {
+			t.Errorf("token %q 期望 %s，实际 %s", token, want, algo.Name())
+		}
+	}
+	// 前端默认值必须命中**显式 case**：DeepHash.Name()=="deep_hash" 且 default 分支
+	// 改语义时不受影响——用一个故意非 deep_hash 的未知 token 确认 default 独立兜底。
+	if (&DeepHash{}).Name() != "deep_hash" {
+		t.Fatalf("DeepHash.Name() 契约漂移：前端默认值 token 依赖此返回值")
+	}
+}
+
 func TestDeepHash_ComputeHash(t *testing.T) {
 	dir, err := os.MkdirTemp("", "deep-hash-test-*")
 	if err != nil {

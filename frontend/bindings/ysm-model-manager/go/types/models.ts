@@ -250,6 +250,33 @@ export interface DownloadTask {
 }
 
 /**
+ * ErrorCode 结构化错误码（ADR-051 落地：替代裸字符串拼接，消除前后端双份分类表漂移）。
+ * 所有错误构造点统一使用此处的常量，前端 friendlyError 消费 Code 字段做 i18n 映射。
+ */
+export enum ErrorCode {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    ErrFileExists = "FILE_EXISTS",
+    ErrAlreadyExists = "ALREADY_EXISTS",
+    ErrInvalidParam = "INVALID_PARAM",
+    ErrInvalidPath = "INVALID_PATH",
+    ErrFileNameInvalid = "FILENAME_INVALID",
+    ErrUnsupportedType = "FILE_TYPE_UNSUPPORTED",
+    ErrUnsupportedFmt = "UNSUPPORTED_FORMAT",
+    ErrDecodeFailed = "DECODE_FAILED",
+    ErrFileTooLarge = "FILE_TOO_LARGE",
+    ErrFileEmpty = "FILE_EMPTY",
+    ErrMkdirFailed = "MKDIR_FAILED",
+    ErrWriteFailed = "WRITE_FAILED",
+    ErrIO = "IO_ERROR",
+    ErrLinkFailed = "LINK_FAILED",
+    ErrUnknown = "UNKNOWN",
+};
+
+/**
  * FileInventory zip 内文件归属清单（对齐 Modern YSM parseGlobalResources 的分流思想，
  * 但只识别归属、不解析内容——不造双路径，前端直接消费准确清单，不再事后按文件名猜）。
  */
@@ -317,6 +344,14 @@ export interface ImportLog {
     "FileSize": number;
     "Status": string;
     "ErrorMsg"?: string;
+
+    /**
+     * Code / Suggestion：AppError 的结构化字段（errors.As 拆解后落盘，
+     * 2026-09 对接锐评②）。旧日志文件无此二字段，JSON 解码为零值——
+     * 前端据此分流：有 Code/Suggestion 走结构化渲染，无则回退散文解析。
+     */
+    "Code"?: ErrorCode;
+    "Suggestion"?: string;
     "Timestamp": number;
 
     /**

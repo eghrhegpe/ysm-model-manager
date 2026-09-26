@@ -22,7 +22,7 @@ func TestDetectConflicts_NoMcRoot_ReturnsError(t *testing.T) {
 // 未配置游戏根目录时 ResolveConflicts 也必须返回 error。
 func TestResolveConflicts_NoMcRoot_ReturnsError(t *testing.T) {
 	a := repoApp(t, types.AppConfig{})
-	if _, err := a.ResolveConflicts(`[]`, "force_remote", "ysm", "test-instance"); err == nil {
+	if _, err := a.ResolveConflicts(nil, "force_remote", "ysm", "test-instance"); err == nil {
 		t.Fatal("ResolveConflicts 错误响应必须返回非 nil error")
 	}
 }

@@ -258,7 +258,7 @@ func (q *DownloadQueue) consume() {
 		if err != nil {
 			log.Printf("[queue] emit queue:file-done name=%s status=fail err=%v", task.Name, err)
 			q.emitFn("queue:file-done", task.Name, "fail", err.Error())
-			q.logFn("download", task.Name, task.URL, task.SaveDir, 0, "failed", err.Error())
+			q.logFn("download", task.Name, task.URL, task.SaveDir, 0, types.StatusFailed, err.Error())
 		} else {
 			log.Printf("[queue] emit queue:file-done name=%s status=ok", task.Name)
 			q.emitFn("queue:file-done", task.Name, "ok", "")
@@ -267,7 +267,7 @@ func (q *DownloadQueue) consume() {
 			if fi, st := os.Stat(savePath); st == nil {
 				fileSize = fi.Size()
 			}
-			q.logFn("download", task.Name, task.URL, task.SaveDir, fileSize, "success", "")
+			q.logFn("download", task.Name, task.URL, task.SaveDir, fileSize, types.StatusSuccess, "")
 		}
 
 		select {

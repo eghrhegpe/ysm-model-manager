@@ -346,10 +346,12 @@ describe("同步冲突解决（do-resolve-btn）", () => {
       // 先推进 0ms：仅冲刷微任务，让解决结果渲染，但 1.5s 复扫 timer 未触发
       await vi.advanceTimersByTimeAsync(0);
       expect(resolveFn).toHaveBeenCalledTimes(1);
-      expect(resolveFn).toHaveBeenCalledWith(expect.any(String), "force_local", "ysm", "insA");
-      const sentConflicts = JSON.parse(
-        (resolveFn.mock.calls[0] as unknown as unknown[])[0] as string,
-      );
+      // 低优先①：typed 直传——首参是 FileConflict[] 本体（JSON 文本协议已退役）
+      expect(resolveFn).toHaveBeenCalledWith(expect.any(Array), "force_local", "ysm", "insA");
+      // resolveFn 是无参签名的 vi.fn，mock.calls 推断为空元组——经 unknown[][] 收窄取首参
+      const call0 = (resolveFn.mock.calls as unknown as unknown[][])[0];
+      const sentConflicts = call0?.[0] as Record<string, unknown>[];
+      expect(Array.isArray(sentConflicts)).toBe(true);
       expect(sentConflicts[0].path).toBe("a/模型.ysm");
       expect(list.textContent).toContain("已解决 2");
       expect(list.textContent).toContain("失败 1");

@@ -101,7 +101,7 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 		// logger 为薄壳注入，可能为 nil（如测试/嵌入式调用），nil 时跳过日志不影响导入
 		warn := func(msg string) {
 			if logger != nil {
-				logger(fileName, fileName, targetRoot, 0, "warn", msg)
+				logger(fileName, fileName, targetRoot, 0, types.StatusWarn, msg)
 			}
 		}
 		if ext == ".zip" || ext == ".ysm" {

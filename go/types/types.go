@@ -101,15 +101,20 @@ type SearchResult struct {
 
 // ImportLog 应用操作日志（导入、扫描、下载、同步等）
 type ImportLog struct {
-	ModelName  string   `json:"ModelName"`
-	SourcePath string   `json:"SourcePath"`
-	TargetDir  string   `json:"TargetDir"`
-	FileSize   int64    `json:"FileSize"`
-	Status     string   `json:"Status"`
-	ErrorMsg   string   `json:"ErrorMsg,omitempty"`
-	Timestamp  int64    `json:"Timestamp"`
-	Operation  string   `json:"Operation,omitempty"` // import / scan / download / sync / rename / delete
-	Level      LogLevel `json:"Level,omitempty"`     // debug/info/warn/error/fatal
+	ModelName  string `json:"ModelName"`
+	SourcePath string `json:"SourcePath"`
+	TargetDir  string `json:"TargetDir"`
+	FileSize   int64  `json:"FileSize"`
+	Status     string `json:"Status"`
+	ErrorMsg   string `json:"ErrorMsg,omitempty"`
+	// Code / Suggestion：AppError 的结构化字段（errors.As 拆解后落盘，
+	// 2026-09 对接锐评②）。旧日志文件无此二字段，JSON 解码为零值——
+	// 前端据此分流：有 Code/Suggestion 走结构化渲染，无则回退散文解析。
+	Code       ErrorCode `json:"Code,omitempty"`
+	Suggestion string    `json:"Suggestion,omitempty"`
+	Timestamp  int64     `json:"Timestamp"`
+	Operation  string    `json:"Operation,omitempty"` // import / scan / download / sync / rename / delete
+	Level      LogLevel  `json:"Level,omitempty"`     // debug/info/warn/error/fatal
 }
 
 // RuntimeLog 运行时日志（watcher/sync 等标准库 log 输出，诊断页可见）
@@ -184,17 +189,32 @@ const (
 	LevelFatal LogLevel = "fatal"
 )
 
+// LogStatus ImportLog.Status 的值域（2026-09 对接锐评③：此前是散在 8 个生产者
+// 文件里的裸字符串，与 StatusToLevel / 前端 chip data-status 三处各写一份，漂移
+// 无从校验）。生产者统一引用下列常量约束「新写入」一侧；字段类型仍为裸 string——
+// 旧落盘日志的任意历史值解码后照样透传展示，且 sync/recycle/importer 回调签名以
+// string 穿行，换具名类型会波及 web-store 桥接（TS 字面量不再可赋值），收益不抵代价。
+// （故用类型别名：常量即 string，任何收 string 的签名直接可传。）
+type LogStatus = string
+
+const (
+	StatusSuccess LogStatus = "success"
+	StatusFailed  LogStatus = "failed"
+	StatusWarn    LogStatus = "warn"
+	StatusSkipped LogStatus = "skipped"
+)
+
 // StatusToLevel 将 ImportLog 的 Status 字符串映射到日志级别。
 // 调用方（go/logs 跨包）在 addOp 时传入，保证新旧日志字段一致。
 func StatusToLevel(status string) LogLevel {
 	switch status {
-	case "success":
+	case StatusSuccess:
 		return LevelInfo
-	case "failed":
+	case StatusFailed:
 		return LevelError
-	case "warn":
+	case StatusWarn:
 		return LevelWarn
-	case "skipped":
+	case StatusSkipped:
 		return LevelDebug
 	default:
 		return LevelInfo

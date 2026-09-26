@@ -46,10 +46,15 @@ afterEach(() => {
 
 /** 构造 RepoHealthAudit 合法返回（字段与 go/repoaudit.HealthReport 对齐；ADR-143 P1 后 typed） */
 function auditReport(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  const score = (overrides.score as number | undefined) ?? 87;
+  // 锐评④：verdict 绑定必填，夹具按 Go ScoreVerdict 同阈值派生（good≥80/ok≥60/bad）
+  const verdict =
+    (overrides.verdict as string | undefined) ?? (score >= 80 ? "good" : score >= 60 ? "ok" : "bad");
   return {
     timestamp: "2026-08-30T00:00:00Z",
     directory: "/repo",
-    score: 87,
+    score,
+    verdict,
     completeness: { checked: 3, valid: 3, invalid: 0, percentage: 100 },
     cache: { cache_dir: "", cache_files: 0, cache_size: 0 },
     resources: { total_files: 7, total_size: 1051136, banned: 1, by_type: {} },

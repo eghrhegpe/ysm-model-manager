@@ -2,7 +2,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -57,22 +56,17 @@ func (a *App) DetectConflicts(rtype, instanceName string) (*ysmsync.ConflictRepo
 }
 
 // ResolveConflicts 批量解决冲突
-// conflictsJSON: 冲突列表 JSON（来自 DetectConflicts）
+// conflicts: 冲突列表（DetectConflicts 返回的同构 struct 切片，typed 入参直连——
+// 低优先①：原 conflictsJSON string + json.Unmarshal 把类型契约降级成文本协议，
+// 前端改名/漏字段编译期零感知；参照 EnqueueDownloads([]types.DownloadTask) 先例）
 // defaultStrategy: 默认解决策略 (force_remote/force_local/manual)
 // rtype: 资源类型 ID
 // instanceName: 整合包名称
 // 返回 typed SyncResolveResult，失败 → error
-func (a *App) ResolveConflicts(conflictsJSON, defaultStrategy, rtype, instanceName string) (*types.SyncResolveResult, error) {
+func (a *App) ResolveConflicts(conflicts []ysmsync.FileConflict, defaultStrategy, rtype, instanceName string) (*types.SyncResolveResult, error) {
 	globalDir, targetDir, err := a.getSyncDirs(rtype, instanceName)
 	if err != nil {
 		return nil, err
-	}
-
-	// 解析冲突列表
-	var conflicts []ysmsync.FileConflict
-	if err := json.Unmarshal([]byte(conflictsJSON), &conflicts); err != nil {
-		log.Printf("[conflict] 解析冲突列表失败: %v", err)
-		return nil, fmt.Errorf("解析冲突列表失败: %w", err)
 	}
 
 	if len(conflicts) == 0 {

@@ -110,7 +110,7 @@ func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogg
 			// 实例文件在仓库根内 → 移回收站（可恢复）
 			if err := Move(p, recycleRoot); err != nil {
 				if logger != nil {
-					logger(filepath.Base(p), p, "", 0, "failed", "移入回收站失败: "+err.Error())
+					logger(filepath.Base(p), p, "", 0, types.StatusFailed, "移入回收站失败: "+err.Error())
 				}
 				continue
 			}
@@ -118,7 +118,7 @@ func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogg
 			// 实例文件不在仓库根内（常见情况：整合包在 mcRoot 下）→ 直接删
 			if err := os.Remove(p); err != nil {
 				if logger != nil {
-					logger(filepath.Base(p), p, "", 0, "failed", "直接删除失败: "+err.Error())
+					logger(filepath.Base(p), p, "", 0, types.StatusFailed, "直接删除失败: "+err.Error())
 				}
 				continue
 			}
@@ -162,7 +162,7 @@ func DeduplicateEntries(entries []types.ModelEntry, recycleRoot string, logger C
 		for _, e := range group[1:] {
 			if err := Move(e.Path, recycleRoot); err != nil {
 				if logger != nil {
-					logger(e.Name, e.Path, recycleRoot, 0, "failed", "回收站移动失败: "+err.Error())
+					logger(e.Name, e.Path, recycleRoot, 0, types.StatusFailed, "回收站移动失败: "+err.Error())
 				}
 				groupFailed = true
 				continue

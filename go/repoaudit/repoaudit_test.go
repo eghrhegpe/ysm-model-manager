@@ -4,6 +4,7 @@
 package repoaudit
 
 import (
+	"fmt"
 	"ysm-model-manager/go/internal/testutil"
 
 	"os"
@@ -48,6 +49,132 @@ func TestAudit_BadModelLowersScore(t *testing.T) {
 	}
 	if len(result.Warnings) == 0 {
 		t.Error("坏模型应产生完整性警告")
+	}
+}
+
+// ===== 锐评④：健康分判级单源（ScoreVerdict / Verdict 字段）=====
+
+func TestScoreVerdict(t *testing.T) {
+	cases := []struct {
+		score int
+		want  string
+		why   string
+	}{
+		{100, VerdictGood, "满分"},
+		{80, VerdictGood, "good 下边界（含）"},
+		{79, VerdictOk, "good 边界外一档"},
+		{60, VerdictOk, "ok 下边界（含）"},
+		{59, VerdictBad, "ok 边界外一档"},
+		{30, VerdictBad, "扣分下限"},
+		{0, VerdictBad, "全仓审计失败时合并分为 0"},
+		{-5, VerdictBad, "负分兜底（理论不可达，防越界判 good）"},
+	}
+	for _, c := range cases {
+		if got := ScoreVerdict(c.score); got != c.want {
+			t.Errorf("ScoreVerdict(%d) = %q, 期望 %q（%s）", c.score, got, c.want, c.why)
+		}
+	}
+}
+
+// TestCalculateAuditScore_Formula 钉死扣分公式：真实 Audit 依赖全局 texture_cache
+// 状态（CacheFiles 在不同机器上不同），这里直接构造 DirAuditResult 做纯函数测试，
+// 把「完整性比例折算 / 无效数 / 无缓存 / 超大文件 / 下限」五档扣分开合清楚。
+func TestCalculateAuditScore_Formula(t *testing.T) {
+	mk := func(pct float64, valid, invalid, total, cacheFiles int, largest int64) DirAuditResult {
+		r := DirAuditResult{}
+		r.Completeness.Percentage = pct
+		r.Completeness.Valid = valid
+		r.Completeness.Invalid = invalid
+		r.Resources.TotalFiles = total
+		r.Cache.CacheFiles = cacheFiles
+		r.Resources.LargestSize = largest
+		return r
+	}
+	const mb = 1024 * 1024
+	cases := []struct {
+		name string
+		res  DirAuditResult
+		want int
+	}{
+		{"满分（无缓存也不扣：TotalFiles=0）", mk(100, 0, 0, 0, 0, 0), 100},
+		{"有资源但零缓存扣 20", mk(100, 5, 0, 5, 0, 0), 80},
+		{"有资源有缓存不扣", mk(100, 5, 0, 5, 3, 0), 100},
+		{"完整性 90% 扣 5", mk(90, 9, 0, 9, 3, 0), 95},
+		{"1 个无效扣 5", mk(100, 9, 1, 10, 3, 0), 95},
+		{"499MB 不触发超大扣分", mk(100, 1, 0, 1, 3, 499*mb), 100},
+		{"501MB 扣 10", mk(100, 1, 0, 1, 3, 501*mb), 90},
+		{
+			"叠加：80% 完整性 + 4 无效 + 无缓存 + 超大",
+			mk(80, 8, 4, 12, 0, 600*mb),
+			100 - 10 - 20 - 20 - 10,
+		},
+		{"多问题叠加触底 scoreFloor=30", mk(50, 10, 20, 30, 0, 900*mb), 30},
+	}
+	for _, c := range cases {
+		if got := calculateAuditScore(c.res); got != c.want {
+			t.Errorf("%s: calculateAuditScore = %d, 期望 %d", c.name, got, c.want)
+		}
+	}
+}
+
+// TestAudit_RealFiles_ScoreExact 真实文件落盘 → 精确分值钉死（用户明确要求覆盖
+// 「真实文件的情况」）。缓存扣分项从 Audit 实际返回的 Cache.CacheFiles 推出，
+// 使断言在全新沙盒与已有缓存的开发机上同样确定。
+func TestAudit_RealFiles_ScoreExact(t *testing.T) {
+	dir := t.TempDir()
+	// 10 个有效 + 2 个无效 .ysm：完整性 10/12 ≈ 83.33% → 扣 int(16.67*0.5)=8；无效 2 → 扣 10
+	for i := 0; i < 10; i++ {
+		name := filepath.Join(dir, fmt.Sprintf("ok%d.ysm", i))
+		testutil.WriteTestFileBytes(t, name,
+			[]byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+	}
+	for i := 0; i < 2; i++ {
+		name := filepath.Join(dir, fmt.Sprintf("bad%d.ysm", i))
+		testutil.WriteTestFileBytes(t, name, []byte(`{"foo":"bar"}`))
+	}
+
+	res, err := Audit(dir)
+	if err != nil {
+		t.Fatalf("Audit 应成功, got %v", err)
+	}
+	if res.Completeness.Checked != 12 || res.Completeness.Valid != 10 || res.Completeness.Invalid != 2 {
+		t.Fatalf("完整性统计错位: checked=%d valid=%d invalid=%d",
+			res.Completeness.Checked, res.Completeness.Valid, res.Completeness.Invalid)
+	}
+
+	cacheDed := 0
+	if res.Cache.CacheFiles == 0 {
+		cacheDed = 20
+	}
+	want := 100 - int((100-res.Completeness.Percentage)*0.5) - 2*5 - cacheDed
+	if res.Score != want {
+		t.Errorf("Score = %d, 按公式期望 %d（pct=%.2f cacheFiles=%d）",
+			res.Score, want, res.Completeness.Percentage, res.Cache.CacheFiles)
+	}
+	// 判级必须与分数同源一致（前端只读 verdict，二者背离即为缺陷）
+	if v := ScoreVerdict(res.Score); v != ScoreVerdict(want) {
+		t.Errorf("verdict 派生不一致: score=%d v=%s, want=%d v=%s", res.Score, v, want, ScoreVerdict(want))
+	}
+}
+
+// TestHealthReportFor_VdictFilled HealthReportFor 必须带 verdict（否则前端
+// parseHealthReport 直接判为畸形报告）
+func TestHealthReportFor_VerdictFilled(t *testing.T) {
+	dir := t.TempDir()
+	testutil.WriteTestFileBytes(t, filepath.Join(dir, "ok.ysm"),
+		[]byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
+
+	rep, err := HealthReportFor(dir)
+	if err != nil {
+		t.Fatalf("HealthReportFor 应成功, got %v", err)
+	}
+	if rep.Verdict != ScoreVerdict(rep.Score) {
+		t.Errorf("Verdict = %q, 期望 %q（score=%d）", rep.Verdict, ScoreVerdict(rep.Score), rep.Score)
+	}
+	switch rep.Verdict {
+	case VerdictGood, VerdictOk, VerdictBad:
+	default:
+		t.Errorf("Verdict = %q 不在值域 {good,ok,bad}", rep.Verdict)
 	}
 }
 

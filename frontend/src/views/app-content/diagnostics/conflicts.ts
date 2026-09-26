@@ -4,6 +4,7 @@
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import type { FileConflict } from "@/utils/types-re-export.ts";
@@ -124,7 +125,10 @@ export async function initSyncConflictPanel(
     );
     state.instance = insSel.value; // 默认选中首个可用实例（无 selected 声明时浏览器取首项）
   } catch (err) {
-    list.innerHTML = msgRowHTML("error", `${t("diagnostics.scanFailed")}: ${esc(String(err))}`);
+    // 低优先③：统一走 friendlyError（AppError Code→i18n；Go 中文 Reason 透传剥内部路径；
+    // 英文才加「扫描失败: 」前缀）——原 `${t(...)}: ${esc(String(err))}` 把 Go 中文错误
+    // 硬挂在英文前缀后，双语混排。esc 交 msgRowHTML 单点转义（勿二次 esc）。
+    list.innerHTML = msgRowHTML("error", friendlyError(err, t("diagnostics.scanFailed")), esc);
     dgCfSetScanEnabled(scanBtn, false);
   }
 }
@@ -145,7 +149,8 @@ export async function runSyncConflictScan(
   try {
     await dgCfRunSyncDetection(list, esc, target);
   } catch (err) {
-    list.innerHTML = msgRowHTML("error", `${t("diagnostics.scanFailed")}: ${esc(String(err))}`);
+    // 低优先③：同上——friendlyError 单源，不再手拼「译文前缀 + 裸 Go 文案」
+    list.innerHTML = msgRowHTML("error", friendlyError(err, t("diagnostics.scanFailed")), esc);
   } finally {
     diagSyncBusy = false;
     dgCfSetScanEnabled(target.scanBtn, true);
@@ -239,8 +244,9 @@ async function dgCfExecuteResolve(
   const strategy = strategyEl?.value || DEFAULT_RESOLVE_STRATEGY.value;
   try {
     const { ResolveConflicts } = await backendGetApp();
-    const conflictsJSON = JSON.stringify(conflicts);
-    const result = await ResolveConflicts(conflictsJSON, strategy, target.rtype, target.instance);
+    // 低优先①：冲突列表以 typed struct 数组直传（Go 签名 []ysmsync.FileConflict），
+    // 原 JSON.stringify→Unmarshal 文本协议退役——字段漂移现在编译期即报错。
+    const result = await ResolveConflicts(conflicts, strategy, target.rtype, target.instance);
     if (!result) {
       list.innerHTML = msgRowHTML("error", t("diagnostics.resolveFailed"), undefined, {
         icon: UI_ICONS.error,
@@ -270,7 +276,7 @@ async function dgCfExecuteResolve(
     const errDiv = document.createElement("div");
     errDiv.className = "stat-row diag-msg diag-msg-error";
     errDiv.style.marginTop = "12px";
-    errDiv.innerHTML = `${UI_ICONS.error} ${esc(String(err))}`; // 图标走 SVG；err 为后端消息，esc() 防注入
+    errDiv.innerHTML = `${UI_ICONS.error} ${esc(friendlyError(err, t("diagnostics.resolveFailed")))}`; // 图标走 SVG；低优先③：friendlyError 单源（Code→i18n/中文透传），esc 防注入
     list.appendChild(errDiv);
   }
 }

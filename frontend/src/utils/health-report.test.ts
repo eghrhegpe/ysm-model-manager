@@ -9,6 +9,8 @@ function makeReport(overrides: Partial<HealthReport> = {}): HealthReport {
     timestamp: "2026-01-01T00:00:00Z",
     directory: "/repo",
     score: 85,
+    // 锐评④：verdict 是 Go 单源判定字段，绑定必填 → 骨架须携带
+    verdict: "good",
     completeness: { checked: 100, valid: 80, invalid: 20, percentage: 80 },
     cache: {
       cache_dir: "/cache",
@@ -127,6 +129,16 @@ describe("parseHealthReport — 运行时结构校验", () => {
     const raw = makeReport({
       resources: { total_files: "many" as unknown as number, total_size: 0, banned: 0, by_type: null },
     });
+    expect(parseHealthReport(raw)).toBeNull();
+  });
+
+  it("verdict 缺失（旧后端结构漂移）→ 返回 null（锐评④：判定单源，不让前端悄悄回退）", () => {
+    const { verdict: _verdict, ...rest } = makeReport();
+    expect(parseHealthReport(rest as HealthReport)).toBeNull();
+  });
+
+  it("verdict 为非字符串 → 返回 null", () => {
+    const raw = makeReport({ verdict: 7 as unknown as string });
     expect(parseHealthReport(raw)).toBeNull();
   });
 });

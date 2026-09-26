@@ -71,7 +71,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 			} else {
 				failed++
 				if logger != nil {
-					logger(filepath.Base(missing), missing, targetDir, 0, "failed", "推送失败: "+err.Error())
+					logger(filepath.Base(missing), missing, targetDir, 0, types.StatusFailed, "推送失败: "+err.Error())
 				}
 			}
 		}
@@ -91,7 +91,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 		} else {
 			failed++
 			if logger != nil {
-				logger(filepath.Base(src), src, targetDir, 0, "failed", "推送失败: "+err.Error())
+				logger(filepath.Base(src), src, targetDir, 0, types.StatusFailed, "推送失败: "+err.Error())
 			}
 		}
 	}
@@ -135,7 +135,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 				if err := copyDirRecursive(src, dstPath); err != nil {
 					failed++
 					if logger != nil {
-						logger(filepath.Base(src), src, dstPath, 0, "failed", "拉取失败: "+err.Error())
+						logger(filepath.Base(src), src, dstPath, 0, types.StatusFailed, "拉取失败: "+err.Error())
 					}
 					continue
 				}
@@ -144,14 +144,14 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 				if err := os.MkdirAll(filepath.Dir(dstPath), fsutil.DirPerms); err != nil {
 					failed++
 					if logger != nil {
-						logger(filepath.Base(src), src, filepath.Dir(dstPath), 0, "failed", "创建目录失败: "+err.Error())
+						logger(filepath.Base(src), src, filepath.Dir(dstPath), 0, types.StatusFailed, "创建目录失败: "+err.Error())
 					}
 					continue
 				}
 				if err := fsutil.CopyFile(src, dstPath); err != nil {
 					failed++
 					if logger != nil {
-						logger(filepath.Base(src), src, dstPath, 0, "failed", "拉取失败: "+err.Error())
+						logger(filepath.Base(src), src, dstPath, 0, types.StatusFailed, "拉取失败: "+err.Error())
 					}
 					continue
 				}
@@ -163,7 +163,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 		if mapErr != nil {
 			failed++
 			if logger != nil {
-				logger(filepath.Base(src), src, globalDir, 0, "failed", "路径映射失败: "+mapErr.Error())
+				logger(filepath.Base(src), src, globalDir, 0, types.StatusFailed, "路径映射失败: "+mapErr.Error())
 			}
 			continue
 		}
@@ -171,7 +171,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 		if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
 			failed++
 			if logger != nil {
-				logger(filepath.Base(src), src, dstDir, 0, "failed", "拉取失败: "+err.Error())
+				logger(filepath.Base(src), src, dstDir, 0, types.StatusFailed, "拉取失败: "+err.Error())
 			}
 			continue
 		}
@@ -181,7 +181,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 			if err := copyDirRecursive(src, mapped); err != nil {
 				failed++
 				if logger != nil {
-					logger(filepath.Base(src), src, mapped, 0, "failed", "拉取失败: "+err.Error())
+					logger(filepath.Base(src), src, mapped, 0, types.StatusFailed, "拉取失败: "+err.Error())
 				}
 				continue
 			}
@@ -191,7 +191,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 		if err := fsutil.CopyFile(src, filepath.Join(dstDir, filepath.Base(src))); err != nil {
 			failed++
 			if logger != nil {
-				logger(filepath.Base(src), src, dstDir, 0, "failed", "拉取失败: "+err.Error())
+				logger(filepath.Base(src), src, dstDir, 0, types.StatusFailed, "拉取失败: "+err.Error())
 			}
 			continue
 		}
@@ -307,7 +307,7 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 	for _, e := range srcEntries {
 		if e.Hash != "" && repoHashes[e.Hash] {
 			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, "skipped", "仓库已存在同哈希文件，跳过")
+				logger(e.Name, e.Path, repoDir, 0, types.StatusSkipped, "仓库已存在同哈希文件，跳过")
 			}
 			continue
 		}
@@ -319,7 +319,7 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 		// 但哈希去重（L286）已覆盖「同名同内容」场景，此处仅挡「同名不同内容」。
 		if repoNames[e.Name] {
 			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, "skipped", "仓库已存在同名文件，跳过")
+				logger(e.Name, e.Path, repoDir, 0, types.StatusSkipped, "仓库已存在同名文件，跳过")
 			}
 			continue
 		}
@@ -328,7 +328,7 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 			// P0 修复：防路径穿越——e.Path 不在 customDir 下时，丢弃 err 会生成 "..\\leaked\\m.ysm"
 			// 并 MkdirAll 到 customDir 外部。显式拒绝越界条目。
 			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, "failed",
+				logger(e.Name, e.Path, repoDir, 0, types.StatusFailed,
 					"跳过越界路径（不在 customDir 下）: "+e.Path)
 			}
 			continue
@@ -340,19 +340,19 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 		dstDir := filepath.Dir(dstPath)
 		if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
 			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, "failed", "创建目录失败: "+err.Error())
+				logger(e.Name, e.Path, repoDir, 0, types.StatusFailed, "创建目录失败: "+err.Error())
 			}
 			continue
 		}
 		if _, err := installer.CopyFileLocked(e.Path, dstDir); err != nil {
 			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, "failed", "复制失败: "+err.Error())
+				logger(e.Name, e.Path, repoDir, 0, types.StatusFailed, "复制失败: "+err.Error())
 			}
 			continue
 		}
 		count++
 		if logger != nil {
-			logger(e.Name, e.Path, repoDir, 0, "success", "已复制到仓库")
+			logger(e.Name, e.Path, repoDir, 0, types.StatusSuccess, "已复制到仓库")
 		}
 	}
 	return count, nil

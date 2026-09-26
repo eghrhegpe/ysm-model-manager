@@ -122,7 +122,9 @@ export function createDedupSession(): DedupSession {
         { icon: UI_ICONS.success },
       );
     } catch (err) {
-      list.innerHTML = msgRowHTML("error", `${t("diagnostics.dedupFailed")}: ${esc(String(err))}`);
+      // 低优先③：与 conflicts/health 同口径——friendlyError 单源（Code→i18n、Go 中文透传、
+      // 英文才加前缀），esc 交 msgRowHTML 单点转义
+      list.innerHTML = msgRowHTML("error", friendlyError(err, t("diagnostics.dedupFailed")), esc);
     } finally {
       state.execBusy = false;
     }
@@ -214,7 +216,8 @@ export function createDedupSession(): DedupSession {
         MoveToRecycle,
       );
     } catch (err) {
-      list.innerHTML = msgRowHTML("error", `${t("diagnostics.dedupFailed")}: ${esc(String(err))}`);
+      // 低优先③：friendlyError 单源（同 runExecDelete 的 catch），esc 交 msgRowHTML 单点转义
+      list.innerHTML = msgRowHTML("error", friendlyError(err, t("diagnostics.dedupFailed")), esc);
     }
   }
 

@@ -530,6 +530,9 @@ func mergeAuditResults(results []auditResult, timestamp string) *repoaudit.Healt
 	if scoreCount > 0 {
 		merged.Score = scoreSum / scoreCount
 	}
+	// Verdict 与 Score 同点派生（锐评④单源）：全仓审计都失败时 scoreCount==0，
+	// Score 保持零值——verdict 随之落 bad，前端无需再对 0 特判
+	merged.Verdict = repoaudit.ScoreVerdict(merged.Score)
 	if merged.Completeness.Checked > 0 {
 		merged.Completeness.Percentage = float64(merged.Completeness.Valid) / float64(merged.Completeness.Checked) * 100
 	}

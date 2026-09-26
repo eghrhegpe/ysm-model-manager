@@ -199,7 +199,57 @@ func (l *Logger) AddOp(op, modelName, sourcePath, targetDir string, fileSize int
 	l.addOp(op, modelName, sourcePath, targetDir, fileSize, status, errMsg)
 }
 
+// AddErr 导入结构化错误（2026-09 对接锐评②）：err 为 types.AppError 时拆出
+// Code/Reason/Suggestion 独立字段落盘，前端直接按字段渲染；非 AppError 时
+// ErrorMsg=err.Error() 兜底。status 由调用方给定（错误路径多为 types.StatusFailed）。
+func (l *Logger) AddErr(modelName, sourcePath, targetDir string, fileSize int64, status string, err error) {
+	l.addOpErr("import", modelName, sourcePath, targetDir, fileSize, status, err)
+}
+
+// AddOpErr 指定操作类型的结构化错误日志（见 AddErr）
+func (l *Logger) AddOpErr(op, modelName, sourcePath, targetDir string, fileSize int64, status string, err error) {
+	l.addOpErr(op, modelName, sourcePath, targetDir, fileSize, status, err)
+}
+
 func (l *Logger) addOp(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {
+	l.appendOp(types.ImportLog{
+		ModelName:  modelName,
+		SourcePath: sourcePath,
+		TargetDir:  targetDir,
+		FileSize:   fileSize,
+		Status:     status,
+		ErrorMsg:   errMsg,
+		Operation:  op,
+	})
+}
+
+// addOpErr 拆解 err 后走 appendOp 共享尾部（截断/时间戳/级别/裁剪/防抖落盘）。
+// errors.As 穿透包装链取 AppError；取不到就整体退化为 ErrorMsg 散文——
+// 旧日志文件同样没有 Code/Suggestion 字段，前端以「字段存在与否」分流渲染。
+func (l *Logger) addOpErr(op, modelName, sourcePath, targetDir string, fileSize int64, status string, err error) {
+	entry := types.ImportLog{
+		ModelName:  modelName,
+		SourcePath: sourcePath,
+		TargetDir:  targetDir,
+		FileSize:   fileSize,
+		Status:     status,
+		Operation:  op,
+	}
+	if err != nil {
+		var ae types.AppError
+		if errors.As(err, &ae) {
+			entry.ErrorMsg = ae.Reason
+			entry.Code = ae.Code
+			entry.Suggestion = ae.Suggestion
+		} else {
+			entry.ErrorMsg = err.Error()
+		}
+	}
+	l.appendOp(entry)
+}
+
+// appendOp 日志写入唯一尾部：补齐时间戳/级别 → 字段截断 → 环形裁剪 → 防抖落盘。
+func (l *Logger) appendOp(e types.ImportLog) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	// 字段字节级截断——errMsg/modelName 无上限时 500 条 ×
@@ -213,17 +263,14 @@ func (l *Logger) addOp(op, modelName, sourcePath, targetDir string, fileSize int
 		}
 		return s
 	}
-	l.logs = append(l.logs, types.ImportLog{
-		ModelName:  trunc(modelName),
-		SourcePath: trunc(sourcePath),
-		TargetDir:  trunc(targetDir),
-		FileSize:   fileSize,
-		Status:     status,
-		ErrorMsg:   trunc(errMsg),
-		Timestamp:  time.Now().UnixMilli(),
-		Operation:  op,
-		Level:      types.StatusToLevel(status),
-	})
+	e.ModelName = trunc(e.ModelName)
+	e.SourcePath = trunc(e.SourcePath)
+	e.TargetDir = trunc(e.TargetDir)
+	e.ErrorMsg = trunc(e.ErrorMsg)
+	e.Suggestion = trunc(e.Suggestion)
+	e.Timestamp = time.Now().UnixMilli()
+	e.Level = types.StatusToLevel(e.Status)
+	l.logs = append(l.logs, e)
 	if len(l.logs) > logMaxEntries() {
 		l.logs = l.logs[len(l.logs)-logMaxEntries():]
 		// 底层数组远大于容量时重分配，释放突发峰值占用

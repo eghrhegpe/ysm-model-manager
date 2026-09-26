@@ -2,15 +2,18 @@
 package logs
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/types"
 )
 
 func TestLogger_AddAndGetAll(t *testing.T) {
 	dir := t.TempDir()
 	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
-	l.Add("模型A", "/src/a.ysm", "/dst", 1024, "成功", "")
+	l.Add("模型A", "/src/a.ysm", "/dst", 1024, types.StatusSuccess, "")
 	logs := l.GetAll()
 	if len(logs) != 1 {
 		t.Fatalf("期望 1 条日志, 得到 %d", len(logs))
@@ -18,18 +21,21 @@ func TestLogger_AddAndGetAll(t *testing.T) {
 	if logs[0].ModelName != "模型A" {
 		t.Errorf("ModelName = %q, 期望 模型A", logs[0].ModelName)
 	}
-	if logs[0].Status != "成功" {
-		t.Errorf("Status = %q, 期望 成功", logs[0].Status)
+	if logs[0].Status != types.StatusSuccess {
+		t.Errorf("Status = %q, 期望 %s", logs[0].Status, types.StatusSuccess)
 	}
 	if logs[0].Operation != "import" {
 		t.Errorf("Operation = %q, 期望 import", logs[0].Operation)
+	}
+	if logs[0].Level != types.LevelInfo {
+		t.Errorf("Level = %q, 期望 info（StatusToLevel 映射）", logs[0].Level)
 	}
 }
 
 func TestLogger_AddOp(t *testing.T) {
 	dir := t.TempDir()
 	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
-	l.AddOp("delete", "模型B", "/src/b.ysm", "/dst", 2048, "已完成", "")
+	l.AddOp("delete", "模型B", "/src/b.ysm", "/dst", 2048, types.StatusSuccess, "")
 	logs := l.GetAll()
 	if len(logs) != 1 {
 		t.Fatalf("期望 1 条日志, 得到 %d", len(logs))
@@ -39,10 +45,79 @@ func TestLogger_AddOp(t *testing.T) {
 	}
 }
 
+// ===== 锐评②：AddErr / AddOpErr 结构化拆解 =====
+func TestLogger_AddErr_AppError(t *testing.T) {
+	l := &Logger{path: filepath.Join(t.TempDir(), "test-logs.json")}
+	err := types.AppError{
+		Code:       types.ErrFileExists,
+		Operation:  "导入模型",
+		SourcePath: "/src/a.ysm",
+		Reason:     "目标已存在同名文件",
+		Suggestion: "重命名后重试",
+	}
+	l.AddErr("模型C", "/src/a.ysm", "/dst", 10, types.StatusFailed, err)
+	logs := l.GetAll()
+	if len(logs) != 1 {
+		t.Fatalf("期望 1 条日志, 得到 %d", len(logs))
+	}
+	e := logs[0]
+	if e.Code != types.ErrFileExists {
+		t.Errorf("Code = %q, 期望 %q", e.Code, types.ErrFileExists)
+	}
+	if e.ErrorMsg != "目标已存在同名文件" {
+		t.Errorf("ErrorMsg = %q, 期望 Reason 而非散文模板", e.ErrorMsg)
+	}
+	if e.Suggestion != "重命名后重试" {
+		t.Errorf("Suggestion = %q", e.Suggestion)
+	}
+	if e.Level != types.LevelError {
+		t.Errorf("Level = %q, 期望 error", e.Level)
+	}
+}
+
+func TestLogger_AddErr_PlainError(t *testing.T) {
+	l := &Logger{}
+	l.AddErr("模型D", "", "", 0, types.StatusFailed, errors.New("disk full"))
+	logs := l.GetAll()
+	e := logs[0]
+	if e.Code != "" || e.Suggestion != "" {
+		t.Errorf("非 AppError 应无结构化字段, got Code=%q Suggestion=%q", e.Code, e.Suggestion)
+	}
+	if e.ErrorMsg != "disk full" {
+		t.Errorf("ErrorMsg = %q, 期望原样 err.Error()", e.ErrorMsg)
+	}
+}
+
+func TestLogger_AddErr_WrappedAppError(t *testing.T) {
+	l := &Logger{}
+	inner := types.AppError{Code: types.ErrIO, Reason: "被占用", Suggestion: "关闭占用程序"}
+	wrapped := errors.Join(errors.New("推送失败"), inner)
+	l.AddOpErr("push", "模型E", "/src", "/dst", 0, types.StatusFailed, wrapped)
+	e := l.GetAll()[0]
+	if e.Code != types.ErrIO {
+		t.Errorf("errors.As 应穿透包装链, got Code=%q", e.Code)
+	}
+	if e.ErrorMsg != "被占用" {
+		t.Errorf("ErrorMsg = %q", e.ErrorMsg)
+	}
+}
+
+func TestLogger_AddErr_NilErr(t *testing.T) {
+	l := &Logger{}
+	l.AddErr("模型F", "", "", 0, types.StatusWarn, nil)
+	e := l.GetAll()[0]
+	if e.ErrorMsg != "" || e.Code != "" {
+		t.Errorf("nil err 应产出空字段, got ErrorMsg=%q Code=%q", e.ErrorMsg, e.Code)
+	}
+	if e.Status != types.StatusWarn || e.Level != types.LevelWarn {
+		t.Errorf("status/level 透传错误: %q/%q", e.Status, e.Level)
+	}
+}
+
 func TestLogger_Clear(t *testing.T) {
 	dir := t.TempDir()
 	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
-	l.Add("模型A", "/src/a.ysm", "/dst", 1024, "成功", "")
+	l.Add("模型A", "/src/a.ysm", "/dst", 1024, types.StatusSuccess, "")
 	l.Clear()
 	logs := l.GetAll()
 	if len(logs) != 0 {

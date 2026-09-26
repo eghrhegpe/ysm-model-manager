@@ -1039,14 +1039,16 @@ export function ResetWorkshopConfigs(): $CancellablePromise<types$0.WorkshopSite
 
 /**
  * ResolveConflicts 批量解决冲突
- * conflictsJSON: 冲突列表 JSON（来自 DetectConflicts）
+ * conflicts: 冲突列表（DetectConflicts 返回的同构 struct 切片，typed 入参直连——
+ * 低优先①：原 conflictsJSON string + json.Unmarshal 把类型契约降级成文本协议，
+ * 前端改名/漏字段编译期零感知；参照 EnqueueDownloads([]types.DownloadTask) 先例）
  * defaultStrategy: 默认解决策略 (force_remote/force_local/manual)
  * rtype: 资源类型 ID
  * instanceName: 整合包名称
  * 返回 typed SyncResolveResult，失败 → error
  */
-export function ResolveConflicts(conflictsJSON: string, defaultStrategy: string, rtype: string, instanceName: string): $CancellablePromise<types$0.SyncResolveResult | null> {
-    return $Call.ByID(1918295312, conflictsJSON, defaultStrategy, rtype, instanceName);
+export function ResolveConflicts(conflicts: sync$0.FileConflict[] | null, defaultStrategy: string, rtype: string, instanceName: string): $CancellablePromise<types$0.SyncResolveResult | null> {
+    return $Call.ByID(1918295312, conflicts, defaultStrategy, rtype, instanceName);
 }
 
 export function RestartApplication(): $CancellablePromise<void> {

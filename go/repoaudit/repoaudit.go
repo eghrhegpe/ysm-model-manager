@@ -152,11 +152,37 @@ type HealthReport struct {
 	Timestamp    string          `json:"timestamp"`
 	Directory    string          `json:"directory"`
 	Score        int             `json:"score"`
+	Verdict      string          `json:"verdict"`
 	Completeness Completeness    `json:"completeness"`
 	Cache        CacheStatus     `json:"cache"`
 	Resources    ResourceSummary `json:"resources"`
 	Dedup        DedupSummary    `json:"dedup"`
 	Warnings     []string        `json:"warnings,omitempty"`
+}
+
+// 健康分档位（2026-09 对接锐评④：判级阈值单源在 Go，前端只按 verdict 映射颜色/
+// 文案。此前 80/60 只存在于 diagnostics/health.ts 的两份三元里，Go 侧无出处，
+// 改阈值要前后端两处同步——典型的职责不清）。
+const (
+	VerdictGood = "good" // score >= verdictGoodMin
+	VerdictOk   = "ok"   // verdictOkMin <= score < verdictGoodMin
+	VerdictBad  = "bad"  // score < verdictOkMin
+
+	verdictGoodMin = 80
+	verdictOkMin   = 60
+)
+
+// ScoreVerdict 健康分 → 档位。导出口径统一供 HealthReportFor 与
+// internal/app 的多仓合并（mergeAuditResults）共用，防止双实现漂移。
+func ScoreVerdict(score int) string {
+	switch {
+	case score >= verdictGoodMin:
+		return VerdictGood
+	case score >= verdictOkMin:
+		return VerdictOk
+	default:
+		return VerdictBad
+	}
 }
 
 // Audit 仓库健康审计核心：资源扫描 + 完整性 + 缓存 + 健康分数 + 警告，一次遍历。
@@ -418,6 +444,7 @@ func HealthReportFor(dirPath string) (HealthReport, error) {
 		Timestamp:    audit.Timestamp,
 		Directory:    audit.Directory,
 		Score:        audit.Score,
+		Verdict:      ScoreVerdict(audit.Score),
 		Completeness: audit.Completeness,
 		Cache:        audit.Cache,
 		Resources:    audit.Resources,

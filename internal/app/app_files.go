@@ -185,7 +185,7 @@ func (a *App) ImportModelFolderTo(folderName, subpath, rtype string, files []typ
 		if rtype == neutralPageType {
 			return a.ImportModelFolder(folderName, subpath, files)
 		}
-		a.AddOpLog("import", folderName, "", "", 0, "warn",
+		a.AddOpLog("import", folderName, "", "", 0, types.StatusWarn,
 			fmt.Sprintf("内容特征指向 %s，按当前页面类型 %s 落盘", mismatch, rtype))
 	}
 	return a.importModelFolderAs(rtype, folderName, subpath, files)

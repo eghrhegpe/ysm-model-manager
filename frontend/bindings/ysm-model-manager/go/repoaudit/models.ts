@@ -72,6 +72,7 @@ export interface HealthReport {
     "timestamp": string;
     "directory": string;
     "score": number;
+    "verdict": string;
     "completeness": Completeness;
     "cache": CacheStatus;
     "resources": ResourceSummary;

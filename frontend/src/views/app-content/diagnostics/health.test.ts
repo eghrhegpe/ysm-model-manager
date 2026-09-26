@@ -18,6 +18,8 @@ function buildReport(): HealthReport {
     timestamp: "2026-08-21T00:00:00Z",
     directory: "/repo",
     score: 85,
+    // 锐评④：verdict 为绑定必填字段（Go ScoreVerdict 单源产出）；夹具与 Go 口径一致
+    verdict: "good",
     completeness: { checked: 10, valid: 9, invalid: 1, percentage: 90 },
     cache: { cache_dir: "/cache", cache_files: 5, cache_size: 1024 },
     resources: { total_files: 12, total_size: 2048, banned: 0, by_type: { model: 10, texture: 2 } },
@@ -102,6 +104,55 @@ describe("parseHealthReport", () => {
   it("结构不合法（缺 score）→ null", () => {
     const r = parseHealthReport({ timestamp: "x", directory: "/", completeness: { checked: 0, valid: 0, invalid: 0, percentage: 0 } } as never);
     expect(r).toBeNull();
+  });
+
+  it("锐评④：缺 verdict（后端漂移/旧版结构）→ null，不静默回退第二判定源", () => {
+    const r = { ...buildReport() } as Record<string, unknown>;
+    delete r.verdict;
+    expect(parseHealthReport(r as never)).toBeNull();
+  });
+});
+
+describe("renderHealthReport — verdict 单源渲染（锐评④）", () => {
+  // 颜色/文案由 Go verdict 决定，前端不再按分数二次判定；分数带仅作未知 verdict 的兜底。
+  const bandOf = (html: string) => ({
+    green: html.includes("var(--status-success)"),
+    amber: html.includes("var(--tag-amber)"),
+    red: html.includes("var(--status-error)"),
+  });
+
+  it("verdict=ok（score 75）→ 琥珀 + 文案「亚健康」，不看分数带（75<80 本会同色，此处锁映射）", () => {
+    const r = { ...buildReport(), score: 75, verdict: "ok" };
+    const html = renderHealthReport(r, esc);
+    expect(bandOf(html).amber).toBe(true);
+    expect(html).toContain("亚健康");
+  });
+
+  it("verdict 与分数带冲突时 verdict 优先（score 85 但 verdict=bad → 红色，证明前端不再自判）", () => {
+    const r = { ...buildReport(), score: 85, verdict: "bad" };
+    const html = renderHealthReport(r, esc);
+    expect(bandOf(html).red).toBe(true);
+    expect(bandOf(html).green).toBe(false);
+    expect(html).toContain("需要整理");
+  });
+
+  it("未知 verdict（Go 未来新档位）→ 回退分数带，good 色", () => {
+    const r = { ...buildReport(), score: 85, verdict: "shiny" };
+    const html = renderHealthReport(r, esc);
+    expect(bandOf(html).green).toBe(true);
+    expect(html).toContain("健康");
+  });
+
+  it("边界回退带与 Go ScoreVerdict 阈值一致（79→琥珀，60→琥珀，59→红；仅 verdict 缺失时生效）", () => {
+    for (const [score, expectCls] of [
+      [79, "amber"],
+      [60, "amber"],
+      [59, "red"],
+    ] as const) {
+      const r = { ...buildReport(), score, verdict: "" };
+      const html = renderHealthReport(r, esc);
+      expect(bandOf(html)[expectCls], `score=${score} → ${expectCls}`).toBe(true);
+    }
   });
 });
 

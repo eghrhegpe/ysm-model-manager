@@ -8,6 +8,13 @@ import { logError } from "@/utils/base/primitives/log.ts";
 import { formatClock } from "@/utils/format/format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
+// 锐评①：操作/运行时日志的类型契约直连绑定生成类型（经 types-re-export 垫层），
+// 删除此前手写的 ImportLogLike / RuntimeLogLike 镜像——Go 侧新增 Code/Suggestion
+// 字段时镜像毫无感知，正是对接漂移的温床。
+// LogLevel/ErrorCode 只做类型导出（垫层纪律：bindings 的值不经别名进运行时）；
+// 与 Level 比较统一 String() 归一后比字面量——string enum 成员值 = Go 常量字面量，
+// 且 mock/旧缓存里的裸 string 同样命中。
+import type { ImportLog, RuntimeLog } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { statRowHTML } from "./status-row.ts";
 
@@ -29,17 +36,7 @@ const diagLoadGuard = createLoadGuard();
 const DIAG_OP_WINDOW = 500;
 const DIAG_RUNTIME_WINDOW = 300;
 
-/** 绑定 ImportLog（仅用到的字段） */
-interface ImportLogLike {
-  Status?: string;
-  Timestamp?: string | number;
-  ModelName?: string;
-  TargetDir?: string;
-  SourcePath?: string;
-  ErrorMsg?: string;
-  Operation?: string;
-  Level?: "" | "debug" | "info" | "warn" | "error" | "fatal";
-}
+// 锐评①：手写镜像 ImportLogLike / RuntimeLogLike 已删除——契约直连 Go 绑定类型（见顶部 import）。
 
 /** 操作类型 → 中文标签 + 图标（分组标题与行内徽标共用；图标走 UI_ICONS SVG，ADR-238） */
 const OP_META: Record<string, { label: string; icon: string }> = {
@@ -98,7 +95,7 @@ function dgLsReadOpFilter(root: ShadowRoot): string {
  * 2026-09-18 扩展：Operation 同时匹配原始 key 与本地化标签（opMeta 同源），
  * 搜「导入」/「import」都能命中——搜索框与分组标题共用 OP_META，标签即用户所见。
  */
-function dgLsMatchDiagSearch(l: ImportLogLike, search: string): boolean {
+function dgLsMatchDiagSearch(l: ImportLog, search: string): boolean {
   if (!search) return true;
   const op = l.Operation || "import";
   return [l.ModelName, l.ErrorMsg, l.TargetDir, l.SourcePath, op, opMeta(op).label]
@@ -108,7 +105,7 @@ function dgLsMatchDiagSearch(l: ImportLogLike, search: string): boolean {
     .includes(search);
 }
 
-function dgLsFilterDiagLogs(logs: ImportLogLike[], root: ShadowRoot): ImportLogLike[] {
+function dgLsFilterDiagLogs(logs: ImportLog[], root: ShadowRoot): ImportLog[] {
   const activeBtn = root.querySelector(".diag-log-fbtn.active");
   const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status : "all";
   const opFilter = dgLsReadOpFilter(root);
@@ -124,8 +121,8 @@ function dgLsFilterDiagLogs(logs: ImportLogLike[], root: ShadowRoot): ImportLogL
     });
 }
 
-function dgLsGroupByOp(filtered: ImportLogLike[]): Map<string, ImportLogLike[]> {
-  const groups = new Map<string, ImportLogLike[]>();
+function dgLsGroupByOp(filtered: ImportLog[]): Map<string, ImportLog[]> {
+  const groups = new Map<string, ImportLog[]>();
   for (const l of filtered) {
     const key = l.Operation || "import";
     const arr = groups.get(key);
@@ -141,15 +138,18 @@ function dgLsGroupByOp(filtered: ImportLogLike[]): Map<string, ImportLogLike[]> 
 //   的 emoji-icon 判定）结构性量不到——与 toast `msg` 载荷 emoji 同属盲区债。
 //   现已全转 UI_ICONS 语义 SVG；💀/⏭️ 对应的 fatal/skip 图标已补进 ui-icons.ts，
 //   icon-map 误把 ⏭️ 记成 performance 的串味映射也已纠正为 skip。
-function dgLsMakeStatusLabel(l: ImportLogLike): string {
+function dgLsMakeStatusLabel(l: ImportLog): string {
+  // LogLevel 是 string enum，成员值 = Go 常量字面量（"error" 等）；
+  // String() 归一后比字面量（enum 与字面量在 TS 中不可直接比较，且裸 string 数据也兼容）。
   if (l.Level) {
-    return l.Level === "error"
+    const lv = String(l.Level);
+    return lv === "error"
       ? UI_ICONS.error
-      : l.Level === "warn"
+      : lv === "warn"
         ? UI_ICONS.warning
-        : l.Level === "debug"
+        : lv === "debug"
           ? UI_ICONS.search
-          : l.Level === "fatal"
+          : lv === "fatal"
             ? UI_ICONS.fatal
             : UI_ICONS.success;
   }
@@ -162,26 +162,37 @@ function dgLsMakeStatusLabel(l: ImportLogLike): string {
         : UI_ICONS.skip;
 }
 
-function dgLsBuildDiagMsg(l: ImportLogLike, esc: EscFn): string {
+function dgLsBuildDiagMsg(l: ImportLog, esc: EscFn): string {
   const dir =
     l.TargetDir || l.SourcePath
       ? `<br>${UI_ICONS.folderOpen} ${esc(l.TargetDir || l.SourcePath)}`
       : "";
-  const raw = l.ErrorMsg || "";
-  const cleanErr = esc(raw)
-    // biome-ignore lint/suspicious/noMisleadingCharacterClass: 匹配日志状态 emoji 前缀，变音选择符为边角
-    .replace(/^[❌✅⚠️⏭️]\s*/, "")
-    .replace(/\s+(问题描述|操作|源路径|目标路径|解决建议)[：:]?/g, "<br>$1：");
   const modelDisplay = renderDisplayName(l.ModelName || "");
-  const modelPart = modelDisplay && modelDisplay !== cleanErr ? modelDisplay : "";
-  if (!modelPart && !cleanErr) return dir || "";
-  if (!modelPart) return dir || cleanErr ? dir + cleanErr : "";
-  if (!cleanErr) return modelPart + dir;
-  return `${modelPart + dir}<br>${cleanErr}`;
+  // 锐评②（结构化分流）：Go 侧 AppError 经 errors.As 拆解后 ErrorMsg=Reason（干净文案），
+  // Code/Suggestion 独立字段落盘——直接字段渲染，不再从散文里抠。
+  const structured = Boolean(l.Code || l.Suggestion);
+  let errHtml = "";
+  if (structured) {
+    errHtml = esc(l.ErrorMsg || "");
+    if (l.Code) errHtml += `<br>${t("diagnostics.errCodeLabel")}: ${esc(String(l.Code))}`;
+    if (l.Suggestion) errHtml += `<br>${t("diagnostics.suggestionLabel")}: ${esc(l.Suggestion)}`;
+  } else {
+    // 旧日志回退：Code/Suggestion 字段上线前持久化的条目只有 AppError.Error() 散文
+    //（「问题描述：… 操作：… 解决建议：…」），保留正则换行；新日志不会再走到这里。
+    errHtml = esc(l.ErrorMsg || "")
+      // biome-ignore lint/suspicious/noMisleadingCharacterClass: 匹配日志状态 emoji 前缀，变音选择符为边角
+      .replace(/^[❌✅⚠️⏭️]\s*/, "")
+      .replace(/\s+(问题描述|操作|源路径|目标路径|解决建议)[：:]?/g, "<br>$1：");
+  }
+  const modelPart = modelDisplay && modelDisplay !== errHtml ? modelDisplay : "";
+  if (!modelPart && !errHtml) return dir || "";
+  if (!modelPart) return dir || errHtml ? dir + errHtml : "";
+  if (!errHtml) return modelPart + dir;
+  return `${modelPart + dir}<br>${errHtml}`;
 }
 
 function dgLsRenderDiagGroups(
-  groups: Map<string, ImportLogLike[]>,
+  groups: Map<string, ImportLog[]>,
   esc: EscFn,
   copyLogTitle: string,
 ): string {
@@ -209,15 +220,9 @@ function dgLsRenderDiagGroups(
   return parts.join("");
 }
 
-/** 运行时日志条目（仅用到的字段） */
-interface RuntimeLogLike {
-  Message?: string;
-  Timestamp?: string | number;
-  /** ADR-289：捕获层从 Message 推断（标准库 log 无真实级别；前端不重判，只读） */
-  Level?: "" | "debug" | "info" | "warn" | "error" | "fatal";
-  /** ADR-289：行首 `[tag]` 前缀提取（无前缀为空） */
-  Tag?: string;
-}
+// 锐评①：手写镜像 RuntimeLogLike 已删除（RuntimeLog 绑定字段：Message: string /
+// Timestamp: number / Level?: LogLevel / Tag?: string）。Level 是 string enum，
+// 与字面量比较前统一 String() 归一（见 dgLsFilterRuntimeLogs / dgLsRuntimeStatusIcon）。
 
 /**
  * 运行时日志过滤：状态 chips（按推断 Level）× 搜索（Message + Tag）。
@@ -226,7 +231,7 @@ interface RuntimeLogLike {
  * 无 Status 概念；现捕获层已从 Message 推断 Level，chips 遂有真实语义可比。
  * 命中域含 Tag：`[watcher]` 这类前缀成为独立可搜维度（Message 里也含，但字段化后语义明确）。
  */
-function dgLsFilterRuntimeLogs(logs: RuntimeLogLike[], root: ShadowRoot): RuntimeLogLike[] {
+function dgLsFilterRuntimeLogs(logs: RuntimeLog[], root: ShadowRoot): RuntimeLog[] {
   const activeBtn = root.querySelector(".diag-log-fbtn.active");
   const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status : "all";
   const search = dgLsReadSearch(root);
@@ -237,8 +242,9 @@ function dgLsFilterRuntimeLogs(logs: RuntimeLogLike[], root: ShadowRoot): Runtim
       // 「全部」放行一切。⚠️ chip 的 data-status 沿用操作日志的 Status 词汇（success/failed/
       // warn/skipped），而运行时日志是 Level 词汇（info/error/warn/debug）——两者**不同族**，
       // 须显式映射：success↔info、failed↔error、skipped↔debug、warn 是级别阈值（含更严重者）。
+      // LogLevel 是 string enum：比较前 String() 归一（成员值 = 字面量，行为不变）。
       if (filter !== "all") {
-        const lv = l.Level || "info";
+        const lv = String(l.Level || "info");
         if (filter === "warn") {
           if (lv !== "warn" && lv !== "error" && lv !== "fatal") return false;
         } else {
@@ -253,8 +259,9 @@ function dgLsFilterRuntimeLogs(logs: RuntimeLogLike[], root: ShadowRoot): Runtim
 }
 
 /** 运行时日志状态图标：按推断 Level 映射（与操作日志 dgLsMakeStatusLabel 同口径；无 Level 时 note 兜底） */
-function dgLsRuntimeStatusIcon(l: RuntimeLogLike): { icon: string; cls: string } {
-  switch (l.Level) {
+function dgLsRuntimeStatusIcon(l: RuntimeLog): { icon: string; cls: string } {
+  // String() 归一：LogLevel 是 string enum，case 裸字面量与 enum 类型不可比（TS no-overlap）。
+  switch (String(l.Level ?? "")) {
     case "error":
       return { icon: UI_ICONS.error, cls: "error" };
     case "fatal":
@@ -270,7 +277,7 @@ function dgLsRuntimeStatusIcon(l: RuntimeLogLike): { icon: string; cls: string }
   }
 }
 
-function dgLsRenderRuntimeRows(logs: RuntimeLogLike[], esc: EscFn, copyLogTitle: string): string {
+function dgLsRenderRuntimeRows(logs: RuntimeLog[], esc: EscFn, copyLogTitle: string): string {
   return logs
     .map((l, i) => {
       const timeStr = formatClock(l.Timestamp);
@@ -293,7 +300,7 @@ export async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise
   const { list, gen, copyLogTitle } = ctx;
   try {
     const { GetImportLogs } = await backendGetApp();
-    const logs: ImportLogLike[] = (await GetImportLogs()) || [];
+    const logs: ImportLog[] = (await GetImportLogs()) || [];
     if (dgLsCheckStale(gen)) return;
     if (!logs.length) return dgLsSetEmpty(list, "diagnostics.noLogs");
     const filtered = dgLsFilterDiagLogs(logs, root);
@@ -313,7 +320,7 @@ export async function loadRuntimeLogs(root: ShadowRoot, esc: EscFn): Promise<voi
   const { list, gen, copyLogTitle } = ctx;
   try {
     const { GetRuntimeLogs } = await backendGetApp();
-    const logs: RuntimeLogLike[] = (await GetRuntimeLogs()) || [];
+    const logs: RuntimeLog[] = (await GetRuntimeLogs()) || [];
     if (dgLsCheckStale(gen)) return;
     if (!logs.length) return dgLsSetEmpty(list, "diagnostics.noRuntimeLogs");
     const filtered = dgLsFilterRuntimeLogs(logs, root);

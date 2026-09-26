@@ -84,9 +84,9 @@ func (a *App) InstallModelTo(src, customDir string) error {
 	root, _ := a.GetRepoRoot(rtype)
 	err := installer.Install(src, customDir, root, a.getLinkMode())
 	if err != nil {
-		a.logger.Add(filepath.Base(src), src, customDir, 0, "failed", err.Error())
+		a.logger.AddErr(filepath.Base(src), src, customDir, 0, types.StatusFailed, err)
 	} else {
-		a.logger.Add(filepath.Base(src), src, customDir, 0, "success", "")
+		a.logger.Add(filepath.Base(src), src, customDir, 0, types.StatusSuccess, "")
 	}
 	return err
 }
@@ -339,10 +339,12 @@ func (a *App) pushRepoPathToInstance(rtype, instanceName, repoPath string) error
 	}
 	opErr := ysmsync.PushSingleResource(repoPath, customDir, globalDir, a.getLinkMode(), rtype)
 	if opErr != nil {
-		a.logger.Add(filepath.Base(repoPath), repoPath, customDir, 0, "failed", opErr.Error())
+		// 锐评②：结构化落盘——opErr 为 types.AppError 时拆 Code/Reason/Suggestion，
+		// 前端按字段渲染；非 AppError 自动退化为 ErrorMsg 散文
+		a.logger.AddErr(filepath.Base(repoPath), repoPath, customDir, 0, types.StatusFailed, opErr)
 		return opErr
 	}
-	a.logger.Add(filepath.Base(repoPath), repoPath, customDir, 0, "success", "")
+	a.logger.Add(filepath.Base(repoPath), repoPath, customDir, 0, types.StatusSuccess, "")
 	// 推送会改实例目录；与 PushSingleResourceToInstance 同款显式失效（保持刷新即时）
 	instance.InvalidateSyncItemsCache()
 	ysmsync.InvalidateSyncScanCaches()

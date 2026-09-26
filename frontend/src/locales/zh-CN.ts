@@ -923,6 +923,9 @@ export const zhCN = {
   "diagnostics.scanHint": "点击「扫描同步冲突」比较实例与仓库的内容差异",
   "diagnostics.noMatchLogs": "无匹配日志",
   "diagnostics.itemsCount": "{n} 条",
+  // 锐评②：结构化日志行字段前缀（ImportLog.Code / .Suggestion 渲染用）
+  "diagnostics.errCodeLabel": "错误码",
+  "diagnostics.suggestionLabel": "解决建议",
   "diagnostics.loadLogsFailed": "加载日志失败",
   "diagnostics.loadRuntimeLogsFailed": "加载运行时日志失败",
   "diagnostics.scanHash": "⏳ 扫描 {icon} {label} 目录文件哈希...",

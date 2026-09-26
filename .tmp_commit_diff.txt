@@ -1,0 +1,179 @@
+commit 666ff0ee2fbda000e4764f9ca50b9ec6bcf14647
+Author: eghrhegpe <134900655+eghrhegpe@users.noreply.github.com>
+Date:   Fri Sep 25 23:18:22 2026 +0800
+
+     SVG 样式改动中断保存
+
+diff --git a/frontend/src/views/app-content/init-pages.ts b/frontend/src/views/app-content/init-pages.ts
+index 6496ead31..a53e0420b 100644
+--- a/frontend/src/views/app-content/init-pages.ts
++++ b/frontend/src/views/app-content/init-pages.ts
+@@ -227,7 +227,7 @@ export function bindTabs(host: AppContentHost, tabSelector: string, prefix: stri
+           } catch (e) {
+             inited[tab] = false;
+             bus.emit("toast:show", {
+-              msg: `${UI_ICONS.error} ${friendlyError(e, t("common.loadFailed"))}`,
++              msg: friendlyError(e, t("common.loadFailed")),
+               duration: TOAST_MS.verbose,
+               type: "error",
+             });
+diff --git a/frontend/src/views/app-content/site/drag.ts b/frontend/src/views/app-content/site/drag.ts
+index 746af9026..f7c5b0481 100644
+--- a/frontend/src/views/app-content/site/drag.ts
++++ b/frontend/src/views/app-content/site/drag.ts
+@@ -125,7 +125,7 @@ export function bindDragEvents(state: SiteViewState, _refreshView: () => void):
+         }
+       } catch (e) {
+         busRef.emit("toast:show", {
+-          msg: `❌ ${friendlyError(e, t("content.importFailed"))}`,
++          msg: friendlyError(e, t("content.importFailed")),
+           duration: TOAST_MS.verbose,
+           type: "error",
+         });
+diff --git a/frontend/src/views/app-sync-manager/index.ts b/frontend/src/views/app-sync-manager/index.ts
+index 61436286d..56863a8e1 100644
+--- a/frontend/src/views/app-sync-manager/index.ts
++++ b/frontend/src/views/app-sync-manager/index.ts
+@@ -265,7 +265,7 @@ export class AppSyncManager extends WebComponentBase {
+     if (listEl) listEl.appendChild(errDiv);
+     else this.appendChild(errDiv);
+     bus.emit("toast:show", {
+-      msg: `${UI_ICONS.error} ${friendlyError(e, head)}`,
++      msg: friendlyError(e, head),
+       duration: TOAST_MS.long,
+       type: "error",
+     });
+diff --git a/frontend/src/views/app-sync-manager/tpl.ts b/frontend/src/views/app-sync-manager/tpl.ts
+index c4429b2df..f00a71f3a 100644
+--- a/frontend/src/views/app-sync-manager/tpl.ts
++++ b/frontend/src/views/app-sync-manager/tpl.ts
+@@ -35,12 +35,12 @@ export const STATUS_ICON: Record<string, UiIconName> = {
+   all: "chart", // 仅 tab 使用（"全部"不是行状态）
+   synced: "success",
+   legacy: "link",
+-  missing: "download",
++  missing: "upload",
+   // diverged（本/远端均有改动，需处理）取 `warning` 而不另造 `diff`：语义即「需注意」，
+   // 且行色已由 STATUS_COLOR 标为 --accent —— 本次迁移零新增图标。
+   diverged: "warning",
+   disabled: "blocked",
+-  optional: "upload",
++  optional: "download",
+ };
+ 
+ export const STATUS_COLOR: Record<string, string> = {
+@@ -101,7 +101,7 @@ export function syncDirRowHTML(
+ ): string {
+   const sizeStr = syncItem.size > 0 ? formatBytes(syncItem.size) : "";
+   const actionBtn = actionBtnHTML(syncItem.status);
+-  const arrow = shouldOpen ? "▾" : "▸";
++  const arrow = shouldOpen ? UI_ICONS.chevronDown : UI_ICONS.chevronRight;
+   return (
+     '<div class="sm-item sm-dir" data-path="' +
+     esc(opPath || path) +
+@@ -123,7 +123,7 @@ export function syncDirRowHTML(
+     arrow +
+     "</button>" +
+     '<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">' +
+-    (syncItem.icon || "📁") +
++    (syncItem.icon || UI_ICONS.folder) +
+     "</span>" +
+     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
+     renderFormattedText(syncItem.name) +
+@@ -270,7 +270,7 @@ export function itemHTML(item: SyncItem, indent: number): string {
+     statusIcon +
+     "</span>" +
+     '<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">' +
+-    (item.icon || "📦") +
++    (item.icon || UI_ICONS.package) +
+     "</span>" +
+     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
+     renderFormattedText(item.name) +
+diff --git a/frontend/src/views/app-tree/toolbar-menus.ts b/frontend/src/views/app-tree/toolbar-menus.ts
+index 336b72888..9bd490814 100644
+--- a/frontend/src/views/app-tree/toolbar-menus.ts
++++ b/frontend/src/views/app-tree/toolbar-menus.ts
+@@ -57,7 +57,7 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
+     id: "btn-batch",
+     menuId: "menu-batch",
+     buttonLabelKey: "tree.batch",
+-    buttonIcon: "performance",
++    buttonIcon: "tools",
+     items: [
+       {
+         action: "enable-all",
+@@ -83,7 +83,7 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
+         action: "import-file",
+         testid: "tree-more-import-file",
+         labelKey: "tree.moreImportFile",
+-        icon: "file",
++        icon: "import",
+       },
+       {
+         action: "import-dir",
+@@ -95,7 +95,7 @@ const TOOLBAR_MENUS: Record<ToolbarMenuKey, ToolbarMenuDef> = {
+         action: "open-folder",
+         testid: "tree-more-open-folder",
+         labelKey: "tree.moreOpenFolder",
+-        icon: "folderOpen",
++        icon: "external",
+         dividerBefore: true,
+       },
+       {
+diff --git a/frontend/src/views/app-tree/tpl-adv-filter.ts b/frontend/src/views/app-tree/tpl-adv-filter.ts
+index 35de5f6b3..f8dd1307e 100644
+--- a/frontend/src/views/app-tree/tpl-adv-filter.ts
++++ b/frontend/src/views/app-tree/tpl-adv-filter.ts
+@@ -28,7 +28,7 @@ function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
+             </div>
+           </div>
+           <div>
+-            <label for="afv-minCubes" class="afv-label">${UI_ICONS.unknown} ${t("dialog.cubes")}</label>
++            <label for="afv-minCubes" class="afv-label">${UI_ICONS.voxel} ${t("dialog.cubes")}</label>
+             <div class="afv-range-row">
+               <input id="afv-minCubes" type="number" min="0" value="${esc(String(v.minCubes ?? ""))}" placeholder="${t("dialog.min")}" class="afv-inp">
+               <span class="afv-sep">—</span>
+diff --git a/frontend/src/views/app-tree/tpl-batch-rename.ts b/frontend/src/views/app-tree/tpl-batch-rename.ts
+index bb302f0e6..273d621b9 100644
+--- a/frontend/src/views/app-tree/tpl-batch-rename.ts
++++ b/frontend/src/views/app-tree/tpl-batch-rename.ts
+@@ -42,11 +42,11 @@ function buildFormHTML(dir: string, total: number, changed: number): string {
+   </label>
+   <button id="br-presets" class="dlg-btn-accent">${UI_ICONS.clipboard} ${t("dialog.presets")}</button>
+   <div id="br-presets-menu" class="dlg-presets-menu">
+-    <div class="br-preset dlg-preset-chip" data-find="(\\d{4}-\\d{2})" data-replace="" data-regex="1">${UI_ICONS.error} ${t("dialog.presetRemoveYear")}</div>
+-    <div class="br-preset dlg-preset-chip" data-find="-v\\d+(?=.)" data-replace="" data-regex="1">${UI_ICONS.error} ${t("dialog.presetRemoveVersion")}</div>
++    <div class="br-preset dlg-preset-chip" data-find="(\\d{4}-\\d{2})" data-replace="" data-regex="1">${UI_ICONS.cut} ${t("dialog.presetRemoveYear")}</div>
++    <div class="br-preset dlg-preset-chip" data-find="-v\\d+(?=.)" data-replace="" data-regex="1">${UI_ICONS.cut} ${t("dialog.presetRemoveVersion")}</div>
+     <div class="br-preset dlg-preset-chip" data-find="【(.+?)】" data-replace="[$1]" data-regex="1">${t("dialog.presetBrackets")}</div>
+-    <div class="br-preset dlg-preset-chip" data-find="[(.+?)]【(.+?)】" data-replace="$1-$2" data-regex="1">${UI_ICONS.label} ${t("dialog.presetFlatten")}</div>
+-    <div class="br-preset dlg-preset-chip" data-find="\\s+" data-replace="_" data-regex="1">${UI_ICONS.link} ${t("dialog.presetSpaceUnderscore")}</div>
++    <div class="br-preset dlg-preset-chip" data-find="[(.+?)]【(.+?)】" data-replace="$1-$2" data-regex="1">${UI_ICONS.tools} ${t("dialog.presetFlatten")}</div>
++    <div class="br-preset dlg-preset-chip" data-find="\\s+" data-replace="_" data-regex="1">${UI_ICONS.edit} ${t("dialog.presetSpaceUnderscore")}</div>
+   </div>
+ </div>
+ <div id="br-preview" class="dlg-preview"></div>
+@@ -76,7 +76,7 @@ function buildPreviewHTML(rows: BrRowView[]): string {
+   ${
+     r.selected && r.changed
+       ? `<span class="br-name br-name-old" title="${esc(r.name)}">${esc(r.name)}</span>
+-  <span class="br-arrow">→</span>
++  <span class="br-arrow">${UI_ICONS.chevronRight}</span>
+   <span class="br-name br-name-new" title="${esc(r.newName)}">${esc(r.newName)}</span>`
+       : `<span class="br-name-plain" style="opacity:${r.selected ? 1 : 0.5}">${esc(r.name)}</span>`
+   }
+diff --git a/frontend/src/views/app-tree/tpl.ts b/frontend/src/views/app-tree/tpl.ts
+index b0607d119..1b8984c86 100644
+--- a/frontend/src/views/app-tree/tpl.ts
++++ b/frontend/src/views/app-tree/tpl.ts
+@@ -28,8 +28,8 @@ export function headerHTML(): string {
+   <input class="srch-inp" id="srch" data-testid="tree-srch" type="text" placeholder="${t("tree.searchPlaceholder")}" autocomplete="off">
+ </div>
+ <div class="hdr-row hdr-btn-row">
+-  <button class="btn-base sm" id="btn-adv-filter" data-testid="tree-adv-filter" title="${t("dialog.advFilter")}">${UI_ICONS.settings} ${t("tree.filter")}</button>
+-  <div class="dd-wrap" id="dd-authors"><button class="btn-base sm" id="btn-authors" data-testid="tree-authors">${UI_ICONS.brush} ${t("tree.authors")}</button><div class="dd-menu" id="menu-authors"></div></div>
++  <button class="btn-base sm" id="btn-adv-filter" data-testid="tree-adv-filter" title="${t("dialog.advFilter")}">${UI_ICONS.controls} ${t("tree.filter")}</button>
++  <div class="dd-wrap" id="dd-authors"><button class="btn-base sm" id="btn-authors" data-testid="tree-authors">${UI_ICONS.author} ${t("tree.authors")}</button><div class="dd-menu" id="menu-authors"></div></div>
+   ${renderDropdown("batch")}
+   <button class="btn-base sm" id="sel-all" data-testid="tree-sel-all" title="${t("tree.selectAll")}">${UI_ICONS.checkbox} ${t("tree.selectAll")}</button>
+   ${renderDropdown("more")}

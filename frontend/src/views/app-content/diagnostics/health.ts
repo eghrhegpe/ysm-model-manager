@@ -79,21 +79,41 @@ export async function runHealthAudit(
   }
 }
 
+// 锐评④：verdict→外观映射（verdict 值域 = Go go/repoaudit VerdictGood/Ok/Bad 常量，
+// 字面量在此出现一次；改 Go 值域会同时打红 Go 测试与本处回退注释）。
+const VERDICT_BANDS: Record<string, { color: string; label: string }> = {
+  good: { color: "var(--status-success)", label: t("diagnostics.healthGood") },
+  ok: { color: "var(--tag-amber)", label: t("diagnostics.healthOk") },
+  bad: { color: "var(--status-error)", label: t("diagnostics.healthBad") },
+};
+
+// 回退带：与 Go ScoreVerdict 阈值一致（good≥80 / ok≥60 / bad），仅当 verdict 缺失/
+// 不在值域（如旧后端缓存的直连响应）时兜底，正常链路不走。
+function scoreBandColor(score: number): string {
+  return score >= 80
+    ? "var(--status-success)"
+    : score >= 60
+      ? "var(--tag-amber)"
+      : "var(--status-error)";
+}
+function scoreBandLabel(score: number): string {
+  return score >= 80
+    ? t("diagnostics.healthGood")
+    : score >= 60
+      ? t("diagnostics.healthOk")
+      : t("diagnostics.healthBad");
+}
+
 /** 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 */
 export function renderHealthReport(r: HealthReport, esc: EscFn): string {
   const score = Math.max(0, Math.min(100, r.score));
-  const color =
-    score >= 80
-      ? "var(--status-success)"
-      : score >= 60
-        ? "var(--tag-amber)"
-        : "var(--status-error)";
-  const label =
-    score >= 80
-      ? t("diagnostics.healthGood")
-      : score >= 60
-        ? t("diagnostics.healthOk")
-        : t("diagnostics.healthBad");
+  // 锐评④（判定单源化）：颜色/文案此前是前端第二套 80/60 阈值——Go 改带、
+  // 前端不改即出现「分色不符」的双轨漂移。现 verdict 由 Go ScoreVerdict 产出
+  //（good≥80 / ok≥60 / bad，与阈值同仓同函数），前端只做 verdict→外观映射。
+  // 未知/缺失 verdict（旧后端直连或新值域）回退分数带，回退带与 Go 阈值一致并注释。
+  const band = VERDICT_BANDS[r.verdict];
+  const color = band?.color ?? scoreBandColor(score);
+  const label = band?.label ?? scoreBandLabel(score);
 
   const warnings = (r.warnings ?? [])
     .map((w) => `<div class="stat-row diag-warn">${UI_ICONS.warning} ${esc(w)}</div>`)

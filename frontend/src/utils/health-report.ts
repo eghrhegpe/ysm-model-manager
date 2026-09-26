@@ -20,6 +20,10 @@ export function parseHealthReport(raw: HealthReport | null): HealthReport | null
   if (
     raw &&
     typeof raw.score === "number" &&
+    // 锐评④：verdict 是 Go 单源判定字段（go/repoaudit ScoreVerdict 产出 good/ok/bad，
+    // 绑定类型必填）。缺失 = 后端结构漂移，按解析失败显式报错——宁可报修，不让前端
+    // 回退分数带悄悄变成第二判定源。值在带外（Go 未来新档）不阻断，渲染层回退带兜底。
+    typeof raw.verdict === "string" &&
     raw.completeness &&
     typeof raw.completeness.percentage === "number" &&
     typeof raw.completeness.valid === "number" &&

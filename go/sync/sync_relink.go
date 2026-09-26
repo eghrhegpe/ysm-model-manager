@@ -143,7 +143,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 				//（报告成功但游戏实际加载的文件未重链）。CopyFile 直接落地到平铺目录。
 				if _, err := installer.CopyFileLocked(srcPath, customDir); err != nil {
 					if logger != nil {
-						logger(ce.Name, ce.Path, customDir, 0, "failed", "relink 失败: "+err.Error())
+						logger(ce.Name, ce.Path, customDir, 0, types.StatusFailed, "relink 失败: "+err.Error())
 					}
 					continue
 				}
@@ -160,13 +160,13 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 				// 锁外 Lstat 即失败（目录不存在/竞态窗口中消失）——拒绝搬一个
 				// 从未观察到的对象；改名/删除竞态中重建的同名目录不是快照对象
 				if logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, "failed", "relink 跳过: 目标目录快照缺失（已不存在或扫描窗口中被改动）")
+					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "relink 跳过: 目标目录快照缺失（已不存在或扫描窗口中被改动）")
 				}
 				continue
 			}
 			if ok, reason := verifyDirSnapshot(snap, dstParent); !ok {
 				if logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, "failed", "relink 跳过: "+reason)
+					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "relink 跳过: "+reason)
 				}
 				continue
 			}
@@ -178,7 +178,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 			backup := fmt.Sprintf("%s.relink-bak-%d", dstParent, time.Now().UnixNano())
 			if err := os.Rename(dstParent, backup); err != nil {
 				if logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, "failed", "relink 备份目录失败: "+err.Error())
+					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "relink 备份目录失败: "+err.Error())
 				}
 				continue
 			}
@@ -186,19 +186,19 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 				// 回滚：删除半成品，恢复原目录。删除失败仅记日志不吞净——
 				// 残留半成品目录提示用户确实需要清理（P2 修复，替代静默 `_ =`）。
 				if rmErr := os.RemoveAll(filepath.Join(dstBase, filepath.Base(srcDir))); rmErr != nil && logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, "failed", "回滚删除半成品失败: "+rmErr.Error())
+					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "回滚删除半成品失败: "+rmErr.Error())
 				}
 				// 回滚 rename 失败不再静默吞——原 `_ =` 吞错，
 				// 原目录滞留 .relink-bak、实例目录缺失且函数继续执行（静默数据不可达）；
 				// 记 logger 供用户排查（不 return——目录已损坏，继续无意义）
 				if rbErr := os.Rename(backup, dstParent); rbErr != nil {
 					if logger != nil {
-						logger(ce.Name, ce.Path, dstParent, 0, "failed",
+						logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed,
 							"relink 失败且回滚失败，原目录滞留 "+filepath.Base(backup)+": "+rbErr.Error())
 					}
 				}
 				if logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, "failed", "relink 失败: "+err.Error())
+					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "relink 失败: "+err.Error())
 				}
 				continue
 			}
@@ -210,7 +210,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		// Install 内部对已存在的旧文件做原子替换（临时链接 + rename），失败不破坏原文件
 		if err := installer.InstallLocked(srcPath, customDir, filesRoot, linkMode); err != nil {
 			if logger != nil {
-				logger(ce.Name, ce.Path, customDir, 0, "failed", "relink 失败: "+err.Error())
+				logger(ce.Name, ce.Path, customDir, 0, types.StatusFailed, "relink 失败: "+err.Error())
 			}
 			continue
 		}
@@ -262,6 +262,6 @@ func verifyDirSnapshot(snap os.FileInfo, dstParent string) (bool, string) {
 // 在用户模型目录堆积且无人知晓（P2 修复，替代旧 `_ = os.RemoveAll(backup)`）。
 func removeRelinkBackup(backup string, ce types.ModelEntry, dstParent string, logger Logger) {
 	if err := os.RemoveAll(backup); err != nil && logger != nil {
-		logger(ce.Name, ce.Path, dstParent, 0, "failed", "清理 relink 备份目录失败: "+err.Error())
+		logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "清理 relink 备份目录失败: "+err.Error())
 	}
 }

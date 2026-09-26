@@ -944,6 +944,8 @@ export const ja: Record<string, string> = {
     "「同期競合をスキャン」をクリックしてインスタンスとリポジトリの内容差分を比較",
   "diagnostics.noMatchLogs": "一致するログはありません",
   "diagnostics.itemsCount": "{n} 件",
+  "diagnostics.errCodeLabel": "エラーコード",
+  "diagnostics.suggestionLabel": "解決の提案",
   "diagnostics.loadLogsFailed": "ログの読み込みに失敗しました",
   "diagnostics.loadRuntimeLogsFailed": "ランタイムログの読み込みに失敗しました",
   "diagnostics.scanHash": "⏳ {icon} {label} ディレクトリのファイルハッシュをスキャン中...",

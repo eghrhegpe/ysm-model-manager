@@ -231,7 +231,7 @@ func (a *App) ScanModelEntries(dir string) []types.ModelEntry {
 	}
 	entries, hit := a.scanModelEntriesWithHit(dir)
 	if !hit {
-		a.AddOpLog("scan", fmt.Sprintf("扫描 %d 个文件", len(entries)), dir, "", int64(len(entries)), "success", "")
+		a.AddOpLog("scan", fmt.Sprintf("扫描 %d 个文件", len(entries)), dir, "", int64(len(entries)), types.StatusSuccess, "")
 	}
 	return entries
 }
@@ -252,7 +252,7 @@ func (a *App) ScanModelEntriesWithLabel(dir string, label string) []types.ModelE
 		if label != "" {
 			msg += " · " + label
 		}
-		a.AddOpLog("scan", msg, dir, "", int64(len(entries)), "success", "")
+		a.AddOpLog("scan", msg, dir, "", int64(len(entries)), types.StatusSuccess, "")
 	}
 	return entries
 }
@@ -317,7 +317,7 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 		if label != "" {
 			msg += " · " + label
 		}
-		a.AddOpLog("scan", msg, dir, "", int64(len(entries)), "success", "")
+		a.AddOpLog("scan", msg, dir, "", int64(len(entries)), types.StatusSuccess, "")
 	}
 	return entries
 }

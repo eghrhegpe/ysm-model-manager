@@ -76,7 +76,12 @@ func (ns *NameSizeHash) ComputeHash(filePath string) (string, error) {
 	return fmt.Sprintf("%s_%d", name, info.Size()), nil
 }
 
-// NewHashAlgorithm 根据配置创建哈希算法实例
+// NewHashAlgorithm 根据配置创建哈希算法实例。
+// 跨端契约（低优先②）：前端下拉与默认值（dedup-types.ts DEDUP_DEFAULTS.strategy /
+// dedup-render.ts options）只产出 "deep_hash" / "quick_hash" / "name_size" 三个 token，
+// 三者全部显式 case（deep_hash 不靠 default 兜底——default 一旦改语义，前端默认值会静默漂移）；
+// default 仅承接历史持久化配置里的旧 token（"hash"）、空串与未知值，统一回退 DeepHash。
+// KeepPolicy/PriorityPath 不经此处——Go 不消费它们，保留决策全在前端（dedup-policy.ts）。
 func NewHashAlgorithm(config *types.DedupConfig) HashAlgorithm {
 	if config == nil {
 		return &DeepHash{}
@@ -86,7 +91,9 @@ func NewHashAlgorithm(config *types.DedupConfig) HashAlgorithm {
 		return &QuickHash{}
 	case "name_size":
 		return &NameSizeHash{}
-	default: // "deep_hash" / "hash" / "" / 未知策略统一回退 DeepHash
+	case "deep_hash", "hash", "":
+		return &DeepHash{}
+	default: // 未知策略回退 DeepHash（最精确档位，宁可慢不可误合）
 		return &DeepHash{}
 	}
 }

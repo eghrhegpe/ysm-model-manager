@@ -659,12 +659,15 @@ function runChecks() {
   // 禁手写卡片结构族 class 字面量（stg-card 外壳 / -hdr / -body，含附加类如 -overridden）。
   // stg-card-desc（body 内说明块）不在构造器管辖内，合法手写，正则排除；stg-card.ts 构造器
   // 本体豁免；测试文件豁免（断言构造器输出属合法消费）；注释行豁免（历史说明合法提及）。
+  // 分支含行尾 `$` 与裸引号 `'`：抓「字符串拼接半截形态」（`'<div class="stg-card' + …`，
+  // 恰是 initAdvancedGrid 收编前的真实历史形态——class 值未闭合截断，续行才补
+  // ` stg-card-overridden"`，完整形态三分支抓不到）。审核 P2（2026-10）补盲区。
   // 背景：知识卡「手写卡片已清零」的宣称曾因无闸兜底在动态渲染路径
   // （path-cards|initAdvancedGrid）上失真——本闸把「新增即回退」从条文变机器执法。
   add(
     "W9",
     "settings hand-written stg-card markup",
-    rgTracked('class="stg-card(?:-hdr|-body|[" ])', "frontend/src/views/app-content/settings", [
+    rgTracked('class="stg-card(?:-hdr|-body|["\' ]|$)', "frontend/src/views/app-content/settings", [
       "*.ts",
     ])
       .filter((l) => {

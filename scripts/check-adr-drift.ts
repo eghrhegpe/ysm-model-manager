@@ -277,19 +277,28 @@ function codeAsserts() {
   }
 
   // 9. ADR-029 WASM glue patch 防倒退：glue 生成处必须注入 HEAPU8（防 _getGlueCode bug 倒退）。
-  // ADR-164 后脚本/子进程/护栏收敛到 go/avatar（wasm_decoder.go 仅剩薄封装），断言跟随实现唯一副本。
+  // ADR-316（2026-09-27）后 Node 子进程桥退役（avatar_decode.go 删除，glue patch 随之失效）：
+  // 桥文件存在时才断言 HEAPU8 注入；桥已退役 → 断言空转通过（防回退者复活旧桥绕过 patch）。
   const glueImplPaths = ["go/avatar/avatar_decode.go", "internal/app/wasm_decoder.go"];
   try {
-    const ok = glueImplPaths.some((p) => {
+    const texts = glueImplPaths.map((p) => {
       const fp = path.join(ROOT, p);
-      const text = fs.existsSync(fp) ? fs.readFileSync(fp, "utf-8") : "";
-      return /HEAPU8/.test(text) && /ReplaceAll/.test(text);
+      return {
+        p,
+        exists: fs.existsSync(fp),
+        text: fs.existsSync(fp) ? fs.readFileSync(fp, "utf-8") : "",
+      };
     });
+    const bridgeAlive = texts.some((t) => t.exists && /HEAPU8|ReplaceAll|SetNodeJS/.test(t.text));
+    const patched = texts.some((t) => /HEAPU8/.test(t.text) && /ReplaceAll/.test(t.text));
+    const ok = !bridgeAlive || patched;
     results.push({
       name: "ADR-029 WASM glue HEAPU8 注入",
       ok,
       detail: ok
-        ? "go/avatar/avatar_decode.go 含 HEAPU8 注入 patch（ADR-029 bug 已修，防倒退；ADR-164 收敛后实现唯一副本）"
+        ? bridgeAlive
+          ? "glue 实现文件含 HEAPU8 注入 patch（ADR-029 bug 已修，防倒退）"
+          : "Node 桥已按 ADR-316 退役，glue patch 断言随之失效（HEAPU8 patch 仅存在于 Node 桥实现）"
         : "go/avatar/avatar_decode.go 缺失 HEAPU8 注入（ADR-029 _getGlueCode bug 倒退风险）",
     });
   } catch (e) {

@@ -4,21 +4,19 @@ name: Go 头像提取：纯函数 vs Node+WASM 解码分界
 tier: leaf
 category: go
 source_files:
-  - go/avatar/avatar_decode.go
+  - go/avatar/avatar_extract_ysm.go
 auto_fields:
-  symbols_with_lines:
-    - DecodeYSMData
-    - FS
-    - SetNodeJS
-    - Write
+  symbols_with_lines: []
+# ⚠️ Node+WASM 解码桥 avatar_decode.go 已按 ADR-316 退役（2026-09-27）：.ysm 解码改消费 ysm.DecodeYSM 注入点（go/ysmwasi wazero 内存直解，知识卡 ysm-wasi.md）；本卡只余头像纯函数与扩展名分界部分。
+
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
-  - 头像提取、DecodeYSMData、ExtractAvatarURI
+  - 头像提取、ysm.DecodeYSM、ExtractAvatarURI
   - 纯函数 vs Node+WASM 解码分界
 quick_risk_lines:
   - 头像提取路径必须按扩展名分发（.ysm → WASM 解码 / .zip/.7z → 归档解压 / .json → 直读），禁止跨扩展名混用
-  - ADR-164 后 DecodeYSMData 是全仓唯一 Node+WASM 解码桥（internal/app wasm_decoder.go 已变薄封装），禁止新建第二份副本
+  - ADR-316 后 Node+WASM 解码桥已退役：.ysm 解码走 ysm.DecodeYSM 注入点（wazero），禁止新建 Node 子进程桥
 pitfalls:
   - 跨扩展名混用提取逻辑 → 解析失败、抛异常；必须按扩展名分发
   - 测试环境三件套（nodeJSPath / glueCode / wasmBinary）为空 → 静默降级空列表；必须在测试里 mock 三件套

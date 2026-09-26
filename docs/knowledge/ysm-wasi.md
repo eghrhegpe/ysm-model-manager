@@ -3,12 +3,17 @@ kind: ysm-wasi
 name: WASI 解码器 spike（wazero 内存直解，node 桥退役候选）
 tier: architecture
 category: go
-status: draft
+status: active
 source_files:
+  - go/ysmwasi/ysmwasi.go
   - go/wasispike/main.go
   - upstream/YesSteveModel-Parser/build-wasi.ps1
   - upstream/YesSteveModel-Parser/ysm-wasm-bridge.cpp
   - upstream/YesSteveModel-Parser/YSMParser/parsers/v3/YSMParserV3.cpp
+auto_fields:
+  symbols_with_lines:
+    - Close
+    - Decode
 use_when:
   - WASI / wazero / 内存直解
   - node 子进程退役
@@ -26,12 +31,14 @@ quick_intents:
 quick_risk_lines:
   - 解析器改动（collectToMemory）在本仓 vendored 副本内，上游同步时需重放
 invariant_anchors:
+  - go/ysmwasi/ysmwasi.go|Decode
+  - go/ysmwasi/ysmwasi_test.go|TestImportsClosedSet
   - go/wasispike/main.go|run
   - upstream/YesSteveModel-Parser/ysm-wasm-bridge.cpp|ysm_decode_to_memory
   - upstream/YesSteveModel-Parser/YSMParser/parsers/v3/YSMParserV3.cpp|collectToMemory
 ---
 
-# WASI 解码器 spike（wazero 内存直解）
+# WASI 解码器（wazero 内存直解，node 桥已退役）
 
 ## 概览
 
@@ -63,12 +70,14 @@ em++ -sSTANDALONE_WASM -sSTACK_SIZE=4194304 -sALLOW_MEMORY_GROWTH=1 \
 - 4 个 env 垫片：getdents64 返回 0、getcwd 写 "/output"、readlinkat 返回 -22、notify_memory_growth 空实现（签名 `func(ctx, mod, size uint32)`）。
 - 内存直出后**连 preopen 文件系统都不需要**——比现 Node 桥（临时目录 + stdout JSON 搬运）干净一个量级。
 
-## 生产化差距（下一步）
+## 生产化落地（2026-09-27，ADR-316 已采纳）
 
-1. wazero EH：升级/等待 exnref 支持成熟，或接受 noeh + abort 语义（需环形日志面板捕获 abort 诊断）。
-2. `collectToMemory` 是 vendored 副本改动，上游 Parser 版本更新时需重放（或推上游）。
-3. 替换 `internal/app/wasm_decoder.go` 的 `decodeYSMViaNodeJS` + Android 分支（`findNodeJS` 恒空）可一并退役——Android 首次获得加密模型解码能力。
-4. 内存上限护栏（Go 侧 maxOutput 语义改为 maxHeap/产物总量上限）需重设计。
+1. **生产路径已切换**：新包 `go/ysmwasi`（内嵌 `YSMParser-mem-noeh.wasm` 903KB + wazero 宿主，runtime/编译单例 + 每次解码新 module 独占堆）；`internal/app/wasm_decoder.go` 的 `runYSMDecode`/`decodeYSMViaWASI`/`decodeYSMComponentsViaWASI` 走 wazero；`avatar` 头像提取改消费 `ysm.DecodeYSM` 注入点。
+2. **Node 桥已退役**：`go/avatar/avatar_decode.go`（DecodeYSMData/SetNodeJS）、`findNodeJS`、`internal/app/wasm_embed.go` 与根 `embed.go` 的 YSMParser.js/wasm 内嵌注入链全部删除——分发不再拖 Node，Android 首次获得加密模型解码能力。前端预览仍用 frontend 侧 WASM（不受影响）。
+3. **护栏对齐旧口径**：输入 200MB 上限、产物总量 200MB 上限、60s 超时（wazero Call 接 context）；产物缓冲格式 `[u32 count][u32 nameLen][u32 dataLen][name][data]*`，`ysm_decode_to_memory(data,size,out_ptr)` 第三参是输出槽（指针的指针）。
+4. **错误语义（现状）**：noeh 构建畸形输入 → parser abort → wazero error（可恢复），无 C++ 异常文本；诊断经 `log.Printf("[ysm-wasi]")`，环形日志面板接线待做。wazero EH 成熟后再补错误码体系。
+5. **契约测试**：`go/ysmwasi/ysmwasi_test.go` 锁导入闭集（手解 wasm import section：env 4 + wasi 10，上游重编 wasm 引入新导入即红）+ 护栏 + 畸形输入并发；真实样本冒烟 `YSMWASI_TEST_FIXTURE=<.ysm> go test ./go/ysmwasi/ -run TestDecode_RealFixture`（V3 75 产物 1.4s / V2 产物均解出）。
+6. `collectToMemory` 是 vendored 副本改动，上游 Parser 版本更新时需重放（或推上游）。
 
 ## 相关
 

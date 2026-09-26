@@ -10,7 +10,7 @@ source_files:
   - go/scanner/scanner.go
   - go/fsutil/write.go
   - go/recycle/recycle.go
-  - go/avatar/avatar_decode.go
+  # avatar_decode.go 已按 ADR-316 退役（2026-09-27）；本卡为历史审计快照，正文中的 avatar_decode.go 引用是决策时的状态，非现状
   - internal/app/wasm_decoder.go
   - internal/app/app_download.go
   - go/instance/instance.go
@@ -34,7 +34,6 @@ auto_fields:
     - BuildVoxelData
     - BuildVoxelDataFromRoot
     - ComputeFileHash
-    - DecodeYSMData
     - DetectContainerTypeFromBase64Tail
     - EffectiveCacheTTL
     - ErrChmodFailed
@@ -47,7 +46,6 @@ auto_fields:
     - ExtractFirstPNGFromZip
     - FindComponentsInExtractedYSM
     - FindGeometryInExtractedYSM
-    - FS
     - GenerateRepoIndex
     - HideWindow
     - InvalidateCache
@@ -75,7 +73,6 @@ auto_fields:
     - ScanEntriesWithHit
     - ScanLocalAuthors
     - SetErrorSink
-    - SetNodeJS
     - SHA256File
     - TrashManager
     - TrashManager.Delete
@@ -85,7 +82,6 @@ auto_fields:
     - TrashManager.MoveEx
     - TrashManager.RecycleDir
     - TrashManager.Restore
-    - Write
     - WriteFileAtomic
 use_when:
   - Go 后端评审

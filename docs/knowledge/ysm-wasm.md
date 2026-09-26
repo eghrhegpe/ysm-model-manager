@@ -5,8 +5,6 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/wasm/
-  - internal/app/wasm_decoder.go
-  - go/avatar/avatar_decode.go
 auto_fields:
   symbols_with_lines:
     - _getGlueCode
@@ -16,13 +14,11 @@ auto_fields:
     - classifyWasmError
     - collectOutputFiles
     - createLazyModule
-    - DecodeYSMData
     - decodeYsmFile
     - decodeYsmFileFromMemory
     - decodeYsmInWorker
     - decodeYsmInWorkerMemfs
     - ensureDir
-    - FS
     - FSLike
     - initYSMParser
     - initYsmParserInWorker
@@ -31,10 +27,8 @@ auto_fields:
     - LazyModule
     - patchGlueHeapExport
     - resolveWasmFactory
-    - SetNodeJS
     - WasmModuleLike
     - wipeDir
-    - Write
     - writeHeapBytes
     - YsmDecodedFile
     - YsmModuleConfig
@@ -63,13 +57,11 @@ use_when:
   - pthread
 
 invariant_anchors:
-  - go/avatar/avatar_decode.go|DecodeYSMData
-  - go/avatar/avatar_decode.go|SetNodeJS
-  - internal/app/wasm_decoder.go|decodeYSMViaNodeJS
+  - frontend/src/wasm/ysm-parser.ts|initYSMParser  # Go 侧锚点随 ADR-316 退役移除
 perf:
   - cpu-bound
   - single-thread
-status: active
+status: active  # Go 侧 Node 子进程桥已按 ADR-316 退役（2026-09-27）：Go 解码走 go/ysmwasi（知识卡 ysm-wasi.md）；本卡现仅覆盖前端预览 WASM 链路
 ---
 
 # WASM 解析器 ysm-parser

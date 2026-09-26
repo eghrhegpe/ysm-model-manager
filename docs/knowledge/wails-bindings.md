@@ -15,7 +15,7 @@ source_files:
   - internal/app/app_tags.go
   - internal/app/app_workshop.go
   - internal/app/resource_bindings.go
-  - internal/app/wasm_embed.go
+  # internal/app/wasm_embed.go 已按 ADR-316 退役（2026-09-27）：wasm/glue 内嵌注入链删除
 auto_fields:
   symbols_with_lines:
     - App

@@ -10,6 +10,7 @@ export type {
     DialogManager,
     EnvironmentManager,
     EventManager,
+    GlobalShortcutManager,
     KeyBindingManager,
     MenuManager,
     ScreenManager,

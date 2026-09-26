@@ -24,6 +24,7 @@ export interface App {
     "Clipboard": ClipboardManager | null;
     "SystemTray": SystemTrayManager | null;
     "Autostart": AutostartManager | null;
+    "GlobalShortcut": GlobalShortcutManager | null;
     "Updater": updater$0.Updater | null;
     "Logger": slog$0.Logger | null;
 }
@@ -83,6 +84,24 @@ export interface EnvironmentManager {
  * EventManager manages event-related operations
  */
 export interface EventManager {
+}
+
+/**
+ * GlobalShortcutManager manages application-wide (global) keyboard shortcuts.
+ * 
+ * Unlike menu accelerators or [KeyBindingManager] - which only fire while a
+ * Wails window has focus - a global shortcut fires regardless of which
+ * application is currently focused, as long as the Wails application is
+ * running.
+ * 
+ * Global shortcuts are owned by the application, not by an individual window.
+ * Registering the same accelerator twice within the same application is
+ * reported as an error and the original binding is preserved; see [Register].
+ * 
+ * Shortcuts may be registered before [App.Run] is called: the binding with the
+ * operating system is then deferred until the application starts.
+ */
+export interface GlobalShortcutManager {
 }
 
 /**

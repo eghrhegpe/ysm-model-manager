@@ -311,7 +311,7 @@
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, FAB 3D 预览入口, overlay, ADR-057 |
 | 🏗 features_dialogs | 业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选) | architecture | — | 批量重命名 / 标签编辑 / 高级筛选对话框, 找对话框入口符号 |
 | 🏗 frontend_design_critique | 前端设计锐评 | architecture | — | 设计评审, 前端设计, 锐评, 主题系统, 3D 性能审查, 生命周期审查, 技术债 |
-| 🍃 frontend_design_debt | 前端设计令牌债务 — 剩余 157 条决策记录 | leaf | — | 剩余设计令牌债务如何判定, 哪些 padding 值留存量, 输入框/容器是否归按钮档, 空态大图标字号立项, 设计令牌债收录尾 |
+| 🍃 frontend_design_debt | 前端设计令牌债务 — 逐簇判定记录（快照） | leaf | — | 剩余设计令牌债务如何判定, 哪些 padding 值留存量, 输入框/容器是否归按钮档, 空态大图标字号立项, 设计令牌债收录尾 |
 | 🍃 frontend_naming | 前端命名章程（黑话治理） | leaf | — | 黑话, 命名, 缩写, 重命名, 可读性, 匈牙利前缀, 单字母变量, 动词名词化 |
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
 | 🍃 icon_kit | icon-kit 多源图标（已并入 UI_ICONS） | leaf | — | icon-kit, 多源图标, renderIcon, emoji 图标源, 图标字体 |

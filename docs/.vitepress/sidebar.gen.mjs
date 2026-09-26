@@ -1919,7 +1919,7 @@ export const autoSidebar = [
             "link": "/knowledge/frontend_design_critique"
           },
           {
-            "text": "前端设计令牌债务 — 剩余 157 条决策记录",
+            "text": "前端设计令牌债务 — 逐簇判定记录（快照）",
             "link": "/knowledge/frontend_design_debt"
           },
           {

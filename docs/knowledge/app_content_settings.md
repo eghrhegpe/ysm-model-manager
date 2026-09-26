@@ -4,9 +4,12 @@ name: 设置页 settings
 tier: leaf
 category: ui
 source_files:
+  - frontend/src/views/app-content/settings/default-page.ts
   - frontend/src/views/app-content/settings/init.ts
   - frontend/src/views/app-content/settings/keymap.ts
   - frontend/src/views/app-content/settings/path-cards.ts
+  - frontend/src/views/app-content/settings/settings-schema.ts
+  - frontend/src/views/app-content/settings/stg-card.ts
   - frontend/src/views/app-content/settings/store.ts
   - frontend/src/views/app-content/settings/theme.ts
   - frontend/src/views/app-content/settings/ui-maps.ts
@@ -18,25 +21,56 @@ auto_fields:
     - bindPathClick
     - cardRefreshers
     - cleanupKeymap
+    - DENSITY_DEFAULT
+    - DENSITY_LEVELS
+    - DensityLevel
+    - DISPLAY_FONT_DEFAULT
+    - DISPLAY_FONTS
+    - DisplayFont
+    - FONT_SIZE_DEFAULT
+    - FONT_SIZE_LEVELS
+    - FontSizeLevel
     - getCfg
     - initAdvancedGrid
+    - initDefaultPagePrefs
     - initKeymap
     - initMcDetect
     - initSettings
     - initThemeSection
     - initUiPrefs
     - initWorkerPrefs
+    - LINK_MODE_DEFAULT
     - LINK_MODE_UI
+    - LINK_MODES
+    - LinkMode
+    - MIRROR_DEFAULT
+    - MIRROR_SOURCES
     - MIRROR_UI
+    - MirrorSource
     - resetSettingsStore
     - saveCfg
     - SettingsCfg
+    - stgCard
+    - stgCardHeader
+    - StgCardHeaderOpts
+    - StgCardOpts
+    - stgCards
+    - StgCardSpec
+    - stgUnits
+    - StgUnitSpec
     - toastError
+    - UPDATE_CHECK_DEFAULT
+    - UPDATE_CHECK_INTERVALS
+    - UpdateCheckInterval
     - withBusy
   tests:
+    - frontend/src/views/app-content/settings/default-page.test.ts
     - frontend/src/views/app-content/settings/init.test.ts
     - frontend/src/views/app-content/settings/keymap.test.ts
+    - frontend/src/views/app-content/settings/stg-card.test.ts
+    - frontend/src/views/app-content/settings/store.test.ts
     - frontend/src/views/app-content/settings/theme.test.ts
+    - frontend/src/views/app-content/settings/theme-cards.test.ts
 quick_groups:
   - 配置与注册表
 quick_intents:

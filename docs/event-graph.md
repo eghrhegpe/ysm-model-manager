@@ -197,7 +197,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 57 |
+| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 67 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 209 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 247 |

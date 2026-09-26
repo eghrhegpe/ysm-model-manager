@@ -13,10 +13,20 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
 
-// ===== 展示阈值（与诊断页 health.ts 同口径：80/60 分档）=====
+// ===== 分档：verdict 单源（锐评④收尾——此前本地 80/60 阈值是与诊断页双轨的第二判定源，
+// Go 改带即分色漂移；现 verdict→外观映射 + 分数回退带，与 health.ts 同构）=====
+// 回退带：与 Go ScoreVerdict 阈值一致（good≥80 / ok≥60 / bad），仅当 verdict 不在值域
+//（旧后端直连/新值域）时兜底，正常链路不走（parseHealthReport 已强制 verdict 存在）。
 
-const SCORE_HEALTH_GOOD = 80;
-const SCORE_HEALTH_OK = 60;
+const VERDICT_BANDS: Record<string, { color: string; label: string; tagClass: string }> = {
+  good: { color: "var(--status-success)", label: t("oldest.health.good"), tagClass: "good" },
+  ok: { color: "var(--tag-amber)", label: t("oldest.health.ok"), tagClass: "ok" },
+  bad: { color: "var(--status-error)", label: t("oldest.health.bad"), tagClass: "bad" },
+};
+
+function scoreBand(score: number): { color: string; label: string; tagClass: string } {
+  return score >= 80 ? VERDICT_BANDS.good : score >= 60 ? VERDICT_BANDS.ok : VERDICT_BANDS.bad;
+}
 
 export interface ModelEntry {
   Name: string;
@@ -65,25 +75,16 @@ async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
   const report = parseHealthReport(await RepoHealthAudit(filesRoot));
   if (!report) throw new Error(t("diagnostics.healthParseFailed"));
   const score = report.score;
+  const band = VERDICT_BANDS[report.verdict] ?? scoreBand(score);
   return {
     totalFiles: report.resources.total_files,
     totalSize: report.resources.total_size,
     banned: report.resources.banned ?? 0,
     dupGroups: report.dedup.groups,
     score,
-    healthColor:
-      score >= SCORE_HEALTH_GOOD
-        ? "var(--status-success)"
-        : score >= SCORE_HEALTH_OK
-          ? "var(--tag-amber)"
-          : "var(--status-error)",
-    healthLabel:
-      score >= SCORE_HEALTH_GOOD
-        ? t("oldest.health.good")
-        : score >= SCORE_HEALTH_OK
-          ? t("oldest.health.ok")
-          : t("oldest.health.bad"),
-    healthTagClass: score >= SCORE_HEALTH_GOOD ? "good" : score >= SCORE_HEALTH_OK ? "ok" : "bad",
+    healthColor: band.color,
+    healthLabel: band.label,
+    healthTagClass: band.tagClass,
   };
 }
 

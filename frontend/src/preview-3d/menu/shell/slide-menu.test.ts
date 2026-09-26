@@ -568,6 +568,17 @@ describe("createSlideMenu 键盘导航", () => {
     h.list.dispatchEvent(ev);
     expect(ev.defaultPrevented).toBe(true);
   });
+
+  it("重渲染（navigate）：roving 跟随恢复后的焦点项，不再无条件重置首项（ADR-308 D2 改进）", () => {
+    const h = mountMenu();
+    h.home(makeNavView(["A", "B", "C"]));
+    const items = Array.from(h.list.children) as HTMLElement[];
+    items[1]!.focus();
+    h.navigate(makeNavView(["X", "Y", "Z"], "二级"));
+    const after = Array.from(h.list.children) as HTMLElement[];
+    expect(after.map((el) => el.tabIndex)).toEqual([-1, 0, -1]);
+    expect(document.activeElement).toBe(after[1]);
+  });
 });
 
 // ===================================================================

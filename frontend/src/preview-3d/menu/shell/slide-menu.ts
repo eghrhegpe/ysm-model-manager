@@ -8,25 +8,24 @@
 //  - 关闭/返回按钮均用 **SVG 图标**（`UI_ICONS.close` / `UI_ICONS.back`，ADR-238 §1.4：结构槽图标位走 SVG；
 //    原为字面量 glyph "✕"——那条注释的理由「不依赖 iconify 运行时」基于过时前提，
 //    UI_ICONS 是内联 SVG 字符串，本就不需要任何运行时）；
-//    子级返回仍用字面 glyph `←` —— 图标库暂无「返回」语义名，按 §1.4 记债而**不硬塞**
-//    （`pointerLeft` 语义是「指针左」，拿它冒充会腐蚀 D2 语义命名）；
-//    原 `closeIcon?: string` 覆盖参数已同批删除——它把未转义 HTML 串做成公开注入面
+//  - 原 `closeIcon?: string` 覆盖参数已同批删除——它把未转义 HTML 串做成公开注入面
 //    （触发 check-redlines R8），而全仓唯一调用方 core.ts 从不需要它；
 //  - 外壳恒含行级组件样式（.slide-item/.cs-bar 等），故安装外壳样式时一并安装 ui-components 样式；
 //  - 零业务依赖，可被任意预览/面板复用；
 //  - 向后兼容：不调用 home/navigate 的调用方（直接操作 menu.list）行为不变——
 //    此时导航栈为空，slide-back 在根级仍触发 onClose（即关闭）。
 //
-// 键盘可达性（ADR-076 a11y 补全）：
-//  - 方向键 ↑↓ 导航菜单项（roving tabindex：当前项 tabindex=0，其余 -1）
+// 键盘可达性（ADR-076 a11y 补全；ADR-308 D2 收敛至 bind-roving 原语，2026-09）：
+//  - 方向键 ↑↓ 导航菜单项（roving tabindex：当前项 tabindex=0，其余 -1，cyclic 回绕）
 //  - Enter/Space 激活聚焦项（触发 click 事件，复用已有行 click handler）
-//  - Escape / Home / End 辅助导航
+//  - Escape 返回/关菜单（外壳语义，独立监听）+ Home / End 首尾
 //  - onShow() / onHide() 管理焦点记忆恢复 + 输入阻断栈（menu.openId →
 //    isInputBlocked()=true → input-and-animation 暂停相机 WASD/方向键）
 
 import { t } from "@/core/i18n/t.ts";
 import { installComponentsStyles } from "@/preview-3d/menu/style/components-styles.ts";
 import { installSlideMenuStyles } from "@/preview-3d/menu/style/slide-menu-styles.ts";
+import { bindRoving } from "@/utils/dom/bind-roving.ts";
 import { popInputBlock, pushInputBlock } from "@/utils/dom/input-block-stack.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
@@ -89,9 +88,39 @@ export function createSlideMenu(opts?: { title?: string }): SlideMenuHandle {
   let _prevFocus: HTMLElement | null = null;
   const MENU_BLOCK_ID = "slide-menu";
 
+  // ADR-308 D2：键盘导航收敛到 bind-roving 原语（选项按本文件冻结契约选配）：
+  // - itemsOf = smGetNavItems（可见直接子元素过滤，offsetParent!==null）
+  // - activeElementBase：键派发到容器，实际焦点项才是移动/激活基准
+  // - stateAttr null：菜单项无 ARIA role，写状态位即 ARIA 非法
+  // - preset "tab"：方向键只移动聚焦，Enter/Space 激活（点项自身或第一个交互子元素，
+  //   兼容 section header / row / toggle）
+  // - cyclic：首尾回绕（slide-menu 语义，冻结契约）
+  // Escape 属外壳语义（返回/关菜单）而非 roving，保留独立小监听（见下）
+  const roving = bindRoving({
+    root: document,
+    container: shell.list,
+    itemSelector: ".slide-item", // 名义值：实际 items 由 itemsOf 提供
+    itemsOf: (c) => smGetNavItems(c),
+    preset: "tab",
+    orientation: "vertical",
+    cyclic: true,
+    activeElementBase: true,
+    stateAttr: null,
+    onActivate: (item: HTMLElement): void => {
+      const clickable =
+        item.querySelector<HTMLElement>("button, a[href], [role='button'], input") ?? item;
+      clickable.click();
+    },
+  });
+
   const renderTop = (): void => {
     smRenderTop(stack, shell.list, shell.title, shell.backBtn);
-    smSetupNavItems(shell.list);
+    // roving 跟随焦点：smRenderTop 已把焦点恢复到记忆位；焦点不在 items 内
+    // （新菜单 / 焦点在外部）回落首项——取代原 smSetupNavItems（无条件重置首项，
+    // 重渲染后焦点与 roving 失位的固有 quirk 一并消除）
+    const items = smGetNavItems(shell.list);
+    const cur = document.activeElement ? items.indexOf(document.activeElement as HTMLElement) : -1;
+    roving.syncIndex(cur >= 0 ? cur : 0);
   };
   const handleBack = (): void => {
     if (stack.length > 1) {
@@ -102,7 +131,12 @@ export function createSlideMenu(opts?: { title?: string }): SlideMenuHandle {
     }
   };
   smBindBackButton(shell.backBtn, handleBack);
-  smBindKeyboardNav(shell.list, handleBack);
+  shell.list.addEventListener("keydown", (e: KeyboardEvent): void => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      handleBack();
+    }
+  });
 
   // handle 直接以闭包捕获本函数状态（onClose/prevFocus/stack）——不再经 SmHandleDeps
   // 注入舞绕一圈（原实现把私有闭包变量拆成 getter/setter 喂给同文件私有函数，零收益）。
@@ -134,6 +168,7 @@ export function createSlideMenu(opts?: { title?: string }): SlideMenuHandle {
     },
     isAtRoot: (): boolean => stack.length <= 1,
     dispose: (): void => {
+      roving.dispose();
       shell.root.remove();
     },
 
@@ -239,7 +274,7 @@ function smRenderTop(
   // 每次渲染白跑一次 DOM 清空；且会掩盖「视图忘了自清空」的重复 append 类缺陷。
   title.textContent = top.title;
   const atRoot = stack.length <= 1;
-  // 根级 = SVG 关闭图标；子级 = 字面 glyph「←」（图标库暂无「返回」语义名，见文件头 §1.4 记债）。
+  // 根级 = close 图标，子级 = back 图标（均为 UI_ICONS SVG，ADR-238 §1.4）。
   // 刻意用 if/else 而非三元赋 innerHTML：三元会被 check-redlines R8 视为未转义注入面，
   // 且分开后每条赋值各自命中既有豁免（ICONS 常量 / 纯字面量），语义也更直白。
   if (atRoot) {
@@ -272,60 +307,17 @@ function smBindBackButton(backBtn: HTMLSpanElement, handleBack: () => void): voi
 
 // ── 键盘导航 ──────────────────────────────────────────────────────
 
-/** list 可见直接子节点（菜单项 / section wrapper） */
-function smGetNavItems(list: HTMLElement): HTMLElement[] {
+/** list 可见直接子节点（菜单项 / section wrapper）；Element 入参 = 兼作 bindRoving itemsOf 提供器 */
+function smGetNavItems(list: Element): HTMLElement[] {
   return Array.from(list.children).filter(
     (el): el is HTMLElement => el instanceof HTMLElement && el.offsetParent !== null,
   );
 }
 
-/** roving tabindex：当前项 0，其余 -1；focus */
+/** roving tabindex：当前项 0，其余 -1；focus（onShow 首项聚焦用；导航 roving 已归 bindRoving） */
 function smFocusItem(items: HTMLElement[], idx: number): void {
   items.forEach((el, i) => {
     el.tabIndex = i === idx ? 0 : -1;
   });
   items[idx]?.focus();
-}
-
-/** list 级 keydown 委托：↑↓ 导航 / Enter·Space 激活 / Escape 返回 / Home·End 首尾 */
-function smBindKeyboardNav(list: HTMLElement, handleBack: () => void): void {
-  list.addEventListener("keydown", (e: KeyboardEvent): void => {
-    const items = smGetNavItems(list);
-    if (!items.length) return;
-    const idx = items.indexOf(document.activeElement as HTMLElement);
-    const key = e.key;
-    if (key === "ArrowDown") {
-      e.preventDefault();
-      smFocusItem(items, idx < 0 ? 0 : (idx + 1) % items.length);
-    } else if (key === "ArrowUp") {
-      e.preventDefault();
-      smFocusItem(items, idx < 0 ? 0 : (idx - 1 + items.length) % items.length);
-    } else if (key === "Home") {
-      e.preventDefault();
-      smFocusItem(items, 0);
-    } else if (key === "End") {
-      e.preventDefault();
-      smFocusItem(items, items.length - 1);
-    } else if (key === "Enter" || key === " ") {
-      e.preventDefault();
-      const target = items[idx >= 0 ? idx : 0];
-      if (target) {
-        // 触发项自身或其第一个交互子元素的 click（兼容 section header / row / toggle）
-        const clickable =
-          target.querySelector<HTMLElement>("button, a[href], [role='button'], input") ?? target;
-        clickable.click();
-      }
-    } else if (key === "Escape") {
-      e.preventDefault();
-      handleBack();
-    }
-  });
-}
-
-/** 每次 smRenderTop 后：为 list 可见直接子节点设 roving tabindex（首项 0，其余 -1） */
-function smSetupNavItems(list: HTMLElement): void {
-  const items = smGetNavItems(list);
-  items.forEach((el, i) => {
-    el.tabIndex = i === 0 ? 0 : -1;
-  });
 }

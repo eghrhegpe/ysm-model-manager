@@ -6,9 +6,11 @@
 // 同构（spec-driven 声明式原语，仓内 6 处同构键盘实现收敛的第二站）。
 //
 // 现状消费方：app-sidebar 整合包卡片列表（preset "list"，垂直，移动即激活——
-// 激活 = 派发到既有点击委托路径，高亮/涟漪/去重/持久化零复制）。
+// 激活 = 派发到既有点击委托路径，高亮/涟漪/去重/持久化零复制）；
+// 3D slide-menu（preset "tab"，垂直，cyclic + activeElementBase + itemsOf +
+// stateAttr:null——无 role 容器不写 ARIA 位；外壳语义 Escape 保留独立监听）。
 // 后续收敛对象：tabs-shell bindSubBar / sync-manager radio-group /
-// slide-menu smBindKeyboardNav / app-nav / dropdown（按 ADR-308 D2 接入顺序拍板后推进）。
+// app-nav / dropdown（按 ADR-308 D2 接入顺序拍板后推进）。
 
 export type RovingPreset = "radio" | "tab" | "list";
 
@@ -36,6 +38,16 @@ export interface RovingSpec {
   onMove?: (item: HTMLElement, index: number) => void;
   /** 激活回调：preset radio/list 移动即触发 + Enter/Space 触发；tab 仅 Enter/Space */
   onActivate?: (item: HTMLElement, index: number) => void;
+  /** 移动/激活基准：true = 实际焦点（root.activeElement，不在 items 内时回退 stateIndex）；
+   *  false（默认）= e.target（含 item 后代，否则回退 stateIndex）。
+   *  slide-menu 冻结契约 = 键派发到容器 + 焦点项为基准 → 需置 true */
+  activeElementBase?: boolean;
+  /** 自定义 item 提供器（如 slide-menu 的可见直接子元素 offsetParent 过滤）；
+   *  缺省 = 每次按键实时 container.querySelectorAll(itemSelector) */
+  itemsOf?: (container: Element) => HTMLElement[];
+  /** ARIA 状态位：null = 不写任何属性（无 role 容器专用，写了即 ARIA 非法）；
+   *  缺省按 preset 派生（radio→aria-checked，tab/list→aria-selected） */
+  stateAttr?: "aria-selected" | "aria-checked" | null;
 }
 
 export interface RovingHandle {
@@ -54,7 +66,12 @@ export function bindRoving(spec: RovingSpec): RovingHandle {
   const orientation = spec.orientation ?? "both";
   const cyclic = spec.cyclic === true;
   const homeEnd = spec.homeEnd !== false;
-  const stateAttr = stateAttrOf(preset);
+  const activeElementBase = spec.activeElementBase === true;
+  const stateAttr = spec.stateAttr === undefined ? stateAttrOf(preset) : spec.stateAttr;
+  const itemsProvider =
+    spec.itemsOf ??
+    ((c: Element): HTMLElement[] =>
+      Array.from(c.querySelectorAll(spec.itemSelector)) as HTMLElement[]);
   const container =
     typeof spec.container === "string"
       ? (spec.root.querySelector(spec.container) as Element | null)
@@ -63,8 +80,7 @@ export function bindRoving(spec: RovingSpec): RovingHandle {
   let stateIndex = spec.initialIndex ?? 0;
   let disposed = false;
 
-  const itemsOf = (): HTMLElement[] =>
-    container ? (Array.from(container.querySelectorAll(spec.itemSelector)) as HTMLElement[]) : [];
+  const itemsOf = (): HTMLElement[] => (container ? itemsProvider(container) : []);
 
   /** roving tabindex + 状态位铺满（active 项 0/true，其余 -1/false）；越界 clamp */
   const layout = (items: HTMLElement[]): number => {
@@ -72,7 +88,7 @@ export function bindRoving(spec: RovingSpec): RovingHandle {
     const idx = len ? Math.min(Math.max(stateIndex, 0), len - 1) : 0;
     items.forEach((el, i) => {
       el.tabIndex = i === idx ? 0 : -1;
-      el.setAttribute(stateAttr, i === idx ? "true" : "false");
+      if (stateAttr) el.setAttribute(stateAttr, i === idx ? "true" : "false");
     });
     return idx;
   };
@@ -105,9 +121,18 @@ export function bindRoving(spec: RovingSpec): RovingHandle {
       const target = e.target instanceof HTMLElement ? e.target : (null as HTMLElement | null);
       if (isEditable(target)) return; // 输入中不接管（与 app-tree 裸键让路同口径）
 
-      // 基准：焦点在 item 内 → 该 item；否则（焦点在 container 上）→ stateIndex 位序
-      const cur = indexOfTarget(items, e.target);
-      const base = cur >= 0 ? cur : Math.min(Math.max(stateIndex, 0), items.length - 1);
+      // 基准：activeElementBase → 实际焦点项（slide-menu 冻结契约：键派发到容器时
+      // 焦点项才是移动基准）；缺省 → e.target 所在 item（后代命中同认）；
+      // 均落空 → stateIndex 位序（clamp）
+      let base: number;
+      if (activeElementBase) {
+        const ae = spec.root.activeElement as HTMLElement | null;
+        const ai = ae ? items.indexOf(ae) : -1;
+        base = ai >= 0 ? ai : Math.min(Math.max(stateIndex, 0), items.length - 1);
+      } else {
+        const cur = indexOfTarget(items, e.target);
+        base = cur >= 0 ? cur : Math.min(Math.max(stateIndex, 0), items.length - 1);
+      }
 
       let next: number | null = null;
       switch (e.key) {

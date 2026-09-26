@@ -24,7 +24,7 @@
 
 - **D1｜全局组合键注册表 = combo 键语义唯一出口（✅ 已落地 2026-09-25）**：`utils/dom/key-router.ts` 注册表——`registerShortcut({id, combo, when?, handler})` 单点 document keydown 分发 + 组合匹配纯函数（修饰键掩码 + 主键，大小写不敏感）+ 注册期同组合碰撞响亮告警 + 末个 shortcut 摘除监听（根治 HMR/vi.resetModules 叠加注册）；`listShortcuts()` / `formatAriaKeyShortcuts()` 供快捷键帮助页与 aria-keyshortcuts 自动声明消费。已收编 app-tree（`tree:find` / `tree:delete` / `tree:nav-down` / `tree:nav-up`，3D 让路 = `when: () => !isPreviewOverlayActive()` 门禁）与 app-modules（`devtools` F12 / Ctrl+Shift+I）。
   - **边界**：注册表只管 **combo 组合键**（一次按键事件完成语义）。键状态类输入（WASD 长按 / 双轨键——`preview-3d/infra/input-and-animation.ts` 的 keydown+keyup 表驱动）与一次性捕获（设置页键位改绑 capture）语义不同，**不进注册表**；3D 键位表驱动（ADR-036）与冲突检测维持原样。
-- **D2｜列表/单选键盘原语泛化（待拍板）**：6 处同构收敛为 `utils/dom/bind-roving.ts`（`bindRoving(root, spec)`；spec = 选择器 + 激活语义预设（`radio`/`tab`/`list`）+ 循环性 + onActivate 副作用），泛化 `bindTabA11y` 的声明式形态；ADR-300 §3 的 toolbar+radiogroup 兼容姿势（无 role 的旧 bar 跳过键盘增强）沿用。接入顺序：app-sidebar（零键盘顶层视图，先补可达性）→ 3D slide-menu / cap-controls 行控件（**3D 域红线**：MenuNode schema 结构不动，键盘仅是行为层增强，新增 UI 功能须仍可被 MenuNode schema 菜单调用）。
+- **D2｜列表/单选键盘原语泛化（✅ app-sidebar + 3D slide-menu 已落地 2026-09，cap-controls 出局）**：6 处同构收敛为 `utils/dom/bind-roving.ts`（`bindRoving(root, spec)`；spec = 选择器 + 激活语义预设（`radio`/`tab`/`list`）+ 循环性 + onActivate 副作用 + 增量选项（`activeElementBase`/`itemsOf`/`stateAttr:null`，缺省值全部保留既有消费方行为）），泛化 `bindTabA11y` 的声明式形态；ADR-300 §3 的 toolbar+radiogroup 兼容姿势（无 role 的旧 bar 跳过键盘增强）沿用。接入顺序：app-sidebar（零键盘顶层视图，先补可达性，preset "list"，移动即激活 = 合成 click 派发既有委托路径）→ 3D slide-menu（**3D 域红线**：MenuNode schema 结构不动，键盘仅是行为层增强，新增 UI 功能须仍可被 MenuNode schema 菜单调用；preset "tab" + cyclic + activeElementBase + itemsOf（可见直接子元素过滤）+ stateAttr:null（菜单项无 role，写位即 ARIA 非法））。**cap-controls 出局**：其 slider 行是 ARIA-slider 步进语义（`preview-3d/menu/render/slider-controller.ts` ←→/Home/End 调步），与 roving 列表导航异类，不进本原语；行内 toggle/select 原生键盘可达，无需收敛。剩余收敛对象（tabs-shell bindSubBar / sync-manager radio-group / app-nav / dropdown）按 ADR 拍板后逐项推进。
 - **D3｜a11y 静态门禁替代运行时自动推导（待拍板）**：`scripts/check-a11y.ts` + `docs/.a11y-baseline.json`（只减不增，同 `.layering-baseline.json` 范式）防退化；**不做** ARIA 启发式扫描自动挂 role/aria + 键盘 handler（与「模板唯一出口」纪律冲突、误报风险高）——「自动化生成按键操作」的正确形态 = D1/D2 的 spec 驱动生成（写 spec → 按键行为自动挂全），不是运行时推导。
 
 ## 3. 后果（Consequences）
@@ -37,5 +37,6 @@
 - 2026-09-25 前端 a11y 普查（生产 574 .ts：aria-* 12 文件 / keydown 监听 26 文件 / tabindex 27 文件 / role 26 文件 / `aria-keyshortcuts` 1 文件 / document 级 keydown 散点 10 处 8 文件 / 同构键盘实现 6 处 / `app-sidebar/` 0 键盘）→ D1–D3 立项
 - 实例收敛先例：ADR-298 D3（dropdown）/ ADR-300 §3（pill 键盘化，已落地）/ ADR-036（3D 键位表驱动）/ ADR-175 M1（overlay-active 让路契约）
 - D1 实施溯源：`frontend/src/utils/dom/key-router.ts`（+ 契约测试 14 条）收编 `views/app-tree/index.ts` 键盘段与 `app-modules.ts` devtools 段（2026-09-25）
+- D2 实施溯源：`frontend/src/utils/dom/bind-roving.ts`（契约测试 30 条）两波接线——app-sidebar（2026-09，preset "list"，合成 click 复用委托路径）与 3D slide-menu（2026-09-30，preset "tab" + cyclic + activeElementBase + itemsOf + stateAttr:null；`slide-menu.test.ts` 键盘契约 11 条零修改回归 + 重渲染 roving 跟随焦点改进 1 条；cap-controls 出局见 §2 D2）
 
 <!-- 文件名: keyboard-primitive-convergence.md → 实际文件 ADR-308-keyboard-primitive-convergence.md -->

@@ -62,12 +62,12 @@ status: active
 - `refresh()` — 重渲当前视图
 - `reset()` / `isAtRoot()` — 栈重置与根级检测
 - `isShowing()` — 是否处于打开状态
-- **键盘导航（a11y，2026-08-29）**：↑↓ 方向键在菜单项间循环（roving tabindex：当前项 `tabindex=0`，其余 `-1`）；Enter/Space 激活聚焦项（触发 click，复用已有行 click handler）；Escape 返回上一级 / 根级触发关闭；Home/End 跳首尾。**不使用 WASD**（避免与 3D 相机输入冲突，上下文栈可后续接入）
+- **键盘导航（a11y，2026-08-29；ADR-308 D2 收敛至 bind-roving 原语，2026-09-30）**：↑↓ 方向键在菜单项间**循环**移动（roving tabindex：当前项 `tabindex=0`，其余 `-1`）；Enter/Space 激活聚焦项（触发项自身或第一个交互子元素的 click，复用已有行 click handler）；Escape 返回上一级 / 根级触发关闭（外壳语义，独立监听）；Home/End 跳首尾。**实现 = `utils/dom/bind-roving.ts|bindRoving`**（preset "tab" + cyclic + `activeElementBase`（键派发到容器、实际焦点项为移动基准）+ `itemsOf`（smGetNavItems 可见直接子元素过滤）+ `stateAttr:null`（菜单项无 ARIA role，写状态位即 ARIA 非法））；重渲染后 roving **跟随** smRenderTop 恢复的焦点位（取代原「无条件重置首项」quirk）。**不使用 WASD**（避免与 3D 相机输入冲突）
 - **焦点记忆 + 输入阻断栈（a11y，2026-08-29）**：`onShow()` 记住触发焦点 + `pushInputBlock("slide-menu")`（暂停相机 WASD/方向键消费）+ 给首项 focus；`onHide({ restoreFocus? })` pop 输入阻断 + 归还焦点（3D overlay 关闭路径传 `{restoreFocus:false}` 避免双 returnFocus 竞争）
 
 ## 解耦要点
 
-- 关闭/返回按钮用**字面量 glyph**（根级 ✕，子集 ←），不依赖 iconify 运行时
+- 关闭/返回按钮均用 **SVG 图标**（`UI_ICONS.close` / `UI_ICONS.back`，ADR-238 §1.4：结构槽图标位走 SVG；原字面量 glyph "✕"/"←" 已替换）；原 `closeIcon?: string` 覆盖参数已删（未转义 HTML 串 = 公开注入面，R8）
 - 外壳恒含 🥉 行组件，故 `createSlideMenu` 同时安装 components 样式（`installComponentsStyles`，原 `installUiComponentsStyles`）
 - **零业务依赖**：可被任意预览/面板复用，不绑定 3D/YSM/VRM 特定内容
 - 向后兼容：不调用 `home`/`navigate` 的调用方（直接操作 `menu.list`）行为不变——导航栈为空，`slide-back` 在根级仍触发 `onClose`（即关闭）
@@ -78,7 +78,7 @@ status: active
 - `SlideMenuHandle` — `{ root, list, setTitle, setOnClose, home, navigate, back, refresh, reset, isAtRoot, isShowing, onShow, onHide }`
   - `onShow(): void` — 焦点记忆 + 输入阻断 + 首项 focus
   - `onHide(opts?: { restoreFocus?: boolean }): void` — pop 阻断 + 归还焦点
-- `createSlideMenu({ title?, closeIcon? })`
+- `createSlideMenu({ title? })`（原 `closeIcon?: string` 覆盖参数已删——未转义 HTML 串是公开注入面，R8）
 
 ## 与其他子系统关系
 
@@ -89,7 +89,7 @@ status: active
 
 ## 不变量
 
-- `closeIcon` 默认 ✕，`navigate` 后返回按钮切换为 ←（不通过 CSS class 区分，靠 glyph 切换）
+- 关闭图标根级 = `UI_ICONS.close`、子级 = `UI_ICONS.back`（均 SVG，ADR-238 §1.4；不通过 CSS class 区分，靠图标切换）
 - 每次 `navigate`/`refresh` 都会调用视图的 `render`（须幂等）
 - 导航栈清空（`reset`）后回到初始状态，`isAtRoot()` 始终为 true
 - **键盘导航仅使用方向键**（不使用 WASD），避免与 3D 相机 WASD 输入冲突（input-and-animation 在 document 级监听，isInputBlocked 暂停其消费）
@@ -127,6 +127,7 @@ status: active
 
 ## 相关
 
+- `utils-dom` 卡的 `bind-roving.ts` 键盘原语（ADR-308 D2：slide-menu 键盘导航已收敛至此原语，2026-09-30）
 - [preview_core](./preview_core.md) — 环境面板等消费方
 - [app-preview](./app-preview.md) — app-preview 侧 mmd-controls 等模块（现不再直接消费该外壳，经 preview-3d/menu cap 栈渲染）
 - [ui_components](./ui_components.md) — 🥉 行组件库（`components-styles.ts` 同源）

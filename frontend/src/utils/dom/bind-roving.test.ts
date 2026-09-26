@@ -287,6 +287,67 @@ describe("重渲染（innerHTML 换血）", () => {
   });
 });
 
+// ---------- 增量选项（ADR-308 D2 · slide-menu 收敛，2026-09） ----------
+describe("stateAttr: null（无 role 容器，纯 roving）", () => {
+  it("移动不写任何 aria 状态位，仅迁移 roving tabindex", () => {
+    const h = setup(3, { stateAttr: null });
+    expect(h.items[0].getAttribute("aria-selected")).toBeNull();
+    expect(h.items[0].hasAttribute("aria-checked")).toBe(false);
+    key(h.items[0], "ArrowDown");
+    expect(h.items[1].tabIndex).toBe(0);
+    expect(h.items[1].getAttribute("aria-selected")).toBeNull();
+  });
+});
+
+describe("itemsOf 提供器（slide-menu：可见直接子元素过滤）", () => {
+  it("移动限定在 provider 子集内，范围外 item 保持默认 tabindex", () => {
+    const h = setup(3, {
+      itemsOf: (c) => (Array.from(c.children) as HTMLElement[]).slice(0, 2),
+    });
+    key(h.items[0], "ArrowDown");
+    expect(h.root.activeElement).toBe(h.items[1]);
+    key(h.items[1], "ArrowDown"); // 子集末端（cyclic=false）
+    expect(h.root.activeElement).toBe(h.items[1]);
+    expect(h.items[2].tabIndex).toBe(-1);
+    // provider 范围内仍写状态位（默认 preset 派生）
+    expect(h.items[1].getAttribute("aria-selected")).toBe("true");
+  });
+});
+
+describe("activeElementBase（slide-menu：以实际焦点为基准，键派发到容器）", () => {
+  it("手动 focus 某项后在容器上派键：以该焦点项为基准移动（而非 stateIndex）", () => {
+    const h = setup(3, { activeElementBase: true });
+    h.items[2].focus(); // roving 仍在 0（stateIndex=0）
+    key(h.container, "ArrowUp"); // 基准=2 → 1
+    expect(h.root.activeElement).toBe(h.items[1]);
+    expect(h.items[1].tabIndex).toBe(0);
+  });
+
+  it("cyclic：focus 末项后 ArrowDown 回绕到 0（slide-menu 冻结契约复现）", () => {
+    const h = setup(2, { activeElementBase: true, cyclic: true });
+    h.items[1].focus();
+    key(h.container, "ArrowDown");
+    expect(h.items.map((el) => el.tabIndex)).toEqual([0, -1]);
+  });
+
+  it("Enter 激活实际焦点项（键派发到容器）", () => {
+    const onActivate = vi.fn();
+    const h = setup(3, { preset: "tab", activeElementBase: true, onActivate });
+    h.items[2].focus();
+    key(h.container, "Enter");
+    expect(onActivate).toHaveBeenCalledTimes(1);
+    expect(onActivate.mock.calls[0]?.[0]).toBe(h.items[2]);
+  });
+
+  it("焦点不在任何 item（落在 host 上）时回退 stateIndex", () => {
+    const h = setup(3, { activeElementBase: true });
+    key(h.items[0], "ArrowDown"); // stateIndex=1
+    h.host.focus(); // 焦点移出 shadow 树（root.activeElement=null）
+    key(h.container, "ArrowDown"); // 基准=stateIndex=1 → 2
+    expect(h.root.activeElement).toBe(h.items[2]);
+  });
+});
+
 // ---------- 句柄 ----------
 describe("RovingHandle", () => {
   it("syncIndex 对齐外部选区（restore 高亮）：更新 roving + 状态位，不夺焦", () => {

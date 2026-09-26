@@ -52,7 +52,7 @@ status: active
 
 - `loadOldestModel(container, _esc, deps)`：主入口，返回 `{ cleanup, onShow }` 句柄（`_esc` 保留位仅与 views 调用点传参形状兼容，DOM 构建后 textContent 自转义，本函数不再消费）
 - 数据获取：`GetRepoRoot(currentType)` 取当前类型仓库根（未配置显示提示），`ScanModelEntriesWithLabel` 取条目列表（`{ Name, Size, Path, Ext, Hash, ModTime }`）
-- 仓库评分/禁用/重复统计：统一调 Go `RepoHealthAudit`（与诊断页/CLI health-report 同源单一口径，ADR-143 P1 后 typed 报告 + `parseHealthReport` 运行时校验），**前端不自算评分**；分档展示阈值 80/60（good/ok/bad，verdict 为 Go 单源判定字段）。**统计失败降级不杀主列表（2026-09 对接锐评②）**：RepoHealthAudit 失败只把统计条渲染为失败提示行（`oldest.statsFailed` + friendlyError 缘由，tpl-oldest 的 `renderStatsBarHtml` stats=null 分支），模型卡片/热力图/推荐不依赖报告照常渲染
+- 仓库评分/禁用/重复统计：统一调 Go `RepoHealthAudit`（与诊断页/CLI health-report 同源单一口径，ADR-143 P1 后 typed 报告 + `parseHealthReport` 运行时校验），**前端不自算评分**；分档走 verdict 单源（`VERDICT_BANDS` verdict→外观映射，verdict 越域才回退分数带 80/60，2026-09 锐评④收尾，与诊断页 health.ts 同构）。**统计失败降级不杀主列表（2026-09 对接锐评②）**：RepoHealthAudit 失败只把统计条渲染为失败提示行（`oldest.statsFailed` + friendlyError 缘由，tpl-oldest 的 `renderStatsBarHtml` stats=null 分支），模型卡片/热力图/推荐不依赖报告照常渲染
 - 资历最深：过滤有 `ModTime` 的条目升序取前 4，展示大小/日期/入库天数
 - 月度活动：`buildMonthHeatmap` 统计近 12 个月文件数（**DOM 模板与热力图已按 ADR-190 D1a 回迁 `views/app-content/tpl-oldest.ts`**，数据获取/分档留守本文件，经 `deps.renderPage` 注入模板），归一化柱高与分段配色
 - 每日推荐：Fisher-Yates 洗牌取前 3 渲染卡片（卡片模板亦在 tpl-oldest.ts）

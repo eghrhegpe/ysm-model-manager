@@ -24,30 +24,30 @@
     "check-bindings": "node scripts/check-binding-usage.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.10",
-    "@playwright/test": "^1.62.1",
-    "@types/node": "^24.0.0",
-    "@types/three": "^0.185.4",
+    "@biomejs/biome": "^2.5.14",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.13.6",
+    "@types/three": "^0.186.0",
     "@vitest/coverage-istanbul": "^4.1.11",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.11",
     "esbuild": "^0.25.0",
-    "happy-dom": "^20.11.1",
-    "jscpd": "^5.0.14",
-    "knip": "^6.31.0",
+    "happy-dom": "^20.14.5",
+    "jscpd": "^5.3.2",
+    "knip": "^6.38.0",
     "ts-morph": "^28.0.0",
     "typescript": "^7.0.2",
     "vite": "^6.4.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
-    "@moeru/three-mmd": "^0.1.1",
-    "@moeru/three-mmd-physics-ammo": "^0.1.1",
+    "@moeru/three-mmd": "^0.1.2",
+    "@moeru/three-mmd-physics-ammo": "^0.1.2",
     "@pixiv/three-vrm": "^3.5.5",
     "@pixiv/three-vrm-animation": "^3.5.5",
     "@pixiv/three-vrm-core": "^3.5.5",
     "@wailsio/runtime": "^3.0.0-alpha.97",
-    "fflate": "~0.8.2",
-    "three": "^0.185.1"
+    "fflate": "~0.8.3",
+    "three": "^0.186.1"
   },
   "knip": {
     "ignoreDependencies": [

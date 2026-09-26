@@ -27,8 +27,8 @@ describe("checkRevision 纯函数", () => {
 });
 
 describe("assertRevisionRange", () => {
-  it("范围内 → 不抛（185 为当前已审计版本）", () => {
-    expect(() => assertRevisionRange({ module: "sky-patch", allowed: ["185"] })).not.toThrow();
+  it("范围内 → 不抛（186 为当前已审计版本）", () => {
+    expect(() => assertRevisionRange({ module: "sky-patch", allowed: ["186"] })).not.toThrow();
   });
 
   it("范围外 → 抛错（升级显式化），且 console.error 有兜底留痕", async () => {
@@ -38,7 +38,7 @@ describe("assertRevisionRange", () => {
     const orig = (threeMod as { REVISION?: string }).REVISION;
     (threeMod as { REVISION?: string }).REVISION = "199";
     try {
-      expect(() => assertRevisionRange({ module: "sky-patch", allowed: ["185"] })).toThrow(
+      expect(() => assertRevisionRange({ module: "sky-patch", allowed: ["186"] })).toThrow(
         /sky-patch/,
       );
       expect(spy).toHaveBeenCalled(); // 无 __ysmRingLog 挂载 → console 兜底

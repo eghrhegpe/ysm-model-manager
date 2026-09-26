@@ -88,7 +88,8 @@ export class ReflectorCapability implements SceneCapability {
 
   private injectOpacityIntoShader(options: { shader: ReflectorShaderDef }): boolean {
     // [shader-patch 守卫] three 升级到未审计 REVISION 时显式抛错（ReflectorShader 锚点失配静默降级 → 显式化）
-    assertRevisionRange({ module: "reflector-patch", allowed: ["185"] });
+    // 185/186 两版锚点（uniform vec3 color / blendOverlay gl_FragColor）核对一致——2026-09-26 升级审计
+    assertRevisionRange({ module: "reflector-patch", allowed: ["185", "186"] });
     const officialFrag = options.shader.fragmentShader;
     const declAnchor = "uniform vec3 color;";
     const alphaAnchor = "gl_FragColor = vec4( blendOverlay( base.rgb, color ), 1.0 );";

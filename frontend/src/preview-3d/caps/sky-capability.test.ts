@@ -676,16 +676,18 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     expect(mat.fragmentShader).toMatch(/vec3\(\s*1\.5\s*\)/);
   });
 
-  it("解耦点 ②：太阳盘白光被 sunDiscScale 缩放（切断 19M 白光炸弹）", () => {
+  it("解耦点 ②：太阳盘白光被 sunDiscScale 缩放（three r186 重构后锚点）", () => {
     const sky = new Sky();
     const mat = sky.material as THREE.ShaderMaterial;
     injectSkySunScalePatch(mat);
-    // 原 shader L272: ( vSunE * 19000.0 * Fex ) * sundisc;
-    // 替换后:    ( vSunE * 19000.0 * sunDiscScale * Fex ) * sundisc;
-    expect(mat.fragmentShader).toMatch(/19000\.0\s*\*\s*sunDiscScale\s*\*\s*Fex/);
+    // r186 L273 原 shader: vec3 sundiscColor = ( 760.0 * sundisc ) * min( vSunE * Fex, 80.0 );
+    // 替换后:              vec3 sundiscColor = ( sunDiscScale * 760.0 * sundisc ) * min( vSunE * Fex, 80.0 );
+    expect(mat.fragmentShader).toMatch(/sunDiscScale\s*\*\s*760\.0\s*\*\s*sundisc/);
+    // 不丢原有的物理模型内容：vSunE 白光钳制依然存在
+    expect(mat.fragmentShader).toMatch(/min\(\s*vSunE\s*\*\s*Fex,\s*80\.0\s*\)/);
   });
 
-  it("幂等：重复调用不会重复注入声明 / 重复乘法（避免 19000.0 * sunDiscScale * sunDiscScale 叠乘）", () => {
+  it("幂等：重复调用不会重复注入声明 / 重复乘法（避免 sunDiscScale 叠乘）", () => {
     const sky = new Sky();
     const mat = sky.material as THREE.ShaderMaterial;
     injectSkySunScalePatch(mat);
@@ -697,8 +699,8 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     expect(mat.fragmentShader).toBe(shaderOnce);
     // uniforms 数量不变（没有重复新建 uniform）
     expect(Object.keys(mat.uniforms).length).toBe(uniformCountOnce);
-    // 只出现一次 19000.0 * sunDiscScale
-    const matches = mat.fragmentShader.match(/19000\.0\s*\*\s*sunDiscScale/g) ?? [];
+    // 只出现一次 sunDiscScale * 760.0（守卫正则命中形态——重复注入被 hasDiscScaleUse 短路）
+    const matches = mat.fragmentShader.match(/sunDiscScale\s*\*\s*760\.0/g) ?? [];
     expect(matches.length).toBe(1);
   });
 
@@ -719,15 +721,15 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     const mat = sky.material as THREE.ShaderMaterial;
     injectSkySunScalePatch(mat);
     // 模拟半残：乘法层被外部改动抹掉（回到无 sunDiscScale 的原始形态），但 uniform 仍注册
-    expect(mat.fragmentShader).toMatch(/19000\.0 \* sunDiscScale \* Fex/);
+    expect(mat.fragmentShader).toMatch(/sunDiscScale \* 760\.0 \* sundisc/);
     mat.fragmentShader = mat.fragmentShader.replace(
-      "19000.0 * sunDiscScale * Fex",
-      "19000.0 * Fex",
+      "sunDiscScale * 760.0 * sundisc",
+      "760.0 * sundisc",
     );
-    expect(mat.fragmentShader).not.toMatch(/19000\.0 \* sunDiscScale \* Fex/);
+    expect(mat.fragmentShader).not.toMatch(/sunDiscScale \* 760\.0 \* sundisc/);
     // 二次调用：分字段守卫检测到 sunDiscScale uniform 在但乘法缺失 → 补全乘法而非整体早退
     injectSkySunScalePatch(mat);
-    expect(mat.fragmentShader).toMatch(/19000\.0 \* sunDiscScale \* Fex/);
+    expect(mat.fragmentShader).toMatch(/sunDiscScale \* 760\.0 \* sundisc/);
   });
 
   it("半残状态修复：sunIntensityScale 乘法缺失 → 二次调用补全（同理分字段）", () => {
@@ -752,7 +754,7 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     // 彻底破坏两个乘法锚点（模拟 Three 未来重构表达式），uniform 保留在对象层
     mat.fragmentShader = mat.fragmentShader
       .replace("pow( (vSunE * sunIntensityScale) * (", "pow( vSunE_Lin * (")
-      .replace("19000.0 * sunDiscScale * Fex", "SUN_DISC_LUM * Fex");
+      .replace("sunDiscScale * 760.0 * sundisc", "SUN_DISC_LUM * sundisc");
     injectSkySunScalePatch(mat);
     // 锚点已彻底不在 → 无法补全 → 环形日志留痕（审计①：消除静默失效缝隙）
     log.expectLogged("sky", "锚点失配");
@@ -775,10 +777,10 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     expect(mat.needsUpdate).toBeFalsy();
   });
 
-  it("声明注入兜底：showSunDisc 锚点失配时在 hash 函数前插入声明", () => {
+  it("声明注入兜底：showSunDisc 锚点失配时在 gradient 函数前插入声明", () => {
     const sky = new Sky();
     const mat = sky.material as THREE.ShaderMaterial;
-    // 模拟 Three 未来版本调整 uniforms 顺序：主锚点被破坏，但保留 hash 函数标记
+    // 模拟 Three 未来版本调整 uniforms 顺序：主锚点被破坏，但保留 gradient 函数标记（r186 起接替 hash）
     mat.fragmentShader = mat.fragmentShader.replace(
       /(uniform\s+float\s+showSunDisc\s*;\s*\n\s*uniform\s+float\s+time\s*;)/,
       "// anchors removed",
@@ -788,7 +790,7 @@ describe("injectSkySunScalePatch — 运行时 shader 解耦注入（最小 patc
     injectSkySunScalePatch(mat);
     expect(mat.fragmentShader).toMatch(/uniform\s+float\s+sunIntensityScale\s*;/);
     expect(mat.fragmentShader.indexOf("uniform float sunIntensityScale")).toBeLessThan(
-      mat.fragmentShader.indexOf("float hash( vec2 p )"),
+      mat.fragmentShader.indexOf("vec2 gradient( vec2 i )"),
     );
     expect(mat.version).toBe(versionBefore + 1); // patched → needsUpdate=true → version++
   });

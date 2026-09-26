@@ -69,8 +69,9 @@ const SKY_SCALE = 12000;
  * 🔎 需要 patch 的两处硬编码（来自 three/examples/jsm/objects/Sky.js SkyShader.fragmentShader）：
  *   ① L261:  `pow( vSunE * ((betaRTheta...) * (1.0-Fex) ), vec3(1.5))` → 把 vSunE 前乘 sunIntensityScale
  *        →  `pow( (vSunE * sunIntensityScale) * ((betaRTheta...) * (1.0-Fex) ), vec3(1.5))`
- *   ② L272:  `(vSunE * 19000.0 * Fex) * sundisc;` → 在 19000 后插入 sunDiscScale
- *        →  `(vSunE * 19000.0 * sunDiscScale * Fex) * sundisc;`
+ *   ② r186 L273:  `vec3 sundiscColor = ( 760.0 * sundisc ) * min( vSunE * Fex, 80.0 );`
+ *        →  `vec3 sundiscColor = ( sunDiscScale * 760.0 * sundisc ) * min( vSunE * Fex, 80.0 );`
+ *      （r185 原式 `(vSunE * 19000.0 * Fex) * sundisc` 已被 three r186 重构——2026-09-26 升级审计适配锚点）
  *
  * ⚡ 幂等：重复调用不会重复注入。未注入过时才做 shader 替换并置 needsUpdate=true。
  *
@@ -85,7 +86,7 @@ export function injectSkySunScalePatch(
   },
 ): void {
   // [shader-patch 守卫] three 升级到未审计 REVISION 时显式抛错（锚点失配静默降级 → 显式化）
-  assertRevisionRange({ module: "sky-patch", allowed: ["185"] });
+  assertRevisionRange({ module: "sky-patch", allowed: ["186"] });
   // 分字段幂等守卫（审计①：原「双字段整体短路」有半残缺口——uniform 已注册但乘法
   // 缺失时误判已注入 → 永不补全，静默半残）。现按字段各自校验：字段视为已注入
   // 仅当「uniform 存在 且 shader 已含对应乘法」。半残状态（uniform 在、乘法缺）下次
@@ -93,7 +94,7 @@ export function injectSkySunScalePatch(
   const hasSunScaleUniform = mat.uniforms.sunIntensityScale !== undefined;
   const hasDiscScaleUniform = mat.uniforms.sunDiscScale !== undefined;
   const hasSunScaleUse = /vSunE\s*\*\s*sunIntensityScale/.test(mat.fragmentShader);
-  const hasDiscScaleUse = /19000\.0\s*\*\s*sunDiscScale/.test(mat.fragmentShader);
+  const hasDiscScaleUse = /sunDiscScale\s*\*\s*760\.0/.test(mat.fragmentShader);
   if (hasSunScaleUniform && hasDiscScaleUniform && hasSunScaleUse && hasDiscScaleUse) {
     // 完全注入 → 只确保默认值同步到 uniforms（不改 shader，避免重编译）
     mat.uniforms.sunIntensityScale.value = defaults.sunIntensityScale;
@@ -122,8 +123,8 @@ export function injectSkySunScalePatch(
     if (mat.fragmentShader !== before) patched = true;
     else {
       // regex 未匹配（Three 未来版本可能调整 uniforms 顺序），做全局兜底：在最后一个 uniform 声明后加
-      // 取 "// Cloud noise functions" 之前最后一个 `uniform ...;` 的行尾追加
-      const fallbackIdx = mat.fragmentShader.indexOf("float hash( vec2 p )");
+      // 取 uniforms 块后第一个函数（r185 hash / r186 gradient）之前插入
+      const fallbackIdx = mat.fragmentShader.indexOf("vec2 gradient( vec2 i )");
       if (fallbackIdx > 0) {
         mat.fragmentShader =
           mat.fragmentShader.slice(0, fallbackIdx) +
@@ -161,12 +162,13 @@ export function injectSkySunScalePatch(
     }
   }
 
-  // 2c) 解耦点 ②：19000.0 * Fex → 19000.0 * sunDiscScale * Fex
+  // 2c) 解耦点 ②：r186 `sundiscColor = ( 760.0 * sundisc ) * …` → sundisc 前乘 sunDiscScale
+  //    （r185 老锚点 `19000.0 * Fex` 已随 three r186 重构失配，2026-09-26 升级审计适配）
   if (!hasDiscScaleUse) {
     const before = mat.fragmentShader;
     mat.fragmentShader = mat.fragmentShader.replace(
-      "19000.0 * Fex",
-      "19000.0 * sunDiscScale * Fex",
+      "vec3 sundiscColor = ( 760.0 * sundisc )",
+      "vec3 sundiscColor = ( sunDiscScale * 760.0 * sundisc )",
     );
     if (mat.fragmentShader !== before) patched = true;
     else {
@@ -681,7 +683,7 @@ export class SkyCapability implements SceneCapability {
   }
 
   /** §4 解耦：设置太阳盘白光的尺度（合法域 [0,1.5]／滑杆 0–1.2，默认 0.5）；
-   *  1.0 = 原生 19000× 白光炸弹，越低太阳盘越暗、Bloom 越不炸屏。 */
+   *  1.0 = three 原生太阳盘亮度（r186 起官方自带 min 钳制；r185 时代为 19000× 白光炸弹），越低太阳盘越暗。 */
   setSunDiscScale(v: number): void {
     // 值域钳制在唯一写入口（ADR-283）：合法域 [0,1.5] 由 schema range 声明，滑杆行程见 uiRange
     // ADR-196 收口：纯写 envState；uniform 由 callback 落地。

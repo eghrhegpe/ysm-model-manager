@@ -156,3 +156,14 @@ func TestRuntimeBuffer_LevelPriority(t *testing.T) {
 		t.Errorf("error 应优先于 warn，实际 %q", got)
 	}
 }
+
+// TestRuntimeBuffer_CapAccessor 锐评⑤：Cap() 访问器供 GetLogCaps 绑定消费——
+// 显式容量原样返回，默认回退容量（<=0 → DefaultRuntimeCap）同样可观测。
+func TestRuntimeBuffer_CapAccessor(t *testing.T) {
+	if got := NewRuntimeBuffer(42).Cap(); got != 42 {
+		t.Fatalf("显式容量 Cap() = %d, 期望 42", got)
+	}
+	if got := NewRuntimeBuffer(0).Cap(); got != DefaultRuntimeCap {
+		t.Fatalf("回退容量 Cap() = %d, 期望 %d", got, DefaultRuntimeCap)
+	}
+}

@@ -129,6 +129,14 @@ type RuntimeLog struct {
 	Tag       string   `json:"Tag,omitempty"`   // `[tag]` 前缀提取（无前缀为空串，不丢弃消息）
 }
 
+// LogCaps 两类日志环形缓冲的实时上限（GetLogCaps 返回）。
+// 2026-09 对接锐评⑤：诊断页检索窗口以此为准单源——Op 上限随 AppConfig.LogMaxEntries
+// 动态变化，前端手写镜像在用户调大缓冲时窗口失真，已退役。
+type LogCaps struct {
+	Op      int `json:"op"`
+	Runtime int `json:"runtime"`
+}
+
 // LinkType 链接类型
 type LinkType string
 

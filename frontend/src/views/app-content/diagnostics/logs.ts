@@ -27,14 +27,31 @@ export type EscFn = (s: unknown) => string;
 // 前比对丢弃陈旧
 const diagLoadGuard = createLoadGuard();
 
-// ===== 展示窗口容量（单一事实源在 Go，此处为镜像）=====
-// 两个窗口是「前端展示层收窄」，与 Go 侧环形缓冲上限对应但**独立**：
-//   操作日志 Go 上限 500（go/logs/logs.go|logMaxEntries，AppConfig.LogMaxEntries 可配置）
-//   运行时日志 Go 上限 200（go/logs/runtime.go|DefaultRuntimeCap，固定）
-// ⚠️ 改 Go 容量时须同步此处（不崩，仅影响「窗口内检索」范围与无命中占位准确性）。
-// 运行时后端恒 ≤200，DIAG_RUNTIME_WINDOW=300 是防御性冗余（搜索口径留余量）。
-const DIAG_OP_WINDOW = 500;
-const DIAG_RUNTIME_WINDOW = 300;
+// ===== 展示窗口容量（单源 = Go GetLogCaps，锐评⑤镜像退役）=====
+// 窗口是「前端展示层收窄」，容量须与 Go 环形缓冲一致——操作日志上限随
+// AppConfig.LogMaxEntries 可配置（go/logs logMaxEntries 动态读配置），手写镜像
+// 在用户调大缓冲时窗口失真（Go 存 1000 条、前端只检索 500，搜索静默漏后半），
+// 故改由 GetLogCaps 绑定单源下发；运行时日志同理（DefaultRuntimeCap）。
+// 模块级 memo：容量进程内准静态（改配置需重启生效），避免每次击键多一跳 RPC。
+// fallback 仅承接 web 旧 adapter / 旧后端无此绑定的降级，正常链路恒走 Go。
+const DIAG_OP_WINDOW_FALLBACK = 500;
+const DIAG_RUNTIME_WINDOW_FALLBACK = 300;
+let diagCapsPromise: Promise<{ op: number; runtime: number }> | null = null;
+function dgLsLogCaps(): Promise<{ op: number; runtime: number }> {
+  diagCapsPromise ??= backendGetApp()
+    .then((app) => app.GetLogCaps())
+    .then((caps) => ({
+      op: caps.op > 0 ? caps.op : DIAG_OP_WINDOW_FALLBACK,
+      runtime: caps.runtime > 0 ? caps.runtime : DIAG_RUNTIME_WINDOW_FALLBACK,
+    }))
+    .catch(() => ({ op: DIAG_OP_WINDOW_FALLBACK, runtime: DIAG_RUNTIME_WINDOW_FALLBACK }));
+  return diagCapsPromise;
+}
+
+/** 测试专用：清空模块级 caps memo，防用例间 mock 串扰（日志窗口随 mock 变化的用例须先复位） */
+export function dgLsResetCapsMemo(): void {
+  diagCapsPromise = null;
+}
 
 // 锐评①：手写镜像 ImportLogLike / RuntimeLogLike 已删除——契约直连 Go 绑定类型（见顶部 import）。
 
@@ -105,13 +122,13 @@ function dgLsMatchDiagSearch(l: ImportLog, search: string): boolean {
     .includes(search);
 }
 
-function dgLsFilterDiagLogs(logs: ImportLog[], root: ShadowRoot): ImportLog[] {
+function dgLsFilterDiagLogs(logs: ImportLog[], root: ShadowRoot, cap: number): ImportLog[] {
   const activeBtn = root.querySelector(".diag-log-fbtn.active");
   const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status : "all";
   const opFilter = dgLsReadOpFilter(root);
   const search = dgLsReadSearch(root);
   return logs
-    .slice(-DIAG_OP_WINDOW)
+    .slice(-cap)
     .reverse()
     .filter((l) => {
       // 横向（状态）× 纵向（操作类型）× 搜索，三者 AND 交集——互斥维度，叠加不冲突
@@ -231,12 +248,12 @@ function dgLsRenderDiagGroups(
  * 无 Status 概念；现捕获层已从 Message 推断 Level，chips 遂有真实语义可比。
  * 命中域含 Tag：`[watcher]` 这类前缀成为独立可搜维度（Message 里也含，但字段化后语义明确）。
  */
-function dgLsFilterRuntimeLogs(logs: RuntimeLog[], root: ShadowRoot): RuntimeLog[] {
+function dgLsFilterRuntimeLogs(logs: RuntimeLog[], root: ShadowRoot, cap: number): RuntimeLog[] {
   const activeBtn = root.querySelector(".diag-log-fbtn.active");
   const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status : "all";
   const search = dgLsReadSearch(root);
   return logs
-    .slice(-DIAG_RUNTIME_WINDOW)
+    .slice(-cap)
     .reverse()
     .filter((l) => {
       // 「全部」放行一切。⚠️ chip 的 data-status 沿用操作日志的 Status 词汇（success/failed/
@@ -300,10 +317,11 @@ export async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise
   const { list, gen, copyLogTitle } = ctx;
   try {
     const { GetImportLogs } = await backendGetApp();
+    const caps = await dgLsLogCaps();
     const logs: ImportLog[] = (await GetImportLogs()) || [];
     if (dgLsCheckStale(gen)) return;
     if (!logs.length) return dgLsSetEmpty(list, "diagnostics.noLogs");
-    const filtered = dgLsFilterDiagLogs(logs, root);
+    const filtered = dgLsFilterDiagLogs(logs, root, caps.op);
     if (!filtered.length) return dgLsSetEmpty(list, "diagnostics.noMatchLogs");
     const groups = dgLsGroupByOp(filtered);
     list.innerHTML = dgLsRenderDiagGroups(groups, esc, copyLogTitle);
@@ -320,10 +338,11 @@ export async function loadRuntimeLogs(root: ShadowRoot, esc: EscFn): Promise<voi
   const { list, gen, copyLogTitle } = ctx;
   try {
     const { GetRuntimeLogs } = await backendGetApp();
+    const caps = await dgLsLogCaps();
     const logs: RuntimeLog[] = (await GetRuntimeLogs()) || [];
     if (dgLsCheckStale(gen)) return;
     if (!logs.length) return dgLsSetEmpty(list, "diagnostics.noRuntimeLogs");
-    const filtered = dgLsFilterRuntimeLogs(logs, root);
+    const filtered = dgLsFilterRuntimeLogs(logs, root, caps.runtime);
     if (!filtered.length) return dgLsSetEmpty(list, "diagnostics.noMatchLogs");
     list.innerHTML = dgLsRenderRuntimeRows(filtered, esc, copyLogTitle);
   } catch (e) {

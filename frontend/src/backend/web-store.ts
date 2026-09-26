@@ -315,6 +315,9 @@ export const webStoreBindings = {
   // 网页版内存日志环（替代 Go ImportLog / runtimeLogs，消除诊断页 fail-fast 红错）
   GetImportLogs: () => getWebImportLogs(),
   GetRuntimeLogs: () => getWebRuntimeLogs(),
+  // 日志环容量单源下发（锐评⑤：诊断页检索窗口不再手写镜像）——op 读配置
+  // logMaxEntries（与 importLogCap 同口径），runtime 恒为 web 环常量
+  GetLogCaps: async () => ({ op: importLogCap(), runtime: WEB_RUNTIME_LOG_CAP }),
   AddImportLog: (
     modelName: string,
     sourcePath: string,

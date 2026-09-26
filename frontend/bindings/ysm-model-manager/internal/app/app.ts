@@ -456,6 +456,16 @@ export function GetLitematicVoxelData(path: string): $CancellablePromise<registr
     return $Call.ByID(2172897631, path);
 }
 
+/**
+ * GetLogCaps 返回两类日志环形缓冲的实时上限（诊断页检索窗口单源）。
+ * 2026-09 对接锐评⑤收尾：前端 DIAG_OP_WINDOW/DIAG_RUNTIME_WINDOW 手写镜像退役——
+ * Op 上限随 AppConfig.LogMaxEntries 可配置，镜像在用户调大缓冲时窗口失真
+ * （Go 环形缓冲存 1000 条、前端只检索 500，搜索静默漏后半）。
+ */
+export function GetLogCaps(): $CancellablePromise<types$0.LogCaps> {
+    return $Call.ByID(1598147712);
+}
+
 export function GetMinecraftPaths(): $CancellablePromise<string[] | null> {
     return $Call.ByID(2122198272);
 }

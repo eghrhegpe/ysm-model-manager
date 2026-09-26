@@ -232,6 +232,7 @@ export const MOCK_DATA = {
   ScanLocalAuthors: [],
   GetImportLogs: [],
   GetRuntimeLogs: [],
+  GetLogCaps: { op: 500, runtime: 300 }, // 网页版日志环容量（对齐 web-store WEB_*_LOG_CAP）
   ClearImportLogs: undefined,
   RenameFile: undefined,
   // 设置页「选择目录」返回非空路径（走通 SelectDirectory → saveCfg 保存链路）

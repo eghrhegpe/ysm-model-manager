@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { flushPromises, waitFor } from "@/test-utils/wait.ts";
 import { initDiagnostics, createDedupSession } from "./init.ts";
+import { dgLsResetCapsMemo } from "./logs.ts";
 import { clearLoadTraces, recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { diagnosticsHTML } from "@/views/app-content/tpl.ts";
 
@@ -242,6 +243,26 @@ describe("initDiagnostics — 日志面板", () => {
     (root.querySelector('.diag-log-fbtn[data-status="warn"]') as HTMLElement).click();
     await waitFor(() => !list.textContent!.includes("scn"));
     expect(list.textContent).not.toContain("imp");
+  });
+
+  it("检索窗口单源 GetLogCaps：Op cap 下发 2 → 只渲染最近 2 条（锐评⑤镜像退役）", async () => {
+    dgLsResetCapsMemo();
+    mockApp({
+      GetLogCaps: vi.fn(() => ({ op: 2, runtime: 1 })),
+      GetImportLogs: vi.fn(() => [
+        { Status: "success", Operation: "import", ModelName: "oldest.ysm", Timestamp: 1 },
+        { Status: "success", Operation: "import", ModelName: "middle.ysm", Timestamp: 2 },
+        { Status: "success", Operation: "import", ModelName: "newest.ysm", Timestamp: 3 },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    await waitFor(() => list.textContent!.includes("newest"));
+    expect(list.textContent).toContain("middle");
+    expect(list.textContent).not.toContain("oldest");
+    // memo 复位：不污染后续用例的 caps 缓存
+    dgLsResetCapsMemo();
   });
 
   it("搜索输入 → 300ms 防抖重载", async () => {

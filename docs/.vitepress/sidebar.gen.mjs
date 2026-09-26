@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-314：诊断页长任务取消通道：ctx 贯穿 + Wails 原生 CancellablePromise",
+        "link": "/adr/ADR-314-ctx-wails-cancellablepromise"
+      },
+      {
         "text": "ADR-313：应用配置写唯一实参点：SaveAppConfig 六位置实参统一上移 views/config-write.ts",
         "link": "/adr/ADR-313-saveappconfig-views-config-write-ts"
       },

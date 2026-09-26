@@ -248,3 +248,12 @@ func TestLogger_NewLogger(t *testing.T) {
 	}
 	_ = l
 }
+
+// TestLogger_Cap 锐评⑤：Cap() 返回实时上限（logMaxEntries 读配置），
+// GetLogCaps 绑定据此单源化诊断页检索窗口——契约只锁「正值」，具体数值随配置走。
+func TestLogger_Cap(t *testing.T) {
+	l := NewLogger(t.TempDir())
+	if got := l.Cap(); got <= 0 {
+		t.Fatalf("Cap() = %d, 期望正值（logMaxEntries 默认或配置值）", got)
+	}
+}

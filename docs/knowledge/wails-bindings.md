@@ -309,6 +309,7 @@ status: active
 
 - `AddImportLog(modelName, sourcePath, targetDir, fileSize, status, errMsg) → void` — 记录一条导入日志
 - `GetImportLogs() → types.ImportLog[]` — 获取全部导入日志
+- `GetLogCaps() → types.LogCaps` — 两类日志环形缓冲实时上限（op 随 AppConfig.LogMaxEntries 动态，runtime 恒为 DefaultRuntimeCap）；诊断页检索窗口单源（2026-09 对接锐评⑤：前端手写镜像退役）
 - `ClearImportLogs() → void` — 清空导入日志
 
 ### 下载队列（app_download.go）

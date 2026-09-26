@@ -109,6 +109,11 @@ func (b *RuntimeBuffer) GetAll() []types.RuntimeLog {
 	return cp
 }
 
+// Cap 返回运行时日志缓冲容量（GetLogCaps 绑定消费，诊断页检索窗口单源）。
+func (b *RuntimeBuffer) Cap() int {
+	return b.cap
+}
+
 // Clear 清空缓冲
 func (b *RuntimeBuffer) Clear() {
 	b.mu.Lock()

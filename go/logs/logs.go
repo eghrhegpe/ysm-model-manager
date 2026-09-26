@@ -322,6 +322,13 @@ func (l *Logger) GetAll() []types.ImportLog {
 	return cp
 }
 
+// Cap 返回操作日志环形缓冲的实时上限（logMaxEntries 每次读配置，可被
+// AppConfig.LogMaxEntries 调整）。GetLogCaps 绑定消费——诊断页检索窗口
+// 以此为单源，替代前端手写镜像（镜像在用户调大缓冲时窗口失真）。
+func (l *Logger) Cap() int {
+	return logMaxEntries()
+}
+
 // Clear 清空日志（同步落盘语义不变：返回即磁盘已为空，防快速退出后旧日志复活）
 func (l *Logger) Clear() {
 	l.mu.Lock()

@@ -463,6 +463,16 @@ export enum LinkType {
 };
 
 /**
+ * LogCaps 两类日志环形缓冲的实时上限（GetLogCaps 返回）。
+ * 2026-09 对接锐评⑤：诊断页检索窗口以此为准单源——Op 上限随 AppConfig.LogMaxEntries
+ * 动态变化，前端手写镜像在用户调大缓冲时窗口失真，已退役。
+ */
+export interface LogCaps {
+    "op": number;
+    "runtime": number;
+}
+
+/**
  * LogLevel 日志级别（诊断页按 Level 过滤；向后兼容——旧日志无此字段时前端按 Status 兜底）
  */
 export enum LogLevel {

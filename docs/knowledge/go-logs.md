@@ -14,12 +14,14 @@ auto_fields:
     - Logger.AddErr
     - Logger.AddOp
     - Logger.AddOpErr
+    - Logger.Cap
     - Logger.Clear
     - Logger.Flush
     - Logger.GetAll
     - NewLogger
     - NewRuntimeBuffer
     - RuntimeBuffer
+    - RuntimeBuffer.Cap
     - RuntimeBuffer.Clear
     - RuntimeBuffer.GetAll
     - RuntimeBuffer.Write

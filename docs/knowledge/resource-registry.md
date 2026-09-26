@@ -81,6 +81,7 @@ auto_fields:
     - LitematicMeta
     - LitematicVoxelData
     - LoadRegistry
+    - LogCaps
     - LogLevel
     - LogStatus
     - MatchZipEntry

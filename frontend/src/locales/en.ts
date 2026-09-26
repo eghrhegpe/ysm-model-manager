@@ -798,6 +798,7 @@ export const en: Record<string, string> = {
   "sidebar.configGameDir": "Configure Game Directory",
   "sidebar.notSet": "Not Set",
   "sidebar.noMatchInstances": "No matching modpacks found",
+  "sidebar.instanceList": "Modpacks list",
   "sidebar.noMods": "No {type}",
   // sidebar push/pull action toasts (app-sidebar/index.ts)
   "sidebar.selectPackFirst": "Please select the packs to {verb} first",

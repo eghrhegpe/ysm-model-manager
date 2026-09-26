@@ -4,6 +4,7 @@ import { bus } from "@/bus";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { bindRoving, type RovingHandle } from "@/utils/dom/bind-roving.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { sidebarCSS } from "./sidebar-css.ts";
@@ -57,6 +58,8 @@ class AppSidebar extends WebComponentBase {
   private _packDndCleanup: (() => void) | null = null;
   /** 下拉控制器 dispose（push/pull 两个，ADR-298 D3）；替代原 _docClickHandler 单槽 */
   private _dropdownCleanup: (() => void) | null = null;
+  /** ADR-308 D2：整合包卡片 roving 键盘导航句柄（原语 = utils/dom/bind-roving.ts） */
+  private _roving: RovingHandle | null = null;
   private _syncInProgress = false; // 防止并发推送/拉取
   private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
   /** 重载在途锁（并发控制·单飞）：在途时新请求不并发，仅记补跑标记。
@@ -95,6 +98,18 @@ class AppSidebar extends WebComponentBase {
 
   async connectedCallback(): Promise<void> {
     this._renderLayout();
+
+    // ADR-308 D2：整合包卡片键盘导航（roving tabindex + 方向键，list 预设垂直向）。
+    // 激活走合成点击复用点击委托路径——高亮/涟漪/去重/持久化全在既有 handler，零复制。
+    this._roving?.dispose();
+    this._roving = bindRoving({
+      root: this._root,
+      container: "#sidebar-instance-list",
+      itemSelector: ".instance-card",
+      preset: "list",
+      orientation: "vertical",
+      onActivate: (item) => this._activateCardKeyboard(item),
+    });
 
     // 整合包卡片拖拽导入（先入仓库再推送）：document 层监听，惰性读最新实例列表
     this._packDndCleanup?.();
@@ -157,6 +172,10 @@ class AppSidebar extends WebComponentBase {
       this,
     );
     this._cardCleanup = cardCleanup;
+    // ADR-308 D2：重渲染后新卡片全为 tabindex=-1（render.ts 统一落点），键盘入口须由
+    // 原语重新布局「恰一 tabindex 0」——落点 0；若有保存选中，restoreSelectedCard 的
+    // rAF（晚于本同步路径）经 syncRestoredIndex 校正到选中卡，最终态正确
+    this._roving?.syncIndex(0);
   }
 
   // SidebarHost 实现：去重状态机 + 并发守卫（实例级）
@@ -174,6 +193,30 @@ class AppSidebar extends WebComponentBase {
   }
   setBusy(v: boolean): void {
     this._busy = v;
+  }
+
+  /** SidebarHost（可选，ADR-308 D2）：恢复保存选中时把 roving 布局校正到选中卡
+   *  （restoreSelectedCard 的 rAF 调用；事件层不感知原语细节，句柄缺失则 no-op） */
+  syncRestoredIndex(idx: number): void {
+    this._roving?.syncIndex(idx);
+  }
+
+  /** ADR-308 D2 键盘激活路径：在卡片 header 中心派发合成 click，完整复用点击委托路径的
+   *  语义（高亮/涟漪/去重/持久化全在 events.ts 既有 handler，零复制——原语只产「激活哪个」）。
+   *  取 header 而非整卡：点击路径的高亮/涟漪作用在 header；中心坐标让涟漪落点
+   *  对齐 CSS 缺省锚点（--ripple-x/--ripple-y 50%）。 */
+  private _activateCardKeyboard(card: HTMLElement): void {
+    const hdr = card.querySelector(".instance-card-header") as HTMLElement | null;
+    if (!hdr) return;
+    const rect = hdr.getBoundingClientRect();
+    hdr.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+      }),
+    );
   }
 
   private async _reload(force = false): Promise<void> {
@@ -251,6 +294,11 @@ class AppSidebar extends WebComponentBase {
     if (this._dropdownCleanup) {
       this._dropdownCleanup();
       this._dropdownCleanup = null;
+    }
+    // ADR-308 D2：roving 键位监听随卸载死寂（dispose 幂等；重挂载由 connectedCallback 重绑）
+    if (this._roving) {
+      this._roving.dispose();
+      this._roving = null;
     }
     // _checkedSets / _lastEmittedPkg / _busy 均为实例属性，随组件 GC 自然回收
   }

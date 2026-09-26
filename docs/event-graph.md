@@ -222,7 +222,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 266 |
 | anBindNavItems | `frontend/src/views/app-nav/index.ts` | 52 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 224 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 275 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 280 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 87 |
 
 **订阅方（on）：**
@@ -237,7 +237,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 91 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 261 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 266 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -270,7 +270,7 @@
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 120 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 303 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 216 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 115 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 130 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 305 |
 
 ### `repo:search-creator`
@@ -333,7 +333,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 107 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 122 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 285 |
 
 ### `sync:download:done`

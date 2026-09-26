@@ -82,6 +82,7 @@ auto_fields:
     - LitematicVoxelData
     - LoadRegistry
     - LogLevel
+    - LogStatus
     - MatchZipEntry
     - MaxImportSize
     - MaxImportSizeMB
@@ -116,7 +117,11 @@ auto_fields:
     - SetRegistryPath
     - ShaderpackLang
     - ShouldHashExt
+    - StatusFailed
+    - StatusSkipped
+    - StatusSuccess
     - StatusToLevel
+    - StatusWarn
     - StorageSubDir
     - StripBanSuffix
     - StripDisableSuffix

@@ -777,6 +777,7 @@ export const zhCN = {
   "sidebar.configGameDir": "配置游戏目录",
   "sidebar.notSet": "未设置",
   "sidebar.noMatchInstances": "未找到匹配的整合包",
+  "sidebar.instanceList": "整合包列表",
   "sidebar.noMods": "无{type}",
   // sidebar 推送/拉取动作 toast（app-sidebar/index.ts）
   "sidebar.selectPackFirst": "请先勾选要{verb}的整合包",

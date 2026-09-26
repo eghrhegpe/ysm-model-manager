@@ -150,15 +150,20 @@ function typeMenuItemsHTML(): string {
 }
 
 export function listContainerHTML(): string {
-  return `<div class="list" id="sidebar-instance-list">${skeletonHTML()}</div>`;
+  // ADR-308 D2：结构角色在消费端声明（listbox）；交互态（roving tabindex/aria-selected）
+  // 归 bindRoving 原语管（utils/dom/bind-roving.ts），模板不碰交互状态
+  return `<div class="list" id="sidebar-instance-list" role="listbox" aria-label="${esc(
+    t("sidebar.instanceList"),
+  )}">${skeletonHTML()}</div>`;
 }
 
 /** 加载骨架屏 */
-/** 加载骨架屏（内部被 listContainerHTML 引用，无需导出） */
+/** 加载骨架屏（内部被 listContainerHTML 引用，无需导出）。
+ *  aria-hidden：装饰性占位不是 option，不进 listbox 的 accessibility 结构（读屏跳过） */
 function skeletonHTML(): string {
   let h = "";
   for (let i = 0; i < 4; i++) {
-    h += `<div class="sk-item">
+    h += `<div class="sk-item" aria-hidden="true">
 <div class="sk-line sk-w80"></div>
 <div class="sk-line sk-w40"></div>
 </div>`;

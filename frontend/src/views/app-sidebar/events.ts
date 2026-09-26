@@ -222,6 +222,9 @@ export interface EmitDedupe {
 export interface SidebarHost extends EmitDedupe {
   getBusy(): boolean;
   setBusy(v: boolean): void;
+  /** ADR-308 D2（可选）：恢复保存选中时把 roving 布局（唯一 tabindex 0 / aria-selected）
+   *  校正到恢复的卡片。restoreSelectedCard 的 rAF 内调用——不实现者（测试 mock）行为不变 */
+  syncRestoredIndex?(idx: number): void;
 }
 
 function restoreSelectedCard(
@@ -242,6 +245,8 @@ function restoreSelectedCard(
       const hdr = card.querySelector(".instance-card-header");
       if (!hdr) return;
       hdr.classList.add("active");
+      // ADR-308 D2：roving 布局跟选中校正（可选接口，测试 mock 不实现则跳过）
+      host.syncRestoredIndex?.(idx);
       // P2 修复：仅选中项实际变化时才 emit——原每次重载都重发。
       // 2026-09：app-content 已改为复用同一 <app-sync-manager> 实例（同值 setAttribute
       // 被组件 oldVal===newVal 拦下），重复 emit 不再有丢状态代价，此处仅省事件扩散。

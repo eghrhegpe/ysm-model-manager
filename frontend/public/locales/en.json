@@ -674,6 +674,7 @@
   "sidebar.configGameDir": "Configure Game Directory",
   "sidebar.notSet": "Not Set",
   "sidebar.noMatchInstances": "No matching modpacks found",
+  "sidebar.instanceList": "Modpacks list",
   "sidebar.noMods": "No {type}",
   "sidebar.selectPackFirst": "Please select the packs to {verb} first",
   "sidebar.verbPush": "push",

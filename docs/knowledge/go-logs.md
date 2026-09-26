@@ -11,7 +11,9 @@ auto_fields:
     - DefaultRuntimeCap
     - Logger
     - Logger.Add
+    - Logger.AddErr
     - Logger.AddOp
+    - Logger.AddOpErr
     - Logger.Clear
     - Logger.Flush
     - Logger.GetAll

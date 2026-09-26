@@ -1,5 +1,11 @@
 // ===== sidebar Shadow CSS =====
-import { btnBaseCSS, dropdownBaseCSS, noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
+import {
+  btnBaseCSS,
+  dropdownBaseCSS,
+  focusVisibleCSS,
+  noAnimationsCSS,
+  wsIconCSS,
+} from "@/utils/dom/css.ts";
 import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";
 export const sidebarCSS: string = `
 :host {
@@ -15,6 +21,13 @@ export const sidebarCSS: string = `
 .instance-card {
   background: var(--bg); border: 1px solid var(--bd);
   border-radius:var(--radius-md); margin-bottom: var(--card-gap, 4px); overflow: hidden;
+}
+/* ADR-308 D2 键盘可达：roving tabindex 聚焦卡片时 :focus-visible 描边（ring 用 accent，
+   与全局 focusVisibleCSS 同口径但作用在卡片级——卡片非表单控件，单独落规则） */
+.instance-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+  border-color: var(--accent);
 }
 /* 拖拽导入悬停态：虚线框提示「拖到此卡片可直接推送到该整合包」 */
 .instance-card.dnd-over { border: 1px dashed var(--accent, #89b4fa); box-shadow: 0 0 0 1px var(--accent, #89b4fa) inset; }
@@ -91,4 +104,7 @@ ${dropdownBaseCSS}
 /* sidebar 下拉局部差异（宽度/换行/字号/项间距），覆盖共享默认值——勿回内联 */
 .dd-wrap .dd-menu { min-width:160px; white-space:nowrap; font-size:var(--fs-xs); }
 .dd-wrap .dd-item { padding:var(--sp-vh-cell); }
+/* 键盘可达（ADR-308 D2）：shadow 内剩余 focusable（.chk 复选框等）统一 :focus-visible 描边；
+   卡片级描边见上方 .instance-card:focus-visible（单独落规则，非表单控件） */
+${focusVisibleCSS}
 `;

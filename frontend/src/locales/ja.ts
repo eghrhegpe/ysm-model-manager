@@ -797,6 +797,7 @@ export const ja: Record<string, string> = {
   "sidebar.configGameDir": "ゲームディレクトリを設定",
   "sidebar.notSet": "未設定",
   "sidebar.noMatchInstances": "一致する統合パックが見つかりません",
+  "sidebar.instanceList": "統合パック一覧",
   "sidebar.noMods": "{type}なし",
   // sidebar プッシュ/プルトースト（app-sidebar/index.ts）
   "sidebar.selectPackFirst": "先に{verb}するパックを選択してください",

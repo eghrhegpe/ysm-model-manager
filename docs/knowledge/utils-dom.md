@@ -146,6 +146,7 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 - `esc(s: string): string` — **治理红线函数**：转义 `&` `<` `>` `"` `'` 五种字符为 HTML 实体（`&` 最先替换防二次转义）；null/undefined 按空串处理不抛错
 - `escUnknown(s: unknown): string` — **`EscFn` 形状（`(s: unknown) => string`）的转义适配单点**（2026-09 收口）：`null/undefined → ""`、其余 `String(s)` 后走 `esc` 同一张表。页面接线（`views/app-content/init-pages.ts` 的诊断页 / 去重面板）与 14 处测试夹具共用它——此前生产是内联 lambda、夹具各自手写，**已分裂成 3 / 4 / 5 实体三种转义表**（`>` 与 `'` 在两版夹具里根本不转义），于是「测试绿」证明不了生产渲染正确。实证：`diagnostics/health.test.ts` 的「目录路径转义」曾把夹具的残缺表锁成契约（断言 `&lt;b>evil`，生产实为 `&lt;b&gt;evil&lt;/b&gt;`）。新增需要该签名的场景一律调它，不再手写 lambda
 - `hl(text: string, query?: string): string` — 先在**原始 text** 上大小写不敏感定位 query 的**首个**命中，再按原始索引切 before/match/after 三段、各自 `esc()` 后拼 `<mark>`（非「先整体转义再查找」——该路径会因 `&lt;` 错位，html.ts esc 注释显式否决）；无 query 或未命中时返回纯转义文本
+- **键盘原语 `bind-roving.ts`（ADR-308 D2，2026-09）**：`bindRoving(spec)` 泛化 roving tabindex 原语。`RovingSpec {root: ShadowRoot|Document; container: string|Element; itemSelector; preset?: "radio"|"tab"|"list"（默认 list）; orientation?（默认 both）; cyclic?（默认 false）; homeEnd?（默认 true）; initialIndex?; when?; onMove?; onActivate?}`，返回 `RovingHandle {syncIndex(i); activate(); dispose()}`。职责切分与 `tabs-a11y.ts|bindTabA11y` 同构：**消费方模板声明结构 ARIA 角色（listbox/option 等），原语只管交互态**（roving tabindex 0/-1、aria-selected/aria-checked 迁移、焦点、键分派）；items 每次 keydown 实时 `querySelectorAll`（innerHTML 换血安全，索引按位置、列表变短则钳制）；modifier 键（ctrl/meta/alt）整体让位（不打断 key-router 组合键）；编辑目标（INPUT/TEXTAREA/contentEditable）内忽略；容器缺失 → 惰性 handle（syncIndex/activate 安全空转，不抛）
 - **焦点记忆 / 恢复 + 跨 Shadow DOM 焦点陷阱**（`utils/dom/focus-restore.ts`，2026-08-29）：
   - `rememberTrigger()` 记下当前 `document.activeElement`（同步，开模态/浮层前调）
   - `returnFocus()` 关闭时把焦点还给记住的元素；元素已离文档/不可聚焦时静默跳过（不抛错）；`clearTrigger()` 显式清除
@@ -179,5 +180,6 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 - [utils_display](./utils-display.md) — 文件名显示（同源红线）
 - `frontend/src/utils/html/html.test.ts` — 单元测试（验证入口）
 - `frontend/src/utils/dom/virtual-scroll.test.ts` — 虚拟滚动原语测试
+- `frontend/src/utils/dom/bind-roving.test.ts` — 键盘原语契约测试（17：初始布局/移动+激活/钳制/循环/Home-End/preventDefault/modifier 让位/三预设/三向/when 门控/编辑目标忽略/innerHTML 换血/handle 幂等/零项与缺容器全安全）
 - `frontend/src/features/community/virtual-list.test.ts` — 定高虚拟列表组件测试
 - AGENTS.md §3.3 UI 安全红线

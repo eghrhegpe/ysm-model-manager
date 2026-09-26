@@ -338,6 +338,7 @@ export const ja: Record<string, string> = {
   "oldest.heatmapTip": "{month}: {count} ファイル",
   "oldest.daysAgo": "{n} 日前",
   "oldest.noPicks": "おすすめはありません",
+  "oldest.statsFailed": "統計の読み込みに失敗しました",
   "dedup.sha256Hint": "SHA256 ハッシュでグループ化し、各グループから1つを残して残りをごみ箱へ移動",
   "dedup.startDedup": "重複削除を開始",
 

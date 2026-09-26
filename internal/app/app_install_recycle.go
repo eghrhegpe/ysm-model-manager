@@ -110,6 +110,10 @@ func (a *App) ListRecycleBin(recyclePath string) []types.ModelEntry {
 	return all
 }
 
+// RestoreFromRecycle 从回收站恢复条目。filesRoot 为兜底恢复根：allRecycleRoots
+// 全部未命中时按它做最后一次尝试——GUI 传当前类型的仓库根（回收站列表按当前根
+// 作用域过滤，条目与该根相关），CLI 传 --files-root；恒传空串会让 fallback 变成
+// CWD 相对 ".recycle" 的死救援分支（2026-09 对接锐评③：前端已改传真实根）。
 func (a *App) RestoreFromRecycle(src, filesRoot string) error {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
@@ -149,9 +153,9 @@ func (a *App) DeleteFromRecycle(src string) error {
 }
 
 // EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。
-// src 参数保留以兼容既有前端绑定契约（批次4 P2 参数命名）：历史遗留占位，
-// 实际清空全部回收站而非按单目录，Go 端不消费该值。
-func (a *App) EmptyRecycleBin(src string) (int, error) {
+// （2026-09 对接锐评③：原 src 占位参数退役——「前端绑定契约兼容」的历史遗留
+// 死参数，GUI/CLI 两端均不消费该值，与 FindDuplicateFiles configStr 同批清理。）
+func (a *App) EmptyRecycleBin() (int, error) {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
 	cfg := a.LoadAppConfig()

@@ -336,6 +336,7 @@ export const en: Record<string, string> = {
   "oldest.heatmapTip": "{month}: {count} files",
   "oldest.daysAgo": "{n} days ago",
   "oldest.noPicks": "No recommendations",
+  "oldest.statsFailed": "Stats failed to load",
   "dedup.sha256Hint": "Group by SHA256 hash; keep one per group and move the rest to Recycle Bin",
   "dedup.startDedup": "Start Dedup",
 

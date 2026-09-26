@@ -99,6 +99,9 @@ export async function loadEntries(
         modTime: e.ModTime,
         banned: e.banned || false,
         type: e.type || "",
+        // HasTags 由 Go 扫描时批量填充（scanModelEntriesWithHit 读标签存储），
+        // row-tpl 的 tag-dot 标记消费——漏透传 = Go 白算、标记永不显示（对接锐评①）
+        HasTags: e.HasTags || false,
       };
     });
     return { filesRoot, entries };

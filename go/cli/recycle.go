@@ -115,7 +115,7 @@ func runRecycleEmpty(ctx *CmdContext) error {
 		}
 	}
 
-	count, err := ctx.App.EmptyRecycleBin("")
+	count, err := ctx.App.EmptyRecycleBin()
 	if err != nil {
 		return newRuntimeErrf("清空回收站失败: %w", err)
 	}

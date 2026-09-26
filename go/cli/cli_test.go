@@ -1746,7 +1746,7 @@ func TestRecycleRestore_RequiresPath(t *testing.T) {
 }
 
 func TestRecycleEmpty_YesFlagRuns(t *testing.T) {
-	// EmptyRecycleBin("") 在零值 App 上会走 LoadAppConfig 空配置路径，
+	// EmptyRecycleBin() 在零值 App 上会走 LoadAppConfig 空配置路径，
 	// 返回 (0, nil) 或错误——薄壳只验证 --yes 路径不 panic、不卡确认
 	out := captureOutput(t, func() {
 		_ = runRecycleEmpty(&CmdContext{App: &app.App{}, Args: []string{"--yes"}})

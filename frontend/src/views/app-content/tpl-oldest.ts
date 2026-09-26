@@ -161,15 +161,20 @@ function renderDailyPicksHtml(entries: ModelEntry[]): string {
   );
 }
 
-/** 整页装配（原 features 侧 loadOldestModel 内联组装段原样回迁） */
-export function renderOldestPage(entries: ModelEntry[], stats: RepoStats): string {
-  const heatmapHtml = buildHeatmapHtml(entries);
-  const sorted4 = [...entries]
-    .filter((e) => Number.isFinite(e.ModTime) && e.ModTime > 0)
-    .sort((a, b) => a.ModTime - b.ModTime)
-    .slice(0, OLDEST_CARD_COUNT);
-  const oldestHtml = renderOldestCardsHtml(sorted4);
-  const dailyHtml = renderDailyPicksHtml(entries);
+/** 统计条（对接锐评②降级路径）：stats 为 null（RepoHealthAudit 失败）→ 失败提示行，
+ * 模型卡片/热力图/每日推荐不依赖报告，照常渲染；正常 → 评分环 + 统计 pill */
+function renderStatsBarHtml(stats: RepoStats | null, statsError?: string): string {
+  if (!stats) {
+    return (
+      '<div class="oldest-stats-bar">' +
+      '<div class="stat-row" style="color:var(--muted);font-size:var(--fs-sm);justify-content:center">' +
+      UI_ICONS.error +
+      " " +
+      esc(t("oldest.statsFailed")) +
+      (statsError ? ` · ${esc(statsError)}` : "") +
+      "</div></div>"
+    );
+  }
   const {
     score,
     healthColor,
@@ -181,7 +186,6 @@ export function renderOldestPage(entries: ModelEntry[], stats: RepoStats): strin
     dupGroups,
   } = stats;
   return (
-    '<div class="oldest-page">' +
     '<div class="oldest-stats-bar">' +
     '<div class="oldest-health-box">' +
     '<div class="oldest-health-label">' +
@@ -226,7 +230,26 @@ export function renderOldestPage(entries: ModelEntry[], stats: RepoStats): strin
     UI_ICONS.link +
     " " +
     dupGroups +
-    "</span></div></div>" +
+    "</span></div></div>"
+  );
+}
+
+/** 整页装配（原 features 侧 loadOldestModel 内联组装段原样回迁） */
+export function renderOldestPage(
+  entries: ModelEntry[],
+  stats: RepoStats | null,
+  statsError?: string,
+): string {
+  const heatmapHtml = buildHeatmapHtml(entries);
+  const sorted4 = [...entries]
+    .filter((e) => Number.isFinite(e.ModTime) && e.ModTime > 0)
+    .sort((a, b) => a.ModTime - b.ModTime)
+    .slice(0, OLDEST_CARD_COUNT);
+  const oldestHtml = renderOldestCardsHtml(sorted4);
+  const dailyHtml = renderDailyPicksHtml(entries);
+  return (
+    '<div class="oldest-page">' +
+    renderStatsBarHtml(stats, statsError) +
     '<div class="oldest-section">' +
     '<div class="oldest-section-title">' +
     UI_ICONS.oldest +

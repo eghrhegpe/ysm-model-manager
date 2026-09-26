@@ -51,11 +51,11 @@ status: active
 
 ## 核心职责
 
-- `loadRecycleBin()`：`ListRecycleBin("")` 取全部条目 → `GetRepoRoot(currentType)` 按当前资源类型根目录前缀过滤 → 渲染条目（名称走 `renderDisplayName`、大小走宿主 `_fmtSize`、完整路径展示）；类型图标同步走 `typeIconOf()`（`utils/resource/types.ts` 派生自 `resource_types.json`，ADR-269 D3④：废 `loadResourceRegistry()` RPC 旁路）
+- `loadRecycleBin()`：`GetRepoRoot(currentType)` 取当前类型根 → `ListRecycleBin(currentRoot)` **作用域过滤归 Go 端**（按根互相包含判定相关回收站，前端不再自建路径前缀匹配）→ 渲染条目（名称走 `renderDisplayName`、大小走宿主 `_fmtSize`、完整路径展示）；类型图标同步走 `typeIconOf()`（`utils/resource/types.ts` 派生自 `resource_types.json`，ADR-269 D3④：废 `loadResourceRegistry()` RPC 旁路）
 - generation 守卫：`createLoadGuard()`（utils/async/load-guard.ts，与 oldest-models 共用）每次加载自增代数，`await` 后比对 `guard.isStale()`，过期请求的结果直接丢弃，不覆盖新列表；重载入口先 `guard.invalidate()`（含 catch 分支）
-- 单条恢复：按钮 `disabled` 自锁 + `leaving` 离场动画（150ms）后 `RestoreFromRecycle(path, "")`，成功后重载列表并广播刷新；失败回滚 `leaving` 类并解锁按钮
+- 单条恢复：按钮 `disabled` 自锁 + `leaving` 离场动画（150ms）后 `RestoreFromRecycle(path, currentRoot)`，成功后重载列表并广播刷新；失败回滚 `leaving` 类并解锁按钮。**filesRoot 传当前类型真实根（2026-09 对接锐评③）**：该参数是 Go 端 allRecycleRoots 全部未命中时的兜底恢复根，恒传空串会让 fallback 沦为 CWD 相对 `.recycle` 的死救援分支；CLI 侧同参传 `--files-root`
 - 单条删除：`modalConfirm` 二次确认后同样自锁 + 动画 → `DeleteFromRecycle(path)`
-- 清空回收站：`modalConfirm`（danger）确认后 `EmptyRecycleBin("")`，toast 回报数量
+- 清空回收站：`modalConfirm`（danger）确认后 `EmptyRecycleBin()`（无参，2026-09 对接锐评③退役原 src 占位死参数——GUI/CLI 两端均不消费），toast 回报数量
 - 监听 `repo:rtype-changed`：资源类型切换时更新 `currentType` 并重载列表
 - 条目名称区点击 → `bus.emit("model:select", { path })` 查看详情：**在 init 阶段对列表容器做一次事件委托**（`onRecycleListClick`，命中 `.recy-restore`/`.recy-del` 时短路），不在每次渲染时逐元素绑定，避免监听泄漏
 

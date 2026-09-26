@@ -54,7 +54,7 @@ type AppService interface {
 	// ── 回收站 ──
 	ListRecycleBin(recyclePath string) []types.ModelEntry
 	RestoreFromRecycle(src, filesRoot string) error
-	EmptyRecycleBin(src string) (int, error)
+	EmptyRecycleBin() (int, error)
 
 	// ── 下载队列 ──
 	EnqueueDownloads(tasks []types.DownloadTask) error

@@ -84,6 +84,8 @@ export function createDedupSession(): DedupSession {
     state.execBusy = true;
     let del = 0,
       fail = 0;
+    // 对接锐评⑦：失败不只报数量——保留前 3 条缘由（friendlyError 单源，esc 交渲染单点）
+    const errors: string[] = [];
     // 组容器按渲染平铺序与 allResults 的 groups 一一对应（渲染 groupIndex 递增 = 同序）。
     // 逐组在容器内查 :checked，替代按 name="dedup-keep-<gi>" 的全局拼串查询——
     // 组间插入其它控件也不致错位，消除「渲染计数 gi / exec 计数 gi2」双轨对齐依赖。
@@ -103,8 +105,9 @@ export function createDedupSession(): DedupSession {
               try {
                 await MoveToRecycle(files[fi].path);
                 del++;
-              } catch {
+              } catch (e) {
                 fail++;
+                if (errors.length < 3) errors.push(friendlyError(e));
               }
             }
           }
@@ -115,12 +118,13 @@ export function createDedupSession(): DedupSession {
         bus.emit("stats:refresh");
         bus.emit("tree:reload");
       }
-      list.innerHTML = msgRowHTML(
-        fail > 0 ? "warn" : "success",
-        t("diagnostics.dedupDone", { del, fail }),
-        undefined,
-        { icon: UI_ICONS.success },
-      );
+      list.innerHTML =
+        msgRowHTML(
+          fail > 0 ? "warn" : "success",
+          t("diagnostics.dedupDone", { del, fail }),
+          undefined,
+          { icon: UI_ICONS.success },
+        ) + (errors.length ? errors.map((msg) => msgRowHTML("error", msg, esc)).join("") : "");
     } catch (err) {
       // 低优先③：与 conflicts/health 同口径——friendlyError 单源（Code→i18n、Go 中文透传、
       // 英文才加前缀），esc 交 msgRowHTML 单点转义

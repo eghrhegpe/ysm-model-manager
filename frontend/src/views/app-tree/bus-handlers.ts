@@ -190,7 +190,8 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
       for (let j = 0; j < results.length; j++) {
         const r = results[j];
         if (r.status === "fulfilled") count++;
-        else errors.push(`${batch[j].split(/[/\\]/).pop()}: ${String(r.reason)}`);
+        // 对接锐评⑦：拒绝缘由走 friendlyError 单源（AppError Code→i18n、中文透传）
+        else errors.push(`${batch[j].split(/[/\\]/).pop()}: ${friendlyError(r.reason)}`);
       }
     }
     try {

@@ -76,7 +76,7 @@ function setupRecycleActions(
   listEl: HTMLElement,
   guard: LoadGuard,
   opts: {
-    RestoreFromRecycle: (p: string, s: string) => Promise<unknown>;
+    RestoreFromRecycle: (p: string) => Promise<unknown>;
     DeleteFromRecycle: (p: string) => Promise<unknown>;
     getCurrentType: GetCurrentTypeFn;
     loadRecycleBin: () => void;
@@ -134,7 +134,9 @@ function setupRecycleActions(
   };
 
   bindRecycleAction(".recy-restore", {
-    binding: (p) => opts.RestoreFromRecycle(p, ""),
+    // filesRoot 兜底根由 loadRecycleBin 闭包传入当前类型真实根（对接锐评③：
+    // 原恒传空串让 Go 端 fallback 沦为 CWD 相对 ".recycle" 的死救援分支）
+    binding: (p) => opts.RestoreFromRecycle(p),
     toastKey: "recycle.restored",
   });
   bindRecycleAction(".recy-del", {
@@ -185,7 +187,7 @@ function onRecycleEmptyClick(opts: {
     opts.setEmptyBusy(true);
     try {
       const { EmptyRecycleBin } = await opts.getApp();
-      const n = Number(await EmptyRecycleBin("")) || 0; // 旧桥可能返回 undefined，兜底防「undefined 个文件」
+      const n = Number(await EmptyRecycleBin()) || 0; // 旧桥可能返回 undefined，兜底防「undefined 个文件」
       opts.onShowToast(opts.t("recycle.cleared", { n }), TOAST_EMPTY_OK_MS, "success");
       opts.loadRecycleBin();
       bus.emit("stats:refresh");
@@ -278,7 +280,8 @@ function buildLoadRecycleBin(
       list.innerHTML = deps.renderListHtml(entries);
       if (shell.cleanupActions.current) shell.cleanupActions.current();
       shell.cleanupActions.current = setupRecycleActions(list, guard, {
-        RestoreFromRecycle,
+        // 传当前类型真实根作为 Go 端兜底恢复根（列表按该根作用域过滤，条目与根相关）
+        RestoreFromRecycle: (p) => RestoreFromRecycle(p, currentRoot),
         DeleteFromRecycle,
         getCurrentType,
         loadRecycleBin: shell.loadRecycleBin,

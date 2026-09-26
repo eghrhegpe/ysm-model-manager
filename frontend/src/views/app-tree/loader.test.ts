@@ -125,6 +125,20 @@ describe("loadEntries", () => {
     expect(mocks.IsFileBanned).not.toHaveBeenCalled();
   });
 
+  it("HasTags 由 Go 下发并透传到 TreeEntry（row-tpl tag-dot 消费，对接锐评①）", async () => {
+    const repo = MOCK_DATA.GetRepoRoot;
+    mocks.ScanModelEntriesFiltered.mockResolvedValue([
+      { Name: "tagged.ysm", Path: `${repo}/tagged.ysm`, Size: 10, ModTime: 1, HasTags: true },
+      { Name: "plain.ysm", Path: `${repo}/plain.ysm`, Size: 10, ModTime: 1 },
+    ]);
+    const { loadEntries } = await import("./loader.ts");
+    const r = await loadEntries("ysm");
+    // 有标签条目必须带 HasTags=true（漏透传 = 树内标签圆点永不显示）；
+    // Go 未填（undefined）时归一为 false，row-tpl 的真值判断不出 undefined
+    expect(r.entries[0].HasTags).toBe(true);
+    expect(r.entries[1].HasTags).toBe(false);
+  });
+
   it("仓库根路径带反斜杠时也能剥离前缀", async () => {
     mocks.GetRepoRoot.mockResolvedValue("C:\\repo");
     mocks.ScanModelEntriesFiltered.mockResolvedValue([

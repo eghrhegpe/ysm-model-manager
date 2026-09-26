@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
 import { flushPromises } from "@/test-utils/index.ts";
 import { renderOldestPage } from "@/views/app-content/tpl-oldest.ts";
+import type { OldestModelHandle } from "./oldest-models.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
@@ -74,7 +75,7 @@ async function setupPendingRoot(): Promise<{
   resolveFirst: (v: string) => void;
   rejectFirst: (e: Error) => void;
   container: HTMLDivElement;
-  loadPromise: Promise<() => void>;
+  loadPromise: Promise<OldestModelHandle>;
 }> {
   let resolveFirst!: (v: string) => void;
   let rejectFirst!: (e: Error) => void;
@@ -91,18 +92,20 @@ async function setupPendingRoot(): Promise<{
 }
 
 describe("loadOldestModel", () => {
-  it("container 为空 → 返回空清理函数", async () => {
+  it("container 为空 → 返回空清理句柄", async () => {
     const { loadOldestModel } = await import("./oldest-models.ts");
-    const cleanup = await loadOldestModel(null as unknown as HTMLElement, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup, onShow } = await loadOldestModel(null as unknown as HTMLElement, (s) => s, { renderPage: renderOldestPage });
     expect(typeof cleanup).toBe("function");
+    expect(typeof onShow).toBe("function");
     cleanup();
+    onShow();
   });
 
   it("未配置目录 → 显示请先配置提示", async () => {
     mocks.GetRepoRoot.mockResolvedValue("");
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     expect(container.textContent).toContain("请先配置该资源类型目录");
     cleanup();
   });
@@ -111,7 +114,7 @@ describe("loadOldestModel", () => {
     mocks.ScanModelEntries.mockResolvedValue([]);
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     expect(container.textContent).toContain("该类型仓库为空");
     cleanup();
@@ -121,7 +124,7 @@ describe("loadOldestModel", () => {
     mocks.ScanModelEntries.mockResolvedValue(sampleEntries);
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
 
@@ -157,7 +160,7 @@ describe("loadOldestModel", () => {
     unsubModelSelect = bus.on("model:select", (p) => selected.push(p as { path: string }));
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
 
@@ -173,7 +176,7 @@ describe("loadOldestModel", () => {
     mocks.ScanModelEntries.mockResolvedValue(sampleEntries);
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
 
@@ -196,7 +199,7 @@ describe("loadOldestModel", () => {
     mocks.ScanModelEntries.mockRejectedValue(new Error("scan crashed"));
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
     expect(container.textContent).toContain("加载失败");
@@ -209,7 +212,7 @@ describe("loadOldestModel", () => {
     mocks.GetRepoRoot.mockRejectedValue(new Error("root boom"));
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
     expect(container.textContent).toContain("加载失败");
@@ -229,7 +232,7 @@ describe("loadOldestModel", () => {
 
     // 旧请求此刻才返回 → gen 已过期必须丢弃（不得再走 ScanModelEntries）
     resolveFirst("/stale-root");
-    const cleanup = await loadPromise;
+    const { cleanup } = await loadPromise;
     await flushPromises();
 
     expect(mocks.ScanModelEntries).toHaveBeenCalledTimes(1);
@@ -246,7 +249,7 @@ describe("loadOldestModel", () => {
     expect(container.textContent).toContain("仓库评分"); // render#2 已渲染
 
     rejectFirst(new Error("stale boom"));
-    const cleanup = await loadPromise;
+    const { cleanup } = await loadPromise;
     await flushPromises();
 
     // 过期错误被 gen 守卫丢弃，不得覆盖新内容
@@ -266,7 +269,7 @@ describe("loadOldestModel", () => {
     ]);
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
 
@@ -279,27 +282,74 @@ describe("loadOldestModel", () => {
     cleanup();
   });
 
-  it("RepoHealthAudit 失败 → 显示错误信息", async () => {
+  it("RepoHealthAudit 失败 → 统计条降级，模型列表保留（对接锐评②）", async () => {
+    mocks.ScanModelEntries.mockResolvedValue(sampleEntries);
     mocks.RepoHealthAudit.mockRejectedValue(new Error("audit crashed"));
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
-    expect(container.textContent).toContain("加载失败");
+    // 降级统计条：失败提示 + 错误缘由（friendlyError 单源）
+    expect(container.textContent).toContain("统计加载失败");
     expect(container.textContent).toContain("audit crashed");
+    // 降级不杀主列表：模型卡片/热力图照常渲染
+    expect(container.querySelectorAll(".model-card-sm").length).toBeGreaterThan(0);
+    expect(container.textContent).toContain("月度活动");
     cleanup();
   });
 
-  it("RepoHealthAudit 返回后端业务错误 → 显示错误信息", async () => {
+  it("RepoHealthAudit 返回后端业务错误 → 统计条降级显示缘由", async () => {
+    mocks.ScanModelEntries.mockResolvedValue(sampleEntries);
     mocks.RepoHealthAudit.mockRejectedValue(new Error("审计目录不可用"));
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
-    expect(container.textContent).toContain("加载失败");
     expect(container.textContent).toContain("审计目录不可用");
+    expect(container.querySelectorAll(".model-card-sm").length).toBeGreaterThan(0);
+    cleanup();
+  });
+
+  it("隐藏面板类型切换 → 只记脏账不扫盘，onShow 补渲染（感知性绑定，对接锐评②）", async () => {
+    mocks.ScanModelEntries.mockResolvedValue(sampleEntries);
+    const { loadOldestModel } = await import("./oldest-models.ts");
+    const container = document.createElement("div");
+    const { cleanup, onShow } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    await flushPromises();
+    await flushPromises();
+    const callsAfterInit = mocks.ScanModelEntries.mock.calls.length;
+
+    // 隐藏期间切类型：RepoHealthAudit 全库 SHA256 是重活，不扫盘只记账
+    container.hidden = true;
+    bus.emit("repo:rtype-changed", "mmd");
+    await flushPromises();
+    await flushPromises();
+    expect(mocks.ScanModelEntries.mock.calls.length).toBe(callsAfterInit);
+
+    // 切回可见：onShow 按需补渲染新类型
+    container.hidden = false;
+    onShow();
+    await flushPromises();
+    await flushPromises();
+    expect(mocks.GetRepoRoot).toHaveBeenLastCalledWith("mmd");
+    expect(mocks.ScanModelEntries.mock.calls.length).toBe(callsAfterInit + 1);
+    cleanup();
+  });
+
+  it("可见面板类型切换 → 照常重渲染（隐藏守卫不改变可见路径）", async () => {
+    mocks.ScanModelEntries.mockResolvedValue(sampleEntries);
+    const { loadOldestModel } = await import("./oldest-models.ts");
+    const container = document.createElement("div");
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    await flushPromises();
+    await flushPromises();
+
+    bus.emit("repo:rtype-changed", "mmd");
+    await flushPromises();
+    await flushPromises();
+    expect(mocks.GetRepoRoot).toHaveBeenLastCalledWith("mmd");
     cleanup();
   });
 
@@ -311,7 +361,7 @@ describe("loadOldestModel", () => {
     mocks.ScanModelEntries.mockResolvedValue(badEntries);
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
 
@@ -325,7 +375,7 @@ describe("loadOldestModel", () => {
     mocks.ScanModelEntries.mockResolvedValue(sampleEntries);
     const { loadOldestModel } = await import("./oldest-models.ts");
     const container = document.createElement("div");
-    const cleanup = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
+    const { cleanup } = await loadOldestModel(container, (s) => s, { renderPage: renderOldestPage });
     await flushPromises();
     await flushPromises();
 

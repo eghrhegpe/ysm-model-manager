@@ -205,7 +205,7 @@ describe("恢复 / 删除 / 清空", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(mocks.RestoreFromRecycle).toHaveBeenCalledWith("/mc/a.ysm", "");
+    expect(mocks.RestoreFromRecycle).toHaveBeenCalledWith("/mc/a.ysm", "/mc"); // 兜底根=当前类型真实根（对接锐评③）
     expect(toasts.some((t) => t.type === "success" && t.msg.length > 0)).toBe(true);
     expect(stats).toHaveBeenCalled();
     expect(reload).toHaveBeenCalled();
@@ -324,7 +324,7 @@ describe("恢复 / 删除 / 清空", () => {
     await flushPromises();
     await flushPromises();
 
-    expect(mocks.EmptyRecycleBin).toHaveBeenCalledWith("");
+    expect(mocks.EmptyRecycleBin).toHaveBeenCalledWith(); // 死参数已退役（对接锐评③）
     expect(stats).toHaveBeenCalled();
     expect(reload).toHaveBeenCalled();
     expect(toasts.some((t) => t.type === "success" && t.msg.length > 0)).toBe(true);

@@ -317,18 +317,19 @@ async function initDedupTab(
 }
 
 /**
- * 初始化「最近/最旧模型」tab，返回清理函数
+ * 初始化「最近/最旧模型」tab，返回 { cleanup, onShow }：
+ * cleanup = 组件卸载清理；onShow = 补渲染隐藏期间被脏账记账跳过的类型切换
+ * （感知性绑定，对接锐评②——隐藏面板不触发全库 SHA256 体检，切进面板时按需补）
  */
 async function initOldestTab(
   _host: AppContentHost,
   container: HTMLElement,
-): Promise<(() => void) | null> {
+): Promise<{ cleanup: () => void; onShow: () => void }> {
   // ADR-190 D1a：整页 DOM 模板由 views 提供（tpl-oldest.ts），features 只做数据编排
   const { renderOldestPage } = await import("./tpl-oldest.ts");
-  const oldestCleanup = await loadOldestModel(container, (s) => esc(s), {
+  return loadOldestModel(container, (s) => esc(s), {
     renderPage: renderOldestPage,
   });
-  return oldestCleanup;
 }
 
 /**

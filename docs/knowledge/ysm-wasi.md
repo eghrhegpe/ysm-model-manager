@@ -79,6 +79,12 @@ em++ -sSTANDALONE_WASM -sSTACK_SIZE=4194304 -sALLOW_MEMORY_GROWTH=1 \
 5. **契约测试**：`go/ysmwasi/ysmwasi_test.go` 锁导入闭集（手解 wasm import section：env 4 + wasi 10，上游重编 wasm 引入新导入即红）+ 护栏 + 畸形输入并发；真实样本冒烟 `YSMWASI_TEST_FIXTURE=<.ysm> go test ./go/ysmwasi/ -run TestDecode_RealFixture`（V3 75 产物 1.4s / V2 产物均解出）。
 6. `collectToMemory` 是 vendored 副本改动，上游 Parser 版本更新时需重放（或推上游）。
 
+## 2026-09-27 后续三件（已闭环两件半）
+
+1. **环形日志接线（已闭环，靠机制白嫖）**：ADR-289 的 `app.go` `log.SetOutput(MultiWriter(stderr, RuntimeBuffer))` 自动捕获标准库 log——`[ysm-wasi]` 前缀恰在 tag 提取允许集（连字符合规）、「失败」命中 error 级词表，**零新增代码即接通**；回归锁 `TestRunYSMDecode_RingLogWired` 防改回 fmt.Fprintln(stderr) 旁路（avatar 旧桥写法）。
+2. **interpreter 基准（已量化，结论严峻）**：同一 V3 样本（1.7MB 输入 75 产物，i7-13700HX）compiler **0.76s** vs interpreter **35.6s = 47×**。Android 无 wazero optimizing compiler（长期不支持），手机 silicon 只会更慢且撞 60s 超时护栏——**ADR-316 D5「Android 首次获得加密解码」技术上成立、体验上不可用**，上线前须产品决策：①Android 回退 metadata-only（放弃加密解码）；②接受慢速单模型解码（需调大超时 + 进度提示）；③等 wazero compiler 支持 android。基准复跑：`YSMWASI_TEST_FIXTURE=<.ysm> go test ./go/ysmwasi/ -bench .`（`ysmwasi_bench_test.go` 双模式）。
+3. **推上游（准备包已备）**：`docs/upstream-pr/ysmparser-collecttomemory-pr.md`——collectToMemory 纯增量提案 + V1/V2/V3 实现 + 桥接导出全文 + 提交前待办；结论「越早越好但非依赖项」（vendored 重放仍是主防线）。
+
 ## 相关
 
 - [ysm-wasm](./ysm-wasm.md) — 现 Node.js + WASM 桥（生产主路径，本卡验证的退役对象）

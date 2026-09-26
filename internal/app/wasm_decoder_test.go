@@ -1,9 +1,12 @@
 package app
 
 import (
+	"bytes"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -134,6 +137,29 @@ func TestRunYSMDecode_InvalidYSM(t *testing.T) {
 	result := runYSMDecode([]byte("not a ysm file"))
 	if result != nil {
 		t.Fatalf("无效输入应返回 nil, got %v", result)
+	}
+}
+
+// TestRunYSMDecode_RingLogWired 环形日志接线回归锁（ADR-316 D2：noeh abort
+// 语义下，解码失败是用户可感知的唯一诊断渠道）。ADR-289 机制：app.go 的
+// log.SetOutput(MultiWriter(stderr, RuntimeBuffer)) 捕获标准库 log 输出，
+// `[ysm-wasi]` 前缀由 RuntimeBuffer 提取为 tag（连字符在允许集）、「失败」
+// 推断为 error 级。本测试锁住：解码失败必须走 log.Printf 且前缀合规——
+// 若有人改回 fmt.Fprintln(stderr) 直写（avatar 旧桥的旁路写法）则本测试红。
+func TestRunYSMDecode_RingLogWired(t *testing.T) {
+	var captured bytes.Buffer
+	old := log.Writer()
+	log.SetOutput(&captured)
+	t.Cleanup(func() { log.SetOutput(old) })
+
+	runYSMDecode([]byte("not a ysm file"))
+
+	out := captured.String()
+	if !strings.Contains(out, "[ysm-wasi]") {
+		t.Fatalf("解码失败未落 [ysm-wasi] 前缀日志（环形日志面板将无法按 tag 检索）: %q", out)
+	}
+	if !strings.Contains(out, "失败") {
+		t.Fatalf("日志缺「失败」标记（级别推断将降为 info 而非 error）: %q", out)
 	}
 }
 

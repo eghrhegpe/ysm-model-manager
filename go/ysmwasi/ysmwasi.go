@@ -49,47 +49,55 @@ var (
 	once     sync.Once
 )
 
-// ensureInit 惰性初始化：建 runtime + wasi + 4 个 env 垫片 + 编译内嵌 wasm。
+// ensureInit 惰性初始化：建 runtime（默认 optimizing compiler；Android 等
+// compiler 不支持平台 wazero 自动退 interpreter）+ wasi + 4 个 env 垫片 +
+// 编译内嵌 wasm。
 // WithStartFunctions 清空自动启动（standalone WASI command 的 _start 会跑
 // CLI11 空参 main，-fignore-exceptions 下 throw=trap），实例化后手动调
 // __wasm_call_ctors。
 func ensureInit() error {
 	once.Do(func() {
-		ctx := context.Background()
-		r := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig())
-		if _, err := wasi.NewBuilder(r).Instantiate(ctx); err != nil {
-			_ = r.Close(ctx)
-			initErr = fmt.Errorf("wasi 实例化: %w", err)
-			return
-		}
-		// emscripten libc 直译的 3 个 syscall 垫片 + 内存增长回调（noeh 构建
-		// 的全部 env 依赖；getdents64 解码 happy path 不依赖，stub 返回 EOF）
-		_, err := r.NewHostModuleBuilder("env").
-			NewFunctionBuilder().WithFunc(func(ctx context.Context, mod api.Module, fd, buf, count uint32) int32 {
-			return 0
-		}).Export("__syscall_getdents64").
-			NewFunctionBuilder().WithFunc(sysGetcwd).
-			Export("__syscall_getcwd").
-			NewFunctionBuilder().WithFunc(func(ctx context.Context, mod api.Module, fd int32, path, buf, size uint32) int32 {
-			return -22 // -EINVAL：不支持符号链接
-		}).Export("__syscall_readlinkat").
-			NewFunctionBuilder().WithFunc(func(ctx context.Context, mod api.Module, size uint32) {}).
-			Export("emscripten_notify_memory_growth").
-			Instantiate(ctx)
+		r, c, err := newRuntime(context.Background(), wazero.NewRuntimeConfig())
 		if err != nil {
-			_ = r.Close(ctx)
-			initErr = fmt.Errorf("env 垫片: %w", err)
-			return
-		}
-		c, err := r.CompileModule(ctx, wasmBinary)
-		if err != nil {
-			_ = r.Close(ctx)
-			initErr = fmt.Errorf("wasm 编译: %w", err)
+			initErr = err
 			return
 		}
 		runtime, compiled = r, c
 	})
 	return initErr
+}
+
+// newRuntime 建带垫片的 runtime 并编译内嵌 wasm（cfg 决定 compiler/interpreter；
+// bench 测试用 interpreter 配置量化无 compiler 平台的解码耗时）。
+func newRuntime(ctx context.Context, cfg wazero.RuntimeConfig) (wazero.Runtime, wazero.CompiledModule, error) {
+	r := wazero.NewRuntimeWithConfig(ctx, cfg)
+	if _, err := wasi.NewBuilder(r).Instantiate(ctx); err != nil {
+		_ = r.Close(ctx)
+		return nil, nil, fmt.Errorf("wasi 实例化: %w", err)
+	}
+	// emscripten libc 直译的 3 个 syscall 垫片 + 内存增长回调（noeh 构建
+	// 的全部 env 依赖；getdents64 解码 happy path 不依赖，stub 返回 EOF）
+	if _, err := r.NewHostModuleBuilder("env").
+		NewFunctionBuilder().WithFunc(func(ctx context.Context, mod api.Module, fd, buf, count uint32) int32 {
+		return 0
+	}).Export("__syscall_getdents64").
+		NewFunctionBuilder().WithFunc(sysGetcwd).
+		Export("__syscall_getcwd").
+		NewFunctionBuilder().WithFunc(func(ctx context.Context, mod api.Module, fd int32, path, buf, size uint32) int32 {
+		return -22 // -EINVAL：不支持符号链接
+	}).Export("__syscall_readlinkat").
+		NewFunctionBuilder().WithFunc(func(ctx context.Context, mod api.Module, size uint32) {}).
+		Export("emscripten_notify_memory_growth").
+		Instantiate(ctx); err != nil {
+		_ = r.Close(ctx)
+		return nil, nil, fmt.Errorf("env 垫片: %w", err)
+	}
+	c, err := r.CompileModule(ctx, wasmBinary)
+	if err != nil {
+		_ = r.Close(ctx)
+		return nil, nil, fmt.Errorf("wasm 编译: %w", err)
+	}
+	return r, c, nil
 }
 
 // sysGetcwd 返回 preopen 目录 "/output" 作为 cwd（parser 内相对路径兜底；
@@ -122,8 +130,13 @@ func Decode(ysmData []byte) ([]ysm.DecodedFile, error) {
 
 	mu.Lock()
 	defer mu.Unlock()
+	return decodeWith(ctx, runtime, compiled, ysmData)
+}
 
-	mod, err := runtime.InstantiateModule(ctx, compiled, moduleCfg)
+// decodeWith 在给定 runtime/编译产物上执行单次解码（调用方持锁/限并发）。
+// bench 测试用 interpreter runtime 复用此路径，保证与生产 Decode 同构。
+func decodeWith(ctx context.Context, rt wazero.Runtime, cm wazero.CompiledModule, ysmData []byte) ([]ysm.DecodedFile, error) {
+	mod, err := rt.InstantiateModule(ctx, cm, moduleCfg)
 	if err != nil {
 		return nil, fmt.Errorf("module 实例化: %w", err)
 	}

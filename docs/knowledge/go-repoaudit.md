@@ -8,6 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - Audit
+    - AuditCtx
     - CacheStatus
     - Classify
     - ClassifyWith
@@ -16,6 +17,7 @@ auto_fields:
     - DirAuditResult
     - HealthReport
     - HealthReportFor
+    - HealthReportForCtx
     - ResourceSummary
     - ScoreVerdict
     - VerdictBad

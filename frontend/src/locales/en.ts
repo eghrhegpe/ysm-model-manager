@@ -996,6 +996,8 @@ export const en: Record<string, string> = {
   "diagnostics.selectResourceType": "Select Resource Type",
   "diagnostics.conflictTypeContent": "Content Modified",
   "diagnostics.conflictTypeBoth": "Added in Both",
+  "diagnostics.cancelScan": "Cancel scan",
+  "diagnostics.scanCancelled": "Scan cancelled",
   // [ADR-305 D5 reserved key] reserved for ADR-300 S2 diagnostics group refactor, do not delete
   "diagnostics.healthTitle": "Repo Health Audit",
   "diagnostics.healthHint":

@@ -75,3 +75,26 @@ export function statRowHTML(
 ): string {
   return statusRowHTML(`stat-row diag-stat diag-stat-${kind}`, msg, esc, opts?.icon);
 }
+
+/**
+ * 扫描中占位行 + 取消按钮（ADR-314 长任务取消通道，health / dedup-scan 共用外壳）。
+ *
+ * 「扫描中」是取消按钮唯一合法形态：任务尚未产出结果，取消 = 纯丢弃、无破坏性；
+ * 结果行不提供取消（结果已出，删除/执行各有其确认流）。
+ * 与本模块「图标由调用点给」同纪律：按钮只产外壳，点击行为由调用方绑定——
+ * 查询 `#diag-scan-cancel` → `promise.cancel()`（Wails 原生通道，Go 侧 ctx 贯穿）。
+ * 按钮样式在 css/content-diag.ts|.diag-cancel-btn（行内 padding/font-size 会踩 design-token 闸）。
+ */
+export function scanRowWithCancelHTML(
+  msg: string,
+  esc: EscFn | undefined,
+  opts: { icon?: string; cancelLabel: string },
+): string {
+  const glyph = opts.icon ? `${opts.icon} ` : "";
+  const body = esc ? esc(msg) : msg;
+  const label = esc ? esc(opts.cancelLabel) : opts.cancelLabel;
+  return (
+    `<div class="stat-row diag-stat diag-stat-muted">${glyph}${body}` +
+    `<button id="diag-scan-cancel" type="button" class="diag-cancel-btn">${label}</button></div>`
+  );
+}

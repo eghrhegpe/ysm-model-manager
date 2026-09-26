@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -36,7 +37,7 @@ func TestFindDuplicateFiles_Guard(t *testing.T) {
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 
 	// 根内路径应通过守卫（即使无重复也返回空切片而非 error）
-	groups, err := a.FindDuplicateFiles(root, "")
+	groups, err := a.FindDuplicateFiles(context.Background(), root, "")
 	if err != nil {
 		t.Fatalf("根内路径不应报错: %v", err)
 	}
@@ -48,7 +49,7 @@ func TestFindDuplicateFiles_Guard(t *testing.T) {
 
 	// 根外路径应被守卫拒绝，且错误为结构化 AppError（INVALID_PATH，friendlyError 可映射 i18n）
 	outside := filepath.Join(base, "..", "outside")
-	_, err = a.FindDuplicateFiles(outside, "")
+	_, err = a.FindDuplicateFiles(context.Background(), outside, "")
 	if err == nil {
 		t.Fatal("根外路径应被守卫拒绝返回 error")
 	}
@@ -81,7 +82,7 @@ func TestFindDuplicateFiles_Basic(t *testing.T) {
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
-	groups, err := a.FindDuplicateFiles(root, "")
+	groups, err := a.FindDuplicateFiles(context.Background(), root, "")
 	if err != nil {
 		t.Fatalf("FindDuplicateFiles 失败: %v", err)
 	}
@@ -111,7 +112,7 @@ func TestFindDuplicateFiles_WithStrategy(t *testing.T) {
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 	// name_size 策略（文件名+大小）：a/b 同内容但文件名不同 → 不成组。
 	// 期望 0 组即可判别策略 token 确实生效——deep_hash（默认档）对同内容文件会返回 1 组。
-	groups, err := a.FindDuplicateFiles(root, "name_size")
+	groups, err := a.FindDuplicateFiles(context.Background(), root, "name_size")
 	if err != nil {
 		t.Fatalf("FindDuplicateFiles 失败: %v", err)
 	}
@@ -133,7 +134,7 @@ func TestFindDuplicateFiles_NoDupNilFree(t *testing.T) {
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
-	groups, err := a.FindDuplicateFiles(root, "deep_hash")
+	groups, err := a.FindDuplicateFiles(context.Background(), root, "deep_hash")
 	if err != nil {
 		t.Fatalf("FindDuplicateFiles 失败: %v", err)
 	}
@@ -192,14 +193,14 @@ func TestRepoHealthAudit_Guard(t *testing.T) {
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 
 	// 根内路径
-	_, err := a.RepoHealthAudit(root)
+	_, err := a.RepoHealthAudit(context.Background(), root)
 	if err != nil {
 		t.Fatalf("根内路径不应报错: %v", err)
 	}
 
 	// 根外路径
 	outside := filepath.Join(base, "..", "outside")
-	_, err = a.RepoHealthAudit(outside)
+	_, err = a.RepoHealthAudit(context.Background(), outside)
 	if err == nil {
 		t.Error("根外路径应被守卫拒绝")
 	}
@@ -214,7 +215,7 @@ func TestRepoHealthAudit_EmptyDir(t *testing.T) {
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
-	report, err := a.RepoHealthAudit(root)
+	report, err := a.RepoHealthAudit(context.Background(), root)
 	if err != nil {
 		t.Fatalf("空目录体检不应报错: %v", err)
 	}
@@ -241,7 +242,7 @@ func TestRepoHealthAudit_WithFiles(t *testing.T) {
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
-	report, err := a.RepoHealthAudit(root)
+	report, err := a.RepoHealthAudit(context.Background(), root)
 	if err != nil {
 		t.Fatalf("体检失败: %v", err)
 	}
@@ -256,7 +257,7 @@ func TestRepoHealthAudit_WithFiles(t *testing.T) {
 // TestRepoHealthAudit_EmptyPath 测试空路径返回错误
 func TestRepoHealthAudit_EmptyPath(t *testing.T) {
 	a := resourceApp(t, types.AppConfig{FilesRoot: t.TempDir()})
-	_, err := a.RepoHealthAudit("")
+	_, err := a.RepoHealthAudit(context.Background(), "")
 	if err == nil {
 		t.Error("空路径应返回 error")
 	}
@@ -398,5 +399,46 @@ func TestInstallResourceToInstance_FolderPush(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(installedDir, f)); os.IsNotExist(err) {
 			t.Errorf("文件夹级安装应包含 %s", f)
 		}
+	}
+}
+
+// TestFindDuplicateFiles_Cancelled ADR-314：预取消 ctx 穿透绑定层——路径守卫之后
+// 进入 dedup 管道即被取消检查点中止，错误链可 errors.Is 判定。
+func TestFindDuplicateFiles_Cancelled(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("same"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a := resourceApp(t, types.AppConfig{FilesRoot: base})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := a.FindDuplicateFiles(ctx, root, "")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("预取消 ctx 应返回 context.Canceled 链, got %v", err)
+	}
+}
+
+// TestRepoHealthAudit_Cancelled ADR-314：体检绑定同取消语义（walk 首检点即中止）。
+func TestRepoHealthAudit_Cancelled(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a := resourceApp(t, types.AppConfig{FilesRoot: base})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := a.RepoHealthAudit(ctx, root)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("预取消 ctx 应返回 context.Canceled 链, got %v", err)
 	}
 }

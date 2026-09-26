@@ -45,6 +45,7 @@ auto_fields:
     - initDropdown
     - InputBlockStack
     - installScrollSync
+    - isCancelError
     - isEditableTarget
     - isFileExistsError
     - isInputBlocked

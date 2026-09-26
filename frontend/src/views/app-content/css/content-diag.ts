@@ -90,6 +90,10 @@ export const contentDiagCSS: string = `
 /* 操作类型下拉（2026-09-28 纵向筛选）：与状态 chips 同排、与搜索框同款度量；
    max-width 封顶防长标签（「全部操作」多语）把 chips 挤走，margin-left:auto 推到行尾与 chips 分离。 */
 .diag-log-op-filter { font-size:var(--fs-sm); padding:var(--btn-padding-xs); border-radius:var(--radius-sm); border:1px solid var(--bd); background:var(--bg); color:var(--txt); max-width:150px; margin-left:auto; }
+/* ADR-314 长任务取消按钮（status-row|scanRowWithCancelHTML 唯一消费点）：扫描中行内的
+   紧凑取消钮。样式走类不走行内——inline padding/font-size 会踩 design-token 闸（只判新增行）。 */
+.diag-cancel-btn { margin-left:var(--sp-3); padding:var(--sp-1) var(--sp-3); font-size:var(--fs-xs); border:1px solid var(--bd); border-radius:var(--radius-sm); background:var(--surf); color:var(--muted); cursor:pointer; }
+.diag-cancel-btn:hover { color:var(--txt); border-color:var(--muted); }
 /* ADR-259：布局基线归 .tab-body（面板即 .tab-body）；.diag-panel 除入场动画钩子外，
    2026-09-25 起兼作三 tab 的唯一留白来源（见上方 .diag-panel 规则处注释）。 */
 .stat-row { font-size:var(--fs-md); color:var(--txt); padding:var(--pad-v-2); display:flex; justify-content:space-between; }

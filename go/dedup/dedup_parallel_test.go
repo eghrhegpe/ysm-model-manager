@@ -1,6 +1,7 @@
 package dedup
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -210,7 +211,7 @@ func TestFindDuplicateFiles_SizeGrouping_Mixed(t *testing.T) {
 // 对齐、或组序随哈希完成序漂移，黄金对照测试会确定性变红（code_review P3-2 回归点）。
 func serialReference(t *testing.T, dir string) []Group {
 	t.Helper()
-	files, err := collectFiles(dir, true)
+	files, err := collectFiles(context.Background(), dir, true)
 	if err != nil {
 		t.Fatal(err)
 	}

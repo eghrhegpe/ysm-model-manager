@@ -11,6 +11,7 @@
 package repoaudit
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -190,6 +191,12 @@ func ScoreVerdict(score int) string {
 // 目录不存在/不可用必须先报错——filepath.Walk 对不存在目录只回错误回调却返回 nil，
 // 会静默产出「空报告 = 假绿」（与 dedup.ErrSymlinkRoot 同族陷阱）。
 func Audit(dirPath string) (DirAuditResult, error) {
+	return AuditCtx(context.Background(), dirPath)
+}
+
+// AuditCtx ctx 版（ADR-314）：GUI 绑定传入 Wails 注入的可取消 ctx。取消后整单作废
+// （前端不消费部分结果），完整跑完的报告确定性不受影响（ADR-119）。
+func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) {
 	if st, err := os.Stat(dirPath); err != nil {
 		return DirAuditResult{}, fmt.Errorf("审计目录不可用 %q: %w", dirPath, err)
 	} else if !st.IsDir() {
@@ -218,10 +225,19 @@ func Audit(dirPath string) (DirAuditResult, error) {
 	// 每文件 LoadRegistry（mutex + 解析开销——大仓库线性放大）
 	reg := registry.LoadRegistry()
 
+	// ADR-314 取消检查点：ctx.Err() 内部带锁，降频至每 64 项一查（回调内其余工作
+	// 均含文件系统调用，检查开销相对可忽略）。
+	walked := 0
 	err := filepath.WalkDir(dirPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			result.Warnings = append(result.Warnings, fmt.Sprintf("访问异常: %s (%v)", path, err))
 			return nil
+		}
+		walked++
+		if walked%64 == 1 {
+			if cerr := ctx.Err(); cerr != nil {
+				return cerr
+			}
 		}
 		// 符号链接守卫：拒绝根目录符号链接，跳过子树内符号链接（与 dedup 包对齐）
 		if d.Type()&os.ModeSymlink != 0 {
@@ -318,7 +334,13 @@ func Audit(dirPath string) (DirAuditResult, error) {
 	result.Cache.CacheSize = stats.TotalSize
 	result.Cache.ShouldWarn = stats.ShouldWarn
 
-	hits, misses, scanErrs := measureCacheHitRate(texturePaths)
+	if err := ctx.Err(); err != nil {
+		return result, fmt.Errorf("体检已取消: %w", err)
+	}
+	hits, misses, scanErrs := measureCacheHitRateCtx(ctx, texturePaths)
+	if err := ctx.Err(); err != nil {
+		return result, fmt.Errorf("体检已取消: %w", err)
+	}
 	textureTotal := hits + misses
 	if textureTotal > 0 {
 		result.Cache.Hits = hits
@@ -355,6 +377,12 @@ func Audit(dirPath string) (DirAuditResult, error) {
 // 失败语义：哈希失败/缓存探测失败 **不计入** 分子也不计入分母（计入失败数）——
 // 「探测故障」≠「未缓存」，否则磁盘/权限故障会被误读成「该纹理没缓存」。
 func measureCacheHitRate(texturePaths []string) (hits, misses, scanErrs int) {
+	return measureCacheHitRateCtx(context.Background(), texturePaths)
+}
+
+// measureCacheHitRateCtx ctx 版（ADR-314）：worker 每纹理一查（单纹理 SHA256 开销
+// 远大于检查），取消即提前收工——结果作废，调用方据 ctx.Err() 判定。
+func measureCacheHitRateCtx(ctx context.Context, texturePaths []string) (hits, misses, scanErrs int) {
 	if len(texturePaths) == 0 {
 		return 0, 0, 0
 	}
@@ -409,6 +437,9 @@ func measureCacheHitRate(texturePaths []string) (hits, misses, scanErrs int) {
 			defer wg.Done()
 			var t tally
 			for _, path := range texturePaths[start:end] {
+				if ctx.Err() != nil {
+					break
+				}
 				hash, err := texture_cache.TextureHash(path)
 				if err != nil {
 					t.bad++
@@ -435,7 +466,12 @@ func measureCacheHitRate(texturePaths []string) (hits, misses, scanErrs int) {
 
 // HealthReportFor 完整体检（审计 + 去重），GUI 绑定与 CLI health-report 同一载荷
 func HealthReportFor(dirPath string) (HealthReport, error) {
-	audit, err := Audit(dirPath)
+	return HealthReportForCtx(context.Background(), dirPath)
+}
+
+// HealthReportForCtx ctx 版（ADR-314）：审计与去重全链贯穿可取消 ctx。
+func HealthReportForCtx(ctx context.Context, dirPath string) (HealthReport, error) {
+	audit, err := AuditCtx(ctx, dirPath)
 	if err != nil {
 		return HealthReport{}, err
 	}
@@ -451,7 +487,7 @@ func HealthReportFor(dirPath string) (HealthReport, error) {
 		Warnings:     audit.Warnings,
 	}
 
-	groups, err := dedup.FindDuplicateFiles(dirPath, true)
+	groups, err := dedup.FindDuplicateFilesCtx(ctx, dirPath, true)
 	if err != nil {
 		return HealthReport{}, fmt.Errorf("去重扫描失败: %w", err)
 	}

@@ -232,3 +232,36 @@ describe("createDedupSession — exec 多组 DOM 读态（组级 :checked，非 
     expect(moveFn).toHaveBeenCalledWith("/b/2.ysm");
   });
 });
+describe("createDedupSession — 扫描取消（ADR-314）", () => {
+  it("取消按钮 → CancelError → 「已取消」落定，busy 复位可复扫", async () => {
+    let rejectFn: (e: unknown) => void = () => {};
+    const scanMock = vi.fn(() => {
+      const p = new Promise<never>((_res, rej) => {
+        rejectFn = rej;
+      });
+      (p as unknown as { cancel: (c?: unknown) => void }).cancel = () =>
+        rejectFn(Object.assign(new Error("cancelled"), { name: "CancelError" }));
+      return p;
+    });
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: scanMock,
+      MoveToRecycle: vi.fn(async () => {}),
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    const startP = dedup.start(list, esc, "ysm");
+    await waitFor(() => list.querySelector("#diag-scan-cancel"));
+    (list.querySelector("#diag-scan-cancel") as HTMLElement).click();
+    await startP;
+    await waitFor(() => list.textContent!.includes("已取消"));
+    // busy 已复位：换正常 mock 再发起，扫描重新执行到结果渲染
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => groupJson),
+      MoveToRecycle: vi.fn(async () => {}),
+    });
+    await dedup.start(list, esc, "mmd");
+    await waitFor(() => list.querySelector("#diag-dedup-exec"));
+  });
+});

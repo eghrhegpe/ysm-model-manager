@@ -973,6 +973,8 @@ export const zhCN = {
   "diagnostics.selectResourceType": "选择资源类型",
   "diagnostics.conflictTypeContent": "内容修改冲突",
   "diagnostics.conflictTypeBoth": "双端新增冲突",
+  "diagnostics.cancelScan": "取消扫描",
+  "diagnostics.scanCancelled": "已取消扫描",
   // [ADR-305 D5 预留键] ADR-300 S2 诊断组重构预留（「仓库健康审计」标题），勿删
   "diagnostics.healthTitle": "仓库健康审计",
   "diagnostics.healthHint":

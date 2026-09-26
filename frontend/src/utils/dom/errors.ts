@@ -74,6 +74,18 @@ export function stripPathSegments(msg: string): string {
 }
 
 /**
+ * 判断错误是否为「用户主动取消」（ADR-314 长任务取消通道）。
+ * Wails CancellablePromise.cancel() 的 reject 载荷是 @wailsio/runtime 的 CancelError
+ * （name 固定 "CancelError"，见 runtime types/cancellable.d.ts）——取消不是错误：
+ * 调用方据此静默落「已取消」占位，不弹错误 toast、不计失败。
+ */
+export function isCancelError(err: unknown): boolean {
+  return (
+    typeof err === "object" && err !== null && (err as { name?: unknown }).name === "CancelError"
+  );
+}
+
+/**
  * 判断错误消息是否为「文件已存在」冲突（索引 4.2 收敛）。
  * 统一消费结构化 AppError.Code 优先，字符串匹配兜底——两处调用点（import-executor/
  * import-queue-events）原各自手写 `includes("FILE_EXISTS") || includes(中文文案)`，

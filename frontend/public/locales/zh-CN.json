@@ -854,6 +854,8 @@
   "diagnostics.selectResourceType": "选择资源类型",
   "diagnostics.conflictTypeContent": "内容修改冲突",
   "diagnostics.conflictTypeBoth": "双端新增冲突",
+  "diagnostics.cancelScan": "取消扫描",
+  "diagnostics.scanCancelled": "已取消扫描",
   "diagnostics.healthTitle": "仓库健康审计",
   "diagnostics.healthHint": "静态健康审计：完整性、缓存、资源、去重（不含加载耗时；与 CLI health-report 同源）",
   "diagnostics.healthRun": "开始体检",

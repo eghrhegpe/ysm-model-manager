@@ -6,13 +6,13 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
-import { friendlyError } from "@/utils/dom/errors.ts";
+import { friendlyError, isCancelError } from "@/utils/dom/errors.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
-import { msgRowHTML, statRowHTML } from "./status-row.ts";
+import { msgRowHTML, scanRowWithCancelHTML } from "./status-row.ts";
 
 // 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML。
 // 【范式豁免】本模块无跨调用配置状态（不像 dedup.ts 的 keepPolicy/priorityPath 需跨调用保持），
@@ -55,10 +55,6 @@ export async function runHealthAudit(
   _healthBusy = true;
   if (btn) btn.disabled = true;
   try {
-    list.innerHTML = statRowHTML("muted", t("diagnostics.healthScanning"), undefined, {
-      icon: UI_ICONS.refresh,
-    });
-
     const { RepoHealthAudit, GetRepoRoot } = await backendGetApp();
     const filesRoot = await GetRepoRoot(currentRepoType());
     // 未配置仓库根（GetRepoRoot 契约：desktop 未配置时返回空串，见 resource_bindings.go）
@@ -70,7 +66,17 @@ export async function runHealthAudit(
       });
       return;
     }
-    const report = parseHealthReport(await RepoHealthAudit(filesRoot));
+    // ADR-314：体检是全目录 Walk + SHA256 的分钟级潜力股——占位行带「取消」按钮，
+    // 点按 promise.cancel() 经 Wails CancelCall 直达 Go ctx（贯穿 walk/哈希/去重全链）。
+    const auditPromise = RepoHealthAudit(filesRoot);
+    list.innerHTML = scanRowWithCancelHTML(t("diagnostics.healthScanning"), undefined, {
+      icon: UI_ICONS.refresh,
+      cancelLabel: t("diagnostics.cancelScan"),
+    });
+    list.querySelector("#diag-scan-cancel")?.addEventListener("click", () => {
+      auditPromise.cancel();
+    });
+    const report = parseHealthReport(await auditPromise);
     if (!report) {
       list.innerHTML = msgRowHTML("error", t("diagnostics.healthParseFailed"), esc, {
         icon: UI_ICONS.error,
@@ -80,6 +86,11 @@ export async function runHealthAudit(
 
     list.innerHTML = renderHealthReport(report, esc);
   } catch (e) {
+    // 用户主动取消（ADR-314）：静默落「已取消」占位——取消不是失败，不弹错误。
+    if (isCancelError(e)) {
+      list.innerHTML = msgRowHTML("muted", t("diagnostics.scanCancelled"), esc);
+      return;
+    }
     // Go error 通道（路径校验等业务错误）或调用失败：统一展示
     const msg = friendlyError(e, t("diagnostics.healthFailed"));
     list.innerHTML = msgRowHTML("error", msg, esc, { icon: UI_ICONS.error });

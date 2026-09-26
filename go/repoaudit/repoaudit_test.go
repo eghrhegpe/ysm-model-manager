@@ -4,6 +4,8 @@
 package repoaudit
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"ysm-model-manager/go/internal/testutil"
 
@@ -413,5 +415,20 @@ func TestClassifyWith_RebuildOnRegistrySwap(t *testing.T) {
 	}
 	if got := ClassifyWith(regB, ".aaa"); got != "other" {
 		t.Fatalf("颠簸后 regB 判 '.aaa' 应 other（regB 未声明 .aaa）, got %q", got)
+	}
+}
+
+// TestHealthReportForCtx_PreCancelled ADR-314：预取消 ctx 确定性验证——walk 首个
+// 检查点即中止，错误链可 errors.Is 判定（不依赖时序竞态）。
+func TestHealthReportForCtx_PreCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := HealthReportForCtx(ctx, dir)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("预取消 ctx 应返回 context.Canceled 链, got %v", err)
 	}
 }

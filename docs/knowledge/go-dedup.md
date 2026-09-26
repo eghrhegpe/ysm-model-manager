@@ -8,6 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - CountDuplicates
+    - CountDuplicatesCtx
     - DeepHash
     - DeepHash.ComputeHash
     - DeepHash.Name
@@ -18,6 +19,7 @@ auto_fields:
     - ErrSymlinkRoot
     - FileEntry
     - FindDuplicateFiles
+    - FindDuplicateFilesCtx
     - Group
     - HashAlgorithm
     - NameSizeHash

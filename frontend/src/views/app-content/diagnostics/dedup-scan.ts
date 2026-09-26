@@ -3,6 +3,7 @@
 // scanEachDirectory（progress 占位 + err 判别 {error} 假绿）。
 
 import { t } from "@/core/i18n/t.ts";
+import { isCancelError } from "@/utils/dom/errors.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type {
   DedupRegType,
@@ -12,7 +13,7 @@ import type {
   ScanTarget,
 } from "./dedup-types.ts";
 import type { EscFn } from "./logs.ts";
-import { statRowHTML } from "./status-row.ts";
+import { msgRowHTML, scanRowWithCancelHTML } from "./status-row.ts";
 
 /** ② targets收集(rtype单目录/全类型遍历)（依赖注入，无会话状态） */
 export async function collectTargets(
@@ -46,21 +47,37 @@ export async function scanEachDirectory(
   esc: EscFn,
   FindDuplicateFiles: FindDuplicateFilesFn,
   strategy: string,
-): Promise<{ allResults: ScanGroupResult[]; earlyExit: boolean }> {
+): Promise<{ allResults: ScanGroupResult[]; earlyExit: boolean; cancelled?: boolean }> {
   const allResults: ScanGroupResult[] = [];
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
-    list.innerHTML = statRowHTML(
-      "muted",
+    await new Promise((r) => setTimeout(r, 10));
+    // ADR-314：逐目录全量哈希可取消——进度行带「取消」按钮，点按 cancel() 直达 Go ctx；
+    // CancelError 静默落「已取消」（取消不是失败），其余错误原样上抛交会话外壳渲染。
+    const scanPromise = FindDuplicateFiles(target.dir, strategy);
+    list.innerHTML = scanRowWithCancelHTML(
       t("diagnostics.scanningProgress", {
         cur: i + 1,
         total: targets.length,
         icon: esc(target.icon),
         label: esc(target.label),
       }),
+      undefined,
+      { cancelLabel: t("diagnostics.cancelScan") },
     );
-    await new Promise((r) => setTimeout(r, 10));
-    const groups = await FindDuplicateFiles(target.dir, strategy);
+    list.querySelector("#diag-scan-cancel")?.addEventListener("click", () => {
+      scanPromise.cancel();
+    });
+    let groups: Awaited<ReturnType<typeof FindDuplicateFiles>>;
+    try {
+      groups = await scanPromise;
+    } catch (e) {
+      if (isCancelError(e)) {
+        list.innerHTML = msgRowHTML("muted", t("diagnostics.scanCancelled"), esc);
+        return { allResults, earlyExit: true, cancelled: true };
+      }
+      throw e;
+    }
     if (!groups) {
       // Go 成功路径恒返回非 nil（无重复 = 空数组，go/dedup/dedup.go result 起步即 []Group{}，
       // 契约锁 internal/app TestFindDuplicateFiles_NoDupNilFree）——null 只可能是绑定层

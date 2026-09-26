@@ -2,6 +2,7 @@
 package dedup
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -69,12 +70,21 @@ var computeHash = func(path string, algo HashAlgorithm) (string, error) {
 //
 // 遍历中子树访问失败仅 log-and-skip（知识卡「不变量」：与根 symlink 硬报错不对称，
 // 有意为之——留痕可诊断、不阻断扫描）。
-func collectFiles(dir string, skipRecycle bool) ([]fileInfo, error) {
+func collectFiles(ctx context.Context, dir string, skipRecycle bool) ([]fileInfo, error) {
 	var files []fileInfo
+	// ADR-314 取消检查点：ctx.Err() 内部带锁，降频至每 64 项一查（回调内其余工作
+	// 均含文件系统调用，检查开销相对可忽略；取 64 与 repoaudit walk 同量级）。
+	walked := 0
 	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("[dedup] 访问 %s 失败: %v", p, err)
 			return nil
+		}
+		walked++
+		if walked%64 == 1 {
+			if cerr := ctx.Err(); cerr != nil {
+				return cerr
+			}
 		}
 		// 跳过符号链接（去重只处理实际文件）
 		if d.Type()&os.ModeSymlink != 0 {
@@ -119,11 +129,11 @@ func collectFiles(dir string, skipRecycle bool) ([]fileInfo, error) {
 // 不可能同 hash，唯一 size 的文件必不成组——跳过其哈希省一次 I/O，输出不变。
 // 代价：唯一 size 文件不被打开，若其本身读失败则不可见（同 size 文件读失败会
 // log-and-skip）——这是设计，不是 bug。
-func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
+func hashFilesParallel(ctx context.Context, files []fileInfo, algo HashAlgorithm) ([]hashResult, error) {
 	n := len(files)
 	results := make([]hashResult, n)
 	if n == 0 {
-		return results
+		return results, nil
 	}
 	sizeCount := make(map[int64]int, n)
 	for _, f := range files {
@@ -157,14 +167,31 @@ func hashFilesParallel(files []fileInfo, algo HashAlgorithm) []hashResult {
 			}
 		}()
 	}
+	// ADR-314 取消检查点（投递侧）：ctx 取消即停止投递并关闭 jobs——worker 在途的
+	// 至多 GOMAXPROCS 个哈希跑完即退出，无 goroutine 泄漏；调用方对取消结果整单作废
+	// （前端不消费部分结果），完整跑完的输出确定性不受影响（ADR-119）。
+	var cancelled error
+dispatch:
 	for _, f := range files {
+		if err := ctx.Err(); err != nil {
+			cancelled = err
+			break dispatch
+		}
 		if sizeCount[f.size] > 1 { // 唯一 size 不进 job（results 槽留零值 ok=false）
-			jobs <- f
+			select {
+			case jobs <- f:
+			case <-ctx.Done():
+				cancelled = ctx.Err()
+				break dispatch
+			}
 		}
 	}
 	close(jobs)
 	wg.Wait()
-	return results
+	if cancelled != nil {
+		return nil, fmt.Errorf("去重扫描已取消: %w", cancelled)
+	}
+	return results, nil
 }
 
 // ErrRelativePath 调用方传入相对路径——拒绝扫描。相对路径按 CWD 解析可能穿越到
@@ -222,6 +249,13 @@ func resolveHashAlgorithm(config ...*types.DedupConfig) HashAlgorithm {
 // 消费共享并行哈希管道（ADR-119）：collectFiles + hashFilesParallel + 串行分组，
 // 组顺序 = hash 首次出现于遍历的顺序，组内 Files 按 Path 排序（确定性，逐字节与串行一致）。
 func FindDuplicateFiles(dir string, skipRecycle bool, config ...*types.DedupConfig) ([]Group, error) {
+	return FindDuplicateFilesCtx(context.Background(), dir, skipRecycle, config...)
+}
+
+// FindDuplicateFilesCtx ctx 版（ADR-314）：GUI 绑定传入 Wails 注入的可取消 ctx，
+// 全量哈希长任务可被用户中止。取消后整单作废（前端不消费部分结果），
+// 完整跑完的输出仍逐字节确定（ADR-119 不受影响）。
+func FindDuplicateFilesCtx(ctx context.Context, dir string, skipRecycle bool, config ...*types.DedupConfig) ([]Group, error) {
 	abs, err := resolveScanRoot(dir)
 	if err != nil {
 		return nil, err
@@ -229,11 +263,14 @@ func FindDuplicateFiles(dir string, skipRecycle bool, config ...*types.DedupConf
 	dir = abs
 	algo := resolveHashAlgorithm(config...)
 
-	files, err := collectFiles(dir, skipRecycle)
+	files, err := collectFiles(ctx, dir, skipRecycle)
 	if err != nil {
 		return nil, err
 	}
-	results := hashFilesParallel(files, algo)
+	results, err := hashFilesParallel(ctx, files, algo)
+	if err != nil {
+		return nil, err
+	}
 
 	hashGroups := make(map[string]*Group)
 	// 使用 map 保持插入顺序
@@ -282,6 +319,11 @@ func FindDuplicateFiles(dir string, skipRecycle bool, config ...*types.DedupConf
 // CountDuplicates 统计重复文件数量（比 FindDuplicateFiles 轻量，只计数）
 // 同样消费共享并行哈希管道（ADR-119 P1：与 FindDuplicateFiles 同源，禁止双实现漂移）。
 func CountDuplicates(dir string, skipRecycle bool, config ...*types.DedupConfig) (groups int, extraFiles int, err error) {
+	return CountDuplicatesCtx(context.Background(), dir, skipRecycle, config...)
+}
+
+// CountDuplicatesCtx ctx 版（ADR-314，与 FindDuplicateFilesCtx 同取消语义）。
+func CountDuplicatesCtx(ctx context.Context, dir string, skipRecycle bool, config ...*types.DedupConfig) (groups int, extraFiles int, err error) {
 	groups = 0
 	extraFiles = 0
 
@@ -292,11 +334,14 @@ func CountDuplicates(dir string, skipRecycle bool, config ...*types.DedupConfig)
 	dir = abs
 	algo := resolveHashAlgorithm(config...)
 
-	files, err := collectFiles(dir, skipRecycle)
+	files, err := collectFiles(ctx, dir, skipRecycle)
 	if err != nil {
 		return 0, 0, err
 	}
-	results := hashFilesParallel(files, algo)
+	results, err := hashFilesParallel(ctx, files, algo)
+	if err != nil {
+		return 0, 0, err
+	}
 
 	hashCount := make(map[string]int)
 	for i := range files {

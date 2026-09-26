@@ -320,6 +320,28 @@ describe("runHealthAudit", () => {
     expect(list.innerHTML).not.toContain("路径超出仓库目录");
   });
 
+  it("取消：CancelError → 「已取消」落定，非错误行（ADR-314）", async () => {
+    let rejectFn: (e: unknown) => void = () => {};
+    getApp.mockResolvedValue({
+      RepoHealthAudit: vi.fn(() => {
+        const p = new Promise((_res, rej) => {
+          rejectFn = rej;
+        });
+        (p as unknown as { cancel: (c?: unknown) => void }).cancel = () =>
+          rejectFn(Object.assign(new Error("cancelled"), { name: "CancelError" }));
+        return p;
+      }),
+      GetRepoRoot: vi.fn(async () => "/m"),
+    });
+    const list = document.createElement("div");
+    const runP = runHealthAudit(list, esc);
+    await waitFor(() => list.querySelector("#diag-scan-cancel"));
+    (list.querySelector("#diag-scan-cancel") as HTMLElement).click();
+    await runP;
+    await waitFor(() => list.textContent!.includes("已取消"));
+    expect(list.innerHTML).not.toContain("diag-msg-error");
+  });
+
   it("调用异常 → 展示错误（friendlyError）", async () => {
     getApp.mockResolvedValue({
       RepoHealthAudit: vi.fn(() => Promise.reject(new Error("boom"))),

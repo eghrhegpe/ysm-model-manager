@@ -854,6 +854,8 @@
   "diagnostics.selectResourceType": "リソースタイプを選択",
   "diagnostics.conflictTypeContent": "内容変更競合",
   "diagnostics.conflictTypeBoth": "両方に追加競合",
+  "diagnostics.cancelScan": "スキャンを中止",
+  "diagnostics.scanCancelled": "スキャンを中止しました",
   "diagnostics.healthTitle": "リポジトリ健全性監査",
   "diagnostics.healthHint": "静的健全性監査：完全性・キャッシュ・リソース・重複（読込時間は含まない；CLI health-report と同一ソース）",
   "diagnostics.healthRun": "診断開始",

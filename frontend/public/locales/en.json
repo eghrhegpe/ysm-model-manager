@@ -854,6 +854,8 @@
   "diagnostics.selectResourceType": "Select Resource Type",
   "diagnostics.conflictTypeContent": "Content Modified",
   "diagnostics.conflictTypeBoth": "Added in Both",
+  "diagnostics.cancelScan": "Cancel scan",
+  "diagnostics.scanCancelled": "Scan cancelled",
   "diagnostics.healthTitle": "Repo Health Audit",
   "diagnostics.healthHint": "Static health audit: completeness, cache, resources, dedup (no load-time measurement; same source as CLI health-report)",
   "diagnostics.healthRun": "Start Check",

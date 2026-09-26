@@ -28,6 +28,15 @@ jobs:
       - name: 安装 ripgrep（契约测试依赖 rg 二进制；ubuntu-latest 默认未预装）
         run: sudo apt-get update -y && sudo apt-get install -y ripgrep
 
+      # test_config_defaults.ts（83bcd8d33）：CI 下缺 AppConfig = 零覆盖假绿 ⇒ 显式 FAIL。
+      # 注入 mock fixture（单一源：tests/fixtures/ysm_config.ci.json）；
+      # 对齐 configPath() 的 linux 分支：$HOME/.config/YSM-Model-Manager/ysm_config.json。
+      - name: 注入 mock AppConfig（契约测试结构校验）
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.config/YSM-Model-Manager"
+          cp tests/fixtures/ysm_config.ci.json "$HOME/.config/YSM-Model-Manager/ysm_config.json"
+
       # 统一走 scripts/contract-tests.ts（与 test.yml / 本地 pre-push-gate 同源：收集 /
       # 域裁剪 / @/ 别名运行时注入 / 并发 / 失败复跑全复用 _lib/contract-tests.ts）。
       # ⚠️ 勿退回手写 `for f in tests/*.ts; do node "$f"; done` 裸跑循环——裸跑缺

@@ -79,6 +79,16 @@ jobs:
           Add-Content -Path "$env:GITHUB_PATH" -Value $bin
           & "$bin\rg.exe" --version
 
+      # test_config_defaults.ts（83bcd8d33）：CI 下缺 AppConfig = 零覆盖假绿 ⇒ 显式 FAIL。
+      # 先注入 mock fixture（单一源：tests/fixtures/ysm_config.ci.json），让结构校验真正跑到 mock；
+      # 对齐 configPath() 的 win32 分支：$APPDATA/YSM-Model-Manager/ysm_config.json。
+      - name: 注入 mock AppConfig（契约测试结构校验）
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:APPDATA "YSM-Model-Manager"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item tests/fixtures/ysm_config.ci.json (Join-Path $dir "ysm_config.json") -Force
+
       # 统一走 scripts/contract-tests.ts（与本地 pre-push-gate 同源：收集 / 域裁剪 /
       # @/ 别名运行时注入 / 并发 / 失败复跑全复用 _lib/contract-tests.ts）。
       # ⚠️ 勿退回手写 `Get-ChildItem tests/*.ts | node $f` 裸跑循环——裸跑缺

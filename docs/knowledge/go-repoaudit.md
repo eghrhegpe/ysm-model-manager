@@ -17,6 +17,10 @@ auto_fields:
     - HealthReport
     - HealthReportFor
     - ResourceSummary
+    - ScoreVerdict
+    - VerdictBad
+    - VerdictGood
+    - VerdictOk
 use_when:
   - 仓库审计
   - 健康分数

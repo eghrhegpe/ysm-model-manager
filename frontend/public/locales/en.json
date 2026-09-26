@@ -805,6 +805,8 @@
   "diagnostics.scanHint": "Click Scan Sync Conflicts to compare content between instance and repository",
   "diagnostics.noMatchLogs": "No matching logs",
   "diagnostics.itemsCount": "{n} items",
+  "diagnostics.errCodeLabel": "Error code",
+  "diagnostics.suggestionLabel": "Suggestion",
   "diagnostics.loadLogsFailed": "Failed to load logs",
   "diagnostics.loadRuntimeLogsFailed": "Failed to load runtime logs",
   "diagnostics.scanHash": "⏳ Scanning {icon} {label} directory file hashes...",

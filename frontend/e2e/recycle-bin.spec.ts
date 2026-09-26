@@ -49,14 +49,13 @@ test.describe("回收站", () => {
     await navItem(page, "repository").click();
     await clickBySelector(page, '.repo-tab[data-tab="recycle"]');
 
-    // 轮询等待列表容器就绪（含 0 条目的空态也算就绪）
+    // 轮询等待列表容器就绪（含 0 条目的空态也算就绪）——countInShadow 轮询吸收
+    // tab 切换异步渲染时序竞态（2026-09-26 CI flake 36211111438：一次性 evaluate 早于
+    // 模板渲染落点 → 误判容器缺失；本文件 :20 契约「轮询吸收时序竞态」）
     // 用 data-testid 而非 id 通道（ADR-133 阶段 C+ 门禁：e2e 禁 id 定位——
     // id 属运行期可变锚点，testid 是稳定契约钩子）
-    const listReady = await page.evaluate(() => {
-      const root = document.querySelector("app-content")?.shadowRoot;
-      return Boolean(root?.querySelector('[data-testid="recy-list"]'));
-    }, undefined);
-    expect(listReady).toBe(true);
+    const listCount = await countInShadow(page, '[data-testid="recy-list"]', 5000);
+    expect(listCount).toBe(1);
 
     const itemCount = await countInShadow(page, '[data-testid="recy-item"]', 5000);
     if (itemCount > 0) {

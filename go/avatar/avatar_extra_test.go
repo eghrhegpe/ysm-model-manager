@@ -85,34 +85,6 @@ func TestAvatarCandidates(t *testing.T) {
 	}
 }
 
-func TestLimitedBuffer(t *testing.T) {
-	// 未超限：正常写入
-	l := &limitedBuffer{max: 10}
-	n, err := l.Write([]byte("abc"))
-	if n != 3 || err != nil || l.exceeded || l.buf.Len() != 3 {
-		t.Fatalf("未超限写入异常: n=%d err=%v exceeded=%v len=%d", n, err, l.exceeded, l.buf.Len())
-	}
-	// 恰好写满（3+5=8 ≤ 10）：不置 exceeded
-	n, err = l.Write([]byte("defgh"))
-	if n != 5 || err != nil || l.exceeded || l.buf.Len() != 8 {
-		t.Fatalf("恰好写满异常: n=%d err=%v exceeded=%v len=%d", n, err, l.exceeded, l.buf.Len())
-	}
-	// 超限：丢弃超限部分但返回 len(p)（内存有界），buf 保持上限内
-	n, err = l.Write([]byte("xyz"))
-	if n != 3 || err != nil || !l.exceeded {
-		t.Fatalf("超限写入异常: n=%d err=%v exceeded=%v", n, err, l.exceeded)
-	}
-	if l.buf.Len() != 8 {
-		t.Fatalf("超限后缓冲应保持上限内, len=%d", l.buf.Len())
-	}
-	// 边界：max=0 时任何写入都视为超限
-	l0 := &limitedBuffer{max: 0}
-	_, _ = l0.Write([]byte("a"))
-	if !l0.exceeded {
-		t.Fatal("max=0 时应置 exceeded")
-	}
-}
-
 // ===== 缓存读写边界补测 =====
 
 func TestReadCachedAvatar_MimeSniff(t *testing.T) {

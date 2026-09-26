@@ -1,69 +1,45 @@
 package app
 
 import (
-	"os/exec"
+	"log"
 	"path"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
-	"ysm-model-manager/go/avatar"
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/ysm"
+	"ysm-model-manager/go/ysmwasi"
 )
 
-// nodeJSPath 查找 node.js 可执行文件
-var nodeJSPath = findNodeJS()
-
 func init() {
-	avatar.SetNodeJS(nodeJSPath, getGlueCode, getWasmBinary)
-	// 注入 .ysm 解码器（fileops 封面提取等 go/ 层消费端；取代已停发的 YSMParser.exe sidecar）
+	// 注入 .ysm 解码器（fileops 封面提取等 go/ 层消费端）：ADR-316 后为
+	// wazero 纯 Go 内存直解（Android 同样可用，Node 子进程桥已退役）；
+	// 解码失败降级为 nil（与旧口径一致），错误进日志供诊断。
 	ysm.SetDecoder(func(data []byte) []ysm.DecodedFile {
-		out := runYSMNodeJSDecode(data)
-		if out == nil {
+		files, err := ysmwasi.Decode(data)
+		if err != nil {
+			log.Printf("[ysm-wasi] 解码失败: %v", err)
 			return nil
-		}
-		files := make([]ysm.DecodedFile, len(out))
-		for i, f := range out {
-			files[i] = ysm.DecodedFile{Path: f.Path, Data: f.Data}
 		}
 		return files
 	})
 }
 
-func findNodeJS() string {
-	// ADR-047 明示：Android 无 Node.js 运行时，nodeJSPath 恒为空 → runYSMNodeJSDecode
-	// 返回 nil（.ysm 预览走 WASM 内嵌解码或不可用），不尝试 exec 避免静默失败
-	if runtime.GOOS == "android" {
-		return ""
-	}
-	// PATH 查找（跨平台：Linux/macOS 命中 "node"，Windows 命中 "node.exe"）
-	if p, err := exec.LookPath("node"); err == nil {
-		return p
-	}
-	if p, err := exec.LookPath("node.exe"); err == nil {
-		return p
-	}
-	return ""
-}
-
-// decodeYSMViaNodeJS 用 Node.js + WASM 解码 .ysm 文件
-// 嵌入的 JS 胶水代码和 WASM 二进制会写到临时目录执行
+// decodedYSMExtra 解码产出的单个文件（Path 为产物相对路径）
 type decodedYSMExtra struct {
 	Path string
 	Data []byte
 }
 
-// runYSMNodeJSDecode 用 Node.js + WASM 解码 .ysm，返回解出的全部文件（Path/Data）。
-// decodeYSMViaNodeJS（合并单组件）与 decodeYSMComponentsViaNodeJS（多组件）共用此解码。
-// ADR-164 收敛：实现下沉 go/avatar.DecodeYSMData（脚本/子进程/护栏全仓唯一副本），
-// 本函数仅做类型适配——超时/输入/输出护栏语义由 avatar 统一承接。
-func runYSMNodeJSDecode(ysmData []byte) []decodedYSMExtra {
-	files := avatar.DecodeYSMData(ysmData)
-	if len(files) == 0 {
+// runYSMDecode 用 wazero 内存直解 .ysm，返回解出的全部文件（Path/Data）。
+// decodeYSMViaWASI（合并单组件）与 decodeYSMComponentsViaWASI（多组件）共用此解码。
+func runYSMDecode(ysmData []byte) []decodedYSMExtra {
+	files, err := ysmwasi.Decode(ysmData)
+	if err != nil {
+		log.Printf("[ysm-wasi] 解码失败: %v", err)
 		return nil
 	}
 	out := make([]decodedYSMExtra, len(files))
@@ -73,9 +49,9 @@ func runYSMNodeJSDecode(ysmData []byte) []decodedYSMExtra {
 	return out
 }
 
-// decodeYSMViaNodeJS 用 Node.js + WASM 解码 .ysm 并合并为单 BedrockModel（单组件模式）。
-func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
-	files := runYSMNodeJSDecode(ysmData)
+// decodeYSMViaWASI 解码 .ysm 并合并为单 BedrockModel（单组件模式）。
+func decodeYSMViaWASI(ysmData []byte) *types.BedrockModel {
+	files := runYSMDecode(ysmData)
 	if len(files) == 0 {
 		return nil
 	}
@@ -159,11 +135,11 @@ func decodeYSMViaNodeJS(ysmData []byte) *types.BedrockModel {
 	return merged
 }
 
-// decodeYSMComponentsViaNodeJS 解码 .ysm 并收集为多组件列表（不合并 bones）。
+// decodeYSMComponentsViaWASI 解码 .ysm 并收集为多组件列表（不合并 bones）。
 // 每个组件 = 独立 BedrockModel；TexSlot 按全局文件序分配（main 优先，其余按路径排序），
 // 供 threejs.BuildMulti 生成多组件 spec（YSMViewer 式多组件同屏，arm 等保留为独立组件）。
-func decodeYSMComponentsViaNodeJS(ysmData []byte) ([]types.BedrockModel, []string) {
-	files := runYSMNodeJSDecode(ysmData)
+func decodeYSMComponentsViaWASI(ysmData []byte) ([]types.BedrockModel, []string) {
+	files := runYSMDecode(ysmData)
 	if len(files) == 0 {
 		return nil, nil
 	}

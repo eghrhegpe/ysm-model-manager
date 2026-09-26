@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/go/ysm"
 )
 
 // extractAvatarFromYSM 从 .ysm 模型包提取指定作者的头像。
@@ -28,7 +29,7 @@ func extractAvatarFromYSM(modelPath, safeName string) string {
 		}
 		return ""
 	}
-	files := DecodeYSMData(ysmData)
+	files := ysm.DecodeYSM(ysmData)
 	if len(files) == 0 {
 		return ""
 	}
@@ -46,10 +47,10 @@ func extractAvatarFromYSM(modelPath, safeName string) string {
 }
 
 // parseYSMJSONAuthors 从 YSM 文件列表中找 ysm.json 并解析 authors。
-// 消费 DecodeYSMData 的 []byte 直通形态（旧 []int 中间
+// 消费 ysm.DecodeYSM 注入解码器（ADR-316 wazero 内存直解）的 []byte 直通形态（旧 []int 中间
 // 形态每字节膨胀 8× 且需 toBytes 转回，纯为历史签名买单）。
 // 解析失败静默返回 nil（与旧实现 break 行为一致），元数据声明收敛于 parseMetadataAuthors。
-func parseYSMJSONAuthors(files []ysmDecodedFile) []authorEntry {
+func parseYSMJSONAuthors(files []ysm.DecodedFile) []authorEntry {
 	for _, f := range files {
 		if isYSMJSONPath(f.Path) {
 			authors, _ := parseMetadataAuthors(f.Data)
@@ -60,7 +61,7 @@ func parseYSMJSONAuthors(files []ysmDecodedFile) []authorEntry {
 }
 
 // extractFallbackAvatarFromDir 降级路径：取 avatar/ 目录第一张图片。
-func extractFallbackAvatarFromDir(files []ysmDecodedFile, safeName string) string {
+func extractFallbackAvatarFromDir(files []ysm.DecodedFile, safeName string) string {
 	// 扩展名口径与 avatarCandidates 对齐：.png/.jpg/.jpeg 均认（原漏 .jpeg
 	// 使 avatar/face.jpeg 声明的头像在不走作者匹配的降级路径下被跳过）
 	// 不含 .tga——浏览器不解码，头像 <img> 无法渲染。委托 registry.IsRenderableTextureExt。
@@ -80,7 +81,7 @@ func extractFallbackAvatarFromDir(files []ysmDecodedFile, safeName string) strin
 // matchAvatarByAuthor 按作者名匹配 avatar 字段，找到对应图片文件后保存。
 // 先收集 SafeName 匹配的作者再按文件优先比对（P3-10：原实现每文件全扫 authors，
 // N 作者 × M 文件 = O(M×N)；作者名各异时匹配集收敛到 1，降为 O(M)，语义不变）。
-func matchAvatarByAuthor(files []ysmDecodedFile, authors []authorEntry, safeName string) string {
+func matchAvatarByAuthor(files []ysm.DecodedFile, authors []authorEntry, safeName string) string {
 	var matched []authorEntry
 	for _, au := range authors {
 		if SafeName(au.Name) == safeName && au.Avatar != "" {
@@ -130,7 +131,7 @@ func cacheYSMavatars(modelPath string) {
 		}
 		return
 	}
-	files := DecodeYSMData(data)
+	files := ysm.DecodeYSM(data)
 	if len(files) == 0 {
 		return
 	}

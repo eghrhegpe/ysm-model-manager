@@ -2,7 +2,7 @@ package app
 
 // 纹理序口径（2026-08-10 统一）：有 ysm.json 声明序 → 声明序 + default_texture 置首；
 // 无（加密模型等 ysm.json 不可解）→ 按纹理尺寸降序（主纹理通常最大）。
-// 三处消费方共用：AnalyzeBedrockModel（Go 原生解析）、decodeYSMViaNodeJS（Node WASM 解码）、
+// 三处消费方共用：AnalyzeBedrockModel（Go 原生解析）、decodeYSMViaWASI（wazero 解码）、
 // 前端 wasm.ts orderedTexKeys（texture-order.ts，口径对称）。改口径务必同步三处。
 
 import (

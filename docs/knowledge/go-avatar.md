@@ -11,16 +11,12 @@ auto_fields:
     - CacheAvatarsFromJSON
     - CacheAvatarsFromModel
     - CacheDir
-    - DecodeYSMData
     - ExtractAvatarURI
-    - FS
     - PurgeAvatarCache
     - ReadCachedAvatar
     - ReadFileFromContainer
     - SafeName
     - SaveAvatarData
-    - SetNodeJS
-    - Write
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:

@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -113,89 +111,66 @@ func TestImagePixelArea(t *testing.T) {
 	}
 }
 
-// ===== wasm_decoder.go 未覆盖函数测试 =====
+// ===== wasm_decoder.go（ADR-316 wazero 内存直解）解码路径测试 =====
 
-// TestFindNodeJS_AndroidEmpty 测试 Android 平台返回空路径
-func TestFindNodeJS_AndroidEmpty(t *testing.T) {
-	if runtime.GOOS == "android" {
-		if findNodeJS() != "" {
-			t.Fatal("Android 平台 findNodeJS 应返回空串")
-		}
-	} else {
-		t.Skip("非 Android 平台，跳过")
-	}
-}
-
-// TestFindNodeJS_ReturnsPathOrEmpty 测试 findNodeJS 返回路径或空（不依赖环境）
-func TestFindNodeJS_ReturnsPathOrEmpty(t *testing.T) {
-	// findNodeJS 查找 PATH 中的 node/node.exe
-	// 这里只验证不 panic，返回值依赖测试环境
-	path := findNodeJS()
-	if path != "" {
-		if !strings.HasSuffix(path, "node") && !strings.HasSuffix(path, "node.exe") {
-			t.Logf("findNodeJS 返回: %s", path)
-		}
-	}
-}
-
-// TestRunYSMNodeJSDecode_NilInput 测试 nil 输入
-func TestRunYSMNodeJSDecode_NilInput(t *testing.T) {
-	result := runYSMNodeJSDecode(nil)
+// TestRunYSMDecode_NilInput 测试 nil 输入（wazero 路径：parser abort → error → nil）
+func TestRunYSMDecode_NilInput(t *testing.T) {
+	result := runYSMDecode(nil)
 	if result != nil {
 		t.Fatalf("nil 输入应返回 nil, got %v", result)
 	}
 }
 
-// TestRunYSMNodeJSDecode_EmptyInput 测试空输入
-func TestRunYSMNodeJSDecode_EmptyInput(t *testing.T) {
-	result := runYSMNodeJSDecode([]byte{})
+// TestRunYSMDecode_EmptyInput 测试空输入
+func TestRunYSMDecode_EmptyInput(t *testing.T) {
+	result := runYSMDecode([]byte{})
 	if result != nil {
 		t.Fatalf("空输入应返回 nil, got %v", result)
 	}
 }
 
-// TestRunYSMNodeJSDecode_InvalidYSM 测试无效 .ysm 数据
-func TestRunYSMNodeJSDecode_InvalidYSM(t *testing.T) {
-	result := runYSMNodeJSDecode([]byte("not a ysm file"))
+// TestRunYSMDecode_InvalidYSM 测试无效 .ysm 数据
+func TestRunYSMDecode_InvalidYSM(t *testing.T) {
+	result := runYSMDecode([]byte("not a ysm file"))
 	if result != nil {
 		t.Fatalf("无效输入应返回 nil, got %v", result)
 	}
 }
 
-// TestDecodeYSMViaNodeJS_NilInput 测试 nil 输入
-func TestDecodeYSMViaNodeJS_NilInput(t *testing.T) {
-	result := decodeYSMViaNodeJS(nil)
+// TestDecodeYSMViaWASI_NilInput 测试 nil 输入
+func TestDecodeYSMViaWASI_NilInput(t *testing.T) {
+	result := decodeYSMViaWASI(nil)
 	if result != nil {
 		t.Fatalf("nil 输入应返回 nil, got %v", result)
 	}
 }
 
-// TestDecodeYSMViaNodeJS_EmptyInput 测试空输入
-func TestDecodeYSMViaNodeJS_EmptyInput(t *testing.T) {
-	result := decodeYSMViaNodeJS([]byte{})
+// TestDecodeYSMViaWASI_EmptyInput 测试空输入
+func TestDecodeYSMViaWASI_EmptyInput(t *testing.T) {
+	result := decodeYSMViaWASI([]byte{})
 	if result != nil {
 		t.Fatalf("空输入应返回 nil, got %v", result)
 	}
 }
 
-// TestDecodeYSMComponentsViaNodeJS_NilInput 测试 nil 输入
-func TestDecodeYSMComponentsViaNodeJS_NilInput(t *testing.T) {
-	comps, names := decodeYSMComponentsViaNodeJS(nil)
+// TestDecodeYSMComponentsViaWASI_NilInput 测试 nil 输入
+func TestDecodeYSMComponentsViaWASI_NilInput(t *testing.T) {
+	comps, names := decodeYSMComponentsViaWASI(nil)
 	if comps != nil || names != nil {
 		t.Fatalf("nil 输入应返回 (nil, nil), got (%v, %v)", comps, names)
 	}
 }
 
-// TestDecodeYSMComponentsViaNodeJS_EmptyInput 测试空输入
-func TestDecodeYSMComponentsViaNodeJS_EmptyInput(t *testing.T) {
-	comps, names := decodeYSMComponentsViaNodeJS([]byte{})
+// TestDecodeYSMComponentsViaWASI_EmptyInput 测试空输入
+func TestDecodeYSMComponentsViaWASI_EmptyInput(t *testing.T) {
+	comps, names := decodeYSMComponentsViaWASI([]byte{})
 	if comps != nil || names != nil {
 		t.Fatalf("空输入应返回 (nil, nil), got (%v, %v)", comps, names)
 	}
 }
 
-// TestDecodeYSMComponentsViaNodeJS_ValidYSM 构造最小合法 .ysm 验证多组件解码
-func TestDecodeYSMComponentsViaNodeJS_ValidYSM(t *testing.T) {
+// TestDecodeYSMComponentsViaWASI_ValidYSM 构造最小合法 .ysm 验证多组件解码
+func TestDecodeYSMComponentsViaWASI_ValidYSM(t *testing.T) {
 	// 创建临时目录构造合法 .ysm 结构
 	dir := t.TempDir()
 	modelsDir := filepath.Join(dir, "models")
@@ -231,16 +206,16 @@ func TestDecodeYSMComponentsViaNodeJS_ValidYSM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 解码（依赖 Node.js + WASM，环境无 Node 则返回 nil）
-	comps, names := decodeYSMComponentsViaNodeJS(ysmData)
+	// 解码（wazero 内存直解，ADR-316）
+	comps, names := decodeYSMComponentsViaWASI(ysmData)
 
-	// 无 Node.js 环境时返回 nil（Android/无运行时），这是预期行为
+	// 输入是裸 ysm.json 而非加密 .ysm 容器，parser abort → nil 是预期行为
 	if comps == nil && names == nil {
-		t.Log("Node.js 不可用，解码器返回 nil（预期）")
+		t.Log("非 .ysm 容器输入，解码器返回 nil（预期）")
 		return
 	}
 
-	// 有 Node.js 时验证结构
+	// 解码成功时验证结构
 	if comps != nil {
 		if len(comps) < 1 {
 			t.Fatalf("期望至少 1 个组件, got %d", len(comps))

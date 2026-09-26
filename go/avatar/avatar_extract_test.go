@@ -6,12 +6,14 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/ysm"
 )
 
-// ysmFileFromStr 将字符串按字节构造解码文件条目（ysmDecodedFile.Data 为 []byte
+// ysmFileFromStr 将字符串按字节构造解码文件条目（ysm.DecodedFile.Data 为 []byte
 // 直通形态——2026-09 外部锐评 #2 后无 []int 中间形态，纯函数表驱动直接喂 []byte）。
-func ysmFileFromStr(path, content string) ysmDecodedFile {
-	return ysmDecodedFile{Path: path, Data: []byte(content)}
+func ysmFileFromStr(path, content string) ysm.DecodedFile {
+	return ysm.DecodedFile{Path: path, Data: []byte(content)}
 }
 
 // withTempCache 将 CacheDir 接管到临时目录，避免污染真实用户缓存。
@@ -58,7 +60,7 @@ func TestExtractAvatarCandidates(t *testing.T) {
 // TestParseYSMJSONAuthors 验证 ysm.json 作者列表解析（纯函数，喂 ysmFile 切片）。
 func TestParseYSMJSONAuthors(t *testing.T) {
 	json := `{"metadata":{"authors":[{"name":"Alice","avatar":"avatar/alice.png"},{"name":"Bob","avatar":"bob.jpg"}]}}`
-	files := []ysmDecodedFile{
+	files := []ysm.DecodedFile{
 		ysmFileFromStr("ysm.json", json),
 		ysmFileFromStr("avatar/alice.png", "\x89PNG"),
 	}
@@ -75,7 +77,7 @@ func TestParseYSMJSONAuthors(t *testing.T) {
 	}
 
 	// 无 ysm.json 时返回 nil
-	if got := parseYSMJSONAuthors([]ysmDecodedFile{ysmFileFromStr("model.pmx", "x")}); got != nil {
+	if got := parseYSMJSONAuthors([]ysm.DecodedFile{ysmFileFromStr("model.pmx", "x")}); got != nil {
 		t.Errorf("无 ysm.json 时解析=%v, 期望 nil", got)
 	}
 }
@@ -149,7 +151,7 @@ func TestMatchAvatarByAuthor(t *testing.T) {
 	withTempCache(t)
 
 	json := `{"metadata":{"authors":[{"name":"Alice","avatar":"avatar/alice.png"}]}}`
-	files := []ysmDecodedFile{
+	files := []ysm.DecodedFile{
 		ysmFileFromStr("ysm.json", json),
 		ysmFileFromStr("avatar/alice.png", "\x89PNG..."),
 	}
@@ -165,7 +167,7 @@ func TestMatchAvatarByAuthor(t *testing.T) {
 	}
 
 	// 未命中：作者存在但头像文件缺失 → 返回空
-	missFiles := []ysmDecodedFile{ysmFileFromStr("ysm.json", json)}
+	missFiles := []ysm.DecodedFile{ysmFileFromStr("ysm.json", json)}
 	if got := matchAvatarByAuthor(missFiles, authors, SafeName("Alice")); got != "" {
 		t.Errorf("头像缺失时匹配=%q, 期望空", got)
 	}
@@ -175,7 +177,7 @@ func TestMatchAvatarByAuthor(t *testing.T) {
 func TestExtractFallbackAvatarFromDir(t *testing.T) {
 	withTempCache(t)
 
-	files := []ysmDecodedFile{
+	files := []ysm.DecodedFile{
 		ysmFileFromStr("avatar/face.png", "\x89PNG..."),
 		ysmFileFromStr("model.pmx", "binary"),
 	}
@@ -184,7 +186,7 @@ func TestExtractFallbackAvatarFromDir(t *testing.T) {
 	}
 
 	// 无 avatar/ 目录图片 → 返回空
-	noAvatar := []ysmDecodedFile{ysmFileFromStr("model.pmx", "binary")}
+	noAvatar := []ysm.DecodedFile{ysmFileFromStr("model.pmx", "binary")}
 	if got := extractFallbackAvatarFromDir(noAvatar, "Alice"); got != "" {
 		t.Errorf("无头像时降级=%q, 期望空", got)
 	}

@@ -53,7 +53,8 @@ export default defineConfig({
   },
   build: {
     outDir: "dist-web",
-    rollupOptions: {
+    // vite 8 起 rolldown 内核：rollupOptions 更名 rolldownOptions（rollupOptions 已弃用告警）
+    rolldownOptions: {
       // 单入口（原 spike 入口随 web.html 删除一并移除，见文件头说明）
       input: {
         main: resolve(root, "index.html"),

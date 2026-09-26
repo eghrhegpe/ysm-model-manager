@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * 语言包 TS → JSON 构建脚本（ADR-045）。
  * generate-locale-json.ts — 编译 locales TS 导出为运行时 JSON
@@ -16,6 +17,7 @@
 // --check 模式解决 #8 开发/运行双源不对称：改 TS 未重生成 → 构建即失败。
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { basename, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -26,9 +28,11 @@ const OUT_DIR = join(ROOT, "frontend", "public", "locales");
 
 const CHECK = process.argv.includes("--check");
 
-// esbuild 是 Vite 的依赖，从 frontend/node_modules 解析
-// Windows 路径必须转 file:// URL 才能用于 import()
-const esbuildPath = join(ROOT, "frontend", "node_modules", "esbuild", "lib", "main.js");
+// esbuild 是 Vite 的依赖，以 frontend/ 为解析起点走 Node 标准向上查找
+// （可能落在 frontend/node_modules，也可能被 npm workspaces 提升到根 node_modules）
+const esbuildPath = createRequire(join(ROOT, "frontend", "package.json")).resolve(
+  "esbuild/lib/main.js",
+);
 const esbuild = await import(pathToFileURL(esbuildPath).href);
 
 const tsFiles = readdirSync(SRC_DIR).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
@@ -52,7 +56,7 @@ async function loadTsObject(file: string): Promise<Record<string, unknown>> {
   // 提取 module.exports — CJS 下对象导出为 module.exports = { ... }
   // 用 Function 构造器安全执行（不走 eval）
   const fn = new Function("module", "exports", code);
-  const mod: { exports: Record<string, any> } = { exports: {} };
+  const mod: { exports: Record<string, unknown> } = { exports: {} };
   fn(mod, mod.exports);
   // 取第一个导出的值（zh-CN.ts 导出 zhCN 对象）
   const exported = mod.exports;
@@ -97,7 +101,7 @@ if (CHECK) {
         console.log(`[locale-gen:check] ${lang}.json ✓（${tsKeys.length} keys 一致）`);
       }
     } catch (e) {
-      console.error(`[locale-gen:check] ${file} 编译失败:`, (e as any).message);
+      console.error(`[locale-gen:check] ${file} 编译失败:`, e instanceof Error ? e.message : e);
       failed++;
     }
   }
@@ -124,7 +128,7 @@ for (const file of tsFiles) {
     const keyCount = Object.keys(obj).length;
     console.log(`[locale-gen] ${lang}.json ← ${file} (${keyCount} keys)`);
   } catch (e) {
-    console.error(`[locale-gen] ${file} 编译失败:`, (e as any).message);
+    console.error(`[locale-gen] ${file} 编译失败:`, e instanceof Error ? e.message : e);
     failed++;
   }
 }

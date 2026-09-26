@@ -27,6 +27,7 @@ import (
 	"ysm-model-manager/internal/app/install"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // requireMcRoot 校验游戏根目录已配置（收敛散落的 `cfg.McRoot == ""` 错误检查）。
@@ -251,9 +252,19 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 	a.app.Event.Emit("config-loaded", ysmRoot, cfg.McRoot, cfg.LinkMode)
 
-	// 预热模型广场第二窗口（ADR-050）
+	// 预热模型广场第二窗口（ADR-050）。
+	// Wails beta.26 时序变化：ServiceStartup 阶段主窗口尚未嵌 WebView2 控制器，
+	// 此刻同步预热会让 plaza 与主窗口并发 CreateCoreWebView2Controller →
+	// 后到者 0x800700AA（requested resource is in use）崩掉启动。
+	// 推迟到主窗口 WindowDidLoad 后再预热，此时主窗口控制器已就位。
 	if runtime.GOOS != "android" {
-		a.prewarmPlazaWindow()
+		if a.mainWindow != nil {
+			a.mainWindow.RegisterHook(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
+				a.prewarmPlazaWindow()
+			})
+		} else {
+			a.prewarmPlazaWindow()
+		}
 	}
 
 	// 启动文件监听器（自动同步启用/禁用状态到整合包）

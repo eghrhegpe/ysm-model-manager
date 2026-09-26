@@ -23,6 +23,10 @@ type pathManager interface {
 // pathMgr 包级单例（由平台文件 init 注入实现）
 var pathMgr pathManager
 
+// configDirOverride 测试专用配置目录覆盖（仅测试代码经 setConfigDirForTest 置值）：
+// 落盘类操作（saveConfig/日志等）重定向进临时目录，防写穿真实用户配置。
+var configDirOverride string
+
 // appDataRoot 委托平台实现；失败返回空串并明示原因（不静默降级为 "."——
 // Android 上 "." 即 CWD=/ 不可写根，配置/日志将静默不落盘，P1 审核发现）。
 // 调用方以空串区分处理（app_config.go 已有 `appData != ""` 守卫）。

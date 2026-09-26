@@ -6,6 +6,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"ysm-model-manager/go/types"
@@ -48,15 +49,46 @@ func TestRepoDirAccessible(t *testing.T) {
 	}
 }
 
+// setConfigDirForTest 将配置目录重定向到 dir 并在测试结束时还原。
+// saveConfig 等落盘操作由此隔离进临时目录，绝不触碰真实用户配置
+// （先例事故：TestResolvedRootCache 写穿 ysm_config.json，2026-09-26）。
+func setConfigDirForTest(t *testing.T, dir string) {
+	t.Helper()
+	prev := configDirOverride
+	configDirOverride = dir
+	t.Cleanup(func() { configDirOverride = prev })
+}
+
 // repoApp 构造注入 configCache 的 App（specificRoot 经 resource_types.json 注册表驱动）
 func repoApp(t *testing.T, cfg types.AppConfig) *App {
 	t.Helper()
+	// 统一防写穿：所有经 repoApp/scanApp 构造的测试 App，其落盘操作一律进临时目录
+	setConfigDirForTest(t, t.TempDir())
 	a := &App{}
 	a.configMu.Lock()
 	a.configCache = cfg
 	a.configLoaded = true
 	a.configMu.Unlock()
 	return a
+}
+
+// TestSaveConfig_IsolatedFromUserConfig：经 repoApp 构造的测试 App 调 saveConfig，
+// 落盘必须进测试覆盖目录、绝不触碰真实用户配置（TestResolvedRootCache 写穿事故回归锁）。
+func TestSaveConfig_IsolatedFromUserConfig(t *testing.T) {
+	a := repoApp(t, types.AppConfig{FilesRoot: t.TempDir()})
+	dest := configPath()
+	if dest == "" {
+		t.Fatal("configPath 不应为空（configDirOverride 已生效）")
+	}
+	if err := a.saveConfig(a.LoadAppConfig()); err != nil {
+		t.Fatalf("saveConfig: %v", err)
+	}
+	if _, err := os.Stat(dest); err != nil {
+		t.Fatalf("配置应写入测试覆盖目录 %s: %v", dest, err)
+	}
+	if strings.Contains(filepath.Base(filepath.Dir(dest)), "Roaming") {
+		t.Errorf("配置落入真实用户目录: %s", dest)
+	}
 }
 
 func TestGetRepoRoot_FallbackChain(t *testing.T) {

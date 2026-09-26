@@ -38,6 +38,12 @@ func findConfigFile(candidates ...string) string {
 }
 
 func configDir() string {
+	// 测试专用覆盖（见 pathmgr_test.go|setConfigDirForTest）：防 saveConfig 写穿
+	// 真实用户配置——TestResolvedRootCache 曾把用户 ysm_config.json 的 filesRoot
+	// 覆写成 t.TempDir()（2026-09-26 事故）。生产代码永不置此值。
+	if configDirOverride != "" {
+		return configDirOverride
+	}
 	// 平台差异收敛：桌面 os.UserConfigDir() / Android 沙盒（PathManager，ADR-046 P2）
 	dir := appDataRoot()
 	// 与 go/logs 的子目录保持一致（YSM-Model-Manager），用户目录下统一管理

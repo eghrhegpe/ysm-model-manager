@@ -98,6 +98,26 @@ em++ -sSTANDALONE_WASM -sSTACK_SIZE=4194304 -sALLOW_MEMORY_GROWTH=1 \
 结论：Android WebView 的 V8（Liftoff/TurboFan）解码同一加密模型是**秒级**且产物与 wazero 路径语义一致——「Android 无编译器」是 wazero 的局限，不是 wasm 解码本身的宿命。产品决策因此多出第④项：**Android 走 WebView 桥委托解码**（Go 经 WebView 执行 frontend 同源 YSMParser wasm 拿回产物）。代价：形式上复活一条桥（与 ADR-316 退役桥精神有张力），但零额外分发（WebView 系统自带）；Node 开发机基准脚本可复刻（退役桥 `git show 711e1ae3e^:go/avatar/avatar_decode.go` 的 decode.cjs 逻辑）。⚠️ 知识卡旧记「75 产物」与实测 53 有出入（复测两条路径均 53，以实测为准）。
 注：Node V8 数据是 WebView 的**上限估计**——真机 WebView 环境并发渲染会分走资源，on-device 终测仍需另行安排。
 
+## 2026-09-27 P0 spike 通过：Wails 事件通道大 payload 往返实测（桌面 WebView2，ADR-317 数据）
+
+环境：`task dev`（wails3 beta.26）+ `Windows.WindowsOptions.AdditionalBrowserArgs=--remote-debugging-port=9222` 开 CDP，Node 直连 WebSocket 注入 `window._wails.dispatchWailsEvent` 包装器/动态 import `/src/backend/runtime.ts`。spike 代码已还原不落仓（测量方法记录于此，可随时重演）。
+
+**Go→前端 Emit 方向**（payload 字符串带 UnixNano 前缀测单程延迟，1/4/8/16/32MB × 2 轮，全部完整无截断）：
+
+| size | 空闲轮 | 忙碌轮 |
+|------|--------|--------|
+| 1MB | 17ms | 17ms |
+| 4MB | 64ms | 304ms |
+| 8MB | 155ms | 525ms |
+| 16MB | 257ms | 1272ms |
+| 32MB | 485ms | 2613ms |
+
+**前端→Go 绑定方向**（生成绑定 `DetectContainerType` 传大 base64 串，含 JSON 序列化）≈ **160ms/MB**：1MB=176ms / 4MB=689ms / 8MB=1292ms / 16MB=2540ms / 32MB=5240ms。
+
+**预算推演**：真实 V3 样本往返 ≈ 输入 1.7MB→base64 2.3MB（Emit ~50ms）+ 产物 7.5MB→base64 10MB（绑定 ~1.6s）+ V8 解码 1.1s ≈ **3s 端到端**，vs wazero interpreter 33s——**ADR-317 P0 green-light**，桥接方案通道容量与延迟均可行。遗留：binding 方向 160ms/MB 偏贵（JSON 双转换），P1 实现时产物回传可考虑分块或 WASM 侧压（如产物 gzip 后再 base64）。
+
+**测量方法备忘**（复演用）：①Go 侧临时 spike 块放 `ServiceStartup` 的 config-loaded emit 之后（env 门控 + goroutine 延迟发射）；②CDP 开端口须走 `main.go` 的 `application.Options{Windows: {AdditionalBrowserArgs: []string{"--remote-debugging-port=..."}}}`——`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` 环境变量会被 go-webview2 loader 主动覆盖（env_create.go:169 清空）；③前端事件必经 `window._wails.dispatchWailsEvent`，包装它比 Events.On 订阅可靠（动态 import runtime.ts 会产生模块分身，订阅可能收不到）；④前端→Go 直接动态 import `/bindings/ysm-model-manager/internal/app/app.ts` 调生成函数（vite dev 服务全项目文件）。
+
 ## 相关
 
 - [ysm-wasm](./ysm-wasm.md) — 现 Node.js + WASM 桥（生产主路径，本卡验证的退役对象）

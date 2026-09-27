@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-317：Android .ysm 解码 WebView 桥后端（Decoder 策略平台化）",
+        "link": "/adr/ADR-317-android-webview-decode-bridge"
+      },
+      {
         "text": "ADR-316：WASI 解码器生产化：wazero 纯 Go 宿主退役 Node 子进程桥",
         "link": "/adr/ADR-316-wasi-wazero-go-node"
       },

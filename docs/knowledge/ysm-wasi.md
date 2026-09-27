@@ -85,6 +85,19 @@ em++ -sSTANDALONE_WASM -sSTACK_SIZE=4194304 -sALLOW_MEMORY_GROWTH=1 \
 2. **interpreter 基准（已量化，结论严峻）**：同一 V3 样本（1.7MB 输入 75 产物，i7-13700HX）compiler **0.76s** vs interpreter **35.6s = 47×**。Android 无 wazero optimizing compiler（长期不支持），手机 silicon 只会更慢且撞 60s 超时护栏——**ADR-316 D5「Android 首次获得加密解码」技术上成立、体验上不可用**，上线前须产品决策：①Android 回退 metadata-only（放弃加密解码）；②接受慢速单模型解码（需调大超时 + 进度提示）；③等 wazero compiler 支持 android。基准复跑：`YSMWASI_TEST_FIXTURE=<.ysm> go test ./go/ysmwasi/ -bench .`（`ysmwasi_bench_test.go` 双模式）。
 3. **推上游（准备包已备）**：`docs/upstream-pr/ysmparser-collecttomemory-pr.md`——collectToMemory 纯增量提案 + V1/V2/V3 实现 + 桥接导出全文 + 提交前待办；结论「越早越好但非依赖项」（vendored 重放仍是主防线）。
 
+## 2026-09-27 Android 决策补充实证：WebView V8 路径是快的（产品决策第④项浮出）
+
+同一样本（双月希瞳 v2.2.ysm，1.7MB V3，i7-13700HX，2026-09-27 实测）三路对照：
+
+| 路径 | 耗时 | 产物 |
+|------|------|------|
+| wazero compiler（桌面） | 0.76s（bench）/ 1.21s（含冒烟日志） | 53 文件 7515549 bytes |
+| wazero interpreter（Android 现状） | **32.8s**（-benchtime 1x 复测，与 35.6s 同量级） | 同上 |
+| **Node/WebView V8 JIT**（frontend/public/wasm 同源资产） | **1.1s**（decode 本体；init 8ms） | **逐字节同量 53 文件 7515549 bytes** |
+
+结论：Android WebView 的 V8（Liftoff/TurboFan）解码同一加密模型是**秒级**且产物与 wazero 路径语义一致——「Android 无编译器」是 wazero 的局限，不是 wasm 解码本身的宿命。产品决策因此多出第④项：**Android 走 WebView 桥委托解码**（Go 经 WebView 执行 frontend 同源 YSMParser wasm 拿回产物）。代价：形式上复活一条桥（与 ADR-316 退役桥精神有张力），但零额外分发（WebView 系统自带）；Node 开发机基准脚本可复刻（退役桥 `git show 711e1ae3e^:go/avatar/avatar_decode.go` 的 decode.cjs 逻辑）。⚠️ 知识卡旧记「75 产物」与实测 53 有出入（复测两条路径均 53，以实测为准）。
+注：Node V8 数据是 WebView 的**上限估计**——真机 WebView 环境并发渲染会分走资源，on-device 终测仍需另行安排。
+
 ## 相关
 
 - [ysm-wasm](./ysm-wasm.md) — 现 Node.js + WASM 桥（生产主路径，本卡验证的退役对象）

@@ -1141,7 +1141,6 @@ auto_fields:
     - showMorphPreview
     - showProgress
     - showRenameDialog
-    - showRepoModels
     - showResourcePack
     - showScenePreview
     - showShaderpack

@@ -4,7 +4,6 @@
 // - workshop-browse-mode.ts: 浏览模式（外链/内嵌/窗口）
 // - workshop-site-opener.ts: 站点打开、内嵌浏览器、导出/导入
 // - workshop-avatar.ts: 创作者头像提取
-// - features/community/show-repo-models.ts: 仓库模型显示（与 init-github.ts 共享）
 
 import { Events } from "@/backend/runtime.ts";
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
@@ -15,8 +14,6 @@ import {
   getAvatarSnapshot,
   setAvatar,
 } from "@/features/community/creator-avatar-store.ts";
-import type { WorkshopModel } from "@/features/community/render.ts";
-import { showRepoModels } from "@/features/community/show-repo-models.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -29,10 +26,10 @@ import {
 } from "@/views/app-content/site/workshop-browse-mode.ts";
 import type { AppContentHost } from "./host.ts";
 import { extractAvatars } from "./site/workshop-avatar.ts";
+import { WS_ACTIVE_TAG_KEY, WS_SEARCH_KW_KEY } from "./site/workshop-data.ts";
 import { createWorkshopPageState } from "./site/workshop-page-state.ts";
 import { bindSiteEvents, openSite } from "./site/workshop-site-opener.ts";
 import { createWorkshopRefs, initWorkshopTabs } from "./site/workshop-tabs.ts";
-import { workshopTpl } from "./tpl-workshop.ts";
 
 /**
  * 创建创意工坊页的共享 ref 对象——单一入口，tabs / showSiteView / edit 等全部从此处取。
@@ -55,24 +52,6 @@ export function initWorkshopPage(host: AppContentHost): void {
   // 单一入口：所有可变 ref 由 createWorkshopRefs() 生成一份；tabs 写入、showSiteView 读取，
   // 永远是同一实例——杜绝「形状相同、实例不同」的错位 bug。
   const refs = createWorkshopRefs();
-  // 页内「可替换清理槽」：重绑前清旧、绑完存新；经订阅桶登记拆除（ADR-260），
-  // 不再借宿 AppContentState 字段，也不再作为注入参数穿过 showRepoModels。
-  // ⚠️ drain 闭包「读槽位 → 置 null → await」与 re-bind 路径「await 旧 cleanup → 写新 cleanup」
-  // 存在既有竞态：lang:changed 的 cleanupPage() 落在 re-bind 的 await 挂起期间时，旧 cleanup
-  // 会被 drain 与 re-bind 各跑一次（双跑）。bindRepoEvents 的 cleanup（退订 bus 监听 + 取消
-  // 下载队列定时器）幂等无害，双跑安全；若未来 cleanup 引入非幂等副作用，须在此处加代际守卫。
-  // （与 init-github.ts 同构槽位同因同注，见 ADR-260）
-  let _repoEventsCleanup: (() => Promise<void>) | null = null;
-  host.subs.addPage(async () => {
-    const prev = _repoEventsCleanup;
-    _repoEventsCleanup = null;
-    await prev?.();
-  });
-  let repoModelCache = host.state.workshopCache;
-  if (!repoModelCache) {
-    repoModelCache = new Map();
-    host.state.workshopCache = repoModelCache;
-  }
 
   // 浏览模式：单源 ref（{ v }）＋ setter——setBrowseMode 改 .v 即让
   // re-render 高亮与 openUrl 打开同时读到新值，无需退出页面、无值拷贝 stale。
@@ -122,37 +101,14 @@ export function initWorkshopPage(host: AppContentHost): void {
       allCreators: refs.allCreatorsRef.v,
       repoAuthors: refs.repoAuthorsRef.v,
       wsEditModeRef: refs.wsEditModeRef,
-      showRepoModels: async (repo, models, source) => {
-        await showRepoModels(
-          (s) => esc(s == null ? "" : String(s)),
-          _repoEventsCleanup,
-          (fn: (() => Promise<void>) | null) => {
-            _repoEventsCleanup = fn;
-          },
-          page.getCurrentSite(),
-          (site: WorkshopSite | null) => {
-            page.setCurrentSite(site);
-          },
-          repo,
-          models as WorkshopModel[],
-          source,
-          searchResults,
-          workshopTpl,
-        );
-      },
       fillSearch,
-      repoModelCache,
       openUrl,
       // 头像表直接取 store 活体引用（ADR-264）：增量写是原地改写，已渲染 ctx 能立即看到新值
       avatarCache: getAvatarSnapshot(),
       browseMode: browseModeRef,
       setBrowseMode,
-      activeTag: safeGet("ysm-ws-active-tag") || "",
-      searchKw: safeGet("ysm-ws-search-kw") || "",
-      backToSite: () => {
-        const cur = page.getCurrentSite();
-        if (cur) showSiteView(cur);
-      },
+      activeTag: safeGet(WS_ACTIVE_TAG_KEY) || "",
+      searchKw: safeGet(WS_SEARCH_KW_KEY) || "",
       // 重渲染（编辑切换/保存/拖拽/搜索等）经同一 wrapper：先跑旧 cleanup 再存新
       // cleanup（见 runPrevSiteViewCleanup 注释），供 site-view 的 refreshView 调用。
       reRender: () => {

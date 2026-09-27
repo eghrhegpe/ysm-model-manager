@@ -61,7 +61,6 @@ function makeState(creators: LocalCreatorLike[]): {
     creators,
     authorCountMap: {},
     bus: { emit: vi.fn() } as unknown as SiteViewState["bus"],
-    ctx: null as unknown as SiteViewState["ctx"],
     activeTag: "",
     searchKw: "",
     detachedCreators: [],

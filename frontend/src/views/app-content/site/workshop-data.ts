@@ -5,7 +5,19 @@ import { t } from "@/core/i18n/t.ts";
 import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
 import { ICONS } from "@/utils/icon/workshop-icons.ts";
 
-const STORAGE_KEY = "ysm-fav-creators";
+// ===== 页作用域 localStorage 键（单源）=====
+// 读方/写方散在 init-workshop（读）、edit（写）、events 跨页 storage 监听、tabs（last-tab）。
+// 键改名即断链（旧值成孤儿、监听失配），故收口于此，改动只认这一处。
+/** 收藏创作者名单（JSON string[]）——本模块读写 + events.ts 跨标签页 storage 同步监听 */
+export const FAV_CREATORS_KEY = "ysm-fav-creators";
+/** 分类标签过滤（""=全部）——init-workshop 读、edit 写 */
+export const WS_ACTIVE_TAG_KEY = "ysm-ws-active-tag";
+/** 搜索关键词（""=无词）——init-workshop 读、edit 写 */
+export const WS_SEARCH_KW_KEY = "ysm-ws-search-kw";
+/** 上次停留的站点 tab——workshop-tabs 读写 */
+export const WS_LAST_TAB_KEY = "ysm-ws-last-tab";
+
+const STORAGE_KEY = FAV_CREATORS_KEY;
 
 /** 创作者身份识别结果 */
 export interface CreatorIdentity {

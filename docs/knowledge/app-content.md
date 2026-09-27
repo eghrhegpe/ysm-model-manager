@@ -138,7 +138,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - 社区数据层（`community-data.ts`，ADR-223 北迁 `features/community/community-data.ts`，经 `community-deps` seam 取绑定）：`loadCommunityData` 首屏快路径（不含磁盘扫描）；`loadLocalAuthors` withCached 5min **STALE** 策略（过期返旧值后台刷新）；`mergeLocalAuthorsInto` 幂等合并（同名去重 + type 分段精确比较）。
 - `workshop-icons.ts` — SVG 图标表 `ICONS` 与 `getSiteIcon` / `getTagIconFromRole`
 - `workshop-site-opener.ts` — 站点打开器：`openSite(host, site, browseMode, targetUrl)` 按模式走 `openEmbedded` / `NavigatePlazaWindow` / `OpenInBrowser`；`targetUrl` 缺省回退 `site.url`；site-view 的 `ctx.openUrl` 须把搜索词链接**透传**给 `openSite`，不得丢弃。`bindSiteEvents(host, page)` 经页作用域句柄读当前站点（ADR-263）。
-- **`AppContentState` 字段归属（ADR-263/264 收口）**：容器只收 app 壳层基础设施（`root` / `current` / `pagePanels` / `resizeMove` / `resizeUp`）与唯一一个**有意跨切**的字段——`workshopTimer`（清理点在 `_render` 开头且**必须早于 `page.init`**，搬进页内无法等效）。`currentSite` 已下沉 `site/workshop-page-state.ts`（ADR-263）；`avatarCache` 已上收 `features/community/creator-avatar-store.ts`（ADR-264，与写入方 download-queue-store 同寿命同形态）。新增字段前先读 `state.ts` 逐字段注释，别再把页私有/跨页状态往里塞。
+- **`AppContentState` 字段归属（ADR-263/264 收口）**：容器只收 app 壳层基础设施（`root` / `current` / `pagePanels` / `resizeMove` / `resizeUp`）与两个**有意跨切**的字段——`workshopTimer`（清理点在 `_render` 开头且**必须早于 `page.init`**，搬进页内无法等效）与`githubCache`（GitHub 页模型扫描结果缓存，会话级复用）。`currentSite` 已下沉 `site/workshop-page-state.ts`（ADR-263）；`avatarCache` 已上收 `features/community/creator-avatar-store.ts`（ADR-264，与写入方 download-queue-store 同寿命同形态）。新增字段前先读 `state.ts` 逐字段注释，别再把页私有/跨页状态往里塞。
 - **订阅桶 `add*Once` 改收工厂（ADR-264）**：`addGlobalOnce(key, () => bus.on(...))` / `addPageOnce(key, () => bus.on(...))`——传现成退订函数会在实参位置急切求值，幂等分支命中时遗留「已生效但未入桶」的孤儿订阅（实测：二次 init 后一次 emit 触发两次）。TypeScript 签名 `() => () => void` 会拦截写错形态。
 - **site 层不再收 host（ADR-265）**：`openSite(root, site, mode, url)` / `bindSiteEvents(root, page)` / `initWorkshopTabs(root, refs, page, registerDefaultSiteTimer)`——三入口只收 `root: ShadowRoot` 与页作用域句柄；定时器经登记函数一次性交回壳层（清理点在 `_render` 开头，所有权不变）。site 目录生产文件 `AppContentHost` 零命中，「接口宽度即权限」系列收口。
 
@@ -156,7 +156,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - `app-nav` 是 `nav:changed` 的主要派发源；本组件与 `PageStore` 监听 `nav:changed`（本组件切页整块重渲染，`PageStore` 单向更新状态；2026-08-17 起单事件模型，见知识卡 `app_nav`、`page_store`）
 - `<app-preview>` 由本模块顶部副作用静态导入完成注册，仓库页模板直接放置元素（见知识卡 `app_preview`）
 - `package:selected` 由 `app-sidebar` 卡片点击派发，本组件据此挂载 `<app-sync-manager instance=...>`（见知识卡 `app_sidebar`、`app_sync_manager`）。**2026-09 起为复用语义**：`mountSyncManager` 首次注入元素、后续仅改 `instance`/`default-type` 属性，实例跨整合包存活（组件 `attributeChangedCallback` 已支持 instance 变更）；切包由组件内 `_resetViewState()` 复位视图状态
-- 仓库页事件绑定与卡片渲染委托 `features/community/events.ts`（`bindRepoEvents`）与 `features/community/render.ts`；其 cleanup 为**异步**，由两页（github / community，后者旧 id `workshop`，ADR-301）各自持页内可替换槽并 `host.subs.addPage` 登记（ADR-260，**不再**存 `state.repoEventsCleanup` 字段、也不经注入链）；工坊模型列表接入定高虚拟滚动（`virtual-list.ts`，社区上线后索引可顶 2000 级）
+- 仓库页事件绑定与卡片渲染委托 `features/community/events.ts`（`bindRepoEvents`）与 `features/community/render.ts`；其 cleanup 为**异步**，由 github 页持页内可替换槽并 `host.subs.addPage` 登记（ADR-260，**不再**存 `state.repoEventsCleanup` 字段、也不经注入链；工坊页侧的 `_repoEventsCleanup` 槽随 show-repo-models 死链拆除已退役）；工坊模型列表接入定高虚拟滚动（`virtual-list.ts`，社区上线后索引可顶 2000 级）
 - 所有 Go 调用统一走 `getApp()`（见知识卡 `wails_bridge`）；跨组件通信走 bus（见知识卡 `event_bus`）
 
 ## 不变量
@@ -168,7 +168,7 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 - **幂等订阅用 `addPageOnce(key, fn)` / `addGlobalOnce(key, fn)`，不要自己开布尔标志**（ADR-261）：key 集合与订阅集合**同寿命**（`drainPage` / `cleanupAll` 一并清），故 lang:changed 重建后天然可重注册，无需任何外部复位。旧模式（`state.insListenerReg` / `.avatarRefreshRegistered` + `index.ts` 手工复位）已退役——它的不变量维护点横跨页与协调器两处，漏复位即「语言热切换后页面永久失去监听」（僵尸页同族）。⚠️ 幂等**须跨 init 调用**持存：闭包变量做不到（每次 init 新闭包），这也是不能「删了守卫了事」的原因（导出入口被二次调用也必须幂等，测试已锁定）
 - `_render()` 内页面 init 分发整体包 try/catch：init 抛错不中断调用方，转 `console.error` + `toast:show` 反馈用户而非静默
 - 样式走 `adoptedStyleSheets` + CSS 变量，无硬编码颜色；`innerHTML` 拼接统一过 `_esc` / `esc`；**页面级把 esc 传给渲染函数时统一用 `escUnknown`**（`utils/html/html.ts` 的 `EscFn` 形状适配单点，诊断页 / 去重面板接线），不再写 `(s) => esc(s == null ? "" : String(s))` 内联 lambda——测试夹具曾各手写一份并分裂成 3 / 4 / 5 实体三种转义表
-- 页面级临时缓存（`_workshopCache` / `_githubCache`）与 `_workshopTimer` 定时器在 `disconnectedCallback` 清空
+- 页面级临时缓存（`githubCache`）与 `workshopTimer` 定时器在 `disconnectedCallback` 清空：`githubCache` 存储 GitHub 页模型扫描结果，`workshopCache` 随 show-repo-models 死链拆除（2026-09）已移除
 - 站点搜索带词链接必须**真传**到底层打开调用：`ctx.openUrl(url)` → `openSite(host, site, mode, url)` 的 `url` 不得丢弃
 - 浏览模式收敛为**单源 ref**：`browseMode` 存为 `BrowseModeRef{ v }`，经 `ctx.browseMode` 贯穿到 `renderSiteView` 高亮与 `openUrl`→`openSite`，`setBrowseMode` 只改 `.v` + localStorage → 一处 set、处处一致，无值拷贝 stale
 - **community-data.ts 写回路径（2026-09-03 复核修正）**：`tryAutoMergeCommunity` 的「前端一次合并 + 单次 `SaveWorkshopCreators` 整体保存」规避的是**前端逐站循环调 `SaveWorkshopCreatorsBySite` N 次的跨调用部分提交**——BySite 自身（Go `internal/app/app_workshop.go`）是单次 Load→过滤→原子写的完整事务。代价是合并/去重派生逻辑（`mergeLocalAuthorsInto`/`dedupeCreators`/type 分号段比较）落在 TS 侧，触及 AGENTS.md「Go 派生结果只读」红线；长治方案 = 下沉 Go 新增「多站点合并替换」单次原子 binding，须开 ADR 后动（注释内已标注）

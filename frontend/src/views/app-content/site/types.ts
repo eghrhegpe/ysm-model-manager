@@ -17,11 +17,8 @@ export interface RenderSiteViewCtx {
   allCreators: LocalCreatorLike[];
   repoAuthors: RepoAuthorLike[];
   wsEditModeRef: { v: boolean };
-  showRepoModels: (repo: string, models: unknown[], source: string) => Promise<void>;
   fillSearch: (tpl: string, q: string) => string;
-  repoModelCache: Map<string, { models: unknown[]; source: string }>;
   openUrl: (url: string) => void;
-  backToSite: () => void;
   avatarCache: Record<string, string>;
   /** 创作者频道浏览模式（external/embed/window，ref 单源，localStorage 持久化） */
   browseMode: BrowseModeRef;
@@ -67,7 +64,6 @@ export interface SiteViewState {
 
   // 事件块共享的运行时状态
   bus: typeof bus;
-  ctx: RenderSiteViewCtx; // 兜底：refreshView = () => renderSiteView(site, ctx) 需要原 ctx
   /** 分类标签过滤（localStorage 持久化），""=全部 */
   activeTag: string;
   /** 创作者搜索关键词（localStorage 持久化） */

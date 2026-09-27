@@ -59,7 +59,6 @@ function makeState(over: Partial<SiteViewState> = {}): {
     creators,
     authorCountMap: {},
     bus: { emit: vi.fn() } as unknown as SiteViewState["bus"],
-    ctx: null as unknown as SiteViewState["ctx"],
     activeTag: "",
     searchKw: "",
     detachedCreators: [],

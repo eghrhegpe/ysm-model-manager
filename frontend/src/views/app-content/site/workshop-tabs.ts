@@ -17,6 +17,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getSiteIcon } from "@/utils/icon/workshop-icons.ts";
 import { bindTabA11y } from "@/views/app-content/tabs-a11y.ts";
 import type { RepoAuthorLike } from "./site-view.ts";
+import { WS_LAST_TAB_KEY } from "./workshop-data.ts";
 import type { WorkshopPageState } from "./workshop-page-state.ts";
 
 /** 创意工坊 Tab 延迟加载毫秒数（0 = 当前任务结束后立即拉数据；保留定时器机制供壳层
@@ -92,7 +93,7 @@ export function initWorkshopTabs(
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
       page.setCurrentSite(site);
-      safeSet("ysm-ws-last-tab", site.id);
+      safeSet(WS_LAST_TAB_KEY, site.id);
       // tab 高亮 / roving tabindex / aria-selected 由 tabs-a11y 原语在 activate 时统一切换，
       // 此处只负责内容区重渲染（原手搓 querySelectorAll 去 active + add active 已收敛）。
       refs.showSiteViewRef.v(page.getCurrentSite());
@@ -121,7 +122,7 @@ export function initWorkshopTabs(
         const tabsEl = root.getElementById("ws-tabs");
         if (tabsEl && data.sites.length) {
           // 恢复上次选中的 tab（用于决定首个激活项，与 bindTabA11y 的 pre-seeded active 对齐）
-          const last = safeGet("ysm-ws-last-tab");
+          const last = safeGet(WS_LAST_TAB_KEY);
           const initial = data.sites.find((s) => s.id === last) || data.sites[0];
           tabsEl.innerHTML = "";
           data.sites.forEach((s) => {

@@ -35,7 +35,6 @@ auto_fields:
     - countMissing
     - createDownloadQueue
     - createProgressGuard
-    - createRepoRenderGuard
     - createVirtualList
     - decrementRemaining
     - DEFAULT_COMMUNITY_URL
@@ -88,7 +87,6 @@ auto_fields:
     - RepoEventsContext
     - RepoEventsHandle
     - RepoHeaderData
-    - RepoRenderGuard
     - RepoTpl
     - resetProgress
     - resume
@@ -97,7 +95,6 @@ auto_fields:
     - setAvatar
     - setAvatars
     - showProgress
-    - showRepoModels
     - subscribe
     - subscribeAvatars
     - tryFetchModels
@@ -146,13 +143,12 @@ status: active
 
 ## 概览
 
-`features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，多文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染仓库模型列表行与表头、`show-repo-models.ts` 仓库模型页编排、`events.ts` 绑定仓库页交互事件、`virtual-list.ts` 定高虚拟滚动、`download-queue.ts`（UI 控制器 + 对外 re-export）与其拆分的 `download-queue-store.ts` / `download-queue-progress.ts`（模块级下载队列状态机 + 99% 卡进度守护，ADR-040 拆分：829 → 360/299/278）。站点/创作者频道卡片渲染不在此目录——归 `views/app-content/site/`（见知识卡 `app_content_site`）。下载执行桌面在 Go 端队列（go/download），前端通过 Wails 事件接收进度；网页版无 Go 队列，web 分支走 fetch→importWebFiles 入 IndexedDB（对齐导入链路），失败/超 50MB 回退 `<a download>` 直链（ADR-123 P1）；单文件 fetch 15s 超时（AbortController，code_review P2），挂起服务器超时亦回退直链、不卡队列（分支级 try/finally 兜底复位 idle）。
+`features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，多文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染仓库模型列表行与表头、`events.ts` 绑定仓库页交互事件、`virtual-list.ts` 定高虚拟滚动、`download-queue.ts`（UI 控制器 + 对外 re-export）与其拆分的 `download-queue-store.ts` / `download-queue-progress.ts`（模块级下载队列状态机 + 99% 卡进度守护，ADR-040 拆分：829 → 360/299/278）。`show-repo-models.ts` 已于 2026-09 死链拆除（god-like envelope 的死字段税；孤儿模块随 init-workshop 注入链退役而删除）。站点/创作者频道卡片渲染不在此目录——归 `views/app-content/site/`（见知识卡 `app_content_site`）。下载执行桌面在 Go 端队列（go/download），前端通过 Wails 事件接收进度；网页版无 Go 队列，web 分支走 fetch→importWebFiles 入 IndexedDB（对齐导入链路），失败/超 50MB 回退 `<a download>` 直链（ADR-123 P1）；单文件 fetch 15s 超时（AbortController，code_review P2），挂起服务器超时亦回退直链、不卡队列（分支级 try/finally 兜底复位 idle）。
 
 ## 核心职责
 
 - `data.ts` — `tryFetchModels(repo, mirror, onProgress)`：三镜像（raw.githubusercontent / jsDelivr / api.github）延时并发（首个立即、2s/4s 各补一个）+ `Promise.any` 取最快成功；单请求 8s `AbortController` 超时；**仅 raw 源 404 视为确定性 NoIndex 证据**（置 `FetchRaceState.rawNoIndex` 并 abort 整体，jsd/api 404 可能是 CDN 缓存未命中/限流，只记录不误杀在途请求）；全败时经 `summarizeFetchFailures` 类型化分类（404→`NoIndex`、403→`RateLimited`、网络/超时→`NetworkOffline`、其余→`AllFailed`）。`showProgress` 渲染抓取进度条；回收站段条目经 `hasRecycleSegment`（utils/recycle-path.ts）过滤
 - `render.ts` — 仓库模型列表渲染（非站点卡片）：`VIEW_TESTIDS`（ADR-133 稳定 testid 声明）、`WorkshopModel`、`isModelMissing`/`countMissing`（按 hash 或名称比对本地 `localMap`；`hashSetOf`/`_hashSetCache` WeakMap 把线性扫描收敛为 O(1) Set 查找，`1cd8e305`）、`filterModels`（关键词 + 仅显缺失，自 events.ts renderList 抽出，ADR-023 L3）、`buildModelRow`（单行构建器，供虚拟列表 `renderItem` 复用）、`renderRepoHeaderHTML`（仓库页头部）；`renderModelList` 已删除、站点卡片渲染已迁 `site/render.ts`（`buildSiteHtml`）
-- `show-repo-models.ts` — `createRepoRenderGuard()` 工厂 + 模块级 `defaultRepoGuard` 默认实例（P0 整改：消除裸模块级可变全局，测试可注入独立 guard）：代际计数器防快速切仓乱序覆盖；**代际只认用户请求**（`bindRepoEvents` 内部 `doneTimer` 重秀不 `bump`，须显式经 `internalRefresh` 参数，且 `isCurrent(repo)` 校验目标仓仍是最近用户请求），杜绝「内部刷新误刷 UI」竞态（code_review #3）
 - `events.ts` — `bindRepoEvents(sr, ctx)`：内部维护 `showAll`/`selectedSet`，返回 `{ renderList, updateSelectedUI, cleanup }`；**虚拟滚动接入**：`renderList` 内部经 `createVirtualList` 写入 `#gh-repo-list`（行高经 `measureGhRowH` 探针实测——`.gh-row` 高随 `--fs-scale` 字体缩放主题增长，`GH_ROW_H=42` 仅为无布局环境兜底；jsdom 零高度自动全量回退）；全选逻辑改遍历 `currentFiltered` 筛选结果（虚拟化后 DOM 只含可见行，原"遍历 DOM 勾选"会漏选）；三个下载入口（单行下载按钮 `handleSingleDownload`、「下载选中」按钮、全选后「下载选中」）全部汇入 `queue.enqueue(tasks)`；单文件 >10MB 拒载、>4MB `modalConfirm` 确认；右键行 → `bus.emit("ctx:show")`（type `workshop`，4 条纯展示行 `kind:"header"`——ADR-208 D3 移植 menu-defs 单一事实源，原裸发 `menu:show` 幽灵菜单已杀灭；noop 假动作已退役，表意走 icon 字段、体积走 `utils/format formatBytes`）；B 站搜索作者走 `parseModelName` 取作者 + `OpenInBrowser`（`parseModelName` 已由动态导入改为顶层静态导入，提交 7bb9f7c）
 - `virtual-list.ts` — `createVirtualList<T>(opts)`：定高虚拟列表组件（零高度自动全量回退、阈值 60 行以下直接全量、`destroy()` 移除滚动监听）；底层走 `utils/dom/virtual-scroll.ts` 共享原语（`calcVisibleRange` + `installScrollSync`）
 - `download-queue.ts` 族（原单文件超 100 行红线，ADR-040 拆为 tasks/store/progress/ui 四件；ADR-208 D2 再拆 web 入队分支至 `download-queue-web.ts`）：
@@ -164,7 +160,7 @@ status: active
 
 ## 对外 API / 入口
 
-- 导出：`showProgress`、`tryFetchModels`、`FetchModelsResult`（data.ts）；`VIEW_TESTIDS`、`WorkshopModel`、`isModelMissing`、`countMissing`、`filterModels`、`ModelRowCtx`、`buildModelRow`、`renderRepoHeaderHTML`（render.ts）；`bindRepoEvents`、`RepoEventsContext`、`RepoEventsHandle`（events.ts）；`showRepoModels`（show-repo-models.ts）；`createVirtualList`、`VirtualList`、`VirtualListOpts`（virtual-list.ts）；`subscribe`、`getState`、`resume`、`enqueueDownloads`、`cancelDownloads`、`createDownloadQueue`、`DownloadTask`、`QueueError`、`DownloadState`、`QueueControllerOptions`、`QueueController`（download-queue.ts）；`WorkshopSite` 类型来自 bindings（`bindings/ysm-model-manager/go/types/models.ts`，非本目录导出）
+- 导出：`showProgress`、`tryFetchModels`、`FetchModelsResult`（data.ts）；`VIEW_TESTIDS`、`WorkshopModel`、`isModelMissing`、`countMissing`、`filterModels`、`ModelRowCtx`、`buildModelRow`、`renderRepoHeaderHTML`（render.ts）；`bindRepoEvents`、`RepoEventsContext`、`RepoEventsHandle`（events.ts）；`createVirtualList`、`VirtualList`、`VirtualListOpts`（virtual-list.ts）；`subscribe`、`getState`、`resume`、`enqueueDownloads`、`cancelDownloads`、`createDownloadQueue`、`DownloadTask`、`QueueError`、`DownloadState`、`QueueControllerOptions`、`QueueController`（download-queue.ts）；`WorkshopSite` 类型来自 bindings（`bindings/ysm-model-manager/go/types/models.ts`，非本目录导出）
 - 监听 bus：无（UI 层经 `subscribe` 订阅 STATE）
 - 派发 bus：`toast:show`、`tree:reload`、`stats:refresh`、`avatar:refresh`、`ctx:show`（workshop 右键，ADR-208 D3 后不再裸发 `menu:show`）
 - Wails `Events.On`（@wailsio/runtime，模块顶层注册一次；v3 payload 为 `{ data: unknown[] }`，多参在 Go Emit 侧打包为数组）：`queue:status`、`queue:file-start`、`queue:file-done`、`download:progress`

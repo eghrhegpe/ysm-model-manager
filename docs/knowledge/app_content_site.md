@@ -29,6 +29,7 @@ auto_fields:
     - createCrCard
     - CreatorIdentity
     - CreatorIdentityInput
+    - FAV_CREATORS_KEY
     - getCreatorIdentity
     - getTagDisplayLabel
     - getTagFromRole
@@ -45,6 +46,9 @@ auto_fields:
     - saveBrowseMode
     - SiteViewState
     - toggleFav
+    - WS_ACTIVE_TAG_KEY
+    - WS_LAST_TAB_KEY
+    - WS_SEARCH_KW_KEY
   tests:
     - frontend/src/views/app-content/site/site-view.test.ts
     - frontend/src/views/app-content/site/render.test.ts
@@ -80,13 +84,13 @@ status: active
 
 ## 概览
 
-`site/` 子目录（含 `site-view.ts`、`workshop-data.ts`、`workshop-browse-mode.ts` 与 5 个子模块）是 `app-content` 的「创意工坊站点」页子域，由主卡 `app-content` 的 `init-workshop.ts` 调用 `renderSiteView` 组装。内部高内聚：`site-view.ts` 委托同目录 5 个子模块渲染与绑定（render / events / edit / drag / types），并共享 `workshop-data.ts`（收藏/标签解析）与 `workshop-browse-mode.ts`（浏览模式 ref）。对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据；2026-09 三件套已物理归位 site/ 子目录，消灭顶层散落）。
+`site/` 子目录是 `app-content` 的「创意工坊站点」页子域，由主卡 `app-content` 的 `init-workshop.ts` 调用 `renderSiteView` 组装。内部高内聚：`site-view.ts` 委托同目录模块渲染与绑定（render / events / edit / drag / types），并共享 `workshop-data.ts`（收藏/标签解析）与 `workshop-browse-mode.ts`（浏览模式 ref）。对外只依赖 `core/i18n` / `bus` / `backend` / `utils` 基础设施，**不反向依赖 app-content 其他子域**（归属边界干净，ADR-138 拆分依据；2026-09 三件套已物理归位 site/ 子目录，消灭顶层散落）。生产文件包括：site-view、render、events、edit、edit-drag、drag、types、workshop-data、workshop-browse-mode、workshop-page-state、workshop-site-opener、workshop-tabs、workshop-avatar。
 
 ## 核心职责
 
 - `site-view.ts` — `renderSiteView`：组装 `SiteViewState` 后委托 `site/` 子模块渲染与绑定；行内编辑选择器排除预设卡片（`[data-idx][data-fld]:not([data-edit='preset'])`，防预设 label 输入污染创作者对象，P2 修复）；拖拽 drop 用 `realIdx` 在 `allCreators` 全量数组上重排（防站点子集覆盖清空其他站点，P2 修复）
 - `site/types.ts` / `site/render.ts` / `site/events.ts` / `site/edit.ts` / `site/drag.ts` — 状态类型 `SiteViewState` / `CleanupFn`、`createCrCard`（**声明式：返回 HTML 字符串，零 DOM**）+ `computeCreatorTiers`（排名分档一次性 O(n log n) 预计算，见不变量「排名分档预计算」条）+ `buildSiteHtml` 渲染、`bindBrowseEvents` 浏览交互、`bindEditEvents` 编辑模式（AbortController signal 贯穿 7 个 eeBind* 全部监听，cleanup 真实解绑幂等）、`bindDragEvents` 卡片拖拽排序；各 bind 均返回 `CleanupFn`
-- `workshop-data.ts` — 工坊纯数据工具：`getCreatorIdentity` / `getTagDisplayLabel`（tag 展示文案：已知身份走 i18n label，**未知 tag 原样返回**，不冒充别的身份）/ `getTagFromRole` / `parseDescTags`（**只认「标签式描述」**：顿号/全角逗号切分，段数 2..6 且每段 ≤12 字符才返回片段，否则返回 `[]` 由详情层回退全文；ASCII 逗号不参与切分，>6 段**不截断**而是整体回退全文）/ 收藏 `loadFavs` / `isFaved` / `toggleFav`（localStorage `ysm-fav-creators`，写入函数 `saveFavs` 为模块内私有）
+- `workshop-data.ts` — 工坊纯数据工具：`getCreatorIdentity` / `getTagDisplayLabel`（tag 展示文案：已知身份走 i18n label，**未知 tag 原样返回**，不冒充别的身份）/ `getTagFromRole` / `parseDescTags`（**只认「标签式描述」**：顿号/全角逗号切分，段数 2..6 且每段 ≤8 字符才返回片段，否则返回 `[]` 由详情层回退全文；ASCII 逗号不参与切分，>6 段**不截断**而是整体回退全文）/ 收藏 `loadFavs` / `isFaved` / `toggleFav`（localStorage key 以单源常量定义导出：`FAV_CREATORS_KEY`）；4 个页面级持久键统一存于此模块作为单一事实源（`FAV_CREATORS_KEY`, `WS_ACTIVE_TAG_KEY`, `WS_SEARCH_KW_KEY`, `WS_LAST_TAB_KEY`）
 - `workshop-browse-mode.ts` — 浏览模式 ref：`BrowseModeRef{ v }` 单源（与 `wsEditModeRef:{v}` 同构），经 `ctx.browseMode` 贯穿到渲染高亮与 `openUrl`，`setBrowseMode` 只改 `.v` + localStorage → 一处 set、处处一致
 
 ## 对外 API / 入口
@@ -115,7 +119,7 @@ status: active
 - **创作者数据面禁写界面文案**（2026-09 锐评 P0-2，**复核后治本**）：**`creators.json` 的 `name` / `desc`** 不得承载任何一种语言的字面文案（`SaveWorkshopCreatorsBySite` 会落盘）。⚠️ **规则边界**：Go 默认**站点元数据**（`internal/app/app_workshop.go` 的 `Label` / `Desc`，如「B站」）属**捆绑内容**，与创作者数据面不同性质、不受本规则约束（复核 N7：原措辞「不得承载任何一种语言的字面文案」过宽会误伤该处）。⚠️ **首次修复只改了前端、对生产数据无效**（复核 P1-1 实证）：本地作者 desc 的**源头**是 `go/scanner/scanner.go` 与 `frontend/src/backend/web-community.ts|scanWebLocalAuthors` 里硬编码的「来自本地仓库」，前端 `mergeLocalAuthorsInto` 的 `|| ""` 分支根本不可达。治本口径：**源头落空串**（Go/网页版两处同口径），`community-data.ts|mergeLocalAuthorsInto` 对该空值**恒等透传**（不是"兜底被触发"），「来自本地仓库」提示由展示层按 `_fromLocal` 标记**现取当前语言**（`site/render.ts|createCrCard` 卡片 + `site/events.ts|cmCrBuildDetailHtml` 浮层）；`site/edit.ts|eeBindCreatorsEdit` 的 `cr-add` 新增行落空 name/desc（编辑卡 placeholder 引导）+ 保存路径过滤空名条目。相关死键 `workshop.newCreatorName` / `newCreatorDesc` / `activeCreators` 已从三语包删除
 - **筛选行/卡片/浮层的 tag 展示走 `getTagDisplayLabel` 单源**（锐评 P0-4 + 复核 P1-3）：已知身份 → `getCreatorIdentity` 的 i18n label；**未知 tag 原样显示**（曾回退成「YSM 创作者」，导致按钮文案与 `data-tag` 过滤语义不符）。`data-tag` 与 `cr-tag-<role>` class 始终是原始 role id（**展示层 ≠ 数据语义**）。站点空态引导指向 `workshop.importSite`（导入）——历史 bug：上传图标配「导出站点」，恢复路径指反
 
-- **单内容区（无第二创作者面板）**：`#ws-creator-view` / `.ws-creators-list` / `creatorView` 句柄链已于 2026-09 锐评 P1 删除——那是旧双栏布局残骸（JS 恒置 `display:none`、无任何填充者，连 CSS 规则都缺），页面内容只经 `#ws-search-results`，`RenderSiteViewCtx` / `SiteViewState` 不再有 `creatorView` 字段；要加并列面板须重开设计评审，不得复活临时容器
+- **单内容区（无第二创作者面板）**：`#ws-creator-view` / `.ws-creators-list` / `creatorView` 句柄链已于 2026-09 锐评 P1 删除——那是旧双栏布局残骸（JS 恒置 `display:none`、无任何填充者，连 CSS 规则都缺），页面内容只经 `#ws-search-results`，`RenderSiteViewCtx` / `SiteViewState` 不再有 `creatorView` 字段；死字段税 P1-c 手术同步切除 `showRepoModels` / `repoModelCache` / `backToSite`（`RenderSiteViewCtx`）与 `state.ctx` ——`ctx` 仅在 `init-workshop.ts` 的闭包内用于 reRender 路由，不再作为公共状态传递。要加并列面板须重开设计评审，不得复活临时容器
 
 ## 相关
 

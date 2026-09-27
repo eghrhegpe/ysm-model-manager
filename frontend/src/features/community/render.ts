@@ -36,7 +36,7 @@ export interface WorkshopModel {
  * localMap（Map<name, hash>）→ hash 值 Set 的惰性缓存。
  * 每模型调用 isModelMissing 时若遍历 Array.from(localMap.values()) 为 O(M)，
  * N 个模型 = O(N×M)——本地文件上千 + 仓库模型上千时每次搜索/渲染数百万次比较。
- * localMap 实例在会话生命周期内内容固定（show-repo-models 扫描一次后只读传递），
+ * localMap 实例在会话生命周期内内容固定（GitHub 页扫描一次后只读传递），
  * 故每个实例仅构建一次 hashSet；WeakMap 弱引用，localMap 被 GC 后自动清理无泄漏。
  */
 const _hashSetCache = new WeakMap<Map<string, string>, Set<string>>();
@@ -196,8 +196,8 @@ export interface RepoHeaderData {
 /**
  * 仓库页 DOM 模板注入契约（ADR-190 D1a：DOM 模板归 views，组合根注入；features 不自渲染。
  * 先例 AdvFilterTpl / BatchRenameTpl）。
- * views/app-content/tpl-workshop.ts 提供实现；工坊页经 showRepoModels 注入，
- * GitHub 页（init-github.ts，本属 views）直接消费同一模板。
+ * views/app-content/tpl-workshop.ts 提供实现；GitHub 页（init-github.ts，本属 views）
+ * 直接消费同一模板（工坊页侧的 show-repo-models 注入链已随死代码拆除，2026-09）。
  */
 export interface RepoTpl {
   /** 仓库模型页头部（含返回按钮、计数、来源徽章、筛选按钮、列表挂载点） */

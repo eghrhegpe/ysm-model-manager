@@ -57,7 +57,7 @@ status: active
 
 ## 对外 API / 入口
 
-- `currentRepoType(): string` — 一次性读取当前类型（download-queue / import-executor / toolbar-events / show-repo-models / diagnostics/health 等消费）
+- `currentRepoType(): string` — 一次性读取当前类型（download-queue / import-executor / toolbar-events / diagnostics/health 等消费）
 - `useCurrentResourceType(onChange: () => void): { get: () => string; cleanup: () => void }` — 订阅类型切换（oldest-models / recycle-bin 消费）
 
 ## 与其他子系统关系
@@ -66,7 +66,7 @@ status: active
 - **`bus.ts` `repo:rtype-changed` 事件** — 运行期类型变更唯一入口；`useCurrentResourceType` 订阅此事件。
 - **`utils/base/primitives/storage.ts` `safeGet`** — localStorage 安全读取（隐私模式下降级兜底）。
 - **`utils/resource/types.ts` `RESOURCE_TYPES`** — 资源类型常量（YSM / EntityPlayer / vrm / resourcepack 等）。
-- **消费方**：`features/community/download-queue.ts`（下载落库 GetRepoRoot）、`features/import/executor.ts`（importWebFiles 类型参数）、`views/app-sidebar/events.ts`（侧边栏选中状态 key）、`views/app-sidebar/index.ts`（组件 rtype 属性）、`views/app-sidebar/render.ts`（实例 rtype 兜底）、`views/app-tree/toolbar-events.ts`（导入文件夹 GetRepoRoot）、`views/app-content/diagnostics/health.ts`（诊断扫描根目录）、`backend/web-fs-auth.ts`（web 导入类型参数）、`features/community/show-repo-models.ts`（GitHub 页扫描目标类型）。
+- **消费方**：`features/community/download-queue.ts`（下载落库 GetRepoRoot）、`features/import/executor.ts`（importWebFiles 类型参数）、`views/app-sidebar/events.ts`（侧边栏选中状态 key）、`views/app-sidebar/index.ts`（组件 rtype 属性）、`views/app-sidebar/render.ts`（实例 rtype 兜底）、`views/app-tree/toolbar-events.ts`（导入文件夹 GetRepoRoot）、`views/app-content/diagnostics/health.ts`（诊断扫描根目录）、`backend/web-fs-auth.ts`（web 导入类型参数）。
 
 ## 不变量
 

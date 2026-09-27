@@ -1,8 +1,7 @@
 // ===== 创意工坊/GitHub 仓库模型页 — DOM 模板层（ADR-190 D1a：DOM 模板归 views，组合根注入；
 // R8 销账：自 features/community/render.ts 内嵌 renderRepoHeaderHTML 外抽，2026-09-25）=====
-// 两个消费者：
-//   1. 工坊页 features/community/show-repo-models.ts 经 RepoTpl 注入（组合根 init-workshop.ts）；
-//   2. GitHub 页 init-github.ts 本属 views，直接消费本模块。
+// 两个消费者（show-repo-models 死链拆除后收为一个）：
+//   1. GitHub 页 init-github.ts 本属 views，直接消费本模块。
 // 模板只吃纯数据（RepoHeaderData，source/mirror 为字符串枚举，无 DOM/内部结构）。
 // 先例：tpl-adv-filter.ts / tpl-batch-rename.ts。
 
@@ -95,7 +94,7 @@ function repoHeaderHTML(d: RepoHeaderData): string {
   );
 }
 
-/** 组合根注入对象（init-workshop.ts 传给 showRepoModels；init-github.ts 直接消费） */
+/** 仓库页头部模板（init-github.ts 直接消费；工坊页侧注入链已随 show-repo-models 拆除） */
 export const workshopTpl: RepoTpl = {
   repoHeaderHTML,
 };

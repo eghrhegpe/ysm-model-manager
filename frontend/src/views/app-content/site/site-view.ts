@@ -89,7 +89,6 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
     creators,
     authorCountMap,
     bus,
-    ctx,
     activeTag,
     searchKw,
     // P1-2 锐评：跨站点创作者「解除本站关联」的暂存列表（保存时写回，维持他站可见）

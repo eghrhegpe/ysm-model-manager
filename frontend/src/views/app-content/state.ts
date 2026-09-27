@@ -3,7 +3,7 @@
 // 字段分组：
 // - 核心状态：root / current
 // - 拖拽回调：resizeMove / resizeUp（app 壳层预览拖拽，非页私有）
-// - 其余借宿字段：workshopCache / githubCache（页级模型缓存，经本容器做 session 内复用）
+// - 其余借宿字段：githubCache（页级模型缓存，经本容器做 session 内复用）
 // - 定时器：workshopTimer（app 壳层跨切防御，见字段注释——非普通页私有状态）
 // 注：仓库视图的异步清理**不在本容器**——已归订阅桶（host.subs.addPage 收 Promise，ADR-260）。
 
@@ -34,8 +34,6 @@ export class AppContentState {
   // 注：`avatarCache` 已上收 community 层 store（ADR-264，`features/community/creator-avatar-store.ts`）——
   // 它的写入方是模块级下载队列，寿命比任何页面都长，故与 `download-queue-store` 同住 features。
 
-  /** 创意工坊模型缓存 */
-  workshopCache: Map<string, RepoCacheEntry> | null = null;
   /** GitHub 模型缓存 */
   githubCache: Map<string, RepoCacheEntry> | null = null;
   /** 创意工坊默认站点延迟加载定时器
@@ -85,8 +83,6 @@ export class AppContentState {
     if (this.resizeUp) document.removeEventListener("pointerup", this.resizeUp);
     this.resizeMove = null;
     this.resizeUp = null;
-    if (this.workshopCache) this.workshopCache.clear();
-    this.workshopCache = null;
     if (this.githubCache) this.githubCache.clear();
     this.githubCache = null;
     if (this.workshopTimer) {

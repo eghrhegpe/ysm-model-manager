@@ -1,7 +1,7 @@
 // ===== init-workshop（创意工坊页编排入口）单测 =====
 // 覆盖 initWorkshopPage / resetAvatarConfigLoaded：
-//  - 初始化状态装配（页作用域 currentSite / workshopCache / avatarCache / extractAvatars / tabs 接线）
-//  - showSiteView 闭包 ctx：openUrl 透传、setBrowseMode 单源 ref、backToSite、reRender cleanup 次序
+//  - 初始化状态装配（页作用域 currentSite / 头像 store 上收 / extractAvatars / tabs 接线）
+//  - showSiteView 闭包 ctx：openUrl 透传、setBrowseMode 单源 ref、reRender cleanup 次序
 //  - avatar:refresh 订阅：命中卡片更新 img.src、未命中重渲染、重复 dataUri 提前返回、单 host 注册守卫
 //  - config-loaded 事件重提取 + 模块级注册守卫 + resetAvatarConfigLoaded 复位
 // mock 写法按知识卡 vitest-env-switch.md 模式 4（vi.hoisted + mock getApp）；bus 用真实实例 + spy。
@@ -12,7 +12,6 @@ const {
   getApp,
   eventsOn,
   renderSiteView,
-  showRepoModels,
   extractAvatars,
   openSite,
   bindSiteEvents,
@@ -34,7 +33,6 @@ const {
     getApp: vi.fn(),
     eventsOn: vi.fn((_e: string, _cb: (...a: unknown[]) => void) => vi.fn()),
     renderSiteView: vi.fn(() => vi.fn()),
-    showRepoModels: vi.fn(async () => {}),
     extractAvatars: vi.fn(async () => {}),
     openSite: vi.fn(),
     bindSiteEvents: vi.fn(),
@@ -59,7 +57,6 @@ const {
 vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("@/backend/runtime.ts", () => ({ Events: { On: eventsOn } }));
 vi.mock("./site/site-view.ts", () => ({ renderSiteView }));
-vi.mock("@/features/community/show-repo-models.ts", () => ({ showRepoModels }));
 vi.mock("./site/workshop-avatar.ts", () => ({ extractAvatars }));
 vi.mock("./site/workshop-site-opener.ts", () => ({ openSite, bindSiteEvents }));
 vi.mock("./site/workshop-tabs.ts", () => ({ initWorkshopTabs, createWorkshopRefs }));
@@ -68,7 +65,6 @@ vi.mock("@/features/community/community-data.ts", () => ({ fillSearch }));
 import { clearAvatars, getAvatar } from "@/features/community/creator-avatar-store.ts";
 import { initWorkshopPage, resetAvatarConfigLoaded } from "./init-workshop.ts";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
-import { flushPromises } from "@/test-utils/index.ts";
 import type { AppContentHost } from "./host.ts";
 import type { WorkshopPageState } from "./site/workshop-page-state.ts";
 import type { WorkshopSite } from "../../../bindings/ysm-model-manager/go/types/models.ts";
@@ -87,7 +83,6 @@ function lastCallArgs(mock: unknown): unknown[] {
 interface MockHost {
   state: {
     root: HTMLElement;
-    workshopCache: Map<string, unknown> | null;
     githubCache: unknown;
     workshopTimer: ReturnType<typeof setTimeout> | null;
   };
@@ -108,7 +103,6 @@ function makeHost(cardsHTML = "") {
   const raw: MockHost = {
     state: {
       root: el,
-      workshopCache: null,
       githubCache: null,
       workshopTimer: null,
     },
@@ -162,14 +156,13 @@ const site = { id: "github", url: "https://github.com/", label: "GitHub" } as un
 const site2 = { id: "bilibili", url: "https://bilibili.com/", label: "B站" } as unknown as WorkshopSite;
 
 describe("initWorkshopPage — 初始化装配", () => {
-  it("状态装配：页作用域 currentSite 置空、workshopCache 初始化、头像 store 上收、子模块接线", () => {
+  it("状态装配：页作用域 currentSite 置空、头像 store 上收、子模块接线", () => {
     const { host, raw } = makeHost();
     initWorkshopPage(host);
 
     // ADR-263：currentSite 已下沉到页作用域（不再借宿 AppContentState）——
     // 装配后初始为空，且结构性不可在共享 state 上访问到（后者已无该字段，故此处不断言）
     expect(getPageState().getCurrentSite()).toBeNull();
-    expect(raw.state.workshopCache).toBeInstanceOf(Map);
     // ADR-264：avatarCache 已上收 community 层 store——不再在共享 state 上初始化/置空，
     // 且 extractAvatars 不再需要 host（它写的是 store，不是页面字段）
     expect("avatarCache" in raw.state).toBe(false);
@@ -197,12 +190,10 @@ describe("initWorkshopPage — 初始化装配", () => {
     clearTimeout(fakeTimer);
   });
 
-  it("已有缓存/已注册的 host 二次 init：不重复建 cache、不重复注册 avatar:refresh", () => {
+  it("已注册的 host 二次 init：不重复注册 avatar:refresh", () => {
     const { host, raw } = makeHost();
     initWorkshopPage(host);
-    const cache = raw.state.workshopCache;
     initWorkshopPage(host);
-    expect(raw.state.workshopCache).toBe(cache); // if (!host.state.workshopCache) 守卫
     expect(raw.subs.globalUnsubs).toHaveLength(1); // addGlobalOnce 守卫（ADR-261）
   });
 
@@ -254,7 +245,6 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     expect(ctx.searchResults).toBe(el.querySelector("#ws-search-results"));
     expect(ctx.allSites).toEqual([]); // refs.allSitesRef.v
     expect(ctx.wsEditModeRef).toEqual({ v: false });
-    expect(ctx.repoModelCache).toBe(raw_workshopCache(host));
     expect(ctx.fillSearch).toBe(fillSearch);
     expect(ctx.esc("<b>&\"'")).toBe("&lt;b&gt;&amp;&quot;&#39;");
   });
@@ -286,21 +276,6 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     expect(openSite).toHaveBeenLastCalledWith(expect.anything(), site, "embed", "https://x/y");
   });
 
-  it("ctx.backToSite：有 currentSite → 用它重渲染；无 → 不渲染", () => {
-    const { host } = makeHost();
-    initWorkshopPage(host);
-    getShowSiteView()(site);
-    const ctx = lastCallArgs(renderSiteView)[1] as any;
-
-    ctx.backToSite(); // currentSite 仍为 null
-    expect(renderSiteView).toHaveBeenCalledTimes(1);
-
-    getPageState().setCurrentSite(site2);
-    ctx.backToSite();
-    expect(renderSiteView).toHaveBeenCalledTimes(2);
-    expect(callArgs(renderSiteView, 1)[0]).toBe(site2);
-  });
-
   it("ctx.reRender：先跑旧 cleanup 再渲染新视图（cleanup 次序）", () => {
     const cleanupA = vi.fn();
     const cleanupB = vi.fn();
@@ -321,39 +296,6 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     getShowSiteView()(site2);
     expect(cleanupB).toHaveBeenCalledTimes(1);
     expect(renderSiteView).toHaveBeenCalledTimes(3);
-  });
-
-  it("ctx.showRepoModels 委托 showRepoModels 并透传 host 清理钩子与 searchResults", async () => {
-    const { host, raw, el } = makeHost();
-    initWorkshopPage(host);
-    getShowSiteView()(site);
-    const ctx = lastCallArgs(renderSiteView)[1] as any;
-
-    const models = [{ name: "m1", path: "p1" }];
-    await ctx.showRepoModels("o/r", models, "raw");
-    expect(showRepoModels).toHaveBeenCalledTimes(1);
-    const args = callArgs(showRepoModels, 0);
-    expect(args[0]).toBeTypeOf("function"); // esc
-    // 首绑无前次清理 → args[1] 为 null（值口径，非 getter）
-    expect(args[1]).toBeNull();
-    expect(args[2]).toBeTypeOf("function"); // setter
-    // setter 写入「页内可替换槽」；再调一次 showRepoModels 即应读到该值（往返一致）
-    const token = vi.fn(async () => {});
-    (args[2] as (fn: unknown) => void)(token);
-    await ctx.showRepoModels("o/r", models, "raw");
-    expect(callArgs(showRepoModels, 1)[1], "第二次应读到上次写入的清理").toBe(token);
-    // 且该槽已随订阅桶登记：桶清理即执行（ADR-260 拆除单源）
-    raw.subs.cleanupPage();
-    await flushPromises();
-    expect(token).toHaveBeenCalledTimes(1);
-    expect(args[3]).toBe(getPageState().getCurrentSite());
-    expect(args[4]).toBeTypeOf("function");
-    (args[4] as (site: unknown) => void)("site-token");
-    expect(getPageState().getCurrentSite()).toBe("site-token");
-    expect(args[5]).toBe("o/r");
-    expect(args[6]).toEqual(models);
-    expect(args[7]).toBe("raw");
-    expect(args[8]).toBe(el.querySelector("#ws-search-results"));
   });
 });
 
@@ -444,8 +386,3 @@ describe("config-loaded 事件与 resetAvatarConfigLoaded", () => {
     expect(eventsOn).toHaveBeenCalledTimes(2);
   });
 });
-
-/** 从 host 上取 workshopCache（测试辅助，类型收窄用） */
-function raw_workshopCache(host: AppContentHost): Map<string, unknown> | null {
-  return (host as unknown as MockHost).state.workshopCache;
-}

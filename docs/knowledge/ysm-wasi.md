@@ -118,6 +118,8 @@ em++ -sSTANDALONE_WASM -sSTACK_SIZE=4194304 -sALLOW_MEMORY_GROWTH=1 \
 
 **测量方法备忘**（复演用）：①Go 侧临时 spike 块放 `ServiceStartup` 的 config-loaded emit 之后（env 门控 + goroutine 延迟发射）；②CDP 开端口须走 `main.go` 的 `application.Options{Windows: {AdditionalBrowserArgs: []string{"--remote-debugging-port=..."}}}`——`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` 环境变量会被 go-webview2 loader 主动覆盖（env_create.go:169 清空）；③前端事件必经 `window._wails.dispatchWailsEvent`，包装它比 Events.On 订阅可靠（动态 import runtime.ts 会产生模块分身，订阅可能收不到）；④前端→Go 直接动态 import `/bindings/ysm-model-manager/internal/app/app.ts` 调生成函数（vite dev 服务全项目文件）。
 
+**Android 侧 Go→前端 Emit 链路源码确认（2026-09-27，wails beta.26）**：`EventProcessor.Emit` → `frontendEvents` mailbox → `dispatchEventToWindows` → `androidWebviewWindow.execJS`（webview_window_android.go:30）→ JNI `executeJavaScriptOnBridge`（application_android.go:282，`NewStringUTF` 同进程 JNI 传串，**不经过 binder，无 1MB binder 限制**）→ Java `WailsBridge.executeJavaScript` → WebView 内 `window._wails.dispatchWailsEvent`。链路存在且与桌面同构；仓内 Go 侧 Emit 仅 3 处（config-loaded/download:progress/update:progress），Android 查看器模式均不消费——**即 Android 上 Go Emit 大 payload 无生产先例，P2 真机必测**（风险点：evaluateJavascript 携带 MB 级 JS 串的耗时/内存，备选分块）。
+
 ## 相关
 
 - [ysm-wasm](./ysm-wasm.md) — 现 Node.js + WASM 桥（生产主路径，本卡验证的退役对象）

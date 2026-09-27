@@ -5,6 +5,7 @@ tier: architecture
 category: go
 status: active
 source_files:
+  - go/ysmwebview/bridge.go
   - go/ysmwasi/ysmwasi.go
   - go/wasispike/main.go
   - upstream/YesSteveModel-Parser/build-wasi.ps1
@@ -12,8 +13,18 @@ source_files:
   - upstream/YesSteveModel-Parser/YSMParser/parsers/v3/YSMParserV3.cpp
 auto_fields:
   symbols_with_lines:
+    - Bridge
+    - Bridge.Decode
+    - Bridge.MarkReady
+    - Bridge.Ready
+    - Bridge.Resolve
+    - Bridge.SetEmit
     - Close
     - Decode
+    - ErrNotReady
+    - ErrTimeout
+    - MaxInput
+    - New
 use_when:
   - WASI / wazero / 内存直解
   - node 子进程退役

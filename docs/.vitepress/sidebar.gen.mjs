@@ -1817,6 +1817,10 @@ export const autoSidebar = [
             "link": "/knowledge/golangci-lint"
           },
           {
+            "text": "火绒主动防御按二进制拦截应用写入（读写分离假象）",
+            "link": "/knowledge/huorong_hips_blocks_app_writes"
+          },
+          {
             "text": "install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）",
             "link": "/knowledge/install_domain_split"
           },

@@ -6,6 +6,9 @@
 /** 所有 mock 绑定的返回值 */
 export const MOCK_DATA = {
   GetAppVersion: "v1.0.0-e2e",
+  // ADR-317 桥解码：Android 专属绑定，E2E 桌面环境无调用，仅满足 mock 契约断言
+  MarkYsmDecodeBridgeReady: undefined,
+  ResolveYsmDecode: undefined,
   // 禁用状态检查：loader 对每个条目调用 IsFileBanned(e.Path)（返回 false=未禁用）。
   // ⚠️ 上一轮去重误删两处定义后此处曾缺失 → "IsFileBanned is not a function"，
   // 全量 file-tree/settings/tree-multiselect 渲染失败（retries: 0 暴露）。

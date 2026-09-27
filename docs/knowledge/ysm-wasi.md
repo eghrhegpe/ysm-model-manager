@@ -120,6 +120,22 @@ em++ -sSTANDALONE_WASM -sSTACK_SIZE=4194304 -sALLOW_MEMORY_GROWTH=1 \
 
 **Android 侧 Go→前端 Emit 链路源码确认（2026-09-27，wails beta.26）**：`EventProcessor.Emit` → `frontendEvents` mailbox → `dispatchEventToWindows` → `androidWebviewWindow.execJS`（webview_window_android.go:30）→ JNI `executeJavaScriptOnBridge`（application_android.go:282，`NewStringUTF` 同进程 JNI 传串，**不经过 binder，无 1MB binder 限制**）→ Java `WailsBridge.executeJavaScript` → WebView 内 `window._wails.dispatchWailsEvent`。链路存在且与桌面同构；仓内 Go 侧 Emit 仅 3 处（config-loaded/download:progress/update:progress），Android 查看器模式均不消费——**即 Android 上 Go Emit 大 payload 无生产先例，P2 真机必测**（风险点：evaluateJavascript 携带 MB 级 JS 串的耗时/内存，备选分块）。
 
+## 2026-09-27 ADR-317 P1 落地：桥骨架 + 桌面 E2E 全链路打通
+
+**实现（已提交）**：
+- `go/ysmwebview/`：桥请求管理器（纯 Go 零 Wails 依赖，emit 注入；id/channel/超时/就绪态；`-race` 单测 7 例全绿）。协议镜像：Go→前端 Emit `ysm-decode-request` `(id, base64(.ysm))`；前端→Go 绑定 `ResolveYsmDecode(id, gzip(JSON{files[data=base64]})→base64, errMsg)`。
+- `internal/app/ysm_webview_bridge.go`：桥单例 + App 绑定方法（`MarkYsmDecodeBridgeReady`/`ResolveYsmDecode`）；`SetApp` 接 emit。
+- `internal/app/wasm_decoder.go`：`decodeYSMBest` 后端选择器统一 `ysm.SetDecoder` 与 `runYSMDecode`——桥就绪且 ≤32MB 走桥，否则/失败回退 wazero（桌面主路径/CLI 天然走兜底，零行为漂移）。
+- `frontend/src/backend/ysm-decode-bridge.ts`：backend 层 listener，复用 `decodeYsmFileFromMemory`（预览同源 wasm 管线），`CompressionStream` gzip 回传；非 Android no-op（桌面联调逃生阀：`localStorage["ysm-force-decode-bridge"]=1`）；串行队列防 wasm MEMFS 并发。装配点 `app-modules.ts`（error-diary 之后）。
+- `main.go`：`YSM_CDP_PORT` 环境变量门控的 WebView2 CDP 开关（`WindowsOptions.AdditionalBrowserArgs`），联调用。
+- vitest：payload 组装与 Go 解析镜像测试（gzip 往返 + base64 结构断言）。
+
+**桌面 E2E 实测（dev + CDP）**：`AnalyzeBedrockModel(真实 V3 .ysm)` → Go 走桥（`ysm-decode-request` 拦截确认）→ 前端解码 → gzip 回传 → Go 得 BedrockModel（bones=350），全程 **2062ms**（含 wasm 冷启动 init）。
+
+**E2E 联调排障教训**：①`A=v cmd1 && cmd2` 复合命令的环境变量只作用于 cmd1（本次 dev 启动没拿到 YSM_CDP_PORT 的根因）；②CDP 端口 9222 被僵尸 msedgewebview2 占用 → app 静默 exit(1)（换 9223 立愈；占位现象与"启动即死"难关联，对照实验排查耗时最久）；③"新代码崩溃"勿轻信——先跑旧代码对照实验再定位。
+
+**P2 待办（on-device）**：真机跑 Android 桥解码（V3 样本 + 后台冻结 + 内存峰值）；预期端口/桥参数沿用本卡方法。
+
 ## 相关
 
 - [ysm-wasm](./ysm-wasm.md) — 现 Node.js + WASM 桥（生产主路径，本卡验证的退役对象）

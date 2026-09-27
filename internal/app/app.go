@@ -146,7 +146,13 @@ func NewApp() *App {
 }
 
 // SetApp 注入 Wails 3 应用实例，供 service 方法访问窗口/事件/对话框/浏览器管理器
-func (a *App) SetApp(app *application.App) { a.app = app }
+func (a *App) SetApp(app *application.App) {
+	a.app = app
+	// ADR-317：桥解码 Go→前端事件发射接线（a.app 就位后闭包才可用）
+	ysmDecodeBridge.SetEmit(func(name string, id int64, data []byte) {
+		app.Event.Emit(name, id, data)
+	})
+}
 
 // GetYSMRepoRoot 返回当前配置的 YSM 仓库根目录
 func (a *App) GetYSMRepoRoot() string {

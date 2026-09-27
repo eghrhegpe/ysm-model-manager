@@ -91,7 +91,7 @@ export function BatchExtractCreatorAvatars(): $CancellablePromise<{ [_ in string
 
 /**
  * Build3DSpecFromGeometryJSON 从 bedrock geometry JSON 构建 3D spec（纯 Go，无 Node 依赖）。
- * 用途：Android 上 Go 端无 .ysm 解码通道（Node WASM 不可用，runYSMNodeJSDecode 恒 nil）时，
+ * 用途：Android 上 Go 端曾无 .ysm 解码通道；ADR-316 后 wazero 直解可用，此兜底仅防解码失败，
  * 前端用 WebView 内 WASM 解码 .ysm 拿到 geometry JSON，再调本函数构建 spec——
  * 复用 threejs.BuildMulti 全量顶点算法（ADR-004：Go 绑定为唯一事实来源），桌面端主路径不变。
  * 返回 nil 表示不可用（前端据此决定是否报错/提示）。
@@ -752,6 +752,13 @@ export function LoadWorkshopCreators(): $CancellablePromise<types$0.WorkshopCrea
 }
 
 /**
+ * MarkYsmDecodeBridgeReady 前端 listener 挂好后调用（frontend/src/backend/ysm-decode-bridge.ts）。
+ */
+export function MarkYsmDecodeBridgeReady(): $CancellablePromise<void> {
+    return $Call.ByID(3139834113);
+}
+
+/**
  * MergeCommunityCreatorsFromJSON 把社区索引（增量）并入本地 creators 并单次原子写回。
  * ADR-172：社区增量合并下沉 Go——替代前端 tryAutoMergeCommunity / site edit 同步
  * 按钮的 TS 派生写回链（siteMap 分组 / kept 过滤 / dedupeCreators），解除 AGENTS.md
@@ -1050,6 +1057,13 @@ export function ResetWorkshopConfigs(): $CancellablePromise<types$0.WorkshopSite
  */
 export function ResolveConflicts(conflicts: sync$0.FileConflict[] | null, defaultStrategy: string, rtype: string, instanceName: string): $CancellablePromise<types$0.SyncResolveResult | null> {
     return $Call.ByID(1918295312, conflicts, defaultStrategy, rtype, instanceName);
+}
+
+/**
+ * ResolveYsmDecode 前端解码回传（payload=gzip(JSON files)→base64；errMsg 非空=前端失败）。
+ */
+export function ResolveYsmDecode(id: number, payload: string, errMsg: string): $CancellablePromise<void> {
+    return $Call.ByID(949428798, id, payload, errMsg);
 }
 
 export function RestartApplication(): $CancellablePromise<void> {

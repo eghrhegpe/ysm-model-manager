@@ -6,20 +6,39 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"ysm-model-manager/go/geometry"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/ysm"
 	"ysm-model-manager/go/ysmwasi"
+	"ysm-model-manager/go/ysmwebview"
 )
 
+// ysmDecodeTimeout 桥/兜底共用解码超时（对齐 ADR-316 护栏口径）
+const ysmDecodeTimeout = 60 * time.Second
+
+// decodeYSMBest 解码后端选择（ADR-317）：桥就绪且输入合规 → WebView 桥
+// （Android 快路径，V8 JIT）；未就绪/失败/超限回退 wazero 内存直解
+// （桌面主路径 + Android 兜底 + CLI 无前端的天然路径）。
+func decodeYSMBest(data []byte) ([]ysm.DecodedFile, error) {
+	if ysmDecodeBridge.Ready() && len(data) <= ysmwebview.MaxInput {
+		files, err := ysmDecodeBridge.Decode(data, ysmDecodeTimeout)
+		if err == nil {
+			return files, nil
+		}
+		log.Printf("[ysm-webview] 桥解码失败，回退 wazero: %v", err)
+	}
+	return ysmwasi.Decode(data)
+}
+
 func init() {
-	// 注入 .ysm 解码器（fileops 封面提取等 go/ 层消费端）：ADR-316 后为
-	// wazero 纯 Go 内存直解（Android 同样可用，Node 子进程桥已退役）；
+	// 注入 .ysm 解码器（fileops 封面提取等 go/ 层消费端）：ADR-316 wazero 纯 Go
+	// 内存直解为基线，ADR-317 后 Android 上优先走 WebView 桥（decodeYSMBest 选择）；
 	// 解码失败降级为 nil（与旧口径一致），错误进日志供诊断。
 	ysm.SetDecoder(func(data []byte) []ysm.DecodedFile {
-		files, err := ysmwasi.Decode(data)
+		files, err := decodeYSMBest(data)
 		if err != nil {
 			log.Printf("[ysm-wasi] 解码失败: %v", err)
 			return nil
@@ -34,10 +53,10 @@ type decodedYSMExtra struct {
 	Data []byte
 }
 
-// runYSMDecode 用 wazero 内存直解 .ysm，返回解出的全部文件（Path/Data）。
-// decodeYSMViaWASI（合并单组件）与 decodeYSMComponentsViaWASI（多组件）共用此解码。
+// runYSMDecode 解码 .ysm（decodeYSMBest 选择桥/wazero），返回解出的全部文件
+// （Path/Data）。decodeYSMViaWASI（合并单组件）与 decodeYSMComponentsViaWASI（多组件）共用此解码。
 func runYSMDecode(ysmData []byte) []decodedYSMExtra {
-	files, err := ysmwasi.Decode(ysmData)
+	files, err := decodeYSMBest(ysmData)
 	if err != nil {
 		log.Printf("[ysm-wasi] 解码失败: %v", err)
 		return nil

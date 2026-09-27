@@ -381,9 +381,9 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/app-modules.ts` | 30 |
-| runStartupSteps | `frontend/src/app-modules.ts` | 90 |
-| (顶层) | `frontend/src/app-modules.ts` | 175 |
+| (顶层) | `frontend/src/app-modules.ts` | 31 |
+| runStartupSteps | `frontend/src/app-modules.ts` | 91 |
+| (顶层) | `frontend/src/app-modules.ts` | 178 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |

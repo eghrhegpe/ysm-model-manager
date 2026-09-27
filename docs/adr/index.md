@@ -16,21 +16,20 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 7 |
+| [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 285 |
+| [✅ 已采纳](#已采纳) | 286 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（7）
+### 📝 提议中（6）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-317](./ADR-317-android-webview-decode-bridge.md) | Android .ysm 解码 WebView 桥后端（Decoder 策略平台化） | 📝 提议中 |
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
@@ -56,10 +55,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（285）
+### ✅ 已采纳（286）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-317](./ADR-317-android-webview-decode-bridge.md) | Android .ysm 解码 WebView 桥后端（Decoder 策略平台化） | ✅ 已采纳 |
 | [ADR-316](./ADR-316-wasi-wazero-go-node.md) | WASI 解码器生产化：wazero 纯 Go 宿主退役 Node 子进程桥 | ✅ 已采纳 |
 | [ADR-315](./ADR-315-vrm.md) | 水/VRM 适配层拆真缝收编 | ✅ 已采纳 |
 | [ADR-314](./ADR-314-ctx-wails-cancellablepromise.md) | 诊断页长任务取消通道：ctx 贯穿 + Wails 原生 CancellablePromise | ✅ 已采纳 |
@@ -370,7 +370,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-317 | Android .ysm 解码 WebView 桥后端（Decoder 策略平台化） | 📝 提议中 | 2026-09-27 |
+| ADR-317 | Android .ysm 解码 WebView 桥后端（Decoder 策略平台化） | ✅ 已采纳 | 2026-09-27 |
 | ADR-316 | WASI 解码器生产化：wazero 纯 Go 宿主退役 Node 子进程桥 | ✅ 已采纳 | 2026-09-27 |
 | ADR-315 | 水/VRM 适配层拆真缝收编 | ✅ 已采纳 | 2026-09-26 |
 | ADR-314 | 诊断页长任务取消通道：ctx 贯穿 + Wails 原生 CancellablePromise | ✅ 已采纳 | 2026-09-26 |

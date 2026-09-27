@@ -4,6 +4,7 @@ import { prefetchStatsWorker } from "@/backend/browser-adapter.ts";
 import { makeDiarySink } from "@/backend/diary-sink.ts";
 import { installGlobalErrorListeners } from "@/backend/global-error-listeners.ts";
 import { Window } from "@/backend/runtime.ts";
+import { installYsmDecodeBridge } from "@/backend/ysm-decode-bridge.ts";
 import { registerErrorDiary } from "@/core/error-diary.ts";
 import { initI18n, setLocaleHost } from "@/core/i18n/locale.ts";
 import { checkUpdateSilent } from "@/features/maintenance/version-updater.ts";
@@ -111,6 +112,8 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
             console.warn("[module] error-diary 注册未接管（已有先前注册？sink 未生效）");
           }
           installGlobalErrorListeners();
+          // ADR-317：Android 桥解码 listener（桌面/网页 getAndroidBridge() null → no-op）
+          installYsmDecodeBridge();
         },
       },
     ]);

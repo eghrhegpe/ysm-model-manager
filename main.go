@@ -88,6 +88,18 @@ func main() {
 	})
 	wailsApp := application.New(application.Options{
 		Name: "YSM 模型管理器",
+		// WebView2 远程调试（CDP）开关：YSM_CDP_PORT 非空时注入 --remote-debugging-port。
+		// ADR-317 桥解码联调/网页调试用（edge://inspect 连 127.0.0.1:<port>）；
+		// 不设环境变量时零行为。⚠️ 勿用 WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS 环境变量——
+		// go-webview2 loader 会主动覆盖它（env_create.go 清空+重写）。
+		Windows: application.WindowsOptions{
+			AdditionalBrowserArgs: func() []string {
+				if p := os.Getenv("YSM_CDP_PORT"); p != "" {
+					return []string{"--remote-debugging-port=" + p}
+				}
+				return nil
+			}(),
+		},
 		// MarshalError 见 marshalBindingError 注释
 		MarshalError: marshalBindingError,
 		Services: []application.Service{

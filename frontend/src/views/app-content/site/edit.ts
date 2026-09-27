@@ -15,7 +15,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { bindDragSort, type DragStateShell } from "./edit-drag.ts";
 import { buildCreatorEditCard } from "./render.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
-import { joinSiteIds, parseSiteIds } from "./workshop-data.ts";
+import { joinSiteIds, parseSiteIds, WS_ACTIVE_TAG_KEY, WS_SEARCH_KW_KEY } from "./workshop-data.ts";
 
 interface FilterStateShell {
   activeTag: string;
@@ -580,7 +580,7 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
     searchInput.addEventListener(
       "input",
       () => {
-        safeSet("ysm-ws-search-kw", searchInput.value);
+        safeSet(WS_SEARCH_KW_KEY, searchInput.value);
         eeApplyFilters(searchResults, searchInput, fs, creators);
       },
       { signal: sig },
@@ -596,10 +596,10 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
       const target = e.target as HTMLElement | null;
       if (!target?.closest("[data-clear-filter]")) return;
       fs.activeTag = "";
-      safeSet("ysm-ws-active-tag", "");
+      safeSet(WS_ACTIVE_TAG_KEY, "");
       if (searchInput) {
         searchInput.value = "";
-        safeSet("ysm-ws-search-kw", "");
+        safeSet(WS_SEARCH_KW_KEY, "");
       }
       searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((b) => {
         b.classList.toggle(
@@ -617,7 +617,7 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
       "click",
       () => {
         fs.activeTag = btn.dataset.tag || "";
-        safeSet("ysm-ws-active-tag", fs.activeTag);
+        safeSet(WS_ACTIVE_TAG_KEY, fs.activeTag);
         searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((b) => {
           b.classList.toggle("active", b === btn);
         });

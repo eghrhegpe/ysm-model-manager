@@ -13,6 +13,7 @@ import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
 import type { BrowseMode } from "./workshop-browse-mode.ts";
 import {
   type CreatorIdentityInput,
+  FAV_CREATORS_KEY,
   getCreatorIdentity,
   getTagDisplayLabel,
   getTagFromRole,
@@ -452,7 +453,7 @@ function cmSeSyncFavButtons(searchResults: HTMLElement): void {
 
 function cmSeMakeSyncFn(searchResults: HTMLElement): (e: StorageEvent) => void {
   return (e: StorageEvent) => {
-    if (e.key === "ysm-fav-creators") {
+    if (e.key === FAV_CREATORS_KEY) {
       cmSeSyncFavButtons(searchResults);
     }
   };

@@ -1817,10 +1817,6 @@ export const autoSidebar = [
             "link": "/knowledge/golangci-lint"
           },
           {
-            "text": "火绒主动防御按二进制拦截应用写入（读写分离假象）",
-            "link": "/knowledge/huorong_hips_blocks_app_writes"
-          },
-          {
             "text": "install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）",
             "link": "/knowledge/install_domain_split"
           },
@@ -1835,6 +1831,10 @@ export const autoSidebar = [
           {
             "text": "Wails Binding API 总览 internal/app",
             "link": "/knowledge/wails-bindings"
+          },
+          {
+            "text": "仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截）",
+            "link": "/knowledge/workspace_exe_write_denied"
           },
           {
             "text": "WASI 解码器 spike（wazero 内存直解，node 桥退役候选）",

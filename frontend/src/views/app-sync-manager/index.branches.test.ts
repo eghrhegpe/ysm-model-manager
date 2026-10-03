@@ -104,18 +104,20 @@ describe("app-sync-manager — attributeChangedCallback 与代际守卫", () => 
   });
 
   it("首次 _init 在途时 instance 变更 → 旧代际完成被 gen 守卫丢弃（只渲染一次）", async () => {
-    // 第一次 loadData 挂起，制造在途窗口
-    let resolveFirst: (v: string) => void = () => {};
-    mocks.GetInstanceSyncStatus.mockImplementationOnce(
-      () => new Promise<string>((r) => (resolveFirst = r)),
-    );
+    // 两个代际的 loadData 都挂起（同一 deferred 同时放行）——确定性锁 gen 守卫：
+    // gen1 挂起期间换 instance → gen2 也挂起；放行后 gen1 结果必须被 gen 守卫丢弃，
+    // 只有 gen2 渲染一次。（旧版只挂 gen1、依赖 gen2 在窗口内的完成时序——vitest 5
+    // 微任务排布变化暴露该假设不成立，改为双挂起消除时序敏感。）
+    let resolveBoth: (v: string) => void = () => {};
+    const hang = () => new Promise<string>((r) => (resolveBoth = r));
+    mocks.GetInstanceSyncStatus.mockImplementationOnce(hang);
+    mocks.GetInstanceSyncStatus.mockImplementationOnce(hang);
     const { el } = mount();
     // 挂起期间换 instance → 第二次 _init（gen=2）
     el.setAttribute("instance", "other");
     await waitFor(() => mocks.GetInstanceSyncStatus.mock.calls.length >= 2, 5000);
     renderMock.mockClear();
-    resolveFirst(JSON.stringify([])); // 旧代际完成 → gen 守卫丢弃
-    // 正等结果：落定后共恰 1 次渲染（gen=2 正常；gen=1 被 gen 守卫丢弃）
+    resolveBoth(JSON.stringify([])); // 两代同时落定 → gen1 丢弃、gen2 渲染
     await waitFor(() => renderMock.mock.calls.length >= 1, 5000);
     // gen=1 的收尾不得渲染；gen=2 正常渲染一次（锁「不多」= toBeCalledTimes(1)；
     // ⚠️ waitFor(>=1) 返回后即断言，尾部窗口≈0——当前 store/renderer 链零定时器故安全，

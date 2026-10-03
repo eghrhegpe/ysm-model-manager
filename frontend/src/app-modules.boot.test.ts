@@ -38,6 +38,8 @@ const m = vi.hoisted(() => ({
   // 六条用例一次性连锁红（toast 计数 +1）。
   applyThemeAuto: vi.fn(),
   normalizeTheme: vi.fn((t: string) => t),
+  // debugGetSpec 钩子用（ADR-214）；vi.mock/vi.hoisted 必须顶层（vitest 5 静态检查强制）
+  getAppMock: vi.fn(),
   windowShow: vi.fn(),
   openDevTools: vi.fn(),
   // revealMainWindow 观察点：记录收到的 show 回调（模块内写死 () => Window.Show()）
@@ -63,6 +65,7 @@ vi.mock("./backend/browser-adapter.ts", () => ({ prefetchStatsWorker: m.prefetch
 vi.mock("./core/i18n/locale.ts", () => ({ initI18n: m.initI18n, setLocaleHost: m.setLocaleHost }));
 vi.mock("./features/maintenance/version-updater.ts", () => ({ checkUpdateSilent: m.checkUpdateSilent }));
 vi.mock("./views/app-content/settings/ui-prefs.ts", () => ({ applyUIPrefs: m.applyUIPrefs }));
+vi.mock("@/backend/app.ts", () => ({ getApp: m.getAppMock }));
 vi.mock("./theme-core.ts", () => ({
   normalizeTheme: m.normalizeTheme,
   applyTheme: m.applyTheme,
@@ -457,12 +460,10 @@ describe("app-modules devtools 快捷键接线", () => {
 });
 
 describe("app-modules debugGetSpec 控制台钩子（ADR-214）", () => {
-  const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
   // debugGetSpec 类型声明（app-modules.ts 用类型断言绕过 Window 接口冲突）
   type DebugGetSpec = (path?: string) => Promise<unknown>;
 
   beforeEach(() => {
-    vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
     // _devMode 判定：?dev=1 或 _devtools=1
     localStorage.setItem("_devtools", "1");
     // isDebugEnabled 判定：无 ?nodebug=1 且 _debug !== "0"
@@ -470,7 +471,7 @@ describe("app-modules debugGetSpec 控制台钩子（ADR-214）", () => {
   });
 
   it("_devMode + isDebugEnabled → 挂载 window.debugGetSpec，调用返回 spec", async () => {
-    getAppMock.mockResolvedValue({
+    m.getAppMock.mockResolvedValue({
       GetModel3DSpec: vi.fn().mockResolvedValue({ bones: [1, 2] }),
     });
     await boot();
@@ -486,7 +487,7 @@ describe("app-modules debugGetSpec 控制台钩子（ADR-214）", () => {
 
   it("GetModel3DSpec 拒绝 → console.error + 返回 null", async () => {
     const err = stubConsoleError();
-    getAppMock.mockResolvedValue({
+    m.getAppMock.mockResolvedValue({
       GetModel3DSpec: vi.fn().mockRejectedValue(new Error("spec down")),
     });
     await boot();

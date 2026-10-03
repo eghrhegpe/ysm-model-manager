@@ -155,6 +155,9 @@
 ### 发版前
 - [ ] 版本号 `X.Y.Z` 已定，与既有 tag 无冲突。（§2 步 1）
 - [ ] `docs/releases/vX.Y.Z.md` 已手写并提交（路径确认小写 `releases`）。（§2 步 2-3）
+- [ ] **冒烟组全绿（必跑，ADR-318）**：`node scripts/release-smoke.ts`——CI 同口径预演
+      （pnpm frozen-lockfile / npm ci dry-run / 跨平台 import 执法 / tag 敏感契约抽样 /
+      binding-check），目标 ≤3 分钟。失败先修再发版，别赌 CI（v1.15.0 五轮排雷教训）。
 - [ ] （可选）本地 `.\cmd\build-release.ps1 vX.Y.Z -SkipUpload` 构建通过。（§0 本地自检）
 
 ### 发版中

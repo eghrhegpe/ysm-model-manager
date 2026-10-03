@@ -2331,6 +2331,10 @@ export const autoSidebar = [
             "link": "/knowledge/check_threshold_scanners"
           },
           {
+            "text": "发版冒烟组——CI 同口径预演（ADR-318）",
+            "link": "/knowledge/experience"
+          },
+          {
             "text": "可拓展点索引对账（vs HEAD @ d517113c…）",
             "link": "/knowledge/extensibility-index-reconciliation"
           },

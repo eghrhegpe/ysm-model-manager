@@ -29,8 +29,10 @@ pitfalls:
 处置：
   - 立即恢复：把构建产物复制到仓外再跑（cp bin/xxx.exe %TEMP%/ 后运行即可全功能）
   - 正式发布/安装的 exe 在仓外，终端用户不受影响；仅影响「从仓内直接运行构建产物」的开发/调试场景
-  - 长治：在代理沙箱设置中为工作区二进制放行用户目录写入（或接受「仓外跑 dev 产物」的工作流）
+  - 长治：在 ZCode/Codex 应用设置中查找「工作区保护/沙箱」开关放行；或固化「仓外跑 dev 产物」工作流
   - 代码侧无需也不应改动：WriteFileAtomic/CreateTemp 无问题，失败已按 ADR-044 sentinel 留痕
+  - ⚠️ 勿把配置目录迁去 LocalAppData 来"绕开"：Temp 被拦才是硬伤（os.CreateTemp/wails/更新器都依赖系统 Temp，绕不开），且白名单随策略版本可能变化——治本在沙箱设置不在应用代码
+  - 区分两类现象：仓内 exe 写被拒（本卡）≠ 未签名 exe 复制后运行弹 SmartScreen「无法验证发布者」（Mark of the Web 常规警告，见签名话题）
 quick_groups:
   - 排查「读正常写拒绝」类雷霆：先做「换位置」对照实验（仓内 vs 仓外），再查 ACL/令牌/安全软件记录
 quick_intents:
@@ -48,12 +50,15 @@ invariant_anchors:
 
 2026-09-27 排查「wails3 dev 下所有临时文件创建失败（Access is denied），但浏览功能全部正常」：实锤为 **AI 代理沙箱按 exe 镜像位置拦截**——可执行文件位于代理工作区（C:\Users\...\ysm-model-manager）内的进程，写用户目录（AppData\Roaming）被静默拒绝；复制到仓外立即恢复。非代码 bug、非 ACL、非火绒。
 
-## 实证链（四组对照实验）
+## 实证链（对照实验 + 逐个排除）
 
 1. 目录 ACL/属主正常（user 完全控制；CodexSandboxUsers:(RX) 为 Codex CLI 沙箱的无害继承项）；Go 语义复刻探针（os.CreateTemp 同目录）自 /tmp 运行**成功**。
 2. 同一 exe 的 CLI 模式 cache-clear 删除 64 文件成功——排除二进制被整体封杀（但注意：删除与创建是不同行为类别，勿过度推论）。
 3. **名字 vs 位置剥离**：原名 exe 放 %TEMP% 跑 → 零失败；改名 exe 放仓内 bin → 失败。**拦截键 = 位置，不是名字**。
 4. **封口**：从未被标记的探针 exe 复制进 bin 运行 → 立即失败。纯位置因素，与二进制身份无关。
+5. **规则画像**（仓内镜像探针）：Roaming/Temp/D:\ 全拒，**工作区自身 + LOCALAPPDATA 放行**——白名单形策略；非工作区用户目录（如 `~\ysm-nonworkspace-test`）镜像全放行 → 拦截器精确认得本仓目录（代理注册的工作区）。
+6. **逐个排除安全软件**：卸载微软电脑管家（ahflt.sys 消失）仍失败 → 排除；退出火绒（sysdiag 仍在但防护已停）仍失败 → 排除；Sandboxie（SbieSvc 在但 SbieDrv STOPPED）排除；Defender CFA 事件日志无记录。**拦截器不在常规安全软件里，指向代理工具自身的沙箱基础设施**（机器存在 CodexSandboxUsers 受管组；本仓为 ZCode/Codex 注册的工作区）。
+7. **应用侧自诊断工具**：`internal/app/write_diag.go`（`YSM_WRITE_DIAG=1` 启用）——失败进程自己交代多路径探测/令牌/错误码，证实令牌干净、winerr=5、新增目录（LocalAppData 探测点）可写而既有受保护目录（含系统 Temp）拒绝。
 
 ## 与其他子系统关系
 

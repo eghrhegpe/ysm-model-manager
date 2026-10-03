@@ -42,9 +42,17 @@ function git(cwd: string, args: string[]): { ok: boolean; out: string } {
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ysm-shallow-"));
 try {
   // ── 1. 造浅克隆：本地仓库自身当 remote，--depth=1 制造 .git/shallow ──
+  // 抓 ref 用 HEAD（落成 origin/main）：tag 触发的 CI 检出里本地仓库可能没有
+  // refs/heads/main（actions/checkout 只取 tag），按名抓 main 会 "couldn't find remote ref"。
   git(tmp, ["init", "--quiet", "."]);
   git(tmp, ["remote", "add", "origin", ROOT]);
-  const fetched = git(tmp, ["fetch", "--quiet", "origin", "main", "--depth=1"]);
+  const fetched = git(tmp, [
+    "fetch",
+    "--quiet",
+    "origin",
+    "+HEAD:refs/remotes/origin/main",
+    "--depth=1",
+  ]);
   assert.ok(fetched.ok, `浅抓取失败（无法构造前置条件）：${fetched.out}`);
   git(tmp, ["checkout", "--quiet", "-B", "main", "FETCH_HEAD"]);
 

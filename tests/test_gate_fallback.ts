@@ -89,7 +89,9 @@ console.log(
 // 故只在 fallback 未贴平时断言非空（与上方 resolveBaseRev 的 base !== '' 守卫同型）。
 const chg = resolveChanges(`refs/heads/${branch}`, localOid, localOid);
 assert.ok(Array.isArray(chg), "resolveChanges 同源应返回数组");
-const mbSame = sh(`merge-base origin/${branch} ${localOid}`);
+// tag 触发的 CI 检出是 detached HEAD（branch --show-current = ""），origin/ 空分支非法；
+// 此场景无「未贴平」信息可依，视作已贴平跳过非空断言。
+const mbSame = branch ? sh(`merge-base origin/${branch} ${localOid}`) : localOid;
 if (mbSame !== localOid) {
   assert.ok(chg!.length > 0, "resolveChanges fallback 未贴平时应解析到变更文件集");
 }

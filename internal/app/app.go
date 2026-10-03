@@ -258,6 +258,12 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 	a.app.Event.Emit("config-loaded", ysmRoot, cfg.McRoot, cfg.LinkMode)
 
+	// 写入自诊断（临时排障工具）：YSM_WRITE_DIAG=1 时应用进程自己交代
+	// 令牌/错误码/多路径探测结果（「仓内 exe 写 AppData 被拒」雷霆专用）
+	if os.Getenv("YSM_WRITE_DIAG") == "1" {
+		go runWriteDiag()
+	}
+
 	// 预热模型广场第二窗口（ADR-050）。
 	// Wails beta.26 时序变化：ServiceStartup 阶段主窗口尚未嵌 WebView2 控制器，
 	// 此刻同步预热会让 plaza 与主窗口并发 CreateCoreWebView2Controller →

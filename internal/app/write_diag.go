@@ -1,3 +1,5 @@
+//go:build windows
+
 package app
 
 // 写入自诊断（临时排障工具，YSM_WRITE_DIAG=1 启用，验证后可移除）。

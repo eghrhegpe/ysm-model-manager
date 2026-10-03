@@ -194,6 +194,10 @@ export const autoSidebar = [
       {
         "text": "v1.14.0 — 联邦渲染能力激活 + 3D 预览重构 + 同步去重核心",
         "link": "/releases/v1.14.0"
+      },
+      {
+        "text": "v1.15.0 — 解码引擎重构（wazero + Android）+ 依赖大升级 + 无障碍收口",
+        "link": "/releases/v1.15.0"
       }
     ]
   },

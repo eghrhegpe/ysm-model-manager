@@ -266,6 +266,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-318：测试套件分组与发版冒烟组（反馈回路提速）",
+        "link": "/adr/ADR-318-test-suite-groups-release-smoke"
+      },
+      {
         "text": "ADR-317：Android .ysm 解码 WebView 桥后端（Decoder 策略平台化）",
         "link": "/adr/ADR-317-android-webview-decode-bridge"
       },

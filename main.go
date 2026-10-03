@@ -134,9 +134,13 @@ func main() {
 
 func mainWindowOptions() application.WebviewWindowOptions {
 	return application.WebviewWindowOptions{
-		Title:            "YSM 模型管理器",
-		Width:            1280,
-		Height:           800,
+		Title:  "YSM 模型管理器",
+		Width:  1280,
+		Height: 800,
+		// 最小尺寸兜底：禁止拖到任意小；恢复侧对损坏配置的正数小值同样夹紧
+		// （internal/app minWindowW/H），两处需同步。
+		MinWidth:         800,
+		MinHeight:        600,
 		URL:              "/",
 		Hidden:           true,
 		BackgroundColour: application.NewRGB(17, 17, 27),

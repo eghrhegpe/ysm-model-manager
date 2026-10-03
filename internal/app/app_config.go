@@ -423,6 +423,29 @@ func (a *App) SaveWindowPosition(x, y, width, height int) {
 	a.saveConfig(cfg)
 }
 
+// clampWindowSize 窗口尺寸兜底：<=0 回落默认 1200×800（「未配置」哨兵判据依赖该值），
+// 正数但小于最小值（main.go MinWidth/MinHeight 同值 800×600）夹紧到最小值——防配置文件
+// 部分损坏或用户怪操作把窗口恢复成 1×1 之类。
+func clampWindowSize(w, h int) (int, int) {
+	const (
+		defaultW   = 1200
+		defaultH   = 800
+		minWindowW = 800
+		minWindowH = 600
+	)
+	if w <= 0 {
+		w = defaultW
+	} else if w < minWindowW {
+		w = minWindowW
+	}
+	if h <= 0 {
+		h = defaultH
+	} else if h < minWindowH {
+		h = minWindowH
+	}
+	return w, h
+}
+
 func (a *App) GetWindowPosition() types.WindowState {
 	cfg := a.LoadAppConfig()
 	state := types.WindowState{
@@ -431,12 +454,9 @@ func (a *App) GetWindowPosition() types.WindowState {
 		Width:  cfg.WinW,
 		Height: cfg.WinH,
 	}
-	if state.Width <= 0 {
-		state.Width = 1200
-	}
-	if state.Height <= 0 {
-		state.Height = 800
-	}
+	// 最小窗口尺寸：夹紧「正数但离谱小」的损坏/怪操作配置（main.go MinWidth/MinHeight
+	// 同值，两处需同步）。<=0 仍回落默认值——下方「未配置」哨兵判据依赖 1200/800。
+	state.Width, state.Height = clampWindowSize(cfg.WinW, cfg.WinH)
 	// 检测屏幕是否变化（双屏切换），用相对坐标重算
 	_, _, vw, vh := getVirtualScreen()
 	if cfg.WinScrW > 0 && cfg.WinScrH > 0 && (cfg.WinScrW != vw || cfg.WinScrH != vh) {

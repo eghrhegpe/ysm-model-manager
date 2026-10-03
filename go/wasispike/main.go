@@ -35,7 +35,7 @@ func run(wasmPath, ysmPath string) error {
 	ctx := context.Background()
 	r := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().
 		WithCoreFeatures(api.CoreFeaturesV2|experimental.CoreFeaturesExceptionHandling))
-	defer r.Close(ctx)
+	defer func() { _ = r.Close(ctx) }()
 
 	// wasi：本内存直出路径不再需要 preopen 文件系统，仅导入表需要 wasi 模块在场
 	_, err = wasi.NewBuilder(r).Instantiate(ctx)
@@ -121,7 +121,7 @@ func run(wasmPath, ysmPath string) error {
 			fmt.Printf("   %s (%d bytes)\n", string(name), d)
 		}
 	}
-	freeFn.Call(ctx, uint64(bufPtr32_le))
+	_, _ = freeFn.Call(ctx, uint64(bufPtr32_le))
 	fmt.Printf("共 %d 个产物, %d bytes — wazero 纯 Go 内存直解成功\n", count32, total)
 	return nil
 }

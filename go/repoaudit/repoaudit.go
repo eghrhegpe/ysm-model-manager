@@ -196,7 +196,7 @@ func Audit(dirPath string) (DirAuditResult, error) {
 
 // AuditCtx ctx 版（ADR-314）：GUI 绑定传入 Wails 注入的可取消 ctx。取消后整单作废
 // （前端不消费部分结果），完整跑完的报告确定性不受影响（ADR-119）。
-func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) {
+func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //nolint:gocyclo // 存量复杂度（25>20），发版窗口暂以 nolint 记账，重构另立任务
 	if st, err := os.Stat(dirPath); err != nil {
 		return DirAuditResult{}, fmt.Errorf("审计目录不可用 %q: %w", dirPath, err)
 	} else if !st.IsDir() {

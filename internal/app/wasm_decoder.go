@@ -69,7 +69,7 @@ func runYSMDecode(ysmData []byte) []decodedYSMExtra {
 }
 
 // decodeYSMViaWASI 解码 .ysm 并合并为单 BedrockModel（单组件模式）。
-func decodeYSMViaWASI(ysmData []byte) *types.BedrockModel {
+func decodeYSMViaWASI(ysmData []byte) *types.BedrockModel { //nolint:gocyclo // 存量复杂度（23>20），发版窗口暂以 nolint 记账，重构另立任务
 	files := runYSMDecode(ysmData)
 	if len(files) == 0 {
 		return nil

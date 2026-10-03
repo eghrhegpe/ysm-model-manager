@@ -217,13 +217,21 @@ function extractGoExports() {
         const open = m.index + m[0].length - 1; // m[0] 以参数列表的 `(` 收尾
         const close = matchingParen(text, open);
         const body = paramBody(text, open, close);
+        // ADR-314：Wails needsContext 注入的首参 `ctx context.Context` 不出现在 TS 绑定面，
+        // 对账前剥离（不剥会误报 signature_mismatch，FindDuplicateFiles/RepoHealthAudit 回归）
+        const ctxStripped = /^ctx\s+context\.Context\s*,\s*/.test(body)
+          ? body.replace(/^ctx\s+context\.Context\s*,\s*/, "")
+          : body;
         // 返回类型：参数右括号后、函数体 `{` 前（多返回 `(T, error)` 或单 `T`）
         const retMatch = text.slice(close + 1).match(/^\s*([^\s{]+)/);
         const retType = retMatch ? retMatch[1]?.replace(/^\(/, "").split(",")[0]?.trim() : "";
         exports[name] = {
           file: path.basename(fp),
-          arity: paramArity(text, open, close),
-          params: goParamTypes(body),
+          arity:
+            ctxStripped === body
+              ? paramArity(text, open, close)
+              : paramArity(ctxStripped, -1, ctxStripped.length),
+          params: goParamTypes(ctxStripped),
           // ADR-143 §2.5：首个返回类型（string 承载 JSON 检测用；`(string, error)` → "string"）
           retType: retType === "string" || retType === "(string" ? "string" : retType,
         };

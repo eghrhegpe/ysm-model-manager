@@ -2,7 +2,7 @@
 // 状态变更回调注册表 + dispatchEnvChange 派发。
 // 仿 MikuMikuAR dispatchEnvChange 模式。
 
-import { ringLog } from "@/preview-3d/caps/scene-capability.ts";
+import { ringLog } from "@/preview-3d/ring-log.ts";
 import type { EnvState } from "./env-state-schema.ts";
 import { type EnvStateKey, getPresetKeys } from "./env-state-schema.ts";
 

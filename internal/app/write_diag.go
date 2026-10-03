@@ -37,8 +37,8 @@ func runWriteDiag() {
 				probe.label, probe.path, err, winErrCode(err))
 		} else {
 			name := f.Name()
-			f.Close()
-			os.Remove(name)
+			_ = f.Close()
+			_ = os.Remove(name)
 			fmt.Fprintf(os.Stderr, "[write-diag] %s(%s) 创建成功\n", probe.label, probe.path)
 		}
 	}
@@ -48,16 +48,12 @@ func runWriteDiag() {
 	if hf, err := os.OpenFile(existing, os.O_WRONLY|os.O_APPEND, 0o644); err != nil {
 		fmt.Fprintf(os.Stderr, "[write-diag] 已存在文件追加写失败: %v (winerr=%d)\n", err, winErrCode(err))
 	} else {
-		hf.Close()
+		_ = hf.Close()
 		fmt.Fprintf(os.Stderr, "[write-diag] 已存在文件追加写成功\n")
 	}
 
-	tok, err := windows.OpenCurrentProcessToken()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "[write-diag] 令牌打开失败: %v\n", err)
-		return
-	}
-	defer tok.Close()
+	tok := windows.GetCurrentProcessToken()
+	defer func() { _ = tok.Close() }()
 
 	// 完整性级别：x/sys 无现成 API，getInfo(25)=TokenIntegrityLevel 手解
 	// TOKEN_MANDATORY_LABEL{ SID_AND_ATTRIBUTES }：SID rev(1)+count(1)+auth(6)+rid[]，

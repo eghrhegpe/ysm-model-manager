@@ -8,9 +8,8 @@ source_files:
   - go/ysmwebview/bridge.go
   - go/ysmwasi/ysmwasi.go
   - go/wasispike/main.go
-  - upstream/YesSteveModel-Parser/build-wasi.ps1
-  - upstream/YesSteveModel-Parser/ysm-wasm-bridge.cpp
-  - upstream/YesSteveModel-Parser/YSMParser/parsers/v3/YSMParserV3.cpp
+  # upstream/YesSteveModel-Parser 为 vendored 未跟踪目录（不在 git），drift 检查在 CI 无法
+  # 验证——构建 recipe / ysm_decode_to_memory / collectToMemory 的知识保留在正文，不做文件锚
 auto_fields:
   symbols_with_lines:
     - Bridge
@@ -45,8 +44,6 @@ invariant_anchors:
   - go/ysmwasi/ysmwasi.go|Decode
   - go/ysmwasi/ysmwasi_test.go|TestImportsClosedSet
   - go/wasispike/main.go|run
-  - upstream/YesSteveModel-Parser/ysm-wasm-bridge.cpp|ysm_decode_to_memory
-  - upstream/YesSteveModel-Parser/YSMParser/parsers/v3/YSMParserV3.cpp|collectToMemory
 ---
 
 # WASI 解码器（wazero 内存直解，node 桥已退役）

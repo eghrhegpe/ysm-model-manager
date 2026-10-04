@@ -23,7 +23,9 @@
 > 「守卫得是真守卫」不变量 + `scene-capability.ts` 默认值注释（0.01 → 0.15）+ ADR-319 遗留项归口指针。
 > **本轮验证**：`water-capability.test.ts` **123 例全绿**（含新增 5 例）；`vite build` 通过；
 > `check-biome --files`（4 个前端文件）通过；`probe-water-wave.ts` 默认档无回归；e2e 新增 S7 静水端点场景
-> （`water-wave-evidence.spec.ts`）。⚠️ **全量 `typecheck` 与 `scripts/tsc` 当前各报 2 条错误，均属并行会话的在途改动，
+> （`water-wave-evidence.spec.ts`；**本机未跑通**——`page.waitForLoadState("networkidle")` 60s 超时，
+> 既有六场景用例同因失败（`webServer` 能起、页面 load 事件已触发，但 networkidle 不达成），
+> 属环境/既有 spec 敏感点，**非本轮改动**；截图未进仓）。⚠️ **全量 `typecheck` 与 `scripts/tsc` 当前各报 2 条错误，均属并行会话的在途改动，
 > 与本轮无关**：`frontend/src/preview-3d/adapters/ysm-adapter.ts`（临时诊断块 `t.image?.naturalWidth`，标注「诊断后删除」）、
 > `scripts/check-adr-health.ts` / `scripts/new-adr.ts`（ADR 归档迁移在途）；**本轮改动的 5 个文件在两处 tsc 输出里均零错误**。
 > **未动**（待决策）：P1-1 波陡归一、P1-2 滑杆动态上界、P1-4 存档追溯迁移、P2-1..P2-4、P3-1/P3-2。

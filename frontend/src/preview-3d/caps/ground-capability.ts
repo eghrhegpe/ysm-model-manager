@@ -599,8 +599,10 @@ export class GroundCapability implements SceneCapability {
     return envState.groundSourceKind;
   }
   /** 表面承接面当前可见性（与 updateSurfaceVisible 同口径的纯派生，零副作用；供 e2e/dev 探针只读）。
-   *  surface.visible = 能力开关 × 总开关 × 来源非 none；默认 sourceKind="none" 时此值为 false——
-   *  即「默认只有网格线、无实体承接面」的自证出口（e2e 见 web-preview ground 用例）。 */
+   *  surface.visible = 能力开关 × 总开关 × 来源非 none；默认 sourceKind="solid" → 此值默认为 true
+   *  （实体承接面开箱可见，「地面在哪」的锚点）；来源切 none 后回落 false（无表面层纯净态；
+   *  参考网格此时亦默认不亮，见 env-state-schema.ts groundGridVisible 翻转注释）的自证出口
+   *  （e2e 见 web-preview ground 用例 / ysmGroundProbe 探针）。 */
   isSurfaceVisible(): boolean {
     return this.enabled && envState.groundVisible && envState.groundSourceKind !== "none";
   }

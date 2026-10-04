@@ -16,6 +16,8 @@
 //     findLocalChromium 传 preferFull（期望修订 full → 最大 full → 期望 shell → 最大 shell）；
 //     本机若只有旧版 full（如 1228）也会取之而非匹配版 shell；若全部缺失（他机/CI），
 //     回落硬编码路径并启动失败而非静默跳过——这是有意的，避免「环境没了测试却全绿」。
+
+import { createWriteStream } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { findLocalChromium } from "../e2e/browser-path.ts";
 
@@ -201,5 +203,137 @@ test.describe("后处理真实 WebGL 链路（锐评 P1-1 / P2-2）", () => {
     expect(r.after.ppOff, "关/开后处理亮度应不同（门真的生效）").not.toBe(r.after.ppOn);
     // ② 反证：无门时（修复前）关掉后处理也照样被 ppExposure 拉亮 → 比修复后更亮。
     expect(r.before.ppOff, "无门时关着后处理也更亮——病态可复现").toBeGreaterThan(r.after.ppOff);
+  });
+
+  test("Bloom 域修复实测：mid-tone 不再进高辉光（真 WebGL 像素对比 + 生产函数同源）", async ({
+    page,
+  }) => {
+    // 本用例首引 UnrealBloomPass/OutputPass——不在 vite 预打包缓存里，浏览器首次请求
+    // 触发「发现新依赖 → 整页 reload」（bootstrap 注释的同款坑），长 evaluate 会被掐死。
+    // 对策 = 撞一次导航后整段 bootstrap 重来再跑：dep optimize 每轮 dev server 只发生一次，
+    // 第二次 evaluate 全走缓存。放宽超时（optimize 本身耗时，20s 默认预算不够两次 bootstrap）。
+    test.setTimeout(60_000);
+    await bootstrap(page);
+
+    const runner = async () => {
+      const THREE = await import("/node_modules/.vite/deps/three.js");
+      const { EffectComposer } = await import(
+        "/@id/three/examples/jsm/postprocessing/EffectComposer.js"
+      );
+      const { RenderPass } = await import("/@id/three/examples/jsm/postprocessing/RenderPass.js");
+      const { UnrealBloomPass } = await import(
+        "/@id/three/examples/jsm/postprocessing/UnrealBloomPass.js"
+      );
+      const { OutputPass } = await import("/@id/three/examples/jsm/postprocessing/OutputPass.js");
+      // 生产代码直用（vite dev 同源解析）：域换算必须是**本次改动的实现**在浏览器里跑，
+      // 不是测试侧手抄一份近似公式——手抄即分叉隐患（本仓纪律，同 attenuateAmbientForSky 单源）。
+      const { bloomThresholdToLinear } = await import(
+        "/src/preview-3d/caps/postprocessing-state.ts"
+      );
+
+      // 场景：黑底上一块「典型受光中亮面」（MeshBasic 0xE0E0E0 → 线性 ≈0.75，占视口中央）。
+      // 曝光 0.5（本仓 skyExposure 默认）下亮块显示约中灰——正是用户眼中「正常亮度」的像素。
+      // 病（修复前）：threshold 0.6 直接和**未曝光线性值**比 → 0.75 > 0.6，亮块整块进辉光、
+      // 光晕向黑底晕开（用户投诉的「奇葩」画面）；修复后 pass 拿 0.6÷0.5=1.2 → 0.75 不过阈值，
+      // 辉光只留给真高光。黑底衬托让光晕肉眼可辨（平场无边缘，看不出晕——踩过）。
+      const EXPOSURE = 0.5;
+      const USER_THRESHOLD = 0.6;
+      const SIZE = 256;
+
+      const build = (bloom: number | null) => {
+        const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+        renderer.setPixelRatio(1);
+        renderer.setSize(SIZE, SIZE, false);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = EXPOSURE;
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        const quad = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.1, 1.1),
+          new THREE.MeshBasicMaterial({ color: 0xe0e0e0 }),
+        );
+        quad.position.z = -2.5;
+        scene.add(quad);
+        const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+        const composer = new EffectComposer(renderer);
+        composer.setSize(SIZE, SIZE);
+        composer.addPass(new RenderPass(scene, camera));
+        if (bloom !== null) {
+          composer.addPass(new UnrealBloomPass(new THREE.Vector2(SIZE, SIZE), 0.6, 0.5, bloom));
+        }
+        composer.addPass(new OutputPass());
+        composer.render();
+        const gl = renderer.getContext();
+        // 中心 = 亮块内部；角落 = 黑底（辉光晕染的落点）
+        const read = (x: number, y: number): number => {
+          const px = new Uint8Array(4);
+          gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+          return px[0];
+        };
+        const out = {
+          center: read(SIZE / 2, SIZE / 2),
+          corner: read(6, 6),
+          png: (renderer.domElement as HTMLCanvasElement).toDataURL("image/png"),
+        };
+        renderer.dispose();
+        return out;
+      };
+
+      // 基线：整链无 bloom（辉光增量以它为参照）
+      const baseline = build(null);
+      const old = build(USER_THRESHOLD); // 病态：阈值直吃线性域
+      const fixed = build(bloomThresholdToLinear(USER_THRESHOLD, EXPOSURE)); // 生产函数换算
+      return { old, fixed, baseline, converted: bloomThresholdToLinear(USER_THRESHOLD, EXPOSURE) };
+    };
+
+    let r: Awaited<ReturnType<typeof runner>> | null = null;
+    for (let attempt = 0; attempt < 2 && !r; attempt++) {
+      try {
+        r = await page.evaluate(runner);
+      } catch {
+        // 第一次若被 vite dep-optimize 的整页 reload 掐死 → bootstrap 重建上下文再跑；
+        // optimize 每轮 dev server 只发生一次，第二次 evaluate 全走缓存。
+        if (attempt === 0) await bootstrap(page);
+      }
+    }
+    if (!r) throw new Error("bloom 域修复 e2e：page.evaluate 两次均失败（非断言失败）");
+
+    // ① 生产函数在浏览器里的换算值 = 0.6 ÷ 0.5 = 1.2（与被测实现同源，非测试手抄）
+    expect(r.converted, "bloomThresholdToLinear(0.6, 0.5) = 1.2").toBeCloseTo(1.2, 6);
+
+    // ② 病态复现：旧口径下中灰亮块被辉光**垫亮**（中心 > 无 bloom 基线），且光晕**晕上黑底**
+    // （角落 > 基线角落≈0）——「亮瞎 + 整片发雾」两特征齐活。
+    expect(r.old.center, `旧口径亮块应被 bloom 垫亮（>基线 ${r.baseline.center}）`).toBeGreaterThan(
+      r.baseline.center,
+    );
+    expect(r.old.corner, `旧口径黑底角落应吃到光晕（>基线 ${r.baseline.corner}）`).toBeGreaterThan(
+      r.baseline.corner,
+    );
+
+    // ③ 修复生效：换算后同场景同参数，中心回到基线附近、角落不再被晕染（辉光放走 mid-tone）
+    expect(r.fixed.center, `修复后亮块应回到基线（<旧口径 ${r.old.center}）`).toBeLessThan(
+      r.old.center,
+    );
+    expect(
+      Math.abs(r.fixed.center - r.baseline.center),
+      "修复后中心偏差 ≤ 2/255",
+    ).toBeLessThanOrEqual(2);
+    expect(
+      Math.abs(r.fixed.corner - r.baseline.corner),
+      "修复后角落无晕染（≤2/255）",
+    ).toBeLessThanOrEqual(2);
+
+    // ④ 人眼证据：两图落盘，肉眼可见旧图亮块发光+黑底起雾、修复图干净
+    for (const [name, dataUrl] of [
+      ["bloom-domain-old.png", r.old.png],
+      ["bloom-domain-fixed.png", r.fixed.png],
+    ] as const) {
+      const b64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+      createWriteStream(`e2e-web/_shots/${name}`).end(Buffer.from(b64, "base64"));
+    }
+    test.info().annotations.push({
+      type: "bloom 域修复",
+      description: `中心: 基线=${r.baseline.center} 旧=${r.old.center} 修复=${r.fixed.center}｜角落: 基线=${r.baseline.corner} 旧=${r.old.corner} 修复=${r.fixed.corner}（阈值 0.6→${r.converted}）`,
+    });
   });
 });

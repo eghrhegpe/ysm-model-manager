@@ -1066,23 +1066,20 @@ ADR-249 拆轴时漏 `groundSourceKind` 的病史类复发从机制上消除。
 | light | `auto-model`（light-persist，acc 合批） | ✅（L-1 收口 2026-09-22） | 正确 |
 | postprocessing | `auto-model`（表驱动字段全 auto-model） | ✅（P-1） | 正确 |
 | ground | `manual` + skipMiddleware | ⚠️ 部分（G-6 已修中间件，loadState 仍 manual 但**有 skipMiddleware 豁免**） | G-6 中间件修复后正确 |
-| **reflector** | **`manual`**（reflector-capability.ts:297-303） | ❌ **未修** | **潜伏（latent），见下** |
-| **shadow** | **`manual`**（shadow-capability.ts:483-492） | ❌ **未修** | **潜伏（latent），见下** |
+| **reflector** | `auto-model`（reflector-capability.ts:294-313 还原表全 `auto-model`） | ✅ **已收口** | 正确（2026-10 复核：restore 路径早已全程 auto-model，旧审计「❌ 潜伏」为过时误判） |
+| **shadow** | `auto-model`（shadow-capability.ts:516-534 还原表全 `auto-model`） | ✅ **已收口** | 正确（同上，旧审计「❌ 潜伏」为过时误判） |
 | renderMode | `manual` | ❌ 未修 | 无自动来源会写 renderMode 键，**非漏洞** |
 
-**为什么 reflector/shadow 的 `manual` 恢复是「潜伏」而非「活动故障」**——两条防线共同兜住：
+> **⚠️ 2026-10 复核修订**：本表原（审计 §19 初版）把 reflector/shadow 标「❌ 未修 / 潜伏（latent）」，
+> 依据是当时代码 `loadState` 还原表写 `manual`。**现读当前源码核实，二者 restore 路径均早已全程
+> `auto-model`**（reflector-capability.ts:294-313 / shadow-capability.ts:516-534，每键
+> `{...}: (v) => setEnvState({...}, { source: "auto-model" })`），「潜伏 bug」**并不存在**——
+> 属文档「病」≠ 当前状态的典型陷阱（AGENTS.md 反复警示）。故此处由「❌ 未修」更正为「✅ 已收口」，
+> 删除「潜伏」措辞。跨 cap 来源纪律横向 verdict 现结论：**七 cap 全部 auto-model 或受豁免/守卫兜住，
+> 环境系统无残留 manual 潜伏漏洞**。
 
-1. **`isStateLoaded` 守卫**：reflector/shadow 的 `applyModelPreset` 首行 `if (this.isStateLoaded) return`
-   （reflector-capability.ts:207 / shadow-capability.ts:158），loadState 末尾置 `isStateLoaded = true`。
-   装配序 `loadAll() → applyModelDefaults()`（shared-infra.ts:308,314）——有存档时模型默认值**根本不写**
-   reflector/shadow 键，故「manual 打穿 auto-model 模型默认」这条 E-3/F-2 病在本二 cap 不成立。
-2. **归属隔离**：氛围预设 `ATMOSPHERE_PRESETS` 明确 `❌ shadow 类型（技术质量档）/ reflector 尺寸（场景布置）`
-   （atmosphere-presets.ts:10-11）——auto-atmosphere 永不写这两组键，故「manual 打穿氛围预设」也不成立。
-   唯一会写 reflector/shadow 的自动来源（模型默认）恰被守卫挡掉，manual 锁无受害方。
-
-> **结论**：reflector/shadow 的 restore `manual` 是**格式不一致的债**（与六 cap 同族），但不是**活动 bug**。
-> 修它的收益仅是「物体一致性」（新 cap 读代码不会再误以为 manual 是正确范式），零行为变化。
-> **已记录，不做（留作格式收敛候选，与 19.2 的 B 类合并处理更合理）。**
+> 原「潜伏」论证（isStateLoaded 守卫 + 归属隔离）作为**历史防御纵深**仍成立，但当前已非必须——
+> 因 restore 路径本身已合规，不再依赖守卫兜住 manual 误写。
 
 ### 19.2 保存清单手抄 vs schema 驱动（B 类）——横向 verdict
 
@@ -1090,7 +1087,7 @@ ADR-249 拆轴时漏 `groundSourceKind` 的病史类复发从机制上消除。
 |-----|-----------|------------------|------|
 | water | `getPresetKeys("water")` 循环 | ✅ | 零（新增键写侧自动跟上） |
 | light | `buildLightPersistPayload` + `FLATTEN_MAP` | ✅ | 零（字段全集只在 light-presets 声明一次） |
-| ground | 手写 27 字段（ground-capability.ts:705-735） | ❌ | 中（§18 G-8 已记录；ADR-249 漏键病史） |
+| ground | `getPresetKeys("ground")` schema 驱动（ground-capability.ts，2026-10 G-8 收口） | ✅ | 零（§18 G-8 已收口 + 契约锁） |
 | fog | 手写 6 字段 | ❌ | 低（字段少且稳定） |
 | env | 手写 6 字段 | ❌ | 低 |
 | pp | 手写 19 字段（postprocessing-capability.ts:730-753） | ❌ | 中（字段多、新增易漏） |
@@ -1099,7 +1096,9 @@ ADR-249 拆轴时漏 `groundSourceKind` 的病史类复发从机制上消除。
 | renderMode | 手写 5 字段 | ❌ | 低（debug 工具） |
 
 > **结论**：B 类是真实的同族「手抄清单」债，但它是**零故障风险的风格债务**（不在本次修复范围）。
-> 最值得后续收敛的是 pp（19 字段）+ ground（27 字段）——水/光的 schema 驱动先例已证明可行路径。
+> 最值得后续收敛的是 pp（19 字段，postprocessing-capability.ts:730-753）——ground 已于 2026-10 经 G-8
+> 收口为 `getPresetKeys("ground")` schema 驱动，水/光的先例已验证路径可行；pp 字段多、新增易漏，是现存的
+> 最高价值收敛候选。
 
 ### 19.3 cap 私有 enabled 双键（C 类）——横向 verdict
 

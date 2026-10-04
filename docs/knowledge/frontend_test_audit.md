@@ -104,6 +104,16 @@ invariant_anchors:
   - **执行逻辑已由单测守护**：`download-queue.test.ts` + `download-queue-ui.test.ts` + `download-queue-store.test.ts` 覆盖队列状态机/UI/存储。
   - **结论**：盲区标为「**受阻：待 tryFetchModels 可注入/加 route 模拟**」——在 `tryFetchModels` 被抽象为可注入数据源（或 e2e 加 `page.route` 模拟 raw.githubusercontent.com 抓取）之前，仓库模型页头不可达，硬写 e2e 必 flake/恒 0，违背 AGENTS.md 禁 flake 原则。插桩先行，待渲染门控解除即可零成本接入。
 
+- **preview-3d 后处理链路（真实 WebGL）**：审计时列「3D 预览的 e2e 只验到 canvas 出现 + 不白屏，后处理管线零覆盖」。
+  **✅ 已补 `frontend/e2e-web/postprocessing.spec.ts`（2026-10，锐评 P1-1 / P2-2 跟进）**——该 spec 在真 WebGL2 里复现 composer 链路并 `readPixels`，形成端到端证据链。
+  - **为什么单测不够**：后处理 3000+ 单测全跑 mock renderer，断言的是「调用顺序 / 字段赋值」；而 P1-1（缓冲分辨率）在 mock 下 `setSize` 是空实现、P2-2（亮度差）只有真渲染才看得见——两个高危缺陷**只在真 GPU 路径上暴露**。
+  - **环境前提（本机实测）**：WebGL2 via ANGLE/SwiftShader 软渲染，`EXT_color_buffer_float` 与 `MAX_SAMPLES=4` 均可用，够支撑 EffectComposer 的 HalfFloatType 缓冲与 MSAA。
+  - ⚠️ **`page.evaluate` 内的动态 import 不经 vite 的 bare-specifier 转换**：必须用 dev server 实际 URL——three 写 `/node_modules/.vite/deps/three.js`（预打包），addons 写 `/@id/three/examples/jsm/...`（pnpm 符号链接布局下 `node_modules/three` 非真实目录，直取被 fs 白名单挡）。
+  - ⚠️ **页面就绪须等启动链稳定**：`goto("/")` 后应用会触发一次同 URL 导航，只等 `domcontentloaded` 就 evaluate 会撞 "Execution context was destroyed"（实测），需 `networkidle` + 额外等待。
+  - ⚠️ **`scene.background` 不经曝光路径**：验 `toneMappingExposure` 差异必须用**材质**填满视口，清屏色下各档曝光读回像素完全相同（踩过：四档全 128）。
+  - **本机浏览器缺口（非本 spec 引入）**：playwright 未装默认的 `chromium_headless_shell-1243`，故 `web-preview.spec.ts` 等未指 `executablePath` 的既有 spec 在本机**启动即失败**（`browserType.launch`）；本 spec 显式指完整版 chromium（`chromium-1228`，带 GPU 栈，比 headless-shell 更适合验 WebGL）因而可跑。他机/CI 需 `npx playwright install chromium`。
+  - **豁免说明（对上条「禁新增 waitForTimeout」不变量）**：本 spec 用固定等待而非轮询，因等待对象是「应用启动链触发的同 URL 导航」——它不是 DOM 条件、无稳定 selector 可轮询（`networkidle` 已用尽仍不足以判定导航结束）。属**环境就绪等待**而非业务断言等待，故不违该不变量的立意（该条禁的是掩盖竞态的条件等待）。
+
 ## 不变量
 
 - tests/*.ts 保持 Node 零依赖（仅 node:* + ../scripts/），失败必须 exit(1)——凡进 tests/ 的脚本要么是真门禁要么移走

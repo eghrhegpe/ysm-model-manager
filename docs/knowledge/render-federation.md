@@ -19,7 +19,6 @@ auto_fields:
   symbols_with_lines:
     - _resetSingletons
     - AssembledShell
-    - attenuateAmbientForSky
     - BaseScene
     - CameraControlScene
     - CapabilityId
@@ -42,7 +41,6 @@ auto_fields:
     - invalidatePreview
     - isSkyEnvironmentOn
     - LightCapability
-    - lightDirToPosition
     - LightKey
     - mount3D
     - Mount3DOptions
@@ -62,7 +60,6 @@ auto_fields:
     - ShadowCapability
     - ShadowType
     - SkyCapability
-    - spotDistanceAttenuation
     - switchPreview
     - UpdateableScene
     - volParamKeys

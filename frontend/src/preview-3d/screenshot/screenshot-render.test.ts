@@ -511,7 +511,7 @@ describe("renderMultiAngle — 灯光对象落地（S1 照度守恒）", () => {
     const lights = makeLights();
     await renderMultiAngle("/m/a.ysm", [], { lights });
     const { lightDirToPosition, spotDistanceAttenuation } = await import(
-      "@/preview-3d/caps/light-capability.ts"
+      "@/preview-3d/caps/light-math.ts"
     );
     const origin = new threeStub.Vector3(0, 0, 0); // 模型中心（Box3 size 2 → center 0）
     const spot = lights.key; // spot 参数
@@ -537,7 +537,7 @@ describe("renderMultiAngle — 灯光对象落地（S1 照度守恒）", () => {
     const lights = makeLights({ key, volumetric: null });
     await renderMultiAngle("/m/a.ysm", [], { lights });
     const { lightDirToPosition, spotDistanceAttenuation } = await import(
-      "@/preview-3d/caps/light-capability.ts"
+      "@/preview-3d/caps/light-math.ts"
     );
     const pos = lightDirToPosition(key, lights.radius);
     const d0 = pos.distanceTo(new threeStub.Vector3(0, 0, 0));
@@ -570,7 +570,7 @@ describe("renderMultiAngle — 灯光对象落地（S1 照度守恒）", () => {
     const key = { ...DEFAULT_LIGHT_PARAMS.key, enabled: true };
     const lights = makeLights({ key, volumetric: null });
     await renderMultiAngle("/m/a.ysm", [], { lights });
-    const { lightDirToPosition } = await import("@/preview-3d/caps/light-capability.ts");
+    const { lightDirToPosition } = await import("@/preview-3d/caps/light-math.ts");
     // AmbientLight 的 target 为 null，DirectionalLight 的 target 是共享靶点（非 null）——据此区分
     const dir = threeStub.DirectionalLight.instances.find((l) => l.target !== null);
     expect(dir, "应创建一盏 DirectionalLight").toBeDefined();

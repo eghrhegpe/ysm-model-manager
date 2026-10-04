@@ -1549,6 +1549,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
       },
       {
+        "text": "ADR-270-d2：views→preview-3d 入口面白名单闸（R10）：斩 DECODE_SOURCE/keymap 绕行边，存量债入基线",
+        "link": "/adr/decisions/ADR-270-d2-views-p3d-r10-entry-whitelist"
+      },
+      {
         "text": "ADR-270-d1：preview-3d 内部分层方向闸 R9（state/infra/decoder/shader-patches 禁运行时引 adapters/caps/menu，基线防回退）",
         "link": "/adr/decisions/ADR-270-d1-preview-3d-r9-state-infra-decoder-shader-patches-adapters-caps-menu"
       },

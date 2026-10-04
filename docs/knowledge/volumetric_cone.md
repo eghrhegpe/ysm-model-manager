@@ -25,13 +25,10 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - applyVolumetricCone
-    - attenuateAmbientForSky
     - LightCapability
-    - lightDirToPosition
     - LightKey
     - ScreenshotLights
     - ScreenshotVolumetric
-    - spotDistanceAttenuation
     - toScreenshotLights
     - volParamKeys
     - VolumetricCone

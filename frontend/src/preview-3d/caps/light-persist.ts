@@ -141,6 +141,9 @@ export function restoreLightParams(state: Record<string, unknown>): void {
   if (typeof state.enabled === "boolean") acc.lightEnabled = state.enabled;
   if (typeof state.helperVisible === "boolean") acc.lightHelperVisible = state.helperVisible;
   // ② 用户显式保存的灯开关优先于模型预设
+  // ⚠️ 扁平 ambientIntensity 是**旧存档兼容读取**（4e7977303 时代 saveState 直接产顶层
+  // `ambientIntensity`；后改为嵌套 `ambient:{color,intensity}`）。保存侧不再产出它，但**不能删**：
+  // 老档只有此一处能恢复环境光强度（嵌套 ambient 缺失时该键会静默丢失）。
   if (typeof state.ambientIntensity === "number") {
     acc.lightAmbientIntensity = state.ambientIntensity;
   }

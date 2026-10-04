@@ -21,7 +21,13 @@ import { type LocaleKey, tOf } from "@/core/i18n/t.ts";
 import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { LightCapability, LightKey } from "./light-capability.ts";
-import { FLATTEN_MAP, type LightType, type VolumetricDriver } from "./light-params.ts";
+import {
+  FLATTEN_MAP,
+  LIGHT_SLOTS as LIGHT_SLOT_IDS,
+  type LightSlot,
+  type LightType,
+  type VolumetricDriver,
+} from "./light-params.ts";
 
 /** 统一设置条内「有值域」的参数字段（type/enabled/color 不在其列）。 */
 type LightSliderField =
@@ -35,12 +41,18 @@ type LightSliderField =
 
 // 共享 options 常量——节点树路径（buildLightNodes 的 `control.options:`）
 
+/** 槽位菜单文案（label/labelKey）。params 层带不了 i18n，文案必须留菜单；value 三串不再手抄——
+ *  由 light-params.LIGHT_SLOTS 权威枚举派生：增/删槽位自动传播，漏配标签即 Record 全键约束编译报错。
+ *  （原实现另抄一份三串字面量，与权威枚举脱钩——[ADR-281] 唯一真相源纪律的菜单面漏网。） */
+const SLOT_LABELS: Record<LightSlot, { label: string; labelKey: LocaleKey }> = {
+  key: { label: "主灯", labelKey: "preview.keyLight" },
+  fill: { label: "补灯", labelKey: "preview.fillLight" },
+  rim: { label: "轮廓灯", labelKey: "preview.rimLight" },
+};
+
 /** 三盏灯槽位（[light-type-switch] 「编辑灯光」select；旧注释称「按钮组」与实现不符已修） */
-const LIGHT_SLOTS: Array<{ value: string; label: string; labelKey: LocaleKey }> = [
-  { value: "key", label: "主灯", labelKey: "preview.keyLight" },
-  { value: "fill", label: "补灯", labelKey: "preview.fillLight" },
-  { value: "rim", label: "轮廓灯", labelKey: "preview.rimLight" },
-];
+const LIGHT_SLOTS: Array<{ value: LightSlot; label: string; labelKey: LocaleKey }> =
+  LIGHT_SLOT_IDS.map((which) => ({ value: which, ...SLOT_LABELS[which] }));
 
 /** 单灯 folder 标题键：与「编辑灯光」select 选项同源——编辑谁，folder 就叫谁
  *  （修复「选了补灯、全文却无一处显示正在改谁」的 subject 丢失）。 */

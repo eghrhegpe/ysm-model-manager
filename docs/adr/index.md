@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **322** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **323** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 295 |
+| [✅ 已采纳](#已采纳) | 296 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -53,7 +53,7 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（295）
+### ✅ 已采纳（296）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -106,6 +106,7 @@ permalink: /adr/
 | [ADR-271](./ADR-271-water-detail-normal-gpu.md) | 水面微细节法线 GPU 化（移除 CPU DataTexture 链路） | ✅ 已采纳 |
 | [ADR-270](./ADR-270-menu-directory-layering.md) | preview-3d/menu 目录物理分层（七层隐式收敛为显式子目录） | ✅ 已采纳 |
 | [ADR-270-d1](./decisions/ADR-270-d1-preview-3d-r9-state-infra-decoder-shader-patches-adapters-caps-menu.md) | preview-3d 内部分层方向闸 R9（state/infra/decoder/shader-patches 禁运行时引 adapters/caps/menu，基线防回退） | ✅ 已采纳 |
+| [ADR-270-d2](./decisions/ADR-270-d2-views-p3d-r10-entry-whitelist.md) | views→preview-3d 入口面白名单闸（R10）：斩 DECODE_SOURCE/keymap 绕行边，存量债入基线 | ✅ 已采纳 |
 | [ADR-269](./ADR-269-resource-manifest-single-source.md) | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定 | ✅ 已采纳 |
 | [ADR-268](./ADR-268-env-cap-self-placement.md) | 环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单 | ✅ 已采纳 |
 | [ADR-267](./ADR-267-toast-emoji-esc.md) | toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区 | ✅ 已采纳 |
@@ -703,6 +704,7 @@ permalink: /adr/
 |------|------|------|------|
 | ADR-293-d1 | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ✅ 已采纳 | 2026-10-04 |
 | ADR-270-d1 | preview-3d 内部分层方向闸 R9（state/infra/decoder/shader-patches 禁运行时引 adapters/caps/menu，基线防回退） | ✅ 已采纳 | 2026-10-04 |
+| ADR-270-d2 | views→preview-3d 入口面白名单闸（R10）：斩 DECODE_SOURCE/keymap 绕行边，存量债入基线 | ✅ 已采纳 | 2026-10-05 |
 | ADR-266-d1 | 体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像） | ✅ 已采纳 | 2026-10-04 |
 
 ## 使用规则（硬约束）

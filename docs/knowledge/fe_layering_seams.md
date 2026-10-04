@@ -18,6 +18,10 @@ auto_fields:
     - P3D_LOWER_SUBS
     - P3D_UPPER_SUBS
     - p3dSubOf
+    - R10_WHITELIST_FILES
+    - R10_WHITELIST_PREFIXES
+    - r10EdgeViolates
+    - r10TargetAllowed
     - r7EdgeViolates
     - R8_ALLOW_MARKER
     - r9EdgeViolates

@@ -9,8 +9,8 @@
 //   · 锥顶 = 模型中心 + 方位角/仰角 × radius（= 本目录 applyLights 的灯位公式）
 //   · 射束方向 = 靶点（模型中心）− 锥顶（= 预览 getSpotDir）
 import * as THREE from "three";
-import { lightDirToPosition } from "@/preview-3d/caps/light-capability.ts";
 import { VolumetricCone } from "@/preview-3d/caps/light-cone.ts";
+import { lightDirToPosition } from "@/preview-3d/caps/light-math.ts";
 import type { ScreenshotLights } from "./screenshot-lights.ts";
 
 /** 在离屏场景建锥并挂载；预览无光柱（volumetric 为 null）/ 体积光关 → null。

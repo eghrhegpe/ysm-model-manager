@@ -6,7 +6,7 @@
 // 刻意的暗场景，截图必须保持暗——[doc:adr-126-p5] 截图灯光割裂修复：所见即所得）。
 import type * as THREE from "three";
 import { sceneInfraHost } from "@/preview-3d/adapters/shared-infra.ts";
-import { attenuateAmbientForSky } from "@/preview-3d/caps/light-capability.ts";
+import { attenuateAmbientForSky } from "@/preview-3d/caps/light-math.ts";
 import type { LightInstanceParams, VolumetricParams } from "@/preview-3d/caps/light-params.ts";
 import {
   isSkyEnvironmentOn,

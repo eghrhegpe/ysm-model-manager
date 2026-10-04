@@ -12,7 +12,7 @@
 // 对齐先例：water-capability 的 REVISION 断言 / water.md「升级 three 后必须重跑」。
 import { describe, it, expect } from "vitest";
 import glslLightsPars from "three/src/renderers/shaders/ShaderChunk/lights_pars_begin.glsl.js";
-import { spotDistanceAttenuation } from "./light-capability.ts";
+import { spotDistanceAttenuation } from "./light-math.ts";
 
 /** three 上游 GLSL 原文（随包发布的 shader chunk 源字符串）。 */
 const upstreamGlsl: string = glslLightsPars;

@@ -10,7 +10,7 @@ import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { applyVolumetricCone } from "./screenshot-cone.ts";
 import type { ScreenshotLights, ScreenshotVolumetric } from "./screenshot-lights.ts";
-import { lightDirToPosition } from "@/preview-3d/caps/light-capability.ts";
+import { lightDirToPosition } from "@/preview-3d/caps/light-math.ts";
 import { DEFAULT_LIGHT_PARAMS, type LightInstanceParams } from "@/preview-3d/caps/light-params.ts";
 
 const CONE_NAME = "ysm-light-volumetric-cone";

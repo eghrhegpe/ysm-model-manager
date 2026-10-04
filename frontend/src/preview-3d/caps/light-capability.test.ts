@@ -5,7 +5,8 @@
 // 「聚光灯」= 把某盏灯（默认 key）的 type 设为 "spot"，体积光锥由第一盏启用的 spot 灯驱动。
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
-import { LightCapability, spotDistanceAttenuation } from "./light-capability.ts";
+import { LightCapability } from "./light-capability.ts";
+import { spotDistanceAttenuation } from "./light-math.ts";
 // [作用域三组分治] 组 id 由实现侧导出：测试与实现共用同一常量，防两边平行手抄同一字符串
 // （同 LIGHT_MASTER_NODE_ID 的处理口径）。
 import {
@@ -1061,6 +1062,13 @@ describe("LightCapability — 持久化", () => {
     expect(p.key.angle).toBe(DEFAULT_LIGHT_PARAMS.key.angle);
     expect(p.volumetric.enabled).toBe(false);
   });
+
+  it("[旧档兼容] 扁平 ambientIntensity 为合法数字时照常恢复（嵌套前格式——删该读取即老档丢环境光强度）", () => {
+    localStorage.setItem("ysm-scene-cap-light", JSON.stringify({ ambientIntensity: 0.62 }));
+    const cap = newCap();
+    cap.loadState();
+    expect(cap.getParams().ambient.intensity).toBe(0.62);
+  });
 });
 
 // ============ 锥组挂载态下的更新路径 ============
@@ -1594,7 +1602,7 @@ describe("LightCapability — 聚光灯 helper 线框", () => {
 // ============ 导出工具函数 ============
 describe("light-capability 导出工具函数", () => {
   it("attenuateAmbientForSky：开 ×0.5 / 关 ×1", async () => {
-    const { attenuateAmbientForSky, lightDirToPosition } = await import("./light-capability.ts");
+    const { attenuateAmbientForSky, lightDirToPosition } = await import("./light-math.ts");
     expect(attenuateAmbientForSky(1.0, true)).toBeCloseTo(0.5, 10);
     expect(attenuateAmbientForSky(1.0, false)).toBeCloseTo(1.0, 10);
     // lightDirToPosition：仰角 90 → 正上方；方位 0 → +Z
@@ -1610,7 +1618,7 @@ describe("light-capability 导出工具函数", () => {
   // [S1 方位角文档与公式对齐] 数值锁：x=h·sin(az)、z=h·cos(az) 逐点钉死，防将来手改
   // 公式静默镜像灯架（方位 90 若被误写为 -90，灯位沿东西向翻转而现有用例仍绿）。
   it("lightDirToPosition 方位角数值锁：az=0→(0,0,+h)、az=90→(+h,0,0)、az=180→(0,0,-h)", async () => {
-    const { lightDirToPosition } = await import("./light-capability.ts");
+    const { lightDirToPosition } = await import("./light-math.ts");
     const flat = { ...LIGHT_FIELDS_BASE, elevation: 0 };
     const h = 5;
     const south = lightDirToPosition({ ...flat, azimuth: 0 }, h);

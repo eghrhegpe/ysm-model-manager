@@ -178,7 +178,10 @@ export class VolumetricCone {
     spotlightPos: THREE.Vector3,
     spotlightDir: THREE.Vector3 = DEFAULT_BEAM_DIR,
   ): void {
-    this.disposeGroup();
+    // 早退也要走完整 dispose（= disposeGroup + 清 material/uniforms）：只调 disposeGroup 会把
+    // material/uniforms 留在已 dispose 的对象上——正常路径 createMaterial 会重写二者所以无感，
+    // 但早退路径下 updateUniforms 仍会写进已 dispose 材质（three 不冻结 JS 对象，静默不报错）。
+    this.dispose();
     if (!sp.enabled || !vm.enabled) return;
 
     this.height = height;

@@ -6,7 +6,7 @@
 import * as THREE from "three";
 
 import { getApp } from "@/backend/app.ts";
-import { lightDirToPosition, spotDistanceAttenuation } from "@/preview-3d/caps/light-capability.ts";
+import { lightDirToPosition, spotDistanceAttenuation } from "@/preview-3d/caps/light-math.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/model/ysm-object.ts";

@@ -1248,7 +1248,7 @@
   "preview.groundMatAngle": "テクスチャ角度",
   "preview.groundMatPick": "画像を選択",
   "preview.groundMatClear": "画像を解除",
-  "preview.groundMatLoadFailed": "地面テクスチャの読み込みに失敗",
+  "preview.groundMatLoadFailed": "地面テクスチャの読み込みに失敗：{name}",
   "preview.groundMatOpacity": "サーフェス不透明度",
   "preview.groundMatScale": "テクスチャスケール",
   "preview.groundMatRotation": "テクスチャ回転",

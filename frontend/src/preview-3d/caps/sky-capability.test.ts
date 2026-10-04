@@ -316,11 +316,13 @@ describe("SkyCapability — 持久化", () => {
 describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("基座级节点平铺 + 高级 folder（节点化后 group 由 folder 承载）", () => {
+  it("基座级节点平铺 + 高级 folder（节点化后 group 由 folder 承载；[锐评 S1-1] 云量提级平铺）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // 成员归属（精确集合，不测顺序）
-    expect(nodeIds(nodes).sort()).toEqual(["sky-enabled", "cap-node-sky-timeline", "cap-group-sky-advanced"].sort());
+    // 成员归属（精确集合，不测顺序）——云量已提级到基础行，高级 folder 余 4 项
+    expect(nodeIds(nodes).sort()).toEqual(
+      ["sky-enabled", "cap-node-sky-timeline", "sky-cloud", "cap-group-sky-advanced"].sort(),
+    );
     // 0: sky-enabled 能力总开关 toggle（env 一级行 headerToggle 源）
     const master = findNodeById(nodes, "sky-enabled");
     expect(master.kind).toBe("toggle");
@@ -334,7 +336,7 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.skyGroupAdvanced");
     const childIdSet = childIds(folder);
-    expect(childIdSet).toContain("sky-cloud");
+    expect(childIdSet).not.toContain("sky-cloud"); // 云量已提级，不在 folder 内
     expect(childIdSet).toContain("sky-sun-intensity");
     expect(childIdSet).toContain("sky-sun-disc");
     expect(childIdSet).toContain("sky-auto-rotate");
@@ -354,8 +356,10 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
     };
     walk(nodes);
     expect(allIds).not.toContain("sky-env");
-    // 顶层 = 总开关 + timeline + 高级 folder（精确集合，不测顺序）
-    expect(nodeIds(nodes).sort()).toEqual(["sky-enabled", "cap-node-sky-timeline", "cap-group-sky-advanced"].sort());
+    // 顶层 = 总开关 + timeline + 云量 + 高级 folder（[锐评 S1-1] 云量提级平铺，精确集合不测顺序）
+    expect(nodeIds(nodes).sort()).toEqual(
+      ["sky-enabled", "cap-node-sky-timeline", "sky-cloud", "cap-group-sky-advanced"].sort(),
+    );
   });
 
   it("时间轴控件与云量滑块联动状态（controls 通道 + 高级 folder，节点 control 闭包）", () => {
@@ -366,17 +370,23 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
     tl.setValue(20);
     expect(cap.getTimeOfDay()).toBe(20);
     expect(tl.getValue()).toBe(20);
-    const folder = findNodeById(nodes, "cap-group-sky-advanced");
-    const cloudNode = findNodeById(folder.children!, "sky-cloud");
+    // [锐评 S1-1] 云量已提级到基础行（顶层），从 nodes 顶层定位而非 folder.children
+    const cloudNode = findNodeById(nodes, "sky-cloud");
     cloudNode.control!.set!(0.8);
     expect(cap.getCloudCoverage()).toBe(0.8);
   });
 
   it("菜单滑杆值域 = schema 值域（ADR-283：菜单不再是第二事实源）", () => {
     const cap = newCap();
-    const folder = findNodeById(cap.getMenuNodes(), "cap-group-sky-advanced");
+    const nodes = cap.getMenuNodes();
+    const folder = findNodeById(nodes, "cap-group-sky-advanced");
+    // [锐评 S1-1] 云量已提级到基础行，从顶层定位；其余两项仍在高级 folder
+    const cloudCtrl = findNodeById(nodes, "sky-cloud").control!;
+    expect(
+      { min: cloudCtrl.min, max: cloudCtrl.max, step: cloudCtrl.step, unit: cloudCtrl.unit },
+      "sky-cloud 值域应来自 schema",
+    ).toEqual(getParamRange("skyCloudCoverage"));
     for (const [id, key] of [
-      ["sky-cloud", "skyCloudCoverage"],
       ["sky-sun-intensity", "skySunIntensityScale"],
       ["sky-sun-disc", "skySunDiscScale"],
     ] as const) {
@@ -835,9 +845,11 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
   // [ADR-250 §2.3] 曝光属主归 sky：本 cap 是 `renderer.toneMappingExposure` 的唯一写者，
   // 有效值 = skyExposure × ppExposure。原后处理侧直接覆写该字段，导致开/关后处理时
   // 约 1.8× 亮度跳变（「MMD 亮瞎」真因）——本组锁定乘算口径。
+  // [锐评 P2-2] 乘算**受后处理总开关门控**：ppEnabled=false 时 ppExposure 退化为 1.0
+  //（后处理关着，它面板里的曝光系数不该继续作用于画面）。
   it("[ADR-250] 曝光 = skyExposure × ppExposure（ppExposure 作为乘法系数，非夺属主）", () => {
     const scene = new THREE.Scene();
-    setEnvState({ skyExposure: 0.5, ppExposure: 1.2 }, { source: "manual" });
+    setEnvState({ skyExposure: 0.5, ppExposure: 1.2, ppEnabled: true }, { source: "manual" });
     const renderer = makeFakeRenderer({ toneMapping: THREE.NoToneMapping, toneMappingExposure: 9 });
     const cap = new SkyCapability({ scene, renderer });
     cap.apply();
@@ -846,7 +858,7 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
 
   it("[ADR-250] ppExposure 变更经 envState 派发重算曝光（无需 postproc 介入）", () => {
     const scene = new THREE.Scene();
-    setEnvState({ skyExposure: 0.5, ppExposure: 1.0 }, { source: "manual" });
+    setEnvState({ skyExposure: 0.5, ppExposure: 1.0, ppEnabled: true }, { source: "manual" });
     const renderer = makeFakeRenderer({ toneMapping: THREE.NoToneMapping, toneMappingExposure: 9 });
     const cap = new SkyCapability({ scene, renderer });
     cap.apply();
@@ -854,6 +866,63 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     setEnvState({ ppExposure: 2.0 }, { source: "manual" });
     expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 6); // 0.5 × 2.0
   });
+
+  // [锐评 P2-2] 总开关门：后处理关闭时，其面板上的「曝光」滑杆不得继续改变画面亮度。
+  // 病：applyExposure 原为 `skyExposure * ppExposure` 无门 —— 用户把后处理整个关掉后
+  // 拖那根滑杆，画面照样变亮/变暗（「关掉的系统里的控件仍在生效」）；反之天空缺席时
+  // 该滑杆又完全无效果（死参数）。同一控件两种病态，唯独缺「关着就不生效」这一档。
+  describe("[锐评 P2-2] 曝光受后处理总开关门控", () => {
+    it("ppEnabled=false 时 ppExposure 被门掉（退化为 1.0，画面 = 纯 skyExposure）", () => {
+      const scene = new THREE.Scene();
+      setEnvState(
+        { skyExposure: 0.5, ppExposure: 1.8, ppEnabled: false },
+        { source: "manual" },
+      );
+      const renderer = makeFakeRenderer({
+        toneMapping: THREE.NoToneMapping,
+        toneMappingExposure: 9,
+      });
+      const cap = new SkyCapability({ scene, renderer });
+      cap.apply();
+      // 关键：不得是 0.9（0.5 × 1.8）——那正是「关掉后处理却仍被它改亮度」的病
+      expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 6);
+    });
+
+    it("运行中关掉后处理 → 曝光立即回落到纯 skyExposure（无需重挂天空）", () => {
+      const scene = new THREE.Scene();
+      setEnvState(
+        { skyExposure: 0.5, ppExposure: 2.0, ppEnabled: true },
+        { source: "manual" },
+      );
+      const renderer = makeFakeRenderer({
+        toneMapping: THREE.NoToneMapping,
+        toneMappingExposure: 9,
+      });
+      const cap = new SkyCapability({ scene, renderer });
+      cap.apply();
+      expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 6); // 0.5 × 2.0
+      // 关总开关：ppEnabled 变更须触发重算（否则门只在 apply 时生效 = 半吊子）
+      setEnvState({ ppEnabled: false }, { source: "manual" });
+      expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 6);
+      // 再开回来 → 系数恢复参与
+      setEnvState({ ppEnabled: true }, { source: "manual" });
+      expect(renderer.toneMappingExposure).toBeCloseTo(1.0, 6);
+    });
+
+    it("默认态（ppEnabled=false + ppExposure=1.0）观感不变——加门不改变开箱亮度", () => {
+      const scene = new THREE.Scene();
+      resetEnvState(); // 三键全默认：ppEnabled=false / ppExposure=1.0 / skyExposure=0.5
+      const renderer = makeFakeRenderer({
+        toneMapping: THREE.NoToneMapping,
+        toneMappingExposure: 9,
+      });
+      const cap = new SkyCapability({ scene, renderer });
+      cap.apply();
+      // 0.5 × 1.0 门不门都是 0.5 —— 存量默认配置观感零变化（本次修复的兼容性前提）
+      expect(renderer.toneMappingExposure).toBeCloseTo(0.5, 6);
+    });
+  });
+
 
   it("environment=false 时 apply 清空 environment 但仍挂载天空", () => {
     const scene = new THREE.Scene();
@@ -1362,11 +1431,13 @@ describe("SkyCapability — God Rays 挂载分支", () => {
 describe("SkyCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("完整树 = sky-enabled 总开关 + timeline controls 节点 + 高级 folder（sky-env 随 ADR-292 D4 退场）", () => {
+  it("完整树 = sky-enabled 总开关 + timeline controls 节点 + 云量 + 高级 folder（sky-env 随 ADR-292 D4 退场；[锐评 S1-1] 云量提级平铺）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
-    // 成员归属（精确集合，不测顺序）
-    expect(nodeIds(nodes).sort()).toEqual(["sky-enabled", "cap-node-sky-timeline", "cap-group-sky-advanced"].sort());
+    // 成员归属（精确集合，不测顺序）——云量已提级到基础行，高级 folder 余 4 项
+    expect(nodeIds(nodes).sort()).toEqual(
+      ["sky-enabled", "cap-node-sky-timeline", "sky-cloud", "cap-group-sky-advanced"].sort(),
+    );
     // 0: sky-enabled 能力总开关 toggle（env 一级行 headerToggle 源）
     const master = findNodeById(nodes, "sky-enabled");
     expect(master.kind).toBe("toggle");
@@ -1387,18 +1458,20 @@ describe("SkyCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
     const folder = findNodeById(nodes, "cap-group-sky-advanced");
     expect(folder.kind).toBe("folder");
     expect(folder.labelKey).toBe("preview.skyGroupAdvanced");
-    // 高级组内 5 轴成员（精确集合，不测顺序）
+    // 高级组内 4 轴成员（云量已提级平铺到基础行，精确集合不测顺序）
     expect(childIds(folder).sort()).toEqual(
-      ["sky-cloud", "sky-sun-intensity", "sky-sun-disc", "sky-auto-rotate", "sky-godrays"].sort(),
+      ["sky-sun-intensity", "sky-sun-disc", "sky-auto-rotate", "sky-godrays"].sort(),
     );
   });
 
-  it("高级组节点读写闭包直连 cap（cloud/godrays）", () => {
+  it("高级组节点读写闭包直连 cap（cloud 已提级平铺 / godrays 仍在高级 folder）", () => {
     const cap = newCap();
-    const folder = findNodeById(cap.getMenuNodes(), "cap-group-sky-advanced");
-    const cloud = findNodeById(folder.children!, "sky-cloud");
+    const nodes = cap.getMenuNodes();
+    // [锐评 S1-1] 云量已提级到基础行，从顶层定位
+    const cloud = findNodeById(nodes, "sky-cloud");
     cloud.control!.set!(0.6);
     expect(cap.getCloudCoverage()).toBeCloseTo(0.6, 5);
+    const folder = findNodeById(nodes, "cap-group-sky-advanced");
     const godrays = findNodeById(folder.children!, "sky-godrays");
     godrays.control!.set!(true);
     expect(cap.isGodRaysEnabled()).toBe(true);

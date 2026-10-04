@@ -336,7 +336,9 @@ export class SkyCapability implements SceneCapability {
         // [ADR-250 §2.3] 曝光属主归 sky：有效曝光 = skyExposure × ppExposure。
         // ppExposure 变更亦走此处重算（原由 PostprocessingCapability 直接覆写，两 cap 并写同一字段
         // 造成约 1.8× 亮度跳变——「MMD 亮瞎」的真因，见 ADR-250 §1.4）。
-        if (changed.has("skyExposure") || changed.has("ppExposure")) {
+        // [锐评 P2-2] `ppEnabled` 一并纳入重算条件：该键是 ppExposure 的**门控**（见 applyExposure），
+        // 总开关翻转会改变有效曝光，不重算则门只在 apply 时生效（半吊子）。
+        if (changed.has("skyExposure") || changed.has("ppExposure") || changed.has("ppEnabled")) {
           this.applyExposure();
         }
         if (changed.has("skyEnvironment")) {
@@ -513,9 +515,19 @@ export class SkyCapability implements SceneCapability {
    * `skyExposure` 一致）。后处理侧只提供 `ppExposure` 作为**乘法系数**，
    * 不再直接覆写渲染器字段——原双写造成约 1.8× 亮度跳变（「MMD 亮瞎」的真因）：后处理一开
    * 即从 `skyExposure`(per-type 0.5~0.6) 跳到 `ppExposure`(全局 1.0)。
+   *
+   * [锐评 P2-2] `ppExposure` 系数**受后处理总开关 `ppEnabled` 门控**：后处理整个关掉时，
+   * 其面板里的曝光滑杆退化为 1.0（不参与乘算）。
+   * 病（原实现 `skyExposure * ppExposure` 无门）：用户把后处理关掉后拖那根滑杆，画面照样
+   * 变亮/变暗——「已关闭的系统里的控件仍在生效」；而天空缺席时该滑杆又完全无效果（死参数）。
+   * 同一控件两种病态，唯独缺「关着就不生效」这一档。
+   * 兼容性：默认 `ppExposure = 1.0`，门不门都得同一值，**开箱亮度零变化**——只有「关着后处理
+   * 且 ppExposure ≠ 1」的存量配置会回落到纯 `skyExposure`，那正是本修复的预期效果。
    */
   private applyExposure(): void {
-    this.renderer.toneMappingExposure = envState.skyExposure * envState.ppExposure;
+    // ppEnabled 为 false 时系数取中性值 1.0（而非 0——那是"变黑"不是"不参与"）
+    const ppFactor = envState.ppEnabled ? envState.ppExposure : 1.0;
+    this.renderer.toneMappingExposure = envState.skyExposure * ppFactor;
   }
 
   private writeUniforms(sky: Sky): void {

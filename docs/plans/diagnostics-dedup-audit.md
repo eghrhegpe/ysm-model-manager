@@ -85,7 +85,7 @@
 | C13 status-row | ✅ 已落地（完成） | `status-row.ts|msgRowHTML/statRowHTML` 单点广泛消费。conflicts 解决结果行仍手写是**契约内豁免**非残余债：那两行带 `style.marginTop` 且用 `textContent`，而 status-row.ts 头注声明「**不产出属性位（style=…），带额外属性的站点保持原样**」（:19、:64-68）；perf 下 4 处无 `stat-row` 的站点同理豁免 |
 
 ### 待确认补录（本轮）
-- **#4 e2e 状态行 class —— 有依赖但闭环安全**：`e2e/diagnostics.spec.ts:505` 确有 `q(".diag-stat-error")` 读 `textContent`。命中的是 perf 面板 `errorHTML`/`renderLoadFailure` 出口（class=`diag-stat diag-stat-error`，**无 `stat-row`**）。C13 明确排除这 4 处无 `stat-row` 的 perf 站点，且 `statRowHTML` 保留 class 字符串原样（不统一字号/对齐/不改 class），故 e2e 选择器与其 textContent 断言不受影响。**关闭-安全**。护栏建议：`q(".diag-stat-error")[0]` 是「首个命中」，若未来把 perf 某站点迁到 `statRowHTML("error")`（会再产一个 `.diag-stat-error` 节点），:505 的 `[0]` 可能漂移——动它前应把此 e2e 锚点收得更具体。
+- **#4 e2e 状态行 class —— 有依赖但闭环安全**：`e2e/diagnostics.spec.ts:505` 确有 `q(".diag-stat-error")` 读 `textContent`。命中的是 perf 面板 `errorHTML`/`renderLoadFailure` 出口（class=`diag-stat diag-stat-error`，**无 `stat-row`**）。C13 明确排除这 4 处无 `stat-row` 的 perf 站点，且 `statRowHTML` 保留 class 字符串原样（不统一字号/对齐/不改 class），故 e2e 选择器与其 textContent 断言不受影响。**关闭-安全**。护栏建议：`q(".diag-stat-error")[0]` 是「首个命中」，若未来把 perf 某站点迁到 `statRowHTML("error")`（会再产一个 `.diag-stat-error` 节点），:505 的 `[0]` 可能漂移——动它前应把此 e2e 锚点收得更具体。**✅ 护栏已收口（2026-10-04）**：`perf-common|errorHTML` 加 `data-testid="diag-perf-error"` 钩子（声明入 `tpl.ts|VIEW_TESTIDS`），`baselineBannerHTML` 的字面量并入 errorHTML（横幅单一出处回归 C3 形态），e2e `readSingleOut` 改按 testid 读横幅——C13 两族收敛把 perf 站点迁到 `statRowHTML` 时，只需在共享单点补同一 testid 即锚点不破。
 - **#3 三态 toast —— 大部分已被 C6 消化**：`copyWithToast` 已按 `copyText.ok` 分成功/失败，失败走 `diagnostics.copyFail`（不再谎报）；「降级成功 vs 彻底失败」两态是否再细分成文案，可视为独立微调，优先级低。
 
 ### 剩余动作（按优先级）

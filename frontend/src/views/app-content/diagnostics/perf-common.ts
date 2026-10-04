@@ -159,8 +159,13 @@ function setErrorCatch(out: HTMLElement, e: unknown, esc: EscFn): void {
   out.innerHTML = errorHTML(`${t("diagnostics.perfFail")}: ${safeErrorMessage(e)}`, esc);
 }
 
-function errorHTML(msg: string, esc: EscFn): string {
-  return `<div class="diag-stat diag-stat-error">${UI_ICONS.error} ${esc(msg)}</div>`;
+function errorHTML(msg: string, esc: EscFn, detail?: string): string {
+  // C13 #4 护栏收口（2026-10-04）：横幅挂稳定钩子 diag-perf-error（声明在 tpl.ts|VIEW_TESTIDS）。
+  // 同名 class `.diag-stat-error` 亦是 status-row.ts|statRowHTML("error") 的产物（两族收敛期
+  // 双产出方）——e2e 读横幅走 testid 通道，不再按 class 取 [0]（类锚点在第二产出方进容器即漂移）。
+  // detail（可选）进 title：本地化正文 + 可追问的原始细节（与 baselineBannerHTML 原行为一致）。
+  const detailAttr = detail ? ` title="${esc(detail)}"` : "";
+  return `<div class="diag-stat diag-stat-error" data-testid="diag-perf-error"${detailAttr}>${UI_ICONS.error} ${esc(msg)}</div>`;
 }
 
 /** 类型谓词：仅当 output 是**非空字符串**时才为 true。

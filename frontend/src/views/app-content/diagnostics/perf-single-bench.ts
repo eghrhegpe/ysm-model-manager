@@ -340,9 +340,9 @@ function baselineBannerHTML(bl: PerfBaselineBlock | undefined, resp: CLIResp, es
   const key = BASELINE_ERR_KEYS[token] as Parameters<typeof t>[0] | undefined;
   const msg = key ? t(key) : t("diagnostics.perfBaselineErrUnknown");
   const savedNote = bl?.saved_to ? ` ${t("diagnostics.perfBaselineErrSavedNote")}` : "";
-  // detail 进 title：中文细节（含路径）供追问，正文保持本地化
-  const title = bl?.detail ? ` title="${esc(bl.detail)}"` : "";
-  return `<div class="diag-stat diag-stat-error"${title}>${UI_ICONS.error} ${esc(msg + savedNote)}</div>`;
+  // detail 进 title：中文细节（含路径）供追问，正文保持本地化。
+  // 横幅字面量不再手搓——委托 errorHTML（perf-common 单一出处，C3 收口；data-testid 钩子随横幅走）
+  return errorHTML(msg + savedNote, esc, bl?.detail);
 }
 // singleBenchRenderBaseline 渲染基准块（保存去向 + 逐阶段判决；比不成时只有横幅说话）。
 function singleBenchRenderBaseline(bl: PerfBaselineBlock | undefined, esc: EscFn): string {

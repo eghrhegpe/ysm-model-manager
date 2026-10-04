@@ -642,7 +642,10 @@ function readSingleOut(page: Page) {
       dangerBars: q(".perf-bar-danger").length,
       blRows: q(".perf-bl-row").length,
       titles: q("[title]").map((n) => n.getAttribute("title") ?? ""),
-      bannerText: (q(".diag-stat-error")[0]?.textContent ?? "").trim(),
+      // C13 #4 护栏收口：横幅走 testid 通道——class 锚点 `.diag-stat-error` 与
+      // status-row.ts|statRowHTML("error") 同名，C13 两族收敛后第二产出方进本容器即漂移；
+      // 横幅唯一出处 = perf-common|errorHTML（委托方 baselineBannerHTML 已并入），钩子稳定
+      bannerText: (q('[data-testid="diag-perf-error"]')[0]?.textContent ?? "").trim(),
     };
   });
 }

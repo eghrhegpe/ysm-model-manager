@@ -48,6 +48,9 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-run",
   "diag-perf-model",
   "diag-perf-single",
+  // C13 #4 护栏收口（2026-10-04）：性能错误横幅钩子（perf-common|errorHTML 单一出处，
+  // baselineBannerHTML 亦委托它）——e2e 按此 testid 读横幅，替代同名双产出的 class 锚点
+  "diag-perf-error",
   "diag-perf-conc-max",
   "diag-perf-conc-run",
   "diag-perf-conc-out",

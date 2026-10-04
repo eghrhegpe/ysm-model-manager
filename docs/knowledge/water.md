@@ -11,6 +11,7 @@ adr:
   - ADR-272
   - ADR-283
   - ADR-297
+  - ADR-319
 source_files:
   - frontend/src/preview-3d/caps/water-capability.ts
   - frontend/src/preview-3d/caps/water-body-strategies.ts
@@ -41,10 +42,14 @@ use_when:
   - 改滑杆范围 / 参数值域（range / uiRange）
   - 新增水体形态（海洋 / 喷泉 / 大水面）
   - 改水面模型倒影 / 镜像 RT / fresnel 混合
+  - 复核波高 / 泡沫 / 频谱是否成立（数值探针 probe-water-wave）
 pitfalls:
   - 水面有 waterNormalStrength，但材质 normalMap 恒为 null——微细节法线由 fragment 程序化生成，不存在贴图（ADR-271）
   - 水面 mesh 是 scale(uSize,uSize,1) 各向异性缩放：世界量与局部量互换必须成对换算，只修一边等于换一种错法（ADR-257 §6.4）
-  - 波浪振幅被 min(…, 0.5) 钳制，wave0–4 全部顶到上限，设计的几何级数衰减实际不存在（ADR-257 §6.4，登记未改）
+  - '**波幅钳制的实际后果已被数值探针量化（2026-10-04，ADR-319）**：`gerstner()` 里 `amp = min(0.6·0.82^i / freq, 0.5)` 使 wave0–4 全部顶到上限 0.5（仅 wave5 为 0.373），ADR-255 §2.1 设计的几何级数衰减被抹平；振幅是**绝对世界米制、不随 waterSize / 池深 / 水位归一**。默认参数（size=80、choppiness=0.5、segments=64、level=0.01、poolHeight=0.3）实测：峰 +2.605 m / 谷 −2.691 m / 峰谷差 5.296 m / RMS 0.834 m ⇒ **33.17% 采样点的水面高于池壁顶（壁顶仅 0.39 m）、49.14% 低于 y=0 地面**。复现命令 `node scripts/probe-water-wave.ts`（量具非门禁，退出码恒 0；其 ① 段标定复现 ADR-257 §6.4 的法线夹角 1.18°/6.20° vs 2.40°/7.02°，先自证复刻忠实再取数）'
+  - '**浪高没有任何可调入口**：面板五个与水波相关的旋钮（waveSpeed / choppiness / normalStrength / clarity / size）里不含振幅——`amp` 不进 `steep` 链，`waterChoppiness=0` 时峰谷差仍 5.296 m（探针实测，零变化），即「静水态不可达」且「尖度滑杆到零点时几何仍在大幅起伏、而解析法线已判为平面」。处方见 ADR-319 D1（新增 `waterWaveHeight` + 双向往容器钳制：上钳 `Σamp ≤ 0.25·poolHeight`、下钳 `Σamp ≤ waterLevel`，单向只治一半）'
+  - '**泡沫是死通道（判据与防自交钳制互斥）**：`foam = smoothstep(0.0, -0.25, J)` 要求 `J ≤ 0`（波面自交），而 `Σσ·k ≤ 0.8` 的防自交钳制恰好保证 `J > 0`——探针实测 `choppiness=0.5` 时 `J_min = 0.673`、拖满 1.0 时 `J_min = 0.407`，**`J ≤ 0` 占比 0.00%** ⇒ `vFoam` 恒 0，每顶点白算三项 Jacobian、每片元白跑一次 mix。别按「水面该有白沫」去调 foam 系数，先按 ADR-319 D3 表态（改判据为 J 的相对压缩量，或整条通道连同 varying 退役）'
+  - '**频谱锚在 world metric、UI 域却在 10–300 m**：`freq = 0.25·1.19^i` ⇒ λ 钉死 [10.53, 25.13] m，而采样可呈现窗口是 `λ ∈ [6·size/segments, size/2]`。探针尺寸域扫描：`size=10` 六波**全部长于域宽**（窗口内 0 条，水面是一块倾斜的板，看不到波纹）；`size=300` 六波**全部被 aa 淡出**（窗口内 0 条，只剩两道长涌）；只有 `size ≈ 53–107` m 才六波齐活。ADR-272 加的「每波长顶点数淡出」治的是**采样不足**，不治**锚点错配**——两者是两笔账，勿混为一谈'
   - 结构参数只能动 `transformLinks`（`square` 等比铺满 / `wall` 双轴：x = size、y = 壁高 + 外偏沿法向轴）：**y 轴不得被 size 缩放**（`wallH` 由 h / t 现算，与 size 无关），否则壁高与壁厚会被尺寸连带放大
   - '**（已修复 2026-09，ADR-272 §5.1）** pool 的 waterPoolHeight / waterPoolWallThickness 曾走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——拖动即每帧重建 10 个 mesh。现壁几何单位化：壁高走 `scale.y`、外偏 = `size/2 + t` 运行期现算。教训：**任何结构参数只要被烘焙进几何，就必然在滑块拖动时变成重建风暴**'
   - waterSize 值域：合法域 [1, 300]（下界来自「0/负数会让水面退化成一个点」）、展示域 10–300；钳制在 `setEnvState`（ADR-283），shader 侧另有 max(uSize, 0.001) 兜底
@@ -105,7 +110,9 @@ invariant_anchors:
 
 1. **波浪**：`buildWaveWaterMaterial` 于 `onBeforeCompile` 注入 6 波 Gerstner 余摆线——
    顶点同时水平 + 垂直位移（波峰尖、波谷平）；解析法线（GPU Gems 1 ch.1）覆盖 `objectNormal`；
-   Jacobian `J < 0` 处出碎波泡沫。方向/相位由 wave index hash 播种，陡度钳制 `Σσ·k ≤ 0.8` 防自交。
+   泡沫通道按 Jacobian `J` 写好了出口，但**当前判据在防自交钳制下恒不触发**（`vFoam ≡ 0`，
+   见上方「泡沫是死通道」陷阱条与 ADR-319 D3——读代码时别把它当成已生效特性）。
+   方向/相位由 wave index hash 播种，陡度钳制 `Σσ·k ≤ 0.8` 防自交。
 2. **微细节法线**：fragment 在 `#include <normal_fragment_maps>` **之后**按世界水平坐标
    （`vWorldPos_wave.xz`）程序化求三组方向沟槽偏导，构成世界空间切向扰动，经 `viewMatrix`
    送入视图空间叠加到 `normal`；强度由 `uDetailStrength` 驱动（原 `normalScale` 槽位的替代）。
@@ -202,6 +209,10 @@ invariant_anchors:
   新增/改动值域只动 schema 一处——菜单与 cap 都只是它的读口。
 - **材质构造期断言 REVISION**：water 锚点失配即 throw，由 registry 工厂兜底使本 cap 缺失，
   拒绝静默降级。
+- **波形命题用数值断言，不用字符串断言**（ADR-319 D4）：本轮三个真缺陷（浪高失控 / 泡沫恒 0 /
+  频谱锚点错配）全是 `toContain("disp.z += amp * s;")` 这类字符断言放过去的——它们改个格式就红，
+  却对「峰谷差是否超出容器预算」「`J` 是否可达」「六波是否落在可呈现窗口内」一言不发。
+  改波场时先跑探针取数，再把结论落成数值用例。
 - **不存在 CPU 法线贴图**：`getNormalMap` / `generateNormalMap` / `normalMapCache` 已整体退场，
   回归时不应复活。
 - **不存在能力级私有开关**：`this.enabled` / `opts.enabled` / 存档顶层 `enabled` 键已退役（单门 =
@@ -210,6 +221,8 @@ invariant_anchors:
 ## 相关
 
 - ADR-283（参数值域描述符：schema `range`/`uiRange` 单一事实源 + 钳制收口 `setEnvState`）
+- ADR-319（波场尺度归一与泡沫判据可达性：浪高出参数 + 双向往容器钳制 / λ 锚定域宽 / 泡沫二选一表态 / 数值断言替字符断言）
+- 量具：`node scripts/probe-water-wave.ts`（复刻 `gerstner()` 的数值探针，`--json` 可机读；退出码恒 0，不作门禁）
 - ADR-272（waterSize 放开 UI 入口 + pool 尺寸零重建 / `sizeLinks`；§5 扩展：池深/壁厚一并零重建 + 三处接线收口）
 - ADR-271（微细节法线 GPU 化，移除 CPU DataTexture 链路）
 - ADR-257（水面/容器解耦 + 水体形态策略表）、ADR-255（Gerstner + uniform 化）

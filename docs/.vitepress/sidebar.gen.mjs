@@ -270,6 +270,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-319：水面波场尺度归一与泡沫判据可达性",
+        "link": "/adr/ADR-319-water-spectrum-scale-normalization"
+      },
+      {
         "text": "ADR-318：测试套件分组与发版冒烟组（反馈回路提速）",
         "link": "/adr/ADR-318-test-suite-groups-release-smoke"
       },

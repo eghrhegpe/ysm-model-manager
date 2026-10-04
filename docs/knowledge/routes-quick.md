@@ -43,8 +43,8 @@
 | 评审 mount-preview-core.ts | [mount3D 巨函数现状（2026-08-27 已部分拆分）](./mount3d-584-giant.md) | - | ADR-091 |
 | 前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | - | - |
 | 数字滚动、stagger 入场、关闭动画 | [动画系统 animation](./animation-system.md) | - | - |
-| 水面/水池/water/波浪/wave | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | 水面 shader 有 REVISION 断言与注入守卫（vertex 波浪函数 / objectNormal 覆盖 / 圆角段 / 微细节覆写点 / 倒影混合块）：升级 three 后必须重跑 water-capability.test.ts | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297 |
-| 水位与水膜（waterLevel / wetness） | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | - | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297 |
+| 水面/水池/water/波浪/wave | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | 水面 shader 有 REVISION 断言与注入守卫（vertex 波浪函数 / objectNormal 覆盖 / 圆角段 / 微细节覆写点 / 倒影混合块）：升级 three 后必须重跑 water-capability.test.ts | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
+| 水位与水膜（waterLevel / wetness） | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | - | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
 | 条件显隐控件不出现 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview_menu_settings_state.md) | - | - |
 | 头像、作者、创作者 avatar | [头像 go/avatar](./go-avatar.md) | 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接 | - |
 | 头像缓存、缩略图 | [头像 go/avatar](./go-avatar.md) | - | - |
@@ -59,7 +59,7 @@
 | 新增 3D 预览设置项、新增 cap 让开关出现在设置面板 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview_menu_settings_state.md) | 3D 预览设置必须走 preview-state 的 KNOWN_PATHS 注册 + 自动 cap 聚合，禁止横切设置项各自有独立读写通道 | - |
 | 新增 cap 参数 / env-state-schema 字段 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | - | ADR-196 |
 | 新增 KNOWN_PATHS 路径 | [3D 预览全域状态层（ADR-126 P4-A）](./preview_state.md) | - | - |
-| 新增水体形态 | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | - | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297 |
+| 新增水体形态 | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | - | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
 | 新增一个 MMD 骨名/表情映射 | [VMD→VRM 动作重定向 vmd-retarget](./vmd_vrm_retarget.md) | - | ADR-243, ADR-306, ADR-309 |
 | 渲染联邦、shared renderer、rAF 复用 | [联邦渲染能力 (Render Federation)](./render-federation.md) | 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer | ADR-125 |
 | 预览面板状态改了不生效 / 重开面板值不对 | [3D 预览全域状态层（ADR-126 P4-A）](./preview_state.md) | - | - |
@@ -1360,7 +1360,10 @@
 | 拼错 webImpls 键名 | - | 原先运行时静默无响应，Phase 3 修复后通过 satisfies Record 保留字面量键 + AssertSubset 在编译期暴露 |
 | 水面有 waterNormalStrength，但材质 normalMap 恒为 null——微细节法线由 fragment 程序化生成，不存在贴图（ADR-271） | - | - |
 | 水面 mesh 是 scale(uSize,uSize,1) 各向异性缩放：世界量与局部量互换必须成对换算，只修一边等于换一种错法（ADR-257 §6.4） | - | - |
-| 波浪振幅被 min(…, 0.5) 钳制，wave0–4 全部顶到上限，设计的几何级数衰减实际不存在（ADR-257 §6.4，登记未改） | - | - |
+| '**波幅钳制的实际后果已被数值探针量化（2026-10-04，ADR-319）**： 里 `amp = min(0.6·0.82^i / freq, 0.5)` 使 wave0–4 全部顶到上限 0.5（仅 wave5 为 0.373），ADR-255 §2.1 设计的几何级数衰减被抹平；振幅是**绝对世界米制、不随 waterSize / 池深 / 水位归一**。默认参数（size=80、choppiness=0.5、segments=64、level=0.01、poolHeight=0.3）实测：峰 +2.605 m / 谷 −2.691 m / 峰谷差 5.296 m / RMS 0.834 m ⇒ **33.17% 采样点的水面高于池壁顶（壁顶仅 0.39 m）、49.14% 低于 y=0 地面**。复现命令 `node scripts/probe-water-wave.ts`（量具非门禁，退出码恒 0；其 ① 段标定复现 ADR-257 §6.4 的法线夹角 1.18°/6.20° vs 2.40°/7.02°，先自证复刻忠实再取数）' | `gerstner()` | - |
+| '**浪高没有任何可调入口**：面板五个与水波相关的旋钮（waveSpeed / choppiness / normalStrength / clarity / size）里不含振幅——`amp` 不进 `steep` 链，`waterChoppiness=0` 时峰谷差仍 5.296 m（探针实测，零变化），即且「尖度滑杆到零点时几何仍在大幅起伏、而解析法线已判为平面」。处方见 ADR-319 D1（新增 `waterWaveHeight` + 双向往容器钳制：上钳 `Σamp ≤ 0.25·poolHeight`、下钳 `Σamp ≤ waterLevel`，单向只治一半）' | `静水态不可达` | - |
+| '**泡沫是死通道（判据与防自交钳制互斥）**：`foam = smoothstep(0.0, -0.25, J)` 要求 `J ≤ 0`（波面自交），而 `Σσ·k ≤ 0.8` 的防自交钳制恰好保证 `J > 0`——探针实测 `choppiness=0.5` 时 `J_min = 0.673`、拖满 1.0 时 `J_min = 0.407`，**`J ≤ 0` 占比 0.00%** ⇒ `vFoam` 恒 0，每顶点白算三项 Jacobian、每片元白跑一次 mix。别按去调 foam 系数，先按 ADR-319 D3 表态（改判据为 J 的相对压缩量，或整条通道连同 varying 退役）' | `水面该有白沫` | - |
+| '**频谱锚在 world metric、UI 域却在 10–300 m**：`freq = 0.25·1.19^i` ⇒ λ 钉死 [10.53, 25.13] m，而采样可呈现窗口是 `λ ∈ [6·size/segments, size/2]`。探针尺寸域扫描：`size=10` 六波**全部长于域宽**（窗口内 0 条，水面是一块倾斜的板，看不到波纹）；`size=300` 六波**全部被 aa 淡出**（窗口内 0 条，只剩两道长涌）；只有 `size ≈ 53–107` m 才六波齐活。ADR-272 加的治的是**采样不足**，不治**锚点错配**——两者是两笔账，勿混为一谈' | `每波长顶点数淡出` | - |
 | 结构参数只能动 （`square` 等比铺满 / `wall` 双轴：x = size、y = 壁高 + 外偏沿法向轴）：**y 轴不得被 size 缩放**（`wallH` 由 h / t 现算，与 size 无关），否则壁高与壁厚会被尺寸连带放大 | `transformLinks` | - |
 | '**（已修复 2026-09，ADR-272 §5.1）** pool 的 waterPoolHeight / waterPoolWallThickness 曾走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——拖动即每帧重建 10 个 mesh。现壁几何单位化：壁高走 、外偏 = `size/2 + t` 运行期现算。教训：**任何结构参数只要被烘焙进几何，就必然在滑块拖动时变成重建风暴**' | `scale.y` | - |
 | waterSize 值域：合法域 [1, 300]（下界来自）、展示域 10–300；钳制在 `setEnvState`（ADR-283），shader 侧另有 max(uSize, 0.001) 兜底 | `0/负数会让水面退化成一个点` | - |

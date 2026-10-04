@@ -76,7 +76,7 @@ export type PreviewStatePath = (typeof KNOWN_PATHS)[number];
  */
 export const PROBE_ENUM_VALUES = {
   "env.waterMode": ["film", "pool"],
-  "env.groundSourceKind": ["none", "solid", "canvas", "texture"],
+  "env.groundSourceKind": ["solid", "none", "canvas", "texture"],
   "env.groundCanvasStyle": ["plain", "marble", "sand", "grass"],
   "env.groundOverlay": ["none", "grid", "checker", "stripes", "diamond"],
   "env.fogMode": ["linear", "exp2"],

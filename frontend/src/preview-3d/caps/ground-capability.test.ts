@@ -82,13 +82,14 @@ describe("GroundCapability", () => {
 describe("GroundCapability — 表面材质层（spec 单源）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("默认 sourceKind=none：apply 后 surface 存在但不可见", () => {
+  it("默认 sourceKind=solid（2026-10 收口）：apply 后 surface 存在且可见（开箱即有实体承接面）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
+    expect(cap.getSourceKind()).toBe("solid");
     const surf = scene.getObjectByName("ysm-ground-surface");
     expect(surf).toBeDefined();
-    expect(surf!.visible).toBe(false);
+    expect(surf!.visible).toBe(true);
   });
 
   it("[地面自证] isSurfaceVisible() 与 surface.visible 同口径（e2e 探针 ysmGroundProbe 的数据源）", () => {
@@ -96,13 +97,13 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     const cap = new GroundCapability({ scene });
     cap.apply();
     const surf = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
-    // 默认 none：两层都不可见
-    expect(cap.isSurfaceVisible()).toBe(false);
-    expect(surf.visible).toBe(false);
-    // 切 solid：getter 与 mesh.visible 同步翻转
-    cap.setSourceKind("solid");
+    // 默认 solid：开箱即有实体承接面，两层都可见
     expect(cap.isSurfaceVisible()).toBe(true);
     expect(surf.visible).toBe(true);
+    // 切 none：getter 与 mesh.visible 同步翻转
+    cap.setSourceKind("none");
+    expect(cap.isSurfaceVisible()).toBe(false);
+    expect(surf.visible).toBe(false);
     // 关总开关：两者同步回落
     cap.setVisible(false);
     expect(cap.isSurfaceVisible()).toBe(false);

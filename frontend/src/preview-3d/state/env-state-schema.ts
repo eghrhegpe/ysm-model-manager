@@ -111,10 +111,12 @@ export const ENV_STATE_SCHEMA = {
   // 且菜单无任何网格参数出口。现拆出单轴：网格显隐 = enabled && groundVisible && groundGridVisible。
   groundGridVisible: { type: "boolean", default: true, group: "ground" },
   // ADR-249 §2.1 拆轴：来源轴（颜色从哪来）。替代原单枚举 groundMatSource。
+  // 默认 "solid"（2026-10 用户反馈收口）：开箱即有实体承接面，新人/AI/e2e 一眼认得地面在 y=0；
+  // 旧默认 "none" 仅留网格线、易被误认作「地面=天空」（见 ground_surface_spec 不变量 17）。
   groundSourceKind: {
     type: "enum",
     values: GROUND_SOURCE_KINDS,
-    default: "none",
+    default: "solid",
     group: "ground",
   },
   // ADR-249 §2.1 拆轴：样式轴（程序化画布长什么样，仅 sourceKind===canvas 有效）。

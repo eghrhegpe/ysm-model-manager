@@ -685,7 +685,7 @@ describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P
     expect(isPathAvailable("env.waterMode")).toBe(false);
     expect(getStateValue("env.waterMode")).toBe("film");
     expect(isPathAvailable("env.groundSourceKind")).toBe(false);
-    expect(getStateValue("env.groundSourceKind")).toBe("none");
+    expect(getStateValue("env.groundSourceKind")).toBe("solid");
     expect(isPathAvailable("env.groundCanvasStyle")).toBe(false);
     expect(getStateValue("env.groundCanvasStyle")).toBe("plain");
     expect(isPathAvailable("env.groundOverlay")).toBe(false);
@@ -721,7 +721,7 @@ describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P
     expect("env.groundSourceKind" in snap).toBe(true);
     expect("env.groundCanvasStyle" in snap).toBe(true);
     expect(snap["env.waterMode"]).toBe("film");
-    expect(snap["env.groundSourceKind"]).toBe("none");
+    expect(snap["env.groundSourceKind"]).toBe("solid");
     expect(snap["env.groundCanvasStyle"]).toBe("plain");
     expect("env.groundOverlay" in snap).toBe(true);
     expect(snap["env.groundOverlay"]).toBe("none");

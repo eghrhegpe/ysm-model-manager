@@ -91,6 +91,7 @@ test.describe("真实 3D 会话内的菜单", () => {
   });
 
   test("会话内 Scene→Post-processing 面板不再空态（有真 cap 控件）", async ({ page }) => {
+    test.slow(); // 同 spec 邻座：会话启动 + 面板下钻贴近 20s 默认上限，统一放宽（2026-10-04）
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
@@ -132,7 +133,7 @@ test.describe("真实 3D 会话内的菜单", () => {
     expect(state.controls, "真 3D 会话内后处理面板应渲染出 cap 控件").toBeGreaterThan(0);
   });
 
-  test("地面自证：默认 sourceKind=none → 网格可见、实体承接面不可见（机器可读，AI/e2e 认得出地面）", async ({
+  test("地面自证：默认 sourceKind=solid → 网格可见、实体承接面默认可见（开箱即认得出地面）", async ({
     page,
   }) => {
     test.slow(); // 会话启动 + 菜单下钻 + 两次截图，超 20s 默认上限（同 spec 前两用例贴近上限）
@@ -150,15 +151,15 @@ test.describe("真实 3D 会话内的菜单", () => {
     );
     expect(probe, "devtools 下 ysmGroundProbe 应挂载且返回非空").not.toBeNull();
     expect(probe, "地面探针应返回结构化状态").toMatchObject({
-      sourceKind: "none",
-      surfaceVisible: false, // 默认无实体承接面（只留 y=0 网格线）
+      sourceKind: "solid", // 默认开箱即有实体承接面（2026-10 收口）
+      surfaceVisible: true, // 默认实体承接面可见 —— 地面一眼认得出
       gridVisible: true, // 参考网格默认可见 ——「地面在哪」的锚点
     });
 
-    // 截图回看：默认场景应只看到网格线（无地面承接面），与探针快照一致。
+    // 截图回看：默认场景即有实体承接面（灰棕）+ 网格线，与探针快照一致。
     await page.screenshot({ path: "e2e-web/_shots/3d-ground-default.png" });
 
-    // ── 开启路径：经真实菜单把地面来源切到 solid → 探针应翻转 surfaceVisible=true ──
+    // ── 关闭路径：经真实菜单把地面来源切到 none → 探针应翻转 surfaceVisible=false ──
     // 路径：dock-env → preview-env-cap-ground（chevron 展开）→ 材质 folder → cap-ground-mat-source select
     await page.locator('.mpc-overlay >> [data-testid="dock-env"]').click();
     await page.waitForTimeout(400);
@@ -169,17 +170,17 @@ test.describe("真实 3D 会话内的菜单", () => {
 
     const sourceSel = page.locator('.mpc-overlay >> [data-testid="cap-ground-mat-source"] select');
     await expect(sourceSel, "地面材质来源 select 应渲染").toBeVisible({ timeout: 5000 });
-    await sourceSel.selectOption("solid");
+    await sourceSel.selectOption("none");
     await page.waitForTimeout(400);
 
     const after = await page.evaluate(() =>
       (window as unknown as { ysmGroundProbe?: () => unknown }).ysmGroundProbe?.(),
     );
-    expect(after, "切换 solid 后探针应仍可读").toMatchObject({
-      sourceKind: "solid",
-      surfaceVisible: true, // 实体承接面已开启 —— 地面从此「看得见」
+    expect(after, "切换 none 后探针应仍可读").toMatchObject({
+      sourceKind: "none",
+      surfaceVisible: false, // 实体承接面已关 —— 回到「只留网格线」纯净态
       gridVisible: true,
     });
-    await page.screenshot({ path: "e2e-web/_shots/3d-ground-solid.png" });
+    await page.screenshot({ path: "e2e-web/_shots/3d-ground-none.png" });
   });
 });

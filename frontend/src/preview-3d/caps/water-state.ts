@@ -55,3 +55,10 @@ export const WAVE_STEEP_SIZE_REF = 80;
  *  WAVE_DEGENERATE_WA）。shader 注入串内插本对常量——菜单/测试/探针都只是读口。 */
 export const WAVE_AA_MIN_VERTS = 2;
 export const WAVE_AA_FULL_VERTS = 6;
+
+/** film 水膜 alpha 的**观感基准**（锐评回归 2026-10-04，P2-1 未摘净的耦合）：
+ *  film 顶面 alpha = 本值 × `waterWetness`（浓度）。
+ *  **刻意不读 `envState.waterOpacity`**——原实现读它（默认 0.25），于是「一形态一旋钮」只把 opacity
+ *  滑杆藏了、耦合仍在：pool 下把不透明度调到 1.0 再切回 film，同一浓度值的水膜浓淡变 4 倍，
+ *  而 film 下没有任何滑杆能把它调回来。本值取历史观感基准（= 原默认 0.25），保默认画面零变化。 */
+export const FILM_WETNESS_ALPHA_BASE = 0.25;

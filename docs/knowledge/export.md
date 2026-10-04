@@ -37,6 +37,8 @@ auto_fields:
     - screenshotFromRenderer
     - ScreenshotLights
     - ScreenshotOpts
+    - ScreenshotOutputSettings
+    - ScreenshotVolumetric
     - setup2DCanvas
     - shotButtonNodes
     - textureCache

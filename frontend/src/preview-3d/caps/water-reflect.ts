@@ -52,6 +52,10 @@ export interface WaterReflectCtx {
 export function reflectionActive(ctx: WaterReflectCtx): boolean {
   if (!envState.waterReflectionEnabled) return false;
   if (envState.waterReflectDisableWhenSSR && isSsrRenderActive()) return false;
+  // [锐评回归 2026-10-04] 水面**全透明**（film 浓度 0 / pool 不透明度 0）时倒影无意义：可见性单门后
+  // wetness=0 不再隐水（`root.visible` 仍为真），若不在此门掉，开着倒影就每帧白付一次整场 RT 重渲，
+  // 而画面里一滴水都没有。波相仍由 `update` 推进（廉价），只是不渲 RT。
+  if (!((ctx.top.material as THREE.Material).opacity > 0)) return false;
   return ctx.renderer !== null && ctx.camera !== null;
 }
 

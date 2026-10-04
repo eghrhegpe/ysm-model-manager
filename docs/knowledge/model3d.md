@@ -44,6 +44,7 @@ auto_fields:
     - applyPerfPreset
     - applyReflectionUniforms
     - applyRotationIfNonIdentity
+    - applyVolumetricCone
     - applyVPDToMesh
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
@@ -302,6 +303,7 @@ auto_fields:
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
+    - FILM_WETNESS_ALPHA_BASE
     - filmStrategy
     - filterAnimFiles
     - findAncestorBoneId
@@ -783,7 +785,9 @@ auto_fields:
     - screenshotFromRenderer
     - ScreenshotLights
     - ScreenshotOpts
+    - ScreenshotOutputSettings
     - ScreenshotScene
+    - ScreenshotVolumetric
     - SEMANTIC_BONE_IDS
     - SEMANTIC_MORPH_IDS
     - SemanticBoneEntry

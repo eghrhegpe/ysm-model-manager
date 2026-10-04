@@ -26,6 +26,7 @@ import {
   type WaterPartRole,
   type WaterTopMesh,
 } from "./water-body-strategies.ts";
+import { FILM_WETNESS_ALPHA_BASE } from "./water-state.ts";
 
 type WaterParamKey = Extract<EnvStateKey, `water${string}`>;
 type WaterApplyCtx = {
@@ -107,18 +108,21 @@ export const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) =>
   waterWaveSpeed: NOOP_APPLIER, // [锐评 3.3] 无材质应用——消费点在 update() 逐帧现读 envState（登记于 WATER_FRAME_READ_KEYS）
   waterWetness: ({ strategy, top, setUniform }) => {
     if (!strategy.wetnessScalesOpacity) return;
-    const eff = envState.waterOpacity * envState.waterWetness;
+    // [锐评回归 2026-10-04] film 顶面 alpha **单源** = 浓度 × 基准常量，不读 `waterOpacity`——
+    // 否则 pool 调过不透明度再切 film，同一浓度值浓淡会变（解耦理由见 water-state.ts|FILM_WETNESS_ALPHA_BASE）
+    const eff = FILM_WETNESS_ALPHA_BASE * envState.waterWetness;
     top.material.opacity = eff;
     setUniform(top.material, "uBaseOpacity", eff);
   },
   waterOpacity: ({ strategy, targets, top, setUniform }) => {
-    // 顶水面 + 池内壁（ADR-257 审核 Item 6：内壁透明度必须随 waterOpacity 跟随，
-    // 否则拖透明度滑块时水面与池壁脱节；内壁套 INNER_WALL_OPACITY_FACTOR 与构建期一致）
-    const eff = strategy.wetnessScalesOpacity
-      ? envState.waterOpacity * envState.waterWetness
-      : envState.waterOpacity;
-    top.material.opacity = eff;
-    setUniform(top.material, "uBaseOpacity", eff);
+    // [锐评回归 2026-10-04] 顶面 alpha 的写权按形态分派：film 归「浓度 × 基准」（本键不得越权改写，
+    // 否则与浓度耦合复发）；pool 恒随本键。池内壁**恒**随 waterOpacity 跟随（ADR-257 审核 Item 6：
+    // 否则拖透明度滑块时水面与池壁脱节；内壁套 INNER_WALL_OPACITY_FACTOR 与构建期一致；
+    // film 下该数组为空数组，天然 no-op）。
+    if (!strategy.wetnessScalesOpacity) {
+      top.material.opacity = envState.waterOpacity;
+      setUniform(top.material, "uBaseOpacity", envState.waterOpacity);
+    }
     for (const m of targets("wallInner")) {
       (m.material as THREE.MeshPhysicalMaterial).opacity =
         envState.waterOpacity * INNER_WALL_OPACITY_FACTOR;

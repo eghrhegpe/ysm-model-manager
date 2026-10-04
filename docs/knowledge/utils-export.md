@@ -24,6 +24,8 @@ auto_fields:
     - screenshotFromRenderer
     - ScreenshotLights
     - ScreenshotOpts
+    - ScreenshotOutputSettings
+    - ScreenshotVolumetric
     - toScreenshotLights
   tests:
     - frontend/src/preview-3d/decoder/cache.test.ts

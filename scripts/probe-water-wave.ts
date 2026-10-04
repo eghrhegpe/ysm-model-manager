@@ -387,11 +387,7 @@ function buildPrescription(
       // 预算归零（level=0 / pool 水位≥池深）⇒ k=0 ⇒ wa=0：同退化门，steep 置 0 而非除零（锐评 P0-1）
       w.steep =
         w.wa > 1e-6
-          ? clamp(
-              (choppiness * 0.8) / (w.wa * GERSTNER_COUNT),
-              0,
-              0.8 / (w.wa * GERSTNER_COUNT),
-            )
+          ? clamp((choppiness * 0.8) / (w.wa * GERSTNER_COUNT), 0, 0.8 / (w.wa * GERSTNER_COUNT))
           : 0;
     }
   }
@@ -498,7 +494,10 @@ function main(): number {
     );
     const pr = scan(pw, sz, { level: level2, wallTop });
     const fp = spectrumFit(pw, sz, segments);
-    return { size: sz, current: r, fit: fw, prescribed: pr, pfit: fp };
+    // [锐评回归 2026-10-04] Σσk（波峰尖度塑形力）域宽曲线：P1-1 的反归一保住了「位移恒定」，
+    // 但尖度 ∝ 1/size——把这条权衡的另一半也变成可复现数据，而不是只声明半边
+    const steepSum = w.reduce((a, x) => a + x.steep * x.wa, 0);
+    return { size: sz, current: r, fit: fw, prescribed: pr, pfit: fp, steepSum };
   });
 
   if (args.json) {
@@ -596,9 +595,7 @@ function main(): number {
   }
   L(`   Σ amp = ${f3(waves.reduce((a, w) => a + w.amp, 0))}m（= h，按 0.26·Σ0.82^i 归一）`);
   L(`   峰 ${f3(s.hMax)}m  谷 ${f3(s.hMin)}m  峰谷差 ${f3(s.peakToTrough)}m  RMS ${f3(s.rms)}m`);
-  L(
-    `   水平位移峰值 ${f3(s.maxHoriz)}m（P1-1 反归一的判据量：修复前 ∝size，域宽扫描见 ④）`,
-  );
+  L(`   水平位移峰值 ${f3(s.maxHoriz)}m（P1-1 反归一的判据量：修复前 ∝size，域宽扫描见 ④）`);
   L(
     forPool
       ? `   → 越壁：${pct(s.aboveWallRatio)} 采样点的水面高于池壁顶（poolHeight=${depth}m，壁顶 ${f3(wallTop)}m）`
@@ -644,6 +641,10 @@ function main(): number {
   L(
     `   水平位移峰值域宽扫描（P1-1 判据，m）：${sweep.map((r) => `size=${r.size}:${f3(r.current.maxHoriz)}`).join("  ")}`,
   );
+  L(
+    `   Σσk 域宽扫描（波峰尖度塑形力，P1-1 权衡的另一面：位移恒定 ⇒ 尖度 ∝ 1/size，大水面波峰更圆润）：`,
+  );
+  L(`     ${sweep.map((r) => `size=${r.size}:${f3(r.steepSum)}`).join("  ")}`);
   L("");
   L(
     `⑤ 处方对照（λ_i = size/(4·1.19^i)，amp_i = amp·size/1.19^i，双向往钳制 Σamp ≤ min(0.25·depth, level)；amp=${prescAmp}）`,

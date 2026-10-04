@@ -411,3 +411,34 @@ three 0.186.1 的 `MeshPhysicalMaterial` **没有这个属性**（grep `src/mate
 - **时间线**：`git log -S "dispOk"` / `-S "uniform sampler2D uReflTex;"` → 均命中 `7214b629c`（P2-5① 漂移依据）。
 - **未做**：`vitest` / `vite build` / `typecheck` / `pre-push-gate` 未跑；P0-1 的 GPU 实际行为未做真机/e2e 实证（规范对除零未定义），
   测试面结论来自通读用例，不是执行结果。**以上均不可外推为「水面无风险」。**
+
+---
+
+## 七、横向外推：同族病复发清单（第二轮，2026-10-04 晚）
+
+方法：把本报告 12 条提炼成「病症模式清单」，派独立子代理逐 cap 扫描。**发现 8 处同族复发**（含 1 处 P1），
+全部附源码证据、可复核；本清单即下一轮工作队列。
+
+| # | 子系统 | 病症模式 | 证据 | 判定 | 状态 |
+|---|---|---|---|---|---|
+| X-1 | render-mode | **部分撤销只还原第一个材质**：`coveredProps` 是全局 `Set<属性名>`，首个材质 `delete` 后其余材质 `has()` 为 false ⇒ 多 mesh 时残留覆盖（开线框 + X 光后关线框，只有一个 mesh 回退） | `render-mode-capability.ts:89` / `:140-143` | **P1（画面直接错）** | 待修 |
+| X-2 | fog | `fogNear`×`fogFar` 无跨字段约束 ⇒ near > far 落入 GLSL `smoothstep(edge0 ≥ edge1)` 未定义域，且无测试覆盖 | `env-state-schema.ts:411,417` / `fog-capability.ts:102-103` | P2 | 待修 |
+| X-3 | light | 环境光 ×0.5 让位判据读 sky **自宣退役**的 `skyEnvironment`（真供图者已是 `envSource`）⇒ IBL 在场却不让位（双间接光过亮）；ambient 滑杆无 hint 出口 | `light-capability.ts:847-849` vs `sky-capability.ts:354`、`light-controls.ts:360-364` | P2 | 待修 |
+| X-4 | sky | `skyElevation`/`skyAzimuth` 幽灵键：构造读入 → `apply()` 内 `syncSunFromTime()` 覆盖，且 `saveState` 不落 / `loadState` 不恢复 ⇒ `setSun()` 效果活不过一次 apply | `sky-capability.ts:274-275,489,801-803,944-955` | P2 | 待修 |
+| X-5 | shadow | 四档白名单只装在 `setMapSize`，`loadState` 恢复侧裸奔且 schema 无 `range` ⇒ 脏档值原样进 `mapSize.set()`，脱离 UI 可达域 | `shadow-capability.ts:412` vs `:522`、`env-state-schema.ts:431` | P2 | 待修 |
+| X-6 | 跨 cap | 未启用态口径不统一：pp 有 `disabledWhenOff`（20 处子控件灰化 + title），fog / shadow / reflector 三个 menu **零 `disabled:`** | `postprocessing-menu.ts:52-54` | P2 | 待修 |
+| X-7 | sun-beams | 恒真守卫（同本报告 P1-3②）：过门后 `(20-e)/20 ∈ (0, 0.99995)`，`min/max` 两极永不触及 | `sun-beams.ts:28-29` | P3 | 待修 |
+| X-8 | ground / reflector | 零散：ground 私有 `enabled` 与 schema 键双门（旧档 `enabled=false` 时面板 ON 而地面不出现，待验证）；reflector 注入返回值被丢弃、锚点失配仅 warn 而参数照写 | `ground-capability.ts:347-348,483`；`reflector-capability.ts:119,140` | P3 | 待修 |
+
+**未发现同族病**（A/B/C 三类已扫）：postprocessing、environment、render-mode-menu、sky-menu、fog-menu、
+shadow-menu、light-controls/light-params、ground-menu/ground-surface-spec。
+
+**子代理建议的前三优先级**：X-1（唯一画面错）→ X-2（两行 + 一条测试）→ X-3（判据一行 + 复用新 hint 通道）。
+
+## 八、第二轮回归审计（水面自身）与处置
+
+要点：**本轮五提交的改动自身带出 3 条新问题**（film 耦合未摘净 / 可见性单门解锁倒影重渲 / 迁移判据用 `===`），
+主模型复核后**全部已修**；1 条已由主模型自查收窄（slider 静态 `hintKey` 转「登记未接」）；
+1 条属语义权衡，**登记 + 量具化**（尖度轴 Σσk ∝ 1/size，探针新增「Σσk 域宽扫描」行）。
+子代理同时**证伪 4 项**（跳变量级突变、版本戳污染 cap、`samples === 0` 恒真、i18n 时机），
+并确认 `level` 旧别名会绕过迁移但属良性（别名期无 0.01 默认值）。详见文首「第二轮锐评（增量）」段。

@@ -68,6 +68,7 @@ import {
 } from "./water-reflect.ts";
 import type { WaterMode } from "./water-state.ts";
 import {
+  FILM_WETNESS_ALPHA_BASE,
   WATER_MODES,
   WATER_WAVE_SEGMENTS,
   WAVE_AA_FULL_VERTS,
@@ -176,7 +177,11 @@ export class WaterCapability implements SceneCapability {
     const mat = new THREE.MeshPhysicalMaterial({
       color: envState.waterColor,
       transparent: true,
-      opacity: envState.waterOpacity * (opts.forPool ? 1 : envState.waterWetness),
+      // [锐评回归 2026-10-04] film 的 alpha **单源** = 浓度 × 基准常量（刻意不读 waterOpacity；
+      // 解耦理由见 water-state.ts|FILM_WETNESS_ALPHA_BASE：否则 pool 调过不透明度再切 film，同一浓度值浓淡会变）
+      opacity: opts.forPool
+        ? envState.waterOpacity
+        : FILM_WETNESS_ALPHA_BASE * envState.waterWetness,
       roughness: 0.15,
       metalness: opts.forPool ? 0.0 : 0.3,
       depthWrite: false,

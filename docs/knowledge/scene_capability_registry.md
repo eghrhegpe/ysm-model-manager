@@ -65,6 +65,7 @@ auto_fields:
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
+    - FILM_WETNESS_ALPHA_BASE
     - filmStrategy
     - FLATTEN_MAP
     - flattenLightParams

@@ -228,10 +228,15 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
             set: (v) => cap.setWaveHeight(v),
             // [锐评 2026-10-04 P1-2] 显示**钳后实际生效值**（受水位 / 池深预算约束）：
             // 默认档滑杆 0.15→1.0 整段无效（85% 死区），此前无任何出口告知，用户只会以为坏了。
-            getHint: () =>
-              t("preview.waterWaveHeightEffective", {
-                v: cap.getEffectiveWaveHeight().toFixed(2),
-              }),
+            // [回归修复] 未钳制时返回空串（slider 臂据此 display:none）——否则同行会并排
+            // 「0.06m」与「实际生效 0.06 m」两份同值，纯噪声；只有真被预算钳住才提示。
+            getHint: () => {
+              const setValue = cap.getWaveHeight();
+              const eff = cap.getEffectiveWaveHeight();
+              return eff < setValue - 1e-9
+                ? t("preview.waterWaveHeightEffective", { v: eff.toFixed(2) })
+                : "";
+            },
           },
         ),
       ],

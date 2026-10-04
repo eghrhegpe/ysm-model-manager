@@ -1539,6 +1539,10 @@ export const autoSidebar = [
       {
         "text": "ADR-293-d1：灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档",
         "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
+      },
+      {
+        "text": "ADR-266-d1：体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像）",
+        "link": "/adr/decisions/ADR-266-d1-volumetric-cone-in-screenshot"
       }
     ]
   },

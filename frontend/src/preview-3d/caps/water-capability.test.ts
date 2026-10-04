@@ -781,7 +781,7 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
     expect(mat.userData.shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.25 * 0.6, 5);
   });
 
-  it("setWaterOpacity（film，shader 已编译）→ 同步 uBaseOpacity uniform", () => {
+  it("[回归] setWaterOpacity（film）**不**改顶面 alpha：film 单源 = 浓度 × 基准常量（P2-1 的耦合已摘净）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
@@ -789,10 +789,36 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
       userData: { shader?: { uniforms: { uBaseOpacity: { value: number } } } };
     };
     mat.userData.shader = { uniforms: { uBaseOpacity: { value: 0 } } };
+    cap.setWetness(0.5); // 先走一遍真实链路：film alpha = 浓度 × 基准常量
+    const before = mat.opacity;
+    expect(before, "film 默认 = 浓度 0.5 × 基准 0.25").toBeCloseTo(0.25 * 0.5, 5);
+    expect(mat.userData.shader.uniforms.uBaseOpacity.value, "uniform 与材质同步").toBeCloseTo(
+      0.25 * 0.5,
+      5,
+    );
     cap.setWaterOpacity(0.8);
-    // film: opacity = waterOpacity * wetness(默认0.5)
-    expect(mat.opacity).toBeCloseTo(0.8 * 0.5, 5);
-    expect(mat.userData.shader.uniforms.uBaseOpacity.value).toBeCloseTo(0.8 * 0.5, 5);
+    // 原实现：film alpha = waterOpacity × wetness ⇒ pool 调过不透明度再切 film 浓淡会变 4 倍，
+    // 而 film 下 opacity 滑杆已隐藏、无处调回。现 opacity 键不得越权改写 film 顶面。
+    expect(mat.opacity, "film 顶部 alpha 不受 opacity 键影响").toBeCloseTo(before, 5);
+    expect(mat.userData.shader.uniforms.uBaseOpacity.value, "uniform 同样不被改写").toBeCloseTo(
+      before,
+      5,
+    );
+  });
+
+  it("[回归] 跨形态解耦：pool 把不透明度调到 1.0 后切回 film，同一浓度值浓淡不变", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    cap.setWaterMode("pool");
+    cap.setWaterOpacity(1);
+    cap.setWaterMode("film");
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    expect(mat.opacity, "film 仍按「浓度 × 基准」——与 pool 期间改过的 opacity 无关").toBeCloseTo(
+      0.25 * 0.5,
+      5,
+    );
   });
 
   it("setWaterOpacity（pool，shader 已编译）→ 同步 uBaseOpacity uniform", () => {
@@ -2042,6 +2068,20 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     expect(renderCount).toBe(2);
   });
 
+  it("[回归] 全透明水面不渲倒影（alpha=0 门）：film 浓度 0 时零整场重渲", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterEnabled(true);
+    cap.setWetness(0); // alpha = 0 ⇒ 虽可见（可见性单门）但无水可倒映
+    cap.setWaterReflectionEnabled(true);
+    cap.update(0.016);
+    expect(
+      cap["reflect"]!.reflector,
+      "alpha=0 ⇒ 不建载体（该路径原被 wetness 门挡住，单门改造后必须由 alpha 门接管）",
+    ).toBeNull();
+  });
+
   it("[P2-3] 反射 RT 显式关 MSAA（multisample: 0）：4× 半浮点显存的边际收益换不回", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
@@ -2216,10 +2256,10 @@ describe("WaterCapability — 波场尺度归一与浪高分形态容器钳制�
     const cap = new WaterCapability({ scene: new THREE.Scene() });
     const hint = findNodeById(cap.getMenuNodes(), "water-wave-height")!.control!.getHint;
     expect(hint, "须有动态 hint 出口（slider 臂渲染为 label 右侧小字）").toBeTypeOf("function");
-    // film 默认：预算 = min(level, …) = 0.15，浪高默认 0.06 未被钳
-    expect(hint!(), "显示实际生效值而非滑杆原值").toContain("0.06");
+    // [回归] 未钳制时返回空串：否则同行并排「0.06m」与「实际生效 0.06 m」两份同值，纯噪声
+    expect(hint!(), "未钳制 ⇒ 空串（slider 臂据此 display:none）").toBe("");
     cap.setWaveHeight(0.6); // 超预算 ⇒ 钳到 0.15
-    expect(hint!(), "钳后值随滑杆变化").toContain("0.15");
+    expect(hint!(), "钳制后才提示实际生效值").toContain("0.15");
     expect(hint!(), "不得显示滑杆原值 0.60（否则用户仍被蒙在鼓里）").not.toContain("0.60");
     cap.setLevel(0.04); // 水位压低 ⇒ 预算收窄到 0.04
     expect(hint!(), "预算随水位重算").toContain("0.04");
@@ -2538,6 +2578,15 @@ describe("WaterCapability — 旧档水位默认值迁移（锐评 2026-10-04 P1
     expect(migrateLegacyWaterLevel(0.5, undefined)).toBeUndefined();
     expect(migrateLegacyWaterLevel(undefined, undefined)).toBeUndefined();
     expect(migrateLegacyWaterLevel("0.01", undefined), "字符串不认（存档类型守卫）").toBeUndefined();
+    // [回归修复] 判据必须容得下「未来版本号」与「非法戳」——用 === 会让升版本后误迁全部 v2 新档
+    expect(
+      migrateLegacyWaterLevel(0.01, WATER_SCHEMA_VERSION + 1),
+      "更高版本戳 = 新档，绝不可迁移",
+    ).toBeUndefined();
+    expect(migrateLegacyWaterLevel(0.01, "2"), "非法戳（字符串）保守按新档处理").toBeUndefined();
+    expect(migrateLegacyWaterLevel(0.01, 1), "低于当前版本的戳 = 老档，仍迁").toBe(
+      ENV_STATE_SCHEMA.waterLevel.default,
+    );
   });
 });
 

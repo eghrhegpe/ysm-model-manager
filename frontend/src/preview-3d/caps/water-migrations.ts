@@ -33,7 +33,14 @@ export function migrateLegacyWaterLevel(
   archivedLevel: unknown,
   schemaVersion: unknown,
 ): number | undefined {
-  if (schemaVersion === WATER_SCHEMA_VERSION) return undefined;
+  // [锐评回归 2026-10-04 P3] 「有戳」= 数值且 **≥ 当前版本** ⇒ 新档一律不迁。
+  // 必须用 `>=` 而非 `===`：否则常量升到 3 时，用户显式把水位设成 0.01 的 v2 档会被当成老档
+  // 误迁到 0.15——正是「带戳新档原样保留」要保的性质。
+  // 非法戳（字符串 / NaN）保守按新档处理：误迁用户值比漏迁（只保持旧默认观感）更糟。
+  if (schemaVersion !== undefined && schemaVersion !== null) {
+    const v = typeof schemaVersion === "number" ? schemaVersion : Number.NaN;
+    if (!Number.isFinite(v) || v >= WATER_SCHEMA_VERSION) return undefined;
+  }
   if (archivedLevel !== LEGACY_DEFAULT_WATER_LEVEL) return undefined;
   return ENV_STATE_SCHEMA.waterLevel.default;
 }

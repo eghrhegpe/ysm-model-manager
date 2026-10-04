@@ -110,7 +110,8 @@ function lightEnabledNode(cap: LightCapability): NodeFor<"toggle"> {
  *  正是 ADR-290 给锥体驱动源清偿的「渲染输入未显式化」同款债，本节点收口。
  *  不入 LightParams/FLATTEN_MAP（那映射的是「灯光参数面」，线框不是灯光参数），
  *  直接挂 schema 布尔键，持久化走顶层 helperVisible 键（light-persist.ts）。
- *  默认 true = 现状观感（线框随各灯开关），此开关只增加撤销权。 */
+ *  [ADR-293-d1] 默认 **false** = 首启视口干净（线框是编辑辅助，hint 自陈不随截图输出）；
+ *  要调参的人自己开，撤销权由「开关存在」本身承担，与默认值无关。 */
 function lightHelperNode(cap: LightCapability): NodeFor<"toggle"> {
   return {
     id: "light-helper",

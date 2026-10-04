@@ -127,7 +127,8 @@ describe("LightCapability — 灯光类型切换（ADR-280）", () => {
   it("getSpotLightForCone：返回第一盏启用的 spot 灯 + 槽位", () => {
     resetEnvState();
     const cap = newCap();
-    cap.setLightParams("rim", { type: "spot" });
+    // [ADR-293-d1] rim 默认关——本用例考「启用 spot 可被选中」，须显式开灯
+    cap.setLightParams("rim", { type: "spot", enabled: true });
     const found = cap.getSpotLightForCone();
     expect(found).not.toBeNull();
     expect(found?.which).toBe("rim");
@@ -137,8 +138,9 @@ describe("LightCapability — 灯光类型切换（ADR-280）", () => {
   it("getSpotLightForCone：key 优先于 rim（按 key→fill→rim 顺序）", () => {
     resetEnvState();
     const cap = newCap();
-    cap.setLightParams("rim", { type: "spot" });
-    cap.setLightParams("key", { type: "spot" });
+    // 两盏都显式开启，优先级才是真被考到的（否则 rim 关灯恒不参与）
+    cap.setLightParams("rim", { type: "spot", enabled: true });
+    cap.setLightParams("key", { type: "spot", enabled: true });
     expect(cap.getSpotLightForCone()?.which).toBe("key");
   });
 
@@ -171,8 +173,9 @@ describe("LightCapability — 灯光类型切换（ADR-280）", () => {
     const conePresent = () => scene.children.some((o) => o.name === "ysm-light-volumetric-cone");
     cap.setVolumetric({ enabled: true });
     expect(conePresent()).toBe(false); // 三盏都是 directional → 无 driving spot
-    cap.setLightParams("fill", { type: "spot" });
-    expect(conePresent()).toBe(true); // 任意一盏变 spot 即可见光柱
+    // [ADR-293-d1] fill 默认关——切 spot 的同时须显式开灯，锥才有驱动源
+    cap.setLightParams("fill", { type: "spot", enabled: true });
+    expect(conePresent()).toBe(true); // 任意一盏「启用的」spot 即可见光柱
   });
 
   it("三盏灯全部切 spot：锥体仍只认第一盏（key）", () => {

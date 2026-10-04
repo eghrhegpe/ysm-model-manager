@@ -104,15 +104,20 @@ describe("LightCapability — 构造函数与默认值", () => {
     const cap = newCap();
     const p = cap.getParams();
     // [light-type-switch] 原独立 spotlight 灯（默认关）已并入 key 灯：默认三盏灯全是方向光
+    // [ADR-293-d1] 首启默认 = 浏览最小光照：仅 key 亮，fill/rim 默认关（创作者三点布光自行开）
     for (const which of ["key", "fill", "rim"] as const) {
       expect(p[which].type).toBe("directional");
-      expect(p[which].enabled).toBe(true);
     }
+    expect(p.key.enabled).toBe(true);
+    expect(p.fill.enabled).toBe(false);
+    expect(p.rim.enabled).toBe(false);
     // 「默认无聚光灯」的等价断言：没有可见的 spot 灯 → 体积光锥无驱动源
     expect(cap.getSpotLightForCone()).toBeNull();
     expect(p.volumetric.enabled).toBe(false);
-    expect(p.ambient.intensity).toBe(0.5);
+    expect(p.ambient.intensity).toBe(0.15);
     expect(cap.isEnabled()).toBe(true);
+    // [ADR-293-d1] 辅助线框默认关：首屏视口不再被三副 gizmo 包围
+    expect(cap.isHelperVisible()).toBe(false);
   });
 
   it("enabled:false 初始不挂载", () => {
@@ -193,10 +198,18 @@ describe("LightCapability — apply / setEnabled / dispose", () => {
     expect(keyHelper).toBeDefined();
     expect(fillHelper).toBeDefined();
     expect(rimHelper).toBeDefined();
-    // 默认三盏方向光均开 → helper 可见（开关一眼可见）
+    // [ADR-293-d1] 线框总闸默认关 → helper 虽挂场景但三副皆不可见（首屏干净）
+    expect(keyHelper.visible).toBe(false);
+    expect(fillHelper.visible).toBe(false);
+    expect(rimHelper.visible).toBe(false);
+    // 开线框总闸 → 显隐回到「各灯开关」：key 默认亮故可见，fill/rim 默认关灯故仍藏
+    cap.setHelperVisible(true);
     expect(keyHelper.visible).toBe(true);
+    expect(fillHelper.visible).toBe(false);
+    expect(rimHelper.visible).toBe(false);
+    // 开补灯 → 其 helper 随即出现（灯开关单独一层门禁）
+    cap.setParams({ fill: { enabled: true } });
     expect(fillHelper.visible).toBe(true);
-    expect(rimHelper.visible).toBe(true);
     // 关主灯 → 其 helper 立刻收起（其余不变）
     cap.setParams({ key: { enabled: false } });
     expect(keyHelper.visible).toBe(false);
@@ -559,6 +572,8 @@ describe("LightCapability — helper 挂载契约", () => {
   it("loadState 单独调用后 helper 已在场景（不依赖后续 apply 兜底）", () => {
     const cap = newCap();
     cap.setLightParams("key", { type: "spot", enabled: true });
+    // [ADR-293-d1] 线框总闸默认关——显式开闸才验得了「loadState 后 helper 可见」这条契约
+    cap.setHelperVisible(true);
     cap.saveState();
     const cap2 = newCap();
     cap2.loadState();
@@ -633,7 +648,13 @@ describe("LightCapability — ADR-293 总开关与 helper schema 化", () => {
     cap.apply();
     const keyHelper = scene.getObjectByName("ysm-light-key-helper")!;
     const keyLight = scene.getObjectByName("ysm-light-key")!;
-    expect(cap.isHelperVisible()).toBe(true); // 默认 = 现状（线框随灯开关）
+    // [ADR-293-d1] 默认关 = 首屏干净；灯本体不受影响
+    expect(cap.isHelperVisible()).toBe(false);
+    expect(keyHelper.visible).toBe(false);
+    expect(keyLight.visible).toBe(true); // 灯还亮着——只收 gizmo 不收功率
+    cap.setHelperVisible(true);
+    expect(envState.lightHelperVisible).toBe(true);
+    expect(keyHelper.visible).toBe(true); // 本灯开 && 总闸开
     cap.setHelperVisible(false);
     expect(envState.lightHelperVisible).toBe(false);
     expect(keyHelper.visible).toBe(false);
@@ -644,14 +665,14 @@ describe("LightCapability — ADR-293 总开关与 helper schema 化", () => {
     expect(keyHelper.visible).toBe(false);
   });
 
-  it("helper 可见性持久化往返 + 旧存档缺键落默认（显）", () => {
+  it("helper 可见性持久化往返 + 旧存档缺键落默认（隐）", () => {
     const cap = newCap();
-    cap.setHelperVisible(false);
+    cap.setHelperVisible(true);
     cap.saveState();
     resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
-    expect(cap2.isHelperVisible()).toBe(false);
+    expect(cap2.isHelperVisible()).toBe(true);
     localStorage.setItem(
       "ysm-scene-cap-light",
       JSON.stringify({ enabled: true, key: { intensity: 2 } }),
@@ -659,7 +680,7 @@ describe("LightCapability — ADR-293 总开关与 helper schema 化", () => {
     resetEnvState();
     const cap3 = newCap();
     cap3.loadState();
-    expect(cap3.isHelperVisible()).toBe(true); // 旧档无 helperVisible 键 = 不写，落默认
+    expect(cap3.isHelperVisible()).toBe(false); // 旧档无 helperVisible 键 = 不写，落默认（关）
     expect(cap3.getParams().key.intensity).toBe(2); // 其余旧字段照恢复
   });
 
@@ -754,10 +775,10 @@ describe("LightCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     // [ADR-293] light-helper：三副线框的可见性总开关（渲染输入显式化，真值源 schema 键）
     const helper = findNodeById(nodes, "light-helper");
     expect(helper.kind).toBe("toggle");
-    expect(helper.control!.get!(undefined)).toBe(true);
-    helper.control!.set!(false);
-    expect(envState.lightHelperVisible).toBe(false);
+    expect(helper.control!.get!(undefined)).toBe(false); // [ADR-293-d1] 默认关
     helper.control!.set!(true);
+    expect(envState.lightHelperVisible).toBe(true);
+    helper.control!.set!(false);
     // 单灯 folder：统一设置条（当前槽位 key，默认 directional 故无锥角/衰减控件）
     const slotFolder = findNodeById(nodes, LIGHT_SLOT_FOLDER_ID);
     expect(slotFolder.kind).toBe("folder");
@@ -891,7 +912,10 @@ describe("LightCapability — setParams 合并更新", () => {
     expect(DEFAULT_LIGHT_PARAMS.key.angle).toBe(25);
     expect(DEFAULT_LIGHT_PARAMS.key.penumbra).toBe(0.3);
     expect(DEFAULT_LIGHT_PARAMS.volumetric.enabled).toBe(false);
-    expect(DEFAULT_LIGHT_PARAMS.ambient.intensity).toBe(0.5);
+    expect(DEFAULT_LIGHT_PARAMS.ambient.intensity).toBe(0.15);
+    // [ADR-293-d1] 重置锚点 = 浏览最小光照（fill/rim 关），不是「全开影棚」
+    expect(DEFAULT_LIGHT_PARAMS.fill.enabled).toBe(false);
+    expect(DEFAULT_LIGHT_PARAMS.rim.enabled).toBe(false);
   });
 });
 
@@ -966,7 +990,7 @@ describe("LightCapability — 持久化", () => {
   it("loadState 空存储时保持默认值", () => {
     const cap = newCap();
     cap.loadState();
-    expect(cap.getParams().ambient.intensity).toBe(0.5);
+    expect(cap.getParams().ambient.intensity).toBe(0.15);
   });
 
   it("loadState 老存档残留 volumetricEngine 字段被忽略（ADR-246 D1 惰性数据）", () => {
@@ -1000,7 +1024,7 @@ describe("LightCapability — 持久化", () => {
     cap.loadState();
     const p = cap.getParams();
     expect(p.key.enabled).toBe(true); // 默认
-    expect(p.ambient.intensity).toBe(0.5);
+    expect(p.ambient.intensity).toBe(0.15);
     // 脏 spotlight 块不迁移（enabled 非 boolean → 不切 key 类型；angle 非 number → 不写锥角）
     expect(p.key.type).toBe("directional");
     expect(p.key.angle).toBe(DEFAULT_LIGHT_PARAMS.key.angle);
@@ -1509,6 +1533,8 @@ describe("LightCapability — 聚光灯 helper 线框", () => {
     cap.setLightParams("key", { type: "spot" });
     const helper = scene.getObjectByName(KEY_HELPER);
     expect(helper).toBeDefined();
+    // [ADR-293-d1] 线框总闸默认关——先开闸，再验「随灯开关显隐」
+    cap.setHelperVisible(true);
     expect(helper!.visible).toBe(true);
     cap.setLightParams("key", { enabled: false });
     expect(scene.getObjectByName(KEY_HELPER)!.visible).toBe(false);

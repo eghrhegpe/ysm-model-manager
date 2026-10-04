@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **318** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **319** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 289 |
+| [✅ 已采纳](#已采纳) | 290 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -55,7 +55,7 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（289）
+### ✅ 已采纳（290）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -86,6 +86,7 @@ permalink: /adr/
 | [ADR-295](./ADR-295-combo-spacing-tokens.md) | 组合间距档 --sp-vh-*：为高频「垂直+横向」组合值补标准化令牌（承接 ADR-294 D3 存量收敛） | ✅ 已采纳 |
 | [ADR-294](./ADR-294-spacing-five-tier-tokens.md) | 间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层） | ✅ 已采纳 |
 | [ADR-293](./ADR-293-schema-helper.md) | 灯光能力总开关 schema 化、helper 可见性控件化与面板响应 | ✅ 已采纳 |
+| [ADR-293-d1](./decisions/ADR-293-d1-light-first-run-defaults.md) | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ✅ 已采纳 |
 | [ADR-291](./ADR-291-preview-snapshot-probe-threshold.md) | B 轨快照探针入册门槛（双轨状态镜像的治理边界） | ✅ 已采纳 |
 | [ADR-290](./ADR-290-volumetric-cone-driver.md) | 体积光锥驱动源 schema 化（lightVolumetricDriver） | ✅ 已采纳 |
 | [ADR-289](./ADR-289-runtime-log-structuring.md) | 运行时日志结构化：tag 提取与级别推断 | ✅ 已采纳 |
@@ -691,6 +692,12 @@ permalink: /adr/
 | ADR-003 | 业务逻辑从 Binding 层下沉至纯 Go 包（Logic Sinking） | ✅ 已采纳 | 2026-08-03（初定），原方案记录于 2026-06-16 |
 | ADR-002 | 项目全面评估与改进方向 | ✅ 已采纳 | 2026-08-03 |
 | ADR-001 | 升级至 Wails 3 | ✅ 已采纳 | 2026-07-14 |
+
+## 登记表（执行决策日志）
+
+| 编号 | 标题 | 状态 | 日期 |
+|------|------|------|------|
+| ADR-293-d1 | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ✅ 已采纳 | 2026-10-04 |
 
 ## 使用规则（硬约束）
 

@@ -21,7 +21,7 @@
 | 材质重建与原地更新的判别（needsRebuild） | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | - | - |
 | 参考网格显隐 / 关不掉自带网格（groundGridVisible） | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | - | - |
 | 拆 mount3D 巨函数 | [mount3D 巨函数现状（2026-08-27 已部分拆分）](./mount3d-584-giant.md) | mount3D 本体 527 行（L351-877，预置顶复核节实测），仍超 100 行红线；继续往里加新逻辑需评审 | ADR-091 |
-| 场景参数 / envState / 统一状态层 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | cap 参数必须存 envState，禁止各自 this.params 私有化（ADR-196） | ADR-196 |
+| 场景参数 / envState / 统一状态层 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | cap 参数必须存 envState，禁止各自 this.params 私有化（ADR-196） | ADR-196, ADR-293-d1 |
 | 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | ADR-132 |
 | 程序化纹理生成 | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | - | - |
 | 纯函数 vs Node+WASM 解码分界 | [Go 头像提取：纯函数 vs Node+WASM 解码分界](./go-avatar-decode.md) | ADR-316 后 Node+WASM 解码桥已退役：.ysm 解码走 ysm.DecodeYSM 注入点（wazero），禁止新建 Node 子进程桥 | - |
@@ -57,7 +57,7 @@
 | 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | ADR-132 |
 | 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡） | [3D 预览面板内容声明式化通道（ADR-126 P4-B）](./preview_panel_declarative.md) | 3D 预览面板内容必须走声明式菜单节点（children / renderCustom），禁止在 adapter 里手写 DOM | - |
 | 新增 3D 预览设置项、新增 cap 让开关出现在设置面板 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview_menu_settings_state.md) | 3D 预览设置必须走 preview-state 的 KNOWN_PATHS 注册 + 自动 cap 聚合，禁止横切设置项各自有独立读写通道 | - |
-| 新增 cap 参数 / env-state-schema 字段 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | - | ADR-196 |
+| 新增 cap 参数 / env-state-schema 字段 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | - | ADR-196, ADR-293-d1 |
 | 新增 KNOWN_PATHS 路径 | [3D 预览全域状态层（ADR-126 P4-A）](./preview_state.md) | - | - |
 | 新增水体形态 | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | - | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
 | 新增一个 MMD 骨名/表情映射 | [VMD→VRM 动作重定向 vmd-retarget](./vmd_vrm_retarget.md) | - | ADR-243, ADR-306, ADR-309 |
@@ -73,7 +73,7 @@
 | ADR-195 cap 直产节点 | [ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）](./ground-cap-materialgroup-factories.md) | - | - |
 | AnimationController、状态机 | [动画系统 animation](./animation-system.md) | - | - |
 | buildBoneTree / makeBonePanelRenderer | [跨格式骨骼工具层 bone-tools](./bone-tools.md) | - | ADR-109 |
-| cap 参数存哪 / 怎么改不生效 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | - | ADR-196 |
+| cap 参数存哪 / 怎么改不生效 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | - | ADR-196, ADR-293-d1 |
 | createAll / loadAll / setPreset / saveAll / dispose | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | ADR-132 |
 | extra_animation、summarize | [YSM 动画分组与配置菜单提取](./format-ysm-anim-config.md) | - | - |
 | foot IK、极向量 / pole、CCD | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik_solver.md) | 腿链链根取大腿的「直接父骨」；改成大腿自身 = 只有膝盖能动 | - |
@@ -1265,6 +1265,7 @@
 | 直接改 envState 对象字段（不经 setEnvState）→ 不派发回调，cap 渲染不更新；必须走 setEnvState | - | - |
 | cap 忘记 registerEnvCallback / dispose 不退订 | - | 状态变更不落地或泄漏回调 |
 | 测试不 beforeEach resetEnvState | - | envState 单例跨用例串扰 |
+| 改灯光首启默认只看新用户（saveAll 无条件落盘 | - | 老存档走祖父条款，旧值永不退场，出口是「重置全部灯光」） |
 | 跨场景共用 schema key | - | 多模型同框时 schema 冲突、菜单项混乱；必须用 per-scene 键 |
 | switch-preview 未清 schema 注册表 | - | 旧模型 schema 残留；必须经 switch-preview 清理 |
 | 横切设置项各自有独立读写通道 | - | 状态单向流失效、菜单控件与状态不同步；必须走 preview-state |

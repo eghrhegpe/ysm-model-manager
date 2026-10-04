@@ -5,6 +5,7 @@ tier: architecture
 category: rendering
 adr:
   - ADR-196
+  - ADR-293-d1
 status: active
 source_files:
   - frontend/src/preview-3d/state/env-state.ts
@@ -72,6 +73,7 @@ pitfalls:
   - 直接改 envState 对象字段（不经 setEnvState）→ 不派发回调，cap 渲染不更新；必须走 setEnvState
   - cap 忘记 registerEnvCallback / dispose 不退订 → 状态变更不落地或泄漏回调
   - 测试不 beforeEach resetEnvState → envState 单例跨用例串扰
+  - 改灯光首启默认只看新用户（saveAll 无条件落盘 → 老存档走祖父条款，旧值永不退场，出口是「重置全部灯光」）
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -218,6 +220,13 @@ invariant_anchors:
   - **反向陷阱（已修）**：原 `default` 预设的 light 段只剩 `lightVolumetricEnabled:false`（与 schema 默认同值 = 纯 no-op），但选中它会设 `manualPreset` → **永久冻结**后续模型预设（跨会话、无 UI 可解）。即「改了等于没改，却把开关焊死」。
   - **双重手动优先收敛**：旧有 `manualPreset`（粗粒度整体早退）与 `shouldOverwrite` 按 key 记 `manual`（细粒度）两套；现只剩后者独当——用户拖过的键在后续 `auto-model` 写入时自动豁免。
   - **防回退闸**：`state/model-defaults.test.ts` 断言 `MODEL_DEFAULTS` 任何类别都不得含 `light` 前缀键——防止将来「顺手」加一行 `lightKeyIntensity` 悄悄复活漂移源。
+- **[ADR-293-d1 锐评收口 2026-10] 灯光首启默认分治（浏览者 ≠ 创作者）**：schema default 是**规范初始态**，不是历史观感的快照——ADR-293 D2 的「默认 true = 保持现状观感」被本刀推翻。四处默认翻转，唯一事实源 = `env-state-schema.ts|ENV_STATE_SCHEMA` 的 light 组：
+  - `lightHelperVisible` `true→false`：三副彩线是 three.js 调参 gizmo（i18n hint 自陈「仅编辑辅助，不随截图输出」），不该默认糊在首屏；`light-helper` 开关仍在，**撤销权与默认值解耦**（旧论证「默认 true 才有撤销能力」是伪因果）。
+  - `lightFillEnabled` / `lightRimEnabled` `true→false`（`lightKeyEnabled` 保持 `true`）：首启 = IBL + 主灯的「浏览最小光照」；三点布光要时逐盏开——这是 ADR-282「灯光是场景属性」论证的延伸。
+  - `lightAmbientIntensity` `0.5→0.15`：环境光是「别全黑」的底光而非主光；旧值把三灯方向性整个填平（暗部消失、阴影白开），且 sky 环境开时还要 ×0.5 让位。
+  - **行为副作用（改锥体驱动相关代码时必读）**：`getSpotLightForCone` 只认「**启用的** spot」，故 fill/rim 切 `type:spot` 不再自动产锥——切类型须同时 `enabled:true`，否则「体积光开了却无光柱」（`light-type-switch.test.ts` 已按此口径写死）。
+  - **老用户走祖父条款**：`mount-session.ts|saveAll` 在每次会话收尾**无条件**落盘，故存量存档恒携带 `helperVisible:true` / `fill.enabled:true` / `rim.enabled:true` / `ambient:0.5`——新默认只对「无存档首启」生效；回到新规范态的出口 = 面板「重置全部灯光」（锚点 `DEFAULT_LIGHT_PARAMS` 由 schema 派生，已同步）。
+  - **默认值语义立法**：schema default 只能写设计意图，禁止写「保持历史观感」——历史 bug 的观感不得焊进规范初始态。
 - **[ADR-284] sky 大气散射与模型类别解耦 + reflector/shadow 清噪声（2026-09-20）**：承 ADR-282 的手术刀向其余类别推广——把灯光病灶拆成 **A 噪声 / B no-op / C 单向陷阱** 三标准逐类审计。
   - **澄清**：C（`source:manual` 夺所有权永久冻结）是灯光孤例——其余 cap 走 `source:'auto-model'` + `isStateLoaded` 守卫，结构上无 C。普适病灶只有 A/B。
   - **sky 解耦**：`MODEL_DEFAULTS` 摘除全部 sky 散射段（turbidity/rayleigh/mie/mieDir/exposure/sunIntensityScale/sunDiscScale）——大气属天空盒，与「模型是 VRM 还是 MMD」无关（同灯光 1.3 论证）。`skyForceEnv` 不在挑参表内（它不参与模型类别选择）；**注意它不是死字段**——真实读点在 sky callback 的 `maybeRegenerateEnvironment` 阈值门控与云量重建分支（详见「核心职责」ADR-292 D8）。重建脉冲真实来源在 cap 内，摘表不扰动 IBL 重建。

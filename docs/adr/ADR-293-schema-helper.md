@@ -1,6 +1,7 @@
 # ADR-293：灯光能力总开关 schema 化、helper 可见性控件化与面板响应
 
 - **状态**：✅ 已采纳（Implemented；含复核 P0 修订，见 D3 重入安全前提）
+  - ⚠️ **D2 的默认值已被 [ADR-293-d1](./decisions/ADR-293-d1-light-first-run-defaults.md) 部分取代**（2026-10-04）：`lightHelperVisible` 默认由 `true` 翻转为 `false`（「默认 = 历史观感」被推翻）；本 ADR 其余决策不变。
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-22
 - **决策人**：Jieling（人类首席架构师）、AI 代理

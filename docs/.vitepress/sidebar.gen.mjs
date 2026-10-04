@@ -1532,6 +1532,17 @@ export const autoSidebar = [
     ]
   },
   {
+    "text": "决策日志 (decisions)",
+    "link": "/adr/",
+    "collapsed": true,
+    "items": [
+      {
+        "text": "ADR-293-d1：灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档",
+        "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
+      }
+    ]
+  },
+  {
     "text": "审计",
     "link": "/audit/",
     "collapsed": true,

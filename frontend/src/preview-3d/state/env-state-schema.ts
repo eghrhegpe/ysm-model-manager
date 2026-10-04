@@ -570,10 +570,15 @@ export const ENV_STATE_SCHEMA = {
   // [ADR-293] 两维 schema 化收口：
   //   lightEnabled——能力总开关，对齐 ppEnabled（ADR-250）/ fogEnabled（ADR-196）口径，
   //     LightCapability 不再持私有 enabled 字段，写路径全走 setEnvState 四件套；
-  //   lightHelperVisible——视口线框（gizmo）显隐。默认 true = 保持现状观感（线框随各灯
-  //     开关），新开关只赋予「一键全收」的撤销能力。
+  //   lightHelperVisible——视口线框（gizmo）显隐。
+  // [ADR-293-d1 锐评收口 2026-10] 「首启默认」分治——schema default 是**规范初始态**，
+  //   不是历史观感的快照（旧注释「默认 true = 保持现状观感」正是被推翻的那条）：
+  //   ① lightHelperVisible 默认 **false**：线框是编辑辅助（i18n hint 自陈「不随截图输出」），
+  //      不该默认糊在首屏；想调参的人自己开，撤销权一点不少；
+  //   ② 三盏灯默认不再是「全开影棚」：key 开 + fill/rim 关（浏览最小光照 = IBL + 主灯），
+  //      创作者要三点布光时逐盏开——浏览者与创作者的默认本就不该一样。
   lightEnabled: { type: "boolean", default: true, group: "light" },
-  lightHelperVisible: { type: "boolean", default: true, group: "light" },
+  lightHelperVisible: { type: "boolean", default: false, group: "light" },
   //
   // key 灯
   lightKeyType: {
@@ -637,7 +642,8 @@ export const ENV_STATE_SCHEMA = {
     default: "directional",
     group: "light",
   },
-  lightFillEnabled: { type: "boolean", default: true, group: "light" },
+  // [ADR-293-d1] 默认关：补灯/轮廓灯属「创作者三点布光」用具，浏览首启不预开
+  lightFillEnabled: { type: "boolean", default: false, group: "light" },
   lightFillColor: { type: "number", default: 0xffffff, group: "light" },
   lightFillIntensity: {
     type: "number",
@@ -689,7 +695,8 @@ export const ENV_STATE_SCHEMA = {
     default: "directional",
     group: "light",
   },
-  lightRimEnabled: { type: "boolean", default: true, group: "light" },
+  // [ADR-293-d1] 默认关：补灯/轮廓灯属「创作者三点布光」用具，浏览首启不预开
+  lightRimEnabled: { type: "boolean", default: false, group: "light" },
   lightRimColor: { type: "number", default: 0xffffff, group: "light" },
   lightRimIntensity: {
     type: "number",
@@ -735,10 +742,13 @@ export const ENV_STATE_SCHEMA = {
     range: { min: 0, max: 4, step: 0.1 },
   },
   // ambient
+  // [ADR-293-d1] 默认 0.5 → 0.15：环境光是「别全黑」的底光，不是主光。旧 0.5 白环境光
+  // 把三灯的方向性整个填平（暗部消失、阴影无用），且 sky 环境开时还要 ×0.5 让位——
+  // 0.15 是「有 IBL 兜底时只补底、无 IBL 时也不至于压死」的一档。
   lightAmbientColor: { type: "number", default: 0xffffff, group: "light" },
   lightAmbientIntensity: {
     type: "number",
-    default: 0.5,
+    default: 0.15,
     group: "light",
     range: { min: 0, max: 2, step: 0.1 },
   },

@@ -101,7 +101,9 @@ export class SceneCapabilityRegistry {
         const cap = factory({ ...ctx, caps: { getById: (id) => this.getById(id) } });
         this.instances.push(cap);
       } catch (e) {
-        ringLog("scene-cap", `能力创建失败: ${e}`, "warn");
+        ringLog("scene-cap", `能力创建失败: ${e}`, "warn", () =>
+          console.warn(`[scene-cap] 能力创建失败: ${e}`),
+        );
       }
     }
     return [...this.instances];
@@ -132,7 +134,9 @@ export class SceneCapabilityRegistry {
       try {
         cap.saveState();
       } catch (e) {
-        ringLog("scene-cap", `${cap.id} 保存失败: ${e}`, "warn");
+        ringLog("scene-cap", `${cap.id} 保存失败: ${e}`, "warn", () =>
+          console.warn(`[scene-cap] ${cap.id} 保存失败: ${e}`),
+        );
       }
     }
   }
@@ -143,7 +147,9 @@ export class SceneCapabilityRegistry {
       try {
         cap.loadState();
       } catch (e) {
-        ringLog("scene-cap", `${cap.id} 恢复失败: ${e}`, "warn");
+        ringLog("scene-cap", `${cap.id} 恢复失败: ${e}`, "warn", () =>
+          console.warn(`[scene-cap] ${cap.id} 恢复失败: ${e}`),
+        );
       }
     }
   }
@@ -154,7 +160,9 @@ export class SceneCapabilityRegistry {
       try {
         cap.dispose();
       } catch (e) {
-        ringLog("scene-cap", `${cap.id} 释放失败: ${e}`, "warn");
+        ringLog("scene-cap", `${cap.id} 释放失败: ${e}`, "warn", () =>
+          console.warn(`[scene-cap] ${cap.id} 释放失败: ${e}`),
+        );
       }
     }
     this.instances = [];

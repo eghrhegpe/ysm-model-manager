@@ -148,11 +148,16 @@ export function injectSkySunScalePatch(
   }
 
   // 2b) 解耦点 ①：pow( vSunE * (  →  pow( (vSunE * sunIntensityScale) * (
+  // [锐评 P2-2] 锚定唯一上下文——`pow( vSunE * (` 在 Sky.js r186 出现两次（L262 base 项 /
+  // L263 fresnel 项），原 String.replace 只替首个，靠「首个即正确项」的隐式约定活着；
+  // three 重排两行即静默错挂。现连同 base 项独有的 `( 1.0 - Fex )` 尾部锚定。
   if (!hasSunScaleUse) {
     const before = mat.fragmentShader;
+    const baseAnchor =
+      "pow( vSunE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex )";
     mat.fragmentShader = mat.fragmentShader.replace(
-      "pow( vSunE * (",
-      "pow( (vSunE * sunIntensityScale) * (",
+      baseAnchor,
+      "pow( (vSunE * sunIntensityScale) * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex )",
     );
     if (mat.fragmentShader !== before) patched = true;
     else {

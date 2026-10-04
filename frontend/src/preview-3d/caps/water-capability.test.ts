@@ -1121,7 +1121,7 @@ describe("WaterCapability — 菜单控件全联动", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(countControls(nodes)).toBe(21);
+    expect(countControls(nodes)).toBe(21); // layout-assert: 控件总数 21 为产品决策计数，新增/删控件须同步更新此数（防漏断言；ADR-311 D1 第三档）
     const by = (id: string) => findNodeById(nodes, id);
     const master = by("water-enabled");
     master.control!.set!(false);

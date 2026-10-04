@@ -49,6 +49,10 @@ export class ReflectorCapability implements SceneCapability {
   private readonly listenerSet = createListenerSet();
 
   constructor(opts: { scene: THREE.Scene; renderer: THREE.WebGLRenderer }) {
+    // [锐评 P1-1] REVISION 断言提到构造期——原在 injectOpacityIntoShader（apply 期）抛出，
+    // registry 工厂 try/catch 覆盖不到（shared-infra for-loop 无 per-cap 兜底）→ mount 崩。
+    // 提级后与 sky/water 对齐：构造期抛即被 createAll 捕获，只使本 cap 缺失、不崩 mount。
+    assertRevisionRange({ module: "reflector-patch", allowed: ["185", "186"] });
     this.scene = opts.scene;
 
     // ADR-196：订阅 envState 变更——细粒度分派（code_review P3 #5/#15/#20 单主化）：
@@ -87,9 +91,6 @@ export class ReflectorCapability implements SceneCapability {
   /* -------- 内部：构造/销毁 Reflector -------- */
 
   private injectOpacityIntoShader(options: { shader: ReflectorShaderDef }): boolean {
-    // [shader-patch 守卫] three 升级到未审计 REVISION 时显式抛错（ReflectorShader 锚点失配静默降级 → 显式化）
-    // 185/186 两版锚点（uniform vec3 color / blendOverlay gl_FragColor）核对一致——2026-09-26 升级审计
-    assertRevisionRange({ module: "reflector-patch", allowed: ["185", "186"] });
     const officialFrag = options.shader.fragmentShader;
     const declAnchor = "uniform vec3 color;";
     const alphaAnchor = "gl_FragColor = vec4( blendOverlay( base.rgb, color ), 1.0 );";

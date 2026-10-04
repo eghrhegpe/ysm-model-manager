@@ -368,19 +368,25 @@ export class WaterCapability implements SceneCapability {
          gl_FragColor.a = min(gl_FragColor.a, uBaseOpacity);`,
       );
       // [shader-patch 守卫] 注入检测：多次无条件 replace 原本零检测（失配全静默）。
-      // 现检查三处关键符号是否落地——vertex 的 wave 函数 / beginnormal 的法线覆盖 /
-      // fragment 的 uRoundness 裁剪段，任一缺失即告警（console 兜底），不再静默降级
+      // 现检查六处关键符号是否落地——vertex 的 wave 函数 / beginnormal 的法线覆盖 /
+      // begin_vertex 的位移注入 / fragment common 独有声明 / 微细节法线覆写 /
+      // 倒影混合块，任一缺失即告警（console 兜底），不再静默降级。
+      // [锐评 P1-2] begin_vertex 位移锚点：原 vertexOk 查 common 注入（函数定义），
+      // begin_vertex 失配时位移静默丢失（「法线在摆、水面在僵」）而检测全绿。
       const vertexOk = shader.vertexShader.includes("vec3 gerstner(");
       const normalOk = shader.vertexShader.includes("objectNormal = ysmWaveNormal;");
-      const fragOk = shader.fragmentShader.includes("uRoundness");
+      const dispOk = shader.vertexShader.includes("transformed.z += gdisp.z;");
+      // [锐评 P2-1] fragOk 改查 common 独有串——uRoundness 在 common 声明与 dithering
+      // 使用两处出现，common 失配时 dithering 仍在致漏报；uReflTex 是 common 独有。
+      const fragOk = shader.fragmentShader.includes("uniform sampler2D uReflTex;");
       // 微细节法线落地检查：normal 覆写点在场（贴图链路已删，此处失配即是静默丢细节）
       const detailOk = shader.fragmentShader.includes("normal = normalize(normal +");
       // [ADR-297] 倒影混合块落地检查：失配 = 倒影静默消失，与其余四项同病
       const reflOk = shader.fragmentShader.includes("if (uReflStrength > 0.0) {");
-      if (!vertexOk || !normalOk || !fragOk || !detailOk || !reflOk) {
+      if (!vertexOk || !normalOk || !dispOk || !fragOk || !detailOk || !reflOk) {
         reportPatchIssue(
           "water",
-          `water onBeforeCompile 锚点失配（vertex=${vertexOk ? "ok" : "miss"} normal=${normalOk ? "ok" : "miss"} fragment=${fragOk ? "ok" : "miss"} detail=${detailOk ? "ok" : "miss"} refl=${reflOk ? "ok" : "miss"}），水面波浪法线 / 微细节 / 波纹 / 圆角 / 倒影 / 透明度 clamp 可能失效。请检查 three 渲染管线 chunk 标记是否变更。`,
+          `water onBeforeCompile 锚点失配（vertex=${vertexOk ? "ok" : "miss"} normal=${normalOk ? "ok" : "miss"} disp=${dispOk ? "ok" : "miss"} fragment=${fragOk ? "ok" : "miss"} detail=${detailOk ? "ok" : "miss"} refl=${reflOk ? "ok" : "miss"}），水面波浪法线 / 位移 / 微细节 / 圆角 / 倒影 / 透明度 clamp 可能失效。请检查 three 渲染管线 chunk 标记是否变更。`,
           "warn",
         );
       }

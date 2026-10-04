@@ -55,5 +55,11 @@
 - 忠实度标定：同脚本输出 ①，对照 ADR-257 §6.4 表（修正后 2.40° / 7.02°），实测 1.18° / 6.20°。
 - §1 六行表全部为该脚本默认调用的直接读数，无手工推算。
 - 处方档（D1+D2 落地后的候选参数 `amp=0.004`、`level=0.06`）实测：峰谷差 **0.115 m**、RMS **0.018 m**、越壁 **0.00%**、穿地 **0.00%**、aa 淡出 **0 条**、窗口内 **6 条**，且在 `size ∈ {10,20,40,80,160,300}` 上**指标不变**——尺度无关性由数据背书，不是推理。
+- **视觉取证（e2e 真 3D 会话截图，2026-10-04）**：`frontend/e2e-web/water-wave-evidence.spec.ts`（swiftshader WebGL，`waveSpeed=0` 冻结波相使五场景同相可比）产出 `frontend/e2e-web/_shots/water-wave/s1..s5.png`，逐张人工回看与上表逐条对应：
+  - `s1-film-default.png`：默认 film（size=80/choppiness=0.5）即明显起伏，地面网格横穿水膜（穿地 49.14% 的可见形态）；
+  - `s2-choppiness-max-no-foam.png`：Choppiness 0.50→1.00 波形零变化（高度不进尖度链），全画面无白沫（泡沫判据不可达）；
+  - `s3-pool-size10-overflow.png`：pool + size=10，水膜整体浮在池壁顶沿之上（越壁 33.17%）；
+  - `s4-film-size10.png`：10 m 域宽内只有一段长涌，像波浪毯，无波纹；
+  - `s5-film-size300.png`：300 m 域宽只剩地平线一道长涌，主体近水平。
 
 <!-- 文件名: water-spectrum-scale-normalization.md → 实际文件 ADR-319-water-spectrum-scale-normalization.md -->

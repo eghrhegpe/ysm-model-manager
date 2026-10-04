@@ -213,6 +213,12 @@ invariant_anchors:
   频谱锚点错配）全是 `toContain("disp.z += amp * s;")` 这类字符断言放过去的——它们改个格式就红，
   却对「峰谷差是否超出容器预算」「`J` 是否可达」「六波是否落在可呈现窗口内」一言不发。
   改波场时先跑探针取数，再把结论落成数值用例。
+- **取证双通道：探针取数 + e2e 截图回看**（2026-10-04）：`scripts/probe-water-wave.ts` 出数值，
+  `frontend/e2e-web/water-wave-evidence.spec.ts`（swiftshader WebGL，`waterWaveSpeed=0` 冻结波相使
+  多场景同相可比）出截图 `e2e-web/_shots/water-wave/s1..s5.png`——s3 拍出「水膜浮在池壁顶沿之上」、
+  s1 拍出「地面网格横穿水膜」、s2 拍出「尖度拖满仍无白沫」，与探针的越壁 33.17% / 穿地 49.14% /
+  J 不可达逐条对上。**数值命题只信探针，视觉命题只信截图**；两者互证才写进 ADR（配图已进
+  ADR-319 §4 数据溯源）。
 - **不存在 CPU 法线贴图**：`getNormalMap` / `generateNormalMap` / `normalMapCache` 已整体退场，
   回归时不应复活。
 - **不存在能力级私有开关**：`this.enabled` / `opts.enabled` / 存档顶层 `enabled` 键已退役（单门 =

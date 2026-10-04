@@ -109,6 +109,7 @@ auto_fields:
     - isEnvDisposableSource
     - isSkyEnvironmentOn
     - LEGACY_CANVAS_PATTERNS
+    - LEGACY_DEFAULT_WATER_LEVEL
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
     - LIGHT_AMBIENT_FOLDER_ID
@@ -133,6 +134,7 @@ auto_fields:
     - maxWrapSeamDiscontinuity
     - migrateEnvSource
     - migrateGroundMatSource
+    - migrateLegacyWaterLevel
     - ModelEntry
     - normalizeEnvLegacyState
     - normalizeGroundLegacyState
@@ -196,6 +198,8 @@ auto_fields:
     - WATER_NOOP_APPLIER_KEYS
     - WATER_PARAM_APPLIER_KEYS
     - WATER_PARAM_APPLIERS
+    - WATER_SCHEMA_VERSION
+    - WATER_SCHEMA_VERSION_KEY
     - WATER_UNIFORM_NAMES
     - WATER_WAVE_SEGMENTS
     - WaterApplyCtx
@@ -213,6 +217,7 @@ auto_fields:
     - WAVE_AA_FULL_VERTS
     - WAVE_AA_MIN_VERTS
     - WAVE_DEGENERATE_WA
+    - WAVE_STEEP_SIZE_REF
     - WAVE_STEEP_SUM_LIMIT
   tests:
     - frontend/src/preview-3d/caps/scene-capability-registry.test.ts

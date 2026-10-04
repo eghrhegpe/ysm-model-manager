@@ -24,6 +24,7 @@ import { spawnSync } from "node:child_process";
  */
 import fs from "node:fs";
 import path from "node:path";
+import { listAdrFiles } from "./_lib/adr-files.ts";
 import { classifyStatus, DISPLAY_GROUPS, STATE_LABEL } from "./_lib/adr-status-categories.ts";
 import { parseAdrHeader } from "./_lib/frontmatter.ts";
 import { GUIDE_GROUPS, GUIDE_ORDER } from "./_lib/guide-order.ts";
@@ -113,20 +114,20 @@ function applyWholeFile(file: string, content: string, label: string) {
 // ── ADR 解析与状态分类（[ADR-114 §被补充] 统一走共享库）──
 
 function parseAdrs() {
-  const files = fs
-    .readdirSync(ADR_DIR)
-    .filter((f) => /^ADR-\d{3}-.*\.md$/.test(f))
-    .sort();
+  const refs = listAdrFiles(); // 三区：根存量 / architecture/ / decisions/（ADR-320）
   const list: any[] = [];
-  for (const f of files) {
-    const hdr: any = parseAdrHeader(path.join(ADR_DIR, f));
+  for (const ref of refs) {
+    const hdr: any = parseAdrHeader(ref.absPath);
     if (hdr.error) {
-      console.error(`[WARN] ${f} 首部解析失败（${hdr.error}），将被登记表忽略`);
+      console.error(`[WARN] ${ref.relPath} 首部解析失败（${hdr.error}），将被登记表忽略`);
       continue;
     }
     list.push({
       num: hdr.num,
-      file: f,
+      sub: ref.sub,
+      id: ref.id,
+      zone: ref.zone,
+      file: ref.relPath, // 相对 docs/adr/，子区自带 architecture//decisions/ 前缀
       title: hdr.title,
       statusRaw: hdr.status,
       date: hdr.date || "-",
@@ -134,7 +135,8 @@ function parseAdrs() {
       statusLine: hdr.statusLine,
     });
   }
-  return list.sort((a, b) => b.num - a.num); // 新→旧（与 BABY 版对齐，最新决策在最前）
+  // 新→旧（主编号降序；同主编号按子编号升序，d1 在 d2 前）
+  return list.sort((a, b) => b.num - a.num || (a.sub ?? -1) - (b.sub ?? -1));
 }
 
 function mapStatus(adr: any) {
@@ -150,8 +152,8 @@ function mapStatus(adr: any) {
 function buildAdrRegistry(list: any[]) {
   let out = "| 编号 | 标题 | 状态 | 日期 |\n";
   out += "|------|------|------|------|\n";
-  for (const a of list) {
-    out += `| ADR-${pad(a.num)} | ${escCell(a.title)} | ${mapStatus(a)} | ${escCell(a.date)} |\n`;
+  for (const a of list.filter((x) => x.sub === null)) {
+    out += `| ${a.id} | ${escCell(a.title)} | ${mapStatus(a)} | ${escCell(a.date)} |\n`;
   }
   return out;
 }
@@ -168,7 +170,7 @@ function buildAdrRegistry(list: any[]) {
 const ADR_USAGE_RULES = [
   "1. **编号**：取本表最大编号 +1（三位，如 `ADR-014`），禁止 `ADR-000N` 式前缀，禁止跳号复用。",
   "2. **占号**：写文件**前**先在本表登记占号（并提交登记），再创建文件——多会话并行时以登记顺序为准，撞号者必须让位改号。",
-  "3. **命名**：文件名 `ADR-NNN-kebab-case.md`（如 `ADR-013-governance-convergence.md`）。",
+  "3. **命名与分级（ADR-320）**：架构级 `--tier architecture --reason 一句理由` → `architecture/ADR-NNN-kebab-case.md`（主编号延续全局唯一）；执行级 `--tier decisions --parent NNN` → `decisions/ADR-NNN-dN-kebab-case.md`（子编号挂靠主 ADR，轻量模板）。存量根目录 ADR 原位演化不迁移。",
   "4. **必填字段**：状态 / 日期 / 决策人 / 相关；正文结构：背景（Context）→ 决策（Decision）→ 后果（Consequences）→ 数据溯源。",
   "5. **状态值**：`📝 提议中` / `✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代` / `⚠️ 已采纳（违规或未修复，自动从文件首部识别）`。新 ADR 默认 `📝 提议中`，人类首席架构师拍板后置为 `✅ 已采纳`。状态变更只改文件首部，本页由 `gen-docs-index.ts` 自动重写。取代关系用 `- **被取代**：[ADR-NNN] 取代` 独立行标注（`gen-adr-supersede.ts` 扫描）。",
   "6. **新 ADR 落地后**：本页自动重写（改文件首部即可），无需手动同步；历史 `PROJECT_STATUS.md` 已冻结于 `docs/archive/`，不再维护。",
@@ -201,7 +203,8 @@ function buildAdrIndex(list: any[]) {
     "<!-- 本文件由 scripts/gen-docs-index.ts 自动生成，禁止手改。重跑：node scripts/gen-docs-index.ts -->\n\n";
   out += "# 决策记录（ADR）\n\n";
   out += `> 架构决策日志，共 **${total}** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。\n\n`;
-  out += "> 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。\n\n";
+  out +=
+    "> ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。\n\n";
 
   // 状态分布总览（6 桶，含计数 + 锚点跳转）
   out += "## 按状态分布\n\n";
@@ -221,15 +224,27 @@ function buildAdrIndex(list: any[]) {
     out += "| ADR | 标题 | 状态 |\n";
     out += "|-----|------|------|\n";
     for (const a of items) {
-      out += `| [ADR-${pad(a.num)}](${hrefTo(a.file)}) | ${escCell(a.title)} | ${mapStatus(a)} |\n`;
+      out += `| [${a.id}](${hrefTo(a.file)}) | ${escCell(a.title)} | ${mapStatus(a)} |\n`;
     }
     out += "\n";
   }
 
-  // 登记表（全量明细，新→旧）
+  // 登记表（主编号明细，新→旧；decisions 子编号行见下节）
   out += "## 登记表（新→旧）\n\n";
   out += buildAdrRegistry(list);
   out += "\n";
+
+  // 执行决策日志登记表（decisions 子编号，ADR-320）
+  const decisions = list.filter((a) => a.sub !== null);
+  if (decisions.length) {
+    out += "## 登记表（执行决策日志）\n\n";
+    out += "| 编号 | 标题 | 状态 | 日期 |\n";
+    out += "|------|------|------|------|\n";
+    for (const a of decisions) {
+      out += `| ${a.id} | ${escCell(a.title)} | ${mapStatus(a)} | ${escCell(a.date)} |\n`;
+    }
+    out += "\n";
+  }
 
   // 使用规则（硬约束，作者向操作规程）
   out += "## 使用规则（硬约束）\n\n";

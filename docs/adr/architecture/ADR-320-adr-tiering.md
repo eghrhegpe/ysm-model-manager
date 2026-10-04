@@ -1,10 +1,10 @@
 # ADR-320：ADR 体系分级：架构决策与执行决策日志分治
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（2026-10-04 首席架构师拍板「尝试吧」，分级机制当日落地：_lib/adr-files.ts 收口 + 7 脚本三区化 + 本卡迁入 architecture/ 为首批住民）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-10-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/adr/index.md`（登记表）、`scripts/check-adr-health.ts`（状态机/登记/技术债）、`scripts/new-adr.ts`（占号）、`docs/knowledge/AGENTS.md` §快照卡终局（知识侧同类问题已于 2026-10-04 处置：snapshot 卡迁出 `docs/knowledge/` → `docs/archive/`）
+- **相关**：`docs/adr/index.md`（登记表分节）、`scripts/_lib/adr-files.ts`（分级语法单一事实源）、`scripts/new-adr.ts`（--tier 路由）、`docs/knowledge/AGENTS.md` §快照卡终局（知识侧同类问题已于 2026-10-04 处置：snapshot 卡迁出 `docs/knowledge/` → `docs/archive/`）
 
 ---
 

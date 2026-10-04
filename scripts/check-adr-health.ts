@@ -25,11 +25,10 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { ADR_DIR, listAdrFiles, REG_ROW_FULL_RE } from "./_lib/adr-files.ts";
 import { normalizeState, STATE_LABEL } from "./_lib/adr-status-categories.ts";
 import { parseAdrHeader } from "./_lib/frontmatter.ts";
-import { ROOT } from "./_lib/scan-files.ts";
 
-const ADR_DIR = path.join(ROOT, "docs/adr");
 const REG_FILE = path.join(ADR_DIR, "index.md"); // 登记表已并入 index
 
 const ARGS = new Set(process.argv.slice(2));
@@ -44,7 +43,7 @@ const _statusRows: any[] = [];
 // ── 技术债提取 ────────────────────────────────────────
 
 /** 从状态字符串提取债类型与严重度。 */
-function extractDebt(adr: number, title: string, raw: string) {
+function extractDebt(adrId: string, title: string, raw: string) {
   const debtType: string[] = [];
   // 兼容「违规未修复」与 AGENTS.md 措辞「违规或未修复」（含「或」，code_review P2-2）
   if (/违规未修复|违规或未修复/.test(raw)) debtType.push("违规未修复");
@@ -60,7 +59,7 @@ function extractDebt(adr: number, title: string, raw: string) {
     let severity = "P3";
     if (t === "违规未修复" || t === "不一致未修复") severity = "P2";
     if (t === "待办") severity = "P1";
-    debts.push({ adr: `ADR-${String(adr).padStart(3, "0")}`, title, type: t, severity });
+    debts.push({ adr: adrId, title, type: t, severity });
   }
 }
 
@@ -74,31 +73,29 @@ function checkStatus() {
     errors.push("[状态机] docs/adr/ 目录不存在");
     return [];
   }
-  const files = fs
-    .readdirSync(ADR_DIR)
-    .filter((f) => /^ADR-\d{3}-.*\.md$/.test(f))
-    .sort();
+  const files = listAdrFiles(); // 三区：根存量 / architecture/ / decisions/（ADR-320）
   const out: any[] = [];
-  for (const f of files) {
-    const hdr = parseAdrHeader(path.join(ADR_DIR, f)) as any;
+  for (const ref of files) {
+    const hdr = parseAdrHeader(ref.absPath) as any;
     if (hdr.error) {
       // P2-4 修复（code_review）：缺标题/缺状态 ADR 不再静默跳过——该 ADR 完全不进 health 判定=假绿。
       // 口径与 check-doc-drift 一致。
-      errors.push(`[状态机] ${f} 首部解析失败（${hdr.error}）`);
+      errors.push(`[状态机] ${ref.relPath} 首部解析失败（${hdr.error}）`);
       continue;
     }
-    const { num, title, status: raw } = hdr;
+    const { num, sub, title, status: raw } = hdr;
+    const id = ref.id; // 与文件名同源（语法一致性由 adr-check ID_MISMATCH 把关）
     const { key } = normalizeState(raw);
     const statusMissing = !raw || raw === "(未标注状态)";
 
-    if (statusMissing) warns.push(`[状态机] ${f} 缺少 '- **状态**：' 字段`);
+    if (statusMissing) warns.push(`[状态机] ${ref.relPath} 缺少 '- **状态**：' 字段`);
     else if (key === "unknown")
       errors.push(
-        `[状态机] ${f} 状态值非法: 「${raw}」（应为 提议中/已采纳/部分采纳/已废弃/已取代 之一）`,
+        `[状态机] ${ref.relPath} 状态值非法: 「${raw}」（应为 提议中/已采纳/部分采纳/已废弃/已取代 之一）`,
       );
 
-    extractDebt(num, title, raw);
-    out.push({ file: f, num, title, raw, key });
+    extractDebt(id, title, raw);
+    out.push({ file: ref.relPath, id, num, sub, title, raw, key });
   }
   return out;
 }
@@ -114,18 +111,18 @@ function checkRegistry(statusRowsMap: Record<string, any>) {
     return;
   }
   const regMap: Record<string, any> = {};
-  for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|\s*([^|]+)\|\s*([^|]+)\|/gm)) {
-    regMap[parseInt(m[1]!, 10)] = { title: m[2]?.trim(), raw: m[3]?.trim() };
+  for (const m of regText.matchAll(REG_ROW_FULL_RE)) {
+    regMap[m[1]!] = { title: m[2]?.trim(), raw: m[3]?.trim() };
   }
-  for (const [num, reg] of Object.entries(regMap)) {
-    const file = statusRowsMap[num];
+  for (const [id, reg] of Object.entries(regMap)) {
+    const file = statusRowsMap[id];
     if (!file) continue; // 幽灵由 adr-check 管
     const { key: fileKey } = normalizeState(file.raw);
     const { key: regKey } = normalizeState(reg.raw);
     if (fileKey === "unknown") continue; // 文件状态非法已由状态机报
     if (fileKey !== regKey) {
       errors.push(
-        `[登记同步] ADR-${num} 状态不一致：文件「${STATE_LABEL[fileKey]}」vs 登记表「${STATE_LABEL[regKey]}」`,
+        `[登记同步] ${id} 状态不一致：文件「${STATE_LABEL[fileKey]}」vs 登记表「${STATE_LABEL[regKey]}」`,
       );
     }
   }
@@ -135,7 +132,7 @@ function checkRegistry(statusRowsMap: Record<string, any>) {
 
 function main() {
   const rows = checkStatus();
-  const statusRowsMap = Object.fromEntries(rows.map((r) => [r.num, r]));
+  const statusRowsMap = Object.fromEntries(rows.map((r) => [r.id, r]));
 
   if (!ONLY || ONLY === "--health") checkRegistry(statusRowsMap);
 
@@ -148,7 +145,7 @@ function main() {
           warns,
           debts,
           statusRows: rows.map((r) => ({
-            adr: `ADR-${String(r.num).padStart(3, "0")}`,
+            adr: r.id,
             status: r.raw,
             state: r.key,
           })),
@@ -174,9 +171,7 @@ function main() {
   if (!ONLY || ONLY === "--status") {
     console.log("\n【状态机】");
     for (const r of rows) {
-      console.log(
-        `  ${STATE_LABEL[r.key]}  ADR-${String(r.num).padStart(3, "0")} ${r.title}  (${r.raw})`,
-      );
+      console.log(`  ${STATE_LABEL[r.key]}  ${r.id} ${r.title}  (${r.raw})`);
     }
   }
 

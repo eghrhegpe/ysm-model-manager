@@ -434,6 +434,7 @@ auto_fields:
     - Ktx2TextureLoaderDeps
     - LARGE_MODEL_WARN_BYTES
     - LEGACY_CANVAS_PATTERNS
+    - LEGACY_DEFAULT_WATER_LEVEL
     - LEGACY_GROUND_MAT_SOURCES
     - LegacyGroundMatSource
     - LegChain
@@ -527,6 +528,7 @@ auto_fields:
     - MeshFragment
     - migrateEnvSource
     - migrateGroundMatSource
+    - migrateLegacyWaterLevel
     - MIPMAP_CHAIN_FACTOR
     - MMD_SEMANTIC_CANDIDATES
     - MMD_SEMANTIC_MORPH_CANDIDATES
@@ -968,6 +970,8 @@ auto_fields:
     - WATER_NOOP_APPLIER_KEYS
     - WATER_PARAM_APPLIER_KEYS
     - WATER_PARAM_APPLIERS
+    - WATER_SCHEMA_VERSION
+    - WATER_SCHEMA_VERSION_KEY
     - WATER_UNIFORM_NAMES
     - WATER_WAVE_SEGMENTS
     - WaterApplyCtx
@@ -985,6 +989,7 @@ auto_fields:
     - WAVE_AA_FULL_VERTS
     - WAVE_AA_MIN_VERTS
     - WAVE_DEGENERATE_WA
+    - WAVE_STEEP_SIZE_REF
     - WAVE_STEEP_SUM_LIMIT
     - WorkerBridge
     - WorkerErrorStrategy

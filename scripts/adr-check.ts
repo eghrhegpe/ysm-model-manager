@@ -2,15 +2,16 @@
 /**
  * adr-check.ts — ADR 登记一致性检查（占号防撞机制落地）。
  *
- * 校验 docs/adr/ 目录文件 vs adr/index.md 登记表：
- *   - 文件编号唯一（无撞号）
+ * 校验 docs/adr/ 三区（根存量 / architecture/ / decisions/，ADR-320）文件 vs adr/index.md 登记表：
+ *   - 文件编号唯一（无撞号，主编号+子编号二元组判定）
  *   - 登记表覆盖全部文件（无漏登）
  *   - 文件都在登记表（无幽灵文件）
- *   - 编号连续（无跳号，空缺需注明）
+ *   - 主编号连续（无跳号，空缺需注明；decisions 子编号不参与连续性）
  *   - 状态行合规（STATUS_MISSING=真没有；STATUS_FORMAT=有但格式不对，报行号与正确写法）
+ *   - 文件名编号 vs 标题编号一致（ID_MISMATCH，ADR-320 分级语法防呆）
  * 呼应 ADR-013 Phase 0.2「写文件前先在登记表占号」。
  *
- * 零依赖（仅 node:fs / node:path / node:url）。
+ * 零依赖（仅 node:fs / node:path / node:url；三区枚举与语法收口 _lib/adr-files.ts）。
  *
  * 用法：
  *   node scripts/adr-check.ts              # 文本报告
@@ -21,9 +22,16 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { ROOT } from "./_lib/scan-files.ts";
+import {
+  ADR_DIR,
+  ADR_TITLE_RE,
+  type AdrFileRef,
+  adrId,
+  listAdrFiles,
+  parseAdrFilename,
+  REG_ROW_ID_RE,
+} from "./_lib/adr-files.ts";
 
-const ADR_DIR = path.join(ROOT, "docs/adr");
 const REG_FILE = path.join(ADR_DIR, "index.md"); // 登记表已并入 index（ADR 双文件合并）
 
 const args = process.argv.slice(2);
@@ -33,8 +41,8 @@ const errors: string[] = [];
 
 // 早退路径（目录/登记表缺失时提前 finish()）也需可读：顶部初始化默认值，
 // 后续流程赋值，避免 finish() 访问未初始化 const 命中 TDZ 崩栈。
-let files: string[] = [];
-let regNums = new Set<number>();
+let files: AdrFileRef[] = [];
+let regNums = new Set<string>();
 let gaps: number[] = [];
 
 // 文本位置 → 行号（1-based，报错定位用）
@@ -57,16 +65,13 @@ function findStatusLike(text: string) {
   return null;
 }
 
-// 1. 扫描目录文件
+// 1. 扫描三区文件（根存量 + architecture/ + decisions/）
 if (!fs.existsSync(ADR_DIR)) {
   errors.push("MISSING: docs/adr/ 目录不存在");
   finish();
 }
 
-files = fs
-  .readdirSync(ADR_DIR)
-  .filter((f) => /^ADR-\d{3}-.*\.md$/.test(f))
-  .sort();
+files = listAdrFiles();
 
 if (!files.length) {
   errors.push("NO_FILES: adr/ 目录下没有 ADR 文件");
@@ -88,43 +93,53 @@ const VALID_STATUS = [
   "已废弃",
   "已取代",
 ];
-const fileMeta: Record<number, any> = {};
-for (const f of files) {
-  const text = fs.readFileSync(path.join(ADR_DIR, f), "utf-8");
-  const titleM = text.match(/^# ADR-(\d{3})[：:]\s*(.+)$/m);
+const fileMeta: Record<string, any> = {};
+for (const ref of files) {
+  const text = fs.readFileSync(ref.absPath, "utf-8");
+  const titleM = ADR_TITLE_RE.exec(text);
   const statusM = text.match(/^-\s*\*\*状态\*\*[：:]\s*(.+)$/m);
   // 近似写法（如「**状态：** ✅ 已采纳」）供精准报错：有状态信息但格式不合规 → STATUS_FORMAT，而非误报"缺少"
   const statusLike = findStatusLike(text);
   if (!titleM) {
-    errors.push(`TITLE_MISSING: ${f} 缺少 '# ADR-NNN：' 标题`);
+    errors.push(`TITLE_MISSING: ${ref.relPath} 缺少 '# ADR-NNN(-dN)?：' 标题`);
     continue;
   }
   const num = parseInt(titleM[1]!, 10);
-  if (fileMeta[num]) {
+  const sub = titleM[2] ? parseInt(titleM[2], 10) : null;
+  const id = adrId(num, sub);
+  // 文件名编号 vs 标题编号一致性（ADR-320 分级语法防呆：防止挂靠错位/复制改名漏改标题）
+  const fnameParsed = parseAdrFilename(ref.name);
+  if (fnameParsed && adrId(fnameParsed.num, fnameParsed.sub) !== id) {
     errors.push(
-      `DUP_NUM: 编号 ADR-${String(num).padStart(3, "0")} 撞号：${fileMeta[num].file} 与 ${f}`,
+      `ID_MISMATCH: ${ref.relPath} 文件名编号 ${adrId(fnameParsed.num, fnameParsed.sub)} 与标题编号 ${id} 不一致`,
     );
+    continue;
+  }
+  if (fileMeta[id]) {
+    errors.push(`DUP_NUM: 编号 ${id} 撞号：${fileMeta[id].file} 与 ${ref.relPath}`);
     continue; // 撞号时保留首个文件元数据供后续对账，避免被覆盖（code_review P3-1）
   }
   const statusRaw = statusM ? statusM[1]?.trim() : "";
   if (statusLike) {
     errors.push(
-      `STATUS_FORMAT: ${f} 第 ${statusLike.no} 行「${statusLike.line}」写法不合规——状态行必须是「- **状态**：」前缀的列表项，如「- **状态**：✅ 已采纳」`,
+      `STATUS_FORMAT: ${ref.relPath} 第 ${statusLike.no} 行「${statusLike.line}」写法不合规——状态行必须是「- **状态**：」前缀的列表项，如「- **状态**：✅ 已采纳」`,
     );
   } else if (!statusRaw) {
-    errors.push(`STATUS_MISSING: ${f} 缺少 '- **状态**：' 行`);
+    errors.push(`STATUS_MISSING: ${ref.relPath} 缺少 '- **状态**：' 行`);
   } else if (!VALID_STATUS.some((s) => statusRaw.startsWith(s))) {
     // statusRaw 非空 ⇒ statusM 必存在，?? 分支不可达；text.length 与原 `?.index!`
     // 在 statusM 为空时的运行时行为（slice(0, undefined) = 全文）完全一致
     const statusIdx = statusM?.index ?? text.length;
     errors.push(
-      `BAD_STATUS: ${f} 第 ${lineNo(text, statusIdx)} 行状态「${statusRaw}」不在合法枚举 ${VALID_STATUS.join(" / ")}（code_review P2-1）`,
+      `BAD_STATUS: ${ref.relPath} 第 ${lineNo(text, statusIdx)} 行状态「${statusRaw}」不在合法枚举 ${VALID_STATUS.join(" / ")}（code_review P2-1）`,
     );
   }
-  fileMeta[num] = {
-    file: f,
+  fileMeta[id] = {
+    file: ref.relPath,
     num,
-    title: titleM[2]?.trim(),
+    sub,
+    id,
+    title: titleM[3]?.trim(),
     status: statusRaw || "(未标注状态)",
   };
 }
@@ -139,38 +154,36 @@ try {
   finish();
 }
 
-regNums = new Set<number>();
-const regRows: Record<number, boolean> = {};
-for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) {
-  const num = parseInt(m[1]!, 10);
-  regNums.add(num);
-  regRows[num] = true;
+regNums = new Set<string>();
+for (const m of regText.matchAll(REG_ROW_ID_RE)) {
+  regNums.add(m[1]!);
 }
 
-// 4. 对账
-for (const num of Object.keys(fileMeta)
-  .map(Number)
-  .sort((a, b) => a - b)) {
-  if (!regNums.has(num)) {
-    errors.push(
-      `NOT_REGISTERED: ADR-${String(num).padStart(3, "0")} (${fileMeta[num].file}) 未在 adr/index.md 登记表占号`,
-    );
+// 4. 对账（ID = 主编号 或 主编号-d子编号）
+for (const id of Object.keys(fileMeta).sort()) {
+  if (!regNums.has(id)) {
+    errors.push(`NOT_REGISTERED: ${id} (${fileMeta[id].file}) 未在 adr/index.md 登记表占号`);
   }
 }
-for (const num of [...regNums].sort((a, b) => a - b)) {
-  if (!fileMeta[num]) {
-    errors.push(`GHOST: 登记表有 ADR-${String(num).padStart(3, "0")}，但磁盘无对应文件`);
+for (const id of [...regNums].sort()) {
+  if (!fileMeta[id]) {
+    errors.push(`GHOST: 登记表有 ${id}，但磁盘无对应文件`);
   }
 }
 
-// 5. 编号连续性（空缺注明为警告）
-const nums = Object.keys(fileMeta)
-  .map(Number)
-  .sort((a, b) => a - b);
+// 5. 主编号连续性（空缺注明为警告；decisions 子编号不参与）
+const mainNums = [
+  ...new Set([
+    ...Object.values(fileMeta)
+      .filter((m) => m.sub === null)
+      .map((m) => m.num as number),
+    ...[...regNums].filter((id) => /^ADR-\d{3}$/.test(id)).map((id) => parseInt(id.slice(4), 10)),
+  ]),
+].sort((a, b) => a - b);
 gaps = [];
-if (nums.length > 1) {
-  for (let i = nums[0]!; i <= nums[nums.length - 1]!; i++) {
-    if (!fileMeta[i] && !regNums.has(i)) gaps.push(i);
+if (mainNums.length > 1) {
+  for (let i = mainNums[0]!; i <= mainNums[mainNums.length - 1]!; i++) {
+    if (!mainNums.includes(i)) gaps.push(i);
   }
 }
 

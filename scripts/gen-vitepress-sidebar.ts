@@ -151,15 +151,32 @@ const archItems: any[] = mdNames(".")
 const appItems = scanItems("app", ["index.md"]);
 if (appItems.length) archItems.push({ text: "网页版", collapsed: true, items: appItems });
 
-// ---------- 4. 决策记录（adr/，编号数字倒序，折叠） ----------
-const adrItems = mdNames("adr")
-  .filter((f) => !["index.md", "README.md"].includes(f))
-  .map((f) => ({ f, num: Number((f.match(/^ADR-(\d+)/) || [])[1] || 0) }))
-  .sort((a, b) => b.num - a.num)
-  .map(({ f }) => {
-    const rel = toPosix(join("adr", f));
-    return { text: readTitle(rel) || f.replace(/\.md$/, ""), link: linkify(rel) };
-  });
+// ---------- 4. 决策记录（adr/ 三区：根存量 + architecture/ 主编号倒序；decisions/ 独立折叠组） ----------
+// ADR-320 分级：主编号区（根存量 + architecture/）合并进「决策记录」组；
+// 执行决策日志（decisions/ 子编号）价值定位 = 可 grep 的决策档案，独立折叠组靠后。
+// mdNames 对不存在目录返回 []，architecture/decisions 未创建时天然为空。
+const adrMainItems = [
+  ...mdNames("adr")
+    .filter((f) => !["index.md", "README.md"].includes(f))
+    .map((f) => ({ f, rel: toPosix(join("adr", f)) })),
+  ...mdNames(join("adr", "architecture")).map((f) => ({
+    f,
+    rel: toPosix(join("adr", "architecture", f)),
+  })),
+];
+const adrItems = adrMainItems
+  .map(({ f, rel }) => ({ f, rel, num: Number((f.match(/^ADR-(\d+)/) || [])[1] || 0) }))
+  .sort((a, b) => b.num - a.num || a.rel.localeCompare(b.rel))
+  .map(({ f, rel }) => ({ text: readTitle(rel) || f.replace(/\.md$/, ""), link: linkify(rel) }));
+const adrDecisionItems = mdNames(join("adr", "decisions"))
+  .map((f) => ({
+    f,
+    rel: toPosix(join("adr", "decisions", f)),
+    num: Number((f.match(/^ADR-(\d+)/) || [])[1] || 0),
+    sub: Number((f.match(/-d(\d+)-/) || [])[1] || 0),
+  }))
+  .sort((a, b) => b.num - a.num || b.sub - a.sub)
+  .map(({ f, rel }) => ({ text: readTitle(rel) || f.replace(/\.md$/, ""), link: linkify(rel) }));
 
 // ---------- 5. 知识卡（knowledge/，按 category 聚合，折叠） ----------
 // 从卡片 frontmatter 聚合分类（groupBy），表外分类归「其他」并告警，绝不静默丢卡。
@@ -249,6 +266,9 @@ const sidebar = [
   { text: "发版记录", link: "/releases/", collapsed: true, items: releasesItems },
   { text: "架构与规范", link: "/architecture", collapsed: true, items: archItems },
   { text: "决策记录 (ADR)", link: "/adr/", collapsed: true, items: adrItems },
+  ...(adrDecisionItems.length
+    ? [{ text: "决策日志 (decisions)", link: "/adr/", collapsed: true, items: adrDecisionItems }]
+    : []),
   { text: "审计", link: "/audit/", collapsed: true, items: auditItems },
   { text: "知识卡", link: "/knowledge/", collapsed: true, items: knowledgeItemsBuilder() },
   { text: "小说", link: "/novel/", collapsed: true, items: novelItemsBuilder() },

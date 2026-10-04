@@ -38,6 +38,7 @@ auto_fields:
     - WAVE_AA_FULL_VERTS
     - WAVE_AA_MIN_VERTS
     - WAVE_DEGENERATE_WA
+    - WAVE_STEEP_SIZE_REF
     - WAVE_STEEP_SUM_LIMIT
 use_when:
   - 改水面波浪 / 颜色 / 透明度 / 水位 / 尺寸 / 池体参数

@@ -25,6 +25,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { ADR_DIR, listAdrFiles, REG_ROW_ID_RE } from "./_lib/adr-files.ts";
 import { parseAdrHeader, parseFrontmatter, parseSourceFiles } from "./_lib/frontmatter.ts";
 import {
   getUntrackedCards,
@@ -35,7 +36,6 @@ import {
 import { parseArgs } from "./_lib/parse-args.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
-const ADR_DIR = path.join(ROOT, "docs/adr");
 const KC_DIR = path.join(ROOT, "docs/knowledge");
 const ARCH_DOCS = [
   "docs/archive/architecture.md",
@@ -87,29 +87,24 @@ function checkAdr() {
     errors.push("[ADR] docs/adr/ 目录不存在");
     return;
   }
-  const files = fs
-    .readdirSync(ADR_DIR)
-    .filter((f) => /^ADR-\d{3}-.*\.md$/.test(f))
-    .sort();
+  const files = listAdrFiles(); // 三区：根存量 / architecture/ / decisions/（ADR-320）
   if (!files.length) {
     errors.push("[ADR] adr/ 目录下没有 ADR 文件");
     return;
   }
 
   const fileMeta: Record<string, any> = {};
-  for (const f of files) {
-    const hdr = parseAdrHeader(path.join(ADR_DIR, f)) as any;
+  for (const ref of files) {
+    const hdr = parseAdrHeader(ref.absPath) as any;
     if (hdr.error) {
-      errors.push(`[ADR] ${f} 首部解析失败（${hdr.error}）`);
+      errors.push(`[ADR] ${ref.relPath} 首部解析失败（${hdr.error}）`);
       continue;
     }
-    const num = hdr.num;
-    if (fileMeta[num]) {
-      errors.push(
-        `[ADR] 编号 ADR-${String(num).padStart(3, "0")} 撞号：${fileMeta[num].file} 与 ${f}`,
-      );
+    const id = ref.id; // 文件名编号源；标题一致性由 adr-check ID_MISMATCH 把关
+    if (fileMeta[id]) {
+      errors.push(`[ADR] 编号 ${id} 撞号：${fileMeta[id].file} 与 ${ref.relPath}`);
     }
-    fileMeta[num] = { file: f, num, title: hdr.title };
+    fileMeta[id] = { file: ref.relPath, id, title: hdr.title };
   }
 
   const regText = readText("docs/adr/index.md");
@@ -117,20 +112,14 @@ function checkAdr() {
     errors.push("[ADR] adr/index.md 登记表不存在");
     return;
   }
-  const regNums = new Set<number>();
-  for (const m of regText.matchAll(/^\|\s*ADR-(\d{3})\s*\|/gm)) regNums.add(parseInt(m[1]!, 10));
+  const regNums = new Set<string>();
+  for (const m of regText.matchAll(REG_ROW_ID_RE)) regNums.add(m[1]!);
 
-  for (const num of Object.keys(fileMeta)
-    .map(Number)
-    .sort((a, b) => a - b)) {
-    if (!regNums.has(num))
-      errors.push(
-        `[ADR] ADR-${String(num).padStart(3, "0")} (${fileMeta[num].file}) 未在登记表占号`,
-      );
+  for (const id of Object.keys(fileMeta).sort()) {
+    if (!regNums.has(id)) errors.push(`[ADR] ${id} (${fileMeta[id].file}) 未在登记表占号`);
   }
-  for (const num of [...regNums].sort((a, b) => a - b)) {
-    if (!fileMeta[num])
-      errors.push(`[ADR] 登记表有 ADR-${String(num).padStart(3, "0")}，但磁盘无对应文件`);
+  for (const id of [...regNums].sort()) {
+    if (!fileMeta[id]) errors.push(`[ADR] 登记表有 ${id}，但磁盘无对应文件`);
   }
   return { files: files.length, registered: regNums.size };
 }

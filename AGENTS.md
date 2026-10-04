@@ -135,7 +135,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 
 ## ADR 与审核
 
-- 新 ADR 走 `node scripts/new-adr.ts "标题" [...]`（不手写编号）；状态：`📝 提议中（新 ADR 默认，待拍板）/ ✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代`；触及既有 ADR 时在对方首部标「被 [ADR-NNN] 取代」。
+- 新 ADR 走 `node scripts/new-adr.ts`（不手写编号；ADR-320 分级：架构级 `--tier architecture --reason 一句理由` → `architecture/`，执行拍板 `--tier decisions --parent NNN` → `decisions/` 轻量模板，存量根目录原位演化）；状态：`📝 提议中（新 ADR 默认，待拍板）/ ✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代`；触及既有 ADR 时在对方首部标「被 [ADR-NNN] 取代」。
 - **ADR 只记决策方向和理由，不记实施进度**。实施进度（哪步做了哪步没做）写进知识卡——知识卡有 `check-knowledge-drift` 自动检测，ADR 没有。ADR 状态字段只记生命周期，不记"§2.3 仍排期"这类待办状态（脱节案例：ADR-042）。
 - 审核流水线 / 反模式 / 致命陷阱 / 治理红线 / 防御范式 → 三处：治理红线 = `skills/governance-rules.md`、致命陷阱 = `skills/pitfalls.md`、审核流水线 + 三份 Checklist = `docs/adr/ADR-109-code-review-checklist.md`。
 - **铁律**：改完代码同步知识卡（`check-knowledge-drift` 由钩子自动兜底）。

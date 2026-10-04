@@ -125,6 +125,8 @@ export function parseSourceFiles(fm: string | null): string[] {
 export function parseAdrHeader(filePath: string):
   | {
       num: number;
+      /** 子编号（decisions 挂靠 ADR-319-d2 时 = 2；主编号 ADR = null）。ADR-320 分级语法 */
+      sub: number | null;
       title: string;
       status: string;
       date: string;
@@ -137,6 +139,7 @@ export function parseAdrHeader(filePath: string):
   const lines = text.split(/\r?\n/);
 
   let num: number | null = null;
+  let sub: number | null = null;
   let title = "";
   let status = "";
   let date = "";
@@ -147,12 +150,14 @@ export function parseAdrHeader(filePath: string):
   for (let i = 0; i < Math.min(lines.length, 25); i++) {
     const line = lines[i]!;
 
-    // 标题：# ADR-NNN：Title 或 # ADR-NNN: Title 或 # ADR-NNN Title
+    // 标题：# ADR-NNN(-dN)?：Title（-dN = decisions 挂靠子编号，ADR-320）或 # ADR-NNN Title
     const mTitle =
-      line.match(/^#\s+ADR-(\d{3})\s*[：:]\s*(.+)/) || line.match(/^#\s+ADR-(\d{3})\s+(.+)/);
+      line.match(/^#\s+ADR-(\d{3})(?:-d(\d+))?\s*[：:]\s*(.+)/) ||
+      line.match(/^#\s+ADR-(\d{3})\s+(.+)/);
     if (mTitle && num === null) {
       num = parseInt(mTitle[1]!, 10);
-      title = mTitle[2]?.trim() ?? "";
+      sub = mTitle[2] ? parseInt(mTitle[2], 10) : null;
+      title = (mTitle[3] ?? mTitle[2])?.trim() ?? "";
       continue;
     }
 
@@ -197,5 +202,5 @@ export function parseAdrHeader(filePath: string):
   if (!status) return { error: "未找到可解析的状态字段" };
   if (!title) return { error: "未找到 ADR 标题" };
 
-  return { num, title, status, date, statusLine, supersededBy, supersedes };
+  return { num, sub, title, status, date, statusLine, supersededBy, supersedes };
 }

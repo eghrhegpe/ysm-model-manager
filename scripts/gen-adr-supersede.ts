@@ -21,7 +21,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseAdrHeader } from "./_lib/frontmatter.ts";
-import { ROOT } from "./_lib/scan-files.ts";
 import {
   globalOf,
   RE_CLAIM_A,
@@ -41,7 +40,8 @@ const RE_CLAIM_A_G = globalOf(RE_CLAIM_A);
 const RE_CLAIM_B_G = globalOf(RE_CLAIM_B);
 const _RE_NEGATED_CLAIM_G = globalOf(RE_NEGATED_CLAIM);
 
-const ADR_DIR = path.join(ROOT, "docs", "adr");
+import { ADR_DIR, listAdrFiles } from "./_lib/adr-files.ts";
+
 const FLAG_CHECK = process.argv.includes("--check");
 const FLAG_QUIET = process.argv.includes("--quiet");
 
@@ -61,10 +61,7 @@ function main() {
     process.exit(1);
   }
 
-  const files = fs
-    .readdirSync(ADR_DIR)
-    .filter((f) => /^ADR-\d{3}-.*\.md$/.test(f))
-    .sort();
+  const files = listAdrFiles().map((f) => f.relPath); // 三区（ADR-320）：相对 docs/adr/ 的路径
 
   const adrList: any[] = [];
   const adrNums = new Set();
@@ -77,7 +74,7 @@ function main() {
 
   // 第一遍：解析全部首部
   for (const file of files) {
-    const parsed: any = parseAdrHeader(path.join(ADR_DIR, file));
+    const parsed: any = parseAdrHeader(path.join(ADR_DIR, file)); // file 为三区相对路径
     if (parsed && !parsed.error && parsed.num !== null) {
       const { num, title, status, statusLine, supersededBy } = parsed;
       adrList.push({ num, file, title, status, statusLine, supersededBy });

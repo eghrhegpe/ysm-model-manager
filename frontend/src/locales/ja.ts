@@ -1336,6 +1336,7 @@ export const ja: Record<string, string> = {
   "preview.settingsNote": "解像度上限は 3D プレビュー再入場後に有効；それ以外は即時反映。",
   "preview.postprocessing": "ポストプロセス",
   "preview.postprocessingDesc": "ブルーム / SSAO / トーンマッピング / 露出",
+  "preview.postprocessingNeedsEnable": "先にポストプロセスを有効にしてください",
   "preview.toneMapping": "トーンマッピング",
   "preview.exposure": "露出",
   "preview.bloomStrength": "ブルーム強度",

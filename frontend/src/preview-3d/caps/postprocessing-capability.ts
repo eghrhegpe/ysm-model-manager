@@ -205,9 +205,31 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     }
 
     // 结构性变化（影响 pass 组合）→ 重建 composer（若已存在）
-    if (changed.has("ppSsaoEnabled") || changed.has("ppReflectionMode")) {
+    // [锐评 P2-4] 反射模式**不再触发重建**：SSR 档位变化只需切 `ssrPass.enabled`
+    // 与少量参数（render() 每帧已按 `ppReflectionMode !== "envmap-only"` 同步 enabled）。
+    // 原实现每次切档都全量重建 → `new SSRPass(...)`，而 three 0.186.1 的
+    // `SSRPass.dispose`（SSRPass.js:491-518）**漏释放 `ssrMaterial`**（持有 defines 与
+    // 全部 uniforms 的 ShaderMaterial，构造于 :354）——属上游客源缺陷，本仓无法直接修，
+    // 故从根上不重建：反复切档不再累积未释放的 ShaderMaterial。
+    // 唯二需要重建的是 SSAO 开关（真正增删 pass）；反射模式仅在「SSR pass 尚不存在
+    // 但模式已为 SSR 档」时需要补挂（首次开启总开关的惰性创建路径已覆盖该组合）。
+    if (changed.has("ppSsaoEnabled")) {
       if (this.composer) this.buildComposer();
       return; // rebuild 创建新 pass，无需逐项同步
+    }
+    if (changed.has("ppReflectionMode")) {
+      if (this.composer && !this.ssrPass && state.ppReflectionMode !== "envmap-only") {
+        // 已启用且需要 SSR 但尚无 ssrPass（例：切到 SSR 档时 pass 组合缺失）→ 补建。
+        // ⚠️ 不可在此 `return`：SSR 活跃性直接决定 reflector 抑制（applyReflectorSync），
+        // 原实现靠 buildComposer 内部那次 applyReflectorSync 兜住；改为免重建后必须显式
+        // 落到函数末尾的 applyReflectorSync（下方不 return，穿透到末尾）。
+        this.buildComposer();
+      } else if (this.ssrPass) {
+        this.applySSRModeToPass();
+      }
+      // 不 return —— 需继续走到末尾 applyReflectorSync，否则反射模式切换丢掉
+      // 「SSR 开→压制单平面镜 / SSR 关→归还」的联动（原 rebuild 路径的隐藏副作用）。
+      // SSR 参数六项同批变更时下方分支会重新赋值，与 applySSRModeToPass 同源幂等。
     }
 
     // 独立辉光开关 → 旁路 bloomPass
@@ -264,7 +286,11 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     }
 
     // Reflector 联动
-    if (changed.has("ppReflectorDisableWhenSSR")) {
+    // [锐评 P2-4] 新增 `ppReflectionMode`：反射模式直接决定 SSR 是否在渲染
+    //（isSsrRenderActive = ppEnabled ∧ mode≠envmap-only），进而决定单平面镜的压制/归还。
+    // 原实现靠 `buildComposer()` 内部那次 `applyReflectorSync()` 兜住，改为免重建后
+    // 必须在此显式触发——否则「SSR 关→镜子该回来」与「SSR 开→镜子该被压制」双双失效。
+    if (changed.has("ppReflectorDisableWhenSSR") || changed.has("ppReflectionMode")) {
       this.applyReflectorSync();
     }
   };
@@ -319,26 +345,35 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     return composer;
   }
 
+  /** [2026-10 锐评 P2-1] pass 构造尺寸统一取 host 下发的凭据（与 composer 同源）。
+   *  原实现从 `renderer.getSize()` 现取，而 composer 用 `lastW/lastH`——同一函数内两套
+   *  尺寸源，在「容器已变但尚未下发」的窗口内会分叉。凭据为空时才回落 renderer 现值。 */
+  private passSizes(): { w: number; h: number } {
+    const logical = this.renderer.getSize(new THREE.Vector2());
+    return {
+      w: Math.max(this.lastW > 0 ? this.lastW : logical.x, 1),
+      h: Math.max(this.lastH > 0 ? this.lastH : logical.y, 1),
+    };
+  }
+
   private attachSSAOPass(composer: EffectComposer): void {
     if (!envState.ppSsaoEnabled) return;
-    const logicalSize = this.renderer.getSize(new THREE.Vector2());
-    const w = Math.max(logicalSize.x, 1);
-    const h = Math.max(logicalSize.y, 1);
+    const { w, h } = this.passSizes();
     this.ssaoPass = new SSAOPass(this.scene, this.camera, w, h, 32);
     this.ssaoPass.kernelRadius = envState.ppSsaoRadius;
     this.ssaoPass.minDistance = envState.ppSsaoMinDist;
     this.ssaoPass.maxDistance = envState.ppSsaoMaxDist;
     this.ssaoPass.output =
       (SSAOPass as unknown as { OUTPUT: { Default: number } }).OUTPUT?.Default ?? 0;
+    // [锐评 P1-1] 走 insertPass（addPass/insertPass 是唯一会按物理尺寸下发 setSize 的
+    // 同步点），替代原 `composer.passes.splice(...)` 直插——后者绕过同步，使新 pass
+    // 停留在构造期的逻辑尺寸上，「插入即正确」的不变量失守。
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    const renderPassIndex = composer.passes.indexOf(this.renderPass!);
-    composer.passes.splice(renderPassIndex + 1, 0, this.ssaoPass);
+    composer.insertPass(this.ssaoPass, composer.passes.indexOf(this.renderPass!) + 1);
   }
 
   private attachSSRAndBloomPasses(composer: EffectComposer, useSSR: boolean): void {
-    const logicalSize = this.renderer.getSize(new THREE.Vector2());
-    const w = Math.max(logicalSize.x, 1);
-    const h = Math.max(logicalSize.y, 1);
+    const { w, h } = this.passSizes();
 
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(w, h),
@@ -346,9 +381,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       envState.ppBloomRadius,
       envState.ppBloomThreshold,
     );
+    // [锐评 P1-1] insertPass 替代 splice（同 attachSSAOPass）。
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    const outputPassIndex = composer.passes.indexOf(this.outputPass!);
-    composer.passes.splice(outputPassIndex, 0, this.bloomPass);
+    composer.insertPass(this.bloomPass, composer.passes.indexOf(this.outputPass!));
 
     if (useSSR) {
       // ⚠️ groundReflector 必须保持 null（2026-09 读 three r185 源码核实）：SSRPass 期望的是
@@ -385,10 +420,19 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       // （SSAO/Bloom）成果都会被覆盖——原顺序「Bloom → SSR」导致一开 SSR 就静默吃掉 Bloom/SSAO。
       // 插在 renderPass 之后即位于 SSAO 之前；SSAO 用 CustomBlending 叠在 readBuffer 上、
       // Bloom 也读 readBuffer，二者排在其后即可全保。
+      // [锐评 P1-1] insertPass 替代 splice（同上）：插入即按物理尺寸初始化。
       // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      const renderPassIndex = composer.passes.indexOf(this.renderPass!);
-      composer.passes.splice(renderPassIndex + 1, 0, this.ssrPass);
+      composer.insertPass(this.ssrPass, composer.passes.indexOf(this.renderPass!) + 1);
     }
+  }
+
+  /** [锐评 P2-4] 反射模式变更时把档位落到既有 ssrPass，不重建 composer。
+   *  `ssr-only` 需把 opacity 顶到 1（纯 SSR、无屏外环境贴图补全）；
+   *  其余档位恢复用户设定的 opacity（`envmap+ssr` 为半混合）。
+   *  enabled 由 render() 每帧按 `ppReflectionMode !== "envmap-only"` 统一同步，此处不重复。 */
+  private applySSRModeToPass(): void {
+    if (!this.ssrPass) return;
+    this.ssrPass.opacity = envState.ppReflectionMode === "ssr-only" ? 1 : envState.ppSsrOpacity;
   }
 
   private buildComposer(syncReflector = true): void {
@@ -580,19 +624,28 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     // [ADR-299] 凭据无条件记录：关闭态 composer 为 null，但首次启用时要按此尺寸建缓冲。
     this.lastW = width;
     this.lastH = height;
-    if (this.composer) {
-      this.composer.setSize(width, height);
-      if (this.bloomPass) this.bloomPass.resolution = new THREE.Vector2(width, height);
-      if (this.ssrPass) {
-        this.ssrPass.width = width;
-        this.ssrPass.height = height;
-        this.ssrPass.setSize(width, height);
-      }
-    }
+    // [2026-10 锐评 P1-1] 此处**只**记凭据并交给 composer 驱动，不得手写 ssrPass.setSize。
+    //
+    // 病根（读 three 0.186.1 源码核实）：`EffectComposer.setSize` 会以
+    // `_width * _pixelRatio`（物理量）遍历所有 pass 下发尺寸；原实现在其后紧跟一句
+    // `this.ssrPass.setSize(width, height)`（逻辑量）二次覆盖 → SSRPass 的
+    // beauty/normal/metalness RT 被打回逻辑尺寸，DPR>1 时只有主链一半线性分辨率。
+    // 而 SSRPass 独占链首、每帧在 beautyRenderTarget 上整场重渲并以 NoBlending 整片覆写
+    // writeBuffer → **整帧**被拉到逻辑尺寸，SSAO/Bloom/Output 全部继承（症状是「整帧糊」，
+    // 而非反射错位——SSR 自身的 resolution uniform 与 beauty 一致，采样仍自洽）。
+    //
+    // 更本质的一层：passes 经 `composer.passes.splice(...)` 直插数组，绕过了
+    // `addPass`/`insertPass`——那两者是**唯一**会下发物理尺寸的同步点，而 `Pass` 基类的
+    // `setSize` 是空实现（Pass.js:74）。故 SSRPass 自构造起就从未被正确初始化。
+    // 现改为全程用 `addPass`/`insertPass`（见 createComposerBase/attach*），
+    // 插入即自动获得物理尺寸，resize 则由 composer.setSize 单一驱动。
+    this.composer?.setSize(width, height);
   }
 
   setPixelRatio(pixelRatio: number): void {
     // [ADR-299] 同 setSize：关闭态也记，供惰性创建时对齐 renderer 的实际像素比。
+    // [锐评 P1-1] composer.setPixelRatio 内部会以 `setSize(_width, _height)` 级联重算
+    // 所有 pass 的物理尺寸，故此处无需也不得额外碰 ssrPass。
     this.lastPixelRatio = pixelRatio;
     this.composer?.setPixelRatio(pixelRatio);
   }
@@ -868,5 +921,16 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.unsubscribeEnv();
     this.disposeComposer();
     this.restoreOutputSettings();
+    // [2026-10 锐评 P1-2 / P2-5] 会话级字段必须复位。
+    // `scene-capability-registry.createAll` 有「同宿主三引用全等则复用实例」短路
+    //（scene-capability-registry.ts:86-95），复用后上个会话的残留会让：
+    //  ① `isStateLoaded` 恒真 → `applyModelPreset` 的守卫永久挡下本会话的模型默认
+    //    （换 YSM/VRM/MMD 都不再改变后处理开关）；
+    //  ② `lastW/lastH/lastPixelRatio` 是上个会话的值 → 若本会话未下发 resize 就启用，
+    //    惰性创建的 composer 会按**上个会话**的尺寸/像素比建缓冲（自适应降档后尤甚）。
+    this.isStateLoaded = false;
+    this.lastW = 0;
+    this.lastH = 0;
+    this.lastPixelRatio = 0;
   }
 }

@@ -23,6 +23,9 @@ export const ARIA_ATTR = {
   labelledby: "aria-labelledby",
   live: "aria-live",
   atomic: "aria-atomic",
+  /** [2026-10 锐评 P1-3] 控件禁用态：自绘控件（cs-bar）与行容器无原生 disabled 属性，
+   *  须显式标注无障碍态（原生 select/input 另有 disabled 属性，两者并用）。 */
+  disabled: "aria-disabled",
 } as const;
 
 /** 滑动条本体 class（cap 栈 renderCapSlider 自绘 .cs-bar，经 uiComponentsStyleSheet 消费） */

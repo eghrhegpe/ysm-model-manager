@@ -1336,6 +1336,7 @@ export const en: Record<string, string> = {
     "Resolution cap takes effect after re-entering 3D preview; other toggles apply instantly.",
   "preview.postprocessing": "Post-processing",
   "preview.postprocessingDesc": "Bloom / SSAO / Tone mapping / Exposure",
+  "preview.postprocessingNeedsEnable": "Enable post-processing first",
   "preview.toneMapping": "Tone Mapping",
   "preview.exposure": "Exposure",
   "preview.bloomStrength": "Bloom Strength",

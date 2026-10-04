@@ -125,6 +125,65 @@ describe("PostprocessingCapability — 启用/禁用", () => {
   });
 });
 
+// ===== [2026-10 锐评 P1-3] 总开关关闭时子控件须给出「不可用」反馈 =====
+// 病：总开关关闭（= 默认态）时 composer 不存在或不参与每帧，子控件写入无任何可见效果，
+// 但 UI 照常可点 → 用户以为是 bug。修复 = 子控件置 disabled 谓词（渲染层灰化 + title 说明），
+// 总开关自身不灰化（否则无从开启）。
+describe("[锐评 P1-3] 总开关门：子控件禁用谓词的覆盖与豁免", () => {
+  /** 遍历节点树收集全部节点（folder 递归） */
+  function allNodes(cap: PostprocessingCapability) {
+    const out: import("@/preview-3d/menu/schema/menu-node-types.ts").PreviewMenuNode[] = [];
+    const walk = (ns: import("@/preview-3d/menu/schema/menu-node-types.ts").PreviewMenuNode[]): void => {
+      for (const n of ns) {
+        out.push(n);
+        if (n.children) walk(n.children);
+      }
+    };
+    walk(cap.getMenuNodes());
+    return out;
+  }
+
+  it("总开关 pp-enabled 自身不得带 disabled 谓词（否则无法开启）", () => {
+    const node = findNode(newCap().getMenuNodes(), "pp-enabled")!;
+    expect(node.control!.disabled).toBeUndefined();
+  });
+
+  it("既非总开关、又非纯展示节点的可交互控件，一律带 disabled 谓词", () => {
+    const cap = newCap();
+    const interactive = allNodes(cap).filter(
+      (n) => n.control?.set !== undefined && n.id !== "pp-enabled",
+    );
+    // 行为不变量：每个可写控件都能在「总开关关闭」时表达不可用
+    const missing = interactive.filter((n) => n.control!.disabled === undefined).map((n) => n.id);
+    expect(missing).toEqual([]);
+  });
+
+  it("disabled 谓词随总开关实时翻转（关闭→灰化，开启→可用）", () => {
+    const cap = newCap();
+    const probe = findNode(cap.getMenuNodes(), "pp-ssao-enabled")!;
+    expect(probe.control!.disabled!()).toBe(true); // 默认关闭态
+    cap.setEnabled(true);
+    expect(probe.control!.disabled!()).toBe(false);
+    cap.setEnabled(false);
+    expect(probe.control!.disabled!()).toBe(true);
+  });
+
+  it("覆盖范围含色彩映射/曝光/辉光/SSAO/反射/SSR 各组代表节点", () => {
+    const cap = newCap();
+    for (const id of [
+      "pp-toneMapping",
+      "pp-exposure",
+      "pp-bloom-strength",
+      "pp-ssao-enabled",
+      "pp-ssao-radius",
+      "pp-reflection-mode",
+      "pp-ssr-opacity",
+    ]) {
+      expect(findNode(cap.getMenuNodes(), id)!.control!.disabled?.(), `${id} 应带禁用门`).toBe(true);
+    }
+  });
+});
+
 describe("PostprocessingCapability — Bloom 参数", () => {
   it("Bloom 强度/阈值/半径读写", () => {
     const cap = newCap();
@@ -857,6 +916,7 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     return cap as unknown as {
       composer: EffectComposer; renderPass: Pass; bloomPass: Pass; outputPass: Pass;
       ssaoPass: Pass | null; ssrPass: Pass | null;
+      lastW: number; lastH: number; lastPixelRatio: number; isStateLoaded: boolean;
     };
   }
 
@@ -997,14 +1057,18 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(ssao.maxDistance).toBe(0.5);
   });
 
-  it("setReflectionMode 重建 composer（SSR 组合变化）", () => {
+  it("[锐评 P2-4] setReflectionMode 按需补挂 ssrPass，且切档不销毁已建 pass", () => {
     const { cap } = newRealCap();
     cap.setEnabled(true);
+    // 默认 envmap-only：不挂 SSR pass
     expect(internalsOf(cap).ssrPass).toBeNull();
+    // 切到 SSR 档 → pass 组合缺失，补挂
     cap.setReflectionMode("envmap+ssr");
     expect(internalsOf(cap).ssrPass).not.toBeNull();
+    const ssr = internalsOf(cap).ssrPass;
+    // 切回 envmap-only → **不再销毁** ssrPass（旧语义为置 null 并重建 composer）
     cap.setReflectionMode("envmap-only");
-    expect(internalsOf(cap).ssrPass).toBeNull();
+    expect(internalsOf(cap).ssrPass).toBe(ssr);
   });
 
   it("setBloom* 直改 bloomPass；setBloomEnabled(false) 旁路 bloomPass", () => {
@@ -1120,6 +1184,159 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     // disabled 时 setSize no-op
     cap.setEnabled(false);
     expect(() => cap.setSize(100, 100)).not.toThrow();
+  });
+
+  // ===== [2026-10 锐评 P1-1] SSR 缓冲必须按**物理**尺寸（逻辑×DPR）建，而非逻辑尺寸 =====
+  // 病根：`passes.splice` 直插绕过 addPass/insertPass（唯一会下发 `_width * _pixelRatio` 的
+  // 同步点），而 cap 又手写 `ssrPass.setSize(width, height)`（逻辑量）二次覆盖 →
+  // SSRPass 的 beauty/ssr/blur 三个 RT 常年只有主链一半分辨率（DPR=2 时），
+  // 且 SSRPass 独占链首、每帧在 beauty 上整场重渲 → **整帧**被拉到逻辑尺寸。
+  // 旧用例断言 `ssr.width === 256` 是「反向锁定」：它锁的正是缺陷侧，故本组断言一律取
+  // 真实渲染资源 `beautyRenderTarget.width`（物理量），而非 setSize 的入参回写。
+  describe("[锐评 P1-1] SSR 缓冲分辨率 = 物理尺寸", () => {
+    it("DPR=2 时 beautyRenderTarget 为逻辑尺寸的 2 倍（旧实现恒为逻辑尺寸）", () => {
+      const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
+      cap.setEnabled(true);
+      cap.setSize(800, 600);
+      cap.setPixelRatio(2);
+      const ssr = internalsOf(cap).ssrPass as unknown as {
+        beautyRenderTarget: { width: number; height: number };
+      };
+      expect(ssr.beautyRenderTarget.width).toBe(1600);
+      expect(ssr.beautyRenderTarget.height).toBe(1200);
+    });
+
+    it("setSize 与 setPixelRatio 的顺序互换后仍为物理尺寸（幂等、不依赖调用序）", () => {
+      const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
+      cap.setEnabled(true);
+      cap.setPixelRatio(2);
+      cap.setSize(800, 600);
+      const ssr = internalsOf(cap).ssrPass as unknown as {
+        beautyRenderTarget: { width: number; height: number };
+      };
+      expect(ssr.beautyRenderTarget.width).toBe(1600);
+      expect(ssr.beautyRenderTarget.height).toBe(1200);
+    });
+
+    it("DPR=1 时与逻辑尺寸一致（避免过度放大）", () => {
+      const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
+      cap.setEnabled(true);
+      cap.setPixelRatio(1);
+      cap.setSize(640, 480);
+      const ssr = internalsOf(cap).ssrPass as unknown as {
+        beautyRenderTarget: { width: number; height: number };
+      };
+      expect(ssr.beautyRenderTarget.width).toBe(640);
+      expect(ssr.beautyRenderTarget.height).toBe(480);
+    });
+
+    it("自适应降档（DPR 2→1）后 SSR 缓冲随之缩小", () => {
+      const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
+      cap.setEnabled(true);
+      cap.setSize(800, 600);
+      cap.setPixelRatio(2);
+      let ssr = internalsOf(cap).ssrPass as unknown as {
+        beautyRenderTarget: { width: number };
+      };
+      expect(ssr.beautyRenderTarget.width).toBe(1600);
+      cap.setPixelRatio(1);
+      ssr = internalsOf(cap).ssrPass as unknown as { beautyRenderTarget: { width: number } };
+      expect(ssr.beautyRenderTarget.width).toBe(800);
+    });
+  });
+
+  // ===== [2026-10 锐评 P2-4] 切反射模式不得重建 composer（消除 ssrMaterial 泄漏） =====
+  // three 0.186.1 `SSRPass.dispose`（SSRPass.js:491-518）漏释放 `ssrMaterial`（持有 defines
+  // 与全部 uniforms 的 ShaderMaterial，构造于 :354）→ 本条为**上游客源缺陷**，本仓无法直接修。
+  // 但 `ppReflectionMode` 变更原走 `buildComposer()` 全量重建（每次 new 一个 SSRPass）→
+  // 反复切档即累积泄漏。改为只切 `ssrPass.enabled` + 参数，从根上绕开该路径。
+  describe("[锐评 P2-4] 反射模式切换不重建 composer", () => {
+    it("已有 SSR pass 时切档：composer 与 ssrPass 实例均不重建", () => {
+      const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
+      cap.setEnabled(true);
+      const before = internalsOf(cap);
+      const composerBefore = before.composer;
+      const ssrBefore = before.ssrPass;
+      expect(ssrBefore).not.toBeNull();
+      cap.setReflectionMode("envmap-only");
+      const after = internalsOf(cap);
+      expect(after.composer).toBe(composerBefore);
+      expect(after.ssrPass).toBe(ssrBefore);
+      cap.setReflectionMode("ssr-only");
+      expect(internalsOf(cap).ssrPass).toBe(ssrBefore);
+    });
+
+    it("envmap-only 时 ssrPass.enabled=false；切回后 enabled=true（行为不变）", () => {
+      // composer.render 为逐 pass 真渲染，测试中以 spy 拦截（仓内既有手法）
+      vi.spyOn(
+        EffectComposer.prototype as unknown as { render: () => void },
+        "render",
+      ).mockImplementation(() => {});
+      const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
+      cap.setEnabled(true);
+      const ssr = internalsOf(cap).ssrPass as unknown as { enabled: boolean };
+      cap.setReflectionMode("envmap-only");
+      cap.render(0.016, stubLightCap({ opacity: 1 }));
+      expect(ssr.enabled).toBe(false);
+      cap.setReflectionMode("ssr-only");
+      cap.render(0.016, stubLightCap({ opacity: 1 }));
+      expect(ssr.enabled).toBe(true);
+    });
+
+    it("ssr-only 档位把 opacity 设为 1（参数落地不因免重建而丢失）", () => {
+      const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
+      cap.setEnabled(true);
+      cap.setReflectionMode("ssr-only");
+      const ssr = internalsOf(cap).ssrPass as unknown as { opacity: number };
+      expect(ssr.opacity).toBe(1);
+    });
+
+    it("首次开启总开关且模式为 SSR 档时，惰性创建仍会建出 ssrPass（不能因免重建而漏建）", () => {
+      vi.spyOn(
+        EffectComposer.prototype as unknown as { render: () => void },
+        "render",
+      ).mockImplementation(() => {});
+      const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
+      // 关闭态切档（composer 为 null）→ 不应崩，也不应提前建
+      cap.setReflectionMode("ssr-only");
+      expect(internalsOf(cap).composer).toBeNull();
+      cap.setEnabled(true); // 惰性创建唯一时机
+      const ssr = internalsOf(cap).ssrPass as unknown as { enabled: boolean } | null;
+      expect(ssr).not.toBeNull();
+      cap.render(0.016, stubLightCap({ opacity: 1 }));
+      expect((internalsOf(cap).ssrPass as unknown as { enabled: boolean }).enabled).toBe(true);
+    });
+  });
+
+  // ===== [2026-10 锐评 P1-2/P2-5] dispose 复位会话级字段 =====
+  // `scene-capability-registry.createAll` 有「三引用全等则复用实例」短路（:86-95），
+  // 复用后上个会话的残留会让：① `isStateLoaded` 恒真 → `applyModelPreset` 永久失效
+  //（换模型不再套默认后处理）；② `lastPixelRatio` 陈旧 → 新会话建出与 renderer 不符的缓冲。
+  describe("[锐评 P1-2/P2-5] dispose 复位会话级字段", () => {
+    it("dispose 后 isStateLoaded 复位（复用实例时模型默认仍能生效）", () => {
+      const { cap, renderer, scene, camera } = newRealCap({
+        params: { reflectionMode: "envmap+ssr" },
+      });
+      cap.setEnabled(true);
+      cap.saveState();
+      cap.dispose();
+      const revived = new PostprocessingCapability({ scene, renderer, camera });
+      revived.applyModelPreset("ysm");
+      // 复位后 isStateLoaded=false ⇒ applyModelPreset 不被守卫挡下；
+      // 是否真改变值取决于 MODEL_DEFAULTS，故此处只锁「守卫未挡」这一不变量。
+      expect(internalsOf(revived).isStateLoaded).toBe(false);
+    });
+
+    it("dispose 后像素比凭据复位：新会话不继承上个会话的降档值", () => {
+      const { cap } = newRealCap({ params: { reflectionMode: "envmap+ssr" } });
+      cap.setEnabled(true);
+      cap.setSize(800, 600);
+      cap.setPixelRatio(0.75); // 模拟上个会话的自适应降档
+      cap.dispose();
+      expect(internalsOf(cap).lastPixelRatio).toBe(0);
+      expect(internalsOf(cap).lastW).toBe(0);
+      expect(internalsOf(cap).lastH).toBe(0);
+    });
   });
 
   it("[ADR-299] 关闭态下发的 setSize/setPixelRatio 留凭据：惰性创建的 composer 按该尺寸建", () => {

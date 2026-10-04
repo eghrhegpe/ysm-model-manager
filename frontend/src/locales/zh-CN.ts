@@ -1303,6 +1303,7 @@ export const zhCN = {
   "preview.settingsNote": "分辨率上限需重新进入 3D 预览生效；其余开关即时生效。",
   "preview.postprocessing": "后处理",
   "preview.postprocessingDesc": "Bloom / SSAO / 色调映射 / 曝光",
+  "preview.postprocessingNeedsEnable": "需先开启后处理",
   "preview.toneMapping": "色彩映射",
   "preview.exposure": "曝光",
   "preview.bloomStrength": "辉光强度",

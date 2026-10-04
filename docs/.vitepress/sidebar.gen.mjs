@@ -231,6 +231,10 @@ export const autoSidebar = [
         "link": "/audit-env-review"
       },
       {
+        "text": "后处理系统锐评（2026-10-04）",
+        "link": "/audit-postprocessing-critique"
+      },
+      {
         "text": "CLI 命令参考",
         "link": "/cli-commands"
       },

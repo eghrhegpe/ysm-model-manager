@@ -305,6 +305,10 @@ export function nodeControlToView(node: PreviewMenuNode, menu?: SlideMenuHandle)
     ...(spec?.onChange || spec?.refreshOnChange ? { onChange: setValue } : {}),
   };
   if (node.hintKey) view.hintKey = node.hintKey;
+  // [2026-10 锐评 P1-3] disabled 由 button 专属提升为通用控件通道：slider/select/toggle/color
+  // 四臂经 applyControlDisabled 统一落地灰化 + 阻断交互（原先该字段只在 rmAppendButton 被消费，
+  // 简单控件无从表达「当前不具备生效前提」→ 后处理子开关在总开关关闭时静默 no-op）。
+  if (spec?.disabled) view.disabled = spec.disabled;
 
   if (node.kind === "slider" && spec) {
     const slider: NonNullable<CapControlView["slider"]> = {

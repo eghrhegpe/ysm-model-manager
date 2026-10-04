@@ -318,3 +318,62 @@ describe("renderCapToggle / renderCapSlider — 只声明 fallback 的动态名�
     expect(row.querySelector(".cs-bar")?.getAttribute("aria-label")).toBe("哀");
   });
 });
+
+// ===== [2026-10 锐评 P1-3] 控件级 disabled 通道（button 专属 → 通用） =====
+// 背景：后处理子开关在总开关关闭时写入无可见效果（composer 未建/未参与每帧），
+// 原实现照常可点 → 「开了没反应」。修复 = 灰化 + 阻断交互 + title 说明原因，
+// 而非惰性建 composer（那会重开 ADR-299 关掉的默认路径过载）。
+describe("[锐评 P1-3] 控件级 disabled 通道", () => {
+  function view(over: Partial<CapControlView> = {}): CapControlView {
+    return {
+      id: "t",
+      labelKey: "t" as LocaleKey,
+      fallback: "t",
+      getValue: () => 0.5,
+      setValue: () => {},
+      slider: { min: 0, max: 1, step: 0.01 },
+      ...over,
+    };
+  }
+
+  it("disabled() 为 true → 行标注 aria-disabled/data-disabled 并阻断指针交互", () => {
+    const list = document.createElement("div");
+    renderCapToggle(list, view({ disabled: () => true }));
+    const row = list.querySelector('[data-testid="cap-t"]') as HTMLElement;
+    expect(row.getAttribute("aria-disabled")).toBe("true");
+    expect(row.dataset.disabled).toBe("true");
+    expect(row.classList.contains("cc-disabled")).toBe(true);
+    expect(row.style.pointerEvents).toBe("none");
+  });
+
+  it("disabled() 为 false → 不标注禁用态（不得误灰化）", () => {
+    const list = document.createElement("div");
+    renderCapToggle(list, view({ disabled: () => false }));
+    const row = list.querySelector('[data-testid="cap-t"]') as HTMLElement;
+    expect(row.getAttribute("aria-disabled")).toBeNull();
+    expect(row.classList.contains("cc-disabled")).toBe(false);
+    expect(row.style.pointerEvents).not.toBe("none");
+  });
+
+  it("未声明 disabled → 保持可交互（既有节点行为不变）", () => {
+    const list = document.createElement("div");
+    renderCapToggle(list, view());
+    const row = list.querySelector('[data-testid="cap-t"]') as HTMLElement;
+    expect(row.getAttribute("aria-disabled")).toBeNull();
+  });
+
+  it("slider 禁用：cs-bar 标 aria-disabled 且移出 Tab 序", () => {
+    const list = document.createElement("div");
+    renderCapSlider(list, view({ disabled: () => true }));
+    const bar = list.querySelector(".cs-bar") as HTMLElement;
+    expect(bar.getAttribute("aria-disabled")).toBe("true");
+    expect(bar.tabIndex).toBe(-1);
+  });
+
+  it("禁用原因经 title 暴露（四臂一致，含无 hint 槽位的 slider）", () => {
+    const list = document.createElement("div");
+    renderCapSlider(list, view({ disabled: () => true }));
+    const row = list.querySelector('[data-testid="cap-t"]') as HTMLElement;
+    expect(row.title.length).toBeGreaterThan(0);
+  });
+});

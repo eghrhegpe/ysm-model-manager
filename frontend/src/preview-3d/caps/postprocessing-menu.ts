@@ -43,6 +43,16 @@ const REFLECTION_MODE_OPTIONS: ReadonlyArray<{
   { value: "ssr-only", label: "仅屏幕空间", labelKey: "preview.reflectionModeSsrOnly" },
 ];
 
+// [2026-10 锐评 P1-3] 总开关门：总开关关闭时，子控件的写入一律不产生可见效果
+// （composer 未建 / 未参与每帧），原实现让它们照常可点 → 用户「开了没反应」。
+// 这里不改成「关闭时惰性建 composer」——那会重新打开 ADR-299 已关掉的默认路径每帧过载
+// （实测 1.05ms/帧、+35.3MB 常驻缓冲），牺牲的是全体用户的默认启动开销。
+// 正解 = 诚实反馈：灰化 + hint 说明「需先开启后处理」，交互不静默。
+/** 子控件统一的禁用谓词：总开关关闭即灰化（语义为「当前不具备生效前提」）。 */
+function disabledWhenOff(cap: PostprocessingCapability): () => boolean {
+  return () => !cap.isEnabled();
+}
+
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
 
 // 每个节点组一个具名构造器：`buildPostprocessingNodes` 退化为可一眼读完的
@@ -77,6 +87,7 @@ function colorFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           options: [...TONE_MAPPING_OPTIONS],
           get: () => cap.getParams().toneMapping,
           set: (v) => cap.setToneMapping(v as PostprocessingParams["toneMapping"]),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -87,6 +98,7 @@ function colorFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppExposure"),
           get: () => cap.getParams().exposure,
           set: (v) => cap.setExposure(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
     ],
@@ -102,6 +114,7 @@ function bloomEnabledNode(cap: PostprocessingCapability): NodeFor<"toggle"> {
     control: {
       get: () => cap.getParams().bloomEnabled,
       set: (v) => cap.setBloomEnabled(v as boolean),
+      disabled: disabledWhenOff(cap),
     },
   };
 }
@@ -121,6 +134,7 @@ function bloomFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppBloomStrength"),
           get: () => cap.getParams().bloomStrength,
           set: (v) => cap.setBloomStrength(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -131,6 +145,7 @@ function bloomFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppBloomThreshold"),
           get: () => cap.getParams().bloomThreshold,
           set: (v) => cap.setBloomThreshold(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -141,6 +156,7 @@ function bloomFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppBloomRadius"),
           get: () => cap.getParams().bloomRadius,
           set: (v) => cap.setBloomRadius(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -150,6 +166,7 @@ function bloomFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
         control: {
           get: () => cap.getParams().bloomFollowVolumetric,
           set: (v) => cap.setBloomFollowVolumetric(v as boolean),
+          disabled: disabledWhenOff(cap),
         },
       },
     ],
@@ -165,6 +182,7 @@ function ssaoEnabledNode(cap: PostprocessingCapability): NodeFor<"toggle"> {
     control: {
       get: () => cap.getParams().ssaoEnabled,
       set: (v) => cap.setSSAOEnabled(v as boolean),
+      disabled: disabledWhenOff(cap),
     },
   };
 }
@@ -184,6 +202,7 @@ function ssaoFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppSsaoRadius"),
           get: () => cap.getParams().ssaoRadius,
           set: (v) => cap.setSSAORadius(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -194,6 +213,7 @@ function ssaoFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppSsaoMinDist"),
           get: () => cap.getParams().ssaoMinDist,
           set: (v) => cap.setSSAOMinDist(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -204,6 +224,7 @@ function ssaoFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppSsaoMaxDist"),
           get: () => cap.getParams().ssaoMaxDist,
           set: (v) => cap.setSSAOMaxDist(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
     ],
@@ -225,6 +246,7 @@ function reflectionFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           options: [...REFLECTION_MODE_OPTIONS],
           get: () => cap.getParams().reflectionMode,
           set: (v) => cap.setReflectionMode(v as ReflectionMode),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -234,6 +256,7 @@ function reflectionFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
         control: {
           get: () => cap.getParams().reflectorDisableWhenSSR,
           set: (v) => cap.setReflectorDisableWhenSSR(v as boolean),
+          disabled: disabledWhenOff(cap),
         },
       },
     ],
@@ -255,6 +278,7 @@ function ssrFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppSsrOpacity"),
           get: () => cap.getParams().ssrOpacity,
           set: (v) => cap.setSSROpacity(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -265,6 +289,7 @@ function ssrFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppSsrMaxDistance"),
           get: () => cap.getParams().ssrMaxDistance,
           set: (v) => cap.setSSRMaxDistance(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -275,6 +300,7 @@ function ssrFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
           ...getParamRange("ppSsrThickness"),
           get: () => cap.getParams().ssrThickness,
           set: (v) => cap.setSSRThickness(v as number),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -284,6 +310,7 @@ function ssrFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
         control: {
           get: () => cap.getParams().ssrBlur,
           set: (v) => cap.setSSRBlur(v as boolean),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -293,6 +320,7 @@ function ssrFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
         control: {
           get: () => cap.getParams().ssrDistanceAttenuation,
           set: (v) => cap.setSSRDistanceAttenuation(v as boolean),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -302,6 +330,7 @@ function ssrFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
         control: {
           get: () => cap.getParams().ssrFresnel,
           set: (v) => cap.setSSRFresnel(v as boolean),
+          disabled: disabledWhenOff(cap),
         },
       },
       {
@@ -311,6 +340,7 @@ function ssrFolder(cap: PostprocessingCapability): NodeFor<"folder"> {
         control: {
           get: () => cap.getParams().ssrBouncing,
           set: (v) => cap.setSSRBouncing(v as boolean),
+          disabled: disabledWhenOff(cap),
         },
       },
     ],

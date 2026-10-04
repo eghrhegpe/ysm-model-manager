@@ -31,6 +31,11 @@ export interface CapControlView {
   labelKey: LocaleKey | "";
   fallback: string;
   hintKey?: string;
+  /** [2026-10 锐评 P1-3] 控件级禁用谓词（原为 button 专属，现提升为通用通道）。
+   *  半静态求值：进入面板时求一次。语义 = 「该控件当前不具备生效前提」——典型场景是
+   *  后处理子开关在总开关关闭时为 no-op（用户点了没反应），以灰化 + hint 明示，
+   *  而不是静默吞掉交互。仅表达「不可交互」，不改变控件值本身。 */
+  disabled?: () => boolean;
   getValue(): unknown;
   setValue(v: number | string | boolean): void;
   onChange?(v: number | string | boolean): void;
@@ -156,6 +161,24 @@ function ensureCapSection(
   return body;
 }
 
+/** [2026-10 锐评 P1-3] 禁用态统一落地：把 `disabled()` 结果写到行容器与其可交互子元素。
+ *  单一出口，避免 slider/select/toggle/color 四臂各写一遍灰化与 pointer-events（防漂移）。
+ *  行为：行加 `cc-disabled` 类（降透明度）+ `aria-disabled`，子元素 `pointer-events:none`
+ *  阻断交互；`data-disabled` 供测试定位。仅视觉/交互层，不改控件值。
+ *  原因文案统一挂 `title`（四臂布局不一：toggle 有 hint span，slider/select/color 无，
+ *  挂 title 才能一致地在四臂都可见，且不挤占既有 hint 槽位）。 */
+function applyControlDisabled(row: HTMLElement, v: CapControlView): boolean {
+  const d = v.disabled?.() ?? false;
+  if (!d) return false;
+  row.classList.add("cc-disabled");
+  row.setAttribute(ARIA_ATTR.disabled, "true");
+  row.dataset.disabled = "true";
+  row.style.opacity = "0.5";
+  row.style.pointerEvents = "none";
+  row.title = tOf("preview.postprocessingNeedsEnable");
+  return true;
+}
+
 /** toggle：label + hint + 滑动开关 */
 export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
   const row = document.createElement("div");
@@ -189,6 +212,7 @@ export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
     if (toggle.contains(e.target as Node)) return;
     toggle.forceToggle();
   });
+  applyControlDisabled(row, v);
   parent.appendChild(row);
 }
 
@@ -304,6 +328,12 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   updateDisplay(numVal);
   row.append(head, bar);
   if (num) row.append(num);
+  if (applyControlDisabled(row, v)) {
+    // 自绘 cs-bar 非原生控件，无障碍态须显式标注（pointer-events 由行级 none 兜住）
+    bar.setAttribute(ARIA_ATTR.disabled, "true");
+    bar.tabIndex = -1;
+    if (num) num.disabled = true;
+  }
   parent.appendChild(row);
 }
 
@@ -333,6 +363,7 @@ export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
     v.onChange?.(sv);
   };
   row.append(label, sel);
+  if (applyControlDisabled(row, v)) sel.disabled = true;
   parent.appendChild(row);
 }
 
@@ -373,6 +404,7 @@ export function renderCapColor(parent: HTMLElement, v: CapControlView): void {
     v.setValue(parseInt(h.slice(1), 16));
   };
   row.append(label, picker);
+  if (applyControlDisabled(row, v)) picker.disabled = true;
   parent.appendChild(row);
 }
 

@@ -202,7 +202,7 @@ describe("statsCardHTML", () => {
 describe("pageShellHTML", () => {
   it("渲染 #preview-content 壳 + h3（图标 + 转义标题）+ body 原样", () => {
     const html = pageShellHTML({ icon: "<svg></svg>", title: "<x>", body: "<p>b</p>" });
-    expect(html).toContain('<div class="content" id="preview-content">');
+    expect(html).toContain('<div class="content" id="preview-content" data-testid="preview-content">');
     expect(html).toContain("<h3><svg></svg> &lt;x&gt;</h3>");
     expect(html).toContain("<p>b</p>");
   });

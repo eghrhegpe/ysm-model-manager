@@ -129,7 +129,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
     ? `<h3>${authorHtml ? `${authorHtml} ` : ""}<span style="color:var(--txt)">${esc(p.chara || p.raw.replace(/\.[^.]*$/, ""))}</span>${freeBadge}</h3>`
     : `<h3>${esc(name)}${freeBadge}</h3>`;
 
-  return `<div class="content" id="preview-content">
+  return `<div class="content" id="preview-content" data-testid="preview-content">
 ${titleHtml}
 ${workHtml ? `<div class="md-row"><span class="md-label">${t("dialog.work")}</span><span class="md-value">${workHtml}</span></div>` : ""}
 ${tips ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px;line-height:1.6;padding:var(--sp-vh-btn);background:var(--surf);border-radius:var(--radius-md);border-left:3px solid var(--accent)">${tips}</div>` : ""}
@@ -156,7 +156,7 @@ export function summaryCardHTML(
   basename?: string,
 ): string {
   if (!summary && !header) {
-    return `<div class="content" id="preview-content">
+    return `<div class="content" id="preview-content" data-testid="preview-content">
 <h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
 <div class="dp-placeholder">
   <div class="big-icon">${UI_ICONS.file}</div>
@@ -230,7 +230,7 @@ export function summaryCardHTML(
       : `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
     : "";
 
-  return `<div class="content" id="preview-content">
+  return `<div class="content" id="preview-content" data-testid="preview-content">
 <h3>${esc(name)}${freeBadge}</h3>
 
 ${tips ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px;line-height:1.6">${tips}</div>` : ""}

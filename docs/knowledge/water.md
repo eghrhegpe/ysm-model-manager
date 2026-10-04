@@ -47,7 +47,7 @@ pitfalls:
   - 水面有 waterNormalStrength，但材质 normalMap 恒为 null——微细节法线由 fragment 程序化生成，不存在贴图（ADR-271）
   - 水面 mesh 是 scale(uSize,uSize,1) 各向异性缩放：世界量与局部量互换必须成对换算，只修一边等于换一种错法（ADR-257 §6.4）
   - '**波幅写死已被数值探针量化、2026-10-04 修复（ADR-319 D1）**：旧式 `amp = min(0.6·0.82^i / freq, 0.5)` 使 wave0–4 全部顶到上限 0.5（ADR-255 设计的几何级数衰减被抹平）、振幅是**绝对世界米制、不随 waterSize / 池深 / 水位归一**，默认参数实测峰谷差 5.296 m ⇒ **33.17% 越壁、49.14% 穿地**。现 `amp = uWaveHeight·0.26·0.82^i`（0.26 归一 ⇒ Σamp ≡ uWaveHeight），取新默认（waveHeight=0.06、level=0.15、poolHeight=0.3）复测：峰谷差 **0.116 m**、越壁 **0.00%**、穿地 **0.00%**。复现命令 `node scripts/probe-water-wave.ts`（量具非门禁，退出码恒 0；① 段标定自证复刻忠实度）'
-  - '**浪高入口曾完全缺席（2026-10-04 修复，ADR-319 D1）**：面板五个水波旋钮（waveSpeed / choppiness / normalStrength / clarity / size）里不含振幅——`amp` 不进 `steep` 链，`waterChoppiness=0` 时峰谷差零变化（探针实测），即「静水态不可达」且「尖度归零时几何仍大幅起伏、解析法线已判为平面」。现 `waterWaveHeight` 进 schema（默认 0.06，range 0–1），经 `water-params.ts|effectiveWaveHeight` **双向往钳制**：`budget = min(waterLevel, waterPoolHeight − waterLevel)`，上钳治越壁、下钳治穿地，取小者，钳制量在 CPU 侧算好下发。**单向只治一半**（只钳池深时 `waterLevel=0.01` 仍穿地），故 `waterLevel` 默认同步从 0.01 抬到 0.15——别把预算卡死成平面'
+  - '**浪高入口曾完全缺席（2026-10-04 修复，ADR-319 D1）**：面板五个水波旋钮（waveSpeed / choppiness / normalStrength / clarity / size）里不含振幅——`amp` 不进 `steep` 链，`waterChoppiness=0` 时峰谷差零变化（探针实测），即「静水态不可达」且「尖度归零时几何仍大幅起伏、解析法线已判为平面」。现 `waterWaveHeight` 进 schema（默认 0.06，range 0–1），经 `water-params.ts|effectiveWaveHeight` **分形态钳制**：下钳 `min(waterLevel)` 治穿地（film/pool 通用），上钳 `min(waterPoolHeight − waterLevel)` 治越壁（**仅 pool**），钳制量在 CPU 侧算好下发。**上钳不可无条件套用**——film 下 `waterPoolHeight` 滑块隐藏、锁死在默认 0.3，而 `waterLevel` range 到 5.0，无条件「两钳取小」会让水位过 0.3 m 时预算归零、浪高静默死平（落地后子代理复核发现，已改为 `effectiveWaveHeight(forPool)` 按形态传入）。**单向只治一半**（只钳池深时 `waterLevel=0.01` 仍穿地），故 `waterLevel` 默认同步从 0.01 抬到 0.15——别把预算卡死成平面'
   - '**泡沫通道已删（ADR-319 D3b，2026-10-04）**：旧判据 `smoothstep(0.0, -0.25, J)` 要求 `J ≤ 0`（波面自交），与 `Σσ·k ≤ 0.8` 的防自交钳制互斥——探针实测 `choppiness=0.5` 时 `J_min = 0.656`、拖满 1.0 时 `0.379`，**`J ≤ 0` 占比恒 0.00%** ⇒ `vFoam` 恒 0，每顶点白算三项 Jacobian、每片元白跑一次 mix。现已**整条退役**（varying + Jacobian 三项累加 + mix 全删），shader 内无 foam 残留；别按「水面该有白沫」去调 foam 系数，也别把旧通道接回来——原判据（`J ≤ 0`）仍是死通道；要做泡沫须按 ADR-319 D3(a) 重新设计判据与归一（新尺度下 `Σσ·k = 0.8·choppiness`，拖满时 `J_min = 0.379`）'
   - '**频谱锚点错配已修（ADR-319 D2，2026-10-04）**：旧式 `freq = 0.25·1.19^i` ⇒ λ 钉死 [10.53, 25.13] m，而采样可呈现窗口是 `λ ∈ [6·size/segments, size/2]`（`size=10` 六波全超域宽、`size=300` 六波全被 aa 淡出，滑杆展示域却是 10–300 m）。现 `freq = 2π·1.19^i·4/uSize` ⇒ `λ_i = uSize/(4·1.19^i)`，每波长顶点数 = 分段数/(4·1.19^i) **与 uSize 无关**，全域六波恒落窗口内（探针尺寸域扫描：size ∈ {10,20,40,80,160,300} 峰谷差/越壁/穿地/窗口内条数全部不变）。ADR-272 加的「每波长顶点数淡出」治的是**采样不足**，不治**锚点错配**——两者是两笔账，勿混为一谈；锚点归一后淡出成为纯保险（六波全在窗口内时恒为 1）'
   - 结构参数只能动 `transformLinks`（`square` 等比铺满 / `wall` 双轴：x = size、y = 壁高 + 外偏沿法向轴）：**y 轴不得被 size 缩放**（`wallH` 由 h / t 现算，与 size 无关），否则壁高与壁厚会被尺寸连带放大
@@ -169,8 +169,9 @@ invariant_anchors:
 - 外观：`setWaterColor`、`setWaterOpacity`、`setWetness`、`setNormalStrength`、`setClarity`、`setChoppiness`
 - 池体：`setPoolHeight`、`setPoolWallThickness`（**两条均零重建**，ADR-272 §5.1：壁高走 `scale.y`、外偏与光学光程运行期现算）、`setPoolWallColor`、`setPoolRoundness`（钳制同源 schema `range`，ADR-283）
 - 波纹：`setWaveSpeed`、`setWaveHeight`（ADR-319 D1：入 shader 前经 `water-params.ts|effectiveWaveHeight`
-  **双向往容器钳制**——`uWaveHeight` 恒为 `min(waterWaveHeight, min(waterLevel, waterPoolHeight − waterLevel))`，
-  上钳防越壁、下钳防穿地，取小者；值域仍由 schema `range` 唯一给）；时间推进走 `update(dt)` 累加
+  **分形态容器钳制**——`uWaveHeight` 恒为 `min(waterWaveHeight, 下钳)`，下钳 = film 时 `waterLevel`、
+  pool 时 `min(waterLevel, waterPoolHeight − waterLevel)`（上钳防越壁**仅 pool**，film 无壁无上钳；
+  值域仍由 schema `range` 唯一给）；时间推进走 `update(dt)` 累加
   `waterTime`（仅推进 uniform，从不写变换）
 - 倒影（ADR-297）：`setWaterReflectionEnabled` / `setWaterReflectionStrength` / `setWaterReflectionResolution` /
   `setWaterReflectionClipBias` / `setWaterReflectDisableWhenSSR`（getter 同名 get* 族）。构造 opts 含可选 `renderer`/`camera`（registry 传

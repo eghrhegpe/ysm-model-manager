@@ -158,7 +158,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
       const rv = describeVersionRange(m);
       // ADR-131 P3：模型清单（path + 方块数，封顶 200，total 全量）——list 组件占位，
       // 数据经 ListPackModelsDetail 异步取（Go 绑定 / web-fs 镜像同构）
-      return `<div class="content" id="preview-content">
+      return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${UI_ICONS.appearance} ${t("preview.resourcePack")}</h3>
   <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${m.thumbnail ? `<img src="${esc(m.thumbnail)}" alt="pack" style="width:128px;height:128px;object-fit:contain;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;image-rendering:pixelated">` : `<div style="width:128px;height:128px;border-radius:var(--radius-md);border:1px solid var(--bd);align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--surf)"><div style="font-size:var(--fs-xl);line-height:1">${UI_ICONS.error}</div><div style="font-size:var(--fs-sm);color:var(--muted)">${t("preview.noPackPng")}</div></div>`}

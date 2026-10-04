@@ -12,12 +12,19 @@
  *   ③ nth   .nth(N) 字面量数字                                  → 硬编码序号（菜单动态显隐即错位）
  *   ④ text  filter({ hasText: "x" })                             → 命中 i18n locale = 产品文案
  *
+ * 字面量审计（2026-10 补「参数化盲区」）：①② 原只认直调形态，选择器字面量传给自定义
+ * helper（countInShadow / waitForPreviewEl 等）即整体逃出守护。现对 e2e + e2e-web 全量
+ * 「整串选择器字面量」统一过索引（去重直调形态、豁免 #hex 颜色值与运行时 id）：
+ *   #id 有同名 testid → VIOLATION；#id 无 testid / .class 整串 / .first()/.last() → REVIEW
+ *
  * 判定与门禁：
  *   VIOLATION（① id ③ nth ④ text：已有稳定钩子可用 / 结构性脆弱）→ exit 1
  *   MISSING  （① id：源码有 id 但无 testid 钩子，须先补钩子）      → exit 1
- *   REVIEW   （② class：class 有「模板属性 / CSS 定义 / 运行时赋值」三态，关联同元素
- *             testid 不可靠，易误报）→ 仅报告，不入门禁
- *   EXEMPT   （动态 id / 变量 nth / 非 i18n 文案）→ 误报防线，不判定
+ *   REVIEW   （② class / id 无钩子 / 序号定位：三态或合理用法难判）→ 仅报告，不入门禁
+ *   EXEMPT   （动态 id / 变量 nth / 非 i18n 文案 / 颜色值）→ 误报防线，不判定
+ *
+ * 守护自护（2026-10）：i18n locale 索引为空（路径漂移等致 ④ 通道整条空转）→ exit 1，
+ * 真空的守护比没有守护更贵。扫描面 e2e + e2e-web 双目录（与 tsconfig.e2e.json 同域）。
  *
  * 注释掩码：扫描前剥离 // 与 /* *\/ 注释（行号 / 偏移守恒），避免「注释里引用旧脆弱写法」
  * 被误判为违规（越写清楚注释越报红）。
@@ -31,8 +38,10 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const FE = path.join(ROOT, "frontend");
 const E2E = path.join(FE, "e2e");
+const E2EWEB = path.join(FE, "e2e-web");
 const SRC = path.join(FE, "src");
-const LOCALES = path.join(SRC, "core/i18n/locales");
+// 2026-10 修：原指 core/i18n/locales（不存在的目录）→ localeStrings 恒空、④ text 通道整条空转
+const LOCALES = path.join(SRC, "locales");
 
 const rel = (f) =>
   path
@@ -164,16 +173,30 @@ if (fs.existsSync(LOCALES)) {
   }
 }
 const localeList = [...localeStrings];
+// 守护自护（2026-10）：locale 索引为空 = ④ text 通道整条退化为 EXEMPT 空转（历史病灶：
+// LOCALES 曾指向不存在的目录，门禁恒绿而 i18n 文案定位无人守护）——空索引即门禁失败，
+// 真空的守护比没有守护更贵
+if (!localeStrings.size) {
+  console.error(
+    `❌ i18n locale 索引为空（${rel(LOCALES)} 不存在或无可解析文案）——④ text 通道真空，按守护失败处理`,
+  );
+  process.exit(1);
+}
 
 // ───────── 扫 e2e ─────────
-if (!fs.existsSync(E2E)) {
+// 2026-10 扩：e2e-web（真 WebGL 套件）与 e2e 同属 Playwright 用例域（tsconfig.e2e.json 双目录
+// 同型检查面），定位通道守护一并纳入——此前 web 套件 14 例整体在扫描盲区
+const e2eDirs = [E2E, E2EWEB].filter((d) => fs.existsSync(d));
+if (!e2eDirs.length) {
   console.log("⚠️ 无 frontend/e2e 目录，跳过 e2e 定位通道守护");
   process.exit(0);
 }
-const e2eFiles = fs
-  .readdirSync(E2E)
-  .filter((n) => /\.ts$/.test(n))
-  .map((n) => path.join(E2E, n));
+const e2eFiles = e2eDirs.flatMap((dir) =>
+  fs
+    .readdirSync(dir)
+    .filter((n) => /\.ts$/.test(n))
+    .map((n) => path.join(dir, n)),
+);
 
 const V = [],
   M = [],
@@ -316,6 +339,86 @@ for (const f of e2eFiles) {
         why: "非 i18n 文案（测试自注入 / mock 数据）",
       });
   }
+
+  // ── 字面量审计（①②通道参数化盲区反制，2026-10）──
+  // ①/② 原只认直调形态（getElementById / querySelector / locator 的实参），把选择器字面量
+  // 传给自定义 helper（countInShadow / waitForPreviewEl 等）即整体逃出守护——spec 越
+  // helper 化，门禁可视面越单调收缩。此处对「整串选择器字面量」统一过索引：
+  //   #id：源码有同名 testid → VIOLATION（稳定钩子可用须换）；无 testid → REVIEW（补钩
+  //        债务可见化——直调形态保留原 MISSING 硬门禁语义，此处不重复硬闸）；源码无此
+  //        id → EXEMPT（运行时生成）；#hex 颜色值 → EXEMPT
+  //   .class 整串：REVIEW only（与 ② 通道政策一致——class 三态判定不可靠，不入门禁）
+  const dedupPrefix = (i) =>
+    /(?:getElementById|querySelector(?:All)?|locator)\(\s*$/.test(
+      s.slice(Math.max(0, i - 40), i),
+    );
+  for (const m of s.matchAll(/(["'`])(#[\w-]+)\1/g)) {
+    const i = m.index;
+    if (dedupPrefix(i)) continue; // 直调形态已被 ① 通道判定，去重
+    const sel = m[2],
+      id = sel.slice(1);
+    if (/^#[0-9a-fA-F]{3}$/.test(sel) || /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(sel)) {
+      EX.push({ ...at(i), ch: "id", raw: sel, why: "CSS 颜色值（#hex）" });
+      continue;
+    }
+    const rec = idIndex.get(id);
+    if (!rec) EX.push({ ...at(i), ch: "id", raw: sel, why: "源码无此 id（运行时生成）" });
+    else if (rec.testid)
+      V.push({
+        ...at(i),
+        ch: "id",
+        key: id,
+        rec,
+        via: "literal-audit",
+        fix: `[data-testid="${rec.testid}"]`,
+      });
+    else
+      R.push({
+        ...at(i),
+        ch: "id",
+        key: sel,
+        rec,
+        fix: `源码 ${rec.file}:${rec.line} 无 data-testid——补钩子或改稳定属性定位`,
+      });
+  }
+  for (const m of s.matchAll(/(["'`])\.([\w-]+)\1/g)) {
+    const i = m.index;
+    if (dedupPrefix(i)) continue;
+    const cls = m[2],
+      rec = clsIndex.get(cls);
+    if (!rec) {
+      // 无源码索引的整串 class 多非选择器（文件扩展名 ".ysm" / 目录名 ".cache" /
+      // 运行时类）——不可判定即不判定（内容丢失须可见 → 进 EX 计数，不入 REVIEW 刷屏）
+      EX.push({
+        ...at(i),
+        ch: "class",
+        raw: m[0],
+        why: "整串 class 无源码索引（扩展名/目录名/运行时类）——不判定",
+      });
+      continue;
+    }
+    R.push({
+      ...at(i),
+      ch: "class",
+      key: `.${cls}`,
+      rec,
+      fix: rec.testids.size
+        ? `可用 [data-testid="${[...rec.testids][0]}"]`
+        : "补 data-testid",
+    });
+  }
+
+  // ── ③+ 序号定位 REVIEW（.first()/.last() 与 .nth(N) 同病：菜单/行序变化即错位；
+  // 与 ③ 一致只 REVIEW 不门禁——集合遍历场景的序号是合理用法）──
+  for (const m of s.matchAll(/\.first\(\)|\.last\(\)/g)) {
+    R.push({
+      ...at(m.index),
+      ch: "nth",
+      key: m[0],
+      rec: null,
+      fix: "序号定位对顺序变化敏感——改语义属性 / testid（集合遍历场景保留变量索引）",
+    });
+  }
 }
 
 // ───────── 报告 ─────────
@@ -361,7 +464,9 @@ for (const [label, bucket] of [
 }
 
 if (R.length) {
-  console.log("\n🔵 REVIEW — class 通道（形态多样，判定不可靠，仅供人工决策，不入门禁）");
+  console.log(
+    "\n🔵 REVIEW — 非门禁通道（class 整串 / id 无钩子 / 序号定位 .first()/.last()，形态多样判定不可靠，仅供人工决策，不入门禁）",
+  );
   const g = new Map();
   for (const x of R) {
     const k = `${x.ch}|${x.key}`;
@@ -398,5 +503,5 @@ if (gate > 0) {
   process.exit(1);
 }
 console.log(
-  "\n✅ e2e 定位通道守护通过：无 id / nth / text 脆弱定位（class 通道仅 REVIEW，不门禁）",
+  "\n✅ e2e 定位通道守护通过：无 id / nth / text 脆弱定位（class / id 无钩子 / 序号定位仅 REVIEW，不门禁）",
 );

@@ -9,23 +9,36 @@ import { localChromiumUse } from "./e2e/browser-path.ts";
 export default defineConfig({
   testDir: "./e2e-web",
   timeout: 20000,
-  globalTimeout: 3 * 60 * 1000,
+  // 2026-10 扩限：SwiftShader 软渲染（CI headless 无 GPU）逐例成本高于本地 GPU 机，
+  // 14 例自然时长贴 3min 曲线即假红——5min 留余量（本地 GPU 机更快，不受影响）
+  globalTimeout: 5 * 60 * 1000,
   maxFailures: 2,
   retries: 0,
   workers: 1,
   reporter: [["list"]],
   use: {
     baseURL: "http://localhost:5199",
-    trace: "on-first-retry",
+    // retries: 0 下 on-first-retry 永不触发（主配置 2026-08 同病已修，web 配置漏跟）→
+    // 失败即留 trace，与主配置 retain-on-failure 纪律对齐
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
     locale: "en-US",
+    // WebGL 软渲染统一（2026-10）：CI headless 无 GPU，SwiftShader 参数原仅三个 spec 级
+    // 钉住（postprocessing / menu-3d-session / water-wave-evidence），web-preview / web-smoke
+    // 无参裸跑 → CI 上 WebGL2 可用性不稳。project 级统一钉住；spec 级 test.use 的
+    // launchOptions 深合并优先（executablePath 硬钉不受影响）。跨环境确定性：软渲染伪影
+    // 不作美术判据（e2e-visual-feedback 卡纪律）。
+    launchOptions: {
+      args: ["--enable-unsafe-swiftshader", "--use-angle=swiftshader"],
+    },
   },
   webServer: {
     command: "npx vite --mode web --port 5199 --host 127.0.0.1",
     url: "http://localhost:5199",
     reuseExistingServer: !process.env.CI,
     cwd: ".",
-    timeout: 30000,
+    // 与主配置同纪律：CI（ubuntu runner）冷启动放宽到 120s（vite web 模式首启含依赖预构建）
+    timeout: 120000,
   },
   projects: [
     {

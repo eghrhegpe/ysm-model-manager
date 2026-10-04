@@ -14,11 +14,10 @@
 //   防假绿灯：每步读回 aria-valuenow / select 值，而非只点了一下）。
 import fs from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
-import { findLocalChromium } from "../e2e/browser-path.ts";
+import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
 
-const CHROME =
-  findLocalChromium() ??
-  `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1228\\chrome-win64\\chrome.exe`;
+// 本机探测不到即启动失败（有意，防全绿假死；旧 ${LOCALAPPDATA} 硬编码兜底已收口进 helper）
+const CHROME = pinnedChromiumOrThrow();
 
 // 软渲染（SwiftShader）：headless 下 WebGL2 可用（与 postprocessing.spec.ts 同款）
 test.use({
@@ -72,11 +71,14 @@ async function openWaterPanel(page: Page): Promise<void> {
   await page.waitForTimeout(1200);
 }
 
-/** 读 cs-bar 滑块的 aria-valuenow（渲染器把当前值烘在属性上——改没改得逞看这里，不看「点开了」） */
+/** 读 cs-bar 滑块的 aria-valuenow（渲染器把当前值烘在属性上——改没改得逞看这里，不看「点开了」）。
+ *  属性缺失（bar 未渲染）→ 空串：调用方断言严格相等（"0"/"1"/"10"/"300"），空串即响亮失败。 */
 async function barValue(page: Page, id: string): Promise<string> {
-  return page
-    .locator(`.mpc-overlay >> [data-testid="${id}"] .cs-bar`)
-    .getAttribute("aria-valuenow");
+  return (
+    (await page
+      .locator(`.mpc-overlay >> [data-testid="${id}"] .cs-bar`)
+      .getAttribute("aria-valuenow")) ?? ""
+  );
 }
 /** 键盘精确置位（cs-bar 支持 Home/End：min/max，无像素换算误差） */
 async function setBarTo(page: Page, id: string, which: "min" | "max"): Promise<void> {

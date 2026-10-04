@@ -76,7 +76,7 @@ npx playwright test --config playwright.config.ts menu-visual
 npx playwright test --config playwright.web.config.ts menu-3d-session
 ```
 
-**软渲染参数**：headless 无 GPU，须在 **spec 级** `test.use({ launchOptions: { args: ["--enable-unsafe-swiftshader", "--use-angle=swiftshader"] } })` 声明（与 `postprocessing.spec.ts` 同款）。`launchOptions` 内的**条件展开会破坏 `test.use`**，须用值级 `??` 兜底。
+**软渲染参数**：headless 无 GPU，须钉 SwiftShader 参数。2026-10 起 `playwright.web.config.ts` **project 级**统一钉住 `args: ["--enable-unsafe-swiftshader", "--use-angle=swiftshader"]`（跨环境确定性，CI 无 GPU 亦可跑）；spec 级 `test.use({ launchOptions })` 仅在需**硬钉 executablePath** 时再写（spec 级 launchOptions 深合并优先）。钉浏览器可执行文件走 `browser-path.ts|pinnedChromiumOrThrow`（探测不到即抛清晰错误防「环境没了全绿」；旧三 spec 各写一份 `${LOCALAPPDATA}` 硬编码兜底已收口）。`launchOptions` 内**条件展开会破坏 `test.use`** 的旧坑仍在，用值级 `??` 兜底。
 
 ## 视觉异常定位：单变量对照实验
 

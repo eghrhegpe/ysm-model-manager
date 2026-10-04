@@ -500,6 +500,22 @@
 | 预览卡片、加密模型、作者信息、动画分组、免费付费 | [摘要生成 summarize](./utils-summarize.md) | - | - |
 | renderMultiAngle / AngleShot | [截图与导出 export](./utils-export.md) | - | - |
 
+## 🎯 边界与豁免
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 磁盘级筛选与高级搜索归 Go（SearchModels），前端不扫磁盘 | [前端只读不判边界与豁免](./fe_go_boundary.md) | - | - |
+| 输入端（磁盘 → 列表）归 Go，展示端（列表 → 视图）豁免 | [前端只读不判边界与豁免](./fe_go_boundary.md) | 前端扫磁盘 / 重算归属语义 = 违反回归红线 | - |
+| 树内即时过滤是对 Go 已交付内存全量的 UI 收窄，不是归属重算 | [前端只读不判边界与豁免](./fe_go_boundary.md) | - | - |
+
+## 🎯 前端分层
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| core 准入三条全满足才可入；绑定能力走依赖注入不走直引 | [前端分层 seam 与 import 路径](./fe_layering_seams.md) | core 直引 backend/* 或 features 直引 backend/app.ts = 门禁阻断 | - |
+| features 拿 backend 能力唯一出口是 *-deps.ts seam + 注入形态 | [前端分层 seam 与 import 路径](./fe_layering_seams.md) | - | - |
+| import 非精确同目录一律 @/顶层/具体文件，禁裸目录聚口 | [前端分层 seam 与 import 路径](./fe_layering_seams.md) | - | - |
+
 ## 🎯 业务对话框
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -594,6 +610,14 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 该子域是否直读 App 的共享基础设施字段？是 → 不切（复合域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install_domain_split.md) | importModelFolderAs 宿主在 app_files.go（files 域），被 files 域绑定与 install 组合链三方共用 | - |
+
+## 🎯 代际守卫
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 判断「全仓干净」用 grep 实证，不引用历史注脚作证据 | [代际守卫唯一出口 createLoadGuard](./load_guard.md) | - | - |
+| 想迁移/收敛 load-guard.ts 前，先查 ADR-230 | [代际守卫唯一出口 createLoadGuard](./load_guard.md) | - | - |
+| 新增代际逻辑时，唯一出口是 createLoadGuard() 四件套 | [代际守卫唯一出口 createLoadGuard](./load_guard.md) | 迁移或删除 load-guard.ts = 违反 ADR-230 | - |
 
 ## 🎯 菜单测试 / cap 节点树断言 / 布局快照债务
 
@@ -995,6 +1019,12 @@
 | lockfile-frontend 检查假红排查：先手动  看真实报错 | `cd frontend && pnpm install --frozen-lockfile` | - |
 | 离屏 Canvas 不释放 | - | 内存泄漏、连续截图卡死；必须在完成回调里 release |
 | blob URL 不 revokeObjectURL | - | 浏览器内存累积；导出 / 失败分支都必须 revoke |
+| 展示端豁免仅限，触及磁盘 I/O 或归属语义重算即越界 | `内存全量 entries 的展示层收窄` | - |
+| 绑定命令漏  会产出 `.js` 并清掉 git 跟踪的 `.ts`（回归红线） | `-ts` | - |
+| 跨类型切换误用 （同源替换才走它） | `switchTo` | - |
+| 三套门禁同号异策——R5 在 check-layering 是 seam 红线、在 check-path-hygiene 是同目录别名提示，勿混（见下方对照表） | - | - |
+| core 测试文件同样受 check-layering R6 约束（引擎无关对 type 感知不成立） | - | - |
+| HTML 字面量存量在 baseline 只减不增，触碰即顺手收敛，新增即红 | - | - |
 | 目录层级变动后,vi.mock 字符串路径与 import 同步重算(ADR-170 实测:非 import 语句正则扫不到 mock 路径变更) | - | - |
 | modal-core.ts VIEW_TESTIDS 是契约测试静态聚合的单一事实源,增删 data-testid 必须同步本数组,否则契约测试静默漏检 | - | - |
 | tag-editor.ts 标签建议列表未做去重,上游标签集含重复时 UI 会渲染重复条目(已知限制,非 bug) | - | - |
@@ -1145,6 +1175,9 @@
 | dnd-collector 未做去重 | - | 同文件重复导入；必须在 collector 阶段去重 |
 | 硬切高内聚复合域会把 App god-object 换成，且连带拉扯共享 helper 的宿主域（伪切分） | `接口版 god-object` | - |
 | 包级私有 helper 被多域/多测试直调时，迁移需连带改造测试，成本随调用面放大 | - | - |
+| 单文件目录 ≠ 待收敛孤岛（ADR-230 钉死，迁移 = 违反 ADR + 无谓 churn） | - | - |
+| ≠「全仓零手搓」——范围性目标非穷举保证，判断干净必须 grep 实证 | `D1/D2 已落地` | - |
+| LoadGuard 只管代际不管并发；属并发控制，勿混入 | `单飞 + 尾随补跑` | - |
 | 用  / `getMenuNodes()[1]!.children` 位置索引找节点——菜单增删一项全崩且报不出缺哪个；一律 findNodeById | `nodes[3]!` | - |
 | 归属写成有序  快照——重排即崩；配集合判据 `.sort()).toEqual([...].sort())` | `map(c => c.id)).toEqual([...]` | - |
 | 顺手引入 jest-extended 的 toIncludeSameMembers——仓内无该扩展（vitest ^4 无 setup），成员相等走仓内 sort 集合惯例 | - | - |

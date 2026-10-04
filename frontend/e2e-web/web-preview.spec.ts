@@ -65,8 +65,8 @@ async function dropFixtureYsm(page: Page, fileName: string): Promise<void> {
     async ({ name, b64 }) => {
       const content = document.querySelector("app-content");
       const treeHost = content?.shadowRoot?.querySelector("app-tree");
-      const tree = treeHost?.shadowRoot?.getElementById("tree");
-      if (!tree) throw new Error("app-tree #tree 未就绪，无法派发组件级 DnD");
+      const tree = treeHost?.shadowRoot?.querySelector('[data-testid="tree-root"]');
+      if (!tree) throw new Error("app-tree tree-root 未就绪，无法派发组件级 DnD");
       const bin = atob(b64);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -84,13 +84,14 @@ async function dropFixtureYsm(page: Page, fileName: string): Promise<void> {
 async function dropFile(page: Page, fileName: string, content: string): Promise<void> {
   await page.evaluate(
     async ({ name, body }) => {
-      // 穿透双层 shadow DOM：document → app-content.shadowRoot → app-tree.shadowRoot → #tree。
-      // 组件级 DnD 监听器挂在 #tree 上（import-dnd.ts bindTreeDnD），派发到 document 事件
-      // 无法进入 shadow 边界——此前 web 导入 e2e 静默失效的根因。
+      // 穿透双层 shadow DOM：document → app-content.shadowRoot → app-tree.shadowRoot → tree-root。
+      // 组件级 DnD 监听器挂在 tree（data-testid="tree-root"，import-dnd.ts bindTreeDnD）上，
+      // 派发到 document 事件无法进入 shadow 边界——此前 web 导入 e2e 静默失效的根因。
+      // ADR-133 定位契约：tree 走 testid 通道（#tree id 无稳定钩子，门禁 ① 判 VIOLATION）。
       const content = document.querySelector("app-content");
       const treeHost = content?.shadowRoot?.querySelector("app-tree");
-      const tree = treeHost?.shadowRoot?.getElementById("tree");
-      if (!tree) throw new Error("app-tree #tree 未就绪，无法派发组件级 DnD");
+      const tree = treeHost?.shadowRoot?.querySelector('[data-testid="tree-root"]');
+      if (!tree) throw new Error("app-tree tree-root 未就绪，无法派发组件级 DnD");
       const dt = new DataTransfer();
       dt.items.add(new File([body], name, { type: "application/octet-stream" }));
       const ev = new DragEvent("drop", { bubbles: true, cancelable: true, composed: true });
@@ -178,22 +179,22 @@ async function clickTreeFile(page: Page, idx = 0): Promise<boolean> {
 }
 
 /**
- * 读取 app-preview shadow DOM 内 #preview-content 的文本内容。
+ * 读取 app-preview shadow DOM 内 preview-content（data-testid="preview-content"）的文本内容。
  * app-preview 是 app-content shadow 内的子组件（单层 shadow）。
- * 返回 null 表示组件未挂载或 #preview-content 不存在。
+ * 返回 null 表示组件未挂载或 preview-content 不存在。
  */
 async function previewContentText(page: Page): Promise<string | null> {
   return page.evaluate(() => {
     const content = document.querySelector("app-content");
     const preview = content?.shadowRoot?.querySelector("app-preview");
     if (!preview?.shadowRoot) return null;
-    const el = preview.shadowRoot.querySelector("#preview-content");
+    const el = preview.shadowRoot.querySelector('[data-testid="preview-content"]');
     return el?.textContent?.trim() ?? null;
   });
 }
 
 /**
- * 读取 app-preview shadow DOM 内 #preview-content 的 innerHTML。
+ * 读取 app-preview shadow DOM 内 preview-content 的 innerHTML。
  * 用于断言错误占位（⚠️ 图标 + 错误文案）是否渲染。
  */
 async function previewContentHTML(page: Page): Promise<string | null> {
@@ -201,7 +202,7 @@ async function previewContentHTML(page: Page): Promise<string | null> {
     const content = document.querySelector("app-content");
     const preview = content?.shadowRoot?.querySelector("app-preview");
     if (!preview?.shadowRoot) return null;
-    const el = preview.shadowRoot.querySelector("#preview-content");
+    const el = preview.shadowRoot.querySelector('[data-testid="preview-content"]');
     return el?.innerHTML ?? null;
   });
 }

@@ -24,7 +24,7 @@ export interface ModelDetailMeta {
 /** 模型详情面板（仓库页面） */
 export function modelDetailHTML(meta: ModelDetailMeta | null): string {
   if (!meta) {
-    return `<div class="content" id="preview-content">
+    return `<div class="content" id="preview-content" data-testid="preview-content">
 <h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
 <div class="dp-placeholder">
   <div class="big-icon"></div>
@@ -40,12 +40,12 @@ export function modelDetailHTML(meta: ModelDetailMeta | null): string {
   }
   if (meta.hasError) {
     const errMsg = meta.errorMsg || t("preview.unknownError");
-    return `<div class="content" id="preview-content">
+    return `<div class="content" id="preview-content" data-testid="preview-content">
 <h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
 <div class="err">${UI_ICONS.warning} ${errMsg}</div>
 </div>`;
   }
-  return `<div class="content" id="preview-content">
+  return `<div class="content" id="preview-content" data-testid="preview-content">
 <h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
 <div class="md-row"><span class="md-label">${t("preview.nameLabel")}</span><span class="md-value">${esc(meta.name || "-")}</span></div>
 <div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value">${esc(meta.author || "-")}</span></div>
@@ -99,7 +99,7 @@ export function errorPlaceholderHTML(message: string): string {
 
 /** 预览页统一骨架：#preview-content > h3(icon + title) + body。title 内部转义，body 原样 */
 export function pageShellHTML(opts: { icon: string; title: string; body: string }): string {
-  return `<div class="content" id="preview-content">
+  return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${opts.icon} ${esc(opts.title)}</h3>
   ${opts.body}
 </div>`;
@@ -133,7 +133,7 @@ export function tabbedShellHTML(opts: {
         `  <div id="preview-${p.key}"${opts.active !== p.key ? ' style="display:none"' : ""}>${p.body}</div>`,
     )
     .join("\n");
-  return `<div class="content" id="preview-content">
+  return `<div class="content" id="preview-content" data-testid="preview-content">
   <div class="pv-tab-row">
 ${tabBtns}
   </div>

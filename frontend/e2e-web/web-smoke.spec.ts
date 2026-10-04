@@ -14,13 +14,14 @@ import { expect, type Page, test } from "@playwright/test";
 async function dropFile(page: Page, fileName: string, content: string): Promise<void> {
   await page.evaluate(
     async ({ name, body }) => {
-      // 穿透双层 shadow DOM：document → app-content.shadowRoot → app-tree.shadowRoot → #tree。
-      // 组件级 DnD 监听器挂在 #tree 上（import-dnd.ts bindTreeDnD），派发到 document 事件
-      // 无法进入 shadow 边界——此前 web 导入 e2e 静默失效的根因。
+      // 穿透双层 shadow DOM：document → app-content.shadowRoot → app-tree.shadowRoot → tree-root。
+      // 组件级 DnD 监听器挂在 tree（data-testid="tree-root"，import-dnd.ts bindTreeDnD）上，
+      // 派发到 document 事件无法进入 shadow 边界——此前 web 导入 e2e 静默失效的根因。
+      // ADR-133 定位契约：tree 走 testid 通道（#tree id 无稳定钩子，门禁 ① 判 VIOLATION）。
       const content = document.querySelector("app-content");
       const treeHost = content?.shadowRoot?.querySelector("app-tree");
-      const tree = treeHost?.shadowRoot?.getElementById("tree");
-      if (!tree) throw new Error("app-tree #tree 未就绪，无法派发组件级 DnD");
+      const tree = treeHost?.shadowRoot?.querySelector('[data-testid="tree-root"]');
+      if (!tree) throw new Error("app-tree tree-root 未就绪，无法派发组件级 DnD");
       const dt = new DataTransfer();
       dt.items.add(new File([body], name, { type: "application/octet-stream" }));
       const ev = new DragEvent("drop", { bubbles: true, cancelable: true, composed: true });

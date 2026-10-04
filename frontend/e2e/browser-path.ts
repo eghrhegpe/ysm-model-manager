@@ -260,3 +260,21 @@ export function localChromiumUse(): { launchOptions?: { executablePath: string }
   const p = findLocalChromium();
   return p ? { launchOptions: { executablePath: p } } : {};
 }
+
+/**
+ * WebGL 链路（e2e-web spec 级硬钉 executablePath）：探测命中 → 返回钉住的 chromium；
+ * 探测不到 → 抛清晰错误（有意语义：环境缺失即启动失败，防「环境没了测试却全绿」，
+ * 见 e2e-web/postprocessing.spec.ts 头注）。
+ *
+ * 2026-10 收口：此前三个 e2e-web spec 各自 `?? 硬编码 ${LOCALAPPDATA}\ms-playwright\
+ * chromium-1228\chrome.exe` 兜底——跨平台假路径（Linux/CI 上 LOCALAPPDATA 未定义、
+ * 修订号 1228 写死），且三份复制。兜底逻辑归本模块单点：抛错而非给假路径。
+ */
+export function pinnedChromiumOrThrow(opts: { preferFull?: boolean } = {}): string {
+  const p = findLocalChromium(undefined, undefined, opts);
+  if (p) return p;
+  throw new Error(
+    `[e2e-web] 无可用本机 chromium（browsersRoot=${browsersRoot() ?? "不可推导"}）：` +
+      `先跑 pnpm exec playwright install chromium，或用 PLAYWRIGHT_BROWSERS_PATH 指到既有浏览器目录`,
+  );
+}

@@ -36,7 +36,7 @@ export async function showVrmMeta(
       const m = meta as Record<string, unknown> | null;
       if (!m || (!m.name && !(m.authors as string[])?.length)) {
         // 无 meta（非标准 VRM 或解析失败）→ 仅名称
-        return `<div class="content" id="preview-content">
+        return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
@@ -71,7 +71,7 @@ export async function showVrmMeta(
             <span>${UI_ICONS.avatar} ${t("preview.stats.morphs")}: <b>${s.morphCount}</b></span>
           </div>`
           : "";
-      return `<div class="content" id="preview-content">
+      return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     ${thumb}
@@ -104,7 +104,7 @@ export async function showMmdPreview(
     label,
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content">
+      return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
@@ -155,7 +155,7 @@ export async function showFbxPreview(
     label,
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content">
+      return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${icon} ${label}</h3>
   <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
@@ -177,7 +177,7 @@ export async function showScenePreview(
     label: t("preview.sceneModel"),
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content">
+      return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${UI_ICONS.build} ${t("preview.sceneModel")}</h3>
   <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
@@ -203,7 +203,7 @@ export async function showMorphPreview(
     label: t("preview.customMorph"),
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content">
+      return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${UI_ICONS.avatar} ${t("preview.customMorph")}</h3>
   <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>
@@ -272,7 +272,7 @@ export async function showStagePreview(
     label: t("preview.stageAnim"),
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content">
+      return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${UI_ICONS.voice} ${t("preview.stageAnim")}</h3>
   <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
     <div><strong>${renderFormattedText(basename)}</strong></div>

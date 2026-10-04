@@ -1603,6 +1603,10 @@ export const autoSidebar = [
             "link": "/knowledge/event-graph-guard"
           },
           {
+            "text": "前端分层 seam 与 import 路径",
+            "link": "/knowledge/fe_layering_seams"
+          },
+          {
             "text": "解析簇 parsers/ 自 backend 迁出",
             "link": "/knowledge/frontend_parsers"
           },
@@ -2069,6 +2073,10 @@ export const autoSidebar = [
             "link": "/knowledge/export"
           },
           {
+            "text": "前端只读不判边界与豁免",
+            "link": "/knowledge/fe_go_boundary"
+          },
+          {
             "text": "全局导入执行 import-executor",
             "link": "/knowledge/import-queue"
           },
@@ -2235,6 +2243,10 @@ export const autoSidebar = [
           {
             "text": "覆盖率门禁语句加权口径",
             "link": "/knowledge/go_coverage_gate"
+          },
+          {
+            "text": "代际守卫唯一出口 createLoadGuard",
+            "link": "/knowledge/load_guard"
           },
           {
             "text": "mock 路径守卫 check-mock-paths",

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 199 张知识卡
+> 总计: 202 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -40,7 +40,7 @@
 - **scripts_lib_adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
 - **scripts_readme_index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
-## core（24 张）
+## core（25 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -57,6 +57,7 @@
 | 🍃 e2e-visual-feedback | E2E 视觉反馈（截图取证） | leaf | — | 看界面长什么样, 截图取证, 视觉异常定位, 界面回归验证, 假绿灯排查, 需要真 3D 会话 |
 | 🏗 event-bus | 事件总线 bus.ts | architecture | — | 事件, 事件总线, 通信, emit, 跨组件通信, bus |
 | 🍃 event-graph-guard | Bus 事件契约守卫 | leaf | — | 未传参, 缺参, bus 事件, 事件契约, 事件漂移, 内联脚本, 可选链, 跨行调用 |
+| 🍃 fe_layering_seams | 前端分层 seam 与 import 路径 | leaf | — | src/core 想新增文件或依赖前, features 模块需要拿到 backend 能力时, 写 import 犹豫用 @/ 还是 ../ 时, 门禁报 check-layering / check-path-hygiene 编号不知道查哪条 |
 | 🏗 frontend_parsers | 解析簇 parsers/ 自 backend 迁出 | architecture | — | 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射, voxel 管线（voxel-bits/pipeline/三视图）/ ysm-header / nbt-parse 定位 |
 | 🏗 frontend_test_audit | 前端测试基建审计 | architecture | — | 代码审核, 测试基建, 契约测试, e2e, flaky, 假绿, 覆盖盲区 |
 | 🏗 global-handlers | 全局事件处理 global-handlers | architecture | — | 全局事件, 拖拽导入, 拖拽提示, 同步缺失, 清空整合包, 导出清单 |
@@ -82,6 +83,7 @@
 - **core-error-diary**（UI 报错落日记 error-diary）：把 UI 层的错误/告警（toast、未捕获异常、未处理拒绝、logWarn/logError）统一净化后写入运行时日志环（go/logs），诊断页可回溯。**core 不感知 Wails、不摸 window**：落盘通道 `DiarySi…
 - **e2e-visual-feedback**（E2E 视觉反馈（截图取证））：让 agent「看到」界面长什么样的三条通路。本卡记录**方法**与**踩过的坑**，不记录具体 UI 布局。
 - **event-graph-guard**（Bus 事件契约守卫）：`scripts/event-graph.ts` 是 Bus 事件契约的唯一机器守卫：从 `frontend/src/bus.ts` 的 `BusEvents`
+- **fe_layering_seams**（前端分层 seam 与 import 路径）：前端三大分层约束的完整版（原 AGENTS.md「src/core 准入」「features→backend seam」「前端 import 路径约定」三节全文迁入，2026-10-04 常驻层瘦身）。执法闸：`scripts/check-…
 - **frontend_parsers**（解析簇 parsers/ 自 backend 迁出）：`frontend/src/parsers/`：纯解析层，自 `backend/` 迁出（ADR-170 第一段）。含 YSM 头/摘要、NBT、体素（voxel，7cace0d59 拆为公共件 4 + 三视图 3）、zip 解包、pack…
 - **frontend_test_audit**（前端测试基建审计）：2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.ts` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（1…
 - **global-handlers**（全局事件处理 global-handlers）：全局 handler 注册入口在 ADR-188 中从 `core/handlers/global.ts` 汇编壳收敛为 **app-content 直接编排**：`connectedCallback` 依次调 `registerSync`…
@@ -93,7 +95,7 @@
 - **theme**（主题系统 theme）：主题系统的纯逻辑实现在 `frontend/src/theme-core.ts`（2026-08-17 神桶拆分自 `app-modules.ts`；`app-modules.ts` 仅 re-export `applyTheme/init…
 - **ysm-baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
-## feature（17 张）
+## feature（18 张）
 
 *业务功能（导入队列、同步、社区）*
 
@@ -105,6 +107,7 @@
 | 🏗 download-queue-store | 下载队列状态机 download-queue-store | architecture | — | 下载队列状态, 入队 / 取消 / 恢复, Wails 进度事件, 社区下载状态层 |
 | 🍃 download-tasks | 下载任务执行层 download-tasks | leaf | — | 下载任务构建, 下载大小策略, 选中集转下载任务, 社区下载前置决策 |
 | 🏗 export | 截图导出 export | architecture | — | 截图, 导出 PNG, 多角度截图, 透明背景, 预览缓存, blob URL, saveScreenshot, renderMultiAngle |
+| 🍃 fe_go_boundary | 前端只读不判边界与豁免 | leaf | — | 判断某个过滤/归类逻辑该放前端还是 Go, 树内即时搜索/排序想下沉磁盘前, 跨资源类型切换的实现选型, Wails 绑定生成相关疑问 |
 | 🏗 import-queue | 全局导入执行 import-executor | architecture | io-bound | 导入, 导入队列, 拖拽导入, 文件夹导入, 覆盖导入, import, 拖拽 |
 | 🏗 oldest-models | 资历最深模型 oldest-models | architecture | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
 | 🏗 preview-controls | 3D 预览控制器（声明式菜单节点） | architecture | — | 3D 控制器, MMD 播放, 截图按钮, 相机控制, 模型切换, 3D 入口, nav-fab, siblings, 容器内模型, 资源包模型直达 |
@@ -125,6 +128,7 @@
 - **download-queue-store**（下载队列状态机 download-queue-store）：创意工坊批量下载队列的状态层（模块级 Store）。ADR-040 ≤400 行红线拆分产物：自 `download-queue.ts`（原超长文件）拆出，类型 / STATE / Go 调用 / 后端事件注册全部内聚于此。v2：模块级持久…
 - **download-tasks**（下载任务执行层 download-tasks）：创意工坊下载任务构建 + 大小策略纯函数层。自 `community/events.ts` 抽出：下载大小决策（4MB 确认 / 10MB 拒绝）与选中集 → 下载任务列表的构建逻辑，供单测覆盖（ADR-023 L3）。与 `downloa…
 - **export**（截图导出 export）：> **差异化定位**：`utils-export.md`（utils 分类）回答"截图/缓存**怎么写**"（API 签名、淘汰策略、dispose 顺序）；本 feature 卡回答"用户点截图按钮后**发生了什么**"——从触发入口到…
+- **fe_go_boundary**（前端只读不判边界与豁免）：回归红线「前端只读不判」的完整版（原 AGENTS.md「职责归属——前端 vs Go」豁免注脚全文迁入，2026-10-04 常驻层瘦身）。
 - **import-queue**（全局导入执行 import-executor）：**2026-08-05 重构**：原 `import-queue.ts`（导入 tab UI 层）与 `ImportHistory`（内存导入历史）已全部删除。导入改为**全局静默执行**架构——拖拽/选择文件直接走 `import-ex…
 - **oldest-models**（资历最深模型 oldest-models）：`oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按…
 - **preview-controls**（3D 预览控制器（声明式菜单节点））：> ⚠️ **重要前提（ADR-076 v2 Phase 2 重构后）**：相机操作已收编进**核心声明式根菜单**（⚙️ 按钮 → `mountPreviewRootMenu` 的 `camera` 项），底部导航弹窗已删除。现存的 `m…
@@ -381,7 +385,7 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/preview-3d/menu/shell/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 s…
 - **ui_components**（UI 组件簇（原 ui 收容所，已归位））：原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front…
 
-## utils（31 张）
+## utils（32 张）
 
 *工具函数（display、fmt、dom、animation）*
 
@@ -396,6 +400,7 @@
 | 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
 | 🏗 go_coverage_gate | 覆盖率门禁语句加权口径 | architecture | — | 覆盖率门禁, go 覆盖率, 包覆盖率 0%, 单函数拖垮整包, coverprofile 解析 |
+| 🍃 load_guard | 代际守卫唯一出口 createLoadGuard | leaf | — | 新增需要「丢弃过期一轮结果」的代际逻辑, 见到单文件目录想顺手收敛进 utils/base/, 判断全仓代际守卫是否还有手搓残留, 想给 LoadGuard 加并发限制之前 |
 | 🏗 mock_path_guard | mock 路径守卫 check-mock-paths | architecture | — | vi.mock 失效, mock 路径守卫, mock-path-ignore, ADR-224, 测试隔离静默丢失 |
 | 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离, 逃生留痕 |
 | 🏗 pre_push_gate | 推送前门禁 pre-push-gate | architecture | — | 推送门禁, 质量门禁, 门禁阻断, 域级检查, go build, vite build, 契约测试, 工具输出解析 |
@@ -430,6 +435,7 @@
 - **dom_tooltip**（悬浮提示 tooltip）：3D 预览控制层的自定义悬浮提示组件（单例 light DOM），替代原生 `title` 的迟缓黄气泡（~1s 延迟、样式不可控）。毛玻璃风格对齐 3D HUD（`fab.ts` `.ysm-3d-popup` 同族）；tooltip 节…
 - **format-ysm-anim-config**（YSM 动画分组与配置菜单提取）：前端镜像 Go 端 `appendAnimGroupsAndConfigs` 逻辑的纯函数模块（`summary.go`）。加密 `.ysm` 经 WASM 解码后，`ysm.json` 的 `properties` 字段可读，但原 `wa…
 - **go_coverage_gate**（覆盖率门禁语句加权口径）：`scripts/check-go-coverage-threshold.ts` 消费 `go test -coverprofile` 产物，按包比对覆盖率阈值。
+- **load_guard**（代际守卫唯一出口 createLoadGuard）：`utils/async/load-guard.ts` 是全仓唯一代际守卫出口，由 **ADR-230 钉死**。本卡承接原 AGENTS.md「src/core 准入准则」下的 ADR-230 注脚链全文（2026-10-04 迁入，常驻…
 - **mock_path_guard**（mock 路径守卫 check-mock-paths）：ADR-224 落地：vitest 的 `vi.mock("<path>")` 对**不存在的模块路径静默不命中也不报错**（host 视为 auto-mock）。模块因重构/rename 被移动后，测试里指向旧路径的 mock 失效——m…
 - **pre-commit-hook**（提交前钩子 pre-commit）：`.githooks/pre-commit` 在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17…
 - **pre_push_gate**（推送前门禁 pre-push-gate）：`.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（编译/测试/…

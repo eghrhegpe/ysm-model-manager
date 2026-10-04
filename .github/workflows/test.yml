@@ -304,7 +304,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   # ── E2E（Playwright · vite dev 纯前端 + mock bridge，参照 MikuMikuAR 实证模式）──
-  # 参数：全局 7 分钟总限 / 每用例 15s / 累计 5 次失败阻断（maxFailures=5）——ADR-037 接入参数。
+  # 参数：全局 7 分钟总限 / 每用例 15s / 累计 2 次失败阻断（maxFailures=2，playwright.config.ts:16）——ADR-037 接入参数。
   # webServer 自动管理 vite dev 生命周期（playwright.config.ts）。
   e2e:
     name: E2E（Playwright）
@@ -339,7 +339,7 @@ jobs:
         working-directory: frontend
         run: pnpm exec tsc -p tsconfig.e2e.json --noEmit
 
-      - name: E2E 测试（7min 总限 / 15s 每项 / maxFailures=5）
+      - name: E2E 测试（7min 总限 / 15s 每项 / maxFailures=2）
         working-directory: frontend
         run: pnpm exec playwright test --reporter=line
 
@@ -351,7 +351,11 @@ jobs:
           path: frontend/test-results/
           if-no-files-found: ignore
 
+      # 「可选非门禁」意图与行为对齐（2026-10）：默认 bash -e 下多行 run 里 coverage 步失败
+      # 会连坐整个 step（名义非门禁、实际门禁）——continue-on-error 让「非门禁」名副其实。
+      # 广度报告仍是产物上传，只是不再阻断 pipeline。
       - name: E2E 覆盖广度采集（ADR-035 G-4，可选非门禁）
+        continue-on-error: true
         working-directory: frontend
         run: |
           pnpm exec playwright test --config playwright.coverage.config.ts
@@ -361,4 +365,50 @@ jobs:
         with:
           name: e2e-coverage-report
           path: frontend/e2e-coverage/
+          if-no-files-found: ignore
+
+  # ── E2E-Web（Playwright · 真 WebGL 管线 + SwiftShader 软渲染，ADR-049 web 版）──
+  # 2026-10 接入：此前 e2e-web 套件（真 3D 会话 / 像素读回 / 菜单巡检 14 例）在 CI 零执行，
+  # 是「纯本地仪式」（锐评 🔴-3）。SwiftShader 参数已下沉 playwright.web.config.ts
+  # project 级统一钉住，ubuntu runner 无 GPU 亦可确定性软渲染。
+  # 类型检查复用 e2e job 的 tsconfig.e2e.json（双套件同域，不重复跑）。
+  e2e-web:
+    name: E2E-Web（真 WebGL）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: 缓存 Playwright 浏览器
+        uses: actions/cache@v5.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-browsers-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: 安装 Playwright Chromium
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E-Web 测试（20s 每项 / 5min 总限 / SwiftShader 软渲染）
+        working-directory: frontend
+        run: pnpm exec playwright test --config playwright.web.config.ts --reporter=line
+
+      - name: 上传 E2E-Web 报告（失败时保留现场）
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-web-report
+          path: frontend/test-results/
           if-no-files-found: ignore

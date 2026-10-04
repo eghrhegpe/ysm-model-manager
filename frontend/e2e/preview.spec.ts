@@ -125,7 +125,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     await clickTreeFile(page, 0);
 
     // 硬断言 1：preview-content 必须在 app-preview shadowRoot 内出现
-    const contentFound = await waitForPreviewEl(page, "#preview-content", 8000);
+    const contentFound = await waitForPreviewEl(page, '[data-testid="preview-content"]', 8000);
     expect(contentFound).toBe(true);
 
     // 硬断言 2：tab 按钮出现——证明 showModelDetail 已执行（初始占位无 tab 按钮）
@@ -221,7 +221,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     await clickTreeFile(page, 0);
 
     // 等 #preview-content 渲染（showModelDetail 初始 innerHTML 即含它）
-    const contentFound = await waitForPreviewEl(page, "#preview-content", 8000);
+    const contentFound = await waitForPreviewEl(page, '[data-testid="preview-content"]', 8000);
     expect(contentFound).toBe(true);
 
     // 详情/骨骼 tab 行（与 FAB 无关的稳定锚点）
@@ -240,12 +240,12 @@ test.describe("模型详情预览页（app-preview）", () => {
 
     await clickTreeFile(page, 0);
 
-    const contentFound = await waitForPreviewEl(page, "#preview-content", 8000);
+    const contentFound = await waitForPreviewEl(page, '[data-testid="preview-content"]', 8000);
     expect(contentFound).toBe(true);
 
     // 稳定性断言：预览区不白屏（preview-content 持续存在，轮询 3s 吸收渲染抖动，
     // 替代固定 waitForTimeout(500) 防慢环境 flake）
-    const stillThere = await waitForPreviewEl(page, "#preview-content", 3000);
+    const stillThere = await waitForPreviewEl(page, '[data-testid="preview-content"]', 3000);
     expect(stillThere).toBe(true);
   });
 
@@ -300,7 +300,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     ).toBe(true);
 
     // 硬断言：预览区不白屏（#preview-content 仍存在）
-    const contentStillThere = await waitForPreviewEl(page, "#preview-content", 3000);
+    const contentStillThere = await waitForPreviewEl(page, '[data-testid="preview-content"]', 3000);
     expect(contentStillThere).toBe(true);
   });
 
@@ -317,7 +317,7 @@ test.describe("模型详情预览页（app-preview）", () => {
     //   tpl.ts:24 `<div class="dp-placeholder">`
     //   tpl.ts:26 `<div class="dp-hint">${t("preview.clickFileHint")}</div>`
     //   en.ts:857 "preview.clickFileHint": "Click a file in the left repository to view details"
-    const contentFound = await waitForPreviewEl(page, "#preview-content", 8000);
+    const contentFound = await waitForPreviewEl(page, '[data-testid="preview-content"]', 8000);
     expect(contentFound).toBe(true);
 
     // 断言占位提示文案出现（en-US locale）

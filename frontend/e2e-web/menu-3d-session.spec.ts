@@ -14,11 +14,10 @@
 // 运行：
 //   npx playwright test --config playwright.web.config.ts menu-3d-session
 import { expect, type Page, test } from "@playwright/test";
-import { findLocalChromium } from "../e2e/browser-path.ts";
+import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
 
-const CHROME =
-  findLocalChromium() ??
-  `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1228\\chrome-win64\\chrome.exe`;
+// 本机探测不到即启动失败（有意，防全绿假死；旧 ${LOCALAPPDATA} 硬编码兜底已收口进 helper）
+const CHROME = pinnedChromiumOrThrow();
 
 // 软渲染（SwiftShader）：与 postprocessing.spec.ts 同款，headless 下 WebGL2 可用
 test.use({

@@ -17,7 +17,9 @@
  *   - 按 quick_groups 值分组，组内按 quick_intents 排序（稳定）
  *   - pitfalls 独立汇总到「高频陷阱速查」段
  *   - 关联 ADR 取自卡片的 adr: 字段；无则填 -
- *   - 仅处理 tier: architecture 且带 quick_groups 的卡
+ *   - 仅处理 status ∈ {active, 缺省} 且带 quick_groups 的卡（2026-10 由 tier: architecture 闸换成
+ *     status 闸：原过滤静默挡掉 52 张带 quick_* 的 leaf 卡、反向放行 6 张 draft/snapshot arch 卡；
+ *     路由表该管生命周期（活/冻结），不卡入口/细节层级。draft/snapshot/archived/superseded 一律剔除）
  *
  * 用法:
  *   node scripts/gen-routes-quick.ts            # 写入 docs/knowledge/routes-quick.md
@@ -259,7 +261,11 @@ function main() {
     if (KNOWLEDGE_NON_CARDS.has(f)) continue;
     const text = fs.readFileSync(path.join(KNOW_DIR, f), "utf8");
     if (!parseFrontmatter(text)) continue;
-    if (fm(text, "tier") !== "architecture") continue;
+    // status 闸（替换原 tier: architecture 闸，理由见 JSDoc「输出分组」）：
+    // 只收 active（缺 status 字段缺省 active）卡——draft/snapshot/archived/superseded 是冻结/草稿
+    // 生命周期，不进 AI 路由表；tier 不再参与过滤（leaf 卡带 quick_* 同样可达）
+    const status = fm(text, "status") || "active";
+    if (status !== "active") continue;
     const groups = fmList(text, "quick_groups");
     if (!groups.length) continue;
     cards.push({

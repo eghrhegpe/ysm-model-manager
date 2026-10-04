@@ -30,6 +30,39 @@ function makeMesh(opts: { mats?: number } = {}) {
   return new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), matCount === 1 ? mats[0] : mats);
 }
 
+describe("RenderModeCapability — 多材质覆盖账本（锐评 X-1 回归）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("两个 mesh 部分清除：关线框后**每个** mesh 都回落（原全局 Set 只还原第一个）", () => {
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    const cap = newCap(meshA, meshB);
+    const matA = meshA.material as THREE.MeshBasicMaterial;
+    const matB = meshB.material as THREE.MeshBasicMaterial;
+    cap.setWireframe(true);
+    expect(matA.wireframe).toBe(true);
+    expect(matB.wireframe).toBe(true);
+    cap.setWireframe(null); // 部分清除（只清 wireframe）——正是原实现漏还原的路径
+    expect(matA.wireframe, "第一个材质回落").toBe(false);
+    expect(matB.wireframe, "第二个材质同样必须回落（原实现残留 true = 画面直接错）").toBe(false);
+  });
+
+  it("账本按材质隔离：A 的属性清除不误伤 B 的其余属性覆盖", () => {
+    const meshA = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    const meshB = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    const cap = newCap(meshA, meshB);
+    const matA = meshA.material as THREE.MeshBasicMaterial;
+    const matB = meshB.material as THREE.MeshBasicMaterial;
+    cap.setWireframe(true);
+    cap.setDepthWrite(false);
+    cap.setWireframe(null); // 只清 wireframe
+    for (const m of [matA, matB]) {
+      expect(m.wireframe, "wireframe 已回落").toBe(false);
+      expect(m.depthWrite, "depthWrite 覆盖必须仍在").toBe(false);
+    }
+  });
+});
+
 describe("RenderModeCapability — 构造与初始状态", () => {
   beforeEach(() => { resetEnvState(); });
 

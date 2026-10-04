@@ -474,6 +474,27 @@ describe("FogCapability — apply 管线", () => {
     expect((scene.fog as THREE.Fog).color.getHex()).toBe(0x123456);
   });
 
+  it("[X-2] near ≥ far 的脏组合不落进 GLSL 未定义域：渲染侧 far 抬到 near + 1", () => {
+    const scene = new THREE.Scene();
+    const cap = new FogCapability({ scene });
+    cap.setEnabledFog(true);
+    cap.setLinearRange(500, undefined); // 先把近端拖到上限
+    cap.setLinearRange(undefined, 10); // 再把远端拖到下限 ⇒ near(500) ≥ far(10)
+    const fog = scene.fog as THREE.Fog;
+    expect(fog.near).toBe(500);
+    expect(fog.far, "far 至少比 near 大 1（否则 smoothstep(edge0 ≥ edge1) 落进未定义域）").toBe(501);
+  });
+
+  it("[X-2] 正常组合原样透传：规范化不误伤合法值", () => {
+    const scene = new THREE.Scene();
+    const cap = new FogCapability({ scene });
+    cap.setEnabledFog(true);
+    cap.setLinearRange(20, 300);
+    const fog = scene.fog as THREE.Fog;
+    expect(fog.near).toBe(20);
+    expect(fog.far).toBe(300);
+  });
+
   it("切换模式重建雾对象（Fog ↔ FogExp2 类型不同，必然新建）", () => {
     const scene = new THREE.Scene();
     const cap = new FogCapability({ scene });

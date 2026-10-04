@@ -124,21 +124,26 @@ export class RenderModeCapability implements SceneCapability {
     }
   }
 
-  /** 单属性应用：override 非 null → 用它；override null 且曾被覆盖 → 回落快照；从未覆盖 → 保持现值 */
+  /** 单属性应用：override 非 null → 用它；override null 且**该材质**曾被覆盖 → 回落快照；从未覆盖 → 保持现值 */
   private applyProp<T>(
     key: string,
-    _mat: THREE.MeshBasicMaterial,
+    mat: THREE.MeshBasicMaterial,
     ov: T | null,
     orig: MaterialSnapshot | undefined,
     set: (v: T) => void,
   ): void {
+    // [锐评 X-1 2026-10-04] 覆盖账本必须按 **(材质, 属性)** 记账，不能只按属性名：
+    // 原实现用全局 `Set<属性名>`，首个材质回落后就 `delete(key)`，其余材质 `has(key)` 变 false
+    // ⇒ 多 mesh 场景下「关线框」只有一个 mesh 回退（画面直接错）。
+    // 测试盲区 = 部分清除用例只用了单材质；多材质用例走的是全清路径（restoreSnapshot 遍历全部）。
+    const propKey = `${mat.uuid}:${key}`;
     if (ov !== null) {
-      this.coveredProps.add(key);
+      this.coveredProps.add(propKey);
       set(ov as T);
       return;
     }
-    if (this.coveredProps.has(key)) {
-      this.coveredProps.delete(key);
+    if (this.coveredProps.has(propKey)) {
+      this.coveredProps.delete(propKey);
       if (orig !== undefined) set(orig[key as keyof MaterialSnapshot] as unknown as T);
     }
   }

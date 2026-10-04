@@ -421,8 +421,8 @@ three 0.186.1 的 `MeshPhysicalMaterial` **没有这个属性**（grep `src/mate
 
 | # | 子系统 | 病症模式 | 证据 | 判定 | 状态 |
 |---|---|---|---|---|---|
-| X-1 | render-mode | **部分撤销只还原第一个材质**：`coveredProps` 是全局 `Set<属性名>`，首个材质 `delete` 后其余材质 `has()` 为 false ⇒ 多 mesh 时残留覆盖（开线框 + X 光后关线框，只有一个 mesh 回退） | `render-mode-capability.ts:89` / `:140-143` | **P1（画面直接错）** | 待修 |
-| X-2 | fog | `fogNear`×`fogFar` 无跨字段约束 ⇒ near > far 落入 GLSL `smoothstep(edge0 ≥ edge1)` 未定义域，且无测试覆盖 | `env-state-schema.ts:411,417` / `fog-capability.ts:102-103` | P2 | 待修 |
+| X-1 | render-mode | **部分撤销只还原第一个材质**：`coveredProps` 是全局 `Set<属性名>`，首个材质 `delete` 后其余材质 `has()` 为 false ⇒ 多 mesh 时残留覆盖（开线框 + X 光后关线框，只有一个 mesh 回退） | `render-mode-capability.ts:89` / `:140-143` | **P1（画面直接错）** | **已修**：账本改按 `uuid:key` 记账 + 两条多材质用例 |
+| X-2 | fog | `fogNear`×`fogFar` 无跨字段约束 ⇒ near > far 落入 GLSL `smoothstep(edge0 ≥ edge1)` 未定义域，且无测试覆盖 | `env-state-schema.ts:411,417` / `fog-capability.ts:102-103` | P2 | **已修**：消费点 `normalizeFogRange`（far ≥ near+1）+ 两条用例；**「显示值 ≠ 生效值」的 far 滑杆 hint 出口登记未接**（免与并行会话在改的 3 个 locale 文件冲突） |
 | X-3 | light | 环境光 ×0.5 让位判据读 sky **自宣退役**的 `skyEnvironment`（真供图者已是 `envSource`）⇒ IBL 在场却不让位（双间接光过亮）；ambient 滑杆无 hint 出口 | `light-capability.ts:847-849` vs `sky-capability.ts:354`、`light-controls.ts:360-364` | P2 | 待修 |
 | X-4 | sky | `skyElevation`/`skyAzimuth` 幽灵键：构造读入 → `apply()` 内 `syncSunFromTime()` 覆盖，且 `saveState` 不落 / `loadState` 不恢复 ⇒ `setSun()` 效果活不过一次 apply | `sky-capability.ts:274-275,489,801-803,944-955` | P2 | 待修 |
 | X-5 | shadow | 四档白名单只装在 `setMapSize`，`loadState` 恢复侧裸奔且 schema 无 `range` ⇒ 脏档值原样进 `mapSize.set()`，脱离 UI 可达域 | `shadow-capability.ts:412` vs `:522`、`env-state-schema.ts:431` | P2 | 待修 |

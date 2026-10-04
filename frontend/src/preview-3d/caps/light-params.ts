@@ -45,7 +45,10 @@ export interface LightInstanceParams {
   enabled: boolean;
   color: number;
   intensity: number;
-  /** 方位角（度，0=+X 东，90=+Z 南，180=-X 西，270=-Z 北；Y-up 坐标系） */
+  /** 方位角（度，罗盘式方位；Y-up 坐标系，X=东 / Z=南）：
+   *  0=+Z 南，90=+X 东，180=-Z 北，270=-X 西。
+   *  ⚠️ 与 light-capability.lightDirToPosition 公式对齐（文档跟公式）：x=h·sin(az)、z=h·cos(az)。
+   *  实例语义：默认 key=30°（南偏东）、fill=-30°（南偏西）、rim=180°（北）——三盏布光方位以此为准。 */
   azimuth: number;
   /** 仰角（度，0=水平，90=正上；负值=地面下） */
   elevation: number;

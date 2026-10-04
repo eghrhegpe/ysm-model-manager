@@ -82,7 +82,17 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       }
     }
     class FakeLight {
-      position = { set: vi.fn(), copy: vi.fn() };
+      static instances: FakeLight[] = [];
+      // [S1] 由 {set,copy} mock 改为真 FakeVec：copy 真实记录落位值，directional 落位断言直读
+      position = new FakeVec();
+      color: unknown;
+      intensity: unknown;
+      target: unknown = null;
+      constructor(color?: unknown, intensity?: unknown) {
+        this.color = color;
+        this.intensity = intensity;
+        FakeLight.instances.push(this);
+      }
     }
     // [ADR-266-d1] 带 lights 的路径首次进测试：applyLights 需要 Object3D（共享靶点）、
     // SpotLight（位置光 + target 绑定）与 MathUtils.degToRad 才走得下去
@@ -90,14 +100,45 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       position = new FakeVec();
       target: unknown = null;
     }
+    // [S1] 记录构造实参与实例（spot/point candela 补偿与共享靶点断言用）：
+    // 真实 SpotLight 构造签名 (color, intensity, distance, angle, penumbra, decay)
     class FakeSpotLight {
+      static instances: FakeSpotLight[] = [];
       position = new FakeVec();
       target: unknown = null;
-      constructor(..._a: unknown[]) {}
+      color: unknown;
+      intensity: unknown;
+      distance: unknown;
+      angle: unknown;
+      penumbra: unknown;
+      decay: unknown;
+      constructor(
+        color?: unknown, intensity?: unknown, distance?: unknown,
+        angle?: unknown, penumbra?: unknown, decay?: unknown,
+      ) {
+        this.color = color;
+        this.intensity = intensity;
+        this.distance = distance;
+        this.angle = angle;
+        this.penumbra = penumbra;
+        this.decay = decay;
+        FakeSpotLight.instances.push(this);
+      }
     }
     class FakePointLight {
+      static instances: FakePointLight[] = [];
       position = new FakeVec();
-      constructor(..._a: unknown[]) {}
+      color: unknown;
+      intensity: unknown;
+      distance: unknown;
+      decay: unknown;
+      constructor(color?: unknown, intensity?: unknown, distance?: unknown, decay?: unknown) {
+        this.color = color;
+        this.intensity = intensity;
+        this.distance = distance;
+        this.decay = decay;
+        FakePointLight.instances.push(this);
+      }
     }
     class FakeWebGLRenderer {
       static toDataURLValue = "data:image/png;base64,QUFB";
@@ -248,6 +289,9 @@ beforeEach(() => {
   // 缺省无锥（= 无灯光 / 无光柱路径）；需要锥的用例自行 stubConeReturn()
   coneMock.mockReturnValue(null);
   threeStub.WebGLRenderer.instances.length = 0; // 防跨测试累积
+  threeStub.DirectionalLight.instances.length = 0; // [S1] 灯光桩实例记录逐用例清零（Ambient/Directional 同 FakeLight 类，共享静态数组）
+  threeStub.SpotLight.instances.length = 0;
+  threeStub.PointLight.instances.length = 0;
   getAppMock.mockResolvedValue({ GetModel3DSpec: specMock });
   specMock.mockResolvedValue(validSpec);
   loadTexturesMock.mockResolvedValue([{}]);
@@ -439,5 +483,103 @@ describe("renderMultiAngle — 体积光锥与输出设置同构（ADR-266-d1）
     };
     expect(r.toneMapping).toBeUndefined();
     expect(r.toneMappingExposure).toBeUndefined();
+  });
+});
+
+// ===== [S1] 截图灯光 candela 补偿与共享靶点同构 =====
+// 预览侧 applyLightParams 把 UI intensity 反推回坎德拉；截图侧 applyLights 走同一份
+// spotDistanceAttenuation。主链盲区：两侧公式同源却无人断言「离屏灯强度」——以下直读桩构造实参。
+describe("renderMultiAngle — 灯光对象落地（S1 照度守恒）", () => {
+  function makeLights(over: Partial<ScreenshotLights> = {}): ScreenshotLights {
+    return {
+      ambient: { color: 0xffffff, intensity: 0.3 },
+      radius: 8,
+      key: { ...DEFAULT_LIGHT_PARAMS.key, type: "spot" as const, enabled: true },
+      fill: { ...DEFAULT_LIGHT_PARAMS.fill, enabled: false },
+      rim: { ...DEFAULT_LIGHT_PARAMS.rim, enabled: false },
+      volumetric: {
+        slot: "key",
+        spot: { ...DEFAULT_LIGHT_PARAMS.key, type: "spot" as const, enabled: true },
+        params: { ...DEFAULT_LIGHT_PARAMS.volumetric, enabled: true },
+      },
+      output: null,
+      ...over,
+    };
+  }
+
+  it("spot：candela 补偿 = p.intensity/falloff(radius)，距离/衰减/颜色透传，落位同预览公式", async () => {
+    const lights = makeLights();
+    await renderMultiAngle("/m/a.ysm", [], { lights });
+    const { lightDirToPosition, spotDistanceAttenuation } = await import(
+      "@/preview-3d/caps/light-capability.ts"
+    );
+    const origin = new threeStub.Vector3(0, 0, 0); // 模型中心（Box3 size 2 → center 0）
+    const spot = lights.key; // spot 参数
+    const expectedPos = lightDirToPosition(spot, lights.radius).add(
+      new threeStub.Vector3(0, 0, 0),
+    );
+    const d0 = expectedPos.distanceTo(origin);
+    const falloff = spotDistanceAttenuation(d0, spot.distance, spot.decay);
+    const s = threeStub.SpotLight.instances.at(-1)!;
+    expect(s, "应创建一盏 SpotLight").toBeDefined();
+    expect(s.intensity).toBeCloseTo(spot.intensity / falloff, 6); // 到达靶点照度守恒
+    expect(s.distance).toBe(spot.distance);
+    expect(s.decay).toBe(spot.decay);
+    expect(s.color).toBe(spot.color);
+    // 灯位 = 模型中心 + 方位角/仰角 × radius（与预览 lightPosition 同式）
+    expect(s.position.x).toBeCloseTo(expectedPos.x, 5);
+    expect(s.position.y).toBeCloseTo(expectedPos.y, 5);
+    expect(s.position.z).toBeCloseTo(expectedPos.z, 5);
+  });
+
+  it("point：同吃 candela 补偿（spot/point 单一事实源），非裸强度", async () => {
+    const key = { ...DEFAULT_LIGHT_PARAMS.key, type: "point" as const, enabled: true };
+    const lights = makeLights({ key, volumetric: null });
+    await renderMultiAngle("/m/a.ysm", [], { lights });
+    const { lightDirToPosition, spotDistanceAttenuation } = await import(
+      "@/preview-3d/caps/light-capability.ts"
+    );
+    const pos = lightDirToPosition(key, lights.radius);
+    const d0 = pos.distanceTo(new threeStub.Vector3(0, 0, 0));
+    const falloff = spotDistanceAttenuation(d0, key.distance, key.decay);
+    const p = threeStub.PointLight.instances.at(-1)!;
+    expect(p.intensity).toBeCloseTo(key.intensity / falloff, 6);
+    expect(p.distance).toBe(key.distance);
+    expect(p.decay).toBe(key.decay);
+    expect(p.color).toBe(key.color);
+  });
+
+  it("多盏 spot 共享同一靶点对象（target 同一实例，位置=模型中心）", async () => {
+    const fill = { ...DEFAULT_LIGHT_PARAMS.fill, type: "spot" as const, enabled: true };
+    await renderMultiAngle("/m/a.ysm", [], { lights: makeLights({ fill }) });
+    const spots = threeStub.SpotLight.instances;
+    expect(spots.length).toBeGreaterThanOrEqual(2);
+    const t0 = spots[0]!.target;
+    expect(t0).toBeDefined();
+    expect(t0).not.toBeNull();
+    for (const s of spots) {
+      expect(s.target).toBe(t0); // 同一 Object3D 实例（防各灯各自 new 靶点、定向失效）
+    }
+    const target = t0 as { position: { x: number; y: number; z: number } };
+    expect(target.position.x).toBe(0);
+    expect(target.position.y).toBe(0);
+    expect(target.position.z).toBe(0);
+  });
+
+  it("directional：落位同预览公式（position - origin ≈ lightDirToPosition），target 共享", async () => {
+    const key = { ...DEFAULT_LIGHT_PARAMS.key, enabled: true };
+    const lights = makeLights({ key, volumetric: null });
+    await renderMultiAngle("/m/a.ysm", [], { lights });
+    const { lightDirToPosition } = await import("@/preview-3d/caps/light-capability.ts");
+    // AmbientLight 的 target 为 null，DirectionalLight 的 target 是共享靶点（非 null）——据此区分
+    const dir = threeStub.DirectionalLight.instances.find((l) => l.target !== null);
+    expect(dir, "应创建一盏 DirectionalLight").toBeDefined();
+    expect(dir!.target).not.toBeNull();
+    const expected = lightDirToPosition(key, lights.radius).add(new threeStub.Vector3(0, 0, 0));
+    expect(dir!.position.x).toBeCloseTo(expected.x, 5);
+    expect(dir!.position.y).toBeCloseTo(expected.y, 5);
+    expect(dir!.position.z).toBeCloseTo(expected.z, 5);
+    expect(dir!.intensity).toBe(key.intensity); // directional 无 candela 补偿
+    expect(dir!.color).toBe(key.color);
   });
 });

@@ -147,41 +147,91 @@ const KEY_CHANGES = lightChangeSet("key");
 const FILL_CHANGES = lightChangeSet("fill");
 const RIM_CHANGES = lightChangeSet("rim");
 
-const VOL_PARAM_CHANGES: Set<EnvStateKey> = new Set([
-  "lightVolumetricOpacity",
-  "lightVolumetricFogPower",
-  "lightVolumetricEdgeFade",
-  "lightVolumetricBaseStrength",
-  "lightVolumetricTipStrength",
-]);
+// [S1 收口 2026-10-04] 手写键表与 FLATTEN_MAP 脱节问题在此收口：
+//   - VOL_PARAM_CHANGES 原手抄 5 键，现从 FLATTEN_MAP.volumetric 派生（白名单排除
+//     enabled/driver 两个「存在性」键——它们属锥体重建分支而非 uniforms 更新）。
+//   - CONE_GEO / CONE_MOVE 同样派生：字段全集取 FLATTEN_MAP 槽位值域，归属由下方
+//     `satisfies` 字段表声明（改字段名即编译红；新增字段须显式归类到三集之一）。
+//   - 对照闸 assertConeChangeSetConsistent：派生结果不得产出 FLATTEN_MAP 之外的键，
+//     且槽位字段全集必须被「几何 ∪ 位置 ∪ uniform」穷尽——强制「改字段全集必须核对」。
+
+/** 体积光 uniforms 变更键集：从 FLATTEN_MAP.volumetric 派生（白名单排除 enabled/driver）。
+ *  导出供测试对照——确保「派生的就是期望的」，防派生逻辑自身跑偏。 */
+export function volParamKeys(): Set<EnvStateKey> {
+  const { enabled, driver, ...rest } = FLATTEN_MAP.volumetric;
+  return new Set<EnvStateKey>(Object.values(rest));
+}
+
+const VOL_PARAM_CHANGES: Set<EnvStateKey> = volParamKeys();
+
+/** 按字段子集从 FLATTEN_MAP 三槽位值域派生扁平键集（单源，零手抄键字符串） */
+function lightSlotFieldKeys(fields: readonly (keyof LightInstanceParams)[]): Set<EnvStateKey> {
+  const out = new Set<EnvStateKey>();
+  for (const which of LIGHT_SLOTS) {
+    const m = FLATTEN_MAP[which];
+    for (const f of fields) out.add(m[f]);
+  }
+  return out;
+}
 
 /** 影响锥体几何（形状/存在性）的字段：type/enabled/angle/penumbra 变化才需 dispose+重建；
  *  颜色/强度/距离/衰减只动 uniforms，方位角/仰角只动 transform。
  *  （旧实现：任意 spotlight 字段变更都整组重建，拖滑块即 GC 抖动。） */
-const CONE_GEO_CHANGES: Set<EnvStateKey> = new Set([
-  "lightKeyType",
-  "lightFillType",
-  "lightRimType",
-  "lightKeyEnabled",
-  "lightFillEnabled",
-  "lightRimEnabled",
-  "lightKeyAngle",
-  "lightFillAngle",
-  "lightRimAngle",
-  "lightKeyPenumbra",
-  "lightFillPenumbra",
-  "lightRimPenumbra",
-]);
+const CONE_GEO_FIELDS = [
+  "type",
+  "enabled",
+  "angle",
+  "penumbra",
+] as const satisfies readonly (keyof LightInstanceParams)[];
+const CONE_GEO_CHANGES: Set<EnvStateKey> = lightSlotFieldKeys(CONE_GEO_FIELDS);
 
 /** 只改变光源位置（不影响锥形）的字段 → 锥体 syncPosition */
-const CONE_MOVE_CHANGES: Set<EnvStateKey> = new Set([
-  "lightKeyAzimuth",
-  "lightFillAzimuth",
-  "lightRimAzimuth",
-  "lightKeyElevation",
-  "lightFillElevation",
-  "lightRimElevation",
-]);
+const CONE_MOVE_FIELDS = [
+  "azimuth",
+  "elevation",
+] as const satisfies readonly (keyof LightInstanceParams)[];
+const CONE_MOVE_CHANGES: Set<EnvStateKey> = lightSlotFieldKeys(CONE_MOVE_FIELDS);
+
+/** 槽位字段中既不动几何也不动位置、只走 uniforms 快路径（lightTouched 分支）的字段——
+ *  与上两集构成字段全集的三分法，缺一即对照闸红。 */
+const CONE_UNIFORM_FIELDS = [
+  "color",
+  "intensity",
+  "distance",
+  "decay",
+] as const satisfies readonly (keyof LightInstanceParams)[];
+
+/** [S1 对照闸] 派生键表与 FLATTEN_MAP 的双向对账：
+ *  ①派生结果不得含 FLATTEN_MAP 之外的键（改映射结构而派生没跟上 → 幽灵键/漏键，启动即红）；
+ *  ②每个槽位字段必须归入几何/位置/uniform 之一（新增字段漏归类 → 点名报错，强制人工核对）。
+ *  纯派生自 FLATTEN_MAP，正常情况下恒通过；本闸拦截的是「字段全集变了而派生没跟着改」。 */
+function assertConeChangeSetConsistent(): void {
+  const universe = new Set<EnvStateKey>([
+    ...LIGHT_SLOTS.flatMap((w) => Object.values(FLATTEN_MAP[w])),
+    ...Object.values(FLATTEN_MAP.volumetric),
+  ]);
+  const derived = new Set<EnvStateKey>([
+    ...CONE_GEO_CHANGES,
+    ...CONE_MOVE_CHANGES,
+    ...volParamKeys(),
+    ...lightSlotFieldKeys(CONE_UNIFORM_FIELDS),
+  ]);
+  for (const k of derived) {
+    if (!universe.has(k)) {
+      throw new Error(`[light] 派生变更集出现 FLATTEN_MAP 之外的键：${k}`);
+    }
+  }
+  for (const which of LIGHT_SLOTS) {
+    for (const k of Object.values(FLATTEN_MAP[which])) {
+      if (!derived.has(k)) {
+        throw new Error(
+          `[light] 灯光字段 ${k} 未归类到锥体变更集（几何/位置/uniform）——新增字段须显式归类`,
+        );
+      }
+    }
+  }
+}
+assertConeChangeSetConsistent();
 
 /** [ADR-293] 触发菜单刷新（subscribe notify）的离散键集：点击式开关/选择——总开关、
  *  三槽位类型/开关、体积光开关/驱动源、helper 线框开关；连续滑块（intensity/azimuth/
@@ -289,16 +339,19 @@ export class LightCapability implements SceneCapability {
     // [light-gizmo] 每盏灯配一个类型相关 helper（颜色区分），visible 绑 enabled
     this.keyHelper = this.createHelper(
       this.keyLight,
+      "key",
       DIR_HELPER_COLORS.key,
       "ysm-light-key-helper",
     );
     this.fillHelper = this.createHelper(
       this.fillLight,
+      "fill",
       DIR_HELPER_COLORS.fill,
       "ysm-light-fill-helper",
     );
     this.rimHelper = this.createHelper(
       this.rimLight,
+      "rim",
       DIR_HELPER_COLORS.rim,
       "ysm-light-rim-helper",
     );
@@ -341,7 +394,7 @@ export class LightCapability implements SceneCapability {
 
     // [ADR-293] helper 可见性翻转：三副线框重新套显隐门禁（灯本体与锥体不动）
     if (changed.has("lightHelperVisible")) {
-      for (const which of LIGHT_SLOTS) this.syncHelper(which, readLightParams(which, state));
+      for (const which of LIGHT_SLOTS) this.syncHelper(which);
     }
 
     // ambient：总是刷新（依赖 caps 查询器的 sky 环境开关，非纯 envState 派生）
@@ -398,7 +451,7 @@ export class LightCapability implements SceneCapability {
       this.setLight(which, next);
       this.setHelper(
         which,
-        this.createHelper(next, DIR_HELPER_COLORS[which], `ysm-light-${which}-helper`),
+        this.createHelper(next, which, DIR_HELPER_COLORS[which], `ysm-light-${which}-helper`),
       );
       if (this.enabled) {
         this.mountLight(which);
@@ -416,7 +469,7 @@ export class LightCapability implements SceneCapability {
     }
 
     this.applyLightParams(current, p);
-    this.syncHelper(which, p);
+    this.syncHelper(which);
   }
 
   private getLight(which: LightKey): THREE.Light {
@@ -511,15 +564,29 @@ export class LightCapability implements SceneCapability {
     }
   }
 
+  /** helper 可见性的唯一谓词（[S1 收口] 三处调用点统一单源）：
+   *  = 能力总闸 ∧ 本灯 enabled ∧ lightHelperVisible。
+   *  ⚠️ 旧实现三分歧：createHelper 用 `light.visible`（= 本灯开）顶替、缺能力总闸；
+   *  syncHelper 仅「本灯 ∧ 线框闸」、同样缺能力总闸——总闸关时这两处会漏放线框；
+   *  mountHelper 三项齐全。单源后三处语义一致，杜绝再手抄第三份。 */
+  private helperVisibleFor(which: LightSlot, masterOn: boolean): boolean {
+    return masterOn && readLightParams(which).enabled && envState.lightHelperVisible;
+  }
+
   /** 类型相关 helper 工厂 */
-  private createHelper(light: THREE.Light, color: number, name: string): THREE.Object3D {
+  private createHelper(
+    light: THREE.Light,
+    which: LightSlot,
+    color: number,
+    name: string,
+  ): THREE.Object3D {
     let h: THREE.Object3D;
     if (light instanceof THREE.SpotLight) h = new THREE.SpotLightHelper(light, color);
     else if (light instanceof THREE.PointLight) h = new THREE.PointLightHelper(light, 1, color);
     else h = new THREE.DirectionalLightHelper(light as THREE.DirectionalLight, 2, color);
     h.name = name;
-    // [ADR-293] helper 可见 = 本灯开 && 线框总闸开（重建即取当前门禁态）
-    h.visible = light.visible && envState.lightHelperVisible;
+    // [ADR-293] helper 可见 = 能力总闸 ∧ 本灯开 ∧ 线框总闸（谓词单源，重建即取当前门禁态）
+    h.visible = this.helperVisibleFor(which, this.enabled);
     return h;
   }
 
@@ -533,11 +600,11 @@ export class LightCapability implements SceneCapability {
     else this.rimHelper = h;
   }
 
-  /** helper 显隐 = 本灯 enabled && [ADR-293] lightHelperVisible 总闸 + 几何重算 */
-  private syncHelper(which: LightKey, p: LightInstanceParams): void {
+  /** helper 显隐（谓词单源：能力总闸 ∧ 本灯 enabled ∧ lightHelperVisible）+ 几何重算 */
+  private syncHelper(which: LightKey): void {
     const h = this.getHelper(which);
     if (!h) return;
-    h.visible = p.enabled && envState.lightHelperVisible;
+    h.visible = this.helperVisibleFor(which, this.enabled);
     const updatable = h as unknown as { update?: () => void };
     updatable.update?.();
   }
@@ -570,13 +637,13 @@ export class LightCapability implements SceneCapability {
     }
   }
 
-  /** 把单盏灯的 helper 挂到场景并同步显隐（[ADR-293] 显隐 = 总闸 ∧ 本灯开关 ∧ 线框总闸——
+  /** 把单盏灯的 helper 挂到场景并同步显隐（[S1 收口] 谓词单源：能力总闸 ∧ 本灯开关 ∧ 线框总闸——
    *  单独 loadState 后总开关为 off 时 helper 也不该可见） */
   private mountHelper(which: LightKey): void {
     const h = this.getHelper(which);
     if (!h) return;
     if (!h.parent) this.scene.add(h);
-    h.visible = this.enabled && readLightParams(which).enabled && envState.lightHelperVisible;
+    h.visible = this.helperVisibleFor(which, this.enabled);
     (h as unknown as { update?: () => void }).update?.();
   }
 
@@ -630,7 +697,7 @@ export class LightCapability implements SceneCapability {
       const light = this.getLight(which);
       const p = readLightParams(which);
       this.applyLightParams(light, p);
-      this.syncHelper(which, p);
+      this.syncHelper(which);
     }
     this.rebuildConeIfNeeded(envState);
   }
@@ -679,7 +746,7 @@ export class LightCapability implements SceneCapability {
       const light = this.getLight(which);
       const p = readLightParams(which);
       this.applyLightParams(light, p);
-      this.syncHelper(which, p);
+      this.syncHelper(which);
     }
     this.rebuildConeIfNeeded(envState);
   }
@@ -694,7 +761,11 @@ export class LightCapability implements SceneCapability {
    *  重置作用域：它是会话总闸，重置参数不替用户开灯。
    *  不再有任何按模型类别的预设：灯光是场景属性，Three.js 层面无「模型类别」概念；
    *  唯一合法的模型相关输入是包围盒（驱动灯位/坎德拉补偿），已由 setTarget/setTargetHeight 动态处理。
-   *  `source: "manual"`：用户显式重置与拖滑块同源——重置后的值受 shouldOverwrite 保护。 */
+   *  `source: "manual"`：用户显式重置与拖滑块同源——重置后的值受 shouldOverwrite 保护。
+   *  [S1 留痕 2026-10-04] ⚠️ 该 manual 源打 39 键会把灯组键全标为「手动」，会话内
+   *  auto-atmosphere 氛围预设因此不能再写灯——这是既有语义（2026-10-04 审查确认，
+   *  用户裁定保持现状）。后续若改走 auto-model 需同步补回归锁（见本文件 light* 键
+   *  来源纪律测试）。 */
   resetLightParams(): void {
     setEnvState(lightResetPatch(), { source: "manual" });
     // callback 负责 syncLight + 锥体重建（含 volumetric.enabled 变 false 时卸载）+ helper 显隐

@@ -101,10 +101,6 @@ const DEFAULT_BEAM_DIR = new THREE.Vector3(0, -1, 0);
 /** 局部 +Y（锥顶指向）的对齐基准 */
 const LOCAL_UP = new THREE.Vector3(0, 1, 0);
 
-/** 朝向计算暂存（避免每次 sync 分配；本类单实例持有，无重入） */
-const _beamDir = new THREE.Vector3();
-const _beamUp = new THREE.Vector3();
-
 /** 材质上所有可能持有贴图的属性 key */
 const ALL_TEX_KEYS = [
   "map",
@@ -151,6 +147,10 @@ export class VolumetricCone {
   private height = 0;
   /** 最近一次同步的射束方向（世界，光源 → 靶点）——syncPosition 复用，避免重算 */
   private beamDir = new THREE.Vector3(0, -1, 0);
+  /** 朝向计算暂存（避免每次 applyTransform 分配；本类实例字段，非模块级共享——每次
+   *  applyTransform 内局部使用，跨实例无共享故无重入/串改风险） */
+  private beamTmpDir = new THREE.Vector3();
+  private beamTmpUp = new THREE.Vector3();
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -251,19 +251,19 @@ export class VolumetricCone {
     spotlightDir: THREE.Vector3,
   ): void {
     // 退化方向（光源与靶点重合）兜底为垂直向下，区别于「朝向错乱」
-    _beamDir.copy(spotlightDir);
-    if (_beamDir.lengthSq() < 1e-12) _beamDir.copy(DEFAULT_BEAM_DIR);
-    _beamDir.normalize();
-    this.beamDir.copy(_beamDir);
+    this.beamTmpDir.copy(spotlightDir);
+    if (this.beamTmpDir.lengthSq() < 1e-12) this.beamTmpDir.copy(DEFAULT_BEAM_DIR);
+    this.beamTmpDir.normalize();
+    this.beamDir.copy(this.beamTmpDir);
 
     // 局部 +Y（锥顶指向）对齐射束反向；垂直向下时 -dir = +Y → 单位四元数（旧行为逐像素等价）。
     // 同向分支的退化处理由 three 内部负责（setFromUnitVectors 结尾自带 normalize，r<1e-8 分支兜反向）
-    _beamUp.copy(_beamDir).negate();
-    group.quaternion.setFromUnitVectors(LOCAL_UP, _beamUp);
+    this.beamTmpUp.copy(this.beamTmpDir).negate();
+    group.quaternion.setFromUnitVectors(LOCAL_UP, this.beamTmpUp);
     // 几何中心 = 锥顶 + 半高 · 射束方向。
     // 注意符号：ConeGeometry 的锥顶在局部 +Y（向上），而射束向下延伸，故中心须落在
     // 锥顶沿射束「正向」半高处（垂直向下时即 spotlightPos.y - height/2，与旧实现等价）。
-    group.position.copy(spotlightPos).addScaledVector(_beamDir, this.height / 2);
+    group.position.copy(spotlightPos).addScaledVector(this.beamTmpDir, this.height / 2);
   }
 
   /** 更新现有材质 uniforms（setVolumetric 走此路径，不重建几何） */

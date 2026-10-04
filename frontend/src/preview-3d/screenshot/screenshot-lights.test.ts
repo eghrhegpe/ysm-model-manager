@@ -94,6 +94,27 @@ describe("toScreenshotLights — 光柱同构（预览有 ⟺ 截图有）", () 
     const lights = toScreenshotLights()!;
     expect(lights.volumetric?.params.enabled).toBe(false);
   });
+
+  // [S1 skyEnv ambient 分支] 让位系数 ×0.5 是共享单源；输入从 getParams 取，不写死字面量——
+  // 改默认环境光强度时本用例不得因字面量过期而假红/假绿。
+  it("skyEnv 开 → ambient ×0.5 让位（输入读 getParams，防字面量漂移）", () => {
+    const params = makeParams();
+    params.ambient = { color: 0x123456, intensity: 0.4 };
+    stub.cap = makeCap({ params });
+    stub.skyEnv = true;
+    const lights = toScreenshotLights()!;
+    expect(lights.ambient.intensity).toBeCloseTo(params.ambient.intensity * 0.5, 10);
+    // 颜色不被让位影响（只让强度）
+    expect(lights.ambient.color).toBe(params.ambient.color);
+  });
+
+  it("skyEnv 关 → ambient ×1（让位关）", () => {
+    const params = makeParams();
+    params.ambient = { color: 0xffffff, intensity: 0.4 };
+    stub.cap = makeCap({ params });
+    stub.skyEnv = false;
+    expect(toScreenshotLights()!.ambient.intensity).toBeCloseTo(params.ambient.intensity, 10);
+  });
 });
 
 describe("toScreenshotLights — 输出设置镜像（ADR-266-d1 D2）", () => {

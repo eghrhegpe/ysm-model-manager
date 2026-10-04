@@ -3,7 +3,7 @@
 // [light-type-switch] key/fill/rim 统一为 LightInstanceParams（type/enabled/color/intensity/
 // azimuth/elevation/angle/penumbra/distance/decay），原独立 spotlight 灯已删除——
 // 「聚光灯」= 把某盏灯（默认 key）的 type 设为 "spot"，体积光锥由第一盏启用的 spot 灯驱动。
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
 import { LightCapability, spotDistanceAttenuation } from "./light-capability.ts";
 // [作用域三组分治] 组 id 由实现侧导出：测试与实现共用同一常量，防两边平行手抄同一字符串
@@ -1605,5 +1605,195 @@ describe("light-capability 导出工具函数", () => {
     const north = lightDirToPosition({ ...LIGHT_FIELDS_BASE, elevation: 0 }, 5);
     expect(north.z).toBeCloseTo(5, 5);
     expect(north.y).toBeCloseTo(0, 5);
+  });
+
+  // [S1 方位角文档与公式对齐] 数值锁：x=h·sin(az)、z=h·cos(az) 逐点钉死，防将来手改
+  // 公式静默镜像灯架（方位 90 若被误写为 -90，灯位沿东西向翻转而现有用例仍绿）。
+  it("lightDirToPosition 方位角数值锁：az=0→(0,0,+h)、az=90→(+h,0,0)、az=180→(0,0,-h)", async () => {
+    const { lightDirToPosition } = await import("./light-capability.ts");
+    const flat = { ...LIGHT_FIELDS_BASE, elevation: 0 };
+    const h = 5;
+    const south = lightDirToPosition({ ...flat, azimuth: 0 }, h);
+    expect(south.x).toBeCloseTo(0, 5);
+    expect(south.z).toBeCloseTo(h, 5); // 0=+Z 南
+    const east = lightDirToPosition({ ...flat, azimuth: 90 }, h);
+    expect(east.x).toBeCloseTo(h, 5); // 90=+X 东
+    expect(east.z).toBeCloseTo(0, 5);
+    const north = lightDirToPosition({ ...flat, azimuth: 180 }, h);
+    expect(north.x).toBeCloseTo(0, 5);
+    expect(north.z).toBeCloseTo(-h, 5); // 180=-Z 北
+    const west = lightDirToPosition({ ...flat, azimuth: 270 }, h);
+    expect(west.x).toBeCloseTo(-h, 5); // 270=-X 西
+    expect(west.z).toBeCloseTo(0, 5);
+    // 距离守恒：任何方位角下灯位距原点恒为 h
+    for (const az of [0, 90, 180, 270, 30, -30]) {
+      const p = lightDirToPosition({ ...flat, azimuth: az }, h);
+      expect(Math.hypot(p.x, p.y, p.z)).toBeCloseTo(h, 5);
+    }
+  });
+
+  // [S1 键表派生] volParamKeys 从 FLATTEN_MAP.volumetric 派生，白名单排除 enabled/driver。
+  // 有消费者即证明派生未脱节：派生的就是期望的，期望的写在字面量断言里（防派生逻辑自身跑偏）。
+  it("volParamKeys：体积光 uniforms 键集 = FLATTEN_MAP.volumetric 除 enabled/driver 外全部", async () => {
+    const { volParamKeys } = await import("./light-capability.ts");
+    const keys = volParamKeys();
+    expect(keys).toEqual(
+      new Set([
+        "lightVolumetricOpacity",
+        "lightVolumetricFogPower",
+        "lightVolumetricEdgeFade",
+        "lightVolumetricBaseStrength",
+        "lightVolumetricTipStrength",
+      ]),
+    );
+    // 两个「存在性」键不得混入 uniforms 变更集（它们属锥体重建分支）
+    expect(keys.has("lightVolumetricEnabled")).toBe(false);
+    expect(keys.has("lightVolumetricDriver")).toBe(false);
+    // 与 FLATTEN_MAP.volumetric 值域双向一致：派生集 ⊆ 值域，且排除集 = 全集 - 派生集
+    const universe = new Set<EnvStateKey>(Object.values(FLATTEN_MAP.volumetric));
+    expect(FLATTEN_MAP.volumetric.enabled).toBeDefined();
+    for (const k of keys) expect(universe.has(k)).toBe(true);
+    expect(universe.size - keys.size).toBe(2); // 恰排除 enabled + driver
+  });
+});
+
+// ============ [S1 收口] 灯对象级同步（主链盲区补锁）============
+// 既往测试多断言 envState/参数面，Three 对象层的实际落地（color/intensity/位置）缺直接
+// 断言——参数对接的终点无人验证，手改 applyLightParams 即静默分叉。以下直读灯对象字段。
+describe("LightCapability — 灯对象级同步（S1 主链盲区）", () => {
+  beforeEach(() => resetEnvState());
+
+  it("setLightParams 后方向光对象字段与参数一一对应（color/intensity/位置距靶点=targetHeight）", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({
+      scene, renderer: makeFakeRenderer(), targetHeight: 8,
+    });
+    cap.apply();
+    cap.setLightParams("key", { color: 0xffcc00, intensity: 2.5, azimuth: 90, elevation: 0 });
+    const key = cap.getLights()[0];
+    // 默认类型 = directional（开箱第一盏），是主链最高频路径
+    expect(key).toBeInstanceOf(THREE.DirectionalLight);
+    expect(key.color.getHex()).toBe(0xffcc00);
+    expect(key.intensity).toBe(2.5);
+    // 位置 = target + 方位角/仰角方向 × targetHeight；任何角度下距靶点恒 = targetHeight
+    expect(key.position.distanceTo(cap.getTarget())).toBeCloseTo(cap.getTargetHeight(), 6);
+    expect(key.position.x).toBeCloseTo(8, 5); // az=90 → +X 东
+    expect(key.position.z).toBeCloseTo(0, 5);
+    expect(key.position.y).toBeCloseTo(0, 5);
+  });
+
+  it("spot 类型写 distance/decay；切 point 后同字段保留（三型统一实例）", () => {
+    const cap = newCap();
+    cap.apply();
+    cap.setLightParams("key", { type: "spot", distance: 42, decay: 2 });
+    const spot = cap.getLights()[0] as THREE.SpotLight;
+    expect(spot).toBeInstanceOf(THREE.SpotLight);
+    expect(spot.distance).toBe(42);
+    expect(spot.decay).toBe(2);
+    cap.setLightParams("key", { type: "point" });
+    const point = cap.getLights()[0] as THREE.PointLight;
+    expect(point).toBeInstanceOf(THREE.PointLight);
+    expect(point.distance).toBe(42);
+    expect(point.decay).toBe(2);
+  });
+
+  it("照度守恒：setTargetHeight 改高度后 spot.intensity×falloff(d) 不变（靶点照度不漂移）", () => {
+    const cap = new LightCapability({
+      scene: new THREE.Scene(), renderer: makeFakeRenderer(), targetHeight: 8,
+    });
+    cap.setLightParams("key", { type: "spot", intensity: 3, distance: 30, decay: 1.5 });
+    cap.apply();
+    const spot = cap.getLights()[0] as THREE.SpotLight;
+    const p = cap.getParams().key;
+    const d0 = spot.position.distanceTo(cap.getTarget());
+    const before = spot.intensity * spotDistanceAttenuation(d0, p.distance, p.decay);
+    cap.setTargetHeight(16);
+    const d1 = spot.position.distanceTo(cap.getTarget());
+    expect(d1).toBeGreaterThan(d0); // 高度真的变了
+    const after = spot.intensity * spotDistanceAttenuation(d1, p.distance, p.decay);
+    expect(after).toBeCloseTo(before, 6); // 到达靶点照度守恒
+    expect(spot.intensity).not.toBeCloseTo(3, 6); // 坎德拉补偿确实在动（非恒值）
+  });
+
+  it("照度守恒：setTarget 平移靶点后 spot.intensity×falloff(d) 不变", () => {
+    const cap = new LightCapability({
+      scene: new THREE.Scene(), renderer: makeFakeRenderer(), targetHeight: 8,
+    });
+    cap.setLightParams("key", { type: "spot", intensity: 2, distance: 30, decay: 1.5 });
+    cap.apply();
+    const spot = cap.getLights()[0] as THREE.SpotLight;
+    const p = cap.getParams().key;
+    const d0 = spot.position.distanceTo(cap.getTarget());
+    const before = spot.intensity * spotDistanceAttenuation(d0, p.distance, p.decay);
+    cap.setTarget(new THREE.Vector3(20, 3, -7));
+    expect(cap.getTarget().x).toBe(20); // target 真被搬走
+    const d1 = spot.position.distanceTo(cap.getTarget());
+    expect(d1).toBeCloseTo(cap.getTargetHeight(), 6); // 灯随靶点平移，距离恒为 targetHeight
+    const after = spot.intensity * spotDistanceAttenuation(d1, p.distance, p.decay);
+    expect(after).toBeCloseTo(before, 6);
+  });
+
+  it("类型切换 → shadow cap 重挂 apply：directional↔spot 往返各一次", () => {
+    const shadowApply = vi.fn();
+    const cap = new LightCapability({
+      scene: new THREE.Scene(),
+      renderer: makeFakeRenderer(),
+      caps: {
+        getById: (id: string) =>
+          id === "shadow" ? ({ apply: shadowApply } as unknown as SceneCapability) : undefined,
+      },
+    });
+    cap.apply();
+    expect(shadowApply).not.toHaveBeenCalled();
+    cap.setLightParams("key", { type: "spot" }); // directional → spot
+    expect(shadowApply).toHaveBeenCalledTimes(1);
+    cap.setLightParams("key", { type: "directional" }); // spot → directional 往返
+    expect(shadowApply).toHaveBeenCalledTimes(2);
+    cap.setLightParams("key", { type: "spot" });
+    expect(shadowApply).toHaveBeenCalledTimes(3);
+  });
+});
+
+// ============ [S1] helper 谓词单源：能力总闸是硬门禁 ============
+describe("LightCapability — helper 可见谓词单源（S1）", () => {
+  beforeEach(() => { resetEnvState(); localStorage.clear(); });
+  afterEach(() => { localStorage.clear(); });
+
+  it("能力总闸关 + 灯 enabled + 线框闸开：三个入口的 helper 均不可见", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer(), enabled: false });
+    cap.setHelperVisible(true); // 线框闸开——若谓词缺总闸，此处 helper 就会漏放
+    // 入口① createHelper（构造期）：总闸关 → 不可见
+    const keyHelper = (cap as unknown as { keyHelper: THREE.Object3D }).keyHelper;
+    expect(keyHelper.visible).toBe(false);
+    // 入口② syncHelper：改灯参数 / 线框闸触发原地更新
+    cap.setLightParams("key", { intensity: 2 }); // 触发 syncLight → syncHelper
+    expect(keyHelper.visible).toBe(false);
+    cap.setHelperVisible(false);
+    cap.setHelperVisible(true); // 线框闸翻转 → syncHelper
+    expect(keyHelper.visible).toBe(false);
+    // 入口③ mountHelper：loadState 独立路径（恢复出总闸关也不放线框）
+    cap.saveState();
+    const cap2 = newCap();
+    cap2.loadState();
+    const helper2 = (cap2 as unknown as { keyHelper: THREE.Object3D }).keyHelper;
+    expect(helper2.visible).toBe(false);
+    expect(cap2.isEnabled()).toBe(false); // 前提自洽：总闸确实关着
+  });
+
+  it("能力总闸开 + 灯开 + 线框闸开：helper 可见（单源谓词的正常分支）", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    cap.setHelperVisible(true);
+    const keyHelper = scene.getObjectByName("ysm-light-key-helper")!;
+    expect(keyHelper.visible).toBe(true);
+    // 关灯 → helper 收（本灯 enabled 是第二道门）
+    cap.setLightParams("key", { enabled: false });
+    expect(keyHelper.visible).toBe(false);
+    // 关总闸 → helper 收（能力总闸是最外一道门）
+    cap.setHelperVisible(true);
+    cap.setEnabled(false);
+    expect(keyHelper.visible).toBe(false);
   });
 });

@@ -24,6 +24,10 @@ export const VIEW_TESTIDS: readonly string[] = [
   "recy-restore",
   "recy-del",
   "recy-list",
+  // 2026-10-04 补钩债务清账：刷新/清空按钮原只有 id，recycle-bin.spec 可见性用例走
+  // #id 落 REVIEW 债——同名 testid 补上，e2e 迁 testid 通道。
+  "recy-refresh",
+  "recy-empty",
 ];
 
 const LEAVE_ANIM_MS = 150;

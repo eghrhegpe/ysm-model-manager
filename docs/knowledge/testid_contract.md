@@ -67,6 +67,13 @@ invariant_anchors:
   `data-testid="diag-sub-<group>-<id>"`，无需手写。
 - 顶层 tab 按钮：通过 `TabSpec.buttonTestid` 声明（如诊断页 `"diag-tab"`），由 `renderTabs`
   写进 `data-testid` 并自动纳入 `VIEW_TESTIDS` 登记面。
+- 补钩债务清账（2026-10-04，阶段 C+ 同名约定）：`tpl.ts|diagnosticsHTML` 日志工具栏 6 元素
+  （`diag-log-search` / `diag-refresh` / `diag-copy` / `diag-clear` / `diag-log-filter` /
+  `diag-log-op-filter`）与 `tpl-recycle.ts|recycleHTML` 的 `recy-refresh` / `recy-empty`
+  原只有 id、无 testid——e2e 版面/可见性用例走 `#id` 落 `tests/test_e2e_location_contract.ts`
+  的 ① id REVIEW 债（8 处）。补**同名** `data-testid` 后 spec 迁 testid 通道，id 保留给
+  handler / CSS 锚点；8 项新钩子分别登记进两视图的 `VIEW_TESTIDS`，配对契约由
+  `tpl.test.ts` 在成品 HTML 上钉（id↔testid 逐个成对断言）。
 
 ## 与其他子系统关系
 

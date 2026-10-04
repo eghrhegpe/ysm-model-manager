@@ -281,12 +281,14 @@ test.describe("诊断页", () => {
           return { top: r.top, bottom: r.bottom };
         }),
         subBar: rect('.diag-sub-bar[data-sub-bar="logs"]'),
-        refresh: rect("#diag-refresh"),
-        copy: rect("#diag-copy"),
-        clear: rect("#diag-clear"),
-        filter: rect("#diag-log-filter"),
-        search: rect("#diag-log-search"),
-        opFilter: rect("#diag-log-op-filter"),
+        // 2026-10-04 补钩债务清账：6 个工具栏元素曾有 id 无 testid（rect("#id") 落门禁
+        // REVIEW 债）——tpl.ts 已补同名 data-testid，定位一律走 testid 通道
+        refresh: rect('[data-testid="diag-refresh"]'),
+        copy: rect('[data-testid="diag-copy"]'),
+        clear: rect('[data-testid="diag-clear"]'),
+        filter: rect('[data-testid="diag-log-filter"]'),
+        search: rect('[data-testid="diag-log-search"]'),
+        opFilter: rect('[data-testid="diag-log-op-filter"]'),
         skipChip: rect('.diag-log-fbtn[data-status="skipped"]'),
       };
     });

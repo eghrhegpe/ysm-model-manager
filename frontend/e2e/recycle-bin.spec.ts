@@ -38,9 +38,11 @@ test.describe("回收站", () => {
     await clickBySelector(page, '.repo-tab[data-tab="recycle"]');
 
     // 硬断言回收站页真实挂载（非空壳）：清空 + 刷新控件必须在 shadow 内可见
-    const empties = await countInShadow(page, "#recy-empty", 5000);
+    // （2026-10-04 补钩债务清账：原 #recy-empty / #recy-refresh 有 id 无 testid 落 REVIEW 债，
+    //  tpl-recycle.ts 已补同名钩子，一律走 testid 通道——同下方 recy-list 钩子契约）
+    const empties = await countInShadow(page, '[data-testid="recy-empty"]', 5000);
     expect(empties).toBe(1);
-    const refreshes = await countInShadow(page, "#recy-refresh", 5000);
+    const refreshes = await countInShadow(page, '[data-testid="recy-refresh"]', 5000);
     expect(refreshes).toBe(1);
   });
 

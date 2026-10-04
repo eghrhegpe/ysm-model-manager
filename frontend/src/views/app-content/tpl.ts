@@ -17,6 +17,15 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-log",
   "diag-log-list",
   "diag-runtime",
+  // 2026-10-04 补钩债务清账（阶段 C+ 同名约定）：日志工具栏 6 元素原只有 id、无 testid，
+  // e2e diagnostics.spec 版面用例走 rect("#id") 落 REVIEW 债——id 保留给 handler / CSS
+  // 锚点，testid 独占测试通道，二者同名。
+  "diag-log-search",
+  "diag-log-filter",
+  "diag-log-op-filter",
+  "diag-refresh",
+  "diag-copy",
+  "diag-clear",
   "ins-content",
   "ws-tabs",
   "ws-search-view",
@@ -208,20 +217,20 @@ export function diagnosticsHTML(): string {
     )}
     <div class="diag-bar" data-sub-group="logs" data-sub-pane="op runtime">
       <div class="diag-bar-row">
-        <input id="diag-log-search" class="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
+        <input id="diag-log-search" data-testid="diag-log-search" class="diag-log-search" placeholder="${t("diagnostics.searchPlaceholder")}">
         <span class="diag-bar-spacer"></span>
-        <button class="btn-base sm" id="diag-refresh">${t("diagnostics.refresh")}</button>
-        <button class="btn-base sm" id="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
-        <button class="btn-base sm" id="diag-clear" data-sub-group="logs" data-sub-pane="op">${t("diagnostics.clearLog")}</button>
+        <button class="btn-base sm" id="diag-refresh" data-testid="diag-refresh">${t("diagnostics.refresh")}</button>
+        <button class="btn-base sm" id="diag-copy" data-testid="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
+        <button class="btn-base sm" id="diag-clear" data-testid="diag-clear" data-sub-group="logs" data-sub-pane="op">${t("diagnostics.clearLog")}</button>
       </div>
       <div class="diag-bar-row">
-        <div class="diag-log-filter" id="diag-log-filter">
+        <div class="diag-log-filter" id="diag-log-filter" data-testid="diag-log-filter">
         <button class="diag-log-fbtn active" data-status="all">${t("diagnostics.all")}</button>
         <button class="diag-log-fbtn" data-status="success">${UI_ICONS.success} ${t("diagnostics.success")}</button>
         <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
         <button class="diag-log-fbtn" data-status="warn">${UI_ICONS.warning} ${t("diagnostics.warn")}</button>
         <button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.skip} ${t("diagnostics.skipped")}</button>
-        <select id="diag-log-op-filter" class="diag-log-op-filter">
+        <select id="diag-log-op-filter" data-testid="diag-log-op-filter" class="diag-log-op-filter">
           <option value="all">${t("diagnostics.opAll")}</option>
           <option value="import">${t("diagnostics.opImport")}</option>
           <option value="scan">${t("diagnostics.opScan")}</option>

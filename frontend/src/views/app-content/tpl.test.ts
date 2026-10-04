@@ -467,6 +467,22 @@ describe("app-content 模板", () => {
     expect(html).toContain('id="diag-sync-conflict-list"');
     expect(html).toContain('class="diag-pane"');
   });
+  it("日志工具栏 6 元素 testid 同名钩子齐备（e2e 定位通道走 testid，id 留 handler/CSS）", () => {
+    const html = diagnosticsHTML();
+    // 2026-10-04 补钩债务清账：原只 id 无 testid，e2e 版面用例走 #id 落 REVIEW 债——
+    // 同名 testid 补上后，测试通道独占 testid（ADR-133 阶段 C+）。逐个钉 id↔testid 配对。
+    for (const hook of [
+      "diag-log-search",
+      "diag-refresh",
+      "diag-copy",
+      "diag-clear",
+      "diag-log-filter",
+      "diag-log-op-filter",
+    ]) {
+      expect(html).toContain(`id="${hook}"`);
+      expect(html).toContain(`data-testid="${hook}"`);
+    }
+  });
   // ===== ADR-300 S1+S2：顶层 tab 名词化 / 父子同名消解 / 子 pill 单点语法 / skipped 专用图标 =====
   it("诊断页顶层 tab 名词化，skipped chip 用专用图标不蹭闪电（桌面零告知噪音）", () => {
     const html = diagnosticsHTML();

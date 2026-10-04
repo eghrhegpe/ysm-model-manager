@@ -23,7 +23,7 @@ export const ARIA_ATTR = {
   labelledby: "aria-labelledby",
   live: "aria-live",
   atomic: "aria-atomic",
-  /** [2026-10 锐评 P1-3] 控件禁用态：自绘控件（cs-bar）与行容器无原生 disabled 属性，
+  /** 控件禁用态：自绘控件（cs-bar）与行容器无原生 disabled 属性，
    *  须显式标注无障碍态（原生 select/input 另有 disabled 属性，两者并用）。 */
   disabled: "aria-disabled",
 } as const;

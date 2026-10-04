@@ -58,7 +58,7 @@ v1.15.0 发版跑了五轮 CI 才成功，复盘结论：**不是测试太严，
 ## 不变量
 
 - 每条检查必须归属一个真实 CI 步骤（`ciStep` 字段），回答不了的不要进冒烟组。
-- 跨平台执法 = 包名级静态 import + `//go:build` 标签对账（`checkCrossPlatformImports`）；`_other.go`/`_stub.go` 命名豁免（write_diag_other.go 空实现范式）。
+- 跨平台执法 = 包名级静态 import + `//go:build` 标签对账（`checkCrossPlatformImports`）；`_other.go`/`_stub.go` 命名豁免（空实现范式，如 `go/fsutil/crossdevice_other.go`）。
 
 ## 相关
 

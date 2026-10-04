@@ -58,7 +58,7 @@ invariant_anchors:
 4. **封口**：从未被标记的探针 exe 复制进 bin 运行 → 立即失败。纯位置因素，与二进制身份无关。
 5. **规则画像**（仓内镜像探针）：Roaming/Temp/D:\ 全拒，**工作区自身 + LOCALAPPDATA 放行**——白名单形策略；非工作区用户目录（如 `~\ysm-nonworkspace-test`）镜像全放行 → 拦截器精确认得本仓目录（代理注册的工作区）。
 6. **逐个排除安全软件**：卸载微软电脑管家（ahflt.sys 消失）仍失败 → 排除；退出火绒（sysdiag 仍在但防护已停）仍失败 → 排除；Sandboxie（SbieSvc 在但 SbieDrv STOPPED）排除；Defender CFA 事件日志无记录。**拦截器不在常规安全软件里，指向代理工具自身的沙箱基础设施**（机器存在 CodexSandboxUsers 受管组；本仓为 ZCode/Codex 注册的工作区）。
-7. **应用侧自诊断工具**：`internal/app/write_diag.go`（`YSM_WRITE_DIAG=1` 启用）——失败进程自己交代多路径探测/令牌/错误码，证实令牌干净、winerr=5、新增目录（LocalAppData 探测点）可写而既有受保护目录（含系统 Temp）拒绝。
+7. **应用侧自诊断工具（2026-09-27 曾写入、验证完成后 2026-10-04 摘除）**：`internal/app/write_diag.go`（`YSM_WRITE_DIAG=1` 启用）——失败进程自己交代多路径探测/令牌/错误码，证实令牌干净、winerr=5、新增目录（LocalAppData 探测点）可写而既有受保护目录（含系统 Temp）拒绝。摘除时平台桩 `write_diag_other.go` 一并清除；本条仅存证据链，工具本体不复存在。
 
 ## 与其他子系统关系
 

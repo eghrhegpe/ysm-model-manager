@@ -19,7 +19,7 @@ import * as THREE from "three";
 import { disposeObject3D, safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
-import type { LightInstanceParams, VolumetricParams } from "./light-presets.ts";
+import type { LightInstanceParams, VolumetricParams } from "./light-params.ts";
 
 /* ============ 体积光锥 shader（真锥体网格 + 轴向衰减 + Fresnel 边缘辉光） ============ */
 

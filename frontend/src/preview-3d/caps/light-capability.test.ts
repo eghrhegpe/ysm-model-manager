@@ -21,7 +21,7 @@ import {
   LIGHT_SLOTS,
   type LightInstanceParams,
   readLightParams,
-} from "./light-presets.ts";
+} from "./light-params.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { childIds, findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";

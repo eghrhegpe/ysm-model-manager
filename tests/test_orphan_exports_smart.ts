@@ -50,11 +50,11 @@ const REAL_ORPHANS_20260908 = [
   //   · SHADOW_TYPES / DEFAULT_SHADOW_PARAMS @ caps/shadow-state.ts → 整文件零消费者，已删文件
   //   · DEFAULT_SKY_PARAMS @ caps/sky-state.ts                    → 整文件零消费者，已删文件
   //   · DEFAULT_WATER_PARAMS @ caps/water-state.ts                → 零消费者，已删符号
-  //   · deepMergeLightParams @ caps/light-presets.ts              → 零消费者，已删函数
+  //   · deepMergeLightParams @ caps/light-params.ts              → 零消费者，已删函数
   // 教训：宽 glob（`DEFAULT_*_PARAMS` / `*_TYPES`）把「检测器看不见」当成了「不存在」，
   // 遮蔽真孤儿长达数月；默认值唯一事实源现为 state/env-state-schema.ts。
   { symbol: "DEFAULT_WATER_PARAMS", file: "frontend/src/preview-3d/caps/water-state.ts" },
-  { symbol: "deepMergeLightParams", file: "frontend/src/preview-3d/caps/light-presets.ts" },
+  { symbol: "deepMergeLightParams", file: "frontend/src/preview-3d/caps/light-params.ts" },
 
   // 第三类：ADR-196 env-state 暂存（统一数据源 refactor 中间态）
   { symbol: "getEnvCallbackCount", file: "frontend/src/preview-3d/state/env-dispatcher.ts" },
@@ -167,7 +167,7 @@ assert.equal(
 
 // ADR-196 env-state 暂存应该豁免 4 个（getStateValue / setStateValue / getPresetKeys / getEnvCallbackCount）
 // 2026-09-11：原第 5 个 deepMergeLightParams 退出——检测器修复 export * 通配转发漏检后，
-// 该符号被证明是活的（当时经 light-capability.ts 的 `export * from "./light-presets.ts"` 转发消费；
+// 该符号被证明是活的（当时经 light-capability.ts 的 `export * from "./light-params.ts"` 转发消费；
 // 该桶已于 ADR-281 删除），其 ADR-196 豁免规则随之删除（僵尸规则清理）。
 const adr196Count = exempted.filter(
   (e) =>

@@ -1,5 +1,5 @@
 // ===== ysm-meta-parser — ysm.json 元数据纯解析器（P4 抽取自 wasm-decode.ts）=====
-// 对齐 P1 sun-beams.ts / P2 env-pixels.ts / P3 light-presets.ts 拆分先例：把
+// 对齐 P1 sun-beams.ts / P2 env-pixels.ts / P3 light-params.ts 拆分先例：把
 // 不属于「WASM 解码流水线」主职责的纯解析片段下沉本文件，使 wasm-decode.ts
 // 收口并发去重 / JSON 直接解析 / WASM 初始化+三重解码 / 纹理·模型·动画流水线。
 // 本文件零应用层依赖（不 import backend/features/views）：纯数据解析，只读传入的

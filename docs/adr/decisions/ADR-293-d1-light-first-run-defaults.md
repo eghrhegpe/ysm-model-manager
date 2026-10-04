@@ -21,6 +21,6 @@ ADR-293 D2 给 helper 补开关时把默认值取成 `true`，理由是「保持
 
 **老用户走祖父条款**：`mount-session.ts` 的 `saveAll()` 在每次会话收尾无条件落盘，故存量存档恒携带 `helperVisible:true` / `fill.enabled:true` / `rim.enabled:true` / `ambient.intensity:0.5`——新默认只对「无存档首启」生效（本轮范围即此），老用户回到新规范态的出口是**「重置全部灯光」**（锚点 = `DEFAULT_LIGHT_PARAMS`，已同步派生新默认）或手动关；回退 = 三个 schema default 改回原值，无迁移、无数据副作用。
 >
-> **[2026-10-04 锐评收口补记]** 上面这个「出口」原先只对 fill/rim/ambient 三维成立：`DEFAULT_LIGHT_PARAMS` 由 `FLATTEN_MAP` 派生，**结构上不含 `lightHelperVisible`**（线框不在参数面），故老档点重置后线框仍照画——同一份 ADR 里「出口 = 重置」与「锚点 = DEFAULT_LIGHT_PARAMS」自相矛盾。现出口改为 `caps/light-presets.ts|lightResetPatch`（参数面 + `lightHelperVisible`），承诺与实现对齐；`lightEnabled`（会话总闸）刻意仍在重置作用域外——重置参数不替用户开灯。
+> **[2026-10-04 锐评收口补记]** 上面这个「出口」原先只对 fill/rim/ambient 三维成立：`DEFAULT_LIGHT_PARAMS` 由 `FLATTEN_MAP` 派生，**结构上不含 `lightHelperVisible`**（线框不在参数面），故老档点重置后线框仍照画——同一份 ADR 里「出口 = 重置」与「锚点 = DEFAULT_LIGHT_PARAMS」自相矛盾。现出口改为 `caps/light-params.ts|lightResetPatch`（参数面 + `lightHelperVisible`），承诺与实现对齐；`lightEnabled`（会话总闸）刻意仍在重置作用域外——重置参数不替用户开灯。
 
 <!-- 文件名: light-first-run-defaults.md → 实际文件 decisions/ADR-293-d1-light-first-run-defaults.md（ADR-320 decisions 轻量模板） -->

@@ -6,7 +6,7 @@
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { VolumetricCone } from "./light-cone.ts";
-import { DEFAULT_LIGHT_PARAMS, type LightInstanceParams, type VolumetricParams } from "./light-presets.ts";
+import { DEFAULT_LIGHT_PARAMS, type LightInstanceParams, type VolumetricParams } from "./light-params.ts";
 
 const CONE_NAME = "ysm-light-volumetric-cone";
 const HEIGHT = 8;

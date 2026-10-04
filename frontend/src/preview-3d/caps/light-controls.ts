@@ -21,7 +21,7 @@ import { type LocaleKey, tOf } from "@/core/i18n/t.ts";
 import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { LightCapability, LightKey } from "./light-capability.ts";
-import { FLATTEN_MAP, type LightType, type VolumetricDriver } from "./light-presets.ts";
+import { FLATTEN_MAP, type LightType, type VolumetricDriver } from "./light-params.ts";
 
 /** 统一设置条内「有值域」的参数字段（type/enabled/color 不在其列）。 */
 type LightSliderField =
@@ -134,7 +134,7 @@ function unifiedLightNodes(cap: LightCapability): PreviewMenuNode[] {
   const setField = (field: string, v: unknown) =>
     cap.setLightParams(which, { [field]: v } as never);
 
-  // 滑杆值域唯一事实源 = schema（ADR-283）：键由 FLATTEN_MAP（light-presets.ts，which→字段→键 唯一映射）
+  // 滑杆值域唯一事实源 = schema（ADR-283）：键由 FLATTEN_MAP（light-params.ts，which→字段→键 唯一映射）
   // 决定——which 是动态槽位，同一控件对应 key/fill/rim 三键之一；三键均已在 schema 声明 range，
   // 故此处的窄化由编译期保证（若某槽位漏声明 range，`RangedKey` 约束即报错）。
   const rangeOf = (field: LightSliderField) => getParamRange(FLATTEN_MAP[which][field]);

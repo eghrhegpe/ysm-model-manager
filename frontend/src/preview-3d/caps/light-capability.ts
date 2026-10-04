@@ -6,8 +6,8 @@
 // 职责拆分（ADR-177，2026-09-04）：
 //   - 灯光对象管理（key/fill/rim/ambient + 阴影协作）保留本类（核心职责①）
 //   - 体积光锥体② → light-cone.ts（VolumetricCone）
-//   - 预设数据③ → light-presets.ts（ADR-281 后不再经本文件 `export *` 转发，消费方直引具体叶）
-//   - 嵌套 ↔ 扁平参数映射 flattenLightParams → light-presets.ts（P3 下沉：纯映射样板，不触 cap 状态）
+//   - 预设数据③ → light-params.ts（ADR-281 后不再经本文件 `export *` 转发，消费方直引具体叶）
+//   - 嵌套 ↔ 扁平参数映射 flattenLightParams → light-params.ts（P3 下沉：纯映射样板，不触 cap 状态）
 //   - 菜单 UI 定义④ → light-controls.ts（buildLightNodes）
 //   - 状态持久化⑤ 保留本类（触达大量私有字段，顺序语义敏感）
 //
@@ -35,7 +35,6 @@ import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { VolumetricCone } from "./light-cone.ts";
 import { buildLightNodes, LIGHT_MASTER_NODE_ID } from "./light-controls.ts";
-import { buildLightPersistPayload, restoreLightParams } from "./light-persist.ts";
 import {
   type DeepPartial,
   FLATTEN_MAP,
@@ -48,7 +47,8 @@ import {
   lightResetPatch,
   readLightParams as readLightParamsFrom,
   type VolumetricParams,
-} from "./light-presets.ts";
+} from "./light-params.ts";
+import { buildLightPersistPayload, restoreLightParams } from "./light-persist.ts";
 import {
   getTypedCap,
   persistState,
@@ -99,7 +99,7 @@ export function attenuateAmbientForSky(intensity: number, skyEnvOn: boolean): nu
 // ======== ADR-196：嵌套 ↔ 扁平映射 ========
 
 /** 从 envState 读取单盏灯参数（缺省读单例 envState）。
- *  真值映射体在 light-presets.readLightParams——本包装只为让本模块内调用省掉 envState 形参。 */
+ *  真值映射体在 light-params.readLightParams——本包装只为让本模块内调用省掉 envState 形参。 */
 function readLightParams(which: LightSlot, state: EnvState = envState): LightInstanceParams {
   return readLightParamsFrom(state, which);
 }
@@ -133,7 +133,7 @@ function getParamsFromEnvState(state: EnvState = envState): LightParams {
 
 // ======== 变更分组（callback 分派用） ========
 // [light-type-switch] 三盏灯结构统一：每盏灯的变更集 = 该槽位的全部 envState 键，
-// 由 light-presets 的 FLATTEN_MAP 派生（lightEnvKeys）——新增字段不再需同步维护本表。
+// 由 light-params 的 FLATTEN_MAP 派生（lightEnvKeys）——新增字段不再需同步维护本表。
 // 灯内部按字段决定「重建灯对象」（type 变化）还是「原地更新」。
 
 /** 三槽位的通用别名（本模块旧名，语义同 LightSlot） */

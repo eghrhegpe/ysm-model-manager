@@ -7,7 +7,7 @@
 //（顺序敏感段——开关恢复→syncLight 重建→锥组重建——留在主类 loadState。）
 // [ADR-282] 原 currentPreset/manualPreset 两个私有态键已随灯光与模型类别解耦退役。
 // [ADR-246 D1] 原 volumetricEngine 维度已删（postprocess 空壳引擎移除）。
-// 对齐 light-presets.ts（参数面）/ light-controls.ts（菜单面）的拆分先例。
+// 对齐 light-params.ts（参数面）/ light-controls.ts（菜单面）的拆分先例。
 
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import {
@@ -20,14 +20,14 @@ import {
   type LightInstanceParams,
   type LightSlot,
   readLightParams,
-} from "./light-presets.ts";
+} from "./light-params.ts";
 import { oneOf, restoreFields } from "./scene-capability.ts";
 /* ============ saveState：envState → 持久化嵌套结构（纯读，由 FLATTEN_MAP 逆读口派生） ============ */
 
 /** [锐评根治 2026-09] 旧实现逐字段手抄 30 个 envState 键裸字面量——新增灯光字段时
  *  FLATTEN_MAP 漏配编译报错，本函数漏加却静默不持久化。现三盏灯经 readLightParams
  *  （FLATTEN_MAP 真逆口）派生，ambient/volumetric 直读各自键：字段全集只在
- *  light-presets.ts 声明一次，本文件零手抄。顶层冗余键 keyEnabled/fillEnabled/rimEnabled
+ *  light-params.ts 声明一次，本文件零手抄。顶层冗余键 keyEnabled/fillEnabled/rimEnabled
  *  保留：与旧存档格式向后兼容（restore 侧只读 state.key.enabled，不消费它们，但外部工具
  *  可能直读），删之无收益。 */
 export function buildLightPersistPayload(): Record<string, unknown> {
@@ -38,7 +38,7 @@ export function buildLightPersistPayload(): Record<string, unknown> {
     // 条款保留旧观感，「重置全部灯光」是回到新规范态的出口。
     // [2026-10-04 锐评收口] 那句承诺曾对该维空转：resetLightParams 只写参数面，
     // helperVisible 不在 FLATTEN_MAP（线框不是灯光参数）→ 老档点重置后线框照画。
-    // 现出口 = light-presets|lightResetPatch（参数面 + helperVisible）；lightEnabled
+    // 现出口 = light-params|lightResetPatch（参数面 + helperVisible）；lightEnabled
     // 刻意不在重置作用域（会话总闸不替用户开灯））
     enabled: envState.lightEnabled,
     helperVisible: envState.lightHelperVisible,
@@ -73,7 +73,7 @@ export function buildLightPersistPayload(): Record<string, unknown> {
  *  ADR-281 在 presets 侧消灭的 `${prefix}${X}` 拼串同款病灶：与 FLATTEN_MAP 的对齐
  *  纯靠命名巧合，schema 键重命名时前者编译报错、此侧静默丢字段（typeof 不匹配即
  *  skip，用户灯光参数无声蒸发）。现后缀列退场，envState 键一律查 FLATTEN_MAP——
- *  键映射唯一真相源在 light-presets.ts，本表只剩 typeof 校验列。 */
+ *  键映射唯一真相源在 light-params.ts，本表只剩 typeof 校验列。 */
 const LIGHT_FIELD_TYPES = {
   type: "string",
   enabled: "boolean",

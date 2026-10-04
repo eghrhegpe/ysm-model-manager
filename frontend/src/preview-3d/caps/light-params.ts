@@ -3,6 +3,10 @@
 // [ADR-282] 模型类别预设（原 LIGHT_PRESETS）已废除——灯光与模型类别解耦，
 //   本文件只剩「参数面」：类型/默认值/嵌套↔扁平映射。
 // 行为与原实现逐字节一致。
+// [2026-10-04 改名] 本文件原名 `light-presets.ts`——ADR-282 废除 `LIGHT_PRESETS` 后，文件名
+//   成了化石（一个叫 presets 的文件里零 preset），按「文件名不得撒谎」改为 `light-params.ts`。
+//   改动纯机械：符号与导出面零变化；历史 ADR（177/280/281/282）里的旧名保持原位不动
+//   （决策时快照，回改等于改历史）；deadcode 基线键与 orphan-exports 夹具的路径键已同步。
 // [ADR-281] 本文件是灯光字段全集（LightInstanceParams 10 字段 × key/fill/rim）的**唯一真相源**：
 //   FLATTEN_MAP 声明的嵌套→扁平映射既有 `satisfies` 锁死键拼写，又派生出
 //   lightEnvKeys / LIGHT_SLOTS / readLightParams——变更集与读参数全由它计算，
@@ -18,7 +22,7 @@
 // [锐评根治 2026-09] DEFAULT_LIGHT_PARAMS 从 envState schema 默认值派生（ADR-249 §2.6
 // 默认值单一事实源延伸到灯光组）：旧实现平行手抄 38 个字面量，schema default 与本表
 // 一旦分叉即「重置」回到一个 schema 认为不存在的状态。现派生方向 = FLATTEN_MAP 逆读口
-// readLightParams(envStateSchemaDefaults, slot)，字面量全部退场；防回退闸在 light-presets.test.ts。
+// readLightParams(envStateSchemaDefaults, slot)，字面量全部退场；防回退闸在 light-params.test.ts。
 // 默认值段引用 FLATTEN_MAP 逆读口，故文件顺序为：类型 → FLATTEN_MAP/槽位/读口 → 默认值派生。
 
 import {
@@ -184,7 +188,7 @@ const ENV_DEFAULTS = deriveDefaultEnvState();
 
 /** 灯光参数默认值基线（重置锚点）：逐字段取自 ENV_DEFAULTS 的对应 envState 键（经
  *  FLATTEN_MAP 逆读口组装）——「重置」语义 = 回到 schema 声明的初始态，
- *  不存在第二套可漂移的字面量；防回退闸见 light-presets.test.ts。 */
+ *  不存在第二套可漂移的字面量；防回退闸见 light-params.test.ts。 */
 export const DEFAULT_LIGHT_PARAMS: LightParams = {
   key: readLightParams(ENV_DEFAULTS, "key"),
   fill: readLightParams(ENV_DEFAULTS, "fill"),
@@ -206,7 +210,7 @@ export const DEFAULT_LIGHT_PARAMS: LightParams = {
 
 // ⚠️ 刀⑳：`deepMergeLightParams` 已删除（零消费者）。此前 check-orphan-exports 的
 // ADR-196 豁免规则在 2026-09-11 被误删——理由是「经 light-capability.ts 的
-// `export * from "./light-presets.ts"` 转发消费」，但 `export *` 只是让**检测器漏检**，
+// `export * from "./light-params.ts"` 转发消费」，但 `export *` 只是让**检测器漏检**，
 // 不等于真有消费者：全仓 grep 该符号仅命中定义处，light-capability 实际只 import
 // 具体符号。检测器修复后它暴露为真孤儿，此处直接清理（而非重新加豁免）。
 // 嵌套→扁平仍走下方 flattenLightParams（活代码）。

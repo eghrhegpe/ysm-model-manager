@@ -13,7 +13,7 @@ import {
   lightEnvKeys,
   lightResetPatch,
   readLightParams,
-} from "./light-presets.ts";
+} from "./light-params.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import {
   clampFieldValue,

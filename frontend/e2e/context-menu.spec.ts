@@ -8,12 +8,19 @@
 import { expect, test } from "./fixture.ts";
 import { gotoApp, rightClickTree, waitForTreeCount } from "./helpers.ts";
 
-/** 轮询等待 tree-file 在嵌套 Shadow DOM 中出现（复用 helpers 的 waitForTreeCount） */
-async function waitForTreeFile(
+/** 轮询等待 tree-file 在嵌套 Shadow DOM 中出现（复用 helpers 的 waitForTreeCount）。
+ *  渲染失败即硬断言红，不再 test.skip——mock 桥数据固定（mock-data.ts），tree-file 不渲染
+ *  是加载链回归而非环境问题；skip 把回归洗成绿，正是假绿灯三重门的「条件跳过」形态
+ *  （e2e-visual-feedback 卡；file-tree.spec 同病已按 P3 修过，本文件补齐）。 */
+async function expectTreeFileRendered(
   page: import("@playwright/test").Page,
   timeout = 8000,
-): Promise<boolean> {
-  return (await waitForTreeCount(page, "tree-file", timeout)) > 0;
+): Promise<void> {
+  const count = await waitForTreeCount(page, "tree-file", timeout);
+  expect(
+    count,
+    "tree-file 应在 Shadow DOM 中渲染（未渲染 = 加载链回归，非环境问题）",
+  ).toBeGreaterThan(0);
 }
 
 test.describe("右键菜单", () => {
@@ -29,12 +36,8 @@ test.describe("右键菜单", () => {
   });
 
   test("文件树文件上右键 → contextmenu 事件触发", async ({ page }) => {
-    // 轮询等待 tree-file 渲染
-    const hasTreeFile = await waitForTreeFile(page);
-    if (!hasTreeFile) {
-      test.skip(true, "tree-file 未在 Shadow DOM 中渲染");
-      return;
-    }
+    // 轮询等待 tree-file 渲染（未渲染即红，见 expectTreeFileRendered 注释）
+    await expectTreeFileRendered(page);
     await rightClickTree(page, "tree-file");
     // 右键后菜单项应出现（原 expect(true).toBe(true) 恒真，itemCount 是死代码）
     const ctxItems = page.locator('[data-testid="ctx-item"]');
@@ -43,30 +46,19 @@ test.describe("右键菜单", () => {
   });
 
   test("右键菜单项可点击", async ({ page }) => {
-    const hasTreeFile = await waitForTreeFile(page);
-    if (!hasTreeFile) {
-      test.skip(true, "tree-file 未在 Shadow DOM 中渲染");
-      return;
-    }
+    await expectTreeFileRendered(page);
     await rightClickTree(page, "tree-file");
-    // 尝试点击菜单项
+    // 点击菜单项（原「itemCount===0 即 skip」改硬断言：兄弟用例已证右键必出菜单项，
+    // 此处 0 项即回归，不该静默逃逸）
     const ctxItems = page.locator('[data-testid="ctx-item"]');
-    const itemCount = await ctxItems.count();
-    if (itemCount === 0) {
-      test.skip(true, "右键菜单未渲染菜单项");
-      return;
-    }
+    await expect(ctxItems.first()).toBeVisible({ timeout: 3000 });
     await ctxItems.first().click();
     // 弱断言改实断言：点击后菜单应隐藏（onClick 的 finally 调 hide）
     await expect(ctxItems.first()).not.toBeVisible({ timeout: 3000 });
   });
 
   test("右键 → 点击「Copy File Path」→ action 执行 + toast 反馈", async ({ page }) => {
-    const hasTreeFile = await waitForTreeFile(page);
-    if (!hasTreeFile) {
-      test.skip(true, "tree-file 未在 Shadow DOM 中渲染");
-      return;
-    }
+    await expectTreeFileRendered(page);
     await rightClickTree(page, "tree-file");
 
     // 语义定位（ADR-133 阶段 C+）：按 data-action 匹配 action 标识，

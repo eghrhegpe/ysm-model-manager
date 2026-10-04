@@ -95,6 +95,10 @@ async function setBarTo(page: Page, id: string, which: "min" | "max"): Promise<v
 test.describe("水面波场回归取证（ADR-319 落地后）", () => {
   test("六场景单变量对照截图", async ({ page }) => {
     test.slow(); // 单会话六场景 + 逐场景等待，远超 20s 默认上限
+    // slow 的 60s 对 SwiftShader 不够：截图成本随 CPU 负载放大（并行会话同跑 e2e-web 时
+    // 实测 6 张截图 + 双面板下钻 >60s，rAF 相位漂移再抖一次即超时——失败点每次不同，
+    // 是环境性超时非断言回归）。150s 上限，CI 单机自然时长 ~50s 不受影响。
+    test.setTimeout(150_000);
     fs.mkdirSync(SHOTS, { recursive: true });
     await page.goto("/");
     await page.waitForLoadState("networkidle");

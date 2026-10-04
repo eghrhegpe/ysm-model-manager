@@ -78,6 +78,8 @@ npx playwright test --config playwright.web.config.ts menu-3d-session
 
 **软渲染参数**：headless 无 GPU，须钉 SwiftShader 参数。2026-10 起 `playwright.web.config.ts` **project 级**统一钉住 `args: ["--enable-unsafe-swiftshader", "--use-angle=swiftshader"]`（跨环境确定性，CI 无 GPU 亦可跑）；spec 级 `test.use({ launchOptions })` 仅在需**硬钉 executablePath** 时再写（spec 级 launchOptions 深合并优先）。钉浏览器可执行文件走 `browser-path.ts|pinnedChromiumOrThrow`（探测不到即抛清晰错误防「环境没了全绿」；旧三 spec 各写一份 `${LOCALAPPDATA}` 硬编码兜底已收口）。`launchOptions` 内**条件展开会破坏 `test.use`** 的旧坑仍在，用值级 `??` 兜底。
 
+**软渲染成本随 CPU 负载放大**：SwiftShader 截图是纯 CPU 光栅化，本机并行跑多套 web e2e 时单张截图成本数倍放大——`test.slow()`（60s）对六场景取证不够，且**失败点每轮漂移**（这轮 `waitForLoadState`、下轮 `screenshot`、再下轮 `locator.focus`）——漂移即环境性超时信号，非断言回归，处置是 `test.setTimeout(150_000)` 放宽而非改断言（实证：water-wave-evidence 六场景，2026-10-04）。
+
 ## 视觉异常定位：单变量对照实验
 
 **这是本卡最重要的一条。** 定位画面异常时，禁止「看到现象 → 套已知模板 → 解释」。

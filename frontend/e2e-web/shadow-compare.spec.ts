@@ -101,6 +101,9 @@ test("默认软阴影生效：shadow-soft toggle 默认开 + 菜单面板截图"
   test
     .info()
     .annotations.push({ type: "scene candidates", description: opened.candidates.join(", ") });
+  // 失败点回到病灶本身：原只靠后续 soft.has 兜底（面板没点开 → has=false 报「面板应含
+  // toggle」，误导为控件缺失而非下钻失败）——先断言点击命中，再验内容
+  expect(opened.clicked, "Scene 组应含 Shadow 面板入口行且可点击").toBe(true);
   await page.waitForTimeout(800);
 
   const soft = await readSoftToggle(page);

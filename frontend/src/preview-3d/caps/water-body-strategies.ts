@@ -117,15 +117,19 @@ function applyTransformLinks(
   poolHeight: number,
   wallThickness: number,
 ): void {
-  const half = size / 2;
+  // 三键同源值域钳制（ADR-283：schema range 单一事实源）——h/t 曾二次防御而 size 裸用，
+  // 防御口径不对称是埋好的坑：任何绕过 setEnvState 的直调路径（测试 helper / 存档直读 /
+  // 其他 cap 写 envState 旁路）会把越界 size 静默烤进 10 件 mesh 的 transform。
+  const s = clampFieldValue("waterSize", size);
+  const half = s / 2;
   const h = clampFieldValue("waterPoolHeight", poolHeight);
   const t = clampFieldValue("waterPoolWallThickness", wallThickness); // 值域同源 schema（ADR-283）
   for (const link of body.transformLinks) {
     if (link.kind === "square") {
-      link.mesh.scale.set(size, size, 1);
+      link.mesh.scale.set(s, s, 1);
     } else {
       const wallH = h + (link.outer ? Math.max(0.02, t * 0.6) : 0);
-      link.mesh.scale.x = size;
+      link.mesh.scale.x = s;
       link.mesh.scale.y = wallH;
       link.mesh.position.y = wallH / 2;
       link.mesh.position[link.axis] = link.sign * (half + (link.outer ? t : 0));

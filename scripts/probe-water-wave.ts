@@ -54,8 +54,9 @@ function clamp(x: number, lo: number, hi: number): number {
 /** 逐波常数表 —— 与 shader 同一写法（ADR-319 D1/D2 落地后）：
  *   freq = 2π·1.19^i·4/sizeSafe（λ_i = size/(4·1.19^i)，频谱锚定域宽）；
  *   amp = waveHeight·0.26·0.82^i（浪高入参数，绝对米制，Σ_i amp_i = waveHeight）；
- *   waveHeight 先经双向往容器钳制 min(level, depth−level)（与 effectiveWaveHeight 同口径），
- *   下钳治穿地、上钳治越壁——单向只治一半。 */
+ *   waveHeight 先经容器钳制（与 effectiveWaveHeight 同口径，**分形态**）：下钳 min(level) 治
+ *   穿地（film/pool 通用），上钳 min(depth−level) 治越壁（**仅 pool**）——单向只治一半，且
+ *   无条件套上钳会让 film 水位过默认池深时浪全灭（ADR-319 D1 落地后复核发现的缺陷）。 */
 function buildWaves(
   size: number,
   choppiness: number,
@@ -63,10 +64,14 @@ function buildWaves(
   waveHeight = 0.06,
   level = 0.15,
   depth = 0.3,
+  forPool = true,
 ) {
   const sizeSafe = Math.max(size, 0.001);
   const spacing = sizeSafe / segments;
-  const budget = Math.min(Math.max(level, 0), Math.max(depth - level, 0));
+  // film 无壁无上钳：预算即下钳的水位净空；pool 才有壁顶上钳
+  const budget = forPool
+    ? Math.min(Math.max(level, 0), Math.max(depth - level, 0))
+    : Math.max(level, 0);
   const h = Math.max(0, Math.min(waveHeight, budget));
   const waves = [];
   for (let i = 0; i < GERSTNER_COUNT; i++) {
@@ -364,17 +369,19 @@ function pct(x: number): string {
 
 function main(): number {
   const args = parseArgs(process.argv.slice(2), {
-    bools: ["json"],
+    bools: ["json", "film"],
     strings: ["size", "choppiness", "segments", "level", "depth", "amp"],
   });
   if (args.unknown.length) console.warn(`忽略未知参数: ${args.unknown.join(", ")}`);
   if (args.help) {
     console.log(
       "用法: node scripts/probe-water-wave.ts [--json] [--size N] [--choppiness N] [--segments N]\n" +
-        "                                  [--level N] [--depth N] [--amp N]\n" +
+        "                                  [--level N] [--depth N] [--amp N] [--film]\n" +
         "  depth = waterPoolHeight（池深）；level = waterLevel（水面世界 y）；\n" +
         "  amp = 浪高 waterWaveHeight（绝对米制，ADR-319 D1，默认 0.06 = schema 默认）；\n" +
-        "        入波场前先经双向往容器钳制 min(level, depth−level)",
+        "        入波场前先经容器钳制（分形态）：pool = min(level, depth−level)，film = level\n" +
+        "  --film = 按 film 形态建模（无上钳，无壁可越）。默认按 pool 建模以保留 ADR-319 已\n" +
+        "          发布命令的可复现性；schema 默认形态是 film。",
     );
     return 0;
   }
@@ -390,30 +397,61 @@ function main(): number {
   const prescAmp = 0.004;
 
   const wallThickness = 0.15;
+  // film 无壁：无壁顶可越（wallTop = +∞，aboveWallRatio 自然为 0）
+  const forPool = !args.film;
   // 池壁顶世界 y：外层壁高于 poolHeight 一个 min(0.02, t*0.6) 的边沿（body-strategies|applyTransformLinks）
-  const wallTop = depth + Math.max(0.02, wallThickness * 0.6);
+  const wallTop = forPool ? depth + Math.max(0.02, wallThickness * 0.6) : Number.POSITIVE_INFINITY;
   const opts = { level, wallTop };
 
-  const waves = buildWaves(size, choppiness, segments, waveHeight, level, depth);
+  const waves = buildWaves(size, choppiness, segments, waveHeight, level, depth, forPool);
   const cal = calibrate(waves, size, segments, 1.37);
   const s = scan(waves, size, opts);
-  const sFull = scan(buildWaves(size, 1.0, segments, waveHeight, level, depth), size, opts);
-  const sCalm = scan(buildWaves(size, 0.0, segments, waveHeight, level, depth), size, opts);
+  const sFull = scan(
+    buildWaves(size, 1.0, segments, waveHeight, level, depth, forPool),
+    size,
+    opts,
+  );
+  const sCalm = scan(
+    buildWaves(size, 0.0, segments, waveHeight, level, depth, forPool),
+    size,
+    opts,
+  );
   const fit = spectrumFit(waves, size, segments);
 
-  const presc = buildPrescription(size, choppiness, segments, prescAmp, depth, level);
+  const presc = buildPrescription(
+    size,
+    choppiness,
+    segments,
+    prescAmp,
+    forPool ? depth : null,
+    level,
+  );
   const ps = scan(presc, size, opts);
   const pfit = spectrumFit(presc, size, segments);
   // 处方第二档：水位抬到 0.06（= 建议默认值），验证「预算不再被水位卡死」后的幅度
   const level2 = Math.max(level, 0.06);
-  const presc2 = buildPrescription(size, choppiness, segments, prescAmp, depth, level2);
+  const presc2 = buildPrescription(
+    size,
+    choppiness,
+    segments,
+    prescAmp,
+    forPool ? depth : null,
+    level2,
+  );
   const ps2 = scan(presc2, size, { level: level2, wallTop });
 
   const sweep = [10, 20, 40, 80, 160, 300].map((sz) => {
-    const w = buildWaves(sz, choppiness, segments, waveHeight, level, depth);
+    const w = buildWaves(sz, choppiness, segments, waveHeight, level, depth, forPool);
     const r = scan(w, sz, opts);
     const fw = spectrumFit(w, sz, segments);
-    const pw = buildPrescription(sz, choppiness, segments, prescAmp, depth, level2);
+    const pw = buildPrescription(
+      sz,
+      choppiness,
+      segments,
+      prescAmp,
+      forPool ? depth : null,
+      level2,
+    );
     const pr = scan(pw, sz, { level: level2, wallTop });
     const fp = spectrumFit(pw, sz, segments);
     return { size: sz, current: r, fit: fw, prescribed: pr, pfit: fp };
@@ -423,7 +461,16 @@ function main(): number {
     console.log(
       JSON.stringify(
         {
-          inputs: { size, choppiness, segments, level, depth, waveHeight, wallTop },
+          inputs: {
+            size,
+            choppiness,
+            segments,
+            level,
+            depth,
+            waveHeight,
+            wallTop,
+            mode: forPool ? "pool" : "film",
+          },
           calibration: cal,
           current: {
             waves: waves.map((w) => ({
@@ -491,9 +538,11 @@ function main(): number {
     "     （旧公式时代对照基准 ADR-257 §6.4 = 2.40°/7.02°；当前公式振幅小两个量级、斜率趋零，偏差同步缩小，属预期）",
   );
   L("");
+  // 预算已按形态算好并存进每波的 budget 字段（forPool ? min(level, depth−level) : level）
+  const budget0 = waves[0]?.budget ?? 0;
   L("② 波谱与波高（ADR-319 落地后：D1 浪高入参 + D2 频谱锚定域宽）");
   L(
-    `   预算 = min(level, depth−level) = min(${f3(level)}, ${f3(depth - level)}) = ${f3(Math.min(level, depth - level))}m；浪高 h = min(${f3(waveHeight)}, 预算) = ${f3(Math.min(waveHeight, Math.min(level, depth - level)))}m`,
+    `   预算 ${forPool ? `= min(level, depth−level) = min(${f3(level)}, ${f3(Math.max(depth - level, 0))})` : `= level（film 无壁无上钳，仅下钳治穿地）`} = ${f3(budget0)}m；浪高 h = min(${f3(waveHeight)}, 预算) = ${f3(Math.min(waveHeight, budget0))}m`,
   );
   L("   i   freq(rad/m)  λ(m)     amp=h·0.26·0.82^i  aa      amp实    σ(steep)");
   for (const w of waves) {
@@ -504,7 +553,9 @@ function main(): number {
   L(`   Σ amp = ${f3(waves.reduce((a, w) => a + w.amp, 0))}m（= h，按 0.26·Σ0.82^i 归一）`);
   L(`   峰 ${f3(s.hMax)}m  谷 ${f3(s.hMin)}m  峰谷差 ${f3(s.peakToTrough)}m  RMS ${f3(s.rms)}m`);
   L(
-    `   → 越壁：${pct(s.aboveWallRatio)} 采样点的水面高于池壁顶（默认 h=${depth}m，壁顶 ${f3(wallTop)}m）`,
+    forPool
+      ? `   → 越壁：${pct(s.aboveWallRatio)} 采样点的水面高于池壁顶（poolHeight=${depth}m，壁顶 ${f3(wallTop)}m）`
+      : `   → 越壁：不适用（film 无壁；穿地仍受下钳约束）`,
   );
   L(`   → 穿地：${pct(s.belowGroundRatio)} 采样点的水面低于 y=0 地面（水膜基准 level=${level}m）`);
   L(

@@ -182,7 +182,8 @@ export class WaterCapability implements SceneCapability {
       shader.uniforms.uSize = { value: envState.waterSize };
       shader.uniforms.uChoppiness = { value: envState.waterChoppiness };
       // ADR-319 D1：浪高入参数（钳后值）——原写死 min(0.6·0.82^i/freq, 0.5)，浪高无用户入口
-      shader.uniforms.uWaveHeight = { value: effectiveWaveHeight() };
+      // forPool 决定是否套壁顶上钳：film 无壁无上钳（无条件套会让水位过默认池深即静默死平）
+      shader.uniforms.uWaveHeight = { value: effectiveWaveHeight(opts.forPool) };
       // 微细节法线强度（原 normalScale 槽位的替代；值域 0-1，由 water 组键 `waterNormalStrength`
       // 驱动——菜单控件 water-normal-strength；旧「ground-normal-strength 驱动」为水面拆分前口径）
       shader.uniforms.uDetailStrength = { value: envState.waterNormalStrength };
@@ -346,7 +347,7 @@ export class WaterCapability implements SceneCapability {
            fade = 1.0 - smoothstep(edge, uHalfSize, md);
            gl_FragColor.a *= fade;
          }
-         // [ADR-319 D3(b)] 碎波泡沫通道已删除——原判据 J ≤ 0（波面自交）与陡度钳制 Σσk ≤ 0.8 互斥，vFoam 恒 0（探针实测 J_min 0.673 / 0.407，J ≤ 0 占比 0.00%）；新尺度下 Σσk ≪ 1，相对压缩判据亦不可达。删除胜过留「每帧计算、永不触发」的第三个选项。
+         // [ADR-319 D3(b)] 碎波泡沫通道已删除——原判据 J ≤ 0（波面自交）与陡度钳制 Σσk ≤ 0.8（probe steepSum = 0.8·choppiness）在数学上互斥：新尺度下 J_min 实测 0.656（chopp=0.5）/ 0.379（拖满），J ≤ 0 占比恒 0.00%。改走相对压缩判据 smoothstep(0.75,0.45,J) 拖满时虽可达（0.379 < 0.75），但要重写判据 + 按 choppiness 归一 + 加可见性门——给一条从没工作过的通道做第二次手术，不如删除；判据设计权留给未来真要做泡沫的那一次（ADR-319 §2 D3b）。
          // [ADR-319 D3(b)] 碎波泡沫通道已删除
          // ADR-297 水面模型倒影：世界坐标投影进镜像相机裁剪空间采样反射 RT——uReflMatrix
          // 已含官方 bias（末位右乘 M⁻¹ 剥回世界口径）→ 除 w 即 uv。RT 内容为线性空间
@@ -822,12 +823,15 @@ export class WaterCapability implements SceneCapability {
         poolWallColor: { number: (v) => this.setPoolWallColor(v) },
         poolRoundness: { number: (v) => this.setPoolRoundness(v) },
       });
-      // ADR-257 迁移：旧存档没有 waterLevel 键（旧语义里「水面 y == 池深 h」）。
-      // pool 用户兜底为 waterPoolHeight 以保持原有观感；film 用户沿用默认 0.01（与旧硬编码一致）。
+      // ADR-257 迁移：旧存档没有 waterLevel 键（旧语义里「水面 y == 池深 h」，即水填到池顶）。
+      // pool 用户兜底取**中池位** `poolHeight × 0.5`——这是预算 `min(level, poolHeight−level)` 的
+      // 最大值点（= poolHeight/2），也是新默认 `waterLevel=0.15 / waterPoolHeight=0.3` 的比例。
+      // 旧实现兜底取 `poolHeight` 会让预算 = min(h, 0) = 0、浪退化成平面（ADR-319 §3 预警项，
+      // 「别让兜底路径绕过新预算」）；旧默认 0.01 的 film 沿用说法已随 ADR-319 D1 抬到 0.15。
       // 注：mode/waterMode 在上方 restoreFields 中已先行还原，故此处读到的 waterMode 即存档形态。
       const hadLevelKey = w.level !== undefined || w.waterLevel !== undefined;
       if (!hadLevelKey && envState.waterMode === "pool") {
-        this.setLevel(envState.waterPoolHeight);
+        this.setLevel(envState.waterPoolHeight * 0.5);
       }
     } finally {
       resumeEnvCallbacks();

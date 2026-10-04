@@ -18,6 +18,7 @@ import {
 } from "./water-capability.ts";
 import { WATER_PARAM_APPLIER_KEYS } from "./water-capability.ts";
 import { persistState, restoreState } from "./scene-capability.ts";
+import { effectiveWaveHeight } from "./water-params.ts";
 import { isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";
 import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -2122,10 +2123,10 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
   });
 });
 
-describe("WaterCapability — 波场尺度归一与浪高双向往钳制（ADR-319 D1/D2）", () => {
+describe("WaterCapability — 波场尺度归一与浪高分形态容器钳制（ADR-319 D1/D2）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  /** 起会话并抓取真实 shader.uniforms（与上方 uSize 用例同款路径：setter → 分派表 → setUniform 写回） */
+  /** 起会话并抓取真实 shader.uniforms（film 默认形态；setter → 分派表 → setUniform 写回） */
   function liveUniforms(scene: THREE.Scene) {
     const cap = new WaterCapability({ scene });
     cap.apply();
@@ -2139,28 +2140,20 @@ describe("WaterCapability — 波场尺度归一与浪高双向往钳制（ADR-3
     return { cap, uniforms: mat.userData.shader.uniforms };
   }
 
-  it("浪高入 shader 前被双向往容器钳制：默认预算 min(0.15, 0.3−0.15)=0.15，0.06 原值放行", () => {
+  it("默认 film 浪高入 shader 前被下钳约束：预算 = min(waveHeight, level) = min(0.06, 0.15)，0.6 钳到 0.15", () => {
     const scene = new THREE.Scene();
     const { cap, uniforms } = liveUniforms(scene);
     expect(uniforms.uWaveHeight.value, "默认 0.06 ≤ 预算 0.15，不钳").toBeCloseTo(0.06, 5);
     cap.setWaveHeight(0.6);
-    expect(uniforms.uWaveHeight.value, "0.6 > 预算 0.15 → 钳到预算").toBeCloseTo(0.15, 5);
+    expect(uniforms.uWaveHeight.value, "0.6 > 预算 0.15 → 钳到 0.15").toBeCloseTo(0.15, 5);
   });
 
-  it("下钳：水位压低时预算随之收窄（波谷不穿地面，film 语义）", () => {
+  it("下钳：水位压低时预算随之收窄（波谷不穿地面，film/pool 通用）", () => {
     const scene = new THREE.Scene();
     const { cap, uniforms } = liveUniforms(scene);
     cap.setWaveHeight(0.6);
     cap.setLevel(0.04);
-    expect(uniforms.uWaveHeight.value, "预算 = min(0.04, 0.3−0.04) = 0.04").toBeCloseTo(0.04, 5);
-  });
-
-  it("上钳：池壁顶压低时预算随之收窄（波峰不越壁顶，pool 语义）", () => {
-    const scene = new THREE.Scene();
-    const { cap, uniforms } = liveUniforms(scene);
-    cap.setWaveHeight(0.6);
-    cap.setPoolHeight(0.2);
-    expect(uniforms.uWaveHeight.value, "预算 = min(0.15, 0.2−0.15) = 0.05").toBeCloseTo(0.05, 5);
+    expect(uniforms.uWaveHeight.value, "预算 = min(0.6, 0.04) = 0.04").toBeCloseTo(0.04, 5);
   });
 
   it("D2 浪高是用户量、与尺寸解耦：改 waterSize 不漂移 uWaveHeight（尺度归一只动频谱）", () => {
@@ -2183,4 +2176,68 @@ describe("WaterCapability — 波场尺度归一与浪高双向往钳制（ADR-3
     expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }).toEqual(range);
   });
 });
+
+describe("effectiveWaveHeight — 分形态预算算术（ADR-319 D1 落地后复核）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("film 无上钳（回归）：水位超默认池深时浪不死平——无条件套 poolHeight 曾把预算钳到 0", () => {
+    setEnvState(
+      { waterWaveHeight: 0.06, waterLevel: 0.5, waterPoolHeight: 0.3 },
+      { source: "manual" },
+    );
+    expect(
+      effectiveWaveHeight(false),
+      "film 预算 = 下钳 0.5 ≥ 0.06 → 原值放行（旧实现得 0，浪全灭）",
+    ).toBeCloseTo(0.06, 5);
+    setEnvState({ waterWaveHeight: 0.6 }, { source: "manual" });
+    expect(
+      effectiveWaveHeight(false),
+      "同一水位下大浪高只受下钳约束：min(0.6, 0.5) = 0.5",
+    ).toBeCloseTo(0.5, 5);
+  });
+
+  it("pool 有上钳：预算 = min(waveHeight, min(level, poolHeight − level))", () => {
+    setEnvState({ waterWaveHeight: 0.6, waterLevel: 0.15, waterPoolHeight: 0.2 }, { source: "manual" });
+    expect(effectiveWaveHeight(true), "预算 = min(0.6, min(0.15, 0.05)) = 0.05").toBeCloseTo(0.05, 5);
+  });
+
+  it("pool 脏参数：水位高于壁顶 → 预算归零（波峰不越壁顶），film 同参数下不受影响", () => {
+    setEnvState({ waterWaveHeight: 0.6, waterLevel: 0.5, waterPoolHeight: 0.3 }, { source: "manual" });
+    expect(effectiveWaveHeight(true), "预算 = min(0.5, max(0, 0.3−0.5)) = 0").toBe(0);
+    expect(effectiveWaveHeight(false), "film 同参数仍为 min(0.6, 0.5) = 0.5").toBeCloseTo(0.5, 5);
+  });
+
+  it("下钳水位归零：预算归零（波谷不穿地面），两形态一致", () => {
+    setEnvState({ waterWaveHeight: 0.6, waterLevel: 0 }, { source: "manual" });
+    expect(effectiveWaveHeight(false)).toBe(0);
+    expect(effectiveWaveHeight(true)).toBe(0);
+  });
+});
+
+describe("WaterCapability — 水面 root 恒在原点（圆角裁剪不变量，ADR-319 遗留）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("film/pool 切换 + 水位/尺寸/池深变更均不移动 root 的 xz——fragment 圆角裁剪用世界坐标 " +
+    "对比 uHalfSize，水面一旦离开原点整块水面会被静默裁成隐形（知识卡已登记，此断言是钉子）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const atOrigin = () => {
+      const root = scene.getObjectByName("ysm-ground-water")!;
+      return [root.position.x, root.position.z];
+    };
+    expect(atOrigin(), "film 挂载后").toEqual([0, 0]);
+    cap.setWaterMode("pool");
+    cap.setPoolHeight(0.8);
+    cap.setPoolWallThickness(0.2);
+    expect(atOrigin(), "pool 结构变更后").toEqual([0, 0]);
+    cap.setLevel(0.4);
+    expect(atOrigin(), "水位变更（applyLevel 只写 top.position.y）后").toEqual([0, 0]);
+    cap.setWaterMode("film");
+    cap.setWaterSize(300);
+    cap.setLevel(2.5);
+    expect(atOrigin(), "切回 film + 尺寸/水位变更后").toEqual([0, 0]);
+  });
+});
+
 

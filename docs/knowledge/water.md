@@ -50,10 +50,12 @@ pitfalls:
   - '**浪高入口曾完全缺席（2026-10-04 修复，ADR-319 D1）**：面板五个水波旋钮（waveSpeed / choppiness / normalStrength / clarity / size）里不含振幅——`amp` 不进 `steep` 链，`waterChoppiness=0` 时峰谷差零变化（探针实测），即「静水态不可达」且「尖度归零时几何仍大幅起伏、解析法线已判为平面」。现 `waterWaveHeight` 进 schema（默认 0.06，range 0–1），经 `water-params.ts|effectiveWaveHeight` **分形态钳制**：下钳 `min(waterLevel)` 治穿地（film/pool 通用），上钳 `min(waterPoolHeight − waterLevel)` 治越壁（**仅 pool**），钳制量在 CPU 侧算好下发。**上钳不可无条件套用**——film 下 `waterPoolHeight` 滑块隐藏、锁死在默认 0.3，而 `waterLevel` range 到 5.0，无条件「两钳取小」会让水位过 0.3 m 时预算归零、浪高静默死平（落地后子代理复核发现，已改为 `effectiveWaveHeight(forPool)` 按形态传入）。**单向只治一半**（只钳池深时 `waterLevel=0.01` 仍穿地），故 `waterLevel` 默认同步从 0.01 抬到 0.15——别把预算卡死成平面'
   - '**泡沫通道已删（ADR-319 D3b，2026-10-04）**：旧判据 `smoothstep(0.0, -0.25, J)` 要求 `J ≤ 0`（波面自交），与 `Σσ·k ≤ 0.8` 的防自交钳制互斥——探针实测 `choppiness=0.5` 时 `J_min = 0.656`、拖满 1.0 时 `0.379`，**`J ≤ 0` 占比恒 0.00%** ⇒ `vFoam` 恒 0，每顶点白算三项 Jacobian、每片元白跑一次 mix。现已**整条退役**（varying + Jacobian 三项累加 + mix 全删），shader 内无 foam 残留；别按「水面该有白沫」去调 foam 系数，也别把旧通道接回来——原判据（`J ≤ 0`）仍是死通道；要做泡沫须按 ADR-319 D3(a) 重新设计判据与归一（新尺度下 `Σσ·k = 0.8·choppiness`，拖满时 `J_min = 0.379`）'
   - '**频谱锚点错配已修（ADR-319 D2，2026-10-04）**：旧式 `freq = 0.25·1.19^i` ⇒ λ 钉死 [10.53, 25.13] m，而采样可呈现窗口是 `λ ∈ [6·size/segments, size/2]`（`size=10` 六波全超域宽、`size=300` 六波全被 aa 淡出，滑杆展示域却是 10–300 m）。现 `freq = 2π·1.19^i·4/uSize` ⇒ `λ_i = uSize/(4·1.19^i)`，每波长顶点数 = 分段数/(4·1.19^i) **与 uSize 无关**，全域六波恒落窗口内（探针尺寸域扫描：size ∈ {10,20,40,80,160,300} 峰谷差/越壁/穿地/窗口内条数全部不变）。ADR-272 加的「每波长顶点数淡出」治的是**采样不足**，不治**锚点错配**——两者是两笔账，勿混为一谈；锚点归一后淡出成为纯保险（六波全在窗口内时恒为 1）'
+  - '**shader 注入检测有洞（2026-10-04 子代理审计，待议）**：`water onBeforeCompile` 的注入检测只查 5 个符号（`vec3 gerstner(` / `objectNormal = ysmWaveNormal;` / `uRoundness` / `normal = normalize(normal +` / `if (uReflStrength > 0.0) {`），**begin_vertex 位移注入（`transformed.x += gdisp.x`、`vWorldPos_wave = worldPosWave.xyz`）无锚点**——three 在 allowed 窗口 [185,190) 内若重命名/重组该 chunk，位移静默丢失（顶点不动、解析法线照常：「法线在摆、水面在僵」），`reportPatchIssue` 一声不吭。`fragOk` 查的 `uRoundness` 同时出现在 common 注入（声明）与 dithering 注入（引用）两处 → common 失配时字符串仍在、检测漏报（实际 GLSL 会因未声明 uniform 报错，但守卫报 ok）。修复方向：begin_vertex 补 `transformed.z += gdisp.z` 锚点；`fragOk` 改查 common 注入独有串（如 `uniform sampler2D uReflTex`）'
+  - '**顶点波场被算两次（2026-10-04 子代理审计，待议）**：`gerstner()` 每顶点调两遍——`beginnormal_vertex` 里算只取 `nrm`（丢弃 disp），`begin_vertex` 里算只取 `disp`（丢弃 `nrm`，形参名 `gWaveNormalUnused` 即自证）。6 波 × 64² 顶点 × 2 ≈ 49k 次三角函数对/帧，非瓶颈但是白算。两 chunk 在同一 `main()` 作用域、中间无 chunk 改 `position`（morphnormal/skinbase/skinnormal/defaultnormal/normal_vertex 均只读 objectNormal），可合成一次：beginnormal 内算 disp 存局部、begin_vertex 直接 `transformed += disp`。与上一条「注入检测有洞」是同一处代码的两面，一并议'
   - 结构参数只能动 `transformLinks`（`square` 等比铺满 / `wall` 双轴：x = size、y = 壁高 + 外偏沿法向轴）：**y 轴不得被 size 缩放**（`wallH` 由 h / t 现算，与 size 无关），否则壁高与壁厚会被尺寸连带放大
   - '**（已修复 2026-09，ADR-272 §5.1）** pool 的 waterPoolHeight / waterPoolWallThickness 曾走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——拖动即每帧重建 10 个 mesh。现壁几何单位化：壁高走 `scale.y`、外偏 = `size/2 + t` 运行期现算。教训：**任何结构参数只要被烘焙进几何，就必然在滑块拖动时变成重建风暴**'
   - waterSize 值域：合法域 [1, 300]（下界来自「0/负数会让水面退化成一个点」）、展示域 10–300；钳制在 `setEnvState`（ADR-283），shader 侧另有 max(uSize, 0.001) 兜底
-  - 圆角裁剪用世界坐标 max(|x|,|z|) 对比 uHalfSize，隐含「水面恒在世界原点」这一假设——已登记（2026-09-20）：若未来支持移动/放置水面（脱离原点），圆角裁剪会静默出错，需先改为相对水面自身中心的局部坐标
+  - 圆角裁剪用世界坐标 max(|x|,|z|) 对比 uHalfSize，隐含「水面恒在世界原点」这一假设——已登记（2026-09-20），2026-10-04 已补测试钉子（`水面 root 恒在原点` describe：film/pool 切换 + 水位/尺寸/池深变更均不移动 root 的 xz）。若未来支持移动/放置水面（脱离原点），圆角裁剪会静默把整块水面裁成隐形，需先改为相对水面自身中心的局部坐标
   - '⏰ 升级 three ≥ r190 前必读：buildWaveWaterMaterial 的 assertRevisionRange allowed 窗口为 [185,190)（water-capability.ts）——r190 起 water 材质构造会故意 throw（registry 工厂兜底使 cap 缺失，拒绝静默降级）。升级时须重新审计 wave shader 注入的 chunk 锚点（common / normal_fragment_maps 在 onBeforeCompile 期仍存在）后收窄/前移窗口，不可无脑放行'
   - '**透明度预设失效（已修复 2026-09）**：`applyChangedParams` 中 `waterOpacity` 变更路径只更新 `top.material.opacity`，漏同步 shader uniform `uBaseOpacity`。shader 用 `min(gl_FragColor.a, uBaseOpacity)` clamp 透明度，`uBaseOpacity` 固化在构建期，导致增大 opacity 不生效（减小偶然正常）。修复：补调 `syncBaseOpacityUniform`，与 `waterWetness` 路径同口径'
   - '**派发键是类型化键域（2026-09）**：`EnvCallback.changed` 为 `Set<EnvStateKey>`，`changed.has("拼错")` 编译不过；新增参数必须先在 `env-state-schema.ts` 声明（含 `group: "water"`），否则派发链与持久化都抓不到它'
@@ -220,11 +222,14 @@ invariant_anchors:
   频谱锚点错配）全是 `toContain("disp.z += amp * s;")` 这类字符断言放过去的——它们改个格式就红，
   却对「峰谷差是否超出容器预算」「`J` 是否可达」「六波是否落在可呈现窗口内」一言不发。
   改波场时先跑探针取数，再把结论落成数值用例。
-- **浪高入 shader 前必过双向往容器钳制**（ADR-319 D1）：`uWaveHeight` 恒为
-  `min(waterWaveHeight, min(waterLevel, waterPoolHeight − waterLevel))`——上钳防越壁、下钳防穿地，
+- **浪高入 shader 前必过分形态容器钳制**（ADR-319 D1）：`uWaveHeight` 恒为
+  `min(waterWaveHeight, 下钳)`，下钳 = film 时 `waterLevel`、pool 时
+  `min(waterLevel, waterPoolHeight − waterLevel)`——上钳防越壁**仅 pool 有**（film 无壁无上钳），
   **单向只治一半**。预算随 `waterLevel` / `waterPoolHeight` 现算（不是烘死在构建期），
-  钳制是入参侧的一次性投影、不回写 schema 态。测试以「浪高拉到 range 上限时 `uWaveHeight` ≤ 预算」
-  为断言（`水高双向往钳制` describe 覆盖默认放行 / 超预算钳制 / 预算随水位池深重算 / 与尺寸解耦）。
+  钳制是入参侧的一次性投影、不回写 schema 态。测试两路：shader 侧覆盖默认放行 / 超预算钳制 /
+  预算随水位重算 / 与尺寸解耦；算术侧 `effectiveWaveHeight` describe 覆盖 **film 无上钳**（水位超
+  默认池深时浪不死平——落地后子代理复核发现的缺陷，无条件套上钳曾把预算钳到 0）/ pool 有上钳 /
+  pool 脏参数归零 / 下钳水位归零。
 - **取证双通道：探针取数 + e2e 截图回看**（2026-10-04）：`scripts/probe-water-wave.ts` 出数值，
   `frontend/e2e-web/water-wave-evidence.spec.ts`（swiftshader WebGL，`waterWaveSpeed=0` 冻结波相使
   多场景同相可比）出截图——修复前取证在 `e2e-web/_shots/water-wave/`（s3 拍出「水膜浮在池壁顶沿之上」、

@@ -152,6 +152,28 @@ export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
 };
 
 /**
+ * [2026-10 bloom 域修复] 用户阈值（「曝光后可见亮度」语义，0~1）→ UnrealBloomPass
+ * 实际消费的阈值（「曝光前线性 HDR」域）。
+ *
+ * 病根：pass 序 RenderPass → (SSR/SSAO) → UnrealBloom → **OutputPass**——three 在渲染进
+ * render target 时材质**不做** tone mapping（曝光/ACES 全部压在 OutputPass，即 bloom 之后），
+ * 所以 bloom 的 luminosityThreshold 比的是未乘曝光的线性值。用户拿滑杆校准的是屏幕上的
+ * 感知亮度（= ACES(linear×exposure)），两套坐标差 exposure 倍：exposure=0.5 时用户阈值 0.6
+ * 实际约等于「显示 48% 灰就起辉」——中灰以上全模型泛光（默认 VRM/MMD 开 pp 即亮瞎）。
+ *
+ * 修复 = 把用户值除以曝光换回 bloom 所在的线性域：thresholdLinear = user / exposure。
+ * **只换算 threshold**：strength 是加性增益、无亮度域语义，且随 OutputPass 曝光自然缩放。
+ *
+ * 不选 ACES 反函数（阈值严格对齐「显示亮度」）的原因：ACES 上凸非线性，反解后阈值
+ * 对曝光滑杆的响应是扭曲的（低阈值区响应过冲）；纯除法保持「阈值 ∝ 曝光」线性语义，
+ * 且与用户直觉（暗场景阈值更低）一致。域钳 [0, +∞)：除数下限 1e-3 防零曝光除爆——
+ * 零曝光时画面全黑，threshold 取什么值都无意义，钳到有限大即可，不产生 Infinity 污染 pass。
+ */
+export function bloomThresholdToLinear(userThreshold: number, exposure: number): number {
+  return userThreshold / Math.max(exposure, 1e-3);
+}
+
+/**
  * [ADR-250] 原 `POSTPROC_PRESETS`（模型类别后处理预设表）已删除，勿再加回。
  * 「YSM/体素默认不开后处理」这一偏好改由 `MODEL_DEFAULTS`（state/model-defaults.ts）
  * 写 `ppEnabled: false` 表达——与 sky/light/fog/shadow/reflector/environment 六 cap 同路，

@@ -38,7 +38,12 @@ import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, isSsrRenderActive, setEnvState } from "@/preview-3d/state/env-state.ts";
+import {
+  effectiveToneMappingExposure,
+  envState,
+  isSsrRenderActive,
+  setEnvState,
+} from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { pickModelDefaultFields, toModelType } from "@/preview-3d/state/model-defaults.ts";
 import type { LightCapability } from "./light-capability.ts";
@@ -49,6 +54,7 @@ import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
 // toneMappingValue()（惰性，测试 mock 约束见 state 文件头注释）。
 // [ADR-250] POSTPROC_PRESETS 已删除——模型类别默认偏好改走 MODEL_DEFAULTS 写 `ppEnabled`。
 import {
+  bloomThresholdToLinear,
   DEFAULT_POSTPROC_PARAMS,
   type PostprocessingParams,
   type ReflectionMode,
@@ -221,9 +227,15 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       keys: ["ppBloomStrength", "ppBloomThreshold", "ppBloomRadius"],
       write: (cap, s) => {
         if (!cap.bloomPass) return false;
-        // base 值；render() 时 syncBloomPass 再应用体积光联动
+        // base 值；render() 时 syncBloomPass 再应用体积光联动。
+        // [2026-10 bloom 域修复] threshold 在**每个写入点**都做曝光域换算——与
+        // syncBloomPass/attachSSRAndBloomPasses 同域，防「键变更→下一 render 之前」
+        // 的帧窗口里 pass 躺着一帧裸用户值（症状：拖阈值滑杆瞬间辉光先炸再收）。
         cap.bloomPass.strength = s.ppBloomStrength;
-        cap.bloomPass.threshold = s.ppBloomThreshold;
+        cap.bloomPass.threshold = bloomThresholdToLinear(
+          s.ppBloomThreshold,
+          effectiveToneMappingExposure(),
+        );
         cap.bloomPass.radius = s.ppBloomRadius;
         return true;
       },
@@ -399,7 +411,10 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       new THREE.Vector2(w, h),
       envState.ppBloomStrength,
       envState.ppBloomRadius,
-      envState.ppBloomThreshold,
+      // [2026-10 bloom 域修复] 用户阈值是「曝光后可见亮度」语义，pass 消费的是
+      // 「曝光前线性 HDR」域（OutputPass 的 ACES+曝光在 bloom **之后**）——除以有效
+      // 曝光换算回线性域。render() 每帧 syncBloomPass 重算，曝光滑杆变化自动跟上。
+      bloomThresholdToLinear(envState.ppBloomThreshold, effectiveToneMappingExposure()),
     );
     // [锐评 P1-1] insertPass 替代 splice（同 attachSSAOPass）。
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
@@ -572,6 +587,11 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     // 独立辉光开关：false 时整个 bloomPass 旁路（Pass.enabled=false），不影响 SSAO/SSR
     this.bloomPass.enabled = envState.ppBloomEnabled;
     if (!envState.ppBloomEnabled) return;
+    // [2026-10 bloom 域修复] 用户阈值语义 =「曝光后可见亮度」，pass 阈值域 =「曝光前线性
+    // HDR」（ACES+曝光压在 OutputPass、位于 bloom 之后）。统一在此现读有效曝光做域换算，
+    // 每帧自愈：用户拖曝光滑杆（sky 组键，不派发本 cap）下一帧阈值即对齐，无需跨组订阅。
+    // threshold 先按联动 ±20% 缩放、再换域（联动是「浓度微调」语义，作用于用户可见值上）。
+    const exposure = effectiveToneMappingExposure();
     if (envState.ppBloomFollowVolumetric && lightCap) {
       const vol = lightCap.getParams().volumetric;
       // [ADR-247] 联动门禁只看联动开关本身，读「浓度意图」opacity，与体积光「此刻是否可见」解耦。
@@ -590,11 +610,15 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       // 为基准，体积光 opacity 仅做 ±20% 微调。此前 opacity 直接放大成 strength 系数
       //（满值 1.5 = 默认 2.5 倍）+ 阈值压到 0.2——开体积光即亮爆；体积光是光柱浓度语义，
       // 不该主导全局 bloom。radius 保持用户设置（edgeFade 联动半径本就怪）。
-      this.bloomPass.threshold = envState.ppBloomThreshold * (1 - 0.2 * gain);
+      this.bloomPass.threshold = bloomThresholdToLinear(
+        envState.ppBloomThreshold * (1 - 0.2 * gain),
+        exposure,
+      );
+      // strength 是加性增益、无「亮度域」语义，且随 OutputPass 曝光自然缩放——不换域。
       this.bloomPass.strength = envState.ppBloomStrength * (1 + 0.2 * gain);
       this.bloomPass.radius = envState.ppBloomRadius;
     } else {
-      this.bloomPass.threshold = envState.ppBloomThreshold;
+      this.bloomPass.threshold = bloomThresholdToLinear(envState.ppBloomThreshold, exposure);
       this.bloomPass.strength = envState.ppBloomStrength;
       this.bloomPass.radius = envState.ppBloomRadius;
     }

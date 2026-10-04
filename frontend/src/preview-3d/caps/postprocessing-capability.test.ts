@@ -16,7 +16,12 @@ import type { LightCapability } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 // ADR-196：统一状态层（测试隔离）
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
-import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import {
+  effectiveToneMappingExposure,
+  envState,
+  resetEnvState,
+  setEnvState,
+} from "@/preview-3d/state/env-state.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
@@ -59,6 +64,12 @@ function stubLightCap(opts: { opacity?: number } = {}) {
     getParams: () => ({ volumetric: { opacity: opts.opacity ?? 0.45 } }),
   } as unknown as LightCapability;
 }
+
+/** [2026-10 bloom 域修复] 测试侧换算 oracle：用户阈值 ÷ 当前有效曝光。
+ *  刻意不复用被测的 bloomThresholdToLinear——断言要能独立复现「pass 里应是曝光前线性域
+ *  的值」，与被测实现同源自证会失去抓错能力。默认 skyExposure=0.5 → 曝光=0.5。 */
+const EXP = () => effectiveToneMappingExposure();
+const linTh = (userThreshold: number) => userThreshold / EXP();
 
 /** 递归查找节点树中的节点（postprocessing 节点树：顶层 + folder children）。
  *  转发至共享 findNodeById（menu-test-helpers，ADR-311 D2），保留 nodes 直传签名。 */
@@ -614,12 +625,13 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
   const lightCap = (opacity: number) =>
     ({ getParams: () => ({ volumetric: { opacity } }) }) as unknown as SceneCapability;
 
-  it("默认体积光（opacity 0.45）：threshold/strength 落在用户设置 ±20% 内，radius 保持用户设置", () => {
+  it("默认体积光（opacity 0.45）：threshold 落用户设置 ±20% 再除曝光、radius 保持用户设置", () => {
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
     const bp = mockBloomPass(cap);
     (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(0.45));
-    expect(bp.threshold).toBeGreaterThanOrEqual(0.6 * 0.8);
-    expect(bp.threshold).toBeLessThanOrEqual(0.6);
+    // [2026-10 域修复] threshold 现落「曝光前线性域」= 用户值÷曝光，联动 ±20% 在用户域缩放
+    expect(bp.threshold).toBeGreaterThanOrEqual(linTh(0.6 * 0.8));
+    expect(bp.threshold).toBeLessThanOrEqual(linTh(0.6));
     expect(bp.strength).toBeGreaterThanOrEqual(0.6);
     expect(bp.strength).toBeLessThanOrEqual(0.6 * 1.2);
     expect(bp.radius).toBe(0.5); // radius 不再被 edgeFade 劫持
@@ -641,11 +653,11 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     expect(bp.strength).toBeCloseTo(0.6 * 1.2, 6); // 确实联动了（非原值 0.6）
   });
 
-  it("满值体积光（opacity 1.0）：不再爆——strength ≤ +20%、threshold ≥ -20%", () => {
+  it("满值体积光（opacity 1.0）：不再爆——strength ≤ +20%、threshold 用户域 ≥ -20%", () => {
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
     const bp = mockBloomPass(cap);
     (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
-    expect(bp.threshold).toBeGreaterThanOrEqual(0.6 * 0.8 - 1e-9);
+    expect(bp.threshold).toBeGreaterThanOrEqual(linTh(0.6 * 0.8) - 1e-9);
     expect(bp.strength).toBeLessThanOrEqual(0.6 * 1.2 + 1e-9);
   });
 
@@ -655,16 +667,16 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.04, bloomRadius: 0.5 } });
     const bp = mockBloomPass(cap);
     (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
-    expect(bp.threshold).toBeCloseTo(0.04 * 0.8, 6); // 0.032 而非旧下限 0.05
+    expect(bp.threshold).toBeCloseTo(linTh(0.04 * 0.8), 6); // 用户域 0.032 → 线性域 0.064
   });
 
-  it("联动关：直接用用户设置（else 分支不受影响）", () => {
+  it("联动关：直接用用户设置换到线性域（else 分支不受联动影响）", () => {
     const cap = newCap({ params: { bloomStrength: 0.9, bloomThreshold: 0.7, bloomRadius: 0.4 } });
     cap.setBloomFollowVolumetric(false);
     const bp = mockBloomPass(cap);
     (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
-    expect(bp.threshold).toBe(0.7);
-    expect(bp.strength).toBe(0.9);
+    expect(bp.threshold).toBeCloseTo(linTh(0.7), 6); // 0.7 ÷ 0.5 = 1.4
+    expect(bp.strength).toBe(0.9); // strength 不换域
     expect(bp.radius).toBe(0.4);
   });
 
@@ -684,8 +696,34 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(stub);
     expect(Number.isFinite(bp.threshold)).toBe(true);
     expect(Number.isFinite(bp.strength)).toBe(true);
-    expect(bp.threshold).toBe(0.6); // 与「不联动」等价
+    expect(bp.threshold).toBeCloseTo(linTh(0.6), 6); // 与「不联动」等价（gain=0 后同换域）
     expect(bp.strength).toBe(0.6);
+  });
+
+  // [2026-10 bloom 域修复] 新增契约组：threshold 落「曝光前线性 HDR 域」
+  describe("threshold 曝光域换算", () => {
+    it("纯函数：用户阈值 ÷ 曝光，零曝光钳到有限大（不产生 Infinity 污染 pass）", async () => {
+      const { bloomThresholdToLinear } = await import("./postprocessing-state.ts");
+      expect(bloomThresholdToLinear(0.6, 0.5)).toBeCloseTo(1.2, 6); // 默认曝光 → ×2
+      expect(bloomThresholdToLinear(0.6, 1.0)).toBe(0.6); // 曝光 1 → 恒等
+      expect(bloomThresholdToLinear(0.6, 0)).toBeCloseTo(0.6 / 1e-3, 6); // 零曝光钳下限
+      expect(Number.isFinite(bloomThresholdToLinear(0.6, 0))).toBe(true);
+    });
+
+    it("曝光自愈：sky 组改 skyExposure（不派发本 cap）后，下一帧 syncBloomPass 现读新曝光", () => {
+      // 立身用例：曝光是 sky 属主、写 skyExposure 键不会进 pp cap 回调——旧实现阈值不随曝光，
+      // 用户拖曝光滑杆时 bloom 域错位不变。现实现每帧 syncBloomPass 现读 effectiveToneMappingExposure
+      // → 曝光变化下一帧阈值即对齐。此用例钉死「现读」而非「构造期快照」。
+      const cap = newCap({ params: { bloomThreshold: 0.6 } });
+      cap.setBloomFollowVolumetric(false); // 排除联动噪声，只看域换算
+      const bp = mockBloomPass(cap);
+      (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(null);
+      const atHalf = bp.threshold; // 曝光 0.5 → 1.2
+      setEnvState({ skyExposure: 0.25 }, { source: "manual" });
+      (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(null);
+      expect(bp.threshold).toBeCloseTo(atHalf * 2, 6); // 曝光再减半 → 阈值翻倍
+      expect(bp.threshold).toBeCloseTo(0.6 / 0.25, 6);
+    });
   });
 });
 
@@ -1072,7 +1110,7 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(internalsOf(cap).ssrPass).toBe(ssr);
   });
 
-  it("setBloom* 直改 bloomPass；setBloomEnabled(false) 旁路 bloomPass", () => {
+  it("setBloom* 直改 bloomPass（threshold 经曝光域换算）；setBloomEnabled(false) 旁路 bloomPass", () => {
     const { cap } = newRealCap();
     cap.setEnabled(true);
     const bloom = internalsOf(cap).bloomPass as unknown as { strength: number; threshold: number; radius: number; enabled: boolean };
@@ -1080,7 +1118,8 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     cap.setBloomThreshold(0.5);
     cap.setBloomRadius(0.9);
     expect(bloom.strength).toBe(1.5);
-    expect(bloom.threshold).toBe(0.5);
+    // [2026-10 域修复] pp 启用态曝光 = skyExposure0.5×ppExposure1.0=0.5 → 0.5÷0.5=1.0
+    expect(bloom.threshold).toBeCloseTo(linTh(0.5), 6);
     expect(bloom.radius).toBe(0.9);
     cap.setBloomEnabled(false);
     expect(bloom.enabled).toBe(false);
@@ -1112,7 +1151,7 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(ssr.bouncing).toBe(true);
   });
 
-  it("syncBloomPass 体积光联动：render() 时按 ±20% 微调 threshold/strength", () => {
+  it("syncBloomPass 体积光联动：render() 时按 ±20% 微调后换算到曝光前线性域", () => {
     const { cap } = newRealCap({ params: { bloomStrength: 1.0, bloomThreshold: 0.85 } });
     cap.setEnabled(true);
     const bloom = internalsOf(cap).bloomPass as unknown as { strength: number; threshold: number; radius: number };
@@ -1120,12 +1159,13 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     const rendered = cap.render(0.016, stubLightCap({ opacity: 0.5 }));
     expect(rendered).toBe(true);
     expect(renderSpy).toHaveBeenCalled();
-    expect(bloom.threshold).toBeCloseTo(0.85 * (1 - 0.2 * 0.5), 6);
-    expect(bloom.strength).toBeCloseTo(1.0 * (1 + 0.2 * 0.5), 6);
-    // 联动关闭时回用户原值
+    // 联动 ±20% 在用户域缩放后再 ÷曝光（pp 启用态曝光=0.5）：0.85×0.9 ÷0.5 = 1.53
+    expect(bloom.threshold).toBeCloseTo(linTh(0.85 * (1 - 0.2 * 0.5)), 6);
+    expect(bloom.strength).toBeCloseTo(1.0 * (1 + 0.2 * 0.5), 6); // strength 不换域
+    // 联动关闭时回用户原值（仍换域）
     cap.setBloomFollowVolumetric(false);
     cap.render(0.016, stubLightCap({ opacity: 0.5 }));
-    expect(bloom.threshold).toBeCloseTo(0.85, 6);
+    expect(bloom.threshold).toBeCloseTo(linTh(0.85), 6);
     expect(bloom.strength).toBeCloseTo(1.0, 6);
   });
 
@@ -1762,7 +1802,11 @@ describe("PostprocessingCapability — onEnvChanged 键组写入等价性（重�
     expect(bloom.strength, "ppBloomStrength → bloomPass.strength").toBe(1.7);
 
     setEnvState({ ppBloomThreshold: 0.23 }, { source: "manual" });
-    expect(bloom.threshold, "ppBloomThreshold → bloomPass.threshold").toBe(0.23);
+    // [2026-10 域修复] PARAM_SYNC 写路径同步换域：0.23 ÷ 0.5（pp 启用态曝光）= 0.46
+    expect(bloom.threshold, "ppBloomThreshold → bloomPass.threshold（×1/曝光）").toBeCloseTo(
+      linTh(0.23),
+      6,
+    );
 
     setEnvState({ ppBloomRadius: 1.4 }, { source: "manual" });
     expect(bloom.radius, "ppBloomRadius → bloomPass.radius").toBe(1.4);

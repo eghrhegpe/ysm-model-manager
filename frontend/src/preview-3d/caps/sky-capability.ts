@@ -25,7 +25,11 @@ import {
   suspendEnvCallbacks,
 } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
-import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import {
+  effectiveToneMappingExposure,
+  envState,
+  setEnvState,
+} from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-216：监听器集合工厂提级共享原语（fog/light/ground/water/environment 同源；菜单局部刷新 notify 用）
@@ -525,9 +529,9 @@ export class SkyCapability implements SceneCapability {
    * 且 ppExposure ≠ 1」的存量配置会回落到纯 `skyExposure`，那正是本修复的预期效果。
    */
   private applyExposure(): void {
-    // ppEnabled 为 false 时系数取中性值 1.0（而非 0——那是"变黑"不是"不参与"）
-    const ppFactor = envState.ppEnabled ? envState.ppExposure : 1.0;
-    this.renderer.toneMappingExposure = envState.skyExposure * ppFactor;
+    // [2026-10 bloom 域修复] 公式收编 state 层单源 effectiveToneMappingExposure——
+    // bloom 侧需同一曝光值把用户阈值换算回曝光前线性域，两处手抄即分叉隐患。
+    this.renderer.toneMappingExposure = effectiveToneMappingExposure();
   }
 
   private writeUniforms(sky: Sky): void {

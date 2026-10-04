@@ -145,6 +145,21 @@ export function isSsrRenderActive(): boolean {
 }
 
 /**
+ * 有效色调映射曝光（`renderer.toneMappingExposure` 的语义单源）：
+ * `skyExposure × ppExposure`，ppExposure 受 `ppEnabled` 门控（后处理关掉时其面板里的
+ * 曝光滑杆不参与乘算，取中性值 1.0——「已关闭的系统里的控件不生效」）。
+ *
+ * 唯一属主写入方 = `SkyCapability.applyExposure`；本函数额外供
+ * `PostprocessingCapability` 把 bloom 阈值从「用户可见亮度语义」换算回
+ * 「曝光前线性 HDR 域」（UnrealBloomPass 在 OutputPass 之前，比的是未乘曝光的值）。
+ * 两处若各自手抄公式即分叉隐患（attenuateAmbientForSky 同纪律），收编单源。
+ */
+export function effectiveToneMappingExposure(): number {
+  const ppFactor = envState.ppEnabled ? envState.ppExposure : 1.0;
+  return envState.skyExposure * ppFactor;
+}
+
+/**
  * 重置单例（测试用）。
  */
 export function resetEnvState(): void {

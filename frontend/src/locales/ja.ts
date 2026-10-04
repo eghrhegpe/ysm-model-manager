@@ -1236,7 +1236,8 @@ export const ja: Record<string, string> = {
   "preview.ambientColor": "アンビエントカラー",
   "preview.ambientIntensity": "アンビエント",
   "preview.volumetric": "体積光",
-  "preview.volumetricHint": "スポットライトが必要",
+  "preview.volumetricHint":
+    "スポットライトが必要。光柱はプレビュー専用で、スクリーンショットには含まれません",
   "preview.volumetricDriver": "駆動ライト",
   "preview.volumetricDriverAuto": "自動",
   "preview.volumetricDriverHint":

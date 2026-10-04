@@ -1206,7 +1206,7 @@ export const zhCN = {
   "preview.ambientColor": "环境光颜色",
   "preview.ambientIntensity": "环境光强度",
   "preview.volumetric": "体积光",
-  "preview.volumetricHint": "需先开启聚光灯",
+  "preview.volumetricHint": "需先开启聚光灯；光柱为预览专有，不随截图导出",
   "preview.volumetricDriver": "驱动灯光",
   "preview.volumetricDriverAuto": "自动",
   "preview.volumetricDriverHint":

@@ -90,7 +90,7 @@ invariant_anchors:
 - **`LightCapability`**：三盏灯（key/fill/rim）各可在 directional/point/spot 间切换；锥体由「当前编辑的 spot 灯优先，否则第一盏启用的 spot 灯」驱动（`getSpotLightForCone()`），方向由 `getSpotDir(spotLight)`（光源 → 靶点）算出。重建触发面 = `CONE_GEO_CHANGES`（type/enabled/angle/penumbra），位置变更走 `syncPosition`，其余走 uniforms 快路径。
 - **envState / env-dispatcher**：参数变更经 `setEnvState` 派发，`onEnvChanged` 分派到锥体。
 - **灯 helper**（ADR-246 D3 扩展）：每盏灯按当前 type 配对应 helper（Directional↔DirectionalLightHelper / Spot↔SpotLightHelper / Point↔PointLightHelper），类型切换时重建；体积光锥是视觉光柱本体。
-- **截图渲染**（`preview-3d/screenshot/screenshot-lights.ts`）：**不复用本能力**，不产出光锥——预览与截图在体积光上本就不同构。
+- **截图渲染**（`preview-3d/screenshot/screenshot-lights.ts`）：**不复用本能力**，不产出光锥——预览与截图在体积光上本就不同构。该差异已由面板 hint 显式化（`preview.volumetricHint` = 「需先开启聚光灯；光柱为预览专有，不随截图导出」，2026-10-04 锐评收口）：用户不必等导出后才发现光柱消失。若日后要「光柱进截图」，属**行为变更**（须在离屏渲染器重建锥体几何 + shader），须先立 ADR 取代本行，不得顺手改。
 - **后处理**（bloom / ACES 由 renderer 与 `PostprocessingCapability` 管）：本材质以「被色调映射的加色」参与，不再旁路。
 
 ## 不变量

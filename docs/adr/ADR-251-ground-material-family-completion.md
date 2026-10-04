@@ -6,7 +6,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/caps/ground-surface-spec.ts`、`frontend/src/preview-3d/caps/ground-menu.ts`、`frontend/src/preview-3d/caps/ground-capability.ts`、`docs/adr/ADR-249-ground-material-axis-split-layer-overlay.md`、`docs/adr/ADR-252-ground-canvas-style-material-only.md`、`docs/ADR-249-ground-material-effect-matrix.md`
+- **相关**：`frontend/src/preview-3d/caps/ground-surface-spec.ts`、`frontend/src/preview-3d/caps/ground-menu.ts`、`frontend/src/preview-3d/caps/ground-capability.ts`、`docs/adr/ADR-249-ground-material-axis-split-layer-overlay.md`、`docs/adr/ADR-252-ground-canvas-style-material-only.md`、`docs/archive/ADR-249-ground-material-effect-matrix.md`
 
 ---
 

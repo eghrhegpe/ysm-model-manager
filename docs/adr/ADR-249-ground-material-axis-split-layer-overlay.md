@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/caps/ground-menu.ts`、`frontend/src/preview-3d/caps/ground-surface-spec.ts`、`frontend/src/preview-3d/caps/ground-capability.ts`、`frontend/src/preview-3d/state/env-state-schema.ts`、[生效矩阵](../ADR-249-ground-material-effect-matrix.md)、`docs/adr/ADR-117-ground-material-spec.md`、`docs/adr/ADR-195-cap-control-single-type.md`、`docs/adr/ADR-196-env-state-preset-unification.md`
+- **相关**：`frontend/src/preview-3d/caps/ground-menu.ts`、`frontend/src/preview-3d/caps/ground-surface-spec.ts`、`frontend/src/preview-3d/caps/ground-capability.ts`、`frontend/src/preview-3d/state/env-state-schema.ts`、[生效矩阵](../archive/ADR-249-ground-material-effect-matrix.md)、`docs/adr/ADR-117-ground-material-spec.md`、`docs/adr/ADR-195-cap-control-single-type.md`、`docs/adr/ADR-196-env-state-preset-unification.md`
 - **外部参照**：MikuMikuAR `docs/adr/adr-089-ground-mode-split.md`（拆轴）、`docs/adr/adr-226-ground-material-spec-single-source.md`（spec 单一事实源）
 
 ---
@@ -175,7 +175,7 @@ headerToggle: {
 
 **这是本 ADR 的核心防翻车机制。** 拆轴前必须产出一张**参数 × 模式生效矩阵**，作为菜单可见性与渲染读取的**共同事实源**。
 
-矩阵已产出并按源码逐格核实，**独立成文**：`docs/ADR-249-ground-material-effect-matrix.md`（含核实方法、9×11 生效表、当前死控件清单、拆轴后目标形态）。
+矩阵已产出并按源码逐格核实，**独立成文**：`docs/archive/ADR-249-ground-material-effect-matrix.md`（含核实方法、9×11 生效表、当前死控件清单、拆轴后目标形态）。
 
 摘要（完整表见上述文件）：
 

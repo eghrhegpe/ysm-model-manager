@@ -165,10 +165,9 @@ quick_groups:
   - 3D 预览面板与模型追加
 quick_intents:
   - 预览面板、模型预览、2D 骨骼 / 3D 预览
-  - Litematic / 蓝图、资源包 / 光影包
+  - Litematic / 蓝图、资源包 / 光影包（showResourcePack / showShaderpack）
   - model:select、WASM 解码、放大预览
   - app-preview 组件、_previewGuard、detailGen
-  - showResourcePack、showShaderpack
   - 详情卡 3D 入口、nav-fab、card-shell 统一壳
 quick_risk_lines:
   - 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则

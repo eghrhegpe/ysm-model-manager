@@ -2,24 +2,21 @@
 
 # 知识卡索引
 
-> 总计: 202 张知识卡
+> 总计: 195 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（15 张）
+## config（12 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🏗 audit-drift-report-2026 | 知识卡 vs 代码 语义审计报告 | architecture | — | 知识卡审计, 文档-代码脱节审计 |
 | 🏗 auto_import_split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
 | 🍃 check_threshold_scanners | 三档阈值扫描器（复杂度/参数/类型安全） | leaf | — | check-complexity, check-params, 认知复杂度, 参数陷阱, 阈值扫描器, gate debt 档, --files 传参 |
 | 🍃 experience | 发版冒烟组——CI 同口径预演（ADR-318） | leaf | — | 发版前预演 CI（tag 推送前）, lockfile 与 package.json 是否同步存疑, Go 文件 import OS 专属包要确认 build 标签, 发版 CI 连红要本地快速定位口径差 |
-| 🏗 extensibility-index-reconciliation | 可拓展点索引对账（vs HEAD @ d517113c…） | architecture | — | 拓展点对账, 落地状态, ADR 闭环 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单, 拓展点探索 |
-| 🏗 optimization_log | 优化记录 optimization-log | architecture | cpu-bound, gpu-bound, concurrent, memory-heavy | 性能优化, KTX2 编码, 纹理缓存, 主线程监控, 内存泄漏 |
 | 🍃 orphan_export_scanner | 孤儿导出检测器（扫描盲区） | leaf | — | 修改 check-orphan-exports.ts 扫描逻辑, 门禁报孤儿导出，判定是真死代码还是扫描漏检, 新增 export * 转发壳 / 测试包装函数后复核孤儿读数 |
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
 | 🏗 scripts_argv | 脚本 argv 规范与已知豁免 parse-args.ts | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
@@ -40,7 +37,7 @@
 - **scripts_lib_adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
 - **scripts_readme_index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
-## core（25 张）
+## core（24 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -62,7 +59,6 @@
 | 🏗 frontend_test_audit | 前端测试基建审计 | architecture | — | 代码审核, 测试基建, 契约测试, e2e, flaky, 假绿, 覆盖盲区 |
 | 🏗 global-handlers | 全局事件处理 global-handlers | architecture | — | 全局事件, 拖拽导入, 拖拽提示, 同步缺失, 清空整合包, 导出清单 |
 | 🏗 i18n | 国际化 i18n 模块 | architecture | — | 翻译, 多语言, i18n, t(), 语言切换, lang:changed |
-| 🍃 i18n_accuracy | i18n 翻译准确度扫描记录 | leaf | — | 翻译准确度, 键名与值语义错位, i18n 翻译扫描, en 丢 Count, Opacity 误译, 术语统一, 翻译名实不符 |
 | 🍃 ik_solver | CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik | leaf | cpu-bound | IK 求解, 骨骼 IK, 足部锚地, foot IK, 极向量 / pole, CCD, 腿链提取 |
 | 🏗 model-stats | Web Worker 模型统计层 model-stats | architecture | cpu-bound, concurrent | 模型统计, 骨骼数, 立方体数, 纹理尺寸, SearchModels, 数值筛选, Web Worker, 批量统计 |
 | 🏗 page-store | 页面状态管理 page-store.ts | architecture | — | 页面, 当前页, 状态管理, page store, currentPage |
@@ -88,14 +84,13 @@
 - **frontend_test_audit**（前端测试基建审计）：2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.ts` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（1…
 - **global-handlers**（全局事件处理 global-handlers）：全局 handler 注册入口在 ADR-188 中从 `core/handlers/global.ts` 汇编壳收敛为 **app-content 直接编排**：`connectedCallback` 依次调 `registerSync`…
 - **i18n**（国际化 i18n 模块）：`i18n` 模块是 YSM 前端的唯一翻译层，基于 ADR-045 设计。`t.ts` 提供纯函数式翻译（按 key 查表），`locale.ts` 管理语言状态、持久化与异步加载。支持简体中文（基准）、英语、日语三种语言，语言偏好持久化…
-- **i18n_accuracy**（i18n 翻译准确度扫描记录）：2026-08-28 对三语翻译包（zh-CN / en / ja）进行了系统性扫描，覆盖 13 个命名空间、4 种语义模式（Count 后缀、Opacity 后缀、Size 后缀、Material 后缀）。发现并修复 10 处"键名与翻译…
 - **ik_solver**（CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik）：自写精简版 CCD（Cyclic Coordinate Descent）IK 求解器（ADR-072 工具层纯净、零 DOM / 零 backend），
 - **model-stats**（Web Worker 模型统计层 model-stats）：`frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo…
 - **pointer-events**（Pointer Events 统一交互（触屏 + 桌面））：ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `…
 - **theme**（主题系统 theme）：主题系统的纯逻辑实现在 `frontend/src/theme-core.ts`（2026-08-17 神桶拆分自 `app-modules.ts`；`app-modules.ts` 仅 re-export `applyTheme/init…
 - **ysm-baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
-## feature（18 张）
+## feature（17 张）
 
 *业务功能（导入队列、同步、社区）*
 
@@ -110,9 +105,8 @@
 | 🍃 fe_go_boundary | 前端只读不判边界与豁免 | leaf | — | 判断某个过滤/归类逻辑该放前端还是 Go, 树内即时搜索/排序想下沉磁盘前, 跨资源类型切换的实现选型, Wails 绑定生成相关疑问 |
 | 🏗 import-queue | 全局导入执行 import-executor | architecture | io-bound | 导入, 导入队列, 拖拽导入, 文件夹导入, 覆盖导入, import, 拖拽 |
 | 🏗 oldest-models | 资历最深模型 oldest-models | architecture | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
-| 🏗 preview-controls | 3D 预览控制器（声明式菜单节点） | architecture | — | 3D 控制器, MMD 播放, 截图按钮, 相机控制, 模型切换, 3D 入口, nav-fab, siblings, 容器内模型, 资源包模型直达 |
+| 🏗 preview-controls | 3D 预览控制器（声明式菜单节点） | architecture | — | 3D 控制器 / MMD 播放, 截图按钮 / 相机控制, 模型切换, 3D 入口 / nav-fab, siblings / 容器内模型, 资源包模型直达 |
 | 🏗 preview-settings | 预览面板设置与显示控制 | architecture | — | 预览设置, 显示控制, 骨骼名称, 帧率, 截图灯光 |
-| 🍃 preview_3d_migration | preview-3d 领域根迁移 | leaf | — | 整目录搬家, 领域根提升, 相对引用修复, cmd 命令行限制, 目录归置 |
 | 🏗 recycle-bin | 回收站界面 recycle-bin | architecture | io-bound | 回收站, 恢复文件, 清空回收站, 软删除, recycle, 还原 |
 | 🍃 repo-rtype | 全局资源类型状态 repo-rtype | leaf | — | 当前资源类型, 类型切换订阅, 仓库类型权威源, repo_rtype 状态 |
 | 🏗 resource-packs | 资源包功能 resource-packs（已归档） | architecture | — | 资源包, 光影包, resourcepack, shaderpack |
@@ -133,7 +127,6 @@
 - **oldest-models**（资历最深模型 oldest-models）：`oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按…
 - **preview-controls**（3D 预览控制器（声明式菜单节点））：> ⚠️ **重要前提（ADR-076 v2 Phase 2 重构后）**：相机操作已收编进**核心声明式根菜单**（⚙️ 按钮 → `mountPreviewRootMenu` 的 `camera` 项），底部导航弹窗已删除。现存的 `m…
 - **preview-settings**（预览面板设置与显示控制）：> **重要前提**：预览面板设置**不是单一 settings 面板**，而是分散在 **3 域**（2D 显示控制 / 3D 全域状态层 / 截图 & 填充面板）。本 feature 卡汇总三域设置项的语义、持久化点、广播契约与相互依赖…
-- **preview_3d_migration**（preview-3d 领域根迁移）：ADR-129 第三刀：把 `frontend/src/utils/3d/`（227 文件）整编搬迁到 `frontend/src/preview-3d/`。纯改名、收益最低、但暗礁最多。三刀顺序不可逆：第一刀正类型（依赖倒置修复）→ 第二…
 - **recycle-bin**（回收站界面 recycle-bin）：`recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调…
 - **repo-rtype**（全局资源类型状态 repo-rtype）：全局资源类型权威源。收敛 `oldest-models` / `recycle-bin` / `views/init-pages` 三处各自手写的 `safeGet("repo_rtype") || RESOURCE_TYPES.YSM` …
 - **resource-packs**（资源包功能 resource-packs（已归档））：**已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager…
@@ -141,7 +134,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（50 张）
+## go（51 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -194,9 +187,10 @@
 | 🏗 install_domain_split | install 域切分经验：切纯域不硬切复合域（耦合度门槛判断） | architecture | — | internal/app 再切分或迁移 App god-object 字段/方法时, 评估某子域「迁出 internal/app 包」的收益与成本, 复述 ADR-179 实际收敛边界 |
 | 🏗 reference | win-filename-rules | architecture | — | 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）, 判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） |
 | 🏗 rustbridge | Rust 桥 rustbridge | architecture | io-bound, concurrent | Rust 扫描器, rust_backend, 桥 DLL, Wails 后端迁移 Rust |
+| 🍃 texture-cache | 纹理缓存 texture_cache | leaf | — | 纹理缓存 / KTX2 缓存, 缓存清理 / 缓存状态 / 缓存校验, 缓存占用异常 / 磁盘膨胀 |
 | 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 调用后端, getApp, 方法签名, app.ts 绑定 |
 | 🍃 workspace_exe_write_denied | 仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截） | leaf | — | 应用日志/配置出现「创建临时文件失败 ... Access is denied」，但浏览、读取全部正常, wails3 dev / 仓内 bin 下 exe 写失败；同一 exe 复制到仓外跑恢复正常 |
-| 🏗 ysm-wasi | WASI 解码器 spike（wazero 内存直解，node 桥退役候选） | architecture | — | WASI / wazero / 内存直解, node 子进程退役, .ysm 加密解码依赖 |
+| 🏗 ysm-wasi | WASI 解码器（wazero 内存直解，node 桥已退役） | architecture | — | WASI / wazero / 内存直解, node 子进程退役, .ysm 加密解码依赖 |
 
 ### 摘要
 
@@ -245,9 +239,10 @@
 - **golangci-lint**（golangci-lint（Go 静态分析真空面））：Go 侧静态分析长期只有 `go vet` 一根独苗，与 TS 侧密集门禁网形成显著落差。ADR-205 决定引入
 - **install_domain_split**（install 域切分经验：切纯域不硬切复合域（耦合度门槛判断））：ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /…
 - **reference**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
+- **texture-cache**（纹理缓存 texture_cache）：`go/texture_cache` 是模型纹理的磁盘缓存层：源纹理按内容哈希（`TextureHash`）落盘为 KTX2 缓存条目，二次加载直接读缓存，避免重复转码。容量与 TTL 双约束，写入路径自动触发裁剪（Prune）。
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
 - **workspace_exe_write_denied**（仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截））：2026-09-27 排查「wails3 dev 下所有临时文件创建失败（Access is denied），但浏览功能全部正常」：实锤为 **AI 代理沙箱按 exe 镜像位置拦截**——可执行文件位于代理工作区（C:\Users\...…
-- **ysm-wasi**（WASI 解码器 spike（wazero 内存直解，node 桥退役候选））：2026-09-27 最小验证完成：**把 YSMParser 重编成 emscripten standalone（非真 WASI 目标）+ wazero 纯 Go 运行时内存直解，node 子进程桥可整条退役**。12 个真实 .ysm（…
+- **ysm-wasi**（WASI 解码器（wazero 内存直解，node 桥已退役））：2026-09-27 最小验证完成：**把 YSMParser 重编成 emscripten standalone（非真 WASI 目标）+ wazero 纯 Go 运行时内存直解，node 子进程桥可整条退役**。12 个真实 .ysm（…
 
 ## rendering（19 张）
 
@@ -293,13 +288,12 @@
 - **volumetric_cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），四轴分离：
 
-## ui（43 张）
+## ui（41 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🍃 3d-oversize-file-codesplit-feasibility | 3D 层超大文件 code-split 可行性 | leaf | cpu-bound | code-split, 超大文件, mmd-adapter, 拆分可行性 |
 | 🏗 3d-patterns | 3D 区审核与修复模式提炼 | architecture | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
 | 🏗 adr | toast-emoji-svg | architecture | — | toast msg 载荷带 emoji 前缀（✅/❌/⚠️）不知如何处理, toast undo 按钮图标迁移, ADR-238 emoji→SVG 收债的 toast 盲区量不到不拦 |
 | 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:changed, 仓库页, 全局 handler |
@@ -327,7 +321,6 @@
 | 🍃 frontend_naming | 前端命名章程（黑话治理） | leaf | — | 黑话, 命名, 缩写, 重命名, 可读性, 匈牙利前缀, 单字母变量, 动词名词化 |
 | 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
 | 🍃 icon_kit | icon-kit 多源图标（已并入 UI_ICONS） | leaf | — | icon-kit, 多源图标, renderIcon, emoji 图标源, 图标字体 |
-| 🏗 knowledge_frontend_drift_audit | 知识库×前端语义脱节审计 | architecture | — | 知识库脱节, 幽灵事件, nav:changed, invariant_anchors, status 字段, 机制锚, 卡片漂移 |
 | 🍃 menu_test_assertion | 菜单测试断言三分法 | leaf | — | 写 / 改 3D 菜单（cap/adapter/panel/state）测试，断言节点树结构, 菜单测试因加项、删项、重排而集体崩——判断该断言是否属于脆弱布局断言, 新增 cap/菜单节点后，测试该怎么写才不再随菜单变化而改, 看到 check-menu-test-layout 门禁红（新增布局快照断言超基线）, 评审菜单测试时，分不清「行为断言」与「布局快照」 |
 | 🍃 module_global_state | 模块级全局状态治理 | leaf | — | 模块级全局状态, 全局 Map 泛滥, reset 测试钩子, 单例收敛 |
 | 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | gpu-bound | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
@@ -369,7 +362,6 @@
 - **frontend_design_critique**（前端设计锐评）：2026-09-05 三子代理串行只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。…
 - **frontend_naming**（前端命名章程（黑话治理））：2026-09 ADR-161「渲染会话词汇章程」实施时扩大扫描 `frontend/src` 404 个生产 TS 文件，发现命名黑话远超章程六类，按模式统计：
 - **frontend_repo_audit**（前端 TS 整包审计）：2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全…
-- **knowledge_frontend_drift_audit**（知识库×前端语义脱节审计）：2026-09-05 三子代理串行只读锐评（views+features / preview-3d+parsers / core+ui+utils+backend），主模型逐条抽查背书。审计对象：`docs/knowledge` 166 张…
 - **menu_test_assertion**（菜单测试断言三分法）：菜单 UI 逻辑（cap 的 `getMenuNodes()` 树、adapter 产树、state 层控制项顺序）变化频繁，手写「布局快照」断言（有序 id 数组 `toEqual`、精确 `toHaveLength`、`nodes[i]…
 - **module_global_state**（模块级全局状态治理）：2026-09-04 锐评续刀 + ADR-178 期间对「模块级全局状态」的系统评估：modal 单例槽位试点收敛成功（`ModalSlotState`），locale/web-store 查证后**停止推广**（无净收益）。本卡沉淀判断…
 - **multi_model_select**（多模型选择菜单原语 multiModelSelectNode）：跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的
@@ -385,7 +377,7 @@
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/preview-3d/menu/shell/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 s…
 - **ui_components**（UI 组件簇（原 ui 收容所，已归位））：原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front…
 
-## utils（32 张）
+## utils（31 张）
 
 *工具函数（display、fmt、dom、animation）*
 
@@ -420,7 +412,6 @@
 | 🏗 utils-misc | 常量与调试 constants/debug | architecture | — | 调试日志, dbg, 调试开关, 环形日志, debugGetSpec, 全局常量 |
 | 🏗 utils-resource-types | 资源类型工具 resource-types | architecture | — | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, resourceTypesById, 注册表加载 |
 | 🏗 utils-summarize | 摘要生成 summarize | architecture | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
-| 🍃 worker-bridge-settleerror-fallback | worker-bridge-settleError-fallback | leaf | concurrent | 扩展 WorkerErrorStrategy 策略, 评审 worker-bridge settleError 分支 |
 | 🏗 ysm-anim-pipeline | YSM (Bedrock) 动画管线 | architecture | cpu-bound | YSM 动画, 基岩动画, molang, 动画管线 |
 | 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM / YSMParser, ysm 解码, wasm 加载、按需加载, MEMFS, callMain, crossOriginIsolated, stats.worker / worker.format, pthread |
 
@@ -454,7 +445,6 @@
 - **utils-misc**（常量与调试 constants/debug）：前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。
 - **utils-resource-types**（资源类型工具 resource-types）：前端资源类型常量与派生工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 Go 端加载；本卡讲 `utils/resou…
 - **utils-summarize**（摘要生成 summarize）：把 Go 端解析出的模型摘要（YsmSummary）与头部信息（YSMHeader）渲染为预览面板的「模型详情」卡片 HTML。
-- **worker-bridge-settleerror-fallback**（worker-bridge-settleError-fallback）：`worker-bridge.ts` 的 `settleError` 三分支结算：`terminatePool` → reject；`makeErrorResponse` 存在 → resolve 错误响应；else → reject（P2…
 - **ysm-wasm**（WASM 解析器 ysm-parser）：YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64…
 
 ## 性能画像（perf 标签）
@@ -464,11 +454,11 @@
 | 标签 | 含义 | 卡片 |
 |------|------|------|
 | io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, rustbridge, version-updater |
-| cpu-bound | CPU 密集（解析/编译/解算/编码） | 3d-oversize-file-codesplit-feasibility, animation-system, app_content_diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, optimization_log, perception, ysm-anim-pipeline, ysm-wasm |
-| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, model3d, mount3d-584-giant, multi_model_select, optimization_log, preview_core, preview_env_state, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
-| concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app_content_diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race, optimization_log, rustbridge, worker-bridge-settleerror-fallback |
-| memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, model3d, optimization_log, utils-export |
+| cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app_content_diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, perception, ysm-anim-pipeline, ysm-wasm |
+| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, model3d, mount3d-584-giant, multi_model_select, preview_core, preview_env_state, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
+| concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app_content_diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race, rustbridge |
 | single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, scripts_readme_index, ysm-wasm |
+| memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, model3d, utils-export |
 
 ---
 

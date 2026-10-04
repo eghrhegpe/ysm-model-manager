@@ -57,11 +57,10 @@ auto_fields:
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
-  - 地面材质/地面贴图/地板/surface
+  - 地面材质/地面贴图/地板/surface（GroundMaterialSpec/specKey/textureToken）
   - 材质重建与原地更新的判别（needsRebuild）
   - 程序化纹理生成
   - 自定义图片上传到地面
-  - GroundMaterialSpec/specKey/textureToken
   - 参考网格显隐 / 关不掉自带网格（groundGridVisible）
 quick_risk_lines:
   - 地面材质必须走 ground-surface-spec 的 buildGroundSurfaceSpec，spec 是唯一数据源

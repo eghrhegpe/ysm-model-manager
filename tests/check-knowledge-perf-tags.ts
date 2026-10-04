@@ -92,10 +92,11 @@ ok(
   "性能画像未收录 rustbridge",
 );
 
-// 已知标注卡抽查：optimization_log 应带 gpu-bound（KTX2/GPU 内存主题）
-const optRow = indexText.split("\n").find((l) => l.includes("optimization_log"));
+// 已知标注卡抽查：model3d 应带 gpu-bound（3D 渲染主题；抽查对象须为在世卡，
+// 勿指向 docs/archive/ 冻结快照——2026-10 前任抽查卡 optimization_log 已归档迁出）
+const optRow = indexText.split("\n").find((l) => l.includes("model3d"));
 ok(
-  "optimization_log 行含 gpu-bound",
+  "model3d 行含 gpu-bound",
   Boolean(optRow?.includes("gpu-bound")),
   `行内容: ${optRow?.slice(0, 160)}`,
 );

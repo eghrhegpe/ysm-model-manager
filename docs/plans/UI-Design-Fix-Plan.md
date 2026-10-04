@@ -1,6 +1,6 @@
 # YSM 模型管理器 — 界面一致性落地改动方案
 
-> 配套报告：`docs/UI-Design-Audit-2026-09.md`
+> 配套报告：`docs/archive/UI-Design-Audit-2026-09.md`
 > 性质：**只读改动方案**（本文件不改任何代码，只给出 文件:行号 + diff 思路，供逐条拍板/审查）
 > 审查基准：`docs/UI-Design.md` + `frontend/css/variables.css`
 > 复核说明：报告原文部分行号/措辞与当前真实源码有出入，本方案以**当前源码树实测行号**为准，并在 §6 标注了与报告的差异。

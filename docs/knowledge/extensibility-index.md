@@ -33,7 +33,7 @@ invariant_anchors:
 
 # 可拓展点发掘索引（extensibility inventory）
 
-> ⚠️ **批次 1 快照（2026-08-15）**：本卡为 6 个 explore 子代理的输出汇总，此后又经 ADR-064/065/067/068/069 + web M1/M2 闭环了 Top 10 的 60%。状态对账见 [extensibility-index-reconciliation.md](./extensibility-index-reconciliation.md)（2026-08-17）；新拓展点探索见 [extensibility-round2.md](./extensibility-round2.md)（2026-08-16+）。
+> ⚠️ **批次 1 快照（2026-08-15）**：本卡为 6 个 explore 子代理的输出汇总，此后又经 ADR-064/065/067/068/069 + web M1/M2 闭环了 Top 10 的 60%。状态对账见 [extensibility-index-reconciliation.md](../archive/extensibility-index-reconciliation.md)（2026-08-17）；新拓展点探索见 [extensibility-round2.md](./extensibility-round2.md)（2026-08-16+）。
 
 > 范围：YSM model manager 全量非测试源码（frontend/src/** + go/**），323 TS + 181 Go 文件。
 > 方法：6 个 explore 子代理按模块边界并行深读，输出按「现状 → 可拓展为 → 价值」三元组。
@@ -45,7 +45,7 @@ invariant_anchors:
 ## 批次 2（2026-08-16）：对账 + Round 2 探索
 
 > 本轮（ADR-064/065/067/068 + 硬编码清理 c30fb366 + 目录解析锚定 d517113c + web M1/M2 93cb0e8b）闭环了批次 1 Top 10 的 **60%**。
-> 对账详情（逐条已闭环/存活/部分，grep 实测当前 HEAD 行号）：`extensibility-index-reconciliation.md`
+> 对账详情（逐条已闭环/存活/部分，grep 实测当前 HEAD 行号）：`docs/archive/extensibility-index-reconciliation.md`
 > 新拓展点探索（4 维度扩展入口 + Top 10 新建议 + 残留清单）：`extensibility-round2.md`
 
 **批次 1 Top 10 状态**：✅ 闭环 #3（文件夹级判定）/ #5（ShouldHashExt）/ #6（browser-adapter 装配）/ #7（import-dnd）/ #8（app-modules loadView）/ #10（/web 正则）；🔄 部分 #2（双检测器并存）/ #4（copyFile 6 处 wrapper 未收尽，installer 已收敛）/ #9（无显式 hook 指针）；⏸ N/A #1（RenderSession 独立立项）。

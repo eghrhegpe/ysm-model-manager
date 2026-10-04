@@ -8,7 +8,7 @@
 //   3. none 语义：真的不产出表面（ADR-249 §2.2）
 //
 // 核实基准：frontend/src/preview-3d/caps/ground-surface-spec.ts（2026-09-16）
-// 文档：docs/ADR-249-ground-material-effect-matrix.md
+// 文档：docs/archive/ADR-249-ground-material-effect-matrix.md
 
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";

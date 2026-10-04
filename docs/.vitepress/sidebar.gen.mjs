@@ -223,16 +223,16 @@ export const autoSidebar = [
         "link": "/audit-src-map"
       },
       {
-        "text": "地面材质参数 × 模式生效矩阵（ADR-249 §2.4 交付物）",
-        "link": "/ADR-249-ground-material-effect-matrix"
-      },
-      {
         "text": "环境系统面板审查（锐评）— 进度与发现",
         "link": "/audit-env-review"
       },
       {
         "text": "后处理系统锐评（2026-10-04）",
         "link": "/audit-postprocessing-critique"
+      },
+      {
+        "text": "水面系统锐评（2026-10-04）",
+        "link": "/audit-water-critique"
       },
       {
         "text": "CLI 命令参考",
@@ -243,24 +243,8 @@ export const autoSidebar = [
         "link": "/event-graph"
       },
       {
-        "text": "前端无障碍普及率调查报告",
-        "link": "/frontend-a11y-audit"
-      },
-      {
-        "text": "preview-3d 巡检追踪器",
-        "link": "/preview-3d-review-tracker"
-      },
-      {
         "text": "3D 预览菜单系统全景图",
         "link": "/preview-menu-overview"
-      },
-      {
-        "text": "YSM 模型管理器 — 界面视觉与布局一致性诊断报告",
-        "link": "/UI-Design-Audit-2026-09"
-      },
-      {
-        "text": "YSM 模型管理器 — 界面一致性落地改动方案",
-        "link": "/UI-Design-Fix-Plan"
       }
     ]
   },
@@ -269,6 +253,10 @@ export const autoSidebar = [
     "link": "/adr/",
     "collapsed": true,
     "items": [
+      {
+        "text": "ADR-320：ADR 体系分级：架构决策与执行决策日志分治",
+        "link": "/adr/ADR-320-adr-tiering"
+      },
       {
         "text": "ADR-319：水面波场尺度归一与泡沫判据可达性",
         "link": "/adr/ADR-319-water-spectrum-scale-normalization"
@@ -1619,10 +1607,6 @@ export const autoSidebar = [
             "link": "/knowledge/global-handlers"
           },
           {
-            "text": "i18n 翻译准确度扫描记录",
-            "link": "/knowledge/i18n_accuracy"
-          },
-          {
             "text": "国际化 i18n 模块",
             "link": "/knowledge/i18n"
           },
@@ -1853,6 +1837,10 @@ export const autoSidebar = [
             "link": "/knowledge/rustbridge"
           },
           {
+            "text": "纹理缓存 texture_cache",
+            "link": "/knowledge/texture-cache"
+          },
+          {
             "text": "Wails Binding API 总览 internal/app",
             "link": "/knowledge/wails-bindings"
           },
@@ -1861,7 +1849,7 @@ export const autoSidebar = [
             "link": "/knowledge/workspace_exe_write_denied"
           },
           {
-            "text": "WASI 解码器 spike（wazero 内存直解，node 桥退役候选）",
+            "text": "WASI 解码器（wazero 内存直解，node 桥已退役）",
             "link": "/knowledge/ysm-wasi"
           }
         ]
@@ -1870,10 +1858,6 @@ export const autoSidebar = [
         "text": "ui",
         "collapsed": true,
         "items": [
-          {
-            "text": "3D 层超大文件 code-split 可行性",
-            "link": "/knowledge/3d-oversize-file-codesplit-feasibility"
-          },
           {
             "text": "3D 区审核与修复模式提炼",
             "link": "/knowledge/3d-patterns"
@@ -1983,10 +1967,6 @@ export const autoSidebar = [
             "link": "/knowledge/icon_kit"
           },
           {
-            "text": "知识库×前端语义脱节审计",
-            "link": "/knowledge/knowledge_frontend_drift_audit"
-          },
-          {
             "text": "菜单测试断言三分法",
             "link": "/knowledge/menu_test_assertion"
           },
@@ -2083,10 +2063,6 @@ export const autoSidebar = [
           {
             "text": "资历最深模型 oldest-models",
             "link": "/knowledge/oldest-models"
-          },
-          {
-            "text": "preview-3d 领域根迁移",
-            "link": "/knowledge/preview_3d_migration"
           },
           {
             "text": "3D 预览控制器（声明式菜单节点）",
@@ -2325,10 +2301,6 @@ export const autoSidebar = [
             "link": "/knowledge/utils-summarize"
           },
           {
-            "text": "worker-bridge-settleError-fallback",
-            "link": "/knowledge/worker-bridge-settleerror-fallback"
-          },
-          {
             "text": "YSM (Bedrock) 动画管线",
             "link": "/knowledge/ysm-anim-pipeline"
           },
@@ -2343,10 +2315,6 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "知识卡 vs 代码 语义审计报告",
-            "link": "/knowledge/audit-drift-report-2026"
-          },
-          {
             "text": "auto-import 拆分与缺失 import 检测",
             "link": "/knowledge/auto_import_split"
           },
@@ -2359,20 +2327,12 @@ export const autoSidebar = [
             "link": "/knowledge/experience"
           },
           {
-            "text": "可拓展点索引对账（vs HEAD @ d517113c…）",
-            "link": "/knowledge/extensibility-index-reconciliation"
-          },
-          {
             "text": "可拓展点发掘索引（extensibility inventory）",
             "link": "/knowledge/extensibility-index"
           },
           {
             "text": "拓展点 / 扩展入口 探索报告（Round 2）",
             "link": "/knowledge/extensibility-round2"
-          },
-          {
-            "text": "优化记录 optimization-log",
-            "link": "/knowledge/optimization_log"
           },
           {
             "text": "孤儿导出检测器（扫描盲区）",

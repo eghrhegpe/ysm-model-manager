@@ -133,5 +133,5 @@ ADR-069：importer 魔数路径（不真开容器、靠魔数嗅探）语义由 
 
 - [go_types](./go-types.md) — `types` 共享类型层（注册表加载、zipentry 契约 ADR-067）
 - [resource_registry](./resource-registry.md) — `resource_types.json` 单一事实源
-- [extensibility_index_reconciliation](./extensibility-index-reconciliation.md) — Top #2 双入口检测器（部分闭环）
+- [extensibility_index_reconciliation](../archive/extensibility-index-reconciliation.md) — Top #2 双入口检测器（部分闭环）
 - 测试：`go/packs/classify_test.go`、`go/packs/model_file_test.go`、`go/packs/testdata/classify-golden.json`、`go/types/registry_schema_guard_test.go`

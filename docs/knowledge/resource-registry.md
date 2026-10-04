@@ -165,7 +165,7 @@ use_when:
   - registry
   - 文件类型
 invariant_anchors:
-  - resource_types.json|resourceTypes
+  - internal/app/resource_bindings.go|DetectResourceType
 
 quick_groups:
   - 配置与注册表

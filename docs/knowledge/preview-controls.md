@@ -75,15 +75,11 @@ pitfalls:
   - 想在详情卡加 3D 按钮 → 与 ADR-253 D7 冲突（3D 已收敛到 nav-fab）；需要容器内指定模型请用 openModel3DFullscreen(path, { entry })
 
 use_when:
-  - 3D 控制器
-  - MMD 播放
-  - 截图按钮
-  - 相机控制
+  - 3D 控制器 / MMD 播放
+  - 截图按钮 / 相机控制
   - 模型切换
-  - 3D 入口
-  - nav-fab
-  - siblings
-  - 容器内模型
+  - 3D 入口 / nav-fab
+  - siblings / 容器内模型
   - 资源包模型直达
 invariant_anchors:
   - frontend/src/views/app-preview/ysm-controls.ts|registerYsmModelSchema

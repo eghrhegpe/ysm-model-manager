@@ -72,7 +72,7 @@ invariant_anchors:
   - docs/adr/ADR-249-ground-material-axis-split-layer-overlay.md|§2.4 生效矩阵
 ---
 
-# ai-review-pitfalls
+# AI 审查器偏差与查证方法论（9 轮实战沉淀）
 
 ## 概览
 

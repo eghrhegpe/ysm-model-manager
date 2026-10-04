@@ -30,7 +30,7 @@ invariant_anchors:
 
 # 可拓展点索引对账（vs HEAD @ d517113c…）
 
-> ⚠️ **快照卡**：对账基准为 d517113c（2026-08-17），此后又有多轮 ADR 落地（ADR-144 分类下沉、ADR-151 临时索引等），当前 HEAD 相对此卡的 Top 10 状态可能已进一步演化。如需最新对账状态，请走 [extensibility_round2](./extensibility-round2.md) 或以 grep 实测为准。
+> ⚠️ **快照卡**：对账基准为 d517113c（2026-08-17），此后又有多轮 ADR 落地（ADR-144 分类下沉、ADR-151 临时索引等），当前 HEAD 相对此卡的 Top 10 状态可能已进一步演化。如需最新对账状态，请走 [extensibility_round2](../knowledge/extensibility-round2.md) 或以 grep 实测为准。
 
 > 索引版本：2026-08-15（第 1 批，6 个 explore 子代理产出，323 行）
 > 对账口径：以 grep 实测为准（行号以当前 HEAD 漂移后为准）。
@@ -41,7 +41,7 @@ invariant_anchors:
 | # | 索引条目 | 状态 | 当前证据（文件:行号） |
 |---|---------|------|----------------------|
 | 1 | `model3d.ts` RenderSession 完整对象化（陷阱 #11 已独立立项） | **N/A** | `frontend/src/preview-3d/mesh/model3d.ts` 仍存在；按索引原文「已裁决独立立项待启动」处理，不计入 Top 10 对账 |
-| 2 | 两套检测器 `importer_file.go` + `mcmeta.go` 均应注册表驱动 | **部分** | 现状（2026-09-01 更新）：`go/packs/mcmeta.go` `DetectResourceType` 同包直调 `ClassifyResource`；`go/importer/importer_file.go` `DetectZipType` 收集全条目名后委托 `packs.DetectByEntries`（commit `bc95fbb4` 收敛至 types，**ADR-144 下沉至 packs**）。**分类核心统一于 `packs` 包**（识别大脑 + 识别入口同包，薄壳撤销），`resource_types.json` 字段驱动不变（ADR-067 闭环）。但 `go/repoaudit/repoaudit.go` `Classify` 仍自有实现（**有意保留**：审计口径遇未知容器标 `container`，与导入口径 content-fingerprint 语义不同），故「完全合并为单一入口」未达成。回归护栏见 [classify_routing](./classify-routing.md)（golden/isolation/order + schema 守卫 4/5，commit `634fb63f`）。|
+| 2 | 两套检测器 `importer_file.go` + `mcmeta.go` 均应注册表驱动 | **部分** | 现状（2026-09-01 更新）：`go/packs/mcmeta.go` `DetectResourceType` 同包直调 `ClassifyResource`；`go/importer/importer_file.go` `DetectZipType` 收集全条目名后委托 `packs.DetectByEntries`（commit `bc95fbb4` 收敛至 types，**ADR-144 下沉至 packs**）。**分类核心统一于 `packs` 包**（识别大脑 + 识别入口同包，薄壳撤销），`resource_types.json` 字段驱动不变（ADR-067 闭环）。但 `go/repoaudit/repoaudit.go` `Classify` 仍自有实现（**有意保留**：审计口径遇未知容器标 `container`，与导入口径 content-fingerprint 语义不同），故「完全合并为单一入口」未达成。回归护栏见 [classify_routing](../knowledge/classify-routing.md)（golden/isolation/order + schema 守卫 4/5，commit `634fb63f`）。|
 | 3 | 文件夹级判定 6+ 处硬编码 | **已闭环 ADR-064/065** | `go/sync/sync_push.go` 均改调 `types.IsDirLevelSync(rtype)`；`go/sync/sync_relink.go` 用 `types.IsDirLevelSync(rtype) && packs.IsTypeModelFile(base, rtype)`；`go/sync/sync_dirlevel.go` 用 `packs.IsTypeModelFile`；`go/instance/instance.go` 用 `types.FindInstDir`（注册表驱动）。`isSyncAllowed/isModelFile/extMatch/syncNameKey` 全部收敛进 `types/`（`NormalizeResourceName`/`IsResourceAllowed`/`IsDirLevelSync`）+ `packs/`（`IsTypeModelFile`，ADR-144 下沉）。 |
 | 4 | `fsutil/` `copyFile×6` / `copyDirRecursive×4` 重复 | **部分** | `go/fsutil/copy.go` 已定义统一 `CopyFile` + `CopyDirRecursive`（注释明确「收敛自 fileops/recycle/importer/sync 四份」）。`installer.copyFileLocked` 已收敛为 `fsutil.CopyFile` 委托 + `StepError` 步骤类型化错误（ADR-044 策略 A：机制归 fsutil、文案归 installer）。仍保留 6 处本地 wrapper：`sync.copyFile`、`recycle.copyFile`、`importer.copyFile`、`fileops.copyFile`、`updater.copyFile`、`cmd/updater.copyFile`——多数为薄包装/不同语义，未完全消除。 |
 | 5 | `ShouldHashExt` + scanner CI 清单硬编码 | **已闭环** | `go/types/registry/extensions.go` `ShouldHashExt` 现按 `ResourceType.Hashable` 字段判定（注释：「注册表驱动：任何声明 hashable 的资源类型扩展名均计入哈希」）。`Hashable` 字段在 `go/types/registry/resource.go` 已定义。`go/types/types_extra_test.go` `TestShouldHashExt_PinnedList` 钉住 `.ysm/.zip/.7z/.json/.nbt/.schematic/.litematic`，并测大小写不敏感。scanner 不再维护独立清单。 |

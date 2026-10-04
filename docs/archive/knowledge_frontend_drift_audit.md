@@ -106,6 +106,6 @@ invariant_anchors:
 
 ## 相关
 
-- [frontend_design_critique](./frontend_design_critique.md) — 2026-09-05 前端设计锐评（并行审计，主模型抽查背书同款方法论）
-- [frontend_repo_audit](./frontend_repo_audit.md) — 2026-08-26 代码质量审计（本卡基线）
+- [frontend_design_critique](../knowledge/frontend_design_critique.md) — 2026-09-05 前端设计锐评（并行审计，主模型抽查背书同款方法论）
+- [frontend_repo_audit](../knowledge/frontend_repo_audit.md) — 2026-08-26 代码质量审计（本卡基线）
 - 修复提交：`029721d4` `e33e1f49` `31bf4ae5` `5d5a20b0` `98c13f6d`

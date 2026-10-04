@@ -85,6 +85,6 @@ YSM_SKIP_TOKEN_CHECK=1 node scripts/css-token-check.ts  # 逃生阀
 
 ## 相关
 
-- [UI-Design-Audit-2026-09](./../UI-Design-Audit-2026-09.md) — 界面一致性诊断报告
-- [UI-Design-Fix-Plan](./../UI-Design-Fix-Plan.md) — 落地改动方案（含执行记录 §8）
+- [UI-Design-Audit-2026-09](./../archive/UI-Design-Audit-2026-09.md) — 界面一致性诊断报告
+- [UI-Design-Fix-Plan](./../plans/UI-Design-Fix-Plan.md) — 落地改动方案（含执行记录 §8）
 - [css-layer-check](../adr/ADR-274-css-layer-check.md) — Shadow DOM 样式越界检查（闸本体决策 ADR-274/275；`scripts/css-layer-check.ts` 为脚本本体，docs 下无同名知识卡）

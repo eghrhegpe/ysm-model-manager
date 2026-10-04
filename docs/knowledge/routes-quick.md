@@ -25,7 +25,7 @@
 | 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | ADR-132 |
 | 程序化纹理生成 | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | - | - |
 | 纯函数 vs Node+WASM 解码分界 | [Go 头像提取：纯函数 vs Node+WASM 解码分界](./go-avatar-decode.md) | ADR-316 后 Node+WASM 解码桥已退役：.ysm 解码走 ysm.DecodeYSM 注入点（wazero），禁止新建 Node 子进程桥 | - |
-| 地面材质/地面贴图/地板/surface | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | 地面材质必须走 ground-surface-spec 的 buildGroundSurfaceSpec，spec 是唯一数据源 | - |
+| 地面材质/地面贴图/地板/surface（GroundMaterialSpec/specKey/textureToken） | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | 地面材质必须走 ground-surface-spec 的 buildGroundSurfaceSpec，spec 是唯一数据源 | - |
 | 动画分组、配置菜单、ysm.json | [YSM 动画分组与配置菜单提取](./format-ysm-anim-config.md) | YSM 动画分组与配置菜单必须经 extractAnimGroupsAndConfigs 从 ysm.json properties 提取 | - |
 | 动画解析 / 求值 / 渲染注入 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
 | 多 3D 场景共存 | [联邦渲染能力 (Render Federation)](./render-federation.md) | - | ADR-125 |
@@ -78,7 +78,6 @@
 | extra_animation、summarize | [YSM 动画分组与配置菜单提取](./format-ysm-anim-config.md) | - | - |
 | foot IK、极向量 / pole、CCD | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik_solver.md) | 腿链链根取大腿的「直接父骨」；改成大腿自身 = 只有膝盖能动 | - |
 | ground 材质菜单节点 | [ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）](./ground-cap-materialgroup-factories.md) | - | - |
-| GroundMaterialSpec/specKey/textureToken | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | - | - |
 | IK 求解、骨骼 IK、足部锚地 | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik_solver.md) | IK 求解必须走 ik-solver 的 CCD 求解器 + mmd-foot-ik 的足部锚地，禁止手写 IK 逻辑 | - |
 | isSafeAvatarPath | [头像 go/avatar](./go-avatar.md) | - | - |
 | MEMFS / node 解码 / callMain | [WASM 解析器 ysm-parser](./ysm-wasm.md) | - | - |
@@ -92,7 +91,7 @@
 | schema 键冲突、ADR-132 | [preview-menu-session-key](./preview_menu_session_key.md) | - | ADR-132 |
 | schema 注册、per-scene、多模型同框 | [preview-menu-session-key](./preview_menu_session_key.md) | schema 注册必须用 per-scene 键，禁止跨场景共用 schema key | ADR-132 |
 | VRM 动画播放、VRMA | [统一 3D 预览核心 preview-core](./preview_core.md) | 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update() | ADR-125 |
-| WASI 解码、wazero、node 退役 | [WASI 解码器 spike（wazero 内存直解，node 桥退役候选）](./ysm-wasi.md) | 解析器改动（collectToMemory）在本仓 vendored 副本内，上游同步时需重放 | - |
+| WASI 解码、wazero、node 退役 | [WASI 解码器（wazero 内存直解，node 桥已退役）](./ysm-wasi.md) | 解析器改动（collectToMemory）在本仓 vendored 副本内，上游同步时需重放 | - |
 | WASM 解析器、YSMParser、ysm 解码 | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析 | - |
 | YSM 动画管线、基岩动画 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | YSM 动画必须走 ysm-anim-pipeline 的解析-求值-注入三段，禁止前端手写动画解析 | - |
 | ysm-animation-player、molang | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
@@ -324,9 +323,8 @@
 | 详情卡 3D 入口、nav-fab、card-shell 统一壳 | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
 | 预览面板、模型预览、2D 骨骼 / 3D 预览 | [预览面板 app-preview](./app-preview.md) | 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则 | ADR-137, ADR-138, ADR-253 |
 | app-preview 组件、_previewGuard、detailGen | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
-| Litematic / 蓝图、资源包 / 光影包 | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
+| Litematic / 蓝图、资源包 / 光影包（showResourcePack / showShaderpack） | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
 | model:select、WASM 解码、放大预览 | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
-| showResourcePack、showShaderpack | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
 
 ## 🎯 UI 交互与弹窗
 
@@ -812,6 +810,14 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | sleep 替换为 waitFor / 负向定时器窗口断言 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
+
+## 🎯 缓存
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 缓存清理、cache-clear | [纹理缓存 texture_cache](./texture-cache.md) | - | - |
+| 缓存状态、cache-status / cache-verify | [纹理缓存 texture_cache](./texture-cache.md) | - | - |
+| 纹理缓存、KTX2 缓存 | [纹理缓存 texture_cache](./texture-cache.md) | 缓存键 = 内容哈希（TextureHash），改哈希口径旧缓存全体失联；TTL 与容量裁剪（Prune）在写入路径触发，改淘汰策略须同步 prune 测试矩阵 | - |
 
 ## 🎯 preview-3d
 
@@ -1335,6 +1341,7 @@
 | 将 init 落定硬凑成 waitFor 条件会与组件内部实现耦合，条件易碎 | - | - |
 | 将负向定时器窗口换成短 sleep 会导致防抖真坏了也漏报 | - | - |
 | testid 值禁止含空格或大小写混排（UI-Design.md §19.1），本层未做入口校验（P3） | - | - |
+| 缓存目录位置经 CacheDir 推导，清理一律走 cache-clear CLI，不手删目录 | - | - |
 | 脏主题值直写 | - | 无效 CSS 变量、页面错乱；必须经 normalizeTheme 过滤 |
 | 跟随系统主题未监听 prefers-color-scheme | - | 系统切换主题后页面未同步；必须挂 change 监听 |
 | 各层各自调 SearchModels | - | 重复请求 / 结果不一致；必须经 toolbar-search 单点编排 |

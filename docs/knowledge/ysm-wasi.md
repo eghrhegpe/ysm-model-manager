@@ -1,6 +1,6 @@
 ---
 kind: ysm-wasi
-name: WASI 解码器 spike（wazero 内存直解，node 桥退役候选）
+name: WASI 解码器（wazero 内存直解，node 桥已退役）
 tier: architecture
 category: go
 status: active

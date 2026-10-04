@@ -53,7 +53,7 @@ status: snapshot
 ## 2026-09-03 复核（外部评审再点名 + mmd-adapter 已拆）
 
 - **mmd-adapter.ts（原判不拆）→ 已被 [ADR-167](../adr/ADR-167-mmd-stage.md) 推翻并拆完**：旧判「唯一导出 interface、拆了断注册链」被证伪——壳 re-export 保兼容，零调用方改动。真正决定可拆性的是**结构而非行数**：mmd-adapter 是 stage 管线（顶层函数 + MdMmBuildCtx/Pick 收窄），有真缝；沿缝搬移为 9 文件（壳 74 行 + types/shared/load/parse/scene/anim/menu/result），64+565 测试全绿。本卡旧正文 mmd-adapter 段落已失效。
-- **mount-preview-core.ts（维持不拆）**：仍为大文件，`mount3D` 占文件主体（数百行级）。§5 二次拆分已把 5 个 mp* 子函数全部外移（shared-infra/wasd-camera/unified-pick/unload-model/input-and-animation/switch-preview），实体逻辑全外置；剩余为**闭包接线编排器**，段落共享 15+ 闭包变量、无 stage 缝——强行拆 = 巨型参数化，与 mmd-adapter 不可类比。详见 [mount3d-584-giant](./mount3d-584-giant.md) 2026-09-03 复核节。
+- **mount-preview-core.ts（维持不拆）**：仍为大文件，`mount3D` 占文件主体（数百行级）。§5 二次拆分已把 5 个 mp* 子函数全部外移（shared-infra/wasd-camera/unified-pick/unload-model/input-and-animation/switch-preview），实体逻辑全外置；剩余为**闭包接线编排器**，段落共享 15+ 闭包变量、无 stage 缝——强行拆 = 巨型参数化，与 mmd-adapter 不可类比。详见 [mount3d-584-giant](../knowledge/mount3d-584-giant.md) 2026-09-03 复核节。
 - **ground-capability.ts（维持不拆）**：能力单元制（caps/ 29 文件），规模为合理量级，未变。
 - **判定准则更新**：「行数」不是拆分依据；先查**缝**（stage 顶层化 / Pick 收窄接口 / 独立生命周期边界），有缝才拆，无缝的闭包编排单体记「不拆」并留复核节。
 
@@ -84,7 +84,7 @@ status: snapshot
 - 与 mmd-adapter 同理——唯一导出 `PreviewBuildCtx` interface，拆 interface 会断契约链
 - `switch-preview.ts`(442) / `preview-menu/settings.ts`(226) / `preview-menu/roles.ts`(310) 已经拆出去了
 - 剩下的 1202 行是 mount-preview 的核心编排逻辑（场景注册 + 会话管理 + 资源加载），拆了会断生命周期链
-- ⚠️ 注：`mount3D` 本体仍 604 行（L263-L866），已拆出 5 个 `mp*` 子函数（见 [mount3D 巨函数现状](./mount3d-584-giant.md)），但会话管理部分未外拆
+- ⚠️ 注：`mount3D` 本体仍 604 行（L263-L866），已拆出 5 个 `mp*` 子函数（见 [mount3D 巨函数现状](../knowledge/mount3d-584-giant.md)），但会话管理部分未外拆
 
 ### caps/ground-capability.ts（559 行）
 

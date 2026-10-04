@@ -92,7 +92,7 @@ export const DEFAULT_GROUND_SURFACE_PARAMS: GroundMaterialParams = {
 //
 // 核实基准（2026-09-16）：generateSurfacePixels 的像素读取分支 +
 // applyGroundSurfaceAppearance 的 mat.map 读取。逐格核实记录见
-// docs/ADR-249-ground-material-effect-matrix.md。
+// docs/archive/ADR-249-ground-material-effect-matrix.md。
 //
 // 注意 matScale / matRotationDeg：二者作用于 mat.map，故凡产出贴图的模式
 // （plain 起）均被读取——属「生效但视觉不可见」（纯色贴图重复仍是纯色）。

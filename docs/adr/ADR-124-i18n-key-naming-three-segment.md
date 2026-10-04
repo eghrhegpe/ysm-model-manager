@@ -145,7 +145,7 @@ function t(key, params) {
 
 **采用「同步改调用点」的理由**：
 - 迁移键量可控（每个 PR ≤50 键），调用点 grep 可穷尽，同步改比长期维护映射表更简单、无「翻译改旧键白改」的隐性坑
-- 旧键直接删除而非保留，**杜绝了「翻译改旧键以为生效实则无效」的失效陷阱**（i18n_accuracy.md 曾记录 10 处键名迁移后值未同步的问题，正是旧键残留的后果）
+- 旧键直接删除而非保留，**杜绝了「翻译改旧键以为生效实则无效」的失效陷阱**（docs/archive/i18n_accuracy.md 曾记录 10 处键名迁移后值未同步的问题，正是旧键残留的后果）
 - 维护成本：无需维护 `legacy-key-map.ts` 长期表
 
 ### 2.4 命名检查脚本：`scripts/i18n-key-naming.ts`
@@ -185,7 +185,7 @@ node scripts/i18n-key-naming.ts --check newKey1 newKey2  # 检查指定键
 | 旧键 | 新键 |
 |------|------|
 | `preview.skeletonTab` | `preview.tab.skeleton` |
-| `preview.skeletonLabel` | `preview.label.boneCount`（~~label.skeleton~~ 后续细化改名，见 [i18n_accuracy](../knowledge/i18n_accuracy.md)） |
+| `preview.skeletonLabel` | `preview.label.boneCount`（~~label.skeleton~~ 后续细化改名，见 [i18n_accuracy](../archive/i18n_accuracy.md)） |
 | `preview.bones` | `preview.section.bones` |
 | `preview.bonesLabel` | `preview.label.bones` |
 | `preview.boneLabels` | `preview.field.boneNames` |

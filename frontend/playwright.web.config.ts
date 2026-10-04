@@ -4,6 +4,7 @@
 // （IndexedDB 模型库，零 Wails 壳依赖）。跑法：
 //   npx playwright test --config playwright.web.config.ts
 import { defineConfig, devices } from "@playwright/test";
+import { localChromiumUse } from "./e2e/browser-path.ts";
 
 export default defineConfig({
   testDir: "./e2e-web",
@@ -29,7 +30,12 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      // 浏览器探测（e2e/browser-path.ts，与主配置同一机制）：web 链路是 WebGL 主战场，
+      // 默认 headless 解析走 headless shell（GPU 栈弱）——探测到期望修订的 full 时钉住。
+      // postprocessing.spec 的 spec 级 test.use 硬钉全版本（spec 级覆盖 project 级），
+      // 其「环境缺失即启动失败」的有意语义不受本接线影响；未设 spec 级 use 的
+      // web-preview / web-smoke 走本 project 级探测，探测不到则展开 {} 走默认解析。
+      use: { ...devices["Desktop Chrome"], ...localChromiumUse() },
     },
   ],
 });

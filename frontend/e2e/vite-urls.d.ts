@@ -6,6 +6,11 @@
 // ⚠️ 通配 ambient 声明必须放**纯全局** .d.ts（无顶层 import/export）：放进模块文件
 // （如 e2e/global.d.ts，其顶部有 import type）会被 TS 当模块增强静默忽略（实测 2026-10-04：
 // 放 global.d.ts 不生效、移出后 tsc 转绿）——勿移回。
+//
+// ⚠️ 潜伏绊线（2026-10 锐评 P2-4）：`/...` 开头的模块名在关闭 skipLibCheck 时会触发
+// TS2436（Ambient module declaration cannot specify relative module name）——当前绿态
+// 依赖 tsconfig.json 继承的 skipLibCheck: true。谁若为 e2e 单独关掉 skipLibCheck，本文件
+// 与 e2e-web/global.d.ts 即红——改开关前先改声明（如按具体 URL 逐条 shorthand declare module）。
 declare module "/src/*" {
   const value: any;
   export = value;

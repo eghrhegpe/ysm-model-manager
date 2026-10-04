@@ -42,10 +42,11 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      // 浏览器探测（e2e/browser-path.ts）：受限网络下 ms-playwright 里实际存在的
-      // chromium 版本可能与 @playwright/test 期望不符 → 默认解析 "Executable doesn't
-      // exist"。探测到即钉住其 launchOptions.executablePath；探测不到展开 {}，
-      // 行为与改造前完全一致（CI 正常装了浏览器的场景正是这条路）。
+      // 浏览器探测（e2e/browser-path.ts，机制见该文件头）：期望修订优先（与
+      // @playwright/test 期望版对齐，避免「钉旧版/钉异版比默认解析更糟」——2026-10
+      // 锐评 P1-1），期望修订缺失时回落最大修订启发式；完全没有浏览器时展开 {}
+      // 走默认解析。CI 正常装完浏览器的场景探测**成功**（钉期望修订，净效应与默认
+      // 解析一致），{} 才是「无浏览器」路径——注意因果（曾写反，锐评修正）。
       use: { ...devices["Desktop Chrome"], ...localChromiumUse() },
     },
   ],

@@ -12,15 +12,16 @@
 // 环境前提（本机实测）：
 //   · WebGL2 via ANGLE/SwiftShader 软渲染；EXT_color_buffer_float 与 MAX_SAMPLES=4 均可用，
 //     足够支撑 EffectComposer 的 HalfFloatType 缓冲与 MSAA。
-//   · 完整版 chromium（chromium-1228）比 chrome-headless-shell 更适合验 WebGL，故显式
-//     指 executablePath；若该目录缺失（他机/CI），用例会启动失败而非静默跳过——这是有意的，
-//     避免「环境没了测试却全绿」。
+//   · 完整版 chromium 比 chrome-headless-shell 更适合验 WebGL（GPU 栈完整），故
+//     findLocalChromium 传 preferFull（期望修订 full → 最大 full → 期望 shell → 最大 shell）；
+//     本机若只有旧版 full（如 1228）也会取之而非匹配版 shell；若全部缺失（他机/CI），
+//     回落硬编码路径并启动失败而非静默跳过——这是有意的，避免「环境没了测试却全绿」。
 import { expect, type Page, test } from "@playwright/test";
 import { findLocalChromium } from "../e2e/browser-path.ts";
 
-/** 本机探测到的 chromium（优先完整版）；探测不到时回落硬编码路径。 */
+/** 本机探测到的 chromium（preferFull：WebGL 语义，见上）；探测不到时回落硬编码路径。 */
 const CHROME =
-  findLocalChromium() ??
+  findLocalChromium(undefined, undefined, { preferFull: true }) ??
   `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1228\\chrome-win64\\chrome.exe`;
 
 test.use({

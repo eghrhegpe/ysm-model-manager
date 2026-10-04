@@ -208,6 +208,17 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           get: () => cap.getWaveSpeed(),
           set: (v) => cap.setWaveSpeed(v),
         }),
+        // ADR-319 D1：浪高入参数——原波幅写死、无用户入口（默认 ±2.7 m 风暴）。
+        // 入 shader 前经 effectiveWaveHeight 双向往容器钳制，拉到上限也不越壁不穿地。
+        wSliderNode(
+          "water-wave-height",
+          "preview.waterWaveHeight",
+          getParamRange("waterWaveHeight"),
+          {
+            get: () => cap.getWaveHeight(),
+            set: (v) => cap.setWaveHeight(v),
+          },
+        ),
       ],
     },
     // ADR-297：模型倒影——隐藏 Reflector 借官方 RT + 水 shader 投影采样。

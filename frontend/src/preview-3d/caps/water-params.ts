@@ -40,6 +40,22 @@ type WaterApplyCtx = {
 // ADR-315 D1 拆出导出（water-capability applyChangedParams 装配 ctx 消费）：
 export type { WaterApplyCtx, WaterParamKey };
 
+/**
+ * ADR-319 D1：波高**双向往容器钳制**——入 shader 前算好钳后值，shader 不再长一套容器假设。
+ *   · 下钳 `Σamp ≤ waterLevel`：波谷不得穿透 y=0 地面（film 语义）；
+ *   · 上钳 `Σamp ≤ poolHeight − waterLevel`：波峰不得越过池壁顶（pool 语义）。
+ * 取两者较小值；任一为负（水位高于壁顶等脏参数）则归零。单向钳制只治一半——
+ * 只钳池深会让水位为 0 时波谷穿透地面，只钳水位会让波峰漫过池壁（探针实测越壁 33.17%）。
+ * 消费点：`waterWaveHeight` / `waterLevel` / `waterPoolHeight` 三条 applier 同源调用，
+ * 保证三者任一变更即重算（派生量不烘死在装配期——ADR-272 §5 教训同源）。
+ */
+export function effectiveWaveHeight(): number {
+  const level = Math.max(0, envState.waterLevel);
+  const headroom = Math.max(0, envState.waterPoolHeight - level);
+  const budget = Math.min(level, headroom);
+  return Math.max(0, Math.min(envState.waterWaveHeight, budget));
+}
+
 /** 结构参数三键共享：查表执行 transformLinks（幂等，重复调用 no-op） */
 function applyStructuralProfile(ctx: WaterApplyCtx): void {
   ctx.strategy.applyProfile(ctx.water, {
@@ -66,6 +82,7 @@ export const WATER_PARAM_APPLIER_KEYS = [
   "waterPoolHeight",
   "waterPoolWallThickness",
   "waterChoppiness",
+  "waterWaveHeight",
   "waterLevel",
   "waterReflectionEnabled",
   "waterReflectionStrength",
@@ -143,6 +160,9 @@ export const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) =>
   },
   waterPoolHeight: (ctx) => {
     applyStructuralProfile(ctx);
+    // ADR-319 D1：池深同时是波高预算的上钳上限（波峰不越壁顶），film/pool 都须重算
+    // ——故放在 supportsVolumeOptics 早退**之前**（film 无体积光学但同样受预算约束）。
+    ctx.setUniform(ctx.top.material, "uWaveHeight", effectiveWaveHeight());
     // 池深同时是顶水面的体积光学光程（ADR-257：「容器内水的光程」由容器深度派生）。
     // 派生量必须随 poolHeight 重算，否则拖池深滑块观感裂缝；仅 supportsVolumeOptics 有意义。
     if (!ctx.strategy.supportsVolumeOptics) return;
@@ -158,9 +178,15 @@ export const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) =>
   waterChoppiness: ({ top, setUniform }) => {
     setUniform(top.material, "uChoppiness", envState.waterChoppiness);
   },
-  waterLevel: ({ water, strategy }) => {
+  waterWaveHeight: ({ top, setUniform }) => {
+    // ADR-319 D1：写钳后值（effectiveWaveHeight），与构造期同一钳制口径
+    setUniform(top.material, "uWaveHeight", effectiveWaveHeight());
+  },
+  waterLevel: ({ water, strategy, top, setUniform }) => {
     // ADR-257：水面 position.y（film/pool 通用，零重建）——旧语义抬水面须重建 10 个 mesh，如今一个标量
     strategy.applyLevel(water, envState.waterLevel);
+    // ADR-319 D1：水位同时是波高预算的下钳上限，变更后须重算钳后波高
+    setUniform(top.material, "uWaveHeight", effectiveWaveHeight());
   },
   // ADR-297 倒影五键：结构性空条目——门控/权重/RT 边长/镜面高度/裁剪偏置全部由
   // renderReflection / ensureReflector 逐帧现读 envState（真值源单一，派发侧零材质写，
@@ -186,6 +212,7 @@ export const WATER_UNIFORM_NAMES = [
   "uBaseOpacity",
   "uRoundness",
   "uChoppiness",
+  "uWaveHeight",
   "uDetailStrength",
   // ADR-297 倒影三件套（onBeforeCompile 初始化 + renderReflection/applyReflectionUniforms 每帧写）
   "uReflTex",

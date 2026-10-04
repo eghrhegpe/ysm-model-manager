@@ -165,12 +165,14 @@ export const ENV_STATE_SCHEMA = {
   },
   groundDivisions: {
     type: "number",
-    default: 60,
+    default: 40, // 2026-10 收口：降密度缓解「网格切天边」硬边观感（原 60，纯默认値，零架构风险）
     group: "ground",
     range: { min: 2, max: 200, step: 2 },
   },
-  groundColorCenter: { type: "number", default: 0x555577, group: "ground" },
-  groundColorGrid: { type: "number", default: 0x2a2a3a, group: "ground" },
+  // 网格线色 2026-10 收口：由冷调深蓝灰（0x2a2a3a/0x555577）向暖中灰靠拢，
+  // 与默认暖棕承接面 0x9a8b78 同温，作「锚点」而非冷调突兀（P0 网格地平线配套）。
+  groundColorCenter: { type: "number", default: 0x8a8278, group: "ground" },
+  groundColorGrid: { type: "number", default: 0x6a6258, group: "ground" },
   groundMatColor: { type: "number", default: GROUND_DEFAULTS.matColor, group: "ground" },
   groundMatColor2: { type: "number", default: GROUND_DEFAULTS.matColor2, group: "ground" },
   groundMatGridSize: {
@@ -226,7 +228,9 @@ export const ENV_STATE_SCHEMA = {
   },
 
   // --- Water ---
-  waterEnabled: { type: "boolean", default: true, group: "water" },
+  // 默认关水（2026-10 收口）：默认蓝膜压在地面承接面之上，导致默认地面呈蓝灰、暖棕承接面
+  // 0x9a8b78 不可见（地面自证视觉不成立）；想要水景的用户菜单一键开（water-menu）。
+  waterEnabled: { type: "boolean", default: false, group: "water" },
   waterMode: {
     type: "enum",
     values: ["film", "pool"] as const,
@@ -234,11 +238,13 @@ export const ENV_STATE_SCHEMA = {
     group: "water",
   },
   // ADR-257：水面世界 y 坐标——「抬高/压低水面」的唯一入口，film 与 pool 共用。
-  // 默认 0.01 = film 历史水膜微抬量（原 scene-capability.ts|GROUND_LAYER_OFFSETS.waterFilm
-  // 已随 2026-09-18 收口删除，此处成为唯一事实源）；本 schema 为零 THREE 依赖层，故写字面量。
+  // 默认 0.15（ADR-319 D1 抬升）：水位同时是波高预算的**下钳上限**（波谷不得穿地面），
+  // 原 0.01 会把浪高钳死到 1 cm、水面退化成平面——抬到 0.15 后预算 = min(level, poolHeight−level)
+  // = 0.15，默认浪高 0.06 得 2.5× 余量。pool 形态旧存档兜底仍取 poolHeight（ADR-257）。
+  // 本 schema 为零 THREE 依赖层，故写字面量。
   waterLevel: {
     type: "number",
-    default: 0.01,
+    default: 0.15,
     group: "water",
     range: { min: 0, max: 5, step: 0.01, unit: "m" },
   },
@@ -278,6 +284,15 @@ export const ENV_STATE_SCHEMA = {
     default: 0.5,
     group: "water",
     range: { min: 0, max: 1, step: 0.05 },
+  },
+  // ADR-319 D1：浪高（世界米制）——原波幅写死 min(0.6·0.82^i/freq, 0.5) 造成默认 ±2.7 m 风暴、
+  // 且无任何用户入口。此键为唯一事实源；实际入 shader 前经 effectiveWaveHeight 双向往容器
+  // 钳制（`water-params.ts|effectiveWaveHeight`），故滑杆拉到上限不越壁不穿地。
+  waterWaveHeight: {
+    type: "number",
+    default: 0.06,
+    group: "water",
+    range: { min: 0, max: 1, step: 0.01, unit: "m" },
   },
   waterPoolHeight: {
     type: "number",

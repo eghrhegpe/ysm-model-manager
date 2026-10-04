@@ -48,6 +48,7 @@ auto_fields:
     - disposeReflector
     - drawEnvEquirect
     - effectiveParamsOf
+    - effectiveWaveHeight
     - ensureReflector
     - ENV_PRESETS
     - EnvBorrowedTextures

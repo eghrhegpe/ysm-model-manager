@@ -45,10 +45,12 @@ function fakeShader() {
 describe("WaterCapability", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("apply 挂入场景（ysm-ground-water），默认 film + 水膜浓度>0 可见", () => {
+  it("apply 挂入场景（ysm-ground-water），film 模式 + 水面开启时可见", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     expect(cap.getWaterMode()).toBe("film");
+    // 2026-10 收口：waterEnabled 默认 false（防默认蓝膜压住地面承接面），本用例测「挂载 + 可见」须显式开启
+    setEnvState({ waterEnabled: true }, { source: "manual" });
     cap.apply();
     const water = scene.getObjectByName("ysm-ground-water");
     expect(water).toBeDefined();
@@ -59,6 +61,7 @@ describe("WaterCapability", () => {
   it("setWaterEnabled 控制 visible（单门：能力启停即 waterEnabled，fog 同法）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
+    setEnvState({ waterEnabled: true }, { source: "manual" }); // 默认关水（2026-10），测开关须先开基线
     cap.apply();
     expect(scene.getObjectByName("ysm-ground-water")?.visible).toBe(true);
     cap.setWaterEnabled(false);
@@ -272,7 +275,8 @@ describe("WaterCapability — 旧存档迁移（legacy ground 键）", () => {
     expect(cap.getWaterColor()).toBe(0x4488aa);
     expect(cap.getWaterOpacity()).toBeCloseTo(0.5);
     expect(cap.getNormalStrength()).toBeCloseTo(0.4);
-    expect(cap.getWaterEnabled()).toBe(true);
+    // legacy ground 存档不含 waterEnabled 键（能力启停不走 legacy 迁移），保持默认 false（2026-10 收口）
+    expect(cap.getWaterEnabled()).toBe(false);
     expect(cap.getWaterMode()).toBe("film");
   });
 
@@ -343,12 +347,20 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     expect(shader.uniforms.uRoundness.value).toBe(0);
     expect(shader.uniforms.uChoppiness.value).toBeCloseTo(0.5, 5);
     expect(shader.uniforms.uDetailStrength.value).toBeCloseTo(0.08, 5);
+    // ADR-319 D1：浪高入参数（钳后值；默认 0.06 ≤ 预算 min(0.15, 0.3−0.15) = 0.15，未被钳）
+    expect(shader.uniforms.uWaveHeight.value).toBeCloseTo(0.06, 5);
     expect(shader.vertexShader).toContain("vec3 gerstner(");
     expect(shader.vertexShader).toContain("vWorldPos_wave");
     expect(shader.vertexShader).toContain("transformed.z += gdisp.z;");
-    expect(shader.vertexShader).toContain("vFoam");
+    // ADR-319 D1/D2：振幅与频率都由 uniform 驱动，GLSL 不再写死 amp/freq 字面量；
+    // D2 频谱锚定域宽（λ_i = uSize/(4·1.19^i)）——字面量断言锁住这条换算，防回退到世界米制。
+    expect(shader.vertexShader).toContain("uWaveHeight");
+    expect(shader.vertexShader).toContain("6.2831853 * pow(1.19, fi) * 4.0 / sizeSafe");
+    // ADR-319 D3(b)：泡沫通道整条退役（varying + Jacobian + mix 均无），不留死代码
+    expect(shader.vertexShader).not.toContain("vFoam");
+    expect(shader.vertexShader).not.toContain("float jxx");
     expect(shader.fragmentShader).toContain("vWorldPos_wave");
-    expect(shader.fragmentShader).toContain("vFoam");
+    expect(shader.fragmentShader).not.toContain("vec3(0.92, 0.95, 0.98)");
     expect(shader.fragmentShader).toContain("gl_FragColor.a *= fade;");
   });
 
@@ -611,9 +623,10 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
 describe("WaterCapability — update 波纹动画推进", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("update(dt) 按 waveSpeed 累加 waterTime（film 默认可见）", () => {
+  it("update(dt) 按 waveSpeed 累加 waterTime（film + 水面开启时）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
+    setEnvState({ waterEnabled: true }, { source: "manual" }); // 默认关水（2026-10），累加须水面可见
     cap.apply();
     cap.setWaveSpeed(2.0);
     cap.update(0.5);
@@ -623,6 +636,7 @@ describe("WaterCapability — update 波纹动画推进", () => {
   it("update 门控：visible 为假不累加（setEnabled 别名与 setWaterEnabled 同一 gate，两条路径都验）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
+    setEnvState({ waterEnabled: true }, { source: "manual" }); // 默认关水（2026-10），基线须可见
     cap.apply();
     cap.update(1.0);
     expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(1.0, 5);
@@ -710,6 +724,7 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
   it("setWaveSpeed 存参且影响 update 累加", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
+    setEnvState({ waterEnabled: true }, { source: "manual" }); // 默认关水（2026-10），累加须水面可见
     cap.apply();
     cap.setWaveSpeed(2.0);
     expect(cap.getWaveSpeed()).toBeCloseTo(2.0, 5);
@@ -965,7 +980,7 @@ describe("WaterCapability — loadState 多分支", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.loadState();
-    expect(cap.getWaterEnabled()).toBe(true);
+    expect(cap.getWaterEnabled(), "类型不匹配跳过 → 保持默认关水（2026-10 收口）").toBe(false);
     expect(cap.getWaterMode()).toBe("film");
     expect(cap.getWetness()).toBeCloseTo(0.5, 5);
   });
@@ -1101,11 +1116,11 @@ describe("WaterCapability — 菜单控件全联动", () => {
   const countControls = (arr: readonly PreviewMenuNode[]): number =>
     arr.reduce((n, c) => n + (c.children ? countControls(c.children) : 1), 0);
 
-  it("20 项控件 setValue/getValue 双向读写联动（数量与树一致）", () => {
+  it("21 项控件 setValue/getValue 双向读写联动（数量与树一致）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     const nodes = cap.getMenuNodes();
-    expect(countControls(nodes)).toBe(20);
+    expect(countControls(nodes)).toBe(21);
     const by = (id: string) => findNodeById(nodes, id);
     const master = by("water-enabled");
     master.control!.set!(false);
@@ -1138,6 +1153,8 @@ describe("WaterCapability — 菜单控件全联动", () => {
     expect(by("water-wave-speed").control!.get!(undefined)).toBeCloseTo(1.8, 5);
     by("water-choppiness").control!.set!(0.42);
     expect(by("water-choppiness").control!.get!(undefined)).toBeCloseTo(0.42, 5);
+    by("water-wave-height").control!.set!(0.35);
+    expect(by("water-wave-height").control!.get!(undefined)).toBeCloseTo(0.35, 5);
     // ADR-297 reflect 组五控件（主开 + 四从控）双向读写
     by("water-reflection").control!.set!(true);
     expect(by("water-reflection").control!.get!(undefined)).toBe(true);
@@ -1230,8 +1247,8 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
 describe("WaterCapability — 水面/容器解耦：waterLevel（ADR-257 A 档）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  /** schema 默认值 = 0.01（历史 film 水膜微抬量；原 GROUND_LAYER_OFFSETS.waterFilm 已于 ADR-257 后删除） */
-  const DEFAULT_LEVEL = 0.01;
+  /** schema 默认值 = 0.15（ADR-319 D1 抬升：水位是波高预算的下钳上限，原 0.01 会把浪高钳死到 1 cm） */
+  const DEFAULT_LEVEL = 0.15;
 
   it("film：改 waterLevel 不重建 mesh 且 root.position.y 跟随", () => {
     const scene = new THREE.Scene();
@@ -1444,6 +1461,7 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     //     「无宿主/默认关」门控用例）——登记只指消费点，行为证据不在此重复。
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
+    setEnvState({ waterEnabled: true }, { source: "manual" }); // 默认关水（2026-10），累加实证须水面可见
     cap.apply();
     const before = (cap as unknown as { waterTime: { value: number } }).waterTime.value;
     cap.setWaveSpeed(2.0);
@@ -1481,7 +1499,8 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     const cap = new WaterCapability({ scene });
     // 每键一个「≠ schema 默认」的偏离值（合法域内）——新键未列入即 fail 提示登记
     const DEVIATION: Record<string, unknown> = {
-      waterEnabled: false,
+      // 2026-10 收口：默认关水，故偏离值取 true（原 false 已与新默认同值，测试自失能）
+      waterEnabled: true,
       waterMode: "pool",
       waterLevel: 2.5,
       waterWetness: 0.9,
@@ -1491,6 +1510,7 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
       waterClarity: 0.2,
       waterWaveSpeed: 2.5,
       waterChoppiness: 0.9,
+      waterWaveHeight: 0.6, // ADR-319 D1：默认 0.06，偏离取 0.6 ∈ [0,1]
       waterPoolHeight: 1.5,
       waterPoolWallThickness: 0.5,
       waterPoolWallColor: 0x040506,
@@ -1569,6 +1589,7 @@ describe("WaterCapability — waterSize UI 入口与零重建（ADR-272）", () 
       ["water-pool-wall-thickness", "waterPoolWallThickness"],
       ["water-pool-roundness", "waterPoolRoundness"],
       ["water-wave-speed", "waterWaveSpeed"],
+      ["water-wave-height", "waterWaveHeight"],
     ] as const;
     for (const [id, key] of pairs) {
       const node = sliders.find((c) => c.id === id);
@@ -1747,6 +1768,8 @@ describe("ADR-286 分派表：顺序无关性守卫", () => {
 describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
   beforeEach(() => {
     resetEnvState();
+    // 2026-10 收口：waterEnabled 默认 false（防默认蓝膜压住地面）；本组测反射载体，须水面可见才走 update 建载体
+    setEnvState({ waterEnabled: true }, { source: "manual" });
   });
 
   /** 假 renderer：覆盖官方 Reflector.onBeforeRender 的渲染器触点（r185 实证清单：
@@ -2096,6 +2119,68 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     expect(cap.getWaterReflectionClipBias()).toBeCloseTo(7.5, 5);
     expect(cap.getWaterReflectDisableWhenSSR()).toBe(false);
     expect(isEnvCallbacksSuspended(), "suspend 计数已随 finally 归零").toBe(false);
+  });
+});
+
+describe("WaterCapability — 波场尺度归一与浪高双向往钳制（ADR-319 D1/D2）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  /** 起会话并抓取真实 shader.uniforms（与上方 uSize 用例同款路径：setter → 分派表 → setUniform 写回） */
+  function liveUniforms(scene: THREE.Scene) {
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    return { cap, uniforms: mat.userData.shader.uniforms };
+  }
+
+  it("浪高入 shader 前被双向往容器钳制：默认预算 min(0.15, 0.3−0.15)=0.15，0.06 原值放行", () => {
+    const scene = new THREE.Scene();
+    const { cap, uniforms } = liveUniforms(scene);
+    expect(uniforms.uWaveHeight.value, "默认 0.06 ≤ 预算 0.15，不钳").toBeCloseTo(0.06, 5);
+    cap.setWaveHeight(0.6);
+    expect(uniforms.uWaveHeight.value, "0.6 > 预算 0.15 → 钳到预算").toBeCloseTo(0.15, 5);
+  });
+
+  it("下钳：水位压低时预算随之收窄（波谷不穿地面，film 语义）", () => {
+    const scene = new THREE.Scene();
+    const { cap, uniforms } = liveUniforms(scene);
+    cap.setWaveHeight(0.6);
+    cap.setLevel(0.04);
+    expect(uniforms.uWaveHeight.value, "预算 = min(0.04, 0.3−0.04) = 0.04").toBeCloseTo(0.04, 5);
+  });
+
+  it("上钳：池壁顶压低时预算随之收窄（波峰不越壁顶，pool 语义）", () => {
+    const scene = new THREE.Scene();
+    const { cap, uniforms } = liveUniforms(scene);
+    cap.setWaveHeight(0.6);
+    cap.setPoolHeight(0.2);
+    expect(uniforms.uWaveHeight.value, "预算 = min(0.15, 0.2−0.15) = 0.05").toBeCloseTo(0.05, 5);
+  });
+
+  it("D2 浪高是用户量、与尺寸解耦：改 waterSize 不漂移 uWaveHeight（尺度归一只动频谱）", () => {
+    const scene = new THREE.Scene();
+    const { cap, uniforms } = liveUniforms(scene);
+    cap.setWaveHeight(0.3); // 钳后 0.15
+    const clamped = uniforms.uWaveHeight.value;
+    cap.setWaterSize(300);
+    expect(uniforms.uWaveHeight.value).toBeCloseTo(clamped, 5);
+    cap.setWaterSize(10);
+    expect(uniforms.uWaveHeight.value).toBeCloseTo(clamped, 5);
+  });
+
+  it("菜单 water-wave-height：值域 = schema（ADR-283 菜单非第二事实源）", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    const node = findNodeById(cap.getMenuNodes(), "water-wave-height");
+    expect(node, "WAVE 组应含浪高滑杆").toBeDefined();
+    const c = node!.control!;
+    const range = getParamRange("waterWaveHeight");
+    expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }).toEqual(range);
   });
 });
 

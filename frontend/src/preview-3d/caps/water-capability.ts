@@ -45,6 +45,7 @@ import {
 import { buildWaterNodes } from "./water-menu.ts";
 // ADR-315 D1①：分派表 / uniform 登记 / 逐帧现读表（零 THREE 纯表）拆出真缝
 import {
+  effectiveWaveHeight,
   WATER_PARAM_APPLIERS,
   type WaterApplyCtx,
   type WaterParamKey,
@@ -180,6 +181,8 @@ export class WaterCapability implements SceneCapability {
       shader.uniforms.uHalfSize = { value: envState.waterSize / 2 };
       shader.uniforms.uSize = { value: envState.waterSize };
       shader.uniforms.uChoppiness = { value: envState.waterChoppiness };
+      // ADR-319 D1：浪高入参数（钳后值）——原写死 min(0.6·0.82^i/freq, 0.5)，浪高无用户入口
+      shader.uniforms.uWaveHeight = { value: effectiveWaveHeight() };
       // 微细节法线强度（原 normalScale 槽位的替代；值域 0-1，由 water 组键 `waterNormalStrength`
       // 驱动——菜单控件 water-normal-strength；旧「ground-normal-strength 驱动」为水面拆分前口径）
       shader.uniforms.uDetailStrength = { value: envState.waterNormalStrength };
@@ -203,12 +206,12 @@ export class WaterCapability implements SceneCapability {
          uniform float uBaseOpacity;
          uniform float uRoundness;
          uniform float uChoppiness;
+         uniform float uWaveHeight;
          varying vec3 vWorldPos_wave;
-         varying float vFoam;
          varying vec2 vWaveSlope_wave;
          const int GERSTNER_COUNT = 6;
          float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-         // Gerstner 余摆线：返回**物体空间位移**；out 碎波泡沫 + out 物体空间法线。
+         // Gerstner 余摆线：返回**物体空间位移**；out 物体空间法线。
          // 方向/相位由 wave index hash 播种，freq*=1.19 amp*=0.82 几何级数；
          // 陡度钳制 per-wave σ·k ≤ 0.8/N → Σ ≤ 0.8 防自交。
          //
@@ -220,9 +223,8 @@ export class WaterCapability implements SceneCapability {
          //     各向异性缩放经 normalMatrix（逆缩放）还原，故水平分量须 ×sizeSafe。
          // 修正前二者同时漏换算（几何法线偏离解析值平均 94°、最大 179°＝大面积翻面；
          // 修正后 2.4°/7.0°，仅剩一阶近似残差）——数值实证脚本与结论见 ADR-257 §6.4。
-         vec3 gerstner(vec2 p, out float foam, out vec3 nrm) {
+         vec3 gerstner(vec2 p, out vec3 nrm) {
            vec3 disp = vec3(0.0);
-           float jxx = 0.0, jzz = 0.0, jxz = 0.0;
            nrm = vec3(0.0);
            // 防除零：/uSize 遇 0 会产生 NaN 几何，故取正下界；setter（≥1）与 loadState 恢复
            // 另有入口钳制（两道防线，语义不同：此处只求非零）。
@@ -237,8 +239,14 @@ export class WaterCapability implements SceneCapability {
              float fi = float(i);
              float ang = hash11(fi + 1.0) * 6.2831853;
              vec2 dir = vec2(cos(ang), sin(ang));
-             float freq = 0.25 * pow(1.19, fi);
-             float amp = min(0.6 * pow(0.82, fi) / freq, 0.5);
+             // ADR-319 D2 频谱锚定域宽：λ_i = uSize/(4·1.19^i) → freq = 2π·1.19^i·4/uSize。
+             // 原 freq=0.25·1.19^i 把 λ 钉死世界 [10.5, 25.1] m，与尺寸滑块（10–300 m）脱钩：
+             // size=10 六波全超域宽、size=300 六波全被 aa 淡出（探针实测两端各 0 条在窗口内）。
+             // 归一后每波长顶点数 λ/间距 = 分段数/(4·1.19^i)，与 uSize 无关，全域六波恒可呈现。
+             float freq = 6.2831853 * pow(1.19, fi) * 4.0 / sizeSafe;
+             // ADR-319 D1 浪高入参数：Σ_i amp_i = uWaveHeight（0.26 归一 + 0.82 级数衰减）。
+             // 钳后值由 effectiveWaveHeight 在 CPU 侧算好下发（water-params.ts），此处只消费。
+             float amp = uWaveHeight * 0.26 * pow(0.82, fi);
              // 衰减须在 wa/steep 派生之前：位移 / 解析法线 / 泡沫 Jacobian 同源于 amp，
              // 一处淡出三处一致（法线不会声称一个位移里不存在的高频斜率）。
              float waveLen = 6.2831853 / freq;
@@ -252,10 +260,6 @@ export class WaterCapability implements SceneCapability {
              disp.x += steep * amp * dir.x * c / sizeSafe;
              disp.y += steep * amp * dir.y * c / sizeSafe;
              disp.z += amp * s;
-             // 泡沫掩码 = 水平压缩量：偏导按位移项逐项取（Jacobian 启发式）
-             jxx += steep * wa * dir.x * dir.x * c;
-             jzz += steep * wa * dir.y * dir.y * c;
-             jxz += steep * wa * dir.x * dir.y * c;
              // 法线偏导：世界水平偏导 -Σ D·WA·C → 物体空间须 ×size；高度轴 -Σ Q·WA·S 同尺度
              nrm.x -= dir.x * wa * c * sizeSafe;
              nrm.y -= dir.y * wa * c * sizeSafe;
@@ -263,8 +267,6 @@ export class WaterCapability implements SceneCapability {
            }
            nrm.z += 1.0;
            nrm = normalize(nrm);
-           float J = (1.0 + jxx) * (1.0 + jzz) - jxz * jxz;
-           foam = smoothstep(0.0, -0.25, J);
            return disp;
          }`,
       );
@@ -276,9 +278,8 @@ export class WaterCapability implements SceneCapability {
         "#include <beginnormal_vertex>",
         `#include <beginnormal_vertex>
          {
-           float gnf;
            vec3 ysmWaveNormal;
-           gerstner(position.xy * uSize, gnf, ysmWaveNormal);
+           gerstner(position.xy * uSize, ysmWaveNormal);
            objectNormal = ysmWaveNormal;
            vWaveSlope_wave = ysmWaveNormal.xy;
          }`,
@@ -287,13 +288,11 @@ export class WaterCapability implements SceneCapability {
         "#include <begin_vertex>",
         `#include <begin_vertex>
          vec2 wpos = transformed.xy * uSize;
-         float gf;
          vec3 gWaveNormalUnused;
-         vec3 gdisp = gerstner(wpos, gf, gWaveNormalUnused);
+         vec3 gdisp = gerstner(wpos, gWaveNormalUnused);
          transformed.x += gdisp.x;
          transformed.y += gdisp.y;
          transformed.z += gdisp.z;
-         vFoam = gf;
          vec4 worldPosWave = modelMatrix * vec4(transformed, 1.0);
          vWorldPos_wave = worldPosWave.xyz;`,
       );
@@ -308,7 +307,6 @@ export class WaterCapability implements SceneCapability {
          uniform mat4 uReflMatrix;
          uniform float uReflStrength;
          varying vec3 vWorldPos_wave;
-         varying float vFoam;
          varying vec2 vWaveSlope_wave;`,
       );
       // 微细节法线（GPU 程序化，替代原 256² CPU DataTexture + normalMap 槽）：
@@ -348,8 +346,8 @@ export class WaterCapability implements SceneCapability {
            fade = 1.0 - smoothstep(edge, uHalfSize, md);
            gl_FragColor.a *= fade;
          }
-         // 碎波泡沫：Jacobian<0 处 mix 白沫（不依赖反射，单 pass 廉价）
-         gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.92, 0.95, 0.98), vFoam * 0.55);
+         // [ADR-319 D3(b)] 碎波泡沫通道已删除——原判据 J ≤ 0（波面自交）与陡度钳制 Σσk ≤ 0.8 互斥，vFoam 恒 0（探针实测 J_min 0.673 / 0.407，J ≤ 0 占比 0.00%）；新尺度下 Σσk ≪ 1，相对压缩判据亦不可达。删除胜过留「每帧计算、永不触发」的第三个选项。
+         // [ADR-319 D3(b)] 碎波泡沫通道已删除
          // ADR-297 水面模型倒影：世界坐标投影进镜像相机裁剪空间采样反射 RT——uReflMatrix
          // 已含官方 bias（末位右乘 M⁻¹ 剥回世界口径）→ 除 w 即 uv。RT 内容为线性空间
          // （three 仅对 canvas 输出做 tone map），采样值过同源 linearToOutputTexel 编到
@@ -640,6 +638,14 @@ export class WaterCapability implements SceneCapability {
   }
   getChoppiness(): number {
     return envState.waterChoppiness;
+  }
+
+  // ── 浪高（ADR-319 D1：入 shader 前经 effectiveWaveHeight 双向往容器钳制）──
+  setWaveHeight(v: number): void {
+    setEnvState({ waterWaveHeight: v }, { source: "manual" });
+  }
+  getWaveHeight(): number {
+    return envState.waterWaveHeight;
   }
 
   // ── 水面高度（ADR-257：跨形态通用，与容器彻底解耦）──

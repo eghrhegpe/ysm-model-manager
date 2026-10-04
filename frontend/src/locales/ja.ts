@@ -1451,6 +1451,7 @@ export const ja: Record<string, string> = {
   "preview.waterSpeed": "波速",
   "preview.waterClarity": "水の透明度",
   "preview.waterChoppiness": "波の鋭さ",
+  "preview.waterWaveHeight": "波の高さ",
   "preview.waterHeight": "プール高さ",
   "preview.waterWallThickness": "壁厚",
   "preview.waterWallColor": "壁色",

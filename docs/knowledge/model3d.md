@@ -247,6 +247,7 @@ auto_fields:
     - drawEnvEquirect
     - effectiveParamsOf
     - effectiveToneMappingExposure
+    - effectiveWaveHeight
     - encodeAndCacheTexture
     - encodeToKTX2Basis
     - Endianness

@@ -3,13 +3,14 @@
  * probe-water-wave.ts — 水面 Gerstner 波场数值探针（观感成立性的实证量具）
  *
  * 描述：用 JS 逐式复刻 `frontend/src/preview-3d/caps/water-capability.ts|buildWaveWaterMaterial`
- *   注入的 `gerstner()`——同一套 hash 播种 / 频率级数 / 振幅钳制 / 陡度上界 / 抗锯齿淡出 /
- *   Jacobian 泡沫判据，在「网格 × 时间」上做数值扫描，输出五张表：
+ *   注入的 `gerstner()`——同一套 hash 播种 / 频率级数 / 振幅分配 / 陡度上界 / 抗锯齿淡出，
+ *   在「网格 × 时间」上做数值扫描，输出五张表：
  *     ① 标定：复现 ADR-257 §6.4 的几何法线 vs 解析法线夹角（先自证探针复刻忠实度）；
  *     ② 波高：默认参数下的峰/谷/RMS，对照容器（池壁顶、地面）算越界**采样占比**；
- *     ③ 泡沫可达性：J 的全域最小值与 `J ≤ 0` / `J ≤ -0.25` 占比（判据是否永不可达）；
- *     ④ 频谱-尺度匹配：可呈现波长窗口与当前钉死波谱的重叠数，附尺寸域扫描对照；
- *     ⑤ 处方对照：λ 锚定域宽 + 振幅按域宽归一 + 容器钳制后的同一组指标。
+ *     ③ 自交可达性（参考量）：J 的全域最小值与 `J ≤ 0` / `J ≤ -0.25` 占比
+ *        ——泡沫通道已于 ADR-319 D3b 从 shader 整条删除，此项仅存证「判据为何永不可达」；
+ *     ④ 频谱-尺度匹配：可呈现波长窗口与当前锚定域宽波谱的重叠数，附尺寸域扫描对照；
+ *     ⑤ 处方对照：λ 锚定域宽 + 振幅按域宽归一 + 容器钳制后的同一组指标（与实现同源）。
  * 设计意图：波形的「对不对」是数值命题，不是审美命题——「浪比池子高」「泡沫恒不触发」
  *   「大水面高频被砍光」都无法靠拖滑块看屏幕证伪。本探针把这些命题变成可复跑的表，
  *   供 ADR 数据溯源与知识卡陷阱条目引用。它是**量具不是门禁**（退出码恒 0），
@@ -20,7 +21,7 @@
  *   node scripts/probe-water-wave.ts                                  # 默认取 schema 现值
  *   node scripts/probe-water-wave.ts --json                            # 结构化输出
  *   node scripts/probe-water-wave.ts --size 300 --choppiness 1
- *   node scripts/probe-water-wave.ts --depth 5 --level 0.3 --amp 0.004
+ *   node scripts/probe-water-wave.ts --depth 5 --level 0.3 --amp 0.06
  *   node scripts/probe-water-wave.ts --help
  *
  * 退出码：恒 0（量具）；--help 亦 0。
@@ -50,16 +51,30 @@ function clamp(x: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, x));
 }
 
-/** 逐波常数表 —— `freq / amp / aa / steep` 与 shader 同一写法 */
-function buildWaves(size: number, choppiness: number, segments: number) {
-  const spacing = Math.max(size, 0.001) / segments;
+/** 逐波常数表 —— 与 shader 同一写法（ADR-319 D1/D2 落地后）：
+ *   freq = 2π·1.19^i·4/sizeSafe（λ_i = size/(4·1.19^i)，频谱锚定域宽）；
+ *   amp = waveHeight·0.26·0.82^i（浪高入参数，绝对米制，Σ_i amp_i = waveHeight）；
+ *   waveHeight 先经双向往容器钳制 min(level, depth−level)（与 effectiveWaveHeight 同口径），
+ *   下钳治穿地、上钳治越壁——单向只治一半。 */
+function buildWaves(
+  size: number,
+  choppiness: number,
+  segments: number,
+  waveHeight = 0.06,
+  level = 0.15,
+  depth = 0.3,
+) {
+  const sizeSafe = Math.max(size, 0.001);
+  const spacing = sizeSafe / segments;
+  const budget = Math.min(Math.max(level, 0), Math.max(depth - level, 0));
+  const h = Math.max(0, Math.min(waveHeight, budget));
   const waves = [];
   for (let i = 0; i < GERSTNER_COUNT; i++) {
     const ang = hash11(i + 1.0) * TWO_PI;
     const dir = { x: Math.cos(ang), y: Math.sin(ang) };
-    const freq = 0.25 * 1.19 ** i;
-    const ampDesigned = (0.6 * 0.82 ** i) / freq;
-    const ampClamped = Math.min(ampDesigned, 0.5);
+    const freq = (TWO_PI * 1.19 ** i * 4) / sizeSafe;
+    const ampDesigned = h * 0.26 * 0.82 ** i;
+    const ampClamped = ampDesigned; // 钳制已发生在 h 处（Σ amp_i = h）
     const waveLen = TWO_PI / freq;
     const aa = Math.max(smoothstep(2.0, 6.0, waveLen / spacing), 0.001);
     const amp = ampClamped * aa;
@@ -79,6 +94,7 @@ function buildWaves(size: number, choppiness: number, segments: number) {
       wa,
       steep,
       spacing,
+      budget,
     });
   }
   return waves;
@@ -356,43 +372,48 @@ function main(): number {
     console.log(
       "用法: node scripts/probe-water-wave.ts [--json] [--size N] [--choppiness N] [--segments N]\n" +
         "                                  [--level N] [--depth N] [--amp N]\n" +
-        "  depth = waterPoolHeight（池深，处方容器钳制用）；amp = 归一浪高（处方参数，默认 0.004）",
+        "  depth = waterPoolHeight（池深）；level = waterLevel（水面世界 y）；\n" +
+        "  amp = 浪高 waterWaveHeight（绝对米制，ADR-319 D1，默认 0.06 = schema 默认）；\n" +
+        "        入波场前先经双向往容器钳制 min(level, depth−level)",
     );
     return 0;
   }
 
-  // 默认值全部取 env-state-schema.ts 的 water 组现值
+  // 默认值全部取 env-state-schema.ts 的 water 组现值（ADR-319 落地后）
   const size = num(args.size, 80);
   const choppiness = num(args.choppiness, 0.5);
   const segments = num(args.segments, SEGMENTS_DEFAULT);
-  const level = num(args.level, 0.01);
+  const level = num(args.level, 0.15);
   const depth = num(args.depth, 0.3);
-  const waveHeight = num(args.amp, 0.004);
+  const waveHeight = num(args.amp, 0.06);
+  // 处方（§5 对照设计）的归一浪高比：与实现公式不同语义（amp·size/1.19^i），单列不混用
+  const prescAmp = 0.004;
 
   const wallThickness = 0.15;
-  const wallTop = depth + Math.max(0.02, wallThickness * 0.6); // body-strategies|applyTransformLinks
+  // 池壁顶世界 y：外层壁高于 poolHeight 一个 min(0.02, t*0.6) 的边沿（body-strategies|applyTransformLinks）
+  const wallTop = depth + Math.max(0.02, wallThickness * 0.6);
   const opts = { level, wallTop };
 
-  const waves = buildWaves(size, choppiness, segments);
+  const waves = buildWaves(size, choppiness, segments, waveHeight, level, depth);
   const cal = calibrate(waves, size, segments, 1.37);
   const s = scan(waves, size, opts);
-  const sFull = scan(buildWaves(size, 1.0, segments), size, opts);
-  const sCalm = scan(buildWaves(size, 0.0, segments), size, opts);
+  const sFull = scan(buildWaves(size, 1.0, segments, waveHeight, level, depth), size, opts);
+  const sCalm = scan(buildWaves(size, 0.0, segments, waveHeight, level, depth), size, opts);
   const fit = spectrumFit(waves, size, segments);
 
-  const presc = buildPrescription(size, choppiness, segments, waveHeight, depth, level);
+  const presc = buildPrescription(size, choppiness, segments, prescAmp, depth, level);
   const ps = scan(presc, size, opts);
   const pfit = spectrumFit(presc, size, segments);
   // 处方第二档：水位抬到 0.06（= 建议默认值），验证「预算不再被水位卡死」后的幅度
   const level2 = Math.max(level, 0.06);
-  const presc2 = buildPrescription(size, choppiness, segments, waveHeight, depth, level2);
+  const presc2 = buildPrescription(size, choppiness, segments, prescAmp, depth, level2);
   const ps2 = scan(presc2, size, { level: level2, wallTop });
 
   const sweep = [10, 20, 40, 80, 160, 300].map((sz) => {
-    const w = buildWaves(sz, choppiness, segments);
+    const w = buildWaves(sz, choppiness, segments, waveHeight, level, depth);
     const r = scan(w, sz, opts);
     const fw = spectrumFit(w, sz, segments);
-    const pw = buildPrescription(sz, choppiness, segments, waveHeight, depth, level2);
+    const pw = buildPrescription(sz, choppiness, segments, prescAmp, depth, level2);
     const pr = scan(pw, sz, { level: level2, wallTop });
     const fp = spectrumFit(pw, sz, segments);
     return { size: sz, current: r, fit: fw, prescribed: pr, pfit: fp };
@@ -409,7 +430,7 @@ function main(): number {
               i: w.i,
               freq: w.freq,
               lambda: w.waveLen,
-              ampDesigned: (0.6 * 0.82 ** w.i) / w.freq,
+              ampDesigned: w.ampDesigned,
               amp: w.amp,
               aa: w.aa,
               steep: w.steep,
@@ -462,18 +483,25 @@ function main(): number {
     `水面波场探针   size=${size}m  choppiness=${choppiness}  segments=${segments}  level=${level}m  poolHeight=${depth}m  池壁顶 y=${f3(wallTop)}m`,
   );
   L("─".repeat(100));
-  L("① 标定（探针忠实度自证；对照 ADR-257 §6.4 实测：修正后 2.40° / 7.02°）");
+  L("① 标定（探针内部自证：解析法线 vs 由位移场数值差分求得的几何法线）");
   L(
-    `   解析法线 vs 几何法线夹角：平均 ${f3(cal.meanDeg)}°  最大 ${f3(cal.maxDeg)}°  ← 落在同量级即证明本探针复刻无偏差`,
+    `   解析法线 vs 几何法线夹角：平均 ${f3(cal.meanDeg)}°  最大 ${f3(cal.maxDeg)}°  ← 同量级即证明复刻无偏差`,
+  );
+  L(
+    "     （旧公式时代对照基准 ADR-257 §6.4 = 2.40°/7.02°；当前公式振幅小两个量级、斜率趋零，偏差同步缩小，属预期）",
   );
   L("");
-  L("② 波谱与波高（当前实现）");
-  L("   i   freq(rad/m)  λ(m)     amp设计   min钳后   aa      amp实    σ(steep)");
+  L("② 波谱与波高（ADR-319 落地后：D1 浪高入参 + D2 频谱锚定域宽）");
+  L(
+    `   预算 = min(level, depth−level) = min(${f3(level)}, ${f3(depth - level)}) = ${f3(Math.min(level, depth - level))}m；浪高 h = min(${f3(waveHeight)}, 预算) = ${f3(Math.min(waveHeight, Math.min(level, depth - level)))}m`,
+  );
+  L("   i   freq(rad/m)  λ(m)     amp=h·0.26·0.82^i  aa      amp实    σ(steep)");
   for (const w of waves) {
     L(
-      `   ${w.i}   ${f3(w.freq).padEnd(12)} ${f3(w.waveLen).padEnd(8)} ${f3((0.6 * 0.82 ** w.i) / w.freq).padEnd(9)} ${f3(Math.min((0.6 * 0.82 ** w.i) / w.freq, 0.5)).padEnd(9)} ${f3(w.aa).padEnd(7)} ${f3(w.amp).padEnd(7)} ${f3(w.steep)}`,
+      `   ${w.i}   ${f3(w.freq).padEnd(12)} ${f3(w.waveLen).padEnd(8)} ${f3(w.ampDesigned).padEnd(18)} ${f3(w.aa).padEnd(7)} ${f3(w.amp).padEnd(7)} ${f3(w.steep)}`,
     );
   }
+  L(`   Σ amp = ${f3(waves.reduce((a, w) => a + w.amp, 0))}m（= h，按 0.26·Σ0.82^i 归一）`);
   L(`   峰 ${f3(s.hMax)}m  谷 ${f3(s.hMin)}m  峰谷差 ${f3(s.peakToTrough)}m  RMS ${f3(s.rms)}m`);
   L(
     `   → 越壁：${pct(s.aboveWallRatio)} 采样点的水面高于池壁顶（默认 h=${depth}m，壁顶 ${f3(wallTop)}m）`,
@@ -483,7 +511,7 @@ function main(): number {
     `   → 静水不可达：σ(choppiness)=0 时峰谷差仍 ${f3(sCalm.peakToTrough)}m（amp 不进 steep 链，高度独立于尖度）`,
   );
   L("");
-  L("③ 泡沫判据可达性（GLSL: foam = smoothstep(0.0, -0.25, J)，要求 J ≤ 0）");
+  L("③ 波面自交可达性（参考量；泡沫通道已于 ADR-319 D3b 从 shader 整条删除）");
   L(
     `   Σ σ·k = ${f3(waves.reduce((a, w) => a + w.steep * w.wa, 0))}（choppiness=${choppiness}，shader 上界 0.8）`,
   );
@@ -491,10 +519,10 @@ function main(): number {
     `   J_min = ${f3(s.jMin)}   J ≤ 0 占比 ${pct(s.foamRatio)}   J ≤ -0.25 占比 ${pct(s.fullFoamRatio)}`,
   );
   L(
-    `   拖满 choppiness=1：J_min = ${f3(sFull.jMin)}，J ≤ 0 占比 ${pct(sFull.foamRatio)} → 防自交钳制（Σ≤0.8）与泡沫判据（J≤0）互斥，vFoam 恒 0`,
+    `   拖满 choppiness=1：J_min = ${f3(sFull.jMin)}，J ≤ 0 占比 ${pct(sFull.foamRatio)} → 防自交钳制（Σ≤0.8）与自交判据（J≤0）互斥，故 ADR-319 D3b 直接删通道`,
   );
   L("");
-  L("④ 频谱-尺度匹配（λ 钉死世界米制 vs 采样可呈现窗口）");
+  L("④ 频谱-尺度匹配（D2 后 λ 锚定域宽：每波长顶点数与 size 无关）");
   L(
     `   窗口 λ ∈ [${f3(fit.window.lambdaMin)}, ${f3(fit.window.lambdaMax)}]m（verts/λ ≥ 6 且 λ ≤ size/2）`,
   );
@@ -502,7 +530,7 @@ function main(): number {
     `   六波：落在窗口内 ${fit.inside} 条 / 被 aa 淡出 ${fit.faded} 条 / 波长 > 域宽 ${fit.longerThanDomain} 条`,
   );
   L(
-    "   尺寸域扫描（当前实现 → 处方@level=0.06；「淡出」= 被 aa 砍掉的波数，「>域宽」= 波长大于域宽的波数）：",
+    `   尺寸域扫描（当前实现 → 处方@level=${f3(level2)}；「淡出」= 被 aa 砍掉的波数，「>域宽」= 波长大于域宽的波数）：`,
   );
   L(
     "   size  当前峰谷差 当前RMS 越壁%  穿地%  淡出 窗口内>域宽 | 处方峰谷差 处方RMS 越壁%  穿地%  淡出 窗口内",
@@ -514,7 +542,7 @@ function main(): number {
   }
   L("");
   L(
-    `⑤ 处方对照（λ_i = size/(4·1.19^i)，amp_i = amp·size/1.19^i，双向往钳制 Σamp ≤ min(0.25·depth, level)；amp=${waveHeight}）`,
+    `⑤ 处方对照（λ_i = size/(4·1.19^i)，amp_i = amp·size/1.19^i，双向往钳制 Σamp ≤ min(0.25·depth, level)；amp=${prescAmp}）`,
   );
   L(
     `   现默认 level=${level}m → 预算 min(${f3(0.25 * depth)}, ${f3(level)}) = ${f3(Math.min(0.25 * depth, level))}m：`,
@@ -528,7 +556,7 @@ function main(): number {
     `     峰 ${f3(ps2.hMax)}m 谷 ${f3(ps2.hMin)}m 峰谷差 ${f3(ps2.peakToTrough)}m RMS ${f3(ps2.rms)}m  越壁 ${pct(ps2.aboveWallRatio)} 穿地 ${pct(ps2.belowGroundRatio)}  淡出 ${p2fit.faded} 条 窗口内 ${p2fit.inside} 条`,
   );
   L(
-    "   → 处方只换「频率锚点 + 振幅量纲 + 容器预算」；Gerstner 骨架、解析法线、成对换算、泡沫通道全部不动。",
+    "   → 处方与实现现已同源（D2 λ 锚定域宽 + D1 绝对米制浪高 + 双向往容器钳制）；差异只在振幅分配曲线（实现 0.82 级数 vs 处方 1.19 级数）。",
   );
   L(
     "   → 归一浪高要生效，水位默认值必须同时抬（否则预算被 level 卡死，波退化成平面）——这条是探针跑出来的，不是拍的。",

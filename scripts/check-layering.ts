@@ -54,6 +54,14 @@
  *                             基线（key=from:to，含 ADR-249「默认值单一事实源」立法边
  *                             env-state-schema→caps/ground-surface-spec），新增即回归阻断。
  *
+ *   R10（防回退）  views→preview-3d 入口面白名单闸（ADR-270-d2）：views 生产文件运行时
+ *                             import preview-3d/ 仅许经入口面（adapters/ 装配入口面目录 +
+ *                             infra 值域/公共通道精确文件 + state/preview-state.ts 公开面）；
+ *                             decoder/**、mesh/**、model/**、texture/**、screenshot/**、
+ *                             menu/panels/** 等内部细节穿透入基线（key=from:to，防回退），
+ *                             新增边即阻断。type-only 豁免；测试文件经 skipFile 豁免；动态
+ *                             import() 不在 matchImports 射程（与 R7/R9 同口径）。
+ *
  *   skipFile 豁免测试文件的设计意图（2026-09 R6 摸排）：features/views 测试 import
  *   views 模板（如 batch-rename.test.ts → views/app-tree/tpl-batch-rename.ts）是
  *   ADR-208 D2「HTML 模板外移 views」的设计内合法测试依赖传递（测试对象在 views，
@@ -71,9 +79,9 @@
  *   生产 features 无此类命中——留瑕，allow 尾注兜底。
  *
  * 用法：
- *   node scripts/check-layering.ts            # R1/R2/R0/R5/R6/R7 违规或 R3/R4/R8/R9 超基线则退 1
+ *   node scripts/check-layering.ts            # R1/R2/R0/R5/R6/R7 违规或 R3/R4/R8/R9/R10 超基线则退 1
  *   node scripts/check-layering.ts --json     # JSON（CI / 子代理消费）
- *   node scripts/check-layering.ts --update   # 更新 R3/R4/R8 基线（只许收紧；新增需 --force）
+ *   node scripts/check-layering.ts --update   # 更新 R3/R4/R8/R9/R10 基线（只许收紧；新增需 --force）
  *
  * 退出码：0 通过 / 1 违规。
  * 依赖：node:fs / node:path / node:url / 本地模块
@@ -339,6 +347,35 @@ export function r9EdgeViolates(fromSub: string, toSub: string): boolean {
   return P3D_LOWER_SUBS.has(fromSub) && P3D_UPPER_SUBS.has(toSub);
 }
 
+/* ---------- R10 内核（模块级导出，供契约测试直测「非空转」，ADR-270-d2）----------
+ * views→preview-3d 入口面白名单闸：views 生产文件对 preview-3d/ 的运行时 import 仅许
+ * 走入口面（adapters/ 装配入口面目录前缀 + infra 值域/公共通道精确文件 + state/
+ * preview-state.ts 公开面）；内部细节穿透（decoder/**、mesh/**、model/**、texture/**、
+ * screenshot/**、menu/panels/**）入 tracked 基线防回退，新增边即阻断。
+ * 射程刻意收窄：只管 views→preview-3d，其他层对 preview-3d 的引用不属 R10
+ * （「前端只读不判」红线由 R5/seam 体系执法，R10 管的是展示端耦合面宽度）。 */
+export const R10_WHITELIST_PREFIXES: readonly string[] = ["preview-3d/adapters/"];
+export const R10_WHITELIST_FILES: readonly string[] = [
+  "preview-3d/infra/settings-schema.ts",
+  "preview-3d/infra/keymap.ts",
+  "preview-3d/infra/load-trace.ts",
+  "preview-3d/infra/overlay-active.ts",
+  "preview-3d/infra/scene-registry.ts",
+  "preview-3d/infra/schema-registry.ts",
+  "preview-3d/state/preview-state.ts",
+];
+/** R10 目标文件是否在入口面白名单（前缀或精确文件命中） */
+export function r10TargetAllowed(targetRel: string): boolean {
+  if (R10_WHITELIST_PREFIXES.some((p) => targetRel.startsWith(p))) return true;
+  return R10_WHITELIST_FILES.includes(targetRel);
+}
+/** R10 一条边（views 生产文件 → preview-3d 目标，运行时 import）是否违规：白名单外 = 违规 */
+export function r10EdgeViolates(fromRel: string, targetRel: string): boolean {
+  if (!fromRel.startsWith("views/")) return false;
+  if (!targetRel.startsWith("preview-3d/")) return false;
+  return !r10TargetAllowed(targetRel);
+}
+
 /* ---------- 主流程 ---------- */
 function main() {
   const parsed = parseArgs(process.argv.slice(2), { bools: ["json", "update", "force"] });
@@ -519,6 +556,30 @@ function main() {
     }
   }
 
+  /* ---------- R10 专用扫描：views→preview-3d 入口面白名单闸（ADR-270-d2）----------
+   * 仿 R7/R9：views/ 生产文件为扫描主体，运行时 import 目标落入 preview-3d/ 且不在
+   * 入口面白名单（adapters/ 前缀 + infra 值域精确文件 + state/preview-state.ts）即
+   * 违规。type-only 豁免；测试文件经 SCAN_OPTS.skipFile 豁免。存量内部细节穿透边入
+   * 基线防回退（tracked），新增边即阻断。 */
+  for (const abs of walk(SRC_ROOT, SCAN_OPTS) as string[]) {
+    const srcRel = toPosix(relative(SRC_ROOT, abs));
+    if (!srcRel.startsWith("views/")) continue;
+    const text = readFileSync(abs, "utf8");
+    for (const { spec, typeOnly, line } of matchImports(text)) {
+      if (typeOnly) continue;
+      const target = resolveTarget(spec, srcRel);
+      if (!target || !r10EdgeViolates(srcRel, target)) continue;
+      violations.push({
+        rule: "R10",
+        from: srcRel,
+        line,
+        to: target,
+        fromLayer: "views",
+        toLayer: "preview-3d",
+      });
+    }
+  }
+
   /* ---------- 基线比对 ---------- */
   const key = (v: any) => `${v.from}:${v.to}`;
   const rZero = violations.filter(
@@ -531,7 +592,7 @@ function main() {
       v.rule === "R7",
   );
   const tracked = violations.filter(
-    (v) => v.rule === "R3" || v.rule === "R4" || v.rule === "R8" || v.rule === "R9",
+    (v) => v.rule === "R3" || v.rule === "R4" || v.rule === "R8" || v.rule === "R9" || v.rule === "R10",
   );
 
   const baseline = existsSync(BASELINE_FILE)
@@ -565,7 +626,7 @@ function main() {
     }
     const data = {
       _comment:
-        "前端分层反向边基线（R3 core→上层 / R4 features→views / R8 features 生产文件 HTML 字面量 key=路径:html-literal / R9 preview-3d 底层 state|infra|decoder|shader-patches→上层 adapters|caps|menu key=from:to）。仅允许减少，不允许增加。更新: node scripts/check-layering.ts --update",
+        "前端分层反向边基线（R3 core→上层 / R4 features→views / R8 features 生产文件 HTML 字面量 key=路径:html-literal / R9 preview-3d 底层 state|infra|decoder|shader-patches→上层 adapters|caps|menu key=from:to / R10 views→preview-3d 入口面穿透 key=from:to）。仅允许减少，不允许增加。更新: node scripts/check-layering.ts --update",
       generatedAt: new Date().toISOString().slice(0, 10),
       entries: newEntries,
     };
@@ -620,7 +681,7 @@ function main() {
 
   const trackedEdges = new Set(tracked.map(key));
   console.log(
-    `\nR3/R4 反向边 + R8 HTML 字面量 + R9 preview-3d 反向边: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处命中（基线 ${known.size} 条）`,
+    `\nR3/R4 反向边 + R8 HTML 字面量 + R9 preview-3d 反向边 + R10 views 入口面穿透: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处命中（基线 ${known.size} 条）`,
   );
   if (regressions.length) {
     console.error(`❌ 新增 ${regressions.length} 条反向边/HTML 字面量（超出基线）：`);

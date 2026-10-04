@@ -1,7 +1,7 @@
 // ===== preview HTML 模板 =====
 
 import { t } from "@/core/i18n/t.ts";
-import { DECODE_SOURCE } from "@/preview-3d/decoder/utils.ts";
+import { DECODE_SOURCE } from "@/preview-3d/infra/load-trace.ts";
 import { esc } from "@/utils/html/html.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
 import { UI_ICONS, type UiIconName } from "@/utils/icon/ui-icons.ts";

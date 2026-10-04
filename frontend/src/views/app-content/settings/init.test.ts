@@ -27,7 +27,8 @@ const {
   busEmit: vi.fn(),
   busOn: vi.fn((_event: string, _fn: (p: unknown) => void) => () => {}),
   getApp: vi.fn(),
-  // 模拟真实 loadTdKeymap（preview-3d/keymap.ts）：从 localStorage 读取并合并默认键位——
+  // 模拟真实 loadTdKeymap（preview-3d/infra/keymap.ts，ADR-270-d2 R10 斩边后直引原址）：
+  // 从 localStorage 读取并合并默认键位——
   // 固定返回 [] 会让 JSON.stringify 丢弃数组额外属性，键位保存/冲突分支无法正确断言
   loadTdKeymap: vi.fn(() => {
     const base: Record<string, string> = {
@@ -62,7 +63,10 @@ const {
 
 vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
-vi.mock("@/preview-3d/mesh/model3d.ts", () => ({ loadTdKeymap }));
+vi.mock("@/preview-3d/infra/keymap.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/preview-3d/infra/keymap.ts")>();
+  return { ...actual, loadTdKeymap };
+});
 vi.mock("@/features/maintenance/version-updater.ts", () => ({ initVersionUpdater }));
 vi.mock("@/utils/dom/errors.ts", () => ({ friendlyError }));
 // browser-adapter：本图内仅 init.ts 消费 FSA 三函数；browserAdapter 空垫是给

@@ -3,7 +3,7 @@
 
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { cacheGet, cacheSet } from "@/preview-3d/decoder/model-cache.ts";
-import { DECODE_SOURCE } from "@/preview-3d/decoder/utils.ts";
+import { DECODE_SOURCE } from "@/preview-3d/infra/load-trace.ts";
 import { type AnimationClip, parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 import { extOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";

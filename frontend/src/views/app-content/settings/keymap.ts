@@ -4,9 +4,10 @@
 // 一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持。
 import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
-import { TD_KEYMAP_REGISTRY, type TdKeyAction } from "@/preview-3d/infra/keymap.ts";
+// [ADR-270-d2 R10] loadTdKeymap 原址直引 infra/keymap.ts（2026-09-25 收缩立法：消费者一律直引原址；
+// 经 mesh/model3d.ts 再导出面绕行 584 行巨型文件的旧边斩掉）
+import { loadTdKeymap, TD_KEYMAP_REGISTRY, type TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import { TD_CAM_SPEED, TD_KEYMAP_KEY, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
-import { loadTdKeymap } from "@/preview-3d/mesh/model3d.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 

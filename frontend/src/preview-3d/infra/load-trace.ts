@@ -57,6 +57,31 @@ export const TRACE_FORMAT_ADAPTERS = [
   "litematic",
 ] as const;
 
+/**
+ * 解码器来源**码**（`_decodedBy`）——**解码器是唯一事实源**：
+ * 凡经某条解码路径产出的结果都盖此章，写入缓存/纹理预览等旁路也随对象传播。
+ *
+ * [ADR-270-d2 R10] 自 decoder/utils.ts 迁入 infra 加载剖析值域：views 入口面仅许
+ * import infra 值域面（R10 白名单），DECODE_SOURCE 是「来源码家族」值域常量
+ * （与 TRACE_FORMAT_OTHER / TRACE_FORMAT_ADAPTERS 同族），归加载剖析值域。
+ *
+ *  ⚠️ 数据层只存**来源码**，不存展示文案：文案进数据 ⇒ i18n 失效（切语言不变）、
+ *  图标退化成 emoji 字形（ADR-238：不受 currentColor 控制 / 跨平台漂移 / 不随字号缩放）。
+ *  展示由 `views/app-preview/tpl.ts` 映射：语义名 → `resolveIcon()` SVG，文案 → `preview.decodedBy.*`。 */
+export const DECODE_SOURCE = {
+  /** 前端 WASM 内置解码（.ysm 二进制包） */
+  wasm: "wasm",
+  /** 前端 WASM 解析解压后的 ysm.json 规格 */
+  json: "json",
+  /** Go 原生解析兜底（.zip / 文件夹 / 解码失败回退） */
+  go: "go",
+  /** Go 单角色解析（L0 清单命中，多角色包切角色） */
+  goSingle: "go-single",
+} as const;
+
+/** 解码器来源码取值（`DecodedYsm._decodedBy`）；统计卡徽标按此联合键查表 */
+export type DecodeSource = (typeof DECODE_SOURCE)[keyof typeof DECODE_SOURCE];
+
 export interface LoadTrace {
   ts: number;
   format: LoadTraceFormat;

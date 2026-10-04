@@ -40,9 +40,12 @@ vi.mock("@/bus", () => ({
   bus: { emit: (...a: unknown[]) => busEmit(...a) },
 }));
 
-vi.mock("@/preview-3d/mesh/model3d.ts", () => ({
-  loadTdKeymap: () => loadTdKeymap(),
-}));
+// [ADR-270-d2 R10] mock 靶改 infra/keymap.ts（settings/keymap.ts 斩边后直引 loadTdKeymap）；
+// importOriginal 展开保全 TD_KEYMAP_REGISTRY 真导出（本测试 L2 直引）
+vi.mock("@/preview-3d/infra/keymap.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/preview-3d/infra/keymap.ts")>();
+  return { ...actual, loadTdKeymap: () => loadTdKeymap() };
+});
 
 function makeRoot() {
   const grid = document.createElement("div");

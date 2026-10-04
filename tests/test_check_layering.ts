@@ -21,8 +21,12 @@ import {
   matchImports,
   menuSubOf,
   p3dSubOf,
+  r10EdgeViolates,
+  r10TargetAllowed,
   r7EdgeViolates,
   r9EdgeViolates,
+  R10_WHITELIST_FILES,
+  R10_WHITELIST_PREFIXES,
 } from "../scripts/check-layering.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -231,6 +235,103 @@ check("R9 p3dSubOf：子目录归属解析 + 根散文件/非 preview-3d 返回 
   // preview-3d 根散文件（ring-log.ts 等）无子目录归属 → null（R9 双向隐形，与 R7 menu 根散文件同形）
   assert.equal(p3dSubOf("preview-3d/ring-log.ts"), null);
   assert.equal(p3dSubOf("views/app-nav/index.ts"), null, "非 preview-3d 不参与 R9 判定");
+});
+
+// R10（ADR-270-d2 views→preview-3d 入口面白名单闸）：views 生产文件运行时 import
+// preview-3d/ 仅许经入口面（adapters/ 装配入口面目录前缀 + infra 值域/公共通道精确文件
+// + state/preview-state.ts 公开面）；内部细节穿透（decoder/mesh/model/texture/screenshot/
+// menu panels）入基线（key=from:to），新增边即阻断。type-only 豁免；测试文件经 skipFile 豁免。
+// 两层断言同 R7/R8/R9 惯例：1. 非空转（纯核）；2. 集成（超基线 rc=1 + 存量债务非空守卫）。
+check("R10 零新增（views→preview-3d 内部细节穿透，超基线即阻断，ADR-270-d2）", () => {
+  const { out } = runLayering(["--json"]);
+  const data = JSON.parse(out);
+  const r10reg = (data.regressions ?? []).filter((v) => v.rule === "R10");
+  assert.equal(
+    r10reg.length,
+    0,
+    `R10 新增穿透边 ${r10reg.length} 条：${r10reg.map((v) => `${v.from}:${v.line} → ${v.to}`).join(", ")}`,
+  );
+  assert.ok(
+    (data.debt ?? []).some((e) => e.startsWith("views/") && e.includes(":preview-3d/")),
+    "R10 基线债务为空——扫描器疑似对真实树空转（或存量全收敛但基线未 --update 收紧）",
+  );
+});
+
+check("R10 纯核 r10EdgeViolates：入口面白名单放行，内部细节穿透判违规，非 views 不参与", () => {
+  // 白名单放行（adapters/ 前缀 + infra 精确文件 + state/preview-state.ts 公开面）
+  assert.equal(
+    r10EdgeViolates("views/app-preview/ysm-3d.ts", "preview-3d/adapters/mount-preview-core.ts"),
+    false,
+    "adapters/ 装配入口面前缀放行",
+  );
+  assert.equal(
+    r10EdgeViolates("views/app-preview/detail-3d.ts", "preview-3d/adapters/mmd/mmd-detail-stats.ts"),
+    false,
+    "adapters/ 子目录（格式适配器）放行",
+  );
+  assert.equal(
+    r10EdgeViolates("views/app-content/settings/keymap.ts", "preview-3d/infra/keymap.ts"),
+    false,
+    "infra 值域精确文件放行",
+  );
+  assert.equal(
+    r10EdgeViolates("views/app-preview/perf-trace.ts", "preview-3d/infra/load-trace.ts"),
+    false,
+    "infra/load-trace.ts 来源码家族值域放行",
+  );
+  assert.equal(
+    r10EdgeViolates("views/app-nav/index.ts", "preview-3d/state/preview-state.ts"),
+    false,
+    "state/preview-state.ts 公开面放行",
+  );
+  // 内部细节穿透判违规（解码链/菜单节点/截图引擎/巨型文件再导出面）
+  assert.equal(
+    r10EdgeViolates("views/app-preview/index.ts", "preview-3d/decoder/model-cache.ts"),
+    true,
+    "decoder 解码缓存穿透必须判违规",
+  );
+  assert.equal(
+    r10EdgeViolates("views/app-preview/skeleton-render.ts", "preview-3d/screenshot/screenshot-lights.ts"),
+    true,
+    "screenshot 截图引擎穿透必须判违规",
+  );
+  assert.equal(
+    r10EdgeViolates("views/app-preview/mmd-controls.ts", "preview-3d/menu/panels/multi-model.ts"),
+    true,
+    "menu 菜单节点穿透必须判违规",
+  );
+  assert.equal(
+    r10EdgeViolates("views/app-content/settings/keymap.ts", "preview-3d/mesh/model3d.ts"),
+    true,
+    "mesh 巨型文件再导出面穿透必须判违规（ADR-270-d2 斩边目标）",
+  );
+  assert.equal(
+    r10EdgeViolates("views/app-preview/index.ts", "preview-3d/infra/unknown.ts"),
+    true,
+    "infra 白名单外精确文件（未列名）必须判违规——白名单是闭集",
+  );
+  // 射程收窄：非 views from / 非 preview-3d target 不参与
+  assert.equal(
+    r10EdgeViolates("features/app-sync-manager/index.ts", "preview-3d/decoder/model-cache.ts"),
+    false,
+    "非 views 层不参与 R10（射程刻意收窄，features 引 p3d 另行治理）",
+  );
+  assert.equal(
+    r10EdgeViolates("views/app-preview/index.ts", "core/bus.ts"),
+    false,
+    "非 preview-3d target 不参与 R10",
+  );
+});
+
+check("R10 r10TargetAllowed：白名单闭集 + 非空转守卫", () => {
+  assert.ok(R10_WHITELIST_PREFIXES.length > 0, "前缀白名单被清空——非空转");
+  assert.ok(R10_WHITELIST_FILES.length > 0, "精确文件白名单被清空——非空转");
+  assert.equal(r10TargetAllowed("preview-3d/adapters/mount-preview-core.ts"), true);
+  assert.equal(r10TargetAllowed("preview-3d/infra/schema-registry.ts"), true);
+  assert.equal(r10TargetAllowed("preview-3d/state/preview-state.ts"), true);
+  assert.equal(r10TargetAllowed("preview-3d/decoder/utils.ts"), false);
+  assert.equal(r10TargetAllowed("preview-3d/menu/panels/multi-model.ts"), false);
+  assert.equal(r10TargetAllowed("core/bus.ts"), false, "非 preview-3d target 不属白名单");
 });
 
 check("基线文件存在且 tracked 与基线一致（防漂移）", () => {

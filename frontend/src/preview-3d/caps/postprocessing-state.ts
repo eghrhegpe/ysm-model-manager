@@ -105,7 +105,12 @@ export const POSTPROC_PERSIST_FIELDS = {
 /**
  * params 键 → envState 键映射（ADR-196 刀2）：
  * 构造覆盖 seed / 测试 seed / save→load 反向映射 共用。
- * 注意：enabled 不入 schema，由 this.enabled 单独携带。
+ * 注意：`enabled` 不在本表的排除之外另有原因——它是 `PostprocessingParams` 上的**只读视图**
+ * （cap 内经 envState 读写 `ppEnabled`），不参与本 params→env 搬运，故 `Exclude` 掉。
+ * ⚠️ 修正（2026-10 锐评）：原注释写「enabled 不入 schema」，已被 ADR-250 推翻——
+ *    `ppEnabled` **确在** `ENV_STATE_SCHEMA`（group: postprocessing，default false），
+ *    「后处理是否启用」的唯一真值源即在 schema；此处排除的是 **params 结构体上的同名键**，
+ *    两者不可混为一谈（历史措辞把「params 无此字段」误表述为「schema 无此键」）。
  */
 export const PP_PARAMS_TO_ENV: Record<Exclude<keyof PostprocessingParams, "enabled">, string> = {
   bloomStrength: "ppBloomStrength",

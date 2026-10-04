@@ -318,7 +318,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     const h = this.lastH > 0 ? this.lastH : Math.max(logicalSize.y, 1);
     const pixelRatio =
       this.lastPixelRatio > 0 ? this.lastPixelRatio : previewPixelRatio(window.devicePixelRatio);
-    // [P2 修复] EffectComposer 自建读/写缓冲时不带 samples（three r185 构造器：
+    // [P2 修复] EffectComposer 自建读/写缓冲时不带 samples（three 0.186.1 构造器
+    // ——实装版本，`frontend/package.json` 声明 `^0.186.1`；本行原写「r185」，属版本标签陈旧，
+    // 该构造器签名自 r185 起未变、结论不受影响：
     // `new WebGLRenderTarget(w, h, { type: HalfFloatType })`，samples 默认 0），而共享 renderer
     // 是 `antialias: true` 建的——后期一开，整链改画进非 MSAA 离屏缓冲 → 抗锯齿被静默旁路，
     // 边缘锯齿回归。此处显式给 composer 的缓冲开 MSAA，与 renderer 的抗锯齿意图对齐

@@ -696,6 +696,12 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
 //   · 「不越权开启」　→ 模型预设不得覆盖用户手动开关（auto-model vs manual 仲裁）
 //   · 「无谓重建」　　→ composer 常驻：启用意图翻转不触发 build/dispose
 describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () => {
+  // [锐评 P3-4b] 本组涉及持久化写读（saveState/loadState 落 localStorage），原先靠**每个用例
+  // 手写 `localStorage.clear()`**（8 处重复）维持隔离——漏写一处即让上个用例的存档串味，
+  // 且顶层 beforeEach 只 reset envState 不管存储。改为组级统一隔离，删去手写副本：
+  beforeEach(() => { localStorage.clear(); });
+  afterEach(() => { localStorage.clear(); });
+
   function buildSpy() {
     return vi.spyOn(
       PostprocessingCapability.prototype as unknown as { buildComposer: () => void },
@@ -777,7 +783,6 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
   // 模拟：registry 工厂 ctx 无 enabled 字段 → 构造不播种（原 `newCap({enabled:false})`
   // 以 manual 播种，恰好演示了"manual 足迹挡 auto 系覆盖"——那是本要消灭的病，不是场景）。
   it("loadState 恢复 enabled=true 落 ppEnabled，off→on 往返自洽（原 R1 场景）", () => {
-    localStorage.clear();
     resetEnvState();
     const cap1 = newCap({ enabled: true });
     cap1.saveState();
@@ -789,11 +794,9 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
     expect(cap2.isEnabled()).toBe(false);
     cap2.setEnabled(true);
     expect(cap2.isEnabled()).toBe(true);
-    localStorage.clear();
   });
 
   it("loadState 后 applyModelPreset('default') 不扰动已恢复的启用意图（原 R1 组合场景）", () => {
-    localStorage.clear();
     resetEnvState();
     const cap1 = newCap({ enabled: true });
     cap1.saveState();
@@ -802,14 +805,12 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
     cap2.loadState();
     cap2.applyModelPreset("default"); // default 无 ppEnabled 键 → 不触碰
     expect(cap2.isEnabled()).toBe(true);
-    localStorage.clear();
   });
 
   // [R-1 收口 2026-09-22] 恢复走 auto-model（P-1）后，同轨 auto-model→auto-model 被
   // shouldOverwrite 放行——ppEnabled 在 MODEL_DEFAULTS 各模型均有值，无 isStateLoaded
   // 守卫则存档开关每次挂载被模型值顶掉（fog/env 探针同形病）。
   it("[R-1] 有存档时 applyModelPreset 不得顶掉存档 ppEnabled（模型默认让位）", () => {
-    localStorage.clear();
     resetEnvState();
     const cap1 = newCap({ enabled: true });
     cap1.saveState(); // 存档 ppEnabled=true
@@ -819,17 +820,14 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
     expect(cap2.isEnabled()).toBe(true);
     cap2.applyModelPreset("ysm"); // ysm 的模型默认 ppEnabled:false → 有存档必须让位
     expect(cap2.isEnabled(), "存档开启意图应存活（对齐 shadow/reflector isStateLoaded）").toBe(true);
-    localStorage.clear();
   });
 
   it("[R-1 对照] 无存档首启：applyModelPreset 照常套用模型 ppEnabled（守卫不误伤）", () => {
-    localStorage.clear();
     resetEnvState();
     const cap = newCap();
     cap.loadState(); // 无存储 → 早退，isStateLoaded 不置位
     cap.applyModelPreset("vrm"); // vrm → ppEnabled:true 模型值应落
     expect(cap.isEnabled(), "首启无存档 → 模型值照写").toBe(true);
-    localStorage.clear();
   });
 
   // ===== ADR-250 三症状端到端回归（数值锁定，防回退）=====
@@ -1014,8 +1012,11 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     const { renderer } = newRealCap({ enabled: true, params: { toneMapping: "reinhard", exposure: 1.8 } });
     expect(renderer.toneMapping).toBe(THREE.ReinhardToneMapping);
     expect(renderer.outputColorSpace).toBe(THREE.SRGBColorSpace);
-    // ppExposure(1.8) 不再是 renderer 上的直写值——由 sky 侧乘算 skyExposure × ppExposure
-    expect(renderer.toneMappingExposure).not.toBe(1.8);
+    // ppExposure(1.8) 不再是 renderer 上的直写值——由 sky 侧乘算 skyExposure × ppExposure。
+    // [锐评 P3-4c] 原断言 `not.toBe(1.8)` 是**排除式弱断言**：任何「不是 1.8」的值都能过（包括 999、
+    // undefined），对「本 cap 是否真的没写」零分辨力。改为钉死**精确值**——本 cap 无 exposure 写权，
+    // 故必须原样保持 fake renderer 的初值 1（写任何值都属越权，即 ADR-250 §2.3 想根除的属主争夺）：
+    expect(renderer.toneMappingExposure).toBe(1);
   });
   it("[归属判定] outputColorSpace 被他人接管时不得盲还原（对齐 toneMapping 范式）", () => {
     const { cap, renderer } = newRealCap({ enabled: true });
@@ -1360,7 +1361,7 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     expect(composer.renderTarget1.height).toBe(1200);
   });
 
-  it("dispose 还原 renderer tone mapping/exposure/colorSpace", () => {
+  it("dispose 还原 renderer tone mapping/colorSpace；exposure 不归还（属主归 sky）", () => {
     const scene = new THREE.Scene();
     const renderer = makeFakeRenderer();
     renderer.toneMapping = THREE.NoToneMapping;
@@ -1369,9 +1370,16 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: false });
     cap.setEnabled(true);
     expect(renderer.toneMapping).toBe(THREE.ACESFilmicToneMapping);
+    // [锐评 P3-4a] 原断言 `expect(renderer.toneMappingExposure).toBe(0.4)` 是**恒真**的——全程无人
+    // 改动该字段，其「通过」对实现零分辨力。经核（`postprocessing-capability.ts|restoreOutputSettings`
+    // 注释 + ADR-250 §2.3）真相是：**本 cap 根本没有 exposure 写权**（曝光 = skyExposure × ppExposure，
+    // 属主归 sky，唯一写入口 `sky-capability.ts|applyExposure`），故它天然改不动、也无需归还。
+    // 断言改为**钉死这条属主契约**——中途被他人改动后，dispose **不得**回写（回写即属主争夺复发，
+    // 正是「MMD 亮瞎 1.8×」的根因）：
+    renderer.toneMappingExposure = 0.9;
     cap.dispose();
     expect(renderer.toneMapping).toBe(THREE.NoToneMapping);
-    expect(renderer.toneMappingExposure).toBe(0.4);
+    expect(renderer.toneMappingExposure).toBe(0.9);
     expect(internalsOf(cap).composer).toBeNull();
   });
 });

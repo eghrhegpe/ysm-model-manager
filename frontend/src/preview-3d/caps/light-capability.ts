@@ -37,7 +37,6 @@ import { VolumetricCone } from "./light-cone.ts";
 import { buildLightNodes, LIGHT_MASTER_NODE_ID } from "./light-controls.ts";
 import { buildLightPersistPayload, restoreLightParams } from "./light-persist.ts";
 import {
-  DEFAULT_LIGHT_PARAMS,
   type DeepPartial,
   FLATTEN_MAP,
   flattenLightParams,
@@ -46,6 +45,7 @@ import {
   type LightParams,
   type LightSlot,
   lightEnvKeys,
+  lightResetPatch,
   readLightParams as readLightParamsFrom,
   type VolumetricParams,
 } from "./light-presets.ts";
@@ -684,15 +684,20 @@ export class LightCapability implements SceneCapability {
     this.rebuildConeIfNeeded(envState);
   }
 
-  /** [ADR-282] 把三盏灯 + 体积光重置为规范默认值。
-   *  锚点 = `DEFAULT_LIGHT_PARAMS`（与 envState schema 初始值同源，模型无关）——
-   *  语义：「重置」= 回到「从没动过」的状态。
+  /** [ADR-282] 把三盏灯 + 环境光 + 体积光 + [2026-10-04] 线框开关重置为规范默认值。
+   *  写入集唯一来源 = `lightResetPatch()`（参数面锚 `DEFAULT_LIGHT_PARAMS`，与 envState schema
+   *  初始值同源、模型无关，另含 `lightHelperVisible`）——语义：「重置」= 回到「从没动过」的状态。
+   *  ⚠️ 旧实现只写 `flattenLightParams(DEFAULT_LIGHT_PARAMS)`，漏 `lightHelperVisible`
+   *  （线框不在 FLATTEN_MAP）→ 老档（恒携带 helperVisible:true）点重置后线框照画，而
+   *  ADR-293-d1 §后果承诺本按钮是「老用户回到新规范态的出口」——文档对该维空转，2026-10-04
+   *  探针实证（写入集无 helper 键、重置后仍 true）后收口。总开关 `lightEnabled` 刻意不在
+   *  重置作用域：它是会话总闸，重置参数不替用户开灯。
    *  不再有任何按模型类别的预设：灯光是场景属性，Three.js 层面无「模型类别」概念；
    *  唯一合法的模型相关输入是包围盒（驱动灯位/坎德拉补偿），已由 setTarget/setTargetHeight 动态处理。
    *  `source: "manual"`：用户显式重置与拖滑块同源——重置后的值受 shouldOverwrite 保护。 */
   resetLightParams(): void {
-    setEnvState(flattenLightParams(DEFAULT_LIGHT_PARAMS), { source: "manual" });
-    // callback 负责 syncLight + 锥体重建（含 volumetric.enabled 变 false 时卸载）
+    setEnvState(lightResetPatch(), { source: "manual" });
+    // callback 负责 syncLight + 锥体重建（含 volumetric.enabled 变 false 时卸载）+ helper 显隐
   }
 
   /**

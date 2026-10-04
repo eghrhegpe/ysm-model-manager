@@ -350,6 +350,7 @@ describe("LightCapability — 灯光与模型类别解耦（ADR-282）", () => {
   it("resetLightParams：三盏灯 + 环境光 + 体积光逐字段回到 DEFAULT_LIGHT_PARAMS", () => {
     const cap = newCap();
     // 先把所有维度推离默认
+    cap.setHelperVisible(true); // [2026-10-04] 线框开关亦属重置作用域（祖父条款出口）
     cap.setLightParams("key", { type: "spot", intensity: 9, azimuth: 11, angle: 66, decay: 3 });
     cap.setLightParams("fill", { type: "point", intensity: 8, distance: 111 });
     cap.setLightParams("rim", { intensity: 7, color: 0x123456, enabled: false });
@@ -364,6 +365,20 @@ describe("LightCapability — 灯光与模型类别解耦（ADR-282）", () => {
     expect(cap.getParams().volumetric).toEqual(DEFAULT_LIGHT_PARAMS.volumetric);
     // 体积光回默认（关）→ 锥体已卸载
     expect(cap.getSpotLightForCone()).toBeNull();
+    // [2026-10-04 锐评收口] 线框开关同批归位——旧实现漏此键，老档线框永驻视口
+    expect(envState.lightHelperVisible).toBe(false);
+  });
+
+  it("[2026-10-04 锐评收口] 重置是 helperVisible 祖父条款的出口，但不替用户开总闸", () => {
+    const cap = newCap();
+    // 老档态复刻：saveAll 无条件落盘 → helperVisible:true（ADR-293-d1 祖父条款）
+    cap.setHelperVisible(true);
+    cap.setEnabled(false); // 用户刻意关灯：会话总闸
+    cap.resetLightParams();
+    // 出口真的通（旧实现此处恒为 true → ADR-293-d1 承诺对该维空转）
+    expect(envState.lightHelperVisible).toBe(false);
+    // 参数重置不动会话总闸——关灯用户点重置的预期是「参数归位」，不是「灯被替自己打开」
+    expect(cap.isEnabled()).toBe(false);
   });
 
   it("resetLightParams 写 manual 源：重置后的值不被 auto-model 覆盖", () => {

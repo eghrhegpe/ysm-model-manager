@@ -225,7 +225,7 @@ invariant_anchors:
   - `lightFillEnabled` / `lightRimEnabled` `true→false`（`lightKeyEnabled` 保持 `true`）：首启 = IBL + 主灯的「浏览最小光照」；三点布光要时逐盏开——这是 ADR-282「灯光是场景属性」论证的延伸。
   - `lightAmbientIntensity` `0.5→0.15`：环境光是「别全黑」的底光而非主光；旧值把三灯方向性整个填平（暗部消失、阴影白开），且 sky 环境开时还要 ×0.5 让位。
   - **行为副作用（改锥体驱动相关代码时必读）**：`getSpotLightForCone` 只认「**启用的** spot」，故 fill/rim 切 `type:spot` 不再自动产锥——切类型须同时 `enabled:true`，否则「体积光开了却无光柱」（`light-type-switch.test.ts` 已按此口径写死）。
-  - **老用户走祖父条款**：`mount-session.ts|saveAll` 在每次会话收尾**无条件**落盘，故存量存档恒携带 `helperVisible:true` / `fill.enabled:true` / `rim.enabled:true` / `ambient:0.5`——新默认只对「无存档首启」生效；回到新规范态的出口 = 面板「重置全部灯光」（锚点 `DEFAULT_LIGHT_PARAMS` 由 schema 派生，已同步）。
+  - **老用户走祖父条款**：`mount-session.ts|saveAll` 在每次会话收尾**无条件**落盘，故存量存档恒携带 `helperVisible:true` / `fill.enabled:true` / `rim.enabled:true` / `ambient:0.5`——新默认只对「无存档首启」生效；回到新规范态的出口 = 面板「重置全部灯光」，写入集唯一来源 = `light-presets.ts|lightResetPatch`（FLATTEN_MAP 参数面全量 + `lightHelperVisible`）。**该出口曾对该维空转**：`light-capability.ts|resetLightParams` 只写参数面，而线框不在 FLATTEN_MAP（`light-controls.ts|lightHelperNode` 明言「线框不是灯光参数」）→ 老档点重置后线框照画，承诺与实现脱节（2026-10-04 探针实证后收口）。`lightEnabled`（能力总开关）**刻意不在**重置作用域——会话总闸不替用户开灯。回归锁 = `light-presets.test.ts` 的重置补丁作用域用例 + `light-capability.test.ts` 的「重置是 helperVisible 祖父条款的出口」。
   - **默认值语义立法**：schema default 只能写设计意图，禁止写「保持历史观感」——历史 bug 的观感不得焊进规范初始态。
 - **[ADR-284] sky 大气散射与模型类别解耦 + reflector/shadow 清噪声（2026-09-20）**：承 ADR-282 的手术刀向其余类别推广——把灯光病灶拆成 **A 噪声 / B no-op / C 单向陷阱** 三标准逐类审计。
   - **澄清**：C（`source:manual` 夺所有权永久冻结）是灯光孤例——其余 cap 走 `source:'auto-model'` + `isStateLoaded` 守卫，结构上无 C。普适病灶只有 A/B。

@@ -35,7 +35,11 @@ export function buildLightPersistPayload(): Record<string, unknown> {
     // [ADR-293] 总开关与线框可见性（顶层键，格式向后兼容：旧存档缺键 restore 不写，
     // 新会话即落 schema 默认；[ADR-293-d1] 该默认已由 true/true 翻转为 true/false
     // ——注意旧存档恒携带 helperVisible:true（saveAll 无条件落盘），故老用户走祖父
-    // 条款保留旧观感，「重置全部灯光」是回到新规范态的出口）
+    // 条款保留旧观感，「重置全部灯光」是回到新规范态的出口。
+    // [2026-10-04 锐评收口] 那句承诺曾对该维空转：resetLightParams 只写参数面，
+    // helperVisible 不在 FLATTEN_MAP（线框不是灯光参数）→ 老档点重置后线框照画。
+    // 现出口 = light-presets|lightResetPatch（参数面 + helperVisible）；lightEnabled
+    // 刻意不在重置作用域（会话总闸不替用户开灯））
     enabled: envState.lightEnabled,
     helperVisible: envState.lightHelperVisible,
     keyEnabled: envState.lightKeyEnabled,

@@ -5,11 +5,13 @@
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_LIGHT_PARAMS,
+  FLATTEN_MAP,
   flattenLightParams,
   LIGHT_SLOTS,
   type LightInstanceParams,
   type LightParams,
   lightEnvKeys,
+  lightResetPatch,
   readLightParams,
 } from "./light-presets.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -337,5 +339,23 @@ describe("DEFAULT_LIGHT_PARAMS = envState schema 默认值的派生投影", () =
     expect(clampFieldValue("waterMode", "banana" as never)).toBe("film");
     // undefined（Partial patch 缺键）不参与钳制，重载短路语义保留
     expect(clampFieldValue("lightKeyType", undefined)).toBeUndefined();
+  });
+});
+
+describe("[2026-10-04 锐评收口] lightResetPatch：重置出口的作用域", () => {
+  it("覆盖参数面之外的 light 组开关：helperVisible 入补丁（老档祖父条款的出口）", () => {
+    const patch = lightResetPatch();
+    // 行为不变量①：FLATTEN_MAP 声明的参数面全量在补丁内（重置 = 参数归位）
+    for (const group of Object.values(FLATTEN_MAP)) {
+      for (const k of Object.values(group)) {
+        expect(Object.hasOwn(patch, k), `${k} 漏出重置作用域`).toBe(true);
+      }
+    }
+    // 行为不变量②：参数面之外的线框开关也归位——旧实现漏此键（线框不在 FLATTEN_MAP），
+    // 老档点重置后线框永驻视口，而 ADR-293-d1 承诺本按钮是「回到新规范态的出口」
+    expect(patch.lightHelperVisible).toBe(deriveDefaultEnvState().lightHelperVisible);
+    expect(patch.lightHelperVisible).toBe(false);
+    // 行为不变量③：能力总开关刻意不在作用域——会话总闸不替用户开灯
+    expect(Object.hasOwn(patch, "lightEnabled")).toBe(false);
   });
 });

@@ -235,3 +235,25 @@ export function flattenLightParams(p: DeepPartial<LightParams>): Partial<EnvStat
   }
   return out as Partial<EnvState>;
 }
+
+/* ============ 重置补丁（「重置全部灯光」写入集的唯一出口）============ */
+
+/** 「重置全部灯光」的完整写入补丁。
+ *  覆盖两段——缺任一段则「重置」名不副实：
+ *   ① **参数面**：FLATTEN_MAP 全量（三灯 3×10 + 环境光 2 + 体积光 7 = 39 键），锚 `DEFAULT_LIGHT_PARAMS`；
+ *   ② **参数面之外的 light 组开关**：`lightHelperVisible`（视口线框，schema default false）。
+ *      ⚠️ 线框不在 FLATTEN_MAP（[light-controls] 明言「线框不是灯光参数」），旧实现因此只写 ①——
+ *      2026-10-04 探针实测（39 键，无 helper 键）：老档（`saveAll` 无条件落盘 → 恒携带
+ *      `helperVisible:true`）执行 `resetLightParams()` 后该键仍为 true，而 ADR-293-d1 §后果与
+ *      `light-persist` 注释均承诺「重置 = 老用户回到新规范态的出口」→ 承诺对该维恒空转
+ *      （key 灯默认开 → 线框照画在视口）。本补丁把 ② 并入同一出口，让承诺与实现对齐。
+ *  刻意**不含** `lightEnabled`（能力总开关）：它是会话总闸而非灯光参数——关灯用户点「重置」
+ *  的预期是「参数归位」，不是「灯被系统替我打开」。该键的撤销权留在面板首行开关自身。
+ *  值一律取自 schema 默认值快照（`ENV_DEFAULTS`）+ `DEFAULT_LIGHT_PARAMS`，零字面量：
+ *  schema 键重命名 → 编译报错；helper 默认值再翻转 → 本补丁自动跟随（无需同步第二处）。 */
+export function lightResetPatch(): Partial<EnvState> {
+  return {
+    ...flattenLightParams(DEFAULT_LIGHT_PARAMS),
+    lightHelperVisible: ENV_DEFAULTS.lightHelperVisible,
+  };
+}

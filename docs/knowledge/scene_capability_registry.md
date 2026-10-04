@@ -123,6 +123,7 @@ auto_fields:
     - LightInstanceParams
     - LightKey
     - LightParams
+    - lightResetPatch
     - LightSlot
     - lightSlotLabelKey
     - LightType

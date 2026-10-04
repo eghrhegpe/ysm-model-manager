@@ -76,6 +76,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 结论建在前端菜单测试上（frontend 域）；扫描核在 scripts 工具自身（tests 域）
   "test_check_menu_test_layout.ts": ["frontend", "tests"],
   "test_e2e_location_contract.ts": ["frontend"],
+  // e2e 浏览器探测（frontend/e2e/browser-path.ts）纯函数核——探测逻辑变更即触发
+  "test_e2e_browser_path.ts": ["frontend"],
   "test_html_integrity.ts": ["frontend"],
   // R8 模板闸扫描核（scripts/_lib/innerhtml-hygiene.ts）——纯函数核在 tests 域，
   // 但结论建在前端模板写法上（栅标 frontend 源），故双域。

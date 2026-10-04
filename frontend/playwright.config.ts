@@ -3,6 +3,7 @@
 // 内置 webServer 自动管理 vite dev 生命周期。
 // 使用 data-testid 稳定钩子定位元素（Design.md §19.1）。
 import { defineConfig, devices } from "@playwright/test";
+import { localChromiumUse } from "./e2e/browser-path.ts";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -41,7 +42,11 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      // 浏览器探测（e2e/browser-path.ts）：受限网络下 ms-playwright 里实际存在的
+      // chromium 版本可能与 @playwright/test 期望不符 → 默认解析 "Executable doesn't
+      // exist"。探测到即钉住其 launchOptions.executablePath；探测不到展开 {}，
+      // 行为与改造前完全一致（CI 正常装了浏览器的场景正是这条路）。
+      use: { ...devices["Desktop Chrome"], ...localChromiumUse() },
     },
   ],
 });

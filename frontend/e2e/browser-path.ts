@@ -32,8 +32,8 @@ function browsersRoot(): string | null {
 }
 
 /** 单个浏览器目录内，各平台可执行文件的相对位置。 */
-function candidatesIn(dir: string): string[] {
-  if (process.platform === "win32") {
+function candidatesIn(dir: string, platform: NodeJS.Platform = process.platform): string[] {
+  if (platform === "win32") {
     return [
       path.join(dir, "chrome-win64", "chrome.exe"),
       path.join(dir, "chrome-win", "chrome.exe"),
@@ -41,7 +41,7 @@ function candidatesIn(dir: string): string[] {
       path.join(dir, "chrome-headless-shell-win", "chrome-headless-shell.exe"),
     ];
   }
-  if (process.platform === "darwin") {
+  if (platform === "darwin") {
     return [
       path.join(dir, "chrome-mac", "Chromium.app", "Contents", "MacOS", "Chromium"),
       path.join(dir, "chrome-mac-arm64", "Chromium.app", "Contents", "MacOS", "Chromium"),
@@ -60,10 +60,14 @@ function candidatesIn(dir: string): string[] {
  * 优先级：完整版 chromium（带 GPU 栈，WebGL 更可靠）> headless shell（更省资源）；
  * 同为完整版时取版本号大者。
  *
+ * @param root ms-playwright 根目录（缺省 `browsersRoot()` 自动探测；契约测试经此注入临时目录）
+ * @param platform 目标平台（缺省 `process.platform`；契约测试经此做跨平台断言）
  * @returns 可执行文件绝对路径；本机无任何可用浏览器时返回 undefined。
  */
-export function findLocalChromium(): string | undefined {
-  const root = browsersRoot();
+export function findLocalChromium(
+  root: string | null = browsersRoot(),
+  platform: NodeJS.Platform = process.platform,
+): string | undefined {
   if (!root || !fs.existsSync(root)) return undefined;
 
   let entries: string[];
@@ -82,7 +86,7 @@ export function findLocalChromium(): string | undefined {
         return n(b) - n(a);
       });
     for (const d of dirs) {
-      for (const exe of candidatesIn(path.join(root, d))) {
+      for (const exe of candidatesIn(path.join(root, d), platform)) {
         if (fs.existsSync(exe)) return exe;
       }
     }
@@ -93,14 +97,18 @@ export function findLocalChromium(): string | undefined {
 }
 
 /**
- * 探测到本机 chromium 时返回 `{ executablePath }`，否则返回空对象。
+ * 探测到本机 chromium 时返回可直接展开进 `use` 的 `launchOptions` 片段，否则返回空对象。
  * 用法（**必须**写进 projects[].use，见文件头说明）：
  *
  * ```ts
  * projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], ...localChromiumUse() } }]
  * ```
+ *
+ * ⚠️ 返回值是 `launchOptions` 嵌套形（`executablePath` 只存在于 LaunchOptions 内，
+ * Playwright 类型可证）：`use` 袋对平铺的未知键静默忽略（fixture 袋不校验），
+ * 平铺写 `use.executablePath` 不生效——勿回退。
  */
-export function localChromiumUse(): { executablePath?: string } {
+export function localChromiumUse(): { launchOptions?: { executablePath: string } } {
   const p = findLocalChromium();
-  return p ? { executablePath: p } : {};
+  return p ? { launchOptions: { executablePath: p } } : {};
 }

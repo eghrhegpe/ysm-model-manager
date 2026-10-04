@@ -20,7 +20,9 @@ import {
   htmlLiteralHits,
   matchImports,
   menuSubOf,
+  p3dSubOf,
   r7EdgeViolates,
+  r9EdgeViolates,
 } from "../scripts/check-layering.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -183,6 +185,52 @@ check("R8 集成：features 零新增 HTML 字面量（存量在基线，增量�
     (data.debt ?? []).some((e) => e.includes(":html-literal")),
     "R8 基线债务为空——扫描器疑似对真实树空转（或存量全清零却未收紧注释）",
   );
+});
+
+// R9（ADR-270-d1 preview-3d 内部分层方向闸，R7 自 menu/ 扩至全区）：
+// 底层子目录 { state, infra, decoder, shader-patches } 生产文件禁运行时 import 上层
+// { adapters, caps, menu }（type-only 豁免；测试文件经 skipFile 豁免）。
+// 两层断言同 R7/R8 惯例：
+//   1. 非空转（纯核）——r9EdgeViolates/p3dSubOf 直测，rank 表被误清空即红；
+//   2. 集成——新增反向边超基线即 rc=1 阻断；基线含存量条目的软断言防扫描器空转。
+check("R9 零新增（preview-3d 底层→上层运行时反向边，超基线即阻断，ADR-270-d1）", () => {
+  const { out } = runLayering(["--json"]);
+  const data = JSON.parse(out);
+  const r9reg = (data.regressions ?? []).filter((v) => v.rule === "R9");
+  assert.equal(
+    r9reg.length,
+    0,
+    `R9 新增反向边 ${r9reg.length} 条：${r9reg.map((v) => `${v.from}:${v.line} → ${v.to}`).join(", ")}`,
+  );
+  assert.ok(
+    (data.debt ?? []).some((e) => e.startsWith("preview-3d/") && e.endsWith(".ts")),
+    "R9 基线债务为空——扫描器疑似对真实树空转（或存量全收敛但基线未 --update 收紧）",
+  );
+});
+
+check("R9 纯核 r9EdgeViolates：底层→上层判违规，下行/同层/越界放行", () => {
+  assert.equal(r9EdgeViolates("state", "caps"), true, "state→caps 必须判违规");
+  assert.equal(r9EdgeViolates("state", "adapters"), true, "state→adapters 必须判违规");
+  assert.equal(r9EdgeViolates("infra", "adapters"), true, "infra→adapters 必须判违规");
+  assert.equal(r9EdgeViolates("infra", "menu"), true, "infra→menu 必须判违规");
+  assert.equal(r9EdgeViolates("decoder", "caps"), true, "decoder→caps 必须判违规");
+  assert.equal(r9EdgeViolates("shader-patches", "caps"), true, "shader-patches→caps 必须判违规");
+  assert.equal(r9EdgeViolates("adapters", "state"), false, "adapters→state 下行放行");
+  assert.equal(r9EdgeViolates("caps", "infra"), false, "caps→infra 下行放行");
+  assert.equal(r9EdgeViolates("state", "state"), false, "同层放行");
+  assert.equal(r9EdgeViolates("menu", "caps"), false, "越界（menu 非底层）不判违规");
+  assert.equal(r9EdgeViolates("mesh", "caps"), false, "越界（mesh 非射程子目录）不判违规——R9.x 扩围前保持隐形");
+});
+
+check("R9 p3dSubOf：子目录归属解析 + 根散文件/非 preview-3d 返回 null", () => {
+  assert.equal(p3dSubOf("preview-3d/state/env-state.ts"), "state");
+  assert.equal(p3dSubOf("preview-3d/infra/render-host.ts"), "infra");
+  assert.equal(p3dSubOf("preview-3d/decoder/geometry.ts"), "decoder");
+  assert.equal(p3dSubOf("preview-3d/shader-patches/patch-guard.ts"), "shader-patches");
+  assert.equal(p3dSubOf("preview-3d/menu/engine/core.ts"), "menu");
+  // preview-3d 根散文件（ring-log.ts 等）无子目录归属 → null（R9 双向隐形，与 R7 menu 根散文件同形）
+  assert.equal(p3dSubOf("preview-3d/ring-log.ts"), null);
+  assert.equal(p3dSubOf("views/app-nav/index.ts"), null, "非 preview-3d 不参与 R9 判定");
 });
 
 check("基线文件存在且 tracked 与基线一致（防漂移）", () => {

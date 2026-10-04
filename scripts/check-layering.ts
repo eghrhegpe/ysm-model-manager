@@ -43,6 +43,17 @@
  *                             数据语义的场景）。与 check-redlines 的 W2/R8、check-path-hygiene
  *                             的 R5/R6 各属同号异策规则集，勿混。
  *
+ *   R9（防回退）  preview-3d 内部分层方向闸（ADR-270-d1，R7 自 menu/ 扩至 preview-3d 全区）：
+ *                             下层子目录 { state, infra, decoder, shader-patches } 生产文件
+ *                             不得运行时 import 上层子目录 { adapters, caps, menu }（type-only
+ *                             编译期擦除豁免；测试文件经 skipFile 豁免；动态 import() 不在
+ *                             matchImports 射程——与 R7 同口径，动态 import 归 check-dynamic-import）。
+ *                             底层不得伸手读「装配层」（adapters = 组合根装配产物宿主，caps =
+ *                             能力装配层，menu = 声明层；ADR-168 注入点先例：state 层 cap 查询
+ *                             走 setSceneCapabilityLookup 注入而非 import 组合根单例）。存量边入
+ *                             基线（key=from:to，含 ADR-249「默认值单一事实源」立法边
+ *                             env-state-schema→caps/ground-surface-spec），新增即回归阻断。
+ *
  *   skipFile 豁免测试文件的设计意图（2026-09 R6 摸排）：features/views 测试 import
  *   views 模板（如 batch-rename.test.ts → views/app-tree/tpl-batch-rename.ts）是
  *   ADR-208 D2「HTML 模板外移 views」的设计内合法测试依赖传递（测试对象在 views，
@@ -60,7 +71,7 @@
  *   生产 features 无此类命中——留瑕，allow 尾注兜底。
  *
  * 用法：
- *   node scripts/check-layering.ts            # R1/R2/R0/R5/R6/R7 违规或 R3/R4/R8 超基线则退 1
+ *   node scripts/check-layering.ts            # R1/R2/R0/R5/R6/R7 违规或 R3/R4/R8/R9 超基线则退 1
  *   node scripts/check-layering.ts --json     # JSON（CI / 子代理消费）
  *   node scripts/check-layering.ts --update   # 更新 R3/R4/R8 基线（只许收紧；新增需 --force）
  *
@@ -307,6 +318,27 @@ export function htmlLiteralHits(text: string): Array<{ line: number; snippet: st
   return hits;
 }
 
+/* ---------- R9 内核（模块级导出，供契约测试直测「非空转」，ADR-270-d1）----------
+ * preview-3d 内部分层方向闸：底层子目录（infra/state 基建与解码基座）禁止运行时
+ * 伸手读「装配层」（adapters 组合根装配产物宿主 / caps 能力装配层 / menu 声明层）。
+ * 射程刻意收窄：不拦 mesh↔model / screenshot→caps 等邻层既成双向债（扩围另立 R9.x）。
+ * 纯函数导出 + 当前仓库 0 回归断言双保险——rank 表被误清空时非空转用例即红。 */
+const P3D_PREFIX = "preview-3d/";
+export const P3D_LOWER_SUBS = new Set(["state", "infra", "decoder", "shader-patches"]);
+export const P3D_UPPER_SUBS = new Set(["adapters", "caps", "menu"]);
+/** 文件（相对 src 正斜杠路径）所属 preview-3d 射程子目录；非 preview-3d/、preview-3d 根散文件
+ * 或越界子目录（mesh/texture 等 R9.x 扩围前）一律 null——与 R7 menuSubOf 同形：
+ * 只认 lower/upper 白名单内的归属，其余双向隐形（不误拦亦不误报）。 */
+export function p3dSubOf(rel: string): string | null {
+  if (!rel.startsWith(P3D_PREFIX)) return null;
+  const seg = rel.slice(P3D_PREFIX.length).split("/")[0];
+  return seg && (P3D_LOWER_SUBS.has(seg) || P3D_UPPER_SUBS.has(seg)) ? seg : null;
+}
+/** R9 一条边（from 子目录 → to 子目录，运行时 import）是否违规：底层→上层即违规 */
+export function r9EdgeViolates(fromSub: string, toSub: string): boolean {
+  return P3D_LOWER_SUBS.has(fromSub) && P3D_UPPER_SUBS.has(toSub);
+}
+
 /* ---------- 主流程 ---------- */
 function main() {
   const parsed = parseArgs(process.argv.slice(2), { bools: ["json", "update", "force"] });
@@ -461,6 +493,32 @@ function main() {
     }
   }
 
+  /* ---------- R9 专用扫描：preview-3d 底层 → 上层运行时反向边（ADR-270-d1）----------
+   * 仿 R7：底层子目录 { state, infra, decoder, shader-patches } 为扫描主体，目标落
+   * 上层子目录 { adapters, caps, menu } 即违规；type-only 豁免（不建运行时耦合）、
+   * 测试文件经 SCAN_OPTS.skipFile 豁免。存量边入基线防回退（tracked），新增即阻断。 */
+  for (const abs of walk(SRC_ROOT, SCAN_OPTS) as string[]) {
+    const srcRel = toPosix(relative(SRC_ROOT, abs));
+    const fromSub = p3dSubOf(srcRel);
+    if (!fromSub || !P3D_LOWER_SUBS.has(fromSub)) continue;
+    const text = readFileSync(abs, "utf8");
+    for (const { spec, typeOnly, line } of matchImports(text)) {
+      if (typeOnly) continue;
+      const target = resolveTarget(spec, srcRel);
+      if (!target) continue;
+      const toSub = p3dSubOf(target);
+      if (!toSub || !r9EdgeViolates(fromSub, toSub)) continue;
+      violations.push({
+        rule: "R9",
+        from: srcRel,
+        line,
+        to: target,
+        fromLayer: `p3d/${fromSub}`,
+        toLayer: `p3d/${toSub}`,
+      });
+    }
+  }
+
   /* ---------- 基线比对 ---------- */
   const key = (v: any) => `${v.from}:${v.to}`;
   const rZero = violations.filter(
@@ -472,7 +530,9 @@ function main() {
       v.rule === "R6" ||
       v.rule === "R7",
   );
-  const tracked = violations.filter((v) => v.rule === "R3" || v.rule === "R4" || v.rule === "R8");
+  const tracked = violations.filter(
+    (v) => v.rule === "R3" || v.rule === "R4" || v.rule === "R8" || v.rule === "R9",
+  );
 
   const baseline = existsSync(BASELINE_FILE)
     ? JSON.parse(readFileSync(BASELINE_FILE, "utf8"))
@@ -505,7 +565,7 @@ function main() {
     }
     const data = {
       _comment:
-        "前端分层反向边基线（R3 core→上层 / R4 features→views / R8 features 生产文件 HTML 字面量，key=路径:html-literal）。仅允许减少，不允许增加。更新: node scripts/check-layering.ts --update",
+        "前端分层反向边基线（R3 core→上层 / R4 features→views / R8 features 生产文件 HTML 字面量 key=路径:html-literal / R9 preview-3d 底层 state|infra|decoder|shader-patches→上层 adapters|caps|menu key=from:to）。仅允许减少，不允许增加。更新: node scripts/check-layering.ts --update",
       generatedAt: new Date().toISOString().slice(0, 10),
       entries: newEntries,
     };
@@ -560,7 +620,7 @@ function main() {
 
   const trackedEdges = new Set(tracked.map(key));
   console.log(
-    `\nR3/R4 反向边 + R8 HTML 字面量: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处命中（基线 ${known.size} 条）`,
+    `\nR3/R4 反向边 + R8 HTML 字面量 + R9 preview-3d 反向边: ${trackedEdges.size} 条唯一边 / ${tracked.length} 处命中（基线 ${known.size} 条）`,
   );
   if (regressions.length) {
     console.error(`❌ 新增 ${regressions.length} 条反向边/HTML 字面量（超出基线）：`);

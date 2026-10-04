@@ -15,8 +15,12 @@ auto_fields:
     - matchImports
     - MENU_SUB_RANK
     - menuSubOf
+    - P3D_LOWER_SUBS
+    - P3D_UPPER_SUBS
+    - p3dSubOf
     - r7EdgeViolates
     - R8_ALLOW_MARKER
+    - r9EdgeViolates
 use_when:
   - src/core 想新增文件或依赖前
   - features 模块需要拿到 backend 能力时

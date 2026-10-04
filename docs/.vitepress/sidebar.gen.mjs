@@ -1549,6 +1549,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
       },
       {
+        "text": "ADR-270-d1：preview-3d 内部分层方向闸 R9（state/infra/decoder/shader-patches 禁运行时引 adapters/caps/menu，基线防回退）",
+        "link": "/adr/decisions/ADR-270-d1-preview-3d-r9-state-infra-decoder-shader-patches-adapters-caps-menu"
+      },
+      {
         "text": "ADR-266-d1：体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像）",
         "link": "/adr/decisions/ADR-266-d1-volumetric-cone-in-screenshot"
       }

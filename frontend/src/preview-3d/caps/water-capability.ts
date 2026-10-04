@@ -43,6 +43,11 @@ import {
   type WaterBuildContext,
 } from "./water-body-strategies.ts";
 import { buildWaterNodes } from "./water-menu.ts";
+import {
+  migrateLegacyWaterLevel,
+  WATER_SCHEMA_VERSION,
+  WATER_SCHEMA_VERSION_KEY,
+} from "./water-migrations.ts";
 // ADR-315 D1①：分派表 / uniform 登记 / 逐帧现读表（零 THREE 纯表）拆出真缝
 import {
   effectiveWaveHeight,
@@ -68,6 +73,7 @@ import {
   WAVE_AA_FULL_VERTS,
   WAVE_AA_MIN_VERTS,
   WAVE_DEGENERATE_WA,
+  WAVE_STEEP_SIZE_REF,
   WAVE_STEEP_SUM_LIMIT,
 } from "./water-state.ts";
 
@@ -273,10 +279,17 @@ export class WaterCapability implements SceneCapability {
              // 双双污染 ⇒ 水面整块消失）。本波既无位移也无法线贡献，整波跳过；跳过后 nrm 保持
              // (0,0,1)、位移为 0 —— 平面水 + 正确法线，静水态由此真正可达。
              if (wa <= ${WAVE_DEGENERATE_WA.toExponential(1)}) { continue; }
+             // [锐评 2026-10-04 P1-1] 波陡反归一：D2 让 λ ∝ uSize ⇒ 未反归一时水平位移
+             // steep·amp ∝ 1/freq ∝ uSize、且与浪高解耦（实测 size 10→300 水平摆动 0.036→1.091 m，
+             // 而垂直总振幅恒 0.060 m ⇒ 大水面被「横向揉皱」）。乘 WAVE_STEEP_SIZE_REF/uSize 后，
+             // 基准尺寸档观感零变化、尺寸域水平摆动恒定；小尺寸越过自交上界时由 steepCap 接管
+             // （物理约束：波长太短本就不允许那么大水平摆动，非漂移）。
+             float steepScale = ${WAVE_STEEP_SIZE_REF.toFixed(1)} / sizeSafe;
              // clamp 是**纵深防御**（锐评 P1-3②）：choppiness ∈ [0,1]（schema range）时输入恰在
              // [0, 上界] 内、恒不夹住；只有越界值（存档直写 / 未来放宽 range）才真正把
              // Σσk 钳回 WAVE_STEEP_SUM_LIMIT。域内恒等 + 域外夹住两条数值判据见其测试。
-             float steep = clamp(uChoppiness * ${WAVE_STEEP_SUM_LIMIT} / (wa * float(GERSTNER_COUNT)), 0.0, ${WAVE_STEEP_SUM_LIMIT} / (wa * float(GERSTNER_COUNT)));
+             float steepCap = ${WAVE_STEEP_SUM_LIMIT} / (wa * float(GERSTNER_COUNT));
+             float steep = clamp(uChoppiness * ${WAVE_STEEP_SUM_LIMIT} / (wa * float(GERSTNER_COUNT)) * steepScale, 0.0, steepCap);
              float phase = freq * dot(dir, p) - speed * uTime;
              float c = cos(phase), s = sin(phase);
              disp.x += steep * amp * dir.x * c / sizeSafe;
@@ -767,6 +780,9 @@ export class WaterCapability implements SceneCapability {
   saveState(): void {
     const state: Record<string, unknown> = {};
     for (const key of getPresetKeys("water")) state[key] = envState[key];
+    // [锐评 P1-4] 版本戳：唯一消费者 = loadState 的旧档迁移判据（water-migrations.ts）。
+    // 缺它 = 被当作 ADR-319 之前的老档——水位恰为旧默认 0.01 时会被迁移。
+    state[WATER_SCHEMA_VERSION_KEY] = WATER_SCHEMA_VERSION;
     persistState(this.id, state);
   }
 
@@ -850,6 +866,14 @@ export class WaterCapability implements SceneCapability {
         poolWallColor: { number: (v) => this.setPoolWallColor(v) },
         poolRoundness: { number: (v) => this.setPoolRoundness(v) },
       });
+      // [锐评 P1-4] ADR-319 D1 默认值抬升对存量存档的追溯：老档（无版本戳）里若记录的是旧默认
+      // 0.01，会把波高预算 `effectiveWaveHeight` 钳到 1 cm（浪死平）——迁到现默认；带版本戳的
+      // 新档一律不动（用户可自由把水位设成 0.01）。判据与边界见 water-migrations.ts。
+      const migratedLevel = migrateLegacyWaterLevel(
+        w.waterLevel,
+        (state as Record<string, unknown>)[WATER_SCHEMA_VERSION_KEY],
+      );
+      if (migratedLevel !== undefined) this.setLevel(migratedLevel);
       // ADR-257 迁移：旧存档没有 waterLevel 键（旧语义里「水面 y == 池深 h」，即水填到池顶）。
       // pool 用户兜底取**中池位** `poolHeight × 0.5`——这是预算 `min(level, poolHeight−level)` 的
       // 最大值点（= poolHeight/2），也是新默认 `waterLevel=0.15 / waterPoolHeight=0.3` 的比例。

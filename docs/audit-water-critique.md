@@ -28,7 +28,19 @@
 > 属环境/既有 spec 敏感点，**非本轮改动**；截图未进仓）。⚠️ **全量 `typecheck` 与 `scripts/tsc` 当前各报 2 条错误，均属并行会话的在途改动，
 > 与本轮无关**：`frontend/src/preview-3d/adapters/ysm-adapter.ts`（临时诊断块 `t.image?.naturalWidth`，标注「诊断后删除」）、
 > `scripts/check-adr-health.ts` / `scripts/new-adr.ts`（ADR 归档迁移在途）；**本轮改动的 5 个文件在两处 tsc 输出里均零错误**。
-> **未动**（待决策）：P1-1 波陡归一、P1-2 滑杆动态上界、P1-4 存档追溯迁移、P2-1..P2-4、P3-1/P3-2。
+> **P1-1 已修（第二轮，用户「继续」授权）**——`steep` 在自交 clamp 之前乘基准反归一
+> `water-state.ts|WAVE_STEEP_SIZE_REF/uSize`（基准 = schema `waterSize` 默认 80，同值守卫在测试内）。
+> 探针 ④ 段域宽扫描：修复前水平摆动 ∝ size（10→300 差约 30 倍），修复后 `size ≥ 80` 六档恒 **0.650 m**、
+> `size ≤ 40` 递减（自交上界接管 = 物理约束，非公式漂移）；默认档观感零变化。
+> **探针补齐「最大水平位移」指标**（原先这一维不进输出列，正是 P1-1 漏网的原因），并新增
+> 「探针与源码同源核查」用例（P2-4 的机器守卫：探针手抄的五个共享常量与 `water-state.ts` 字面一致，改一侧忘另一侧即红）。
+> **P1-4 已修**——新增 `caps/water-migrations.ts`（纯函数，范式对齐 `environment-migrations.ts`）+
+> 存档版本戳 `WATER_SCHEMA_VERSION_KEY`：只有「无版本戳 ∧ 水位严格等于旧默认 0.01」才迁到现默认；
+> 带戳新档永不迁移（0.01 往返恒等）。
+> **本轮验证（第二轮）**：`water-capability.test.ts` **132 例全绿**（P1-1 / P1-4 / 同源核查共新增 9 例）；
+> `vite build` ✓；`npm run typecheck` **零错误**；`check-biome --files` ✓；`doctor --docs` **22/22 PASS**；
+> 探针默认档无回归（aa 全 1、峰谷差 0.116）、`--amp 0` 全 0（无 NaN）。
+> **未动**：P1-2（滑杆动态上界，需产品决策）、P2-1..P2-4（参数语义 / 策略旗标 / 倒影计价 / 量具同源深化）、P3-1/P3-2。
 
 ---
 

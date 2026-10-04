@@ -35,6 +35,10 @@ const TWO_PI = 6.2831853;
 const GERSTNER_COUNT = 6;
 /** water-state.ts|WATER_WAVE_SEGMENTS —— 波场采样密度唯一事实源 */
 const SEGMENTS_DEFAULT = 64;
+/** water-state.ts|WAVE_STEEP_SIZE_REF —— 波陡反归一的基准尺寸（锐评 2026-10-04 P1-1）。
+ *  探针零外部依赖故手抄，**同值守卫** = water-capability.test.ts 的「探针与源码同源核查」用例
+ *  （读本文件文本断言含同值字面量；照抄改一处忘另一处即红）。 */
+const STEEP_SIZE_REF = 80;
 /** GLSL: float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); } */
 function fract(x: number): number {
   return x - Math.floor(x);
@@ -89,7 +93,14 @@ function buildWaves(
     // uWaveHeight=0（浪高 min / 水位归零 / pool 水位≥池深）⇒ amp=0 ⇒ wa=0 ⇒ 0.8/(wa·N) 得 +∞、
     // steep·amp = ∞×0 = NaN（JS 与 GLSL/IEEE 同行为）。退化波整波跳过——与 shader 的 `continue` 同形。
     if (wa <= 1e-6) continue;
-    const steep = clamp((choppiness * 0.8) / (wa * GERSTNER_COUNT), 0, 0.8 / (wa * GERSTNER_COUNT));
+    // [锐评 2026-10-04 P1-1] 与 shader 同式：steep 先乘基准反归一（STEEP_SIZE_REF/size）再被自交上界钳住。
+    // 修复前 steep = 0.8·chop/(wa·N) ∝ size ⇒ 水平位移 steep·amp ∝ size（size 10→300 差约 30 倍，
+    // 而垂直总振幅与 size 无关）——大水面被「横向揉皱」。反归一后大尺寸端恒定，小尺寸由自交上界接管。
+    const steep = clamp(
+      ((choppiness * 0.8) / (wa * GERSTNER_COUNT)) * (STEEP_SIZE_REF / sizeSafe),
+      0,
+      0.8 / (wa * GERSTNER_COUNT),
+    );
     waves.push({
       i,
       dir,
@@ -247,6 +258,7 @@ function scan(
       fullFoamRatio: 0,
       aboveWallRatio: 0,
       belowGroundRatio: 0,
+      maxHoriz: 0,
       samples: 0,
     };
   }
@@ -254,6 +266,8 @@ function scan(
   let hMin = Infinity;
   let sq = 0;
   let jMin = Infinity;
+  /** [锐评 P1-1] 水平位移峰值 |Σ steep_i·amp_i·dir_i·cos|（世界米制）——修复前该量与 size 成正比 */
+  let maxHoriz = 0;
   let jLe0 = 0;
   let jLeNeg025 = 0;
   let aboveWall = 0;
@@ -267,6 +281,8 @@ function scan(
         const px = -half + (size * ix) / axis;
         const py = -half + (size * iy) / axis;
         const h = heightAt(waves, px, py, t);
+        const hz = horizAt(waves, px, py, t);
+        maxHoriz = Math.max(maxHoriz, Math.hypot(hz.x, hz.y));
         hMax = Math.max(hMax, h);
         hMin = Math.min(hMin, h);
         sq += h * h;
@@ -284,6 +300,7 @@ function scan(
     hMax,
     hMin,
     peakToTrough: hMax - hMin,
+    maxHoriz,
     rms: Math.sqrt(sq / n),
     jMin,
     foamRatio: jLe0 / n,
@@ -579,6 +596,9 @@ function main(): number {
   L(`   Σ amp = ${f3(waves.reduce((a, w) => a + w.amp, 0))}m（= h，按 0.26·Σ0.82^i 归一）`);
   L(`   峰 ${f3(s.hMax)}m  谷 ${f3(s.hMin)}m  峰谷差 ${f3(s.peakToTrough)}m  RMS ${f3(s.rms)}m`);
   L(
+    `   水平位移峰值 ${f3(s.maxHoriz)}m（P1-1 反归一的判据量：修复前 ∝size，域宽扫描见 ④）`,
+  );
+  L(
     forPool
       ? `   → 越壁：${pct(s.aboveWallRatio)} 采样点的水面高于池壁顶（poolHeight=${depth}m，壁顶 ${f3(wallTop)}m）`
       : `   → 越壁：不适用（film 无壁；穿地仍受下钳约束）`,
@@ -620,6 +640,9 @@ function main(): number {
       `   ${String(r.size).padEnd(5)} ${f3(r.current.peakToTrough).padEnd(10)} ${f3(r.current.rms).padEnd(8)} ${(r.current.aboveWallRatio * 100).toFixed(1).padEnd(6)} ${(r.current.belowGroundRatio * 100).toFixed(1).padEnd(6)} ${String(r.fit.faded).padEnd(4)} ${r.fit.inside}/${r.fit.longerThanDomain}      | ${f3(r.prescribed.peakToTrough).padEnd(10)} ${f3(r.prescribed.rms).padEnd(8)} ${(r.prescribed.aboveWallRatio * 100).toFixed(1).padEnd(6)} ${(r.prescribed.belowGroundRatio * 100).toFixed(1).padEnd(6)} ${String(r.pfit.faded).padEnd(4)} ${r.pfit.inside}`,
     );
   }
+  L(
+    `   水平位移峰值域宽扫描（P1-1 判据，m）：${sweep.map((r) => `size=${r.size}:${f3(r.current.maxHoriz)}`).join("  ")}`,
+  );
   L("");
   L(
     `⑤ 处方对照（λ_i = size/(4·1.19^i)，amp_i = amp·size/1.19^i，双向往钳制 Σamp ≤ min(0.25·depth, level)；amp=${prescAmp}）`,

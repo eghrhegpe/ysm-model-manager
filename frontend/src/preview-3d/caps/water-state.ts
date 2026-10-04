@@ -41,6 +41,15 @@ export const WAVE_DEGENERATE_WA = 1e-6;
  *  数值判据（含越界夹住的反证）见 water-capability.test.ts「波场守卫的真实性」。 */
 export const WAVE_STEEP_SUM_LIMIT = 0.8;
 
+/** 波陡基准尺寸（锐评 2026-10-04 P1-1）——`steep` 反归一的参考域宽，取 schema `waterSize` 的默认值。
+ *  D2 让 λ ∝ uSize（频谱锚定域宽），而 Gerstner 的水平位移 `steep·amp ∝ 1/freq ∝ uSize`、与浪高解耦
+ *  ⇒ 同一浪高在 size=10 与 300 下的水平摆动相差约 30 倍（实测 0.036 m ↔ 1.091 m，而垂直总振幅恒
+ *  0.060 m）——大水面被「横向揉皱」。以本值为基准反归一（`steep` 乘 `本值/uSize`）后：
+ *  默认档（80 m）**观感零变化**，且尺寸域内水平摆动恒定；只有小尺寸越过自交上界
+ *  `WAVE_STEEP_SUM_LIMIT/(wa·N)` 时由该上界接管（物理约束，正确行为）。
+ *  ⚠️ 必须与 `env-state-schema.ts|ENV_STATE_SCHEMA.waterSize.default` 同值（守卫 = 其测试断言两者相等）。 */
+export const WAVE_STEEP_SIZE_REF = 80;
+
 /** 波幅抗锯齿淡出的两个阈值（每波长顶点数 λ/spacing）：≥ FULL 全保留（aa = 1），
  *  在 MIN–FULL 之间线性消退；下方另有 1‰ 下界只保证 aa 非零，**不保证 wa > 0**（见
  *  WAVE_DEGENERATE_WA）。shader 注入串内插本对常量——菜单/测试/探针都只是读口。 */

@@ -13,28 +13,52 @@ adr:
   - ADR-297
   - ADR-319
 source_files:
-  - frontend/src/preview-3d/caps/water-capability.ts
   - frontend/src/preview-3d/caps/water-body-strategies.ts
+  - frontend/src/preview-3d/caps/water-capability.ts
   - frontend/src/preview-3d/caps/water-menu.ts
+  - frontend/src/preview-3d/caps/water-migrations.ts
+  - frontend/src/preview-3d/caps/water-params.ts
+  - frontend/src/preview-3d/caps/water-reflect.ts
   - frontend/src/preview-3d/caps/water-state.ts
 auto_fields:
   symbols_with_lines:
+    - applyReflectionUniforms
     - buildWaterNodes
     - clampPoolRoundness
+    - createWaterReflectState
+    - disposeReflector
+    - effectiveWaveHeight
+    - ensureReflector
     - filmStrategy
     - getWaterBodyStrategy
     - INNER_WALL_OPACITY_FACTOR
+    - LEGACY_DEFAULT_WATER_LEVEL
+    - migrateLegacyWaterLevel
     - poolStrategy
+    - reflectionActive
     - registerWaterBodyStrategy
+    - renderReflection
+    - WATER_FRAME_READ_KEYS
     - WATER_MODES
+    - WATER_NOOP_APPLIER_KEYS
+    - WATER_PARAM_APPLIER_KEYS
+    - WATER_PARAM_APPLIERS
+    - WATER_SCHEMA_VERSION
+    - WATER_SCHEMA_VERSION_KEY
+    - WATER_UNIFORM_NAMES
     - WATER_WAVE_SEGMENTS
+    - WaterApplyCtx
     - WaterBody
     - WaterBodyStrategy
     - WaterBuildContext
     - WaterCapability
     - WaterMode
+    - WaterParamKey
     - WaterPartRole
+    - WaterReflectCtx
+    - WaterReflectState
     - WaterTopMesh
+    - WaterUniformName
     - WAVE_AA_FULL_VERTS
     - WAVE_AA_MIN_VERTS
     - WAVE_DEGENERATE_WA
@@ -80,6 +104,8 @@ pitfalls:
   - '**倒影 RT 内容线性、无 tone map**（three 仅对 canvas 输出做 tone map）：dithering 段底色已过 colorspace，采样值必须过 `linearToOutputTexel` 再混——直接混 linear 进 sRGB 域会让倒影发黑'
   - '**波场采样密度 ≡ 几何分段数，两处必须同源（2026-09-22 治大水面摩尔纹）**：顶水面网格分段固定（唯一事实源 `water-state.ts|WATER_WAVE_SEGMENTS`），顶点间距 s = waterSize/分段数——s 逼近波长一半（奈奎斯特）时高频波混叠成游走摩尔纹（300 m 水池高频频闪的病灶）。gerstner 逐波按「每波长顶点数 λ/s」淡出振幅（≥6 全留、2–6 线性消退；1‰ 下界只保 aa 非零——**不保 wa>0**，wa 的除零由退化门 `water-state.ts|WAVE_DEGENERATE_WA` 承接）；位移/解析法线/泡沫 Jacobian 同源于 amp，一处衰减三处一致。**D2 锚定域宽后 λ/spacing = 分段数/(4·1.19^i) 与 uSize 无关，segments=64 时六波最小 6.70 ≥ 6 ⇒ 本淡出当前恒为 1（惰性保险，非活功能）**，分段数压到 ≤57 才会真正淡出高频——数值判据见 `water-capability.test.ts` 的「波场守卫的真实性」describe（含"通道不是死代码"的反证）。改分段只动常数一处（几何装配与 shader 间距推导都读它，守卫 = 「分段数唯一事实源」用例）；调大 = 高频保留更好但三角数平方上涨，调小 = 消隐提前介入。注意此衰减治的是「采样不足」，`min(…, 0.5)` 抹平振幅级数是另一笔已登记未改的账'
   - '**静水态曾产出 NaN（2026-10-04 修复，锐评 P0-1）**：`amp = uWaveHeight·0.26·0.82^i·aa`，而 `uWaveHeight` 可为 0——浪高滑杆 min=0、水位归零、pool 下水位 ≥ 池深，都会让 `water-params.ts|effectiveWaveHeight` 的预算归零。此时 `wa = freq·amp = 0` ⇒ 陡度式 `0.8/(wa·6)` 得 +∞ ⇒ `steep·amp = ∞×0 = NaN` ⇒ `transformed` 与 `objectNormal` 双双污染 ⇒ **水面整块消失**（用户拖浪高到 0 想要静水，得到「水没了」）。修复 = shader 波场内退化门 `if (wa <= WAVE_DEGENERATE_WA) { continue; }`（阈值单一事实源 `water-state.ts`，shader 内插、探针 `buildWaves` 同门）——跳过后 nrm 保持 (0,0,1)、位移为 0 = 平面水 + 正确法线，静水态这才真正可达。⚠️ 原注释与知识卡宣称的「1‰ 下界保 wa 恒 > 0」**是假不变量**：该下界加在 `aa` 上，amp 本身已是 0 时救不了 wa（已随本轮订正）'
+  - '**水平摆动曾随水面尺寸漂 30 倍（2026-10-04 修复，锐评 P1-1）**：D2 让 λ ∝ uSize，而 Gerstner 的水平位移 `steep·amp ∝ 1/freq ∝ uSize`、且与浪高解耦 ⇒ 同一浪高在 size=10 与 300 下水平摆动差约 30 倍（探针改前实测 0.036 m ↔ 1.091 m，而垂直总振幅恒 0.060 m）——大水面被「横向揉皱」。修复 = `steep` 乘基准反归一 `water-state.ts|WAVE_STEEP_SIZE_REF/uSize`（基准 = schema `waterSize` 默认 80，同值守卫在其测试内）：默认档观感零变化，`size ≥ 80` 域水平摆动恒定（探针域宽扫描六档恒 0.650 m），`size < 80` 由自交上界 `WAVE_STEEP_SUM_LIMIT/(wa·N)` 接管——那是物理约束（波长太短本就不允许那么大水平摆动），不是公式漂移。⚠️ 别为「让两端完全相等」去突破自交上界'
+  - '**存量存档吃掉 D1 的默认抬升（2026-10-04 修复，锐评 P1-4）**：`saveState` 遍历 schema 键集恒写 `waterLevel`，而 ADR-319 D1 把默认从 0.01 抬到 0.15 ⇒ 老档把旧默认原样带回、预算被钳到 1 cm（「浪死平」观感原样保留），收益只覆盖新装 / 清过档的用户。修复 = 存档带版本戳 `water-migrations.ts|WATER_SCHEMA_VERSION_KEY`（唯一消费者是 loadState 的迁移判据，**不是参数键**、不入 schema）+ 纯函数 `migrateLegacyWaterLevel`：只有「无版本戳 ∧ 水位**严格等于**旧默认 0.01」才迁到现默认，带戳新档一律不动（用户可自由设 0.01，save/load 往返恒等）。**新增存档键必须自证有读侧消费者**——本键的消费者就是 loadState 那三行'
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -121,6 +147,8 @@ invariant_anchors:
    方向/相位由 wave index hash 播种，陡度钳制 `Σσ·k ≤ 0.8` 防自交；**退化门**（锐评 2026-10-04 P0-1）：
    `wa = freq·amp` 低于 `water-state.ts|WAVE_DEGENERATE_WA` 的波整波跳过——静水态（浪高/水位归零）由此
    得到「平面水 + 正确法线」，而不是修复前的 `∞×0 = NaN`（顶点与法线双污染、水面整块消失）。
+   水平位移另有**基准反归一**（锐评 2026-10-04 P1-1）：`steep` 乘 `WAVE_STEEP_SIZE_REF/uSize`，
+   使水平摆动与水面尺寸解耦（默认档观感零变化）。
    **量纲约定（ADR-319 D1/D2）**：振幅 `amp = uWaveHeight·0.26·0.82^i`（Σamp ≡ 用户浪高，入 shader 前经
    `water-params.ts|effectiveWaveHeight` 双向往容器钳制）、频率 `freq = 2π·1.19^i·4/uSize`
    （λ 锚定域宽，每波长顶点数与 uSize 无关）——两者都随用户量与水面尺寸归一，不再钉死世界米制。
@@ -238,6 +266,16 @@ invariant_anchors:
   判据：**写守卫时必须回答「它在什么条件下真正触发」，并把该条件写成数值断言**；答不上来的守卫要么删，
   要么转成纵深防御并注明边界。波场三个阈值常量（退化门 / Σσk 上界 / aa 双阈值）住 `water-state.ts`
   并被 shader 模板内插——改常量即改 shader，菜单/测试/探针都只是读口。
+- **波陡基准与水面尺寸解耦**（锐评 2026-10-04 P1-1）：`steep` 在自交 clamp **之前**乘
+  `water-state.ts|WAVE_STEEP_SIZE_REF / uSize`——基准常量必须与 `ENV_STATE_SCHEMA.waterSize.default` 同值
+  （断言 = 「基准常量与 schema waterSize 默认同源」），改一处忘另一处即红。自交上界
+  `WAVE_STEEP_SUM_LIMIT/(wa·N)` 仍是物理天花板：小尺寸下由它接管，**不得为「视觉一致」突破它**
+  （判据 = 探针 ④ 段域宽扫描：`size ≥ 80` 六档恒 0.650 m，`size ≤ 40` 递减）。
+- **存档版本戳是旧档迁移的唯一开关**（锐评 2026-10-04 P1-4）：`water-migrations.ts|WATER_SCHEMA_VERSION`
+  随 `saveState` 落盘、只被 `loadState` 的迁移判据消费；迁移只认「**无戳** ∧ 水位恰为旧默认」。
+  **默认值变更的两条腿 = schema `default` + 旧档迁移判据**——缺后者就等于只对新用户生效
+  （ADR-319 D1 踩过：老用户存档里的 0.01 把新预算钳死）。加存档字段前先想清「谁读它」——
+  幽灵键（曾被 fog/water 私有 `enabled` 咬过）不得无消费者落盘。
 - **浪高入 shader 前必过分形态容器钳制**（ADR-319 D1）：`uWaveHeight` 恒为
   `min(waterWaveHeight, 下钳)`，下钳 = film 时 `waterLevel`、pool 时
   `min(waterLevel, waterPoolHeight − waterLevel)`——上钳防越壁**仅 pool 有**（film 无壁无上钳），

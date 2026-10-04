@@ -1,5 +1,7 @@
 // @vitest-environment node
 // ===== WaterCapability 测试（ADR-196 迁移至 envState）=====
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
 import {
@@ -14,6 +16,7 @@ import {
   WAVE_AA_FULL_VERTS,
   WAVE_AA_MIN_VERTS,
   WAVE_DEGENERATE_WA,
+  WAVE_STEEP_SIZE_REF,
   WAVE_STEEP_SUM_LIMIT,
 } from "./water-state.ts";
 import {
@@ -25,8 +28,13 @@ import {
 import { WATER_PARAM_APPLIER_KEYS } from "./water-capability.ts";
 import { persistState, restoreState } from "./scene-capability.ts";
 import { effectiveWaveHeight } from "./water-params.ts";
+import {
+  migrateLegacyWaterLevel,
+  WATER_SCHEMA_VERSION,
+  WATER_SCHEMA_VERSION_KEY,
+} from "./water-migrations.ts";
 import { isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";
-import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
+import { ENV_STATE_SCHEMA, getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
@@ -2324,6 +2332,151 @@ describe("WaterCapability — 波场守卫的真实性（锐评 2026-10-04 P0-1 
       WAVE_STEEP_SUM_LIMIT,
       6,
     );
+  });
+});
+
+describe("WaterCapability — 波陡尺寸反归一（锐评 2026-10-04 P1-1）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  function liveShader(scene: THREE.Scene) {
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    return { cap, shader };
+  }
+
+  it("基准常量与 schema waterSize 默认同源（改 schema 默认即红，防两个默认值各说各话）", () => {
+    expect(WAVE_STEEP_SIZE_REF).toBe(ENV_STATE_SCHEMA.waterSize.default);
+  });
+
+  it("shader：steep 乘 WAVE_STEEP_SIZE_REF/uSize 反归一，且早于自交 clamp 生效", () => {
+    const { shader } = liveShader(new THREE.Scene());
+    const scaleLine = `float steepScale = ${WAVE_STEEP_SIZE_REF.toFixed(1)} / sizeSafe;`;
+    expect(shader.vertexShader).toContain(scaleLine);
+    expect(shader.vertexShader).toContain("* steepScale, 0.0, steepCap);");
+    // 反归一必须早于 clamp——自交上界须对乘后值生效，否则小尺寸下会越界自交
+    expect(shader.vertexShader.indexOf(scaleLine)).toBeLessThan(
+      shader.vertexShader.indexOf("float steep = clamp("),
+    );
+  });
+
+  /** 与 shader 同式复算：水平位移幅值和 Σ(steep_i·amp_i)（不防相位抵消 → 保守上界） */
+  function horizAmpSum(size: number): number {
+    const h = 0.06; // schema waterWaveHeight 默认（预算 0.15 不钳）
+    let sum = 0;
+    for (let i = 0; i < 6; i++) {
+      const freq = (2 * Math.PI * 1.19 ** i * 4) / size;
+      const amp = h * 0.26 * 0.82 ** i;
+      const wa = freq * amp;
+      const raw = (0.5 * WAVE_STEEP_SUM_LIMIT) / (wa * 6);
+      const cap = WAVE_STEEP_SUM_LIMIT / (wa * 6);
+      const steep = Math.min(cap, raw * (WAVE_STEEP_SIZE_REF / size));
+      sum += steep * amp;
+    }
+    return sum;
+  }
+
+  /** 修复前模型（steep 无反归一因子）：水平位移 ∝ 1/freq ∝ size —— 对照用 */
+  function horizAmpSumLegacy(size: number): number {
+    const h = 0.06;
+    let sum = 0;
+    for (let i = 0; i < 6; i++) {
+      const freq = (2 * Math.PI * 1.19 ** i * 4) / size;
+      const amp = h * 0.26 * 0.82 ** i;
+      const wa = freq * amp;
+      const capped = Math.min(
+        WAVE_STEEP_SUM_LIMIT / (wa * 6),
+        (0.5 * WAVE_STEEP_SUM_LIMIT) / (wa * 6),
+      );
+      sum += capped * amp;
+    }
+    return sum;
+  }
+
+  it("尺寸域水平位移：大尺寸端漂移完全消除；小尺寸残余只来自自交上界（物理约束）", () => {
+    const at80 = horizAmpSum(80);
+    expect(horizAmpSum(300), "大尺寸端与基准档同一水平摆动（修复前 3.6×）").toBeCloseTo(at80, 12);
+    expect(
+      horizAmpSumLegacy(300) / horizAmpSum(300),
+      "修复前对照：size=300 的水平摆动漂移倍数",
+    ).toBeGreaterThan(3);
+    expect(
+      horizAmpSumLegacy(10) / horizAmpSum(10),
+      "小尺寸端修复前反而更小（未触自交上界），修复后抬到上界——两端向基准收敛",
+    ).toBeLessThan(1);
+    expect(
+      at80 / horizAmpSum(10),
+      "残余差距（修复前 8.4×）只来自自交上界接管：小尺寸波长太短，物理上不允许那么大水平摆动",
+    ).toBeLessThan(5);
+  });
+
+  it("[P2-4] 探针与源码同源核查：probe 手抄的常量/门与 water-state 单一事实源字面一致（防平行实现漂移）", () => {
+    // 探针是 JS 逐式复刻 shader 的「平行实现」（零外部依赖故手抄常量）——本用例是它的漂移闸：
+    // 源码改常量而探针忘同步 ⇒ 红（否则探针会拿旧公式为「新 shader 是对的」出具数据背书）。
+    const probe = readFileSync(
+      fileURLToPath(new URL("../../../../scripts/probe-water-wave.ts", import.meta.url)),
+      "utf8",
+    );
+    // 先钉源码常量值，再钉探针文本——两侧任一侧改动都红
+    expect(WAVE_DEGENERATE_WA).toBe(1e-6);
+    expect(WAVE_STEEP_SUM_LIMIT).toBe(0.8);
+    expect(WAVE_AA_MIN_VERTS).toBe(2);
+    expect(WAVE_AA_FULL_VERTS).toBe(6);
+    expect(probe, "退化门阈值同值").toContain("if (wa <= 1e-6) continue;");
+    expect(probe, "自交上界同值").toContain("0.8 / (wa * GERSTNER_COUNT)");
+    expect(probe, "分段数同值").toContain(`const SEGMENTS_DEFAULT = ${WATER_WAVE_SEGMENTS};`);
+    expect(probe, "aa 双阈值同值").toContain("smoothstep(2.0, 6.0, waveLen / spacing)");
+    expect(probe, "基准尺寸常量同值").toContain(`const STEEP_SIZE_REF = ${WAVE_STEEP_SIZE_REF};`);
+  });
+});
+
+describe("WaterCapability — 旧档水位默认值迁移（锐评 2026-10-04 P1-4）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  it("无版本戳老档 + 水位 = 旧默认 0.01 → 迁到现默认（否则预算把浪高钳死成平面）", () => {
+    persistState("water", { waterMode: "film", waterLevel: 0.01 });
+    new WaterCapability({ scene: new THREE.Scene() }).loadState();
+    expect(envState.waterLevel).toBe(ENV_STATE_SCHEMA.waterLevel.default);
+  });
+
+  it("无版本戳老档 + 用户显式水位 → 原样保留（判据窄到只认旧默认值）", () => {
+    persistState("water", { waterMode: "film", waterLevel: 0.5 });
+    new WaterCapability({ scene: new THREE.Scene() }).loadState();
+    expect(envState.waterLevel).toBe(0.5);
+  });
+
+  it("带版本戳新档 + 水位 = 0.01 → 原样保留（往返恒等：用户可自由设 0.01）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.setLevel(0.01);
+    cap.saveState();
+    expect(
+      (restoreState("water") as Record<string, unknown>)[WATER_SCHEMA_VERSION_KEY],
+      "新档必须带版本戳，否则会被当成老档迁移",
+    ).toBe(WATER_SCHEMA_VERSION);
+    resetEnvState();
+    new WaterCapability({ scene }).loadState();
+    expect(envState.waterLevel).toBe(0.01);
+  });
+
+  it("老档 pool 且无 waterLevel 键 → 仍走 ADR-257 中池位兜底（迁移不越权）", () => {
+    persistState("water", { waterMode: "pool", waterPoolHeight: 0.8 });
+    new WaterCapability({ scene: new THREE.Scene() }).loadState();
+    expect(envState.waterLevel).toBeCloseTo(0.4, 5);
+  });
+
+  it("纯函数判据表：只有「无版本戳 ∧ 恰为旧默认」才迁，其余一律不动", () => {
+    expect(migrateLegacyWaterLevel(0.01, undefined)).toBe(ENV_STATE_SCHEMA.waterLevel.default);
+    expect(migrateLegacyWaterLevel(0.01, WATER_SCHEMA_VERSION)).toBeUndefined();
+    expect(migrateLegacyWaterLevel(0.5, undefined)).toBeUndefined();
+    expect(migrateLegacyWaterLevel(undefined, undefined)).toBeUndefined();
+    expect(migrateLegacyWaterLevel("0.01", undefined), "字符串不认（存档类型守卫）").toBeUndefined();
   });
 });
 

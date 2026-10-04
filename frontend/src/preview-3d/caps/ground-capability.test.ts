@@ -386,6 +386,39 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     });
   });
 
+  // [P1 批 2026-10-04] 微噪点（structural 重建）+ IBL 反射（外观原地）双层落地
+  describe("[P1 批] matMicroNoise / matEnvMapIntensity 落地判别", () => {
+    it("envMapIntensity 变更走原地路径（材质引用不变，值真实落地）", () => {
+      const scene = new THREE.Scene();
+      const cap = new GroundCapability({ scene });
+      cap.apply();
+      cap.setSourceKind("solid");
+      const mesh = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
+      const matBefore = mesh.material as THREE.MeshStandardMaterial;
+      setEnvState({ groundMatEnvMapIntensity: 0.4 }, { source: "manual" });
+      const meshAfter = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
+      expect(meshAfter.material, "改反射强度不得重建材质（外观层原地）").toBe(matBefore);
+      expect((meshAfter.material as THREE.MeshStandardMaterial).envMapIntensity).toBe(0.4);
+    });
+
+    it("microNoise 幅度变更触发重建（structural 层：材质与纹理换新）", () => {
+      const scene = new THREE.Scene();
+      const cap = new GroundCapability({ scene });
+      cap.apply();
+      cap.setSourceKind("solid");
+      const matBefore = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh)
+        .material as THREE.MeshStandardMaterial;
+      setEnvState({ groundMatMicroNoise: 12 }, { source: "manual" });
+      const meshAfter = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
+      expect(
+        meshAfter.material,
+        "改微噪点幅度须重建（像素重算，specKey 变化）",
+      ).not.toBe(matBefore);
+      // 重建后外观层仍同步落地（envMapIntensity 保持当前值，非重置默认）
+      expect((meshAfter.material as THREE.MeshStandardMaterial).envMapIntensity).toBe(0.15);
+    });
+  });
+
   describe("subscribe（局部刷新通知）", () => {
     it("setSourceKind/setCanvasStyle 各触发 1 次订阅者（拆轴后独立 setter），同值早退不 notify，unsub 后停止", () => {
       const scene = new THREE.Scene();
@@ -768,7 +801,9 @@ describe("GroundCapability — 叠加层（ADR-249 §2.3 独立格线层）", ()
     expect(surface.visible).toBe(true);
     expect(overlay.visible).toBe(true);
     const surfMat = surface.material as THREE.MeshStandardMaterial;
-    expect(surfMat.map).toBeNull(); // solid 不产贴图
+    // [P1 批 2026-10-04] 默认 matMicroNoise=6 → solid 生成纹理（微细节，rebuildSurface tex 分派）；
+    // 纯色快路径（map=null）仅在 matMicroNoise=0 时保留（ADR-254 §2.5 快路径语义未废，只是默认态绕开）
+    expect(surfMat.map).toBeInstanceOf(THREE.DataTexture);
     expect((overlay.material as THREE.MeshStandardMaterial).map).toBeInstanceOf(THREE.DataTexture);
   });
 
@@ -1254,6 +1289,8 @@ describe("GroundCapability — 恢复路径来源纪律（锐评 F-2）", () => 
       groundMatAngleDeg: 30,
       groundMatRoughness: 0.4,
       groundMatMetalness: 0.5,
+      groundMatMicroNoise: 3,
+      groundMatEnvMapIntensity: 0.4,
     };
     const schemaKeys = getPresetKeys("ground");
     const missing = schemaKeys.filter((k) => !(k in DEVIATION));

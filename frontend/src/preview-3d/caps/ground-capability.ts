@@ -438,8 +438,14 @@ export class GroundCapability implements SceneCapability {
     if (st.mode === "texture") {
       tex = this.customTex ?? this.makeGeneratedTexture({ ...st, mode: "solid" });
       // ADR-254 §2.5：`plain` 与 `solid` 都是平坦 matColor，同一输出不留两条实现路径——
-      // plain 也走 tex=null（材质直出 color），不再生成一张均匀贴图。
-    } else if (st.mode !== "solid" && st.mode !== "none" && st.mode !== "plain") {
+      // 占位回退用 solid 生成器（P1 批后含微噪点分支，见下）。
+    } else if (st.mode === "marble" || st.mode === "sand" || st.mode === "grass") {
+      // 噪声材质：恒产贴图（既有路径）
+      tex = this.makeGeneratedTexture(st);
+    } else if ((st.mode === "solid" || st.mode === "plain") && st.microNoise > 0) {
+      // [P1 批 2026-10-04] 微噪点 >0 时 plain 系必须走生成纹理（像素承载微细节）——
+      // ADR-254 §2.5 的「tex=null 材质直出 color」纯色快路径只在 microNoise=0 时保留
+      // （=0 时生成器输出均匀像素，走贴图与直出 color 同画面，取快路径省一次 512² 重建）
       tex = this.makeGeneratedTexture(st);
     }
 
@@ -465,6 +471,9 @@ export class GroundCapability implements SceneCapability {
       matAngleDeg: envState.groundMatAngleDeg,
       matRoughness: envState.groundMatRoughness,
       matMetalness: envState.groundMatMetalness,
+      // [P1 批 2026-10-04] 微噪点（structural：改幅度触发纹理重建）+ IBL 反射（外观：原地）
+      matMicroNoise: envState.groundMatMicroNoise,
+      matEnvMapIntensity: envState.groundMatEnvMapIntensity,
     };
     const next = buildGroundSurfaceSpec(matParams, this.currentTextureToken());
     if (!this.surfaceSpec || groundSurfaceNeedsRebuild(this.surfaceSpec, next)) {
@@ -842,6 +851,14 @@ export class GroundCapability implements SceneCapability {
         groundMatAngleDeg: { number: (v) => this.setMatAngleRestore(v) },
         groundMatRoughness: { number: (v) => this.setMatRoughness(v, RESTORE_SOURCE) },
         groundMatMetalness: { number: (v) => this.setMatMetalness(v, RESTORE_SOURCE) },
+        // [P1 批 2026-10-04] 两个新键进读侧手写还原表（ADR-321 收口前，漏登记由 G-8
+        // round-trip 契约锁兜红）；非预设键 → 中间件不消费，无需 skipMiddleware
+        groundMatMicroNoise: {
+          number: (v) => setEnvState({ groundMatMicroNoise: v }, RESTORE_SOURCE),
+        },
+        groundMatEnvMapIntensity: {
+          number: (v) => setEnvState({ groundMatEnvMapIntensity: v }, RESTORE_SOURCE),
+        },
         // ADR-249 §2.3 叠加层恢复
         groundOverlay: oneOf(GROUND_OVERLAY_STYLES, (v) =>
           setEnvState({ groundOverlay: v }, RESTORE_SOURCE),

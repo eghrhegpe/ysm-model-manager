@@ -228,6 +228,22 @@ export const ENV_STATE_SCHEMA = {
     group: "ground",
     range: { min: 0, max: 1, step: 0.05 },
   },
+  // [P1 批 2026-10-04] 承接面微噪点幅度（±/255，0=关）——默认 ±6 去「纯色塑料感」
+  // （探索档 P1 提案 A；单源纪律：默认值取自 spec，值域归本表 range（ADR-283））
+  groundMatMicroNoise: {
+    type: "number",
+    default: GROUND_DEFAULTS.matMicroNoise,
+    group: "ground",
+    range: { min: 0, max: 16, step: 1 },
+  },
+  // [P1 批 2026-10-04] 承接面 IBL 反射强度（极低=接地呼应，不抢模型焦点；
+  // 探索档 P1 提案 D 配套——独立于模型全局 envIntensity，地面走本键）
+  groundMatEnvMapIntensity: {
+    type: "number",
+    default: GROUND_DEFAULTS.matEnvMapIntensity,
+    group: "ground",
+    range: { min: 0, max: 1, step: 0.05 },
+  },
 
   // --- Water ---
   // 默认关水（2026-10 收口）：默认蓝膜压在地面承接面之上，导致默认地面呈蓝灰、暖棕承接面

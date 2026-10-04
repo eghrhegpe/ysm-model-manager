@@ -43,8 +43,8 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
     }
   });
 
-  it("matOpacity/matRoughness/matMetalness 在 solid 起全部模式生效（外观参数不分模式）", () => {
-    const appearanceAlways = ["matOpacity", "matRoughness", "matMetalness"] as const;
+  it("matOpacity/matRoughness/matMetalness/matEnvMapIntensity 在 solid 起全部模式生效（外观参数不分模式）", () => {
+    const appearanceAlways = ["matOpacity", "matRoughness", "matMetalness", "matEnvMapIntensity"] as const;
     for (const mode of GROUND_SURFACE_MODES) {
       for (const p of appearanceAlways) {
         const expected = mode !== "none";
@@ -103,6 +103,7 @@ describe("Suite 1 — 生效矩阵结构与自身一致性", () => {
       "matGridSize",
       "matDensity",
       "matAngleDeg",
+      "matMicroNoise",
     ];
     for (const p of colorParams) {
       expect(paramIsEffective("texture", p), `texture/${p}`).toBe(false);
@@ -127,6 +128,8 @@ describe("Suite 2 — 矩阵与渲染真实行为一致", () => {
     ["matColor", (p) => (p.matColor = 0xff0000)],
     ["matColor2", (p) => (p.matColor2 = 0x00ff00)],
     ["matDensity", (p) => (p.matDensity = 5)],
+    ["matMicroNoise", (p) => (p.matMicroNoise = 12)],
+    ["matEnvMapIntensity", (p) => (p.matEnvMapIntensity = 0.9)],
   ];
 
   for (const mode of GROUND_SURFACE_MODES) {
@@ -162,6 +165,15 @@ describe("Suite 2 — 矩阵与渲染真实行为一致", () => {
   it("plain 下 matDensity 变 → 像素不变（纯色不受密度影响）", () => {
     expect(pixelDiffersWith("plain", (p) => (p.matDensity = 5))).toBe(false);
   });
+
+  // [P1 批 2026-10-04] 微噪点参数矩阵：solid/plain 消费（plain 系生成器），噪声材质不消费
+  it("solid 下 matMicroNoise 变 → 像素变（微噪点真实生效）", () => {
+    expect(pixelDiffersWith("solid", (p) => (p.matMicroNoise = 12))).toBe(true);
+  });
+
+  it("marble 下 matMicroNoise 变 → 像素不变（噪声材质生成器不消费该参数，矩阵强方向边界）", () => {
+    expect(pixelDiffersWith("marble", (p) => (p.matMicroNoise = 12))).toBe(false);
+  });
 });
 
 /* ============ Suite 3 — none 语义：真的不产出表面（ADR-249 §2.2）============ */
@@ -177,9 +189,9 @@ describe("Suite 3 — none 语义：不产出表面", () => {
     expect(px.length).toBe(0);
   });
 
-  it("solid 仍生成不透明纯色（与 none 明确区分）", () => {
+  it("solid 仍生成不透明纯色（与 none 明确区分；matMicroNoise=0 锁定纯色基线）", () => {
     const st = buildGroundSurfaceSpec(
-      { ...DEFAULT_GROUND_SURFACE_PARAMS, matSource: "solid", matColor: 0x123456 },
+      { ...DEFAULT_GROUND_SURFACE_PARAMS, matSource: "solid", matColor: 0x123456, matMicroNoise: 0 },
       "",
     ).structural;
     const px = generateSurfacePixels(st, 16);
@@ -283,6 +295,8 @@ describe("Suite 5 — 默认值单一事实源", () => {
       ["groundMatAngleDeg", "matAngleDeg"],
       ["groundMatRoughness", "matRoughness"],
       ["groundMatMetalness", "matMetalness"],
+      ["groundMatMicroNoise", "matMicroNoise"],
+      ["groundMatEnvMapIntensity", "matEnvMapIntensity"],
     ];
     for (const [stateKey, specKey] of pairs) {
       expect(envState[stateKey], `${String(stateKey)} 与 spec.${String(specKey)} 不一致`).toBe(

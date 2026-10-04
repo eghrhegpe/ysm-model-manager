@@ -69,6 +69,12 @@ export interface GroundMaterialParams {
   matDensity: number;
   /** 图案角度（度，条纹/菱形/大理石 生效；UI 直读 0~360） */
   matAngleDeg: number;
+  /** [P1 批 2026-10-04] 微噪点纹理幅度（±/255；0=关）——plain 系生成器（solid/plain）消费，
+   *  打破「纯色塑料感」的高频无缝微细节（4D 环面 tiledFbm 同源基建，零接缝） */
+  matMicroNoise: number;
+  /** [P1 批 2026-10-04] IBL 反射强度（极低值=「坐地」接地呼应，不抢模型焦点；
+   *  外观层属性，非像素参数——走 applyGroundSurfaceAppearance 单路径） */
+  matEnvMapIntensity: number;
 }
 
 export const DEFAULT_GROUND_SURFACE_PARAMS: GroundMaterialParams = {
@@ -83,6 +89,11 @@ export const DEFAULT_GROUND_SURFACE_PARAMS: GroundMaterialParams = {
   matMetalness: 0,
   matDensity: 1,
   matAngleDeg: 0,
+  // [P1 批 2026-10-04] 默认 ±6/255 高频微噪点（人眼几乎不觉察，破除纯色塑料感；
+  // 探索档候选值 ±5~8 取中——幅度入默认值单一事实源，菜单不设控件，0=关回纯色）
+  matMicroNoise: 6,
+  // [P1 批 2026-10-04] 极低 IBL 反射（摄影棚 floor 接地手法；探索档建议 ~0.15 起）
+  matEnvMapIntensity: 0.15,
 };
 
 /* ============ 参数 × 模式生效矩阵（ADR-249 §2.4 单一事实源）============ */
@@ -244,6 +255,8 @@ export const GROUND_MAT_PARAMS = [
   "matRotationDeg",
   "matRoughness",
   "matMetalness",
+  "matMicroNoise",
+  "matEnvMapIntensity",
 ] as const;
 
 export type GroundMatParam = (typeof GROUND_MAT_PARAMS)[number];
@@ -264,7 +277,12 @@ const NOISE_MODES: readonly GroundSurfaceMode[] = ["marble", "sand", "grass"];
 const GRID_SIZE_MODES: readonly GroundSurfaceMode[] = ["marble", "sand", "grass"];
 
 /** 外观参数（与模式无关，凡非 none 均生效；texture 亦生效） */
-const APPEARANCE_PARAMS: readonly GroundMatParam[] = ["matOpacity", "matRoughness", "matMetalness"];
+const APPEARANCE_PARAMS: readonly GroundMatParam[] = [
+  "matOpacity",
+  "matRoughness",
+  "matMetalness",
+  "matEnvMapIntensity",
+];
 
 /**
  * 判定单个参数在某表面模式下是否生效（矩阵查询）。
@@ -303,6 +321,11 @@ export function paramIsEffective(mode: GroundSurfaceMode, param: GroundMatParam)
     case "matRotationDeg":
       // 作用于 mat.map：凡产出贴图的模式均可被读取
       return MAP_PRODUCING_MODES.includes(mode);
+    case "matMicroNoise":
+      // [P1 批 2026-10-04] 微噪点是 plain 系生成器（solid/plain）的专属像素参数——
+      // 噪声材质（marble/sand/grass）生成器不消费（像素由其自身噪声场决定），
+      // texture 走用户上传贴图（上方 texture 早退已排除）
+      return mode === "solid" || mode === "plain";
     default:
       return false;
   }
@@ -511,6 +534,8 @@ export interface GroundSurfaceStructuralSpec {
   color2: [number, number, number];
   density: number;
   angleRad: number;
+  /** [P1 批 2026-10-04] 微噪点幅度（±/255，0=关）——改幅度须重算像素（structural） */
+  microNoise: number;
 }
 
 export interface GroundSurfaceAppearanceSpec {
@@ -519,6 +544,8 @@ export interface GroundSurfaceAppearanceSpec {
   rotationRad: number;
   roughness: number;
   metalness: number;
+  /** [P1 批 2026-10-04] IBL 反射强度（外观层：原地更新即可，不触发纹理重建） */
+  envMapIntensity: number;
 }
 
 export interface GroundSurfaceSpec {
@@ -545,6 +572,7 @@ export function buildGroundSurfaceSpec(
       color2: hexToTriple(p.matColor2),
       density: p.matDensity,
       angleRad: (p.matAngleDeg * Math.PI) / 180,
+      microNoise: p.matMicroNoise,
     },
     appearance: {
       opacity: p.matOpacity,
@@ -552,6 +580,7 @@ export function buildGroundSurfaceSpec(
       rotationRad: (p.matRotationDeg * Math.PI) / 180,
       roughness: p.matRoughness,
       metalness: p.matMetalness,
+      envMapIntensity: p.matEnvMapIntensity,
     },
   };
 }
@@ -605,6 +634,7 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
 
   // "plain"（素面）与 "solid" 同为**纯色**语义（刀⑳ 修复：漏 plain 会画出格线）。
   // 二者走纯色生成器，不进噪声材质表。
+  // [P1 批 2026-10-04] microNoise 一并下发（plain 系生成器消费；marble/sand/grass 不读该字段）。
   if (st.mode === "solid" || st.mode === "plain") {
     const input: SurfacePixelInput = {
       color: st.color,
@@ -612,6 +642,7 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
       gridSize: st.gridSize,
       density: st.density,
       angleRad: st.angleRad,
+      microNoise: st.microNoise,
     };
     return generatePlainPixels(input, sizePx);
   }
@@ -664,6 +695,9 @@ export function applyGroundSurfaceAppearance(
   mat.depthWrite = a.opacity >= 1;
   mat.roughness = a.roughness;
   mat.metalness = a.metalness;
+  // [P1 批 2026-10-04] 极低 IBL 反射：材质读 scene.environment（env cap 已烘 PMREM），
+  // 强度独立于模型全局 envIntensity（地面是承接面，不随模型反射档 1:1 联动）
+  mat.envMapIntensity = a.envMapIntensity;
   if (mat.map) {
     mat.map.center.set(0.5, 0.5);
     mat.map.rotation = a.rotationRad;

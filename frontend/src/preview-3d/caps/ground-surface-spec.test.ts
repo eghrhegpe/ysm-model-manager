@@ -216,8 +216,11 @@ describe("Suite 3 — 合约：rebuild == in-place", () => {
 describe("Suite 4 — generateSurfacePixels", () => {
   // ⚠️ 刀⑳：本用例原名「plain：全图均匀填充 color」却传 `matSource: "solid"` —— 名实不符，
   // 导致 `"plain"` 分支**从未被覆盖**，掩盖了「素面渲染成格线」的真 bug（见下条用例）。
-  it("solid：全图均匀填充 color", () => {
-    const st = buildGroundSurfaceSpec({ ...baseParams(), matSource: "solid", matColor: 0xaabbcc }, "").structural;
+  it("solid：matMicroNoise=0 时全图均匀填充 color（纯色回归锚）", () => {
+    const st = buildGroundSurfaceSpec(
+      { ...baseParams(), matSource: "solid", matColor: 0xaabbcc, matMicroNoise: 0 },
+      "",
+    ).structural;
     const px = generateSurfacePixels(st, 4);
     expect(px.length).toBe(4 * 4 * 4);
     for (let i = 0; i < px.length; i += 4) {
@@ -228,7 +231,7 @@ describe("Suite 4 — generateSurfacePixels", () => {
 
   it("plain（素面）：必须与 solid 同为纯色，禁止出现任何图案像素（刀⑳ 真 bug 回归）", () => {
     const st = buildGroundSurfaceSpec(
-      { ...baseParams(), matSource: "plain", matColor: 0xaabbcc, matGridSize: 4 },
+      { ...baseParams(), matSource: "plain", matColor: 0xaabbcc, matGridSize: 4, matMicroNoise: 0 },
       "",
     ).structural;
     const px = generateSurfacePixels(st, 8);
@@ -236,6 +239,40 @@ describe("Suite 4 — generateSurfacePixels", () => {
       expect([px[i], px[i + 1], px[i + 2]]).toEqual([0xaa, 0xbb, 0xcc]); // 全图纯色，无线色
       expect(px[i + 3]).toBe(255);
     }
+  });
+
+  // [P1 批 2026-10-04] 承接面微噪点（matMicroNoise，plain 系生成器消费）：
+  // 默认参数（matMicroNoise=6）打破「纯色塑料感」——±6/255 人眼几乎不觉察但非均匀。
+  it("solid 默认参数（matMicroNoise=6）：像素非均匀且落在 base±amp 带内（微噪点真实生效）", () => {
+    const st = buildGroundSurfaceSpec({ ...baseParams(), matSource: "solid", matColor: 0xaabbcc }, "").structural;
+    const px = generateSurfacePixels(st, 32);
+    const seen = new Set<number>();
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i],
+        g = px[i + 1],
+        b = px[i + 2];
+      for (const [base, v] of [
+        [0xaa, r],
+        [0xbb, g],
+        [0xcc, b],
+      ] as const) {
+        expect(v, `像素应落在 base±amp 带内（越界=非 clamp 或幅度错）`).toBeGreaterThanOrEqual(base - 6);
+        expect(v).toBeLessThanOrEqual(Math.min(255, base + 6));
+      }
+      seen.add(r << 16 | (g << 8) | b);
+    }
+    expect(seen.size, "微噪点应产出非均匀像素（纯色回归）").toBeGreaterThan(1);
+  });
+
+  it("matMicroNoise 进 structural（变幅 → 重建；specKey 变化）", () => {
+    const base = buildGroundSurfaceSpec({ ...baseParams(), matSource: "solid" }, "");
+    const bumped = buildGroundSurfaceSpec({ ...baseParams(), matSource: "solid", matMicroNoise: 12 }, "");
+    expect(groundSurfaceNeedsRebuild(base, bumped)).toBe(true);
+  });
+
+  it("微噪点确定性：同参数两次生成像素完全一致（seed 噪声非 Math.random）", () => {
+    const st = buildGroundSurfaceSpec({ ...baseParams(), matSource: "solid" }, "").structural;
+    expect(generateSurfacePixels(st, 16)).toEqual(generateSurfacePixels(st, 16));
   });
 
 });

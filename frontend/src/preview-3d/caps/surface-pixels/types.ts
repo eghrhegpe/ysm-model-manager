@@ -13,6 +13,9 @@ export interface SurfacePixelInput {
   density: number;
   /** 颗粒角度（弧度；与 appearance.rotationRad 不同层） */
   angleRad: number;
+  /** [P1 批 2026-10-04] 微噪点纹理幅度（±/255，0=关）——plain 系生成器消费；
+   *  可选字段：marble/sand/grass 生成器不读（噪声场自身已含细节），零改动继承 */
+  microNoise?: number;
 }
 
 /** 噪声材质样式（plain 走独立纯色生成器，不在此表） */

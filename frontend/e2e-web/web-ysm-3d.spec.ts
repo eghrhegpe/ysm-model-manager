@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
 import { zipSync } from "fflate";
 import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
+import { decodePng } from "./png-color-count.ts";
 
 const CHROME = pinnedChromiumOrThrow();
 
@@ -50,14 +51,25 @@ function fixtureYsmBase64(): string {
   return Buffer.from(zipSync(files)).toString("base64");
 }
 
-/** 清空 IndexedDB（用例间隔离） */
+/**
+ * 清空 IndexedDB（用例间隔离）。
+ * ⚠️ deleteDatabase 在 app 已持有连接时会触发 onversionchange → 应用自动重开同版本
+ * 数据库，导致 deleteDatabase 被 onblocked 挂起、Playwright evaluate 上下文被后续
+ * 页面导航销毁（真实 flake 源）。Playwright 每个测试使用全新 browser context（IDB
+ * 天然隔离），此处降级为「尽力清 + 不阻塞」，清库失败不阻断测试。
+ */
 async function clearIdb(page: Page): Promise<void> {
   await page.evaluate(async () => {
     await new Promise<void>((res) => {
-      const r = indexedDB.deleteDatabase("ysm-model-manager-web");
-      r.onsuccess = () => res();
-      r.onerror = () => res();
-      r.onblocked = () => res();
+      try {
+        const r = indexedDB.deleteDatabase("ysm-model-manager-web");
+        r.onsuccess = () => res();
+        r.onerror = () => res();
+        r.onblocked = () => res();
+        setTimeout(() => res(), 1500); // 兜底：onblocked 永不 settle 时不卡死
+      } catch {
+        res();
+      }
     });
   });
 }
@@ -122,6 +134,36 @@ async function read3DCanvas(page: Page): Promise<{ found: boolean; w: number; h:
   });
 }
 
+/**
+ * 统计 PNG buffer 中「显著饱和色」像素数（max(R,G,B) > 100 且 max-min > 60）。
+ * 判据：天空/地面/灰阶背景不含这种饱和色；纯黑剪影也不含（R/G/B 都低）。
+ * 只有真实上传并映射的彩色纹理才会贡献这类像素。
+ * 注：WebGL readPixels 在 preserveDrawingBuffer=false 下帧间返回全 0，故改用
+ * Playwright 截图 buffer（经极简 PNG 解码，见 png-color-count.ts）。
+ */
+function countSaturatedPixelsFromBuf(buf: Buffer): number {
+  let png: ReturnType<typeof decodePng> = null;
+  try {
+    png = decodePng(buf);
+  } catch {
+    return -1;
+  }
+  if (!png) return -1;
+  const { width, height, rgba } = png;
+  let count = 0;
+  for (let i = 0; i < width * height; i++) {
+    const o = i * 4;
+    if (rgba[o + 3] === 0) continue;
+    const r = rgba[o];
+    const g = rgba[o + 1];
+    const b = rgba[o + 2];
+    const hi = Math.max(r, g, b);
+    const lo = Math.min(r, g, b);
+    if (hi > 100 && hi - lo > 60) count++; // 饱和色：任一通道显著高于其余
+  }
+  return count;
+}
+
 test("web 模式：真实 fixture 模型进入 3D 并渲染（治本视觉验证）", async ({ page }) => {
   test.setTimeout(180000);
   const consoleErrors: string[] = [];
@@ -131,8 +173,7 @@ test("web 模式：真实 fixture 模型进入 3D 并渲染（治本视觉验证
 
   await page.goto("/", { waitUntil: "domcontentloaded", timeout: 60000 });
   await clearIdb(page);
-  await page.reload({ waitUntil: "domcontentloaded", timeout: 60000 });
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(2500);
 
   // 1. 导入真实 fixture .ysm（明文 ZIP 形态）
   await dropFixtureYsm(page, "01_taisho_maid.ysm");
@@ -157,17 +198,32 @@ test("web 模式：真实 fixture 模型进入 3D 并渲染（治本视觉验证
   // 5. 等模型纹理/骨骼加载完成（解码 + 上传有耗时，给足余量）
   await page.waitForTimeout(4000);
 
-  // 6. 截图到 _shots/ 供读图回看（地面/天空/阴影/模型本体可见性实证）
+  // 6. 截图到 _shots/ 供读图回看（地面/天空/阴影/模型本体可见性实证）；
+  //    只裁模型区域（视口中央），排除天空/地面干扰，同一 buffer 直接喂色相断言
   const shotDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "_shots");
   fs.mkdirSync(shotDir, { recursive: true });
   const shot = path.join(shotDir, "web-ysm-3d-fixture.png");
-  await page.screenshot({ path: shot, fullPage: false });
+  const clip = {
+    x: Math.round(cvs.w * 0.3),
+    y: Math.round(cvs.h * 0.25),
+    width: Math.round(cvs.w * 0.4),
+    height: Math.round(cvs.h * 0.6),
+  };
+  const shotBuf = await page.screenshot({ path: shot, fullPage: false, clip });
 
   // 7. 硬断言：不应再出现「3D spec 为空」加载失败
   expect(
     consoleErrors.filter((e) => e.includes("3D spec 为空")),
     "修复后不应再出现 3D spec 为空 错误",
   ).toEqual([]);
+
+  // 8. 硬断言：模型不是纯黑剪影——fixture 使用真实纹理（多色相棋盘格），
+  //    模型区域应出现显著饱和色像素（黑剪影不含；天空/地面已被 clip 排除）
+  const saturated = countSaturatedPixelsFromBuf(shotBuf);
+  console.log(`SATURATED_PIXELS=${saturated}`);
+  expect(saturated, "3D 画面应出现显著饱和色像素（fixture 真实纹理已上传并映射）").toBeGreaterThan(
+    200,
+  );
 
   console.log(`SCREENSHOT=${shot}`);
 });

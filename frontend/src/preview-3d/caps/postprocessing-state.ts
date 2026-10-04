@@ -1,10 +1,9 @@
 import type { FieldKind } from "./scene-capability.ts";
 
 // ===== 后处理能力状态/序列化层（拆轴自 postprocessing-capability.ts）=====
-// 收口「巨型 cap 混装状态与 Three 装配」的锐评结论：本文件收敛纯数据 + 纯类型轴
-// （ReflectionMode / PostprocessingParams / 默认值 / toneMapping 键表），
-// 零 THREE 依赖、无顶层副作用；postprocessing-capability.ts 保留 EffectComposer /
-// Bloom / SSAO / SSR pass 装配、惰性 THREE 枚举求值等渲染轴。
+// 本文件收敛纯数据 + 纯类型轴：ReflectionMode / PostprocessingParams / 默认值 / 键表，
+// 零 THREE 依赖、无顶层副作用；渲染轴（composer、各 pass 装配、惰性 THREE 枚举求值）
+// 留在 postprocessing-capability.ts。
 // 注意：THREE.ToneMapping 枚举值不在本文件求值（verbatimModuleSyntax + 测试 mock 约束），
 // 运行时映射统一走 postprocessing-capability.ts 的 toneMappingValue()。
 
@@ -28,7 +27,7 @@ export interface PostprocessingParams {
   bloomRadius: number;
   /** 是否让 Bloom 参数跟随 LightCapability 体积光联动（开启后用 opacity/edgeFade 调 bloom） */
   bloomFollowVolumetric: boolean;
-  /** 独立辉光开关：false 时旁路 bloomPass，不影响 SSAO/SSR（与整条管线开关 this.enabled 正交） */
+  /** 独立辉光开关：false 时旁路 bloomPass，不影响 SSAO/SSR（与整条管线开关 `ppEnabled` 正交） */
   bloomEnabled: boolean;
   /** SSAO 开关 */
   ssaoEnabled: boolean;
@@ -64,20 +63,16 @@ export interface PostprocessingParams {
 
 /**
  * tone mapping 档位 → THREE 枚举值的静态键表（仅字符串，供运行时校验）。
- * 注意：不要在模块级求值 THREE 枚举（如 LinearToneMapping）——verbatimModuleSyntax 下
- * 未用值导入不再被擦除，全量 mock three 的测试（如 screenshot-render.test）会在收集期
- * 因 mock 缺枚举导出而炸。枚举取值统一走 postprocessing-capability.ts 的 toneMappingValue()。
+ * ⚠️ 勿在模块级求值 THREE 枚举：verbatimModuleSyntax 下未用值导入不再被擦除，全量 mock
+ * three 的测试（如 screenshot-render.test）会在收集期因 mock 缺枚举导出而炸。
+ * 枚举取值统一走 postprocessing-capability.ts 的 toneMappingValue()。
  */
 export const TONE_MAPPING_KEYS = ["none", "linear", "reinhard", "aces", "cineon"] as const;
 
 /**
- * 持久化字段种别表（2026-09 锐评 P2-1）：键集与 PostprocessingParams 全键（除 enabled）
- * 编译期互锁——params 加字段没进表、或表里写了 params 没有的字段，satisfies 双向报错。
- *
- * ADR-196 刀2：本表语义从"params 种别表"退化为"存档键声明"——save/load 直接读写
- * envState（键名沿用旧 params 名向后兼容已有存档），不再依赖 this.params。
- * 键集契约测试（postprocessing-capability.test.ts）仍校验本表 + enabled 与
- * PostprocessingParams 全键全等。
+ * 持久化字段种别表：键集与 `PostprocessingParams` 全键（除 `enabled`）**编译期双向互锁**
+ * ——params 加字段没进表、或表里写了 params 没有的字段，`satisfies` 均报错。
+ * save/load 直接读写 envState（键名沿用旧 params 名以兼容已有存档），不依赖 this.params。
  */
 export const POSTPROC_PERSIST_FIELDS = {
   bloomStrength: "number",
@@ -103,14 +98,11 @@ export const POSTPROC_PERSIST_FIELDS = {
 } as const satisfies Record<Exclude<keyof PostprocessingParams, "enabled">, FieldKind>;
 
 /**
- * params 键 → envState 键映射（ADR-196 刀2）：
- * 构造覆盖 seed / 测试 seed / save→load 反向映射 共用。
- * 注意：`enabled` 不在本表的排除之外另有原因——它是 `PostprocessingParams` 上的**只读视图**
- * （cap 内经 envState 读写 `ppEnabled`），不参与本 params→env 搬运，故 `Exclude` 掉。
- * ⚠️ 修正（2026-10 锐评）：原注释写「enabled 不入 schema」，已被 ADR-250 推翻——
- *    `ppEnabled` **确在** `ENV_STATE_SCHEMA`（group: postprocessing，default false），
- *    「后处理是否启用」的唯一真值源即在 schema；此处排除的是 **params 结构体上的同名键**，
- *    两者不可混为一谈（历史措辞把「params 无此字段」误表述为「schema 无此键」）。
+ * `params 键 → envState 键` 映射（ADR-196 刀2）：构造 seed / 测试 seed / save→load 共用。
+ *
+ * 排除 `enabled` 的原因：它是 `PostprocessingParams` 上的**只读视图**（真值在 envState 的
+ * `ppEnabled`，见 ENV_STATE_SCHEMA），不参与 params→env 搬运，故不在此表。
+ * 即：这里排除的是 **params 结构体上的同名键**，不是「schema 里没有 ppEnabled」。
  */
 export const PP_PARAMS_TO_ENV: Record<Exclude<keyof PostprocessingParams, "enabled">, string> = {
   bloomStrength: "ppBloomStrength",
@@ -160,12 +152,8 @@ export const DEFAULT_POSTPROC_PARAMS: PostprocessingParams = {
 };
 
 /**
- * [ADR-250] 原 `POSTPROC_PRESETS` 表已删除。
- *
- * 它名为「模型类别后处理预设」，但六个条目唯一的键是 `enabled`（能力级启用开关），
- * 在参数轴上内容为空——不是预设，是六个开关。且模型类别写 cap 私有字段属职责越界。
- *
+ * [ADR-250] 原 `POSTPROC_PRESETS`（模型类别后处理预设表）已删除，勿再加回。
  * 「YSM/体素默认不开后处理」这一偏好改由 `MODEL_DEFAULTS`（state/model-defaults.ts）
- * 写 `ppEnabled: false` 表达，与 sky/light/fog/shadow/reflector/environment 六 cap
- * 走同一条路——此时它是可被用户覆盖的默认值，而非钉死在 cap 里的 per-type 分支。
+ * 写 `ppEnabled: false` 表达——与 sky/light/fog/shadow/reflector/environment 六 cap 同路，
+ * 且此时它是**可被用户覆盖的默认值**，而非钉死在 cap 里的 per-type 分支。
  */

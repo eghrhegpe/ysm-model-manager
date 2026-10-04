@@ -31,10 +31,9 @@ export interface CapControlView {
   labelKey: LocaleKey | "";
   fallback: string;
   hintKey?: string;
-  /** [2026-10 锐评 P1-3] 控件级禁用谓词（原为 button 专属，现提升为通用通道）。
-   *  半静态求值：进入面板时求一次。语义 = 「该控件当前不具备生效前提」——典型场景是
-   *  后处理子开关在总开关关闭时为 no-op（用户点了没反应），以灰化 + hint 明示，
-   *  而不是静默吞掉交互。仅表达「不可交互」，不改变控件值本身。 */
+  /** 控件级禁用谓词：语义 = 「该控件当前不具备生效前提」——典型场景是后处理子开关在
+   *  总开关关闭时为 no-op（用户点了没反应），以灰化 + hint 明示，而不是静默吞掉交互。
+   *  半静态求值（进入面板时求一次）；仅表达「不可交互」，不改变控件值本身。 */
   disabled?: () => boolean;
   getValue(): unknown;
   setValue(v: number | string | boolean): void;
@@ -161,7 +160,7 @@ function ensureCapSection(
   return body;
 }
 
-/** [2026-10 锐评 P1-3] 禁用态统一落地：把 `disabled()` 结果写到行容器与其可交互子元素。
+/** 禁用态统一落地：把 `disabled()` 结果写到行容器与其可交互子元素。
  *  单一出口，避免 slider/select/toggle/color 四臂各写一遍灰化与 pointer-events（防漂移）。
  *  行为：行加 `cc-disabled` 类（降透明度）+ `aria-disabled`，子元素 `pointer-events:none`
  *  阻断交互；`data-disabled` 供测试定位。仅视觉/交互层，不改控件值。
@@ -200,7 +199,7 @@ export function renderCapToggle(parent: HTMLElement, v: CapControlView): void {
     value: Boolean(v.getValue()),
     onChange: (val: boolean): void => {
       v.setValue(val);
-      // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）
+      // 通用副作用钩子（适配层可注入 refreshOnChange 语义）
       v.onChange?.(val);
     },
   });
@@ -285,7 +284,7 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
     onChange: (n: number): void => {
       updateDisplay(n);
       v.setValue(n);
-      // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）
+      // 通用副作用钩子（适配层可注入 refreshOnChange 语义）
       v.onChange?.(n);
     },
     onDragEnd: (n: number): void => {
@@ -295,14 +294,14 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
     },
   });
   controller.bind(bar);
-  // [行为对齐] 单击轨道跳转（onElClick）只触发 onChange；补 onCommit 提交钩子，
+  // 单击轨道跳转（onElClick）只触发 onChange；补 onCommit 提交钩子，
   // 对齐原生 input[type=range] 的 change 语义（点击轨道后 change 触发 onCommit，
   // 如 pixel-ratio 提交时 notify）。onElClick 先更新 aria-valuenow，后注册监听读新值。
   bar.addEventListener("click", () => {
     v.slider?.onCommit?.(Number(bar.getAttribute(ARIA_ATTR.valuenow)));
   });
 
-  // [控件原语归一] numeric：旁挂数字输入框（双向联动，onchange 走 min/max clamp——litematic 分层语义）
+  // numeric：旁挂数字输入框（双向联动，onchange 走 min/max clamp——litematic 分层语义）
   let num: HTMLInputElement | null = null;
   if (v.slider?.numeric) {
     num = document.createElement("input");
@@ -337,7 +336,7 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   parent.appendChild(row);
 }
 
-/** select：label + 下拉选择（[控件原语归一] 收编 rmAppendSelect：onChange 钩子） */
+/** select：label + 下拉选择（onChange 钩子） */
 export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
   const row = document.createElement("div");
   row.className = "slide-item cc-row";
@@ -359,7 +358,7 @@ export function renderCapSelect(parent: HTMLElement, v: CapControlView): void {
   sel.onchange = (): void => {
     const sv = sel.value;
     v.setValue(sv);
-    // [控件原语归一] 通用副作用钩子（适配层可注入 refreshOnChange 语义）
+    // 通用副作用钩子（适配层可注入 refreshOnChange 语义）
     v.onChange?.(sv);
   };
   row.append(label, sel);
@@ -483,7 +482,7 @@ function renderCapTimeline(parent: HTMLElement, c: PreviewControlDef): void {
     dragging = true;
     band.setPointerCapture(e.pointerId);
     setFromPointer(e.clientX);
-    // [锐评 S2-1] 拖动期相位标记：天空 cap 侧据此降为阈值门控（PMREM 不逐帧全重建），
+    // 拖动期相位标记：天空 cap 侧据此降为阈值门控（PMREM 不逐帧全重建），
     // 松手时 onDragEnd force 一次取当前帧图——对齐昼夜循环 update(dt) 的阈值门控语义。
     c.onDragStart?.(numVal);
   });
@@ -629,7 +628,7 @@ function renderCapPresetThumb(parent: HTMLElement, c: PreviewControlDef): void {
  *
  * 消费方：`preview-state.test.ts`（契约测试，断言枚举结果），非生产代码。
  *
- * [铁律收口] 2026-09 A 轨 `visible` 闭包已整体删除：条件显隐只允许 visibleWhen（吃状态层快照
+ * 条件显隐只允许 `visibleWhen`（吃状态层快照的纯函数，不摸 cap 实例）——A 轨 `visible` 闭包已删除
  * 的纯函数，不摸 cap 实例）。collectVisiblePredicates 现只收 visibleWhen——与
  * AGENTS.md「3d菜单只允许 visibleWhen」对齐。
  */
@@ -677,7 +676,7 @@ export function renderCapControls(
   // kind 分派：divider 无 group 挂顶层作组间分隔；其余控件挂 (target ?? list)（有 group 挂 body，无 group 挂顶层）。签名不可动，本函数只做纯分派。
   const sectionMap = new Map<string, CapSectionShell>();
   for (const c of controls) {
-    // B 轨唯一：状态层快照谓词 visibleWhen(s)——[铁律收口] A 轨 visible 闭包已删除（2026-09），
+    // 状态层快照谓词 visibleWhen(s)：条件显隐的唯一通道（A 轨 visible 闭包已删除），
     // 条件显隐只允许 visibleWhen。无 snapshot 传入（纯 DOM 冒烟/早期调用）时跳过求值保留渲染。
     if (c.visibleWhen && snapshot && !c.visibleWhen(snapshot)) continue;
     const parent = ensureCapSection(sectionMap, list, c.group) ?? list;

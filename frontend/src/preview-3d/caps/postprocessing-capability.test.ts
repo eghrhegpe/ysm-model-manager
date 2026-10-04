@@ -1717,3 +1717,140 @@ describe("PostprocessingCapability — getMenuNodes（ADR-195 刀2 cap 直产节
     expect(cap.isEnabled()).toBe(false);
   });
 });
+
+// ===== [可读性重构安全带] onEnvChanged 各键组的写入等价性 =====
+// onEnvChanged 主体是「6 组 `if (changed.has(k)) → 逐项写 pass 属性`」的重复模式，重构为
+// 「键组 → 写函数」表驱动。本组测试**锁定重构前后的行为等价**：对每组键逐条 assert 到
+// 目标 pass 属性上，任何键-属性映射在表化时写错（漏键 / 错键 / 错目标）都会在此变红。
+//
+// 说明：`changed` 由 dispatcher 按 group 过滤后传入（registerEnvCallback 第 3 参
+// "postprocessing"），故组内多键同批变更时只有真正变了的键进入 `changed`——表驱动必须
+// 保留这一「按键触发」语义，不能退化为「整组无条件全写」。
+describe("PostprocessingCapability — onEnvChanged 键组写入等价性（重构安全带）", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** 建一个已启用、含全部 pass 的 cap，并取出内部 pass 引用供断言。 */
+  function newEnabledCap() {
+    const scene = new THREE.Scene();
+    const renderer = makeFakeRenderer();
+    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    setEnvState({ ppSsaoEnabled: true, ppReflectionMode: "envmap+ssr" }, { source: "manual" });
+    const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
+    // 内部 pass 经 composer.passes 取（addPass/insertPass 后即在此数组）
+    const internals = cap as unknown as {
+      composer: { passes: Array<{ constructor: { name: string } }> } | null;
+      ssrPass: Record<string, unknown> | null;
+      ssaoPass: Record<string, unknown> | null;
+      bloomPass: Record<string, unknown> | null;
+    };
+    return { cap, internals };
+  }
+
+  it("Bloom 三参数：仅对应键变更时写入 bloomPass", () => {
+    const { cap, internals } = newEnabledCap();
+    const bloom = internals.bloomPass as {
+      strength: number;
+      threshold: number;
+      radius: number;
+      enabled: boolean;
+    };
+    expect(bloom, "启用后 bloomPass 应存在").toBeTruthy();
+
+    setEnvState({ ppBloomStrength: 1.7 }, { source: "manual" });
+    expect(bloom.strength, "ppBloomStrength → bloomPass.strength").toBe(1.7);
+
+    setEnvState({ ppBloomThreshold: 0.23 }, { source: "manual" });
+    expect(bloom.threshold, "ppBloomThreshold → bloomPass.threshold").toBe(0.23);
+
+    setEnvState({ ppBloomRadius: 1.4 }, { source: "manual" });
+    expect(bloom.radius, "ppBloomRadius → bloomPass.radius").toBe(1.4);
+
+    cap.dispose();
+  });
+
+  it("Bloom 独立开关：ppBloomEnabled 只写 bloomPass.enabled，不动其余", () => {
+    const { cap, internals } = newEnabledCap();
+    const bloom = internals.bloomPass as { enabled: boolean; strength: number };
+    const beforeStrength = bloom.strength;
+
+    setEnvState({ ppBloomEnabled: false }, { source: "manual" });
+    expect(bloom.enabled, "ppBloomEnabled → bloomPass.enabled").toBe(false);
+    expect(bloom.strength, "不应顺带改写 strength").toBe(beforeStrength);
+
+    cap.dispose();
+  });
+
+  it("SSAO 三参数：仅对应键变更时写入 ssaoPass", () => {
+    const { cap, internals } = newEnabledCap();
+    const ssao = internals.ssaoPass as {
+      kernelRadius: number;
+      minDistance: number;
+      maxDistance: number;
+    };
+    expect(ssao, "ppSsaoEnabled=true 时 ssaoPass 应存在").toBeTruthy();
+
+    setEnvState({ ppSsaoRadius: 12 }, { source: "manual" });
+    expect(ssao.kernelRadius, "ppSsaoRadius → ssaoPass.kernelRadius").toBe(12);
+
+    setEnvState({ ppSsaoMinDist: 0.02 }, { source: "manual" });
+    expect(ssao.minDistance, "ppSsaoMinDist → ssaoPass.minDistance").toBe(0.02);
+
+    setEnvState({ ppSsaoMaxDist: 0.42 }, { source: "manual" });
+    expect(ssao.maxDistance, "ppSsaoMaxDist → ssaoPass.maxDistance").toBe(0.42);
+
+    cap.dispose();
+  });
+
+  it("SSR 六参数：仅对应键变更时写入 ssrPass", () => {
+    const { cap, internals } = newEnabledCap();
+    const ssr = internals.ssrPass as Record<string, unknown>;
+    expect(ssr, "envmap+ssr 档时 ssrPass 应存在").toBeTruthy();
+
+    setEnvState({ ppSsrMaxDistance: 99 }, { source: "manual" });
+    expect(ssr.maxDistance, "ppSsrMaxDistance → ssrPass.maxDistance").toBe(99);
+
+    setEnvState({ ppSsrThickness: 0.077 }, { source: "manual" });
+    expect(ssr.thickness, "ppSsrThickness → ssrPass.thickness").toBe(0.077);
+
+    setEnvState({ ppSsrBlur: false }, { source: "manual" });
+    expect(ssr.blur, "ppSsrBlur → ssrPass.blur").toBe(false);
+
+    setEnvState({ ppSsrDistanceAttenuation: false }, { source: "manual" });
+    expect(ssr.distanceAttenuation, "ppSsrDistanceAttenuation → ssrPass.distanceAttenuation").toBe(
+      false,
+    );
+
+    setEnvState({ ppSsrFresnel: false }, { source: "manual" });
+    expect(ssr.fresnel, "ppSsrFresnel → ssrPass.fresnel").toBe(false);
+
+    setEnvState({ ppSsrBouncing: true }, { source: "manual" });
+    expect(ssr.bouncing, "ppSsrBouncing → ssrPass.bouncing").toBe(true);
+
+    cap.dispose();
+  });
+
+  it("ppSsrOpacity 在 ssr-only 档被强制为 1（不透明度不可调）", () => {
+    const { cap, internals } = newEnabledCap();
+    const ssr = internals.ssrPass as Record<string, unknown>;
+
+    // 切到 ssr-only：该档下 opacity 恒为 1（纯 SSR 无屏外 fallback，混合无意义）
+    setEnvState({ ppReflectionMode: "ssr-only" }, { source: "manual" });
+    expect(ssr.opacity, "ssr-only 档 → opacity 强制 1").toBe(1);
+
+    cap.dispose();
+  });
+
+  it("色彩映射：ppToneMapping 仅在启用态接管 renderer.toneMapping", () => {
+    const { cap } = newEnabledCap();
+    const renderer = (cap as unknown as { renderer: THREE.WebGLRenderer }).renderer;
+
+    setEnvState({ ppToneMapping: "linear" }, { source: "manual" });
+    expect(renderer.toneMapping, "启用态：ppToneMapping → renderer.toneMapping").toBe(
+      THREE.LinearToneMapping,
+    );
+
+    cap.dispose();
+  });
+});

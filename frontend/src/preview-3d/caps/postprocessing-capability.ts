@@ -197,99 +197,117 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   /* -------- ADR-196：envState 变更回调（同步 pass 属性 / 重建 composer）-------- */
 
+  /** 参数同步表：`键组 → 写入函数`。取代原先 6 段并排的 `if (changed.has(k)) { 逐项赋值 }`。
+   *
+   *  写入函数收 `(cap, state)`，返回 false 表示目标 pass 尚不存在（无需处理）。
+   *  按键触发语义由调用方保留：只有真正出现在 `changed` 里的键才唤起对应条目——
+   *  不能退化为「整组无条件全写」（`changed` 已由 dispatcher 按 postprocessing 组过滤）。
+   *
+   *  结构性变化（`ppSsaoEnabled` 重建 / `ppReflectionMode` 补挂）**不入本表**：它们要
+   *  重建或增删 pass，属控制流而非属性写入，留在 onEnvChanged 主干。 */
+  private static readonly PARAM_SYNC: ReadonlyArray<{
+    keys: readonly EnvStateKey[];
+    write: (cap: PostprocessingCapability, state: EnvState) => boolean;
+  }> = [
+    {
+      keys: ["ppBloomEnabled"],
+      write: (cap) => {
+        if (!cap.bloomPass) return false;
+        cap.bloomPass.enabled = envState.ppBloomEnabled;
+        return true;
+      },
+    },
+    {
+      keys: ["ppBloomStrength", "ppBloomThreshold", "ppBloomRadius"],
+      write: (cap, s) => {
+        if (!cap.bloomPass) return false;
+        // base 值；render() 时 syncBloomPass 再应用体积光联动
+        cap.bloomPass.strength = s.ppBloomStrength;
+        cap.bloomPass.threshold = s.ppBloomThreshold;
+        cap.bloomPass.radius = s.ppBloomRadius;
+        return true;
+      },
+    },
+    {
+      keys: ["ppSsaoRadius", "ppSsaoMinDist", "ppSsaoMaxDist"],
+      write: (cap, s) => {
+        if (!cap.ssaoPass) return false;
+        cap.ssaoPass.kernelRadius = s.ppSsaoRadius;
+        cap.ssaoPass.minDistance = s.ppSsaoMinDist;
+        cap.ssaoPass.maxDistance = s.ppSsaoMaxDist;
+        return true;
+      },
+    },
+    {
+      keys: [
+        "ppSsrOpacity",
+        "ppSsrMaxDistance",
+        "ppSsrThickness",
+        "ppSsrBlur",
+        "ppSsrDistanceAttenuation",
+        "ppSsrFresnel",
+        "ppSsrBouncing",
+      ],
+      write: (cap, s) => {
+        if (!cap.ssrPass) return false;
+        // ssr-only 档无屏外 fallback，混合无意义 → 不透明度恒为 1
+        cap.ssrPass.opacity = s.ppReflectionMode === "ssr-only" ? 1 : s.ppSsrOpacity;
+        cap.ssrPass.maxDistance = s.ppSsrMaxDistance;
+        cap.ssrPass.thickness = s.ppSsrThickness;
+        cap.ssrPass.blur = s.ppSsrBlur;
+        cap.ssrPass.distanceAttenuation = s.ppSsrDistanceAttenuation;
+        cap.ssrPass.fresnel = s.ppSsrFresnel;
+        cap.ssrPass.bouncing = s.ppSsrBouncing;
+        return true;
+      },
+    },
+    {
+      keys: ["ppToneMapping"],
+      write: (cap) => {
+        // enabled 守卫：未启用时不得夺取 renderer.toneMapping（否则「关了后处理却改色调」）
+        if (!cap.enabled) return false;
+        cap.applyToneMapping();
+        return true;
+      },
+    },
+  ];
+
   private onEnvChanged = (changed: Set<EnvStateKey>, state: EnvState): void => {
-    // [ADR-250 + ADR-299] 启用意图翻转：不销毁 composer（常驻），只切每帧参与 + 归权输出设置；
-    // 开启且尚未建时在此惰性创建（applyEnabledSideEffects 是唯一创建点）。
+    // ① 启用意图翻转（ADR-250 + ADR-299）：**不销毁** composer（常驻），只切每帧参与 +
+    //    归权输出设置；开启且尚未建时在此惰性创建（applyEnabledSideEffects 是唯一创建点）。
     if (changed.has("ppEnabled")) {
       this.applyEnabledSideEffects();
     }
 
-    // 结构性变化（影响 pass 组合）→ 重建 composer（若已存在）
-    // [锐评 P2-4] 反射模式**不再触发重建**：SSR 档位变化只需切 `ssrPass.enabled`
-    // 与少量参数（render() 每帧已按 `ppReflectionMode !== "envmap-only"` 同步 enabled）。
-    // 原实现每次切档都全量重建 → `new SSRPass(...)`，而 three 0.186.1 的
-    // `SSRPass.dispose`（SSRPass.js:491-518）**漏释放 `ssrMaterial`**（持有 defines 与
-    // 全部 uniforms 的 ShaderMaterial，构造于 :354）——属上游客源缺陷，本仓无法直接修，
-    // 故从根上不重建：反复切档不再累积未释放的 ShaderMaterial。
-    // 唯二需要重建的是 SSAO 开关（真正增删 pass）；反射模式仅在「SSR pass 尚不存在
-    // 但模式已为 SSR 档」时需要补挂（首次开启总开关的惰性创建路径已覆盖该组合）。
+    // ② 结构性变化：仅 SSAO 开关真正增删 pass → 重建后 return（新 pass 无需逐项同步）。
+    //
+    //    ⚠️ `ppReflectionMode` **不重建**（[锐评 P2-4]）：SSR 档位变化只需切 `ssrPass.enabled`
+    //    与少量参数（render() 每帧已按 `ppReflectionMode !== "envmap-only"` 同步 enabled）。
+    //    原实现每次切档都 `new SSRPass(...)`，而 three 0.186.1 的 `SSRPass.dispose` 漏释放
+    //    `ssrMaterial`（持有 defines 与全部 uniforms 的 ShaderMaterial）——上游客源缺陷，
+    //    本仓无法直接修，故从根上不重建，反复切档不再累积未释放的 ShaderMaterial。
     if (changed.has("ppSsaoEnabled")) {
       if (this.composer) this.buildComposer();
-      return; // rebuild 创建新 pass，无需逐项同步
+      return;
     }
+    // 反射模式：唯一需要动 pass 组合的情况是「已启用 + 需要 SSR + 尚无 ssrPass」→ 补挂。
+    // ⚠️ 不可在此 return：SSR 活跃性直接决定 reflector 抑制，必须落到 ③ 的 applyReflectorSync，
+    //    否则「SSR 开→压制单平面镜 / SSR 关→归还」的联动失效（原实现靠 buildComposer 内那次
+    //    applyReflectorSync 兜住，改为免重建后须显式触发）。
     if (changed.has("ppReflectionMode")) {
       if (this.composer && !this.ssrPass && state.ppReflectionMode !== "envmap-only") {
-        // 已启用且需要 SSR 但尚无 ssrPass（例：切到 SSR 档时 pass 组合缺失）→ 补建。
-        // ⚠️ 不可在此 `return`：SSR 活跃性直接决定 reflector 抑制（applyReflectorSync），
-        // 原实现靠 buildComposer 内部那次 applyReflectorSync 兜住；改为免重建后必须显式
-        // 落到函数末尾的 applyReflectorSync（下方不 return，穿透到末尾）。
         this.buildComposer();
       } else if (this.ssrPass) {
         this.applySSRModeToPass();
       }
-      // 不 return —— 需继续走到末尾 applyReflectorSync，否则反射模式切换丢掉
-      // 「SSR 开→压制单平面镜 / SSR 关→归还」的联动（原 rebuild 路径的隐藏副作用）。
-      // SSR 参数六项同批变更时下方分支会重新赋值，与 applySSRModeToPass 同源幂等。
     }
 
-    // 独立辉光开关 → 旁路 bloomPass
-    if (changed.has("ppBloomEnabled") && this.bloomPass) {
-      this.bloomPass.enabled = state.ppBloomEnabled;
+    // ③ 参数属性同步（按键触发，表驱动；见 PARAM_SYNC）
+    for (const entry of PostprocessingCapability.PARAM_SYNC) {
+      if (entry.keys.some((k) => changed.has(k))) entry.write(this, state);
     }
 
-    // Bloom 参数（base 值；render() 时 syncBloomPass 应用体积光联动）
-    if (
-      this.bloomPass &&
-      (changed.has("ppBloomStrength") ||
-        changed.has("ppBloomThreshold") ||
-        changed.has("ppBloomRadius"))
-    ) {
-      this.bloomPass.strength = state.ppBloomStrength;
-      this.bloomPass.threshold = state.ppBloomThreshold;
-      this.bloomPass.radius = state.ppBloomRadius;
-    }
-
-    // SSAO 参数
-    if (
-      this.ssaoPass &&
-      (changed.has("ppSsaoRadius") || changed.has("ppSsaoMinDist") || changed.has("ppSsaoMaxDist"))
-    ) {
-      this.ssaoPass.kernelRadius = state.ppSsaoRadius;
-      this.ssaoPass.minDistance = state.ppSsaoMinDist;
-      this.ssaoPass.maxDistance = state.ppSsaoMaxDist;
-    }
-
-    // SSR 参数
-    if (
-      this.ssrPass &&
-      (changed.has("ppSsrOpacity") ||
-        changed.has("ppSsrMaxDistance") ||
-        changed.has("ppSsrThickness") ||
-        changed.has("ppSsrBlur") ||
-        changed.has("ppSsrDistanceAttenuation") ||
-        changed.has("ppSsrFresnel") ||
-        changed.has("ppSsrBouncing"))
-    ) {
-      this.ssrPass.opacity = state.ppReflectionMode === "ssr-only" ? 1 : state.ppSsrOpacity;
-      this.ssrPass.maxDistance = state.ppSsrMaxDistance;
-      this.ssrPass.thickness = state.ppSsrThickness;
-      this.ssrPass.blur = state.ppSsrBlur;
-      this.ssrPass.distanceAttenuation = state.ppSsrDistanceAttenuation;
-      this.ssrPass.fresnel = state.ppSsrFresnel;
-      this.ssrPass.bouncing = state.ppSsrBouncing;
-    }
-
-    // 色彩映射（[ADR-250] 曝光已退出本 cap 属主范围，见 applyToneMapping）。
-    // 保留 enabled 守卫：未启用时不得夺取 renderer.toneMapping（否则「关了后处理却改色调」）。
-    if (this.enabled && changed.has("ppToneMapping")) {
-      this.applyToneMapping();
-    }
-
-    // Reflector 联动
-    // [锐评 P2-4] 新增 `ppReflectionMode`：反射模式直接决定 SSR 是否在渲染
-    //（isSsrRenderActive = ppEnabled ∧ mode≠envmap-only），进而决定单平面镜的压制/归还。
-    // 原实现靠 `buildComposer()` 内部那次 `applyReflectorSync()` 兜住，改为免重建后
-    // 必须在此显式触发——否则「SSR 关→镜子该回来」与「SSR 开→镜子该被压制」双双失效。
+    // ④ Reflector 联动：SSR 是否在渲染（isSsrRenderActive）决定单平面镜的压制/归还。
     if (changed.has("ppReflectorDisableWhenSSR") || changed.has("ppReflectionMode")) {
       this.applyReflectorSync();
     }

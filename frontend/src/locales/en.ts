@@ -1246,7 +1246,7 @@ export const en: Record<string, string> = {
   "preview.volumetricTipRatio": "Top/Bottom Ratio",
   "preview.lightResetAll": "Reset All Lights",
   "preview.lightResetAllHint":
-    "Restore all three lights, ambient light and volumetric cone to defaults",
+    "Restore all three lights, ambient light, volumetric cone and light helpers to defaults",
   "preview.lighting": "Lighting",
   "preview.lightSelect": "Edit Light",
   "preview.lightHelper": "Light helpers",

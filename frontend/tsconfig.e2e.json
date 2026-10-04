@@ -3,5 +3,13 @@
   "compilerOptions": {
     "types": ["vite/client", "node"]
   },
-  "include": ["e2e/**/*.ts", "playwright.config.ts", "playwright.coverage.config.ts"]
+  // e2e-web（真实 WebGL 链路）与主 e2e 同属 Playwright 用例域，一并纳入 typecheck
+  // （此前漏收 → CI 的 tsc -p tsconfig.e2e.json 对 e2e-web 全盲，esbuild 剥类型不检查）
+  "include": [
+    "e2e/**/*.ts",
+    "e2e-web/**/*.ts",
+    "playwright.config.ts",
+    "playwright.coverage.config.ts",
+    "playwright.web.config.ts"
+  ]
 }

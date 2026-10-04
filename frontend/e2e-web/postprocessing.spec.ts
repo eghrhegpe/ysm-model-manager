@@ -16,8 +16,12 @@
 //     指 executablePath；若该目录缺失（他机/CI），用例会启动失败而非静默跳过——这是有意的，
 //     避免「环境没了测试却全绿」。
 import { expect, type Page, test } from "@playwright/test";
+import { findLocalChromium } from "../e2e/browser-path.ts";
 
-const CHROME = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1228\\chrome-win64\\chrome.exe`;
+/** 本机探测到的 chromium（优先完整版）；探测不到时回落硬编码路径。 */
+const CHROME =
+  findLocalChromium() ??
+  `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1228\\chrome-win64\\chrome.exe`;
 
 test.use({
   launchOptions: {

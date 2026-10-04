@@ -7,17 +7,38 @@
 //  - P3 修复：空 base64（GPU 异常）不入结果集
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSceneMeshMock, buildYsmObjectMock, buildSpecMock, threeStub } =
+const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSceneMeshMock, buildYsmObjectMock, buildSpecMock, coneMock, threeStub } =
   vi.hoisted(() => {
     class FakeVec {
       x = 0;
       y = 0;
       z = 0;
+      constructor(x = 0, y = 0, z = 0) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+      }
       set(x: number, y: number, z: number) {
         this.x = x;
         this.y = y;
         this.z = z;
         return this;
+      }
+      // [ADR-266-d1] 带 lights 的路径首次进测试：applyLights 需要 copy/add/distanceTo
+      copy(v: FakeVec) {
+        this.x = v.x;
+        this.y = v.y;
+        this.z = v.z;
+        return this;
+      }
+      add(v: FakeVec) {
+        this.x += v.x;
+        this.y += v.y;
+        this.z += v.z;
+        return this;
+      }
+      distanceTo(v: FakeVec) {
+        return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z);
       }
       toArray() {
         return [this.x, this.y, this.z];
@@ -61,7 +82,22 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       }
     }
     class FakeLight {
-      position = { set: vi.fn() };
+      position = { set: vi.fn(), copy: vi.fn() };
+    }
+    // [ADR-266-d1] 带 lights 的路径首次进测试：applyLights 需要 Object3D（共享靶点）、
+    // SpotLight（位置光 + target 绑定）与 MathUtils.degToRad 才走得下去
+    class FakeObject3D {
+      position = new FakeVec();
+      target: unknown = null;
+    }
+    class FakeSpotLight {
+      position = new FakeVec();
+      target: unknown = null;
+      constructor(..._a: unknown[]) {}
+    }
+    class FakePointLight {
+      position = new FakeVec();
+      constructor(..._a: unknown[]) {}
     }
     class FakeWebGLRenderer {
       static toDataURLValue = "data:image/png;base64,QUFB";
@@ -102,12 +138,19 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       buildSceneMeshMock: vi.fn(),
       buildYsmObjectMock: vi.fn(),
       buildSpecMock: vi.fn(),
+      // [ADR-266-d1] 离屏光柱桥桩：本文件只验接线（调用/释放/输出设置），
+      // 几何与落位由 screenshot-cone.test.ts 用真 three 验
+      coneMock: vi.fn(),
       threeStub: {
         NoToneMapping: 0,
         WebGLRenderer: FakeWebGLRenderer,
         Scene: FakeScene,
+        Object3D: FakeObject3D,
         AmbientLight: FakeLight,
         DirectionalLight: FakeLight,
+        SpotLight: FakeSpotLight,
+        PointLight: FakePointLight,
+        MathUtils: { degToRad: (d: number) => (d * Math.PI) / 180 },
         Mesh: FakeMesh,
         Box3: FakeBox3,
         Vector3: FakeVec,
@@ -143,8 +186,18 @@ vi.mock("@/preview-3d/mesh/mesh.ts", () => ({
 vi.mock("@/preview-3d/model/ysm-object.ts", () => ({ buildYsmObject: buildYsmObjectMock }));
 vi.mock("@/preview-3d/model/spec-builder.ts", () => ({ buildSpecFromGeometryJSON: buildSpecMock }));
 vi.mock("three", () => threeStub);
+vi.mock("./screenshot-cone.ts", () => ({ applyVolumetricCone: coneMock }));
+
+/** 让锥桥返回一个可断言的假锥（dispose 是 finally 释放纪律的被测点） */
+function stubConeReturn(): ReturnType<typeof vi.fn> {
+  const dispose = vi.fn();
+  coneMock.mockReturnValue({ dispose });
+  return dispose;
+}
 
 import { renderMultiAngle } from "./screenshot-render.ts";
+import type { ScreenshotLights } from "./screenshot-lights.ts";
+import { DEFAULT_LIGHT_PARAMS } from "@/preview-3d/caps/light-params.ts";
 
 const validSpec = {
   models: [
@@ -192,6 +245,8 @@ function lastRenderer(): {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // 缺省无锥（= 无灯光 / 无光柱路径）；需要锥的用例自行 stubConeReturn()
+  coneMock.mockReturnValue(null);
   threeStub.WebGLRenderer.instances.length = 0; // 防跨测试累积
   getAppMock.mockResolvedValue({ GetModel3DSpec: specMock });
   specMock.mockResolvedValue(validSpec);
@@ -319,5 +374,70 @@ describe("renderMultiAngle — 成功路径", () => {
     await renderMultiAngle("/m/a.ysm", []);
     expect(lastRenderer().dispose).toHaveBeenCalledTimes(1);
     expect(lastRenderer().forceContextLoss).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ===== [ADR-266-d1] 体积光入截图 + 输出设置同构：本文件验「接线」，
+// 几何/落位/门禁由 screenshot-cone.test.ts（真 three）与 screenshot-lights.test.ts 验 =====
+describe("renderMultiAngle — 体积光锥与输出设置同构（ADR-266-d1）", () => {
+  const spot = { ...DEFAULT_LIGHT_PARAMS.key, type: "spot" as const, enabled: true };
+
+  function makeLights(over: Partial<ScreenshotLights> = {}): ScreenshotLights {
+    return {
+      ambient: { color: 0xffffff, intensity: 0.3 },
+      radius: 8,
+      key: spot,
+      fill: { ...DEFAULT_LIGHT_PARAMS.fill, enabled: false },
+      rim: { ...DEFAULT_LIGHT_PARAMS.rim, enabled: false },
+      volumetric: {
+        slot: "key",
+        spot,
+        params: { ...DEFAULT_LIGHT_PARAMS.volumetric, enabled: true },
+      },
+      output: { toneMapping: 4, exposure: 0.55, outputColorSpace: "srgb" },
+      ...over,
+    };
+  }
+
+  it("预览有光柱 → 离屏建锥，且 finally 释放（离屏不靠 GC 收 GPU 资源）", async () => {
+    const dispose = stubConeReturn();
+    const lights = makeLights();
+    await renderMultiAngle("/m/a.ysm", [], { lights });
+    expect(coneMock).toHaveBeenCalledTimes(1);
+    // 接线口径：lights 与模型中心原样透传（锥位/朝向在桥内按预览同式算出）
+    expect(coneMock.mock.calls[0]?.[1]).toBe(lights);
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it("预览无光柱（volumetric=null）→ 不产锥、不触发释放", async () => {
+    const lights = makeLights({ volumetric: null });
+    await renderMultiAngle("/m/a.ysm", [], { lights });
+    expect(coneMock).toHaveBeenCalledWith(expect.anything(), lights, expect.anything());
+    expect(coneMock.mock.results[0]?.value).toBeNull();
+  });
+
+  it("输出设置镜像到离屏 renderer（toneMapping + 曝光 + 色彩空间三项）", async () => {
+    await renderMultiAngle("/m/a.ysm", [], {
+      lights: makeLights({ output: { toneMapping: 4, exposure: 0.55, outputColorSpace: "srgb" } }),
+    });
+    const r = lastRenderer() as unknown as {
+      toneMapping?: number;
+      toneMappingExposure?: number;
+      outputColorSpace?: number;
+    };
+    expect(r.toneMapping).toBe(4);
+    expect(r.toneMappingExposure).toBeCloseTo(0.55, 6);
+    // outputColorSpace 由 SUT 先写 SRGBColorSpace（桩值 1），镜像块再覆盖为镜像值
+    expect(r.outputColorSpace).toBe("srgb");
+  });
+
+  it("无 output（无活跃预览 renderer）→ 不写 toneMapping/曝光（离屏保持自身默认）", async () => {
+    await renderMultiAngle("/m/a.ysm", [], { lights: makeLights({ output: null }) });
+    const r = lastRenderer() as unknown as {
+      toneMapping?: number;
+      toneMappingExposure?: number;
+    };
+    expect(r.toneMapping).toBeUndefined();
+    expect(r.toneMappingExposure).toBeUndefined();
   });
 });

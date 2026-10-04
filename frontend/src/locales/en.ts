@@ -1235,7 +1235,7 @@ export const en: Record<string, string> = {
   "preview.ambientColor": "Ambient Color",
   "preview.ambientIntensity": "Ambient",
   "preview.volumetric": "Volumetric",
-  "preview.volumetricHint": "Requires spotlight; the beam is preview-only, not in screenshots",
+  "preview.volumetricHint": "Requires spotlight",
   "preview.volumetricDriver": "Driven By Light",
   "preview.volumetricDriverAuto": "Auto",
   "preview.volumetricDriverHint":

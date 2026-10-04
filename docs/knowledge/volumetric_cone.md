@@ -6,6 +6,7 @@ category: rendering
 status: active
 adr:
   - ADR-266
+  - ADR-266-d1
   - ADR-177
   - ADR-246
 use_when:
@@ -14,24 +15,34 @@ use_when:
   - 聚光灯可见光柱
   - volumetric / cone
   - 边缘辉光 / fresnel
+  - 截图里没有光柱
 source_files:
   - frontend/src/preview-3d/caps/light-cone.ts
   - frontend/src/preview-3d/caps/light-capability.ts
+  - frontend/src/preview-3d/screenshot/screenshot-cone.ts
+  - frontend/src/preview-3d/screenshot/screenshot-lights.ts
 auto_fields:
   symbols_with_lines:
+    - applyVolumetricCone
     - attenuateAmbientForSky
     - LightCapability
     - lightDirToPosition
     - LightKey
+    - ScreenshotLights
+    - ScreenshotVolumetric
     - spotDistanceAttenuation
+    - toScreenshotLights
     - VolumetricCone
 tests:
   - frontend/src/preview-3d/caps/light-cone.test.ts
   - frontend/src/preview-3d/caps/light-capability.test.ts
+  - frontend/src/preview-3d/screenshot/screenshot-cone.test.ts
+  - frontend/src/preview-3d/screenshot/screenshot-lights.test.ts
 pitfalls:
   - 符号陷阱：ConeGeometry 锥顶在局部 +Y，射束向下延伸 → 几何中心 = 锥顶 + 半高·方向（写成 -半高 会让锥顶飘到光源上方一个锥高；垂直灯下看不出，斜射才穿帮）
   - 平面剪影回归：任何「两片交叉 Plane + discard 抠锥」的写法都会在侧视角双 edge-on 变薄消失、相机穿入时中轴亮缝
   - ACES 旁路回归：自定义 ShaderMaterial 不会自动注入 tonemapping/色彩空间转换，片元必须显式 include 两个 three chunk（tonemapping_fragment + colorspace_fragment），否则加色硬裁并异常喂 bloom
+  - 离屏输出设置分叉（ADR-266-d1）：截图侧不镜像预览 renderer 的 toneMapping / toneMappingExposure 时，光柱与模型亮度在两画面之间静默分叉（ACES 曲线差异比几何差异更刺眼；历史只抄了 outputColorSpace，两侧恰好同为 SRGB 才没露馅）
   - edgeFade 语义已改：0=均匀壳，1=边缘辉光主导（旧版是「压暗边缘」），中间段观感整体约暗 20%，用 opacity 补偿
   - 重建成本：只有 type/enabled/angle/penumbra 影响几何（`CONE_GEO_CHANGES`）；方位角/仰角走 syncPosition，color/intensity/distance/decay 走 updateUniforms——误加回「任意灯字段变更即 rebuild」会恢复拖滑块抖动
 quick_groups:
@@ -39,10 +50,12 @@ quick_groups:
 quick_intents:
   - 改体积光外观 / 加锥体参数
   - 排查光柱穿帮、过曝、开关不生效
+  - 截图/导出里没有光柱或亮度与预览不符
 quick_risk_lines:
   - frontend/src/preview-3d/caps/light-cone.ts|applyTransform
   - frontend/src/preview-3d/caps/light-cone.ts|VOLUMETRIC_CONE_FRAG
   - frontend/src/preview-3d/caps/light-capability.ts|CONE_GEO_CHANGES
+  - frontend/src/preview-3d/screenshot/screenshot-cone.ts|applyVolumetricCone
 invariant_anchors:
   - frontend/src/preview-3d/caps/light-cone.ts|VolumetricCone
   - frontend/src/preview-3d/caps/light-cone.ts|rebuild
@@ -50,6 +63,7 @@ invariant_anchors:
   - frontend/src/preview-3d/caps/light-cone.ts|ConeGeometry
   - frontend/src/preview-3d/caps/light-capability.ts|CONE_GEO_CHANGES
   - frontend/src/preview-3d/caps/light-capability.ts|getSpotDir
+  - frontend/src/preview-3d/screenshot/screenshot-cone.ts|applyVolumetricCone
 ---
 
 # 体积光锥 VolumetricCone（真锥体网格 + Fresnel）
@@ -90,7 +104,7 @@ invariant_anchors:
 - **`LightCapability`**：三盏灯（key/fill/rim）各可在 directional/point/spot 间切换；锥体由「当前编辑的 spot 灯优先，否则第一盏启用的 spot 灯」驱动（`getSpotLightForCone()`），方向由 `getSpotDir(spotLight)`（光源 → 靶点）算出。重建触发面 = `CONE_GEO_CHANGES`（type/enabled/angle/penumbra），位置变更走 `syncPosition`，其余走 uniforms 快路径。
 - **envState / env-dispatcher**：参数变更经 `setEnvState` 派发，`onEnvChanged` 分派到锥体。
 - **灯 helper**（ADR-246 D3 扩展）：每盏灯按当前 type 配对应 helper（Directional↔DirectionalLightHelper / Spot↔SpotLightHelper / Point↔PointLightHelper），类型切换时重建；体积光锥是视觉光柱本体。
-- **截图渲染**（`preview-3d/screenshot/screenshot-lights.ts`）：**不复用本能力**，不产出光锥——预览与截图在体积光上本就不同构。该差异已由面板 hint 显式化（`preview.volumetricHint` = 「需先开启聚光灯；光柱为预览专有，不随截图导出」，2026-10-04 锐评收口）：用户不必等导出后才发现光柱消失。若日后要「光柱进截图」，属**行为变更**（须在离屏渲染器重建锥体几何 + shader），须先立 ADR 取代本行，不得顺手改。
+- **截图渲染**（`preview-3d/screenshot/screenshot-lights.ts` + `preview-3d/screenshot/screenshot-cone.ts`）：**同构**（ADR-266-d1，取代 ADR-246 期「预览与截图本就不同构」的旧口径）——`toScreenshotLights()` 经 `light-capability.ts|getSpotLightForCone` 取驱动槽位（不重算驱动规则），离屏经 `screenshot-cone.ts|applyVolumetricCone` **复用本类**建锥（同一几何/shader，非第二套「截图专用光柱」）；无驱动 spot / 未开体积光 / 能力总闸关 → `volumetric` 为 null（预览没有的东西，截图不凭空出现）。同构义务不止几何：离屏 renderer 的 `toneMapping` / `toneMappingExposure` / `outputColorSpace` 一律镜像活跃预览 renderer 的**现值**（`ScreenshotLights.output`；读现值而非重推 sky/pp 属主链——推导即手抄）。
 - **后处理**（bloom / ACES 由 renderer 与 `PostprocessingCapability` 管）：本材质以「被色调映射的加色」参与，不再旁路。
 
 ## 不变量
@@ -101,9 +115,11 @@ invariant_anchors:
 4. **色调映射接线**：片元恒含 `#include <tonemapping_fragment>` + `<colorspace_fragment>`；`material.toneMapped` 必须为 `true`（否则 renderer 不注入 `TONE_MAPPING` 宏，两个 include 退化为空）。
 5. **重建触发面**：`CONE_GEO_CHANGES`（type/enabled/angle/penumbra）才重建；方位角/仰角走 `syncPosition`；color/intensity/distance/decay 只走 `updateUniforms`。
 6. **轻量性**：不加 pass、不给 renderer 加每帧接线（相机经 three 内置 uniform `cameraPosition` 取得）。
+7. **截图同构**（ADR-266-d1）：`ScreenshotLights.volumetric` 非空 ⟺ 预览此刻确有光柱（能力总闸开 ∧ 体积光开 ∧ 存在启用的驱动 spot）；离屏输出设置逐字段等于预览 renderer 现值。回归锁：`screenshot-cone.test.ts` + `screenshot-lights.test.ts` + `screenshot-render.test.ts`。
 
 ## 相关
 
+- ADR-266-d1：体积光入截图 + 离屏/预览输出设置同构（本条取代「预览与截图本就不同构」的旧口径）。
 - ADR-266：本次几何/着色/色调映射/朝向/重建收窄的决策记录与数据溯源。
 - ADR-177：`VolumetricCone` 拆出 `LightCapability` 的出处（状态机用例契约位在 `light-capability.test.ts`）。
 - ADR-246：D1 删 postprocess 空壳（单引擎 = 本锥体）、D2 参数收编、D3 SpotLightHelper 可视化。

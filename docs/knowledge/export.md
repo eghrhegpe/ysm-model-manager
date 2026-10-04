@@ -9,6 +9,7 @@ source_files:
   - frontend/src/preview-3d/screenshot/screenshot.ts
   - frontend/src/preview-3d/screenshot/screenshot-render.ts
   - frontend/src/preview-3d/screenshot/screenshot-lights.ts
+  - frontend/src/preview-3d/screenshot/screenshot-cone.ts
   - frontend/src/preview-3d/texture/texture-loader.ts
   - frontend/src/preview-3d/texture/texture-cache.ts
   - frontend/src/preview-3d/decoder/model-cache.ts
@@ -18,6 +19,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AngleShot
+    - applyVolumetricCone
     - buildBoneExportRow
     - buildStatsCard
     - buildToggleRow
@@ -37,7 +39,6 @@ auto_fields:
     - screenshotFromRenderer
     - ScreenshotLights
     - ScreenshotOpts
-    - ScreenshotOutputSettings
     - ScreenshotVolumetric
     - setup2DCanvas
     - shotButtonNodes
@@ -130,7 +131,8 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 |------|------|
 | `screenshot.ts` | 纯函数 `screenshotFromRenderer`：对任意活跃 renderer/scene/camera 截图（PNG/JPEG base64）——`render` 后须在同一同步任务内 `toDataURL`（缓冲下一帧被清空）；`preserveDrawingBuffer` 自 r185 起不可运行时切换（幽灵 API，2026-09 P0 修复）。**透明捕获的两个前提（2026-09 补齐，此前「只置清屏色」是双重失效的死代码）**：① renderer 须以 `alpha: true` 构造（见 `shared-infra.ts`，否则画布无 α 通道、α 恒 255）；② 渲染期须把 `scene.background` 临时置 `null`——three 对 `background.isColor` 走 `setClear(bg, 1)`（alpha 硬编码 1）+ forceClear，会**覆盖** `setClearColor(0,0,0,0)`。背景/画布尺寸/清屏色三者一律记录并在 `finally` 还原（渲染抛错也不把共享 renderer/scene 留污染）；空/异常静默返回 null |
 | `screenshot-render.ts` | 离屏多角度渲染器：`renderMultiAngle` 自建 WebGLRenderer（透明背景）+ 四角度循环 + 灯光/纹理/YSM 对象构建 + finally 释放 |
-| `screenshot-lights.ts` | `toScreenshotLights()` 从 `LightCapability` 读三点布光 + PMREM 环境光衰减，缺 cap 回退标准灯 |
+| `screenshot-lights.ts` | `toScreenshotLights()` 从 `LightCapability` 读三点布光 + PMREM 环境光衰减 + **体积光驱动源**（`getSpotLightForCone`）+ **输出设置镜像**（预览 renderer 的 toneMapping/曝光/色彩空间现值），缺 cap 回退标准灯；见 ADR-266-d1 |
+| `screenshot-cone.ts` | `applyVolumetricCone()`：离屏复用预览 `VolumetricCone` 建锥（几何/shader 单源，非第二套「截图专用光柱」）；锥顶 = 模型中心 + 方位角/仰角 × radius、朝向 = 靶点 − 锥顶（与预览同式）；调用方 `finally` 释放 |
 | `texture-loader.ts` | `loadTextures(urls)` 并行从 `textureCache` acquire，polling 等图片 complete（P2 修复 2026-09：轮询加 15s 超时兜底，悬挂 URL 不再永久 pending；超时视同失败 invalidate），失败 invalidate 缓存 |
 | `texture-cache.ts` | 纹理缓存池：引用计数 + LRU 淘汰零引用条目（上限 200），`disposeAll` 由 `mount-preview-core fullCleanup` 统一释放 |
 | `decoder/cache.ts` | 模型预览数据持久缓存：模块级 Map，FIFO 上限 50，覆盖/淘汰走 `onEvict` 回调释放 blob URL（覆盖时新旧 blob URL 差集判定，防误 revoke） |
@@ -144,7 +146,8 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 |------|------|------|
 | `screenshotFromRenderer(renderer, scene, camera, opts?): string \| null` | screenshot.ts | 活跃渲染器截图 |
 | `renderMultiAngle(modelPath, texUrls, opts?): Promise<AngleShot[] \| null>` | screenshot-render.ts | 离屏四角度渲染 |
-| `toScreenshotLights(): ScreenshotLights \| undefined` | screenshot-lights.ts | 三点布光提取 + PMREM 衰减 |
+| `toScreenshotLights(): ScreenshotLights \| undefined` | screenshot-lights.ts | 三点布光提取 + PMREM 衰减 + 光柱驱动源 + 输出设置镜像 |
+| `applyVolumetricCone(scene, lights, origin): VolumetricCone \| null` | screenshot-cone.ts | 离屏建锥（复用预览实现，调用方 finally 释放） |
 | `loadTextures(urls?): Promise<(THREE.Texture \| null)[]>` | texture-loader.ts | 纹理加载（含 invalidate） |
 | `saveScreenshot(model, key, setShotState, screenshotFn?)` | skeleton-render.ts | 六角度分支 + 两条路径选择 |
 | `makeShotAction(modelForSave, screenshotFn)` | shot-panel-shared.ts | 防连点副作用 |
@@ -175,6 +178,8 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 - `toScreenshotLights()` 从 `LightCapability` 取三点布光 + `attenuateAmbientForSky` PMREM 衰减（所见即所得）
 - **三点全关是用户刻意暗场景** → 截图保持暗（不 fallback 标准灯）；cap 缺失才 fallback（ADR-126-P5）
 - `lightDirToPosition(d, 5)` 将方向向量转位置（radius=5 对齐预览 `createDirectional`）
+- **体积光锥入镜（ADR-266-d1）**：`ScreenshotLights.volumetric` 非空 ⟺ 预览此刻确有光柱（能力总闸开 ∧ 体积光开 ∧ 存在启用的驱动 spot）；离屏经 `screenshot-cone.ts|applyVolumetricCone` 复用**同一** `VolumetricCone` 建锥——锥高 = `radius`、锥顶 = 模型中心 + 方向 × radius、朝向 = 靶点 − 锥顶，与预览 `LightCapability|rebuildConeIfNeeded` 同源公式（不写第二套实现）。
+- **输出设置同构（ADR-266-d1 D2）**：离屏 renderer 的 `toneMapping` / `toneMappingExposure` / `outputColorSpace` 一律镜像活跃预览 renderer 的**现值**（`ScreenshotLights.output`）；读现值而非重推 sky/pp 属主链（推导即手抄）。这与上方「后期效果不参与截图」是两回事——镜像的是 renderer 级输出设置，不含 Bloom/SSAO/SSR pass。
 
 ### Blob URL 释放
 - `decoder/cache.ts`：覆盖同 key 时新旧 blob URL 差集判定，仅差集 URL 才 revoke（P1 修复，防同对象 re-set 误 revoke）

@@ -12,6 +12,7 @@ import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
 import { buildYsmObject, type YsmObjectHandle } from "@/preview-3d/model/ysm-object.ts";
 import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture/texture-loader.ts";
 import { screenshotFromRenderer } from "./screenshot.ts";
+import { applyVolumetricCone } from "./screenshot-cone.ts";
 import type { ScreenshotLights } from "./screenshot-lights.ts";
 
 // ===== 3D 场景灯光样板（原 scene-lights.ts，唯一消费者是本文件，合并回）=====
@@ -114,6 +115,8 @@ export async function renderMultiAngle(
   let renderer: THREE.WebGLRenderer | null = null;
   let scene: THREE.Scene | null = null;
   let ysmObject: YsmObjectHandle | null = null;
+  // [ADR-266-d1] 离屏光柱句柄（finally 释放 GPU 资源）
+  let cone: ReturnType<typeof applyVolumetricCone> = null;
   try {
     let spec: Spec3D | null = null;
     try {
@@ -156,6 +159,15 @@ export async function renderMultiAngle(
     renderer.setSize(size, size);
     renderer.setPixelRatio(1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // [ADR-266-d1 D2] 输出设置同构：镜像活跃预览 renderer 的现值。光柱 shader 的
+    // `<tonemapping_fragment>` / `<colorspace_fragment>` 与模型材质同受这三项支配——
+    // 不镜像即「预览 ACES×0.5 对 离屏 NoToneMapping×1.0」的亮度静默分叉（既有债，
+    // 光柱入镜会把它放大成显性穿帮）。读现值、不重推 sky/pp 属主链：推导即手抄，手抄即分叉。
+    if (opts.lights?.output) {
+      renderer.toneMapping = opts.lights.output.toneMapping;
+      renderer.toneMappingExposure = opts.lights.output.exposure;
+      renderer.outputColorSpace = opts.lights.output.outputColorSpace;
+    }
 
     scene = new THREE.Scene();
 
@@ -168,6 +180,8 @@ export async function renderMultiAngle(
     const center = box.getCenter(new THREE.Vector3());
     // 灯光在模型中心算出后再建：spot/point 灯位需相对模型中心（与预览同构）
     applyLights(scene, opts.lights, center);
+    // [ADR-266-d1 D1] 体积光锥入镜：复用预览同一 VolumetricCone（几何/shader 单源）
+    cone = applyVolumetricCone(scene, opts.lights, center);
     const maxDim = Math.max(...box.getSize(new THREE.Vector3()).toArray());
     // meshGroups 空/骨骼组不匹配时 Box3 为空 → getSize 为
     // NaN/0，maxDim 非有限或 ≤0，相机 position 落入 NaN → 截图脏数据甚至渲染异常。
@@ -217,6 +231,9 @@ export async function renderMultiAngle(
         releaseTextureUrls(urls);
       }
     }
+    // [ADR-266-d1] 光柱先释放（几何/材质/贴图槽位 + 从场景摘除），与纹理 release 同纪律——
+    // 离屏会话不依赖 GC 回收 GPU 资源
+    cone?.dispose();
     if (renderer) {
       if (scene && ysmObject) ysmObject.removeFromScene(scene);
       renderer.dispose();

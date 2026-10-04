@@ -1,0 +1,127 @@
+// @vitest-environment node
+// ===== 截图灯光提取测试（ADR-266-d1）=====
+// 数据层锁两条同构义务：
+//  ① 「预览有光柱 ⟺ 截图含光柱」——含最阴的一条：能力总闸关时灯对象仍在、`getSpotLightForCone`
+//     照样命中，若不过总闸就出「预览全黑、截图立着一根光柱」的新破洞；
+//  ② 输出设置镜像——toneMapping / 曝光 / 色彩空间逐字段等于活跃预览 renderer 现值
+//     （历史只抄了 outputColorSpace，两侧恰好同为 SRGB 才没露馅）。
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import * as THREE from "three";
+import { DEFAULT_LIGHT_PARAMS } from "@/preview-3d/caps/light-params.ts";
+import type { LightParams } from "@/preview-3d/caps/light-params.ts";
+
+const { host, stub } = vi.hoisted(() => ({
+  host: { renderer: null as unknown },
+  stub: { cap: undefined as unknown, skyEnv: false },
+}));
+
+// 组合根与注册表用桩替换：本测试只验「提取」这一层，不建真 cap/真场景
+vi.mock("@/preview-3d/adapters/shared-infra.ts", () => ({ sceneInfraHost: host }));
+vi.mock("@/preview-3d/caps/scene-capability-registry.ts", () => ({
+  sceneCapabilityRegistry: { getById: () => stub.cap },
+  isSkyEnvironmentOn: () => stub.skyEnv,
+}));
+
+import { toScreenshotLights } from "./screenshot-lights.ts";
+
+const SPOT_PARAMS = { ...DEFAULT_LIGHT_PARAMS.key, type: "spot" as const, enabled: true };
+
+function makeParams(): LightParams {
+  return {
+    key: { ...SPOT_PARAMS },
+    fill: { ...DEFAULT_LIGHT_PARAMS.fill },
+    rim: { ...DEFAULT_LIGHT_PARAMS.rim },
+    ambient: { color: 0xffffff, intensity: 0.4 },
+    volumetric: { ...DEFAULT_LIGHT_PARAMS.volumetric, enabled: true },
+  };
+}
+
+/** 假 light cap：只实现 toScreenshotLights 消费的四个入口 */
+function makeCap(over: {
+  enabled?: boolean;
+  params?: LightParams;
+  driving?: { which: "key" | "fill" | "rim" } | null;
+} = {}) {
+  const params = over.params ?? makeParams();
+  return {
+    isEnabled: () => over.enabled ?? true,
+    getTargetHeight: () => 8,
+    getParams: () => params,
+    getSpotLightForCone: () =>
+      over.driving === undefined ? { which: "key" as const } : over.driving,
+  };
+}
+
+beforeEach(() => {
+  stub.cap = makeCap();
+  stub.skyEnv = false;
+  host.renderer = null;
+});
+
+describe("toScreenshotLights — 光柱同构（预览有 ⟺ 截图有）", () => {
+  it("无 light cap → undefined（渲染方回退标准灯）", () => {
+    stub.cap = undefined;
+    expect(toScreenshotLights()).toBeUndefined();
+  });
+
+  it("总闸开 + 有驱动 spot + 体积光开 → volumetric 块带槽位/实例参数/体积光参数", () => {
+    const lights = toScreenshotLights()!;
+    expect(lights.volumetric).not.toBeNull();
+    expect(lights.volumetric!.slot).toBe("key");
+    expect(lights.volumetric!.spot).toEqual(SPOT_PARAMS);
+    expect(lights.volumetric!.params.enabled).toBe(true);
+  });
+
+  it("总闸开但无启用的驱动 spot → volumetric 为 null（预览无光柱）", () => {
+    stub.cap = makeCap({ driving: null });
+    expect(toScreenshotLights()!.volumetric).toBeNull();
+  });
+
+  it("总闸关 → 全黑且 volumetric 为 null（灯对象仍存活，必须过总闸）", () => {
+    stub.cap = makeCap({ enabled: false });
+    const lights = toScreenshotLights()!;
+    expect(lights.ambient.intensity).toBe(0);
+    expect(lights.key.enabled).toBe(false);
+    expect(lights.fill.enabled).toBe(false);
+    expect(lights.rim.enabled).toBe(false);
+    expect(lights.volumetric).toBeNull();
+  });
+
+  it("体积光关（其余照旧）→ volumetric 块仍在但 params.enabled=false（截图侧按双门不产锥）", () => {
+    const params = makeParams();
+    params.volumetric = { ...params.volumetric, enabled: false };
+    stub.cap = makeCap({ params });
+    const lights = toScreenshotLights()!;
+    expect(lights.volumetric?.params.enabled).toBe(false);
+  });
+});
+
+describe("toScreenshotLights — 输出设置镜像（ADR-266-d1 D2）", () => {
+  it("三项输出设置逐字段等于预览 renderer 现值", () => {
+    host.renderer = {
+      toneMapping: THREE.ACESFilmicToneMapping,
+      toneMappingExposure: 0.55,
+      outputColorSpace: THREE.SRGBColorSpace,
+    };
+    expect(toScreenshotLights()!.output).toEqual({
+      toneMapping: THREE.ACESFilmicToneMapping,
+      exposure: 0.55,
+      outputColorSpace: THREE.SRGBColorSpace,
+    });
+  });
+
+  it("pp 接管 toneMapping（如 cineon）时镜像跟随，不写死 ACES", () => {
+    host.renderer = {
+      toneMapping: THREE.CineonToneMapping,
+      toneMappingExposure: 1.2,
+      outputColorSpace: THREE.SRGBColorSpace,
+    };
+    expect(toScreenshotLights()!.output!.toneMapping).toBe(THREE.CineonToneMapping);
+    expect(toScreenshotLights()!.output!.exposure).toBeCloseTo(1.2, 6);
+  });
+
+  it("无活跃预览 renderer → output 为 null（无现值可镜像，离屏保持自身默认）", () => {
+    host.renderer = null;
+    expect(toScreenshotLights()!.output).toBeNull();
+  });
+});

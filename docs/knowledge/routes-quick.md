@@ -677,6 +677,14 @@
 | 孤儿导出误报、扫描盲区、转发即消费 | [孤儿导出检测器（扫描盲区）](./orphan_export_scanner.md) | ⚠️ 孤儿读数为 0 才可信；出现孤儿先判「真死代码 vs 扫描漏检」再动手删 | - |
 | check-orphan-exports 三类漏检修复 | [孤儿导出检测器（扫描盲区）](./orphan_export_scanner.md) | - | - |
 
+## 🎯 pack 模型光照
+
+| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+|----------|--------|----------|----------|
+| 为什么模型声明了光照偏好却不生效 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack_gui_light.md) | - | - |
+| 想按模型声明打光怎么做 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack_gui_light.md) | - | - |
+| gui_light 是什么意思 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack_gui_light.md) | 别把 gui_light 接进 LightCapability（三理由：ADR-282 / source 优先级 / 跨类型不一致） | - |
+
 ## 🎯 提交与钩子
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
@@ -1215,6 +1223,9 @@
 | bus.emit 未带 payload | - | 下游无法渲染推荐卡；必须经 bus.emit 携带完整 payload |
 | ❌ 曾漏检三类消费形态，导致活代码被误报孤儿并倒逼出遮蔽性豁免规则（僵尸规则） | - | - |
 | ⚠️ 豁免规则超期未清 = 检测器失明；契约测试硬编码条数，删规则须同步 tests/test_orphan_exports_smart.ts | - | - |
+| gui_light 是 MC GUI 显示上下文的 front/side 二选一打光开关，不是灯位/强度参数——是范畴错误 | `映射灯位` | - |
+| 本产品无 GUI display 渲染上下文，gui_light/display/ambientocclusion 是的死解析数据，不是漏接 | `有意不消费` | - |
+| 禁止接入 LightCapability：ADR-282 解耦 + envState source 优先级复写用户设置 + 仅 pack 带此字段跨类型不一致 | - | - |
 | 在 page-store 里挂页面挂载 / 卸载逻辑 | - | 与 app-content 重复、状态串扰；必须分开 |
 | resolveInitialPage 无回退 | - | 隐私模式读不到 localStorage 时死页；必须经三优先级回退 repository |
 | 手写动画注入 | - | 与感知系统控制器冲突、节奏不同步；必须经感知控制器 |

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 195 张知识卡
+> 总计: 196 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -244,7 +244,7 @@
 - **workspace_exe_write_denied**（仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截））：2026-09-27 排查「wails3 dev 下所有临时文件创建失败（Access is denied），但浏览功能全部正常」：实锤为 **AI 代理沙箱按 exe 镜像位置拦截**——可执行文件位于代理工作区（C:\Users\...…
 - **ysm-wasi**（WASI 解码器（wazero 内存直解，node 桥已退役））：2026-09-27 最小验证完成：**把 YSMParser 重编成 emscripten standalone（非真 WASI 目标）+ wazero 纯 Go 运行时内存直解，node 子进程桥可整条退役**。12 个真实 .ysm（…
 
-## rendering（19 张）
+## rendering（20 张）
 
 *3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）*
 
@@ -259,6 +259,7 @@
 | 🏗 model3d | 3D 预览渲染 model3d | architecture | memory-heavy, gpu-bound | 3D 渲染层, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底 |
 | 🍃 mount-preview-module-singleton-race | mount3D 并发竞态（已闭环 — _gen 代际守卫） | leaf | concurrent | mount3D 并发竞态（已闭环）, 评审模块级单例守卫（历史） |
 | 🍃 mount3d-584-giant | mount3D 巨函数现状（2026-08-27 已部分拆分） | leaf | gpu-bound | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
+| 🍃 pack_gui_light | gui_light 语义与「死解析立牌」（pack 模型光照元数据） | leaf | — | 想把模型 JSON 的 gui_light / display / ambientocclusion 接进渲染或灯光, 查 pack 模型「声明了光照偏好却不生效」, 资源包模型预览光照 |
 | 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 眨眼, 节拍检测, 模型感知 |
 | 🏗 preview-menu | 3D 预览声明式菜单 preview-menu | architecture | — | 3D 预览菜单, 声明式菜单节点, visibleWhen 谓词, 面板 schema 注册, SlideMenu 多层导航 |
 | 🏗 preview-paths | 预览状态路径契约 preview-paths | architecture | — | 预览状态路径, KNOWN_PATHS 扩展, PreviewStatePath 类型, 状态层快照契约 |
@@ -280,6 +281,7 @@
 - **model3d**（3D 预览渲染 model3d）：`frontend/src/preview-3d/` + `frontend/src/views/app-preview/model3d-loader.ts` 构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲…
 - **mount-preview-module-singleton-race**（mount3D 并发竞态（已闭环 — _gen 代际守卫））：**已闭环**。代际计数器（原 `mount-preview-core.ts` 模块级 `let _gen = 0`，ADR-227 后为 `session-ledger.ts` 的 `sessionLedger` 实例字段）在 `moun…
 - **mount3d-584-giant**（mount3D 巨函数现状（2026-08-27 已部分拆分））：> ⬇️ 本节为 2026-08-27 历史快照（行号/行数全部失效，仅存历史演化脉络）。当前实况见置顶「2026-09-05 复核」。
+- **pack_gui_light**（gui_light 语义与「死解析立牌」（pack 模型光照元数据））：Java 资源包模型 JSON 里的三个「光照/显示元数据」字段——`gui_light`、`display`、`ambientocclusion`——在本产品中解析后**有意不消费**（死解析）。本卡立牌：说清上游语义、为何不消费、以及若…
 - **preview-menu**（3D 预览声明式菜单 preview-menu）：3D 预览底部根菜单的声明式菜单系统（ADR-076 v3）。对齐 MikuMikuAR 范式：底部根按钮 → `createSlideMenu` 多层导航。菜单即数据——`PreviewMenuNode` 树 + `visibleWhen…
 - **preview-paths**（预览状态路径契约 preview-paths）：预览状态层的路径契约叶子（ADR-168 二期下沉产物）。零依赖叶子：`KNOWN_PATHS`（值）+ `PreviewStatePath` + `PreviewSnapshot`（类型）。自 `preview-state.ts` 下沉—…
 - **preview_core**（统一 3D 预览核心 preview-core）：`frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi…

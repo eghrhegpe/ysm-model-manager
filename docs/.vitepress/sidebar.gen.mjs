@@ -2150,6 +2150,10 @@ export const autoSidebar = [
             "link": "/knowledge/mount3d-584-giant"
           },
           {
+            "text": "gui_light 语义与「死解析立牌」（pack 模型光照元数据）",
+            "link": "/knowledge/pack_gui_light"
+          },
+          {
             "text": "3D 感知系统 perception",
             "link": "/knowledge/perception"
           },

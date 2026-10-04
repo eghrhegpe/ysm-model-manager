@@ -96,9 +96,25 @@ export interface JavaModelResult {
   entry: string;
   faces: JavaModelFace[];
   elementCount: number;
+  /** [死解析立牌 2026-10] 模型 JSON 的 ambientocclusion 开关——零消费：pack 适配器的顶点
+   *  AO 按相邻方块推导（见知识卡 mc-ao-tint），不读本 JSON 字段。 */
   ambientocclusion: boolean;
-  /** 合并后的 display（含 parent 继承） */
+  /** 合并后的 display（含 parent 继承）——[死解析立牌 2026-10] 同为「解析了但有意不消费」：
+   *  display 是 MC 各显示上下文（gui/thirdperson/ground/…）的变换矩阵，本产品是自由 3D 场景，
+   *  buildModelGroup 直接 group.add(mesh)，不套任何 display 上下文变换（pack-model-adapter.ts）。
+   *  若未来做「按显示上下文预览」再消费，与灯光无关。 */
   display: Record<string, unknown>;
+  /** [死解析立牌 2026-10] Java 模型 JSON 根字段 gui_light（front|side，缺省 side）。
+   *  上游语义（https://minecraft.wiki/w/Model）：**GUI 显示上下文**的二选一打光开关——
+   *  side = 像方块一样受光，front = 像扁平物品一样正面受光；只在 MC 物品栏/GUI 渲染生效，
+   *  不参与世界场景渲染，也不携带任何灯位/强度/颜色参数。
+   *  本产品无 GUI display 渲染上下文（pack 适配器走共享 3D 场景 + LightCapability 灯架），
+   *  **故有意不消费**——不是漏接，是语义上不适用（2026-10 曾误判「一行消费」，见知识卡 pack-gui-light）。
+   *  ⚠️ 禁止接入 LightCapability：① ADR-282 已令灯光与模型类别解耦（场景属性 ≠ 内容元数据）；
+   *  ② 写灯走 envState source 优先级（manual > auto-model）——要么复写用户设置、要么被
+   *  shouldOverwrite 挡住，且换模型灯架跳变；③ 仅资源包模型带此字段 → 跨类型预览不一致。
+   *  若未来要「尊重模型光照偏好」，正确姿势 = 内容层顶点色烘焙（同 mc-ao-tint 的 AO/tint
+   *  模式），不碰全局灯架。 */
   gui_light: string | null;
 }
 
@@ -138,8 +154,11 @@ function textureEntryFor(ref: string): string {
 interface ResolvedModel {
   textures: Record<string, string>;
   elements: Array<Record<string, unknown>>;
+  /** 死解析：语义与不消费理由见 JavaModelResult 同名字段立牌 */
   display: Record<string, unknown>;
+  /** 死解析：同上 */
   ambientocclusion: boolean;
+  /** 死解析：同上（GUI 显示上下文开关，本产品无该上下文） */
   gui_light: string | null;
 }
 

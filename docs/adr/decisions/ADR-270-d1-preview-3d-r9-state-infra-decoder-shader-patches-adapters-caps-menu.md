@@ -1,6 +1,6 @@
 # ADR-270-d1：preview-3d 内部分层方向闸 R9（state/infra/decoder/shader-patches 禁运行时引 adapters/caps/menu，基线防回退）
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳
 - **日期**：2026-10-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **关联主 ADR**：ADR-270

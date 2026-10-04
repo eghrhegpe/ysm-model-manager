@@ -11,8 +11,9 @@
 // 不再依赖模块级全局。外部经 render-loop.ts 的薄门面函数访问，签名零变更。
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { getSceneCaps, type SharedInfra } from "@/preview-3d/adapters/shared-infra.ts";
-import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import type { SharedInfra } from "@/preview-3d/adapters/shared-infra.ts";
+import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
+import type { SceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import {
   cullModelGroups,
@@ -30,6 +31,21 @@ import {
   shouldRenderAtFps,
 } from "./render-budget.ts";
 import { applyWasdCameraMotion } from "./wasd-camera.ts";
+
+/** [ADR-270-d1] caps 遍历提供器（组合根 shared-infra 模块装载时注入 getSceneCaps；
+ *  斩 render-host → adapters 运行时反向边，ADR-168 注入范式；未注册 = 无 cap） */
+let _capsProvider: (() => readonly SceneCapability[]) | null = null;
+export function setSceneCapsProvider(p: (() => readonly SceneCapability[]) | null): void {
+  _capsProvider = p;
+}
+
+/** [ADR-270-d1] cap 注册表注入（组合根 shared-infra buildSharedInfra 时机；斩
+ *  render-host → caps 运行时反向边。typed registry 保留——getById K 收窄与原实现
+ *  等价；宽状态层 lookup 需 cast，故不走） */
+let _capRegistry: SceneCapabilityRegistry | null = null;
+export function setSceneCapRegistry(reg: SceneCapabilityRegistry | null): void {
+  _capRegistry = reg;
+}
 
 /** render-loop 活跃输入会话形状（mount-preview-core 经 set/unregister 注入；rAF 每帧读） */
 export interface ActiveInputSession {
@@ -240,7 +256,7 @@ export class RendererHost {
     const dt = Math.min((now - this._lastTime) / 1000, 0.1);
     this._lastTime = now;
     // 推进逐帧动态效果（水面波纹/弹簧骨骼等；能力自行决定是否需要更新）
-    for (const c of getSceneCaps()) c.update?.(dt);
+    for (const c of _capsProvider ? _capsProvider() : []) c.update?.(dt);
     // 每帧从动态活跃输入会话读取 keys/camSpeed/orbitMode，不再闭包捕获首个 session
     const activeInput = this._activeInputSession;
     if (activeInput) {
@@ -288,8 +304,9 @@ export class RendererHost {
       cullModelGroups(cam);
     } else restoreModelGroupsVisible();
     // 每帧动态解析（coop 会话切换后指向当前存活 cap；全清后为 null 走直渲兜底）
-    const postProcCap = sceneCapabilityRegistry.getById("postprocessing");
-    const lightCap = sceneCapabilityRegistry.getById("light") ?? null;
+    // [ADR-270-d1] registry 经组合根注入（typed getById 保 K 收窄；宽状态层 lookup 需 cast，故不走）
+    const postProcCap = _capRegistry?.getById("postprocessing");
+    const lightCap = _capRegistry?.getById("light") ?? null;
     const rendered = postProcCap ? postProcCap.render(dt, lightCap) : false;
     if (!rendered) infra.renderer.render(infra.scene, cam);
     const nextPixelRatio = sampleAdaptivePixelRatio(

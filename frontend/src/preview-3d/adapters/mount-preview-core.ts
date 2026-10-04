@@ -30,7 +30,7 @@ import {
   ensureViewContainer,
   previewShell,
 } from "@/preview-3d/infra/preview-shell.ts";
-import { registerBuiltScene } from "@/preview-3d/infra/register-built-scene.ts";
+import { registerBuiltScene, setStatsMenuMerger } from "@/preview-3d/infra/register-built-scene.ts";
 import {
   registerPerFrame,
   removePerFrame,
@@ -45,6 +45,7 @@ import {
   type PreviewMenuCtx,
   type PreviewMenuHandle,
 } from "@/preview-3d/menu/engine/core.ts";
+import { mergeStatsMenuItems } from "@/preview-3d/menu/panels/stats.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import {
   componentsStyleSheet,
@@ -84,6 +85,11 @@ import {
 } from "./shared-infra.ts";
 import type { SwitchContext } from "./switch-preview.ts";
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
+
+// [ADR-270-d1] 注册 menu 域统计面板合并器进 infra 管线（组合根）：本模块 runBuild §4c 是首个
+//  registerBuiltScene 调用点——模块装载即注册，保证先于任何场景注册就位。生产图中
+//  menu/panels/stats 只由此处进入，注册缺失 = 合并器丢失、统计面板静默消失。
+setStatsMenuMerger(mergeStatsMenuItems);
 
 /** 适配器构建时可用的通用外壳句柄（内容层据此注入场景/灯光/定相机） */
 export interface PreviewBuildCtx {

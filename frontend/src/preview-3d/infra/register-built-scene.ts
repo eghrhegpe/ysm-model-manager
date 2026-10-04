@@ -6,11 +6,24 @@
 // 不携带菜单/骨骼元数据）语义不同，不在此收编范围。
 import type * as THREE from "three";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
-import { mergeStatsMenuItems } from "@/preview-3d/menu/panels/stats.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { sceneRegistry } from "./scene-registry.ts";
-import { collectSceneStats } from "./scene-stats.ts";
+import { collectSceneStats, type SceneStats } from "./scene-stats.ts";
 import { estimateSceneTextureBytes, setLastSceneTextureBytes } from "./texture-bytes.ts";
+
+/** [ADR-270-d1] 统计面板合并器（menu 域纯函数；组合根 mount-preview-core 模块装载时注册
+ *  mergeStatsMenuItems；斩 infra → menu 运行时反向边，ADR-168 注入范式） */
+export type StatsMenuMerger = (
+  items: PreviewMenuNode[] | null | undefined,
+  stats: SceneStats,
+) => PreviewMenuNode[];
+
+let _statsMerger: StatsMenuMerger | null = null;
+/** [ADR-270-d1] 注册统计面板合并器（传 null 清除；未注册 → registerBuiltScene 退化
+ *  passthrough——正常启动序组合根先于首次场景注册完成注册，退化不可达） */
+export function setStatsMenuMerger(fn: StatsMenuMerger | null): void {
+  _statsMerger = fn;
+}
 
 export interface RegisterBuiltSceneInput {
   path: string;
@@ -38,7 +51,10 @@ export function registerBuiltScene(input: RegisterBuiltSceneInput): PreviewMenuN
   // 「GPU 上现在压着多少」，追加语义下必须累计全部已注册模型。
   // 全场景口径同时覆盖 MMD/VRM（它们不进 textureCache，池口径对它们恒 0）。
   setLastSceneTextureBytes(estimateSceneTextureBytes(scene));
-  const menuItems = mergeStatsMenuItems(input.content.menuItems, stats);
+  // [ADR-270-d1] 统计面板合并（ADR-131 P1）：合并器经组合根注入；未注册 → 退化 passthrough
+  const menuItems = _statsMerger
+    ? _statsMerger(input.content.menuItems, stats)
+    : (input.content.menuItems ?? []);
   sceneRegistry.register({
     path: input.path,
     rtype: input.rtype,

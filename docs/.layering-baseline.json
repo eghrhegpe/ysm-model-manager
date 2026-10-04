@@ -4,11 +4,6 @@
   "entries": [
     "features/dialogs/rename.ts:html-literal",
     "features/dialogs/tag-editor.ts:html-literal",
-    "preview-3d/infra/postproc-cost-probe.ts:preview-3d/adapters/shared-infra.ts",
-    "preview-3d/infra/postproc-cost-probe.ts:preview-3d/caps/scene-capability-registry.ts",
-    "preview-3d/infra/register-built-scene.ts:preview-3d/menu/panels/stats.ts",
-    "preview-3d/infra/render-host.ts:preview-3d/adapters/shared-infra.ts",
-    "preview-3d/infra/render-host.ts:preview-3d/caps/scene-capability-registry.ts",
     "preview-3d/state/env-state-schema.ts:preview-3d/caps/ground-surface-spec.ts"
   ]
 }

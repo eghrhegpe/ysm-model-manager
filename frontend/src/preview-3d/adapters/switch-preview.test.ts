@@ -10,6 +10,7 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.t
 import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
 import type { PreviewBuildCtx, PreviewScene, PreviewHandle } from "./mount-preview-core.ts";
 import { collectSceneStats } from "@/preview-3d/infra/scene-stats.ts";
+import { setStatsMenuMerger } from "@/preview-3d/infra/register-built-scene.ts";
 import { mergeStatsMenuItems } from "@/preview-3d/menu/panels/stats.ts";
 import { sceneRegistry, MAX_MODELS } from "@/preview-3d/infra/scene-registry.ts";
 import { bus } from "@/bus";
@@ -17,6 +18,8 @@ import type { LocaleKey } from "@/core/i18n/t.ts";
 
 beforeEach(() => {
   sceneRegistry.reset();
+  // [ADR-270-d1] 统计面板合并器由组合根注册；switch 测试走真 registerBuiltScene，显式注入
+  setStatsMenuMerger(mergeStatsMenuItems);
 });
 
 afterEach(() => {

@@ -4,13 +4,15 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
-import { registerBuiltScene } from "./register-built-scene.ts";
+import { registerBuiltScene, setStatsMenuMerger } from "./register-built-scene.ts";
 import { sceneRegistry } from "./scene-registry.ts";
-import { STATS_PANEL_ID } from "@/preview-3d/menu/panels/stats.ts";
+import { STATS_PANEL_ID, mergeStatsMenuItems } from "@/preview-3d/menu/panels/stats.ts";
 import type { PreviewScene } from "@/preview-3d/adapters/mount-preview-core.ts";
 
 beforeEach(() => {
   sceneRegistry.reset();
+  // [ADR-270-d1] 合并器由组合根注册；测试环境（本模块不装载 mount-preview-core）显式注入
+  setStatsMenuMerger(mergeStatsMenuItems);
 });
 
 function makeContent(menuItems: PreviewScene["menuItems"] = []): PreviewScene {

@@ -23,8 +23,8 @@
 // 用法（诊断/按需，不挂 CI——需真实 WebGL 与活跃会话）：
 //   const report = await runPostprocCostProbe();   // 结构化报告，自行决定展示
 
-import { sceneInfraHost } from "@/preview-3d/adapters/shared-infra.ts";
-import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import type * as THREE from "three";
+import type { SceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 
 /** 双臂标识 */
@@ -38,6 +38,27 @@ const DEFAULT_MSAA_SAMPLES = 4;
 
 /** 默认每臂采样帧数（交替，故墙钟约 2×N 帧） */
 const DEFAULT_FRAMES_PER_ARM = 60;
+
+/** [ADR-270-d1] 探针所需 infra 现场（组合根 shared-infra 注册的访问器返回形状；全 null = 无活跃会话） */
+export interface ProbeInfraSource {
+  scene: THREE.Scene | null;
+  camera: THREE.PerspectiveCamera | null;
+  renderer: THREE.WebGLRenderer | null;
+}
+
+/** [ADR-270-d1] 注入 infra 现场访问器（shared-infra 模块装载时注册；
+ *  斩 probe → adapters 运行时反向边，ADR-168 注入范式；未注册 = 环境不具备） */
+let _infraSource: (() => ProbeInfraSource) | null = null;
+export function setProbeInfraSource(src: (() => ProbeInfraSource) | null): void {
+  _infraSource = src;
+}
+
+/** [ADR-270-d1] 注入 cap 注册表（组合根 buildSharedInfra 时机；斩 probe → caps
+ *  运行时反向边；typed getById 保 K 收窄，零 cast） */
+let _capRegistry: SceneCapabilityRegistry | null = null;
+export function setProbeCapRegistry(reg: SceneCapabilityRegistry | null): void {
+  _capRegistry = reg;
+}
 /** 预热帧数（管线/着色器/JIT 稳定前不计入） */
 const DEFAULT_WARMUP = 10;
 /** 同时在飞的 GPU query 上限（防无限堆积；超出则该帧不采 GPU 时间） */
@@ -262,17 +283,19 @@ export function buildNote(report: Omit<PostprocProbeReport, "note">): string {
 export async function runPostprocCostProbe(
   opts: PostprocProbeOptions = {},
 ): Promise<PostprocProbeReport | null> {
-  const scene = sceneInfraHost.scene;
-  const camera = sceneInfraHost.camera;
-  const renderer = sceneInfraHost.renderer;
+  // [ADR-270-d1] infra 现场经组合根注册（shared-infra 访问器 live 读 host 字段；未注册 = 环境不具备）
+  const src = _infraSource ? _infraSource() : null;
+  const scene = src?.scene;
+  const camera = src?.camera;
+  const renderer = src?.renderer;
   if (!scene || !camera || !renderer) return null;
 
   const framesPerArm = Math.max(1, Math.floor(opts.framesPerArm ?? DEFAULT_FRAMES_PER_ARM));
   const warmup = Math.max(0, Math.floor(opts.warmup ?? DEFAULT_WARMUP));
   const dt = opts.dt ?? 1 / 60;
 
-  const postProc = sceneCapabilityRegistry.getById("postprocessing");
-  const lightCap = sceneCapabilityRegistry.getById("light") ?? null;
+  const postProc = _capRegistry?.getById("postprocessing");
+  const lightCap = _capRegistry?.getById("light") ?? null;
   const ppEnabled = typeof postProc?.isEnabled === "function" ? postProc.isEnabled() : false;
 
   const canvas = renderer.domElement;

@@ -677,6 +677,7 @@ auto_fields:
     - PROBE_ENUM_VALUES
     - ProbeArm
     - ProbeEnumValue
+    - ProbeInfraSource
     - RangedKey
     - RawYsmAuthor
     - rcMasterToggleNode
@@ -813,8 +814,13 @@ auto_fields:
     - setOverlayStyleTarget
     - setPerfPreset
     - setPreviewUiMode
+    - setProbeCapRegistry
+    - setProbeInfraSource
     - setSceneCapabilityLookup
+    - setSceneCapRegistry
+    - setSceneCapsProvider
     - setStateValue
+    - setStatsMenuMerger
     - setVrmMaterialOpacity
     - setVrmMaterialVisible
     - ShadowCapability
@@ -855,6 +861,7 @@ auto_fields:
     - Stage6Result
     - startGlobalRenderLoop
     - STATS_PANEL_ID
+    - StatsMenuMerger
     - stopIfIdle
     - stripYsgpTextHeader
     - SubModel

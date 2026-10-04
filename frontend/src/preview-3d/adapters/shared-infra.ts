@@ -18,8 +18,13 @@ import type { SceneCapability } from "@/preview-3d/caps/scene-capability.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
 import type { SkyCapability } from "@/preview-3d/caps/sky-capability.ts";
+import {
+  setProbeCapRegistry,
+  setProbeInfraSource,
+} from "@/preview-3d/infra/postproc-cost-probe.ts";
 import type { PostprocessingLike } from "@/preview-3d/infra/postprocessing.ts";
 import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
+import { setSceneCapRegistry, setSceneCapsProvider } from "@/preview-3d/infra/render-host.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import { type ModelType, toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { applyPerfPreset, getPerfPreset } from "@/preview-3d/state/perf-presets.ts";
@@ -218,6 +223,15 @@ export function getSceneCaps(): readonly SceneCapability[] {
   return sceneInfraHost.getCaps();
 }
 
+// [ADR-270-d1] 组合根注入（ADR-168 范式）：模块装载即注册 rAF 循环 caps 提供器 + 探针 infra 现场访问器
+// （闭包捕获 host 引用，live 读取语义不变；斩 render-host / postproc-cost-probe → shared-infra 运行时反向边）
+setSceneCapsProvider(getSceneCaps);
+setProbeInfraSource(() => ({
+  scene: sceneInfraHost.scene,
+  camera: sceneInfraHost.camera,
+  renderer: sceneInfraHost.renderer,
+}));
+
 /** buildSharedInfra 返回的 shared 基础设施 + 程序化能力引用（mount3D 赋值给会话局部变量）。
  *  ⚠️ 只带「装配现场之外仍有消费者」的引用（2026-09-22 死字段清算：skyCap/groundCap/waterCap/
  *  fogCap/reflectorCap/postProcCap 六枚只写不读字段已删）——cap 间协作的合法通道是构造注入的
@@ -297,6 +311,10 @@ export function buildSharedInfra(
   const caps = sceneCapabilityRegistry.createAll({ scene, renderer, camera });
   // [ADR-168] 状态层查询器注入（registry 单例长命，instances 由 createAll/dispose 管理——行为与状态层直持同一引用等价）
   setSceneCapabilityLookup(sceneCapabilityRegistry);
+  // [ADR-270-d1] cap 注册表注入（render-host / postproc-cost-probe 经 typed registry 消费；
+  //  与状态层 lookup 同时机——registry 单例长命，createAll 只换 instances）
+  setSceneCapRegistry(sceneCapabilityRegistry);
+  setProbeCapRegistry(sceneCapabilityRegistry);
   sceneInfraHost.caps = caps;
   const skyCap = sceneCapabilityRegistry.getById("sky") ?? null;
   const lightCap = sceneCapabilityRegistry.getById("light") ?? null;

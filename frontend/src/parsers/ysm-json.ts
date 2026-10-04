@@ -22,6 +22,35 @@ const vec2 = (v: unknown, def: [number, number]): number[] =>
     ? (v as number[])
     : [...def];
 
+/**
+ * 规范化 ysm.json `files.player.model` / `files.player.texture` 声明为**路径数组**。
+ *
+ * ysm.json 有三种合法形态（对齐 Go `ysm/extracted.go|sortMapModelNames`）：
+ *  - 数组（主流）：`["models/main.json", ...]` 或 `[{"path":"..."},{"uv":"..."}]`
+ *  - 字符串：单模型快捷写法
+ *  - **对象映射**（open-source wine_fox 官方格式）：`{"main":"models/main.json","arm":"..."}`
+ *
+ * 旧实现把对象映射整体包成 `[{main:..., arm:...}]`，下游 `handleYsmJsonSpec` /
+ * `mergeBedrockFromManifest` 取 `mf.path` 得到 undefined → 全 continue → 0 骨骼、
+ * 无 `geometryRaw` → `fetchSpecViaWasmFallback` 返回 null → web 3D spec 恒空。
+ * 此处把对象映射拍平成**值数组**：`main` 键强制首位，其余按键名稳定排序
+ * （消除 Go map 遍历随机性，与 Go `sortMapModelNames` 同构）。
+ */
+function normalizePlayerFiles(decl: unknown): unknown[] {
+  // 数组形态浅拷贝：调用方会对 texFiles 做 default_texture 置首的 splice，
+  // 不能改写 JSON.parse 的原始对象（原实现 texFiles 分支即拷贝，此处统一）。
+  if (Array.isArray(decl)) return [...decl];
+  if (!decl || typeof decl === "string") return decl ? [decl] : [];
+  if (typeof decl === "object") {
+    const entries = Object.entries(decl as Record<string, unknown>);
+    if (entries.length === 0) return [];
+    const main = entries.find(([k]) => k === "main");
+    const others = entries.filter(([k]) => k !== "main").sort((a, b) => a[0].localeCompare(b[0]));
+    return [...(main ? [main[1]] : []), ...others.map(([, v]) => v)];
+  }
+  return [];
+}
+
 /** 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） */
 export function parseYsmJsonDirect(json: unknown): DecodedYsm | null {
   const obj = json as {
@@ -41,16 +70,8 @@ export function parseYsmJsonDirect(json: unknown): DecodedYsm | null {
     // 从 files.player.model 提取 geometry 信息
     const playerFiles = obj.files?.player;
     if (!playerFiles) return null;
-    const modelFiles = Array.isArray(playerFiles.model)
-      ? playerFiles.model
-      : playerFiles.model
-        ? [playerFiles.model]
-        : [];
-    const texFiles = Array.isArray(playerFiles.texture)
-      ? [...playerFiles.texture]
-      : playerFiles.texture
-        ? [playerFiles.texture]
-        : [];
+    const modelFiles = normalizePlayerFiles(playerFiles.model);
+    const texFiles = normalizePlayerFiles(playerFiles.texture);
     // R1 契约对齐（2026-08-10）：default_texture 置首（与 Go 端 orderTexByYSM / wasm.ts
     // orderedTexKeys 一致），防「声明序 ≠ 包内文件序」的模型 main 组件贴错纹理
     {

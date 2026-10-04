@@ -131,6 +131,9 @@ YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-p
 - WASM 加载状态是模块级单例（wasmModule/loading/waiters），不得挂额外 window 全局
 - **WASM 生命周期管理**（审计发现）：`decodeYsmFile` 回退路径中，MEMFS 输出文件读取后必须 `FS.unlink` 清理（`wipeDir`，已落地）；`decodeYsmFileFromMemory` 内存直解路径的 /output **原先**只在下一次调用前清理（P3 观察：成功后未立即 wipe，产物常驻至下次解码）。✅ **2026-09 已修复**：两条路径统一为「**读取后立即 wipe**」——`ysm-parser.ts|decodeYsmFileFromMemory` 与 worker 侧 `ysm-worker-loader.ts` 同病同修（含 `!success` 早退分支）。安全性依据：`FS.readFile` 产出的 `data` 持有自己的 `ArrayBuffer`，`unlink` 只摘目录项、数据仍有效（callMain 路径既已采用同一模式）。WASM 为 **app 级常驻单例**（initYSMParser 懒加载后生命周期等同应用，与 ADR-039 §2.2 常驻单例豁免同类），**无销毁场景**——曾提供 `destroyYSMParser()` 但 `_free(0)` 无法真正释放 HEAP，且销毁后重新 init 有加载成本，已移除（2026-08-06，knip 死代码基线）。⚠️ 注意 **WASM 线性内存只增不减**（`_emscripten_resize_heap` + `wasmMemory.grow`，上限 2GB）：HEAP 高位常驻**整个应用生命周期**，对 4GB 设备比瞬时峰值更危险。若未来出现真实长运行内存压力场景，应实现真正的 Emscripten 实例销毁（`Module.destroy`/instance 释放）而非 `_free(0)`。
 
+- **YSMParser WASM 只认 YSGP 魔数（`YSGP` V1/V2/V3）**：`YSMParserFactory::Create` 对非 YSGP 字节抛 `ParserUnSupportVersionException`，故**明文 ZIP 包**（开源 wine_fox 解压目录被 zip 回 `.ysm`/`.zip`）四条解码策略必全 miss。Go 端 `.zip` 走 `ParseComponentsFromZip` 兜住，但 web/Android 的 `decodeYsmViaWasm` 曾只把 `.json` 分派给 JSON 通道——2026-10-04 已补 `isPlainZipMagic` → `tryZipDispatch`：识别 `PK\x03\x04` 文件头，解出 `ysm.json` 走 JSON 分派（zip 内兄弟文件经 zip 表 `ReadBytes` 读取）。纯前端修复，不动 Go/Android/desktop。
+- **`files.player.model` / `.texture` 的对象映射形态**（`{"main":"models/main.json","arm":"..."}`，open-source wine_fox 官方格式）曾被包成 `[{main,arm}]`，下游取 `mf.path` 得 undefined → 0 骨骼、无 `geometryRaw` → web 3D spec 恒空。`parseYsmJsonDirect` 现经 `normalizePlayerFiles` 拍平为路径数组（`main` 强制首位、其余按键名稳定排序，与 Go `sortMapModelNames` 同构）。
+
 ## 相关
 
 - [go_ysm_parser](./go-ysm-parser.md) — Go 端兜底解析

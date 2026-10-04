@@ -3,6 +3,7 @@
 
 import { getApp } from "@/backend/app.ts";
 import { readModelBytes } from "@/backend/read-model-bytes.ts";
+import { extractZip } from "@/parsers/extract.ts";
 import { warnLargeModelIfNeeded } from "@/preview-3d/infra/large-model.ts";
 import { parseBedrockAnimationJSON } from "@/utils/animation/animation.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
@@ -230,6 +231,67 @@ async function handleYsmJsonSpec(
   // 失败路径：释放未赋给 result.geometry 的 blob URL
   for (const u of pendingBlobUrls) URL.revokeObjectURL(u);
   return result;
+}
+
+/** ZIP 本地文件头魔数（PK\x03\x04），与 YSGP "YSGP" 区分明文包 */
+function isPlainZipMagic(bytes: Uint8Array): boolean {
+  return (
+    bytes.length >= 4 &&
+    bytes[0] === 0x50 &&
+    bytes[1] === 0x4b &&
+    bytes[2] === 0x03 &&
+    bytes[3] === 0x04
+  );
+}
+
+/** 按相对路径在 zip entries 中查字节（大小写/反斜杠折叠，对齐 web-fs-bedrock findEntryByRel） */
+function findZipEntryByRel(entries: Record<string, Uint8Array>, rel: string): Uint8Array | null {
+  const norm = rel
+    .replace(/\\/g, "/")
+    .replace(/^\.?\//, "")
+    .toLowerCase();
+  for (const key of Object.keys(entries)) {
+    if (key.replace(/\\/g, "/").toLowerCase() === norm) return entries[key];
+  }
+  return null;
+}
+
+/**
+ * 明文 ZIP（开源 wine_fox 解压目录被 zip 回 .ysm/.zip）→ 解出 ysm.json 后走 JSON 分派。
+ * 复用 tryJsonDispatch 的合并逻辑，只把 ctx.ReadBytes 换成「读 zip entries」：
+ * 解压目录形式下兄弟文件在 zip 内而非 IDB，直接读 zip 表即可。
+ */
+async function tryZipDispatch(ctx: InflightCtx, bytes: Uint8Array): Promise<DecodedYsm | null> {
+  let entries: Record<string, Uint8Array>;
+  try {
+    ({ entries } = extractZip(bytes));
+  } catch (e) {
+    devLog(`[YSM] 明文 ZIP 解压失败: ${safeErrorMessage(e)}`);
+    return null;
+  }
+  // 兼容两种打包：扁平（ysm.json 在根）与「文件夹 zip 回」（01_taisho_maid/ysm.json）
+  const ysmKey = Object.keys(entries).find((k) => {
+    const norm = k.replace(/\\/g, "/").toLowerCase();
+    return norm === "ysm.json" || norm.endsWith("/ysm.json");
+  });
+  if (!ysmKey) {
+    devLog("[YSM] 明文 ZIP 无 ysm.json，跳过（非 YSM 容器）");
+    return null;
+  }
+  // 兄弟文件按 ysm.json 所在目录前缀解析（扁平打包时前缀为空）
+  const prefix = ysmKey.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
+  const zipCtx: InflightCtx = {
+    ...ctx,
+    baseDir: "",
+    ReadBytes: async (p) => {
+      const norm = p.replace(/\\/g, "/").replace(/^\.?\//, "");
+      return (
+        findZipEntryByRel(entries, norm) ??
+        (prefix ? findZipEntryByRel(entries, `${prefix}/${norm}`) : null)
+      );
+    },
+  };
+  return tryJsonDispatch(zipCtx, entries[ysmKey]);
 }
 
 async function tryJsonDispatch(ctx: InflightCtx, bytes: Uint8Array): Promise<DecodedYsm | null> {
@@ -734,6 +796,15 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
   try {
     if (/\.json$/i.test(modelPath)) {
       return await tryJsonDispatch(ctx, bytes);
+    }
+    // 明文 ZIP（非 YSGP 魔数）→ 走解压 → ysm.json → JSON 分派。
+    // YSMParser WASM 只认 YSGP V1/V2/V3（magic "YSGP"），开源 wine_fox 等
+    // 解压目录被 zip 回 .ysm/.zip 时无该魔数，四条策略全 miss → geometryRaw 缺失
+    // → web 3D spec 恒空。此处补上 web/Android 缺的「plain zip」通道，
+    // 与 Go 端 geometry.ParseComponentsFromZip（.zip ext）对齐。
+    if (isPlainZipMagic(bytes)) {
+      const zipped = await tryZipDispatch(ctx, bytes);
+      if (zipped) return zipped;
     }
   } catch (e) {
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);

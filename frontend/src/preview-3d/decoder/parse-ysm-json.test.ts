@@ -51,6 +51,23 @@ describe("parseYsmJsonDirect — ysm.json 格式（spec/files/metadata）", () =
     expect(meta.texFiles).toEqual(["textures/t.png"]);
   });
 
+  it("对象映射 manifest（{main,arm}）拍平为路径数组，main 首位（对齐 Go sortMapModelNames）", () => {
+    const r = parseYsmJsonDirect({
+      spec: {},
+      files: {
+        player: {
+          model: { main: "models/main.json", arm: "models/arm.json" },
+          texture: { main: "textures/main.png" },
+        },
+      },
+    });
+    expect(r).not.toBeNull();
+    const meta = r!.geometry!._ysmMeta as YsmMeta;
+    // 旧实现包成 [{main,arm}]，下游取 mf.path 得 undefined → 0 骨骼 → 3D spec 恒空
+    expect(meta.modelFiles).toEqual(["models/main.json", "models/arm.json"]);
+    expect(meta.texFiles).toEqual(["textures/main.png"]);
+  });
+
   it("缺 player 文件信息返回 null", () => {
     expect(parseYsmJsonDirect({ spec: {}, files: {} })).toBeNull();
   });

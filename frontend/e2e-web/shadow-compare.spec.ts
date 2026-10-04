@@ -2,8 +2,9 @@
 // 背景：`shadowType` 默认 hard→soft（地面 P1 收口），单测锁定 PCFSoftShadowMap。
 // 本 spec 补「真 3D 会话」UI 实证：openEmpty3DFullscreen 起空场景 3D → 菜单 Scene→Shadow
 // 面板读 shadow-soft toggle（默认应为开/soft）→ 点击切 hard，单变量对照 + 截图。
-// 注：web 模式无 Go 桥，加载真实 fixture 模型 3D 常失败（preview.loadFailed: 3D spec），
-// 故走空场景路径——阴影视觉受限于无模型投影对象，toggle 默认态实证不受限。
+// 注：plain-zip fixture 现由 wasm-decode 明文 ZIP 通道（tryZipDispatch）支持，模型可进 3D；
+// 但阴影视觉对比仍需模型 + 投影对象（web 模式 fixture 贴图上传仍是待验点），
+// 故本 spec 用空场景稳定实证 toggle 默认态（阴影落地判据），视觉差异建议桌面实机看。
 //
 // 定位纪律（ADR-133）：统一 data-testid（② 通道）+ .mpc-overlay class（②）+ evaluate
 // 穿透 shadow DOM 遍历（不写 nth()/id/文本字面量，规避 ①③④ 判违规）。

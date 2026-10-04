@@ -805,7 +805,7 @@ export class GroundCapability implements SceneCapability {
           boolean: (v) => this.setVisible(v, RESTORE_SOURCE),
         },
         groundGridVisible: {
-          // 同 groundVisible；旧存档缺该键 → 保持 schema 默认 true
+          // 同 groundVisible；旧存档缺该键 → 保持 schema 默认 false（2026-10-04 默认翻转）
           boolean: (v) => this.setGridVisible(v, RESTORE_SOURCE),
         },
         groundSourceKind: oneOf(GROUND_SOURCE_KINDS, (v) =>

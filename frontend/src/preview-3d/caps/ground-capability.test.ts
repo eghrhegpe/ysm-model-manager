@@ -35,7 +35,7 @@ function setMode(cap: GroundCapability, mode: GroundSurfaceMode): void {
 describe("GroundCapability", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("apply 挂入场景（GridHelper + 名称 ysm-ground），默认可见", () => {
+  it("apply 挂入场景（GridHelper + 名称 ysm-ground），默认不亮（2026-10-04 默认翻转）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     expect(cap.getVisible()).toBe(true);
@@ -43,7 +43,8 @@ describe("GroundCapability", () => {
     const grid = scene.getObjectByName("ysm-ground") as THREE.GridHelper | undefined;
     expect(grid).toBeDefined();
     expect(grid).toBeInstanceOf(THREE.GridHelper);
-    expect(grid!.visible).toBe(true);
+    // 网格对象恒挂场景（可被菜单开关打开），但 groundGridVisible 默认 false → 不可见
+    expect(grid!.visible).toBe(false);
   });
 
   it("setVisible 切换 + getVisible 同步", () => {
@@ -1124,12 +1125,12 @@ describe("GroundCapability — 参考网格独立开关（groundGridVisible）",
     expect(cap.getGridVisible()).toBe(false);
   });
 
-  it("默认开启：参考网格可见（与历史行为一致，开关只增不减）", () => {
+  it("默认关闭（2026-10-04 翻转）：开箱参考网格不亮——实体承接面（默认 solid）已承担 y=0 锚点；开关只增不减，手动可开", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
-    expect(cap.getGridVisible()).toBe(true);
-    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(true);
+    expect(cap.getGridVisible()).toBe(false);
+    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(false);
   });
 
   it("setGridVisible(false) 只隐参考网格：表面材质层与叠加层不受影响", () => {
@@ -1190,7 +1191,7 @@ describe("GroundCapability — 参考网格独立开关（groundGridVisible）",
     expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(false);
   });
 
-  it("旧存档缺 groundGridVisible → 回退默认 true（保守兜底）", () => {
+  it("旧存档缺 groundGridVisible → 回退默认 false（2026-10 翻转后缺键随新默认，旧档也进默认关画面）", () => {
     const scene = new THREE.Scene();
     localStorage.setItem(
       "ysm-scene-cap-ground",
@@ -1199,8 +1200,8 @@ describe("GroundCapability — 参考网格独立开关（groundGridVisible）",
     const cap = new GroundCapability({ scene });
     cap.loadState();
     cap.apply();
-    expect(cap.getGridVisible()).toBe(true);
-    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(true);
+    expect(cap.getGridVisible()).toBe(false);
+    expect((scene.getObjectByName("ysm-ground") as THREE.Object3D).visible).toBe(false);
   });
 });
 
@@ -1267,7 +1268,8 @@ describe("GroundCapability — 恢复路径来源纪律（锐评 F-2）", () => 
     // 每键一个「≠ schema 默认」的偏离值（合法域内）——新键未列入即 fail 提示登记
     const DEVIATION: Record<string, unknown> = {
       groundVisible: false,
-      groundGridVisible: false,
+      // 2026-10-04 默认翻转后偏离值须 ≠ 新默认（false 已等于默认，自失能被锁点名）
+      groundGridVisible: true,
       groundSourceKind: "canvas",
       groundCanvasStyle: "marble",
       groundMaterialPreset: "custom",

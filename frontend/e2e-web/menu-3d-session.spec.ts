@@ -132,7 +132,7 @@ test.describe("真实 3D 会话内的菜单", () => {
     expect(state.controls, "真 3D 会话内后处理面板应渲染出 cap 控件").toBeGreaterThan(0);
   });
 
-  test("地面自证：默认 sourceKind=solid → 网格可见、实体承接面默认可见（开箱即认得出地面）", async ({
+  test("地面自证：默认 sourceKind=solid → 实体承接面默认可见、参考网格默认不亮（2026-10-04 翻转，开箱即认得出地面）", async ({
     page,
   }) => {
     test.slow(); // 会话启动 + 菜单下钻 + 两次截图，超 20s 默认上限（同 spec 前两用例贴近上限）
@@ -152,10 +152,10 @@ test.describe("真实 3D 会话内的菜单", () => {
     expect(probe, "地面探针应返回结构化状态").toMatchObject({
       sourceKind: "solid", // 默认开箱即有实体承接面（2026-10 收口）
       surfaceVisible: true, // 默认实体承接面可见 —— 地面一眼认得出
-      gridVisible: true, // 参考网格默认可见 ——「地面在哪」的锚点
+      gridVisible: false, // 2026-10-04 默认翻转：承接面已承担 y=0 锚点，参考网格默认不亮（菜单可手动开）
     });
 
-    // 截图回看：默认场景即有实体承接面（灰棕）+ 网格线，与探针快照一致。
+    // 截图回看：默认场景有实体承接面（灰棕）、无参考网格线，与探针快照一致。
     await page.screenshot({ path: "e2e-web/_shots/3d-ground-default.png" });
 
     // ── 关闭路径：经真实菜单把地面来源切到 none → 探针应翻转 surfaceVisible=false ──
@@ -177,8 +177,8 @@ test.describe("真实 3D 会话内的菜单", () => {
     );
     expect(after, "切换 none 后探针应仍可读").toMatchObject({
       sourceKind: "none",
-      surfaceVisible: false, // 实体承接面已关 —— 回到「只留网格线」纯净态
-      gridVisible: true,
+      surfaceVisible: false, // 实体承接面已关 —— 回到无表面层的纯净态
+      gridVisible: false, // 参考网格默认关（本用例未动过菜单开关），none 态 = 无表面亦无网格线
     });
     await page.screenshot({ path: "e2e-web/_shots/3d-ground-none.png" });
   });

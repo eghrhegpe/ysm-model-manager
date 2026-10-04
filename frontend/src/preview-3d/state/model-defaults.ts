@@ -77,7 +77,7 @@ const DEFAULT_MODEL_STATE: Partial<EnvState> = {
   // 灯光参数唯一来源 = envState schema 默认值（DEFAULT_LIGHT_PARAMS）+ 用户手动修改。
   // 曾经的 `lightVolumetricEnabled: false`（源自 LIGHT_PRESETS.default）与 schema 默认同值，
   // 属纯 no-op，却会在选中「默认」时夺取手动所有权并永久冻结后续模型预设——已删。
-  // --- shadow：[ADR-284] default 的 shadowType:"hard" == schema 默认，属 no-op，已删 ---
+  // --- shadow：[ADR-284] default 不写 shadowType（原 hard 或现 soft == schema 默认，均属 no-op，已删） ---
   // --- reflector (来自 REFLECTOR_PRESETS.default = 空) ---
   // --- postprocessing (来自 POSTPROC_PRESETS.default = 空) ---
   // [ADR-250] 原 POSTPROC_PRESETS 表已删除；per-type「默认是否开后处理」改写 `ppEnabled`

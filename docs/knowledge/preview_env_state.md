@@ -223,6 +223,7 @@ invariant_anchors:
   - **sky 解耦**：`MODEL_DEFAULTS` 摘除全部 sky 散射段（turbidity/rayleigh/mie/mieDir/exposure/sunIntensityScale/sunDiscScale）——大气属天空盒，与「模型是 VRM 还是 MMD」无关（同灯光 1.3 论证）。`skyForceEnv` 不在挑参表内（它不参与模型类别选择）；**注意它不是死字段**——真实读点在 sky callback 的 `maybeRegenerateEnvironment` 阈值门控与云量重建分支（详见「核心职责」ADR-292 D8）。重建脉冲真实来源在 cap 内，摘表不扰动 IBL 重建。
   - **reflector**：删 opacity/color（纯噪声 A）+ 撞默认 1024 的 resolution（B）；保留 size（场景尺度）与降精度 512。
   - **shadow**：删 `shadowType:"hard"`（== schema 默认，B）；保留 soft（PBR 角色语义）。
+  - **2026-10 P1 收口（反转上文结论）**：`env-state-schema.ts` 的 `shadowType` 默认已由 `hard` 改为 `soft`（PCFSoftShadowMap 接触阴影更柔、模型接地感更自然）。原「hard == schema 默认属 no-op」随之反转——`MODEL_DEFAULTS` 仍不含 `shadowType`（各类别继承 schema 默认 soft），`cap-configs.test.ts` / `shadow-capability.test.ts` 的默认断言与 `model-defaults.ts` 注释已同步。
   - **保留辩护**：fog（near/far/density 随场景体量）、envPreset（离散场景选择 studio/forest/sky）——逐类差异是量纲/语义非噪声，理由记入 ADR-284，消除「看着差不多」怀疑空间。
   - **防回退闸**：`model-defaults.test.ts` 断言任何类别不得含 `sky` 前缀键 / `reflectorOpacity` / `reflectorColor`；`shadowType` 若存在只能为 `soft`。
 - **[ADR-246] 未落地项——「雾中体积光」**：真正的 raymarching 体积光（`VolumetricLightingPass`，ADR-084 末节「后续立项，未开始」）**仍未实现**；ADR-246 已裁定若要做须以**新增 pass** 方式引入，不得复活「切换渲染器」开关。注意与两条已落地能力区分：`FogCapability`（`scene.fog` 线性/指数雾，非体积光）、ADR-107 天空体积光束 god rays（非雾中散射）。

@@ -419,7 +419,10 @@ export const ENV_STATE_SCHEMA = {
   shadowType: {
     type: "enum",
     values: ["soft", "hard"] as const,
-    default: "hard",
+    // 默认 soft（2026-10 地面 P1 收口）：PCFSoftShadowMap 接触阴影更柔和，
+    // 模型「接地感」更自然（hard 硬边在 2048 map 下易显浮起）；各模型类别本就不含
+    // shadowType（原 hard==schema 默认属 no-op），改后继承 soft，无字段清理。
+    default: "soft",
     group: "shadow",
   },
   shadowMapSize: { type: "number", default: 2048, group: "shadow" },

@@ -129,7 +129,7 @@ describe("ShadowCapability — 构造与默认值", () => {
     const cap = new ShadowCapability({ scene, renderer });
     expect(cap.isEnabled()).toBe(true);
     expect(cap.getMapSize()).toBe(2048);
-    expect(cap.isSoft()).toBe(false);
+    expect(cap.isSoft()).toBe(true); // 默认软阴影（2026-10 P1 收口）
     expect(cap.getBias()).toBe(-0.0005);
     expect(cap.getNormalBias()).toBe(0.02);
     expect(cap.getCameraSize()).toBe(15);
@@ -155,11 +155,11 @@ describe("ShadowCapability — 构造与默认值", () => {
 describe("ShadowCapability — apply 管线（真实灯对象）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("setEnabled(true) 后 shadowMap 开启、hard → BasicShadowMap", () => {
+  it("setEnabled(true) 后 shadowMap 开启、默认 soft → PCFSoftShadowMap", () => {
     const { renderer, cap } = setup();
     cap.setEnabled(true);
     expect(renderer.shadowMap.enabled).toBe(true);
-    expect(renderer.shadowMap.type).toBe(THREE.BasicShadowMap);
+    expect(renderer.shadowMap.type).toBe(THREE.PCFSoftShadowMap);
     expect(renderer.shadowMap.needsUpdate).toBe(true);
   });
 
@@ -418,9 +418,9 @@ describe("ShadowCapability — applyModelPreset", () => {
   it("未知 adapterId 经 toModelType 收窄落回 default 预设", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     // 运行时脏 adapter.id 的合法入口是 toModelType（shared-infra 已改用），
-    // 未知值收窄为 "default" → hard shadow
+    // 未知值收窄为 "default" → 继承 schema 默认 soft（2026-10 P1 收口）
     cap.applyModelPreset(toModelType("unknown-type"));
-    expect(cap.isSoft()).toBe(false);
+    expect(cap.isSoft()).toBe(true);
     expect(cap.isEnabled()).toBe(true);
   });
 
@@ -668,11 +668,11 @@ describe("ShadowCapability — 持久化", () => {
     expect(cap.getCameraSize()).toBe(envState.shadowCameraSize);
   });
 
-  it("loadState 非法 type 且无 soft 字段保持默认 hard", () => {
+  it("loadState 非法 type 且无 soft 字段保持默认 soft", () => {
     localStorage.setItem("ysm-scene-cap-shadow", JSON.stringify({ type: "blur", enabled: true }));
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.loadState();
-    expect(cap.isSoft()).toBe(false);
+    expect(cap.isSoft()).toBe(true);
     expect(cap.isEnabled()).toBe(true);
   });
 
@@ -825,7 +825,7 @@ describe("ShadowCapability — envState 默认值完整", () => {
 
   it("默认值字段齐全", () => {
     expect(envState.shadowEnabled).toBe(true);
-    expect(envState.shadowType).toBe("hard");
+    expect(envState.shadowType).toBe("soft"); // 2026-10 地面 P1 收口：默认软阴影
     expect(envState.shadowMapSize).toBe(2048);
     expect(typeof envState.shadowBias).toBe("number");
     expect(typeof envState.shadowNormalBias).toBe("number");

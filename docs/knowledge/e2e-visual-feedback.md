@@ -12,6 +12,7 @@ auto_fields:
     - findLocalChromium
     - fullExeRels
     - localChromiumUse
+    - pinnedChromiumOrThrow
     - registryFacts
     - shellExeRels
 tests:

@@ -20,7 +20,7 @@ describe("envState 默认值结构完整性", () => {
     const defaults = deriveDefaultEnvState();
     expect(defaults.skyTimeOfDay).toBe(9);
     expect(defaults.fogEnabled).toBe(false);
-    expect(defaults.shadowType).toBe("hard");
+    expect(defaults.shadowType).toBe("soft"); // 2026-10 地面 P1 收口：默认软阴影
   });
 });
 

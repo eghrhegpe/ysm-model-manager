@@ -46,7 +46,7 @@ describe("ADR-282 灯光与模型类别解耦", () => {
         MODEL_DEFAULTS[mt].reflectorColor,
         `类别 ${mt} 不应有 reflectorColor（噪声 A）`,
       ).toBeUndefined();
-      // shadowType 若携带只能是有软阴影语义的 soft；hard == schema 默认属 no-op，须清除。
+      // shadowType 若携带只能是有软阴影语义的 soft；soft == schema 默认（2026-10 P1 收口）属 no-op。
       if (MODEL_DEFAULTS[mt].shadowType !== undefined) {
         expect(MODEL_DEFAULTS[mt].shadowType, `类别 ${mt} 的 shadowType 只能是 soft`).toBe("soft");
       }

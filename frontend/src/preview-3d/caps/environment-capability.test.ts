@@ -254,6 +254,25 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
     expect(scene.environment).not.toBeNull();
   });
 
+  it("[X-3] setEnabled 通知 light 重算 ambient 让位（判据换源后必需，与 sky 先例同法）", () => {
+    const refreshAmbientFromSky = vi.fn();
+    const cap = new EnvironmentCapability({
+      scene: new THREE.Scene(),
+      renderer: makeFakeRenderer(),
+      // [锐评 X-3] IBL 在场与否由本 cap 决定，而 light 的 ambient 让位系数依赖它——
+      // 判据从 sky 退役开关改到「env 在场启用」后，这条通知是防漏刷的必需项。
+      caps: {
+        getById: (id: string) => (id === "light" ? { refreshAmbientFromSky } : undefined),
+      } as never,
+    });
+    cap.apply();
+    cap.setEnabled(false);
+    cap.setEnabled(true);
+    expect(refreshAmbientFromSky, "env 开关翻转必须通知 light（否则 ambient 让位漏刷）").toHaveBeenCalledTimes(
+      2,
+    );
+  });
+
   it("构造前已有 environment 时，禁用还原为原引用", () => {
     const scene = new THREE.Scene();
     const original = new THREE.Texture();

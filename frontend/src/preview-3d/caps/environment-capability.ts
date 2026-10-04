@@ -580,6 +580,10 @@ export class EnvironmentCapability implements SceneCapability {
   setEnabled(v: boolean): void {
     this.enabled = v;
     this.buildEnvironment();
+    // [锐评 X-3 2026-10-04] IBL 是否在场直接决定 light 的 ambient 让位系数（×0.5）——env 开关翻转
+    // 必须通知 light 重算（与 `sky.setEnvironmentEnabled` 的跨 cap 通知先例同法）。
+    // 判据已从已退役的 sky 开关改为「env 在场启用」，若不同步补这条通知，翻转 env 就会漏刷 ambient。
+    getTypedCap(this.caps, "light")?.refreshAmbientFromSky?.();
   }
 
   isEnabled(): boolean {

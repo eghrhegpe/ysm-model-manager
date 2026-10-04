@@ -116,7 +116,9 @@ export class ReflectorCapability implements SceneCapability {
   private createReflectorMesh(): Reflector | null {
     const geometry = new THREE.PlaneGeometry(envState.reflectorSize, envState.reflectorSize);
     const shader = { ...REFLECTOR_SHADER };
-    this.injectOpacityIntoShader({ shader });
+    // [锐评 X-8 2026-10-04] 接收注入结果：锚点失配（three 升级改名）时注入内已 reportPatchIssue
+    // 告警，此处**不得再写 uOpacity**——否则会造出「参数值已设、渲染无 effect」的静默假象。
+    const opacityInjected = this.injectOpacityIntoShader({ shader });
 
     // ⚠️ 官方 Reflector（非 ReflectorForSSRPass）。若将来要把本平面接进 SSRPass 的
     // groundReflector，**不能**直接传本实例——SSRPass 调的是 `doRender()`，本类没有该方法
@@ -137,7 +139,7 @@ export class ReflectorCapability implements SceneCapability {
 
     const mat = reflector.material as THREE.ShaderMaterial;
     mat.transparent = true;
-    mat.uniforms.uOpacity = { value: envState.reflectorOpacity };
+    if (opacityInjected) mat.uniforms.uOpacity = { value: envState.reflectorOpacity };
 
     return reflector;
   }

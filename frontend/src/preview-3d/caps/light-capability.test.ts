@@ -391,21 +391,37 @@ describe("LightCapability — 灯光与模型类别解耦（ADR-282）", () => {
     expect(envState.lightKeyIntensity).toBe(DEFAULT_LIGHT_PARAMS.key.intensity);
   });
 
-  it("PMREM 环境光开启时 ambient 自动衰减 ×0.5（双间接光协调，caps 查询器经构造注入）", () => {
+  it("[X-3] IBL 真在场（env cap 启用）时 ambient 自动衰减 ×0.5——判据 = 真供图者，非 sky 退役开关", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({
       scene,
       renderer: makeFakeRenderer(),
-      // fake sky cap 经注入查询器提供（组合根 createAll 同款通道）——不再 spy 全局单例
+      // [锐评 X-3 2026-10-04] 判据已从「sky 的 isEnvironmentEnabled（sky 自宣退役，只门控自持兜底路）」
+      // 换成「env cap 在场且启用」——env 才是 scene.environment 的唯一写者（ADR-292 D1）。
       caps: {
         getById: (id: string) =>
-          id === "sky" ? ({ isEnvironmentEnabled: () => true } as unknown as SceneCapability) : undefined,
+          id === "environment" ? ({ isEnabled: () => true } as unknown as SceneCapability) : undefined,
       },
     });
     // 原经 applyModelPreset("ysm") 顺带触发；该入口已据 ADR-282 退役，改为直接触发重算
     cap.refreshAmbientFromSky();
     const ambient = (cap as unknown as { ambientLight: THREE.AmbientLight }).ambientLight;
     expect(ambient.intensity).toBeCloseTo(cap.getParams().ambient.intensity * 0.5, 6);
+  });
+
+  it("[X-3] env 缺席 / 关闭 ⇒ 不让位（×1）——判据换源后的反向守卫", () => {
+    const scene = new THREE.Scene();
+    const cap = new LightCapability({
+      scene,
+      renderer: makeFakeRenderer(),
+      caps: {
+        getById: (id: string) =>
+          id === "environment" ? ({ isEnabled: () => false } as unknown as SceneCapability) : undefined,
+      },
+    });
+    cap.refreshAmbientFromSky();
+    const ambient = (cap as unknown as { ambientLight: THREE.AmbientLight }).ambientLight;
+    expect(ambient.intensity).toBeCloseTo(cap.getParams().ambient.intensity, 6);
   });
 });
 

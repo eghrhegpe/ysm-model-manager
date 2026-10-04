@@ -844,9 +844,15 @@ export class LightCapability implements SceneCapability {
    *  lightAmbientIntensity/Color 是 light 组字段，回调里刷它本就正当。两路幂等、语义一致，
    *  无「漏刷」窗口（旧注释称「灯组回调是补刷唯一时机」，sky 主动通知落地后已不成立）。 */
   refreshAmbientFromSky(state: EnvState = envState): void {
-    const skyEnvOn = getTypedCap(this.caps, "sky")?.isEnvironmentEnabled() ?? false;
+    // [锐评 X-3 2026-10-04] 让位判据换成**真供图者**：`scene.environment` 的唯一写者是 env cap
+    //（ADR-292 D1），而 sky 的 `skyEnvironment` 已自宣退役（只门控天空自持兜底路，见其注释）。
+    // 读旧开关会在 `envSource=preset` + `skyEnvironment=false` 时「IBL 已供图却不让位」⇒ 双间接光过亮，
+    // 反向组合则误压 ambient。判据与 D10 路由器同源：**env cap 在场且启用 ⇒ IBL 真在场**。
+    // 唤起方随之扩为三处：env.setEnabled（新增，判据换源后必需）、sky.setEnvironmentEnabled（保留，
+    // 幂等）、light 组自身回调（总是刷）。
+    const iblOn = getTypedCap(this.caps, "environment")?.isEnabled() ?? false;
     this.ambientLight.color.setHex(state.lightAmbientColor);
-    this.ambientLight.intensity = attenuateAmbientForSky(state.lightAmbientIntensity, skyEnvOn);
+    this.ambientLight.intensity = attenuateAmbientForSky(state.lightAmbientIntensity, iblOn);
   }
 
   /** 射束方向（世界，光源 → 靶点）——体积光锥朝向锚，结果写入调用方拥有的 `out`。

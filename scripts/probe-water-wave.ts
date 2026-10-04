@@ -85,6 +85,10 @@ function buildWaves(
     const amp = ampClamped * aa;
     const speed = Math.sqrt(9.8 * freq);
     const wa = freq * amp;
+    // [锐评 2026-10-04 P0-1] 与 shader 注入串**同门**（单一事实源 `water-state.ts|WAVE_DEGENERATE_WA`）：
+    // uWaveHeight=0（浪高 min / 水位归零 / pool 水位≥池深）⇒ amp=0 ⇒ wa=0 ⇒ 0.8/(wa·N) 得 +∞、
+    // steep·amp = ∞×0 = NaN（JS 与 GLSL/IEEE 同行为）。退化波整波跳过——与 shader 的 `continue` 同形。
+    if (wa <= 1e-6) continue;
     const steep = clamp((choppiness * 0.8) / (wa * GERSTNER_COUNT), 0, 0.8 / (wa * GERSTNER_COUNT));
     waves.push({
       i,
@@ -230,6 +234,22 @@ function scan(
   const axis = opts.axis ?? 32;
   const steps = opts.steps ?? 12;
   const half = size / 2;
+  // 全波退化（uWaveHeight=0 ⇒ 六波全被退化门跳过）：静水态 = 零位移零斜率，
+  // 返回空统计而非崩在 waves[0]（锐评 2026-10-04 P0-1 顺带加固）
+  if (waves.length === 0) {
+    return {
+      hMax: 0,
+      hMin: 0,
+      peakToTrough: 0,
+      rms: 0,
+      jMin: 1,
+      foamRatio: 0,
+      fullFoamRatio: 0,
+      aboveWallRatio: 0,
+      belowGroundRatio: 0,
+      samples: 0,
+    };
+  }
   let hMax = -Infinity;
   let hMin = Infinity;
   let sq = 0;
@@ -322,6 +342,8 @@ function buildPrescription(
     sumAmp += amp;
     const speed = Math.sqrt(9.8 * freq);
     const wa = freq * amp;
+    // 同主实现：退化波（amp=0 ⇒ wa=0）整波跳过，防 0.8/(wa·N) 除零 → Inf×0 = NaN（锐评 P0-1）
+    if (wa <= 1e-6) continue;
     const steep = clamp((choppiness * 0.8) / (wa * GERSTNER_COUNT), 0, 0.8 / (wa * GERSTNER_COUNT));
     waves.push({
       i,
@@ -344,11 +366,15 @@ function buildPrescription(
     for (const w of waves) {
       w.amp *= k;
       w.wa = w.freq * w.amp;
-      w.steep = clamp(
-        (choppiness * 0.8) / (w.wa * GERSTNER_COUNT),
-        0,
-        0.8 / (w.wa * GERSTNER_COUNT),
-      );
+      // 预算归零（level=0 / pool 水位≥池深）⇒ k=0 ⇒ wa=0：同退化门，steep 置 0 而非除零（锐评 P0-1）
+      w.steep =
+        w.wa > 1e-6
+          ? clamp(
+              (choppiness * 0.8) / (w.wa * GERSTNER_COUNT),
+              0,
+              0.8 / (w.wa * GERSTNER_COUNT),
+            )
+          : 0;
     }
   }
   return waves;
@@ -559,7 +585,10 @@ function main(): number {
   );
   L(`   → 穿地：${pct(s.belowGroundRatio)} 采样点的水面低于 y=0 地面（水膜基准 level=${level}m）`);
   L(
-    `   → 静水不可达：σ(choppiness)=0 时峰谷差仍 ${f3(sCalm.peakToTrough)}m（amp 不进 steep 链，高度独立于尖度）`,
+    `   → 浪高与尖度解耦：σ(choppiness)=0 时峰谷差仍 ${f3(sCalm.peakToTrough)}m（amp 不进 steep 链，高度只由 waterWaveHeight 控制）`,
+  );
+  L(
+    `     静水态可达：waterWaveHeight=0 ⇒ Σamp=0 ⇒ 退化门整波跳过 = 平面水（锐评 2026-10-04 P0-1 修复前该路径是 Inf×0=NaN）`,
   );
   L("");
   L("③ 波面自交可达性（参考量；泡沫通道已于 ADR-319 D3b 从 shader 整条删除）");

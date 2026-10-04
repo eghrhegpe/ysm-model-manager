@@ -35,6 +35,10 @@ auto_fields:
     - WaterMode
     - WaterPartRole
     - WaterTopMesh
+    - WAVE_AA_FULL_VERTS
+    - WAVE_AA_MIN_VERTS
+    - WAVE_DEGENERATE_WA
+    - WAVE_STEEP_SUM_LIMIT
 use_when:
   - 改水面波浪 / 颜色 / 透明度 / 水位 / 尺寸 / 池体参数
   - 找不到水面的 normalMap
@@ -50,7 +54,7 @@ pitfalls:
   - '**浪高入口曾完全缺席（2026-10-04 修复，ADR-319 D1）**：面板五个水波旋钮（waveSpeed / choppiness / normalStrength / clarity / size）里不含振幅——`amp` 不进 `steep` 链，`waterChoppiness=0` 时峰谷差零变化（探针实测），即「静水态不可达」且「尖度归零时几何仍大幅起伏、解析法线已判为平面」。现 `waterWaveHeight` 进 schema（默认 0.06，range 0–1），经 `water-params.ts|effectiveWaveHeight` **分形态钳制**：下钳 `min(waterLevel)` 治穿地（film/pool 通用），上钳 `min(waterPoolHeight − waterLevel)` 治越壁（**仅 pool**），钳制量在 CPU 侧算好下发。**上钳不可无条件套用**——film 下 `waterPoolHeight` 滑块隐藏、锁死在默认 0.3，而 `waterLevel` range 到 5.0，无条件「两钳取小」会让水位过 0.3 m 时预算归零、浪高静默死平（落地后子代理复核发现，已改为 `effectiveWaveHeight(forPool)` 按形态传入）。**单向只治一半**（只钳池深时 `waterLevel=0.01` 仍穿地），故 `waterLevel` 默认同步从 0.01 抬到 0.15——别把预算卡死成平面'
   - '**泡沫通道已删（ADR-319 D3b，2026-10-04）**：旧判据 `smoothstep(0.0, -0.25, J)` 要求 `J ≤ 0`（波面自交），与 `Σσ·k ≤ 0.8` 的防自交钳制互斥——探针实测 `choppiness=0.5` 时 `J_min = 0.656`、拖满 1.0 时 `0.379`，**`J ≤ 0` 占比恒 0.00%** ⇒ `vFoam` 恒 0，每顶点白算三项 Jacobian、每片元白跑一次 mix。现已**整条退役**（varying + Jacobian 三项累加 + mix 全删），shader 内无 foam 残留；别按「水面该有白沫」去调 foam 系数，也别把旧通道接回来——原判据（`J ≤ 0`）仍是死通道；要做泡沫须按 ADR-319 D3(a) 重新设计判据与归一（新尺度下 `Σσ·k = 0.8·choppiness`，拖满时 `J_min = 0.379`）'
   - '**频谱锚点错配已修（ADR-319 D2，2026-10-04）**：旧式 `freq = 0.25·1.19^i` ⇒ λ 钉死 [10.53, 25.13] m，而采样可呈现窗口是 `λ ∈ [6·size/segments, size/2]`（`size=10` 六波全超域宽、`size=300` 六波全被 aa 淡出，滑杆展示域却是 10–300 m）。现 `freq = 2π·1.19^i·4/uSize` ⇒ `λ_i = uSize/(4·1.19^i)`，每波长顶点数 = 分段数/(4·1.19^i) **与 uSize 无关**，全域六波恒落窗口内（探针尺寸域扫描：size ∈ {10,20,40,80,160,300} 峰谷差/越壁/穿地/窗口内条数全部不变）。ADR-272 加的「每波长顶点数淡出」治的是**采样不足**，不治**锚点错配**——两者是两笔账，勿混为一谈；锚点归一后淡出成为纯保险（六波全在窗口内时恒为 1）'
-  - '**shader 注入检测有洞（2026-10-04 子代理审计，待议）**：`water onBeforeCompile` 的注入检测只查 5 个符号（`vec3 gerstner(` / `objectNormal = ysmWaveNormal;` / `uRoundness` / `normal = normalize(normal +` / `if (uReflStrength > 0.0) {`），**begin_vertex 位移注入（`transformed.x += gdisp.x`、`vWorldPos_wave = worldPosWave.xyz`）无锚点**——three 在 allowed 窗口 [185,190) 内若重命名/重组该 chunk，位移静默丢失（顶点不动、解析法线照常：「法线在摆、水面在僵」），`reportPatchIssue` 一声不吭。`fragOk` 查的 `uRoundness` 同时出现在 common 注入（声明）与 dithering 注入（引用）两处 → common 失配时字符串仍在、检测漏报（实际 GLSL 会因未声明 uniform 报错，但守卫报 ok）。修复方向：begin_vertex 补 `transformed.z += gdisp.z` 锚点；`fragOk` 改查 common 注入独有串（如 `uniform sampler2D uReflTex`）'
+  - '**shader 注入检测已补齐六锚点（2026-10-04 修复 `7214b629c`）**：`water onBeforeCompile` 现检六处——vertex 的 wave 函数 / beginnormal 的 `objectNormal` 覆盖 / **begin_vertex 位移锚点 `transformed.z += gdisp.z`** / fragment common 独有串 **`uniform sampler2D uReflTex`**（不再查同时出现在 common 声明与 dithering 引用两处的 `uRoundness`）/ 微细节 `normal` 覆写点 / 倒影混合块。原两条洞（位移注入无锚点、`fragOk` 因重复串漏报）已当日收口——**别再按旧描述去"修"已修好的东西**。剩余同族项只有「`gerstner()` 每顶点算两次」（beginnormal 取 nrm、begin_vertex 取 disp，各丢一半输出，非阻塞；两条 chunk 间无 chunk 改 `position` 的判断须在升级 three 时重验）'
   - '**顶点波场被算两次（2026-10-04 子代理审计，待议）**：`gerstner()` 每顶点调两遍——`beginnormal_vertex` 里算只取 `nrm`（丢弃 disp），`begin_vertex` 里算只取 `disp`（丢弃 `nrm`，形参名 `gWaveNormalUnused` 即自证）。6 波 × 64² 顶点 × 2 ≈ 49k 次三角函数对/帧，非瓶颈但是白算。两 chunk 在同一 `main()` 作用域、中间无 chunk 改 `position`（morphnormal/skinbase/skinnormal/defaultnormal/normal_vertex 均只读 objectNormal），可合成一次：beginnormal 内算 disp 存局部、begin_vertex 直接 `transformed += disp`。与上一条「注入检测有洞」是同一处代码的两面，一并议'
   - 结构参数只能动 `transformLinks`（`square` 等比铺满 / `wall` 双轴：x = size、y = 壁高 + 外偏沿法向轴）：**y 轴不得被 size 缩放**（`wallH` 由 h / t 现算，与 size 无关），否则壁高与壁厚会被尺寸连带放大
   - '**（已修复 2026-09，ADR-272 §5.1）** pool 的 waterPoolHeight / waterPoolWallThickness 曾走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——拖动即每帧重建 10 个 mesh。现壁几何单位化：壁高走 `scale.y`、外偏 = `size/2 + t` 运行期现算。教训：**任何结构参数只要被烘焙进几何，就必然在滑块拖动时变成重建风暴**'
@@ -73,7 +77,8 @@ pitfalls:
   - '**倒影门控是逐帧现读，不是派发驱动**：`waterReflectionEnabled/Strength/Resolution/ClipBias/ReflectDisableWhenSSR` 在分派表里是显式 no-op 声明（与 waterWaveSpeed 同口径）——门控/权重/RT 边长/镜面高度/裁剪偏置全在 `renderReflection / ensureReflector` 现读 envState 落地。别给它们补材质写（双写违 ADR-286），也别给 pp 键补订阅（SSR 抑制真值现算即可，多订一路 = 第二真值源）。**唯一的现读特例（锐评 F-2）**：clipBias 烘在官方 Reflector.onBeforeRender 闭包里不可就地改，`ensureReflector` 以 `reflectorClipBias` 字段比对现读值——不一致即 `disposeReflector()` 弃载体、下拍懒建重建（低频参数，接受重建成本；bias 变更是离散动作非拖拽风暴）'
   - '**SSR 活跃判定单源（锐评 F-1，2026-09-23）**：`state/env-state.ts|isSsrRenderActive()` = `ppEnabled ∧ ppReflectionMode ≠ envmap-only`，是「SSRPass 此刻真在渲染」的唯一判别式——pp `applyReflectorSync`（压地面镜）与 water `reflectionActive`（跳水面镜像）两处消费。此前两处各手抄一份、pp 侧还随 R-1 血案（关 pp 仍白压镜子）演化过一次——手抄判别式即分账隐患。改 SSR 语义只动这一个纯函数，勿再抄第三份'
   - '**倒影 RT 内容线性、无 tone map**（three 仅对 canvas 输出做 tone map）：dithering 段底色已过 colorspace，采样值必须过 `linearToOutputTexel` 再混——直接混 linear 进 sRGB 域会让倒影发黑'
-  - '**波场采样密度 ≡ 几何分段数，两处必须同源（2026-09-22 治大水面摩尔纹）**：顶水面网格分段固定（唯一事实源 `water-state.ts|WATER_WAVE_SEGMENTS`），顶点间距 s = waterSize/分段数——s 逼近波长一半（奈奎斯特）时高频波混叠成游走摩尔纹（300 m 水池高频频闪的病灶）。gerstner 逐波按「每波长顶点数 λ/s」淡出振幅（≥6 全留、2–6 线性消退、1‰ 下界防 wa 除零 NaN）；位移/解析法线/泡沫 Jacobian 同源于 amp，一处衰减三处一致。改分段只动常数一处（几何装配与 shader 间距推导都读它，守卫 = 「分段数唯一事实源」用例）；调大 = 高频保留更好但三角数平方上涨，调小 = 消隐提前介入。注意此衰减治的是「采样不足」，`min(…, 0.5)` 抹平振幅级数是另一笔已登记未改的账'
+  - '**波场采样密度 ≡ 几何分段数，两处必须同源（2026-09-22 治大水面摩尔纹）**：顶水面网格分段固定（唯一事实源 `water-state.ts|WATER_WAVE_SEGMENTS`），顶点间距 s = waterSize/分段数——s 逼近波长一半（奈奎斯特）时高频波混叠成游走摩尔纹（300 m 水池高频频闪的病灶）。gerstner 逐波按「每波长顶点数 λ/s」淡出振幅（≥6 全留、2–6 线性消退；1‰ 下界只保 aa 非零——**不保 wa>0**，wa 的除零由退化门 `water-state.ts|WAVE_DEGENERATE_WA` 承接）；位移/解析法线/泡沫 Jacobian 同源于 amp，一处衰减三处一致。**D2 锚定域宽后 λ/spacing = 分段数/(4·1.19^i) 与 uSize 无关，segments=64 时六波最小 6.70 ≥ 6 ⇒ 本淡出当前恒为 1（惰性保险，非活功能）**，分段数压到 ≤57 才会真正淡出高频——数值判据见 `water-capability.test.ts` 的「波场守卫的真实性」describe（含"通道不是死代码"的反证）。改分段只动常数一处（几何装配与 shader 间距推导都读它，守卫 = 「分段数唯一事实源」用例）；调大 = 高频保留更好但三角数平方上涨，调小 = 消隐提前介入。注意此衰减治的是「采样不足」，`min(…, 0.5)` 抹平振幅级数是另一笔已登记未改的账'
+  - '**静水态曾产出 NaN（2026-10-04 修复，锐评 P0-1）**：`amp = uWaveHeight·0.26·0.82^i·aa`，而 `uWaveHeight` 可为 0——浪高滑杆 min=0、水位归零、pool 下水位 ≥ 池深，都会让 `water-params.ts|effectiveWaveHeight` 的预算归零。此时 `wa = freq·amp = 0` ⇒ 陡度式 `0.8/(wa·6)` 得 +∞ ⇒ `steep·amp = ∞×0 = NaN` ⇒ `transformed` 与 `objectNormal` 双双污染 ⇒ **水面整块消失**（用户拖浪高到 0 想要静水，得到「水没了」）。修复 = shader 波场内退化门 `if (wa <= WAVE_DEGENERATE_WA) { continue; }`（阈值单一事实源 `water-state.ts`，shader 内插、探针 `buildWaves` 同门）——跳过后 nrm 保持 (0,0,1)、位移为 0 = 平面水 + 正确法线，静水态这才真正可达。⚠️ 原注释与知识卡宣称的「1‰ 下界保 wa 恒 > 0」**是假不变量**：该下界加在 `aa` 上，amp 本身已是 0 时救不了 wa（已随本轮订正）'
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -112,7 +117,9 @@ invariant_anchors:
 
 1. **波浪**：`buildWaveWaterMaterial` 于 `onBeforeCompile` 注入 6 波 Gerstner 余摆线——
    顶点同时水平 + 垂直位移（波峰尖、波谷平）；解析法线（GPU Gems 1 ch.1）覆盖 `objectNormal`。
-   方向/相位由 wave index hash 播种，陡度钳制 `Σσ·k ≤ 0.8` 防自交。
+   方向/相位由 wave index hash 播种，陡度钳制 `Σσ·k ≤ 0.8` 防自交；**退化门**（锐评 2026-10-04 P0-1）：
+   `wa = freq·amp` 低于 `water-state.ts|WAVE_DEGENERATE_WA` 的波整波跳过——静水态（浪高/水位归零）由此
+   得到「平面水 + 正确法线」，而不是修复前的 `∞×0 = NaN`（顶点与法线双污染、水面整块消失）。
    **量纲约定（ADR-319 D1/D2）**：振幅 `amp = uWaveHeight·0.26·0.82^i`（Σamp ≡ 用户浪高，入 shader 前经
    `water-params.ts|effectiveWaveHeight` 双向往容器钳制）、频率 `freq = 2π·1.19^i·4/uSize`
    （λ 锚定域宽，每波长顶点数与 uSize 无关）——两者都随用户量与水面尺寸归一，不再钉死世界米制。
@@ -222,6 +229,14 @@ invariant_anchors:
   频谱锚点错配）全是 `toContain("disp.z += amp * s;")` 这类字符断言放过去的——它们改个格式就红，
   却对「峰谷差是否超出容器预算」「`J` 是否可达」「六波是否落在可呈现窗口内」一言不发。
   改波场时先跑探针取数，再把结论落成数值用例。
+- **守卫得是真守卫**（锐评 2026-10-04 P1-3）：波场里三条「每帧计算、条件恒不成立」的量——`aa` 淡出
+  （segments=64 时六波 λ/spacing 最小 6.70 ≥ 6 ⇒ 恒 1）、`steep` 的 clamp（choppiness ∈ [0,1] 时输入
+  恒在 [0, 上界] 内）、`aa` 的 1‰ 下界——都已配**数值断言**说明「当前惰性、何时生效」，不再靠
+  `toContain` 字符断言假装它们在保护（守卫 = `water-capability.test.ts` 的「波场守卫的真实性」describe，
+  含「通道不是死代码」的反证：segments=32 时 aa < 1、choppiness=2 时 Σσk 被钳回 `WAVE_STEEP_SUM_LIMIT`）。
+  判据：**写守卫时必须回答「它在什么条件下真正触发」，并把该条件写成数值断言**；答不上来的守卫要么删，
+  要么转成纵深防御并注明边界。波场三个阈值常量（退化门 / Σσk 上界 / aa 双阈值）住 `water-state.ts`
+  并被 shader 模板内插——改常量即改 shader，菜单/测试/探针都只是读口。
 - **浪高入 shader 前必过分形态容器钳制**（ADR-319 D1）：`uWaveHeight` 恒为
   `min(waterWaveHeight, 下钳)`，下钳 = film 时 `waterLevel`、pool 时
   `min(waterLevel, waterPoolHeight − waterLevel)`——上钳防越壁**仅 pool 有**（film 无壁无上钳），
@@ -254,4 +269,5 @@ invariant_anchors:
 - ADR-271（微细节法线 GPU 化，移除 CPU DataTexture 链路）
 - ADR-257（水面/容器解耦 + 水体形态策略表）、ADR-255（Gerstner + uniform 化）
 - ADR-196（envState 单一事实源）、ADR-195（cap 直产菜单节点）、ADR-268（env 面板归属）
+- 审计：`docs/audit-water-critique.md`（2026-10-04 水面系统锐评，12 条发现 + 处置记录；本轮已修 P0-1 退化门 / P1-3 守卫数值化 / P2-5 文档订正）
 - 测试：`frontend/src/preview-3d/caps/water-capability.test.ts`

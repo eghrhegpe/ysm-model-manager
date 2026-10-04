@@ -210,6 +210,10 @@ auto_fields:
     - WaterReflectState
     - WaterTopMesh
     - WaterUniformName
+    - WAVE_AA_FULL_VERTS
+    - WAVE_AA_MIN_VERTS
+    - WAVE_DEGENERATE_WA
+    - WAVE_STEEP_SUM_LIMIT
   tests:
     - frontend/src/preview-3d/caps/scene-capability-registry.test.ts
     - frontend/src/preview-3d/caps/ground-capability.test.ts

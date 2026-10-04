@@ -62,7 +62,14 @@ import {
   type WaterReflectState,
 } from "./water-reflect.ts";
 import type { WaterMode } from "./water-state.ts";
-import { WATER_MODES, WATER_WAVE_SEGMENTS } from "./water-state.ts";
+import {
+  WATER_MODES,
+  WATER_WAVE_SEGMENTS,
+  WAVE_AA_FULL_VERTS,
+  WAVE_AA_MIN_VERTS,
+  WAVE_DEGENERATE_WA,
+  WAVE_STEEP_SUM_LIMIT,
+} from "./water-state.ts";
 
 // ADR-315 D1：分派表 / uniform 登记 / 逐帧现读表已拆至 water-params.ts（零 THREE 纯表）；
 // 倒影子系统已拆至 water-reflect.ts（载体状态经 WaterReflectState 移交）。
@@ -233,8 +240,14 @@ export class WaterCapability implements SceneCapability {
             // 采样抗锯齿（2026-09-22）：顶点间距 = uSize / 分段数（唯一事实源
             // WATER_WAVE_SEGMENTS，几何装配与此处同源）。波长 λ 的可呈现性取决于每波长
             // 顶点数 λ/s：逼近奈奎斯特极限 2 时欠采样混叠成游走摩尔纹（300 m 大水面
-            // 高频波频闪的病灶）。逐波淡出：≥6 顶点/波长全保留，2–6 线性消退；
-            // 1‰ 下界保 wa 恒 > 0——steep 项含 1/wa，恰零会炸 Inf×0 = NaN。
+            // 高频波频闪的病灶）。逐波淡出：≥${WAVE_AA_FULL_VERTS} 顶点/波长全保留，
+            // ${WAVE_AA_MIN_VERTS}–${WAVE_AA_FULL_VERTS} 之间线性消退。
+            // ⚠️「1‰ 下界」只保证 aa 本身非零，**不保证 wa > 0**（uWaveHeight=0 时 amp 恒 0）——
+            // wa 的除零防线是下方的退化门（WAVE_DEGENERATE_WA）；原注释称「1‰ 下界保 wa 恒 > 0」
+            // 与事实不符，锐评 2026-10-04 P0-1 订正。
+            // 另注（P1-3①）：D2 锚定域宽后 λ/spacing = ${WATER_WAVE_SEGMENTS}/(4·1.19^i) 与 uSize 无关，
+            // 六波最小 6.70 ≥ ${WAVE_AA_FULL_VERTS} ⇒ 本淡出当前**恒为 1**（惰性保险，非活功能）；
+            // 分段数压到 ≤57 才会真正淡出高频。数值判据见 water-capability.test.ts。
             float spacing = sizeSafe / float(${WATER_WAVE_SEGMENTS});
            for (int i = 0; i < GERSTNER_COUNT; i++) {
              float fi = float(i);
@@ -251,11 +264,19 @@ export class WaterCapability implements SceneCapability {
              // 衰减须在 wa/steep 派生之前：位移 / 解析法线 / 泡沫 Jacobian 同源于 amp，
              // 一处淡出三处一致（法线不会声称一个位移里不存在的高频斜率）。
              float waveLen = 6.2831853 / freq;
-             float aa = max(smoothstep(2.0, 6.0, waveLen / spacing), 0.001);
+             float aa = max(smoothstep(${WAVE_AA_MIN_VERTS.toFixed(1)}, ${WAVE_AA_FULL_VERTS.toFixed(1)}, waveLen / spacing), 0.001);
              amp *= aa;
              float speed = sqrt(9.8 * freq);
              float wa = freq * amp;
-             float steep = clamp(uChoppiness * 0.8 / (wa * float(GERSTNER_COUNT)), 0.0, 0.8 / (wa * float(GERSTNER_COUNT)));
+             // [锐评 2026-10-04 P0-1] 退化门：uWaveHeight=0（浪高滑杆 min / 水位归零 / pool 水位≥池深）
+             // ⇒ amp=0 ⇒ wa=0 ⇒ 下方 0.8/(wa·N) 得 +∞ ⇒ steep·amp = ∞×0 = NaN（顶点坐标与解析法线
+             // 双双污染 ⇒ 水面整块消失）。本波既无位移也无法线贡献，整波跳过；跳过后 nrm 保持
+             // (0,0,1)、位移为 0 —— 平面水 + 正确法线，静水态由此真正可达。
+             if (wa <= ${WAVE_DEGENERATE_WA.toExponential(1)}) { continue; }
+             // clamp 是**纵深防御**（锐评 P1-3②）：choppiness ∈ [0,1]（schema range）时输入恰在
+             // [0, 上界] 内、恒不夹住；只有越界值（存档直写 / 未来放宽 range）才真正把
+             // Σσk 钳回 WAVE_STEEP_SUM_LIMIT。域内恒等 + 域外夹住两条数值判据见其测试。
+             float steep = clamp(uChoppiness * ${WAVE_STEEP_SUM_LIMIT} / (wa * float(GERSTNER_COUNT)), 0.0, ${WAVE_STEEP_SUM_LIMIT} / (wa * float(GERSTNER_COUNT)));
              float phase = freq * dot(dir, p) - speed * uTime;
              float c = cos(phase), s = sin(phase);
              disp.x += steep * amp * dir.x * c / sizeSafe;

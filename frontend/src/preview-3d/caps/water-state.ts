@@ -17,5 +17,32 @@ export const WATER_MODES: readonly WaterMode[] = ["film", "pool"];
  *  ① 几何装配：water-body-strategies 的 film 顶面 / pool 顶面；
  *  ② shader 波幅抗锯齿：gerstner 内顶点间距 s = uSize / 本常数，每波长顶点数不足时
  *    高频波淡出（大水面混叠摩尔纹的处方，2026-09-22）。
- *  调大 = 高频波保留到更大尺寸但三角数平方上涨；调小 = 抗锯齿提前介入。 */
+ *  调大 = 高频波保留到更大尺寸但三角数平方上涨；调小 = 抗锯齿提前介入。
+ *  ⚠️ 本常数与 WAVE_AA_FULL_VERTS 共同决定「淡出当前是否惰性」：D2 频谱锚定域宽后
+ *  λ/spacing = 本常数/(4·1.19^i)（与 uSize 无关），64 时六波最小 6.70 ≥ 6 ⇒ aa 恒 1
+ *  （惰性保险）；压到 ≤57 才会真正淡出高频——数值判据见
+ *  water-capability.test.ts「波场守卫的真实性」describe。 */
 export const WATER_WAVE_SEGMENTS = 64;
+
+/** 波场退化门（锐评 2026-10-04 P0-1）：`wa = freq·amp` 低于本值的波整波跳过。
+ *  背景：`amp = uWaveHeight·0.26·0.82^i·aa`，而 `uWaveHeight` 可为 0——浪高滑杆 min=0
+ *  （schema waterWaveHeight.range）、水位归零 / pool 下水位 ≥ 池深都会让
+ *  `water-params.ts|effectiveWaveHeight` 的预算归零。此时 `wa = 0` ⇒ 陡度式
+ *  `0.8/(wa·6)` 得 +∞ ⇒ `steep·amp = ∞×0 = NaN` ⇒ 顶点坐标（transformed）与解析法线
+ *  （objectNormal）双双污染 ⇒ 水面整块消失。**「1‰ 下界」救不了它**：那个下界加在 aa 上，
+ *  而 amp 本身已是 0。唯一的出口是跳过该波（跳过后 nrm 保持 (0,0,1)、位移为 0 —— 平面水
+ *  + 正确法线，静水态由此真正可达）。
+ *  同源消费者：shader 注入串（本常量内插）、`scripts/probe-water-wave.ts|buildWaves`（同门）。 */
+export const WAVE_DEGENERATE_WA = 1e-6;
+
+/** Σσ·k 上限（防波面自交）：`steep` 的 clamp 上界 = 本值 / (wa·波数)，故 Σ(steep·wa) ≤ 本值。
+ *  ⚠️ choppiness ∈ [0,1]（schema range）时 clamp 恒等（输入恰在 [0, 上界] 内）——它是
+ *  **纵深防御**：只有 choppiness 越界（存档直写 / 未来放宽 range）才真正夹住。
+ *  数值判据（含越界夹住的反证）见 water-capability.test.ts「波场守卫的真实性」。 */
+export const WAVE_STEEP_SUM_LIMIT = 0.8;
+
+/** 波幅抗锯齿淡出的两个阈值（每波长顶点数 λ/spacing）：≥ FULL 全保留（aa = 1），
+ *  在 MIN–FULL 之间线性消退；下方另有 1‰ 下界只保证 aa 非零，**不保证 wa > 0**（见
+ *  WAVE_DEGENERATE_WA）。shader 注入串内插本对常量——菜单/测试/探针都只是读口。 */
+export const WAVE_AA_MIN_VERTS = 2;
+export const WAVE_AA_FULL_VERTS = 6;

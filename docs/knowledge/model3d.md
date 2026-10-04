@@ -982,6 +982,10 @@ auto_fields:
     - WaterReflectState
     - WaterTopMesh
     - WaterUniformName
+    - WAVE_AA_FULL_VERTS
+    - WAVE_AA_MIN_VERTS
+    - WAVE_DEGENERATE_WA
+    - WAVE_STEEP_SUM_LIMIT
     - WorkerBridge
     - WorkerErrorStrategy
     - workerMmdUpdateWithMixer

@@ -4,6 +4,8 @@
 //   ② 双向往钳制：浪高拉到上限 1 m 仍被钳到预算 min(level, poolHeight−level)=0.15 m，不越壁不穿地；
 //   ③ 泡沫通道已删（D3b）：无 vFoam，choppiness 拖满也无白沫——这是「删除」而非「判据不触发」；
 //   ④ 频谱锚定域宽（D2）：size=10 与 size=300 都有六波可呈现，不再出现「小水面无波纹 / 大水面只剩长涌」。
+//   ⑤ 静水态端点（锐评 2026-10-04 P0-1 修复）：浪高=0 是**平面水**而非 NaN 导致的水面整块消失
+//      （退化门 WAVE_DEGENERATE_WA 整波跳过；S7 独立场景，见文件末尾）。
 // 修复前的同场景取证在同一 spec 的 git 历史（commit 871874465）与 `_shots/water-wave/`（无前缀目录）保留，
 // 本 spec 的截图进 `post319/` 子目录，两组并排可对照。
 // 方法（对齐 e2e-visual-feedback.md）：真 3D 会话（swiftshader WebGL）+ 单变量对照——
@@ -12,6 +14,7 @@
 // 运行：npx playwright test --config playwright.web.config.ts water-wave-evidence
 // 截图进仓：e2e-web/_shots/water-wave/post319/（证据可复查；本 spec 的断言守护「流程真的动了」，
 //   防假绿灯：每步读回 aria-valuenow / select 值，而非只点了一下）。
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
@@ -145,17 +148,54 @@ test.describe("水面波场回归取证（ADR-319 落地后）", () => {
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${SHOTS}/s6-film-size300.png` });
 
-    // 反假绿灯汇总：六个场景的截图文件必须真实产出且非零字节
-    for (const f of [
+    // 反假绿灯汇总：六个场景的截图必须真实产出、非零字节，且**两两互异**——
+    // 字节相同 = 流程没生效（e2e-visual-feedback 坑位清单第 2 条：size>10k 防不住
+    // 「两张截图一模一样」，哈希互异才防得住「点了但什么都没变」）。
+    // 注：面板值/焦点环差异也计入「互异」，本断言的语义是「流程真的动了」的兜底闸，
+    //   水面本身的视觉判据（钳制生效、无白沫、λ 锚定）由人眼复核截图 + probe-water-wave 数值断言承担。
+    const SHOT_FILES = [
       "s1-film-default.png",
       "s2-waveheight-max-clamped.png",
       "s3-choppiness-max-no-foam.png",
       "s4-pool-size10-contained.png",
       "s5-film-size10.png",
       "s6-film-size300.png",
-    ]) {
-      const st = fs.statSync(`${SHOTS}/${f}`);
-      expect(st.size, `${f} 应非空`).toBeGreaterThan(10_000);
+    ];
+    const hashes = new Map<string, string>();
+    for (const f of SHOT_FILES) {
+      const buf = fs.readFileSync(`${SHOTS}/${f}`);
+      expect(buf.length, `${f} 应非空`).toBeGreaterThan(10_000);
+      hashes.set(f, createHash("sha256").update(buf).digest("hex"));
     }
+    const dup = SHOT_FILES.filter((f, i) =>
+      SHOT_FILES.slice(i + 1).some((g) => hashes.get(g) === hashes.get(f)),
+    );
+    expect(dup, `截图互异判据被破（流程未生效的假绿灯信号）：${dup.join(", ")}`).toEqual([]);
+  });
+
+  // ── S7 静水态端点（锐评 2026-10-04 P0-1 修复取证）：浪高拖到 0 应是**平面水** ──
+  // 修复前：amp=0 ⇒ wa=0 ⇒ 0.8/(wa·N) = +∞ ⇒ steep·amp = ∞×0 = NaN ⇒ 顶点坐标与 objectNormal
+  //         双双污染、图元被 GPU 丢弃——「静水态」实际是「水整块消失」。
+  // 修复后：退化门（WAVE_DEGENERATE_WA）整波跳过 ⇒ 位移 0 + nrm=(0,0,1) = 平面水 + 正确法线。
+  // 本场景独立起会话（不接入六场景状态链）：唯一变量 = 浪高 0，其余保持默认 film。
+  test("S7 静水态端点：浪高=0 应为平面水（修复前是 NaN 消失）", async ({ page }) => {
+    test.slow();
+    fs.mkdirSync(SHOTS, { recursive: true });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+    await start3D(page);
+    await openWaterPanel(page);
+    await setBarTo(page, "cap-water-wave-speed", "min");
+    expect(await barValue(page, "cap-water-wave-speed"), "波速应跳到 min=0").toBe("0");
+    await setBarTo(page, "cap-water-wave-height", "min");
+    expect(await barValue(page, "cap-water-wave-height"), "浪高应到 min=0（合法静水操作）").toBe(
+      "0",
+    );
+    await page.waitForTimeout(600);
+    const out = `${SHOTS}/s7-film-waveheight-zero-calm.png`;
+    await page.screenshot({ path: out });
+    // 反假绿灯：截图真产出且非空；「是平面水而非消失/破洞」由人眼复核该图承担
+    expect(fs.readFileSync(out).length, "截图应非空").toBeGreaterThan(10_000);
   });
 });

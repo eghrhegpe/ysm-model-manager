@@ -255,7 +255,7 @@ export const autoSidebar = [
     "items": [
       {
         "text": "ADR-320：ADR 体系分级：架构决策与执行决策日志分治",
-        "link": "/adr/ADR-320-adr-tiering"
+        "link": "/adr/architecture/ADR-320-adr-tiering"
       },
       {
         "text": "ADR-319：水面波场尺度归一与泡沫判据可达性",

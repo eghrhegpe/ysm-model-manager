@@ -189,7 +189,10 @@ export { ringLog } from "@/preview-3d/ring-log.ts";
  * reflector 平面下沉让位——各层方向与量级语义各异，取用时按名引用，禁止互相推导。
  *
  * 注：原 `waterFilm: 0.01`（film 水膜写死高度）已随 ADR-257 删除——film 的水面 y 现由
- * `envState.waterLevel`（默认同为 0.01）驱动，是唯一事实源，不再是本分层的常量成员。
+ * `envState.waterLevel` 驱动（schema 默认 0.15；ADR-319 D1 从 0.01 抬升——水位同时是波高预算的
+ * 下钳上限，0.01 会把浪高钳死成平面），是唯一事实源，不再是本分层的常量成员。
+ * ⚠️ 与本层 `groundSurface`（0.005）的跨层耦合：`waterLevel` 低于它时水膜被承接面吞掉——
+ * 逐字段 schema `range` 管不到这条，登记见 `docs/audit-water-critique.md` P2-1④。
  */
 export const GROUND_LAYER_OFFSETS = {
   /** ground 承接面（SurfaceMesh）相对 y=0 的微抬 */

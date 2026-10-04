@@ -9,7 +9,13 @@ import {
   type WaterBody,
   type WaterPartRole,
 } from "./water-body-strategies.ts";
-import { WATER_WAVE_SEGMENTS } from "./water-state.ts";
+import {
+  WATER_WAVE_SEGMENTS,
+  WAVE_AA_FULL_VERTS,
+  WAVE_AA_MIN_VERTS,
+  WAVE_DEGENERATE_WA,
+  WAVE_STEEP_SUM_LIMIT,
+} from "./water-state.ts";
 import {
   WaterCapability,
   WATER_UNIFORM_NAMES,
@@ -2237,6 +2243,87 @@ describe("WaterCapability — 水面 root 恒在原点（圆角裁剪不变量�
     cap.setWaterSize(300);
     cap.setLevel(2.5);
     expect(atOrigin(), "切回 film + 尺寸/水位变更后").toEqual([0, 0]);
+  });
+});
+
+describe("WaterCapability — 波场守卫的真实性（锐评 2026-10-04 P0-1 / P1-3）", () => {
+  beforeEach(() => { resetEnvState(); });
+
+  /** 起会话并抓取**注入后**的 shader（与 ADR-319 describe 的 liveUniforms 同手法） */
+  function liveShader(scene: THREE.Scene) {
+    const cap = new WaterCapability({ scene });
+    cap.apply();
+    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh)
+      .material as THREE.MeshPhysicalMaterial;
+    const shader = fakeShader();
+    mat.onBeforeCompile(
+      shader as unknown as THREE.WebGLProgramParametersWithUniforms,
+      undefined as unknown as THREE.WebGLRenderer,
+    );
+    return { cap, shader, uniforms: mat.userData.shader.uniforms };
+  }
+
+  /** GLSL smoothstep 的 JS 同式（只服务本 describe 的算术断言） */
+  function smoothstep(e0: number, e1: number, x: number): number {
+    const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+    return t * t * (3 - 2 * t);
+  }
+  /** 六波「每波长顶点数」λ/spacing = segments/(4·1.19^i)——D2 锚定域宽后与 uSize 无关 */
+  function vertsPerLambda(segments: number): number[] {
+    return Array.from({ length: 6 }, (_, i) => segments / (4 * 1.19 ** i));
+  }
+
+  it("P0-1 退化门在 steep 之前，阈值与 WAVE_DEGENERATE_WA 同源（改常量即改 shader）", () => {
+    const { shader } = liveShader(new THREE.Scene());
+    const gate = `if (wa <= ${WAVE_DEGENERATE_WA.toExponential(1)}) { continue; }`;
+    expect(shader.vertexShader).toContain(gate);
+    // 必须在 0.8/(wa·N) 之前——否则 +∞ 已生成，门形同虚设
+    expect(shader.vertexShader.indexOf(gate)).toBeLessThan(
+      shader.vertexShader.indexOf("float steep = clamp(uChoppiness"),
+    );
+  });
+
+  it("P0-1 零预算路径可达：浪高 / 水位归零 ⇒ uWaveHeight = 0（静水态由退化门接管，不再 Inf×0）", () => {
+    const { cap, uniforms } = liveShader(new THREE.Scene());
+    cap.setWaveHeight(0);
+    expect(uniforms.uWaveHeight.value, "浪高滑杆 min=0 是合法操作").toBe(0);
+    cap.setWaveHeight(0.06);
+    cap.setLevel(0);
+    expect(uniforms.uWaveHeight.value, "水位归零（下钳）⇒ 预算归零").toBe(0);
+  });
+
+  it("P1-3① 惰性保险自证：segments=64 时六波每波长顶点数全部 ≥ WAVE_AA_FULL_VERTS（aa 恒 1）", () => {
+    const ratios = vertsPerLambda(WATER_WAVE_SEGMENTS);
+    expect(Math.min(...ratios), "最小一项 = 最高频波").toBeGreaterThanOrEqual(WAVE_AA_FULL_VERTS);
+    for (const r of ratios) {
+      expect(smoothstep(WAVE_AA_MIN_VERTS, WAVE_AA_FULL_VERTS, r)).toBe(1);
+    }
+  });
+
+  it("P1-3① 反证（通道不是死代码）：segments 压到 32 时最高频 aa < 1；触发阈值恰在 58/57 之间", () => {
+    const top32 = vertsPerLambda(32)[5]!;
+    expect(top32).toBeLessThan(WAVE_AA_FULL_VERTS);
+    expect(smoothstep(WAVE_AA_MIN_VERTS, WAVE_AA_FULL_VERTS, top32)).toBeLessThan(1);
+    // 「调小 = 抗锯齿提前介入」的算术边界：segments ≤ 57 才波及最高频波
+    expect(vertsPerLambda(58)[5]!).toBeGreaterThanOrEqual(WAVE_AA_FULL_VERTS);
+    expect(vertsPerLambda(57)[5]!).toBeLessThan(WAVE_AA_FULL_VERTS);
+  });
+
+  it("P1-3② steep 的 clamp 域内恒等，越界才夹住（Σσk 钳回 WAVE_STEEP_SUM_LIMIT 的纵深防御）", () => {
+    const wa = 0.0049;
+    const n = 6;
+    const steepOf = (chop: number) =>
+      Math.min(
+        WAVE_STEEP_SUM_LIMIT / (wa * n),
+        Math.max(0, (chop * WAVE_STEEP_SUM_LIMIT) / (wa * n)),
+      );
+    const sumSigmaK = (chop: number) => steepOf(chop) * wa * n;
+    expect(sumSigmaK(0.5), "域内 = L·chop，从未被夹").toBeCloseTo(0.4, 6);
+    expect(sumSigmaK(1), "边界恰在上界").toBeCloseTo(WAVE_STEEP_SUM_LIMIT, 6);
+    expect(sumSigmaK(2), "越界（域外）才真夹 → 防御有效，只是域内惰性").toBeCloseTo(
+      WAVE_STEEP_SUM_LIMIT,
+      6,
+    );
   });
 });
 

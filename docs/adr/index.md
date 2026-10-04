@@ -10,27 +10,26 @@ permalink: /adr/
 
 > 架构决策日志，共 **318** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
-> 所有 ADR 存放于本目录。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
+> ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
 ## 按状态分布
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 7 |
+| [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 288 |
+| [✅ 已采纳](#已采纳) | 289 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（7）
+### 📝 提议中（6）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-320](./ADR-320-adr-tiering.md) | ADR 体系分级：架构决策与执行决策日志分治 | 📝 提议中 |
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
@@ -56,10 +55,11 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（288）
+### ✅ 已采纳（289）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-320](./architecture/ADR-320-adr-tiering.md) | ADR 体系分级：架构决策与执行决策日志分治 | ✅ 已采纳 |
 | [ADR-319](./ADR-319-water-spectrum-scale-normalization.md) | 水面波场尺度归一与泡沫判据可达性 | ✅ 已采纳 |
 | [ADR-318](./ADR-318-test-suite-groups-release-smoke.md) | 测试套件分组与发版冒烟组（反馈回路提速） | ✅ 已采纳 |
 | [ADR-317](./ADR-317-android-webview-decode-bridge.md) | Android .ysm 解码 WebView 桥后端（Decoder 策略平台化） | ✅ 已采纳 |
@@ -373,7 +373,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-320 | ADR 体系分级：架构决策与执行决策日志分治 | 📝 提议中 | 2026-10-04 |
+| ADR-320 | ADR 体系分级：架构决策与执行决策日志分治 | ✅ 已采纳 | 2026-10-04 |
 | ADR-319 | 水面波场尺度归一与泡沫判据可达性 | ✅ 已采纳 | 2026-10-04 |
 | ADR-318 | 测试套件分组与发版冒烟组（反馈回路提速） | ✅ 已采纳 | 2026-10-04 |
 | ADR-317 | Android .ysm 解码 WebView 桥后端（Decoder 策略平台化） | ✅ 已采纳 | 2026-09-27 |
@@ -696,7 +696,7 @@ permalink: /adr/
 
 1. **编号**：取本表最大编号 +1（三位，如 `ADR-014`），禁止 `ADR-000N` 式前缀，禁止跳号复用。
 2. **占号**：写文件**前**先在本表登记占号（并提交登记），再创建文件——多会话并行时以登记顺序为准，撞号者必须让位改号。
-3. **命名**：文件名 `ADR-NNN-kebab-case.md`（如 `ADR-013-governance-convergence.md`）。
+3. **命名与分级（ADR-320）**：架构级 `--tier architecture --reason 一句理由` → `architecture/ADR-NNN-kebab-case.md`（主编号延续全局唯一）；执行级 `--tier decisions --parent NNN` → `decisions/ADR-NNN-dN-kebab-case.md`（子编号挂靠主 ADR，轻量模板）。存量根目录 ADR 原位演化不迁移。
 4. **必填字段**：状态 / 日期 / 决策人 / 相关；正文结构：背景（Context）→ 决策（Decision）→ 后果（Consequences）→ 数据溯源。
 5. **状态值**：`📝 提议中` / `✅ 已采纳` / `🔄 部分采纳` / `🧊 已废弃` / `❌ 已取代` / `⚠️ 已采纳（违规或未修复，自动从文件首部识别）`。新 ADR 默认 `📝 提议中`，人类首席架构师拍板后置为 `✅ 已采纳`。状态变更只改文件首部，本页由 `gen-docs-index.ts` 自动重写。取代关系用 `- **被取代**：[ADR-NNN] 取代` 独立行标注（`gen-adr-supersede.ts` 扫描）。
 6. **新 ADR 落地后**：本页自动重写（改文件首部即可），无需手动同步；历史 `PROJECT_STATUS.md` 已冻结于 `docs/archive/`，不再维护。

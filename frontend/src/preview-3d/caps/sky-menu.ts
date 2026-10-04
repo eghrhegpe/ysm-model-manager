@@ -42,28 +42,30 @@ function skyTimelineControlsNode(cap: SkyCapability): NodeFor<"controls"> {
   return { id: "cap-node-sky-timeline", kind: "controls", controls: [timeline] };
 }
 
-/** 完整参数面板节点树：timeline controls 节点 + 高级组 folder
- *  （cloud/sun-intensity/sun-disc/auto-rotate/godrays 全原生）。
- *  顶层：sky-enabled 能力总开关 → timeline → 高级组 folder。
+/** 完整参数面板节点树：sky-enabled 总开关 → timeline → 云量（[锐评 S1-1] 提级平铺）
+ *  → 高级组 folder（sun-intensity/sun-disc/auto-rotate/godrays）。
+ *  顶层：sky-enabled 能力总开关 → timeline → 云量滑块 → 高级组 folder。
  *  （sky 原被注释为「无能力总开关」——误将 sky-env 视作总开关；「是否显示天空」
  *   确是用户对可见效果的偏好，故 [锐评 F-1 收口] 已入 schema 归 `skyEnabled`，
  *   真值源唯一 envState（私有门已退役，setEnabled/isEnabled 为别名）。
  *   `skyGodRaysEnabled` 同批收口——收口前它有 schema 键却无生产写入者，
  *   真开关藏在 SunBeams 私有门里 = 幽灵键。）
+ *  （[锐评 S1-1] 云量是普通用户最高频的天空参数（氛围预设也直接调它），从默认折叠的
+ *   「高级」folder 提级平铺到基础行（紧跟时间轴），无需点开折叠即可调；高级 folder 余 4 项。）
  *  （「时间」slider 已删：与 timeline 同源同槽，timeline 自带 HH:MM 读数 + 拖动，
  *   精度远高于原 0.5h 步进；同一参数不重复声明两条控件。） */
 export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
-  const advanced: PreviewMenuNode[] = [
-    {
-      id: "sky-cloud",
-      kind: "slider",
-      labelKey: "preview.cloudCoverage",
-      control: {
-        ...getParamRange("skyCloudCoverage"),
-        get: () => cap.getCloudCoverage(),
-        set: (v) => cap.setCloudCoverage(v as number, true),
-      },
+  const cloudNode: PreviewMenuNode = {
+    id: "sky-cloud",
+    kind: "slider",
+    labelKey: "preview.cloudCoverage",
+    control: {
+      ...getParamRange("skyCloudCoverage"),
+      get: () => cap.getCloudCoverage(),
+      set: (v) => cap.setCloudCoverage(v as number, true),
     },
+  };
+  const advanced: PreviewMenuNode[] = [
     {
       id: "sky-sun-intensity",
       kind: "slider",
@@ -113,6 +115,8 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
   return [
     skyEnabledNode(cap),
     skyTimelineControlsNode(cap),
+    // [锐评 S1-1] 云量提级平铺到基础行（紧跟时间轴），默认折叠的高级 folder 不再藏高频项
+    cloudNode,
     // [ADR-292 D4] 原「环境贴图」toggle（sky-env）已删除：它与环境面板的总开关互不知晓、
     // 后写者赢，UI 上两个开关都「开」却只有一个生效。scene.environment 的供图者现在由
     // 环境面板的「来源」单选统一表达（选「跟随天空」即旧 toggle=开的效果）。

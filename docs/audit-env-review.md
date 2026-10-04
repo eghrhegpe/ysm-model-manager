@@ -61,6 +61,10 @@
    云量（sky-cloud）是普通用户最高频的天空参数（预设也直接调它），却与
    太阳耦合尺度、光束等冷门项一起塞进默认折叠的「高级」。用户想调云要先点开高级。
    建议：云量提级平铺（与 sky-env 并列），高级仅留 4 项。
+    **✅ 已修（2026-10-04）**：`sky-menu.ts` 把 `sky-cloud` 从 `cap-group-sky-advanced` folder
+    提出平铺到基础行（紧跟时间轴），高级 folder 余 4 项；`sky-capability.test.ts` 结构断言同步更新
+    （顶层集合含 `sky-cloud`、folder 子项不再含 `sky-cloud`、云量改由顶层 `findNodeById` 定位），
+    测试 109 passed 全绿。
 
 2. **S1-2【UX】能力总开关与子视图开关的视觉分裂。**
    一级行 headerToggle 绑 `sky-enabled`（cap.isEnabled/setEnabled），下钻后子视图
@@ -612,7 +616,7 @@ postprocessing cap 确认，列观察项）。
 ### 🟢 UX 改进（低优先级）
 | # | 位置 | 建议 |
 |---|------|------|
-| S1-1 | 云量藏默认折叠高级 folder | 云量提级平铺 |
+| S1-1 | 云量藏默认折叠高级 folder | 云量提级平铺 | ✅ 已修（2026-10-04，sky-menu.ts + 测试同步） |
 | S1-2 | sky 总开关关掉后子视图控件仍可盲调 | 子视图加「能力已关」提示或置灰 |
 | S1-3 | timeline 色带硬编码 5 色与实际天空脱节 | 加 6/12/18 刻度线 |
 | S1-5 | godRays 正午无反应无 hint | hint 补「仅日出日落可见」 |

@@ -158,8 +158,16 @@ export const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) =>
     for (const m of [...targets("surface"), ...targets("wallInner")]) {
       const mat = m.material as THREE.MeshPhysicalMaterial;
       if ("transmission" in mat) {
-        mat.transmission = m === top ? envState.waterClarity : envState.waterClarity * 0.5;
-        mat.needsUpdate = true;
+        const next = m === top ? envState.waterClarity : envState.waterClarity * 0.5;
+        // [锐评 2026-10-04 第三轮 五笔账④] 去掉无条件 needsUpdate——原每 tick 把
+        // surface+wallInner 两材质整段重编 program（滑杆 step 0.05 拖一发一次），
+        // 与同表 waterNormalStrength「无贴图重算、无 needsUpdate」自相矛盾。
+        // three r186 MeshPhysicalMaterial.transmission 是带 setter 的访问器，内部已按
+        // 「0↔非0 跨界」自增 version（只有跨界才翻转 USE_TRANSMISSION define，触发重编；
+        //  非零区间滑动为纯 uniform 更新，version 不动）——纯透传赋值即得条件化语义，
+        // 无须手动 needsUpdate（手动置位会与 setter 各自 version++，跨界时重复 ++，实测
+        //  出现 received 5 vs expected 4）。构造期已是「当前形态的正确 define 态」。
+        mat.transmission = next;
       }
     }
   },

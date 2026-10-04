@@ -169,6 +169,12 @@ export class WaterCapability implements SceneCapability {
   }): THREE.MeshPhysicalMaterial {
     // [shader-patch 守卫] REVISION 断言：water 锚点是渲染管线稳定 chunk 标记，给宽松范围
     // [185,190)，升级审计后再收窄。失配即 throw → registry 工厂兜底使本 cap 缺失，拒绝静默降级。
+    // [锐评 2026-10-04 第三轮 五笔账⑤] 失败哲学（刻意不对称，勿"统一"）：
+    //  · REVISION 失配 = **前提崩塌**（渲染管线 chunk 结构未知，注入串全部可能错位）——此时
+    //    warn+兜底渲染等于输出一坨无法归因的坏画面，故 **throw → cap 缺失 → 显式可发现**；
+    //  · 六锚点失配 = **局部漂移**（REVISION 改写范围仍吻合，仅个别 chunk 标记动了）——水面
+    //    退化为"波浪在摆但细节/倒影缺位"，画面仍可用，故 warn 保现场供诊断，不升级为 throw。
+    //  两个失败模式代价不同（整 cap 不可渲染 vs 单项特效缺失），处理强度随之不同。
     assertRevisionRange({
       module: "water-patch",
       allowed: ["185", "186", "187", "188", "189"],
@@ -367,11 +373,20 @@ export class WaterCapability implements SceneCapability {
            vec2 dd1 = normalize(vec2(1.0, 0.3));
            vec2 dd2 = normalize(vec2(-0.4, 1.0));
            vec2 dd3 = normalize(vec2(0.2, -0.8));
-           float dh1 = 0.08 * cos(dot(dp, dd1) * 0.8);
-           float dh2 = 0.05 * cos(dot(dp, dd2) * 1.1);
-           float dh3 = 0.03 * cos(dot(dp, dd3) * 1.6);
-           float dhdx = dh1 * dd1.x * 0.8 + dh2 * dd2.x * 1.1 + dh3 * dd3.x * 1.6;
-           float dhdz = dh1 * dd1.y * 0.8 + dh2 * dd2.y * 1.1 + dh3 * dd3.y * 1.6;
+           // [锐评 2026-10-04 第三轮 五笔账①] 细节频率反归一（audit P1-1 配套句 192「细节频率
+           // 按 sizeRef/uSize 归一」补落地）：三组沟槽原**恒世界米制**（dp 即世界水平坐标，频率
+           // 参数 0.8/1.1/1.6 rad 唯一，λ 恒 3.9–7.9 m 与 uSize 解耦）——主谱 D2 已锚定域宽
+           // （λ ∝ uSize），细节层却是孤立绝对波带：size=10 时粗沟槽比整个水面还长（细节近乎
+           // 不存在）、size=300 时与主谱差一个数量级。乘 WAVE_STEEP_SIZE_REF/uSize
+           // （fragment 无 uSize 声明，经 uHalfSize=uSize/2 推导）后 λ ∝ uSize 与主谱同基准；
+           // 基准档（80 m）因子 = 1 观感零变化——与 P1-1 主谱反归一同一纪律
+           // （WAVE_STEEP_SIZE_REF = schema waterSize 默认值，二者同源断言见 water-state.ts）。
+           float detailFreqScale = ${WAVE_STEEP_SIZE_REF.toFixed(1)} / max(uHalfSize * 2.0, 0.001);
+           float dh1 = 0.08 * cos(dot(dp, dd1) * 0.8 * detailFreqScale);
+           float dh2 = 0.05 * cos(dot(dp, dd2) * 1.1 * detailFreqScale);
+           float dh3 = 0.03 * cos(dot(dp, dd3) * 1.6 * detailFreqScale);
+           float dhdx = dh1 * dd1.x * 0.8 * detailFreqScale + dh2 * dd2.x * 1.1 * detailFreqScale + dh3 * dd3.x * 1.6 * detailFreqScale;
+           float dhdz = dh1 * dd1.y * 0.8 * detailFreqScale + dh2 * dd2.y * 1.1 * detailFreqScale + dh3 * dd3.y * 1.6 * detailFreqScale;
            // 扰动先在世界空间构造（水面朝上，切向即水平面），再经 viewMatrix 送入视图空间
            vec3 detailWorld = vec3(-dhdx, 0.0, -dhdz) * uDetailStrength;
            normal = normalize(normal + (viewMatrix * vec4(detailWorld, 0.0)).xyz);

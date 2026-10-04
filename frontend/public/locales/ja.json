@@ -1274,6 +1274,7 @@
   "preview.waterChoppiness": "波の鋭さ",
   "preview.waterWaveHeight": "波の高さ",
   "preview.waterWaveHeightEffective": "実際の有効値 {v} m",
+  "preview.waterLevelAboveWall": "水位が壁を {v} m 超えています — 波の予算はゼロ",
   "preview.waterHeight": "プール高さ",
   "preview.waterWallThickness": "壁厚",
   "preview.waterWallColor": "壁色",

@@ -108,6 +108,18 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
         wSliderNode("water-level", "preview.waterLevel", getParamRange("waterLevel"), {
           get: () => cap.getLevel(),
           set: (v) => cap.setLevel(v),
+          // [锐评 2026-10-04 第三轮 五笔账③] pool 下水位超出池壁的出口：此前 level>poolHeight
+          // ⇒ 预算归零 + 水面浮池壁，滑杆无任何提示（P2-1③ 未闭环，测试 2293 反把归零锁成期望）。
+          // 沿 wave-height 的 getHint 纪律：只在「超出」时提示，不打扰；film 无壁（effectiveWaveHeight
+          // 无上钳），水面自由抬升，不受此约束。
+          getHint: () => {
+            if (cap.getWaterMode() !== "pool") return "";
+            const level = cap.getLevel();
+            const wall = cap.getPoolHeight();
+            return level > wall
+              ? t("preview.waterLevelAboveWall", { v: (level - wall).toFixed(2) })
+              : "";
+          },
         }),
         // ADR-272：尺寸与水位同属性——跨形态通用、且两形态都零重建（策略表 transformLinks：
         // film 单件 scale、pool 逐件 transform + 定位），故同理**不带 visibleWhen**。

@@ -46,12 +46,17 @@ export interface WaterReflectCtx {
   update: (dt: number) => void;
 }
 
-/** 倒影门控：总开关 ∧（SSR 抑制启用时 SSR 不活跃）∧ 宿主在场。
+/** 倒影门控：总开关 ∧（SSR 抑制启用时 SSR 不活跃）∧ 强度 > 0 ∧ 水面非全透明 ∧ 宿主在场。
  *  ⚠️ pp* 键属 postprocessing 组，water 回调收不到派发——此处不另订第二路订阅，
  *  逐帧现读 envState 现算（真值源仍是 envState 单处，单门纪律不破）。 */
 export function reflectionActive(ctx: WaterReflectCtx): boolean {
   if (!envState.waterReflectionEnabled) return false;
   if (envState.waterReflectDisableWhenSSR && isSsrRenderActive()) return false;
+  // [锐评 2026-10-04 第三轮 五笔账②] 强度归零 = 关混合但每帧仍付整场 RT 重渲（P2-3 修复方向
+  // 「reflectionActive 顺带判 strength>0」落地）。uReflStrength=0 时 shader 混合块整体跳过
+  // （water-capability.ts 注入处 `if (uReflStrength > 0.0) {`），RT 内容无人消费——归零即停渲，
+  // 与下方全透明门同一「白付一次重渲」修为。强度靠 fader 拉回时不重建 RT（渲一次即恢复）。
+  if (envState.waterReflectionStrength <= 0) return false;
   // [锐评回归 2026-10-04] 水面**全透明**（film 浓度 0 / pool 不透明度 0）时倒影无意义：可见性单门后
   // wetness=0 不再隐水（`root.visible` 仍为真），若不在此门掉，开着倒影就每帧白付一次整场 RT 重渲，
   // 而画面里一滴水都没有。波相仍由 `update` 推进（廉价），只是不渲 RT。

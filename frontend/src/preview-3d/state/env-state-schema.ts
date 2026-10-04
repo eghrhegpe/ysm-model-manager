@@ -346,7 +346,8 @@ export const ENV_STATE_SCHEMA = {
   // ── 水面模型倒影（ADR-297：隐藏 Reflector 借官方 RT + 水 shader 投影采样）──
   // 默认关：倒影 = 每帧多一次整场重渲进 RT，不是白拿的——与地面 reflectorEnabled 同纪律。
   waterReflectionEnabled: { type: "boolean", default: false, group: "water" },
-  // 混合权重上限（fresnel 掠射增强乘于其上；0 等于关混合但保留 RT——通常直接关总开关）。
+  // 混合权重上限（fresnel 掠射增强乘于其上；0 = 关混合 **且停渲**——reflectionActive 顺带判
+  // strength>0（锐评 2026-10-04 第三轮②）：归零即不渲 RT，不再白付整场重渲）。
   waterReflectionStrength: {
     type: "number",
     default: 0.6,

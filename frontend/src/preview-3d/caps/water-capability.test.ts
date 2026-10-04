@@ -515,10 +515,16 @@ describe("WaterCapability — onBeforeCompile 波浪 shader 注入", () => {
     expect(shader.fragmentShader).toContain("viewMatrix * vec4(detailWorld, 0.0)");
     // 强度由 uniform 驱动（原 normalScale 槽位已随贴图链路一并移除）
     expect(shader.fragmentShader).toContain("* uDetailStrength;");
-    // 三组方向沟槽偏导逐项在场，与原 generateNormalMap 同参（防搬迁中悄悄改谱）
-    expect(shader.fragmentShader).toContain("0.08 * cos(dot(dp, dd1) * 0.8)");
-    expect(shader.fragmentShader).toContain("0.05 * cos(dot(dp, dd2) * 1.1)");
-    expect(shader.fragmentShader).toContain("0.03 * cos(dot(dp, dd3) * 1.6)");
+    // 三组方向沟槽偏导逐项在场，与原 generateNormalMap 同参（防搬迁中悄悄改谱）；
+    // [锐评 2026-10-04 第三轮①] 频率参数×detailFreqScale（80/(2·uHalfSize) 反归一，见下方③④断言）
+    expect(shader.fragmentShader).toContain("0.08 * cos(dot(dp, dd1) * 0.8 * detailFreqScale)");
+    expect(shader.fragmentShader).toContain("0.05 * cos(dot(dp, dd2) * 1.1 * detailFreqScale)");
+    expect(shader.fragmentShader).toContain("0.03 * cos(dot(dp, dd3) * 1.6 * detailFreqScale)");
+    // [锐评 2026-10-04 第三轮①] dhdx/dhdz 同乘 detailFreqScale——梯度必须与相位同谱：
+    // cos 内频率变了而偏导系数不跟着变，法线斜率与沟槽波长脱钩（观感裂缝）
+    expect(shader.fragmentShader).toContain("dh1 * dd1.x * 0.8 * detailFreqScale");
+    expect(shader.fragmentShader).toContain("dh2 * dd2.x * 1.1 * detailFreqScale");
+    expect(shader.fragmentShader).toContain("dh3 * dd3.x * 1.6 * detailFreqScale");
   });
 
   it("缺 normal_fragment_maps 锚点也告警（微细节法线静默失效的防线）", () => {
@@ -721,6 +727,28 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
     const inner = scene.getObjectByName("ysm-water-wall-n-inner") as THREE.Mesh;
     expect((top.material as THREE.MeshPhysicalMaterial).transmission).toBeCloseTo(0.8, 5);
     expect((inner.material as THREE.MeshPhysicalMaterial).transmission).toBeCloseTo(0.4, 5);
+  });
+
+  it("[锐评 2026-10-04 第三轮④] setClarity 非零区间滑动不置 needsUpdate，仅 0↔非0 跨界才重编（原每 tick 无条件重编 surface+wallInner 两材质）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    cap.setWaterMode("pool");
+    cap.apply();
+    const top = scene.getObjectByName("ysm-water-top") as THREE.Mesh;
+    const topMat = top.material as THREE.MeshPhysicalMaterial;
+    // pool 默认 clarity 0.6 = 构造期 transmission 0.6（非 0），程序已按 define 编译完毕
+    expect(topMat.transmission).toBeCloseTo(0.6, 5);
+    // three r186 Material.needsUpdate 只有 setter（if (value===true) this.version++）无 getter，
+    // 读恒 undefined——用 version 快照观察重编译触发（同 sky-capability.test.ts:783-790 纪律）
+    const versionBefore = topMat.version;
+    cap.setClarity(0.8); // 0.6→0.8：非零区间，纯 uniform 更新
+    expect(topMat.version, "非零区间滑动不得触发重编译").toBe(versionBefore);
+    cap.setClarity(0); // 0.8→0：跨界 → 需重编（USE_TRANSMISSION define 翻转）
+    expect(topMat.version, "归零跨界须触发重编译").toBe(versionBefore + 1);
+    cap.setClarity(0.3); // 0→0.3：再跨界 → 需重编
+    expect(topMat.version, "从零抬回也须触发重编译").toBe(versionBefore + 2);
+    cap.setClarity(0.4); // 0.3→0.4：非零区间
+    expect(topMat.version, "非零区间滑动不得触发重编译（回归）").toBe(versionBefore + 2);
   });
 
   it("setPoolWallThickness（pool）→ 外壁偏移 / 壁高 / 光学光程就地更新，零重建", () => {
@@ -2036,6 +2064,22 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     expect(renderCount).toBe(1);
   });
 
+  it("[锐评 2026-10-04 第三轮②] 强度归零 → 倒影停渲（reflectionActive 顺带判 strength>0，P2-3 方向②）：uReflStrength=0 时 RT 无人消费，不再每帧白付整场重渲", () => {
+    const scene = new THREE.Scene();
+    let renderCount = 0;
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(() => { renderCount += 1; }), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    cap.setWaterReflectionStrength(0);
+    cap.update(0.016);
+    expect(renderCount, "强度 0：混合块被 shader 跳过，RT 不渲").toBe(0);
+    cap.setWaterReflectionStrength(0.9);
+    cap.update(0.016);
+    expect(renderCount, "强度回升：stale uniform 清零后 RT 恢复（拉回即渲染，无需重建）").toBe(1);
+    const uni = compileTop(cap);
+    expect(uni.uReflStrength!.value).toBeCloseTo(0.9, 5);
+  });
+
   it("shader 未编译不炸：update 在 userData.shader 缺席时照常渲 RT；编译入场同一拍即重绑（零滞后）", () => {
     const scene = new THREE.Scene();
     let renderCount = 0;
@@ -2263,6 +2307,23 @@ describe("WaterCapability — 波场尺度归一与浪高分形态容器钳制�
     expect(hint!(), "不得显示滑杆原值 0.60（否则用户仍被蒙在鼓里）").not.toContain("0.60");
     cap.setLevel(0.04); // 水位压低 ⇒ 预算收窄到 0.04
     expect(hint!(), "预算随水位重算").toContain("0.04");
+  });
+
+  it("[锐评 2026-10-04 第三轮③] 菜单水位滑杆的 getHint：pool 下水位超出池壁 → 提示超出量（P2-1③ 无出口终闭环）；film 下不受约束不提示", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    const hint = findNodeById(cap.getMenuNodes(), "water-level")!.control!.getHint;
+    expect(hint, "水位滑杆须有动态 hint 出口").toBeTypeOf("function");
+    // film：effectiveWaveHeight 无上钳，水位自由抬升，不提示
+    expect(hint!(), "film 水位不受池深约束 ⇒ 空串").toBe("");
+    cap.setWaterMode("pool");
+    cap.apply();
+    // pool 默认水位 0.15 < 池高 0.3：未超出，不提示
+    expect(hint!(), "水位在池壁内 ⇒ 空串（不打扰）").toBe("");
+    cap.setLevel(0.5);
+    expect(hint!(), "水位超池壁 0.2 ⇒ 提示超出量（预算归零的因果出口）").toContain("0.20");
+    // 预算归零的具体机制见 effectiveWaveHeight 用例（2293）：此处只管出口存在
+    cap.setLevel(0.3);
+    expect(hint!(), "水位恰在壁顶：不提示（preview.waterLevelAboveWall 语义是「超出」）").toBe("");
   });
 });
 

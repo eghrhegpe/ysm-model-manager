@@ -1455,6 +1455,7 @@ export const en: Record<string, string> = {
   "preview.waterChoppiness": "Choppiness",
   "preview.waterWaveHeight": "Wave Height",
   "preview.waterWaveHeightEffective": "Effective {v} m",
+  "preview.waterLevelAboveWall": "Water level {v} m above wall — wave budget zeroed",
   "preview.waterHeight": "Pool Height",
   "preview.waterWallThickness": "Wall Thickness",
   "preview.waterWallColor": "Wall Color",

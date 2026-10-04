@@ -91,6 +91,24 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(surf!.visible).toBe(false);
   });
 
+  it("[地面自证] isSurfaceVisible() 与 surface.visible 同口径（e2e 探针 ysmGroundProbe 的数据源）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    const surf = scene.getObjectByName("ysm-ground-surface") as THREE.Mesh;
+    // 默认 none：两层都不可见
+    expect(cap.isSurfaceVisible()).toBe(false);
+    expect(surf.visible).toBe(false);
+    // 切 solid：getter 与 mesh.visible 同步翻转
+    cap.setSourceKind("solid");
+    expect(cap.isSurfaceVisible()).toBe(true);
+    expect(surf.visible).toBe(true);
+    // 关总开关：两者同步回落
+    cap.setVisible(false);
+    expect(cap.isSurfaceVisible()).toBe(false);
+    expect(surf.visible).toBe(false);
+  });
+
   it("setSourceKind/CanvasStyle(marble) → 可见 + 材质挂 DataTexture + repeat=80/10/1", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });

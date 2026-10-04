@@ -581,6 +581,12 @@ export class GroundCapability implements SceneCapability {
   getSourceKind(): GroundSourceKind {
     return envState.groundSourceKind;
   }
+  /** 表面承接面当前可见性（与 updateSurfaceVisible 同口径的纯派生，零副作用；供 e2e/dev 探针只读）。
+   *  surface.visible = 能力开关 × 总开关 × 来源非 none；默认 sourceKind="none" 时此值为 false——
+   *  即「默认只有网格线、无实体承接面」的自证出口（e2e 见 web-preview ground 用例）。 */
+  isSurfaceVisible(): boolean {
+    return this.enabled && envState.groundVisible && envState.groundSourceKind !== "none";
+  }
   setSourceKind(kind: GroundSourceKind): void {
     if (envState.groundSourceKind === kind) return;
     setEnvState({ groundSourceKind: kind }, { source: "manual" });

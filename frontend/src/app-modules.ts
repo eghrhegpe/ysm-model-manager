@@ -302,3 +302,42 @@ if (_devMode && typeof window !== "undefined") {
     })
     .catch((e) => console.warn("[app-modules] ysmPostprocProbe 挂载失败:", e));
 }
+
+// ===== 控制台地面状态探针钩子（ADR-214 同款装配层模式）=====
+// 开发/调试环境挂载 window.ysmGroundProbe() —— 只读返回地面「自证」状态：
+//   { sourceKind, surfaceVisible, gridVisible }
+// 解决「默认地面只有网格线、新人/AI/e2e 认不出地面在哪」的可探测性问题（用户反馈 2026-10）。
+// 地面 surface.visible 是 envState 纯派生（enabled × groundVisible × sourceKind!="none"），
+// 默认 sourceKind="none" → surface 不可见、只剩 y=0 网格；本钩子让机器一眼认得地面语义与位置。
+// 职责纯度：只读派生于 ground cap，钩子生命周期归装配层（与 debugGetSpec 同规矩）。
+if (_devMode && typeof window !== "undefined") {
+  import("@/utils/debug/debug.ts")
+    .then(async ({ isDebugEnabled }) => {
+      if (!isDebugEnabled()) return;
+      const { getSceneCaps } = await import("@/preview-3d/adapters/shared-infra.ts");
+      (
+        window as unknown as {
+          ysmGroundProbe: () => {
+            sourceKind: string;
+            surfaceVisible: boolean;
+            gridVisible: boolean;
+          } | null;
+        }
+      ).ysmGroundProbe = () => {
+        const ground = getSceneCaps().find((c) => c.id === "ground") as
+          | {
+              getSourceKind: () => string;
+              isSurfaceVisible: () => boolean;
+              getGridVisible: () => boolean;
+            }
+          | undefined;
+        if (!ground) return null;
+        return {
+          sourceKind: ground.getSourceKind(),
+          surfaceVisible: ground.isSurfaceVisible(),
+          gridVisible: ground.getGridVisible(),
+        };
+      };
+    })
+    .catch((e) => console.warn("[app-modules] ysmGroundProbe 挂载失败:", e));
+}

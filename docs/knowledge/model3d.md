@@ -70,6 +70,7 @@ auto_fields:
     - bindInputHandlers
     - BlinkCallback
     - BlinkOptions
+    - bloomThresholdToLinear
     - BoneData
     - BoneDetail
     - BoneGroupMap
@@ -245,6 +246,7 @@ auto_fields:
     - DragSliderOptions
     - drawEnvEquirect
     - effectiveParamsOf
+    - effectiveToneMappingExposure
     - encodeAndCacheTexture
     - encodeToKTX2Basis
     - Endianness

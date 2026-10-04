@@ -20,6 +20,7 @@ auto_fields:
     - applyReflectionUniforms
     - attenuateAmbientForSky
     - bindFieldRestorers
+    - bloomThresholdToLinear
     - buildEnvironmentNodes
     - buildFogNodes
     - buildGroundNodes

@@ -138,7 +138,10 @@ test.describe("网页版主链路（ADR-049）", () => {
   });
 
   test("主 UI 加载：组件渲染 + 零 Wails runtime 请求", async ({ page }) => {
-    await expect(page).toHaveTitle(/YSM 模型管理器/);
+    // locale=en-US 由配置钉定；标题是 static-a11y-labels 运行时用 i18n 值覆盖的 document.title，
+    // en 语言包为 "YSM Model Manager"（zh 旧断言 /YSM 模型管理器/ 在 en-US 下确定性红 13 连败）。
+    // 断言 en 精确值——与本例 "Model Repository" 的 en 精确文案惯例一致，locale 泄漏即翻红。
+    await expect(page).toHaveTitle("YSM Model Manager");
     await expect(page.locator("app-nav")).toHaveCount(1);
     await expect(page.locator("app-content")).toHaveCount(1);
     // 树渲染（repo 页默认 tree tab）——poll 等待组件挂载完成（locale=en-US）

@@ -28,6 +28,7 @@ auto_fields:
     - clearSceneCaps
     - deriveDefaultEnvState
     - dispatchEnvChange
+    - effectiveToneMappingExposure
     - ENV_STATE_SCHEMA
     - EnvCallback
     - envState

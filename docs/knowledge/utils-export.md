@@ -24,7 +24,6 @@ auto_fields:
     - screenshotFromRenderer
     - ScreenshotLights
     - ScreenshotOpts
-    - ScreenshotOutputSettings
     - ScreenshotVolumetric
     - toScreenshotLights
   tests:

@@ -15,6 +15,7 @@ import {
   GROUND_MATERIAL_PRESET_IDS,
 } from "./ground-surface-spec.ts";
 import { GROUND_MATERIAL_PRESET_KEYS } from "./ground-capability.ts";
+import { restoreState } from "./scene-capability.ts";
 // ADR-196：每个构造注册全局 env 回调，且仅 dispose 时注销——
 // 不显式 dispose 的用例会泄漏回调，使后续 setEnvState 触发 O(N²) 纹理重建超时。
 // 与 environment/sky/postprocessing/water 同侪一致：afterEach 清空防止 cap 泄漏跨测试。
@@ -198,14 +199,14 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(btn.control!.getHint!()).toContain("wood.png");
   });
 
-  it("clearCustomTexture：释放缓存并回退 canvas/plain（ADR-249 不再改写为语义无关模式）", () => {
+  it("clearCustomTexture：释放缓存并回出厂三轴 solid/plain（2026-10-04 小修批：清图=回到出厂，名称态一致）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
     const tex = new THREE.DataTexture(new Uint8Array(4 * 4), 2, 2);
     cap.acceptLoadedTexture(tex, "wood.png");
     cap.clearCustomTexture();
-    expect(cap.getSourceKind()).toBe("canvas");
+    expect(cap.getSourceKind()).toBe("solid");
     expect(cap.getCanvasStyle()).toBe("plain");
     const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.map).not.toBe(tex);
@@ -580,7 +581,7 @@ describe("GroundCapability — 菜单控件联动", () => {
     expect(clear.visibleWhen?.(snap("texture"))).toBe(true);
     cap.setSourceKind("texture");
     void clear.control!.action!();
-    expect(cap.getSourceKind()).toBe("canvas");
+    expect(cap.getSourceKind(), "清图回出厂默认来源轴 solid（2026-10-04 小修批）").toBe("solid");
     expect(cap.getCanvasStyle()).toBe("plain");
   });
 
@@ -947,7 +948,7 @@ describe("GroundCapability — 材质预设（ADR-254 材质名兑现配色）",
     ).toBe("custom");
   });
 
-  it("[G-6] 贴图 → 清贴图（释放缓存 + 回退 canvas/plain）→ 置位 custom", () => {
+  it("[G-6] 贴图 → 清贴图（释放缓存 + 回出厂三轴 solid/plain）→ 置位 custom", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     cap.apply();
@@ -955,14 +956,12 @@ describe("GroundCapability — 材质预设（ADR-254 材质名兑现配色）",
     const tex = new THREE.DataTexture(new Uint8Array(4 * 4), 2, 2);
     cap.acceptLoadedTexture(tex, "wood.png");
     cap.clearCustomTexture();
-    expect(cap.getSourceKind()).toBe("canvas");
-    expect(cap.getCanvasStyle()).toBe("plain");
+    expect(cap.getSourceKind()).toBe("solid");
+    expect(cap.getCanvasStyle(), "样式轴一并回出厂默认 plain（不留悬空旧轴值）").toBe("plain");
     expect(
       cap.getMaterialPreset(),
       "清贴图是用户手动动作，应视为脱离材质预设",
     ).toBe("custom");
-    // 清贴图后 canvas 轴停留在用户手改的 plain（形状保留，与「custom 态保留上一次形状」一致）
-    expect(cap.getCanvasStyle()).toBe("plain");
   });
 
   it("[G-6] texture → solid/solid → texture 反复切换 → 一律置位 custom（不复位素面）", () => {
@@ -1272,9 +1271,13 @@ describe("GroundCapability — 恢复路径来源纪律（锐评 F-2）", () => 
       patch[k] = DEVIATION[k];
     }
     setEnvState(patch as never, { source: "manual", force: true });
-    // cap 私有 enabled 不进 schema 键集，须仍手写落盘——单独偏离默认 true 验证
-    cap.setEnabled(false);
     cap.saveState();
+    const saved = restoreState("ground") as Record<string, unknown>;
+    // [2026-10-04 小修批] cap 私有 `enabled` 刻意不进存档（对照 water 侧同病收口
+    // 2026-09-22「saveState 不再持久化能力级 enabled 幽灵键」）：无 schema 键、
+    // 构造默认 true、生产 UI 无 setEnabled 写口——旧往返是恒真值绕圈的僵尸路径。
+    // 本断言即防回填闸：任何「把 enabled 塞回存档」的改动在此红。
+    expect("enabled" in saved, "恒真值的 cap 私有 enabled 不得再进存档").toBe(false);
     resetEnvState();
     const cap2 = new GroundCapability({ scene });
     cap2.loadState();
@@ -1283,6 +1286,6 @@ describe("GroundCapability — 恢复路径来源纪律（锐评 F-2）", () => 
         DEVIATION[k],
       );
     }
-    expect(cap2.isEnabled(), "私有 enabled 不进 schema 派生但须持久化并恢复").toBe(false);
+    expect(cap2.isEnabled(), "私有 enabled 无持久化往返：构造默认 true 唯一真相源（旧存档幽灵键被忽略）").toBe(true);
   });
 });

@@ -504,10 +504,18 @@ export class GroundCapability implements SceneCapability {
     setEnvState({ groundSourceKind: "texture" }, { source: "manual" });
   }
 
-  /** 清除自定义贴图缓存并回退 plain（texture 模式时）。
+  /** 清除自定义贴图缓存，清图后回**出厂三轴值**（sourceKind→solid + canvasStyle→plain，texture 模式时）。
    *  [锐评修复] 先摘私有态（customTex/surfaceTex），再经 envState 单路径落地——
    *  旧接线先 setEnvState（同步触发回调 refreshSurface，此时 surfaceTex 仍指向已释放的
-   *  customTex）→ 末尾又显式 refreshSurface 再跑一遍，构成双刷；现摘干净再派发，只刷一次。 */
+   *  customTex）→ 末尾又显式 refreshSurface 再跑一遍，构成双刷；现摘干净再派发，只刷一次。
+   *  [2026-10-04 小修批] 回退目标由 canvas+plain 改为 solid+plain（出厂默认），三条理由：
+   *  ① solid/plain 渲染输出统一（ADR-254 §2.5，tex=null 材质直出 color），画面不变、
+   *  仅下拉文案变——清图后来源下拉显示 solid，与首启默认态完全一致，「回到出厂」
+   *  语义正确；旧行为停在 canvas+plain，同一画面两张菜单脸、名实差一格。
+   *  ② sourceKind 写非 none 值触发中间件置 custom 标记（G-6 修复 2026-09-21）——
+   *  清图后预设显示「自定义」是**对的**（用户确实动过材质），勿误当误清修掉。
+   *  ③ canvasStyle 一并回 plain（出厂默认）：solid 分支不读样式轴，但留着用户上次的
+   *  旧样式值会在下次切 canvas 时突然冒出悬空轴值。 */
   clearCustomTexture(): void {
     const wasAttached = this.surfaceTex === this.customTex;
     if (this.customTex) {
@@ -520,7 +528,7 @@ export class GroundCapability implements SceneCapability {
     // 非 texture 态清缓存不写 envState → 不派发，但上一步已摘私有态、当前 surface 材质未引用
     // customTex（wasAttached=false），无悬空引用，无需显式 refresh。
     if (envState.groundSourceKind === "texture")
-      setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "plain" }, { source: "manual" });
+      setEnvState({ groundSourceKind: "solid", groundCanvasStyle: "plain" }, { source: "manual" });
   }
 
   /** 文件选择器（对齐 environment-capability customHdr 口径：不持久化二进制） */
@@ -750,15 +758,23 @@ export class GroundCapability implements SceneCapability {
    *  不再手抄 23 字段清单（ADR-249 拆轴时就曾漏 groundSourceKind 的病史）。
    *  ⚠️ 读侧不自动：loadState 还原表（restoreFields）仍是手写双轨清单，新键须
    *  同步登记——缺口由 [G-8] schema 键集 round-trip 契约锁兜住（漏登记即红）。
-   *  ⚠️ 顶层 `enabled` 是 cap 私有字段（无 schema 键，registry 恒不传 → 构造默认
-   *  true），不进 getPresetKeys，故仍手写（与 waterEnabled 已收口进 schema 不同）。 */
+   *  ⚠️ cap 私有 `enabled` 刻意**不持久化**（2026-10-04 小修批，对照 water 侧同病
+   *  收口 2026-09-22「saveState 不再持久化能力级 enabled 幽灵键」）：无 schema 键、
+   *  registry 恒不传参（构造默认 true），且生产 UI 无 setEnabled 写口（env 一级行
+   *  headerToggle 绑 ground-visible master 节点 = getVisible/setVisible → schema
+   *  groundVisible；场景组根视图 headerToggle 只覆盖 camera/lighting/shadow/postproc
+   *  面板）——旧手写往返是恒真值绕圈的僵尸路径。本注释即防回填闸：saveState 只有
+   *  schema 键集、没有 enabled 是**有意为之**，不是漏登。setEnabled/isEnabled 保留
+   *  （cap 生命周期 API + 测试消费方），删的只是持久化。真·根治（enabled 收编
+   *  schema 键，跨 cap 统一议题）另立 ADR，不混入本批。 */
   saveState(): void {
-    const state: Record<string, unknown> = { enabled: this.enabled };
+    const state: Record<string, unknown> = {};
     for (const key of getPresetKeys("ground")) state[key] = envState[key];
     persistState(this.id, state);
   }
 
-  /** 从 localStorage 恢复状态（texture 模式二进制未持久化 → 回退 plain） */
+  /** 从 localStorage 恢复状态（texture 模式二进制未持久化 → 保留来源选择，
+   *  无贴图的渲染兜底归 rebuildSurface 的 solid 占位，ADR-249 §2.5 不静默降级） */
   loadState(): void {
     // 三代存档（扁平无前缀 / 旧单枚举 matSource / ADR-249 图案型 canvasStyle）的归一
     // 逻辑下沉至 ground-migrations.ts——纯函数、node 可测，回归锚见其同名测试；
@@ -772,11 +788,9 @@ export class GroundCapability implements SceneCapability {
     suspendEnvCallbacks();
     try {
       restoreFields(state, {
-        enabled: {
-          boolean: (v) => {
-            this.enabled = v;
-          },
-        },
+        // cap 私有 `enabled` 刻意不还原（对照 saveState 注释，2026-10-04 小修批）：
+        // 无 schema 键、构造默认 true、生产 UI 无写口；旧存档里的 enabled 幽灵键被
+        // restoreFields 的未知键静默忽略——恒真值绕圈路径就此除根。
         groundVisible: {
           // 走 setVisible（内部写 envState，挂起期不派发）；末尾统一落地覆盖。
           boolean: (v) => this.setVisible(v, RESTORE_SOURCE),

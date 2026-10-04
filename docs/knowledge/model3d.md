@@ -785,7 +785,6 @@ auto_fields:
     - screenshotFromRenderer
     - ScreenshotLights
     - ScreenshotOpts
-    - ScreenshotOutputSettings
     - ScreenshotScene
     - ScreenshotVolumetric
     - SEMANTIC_BONE_IDS

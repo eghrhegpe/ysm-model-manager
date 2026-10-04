@@ -6,6 +6,7 @@
 // 菜单/持久化/生命周期全部由框架驱动，零手工 wiring。
 
 import type * as THREE from "three";
+import { ringLog } from "@/preview-3d/ring-log.ts";
 import { EnvironmentCapability } from "./environment-capability.ts";
 import { FogCapability } from "./fog-capability.ts";
 import { GroundCapability } from "./ground-capability.ts";
@@ -13,7 +14,7 @@ import { LightCapability } from "./light-capability.ts";
 import { PostprocessingCapability } from "./postprocessing-capability.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
 import { RenderModeCapability } from "./render-mode-capability.ts";
-import { ringLog, type SceneCapability, type SceneCapabilityLookup } from "./scene-capability.ts";
+import type { SceneCapability, SceneCapabilityLookup } from "./scene-capability.ts";
 import { ShadowCapability } from "./shadow-capability.ts";
 import { SkyCapability } from "./sky-capability.ts";
 import { WaterCapability } from "./water-capability.ts";

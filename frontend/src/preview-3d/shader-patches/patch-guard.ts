@@ -11,7 +11,7 @@
 // 版本审计节奏：升级 three 后跑全量测试——若 shader 相关用例红，按报错定位锚点/REVISION
 // 更新对应 allowed 列表（sky/reflector 锁精确版本、water 可给宽松范围，见各调用处）。
 import * as THREE from "three";
-import { ringLog } from "@/preview-3d/caps/scene-capability.ts";
+import { ringLog } from "@/preview-3d/ring-log.ts";
 
 /** REVISION 校验纯函数（可脱离 three 直测）：rev 不在 allowed 内返回失配说明，否则 null */
 export function checkRevision(rev: string, allowed: readonly string[]): string | null {

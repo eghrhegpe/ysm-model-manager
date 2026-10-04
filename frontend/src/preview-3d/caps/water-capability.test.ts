@@ -2433,6 +2433,32 @@ describe("WaterCapability — 波陡尺寸反归一（锐评 2026-10-04 P1-1）"
     expect(probe, "aa 双阈值同值").toContain("smoothstep(2.0, 6.0, waveLen / spacing)");
     expect(probe, "基准尺寸常量同值").toContain(`const STEEP_SIZE_REF = ${WAVE_STEEP_SIZE_REF};`);
   });
+
+  it("[P2-4] 探针与 shader 的**表达式**指纹成对核查（常量之外：级数步长 / 振幅分配 / 反归一 / 成对换算）", () => {
+    const probe = readFileSync(
+      fileURLToPath(new URL("../../../../scripts/probe-water-wave.ts", import.meta.url)),
+      "utf8",
+    );
+    const { shader } = liveShader(new THREE.Scene());
+    const v = shader.vertexShader;
+    // 频谱锚点（D2）：λ = uSize/(4·1.19^i) —— 两侧写法不同（GLSL pow vs JS **），故成对断言指纹
+    expect(v, "shader 端 D2 锚点").toContain("* pow(1.19, fi) * 4.0 / sizeSafe");
+    expect(probe, "探针端 D2 锚点").toContain("(TWO_PI * 1.19 ** i * 4) / sizeSafe");
+    // 振幅分配（D1）：amp = h·0.26·0.82^i
+    expect(v, "shader 端振幅分配").toContain("* 0.26 * pow(0.82, fi)");
+    expect(probe, "探针端振幅分配").toContain("* 0.26 * 0.82 ** i");
+    // 波陡反归一（P1-1）：× 基准/uSize
+    expect(v, "shader 端反归一").toContain(`${WAVE_STEEP_SIZE_REF.toFixed(1)} / sizeSafe`);
+    expect(probe, "探针端反归一").toContain("STEEP_SIZE_REF / sizeSafe");
+    // 各向异性缩放的成对换算（ADR-257 §6.4）：位移 /sizeSafe 与法线 ×sizeSafe 必须同时在场
+    expect(v, "位移须 /sizeSafe").toContain("dir.x * c / sizeSafe");
+    expect(v, "法线须 ×sizeSafe").toContain("dir.x * wa * c * sizeSafe");
+    // 反证（「守卫得是真守卫」）：指纹对数值敏感——篡改任一数字即失配，不是恒真断言
+    expect(v.replaceAll("1.19", "1.20"), "改级数步长即失配").not.toContain(
+      "* pow(1.19, fi) * 4.0 / sizeSafe",
+    );
+    expect(probe.replaceAll("0.26", "0.27"), "改振幅归一即失配").not.toContain("* 0.26 * 0.82 ** i");
+  });
 });
 
 describe("WaterCapability — 旧档水位默认值迁移（锐评 2026-10-04 P1-4）", () => {

@@ -309,7 +309,11 @@ invariant_anchors:
 
 - ADR-283（参数值域描述符：schema `range`/`uiRange` 单一事实源 + 钳制收口 `setEnvState`）
 - ADR-319（波场尺度归一与泡沫判据可达性：浪高出参数 + 双向往容器钳制 / λ 锚定域宽 / 泡沫二选一表态 / 数值断言替字符断言）
-- 量具：`node scripts/probe-water-wave.ts`（复刻 `gerstner()` 的数值探针，`--json` 可机读；退出码恒 0，不作门禁）
+- 量具：`node scripts/probe-water-wave.ts`（复刻 `gerstner()` 的数值探针，`--json` 可机读；退出码恒 0，不作门禁）。
+  **它是 shader 的平行手抄实现**，漂移闸 = `water-capability.test.ts` 的「探针与源码同源核查」两条用例：
+  ① 共享常量字面（退化门 / Σσk 上界 / aa 双阈值 / segments / 波陡基准）；② **表达式指纹成对核查**
+  （D2 锚点 / D1 振幅分配 / 反归一 / 位移↔法线成对换算），并配 `replaceAll` 篡改数字的反证自证非恒真。
+  改 shader 公式或探针公式的任一侧，先跑这两条
 - ADR-272（waterSize 放开 UI 入口 + pool 尺寸零重建 / `sizeLinks`；§5 扩展：池深/壁厚一并零重建 + 三处接线收口）
 - ADR-271（微细节法线 GPU 化，移除 CPU DataTexture 链路）
 - ADR-257（水面/容器解耦 + 水体形态策略表）、ADR-255（Gerstner + uniform 化）

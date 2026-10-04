@@ -46,6 +46,8 @@ import {
 } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { pickModelDefaultFields, toModelType } from "@/preview-3d/state/model-defaults.ts";
+// [锐评 X-6 / 方案 C 2026-10-04] 菜单局部刷新订阅原语（fog/water/reflector 同源）
+import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import type { LightCapability } from "./light-capability.ts";
 import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
 // 状态/序列化轴（PostprocessingParams / 默认值 / toneMapping 键表）已下沉
@@ -155,6 +157,18 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   // ADR-196：取消订阅函数
   private unsubscribeEnv: () => void;
+  /** [锐评 X-6 / 方案 C 2026-10-04] 菜单局部刷新订阅（对齐 fog/water/reflector 同法）：
+   *  本 cap 的 20 处 `disabled: disabledWhenOff(cap)` 灰化是**渲染期求值**，缺本订阅链时
+   *  `ppEnabled` 翻转不会重建面板 ⇒ 灰化态滞后（「总开关关了、子控件还亮着」）。
+   *  触发点只有一处：`ppEnabled` 翻转（其余参数变更无需重建面板）。 */
+  private readonly listenerSet = createListenerSet();
+  /** 订阅菜单局部刷新；返回取消订阅函数（面板卸载须回调） */
+  subscribe(listener: () => void): () => void {
+    return this.listenerSet.subscribe(listener);
+  }
+  private notify(): void {
+    this.listenerSet.notify();
+  }
   /** [R-1 收口 2026-09-22] 有存档 = 模型默认让位。ppEnabled 在 MODEL_DEFAULTS（ADR-250
    *  各模型显式写），恢复 source 改 auto-model 后若无守卫，同轨 auto-model→auto-model
    *  被 shouldOverwrite 放行 → 每次挂载模型值顶掉存档开关（fog/env 探针同形病）。 */
@@ -292,6 +306,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     //    归权输出设置；开启且尚未建时在此惰性创建（applyEnabledSideEffects 是唯一创建点）。
     if (changed.has("ppEnabled")) {
       this.applyEnabledSideEffects();
+      // [锐评 X-6 / 方案 C] 同上：本 cap 的 20 处 `disabled` 依赖渲染期求值，翻转须重建面板，
+      // 否则灰化态滞后（既有缺陷，2026-10-04 随「未启用态判据」一并收口）。
+      this.notify();
     }
 
     // ② 结构性变化：仅 SSAO 开关真正增删 pass → 重建后 return（新 pass 无需逐项同步）。

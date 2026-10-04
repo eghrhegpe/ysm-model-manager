@@ -11,6 +11,8 @@ import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
+// [锐评 X-6 / 方案 C 2026-10-04] 菜单局部刷新订阅原语（fog/water/reflector 同源）
+import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import {
   getTypedCap,
   oneOf,
@@ -64,6 +66,18 @@ export class ShadowCapability implements SceneCapability {
   private meshSnaps: Map<THREE.Object3D, MeshShadowSnapshot> = new Map();
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
+  /** [锐评 X-6 / 方案 C 2026-10-04] 菜单局部刷新订阅（对齐 fog/water/reflector 同法）：
+   *  `disabled` 灰化是**渲染期求值**（cap-controls「半静态求值，进入面板时求一次」），
+   *  缺本订阅链时总开关翻转不会重建面板 ⇒ 子控件灰化态滞后（「开关关了、控件还亮着、点了没反应」）。
+   *  触发点只有一处：`shadowEnabled` 翻转（其余参数变更无需重建面板）。 */
+  private readonly listenerSet = createListenerSet();
+  /** 订阅菜单局部刷新；返回取消订阅函数（面板卸载须回调） */
+  subscribe(listener: () => void): () => void {
+    return this.listenerSet.subscribe(listener);
+  }
+  private notify(): void {
+    this.listenerSet.notify();
+  }
 
   constructor(opts: {
     scene: THREE.Scene;
@@ -90,6 +104,9 @@ export class ShadowCapability implements SceneCapability {
         // 不接管则该键改了不落地（原实现靠私有门短路挂在最前面，键永无消费者 = 幽灵键）。
         if (changed.has("shadowEnabled")) {
           this.apply();
+          // [锐评 X-6 / 方案 C] 开关翻转须通知菜单重渲染——`disabled` 灰化是渲染期求值（半静态），
+          // 缺这条 notify 就是「开关关了、子控件还亮着」的假灰化（比不灰化更糟）。
+          this.notify();
           return;
         }
         if (!envState.shadowEnabled) return;

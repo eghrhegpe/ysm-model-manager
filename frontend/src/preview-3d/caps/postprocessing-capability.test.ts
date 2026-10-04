@@ -490,6 +490,19 @@ describe("PostprocessingCapability — 曝光属主归 sky（ADR-250）", () => 
     return r as THREE.WebGLRenderer;
   }
 
+  it("[X-6] subscribe：ppEnabled 翻转触发 notify（20 处 disabled 灰化实时性依赖这条链）", () => {
+    const cap = newCap();
+    const spy = vi.fn();
+    const unsub = cap.subscribe(spy);
+    cap.setEnabled(true);
+    expect(spy, "开 → 通知（面板据此重渲染，disabled 灰化才会刷新）").toHaveBeenCalledTimes(1);
+    cap.setEnabled(false);
+    expect(spy).toHaveBeenCalledTimes(2);
+    unsub();
+    cap.setEnabled(true);
+    expect(spy, "取消订阅后不再通知").toHaveBeenCalledTimes(2);
+  });
+
   it("构造 enabled=false 时，不覆盖 renderer.toneMapping / exposure（保留 sky 写入值）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);

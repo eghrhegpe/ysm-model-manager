@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== ShadowCapability 测试（ADR-196 迁移至 envState）=====
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
 import { ShadowCapability } from "./shadow-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
@@ -432,6 +432,19 @@ describe("ShadowCapability — applyModelPreset", () => {
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
     cap.loadState();
     expect(cap.getMapSize(), "3000 不在四档 ⇒ 回落到当前值（默认 2048）").toBe(2048);
+  });
+
+  it("[X-6] subscribe：shadowEnabled 翻转触发 notify（灰化实时性依赖这条链）", () => {
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+    const spy = vi.fn();
+    const unsub = cap.subscribe(spy);
+    cap.setEnabled(true);
+    expect(spy, "开 → 通知（面板据此重渲染，disabled 灰化才会刷新）").toHaveBeenCalledTimes(1);
+    cap.setEnabled(false);
+    expect(spy).toHaveBeenCalledTimes(2);
+    unsub();
+    cap.setEnabled(true);
+    expect(spy, "取消订阅后不再通知").toHaveBeenCalledTimes(2);
   });
 
   it("loadState 后 applyModelPreset 不覆盖用户会话配置", () => {

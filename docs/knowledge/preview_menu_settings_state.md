@@ -128,6 +128,25 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 
 只允许两种：① cap 内 `visible`（必须基于自身 params，**禁止跨 cap 探查**）；② 声明式节点 `visibleWhen(s)`（吃状态层快照的纯函数）。禁止在 schema 构建期以 `if (cap)` 做条件插入。
 
+### P3 未启用态三分判据（2026-10-04 锐评 X-6 / 方案 C 定案）
+
+「未启用态」（能力总开关关闭时子控件的表现）**不做机械对齐**，按**参数在关态是否仍生效**三分：
+
+| 判据 | 机制 | 适用 | 例 |
+|---|---|---|---|
+| 关态**真 no-op** ⇒ 灰化 + title 说明 | `disabled: () => !cap.isEnabled()`（`postprocessing-menu.ts\|disabledWhenOff`） | 关态下参数完全没有作用对象 | pp 的 20 处子控件（关 ⇒ composer 不建，子参数确实无效） |
+| **形态/模式不适用** ⇒ 隐藏 | `visibleWhen(s)`（吃状态层快照） | 参数在当前模式下永不读取 | fog 的 density 仅 exp2、near/far 仅 linear；water 的 wetness 仅 film |
+| 关态**仍可预置** ⇒ **不灰化、不隐藏** | 无门控 | 关态仍写 envState、开时立即生效——用户常「先调好再开」 | fog / shadow / reflector 的可调参数（雾距、阴影参数、反射尺寸） |
+
+⚠️ **别为「视觉一致」把第三类灰化**：那会剥夺「先调后开」，是体验倒退。判据落在「关态是否 no-op」，不落在「哪个 cap」。
+
+⚠️ **灰化的实时性前提**：`disabled` 是**渲染期求值**（`cap-controls.ts` 自述「半静态求值，进入面板时求一次」），
+实时刷新依赖 `cap.subscribe(() => menu.refresh())` 这条链（`env.ts|rebuildEnvSubs` / `settings.ts` 同法）。
+**新增 `disabled` 前先确认该 cap 有 subscribe、且在对应开关键翻转时 notify**，否则会出现「开关关了、子控件还亮着、
+点了没反应」的假灰化（比不灰化更糟）。2026-10-04 已给 `postprocessing` 与 `shadow` 补上该链——两者原先都缺，
+**pp 的 20 处灰化此前一直是滞后的**（本判据顺带修掉既存缺陷）。守卫 = 两 cap 的
+「subscribe：开关翻转触发 notify」用例。
+
 ### 性能档位（P4 延续：薄壳版，`perf-presets.ts`）
 
 一键性能档位 = **纯数据表 + 通用套用器**，刻意规避隔壁 MikuMikuAR 的坑（每个模式手写参数映射 + Go 绑定 + custom 档手动 reRender）：

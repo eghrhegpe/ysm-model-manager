@@ -227,6 +227,10 @@ export const autoSidebar = [
         "link": "/audit-env-review"
       },
       {
+        "text": "地面系统锐评 + 决策批执行报告（2026-10-04）",
+        "link": "/audit-ground-review"
+      },
+      {
         "text": "后处理系统锐评（2026-10-04）",
         "link": "/audit-postprocessing-critique"
       },

@@ -90,6 +90,7 @@ check("maxMainNum / nextSubForParent / hasMainAdr", () => {
 
 // ── 2. 真仓三区清单 ──────────────────────────────────
 const real = listAdrFiles();
+const decisionsBefore = real.filter((f) => f.zone === "decisions").length;
 check("真仓：存量体量保留（三区合计 > 300）", () => {
   assert(real.length > 300, `实际 ${real.length}`);
 });
@@ -101,8 +102,12 @@ check("真仓：存量卡仍在 legacy 区", () => {
   const l = real.find((f) => f.id === "ADR-013");
   assert(!!l && l.zone === "legacy" && !/\//.test(l.relPath), JSON.stringify(l));
 });
-check("真仓：decisions 区当前为空（尚无执行日志）", () => {
-  assert(!real.some((f) => f.zone === "decisions"), "不应有 decisions 文件");
+// ADR-320 上线时曾断言「decisions 区当前为空」；该断言把「暂无住民」当成了不变量，
+// 2026-10 出现 decisions 住民（ADR-266-d1 / ADR-293-d1）后必然红——空态不是分级契约。
+// 换为真不变量：decisions 住民必须挂靠到存在的主 ADR（ADR-320 的 `--parent` 约定）。
+check("真仓：decisions 住民均挂靠存在的主 ADR", () => {
+  const orphans = real.filter((f) => f.zone === "decisions" && !hasMainAdr(real, f.num));
+  assert(orphans.length === 0, `孤立 decisions：${orphans.map((f) => f.id).join(",")}`);
 });
 
 // ── 3-4. new-adr dry-run 端到端（零写入）────────────
@@ -117,9 +122,12 @@ let r = runScript(
   "契约测试",
   "--dry-run",
 );
+// 断言不写死具体编号（曾写死 320→321，ADR-321 落地即红）——按当前仓推 maxMainNum+1，
+// 契约锁「延续主编号 + 落 architecture/」这一不变量，而非某一次的快照值。
+const nextMain = maxMainNum(real) + 1;
 ok(
-  "dry-run：architecture 主编号延续（320→321，落 architecture/）",
-  r.status === 0 && r.stdout.includes("ADR-321") && r.stdout.includes("architecture/ADR-321-"),
+  "dry-run：architecture 主编号延续（maxMainNum+1，落 architecture/）",
+  r.status === 0 && r.stdout.includes(`ADR-${nextMain}`) && r.stdout.includes(`architecture/ADR-${nextMain}-`),
   `status=${r.status} stdout=${r.stdout?.slice(0, 200)}`,
 );
 r = runScript(
@@ -133,17 +141,20 @@ r = runScript(
   "319",
   "--dry-run",
 );
+// 同上：不写死「ADR-319-d1」——按 nextSubForParent 动态推，避免仓里出现 319 子编号后即红
+const nextDec = `ADR-319-d${nextSubForParent(real, 319)}`;
 ok(
-  "dry-run：decisions 子编号挂靠（ADR-319-d1，落 decisions/）",
-  r.status === 0 && r.stdout.includes("ADR-319-d1") && r.stdout.includes("decisions/ADR-319-d1-"),
+  "dry-run：decisions 子编号挂靠（nextSubForParent(319)，落 decisions/）",
+  r.status === 0 && r.stdout.includes(nextDec) && r.stdout.includes(`decisions/${nextDec}-`),
   `status=${r.status} stdout=${r.stdout?.slice(0, 200)}`,
 );
 r = runScript("new-adr.ts", "tiering-bare-dry", "--slug", "tiering-bare-dry", "--dry-run");
 ok("缺省不猜级：裸跑退出 1（fail-loud）", r.status === 1, `status=${r.status}`);
 
-// dry-run 后真仓 decisions 区仍为空（证明零写入）
+// dry-run 后 decisions 区不新增文件（证明零写入；不再断言「空」，只断言「没变多」）
 check("dry-run 零写入副作用", () => {
-  assert(!listAdrFiles().some((f) => f.zone === "decisions"), "decisions 区不应产生文件");
+  const now = listAdrFiles().filter((f) => f.zone === "decisions").length;
+  assert(now === decisionsBefore, `dry-run 后 decisions 从 ${decisionsBefore} 变 ${now}`);
 });
 
 // ── 5. adr-check 在分级语法下全绿 ────────────────────

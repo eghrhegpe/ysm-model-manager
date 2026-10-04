@@ -1,12 +1,23 @@
 # 后处理系统锐评（2026-10-04）
 
-> **实施状态（2026-10-04 更新）**：**P1-1 / P1-2 / P1-3 / P2-1 / P2-4 / P2-5 已修复并验证**。
+> **实施状态（2026-10-04 更新）**：**P1-1 / P1-2 / P1-3 / P2-1 / P2-4 / P2-5 已修复并验证**；
+> 追加：**P3-1 / P3-2（部分）/ P3-4 三处已清理**。
 > 未修：**P2-2**（曝光总开关门——属产品决策，改动会动亮度基线，留给用户拍板）、**P2-3**（多会话
-> `envState` 单例，ADR-196 固有成本，属"记录"而非"待修"）、**P2-6**（疑似，未复现）、
-> **P3-1 / P3-2 / P3-4**（死代码与注释/测试清理，零风险但未纳入本轮）。
+> `envState` 单例，ADR-196 固有成本，属"记录"而非"待修"）、**P2-6**（疑似，未复现）。
 > 本轮验证：`src/preview-3d` 165 文件 / 3025 用例、全仓 444 文件 / 7190 用例、
 > `vite build` + `typecheck` + `check-biome` + `doctor --docs` 全绿。
 > 知识卡已同步：`docs/knowledge/preview_env_state.md`「锐评修复 2026-10」段。
+>
+> **⚠️ 两条现场更正（2026-10-04 二次核实时推翻本报告初判）**：
+> 1. **P3-4a「死断言」的解读需修正**——`toneMappingExposure` 那条断言确实恒真（对实现零分辨力），
+>    但**它恒真的原因是设计正确**：本 cap 按 ADR-250 §2.3 **根本没有 exposure 写权**（属主归 sky），
+>    故无从"改动"、也无从"归还"。**试图"强化"成"归还构造期快照"的改法会转红**，那不是缺陷暴露，
+>    而是**断言写错了契约**（我在本轮实测撞上此红并回退）。正确修法 = 钉死属主契约：
+>    中途被他人改动后 dispose **不得回写**（回写即属主争夺复发 = 「MMD 亮瞎 1.8×」的根因）。
+> 2. **F-1（`isSsrRenderActive()` 注释与实现不符）经复核不成立**——`applyReflectorSync` 现文
+>    **确实调用** `isSsrRenderActive()` 单源判定（见该函数内「[锐评 F-1] 判定收编 state/env-state」
+>    注释），与 `water-capability|reflectionActive` 同源。本报告原列的"待补"条目予以撤回。
+
 
 > 审计对象：3D 预览「后处理（postprocessing）」能力簇。
 > 方法：主模型亲自读源码 + three 0.186.1 上游源码取证；对外可见结论逐条给「文件:行号 + 原文片段」。
@@ -162,7 +173,15 @@ three 0.186.1 的 `UnrealBloomPass.setSize(width, height)` 只用来算 `resx/re
 
 **修复方向**：删除。
 
-### P3-2 ｜ 陈旧注释与已删概念残留，误导后来者
+### P3-2 ｜ 陈旧注释与已删概念残留，误导后来者 ｜ ✅ 已清理（部分）
+
+> **状态（2026-10-04）**：本条两处已修——`postprocessing-state.ts` 的「enabled 不入 schema」已改写为
+> 准确表述（`ppEnabled` **确在** schema；被 `Exclude` 掉的是 **params 结构体上的同名键**，
+> 历史措辞把「params 无此字段」误表述成「schema 无此键」）；`postprocessing-capability.ts` 的
+> `three r185` 版本标签已订正为实装 0.186.1（并注明该构造器签名自 r185 起未变、结论不受影响）。
+> **其余 `r185` 提及经核为「当时读源码核实」的历史记录**（如「r185 起 X 变化」「r185 老锚点已随 r186
+> 重构失配」），改成新版本号反而篡改历史事实，**有意保留原文**。
+
 
 - `postprocessing-state.ts:107-108` 注释写「注意：enabled 不入 schema，由 this.enabled 单独携带」——**与事实相反**：`env-state-schema.ts:463` 已有 `ppEnabled`（ADR-250 正是把它入 schema），且 cap 也不再持有 `this.enabled` 字段（`:138-140` 是读 envState 的 getter）。该注释同时否定 ADR-250 的两条核心决策。
 - `postprocessing-capability.ts:23` 写「构造只留 scene/renderer/camera/caps（enabled 形参保留仅为兼容…）」，与 `:158-160` 实际仍接受 `enabled` 形参一致，但 `:172-174` 的 `setEnvState` 调用点未说明"仅显式传入时生效"——而这恰是 ADR-299 §3 第 1 点（构造期按启用意图建 composer）的**上游前提**，值得点明。
@@ -234,7 +253,14 @@ if (changed.has("ppSsaoEnabled") || changed.has("ppReflectionMode")) {
 
 属 ADR-196 单例设计的固有代价、非本 cap 引入，但本 cap 未做会话隔离。**建议**：至少写进知识卡作为已知语义，避免下次被当新缺陷重复排查。
 
-### P3-4 ｜ 测试层三处真实性缺陷
+### P3-4 ｜ 测试层三处真实性缺陷 ｜ ✅ 三处已修（(a) 的解读见文末更正）
+
+> **状态（2026-10-04）**：(a)(b)(c) 均已修，且 **(a) 的修法与报告初判不同**——
+> 详见本报告开头「两条现场更正」第 1 条：该断言恒真是**设计正确**所致（本 cap 无 exposure 写权），
+> 强行"强化"成"归还快照"会误报红。最终改为钉死属主契约（中途被改 → dispose **不得回写**）。
+> (b) 收归 describe 级 `beforeEach/afterEach` 隔离，删去 8 处手写副本；
+> (c) 弱断言 `not.toBe(1.8)` 收紧为精确值 `toBe(1)`（本 cap 不写 → 必保持初值）。
+
 
 **（a）空洞断言（P2）**：`postprocessing-capability.test.ts:1146-1159` 的用例名含 "exposure"，并断言 `expect(renderer.toneMappingExposure).toBe(0.4)`（`:1157`）。但本 cap 自 ADR-250 起**已删除 exposure 的写路径**（曝光归 sky），`toneMappingExposure` 从未被写入 → 该断言**恒真**，通过不证明任何还原逻辑。用例名同样镜像的是 ADR-250 之前的旧架构。
 

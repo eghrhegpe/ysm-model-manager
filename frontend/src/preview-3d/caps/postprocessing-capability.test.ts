@@ -15,7 +15,7 @@ import { POSTPROC_PERSIST_FIELDS, PP_PARAMS_TO_ENV } from "./postprocessing-stat
 import type { LightCapability } from "./light-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 // ADR-196：统一状态层（测试隔离）
-import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { getPresetKeys, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import {
   effectiveToneMappingExposure,
   envState,
@@ -346,6 +346,25 @@ describe("POSTPROC_PERSIST_FIELDS — 表驱动持久化契约（2026-09 锐评 
     cap.saveState();
     const saved = Object.keys(JSON.parse(localStorage.getItem("ysm-scene-cap-postprocessing") ?? "{}"));
     expect([...saved].sort()).toEqual([...Object.keys(POSTPROC_PERSIST_FIELDS), "enabled"].sort());
+  });
+
+  // [2026-10 B 类收口契约锁] saveState/loadState 改表驱动（遍历 PP_PARAMS_TO_ENV ×
+  // POSTPROC_PERSIST_FIELDS 双表）后，**漏登记**成为唯一失配通道：schema 新增 pp 键
+  // 却没进映射表，写侧静默不落盘（比手写清单更隐蔽）。本锁把「schema 组 ⇔ 表键集」
+  // 同构钉死——schema 加键漏表登记即红；表里写了 schema 没有的键亦红。
+  it("[B类] PP_PARAMS_TO_ENV + ppEnabled ⇔ schema postprocessing 组同构（表漏登记即红）", () => {
+    const schemaKeys = new Set<string>(getPresetKeys("postprocessing"));
+    const tableEnvKeys = new Set<string>([...Object.values(PP_PARAMS_TO_ENV), "ppEnabled"]);
+    const missingInTable = [...schemaKeys].filter((k) => !tableEnvKeys.has(k));
+    const extraInTable = [...tableEnvKeys].filter((k) => !schemaKeys.has(k));
+    expect(
+      missingInTable,
+      `schema 新增 postprocessing 键但 PP_PARAMS_TO_ENV 未登记: ${JSON.stringify(missingInTable)}`,
+    ).toEqual([]);
+    expect(
+      extraInTable,
+      `PP_PARAMS_TO_ENV 登记了 schema 不存在的键: ${JSON.stringify(extraInTable)}`,
+    ).toEqual([]);
   });
 });
 

@@ -1090,15 +1090,18 @@ ADR-249 拆轴时漏 `groundSourceKind` 的病史类复发从机制上消除。
 | ground | `getPresetKeys("ground")` schema 驱动（ground-capability.ts，2026-10 G-8 收口） | ✅ | 零（§18 G-8 已收口 + 契约锁） |
 | fog | 手写 6 字段 | ❌ | 低（字段少且稳定） |
 | env | 手写 6 字段 | ❌ | 低 |
-| pp | 手写 19 字段（postprocessing-capability.ts:730-753） | ❌ | 中（字段多、新增易漏） |
+| pp | 表驱动（2026-10 B 类收口：save/load 两侧遍历 `POSTPROC_PERSIST_FIELDS`×`PP_PARAMS_TO_ENV` 双表，手抄 19 字段清单退役；[B类] schema⇔表同构契约锁兜底漏登记） | ✅ | 零（round-trip + 同构双锁） |
 | reflector | 手写 7 字段 | ❌ | 低 |
 | shadow | 手写 6 字段 | ❌ | 低 |
 | renderMode | 手写 5 字段 | ❌ | 低（debug 工具） |
 
 > **结论**：B 类是真实的同族「手抄清单」债，但它是**零故障风险的风格债务**（不在本次修复范围）。
-> 最值得后续收敛的是 pp（19 字段，postprocessing-capability.ts:730-753）——ground 已于 2026-10 经 G-8
-> 收口为 `getPresetKeys("ground")` schema 驱动，水/光的先例已验证路径可行；pp 字段多、新增易漏，是现存的
-> 最高价值收敛候选。
+> ~~最值得后续收敛的是 pp（19 字段）~~——**2026-10 已全部收口最高价值候选**：ground 经 G-8 收为
+> `getPresetKeys("ground")` schema 驱动；pp 因存档键名沿用旧 params 名（向后兼容契约），收为
+> `POSTPROC_PERSIST_FIELDS`（种别表，satisfies 与 params 接口编译期互锁）× `PP_PARAMS_TO_ENV`
+> （键名映射）**读写两侧同表驱动**——比 ground 先例更彻底（ground 读侧仍手写），新增 pp 键只需
+> 登记两张表，漏登记由 [B类] schema⇔表同构契约锁 + 既有 round-trip/防漂移双锁兜底。
+> 剩余 fog/env/reflector/shadow/renderMode 手写清单字段少且稳定（≤7），收益递减，维持现状合理。
 
 ### 19.3 cap 私有 enabled 双键（C 类）——横向 verdict
 

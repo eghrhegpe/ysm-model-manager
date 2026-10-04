@@ -56,11 +56,14 @@ import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
 import {
   bloomThresholdToLinear,
   DEFAULT_POSTPROC_PARAMS,
+  POSTPROC_PERSIST_FIELDS,
   type PostprocessingParams,
+  PP_PARAMS_TO_ENV,
   type ReflectionMode,
 } from "./postprocessing-state.ts";
 import type { ReflectorCapability } from "./reflector-capability.ts";
 import {
+  type FieldRestorer,
   getTypedCap,
   oneOf,
   persistState,
@@ -851,99 +854,54 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
 
   /* -------- 持久化 -------- */
 
+  /** 保存状态到 localStorage（存档键名沿用旧 params 名，向后兼容已有存档——文件头契约）。
+   *  [2026-10 B 类收口] 写侧表驱动：遍历 `PP_PARAMS_TO_ENV`（存档名→envState 键映射），
+   *  手抄 19 字段清单退役——新增 pp 参数只需登记 params 接口 + POSTPROC_PERSIST_FIELDS +
+   *  PP_PARAMS_TO_ENV（编译期 satisfies 互锁 + [B类] schema⇔表同构契约锁兜底）。
+   *  `enabled` 不在搬运表内（params 上的只读视图，真值 envState.ppEnabled，ADR-250 单门），
+   *  手写一行；与 ground 私有 enabled 同形例外。 */
   saveState(): void {
-    persistState(this.id, {
-      enabled: this.enabled,
-      bloomStrength: envState.ppBloomStrength,
-      bloomThreshold: envState.ppBloomThreshold,
-      bloomRadius: envState.ppBloomRadius,
-      bloomFollowVolumetric: envState.ppBloomFollowVolumetric,
-      bloomEnabled: envState.ppBloomEnabled,
-      ssaoEnabled: envState.ppSsaoEnabled,
-      ssaoRadius: envState.ppSsaoRadius,
-      ssaoMinDist: envState.ppSsaoMinDist,
-      ssaoMaxDist: envState.ppSsaoMaxDist,
-      toneMapping: envState.ppToneMapping,
-      exposure: envState.ppExposure,
-      reflectionMode: envState.ppReflectionMode,
-      ssrOpacity: envState.ppSsrOpacity,
-      ssrMaxDistance: envState.ppSsrMaxDistance,
-      ssrThickness: envState.ppSsrThickness,
-      ssrBlur: envState.ppSsrBlur,
-      ssrDistanceAttenuation: envState.ppSsrDistanceAttenuation,
-      ssrFresnel: envState.ppSsrFresnel,
-      ssrBouncing: envState.ppSsrBouncing,
-      reflectorDisableWhenSSR: envState.ppReflectorDisableWhenSSR,
-    });
+    const state: Record<string, unknown> = { enabled: envState.ppEnabled };
+    for (const [paramsKey, envKey] of Object.entries(PP_PARAMS_TO_ENV)) {
+      state[paramsKey] = envState[envKey as EnvStateKey];
+    }
+    persistState(this.id, state);
   }
 
   loadState(): void {
     const state = restoreState(this.id);
     if (!state) return;
 
-    // 表驱动恢复：存档键（params 名）→ envState 键，类型校验后写回。
+    // 表驱动恢复（存档键 params 名 → envState 键，类型校验后写回）。
+    // [2026-10 B 类收口] restorer 表由 POSTPROC_PERSIST_FIELDS（种别表，编译期 satisfies
+    // 与 params 接口互锁）× PP_PARAMS_TO_ENV（键名映射）合成——读写两侧共用同一组表，
+    // 手写 19 行还原器退役；新增 pp 键只需登记两张表，save/load 自动跟上
+    // （漏登记由 [B类] schema⇔表同构契约锁兜底）。
     // [锐评 P-1 收口 2026-09-22] source 一律 auto-model（对齐 fog F-2 / env E-2 / sky S-1
     // 纪律）：原 manual 把 pp 组键打成手改足迹，此后 auto-atmosphere 氛围预设写
     // ppExposure/ppBloomStrength（sunset/night 档全携）被静默拒绝——重启后切氛围
     // 曝光不跟调。ppEnabled 的模型默认顶档风险由 isStateLoaded 守卫承接（R-1）。
-    restoreFields(state, {
-      // [ADR-250] 存档的 `enabled` 键名保持向后兼容，但落点改为统一状态层。
-      // 原实现写 this.enabled + 手工同步 perTypeGate（ADR-247 R1 的补丁），
-      // 降参后二者归一，**该失配在结构上不再可能发生**。
-      enabled: { boolean: (v) => setEnvState({ ppEnabled: v }, { source: "auto-model" }) },
-      bloomStrength: {
-        number: (v) => setEnvState({ ppBloomStrength: v }, { source: "auto-model" }),
-      },
-      bloomThreshold: {
-        number: (v) => setEnvState({ ppBloomThreshold: v }, { source: "auto-model" }),
-      },
-      bloomRadius: {
-        number: (v) => setEnvState({ ppBloomRadius: v }, { source: "auto-model" }),
-      },
-      bloomFollowVolumetric: {
-        boolean: (v) => setEnvState({ ppBloomFollowVolumetric: v }, { source: "auto-model" }),
-      },
-      bloomEnabled: {
-        boolean: (v) => setEnvState({ ppBloomEnabled: v }, { source: "auto-model" }),
-      },
-      ssaoEnabled: {
-        boolean: (v) => setEnvState({ ppSsaoEnabled: v }, { source: "auto-model" }),
-      },
-      ssaoRadius: {
-        number: (v) => setEnvState({ ppSsaoRadius: v }, { source: "auto-model" }),
-      },
-      ssaoMinDist: {
-        number: (v) => setEnvState({ ppSsaoMinDist: v }, { source: "auto-model" }),
-      },
-      ssaoMaxDist: {
-        number: (v) => setEnvState({ ppSsaoMaxDist: v }, { source: "auto-model" }),
-      },
-      toneMapping: oneOf(["none", "linear", "reinhard", "aces", "cineon"], (v) =>
-        setEnvState({ ppToneMapping: v }, { source: "auto-model" }),
-      ),
-      exposure: { number: (v) => setEnvState({ ppExposure: v }, { source: "auto-model" }) },
-      reflectionMode: oneOf(["envmap-only", "envmap+ssr", "ssr-only"], (v) =>
-        setEnvState({ ppReflectionMode: v }, { source: "auto-model" }),
-      ),
-      ssrOpacity: {
-        number: (v) => setEnvState({ ppSsrOpacity: v }, { source: "auto-model" }),
-      },
-      ssrMaxDistance: {
-        number: (v) => setEnvState({ ppSsrMaxDistance: v }, { source: "auto-model" }),
-      },
-      ssrThickness: {
-        number: (v) => setEnvState({ ppSsrThickness: v }, { source: "auto-model" }),
-      },
-      ssrBlur: { boolean: (v) => setEnvState({ ppSsrBlur: v }, { source: "auto-model" }) },
-      ssrDistanceAttenuation: {
-        boolean: (v) => setEnvState({ ppSsrDistanceAttenuation: v }, { source: "auto-model" }),
-      },
-      ssrFresnel: { boolean: (v) => setEnvState({ ppSsrFresnel: v }, { source: "auto-model" }) },
-      ssrBouncing: { boolean: (v) => setEnvState({ ppSsrBouncing: v }, { source: "auto-model" }) },
-      reflectorDisableWhenSSR: {
-        boolean: (v) => setEnvState({ ppReflectorDisableWhenSSR: v }, { source: "auto-model" }),
-      },
-    });
+    const restorers: Record<string, FieldRestorer> = {};
+    for (const [paramsKey, kind] of Object.entries(POSTPROC_PERSIST_FIELDS)) {
+      const envKey = PP_PARAMS_TO_ENV[paramsKey as keyof typeof PP_PARAMS_TO_ENV];
+      const write = (v: number | boolean | string): void => {
+        setEnvState({ [envKey]: v } as Partial<EnvState>, { source: "auto-model" });
+      };
+      if (kind === "number") {
+        restorers[paramsKey] = { number: write };
+      } else if (kind === "boolean") {
+        restorers[paramsKey] = { boolean: write };
+      } else {
+        restorers[paramsKey] = oneOf(kind.oneOf, write);
+      }
+    }
+    // [ADR-250] 存档 `enabled` 键名保持向后兼容，落点为统一状态层 ppEnabled
+    // （params 上的只读视图，不在搬运表；原写 this.enabled + 手工同步 perTypeGate，
+    // 降参后归一，**该失配在结构上不再可能发生**）。
+    restorers.enabled = {
+      boolean: (v) => setEnvState({ ppEnabled: v }, { source: "auto-model" }),
+    };
+    restoreFields(state, restorers);
     this.isStateLoaded = true; // [R-1] 有存档 = 模型默认让位（置于恢复写后、副作用应用前）
 
     // [ADR-250] 恢复后按启用意图落输出设置（曝光已归 sky，此处只管 tone mapping）

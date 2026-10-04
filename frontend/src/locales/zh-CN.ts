@@ -1390,7 +1390,7 @@ export const zhCN = {
   "preview.groundMatAngle": "纹理角度",
   "preview.groundMatPick": "选择贴图",
   "preview.groundMatClear": "清除贴图",
-  "preview.groundMatLoadFailed": "地面贴图加载失败",
+  "preview.groundMatLoadFailed": "地面贴图加载失败：{name}",
   "preview.groundMatOpacity": "表面不透明度",
   "preview.groundMatScale": "纹理缩放",
   "preview.groundMatRotation": "纹理旋转",

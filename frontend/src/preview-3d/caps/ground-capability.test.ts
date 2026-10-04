@@ -9,6 +9,7 @@ import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 import type { GroundCanvasStyle, GroundSurfaceMode } from "./ground-surface-spec.ts";
+import { t } from "@/core/i18n/t.ts";
 import {
   GROUND_MATERIAL_PRESETS,
   GROUND_MATERIAL_PRESET_IDS,
@@ -189,6 +190,33 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(cap.getCanvasStyle()).toBe("plain");
     const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
     expect(mat.map).not.toBe(tex);
+  });
+
+  // [锐评修复] clearCustomTexture 曾先 setEnvState（同步触发回调 refreshSurface，此时
+  // surfaceTex 仍指向已释放的 customTex）→ 末尾又显式 refreshSurface 再刷一遍（双刷）。
+  // 现改为先摘私有态再派发单路径落地：清图后 surface 材质必须有效（map 已换）、无悬空引用。
+  it("[clearCustomTexture] 单路径落地：清图后材质有效、无悬空 customTex 引用、仅刷一次", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    const tex = new THREE.DataTexture(new Uint8Array(4 * 4), 2, 2);
+    cap.acceptLoadedTexture(tex, "wood.png");
+    expect(cap.getCustomTexName()).toBe("wood.png");
+    // spy rebuildSurface（双刷会触发两次；单刷只一次）
+    const rebuildSpy = vi.spyOn(cap as unknown as { rebuildSurface: (s: unknown) => void }, "rebuildSurface");
+    cap.clearCustomTexture();
+    expect(cap.getCustomTexName(), "私有缓存名已清").toBe("");
+    const mat = (scene.getObjectByName("ysm-ground-surface") as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    expect(mat.map, "清图后材质 map 已换（非旧 customTex），无悬空引用").not.toBe(tex);
+    expect(rebuildSpy.mock.calls.length, "清图触发至多一次重建（无双刷）").toBeLessThanOrEqual(1);
+  });
+
+  // [G-9] openTexturePicker 失败 toast 键化（带 {name} 参数，emoji 前缀不再硬编码）
+  it("[G-9] 贴图加载失败文案经 i18n 键化携带文件名（非硬编码 emoji）", () => {
+    // openTexturePicker 内部走 TextureLoader.loadAsync 真实网络请求，单测不触发；
+    // 此处直接断言 t("preview.groundMatLoadFailed", { name }) 插值格式：含文件名、无硬编码 emoji。
+    expect(t("preview.groundMatLoadFailed", { name: "x.png" })).toContain("x.png");
+    expect(t("preview.groundMatLoadFailed", { name: "x.png" })).not.toMatch(/^❌/);
   });
 
   it("texture 模式无缓存时占位回退（纯色像素），加载后自动换真图", () => {

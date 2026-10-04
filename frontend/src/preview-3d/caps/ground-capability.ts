@@ -504,7 +504,10 @@ export class GroundCapability implements SceneCapability {
     setEnvState({ groundSourceKind: "texture" }, { source: "manual" });
   }
 
-  /** 清除自定义贴图缓存并回退 plain（texture 模式时） */
+  /** 清除自定义贴图缓存并回退 plain（texture 模式时）。
+   *  [锐评修复] 先摘私有态（customTex/surfaceTex），再经 envState 单路径落地——
+   *  旧接线先 setEnvState（同步触发回调 refreshSurface，此时 surfaceTex 仍指向已释放的
+   *  customTex）→ 末尾又显式 refreshSurface 再跑一遍，构成双刷；现摘干净再派发，只刷一次。 */
   clearCustomTexture(): void {
     const wasAttached = this.surfaceTex === this.customTex;
     if (this.customTex) {
@@ -512,12 +515,12 @@ export class GroundCapability implements SceneCapability {
       this.customTex = null;
       this.customTexName = "";
     }
+    if (wasAttached) this.surfaceTex = null;
+    // 唯一变更入口收口：仅当真从 texture 态清图时改写来源轴（同步派发 → ground 回调单路径落地）。
+    // 非 texture 态清缓存不写 envState → 不派发，但上一步已摘私有态、当前 surface 材质未引用
+    // customTex（wasAttached=false），无悬空引用，无需显式 refresh。
     if (envState.groundSourceKind === "texture")
       setEnvState({ groundSourceKind: "canvas", groundCanvasStyle: "plain" }, { source: "manual" });
-    if (wasAttached) this.surfaceTex = null;
-    // 显式落地（refresh 单路径的合法例外）：非 texture 态下清缓存不写 envState → 不派发；
-    // 且 customTex 摘除是私有态变更、不在 envState 里——不显式 refresh 会留悬空引用。
-    this.refreshSurface();
   }
 
   /** 文件选择器（对齐 environment-capability customHdr 口径：不持久化二进制） */
@@ -537,7 +540,7 @@ export class GroundCapability implements SceneCapability {
           // 口径对齐 infra/preview-loading showLoadFailure：bus 发 toast，cap 不直接碰 DOM。
           dbg("ground-tex-load-fail", { name: file.name });
           bus.emit("toast:show", {
-            msg: `${t("preview.groundMatLoadFailed")}: ${file.name}`,
+            msg: t("preview.groundMatLoadFailed", { name: file.name }),
             duration: TOAST_MS.normal,
             type: "error",
           });

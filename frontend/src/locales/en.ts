@@ -1428,7 +1428,7 @@ export const en: Record<string, string> = {
   "preview.groundMatAngle": "Texture Angle",
   "preview.groundMatPick": "Pick Image",
   "preview.groundMatClear": "Clear Image",
-  "preview.groundMatLoadFailed": "Ground texture failed to load",
+  "preview.groundMatLoadFailed": "Ground texture failed to load: {name}",
   "preview.groundMatOpacity": "Surface Opacity",
   "preview.groundMatScale": "Texture Scale",
   "preview.groundMatRotation": "Texture Rotation",

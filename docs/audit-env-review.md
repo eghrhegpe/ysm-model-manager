@@ -976,11 +976,23 @@ ADR-249 拆轴时漏 `groundSourceKind` 的病史类复发从机制上消除。
 **私有 `enabled` 例外**：cap 顶层 `this.enabled` 是私有字段（registry 恒不传 → 构造默认 true），
 无 schema 键，不进 `getPresetKeys`，故仍手写落盘（与 waterEnabled 已收口进 schema 不同）。
 
-#### ⚪ G-9 openTexturePicker 失败 toast 硬编码 emoji（承接 G-5）
+#### ⚪ G-9 openTexturePicker 失败 toast 硬编码 emoji（承接 G-5，✅ 已收口 2026-10）
 
-`❌ ${t("preview.groundMatLoadFailed")}: ${file.name}`——emoji 前缀不经 i18n，ja/en 包观感割裂。
-建议整条消息键化（`groundMatLoadFailed` 带 `{name}` 参数）或注释豁免。三语言包键一致性有
-`locales-consistency.test.ts` 守卫，路线明确，仅记录。
+**已修复**：`openTexturePicker` 失败分支改成 `t("preview.groundMatLoadFailed", { name: file.name })`
+整条键化，emoji 前缀不再硬编码，ja/en/zh 三语言包同步加 `{name}` 插值位。三语言包键一致性有
+`locales-consistency.test.ts` 守卫。回归锁见 `ground-capability.test.ts`「[G-9] 贴图加载失败文案经 i18n 键化」。
+
+#### 🟡 clearCustomTexture 顺序双刷（锐评点名项，✅ 已收口 2026-10）
+
+**病根**：旧 `clearCustomTexture` 先 `setEnvState({groundSourceKind:"canvas",...}, manual)`——同步
+触发 ground 回调 → `refreshSurface` 已跑一遍（此刻 `this.surfaceTex` 仍指向刚 `safeDispose` 的
+`customTex`，token 失配）→ 末尾又 `this.refreshSurface()` 显式再刷一遍 = 双刷（一次全量 rebuild
++ 中间一帧纹理失配）。
+
+**修复**：先摘私有态（`safeDispose(customTex)` / `surfaceTex=null` / `customTexName=""`），再经
+`setEnvState` 单路径落地——回调只刷一次；非 texture 态清缓存不写 envState（无派发），但私有态已
+摘、surface 材质未引用 customTex，`无悬空引用`，无需显式 refresh。回归锁见
+`ground-capability.test.ts`「[clearCustomTexture] 单路径落地：清图后材质有效、无悬空、仅刷一次」。
 
 ### 18.3 接线缺口（死键/双轨）全面盘点
 

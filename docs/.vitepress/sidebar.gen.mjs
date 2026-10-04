@@ -1587,6 +1587,10 @@ export const autoSidebar = [
             "link": "/knowledge/core-error-diary"
           },
           {
+            "text": "E2E 视觉反馈（截图取证）",
+            "link": "/knowledge/e2e-visual-feedback"
+          },
+          {
             "text": "事件总线 bus.ts",
             "link": "/knowledge/event-bus"
           },

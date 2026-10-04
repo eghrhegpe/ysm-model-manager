@@ -5,7 +5,7 @@
 > 3d菜单只允许使用：  MenuNode schema，新增的UI功能须可被 MenuNode schema菜单调用。
 > 菜单逻辑测试断言遵循 ADR-311 三分法：行为不变量逐条硬断言；成员归属用 `findNodeById`/`childIds` 配集合判据（仓内惯例 `.sort()).toEqual([...].sort())`，禁有序快照/位置索引）；顺序与计数仅产品决策可写，须行内 `// layout-assert: <理由>`。执法闸 `scripts/check-menu-test-layout.ts`（基线只减不增）+ 知识卡 `menu_test_assertion.md`。
 
-## ⚡ 5 分钟上手（TL;DR——细节以正文对应章节为准，冲突时正文优先）
+## ⚡ 5 分钟上手（TL;DR——细节以知识卡为准，冲突时知识卡优先）
 
 **项目**：Go (Wails v3) 桌面 + 原生 TS (Web Components / Shadow DOM) 前端，Three.js + WASM 做 3D 预览；类型判定单一事实源 = `resource_types.json` + Go。
 
@@ -22,15 +22,17 @@
 
 **提交**：`node scripts/commit-with-check.ts -m "<type>: <描述>" --files <路径...>`——并行会话期必用 `--files`，防止卷入他人在途改动。
 
-**三条回归红线**（踩了门禁会红，正文同名章节有完整理由）：
+**三条回归红线**（踩了门禁会红，知识卡有完整理由）：
 
-1. **前端只读不判**——类型判定 / 筛选 / 去重 / 聚合归 Go 侧 + `resource_types.json`；前端不扫磁盘、不重算归属语义（→「职责归属——前端 vs Go」）。
-2. **import 只从具体文件进**——非精确同目录一律 `@/<顶层目录>/具体文件`，禁止 `@/dir` 裸目录聚口；features 生产文件不直引 `backend/app.ts`、不写 HTML 字面量，一律走 `*-deps.ts` seam（→「features→backend seam」「前端 import 路径约定」）。
-3. **绑定只走一条命令**——`cd frontend && npm run generate:bindings`（已内置 `-ts`）；根目录裸跑报 Missing script，漏 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`（→「职责归属——前端 vs Go」）。
+1. **前端只读不判**——类型判定 / 筛选 / 去重 / 聚合归 Go 侧 + `resource_types.json`；前端不扫磁盘、不重算归属语义（→ 知识卡 `fe_go_boundary.md`）。
+2. **import 只从具体文件进**——非精确同目录一律 `@/<顶层目录>/具体文件`，禁止 `@/dir` 裸目录聚口；features 生产文件不直引 `backend/app.ts`、不写 HTML 字面量，一律走 `*-deps.ts` seam（→ 知识卡 `fe_layering_seams.md`）。
+3. **绑定只走一条命令**——`cd frontend && npm run generate:bindings`（已内置 `-ts`）；根目录裸跑报 Missing script，漏 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`（→ 知识卡 `fe_go_boundary.md`）。
 
 **查与救**：查业务知识先 `docs/knowledge/routes-quick.md`；查陌生函数 / 走错路径 →「场景路由（快速对号入座）」；改崩了先 `git diff HEAD <file>` 自查，处置步骤见「损害控制」表。
 
 **元规则**：ADR 与源码注释里的「病」是决策时的历史快照，**≠ 当前状态**——判断现状只认当前源码树；改完代码必须同步知识卡（`check-knowledge-drift` 钩子兜底）。
+
+**本文件的瘦身纪律**：AGENTS.md 是每会话常驻的系统提示——事故化石（长注脚链、历史对账、实施进度）一律迁知识卡，此处只留一行不变量 + 路由指针。新增内容先问：值得每个会话都付费吗？
 
 ## 工作准则（长效）
 
@@ -58,40 +60,14 @@
 - 并行会话活跃时，放心让提交工具裁决提交归属。
 
 ### 职责归属——前端 vs Go（回归红线，不可违反）
-- 类型判定唯一事实源 = `resource_types.json` + Go（`internal/app/`）；前端只读不判（tab / preview / 3d / resourcepack 归类一律由 Go 扫描结果 + 该 JSON 派生）。
-- 筛选 / 去重 / 聚合归 Go；前端消费 Go 的已筛已归类结果，不本地重算。
-  - **豁免注脚（S3 收口 2026-09-03）**：树内即时过滤属 UI 交互层——app-tree 等对 Go 已交付的
-    **内存全量 entries** 做 search 子串过滤 / 排序 / 展开折叠，数据集归属已由 Go 筛定、前端不重算
-    「哪个文件该出现在哪」的归属语义，仅展示层即时收窄（每次击键本地响应，下沉磁盘 RPC 荒谬）。
-    磁盘级归属筛选与高级搜索（关键词 + 骨骼/立方体/纹理范围，`SearchModels`，adv-filter 消费）仍归 Go，
-    前端不得自行扫描磁盘或重算归属。界线：**输入端（磁盘 → 列表）归 Go，展示端（列表 → 视图）豁免**。
-- 跨类型切换走 `switchExternal`（同源替换走 `switchTo`）。
-- 数据经 Wails 桥（`window.go`）消费；绑定统一 `cd frontend && npm run generate:bindings`（script 已内置 `-ts`；在根目录裸跑会 Missing script，无 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`，回归红线）。
+- 类型判定唯一事实源 = `resource_types.json` + Go（`internal/app/`）；筛选 / 去重 / 聚合归 Go，前端只读不判、不扫磁盘、不重算归属语义。
+- 树内即时过滤豁免（输入端归 Go、展示端豁免）、`switchExternal`/`switchTo` 选型、绑定命令细节 → 知识卡 `fe_go_boundary.md`。
 
-### `src/core` 准入准则（ADR-189 D4）
-- `frontend/src/core` 是**引擎无关内核**（i18n + page-store + 注入式 error-diary + model-path-store），准入三条全满足才可入：①引擎无关（不 import three/Wails）；②不依赖上层与 DOM 原语层（features/views/backend/utils/dom 一律禁止；`utils/base/` 允许——其中 `pure/` 是真纯函数层（array, clamp, gh-links, guards, recycle-path, safe-error-msg, tex-size, apperror-text），零副作用；`primitives/` 是副作用原语层（async, base64, debounce, disposable, lock, log, main-thread-watch, storage），仍零上层依赖；core 现状依赖 primitives/ 的 log/storage、@/bus 及 @/locales/*（类型源），依赖方向只许别人引它——utils/dom 越层走 check-layering R0、backend 越层走 check-layering R6（含 core 测试文件，ADR-189 D4 引擎无关对 type 感知不成立）机制兜底）；③无 Wails 也能单测。
-- 需要绑定的能力（如 `AddOpLog`）走**依赖注入**：core 定义接口（`DiarySink`），`backend/` 提供适配器，装配层（`app-modules.ts`）接线——禁止 core 直接 `import backend/*`（回归红线，check-layering R6 兜底；测试文件越层 2026-09 补齐后无盲区）。
-- DOM 原语（toast 等）归 `utils/dom/`，不进 core；utils 基础纯函数层在 `utils/base/pure/`（真纯函数，零副作用）；副作用原语在 `utils/base/primitives/`（仍零上层依赖）；原 `utils/core/` 已迁入此结构，勿再新建同名目录。
-- ⚠️ **`utils/async/load-guard.ts` 是「单文件目录」但非孤岛，禁止迁入 `utils/base/`**：它虽零依赖纯函数（符合 pure/ 准入），但已由 **ADR-230 钉死为全仓唯一代际守卫出口**（`createLoadGuard()` —— `next()`/`stale()`/`invalidate()`/`current` 四件套），原 `views/app-preview/gen-guard.ts`、`perf-common.ts:makeGenGuard`、`app-tree:atBeGenGuard` 三套同构实现及 app-tree 22 处 raw `_gen` 均已退役并入此出口（D1/D2 已落地）。路径写入 ADR 与 25 处 import，**迁移 = 违反 ADR-230 + 无谓 churn**。后续会话见「单文件目录」勿自动判为待收敛孤岛，先查 ADR 索引。
-  - ⚠️ **「D1/D2 已落地」≠「全仓零手搓」**（2026-09 修正：原注脚写作「零残留」，属由 ADR 落地状态反推全仓，措辞过宽）。D1/D2 是按当时 grep 圈定的**范围性目标**，非穷举保证——复核即发现 3 处范围外漏网：`app-sidebar:_reloadGen`、`preview-3d/session-ledger:_gen`、`app-sync-manager:_initGen`（后两处已并入、末者删除，见 ADR-230 D4）。**新增代际逻辑一律走 `createLoadGuard()`；判断是否「全仓干净」必须 `grep` 实证，不得引用本注脚。**
-  - **职责边界（ADR-230 D4）**：`LoadGuard` 只管**代际**（丢弃哪一轮结果），**不管并发**（同一时刻允许几个请求在跑）。「单飞 + 尾随补跑」属并发控制，全仓仅 `app-sidebar` 一处消费（`_reloadInFlight`/`_reloadPending`），不抽象为通用原语。
-
-### features→backend seam（ADR-190 D2 / ADR-208 D1，回归红线）
-- features 生产文件**禁止直接 import `backend/app.ts`**；唯一合法出口 = `*-deps.ts` seam 组合根
-  （features 根 `backend-deps.ts` 供零散模块 + 目录级 `community-deps.ts` / `context-menu-deps.ts`），
-  「生产默认 getApp」一律写 `deps?.fn || backendGetApp` 注入形态。check-layering 门禁 R5 兜底
-  （features 层规则，勿与 check-path-hygiene 同号 R5 混淆）。
-- **features 生产文件禁 HTML 字面量（check-layering R8，防回退，2026-09-20 立法）**：ADR-190 D1a /
-  ADR-208 D2「HTML 模板归 views」执法——字符串/模板串含 HTML 标签即违规；存量在
-  `docs/.layering-baseline.json`（只减不增，触碰即顺手收敛：tpl 注入或 DOM API 构建 +
-  `outerHTML`），新增即红；确属 HTML 数据语义的场景用行尾注 `// layering-allow: html` 精确豁免。
-  勿与 check-redlines 同号 R8 混淆。
-
-### 前端 import 路径约定（ADR-146，别让大模型手写错路径深度）
-- **任何非精确同目录的 import**（跨顶层 **或** 同顶层内不同子目录）→ 一律 `@/<顶层目录>/具体文件`（如 `@/features/repo/x.ts`）。别手算 `../` 深度——精确同目录就写 `./`，其余就写 `@/`。
-- **精确同目录**（兄弟文件）→ 用相对 `./xxx`；同目录还用别名是噪音（R5 会提示）。src 根文件 `@/bus`、`@/theme-core`。
-- **神桶红线**：import 只从**具体文件**进，禁止 `@/dir`（裸目录聚口）或 `@/dir/index` 入口——尤其测试文件，防「一根测试拉起一整个模块」（R6 提示）。src 根文件 `@/bus`、`@/theme-core` 是**文件级别名**（指向具体叶），不算桶。
-- 门禁：`check-path-hygiene` R5/R6。深 `../` 上跳 > 3 → R3 提示；越 `src` 边界 → R4 阻断。相对深度已全仓归零（仅 `./` 精确同目录 + 越界相对），已全量收敛。
+### 前端分层三约束（回归红线）
+- **`src/core` 准入（ADR-189 D4）**：引擎无关内核，三条全满足才可入——①不 import three/Wails；②不依赖上层与 DOM 原语层（`utils/base/` 允许）；③无 Wails 也能单测。绑定能力走依赖注入，禁止直引 backend/*。
+- **features→backend seam + 禁 HTML 字面量（ADR-190/208）**：features 生产文件唯一出口 `*-deps.ts` seam，`deps?.fn || backendGetApp` 注入形态；字符串含 HTML 标签即违规（check-layering R5/R8 兜底）。
+- **import 路径（ADR-146）**：非精确同目录一律 `@/<顶层目录>/具体文件`；精确同目录用 `./`；禁止 `@/dir` 裸目录聚口。
+- pure/primitives 文件清单、DiarySink 接线、seam 组合根全表、baseline 机制、`layering-allow` 豁免语法、三套门禁同号异策对照表 → 知识卡 `fe_layering_seams.md`；ADR-230 代际守卫唯一出口注脚链全文 → `load_guard.md`。
 
 ## 提交
 
@@ -130,6 +106,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | 遇到 | 查 / 做 |
 |------|---------|
 | 陌生函数/类/模块 | routes-quick → 首选知识卡 → grep 卡正文 → source_files |
+| 前端分层/边界疑问（core 准入、seam、import 路径、前端 vs Go） | 知识卡 `fe_layering_seams.md` / `fe_go_boundary.md` / `load_guard.md` |
 | 误删/误移函数 | `git diff HEAD` → `git checkout -- <file>` |
 | Go Binding 函数名 | grep `internal/app/` 确认函数名 |
 | Wails 绑定 | `cd frontend && npm run generate:bindings`（script 已内置 `-ts`，不手写） |
@@ -150,7 +127,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 |------|------|
 | `doctor` | 全量闸门（`--docs` 文档轻量版） |
 | `commit-with-check` | 验证 + 提交一体，按 staged 文件裁剪门禁 |
-| `check-biome` | biome 增量闸门：**必须显式点名** `node scripts/check-biome.ts --files <改动文件...>` 或裸跑 `npx biome check <files>`——无参/`--strict` 的 `--changed` 默认模式在 main 直提工作流下恒空转（三点 diff `main...HEAD` 恒空，实测恒绿），push 门禁里该闸是摆设；真正防线 = pre-commit 行级闸 `check-biome-lines`（拦「本次提交新增违规行」）。`--write` 自动修复；勿在 frontend/ 外裸跑 `npx biome`（配置在 `frontend/biome.json`）；能清除债务就用这个清除，禁止回退 |
+| `check-biome` | biome 增量闸门：**必须显式点名** `node scripts/check-biome.ts --files <改动文件...>`（无参/`--changed` 默认模式在 main 直提工作流下恒空转，实测恒绿；真正防线 = pre-commit 行级闸 `check-biome-lines`）。`--write` 自动修复；勿在 frontend/ 外裸跑（配置在 `frontend/biome.json`）；能清除债务就用这个清除，禁止回退 |
 | `audit-split` / `rollback-impact` | 拆分 / revert 影响面分析（函数去向、红线、断链调用方） |
 | `api-break` | 两 ref 破坏性变更检测（合分支 / 发版前） |
 | `bug-search` | Bug 历史搜索 |
@@ -159,8 +136,8 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 ## ADR 与审核
 
 - 新 ADR 走 `node scripts/new-adr.ts "标题" [...]`（不手写编号）；状态：`📝 提议中（新 ADR 默认，待拍板）/ ✅ 已采纳 / 🔄 部分采纳 / 🧊 已废弃 / ❌ 已取代`；触及既有 ADR 时在对方首部标「被 [ADR-NNN] 取代」。
-- **ADR 只记决策方向和理由，不记实施进度**。实施进度（哪步做了哪步没做）写进知识卡——知识卡有 `check-knowledge-drift` 自动检测，ADR 没有。ADR 状态字段只记生命周期（提议中/已采纳/部分采纳/已废弃/已取代），不记"§2.3 仍排期"这类待办状态——这类状态和实际严重脱节（ADR-042 案例：记录"四项未建模"，实际三项已落地、一项无需实现）。
-- 审核流水线 / 反模式 / 致命陷阱 / 治理红线 / 防御范式 → 已拆分至三处：治理红线 = `skills/governance-rules.md`（10 条前端规则手册，R1–R10）、致命陷阱 = `skills/pitfalls.md`（24 条事故教训手册）、审核流水线 + 三份 Checklist（代码审查 / 跨平台 / 前端 3D）= `docs/adr/ADR-109-code-review-checklist.md`。原 `docs/audit-framework.md` 已于 2026-09 文档调整中删除（内容拆分归位）。
+- **ADR 只记决策方向和理由，不记实施进度**。实施进度（哪步做了哪步没做）写进知识卡——知识卡有 `check-knowledge-drift` 自动检测，ADR 没有。ADR 状态字段只记生命周期，不记"§2.3 仍排期"这类待办状态（脱节案例：ADR-042）。
+- 审核流水线 / 反模式 / 致命陷阱 / 治理红线 / 防御范式 → 三处：治理红线 = `skills/governance-rules.md`、致命陷阱 = `skills/pitfalls.md`、审核流水线 + 三份 Checklist = `docs/adr/ADR-109-code-review-checklist.md`。
 - **铁律**：改完代码同步知识卡（`check-knowledge-drift` 由钩子自动兜底）。
 - 收敛闭环默认：子代理审核修复 → CodeReview 独立审查 → pre-commit 自动检测。
 
@@ -192,7 +169,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 cd frontend && npx vite build && npm run typecheck   # 前端（同 cwd=frontend）
 node scripts/check-biome.ts --files <改动文件...>      # biome 增量闸门（须显式点名——--changed 在 main 直提下恒空转；--write 自动修复）
 go build ./...                                  # Go（覆盖 go/ + 根 internal/app + 根 main.go CLI 入口）
-node scripts/contract-tests.ts            # 契约测试（95 个 tests/*.ts；⚠️ 勿手写 `for f in tests/*.ts; do node "$f"; done` 裸跑循环——裸跑缺 @/ 别名运行时注入，任何 import 链进入 frontend @/ 别名的用例都 ERR_MODULE_NOT_FOUND（本地绿、CI 红）。护栏：tests/test_workflow_contract_runner.ts）
+node scripts/contract-tests.ts            # 契约测试（95 个 tests/*.ts；⚠️ 勿手写 `for f in tests/*.ts` 裸跑循环——缺 @/ 别名运行时注入，本地绿 CI 红；护栏 tests/test_workflow_contract_runner.ts）
 node scripts/doctor.ts --docs               # 只改文档时（秒级）
 node scripts/doctor.ts                      # 发版前全量
 node scripts/android-build.ts / android-install.ts   # 安卓打包 / 安装

@@ -442,3 +442,32 @@ shadow-menu、light-controls/light-params、ground-menu/ground-surface-spec。
 1 条属语义权衡，**登记 + 量具化**（尖度轴 Σσk ∝ 1/size，探针新增「Σσk 域宽扫描」行）。
 子代理同时**证伪 4 项**（跳变量级突变、版本戳污染 cap、`samples === 0` 恒真、i18n 时机），
 并确认 `level` 旧别名会绕过迁移但属良性（别名期无 0.01 默认值）。详见文首「第二轮锐评（增量）」段。
+
+## 九、第三轮锐评（五笔账）与处置（2026-10-04 夜）
+
+要点：主模型对第二轮后的现行源码再读一轮，**又发现 5 条未处置项（五笔账）**——其中 3 条是既往
+「修复方向已写明、配套未落地」的挂账（P1-1 配套句 / P2-3 方向② / P2-1③ S5-2），2 条为本轮新锐评
+（clarity 无条件重编、失败哲学不对称无文档）。用户「简单回顾提交历史后寻找解决方案吧」授权处置，
+**五笔账全部落地**（提交 `20ec2906c`），并带出一条 three 源码语义的**重要订正**（needsUpdate 无 getter、
+transmission setter 自带跨界 version++，见账④）。
+
+### 五笔账清单与修复
+
+| # | 病症 | 证据（现状） | 归类 | 修复 |
+|---|---|---|---|---|
+| ① | 微细节沟槽频率**恒世界米制**，未按 sizeRef/uSize 归一——与主谱 D2（λ ∝ uSize）尺度基准分裂 | `water-capability.ts` fragment 细节块：`0.08 * cos(dot(dp, dd1) * 0.8)` 等三组频率参数 0.8/1.1/1.6 固定（λ 恒 3.9–7.9 m）；`git -S "0.08 * cos"` 仅命中 ADR-271 引入提交，从未归一 | P1-1 配套句 192 未落地 | **已修**：乘 `detailFreqScale = WAVE_STEEP_SIZE_REF / max(uHalfSize*2, 0.001)`（fragment 无 uSize 声明，经 uHalfSize=uSize/2 推导；`WAVE_STEEP_SIZE_REF` 内插自 `water-state.ts`，80m 基准档因子 = 1 观感零变化，与主谱反归一同一纪律）；dh1/dh2/dh3 与 dhdx/dhdz 偏导系数同乘（梯度与相位同谱防裂缝） |
+| ② | `reflectionActive` 无 `strength > 0` 门：strength=0 时 uReflStrength 混合块跳过、RT 无人消费，却每帧仍付**整场重渲** | `water-reflect.ts:52-60`；`git -S "strength > 0" -- water-reflect.ts` 零输出；schema 注释自认「0 等于关混合但保留 RT」 | P2-3 修复方向②未实施 | **已修**：`if (envState.waterReflectionStrength <= 0) return false;`（全透明门之前插入）——归零即停渲 RT，拉回即恢复无需重建；schema 注释同步为「0 = 关混合 **且停渲**」 |
+| ③ | pool 下 `level > poolHeight` 无约束、无 hint：预算归零 + 水面浮池壁，water-level 滑杆无 getHint（测试 2293 反把归零锁成期望） | `water-menu.ts:106-111`；`effectiveWaveHeight` 预算 = `min(waveHeight, max(0, poolHeight-level))` 归零 | P2-1③ / S5-2 未闭环 | **已修**：water-level 滑杆补 getHint——仅 pool 且 `level > wall` 时返回「水位超出池壁 {v} m」（`t("preview.waterLevelAboveWall")`，新增三语 locale key）；未超出返回 ""（沿 wave-height 纪律：只在钳制时提示，不打扰）；film 无上钳不受约束 |
+| ④ | `waterClarity` applier 每次变更**无条件** `mat.needsUpdate = true`：surface+wallInner 两材质每 tick（滑杆 step 0.05 拖一发一次）整段重编 program | `water-params.ts` waterClarity applier；与同表 waterNormalStrength「无贴图重算、无 needsUpdate」自夸矛盾 | 本轮新锐评 | **已修（比预期更本质）**：查 three 0.186.1 源码——`Material.needsUpdate` 是**只有 setter（`if (value === true) this.version++`）无 getter** 的访问器（读恒 undefined，故测试不能读 needsUpdate 值，须读 `material.version`）；而 `MeshPhysicalMaterial.transmission` **setter 已自带跨界 version++**（`if (this._transmission > 0 !== value > 0) this.version++;`，仅 0↔非0 翻转 USE_TRANSMISSION define 时重编）——**纯透传赋值即得条件化语义，手动 needsUpdate 是重复劳动**（跨界时会与 setter 各 ++ 一次，实测 received 5 vs expected 4）。故删掉手动置位，只留 `mat.transmission = next` |
+| ⑤ | 失败哲学不对称无文档：REVISION 断言失配 **throw**（cap 缺席）vs 六锚点注入失配仅 **warn** 保现场——代价不同，处理强度随之不同，但未成文 | `water-capability.ts:170+`（assertRevisionRange）vs `:414+`（六锚点巡检 warn） | 本轮新锐评 | **已修（文档化，不统一）**：REVISION 断言前补注释块——REVISION 失配=前提崩塌（chunk 结构未知、注入串全可能错位，warn+兜底=无法归因的坏画面）→ throw → cap 缺失显式可发现；六锚点失配=局部漂移（仅个别 chunk 标记动了，水面退化仍可用）→ warn 保现场供诊断。两失败模式代价不同故处理强度不同，勿「统一」 |
+
+**配套测试**（`water-capability.test.ts` 132 → **140 例**）：
+- 账①：微细节三组 cos 断言改为含 `* detailFreqScale)` 闭口 + 新增 dh1/dh2/dh3 偏导系数三段断言（`* dd1.x * 0.8 * detailFreqScale` 等）；
+- 账②：strength=0 门用例——`waterReflectionEnabled(true)` 后 `update` 驱动 renderReflection 计数 0→1，`setWaterReflectionStrength(0)` 后 update 不再渲、拉回 0.9 恢复，uReflStrength uniform=0.9；
+- 账③：getHint 用例——film → ""、pool 默认 0.15<0.3 → ""、setLevel(0.5) → 含 "0.20"、setLevel(0.3)（贴壁）→ ""；
+- 账④：setClarity version 快照用例——0.6→0.8 非零区间 version 不变、0.8→0 跨界 +1、0→0.3 再跨界 +1、0.3→0.4 回归不变（**对齐 `sky-capability.test.ts:783-790` 既有纪律**：three needsUpdate 无 getter，用 version 观察重编触发）。
+
+**验证**：`water-capability.test.ts` **140 例全绿**（含新增 8 例）；caps 全部 29 测试文件 1115 例全绿；
+`vite build` ✓（先跑 `node scripts/generate-locale-json.ts` 同步三语 JSON）；`npm run typecheck` 零错误；
+`biome check` ✓；探针复跑无回归（水平位移峰值 0.650、Σσk=0.400、越壁穿地 0%、六波全在窗口）。
+提交 `20ec2906c`（12 文件 +121/−13，含 schema 注释、locale 三语 ts+json）。

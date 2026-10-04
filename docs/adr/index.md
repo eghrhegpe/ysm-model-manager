@@ -16,17 +16,17 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 7 |
+| [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 291 |
+| [✅ 已采纳](#已采纳) | 294 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（7）
+### 📝 提议中（4）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -34,9 +34,6 @@ permalink: /adr/
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
-| [ADR-282](./ADR-282-applymodelpreset-default-light-params.md) | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 |
-| [ADR-281](./ADR-281-flatten-map.md) | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | 📝 提议中 |
-| [ADR-280](./ADR-280-key-fill-rim-directional-point-spot.md) | 灯光类型切换：三灯统一实例（key/fill/rim 各可 directional/point/spot） | 📝 提议中 |
 
 ### 🔄 部分采纳（13）
 
@@ -56,7 +53,7 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（291）
+### ✅ 已采纳（294）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -95,6 +92,9 @@ permalink: /adr/
 | [ADR-287](./ADR-287-water-ground.md) | water 菜单 ground- 化石前缀重命名 | ✅ 已采纳 |
 | [ADR-286](./ADR-286-water-applychangedparams.md) | water applyChangedParams 声明式分派表 | ✅ 已采纳 |
 | [ADR-283](./ADR-283-env-param-range-descriptor.md) | 参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口 | ✅ 已采纳 |
+| [ADR-282](./ADR-282-applymodelpreset-default-light-params.md) | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | ✅ 已采纳 |
+| [ADR-281](./ADR-281-flatten-map.md) | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | ✅ 已采纳 |
+| [ADR-280](./ADR-280-key-fill-rim-directional-point-spot.md) | 灯光类型切换：三灯统一实例（key/fill/rim 各可 directional/point/spot） | ✅ 已采纳 |
 | [ADR-279](./ADR-279-select-icon-migration.md) | 设置页下拉图标死代码处置与自定义下拉迁移 | ✅ 已采纳 |
 | [ADR-278](./ADR-278-diagnostics-perf-ia.md) | 诊断页按「动作 / 产物」重划性能分组 | ✅ 已采纳 |
 | [ADR-277](./ADR-277-preview-labelkey-localekey.md) | preview 菜单 labelKey 全链钉死为 LocaleKey | ✅ 已采纳 |
@@ -415,9 +415,9 @@ permalink: /adr/
 | ADR-285 | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 | 2026-09-20 |
 | ADR-284 | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 | 2026-09-20 |
 | ADR-283 | 参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口 | ✅ 已采纳 | 2026-09-20 |
-| ADR-282 | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | 📝 提议中 | 2026-09-20 |
-| ADR-281 | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | 📝 提议中 | 2026-09-20 |
-| ADR-280 | 灯光类型切换：三灯统一实例（key/fill/rim 各可 directional/point/spot） | 📝 提议中 | 2026-09-20 |
+| ADR-282 | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | ✅ 已采纳 | 2026-09-20 |
+| ADR-281 | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | ✅ 已采纳 | 2026-09-20 |
+| ADR-280 | 灯光类型切换：三灯统一实例（key/fill/rim 各可 directional/point/spot） | ✅ 已采纳 | 2026-09-20 |
 | ADR-279 | 设置页下拉图标死代码处置与自定义下拉迁移 | ✅ 已采纳 | 2026-09-20 |
 | ADR-278 | 诊断页按「动作 / 产物」重划性能分组 | ✅ 已采纳 | 2026-09-19 |
 | ADR-277 | preview 菜单 labelKey 全链钉死为 LocaleKey | ✅ 已采纳 | 2026-09-19 |

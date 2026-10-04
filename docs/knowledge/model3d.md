@@ -943,6 +943,7 @@ auto_fields:
     - VmdPositionTrackHandle
     - VmdRetargetOptions
     - VmdRetargetResult
+    - volParamKeys
     - VolumetricCone
     - VolumetricDriver
     - VolumetricParams

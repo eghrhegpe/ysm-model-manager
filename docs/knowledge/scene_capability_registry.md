@@ -192,6 +192,7 @@ auto_fields:
     - TONE_MAPPING_KEYS
     - valueNoise2
     - valueNoise4D
+    - volParamKeys
     - VolumetricCone
     - VolumetricDriver
     - VolumetricParams

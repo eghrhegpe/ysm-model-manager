@@ -831,9 +831,9 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 改体积光外观 / 加锥体参数 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | frontend/src/preview-3d/caps/light-cone.ts\|applyTransform | ADR-266, ADR-266-d1, ADR-177, ADR-246 |
-| 截图/导出里没有光柱或亮度与预览不符 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | frontend/src/preview-3d/caps/light-capability.ts\|CONE_GEO_CHANGES | ADR-266, ADR-266-d1, ADR-177, ADR-246 |
-| 排查光柱穿帮、过曝、开关不生效 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | frontend/src/preview-3d/caps/light-cone.ts\|VOLUMETRIC_CONE_FRAG | ADR-266, ADR-266-d1, ADR-177, ADR-246 |
+| 改体积光外观 / 加锥体参数 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | frontend/src/preview-3d/caps/light-cone.ts\|applyTransform | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
+| 截图/导出里没有光柱或亮度与预览不符 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | frontend/src/preview-3d/caps/light-capability.ts\|CONE_GEO_CHANGES | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
+| 排查光柱穿帮、过曝、开关不生效 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | frontend/src/preview-3d/caps/light-cone.ts\|VOLUMETRIC_CONE_FRAG | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
 
 ## 🎯 后端桥接与平台路由
 

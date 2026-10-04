@@ -9,13 +9,14 @@ adr:
   - ADR-266-d1
   - ADR-177
   - ADR-246
+  - ADR-290
 use_when:
   - 体积光
   - 光锥
   - 聚光灯可见光柱
   - volumetric / cone
   - 边缘辉光 / fresnel
-  - 截图里没有光柱
+  - 截图光柱缺失或与预览不一致
 source_files:
   - frontend/src/preview-3d/caps/light-cone.ts
   - frontend/src/preview-3d/caps/light-capability.ts
@@ -32,6 +33,7 @@ auto_fields:
     - ScreenshotVolumetric
     - spotDistanceAttenuation
     - toScreenshotLights
+    - volParamKeys
     - VolumetricCone
 tests:
   - frontend/src/preview-3d/caps/light-cone.test.ts
@@ -72,9 +74,9 @@ invariant_anchors:
 
 聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry` + `discard` 抠锥」换成**真锥体网格**，因为十字片只是锥的剪影，侧视角会变薄消失、相机穿入时两片在中轴叠加出亮竖缝、模型贴近锥面时呈剪纸感。
 
-> **[light-type-switch] 驱动源变更（2026-09）**：锥体不再绑定「第四盏独立聚光灯」，改由**三盏灯中启用的 `type==='spot'` 灯**驱动——任一盏灯切到聚光灯即可见光柱。
-> **[驱动源优先级] 编辑器优先（2026-09 修复）**：多盏 spot 同框时，`getSpotLightForCone()` **优先返回当前编辑的灯**（`activeLight`，即菜单 `light-select` 选中的槽位）；仅当该灯不是启用的 spot 时，才回退到槽位顺序（key→fill→rim）第一盏启用的 spot。旧实现纯按数组顺序取「第一盏」，用户把 key 切 directional、fill 切 spot 后锥体跟 fill，再切 rim 为 spot 仍跟 fill——驱动源不可见、不可控（隐式优先级 UX 语病）。
-> **[同步点硬约束] `setActiveLight` 必须收敛锥体（2026-09 复审补）**：驱动源依赖 `activeLight`，而 `setActiveLight` **不写 envState**（UI 焦点态，不入存档/不派发）——若不内联调 `rebuildConeIfNeeded`，切编辑灯后**驱动源已变、锥体却停在旧灯上**，要等下次碰任意灯光参数才跟上（「切了没反应」，比旧的固定顺序更难预期）。实现：`if (prev !== which) this.rebuildConeIfNeeded(envState)`（同槽位重复设值不空转）。后续若再新增「运行时态影响渲染」的字段，同样必须自带收敛点，不可依赖 envState 派发。守卫：`light-capability.test.ts` 的「setActiveLight 切换驱动源时主动收敛锥体」（断言锥顶位置随驱动源变、回退到非 spot 槽位时回到原驱动源）。
+> **[light-type-switch] 驱动源变更（2026-09）**：锥体不再绑定「第四盏独立聚光灯」，改由**启用的 `type==='spot'` 灯**驱动——任一盏灯切到聚光灯即可见光柱。
+> **[ADR-290] 驱动源 schema 化（`lightVolumetricDriver`）**：锥体贴哪盏灯**不由编辑器焦点决定**，改由 envState 键 `lightVolumetricDriver` 显式决定（`auto` / `key` / `fill` / `rim`）——`auto` = 按 key→fill→rim 槽位顺序第一盏启用的 spot；显式槽位 = 严格绑定该槽位，该槽位不是启用的 spot 则**无锥（不回落）**。`getSpotLightForCone` 只读该 schema 键，与 `activeLight` **彻底脱钩**。
+> **[同步点硬约束] `setActiveLight` 不再收敛锥体（ADR-290）**：驱动源已迁到 `lightVolumetricDriver`（envState 键，变更经既有派发通道触发 rebuild，与 `volumetric.enabled` 同路），`activeLight` 回归纯 UI 焦点态——原「切了没反应」的内联 rebuild 补丁随 ADR-290 退役。守卫：`light-capability.test.ts` 的「[ADR-290] setActiveLight 与锥体彻底脱钩（怎么切都不动锥）；driver 变更即收敛锥体」（断言焦点切换零渲染效果、改 driver 才重建）。
 
 当前实现：`ConeGeometry(baseRadius, height, 48, 4, openEnded)` 单网格 + `AdditiveBlending` + `DoubleSide` + 轴向衰减 + Fresnel 视角边缘辉光 + ACES/色彩空间转换。**无 post-process 管线**（ADR-246 D1 的单引擎裁定）。
 
@@ -101,7 +103,7 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- **`LightCapability`**：三盏灯（key/fill/rim）各可在 directional/point/spot 间切换；锥体由「当前编辑的 spot 灯优先，否则第一盏启用的 spot 灯」驱动（`getSpotLightForCone()`），方向由 `getSpotDir(spotLight)`（光源 → 靶点）算出。重建触发面 = `CONE_GEO_CHANGES`（type/enabled/angle/penumbra），位置变更走 `syncPosition`，其余走 uniforms 快路径。
+- **`LightCapability`**：三盏灯（key/fill/rim）各可在 directional/point/spot 间切换；锥体驱动源 = envState 键 `lightVolumetricDriver`（`getSpotLightForCone` 只读该键，与 `activeLight` 无关），方向由 `getSpotDir(spotLight)`（光源 → 靶点）算出。重建触发面 = `CONE_GEO_CHANGES`（type/enabled/angle/penumbra），位置变更走 `syncPosition`，其余走 uniforms 快路径。
 - **envState / env-dispatcher**：参数变更经 `setEnvState` 派发，`onEnvChanged` 分派到锥体。
 - **灯 helper**（ADR-246 D3 扩展）：每盏灯按当前 type 配对应 helper（Directional↔DirectionalLightHelper / Spot↔SpotLightHelper / Point↔PointLightHelper），类型切换时重建；体积光锥是视觉光柱本体。
 - **截图渲染**（`preview-3d/screenshot/screenshot-lights.ts` + `preview-3d/screenshot/screenshot-cone.ts`）：**同构**（ADR-266-d1，取代 ADR-246 期「预览与截图本就不同构」的旧口径）——`toScreenshotLights()` 经 `light-capability.ts|getSpotLightForCone` 取驱动槽位（不重算驱动规则），离屏经 `screenshot-cone.ts|applyVolumetricCone` **复用本类**建锥（同一几何/shader，非第二套「截图专用光柱」）；无驱动 spot / 未开体积光 / 能力总闸关 → `volumetric` 为 null（预览没有的东西，截图不凭空出现）。同构义务不止几何：离屏 renderer 的 `toneMapping` / `toneMappingExposure` / `outputColorSpace` 一律镜像活跃预览 renderer 的**现值**（`ScreenshotLights.output`；读现值而非重推 sky/pp 属主链——推导即手抄）。
@@ -111,7 +113,7 @@ invariant_anchors:
 
 1. **朝向不变量**：世界空间中锥顶 ≡ 聚光灯位置，锥底中心 ≡ 光源 + 锥高 · 射束方向；由 `light-cone.test.ts` 的 `localToWorld` 断言锁定。
 2. **垂直等价**：缺省方向下 `quaternion` 为单位四元数、中心 `y = spotlightPos.y - height/2`——与 ADR-246 之前的旧实现逐像素等价（防止「换几何顺手改布局」的静默漂移）。
-3. **未双开不产锥**：任一盏灯 `type==='spot' && enabled` 且 `volumetric.enabled` 同时为真才产出 group（挂载态另有 `attach/detach` 语义，重建后需回挂）。
+3. **未双开不产锥**：驱动槽位（`lightVolumetricDriver` 选定的灯，`auto` 下为槽位顺序第一盏启用 spot）`type==='spot' && enabled` 且 `volumetric.enabled` 同时为真才产出 group（挂载态另有 `attach/detach` 语义，重建后需回挂）。
 4. **色调映射接线**：片元恒含 `#include <tonemapping_fragment>` + `<colorspace_fragment>`；`material.toneMapped` 必须为 `true`（否则 renderer 不注入 `TONE_MAPPING` 宏，两个 include 退化为空）。
 5. **重建触发面**：`CONE_GEO_CHANGES`（type/enabled/angle/penumbra）才重建；方位角/仰角走 `syncPosition`；color/intensity/distance/decay 只走 `updateUniforms`。
 6. **轻量性**：不加 pass、不给 renderer 加每帧接线（相机经 three 内置 uniform `cameraPosition` 取得）。
@@ -123,5 +125,6 @@ invariant_anchors:
 - ADR-266：本次几何/着色/色调映射/朝向/重建收窄的决策记录与数据溯源。
 - ADR-177：`VolumetricCone` 拆出 `LightCapability` 的出处（状态机用例契约位在 `light-capability.test.ts`）。
 - ADR-246：D1 删 postprocess 空壳（单引擎 = 本锥体）、D2 参数收编、D3 SpotLightHelper 可视化。
+- ADR-290：锥体驱动源 schema 化（`lightVolumetricDriver`）——本条取代「编辑器焦点优先 / `setActiveLight` 收敛锥体」的旧口径。
 - ADR-084：个人灯光系统（三点布光 + 聚光灯 + 可见光锥）；其中「雾中 raymarching 体积光」**仍未实现**，若要做须以新增 pass 方式引入（ADR-246 裁定）。
 - ADR-107：天空体积光束（god rays）——与雾中光柱非同一物。

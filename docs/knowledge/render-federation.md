@@ -65,6 +65,7 @@ auto_fields:
     - spotDistanceAttenuation
     - switchPreview
     - UpdateableScene
+    - volParamKeys
   tests:
     - frontend/src/preview-3d/adapters/__tests__/mount-preview-core.test.ts
     - frontend/src/preview-3d/caps/environment-capability.test.ts

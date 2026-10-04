@@ -72,7 +72,8 @@ function buildWaves(
 ) {
   const sizeSafe = Math.max(size, 0.001);
   const spacing = sizeSafe / segments;
-  // film 无壁无上钳：预算即下钳的水位净空；pool 才有壁顶上钳
+  // forPool = **是否有壁顶**（与 shader 侧形态能力旗标 `hasWallCeiling` 同义，锐评 P2-2 口径对齐）：
+  // 无壁形态预算即下钳的水位净空；有壁才有「波峰不越壁顶」的上钳
   const budget = forPool
     ? Math.min(Math.max(level, 0), Math.max(depth - level, 0))
     : Math.max(level, 0);

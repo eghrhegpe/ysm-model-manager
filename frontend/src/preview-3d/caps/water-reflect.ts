@@ -90,10 +90,20 @@ export function ensureReflector(state: WaterReflectState): Reflector {
   return state.reflector;
 }
 
-/** 弃倒影载体（RT + 材质 + 几何具名释放）：bias 重建与 dispose 共用同一出口。
- *  Reflector 不入场景，disposeWater 的 traverse 遍历不到，必须在此点名释放。 */
+/** 弃倒影载体（RT + 材质 + **几何**具名释放）：bias 重建与 dispose 共用同一出口。
+ *  Reflector 不入场景，disposeWater 的 traverse 遍历不到，必须在此点名释放。
+ *  [锐评 2026-10-04 P3-2] 官方 `Reflector.dispose()` 只释放 RT + 材质（其 dispose 体仅
+ *  `renderTarget.dispose(); scope.material.dispose();`）——**几何是构造期传入的、官方不管**；
+ *  本出口补具名释放，否则每次 clipBias 重建（Δ ≥ 死区）都在堆上留一个未释放的 PlaneGeometry。
+ *  实际风险很小（载体不入场景、该几何从未被渲染 ⇒ 无 GPU 缓冲泄漏），但「注释承诺 > 实现」
+ *  是本仓最重视的一类漂移。 */
 export function disposeReflector(state: WaterReflectState): void {
-  state.reflector?.dispose();
+  const reflector = state.reflector;
+  if (reflector) {
+    const geometry = reflector.geometry;
+    reflector.dispose(); // 官方：RT + 材质
+    geometry?.dispose(); // 官方不含几何（构造期传入 ⇒ 调用方责任）
+  }
   state.reflector = null;
   state.reflectorClipBias = -1;
 }
@@ -124,7 +134,11 @@ export function renderReflection(
   // 镜面即水面：clip 平面 = Reflector 平面本身，水位升降一个标量跟随
   reflector.position.y = envState.waterLevel;
   reflector.updateMatrixWorld(true);
-  // controls 更新在上一帧尾，官方读 camera.matrixWorld 前须刷新（否则镜像滞后一帧抖动）
+  // [锐评 2026-10-04 P3-2 订正] 官方 onBeforeRender 读 `camera.matrixWorld`，此处刷新保证矩阵与
+  // 已写入的 position/quaternion 一致（防「属性已改、矩阵未更新」）。⚠️ 但它**消除不了**跨帧输入
+  // 滞后：RT 渲发生在 render-host 的 caps.update 段，早于本帧 WASD 相机输入与 perFrame 回调
+  // （见 render-host.ts 的调用序），故镜像相机读到的仍是上一帧末的输入。原注释称「否则镜像滞后
+  // 一帧抖动」，把两件事的功劳记混了——真要消除滞后须把 RT 渲染移到相机输入之后（结构性调整，另议）。
   camera.updateMatrixWorld();
   const prevVisible = waterRoot.visible;
   waterRoot.visible = false;

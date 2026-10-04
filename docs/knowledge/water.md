@@ -106,6 +106,8 @@ pitfalls:
   - '**静水态曾产出 NaN（2026-10-04 修复，锐评 P0-1）**：`amp = uWaveHeight·0.26·0.82^i·aa`，而 `uWaveHeight` 可为 0——浪高滑杆 min=0、水位归零、pool 下水位 ≥ 池深，都会让 `water-params.ts|effectiveWaveHeight` 的预算归零。此时 `wa = freq·amp = 0` ⇒ 陡度式 `0.8/(wa·6)` 得 +∞ ⇒ `steep·amp = ∞×0 = NaN` ⇒ `transformed` 与 `objectNormal` 双双污染 ⇒ **水面整块消失**（用户拖浪高到 0 想要静水，得到「水没了」）。修复 = shader 波场内退化门 `if (wa <= WAVE_DEGENERATE_WA) { continue; }`（阈值单一事实源 `water-state.ts`，shader 内插、探针 `buildWaves` 同门）——跳过后 nrm 保持 (0,0,1)、位移为 0 = 平面水 + 正确法线，静水态这才真正可达。⚠️ 原注释与知识卡宣称的「1‰ 下界保 wa 恒 > 0」**是假不变量**：该下界加在 `aa` 上，amp 本身已是 0 时救不了 wa（已随本轮订正）'
   - '**水平摆动曾随水面尺寸漂 30 倍（2026-10-04 修复，锐评 P1-1）**：D2 让 λ ∝ uSize，而 Gerstner 的水平位移 `steep·amp ∝ 1/freq ∝ uSize`、且与浪高解耦 ⇒ 同一浪高在 size=10 与 300 下水平摆动差约 30 倍（探针改前实测 0.036 m ↔ 1.091 m，而垂直总振幅恒 0.060 m）——大水面被「横向揉皱」。修复 = `steep` 乘基准反归一 `water-state.ts|WAVE_STEEP_SIZE_REF/uSize`（基准 = schema `waterSize` 默认 80，同值守卫在其测试内）：默认档观感零变化，`size ≥ 80` 域水平摆动恒定（探针域宽扫描六档恒 0.650 m），`size < 80` 由自交上界 `WAVE_STEEP_SUM_LIMIT/(wa·N)` 接管——那是物理约束（波长太短本就不允许那么大水平摆动），不是公式漂移。⚠️ 别为「让两端完全相等」去突破自交上界'
   - '**存量存档吃掉 D1 的默认抬升（2026-10-04 修复，锐评 P1-4）**：`saveState` 遍历 schema 键集恒写 `waterLevel`，而 ADR-319 D1 把默认从 0.01 抬到 0.15 ⇒ 老档把旧默认原样带回、预算被钳到 1 cm（「浪死平」观感原样保留），收益只覆盖新装 / 清过档的用户。修复 = 存档带版本戳 `water-migrations.ts|WATER_SCHEMA_VERSION_KEY`（唯一消费者是 loadState 的迁移判据，**不是参数键**、不入 schema）+ 纯函数 `migrateLegacyWaterLevel`：只有「无版本戳 ∧ 水位**严格等于**旧默认 0.01」才迁到现默认，带戳新档一律不动（用户可自由设 0.01，save/load 往返恒等）。**新增存档键必须自证有读侧消费者**——本键的消费者就是 loadState 那三行'
+  - '**形态门控只许能力旗标，禁止 id 字符串现判（2026-10-04 修复，锐评 P2-2）**：`effectiveWaveHeight` 的上钳（波峰不越壁顶）曾在三处按形态 id 现判、构造期还用 `forPool` 兼职——而 `WaterBodyStrategy` 的设计承诺是「新增形态 = 注册一项、现有实现零改动」，id 现判让新形态（ocean 等）**静默走无壁分支**（浪漫过容器、编译器一言不发）。现 `hasWallCeiling` 进策略接口（与 wetnessGated / supportsVolumeOptics / supportsRoundness 并列），`WaterBuildContext.buildMaterial` 的 `{ forPool, hasWallCeiling }` 两维刻意不合并（未来 ocean 可能「有体积光学但无壁」）；守卫 = 旗标断言 + **源码扫描闸**（水源码文本内不得出现按 id 现判 pool 的模式——注释里写该字面量也会被闸住，改用文字描述）'
+  - '**死代码与自证式测试（2026-10-04 修复，锐评 P3-1/P3-2）**：① `disposeWater` 曾读 `material.transmissionRenderTarget` 手动释放——该属性在 three r186 的 `MeshPhysicalMaterial` 上**不存在**（真身在 renderer 侧 `renderState.state.transmissionRenderTarget[camera.id]`，由 renderer 按相机持有与清理），生产路径恒不触发；锁它的用例靠测试**自己伪造该字段**再断言被释放（自证式假绿），已随死代码一并删除。② 官方 `Reflector.dispose()` 只放 RT + 材质、**不放构造期传入的几何**——`disposeReflector` 补具名释放，注释从「RT + 材质 + 几何具名释放」（当时不实）改为事实描述。③ `renderReflection` 的 `camera.updateMatrixWorld()` 备注曾称「否则镜像滞后一帧抖动」——RT 渲在 render-host 的 caps.update 段、早于本帧相机输入，该行只保证「矩阵不落后于属性」、消除不了跨帧输入滞后，注释已订正。教训：**「注释承诺 > 实现」是本仓最重视的漂移**；给「已释放 / 已处理」写断言前，先查上游源码到底释放了什么'
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -271,6 +273,10 @@ invariant_anchors:
   （断言 = 「基准常量与 schema waterSize 默认同源」），改一处忘另一处即红。自交上界
   `WAVE_STEEP_SUM_LIMIT/(wa·N)` 仍是物理天花板：小尺寸下由它接管，**不得为「视觉一致」突破它**
   （判据 = 探针 ④ 段域宽扫描：`size ≥ 80` 六档恒 0.650 m，`size ≤ 40` 递减）。
+- **形态能力一律由 `WaterBodyStrategy` 旗标声明**（锐评 2026-10-04 P2-2）：`wetnessGated` /
+  `supportsVolumeOptics` / `supportsRoundness` / `hasWallCeiling` 四维各自独立、构造期与运行期共用同一旗标；
+  **下游禁止按形态 id 现判**（源码扫描闸兜底，注释里的同形字面量也算违规）。新增形态只需注册一项并声明旗标——
+  漏声明是编译红，不是静默降级。
 - **存档版本戳是旧档迁移的唯一开关**（锐评 2026-10-04 P1-4）：`water-migrations.ts|WATER_SCHEMA_VERSION`
   随 `saveState` 落盘、只被 `loadState` 的迁移判据消费；迁移只认「**无戳** ∧ 水位恰为旧默认」。
   **默认值变更的两条腿 = schema `default` + 旧档迁移判据**——缺后者就等于只对新用户生效

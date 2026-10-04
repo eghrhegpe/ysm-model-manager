@@ -40,7 +40,22 @@
 > **本轮验证（第二轮）**：`water-capability.test.ts` **132 例全绿**（P1-1 / P1-4 / 同源核查共新增 9 例）；
 > `vite build` ✓；`npm run typecheck` **零错误**；`check-biome --files` ✓；`doctor --docs` **22/22 PASS**；
 > 探针默认档无回归（aa 全 1、峰谷差 0.116）、`--amp 0` 全 0（无 NaN）。
-> **未动**：P1-2（滑杆动态上界，需产品决策）、P2-1..P2-4（参数语义 / 策略旗标 / 倒影计价 / 量具同源深化）、P3-1/P3-2。
+> **P2-2 / P3-1 / P3-2 已修（第三轮，用户「继续」授权清内部项）**——
+> **P2-2**：`WaterBodyStrategy` 新增 `hasWallCeiling` 能力旗标（与 `wetnessGated` / `supportsVolumeOptics` /
+> `supportsRoundness` 并列），三处按形态 id 现判与构造期 `forPool` 兼职全部收编；`buildMaterial` 的
+> `{ forPool, hasWallCeiling }` 两维刻意不合并（未来 ocean 可能「有体积光学但无壁」）；守卫 = 旗标断言 +
+> **源码扫描闸**（水源码内不得出现按 id 现判 pool 的模式——注释里写该字面量也会被闸住）。
+> **P3-1**：删 `disposeWater` 里读 `material.transmissionRenderTarget` 的死分支（r186 该属性不存在，
+> 真身在 renderer 侧 `renderState.state.transmissionRenderTarget[camera.id]`）**及其自证式测试**
+> （原用例自己伪造字段、再断言被释放）。
+> **P3-2**：`disposeReflector` 补几何具名释放（官方 `Reflector.dispose()` 只放 RT + 材质）、
+> `camera.updateMatrixWorld()` 的「防镜像滞后一帧」注释订正为事实（该行只保证矩阵不落后于属性，
+> 消除不了跨帧输入滞后——那需要把 RT 渲染移到相机输入之后）。
+> **本轮验证（第三轮）**：`water-capability.test.ts` **132 例全绿**（条数不变：删 1 条自证式用例、
+> 加 1 条源码扫描闸，另在两条既有用例内补断言）；`npm run typecheck` **零错误**；`check-biome --files` ✓。
+> **未动**：P1-2（滑杆动态上界）、P2-1（wetness×opacity 合并）——均需产品决策；
+> P2-3（倒影 4×MSAA / 强度归零仍渲）——需成本口径决策；P2-4 深化（探针与 shader 的**表达式**同源，
+> 当前只锁常量字面量）。
 
 ---
 

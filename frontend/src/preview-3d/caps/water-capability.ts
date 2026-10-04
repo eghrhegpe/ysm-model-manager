@@ -162,7 +162,10 @@ export class WaterCapability implements SceneCapability {
   }
 
   // ── 水材质（波浪 shader + fragment 程序化微细节法线，ADR-271）：film 顶 / pool 顶 共用，避免技术分叉 ──
-  private buildWaveWaterMaterial(opts: { forPool: boolean }): THREE.MeshPhysicalMaterial {
+  private buildWaveWaterMaterial(opts: {
+    forPool: boolean;
+    hasWallCeiling: boolean;
+  }): THREE.MeshPhysicalMaterial {
     // [shader-patch 守卫] REVISION 断言：water 锚点是渲染管线稳定 chunk 标记，给宽松范围
     // [185,190)，升级审计后再收窄。失配即 throw → registry 工厂兜底使本 cap 缺失，拒绝静默降级。
     assertRevisionRange({
@@ -195,8 +198,9 @@ export class WaterCapability implements SceneCapability {
       shader.uniforms.uSize = { value: envState.waterSize };
       shader.uniforms.uChoppiness = { value: envState.waterChoppiness };
       // ADR-319 D1：浪高入参数（钳后值）——原写死 min(0.6·0.82^i/freq, 0.5)，浪高无用户入口
-      // forPool 决定是否套壁顶上钳：film 无壁无上钳（无条件套会让水位过默认池深即静默死平）
-      shader.uniforms.uWaveHeight = { value: effectiveWaveHeight(opts.forPool) };
+      // [锐评 2026-10-04 P2-2] 上钳由形态能力旗标 hasWallCeiling 决定（不再用 forPool 兼职：
+      // 两者不是同一维——未来 ocean 可能「有体积光学但无壁」）。无壁形态无上钳：无条件套会让水位过默认池深即静默死平
+      shader.uniforms.uWaveHeight = { value: effectiveWaveHeight(opts.hasWallCeiling) };
       // 微细节法线强度（原 normalScale 槽位的替代；值域 0-1，由 water 组键 `waterNormalStrength`
       // 驱动——菜单控件 water-normal-strength；旧「ground-normal-strength 驱动」为水面拆分前口径）
       shader.uniforms.uDetailStrength = { value: envState.waterNormalStrength };
@@ -457,14 +461,10 @@ export class WaterCapability implements SceneCapability {
       m.geometry.dispose();
       const mats = Array.isArray(m.material) ? m.material : [m.material];
       for (const mat of mats) {
-        const asPhysical = mat as THREE.MeshPhysicalMaterial & {
-          transmissionRenderTarget?: THREE.WebGLRenderTarget | null;
-        };
-        const trt = asPhysical?.transmissionRenderTarget;
-        if (trt) {
-          trt.texture.dispose();
-          trt.dispose();
-        }
+        // [锐评 2026-10-04 P3-1] 原此处读 `material.transmissionRenderTarget` 手动释放——该属性在
+        // three r186 的 MeshPhysicalMaterial 上**不存在**（真身在 renderer 侧：`WebGLRenderer` 的
+        // `renderState.state.transmissionRenderTarget[camera.id]`，由 renderer 按相机持有与清理），
+        // 故该分支恒不触发（死代码）；锁它的用例靠测试自己伪造该字段通过，属自证式假绿，已一并删除。
         mat.dispose();
       }
     }

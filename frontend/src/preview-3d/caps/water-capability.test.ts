@@ -1049,22 +1049,6 @@ describe("WaterCapability — dispose", () => {
     expect(() => cap.dispose()).not.toThrow();
   });
 
-  it("disposeWater 释放 transmissionRenderTarget（真实渲染时 PhysicalMaterial 内部产物）", () => {
-    const scene = new THREE.Scene();
-    const cap = new WaterCapability({ scene });
-    cap.apply();
-    let texDisposed = 0, rtDisposed = 0;
-    const mat = (scene.getObjectByName("ysm-ground-water") as THREE.Mesh).material as THREE.MeshPhysicalMaterial & {
-      transmissionRenderTarget?: { texture: { dispose: () => void }; dispose: () => void } | null;
-    };
-    mat.transmissionRenderTarget = {
-      texture: { dispose: () => { texDisposed++; } },
-      dispose: () => { rtDisposed++; },
-    };
-    cap.dispose();
-    expect(texDisposed).toBe(1);
-    expect(rtDisposed).toBe(1);
-  });
 });
 
 describe("WaterCapability — 微细节法线（fragment 程序化，无 CPU 贴图）", () => {
@@ -1399,9 +1383,18 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
     expect(filmStrategy.wetnessGated).toBe(true);
     expect(filmStrategy.supportsVolumeOptics).toBe(false);
     expect(filmStrategy.supportsRoundness).toBe(false);
+    expect(filmStrategy.hasWallCeiling, "film 无壁：波高预算无上钳").toBe(false);
     expect(poolStrategy.wetnessGated).toBe(false);
     expect(poolStrategy.supportsVolumeOptics).toBe(true);
     expect(poolStrategy.supportsRoundness).toBe(true);
+    expect(poolStrategy.hasWallCeiling, "pool 有壁顶：波峰不得越壁").toBe(true);
+  });
+
+  it("[P2-2] 形态门控不再写 id 字符串分支：水源码内无 `.id === \"pool\"`（能力旗标是唯一判据）", () => {
+    for (const f of ["water-params.ts", "water-capability.ts", "water-body-strategies.ts"]) {
+      const src = readFileSync(fileURLToPath(new URL(`./${f}`, import.meta.url)), "utf8");
+      expect(src, `${f} 不应再按形态 id 分派门控`).not.toMatch(/\.id\s*===\s*"pool"/);
+    }
   });
 
   it("clampPoolRoundness 边界：负值归零、超上限取 0.5（构造期与运行期共用同一域）", () => {
@@ -2042,9 +2035,15 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     cap.apply();
     cap.setWaterReflectionEnabled(true);
     cap.update(0.016);
-    expect(cap["reflect"]!.reflector).toBeTruthy();
+    const holder = cap["reflect"]!;
+    const reflector = holder.reflector!;
+    expect(reflector).toBeTruthy();
+    // [锐评 P3-2] 官方 Reflector.dispose 只释放 RT + 材质（Reflector.js|dispose）——几何是构造期
+    // 传入的、官方不管；本出口须补具名释放，否则每次 clipBias 重建都在堆上留一个未释放几何
+    const geoDispose = vi.spyOn(reflector.geometry, "dispose");
     cap.dispose();
-    expect(cap["reflect"]!.reflector, "不入场景的载体 disposeWater 遍历不到，须具名清空").toBeNull();
+    expect(geoDispose, "几何须由本出口具名释放").toHaveBeenCalled();
+    expect(holder.reflector, "不入场景的载体 disposeWater 遍历不到，须具名清空").toBeNull();
     expect(() => cap.dispose()).not.toThrow();
   });
 

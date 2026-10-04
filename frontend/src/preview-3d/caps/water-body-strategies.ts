@@ -55,8 +55,11 @@ export type WaterTopMesh = THREE.Mesh<THREE.PlaneGeometry, THREE.MeshPhysicalMat
  *  微细节法线已迁至 fragment 程序化（cap 的 uDetailStrength），ctx 不再承载法线贴图交付——
  *  形态与法线实现就此解耦，新增形态无需关心法线从哪来。 */
 export interface WaterBuildContext {
-  /** 构造带波浪 shader 注入的材质（forPool 决定是否启用 transmission 水体厚度感） */
-  buildMaterial(opts: { forPool: boolean }): THREE.MeshPhysicalMaterial;
+  /** 构造带波浪 shader 注入的材质。
+   *  `forPool` = 是否池式（启用 transmission 水体厚度感 / clearcoat，即体积光学外观）；
+   *  `hasWallCeiling` = 是否有壁顶（波高预算的上钳依据）。**两者刻意不合并**（锐评 P2-2）：
+   *  未来 ocean 形态可能「有体积光学但无壁」，合并即把两维钉死在同一旗标上。 */
+  buildMaterial(opts: { forPool: boolean; hasWallCeiling: boolean }): THREE.MeshPhysicalMaterial;
 }
 
 /** 部件语义角色——取代旧的 mesh-name 字符串寻址 */
@@ -155,6 +158,11 @@ export interface WaterBodyStrategy {
    * 把 `uRoundness` 泄漏进 film 材质（分派表 applier 侧漏门控，2026-09 修复）。
    */
   readonly supportsRoundness: boolean;
+  /** 是否有壁顶（**波高预算上钳的依据**，锐评 2026-10-04 P2-2）：pool=true（波峰不得越壁顶，
+   *  `water-params.ts|effectiveWaveHeight` 取上钳）/ film=false（贴地水膜无壁，无上钳）。
+   *  与 `supportsVolumeOptics` / `supportsRoundness` 同理——**由形态显式声明**；下游禁止再写
+   *  按形态 id 字符串现判（那会让新形态静默走 film 分支：浪漫过容器而编译器一言不发）。 */
+  readonly hasWallCeiling: boolean;
   build(ctx: WaterBuildContext): WaterBody;
   getTargets(body: WaterBody, role: WaterPartRole): THREE.Mesh[];
   /** 应用水面世界 y（契约：必须零重建） */
@@ -176,10 +184,11 @@ const filmStrategy: WaterBodyStrategy = {
   wetnessGated: true,
   supportsVolumeOptics: false,
   supportsRoundness: false, // 薄水膜无容器：圆角裁剪无意义（构造期亦恒 0）
+  hasWallCeiling: false, // 无壁：波高预算无上钳（锐评 P2-2 能力旗标）
   build(ctx) {
     // 分段数 = WATER_WAVE_SEGMENTS 唯一事实源（与 shader 波幅抗锯齿的间距推导同源）
     const geo = new THREE.PlaneGeometry(1, 1, WATER_WAVE_SEGMENTS, WATER_WAVE_SEGMENTS);
-    const mat = ctx.buildMaterial({ forPool: false });
+    const mat = ctx.buildMaterial({ forPool: false, hasWallCeiling: false });
     const root = new THREE.Mesh(geo, mat) as WaterTopMesh;
     root.rotation.x = -Math.PI / 2;
     root.position.y = envState.waterLevel;
@@ -235,6 +244,7 @@ const poolStrategy: WaterBodyStrategy = {
   wetnessGated: false,
   supportsVolumeOptics: true,
   supportsRoundness: true, // 盒式容器：圆角 = 池体边角淡出
+  hasWallCeiling: true, // 有壁顶：波峰不得越壁（波高预算上钳，锐评 P2-2）
   build(ctx) {
     const group = new THREE.Group();
     group.name = "ysm-ground-water";
@@ -244,7 +254,7 @@ const poolStrategy: WaterBodyStrategy = {
     const links: WaterTransformLink[] = [];
 
     const topGeo = new THREE.PlaneGeometry(1, 1, WATER_WAVE_SEGMENTS, WATER_WAVE_SEGMENTS);
-    const topMat = ctx.buildMaterial({ forPool: true });
+    const topMat = ctx.buildMaterial({ forPool: true, hasWallCeiling: true });
     const top = new THREE.Mesh(topGeo, topMat) as WaterTopMesh;
     top.rotation.x = -Math.PI / 2;
     top.position.y = envState.waterLevel;

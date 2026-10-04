@@ -52,10 +52,14 @@ export type { WaterApplyCtx, WaterParamKey };
  * 消费点：`waterWaveHeight` / `waterLevel` / `waterPoolHeight` 三条 applier 与构造期同源调用，
  * 保证任一影响预算的量变更即重算（派生量不烘死在装配期——ADR-272 §5 教训同源）。
  */
-export function effectiveWaveHeight(forPool: boolean): number {
+export function effectiveWaveHeight(hasWallCeiling: boolean): number {
   const level = Math.max(0, envState.waterLevel);
-  // film 无上钳：预算只受下钳（波谷不穿地面）约束；pool 才有壁顶上钳。
-  const budget = forPool ? Math.min(level, Math.max(0, envState.waterPoolHeight - level)) : level;
+  // 无壁形态（film 水膜）无上钳：预算只受下钳（波谷不穿地面）约束；有壁顶形态（pool）才有上钳。
+  // [锐评 2026-10-04 P2-2] 判据来自形态能力旗标 `WaterBodyStrategy.hasWallCeiling`——
+  // 不再是按形态 id 字符串现判（新形态漏声明即编译红，而非静默按无壁处理）。
+  const budget = hasWallCeiling
+    ? Math.min(level, Math.max(0, envState.waterPoolHeight - level))
+    : level;
   return Math.max(0, Math.min(envState.waterWaveHeight, budget));
 }
 
@@ -169,7 +173,7 @@ export const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) =>
     ctx.setUniform(
       ctx.top.material,
       "uWaveHeight",
-      effectiveWaveHeight(ctx.strategy.id === "pool"),
+      effectiveWaveHeight(ctx.strategy.hasWallCeiling),
     );
     // 池深同时是顶水面的体积光学光程（ADR-257：「容器内水的光程」由容器深度派生）。
     // 派生量必须随 poolHeight 重算，否则拖池深滑块观感裂缝；仅 supportsVolumeOptics 有意义。
@@ -188,13 +192,13 @@ export const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) =>
   },
   waterWaveHeight: ({ top, strategy, setUniform }) => {
     // ADR-319 D1：写钳后值（effectiveWaveHeight），与构造期同一钳制口径
-    setUniform(top.material, "uWaveHeight", effectiveWaveHeight(strategy.id === "pool"));
+    setUniform(top.material, "uWaveHeight", effectiveWaveHeight(strategy.hasWallCeiling));
   },
   waterLevel: ({ water, strategy, top, setUniform }) => {
     // ADR-257：水面 position.y（film/pool 通用，零重建）——旧语义抬水面须重建 10 个 mesh，如今一个标量
     strategy.applyLevel(water, envState.waterLevel);
     // ADR-319 D1：水位是波高预算的**下钳上限**（波谷不穿地面），变更后须重算钳后波高
-    setUniform(top.material, "uWaveHeight", effectiveWaveHeight(strategy.id === "pool"));
+    setUniform(top.material, "uWaveHeight", effectiveWaveHeight(strategy.hasWallCeiling));
   },
   // ADR-297 倒影五键：结构性空条目——门控/权重/RT 边长/镜面高度/裁剪偏置全部由
   // renderReflection / ensureReflector 逐帧现读 envState（真值源单一，派发侧零材质写，

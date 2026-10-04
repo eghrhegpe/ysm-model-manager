@@ -141,4 +141,65 @@ test.describe("预览 3D 菜单视觉巡检", () => {
     const best = report.filter((r) => /: [1-9]\d* 控件/.test(r));
     expect(best.length, `无任何分组渲染出控件：${report.join(" | ")}`).toBeGreaterThan(0);
   });
+
+  test("Scene 组逐项下钻到参数面板（L3 层内容 + 截图）", async ({ page }) => {
+    await mountMenu(page);
+
+    // 展开 Scene 组根视图
+    const sceneBtn = dockBtn(page, "scene");
+    await expect(sceneBtn, "Scene 组按钮应存在").toBeVisible({ timeout: 8000 });
+    await sceneBtn.click();
+    await expect(popup(page), "Scene 组根视图应弹出").toBeVisible({ timeout: 5000 });
+    await page.waitForTimeout(250);
+
+    // 收集 Scene 组内可下钻项。
+    // ⚠️ 不能用 `[data-testid="row-chevron"]` 判定：那是 makeRowFn（组根视图 previewMakeGroupView）
+    // 的 chevron；Scene 组声明了 `rootView: true`，走的是 renderMenu 通用组根视图，其 panel 行
+    // 统一是 `.slide-item.rm-row-compact` 且**不带** row-chevron（见 core.test.ts 同款判据）。
+    const drillables = popup(page).locator(".slide-item.rm-row-compact");
+    const n = await drillables.count();
+    expect(n, "Scene 组应有可下钻项（Camera/Lighting/Shadow/Post-processing）").toBeGreaterThan(0);
+
+    // 记录每一项的 testid，供逐个点击（避免点击过程中 DOM 重排导致句柄失效）
+    const ids: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const tid = await drillables.nth(i).getAttribute("data-testid");
+      if (tid) ids.push(tid.replace(/^preview-/, ""));
+    }
+
+    const report: string[] = [];
+    for (const id of ids) {
+      // 回到 Scene 根视图再进（每次从干净态出发，避免层级叠加）
+      const rootBack = dockBtn(page, "scene");
+      if ((await rootBack.count()) > 0) {
+        await rootBack.click();
+        await page.waitForTimeout(200);
+      }
+
+      const row = popup(page).locator(`[data-testid="preview-${id}"]`);
+      if ((await row.count()) === 0) {
+        report.push(`${id}: 根视图中找不到该行`);
+        continue;
+      }
+      const beforeText = ((await popup(page).textContent()) ?? "").replace(/\s+/g, " ").trim();
+
+      await row.first().click();
+      await page.waitForTimeout(350);
+
+      const controls = await popup(page)
+        .locator('[data-testid^="cap-"], [data-testid^="preview-"]')
+        .count();
+      const afterText = ((await popup(page).textContent()) ?? "").replace(/\s+/g, " ").trim();
+      // 内容摘要：不猜标题 class（面板标题形态随 panel 而异），直接截真实文本前 48 字。
+      const excerpt = afterText.slice(0, 48);
+
+      report.push(`${id}: ${controls} 控件 / 「${excerpt}」/ 内容变化 ${beforeText !== afterText}`);
+      await shot(page, `menu-03-scene-${id}`);
+
+      // 硬断言：进到 L3 必须与根视图不同（否则「点了没反应」= 假绿）
+      expect(afterText !== beforeText, `点入 ${id} 后面板内容无变化——下钻未生效`).toBe(true);
+    }
+
+    test.info().annotations.push({ type: "Scene 下钻", description: report.join(" | ") });
+  });
 });

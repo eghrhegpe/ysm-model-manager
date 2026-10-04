@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-321：cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局）",
+        "link": "/adr/architecture/ADR-321-cap-persistence-restore-derivation"
+      },
+      {
         "text": "ADR-320：ADR 体系分级：架构决策与执行决策日志分治",
         "link": "/adr/architecture/ADR-320-adr-tiering"
       },

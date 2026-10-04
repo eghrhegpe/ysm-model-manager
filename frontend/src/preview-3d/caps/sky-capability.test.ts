@@ -166,7 +166,9 @@ describe("SkyCapability — 云量控制", () => {
     const spy = vi
       .spyOn(cap as unknown as { regenerateEnvironment: () => void }, "regenerateEnvironment")
       .mockImplementation(() => {});
-    cap.setSun(30, 200); // 置 skyForceEnv=true（粘滞场景：旧实现此处会污染后续云量判定）
+    // [锐评 X-4] 原用 `setSun(30,200)` 置脉冲（该 API 已随幽灵键清理删除）——脉冲键写法与
+    // atmosphere-presets 同法：必须 `force` 绕 shouldOverwrite（脉冲键无用户手改足迹）。
+    setEnvState({ skyForceEnv: true }, { source: "manual", force: true });
     spy.mockClear();
     cap.setCloudCoverage(0.5); // 默认 regenerate=false
     expect(spy).not.toHaveBeenCalled();
@@ -428,7 +430,7 @@ describe("SkyCapability — 预设数据完整性", () => {
 
   it("envState 默认值完整", () => {
     expect(envState.skyTimeOfDay).toBe(9);
-    expect(typeof envState.skyElevation).toBe("number");
+    // [锐评 X-4] 原此处断言 `skyElevation` 为 number——该幽灵键已删（太阳位置是 timeOfDay 的派生量）
     expect(typeof envState.skyTurbidity).toBe("number");
     expect(typeof envState.skyCloudCoverage).toBe("number");
   });
@@ -468,29 +470,9 @@ describe("SkyCapability — God Rays（体积光束）", () => {
     expect(cap.isGodRaysEnabled()).toBe(false);
   });
 
-  it("getGodRaysIntensity: elevation=-10（日落后）→ 0（夜间不发光）", () => {
-    setEnvState({ skyElevation: -10 }, { source: 'manual' });
-    const cap = newCap();
-    expect(cap.getGodRaysIntensity()).toBe(0);
-  });
-
-  it("getGodRaysIntensity: elevation=10（黄金时刻）→ ~0.5", () => {
-    setEnvState({ skyElevation: 10 }, { source: 'manual' });
-    const cap = newCap();
-    expect(cap.getGodRaysIntensity()).toBeCloseTo(0.5, 1);
-  });
-
-  it("getGodRaysIntensity: elevation=20 → 0", () => {
-    setEnvState({ skyElevation: 20 }, { source: 'manual' });
-    const cap = newCap();
-    expect(cap.getGodRaysIntensity()).toBe(0);
-  });
-
-  it("getGodRaysIntensity: elevation=-20（午夜）→ 0（整夜归零）", () => {
-    setEnvState({ skyElevation: -20 }, { source: 'manual' });
-    const cap = newCap();
-    expect(cap.getGodRaysIntensity()).toBe(0);
-  });
+  // [锐评 X-4 2026-10-04] 原四条「借 `skyElevation` 键注入 elevation 再测 `getGodRaysIntensity`」用例已删：
+  // 注入通道（幽灵键）不存在了，而强度曲线的覆盖改由 `sun-beams.test.ts` **直接**承担
+  //（黄金时刻单调性 / 落山 / 地平线容差 / 正午 / clamp 纵深防御），比借 cap 注入更贴源。
 
   it("[修复回归] 19:00 太阳落山后 godRays intensity=0（不再满强度夜光）", () => {
     const cap = newCap();
@@ -554,7 +536,6 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
   });
 
   it("getSunsetTintIntensity 与 getGodRaysIntensity 返回相同值（复用同一段逻辑）", () => {
-    setEnvState({ skyElevation: -10 }, { source: 'manual' });
     const cap = newCap();
     const tintIntensity = (cap as unknown as { getSunsetTintIntensity: () => number }).getSunsetTintIntensity();
     const godRaysIntensity = cap.getGodRaysIntensity();
@@ -586,6 +567,10 @@ describe("SkyCapability — Sunset Tint Overlay", () => {
     resetEnvState();
     const cap2 = newCap();
     cap2.loadState();
+    // [锐评 X-4] 必须补组合根时序的 apply()：太阳位置是 `skyTimeOfDay` 的派生量，而 loadState
+    // 只写 envState（派发被挂起），由组合根统一 apply 一次（apply 首行 `syncSunFromTime` 重派生）。
+    // 原用例不调 apply 也能绿——那是在吃已删幽灵键 `skyElevation` 的默认值 10（巧合，非真链路）。
+    cap2.apply();
     // tint 不持久化，由时间重新计算
     expect(cap2.getTimeOfDay()).toBe(17);
     expect((cap2 as unknown as { getSunsetTintIntensity: () => number }).getSunsetTintIntensity()).toBeGreaterThan(
@@ -1139,22 +1124,23 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     });
   });
 
-  it("setSun 写 uniforms 并在 enabled+environment 下重建环境", () => {
+  it("setTime 写 uniforms（方向与参数一致）并在 enabled+environment 下重建环境", () => {
     const scene = new THREE.Scene();
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
-    cap.setSun(30, 200);
+    // [锐评 X-4] 原用 setSun(30,200)（已删的死 API）——太阳位置唯一入口是 setTime(hour)：
+    // 15:00 → elevation = sin(0.75π)·70 ≈ 49.497°、azimuth = 225°。
+    cap.setTime(15);
     const p = cap.getParams();
-    expect(p.elevation).toBe(30);
-    expect(p.azimuth).toBe(200);
+    expect(p.elevation).toBeCloseTo(Math.sin(0.75 * Math.PI) * 70, 5);
+    expect(p.azimuth).toBeCloseTo(225, 5);
     const sunU = (cap as unknown as { sky: Sky }).sky.material.uniforms["sunPosition"].value as THREE.Vector3;
-    // code_review 57aeefdb4 #9（P3）：方向断言——callback 字段同步曾滞后一拍（先
-    // writeUniforms 后同步 this.elevation），uniform 恒用旧太阳位置；换算
-    // phi=degToRad(90-elevation)=60°、theta=degToRad(200) →
-    // y=cos(phi)=0.5、x=sin(phi)sin(theta)<0（方位 200° 偏西）。length≈1 的单位向量
-    // 断言捕获不到「方向陈旧」回归，此处 pin 分量。
+    // code_review 57aeefdb4 #9（P3）：方向断言——callback 字段同步曾滞后一拍（先 writeUniforms
+    // 后同步 this.elevation），uniform 恒用旧太阳位置。length≈1 的单位向量断言捕获不到
+    // 「方向陈旧」回归，此处 pin 分量（phi = 90 − elevation、theta = azimuth）。
+    const phiDeg = 90 - p.elevation;
     expect(sunU.length()).toBeCloseTo(1, 5);
-    expect(sunU.y).toBeCloseTo(Math.cos(THREE.MathUtils.degToRad(60)), 5); // elevation 30 → 0.5
-    expect(sunU.x).toBeLessThan(0); // azimuth 200 → 西侧（x<0）
+    expect(sunU.y).toBeCloseTo(Math.cos(THREE.MathUtils.degToRad(phiDeg)), 5);
+    expect(sunU.x, "方位 225° 偏西 ⇒ x<0").toBeLessThan(0);
     expect(scene.environment).not.toBeNull(); // regenerate 已跑
   });
 

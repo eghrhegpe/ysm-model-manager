@@ -22,11 +22,20 @@ import { ENV_PRESETS } from "./environment-state.ts";
  * 旧实现分母为 30 无下限，导致 19:00 后（elevation 降至 -17.8° 乃至午夜 -70°）
  * 整夜满强度发光，出现「天空漆黑、地下却往天上打橙色体积光」的穿帮。
  */
+/** 神光 / 日落 tint 的角度窗口上限（度）：太阳低于本仰角才是黄金时刻 */
+const GOD_RAYS_MAX_ELEVATION = 20;
+/** 落山容差（度）：hourToSun 在 18:00 得极小正 elevation，须并判为落山 */
+const GOD_RAYS_HORIZON_EPS = 1e-3;
+
 export function godRaysIntensity(elevation: number): number {
   // 1e-3° 容差：hourToSun 在 18:00 算 sin(π)≈1.2e-16 得极小正 elevation，
   // 须一并判为「落山」（≤0 等价语义），避免地平线处仍满强度发光。
-  if (elevation <= 1e-3 || elevation >= 20) return 0;
-  return Math.min(1, Math.max(0, (20 - elevation) / 20));
+  if (elevation <= GOD_RAYS_HORIZON_EPS || elevation >= GOD_RAYS_MAX_ELEVATION) return 0;
+  // clamp 是**纵深防御**（锐评 X-7 2026-10-04）：门已保证入参落在开区间
+  // (eps, 20)，故 (20−e)/20 ∈ (0, 0.99995)——`min/max` 两极永不触及（域内恒等）。
+  // 留着是防「未来改门 / 调用方绕过门」：那时它才真正夹住。数值判据见其测试
+  //（域内恒等 + 越界夹住的反证），与水面 `steep` 的处置同范式。
+  return Math.min(1, Math.max(0, (GOD_RAYS_MAX_ELEVATION - elevation) / GOD_RAYS_MAX_ELEVATION));
 }
 
 /* ============ 光束锥体 shader（两交叉 PlaneGeometry，垂直羽化 + 径向衰减 + shimmer） ============ */

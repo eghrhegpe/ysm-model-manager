@@ -424,6 +424,16 @@ describe("ShadowCapability — applyModelPreset", () => {
     expect(cap.isEnabled()).toBe(true);
   });
 
+  it("[X-5] 脏档 mapSize 恢复也过四档白名单（原恢复侧裸写 setEnvState ⇒ 脱离 UI 可达域）", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-shadow",
+      JSON.stringify({ shadowEnabled: true, type: "hard", mapSize: 3000 }),
+    );
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+    cap.loadState();
+    expect(cap.getMapSize(), "3000 不在四档 ⇒ 回落到当前值（默认 2048）").toBe(2048);
+  });
+
   it("loadState 后 applyModelPreset 不覆盖用户会话配置", () => {
     localStorage.setItem("ysm-scene-cap-shadow", JSON.stringify({ enabled: true, type: "hard", mapSize: 4096 }));
     const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });

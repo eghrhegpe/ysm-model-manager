@@ -70,8 +70,10 @@ export const ENV_STATE_SCHEMA = {
     group: "sky",
     range: { min: 0, max: 1, step: 0.05, unit: "%" },
   },
-  skyElevation: { type: "number", default: 10, group: "sky" },
-  skyAzimuth: { type: "number", default: 180, group: "sky" },
+  // [锐评 X-4 2026-10-04] 原 `skyElevation` / `skyAzimuth` 两键已删：太阳位置是 `skyTimeOfDay` 的
+  // **派生量**（`sky-capability.ts|hourToSun`），两键既无 UI 入口、又不进 `saveState`/`loadState`，
+  // 唯一写者 `setSun()` 在生产零消费者（只有测试调用），而 `apply()` 首行 `syncSunFromTime()`
+  // 每次都会用 timeOfDay 重算覆盖 —— 典型幽灵键 + 死 API + 死分支三连。
   skyForceEnv: { type: "boolean", default: true, group: "sky" },
   skyTurbidity: { type: "number", default: 7.5, group: "sky" },
   skyRayleigh: { type: "number", default: 2.5, group: "sky" },

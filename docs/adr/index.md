@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **320** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **321** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 6 |
+| [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
 | [✅ 已采纳](#已采纳) | 291 |
@@ -26,10 +26,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（6）
+### 📝 提议中（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-321](./architecture/ADR-321-cap-persistence-restore-derivation.md) | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 |
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
@@ -375,6 +376,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-321 | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 | 2026-10-04 |
 | ADR-320 | ADR 体系分级：架构决策与执行决策日志分治 | ✅ 已采纳 | 2026-10-04 |
 | ADR-319 | 水面波场尺度归一与泡沫判据可达性 | ✅ 已采纳 | 2026-10-04 |
 | ADR-318 | 测试套件分组与发版冒烟组（反馈回路提速） | ✅ 已采纳 | 2026-10-04 |

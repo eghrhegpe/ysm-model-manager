@@ -24,6 +24,16 @@ import { buildShadowNodes } from "./shadow-menu.ts";
 
 /** 阴影类型合法值 */
 const SHADOW_TYPES = ["soft", "hard"] as const;
+
+/** 阴影贴图尺寸的四档白名单（锐评 X-5 2026-10-04）——**唯一守卫**。
+ *  原白名单只装在 `setMapSize`，而 `loadState` 恢复侧裸写 `setEnvState` ⇒ 旧档 / 脏档值
+ *  可原样进 `light.shadow.mapSize.set(v, v)`，而菜单 select 只有这四档（`MAP_SIZE_OPTIONS`）
+ *  ⇒ 值脱离 UI 可达域。值域语义是**离散档位而非区间**，故 schema 不声明 `range`（见其注释）。
+ *  两个入口（setter 与恢复）都必须过本函数——「守卫只装一侧」是本轮横向外推的母题之一。 */
+const SHADOW_MAP_SIZE_OPTIONS: readonly number[] = [512, 1024, 2048, 4096];
+function normalizeShadowMapSize(v: number, fallback: number): number {
+  return SHADOW_MAP_SIZE_OPTIONS.includes(v) ? v : fallback;
+}
 export type ShadowType = (typeof SHADOW_TYPES)[number];
 
 export class ShadowCapability implements SceneCapability {
@@ -409,7 +419,7 @@ export class ShadowCapability implements SceneCapability {
   /* -------- 公共 setters（菜单调用）-------- */
 
   setMapSize(v: number): void {
-    const clamped = [512, 1024, 2048, 4096].includes(v) ? v : envState.shadowMapSize;
+    const clamped = normalizeShadowMapSize(v, envState.shadowMapSize);
     // ADR-196 收口：纯写 envState；apply 由 callback 落地。
     setEnvState({ shadowMapSize: clamped }, { source: "manual" });
   }
@@ -519,7 +529,15 @@ export class ShadowCapability implements SceneCapability {
         setEnvState({ shadowType: v }, { source: "auto-model" });
         typeRestored = true;
       }),
-      shadowMapSize: { number: (v) => setEnvState({ shadowMapSize: v }, { source: "auto-model" }) },
+      shadowMapSize: {
+        // [锐评 X-5] 恢复侧同样过四档白名单——原实现裸写 setEnvState，脏档值可脱离 UI 可达域
+        // （守卫只装 setter 一侧 = 本轮横向外推的母题之一）。fallback 取当前值（默认 / 已恢复值）。
+        number: (v) =>
+          setEnvState(
+            { shadowMapSize: normalizeShadowMapSize(v, envState.shadowMapSize) },
+            { source: "auto-model" },
+          ),
+      },
       shadowBias: { number: (v) => setEnvState({ shadowBias: v }, { source: "auto-model" }) },
       shadowNormalBias: {
         number: (v) => setEnvState({ shadowNormalBias: v }, { source: "auto-model" }),

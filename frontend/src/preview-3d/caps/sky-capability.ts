@@ -270,9 +270,9 @@ export class SkyCapability implements SceneCapability {
     // 日落光束 + tint overlay（默认禁用；SunBeams 内聚 cones/tint/time 状态机）
     this.beams = new SunBeams(this.scene, SKY_SCALE);
 
-    // ADR-196：初始化运行时太阳位置
-    this.elevation = envState.skyElevation;
-    this.azimuth = envState.skyAzimuth;
+    // [锐评 X-4 2026-10-04] 太阳位置是 `skyTimeOfDay` 的**派生量**（`hourToSun` 单一事实源）——
+    // 原实现读已删的 `skyElevation`/`skyAzimuth` 幽灵键，而 `apply()` 首行又会用 timeOfDay 覆盖它们。
+    this.syncSunFromTime();
 
     // ADR-196：订阅 envState 变更（只接收 sky 组的键，dispatcher 前置过滤）
     // 字段分派表：每个字段 → 应用函数（双写顺序由表顺序保证，消除 if 链顺序隐患）
@@ -300,21 +300,9 @@ export class SkyCapability implements SceneCapability {
           this.maybeRegenerateEnvironment(state);
           this.syncBeams();
         }
-        if (changed.has("skyElevation")) {
-          this.elevation = state.skyElevation;
-        }
-        if (changed.has("skyAzimuth")) {
-          this.azimuth = state.skyAzimuth;
-        }
-        if (changed.has("skyElevation") || changed.has("skyAzimuth")) {
-          this.writeUniforms(this.sky);
-          this.writeUniforms(this.envSky);
-          if (state.skyForceEnv) {
-            // [D-6] 不再前置 skyEnvironment 门控——转交 env 的通路不受退役开关约束，
-            // 该开关现只门控路由器末端的 sky 自持兜底路（见 requestEnvironmentRefresh）
-            this.requestEnvironmentRefresh(true);
-          }
-        }
+        // [锐评 X-4 2026-10-04] 原此处有 `skyElevation`/`skyAzimuth` 两个分支（同步实例字段 +
+        // 双写 uniform + forceEnv 时重烤）。两键已随幽灵键清理删除——太阳位置的唯一入口是
+        // `skyTimeOfDay`（上一分支），故这三个恒不触发的死分支一并删除。
 
         // ② 散射/大气类：双写 uniform（sky + envSky）
         this.applyUniform(changed, "skyCloudCoverage", "cloudCoverage", state.skyCloudCoverage);
@@ -626,15 +614,9 @@ export class SkyCapability implements SceneCapability {
     }
   }
 
-  /** 调整太阳位置（度） */
-  setSun(elevation: number, azimuth: number): void {
-    // ADR-196 收口：纯写 envState；渲染应用（writeUniforms/PMREM 重建）统一走
-    // callback 的 skyElevation/skyAzimuth 分支（forceEnv=true → 无条件重建）。
-    setEnvState(
-      { skyElevation: elevation, skyAzimuth: azimuth, skyForceEnv: true },
-      { source: "manual" },
-    );
-  }
+  // [锐评 X-4 2026-10-04] 原 `setSun(elevation, azimuth)` 已删：生产零消费者（仅测试调用），
+  // 且它写的正是「派生量」两键——`hourToSun(skyTimeOfDay)` 才是太阳位置的单一事实源。
+  // 要设太阳位置请用 `setTime(hour)`（它会连带置 `skyForceEnv` 脉冲触发 IBL 重建）。
 
   /**
    * [锐评 F-1 收口] 能力启停 === 天空开关，真值源唯一 envState.skyEnabled。

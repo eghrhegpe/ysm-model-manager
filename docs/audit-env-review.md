@@ -887,7 +887,7 @@ reflector SSR 互斥通道），并回查 ADR-292 收口后 §1-§13 的过期�
 | G-1（撤销） | `ground-menu.ts:126-172` **groundBuildGridFolder 四控件齐全**（ground-size / divisions / 双色）；`ground-capability.test.ts:586-588` 值域回归锁在 | ✅ 维持撤销 |
 | G-2 冗余重构 | 回调仍对**任意 ground 键**四连（ground-capability.ts:141-144）。**此属有意收口**：`setter 内手动 refresh 已删（锐评修复）`，单出口 + needsRebuild 判别承担防双刷。零厂商响应意图 | ✅ 维持「重构可选」，不主张拆（G-9 替代落点见下） |
 | G-3 waterSize 派生 | `schema 默认 80 ↔ uiRange 10-300`（env-state-schema.ts:151-158）与 water 对齐；water-menu.ts:113 注释明确「声明式引用 groundSize 默认」的语义仍靠**命名巧合**（无机制断言） | ◇ 半维持（P3，机制仍缺） |
-| G-4 saveState 手抄 | **未修**：ground-capability.ts:698-729 仍手写 27 字段清单 | ◻ 维持待办（G-8 重述 + 可修路径） |
+| G-4 saveState 手抄 | **已修（2026-10 G-8 收口）**：ground-capability.ts `saveState` 改 `getPresetKeys("ground")` schema 驱动（与 water 同法），手写 23 字段清单退役；新增 ground 参数进 schema `group:"ground"` 即自动持久化。读侧还原表仍手写，由 [G-8] 契约锁兜底 | ✅ 已收口 |
 | G-5 emoji toast | **未修**：`❌ ${t(...)}: ${name}`（ground-capability.ts:501） | ◻ 维持待办 |
 | S3-5 / G-1 网格四参数 | ✅ 已补出口 | ✅ 维持关闭 |
 | S3-1 ~ S3-4 布局类 | 均为 UX 判定，非接线错误；本轮不重述 | — |
@@ -957,13 +957,20 @@ reflector 的重建，但**每帧字符串 key（JSON.stringify `buildGroundSurf
   matMetalness）在回调体加空转短路，或 `refreshSurface` 用「Appearance 键集」先筛——对齐
   G-2 的「按键分组」建议，但以最小侵入实现（不改单出口架构）。
 
-#### 🟢 G-8 saveState 手抄清单（承接 G-4，未修）
+#### 🟢 G-8 saveState 手抄清单（承接 G-4，✅ 已收口 2026-10）
 
-ground-capability.ts:698-729 手写 27 字段。对比 water 侧 `getPresetKeys("water")` schema 驱动
-（water saveState 用 `for...of`），ground 手抄 err 风险真实存在（ADR-249 拆轴时漏 groundSourceKind
-病史）。**可修路径**：`getPresetKeys("ground")` 已存在（env-state-schema.ts:791），可做
-`for (const key of getPresetKeys("ground")) acc[key] = envState[key]`，cap 级 `enabled` 仍手写。
-未做（非本次轮次范围，留待收敛），仅记录路径。
+**已修复**：`ground-capability.ts` `saveState` 改为 `getPresetKeys("ground")` schema 驱动
+（与 water 同法，`for (const key of getPresetKeys("ground")) state[key] = envState[key]`），
+手写 23 字段清单退役。对比 water 侧 `getPresetKeys("water")`，ground 现同口径——
+新增 ground 参数只要进 schema `group:"ground"`，**写侧**自动持久化（评审「一处参数六处接线」收口），
+ADR-249 拆轴时漏 `groundSourceKind` 的病史类复发从机制上消除。
+
+**读侧仍手写**：`loadState` 还原表（`restoreFields`）不自动派生，新键须同步登记——缺口由
+`ground-capability.test.ts`「[G-8] schema ground 键集全部可 save/load round-trip」契约锁兜底
+（仿 water `[D3]`，偏离值表缺键即红，把加键动作逼回 loadState 登记）。
+
+**私有 `enabled` 例外**：cap 顶层 `this.enabled` 是私有字段（registry 恒不传 → 构造默认 true），
+无 schema 键，不进 `getPresetKeys`，故仍手写落盘（与 waterEnabled 已收口进 schema 不同）。
 
 #### ⚪ G-9 openTexturePicker 失败 toast 硬编码 emoji（承接 G-5）
 

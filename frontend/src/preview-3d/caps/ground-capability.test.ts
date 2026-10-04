@@ -3,7 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { GroundCapability } from "./ground-capability.ts";
-import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
@@ -1174,5 +1174,68 @@ describe("GroundCapability — 恢复路径来源纪律（锐评 F-2）", () => 
     const cap = new GroundCapability({ scene: new THREE.Scene() });
     cap.loadState();
     expect(cap.getMaterialPreset(), "恢复非手改，预设名须存续").toBe("grass");
+  });
+
+  // [锐评 G-8 契约锁 2026-10] saveState 派生化（getPresetKeys("ground") 遍历）只覆盖**写侧**，
+  // loadState 还原表仍是手写双轨清单——本锁补上读侧：schema 每键写偏离值 → save → reset →
+  // load → 全部存活；未来 schema 加 ground 键而漏登记还原表，本测试即红，且缺失键会被点名
+  // （把加键动作逼回 loadState 登记，防「自动持久化、静默不还原」）。
+  it("[G-8] schema ground 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    // 每键一个「≠ schema 默认」的偏离值（合法域内）——新键未列入即 fail 提示登记
+    const DEVIATION: Record<string, unknown> = {
+      groundVisible: false,
+      groundGridVisible: false,
+      groundSourceKind: "canvas",
+      groundCanvasStyle: "marble",
+      groundMaterialPreset: "custom",
+      groundOverlay: "checker",
+      groundOverlayColor: 0x00ff00,
+      groundOverlaySize: 32,
+      groundOverlayOpacity: 0.6,
+      groundSize: 123,
+      groundDivisions: 100,
+      groundColorCenter: 0x111122,
+      groundColorGrid: 0x222233,
+      groundMatColor: 0x123456,
+      groundMatColor2: 0x654321,
+      groundMatGridSize: 16,
+      groundMatOpacity: 0.6,
+      groundMatScale: 2,
+      groundMatRotationDeg: 45,
+      groundMatDensity: 4,
+      groundMatAngleDeg: 30,
+      groundMatRoughness: 0.4,
+      groundMatMetalness: 0.5,
+    };
+    const schemaKeys = getPresetKeys("ground");
+    const missing = schemaKeys.filter((k) => !(k in DEVIATION));
+    expect(
+      missing,
+      `schema 新增了 ground 键但本测试未登记偏离值: ${JSON.stringify(missing)}`,
+    ).toEqual([]);
+    const patch: Record<string, unknown> = {};
+    for (const k of schemaKeys) {
+      // 偏离值必须确实偏离当前值，否则「存活」断言恒真、锁形同虚设
+      expect(
+        envState[k as keyof typeof envState],
+        `ground 键 ${k} 的偏离值与当前值同值（测试自失能）`,
+      ).not.toBe(DEVIATION[k]);
+      patch[k] = DEVIATION[k];
+    }
+    setEnvState(patch as never, { source: "manual", force: true });
+    // cap 私有 enabled 不进 schema 键集，须仍手写落盘——单独偏离默认 true 验证
+    cap.setEnabled(false);
+    cap.saveState();
+    resetEnvState();
+    const cap2 = new GroundCapability({ scene });
+    cap2.loadState();
+    for (const k of schemaKeys) {
+      expect(envState[k as keyof typeof envState], `ground 键 ${k} 未被 loadState 还原`).toBe(
+        DEVIATION[k],
+      );
+    }
+    expect(cap2.isEnabled(), "私有 enabled 不进 schema 派生但须持久化并恢复").toBe(false);
   });
 });

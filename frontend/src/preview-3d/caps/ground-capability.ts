@@ -17,7 +17,7 @@ import type { WriteSource } from "@/preview-3d/state/env-state.ts";
 // ADR-196：统一状态层
 import { envState, registerEnvStateMiddleware, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
-import { clampFieldValue } from "@/preview-3d/state/env-state-schema.ts";
+import { clampFieldValue, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -734,38 +734,19 @@ export class GroundCapability implements SceneCapability {
     return { section: "basic", order: 20 };
   }
 
-  /** 保存状态到 localStorage（mat 字段纯数据可持久化；texture 二进制不存） */
+  /** 保存状态到 localStorage。
+   *  [G-8 收口 2026-10] 持久化字段改由 schema 的 ground 组键集派生
+   *  （getPresetKeys("ground")），与 water 侧同法——新增 ground 参数只要进
+   *  schema 的 group:"ground"，**写侧**自动跟上（评审「一处参数六处接线」收口），
+   *  不再手抄 23 字段清单（ADR-249 拆轴时就曾漏 groundSourceKind 的病史）。
+   *  ⚠️ 读侧不自动：loadState 还原表（restoreFields）仍是手写双轨清单，新键须
+   *  同步登记——缺口由 [G-8] schema 键集 round-trip 契约锁兜住（漏登记即红）。
+   *  ⚠️ 顶层 `enabled` 是 cap 私有字段（无 schema 键，registry 恒不传 → 构造默认
+   *  true），不进 getPresetKeys，故仍手写（与 waterEnabled 已收口进 schema 不同）。 */
   saveState(): void {
-    persistState(this.id, {
-      enabled: this.enabled,
-      groundVisible: envState.groundVisible,
-      groundGridVisible: envState.groundGridVisible,
-      // ADR-249 §2.5.1 拆轴：原 groundMatSource 单键拆为两轴持久化。
-      groundSourceKind: envState.groundSourceKind,
-      groundCanvasStyle: envState.groundCanvasStyle,
-      groundSize: envState.groundSize,
-      groundDivisions: envState.groundDivisions,
-      groundColorCenter: envState.groundColorCenter,
-      groundColorGrid: envState.groundColorGrid,
-      groundMatColor: envState.groundMatColor,
-      groundMatColor2: envState.groundMatColor2,
-      groundMatGridSize: envState.groundMatGridSize,
-      groundMatOpacity: envState.groundMatOpacity,
-      groundMatScale: envState.groundMatScale,
-      groundMatRotationDeg: envState.groundMatRotationDeg,
-      groundMatDensity: envState.groundMatDensity,
-      groundMatAngleDeg: envState.groundMatAngleDeg,
-      groundMatRoughness: envState.groundMatRoughness,
-      groundMatMetalness: envState.groundMatMetalness,
-      // ADR-254：预设状态是持久化的可见事实（名实相符），不持久化则重启后
-      // loadState 恢复配色会被中间件误判为手改 → 恒显示「自定义」
-      groundMaterialPreset: envState.groundMaterialPreset,
-      // ADR-249 §2.3 叠加层持久化
-      groundOverlay: envState.groundOverlay,
-      groundOverlayColor: envState.groundOverlayColor,
-      groundOverlaySize: envState.groundOverlaySize,
-      groundOverlayOpacity: envState.groundOverlayOpacity,
-    });
+    const state: Record<string, unknown> = { enabled: this.enabled };
+    for (const key of getPresetKeys("ground")) state[key] = envState[key];
+    persistState(this.id, state);
   }
 
   /** 从 localStorage 恢复状态（texture 模式二进制未持久化 → 回退 plain） */

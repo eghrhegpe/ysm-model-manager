@@ -149,8 +149,8 @@ export class WaterCapability implements SceneCapability {
         // 可见性统一在派发尾重算一次——开关与参数不再互斥。
         // 参数字段：就地应用（不重建容器，材质句柄保持稳定）
         this.applyChangedParams(changed);
-        // wetness 与 enabled 都参与可见性门控（wetnessGated 形态下 0 即隐），末位统一重算
-        if (changed.has("waterWetness") || changed.has("waterEnabled")) {
+        // [锐评 P2-1] 可见性只在开关变更时重算；wetness 不再参与可见性（仅作 alpha 乘数走分派表）
+        if (changed.has("waterEnabled")) {
           this.syncWaterVisibility();
         }
         // [ADR-297] 倒影主开关参与 reflect 组三从控显隐（visibleWhen 吃
@@ -483,13 +483,12 @@ export class WaterCapability implements SceneCapability {
     return this.water;
   }
 
-  /** 水面可见性：waterEnabled ∧（受 wetness 门控的形态还需 wetness>0）。
-   *  单一 gate（fog 先例同法，2026-09-22）：能力启停 === waterEnabled，
-   *  真值源唯一 envState——原私有 `this.enabled` 恒 true 且被 legacy 存档误写中毒，已退役。 */
+  /** 水面可见性：**单门** = `envState.waterEnabled`（fog / shadow / reflector 同法）。
+   *  [锐评 2026-10-04 P2-1] 原实现额外与 film 的 `wetness > 0` 相与——那让一级行 master 开关在
+   *  wetness=0 时撒谎（显示 ON、场景无水），且与 master 的写值形成「点了又弹回」的双向困惑。
+   *  现 wetness 只作 alpha 乘数（浓度 0 ⇒ 全透明），可见性语义唯一且诚实。 */
   private syncWaterVisibility(): void {
-    const strategy = getWaterBodyStrategy(envState.waterMode);
-    const gatePassed = strategy.wetnessGated ? envState.waterWetness > 0 : true;
-    this.water.root.visible = envState.waterEnabled && gatePassed;
+    this.water.root.visible = envState.waterEnabled;
   }
 
   /** 推进水面波纹动画（render loop 调用）。visible 已含 waterEnabled 语义，单判即可。
@@ -687,6 +686,13 @@ export class WaterCapability implements SceneCapability {
   }
   getWaveHeight(): number {
     return envState.waterWaveHeight;
+  }
+
+  /** 浪高**实际生效值**（钳后）——供菜单 hint 显示隐藏耦合（锐评 2026-10-04 P1-2）：
+   *  滑杆值受水位 / 池深预算钳制（`effectiveWaveHeight`），面板必须有出口告知实际生效多少，
+   *  否则 0.15→1.0 整段拖动毫无反应而没有任何解释（85% 行程死区）。 */
+  getEffectiveWaveHeight(): number {
+    return effectiveWaveHeight(getWaterBodyStrategy(envState.waterMode).hasWallCeiling);
   }
 
   // ── 水面高度（ADR-257：跨形态通用，与容器彻底解耦）──

@@ -57,9 +57,23 @@
 > （`pow(1.19, fi)·4/sizeSafe` ↔ `(TWO_PI·1.19**i·4)/sizeSafe`）、D1 振幅分配（`0.26·pow(0.82,fi)` ↔
 > `0.26·0.82**i`）、P1-1 反归一、ADR-257 §6.4 的「位移 /sizeSafe ↔ 法线 ×sizeSafe」成对换算，共四组
 > 指纹逐对断言；并配**反证**（`replaceAll` 篡改数字即失配）自证指纹不是恒真断言。
-> **未动**：P1-2（滑杆动态上界）、P2-1（wetness×opacity 合并）——均需产品决策；
-> P2-3（倒影 4×MSAA / 强度归零仍渲）——需成本口径决策（schema 注释已声明「0 = 关混合但保留 RT」
-> 是有意语义，改它要权衡拖回强度时的 RT 重建成本）。
+> **P1-2 / P2-1 / P2-3 已修（第五轮，用户「修吧」授权）**——
+> **P1-2**：给 slider 臂补 **hint 槽位**（动态 `getHint` 优先、静态 `hintKey` 回退，与 toggle/button 同范式；
+> `getHint` 由 button 专属提升为通用通道），浪高滑杆即时显示**钳后实际生效值**（如「实际生效 0.15 m」）。
+> 实现时撞到并修掉一个真坑：`onChange` 里 `updateDisplay` **早于** `setValue`，而 hint 读 cap 状态 ⇒ 只在其
+> 中刷会**滞后一步**，故在 `setValue` 之后补 `refreshHint()`（numeric 路径同）。顺带让 light-controls 等
+> 既有的 slider `hintKey`（原先无渲染出口的死字段）复活。
+> **P2-1**：可见性收归**单门** `waterEnabled`（原实现与 film 的 `wetness > 0` 相与 ⇒ master 开关在 wetness=0
+> 时撒谎）；film 下 **`waterOpacity` 滑杆隐藏**（该形态的「水膜多明显」由 wetness/浓度独占）⇒ 一形态一旋钮，
+> 消「两旋钮一个自由度」；旗标 `wetnessGated` → **`wetnessScalesOpacity`**（命名诚实化）。过程中又抓到一条
+> **假绿断言**：旧用例「film wetness=0 → 不可见」在 `waterEnabled` 默认 false 下**恒真**（从未开水），
+> 已改为显式开水 + 断言「可见 + alpha 0」。
+> **P2-3**：`ensureReflector` 显式 `multisample: 0`（three 上游默认 4×）——实付显存降到 1/4
+> （512 档 ≈ 2 MB、2048 档 ≈ 33 MB），行为断言 = `getRenderTarget().samples === 0`；schema 与知识卡同步标价。
+> **本轮验证（第五轮）**：`src/preview-3d` + `src/locales` **165 文件 / 3070 用例全绿**；
+> `npm run typecheck` 零错误；`check-biome` ✓。
+> **至此 12 条全部处置完毕**（P0-1 / P1-1..4 / P2-1..5 / P3-1..2）；唯一保留登记的是「`gerstner()` 每顶点算两次」
+> （非阻塞，升级 three 时一并议）。
 
 ---
 

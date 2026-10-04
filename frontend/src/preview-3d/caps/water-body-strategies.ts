@@ -142,8 +142,11 @@ function applyTransformLinks(
 
 export interface WaterBodyStrategy {
   readonly id: WaterMode;
-  /** 是否受 wetness 门控（film=true：wetness 为 0 时水面不可见） */
-  readonly wetnessGated: boolean;
+  /** alpha 是否乘 `waterWetness`（film=true：浓度参与合成 ⇒ film 的「水膜多明显」由它**独占**，
+   *  故菜单在 film 下隐藏 `waterOpacity`——锐评 2026-10-04 P2-1：一形态一旋钮，消「两旋钮一个自由度」）。
+   *  ⚠️ 原名 `wetnessGated`：它曾同时承担「wetness=0 即隐水」的可见性门控，那会让一级行 master 开关
+   *  在 wetness=0 时撒谎（显示 ON 而场景无水）。可见性已收归单门 `envState.waterEnabled`，旗标随之改名。 */
+  readonly wetnessScalesOpacity: boolean;
   /**
    * 是否启用体积光学（transmission / clarity / thickness）。
    * 薄膜水没有厚度可言，其 transmission 恒为 0；若不分形态一律套用 clarity，
@@ -181,7 +184,7 @@ export interface WaterBodyStrategy {
 
 const filmStrategy: WaterBodyStrategy = {
   id: "film",
-  wetnessGated: true,
+  wetnessScalesOpacity: true, // film：浓度参与 alpha 合成（film 下 opacity 滑杆隐藏，浓度独占）
   supportsVolumeOptics: false,
   supportsRoundness: false, // 薄水膜无容器：圆角裁剪无意义（构造期亦恒 0）
   hasWallCeiling: false, // 无壁：波高预算无上钳（锐评 P2-2 能力旗标）
@@ -241,7 +244,7 @@ const POOL_WALLS: readonly {
 
 const poolStrategy: WaterBodyStrategy = {
   id: "pool",
-  wetnessGated: false,
+  wetnessScalesOpacity: false, // pool：alpha 不乘 wetness（该滑杆在 pool 下隐藏）
   supportsVolumeOptics: true,
   supportsRoundness: true, // 盒式容器：圆角 = 池体边角淡出
   hasWallCeiling: true, // 有壁顶：波峰不得越壁（波高预算上钳，锐评 P2-2）

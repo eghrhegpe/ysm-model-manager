@@ -2,7 +2,7 @@
 // 纯声明层：零 THREE 依赖，仅构造 PreviewMenuNode 供 cap.getMenuNodes()（ADR-195 刀2）。
 // 改控件定义只动此文件，不触碰 Three 装配核。
 
-import type { LocaleKey } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
@@ -30,7 +30,7 @@ function wSliderNode(
   id: string,
   labelKey: LocaleKey,
   slider: { min: number; max: number; step: number; unit?: string },
-  control: { get: () => number; set: (v: number) => void },
+  control: { get: () => number; set: (v: number) => void; getHint?: () => string },
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
 ): NodeFor<"slider"> {
   return {
@@ -45,6 +45,8 @@ function wSliderNode(
       ...(slider.unit !== undefined ? { unit: slider.unit } : {}),
       get: () => control.get(),
       set: (v) => control.set(v as number),
+      // [锐评 2026-10-04 P1-2] 动态 hint 透传（slider 臂渲染为 label 右侧小字，随拖动刷新）
+      ...(control.getHint ? { getHint: control.getHint } : {}),
     },
   };
 }
@@ -124,7 +126,8 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
       labelKey: WATER_GROUP_LOOK,
       children: [
         // [锐评 P2-2 裁定收口，ADR-305 D1/D2] labelKey 跟用户可见语义（水膜浓度），envState
-        //  键是存储标识符（ADR-257 wetnessGated 词系）——脱钩是**设计**：语义拼接点在此，
+        //  键是存储标识符（ADR-257 词系；形态旗标 2026-10-04 改名 wetnessScalesOpacity——
+        //  原 wetnessGated 兼作可见性门控，已由 P2-1 收归单门）——脱钩是**设计**：语义拼接点在此，
         //  审查判据 = 用户可见文案正确性，不是键名同形（改名零收益，3 语言包 + 此处 churn）。
         wSliderNode(
           "water-wetness",
@@ -139,10 +142,16 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           () => cap.getWaterColor(),
           (v) => cap.setWaterColor(v),
         ),
-        wSliderNode("water-opacity", "preview.waterOpacity", getParamRange("waterOpacity"), {
-          get: () => cap.getWaterOpacity(),
-          set: (v) => cap.setWaterOpacity(v),
-        }),
+        wSliderNode(
+          "water-opacity",
+          "preview.waterOpacity",
+          getParamRange("waterOpacity"),
+          {
+            get: () => cap.getWaterOpacity(),
+            set: (v) => cap.setWaterOpacity(v),
+          },
+          waterPoolOn,
+        ), // [锐评 P2-1] film 下隐藏：该形态的「水膜多明显」由 wetness（浓度）独占——一形态一旋钮
         wSliderNode(
           "water-normal-strength",
           "preview.waterStrength",
@@ -217,6 +226,12 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           {
             get: () => cap.getWaveHeight(),
             set: (v) => cap.setWaveHeight(v),
+            // [锐评 2026-10-04 P1-2] 显示**钳后实际生效值**（受水位 / 池深预算约束）：
+            // 默认档滑杆 0.15→1.0 整段无效（85% 死区），此前无任何出口告知，用户只会以为坏了。
+            getHint: () =>
+              t("preview.waterWaveHeightEffective", {
+                v: cap.getEffectiveWaveHeight().toFixed(2),
+              }),
           },
         ),
       ],

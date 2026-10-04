@@ -334,6 +334,9 @@ export const ENV_STATE_SCHEMA = {
   },
   // 反射 RT 边长（px）：step=256 离散档位（256 省 / 512 默认 / 2048 近观）。
   // 变更走 Reflector RT setSize 原位扩缩，不重建载体（water-capability renderReflection）。
+  // ⚠️ 计价口径（锐评 2026-10-04 P2-3）：倒影 RT 为 half-float，且 three 上游 Reflector 默认
+  // `multisample = 4`——本仓已显式关（`water-reflect.ts` 传 `multisample: 0`），故实付 ≈ 边长²×8B
+  // （512 档 ≈ 2 MB / 2048 档 ≈ 33 MB）；关 MSAA 前是它的 4 倍（2048 档 ≈ 134 MB）。
   waterReflectionResolution: {
     type: "number",
     default: 512,

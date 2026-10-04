@@ -58,6 +58,43 @@ describe("formatCapSliderValue", () => {
   });
 });
 
+describe("renderCapSlider — hint 槽位（[P1-2] 动态 getHint / 静态 hintKey 回退）", () => {
+  it("动态 getHint 渲染于 label 右侧；无 hint 时零占位（display:none，不挤 head 布局）", () => {
+    const host = document.createElement("div");
+    renderCapSlider(host, { ...makeSlider("m"), getHint: () => "实际生效 0.06 m" });
+    const hint = host.querySelector(".cc-hint") as HTMLElement;
+    expect(hint.textContent).toBe("实际生效 0.06 m");
+    expect(hint.style.display, "有 hint 时须可见").not.toBe("none");
+
+    const host2 = document.createElement("div");
+    renderCapSlider(host2, makeSlider("m"));
+    const h2 = host2.querySelector(".cc-hint") as HTMLElement;
+    expect(h2.textContent).toBe("");
+    expect(h2.style.display, "无 hint 的滑杆不占位").toBe("none");
+  });
+
+  it("拖动后 hint 取**钳后新值**：刷新在 setValue 之后（否则滞后一步显示上一拍）", () => {
+    const host = document.createElement("div");
+    let effective = 0.06;
+    const view: CapControlView = {
+      ...makeSlider("m"),
+      getValue: () => 0.06,
+      setValue: (n) => {
+        effective = Math.min(Number(n), 0.15); // 模拟 cap 侧 effectiveWaveHeight 钳制
+      },
+      getHint: () => `实际生效 ${effective.toFixed(2)} m`,
+    };
+    renderCapSlider(host, view);
+    expect(host.querySelector(".cc-hint")!.textContent).toBe("实际生效 0.06 m");
+    const bar = host.querySelector(".cs-bar") as HTMLElement;
+    bar.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    expect(
+      host.querySelector(".cc-hint")!.textContent,
+      "hint 须反映 setValue 后的新状态（钳到 0.15，而非滑杆原值 1.00）",
+    ).toBe("实际生效 0.15 m");
+  });
+});
+
 // 复杂件 helper：renderCapControls 通道现仅承载复杂 kind（button 已迁节点原生 kind，
 // rmAppendButton 按钮臂），用 timeline 作显隐/testid 探针
 // （timeline 恒渲染行 + cap- testid，不受 getValue 影响；image 空值会跳过故不适合探针）。

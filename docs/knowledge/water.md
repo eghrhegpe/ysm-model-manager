@@ -108,6 +108,9 @@ pitfalls:
   - '**存量存档吃掉 D1 的默认抬升（2026-10-04 修复，锐评 P1-4）**：`saveState` 遍历 schema 键集恒写 `waterLevel`，而 ADR-319 D1 把默认从 0.01 抬到 0.15 ⇒ 老档把旧默认原样带回、预算被钳到 1 cm（「浪死平」观感原样保留），收益只覆盖新装 / 清过档的用户。修复 = 存档带版本戳 `water-migrations.ts|WATER_SCHEMA_VERSION_KEY`（唯一消费者是 loadState 的迁移判据，**不是参数键**、不入 schema）+ 纯函数 `migrateLegacyWaterLevel`：只有「无版本戳 ∧ 水位**严格等于**旧默认 0.01」才迁到现默认，带戳新档一律不动（用户可自由设 0.01，save/load 往返恒等）。**新增存档键必须自证有读侧消费者**——本键的消费者就是 loadState 那三行'
   - '**形态门控只许能力旗标，禁止 id 字符串现判（2026-10-04 修复，锐评 P2-2）**：`effectiveWaveHeight` 的上钳（波峰不越壁顶）曾在三处按形态 id 现判、构造期还用 `forPool` 兼职——而 `WaterBodyStrategy` 的设计承诺是「新增形态 = 注册一项、现有实现零改动」，id 现判让新形态（ocean 等）**静默走无壁分支**（浪漫过容器、编译器一言不发）。现 `hasWallCeiling` 进策略接口（与 wetnessGated / supportsVolumeOptics / supportsRoundness 并列），`WaterBuildContext.buildMaterial` 的 `{ forPool, hasWallCeiling }` 两维刻意不合并（未来 ocean 可能「有体积光学但无壁」）；守卫 = 旗标断言 + **源码扫描闸**（水源码文本内不得出现按 id 现判 pool 的模式——注释里写该字面量也会被闸住，改用文字描述）'
   - '**死代码与自证式测试（2026-10-04 修复，锐评 P3-1/P3-2）**：① `disposeWater` 曾读 `material.transmissionRenderTarget` 手动释放——该属性在 three r186 的 `MeshPhysicalMaterial` 上**不存在**（真身在 renderer 侧 `renderState.state.transmissionRenderTarget[camera.id]`，由 renderer 按相机持有与清理），生产路径恒不触发；锁它的用例靠测试**自己伪造该字段**再断言被释放（自证式假绿），已随死代码一并删除。② 官方 `Reflector.dispose()` 只放 RT + 材质、**不放构造期传入的几何**——`disposeReflector` 补具名释放，注释从「RT + 材质 + 几何具名释放」（当时不实）改为事实描述。③ `renderReflection` 的 `camera.updateMatrixWorld()` 备注曾称「否则镜像滞后一帧抖动」——RT 渲在 render-host 的 caps.update 段、早于本帧相机输入，该行只保证「矩阵不落后于属性」、消除不了跨帧输入滞后，注释已订正。教训：**「注释承诺 > 实现」是本仓最重视的漂移**；给「已释放 / 已处理」写断言前，先查上游源码到底释放了什么'
+  - '**滑杆值 ≠ 生效值：必须给出口（2026-10-04 修复，锐评 P1-2）**：浪高滑杆值受水位 / 池深预算钳制（`water-params.ts|effectiveWaveHeight`），默认档 0.15→1.0 整段拖动**毫无反应**（85% 死区）却无任何解释。修复 = slider 臂补 **hint 槽位**（动态 `getHint` 优先、静态 `hintKey` 回退；`getHint` 由 button 专属提升为通用通道，渲染于 label 右侧小字），浪高显示「实际生效 X m」。⚠️ **刷新顺序是坑**：`onChange` 内 `updateDisplay(n)` **先于** `v.setValue(n)`，而 hint 读 cap 状态 ⇒ 只在 `updateDisplay` 刷会**滞后一步**（显示上一拍的值）；须在 `setValue` 之后补刷（numeric 输入路径同）。新增任何「值 ≠ 生效值」的参数时，先问：用户从哪里知道实际生效多少'
+  - '**可见性单门 + 一形态一旋钮（2026-10-04 修复，锐评 P2-1）**：① 水面可见性曾与 film 的 `wetness > 0` 相与——把「水膜浓度」拖到 0，一级行 master 开关仍显示 ON 而场景无水（对开关撒谎，与 fog/reflector 已治的同族病）；现收归**单门** `envState.waterEnabled`。② film 的 alpha 曾 = `opacity × wetness`（两个旋钮一个自由度，用户不知该转哪根）；现 **film 下隐藏 `waterOpacity`**，浓度由 wetness 独占 ⇒ 一形态一旋钮。③ 旗标 `wetnessGated` → `wetnessScalesOpacity`（它已不再管可见性，名字必须跟着语义走）。**判「两参数是否重叠」的方法** = 问「能不能构造两组不同取值而画面完全一致」（`(0.5,0.5)` vs `(0.25,1.0)` 即实锤）。另：旧用例「film wetness=0 → 不可见」在 `waterEnabled` 默认 false 下**恒真**（从未开水）——**改默认值会让老断言变成恒真**，改默认时须回扫本 cap 全部断言'
+  - '**倒影 RT 的 MSAA 是隐形成本（2026-10-04 修复，锐评 P2-3）**：three 上游 `Reflector` 默认 `multisample = 4`（构造参数缺省），叠加 half-float ⇒ 2048 档约 **134 MB**（本仓 schema 原先只按分辨率档计价，读者易以为 33 MB）。现 `water-reflect.ts|ensureReflector` 显式传 `multisample: 0`：实付 ≈ 边长²×8B（512 档 ≈ 2 MB / 2048 档 ≈ 33 MB）。倒影经水 shader 斜率扰动采样 + fresnel 混合，边缘抗锯齿的边际收益不抵这笔显存/带宽。行为断言 = `getRenderTarget().samples === 0`（**别只断言源码里写了 multisample**）'
 quick_groups:
   - 3D 预览与模型追加
 quick_intents:
@@ -273,10 +276,17 @@ invariant_anchors:
   （断言 = 「基准常量与 schema waterSize 默认同源」），改一处忘另一处即红。自交上界
   `WAVE_STEEP_SUM_LIMIT/(wa·N)` 仍是物理天花板：小尺寸下由它接管，**不得为「视觉一致」突破它**
   （判据 = 探针 ④ 段域宽扫描：`size ≥ 80` 六档恒 0.650 m，`size ≤ 40` 递减）。
-- **形态能力一律由 `WaterBodyStrategy` 旗标声明**（锐评 2026-10-04 P2-2）：`wetnessGated` /
+- **形态能力一律由 `WaterBodyStrategy` 旗标声明**（锐评 2026-10-04 P2-2）：`wetnessScalesOpacity` /
   `supportsVolumeOptics` / `supportsRoundness` / `hasWallCeiling` 四维各自独立、构造期与运行期共用同一旗标；
   **下游禁止按形态 id 现判**（源码扫描闸兜底，注释里的同形字面量也算违规）。新增形态只需注册一项并声明旗标——
   漏声明是编译红，不是静默降级。
+- **用户可见值与生效值不一致时，必须给出口**（锐评 2026-10-04 P1-2）：钳制 / 派生 / 预算收窄造成的
+  「滑杆拖了没反应」不许静默——slider 的 hint 槽位（动态 `getHint` 优先）是标准出口，且**刷新须在
+  `setValue` 之后**（`updateDisplay` 早于写状态，只在其中刷会滞后一步）。菜单 `getHint` 是通用通道
+  （button 与 slider 共用），新增同类参数照此挂。
+- **一个形态一根旋钮**（锐评 2026-10-04 P2-1）：film 的「水膜多明显」= `waterWetness`（浓度）独占，
+  `waterOpacity` 在 film 下隐藏（pool 反之）；可见性恒为**单门** `waterEnabled`，任何参数都不得再否决它
+  （判据 = 「能否构造两组取值画面完全一致」，能则两参数重叠）。
 - **存档版本戳是旧档迁移的唯一开关**（锐评 2026-10-04 P1-4）：`water-migrations.ts|WATER_SCHEMA_VERSION`
   随 `saveState` 落盘、只被 `loadState` 的迁移判据消费；迁移只认「**无戳** ∧ 水位恰为旧默认」。
   **默认值变更的两条腿 = schema `default` + 旧档迁移判据**——缺后者就等于只对新用户生效

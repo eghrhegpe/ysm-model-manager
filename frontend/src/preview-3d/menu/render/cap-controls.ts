@@ -31,6 +31,9 @@ export interface CapControlView {
   labelKey: LocaleKey | "";
   fallback: string;
   hintKey?: string;
+  /** 动态 hint 文案（覆盖 hintKey）：button = 已加载文件名；slider = **实际生效值**
+   *  （锐评 2026-10-04 P1-2：浪高滑杆值受水位 / 池深预算钳制，拖动时同行小字实时刷新）。 */
+  getHint?: () => string;
   /** 控件级禁用谓词：语义 = 「该控件当前不具备生效前提」——典型场景是后处理子开关在
    *  总开关关闭时为 no-op（用户点了没反应），以灰化 + hint 明示，而不是静默吞掉交互。
    *  半静态求值（进入面板时求一次）；仅表达「不可交互」，不改变控件值本身。 */
@@ -164,7 +167,7 @@ function ensureCapSection(
  *  单一出口，避免 slider/select/toggle/color 四臂各写一遍灰化与 pointer-events（防漂移）。
  *  行为：行加 `cc-disabled` 类（降透明度）+ `aria-disabled`，子元素 `pointer-events:none`
  *  阻断交互；`data-disabled` 供测试定位。仅视觉/交互层，不改控件值。
- *  原因文案统一挂 `title`（四臂布局不一：toggle 有 hint span，slider/select/color 无，
+ *  原因文案统一挂 `title`（四臂布局不一：toggle/slider 有 hint span，select/color 无，
  *  挂 title 才能一致地在四臂都可见，且不挤占既有 hint 槽位）。 */
 function applyControlDisabled(row: HTMLElement, v: CapControlView): boolean {
   const d = v.disabled?.() ?? false;
@@ -243,7 +246,18 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   name.className = "slide-label";
   name.textContent = capLabel(v);
   const val = document.createElement("span");
-  head.append(name, val);
+  // [锐评 2026-10-04 P1-2] slider 支持 hint（动态 getHint 优先、其次静态 hintKey，与 toggle/button 同范式）：
+  // 把「隐藏耦合」显式化——浪高滑杆的实际生效值受水位 / 池深预算钳制，原先 0.15→1.0 整段拖动
+  // 毫无反应且无任何解释（85% 死区）。hint 随拖动实时刷新（见 updateDisplay）。
+  const hintEl = document.createElement("span");
+  hintEl.className = "cc-hint cc-hint-45";
+  const refreshHint = (): void => {
+    const txt = v.getHint?.() ?? (v.hintKey ? tOf(v.hintKey) : "");
+    hintEl.textContent = txt;
+    hintEl.style.display = txt ? "" : "none"; // 无 hint 的滑杆零占位，不挤 name/val 布局
+  };
+  refreshHint();
+  head.append(name, hintEl, val);
 
   const min = v.slider?.min ?? 0;
   const max = v.slider?.max ?? 1;
@@ -269,6 +283,7 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
 
   const updateDisplay = (n: number): void => {
     val.textContent = formatCapSliderValue(v, n);
+    refreshHint(); // [P1-2] 动态 hint 随拖动刷新（实际生效值随滑杆值变）
     const pct = range > 0 ? clampPct(((n - min) / range) * 100) : 0;
     fill.style.width = `${pct}%`;
     thumb.style.left = `${pct}%`;
@@ -284,6 +299,9 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
     onChange: (n: number): void => {
       updateDisplay(n);
       v.setValue(n);
+      // [P1-2] 动态 hint 须在 setValue **之后**再刷一次：hint 常读 cap 状态（钳后生效值），
+      // 而 setValue 才写状态——只在 updateDisplay 里刷会滞后一步（显示上一拍的值）。
+      refreshHint();
       // 通用副作用钩子（适配层可注入 refreshOnChange 语义）
       v.onChange?.(n);
     },
@@ -320,6 +338,7 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
       controller.setValue(cur);
       updateDisplay(cur);
       v.setValue(cur);
+      refreshHint(); // [P1-2] 同 onChange：numeric 输入路径也须在写状态后刷新 hint
       v.onChange?.(cur);
     };
   }

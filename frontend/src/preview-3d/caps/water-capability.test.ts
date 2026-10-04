@@ -152,10 +152,14 @@ describe("WaterCapability", () => {
     const wetness = findNodeById(look.children!, "water-wetness");
     const poolHeight = findNodeById(pool.children!, "water-pool-height");
     const snap = (mode: string) => ({ "env.waterMode": mode } as Partial<PreviewSnapshot>);
+    const opacity = findNodeById(look.children!, "water-opacity");
     expect(wetness.visibleWhen?.(snap("film"))).toBe(true);
     expect(poolHeight.visibleWhen?.(snap("film"))).toBe(false);
     expect(wetness.visibleWhen?.(snap("pool"))).toBe(false);
     expect(poolHeight.visibleWhen?.(snap("pool"))).toBe(true);
+    // [P2-1] film 的「水膜多明显」由 wetness（浓度）独占 ⇒ opacity 隐藏：一形态一旋钮，消「两旋钮一个自由度」
+    expect(opacity.visibleWhen?.(snap("film")), "film 下 opacity 隐藏（浓度交给 wetness）").toBe(false);
+    expect(opacity.visibleWhen?.(snap("pool")), "pool 下 opacity 是主控（内壁同步）").toBe(true);
   });
 
   it("setNormalStrength 写 envState，且 shader 编译后就地同步 uDetailStrength uniform", () => {
@@ -648,7 +652,7 @@ describe("WaterCapability — update 波纹动画推进", () => {
     expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(1.0, 5);
   });
 
-  it("update 门控：visible 为假不累加（setEnabled 别名与 setWaterEnabled 同一 gate，两条路径都验）", () => {
+  it("update 门控：visible 为假不累加（setEnabled 别名与 setWaterEnabled 同一 gate，两条路径都验；[P2-1] wetness 不再隐水）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     setEnvState({ waterEnabled: true }, { source: "manual" }); // 默认关水（2026-10），基线须可见
@@ -663,9 +667,12 @@ describe("WaterCapability — update 波纹动画推进", () => {
     cap.update(1.0);
     expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(1.0, 5);
     cap.setWaterEnabled(true);
-    cap.setWetness(0);
+    cap.setWetness(0); // [P2-1] wetness 不再隐水（可见性单门）——浓度 0 只是 alpha 归零
     cap.update(1.0);
-    expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(1.0, 5);
+    expect(
+      (cap as unknown as { waterTime: { value: number } }).waterTime.value,
+      "水面可见 ⇒ 波纹时间照常推进（原实现被 wetness 门控挡住）",
+    ).toBeCloseTo(2.0, 5);
   });
 });
 
@@ -747,12 +754,18 @@ describe("WaterCapability — pool 模式 setter 分支", () => {
     expect((cap as unknown as { waterTime: { value: number } }).waterTime.value).toBeCloseTo(2.0, 5);
   });
 
-  it("film 模式 wetness=0 → 水面不可见", () => {
+  it("[P2-1] film wetness=0：水面仍可见（可见性单门 = waterEnabled）、alpha 归零——原实现被 wetness 否决，且旧断言在 waterEnabled 默认 false 下恒真（假绿）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });
     cap.apply();
+    cap.setWaterEnabled(true); // 关键：不开水时 visible 恒 false，旧用例正因此恒真
     cap.setWetness(0);
-    expect(scene.getObjectByName("ysm-ground-water")!.visible).toBe(false);
+    const root = scene.getObjectByName("ysm-ground-water") as THREE.Mesh;
+    expect(root.visible, "可见性不再被 wetness 否决（原实现对 master 开关撒谎）").toBe(true);
+    expect(
+      (root.material as THREE.MeshPhysicalMaterial).opacity,
+      "浓度 0 ⇒ alpha 0：视觉上无水，但开关语义诚实",
+    ).toBe(0);
   });
 
   it("setWetness（film，shader 已编译）→ 同步 uBaseOpacity uniform", () => {
@@ -1380,11 +1393,11 @@ describe("WaterCapability — 形态策略表（ADR-257 B 档）", () => {
   });
 
   it("形态能力旗标：film 受 wetness 门控、无体积光学 / 无圆角；pool 反之", () => {
-    expect(filmStrategy.wetnessGated).toBe(true);
+    expect(filmStrategy.wetnessScalesOpacity, "film：alpha 乘 wetness（浓度）").toBe(true);
     expect(filmStrategy.supportsVolumeOptics).toBe(false);
     expect(filmStrategy.supportsRoundness).toBe(false);
     expect(filmStrategy.hasWallCeiling, "film 无壁：波高预算无上钳").toBe(false);
-    expect(poolStrategy.wetnessGated).toBe(false);
+    expect(poolStrategy.wetnessScalesOpacity, "pool：alpha 不乘 wetness（该滑杆在 pool 下隐藏）").toBe(false);
     expect(poolStrategy.supportsVolumeOptics).toBe(true);
     expect(poolStrategy.supportsRoundness).toBe(true);
     expect(poolStrategy.hasWallCeiling, "pool 有壁顶：波峰不得越壁").toBe(true);
@@ -2029,7 +2042,17 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     expect(renderCount).toBe(2);
   });
 
-  it("dispose 释放载体（RT/材质）且清空引用；幂等再 dispose 不炸", () => {
+  it("[P2-3] 反射 RT 显式关 MSAA（multisample: 0）：4× 半浮点显存的边际收益换不回", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
+    cap.apply();
+    cap.setWaterReflectionEnabled(true);
+    cap.update(0.016);
+    const rt = cap["reflect"]!.reflector!.getRenderTarget();
+    expect(rt.samples, "three 上游默认 samples=4，此处必须显式为 0").toBe(0);
+  });
+
+  it("dispose 释放载体（RT/材质 + 几何）且清空引用；幂等再 dispose 不炸", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
     cap.apply();
@@ -2187,6 +2210,19 @@ describe("WaterCapability — 波场尺度归一与浪高分形态容器钳制�
     const c = node!.control!;
     const range = getParamRange("waterWaveHeight");
     expect({ min: c.min, max: c.max, step: c.step, unit: c.unit }).toEqual(range);
+  });
+
+  it("[P1-2] 菜单浪高滑杆的 getHint 显示**钳后实际生效值**（85% 死区的唯一出口）", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    const hint = findNodeById(cap.getMenuNodes(), "water-wave-height")!.control!.getHint;
+    expect(hint, "须有动态 hint 出口（slider 臂渲染为 label 右侧小字）").toBeTypeOf("function");
+    // film 默认：预算 = min(level, …) = 0.15，浪高默认 0.06 未被钳
+    expect(hint!(), "显示实际生效值而非滑杆原值").toContain("0.06");
+    cap.setWaveHeight(0.6); // 超预算 ⇒ 钳到 0.15
+    expect(hint!(), "钳后值随滑杆变化").toContain("0.15");
+    expect(hint!(), "不得显示滑杆原值 0.60（否则用户仍被蒙在鼓里）").not.toContain("0.60");
+    cap.setLevel(0.04); // 水位压低 ⇒ 预算收窄到 0.04
+    expect(hint!(), "预算随水位重算").toContain("0.04");
   });
 });
 

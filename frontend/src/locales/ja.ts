@@ -1452,6 +1452,7 @@ export const ja: Record<string, string> = {
   "preview.waterClarity": "水の透明度",
   "preview.waterChoppiness": "波の鋭さ",
   "preview.waterWaveHeight": "波の高さ",
+  "preview.waterWaveHeightEffective": "実際の有効値 {v} m",
   "preview.waterHeight": "プール高さ",
   "preview.waterWallThickness": "壁厚",
   "preview.waterWallColor": "壁色",

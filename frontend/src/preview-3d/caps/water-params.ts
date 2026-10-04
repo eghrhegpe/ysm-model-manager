@@ -7,7 +7,7 @@
 //    （size/poolHeight/wallThickness）共享 applyStructuralProfile 写域，但它是**读 envState
 //    全量的幂等执行器**（重复调用 no-op），且其余条目不触碰 transform——故乱序仍收敛
 //    （守卫 = 乱序全量 patch ≡ 单键逐发快照一致）；派生量（effectiveOpacity）由 envState 现算；
-//  - 形态门控（wetnessGated / supportsVolumeOptics / 空 targets 数组）一律查 strategy，不写 mode 分支。
+//  - 形态门控（wetnessScalesOpacity / supportsVolumeOptics / 空 targets 数组）一律查 strategy，不写 mode 分支。
 //
 // 契约登记（原水注释原样保留）：
 //  - [锐评 W-3] WATER_PARAM_APPLIER_KEYS 键名显式字面量——供契约测试与 getPresetKeys("water") 做字面同步核查。
@@ -106,7 +106,7 @@ export const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) =>
   waterMode: NOOP_APPLIER, // 形态切换由回调 rebuildWaterContainer 承接，不入本表
   waterWaveSpeed: NOOP_APPLIER, // [锐评 3.3] 无材质应用——消费点在 update() 逐帧现读 envState（登记于 WATER_FRAME_READ_KEYS）
   waterWetness: ({ strategy, top, setUniform }) => {
-    if (!strategy.wetnessGated) return;
+    if (!strategy.wetnessScalesOpacity) return;
     const eff = envState.waterOpacity * envState.waterWetness;
     top.material.opacity = eff;
     setUniform(top.material, "uBaseOpacity", eff);
@@ -114,7 +114,7 @@ export const WATER_PARAM_APPLIERS: Record<WaterParamKey, (ctx: WaterApplyCtx) =>
   waterOpacity: ({ strategy, targets, top, setUniform }) => {
     // 顶水面 + 池内壁（ADR-257 审核 Item 6：内壁透明度必须随 waterOpacity 跟随，
     // 否则拖透明度滑块时水面与池壁脱节；内壁套 INNER_WALL_OPACITY_FACTOR 与构建期一致）
-    const eff = strategy.wetnessGated
+    const eff = strategy.wetnessScalesOpacity
       ? envState.waterOpacity * envState.waterWetness
       : envState.waterOpacity;
     top.material.opacity = eff;

@@ -1415,6 +1415,7 @@ export const zhCN = {
   "preview.waterClarity": "水体通透度",
   "preview.waterChoppiness": "波峰尖度",
   "preview.waterWaveHeight": "浪高",
+  "preview.waterWaveHeightEffective": "实际生效 {v} m",
   "preview.waterHeight": "水池高度",
   "preview.waterWallThickness": "池壁厚度",
   "preview.waterWallColor": "池壁颜色",

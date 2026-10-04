@@ -160,7 +160,9 @@ export interface PreviewControlSpec {
   action?: () => void | Promise<void>;
   /** button 类型：是否禁用（异步加载中禁用） */
   disabled?: () => boolean;
-  /** button 类型：动态右侧 hint 文案（覆盖 hintKey，如已加载 HDR 文件名） */
+  /** 动态 hint 文案（覆盖 hintKey）：button 为已加载 HDR 文件名；**slider 为「实际生效值」**
+   *  （锐评 2026-10-04 P1-2——如浪高滑杆受水位/池深预算钳制，拖动时同行小字实时显示钳后值）。
+   *  渲染端消费：button 臂（rows.ts）与 slider 臂（cap-controls.ts）同范式取值。 */
   getHint?: () => string;
   /** onchange 后重渲染当前面板（menu.refresh()）：面板内容随绑定状态变化的场景
    *  （如组件 select 切档后 stats/纹理行按新快照重建，[doc:adr-126-p5] 订阅链闭合的渲染侧） */

@@ -79,6 +79,10 @@ export function ensureReflector(state: WaterReflectState): Reflector {
       clipBias: bias,
       textureWidth: envState.waterReflectionResolution,
       textureHeight: envState.waterReflectionResolution,
+      // [锐评 2026-10-04 P2-3] 显式关 MSAA：three 上游默认 `multisample = 4`（Reflector.js 构造），
+      // 即 4× 半浮点 RT（2048 档 ≈ 134 MB，512 档 ≈ 8 MB）——而倒影经水 shader 的斜率扰动采样 +
+      // fresnel 混合，边缘抗锯齿的边际收益远不抵这笔显存/带宽。schema 只按分辨率档计价，此处兜底。
+      multisample: 0,
     });
     state.reflectorClipBias = bias;
     // 镜面朝上 = 水面平面（裁剪平面即该平面的无限延展，1×1 尺寸不参与数学）

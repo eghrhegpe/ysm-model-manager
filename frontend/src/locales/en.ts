@@ -1454,6 +1454,7 @@ export const en: Record<string, string> = {
   "preview.waterClarity": "Clarity",
   "preview.waterChoppiness": "Choppiness",
   "preview.waterWaveHeight": "Wave Height",
+  "preview.waterWaveHeightEffective": "Effective {v} m",
   "preview.waterHeight": "Pool Height",
   "preview.waterWallThickness": "Wall Thickness",
   "preview.waterWallColor": "Wall Color",

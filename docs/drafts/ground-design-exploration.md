@@ -178,6 +178,7 @@ r = clamp255(baseR + d); /* g,b 同理 */
 
 - **P0 水面喧宾夺主**：✅ 已落（默认 `waterEnabled=false`，schema 注释有收口记录）。
 - **P0 网格地平线硬切（弱化版）**：✅ 已落（divisions 60→40 + 网格色暖中灰 0x8a8278/0x6a6258）。
+- **参考网格默认翻转 `groundGridVisible true→false`（2026-10-04 用户拍板「有地面还花」）**：✅ 已落（`c2c6dd208`）——默认源翻 solid 后承接面已承担 y=0 锚点，开箱网格线沦为装饰叠加。效果：上文「网格切天边/喧宾夺主」诸论述仅在**手动开启网格**后成立（问题暴露概率大降），但不替代 P0 真·地平线淡出（硬切仍需架构项根治）。
 - **P0 真·地平线距离淡出**：❌ **维持现状 = 已知未收口**（2026-10-04 取证：轻雾路线在 schema 默认雾参数 near=10/far=200 下单变量对照（`e2e-web/fog-horizon-evidence.spec.ts` → `_shots/fog-horizon/`，两图 sha 互异）**未消除平面边缘硬缝**（仅远带向雾色微亮，模型区域零影响）；按拍板纪律「不过关退维持现状、不靠调密度硬救」，真·淡出（自建 LineSegments 顶点 alpha / horizon blend）留作架构项。证据全文 → `docs/audit-ground-review.md`。
 - **P1 soft 阴影默认**：✅ 已落（`shadowType` 默认 soft）。
 - **P1 承接面微噪点 / 极低 envMapIntensity 微反射**：✅ 已落（2026-10-04 P1 批：`matMicroNoise` 默认 6 ±/255（plain 系生成器 tiledFbm 高频微细节）+ `matEnvMapIntensity` 默认 0.15（外观层原地路径）；两键进 schema/restoreFields，菜单暂不设控件——控件化属 P2 场景预设层的议题）。

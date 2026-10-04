@@ -130,6 +130,7 @@ pitfalls:
   - schemaId 必显式声明（panel id 不再隐式兜底作 schema key，防 id 撞注册键渲染错内容）
   - fillers 仅 roles 一项（G3 删 fill* 后唯一残留），health.test 白名单守卫——禁止新增 filler
   - renderCustom 是末段逃生舱，schemaId 未注册时走 renderCustom 会 console.warn
+  - 预览菜单真实 DOM 渲染依赖预览会话上下文（dock 按钮 visibleWhen 谓词 env.skyGroundCap 吃 sceneCapabilityRegistry 内 cap 实例可用性）；脱离真实应用初始化（Go 桥/WASM/scene 装配）在浏览器里纯 stub ctx + 动态 import 复现不出 DOM（dock 空壳：overlay 含 dock/popup 容器但内部按钮行零渲染）。验证菜单布局/成员归属应走 happy-dom 单测（items.test.ts 经 mountPreviewRootMenu 真实渲染环境面板 + 下钻 sky 子视图；sky-capability.test.ts 拓扑契约），而非 e2e 截图——后者在 mock 浏览器下既渲不出菜单、headless 无 GPU 也渲不出 3D 天空外观。
 use_when:
   - 3D 预览菜单
   - 声明式菜单节点

@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/caps/ground-surface-spec.ts`、`frontend/src/preview-3d/caps/ground-capability.ts`、`frontend/src/preview-3d/caps/ground-menu.ts`、`frontend/src/preview-3d/state/env-state.ts`、`frontend/src/preview-3d/state/env-state-schema.ts`、[ADR-249](ADR-249-ground-material-axis-split-layer-overlay.md)、[ADR-251](ADR-251-ground-material-family-completion.md)、[ADR-252](ADR-252-ground-canvas-style-material-only.md)
+- **相关**：`frontend/src/preview-3d/caps/ground-surface-spec.ts`、`frontend/src/preview-3d/caps/ground-capability.ts`、`frontend/src/preview-3d/caps/ground-menu.ts`、`frontend/src/preview-3d/state/env-state.ts`、`frontend/src/preview-3d/state/env-state-schema.ts`、[ADR-249](./ADR-249-ground-material-axis-split-layer-overlay.md)、[ADR-251](./ADR-251-ground-material-family-completion.md)、[ADR-252](./ADR-252-ground-canvas-style-material-only.md)
 - **外部参照**：MikuMikuAR `frontend/src/scene/env/env-ground-presets.ts`（`GROUND_PRESETS` / `GROUND_PRESET_KEYS` / `buildGroundPresetEnvState`）、`_bridge/env-bridge.ts`（`resetGroundPresetOnManualEdit` middleware）、`docs/adr/adr-208-ground-preset-sourcekind.md`
 
 ---

@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：[ADR-066](ADR-066-universal-resource-preview.md)（统一 3D 外壳 / PreviewAdapter 契约）、[ADR-077]（mmd-bones）、[ADR-074]（bones-panel-node 通用化）
+- **相关**：[ADR-066](./ADR-066-universal-resource-preview.md)（统一 3D 外壳 / PreviewAdapter 契约）、[ADR-077]（mmd-bones）、[ADR-074]（bones-panel-node 通用化）
 
 ---
 

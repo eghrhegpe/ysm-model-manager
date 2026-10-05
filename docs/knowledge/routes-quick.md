@@ -939,7 +939,7 @@
 | 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs | - | 误判为 gen 产物 |
 | gen 产物文件路径含空格时 git add 不加引号会断裂 | - | 必须用 git add -- "文件路径" |
 | snap_docs 使用 $ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在 | - | - |
-| 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误 | - | - |
+| 智能 stage 的下缀剥离是**最短匹配**（ | `foo.d.ts` | base `foo.d`，探测不存在的 `foo.d.test.ts`）——仓内有真实 `*.d.ts` 故边界是活的；该行为已由 `tests/test_commit_smart_stage.ts` 的「缺陷等价性锚点」锁死，修复须显式改测试（ADR-323 §4） |
 | drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报 | - | - |
 | 用 `file:line:kind` 键做增量判定 = **高噪声**：行位移被当新增（116 提交窗实测 322/330 = 97.6% 幻影，真新增候选仅 8）→ 必须走真行级 `--added-lines`（ADR-256，`scripts/token-shift-audit.ts` 可复现）；「同行替换同类」会因键相同被判存量（机制性盲区，本窗口实测 0 次） | `只减不增` | - |
 | 无 scope 的  扫磁盘全树 | `--baseline` | 判决域 ≠ 提交域（哪怕键设计没问题，也会把并行会话未提交的新债算到本提交头上） |

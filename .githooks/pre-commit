@@ -167,30 +167,13 @@ fi
 # 自动 stage 同目录/同名的 .test.ts / .test.js 测试文件。
 # 防误 stage：仅当对应源码文件有改动时才 stage 测试文件。
 # 审计修复（2026-08-17 子代理）：逐文件 git add "$f" 防空格断裂；排除 .test.*/.spec.* 防套娃。
+# 推导逻辑已下沉 scripts/_lib/commit-blocks/smart-stage.ts（ADR-323 阶段 2）：
+# 原内联 shell 的后缀剥离（`base="${f%.ts}"` 最短匹配）无法单测，`.d.ts` 边界
+# 只能靠知识卡 pitfall 提醒；现由 tests/test_commit_smart_stage.ts 锁死（含该缺陷的
+# 等价性锚点——修复须是一次显式测试变更，见 ADR-323 §4）。
 echo ""
 echo "[pre-commit] 智能 stage 测试文件..."
-STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.js' 2>/dev/null || true)
-if [ -n "$STAGED_TS" ]; then
-  printf '%s\n' "$STAGED_TS" | while IFS= read -r f; do
-    [ -z "$f" ] && continue
-    # 自身已是测试/规格文件，不套娃
-    case "$f" in
-      *.test.*|*.spec.*) continue ;;
-    esac
-    # 去掉后缀得到 base
-    base="${f%.ts}"; base="${base%.js}"
-    for ext in ".test.ts" ".test.js"; do
-      candidate="${base}${ext}"
-      if [ -f "$candidate" ]; then
-        if git add -- "$candidate" 2>/dev/null; then
-          echo "[pre-commit] 智能 stage: $candidate"
-        else
-          echo "⚠️  智能 stage 失败（不阻断）: $candidate"
-        fi
-      fi
-    done
-  done
-fi
+node scripts/_lib/commit-blocks/smart-stage.ts 2>/dev/null || true
 
 # ── Shadow DOM 样式越界检查（非阻断提示；阻断由 pre-push 门禁兜底）──
 # 2026-08-24 复盘（21c01725 / 9942ada3）：components.css 全局 <link> 定义的类与 @keyframes

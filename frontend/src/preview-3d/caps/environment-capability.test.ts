@@ -26,6 +26,7 @@ import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-sc
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
+import { restoreState } from "./scene-capability.ts";
 
 // PMREMGenerator 扩展 mock：全局 setup 的 Fake 只有 fromScene，本文件需 fromEquirectangular
 vi.mock("three", async (importOriginal) => {
@@ -1412,5 +1413,176 @@ describe("EnvironmentCapability — ADR-292 批次三 来源选择控件", () =>
       expect(envState.envSource).toBe("sky");
       expect(envState.envPreset).toBe("sunset");
     });
+  });
+});
+
+// [锐评 F-1 收口] 能力级开关单门收口——shadow（73bd7dcb0）/ reflector（ed5b21b73）/
+// sky（047f51808）先例同法的**第四例**（2026-10）。
+//
+// 病灶：schema 的 environment 组声明了四枚参量键（envPreset/envIntensity/envUseAsBackground/
+// envResolution/envSource），独独**能力总开关不在其中**——真门是私有 `this.enabled`
+// （构造 `opts.enabled ?? true`），存档把它落成**无前缀** `enabled` 幽灵键，与 schema 键形
+// 分属两套方言。菜单 toggle / headerToggle / 存档三处各读私有门，envState 侧无对应键。
+//
+// ⚠️ 本例比前三例多一层**跨代语义**约束（勿照抄先例而漏）：`environment-migrations.ts`
+// 的 `migrateEnvSource` 判据①（「env 关闭 ∧ sky IBL 开 → envSource="sky"」）读的正是
+// environment 槽的无前缀 `enabled`——它是「用户关掉了整个环境贴图功能」的**唯一证据**，
+// 也是 ADR-292 迁移总纲「保画面不变」的承重墙。故收口必须做到两件事同时成立：
+//   ① saveState 改落 schema 键形 `envEnabled`（键与门不再各说各话）；
+//   ② loadState 把旧存档的无前缀 `enabled` 回填进 `envEnabled`（fog/water/shadow 同款
+//      legacy 回填写法 `if (!("xxxEnabled" in s) && typeof s.enabled === "boolean")`），
+//      判据①才能在升级用户身上继续成立——否则旧用户重启后画面突变。
+//
+// 安全性前置（已核）：env 不在 MODEL_DEFAULTS 的总开关键上（各模型只携
+// envPreset/envIntensity/envResolution/envUseAsBackground，见 model-defaults.ts）
+// → 无双轨写对手，故不需 isStateLoaded 守卫。
+describe("EnvironmentCapability — 能力级开关单门收口（shadow/reflector/sky 先例同法）", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetEnvState();
+  });
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("[F-1] 私有 enabled 字段已退役——cap 不持有同名 own 属性（防僵尸门回归守卫）", () => {
+    const cap = newCap();
+    expect(
+      "enabled" in cap,
+      "能力级开关唯一真值源 = envState.envEnabled，私有门不得复活",
+    ).toBe(false);
+  });
+
+  it("[F-1] schema 声明 envEnabled（environment 组首位，默认 true = 被退役私有门的有效默认）", () => {
+    // 默认值 true 是**零行为漂移**的判据：原私有门 `opts.enabled ?? true`，无存档首启恒开。
+    expect(ENV_STATE_SCHEMA.envEnabled.type).toBe("boolean");
+    expect(ENV_STATE_SCHEMA.envEnabled.default).toBe(true);
+    expect(ENV_STATE_SCHEMA.envEnabled.group).toBe("environment");
+    expect(envState.envEnabled, "schema 默认值经 deriveDefaultEnvState 落地").toBe(true);
+  });
+
+  it("[F-1] setEnabled/isEnabled 是 envState.envEnabled 的别名（写即派发即落场景）", () => {
+    const scene = new THREE.Scene();
+    const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    expect(envState.envEnabled).toBe(true);
+    expect(cap.isEnabled()).toBe(true);
+    expect(scene.environment, "别名写口须真落到场景").not.toBeNull();
+
+    cap.setEnabled(false);
+    expect(envState.envEnabled).toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    expect(scene.environment, "关态须还原 prevEnvironment").toBeNull();
+
+    cap.setEnabled(true);
+    expect(envState.envEnabled).toBe(true);
+    expect(cap.isEnabled()).toBe(true);
+    expect(scene.environment, "单门可逆：翻回即复现").not.toBeNull();
+  });
+
+  it("[F-1] 经 envState 直写 envEnabled 亦落地（键不是幽灵键：有真实消费者）", () => {
+    const scene = new THREE.Scene();
+    const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    cap.apply();
+    expect(scene.environment).not.toBeNull();
+    // 回调新分支的本体：改键即改画面（收口前该键不存在，此行无从谈起）
+    setEnvState({ envEnabled: false }, { source: "manual", force: true });
+    expect(scene.environment).toBeNull();
+    setEnvState({ envEnabled: true }, { source: "manual", force: true });
+    expect(scene.environment).not.toBeNull();
+  });
+
+  it("[F-1] 关态还原 background（applyBackground(null) 语义随总开关收口）", () => {
+    const scene = new THREE.Scene();
+    const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setUseAsBackground(true);
+    expect(scene.background, "开态背景挂源纹理").not.toBeNull();
+    cap.setEnabled(false);
+    expect(scene.background, "总开关关掉 = 背景一并让位（不只 environment 槽）").toBeNull();
+  });
+
+  it("[F-1] saveState 不再持久化能力级 enabled 幽灵键（envEnabled 随 schema 键形落盘）", () => {
+    const cap = newCap();
+    cap.saveState();
+    const saved = restoreState("environment") as Record<string, unknown>;
+    expect("enabled" in saved, "无前缀幽灵键不得再进存档").toBe(false);
+    expect("envEnabled" in saved, "真值源须随 schema 键形落盘").toBe(true);
+  });
+
+  it("[F-1] legacy 中毒回归：旧存档 enabled=false 恢复后，单一开关仍能救回环境贴图", () => {
+    // 旧存档形态 = 无前缀 {enabled, preset, intensity, ...}（本 cap 收口前的 saveState 产物）。
+    // 收口后该键由 loadState 回填进 envEnabled（fog/shadow 先例同法），不再进私有门——
+    // 否则「单一开关」在升级用户身上语义分叉：菜单开关读 schema 键恒 true，
+    // 而存档里的 false 只活在私有门里，重启自续。
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ preset: "forest", enabled: false, intensity: 1.1 }),
+    );
+    const scene = new THREE.Scene();
+    const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    cap.loadState();
+    expect(envState.envEnabled, "旧 enabled 须回填进 schema 键").toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    expect(cap.getPresetId(), "兄弟键照常恢复（回填不得吞掉其余字段）").toBe("forest");
+    expect(scene.environment, "关态不得挂环境贴图").toBeNull();
+
+    cap.setEnabled(true);
+    expect(envState.envEnabled, "单门可逆：翻开关即复现").toBe(true);
+    expect(scene.environment).not.toBeNull();
+  });
+
+  it("[F-1] legacy 回填键形闸：存档已含 envEnabled 时不被无前缀 enabled 覆盖", () => {
+    // 判据 `!("envEnabled" in s)` 的存在理由：混合形态存档（新键 + 残留旧键）新旧不一致时，
+    // 必须认新键——否则「迁移一次又回退一次」，用户手改被幽灵键静默吞掉。
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ envEnabled: true, enabled: false, preset: "sky" }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    expect(envState.envEnabled, "新键优先，旧键不得回填覆盖").toBe(true);
+    expect(cap.isEnabled()).toBe(true);
+  });
+
+  it("[迁移回归] 旧档 enabled=false + sky 槽 environment=true → envSource 仍迁为 sky（判据①承重）", () => {
+    // ADR-292 判据① = 「用户关掉了整个环境贴图功能，却留着天空 IBL」这一**强意图**，
+    // 是唯一能证明「用户真的要天空 IBL」的证据。它的读值依据从旧档无前缀 `enabled` 挪到
+    // schema 键 `envEnabled` 后，legacy 回填就是这条判据的供血线——回填断了，
+    // 升级用户重启即从「天空 IBL」静默掉回「env 预设」，违反迁移总纲「保画面不变」。
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ enabled: false, preset: "sky", intensity: 1.0 }),
+    );
+    localStorage.setItem("ysm-scene-cap-sky", JSON.stringify({ environment: true }));
+    const cap = newCap();
+    cap.loadState();
+    expect(envState.envEnabled, "回填须先于迁移判据读取").toBe(false);
+    expect(envState.envSource, "判据①（env 关 + sky IBL 开）仍须成立").toBe("sky");
+  });
+
+  it("[迁移回归] 无前缀 enabled=true + sky IBL 开 → 不误迁 sky（判据①不得被回填放大）", () => {
+    // 对照组：回填只搬运事实、不制造意图。enabled=true 说明 env 是开的，
+    // 旧世界画面由 env 决定 → 判据①不成立，落判据③ preset。
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ enabled: true, preset: "sky" }),
+    );
+    localStorage.setItem("ysm-scene-cap-sky", JSON.stringify({ environment: true }));
+    const cap = newCap();
+    cap.loadState();
+    expect(envState.envEnabled).toBe(true);
+    expect(envState.envSource, "env 开着 → 默认路径不算强意图").toBe("preset");
+  });
+
+  it("[F-1] 构造 opts.enabled 保留但桥接到 schema 键（ADR-250 口径，非私有门写口）", () => {
+    const cap = newCap({ enabled: false });
+    expect(envState.envEnabled, "opts.enabled 须写 envState 而非私有字段").toBe(false);
+    expect(cap.isEnabled()).toBe(false);
+    // [ADR-250] 顺序注释：构造期 setEnvState 发生在 registerEnvCallback 之前，订阅者未就位，
+    // 挂载副作用不自动触发——场景对象由组合根随后的 apply() 落地。
+    const scene = new THREE.Scene();
+    const cap2 = new EnvironmentCapability({ scene, renderer: makeFakeRenderer(), enabled: true });
+    cap2.apply();
+    expect(scene.environment).not.toBeNull();
   });
 });

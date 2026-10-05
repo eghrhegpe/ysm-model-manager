@@ -343,7 +343,14 @@ export class GroundCapability implements SceneCapability {
 
   /** 总开关真值源 = envState.groundVisible。
    *  不再读 this.grid.visible——网格显隐自 2026-09-19 起是三层合取，读它会把
-   *  「参考网格关掉」误报成「地面关掉」（本 getter 语义 = 总开关，非网格可见性）。 */
+   *  「参考网格关掉」误报成「地面关掉」（本 getter 语义 = 总开关，非网格可见性）。
+   *
+   *  ⚠️ 层级校准（2026-10-05 设计层锐评 §2）：本「总开关」是**参数级可见性**，
+   *  不是**能力级启停**——`getMasterNodeId()` 返回的 `ground-visible` 绑的正是本 getter，
+   *  而 ground 的**能力级**私有 `enabled`（`setEnabled` 的挂/摘 mesh 生命周期）刻意无 UI 写口、
+   *  生产恒 true（详见 `saveState` 上方「防回填闸」注释）。故 env 面板一级行的行尾开关：
+   *  sky/water/env/fog/reflector 是能力开关，ground 是可见性开关——**同形不同义**。
+   *  接口侧措辞已同步校准（`scene-capability.ts|getMasterNodeId`）。 */
   getVisible(): boolean {
     return envState.groundVisible;
   }

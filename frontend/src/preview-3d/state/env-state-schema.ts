@@ -383,6 +383,15 @@ export const ENV_STATE_SCHEMA = {
   },
 
   // --- Environment ---
+  // [锐评 F-1 收口 2026-10] 能力级总开关入 schema（首位，对齐 sky/water/fog/shadow/reflector/pp
+  // 布局）：原私有 `this.enabled`（构造 `opts.enabled ?? true`）时代本键不存在 ⇒ 用户对
+  // 「是否使用环境贴图」的偏好无 envState 落点，菜单 toggle / headerToggle / 存档三处各读私有门；
+  // 存档另落**无前缀** `enabled` 幽灵键，与 schema 键形分属两套方言。
+  // 默认 true 与被退役私有门的有效默认一致，收口零行为漂移。
+  // ⚠️ 跨代语义（勿当成普通参数键）：`environment-migrations.ts|migrateEnvSource` 判据①
+  // 读 `envEnabled === false` 作为「用户关掉了整个环境贴图功能」的唯一证据（迁 envSource="sky"
+  // 的强信号，ADR-292「保画面不变」承重墙）——故 loadState 必须回填旧档无前缀 `enabled`。
+  envEnabled: { type: "boolean", default: true, group: "environment" },
   envPreset: {
     type: "enum",
     values: ["sky", "studio", "sunset", "night", "forest", "custom"] as const,

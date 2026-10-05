@@ -8,9 +8,11 @@
 // 缓存策略（经验 637368）：custom HDR 成功解码后，保存 decoded DataTexture + 文件名缓存，
 // preset 来回切换 custom 时不重复解码；更换/清空 HDR 或 dispose 时 dispose 旧纹理 + revoke blob。
 //
-// ADR-196 刀2：参数量（preset/intensity/resolution/useAsBackground）已迁移至全局 envState 单例，
-// 能力级 enabled 留 cap 私有 this.enabled。setter 收口 setEnvState(source:'manual')，
-// 渲染由 registerEnvCallback 回调落地，setter 内不再直接 buildEnvironment（防双写/双重建）。
+// ADR-196 刀2：参数量（preset/intensity/resolution/useAsBackground）已迁移至全局 envState 单例。
+// [锐评 F-1 收口 2026-10] 能力级开关亦已收编 schema 键 `envEnabled`（第四例，前三例
+// shadow/reflector/sky）——原私有 `this.enabled` 退役，setEnabled/isEnabled 降为 schema 键
+// 别名；setter 收口 setEnvState(source:'manual')，渲染由 registerEnvCallback 回调落地，
+// setter 内不再直接 buildEnvironment（防双写/双重建）。
 
 import * as THREE from "three";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
@@ -111,8 +113,6 @@ export class EnvironmentCapability implements SceneCapability {
 
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
-  /** 能力总开关（不入 envState，getMasterNodeId 返回 'env-enabled'） */
-  private enabled: boolean;
 
   private pmrem: THREE.PMREMGenerator | null = null;
   /** 当前挂载到 scene.environment 的预滤波贴图 */
@@ -164,13 +164,22 @@ export class EnvironmentCapability implements SceneCapability {
   constructor(opts: {
     scene: THREE.Scene;
     renderer: THREE.WebGLRenderer;
+    /** [锐评 F-1 收口] 保留形参以兼容既有调用方/测试（ADR-250 口径，同 sky/light/pp），
+     *  但**不再写 cap 私有字段**——能力总开关唯一真值源是 `envState.envEnabled`。
+     *  传值仅在显式给定时用于初始化该状态（不传则尊重 envState 现值，含存档恢复顺序）。 */
     enabled?: boolean;
     /** [ADR-292 D7] cap 间协调查询器——envSource="sky" 时经此向 sky 取烘焙纹理 */
     caps?: SceneCapabilityLookup;
   }) {
     this.scene = opts.scene;
     this.renderer = opts.renderer;
-    this.enabled = opts.enabled ?? true;
+    // [锐评 F-1 收口] 能力级总开关入 schema（对齐 ADR-250/ADR-293 的 pp/light 口径）：
+    // 显式传值才写状态层，不传则尊重 envState 现值（含用户存档恢复的顺序）。
+    // ⚠️ 顺序敏感：此处 setEnvState 发生在 registerEnvCallback **之前**，订阅者尚未就位，
+    // 挂载/卸载副作用不会自动触发——场景对象由组合根随后的 apply() 落地。
+    if (opts.enabled !== undefined) {
+      setEnvState({ envEnabled: opts.enabled }, { source: "manual" });
+    }
     if (opts.caps !== undefined) this.caps = opts.caps;
     this.prevEnvironment = this.scene.environment;
     this.prevBackground = (this.scene.background as THREE.Texture | THREE.Color | null) ?? null;
@@ -180,13 +189,35 @@ export class EnvironmentCapability implements SceneCapability {
       this,
       (changed, _state) => {
         if (this.isBuilding) return;
+        // [锐评 F-1 收口] 能力总开关 = envState.envEnabled（原私有 this.enabled 已退役）——
+        // schema 键本就在 "environment" 组内，toggle 派发天然到本回调；不接管则该键改了
+        // 不落地（原实现靠私有门短路挂在最前面，键永无消费者 = 幽灵键）。
+        // 开态走 buildEnvironment（从 envState 全量重写：取图通路/分辨率/背景一并跟上，
+        // 同批兄弟键亦被覆盖，故可直接 return）；关态还原 scene.environment +
+        // applyBackground(null)（背景槽同属本 cap，不随总开关关掉即悬空指向已释放纹理）。
+        // ⚠️ 先处理开关分支并 return：buildEnvironment 内部 isBuilding 置位期间若有
+        // 同步派发（取图路径），再入本回调会被首行 isBuilding 短路，不会递归。
+        if (changed.has("envEnabled")) {
+          if (envState.envEnabled) this.buildEnvironment();
+          else {
+            this.disposeEnvironment();
+            this.scene.environment = this.prevEnvironment;
+            this.applyBackground(null);
+          }
+          // [锐评 X-3 2026-10-04] IBL 是否在场直接决定 light 的 ambient 让位系数（×0.5）——
+          // env 开关翻转必须通知 light 重算（与 `sky.setEnvironmentEnabled` 的跨 cap 通知
+          // 先例同法）。判据「env 在场启用」现已唯一归本键。
+          getTypedCap(this.caps, "light")?.refreshAmbientFromSky?.();
+          this.notify();
+          return;
+        }
         const structural =
           changed.has("envPreset") ||
           changed.has("envResolution") ||
           changed.has("envUseAsBackground") ||
           // [ADR-292 D7] 来源切换是结构性变更（换整条取图通路），必须重建
           changed.has("envSource");
-        if (structural && this.enabled) {
+        if (structural && envState.envEnabled) {
           this.buildEnvironment();
         }
         if (changed.has("envIntensity")) {
@@ -343,7 +374,7 @@ export class EnvironmentCapability implements SceneCapability {
       this.backgroundSrcTex.dispose();
     }
     this.backgroundSrcTex = null;
-    if (!this.enabled || !envState.envUseAsBackground || !srcTex) {
+    if (!envState.envEnabled || !envState.envUseAsBackground || !srcTex) {
       // 不使用：还原构造时的 prevBackground（不是 null 的话保留实例——也可能是 Color）
       this.scene.background = this.prevBackground;
       return;
@@ -480,7 +511,7 @@ export class EnvironmentCapability implements SceneCapability {
       // 覆盖为新返回值，拿覆盖后的字段比「变没变」是循环自证，必须用覆盖前的引用对比。
       const prevSkyTex = this.skySourcedTex;
       // [D-3/D-5] 「跟随天空」前置分派：sky 产物已滤波，直装槽位；同引用未换 → 免整轮重建。
-      if (this.enabled && envState.envSource === "sky") {
+      if (envState.envEnabled && envState.envSource === "sky") {
         const skyTex = this.buildSkyEnvTex(skyForce);
         if (skyTex) {
           if (skyTex === prevSkyTex && this.scene.environment === skyTex) return;
@@ -499,7 +530,7 @@ export class EnvironmentCapability implements SceneCapability {
       // [复审 D] sky 取图失败（skySourcedTex 已被 buildSkyEnvTex 置 null）时，
       // 旧 sky 纹理同样须并入排除集——统一传覆盖前引用，两分支一个口径。
       this.disposeEnvironment(prevSkyTex);
-      if (!this.enabled) {
+      if (!envState.envEnabled) {
         this.scene.environment = this.prevEnvironment;
         this.applyBackground(null);
         return;
@@ -577,17 +608,23 @@ export class EnvironmentCapability implements SceneCapability {
 
   /* -------- 公共 API -------- */
 
+  /**
+   * [锐评 F-1 收口] 能力启停 === 环境贴图总开关，真值源唯一 envState.envEnabled。
+   *
+   * 原实现是私有 `this.enabled` + 直接 buildEnvironment()——与 schema 键各说各话
+   * （本键当时根本不存在），存档只能靠同款私有无前缀 `enabled` 方言续命，
+   * 而迁移模块的判据①又依赖那枚方言键的 false 语义（跨代承重，见 loadState 回填）。
+   * 现 setEnvState 同步 dispatch → 本 cap 回调的 `changed.has("envEnabled")` 分支
+   * 统一 build/还原 + light 通知 + notify，写口不再自备副作用
+   * （对齐 fog/shadow/water/reflector/sky 范式）。
+   */
   setEnabled(v: boolean): void {
-    this.enabled = v;
-    this.buildEnvironment();
-    // [锐评 X-3 2026-10-04] IBL 是否在场直接决定 light 的 ambient 让位系数（×0.5）——env 开关翻转
-    // 必须通知 light 重算（与 `sky.setEnvironmentEnabled` 的跨 cap 通知先例同法）。
-    // 判据已从已退役的 sky 开关改为「env 在场启用」，若不同步补这条通知，翻转 env 就会漏刷 ambient。
-    getTypedCap(this.caps, "light")?.refreshAmbientFromSky?.();
+    setEnvState({ envEnabled: v }, { source: "manual" });
   }
 
+  /** [锐评 F-1 收口] 读 envState.envEnabled——不再是私有门。 */
   isEnabled(): boolean {
-    return this.enabled;
+    return envState.envEnabled;
   }
 
   /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/water）。 */
@@ -604,7 +641,7 @@ export class EnvironmentCapability implements SceneCapability {
    * sky 用它决定「自己装载」还是「转交 env」——避免两个 cap 争抢槽位。
    */
   isSkySourced(): boolean {
-    return this.enabled && envState.envSource === "sky";
+    return envState.envEnabled && envState.envSource === "sky";
   }
 
   /**
@@ -722,7 +759,11 @@ export class EnvironmentCapability implements SceneCapability {
     const savePreset: EnvPresetId =
       envState.envPreset === "custom" && !this.customHdrTex ? "studio" : envState.envPreset;
     persistState(this.id, {
-      enabled: this.enabled,
+      // [锐评 F-1 收口] 能力总开关改落 **schema 键形** `envEnabled`，不再落无前缀
+      // `enabled` 幽灵键（私有门已退役，键与门不再各说各话）。兄弟键保持原无前缀方言
+      // 零迁移——`preset`/`intensity`/`useAsBackground` 另有跨代读者（迁移模块与本文件
+      // loadState 的旧档分支），改名即断链。同族先例：reflector 亦仅前缀总开关、兄弟键不动。
+      envEnabled: envState.envEnabled,
       preset: savePreset,
       // [ADR-292 D7] envSource 是「谁供 scene.environment」的单一事实源（preset/sky/custom），
       // 必须落盘——否则用户选 sky/custom 取图通路重启即丢，回退默认 preset 画面突变。
@@ -739,26 +780,39 @@ export class EnvironmentCapability implements SceneCapability {
     const raw = restoreState(this.id);
     if (!raw) return;
 
-    // [ADR-292 D7] 旧存档（无 envSource 键）归一：跨槽读 sky 的 environment 开关 + 本槽 enabled，
+    // [锐评 F-1 收口] legacy 键形回填（fog/water/shadow/reflector 先例同法）：
+    // 收口前 saveState 落的是**无前缀** `enabled`（私有门态）。回填判「前缀键缺失 ∧
+    // 旧键类型合法」——防 undefined 覆盖混合形态的新键。
+    // ⚠️ 这条回填是**跨代承重**而非礼貌兼容：下方 migrateEnvSource 判据①读 `envEnabled`
+    // 的 false 语义（ADR-292「env 关 + sky IBL 开 → 迁 sky」是保画面不变的唯一强信号）。
+    // 不回填则升级用户的 false 永久失传：判据①恒不成立 → envSource 落回 "preset"，
+    // 画面从「天空 IBL」静默掉回「env 预设」——正是迁移总纲要防的突变。
+    let withLegacy: Record<string, unknown> = raw;
+    if (!("envEnabled" in raw) && typeof raw.enabled === "boolean") {
+      withLegacy = { ...raw, envEnabled: raw.enabled };
+    }
+
+    // [ADR-292 D7] 旧存档（无 envSource 键）归一：跨槽读 sky 的 environment 开关 + 本槽总开关，
     // 按 migrateEnvSource 三条判据补写 envSource。已含 envSource 则幂等返回同引用（零拷贝）。
     // 与 ground-capability.loadState 同口径——否则 ADR-292 的 legacy 迁移纯函数（已带测试）
     // 永不被生产代码调用，旧存档落到「envSource 缺省 = preset」的伪默认。
+    // 读值优先取回填后的 `envEnabled`（新键存在时即新键），旧档才回落到无前缀 `enabled`——
+    // 混合形态存档认新键，防「迁移一次又回退一次」把用户手改静默吞掉。
     const skyState = restoreState("sky");
-    const state = normalizeEnvLegacyState(raw, {
-      preset: raw.preset,
+    const state = normalizeEnvLegacyState(withLegacy, {
+      preset: withLegacy.preset,
       skyEnvironment: skyState ? skyState.environment : undefined,
-      envEnabled: raw.enabled,
+      envEnabled: withLegacy.envEnabled ?? withLegacy.enabled,
     });
-
-    // 能力级 enabled 不入 envState，直接恢复
-    if (typeof state.enabled === "boolean") {
-      this.enabled = state.enabled;
-    }
 
     // 收集 envState 恢复值
     const partial: Partial<EnvState> = {};
     /** custom 通路读回但无 HDR 缓存 → 需在最后统一回落到 preset（含 envSource） */
     let customWithoutCache = false;
+
+    // [锐评 F-1 收口] 能力总开关恢复：原为「不入 envState，直接写私有门」，现经 partial
+    // 随其余 env 组键一次性 setEnvState（auto-model 源，与下方恢复块同口径）。
+    if (typeof state.envEnabled === "boolean") partial.envEnabled = state.envEnabled;
 
     if (typeof state.preset === "string") {
       const p = state.preset as EnvPresetId;

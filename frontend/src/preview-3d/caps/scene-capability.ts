@@ -147,14 +147,24 @@ export interface SceneCapability {
   getMenuNodes?(): PreviewMenuNode[];
 
   /**
-   * 能力总开关节点 id（可选）：**「此 cap 有启停整个能力」的唯一真值源**。
+   * 主开关节点 id（可选）：**「此 cap 在菜单一级行上暴露哪个开关」的唯一真值源**。
+   *
+   * ⚠️ 措辞校准（2026-10-05 设计层锐评 §2）：本方法的**语义按 cap 而异**，不是单一语义——
+   * `sky`/`water`/`environment`/`fog`/`reflector` 报的是**能力级启停**（enabled toggle，
+   * 真值源一律 envState 的 `*Enabled` 键）；**`ground` 报的是可见性开关**
+   * （`ground-visible` → `envState.groundVisible`，ground 侧无能力级 toggle，
+   * 其私有 `enabled` 刻意无 UI 写口）。故首句原「启停整个能力」是以偏概全，
+   * 会让读者以为 ground 的实现是错的——实际是**契约措辞未覆盖其合法用法**。
+   * 消费方只关心「一级行要不要给开关、给哪个节点的」，不关心其语义层级；
+   * 若未来需要区分「能力级 vs 参数级」，须另立字段（如 `masterKind`），
+   * 而不是让本方法继续承载两义。
+   *
    * 消费方三处同契：
    *  - env 面板：cap 行升 folder header 的 headerToggle，子视图 filter 剔除
    *  - 场景组根视图：panel 行 headerToggle（是否给开关由本声明决定）。
    *  - 直达面板（light/shadow/postproc 等）：面板渲染时 filter 移除首行主开关防一二级双份。
-   * 仅当存在「启停整个能力」的 toggle 时实现（enabled/visible toggle）；audio 返回
-   *   getMenuNodes() 顶层节点中对应 id（如 "fog-enabled"、"env-enabled"、"shadow-enabled"、
-   *  "light-enabled"、"pp-enabled"），非控件定义（PreviewControlDef）。
+   * 返回 `getMenuNodes()` 顶层节点中对应 id（如 "fog-enabled"、"env-enabled"、"shadow-enabled"、
+   *  "light-enabled"、"pp-enabled"、"ground-visible"），**非控件定义**（PreviewControlDef）。
    * 守护：env.test.ts 遍历 6 环境 cap 断言必须上报；light/shadow/postproc 由
    *  cap 自身测试断言 getMasterNodeId 声明 + 面板渲染 filter 契约。
    */

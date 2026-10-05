@@ -223,6 +223,10 @@ export const autoSidebar = [
         "link": "/audit-src-map"
       },
       {
+        "text": "3D 环境设计锐评（设计层整体审视，2026-10-05）",
+        "link": "/audit-env-design-critique"
+      },
+      {
         "text": "环境系统面板审查（锐评）— 进度与发现",
         "link": "/audit-env-review"
       },

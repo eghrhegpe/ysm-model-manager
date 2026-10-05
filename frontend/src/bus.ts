@@ -2,6 +2,17 @@
 // 组件 `import { bus }` 使用。
 // 类型契约：事件名拼错 / payload 形状错 → 编译期报错（.ts 调用方受益，.js 存量不受影响）。
 
+// ADR-322 D3：emit 是**全应用失败的汇聚点**（toast / 菜单 / 树刷新 / 快捷键
+// 全经它），却把 handler 崩溃只写裸 console ——GUI 生产无 DevTools，等于
+// 「已知失败形状」在这里被静默吞掉。改经 logError 进日记（error-diary 注册后
+// 落到 Go 日志环 + 诊断页）。
+// 循环风险已核：logError → logUiMsg → DiarySink → AddOpLog 是 async 边界
+// （diary-sink 内部 void 浮空 Promise），不同步回到 emit；且 logError 自身不
+// emit 事件，故 handler 里的 emit 失败不会递归自触发。
+// 本文件此前零 import（纯类型 + 实现），此次为收编失败刻意引入唯一依赖；
+// 选 log.ts（utils/base 纯原语层）而非 toast/日记模块，保持零应用层依赖。
+import { logError } from "@/utils/base/primitives/log.ts";
+
 // ── 事件 payload 类型 ───────────────────────────────
 
 export interface ToastPayload {
@@ -196,14 +207,18 @@ function createBus(): Bus {
       // → 静默不触发）。dev 模式给出显式告警；.js/内联脚本存量调用方借此暴露缺参
       // 原实现手抄 8 个 void 事件名第二份清单，现复用 isVoidEvent 消除漂移源
       if (args.length === 0 && !isVoidEvent(event)) {
-        console.warn(`[bus] 事件 "${event}" 声明带 payload，emit 未传参数`);
+        // ADR-322 D3：日志框架 bug（声明与调用不一致）也属失败，必须进日志通道，
+        // 不能只留 console——这类缺陷的唯一现场就是事件名与调用点。
+        logError("bus", `事件 "${event}" 声明带 payload，emit 未传参数`);
       }
       // 拷贝快照再遍历：handler 内 on/off 修改注册表不影响本次派发
       (listeners[event] || []).slice().forEach((fn) => {
         try {
           fn(args[0]);
         } catch (e) {
-          console.error(`[bus] 事件 "${event}" 处理出错:`, e);
+          // ADR-322 D3：原先裸 console.error —— 全应用失败汇聚点却是失败盲区。
+          // 保留 console 由 logError 内部完成（先 console 后 sink），不重复打印。
+          logError("bus", `事件 "${event}" 处理出错`, e);
         }
       });
     },

@@ -9,6 +9,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { bindSubBar } from "@/views/app-content/tabs-shell.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { __resetChannelHealthForTest, renderChannelHealth } from "./channel-health.ts";
 import { initSyncConflictPanel } from "./conflicts.ts";
 import { copyWithToast } from "./copy-toast.ts";
 import { initHealthPanel } from "./health.ts";
@@ -17,6 +18,9 @@ import { applyPerfModeUI, initPerfPanel, renderLoadTraceSection } from "./perf.t
 
 // 对外 API 兼容：createDedupSession 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）
 export { createDedupSession } from "./dedup.ts";
+// ADR-322 D2：健康位 memo 的复位钩子随本页对外 re-export（init.test.ts 共用本页 mock 面，
+// 单开新测试文件会绕过 vi.mock("@/backend/app.ts") 拿到真 getApp 而 fail-open）。
+export { __resetChannelHealthForTest };
 
 function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
   root.getElementById("diag-refresh")?.addEventListener("click", () => {
@@ -231,6 +235,9 @@ export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   dgInBindTraceTab(root, esc);
   dgInBindSubBars(root, esc);
   loadDiagnosticsLogs(root, esc);
+  // ADR-322 D2：通道健康常驻条与日志列表同批渲染——两者是同一事实的两面
+  // （列表是「已落盘的证据」，红条是「没能落盘」）。放其后免得 await 拖慢首屏列表。
+  renderChannelHealth(root);
   dgInBindLogFilter(root, esc);
   dgInBindLogOpFilter(root, esc);
   dgInBindLogSearch(root, esc);

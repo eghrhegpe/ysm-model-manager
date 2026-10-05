@@ -7,7 +7,7 @@
 //  - startDedup：单类型/全类型目录扫描 / 无目录 / 无重复 / exec 移入回收站 / 取消
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { flushPromises, waitFor } from "@/test-utils/wait.ts";
-import { initDiagnostics, createDedupSession } from "./init.ts";
+import { initDiagnostics, createDedupSession, __resetChannelHealthForTest } from "./init.ts";
 import { dgLsResetCapsMemo } from "./logs.ts";
 import { clearLoadTraces, recordLoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { diagnosticsHTML } from "@/views/app-content/tpl.ts";
@@ -16,7 +16,9 @@ const { busEmit, busOn, getApp, can, isViewerMode } = vi.hoisted(() => ({
   busEmit: vi.fn(),
   busOn: vi.fn(() => () => {}),
   getApp: vi.fn(),
-  can: vi.fn(() => true),
+  // 收 binding 名单形参（真接口是 can(binding: string)）：单能力门控用例需要按名放行/拦截，
+  // 而零形参的 vi.fn 会把 mockImplementation 的实现判成类型错误。
+  can: vi.fn((_binding?: string) => true),
   isViewerMode: vi.fn(() => false),
 }));
 
@@ -68,6 +70,7 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
       <button class="diag-log-fbtn" data-status="warn">警告</button>
       <button class="diag-log-fbtn" data-status="skipped">跳过</button>
     </div>
+    <div id="diag-log-channel-health" data-sub-group="logs" data-sub-pane="op runtime" style="display:none"></div>
     <div id="diag-log-list" data-sub-group="logs" data-sub-pane="op"></div>
     <div id="diag-runtime-list" data-sub-group="logs" data-sub-pane="runtime" style="display:none"></div>
     <div class="diag-pane" data-sub-group="logs" data-sub-pane="trace" style="display:none">
@@ -92,6 +95,9 @@ function mockApp(overrides: Record<string, unknown> = {}) {
     LoadAppConfig: vi.fn(() => ({ mcRoot: "/mc" })),
     ListVersionInstances: vi.fn(() => []),
     ScanModelEntriesWithLabel: vi.fn(() => []),
+    // ADR-322 D2：默认健康（缺这一行则 app.GetLogChannelHealth 抛 TypeError，
+    // 被 fetchHealth 的失败分支吃成「不健康」→ 每条既有用例都被红条污染）
+    GetLogChannelHealth: vi.fn(() => ({ persistOK: true })),
     ...overrides,
   });
 }
@@ -132,6 +138,9 @@ beforeEach(() => {
   document.body.innerHTML = "";
   can.mockReturnValue(true);
   isViewerMode.mockReturnValue(false);
+  // ADR-322 D2：健康位 memo 是进程级锁存，测试间不复位会让「不健康」用例跨例污染
+  // （后一个用例拿到前一个的 Promise 而不重新问 mock）。
+  __resetChannelHealthForTest();
   mockApp();
 });
 
@@ -478,6 +487,89 @@ describe("initDiagnostics — 日志面板", () => {
     expect(toolbar.style.display).not.toBe("none");
     expect(clearBtn.style.display).not.toBe("none");
     expect(opList.style.display).not.toBe("none");
+  });
+});
+
+/**
+ * ADR-322 D2：日志通道健康常驻条（元失败的观测面）。
+ * 关键口径见 channel-health.ts ——「读健康位失败」算**不健康**而非静默（宁可误报不可漏报），
+ * 能力不可用才静默留白；任何分支都不得 logError（自证循环）。
+ */
+describe("initDiagnostics — 日志通道健康条（ADR-322 D2）", () => {
+  const barOf = (root: ShadowRoot) =>
+    root.getElementById("diag-log-channel-health") as HTMLElement;
+
+  it("健康：保持隐藏且不写 DOM", async () => {
+    mockApp({ GetLogChannelHealth: vi.fn(() => ({ persistOK: true })) });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await flushPromises();
+    expect(barOf(root).style.display).toBe("none");
+    expect(barOf(root).innerHTML).toBe("");
+  });
+
+  it("不健康 + memory-state：渲染红条与原因文案", async () => {
+    mockApp({
+      GetLogChannelHealth: vi.fn(() => ({ persistOK: false, reason: "memory-state" })),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await waitFor(() => barOf(root).style.display !== "none");
+    const bar = barOf(root);
+    expect(bar.textContent).toContain("日志未落盘");
+    expect(bar.textContent).toContain("应用数据目录不可用");
+    expect(bar.querySelector(".diag-msg-error")).not.toBeNull();
+    expect(bar.querySelector(".diag-channel-health-hint")).not.toBeNull();
+  });
+
+  it("不健康 + idb-unavailable（网页版码）：分文案，不落到 Go 的机器码", async () => {
+    mockApp({
+      GetLogChannelHealth: vi.fn(() => ({ persistOK: false, reason: "idb-unavailable" })),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await waitFor(() => barOf(root).textContent!.includes("浏览器存储"));
+    expect(barOf(root).textContent).not.toContain("idb-unavailable");
+  });
+
+  it("未知 reason 码：回落「原因未分类」，不显示裸机器码", async () => {
+    mockApp({
+      GetLogChannelHealth: vi.fn(() => ({ persistOK: false, reason: "brand-new-code" })),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await waitFor(() => barOf(root).textContent!.includes("原因未分类"));
+    expect(barOf(root).textContent).not.toContain("brand-new-code");
+  });
+
+  it("读健康位失败 → 报不健康（状态未知不可默认健康）", async () => {
+    mockApp({ GetLogChannelHealth: vi.fn(() => Promise.reject(new Error("桥断了"))) });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await waitFor(() => barOf(root).textContent!.includes("原因未分类"));
+  });
+
+  it("能力不可用：静默不渲染、不调绑定", async () => {
+    can.mockImplementation((b) => b !== "GetLogChannelHealth");
+    const health = vi.fn(() => ({ persistOK: false, reason: "memory-state" }));
+    mockApp({ GetLogChannelHealth: health });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await flushPromises();
+    expect(barOf(root).style.display).toBe("none");
+    expect(health).not.toHaveBeenCalled();
+  });
+
+  it("健康位进程内只问一次（锁存语义，重渲不重复 RPC）", async () => {
+    const health = vi.fn(() => ({ persistOK: true }));
+    mockApp({ GetLogChannelHealth: health });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await flushPromises();
+    // 切子屏会重载日志列表，但健康位是准静态的：不该每次都过桥
+    (root.querySelector('.diag-sub-tab[data-sub="runtime"]') as HTMLElement).click();
+    await flushPromises();
+    expect(health).toHaveBeenCalledTimes(1);
   });
 });
 describe("startDedup（会话工厂 createDedupSession）", () => {

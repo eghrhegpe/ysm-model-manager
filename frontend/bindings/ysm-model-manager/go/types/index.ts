@@ -22,6 +22,7 @@ export type {
     InstanceStatus,
     LauncherInstance,
     LogCaps,
+    LogChannelHealth,
     ModelEntry,
     PackInfo,
     PackMetaView,

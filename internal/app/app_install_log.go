@@ -34,6 +34,17 @@ func (a *App) GetLogCaps() types.LogCaps {
 	return types.LogCaps{Op: a.logger.Cap(), Runtime: a.runtimeLogs.Cap()}
 }
 
+// GetLogChannelHealth 返回日志通道自身的健康状态（ADR-322 D1）
+//
+// 元失败的观测面：内存态 logger / 落盘失败此前只留 log.Printf（进只在内存的
+// runtime 环、重启即失），前端无从知晓「日志其实没在落盘」。诊断页据此渲染常驻
+// 红条，启动期据此弹一次 toast。
+// 口径与 go/tags 内存态显式返回错误（tags.go「P1 修复」注释）同源：不是让日志
+// 阻塞主流程，而是让「不阻塞」这件事本身可被看见。
+func (a *App) GetLogChannelHealth() types.LogChannelHealth {
+	return a.logger.Health()
+}
+
 // ClearRuntimeLogs 清空运行时日志缓冲
 func (a *App) ClearRuntimeLogs() {
 	a.runtimeLogs.Clear()

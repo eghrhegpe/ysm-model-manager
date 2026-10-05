@@ -72,6 +72,7 @@ async function hydrateWebLog(ring: Array<Record<string, unknown>>): Promise<void
       const saved = await idbGet<unknown>("config", logKeyOf(ring));
       if (Array.isArray(saved)) ring.push(...(saved as Array<Record<string, unknown>>));
     } catch {
+      markWebLogPersistFailed();
       if (!webLogHydrated[flag]) console.warn("[web-store] IDB 不可用，日志无法恢复");
     } finally {
       // 代际守卫：await 期间发生 clear/reset（epoch 已变）→ 读的是清前快照，
@@ -87,7 +88,10 @@ async function hydrateWebLog(ring: Array<Record<string, unknown>>): Promise<void
 }
 
 /** 追加日志：先 hydrate（合并上会话旧日志，防 fresh 会话先写后读覆盖丢失），
- *  截断后写回 IDB（fire-and-forget：swallowError 记录失败；隐私模式/写失败静默降级为纯内存） */
+ *  截断后写回 IDB（fire-and-forget）。ADR-322：写失败**不再** logWarn——
+ *  logWarn 会经日记 sink 回到 AddOpLog → pushWebLog → idbSet 失败，构成自指
+ *  无限循环（每轮都跨一次 microtask，故不会栈溢出，只会静默烧 CPU）。改为锁存
+ *  健康位由诊断页呈现，这是「失败上报通道自身失效」唯一可靠的落点。 */
 async function pushWebLog(
   ring: Array<Record<string, unknown>>,
   cap: number,
@@ -96,7 +100,50 @@ async function pushWebLog(
   await hydrateWebLog(ring);
   ring.push(entry);
   if (ring.length > cap) ring.splice(0, ring.length - cap); // 仅保留最近 cap 条（环形截断）
-  swallowError(idbSet("config", logKeyOf(ring), ring));
+  idbSet("config", logKeyOf(ring), ring).catch(markWebLogPersistFailed);
+}
+
+// ADR-322 D1：网页版的「通道不健康」形态与桌面不同——桌面是「日志写不进文件」，
+// 网页版是「日志写不进 IndexedDB，退化为纯内存，刷新即失」。后者此前完全静默
+//（pushWebLog 的 swallowError 只进 logWarn，而 logWarn 又经日记 sink 回到
+// AddOpLog → pushWebLog 本身，形成自指噪声环），用户只能靠「日志莫名清空」反推。
+// 故此处显式锁存并对外暴露，配合诊断页常驻条（ADR-322 D2）。
+const LOG_HEALTH_KEY = "web:log-health";
+/** reason 机器码：网页版专用，与 Go 侧 ChannelReason* 互不重叠（前端按码分文案） */
+const WEB_REASON_IDB = "idb-unavailable";
+let webLogPersistOK = true;
+let webLogPersistProbe: Promise<boolean> | null = null;
+
+/** 锁存不可用：只置 false 不复位（一次失败即视为通道降级，避免抖动导致红条闪烁） */
+function markWebLogPersistFailed(): void {
+  webLogPersistOK = false;
+}
+
+/**
+ * 主动探针：写-删一个哨兵键验证 IDB **可写**（隐私模式常见「可读不可写」，
+ * 只读探针会漏判），结果按 Promise 缓存防并发重复探测。
+ * 注意：走 .catch 直接吞（不 logWarn）——logWarn 会经日记 sink 绕回本环。
+ */
+function probeWebLogPersistence(): Promise<boolean> {
+  if (webLogPersistProbe) return webLogPersistProbe;
+  const p = idbSet("config", LOG_HEALTH_KEY, { at: Date.now() })
+    .then(() => idbDel("config", LOG_HEALTH_KEY))
+    .then(
+      () => true,
+      () => false,
+    )
+    .then((ok) => {
+      if (!ok) markWebLogPersistFailed();
+      return ok;
+    });
+  webLogPersistProbe = p;
+  return p;
+}
+
+/** 对外健康快照（GetLogChannelHealth 实现）：未探针失败且无既往失败 → 健康 */
+function webLogPersistenceHealth(): { persistOK: boolean; reason?: string } {
+  if (webLogPersistOK) return { persistOK: true };
+  return { persistOK: false, reason: WEB_REASON_IDB };
 }
 
 async function getWebImportLogs(): Promise<unknown> {
@@ -177,6 +224,18 @@ export function __resetWebLogStateForTest(): void {
   _webLogEpoch.runtime++;
   webLogHydrating.import = null;
   webLogHydrating.runtime = null;
+  // ADR-322：健康锁存位与探针缓存同属模块级状态，须一并重置，否则测试间污染
+  webLogPersistOK = true;
+  webLogPersistProbe = null;
+}
+
+/**
+ * 测试钩子：只重置探针缓存、**保留**健康锁存位。
+ * 存在的理由是「不可复位」是本契约的核心语义（ADR-322 D1）：用整体 reset 钩子
+ * 验证它会连带把锁存位清掉，测出来的其实是「探针重新跑过一次」，等于没测。
+ */
+export function __resetWebLogProbeForTest(): void {
+  webLogPersistProbe = null;
 }
 
 // --- 标签（config store: tags:<path> = string[]）---
@@ -318,6 +377,15 @@ export const webStoreBindings = {
   // 日志环容量单源下发（锐评⑤：诊断页检索窗口不再手写镜像）——op 读配置
   // logMaxEntries（与 importLogCap 同口径），runtime 恒为 web 环常量
   GetLogCaps: async () => ({ op: importLogCap(), runtime: WEB_RUNTIME_LOG_CAP }),
+  // ADR-322 D1：网页版「通道健康」语义不对等——无 Go 进程即无「落盘失败」，
+  // 但有等价的第二形态：IDB 不可用时日志只剩内存（刷新即失，见 pushWebLog 的
+  // 静默降级）。故此处报「持久化是否可用」而非「落盘是否可用」，
+  // 前端文案按 reason 区分，不假设桌面口径。首次调用顺带跑一次可写探针：
+  // 隐私模式「可读不可写」只有写-删探针能发现，纯读路径永远健康。
+  GetLogChannelHealth: async () => {
+    await probeWebLogPersistence();
+    return webLogPersistenceHealth();
+  },
   AddImportLog: (
     modelName: string,
     sourcePath: string,

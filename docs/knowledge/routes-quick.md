@@ -983,6 +983,8 @@
 | 注册失败 catch 后 fall-through 重新占位 currentHandle | - | 僵尸句柄致模块永久静默失效（回滚须返回空 handle、不占位） |
 | 日记写入失败外溢 | - | 必须 try/catch 兜底，不影响 toast 链路 |
 | Go AppError 文案（/`目标路径：`全角冒号 token）变更须同步 fixture + stripAppErrorPaths 正则（双侧测试钉契约，ADR-207 D2） | `源路径：` | - |
+| 已不是完整事实 —— 另有 outbox 第二通道 + `GetLogChannelHealth` 锁存位 + 诊断页红条（ADR-322）；只留 console 等于元失败留在 GUI 不可见区 | `sink 失败只 console.warn` | - |
+| 元失败层（通道自身失效）**禁** /`logError`/`pushToDiary` 收编 —— 那会经 sink 回到 `AddOpLog` 失败处，构成跨 microtask 无限循环（不栈溢出，静默烧 CPU）；此类处一律裸 try/catch 静默 + 锁存健康位（ADR-322 D2） | `logWarn` | - |
 | 手写 adv-filter 弹窗 DOM | - | 与全局弹窗样式 / 焦点陷阱不一致；必须复用 modal.ts 的 registerDlg |
 | adv-filter 输入不校验就提交 | - | min > max 传后端报错；必须在 validate() 拦截并在 |
 | 重复打开 batch-rename 不 close | - | 上一个 Promise 悬挂、调用方 await 卡死；必须先 close 结算 |
@@ -1116,6 +1118,8 @@
 | 未走 bedrock.go 做基岩版转换 | - | voxel 位置偏移；必须经 bedrock.go 转换 |
 | 直接 os.WriteFile | - | 并发写破坏日志；必须经 WriteFileAtomic 原子追加 |
 | 日志未轮转 | - | 单个文件无限膨胀；必须经日志轮转策略 |
+| 已不是完整事实 —— 另有 `Health()` 锁存位 + `[meta]` runtime 环保底（ADR-322 D1/D3）；只 log.Printf 等于退回元失败盲区 | `落盘失败只记系统 log` | - |
+| 裁剪逻辑在 op 环与 runtime 环各写一遍 | - | 两处实现漂移一次即产生「op 环保底而 runtime 环不保底」的半修静默态；一律走 `ring.go` `trimRing` |
 | 前端手写 mcmeta.json 解析 | - | 与 Go 解析字段不一致、漏检 pack_format；必须交 Go 解析 |
 | 未限制 LimitReader/maxLangSize | - | 大语言文件 OOM；必须用 LimitReader 截断 |
 | 手写路径安全检查 | - | 越权路径穿越、符号链接绕过；必须经 IsInside |

@@ -5,6 +5,7 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/views/app-content/diagnostics/init.ts
+  - frontend/src/views/app-content/diagnostics/channel-health.ts
   - frontend/src/views/app-content/diagnostics/logs.ts
   - frontend/src/views/app-content/diagnostics/dedup.ts
   - frontend/src/views/app-content/diagnostics/dedup-policy.ts
@@ -16,6 +17,7 @@ source_files:
   - frontend/src/views/app-content/diagnostics/perf-trace.ts
 auto_fields:
   symbols_with_lines:
+    - __resetChannelHealthForTest
     - applyPerfModeUI
     - BASELINE_CONTROL_IDS
     - bindPerfCopyHandlers
@@ -42,6 +44,7 @@ auto_fields:
     - perfScopeHint
     - populatePerfTargetOptions
     - readActiveBenchMode
+    - renderChannelHealth
     - renderHealthReport
     - renderLoadTraceSection
     - runHealthAudit
@@ -112,6 +115,7 @@ status: active
   - ⚠️ **按钮不得住进结果容器（ADR-288 §1 实测 dead-end）**：旧实现把「引导空态 + 扫描按钮」放在 `#diag-sync-conflict-list` **内部**，点它才渲染参数面板、面板内再点一次才扫描（三次点击，首次零信息增量）；而结果渲染是 `list.innerHTML` 整块替换，配合 `app-content` 的**面板按页缓存**（`init` 仅 `isNew` 跑）⇒ 首次扫描后入口**会话内不可复活**，换实例 / 复扫只能重载应用。`health` 同形同病。现两者都是 `pane > (bar + 结果区)` 两段式，墓碑测试 = 「扫描后按钮仍在栏内且可再次触发」（`conflicts.test.ts` / `health.test.ts`，夹具用**真实父子/兄弟嵌套**；旧夹具把按钮与结果容器建成兄弟，比真相宽松，故一路绿灯）。
   - **冲突检测（跨实例同名扫描）退役**（2026-09-21，用户拍板「直接下线」）：原 conflict tab 的 `scanConflicts` 聚合各整合包 CustomDir 条目判定「同名 + 哈希不唯一」，退役理由三条——① 扫描成本全页最重（遍历所有实例）而输出**只读无后续动作**；② 判据覆盖面已被 sync-conflict tab（内容级 + 可解决）与仓库页去重 tab 挤压，其注释自陈的漏报场景（两实例同名且哈希均缺失）本就「由 sync-conflict tab 兜底」；③ 与 sync-conflict 在用户视角同叫「冲突」难以区分。曾有的护栏修正（2026-09-18：只按名聚合会把 PushResources 正常分发产物误报成冲突，改判「同名 + 哈希不唯一」）不回滚——那是判据正确性，与本次「要不要这个入口」是两回事。Go `DetectConflicts` 本体保留（`handleSyncConflicts` 同步链仍在用）；同批清理仅本 tab 消费的 i18n 死键（`diagnostics.conflict`/`startScan`/`scanningDot`/`webNoConflictScan`/`noModpacks`/`noNameConflict`/`conflictsFound`/`modpackCount`/`contentDiffers`/`moreCount`）、无主 CSS（`.btn-base.accent.scanning` + `@keyframes scanPulse`）与 `dgInHideDesktopOnly` 名单项；`scanHint` 文案改指「扫描同步冲突」按钮；若日后重建，参考 git 历史中 `scanConflicts` 的哈希判据版本。
 - `logs.ts` — 操作日志渲染：`OP_META` 七种中文标签+图标，状态图标优先读 `Level`（error→❌ / warn→⚠️ / debug→🔍 / fatal→💀 / info→✅），无 Level 按 `Status` 兜底；消费 Go `logs` 包（见知识卡 `go_logs`）
+- `channel-health.ts` — **日志通道健康常驻红条**（ADR-322 D1 观测面）：读 `GetLogChannelHealth` → `persistOK=false` 时在日志工具栏与列表之间渲染红色提示（主行「日志未落盘：本次会话的日志只存在于内存中，重启即失」+ 次行 `Reason` 机器码映射的中文原因；机器码见 `go/types|ChannelReason*` 与 `web-store|WEB_REASON_IDB`）。三条口径：**① 读健康位失败判「不健康」而非静默**（状态未知 ≠ 健康，宁可误报不可漏报，同 Go 侧零值 Logger 口径）；② 任何分支都**不 `logError`**（这是全仓唯一「明知通道可能已死还要往里写」的位置，报错即诊断页自证循环）；③ 能力不可用（`can("GetLogChannelHealth")` 假，如 android 黑名单）静默不渲染——报错同样要过那条通道。进程级 memo（Go 侧健康位锁存不回弹，故只问一次）。只陈述事实**不做修复**（不重试/不写日志/不弹 toast），否则观测面与修复面缝在一起会在通道再坏时自己刷自己
 - `perf.ts` — 性能面板 facade：事件接线 + re-export，业务逻辑拆至：
   - `perf-common.ts` — 共享工具层（sectionHeader / 复制按钮 / 守卫 / 错误辅助）
   - `perf-single-bench.ts` — single-bench（CLI 文本流消费 + 柱状图 + 趋势图）

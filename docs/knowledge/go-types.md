@@ -28,6 +28,10 @@ auto_fields:
     - BedrockModel
     - Bone2D
     - BundledRegistryJSON
+    - ChannelReasonMarshalFailed
+    - ChannelReasonMemoryState
+    - ChannelReasonMkdirFailed
+    - ChannelReasonWriteFailed
     - ContainerExts
     - Cube2D
     - CustomFileInfo
@@ -91,6 +95,7 @@ auto_fields:
     - LitematicVoxelData
     - LoadRegistry
     - LogCaps
+    - LogChannelHealth
     - LogLevel
     - LogStatus
     - MatchZipEntry

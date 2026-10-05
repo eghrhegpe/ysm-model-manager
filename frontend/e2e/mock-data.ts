@@ -236,6 +236,8 @@ export const MOCK_DATA = {
   GetImportLogs: [],
   GetRuntimeLogs: [],
   GetLogCaps: { op: 500, runtime: 300 }, // 网页版日志环容量（对齐 web-store WEB_*_LOG_CAP）
+  // ADR-322 D2：e2e 默认健康（红条不出现，否则每个走诊断页的 e2e 都被红条占位）
+  GetLogChannelHealth: { persistOK: true },
   ClearImportLogs: undefined,
   RenameFile: undefined,
   // 设置页「选择目录」返回非空路径（走通 SelectDirectory → saveCfg 保存链路）

@@ -472,6 +472,15 @@ export interface LogCaps {
     "runtime": number;
 }
 
+export interface LogChannelHealth {
+    "persistOK": boolean;
+
+    /**
+     * 机器码，见上方 ChannelReason* 常量
+     */
+    "reason"?: string;
+}
+
 /**
  * LogLevel 日志级别（诊断页按 Level 过滤；向后兼容——旧日志无此字段时前端按 Status 兜底）
  */

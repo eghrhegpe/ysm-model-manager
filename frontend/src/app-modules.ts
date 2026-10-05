@@ -1,7 +1,7 @@
 // ===== 所有 ES module 组件的统一入口 =====
 
 import { prefetchStatsWorker } from "@/backend/browser-adapter.ts";
-import { makeDiarySink } from "@/backend/diary-sink.ts";
+import { drainDiaryOutboxToMainChannel, makeDiarySink } from "@/backend/diary-sink.ts";
 import { installGlobalErrorListeners } from "@/backend/global-error-listeners.ts";
 import { Window } from "@/backend/runtime.ts";
 import { installYsmDecodeBridge } from "@/backend/ysm-decode-bridge.ts";
@@ -114,6 +114,13 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
           installGlobalErrorListeners();
           // ADR-317：Android 桥解码 listener（桌面/网页 getAndroidBridge() null → no-op）
           installYsmDecodeBridge();
+          // ADR-322 D2：积压的日记第二通道在此重投。刻意不 await 到本步——
+          // 主通道不通时每条都要等一轮桥往返，积压越多启动越慢；用 then/catch
+          // 挂在启动链外，失败静默（outbox 会保留条目，下个会话再试）。
+          void drainDiaryOutboxToMainChannel().catch(() => {
+            // 主通道仍不可用：drain 内部已逐条截断并保留剩余，此处无需再报
+            // （报错会经 toast → 日记 → AddOpLog → 失败 → outbox，回到起点）
+          });
         },
       },
     ]);

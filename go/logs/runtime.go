@@ -28,6 +28,16 @@ func NewRuntimeBuffer(capacity int) *RuntimeBuffer {
 	return &RuntimeBuffer{logs: []types.RuntimeLog{}, cap: capacity}
 }
 
+// metaTag 元失败条目的行首 tag：go/logs 与 internal/app 在**通道自身失效**时
+// 以 `[meta]` 前缀写 runtime 环（该环只在内存，是落盘不可用时仅剩的证据带）。
+// 受保护分区据此保底不裁（ADR-322 D3）——理由与 op 环 isUIOpLog 同源：
+// 元失败风暴本身就是高频写入，被普通日志挤没等于没留痕。
+const metaTag = "meta"
+
+// isMetaLog 受保护分区谓词：行首 [meta] 前缀（extractRuntimeTag 已按 ^ 锚定解析，
+// 中段出现的 `[meta]` 不算——与 runtimeTagRe 的行首锚定口径同源）。
+func isMetaLog(e types.RuntimeLog) bool { return e.Tag == metaTag }
+
 // Write 实现 io.Writer：每次调用记录一条运行时日志（标准库 log 一行即一次 Write）
 //
 // ADR-289：捕获层顺带提取 `[tag]` 前缀并推断级别——标准库 log 无级别也无结构，
@@ -44,15 +54,8 @@ func (b *RuntimeBuffer) Write(p []byte) (int, error) {
 		Level:     inferRuntimeLevel(msg),
 		Tag:       extractRuntimeTag(msg),
 	})
-	if len(b.logs) > b.cap {
-		b.logs = b.logs[len(b.logs)-b.cap:]
-		// 底层数组远大于容量时重分配，释放突发峰值占用
-		if cap(b.logs) > b.cap*4 {
-			nb := make([]types.RuntimeLog, len(b.logs))
-			copy(nb, b.logs)
-			b.logs = nb
-		}
-	}
+	// ADR-322 D3：meta 分区保底不裁（与 op 环 trimRing 同源口径）
+	b.logs = trimRing(b.logs, b.cap, isMetaLog)
 	return len(p), nil
 }
 

@@ -12,6 +12,7 @@ auto_fields:
   symbols_with_lines:
     - __resetI18nStateForTest
     - __resetModalStateForTest
+    - __resetWebLogProbeForTest
     - __resetWebLogStateForTest
     - BASE_LANG
     - CachePolicy

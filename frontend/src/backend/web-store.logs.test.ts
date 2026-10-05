@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getIdbMock } from "@/test-utils/idb-mock.ts";
 const idbMock = getIdbMock();
 import { browserAdapter } from "./browser-adapter.ts";
-import { __resetWebLogStateForTest } from "./web-store.ts";
+import { __resetWebLogProbeForTest, __resetWebLogStateForTest } from "./web-store.ts";
 
 // idb 层内存实现（对齐 browser-adapter.test.ts 的 mock 模式）
 
@@ -62,5 +62,51 @@ describe("日志 IDB 持久化（ADR-071 #8 + 审核 A #3 竞态修复）", () =
     expect(logs.some((l) => l.ModelName === "狐狸.ysm")).toBe(true);
     await Promise.resolve();
     expect(idbMock._store.has("web:import-logs")).toBe(true);
+  });
+});
+
+// ADR-322 D1：网页版通道健康锁存。核心语义是「不可驱逐」——锁存后不会被下一次
+// 成功写复位（避免红条随抖动闪烁、也避免「刚好成功一次就当没病过」）。
+// 失败注入用 mockRejectedValueOnce 而非改共享 mock：一次性消费，天然无跨用例残留。
+describe("日志通道健康锁存（ADR-322 D1）", () => {
+  type Health = { persistOK: boolean; reason?: string };
+  const idbBusy = (): void => {
+    idbMock.idbSet.mockRejectedValueOnce(new Error("QuotaExceededError"));
+  };
+
+  it("IDB 正常：GetLogChannelHealth 报健康", async () => {
+    const h = (await browserAdapter.GetLogChannelHealth()) as Health;
+    expect(h.persistOK).toBe(true);
+    expect(h.reason).toBeUndefined();
+  });
+
+  it("探针写失败 → 锁存不健康 + reason=idb-unavailable", async () => {
+    idbBusy();
+    const h = (await browserAdapter.GetLogChannelHealth()) as Health;
+    expect(h.persistOK).toBe(false);
+    expect(h.reason).toBe("idb-unavailable");
+  });
+
+  it("探针失败后 IDB 恢复：仍报不健康（锁存不可复位）", async () => {
+    idbBusy();
+    await browserAdapter.GetLogChannelHealth();
+    __resetWebLogProbeForTest(); // 只重置探针缓存（健康位保留，与生产语义一致）
+    const h = (await browserAdapter.GetLogChannelHealth()) as Health;
+    expect(h.persistOK).toBe(false);
+  });
+
+  it("pushWebLog 写失败也置位（不只探针能发现）", async () => {
+    idbBusy(); // 第一次 idbSet 落在 pushWebLog 自身，探针尚未跑
+    await browserAdapter.AddOpLog("ui", "日记标题", "", "", 0, "failed", "细节");
+    const h = (await browserAdapter.GetLogChannelHealth()) as Health;
+    expect(h.persistOK).toBe(false);
+  });
+
+  it("GetLogChannelHealth 写可写探针：成功路径不留残留键", async () => {
+    await browserAdapter.GetLogChannelHealth();
+    expect(idbMock.idbSet).toHaveBeenCalledWith("config", "web:log-health", {
+      at: expect.any(Number),
+    });
+    expect(idbMock._store.has("web:log-health")).toBe(false);
   });
 });

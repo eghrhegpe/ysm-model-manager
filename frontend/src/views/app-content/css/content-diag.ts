@@ -228,6 +228,15 @@ export const contentDiagCSS: string = `
 .diag-msg-error { color:var(--status-error); }
 .diag-msg-success { color:var(--status-success); }
 .diag-msg-muted { color:var(--muted); }
+/* ADR-322 D2：日志通道健康常驻条。日志写不进文件/IndexedDB 时，页面本身
+   一路通畅（这正是元失败难被察觉的原因），唯一证据只在「打不开的日志页」里——
+   故红条挂在日志组顶部常驻，不随列表滚动（flex-shrink:0，.diag-result 才是滚动容器）。
+   与 .diag-msg 分族而非复用：那是列表内空态行，生命周期绑 innerHTML 覆写；
+   本条是外框级常驻件，内容由 renderChannelHealth 自己覆写。
+   本壳不自带 padding——内层 .diag-msg 行自带 var(--sp-3)，外壳再加即双份内边距。 */
+.diag-channel-health { flex-shrink:0; background:color-mix(in srgb, var(--status-error) 8%, transparent); border-left:3px solid var(--status-error); }
+/* 原因行缩进对齐主文案（.diag-msg 的 padding 左 12px vs 本行 3px 边框 + 9px） */
+.diag-channel-health-hint { display:block; padding:0 var(--sp-3) var(--sp-2) calc(var(--sp-3) + 3px); font-size:var(--fs-micro); color:var(--muted); }
 .diag-dedup-summary { padding:var(--sp-vh-pane);font-size:var(--fs-sm);color:var(--txt);border-bottom:1px solid var(--bd); }
 .diag-dedup-summary-hint { display:block;font-size:var(--fs-micro);color:var(--muted);margin-top:2px; }
 .diag-dedup-rt { display:flex;align-items:center;gap:4px;padding:6px 12px 2px;font-size:var(--fs-xs);font-weight:600;color:var(--txt); }

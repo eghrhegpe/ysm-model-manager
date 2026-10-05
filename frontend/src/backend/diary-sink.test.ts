@@ -4,13 +4,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeDiarySink } from "./diary-sink.ts";
 import { flushPromises } from "@/test-utils/index.ts";
 
-const { addOpLogMock, dbgMock } = vi.hoisted(() => ({
+const { addOpLogMock, dbgMock, enqueueMock } = vi.hoisted(() => ({
   addOpLogMock: vi.fn().mockResolvedValue(undefined),
   dbgMock: vi.fn(),
+  enqueueMock: vi.fn(),
 }));
 
 vi.mock("./app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({ AddOpLog: addOpLogMock }),
+}));
+
+// ADR-322 D2：主通道失败必须补投 localStorage 第二通道——dbg 受调试门控，
+// 唯一的报告者把报告丢了就是元失败。mock 掉 outbox 隔离断言主通道失败分支。
+vi.mock("./diary-outbox.ts", () => ({
+  enqueueDiaryOutbox: enqueueMock,
+  drainDiaryOutbox: vi.fn().mockResolvedValue(0),
 }));
 
 // P1-6 修复：diary-sink 改用 dbg 环形缓冲替代 console.warn——
@@ -22,6 +30,7 @@ vi.mock("@/utils/debug/debug.ts", () => ({
 beforeEach(() => {
   addOpLogMock.mockClear();
   dbgMock.mockClear();
+  enqueueMock.mockClear();
 });
 
 describe("makeDiarySink", () => {
@@ -69,5 +78,27 @@ describe("makeDiarySink", () => {
     } finally {
       window.removeEventListener("unhandledrejection", onRejection);
     }
+  });
+
+  // ADR-322 D2：dbg 是门控的（关调试即静默），故失败必须同时进第二通道。
+  // 断言 entry 原样透传——outbox 是最后一道证据，落库前不该被二次加工。
+  it("AddOpLog reject → 原始 entry 进 outbox 第二通道", async () => {
+    addOpLogMock.mockRejectedValueOnce(new Error("bridge down"));
+    makeDiarySink()({ title: "保存失败", detail: "超时", status: "failed" });
+    await flushPromises();
+    await flushPromises();
+    expect(enqueueMock).toHaveBeenCalledTimes(1);
+    expect(enqueueMock).toHaveBeenCalledWith({
+      title: "保存失败",
+      detail: "超时",
+      status: "failed",
+    });
+  });
+
+  it("AddOpLog 成功 → 不投 outbox（第二通道只兜失败，不做双写）", async () => {
+    makeDiarySink()({ title: "ok", detail: "d", status: "warn" });
+    await flushPromises();
+    expect(addOpLogMock).toHaveBeenCalledTimes(1);
+    expect(enqueueMock).not.toHaveBeenCalled();
   });
 });

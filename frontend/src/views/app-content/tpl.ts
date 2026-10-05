@@ -26,6 +26,10 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-refresh",
   "diag-copy",
   "diag-clear",
+  // ADR-322 D1：日志通道健康红条（常驻显隐，初始 display:none，由 channel-health.ts
+  // 按 GetLogChannelHealth 填充）。留 testid 供 e2e 断言「不健康时出现、健康时隐藏」——
+  // 这是唯一能证伪「红条恒显/永不显」的钩子，id 仍为 handler 锚点。
+  "diag-log-channel-health",
   "ins-content",
   "ws-tabs",
   "ws-search-view",
@@ -243,6 +247,7 @@ export function diagnosticsHTML(): string {
         </div>
       </div>
     </div>
+    <div class="diag-channel-health" id="diag-log-channel-health" data-testid="diag-log-channel-health" data-sub-group="logs" data-sub-pane="op runtime" style="display:none"></div>
     <div class="diag-result" id="diag-log-list" data-testid="diag-log-list" data-sub-group="logs" data-sub-pane="op"><div class="stat-row">${t("diagnostics.noLogs")}</div></div>
     <div class="diag-result" id="diag-runtime-list" data-testid="diag-runtime" style="display:none" data-sub-group="logs" data-sub-pane="runtime"><div class="stat-row">${t("diagnostics.noRuntimeLogs")}</div></div>
     <div class="diag-pane" data-sub-group="logs" data-sub-pane="trace" style="display:none">

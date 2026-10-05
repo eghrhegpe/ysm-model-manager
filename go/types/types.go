@@ -137,6 +137,30 @@ type LogCaps struct {
 	Runtime int `json:"runtime"`
 }
 
+// LogChannelHealth 日志通道自身的健康状态（GetLogChannelHealth 返回，ADR-322 D1）
+//
+// 「元失败」的一等公民：报告失败的通道自己失效时，此前只留 log.Printf（不落 op 环、
+// 只进内存型 runtime 环、重启即失），调用方无从知晓。本类型把该状态升为**可查询值**。
+//
+// Reason 是稳定机器码而非人类散文：具体错误（含内部路径）已由 go/logs 写进 runtime 环，
+// 此处只做前端 i18n 映射的键，避免诊断条把内部路径复述到 UI（ADR-051 精神）。
+// PersistOK=true 时 Reason 恒为空串。
+const (
+	// ChannelReasonMemoryState 平台数据根缺失/创建失败 → logger 内存态，save no-op（重启即失）
+	ChannelReasonMemoryState = "memory-state"
+	// ChannelReasonMarshalFailed 日志序列化失败（理论上不可达：ImportLog 全为 string/int64）
+	ChannelReasonMarshalFailed = "marshal-failed"
+	// ChannelReasonMkdirFailed 落盘前创建日志目录失败
+	ChannelReasonMkdirFailed = "mkdir-failed"
+	// ChannelReasonWriteFailed 原子写日志文件失败（磁盘满/权限/被占用）
+	ChannelReasonWriteFailed = "write-failed"
+)
+
+type LogChannelHealth struct {
+	PersistOK bool   `json:"persistOK"`
+	Reason    string `json:"reason,omitempty"` // 机器码，见上方 ChannelReason* 常量
+}
+
 // LinkType 链接类型
 type LinkType string
 

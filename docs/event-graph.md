@@ -384,7 +384,7 @@
 |------|------|----|
 | (顶层) | `frontend/src/app-modules.ts` | 31 |
 | runStartupSteps | `frontend/src/app-modules.ts` | 91 |
-| (顶层) | `frontend/src/app-modules.ts` | 178 |
+| (顶层) | `frontend/src/app-modules.ts` | 185 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
 | resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
@@ -425,10 +425,10 @@
 | showLoadFailure | `frontend/src/preview-3d/infra/preview-loading.ts` | 44 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
 | copyWithToast | `frontend/src/views/app-content/diagnostics/copy-toast.ts` | 26 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 28 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 39 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 45 |
-| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 100 |
+| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 32 |
+| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 43 |
+| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 49 |
+| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 104 |
 | webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 181 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 229 |

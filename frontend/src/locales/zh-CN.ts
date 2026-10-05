@@ -929,6 +929,15 @@ export const zhCN = {
   "diagnostics.suggestionLabel": "解决建议",
   "diagnostics.loadLogsFailed": "加载日志失败",
   "diagnostics.loadRuntimeLogsFailed": "加载运行时日志失败",
+  // ADR-322 D2：日志通道健康常驻条（原因码 → 文案；码见 go/types ChannelReason* 与 web-store）
+  "diagnostics.channelHealthUnhealthy": "日志未落盘：本次会话的日志只存在于内存中，重启即失",
+  "diagnostics.channelHealthReasonMemoryState": "原因：应用数据目录不可用，日志无法写入磁盘",
+  "diagnostics.channelHealthReasonIdbUnavailable": "原因：浏览器存储不可写，日志刷新即失",
+  "diagnostics.channelHealthReasonMarshalFailed": "原因：日志序列化失败",
+  "diagnostics.channelHealthReasonMkdirFailed": "原因：无法创建日志目录",
+  "diagnostics.channelHealthReasonWriteFailed":
+    "原因：写入日志文件失败（磁盘已满、权限不足或被占用）",
+  "diagnostics.channelHealthReasonUnknown": "原因未分类，详见运行时日志",
   "diagnostics.scanHash": "⏳ 扫描 {icon} {label} 目录文件哈希...",
   "diagnostics.scanningProgress": "⏳ 扫描中 {cur}/{total} {icon} {label}",
   "diagnostics.configResourceDir": "请先配置资源目录",

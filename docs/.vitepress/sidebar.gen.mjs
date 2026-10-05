@@ -258,6 +258,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-322：元失败层：日志通道健康锁存 + 第二落盘通道 + 不可驱逐保留位",
+        "link": "/adr/architecture/ADR-322-meta-failure-log-channel-health"
+      },
+      {
         "text": "ADR-321：cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局）",
         "link": "/adr/architecture/ADR-321-cap-persistence-restore-derivation"
       },

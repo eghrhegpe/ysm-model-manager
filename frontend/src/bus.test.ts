@@ -10,9 +10,11 @@
 // 7. void 事件（无 payload）
 // 8. handler 内移除自身不干扰其他 listener
 // 9. handler 内 emit 不导致无限循环
+// 10. ADR-322 D3：handler 崩溃 / 缺参 emit 收编进日志通道（不再只写裸 console）
 // bus 是全局单例：每个用例注册的 listener 必须显式清理，
 // 否则跨用例泄漏（后续 emit 会触发过期 handler）。
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { setLogSink } from "@/utils/base/primitives/log.ts";
 import { bus } from "./bus.ts";
 
 const unsubs: Array<() => void> = [];
@@ -169,5 +171,58 @@ describe("事件总线 — 边界安全", () => {
     track(bus.on("stats:refresh", okFn));
     expect(() => bus.emit("stats:refresh")).not.toThrow();
     expect(b).toBe(1);
+  });
+});
+
+// ADR-322 D3：emit 是全应用失败汇聚点，handler 崩溃原先只写裸 console
+// （GUI 生产无 DevTools = 静默吞掉）。本组用 log.ts 的 sink 注入做观测口，
+// 断言失败真的走进了统一日志通道（而非只在 console 里）。
+describe("事件总线 — 失败收编进日志通道（ADR-322 D3）", () => {
+  const seen: Array<{ level: string; tag: string; msg: string; err?: unknown }> = [];
+  const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+  beforeEach(() => {
+    seen.length = 0;
+    setLogSink((level, tag, msg, err) => {
+      seen.push({ level, tag, msg, err });
+    });
+  });
+  afterEach(() => {
+    setLogSink(null);
+    errSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("handler 抛错 → 进 sink（error 级 + 带原 err），不再只留 console", () => {
+    const boom = new Error("boom");
+    track(bus.on("stats:refresh", () => { throw boom; }));
+    bus.emit("stats:refresh");
+    expect(seen).toHaveLength(1);
+    expect(seen[0].level).toBe("error");
+    expect(seen[0].tag).toBe("bus");
+    expect(seen[0].msg).toContain('事件 "stats:refresh" 处理出错');
+    expect(seen[0].err).toBe(boom); // 保留原始错误对象，不降级成字符串
+  });
+
+  it("非 void 事件缺参 → 进 sink 且带事件名（该缺陷唯一现场就是事件名）", () => {
+    // @ts-expect-error 故意缺参：验证运行期告警路径（类型层已由 BusEvents 拦截）
+    bus.emit("tree:set-search");
+    expect(seen).toHaveLength(1);
+    expect(seen[0].level).toBe("error");
+    expect(seen[0].msg).toContain('"tree:set-search"');
+    expect(seen[0].msg).toContain("未传参数");
+  });
+
+  it("void 事件正常 emit → 不产生任何日志（无噪声收编）", () => {
+    bus.emit("stats:refresh");
+    expect(seen).toHaveLength(0);
+  });
+
+  it("多 handler 各失败各记一条（不因首个失败提前中断记录）", () => {
+    track(bus.on("stats:refresh", () => { throw new Error("e1"); }));
+    track(bus.on("stats:refresh", () => { throw new Error("e2"); }));
+    bus.emit("stats:refresh");
+    expect(seen).toHaveLength(2);
   });
 });

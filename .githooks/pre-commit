@@ -304,34 +304,14 @@ fi
 #   a) staged 文件名以 $ 开头 → shell 变量漏展开产物（如 $tmp）
 #   b) staged 文件首行为 mode: set/count/atomic → Go 覆盖率 profile 误入库
 #   c) 同 commit 同时含 frontend/ 与 go/ 改动 → 跨层夹带信号（合法联调可忽略）
+# 三查逻辑已下沉 scripts/_lib/commit-blocks/version-defense.ts（ADR-323 阶段 1）：
+# 原内联 shell 无法单测，边界（如 $ 在路径中段）只能靠注释提醒；现由
+# tests/test_commit_version_defense.ts 守护。本段只保留「自取 staged + 渲染」调用。
 # 逃生阀：YSM_SKIP_VERSION_DEFENSE=1
 if [ "${YSM_SKIP_VERSION_DEFENSE:-0}" != "1" ]; then
   echo ""
   echo "[pre-commit] 版本防御检查（意外文件/跨层夹带）..."
-  STAGED_ALL=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)
-  if [ -n "$STAGED_ALL" ]; then
-    # a) $ 开头文件名
-    SUSDOL=$(printf '%s\n' "$STAGED_ALL" | grep -E '(^|/)\$' || true)
-    if [ -n "$SUSDOL" ]; then
-      echo "  ⚠️  \$ 开头文件名（疑似 shell 变量漏展开产物，如 88daf2a2 的 \$tmp）："
-      printf '    %s\n' "$SUSDOL"
-    fi
-    # b) Go 覆盖率 profile（首行 mode: set/count/atomic）
-    BADCOV=$(printf '%s\n' "$STAGED_ALL" | while IFS= read -r f; do
-      [ -f "$f" ] || continue
-      head -1 "$f" 2>/dev/null | grep -qE '^mode: (set|count|atomic)$' && echo "$f"
-    done)
-    if [ -n "$BADCOV" ]; then
-      echo "  ⚠️  疑似 Go 覆盖率 profile 入库："
-      printf '    %s\n' "$BADCOV"
-    fi
-    # c) 跨层夹带（frontend/ + go/ 同时改动）
-    F_CNT=$(printf '%s\n' "$STAGED_ALL" | grep -c '^frontend/' || true)
-    G_CNT=$(printf '%s\n' "$STAGED_ALL" | grep -c '^go/' || true)
-    if [ "$F_CNT" -gt 0 ] && [ "$G_CNT" -gt 0 ]; then
-      echo "  ⚠️  本次 commit 同时含 frontend/(+$F_CNT) 与 go/(+$G_CNT) 改动——跨层夹带信号（合法联调可忽略）"
-    fi
-  fi
+  node scripts/_lib/commit-blocks/version-defense.ts 2>/dev/null || true
 fi
 
 # ── Take巧 #3：本次 commit 变更统计（commit 前预览，ADR-087）──

@@ -58,6 +58,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "verify-adr-042.ts": ["docs"],
   "test_adr_tiering.ts": ["docs", "tests"], // ADR-320 分级：三区语法 + new-adr 双级 dry-run
   "test_new_knowledge_card.ts": ["docs", "tests"], // new-knowledge-card 模板：kind kebab-case + 无失效占位锚
+  "test_commit_version_defense.ts": ["tests"], // ADR-323 阶段 1：pre-commit 版本防御块下沉
   // —— data ——
   "test_creators_schema.ts": ["data"],
   "test_resource_schema.ts": ["data"],
@@ -490,6 +491,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/check-knowledge-drift.ts",
     "scripts/gen-knowledge-index.ts",
   ],
+  "test_commit_version_defense.ts": ["scripts/_lib/commit-blocks/version-defense.ts"],
   "test_adr_tiering.ts": [
     "scripts/_lib/adr-files.ts",
     "scripts/_lib/frontmatter.ts",

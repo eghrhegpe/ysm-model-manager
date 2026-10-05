@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-323：pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化",
+        "link": "/adr/architecture/ADR-323-pre-commit-commit-blocks"
+      },
+      {
         "text": "ADR-322：元失败层：日志通道健康锁存 + 第二落盘通道 + 不可驱逐保留位",
         "link": "/adr/architecture/ADR-322-meta-failure-log-channel-health"
       },

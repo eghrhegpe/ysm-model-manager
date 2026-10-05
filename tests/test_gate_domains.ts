@@ -122,18 +122,22 @@ function stubRedlinesRunner(out: string, rc = 0) {
   assert.equal(off.results.length, 0, "plan.docs=false 时不得产生记录");
   assert.equal(callsOff.length, 0, "plan.docs=false 时不得执行子进程");
 
-  // B2. 全绿：两条记录、label 正确
+  // B2. 全绿：三条记录（断链 + 发版说明 + 知识卡正文机制锚探针）、label 正确
   const ok = mkCtx({ plan: { docs: true } });
-  stubSh(ok, (cmd) =>
-    cmd.includes("link-checker")
-      ? { rc: 0, out: '{"_summary":{"links_broken":0}}' }
-      : { rc: 0, out: "releases ok" },
-  );
+  stubSh(ok, (cmd) => {
+    if (cmd.includes("link-checker"))
+      return { rc: 0, out: '{"_summary":{"links_broken":0}}' };
+    if (cmd.includes("check-knowledge-content"))
+      return { rc: 0, out: '{"_summary":{"issues":0}}' };
+    return { rc: 0, out: "releases ok" };
+  });
   runDocsDomain(ok);
-  assert.equal(ok.results.length, 2, "文档域应产生 2 条记录（断链 + 发版说明）");
+  assert.equal(ok.results.length, 3, "文档域应产生 3 条记录（断链 + 发版说明 + 正文机制锚探针）");
   assert.equal(ok.results[0]!.label, "node scripts/link-checker.ts --json");
   assert.equal(ok.results[0]!.note, "全部链接有效");
   assert.equal(ok.results[1]!.label, "node scripts/release-notes-gen.ts --check");
+  assert.equal(ok.results[2]!.label, "node scripts/check-knowledge-content.ts --json");
+  assert.equal(ok.results[2]!.note, "正文机制声明与源码一致");
   assert.equal(ok.blocked, false);
 
   // B3. 断链 > 0 → FAIL + 阻断

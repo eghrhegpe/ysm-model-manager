@@ -40,7 +40,7 @@
 
 ### 查证优先——不确定就查，不靠记忆推断
 - **业务知识**：`docs/knowledge/routes-quick.md`（AI 第一站）→ `docs/knowledge/routes.md`（兜底）→ `grep -r <关键词> docs/knowledge/` → 知识卡 `source_files` 源码 / CLI 实证。
-- **审核范围确认**：`node scripts/audit-src-map.ts --json` 拿真实路径。
+- **审核范围确认**：`node scripts/gen-project-map.ts --json` 拿真实路径（生成物 = `docs/audit-src-map.md`；无 `audit-src-map.ts` 此名脚本）。
 - 查到的经验**写回知识卡**，让下次直接命中：`node scripts/new-knowledge-card.ts <kind> <name> <category> <source_file> [--leaf]`。
 - **工具/钩子/脚本**：需要修复报错 / 异常时, 才核对`read .githooks/pre-commit`、`read scripts/xx.ts`。
 - **正确性需实证**：当正确性依赖于检索、检查、执行或验证时，坚持使用工具；不要仅仅因为答案看似显而易见就忽略前提条件。

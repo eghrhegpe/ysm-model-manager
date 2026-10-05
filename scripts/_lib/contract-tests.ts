@@ -51,6 +51,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "check-knowledge-card-status.ts": ["docs", "tests"],
   "check-knowledge-rename-migration.ts": ["docs", "tests"],
   "test_check_readme_index.ts": ["docs", "tests"],
+  "test_check_knowledge_content.ts": ["docs", "tests"], // 知识卡正文机制锚探针（P1 补网）
   // link-checker 扫描域 = git 跟踪 ∩ 可扫（防未跟踪 md 拦住全仓推送）——docs 域变更亦触发
   "test_link_checker_scope.ts": ["docs", "tests"],
   "test_sidebar_gen.ts": ["docs", "tests"],
@@ -295,6 +296,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "test_check_complexity.ts": ["scripts/check-complexity.ts"],
   "test_check_type_safety.ts": ["scripts/check-type-safety.ts"],
+  "test_check_knowledge_content.ts": ["scripts/check-knowledge-content.ts"],
   "test_check_params.ts": ["scripts/check-params.ts"],
   // ADR-311 菜单测试布局闸：扫菜单区测试文件的布局快照形态 + 基线对账（只减不增）
   "test_check_menu_test_layout.ts": [

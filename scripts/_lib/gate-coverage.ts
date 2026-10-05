@@ -42,6 +42,7 @@ export const DOMAIN_BLOCK_CHECKS = [
   "check-ctx-menu-i18n.ts",
   "check-binding-usage.ts",
   "check-redlines.ts",
+  "check-knowledge-content.ts",
 ] as const;
 
 /** 全集：scripts/check-*.ts 动态枚举（文件名含 .ts 后缀） */

@@ -82,6 +82,25 @@ export function runDocsDomain(ctx: GateCtx): void {
     time: Date.now() - t1,
     tail: rn.rc ? rn.out.trim().split("\n").slice(-14).join("\n") : "",
   });
+
+  // 知识卡正文机制声明漂移探针（P1 补网，2026-10-05）：扫所有卡正文里显式
+  // 「`文件`(`符号`)」/「`文件`|符号」机制声明，grep 源码确认符号存在（WARN 级，
+  // 不阻断——fail-open 只提醒；fail-closed 由 invariant_anchors 专属 ERROR 守护兜底）。
+  // 真漂移由 --json._summary.issues 透出，不影响 push 退出码。
+  const t2 = Date.now();
+  const kc = ctx.sh("node scripts/check-knowledge-content.ts --json");
+  const kcIssues =
+    kc.rc === 0 ? requireSummaryField(kc.out, "issues") : null;
+  ctx.record("node scripts/check-knowledge-content.ts --json", true, {
+    time: Date.now() - t2,
+    raw: kc.out,
+    note:
+      kcIssues === null
+        ? "输出解析失败（scripts/check-knowledge-content.ts 缺失？）"
+        : kcIssues === 0
+          ? "正文机制声明与源码一致"
+          : `${kcIssues} 条正文机制锚疑似漂移（WARN，不阻断——见脚本输出）`,
+  });
 }
 
 /** ADR 域：决策记录编号/状态/被取代标注健康度。 */

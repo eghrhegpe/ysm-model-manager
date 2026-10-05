@@ -18,7 +18,7 @@
 | 🍃 experience | 发版冒烟组——CI 同口径预演（ADR-318） | leaf | — | 发版前预演 CI（tag 推送前）, lockfile 与 package.json 是否同步存疑, Go 文件 import OS 专属包要确认 build 标签, 发版 CI 连红要本地快速定位口径差 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单, 拓展点探索 |
-| 🏗 gate-chain-map | 门禁委托链全景图（四入口横向拼图） | architecture | — | 门禁委托链, 找门禁流程, 钩子在哪拦, 为什么还能提交, 哪个入口阻断, 门禁总览 |
+| 🏗 gate-chain-map | 门禁委托链全景图（四入口横向拼图） | architecture | — | 门禁委托链, 找门禁流程, 钩子在哪拦, 为什么还能提交, 哪个入口阻断, 门禁总览, 门禁块写法, 新块怎么写 |
 | 🍃 orphan-export-scanner | 孤儿导出检测器（扫描盲区） | leaf | — | 修改 check-orphan-exports.ts 扫描逻辑, 门禁报孤儿导出，判定是真死代码还是扫描漏检, 新增 export * 转发壳 / 测试包装函数后复核孤儿读数 |
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
 | 🏗 scripts-argv | 脚本 argv 规范与已知豁免 parse-args.ts | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |

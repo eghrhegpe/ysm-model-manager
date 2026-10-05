@@ -11,8 +11,33 @@ source_files:
   - scripts/pre-push-gate.ts
   - scripts/doctor.ts
   - scripts/commit-with-check.ts
+  - scripts/_lib/gate-blocks/static-tools.ts
+  - scripts/_lib/gate-ctx.ts
+  - scripts/_lib/gate-parse.ts
+  - scripts/_lib/commit-blocks/smart-stage.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - buildScanVerdict
+    - createGateCtx
+    - deriveTestTargets
+    - ExecResult
+    - GATE_TIMEOUT_MS
+    - GateCtx
+    - GateResult
+    - isTestOrSpecFile
+    - ParsedToolOutput
+    - parseToolOutput
+    - readStagedSourceFiles
+    - RecordOpts
+    - requireSummaryField
+    - requireSummaryOk
+    - runScopedDocDrift
+    - runTools
+    - stageFiles
+    - stripSourceSuffix
+    - tryParseJson
+    - tryParseSummary
+    - WARNS_TOP_N
 use_when:
   - 门禁委托链
   - 找门禁流程
@@ -20,15 +45,20 @@ use_when:
   - 为什么还能提交
   - 哪个入口阻断
   - 门禁总览
+  - 门禁块写法
+  - 新块怎么写
 invariant_anchors:
   - scripts/pre-push-gate.ts|function main
   - scripts/doctor.ts|function delegate
+  - scripts/_lib/gate-blocks/static-tools.ts|runTools
+  - scripts/_lib/gate-ctx.ts|createGateCtx
 quick_groups:
   - 门禁与脚本
 quick_intents:
   - 一眼看清 commit/push/CI 各环谁在哪拦
   - 判断某个检查项归属哪一层
   - 排查「闸红了为什么还能提交」
+  - 新增门禁块按哪套范式写（gate-blocks 还是 commit-blocks）
 pitfalls:
   - 本卡是横向拼图，单环纵深细节读 pre-commit-hook / pre-push-gate 两卡；勿用本卡替代细读
   - 判定「某检查项是否真阻断」必须看它所在清单的 blockPolicy（hard/debt/failClosed），FAIL 非空 ≠ 被拦
@@ -74,6 +104,26 @@ CI ────────── test.yml 独立步骤：pre-push-gate --static
 - **域级检查（go build/test、前端 build/vitest、契约测试）**：本地由 gate 域块承担；CI 由 test.yml 各步骤独立承担，**不经 gate 编排**。
 - **静态治理工具（27/37 接入门禁）**：清单单一事实源 = `scripts/_lib/gate-config.ts`，分 ALL / DOC / FRONTEND / GO 四张；未接入项走 pre-commit 或 CI 旁路。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
 - **审计留痕**：逃生阀命中分两级——`YSM_SKIP_GATE=1` 与 `YSM_SKIP_*` 命中写 `.git/gate-audit.log`（SKIPPED/PUSH 行，可审计）；`git commit --no-verify` / `git push --no-verify` 整钩不跑，零痕迹，只能靠 CI 远端拦截与 `doctor --audit-check` 对账事后回溯。
+
+## 门禁块写法范式（gate-blocks vs commit-blocks，2026-10-06 摸底）
+
+两类「块」是**同一壮大的两种形态**，弄清各自写法才能延续：
+
+| 维度 | gate-blocks（pre-push 侧） | commit-blocks（pre-commit 侧） |
+|------|---------------------------|-------------------------------|
+| 服务对象 | `pre-push-gate.ts` 调度器（import 调用） | pre-commit 钩子（CLI 直接调用） |
+| 入口形态 | **无独立 CLI**，导出函数供调度器 import | **独立 CLI**（`isCli` 判定 + `main()`），sh 钩子直接 `node` |
+| 结果落账 | `ctx.record()` 统一入 `results[]`（label/ok/time/note/tail/raw/blockPolicy） | `console.log`/`console.error` 直通终端（无统一账目） |
+| 判定方式 | `parseToolOutput()` 三级优先级：`_summary.ok → errors===0 → rc`——**退出码不可靠**，审计类工具恒 0 | 直接判 rc / 壳层判退出码 |
+| 阻断语义 | `blockPolicy` 三分（hard 阻断 / debt 记债 / failClosed 工具不可用才阻断），FAIL 明细带归属标签 | 非阻断为主（`|| true`），三段硬阻断留在 shell（exit 1） |
+| 清单驱动 | `GateTool[]` 数组驱动（`gate-config.ts` 单一事实源） | 硬编码分块（无清单层） |
+| 执行安全 | 数组式 `procRun`（防 shell 注入）；`sh()` 只接受源码常量命令 | 无注入面（纯逻辑 + git 子进程） |
+
+**为什么形态不同是合理的**：gate-blocks 服务「调度器统一汇总→生成报告→判定推送」，必须落账；commit-blocks 服务「钩子内联即时输出→stderr 直达终端（AI 必看通道）」，直通即可。**同类加入共识**：
+
+1. **「纯判定 + 渲染分离」是两侧共同底线**（gate-blocks 的 parseToolOutput / commit-blocks 的 detectVersionDefense 都是纯函数 + 独立渲染）——判定可单测是硬要求，形态差异只在落账/输出层。
+2. **新块先问服务对象**：被调度器编排 → 按 gate-blocks 写（函数导出 + record + blockPolicy）；被钩子直调 → 按 commit-blocks 写（CLI + 纯判定导出 + 契约测试）。
+3. **执行安全是 gate 侧红线**（数组式 procRun），commit 侧无 shell 拼接面故豁免——但 commit-blocks 一旦出现「拼命令串」就必须升级为数组式（同 gate-ctx 不变式）。
 
 ## 与其他子系统关系
 

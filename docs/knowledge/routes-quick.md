@@ -543,6 +543,7 @@
 | 往测试加 vi.mock 需要注意什么 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | 用 // mock-path-ignore: <理由> 或 docs/.mock-path-exempt.json 豁免，禁止直接 --no-verify 绕过 | - |
 | 为什么 Go 侧要引入 golangci-lint | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | Go 曾是静态分析真空面（go vet 独苗）：golangci-lint 白名单制补齐——.golangci.yml 为 default: none + 显式 enable，勿开 enable-all | - |
 | 为新的共享模块加一条守护规则 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
+| 新增门禁块按哪套范式写（gate-blocks 还是 commit-blocks） | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
 | 修复登记漂移（补全缺失的登记） | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | - | - |
 | 验证新增脚本是否已正确登记 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | README 是唯一事实源，AGENTS.md 工具口令表只是指针 | - |
 | 一眼看清 commit/push/CI 各环谁在哪拦 | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |

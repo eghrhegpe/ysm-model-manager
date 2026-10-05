@@ -227,7 +227,7 @@ export const autoSidebar = [
         "link": "/audit-env-design-critique"
       },
       {
-        "text": "环境系统面板审查（锐评）— 进度与发现",
+        "text": "环境系统审查台账（活文档）",
         "link": "/audit-env-review"
       },
       {

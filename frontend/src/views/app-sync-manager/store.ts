@@ -3,8 +3,8 @@
 // 纯函数，接收组件实例 self，通过 self 读写状态；无 DOM / 无 bus 副作用。
 // 依赖 DAG：index → store ← network（网络操作后调 loadData 刷新）
 
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { allResourceTypes } from "@/utils/resource/schema.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -74,11 +74,7 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
   } catch {
     if (self._guard.stale(gen)) return;
     self._allItems = [];
-    bus.emit("toast:show", {
-      msg: t("syncManager.loadSyncStatusFailed"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t("syncManager.loadSyncStatusFailed"), TOAST_MS.normal, "warn");
   }
 }
 

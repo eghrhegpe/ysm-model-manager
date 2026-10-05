@@ -9,6 +9,7 @@ import { logError } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { bindRoving } from "@/utils/dom/bind-roving.ts";
 import { setRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -145,12 +146,8 @@ function anBindViewerFab(shadowRoot: ShadowRoot, viewerFabClick: () => Promise<v
     const handler = (): void => {
       void viewerFabClick().catch((e) => {
         logError("app-nav", "打开 3D 失败", e);
-        bus.emit("toast:show", {
-          // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
-          msg: "打开 3D 失败",
-          duration: TOAST_MS.normal,
-          type: "error",
-        });
+        // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
+        toast("打开 3D 失败", TOAST_MS.normal, "error");
       });
     };
     fab.addEventListener("click", handler);

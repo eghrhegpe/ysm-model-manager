@@ -1,9 +1,9 @@
 // ===== sidebar 数据加载层 =====
 
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -144,11 +144,11 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
     return instances;
   } catch (err) {
     // 失败不静默：显示空整合包列表会误导用户以为没装实例
-    bus.emit("toast:show", {
-      msg: `${t("sidebar.loadFailed")}: ${friendlyError(err, t("sidebar.loadFailedDetail"))}`,
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(
+      `${t("sidebar.loadFailed")}: ${friendlyError(err, t("sidebar.loadFailedDetail"))}`,
+      TOAST_MS.long,
+      "error",
+    );
     return [];
   }
 }

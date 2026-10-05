@@ -106,17 +106,9 @@
     "frontend/src/views/app-content/site/drag.ts",
     "frontend/src/views/app-content/site/edit.ts",
     "frontend/src/views/app-content/site/events.ts",
-    "frontend/src/views/app-nav/index.ts",
     "frontend/src/views/app-preview/preview-library.ts",
     "frontend/src/views/app-preview/preview-router.ts",
     "frontend/src/views/app-preview/shot-panel-shared.ts",
-    "frontend/src/views/app-sidebar/events.ts",
-    "frontend/src/views/app-sidebar/launcher-detect.ts",
-    "frontend/src/views/app-sidebar/loader.ts",
-    "frontend/src/views/app-sidebar/sync-flow.ts",
-    "frontend/src/views/app-sync-manager/index.ts",
-    "frontend/src/views/app-sync-manager/network.ts",
-    "frontend/src/views/app-sync-manager/store.ts",
     "frontend/src/views/app-toast/index.ts"
   ],
   "tree:reload": [

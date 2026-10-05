@@ -6,6 +6,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { initDropdown } from "@/utils/dom/dropdown.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { ALL_RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -115,11 +116,7 @@ function beginSync(
   if (!item) return null;
   const selected = getSelected(root, instances);
   if (!selected.length) {
-    bus.emit("toast:show", {
-      msg: t("sidebar.selectPackFirst", { verb }),
-      duration: TOAST_MS.success,
-      type: "info",
-    });
+    toast(t("sidebar.selectPackFirst", { verb }), TOAST_MS.success, "info");
     return null;
   }
   if (syncInProgress.val) return null;
@@ -249,23 +246,12 @@ async function runPush(
       const parts: string[] = [];
       if (skipped > 0) parts.push(t("sidebar.packSkipped", { n: skipped }));
       if (timedOut > 0) parts.push(t("sidebar.packTimedOut", { n: timedOut }));
-      bus.emit("toast:show", {
-        msg: t("sidebar.pushDone", { detail: parts.join("，") }),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("sidebar.pushDone", { detail: parts.join("，") }), TOAST_MS.normal, "warn");
     } else {
-      bus.emit("toast:show", {
-        msg: t("sidebar.pushDoneAll", { n: selected.length }),
-        duration: TOAST_MS.info,
-      });
+      toast(t("sidebar.pushDoneAll", { n: selected.length }), TOAST_MS.info, "success");
     }
   } catch (err) {
-    bus.emit("toast:show", {
-      msg: t("sidebar.pushFailed", { msg: safeErrorMessage(err) }),
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toast(t("sidebar.pushFailed", { msg: safeErrorMessage(err) }), TOAST_MS.normal, "error");
   } finally {
     resetButton(pushBtn, "push");
     syncInProgress.val = false;
@@ -293,31 +279,16 @@ async function runPull(
       }
     }
     if (failed > 0) {
-      bus.emit("toast:show", {
-        msg: t("sidebar.pullDone", { pulled: totalPulled, failed }),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("sidebar.pullDone", { pulled: totalPulled, failed }), TOAST_MS.normal, "warn");
     } else if (totalPulled > 0) {
-      bus.emit("toast:show", {
-        msg: t("sidebar.pullDoneAll", { n: totalPulled }),
-        duration: TOAST_MS.info,
-      });
+      toast(t("sidebar.pullDoneAll", { n: totalPulled }), TOAST_MS.info, "success");
     } else {
-      bus.emit("toast:show", {
-        msg: t("sidebar.pullNothing"),
-        duration: TOAST_MS.info,
-        type: "info",
-      });
+      toast(t("sidebar.pullNothing"), TOAST_MS.info, "info");
     }
     bus.emit("stats:refresh");
     bus.emit("tree:reload");
   } catch (err) {
-    bus.emit("toast:show", {
-      msg: t("sidebar.pullFailed", { msg: safeErrorMessage(err) }),
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toast(t("sidebar.pullFailed", { msg: safeErrorMessage(err) }), TOAST_MS.normal, "error");
   } finally {
     resetButton(pullBtn, "pull");
     syncInProgress.val = false;

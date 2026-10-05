@@ -6,7 +6,7 @@ import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { animateNumber } from "@/utils/animation/animate.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
-import { toastEmptyRtype } from "@/utils/dom/toast.ts";
+import { toast, toastEmptyRtype } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { shortenPath } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -129,11 +129,7 @@ function bindCardContextHandler(st: CardBindState): (e: MouseEvent) => void {
     }
     const path = pkg.dir || "";
     if (!path) {
-      bus.emit("toast:show", {
-        msg: t("ctx.missingPath"),
-        duration: TOAST_MS.normal,
-        type: "error",
-      });
+      toast(t("ctx.missingPath"), TOAST_MS.normal, "error");
       return;
     }
     bus.emit("ctx:show", {

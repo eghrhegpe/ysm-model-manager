@@ -35,7 +35,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 45 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 25 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 15 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 | `ui:card-density` | 1 | 1 | 0 | 0 | ✅ |
@@ -85,7 +85,7 @@
 |------|------|----|
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 126 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 139 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 135 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 260 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 286 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 298 |
@@ -179,7 +179,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 79 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 212 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 209 |
 
 ### `menu:show`
 
@@ -221,16 +221,16 @@
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 67 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 187 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 267 |
-| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 50 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 222 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 280 |
+| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 51 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 219 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 276 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 54 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 189 |
 
 ### `package:selected`
 
@@ -238,7 +238,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 91 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 266 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 262 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -250,7 +250,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 56 |
+| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 57 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -262,7 +262,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 126 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 127 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -270,9 +270,9 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 121 |
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 300 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 214 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 211 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 130 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 307 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 304 |
 
 ### `repo:search-creator`
 
@@ -292,12 +292,12 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 127 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 330 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 327 |
 
 ### `stats:refresh`
 
@@ -320,11 +320,11 @@
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 230 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 83 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 156 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 313 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 225 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 244 |
+| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
+| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 141 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 288 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 226 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 245 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 104 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 131 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 198 |
@@ -335,7 +335,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 122 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 287 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 284 |
 
 ### `sync:download:done`
 
@@ -348,15 +348,15 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 138 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 160 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 135 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 157 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 153 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 150 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -398,32 +398,12 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 331 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 170 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 321 |
-| anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 148 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 200 |
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 42 |
 | routeModelPreview | `frontend/src/views/app-preview/preview-router.ts` | 67 |
 | makeShotAction | `frontend/src/views/app-preview/shot-panel-shared.ts` | 49 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 132 |
-| (顶层) | `frontend/src/views/app-sidebar/launcher-detect.ts` | 42 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 65 |
-| runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 84 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 135 |
-| runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 157 |
-| doLoadInstances | `frontend/src/views/app-sidebar/loader.ts` | 147 |
-| beginSync | `frontend/src/views/app-sidebar/sync-flow.ts` | 118 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 252 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 258 |
-| runPush | `frontend/src/views/app-sidebar/sync-flow.ts` | 264 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 296 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 302 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 307 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 316 |
-| _showError | `frontend/src/views/app-sync-manager/index.ts` | 269 |
-| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 52 |
-| performSingleOp | `frontend/src/views/app-sync-manager/network.ts` | 60 |
-| loadData | `frontend/src/views/app-sync-manager/store.ts` | 77 |
 | show | `frontend/src/views/app-toast/index.ts` | 163 |
 | show | `frontend/src/views/app-toast/index.ts` | 182 |
 | show | `frontend/src/views/app-toast/index.ts` | 191 |
@@ -453,7 +433,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 119 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 314 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 289 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

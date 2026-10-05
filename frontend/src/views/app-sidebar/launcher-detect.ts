@@ -11,6 +11,7 @@ import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalPicker } from "@/utils/dom/modal-picker.ts";
 import { modalSelect } from "@/utils/dom/modal-select.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -39,11 +40,7 @@ export interface BusyGuard {
 }
 
 const toastError = (error: unknown): void => {
-  bus.emit("toast:show", {
-    msg: `${friendlyError(error)}`,
-    duration: TOAST_MS.verbose,
-    type: "error",
-  });
+  toast(`${friendlyError(error)}`, TOAST_MS.verbose, "error");
 };
 
 /** 保存 mcRoot（其余配置项走 writeAppConfig 重读最新落盘值；theme 缺省自 localStorage
@@ -62,11 +59,7 @@ export async function runMcSearch(guard: BusyGuard): Promise<void> {
     const App = await backendGetApp();
     const paths = await App.GetMinecraftPaths();
     if (!paths?.length) {
-      bus.emit("toast:show", {
-        msg: t("settings.mc.noFound"),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("settings.mc.noFound"), TOAST_MS.normal, "warn");
       return;
     }
     let selected: string | null = paths[0];
@@ -81,11 +74,7 @@ export async function runMcSearch(guard: BusyGuard): Promise<void> {
     }
     await saveMcRoot(selected);
     bus.emit("stats:refresh");
-    bus.emit("toast:show", {
-      msg: t("content.mcPathSet", { path: selected }),
-      duration: TOAST_MS.normal,
-      type: "success",
-    });
+    toast(t("content.mcPathSet", { path: selected }), TOAST_MS.normal, "success");
   } catch (error) {
     toastError(error);
   } finally {
@@ -132,11 +121,7 @@ export async function runLauncherDetect(guard: BusyGuard): Promise<void> {
     const App = await backendGetApp();
     const instances = await App.DetectLauncherInstances(launcherDir.dir);
     if (!instances?.length) {
-      bus.emit("toast:show", {
-        msg: t("launcher.detect.noInstances"),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("launcher.detect.noInstances"), TOAST_MS.normal, "warn");
       return;
     }
     const selection = await showLauncherInstancePicker(instances);
@@ -154,14 +139,14 @@ export async function runLauncherDetect(guard: BusyGuard): Promise<void> {
       }
     }
     bus.emit("stats:refresh"); // sidebar 防抖重载实例列表
-    bus.emit("toast:show", {
-      msg: t("launcher.detect.success", {
+    toast(
+      t("launcher.detect.success", {
         launcher: selection.instance.launcher,
         version: selection.instance.gameVersion,
       }),
-      duration: TOAST_MS.normal,
-      type: "success",
-    });
+      TOAST_MS.normal,
+      "success",
+    );
   } catch (error) {
     toastError(error);
   } finally {

@@ -4,9 +4,9 @@
 // 依赖 DAG：index → network ← events（events 通过回调调用 network）
 // network → store（push/pull 后调 loadData 刷新数据）
 
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 
@@ -49,7 +49,7 @@ export async function performSingleOp(
     }
     if (!self.isConnected) return;
     const msg = op === "push" ? t("syncManager.pushed") : t("syncManager.pulled");
-    bus.emit("toast:show", { msg, duration: TOAST_MS.success });
+    toast(msg, TOAST_MS.success, "success");
     const gen = self._guard.current;
     await cb.doLoadData();
     if (self._guard.stale(gen) || !self.isConnected) return;
@@ -57,11 +57,7 @@ export async function performSingleOp(
     cb.doEmitStats();
   } catch (e) {
     if (!self.isConnected) return;
-    bus.emit("toast:show", {
-      msg: `${friendlyError(e)}`,
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toast(`${friendlyError(e)}`, TOAST_MS.normal, "error");
   } finally {
     self._singleBusy.delete(path);
     // per-path 复位：只解禁本行，其他在途行的禁用态不受影响

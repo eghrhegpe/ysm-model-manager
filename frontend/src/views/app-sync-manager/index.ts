@@ -13,6 +13,7 @@ import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import type { RovingHandle } from "@/utils/dom/bind-roving.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -266,11 +267,7 @@ export class AppSyncManager extends WebComponentBase {
     const listEl = this.querySelector(".sm-list");
     if (listEl) listEl.appendChild(errDiv);
     else this.appendChild(errDiv);
-    bus.emit("toast:show", {
-      msg: friendlyError(e, head),
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(friendlyError(e, head), TOAST_MS.long, "error");
   }
 
   /** `_doRender` 抛错兜底：错误 div + toast（不让异常冒泡出 `_init`） */

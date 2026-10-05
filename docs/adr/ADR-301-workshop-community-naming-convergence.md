@@ -40,8 +40,8 @@
 | 方案 | 内容 | 判定 |
 |---|---|---|
 | **甲 双页各归本名**（推荐） | `id:workshop → community`（追 `nav.community`「创作者频道」）；`id:github → workshop`（追 `nav.workshop`「创意工坊」）；文件名/类型/CSS/i18n 随之各归其页 | 五套词汇一次对齐到「标签=真相」；代价 = Go 绑定 + 历史 localStorage 迁移 |
-| 乙 只修 id 不动类型/键 | 仅 `PageName` 两值互换语义（社区页→`community`、GitHub 页→`workflow`? ）| Go `WorkshopSite`/`WorkshopCreator`、`workshop.*` i18n 仍错位，只治了表 | 单点、快，但不根治；可作为分段的先行段 |
-| 丙 纯注释刀 | 不改任何名，仅在 `nav-items.ts` 加醒目对照注释 | 主症全留 | 不作为终点 |
+| 乙 只修 id 不动类型/键 | 仅 `PageName` 两值互换语义（社区页→`community`、GitHub 页→`workflow`? ）| Go `WorkshopSite`/`WorkshopCreator`、`workshop.*` i18n 仍错位，只治了表。单点、快，但不根治；可作为分段的先行段 |
+| 丙 纯注释刀 | 不改任何名，仅在 `nav-items.ts` 加醒目对照注释 | 主症全留。不作为终点 |
 
 **拍板清单**（推荐，待人类首席架构师表决）：
 

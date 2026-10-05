@@ -26,7 +26,6 @@ AGENTS.md §七明确指出：**路径分隔符统一正斜杠 `/`**。
 | `bus-handlers.js` | 157 | `repoRoot + "/" + dir + "/" + name.trim()` |
 | `bus-handlers.js` | 187 | 同上 |
 | `bus-handlers.js` | 234 | 同上 |
-| `settings.js` | 109 | `cfg.filesRoot + "\\" + ...` | ← **此处是反斜杠** |
 
 ### 使用 `\` 的位置（违规）
 
@@ -35,8 +34,9 @@ AGENTS.md §七明确指出：**路径分隔符统一正斜杠 `/`**。
 | `import-queue.js` | 108 | `fullPath = (repoRoot \|\| "") + "\\" + name` |
 | `import-queue.js` | 372 | `(_ysmRoot \|\| "") + "\\" + newName` |
 | `import-queue.js` | 717 | `fullPath = repoRoot + "\\" + name` |
+| `settings.js` | 109 | `cfg.filesRoot + "\\" + ...` |
 
-**合计**：8 处正确 + **3 处违规**。
+**合计**：7 处正确 + **4 处违规**。
 
 ### 后果分析
 

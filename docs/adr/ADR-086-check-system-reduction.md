@@ -66,7 +66,7 @@
 | check-layering R1/R2 零容忍 | 分层公理的硬约束，不可降级 |
 | check-redlines fail-closed | 扫描失败必须阻断，否则红线门禁静默放行 |
 | adr-check | ADR 登记表一致性，秒级，零成本 |
-| type-consistency | resource_types.json ↔ extensions.js 单一事实来源守护 | **🧊 已废弃比对职责（ADR-204）**：T2 后 extensions.ts 构建期派生，JSON↔JS 比对块不可达；脚本收敛为「派生守卫」单职责（拦手写副本回潮），`dup_id` 检查移交 Go `resource_types_consistency_test.go` |
+| type-consistency | resource_types.json ↔ extensions.js 单一事实来源守护。**🧊 已废弃比对职责（ADR-204）**：T2 后 extensions.ts 构建期派生，JSON↔JS 比对块不可达；脚本收敛为「派生守卫」单职责（拦手写副本回潮），`dup_id` 检查移交 Go `resource_types_consistency_test.go` |
 | binding-check | Wails Go↔TS 绑定契约，ADR-014 红线 |
 | check-menu-health | ADR-085 菜单表健康门禁，秒级正则扫描 |
 | i18n-check / i18n-ui-check | 三语一致性，秒级 |

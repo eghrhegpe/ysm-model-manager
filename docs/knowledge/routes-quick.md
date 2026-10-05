@@ -532,6 +532,7 @@
 | 检查某 _lib 模块是否被绕开手搓 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | [] | - |
 | 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
 | 门禁检查项有哪些 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过 | - |
+| 盘点当前技术债并刷新 7 本账本 | [技术债账本刷新与盘点方法论](./debt_ledger_refresh.md) | 未提交改动在多 AI 并行期会被 worktree reset 冲掉——改账本 / 文档后必须立即 --files 提交锁定 | - |
 | 判定「新增重复对」是真实新增还是文件搬迁/拆分 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
 | 判定违规是「真残留」还是「误报」 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
 | 提交前文档自动同步 | [提交前钩子 pre-commit](./pre-commit-hook.md) | 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2） | - |
@@ -672,6 +673,10 @@
 | 元失败层（通道自身失效）**禁** /`logError`/`pushToDiary` 收编 —— 那会经 sink 回到 `AddOpLog` 失败处，构成跨 microtask 无限循环（不栈溢出，静默烧 CPU）；此类处一律裸 try/catch 静默 + 锁存健康位（ADR-322 D2） | `logWarn` | - |
 | swallowError 吞掉业务异常 | - | 静默失败、无法排查；必须用于"预期内可忽略"的错误 |
 | swallowError 异常仅记日志不抛出 | - | 调用方无感知；生产无 console 时须靠 log.ts setLogSink 接日志 |
+| 误判——须读内容判是合理扩展还是失控（见「数文件数 ≠ 债」） | `文件数变多 = 债恶化` | - |
+| check-deadcode-baseline 默认模式会自动收编写基线，只读务必带 --json | - | - |
+| check-doc-drift 的 ARCH_DOCS 若指向已删文档 | - | archText 空 → unregistered 虚报全部模块 |
+| 有未治新债时误用 --update-baseline 会把债冻结进账本 | - | - |
 | 手写 adv-filter 弹窗 DOM | - | 与全局弹窗样式 / 焦点陷阱不一致；必须复用 modal.ts 的 registerDlg |
 | adv-filter 输入不校验就提交 | - | min > max 传后端报错；必须在 validate() 拦截并在 |
 | 重复打开 batch-rename 不 close | - | 上一个 Promise 悬挂、调用方 await 卡死；必须先 close 结算 |

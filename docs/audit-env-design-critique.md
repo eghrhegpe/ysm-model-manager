@@ -237,3 +237,75 @@ sky 侧作者自己标注了这个隐患（值得表扬，也说明已被识别�
 - 子代理的 F-1 第 2 条（dispose 触发路径）它自标「未验证」，主模型复核后**撤销**（见 §6）。
 - §1 的「幽灵键真进 localStorage」由 `persistState` 的 `JSON.stringify` 直接实现坐实，
   但**未跑端到端刷盘-重载实验**——如需最高证据等级，建议补一条 e2e。
+
+---
+
+## §9 修复轮记录（2026-10-05 同日，提交 `88926c810`）
+
+> 用户「尝试修复，结合相关提交历史」→ 本轮落地 §7 的 P0 项。**修复前先做了历史取证**（见下），
+> 因用户明确要求「结合相关提交历史」，且历史正是本轮最关键的证据来源。
+
+### 9.1 历史取证（决定了修复的形态）
+
+| 提交 | 内容 | 对本轮的意义 |
+|---|---|---|
+| `35c78a558`（2026-09-15） | 「env 一级菜单补齐全部 6 cap 能力主开关」 | **立法时刻**：sky/water 补了真能力开关，**ground 直接复用了既有的 `ground-visible`（可见性）凑数**——§2 的病是**立法即妥协**，非事后漂移 |
+| `73bd7dcb0` / `ed5b21b73` / `047f51808`（2026-09-22~23） | shadow → reflector → sky **三度收口** | environment **不在序列里**，直接范本 = sky |
+| `56300e506`（2026-10-04） | 「ground 私有门一项经查证驳回」 | ground 的「僵尸门」定性**已被人查证并维持**，本轮**不推翻**（§2 只做措辞校准，不动其结构） |
+
+**最关键的一条历史证据**：知识卡 `preview-env-state.md` 旧版曾把 `environment` 判为
+「**原教旨形态，非漏网**」，依据是 `ADR-196` 刀5 的「能力级 enabled 不入 schema 红线」。
+而**同一张卡的下一条（sky 收口条）已宣告该红线被 `ADR-250` 判定为误判并推翻**——
+即 env 是**被一份自己已作废的判据持续豁免**，才连躲三度收口。
+`ADR-250 §2.1` 判词原文：「门禁之所以一度无家可归，是因它被**误判为「能力级挂载」**。
+但实际上「是否显示后处理效果」是**用户对可见效果的偏好**，与「cap 是否构造」是两件事」——
+**「是否使用环境贴图」与此同构**，故 env 无任何可辩护的理由。
+
+**为何三度收口扫不到它（判据盲区，已记入知识卡）**：前三轮的判据是「**找双键**」
+（schema 键存在但零消费者）；而 env 是**单键缺失**——schema 里根本没有 `envEnabled`，
+无可计数的键。故须补扫「**私有门 + UI 写口 + 落盘，但 schema 无对应键**」这一形态。
+
+### 9.2 落地（§1 F-1 收口，第四例）
+
+- schema 新增 `envEnabled`（`group:"environment"` 首位，默认 `true` = 被退役私有门有效默认 → **零行为漂移**）
+- 删私有 `enabled`；`opts.enabled` 保留形参但桥接 `setEnvState`（照 sky 口径 + 顺序注释）
+- 回调新增 `changed.has("envEnabled")` **首分支**（开态 `buildEnvironment()`；关态 `disposeEnvironment()` + 还原 `prevEnvironment` + `applyBackground(null)`；两支补 light 通知 + `notify()`，**先处理 return** 防落入 structural 分支）
+- `setEnabled/isEnabled` 收敛为别名；**light 通知自 setter 搬进回调**（§1 所述「isEnabled 兼作跨 cap 协议」的旧形态残留随之收口）
+- `saveState` 落 schema 键形；`loadState` 回填无前缀 `enabled`（判据「新键缺失 ∧ 旧键 boolean」）+ 读值 `withLegacy.envEnabled ?? withLegacy.enabled`
+- **§2 措辞校准**（不重构 ground，因其「僵尸门」定性已有 `56300e506` 查证背书）：`scene-capability.ts|getMasterNodeId` 契约改为「语义按 cap 而异」并分别点明能力级/参数级；清掉注释里拷自他处的 **「audio」化石主语**；`ground-capability.ts|getVisible` 补层级校准注
+
+### 9.3 验证
+
+| 门禁 | 结果 |
+|---|---|
+| TDD 红相（新测试对**旧实现**） | **10 failed \| 1 passed**（唯一先绿者旧路径本就正确，保留作对照锚点） |
+| `vitest --run src/preview-3d/` | **3151 passed / 168 files**；`git stash` 对照基线 3140 → **+11 零回归** |
+| `npx tsc --noEmit` / `npm run typecheck` | **EXIT 0** / **EXIT 0**（两者等价已实证） |
+| `npx vite build` | **✓ built in 1.58s** |
+| `check-biome --files`（5 文件） | **✅ 通过** |
+
+### 9.4 ⚠️ 一次「假绿灯」自查（方法论留档）
+
+主模型复审时认为「关态分支不传 `extraExclude` 给 `disposeEnvironment()`」可能误释放 sky 直装纹理，
+遂补了一条守卫测试。**变异验证（把 `environment-ownership.ts` 的 `skySourcedTex` 排除项去掉）
+后测试仍全绿 → 该测试是空转的**，已**删除**，未留在提交里。
+
+**为何空转**：`disposeEnvironment` 只可能 dispose `this.backgroundSrcTex`；`skySourcedTex`
+仅作**排除集成员**出现、从不进 dispose 路径，且 sky 直装路径此前已 `applyBackground(null)`
+把 `backgroundSrcTex` 置空——故设想的风险**在新分支上不可达**，对该断言而言恒真。
+
+**教训**：新写的守卫测试必须做**变异验证**（改坏实现看是否转红），否则「覆盖率增加」是假象。
+本仓「假绿灯三重门」的传统在此再次被证明必要。
+
+### 9.5 未做 / 留待拍板
+
+- **§4（shadow/light 的环境归属）**：属**产品决策**（改变用户可见的信息架构），本轮**未动**。
+  实测确认 `ENV_CAP_CLASSES` 是硬编码 6 元素数组，给 shadow 加 `getEnvPlacement()` 即会让它
+  出现在环境面板，**无需改守护测试**（但须同步该数组，否则新成员无守护）——即**边界靠硬编码列表维持**。
+- **§3（`opts.enabled` 废除）**：sky 先例**也保留**该参数（只桥接），故本轮照抄保留；
+  「全仓废除」需单独立 ADR，不混入本批。
+- **e2e 视觉验证**：本轮动了 `scene.environment`/`scene.background` 的关态还原路径，
+  理论上有视觉回归面。已由单测覆盖（关态还原 `prevEnvironment` / `background` 让位 /
+  legacy 中毒救回），但**未跑 e2e 截图**——如需最高证据等级可补。
+- **真实旧档样本**：跨代迁移只做了单测级验证（按 `saveState` 历史键形推演），
+  未用真实升级用户存档样本核验。

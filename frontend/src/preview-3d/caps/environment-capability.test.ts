@@ -1585,4 +1585,33 @@ describe("EnvironmentCapability — 能力级开关单门收口（shadow/reflect
     cap2.apply();
     expect(scene.environment).not.toBeNull();
   });
+
+  it("[F-1] 开关单键翻转的重建轮数（行为快照，非防回潮断言——见注）", () => {
+    // ⚠️ 命名诚实说明（2026-10-05 独立复核 + 主模型变异实证）：本条**不是**防回潮断言。
+    // 复核（变异3）发现「删掉开关分支末尾的 `return` 不会让任何测试转红」；主模型随即补写
+    // 「单键翻转恰重建一轮」断言并**亲自变异验证（删 return）——结果仍全绿**。原因：当前
+    // `structural` 集合不含 `envEnabled`，fall-through 恰好良性（开关分支调一次 notify 后
+    // 落入下方，而下方离散键块因 changed 不含 envPreset/envSource/envUseAsBackground 而不触发），
+    // 故**行为在删 return 前后完全相同**——任何纯行为断言都无法捕获该 return 的存在。
+    // 保留本用例的价值 = 钉住「开关翻转的重建轮数」这个**行为事实**（防未来真出现双重建），
+    // 而 early return 本身由上方注释声明意图（防御性守卫），**不宣称有测试保护**。
+    // 观测点选 sky 取图而非 buildEnvironment 本身：`buildEnvironment` 在 envSource="sky"
+    // 通路下必调 `buildSkyEnvTex`，取其调用次数即「重建轮数」的忠实代理。
+    const baked = new THREE.Texture();
+    const bake = vi.fn(() => baked);
+    const scene = new THREE.Scene();
+    const cap = new EnvironmentCapability({
+      scene,
+      renderer: makeFakeRenderer(),
+      caps: { getById: (id: string) => (id === "sky" ? { bakeEnvironmentTexture: bake } : undefined) },
+    } as unknown as ConstructorParameters<typeof EnvironmentCapability>[0]);
+    setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+    cap.apply();
+    const afterApply = bake.mock.calls.length;
+
+    cap.setEnabled(false); // 关态：显式还原，不得再走一次取图
+    expect(bake.mock.calls.length, "关态还原不该再取图（走显式还原分支）").toBe(afterApply);
+    cap.setEnabled(true); // 开态：恰好一轮重建
+    expect(bake.mock.calls.length, "开态单键翻转恰重建一轮，不得叠加").toBe(afterApply + 1);
+  });
 });

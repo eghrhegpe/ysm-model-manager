@@ -2374,6 +2374,10 @@ export const autoSidebar = [
             "link": "/knowledge/check-threshold-scanners"
           },
           {
+            "text": "技术债账本刷新与盘点方法论",
+            "link": "/knowledge/debt_ledger_refresh"
+          },
+          {
             "text": "发版冒烟组——CI 同口径预演（ADR-318）",
             "link": "/knowledge/experience"
           },

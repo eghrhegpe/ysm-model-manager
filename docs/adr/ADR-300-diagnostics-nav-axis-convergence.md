@@ -23,16 +23,12 @@
 | `health` | 仓库健康审计 | diagnose | ✅ | **诊**仓库并处置 |
 | `sync-conflict` | 同步冲突 | refresh | ✅ | **诊**仓库并处置 |
 
-三条主症 + 三条附症（全部源码实测，出处见 §4）：
+三条主症（决策驱动）+ 一条附症（顺手收掉的低烈度债，出处见 §4）：
 
 1. **切分轴是「面板归属」不是「用户意图」**：log 与 record 都是"看数据"却隔成两个平级 tab；bench 与 scan 都是"跑基准"也各占一个；health 与 sync-conflict 同为"扫描→处置"同范式（ADR-288 已给它们同一套两段式），也各占一个。ADR-278 §2.1 自己写下了判据「跑基准是动词，性能记录是名词」，也自己在 §3 留下遗言「若后续再增扫描类，需另立聚合轴，不在本 ADR 范围内」——本 ADR 就是来还这笔的。
 2. **同一页两套二级导航语法**：log 组内用 pill 子 tab（`.diag-sub-tab`，op/runtime），bench 组内用 `<select id="diag-perf-mode">` 下拉。同一个"页内再分屏"概念两种 UI 语法，用户要学两遍。
 3. **跨平台导航形状突变且沉默**：6 个 tab 里 4 个 `desktopOnly`，网页版只剩 2 个——少掉的那 4 个没有任何告知，用户不知道自己缺了什么。
-4. （附）图标分裂：`UI_ICONS.performance` 在同页 tab 标签层出现三次作三种语义（bench 标签 `tpl.ts:210`、scan 标签 `:270`、log 的 skipped 筛选 chip `:189`）。而 skipped **日志行**早已用专用 `UI_ICONS.skip`（`logs.ts:162`——ADR-238 专项收 emoji 债时特意补进图标表，还纠正过「⏭️ 误映射成 performance」的串味，`logs.ts:138-143` 注释自陈）——唯独同页的筛选 chip 仍在蹭闪电：同一状态在行与筛选器两处图标分裂，chip 是用错的那半。
-5. （附）tab 文案词性不齐：「跑基准」（动宾）对「引擎对照 / 性能记录 / 仓库健康审计 / 同步冲突」（名词）；导航名片墙不该动名词混排。
-6. （附）父子同名：「操作日志」tab 内含「操作日志」子 pill（`tpl.ts:170` vs `:174`）——容器用内容的名字命名。
-
-一级入口文案「诊断与冲突」（`nav.diagnostics`）的"与"字是同一病灶的化石：冲突处置没有归属，就缝在标题上。
+4. **附症**（若只看主症 1/2/3 即够理解本 ADR）：图标分裂（skipped 筛选 chip 蹭 `performance` 闪电，而同状态日志行早已用专用 `UI_ICONS.skip`）；词性不齐（「跑基准」动宾对四个名词）；父子同名（「操作日志」tab 内含「操作日志」子 pill）；一级入口「诊断与冲突」的"与"字是同一化石（冲突处置没有归属，就缝在标题上）。
 
 ## 2. 决策（Decision）
 
@@ -72,55 +68,48 @@
 - `.diag-sub-tab` 从「log 组私有」升格为诊断页**唯一**组内二级导航形态：日志 3 / 基准 3 / 体检 2 条子 pill 行。
 - `#diag-perf-mode` select 退役，模式源改为「当前激活子 pill」；`data-perf-mode` 行显隐机制、`PERF_MODE_NAMES` / `PERF_RUN_BUTTON_MODE_KEYS` / `PERF_UNREAD_MODES` / `PERF_UNREAD_TARGETS` 四张门禁表**值域不变**（仍 single|conc）。生产端模式值读取点实测**三处**（`perf.ts:117`、`perf.ts:215`、`perf-single-bench.ts:206`）——全部一次搬家，改由单一函数（如 `readActiveBenchMode(root)`）注入，禁散落直读。scan 子面板不挂公共区行，故置灰表无需回补 scan 项（不共享即不置灰，与 `perf.ts:45` 现有注释同一逻辑）。
 - 子 pill 行不套 `role="tablist"`（顶层 tabbar 已是 tablist，嵌套双 tablist 是 ARIA 反模式），维持 plain button——与现状 `.diag-sub-tab` 一致；键盘化留作遗留（§3）。
-- **接线与产出单点化**（承接 ADR-259「结构正确性由代码保证，不由模板作者记忆」）：`init.ts` 的 `dgInBindLogSubTabs` 泛型化为 `bindSubTabs(root, group, onSwitch)`，与模板侧 `renderSubTabs(group, items, activeId)` 成对落 `tabs-shell.ts`（renderTabs/bindTabs 的既有邻居），三组共用一个显隐 + active 机制。日志组的刷新/复制/清空按当前子 pill 分派的逻辑（`dgInIsRuntimeLog`）收进 onSwitch 回调，不再各自摸 DOM。
+- **接线与产出单点化**（承接 ADR-259「结构正确性由代码保证，不由模板作者记忆」）：`init.ts` 的 `dgInBindLogSubTabs` 泛型化为 `bindSubBar(root, group, onSwitch)`，与模板侧 `renderSubBar(group, items, activeId)` 成对落 `tabs-shell.ts`（renderTabs/bindTabs 的既有邻居），三组共用一个显隐 + active 机制。（决策当时拟名 bindSubTabs/renderSubTabs，落地正名为 SubBar——「子面板条」而非「子 tab」，避免与顶层 tablist 混淆。）日志组的刷新/复制/清空按当前子 pill 分派的逻辑（`dgInIsRuntimeLog`）收进 onSwitch 回调，不再各自摸 DOM。
 
 ### 2.3 图标唯一性：顶层图标预算 = 顶层 tab 数
 
-- 三个组 tab 三枚互不重复：日志=`clipboard`、基准=`performance`、体检=`diagnose`。
-- 子 pill 纯文字带（不挂图标），从机制上消灭「图标通胀」的增量空间。
-- 日志组 skipped 筛选 chip 改用专用图标 `UI_ICONS.skip`——skipped 日志行早已用它（`logs.ts:162`，ADR-238 专项补入图标表并纠正过「⏭️→performance」的串味映射），唯独筛选 chip 还在用闪电（`tpl.ts:189`）：换毕，「跳过」状态全链路一枚图标，闪电归还基准组标签专用。
-- 按钮级图标（如 sync-conflict 的 `refresh`、运行按钮的 `performance`）不占顶层预算，维持现状。
+- 三个组 tab 三枚互不重复：日志=`clipboard`、基准=`performance`、体检=`diagnose`；子 pill 纯文字带（不挂图标），从机制上消灭「图标通胀」的增量空间。按钮级图标（sync-conflict 的 `refresh`、运行按钮的 `performance`）不占顶层预算。
+- 日志组 skipped 筛选 chip 改用专用 `UI_ICONS.skip`（skipped 日志行早已用它，chip 是唯一漏换的一处）：换毕「跳过」状态全链路一枚图标，闪电归还基准组标签专用。
 
 ### 2.4 文案语法对齐
 
-- 顶层 tab 一律名词：**日志 / 基准 / 体检**；「跑基准」下沉为按钮级文案（`#diag-perf-run` 按钮现文本不动），符合 ADR-278 §2.1 自己的判据「动词属于动作层」。
-- 子 pill 一律名词短语且直接复用既有键：操作日志/运行时日志/加载剖析、单模型/批量并发/引擎对照、仓库健康/同步冲突。「操作日志」父子同名随之消解（顶层改叫「日志」后，该词唯一指涉子 pill）。
+- 顶层 tab 一律名词：**日志 / 基准 / 体检**；「跑基准」下沉为按钮级文案（`#diag-perf-run` 现文本不动），符合 ADR-278 §2.1「动词属于动作层」判据。子 pill 一律名词短语且复用既有键，「操作日志」父子同名随之消解（顶层改叫「日志」后该词唯一指涉子 pill）。
 - 三语同步新增组级键 + `nav.diagnostics` 精简（D4），由 `locales-consistency.test.ts` 兜底。
 - ADR-278 §2.6 语义诚实层（标签改口 / scope hint / conc 回落 toast）**全量保留**——它治的是"同控件跨模式改义"，与导航载体无关。
 
 ### 2.5 网页版墓碑与「远处名单」的退役
 
 - viewerMode 下 `renderTabs` 在顶层 tab 栏**外**（tablist 容器之后，非 tablist 之内——尊重 ADR-258 §2.4「tablist 只含 role=tab」红线）产出一行告知：「跑基准与体检仅桌面版可用」。`desktopOnly` 判定从 6 份收敛为 2 份组级声明（基准组、体检组），声明处即真相的 ADR-259 精神不变。
-- `dgInHideDesktopOnly`（`init.ts:152-172`）**整体退役**：其名单三项（`diag-health-bar` / `diag-sync-bar` / `diag-perf-scan-bench`，`:161-165`）重构后全部位于 desktopOnly 组内——组在 web 根本不渲染，"二道防线"永空转；留着它反而是「第二只手」漂移的温床。加载剖析的刷新按钮**本就不在名单内**（历史上曾被误藏后豁免，`init.ts:150-151,166-167` 注释自陈），迁入日志组（非 desktopOnly）后由结构保证不再有误伤空间，教训从「注释提醒」升为「结构继承」。
+- `dgInHideDesktopOnly`（`init.ts:152-172`）**整体退役**：其三项名单重构后全部位于 desktopOnly 组内——组在 web 根本不渲染，"二道防线"永空转；留着它反而是「第二只手」漂移的温床。教训（加载剖析刷新按钮曾被误藏后豁免）从「注释提醒」升为「结构继承」。
 
-### 2.6 契约同步面（落地红线清单）
+### 2.6 契约同步面（落地红线）
 
-1. `VIEW_TESTIDS`（`tpl.ts:13-61`）：删 `diag-perf-mode`；新增组面板与子 pill 的稳定钩子（如 `diag-sub-single/conc/scan/health/sync/trace`）；其余元素 id（`diag-perf-run`、`diag-perf-scan-bench*`、`diag-scan-*`、`diag-load-trace` 等）**全部保留**——元素 id 不动是历次诊断页重构（ADR-278 §3）压住测试面的成功经验。
-2. `frontend/e2e/diagnostics.spec.ts` 实测 12 处触点（`:120,246,272,324,326,557,631,632,771,890,919,931`；注：朴素 grep 数出 15 处是 `diag-perf-model`（模型路径输入框）被 `diag-perf-mode` 子串误命中 3 处，剔除后真实 12 处）。两类搬迁：9 处 `.repo-tab[data-tab=bench/scan/record]` → 组 tab id + 子 pill 点击；3 处 `setShadowSelect(diag-perf-mode)`（`:326/632/931`）→ 点 pill。
-3. **门禁表随载体迁移**：`perf-mode.test.ts` 的穷尽护栏（"新增控件忘登记即红"）判据依赖 select 与 `data-perf-mode` 行归属，载体换成 pill 后判定必须同步搬家——ADR-278 §2.7 早有警告「闸只看得见它被写死的那一类，护栏从覆盖少一格变成扫错文件」。
-4. 单测夹具同形：`init.test.ts` / `tpl.test.ts` / `tpl-structure.test.ts` / `content-diag-classes.test.ts`（类名↔CSS 契约须覆盖子 pill 行新形态）/ `perf.test.ts` / `perf-mode.test.ts` / `perf-concurrent.test.ts` / `perf-matrix.test.ts`。
-5. **生产端消费者搬迁（本 ADR 的命门，非"预期无"而是"实有且须迁"）**：grep 实证两处生产代码消费者，record/scan tab 降级后它们不会报错、只会**静默失配**——
-   - `diagnostics/init.ts:228` `dgInBindTraceTab` 用 `.repo-tab[data-tab="record"]` 挂「进 tab 即重渲染加载剖析」钩子；record 并入日志组后该顶层选择器落空，**每次进剖析子面板重渲染的语义无声丢失**（可选链不抛错，无测试兜得住）。搬迁：把该重渲染登记进日志组 `bindSubTabs` 的 `onSwitch`（子 pill 切到 trace 时触发），元素 id `diag-load-trace` 不变。
-   - `perf-single-bench.ts:206` 直读 `diag-perf-mode`，随 D2 三读点统一收进 `readActiveBenchMode()` 出口（见 §2.2）。
-   - 落地第 0 步：全仓再 grep `data-tab="bench|scan|record"`、`diag-perf-mode`、`#diag-tab-record`、`#diag-tab-scan` 确认搬迁清单闭合，无第三处。
-6. 落地时在 ADR-278 首部加**如实衔接注**（明写「§2.7 item 2 的**结构性判据**被本 ADR 修订为**内容性判据**，scan 以组内子 pill 回到模式行继任位置，危害由公共区整体退场中和」——不得美化为"仅改落点"，格式仿 ADR-278 对 ADR-288 的既注）；ADR-285 状态行补「P1-2/P1-3 由 ADR-300 吸收」。
-7. 知识卡 `docs/knowledge/app-content-diagnostics.md` 同步（铁律：改代码同步知识卡，`check-knowledge-drift` 兜底）。
-8. 本页面属 DOM tab 层，非 3D 菜单——AGENTS.md「3D 菜单只允许 MenuNode schema」红线不适用、也不冲突；页内导航仍经 PAGE_REGISTRY 路由可达，不新增调用面。
+> 具体迁移清单（子 pill 钩子命名与派生规则、e2e 触点逐处、8 个单测夹具、护栏改名）属实施明细，见知识卡「ADR-300 诊断页导航轴收敛」节；本节只留方向与命门。
+
+1. **元素 id 全部保留**（`diag-perf-run`、`diag-perf-scan-bench*`、`diag-scan-*`、`diag-load-trace` 等）；仅删 `diag-perf-mode`，子 pill 钩子由 group+id 派生。元素 id 不动是历次诊断页重构（ADR-278 §3）压住测试面的成功经验。
+2. **门禁表随载体迁移**：`perf-mode.test.ts` 的穷尽护栏判据依赖 select 与 `data-perf-mode` 行归属，载体换 pill 后判定必须同步搬家——ADR-278 §2.7 早有警告「闸只看得见它被写死的那一类，护栏从覆盖少一格变成扫错文件」。
+3. **生产端消费者搬迁（本 ADR 的命门，非"预期无"而是"实有且须迁"）**：record/scan 降级为子 pill 后，两处生产消费者**不报错、只静默失配**——
+   - `diagnostics/init.ts:228` `dgInBindTraceTab` 用 `.repo-tab[data-tab="record"]` 挂「进 tab 即重渲染加载剖析」钩子：选择器落空 → 每次进剖析子面板重渲染的语义无声丢失（可选链不抛错，无测试兜得住）。搬迁到子 pill 切换的 `onSwitch`，元素 id 不变。
+   - `perf-single-bench.ts:206` 直读 `diag-perf-mode`：随 D2 三读点收进 `readActiveBenchMode()` 唯一出口（§2.2）。
+4. **落地第 0 步：搬迁清单 grep 实证闭合**——全仓 grep 旧选择器（`data-tab="bench|scan|record"`、`diag-perf-mode`、`#diag-tab-record`、`#diag-tab-scan`）确认无第三处消费者。降级搬迁的失败模式是「不报错、只静默失配」，清单闭合只能靠 grep 而非测试。
+5. **交叉引用同步**：ADR-278 首部加**如实衔接注**（§2.7 item 2 的结构判据被本 ADR 修订为内容性判据，危害由公共区整体退场中和——不得美化为"仅改落点"，格式仿 ADR-278 对 ADR-288 的既注）；ADR-285 状态行补「P1-2/P1-3 由 ADR-300 吸收」；知识卡同步（铁律，`check-knowledge-drift` 兜底）。
+6. 本页属 DOM tab 层，非 3D 菜单——AGENTS.md「3D 菜单只允许 MenuNode schema」红线不适用、也不冲突；页内导航仍经 PAGE_REGISTRY 可达，不新增调用面。
 
 ### 2.7 分段实施（各自可独立回滚）
 
-- **S1 纯文案与图标刀**（D3/D4 + §2.3 图标 + §2.4 名词化）：不动导航形状，低风险先落，立刻治好附症 4/5/6。
-- **S2 导航重组**（D1/D2 + §2.1/2.2/2.5）：3 组 + renderSubTabs/bindSubTabs 单点 + desktopOnly 组化。
+- **S1 纯文案与图标刀**（D3/D4 + §2.3 图标 + §2.4 名词化）：不动导航形状，低风险先落，立刻治好 §1 的附症。
+- **S2 导航重组**（D1/D2 + §2.1/2.2/2.5）：3 组 + renderSubBar/bindSubBar 单点 + desktopOnly 组化。
 - **S3 退役清扫**：`dgInHideDesktopOnly` 删除、`diag-perf-mode` 相关残留清零、契约测试收紧（新增子面板忘挂 `data-perf-*` 即红的护栏补一条）。
 
 ## 3. 后果（Consequences）
 
 **正面**
 
-- 顶层导航从「三根轴混切」收为单轴一句话心智：**看日志、跑基准、做体检**；6 tab 的视觉重量降为 3。
-- 全页二级导航单一语法一种机制，`bindSubTabs` 单点出口；「select 还是 pill」这类分叉从结构上不可能再长回来。
-- 图标唯一、词性对齐、父子同名消解、「诊断与冲突」的"与"字化石退役。
-- 网页版从「沉默消失」变「可见缺席」；跨平台能力差异以**组**为粒度声明，`dgInHideDesktopOnly` 这只"远处的另一只手"在本页清零。
+- 顶层导航从「三根轴混切」收为单轴一句话心智：**看日志、跑基准、做体检**；全页二级导航单一语法一种机制，「select 还是 pill」这类分叉从结构上不可能再长回来。
 - 偿还 ADR-278 §3 留下的「扫描聚合轴」遗债；吸收 ADR-285 P1-2/P1-3 两笔待拍板布局项（bench 组内行序维持已落地的 P1-1 方案 A，不再二次摇摆）。
 
 **负面 / 代价**
@@ -133,16 +122,16 @@
 
 **已知遗留**
 
-- ~~子 pill 的 ARIA/键盘化（role=tablist 嵌套的正确姿势是 toolbar+radiogroup 还是树形 tablist）~~：**已落地（2026-10）**——采用 toolbar+radiogroup 姿势（bar `role="toolbar"` + pill `role="radio"`/`aria-checked` + roving tabindex + 方向键，实现与兼容策略见 `docs/knowledge/app-content-diagnostics.md`「a11y 接线」节；契约测试 `tabs-shell.test.ts` + `tabs-shell.dom.test.ts`）。不套 tablist 的判据仍成立（顶层已是 tablist）。
+- ~~子 pill 的 ARIA/键盘化~~：**已偿还（2026-10）**——toolbar+radiogroup 姿势（bar `role="toolbar"` + pill `role="radio"`/`aria-checked` + roving tabindex）；不套 tablist 的判据仍成立（顶层已是 tablist）。实现与契约测试见知识卡「a11y 接线」节。
 - 3D 菜单 MenuNode 若要深链诊断页子 pill：`diag-tab-<组>` + `data-sub=<id>` 两级 id 已留单源，深链本身不在本期。
 - `oldest` 页与诊断页共用路由分支（`app-content.methods.test.ts:163`）不在本期触碰范围。
 
 ## 4. 数据溯源
 
 - **现状 6 tab 与 desktopOnly 分布**：`frontend/src/views/app-content/tpl.ts:162-342`（log `:167` / bench `:206` / scan `:263` / record `:285` / health `:298` / sync-conflict `:318`；desktopOnly 标注 `:209,269,300,320`）。
-- **图标分裂**：`tpl.ts:189`（skipped chip=performance）、`:210`（bench 标签）、`:270`（scan 标签）三处蹭闪电；`UI_ICONS.skip` 定义于 `ui-icons.ts:70`，消费者在 `diagnostics/logs.ts:162`（skipped 日志行状态图标，ADR-238 专项补入，串味纠正记录见 `logs.ts:138-143` 注释）——**有消费者，唯独 chip 没换上**，修正方向是补齐 chip 而非"启用闲置图标"。
+- **图标分裂**：`tpl.ts:189`（skipped chip=performance）、`:210`（bench 标签）、`:270`（scan 标签）三处蹭闪电；`UI_ICONS.skip` 定义于 `ui-icons.ts:70`，消费者在 `diagnostics/logs.ts:162`——**有消费者，唯独 chip 没换上**，修正方向是补齐 chip 而非"启用闲置图标"。
 - **两套二级语法**：pill 子 tab `tpl.ts:174-175` + 接线 `diagnostics/init.ts:61-78`；mode select `tpl.ts:220-223` + 接线 `diagnostics/perf.ts:116-124`；门禁四表 `perf.ts:40-77`。
-- **生产端消费者（子代理核实后补录）**：`diagnostics/init.ts:228`（`dgInBindTraceTab` 按 `.repo-tab[data-tab="record"]` 挂重渲染钩子，record 降级后静默失配——见 §2.6 第 5 条）；`diagnostics/perf.ts:117,215` + `diagnostics/perf-single-bench.ts:206`（模式值三读点）。
-- **网页版形状**：`renderTabs` 隐藏机制 `frontend/src/views/app-content/tabs-shell.ts:52-55,76`；局部二道防线 `diagnostics/init.ts:152-172`（现役**三项**名单：`:161,162,165`）；跨平台面板依据 `init.ts:148-151` 注释与 ADR-278 §2.5。
-- **e2e 触点**：`frontend/e2e/diagnostics.spec.ts:120,246,272,324,326,557,631,632,771,890,919,931`，实测 12 处（grep 模式命中 15 行，其中 `:562,616,665` 三行为 `diag-perf-model` 被 `diag-perf-mode` 子串误命中，剔除）。
+- **生产端消费者（子代理核实后补录）**：`diagnostics/init.ts:228`（`dgInBindTraceTab` 按 `.repo-tab[data-tab="record"]` 挂重渲染钩子，record 降级后静默失配——见 §2.6 第 3 条）；`diagnostics/perf.ts:117,215` + `diagnostics/perf-single-bench.ts:206`（模式值三读点）。
+- **网页版形状**：`renderTabs` 隐藏机制 `tabs-shell.ts:52-55,76`；局部二道防线 `diagnostics/init.ts:152-172`；跨平台面板依据 `init.ts:148-151` 注释与 ADR-278 §2.5。
+- **e2e 触点**：`frontend/e2e/diagnostics.spec.ts` 实测 12 处（朴素 grep 命中 15 行，其中 3 行为 `diag-perf-model` 被 `diag-perf-mode` 子串误命中，已剔除）。
 - **决策依据**：ADR-278 §2.1（动/名判据）、§2.7（公共区真常驻 + scan 退轴——本 ADR 保留其内容判据、**修订其结构判据**，见 D1）、§3 负面（元素 id 保留控测试面）、§3 已知遗留（扫描聚合轴另立）；ADR-258 §2.4（tablist 内禁混操作按钮）；ADR-288 D2（两段式与按钮常驻 bar 的 dead-end 教训）；ADR-285 P1-1（动作与参数同序已落地）与 P1-2/P1-3（待拍板）。

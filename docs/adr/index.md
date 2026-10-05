@@ -16,9 +16,9 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 5 |
+| [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 13 |
+| [🔄 部分采纳](#部分采纳) | 14 |
 | [✅ 已采纳](#已采纳) | 298 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 3 |
@@ -26,20 +26,20 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（5）
+### 📝 提议中（4）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-323](./architecture/ADR-323-pre-commit-commit-blocks.md) | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 📝 提议中 |
 | [ADR-321](./architecture/ADR-321-cap-persistence-restore-derivation.md) | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 |
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 
-### 🔄 部分采纳（13）
+### 🔄 部分采纳（14）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-323](./architecture/ADR-323-pre-commit-commit-blocks.md) | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 🔄 部分采纳 |
 | [ADR-285](./ADR-285-bench-usability-copy-diff-plan.md) | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 |
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
 | [ADR-249](./ADR-249-ground-material-axis-split-layer-overlay.md) | 地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层） | 🔄 部分采纳 |
@@ -382,7 +382,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-323 | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 📝 提议中 | 2026-10-06 |
+| ADR-323 | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 🔄 部分采纳 | 2026-10-06 |
 | ADR-322 | 元失败层：日志通道健康锁存 + 第二落盘通道 + 不可驱逐保留位 | ✅ 已采纳 | 2026-10-05 |
 | ADR-321 | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 | 2026-10-04 |
 | ADR-320 | ADR 体系分级：架构决策与执行决策日志分治 | ✅ 已采纳 | 2026-10-04 |

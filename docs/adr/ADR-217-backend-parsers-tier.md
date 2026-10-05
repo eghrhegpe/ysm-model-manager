@@ -23,7 +23,7 @@
 
 ## 2. 决策（Decision）
 
-### 2.1 环 A 断环（已落地）
+### 2.1 环 A 断环
 
 将 `parseBedrockGeometryFromJSON` 与 `parseYsmJsonDirect` 两个**纯 JSON 解析函数**下沉至 `frontend/src/parsers/`：
 
@@ -38,14 +38,14 @@
 
 效果：backend→preview-3d 运行期边消除，环 A 即破；`BedrockGeometry` 等类型消费方（~30 文件）不受影响。
 
-### 2.2 环 B（后批已落地，见 f94625e4d）
+### 2.2 环 B
 
 原计划暂缓的环 B 随 isWebPlatform 上移中性层一并收口：`workers/stats.worker.ts` 的
 `idbGet` / `parseWebPath` 改从 `utils/storage/idb.ts` / `utils/base/web-path.ts`（中性层）
 取用，backend⇄workers 运行期环已破；`workers/coi-sw.ts` → `backend/platform.ts`
 （isWebPlatform，中性叶子）为唯一保留边，不构成环。
 
-### 2.3 Tier 判定收敛（已落地，见 P1-3 实施）
+### 2.3 Tier 判定收敛
 
 `platform.ts` 的 Tier 原语保留；新增单一 `resolveTier()` 组合函数，`platform-web.ts` 仅做 tier→mode 映射；
 删除 `platform-parity.test.ts` 复制粘贴对拍守护（单一来源后无需对拍）。

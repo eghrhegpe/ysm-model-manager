@@ -40,7 +40,7 @@ ADR-086 完成了**检查体系减负**（星级评定 + 职责去重 + AI 调�
 
 ## 2. 决策（Decision）
 
-### Take巧 #1：域间并行（Go ∥ 前端）✅ 已落地
+### Take巧 #1：域间并行（Go ∥ 前端）
 
 **方案**：pre-push-gate `main()` 中，将 Go 域和前端域包成 `Promise.all([asyncFn, asyncFn])` 并行执行。
 
@@ -159,15 +159,15 @@ check-layering → check-menu-health → vite build → vitest → tsc
 
 ---
 
-## 4. 落地结果（2026-08-17）
+## 4. Take巧 裁定（2026-08-17）
 
-| Take巧 | 状态 | 说明 |
+| Take巧 | 裁定 | 说明 |
 |--------|------|------|
-| #1 域间并行（Go ∥ 前端） | ✅ **已落地** | `Promise.all([asyncFn, asyncFn])`，domain-classify 不变，`shAsync` 复用既有函数（无需 `runSpawn`） |
-| #2 Go 域内并行（go test ∥ go vet） | ⏸️ 待实施 | 域内依赖链（build→test→vet），当前域内仍串行 |
-| #3 前端域内并行 | ⏸️ 待实施 | vite build ∥ tsc 已存在；check-layering/check-menu-health 仍串行（<1s，收益低） |
-| #4 静态工具分组并行 | ❌ **实测回退** | spawn 开销吃掉 sub-second 工具收益（见 §2） |
-| #5 pre-commit gen 分组并行 | ⏸️ 待实施 | bash `&`+`wait`，未实施 |
+| #1 域间并行（Go ∥ 前端） | ✅ 采纳 | `Promise.all([asyncFn, asyncFn])`，domain-classify 不变，`shAsync` 复用既有函数（无需 `runSpawn`） |
+| #2 Go 域内并行（go test ∥ go vet） | ⏸️ 未立项 | 域内依赖链（build→test→vet），当前域内仍串行 |
+| #3 前端域内并行 | ⏸️ 未立项 | vite build ∥ tsc 已存在；check-layering/check-menu-health 仍串行（<1s，收益低） |
+| #4 静态工具分组并行 | ❌ 否决 | spawn 开销吃掉 sub-second 工具收益（见 §2） |
+| #5 pre-commit gen 分组并行 | ⏸️ 未立项 | bash `&`+`wait` |
 
 **Take巧 #1 净收益**：
 ```

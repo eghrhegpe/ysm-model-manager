@@ -4,7 +4,6 @@
 - **日期**：2026-08-18
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-066 通用资源预览, ADR-067 压缩容器资源检测, ADR-103 注册表加载单源化, resource_types.json 单一事实来源`
-- **落地进度（2026-08-18 追加）**：group 字段 + resourceGroups 顶层数组已写入 `resource_types.json`（第 1 层通用分组）；Go 侧 `GroupOf` / `GroupStorageRoot` / `GroupLabel` 已实现并接入 `GetRepoRoot` / MkdirAll；前端 `GROUP_META` / `GROUP_OF` / `groupStorageRootOf` 已派生并接入 path-cards 显示；schema 校验已纳入 group（可选 + 白名单）。**MMD 段冻结点已用 `upstream/MC-MMD-rust` 真实源码解冻（见 §4 溯源补充）。**
 
 ---
 

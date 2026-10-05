@@ -75,14 +75,14 @@ ADR-075 已落地的「🌍 环境菜单」（地面/时间/云量/IBL）作为�
 
 ### D4 · 落地范围（v3）
 
-- **Phase 1（已落地，2026-08-16）**：
+- **Phase 1**：
   - 顶栏整块移除（closeBtn/switchSel/spacer/环境菜单块/相机顶栏调用 + `overlay.appendChild(topBar)`）；
   - 新增 `preview-menu-defs.ts`（PREVIEW_MENU_DEFS）+ `preview-menu.ts`（`mountPreviewRootMenu` + `fillEnvironment` + `fillSwitch`）；
   - `mount3D` 在 `overlay` 内挂载根菜单（⚙️ 按钮 `preview-menu-btn` + 弹出 `ysm-preview-menu`），`close` 复刻原 `closeBtn` 分支（`cleanupFn?fullCleanup:closeOverlay`），`fullCleanup` 内解绑 document 监听；
   - 切换后 `currentPath = newPath` 同步根菜单高亮（ADR-066 §5.6）；
   - 适配器底部导航容器 `topBar` 重建为**底部容器**（承接 `extraControls(topBar)`），Phase 2 收编；
   - 三语 locale 补齐 7 键（settings/back/switchModel/noOtherModel/timeOfDay/cloudCoverage/environmentLight）。
-- **Phase 2（已落地，2026-08-16）**：
+- **Phase 2**：
   - **契约修正**：落地为 `PreviewBuildCtx.menu`（`PreviewMenuHandle`：`setAdapterItems` 替换适配器项 / `openPanel` 打开面板 / `dispose` 解绑），而非预想的静态 `PreviewAdapter.previewMenuItems`——因为适配器菜单项（model/material/play/bones）依赖 build 后内容（mmd/mesh/model/handle），只能在 build 内经注册通道注入。`PreviewMenuItemDef` 扩展 `render?`（panel 填充）/ `run?`（action 执行）；
   - **ysM 收编**：`buildYsmBottomNav`/`mkNavBtn`/`popupSection`/`popupRow` 删除，`ysm-controls.ts` 瘦身为面板填充模块（`fillYsmModelPanel`/`fillYsmShotPanel`/`attachYsmBoneSelect`）；ysM 注册 model/截图/骨骼 三项；顺带修复两处现存缺陷（navBuilder 死参数——ysM 底部导航从未挂载；骨骼按钮找不存在的 `#ysm-3d-panel`——点击无效）；
   - **mmd 收编**：`buildMmdBottomNav`/`mkNavBtn`/slide-menu 弹窗删除，`mmd-controls.ts` 瘦身为面板填充模块（`fillMmdModelPanel`/`fillMmdPlayPanel` + 保留 `buildMaterialControls`）；mmd 注册 model/材质/播放 三项 + ADR-077 骨骼项（并行落地，仲裁收编为 bones 菜单项）；切换归 core switch 项、相机归 core camera 项，消灭双入口；

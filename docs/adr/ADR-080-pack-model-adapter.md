@@ -82,7 +82,7 @@ POC `parse-java-model.mjs` 纯 TS 移植（零依赖），加载抽象为 `read(
 - **方法**：POC 解析器 21 断言全绿 → 立项落地（本 ADR）。
 - **结果**：解析口径全部锁定（parent 链/变量/UV/旋转/tint/display 继承），落地改造面 = Go 2 binding + TS 1 解析器 + 1 适配器 + 路由 1 行。
 
-## 5. 材质与 tint 演进（L3 已落地 / L4 参考）
+## 5. 材质与 tint 演进
 
 ### 5.1 L3 材质升级（commit `0e5a7f63`，仅改 `pack-model-adapter.ts`）
 

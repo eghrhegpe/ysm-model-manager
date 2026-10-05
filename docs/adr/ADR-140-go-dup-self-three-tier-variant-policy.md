@@ -48,7 +48,7 @@
 - **🟡 领域脚手架** —— **仅** = 满足 C1–C4 的字节精确自包含块；盲抽 Batch C 对剩余债务**基本不适用**。
 - **结论**：原问题「Batch C vs ADR」的答案是 **先钉 ADR（本 ADR）+ 仅做满足准则的安全抽取**；Batch C 式盲抽会引入风险且不降对。
 
-### 2.4 本轮已落地（示范）
+### 2.4 安全抽取示范
 
 - `go/fileops/fileops.go`：抽 `opPrologue(a,b,emptyMsg)` 统一 `opMu.Lock + TrimSpace + 空值校验`，替换 3 处自重复（Rename*/Move*/Copy*）→ 调用点 4 行。
 - `go/tags/tags.go`：抽 `prepareWrite` 返回解锁闭包，替换 2 处 `checkModelPath+load+Lock/defer`（C3 模式）→ 调用点 4 行。

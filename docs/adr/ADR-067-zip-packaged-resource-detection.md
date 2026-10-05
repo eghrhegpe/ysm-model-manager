@@ -105,7 +105,7 @@ func matchZipArchive(path string, rt *types.ResourceType) bool {
 
 一个 `.zip` 可能同时满足多个 `zipEntries`（如同时含 `ysm.json` 与 `model.pmx`）。消解规则 = **注册表顺序即优先级**：`DetectResourceType` 与 `MatchZipEntry` 均按注册表顺序遍历、首命中胜出。当前顺序 `[resourcepack, shaderpack, ysm, maid-model, blueprint, litematic, EntityPlayer, SceneModel, CustomAnim, CustomMorph, StageAnim, mmd-shader, DefaultAnim, DefaultMorph, fbx]`（15 类，2026-08-21 核对），使 ysm（唯一根标记 `ysm.json`/`models/`）天然排在 MMD 之前 → YSM 更具体者优先，符合直觉。该规则已隐含于现有遍历逻辑，无需额外代码。
 
-### 2.4 S4 — 前端安全契约（本批已落地 ✅）
+### 2.4 S4 — 前端安全契约
 
 `frontend/src/utils/resource/types.ts` 新增 `AMBIGUOUS_EXTS` + `resolveTypeSafe`：歧义扩展名（`.zip`/`.7z` 归属 ≥2 类型）返回 `null`，强制调用方回退 `DetectResourceType` 内容检测。新分发器（P1 VRM / P2 MMD 适配器）统一使用，从入口杜绝硬编码扩展名派发。
 
@@ -139,17 +139,8 @@ func matchZipArchive(path string, rt *types.ResourceType) bool {
 - `go/types/resource.go:43-66` — `ZipEntryMatch{Name,Match}` + `MatchZipEntry`（exact/prefix/suffix）。
 - `resource_types_embed.go:1` — `// Code generated from resource_types.json; DO NOT EDIT.` + 双副本一致性测试 `resource_types_consistency_test.go`。
 
-### 4.2 执行状态
+### 4.2 回归验证口径（zip 化资源检测契约）
 
-| 阶段 | 内容 | 状态 | 落点 |
-|------|------|------|------|
-| S4 | 前端 `AMBIGUOUS_EXTS` + `resolveTypeSafe` | ✅ 已落地 | `frontend/src/utils/resource/types.ts`（`6e504851`，含 15 例单测 `types.test.ts`） |
-| S1 | 4 类 `extensions`+`.zip` / `detector:zipentry` / `zipEntries`（双文件同步） | ✅ 已落地 | `resource_types.json` + `go/types/resource_types_embed.go`（`6e504851`） |
-| S2 | `mcmeta.go` 新增 `zipentry` case + `matchZipArchive` helper | ✅ 已落地 | `go/packs/mcmeta.go`（`6e504851`，zipentry 单测补于 `mcmeta_detect_test.go`） |
-| S3 | 冲突优先级 = 注册表顺序 | 🟢 设计确认，零代码 | 沿用现有遍历逻辑（zipentry 优先级用例已固化进单测） |
-| S5 | 检测层收敛 `zipEntryMatch` 轻量 helper | ✅ 已落地 | `go/packs/mcmeta.go`（`9f1a20e1`） |
-
-### 4.3 回归验证清单（S1/S2 执行前必跑）
 1. `go test ./go/types/...`（embed 与 JSON 一致性）
 2. `go test ./go/packs/... ./go/importer/...`（检测核心）
 3. 前端 `npm run typecheck` + `npx vite build`

@@ -52,7 +52,7 @@ YSM cap 是**实例方法自报控件**（`cap.setCloudCoverage(v)` 等闭包）
    - **与刀 0 的关系**：刀 0 是「渲染归属复位」的方向决策（谁该拥有渲染实现），刀 2.5 是其**延后执行的落地动作**——因刀 1/刀 2 期间桥接层需要稳定中间态，反向投影暂留作过渡；刀 2 收尾后必须在刀 3 前清偿，不得遗留。
 5. **刀 3：收口删除**：最后一个 cap 迁完时，删 `MenuControlDef`/`MenuControlKind`/cap-controls.ts 整组渲染与 cc-* 视觉层、`controls` 节点 kind、settings 的 `collectSettingsCapControls` 特判。
 
-   > **2026-09-07 实施结果（刀3 走法乙，已落地）**：
+   > **2026-09-07 刀3 实施结果（走法乙）**：
    > 原蓝图按「custom 逃生舱迁复杂控件 + 删桥」规划四类拆除；实际落地**改走法乙（更名收敛）**——保留 controls 通道与 cap 栈渲染器，仅把类型名从 `MenuControlDef`/`MenuControlKind` 更名收敛为 `PreviewControlDef`/`PreviewControlKind`（字段原样），渲染形态零变、不碰 render-custom 审计门。落地后：
    > - **类型**：旧类型名全仓归零（仅历史叙事保留旧名）；`PreviewMenuNode.controls` 改持 `PreviewControlDef[]`。
    > - **构造点**（sky/ground/environment 复杂控件 + settings `buildCrossCuttingControls` + cap-to-node 桥）全改吃 `PreviewControlDef`。

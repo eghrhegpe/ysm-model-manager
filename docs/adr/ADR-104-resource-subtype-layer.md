@@ -24,8 +24,8 @@
 3. **防御性检验**：扩展名/内容指纹检测（`detector`、`FindInstDir` 的 `ysm.json` 标志文件、`resolveTypeSafe` 歧义回退内容检测）作为**位置路由的防御层保留**在整合包侧与 3D 预览侧——路径优先，但绝不删检测（ADR-095 教训：只看弱证据会误伤 config 目录）。
 
 **阶段划分**：
-- **阶段 1（✅ 已落地，ffd1c9ef）**：`OpenInstanceFolder` 加 subdir 参数，instance 右键 ctx 透传全局 `repo_subdir`，打开精确到 `3d-skin/{subdir}`——最小修复「打开文件夹不精确」，非 MMD 类型行为不变（`resolveInstDirTargetSubdir` 包装层）。
-- **阶段 2（本 ADR 立项）**：注册表 `subtypes[]` 数据层 + 特判消解（`IsMMDSubDir`/`MMDSubDirs`/sync mmd 分支/scanner mmd 分支/`resolveInstDirTarget` 候选 C 全改注册表驱动），前端 `MMD_SUBTYPES` 硬编码列表退役、nav 二级 select 全部注册表派生。
+- **阶段 1**：`OpenInstanceFolder` 加 subdir 参数，instance 右键 ctx 透传全局 `repo_subdir`，打开精确到 `3d-skin/{subdir}`——最小修复「打开文件夹不精确」，非 MMD 类型行为不变（`resolveInstDirTargetSubdir` 包装层）。
+- **阶段 2**：注册表 `subtypes[]` 数据层 + 特判消解（`IsMMDSubDir`/`MMDSubDirs`/sync mmd 分支/scanner mmd 分支/`resolveInstDirTarget` 候选 C 全改注册表驱动），前端 `MMD_SUBTYPES` 硬编码列表退役、nav 二级 select 全部注册表派生。
 - **阶段 3（后续）**：小类独立 rtype 与否由 `subtypes[]` 消费方演进决定，本 ADR 不强推（改动面大、同步/扫描已位置优先，无增量收益前不拆）。
 
 ## 3. 后果（Consequences）

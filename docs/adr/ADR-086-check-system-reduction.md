@@ -122,7 +122,7 @@
 
 ### commit-with-check.mjs——把 AI 确认性循环压缩为单条命令
 
-**已落地**：`scripts/commit-with-check.ts`（232 行）
+**落点**：`scripts/commit-with-check.ts`（脚本本体；`--files` 白名单防并行卷带）
 
 **核心洞察**：不是「加更多钩子」，而是**把 AI 的「确认性循环」变成单次命令**。
 
@@ -286,10 +286,10 @@ AI: node scripts/commit-with-check.ts -m "..."  ← 单条命令：按域跑 tsc
 | N2 | `git diff --stat HEAD`（提交前变更概览） | 🟡 半适合 · T3 已覆盖 status，diff stat 冗余 | 不落地 | — | — |
 | N3 | `npx vitest run <changed-dir>`（窄范围单测） | 🟢 适合 · commit-with-check 已按域跑全量；窄范围留给 AI 定向排查 | 不落地（保留人工） | — | — |
 | N4 | `node scripts/doctor.ts --docs`（文档域轻量门禁） | 🟢 适合 · pre-push 已按域自动跑；commit 时不必重复 | 不落地（pre-push 已兜底） | — | — |
-| N5 | `node scripts/check-knowledge-drift.ts --affected` 已自动 | ✅ 已落地（T2） | pre-commit | +0.3s | — |
+| N5 | `node scripts/check-knowledge-drift.ts --affected` 已自动 | ✅ 并入 ADR-087 T2 | pre-commit | +0.3s | — |
 | N6 | commit 后自动 `git log --oneline -1` 确认 SHA | 🟡 可做 · 但 commit-with-check 已回显 SHA，冗余 | 不落地 | — | — |
-| N7 | 自动 stage 同目录测试文件 | ✅ 已落地（T1） | pre-commit | +0.1s | 误 stage > 10% |
-| N8 | 提交前 status 摘要 | ✅ 已落地（T3） | pre-commit | +0.05s | — |
+| N7 | 自动 stage 同目录测试文件 | ✅ 并入 ADR-087 T1 | pre-commit | +0.1s | 误 stage > 10% |
+| N8 | 提交前 status 摘要 | ✅ 并入 ADR-087 T3 | pre-commit | +0.05s | — |
 
 **结论**：现有 ADR-087 的 T1/T2/T3 已覆盖「无脑 30%」里最高频的三类（暂存/漂移/状态）。候选池 N1-N6 边际收益低（每项省 ≤1 条/功能且与已有输出重叠），**不建议继续加 hook**，避免 pre-commit 膨胀。真正值得投的是「文件读写」——但那属于子代理并行读，不属 git hook。
 

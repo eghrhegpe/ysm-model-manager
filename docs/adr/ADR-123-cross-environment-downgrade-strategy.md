@@ -36,8 +36,8 @@
 
 ### 2.2 阶段规划
 
-- **Phase 3a（当前）**：诊断 ADR，记录问题与方向，不修改代码（本 ADR）。
-- **Phase 3b（待排期）**：实施 P1/P2 修复；P3 视 Phase 3b 后是否仍有散落分支决定是否新建 platform-web。
+- **Phase 3a（本 ADR）**：诊断记录问题与方向，不修改代码。
+- **Phase 3b**：实施 P1/P2 修复；P3 视 Phase 3b 后是否仍有散落分支决定是否新建 platform-web。
 - **Phase 4（远期）**：若平台差异持续扩大，引入 platform-web 统一层（`resolvePlatformMode` + platform-specific binding fragments）；否则保持现有 browserAdapter + `resolveWebMode()` 双轨。
 
 ---
@@ -47,14 +47,10 @@
 - **正面**：
   - 三处降级的已知缺陷被显式记录，后续实施有明确验收标准（P1: IndexedDB + toast；P2: UI 门控；P3: 统一入口可选）。
   - 避免了"修了一处、漏了三处"的修补式治理——本次全量盘点后按优先级顺序推进。
-- **负面 / 已知遗留**：
-  - P1 未完成：web 模式下下载社区模型仍走 `<a download>`，状态瞬时 idle，无进度反馈，用户体验断裂。
-  - P2 未完成：CLI 命令列在 web 模式下可见但不可用，`can("ExecuteCLI")` 门控失效（`webCliBindings` 有 `ExecuteCLI` 实现，proxy `has` 陷阱返回 true）。
-  - P3 未完成：`resolveWebMode()` 散落在 19 个文件（grep 命中 51 行），无统一降级策略层。
-- **后续待办（非本 ADR 实施进度）**：
-  - P1：`download-queue-store.ts` web 分支改 IndexedDB 写入（参考 `importWebFiles` 实现）；fetch 校验 URL 可达性（安全约束：仅 http/https）；大文件回退 `<a download>` + toast 提示。
-  - P2：从 `webCliBindings` 移除 `ExecuteCLI`（让 `can("ExecuteCLI")` 返回 false），或 UI 消费方加 `!can("ExecuteCLI")` 门控隐藏表格。
-  - P3：`backend/platform-web.ts` 抽象 `resolvePlatformMode()` + `isWebOnly<T>()`，19 文件 51 处 `resolveWebMode()` 逐站替换。
+- **负面 / 已知遗留**（决策当时的判断；三处降级均已按本 ADR 方向修复）：
+  - P1 已修复：web 下载改 IndexedDB 写入（`download-queue-web.ts`），fetch 校验 URL 可达性（仅 http/https），大文件/协议不支持回退 `<a download>` + toast。
+  - P2 已修复：`ExecuteCLI` 已移出 `webCliBindings`（`web-cli.ts`），`can("ExecuteCLI")` 门控恢复命中；回归红线 `web-cli.test.ts` / `platform-web.test.ts` 锁死。
+  - P3 已修复：`backend/platform-web.ts` 落地 `resolvePlatformMode` + `canBinding()` 三态矩阵（能力门控唯一实现源），`resolveWebMode()` 散落分支整体收口。
 
 ---
 

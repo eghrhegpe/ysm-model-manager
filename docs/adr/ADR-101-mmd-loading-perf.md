@@ -54,7 +54,7 @@
 
 ## 优化方向
 
-### 方向 A：Three.js 模块预加载（P2，已实现 ✅）
+### 方向 A：Three.js 模块预加载（P2）
 
 应用启动时 `import("three")` 预热，省掉首次 105ms 脚本编译。
 
@@ -62,7 +62,7 @@
 - 收益：首次加载减少 ~100ms
 - 风险：无
 
-### 方向 B：Go bridge 批量读取（P1，已实现 ✅）
+### 方向 B：Go bridge 批量读取（P1）
 
 把 N 次 `readFileBytes` RPC 合并为 1 次 `ReadFileBytesBatch`，减少 Go↔JS IPC 往返。
 
@@ -97,11 +97,11 @@
 
 | 优先级 | 方向 | 状态 | 负责 |
 |--------|------|------|------|
-| 立即 | A. Three.js 预加载 | ✅ 已实现 | AI |
-| 立即 | B. Go bridge 批量读取 | ✅ 已实现 | AI |
-| 短期 | E. KTX2 压缩 | 进行中（隔壁） | 隔壁 AI |
-| 中期 | C. PMX Worker 化 | ✅ 已实现（opt-in，`mmd-pmx-worker` 开关 + `mmd-pmx-parser.worker.ts`） | AI |
-| 长期 | D. 纹理异步上传 | 待评估 | 待定 |
+| 立即 | A. Three.js 预加载 | 已采纳 | AI |
+| 立即 | B. Go bridge 批量读取 | 已采纳 | AI |
+| 短期 | E. KTX2 压缩 | 长期方向（隔壁） | 隔壁 AI |
+| 中期 | C. PMX Worker 化 | 已采纳（opt-in，`mmd-pmx-worker` 开关 + `mmd-pmx-parser.worker.ts`） | AI |
+| 长期 | D. 纹理异步上传 | 长期方向（待定） | 待定 |
 
 ## 验证方法
 

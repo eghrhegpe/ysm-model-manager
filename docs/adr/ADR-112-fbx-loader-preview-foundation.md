@@ -65,21 +65,10 @@ Go 侧 `DetectResourceType`（`go/packs/mcmeta.go:142`）读全动态 `ResourceT
 - `frontend/src/utils/resource/types.ts` → `RESOURCE_CAPS`/`NO_3D_TYPES` 派生自 JSON，仅 `RESOURCE_TYPES`/`RESOURCE_TYPE_LABELS` 手写。
 - `frontend/src/views/app-preview/index.ts:56-85 PREVIEW_HANDLERS` → 新增 `fbx` 分支落点。
 
-## 5. 拓展落地追踪（Living）
+## 5. 未立项方向（范围边界）
 
-> 本 ADR 仅定「独立预览地基」，体验层拓展按价值/成本分级逐步落地，状态在此滚动更新。
-
-- ✅ **P0-1 同类型 FBX 切换（siblings）— 2026-08-21 落地，commit `a0b4e9eb`**
-  - 抽通用底座 `siblings.ts: resolveSiblingsByType(rtype, extRe)`：`GetRepoRoot(rtype)` → `ScanModelEntries` → 扩展名过滤 → 容错降级 `[]`（全类型可复用，非 FBX 专属）。
-  - 新增 `fbx-siblings.ts: resolveFbxSiblings()` 委托通用底座，按 `.fbx`（含大写）过滤。
-  - `detail-3d.ts` 的 `showFbxPreview` FAB 点击 `await resolveFbxSiblings()` 后 `createFbx3D(path, { siblings })`，复用核心 `Mount3DOptions.siblings` 链路（topBar 渲染切换下拉），与 MMD/VRM/Litematic 体验对齐。
-  - 测试 `siblings.test.ts` + `fbx-siblings.test.ts` 全覆盖（TDD）；复用既有单例渲染容器，零额外 GPU 开销。
-  - 运行时依赖 `GetRepoRoot("fbx")` 返回有效根（fbx 的 `configField: MmdRoot`）；上游未配置则优雅降级为空下拉，主预览不受影响。
-- ✅ **P1 尺度归一（Box3，防 DCC 导出单位 cm/m 混乱）— 2026-08-21 落地**
-  - `fbx-adapter.ts` 新增 `normalizeFbxScale` + `FBX_TARGET_MAX_DIM = 160`：按包围盒最长边均匀缩放组根节点（等比不破宽高比、不扰局部空间骨骼动画）；目标值对齐 MMD 厘米惯例（1.6m 人体 ≈ 160）与场景能力雾距（50-800 cm）。
-  - `buildFbxScene` 加载成功后、挂场景前执行归一，环形日志 `fbx-scale` 回显缩放系数（≠1 才记录）；小模型不再穿近平面（`near=0.05` 恒值）看不见，大模型不再顶爆雾距/场景能力。
-  - 测试（TDD）：`fbx-adapter.test.ts` 新增 5 个归一化用例（cm 180→缩小 / m 0.18→放大 / 已规范 factor≈1 / 空组 no-op 不抛错 / 动画 clip 保留）+ build 主路径归一化取景断言（far 与相机 z 按 160 尺度）。
-- 🟡 **P1 待办（ADR-112 §3 负面项剩余）**：外链纹理 blob 重定向、截图面板 UI 接入（`makeShotPanelRenderer`）。
-- 🔴 **P2 待定（取决于 3d-skin）**：FBX→PMX 重定向（骨骼映射 + 单位换算 + 四元数）——仅当 3d-skin 要求「FBX 动画驱动 PMX 等同 VMD 槽位」时单列专项 ADR。
+- **P0-1 同类型 FBX 切换 / P1 尺度归一**：已落地（实现见知识卡 `app-preview`「siblings」节 / `model3d`「FBX 归一」节，commit `a0b4e9eb`）。
+- **P1 待办（ADR-112 §3 负面项剩余）**：外链纹理 blob 重定向、截图面板 UI 接入（`makeShotPanelRenderer`）。
+- **P2 待定（取决于 3d-skin）**：FBX→PMX 重定向（骨骼映射 + 单位换算 + 四元数）——仅当 3d-skin 要求「FBX 动画驱动 PMX 等同 VMD 槽位」时单列专项 ADR。
 
 <!-- 文件名: fbx-loader-preview-foundation.md → 实际文件 ADR-112-fbx-loader-preview-foundation.md -->

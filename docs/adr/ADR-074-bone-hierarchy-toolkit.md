@@ -48,7 +48,7 @@ interface BoneNode {
 
 > 注：本 ADR 初稿用 `BoneRef` 命名，与并行落地的 `bone-tools.ts` 实现（`BoneNode`）撞车；以实现为准统一为 `BoneNode`。
 
-### 2.2 通用工具（`utils/3d/bone-tools.ts`，纯逻辑零 DOM，已落地）
+### 2.2 通用工具（`utils/3d/bone-tools.ts`，纯逻辑零 DOM）
 
 | 函数 | 职责 | 对应旧 ysm 散件 |
 |------|------|---------|

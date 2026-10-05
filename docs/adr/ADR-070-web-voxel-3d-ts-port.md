@@ -28,9 +28,11 @@ YSM 的网页 gap 曾同病（Spec3D 生成在 Go 侧），解决范式是 **ADR
 
 **网页版蓝图/投影预览 = 纯 TS 平移 voxel 解析，分三阶段，不互相等：**
 
-1. **M1（门控，先行）✅ 已落地**：web 端蓝图/投影的 3D 入口**门控隐藏**（详情可显示文件名/大小，3D tab 不渲染）——消除"点开报 WebUnsupportedError"的坏体验；同时 `browser-adapter` 补 `ReadLitematicMeta`/`ReadNbtStructure`/`ReadSchematic` 的 TS 实现（详情面板恢复，低风险）。落地：`frontend/src/backend/nbt-parse.ts`（`litematicMetaView`/`nbtStructureView`/`schematicSummaryView`）+ `web-fs.ts` `readNbtMetaJson` + `litematic-meta.ts:216-225` 门控。
-2. **M2（核心）✅ 已落地**：**TS 平移 voxel 解析**——前端解析 `.nbt`（gzip + NBT varint + 块状态调色板）/ `.litematic` / `.schematic` → voxel 数据，与 `go/litematic/voxel.go`/`nbt.go` 同口径（参考 spec-builder.ts 范式：镜像 + 双边测试锁定 `frontend 解析 ↔ go/litematic 输出` 对拍）。产出 `frontend/src/backend/voxel-parse.ts`（`litematicVoxelView`/`nbtVoxelView`/`schematicVoxelView`，对齐 `BuildVoxelData`/`BuildNbtVoxelData`/`BuildSchematicVoxelData`），`Get*VoxelData` 三 binding 的 web 实现 = `web-fs.ts` `readVoxelJson` 调它（`VOXEL_MAX_BLOCKS=200000` 对齐 Go `voxelMaxBlocks`）。
-3. **M3（接入）✅ 已落地**：`litematic-3d.ts` 在 web 模式走 TS voxel 数据（渲染复用现有 `createLitematic3D`，不重写）——`litematic-meta.ts` 移除 `resolveWebMode` 门控，`makeVoxelCall` 经 `browserAdapter`（`webFsBindings` 展开装配）直达 web 实现，三端同一渲染路径；D2 统一渲染核心落地后再迁移。
+1. **M1（门控，先行）**：web 端蓝图/投影的 3D 入口**门控隐藏**（详情可显示文件名/大小，3D tab 不渲染）——消除"点开报 WebUnsupportedError"的坏体验；同时 `browser-adapter` 补 `ReadLitematicMeta`/`ReadNbtStructure`/`ReadSchematic` 的 TS 实现（详情面板恢复，低风险）。
+2. **M2（核心）**：**TS 平移 voxel 解析**——前端解析 `.nbt`（gzip + NBT varint + 块状态调色板）/ `.litematic` / `.schematic` → voxel 数据，与 `go/litematic/voxel.go`/`nbt.go` 同口径（参考 spec-builder.ts 范式：镜像 + 双边测试锁定 `frontend 解析 ↔ go/litematic 输出` 对拍）。
+3. **M3（接入）**：`litematic-3d.ts` 在 web 模式走 TS voxel 数据（渲染复用现有 `createLitematic3D`，不重写）——`litematic-meta.ts` 移除 `resolveWebMode` 门控，三端同一渲染路径；D2 统一渲染核心落地后再迁移。
+
+> 落地细节（binding 名、web-fs 接线、VOXEL_MAX_BLOCKS 对齐）见知识卡 `frontend-parsers`（实施进度）。
 
 **边界**：不做 WASM 平移（体素解析是纯逻辑，TS 成本低于 YSM spec；WASM 引入 Go 运行时体积不值）；不与 D2 耦合（litematic-3d 渲染维持现状，D2 只收敛 renderer 骨架，数据层独立）。
 

@@ -234,18 +234,13 @@ git status --short 2>/dev/null | tail -15 || true
 - ADR-086 已落地：检查体系星级 + 重叠对 + AI 调用公约（防一轮打三次）——ADR-087 聚焦其未覆盖的 git hook 侧
 - 性能预算来源：实测 gen 脚本 1s + drift --affected 0.3s + git diff/status < 0.1s
 - ADR-086 §2.3 明确「pre-commit 秒级文档同步」保留——本 ADR 在其上扩展，不改动原有 gen 脚本
-- 补充：T1/T2/T3 已写入 `.githooks/pre-commit` 并实测（见 §9 待办表）；ADR-086 §5.1 的真实指令审计确认「候选池 N1-N6 边际收益低，不建议继续加 hook」
+- 补充：T1/T2/T3 已写入 `.githooks/pre-commit` 并实测（见 §9 落地）；ADR-086 §5.1 的真实指令审计确认「候选池 N1-N6 边际收益低，不建议继续加 hook」
 
 ---
 
-## 9. 待办（按序推进）
+## 9. 落地（已写入 `.githooks/pre-commit`）
 
-| 项 | 描述 | 优先级 | 状态 |
-|----|------|--------|------|
-| T1 | 修改 `.githooks/pre-commit`：gen 循环后加智能 stage | P1 | ✅ 已落地 |
-| T2 | 修改 `.githooks/pre-commit`：gen 循环后加 drift --affected | P1 | ✅ 已落地 |
-| T3 | 修改 `.githooks/pre-commit`：末尾加 status 摘要 | P2 | ✅ 已落地 |
-| T4 | 若 pre-commit 超 5s，回退非阻断部分 | P3（翻转条件） | ⏸️ 待命（当前 1.5s） |
+T1（智能 stage）/ T2（drift --affected）/ T3（status 摘要）均已按 §2 决策落地至 `.githooks/pre-commit`；翻转条件见 §10。
 
 ---
 

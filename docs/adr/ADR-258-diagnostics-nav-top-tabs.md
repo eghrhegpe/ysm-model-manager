@@ -10,8 +10,6 @@
 
 ## 1. 背景（Context）
 
-## 1. 背景（Context）
-
 诊断页（`frontend/src/views/app-content/diagnostics/`）当前导航结构存在双重层级、与全站范式割裂：
 
 - 顶部 `repo-tabs` 只有 1 个退化的 `data-tab="diagnostics"` 按钮，不切换任何内容，实为标题条。

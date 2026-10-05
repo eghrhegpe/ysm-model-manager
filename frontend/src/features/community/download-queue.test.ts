@@ -67,6 +67,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.ts", () => ({
   DebugExtractCreatorAvatar: extractAvatarMock,
   LoadAppConfig: loadConfigMock,
   GetRepoRoot: repoRootMock,
+  ClearScanCache: vi.fn(),
 }));
 
 let bus!: Bus;

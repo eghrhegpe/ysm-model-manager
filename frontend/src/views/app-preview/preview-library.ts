@@ -20,6 +20,7 @@ import {
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import {
   extOf,
@@ -106,12 +107,7 @@ export async function openModel3DFullscreen(
     ({ DetectResourceType } = await backendGetApp());
   } catch (e) {
     logWarn("preview-3d", "后端不可用，无法打开 3D", e);
-    const { bus } = await import("@/bus");
-    bus.emit("toast:show", {
-      msg: t("preview.backendUnavailable"),
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toast(t("preview.backendUnavailable"), TOAST_MS.normal, "error");
     return;
   }
   // 方案 A：cooperate=false 且有活跃会话时，先清理旧的活跃全屏层（释放旧内容层 +
@@ -145,12 +141,11 @@ export async function openModel3DFullscreen(
     const newRtype = resolvePreviewKeyToRtype(routeKey);
     if (activeRtype && newRtype && activeRtype !== newRtype && activeRtype !== routeKey) {
       cooperate = false;
-      const { bus } = await import("@/bus");
-      bus.emit("toast:show", {
-        msg: t("preview.cooperateCrossType", { from: activeRtype, to: newRtype }),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(
+        t("preview.cooperateCrossType", { from: activeRtype, to: newRtype }),
+        TOAST_MS.normal,
+        "warn",
+      );
     }
   }
   if (cooperate) {
@@ -193,15 +188,10 @@ export async function openModel3DFullscreen(
     await opener(path, hasOpts ? openerOpts : undefined);
     return;
   }
-  const { bus } = await import("@/bus");
   // 失败诊断（2026-08-28 加固）：toast + 环形日志都带探测现场，不再是无因「暂不支持」
   const ext = extOf(path) || "(无扩展名)";
   const reason = `探测类型=${rtype || "(空)"} 路由key=${routeKey || "(空)"} 扩展名=${ext}`;
-  bus.emit("toast:show", {
-    msg: `3D 预览暂不支持该类型（${reason}）`,
-    duration: TOAST_MS.normal,
-    type: "warn",
-  });
+  toast(`3D 预览暂不支持该类型（${reason}）`, TOAST_MS.normal, "warn");
   // 环形日志面板留痕（AGENTS.md：排查往环形日志塞日志而非死盯 console）；失败静默不阻断
   try {
     const { AddOpLog } = await backendGetApp();

@@ -20,6 +20,7 @@ import { logError } from "@/utils/base/primitives/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { dndGetApp } from "./dnd-deps.ts";
 
@@ -33,14 +34,6 @@ export interface PackDndBusy {
 export interface PackDndInstance {
   name: string;
 }
-
-const toast = (
-  msg: string,
-  type: "success" | "error" | "warn" | "info",
-  duration: number = TOAST_MS.normal,
-): void => {
-  bus.emit("toast:show", { msg, duration, type });
-};
 
 /**
  * 处理整合包卡片 drop：收集 → oversize 过滤 → 分组 → 逐组「入仓库+推送」。
@@ -59,7 +52,7 @@ export async function handleInstanceDrop(
   if (isEditableTarget(e.target)) return;
 
   if (busy.isBusy()) {
-    toast(t("import.busyImporting"), "info", TOAST_MS.success);
+    toast(t("import.busyImporting"), TOAST_MS.success, "info");
     return;
   }
   busy.setBusy(true);
@@ -70,7 +63,7 @@ export async function handleInstanceDrop(
 
   try {
     if (isWebPlatform()) {
-      toast("网页版暂不支持拖入整合包，请在桌面端操作", "warn", TOAST_MS.verbose);
+      toast("网页版暂不支持拖入整合包，请在桌面端操作", TOAST_MS.verbose, "warn");
       return;
     }
     logDrop(`pack-drop: 目标实例 ${instanceName}`);
@@ -80,7 +73,7 @@ export async function handleInstanceDrop(
     // 仅提示超限（与仓库页拖拽同口径，避免误导性「未检测到支持文件」）
     if (collected0.length === 0) {
       logDrop("pack-drop: 收集 0 文件");
-      toast(t("import.noSupportedFiles"), "info");
+      toast(t("import.noSupportedFiles"), TOAST_MS.normal, "info");
       return;
     }
     // oversize 逐文件过滤（与仓库页拖拽同口径）
@@ -88,8 +81,8 @@ export async function handleInstanceDrop(
     if (oversized.length > 0) {
       toast(
         `⚠️ ${oversized.length} 个文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限已跳过（${oversized[0].file.name}${oversized.length > 1 ? " 等" : ""}）`,
-        "warn",
         TOAST_MS.long,
+        "warn",
       );
     }
     const collected = collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
@@ -102,7 +95,7 @@ export async function handleInstanceDrop(
       if (c.file.name.toLowerCase() === "ysm.json") {
         if (!ysmJsonHinted) {
           ysmJsonHinted = true;
-          toast(t("import.ysmJsonHint"), "warn", 4000);
+          toast(t("import.ysmJsonHint"), 4000, "warn");
         }
         return false;
       }
@@ -153,18 +146,18 @@ export async function handleInstanceDrop(
 
     // 反馈：成功/部分失败/全失败三分；只要有调用即刷新（导入可能已落仓库，防陈旧）
     if (okUnits > 0 && failures.length === 0) {
-      toast(`已导入仓库并推送到 ${instanceName}（${okUnits} 项）`, "success", TOAST_MS.success);
+      toast(`已导入仓库并推送到 ${instanceName}（${okUnits} 项）`, TOAST_MS.success, "success");
     } else if (okUnits > 0 && failures.length > 0) {
       toast(
         `推送完成 ${okUnits} 项，${failures.length} 项失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`,
-        "warn",
         TOAST_MS.verbose,
+        "warn",
       );
     } else if (failures.length > 0) {
       toast(
         `❌ 推送到 ${instanceName} 失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`,
-        "error",
         TOAST_MS.verbose,
+        "error",
       );
     }
     if (attempted > 0) {
@@ -173,7 +166,7 @@ export async function handleInstanceDrop(
     }
   } catch (err) {
     logError("pack-dnd", "拖放处理失败", err);
-    toast(`${t("import.processError")}: ${friendlyError(err)}`, "error", TOAST_MS.verbose);
+    toast(`${t("import.processError")}: ${friendlyError(err)}`, TOAST_MS.verbose, "error");
   } finally {
     busy.setBusy(false);
   }
@@ -256,7 +249,7 @@ export function bindPackCardDnD(
     dbg("pack-dnd", "drop on instance card", { idx, name: ins.name });
     void handleInstanceDrop(e, ins.name, busy).catch((err) => {
       logError("pack-dnd", "拖放处理失败", err);
-      toast(`${t("import.processError")}: ${friendlyError(err)}`, "error", TOAST_MS.verbose);
+      toast(`${t("import.processError")}: ${friendlyError(err)}`, TOAST_MS.verbose, "error");
     });
   };
 

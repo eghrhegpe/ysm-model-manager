@@ -7,9 +7,9 @@
 // 重新校验完整契约，AppPreview 同时实现两者、调用方无需任何 cast。
 
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -39,11 +39,7 @@ export async function routeModelPreview(
 
   // ADR-071 M1：web 端 .7z 明确"暂不支持"
   if (extOf(path) === ".7z" && isWebPlatform()) {
-    bus.emit("toast:show", {
-      msg: t("preview.web7zUnsupported"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t("preview.web7zUnsupported"), TOAST_MS.normal, "warn");
     showSimplePreview(ctx, path, routeTypeMeta(RESOURCE_TYPES.YSM));
     return;
   }
@@ -64,11 +60,7 @@ export async function routeModelPreview(
 
   // 识别不出类型 → toast 提示 + 简单预览
   if (!rtype) {
-    bus.emit("toast:show", {
-      msg: t("preview.unrecognizedType"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t("preview.unrecognizedType"), TOAST_MS.normal, "warn");
     showSimplePreview(ctx, path, {
       icon: "unknown",
       label: t("preview.unrecognizedType"),

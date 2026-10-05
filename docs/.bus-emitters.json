@@ -99,16 +99,11 @@
     "frontend/src/views/app-tree/events.ts"
   ],
   "toast:show": [
-    "frontend/src/features/dnd/pack-dnd.ts",
-    "frontend/src/features/maintenance/recycle-bin.ts",
     "frontend/src/features/maintenance/version-updater.ts",
     "frontend/src/utils/dom/toast.ts",
     "frontend/src/views/app-content/site/drag.ts",
     "frontend/src/views/app-content/site/edit.ts",
     "frontend/src/views/app-content/site/events.ts",
-    "frontend/src/views/app-preview/preview-library.ts",
-    "frontend/src/views/app-preview/preview-router.ts",
-    "frontend/src/views/app-preview/shot-panel-shared.ts",
     "frontend/src/views/app-toast/index.ts"
   ],
   "tree:reload": [

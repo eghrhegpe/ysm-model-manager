@@ -9,6 +9,7 @@ import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS, type UiIconName } from "@/utils/icon/ui-icons.ts";
 import { type RESOURCE_TYPES, typeIconOf } from "@/utils/resource/types.ts";
@@ -310,7 +311,7 @@ export function initRecycleBin(app: RecycleHost, depsOverrides?: Partial<Recycle
     _emptyBusy = b;
   };
   const onShowToast: ToastFn = (msg, duration, type) => {
-    bus.emit("toast:show", { msg, duration, type });
+    toast(msg, duration, type);
   };
 
   const shell: RecycleShell = { loadRecycleBin: () => {}, cleanupActions: { current: null } };

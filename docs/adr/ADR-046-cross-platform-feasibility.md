@@ -89,8 +89,6 @@
 
 **已知遗留**
 - 自动更新维持 Windows-only（ADR-033 已明确拒绝非 Windows，需跨平台需求信号再立项）。
-- ✅ 前端 `prompt()`/`confirm()` 残留审计（2026-08-09）：全前端仅命中 `modal.ts:93` 注释；已统一走 `modalPrompt/modalConfirm/modalSelect`（ADR-014 治理成果），**Android WebView 对话框兼容无需改动**。
-- ✅ YSMParser WASM 的 SharedArrayBuffer 依赖审计（2026-08-09）：单线程无共享内存（见 §2 高阻），Android 直接可用。
 - ✅ P2 Android 主体已实施（工程资产/PathManager/存储授权/系统事件/目录选择平台分支）；**剩余**：真机验证授权流程、WASM 渲染性能、Android 专属 Java 定制深化。
 
 ## 4. 数据溯源

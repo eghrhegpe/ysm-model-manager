@@ -51,6 +51,36 @@ status: active
 | binding-check | STATIC_TOOLS | Go 域 |
 | check-redlines | ❌ 无（只有手写 `checkGovernance` 子集） | 完整 16 条规则 |
 
+## 三方依赖链摸排（2026-10-05，commit / pre-commit / pre-push）
+
+**问题**：纯文档提交也花 25s（`commit-with-check`），是否"凭空创造窗口期"？
+
+**方法**（可复用）：抽取三个入口各自 spawn 的脚本集，求交集。
+抽取须覆盖三种写法，否则漏抽（本次踩过）：① 带前缀字面量 `"scripts/foo.ts"`；
+② **裸短名** `"foo.ts"` + 模板拼接 `` `scripts/${tool}` ``（`_lib/commit-check.ts` 与
+`_lib/gate-blocks/static-tools.ts` 都是这种，首轮全漏）；③ 清单文件间接（`_lib/gen-cmds.ts`、
+`_lib/gate-config.ts` 须展开）。
+
+**实测交集**：
+
+| 交集 | 项 | 判定 |
+|---|---|---|
+| commit ∩ pre-commit | `check-knowledge-drift` | **非真重复**——参数不同：commit 用 `--files <提交清单>`，pre-commit 用 `--affected`（反向查「源码变更 → 受影响卡」，commit 阶段不做这件事） |
+| commit ∩ pre-push | `check-doc-drift` / `check-knowledge-drift` | **真重复但亚秒级**（0.27s + 0.21s），且属 ADR-155 **有意**的 fail-fast（commit=我的 diff 干净吗 ｜ push=整域还建得起来吗） |
+
+**关键结论：重复 ≠ 浪费，要看量级与是否同名同参**。真正的耗时账（热态 8.0s）：
+
+| 项 | 耗时 | 重复？ |
+|---|---|---|
+| `check-redlines`（19 条规则全仓扫 + fail-closed） | 3.9s | 否（仅 commit 阶段跑） |
+| 契约测试（按域选子集） | 3.2s | 否 |
+| `check-doc-drift` / `check-knowledge-drift` / `check-twin-siblings` | <0.6s | 亚秒级，可忽略 |
+
+**已修的真正浪费**（不在交集里，是「无条件跑全集」）：`commit-with-check` 原有一轮
+「gen 预刷新」（串行跑全 15 个 `GEN_CMDS` ~4s），与 pre-commit 的 gen **重复且对本工具无用**
+（本工具走 `--files`，唯一读 gen 产物的「索引断链」检查被 `if (!FILES_SET)` 跳过）——2026-10-05 已删，
+11.5s → 8.0s。详见 `commit-with-check.md` 的 pitfalls。
+
 ## 决策记录
 
 2026-08-14 摸排后曾决定不修复（"折腾"），仅留知识卡存档。

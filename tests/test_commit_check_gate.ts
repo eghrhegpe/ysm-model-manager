@@ -17,6 +17,10 @@
  *   7. drift：输出非 JSON                → ❌ block
  *   8. 契约测试失败                       → ❌ block
  *   9. 全绿（红线 + drift + 契约空）      → allow
+ *  10. 同胞提醒候选>0（P2②）             → allow（纯 WARN 非阻断）
+ *  11. 同胞提醒输出不可解析              → allow（fail-open）
+ *  12. 同胞提醒无源文件变更              → 整步跳过
+ *  13. 同胞提醒零候选                    → allow
  *
  * 零依赖（仅 node:assert）。运行：node tests/test_commit_check_gate.ts
  */
@@ -179,6 +183,50 @@ const main = async () => {
       r.results.every((x) => x.ok),
       true,
     );
+  });
+
+  // 10. 同胞提醒（P2②）：候选 > 0 → 记录为 WARN（ok 恒 true），不阻断提交
+  await check("同胞提醒候选>0 → allow（非阻断）", async () => {
+    const canned = {
+      ...green,
+      "check-twin-siblings.ts": {
+        out: JSON.stringify({ _summary: { issues: 0, warns: 3 }, warns: [{ shape: "Q", origin: "a.ts:1" }] }),
+      },
+    };
+    const r = await runCommitChecks(["frontend/src/a.ts"], { run: fakeRun(canned), runTests: noTests });
+    const it = resultByName(r, "同胞提醒（twin-siblings）");
+    assert.equal(it.ok, true, "纯 WARN 提醒项必须恒 ok=true");
+    assert.ok(it.note?.includes("3"), `note 应携带候选数 3: ${it.note}`);
+    assert.equal(r.ok, true, "同胞提醒项不得阻断提交");
+  });
+
+  // 11. 同胞提醒：探针输出不可解析 → fail-open（提醒工具挂了不得挡提交）
+  await check("同胞提醒不可解析 → allow（fail-open）", async () => {
+    const canned = { ...green, "check-twin-siblings.ts": { out: "boom", ok: false, rc: 1 } };
+    const r = await runCommitChecks(["frontend/src/a.ts"], { run: fakeRun(canned), runTests: noTests });
+    const it = resultByName(r, "同胞提醒（twin-siblings）");
+    assert.equal(it.ok, true);
+    assert.ok(it.note?.includes("不可解析"), `note 应说明不可解析: ${it.note}`);
+    assert.equal(r.ok, true);
+  });
+
+  // 12. 同胞提醒：无源文件变更 → 整步跳过（不产生检查项）
+  await check("同胞提醒无源文件 → 跳过", async () => {
+    const r = await runCommitChecks(["docs/knowledge/x.md"], { run: fakeRun(green), runTests: noTests });
+    assert.equal(r.results.some((x) => x.label === "同胞提醒（twin-siblings）"), false, "docs 提交不应跑同胞提醒");
+    assert.equal(r.ok, true);
+  });
+
+  // 13. 同胞提醒：零候选 → 记录（提示无同胞命中）
+  await check("同胞提醒零候选 → allow", async () => {
+    const canned = {
+      ...green,
+      "check-twin-siblings.ts": { out: JSON.stringify({ _summary: { issues: 0, warns: 0 } }) },
+    };
+    const r = await runCommitChecks(["frontend/src/a.ts"], { run: fakeRun(canned), runTests: noTests });
+    const it = resultByName(r, "同胞提醒（twin-siblings）");
+    assert.equal(it.ok, true);
+    assert.ok(it.note?.includes("= 0"), `note 应提示同胞行 = 0: ${it.note}`);
   });
 
   if (fails.length) {

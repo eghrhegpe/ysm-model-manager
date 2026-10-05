@@ -98,6 +98,9 @@ export const BYPASS_CHECKS = [
   "check-biome-lines.ts",
   "check-diff-coverage.ts",
   "check-go-coverage-threshold.ts",
+  // 孪生同胞提醒探针（P2② 补网）：走 commit-check.ts 第 4 步（commit-with-check 轻量清单），
+  // 变更域语义（git diff 新增行 × 未变更区检索）天然不适合 pre-push 全量门禁，刻意旁路
+  "check-twin-siblings.ts",
 ] as const;
 
 /** 固定尾行文本（PASS/FAIL 两路共用，保证每次输出形态一致） */

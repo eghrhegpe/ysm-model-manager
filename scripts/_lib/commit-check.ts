@@ -12,6 +12,8 @@
  *   2. check-doc-drift --files       知识卡漂移（仅查变更卡；跳未跟踪草稿）
  *      check-knowledge-drift --files 同上
  *   3. 变更域契约测试（selectContractTests 按域选子集，并行跑）
+ *   4. check-twin-siblings --files   改动范围同构同胞提醒（P2② 补网：新增语义行的结构指纹在
+ *      未变更区命中 ≥2 条同胞即出 W7 候选清单；纯 WARN fail-open，恒不阻断——同构 ≠ 需要改）
  *
  * 显式跳过（这些是 push 阶段 pre-push 钩子的职责，不在此处重复验证）：
  *   - go build / go test -race / go vet
@@ -168,6 +170,37 @@ export async function runCommitChecks(
         note: ok ? "全部通过" : failed.slice(0, 400),
         tail: ok ? "" : failed,
       });
+    }
+  }
+
+  /* --- 4. 孪生同胞提醒（P2② 补网，纯 WARN fail-open：候选清单提醒，恒不阻断）--- */
+  {
+    const srcFiles = files.filter((f) => /\.(ts|tsx|js|jsx)$/.test(f));
+    if (srcFiles.length > 0) {
+      const t0 = Date.now();
+      const r = runFn(
+        process.execPath,
+        ["scripts/check-twin-siblings.ts", "--json", "--files", srcFiles.join("\n")],
+        {
+          cwd: ROOT,
+          shell: false,
+          timeout: TIMEOUT,
+        },
+      );
+      let note = "";
+      try {
+        const s = JSON.parse(r.out || r.err || "{}")._summary || {};
+        const w = typeof s.warns === "number" ? s.warns : -1;
+        note =
+          w < 0
+            ? "探针输出不可解析（提醒 fail-open 不阻断，工具链另行排查）"
+            : w > 0
+              ? `${w} 类结构指纹命中 ≥2 条未变更区同胞行（候选提醒，非阻断）`
+              : "未变更区同胞行 = 0";
+      } catch {
+        note = "探针输出不可解析（提醒 fail-open 不阻断，工具链另行排查）";
+      }
+      record({ label: "同胞提醒（twin-siblings）", ok: true, time: Date.now() - t0, note });
     }
   }
 

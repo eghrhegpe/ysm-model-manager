@@ -132,6 +132,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_check_complexity.ts": ["tests"],
   "test_check_type_safety.ts": ["tests"],
   "test_check_params.ts": ["tests"],
+  // 改动范围同构同胞提醒探针（P2② 补网）：锁归一化/过滤/阈值三段纯函数核
+  "test_check_twin_siblings.ts": ["tests"],
   // 裸标签规则对象是 docs/ markdown → docs 域变更同样触发（同 test_gen_routes_quick_pitfall 口径）
   "test_check_doc_markup.ts": ["docs", "tests"],
   "test_complexity_parity.ts": ["tests", "go"],
@@ -302,6 +304,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_check_knowledge_content.ts": ["scripts/check-knowledge-content.ts"],
   // port-align oracle 版本基线断言（P2①）：核 = checkOracleBaseline/ORACLE_BASELINE（在 port-align.ts 内）
   "test_port_align_baseline.ts": ["scripts/port-align.ts"],
+  // 孪生同胞提醒探针（P2② 补网）：核 = normalizeLine/extractShapes/matchShapes 纯函数（在 check-twin-siblings.ts 内）；
+  // 挂点 scripts/_lib/commit-check.ts 第 4 步亦登记（挂载改动重验同胞语义）
+  "test_check_twin_siblings.ts": [
+    "scripts/check-twin-siblings.ts",
+    "tests/test_check_twin_siblings.ts",
+    "scripts/_lib/commit-check.ts",
+  ],
   "test_check_params.ts": ["scripts/check-params.ts"],
   // ADR-311 菜单测试布局闸：扫菜单区测试文件的布局快照形态 + 基线对账（只减不增）
   "test_check_menu_test_layout.ts": [

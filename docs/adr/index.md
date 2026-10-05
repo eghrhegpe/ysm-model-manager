@@ -19,8 +19,8 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 13 |
-| [✅ 已采纳](#已采纳) | 299 |
-| [❌ 已取代](#已取代) | 7 |
+| [✅ 已采纳](#已采纳) | 298 |
+| [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
@@ -53,7 +53,7 @@ permalink: /adr/
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 
-### ✅ 已采纳（299）
+### ✅ 已采纳（298）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -279,7 +279,6 @@ permalink: /adr/
 | [ADR-084](./ADR-084-personal-lighting.md) | 个人灯光系统（Personal Lighting）——三点布光 + 聚光灯 + 体积光双引擎 | ✅ 已采纳 |
 | [ADR-083](./ADR-083-semantic-layer.md) | 语义层双抽象——跨格式语义骨骼 + 语义 morph + 感知层程序化生命力 | ✅ 已采纳 |
 | [ADR-082](./ADR-082-zipentries-any-fingerprint.md) | 材质包识别长治久安：zipEntries 任意层级指纹（any 模式）+ detector 容器统一 | ✅ 已采纳 |
-| [ADR-081](./ADR-081-semantic-bone-layer.md) | 语义骨骼层——跨格式语义骨骼统一抽象 | ✅ 已采纳 |
 | [ADR-080](./ADR-080-pack-model-adapter.md) | 资源包 block/item 模型 JSON 解析与渲染（PackModelAdapter） | ✅ 已采纳 |
 | [ADR-079](./ADR-079-wasm-pthread-mt-decode.md) | WASM pthread 多线程解码：三端 COOP/COEP 注入 + 重编译上游 | ✅ 已采纳 |
 | [ADR-076](./ADR-076-preview-bottom-nav-shell.md) | 3D 预览通用导航与弹窗脚手架收敛契约（v3 — 声明式根菜单 + 适配器项收编） | ✅ 已采纳 ⚠️ 被 [ADR-079] |
@@ -357,7 +356,7 @@ permalink: /adr/
 | [ADR-002](./ADR-002-project-health-assessment.md) | 项目全面评估与改进方向 | ✅ 已采纳 |
 | [ADR-001](./ADR-001-wails3-migration.md) | 升级至 Wails 3 | ✅ 已采纳 |
 
-### ❌ 已取代（7）
+### ❌ 已取代（8）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -366,6 +365,7 @@ permalink: /adr/
 | [ADR-137](./ADR-137-ysm-decoder-homecoming.md) | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
 | [ADR-136](./ADR-136-screenshot-domain-homecoming.md) | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
 | [ADR-125](./ADR-125-preview-menu-unified-state-single-renderer.md) | 3D 预览菜单统一：settingsState 横切状态层 + 单渲染器 + visible 规则 | ❌ 已取代 ⚠️ 被 [ADR-126] |
+| [ADR-081](./ADR-081-semantic-bone-layer.md) | 语义骨骼层——跨格式语义骨骼统一抽象 | ❌ 已取代 |
 | [ADR-077](./ADR-077-bottom-nav-shell-convergence.md) | 底部导航通用外壳收敛（D1+D3 落地） | ❌ 已取代 ⚠️ 被 [ADR-076] |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | ❌ 已取代 |
 
@@ -622,7 +622,7 @@ permalink: /adr/
 | ADR-084 | 个人灯光系统（Personal Lighting）——三点布光 + 聚光灯 + 体积光双引擎 | ✅ 已采纳 | 2026-08-16 |
 | ADR-083 | 语义层双抽象——跨格式语义骨骼 + 语义 morph + 感知层程序化生命力 | ✅ 已采纳 | 2026-08-17 |
 | ADR-082 | 材质包识别长治久安：zipEntries 任意层级指纹（any 模式）+ detector 容器统一 | ✅ 已采纳 | 2026-08-16 |
-| ADR-081 | 语义骨骼层——跨格式语义骨骼统一抽象 | ✅ 已采纳 | 2026-08-17 |
+| ADR-081 | 语义骨骼层——跨格式语义骨骼统一抽象 | ❌ 已取代 | 2026-08-17 |
 | ADR-080 | 资源包 block/item 模型 JSON 解析与渲染（PackModelAdapter） | ✅ 已采纳 | 2026-08-16 |
 | ADR-079 | WASM pthread 多线程解码：三端 COOP/COEP 注入 + 重编译上游 | ✅ 已采纳 | 2026-08-16 |
 | ADR-077 | 底部导航通用外壳收敛（D1+D3 落地） | ❌ 已取代 ⚠️ 被 [ADR-076] | 2026-08-16 |

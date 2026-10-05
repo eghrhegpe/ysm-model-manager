@@ -116,15 +116,10 @@ YSM L1 只有 1 个 clip，`clips.length === 1`，下拉框不渲染（与 MMD �
 - **名称匹配局限**：`.animation.json` 的骨骼名必须与 `spec.bones[].name` 完全一致，大小写敏感。不匹配的骨骼静默跳过（不报错）
 - **Group vs Bone**：YSM 骨骼是 `THREE.Group` 层级树（`mesh.ts` 构建），非 `THREE.Bone`。播放器操作 `Object3D.position/quaternion/scale`，不涉及 SkinnedMesh 骨骼蒙皮——静态网格随 Group 变换整体移动，无蒙皮变形效果。对于方块人模型足够，但对精细模型（如有弯折手臂）动画可能看起来僵硬
 - **语义骨骼命中率依赖作者命名**：YSM 无标准命名规范，`YSM_SEMANTIC_CANDIDATES` 覆盖 Blockbench/MC 常见导出名，但自由命名模型命中率低。感知层（呼吸/眨眼）优雅降级（缺省骨骼静默跳过），不影响渲染
-- ~~**多 clip 只取每文件首 clip**~~ → **L3 已修复（2026-08-21）**：同一 `.animation.json` 内全部 clip 收录，标签策略 `ysmAnimClipLabels`（单 clip 保持文件名口径；多 clip 以「文件名 · clip 名」区分）
-- ~~**切 clip 首帧旋转跳变**~~ → **L3 已修复（2026-08-21）**：三通道（rotation/position/scale）统一 alpha 累加混合模型——`selectClip` 清空混合状态，下一帧从**当前姿态**重新采集 rest 淡入新 clip（对齐 YSMViewer「从不硬切」口径）；构造期捕获 base 姿态，新 clip 未触及的骨骼渐回 base（停播骨骼渐回零位，YSMViewer Aura3DRenderer 同款收尾）
 
-### 已知遗留
-
-- **slerp 已完成（L2）**：`restQuaternions` + `multiplyQuaternions` 实现四元数路径插值，避免欧拉角 gimbal lock
+### 语义澄清
 - **局部变换直接应用**：`evaluateClip(localOnly=true)` 返回的变换不含父级累积，直接设到 Group 上——正确，因为 Group 层级已包含位置偏移（`spec.bones[].localPosition` 在 `mesh.ts` 构建时已 apply）
 - **非 loop 动画末帧暂停后呼吸恢复**：`isAnimActive()` 在 `elapsed >= length && !loop` 时返回 false，呼吸恢复——与 VRM 口径一致
-- **P1 bug 已修复（6312b358）**：初始实现错误地取 `group.children[0] as THREE.Bone`，实际应为 `group` 本身（boneGroupMap 值为 Group 节点）
 
 ---
 
@@ -132,16 +127,16 @@ YSM L1 只有 1 个 clip，`clips.length === 1`，下拉框不渲染（与 MMD �
 
 | 步骤 | 文件 | 内容 |
 |------|------|------|
-| 1 | `frontend/src/utils/3d/ysm-animation-player.ts`（新建） | `createYsmAnimPlayer` + `YsmAnimPlayer` 接口 | ✅ L1 (0ee55eaa) + L2 (4d92eac9) |
-| 2 | `frontend/src/utils/3d/ysm-animation-player.test.ts`（新建） | 单元测试：apply/loop/暂停/多clip/slerp/骨骼缺失降级 | ✅ 13 项全过 |
-| 3 | `frontend/src/utils/3d/adapters/ysm-adapter.ts` | buildYsmScene 加 animation 扫描 + player 接入 update + 语义骨骼 + 呼吸 | ✅ L1+L2 (4d92eac9) |
-| 3-fix | 同文件 P1 bug 修复 | boneByName 改为直接取 boneGroupMap 的 Group（非 children[0] as Bone） | ✅ (6312b358) |
-| 4 | `frontend/src/views/app-preview/ysm-3d.ts` | 注入 `listAllFilePaths` + `readTextFile` 端口 | ✅ |
-| 5 | `frontend/src/utils/3d/semantic-bones.ts` | 新增 `YSM_SEMANTIC_CANDIDATES` + `ysmSemanticBoneMap` | ✅ L2 (4d92eac9) |
-| 6 | ADR-100 本文档 | 决策记录 | ✅ |
-| 7 | L3 平滑过渡：`ysm-animation-player.ts` 三通道 alpha 混合 + base 姿态回落；`animation.ts` 新增 `ysmAnimClipLabels`；`ysm-adapter.ts` 全 clip 收录 | 切 clip 淡入 + 未触及骨骼渐回 + 多 clip 列表 | ✅ (2026-08-21) |
-| 8 | L4 Molang 求值器：`molang.ts`（内嵌 molangjs 源码 MIT）+ `animation.ts` postMolang/preMolang + evaluateKeyframes 求值贯通 | 表达式关键帧真动起来 | ✅ (2026-08-22) |
-| 9 | L4 欧拉序修复：`ysm-animation-player.ts:113` XYZ→ZYX | 修复三轴非零旋转骨骼动画"乱飞" | ✅ (2026-08-22) |
+| 1 | `frontend/src/utils/3d/ysm-animation-player.ts`（新建） | `createYsmAnimPlayer` + `YsmAnimPlayer` 接口 |
+| 2 | `frontend/src/utils/3d/ysm-animation-player.test.ts`（新建） | 单元测试：apply/loop/暂停/多clip/slerp/骨骼缺失降级 |
+| 3 | `frontend/src/utils/3d/adapters/ysm-adapter.ts` | buildYsmScene 加 animation 扫描 + player 接入 update + 语义骨骼 + 呼吸 |
+| 3-fix | 同文件 P1 bug 修复 | boneByName 改为直接取 boneGroupMap 的 Group（非 children[0] as Bone） |
+| 4 | `frontend/src/views/app-preview/ysm-3d.ts` | 注入 `listAllFilePaths` + `readTextFile` 端口 |
+| 5 | `frontend/src/utils/3d/semantic-bones.ts` | 新增 `YSM_SEMANTIC_CANDIDATES` + `ysmSemanticBoneMap` |
+| 6 | ADR-100 本文档 | 决策记录 |
+| 7 | L3 平滑过渡 | `ysm-animation-player.ts` 三通道 alpha 混合 + base 姿态回落；`animation.ts` 新增 `ysmAnimClipLabels`；`ysm-adapter.ts` 全 clip 收录——切 clip 淡入 + 未触及骨骼渐回 + 多 clip 列表 |
+| 8 | L4 Molang 求值器 | `molang.ts`（内嵌 molangjs 源码 MIT）+ `animation.ts` postMolang/preMolang + evaluateKeyframes 求值贯通——表达式关键帧真动起来 |
+| 9 | L4 欧拉序修复 | `ysm-animation-player.ts:113` XYZ→ZYX——修复三轴非零旋转骨骼动画"乱飞" |
 
 ---
 

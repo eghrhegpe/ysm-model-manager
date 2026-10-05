@@ -171,7 +171,6 @@ VRM 用 `@pixiv/three-vrm` + `GLTFLoader`；MMD 用 `babylon-mmd` 的 Three.js �
 - VRM/MMD 直引天然跨平台，契合「网页 + 移动 + 桌面」全平台定位。
 
 **负面 / 风险**：
-- ~~🔴 **MmdAdapter 成熟度**：three-mmd 实验态~~ → ✅ **已落地**（2026-08-16 `b5c8f190`，`mmd-adapter.ts` 1242 行）。`@moeru/three-mmd` v0.1.1 + `@moeru/three-mmd-physics-ammo` Ammo.js 物理后端，含 VMD 动画/IK/morph/toon 全开，`mmd-adapter.test.ts` 全覆盖。性能优化见 ADR-101。
 - 🔴 **坐标口径（陷阱 #11）**：vrm/mmd 自带坐标系，需验证与现有相机/网格对齐，避免历史 9 次 fix 重演。
 - 🟡 **依赖体积**：three-vrm + babylon-mmd parser 增包体，需 tree-shaking 评估。
 - 🟡 **D1 迁移面**：`loader.ts`/`index.ts`/`litematic-meta.ts` 三处散硬判断须迁移到 `types` 单点，含对应测试断言迁移。

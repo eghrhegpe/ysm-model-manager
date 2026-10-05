@@ -1,6 +1,7 @@
 # ADR-081：语义骨骼层——跨格式语义骨骼统一抽象
 
-- **状态**：✅ 已采纳
+- **状态**：❌ 已取代
+- **被取代**：被 [ADR-083](./ADR-083-semantic-layer.md) 同日重写为双抽象（语义骨骼 + 语义 morph + 感知层）——本 ADR 的语义骨骼层为 ADR-083 §2.1 子集，MMD 歧义消解三条与「YSM 不接入」裁定逐字保留；23 个语义 id 清单见源码 `semantic-bones.ts`
 - **日期**：2026-08-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/utils/3d/semantic-bones.ts`、`frontend/src/utils/3d/perception/`、`frontend/src/utils/3d/adapters/mmd-adapter.ts`、`vrm-adapter.ts`、`mount-preview-core.ts`、借鉴 [MikuMikuAR](https://github.com/eghrhegpe/MikuMikuAR) `motion-algos/proc-motion-shared.ts`（候选名匹配表）、`scene/perception/`（感知层）

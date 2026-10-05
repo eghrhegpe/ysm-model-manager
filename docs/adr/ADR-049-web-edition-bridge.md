@@ -35,14 +35,14 @@
 
 **阶段划分**（对齐 ADR-177 Phase 0-4 经验）：
 
-- **Phase 0 Spike（前置门槛）**：纯浏览器 WASM 解码跑通——拖入 `.ysm` → `decodeYsmFileFromMemory`（ADR-029 内存解析）→ 2D 线框 + 3D 预览；验证 bus 事件零 Go 依赖、Vite web 构建产物可独立托管。**未通过不进入 Phase 1**。✅ **已完成（2026-08-10）**：`frontend/web.html` + `src/web-spike/main.ts` + `vite.web.config.ts`（base 默认 `/` 本地验证、CI 设 `WEB_BASE` 部署）；Playwright 无头 Chromium 拖入真实 `.ysm`（露西亚 123KB）→ 解码 7 输出文件（main.json 骨骼 209 / 立方体 176 / 纹理 2），零 binding 依赖。
-- **Phase 1 适配层**：`frontend/src/wails/app.ts` 的 `getApp()` 改为 `resolveBackend()` 双实现路由（桌面 Wails / 浏览器 browser adapter），业务调用零改动；`@wailsio/runtime` value import 全量迁移（MikuMikuAR 审核教训：不止 Events，还有 Browser 等）。✅ **已完成（2026-08-10）**：
+- **Phase 0 Spike（前置门槛）**：纯浏览器 WASM 解码跑通——拖入 `.ysm` → `decodeYsmFileFromMemory`（ADR-029 内存解析）→ 2D 线框 + 3D 预览；验证 bus 事件零 Go 依赖、Vite web 构建产物可独立托管。**未通过不进入 Phase 1**。交付：`frontend/web.html` + `src/web-spike/main.ts` + `vite.web.config.ts`（base 默认 `/` 本地验证、CI 设 `WEB_BASE` 部署）；Playwright 无头 Chromium 拖入真实 `.ysm`（露西亚 123KB）→ 解码 7 输出文件（main.json 骨骼 209 / 立方体 176 / 纹理 2），零 binding 依赖。
+- **Phase 1 适配层**：`frontend/src/wails/app.ts` 的 `getApp()` 改为 `resolveBackend()` 双实现路由（桌面 Wails / 浏览器 browser adapter），业务调用零改动；`@wailsio/runtime` value import 全量迁移（MikuMikuAR 审核教训：不止 Events，还有 Browser 等）。交付：
   - `wails/platform.ts` Tier 分层判定（Tier 0 `__YSM_BACKEND__` 入口声明 / Tier 1 `__YSM_WEB__`+`MODE=web` / Tier 2 运行时探测留给 Phase 3 awaitWailsBridge）
   - `wails/browser-adapter.ts` Proxy 生成 AppBindings 同形状后端：最小启动集（ScanModelEntries/GetRepoRoot/GetDefaultRepoRoot/LoadAppConfig/GetAppInfo 空语义） + 未实现 binding fail-fast 抛 `WebUnsupportedError`（杜绝 undefined 穿透）；`then` 特判防 thenable 探测陷阱
   - `wails/types.ts` AppBindings 类型独立文件（打破 app↔adapter 循环引用）
   - `web.html` 声明 `__YSM_BACKEND__="browser"`（Tier 0 权威信号）
   - 验证：全量 1627 测试通过 + typecheck 零错 + web 构建产物正常
-- **Phase 2 browser adapter**：IndexedDB `dir:*:` 前缀模拟目录结构（模型库）+ `outfit:*:` 文件读 + `web://` 路由（对齐 MikuMikuAR ADR-177）；`localStorage` 配置；File API/拖拽导入；下载用 `<a download>`。✅ **已完成（2026-08-10）**：
+- **Phase 2 browser adapter**：IndexedDB `dir:*:` 前缀模拟目录结构（模型库）+ `outfit:*:` 文件读 + `web://` 路由（对齐 MikuMikuAR ADR-177）；`localStorage` 配置；File API/拖拽导入；下载用 `<a download>`。交付：
   - `wails/idb.ts`：openDB 惰性单例 + idbGet/idbSet/idbDel/idbKeys 前缀扫描（onabort 处理 QuotaExceeded）；IndexedDB 不可用（非浏览器/隐私模式）自动降级内存 Map（应用不崩）
   - browserAdapter 真实实现：ScanModelEntries（IDB dir: 前缀 → ModelEntry，Path 指向主文件）/ ReadFileBytes（`/web/<type>/<name>/<rel>` → base64，wasm.ts 解码链零改动复用）/ GetRepoRoot/GetDefaultRepoRoot（虚拟根 /web）/ LoadAppConfig/SaveAppConfig（localStorage）
   - `importWebFiles(files, type)`：File API → IDB（dir + file 双记录），返回 {imported, failed}（Phase 3 接拖拽 UI）
@@ -66,7 +66,7 @@
   - `model3d-loader.ts` 的 `fetchSpecViaWasmFallback` 在 `resolveWebMode()` 分支直接调 `buildSpecFromGeometryJSON(geometryRaw)`（不再依赖 Go binding），`decodeYsmViaWasm`（base64 → geometryRaw）→ TS spec 构建 → Three.js 渲染全链路闭环；
   - `browser-adapter.ts` 的 `Build3DSpecFromGeometryJSON` 保留 `"{}"` 桩仅作 Android 兜底通道的形状占位（网页版不会调用）；
   - 实现路径与原计划（移植到 ysm-parser WASM）不同——**TS 移植**成本更低、与 Go 契约可直接双边对拍，WASM 路线放弃。
-- **Phase 3 能力门控 + UI 降级**：C 类桌面专属 binding（自更新/系统对话框/资源管理器/剪贴板等 9 个）隐藏对应按钮；B 类写操作降级语义逐项定义（导入→IndexedDB/浏览器下载；回收站/硬链接/重链→不可用隐藏）。✅ **门控主体已完成（2026-08-10）**：
+- **Phase 3 能力门控 + UI 降级**：C 类桌面专属 binding（自更新/系统对话框/资源管理器/剪贴板等 9 个）隐藏对应按钮；B 类写操作降级语义逐项定义（导入→IndexedDB/浏览器下载；回收站/硬链接/重链→不可用隐藏）。交付：
   - `isViewerMode()`（android-bridge.ts）：Android 双端桥 || 网页版 browser adapter 统一判定（Tier 0 `__YSM_BACKEND__` 权威信号，误嵌 WebView 强制走 web）
   - 门控改造 6 处：设置页隐藏游戏目录/链接模式卡片（tpl）、自更新跳过（version-updater）、树「打开/导入文件夹」+ 资源管理器「打开文件夹」走 `resolveAndroidRepoDir`（网页版定位虚拟根 /web）
   - 网页版拖拽导入：`import-queue` drop 分支 → `importWebFiles` 写 IndexedDB + toast + tree:reload

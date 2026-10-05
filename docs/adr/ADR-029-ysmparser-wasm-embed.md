@@ -63,7 +63,6 @@ detectYsmVersion(path)
 - 版本预检 + 分流使 V2/V3/zip 三类来源行为统一，渲染结果可预期。
 
 **负面 / 已知遗留**
-- 🔴 ~~`_getGlueCode` bug（已知，待修）~~ ✅ **已修复（2026-08-23 复核翻牌）**：胶水代码注入 patch 已在运行路径落地——`internal/app/wasm_decoder.go:107-117` 与 `go/avatar/avatar_decode.go:70-77` 经 `strings.ReplaceAll` 注入 `Module["HEAPU8"]=HEAPU8`，由 `832e4b11`（WASM 取代 sidecar）引入、`42f9f6e8` 回归加固。运行时不再回退 Go CLI，"🔴 未稳定生效"为历史快照，当前纯 WASM 路径生效。
 - 内嵌 WASM 使 JS 产物膨胀（约 200KB → 1.5MB），首次初始化有 base64 解码 + 编译延迟（已用缓存缓解，仍有首屏冷启动成本）。
 - 文本头部变体（含 `<hash>` 标签、V2 含 16 字节二进制 hash 重复）的偏移处理极易出错，解析逻辑需持续守护。
 

@@ -98,17 +98,17 @@ Go 端有 17 个 `_test.go`，但核心业务包（`avatar` / `download` / `sync
 
 ---
 
-## 4. 改进优先级（Action Items）
+## 4. 改进优先级（Action Items，已全部闭环，实施细节见知识卡与 git 历史）
 
-| 优先级 | 任务 | 理由 |
-|--------|------|------|
-| **P0** | ~~`site-view.js` 拆分（1,268 → ≤400 行/文件）~~ **✅ 已完成** | 原 `community/site-view.js` 已拆为 `site-view.ts`(114 薄壳) + `site/` 子模块（drag/edit/events/render/types.ts），最大单文件 `edit.ts` 487 行且独立可测，RED 风险消除 |
-| **P0** | ~~清理 25 个一次性脚本 → 归档至 `scripts/_archive/`~~ **✅ 已完成** | Python→Node 全量迁移（`295ac07e`）已清理 25 个 `*.py` 一次性脚本 + 删除 `safe-edit-service.py` 半成品；`scripts/README.md`「已删除」段已记，治理由 `check-script-hygiene.mjs` 等护栏守护 |
-| **P1** | ~~`app_install.go` 逻辑下沉至 `go/installer/`~~ **✅ 已完成** | 原 1,315 行债务已还：`app_install.go` 瘦身为 10 行薄壳，逻辑迁至 `app_install_instance.go`（537 行）。`app_scan.go` 核心亦已下沉 `go/scanner`（见 §3.1） |
-| **P1** | ~~打破 `DownloadQueue ↔ App` 循环引用~~ **✅ 已完成** | 已改 callback 注入模式（`downloadFn/emitFn/logFn`），`app_download_test.go` 独立单测就位，解锁独立测试 |
-| **P2** | ~~为 `installer` / `sync` / `download` 补单元测试~~ **✅ 已完成** | 三包单测已就位（installer 4 / sync 9 / download 5 测试文件，全仓 151 个 go 测试文件）；`app_scan_test.go` 950 行 + `go/scanner` 1300 行 |
-| **P2** | ~~修复 `line-counter.py` 的 `package_lines()` bug~~ **✅ 已完成（前提已消失）** | `line-counter.py` 已迁移为 `line-counter.mjs`（2026-08-03），逻辑逐点保真含 package_lines 行为，原 py 已废弃 |
-| **P3** | ~~审视 AGENTS.md 治理规则，删除"创伤反应"式规则~~ **✅ 已完成** | 当前 AGENTS.md 已无"严禁/绝对不能"等过度防御表述（grep 实证） |
+| 优先级 | 任务 |
+|--------|------|
+| **P0** | `site-view.js` 拆分（1,268 → ≤400 行/文件） |
+| **P0** | 清理一次性脚本 → 归档 `scripts/_archive/` |
+| **P1** | `app_install.go` 逻辑下沉至 `go/installer/` |
+| **P1** | 打破 `DownloadQueue ↔ App` 循环引用 |
+| **P2** | 为 `installer` / `sync` / `download` 补单元测试 |
+| **P2** | 修复 `line-counter.py` 的 `package_lines()` bug |
+| **P3** | 审视 AGENTS.md 治理规则，删除"创伤反应"式规则 |
 
 ---
 

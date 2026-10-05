@@ -111,11 +111,6 @@ SkyCapability 加 `startAutoRotate/stopAutoRotate/isAutoRotating` 接口：`requ
 - **half-float reinterpret 易写错**：首版 `getLuminanceHistogram` 用 Uint16→Float32Array bit-reinterpret 产生垃圾值 + 越界读，codereview P2 拦截后改用 `DataUtils.halfToFloat` 逐元素转换
 - **水面 onBeforeCompile 维护成本**：自定义 shader 注入依赖 Three.js 内部 shader chunk 名（`#include <common>` / `#include <begin_vertex>`），Three.js 升级时可能需适配
 
-### 3.3 已知遗留
-
-- ~~**体积光 god rays** 未实现~~（已落地 [ADR-107](./ADR-107-sky-godrays-volumetric.md)，日出日落时从太阳方向向下投射的体积光束）
-- ~~**水面法线贴图** 未实现~~（程序化 DataTexture 生成，编码波浪偏导数，已落地）
-- ~~**环境预设缩略图** 未实现~~（env-preset select 改为缩略图网格，已落地）
 
 ---
 

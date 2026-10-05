@@ -73,7 +73,6 @@ litematic `extractBits` 越界 panic、`sync:download:missing` 并发守卫、ba
 
 ### 已知遗留
 
-- ADR-009 编号空缺（历史占号缺失，登记表已报 ⚠️，不影响本 ADR）
 - `ysmgit` 相关 AI 并行任务在跟进 app_install.go 下沉（ADR-034 延续）
 
 ---

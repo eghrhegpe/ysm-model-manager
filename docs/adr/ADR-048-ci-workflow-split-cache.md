@@ -62,7 +62,6 @@ test.yml（on: workflow_call）── 测试门禁单一实现（含 helper embe
 - 首次构建多 2 个 `actions/cache` 步骤（约 15s 开销），wails3 模块首个平台首次下载仍需一次。
 
 **已知遗留：**
-- `ADR-009` 编号空缺（既有登记表问题，非本 ADR 引入）。
 - Release body 仍为 softprops 占位文本，需 `gh release edit` 补 notes（v1.10.0/v1.11.x 实测流程，SOP 已记录）。
 
 ## 4. 数据溯源

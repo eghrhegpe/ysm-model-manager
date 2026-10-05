@@ -245,12 +245,6 @@ D1 落地后，nav-fab 与详情卡 FAB 的差异仅剩：
 ### 已知遗留
 
 - 详情卡 FAB 的存废与 `_prefer3D` 语义迁移（§D3）待单独决策。
-- ~~YSM 详情卡 `#btn-3d-preview` 的「延迟绑定致错误路径下点击无响应」缺陷~~
-  **已于 2026-09-16 修复**（§D5）：原 `btn3d.onclick` 挂在 `loadModel2D` 的 try 尾部
-  （所有 `await` + 两个早退之后），解析失败 / 无 bones / 摘要提取失败三条路径上 FAB
-  渲染出来却点击无反应。修复方式：把整块 3D 切换机制（`_toggle3D` + FAB 绑定 +
-  `_prefer3D` 自动弹）提到 `try` **之前**同步执行——依据是 `_toggle3D` 只依赖 `modelPath`
-  参数与 `ctx`，与 2D 加载出的 `model` 无关（3D 侧自带 `loader` 重新加载）。
 
 ## 4. 数据溯源
 

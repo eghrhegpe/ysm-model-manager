@@ -48,7 +48,7 @@ YSM 模型管理器是一个跨平台桌面 + 移动 + 网页应用，用于管�
          │ Wails Service 反射绑定                │  Java↔JS (WailsJSBridge)
          │ EventsOn / Event.Emit (反向)           │  System events (back/network/battery)
 ┌────────▼──────────────────────────┐    ┌──────▼──────────────────────────────┐
-│  internal/app/ (绑定门面层, 29 文件)  │    │  internal/app/ (Go shared lib)       │
+│  internal/app/ (绑定门面层)  │    │  internal/app/ (Go shared lib)       │
 │   编排 Wails 生命周期 + 参数校验       │    │   libwails.so (c-shared, android tag) │
 │   + PathManager 平台抽象 + Guard      │    │   PathManager(android) + Guard      │
 ├─────────────────────────────────────┤    ├─────────────────────────────────────┤
@@ -81,13 +81,13 @@ Web 版 (GitHub Pages):
 
 - **技术**：Wails v3 alpha2.105（Go 1.25 + WebView2/Android WebView/WebKitGTK），模块 `ysm-model-manager`（`go.mod:1`）。桌面四平台共享 `*app.App` Service 绑定面；Android 在此之上套 Java 宿主层 + Gradle APK。
 - **入口** `main.go`（`//go:build !cli`）：
-  - `//go:embed all:frontend/dist` 嵌入前端产物（:13）。
-  - `app.NewApp()` 注册为单一 `application.Service`（:20-22）。
-  - `SetApp(app)` / `SetMainWindow(wnd)` 注入运行时引用，避免启动期 `Window.Current()` 返回 nil（:28, :37）。
-  - 窗口 **1280×800**，URL `/`（:30-35）。
+  - `//go:embed all:frontend/dist` 嵌入前端产物（）。
+  - `app.NewApp()` 注册为单一 `application.Service`（）。
+  - `SetApp(app)` / `SetMainWindow(wnd)` 注入运行时引用，避免启动期 `Window.Current()` 返回 nil（, :37）。
+  - 窗口 **1280×800**，URL `/`（）。
 - **Android 入口**：Wails v3 自动生成 Android 工程资产（`build/android/`），Go 以 `-buildmode=c-shared -tags android` 编译 `libwails.so` → `build/android/app/src/main/jniLibs/{arm64-v8a,x86_64}/libwails.so`，Gradle `assembleDebug`/`assembleRelease` 打包 APK。Java 宿主层详见 §2.2。
 - **Web 版入口**：单入口 `frontend/index.html`（原双入口 `web.html` + `src/web-spike/` 已随 2026-09-05 归一删除） + `frontend/vite.web.config.ts`（`mode: "web"`, 输出 `dist-web`）。纯静态托管，无 Go 编译、无 Wails 壳；Web 模式经 `MODE=web`（Tier 1）判 `resolveWebMode()` 走 `browserAdapter` Proxy。详见 §6.6。
-- **资源注入** `embed.go`（`//go:build` 无限制，双构建均编译）：`//go:embed creators.json resource_types.json workshop-github.json workshop_sites.json` + `frontend/dist/wasm/YSMParser.wasm` + `frontend/public/wasm/YSMParser.js`，经 `init()` → `app.SetEmbedded(...)`（:21-23）。
+- **资源注入** `embed.go`（`//go:build` 无限制，双构建均编译）：`//go:embed creators.json resource_types.json workshop-github.json workshop_sites.json` + `frontend/dist/wasm/YSMParser.wasm` + `frontend/public/wasm/YSMParser.js`，经 `init()` → `app.SetEmbedded(...)`（）。
 
 ### 绑定模式
 
@@ -138,33 +138,37 @@ Java → JS 事件通过 `bridge.emitEvent` → Wails CustomEvent 通道（**勿
 
 后端分两层：**`internal/app/` 绑定门面层**（编排 Wails 生命周期、参数校验、调用业务包）+ **`go/` 业务逻辑包**（纯逻辑，可单测）。
 
-### 3.1 `internal/app/`（29 文件，~5700 行）— 绑定门面
+### 3.1 `internal/app/` — 绑定门面层
 
-| 文件 | 行数 | 职责 / 代表绑定 |
-|------|------|----------------|
-| `app.go` | 135 | `App` 结构体、`ServiceStartup`/`ServiceShutdown` 生命周期（含 Android watcher 守卫）、`OpenInBrowser`、`GetAppVersion` |
-| `app_install.go` | 1255 | 最大文件。导入/安装/同步：`ImportModelFile*`、`SyncResources`、`Push/PullResourceFromInstance`、`RelinkCustomDir`、回收站 `MoveToRecycle*`/`RestoreFromRecycle` |
-| `app_scan.go` | 578 | `ScanModelEntries`、`SearchModels`、`GenerateRepoIndex`、`ListVersionInstances`、`ScanLocalAuthors` |
-| `app_config.go` | 462 | `LoadAppConfig`/`SaveAppConfig`、窗口位置、`CheckUpdate`/`DoUpdate`、`SelectDirectory` |
-| `resource_bindings.go` | 405 | `LoadResourceTypes`（读 `resource_types.json`，:21）、`GetRepoRoot`、`DetectResourceType`、`ImportByType`、litematic/nbt voxel 读取 |
-| `app_files.go` | 337 | 文件 CRUD、`ToggleModelEnable`（`.ban` 后缀）、`ExtractPreviewTexture`、`RevealInExplorer`/`OpenFolder` 平台守卫 |
-| `app_workshop.go` | 318 | 工坊站点/创作者 CRUD、CSV/JSON 导入导出、`atomicWrite`（:19 临时文件 + rename） |
-| `app_download.go` | 317 | `DownloadQueue` 串行队列、`EnqueueDownloads`、`DownloadFromGitHub`（镜像回退） |
-| `app_model.go` | 253 | `AnalyzeYSMModel`、`ExtractYSMHeader`、`GetModel3DSpec`、`ReadFileBytes`（base64） |
-| `proxy.go` | 204 | `StartProxy`/`StopProxy`/`IsProxyRunning` |
-| `plaza_window.go` | 180 | 模型广场 Wails 第二窗口：`prewarmPlazaWindow`/`NavigatePlazaWindow`（ADR-050） |
-| `wasm_decoder.go` | 191 | Node.js 兜底解码 `decodeYSMViaNodeJS`（:48），Android 守卫 `findNodeJS` 恒空串 |
-| `app_avatar.go` | 126 | 创作者头像提取缓存 |
-| `app_tags.go` | 46 | `GetModelTags`/`SetModelTags`/`AllTags` |
-| `bundled_data.go` | 27 | **三级解析**：exe 同级 → exe 上级 → 嵌入基线（:13-27） |
-| `pathmgr.go` | 45 | **PathManager 接口 + 单例**（ADR-046 P2）：`appDataRoot()`/`defaultRepoRoot()` 委托平台实现 |
-| `app_config_windows.go` | — | Windows 专属：`scanMinecraftDirsPlatform`（Java 启动器路径） |
-| `app_config_other.go` | 26 | macOS/Linux 专属：`scanMinecraftDirsPlatform`（PrismLauncher/XDG/传统 .minecraft） |
-| `app_config_android.go` | 7 | Android 专属：`scanMinecraftDirsPlatform` 空实现（查看器模式无启动器扫描） |
-| `go/executil/hidewindow_windows.go` / `hidewindow_other.go` | — | 窗口隐藏（Wails Dialog 创建时 `SW_HIDE`，原 internal/app 副本已收敛） |
-| `screen_windows.go` / `screen_other.go` | 28/11 | 虚拟屏幕坐标（窗口位置恢复） |
-| `texture_order.go` | — | 纹理序口径统一：ysm.json 声明序优先 / 尺寸降序 |
-| `assets.go` / `wasm_embed.go` | 20/17 | `SetEmbedded` 注入点；`GetWasmBinary` |
+> 文件数与行数**刻意不写死**（必然漂移——本表原写「29 文件 ~5700 行」，实测已长到 90 文件 / 16.5k 行）。
+> 要数字直接跑 `Get-ChildItem internal/app -Filter *.go | Measure-Object`。
+> 下表只维持「文件 → 职责」映射；**新增绑定文件请补一行**。
+
+| 文件 | 职责 / 代表绑定 |
+|------|----------------|
+| `app.go` | `App` 结构体、`ServiceStartup`/`ServiceShutdown` 生命周期（含 Android watcher 守卫）、`OpenInBrowser`、`GetAppVersion` |
+| `app_install.go` | 最大文件。导入/安装/同步：`ImportModelFile*`、`SyncResources`、`Push/PullResourceFromInstance`、`RelinkCustomDir`、回收站 `MoveToRecycle*`/`RestoreFromRecycle` |
+| `app_scan.go` | `ScanModelEntries`、`SearchModels`、`GenerateRepoIndex`、`ListVersionInstances`、`ScanLocalAuthors` |
+| `app_config.go` | `LoadAppConfig`/`SaveAppConfig`、窗口位置、`CheckUpdate`/`DoUpdate`、`SelectDirectory` |
+| `resource_bindings.go` | `LoadResourceTypes`（读 `resource_types.json`）、`GetRepoRoot`、`DetectResourceType`、`ImportByType`、litematic/nbt voxel 读取 |
+| `app_files.go` | 文件 CRUD、`ToggleModelEnable`（`.ban` 后缀）、`ExtractPreviewTexture`、`RevealInExplorer`/`OpenFolder` 平台守卫 |
+| `app_workshop.go` | 工坊站点/创作者 CRUD、CSV/JSON 导入导出、`atomicWrite`（临时文件 + rename） |
+| `app_download.go` | `DownloadQueue` 串行队列、`EnqueueDownloads`、`DownloadFromGitHub`（镜像回退） |
+| `app_model.go` | `AnalyzeYSMModel`、`ExtractYSMHeader`、`GetModel3DSpec`、`ReadFileBytes`（base64） |
+| `proxy.go` | `StartProxy`/`StopProxy`/`IsProxyRunning` |
+| `plaza_window.go` | 模型广场 Wails 第二窗口：`prewarmPlazaWindow`/`NavigatePlazaWindow`（ADR-050） |
+| `wasm_decoder.go` | Node.js 兜底解码 `decodeYSMViaNodeJS`（），Android 守卫 `findNodeJS` 恒空串 |
+| `app_avatar.go` | 创作者头像提取缓存 |
+| `app_tags.go` | `GetModelTags`/`SetModelTags`/`AllTags` |
+| `bundled_data.go` | **三级解析**：exe 同级 → exe 上级 → 嵌入基线（） |
+| `pathmgr.go` | **PathManager 接口 + 单例**（ADR-046 P2）：`appDataRoot()`/`defaultRepoRoot()` 委托平台实现 |
+| `app_config_windows.go` | Windows 专属：`scanMinecraftDirsPlatform`（Java 启动器路径） |
+| `app_config_other.go` | macOS/Linux 专属：`scanMinecraftDirsPlatform`（PrismLauncher/XDG/传统 .minecraft） |
+| `app_config_android.go` | Android 专属：`scanMinecraftDirsPlatform` 空实现（查看器模式无启动器扫描） |
+| `go/executil/hidewindow_windows.go` / `hidewindow_other.go` | 窗口隐藏（Wails Dialog 创建时 `SW_HIDE`，原 internal/app 副本已收敛） |
+| `screen_windows.go` / `screen_other.go` | 虚拟屏幕坐标（窗口位置恢复） |
+| `texture_order.go` | 纹理序口径统一：ysm.json 声明序优先 / 尺寸降序 |
+| `assets.go` / `wasm_embed.go` | `SetEmbedded` 注入点；`GetWasmBinary` |
 
 | 平台隔离文件（build tags） | build tag | 职责 |
 |--------------------------|-----------|------|
@@ -367,9 +371,9 @@ type CliCommand struct {
 
 **路径 A — 前端 WebView2 / Android WebView / 纯浏览器**（`frontend/src/wasm/ysm-parser.ts`，加载统一 web 产物）：
 
-1. 动态 `import()` 两个 data 文件 → 补丁胶水代码追加 `Module["HEAPU8"]=HEAPU8`（:75-78）；
-2. 设 `window.Module = { wasmBinary, noInitialRun: true }`（:81-86）；
-3. **间接 `eval`** `(0,eval)(patchedGlue)`（:89）→ 调 `YSMParserModule` 工厂；绕开 WebView2/fetch 的 CORS 限制；
+1. 动态 `import()` 两个 data 文件 → 补丁胶水代码追加 `Module["HEAPU8"]=HEAPU8`（）；
+2. 设 `window.Module = { wasmBinary, noInitialRun: true }`（）；
+3. **间接 `eval`** `(0,eval)(patchedGlue)`（）→ 调 `YSMParserModule` 工厂；绕开 WebView2/fetch 的 CORS 限制；
 4. 双解码路径：`decodeYsmFileFromMemory`（`ccall("ysm_decode_from_memory")` + `_malloc`）优先；`decodeYsmFile`（`callMain` + MEMFS）回退。
 
 > 历史注记：早期版本 `ysm-glue-data.js` 的 `_getGlueCode` 引用未声明 `_cachedWasm` 且返回 `ArrayBuffer`，导致前端 WASM 路径静默失败回退 Go 解析；审计核实（2026-08-08）该 bug 已随数据文件更新（现用 `_cachedGlue` 且返回 string）修复，「WASM 路径必回退 Go」的假设已失效。
@@ -381,8 +385,8 @@ type CliCommand struct {
    - `const YSMParser = require(glueFile)` → `await YSMParser({ wasmBinary, noInitialRun: true })` 实例化 Emscripten 模块；
    - `FS.writeFile('/input/model.ysm', ys)` 写入 MEMFS；
    - **`mod.callMain(['-i','/input','-o','/output'])`** —— 参数与 CLI exe 一致，等于在 Node 运行时里执行原版 C++ 解析器；
-   - 递归收集 `/output` 文件，打 `FILES_JSON:` 标记输出（:88）；
-3. 子进程带超时护栏 + `HideWindow` 防黑框；输出经 `geometry.ParseBedrockGeometry` 合并多骨骼、填纹理 base64 → `types.BedrockModel`（:127-180）；
+   - 递归收集 `/output` 文件，打 `FILES_JSON:` 标记输出（）；
+3. 子进程带超时护栏 + `HideWindow` 防黑框；输出经 `geometry.ParseBedrockGeometry` 合并多骨骼、填纹理 base64 → `types.BedrockModel`（）；
 4. **纯 Node 即可解码，不依赖浏览器/WebView2**（已实测：`upstream/` 下 10 个 .ysm 全部可用此路径解码出骨骼/动画/纹理/头像）。`go/avatar/avatar.go` 的 `DecodeYSMFiles` 是同一套机制的复用（头像提取），两处脚本逻辑近似。
 
 > ✅ **前后端共用同一份 web 产物**（2026-08-08 统一）。若未来更新 YSMParser 上游：重建脚本已归档至 `scripts/_attic/build-ysm-wasm.ts`（见 §4.1），需先复活脚本并具备 emsdk 工具链（本机当前无 emsdk），方可同步重出两处（前端 base64 data + Go embed）——旧指引「重跑 `node scripts/build-ysm-wasm.ts`」已失效，勿按旧路径执行。
@@ -480,7 +484,7 @@ readModelBytes(path) → Uint8Array        ← backend/read-model-bytes.ts（平
 1. **Go 运行时** — `go/types/registry/resource.go` `LoadRegistry()`，`registryPath` 可测试替换；root `resource_types.json` 单源 embed（旧手工副本已废）为兜底基线。
 2. **Go 派生** — `go/types/registry/extensions.go` `AllExts()`/`IsSupportedExt()`/`StorageSubDir()` 全部注册表驱动。
 3. **绑定** — `internal/app/resource_bindings.go:21` `LoadResourceTypes()` 返回原始 JSON 串。
-4. **前端静态镜像** — `js/utils/extensions.ts` `RESOURCE_EXTS`（:8-16，头部注释显式声明同步流程）；`js/utils/resource-types.ts` `RESOURCE_TYPES`/`RESOURCE_TYPE_LABELS`；`js/utils/resource-registry.ts`。
+4. **前端静态镜像** — `js/utils/extensions.ts` `RESOURCE_EXTS`（，头部注释显式声明同步流程）；`js/utils/resource-types.ts` `RESOURCE_TYPES`/`RESOURCE_TYPE_LABELS`；`js/utils/resource-registry.ts`。
 
 > 一致性由 `tests/test_resource_schema.ts` + `go/types/registry/registry_test.go`（TestAllExts/IsSupportedExt/ExtBelongsTo/StorageSubDir/SubDirMap）双向守护；新增资源类型必须同步上述四处。
 
@@ -499,10 +503,10 @@ readModelBytes(path) → Uint8Array        ← backend/read-model-bytes.ts（平
 ### 6.1 入口与组件注册
 
 `frontend/index.html:15` → `src/app-modules.ts`（~6.4KB）：
-- 静态 `import` `app-nav` / `context-menu` / `app-toast`（:16-18）；
-- 动态 `import()` 字面量加载 `app-tree`/`app-sidebar`/`app-content`/`app-sync-manager`（:20-34，分包按需）；
-- `register("loadInstances"|"loadEntries")` 注入服务（:11-12）；
-- 主题 + UI 偏好初始化（:46-132）。
+- 静态 `import` `app-nav` / `context-menu` / `app-toast`（）；
+- 动态 `import()` 字面量加载 `app-tree`/`app-sidebar`/`app-content`/`app-sync-manager`（，分包按需）；
+- `register("loadInstances"|"loadEntries")` 注入服务（）；
+- 主题 + UI 偏好初始化（）。
 
 ### 6.2 组件清单（`js/components/`）
 
@@ -532,7 +536,7 @@ index.ts（编排：constructor → shadow → connected→disconnected）
 
 ### 6.4 事件总线与状态
 
-- **`js/bus.ts`**（~5.9KB）：类型化 bus，`BusEvents` 接口枚举约 **50 个事件名 → payload 类型**（:53-112）；`createBus()` 简单 listener map（:128-159）；`setBus()` 可替换；兼容挂载 `window.bus`（:178）；emit 内 `try/catch` 隔离异常（:145-148）。
+- **`js/bus.ts`**（~5.9KB）：类型化 bus，`BusEvents` 接口枚举约 **50 个事件名 → payload 类型**（）；`createBus()` 简单 listener map（）；`setBus()` 可替换；兼容挂载 `window.bus`（）；emit 内 `try/catch` 隔离异常（）。
 - **`js/core/page-store.ts`**：纯函数模块——`isValidPage`（运行时页面名守卫）+ `resolveInitialPage`（启动初始页解析，三优先级回退 repository）；不持有状态、不镜像。原 `PageStore`/`registerPageStore` 写-only 孤儿状态机经 ADR-209 移除（导航事实源为 bus `nav:changed`）。
 - **`js/services/registry.ts`**（1.6KB）：`Map<string, unknown>`，仅注册"有替换价值"的依赖（数据加载函数）；渲染/纯函数直接 import。
 
@@ -690,7 +694,7 @@ MMD 适配器通过 `MMDAmmoPlugin` 一行注册：`new MMDLoader(manager).regis
 ## 9. 社区 / 工坊（生态聚合）
 
 - **数据加载**：`app-content/community/core.ts:35-36` 调 `LoadWorkshopSites()` + `LoadWorkshopCreators()`（Go `app_workshop.go:56,109` → `loadBundledJSON` → 三级路径解析）；`LoadGitHubRepos()` 读 `workshop-github.json`。
-- **下载流**：用户选中 → `features/community/download-queue.ts:139-142` `EnqueueDownloads(tasks)` → Go `app_download.go:50-64` 入队并 `Event.Emit("queue:status")` → 串行 `process()` → `DownloadFromGitHub`（镜像回退）→ 前端 `Events.On("queue:status"/"queue:file-start"/"queue:file-done"/"download:progress")`（:167-234）更新 UI。
+- **下载流**：用户选中 → `features/community/download-queue.ts:139-142` `EnqueueDownloads(tasks)` → Go `app_download.go:50-64` 入队并 `Event.Emit("queue:status")` → 串行 `process()` → `DownloadFromGitHub`（镜像回退）→ 前端 `Events.On("queue:status"/"queue:file-start"/"queue:file-done"/"download:progress")`（）更新 UI。
 - **配置写回**：`atomicWrite`（tmp + rename，`app_workshop.go:19`）防中断损坏。
 - 创作者头像增量刷新：`download-queue.ts` 解析 `queue:file-done` → `bus.emit("avatar:refresh")` → `app-content` 按 `dataset.name` 定点更新卡片（v1.7.7+）。
 
@@ -700,7 +704,7 @@ MMD 适配器通过 `MMDAmmoPlugin` 一行注册：`new MMDLoader(manager).regis
 
 ### 10.1 配置
 
-- `wails.json` — frontend dir `./frontend`，devServerUrl `:9245`（与 `Taskfile.yml` 的 VITE_PORT 默认值统一，消除历史残留的 `:5173` 占位）。
+- `wails.json` — frontend dir `./frontend`，devServerUrl （与 `Taskfile.yml` 的 VITE_PORT 默认值统一，消除历史残留的  占位）。
 - `frontend/vite.config.js` — `wailsBindingsResolve` 插件；`frontend/vitest.config.ts` — Vitest（happy-dom，`src/**/*.test.{js,ts}`，`setupFiles: ./test-setup.ts`，覆盖率阈值 **statements 40 / branches 31 / functions 40 / lines 40**，排除 `src/wasm/**`）。
 - `frontend/vite.web.config.ts` — Web 版独立构建配置（`mode: "web"`, 输出 `dist-web`），复用 `wailsBindingsResolve`。
 - `Taskfile.yml` — 委派 `build/Taskfile.yml` + `build/{windows,darwin,linux,android}/Taskfile.yml`（ADR-046 P1/P2，四平台矩阵）；`task dev` = `wails3 dev -port 9245`；版本经 `APP_VERSION` 变量注入。
@@ -729,7 +733,8 @@ MMD 适配器通过 `MMDAmmoPlugin` 一行注册：`new MMDLoader(manager).regis
 
 ## 11. 目录结构
 
-> 更新于 2026-08-10。*: 行数为约数（来自 `wc -l` 抽样）。
+> ⚠️ 目录树是**结构示意**，不追行数（行数必然漂移——要看规模直接 `wc -l` / `Measure-Object`）。
+> 路径以源码树为准；发现对不上请直接改这里。
 
 ```
 ysm-model-manager/
@@ -749,7 +754,7 @@ ysm-model-manager/
 │   ├── build-android-so.ps1     # Android Go shared lib 编译
 │   ├── updater/                 # 编译为 ysm-updater-helper.exe (embed)
 ├── internal/
-│   └── app/                    # ★ 绑定门面层 (29 文件, ~5700 行)
+│   └── app/                    # ★ 绑定门面层
 │       ├── app.go               # App 结构体 + 生命周期 + Android watcher 守卫
 │       ├── app_install.go       # 导入/安装/同步/回收站 (最大, 1255 行)
 │       ├── app_scan.go          # 扫描/搜索/索引
@@ -882,42 +887,14 @@ app-content/community/core.ts:35-36
 
 ---
 
-## 14. 近期架构变动
+## 14. 架构变动从哪看
 
-| 日期 | 变动 | 影响 |
-|------|------|------|
-| **2026-09-04** | **锐评 P1 活代码清零收官**（12 批次, `40a93848`） | `style.cssText` 全仓活代码清零（139→8 处死代码移交 G3/豁免）；P1+P3 风格项闭环 |
-| **2026-09-04** | **锐评 G6 立项完成**（`9302e8e8`, ADR-175） | 3D overlay 链 Shadow DOM 化立项：D1 overlay shadow host/D2 菜单 shadow 化+注入迁移/D3 aria+trapFocus 转正/D4 测试策略/D5 分步 M1-M3 |
-| **2026-09-03** | **锐评 S2 ADR 已立**（`4948f390`, ADR-174） | browser parity 判定单一源查证成立（Go registry=内嵌 JSON/TS 直读）；真双实现区=格式平移层，对账硬锁策略定 D2-D5；首轮四函数漂移审计完成 |
-| **2026-09-03** | **锐评 P0 分类治理 + frontend 分层**（ADR-170） | backend 桥层收窄（6 文件原地不动）+ 解析簇 → `src/parsers/` + dialogs 升格 → `src/features/dialogs/` + coi-sw → `src/workers/`；123 处 import 零触碰 |
-| **2026-09-03** | **锐评 preview3d 超大文件裁决**（ADR-171） | FBXLoader vendor → 官方 `three/addons/loaders`；caps 巨型文件维持不拆（行数不是依据，先查缝） |
-| **2026-09-03** | **锐评社区创作者合并下沉 Go**（ADR-172） | 新增 `MergeCommunityCreatorsFromJSON` binding：前端社区拉取结果直传 Go 原子并入，根除 TS 侧派生触碰「Go 派生结果只读」红线 |
-| **2026-09-03** | **锐评 CLI 参数桥 ParamSpec 白名单**（ADR-173） | GUI→CLI 四次格式转换（Record → Wails map → []string → flag.FlagSet）引入 unkeyed diff 与数值 float64 损耗；ParamSpec 白名单协议区分未传与显式空值 |
-| **2026-09-03** | **安全修复：动画分支字节封顶**（`16b3de11`） | `collectAnimJSONs/collectGeoAnimEntries/collectMergedFiles` 补累计字节封顶（maxMaterializeBytes 512MB）；此前仅条目数封顶（5000），恶意压缩包可塞 5000 个 ~50MB JSON 绕封顶 |
-| **2026-09-01** | **锐评 #12 退役 go-run + watcher 机制锚**（`b07f8418`） | 退役 `compare-maid-packs.ts`（依赖 `_tools/` 从未入库、自始不可运行）；知识卡同步：go-importer 留档治理结论 / go-watcher 机制锚修复（4 元组捕获 + fw 句柄） |
-| **2026-08-31** | **平台 shim 收敛 + Go 重复治理**（ADR-139 / ADR-140） | `rustbridge`/`scanner` 四 OS 平台 shim 合并（`rust_backend.go` 单文件）；Go 文件内自重复三层判定与变体层不强制合并 |
-| **2026-08-31** | **3D 子系统归位 src/preview-3d**（ADR-136 / ADR-137 / ADR-138） | 截图/离屏渲染、YSM 解码子系统归位 + `features/preview-3d` 中间层上提 `frontend/src/preview-3d/`（第五刀收尾） |
-| **2026-08-30** | **测试消费性校验 + 缓存组件化 + Go jscpd**（ADR-133 / ADR-134 / ADR-135） | 契约测试从存在性门禁升级为消费性校验；`containerTypeCache` 包级全局收进组件；Go 端 jscpd 重复检测增量门禁 |
-| **2026-08-29** | **拖拽直推仓库 + 统计提取 + 多模型选择原语**（ADR-130 / ADR-131 / ADR-132） | 整合包卡片拖拽先入仓库再推送；3D 渲染期统计提取与类型判定解耦；跨资源类型统一多模型选择菜单原语 |
-| **2026-08-18** | **多模型同框引擎**（ADR-093） | `scene-registry.ts` 场景注册表（每模型 roots/visible/boneMaps/menuItems 元数据）；`fitCameraToRoots` 多包围盒累加取景；`pickModelByObject` 统一拾取 dispatch；`openModel3DFullscreen({ cooperate })` 统一路由入口；`MAX_MODELS=8` GPU 上限 |
-| **2026-08-16** | **联邦 3D 渲染能力**（ADR-073） | `caps/` 8 个场景能力（Sky/Ground/Environment/Fog/Shadow/Reflector/Postprocessing/Light）由 `scene-capability-registry.ts` 工厂注册表驱动；所有适配器零改动继承；程序化天空（Preetham 散射）+ HDR IBL + Bloom/SSAO/SSR 后处理 + 镜面反射落地 |
-| **2026-08-15** | **统一预览核心**（ADR-066 P3） | `mount-preview-core.ts`（928 行）收缴 vrm/litematic 复制脚手架，成为所有富格式 3D 预览的单一外壳；`PreviewAdapter` 适配器模式（ysm/vrm/mmd/litematic/fbx/pack-model 6 种格式）；声明式根菜单（ADR-076）+ 感知层开关面板 |
-| **2026-08-11** | **感知层 + 语义骨骼** | `perception/` 自主行为子系统（呼吸 L1 / 眨眼 L1.5 / 注视 L2 / 口型 L2 / 自动跳舞 L3）；`semantic-bones.ts` 跨格式语义骨骼映射（VRM 零匹配 / MMD 候选名表 / YSM 候选名表）；CCD IK 求解器 + MMD 足部锚地 |
-| **2026-08-11** | **RenderSession 对象化 → 删除**（ADR-052 P2 收尾） | render-session.ts 470 行生产无调用方，已删除；「实例字段封装、显式 dispose」思想由 ADR-066 统一核心继承；`model3d.ts` 缩为 Spec 类型枢纽（70 行） |
-| **2026-08-09** | **v1.11.0：Android 全平台支持**（ADR-046 P1+P2 / ADR-047） | 构建管线扩展为四平台矩阵（Windows / macOS / Linux / Android arm64）；`PathManager` 平台抽象层（`pathmgr_{desktop,android}.go`）；Android Java 宿主层（`MainActivity.java` + `WailsJSBridge.java`）；`MANAGE_EXTERNAL_STORAGE` 授权闭环 + 系统事件（back/网络/battery/屏幕/主题）；Pointer Events 统一触屏交互；查看器模式能力门控 (`isViewerMode()`) |
-| **2026-08-10** | **网页版 backend adapter**（ADR-049） | `browser-adapter.ts` Proxy 同形状绑定 + `idb.ts` IndexedDB 模型库；`platform.ts` Tier 分层判定；`web.html` + `vite.web.config.ts` 纯静态托管；`resolveWebMode()` 路由业务调用零改动 |
-| 2026-08-04 | 前端文档/架构归位 | 渲染片段从 copilot-instructions 迁移；前端路线图/计划类文档收归架构与设计规范体系 |
-| 2026-08-03 | 契约测试 Python → `.mjs` 迁移 | `tests/python/` 仅剩 `__pycache__` |
-| 2026-08-03 | 前端文档归位（本文扩充） | 渲染片段从 copilot-instructions 迁移；前端路线图/计划类文档收归架构与设计规范体系 |
-| 2026-07 | 文档宪法 + 路径大统一 + 主题增强（v1.9.0） | `c381329` |
-| 2026-06-16 | v1.7.8 头像增量刷新 | `download-queue.ts` 解析 `queue:file-done` + `bus.emit("avatar:refresh")`；`app-content` 定点更新卡片 |
-| 2026-06-16 | v1.7.6/7 动画系统 | 统一 3 keyframe / stagger / 设计令牌（前端标准见 `docs/UI-Design.md` §7 动画系统） |
-| 2026-06-16 | v1.7.5 暗色自动切换 + 右键打开位置 | `matchMedia('change')` + `RevealInExplorer` binding |
-| 2026-06-15 | v1.7.4 社区站点视图迁移至 Go 后端 | 前端硬编码数据移除，改 Go binding 读 JSON |
-| 2026-06-11 | 👴 仓库元老降级为仓库页 Tab | 新建 `features/oldest-models.ts` |
-| 2026-06-11 | 🧪 Go 测试框架 + CI | `go/*_test.go`；`.github/workflows/release.yml` |
+> **本节刻意不维护变更日志**——原表 31 行是手抄的 git log 摘要，与 `docs/releases/`、git 历史完全重复，
+> 且必然漂移（原表自称「更新于 2026-08-10」却含 09-04 条目）。**要看变动去权威来源**：
 
----
+- 逐版本变更：`docs/releases/`（有 `release-notes-gen.ts` 契约 + CI `--check`）
+- 逐提交：`git log`（**唯一事实源**）
+- 决策与理由：`docs/adr/`（史书，含「为何不走」的废弃件）
 
 ## 15. 参考
 
@@ -926,9 +903,7 @@ app-content/community/core.ts:35-36
 - 发版脚本：`scripts/build-release.ps1` / `scripts/build-release.sh` / `scripts/build-darwin.sh` / `scripts/build-linux.sh` / `scripts/build-android.ps1`
 - Android 开发手册：`docs/knowledge/android-dev.md`
 - 治理自检：`scripts/doctor.ts`、`scripts/link-checker.ts`
-- 组件规范（冻结快照）：`docs/archive/architecture.md`
 - 设计规范（前端交互/动画标准权威）：`docs/UI-Design.md`（§1 设计原则、§7 动画系统）
 - 样式借鉴（不同项目）：`MikuMikuAR/docs/architecture.md`
 - ADR-046（全平台化可行性）、ADR-047（Android 可用性规划）、ADR-049（网页版桥接）
-- 架构演进摘要：`docs/architecture-evolution-summary.md`
 - ADR-129（预览域根升格）、ADR-159（容器语义）、ADR-160（组件口径统一）、ADR-161（渲染词汇章程）

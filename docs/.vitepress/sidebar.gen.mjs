@@ -223,6 +223,10 @@ export const autoSidebar = [
         "link": "/audit-src-map"
       },
       {
+        "text": "文档实用性审计（只读）— 2026-10-05",
+        "link": "/audit-doc-utility-2026-10-05"
+      },
+      {
         "text": "3D 环境设计锐评（设计层，2026-10-05）",
         "link": "/audit-env-design-critique"
       },

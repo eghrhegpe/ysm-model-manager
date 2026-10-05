@@ -223,7 +223,9 @@ status: active
 - **命名脱钩裁定（ADR-305，2026-09-24）**：preview-3D 菜单三命名族——envState schema 键 = **存储标识符**（默认不改名；改名须带存档迁移 + ADR 词系 + ADR-286 分派表同步）、labelKey = **用户可见语义标识符**（命名跟控件语义走，掉前缀/缩写/语义改名均合法）、菜单工厂 join（`caps/*-menu.ts|buildWaterNodes` 等）= 唯一语义拼接点（`LocaleKey × RangedKey` 类型锁定）。**审查判据（ADR-305 D2）：命名脱钩项当且仅当「用户可见文案错/误导」才构成缺陷；labelKey 名 ≠ schema 键名本身不是缺陷**——38 对同构件（water 8 / postprocessing 20 / 体积光 5 / sky 3 / ground 2，清单见 ADR-305 D4）普查文案三语全对，统一裁定「不动」；新产生的脱钩不需登记，按判据自动裁定。P2-2（waterFilmDensity↔waterWetness）为该族首例，收口注释在 `caps/water-menu.ts|buildWaterNodes` 的 water-wetness 拼接点。
 ## 相关
 
-- `docs/preview-menu-overview.md`（3D 预览菜单系统全景图：分层架构 + 数据流 + ADR 索引 + 调试指南 + 快速上手）
+- `docs/preview-menu-overview.md`（3D 预览菜单系统**新人导览**：分层架构 + 数据流 + ADR 索引 + 调试指南 + 快速上手）
+  ——**分工**：契约/不变量/陷阱以**本卡**为准，导览只答「东西在哪、流程怎么走」；
+  该文件已去除用例数与性能实测等**快照数字**（必然漂移），路径以源码树为准
 
 - `docs/knowledge/preview-state.md`（状态层快照 + visibleWhen 谓词）
 - `docs/knowledge/preview-controls.md`（cap 控件渲染）

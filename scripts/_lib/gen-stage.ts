@@ -8,12 +8,20 @@ import { execFileSync } from "node:child_process";
  * 被误判为 gen 产物 stage 进 index，进而被 `--only` 路径限定提交卷带（实证：
  * fbx-cli-pipeline.md / frontend-test-audit.md 被卷进 e96b47e3）。
  *
- * 修复判定：stage 清单 = 快照变化文件 − 并行 dirty 文件。
+ * 修复判定：stage 清单 = 快照变化文件 − 并行 dirty 文件，新建文件另加白名单门。
  *   - dirty = `git status --porcelain` 中 docs/locales/completions 下有改动的文件
  *     （M/MM/A/D/R 等全部排除——并行会话的暂存或未暂存工作一律不碰）
- *   - `??` 未跟踪文件：gen 前已存在（snap_before 含它）→ 并行新建，排除；
- *      gen 前不存在（snap_before 不含）→ gen 本次新建产物，保留 stage
- *   - 补全型 gen（h1/symbols/adr/tests）改写的卡 gen 前是干净的 → 正常入库
+ *   - gen 前**已存在**的文件被 gen 改写 → 正常 stage（补全型 gen 的职责）
+ *   - gen 前**不存在**的新建文件 → 「gen 新建」与「并发会话新建」观测同形，
+ *     故仅当命中 `GEN_WHOLE_OUTPUTS`/`GEN_WHOLE_PREFIXES` 白名单才 stage（ADR-151-d1）
+ *   - `??` 未跟踪同上：gen 前存在 → 并行新建排除；不存在 → 仅白名单保留
+ *
+ * ADR-151-d1（2026-10-06 硬化）：旧行为对「不在 porcelain 中」的文件**无条件 stage**，
+ * 理由是「gen 本次新建的产物」。但该判据隐含假设「gen 期间新增 = gen 产出」——单会话
+ * 成立、并发失效：「gen 前不存在」在「gen 新建」与「并发会话新建」两种情形下**观测完全
+ * 同形**，故会把他人的新建文件卷进本次提交（实证 `docs/knowledge/zzz-fm-delimiter-tmp.md`
+ * 卷入 `6de3c8d5c`）。现对**新建**分支加白名单门（既有文件改写不受影响）：
+ * 漏 stage 无害（生成物滞留，后续 commit 的滞留收编路径可兜）／误 stage 有害（吞并行会话工作）。
  *
  * 双入口：
  *   - TS 侧：import { parsePorcelain, computeStageList }（契约测试直接测判定）
@@ -26,6 +34,7 @@ import { execFileSync } from "node:child_process";
  */
 import fs from "node:fs";
 import path from "node:path";
+import { isGenWholeOutput, strandedStageList } from "./machine-diff.ts";
 import { toPosix } from "./to-posix.ts";
 
 /** git status --porcelain 单条目。 */
@@ -78,15 +87,28 @@ export interface StageInput {
   snapChanged: string[];
   /** gen 前已存在的路径集合（snap_before 的路径列）；缺省视为空 → ?? 全部保留。 */
   snapBeforePaths?: Set<string>;
+  /**
+   * ADR-151-d1：是否只 stage「命中已知 gen 产出白名单」的文件（默认 true = 硬化行为）。
+   * 置 false 恢复旧行为（未知新建文件无条件 stage）——仅供迁移期排查，勿常态使用。
+   */
+  knownOnly?: boolean;
 }
 
 /**
- * 核心判定：stage 清单 = snapChanged − 并行 dirty。
+ * 核心判定：stage 清单 = snapChanged − 并行 dirty（ADR-151-d1 硬化）。
+ *
  * - 跟踪文件 dirty（M/MM/A/D/R…）→ 排除（并行会话的暂存/未暂存工作）
- * - `??` 未跟踪：snap_before 含它 → 并行新建，排除；不含 → gen 新建，保留
+ * - `??` 未跟踪：snap_before 含它 → 并行新建，排除；不含 → 仅当命中已知产出白名单才保留
+ * - **不在 porcelain 中的文件**（gen 前不存在）→ 仅当命中已知产出白名单才保留；
+ *   未知新建文件默认排除（见 ADR-151-d1：与「并发会话新建」观测同形，漏 stage 无害、
+ *   误 stage 有害）
+ *
+ * @param unknownNewOut 可选出参：收集被排除的未知新建文件（供调用方打 stderr 提示）
  */
-export function computeStageList(input: StageInput): string[] {
+export function computeStageList(input: StageInput, unknownNewOut?: string[]): string[] {
   const { dirtyEntries, snapChanged, snapBeforePaths } = input;
+  const knownOnly = input.knownOnly !== false;
+  const unknownNew = unknownNewOut ?? [];
   const before = snapBeforePaths ?? new Set<string>();
   // dirty 路径防御性归一化（parsePorcelain 已归一，但调用方可能直传反斜杠路径）
   const dirtyMap = new Map<string, PorcelainEntry>();
@@ -109,12 +131,27 @@ export function computeStageList(input: StageInput): string[] {
     const p = normPath(raw);
     const dirty = dirtyMap.get(p);
     if (!dirty) {
-      stage.add(p);
+      // ADR-151-d1：区分「既有文件被 gen 改写」与「新建文件」。
+      //  - gen 前**已存在**（snap_before 含它）→ 既有文件被 gen 补全改写 → 正常 stage
+      //    （gen-knowledge-symbols/autogen 的职责正是改写任意既有卡的机器区）
+      //  - gen 前**不存在** → 「gen 新建」与「并发会话新建」观测同形，无法区分；
+      //    仅白名单内的已知产出可确证为 gen 产物，未知一律保守排除。
+      // 旧行为对两者都无条件 stage，故并发下会卷带他人新建的未跟踪文件
+      // （实证 docs/knowledge/zzz-fm-delimiter-tmp.md 卷入 6de3c8d5c）。
+      // 方向遵 ADR-151 红线：漏 stage 无害（滞留可兜）／误 stage 有害（吞他人工作）。
+      const existedBefore = before.has(p);
+      if (existedBefore || isGenWholeOutput(p)) {
+        stage.add(p);
+      } else if (!knownOnly) {
+        stage.add(p); // 兼容开关：恢复旧行为（迁移期排查用）
+      } else {
+        unknownNew.push(p);
+      }
       continue;
     }
-    // `??` 未跟踪：gen 前不存在 → gen 本次新建，保留；存在 → 并行新建，排除
+    // `??` 未跟踪：gen 前不存在 → gen 本次新建，仅白名单保留；存在 → 并行新建，排除
     if (dirty.x === "?" && dirty.y === "?") {
-      if (!before.has(p)) stage.add(p);
+      if (!before.has(p) && isGenWholeOutput(p)) stage.add(p);
     }
     // 其他 dirty（跟踪文件改动）→ 一律排除
   }
@@ -125,7 +162,6 @@ export function computeStageList(input: StageInput): string[] {
 // node scripts/_lib/gen-stage.ts <snap_before> [snap_after] [porcelain_before]
 // 自身重遍历快照 → 计算变化 → 取 porcelain → 输出 stage 清单
 import { SNAP_DIRS } from "./gen-config.ts";
-import { strandedStageList } from "./machine-diff.ts";
 
 const SNAP_BASES = SNAP_DIRS;
 
@@ -226,11 +262,21 @@ if (isCli) {
   const porcelain = resolvePorcelain(porcelainBeforeFile);
   if (porcelain === null) process.exit(0); // fail-closed：空输出 = 空 stage 清单
   const dirty = parsePorcelain(porcelain);
-  const stage = computeStageList({
-    dirtyEntries: dirty,
-    snapChanged,
-    snapBeforePaths: new Set(before.keys()),
-  });
+  const unknownNew: string[] = [];
+  const stage = computeStageList(
+    {
+      dirtyEntries: dirty,
+      snapChanged,
+      snapBeforePaths: new Set(before.keys()),
+      // 硬化默认开；YSM_GEN_STAGE_STRICT=0 可临时恢复旧行为（迁移期排查用）
+      knownOnly: process.env.YSM_GEN_STAGE_STRICT !== "0",
+    },
+    unknownNew,
+  );
+  // ADR-151-d1：被排除的未知新建文件打 stderr（可观测，不静默丢弃）
+  for (const p of unknownNew) {
+    console.error(`[gen-stage] 未知新建文件已排除（非已知 gen 产出，防卷带并行会话）: ${p}`);
+  }
   // 滞留机器区收编（ADR-184）：gen 刷出未搭车的纯机器区 diff / 生成物整文件，
   // 因 gen 前已 dirty 被 computeStageList 排除——此处按机器区判定追回收编。
   // 人工策展区（正文/use_when/pitfalls 等）dirty 仍排除，并发隔离不放松。

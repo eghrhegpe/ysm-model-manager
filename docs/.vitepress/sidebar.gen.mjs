@@ -253,6 +253,10 @@ export const autoSidebar = [
       {
         "text": "3D 预览菜单系统全景图",
         "link": "/preview-menu-overview"
+      },
+      {
+        "text": "YSM 模型管理器 — 技术债探索报告（2026-10-06）",
+        "link": "/tech-debt-audit-2026-10-06"
       }
     ]
   },
@@ -1579,6 +1583,10 @@ export const autoSidebar = [
       {
         "text": "ADR-266-d1：体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像）",
         "link": "/adr/decisions/ADR-266-d1-volumetric-cone-in-screenshot"
+      },
+      {
+        "text": "ADR-151-d1：gen-stage 未知新建文件默认排除（并发卷带硬化）",
+        "link": "/adr/decisions/ADR-151-d1-gen-stage-unknown-newfile"
       }
     ]
   },

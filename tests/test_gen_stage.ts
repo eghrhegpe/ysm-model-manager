@@ -88,7 +88,13 @@ check("parsePorcelain 解析 X/Y 状态与路径", () => {
 check("场景A: gen 前干净的卡被 gen 改 → 进 stage（补全产物正常入库）", () => {
   const dirty: PorcelainEntry[] = []; // gen 前无任何 dirty
   const snapChanged = ["docs/knowledge/index.md", "docs/knowledge/some-card.md"];
-  const stage = computeStageList({ dirtyEntries: dirty, snapChanged });
+  // some-card.md 是既有卡（gen 前已存在，补全型 gen 改写其机器区）——
+  // 显式声明存在性（ADR-151-d1 判据：既有文件改写正常 stage，新建文件才走白名单门）
+  const stage = computeStageList({
+    dirtyEntries: dirty,
+    snapChanged,
+    snapBeforePaths: new Set(["docs/knowledge/index.md", "docs/knowledge/some-card.md"]),
+  });
   assert.deepEqual(
     [...stage].sort(),
     ["docs/knowledge/index.md", "docs/knowledge/some-card.md"],
@@ -116,28 +122,53 @@ check("场景C: gen 前 dirty 且 gen 又改 → 仍不进", () => {
   assert.deepEqual([...stage], ["docs/knowledge/index.md"], "hybrid.md 不应进 stage");
 });
 
-// 场景 D：gen 新建文件（未跟踪且不在 dirty 排除）→ 进
-check("场景D: gen 新建产物（快照新增）→ 进 stage", () => {
-  const dirty: PorcelainEntry[] = []; // gen 前未跟踪的文件也在 snap 里，但这里模拟 dirty 为空
-  const snapChanged = ["docs/knowledge/index.md"]; // 快照「新增」表现为变化
+// 场景 D：已知产出白名单内的文件 → 进（ADR-151-d1 收紧后仍进）
+check("场景D: 已知 gen 产出（白名单内）→ 进 stage", () => {
+  const dirty: PorcelainEntry[] = [];
+  const snapChanged = ["docs/knowledge/index.md"];
   const stage = computeStageList({ dirtyEntries: dirty, snapChanged });
   assert.deepEqual([...stage], ["docs/knowledge/index.md"]);
 });
 
-// 场景 E：未跟踪的新文件（??）不算 dirty（gen 新建产物的正确形态）
-check("场景E: ?? 未跟踪的新 gen 产物 → 不因 dirty 被误杀", () => {
-  // gen 前快照里没有该文件（不存在），gen 后出现 → snapChanged 含它；
-  // 若它恰好也是 ?? 未跟踪（例如首次生成的 completions 文件），不应被排除
+// 场景 D2：未知新建文件 → 排除 + 出参记录（ADR-151-d1 硬化核心）
+check("场景D2: 未知新建文件（非已知产出）→ 排除并记录", () => {
+  const dirty: PorcelainEntry[] = [];
+  // 模拟并发会话在 gen 期间新建的未跟踪卡（非 gen 产出）
+  const snapChanged = ["docs/knowledge/zzz-fm-delimiter-tmp.md"];
+  const unknown: string[] = [];
+  const stage = computeStageList({ dirtyEntries: dirty, snapChanged }, unknown);
+  assert.deepEqual([...stage], [], "未知新建文件不应进 stage（防卷带并行会话）");
+  assert.deepEqual(
+    unknown,
+    ["docs/knowledge/zzz-fm-delimiter-tmp.md"],
+    "被排除的未知新建文件应记录到出参供提示",
+  );
+});
+
+// 场景 D3：knownOnly:false 恢复旧行为（迁移期逃生）
+check("场景D3: knownOnly=false 恢复旧行为（未知文件进 stage）", () => {
+  const dirty: PorcelainEntry[] = [];
+  const snapChanged = ["docs/knowledge/some-unknown.md"];
+  const stage = computeStageList({ dirtyEntries: dirty, snapChanged, knownOnly: false });
+  assert.deepEqual([...stage], ["docs/knowledge/some-unknown.md"], "逃生开关应恢复旧行为");
+});
+
+// 场景 E：未跟踪的已知 gen 产物（??）不被误杀，未知者被排除
+check("场景E: ?? 未跟踪的**已知**gen 产物 → 不因 dirty 被误杀", () => {
   const dirty: PorcelainEntry[] = [{ path: "completions/ysm.bash", x: "?", y: "?" }];
   const snapChanged = ["completions/ysm.bash"];
-  // 守卫契约：调用方必须传 snapBeforePaths，否则 ?? 文件一律 fail-closed 排除（防卷带）。
-  // 此处传空集合 = 「gen 前该文件不存在」→ 判定为 gen 新建产物 → 安全进 stage（非并行 dirty）。
   const stage = computeStageList({ dirtyEntries: dirty, snapChanged, snapBeforePaths: new Set() });
   assert.deepEqual(
     [...stage],
     ["completions/ysm.bash"],
-    "?? 未跟踪的 gen 产物不应被当并行 dirty 排除",
+    "?? 未跟踪的已知 gen 产物不应被当并行 dirty 排除",
   );
+});
+check("场景E2: ?? 未跟踪的**未知**新文件 → 排除（ADR-151-d1）", () => {
+  const dirty: PorcelainEntry[] = [{ path: "docs/knowledge/zzz-other-session.md", x: "?", y: "?" }];
+  const snapChanged = ["docs/knowledge/zzz-other-session.md"];
+  const stage = computeStageList({ dirtyEntries: dirty, snapChanged, snapBeforePaths: new Set() });
+  assert.deepEqual([...stage], [], "未知的 ?? 新文件不应进 stage");
 });
 
 // 场景 F：路径归一化——dirty 用反斜杠/正斜杠都应命中

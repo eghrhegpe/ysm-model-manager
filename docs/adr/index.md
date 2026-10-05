@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **327** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **328** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 4 |
+| [📝 提议中](#提议中) | 5 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 14 |
 | [✅ 已采纳](#已采纳) | 298 |
@@ -26,7 +26,7 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（4）
+### 📝 提议中（5）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -34,6 +34,7 @@ permalink: /adr/
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
+| [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 |
 
 ### 🔄 部分采纳（14）
 
@@ -714,6 +715,7 @@ permalink: /adr/
 | ADR-270-d3 | bus 合法发射者登记表闸（刀 B）：发射端从自由裸 emit 收敛为在册登记 | ✅ 已采纳 | 2026-10-05 |
 | ADR-270-d4 | toast:show 发射端收敛战役：162 绕行点迁入 utils/dom/toast.ts 原语，登记表逐条销账 | ✅ 已采纳 | 2026-10-05 |
 | ADR-266-d1 | 体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像） | ✅ 已采纳 | 2026-10-04 |
+| ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 | 2026-10-06 |
 
 ## 使用规则（硬约束）
 

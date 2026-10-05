@@ -10,6 +10,7 @@ source_files:
   - scripts/_lib/hook-audit.ts
   - scripts/_lib/commit-blocks/version-defense.ts
   - scripts/_lib/commit-blocks/smart-stage.ts
+  - scripts/_lib/commit-blocks/clean-staged-filter.ts
 auto_fields:
   symbols_with_lines:
     - appendHookAudit
@@ -21,14 +22,17 @@ auto_fields:
     - hasFindings
     - HookAuditEntry
     - hookAuditFilePath
+    - isCleanAgainstIndex
     - isDollarLeadingPath
     - isGoCoverageProfileFirstLine
     - isTestOrSpecFile
     - ORPHAN_TTL_MS
     - pairListPath
+    - partitionByIndexCleanliness
     - readPairList
     - readStagedFiles
     - readStagedSourceFiles
+    - renderDirtySkips
     - renderVersionDefense
     - stageFiles
     - stripSourceSuffix
@@ -80,8 +84,9 @@ status: active
 - 兜底收窄（ADR-150）：`GEN_SNAP` 缺失时**不** `git add -u docs/`，仅置 `GEN_SKIPPED=1` 跳过并告警——防止吞并行会话未提交漂移（实证 `ebb921a5` 误吞 96 张知识卡）
 - drift `--affected` 秒级接入（ADR-087）：取本次 stage 文件查知识卡漂移，不自动 stage
 - 智能 stage：改源码自动 stage 同名 `.test.ts`（防误 stage）；推导逻辑已下沉 `scripts/_lib/commit-blocks/smart-stage.ts`（ADR-323 阶段 2）——`stripSourceSuffix` 纯函数复刻旧 shell 最短后缀匹配、`deriveTestTargets` 注入式存在性判定，由 `tests/test_commit_smart_stage.ts` 守护。**已知缺陷刻意保留**：`foo.d.ts` → base `foo.d`（应为 `foo`），旧 shell `base="${f%.ts}"` 即如此，仓内有真实 `*.d.ts`（`three-glsl.d.ts` 等）故边界是活的；测试以「缺陷等价性锚点」锁死该行为，修复须是一次显式测试变更（ADR-323 §4：搬迁不夹带行为修复）
-- gofmt 自动修复 staged go 文件（失败仅提示）
+- gofmt 自动修复 staged go 文件（失败仅提示）：经 `_lib/commit-blocks/clean-staged-filter.ts` 过滤后逐个 `gofmt -w` + `git add`
 - biome 自动修复 staged frontend TS/TSX（2026-09 接线，镜像 gofmt 范式）：只处理 `git diff --cached` 的 `frontend/*.ts/tsx`，跳过含未暂存编辑的文件（防混拼半成品），`check-biome.ts --write --files` 原地修复后重新 stage；失败仅提示不阻断（pre-push 只读校验兜底）。逃生阀 `YSM_SKIP_BIOME_FIX=1`。曾长期只有 pre-push 只读门禁、与 gofmt 不对称（头注释 "—write pre-commit 用" 空挂），2026-09 补齐
+- 「未暂存编辑」守卫（gofmt / biome **共用**）已下沉 `scripts/_lib/commit-blocks/clean-staged-filter.ts`（ADR-323 阶段 3）：原在两个段各内联一遍（`git diff --quiet`），且 biome 侧以 heredoc + 空格拼串传参（路径含空格即断）——现单一事实源 + 数组式调用，由 `tests/test_commit_clean_staged_filter.ts` 守护（含**真实临时 git 仓**集成断言）。**关键实证**：`git diff --quiet -- <不存在/未跟踪文件>` **返回 0**（索引与工作树都「没有」它即视为无差异），故模块必须补存在性前置，否则不存在文件会被误判为 clean 进入格式化列表——旧 shell 靠 `[ -f ]`/`case` 前置侥幸规避
 - 设计令牌硬阻断③改判**真行级**（ADR-256，2026-09-16）：`check-design-tokens --staged --added-lines` 只判**本次提交的新增行**，内容取**提交侧 blob**（索引 `:path`，非磁盘）——`git commit` 把裁剪后的索引（`commit-temp-index.ts` 的临时索引 / pathspec 提交的 next-index）经 `GIT_INDEX_FILE` 交给钩子，故脚本内 `git diff --cached` 天然只含本次提交，钩子无需知道调用方怎么裁剪；`--files`（pre-push 推送集）走 range 源（base = 与默认分支 merge-base）。**为何弃用 `--baseline`**：键 `file:line:kind` 实测高噪声——`scripts/token-shift-audit.ts --window 120`（116 提交样本）复算：added 330 条中 **322 条（97.6%）** 是行位移幻影，真新增候选仅 8；阻断视角 24 次里 19 次（79%）行级命中为 0，而行级规则总共只阻断 9 次（8%）。另：「同行替换同类」会因键相同被判存量（机制性盲区，本窗口实测 `键碰撞漏检` 0 次；行级判定天然免疫）。行级模式判 blob 而非磁盘 → 「未暂存编辑」不再需要跳过（判定对象 == 提交对象 by construction）
 - 并发配对生成物清单（ADR-232 D1，2026-09-13）：`PARENT_OID=$(git rev-parse HEAD)` 早于 stage 段定义（`set -u` 下必须 `:-` 守卫引用）；gen 产物清单写 `.git/ysm_gen_staged_<PARENT_OID12>`（`_lib/gen-staged-pair.ts` 配对，替代旧版 last-writer-wins 单文件 `ysm_gen_staged`，并发会话父 oid 不同天然互不覆盖）；`/tmp/ysm_gen_to_stage_$$.txt` 加 `$$` 进程后缀防互踩
 - 逃生留痕（ADR-232 D2，2026-09-13）：`YSM_SKIP_BIOME_LINES=1` / `YSM_SKIP_ANDROID=1` 命中时调用 `_lib/hook-audit.ts` 写 `.git/gate-audit.log` 的 `SKIPPED_PRECOMMIT` 行（钩子仍执行→可留痕，区别于 `--no-verify` 整钩不跑的零痕迹绕过）；文案纠正：旧「绕过不留审计」误导已改为「命中即留痕可审计」

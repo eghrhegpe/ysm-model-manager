@@ -60,6 +60,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_new_knowledge_card.ts": ["docs", "tests"], // new-knowledge-card 模板：kind kebab-case + 无失效占位锚
   "test_commit_version_defense.ts": ["tests"], // ADR-323 阶段 1：pre-commit 版本防御块下沉
   "test_commit_smart_stage.ts": ["tests"], // ADR-323 阶段 2：pre-commit 智能 stage 块下沉
+  "test_commit_clean_staged_filter.ts": ["tests"], // ADR-323 阶段 3：未暂存编辑守卫（gofmt/biome 共用）
   // —— data ——
   "test_creators_schema.ts": ["data"],
   "test_resource_schema.ts": ["data"],
@@ -494,6 +495,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "test_commit_version_defense.ts": ["scripts/_lib/commit-blocks/version-defense.ts"],
   "test_commit_smart_stage.ts": ["scripts/_lib/commit-blocks/smart-stage.ts"],
+  "test_commit_clean_staged_filter.ts": ["scripts/_lib/commit-blocks/clean-staged-filter.ts"],
   "test_adr_tiering.ts": [
     "scripts/_lib/adr-files.ts",
     "scripts/_lib/frontmatter.ts",

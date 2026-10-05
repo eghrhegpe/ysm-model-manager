@@ -228,13 +228,13 @@ if command -v gofmt >/dev/null 2>&1; then
     UNFMT=$(printf '%s\n' "$STAGED_GO" | xargs gofmt -l 2>/dev/null | grep -v '^$' || true)
     if [ -n "$UNFMT" ]; then
       echo "[pre-commit] gofmt 自动修复："
-      printf '%s\n' "$UNFMT" | while IFS= read -r f; do
+      # 「未暂存编辑」守卫已下沉 _lib/commit-blocks/clean-staged-filter.ts（ADR-323 阶段 3）：
+      # 原内联 `git diff --quiet` 在 gofmt/biome 两处各写一遍；且实测 git 对**不存在**的
+      # 文件返回 0（索引与工作树都「没有」它即无差异）——故模块补了存在性前置。
+      # 约定：干净子集走 stdout，告警走 stderr（直通终端，无需 shell 分辨行类型）。
+      printf '%s\n' "$UNFMT" | node scripts/_lib/commit-blocks/clean-staged-filter.ts | while IFS= read -r f; do
         [ -z "$f" ] && continue
-        if git diff --quiet -- "$f"; then
-          gofmt -w "$f" && git add "$f"  # 静默成功（gofmt 已原地改+stage）
-        else
-          echo "  ⚠️ $f 含未暂存编辑，跳过自动格式化（请手动 gofmt -w 后提交）"
-        fi
+        gofmt -w "$f" && git add "$f"  # 静默成功（gofmt 已原地改+stage）
       done
       echo "[pre-commit] ✅ go 文件处理完成"
     fi
@@ -254,25 +254,27 @@ fi
 if [ "${YSM_SKIP_BIOME_FIX:-0}" != "1" ] && command -v node >/dev/null 2>&1; then
   STAGED_TS="$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.tsx' 2>/dev/null | grep '^frontend/' || true)"
   if [ -n "$STAGED_TS" ]; then
-    # 守卫：跳过含未暂存编辑的文件，收集干净列表（空文件路径；本仓路径无空格，同 gofmt xargs 前提）
-    CLEAN_TS=""
+    # 守卫：跳过含未暂存编辑的文件（同 gofmt 守卫，防混拼半成品）。
+    # 逻辑已下沉 _lib/commit-blocks/clean-staged-filter.ts（ADR-323 阶段 3，单一事实源）：
+    # 旧实现 heredoc + 空格拼串成 CLEAN_TS 再裸展开传参——路径含空格即断（本仓现无，
+    # 但属隐性契约）。现改为逐文件收集进位置参数数组式调用，不再拼串。
+    CLEAN_TS_FILES=""
     while IFS= read -r f; do
       [ -z "$f" ] && continue
-      if git diff --quiet -- "$f"; then
-        CLEAN_TS="${CLEAN_TS:+$CLEAN_TS }$f"
-      else
-        echo "  ⚠️ $f 含未暂存编辑，跳过 biome 自动修复（请手动格式化后提交）"
-      fi
+      CLEAN_TS_FILES="${CLEAN_TS_FILES}${CLEAN_TS_FILES:+
+}$f"
     done <<EOF
-$STAGED_TS
+$(printf '%s\n' "$STAGED_TS" | node scripts/_lib/commit-blocks/clean-staged-filter.ts)
 EOF
-    if [ -n "$CLEAN_TS" ]; then
+    if [ -n "$CLEAN_TS_FILES" ]; then
       echo "[pre-commit] biome 自动修复："
-      # shellcheck disable=SC2086（有意分词传文件列表）
-      if node scripts/check-biome.ts --write --files $CLEAN_TS 2>&1; then
+      # 逐文件收集为换行列表，经 xargs 以 argv 形式传递（不拼 shell 串、不受空格影响）
+      if printf '%s\n' "$CLEAN_TS_FILES" | xargs -d '\n' node scripts/check-biome.ts --write --files 2>&1; then
         # 修复后重新 stage（无 diff 文件 git add 无副作用）
-        # shellcheck disable=SC2086
-        git add -- $CLEAN_TS 2>/dev/null || true
+        printf '%s\n' "$CLEAN_TS_FILES" | while IFS= read -r f; do
+          [ -z "$f" ] && continue
+          git add -- "$f" 2>/dev/null || true
+        done
         echo "[pre-commit] ✅ frontend TS 格式已自动修复并 stage"
       else
         echo "  ⚠️ biome 自动修复失败或仍有残留违规（不阻断；请手动 node scripts/check-biome.ts --write 复查）"

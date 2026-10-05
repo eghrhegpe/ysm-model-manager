@@ -24,6 +24,7 @@ build/ysmparser-cache/
 cmd/*/*.exe
 *.exe
 node_modules/
+.local/
 
 # VitePress 构建产物（docs 站点，迁移自 Jekyll）
 docs/.vitepress/dist/

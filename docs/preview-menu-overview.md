@@ -1,26 +1,27 @@
 # 3D 预览菜单系统全景图
 
-> 预览底部根菜单架构文档（2026-09）
-> 
-> **快速定位**：新人阅读本文档后应能独立定位核心文件 `core.ts` / `render.ts` / `node-types.ts`
+> 预览底部根菜单**新人导览**（架构图 / 数据流 / 调试路径）。
+> **契约与不变量见知识卡 `docs/knowledge/preview-menu.md`**——本文件只回答「东西在哪、流程怎么走」，
+> 不重复契约细节，**不记用例数/性能实测等快照数字**（那类必然漂移，要数字直接跑 vitest/doctor）。
+>
+> ⚠️ 导览文档的唯一价值是「帮新人找到文件」——**发现路径对不上时请直接改这里**，别留旧路径。
 
 ---
 
-## 📁 目录结构
+## 📁 目录结构（按域分子目录）
 
 ```
 frontend/src/preview-3d/menu/
-├── node-types.ts      ← 类型契约（零依赖叶子，ADR-195 刀 2 下沉）
-├── defs.ts            ← 数据表（结构声明，唯一事实来源）
-├── slide-menu.ts      ← 外壳构建器（导航栈 + 键盘导航）
-├── core.ts            ← 装配层（mountPreviewRootMenu 主函数拆 9 子）
-├── render.ts          ← 通用渲染器（递归投影 PreviewMenuNode[] → DOM）
-├── cap-controls.ts    ← Cap 控件渲染器（toggle/slider/select/color）
-├── menu-graph.ts      ← 导航图生成器（可验证性，ADR-128）
-├── sanctioned.ts      ← 受控逃生舱白名单（renderCustom 审计门）
-├── menu-test-fixtures.ts ← 测试共享夹具
-└── *.test.ts          ← 29 个测试文件，436 个用例
+├── schema/   ← 类型契约（menu-node-types.ts 零依赖叶子，ADR-195 刀2 下沉）
+├── engine/   ← 数据表 + 装配（defs.ts 结构声明 / core.ts mountPreviewRootMenu / menu-graph.ts 导航图）
+├── shell/    ← 外壳构建器（slide-menu.ts 导航栈 + 键盘导航）
+├── render/   ← 渲染器（render.ts 递归投影 PreviewMenuNode[] → DOM / cap-controls.ts 控件 / sanctioned.ts 逃生舱白名单）
+├── panels/   ← 各面板 schema 构建器（含 env.ts 等）
+└── style/    ← 菜单样式
 ```
+
+> ⚠️ 路径以源码树为准（`glob frontend/src/preview-3d/menu/**`）——本表只给**职责归属**。
+> 目录会重构（如原扁平结构已按域分子目录），**发现对不上请直接改这里**。
 
 ---
 
@@ -226,30 +227,19 @@ menu.setOnClose(() => {
 
 ---
 
-## 🧪 测试策略
+## 🧪 怎么跑测试与门禁
 
-### 单元测试覆盖
-
-| 文件 | 用例数 | 重点 |
-|------|--------|------|
-| `items.test.ts` | 45 | CORE_MENU_ITEMS 结构与 dock 渲染 |
-| `node-render.test.ts` | 68 | renderMenu 递归投影各种 kind |
-| `menu-graph.test.ts` | 24 | collectMenuGraph 导航图生成 + reachableBy |
-| `health.test.ts` | 18 | 生产级 renderPreviewPanel 跑一遍每个常驻 dock 面板 |
-| `slide-menu.test.ts` | 52 | 导航栈 home/navigate/back/onShow/onHide |
-| `cap-controls.test.ts` | 89 | toggle/slider/select/color 渲染器 |
-| `roles.test.ts` | 120 | roles 面板三通道（schema/children/renderCustom） |
-
-### 健康度门禁
+> 用例数不写在此——**要数字直接跑命令**（写死必然漂移）。
 
 ```bash
-# doctor 全量
-node scripts/doctor.ts
-
-# 菜单专项
-node scripts/doctor.ts --check-menu-health
-# └─ 运行 health.test.ts 中的生产级渲染测试
+cd frontend && npx vitest --run src/preview-3d/menu/   # 菜单域全量
+node scripts/doctor.ts                                 # 全量门禁
+node scripts/doctor.ts --check-menu-health              # 菜单专项（跑 health.test.ts 生产级渲染）
 ```
+
+**测试分层**：`items` 结构契约 / `node-render` 递归投影 / `menu-graph` 导航图可达性 /
+`health` 生产级面板冒烟 / `slide-menu` 导航栈 / `cap-controls` 控件渲染 / `roles` 面板三通道。
+用例名即规格——**找行为契约先读到用例名**。
 
 ---
 
@@ -296,35 +286,6 @@ menu.isShowing(somePanelView)
 // 2. 手动复位
 menu.reset()
 ```
-
----
-
-## 📈 性能指标
-
-| 指标 | 目标值 | 实测值 |
-|------|--------|--------|
-| mount 耗时 | <50ms | ~30ms |
-| renderMenu 节点数 | ≤100 | ~60 |
-| 测试覆盖率 | ≥80% | 87% |
-| ADR 引用密度 | ≤50 处/文件 | 43 处/文件 |
-
----
-
-## 🚀 演进路线
-
-### P0（已完成 2026-09）
-- [x] 调试日志门控机制集成
-- [x] visibleWhen 完全统一（旧三布尔删除）
-- [x] EscapeHatch 审计门完善
-
-### P1（本月规划）
-- [ ] 错误边界可视化（UI 友好提示 + 详情展开）
-- [ ] bones-panel 部分声明式化（静态项先迁）
-
-### P2（季度规划）
-- [ ] 抽配置对象重构闭包链（adapterItemsRef/shell/routers → PreviewMenuConfig）
-- [ ] 性能埋点（render 耗时/节点数/可见比例）
-- [ ] 插件化谓词（表达式语言支持）
 
 ---
 

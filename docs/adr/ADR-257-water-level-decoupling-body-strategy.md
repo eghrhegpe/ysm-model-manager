@@ -163,7 +163,7 @@ interface WaterBodyStrategy {
 
 - film 水膜 y 改由 `envState.waterLevel` 驱动后，`waterFilm: 0.01` 再无任何渲染消费者，
   只剩注释声称「与 schema 默认值同源」。本次按不变量「零消费者字段即时删除」移除，
-  schema 的 `waterLevel: 0.01` 就此成为唯一事实源（知识卡 `ground_surface_spec.md` 同步改口径）。
+  schema 的 `waterLevel: 0.01` 就此成为唯一事实源（知识卡 `ground-surface-spec.md` 同步改口径）。
 
 ### 6.3 登记遗留（本次未处理）
 

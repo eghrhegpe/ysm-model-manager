@@ -67,7 +67,7 @@ assert.ok(
   `扫描域不应为空或过小（实际 ${targets.rels.length} 个）——真零会让门禁静默失效`,
 );
 assert.ok(
-  targets.rels.includes("docs/knowledge/pre_push_gate.md"),
+  targets.rels.includes("docs/knowledge/pre-push-gate.md"),
   "已知被跟踪的文档卡必须纳入扫描域",
 );
 

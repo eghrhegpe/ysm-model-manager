@@ -4,13 +4,13 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：ADR-179（internal/app 垂直切分同构先例）、docs/knowledge/go_design_critique.md（锐评刀⑥）、go/types/
+- **相关**：ADR-179（internal/app 垂直切分同构先例）、docs/knowledge/go-design-critique.md（锐评刀⑥）、go/types/
 
 ---
 
 ## 1. 背景（Context）
 
-2026-09-05 Go 端锐评刀⑥立项时实测（`docs/knowledge/go_design_critique.md` 记 1715 行，本次复核 1867）：
+2026-09-05 Go 端锐评刀⑥立项时实测（`docs/knowledge/go-design-critique.md` 记 1715 行，本次复核 1867）：
 
 - `go/types` 非测试代码 **1867 行 / 8 文件**（含测试 4860 行），被 **77 个非测试 .go 文件** import，横跨 25 个包目录（internal/app 43、go/sync 17、go/scanner 11、go/threejs 9、go/cli 8……）。
 - 包内实为**至少 6 个不相关域**：注册表加载（resource.go 614 行，有状态：SetRegistryPath/bundledJSON/sync）、注册表派生判定（extensions.go 442 行）、UI DTO + 错误体系（types.go 278）、应用配置结构（config.go 160）、bedrock/ysm metadata 结构（bedrock.go 104）、纹理/定位/实例探测小工具（~270）。
@@ -87,6 +87,6 @@ Wails 绑定以包路径为命名空间。前端从 `bindings/ysm-model-manager/
 ## 5. 数据溯源
 
 - 实测：`wc -l go/types/*.go`（1867 非测试 / 4860 含测试）；grep import 分布（77 文件 / 25 包）；moving↔staying 符号交叉 = 0；前端绑定 import 面（5 类型全属留守域）。
-- 来源：docs/knowledge/go_design_critique.md 刀⑥记录（1715 行）、go/types/ 源码、frontend/bindings/ysm-model-manager/go/types/models.ts、frontend/src/utils/types-re-export.ts。
+- 来源：docs/knowledge/go-design-critique.md 刀⑥记录（1715 行）、go/types/ 源码、frontend/bindings/ysm-model-manager/go/types/models.ts、frontend/src/utils/types-re-export.ts。
 - 2026-09-07 复审：行数实测（根包 487 / registry 1237）、消费方 grep（47 混合 / 80 types-only / 39 registry-only）、`go build ./...` 编译验证通过。
 - 结果：本 ADR + go/types/registry 子包落地。

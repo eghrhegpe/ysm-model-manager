@@ -4,7 +4,7 @@
 // 变更行零覆盖拖低 check-go-diff-coverage。此处用最小路径（错误/空目录分支）
 // 逐一执行，命中加锁行即可。
 // （MoveToRecycleEx 已随 Deprecated 绑定清理删除：其「findRecycleRoot 失败无
-// ysmRoot 兜底」语义无前端消费，见 go_design_critique 动刀记录）
+// ysmRoot 兜底」语义无前端消费，见 go-design-critique 动刀记录）
 package app
 
 import (

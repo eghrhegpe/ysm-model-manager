@@ -16,7 +16,7 @@
  *   node scripts/gen-knowledge-autogen.ts --full     # 重写全部卡片的 auto_fields（含已有）
  *
  * 冻结豁免（2026-09-03）：frontmatter `affected: false` 卡（整包/整目录审计快照，如
- * frontend_repo_audit）auto_fields 冻结——不随源码符号增删重写，--check/--full 同样豁免。
+ * frontend-repo-audit）auto_fields 冻结——不随源码符号增删重写，--check/--full 同样豁免。
  *
  * 零依赖（仅 node:fs / node:path）。
  * 设计意图：知识卡机器推导字段生成器（解法 B）
@@ -128,7 +128,7 @@ function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>):
   }
   // 有现有 auto_fields 块 → 替换
   // 边界规则与 parseAutoFields 对齐：块内空行跳过（历史卡存在「符号+空行交替」格式，
-  // 见 frontend_repo_audit.md 前车之鉴），只有遇到下一个顶层键（顶格行）才结束块。
+  // 见 frontend-repo-audit.md 前车之鉴），只有遇到下一个顶层键（顶格行）才结束块。
   let end = idx + 1;
   while (end < lines.length) {
     const line = lines[end]!;
@@ -345,7 +345,7 @@ function main() {
 
     // 冻结快照（affected: false）增量清理（2026-09-04 方案 A）：
     // 整表豁免保留（新增符号不进卡，防提交噪音），但「已删符号残留」必须清理——
-    // 实证：b91f21fd 删 buildPresetChipGroup 等，frontend_repo_audit 索引残留数月无人知。
+    // 实证：b91f21fd 删 buildPresetChipGroup 等，frontend-repo-audit 索引残留数月无人知。
     // --check 只报冻结卡的 removed 漂移（不报 added）；--full 同样只增量清理。
     if (getScalar(fm, "affected") === "false") {
       const frozenParsed = parseAutoFields(fm);

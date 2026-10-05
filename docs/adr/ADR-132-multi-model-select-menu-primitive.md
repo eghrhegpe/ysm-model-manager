@@ -81,7 +81,7 @@ export function multiModelSelectNode(opts: MultiModelSelectOpts): PreviewMenuNod
 
 ### D4 · 顺手治理 `[doc:adr-127]` 文档漂移
 
-调研发现：`mmd-controls.ts:38,64`、`mmd-adapter.ts:206,392`、`mmd-zip-overlay.ts:33`、`preview_panel_declarative.md:128` 四处 `[doc:adr-127]` 标记指「zip 多 pmx 选择」，但 **ADR-127 实际主题是「性能档位」**（ADR-127-preview-perf-presets.md）——标记编号与主题不符，是历史文档漂移。本 ADR 落地涉及这些文件时**顺手修正标记**为指向本 ADR（ADR-132）。
+调研发现：`mmd-controls.ts:38,64`、`mmd-adapter.ts:206,392`、`mmd-zip-overlay.ts:33`、`preview-panel-declarative.md:128` 四处 `[doc:adr-127]` 标记指「zip 多 pmx 选择」，但 **ADR-127 实际主题是「性能档位」**（ADR-127-preview-perf-presets.md）——标记编号与主题不符，是历史文档漂移。本 ADR 落地涉及这些文件时**顺手修正标记**为指向本 ADR（ADR-132）。
 
 ### D5 · 否决的方案
 

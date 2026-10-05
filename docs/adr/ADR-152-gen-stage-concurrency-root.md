@@ -17,7 +17,7 @@ ADR-151 用「临时索引白名单提交」堵住了主 index 暂存窗口（ad
 
 `snap_docs()` 用「mtime/size 变化」判定 gen 产物——单会话成立，并发失效：并行会话手改的卡恰在快照窗口内被 touch，被误判为 gen 产物 stage 进 index，进而被 `--only` 路径限定提交卷带。
 
-**实证**：`e96b47e3` 提交期间，并行会话的 `fbx-cli-pipeline.md` / `frontend_test_audit.md` 恰好在 snap_docs 窗口内被 touch → 误判 gen 产物 → stage 进 index → 被 `--only` 提交卷带（两文件均不在 paths 白名单内）。
+**实证**：`e96b47e3` 提交期间，并行会话的 `fbx-cli-pipeline.md` / `frontend-test-audit.md` 恰好在 snap_docs 窗口内被 touch → 误判 gen 产物 → stage 进 index → 被 `--only` 提交卷带（两文件均不在 paths 白名单内）。
 
 ## 2. 决策（Decision）
 
@@ -74,7 +74,7 @@ node scripts/_lib/gen-stage.ts "$GEN_SNAP" > /tmp/ysm_gen_to_stage.txt 2>/dev/nu
 
 ## 4. 数据溯源
 
-- **问题**：`e96b47e3` 卷带并行会话的 `fbx-cli-pipeline.md` / `frontend_test_audit.md`
+- **问题**：`e96b47e3` 卷带并行会话的 `fbx-cli-pipeline.md` / `frontend-test-audit.md`
 - **诊断**：snap_docs 快照窗口内并行会话 touch 文件 → mtime 变化 → 误判 gen 产物
 - **修复**：`gen-stage.ts` 判定收紧（快照变化 ∩ 非并行 dirty）+ pre-commit 调用点更新
 - **验收**：`b659efae` 门禁 19/19 PASS、outOfScope=`[]`、interleaved=false、并行会话文件未触碰

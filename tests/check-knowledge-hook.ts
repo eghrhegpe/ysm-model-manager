@@ -66,7 +66,7 @@ check("--quiet 仅吐 card stem", () => {
     .map((s) => s.trim())
     .filter(Boolean)
     .sort();
-  // frontend_repo_audit 为整包审计快照卡（source_files: frontend/src/ 粒度过粗），
+  // frontend-repo-audit 为整包审计快照卡（source_files: frontend/src/ 粒度过粗），
   // 已声明 affected: false 退出 affected 匹配——若本断言失败且输出含它，
   // 说明 opt-out 标记失效或有人删了该标记（整包卡会污染所有前端文件的提交提示）
   assert.deepStrictEqual(lines, ["go-avatar", "utils-resource-types"]);

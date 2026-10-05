@@ -142,6 +142,6 @@ node scripts/drift-scan.ts --json
 
 ## 参考
 
-- [cli_quality_audit](./cli_quality_audit.md) — CLI 质量审计（含双轨问题规律）
+- [cli-quality-audit](./cli-quality-audit.md) — CLI 质量审计（含双轨问题规律）
 - [go-types](./go-types.md) — 类型包（含 ErrorCode 枚举、注册表）
 - [go-fsutil](./go-fsutil.md) — 文件系统工具包

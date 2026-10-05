@@ -1,6 +1,6 @@
 # ADR-314：诊断页长任务取消通道：ctx 贯穿 + Wails 原生 CancellablePromise
 
-- **状态**：✅ 已采纳（Accepted）——2026-09-26 用户拍板「尝试吧」，当日落地（实施进度查 app_content_diagnostics 知识卡）
+- **状态**：✅ 已采纳（Accepted）——2026-09-26 用户拍板「尝试吧」，当日落地（实施进度查 app-content-diagnostics 知识卡）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-26
 - **决策人**：Jieling（人类首席架构师）、AI 代理

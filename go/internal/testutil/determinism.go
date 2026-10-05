@@ -4,7 +4,7 @@
 //   - CleanAbsPath：平台原生绝对路径构造，根治「手拼 POSIX 路径串在 Windows 下语义漂移」
 //     （276fd42e6 先例：filepath.Join 构造干净平台绝对路径）
 //
-// 复用判据（照搬 test_tax_reduction 卡刀三）：同模式在测试中出现 ≥3 处即应改用本三件套。
+// 复用判据（照搬 test-tax-reduction 卡刀三）：同模式在测试中出现 ≥3 处即应改用本三件套。
 package testutil
 
 import (

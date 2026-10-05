@@ -198,4 +198,4 @@ r = clamp255(baseR + d); /* g,b 同理 */
 > - 不变量 5（默认値单一事实源）与 ADR-254（配色单源）纪律不被破坏；
 > - 改 `generateSurfacePixels`/plain 像素须同步 `ground-surface-spec.test.ts`；
 > - 新增菜单节点须过 `scripts/check-menu-test-layout.ts` 基线（只增不减）；
-> - 改完同步知识卡 `docs/knowledge/ground_surface_spec.md`（不变量 17 地面自证若受影响须同步 e2e 与 getter）。
+> - 改完同步知识卡 `docs/knowledge/ground-surface-spec.md`（不变量 17 地面自证若受影响须同步 e2e 与 getter）。

@@ -113,11 +113,11 @@ export const ENV_STATE_SCHEMA = {
   // 且菜单无任何网格参数出口。现拆出单轴：网格显隐 = enabled && groundVisible && groundGridVisible。
   // 2026-10-04 默认翻转（用户拍板「有地面还花」）：默认源翻 solid 后实体承接面已承担
   // 「地面在 y=0」的视觉锚点，网格线开箱即亮沦为装饰叠加 → default: false。开关保留在
-  // 菜单（只增不减），旧存档缺键回退亦随新默认（知识卡 ground_surface_spec 已知遗留 1）。
+  // 菜单（只增不减），旧存档缺键回退亦随新默认（知识卡 ground-surface-spec 已知遗留 1）。
   groundGridVisible: { type: "boolean", default: false, group: "ground" },
   // ADR-249 §2.1 拆轴：来源轴（颜色从哪来）。替代原单枚举 groundMatSource。
   // 默认 "solid"（2026-10 用户反馈收口）：开箱即有实体承接面，新人/AI/e2e 一眼认得地面在 y=0；
-  // 旧默认 "none" 仅留网格线、易被误认作「地面=天空」（见 ground_surface_spec 不变量 17）。
+  // 旧默认 "none" 仅留网格线、易被误认作「地面=天空」（见 ground-surface-spec 不变量 17）。
   groundSourceKind: {
     type: "enum",
     values: GROUND_SOURCE_KINDS,

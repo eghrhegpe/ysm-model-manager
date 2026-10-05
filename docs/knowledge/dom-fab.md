@@ -45,7 +45,7 @@ status: active
 ## 核心职责
 
 - **样式幂等注入**: `ensureFabStyles()` — 全局 CSS 注入到 `<head>`，id=`ysw-fab-styles`，只注入一次
-- **图标按钮工厂**: `createIconButton(opts)` — 统一 emoji/图标按钮，`textContent` 防 XSS，支持 icon / label / title / className / onClick。**title 自 2026-08 起走自定义 tooltip**（`dom_tooltip.md`，~350ms 即显），不再设原生 `title` 属性防双气泡；可达性由 `aria-label` 承担
+- **图标按钮工厂**: `createIconButton(opts)` — 统一 emoji/图标按钮，`textContent` 防 XSS，支持 icon / label / title / className / onClick。**title 自 2026-08 起走自定义 tooltip**（`dom-tooltip.md`，~350ms 即显），不再设原生 `title` 属性防双气泡；可达性由 `aria-label` 承担
 
 ## 对外 API / 入口
 

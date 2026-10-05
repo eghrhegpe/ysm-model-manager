@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-29
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/utils/3d/state/perf-presets.ts, ADR-125, ADR-126, docs/knowledge/preview_menu_settings_state.md`
+- **相关**：`frontend/src/utils/3d/state/perf-presets.ts, ADR-125, ADR-126, docs/knowledge/preview-menu-settings-state.md`
 
 ---
 
@@ -48,7 +48,7 @@
 ## 4. 数据溯源
 
 - **ADR-125 / ADR-126**：状态层六路径 + 单渲染器 + cap 自动聚合——本 ADR 的档位套用器挂在这两个写口上。
-- **docs/knowledge/preview_menu_settings_state.md**：「性能档位（P4 延续：薄壳版）」章节（实施进度落知识卡，本 ADR 不记）。
+- **docs/knowledge/preview-menu-settings-state.md**：「性能档位（P4 延续：薄壳版）」章节（实施进度落知识卡，本 ADR 不记）。
 - **实现落点**：`frontend/src/utils/3d/state/perf-presets.ts`（数据表 + 套用器）、`preview-menu-settings.ts`（档位 select）、`mount-preview-core.ts`（进入预览套用）。
 - **被否决参照**：MikuMikuAR `settings-graphics.ts` 的 `buildPresetSchema`（命令式预设：Wails 绑定 + 手写参数块 + custom 档 reRender）。
 

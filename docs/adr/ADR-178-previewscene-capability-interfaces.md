@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts (PreviewScene/PreviewAdapter), ysm/vrm/mmd/fbx/litematic/pack 六适配器, preview_core 知识卡`
+- **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts (PreviewScene/PreviewAdapter), ysm/vrm/mmd/fbx/litematic/pack 六适配器, preview-core 知识卡`
 
 ---
 
@@ -12,7 +12,7 @@
 
 `PreviewScene`（mount-preview-core.ts:120-144）是 3D 预览适配器的内容层契约，13 个字段中 **12 个可选**（仅 `dispose` 为硬契约）。消费方靠 `?.` 特性探测 + 运行时降级工作，类型系统无法静态表达「某格式支持什么能力」。
 
-2026-09-03/04 五轮前端锐评（frontend_design_critique 快照）实证：
+2026-09-03/04 五轮前端锐评（frontend-design-critique 快照）实证：
 
 - 接口注释自述「缺字段 = 功能降级而非崩溃」——这是**鸭子类型伪装成协议**，13 字段契约实际是「至少实现 dispose 的任意对象」；
 - 六个格式 adapter（ysm/vrm/mmd/fbx/litematic/pack）各自实现不同能力子集，但无一处用类型表达「我支持 update 但不支持 applyPose」；
@@ -68,7 +68,7 @@ function driveFrame(c: UpdateableScene | null, dt: number): void {
 
 ## 4. 数据溯源
 
-锐评实证（2026-09-03 frontend_design_critique 快照 + 09-04 复查）：
+锐评实证（2026-09-03 frontend-design-critique 快照 + 09-04 复查）：
 - mount-preview-core.ts:120-144 PreviewScene 13 字段 12 可选（源码实读）；
 - 帧循环 `perFrame=content.update ?? null`（mount-preview-core.ts:796）、screenshot 透传 `?.`（L891 注释）、unified-pick boneMaps 判定（scene-registry.ts）——`?.` 探测 5+ 处；
 - 六 adapter 能力子集各异（vrm 有 update 无 applyPose；mmd 有 applyPose；litematic/pack 纯静态无 update）——结构类型可无损表达。

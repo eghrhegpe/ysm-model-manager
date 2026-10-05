@@ -6,7 +6,7 @@
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：
   - 代码：`frontend/src/utils/async/load-guard.ts`（收敛目标，唯一出口）、`frontend/src/views/app-preview/gen-guard.ts`（迁移源①）、`frontend/src/views/app-content/diagnostics/perf-common.ts`（迁移源②）、`frontend/src/views/app-tree/bus-handlers.ts`（迁移源③）、`frontend/src/views/app-tree/index.ts` / `events.ts` / `toolbar-events.ts`（raw `_gen` 散落 22 处）
-  - 知识卡：`docs/knowledge/frontend_design_critique.md` §动刀进度 刀⑮「未动」第 1 项（GenGuard 4 套并存）
+  - 知识卡：`docs/knowledge/frontend-design-critique.md` §动刀进度 刀⑮「未动」第 1 项（GenGuard 4 套并存）
 
 ---
 
@@ -32,7 +32,7 @@
 2. `makeGenGuard` / `atBeGenGuard` 是「**外部状态源**」模式：自身不持有代数，读调用方传入的外部计数器。与内建模式**架构不兼容**——强行套进 `createLoadGuard` 签名（`next()` 自增）会破坏"外部自增"语义；要收敛须先把消费方改造为自持 guard，这是宿主 class/模块重构。
 3. app-tree 22 处 raw `_gen` 是同一问题的极端形态：`AppTree` class 直接暴露 `public _gen`，4 个文件各自读/写/比较，无统一守卫对象。
 
-刀⑮（`frontend_design_critique.md`）将「4 套并存」列为未动项，判语「收敛面大宜先立 ADR」——本 ADR 即该拍板。
+刀⑮（`frontend-design-critique.md`）将「4 套并存」列为未动项，判语「收敛面大宜先立 ADR」——本 ADR 即该拍板。
 
 ## 2. 决策（Decision）
 
@@ -112,4 +112,4 @@
 ## 4. 数据溯源
 
 <!-- TODO: 来源 → 结果 -->
-- 核实来源：`frontend_design_critique.md` 刀⑮「未动」清单（2026-09 三子代理只读审核沉淀）；本 ADR 创建前主模型 + 子代理对 4 套实现与 22 处 raw `_gen` 逐点实地核实（文件:行号 全量定位），统计与卡原文吻合（11 比较 / 4 自增 / 7 捕获 / 4 文件）
+- 核实来源：`frontend-design-critique.md` 刀⑮「未动」清单（2026-09 三子代理只读审核沉淀）；本 ADR 创建前主模型 + 子代理对 4 套实现与 22 处 raw `_gen` 逐点实地核实（文件:行号 全量定位），统计与卡原文吻合（11 比较 / 4 自增 / 7 捕获 / 4 文件）

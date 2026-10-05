@@ -75,7 +75,7 @@ install 域实际收编结果：
 3. **测试迁移面大**：import/pack/coverage 等测试直接调私有 helper（如 `importModelFileWithSubpath`、`pushRepoPathToInstance`），迁移须改造测试。
 4. **切分收益的耦合度门槛**：queue/linkMode/launcher 是「低耦合纯域」（依赖注入回调 + DTO 即可运转），切出收益为正；import/recycle/instance 是「高内聚复合域」（与 files/scan/bindings 共享 config/cache/logger 状态），切分收益为负。**收益来自切纯域，不在硬切复合域。**
 
-此类判据已沉淀知识卡 `install_domain_split`，后续 scan/config/bindings/bridge 域切分前先过该门槛。
+此类判据已沉淀知识卡 `install-domain-split`，后续 scan/config/bindings/bridge 域切分前先过该门槛。
 
 ## 4. 数据溯源
 

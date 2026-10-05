@@ -432,7 +432,7 @@ function render(_cards: Card[], data: AnalyzeData) {
     "3. **Go 端最深仅 3 层**（`go/`、`internal/` 路径天然浅），**无需移动**——深度问题全部在前端。",
   );
   L.push(
-    "4. **零互链卡 46 张**中，`frontend_test_audit` / `cli_quality_audit` 等审计报告型卡是历史快照，",
+    "4. **零互链卡 46 张**中，`frontend-test-audit` / `cli-quality-audit` 等审计报告型卡是历史快照，",
   );
   L.push("   可归档到 `docs/review/` 而非知识卡目录（卡目录保持「可导航的活文档」）。");
   L.push(

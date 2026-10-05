@@ -212,4 +212,4 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 - [preview-controls](./preview-controls.md) — 六角度截图按钮 `mmdShotNodes`/`ysmShotNodes`
 - [model3d](./model3d.md) — `Spec3D` 类型 + 渲染核心
 - [dom-fab](./dom-fab.md) — FAB 触发截图
-- [preview_core](./preview_core.md) — `mount-preview-core fullCleanup` 统一释放 `texture-cache`
+- [preview-core](./preview-core.md) — `mount-preview-core fullCleanup` 统一释放 `texture-cache`

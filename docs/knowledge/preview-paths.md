@@ -94,4 +94,4 @@ status: active
 
 - `docs/knowledge/preview-state.md`（运行时实现 + bindings 注册）
 - `docs/knowledge/preview-menu.md`（visibleWhen 谓词消费）
-- `docs/knowledge/scene_capability_registry.md`（cap 生态类型契约）
+- `docs/knowledge/scene-capability-registry.md`（cap 生态类型契约）

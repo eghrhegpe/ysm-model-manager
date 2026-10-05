@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-30
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/knowledge/app_cycle_injection.md`
+- **相关**：`docs/knowledge/app-cycle-injection.md`
 
 ---
 
@@ -18,7 +18,7 @@
    （path → `{modTime,size,detected}`），由**包级全局变量**持有，被 `cachedContainerType()`
    读写、被 `App.ClearScanCache()` 直接 `.Clear()`。
 
-第 2 份缓存是**包级全局可变状态**，属 `app_cycle_injection.md` 知识卡定义的"隐藏耦合"而非对象级环：
+第 2 份缓存是**包级全局可变状态**，属 `app-cycle-injection.md` 知识卡定义的"隐藏耦合"而非对象级环：
 - 跨文件隐式共享：`ClearScanCache`(app_scan.go) 与 `InvalidateScanCache`(resource_bindings.go)
   都直接 mutate 这个包级全局；
 - 测试间会串（全局在进程内共享，单测不清就泄漏）；
@@ -119,7 +119,7 @@ func (a *App) ensureContainerCache() {
 - **最小**：改动全在 `internal/app` 单包内；`go/scanner`、Wails binding、前端、watcher 注册**零改动**；
   外部只看到 `App.ClearScanCache()` 行为不变。
 - **与既有范式一致**：完全复刻 `DownloadQueue` 路径（全局/自由函数 → 组件字段 + 方法 + `NewApp` 注入），
-  未来 reviewer 有 `app_cycle_injection.md` 可对照。
+  未来 reviewer 有 `app-cycle-injection.md` 可对照。
 - **消除隐藏耦合**：全局状态收进 `App` 持有的组件，生命周期随 `App` 走，测试可独立构造、互不串污染。
 
 ## 3. 后果（Consequences）
@@ -134,7 +134,7 @@ func (a *App) ensureContainerCache() {
 
 **负面 / 代价**
 - `App` struct 多一个字段（god-object 略胖，但属"持有组件"的正当膨胀，非方法堆砌）。
-- 需同步更新 `app_cycle_injection.md` 知识卡的"排查范围"示例（把 `containerTypeCache` 从
+- 需同步更新 `app-cycle-injection.md` 知识卡的"排查范围"示例（把 `containerTypeCache` 从
   "待收进组件"改为"已收进组件"）。
 
 **已知遗留**
@@ -151,6 +151,6 @@ func (a *App) ensureContainerCache() {
 - 结果：确认该全局仅被 `cachedContainerType`（读+写）与 `ClearScanCache`（清）三处触碰，
   且 `cachedContainerType` 仅被 `app_scan.go:410` 一处调用 → 收进组件后**无外部签名变化**，
   最小重构可行。
-- 关联范式：`docs/knowledge/app_cycle_injection.md`（对象级环打破 + 隐藏耦合排查范围）。
+- 关联范式：`docs/knowledge/app-cycle-injection.md`（对象级环打破 + 隐藏耦合排查范围）。
 
 <!-- 文件名: container-type-cache-component.md → 实际文件 ADR-134-container-type-cache-component.md -->

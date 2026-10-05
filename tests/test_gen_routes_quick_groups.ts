@@ -23,11 +23,9 @@ function card(file: string, groups: string[], intents: string[]) {
 
 // ─── 1) 词表形状：非空、规模收敛、无重复 ─────────────────────
 {
-  assert.ok(
-    QUICK_GROUPS.length >= 10 && QUICK_GROUPS.length <= 20,
-    `词表规模应收敛在 10~20 组，实际 ${QUICK_GROUPS.length}`,
-  );
-  assert.equal(new Set(QUICK_GROUPS).size, QUICK_GROUPS.length, "词表不得有重复组名");
+  const size = QUICK_GROUPS.length;
+  assert.ok(size >= 10 && size <= 20, `词表规模应收敛在 10~20 组，实际 ${size}`);
+  assert.equal(new Set(QUICK_GROUPS).size, size, "词表不得有重复组名");
 }
 
 // ─── 2) 渲染分组序 = QUICK_GROUPS 词表序 ─────────────────────
@@ -76,4 +74,32 @@ function card(file: string, groups: string[], intents: string[]) {
   assert.ok(iUi < iGate, "同卡双组仍按词表序渲染");
 }
 
-console.log("✅ test_gen_routes_quick_groups.ts 全部通过（4 组契约断言）");
+// ─── 5) 超配红线 → 「通用红线」附加行（不再静默丢弃 / 不再丢失 WARN） ──
+{
+  const warns: string[] = [];
+  const origWarn = console.warn;
+  console.warn = (m: unknown) => warns.push(String(m));
+  let out: string;
+  try {
+    out = render([{ ...card("e.md", ["门禁与脚本"], ["i1", "i2"]), risks: ["r1", "r2", "r3"] }]);
+  } finally {
+    console.warn = origWarn;
+  }
+  assert.ok(out.includes("| r1 |") && out.includes("| r3 |"), "超配红线必须全部渲染，不得丢弃");
+  assert.ok(out.includes("| 通用红线 |"), "超配行意图列标注「通用红线」");
+  assert.ok(
+    !warns.some((w) => w.includes("不输出")),
+    "内容已保全，不得再打「多余不输出」丢失 WARN",
+  );
+}
+
+// ─── 6) 超配红线挂首分组：多组卡不跟随末组 ────────────────────
+{
+  const out = render([
+    { ...card("f.md", ["3D 预览与模型追加", "门禁与脚本"], ["i1"]), risks: ["rX"] },
+  ]);
+  const seg3d = out.slice(out.indexOf("## 🎯 3D 预览与模型追加"), out.indexOf("## 🎯 UI 交互与弹窗"));
+  assert.ok(seg3d.includes("| rX |"), "超配红线挂首分组（3D），不落入末组");
+}
+
+console.log("✅ test_gen_routes_quick_groups.ts 全部通过（6 组契约断言）");

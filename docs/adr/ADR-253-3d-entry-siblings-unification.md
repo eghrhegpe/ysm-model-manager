@@ -57,7 +57,7 @@ ADR-132 的统一原语 `multiModelSelectNode`（`preview-3d/menu/panels/multi-m
 | 资源包（多 block/item JSON） | `pack-model-adapter.ts:392` | `pack-model-select` |
 | 蓝图/litematic（多 nbt） | `litematic-adapter.ts:509` | `litematic-model-select` |
 
-并为知识卡 `multi_model_select.md` 钉为不变量:「容器内多模型必须经 `multiModelSelectNode`
+并为知识卡 `multi-model-select.md` 钉为不变量:「容器内多模型必须经 `multiModelSelectNode`
 声明式菜单选择，禁止 adapter 直接遍历 entry 数组渲染」。
 
 因此「详情卡不列出 zip 内条目、需进 3D 切换」**是 ADR-132 的设计选择**（多模型选择属 3D 菜单域），

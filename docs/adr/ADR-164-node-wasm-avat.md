@@ -3,13 +3,13 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：[go_design_critique](../knowledge/go_design_critique.md)（锐评共识榜 #4 跨域双胞胎复制）、[go-avatar-decode](../knowledge/go-avatar-decode.md)、[ADR-044](ADR-044-code-writing-governance.md)（文件读写收敛、ReadLimitedEntry 统一口径）
+- **相关**：[go-design-critique](../knowledge/go-design-critique.md)（锐评共识榜 #4 跨域双胞胎复制）、[go-avatar-decode](../knowledge/go-avatar-decode.md)、[ADR-044](ADR-044-code-writing-governance.md)（文件读写收敛、ReadLimitedEntry 统一口径）
 
 ---
 
 ## 1. 背景（Context）
 
-2026-09-03 Go 三路锐评（`go_design_critique.md`）实证：同一份「Node.js 子进程 + YSMParser WASM 解码 .ysm」实现被**逐字复刻成两份**：
+2026-09-03 Go 三路锐评（`go-design-critique.md`）实证：同一份「Node.js 子进程 + YSMParser WASM 解码 .ysm」实现被**逐字复刻成两份**：
 
 - `go/avatar/avatar_decode.go` 的 `DecodeYSMFiles`（avatar 头像/作者提取消费）
 - `internal/app/wasm_decoder.go` 的 `runYSMNodeJSDecode`（YSM 预览/几何/纹理消费）

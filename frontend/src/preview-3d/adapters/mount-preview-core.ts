@@ -383,7 +383,7 @@ export async function mount3D(
   // 无活跃会话时 preview-library 的 cooperate 退化为 false → 走本路径而不经
   // switch-preview|beginSwitch 的 keep 通道，曾是无预算门的不对称缺口。
   //
-  // 两条约束，改动前必读（推理链详见知识卡 preview_core.md §不变量）：
+  // 两条约束，改动前必读（推理链详见知识卡 preview-core.md §不变量）：
   // ① gate 在 hasActivePreview()：本门读 renderer.info 的**上一帧**统计，而本次内容
   //    尚未构建——无残留会话时读到「空 renderer（全 0，白判）」或「上一会话陈旧指标
   //    （归因错误）」。只有确有未释放负载时拦，语义才成立。

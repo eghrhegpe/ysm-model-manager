@@ -136,8 +136,8 @@ check("无 section 头但 hunk 内见 auto_fields 键行 → machine（键行信
 // ── 4. 机器块内旧格式空行重排（符号+空行交替 → 压缩）+ 符号变更 → machine ──
 check("机器块空行删除混合符号变更 → machine（空行中性不误判）", () => {
   const diff = [
-    "--- a/docs/knowledge/frontend_repo_audit.md",
-    "+++ b/docs/knowledge/frontend_repo_audit.md",
+    "--- a/docs/knowledge/frontend-repo-audit.md",
+    "+++ b/docs/knowledge/frontend-repo-audit.md",
     "@@ -66,9 +66,9 @@ auto_fields:",
     "     - IsDirLevelSync",
     "-",
@@ -147,7 +147,7 @@ check("机器块空行删除混合符号变更 → machine（空行中性不误�
     "     - IsResourceAllowed",
     "     - IsScanInstance",
   ].join("\n");
-  assert.strictEqual(classifyStranded("docs/knowledge/frontend_repo_audit.md", diff), "machine");
+  assert.strictEqual(classifyStranded("docs/knowledge/frontend-repo-audit.md", diff), "machine");
 });
 
 // ── 5. 机器子键行整块新增（gen 首次插入 auto_fields）→ machine ──

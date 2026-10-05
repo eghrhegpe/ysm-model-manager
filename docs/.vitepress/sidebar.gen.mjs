@@ -1602,10 +1602,6 @@ export const autoSidebar = [
             "link": "/knowledge/android-events"
           },
           {
-            "text": "网页版后端 backend-web",
-            "link": "/knowledge/backend_web"
-          },
-          {
             "text": "浏览器后端 IndexedDB 封装",
             "link": "/knowledge/backend-idb"
           },
@@ -1614,8 +1610,12 @@ export const autoSidebar = [
             "link": "/knowledge/backend-runtime"
           },
           {
+            "text": "网页版后端 backend-web",
+            "link": "/knowledge/backend-web"
+          },
+          {
             "text": "string-JSON 绑定铲债清单",
-            "link": "/knowledge/binding_json_cleanup"
+            "link": "/knowledge/binding-json-cleanup"
           },
           {
             "text": "UI 报错落日记 error-diary",
@@ -1635,15 +1635,15 @@ export const autoSidebar = [
           },
           {
             "text": "前端分层 seam 与 import 路径",
-            "link": "/knowledge/fe_layering_seams"
+            "link": "/knowledge/fe-layering-seams"
           },
           {
             "text": "解析簇 parsers/ 自 backend 迁出",
-            "link": "/knowledge/frontend_parsers"
+            "link": "/knowledge/frontend-parsers"
           },
           {
             "text": "前端测试基建审计",
-            "link": "/knowledge/frontend_test_audit"
+            "link": "/knowledge/frontend-test-audit"
           },
           {
             "text": "全局事件处理 global-handlers",
@@ -1655,7 +1655,7 @@ export const autoSidebar = [
           },
           {
             "text": "CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik",
-            "link": "/knowledge/ik_solver"
+            "link": "/knowledge/ik-solver"
           },
           {
             "text": "Web Worker 模型统计层 model-stats",
@@ -1693,11 +1693,11 @@ export const autoSidebar = [
         "items": [
           {
             "text": "GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态",
-            "link": "/knowledge/adr173_gui_cli_paramspec"
+            "link": "/knowledge/adr173-gui-cli-paramspec"
           },
           {
             "text": "App↔子组件对象级环打破范式（回调注入）",
-            "link": "/knowledge/app_cycle_injection"
+            "link": "/knowledge/app-cycle-injection"
           },
           {
             "text": "分类路由与回归护栏",
@@ -1705,11 +1705,11 @@ export const autoSidebar = [
           },
           {
             "text": "CLI 质量摸排 Checklist",
-            "link": "/knowledge/cli_quality_audit"
+            "link": "/knowledge/cli-quality-audit"
           },
           {
             "text": "质量闸门双调度器重叠审计",
-            "link": "/knowledge/doctor_gate_overlap"
+            "link": "/knowledge/doctor-gate-overlap"
           },
           {
             "text": "drift-scan（双轨漂移检测）",
@@ -1718,18 +1718,6 @@ export const autoSidebar = [
           {
             "text": "FBX CLI 处理管线 fbx-cli-pipeline",
             "link": "/knowledge/fbx-cli-pipeline"
-          },
-          {
-            "text": "Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像）",
-            "link": "/knowledge/go_ccheck"
-          },
-          {
-            "text": "Go 后端设计锐评",
-            "link": "/knowledge/go_design_critique"
-          },
-          {
-            "text": "Go-TS 解析层 golden 对拍（ADR-154 双端互锁）",
-            "link": "/knowledge/go_ts_golden"
           },
           {
             "text": "Android 平台守卫（Go 侧）",
@@ -1742,6 +1730,10 @@ export const autoSidebar = [
           {
             "text": "头像 go/avatar",
             "link": "/knowledge/go-avatar"
+          },
+          {
+            "text": "Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像）",
+            "link": "/knowledge/go-ccheck"
           },
           {
             "text": "CLI 搜索命令 search",
@@ -1762,6 +1754,10 @@ export const autoSidebar = [
           {
             "text": "去重 go/dedup",
             "link": "/knowledge/go-dedup"
+          },
+          {
+            "text": "Go 后端设计锐评",
+            "link": "/knowledge/go-design-critique"
           },
           {
             "text": "下载器 go/download",
@@ -1844,6 +1840,10 @@ export const autoSidebar = [
             "link": "/knowledge/go-threejs"
           },
           {
+            "text": "Go-TS 解析层 golden 对拍（ADR-154 双端互锁）",
+            "link": "/knowledge/go-ts-golden"
+          },
+          {
             "text": "共享类型 go/types",
             "link": "/knowledge/go-types"
           },
@@ -1869,7 +1869,7 @@ export const autoSidebar = [
           },
           {
             "text": "install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）",
-            "link": "/knowledge/install_domain_split"
+            "link": "/knowledge/install-domain-split"
           },
           {
             "text": "win-filename-rules",
@@ -1889,7 +1889,7 @@ export const autoSidebar = [
           },
           {
             "text": "仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截）",
-            "link": "/knowledge/workspace_exe_write_denied"
+            "link": "/knowledge/workspace-exe-write-denied"
           },
           {
             "text": "WASI 解码器（wazero 内存直解，node 桥已退役）",
@@ -1911,15 +1911,15 @@ export const autoSidebar = [
           },
           {
             "text": "诊断页 diagnostics",
-            "link": "/knowledge/app_content_diagnostics"
+            "link": "/knowledge/app-content-diagnostics"
           },
           {
             "text": "设置页 settings",
-            "link": "/knowledge/app_content_settings"
+            "link": "/knowledge/app-content-settings"
           },
           {
             "text": "创意工坊站点视图 site",
-            "link": "/knowledge/app_content_site"
+            "link": "/knowledge/app-content-site"
           },
           {
             "text": "主内容页 app-content",
@@ -1987,55 +1987,55 @@ export const autoSidebar = [
           },
           {
             "text": "业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)",
-            "link": "/knowledge/features_dialogs"
+            "link": "/knowledge/features-dialogs"
           },
           {
             "text": "前端设计锐评",
-            "link": "/knowledge/frontend_design_critique"
+            "link": "/knowledge/frontend-design-critique"
           },
           {
             "text": "前端设计令牌债务 — 逐簇判定记录（快照）",
-            "link": "/knowledge/frontend_design_debt"
+            "link": "/knowledge/frontend-design-debt"
           },
           {
             "text": "前端命名章程（黑话治理）",
-            "link": "/knowledge/frontend_naming"
+            "link": "/knowledge/frontend-naming"
           },
           {
             "text": "前端 TS 整包审计",
-            "link": "/knowledge/frontend_repo_audit"
+            "link": "/knowledge/frontend-repo-audit"
           },
           {
             "text": "icon-kit 多源图标（已并入 UI_ICONS）",
-            "link": "/knowledge/icon_kit"
+            "link": "/knowledge/icon-kit"
           },
           {
             "text": "菜单测试断言三分法",
-            "link": "/knowledge/menu_test_assertion"
+            "link": "/knowledge/menu-test-assertion"
           },
           {
             "text": "模块级全局状态治理",
-            "link": "/knowledge/module_global_state"
+            "link": "/knowledge/module-global-state"
           },
           {
             "text": "多模型选择菜单原语 multiModelSelectNode",
-            "link": "/knowledge/multi_model_select"
+            "link": "/knowledge/multi-model-select"
           },
           {
             "text": "preview-menu-session-key",
-            "link": "/knowledge/preview_menu_session_key"
+            "link": "/knowledge/preview-menu-session-key"
           },
           {
             "text": "3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）",
-            "link": "/knowledge/preview_menu_settings_state"
+            "link": "/knowledge/preview-menu-settings-state"
           },
           {
             "text": "3D 预览面板内容声明式化通道（ADR-126 P4-B）",
-            "link": "/knowledge/preview_panel_declarative"
+            "link": "/knowledge/preview-panel-declarative"
           },
           {
             "text": "3D 预览全域状态层（ADR-126 P4-A）",
-            "link": "/knowledge/preview_state"
+            "link": "/knowledge/preview-state"
           },
           {
             "text": "共享样式 shared-styles",
@@ -2043,7 +2043,7 @@ export const autoSidebar = [
           },
           {
             "text": "emoji/UI_ICONS 摸排方法论",
-            "link": "/knowledge/survey_emoji_icons"
+            "link": "/knowledge/survey-emoji-icons"
           },
           {
             "text": "测试工具 test-utils（G-1 抗脆弱测试基础设施）",
@@ -2051,7 +2051,7 @@ export const autoSidebar = [
           },
           {
             "text": "testid 契约与 VIEW_TESTIDS 注册表",
-            "link": "/knowledge/testid_contract"
+            "link": "/knowledge/testid-contract"
           },
           {
             "text": "工具栏搜索编排 toolbar-search",
@@ -2059,7 +2059,7 @@ export const autoSidebar = [
           },
           {
             "text": "UI 组件簇（原 ui 收容所，已归位）",
-            "link": "/knowledge/ui_components"
+            "link": "/knowledge/ui-components"
           },
           {
             "text": "ADR 去桶化 slide-menu 外壳组件",
@@ -2097,7 +2097,7 @@ export const autoSidebar = [
           },
           {
             "text": "前端只读不判边界与豁免",
-            "link": "/knowledge/fe_go_boundary"
+            "link": "/knowledge/fe-go-boundary"
           },
           {
             "text": "全局导入执行 import-executor",
@@ -2150,16 +2150,16 @@ export const autoSidebar = [
             "link": "/knowledge/bone-tools"
           },
           {
+            "text": "ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）",
+            "link": "/knowledge/ground-cap-materialgroup-factories"
+          },
+          {
             "text": "地面材质 spec 单一事实源 ground-surface-spec",
-            "link": "/knowledge/ground_surface_spec"
+            "link": "/knowledge/ground-surface-spec"
           },
           {
             "text": "程序化地面贴图生成 surface-pixels",
-            "link": "/knowledge/ground_texture_gen"
-          },
-          {
-            "text": "ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）",
-            "link": "/knowledge/ground-cap-materialgroup-factories"
+            "link": "/knowledge/ground-texture-gen"
           },
           {
             "text": "MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现",
@@ -2183,7 +2183,7 @@ export const autoSidebar = [
           },
           {
             "text": "gui_light 语义与「死解析立牌」（pack 模型光照元数据）",
-            "link": "/knowledge/pack_gui_light"
+            "link": "/knowledge/pack-gui-light"
           },
           {
             "text": "3D 感知系统 perception",
@@ -2191,11 +2191,11 @@ export const autoSidebar = [
           },
           {
             "text": "统一 3D 预览核心 preview-core",
-            "link": "/knowledge/preview_core"
+            "link": "/knowledge/preview-core"
           },
           {
             "text": "3D 预览统一状态层 envState（ADR-196）",
-            "link": "/knowledge/preview_env_state"
+            "link": "/knowledge/preview-env-state"
           },
           {
             "text": "3D 预览声明式菜单 preview-menu",
@@ -2211,15 +2211,15 @@ export const autoSidebar = [
           },
           {
             "text": "场景能力注册表 scene-capability-registry",
-            "link": "/knowledge/scene_capability_registry"
+            "link": "/knowledge/scene-capability-registry"
           },
           {
             "text": "VMD→VRM 动作重定向 vmd-retarget",
-            "link": "/knowledge/vmd_vrm_retarget"
+            "link": "/knowledge/vmd-vrm-retarget"
           },
           {
             "text": "体积光锥 VolumetricCone（真锥体网格 + Fresnel）",
-            "link": "/knowledge/volumetric_cone"
+            "link": "/knowledge/volumetric-cone"
           },
           {
             "text": "水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）",
@@ -2245,19 +2245,19 @@ export const autoSidebar = [
           },
           {
             "text": "核心工具函数 core-utils",
-            "link": "/knowledge/core_utils"
+            "link": "/knowledge/core-utils"
           },
           {
             "text": "跨平台目录选择器",
-            "link": "/knowledge/directory_picker"
-          },
-          {
-            "text": "悬浮提示 tooltip",
-            "link": "/knowledge/dom_tooltip"
+            "link": "/knowledge/directory-picker"
           },
           {
             "text": "localStorage 安全读写 safeGet/safeSet",
             "link": "/knowledge/dom-storage"
+          },
+          {
+            "text": "悬浮提示 tooltip",
+            "link": "/knowledge/dom-tooltip"
           },
           {
             "text": "YSM 动画分组与配置菜单提取",
@@ -2265,31 +2265,31 @@ export const autoSidebar = [
           },
           {
             "text": "覆盖率门禁语句加权口径",
-            "link": "/knowledge/go_coverage_gate"
+            "link": "/knowledge/go-coverage-gate"
           },
           {
             "text": "代际守卫唯一出口 createLoadGuard",
-            "link": "/knowledge/load_guard"
+            "link": "/knowledge/load-guard"
           },
           {
             "text": "mock 路径守卫 check-mock-paths",
-            "link": "/knowledge/mock_path_guard"
-          },
-          {
-            "text": "推送前门禁 pre-push-gate",
-            "link": "/knowledge/pre_push_gate"
+            "link": "/knowledge/mock-path-guard"
           },
           {
             "text": "提交前钩子 pre-commit",
             "link": "/knowledge/pre-commit-hook"
           },
           {
+            "text": "推送前门禁 pre-push-gate",
+            "link": "/knowledge/pre-push-gate"
+          },
+          {
             "text": "安全错误消息提取 utils",
-            "link": "/knowledge/safe_error_msg"
+            "link": "/knowledge/safe-error-msg"
           },
           {
             "text": "scripts 共享核演进（diff-coverage-core + cycles）",
-            "link": "/knowledge/script_shared_cores"
+            "link": "/knowledge/script-shared-cores"
           },
           {
             "text": "源码符号提取共享层 source-graph.ts",
@@ -2297,7 +2297,7 @@ export const autoSidebar = [
           },
           {
             "text": "测试税减负三刀方法论",
-            "link": "/knowledge/test_tax_reduction"
+            "link": "/knowledge/test-tax-reduction"
           },
           {
             "text": "数组工具 moveItem",
@@ -2363,11 +2363,11 @@ export const autoSidebar = [
         "items": [
           {
             "text": "auto-import 拆分与缺失 import 检测",
-            "link": "/knowledge/auto_import_split"
+            "link": "/knowledge/auto-import-split"
           },
           {
             "text": "三档阈值扫描器（复杂度/参数/类型安全）",
-            "link": "/knowledge/check_threshold_scanners"
+            "link": "/knowledge/check-threshold-scanners"
           },
           {
             "text": "发版冒烟组——CI 同口径预演（ADR-318）",
@@ -2383,7 +2383,7 @@ export const autoSidebar = [
           },
           {
             "text": "孤儿导出检测器（扫描盲区）",
-            "link": "/knowledge/orphan_export_scanner"
+            "link": "/knowledge/orphan-export-scanner"
           },
           {
             "text": "资源注册表 registry",
@@ -2391,19 +2391,19 @@ export const autoSidebar = [
           },
           {
             "text": "脚本 argv 规范与已知豁免 parse-args.ts",
-            "link": "/knowledge/scripts_argv"
+            "link": "/knowledge/scripts-argv"
           },
           {
             "text": "Go 端 jscpd 重复检测脚本",
-            "link": "/knowledge/scripts_jscpd_go"
+            "link": "/knowledge/scripts-jscpd-go"
           },
           {
             "text": "_lib 共享层采用率闸门",
-            "link": "/knowledge/scripts_lib_adoption"
+            "link": "/knowledge/scripts-lib-adoption"
           },
           {
             "text": "README 登记处对账 check-readme-index.ts",
-            "link": "/knowledge/scripts_readme_index"
+            "link": "/knowledge/scripts-readme-index"
           },
           {
             "text": "Vitest 环境切换规则",

@@ -227,4 +227,4 @@ status: active
 - `docs/knowledge/preview-state.md`（状态层快照 + visibleWhen 谓词）
 - `docs/knowledge/preview-controls.md`（cap 控件渲染）
 - `docs/knowledge/ui-slide-menu.md`（SlideMenu 多层导航）
-- `docs/knowledge/scene_capability_registry.md`（cap 生态）
+- `docs/knowledge/scene-capability-registry.md`（cap 生态）

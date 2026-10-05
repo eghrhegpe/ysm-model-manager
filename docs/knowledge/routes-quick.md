@@ -9,35 +9,35 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 「草为什么是圆斑不像纤维」→ 各向异性坐标拉伸（grass.ts 的 ANISO_X） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | 改生成器算法前确认 surfaceSpecKey 不含像素字段（否则触发无谓重建） | - |
-| 「大理石没有脉络像团块」→ domain warping（marble.ts 的 sin(x + k·fbm)） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | - | - |
-| 「平铺后每隔约两米出现同一个明星特征」→ 无缝但有规律重复，用 anti-repeat.ts（macro/dual/stochastic 三选一或组合） | [程序化地面贴图生成 surface-pixels](./ground_texture_gen.md) | - | - |
+| 「草为什么是圆斑不像纤维」→ 各向异性坐标拉伸（grass.ts 的 ANISO_X） | [程序化地面贴图生成 surface-pixels](./ground-texture-gen.md) | 改生成器算法前确认 surfaceSpecKey 不含像素字段（否则触发无谓重建） | - |
+| 「大理石没有脉络像团块」→ domain warping（marble.ts 的 sin(x + k·fbm)） | [程序化地面贴图生成 surface-pixels](./ground-texture-gen.md) | - | - |
+| 「平铺后每隔约两米出现同一个明星特征」→ 无缝但有规律重复，用 anti-repeat.ts（macro/dual/stochastic 三选一或组合） | [程序化地面贴图生成 surface-pixels](./ground-texture-gen.md) | - | - |
 | 2D 预览、骨骼图、Canvas 渲染 | [2D 预览渲染 model2d](./model2d.md) | 2D 骨骼渲染必须走 model2d.ts 的 Canvas 渲染，禁止手写骨骼画布 | - |
-| 3D 菜单控件声明式渲染 | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | ADR-132 |
+| 3D 菜单控件声明式渲染 | [场景能力注册表 scene-capability-registry](./scene-capability-registry.md) | - | ADR-132 |
 | 3D 感知系统、自主动画、自动跳舞 | [3D 感知系统 perception](./perception.md) | 3D 感知必须走 perception 模块的控制器，禁止手写动画注入 | ADR-138 |
 | 3D 骨骼 spec、three.js | [3D 骨骼 spec go/threejs](./go-threejs.md) | YSM 骨骼数据必须走 go/threejs 的 spec.go 转换为 three.js 格式，前端禁止手写骨骼转换 | - |
 | 3D 截图 / 纹理预加载缓存 / 渲染性能调优 | [3D 预览渲染 model3d](./model3d.md) | - | ADR-129 |
 | 3D 控制器、MMD 播放、VRM 材质 / YSM schema | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | 相机操作已归核心声明式根菜单，底部导航弹窗已删除；adapter 项必须经 setAdapterItems 注入核心根菜单，禁止内联 | ADR-127, ADR-132, ADR-253 |
 | 3D 入口 / nav-fab / siblings 兜底 / entry 通道 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132, ADR-253 |
 | 3D 渲染循环优化、Vector3 复用 | [3D 区审核与修复模式提炼](./3d-patterns.md) | 3D 资源释放必须走 dispose 链路，禁止依赖 GC | - |
-| 3D 预览菜单、根菜单、dock 按钮 | [统一 3D 预览核心 preview-core](./preview_core.md) | 适配器项经 setAdapterItems 注入，禁止内联 | ADR-125 |
-| 3D 预览面板跨 cap 设置项 | [3D 预览全域状态层（ADR-126 P4-A）](./preview_state.md) | 预览状态必须走 preview-state.ts 的 KNOWN_PATHS 注册，binding 只填已落地项，未落地键编译期报错 | - |
-| 把 MMD 动作放到 VRM 模型上播放 | [VMD→VRM 动作重定向 vmd-retarget](./vmd_vrm_retarget.md) | 重建 track = 丢贝塞尔插值（卡点且不报错） | ADR-243, ADR-306, ADR-309 |
-| 材质重建与原地更新的判别（needsRebuild） | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | - | - |
-| 参考网格显隐 / 关不掉自带网格（groundGridVisible） | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | - | - |
+| 3D 预览菜单、根菜单、dock 按钮 | [统一 3D 预览核心 preview-core](./preview-core.md) | 适配器项经 setAdapterItems 注入，禁止内联 | ADR-125 |
+| 3D 预览面板跨 cap 设置项 | [3D 预览全域状态层（ADR-126 P4-A）](./preview-state.md) | 预览状态必须走 preview-state.ts 的 KNOWN_PATHS 注册，binding 只填已落地项，未落地键编译期报错 | - |
+| 把 MMD 动作放到 VRM 模型上播放 | [VMD→VRM 动作重定向 vmd-retarget](./vmd-vrm-retarget.md) | 重建 track = 丢贝塞尔插值（卡点且不报错） | ADR-243, ADR-306, ADR-309 |
+| 材质重建与原地更新的判别（needsRebuild） | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | - | - |
+| 参考网格显隐 / 关不掉自带网格（groundGridVisible） | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | - | - |
 | 拆 mount3D 巨函数 | [mount3D 巨函数现状（2026-08-27 已部分拆分）](./mount3d-584-giant.md) | mount3D 本体 527 行（L351-877，预置顶复核节实测），仍超 100 行红线；继续往里加新逻辑需评审 | ADR-091 |
-| 场景参数 / envState / 统一状态层 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | cap 参数必须存 envState，禁止各自 this.params 私有化（ADR-196） | ADR-196, ADR-293-d1 |
-| 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | ADR-132 |
-| 程序化纹理生成 | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | - | - |
+| 场景参数 / envState / 统一状态层 | [3D 预览统一状态层 envState（ADR-196）](./preview-env-state.md) | cap 参数必须存 envState，禁止各自 this.params 私有化（ADR-196） | ADR-196, ADR-293-d1 |
+| 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene-capability-registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | ADR-132 |
+| 程序化纹理生成 | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | - | - |
 | 纯函数 vs Node+WASM 解码分界 | [Go 头像提取：纯函数 vs Node+WASM 解码分界](./go-avatar-decode.md) | ADR-316 后 Node+WASM 解码桥已退役：.ysm 解码走 ysm.DecodeYSM 注入点（wazero），禁止新建 Node 子进程桥 | - |
-| 地面材质/地面贴图/地板/surface（GroundMaterialSpec/specKey/textureToken） | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | 地面材质必须走 ground-surface-spec 的 buildGroundSurfaceSpec，spec 是唯一数据源 | - |
+| 地面材质/地面贴图/地板/surface（GroundMaterialSpec/specKey/textureToken） | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | 地面材质必须走 ground-surface-spec 的 buildGroundSurfaceSpec，spec 是唯一数据源 | - |
 | 顶点 / UV / 四元数 | [3D 骨骼 spec go/threejs](./go-threejs.md) | - | - |
 | 动画分组、配置菜单、ysm.json | [YSM 动画分组与配置菜单提取](./format-ysm-anim-config.md) | YSM 动画分组与配置菜单必须经 extractAnimGroupsAndConfigs 从 ysm.json properties 提取 | - |
 | 动画解析 / 求值 / 渲染注入 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
 | 多 3D 场景共存 | [联邦渲染能力 (Render Federation)](./render-federation.md) | - | ADR-125 |
 | 多模型同框叠加（keepInScene=true） | [3D 预览渲染 model3d](./model3d.md) | 所有 3D 渲染内容必须经 mount3D 统一会话外壳，禁止独立维护 renderer/scene/camera | ADR-129 |
-| 多模型选择、多组件 / 多 entry | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | 容器内多模型必须经 multiModelSelectNode 声明式菜单选择，禁止 adapter 直接遍历 entry 数组渲染 | ADR-132 |
-| 改体积光外观 / 加锥体参数 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | 锥体几何/着色/状态机单点在 light-cone.ts（rebuild + VOLUMETRIC_CONE_FRAG），禁止外挂第二套光柱实现 | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
+| 多模型选择、多组件 / 多 entry | [多模型选择菜单原语 multiModelSelectNode](./multi-model-select.md) | 容器内多模型必须经 multiModelSelectNode 声明式菜单选择，禁止 adapter 直接遍历 entry 数组渲染 | ADR-132 |
+| 改体积光外观 / 加锥体参数 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric-cone.md) | 锥体几何/着色/状态机单点在 light-cone.ts（rebuild + VOLUMETRIC_CONE_FRAG），禁止外挂第二套光柱实现 | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
 | 骨骼错位 / 模型错位排查 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
 | 骨骼动画、关键帧、动画播放 | [动画系统 animation](./animation-system.md) | 基岩 animation.json 解析后必须走 evaluateClip 插值，禁止前端手写关键帧插值逻辑 | - |
 | 骨骼工具、骨骼树、骨骼列表 | [跨格式骨骼工具层 bone-tools](./bone-tools.md) | 骨骼树必须走 bone-tools 的 buildBoneTree，禁止在 adapter 里手写骨骼树构建 | ADR-109 |
@@ -49,62 +49,63 @@
 | 缓存状态、cache-status / cache-verify | [纹理缓存 texture_cache](./texture-cache.md) | - | - |
 | 加密模型、wasm 加载、Emscripten | [WASM 解析器 ysm-parser](./ysm-wasm.md) | - | - |
 | 节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | - | ADR-138 |
-| 截图/导出里没有光柱或亮度与预览不符 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | 截图必须经 screenshot-cone.ts 的 applyVolumetricCone 复用同一锥体类，离屏 renderer 逐字段镜像预览 toneMapping 现值 | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
+| 截图/导出里没有光柱或亮度与预览不符 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric-cone.md) | 截图必须经 screenshot-cone.ts 的 applyVolumetricCone 复用同一锥体类，离屏 renderer 逐字段镜像预览 toneMapping 现值 | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
 | 截图按钮、相机控制、模型切换 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | 3D 入口统一为左下角 nav-fab（ADR-253 D7）；详情卡内已无 3D 按钮，opener 必须转发 opts 否则 siblings/entry 被静默丢弃 | ADR-127, ADR-132, ADR-253 |
 | 截图灯光、activeComponent、组件选择 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
 | 两步走路径扩展 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | ADR-297 |
-| 模型切换、会话内替换 | [统一 3D 预览核心 preview-core](./preview_core.md) | switchTo 仅同类型；跨类型用 switchExternal | ADR-125 |
+| 模型切换、会话内替换 | [统一 3D 预览核心 preview-core](./preview-core.md) | switchTo 仅同类型；跨类型用 switchExternal | ADR-125 |
 | 模型渲染 | [3D 骨骼 spec go/threejs](./go-threejs.md) | - | - |
-| 排查光柱穿帮、过曝、开关不生效 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric_cone.md) | 重建触发面只有 CONE_GEO_CHANGES（type/enabled/angle/penumbra）；驱动源是 envState 键 lightVolumetricDriver，与 activeLight 彻底脱钩 | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
-| 排查设置项改了不生效 / 重开面板值不对 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview_menu_settings_state.md) | - | - |
+| 排查光柱穿帮、过曝、开关不生效 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric-cone.md) | 重建触发面只有 CONE_GEO_CHANGES（type/enabled/angle/penumbra）；驱动源是 envState 键 lightVolumetricDriver，与 activeLight 彻底脱钩 | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
+| 排查设置项改了不生效 / 重开面板值不对 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview-menu-settings-state.md) | - | - |
 | 评审 ground-capability.ts 菜单构建 | [ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）](./ground-cap-materialgroup-factories.md) | 地面菜单必须经 ground-menu.ts 的 buildGroundNodes 直产 PreviewMenuNode[]，禁止手写控件结构 | - |
 | 评审 mount-preview-core.ts | [mount3D 巨函数现状（2026-08-27 已部分拆分）](./mount3d-584-giant.md) | - | ADR-091 |
 | 前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | - | - |
 | 数字滚动、stagger 入场、关闭动画 | [动画系统 animation](./animation-system.md) | - | - |
 | 水面/水池/water/波浪/wave | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | 水面 shader 有 REVISION 断言与注入守卫（vertex 波浪函数 / objectNormal 覆盖 / 圆角段 / 微细节覆写点 / 倒影混合块）：升级 three 后必须重跑 water-capability.test.ts | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
 | 水位与水膜（waterLevel / wetness） | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | - | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
-| 条件显隐控件不出现 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview_menu_settings_state.md) | - | - |
+| 条件显隐控件不出现 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview-menu-settings-state.md) | - | - |
+| 通用红线 | [统一 3D 预览核心 preview-core](./preview-core.md) | 截图入口走 shotNodes 菜单闭包，禁止往 PreviewHandle 透传 screenshot（2026-09-04 死透传已删） | ADR-125 |
 | 头像、作者、创作者 avatar | [头像 go/avatar](./go-avatar.md) | 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接 | - |
 | 头像缓存、缩略图 | [头像 go/avatar](./go-avatar.md) | - | - |
 | 头像提取、ysm.DecodeYSM、ExtractAvatarURI | [Go 头像提取：纯函数 vs Node+WASM 解码分界](./go-avatar-decode.md) | 头像提取路径必须按扩展名分发（.ysm → WASM 解码 / .zip/.7z → 归档解压 / .json → 直读），禁止跨扩展名混用 | - |
 | 投影、litematic、schematic、nbt、蓝图 | [Litematic 解析 go/litematic](./go-litematic.md) | Litematic 蓝图必须走 go/litematic 的 parser/schematic/structure 三层解析，禁止前端手写 Litematic 解析 | - |
-| 腿链提取、链根取谁 | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik_solver.md) | - | - |
-| 为什么 VMD 表情帧在 VRM 上脸不动 | [VMD→VRM 动作重定向 vmd-retarget](./vmd_vrm_retarget.md) | 表情载体 weight 未初始化 = mixer 静默不写（不报错） | ADR-243, ADR-306, ADR-309 |
-| 为什么 VMD 动作在 VRM 上腿部不动 | [VMD→VRM 动作重定向 vmd-retarget](./vmd_vrm_retarget.md) | 幽灵网格 morphTargetDictionary 留 undefined = 必抛 TypeError | ADR-243, ADR-306, ADR-309 |
-| 为什么模型声明了光照偏好却不生效 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack_gui_light.md) | - | - |
+| 腿链提取、链根取谁 | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik-solver.md) | - | - |
+| 为什么 VMD 表情帧在 VRM 上脸不动 | [VMD→VRM 动作重定向 vmd-retarget](./vmd-vrm-retarget.md) | 表情载体 weight 未初始化 = mixer 静默不写（不报错） | ADR-243, ADR-306, ADR-309 |
+| 为什么 VMD 动作在 VRM 上腿部不动 | [VMD→VRM 动作重定向 vmd-retarget](./vmd-vrm-retarget.md) | 幽灵网格 morphTargetDictionary 留 undefined = 必抛 TypeError | ADR-243, ADR-306, ADR-309 |
+| 为什么模型声明了光照偏好却不生效 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack-gui-light.md) | - | - |
 | 纹理缓存、AbortController 事件管理 | [3D 区审核与修复模式提炼](./3d-patterns.md) | - | - |
 | 纹理缓存、KTX2 缓存 | [纹理缓存 texture_cache](./texture-cache.md) | 缓存键 = 内容哈希（TextureHash），改哈希口径旧缓存全体失联；TTL 与容量裁剪（Prune）在写入路径触发，改淘汰策略须同步 prune 测试矩阵 | - |
 | 详情卡 3D 入口、nav-fab、card-shell 统一壳 | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
-| 想按模型声明打光怎么做 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack_gui_light.md) | - | - |
-| 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理） | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | ADR-132 |
-| 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡） | [3D 预览面板内容声明式化通道（ADR-126 P4-B）](./preview_panel_declarative.md) | 3D 预览面板内容必须走声明式菜单节点（children / renderCustom），禁止在 adapter 里手写 DOM | - |
-| 新增 3D 预览设置项、新增 cap 让开关出现在设置面板 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview_menu_settings_state.md) | 3D 预览设置必须走 preview-state 的 KNOWN_PATHS 注册 + 自动 cap 聚合，禁止横切设置项各自有独立读写通道 | - |
-| 新增 cap 参数 / env-state-schema 字段 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | - | ADR-196, ADR-293-d1 |
-| 新增 KNOWN_PATHS 路径 | [3D 预览全域状态层（ADR-126 P4-A）](./preview_state.md) | - | - |
+| 想按模型声明打光怎么做 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack-gui-light.md) | - | - |
+| 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理） | [场景能力注册表 scene-capability-registry](./scene-capability-registry.md) | - | ADR-132 |
+| 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡） | [3D 预览面板内容声明式化通道（ADR-126 P4-B）](./preview-panel-declarative.md) | 3D 预览面板内容必须走声明式菜单节点（children / renderCustom），禁止在 adapter 里手写 DOM | - |
+| 新增 3D 预览设置项、新增 cap 让开关出现在设置面板 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview-menu-settings-state.md) | 3D 预览设置必须走 preview-state 的 KNOWN_PATHS 注册 + 自动 cap 聚合，禁止横切设置项各自有独立读写通道 | - |
+| 新增 cap 参数 / env-state-schema 字段 | [3D 预览统一状态层 envState（ADR-196）](./preview-env-state.md) | - | ADR-196, ADR-293-d1 |
+| 新增 KNOWN_PATHS 路径 | [3D 预览全域状态层（ADR-126 P4-A）](./preview-state.md) | - | - |
 | 新增水体形态 | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | - | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
-| 新增一个 MMD 骨名/表情映射 | [VMD→VRM 动作重定向 vmd-retarget](./vmd_vrm_retarget.md) | - | ADR-243, ADR-306, ADR-309 |
+| 新增一个 MMD 骨名/表情映射 | [VMD→VRM 动作重定向 vmd-retarget](./vmd-vrm-retarget.md) | - | ADR-243, ADR-306, ADR-309 |
 | 渲染联邦、shared renderer、rAF 复用 | [联邦渲染能力 (Render Federation)](./render-federation.md) | 多 3D 场景必须走 render-federation 的 shared renderer / rAF，禁止各自创建 renderer | ADR-125 |
 | 预览面板、模型预览、2D 骨骼 / 3D 预览 | [预览面板 app-preview](./app-preview.md) | 预览面板必须经 model:select 事件驱动，WASM 能力判定由 matchTypeByExt 注册表驱动，禁止内联正则 | ADR-137, ADR-138, ADR-253 |
-| 预览面板状态改了不生效 / 重开面板值不对 | [3D 预览全域状态层（ADR-126 P4-A）](./preview_state.md) | - | - |
+| 预览面板状态改了不生效 / 重开面板值不对 | [3D 预览全域状态层（ADR-126 P4-A）](./preview-state.md) | - | - |
 | 预览设置、显示控制、骨骼名称开关 | [预览面板设置与显示控制](./preview-settings.md) | 预览设置集中由 preview-state.ts 的 KNOWN_PATHS 注册管理，新增选项必须经注册而非直接读写状态 | ADR-132 |
 | 眨眼/呼吸/视线追踪/口型同步 | [3D 感知系统 perception](./perception.md) | - | ADR-138 |
 | 帧率 / 像素比 / 视锥剔除 / 3D 偏好 | [预览面板设置与显示控制](./preview-settings.md) | - | ADR-132 |
-| 追加模型、同台加载、多模型同框 | [统一 3D 预览核心 preview-core](./preview_core.md) | 跨类型必须走 switchExternal，禁止直接调 adapter.build | ADR-125 |
+| 追加模型、同台加载、多模型同框 | [统一 3D 预览核心 preview-core](./preview-core.md) | 跨类型必须走 switchExternal，禁止直接调 adapter.build | ADR-125 |
 | 资源生命周期 dispose、循环依赖破壁 | [3D 区审核与修复模式提炼](./3d-patterns.md) | - | - |
-| 自定义图片上传到地面 | [地面材质 spec 单一事实源 ground-surface-spec](./ground_surface_spec.md) | - | - |
+| 自定义图片上传到地面 | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | - | - |
 | 自由相机漫游（WASD + 空格/Shift 升降） | [3D 预览渲染 model3d](./model3d.md) | 100MB 阈值是网页版唯一防线，低端设备（4GB RAM）峰值内存可能触顶 OOM | ADR-129 |
-| ADR-125 三块落地状态核对 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview_menu_settings_state.md) | - | - |
+| ADR-125 三块落地状态核对 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview-menu-settings-state.md) | - | - |
 | ADR-195 cap 直产节点 | [ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）](./ground-cap-materialgroup-factories.md) | - | - |
 | AnimationController、状态机 | [动画系统 animation](./animation-system.md) | - | - |
 | app-preview 组件、_previewGuard、detailGen | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
 | buildBoneTree / makeBonePanelRenderer | [跨格式骨骼工具层 bone-tools](./bone-tools.md) | - | ADR-109 |
-| cap 参数存哪 / 怎么改不生效 | [3D 预览统一状态层 envState（ADR-196）](./preview_env_state.md) | - | ADR-196, ADR-293-d1 |
-| createAll / loadAll / setPreset / saveAll / dispose | [场景能力注册表 scene-capability-registry](./scene_capability_registry.md) | - | ADR-132 |
+| cap 参数存哪 / 怎么改不生效 | [3D 预览统一状态层 envState（ADR-196）](./preview-env-state.md) | - | ADR-196, ADR-293-d1 |
+| createAll / loadAll / setPreset / saveAll / dispose | [场景能力注册表 scene-capability-registry](./scene-capability-registry.md) | - | ADR-132 |
 | extra_animation、summarize | [YSM 动画分组与配置菜单提取](./format-ysm-anim-config.md) | - | - |
-| foot IK、极向量 / pole、CCD | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik_solver.md) | 腿链链根取大腿的「直接父骨」；改成大腿自身 = 只有膝盖能动 | - |
+| foot IK、极向量 / pole、CCD | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik-solver.md) | 腿链链根取大腿的「直接父骨」；改成大腿自身 = 只有膝盖能动 | - |
 | ground 材质菜单节点 | [ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）](./ground-cap-materialgroup-factories.md) | - | - |
-| gui_light 是什么意思 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack_gui_light.md) | 别把 gui_light 接进 LightCapability（三理由：ADR-282 / source 优先级 / 跨类型不一致） | - |
-| IK 求解、骨骼 IK、足部锚地 | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik_solver.md) | IK 求解必须走 ik-solver 的 CCD 求解器 + mmd-foot-ik 的足部锚地，禁止手写 IK 逻辑 | - |
+| gui_light 是什么意思 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack-gui-light.md) | 别把 gui_light 接进 LightCapability（三理由：ADR-282 / source 优先级 / 跨类型不一致） | - |
+| IK 求解、骨骼 IK、足部锚地 | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik-solver.md) | IK 求解必须走 ik-solver 的 CCD 求解器 + mmd-foot-ik 的足部锚地，禁止手写 IK 逻辑 | - |
 | isSafeAvatarPath | [头像 go/avatar](./go-avatar.md) | - | - |
 | KNOWN_PATHS 状态路径 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | ADR-297 |
 | Litematic / 蓝图、资源包 / 光影包（showResourcePack / showShaderpack） | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
@@ -112,28 +113,28 @@
 | model:select、WASM 解码、放大预览 | [预览面板 app-preview](./app-preview.md) | - | ADR-137, ADR-138, ADR-253 |
 | Molang 表达式求值 | [动画系统 animation](./animation-system.md) | - | - |
 | mountPreviewRootMenu 挂载 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
-| multiModelSelectNode | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | - | ADR-132 |
+| multiModelSelectNode | [多模型选择菜单原语 multiModelSelectNode](./multi-model-select.md) | - | ADR-132 |
 | multiModelSelectNode / preview menu node | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | - | ADR-127, ADR-132, ADR-253 |
-| P4 子步（A→B→D→C）状态通道复用 | [3D 预览全域状态层（ADR-126 P4-A）](./preview_state.md) | - | - |
-| P4-B 子步（1→2→3）状态通道复用 | [3D 预览面板内容声明式化通道（ADR-126 P4-B）](./preview_panel_declarative.md) | - | - |
+| P4 子步（A→B→D→C）状态通道复用 | [3D 预览全域状态层（ADR-126 P4-A）](./preview-state.md) | - | - |
+| P4-B 子步（1→2→3）状态通道复用 | [3D 预览面板内容声明式化通道（ADR-126 P4-B）](./preview-panel-declarative.md) | - | - |
 | palette / voxel / bedrock 转换 | [Litematic 解析 go/litematic](./go-litematic.md) | - | - |
 | PreviewMenuNode 声明式菜单 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
 | PreviewSnapshot 快照类型 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | ADR-297 |
 | PreviewStatePath 类型契约 | [预览状态路径契约 preview-paths](./preview-paths.md) | - | ADR-297 |
-| renderCustom vs children 声明式 | [3D 预览面板内容声明式化通道（ADR-126 P4-B）](./preview_panel_declarative.md) | - | - |
+| renderCustom vs children 声明式 | [3D 预览面板内容声明式化通道（ADR-126 P4-B）](./preview-panel-declarative.md) | - | - |
 | renderMenu 单一渲染器 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
-| schema 键冲突、ADR-132 | [preview-menu-session-key](./preview_menu_session_key.md) | - | ADR-132 |
-| schema 注册、per-scene、多模型同框 | [preview-menu-session-key](./preview_menu_session_key.md) | schema 注册必须用 per-scene 键，禁止跨场景共用 schema key | ADR-132 |
+| schema 键冲突、ADR-132 | [preview-menu-session-key](./preview-menu-session-key.md) | - | ADR-132 |
+| schema 注册、per-scene、多模型同框 | [preview-menu-session-key](./preview-menu-session-key.md) | schema 注册必须用 per-scene 键，禁止跨场景共用 schema key | ADR-132 |
 | schema-registry 面板注册 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
 | UV 对不上 / 贴图错位定位 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
 | visibleWhen 谓词 | [3D 预览声明式菜单 preview-menu](./preview-menu.md) | - | ADR-132, ADR-195, ADR-276, ADR-305 |
-| VRM 动画播放、VRMA | [统一 3D 预览核心 preview-core](./preview_core.md) | 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update() | ADR-125 |
+| VRM 动画播放、VRMA | [统一 3D 预览核心 preview-core](./preview-core.md) | 必须 mixer.update(dt) → vrm.update(dt)，禁止手动 vrm.humanoid.update() | ADR-125 |
 | WASI 解码、wazero、node 退役 | [WASI 解码器（wazero 内存直解，node 桥已退役）](./ysm-wasi.md) | 解析器改动（collectToMemory）在本仓 vendored 副本内，上游同步时需重放 | - |
 | WASM 解析器、YSMParser、ysm 解码 | [WASM 解析器 ysm-parser](./ysm-wasm.md) | YSM 前端解码必须走 ysm-wasm 的 WASM 解析器，禁止手写 YSM 字节流解析 | - |
 | WASM 解析器版本更新 | [YSM 烘焙与几何反推](./ysm-baked.md) | - | - |
 | YSM 动画管线、基岩动画 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | YSM 动画必须走 ysm-anim-pipeline 的解析-求值-注入三段，禁止前端手写动画解析 | - |
 | ysm-animation-player、molang | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | - | - |
-| zip 多模型、多候选、蓝图 zip、litematic zip | [多模型选择菜单原语 multiModelSelectNode](./multi_model_select.md) | - | ADR-132 |
+| zip 多模型、多候选、蓝图 zip、litematic zip | [多模型选择菜单原语 multiModelSelectNode](./multi-model-select.md) | - | ADR-132 |
 
 ## 🎯 UI 交互与弹窗
 
@@ -141,7 +142,7 @@
 |----------|--------|----------|----------|
 | 按标签筛选、条件过滤 | [高级筛选 adv-filter](./dialog-adv-filter.md) | - | - |
 | 菜单行为执行、ctx:show | [右键菜单系统](./context-menu.md) | 禁止 view 层手写菜单项 | - |
-| 残留扫描 | [emoji/UI_ICONS 摸排方法论](./survey_emoji_icons.md) | - | - |
+| 残留扫描 | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | - | - |
 | 撤销、消息、toast-ms | [Toast 通知 app-toast](./app-toast.md) | - | - |
 | 打标签、编辑标签、tag-editor | [标签编辑器 tag-editor](./dialog-tag-editor.md) | tag-editor 弹窗必须复用 modal.ts 的 Promise API，标签写回走 go/tags Store 的原子替换 | - |
 | 弹确认框 / 输入框 / 下拉选择 / modal | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | 业务弹窗必须复用 modal 家族的 Promise API（prompt/select/confirm/picker），禁止手写弹窗 | - |
@@ -149,20 +150,26 @@
 | 分类标记、全库标签建议 | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
 | 富列表选择（picker，支持自定义 footer 表单） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | - | - |
 | 高级筛选、骨骼数 / 立方体 / 纹理尺寸数值范围 | [高级筛选 adv-filter](./dialog-adv-filter.md) | adv-filter 弹窗必须复用 modal.ts 的 Promise API，禁止手写弹窗 DOM | - |
-| 滑块控制器、幻灯片菜单外壳、头部开关 | [UI 组件簇（原 ui 收容所，已归位）](./ui_components.md) | - | - |
+| 滑块控制器、幻灯片菜单外壳、头部开关 | [UI 组件簇（原 ui 收容所，已归位）](./ui-components.md) | - | - |
 | 进度弹窗（closable=false 防误关） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | - | - |
 | 两级菜单、轻量导航栈、createSlideMenu | [ADR 去桶化 slide-menu 外壳组件](./ui-slide-menu.md) | - | - |
-| 摸排 | [emoji/UI_ICONS 摸排方法论](./survey_emoji_icons.md) | - | - |
+| 摸排 | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | - | - |
 | 批量重命名、查找替换、正则替换 | [批量重命名 batch-rename](./dialog-batch-rename.md) | batch-rename 弹窗单例槽位经 registerDlg 保证（状态在 DgBrShell 实例），重复打开先 close() 结算上一个 Promise | - |
-| 批量重命名实现 / 标签编辑器定位 / 高级筛选弹窗 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features_dialogs.md) | features/dialogs 是业务 UI,勿被调回 utils/dom(分类事故复发) | - |
+| 批量重命名实现 / 标签编辑器定位 / 高级筛选弹窗 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | features/dialogs 是业务 UI,勿被调回 utils/dom(分类事故复发) | - |
+| 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | dialogs 各文件内部引用深度以 features/dialogs 为基准,vi.mock 路径须同步 | - |
+| 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | modal-core.ts VIEW_TESTIDS 增删 data-testid 须同步本数组(ADR-133 阶段 B 契约测试静态聚合) | - |
+| 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | rename.ts 路径变更时需同步 vi.mock 字符串路径(ADR-170 实测教训:非 import 语句正则扫不到) | - |
+| 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | 批量重命名 DOM 模板（含 stagger 动画）在 views/app-tree/tpl-batch-rename.ts（ADR-208 D2 外移），features 经 BatchRenameTpl 注入；改模板走 views 侧，改接线走 features/dialogs | - |
+| 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | rename / adv-filter / tag-editor 内嵌 HTML 字面量已入 check-layering R8 防回退基线（ADR-190 D1a / ADR-208 D2「HTML 模板归 views」执法闸，2026-09-20）；触碰这三文件即顺手收敛（tpl 注入照 BatchRenameTpl 先例，或 DOM API 构建 + outerHTML 字符串契约），新增 HTML 字面量门禁直接红 | - |
+| 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | adv-filter.ts 后端约束:Go SearchModels 仅支持 6 范围 +1 关键字,前端不呈现其他控件(代码注释已注明) | - |
 | 统一作者 / 作品、5 个内置预设 | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
-| 图标迁移 | [emoji/UI_ICONS 摸排方法论](./survey_emoji_icons.md) | - | - |
+| 图标迁移 | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | - | - |
 | 消息弹窗图标 | [toast-emoji-svg](./adr.md) | - | - |
 | 右键菜单、添加菜单项 | [右键菜单系统](./context-menu.md) | 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 features/context-menu/context-menu-handlers.ts（HANDLERS 表） | - |
 | 执行破坏性操作前的二次确认（danger 模式） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | 破坏性操作（删除/清空/覆盖）必须用 modalConfirm，danger=true 标红按钮 | - |
 | 重命名、改名、命名规范 | [重命名弹窗 rename](./dialog-rename.md) | rename 弹窗必须复用 modal.ts 的 Promise API，非法字符与长度校验在弹窗内完成 | - |
-| createSlideMenu / withLoadingIndicator / DragSliderController | [UI 组件簇（原 ui 收容所，已归位）](./ui_components.md) | - | - |
-| emoji | [emoji/UI_ICONS 摸排方法论](./survey_emoji_icons.md) | 别再几十次零散 grep emoji —— 一封 `node scripts/_lib/survey-emoji-icons.ts` 出全貌 | - |
+| createSlideMenu / withLoadingIndicator / DragSliderController | [UI 组件簇（原 ui 收容所，已归位）](./ui-components.md) | - | - |
+| emoji | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | 别再几十次零散 grep emoji —— 一封 `node scripts/_lib/survey-emoji-icons.ts` 出全貌 | - |
 | FAB、悬浮按钮、3D 预览 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | FAB 控制层必须走 preview-3d/menu/shell/fab.ts 的 ensureFabStyles 注入，禁止各组件各自注入 style 标签 | - |
 | modalAdvFilter | [高级筛选 adv-filter](./dialog-adv-filter.md) | - | - |
 | modalTagEditor | [标签编辑器 tag-editor](./dialog-tag-editor.md) | - | - |
@@ -170,12 +177,12 @@
 | rename-format、showRenameDialog | [重命名弹窗 rename](./dialog-rename.md) | - | - |
 | showBatchRenameDialog | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | slide-menu、slide 菜单、去桶化 | [ADR 去桶化 slide-menu 外壳组件](./ui-slide-menu.md) | slide-menu 外壳必须复用 slide-menu 的轻量导航栈，禁止手写导航栈 | - |
-| title 气泡、3D 按钮 | [悬浮提示 tooltip](./dom_tooltip.md) | - | - |
+| title 气泡、3D 按钮 | [悬浮提示 tooltip](./dom-tooltip.md) | - | - |
 | Toast 通知、提示、反馈、报错提示 | [Toast 通知 app-toast](./app-toast.md) | Toast 必须复用 utils/dom/toast-ms.ts 的毫秒级反馈，禁止手写浮层 | - |
 | toast emoji | [toast-emoji-svg](./adr.md) | toast 图标位只喂 resolveIcon 的语义 SVG，msg 载荷禁拼裸 emoji 前缀（esc 文本槽塞 SVG 会字面显示，ADR-267 盲区） | - |
-| tooltip、悬浮提示、hover 提示 | [悬浮提示 tooltip](./dom_tooltip.md) | 悬浮提示必须走 dom/tooltip.ts 的毛玻璃 tooltip，禁止用原生 title | - |
-| UI 组件、卡片组件、加载遮罩 | [UI 组件簇（原 ui 收容所，已归位）](./ui_components.md) | UI 组件必须复用既有 helper 函数，禁止手写重复 DOM 结构 | - |
-| UI_ICONS | [emoji/UI_ICONS 摸排方法论](./survey_emoji_icons.md) | - | - |
+| tooltip、悬浮提示、hover 提示 | [悬浮提示 tooltip](./dom-tooltip.md) | 悬浮提示必须走 dom/tooltip.ts 的毛玻璃 tooltip，禁止用原生 title | - |
+| UI 组件、卡片组件、加载遮罩 | [UI 组件簇（原 ui 收容所，已归位）](./ui-components.md) | UI 组件必须复用既有 helper 函数，禁止手写重复 DOM 结构 | - |
+| UI_ICONS | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | - | - |
 
 ## 🎯 跨组件通信与页面
 
@@ -183,30 +190,31 @@
 |----------|--------|----------|----------|
 | 报错落日记、error toast 落盘、运行时日志环 | [UI 报错落日记 error-diary](./core-error-diary.md) | error/warn toast、未捕获异常、未处理拒绝、logWarn/logError 四路都经 error-diary 落日记（注入式 DiarySink，不直连 backend） | - |
 | 侧边栏、整合包列表、版本卡片 | [侧边栏 app-sidebar](./app-sidebar.md) | 侧边栏的 push/pull 必须经 events.ts 的 runPush/runPull 转发到 sync-manager，禁止直接调 API | - |
-| 创意工坊、站点 / 创作者频道 | [创意工坊站点视图 site](./app_content_site.md) | 浏览 / 编辑模式切换必须经 workshop-browse-mode 统一切换，禁止视图层各自判断 | - |
-| 纯函数 | [核心工具函数 core-utils](./core_utils.md) | - | - |
+| 创意工坊、站点 / 创作者频道 | [创意工坊站点视图 site](./app-content-site.md) | 浏览 / 编辑模式切换必须经 workshop-browse-mode 统一切换，禁止视图层各自判断 | - |
+| 纯函数 | [核心工具函数 core-utils](./core-utils.md) | - | - |
 | 错误提示、友好错误、friendlyError | [错误处理 errors](./utils-errors.md) | 所有异常路径必须经 friendlyError 转中文提示，禁止裸抛原始错误到 UI | - |
-| 错误消息提取、Worker 错误、catch | [安全错误消息提取 utils](./safe_error_msg.md) | Web Worker 内错误提取必须用 safeErrorMessage，禁止 import i18n 依赖 | - |
+| 错误消息提取、Worker 错误、catch | [安全错误消息提取 utils](./safe-error-msg.md) | Web Worker 内错误提取必须用 safeErrorMessage，禁止 import i18n 依赖 | - |
 | 导航栏、切页、nav:changed | [顶部导航 app-nav](./app-nav.md) | nav:changed 事件必须仅由 app-nav 派发，其他页面禁止自派 nav:changed（跨页跳转应派 nav:changed 借道） | - |
 | 调试缺失 key / 清理 console.warn 裸 key | [国际化 i18n 模块](./i18n.md) | LocaleHost 未注入 → loadLocale 告警一次跳过（fail-open），装配层漏 setLocaleHost 不挂启动链 | ADR-124, ADR-207, ADR-210 |
 | 调试日志、dbg、调试开关 | [常量与调试 constants/debug](./utils-misc.md) | 调试日志必须走 debug.ts 的 dbg 工具，禁止 console.log 散落在业务代码 | - |
 | 订阅 / 退订事件 / once | [事件总线 bus.ts](./event-bus.md) | once 只能用它返回的退订函数取消（off 原 fn 匹配不到 wrapper） | - |
 | 动画开关、字号、界面偏好 | [主题系统 theme](./theme.md) | - | ADR-146 |
 | 更新检查、升级、新版本 | [版本更新 version-updater](./version-updater.md) | 版本更新必须经 version-updater 的 canCheck/markChecked 节流，禁止高频轮询 GitHub API | - |
-| 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core_utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fire-and-forget 场景必须经 swallowError 兜底 | - |
+| 工具函数、防抖、异步工具 | [核心工具函数 core-utils](./core-utils.md) | swallowError 只用于"吞掉已知安全错误"，禁止用于掩盖业务异常；fire-and-forget 场景必须经 swallowError 兜底 | - |
 | 共享样式、btn-base、focus-visible | [共享样式 shared-styles](./shared-styles.md) | 按钮样式必须走 btnBaseCSS 统一体系，禁止手写按钮 CSS | - |
 | 环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | - | - |
 | 加翻译 / 多语言 / i18n | [国际化 i18n 模块](./i18n.md) | t() 严格 LocaleKey / tOf string 双入口查表；缺失键多级回退 current → FALLBACK_LANG(en) → 裸 key，getBundle 空包内部 rescue 至 BASE_LANG(zh-CN)；initI18n 启动预载三包（current + FALLBACK + BASE）使回退链各层冷启动可达；语言切换广播 lang:changed 驱动全库重渲染 | ADR-124, ADR-207, ADR-210 |
 | 节点选择、多选、右键菜单 | [资源树 app-tree](./app-tree.md) | TreeRow.key / data-fullpath / selectState.keys 三处键空间必须同源（统一经 entryKey），file 行取磁盘路径（ADR-222） | - |
 | 静默检查、canCheck、markChecked | [版本更新 version-updater](./version-updater.md) | - | - |
-| 卡片拖拽、站点卡片渲染 | [创意工坊站点视图 site](./app_content_site.md) | - | - |
+| 卡片拖拽、站点卡片渲染 | [创意工坊站点视图 site](./app-content-site.md) | - | - |
 | 列表 reorder | [数组工具 moveItem](./utils-array.md) | - | - |
-| 浏览模式、编辑模式切换 | [创意工坊站点视图 site](./app_content_site.md) | - | - |
+| 浏览模式、编辑模式切换 | [创意工坊站点视图 site](./app-content-site.md) | - | - |
 | 启动器检测 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 迁移/重命名翻译 key（三段式规范 + 同步改调用点） | [国际化 i18n 模块](./i18n.md) | 键名迁移无兼容表，改名须同步改调用点 + 测试 + 三语言包 | ADR-124, ADR-207, ADR-210 |
 | 全局事件、拖拽导入、拖拽提示 | [全局事件处理 global-handlers](./global-handlers.md) | 全局事件必须经 global-handlers 单点注册，禁止各页面各自 bindGlobalHandler | - |
 | 日期格式化、友好日期、文件大小颜色 | [格式化工具 fmt](./utils-fmt.md) | - | - |
 | 数组排序、拖拽排序、moveItem | [数组工具 moveItem](./utils-array.md) | 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序 | - |
+| 通用红线 | [国际化 i18n 模块](./i18n.md) | warnMissingKey 每 key 只告警一次（模块内私有 Set，不跨模块导出） | ADR-124, ADR-207, ADR-210 |
 | 同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | 图标、emoji、文件图标、fileIcon | [图标映射 icon](./utils-icon.md) | 文件图标必须走 icon.ts 的 fileIcon，禁止手写文件名→图标映射 | - |
 | 推送 / 拉取、同步状态、勾选 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
@@ -215,7 +223,7 @@
 | 文件名显示、美化文件名、renderDisplayName | [文件名显示 display](./utils-display.md) | 文件名展示必须走 display.ts 的 renderDisplayName，禁止手写文件名解析 | - |
 | 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124, ADR-207, ADR-210 |
 | 新组件注册、import 组件、startup reveal | [组件入口 app-modules](./app-modules.md) | - | - |
-| 循环依赖、NewApp 组装 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | - | ADR-109 |
+| 循环依赖、NewApp 组装 | [App↔子组件对象级环打破范式（回调注入）](./app-cycle-injection.md) | - | ADR-109 |
 | 页面初始化流程、订阅桶 / 会话状态 | [主内容页 app-content](./app-content.md) | - | - |
 | 页面记忆、版本号、折叠展开 | [顶部导航 app-nav](./app-nav.md) | - | - |
 | 页面名合法性守卫 isValidPage | [页面状态管理 page-store.ts](./page-store.md) | page-store 只提供纯函数（isValidPage / resolveInitialPage），不持有状态、不镜像；页面挂载 / 卸载是 app-content 的职责 | - |
@@ -231,7 +239,7 @@
 | 子进程隐藏控制台窗口、HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | 子进程隐藏控制台窗口必须走 go/executil 的 HideWindow，禁止直调 os/exec 不带隐藏标志 | - |
 | 组件入口、模块装配、启动流程 | [组件入口 app-modules](./app-modules.md) | 新增 JS 组件必须登记进 app-modules.ts 的 import 列表，致命陷阱 | - |
 | 作者标签、作品标签、文件名着色、搜索高亮 | [文件名显示 display](./utils-display.md) | - | - |
-| App↔子组件对象级环、回调注入 | [App↔子组件对象级环打破范式（回调注入）](./app_cycle_injection.md) | 子组件必须用回调注入替代 *App 反向指针，禁止在子组件 struct 里持 *App 字段 | ADR-109 |
+| App↔子组件对象级环、回调注入 | [App↔子组件对象级环打破范式（回调注入）](./app-cycle-injection.md) | 子组件必须用回调注入替代 *App 反向指针，禁止在子组件 struct 里持 *App 字段 | ADR-109 |
 | DOM 工具、esc 转义、搜索高亮、XSS | [DOM 工具 dom](./utils-dom.md) | HTML 内容注入必须走 esc() 转义，禁止直接 innerHTML 拼接用户输入 | - |
 | emit 事件 / 跨组件通信 | [事件总线 bus.ts](./event-bus.md) | 所有跨组件异步通信必经 bus.ts，禁止组件间直耦 | - |
 | error-diary / registerErrorDiary / DiarySink | [UI 报错落日记 error-diary](./core-error-diary.md) | - | - |
@@ -250,9 +258,9 @@
 | registerGlobalHandlers、instance-ops | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | renderFormattedText / describeVersionRange | [MC 格式判定 mc-format](./utils-mc-format.md) | - | - |
 | resolveInitialPage / sanitizePage 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
-| safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe_error_msg.md) | - | - |
+| safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe-error-msg.md) | - | - |
 | setPointerCapture、touch-action、拖拽 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | - | - |
-| swallowError（fire-and-forget 错误兜底） | [核心工具函数 core-utils](./core_utils.md) | - | - |
+| swallowError（fire-and-forget 错误兜底） | [核心工具函数 core-utils](./core-utils.md) | - | - |
 | sync:download:missing 缺包回拉 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | toast 文案、报错翻译、网络错误 | [错误处理 errors](./utils-errors.md) | - | - |
 | toast-ms / focus-restore | [DOM 工具 dom](./utils-dom.md) | - | - |
@@ -260,7 +268,7 @@
 | tree:set-search、bus-handlers、selectState | [资源树 app-tree](./app-tree.md) | - | - |
 | updater | [版本更新 version-updater](./version-updater.md) | - | - |
 | Vitest 环境切换、测试环境 | [Vitest 环境切换规则](./vitest-env-switch.md) | 只有纯逻辑测试（不碰 DOM）才能切 @vitest-environment node，源码顶层副作用必须先治理 | - |
-| workshop-data / workshop-browse-mode | [创意工坊站点视图 site](./app_content_site.md) | - | - |
+| workshop-data / workshop-browse-mode | [创意工坊站点视图 site](./app-content-site.md) | - | - |
 
 ## 🎯 模型扫描与仓库管理
 
@@ -276,7 +284,7 @@
 | 模型解析、zip / 7z / 纹理 / 动画 | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
 | 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | ADR-218, ADR-219 |
 | 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) | 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较 | - |
-| 日志查看、性能分析 | [诊断页 diagnostics](./app_content_diagnostics.md) | - | - |
+| 日志查看、性能分析 | [诊断页 diagnostics](./app-content-diagnostics.md) | - | - |
 | 容器解析、container_entries | [统一容器桥接层 go/container](./go-container.md) | 容器内多模型枚举必须走 go/container，前端禁止手写 zip 内文件枚举 | ADR-068, ADR-069 |
 | 扫描模型、ScanModelEntries | [扫描核心 go/scanner](./go-scanner.md) | 容器指纹缓存失效需调 ClearScanCache | - |
 | 数值范围搜索、标签过滤 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | - | - |
@@ -286,7 +294,7 @@
 | 同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) | - | - |
 | 同步状态、app-sync-manager | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 文件监听、文件变化、刷新 | [文件监听 go/watcher](./go-watcher.md) | 文件变更监听必须走 go/watcher 的事件流，禁止轮询文件系统 | - |
-| 诊断页、仓库体检、冲突 / 去重 | [诊断页 diagnostics](./app_content_diagnostics.md) | 去重 / 体检必须经 diagnostics 页发起，禁止在其他页直接调 doDedup | - |
+| 诊断页、仓库体检、冲突 / 去重 | [诊断页 diagnostics](./app-content-diagnostics.md) | 去重 / 体检必须经 diagnostics 页发起，禁止在其他页直接调 doDedup | - |
 | 整合包分类、路由、location 路由 | [分类路由与回归护栏](./classify-routing.md) | 资源整合包分类必须走 go/packs/classify.go 的 ClassifyResource，前端禁止手写分类逻辑 | ADR-093 |
 | 整合包实例、版本实例、VersionInstance | [整合包实例 go/instance](./go-instance.md) | 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑 | - |
 | 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | ADR-064 |
@@ -299,10 +307,10 @@
 | CLI 搜索、命令行搜索、search 命令 | [CLI 搜索命令 search](./go-cli-search.md) | CLI 搜索必须复用 go/cli 的 SearchModels 后端，禁止 CLI 层手写搜索逻辑 | - |
 | filepath.WalkDir 路径安全 | [去重 go/dedup](./go-dedup.md) | - | - |
 | Geometry 存档、基岩版 bedrock | [Geometry 存档 go/geometry](./go-geometry.md) | Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip | ADR-068 |
-| initDiagnostics、createDedupSession | [诊断页 diagnostics](./app_content_diagnostics.md) | - | - |
+| initDiagnostics、createDedupSession | [诊断页 diagnostics](./app-content-diagnostics.md) | - | - |
 | IsRecycleDir 守卫 | [去重 go/dedup](./go-dedup.md) | - | - |
 | last-wins / priority 裁决 | [分类路由与回归护栏](./classify-routing.md) | - | ADR-093 |
-| oldest 资历排行 | [诊断页 diagnostics](./app_content_diagnostics.md) | - | - |
+| oldest 资历排行 | [诊断页 diagnostics](./app-content-diagnostics.md) | - | - |
 | parse.go / archive.go | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
 | runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
 | SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
@@ -320,9 +328,9 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 创意工坊、社区下载、下载队列 | [社区下载 community](./community-feature.md) | 社区下载必须走 community download-queue 排队，禁止各组件各自发下载请求 | - |
-| 存储授权、requestStoragePermission | [跨平台目录选择器](./directory_picker.md) | - | - |
+| 存储授权、requestStoragePermission | [跨平台目录选择器](./directory-picker.md) | - | - |
 | 打标签 / 标签存储 / 按标签筛选 | [标签系统 go/tags](./go-tags.md) | 标签以文件绝对路径为 key 存 tags.json；写入走 tmp + os.Rename 原子替换，禁止直写 | - |
-| 打开文件夹、导入文件夹、目录路径 | [跨平台目录选择器](./directory_picker.md) | - | - |
+| 打开文件夹、导入文件夹、目录路径 | [跨平台目录选择器](./directory-picker.md) | - | - |
 | 导入、导入策略、导入队列 | [导入策略 go/importer](./go-importer.md) | 导入必须走 go/importer，落地用 fsutil.WriteFileAtomic 原子替换，禁止直写目标文件 | - |
 | 导入队列、拖拽导入、文件夹导入 | [全局导入执行 import-executor](./import-queue.md) | 导入必须走 import-executor 单点编排 + dnd-collector 收集，禁止各组件各自调 ImportModel | - |
 | 导入日志、操作记录、日志 | [导入日志 go/logs](./go-logs.md) | 导入日志必须走 go/logs 的 WriteFileAtomic 追加，禁止直接 os.WriteFile | - |
@@ -334,16 +342,16 @@
 | 路径穿越 | [路径安全 go/paths](./go-paths.md) | - | - |
 | 模型安装、模型导入、下载模型 | [模型安装 go/installer](./go-installer.md) | 模型落地必须走 go/installer，按 LinkMode 选择落地方式，落地前做路径安全校验 | - |
 | 软删除、recycle、还原 | [回收站界面 recycle-bin](./recycle-bin.md) | - | - |
-| 同一 exe 换个位置跑行为不同 | [仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截）](./workspace_exe_write_denied.md) | - | - |
-| 网页版虚拟根 /web | [跨平台目录选择器](./directory_picker.md) | - | - |
+| 同一 exe 换个位置跑行为不同 | [仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截）](./workspace-exe-write-denied.md) | - | - |
+| 网页版虚拟根 /web | [跨平台目录选择器](./directory-picker.md) | - | - |
 | 文件遍历 / walk、原子写、复制 | [文件基础设施 go/fsutil](./go-fsutil.md) | 文件系统操作必须走 go/fsutil 的 walk/write/copy 封装，禁止在业务代码里直接 os.Open/os.WriteFile | - |
 | 下载、下载进度、进度条 | [下载器 go/download](./go-download.md) | 下载必须走 go/download，必须带校验和校验防截断 / 部分响应 | - |
 | 校验和校验 | [下载器 go/download](./go-download.md) | - | - |
-| 选择目录、SelectDirectory、Wails 对话框 | [跨平台目录选择器](./directory_picker.md) | 需要目录路径的场景必须经 directory-picker 统一入口（pickDirectory / resolveAndroidRepoDir），禁止各调用方自行实现授权引导或裸调桌面对话框 | - |
+| 选择目录、SelectDirectory、Wails 对话框 | [跨平台目录选择器](./directory-picker.md) | 需要目录路径的场景必须经 directory-picker 统一入口（pickDirectory / resolveAndroidRepoDir），禁止各调用方自行实现授权引导或裸调桌面对话框 | - |
 | 移动 / 复制 / 删除 / 重命名文件 / 文件夹导入 | [文件操作 go/fileops](./go-fileops.md) | 文件 CRUD 必须走 go/fileops，internal/app 薄壳仅转发 | - |
-| 应用临时文件创建全部失败但功能正常 | [仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截）](./workspace_exe_write_denied.md) | go/fsutil/write.go\|createTempFile = os.CreateTemp（:44，无花样，排除代码嫌疑的锚点） | - |
+| 应用临时文件创建全部失败但功能正常 | [仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截）](./workspace-exe-write-denied.md) | go/fsutil/write.go\|createTempFile = os.CreateTemp（:44，无花样，排除代码嫌疑的锚点） | - |
 | 硬链接、跨设备、权限常量 | [文件基础设施 go/fsutil](./go-fsutil.md) | - | - |
-| Android 公共仓库目录、GetDefaultRepoRoot | [跨平台目录选择器](./directory_picker.md) | - | - |
+| Android 公共仓库目录、GetDefaultRepoRoot | [跨平台目录选择器](./directory-picker.md) | - | - |
 | BOM、base64 受限解码、读取上限 | [文件基础设施 go/fsutil](./go-fsutil.md) | - | - |
 | DnD 文件收集 | [拖拽平台适配 dnd-shared](./dnd-shared.md) | - | - |
 | dnd-shared / dnd-collector / pack-dnd | [全局导入执行 import-executor](./import-queue.md) | - | - |
@@ -366,7 +374,7 @@
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 并发工具、Parallel 泛型并行 | [通用泛型并发工具 go/conc](./go-conc.md) | - | - |
-| 参数规格存在哪（单一事实源） | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173_gui_cli_paramspec.md) | - | - |
+| 参数规格存在哪（单一事实源） | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173-gui-cli-paramspec.md) | - | - |
 | 调后端、app.ts 绑定、getApp | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
 | 调用 Go Binding / getApp 获取后端 | [Wails 桥接 app.ts](./wails-bridge.md) | 前端所有 Go 调用必须走 getApp()，禁止直接访问 window.go.main.App（治理红线 4.2） | ADR-049 |
 | 检测平台类型 / 网页模式 | [Wails 桥接 app.ts](./wails-bridge.md) | Binding 函数名写错穿透到运行时 undefined（Mock bridge 形态与生成模块不同，类型造假风险） | ADR-049 |
@@ -374,9 +382,12 @@
 | 平台分支差异：WASM decoder / 进程重启 / Node.js sidecar 禁用、build-tag 双文件隔离 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | 桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
 | 日志环持久化、社区/工坊数据 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | zip entry 路径必须经 sanitizeZipEntryPath 清洗（防 .. 穿越） | ADR-177 |
-| 如何给命令登记 ParamSpec | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173_gui_cli_paramspec.md) | - | - |
+| 如何给命令登记 ParamSpec | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173-gui-cli-paramspec.md) | - | - |
 | 输入序收集 | [通用泛型并发工具 go/conc](./go-conc.md) | - | - |
-| 网页版 / 浏览器模式 / web mode | [网页版后端 backend-web](./backend_web.md) | 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用 | - |
+| 通用红线 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | DetectZipType base64 超 50MB 静默返回空，避免 atob 内存压力 | ADR-177 |
+| 通用红线 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 多标签页互锁：db.onversionchange 关闭旧连接并置空 dbPromise；onblocked 明确 reject | ADR-177 |
+| 通用红线 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 前缀扫描性能门槛 R1 万级 key：用 IDBKeyRange.bound 区间定位而非全库 startsWith | ADR-177 |
+| 网页版 / 浏览器模式 / web mode | [网页版后端 backend-web](./backend-web.md) | 网页版后端必须经 browserAdapter 代理，禁止 Wails 与浏览器后端混合调用 | - |
 | 网页版路由 / browser adapter | [Wails 桥接 app.ts](./wails-bridge.md) | 改 Go 文件后必须 wails3 build + 重启，纯 dev 模式看不到新 Binding | ADR-049 |
 | 网页模式切换、browser-adapter 桥接 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | fail-fast：未实现 binding 必须抛 WebUnsupportedError，禁止 undefined 穿透 | ADR-177 |
 | 桌面/网页版运行时区分 | [Wails runtime 抽象 backend-runtime](./backend-runtime.md) | - | - |
@@ -386,17 +397,17 @@
 | Android/Linux/macOS Rust 桥 | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | Android/Linux/macOS 的 Rust 桥必须走平台桥，禁止硬编码 Windows 路径 | - |
 | API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |
 | bridge_windows/bridge_cgo | [Rust 桥 rustbridge](./rustbridge.md) | - | - |
-| browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend_web.md) | - | - |
+| browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend-web.md) | - | - |
 | closeActiveDialog、registerAndroidEvents | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
 | compile-android-rust/compile-rust-static | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
 | FSA 授权、本地仓库挂载 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 内存降级 OOM 保护：隐私模式无界写入会撑爆堆 | ADR-177 |
 | GetAppVersion / ScanModelEntries / SearchModels | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
-| GUI 调 CLI 参数为何丢失 | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173_gui_cli_paramspec.md) | 新增命令参数必须经 RegisterCommandC 登记 ParamSpec——未登记走 legacy 降级（空串/0/false 丢弃，拿不到声明序与显式空值） | - |
-| IndexedDB / IDB / 浏览器后端 | [网页版后端 backend-web](./backend_web.md) | - | - |
+| GUI 调 CLI 参数为何丢失 | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173-gui-cli-paramspec.md) | 新增命令参数必须经 RegisterCommandC 登记 ParamSpec——未登记走 legacy 降级（空串/0/false 丢弃，拿不到声明序与显式空值） | - |
+| IndexedDB / IDB / 浏览器后端 | [网页版后端 backend-web](./backend-web.md) | - | - |
 | IndexedDB 模型库（browser 模式） | [Wails 桥接 app.ts](./wails-bridge.md) | window.go 空对象 {} 会被缓存为 _App（P3 修复前），导致缺失方法静默穿透整个会话 | ADR-049 |
 | IndexedDB、网页版存储、idbGet/idbSet/idbDel CRUD | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 事务必须接线 complete/error/abort 三事件 | ADR-177 |
 | MANAGE_EXTERNAL_STORAGE、SAF、权限 | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) | - | - |
-| NBT 解析 / 体素 / 网页版文件系统 | [网页版后端 backend-web](./backend_web.md) | - | - |
+| NBT 解析 / 体素 / 网页版文件系统 | [网页版后端 backend-web](./backend-web.md) | - | - |
 | Rust 扫描器、rust_backend | [Rust 桥 rustbridge](./rustbridge.md) | Rust 桥必须走 go/rustbridge 的平台桥（bridge_*.go），禁止在业务代码里直接 dlopen 加载 | - |
 | rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) | - | - |
 | SAF 废弃、MANAGE_EXTERNAL_STORAGE 权限模型、前端黑名单同步（ANDROID_UNAVAILABLE） | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
@@ -416,11 +427,12 @@
 | 存储子目录、storageSubDir、资源类型同步视图、schema.ts | [资源类型工具 resource-types](./utils-resource-types.md) | - | - |
 | 共享类型、AppConfig、配置 | [共享类型 go/types](./go-types.md) | 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义 | ADR-144, ADR-192 |
 | 检查更新、更新下载、update | [自动更新 go/updater](./go-updater.md) | 更新检查必须走 go/updater，前端禁止手写更新下载逻辑 | - |
-| 界面偏好、字号、worker-prefs | [设置页 settings](./app_content_settings.md) | 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（2026-10 含动态渲染路径 initAdvancedGrid 全清零；执法闸 = check-redlines W9，新增即红） | - |
+| 界面偏好、字号、worker-prefs | [设置页 settings](./app-content-settings.md) | 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（2026-10 含动态渲染路径 initAdvancedGrid 全清零；执法闸 = check-redlines W9，新增即红） | - |
 | 扩展名、支持的文件类型、拖拽过滤 | [扩展名映射 extensions](./utils-extensions.md) | 扩展名判定必须走 extensions.ts 的 isSupportedExt，拖拽导入场景禁止等待异步注册表 | - |
 | 启动器检测、HMCL / PCL / Minecraft 识别 | [启动器实例发现 go/launcher](./go-launcher.md) | - | - |
-| 设置页、主题设置、键位、路径配置 | [设置页 settings](./app_content_settings.md) | 配置落盘一律走 `views/config-write.ts\|writeAppConfig(patch)`（跨视图唯一实参点，ADR-313）；设置域内部可走薄包装 `path-cards.ts\|saveCfg`（额外同步内存 cfg）。patch 语义 = 只覆盖显式传入字段、其余取保存前重读最新；偏好类读写一律 safeGet/safeSet，禁止裸 localStorage | - |
+| 设置页、主题设置、键位、路径配置 | [设置页 settings](./app-content-settings.md) | 配置落盘一律走 `views/config-write.ts\|writeAppConfig(patch)`（跨视图唯一实参点，ADR-313）；设置域内部可走薄包装 `path-cards.ts\|saveCfg`（额外同步内存 cfg）。patch 语义 = 只覆盖显式传入字段、其余取保存前重读最新；偏好类读写一律 safeGet/safeSet，禁止裸 localStorage | - |
 | 实例目录解析、运行目录推导 | [启动器实例发现 go/launcher](./go-launcher.md) | - | - |
+| 通用红线 | [设置页 settings](./app-content-settings.md) | 「值→文案」多消费面共享映射表住 `ui-maps.ts`（MIRROR_UI / LINK_MODE_UI）；schema 加成员漏文案键编译期红，禁模板手写 option 裸列 | - |
 | 新增资源类型 / 修改 resource_types.json / 文件类型 | [资源注册表 registry](./resource-registry.md) | resource_types.json 是唯一事实来源；前端只读不判、禁本地重算 | - |
 | 注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
 | 资源类型、RESOURCE_TYPES、类型标签 | [资源类型工具 resource-types](./utils-resource-types.md) | 资源类型必须派生自 resource_types.json（前端唯一入口 = schema.ts 的同步视图 allResourceTypes/resourceTypesById），禁止手写类型映射、禁止异步 RPC 旁路 | - |
@@ -431,7 +443,7 @@
 | LoadRegistry/DedupConfig | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
 | repo_rtype localStorage 权威源 | [全局资源类型状态 repo-rtype](./repo-rtype.md) | - | - |
 | RESOURCE_EXTS/ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) | - | - |
-| settings/init / keymap / store | [设置页 settings](./app_content_settings.md) | 异步操作防连点一律 `store.ts\|withBusy(task)`（返回是否获得锁，false 走拒绝分支如 UI 当场回退）；`isBusy/setBusy` 已退役，禁手写「检查+置忙+finally 复位」三段 | - |
+| settings/init / keymap / store | [设置页 settings](./app-content-settings.md) | 异步操作防连点一律 `store.ts\|withBusy(task)`（返回是否获得锁，false 走拒绝分支如 UI 当场回退）；`isBusy/setBusy` 已退役，禁手写「检查+置忙+finally 复位」三段 | - |
 | useCurrentResourceType 订阅类型切换 | [全局资源类型状态 repo-rtype](./repo-rtype.md) | - | - |
 | version-check | [版本号 go/version](./go-version.md) | - | - |
 | version-updater | [自动更新 go/updater](./go-updater.md) | - | - |
@@ -472,83 +484,88 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| 测试污染 reset 钩子怎么处理 | [模块级全局状态治理](./module_global_state.md) | 判断标准：reset 钩子依赖（有 → 收敛有测试收益）vs resetModules 重载（无 → 收敛仅为组织价值） | - |
-| 磁盘级筛选与高级搜索归 Go（SearchModels），前端不扫磁盘 | [前端只读不判边界与豁免](./fe_go_boundary.md) | - | - |
-| 判断「全仓干净」用 grep 实证，不引用历史注脚作证据 | [代际守卫唯一出口 createLoadGuard](./load_guard.md) | - | - |
-| 前端有没有黑话 / 命名烂在哪 | [前端命名章程（黑话治理）](./frontend_naming.md) | 禁止新增不可读私有缩写前缀（≤3 字母非领域词）；禁止单字母命名业务量（循环下标 i/j 除外） | - |
-| 全局 Map / 模块级 let 何时收敛成对象 | [模块级全局状态治理](./module_global_state.md) | 模块级状态收敛 = 状态收进闭包/类对象 + 导出函数签名不变；不改消费方 | - |
-| 输入端（磁盘 → 列表）归 Go，展示端（列表 → 视图）豁免 | [前端只读不判边界与豁免](./fe_go_boundary.md) | 前端扫磁盘 / 重算归属语义 = 违反回归红线 | - |
-| 树内即时过滤是对 Go 已交付内存全量的 UI 收窄，不是归属重算 | [前端只读不判边界与豁免](./fe_go_boundary.md) | - | - |
-| 为什么搜索「尺寸信息」找不到 si | [前端命名章程（黑话治理）](./frontend_naming.md) | 内容适配器 build 返回值统一命名 content（禁 built），新适配器照此写 | - |
-| 想迁移/收敛 load-guard.ts 前，先查 ADR-230 | [代际守卫唯一出口 createLoadGuard](./load_guard.md) | - | - |
-| 新增代际逻辑时，唯一出口是 createLoadGuard() 四件套 | [代际守卫唯一出口 createLoadGuard](./load_guard.md) | 迁移或删除 load-guard.ts = 违反 ADR-230 | - |
-| 找 YSM 头部解析 / NBT 解析 / 体素解析 / zip 解包 / 颜色映射 | [解析簇 parsers/ 自 backend 迁出](./frontend_parsers.md) | parsers/ 是纯解析层,勿塞业务;web-fs 装配层在 backend/ | - |
-| 重命名某个变量/函数 | [前端命名章程（黑话治理）](./frontend_naming.md) | 生命周期动词一义一词：卸载=unmount、资源释放=dispose、会话收尾=finish/cleanup | - |
-| built 黑话还剩哪些没清理 | [前端命名章程（黑话治理）](./frontend_naming.md) | 跨文件同函数禁双份定义（getCompound 在 nbt-parse.ts 与 voxel-parse.ts 各一份） | - |
-| core 准入三条全满足才可入；绑定能力走依赖注入不走直引 | [前端分层 seam 与 import 路径](./fe_layering_seams.md) | core 直引 backend/* 或 features 直引 backend/app.ts = 门禁阻断 | - |
-| features 拿 backend 能力唯一出口是 *-deps.ts seam + 注入形态 | [前端分层 seam 与 import 路径](./fe_layering_seams.md) | - | - |
-| import 非精确同目录一律 @/顶层/具体文件，禁裸目录聚口 | [前端分层 seam 与 import 路径](./fe_layering_seams.md) | - | - |
+| 测试污染 reset 钩子怎么处理 | [模块级全局状态治理](./module-global-state.md) | 判断标准：reset 钩子依赖（有 → 收敛有测试收益）vs resetModules 重载（无 → 收敛仅为组织价值） | - |
+| 磁盘级筛选与高级搜索归 Go（SearchModels），前端不扫磁盘 | [前端只读不判边界与豁免](./fe-go-boundary.md) | - | - |
+| 判断「全仓干净」用 grep 实证，不引用历史注脚作证据 | [代际守卫唯一出口 createLoadGuard](./load-guard.md) | - | - |
+| 前端有没有黑话 / 命名烂在哪 | [前端命名章程（黑话治理）](./frontend-naming.md) | 禁止新增不可读私有缩写前缀（≤3 字母非领域词）；禁止单字母命名业务量（循环下标 i/j 除外） | - |
+| 全局 Map / 模块级 let 何时收敛成对象 | [模块级全局状态治理](./module-global-state.md) | 模块级状态收敛 = 状态收进闭包/类对象 + 导出函数签名不变；不改消费方 | - |
+| 输入端（磁盘 → 列表）归 Go，展示端（列表 → 视图）豁免 | [前端只读不判边界与豁免](./fe-go-boundary.md) | 前端扫磁盘 / 重算归属语义 = 违反回归红线 | - |
+| 树内即时过滤是对 Go 已交付内存全量的 UI 收窄，不是归属重算 | [前端只读不判边界与豁免](./fe-go-boundary.md) | - | - |
+| 通用红线 | [解析簇 parsers/ 自 backend 迁出](./frontend-parsers.md) | base64 原语已下沉 utils/base/primitives/base64.ts（ADR-170 二段收口 2026-09,parsers 不再 import backend） | - |
+| 通用红线 | [解析簇 parsers/ 自 backend 迁出](./frontend-parsers.md) | ysm-header.ts MAX_HEADER_LINES=200 与 Go header.go 对齐,改上限须双端同步 | - |
+| 通用红线 | [解析簇 parsers/ 自 backend 迁出](./frontend-parsers.md) | voxel-bits.ts 位解码口径(Litematica 小端 LSB 起始)与 Go nbt.go extractBits 逐行一致,改前必读注释 | - |
+| 通用红线 | [解析簇 parsers/ 自 backend 迁出](./frontend-parsers.md) | pack-meta.ts / voxel-colors.ts 下游消费方固定,改导出签名须 grep 全仓消费者 | - |
+| 为什么搜索「尺寸信息」找不到 si | [前端命名章程（黑话治理）](./frontend-naming.md) | 内容适配器 build 返回值统一命名 content（禁 built），新适配器照此写 | - |
+| 想迁移/收敛 load-guard.ts 前，先查 ADR-230 | [代际守卫唯一出口 createLoadGuard](./load-guard.md) | - | - |
+| 新增代际逻辑时，唯一出口是 createLoadGuard() 四件套 | [代际守卫唯一出口 createLoadGuard](./load-guard.md) | 迁移或删除 load-guard.ts = 违反 ADR-230 | - |
+| 找 YSM 头部解析 / NBT 解析 / 体素解析 / zip 解包 / 颜色映射 | [解析簇 parsers/ 自 backend 迁出](./frontend-parsers.md) | parsers/ 是纯解析层,勿塞业务;web-fs 装配层在 backend/ | - |
+| 重命名某个变量/函数 | [前端命名章程（黑话治理）](./frontend-naming.md) | 生命周期动词一义一词：卸载=unmount、资源释放=dispose、会话收尾=finish/cleanup | - |
+| built 黑话还剩哪些没清理 | [前端命名章程（黑话治理）](./frontend-naming.md) | 跨文件同函数禁双份定义（getCompound 在 nbt-parse.ts 与 voxel-parse.ts 各一份） | - |
+| core 准入三条全满足才可入；绑定能力走依赖注入不走直引 | [前端分层 seam 与 import 路径](./fe-layering-seams.md) | core 直引 backend/* 或 features 直引 backend/app.ts = 门禁阻断 | - |
+| features 拿 backend 能力唯一出口是 *-deps.ts seam + 注入形态 | [前端分层 seam 与 import 路径](./fe-layering-seams.md) | - | - |
+| import 非精确同目录一律 @/顶层/具体文件，禁裸目录聚口 | [前端分层 seam 与 import 路径](./fe-layering-seams.md) | - | - |
 
 ## 🎯 重构与域切分
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| "把认知复杂度降到阈值下却分数不变" | [三档阈值扫描器（复杂度/参数/类型安全）](./check_threshold_scanners.md) | - | - |
-| "本地复现三档扫描器的门禁范围" | [三档阈值扫描器（复杂度/参数/类型安全）](./check_threshold_scanners.md) | - | - |
-| "给 exported 函数消参数陷阱但不扭曲 API" | [三档阈值扫描器（复杂度/参数/类型安全）](./check_threshold_scanners.md) | - | - |
-| 该子域是否仅依赖注入回调与 DTO 即可运转？是 → 可切（纯域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install_domain_split.md) | import 域依赖 LoadAppConfig/GetRepoRoot/ScanModelEntries/ClearScanCache/ListVersionInstances 等 10+ 跨域方法 | - |
-| 该子域是否直读 App 的共享基础设施字段？是 → 不切（复合域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install_domain_split.md) | importModelFolderAs 宿主在 app_files.go（files 域），被 files 域绑定与 install 组合链三方共用 | - |
+| "把认知复杂度降到阈值下却分数不变" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | - | - |
+| "给 exported 函数消参数陷阱但不扭曲 API" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | - | - |
+| 该子域是否仅依赖注入回调与 DTO 即可运转？是 → 可切（纯域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install-domain-split.md) | import 域依赖 LoadAppConfig/GetRepoRoot/ScanModelEntries/ClearScanCache/ListVersionInstances 等 10+ 跨域方法 | - |
+| 该子域是否直读 App 的共享基础设施字段？是 → 不切（复合域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install-domain-split.md) | importModelFolderAs 宿主在 app_files.go（files 域），被 files 域绑定与 install 组合链三方共用 | - |
 
 ## 🎯 门禁与脚本
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
-| "为什么某包报 0% 覆盖率" | [覆盖率门禁语句加权口径](./go_coverage_gate.md) | - | - |
-| "知道 check-complexity 报错会不会阻断推送" | [三档阈值扫描器（复杂度/参数/类型安全）](./check_threshold_scanners.md) | "认知复杂度的度量单位是**具名函数**，不是语法上的函数字面量" | - |
-| "Go 覆盖率门禁怎么算包覆盖率" | [覆盖率门禁语句加权口径](./go_coverage_gate.md) | 包覆盖率口径 = aggregateByPackage 语句加权（covered 语句/总语句）——「文件内函数百分比最小值」口径会让单个 0% 函数拖垮整包 | - |
-| 查看 _lib 模块被多少脚本引用 | [_lib 共享层采用率闸门](./scripts_lib_adoption.md) | - | - |
-| 查看重复对的详细位置（行号 + 片段） | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
-| 冻结当前 Go 重复债务到 baseline（治理后收紧） | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
+| "本地复现三档扫描器的门禁范围" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | - | - |
+| "为什么某包报 0% 覆盖率" | [覆盖率门禁语句加权口径](./go-coverage-gate.md) | - | - |
+| "知道 check-complexity 报错会不会阻断推送" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | "认知复杂度的度量单位是**具名函数**，不是语法上的函数字面量" | - |
+| "Go 覆盖率门禁怎么算包覆盖率" | [覆盖率门禁语句加权口径](./go-coverage-gate.md) | 包覆盖率口径 = aggregateByPackage 语句加权（covered 语句/总语句）——「文件内函数百分比最小值」口径会让单个 0% 函数拖垮整包 | - |
+| 查看 _lib 模块被多少脚本引用 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
+| 查看重复对的详细位置（行号 + 片段） | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
+| 冻结当前 Go 重复债务到 baseline（治理后收紧） | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
 | 发版冒烟、CI 预演、lockfile 同步、跨平台标签 | [发版冒烟组——CI 同口径预演（ADR-318）](./experience.md) | contract-tagsensitive 清单为人工维护——新加 tag 敏感契约测试须手动入组（ADR-318 已知遗留） | - |
 | 防吞并发会话未提交漂移 | [提交前钩子 pre-commit](./pre-commit-hook.md) | - | - |
-| 改门禁并行结构 | [推送前门禁 pre-push-gate](./pre_push_gate.md) | FAIL 归属标签靠 blockPolicy 落库，record 漏存即全部误标「本次引入」 | - |
-| 孤儿导出误报、扫描盲区、转发即消费 | [孤儿导出检测器（扫描盲区）](./orphan_export_scanner.md) | ⚠️ 孤儿读数为 0 才可信；出现孤儿先判「真死代码 vs 扫描漏检」再动手删 | - |
-| 检查某 _lib 模块是否被绕开手搓 | [_lib 共享层采用率闸门](./scripts_lib_adoption.md) | [] | - |
-| 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.ts](./scripts_readme_index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
-| 门禁检查项有哪些 | [推送前门禁 pre-push-gate](./pre_push_gate.md) | 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过 | - |
-| 判定「新增重复对」是真实新增还是文件搬迁/拆分 | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
-| 判定违规是「真残留」还是「误报」 | [_lib 共享层采用率闸门](./scripts_lib_adoption.md) | - | - |
+| 改门禁并行结构 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | FAIL 归属标签靠 blockPolicy 落库，record 漏存即全部误标「本次引入」 | - |
+| 孤儿导出误报、扫描盲区、转发即消费 | [孤儿导出检测器（扫描盲区）](./orphan-export-scanner.md) | ⚠️ 孤儿读数为 0 才可信；出现孤儿先判「真死代码 vs 扫描漏检」再动手删 | - |
+| 检查某 _lib 模块是否被绕开手搓 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | [] | - |
+| 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
+| 门禁检查项有哪些 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过 | - |
+| 判定「新增重复对」是真实新增还是文件搬迁/拆分 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
+| 判定违规是「真残留」还是「误报」 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
 | 提交前文档自动同步 | [提交前钩子 pre-commit](./pre-commit-hook.md) | 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2） | - |
-| 推送被门禁阻断怎么办 | [推送前门禁 pre-push-gate](./pre_push_gate.md) | 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查 | - |
-| 往测试加 vi.mock 需要注意什么 | [mock 路径守卫 check-mock-paths](./mock_path_guard.md) | 用 // mock-path-ignore: <理由> 或 docs/.mock-path-exempt.json 豁免，禁止直接 --no-verify 绕过 | - |
+| 通用红线 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 判定字段必须写进 _summary（用 buildScanVerdict），写顶层 ok 会被解析器短路 | - |
+| 推送被门禁阻断怎么办 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查 | - |
+| 往测试加 vi.mock 需要注意什么 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | 用 // mock-path-ignore: <理由> 或 docs/.mock-path-exempt.json 豁免，禁止直接 --no-verify 绕过 | - |
 | 为什么 Go 侧要引入 golangci-lint | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | Go 曾是静态分析真空面（go vet 独苗）：golangci-lint 白名单制补齐——.golangci.yml 为 default: none + 显式 enable，勿开 enable-all | - |
-| 为新的共享模块加一条守护规则 | [_lib 共享层采用率闸门](./scripts_lib_adoption.md) | - | - |
-| 修复登记漂移（补全缺失的登记） | [README 登记处对账 check-readme-index.ts](./scripts_readme_index.md) | - | - |
-| 验证新增脚本是否已正确登记 | [README 登记处对账 check-readme-index.ts](./scripts_readme_index.md) | README 是唯一事实源，AGENTS.md 工具口令表只是指针 | - |
-| 运行 Go 重复门禁 / 检查是否有新增重复对 | [Go 端 jscpd 重复检测脚本](./scripts_jscpd_go.md) | - | - |
-| check-orphan-exports 三类漏检修复 | [孤儿导出检测器（扫描盲区）](./orphan_export_scanner.md) | - | - |
-| CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.ts](./scripts_readme_index.md) | - | - |
+| 为新的共享模块加一条守护规则 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
+| 修复登记漂移（补全缺失的登记） | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | - | - |
+| 验证新增脚本是否已正确登记 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | README 是唯一事实源，AGENTS.md 工具口令表只是指针 | - |
+| 运行 Go 重复门禁 / 检查是否有新增重复对 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
+| check-orphan-exports 三类漏检修复 | [孤儿导出检测器（扫描盲区）](./orphan-export-scanner.md) | - | - |
+| CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | - | - |
 | lint 报了多少存量债 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | 存量债不惩罚：pre-push-gate 跑 --new-from-rev 只拦本次引入（全量必红，errcheck 存量 623 条），未安装/无基线自动降级跳过 | - |
-| mock 路径守卫怎么豁免 | [mock 路径守卫 check-mock-paths](./mock_path_guard.md) | - | - |
+| mock 路径守卫怎么豁免 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | - | - |
 | push 被 golangci-lint 阻断怎么办 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | push 被阻断先看 FAIL 块定位 linter 与文件；语义误报用 //nolint 注明 linter 名与理由，禁止 git push --no-verify 绕过 | - |
-| vi.mock 改了路径结果静默不起作用 | [mock 路径守卫 check-mock-paths](./mock_path_guard.md) | vi.mock("<内部spec>") 指向不存在的模块路径时 vitest 静默不命中——mock 路径写错就悄悄失效，测试照常通过 | - |
+| vi.mock 改了路径结果静默不起作用 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | vi.mock("<内部spec>") 指向不存在的模块路径时 vitest 静默不命中——mock 路径写错就悄悄失效，测试照常通过 | - |
 
 ## 🎯 测试与验证
 
 | 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
 |----------|--------|----------|----------|
 | 按 testid 查询/匹配 DOM 元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用固定 sleep 等待正向结果——真 flaky | - |
-| 布局断言收敛三分法 | [菜单测试断言三分法](./menu_test_assertion.md) | helper 必须在 node/jsdom 双环境可 import（menu-test-helpers 零上层依赖叶） | - |
-| 菜单测试怎么写才长久 | [菜单测试断言三分法](./menu_test_assertion.md) | 门禁只减不增：新增布局断言即红，触碰即收敛 | - |
-| 菜单测试债务门禁 check-menu-test-layout | [菜单测试断言三分法](./menu_test_assertion.md) | - | - |
+| 布局断言收敛三分法 | [菜单测试断言三分法](./menu-test-assertion.md) | helper 必须在 node/jsdom 双环境可 import（menu-test-helpers 零上层依赖叶） | - |
+| 菜单测试怎么写才长久 | [菜单测试断言三分法](./menu-test-assertion.md) | 门禁只减不增：新增布局断言即红，触碰即收敛 | - |
+| 菜单测试债务门禁 check-menu-test-layout | [菜单测试断言三分法](./menu-test-assertion.md) | - | - |
 | 测试报绿但没验到东西时，查静默吞异常与条件跳过 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | - | - |
 | 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用 waitFor 条件耦合组件内部实现细节 | - |
 | 挂载/卸载自定义元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 | 派发 click / input / keydown / drag & drop 等模拟事件 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止把负向定时器窗口断言换成短 sleep | - |
-| 确认 Go-TS 解析层是否漂移 → 跑 go test ./go/types ./go/litematic + vitest src/backend/*.parity.test.ts | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go_ts_golden.md) | Go MatchZipEntry 与 TS matchZipEntryTS 的首命中序依赖 resource_types.json 顺序——重排类型定义即两端漂移 | - |
+| 确认 Go-TS 解析层是否漂移 → 跑 go test ./go/types ./go/litematic + vitest src/backend/*.parity.test.ts | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go-ts-golden.md) | Go MatchZipEntry 与 TS matchZipEntryTS 的首命中序依赖 resource_types.json 顺序——重排类型定义即两端漂移 | - |
 | 视觉异常说不清来源时，做单变量开关对照实验 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | 断言写成 if (count() > 0) 或 .catch(() => {}) 会让未生效的流程报绿 | - |
 | 想知道界面长什么样，用截图取证而非断言计数 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | 元素在 Shadow DOM 内，页面内 querySelector 查不到而截图里明明有 | - |
-| 修改识别层指纹后自检 → 重跑两端 parity 测试（fixture 期望值以 Go 输出为准） | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go_ts_golden.md) | voxel-colors-data.json 无复跑生成器（gen/main.go 只生成 block_ids_data.go），靠 parity_voxel_test.go 兜底 | - |
+| 修改识别层指纹后自检 → 重跑两端 parity 测试（fixture 期望值以 Go 输出为准） | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go-ts-golden.md) | voxel-colors-data.json 无复跑生成器（gen/main.go 只生成 block_ids_data.go），靠 parity_voxel_test.go 兜底 | - |
 | sleep 替换为 waitFor / 负向定时器窗口断言 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 
 ## 🎯 能力门控与平台判定
@@ -587,10 +604,10 @@
 | "三范式各有边界，禁止混搭：卡片=（含 `stg-grid` 平铺的同族小卡，如路径/字体/鸣谢）；选择器瓦片=`theme-card`（主题六选一，已在 `.theme-picker` 内）；紧凑单控件=`settings-group`+`setting-row`（滑块/下拉/开关，以及键位动作行）。键位是快捷键单值，不得为每个动作嵌套一张 `stg-card`" | `stgCard()` | - |
 | 各视图层自己判断模式 | - | 状态分裂、拖拽行为不一致；必须经 workshop-browse-mode 单点 |
 | site 拖拽排序未回写 workshop-data | - | 刷新丢失；必须经 events.ts 的 drag 事件统一落盘 |
-| 子组件持 *App 字段 | - | 对象级循环依赖、GC 无法回收；必须经回调注入 |
-| 回调未正确包装 | - | 空指针 panic；必须在新 App 时注入完整包装 |
 | 页面 A 直接调用页面 B 的 init | - | 重复初始化 / 订阅泄漏；必须经 nav:changed 单点分发 |
 | subscription-bucket 未退订 | - | 跨页残留监听、状态串扰；每次切换必须 clear 旧桶 |
+| 子组件持 *App 字段 | - | 对象级循环依赖、GC 无法回收；必须经回调注入 |
+| 回调未正确包装 | - | 空指针 panic；必须在新 App 时注入完整包装 |
 | 新 JS 未登记进 app-modules.ts | - | 组件不加载、Shadow DOM 未升级；必须在 app-modules.ts 加入口 |
 | 主题值未归一化 | - | 脏值污染 localStorage 持久层；必须经 normalizeTheme 白名单过滤 |
 | 页面 A 直接派 nav:changed | - | 与 app-nav 状态分裂、高亮错位；必须经 app-nav 派发 |
@@ -608,8 +625,6 @@
 | DOM 委托事件进 _unsubs | - | disconnect 时重复 off 报错；DOM 委托事件应靠 ShadowRoot detach 自动清理 |
 | 文件行 key 与选中态路径必须同源（entryKey）：TreeRow.key 取树内拼接路径而 selectState.keys 取磁盘路径时，indexOf/has 恒失配且**不抛错**——Shift 范围选择、右键批量、键盘导航、全选、双击重命名定位 6 处一起静默失效（ADR-222） | - | - |
 | 渲染层禁止值依赖 loader.ts：多个组件测试 vi.mock("./loader.ts") 只为替换 loadEntries，值导入会让渲染崩在 mock 下（entryKey 因此独立成 entry-key.ts） | - | - |
-| 网页版直调 window.go | - | 无 wails runtime 时报错；必须经 browserAdapter |
-| 跨域资源共享不处理 COI | - | SharedArrayBuffer 等 API 不可用；必须设置 cross-origin-isolation 头 |
 | 事务不接线 error/abort | - | Promise 永不 settle，读操作卡死 |
 | 隐私模式下 IndexedDB 受限，必须自动降级到内存 Map（200 条/64MB FIFO） | - | - |
 | db.onversionchange 触发后 dbPromise 为空，后续所有操作立即失败；必须在降级路径中处理 | - | - |
@@ -626,6 +641,8 @@
 | Web 模式 Events.On 返回空函数（no-op）；Emit 返回 Promise，resolve 值恒为 false | - | - |
 | Web 模式 Window 用 Proxy 动态捕获任意方法（返回 async no-op）；thenable 探测陷阱：返回 undefined 防 await 挂起 | - | - |
 | 网页版 Events/Window 无原生后端，须 no-op 兜底，否则 OpenDevTools 等会抛 / 行为漂移 | - | - |
+| 网页版直调 window.go | - | 无 wails runtime 时报错；必须经 browserAdapter |
+| 跨域资源共享不处理 COI | - | SharedArrayBuffer 等 API 不可用；必须设置 cross-origin-isolation 头 |
 | adapter 手写骨骼树 | - | 与 bone-tools 输出不一致、缺骨骼显隐控制；必须经 buildBoneTree |
 | VRM 骨骼映射未走 vrm-bone.ts | - | 骨骼名不匹配、动画错乱；必须经 vrm-bone.ts 映射 |
 | 消费方禁止重复实现 can(binding) 三态矩阵——统一走 can()，platform-web.ts 的 canBinding() 是唯一判定源 | - | - |
@@ -646,8 +663,6 @@
 | destroy 必调：移除滚动监听 + 清空容器，防内存泄漏 | - | - |
 | 内联菜单结构 | `view 层` | 必须声明进 menu-defs.ts |
 | file/dir handler 各用 FileCtx/DirCtx（Omit 掉对立字段）；dir handler 读 ctx.path→编译报错（P2-1 表级窄化） | - | - |
-| swallowError 吞掉业务异常 | - | 静默失败、无法排查；必须用于"预期内可忽略"的错误 |
-| swallowError 异常仅记日志不抛出 | - | 调用方无感知；生产无 console 时须靠 log.ts setLogSink 接日志 |
 | core 里直 import backend | - | 违反 ADR-189 D1 断环；落盘通道必须注入（backend/diary-sink.ts 适配 AddOpLog） |
 | 注册不幂等 / 失败不回滚 | - | 重试叠加监听，同条 toast 落两遍日记 |
 | 注册失败 catch 后 fall-through 重新占位 currentHandle | - | 僵尸句柄致模块永久静默失效（回滚须返回空 handle、不占位） |
@@ -655,6 +670,8 @@
 | Go AppError 文案（/`目标路径：`全角冒号 token）变更须同步 fixture + stripAppErrorPaths 正则（双侧测试钉契约，ADR-207 D2） | `源路径：` | - |
 | 已不是完整事实 —— 另有 outbox 第二通道 + `GetLogChannelHealth` 锁存位 + 诊断页红条（ADR-322）；只留 console 等于元失败留在 GUI 不可见区 | `sink 失败只 console.warn` | - |
 | 元失败层（通道自身失效）**禁** /`logError`/`pushToDiary` 收编 —— 那会经 sink 回到 `AddOpLog` 失败处，构成跨 microtask 无限循环（不栈溢出，静默烧 CPU）；此类处一律裸 try/catch 静默 + 锁存健康位（ADR-322 D2） | `logWarn` | - |
+| swallowError 吞掉业务异常 | - | 静默失败、无法排查；必须用于"预期内可忽略"的错误 |
+| swallowError 异常仅记日志不抛出 | - | 调用方无感知；生产无 console 时须靠 log.ts setLogSink 接日志 |
 | 手写 adv-filter 弹窗 DOM | - | 与全局弹窗样式 / 焦点陷阱不一致；必须复用 modal.ts 的 registerDlg |
 | adv-filter 输入不校验就提交 | - | min > max 传后端报错；必须在 validate() 拦截并在 |
 | 重复打开 batch-rename 不 close | - | 上一个 Promise 悬挂、调用方 await 卡死；必须先 close 结算 |
@@ -677,12 +694,12 @@
 | base64 为空（0 字节文件）时跳过，不落库 | - | - |
 | isImportableFile：.json 仅放行 ysm.json 入口清单（与 go/scanner/scanner.go 白名单对齐） | - | - |
 | readEntries 分页：Web 标准 API 单次最多返回 100 条 FileSystemEntry，必须循环调用直到返回空数组才读完目录——单次调用会静默漏掉第 101+ 个文件（ 已收敛为 `readAllDirEntries` 循环读取，`1cd8e305`） | `features/import/collector.ts` | - |
-| 用原生 title | - | 延迟 ~1s、样式不可控；必须经 tooltip.ts |
-| tooltip 不监听跨 Shadow DOM | - | FAB 按钮无法接 tooltip；必须经 document.body 挂载 |
 | 各组件各自注入 style 标签 | - | 多次注入、样式冲突；必须经 ensureFabStyles 一次注入 |
 | FAB 挂 document.body 但样式在 Shadow DOM | - | light DOM 按钮不继承；必须经 ensureFabStyles 注入 head 标签 |
 | 裸调 localStorage | - | 隐私模式抛异常、启动链中断；必须经 safeGet/safeSet |
 | safeSet 不带 fallback | - | 存储禁用时静默失败；必须在 safeSet 中设 fallback 或 try/catch |
+| 用原生 title | - | 延迟 ~1s、样式不可控；必须经 tooltip.ts |
+| tooltip 不监听跨 Shadow DOM | - | FAB 按钮无法接 tooltip；必须经 document.body 挂载 |
 | ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On 无对应 Off（app 级单例，_registered 守卫防重复注册） | - | - |
 | 非 app 级模块禁止复制此模式 | - | - |
 | isActiveStatus 必须同时认 "downloading" 和 "enqueued"（Go 端入队后只发 enqueued，从不发 downloading）；UI 控制器 run/ended 分支同样走 isActiveStatus，勿再裸比较单字符串（2026-09 修复：idle→enqueued 直跳曾跳过 run 分支致按钮不 disable） | - | - |
@@ -733,14 +750,6 @@
 | ADR-170 二段部分收口(2026-09):base64 原语已归位 utils/base/primitives/base64.ts, parsers 对 backend/web-common 依赖已消除;web-* 族其余归位未动 | - | - |
 | 各页面各自注册全局事件 | - | 重复绑定、冲突处理；必须经 global-handlers 单点 |
 | 拖拽导入未进 import-dnd | - | 与全局拖拽状态冲突；必须经 features/import-dnd.ts |
-| "包覆盖率必须按语句数加权（covered 语句/总语句）；曾用 | `文件内函数百分比最小值` | 一个 0% 函数把整包报成 0%" |
-| "判据是 profile 原文的语句数； 输出只有百分比、没有语句数，做不了加权" | `go tool cover -func` | - |
-| "阈值 pattern 匹配的是包路径（以包名结尾、无尾斜杠）， 这种尾斜杠写法永远匹配不到该包自身" | `internal/app/install/` | - |
-| "本脚本用具名导出供契约测试 import，退出必须用 process.exitCode + 自然返回；用 process.exit(N) 会在 Windows 句柄清理阶段触发 libuv 断言（0xC0000409）" | - | - |
-| "入口包（根 main / cmd/updater / 代码生成器）的 main() 测试内不可达，必然 0%，应进 SKIP_PACKAGES 而非当失败" | - | - |
-| "golden 必须双端互锁：Go 测试 + TS 测试读同一份 fixture，只做 web 单侧对拍是死快照，防不住 Go 侧漂移（ADR-154 §2.2 硬性要求）" | - | - |
-| "matchZipEntryTS 是注册表顺序首命中、忽略 priority；Go MatchZipEntry 同构，但容器级 detectZipType 走 priority desc 裁决——两者不可直接对拍（ADR-154 §2.4）" | - | - |
-| "TS 测试读仓库根 fixture 不得用 import 语句（ADR-146 R4 冻结基线会 FAIL），须用 readFileSync + process.cwd() 向上定位" | - | - |
 | 陷阱：Android 上 xdg-open/exec 链静默失败会掩盖问题 | `静默成功` | 必须返回含「请手动」提示的明确错误 |
 | 陷阱：watcher 守卫缺失时，fw.Add 逐目录失败后 loop 空转 = running=true 假活；Android 必须直接跳过 | `假活` | - |
 | 陷阱：把 RevealInExplorer/OpenFolder 等绑定全部 false | `一刀切` | 应仅在 ANDROID_UNAVAILABLE 黑名单内才禁 |
@@ -761,6 +770,11 @@
 | 配置项未加默认值 | - | 缺失时 panic；必须为所有配置项设默认值 |
 | 手写 zip 内枚举 | - | 与 go/container 判定不一致、多 entry 漏检；必须经 go/container |
 | 未处理 7z 格式 | - | 容器解析失败；必须经 go/container 的格式分流 |
+| "包覆盖率必须按语句数加权（covered 语句/总语句）；曾用 | `文件内函数百分比最小值` | 一个 0% 函数把整包报成 0%" |
+| "判据是 profile 原文的语句数； 输出只有百分比、没有语句数，做不了加权" | `go tool cover -func` | - |
+| "阈值 pattern 匹配的是包路径（以包名结尾、无尾斜杠）， 这种尾斜杠写法永远匹配不到该包自身" | `internal/app/install/` | - |
+| "本脚本用具名导出供契约测试 import，退出必须用 process.exitCode + 自然返回；用 process.exit(N) 会在 Windows 句柄清理阶段触发 libuv 断言（0xC0000409）" | - | - |
+| "入口包（根 main / cmd/updater / 代码生成器）的 main() 测试内不可达，必然 0%，应进 SKIP_PACKAGES 而非当失败" | - | - |
 | 手写去重比较 | - | 与 go/dedup 判定不一致、漏检；必须经 go/dedup |
 | filepath.WalkDir 跟符号链接 | - | 目录遍历循环；必须跳过 ModeSymlink 条目 |
 | 下载不校验 checksum | - | 静默损坏文件；必须经 ErrChecksumMismatch 拦截 |
@@ -819,6 +833,9 @@
 | AddTag 已存在则跳过——不会报错也不会计数 | - | - |
 | 前端手写骨骼转换 | - | 与 go/threejs 输出不一致、四元数旋转错乱；必须经 spec.go |
 | spec 字段漏转换 | - | 骨骼变形丢失；必须完整覆盖所有 spec 字段 |
+| "golden 必须双端互锁：Go 测试 + TS 测试读同一份 fixture，只做 web 单侧对拍是死快照，防不住 Go 侧漂移（ADR-154 §2.2 硬性要求）" | - | - |
+| "matchZipEntryTS 是注册表顺序首命中、忽略 priority；Go MatchZipEntry 同构，但容器级 detectZipType 走 priority desc 裁决——两者不可直接对拍（ADR-154 §2.4）" | - | - |
+| "TS 测试读仓库根 fixture 不得用 import 语句（ADR-146 R4 冻结基线会 FAIL），须用 readFileSync + process.cwd() 向上定位" | - | - |
 | 复制类型定义 | - | 类型不一致、重构时漏改；必须经 go/types 单点 |
 | LoadRegistry 失败未兜底 | - | 启动崩溃；必须在 LoadRegistry 里做默认值兜底 |
 | 手写更新下载 | - | 与 go/updater 的增量 / 全量策略不一致；必须经 go/updater |
@@ -835,6 +852,9 @@
 | 别开 enable-all | `别开 enable-all` | 一次性抛数百条历史债直接堵死 push 通道；白名单只收 6 类零覆盖 linter |
 | 别启用 govet/gofmt/dupl | `别启用 govet/gofmt/dupl` | govet 与既有 `go vet` 重复；gofmt/dupl 自研机制有自动 stage 与漂移账本，golangci-lint 接不住（ADR-205 §2.2） |
 | 版本 < v1.64 解析 go1.26 directive 直接失败 | `版本 < v1.64 解析 go1.26 directive 直接失败` | 必须 v1.64+ / v2.x，实测 v2.13.2 built with go1.26.3 通过 |
+| 手写菜单结构 | - | 与 buildGroundNodes 输出不一致、菜单构建重复；必须经工厂函数 |
+| 新增地面模式未走工厂 | - | 菜单缺控件；必须在 ground-menu.ts 中注册 |
+| 滑杆值域字面量写进菜单 | - | 与 schema 漂移（改一处不生效）；ADR-283 起值域只从 `getParamRange(key)` 取 |
 | 下游手写材质参数 | - | 与 spec 不一致、needsRebuild 判别错误；必须经 buildGroundSurfaceSpec |
 | specKey 不完整 | - | 相同材质不同渲染；specKey 必须含所有影响渲染的参数 |
 | 控件参数未进入像素生成 = 死控件：叠加层初版 `generateOverlayPixels` 硬编码 `sizePx/8` 且不设 `map.repeat`，滑杆可拖、会触发重建、产出却完全相同。ADR-249 §2.4 矩阵约束：渲染消费的参数菜单必须可见，反之亦然——控件参数必须真实参与像素/材质 | `叠加格数` | - |
@@ -845,9 +865,6 @@
 | 把当成「无重复」——**4D 只治接缝，不治重复**。平铺后「每两米出现同一明星特征」是「无缝但有规律重复」，须用 `anti-repeat.ts` 的 macro/dual/stochastic 治理 | `4D 环面无缝` | - |
 | anti-repeat 的输入 tile **必须本身无缝**（周期=S）；非无缝输入它不补接缝，只治重复。本项目的程序化材质（tiledFbm）与已平铺无缝的 PNG 满足 | - | - |
 | macro 的  必须退化为原平铺（factor=1 逐像素相等）——改 macro 时此回归用例（anti-repeat.test.ts）会锁死 | `macroStrength=0` | - |
-| 手写菜单结构 | - | 与 buildGroundNodes 输出不一致、菜单构建重复；必须经工厂函数 |
-| 新增地面模式未走工厂 | - | 菜单缺控件；必须在 ground-menu.ts 中注册 |
-| 滑杆值域字面量写进菜单 | - | 与 schema 漂移（改一处不生效）；ADR-283 起值域只从 `getParamRange(key)` 取 |
 | 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
 | LocaleHost 未注入（装配层漏 setLocaleHost）→ loadLocale 告警一次并跳过（fail-open 不挂启动链），host 就绪后可重试自愈 | - | - |
 | 并发 setLang 竞态：快请求后到覆盖旧写入 | - | _langReqGen 代际计数丢弃过期写入 |
@@ -907,6 +924,15 @@
 | 节拍检测未缓存 | - | 每帧重复采样音频；必须经 beat-detector 的缓存策略 |
 | 混用 mousedown + touchstart | - | 触屏双触发、桌面手势冲突；必须经 pointer events 统一 |
 | 拖拽不设 touch-action:none | - | 浏览器滚动吃掉手势；必须在拖拽元素上禁用 touch-action |
+| 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警 | - | - |
+| 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs | - | 误判为 gen 产物 |
+| gen 产物文件路径含空格时 git add 不加引号会断裂 | - | 必须用 git add -- "文件路径" |
+| snap_docs 使用 $ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在 | - | - |
+| 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误 | - | - |
+| drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报 | - | - |
+| 用 `file:line:kind` 键做增量判定 = **高噪声**：行位移被当新增（116 提交窗实测 322/330 = 97.6% 幻影，真新增候选仅 8）→ 必须走真行级 `--added-lines`（ADR-256，`scripts/token-shift-audit.ts` 可复现）；「同行替换同类」会因键相同被判存量（机制性盲区，本窗口实测 0 次） | `只减不增` | - |
+| 无 scope 的  扫磁盘全树 | `--baseline` | 判决域 ≠ 提交域（哪怕键设计没问题，也会把并行会话未提交的新债算到本提交头上） |
+| 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件 | - | - |
 | 改 Promise.all 并行结构漏写 () | - | 域级检查静默不跑（8/17 起 13 项失效实证） |
 | push 被拒直接 --no-verify | - | 绕过不留审计；应修 FAIL 项或 git pull 整合 |
 | 判定字段写错位置 | - | 门禁静默假绿：`parseToolOutput` 的 `parsed._summary \|\| parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`） |
@@ -936,15 +962,10 @@
 | 2026-09-13（重锐评 | `autoFix 写盘语义` | - |
 | "2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。**2026-09-19 更新：当前 33/37**——未接入仅 1 项 `check-comment-history.ts`（注释考古，观察期 WARN 非阻断），另 3 项为**刻意旁路**（`check-biome-lines` / `check-diff-coverage` / `check-go-coverage-threshold`，由 pre-commit / CI 独立承担）" | `覆盖尾行` | - |
 | ~~已修复~~（2026-09-13 P0）：jscpd 报告原写**固定路径** `frontend/report/jscpd-report.json` 且读完即删、无 pid 无锁，并行会话同跑门禁互相删读（同提交第一次红第二次绿）。现改为每进程独立 `mkdtemp` 临时目录（`os.tmpdir()/jscpd-gate-*`）承载报告，扫描 pattern 用绝对路径指回 `frontend/src`，`finally` 整目录清理——报告生命周期完全私有化，与 jscpd-go.ts 的 tmpdir 先例对齐。教训留存：**工具产物落盘共享路径 = 隐性进程间耦合**，任何检查项新增落盘产物时必须私有化路径或加锁 | `check-deadcode-baseline 的瞬态 FAIL` | - |
-| 快照缺失时严禁 git add -u docs/ 兜底（违反 P2-2 并发隔离）→ 仅置 GEN_SKIPPED=1 跳过并告警 | - | - |
-| 并发共享 checkout 下 snap_docs mtime 窗口期内并行会话手改 docs | - | 误判为 gen 产物 |
-| gen 产物文件路径含空格时 git add 不加引号会断裂 | - | 必须用 git add -- "文件路径" |
-| snap_docs 使用 $ 进程后缀生成快照文件路径，Windows Git Bash 下 /tmp 可能不存在 | - | - |
-| 智能 stage 测试文件逻辑对含多个点号的文件名可能截断错误 | - | - |
-| drift --affected 过滤逻辑中 docs/knowledge/index.md 应排除，但其他 gen 产物未过滤可能误报 | - | - |
-| 用 `file:line:kind` 键做增量判定 = **高噪声**：行位移被当新增（116 提交窗实测 322/330 = 97.6% 幻影，真新增候选仅 8）→ 必须走真行级 `--added-lines`（ADR-256，`scripts/token-shift-audit.ts` 可复现）；「同行替换同类」会因键相同被判存量（机制性盲区，本窗口实测 0 次） | `只减不增` | - |
-| 无 scope 的  扫磁盘全树 | `--baseline` | 判决域 ≠ 提交域（哪怕键设计没问题，也会把并行会话未提交的新债算到本提交头上） |
-| 版本防御检查 $ 开头文件名的正则会匹配路径中含 $ 的合法文件 | - | - |
+| 新加相机按钮 | - | 直接注入 mmd-controls → 切类型时按钮消失；必须走 setAdapterItems 注入核心根菜单 |
+| YSM schema 未走 registerYsmModelSchema 注册 | - | schema 变更不同步到菜单；必须经 schema-registry |
+| registerReRoute opener 写成 (path) 或 (path, siblings) | - | 路由层算出的 candidates/entry 被静默丢弃；必须 (path, opts) => createXxx3D(path, opts) |
+| 想在详情卡加 3D 按钮 | - | 与 ADR-253 D7 冲突（3D 已收敛到 nav-fab）；需要容器内指定模型请用 openModel3DFullscreen(path, { entry }) |
 | 跨类型追加走错适配器 | `frontend/src/preview-3d/menu/engine/core.ts` | 必须经 switchExternal → openModel3DFullscreen(cooperate) |
 | 异步回调写入已卸载 DOM | `skeleton.ts` | 每个 await 后检查 container.isConnected |
 | 手动调用导致 T-pose 回归 | `vrm.humanoid.update()` | 只用 vrm.update(dt) |
@@ -956,24 +977,20 @@
 | switch-preview 未清 schema 注册表 | - | 旧模型 schema 残留；必须经 switch-preview 清理 |
 | 横切设置项各自有独立读写通道 | - | 状态单向流失效、菜单控件与状态不同步；必须走 preview-state |
 | cap 未自动聚合 | - | 新增 cap 后菜单缺控件；必须在 cap 实现 getMenuControls 并注册 |
-| adapter 手写 DOM | - | 与声明式菜单系统不一致、面板内容不出现；必须走声明式节点 |
-| renderCustom 与 children 混用 | - | 渲染通道冲突；必须二选一 |
-| 直接改 preview-state 里的未注册键 | - | 切页 / 换模后状态回滚；必须经 KNOWN_PATHS 注册 |
-| 把状态放 sceneRegistry / SlideMenu / 节点字段而非 previewState | - | 状态无法在 cap 切换时保留；状态通道需集中 |
-| 新加相机按钮 | - | 直接注入 mmd-controls → 切类型时按钮消失；必须走 setAdapterItems 注入核心根菜单 |
-| YSM schema 未走 registerYsmModelSchema 注册 | - | schema 变更不同步到菜单；必须经 schema-registry |
-| registerReRoute opener 写成 (path) 或 (path, siblings) | - | 路由层算出的 candidates/entry 被静默丢弃；必须 (path, opts) => createXxx3D(path, opts) |
-| 想在详情卡加 3D 按钮 | - | 与 ADR-253 D7 冲突（3D 已收敛到 nav-fab）；需要容器内指定模型请用 openModel3DFullscreen(path, { entry }) |
 | 3D 菜单只允许 visibleWhen 谓词，禁止手写 3D 菜单；新增 UI 功能必须可被所有数组类菜单调用 | - | - |
 | schemaId 必显式声明（panel id 不再隐式兜底作 schema key，防 id 撞注册键渲染错内容） | - | - |
 | fillers 仅 roles 一项（G3 删 fill* 后唯一残留），health.test 白名单守卫——禁止新增 filler | - | - |
 | renderCustom 是末段逃生舱，schemaId 未注册时走 renderCustom 会 console.warn | - | - |
 | 预览菜单真实 DOM 渲染需要**足够完备的 ctx**，不是：dock 按钮 `visibleWhen` 谓词（如 `env.skyGroundCap`）读 `sceneCapabilityRegistry` 的 cap 实例可用性，stub 得太薄就退化成「dock 空壳」——overlay 内有 dock/popup 容器但按钮行零渲染。**2026-10-04 实测反驳「e2e 渲不出菜单」**：e2e 层用 `mountPreviewRootMenu` + 含 `getCamBridge`/`getSiblings` 的 ctx 渲出了完整 L3 面板（`menu-visual.spec.ts` + `e2e/_shots/menu-03-scene-*.png`）；e2e-web 层起真 3D 会话（`openEmpty3DFullscreen`）后更渲出 30 控件的后处理面板与 `dock-env` 分组——**两者都只有真上下文才可见**。结论是**分层选工具，不是二选一**：happy-dom 单测（`items.test.ts` / `sky-capability.test.ts`）验成员归属与拓扑契约（快、稳）；e2e 截图验视觉呈现与 cap 真实可用性（方法见 `e2e-visual-feedback.md`）。headless 无 GPU 时天空/水面观感属软渲染伪影，不作美术判据。 | `浏览器渲不出菜单` | - |
+| adapter 手写 DOM | - | 与声明式菜单系统不一致、面板内容不出现；必须走声明式节点 |
+| renderCustom 与 children 混用 | - | 渲染通道冲突；必须二选一 |
 | 新增路径必须两步走，缺一步编译不过 | `扩 KNOWN_PATHS + 填 binding` | - |
 | 未落地键在编译期即报错（不再恒 undefined 静默假死） | - | - |
 | 直接写未落地路径（如 ui.mode / env.sky）编译报错——类型契约即运行时实现 | - | - |
 | 直接改 preview-state 未注册字段 | - | 切页/换模后状态回滚、选项失效；应走 KNOWN_PATHS |
 | 截图灯光与预览灯光混用 | - | 导出 PNG 与实时预览不一致；截图灯光必须走 shot-panel 独立通道 |
+| 直接改 preview-state 里的未注册键 | - | 切页 / 换模后状态回滚；必须经 KNOWN_PATHS 注册 |
+| 把状态放 sceneRegistry / SlideMenu / 节点字段而非 previewState | - | 状态无法在 cap 切换时保留；状态通道需集中 |
 | 前端直调 os.Remove | - | 无法恢复、跳过 ADR-038 合并规则；必须经 go/recycle |
 | initRecycleBin 不返回清理函数 | - | 监听泄漏；必须在 app-content 切换页时调用返回的清理函数 |
 | 各自创建 renderer | - | 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享 |

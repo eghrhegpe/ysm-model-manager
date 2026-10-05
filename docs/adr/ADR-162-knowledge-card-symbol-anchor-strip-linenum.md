@@ -11,7 +11,7 @@
 ## 1. 背景（Context）
 
 - 知识卡 `auto_fields.symbols_with_lines` 以「`符号:行号`」对记录机制锚点，`check-knowledge-drift` / `gen-knowledge-autogen --check` 消费之，检测「源码改了、知识卡没跟上」的漂移。
-- 实证（本次 `mmd-adapter` / `preview-core` 拆分）：~10 张卡因纯行号位移触发重写，其中仅 1 处是真失准（`preview_core.md` 的 `_singletonScene.background` 随拆分挪到 `shared-infra.ts`）。
+- 实证（本次 `mmd-adapter` / `preview-core` 拆分）：~10 张卡因纯行号位移触发重写，其中仅 1 处是真失准（`preview-core.md` 的 `_singletonScene.background` 随拆分挪到 `shared-infra.ts`）。
 - 结论：行号是「防倒退护栏的输入」，**不改善**质量、**守卫**质量；但纯行号位移（符号未变）产生大量无害重写与提交噪音，重构一次就震 ~10 张卡，diff 被行号淹没、真漂移信号被稀释。
 - 本 ADR 承继被 revert 的 **ADR-159 草案**（2026-09-02，标题「知识卡符号锚点降级为文件名清单（行号减噪）」），将其决策落地为已采纳状态。原 159 号已被 `ADR-159-scene-registry-container-semantics.md` 占用，故本 ADR 占新号 162。
 

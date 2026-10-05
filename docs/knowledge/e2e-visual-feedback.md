@@ -145,8 +145,8 @@ npx playwright test --config playwright.web.config.ts menu-3d-session
 
 ## 相关
 
-- `menu_test_assertion.md` — 菜单逻辑断言三分法（ADR-311），本卡管**视觉层**断言
-- `testid_contract.md` — `data-testid` 契约：数行元素用 `[data-testid^="preview-"], [data-testid^="cap-"]`，**禁单个 class**
+- `menu-test-assertion.md` — 菜单逻辑断言三分法（ADR-311），本卡管**视觉层**断言
+- `testid-contract.md` — `data-testid` 契约：数行元素用 `[data-testid^="preview-"], [data-testid^="cap-"]`，**禁单个 class**
 - `pitfalls.md` — 本卡 3 类坑的浓缩条目
 - `preview-menu.md` — 菜单 schema 与 dock 路由
-- `preview_core.md` — `mount3D` 会话生命周期
+- `preview-core.md` — `mount3D` 会话生命周期

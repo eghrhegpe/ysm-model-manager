@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-26
 - **决策人**：Jieling（人类首席架构师）、AI 代理（Riku）
-- **相关**：`frontend/src/utils/3d/adapters/mmd-adapter.ts|MdMmBuildCtx`；提交 `2fbfe5ce`（tier1 域拆分）、`99d41318`（tier2 Pick 收窄）；审计卡 `docs/knowledge/frontend_repo_audit.md`（`:29`/`:52` 已同步）
+- **相关**：`frontend/src/utils/3d/adapters/mmd-adapter.ts|MdMmBuildCtx`；提交 `2fbfe5ce`（tier1 域拆分）、`99d41318`（tier2 Pick 收窄）；审计卡 `docs/knowledge/frontend-repo-audit.md`（`:29`/`:52` 已同步）
 
 ---
 
@@ -41,6 +41,6 @@
 - 构造点实测：`frontend/src/utils/3d/adapters/mmd-adapter.ts:1135-1165`（管线序）、`:1141`（`as` 强转）、`:184-269`（6 域接口）、`:278-348`（8 个 `Pick` stage Ctx）。
 - tier1 落地：`2fbfe5ce`（域拆分 + `!` 清零 + 转义）。
 - tier2 落地：`99d41318`（逐 stage `Pick` 收窄，字段 60→55）。
-- 审计卡已同步：`docs/knowledge/frontend_repo_audit.md` `:29` / `:52`（tier1/2 落地、tier3 Builder 化待办、行号刷新）。
+- 审计卡已同步：`docs/knowledge/frontend-repo-audit.md` `:29` / `:52`（tier1/2 落地、tier3 Builder 化待办、行号刷新）。
 
 <!-- 文件名: mdmmbuildctx-tier3-builder.md → 实际文件 ADR-122-mdmmbuildctx-tier3-builder.md -->

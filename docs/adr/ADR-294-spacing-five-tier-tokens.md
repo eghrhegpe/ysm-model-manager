@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-22
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/UI-Design.md` §5 间距系统；`frontend/css/variables.css`；`scripts/_lib/design-tokens.ts`；`scripts/check-design-tokens.ts`；`tests/test_design_tokens.ts`；`docs/knowledge/frontend_design_critique.md` 刀㉝
+- **相关**：`docs/UI-Design.md` §5 间距系统；`frontend/css/variables.css`；`scripts/_lib/design-tokens.ts`；`scripts/check-design-tokens.ts`；`tests/test_design_tokens.ts`；`docs/knowledge/frontend-design-critique.md` 刀㉝
 
 ---
 
@@ -45,4 +45,4 @@
 
 ## 4. 数据溯源
 
-`docs/UI-Design.md §5`（五档规范）→ `frontend/css/variables.css :root`（`--sp-1..5` 声明）→ `scripts/_lib/design-tokens.ts|PAD_TOKEN_VERTICAL`/`suggestPaddingToken`（判档表 + 建议升级，`--sp-*` 优先）→ `scripts/check-design-tokens.ts`（ERROR_KINDS/KIND_LABEL 复用既有 padding 类目）→ `tests/test_design_tokens.ts`（契约用例锁定档表与 variables.css 对账）→ `docs/knowledge/frontend_design_critique.md` 刀㉝（架构断层记录）。
+`docs/UI-Design.md §5`（五档规范）→ `frontend/css/variables.css :root`（`--sp-1..5` 声明）→ `scripts/_lib/design-tokens.ts|PAD_TOKEN_VERTICAL`/`suggestPaddingToken`（判档表 + 建议升级，`--sp-*` 优先）→ `scripts/check-design-tokens.ts`（ERROR_KINDS/KIND_LABEL 复用既有 padding 类目）→ `tests/test_design_tokens.ts`（契约用例锁定档表与 variables.css 对账）→ `docs/knowledge/frontend-design-critique.md` 刀㉝（架构断层记录）。

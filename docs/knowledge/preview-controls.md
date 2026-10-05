@@ -176,7 +176,7 @@ preview-3d/ 其他
 
 ## 相关
 
-- [preview_core](./preview_core.md) — 适配器统一外壳
+- [preview-core](./preview-core.md) — 适配器统一外壳
 - [model3d](./model3d.md) — 渲染核心（camera 已归核心根菜单）
 - [dom-fab](./dom-fab.md) — FAB 按钮（相机控件走 createIconButton）
 - [utils-export](./utils-export.md) — 截图链路（`saveScreenshot` 六角度）

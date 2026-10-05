@@ -40,7 +40,7 @@ const SERVER_INJECTED = new Set(["SetAllowedCommands"]);
 
 // ===== ADR-143 §2.5 治理闸：string 承载 JSON 禁止（返回 string 须命中允许清单）=====
 // 允许返回 string 的导出方法 = 真字符串语义（路径/文本/版本/base64/类型ID/对话框路径）+
-// 豁免（JSON 文本协议，见 docs/knowledge/binding_json_cleanup.md §三）。
+// 豁免（JSON 文本协议，见 docs/knowledge/binding-json-cleanup.md §三）。
 // 新增「返回 string 的导出绑定」若不在此清单 → 报错：要么是真字符串（补进清单），
 // 要么是 string 承载 JSON（违规，改 struct 返回）。
 const STRING_RETURN_ALLOWLIST = new Set([
@@ -319,7 +319,7 @@ for (const [name, f] of Object.entries(goExports).sort(([a], [b]) => a.localeCom
       type: "string_return_not_allowed",
       func: name,
       go_file: f.file,
-      message: `导出绑定返回 string 未命中白名单（ADR-143 §2.5）：若是真字符串（路径/文本/版本）请补进 scripts/binding-check.ts STRING_RETURN_ALLOWLIST；若是 string 承载 JSON 则违规，请改 struct 返回。豁免 JSON 文本协议见 docs/knowledge/binding_json_cleanup.md §三。`,
+      message: `导出绑定返回 string 未命中白名单（ADR-143 §2.5）：若是真字符串（路径/文本/版本）请补进 scripts/binding-check.ts STRING_RETURN_ALLOWLIST；若是 string 承载 JSON 则违规，请改 struct 返回。豁免 JSON 文本协议见 docs/knowledge/binding-json-cleanup.md §三。`,
     });
   }
 }

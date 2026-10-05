@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-08-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/utils/3d/adapters/mount-preview-core.ts`、`docs/knowledge/preview_core.md`、`ADR-066`、`ADR-072`、`ADR-004`
+- **相关**：`frontend/src/utils/3d/adapters/mount-preview-core.ts`、`docs/knowledge/preview-core.md`、`ADR-066`、`ADR-072`、`ADR-004`
 
 ---
 
@@ -118,12 +118,12 @@ MikuMikuAR 是独立 Babylon App，不在同一个 `ctx.scene`。其天空（若
   - `frontend/src/utils/3d/adapters/mount-preview-core.ts:344-346` — `scene = new THREE.Scene()` + `scene.background = new THREE.Color("#1a1b2e")`：天空唯一落点，所有适配器共用同一 `scene`；
   - `frontend/src/utils/3d/renderer-setup.ts:44` — 旧 `RenderSession` 设同款纯色背景（须同步）；
   - `frontend/src/utils/3d/adapters/{ysm,vrm,mmd,litematic}-adapter.ts` — 均经 `build(ctx)` 注入 `ctx.scene`（统一核心契约，ADR-066 P3 `be237aa0` 落地）。
-- **联邦引擎格局校准**：`~/.workbuddy/USER.md` 技术栈基线已补「双引擎并存 + 域描述」；`docs/knowledge/preview_core.md` 新建卡记录 sky 落点 `:346` 为不变量。
+- **联邦引擎格局校准**：`~/.workbuddy/USER.md` 技术栈基线已补「双引擎并存 + 域描述」；`docs/knowledge/preview-core.md` 新建卡记录 sky 落点 `:346` 为不变量。
 - **关联 ADR**：ADR-066（统一预览契约 + 单一渲染核心，本 ADR 的物理前提）、ADR-072（3D 代码归置，适配器已下沉 `utils/3d/adapters/`）、ADR-004（3D 渲染管线与坐标系）。
 - **实现最小改动面（L1 已落地，commit `4413fb2a`，当前 HEAD 祖先）**：
   1. ✅ 新增 `frontend/src/utils/3d/caps/sky-capability.ts`：`SkyCapability` 接口 + `createThreeSky()`（包 Three `Sky` + PMREM `scene.environment` 联动）；
   2. ✅ `mount-preview-core.ts` shared 模式：`new SkyCapability({ scene, renderer }).apply()` 注入（原 `:346` 纯色 `scene.background` 保留为禁用兜底）；`fullCleanup` 内 `skyCap?.dispose()` 回收；
   3. ⬜ `renderer-setup.ts:44` 旧链路：经核实 `renderModel3D` 无生产调用（仅定义 + 测试），属死代码，依「不扫无关改动」原则**不触碰**，避免波及测试；
-  4. ✅ 验证：`vite build` 通过（`✓ built in 3.50s`），天空源文件类型零报错；typecheck 既有 6 个 `.test.ts` 错误指向 `backend/app.ts`/`bus.ts` 路径解析，与本次无关。目视验证（2026-08-16）：天空渲染正常、四种模型零改动继承，用户评定「效果一般但能跑，作为基线收口，后续迭代」（见 `preview_core.md` 验证状态段）。
+  4. ✅ 验证：`vite build` 通过（`✓ built in 3.50s`），天空源文件类型零报错；typecheck 既有 6 个 `.test.ts` 错误指向 `backend/app.ts`/`bus.ts` 路径解析，与本次无关。目视验证（2026-08-16）：天空渲染正常、四种模型零改动继承，用户评定「效果一般但能跑，作为基线收口，后续迭代」（见 `preview-core.md` 验证状态段）。
 
 <!-- 文件名: federal-render-caps.md → 实际文件 ADR-073-federal-render-caps.md -->

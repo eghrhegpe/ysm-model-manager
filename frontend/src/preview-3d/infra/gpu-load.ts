@@ -1,5 +1,5 @@
 // ===== GPU 负载采样与预算判定（2026 锐评「性能预算靠信仰」——审计卡共识榜 #3，刀⑩）=====
-// frontend_design_critique 指控：「MAX_MODELS=8 是计数非预算，无 draw call/纹理字节预算」。
+// frontend-design-critique 指控：「MAX_MODELS=8 是计数非预算，无 draw call/纹理字节预算」。
 // 本模块引入 renderer.info 的**实测信号**（非 GPU 型号指纹表——ANGLE 字符串解析脆弱、
 // Android WebView 无此扩展、happy-dom 不可测）：
 //   - info.render.calls = 上一帧 draw call 数（info.render 每帧自动复位，读值无副作用）

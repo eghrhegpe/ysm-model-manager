@@ -82,4 +82,4 @@ last_verified: 2026-09-11
 ## 相关
 
 - 兄弟卡：`mount3d-584-giant`（同文件，mount3D 巨函数现状——已部分拆分）
-- 统一核心：`preview_core`（ADR-066 D2 统一外壳）
+- 统一核心：`preview-core`（ADR-066 D2 统一外壳）

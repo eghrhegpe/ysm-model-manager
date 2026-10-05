@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-07
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：ADR-191（testutil 迁址）、ADR-192（registry 拆分）、ADR-174（parity 对账基建）、docs/knowledge/test_tax_reduction.md（测试税三刀判据）、go/types/registry/resource.go、go/installer/installer.go、go/internal/testutil/、scripts/pre-push-gate.ts
+- **相关**：ADR-191（testutil 迁址）、ADR-192（registry 拆分）、ADR-174（parity 对账基建）、docs/knowledge/test-tax-reduction.md（测试税三刀判据）、go/types/registry/resource.go、go/installer/installer.go、go/internal/testutil/、scripts/pre-push-gate.ts
 
 ---
 
@@ -44,7 +44,7 @@
 
 ### 刀4：确定性原语沉淀（testutil 三件套）
 
-`go/internal/testutil` 新增 `SortedKeys` / `WithFixedClock` / `CleanAbsPath`（map 排序、时间注入、平台无关绝对路径构造），收编散修：dfa190b8b / a3382de92（排序）、276fd42e6（filepath.Join 构造路径）。复用判据照搬 `test_tax_reduction` 卡刀三：**同模式 ≥3 处即抽**。
+`go/internal/testutil` 新增 `SortedKeys` / `WithFixedClock` / `CleanAbsPath`（map 排序、时间注入、平台无关绝对路径构造），收编散修：dfa190b8b / a3382de92（排序）、276fd42e6（filepath.Join 构造路径）。复用判据照搬 `test-tax-reduction` 卡刀三：**同模式 ≥3 处即抽**。
 
 - 验收：新增 flaky 类提交（map 随机序 / 时间依赖 / 路径拼串）归零。
 

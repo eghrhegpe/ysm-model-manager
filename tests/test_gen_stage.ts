@@ -5,7 +5,7 @@
  * 背景（2026-09-01 实证）：pre-commit 的 snap_docs 快照 diff 用「mtime/size 变化」
  * 判定 gen 产物——单会话成立，并发失效：并行会话手改的知识卡恰在快照窗口内被 touch，
  * 被误判为 gen 产物 stage 进 index，进而被 `--only` 路径限定提交卷带（实证：
- * fbx-cli-pipeline.md / frontend_test_audit.md 被卷进 e96b47e3）。
+ * fbx-cli-pipeline.md / frontend-test-audit.md 被卷进 e96b47e3）。
  *
  * 修复：stage 判定收窄为「快照变化 ∩ gen 前未 dirty」——gen 前已有真实改动的文件
  * （并行会话手改）永不 stage；补全型 gen 的产物（gen 前干净）正常入库。

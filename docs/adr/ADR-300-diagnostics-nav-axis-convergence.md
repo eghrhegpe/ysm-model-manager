@@ -1,10 +1,10 @@
 # ADR-300：诊断页标签导航单轴收口：看/测/诊三组与二级导航语法统一
 
 - **状态**：✅ 已采纳（Accepted，2026-09-24；D1–D4 全票拍板，见 §2.0）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）——`docs/knowledge/app_content_diagnostics.md`「ADR-300 诊断页导航轴收敛」节
+- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）——`docs/knowledge/app-content-diagnostics.md`「ADR-300 诊断页导航轴收敛」节
 - **日期**：2026-09-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：[ADR-258](./ADR-258-diagnostics-nav-top-tabs.md)（左栏→顶部 tab）、[ADR-259](./ADR-259-tab-rendertabs.md)（renderTabs 结构单点）、[ADR-278](./ADR-278-diagnostics-perf-ia.md)（性能面板内轴收敛；本 ADR 接其 §3「扫描聚合轴」遗留）、[ADR-285](./ADR-285-bench-usability-copy-diff-plan.md)（P1-2/P1-3 待拍板项由本 ADR 吸收）、[ADR-288](./ADR-288-diagnostics-scan-bar-persistent.md)（常驻栏两段式，全部保留）、`docs/knowledge/app_content_diagnostics.md`
+- **相关**：[ADR-258](./ADR-258-diagnostics-nav-top-tabs.md)（左栏→顶部 tab）、[ADR-259](./ADR-259-tab-rendertabs.md)（renderTabs 结构单点）、[ADR-278](./ADR-278-diagnostics-perf-ia.md)（性能面板内轴收敛；本 ADR 接其 §3「扫描聚合轴」遗留）、[ADR-285](./ADR-285-bench-usability-copy-diff-plan.md)（P1-2/P1-3 待拍板项由本 ADR 吸收）、[ADR-288](./ADR-288-diagnostics-scan-bar-persistent.md)（常驻栏两段式，全部保留）、`docs/knowledge/app-content-diagnostics.md`
 
 ---
 
@@ -104,7 +104,7 @@
    - `perf-single-bench.ts:206` 直读 `diag-perf-mode`，随 D2 三读点统一收进 `readActiveBenchMode()` 出口（见 §2.2）。
    - 落地第 0 步：全仓再 grep `data-tab="bench|scan|record"`、`diag-perf-mode`、`#diag-tab-record`、`#diag-tab-scan` 确认搬迁清单闭合，无第三处。
 6. 落地时在 ADR-278 首部加**如实衔接注**（明写「§2.7 item 2 的**结构性判据**被本 ADR 修订为**内容性判据**，scan 以组内子 pill 回到模式行继任位置，危害由公共区整体退场中和」——不得美化为"仅改落点"，格式仿 ADR-278 对 ADR-288 的既注）；ADR-285 状态行补「P1-2/P1-3 由 ADR-300 吸收」。
-7. 知识卡 `docs/knowledge/app_content_diagnostics.md` 同步（铁律：改代码同步知识卡，`check-knowledge-drift` 兜底）。
+7. 知识卡 `docs/knowledge/app-content-diagnostics.md` 同步（铁律：改代码同步知识卡，`check-knowledge-drift` 兜底）。
 8. 本页面属 DOM tab 层，非 3D 菜单——AGENTS.md「3D 菜单只允许 MenuNode schema」红线不适用、也不冲突；页内导航仍经 PAGE_REGISTRY 路由可达，不新增调用面。
 
 ### 2.7 分段实施（各自可独立回滚）
@@ -133,7 +133,7 @@
 
 **已知遗留**
 
-- ~~子 pill 的 ARIA/键盘化（role=tablist 嵌套的正确姿势是 toolbar+radiogroup 还是树形 tablist）~~：**已落地（2026-10）**——采用 toolbar+radiogroup 姿势（bar `role="toolbar"` + pill `role="radio"`/`aria-checked` + roving tabindex + 方向键，实现与兼容策略见 `docs/knowledge/app_content_diagnostics.md`「a11y 接线」节；契约测试 `tabs-shell.test.ts` + `tabs-shell.dom.test.ts`）。不套 tablist 的判据仍成立（顶层已是 tablist）。
+- ~~子 pill 的 ARIA/键盘化（role=tablist 嵌套的正确姿势是 toolbar+radiogroup 还是树形 tablist）~~：**已落地（2026-10）**——采用 toolbar+radiogroup 姿势（bar `role="toolbar"` + pill `role="radio"`/`aria-checked` + roving tabindex + 方向键，实现与兼容策略见 `docs/knowledge/app-content-diagnostics.md`「a11y 接线」节；契约测试 `tabs-shell.test.ts` + `tabs-shell.dom.test.ts`）。不套 tablist 的判据仍成立（顶层已是 tablist）。
 - 3D 菜单 MenuNode 若要深链诊断页子 pill：`diag-tab-<组>` + `data-sub=<id>` 两级 id 已留单源，深链本身不在本期。
 - `oldest` 页与诊断页共用路由分支（`app-content.methods.test.ts:163`）不在本期触碰范围。
 

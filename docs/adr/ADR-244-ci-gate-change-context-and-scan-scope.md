@@ -82,7 +82,7 @@ link-checker 仍是 `[OK]`。⇒ 任何人往仓库里丢一个 md 就能拦住�
 - 各 AI 工具的 agent 工作区文件仍会落在仓库根（`.openclaw` 已由该工具自行加入 `.gitignore`）；
   D2 使门禁对其免疫，但仓库整洁仍归各工具自理。
 - 知识卡 frontmatter 的 YAML 合法性**本地无闸门**（`check-knowledge-drift` 不校验，VitePress 构建只在
-  Pages workflow 跑）——本轮 `pre_push_gate.md` 第 91 行未加引号的半角 `:` 就是这条缝隙
+  Pages workflow 跑）——本轮 `pre-push-gate.md` 第 91 行未加引号的半角 `:` 就是这条缝隙
   （已在 `adbe2358a` 修，闸门缺口另案）。
 
 ## 4. 数据溯源

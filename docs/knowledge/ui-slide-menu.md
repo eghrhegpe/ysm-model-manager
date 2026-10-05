@@ -84,7 +84,7 @@ status: active
 
 - 消费方：`mount-preview-core.ts` 的环境面板（🌍 时间/云量/IBL/地面开关）通过 `createSlideMenu` 构建（`preview-3d/menu/engine/core.ts` 亦直接 `import { createSlideMenu } from "./slide-menu.ts"`）
 - 同目录兄弟模块：`slide-menu-styles.ts`（外壳样式）、`components-styles.ts`（行组件样式）、`style-install.ts`（两样式共用安装脚手架）、`header-toggle.ts` / `slider-controller.ts`（cap 栈控件）
-- 原「🥉 行组件 barrel（`ui-helpers.ts` re-export）」已随 ADR-146 反桶运动删除（2026-08-26）：全部消费方从具体叶模块直引（`createSlideMenu` 直引 `slide-menu.ts`；`cardContainer`/`ui-card.ts` 已于 2026-09-10 随零消费者清理删除）；旧世界命令式行 builder 簇（`ui-rows`/`ui-advanced-rows`/`ui-slide-row` 等）已随拔管删除（见 [ui_components](./ui_components.md)）
+- 原「🥉 行组件 barrel（`ui-helpers.ts` re-export）」已随 ADR-146 反桶运动删除（2026-08-26）：全部消费方从具体叶模块直引（`createSlideMenu` 直引 `slide-menu.ts`；`cardContainer`/`ui-card.ts` 已于 2026-09-10 随零消费者清理删除）；旧世界命令式行 builder 簇（`ui-rows`/`ui-advanced-rows`/`ui-slide-row` 等）已随拔管删除（见 [ui-components](./ui-components.md)）
 - **不消费**：MikuMikuAR 的 `ui-resource-panel` / `ui-fullscreen-overlay` / `ui-virtual-grid` 未纳入本批
 
 ## 不变量
@@ -128,7 +128,7 @@ status: active
 ## 相关
 
 - `utils-dom` 卡的 `bind-roving.ts` 键盘原语（ADR-308 D2：slide-menu 键盘导航已收敛至此原语，2026-09-30）
-- [preview_core](./preview_core.md) — 环境面板等消费方
+- [preview-core](./preview-core.md) — 环境面板等消费方
 - [app-preview](./app-preview.md) — app-preview 侧 mmd-controls 等模块（现不再直接消费该外壳，经 preview-3d/menu cap 栈渲染）
-- [ui_components](./ui_components.md) — 🥉 行组件库（`components-styles.ts` 同源）
+- [ui-components](./ui-components.md) — 🥉 行组件库（`components-styles.ts` 同源）
 - ADR-075（环境面板行式菜单）、ADR-076（根菜单 ⚙️ 收编）、ADR-220（ui 收容所解散归位）、ADR-256（设计令牌行级闸）

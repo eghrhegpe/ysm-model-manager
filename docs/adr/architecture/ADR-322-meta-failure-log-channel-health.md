@@ -1,7 +1,7 @@
 # ADR-322：元失败层：日志通道健康锁存 + 第二落盘通道 + 不可驱逐保留位
 
 - **状态**：✅ 已采纳（D1–D4 全部落地并提交，2026-10-05；P2 两项按 §2 否决方案 ④ 后置另批）
-- **实施状态**：已实施（Go 侧 `Logger.Health()` + `go/logs/ring.go trimRing` 分区裁剪 + `GetLogChannelHealth` 绑定、web 侧 `web-store|GetLogChannelHealth` 写探针、`backend/diary-outbox.ts` 第二通道与启动期 drain、`bus.ts` emit 收编 `logError`、诊断页 `channel-health.ts` 常驻红条；知识卡 `go-logs` / `core-error-diary` / `app_content_diagnostics` / `backend-idb` 已同步）
+- **实施状态**：已实施（Go 侧 `Logger.Health()` + `go/logs/ring.go trimRing` 分区裁剪 + `GetLogChannelHealth` 绑定、web 侧 `web-store|GetLogChannelHealth` 写探针、`backend/diary-outbox.ts` 第二通道与启动期 drain、`bus.ts` emit 收编 `logError`、诊断页 `channel-health.ts` 常驻红条；知识卡 `go-logs` / `core-error-diary` / `app-content-diagnostics` / `backend-idb` 已同步）
 - **日期**：2026-10-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：报告失败的通道自身失效是一类独立失败形状，缺它则已知失败形状的收敛终点静默丢失；跨 Go 日志环/前端装配层/诊断页三域，方向难逆转

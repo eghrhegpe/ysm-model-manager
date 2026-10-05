@@ -12,14 +12,14 @@
 
 pre-commit 钩子每次 commit 跑 GEN_CMDS（写模式）同步生成物，gen-stage.ts 以
 「stage = 快照变化 − gen 前 dirty」做并发隔离（ADR-151）：gen 前已 dirty 的文件一律
-视为并行会话半成品排除，防卷带（实证 fbx-cli-pipeline.md / frontend_test_audit.md
+视为并行会话半成品排除，防卷带（实证 fbx-cli-pipeline.md / frontend-test-audit.md
 卷进 e96b47e3）。
 
 该判定存在死角：**纯机器区 diff 一旦错过「刷出当次提交」就永久滞留**。gen 幂等刷完
 的卡（如 auto_fields.symbols_with_lines 符号增删），若当次提交是 `--only` 路径限定
 （只带走自己的文件）或当时无人提交，diff 滞留在工作区；之后任何 commit 开始时它已是
 dirty → 被当作「并行半成品」排除 → 永远自动 stage 不进去（实证：event-graph.md
-行号漂移版 8a03beaa 后滞留；frontend_repo_audit 的已删符号残留数月）。
+行号漂移版 8a03beaa 后滞留；frontend-repo-audit 的已删符号残留数月）。
 
 「防卷带」与「自动收编生成物」由此冲突：前者需要 dirty 即排除，后者需要纯自动产物
 可收编。一刀切排除 = 自动同步机制对滞留 diff 形同虚设；一刀切收编 = 吞并行手改。
@@ -63,7 +63,7 @@ dirty → 被当作「并行半成品」排除 → 永远自动 stage 不进去�
 ## 4. 数据溯源
 
 来源（工作区实证）→ 判定：
-- frontend_repo_audit.md auto_fields 残留 addClearRow/buildDepthMap/buildPresetChipGroup
+- frontend-repo-audit.md auto_fields 残留 addClearRow/buildDepthMap/buildPresetChipGroup
   （b91f21fd 已删）→ 机器区列表项，收编后 gen 增量清理（8e888d83）；
 - go-types.md auto_fields 新增 IsRenderableTextureExt/IsTextureExt（纯机器区）→ machine 收编；
 - audit-src-map.md 用途表人工区 diff → manual 排除（不误收编）；

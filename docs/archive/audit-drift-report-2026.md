@@ -23,8 +23,8 @@ use_when:
 
 | 类别 | 抽查张数 | 卡名（kind） |
 |---|---|---|
-| **特殊功能卡** | 9 | `ik_solver`, `ground_surface_spec`, `ground-cap-materialgroup-factories`, `render-federation`, `event-graph-guard`, `source-graph`, `extensibility-index`, `extensibility-index-reconciliation`, `extensibility-round2` |
-| **ADR 引用卡** | 1 | `adr173_gui_cli_paramspec` |
+| **特殊功能卡** | 9 | `ik-solver`, `ground-surface-spec`, `ground-cap-materialgroup-factories`, `render-federation`, `event-graph-guard`, `source-graph`, `extensibility-index`, `extensibility-index-reconciliation`, `extensibility-round2` |
+| **ADR 引用卡** | 1 | `adr173-gui-cli-paramspec` |
 | **go-\***（Go 后端） | 12 | `go-cli-search`, `go-conc`, `go-config`, `go-dedup`, `go-fileops`, `go-importer`, `go-installer`, `go-paths`, `go-recycle`, `go-scanner`, `go-sync`, `go-ysm-parser` |
 | **utils-\*** | 6 | `utils-array`, `utils-dom`, `utils-errors`, `utils-fmt`, `utils-resource-types`, `utils-summarize` |
 | **前端 UI / feature** | 12 | `app-tree`, `app-preview`, `app-sidebar`, `dialog-adv-filter`, `dialog-rename`, `community-feature`, `community-virtual-list`, `context-menu`, `download-tasks`, `recycle-bin`, `search`, `toolbar-search` |
@@ -164,13 +164,13 @@ use_when:
 
 ## 四、抽样未覆盖的重要知识卡（建议后续抽查）
 
-- `scene_capability_registry.md` — render-federation 卡的"架构事实迁移"目标，未抽到但被多次引用
+- `scene-capability-registry.md` — render-federation 卡的"架构事实迁移"目标，未抽到但被多次引用
 - `classify-routing.md` — 拓展点对账 Top 10 #2 的护栏卡
 - `mount-preview-module-singleton-race.md` — 已 archived，但 `mount3D` 并发守卫的核心历史卡
-- `preview_core.md` — ADR-066 D2 统一外壳核心卡
+- `preview-core.md` — ADR-066 D2 统一外壳核心卡
 - `resource-registry.md` — 与 `utils-resource-types.md` 互补的单一事实源卡
 - `3d-patterns.md` / `3d-oversize-file-codesplit-feasibility.md` — 3D 渲染架构决策卡
-- `backend_web.md` / `backend-idb.md` / `web-fs.md` — 网页版桥接（Rust backend 相关）
+- `backend-web.md` / `backend-idb.md` / `web-fs.md` — 网页版桥接（Rust backend 相关）
 - `ysm-wasm.md` / `ysm-anim-pipeline.md` — WASM 解码管线（涉及上面发现的字符串 hack）
 - `mount-preview-module-singleton-race.md` — 代际守卫历史
 

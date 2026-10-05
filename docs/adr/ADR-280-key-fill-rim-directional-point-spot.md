@@ -13,7 +13,7 @@
   - `frontend/src/preview-3d/caps/light-persist.ts`（旧存档迁移）
   - `frontend/src/preview-3d/caps/shadow-capability.ts`（`getLights()` 适配）
   - `frontend/src/preview-3d/screenshot/screenshot-render.ts`、`screenshot-lights.ts`（截图按 type 建灯 + 同一灯位公式）
-  - 知识卡 `docs/knowledge/volumetric_cone.md`、`docs/knowledge/preview_env_state.md`
+  - 知识卡 `docs/knowledge/volumetric-cone.md`、`docs/knowledge/preview-env-state.md`
   - 对标参照 `MikuMikuAR/frontend/src/scene/render/lighting-stage.ts`（Babylon `StageLightState.type` 切换）
 
 ---

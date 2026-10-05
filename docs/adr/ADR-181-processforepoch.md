@@ -1,9 +1,9 @@
 # ADR-181：processForEpoch 枚举化——竞态测试先行
 
-- **状态**：✅ 已采纳（决策 = 标记技术债 + 暂缓枚举化，非废弃；实施状态见正文 §2 与知识卡 go_design_critique）
+- **状态**：✅ 已采纳（决策 = 标记技术债 + 暂缓枚举化，非废弃；实施状态见正文 §2 与知识卡 go-design-critique）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：[go_design_critique](../knowledge/go_design_critique.md)、`internal/app/install/queue.go`、[install_domain_split](../knowledge/install_domain_split.md)
+- **相关**：[go-design-critique](../knowledge/go-design-critique.md)、`internal/app/install/queue.go`、[install-domain-split](../knowledge/install-domain-split.md)
 
 ---
 
@@ -38,8 +38,8 @@
 - 锐评报告：视角A2 2026-09-05 三路串行锐评（https://dsh://session/...）
 - 代码位置：`internal/app/install/queue.go:64/84/113-116/127-158/144`
 - 测试缺口：`internal/app/install/queue_test.go` 仅 4 个测试，无并发场景
-- 历史快照：`docs/knowledge/go_design_critique.md` 记录「暂缓，需 ADR 级评估」
+- 历史快照：`docs/knowledge/go-design-critique.md` 记录「暂缓，需 ADR 级评估」
 
 ---
 
-*ADR 只记决策方向和理由，不记实施进度。实施进度见知识卡 [go-design-critique](../knowledge/go_design_critique.md) 动刀进度。*
+*ADR 只记决策方向和理由，不记实施进度。实施进度见知识卡 [go-design-critique](../knowledge/go-design-critique.md) 动刀进度。*

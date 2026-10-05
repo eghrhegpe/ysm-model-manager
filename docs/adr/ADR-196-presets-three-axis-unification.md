@@ -61,7 +61,7 @@ ADR-195（cap 控件单类型化）与 ADR-196 同属菜单/状态体系收口�
 - ADR-196 刀 0 落地后，cap setter/getter **已全部直通 envState**（`setFogDensity`→`setEnvState({fogDensity})` + registerEnvCallback 触发渲染）。这意味着 ADR-196 的**实质目标「cap 参数外移全局 envState + 菜单经统一写入口落状态」已由刀 2 达成**——菜单控件 `{ get:()=>cap.getXxx(), set:(v)=>cap.setXxx(v) }` 闭包背后就是 envState 单例，只差一层字面转发。
 - 2026-09-07 决策（ADR-195 刀 3 之后复核）：**ADR-196 刀 3 字面 StatePath 化不放行**，改为「状态驱动已达成、形式统一不做」。理由：① 菜单闭包绑的 cap setter 语义化清晰、可读、可测，逐一换成 `getStateValue('skyTimeOfDay')` 扁平字符串会丢类型安全与 setter 内部的守卫逻辑（light manual 双入口、reflector isStateLoaded 守卫）；② 泛化统一已有 cap setter 直通 envState 兜底，服务端/装配链均已验证，纯 UI 层字面改写是「用更脆写法换形式上一致」，违背长治久安。ADR-196 刀 3 相应水印为「已由刀 0/2 实质达成，字面部分不采纳」。此决策不改动 `setEnvState` 作为唯一写入口的地位——cap setter 与装配链（applyModelDefaults/applyPostProcDefaults）仍全部经它落状态，StatePath 只作为**可选项**预留，不作为菜单绑定必选。
 
-### 当前实施进度（2026-09-07 v2 快照，详细见知识卡 preview_env_state）
+### 当前实施进度（2026-09-07 v2 快照，详细见知识卡 preview-env-state）
 
 - 刀 0：**3/4，第 4 项明确不做**（`env-state-schema.ts`/`env-state.ts`/`env-dispatcher.ts` 已建；`env-state-persist.ts` 取消——持久化由各 cap saveState 承担，envState 层持久化会双写双恢复冲突，空壳 schedulePersistEnvState 已删，2026-09-07 决断）
 - 刀 1：Sky 参数写入已走 setEnvState，旧 `MODEL_SKY_PRESETS` 已删（3aeb60913）；setter 仍双写 uniforms（残留，不影响预设体系）

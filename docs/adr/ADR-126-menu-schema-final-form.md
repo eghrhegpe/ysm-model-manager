@@ -109,7 +109,7 @@ P4-A/B/D 落地后，对 P4-B-3 / P4-C 的原始范围做**实施认知修正**�
 - **A 层 `renderPreviewSchemaContent` 的 folder/panel/slider/toggle 分支**：本 ADR 不在子步里单独写步；若 P4-B 实施时 B 步内部可顺路补齐（推荐），否则开 P4-E 子 ADR
 - **`litematic extraControls` 顶栏常驻**（ADR-085 §3 已知遗留）——另案轨道，不在本 ADR
 - **视觉回归测试基建**——留作 P4-B 子任务的子任务（命令式→schema 化后 DOM 结构会变，e2e 选择器需同步；`legacyTestId` 字段为兼容口）
-- **`05fe24b7` 手工 refresh 链路**（`rebuildEnvSubs` + `menu.refresh()`，env 域 cap 参数订阅）——知识卡 `preview_menu_settings_state.md` L83 标记「迁移是遗留项」。本 ADR 不接管，env 域的 cap 参数订阅与 settingsState 横切六项**不同域**，硬迁 = 削足适履。除非冒出真实「设置 ↔ 环境面板联动」诉求，否则定性「保持观察」
+- **`05fe24b7` 手工 refresh 链路**（`rebuildEnvSubs` + `menu.refresh()`，env 域 cap 参数订阅）——知识卡 `preview-menu-settings-state.md` L83 标记「迁移是遗留项」。本 ADR 不接管，env 域的 cap 参数订阅与 settingsState 横切六项**不同域**，硬迁 = 削足适履。除非冒出真实「设置 ↔ 环境面板联动」诉求，否则定性「保持观察」
 - **P4-B-3 交互面板**（morph/play/material）——定性「保持逃生舱」：状态源均为运行时交互态（morph 权重直写 mesh / 播放走 MmdPlayBridge / 材质走 MaterialControlBridge），转声明式需先造 Capability 类（另一量级）。逃生舱是 ADR-125 设计内终态（escapeHatch 兼容命令式），非未完成（详见 §2.5）
 - **P4-C dockGroup 双语义**（dock 分组 + 角色详情内容域划分）——定性「保持观察」：当前读法恰好一致（model 内容都在 model 组），概念错位非功能 bug；真拆 ROI 低，等真实诉求（有人把面板挪组）再拆（详见 §2.5）
 
@@ -120,7 +120,7 @@ P4-A/B/D 落地后，对 P4-B-3 / P4-C 的原始范围做**实施认知修正**�
 | **用户对账（2026-08-28 验货报告）** | 4 类病当前位置与现状（dockGroup 1 字段 4 职责 / roleDetailView 万能容器 / model-motion 交叉渲染 / fill3DPanel-fillModelPanel） |
 | **兄弟会话 git log（ADR-125 + 同步提交）** | `22648fc7`（auto-import 修饰符根除误报）、`2c2083bc`（`typeof window` 守卫治 android-events 8 例连坐）、`79e583bb`（ADR-125 全量 14 文件入库） |
 | **doctor 报告（2026-08-28）** | 31/31 全绿、78 文件、1068 测试 |
-| **知识卡 `preview_menu_settings_state.md`** | P1/P2/P3 落地状态、不变量（5 条）、残留手工 refresh 链路（`05fe24b7`）、L100 遗留已被 `22648fc7` 修 |
+| **知识卡 `preview-menu-settings-state.md`** | P1/P2/P3 落地状态、不变量（5 条）、残留手工 refresh 链路（`05fe24b7`）、L100 遗留已被 `22648fc7` 修 |
 | **ADR-085 §1.1-1.4** | 5 处分散定义、状态双源、渲染时机竞态、mmd bones 不可达——本 ADR 视为前置病情 |
 | **ADR-125 §1.1-1.3** | 三套并存（A 声明式 Schema / B cap 控件 / C 逃生舱）、三条病征（f0fa3e23 / 7fdfdcc7 / 05fe24b7 物证）、状态通道散落——本 ADR 视为前置病情 |
 | **AGENTS.md 「ADR 与审核」+「3d菜单只允许 visibleWhen: (s) => boolean」** | 母 ADR 不记实施进度；3D 菜单显隐统一规则约束 P4-D 子步 |

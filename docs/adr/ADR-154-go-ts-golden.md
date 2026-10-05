@@ -34,7 +34,7 @@
 任一端改口径，另一端测试当场红。**禁止只做 web 单侧对拍**——那是死快照，防不住 Go 侧漂移（本方案的核心动机）。
 
 ### 2.3 范围（纯函数层）
-只对「字节/字符串 → 结构化结果」的**纯函数**做 golden；装配层（IDB 读写）、路径语义（`/web`）、Worker 编排**不纳入**（Go 与 TS 输入面不同，无法对拍）。识别层指纹（`MatchZipEntry` ↔ `matchZipEntryTS`）与方块配色（`MapColor`/`ResolveBlockName` ↔ TS `mapColor`/`resolveBlockName`）为首批落地域；ysm-header / nbt-parse 三视图 / pack-meta / 容器级 detectZipType 为后续扩展域。具体落地与进度见知识卡 `go_ts_golden`。
+只对「字节/字符串 → 结构化结果」的**纯函数**做 golden；装配层（IDB 读写）、路径语义（`/web`）、Worker 编排**不纳入**（Go 与 TS 输入面不同，无法对拍）。识别层指纹（`MatchZipEntry` ↔ `matchZipEntryTS`）与方块配色（`MapColor`/`ResolveBlockName` ↔ TS `mapColor`/`resolveBlockName`）为首批落地域；ysm-header / nbt-parse 三视图 / pack-meta / 容器级 detectZipType 为后续扩展域。具体落地与进度见知识卡 `go-ts-golden`。
 
 ### 2.4 priority 裁决差异处理
 pilot 1 阶段**只对拍 `MatchZipEntry` 单条指纹**（两端语义一致，可直接互锁）；**不直接对拍容器级 `detectZipType`**——TS 侧缺 priority 裁决，直接对拍会因算法层级不同而误报。容器级对拍列为后续项，前置动作是给 TS 侧补 (priority desc, id asc) 裁决（与 Go `betterCandidate` 同构），补齐后再对拍 `detectZipType`。

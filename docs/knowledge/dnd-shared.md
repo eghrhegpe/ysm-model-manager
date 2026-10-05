@@ -98,5 +98,5 @@ status: active
 ## 相关
 
 - `docs/knowledge/import-queue.md`（导入队列）
-- `docs/knowledge/features_dialogs.md`（导入对话框）
+- `docs/knowledge/features-dialogs.md`（导入对话框）
 - frontend/AGENTS.md（WebView2 DnD 特殊性）

@@ -83,7 +83,7 @@ ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `P
 
 ## 相关
 
-- 兄弟卡：`ground_surface_spec.md`（材质 spec 单源驱动，新增 3 种程序化像素）
+- 兄弟卡：`ground-surface-spec.md`（材质 spec 单源驱动，新增 3 种程序化像素）
 - ADR-195（cap 直产 PreviewMenuNode[] 终态）
 - ADR-117（ground-material-spec 单一事实源，参数嵌套设计）
 - ADR-283（参数值域描述符：schema `range`/`uiRange` 单一事实源，钳制收口 `setEnvState`）

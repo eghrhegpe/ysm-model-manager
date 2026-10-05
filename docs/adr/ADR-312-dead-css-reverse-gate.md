@@ -54,4 +54,4 @@
 | 全仓 grep 复核（`eicon` / `stagger-in` / `mc-pick-*` / `mc-scan-*` / `ws-preview*` / `ysm-ovl-*` / `ysm-3d-pop*` / `gh-*` / `ws-*` / `batch-*` / `stat-card` / `rec-card` / `repo-bar-btn`） | 仅命中自身定义处与注释/文档，零模板、零 JS 消费者 |
 | `frontend/index.html`（当前外壳 = `app-nav` + `app-content` + `app-toast` + `context-menu`，无 `#root`） | 促成 `layout.css` 整表删除 |
 | `scripts/check-redlines.ts:504`（`tb-btn` 正则）、`upstream/YesSteveModel-Parser/web/index.html:72`（`.topbar`） | 假存活证据 → 促成 D4 |
-| `docs/knowledge/app_content_settings.md`（称 `.mc-pick-*` 已删）vs `frontend/css/components.css:622-641`（规则仍在） | 两处事实源背离 → 促成检查 7 立项 |
+| `docs/knowledge/app-content-settings.md`（称 `.mc-pick-*` 已删）vs `frontend/css/components.css:622-641`（规则仍在） | 两处事实源背离 → 促成检查 7 立项 |

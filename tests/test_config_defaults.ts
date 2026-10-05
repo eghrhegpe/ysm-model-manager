@@ -86,7 +86,7 @@ function validate() {
   const cfg = configPath();
   if (cfg === null) {
     // 首次运行/本地纯净环境无配置文件属合法状态，不视为违规；
-    // 但 CI 下缺失配置 = 零覆盖假绿（审计卡 frontend_test_audit §中低优先级，
+    // 但 CI 下缺失配置 = 零覆盖假绿（审计卡 frontend-test-audit §中低优先级，
     // test_config_defaults 假绿），必须显式 FAIL 而非静默通过。
     const inCI = !!(process.env.CI || process.env.GITHUB_ACTIONS);
     if (inCI) {

@@ -120,9 +120,9 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 
 > **子域拆分（2026-08-31，ADR-138 同批）**：诊断页 / 设置页 / 站点视图已拆为独立子卡——
 > 本卡只持编排、模板、样式层、共享数据与工坊装配。见：
-> - [诊断页 `app_content_diagnostics`](./app_content_diagnostics.md) — `diagnostics/` 全子模块
-> - [设置页 `app_content_settings`](./app_content_settings.md) — `settings/` 全子模块
-> - [创意工坊站点视图 `app_content_site`](./app_content_site.md) — `site/` + `site-view.ts` + `workshop-data` / `workshop-browse-mode`
+> - [诊断页 `app-content-diagnostics`](./app-content-diagnostics.md) — `diagnostics/` 全子模块
+> - [设置页 `app-content-settings`](./app-content-settings.md) — `settings/` 全子模块
+> - [创意工坊站点视图 `app-content-site`](./app-content-site.md) — `site/` + `site-view.ts` + `workshop-data` / `workshop-browse-mode`
 
 - `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:changed` 切页、`_render()` 按 `_current` 选择模板并重渲染（**同页重放短路**：缓存面板 `isConnected` 时直接 return——见「监听 bus」说明；防线 `app-content.component.test.ts` 同页用例）、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（**宽度真值单点在 `init-preview.ts`**：localStorage `preview-width` 恢复 + 拖拽共用 160/500/240 夹取常量，模板不再写死 width）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）；`connectedCallback` 末尾直接注册四组全局 handler（`registerSync` / `registerContextMenus` / `registerInstanceOps` / `registerAndroidEvents`，见 `features/sync.ts` / `features/context-menu/context-menus.ts` / `features/pack-ops/instance-ops.ts` / `features/platform/android-events.ts`）
 - `tpl.ts` — 页面布局模板：`repositoryHTML` / `instancesHTML` / `settingsHTML` / `diagnosticsHTML` / `workshopHTML` / `githubHTML` / `downloadsHTML` / `recycleHTML`。**repository 的 tree tab `body` 留空**——初始挂载单点归 `init-pages.ts|initRepositoryPage.mountTree`（localStorage 恢复 rtype/subdir），模板硬编码 `<app-tree>` 会造成首挂双 mount（connect 发起扫描 RPC 后立即被替换销毁，2026-09 收债）。**rtype 变更复用实例改属性**（2026-09 收债，同 mountSyncManager 范式）：mountTree 对已存在的 app-tree 走 setAttribute/removeAttribute（app-tree 属性机制重载，视图状态跨切换存活），同值 emit 被 `oldVal === newVal` 拦下——「强制刷新树」语义归 `tree:reload`（settings/init.ts FSA 流已改发，勿再借同值 repo:rtype-changed 当刷新用）

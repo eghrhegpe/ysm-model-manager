@@ -74,4 +74,4 @@ ADR-129 第三刀：把 `frontend/src/utils/3d/`（227 文件）整编搬迁到 
 ## 相关
 
 - ADR-129-preview-3d-domain-root
-- preview_core / preview_state / preview_panel_declarative（三刀改动的知识卡）
+- preview-core / preview-state / preview-panel-declarative（三刀改动的知识卡）

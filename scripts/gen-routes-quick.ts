@@ -12,7 +12,8 @@
  *   quick_intents:    用户意图关键词（每行一个，与 quick_groups 循环配对：
  *                     意图多于分组时并入最后分组，分组多于意图时多余分组不输出；
  *                     配对不均恒打 WARN，绝不静默丢弃——2026-08-31 审计修复）
- *   quick_risk_lines: 红线警告（按索引与 quick_intents 配对；缺省则该行红线填 -）。
+ *   quick_risk_lines: 红线警告（按索引与 quick_intents 配对；缺省则该行红线填 -；
+ *                     超出意图条数的行渲染为「通用红线」附加行，不再静默丢弃）。
  *                     面向 AI/人的自然语言，禁写 `file|symbol` 锚语法（那是 invariant_anchors 的语法）
  *   pitfalls:         陷阱列表，格式 "「位置」描述 → 正确做法"（如无前缀则整段作陷阱描述）
  *
@@ -115,13 +116,11 @@ export function parsePitfall(raw: string) {
 }
 
 /**
- * 风险行超配检测（纯函数，契约测试锁定）：quick_risk_lines 按索引与 quick_intents 配对，
- * 超出意图条数的行在渲染时被静默丢弃——把「被丢弃的行」显性返回，调用方据此打 WARN。
- *
- * 背景：2026-08-31 审计把「意图/分组配对不均」从静默丢弃改为恒 WARN，但风险行超配仍是
- * 静默的（实证：某卡写 5 条红线、只 4 条意图，第 5 条永远不出现在速查表）。本函数补上
- * 同一纪律的最后一格——内容丢失不得无声。缺红线方向（risks < intents）由渲染兜底填
- * 「-」，不丢内容，不算超配。
+ * 风险行超配提取（纯函数，契约测试锁定）：quick_risk_lines 按索引与 quick_intents 配对，
+ * 返回超出意图条数的行。2026-10-05 起 render 把超配行渲染为「通用红线」附加行（挂首分组）
+ * 而非丢弃——红线是卡级资产，一条都不该少；旧实现静默丢弃（features-dialogs 7 红线只出
+ * 1 条），2026-09-13 曾补 WARN，但 WARN 只让丢失可见、内容仍然丢了，本版根治。
+ * 缺红线方向（risks < intents）由渲染兜底填「-」，不丢内容，不算超配。
  */
 export function excessRiskLines(risks: string[], intents: string[]): string[] {
   return risks.slice(intents.length);
@@ -145,7 +144,7 @@ export function render(
   const unknownGroups = new Map<string, Set<string>>();
   // 意图 ↔ 分组循环配对（2026-08-31 审计修复）：
   // 旧实现 Math.min(groups, intents) 仅按索引配对，go-scanner 1 组 5 意图只出 1 行、
-  // preview_core 1 组 4 意图只出 1 行——其余意图静默丢弃、零警告（routes-quick 覆盖空转）。
+  // preview-core 1 组 4 意图只出 1 行——其余意图静默丢弃、零警告（routes-quick 覆盖空转）。
   // 新语义：意图多于分组 → 多余意图并入最后分组（保意图不丢）；分组多于意图 → 多余分组不输出。
   // 两种不均都打 WARN，让 AI/人工立即看到配对异常。
   for (const c of cards) {
@@ -170,13 +169,18 @@ export function render(
         `⚠️  ${c.file}: ${gLen} 个分组 > ${iLen} 条意图，多余分组不输出（悬空分组）: ${extra.join("、")}`,
       );
     }
-    // 风险行超配（2026-09-13）：quick_risk_lines 按索引与意图配对，超出行渲染时静默
-    // 丢弃——显性 WARN（同 2026-08-31 配对不均纪律），内容丢失不得无声。
-    const excess = excessRiskLines(c.risks, c.intents);
-    if (excess.length)
-      console.warn(
-        `⚠️  ${c.file}: ${c.risks.length} 条红线 > ${iLen} 条意图，多余 ${excess.length} 条不输出（风险行按索引与意图配对）: ${excess.join("、")}`,
-      );
+    // 超配风险行（2026-10-05 ②）：不再丢弃也不再 WARN——渲染为「通用红线」附加行，
+    // 挂首分组（多组卡的超配红线通常是卡级而非意图级，挂首组最不惊讶）。
+    const primaryGroup = c.groups[0]!;
+    for (const risk of excessRiskLines(c.risks, c.intents)) {
+      rows.push({
+        group: GROUP_RANK.has(primaryGroup) ? primaryGroup : UNCLASSIFIED_GROUP,
+        intent: "通用红线",
+        risk,
+        adr: c.adr,
+        card: c,
+      });
+    }
     for (let i = 0; i < iLen; i++) {
       const rawGroup = c.groups[Math.min(i, gLen - 1)]!;
       rows.push({

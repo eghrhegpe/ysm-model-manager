@@ -92,5 +92,5 @@ status: active
 - ADR-232 — scripts/hooks 并发竞态/审计留痕/退化降级三修复（D1 配对 / D2 留痕 / D3 reconcile 退化降级）
 - ADR-150 — pre-commit 兜底收窄（禁用 git add -u docs/ 吞并发漂移）
 - ADR-087 — drift --affected 秒级接入
-- [pre_push_gate](./pre_push_gate.md) — 逃生留痕对账（gate-audit-reconcile）
-- [scripts_readme_index](./scripts_readme_index.md) — 钩子/脚本总览
+- [pre-push-gate](./pre-push-gate.md) — 逃生留痕对账（gate-audit-reconcile）
+- [scripts-readme-index](./scripts-readme-index.md) — 钩子/脚本总览

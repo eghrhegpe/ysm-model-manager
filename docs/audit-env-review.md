@@ -1225,7 +1225,7 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
 | `npx vite build`（locale JSON 再生后） | ✓ built in 8.49s |
 | `check-biome --files`（13 文件） | ✅ |
 | `check-layering` | ✅ |
-| 知识卡回写 | water.md（F-1/F-2 陷阱 + API 五键 + UI 出口）、preview_env_state.md（isSsrRenderActive 登记） |
+| 知识卡回写 | water.md（F-1/F-2 陷阱 + API 五键 + UI 出口）、preview-env-state.md（isSsrRenderActive 登记） |
 
 > check-circular 报 1 环：`views/app-content/diagnostics/perf.ts ↔ perf-scan/single-bench`
 > ——本会话未触碰 perf 系文件（git status 可证），属**存量环**（diag 工具区，2026-09-22
@@ -1287,7 +1287,7 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
      （用 `restoreState("shadow")` 读真实落盘产物）；
   ④ legacy 中毒救回（旧档 `enabled:false` → 恢复后开关仍能开回阴影）；
   ⑤ F-2 同轨写入。
-- **知识卡**：`preview_env_state.md` 新增「锐评 F-1 收口」条 + 「持久化设计」的键形说明改为
+- **知识卡**：`preview-env-state.md` 新增「锐评 F-1 收口」条 + 「持久化设计」的键形说明改为
   按 cap 分组（fog/water/shadow 只写 schema 键；ground/reflector/environment 仍留旧键形）。
 
 ### 🟡→✅ F-2 恢复来源纪律：4 路 manual → auto-model（§19.1 判词错在「暂无症状 ≠ 已合规」）
@@ -1313,7 +1313,7 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
   `auto-model` 写同键，值必须落地」。四路各一 describe；
   ground 额外锁「委托路径」那条（防只修直连留暗门）+「中间件仍只认 manual」对照例
   （恢复走 auto-model 后 `groundMaterialPreset` 不得被误置 custom，ADR-254 不回归）。
-- **知识卡修正**：`preview_env_state.md` 原文「fog F-2 / env E-2 / ground / light L-1 **四路
+- **知识卡修正**：`preview-env-state.md` 原文「fog F-2 / env E-2 / ground / light L-1 **四路
   同口径**」是**文档先于代码**的漂移（把 ground 写进已合规名单，实际它当时是 manual）。
   已改述为「按**声明**而非按**实施**成立」+ 记录复核与收口，并列出八路真 auto-model 与
   全部回归锁位置。
@@ -1362,7 +1362,7 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
 | `npx tsc --noEmit` | EXIT 0 |
 | `npx vite build` | ✓ built in 9.58s |
 | `check-biome --files`（8 文件） | ✅（2 处格式化自动修复后复检通过） |
-| 知识卡回写 | `preview_env_state.md`（F-1 收口条 / F-2 判词修订 / 键形分组 / 不变量并列例外 / 同族余项复核） |
+| 知识卡回写 | `preview-env-state.md`（F-1 收口条 / F-2 判词修订 / 键形分组 / 不变量并列例外 / 同族余项复核） |
 
 > 未修 / 未动（**登记在案，非遗漏**）：`ground` 僵尸门清理（无行为收益，可随手）、
 > §18 遗留 G-7/G-8/G-9/G-3、§19.2 B 类手抄清单
@@ -1440,7 +1440,7 @@ applyStructuralProfile 幂等全量执行器）；半僵尸 helper `setReflectio
 | `vitest --run src/preview-3d/caps/` | **979 passed / 25 files** |
 | `vitest --run src/preview-3d/` 全量 | **2872 passed / 158 files**（较 §21 再 +7） |
 | `npx tsc --noEmit` | EXIT 0 |
-| 知识卡回写 | `preview_env_state.md`（F-1 二度收口条 / 同族余项改判 / 不变量并入判据 / 键形分组） |
+| 知识卡回写 | `preview-env-state.md`（F-1 二度收口条 / 同族余项改判 / 不变量并入判据 / 键形分组） |
 
 ### 方法层沉淀（本轮最有复用价值的两条）
 
@@ -1551,7 +1551,7 @@ legacy 中毒救回 ×2（旧档 `enabled=false`、旧档 `godRaysEnabled=true`�
 | `check-biome --files`（改动文件） | 通过 ✅ |
 | 独立子代理复审 | 七轴核实成立，2 项误报经实证驳回，1 项真缺陷已修 |
 | 全 29 枚 boolean schema 键生产者扫描 | **零幽灵键**（收口前 `skyGodRaysEnabled` 是唯一零写入者） |
-| 知识卡回写 | `preview_env_state.md`（sky 收口条 / 同族余项改判 / 并入判据补 sky / 键形分组 / light 注脚补两形态对比） |
+| 知识卡回写 | `preview-env-state.md`（sky 收口条 / 同族余项改判 / 并入判据补 sky / 键形分组 / light 注脚补两形态对比） |
 
 ### 方法层沉淀
 

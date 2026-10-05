@@ -43,6 +43,6 @@
 ## 4. 数据溯源
 
 - 来源：2026-09-08 脚本体系锐评（P0：pre-push-gate 神对象；P2：BlockPolicy 语义歧义；P1：gate-parse 收敛未覆盖域块）。
-- 分阶段落点：ADR-206 只记决策方向；阶段实施进度与每阶段验证（三模式 dry-run baseline diff + 契约测试 + 提交）记入知识卡 `pre_push_gate.md`。
+- 分阶段落点：ADR-206 只记决策方向；阶段实施进度与每阶段验证（三模式 dry-run baseline diff + 契约测试 + 提交）记入知识卡 `pre-push-gate.md`。
 
 <!-- 文件名: pre-push-gate-gate-blocks.md → 实际文件 ADR-206-pre-push-gate-gate-blocks.md -->

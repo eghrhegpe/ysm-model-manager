@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-02
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts、frontend/src/preview-3d/mesh/model3d.ts、go/threejs/spec.go、frontend/src/bindings/ysm-model-manager/go/threejs/models.ts、frontend/src/preview-3d/adapters/scene-registry.ts、frontend/src/preview-3d/adapters/unload-role.ts、docs/knowledge/model3d.md、docs/knowledge/preview_core.md、ADR-066、ADR-093、ADR-159、ADR-160`
+- **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts、frontend/src/preview-3d/mesh/model3d.ts、go/threejs/spec.go、frontend/src/bindings/ysm-model-manager/go/threejs/models.ts、frontend/src/preview-3d/adapters/scene-registry.ts、frontend/src/preview-3d/adapters/unload-role.ts、docs/knowledge/model3d.md、docs/knowledge/preview-core.md、ADR-066、ADR-093、ADR-159、ADR-160`
 
 ---
 
@@ -79,6 +79,6 @@ mount-preview-core 内部 `built`/`allBuilt`/`getBuilt()` 及派生命名一律�
 - `scene-registry.ts`（`ModelEntry`，ADR-159）→ 注册条目尺度锚点（2.2/2.4）
 - `unload-role.ts`（角色卸载）→ 文案与内部词收敛「模型实例」（2.4）
 - `ysm-adapter.ts`/`pack-model-adapter.ts`（make 工厂）→ 工厂命名章程范式（2.5）
-- `docs/knowledge/model3d.md`/`preview_core.md` → 词汇字典落点（2.2 词表同步）
+- `docs/knowledge/model3d.md`/`preview-core.md` → 词汇字典落点（2.2 词表同步）
 
 <!-- 文件名: render-vocabulary-charter.md → 实际文件 ADR-161-render-vocabulary-charter.md -->

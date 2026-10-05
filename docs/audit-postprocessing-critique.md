@@ -5,7 +5,7 @@
 > 未修：**P2-3**（多会话 `envState` 单例，ADR-196 固有成本，属"记录"而非"待修"）、
 > **P2-6**（疑似，未复现）。
 > 本轮验证：`src/preview-3d` 165 文件 / 3029 用例、`vite build` + `typecheck` + `check-biome` 全绿。
-> 知识卡已同步：`docs/knowledge/preview_env_state.md`「锐评修复 2026-10」段。
+> 知识卡已同步：`docs/knowledge/preview-env-state.md`「锐评修复 2026-10」段。
 >
 > **⚠️ 两条现场更正（2026-10-04 二次核实时推翻本报告初判）**：
 > 1. **P3-4a「死断言」的解读需修正**——`toneMappingExposure` 那条断言确实恒真（对实现零分辨力），
@@ -324,7 +324,7 @@ three 0.186.1 的 `SSRPass.dispose`（`SSRPass.js:491-518`）释放了 7 个 RT 
 | 4 | **P2-4**（改 `ppReflectionMode` 不重建 composer） | 一并消掉 `ssrMaterial` 泄漏 **与** P1-1 的重建面，是结构性收益 |
 | 5 | **P2-1 / P2-2 / P2-3 / P2-6** | 尺寸源收口、曝光总开关门、多会话语义、归还错归 |
 | 6 | **P3-1 / P3-2 / P3-3**（死代码 + 反事实注释 + 测试真实性） | 零风险清理，顺手做 |
-| 7 | 同步知识卡 + 纠版本号 | `preview_env_state.md` 的 ADR-299 段落补「§5 两项已闭环」；ADR 注释/源码注释将 three 写作 **r185** 而实际是 **0.186.1**，属文档漂移，一并订正 |
+| 7 | 同步知识卡 + 纠版本号 | `preview-env-state.md` 的 ADR-299 段落补「§5 两项已闭环」；ADR 注释/源码注释将 three 写作 **r185** 而实际是 **0.186.1**，属文档漂移，一并订正 |
 | 8 | 补测试 | P1-1 的回归锁必须断言**物理量**（`beautyRenderTarget.width`），并**同步改写 `:1117` 那条反向锁定的断言**；P1-2 补「复用实例后 `applyModelPreset` 仍生效」用例 |
 
 **验收标准**：DPR=2、容器 800×600 场景下，`ssrPass.beautyRenderTarget.width === 1600`；`vite build` + `typecheck` + biome + 后处理全量 vitest 绿。

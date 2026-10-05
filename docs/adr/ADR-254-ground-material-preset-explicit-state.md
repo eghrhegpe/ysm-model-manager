@@ -223,5 +223,5 @@ registerEnvStateMiddleware((patch) => {
 - **固有残差缝（已知，非 bug）**：4D 环面噪声在固定分辨率下，最高频 octave 在边界像素间有亚像素相位差（S=512 实际可忽略）；anti-repeat 契约是「不引入新缝」，不消除该固有残差。
 - **集成点（待接）**：`ground-capability.ts makeGeneratedTexture` 生成 tile 后，按 `derandomize` 策略合成大图并 `texture.repeat = textureRepeatForDerepeat(...)`；该文件当前为用户 WIP，未改。新增 `structural.derandomize` 字段 + `surfaceSpecKey` 纳入即触发重建。
 
-**状态**：代码 + 单测 + 知识卡（`ground_texture_gen.md` §反重复）已落；运行时集成待 `ground-capability.ts` WIP 清后焊接。
+**状态**：代码 + 单测 + 知识卡（`ground-texture-gen.md` §反重复）已落；运行时集成待 `ground-capability.ts` WIP 清后焊接。
 <!-- 文件名: ground-material-preset-explicit-state.md → 实际文件 ADR-254-ground-material-preset-explicit-state.md -->

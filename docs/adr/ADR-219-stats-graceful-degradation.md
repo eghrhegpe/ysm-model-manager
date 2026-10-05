@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-10
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/backend/web-stats.ts · frontend/src/workers/stats-protocol.ts · frontend/src/workers/stats.worker.ts · docs/adr/ADR-218-stats-pool-concurrency.md · docs/knowledge/model-stats.md · docs/knowledge/frontend_design_critique.md`
+- **相关**：`frontend/src/backend/web-stats.ts · frontend/src/workers/stats-protocol.ts · frontend/src/workers/stats.worker.ts · docs/adr/ADR-218-stats-pool-concurrency.md · docs/knowledge/model-stats.md · docs/knowledge/frontend-design-critique.md`
 
 ---
 
@@ -12,7 +12,7 @@
 
 stats Worker 池（`web-stats.ts`）的故障模型是「批粒度」的：一个 chunk（≤200 模型）内**任何一个**模型把 WASM ccall 挂死（worker 单线程 JS 不可抢占，挂死 = 该 worker 永久失响），主线程唯一的侦测手段是 60s 整批 chunk 超时，而超时处置是 `terminateStatsWorker` **杀整池** → 其余健康 worker 的在途结果全部作废 → 整批返回 null → `web-fs` 丢弃全部数值条件 → 用户挂 60s 拿到空结果 + 「数值条件已忽略」toast。故障粒度是一个模型，惩罚粒度是一整次搜索。
 
-已知问题榜（`frontend_design_critique.md` 共识 #4）曾建议「`stats.worker.ts` 层加 `Promise.race` 5s 软超时」。该方案对**同步挂死**是半吊子：挂死点是同步 ccall，`Promise.race` 只能放弃结果、不能中断执行——worker 线程阻塞期间连 race 的 timer 都不会触发，同批后续模型仍排队在挂死 ccall 之后，最终仍走 60s 杀池。挂死类故障唯一可靠的侦测信号是「worker 停止逐模型产出消息」，而这要求 worker 级消息信道存在——恰是 ADR-218 D2 删除的细粒度消息（当时定位为无消费方的死协议）。
+已知问题榜（`frontend-design-critique.md` 共识 #4）曾建议「`stats.worker.ts` 层加 `Promise.race` 5s 软超时」。该方案对**同步挂死**是半吊子：挂死点是同步 ccall，`Promise.race` 只能放弃结果、不能中断执行——worker 线程阻塞期间连 race 的 timer 都不会触发，同批后续模型仍排队在挂死 ccall 之后，最终仍走 60s 杀池。挂死类故障唯一可靠的侦测信号是「worker 停止逐模型产出消息」，而这要求 worker 级消息信道存在——恰是 ADR-218 D2 删除的细粒度消息（当时定位为无消费方的死协议）。
 
 ## 2. 决策（Decision）
 
@@ -32,7 +32,7 @@ stats Worker 池（`web-stats.ts`）的故障模型是「批粒度」的：一�
 
 ## 4. 数据溯源
 
-- 故障推演：`ysm-worker-loader.ts` `decodeYsmInWorker`（ccall 同步直调、无 watchdog，`frontend_design_critique.md` 共识 #4 验证记录）× `web-stats.ts` `statsOneChunk`（60s 超时 → `terminateStatsWorker` 杀整池 → `inflight` 全量降级 settle）
+- 故障推演：`ysm-worker-loader.ts` `decodeYsmInWorker`（ccall 同步直调、无 watchdog，`frontend-design-critique.md` 共识 #4 验证记录）× `web-stats.ts` `statsOneChunk`（60s 超时 → `terminateStatsWorker` 杀整池 → `inflight` 全量降级 settle）
 - 半吊子方案实证：`Promise.race` 不可抢占同步 ccall——worker 单线程 JS 语义（timer 回调与挂死 ccall 同线程排队，线程阻塞期间 timer 不触发）
 - 信道代价评估：`stats-protocol.ts` ADR-218 D2 删除的 `progress` 消息为「每 10 模型一条」（删除前形态）；本 ADR 恢复为逐模型 `partial`（携带结果而非空心跳），消息量 ~10× 但载荷即既有用数据
 - 排除语义对齐：`web-fs.ts` `searchWebModels`（`s.hasError → return` 排除）× Go `internal/app/wasm_decoder.go` `decodeYSMViaNodeJS`（`BoneCount==0` 统计失败口径）

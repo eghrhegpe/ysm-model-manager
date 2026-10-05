@@ -1,5 +1,5 @@
 // ===== 全局 fetch stub 工厂（测试税刀三夹具沉淀，对齐 stubBlobUrls 模式）=====
-// 同构 mock ≥3 处即值得抽（test_tax_reduction 刀三）：data.test.ts /
+// 同构 mock ≥3 处即值得抽（test-tax-reduction 刀三）：data.test.ts /
 // download-queue*.test.ts / community-data.integration.test.ts 四处「stub 全局
 // fetch 防触网」骨架收敛于此。
 // - stubFetch()              → 默认返回 { ok: true, status: 200, json: async () => [] }

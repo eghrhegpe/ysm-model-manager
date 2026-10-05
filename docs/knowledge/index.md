@@ -12,30 +12,30 @@
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🏗 auto_import_split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
-| 🍃 check_threshold_scanners | 三档阈值扫描器（复杂度/参数/类型安全） | leaf | — | check-complexity, check-params, 认知复杂度, 参数陷阱, 阈值扫描器, gate debt 档, --files 传参 |
+| 🏗 auto-import-split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
+| 🍃 check-threshold-scanners | 三档阈值扫描器（复杂度/参数/类型安全） | leaf | — | check-complexity, check-params, 认知复杂度, 参数陷阱, 阈值扫描器, gate debt 档, --files 传参 |
 | 🍃 experience | 发版冒烟组——CI 同口径预演（ADR-318） | leaf | — | 发版前预演 CI（tag 推送前）, lockfile 与 package.json 是否同步存疑, Go 文件 import OS 专属包要确认 build 标签, 发版 CI 连红要本地快速定位口径差 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单, 拓展点探索 |
-| 🍃 orphan_export_scanner | 孤儿导出检测器（扫描盲区） | leaf | — | 修改 check-orphan-exports.ts 扫描逻辑, 门禁报孤儿导出，判定是真死代码还是扫描漏检, 新增 export * 转发壳 / 测试包装函数后复核孤儿读数 |
+| 🍃 orphan-export-scanner | 孤儿导出检测器（扫描盲区） | leaf | — | 修改 check-orphan-exports.ts 扫描逻辑, 门禁报孤儿导出，判定是真死代码还是扫描漏检, 新增 export * 转发壳 / 测试包装函数后复核孤儿读数 |
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
-| 🏗 scripts_argv | 脚本 argv 规范与已知豁免 parse-args.ts | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
-| 🏗 scripts_jscpd_go | Go 端 jscpd 重复检测脚本 | architecture | — | jscpd, go 重复代码, 复制粘贴检测, duplicate, 重复对, 增量门禁, 新增重复, 独立 baseline |
-| 🏗 scripts_lib_adoption | _lib 共享层采用率闸门 | architecture | — | lib adoption, 采用率, 共享层, 有能力未用, 手搓, 重复实现检测, RULES 表, toPosix 收敛 |
-| 🏗 scripts_readme_index | README 登记处对账 check-readme-index.ts | architecture | single-thread | README, 脚本索引, 登记处, check-readme-index, 脚本漂移, 脚本对账, 重复登记, 幽灵引用 |
+| 🏗 scripts-argv | 脚本 argv 规范与已知豁免 parse-args.ts | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
+| 🏗 scripts-jscpd-go | Go 端 jscpd 重复检测脚本 | architecture | — | jscpd, go 重复代码, 复制粘贴检测, duplicate, 重复对, 增量门禁, 新增重复, 独立 baseline |
+| 🏗 scripts-lib-adoption | _lib 共享层采用率闸门 | architecture | — | lib adoption, 采用率, 共享层, 有能力未用, 手搓, 重复实现检测, RULES 表, toPosix 收敛 |
+| 🏗 scripts-readme-index | README 登记处对账 check-readme-index.ts | architecture | single-thread | README, 脚本索引, 登记处, check-readme-index, 脚本漂移, 脚本对账, 重复登记, 幽灵引用 |
 | 🏗 vitest-env-switch | Vitest 环境切换规则 | architecture | — | vitest, 测试环境, node 环境, happy-dom, 测试切换 |
 
 ### 摘要
 
-- **auto_import_split**（auto-import 拆分与缺失 import 检测）：`scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆…
-- **check_threshold_scanners**（三档阈值扫描器（复杂度/参数/类型安全））：`check-complexity`（认知复杂度 + 最大嵌套）、`check-params`（长参数列表 / 布尔陷阱）、
+- **auto-import-split**（auto-import 拆分与缺失 import 检测）：`scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆…
+- **check-threshold-scanners**（三档阈值扫描器（复杂度/参数/类型安全））：`check-complexity`（认知复杂度 + 最大嵌套）、`check-params`（长参数列表 / 布尔陷阱）、
 - **experience**（发版冒烟组——CI 同口径预演（ADR-318））：v1.15.0 发版跑了五轮 CI 才成功，复盘结论：**不是测试太严，是本地验证口径与 CI 冻结口径不同构**。本卡记录冒烟组（`node scripts/release-smoke.ts`，≤3 分钟）的检查项与各自预演的 CI 步骤…
-- **orphan_export_scanner**（孤儿导出检测器（扫描盲区））：`scripts/check-orphan-exports.ts` 审计 `frontend/src/` 下零消费者的导出符号。它同时扫描 `.ts` 与 `.js`（ADR-014 后并存），用文本正则（零依赖，不建 AST）解析导出与消…
+- **orphan-export-scanner**（孤儿导出检测器（扫描盲区））：`scripts/check-orphan-exports.ts` 审计 `frontend/src/` 下零消费者的导出符号。它同时扫描 `.ts` 与 `.js`（ADR-014 后并存），用文本正则（零依赖，不建 AST）解析导出与消…
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
-- **scripts_argv**（脚本 argv 规范与已知豁免 parse-args.ts）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30…
-- **scripts_jscpd_go**（Go 端 jscpd 重复检测脚本）：`scripts/jscpd-go.ts` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd…
-- **scripts_lib_adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
-- **scripts_readme_index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
+- **scripts-argv**（脚本 argv 规范与已知豁免 parse-args.ts）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30…
+- **scripts-jscpd-go**（Go 端 jscpd 重复检测脚本）：`scripts/jscpd-go.ts` 是 Go 端复制粘贴检测工具：调用复用前端的 jscpd v5（Rust 内核）二进制，扫描 `./go/**/*.go`，与独立 baseline `scripts/baseline/jscpd…
+- **scripts-lib-adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
+- **scripts-readme-index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
 ## core（24 张）
 
@@ -48,18 +48,18 @@
 | 🏗 android-events | Android 系统事件消费（back/网络/存储授权） | architecture | — | android:back, 返回键, 弹窗, 系统事件, ScreenLocked, NetworkChanged |
 | 🏗 backend-idb | 浏览器后端 IndexedDB 封装 | architecture | io-bound | IndexedDB, 网页版, backend, 模型库, browser adapter, web mode |
 | 🍃 backend-runtime | Wails runtime 抽象 backend-runtime | leaf | — | Wails 事件订阅, Wails 窗口操作, 桌面/网页版运行时切换, no-op 桩消费 |
-| 🏗 backend_web | 网页版后端 backend-web | architecture | — | 网页版, 浏览器模式, browser adapter, IndexedDB, 跨域隔离 |
-| 🏗 binding_json_cleanup | string-JSON 绑定铲债清单 | architecture | — | string-JSON, JSON.parse 断言, 绑定 struct 化, 铲债清单, 错误通道统一, ADR-143, 绑定返回 string |
+| 🏗 backend-web | 网页版后端 backend-web | architecture | — | 网页版, 浏览器模式, browser adapter, IndexedDB, 跨域隔离 |
+| 🏗 binding-json-cleanup | string-JSON 绑定铲债清单 | architecture | — | string-JSON, JSON.parse 断言, 绑定 struct 化, 铲债清单, 错误通道统一, ADR-143, 绑定返回 string |
 | 🍃 core-error-diary | UI 报错落日记 error-diary | leaf | — | error-diary, 报错日记, toast error warn 落盘, 运行时日志环, DiarySink |
 | 🍃 e2e-visual-feedback | E2E 视觉反馈（截图取证） | leaf | — | 看界面长什么样, 截图取证, 视觉异常定位, 界面回归验证, 假绿灯排查, 需要真 3D 会话 |
 | 🏗 event-bus | 事件总线 bus.ts | architecture | — | 事件, 事件总线, 通信, emit, 跨组件通信, bus |
 | 🍃 event-graph-guard | Bus 事件契约守卫 | leaf | — | 未传参, 缺参, bus 事件, 事件契约, 事件漂移, 内联脚本, 可选链, 跨行调用 |
-| 🍃 fe_layering_seams | 前端分层 seam 与 import 路径 | leaf | — | src/core 想新增文件或依赖前, features 模块需要拿到 backend 能力时, 写 import 犹豫用 @/ 还是 ../ 时, 门禁报 check-layering / check-path-hygiene 编号不知道查哪条 |
-| 🏗 frontend_parsers | 解析簇 parsers/ 自 backend 迁出 | architecture | — | 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射, voxel 管线（voxel-bits/pipeline/三视图）/ ysm-header / nbt-parse 定位 |
-| 🏗 frontend_test_audit | 前端测试基建审计 | architecture | — | 代码审核, 测试基建, 契约测试, e2e, flaky, 假绿, 覆盖盲区 |
+| 🍃 fe-layering-seams | 前端分层 seam 与 import 路径 | leaf | — | src/core 想新增文件或依赖前, features 模块需要拿到 backend 能力时, 写 import 犹豫用 @/ 还是 ../ 时, 门禁报 check-layering / check-path-hygiene 编号不知道查哪条 |
+| 🏗 frontend-parsers | 解析簇 parsers/ 自 backend 迁出 | architecture | — | 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射, voxel 管线（voxel-bits/pipeline/三视图）/ ysm-header / nbt-parse 定位 |
+| 🏗 frontend-test-audit | 前端测试基建审计 | architecture | — | 代码审核, 测试基建, 契约测试, e2e, flaky, 假绿, 覆盖盲区 |
 | 🏗 global-handlers | 全局事件处理 global-handlers | architecture | — | 全局事件, 拖拽导入, 拖拽提示, 同步缺失, 清空整合包, 导出清单 |
 | 🏗 i18n | 国际化 i18n 模块 | architecture | — | 翻译, 多语言, i18n, t(), 语言切换, lang:changed |
-| 🍃 ik_solver | CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik | leaf | cpu-bound | IK 求解, 骨骼 IK, 足部锚地, foot IK, 极向量 / pole, CCD, 腿链提取 |
+| 🍃 ik-solver | CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik | leaf | cpu-bound | IK 求解, 骨骼 IK, 足部锚地, foot IK, 极向量 / pole, CCD, 腿链提取 |
 | 🏗 model-stats | Web Worker 模型统计层 model-stats | architecture | cpu-bound, concurrent | 模型统计, 骨骼数, 立方体数, 纹理尺寸, SearchModels, 数值筛选, Web Worker, 批量统计 |
 | 🏗 page-store | 页面状态管理 page-store.ts | architecture | — | 页面, 当前页, 状态管理, page store, currentPage |
 | 🏗 pointer-events | Pointer Events 统一交互（触屏 + 桌面） | architecture | — | pointerdown, pointermove, pointerup, 触屏, 拖拽, 旋转 |
@@ -75,16 +75,16 @@
 - **android-events**（Android 系统事件消费（back/网络/存储授权））：前端消费 Java 层经 Wails 事件总线转发的 `android:*` 系统事件（ADR-046 P2，参照 MikuMikuAR ADR-017 A3-04）。桌面端无 Java 层，这些事件永不触发，注册无害。生命周期由 `reg…
 - **backend-idb**（浏览器后端 IndexedDB 封装）：`backend/` 目录是 YSM 网页版的后端抽象层（ADR-049 Phase 1-2），在桌面/Android 走 Wails Go 绑定、网页版走 `browser-adapter.ts` + `idb.ts` 的同一接口。`id…
 - **backend-runtime**（Wails runtime 抽象 backend-runtime）：`@wailsio/runtime` 统一桥（ADR-049 Phase 1 收尾：value import 全量迁移）。业务模块禁止再直 import `@wailsio/runtime`；统一经此桥，桌面走真 runtime、网页版（无…
-- **binding_json_cleanup**（string-JSON 绑定铲债清单）：ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struc…
+- **binding-json-cleanup**（string-JSON 绑定铲债清单）：ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struc…
 - **core-error-diary**（UI 报错落日记 error-diary）：把 UI 层的错误/告警（toast、未捕获异常、未处理拒绝、logWarn/logError）统一净化后写入运行时日志环（go/logs），诊断页可回溯。**core 不感知 Wails、不摸 window**：落盘通道 `DiarySi…
 - **e2e-visual-feedback**（E2E 视觉反馈（截图取证））：让 agent「看到」界面长什么样的三条通路。本卡记录**方法**与**踩过的坑**，不记录具体 UI 布局。
 - **event-graph-guard**（Bus 事件契约守卫）：`scripts/event-graph.ts` 是 Bus 事件契约的唯一机器守卫：从 `frontend/src/bus.ts` 的 `BusEvents`
-- **fe_layering_seams**（前端分层 seam 与 import 路径）：前端三大分层约束的完整版（原 AGENTS.md「src/core 准入」「features→backend seam」「前端 import 路径约定」三节全文迁入，2026-10-04 常驻层瘦身）。执法闸：`scripts/check-…
-- **frontend_parsers**（解析簇 parsers/ 自 backend 迁出）：`frontend/src/parsers/`：纯解析层，自 `backend/` 迁出（ADR-170 第一段）。含 YSM 头/摘要、NBT、体素（voxel，7cace0d59 拆为公共件 4 + 三视图 3）、zip 解包、pack…
-- **frontend_test_audit**（前端测试基建审计）：2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.ts` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（1…
+- **fe-layering-seams**（前端分层 seam 与 import 路径）：前端三大分层约束的完整版（原 AGENTS.md「src/core 准入」「features→backend seam」「前端 import 路径约定」三节全文迁入，2026-10-04 常驻层瘦身）。执法闸：`scripts/check-…
+- **frontend-parsers**（解析簇 parsers/ 自 backend 迁出）：`frontend/src/parsers/`：纯解析层，自 `backend/` 迁出（ADR-170 第一段）。含 YSM 头/摘要、NBT、体素（voxel，7cace0d59 拆为公共件 4 + 三视图 3）、zip 解包、pack…
+- **frontend-test-audit**（前端测试基建审计）：2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.ts` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（1…
 - **global-handlers**（全局事件处理 global-handlers）：全局 handler 注册入口在 ADR-188 中从 `core/handlers/global.ts` 汇编壳收敛为 **app-content 直接编排**：`connectedCallback` 依次调 `registerSync`…
 - **i18n**（国际化 i18n 模块）：`i18n` 模块是 YSM 前端的唯一翻译层，基于 ADR-045 设计。`t.ts` 提供纯函数式翻译（按 key 查表），`locale.ts` 管理语言状态、持久化与异步加载。支持简体中文（基准）、英语、日语三种语言，语言偏好持久化…
-- **ik_solver**（CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik）：自写精简版 CCD（Cyclic Coordinate Descent）IK 求解器（ADR-072 工具层纯净、零 DOM / 零 backend），
+- **ik-solver**（CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik）：自写精简版 CCD（Cyclic Coordinate Descent）IK 求解器（ADR-072 工具层纯净、零 DOM / 零 backend），
 - **model-stats**（Web Worker 模型统计层 model-stats）：`frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo…
 - **pointer-events**（Pointer Events 统一交互（触屏 + 桌面））：ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `…
 - **theme**（主题系统 theme）：主题系统的纯逻辑实现在 `frontend/src/theme-core.ts`（2026-08-17 神桶拆分自 `app-modules.ts`；`app-modules.ts` 仅 re-export `applyTheme/init…
@@ -102,7 +102,7 @@
 | 🏗 download-queue-store | 下载队列状态机 download-queue-store | architecture | — | 下载队列状态, 入队 / 取消 / 恢复, Wails 进度事件, 社区下载状态层 |
 | 🍃 download-tasks | 下载任务执行层 download-tasks | leaf | — | 下载任务构建, 下载大小策略, 选中集转下载任务, 社区下载前置决策 |
 | 🏗 export | 截图导出 export | architecture | — | 截图, 导出 PNG, 多角度截图, 透明背景, 预览缓存, blob URL, saveScreenshot, renderMultiAngle |
-| 🍃 fe_go_boundary | 前端只读不判边界与豁免 | leaf | — | 判断某个过滤/归类逻辑该放前端还是 Go, 树内即时搜索/排序想下沉磁盘前, 跨资源类型切换的实现选型, Wails 绑定生成相关疑问 |
+| 🍃 fe-go-boundary | 前端只读不判边界与豁免 | leaf | — | 判断某个过滤/归类逻辑该放前端还是 Go, 树内即时搜索/排序想下沉磁盘前, 跨资源类型切换的实现选型, Wails 绑定生成相关疑问 |
 | 🏗 import-queue | 全局导入执行 import-executor | architecture | io-bound | 导入, 导入队列, 拖拽导入, 文件夹导入, 覆盖导入, import, 拖拽 |
 | 🏗 oldest-models | 资历最深模型 oldest-models | architecture | io-bound | 资历最深, 老模型, 仓库评分, 每日推荐, 月度活动, 热力图, 仓库健康 |
 | 🏗 preview-controls | 3D 预览控制器（声明式菜单节点） | architecture | — | 3D 控制器 / MMD 播放, 截图按钮 / 相机控制, 模型切换, 3D 入口 / nav-fab, siblings / 容器内模型, 资源包模型直达 |
@@ -122,7 +122,7 @@
 - **download-queue-store**（下载队列状态机 download-queue-store）：创意工坊批量下载队列的状态层（模块级 Store）。ADR-040 ≤400 行红线拆分产物：自 `download-queue.ts`（原超长文件）拆出，类型 / STATE / Go 调用 / 后端事件注册全部内聚于此。v2：模块级持久…
 - **download-tasks**（下载任务执行层 download-tasks）：创意工坊下载任务构建 + 大小策略纯函数层。自 `community/events.ts` 抽出：下载大小决策（4MB 确认 / 10MB 拒绝）与选中集 → 下载任务列表的构建逻辑，供单测覆盖（ADR-023 L3）。与 `downloa…
 - **export**（截图导出 export）：> **差异化定位**：`utils-export.md`（utils 分类）回答"截图/缓存**怎么写**"（API 签名、淘汰策略、dispose 顺序）；本 feature 卡回答"用户点截图按钮后**发生了什么**"——从触发入口到…
-- **fe_go_boundary**（前端只读不判边界与豁免）：回归红线「前端只读不判」的完整版（原 AGENTS.md「职责归属——前端 vs Go」豁免注脚全文迁入，2026-10-04 常驻层瘦身）。
+- **fe-go-boundary**（前端只读不判边界与豁免）：回归红线「前端只读不判」的完整版（原 AGENTS.md「职责归属——前端 vs Go」豁免注脚全文迁入，2026-10-04 常驻层瘦身）。
 - **import-queue**（全局导入执行 import-executor）：**2026-08-05 重构**：原 `import-queue.ts`（导入 tab UI 层）与 `ImportHistory`（内存导入历史）已全部删除。导入改为**全局静默执行**架构——拖拽/选择文件直接走 `import-ex…
 - **oldest-models**（资历最深模型 oldest-models）：`oldest-models.ts` 实现仓库页「资历」tab（diagnostics/oldest 页面）的仪表盘：围绕 `ScanModelEntries` 扫描结果做本地统计，渲染四大板块——仓库评分（健康环）、资历最深 Top4（按…
 - **preview-controls**（3D 预览控制器（声明式菜单节点））：> ⚠️ **重要前提（ADR-076 v2 Phase 2 重构后）**：相机操作已收编进**核心声明式根菜单**（⚙️ 按钮 → `mountPreviewRootMenu` 的 `camera` 项），底部导航弹窗已删除。现存的 `m…
@@ -140,21 +140,23 @@
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🏗 adr173_gui_cli_paramspec | GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态 | architecture | — | 修改 GUI 桥可调用 CLI 命令的参数时（新增 flag / 需要传空值语义）, 排查 ExecuteCLI 参数丢失（空串/0/false 不见、顺序不定、拼写错误静默丢参）, 理解 internal/app 与 go/cli 之间参数规格如何跨包传递 |
-| 🏗 app_cycle_injection | App↔子组件对象级环打破范式（回调注入） | architecture | — | 新增/重构 internal/app 下的子组件（队列、缓存、扫描器等），且它需要调用 App 的能力（发事件、写日志、下载文件等）, 评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct, 想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零 |
+| 🏗 adr173-gui-cli-paramspec | GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态 | architecture | — | 修改 GUI 桥可调用 CLI 命令的参数时（新增 flag / 需要传空值语义）, 排查 ExecuteCLI 参数丢失（空串/0/false 不见、顺序不定、拼写错误静默丢参）, 理解 internal/app 与 go/cli 之间参数规格如何跨包传递 |
+| 🏗 app-cycle-injection | App↔子组件对象级环打破范式（回调注入） | architecture | — | 新增/重构 internal/app 下的子组件（队列、缓存、扫描器等），且它需要调用 App 的能力（发事件、写日志、下载文件等）, 评审 PR 时检查是否有人把 `*App` 反向指针重新加回某个子组件 struct, 想确认「循环依赖」现状：本仓仅剩包级（import）环由 go build 兜底，对象级环已清零 |
 | 🏗 classify-routing | 分类路由与回归护栏 | architecture | — | 整合包分类, 路由, zipentry 指纹, 蓝图, 回归, last-wins |
-| 🏗 cli_quality_audit | CLI 质量摸排 Checklist | architecture | — | CLI, 质量摸排, 代码审核, 代码审查, bug 排查, 审计, 白名单, 绑定层 |
-| 🍃 doctor_gate_overlap | 质量闸门双调度器重叠审计 | leaf | — | 双调度器, 质量闸门重叠, doctor gate 差异, 治理红线下沉 |
+| 🏗 cli-quality-audit | CLI 质量摸排 Checklist | architecture | — | CLI, 质量摸排, 代码审核, 代码审查, bug 排查, 审计, 白名单, 绑定层 |
+| 🍃 doctor-gate-overlap | 质量闸门双调度器重叠审计 | leaf | — | 双调度器, 质量闸门重叠, doctor gate 差异, 治理红线下沉 |
 | 🏗 drift-scan | drift-scan（双轨漂移检测） | architecture | — | 漂移检测, 双轨, 重复实现, 口径漂移, 常量硬编码, 错误链断裂, 资源泄漏, 定时器泄漏 |
 | 🏗 fbx-cli-pipeline | FBX CLI 处理管线 fbx-cli-pipeline | architecture | — | FBX, CLI, 命令行, 转换, glTF, GLB, fbx2gltf, assimp |
 | 🏗 go-android-platform-guard | Android 平台守卫（Go 侧） | architecture | — | Android、平台守卫, RevealInExplorer / OpenFolder / xdg-open, SAF / MANAGE_EXTERNAL_STORAGE, build-tag, pathmgr, RestartApplication / 重启, Node.js, watcher 守卫 / fsnotify |
 | 🍃 go-avatar-decode | Go 头像提取：纯函数 vs Node+WASM 解码分界 | leaf | io-bound, single-thread | 改头像提取 / DecodeYSMData / ExtractAvatarURI 逻辑或补 avatar 测试时 |
 | 🏗 go-avatar | 头像 go/avatar | architecture | io-bound | 头像, 作者, 创作者, avatar, 缓存, 头像缩略图 |
+| 🍃 go-ccheck | Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像） | leaf | — | ccheck, 认知复杂度, cognitive, 复杂度扫描, check-complexity 对拍, go 复杂度 |
 | 🏗 go-cli-search | CLI 搜索命令 search | architecture | — | CLI 搜索, 命令行搜索, search 命令, 关键词搜索, 数值范围搜索, 模型搜索, go run search, runSearch |
 | 🍃 go-conc | 通用泛型并发工具 go/conc | leaf | — | 并发, 并行, worker 池, 批量并发, 输入序收集 |
 | 🍃 go-config | Go 配置单持有点 go/config | leaf | — | 改配置注入/阈值逻辑，或消费包读阈值时 |
 | 🏗 go-container | 统一容器桥接层 go/container | architecture | — | 容器, 解包, zip, 7z, ContainerReader, 归档, 压缩包, 目录容器 |
 | 🏗 go-dedup | 去重 go/dedup | architecture | io-bound | 去重, 重复检测, dedup |
+| 🏗 go-design-critique | Go 后端设计锐评 | architecture | — | Go 后端评审, Go 锐评, Go 可读性审查, Go 命名审查, Wails 绑定审查, 隐式协议审查 |
 | 🏗 go-download | 下载器 go/download | architecture | io-bound, single-thread | 下载, 进度, download, 进度条, 下载进度 |
 | 🏗 go-executil | 进程隐藏窗口 go/executil | architecture | — | 子进程隐藏控制台窗口, 跨平台 HideWindow, 外部进程启动 |
 | 🏗 go-fileops | 文件操作 go/fileops | architecture | io-bound | 移动, 复制, 重命名, 删除, fileops, 启用禁用, .ban, ysm.json 整组操作 |
@@ -175,39 +177,39 @@
 | 🏗 go-tags | 标签系统 go/tags | architecture | io-bound | 标签, tag, 分类, tag-editor |
 | 🍃 go-testutil | 测试辅助函数 go/internal/testutil | leaf | — | 跨包复用测试 helper, 创建测试文件, 构造内存 ZIP |
 | 🏗 go-threejs | 3D 骨骼 spec go/threejs | architecture | cpu-bound, concurrent | 3D 预览, 骨骼, three.js, spec, 顶点, UV, 四元数, 模型渲染 |
+| 🏗 go-ts-golden | Go-TS 解析层 golden 对拍（ADR-154 双端互锁） | architecture | — | 网页影子层（TS 平移 Go 的解析函数）与 Go 侧口径是否漂移, 新增/修改 resource_types.json 的 zipEntries 指纹后是否影响 Go-TS 一致性, voxel-colors-data.json 生成物是否过期（Go 表变更未同步前端）, 双端互锁契约 fixture 的更新口径 |
 | 🏗 go-types | 共享类型 go/types | architecture | — | 共享类型, AppConfig, 配置, 注册表, 扩展名, LinkType, BedrockModel |
 | 🏗 go-updater | 自动更新 go/updater | architecture | io-bound | 自动更新, 版本升级, updater |
 | 🍃 go-version | 版本号 go/version | leaf | — | 版本, version, ldflags |
 | 🏗 go-watcher | 文件监听 go/watcher | architecture | io-bound | 监听, 文件变化, 刷新, watcher |
 | 🏗 go-ysm-parser | YSM 解析 go/ysm | architecture | io-bound | YSM, 解析, 摘要, ysm 文件, 元数据 |
-| 🍃 go_ccheck | Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像） | leaf | — | ccheck, 认知复杂度, cognitive, 复杂度扫描, check-complexity 对拍, go 复杂度 |
-| 🏗 go_design_critique | Go 后端设计锐评 | architecture | — | Go 后端评审, Go 锐评, Go 可读性审查, Go 命名审查, Wails 绑定审查, 隐式协议审查 |
-| 🏗 go_ts_golden | Go-TS 解析层 golden 对拍（ADR-154 双端互锁） | architecture | — | 网页影子层（TS 平移 Go 的解析函数）与 Go 侧口径是否漂移, 新增/修改 resource_types.json 的 zipEntries 指纹后是否影响 Go-TS 一致性, voxel-colors-data.json 生成物是否过期（Go 表变更未同步前端）, 双端互锁契约 fixture 的更新口径 |
 | 🏗 golangci-lint | golangci-lint（Go 静态分析真空面） | architecture | — | golangci-lint, Go 静态分析, errcheck, 未检查错误, lint 基线, new-from-rev, 增量 lint |
-| 🏗 install_domain_split | install 域切分经验：切纯域不硬切复合域（耦合度门槛判断） | architecture | — | internal/app 再切分或迁移 App god-object 字段/方法时, 评估某子域「迁出 internal/app 包」的收益与成本, 复述 ADR-179 实际收敛边界 |
+| 🏗 install-domain-split | install 域切分经验：切纯域不硬切复合域（耦合度门槛判断） | architecture | — | internal/app 再切分或迁移 App god-object 字段/方法时, 评估某子域「迁出 internal/app 包」的收益与成本, 复述 ADR-179 实际收敛边界 |
 | 🏗 reference | win-filename-rules | architecture | — | 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）, 判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） |
 | 🏗 rustbridge | Rust 桥 rustbridge | architecture | io-bound, concurrent | Rust 扫描器, rust_backend, 桥 DLL, Wails 后端迁移 Rust |
 | 🍃 texture-cache | 纹理缓存 texture_cache | leaf | — | 纹理缓存 / KTX2 缓存, 缓存清理 / 缓存状态 / 缓存校验, 缓存占用异常 / 磁盘膨胀 |
 | 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 调用后端, getApp, 方法签名, app.ts 绑定 |
-| 🍃 workspace_exe_write_denied | 仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截） | leaf | — | 应用日志/配置出现「创建临时文件失败 ... Access is denied」，但浏览、读取全部正常, wails3 dev / 仓内 bin 下 exe 写失败；同一 exe 复制到仓外跑恢复正常 |
+| 🍃 workspace-exe-write-denied | 仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截） | leaf | — | 应用日志/配置出现「创建临时文件失败 ... Access is denied」，但浏览、读取全部正常, wails3 dev / 仓内 bin 下 exe 写失败；同一 exe 复制到仓外跑恢复正常 |
 | 🏗 ysm-wasi | WASI 解码器（wazero 内存直解，node 桥已退役） | architecture | — | WASI / wazero / 内存直解, node 子进程退役, .ysm 加密解码依赖 |
 
 ### 摘要
 
-- **adr173_gui_cli_paramspec**（GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态）：GUI→CLI 参数链路（frontend buildArgsMap → Wails map → ExecuteCLI → os/exec 子进程 --cli）曾有四重损耗：
-- **app_cycle_injection**（App↔子组件对象级环打破范式（回调注入））：`internal/app` 是 Wails 绑定层（`package app`），`App` 是 god-object，持有若干子组件
+- **adr173-gui-cli-paramspec**（GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态）：GUI→CLI 参数链路（frontend buildArgsMap → Wails map → ExecuteCLI → os/exec 子进程 --cli）曾有四重损耗：
+- **app-cycle-injection**（App↔子组件对象级环打破范式（回调注入））：`internal/app` 是 Wails 绑定层（`package app`），`App` 是 god-object，持有若干子组件
 - **classify-routing**（分类路由与回归护栏）：整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需…
-- **cli_quality_audit**（CLI 质量摸排 Checklist）：本文档记录 YSM 项目 Go CLI 层（`go/cli/` + `internal/app/` + `frontend/src/services/`）代码审核的**高频问题模式**与**修复 Checklist**。2026-08-19…
-- **doctor_gate_overlap**（质量闸门双调度器重叠审计）：2026-08-14 摸排结论：推送测试链路本身不臃肿，但质量闸门体系存在**双调度器 + 双重实现**，约 250 行重复逻辑，已出现参数漂移。
+- **cli-quality-audit**（CLI 质量摸排 Checklist）：本文档记录 YSM 项目 Go CLI 层（`go/cli/` + `internal/app/` + `frontend/src/services/`）代码审核的**高频问题模式**与**修复 Checklist**。2026-08-19…
+- **doctor-gate-overlap**（质量闸门双调度器重叠审计）：2026-08-14 摸排结论：推送测试链路本身不臃肿，但质量闸门体系存在**双调度器 + 双重实现**，约 250 行重复逻辑，已出现参数漂移。
 - **fbx-cli-pipeline**（FBX CLI 处理管线 fbx-cli-pipeline）：**CLI 模式处理 FBX 的成熟路径，不是「Go 直接解析 FBX」，而是「现成转换器转中间格式 + 成熟库读取」的双段式**：
 - **go-android-platform-guard**（Android 平台守卫（Go 侧））：ADR-047「平台守卫批量」：Go 侧对 Android 上**无效或不适用的桌面能力**显式拒绝/降级，避免 `xdg-open`/`exec` 链静默失败（错误分类反模式——失败要可见）。结合既有的 build-tag 平台双文件（`…
 - **go-avatar-decode**（Go 头像提取：纯函数 vs Node+WASM 解码分界）：`go/avatar` 提取作者头像有**两条路**：纯 Go 函数链（零 IO、零 WASM）与 `DecodeYSMData`（Node.js + WASM glue 子进程解码 .ysm）。**包头「不依赖 Wails runtime…
 - **go-avatar**（头像 go/avatar）：`go/avatar/` 包负责创作者头像的提取与缓存：从模型文件（.ysm 二进制 / .zip / 解压目录 .json）的 `metadata.authors[].avatar` 声明中取出头像图片，缓存到**平台配置根 `os.Us…
+- **go-ccheck**（Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像））：`go/ccheck` 提供 Go 源码的**团队复杂度**（认知复杂度 + 嵌套深度）扫描，是前端
 - **go-cli-search**（CLI 搜索命令 search）：`go/cli/model.go` 的 `search` 命令是 YSM CLI 模式的模型搜索入口，注册为 `RegisterCommandC("search", CatModel, "搜索模型（支持关键词过滤）", runSearch)…
 - **go-conc**（通用泛型并发工具 go/conc）：`go/conc` 提供唯一泛型并行入口 `Parallel[T,R]`，收敛 `internal/app` 三处手写 worker 池（`app_scan.go:runConcurrentAnalyze` / `app_model.go:…
 - **go-config**（Go 配置单持有点 go/config）：运行阈值配置的共享单持有点（ADR-091 D12 收敛）：fileops/logs/download/scanner 原各持一份 `var configFunc func() types.AppConfig` 全局变量（写读无同步、仅靠启…
 - **go-container**（统一容器桥接层 go/container）：`go/container/` 包是统一容器桥接层（ADR-068）：收敛 ysm/geometry/avatar/packs 各自独立的「打开容器→找条目」实现（调研实测 zip.OpenReader 10 处 / zip.NewRead…
 - **go-dedup**（去重 go/dedup）：`go/dedup/` 包提供资源去重检测，避免重复导入相同资源。
+- **go-design-critique**（Go 后端设计锐评）：2026-09-03 三路子代理并发只读锐评（IO/扫描域 / 二进制解析域 / Wails 绑定与应用域），主模型对每份报告最强断言逐条实地抽查背书，**无幻觉指控**（3 处过激指控已被主模型仲裁修正，见「仲裁修正」）。安全防御层行业级…
 - **go-download**（下载器 go/download）：`go/download/` 包负责模型资源的纯 HTTP 下载（不依赖 Wails runtime），支持 ctx 取消中断、进度回调与失败半文件清理。镜像回退策略（raw/jsd/api 排序）在 `internal/app/app_d…
 - **go-executil**（进程隐藏窗口 go/executil）：`go/executil/` 包提供跨平台的外部进程执行工具，当前唯一功能是 **HideWindow**：在 Windows 上隐藏子进程控制台窗口，其他平台为 no-op。
 - **go-fileops**（文件操作 go/fileops）：`go/fileops/` 包实现文件 CRUD + 移动/复制/删除 + 文件夹整组导入 + 预览提取 + 启用禁用（ADR-003 P3 下沉，薄壳 `internal/app/app_files.go` 仅转发）。
@@ -228,20 +230,18 @@
 - **go-tags**（标签系统 go/tags）：`go/tags/` 包提供模型标签的线程安全持久化存储，是前端 tag-editor 弹窗的后端。标签存放在配置目录的 `tags.json`，以文件绝对路径为 key、标签列表为 value，与模型文件本身解耦（移动/链接模型不污染文件…
 - **go-testutil**（测试辅助函数 go/internal/testutil）：`go/internal/testutil/` 包提供跨包复用的 Go 单元测试辅助函数，解决原先各包各自实现同名 helper 导致的重复维护问题。
 - **go-threejs**（3D 骨骼 spec go/threejs）：`go/threejs/` 包根据 YSMViewer 的 `ThreeJsPayloadBuilder.cs` 移植，把已解析的 `types.BedrockModel` 转换为 Three.js 可直接消费的 JSON spec：顶点、…
+- **go-ts-golden**（Go-TS 解析层 golden 对拍（ADR-154 双端互锁））：网页版（无 Go 壳）把整层 Go 解析逻辑平移成 TS 影子层（ADR-049 web 豁免 + ADR-070/066/082「TS 镜像 Go」），双实现漂移是永久负债。ADR-154 以共享 fixture（`tests/parit…
 - **go-types**（共享类型 go/types）：`go/types/` 包是全应用的共享类型层：应用配置（AppConfig）、各子系统交换的数据结构（模型条目/实例状态/同步结果/日志/投影元数据等）、以及资源类型注册表的 Go 端加载与扩展名查询。与 [resource_regist…
 - **go-updater**（自动更新 go/updater）：`go/updater/` 包负责 YSM 应用的自动更新机制。
 - **go-version**（版本号 go/version）：`go/version/` 只有一件事：持有应用版本号。默认 `"dev"`，发版构建时通过 `-ldflags -X` 注入正式版本，供界面展示与自动更新的版本比较。
 - **go-watcher**（文件监听 go/watcher）：`go/watcher/` 包监听资源目录的文件系统变化，触发前端资源树刷新。
 - **go-ysm-parser**（YSM 解析 go/ysm）：`go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。
-- **go_ccheck**（Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像））：`go/ccheck` 提供 Go 源码的**团队复杂度**（认知复杂度 + 嵌套深度）扫描，是前端
-- **go_design_critique**（Go 后端设计锐评）：2026-09-03 三路子代理并发只读锐评（IO/扫描域 / 二进制解析域 / Wails 绑定与应用域），主模型对每份报告最强断言逐条实地抽查背书，**无幻觉指控**（3 处过激指控已被主模型仲裁修正，见「仲裁修正」）。安全防御层行业级…
-- **go_ts_golden**（Go-TS 解析层 golden 对拍（ADR-154 双端互锁））：网页版（无 Go 壳）把整层 Go 解析逻辑平移成 TS 影子层（ADR-049 web 豁免 + ADR-070/066/082「TS 镜像 Go」），双实现漂移是永久负债。ADR-154 以共享 fixture（`tests/parit…
 - **golangci-lint**（golangci-lint（Go 静态分析真空面））：Go 侧静态分析长期只有 `go vet` 一根独苗，与 TS 侧密集门禁网形成显著落差。ADR-205 决定引入
-- **install_domain_split**（install 域切分经验：切纯域不硬切复合域（耦合度门槛判断））：ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /…
+- **install-domain-split**（install 域切分经验：切纯域不硬切复合域（耦合度门槛判断））：ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /…
 - **reference**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
 - **texture-cache**（纹理缓存 texture_cache）：`go/texture_cache` 是模型纹理的磁盘缓存层：源纹理按内容哈希（`TextureHash`）落盘为 KTX2 缓存条目，二次加载直接读缓存，避免重复转码。容量与 TTL 双约束，写入路径自动触发裁剪（Prune）。
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
-- **workspace_exe_write_denied**（仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截））：2026-09-27 排查「wails3 dev 下所有临时文件创建失败（Access is denied），但浏览功能全部正常」：实锤为 **AI 代理沙箱按 exe 镜像位置拦截**——可执行文件位于代理工作区（C:\Users\...…
+- **workspace-exe-write-denied**（仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截））：2026-09-27 排查「wails3 dev 下所有临时文件创建失败（Access is denied），但浏览功能全部正常」：实锤为 **AI 代理沙箱按 exe 镜像位置拦截**——可执行文件位于代理工作区（C:\Users\...…
 - **ysm-wasi**（WASI 解码器（wazero 内存直解，node 桥已退役））：2026-09-27 最小验证完成：**把 YSMParser 重编成 emscripten standalone（非真 WASI 目标）+ wazero 纯 Go 运行时内存直解，node 子进程桥可整条退役**。12 个真实 .ysm（…
 
 ## rendering（20 张）
@@ -252,42 +252,42 @@
 |------|------|------|------|--------|
 | 🍃 bone-tools | 跨格式骨骼工具层 bone-tools | leaf | cpu-bound | 骨骼工具, 骨骼树, 骨骼拾取, BoneNode, BoneTree, buildBoneTree |
 | 🍃 ground-cap-materialgroup-factories | ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点） | leaf | cpu-bound | 评审 ground-capability.ts 菜单构建, ground 材质菜单节点, ADR-195 cap 直产节点, ground 滑杆值域 / ADR-283 |
-| 🍃 ground_surface_spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（噪声材质 plain/marble/sand/grass + 几何图案 grid/checker/stripes/diamond）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken, 参考网格（GridHelper 层）显隐 / 关不掉自带网格 |
-| 🏗 ground_texture_gen | 程序化地面贴图生成 surface-pixels | architecture | — | 修改地面材质（草/大理石/沙）的像素形状，或新增材质时, 排查地面贴图重建频率、平铺重复、接缝问题时 |
+| 🍃 ground-surface-spec | 地面材质 spec 单一事实源 ground-surface-spec | leaf | cpu-bound | 地面材质 / 地面贴图 / 地板 / surface, 材质重建与原地更新的判别（needsRebuild）, 程序化纹理生成（噪声材质 plain/marble/sand/grass + 几何图案 grid/checker/stripes/diamond）, 自定义图片上传到地面（TextureLoader）, GroundMaterialSpec / specKey / textureToken, 参考网格（GridHelper 层）显隐 / 关不掉自带网格 |
+| 🏗 ground-texture-gen | 程序化地面贴图生成 surface-pixels | architecture | — | 修改地面材质（草/大理石/沙）的像素形状，或新增材质时, 排查地面贴图重建频率、平铺重复、接缝问题时 |
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
 | 🏗 model3d | 3D 预览渲染 model3d | architecture | memory-heavy, gpu-bound | 3D 渲染层, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底 |
 | 🍃 mount-preview-module-singleton-race | mount3D 并发竞态（已闭环 — _gen 代际守卫） | leaf | concurrent | mount3D 并发竞态（已闭环）, 评审模块级单例守卫（历史） |
 | 🍃 mount3d-584-giant | mount3D 巨函数现状（2026-08-27 已部分拆分） | leaf | gpu-bound | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
-| 🍃 pack_gui_light | gui_light 语义与「死解析立牌」（pack 模型光照元数据） | leaf | — | 想把模型 JSON 的 gui_light / display / ambientocclusion 接进渲染或灯光, 查 pack 模型「声明了光照偏好却不生效」, 资源包模型预览光照 |
+| 🍃 pack-gui-light | gui_light 语义与「死解析立牌」（pack 模型光照元数据） | leaf | — | 想把模型 JSON 的 gui_light / display / ambientocclusion 接进渲染或灯光, 查 pack 模型「声明了光照偏好却不生效」, 资源包模型预览光照 |
 | 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 眨眼, 节拍检测, 模型感知 |
+| 🏗 preview-core | 统一 3D 预览核心 preview-core | architecture | gpu-bound | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
+| 🏗 preview-env-state | 3D 预览统一状态层 envState（ADR-196） | architecture | gpu-bound | 3D 预览场景参数（天空/地面/水面/雾/阴影/反射/环境/后处理/灯光）在哪读哪写, cap 参数为何不存 this.params（ADR-196 统一状态层）, 新增 cap 参数字段要动哪里（env-state-schema.ts）, 排查 cap 参数改动没生效 / 被预设覆盖 |
 | 🏗 preview-menu | 3D 预览声明式菜单 preview-menu | architecture | — | 3D 预览菜单, 声明式菜单节点, visibleWhen 谓词, 面板 schema 注册, SlideMenu 多层导航 |
 | 🏗 preview-paths | 预览状态路径契约 preview-paths | architecture | — | 预览状态路径, KNOWN_PATHS 扩展, PreviewStatePath 类型, 状态层快照契约 |
-| 🏗 preview_core | 统一 3D 预览核心 preview-core | architecture | gpu-bound | 3D 预览, 统一预览外壳, 程序化天空 / sky / 背景 / scene.background, PreviewAdapter 适配器, 全模型预览（YSM / VRM / MMD / Litematic）, mount3D |
-| 🏗 preview_env_state | 3D 预览统一状态层 envState（ADR-196） | architecture | gpu-bound | 3D 预览场景参数（天空/地面/水面/雾/阴影/反射/环境/后处理/灯光）在哪读哪写, cap 参数为何不存 this.params（ADR-196 统一状态层）, 新增 cap 参数字段要动哪里（env-state-schema.ts）, 排查 cap 参数改动没生效 / 被预设覆盖 |
 | 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
-| 🏗 scene_capability_registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
-| 🍃 vmd_vrm_retarget | VMD→VRM 动作重定向 vmd-retarget | leaf | — | 要把 MMD 的 .vmd 动作播到 VRM 模型上（或改对应的发现/加载逻辑）, 要增删骨骼/表情映射（MMD 骨名/morph 名 → VRM humanoid 骨 / expression preset）, 排查「VMD 动作在 VRM 上腿部不动 / 轨道为空 / 动作卡点顿挫」, 排查「VMD 带表情帧但 VRM 脸不动（表情通道）」 |
-| 🏗 volumetric_cone | 体积光锥 VolumetricCone（真锥体网格 + Fresnel） | architecture | — | 体积光, 光锥, 聚光灯可见光柱, volumetric / cone, 边缘辉光 / fresnel, 截图光柱缺失或与预览不一致 |
+| 🏗 scene-capability-registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
+| 🍃 vmd-vrm-retarget | VMD→VRM 动作重定向 vmd-retarget | leaf | — | 要把 MMD 的 .vmd 动作播到 VRM 模型上（或改对应的发现/加载逻辑）, 要增删骨骼/表情映射（MMD 骨名/morph 名 → VRM humanoid 骨 / expression preset）, 排查「VMD 动作在 VRM 上腿部不动 / 轨道为空 / 动作卡点顿挫」, 排查「VMD 带表情帧但 VRM 脸不动（表情通道）」 |
+| 🏗 volumetric-cone | 体积光锥 VolumetricCone（真锥体网格 + Fresnel） | architecture | — | 体积光, 光锥, 聚光灯可见光柱, volumetric / cone, 边缘辉光 / fresnel, 截图光柱缺失或与预览不一致 |
 | 🍃 water | 水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线） | leaf | — | 改水面波浪 / 颜色 / 透明度 / 水位 / 尺寸 / 池体参数, 找不到水面的 normalMap, 拖水面尺寸滑块卡顿 / 水面几何重建, 改滑杆范围 / 参数值域（range / uiRange）, 新增水体形态（海洋 / 喷泉 / 大水面）, 改水面模型倒影 / 镜像 RT / fresnel 混合, 复核波高 / 泡沫 / 频谱是否成立（数值探针 probe-water-wave） |
 
 ### 摘要
 
 - **bone-tools**（跨格式骨骼工具层 bone-tools）：`frontend/src/preview-3d/bone/bone-tools.ts` 是 ADR-072 落地后新增的**跨格式骨骼工具层**，屏蔽 YSM spec 扁平 bones 声明与 VRM humanoid Object3D…
 - **ground-cap-materialgroup-factories**（ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点））：ADR-195 刀2 将 ground 菜单从 `PreviewControlDef[]` 控件定义重构为 `PreviewMenuNode[]` 节点直产。`ground-menu.ts` 是纯声明层（零 THREE 依赖），仅构造 `P…
-- **ground_surface_spec**（地面材质 spec 单一事实源 ground-surface-spec）：ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 介于网格 y=0 与水面 y=0.01）。架构移植自 MikuMikuAR ADR-226「GroundMateria…
-- **ground_texture_gen**（程序化地面贴图生成 surface-pixels）：`caps/surface-pixels/` 是 ground 地面材质（plain / marble / sand / grass）的纯像素生成器目录，从 `ground-surface-spec.ts` 的 `generateSurfa…
+- **ground-surface-spec**（地面材质 spec 单一事实源 ground-surface-spec）：ADR-117：GroundCapability 的表面材质层（`ysm-ground-surface`，y=0.005 介于网格 y=0 与水面 y=0.01）。架构移植自 MikuMikuAR ADR-226「GroundMateria…
+- **ground-texture-gen**（程序化地面贴图生成 surface-pixels）：`caps/surface-pixels/` 是 ground 地面材质（plain / marble / sand / grass）的纯像素生成器目录，从 `ground-surface-spec.ts` 的 `generateSurfa…
 - **model2d**（2D 预览渲染 model2d）：Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。
 - **model3d**（3D 预览渲染 model3d）：`frontend/src/preview-3d/` + `frontend/src/views/app-preview/model3d-loader.ts` 构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲…
 - **mount-preview-module-singleton-race**（mount3D 并发竞态（已闭环 — _gen 代际守卫））：**已闭环**。代际计数器（原 `mount-preview-core.ts` 模块级 `let _gen = 0`，ADR-227 后为 `session-ledger.ts` 的 `sessionLedger` 实例字段）在 `moun…
 - **mount3d-584-giant**（mount3D 巨函数现状（2026-08-27 已部分拆分））：> ⬇️ 本节为 2026-08-27 历史快照（行号/行数全部失效，仅存历史演化脉络）。当前实况见置顶「2026-09-05 复核」。
-- **pack_gui_light**（gui_light 语义与「死解析立牌」（pack 模型光照元数据））：Java 资源包模型 JSON 里的三个「光照/显示元数据」字段——`gui_light`、`display`、`ambientocclusion`——在本产品中解析后**有意不消费**（死解析）。本卡立牌：说清上游语义、为何不消费、以及若…
+- **pack-gui-light**（gui_light 语义与「死解析立牌」（pack 模型光照元数据））：Java 资源包模型 JSON 里的三个「光照/显示元数据」字段——`gui_light`、`display`、`ambientocclusion`——在本产品中解析后**有意不消费**（死解析）。本卡立牌：说清上游语义、为何不消费、以及若…
+- **preview-core**（统一 3D 预览核心 preview-core）：`frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi…
+- **preview-env-state**（3D 预览统一状态层 envState（ADR-196））：全局可变单例 `envState` 收口全部 10 个 SceneCapability 的场景参数（sky/ground/water/environment/fog/shadow/reflector/renderMode/postproce…
 - **preview-menu**（3D 预览声明式菜单 preview-menu）：3D 预览底部根菜单的声明式菜单系统（ADR-076 v3）。对齐 MikuMikuAR 范式：底部根按钮 → `createSlideMenu` 多层导航。菜单即数据——`PreviewMenuNode` 树 + `visibleWhen…
 - **preview-paths**（预览状态路径契约 preview-paths）：预览状态层的路径契约叶子（ADR-168 二期下沉产物）。零依赖叶子：`KNOWN_PATHS`（值）+ `PreviewStatePath` + `PreviewSnapshot`（类型）。自 `preview-state.ts` 下沉—…
-- **preview_core**（统一 3D 预览核心 preview-core）：`frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi…
-- **preview_env_state**（3D 预览统一状态层 envState（ADR-196））：全局可变单例 `envState` 收口全部 10 个 SceneCapability 的场景参数（sky/ground/water/environment/fog/shadow/reflector/renderMode/postproce…
-- **vmd_vrm_retarget**（VMD→VRM 动作重定向 vmd-retarget）：VRM 生态长期缺动作：MMD 圈产 `.vmd`、动捕产 FBX，几乎无人专门产 `.vrma`。本卡对应的模块把 **VMD 身体 FK 重定向到 VRM humanoid 归一化骨骼**，让 VRM 预览直接吃 MMD 动作（ADR-…
-- **volumetric_cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
+- **vmd-vrm-retarget**（VMD→VRM 动作重定向 vmd-retarget）：VRM 生态长期缺动作：MMD 圈产 `.vmd`、动捕产 FBX，几乎无人专门产 `.vrma`。本卡对应的模块把 **VMD 身体 FK 重定向到 VRM humanoid 归一化骨骼**，让 VRM 预览直接吃 MMD 动作（ADR-…
+- **volumetric-cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），四轴分离：
 
 ## ui（41 张）
@@ -298,6 +298,9 @@
 |------|------|------|------|--------|
 | 🏗 3d-patterns | 3D 区审核与修复模式提炼 | architecture | — | 3D 渲染循环优化, Vector3 复用, 纹理缓存, AbortController 事件管理, 资源生命周期 dispose, 循环依赖破壁, 审核驱动开发, 并发防护 gen 守卫 |
 | 🏗 adr | toast-emoji-svg | architecture | — | toast msg 载荷带 emoji 前缀（✅/❌/⚠️）不知如何处理, toast undo 按钮图标迁移, ADR-238 emoji→SVG 收债的 toast 盲区量不到不拦 |
+| 🏗 app-content-diagnostics | 诊断页 diagnostics | architecture | cpu-bound, gpu-bound, concurrent | 诊断页, 冲突, 去重流程, 诊断页日志 tab, 性能, oldest |
+| 🍃 app-content-settings | 设置页 settings | leaf | — | 设置页, 主题设置, 键位, 路径配置, 界面偏好 |
+| 🍃 app-content-site | 创意工坊站点视图 site | leaf | — | 创意工坊, 站点视图, 浏览模式, 卡片拖拽, workshop-data |
 | 🏗 app-content | 主内容页 app-content | architecture | — | 主内容区, 页面切换, nav:changed, 仓库页, 全局 handler |
 | 🏗 app-modules | 组件入口 app-modules | architecture | io-bound | 组件入口, 模块装配, 启动流程, 主题初始化, 服务注册, 检查更新 |
 | 🍃 app-nav | 顶部导航 app-nav | leaf | — | 导航栏, 导航, 切页, nav:changed, 菜单, 页面记忆, 版本号 |
@@ -306,9 +309,6 @@
 | 🏗 app-sync-manager | 整合包同步页 app-sync-manager | architecture | io-bound | 整合包同步, 同步状态, 推送资源, 拉取资源, 待推送, 可拉取, 已禁用, 实例资源 |
 | 🍃 app-toast | Toast 通知 app-toast | leaf | — | toast, 通知, 提示, 消息, 撤销, 反馈, 报错提示 |
 | 🏗 app-tree | 资源树 app-tree | architecture | — | 树形, 资源列表, tree, 节点, 树, 目录树 |
-| 🏗 app_content_diagnostics | 诊断页 diagnostics | architecture | cpu-bound, gpu-bound, concurrent | 诊断页, 冲突, 去重流程, 诊断页日志 tab, 性能, oldest |
-| 🍃 app_content_settings | 设置页 settings | leaf | — | 设置页, 主题设置, 键位, 路径配置, 界面偏好 |
-| 🍃 app_content_site | 创意工坊站点视图 site | leaf | — | 创意工坊, 站点视图, 浏览模式, 卡片拖拽, workshop-data |
 | 🏗 context-menu | 右键菜单系统 | architecture | — | 右键菜单, 右键, 上下文菜单, ctx:show, menu:show, 批量操作, 移入回收站 |
 | 🏗 css-token-check | 视图层 token 消费门禁 css-token-check | architecture | — | css-token-check, token 门禁, 视图层裸值, 硬编码 padding, 设计令牌合规 |
 | 🏗 dialog-adv-filter | 高级筛选 adv-filter | architecture | — | 高级筛选, 筛选, 骨骼数, 立方体, 纹理尺寸, 按标签筛选, 条件过滤 |
@@ -317,30 +317,33 @@
 | 🏗 dialog-rename | 重命名弹窗 rename | architecture | — | 重命名, 改名, 命名规范, 作者 品牌 角色, rename, 读取头部 |
 | 🏗 dialog-tag-editor | 标签编辑器 tag-editor | architecture | — | 标签, 打标签, 编辑标签, tag, 标签弹窗, 分类标记 |
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, FAB 3D 预览入口, overlay, ADR-057 |
-| 🏗 features_dialogs | 业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选) | architecture | — | 批量重命名 / 标签编辑 / 高级筛选对话框, 找对话框入口符号 |
-| 🏗 frontend_design_critique | 前端设计锐评 | architecture | — | 设计评审, 前端设计, 锐评, 主题系统, 3D 性能审查, 生命周期审查, 技术债 |
-| 🍃 frontend_design_debt | 前端设计令牌债务 — 逐簇判定记录（快照） | leaf | — | 剩余设计令牌债务如何判定, 哪些 padding 值留存量, 输入框/容器是否归按钮档, 空态大图标字号立项, 设计令牌债收录尾 |
-| 🍃 frontend_naming | 前端命名章程（黑话治理） | leaf | — | 黑话, 命名, 缩写, 重命名, 可读性, 匈牙利前缀, 单字母变量, 动词名词化 |
-| 🏗 frontend_repo_audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
-| 🍃 icon_kit | icon-kit 多源图标（已并入 UI_ICONS） | leaf | — | icon-kit, 多源图标, renderIcon, emoji 图标源, 图标字体 |
-| 🍃 menu_test_assertion | 菜单测试断言三分法 | leaf | — | 写 / 改 3D 菜单（cap/adapter/panel/state）测试，断言节点树结构, 菜单测试因加项、删项、重排而集体崩——判断该断言是否属于脆弱布局断言, 新增 cap/菜单节点后，测试该怎么写才不再随菜单变化而改, 看到 check-menu-test-layout 门禁红（新增布局快照断言超基线）, 评审菜单测试时，分不清「行为断言」与「布局快照」 |
-| 🍃 module_global_state | 模块级全局状态治理 | leaf | — | 模块级全局状态, 全局 Map 泛滥, reset 测试钩子, 单例收敛 |
-| 🏗 multi_model_select | 多模型选择菜单原语 multiModelSelectNode | architecture | gpu-bound | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
-| 🏗 preview_menu_session_key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, sessionId |
-| 🍃 preview_menu_settings_state | 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125） | leaf | — | 新增 3D 预览设置项, 新增 cap 想让某个开关出现在设置面板, 排查设置项改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, ADR-125 三块落地状态核对 |
-| 🍃 preview_panel_declarative | 3D 预览面板内容声明式化通道（ADR-126 P4-B） | leaf | gpu-bound | 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）, 评估"面板内容该走 renderCustom 还是 children 声明式", 排查面板内容不出现 / 渲染通道冲突, P4-B 子步（1→2→3）状态通道复用参考 |
-| 🍃 preview_state | 3D 预览全域状态层（ADR-126 P4-A） | leaf | — | 新增 3D 预览面板跨 cap 设置项, 排查预览面板状态改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, P4 子步（A→B→D→C）状态通道复用参考, 评估"某状态是否应进 previewState vs 留在 sceneRegistry/SlideMenu/节点字段" |
+| 🏗 features-dialogs | 业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选) | architecture | — | 批量重命名 / 标签编辑 / 高级筛选对话框, 找对话框入口符号 |
+| 🏗 frontend-design-critique | 前端设计锐评 | architecture | — | 设计评审, 前端设计, 锐评, 主题系统, 3D 性能审查, 生命周期审查, 技术债 |
+| 🍃 frontend-design-debt | 前端设计令牌债务 — 逐簇判定记录（快照） | leaf | — | 剩余设计令牌债务如何判定, 哪些 padding 值留存量, 输入框/容器是否归按钮档, 空态大图标字号立项, 设计令牌债收录尾 |
+| 🍃 frontend-naming | 前端命名章程（黑话治理） | leaf | — | 黑话, 命名, 缩写, 重命名, 可读性, 匈牙利前缀, 单字母变量, 动词名词化 |
+| 🏗 frontend-repo-audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
+| 🍃 icon-kit | icon-kit 多源图标（已并入 UI_ICONS） | leaf | — | icon-kit, 多源图标, renderIcon, emoji 图标源, 图标字体 |
+| 🍃 menu-test-assertion | 菜单测试断言三分法 | leaf | — | 写 / 改 3D 菜单（cap/adapter/panel/state）测试，断言节点树结构, 菜单测试因加项、删项、重排而集体崩——判断该断言是否属于脆弱布局断言, 新增 cap/菜单节点后，测试该怎么写才不再随菜单变化而改, 看到 check-menu-test-layout 门禁红（新增布局快照断言超基线）, 评审菜单测试时，分不清「行为断言」与「布局快照」 |
+| 🍃 module-global-state | 模块级全局状态治理 | leaf | — | 模块级全局状态, 全局 Map 泛滥, reset 测试钩子, 单例收敛 |
+| 🏗 multi-model-select | 多模型选择菜单原语 multiModelSelectNode | architecture | gpu-bound | 多模型, 模型选择, select, zip 多模型, 多 entry, ADR-132 |
+| 🏗 preview-menu-session-key | preview-menu-session-key | architecture | — | schema 注册, per-scene, 多模型同框, schema 键冲突, activeComponent, 组件选择, YSM maid 同台, sessionId |
+| 🍃 preview-menu-settings-state | 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125） | leaf | — | 新增 3D 预览设置项, 新增 cap 想让某个开关出现在设置面板, 排查设置项改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, ADR-125 三块落地状态核对 |
+| 🍃 preview-panel-declarative | 3D 预览面板内容声明式化通道（ADR-126 P4-B） | leaf | gpu-bound | 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）, 评估"面板内容该走 renderCustom 还是 children 声明式", 排查面板内容不出现 / 渲染通道冲突, P4-B 子步（1→2→3）状态通道复用参考 |
+| 🍃 preview-state | 3D 预览全域状态层（ADR-126 P4-A） | leaf | — | 新增 3D 预览面板跨 cap 设置项, 排查预览面板状态改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, P4 子步（A→B→D→C）状态通道复用参考, 评估"某状态是否应进 previewState vs 留在 sceneRegistry/SlideMenu/节点字段" |
 | 🍃 shared-styles | 共享样式 shared-styles | leaf | — | 共享样式, 按钮样式, btn-base, focus-visible, tree 样式, Shadow DOM 样式, CSS 变量 |
-| 🍃 survey_emoji_icons | emoji/UI_ICONS 摸排方法论 | leaf | — | emoji 残留摸排, UI_ICONS 消费分布, 孤儿图标盘点, 图标迁移审计 |
+| 🍃 survey-emoji-icons | emoji/UI_ICONS 摸排方法论 | leaf | — | emoji 残留摸排, UI_ICONS 消费分布, 孤儿图标盘点, 图标迁移审计 |
 | 🏗 test-utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture | — | 测试工具, testid, getByTestId, waitFor, sleep, flaky, 异步等待, 组件测试 |
-| 🏗 testid_contract | testid 契约与 VIEW_TESTIDS 注册表 | architecture | — | 在 frontend/src 任何位置新增 data-testid / dataset.testid / buttonTestid / panelTestid, 修改某个视图的 VIEW_TESTIDS 数组, testid 契约测试报 ORPHAN 或 MISSING, 想给诊断页/仓库页/工坊等顶层 tab 补测试钩子 |
+| 🏗 testid-contract | testid 契约与 VIEW_TESTIDS 注册表 | architecture | — | 在 frontend/src 任何位置新增 data-testid / dataset.testid / buttonTestid / panelTestid, 修改某个视图的 VIEW_TESTIDS 数组, testid 契约测试报 ORPHAN 或 MISSING, 想给诊断页/仓库页/工坊等顶层 tab 补测试钩子 |
 | 🍃 toolbar-search | 工具栏搜索编排 toolbar-search | leaf | — | 搜索编排, 高级筛选, 关键词搜索, 数值范围搜索, 标签过滤, 多线程统计角标, 降级提示 |
+| 🏗 ui-components | UI 组件簇（原 ui 收容所，已归位） | architecture | — | UI 组件, 卡片组件, 加载动画, 滑块, 幻灯片菜单 |
 | 🍃 ui-slide-menu | ADR 去桶化 slide-menu 外壳组件 | leaf | — | slide-menu, slide 菜单, 去桶化, 两级菜单, 轻量导航栈, createSlideMenu |
-| 🏗 ui_components | UI 组件簇（原 ui 收容所，已归位） | architecture | — | UI 组件, 卡片组件, 加载动画, 滑块, 幻灯片菜单 |
 
 ### 摘要
 
 - **adr**（toast-emoji-svg）：`<app-toast>` 渲染层 `<span class="msg">${esc(msg)}</span>` 走 esc 转义文本槽，
+- **app-content-diagnostics**（诊断页 diagnostics）：`diagnostics/` 是 `app-content` 的「诊断」页子域，顶部 **3 个意图组** `repo-tab`（logs 日志 / bench 基准 / audit 体检——ADR-258 由左栏分段收敛为顶 tab，AD…
+- **app-content-settings**（设置页 settings）：`settings/` 是 `app-content` 的「设置」页子域，由主卡 `app-content` 的 `init-pages.ts` 在切到设置页时分发初始化。内部高内聚：`init.ts` 汇聚全部子模块（键位 / 路径卡 /…
+- **app-content-site**（创意工坊站点视图 site）：`site/` 子目录是 `app-content` 的「创意工坊站点」页子域，由主卡 `app-content` 的 `init-workshop.ts` 调用 `renderSiteView` 组装。内部高内聚：`site-view.t…
 - **app-content**（主内容页 app-content）：`app-content` 是应用的主内容区组件（Shadow DOM + adoptedStyleSheets），承载 6 个页面：模型仓库（repository）、整合包管理（instances）、创作者频道（workshop）、创意工…
 - **app-modules**（组件入口 app-modules）：`app-modules.ts` 是前端所有 ES module 组件的统一装配入口：注册可替换服务、按「轻量静态 + 重量级动态」策略导入全部 Web Components、注册右键菜单映射、初始化主题与 UI 偏好、静默检查更新。新增组…
 - **app-nav**（顶部导航 app-nav）：`app-nav` 是应用的主导航菜单组件（Shadow DOM，渲染为左侧固定栏），列出模型仓库、整合包管理、创作者频道、创意工坊、诊断与冲突、设置 6 个入口，底部显示应用版本号。它是 `nav:changed` 事件的主要派发源（20…
@@ -349,9 +352,6 @@
 - **app-sync-manager**（整合包同步页 app-sync-manager）：`app-sync-manager` 是整合包管理页内嵌的同步状态面板（light DOM），由 `app-content` 在收到 `package:selected` 后以 `<app-sync-manager instance="版本…
 - **app-toast**（Toast 通知 app-toast）：`app-toast` 是全局 Toast 通知组件（Shadow DOM，固定悬浮于视口底部居中），是全应用唯一的操作反馈出口。治理红线要求所有异常路径必须有 toast 反馈，各模块统一通过 `bus.emit("toast:show"…
 - **app-tree**（资源树 app-tree）：`app-tree` 是 YSM 核心的资源目录树组件，使用 Web Components 实现，支持展开/折叠、右键菜单、文件图标显示。
-- **app_content_diagnostics**（诊断页 diagnostics）：`diagnostics/` 是 `app-content` 的「诊断」页子域，顶部 **3 个意图组** `repo-tab`（logs 日志 / bench 基准 / audit 体检——ADR-258 由左栏分段收敛为顶 tab，AD…
-- **app_content_settings**（设置页 settings）：`settings/` 是 `app-content` 的「设置」页子域，由主卡 `app-content` 的 `init-pages.ts` 在切到设置页时分发初始化。内部高内聚：`init.ts` 汇聚全部子模块（键位 / 路径卡 /…
-- **app_content_site**（创意工坊站点视图 site）：`site/` 子目录是 `app-content` 的「创意工坊站点」页子域，由主卡 `app-content` 的 `init-workshop.ts` 调用 `renderSiteView` 组装。内部高内聚：`site-view.t…
 - **context-menu**（右键菜单系统）：右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`features/context-menu/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `me…
 - **css-token-check**（视图层 token 消费门禁 css-token-check）：`css-token-check.ts` 是 UI 一致性审计（UI-Design-Audit-2026-09.md §5.2 第 3 步）落地的**止血门禁**：扫描前端视图层 CSS，把「属性位出现裸数值（非 `var(--*)` / …
 - **dialog-adv-filter**（高级筛选 adv-filter）：`adv-filter.ts` 提供模型高级筛选弹窗：关键字 + 骨骼数/立方体数/纹理尺寸三组数值范围 + 标签名，采集后返回结构化条件对象交给调用方执行搜索。控件集合与后端 `SearchModels` 的能力严格对齐（6 个范围参数 …
@@ -360,24 +360,24 @@
 - **dialog-rename**（重命名弹窗 rename）：`rename.ts` 提供单个模型的结构化重命名弹窗：把文件名按 `[作者]【品牌】角色-变体 (年月).ext` 规范拆成五个输入框，实时预览新文件名，可选「📖 读取头部」从 YSM 文件头提取作者/介绍。弹窗只负责产出新文件名，实际落…
 - **dialog-tag-editor**（标签编辑器 tag-editor）：`tag-editor.ts` 提供单个模型的标签编辑弹窗：加载该模型已有标签与全库已有标签，支持手工输入新标签（Enter 或「+ 添加」）与从建议列表点选，删除标签用标签内 ✕ 按钮。保存时把最终标签列表写回后端 go/tags Sto…
 - **dom-fab**（3D 预览悬浮 FAB 控制层）：3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu…
-- **features_dialogs**（业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)）：`frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整…
-- **frontend_design_critique**（前端设计锐评）：2026-09-05 三子代理串行只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend_repo_audit`（2026-08-26，4.1/5，偏代码质量）。…
-- **frontend_naming**（前端命名章程（黑话治理））：2026-09 ADR-161「渲染会话词汇章程」实施时扩大扫描 `frontend/src` 404 个生产 TS 文件，发现命名黑话远超章程六类，按模式统计：
-- **frontend_repo_audit**（前端 TS 整包审计）：2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全…
-- **menu_test_assertion**（菜单测试断言三分法）：菜单 UI 逻辑（cap 的 `getMenuNodes()` 树、adapter 产树、state 层控制项顺序）变化频繁，手写「布局快照」断言（有序 id 数组 `toEqual`、精确 `toHaveLength`、`nodes[i]…
-- **module_global_state**（模块级全局状态治理）：2026-09-04 锐评续刀 + ADR-178 期间对「模块级全局状态」的系统评估：modal 单例槽位试点收敛成功（`ModalSlotState`），locale/web-store 查证后**停止推广**（无净收益）。本卡沉淀判断…
-- **multi_model_select**（多模型选择菜单原语 multiModelSelectNode）：跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的
-- **preview_menu_session_key**（preview-menu-session-key）：3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台
-- **preview_menu_settings_state**（3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125））：ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已落地，**S2「状态单向流」只落了 bind 回写，未落统一状态源**——横切设置项各自有独立读写通道，声明式 Schema 的 `control.bi…
-- **preview_panel_declarative**（3D 预览面板内容声明式化通道（ADR-126 P4-B））：ADR-125 把**设置面板**的控件统一到 `PreviewControlDef[]`（B 层单渲染器）。ADR-126 P4-B 把同一方向的**面板内容**（统计/纹理/按钮组/信息卡——非控件的内容展示）也声明式化：panel 节…
-- **preview_state**（3D 预览全域状态层（ADR-126 P4-A））：ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `settings-state.ts` / 六项横切）。ADR-126 P4-A 把该模式**升格到 3D 预览全域**——本文件是升格后的形态，是 P…
+- **features-dialogs**（业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)）：`frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整…
+- **frontend-design-critique**（前端设计锐评）：2026-09-05 三子代理串行只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend-repo-audit`（2026-08-26，4.1/5，偏代码质量）。…
+- **frontend-naming**（前端命名章程（黑话治理））：2026-09 ADR-161「渲染会话词汇章程」实施时扩大扫描 `frontend/src` 404 个生产 TS 文件，发现命名黑话远超章程六类，按模式统计：
+- **frontend-repo-audit**（前端 TS 整包审计）：2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全…
+- **menu-test-assertion**（菜单测试断言三分法）：菜单 UI 逻辑（cap 的 `getMenuNodes()` 树、adapter 产树、state 层控制项顺序）变化频繁，手写「布局快照」断言（有序 id 数组 `toEqual`、精确 `toHaveLength`、`nodes[i]…
+- **module-global-state**（模块级全局状态治理）：2026-09-04 锐评续刀 + ADR-178 期间对「模块级全局状态」的系统评估：modal 单例槽位试点收敛成功（`ModalSlotState`），locale/web-store 查证后**停止推广**（无净收益）。本卡沉淀判断…
+- **multi-model-select**（多模型选择菜单原语 multiModelSelectNode）：跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的
+- **preview-menu-session-key**（preview-menu-session-key）：3D 预览面板的受控 schema 注册（`schema-registry.ts`）用「per-scene 唯一 key」保证多模型同台
+- **preview-menu-settings-state**（3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125））：ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已落地，**S2「状态单向流」只落了 bind 回写，未落统一状态源**——横切设置项各自有独立读写通道，声明式 Schema 的 `control.bi…
+- **preview-panel-declarative**（3D 预览面板内容声明式化通道（ADR-126 P4-B））：ADR-125 把**设置面板**的控件统一到 `PreviewControlDef[]`（B 层单渲染器）。ADR-126 P4-B 把同一方向的**面板内容**（统计/纹理/按钮组/信息卡——非控件的内容展示）也声明式化：panel 节…
+- **preview-state**（3D 预览全域状态层（ADR-126 P4-A））：ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `settings-state.ts` / 六项横切）。ADR-126 P4-A 把该模式**升格到 3D 预览全域**——本文件是升格后的形态，是 P…
 - **shared-styles**（共享样式 shared-styles）：两个样式模块为 Shadow DOM 组件提供可复用的 CSS 字符串：`utils/dom/css.ts` 导出全应用统一的按钮体系 `.btn-base`、通用 focus-visible 规则、`.ws-icon` 图标规则与 `.n…
-- **survey_emoji_icons**（emoji/UI_ICONS 摸排方法论）：ADR-238 把 emoji 当 UI 图标迁移成 SVG（`UI_ICONS` + `.ws-icon`）。摸排「还有哪些 emoji 残留 / 哪些图标没被用」时，**不要**几十次零散 grep——仓库已有现成工具，一次运行出全貌。
+- **survey-emoji-icons**（emoji/UI_ICONS 摸排方法论）：ADR-238 把 emoji 当 UI 图标迁移成 SVG（`UI_ICONS` + `.ws-icon`）。摸排「还有哪些 emoji 残留 / 哪些图标没被用」时，**不要**几十次零散 grep——仓库已有现成工具，一次运行出全貌。
 - **test-utils**（测试工具 test-utils（G-1 抗脆弱测试基础设施））：`frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / UI-Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 …
-- **testid_contract**（testid 契约与 VIEW_TESTIDS 注册表）：`tests/test_testid_contract.ts`（ADR-133 阶段 B）是前端测试钩子的红线门禁：所有 `data-testid`
+- **testid-contract**（testid 契约与 VIEW_TESTIDS 注册表）：`tests/test_testid_contract.ts`（ADR-133 阶段 B）是前端测试钩子的红线门禁：所有 `data-testid`
 - **toolbar-search**（工具栏搜索编排 toolbar-search）：`toolbar-search.ts` 是 YSM 前端搜索/筛选/导入逻辑的编排核心（从 `toolbar-events.ts` 拆出，ADR-040 P1）。它管理从用户输入到搜索结果渲染的完整链路：弹窗交互 → 后端搜索 → 标签交集…
+- **ui-components**（UI 组件簇（原 ui 收容所，已归位））：原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front…
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/preview-3d/menu/shell/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 s…
-- **ui_components**（UI 组件簇（原 ui 收容所，已归位））：原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front…
 
 ## utils（31 张）
 
@@ -388,20 +388,20 @@
 | 🏗 animation-system | 动画系统 animation | architecture | cpu-bound | 动画, 骨骼动画, 关键帧, Molang, 数字滚动, stagger 入场 |
 | 🍃 capabilities | 能力门控 capabilities | leaf | — | can binding 门控, viewer 模式右键菜单过滤, web 可达性判定, 平台能力矩阵 |
 | 🏗 commit-with-check | 提交脚本 commit-with-check | architecture | — | commit-with-check, 自动提交, 并发提交, 临时索引, 白名单提交, 门禁后自动 commit |
-| 🏗 core_utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步 |
-| 🍃 directory_picker | 跨平台目录选择器 | leaf | — | 目录选择, 选择文件夹, Android 公共仓库目录, 网页版虚拟根, 授权引导, viewer 模式 |
+| 🏗 core-utils | 核心工具函数 core-utils | architecture | — | 工具函数, 工具方法, 纯函数, 防抖, 异步 |
+| 🍃 directory-picker | 跨平台目录选择器 | leaf | — | 目录选择, 选择文件夹, Android 公共仓库目录, 网页版虚拟根, 授权引导, viewer 模式 |
 | 🍃 dom-storage | localStorage 安全读写 safeGet/safeSet | leaf | — | localStorage, 隐私模式, safeGet, safeSet, storage |
-| 🍃 dom_tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
+| 🍃 dom-tooltip | 悬浮提示 tooltip | leaf | — | tooltip, 悬浮提示, hover 提示, title 气泡, 3D 按钮 |
 | 🍃 format-ysm-anim-config | YSM 动画分组与配置菜单提取 | leaf | — | 动画分组, 配置菜单, ysm.json, extra_animation, summarize |
-| 🏗 go_coverage_gate | 覆盖率门禁语句加权口径 | architecture | — | 覆盖率门禁, go 覆盖率, 包覆盖率 0%, 单函数拖垮整包, coverprofile 解析 |
-| 🍃 load_guard | 代际守卫唯一出口 createLoadGuard | leaf | — | 新增需要「丢弃过期一轮结果」的代际逻辑, 见到单文件目录想顺手收敛进 utils/base/, 判断全仓代际守卫是否还有手搓残留, 想给 LoadGuard 加并发限制之前 |
-| 🏗 mock_path_guard | mock 路径守卫 check-mock-paths | architecture | — | vi.mock 失效, mock 路径守卫, mock-path-ignore, ADR-224, 测试隔离静默丢失 |
+| 🏗 go-coverage-gate | 覆盖率门禁语句加权口径 | architecture | — | 覆盖率门禁, go 覆盖率, 包覆盖率 0%, 单函数拖垮整包, coverprofile 解析 |
+| 🍃 load-guard | 代际守卫唯一出口 createLoadGuard | leaf | — | 新增需要「丢弃过期一轮结果」的代际逻辑, 见到单文件目录想顺手收敛进 utils/base/, 判断全仓代际守卫是否还有手搓残留, 想给 LoadGuard 加并发限制之前 |
+| 🏗 mock-path-guard | mock 路径守卫 check-mock-paths | architecture | — | vi.mock 失效, mock 路径守卫, mock-path-ignore, ADR-224, 测试隔离静默丢失 |
 | 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离, 逃生留痕 |
-| 🏗 pre_push_gate | 推送前门禁 pre-push-gate | architecture | — | 推送门禁, 质量门禁, 门禁阻断, 域级检查, go build, vite build, 契约测试, 工具输出解析 |
-| 🏗 safe_error_msg | 安全错误消息提取 utils | architecture | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
-| 🏗 script_shared_cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重 |
+| 🏗 pre-push-gate | 推送前门禁 pre-push-gate | architecture | — | 推送门禁, 质量门禁, 门禁阻断, 域级检查, go build, vite build, 契约测试, 工具输出解析 |
+| 🏗 safe-error-msg | 安全错误消息提取 utils | architecture | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
+| 🏗 script-shared-cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重 |
 | 🏗 source-graph | 源码符号提取共享层 source-graph.ts | architecture | — | 符号提取, 导出符号, 顶层声明, api-break, audit-split, rollback-impact, bloat-history, 依赖图 |
-| 🏗 test_tax_reduction | 测试税减负三刀方法论 | architecture | — | 测试税, 测试文件过大, mock 复印机, 双胞胎测试, 墓碑测试, stubBlobUrls, 夹具沉淀 |
+| 🏗 test-tax-reduction | 测试税减负三刀方法论 | architecture | — | 测试税, 测试文件过大, mock 复印机, 双胞胎测试, 墓碑测试, stubBlobUrls, 夹具沉淀 |
 | 🏗 utils-array | 数组工具 moveItem | architecture | — | 数组排序, 拖拽排序, moveItem, 列表 reorder |
 | 🍃 utils-display | 文件名显示 display | leaf | — | 文件名显示, renderDisplayName, 作者标签, 作品标签, 文件名着色, 搜索高亮 |
 | 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, escUnknown, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
@@ -422,19 +422,19 @@
 - **animation-system**（动画系统 animation）：前端动画体系分两层：**模型骨骼动画**（基岩版 animation.json 解析 + 关键帧插值求值）与 **UI 动效**（数字里程表滚动、stagger 入场延迟）。UI 层的 CSS 动画可被全局 `no-animations` …
 - **capabilities**（能力门控 capabilities）：前端能力门控唯一对外入口。`can(binding)` 将「当前平台是否可用指定 binding」的三态判定（desktop 全量 / web adapter has / Android 黑名单）委托给 `backend/platform-…
 - **commit-with-check**（提交脚本 commit-with-check）：`commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD…
-- **core_utils**（核心工具函数 core-utils）：`utils/base/`（原 `utils/core/`，ADR-189 D2 改名消双 core 歧义）是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。
-- **directory_picker**（跨平台目录选择器）：`frontend/src/backend/directory-picker.ts`（2026-09 自 `utils/dom/` 迁至 `backend/`，消除 utils→backend 反向依赖）：跨平台「要一个目录路径」的统一入口…
+- **core-utils**（核心工具函数 core-utils）：`utils/base/`（原 `utils/core/`，ADR-189 D2 改名消双 core 歧义）是全前端最基础的纯函数工具层，不依赖任何前端框架或业务模块。按 ADR-044 策略 A 收敛自多包重复实现，统一入口。
+- **directory-picker**（跨平台目录选择器）：`frontend/src/backend/directory-picker.ts`（2026-09 自 `utils/dom/` 迁至 `backend/`，消除 utils→backend 反向依赖）：跨平台「要一个目录路径」的统一入口…
 - **dom-storage**（localStorage 安全读写 safeGet/safeSet）：`localStorage` 安全读写工具层（ADR-044 策略 A），收敛项目内所有 `localStorage` 调用，避免隐私模式/存储禁用下裸调抛错中断启动链（`initTheme`/`applyUIPrefs`/`setting…
-- **dom_tooltip**（悬浮提示 tooltip）：3D 预览控制层的自定义悬浮提示组件（单例 light DOM），替代原生 `title` 的迟缓黄气泡（~1s 延迟、样式不可控）。毛玻璃风格对齐 3D HUD（`fab.ts` `.ysm-3d-popup` 同族）；tooltip 节…
+- **dom-tooltip**（悬浮提示 tooltip）：3D 预览控制层的自定义悬浮提示组件（单例 light DOM），替代原生 `title` 的迟缓黄气泡（~1s 延迟、样式不可控）。毛玻璃风格对齐 3D HUD（`fab.ts` `.ysm-3d-popup` 同族）；tooltip 节…
 - **format-ysm-anim-config**（YSM 动画分组与配置菜单提取）：前端镜像 Go 端 `appendAnimGroupsAndConfigs` 逻辑的纯函数模块（`summary.go`）。加密 `.ysm` 经 WASM 解码后，`ysm.json` 的 `properties` 字段可读，但原 `wa…
-- **go_coverage_gate**（覆盖率门禁语句加权口径）：`scripts/check-go-coverage-threshold.ts` 消费 `go test -coverprofile` 产物，按包比对覆盖率阈值。
-- **load_guard**（代际守卫唯一出口 createLoadGuard）：`utils/async/load-guard.ts` 是全仓唯一代际守卫出口，由 **ADR-230 钉死**。本卡承接原 AGENTS.md「src/core 准入准则」下的 ADR-230 注脚链全文（2026-10-04 迁入，常驻…
-- **mock_path_guard**（mock 路径守卫 check-mock-paths）：ADR-224 落地：vitest 的 `vi.mock("<path>")` 对**不存在的模块路径静默不命中也不报错**（host 视为 auto-mock）。模块因重构/rename 被移动后，测试里指向旧路径的 mock 失效——m…
+- **go-coverage-gate**（覆盖率门禁语句加权口径）：`scripts/check-go-coverage-threshold.ts` 消费 `go test -coverprofile` 产物，按包比对覆盖率阈值。
+- **load-guard**（代际守卫唯一出口 createLoadGuard）：`utils/async/load-guard.ts` 是全仓唯一代际守卫出口，由 **ADR-230 钉死**。本卡承接原 AGENTS.md「src/core 准入准则」下的 ADR-230 注脚链全文（2026-10-04 迁入，常驻…
+- **mock-path-guard**（mock 路径守卫 check-mock-paths）：ADR-224 落地：vitest 的 `vi.mock("<path>")` 对**不存在的模块路径静默不命中也不报错**（host 视为 auto-mock）。模块因重构/rename 被移动后，测试里指向旧路径的 mock 失效——m…
 - **pre-commit-hook**（提交前钩子 pre-commit）：`.githooks/pre-commit` 在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17…
-- **pre_push_gate**（推送前门禁 pre-push-gate）：`.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（编译/测试/…
-- **safe_error_msg**（安全错误消息提取 utils）：`frontend/src/utils/base/pure/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `f…
-- **script_shared_cores**（scripts 共享核演进（diff-coverage-core + cycles））：`scripts/_lib/` 承载跨脚本共享逻辑。2026-09 按「四脚本镜像嫌疑分析」实测后，新增两个共享核，消除两对镜像脚本的重复：
-- **test_tax_reduction**（测试税减负三刀方法论）：测试税 ≠ 测试太多，而是「mock 复印机」与「双胞胎测试」这两种结构病。
+- **pre-push-gate**（推送前门禁 pre-push-gate）：`.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（编译/测试/…
+- **safe-error-msg**（安全错误消息提取 utils）：`frontend/src/utils/base/pure/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `f…
+- **script-shared-cores**（scripts 共享核演进（diff-coverage-core + cycles））：`scripts/_lib/` 承载跨脚本共享逻辑。2026-09 按「四脚本镜像嫌疑分析」实测后，新增两个共享核，消除两对镜像脚本的重复：
+- **test-tax-reduction**（测试税减负三刀方法论）：测试税 ≠ 测试太多，而是「mock 复印机」与「双胞胎测试」这两种结构病。
 - **utils-array**（数组工具 moveItem）：纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。
 - **utils-display**（文件名显示 display）：模型文件名解析 + 美化显示管线。YSM 社区文件名遵循 `[作者]【作品】角色 日期.ext` 命名约定，本模块把它解析为结构化字段，并在原文件名上原位着色（作者/作品/日期各自样式），是 UI 侧文件名展示的唯一入口。
 - **utils-dom**（DOM 工具 dom）：HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / 恢复（a11y）。`esc()` 是全前端 HTML 转义的统一入口，也是治理红线指定的转义函数；`toast-ms.ts` 是全应用 toast 时长的单一事实源（8…
@@ -456,10 +456,10 @@
 | 标签 | 含义 | 卡片 |
 |------|------|------|
 | io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, rustbridge, version-updater |
-| cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app_content_diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground_surface_spec, ik_solver, mc-ao-tint, model-stats, model2d, perception, ysm-anim-pipeline, ysm-wasm |
-| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app_content_diagnostics, model3d, mount3d-584-giant, multi_model_select, preview_core, preview_env_state, preview_panel_declarative, render-federation, scene_capability_registry, utils-export |
-| concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app_content_diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race, rustbridge |
-| single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, scripts_readme_index, ysm-wasm |
+| cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app-content-diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground-surface-spec, ik-solver, mc-ao-tint, model-stats, model2d, perception, ysm-anim-pipeline, ysm-wasm |
+| gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app-content-diagnostics, model3d, mount3d-584-giant, multi-model-select, preview-core, preview-env-state, preview-panel-declarative, render-federation, scene-capability-registry, utils-export |
+| concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app-content-diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race, rustbridge |
+| single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, scripts-readme-index, ysm-wasm |
 | memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, model3d, utils-export |
 
 ---

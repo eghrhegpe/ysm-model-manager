@@ -112,6 +112,6 @@ status: active
 
 ## 相关
 
-- [preview_core](./preview_core.md) — 通用外壳 + 骨骼面板接线（`setAdapterItems` 收编）
+- [preview-core](./preview-core.md) — 通用外壳 + 骨骼面板接线（`setAdapterItems` 收编）
 - [model3d](./model3d.md) — YSM 侧既有 `bone-list`/`bone-raycast`/`bone-visibility`（未桥接，见边界）
 - ADR-077（三端骨骼面板通用外壳）

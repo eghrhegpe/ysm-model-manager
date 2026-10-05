@@ -60,7 +60,7 @@ last_verified: 2026-09-03
 - `render-loop.ts` — rAF 全局循环 + perFrame 注册表
 - `wasd-camera.ts`/`unified-pick.ts`/`unload-model.ts`/`input-and-animation.ts`/`switch-preview.ts` — 分别承载 WASD/拾取/卸载/输入/会话切换
 
-「再拆 vs 维持」的结构性判定仍成立（闭包接线器无 stage 缝，强行外移需 15-20 参数 ctx 化，ROI 低），最重的生命周期函数已外置；**残余内嵌闭包仅剩 `escH`**（`mount-preview-core.ts|escH` 相关段——session 可变引用，与 `switchTo` 的旧 handler 替换语义耦合，见卡片 `preview_core` §不变量）与 animate/rAF 调度（`render-loop.ts` 持有的 perFrame 表）。旧文的「6 个内嵌闭包」「fullCleanup ~60 行内嵌」等表述已过时。
+「再拆 vs 维持」的结构性判定仍成立（闭包接线器无 stage 缝，强行外移需 15-20 参数 ctx 化，ROI 低），最重的生命周期函数已外置；**残余内嵌闭包仅剩 `escH`**（`mount-preview-core.ts|escH` 相关段——session 可变引用，与 `switchTo` 的旧 handler 替换语义耦合，见卡片 `preview-core` §不变量）与 animate/rAF 调度（`render-loop.ts` 持有的 perFrame 表）。旧文的「6 个内嵌闭包」「fullCleanup ~60 行内嵌」等表述已过时。
 
 **代际守卫**（并发安全核心）：代际计数器自 ADR-227 起由 `session-ledger.ts|sessionLedger`（`SessionLedgerHost` 实例）持有 / `mount3D` 入口 `sessionLedger.beginSession()` 分配代数 / 三处 `ctx.myGen !== ctx.getGen()` 守卫弃旧（与卡片 `mount-preview-module-singleton-race` 一致）。
 
@@ -137,7 +137,7 @@ mount-preview-core.ts 现 983 行（8-27 快照 1202 行 → 经 §5 二次拆�
 
 - 兄弟卡：`3d-超大文件-code-split-可行性`（决策：当前不拆，P3 优先级；注：该卡引用的 mount-preview-core.ts 行数 1113/1202 已过时，现 888 行）
 - 归档卡：`mount-preview-module-singleton-race`（_gen 并发竞态已闭环，卡已转 archived）
-- 统一核心：`preview_core`（ADR-066 D2 统一外壳已落地）
+- 统一核心：`preview-core`（ADR-066 D2 统一外壳已落地）
 - ADR-066 P3（收缴 vrm/litematic 复制脚手架）
 - ADR-076 v2（声明式根菜单，顶栏砍掉）
 - ADR-093 T2/T5/T6（场景注册表/统一拾取/超量拦截）

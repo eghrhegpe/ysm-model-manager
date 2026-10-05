@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-23
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`AGENTS.md 硬约束 / 前端 vs Go 职责红线 / preview_core.md`
+- **相关**：`AGENTS.md 硬约束 / 前端 vs Go 职责红线 / preview-core.md`
 
 ---
 

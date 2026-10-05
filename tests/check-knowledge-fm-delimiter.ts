@@ -4,7 +4,7 @@
  *
  * 背景：*** / ~~~ 等非 `---` 开头 = 疑似「整卡 Markdown 重排事故」——frontmatter 被当
  * 正文序列化（---→*** 水平线改写、\_ 转义、列表空行平铺+嵌套错乱）。历史上两次受害：
- * frontend_repo_audit.md（bd86a916 修复）、context-menu.md（cabb0e8b 回滚）。*** 开头会
+ * frontend-repo-audit.md（bd86a916 修复）、context-menu.md（cabb0e8b 回滚）。*** 开头会
  * 令 parseFrontmatter（^--- 匹配）返回 null → gen 静默跳过 → 索引漏登。旧文案只报泛化
  * 「幽灵卡」，看不出是重排事故。本测试锁定新文案给出可操作指引。
  *

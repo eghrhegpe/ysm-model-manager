@@ -1,7 +1,7 @@
 # ADR-285：跑基准可用性收口：动作与参数同序、文案去重、术语本地化
 
 - **状态**：🔄 部分采纳（2026-09-20 首轮拍板：P0-1/2/4、P1-1、P3-1/2 已落地；P2-1 只改了三语标签那一路（随 P0-4）；P0-3 已决定不做；P1-2/1-3、P2-2/2-3 留待后续拍板 → 2026-09-24 续：**P1-2（公共区上移）与 P1-3（分组显示）由 [ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md) 的 bench 组重构吸收落地**——公共区（测什么/排序）收进 `data-perf-mode="single conc"` 常驻行置顶、single/conc/scan 三子屏 pill 分组；剩 P2-2/2-3 仍待拍板）
-- **实施情况**：已落地的部分记在知识卡 `docs/knowledge/app_content_diagnostics.md`（**本 ADR 只记决策，实施进度看知识卡**，钩子会自动查漂移）
+- **实施情况**：已落地的部分记在知识卡 `docs/knowledge/app-content-diagnostics.md`（**本 ADR 只记决策，实施进度看知识卡**，钩子会自动查漂移）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-278 / ADR-262 / frontend/src/views/app-content/tpl.ts / frontend/src/views/app-content/diagnostics/perf.ts / frontend/src/locales`
@@ -80,7 +80,7 @@
 | P2-2 | 并发目标集改口带原因：「测哪些（并发没有单模型）」 | 语义 | 三语 6 文件 | 低 | ☐ 采纳 ☐ 否 |
 | P2-3 | `perfScopeHint` 前缀「测什么：」→「这次测的是：」（消撞名） | 语义 | `perf.ts:93` + 三语 | 低 | ☐ 采纳 ☐ 否 |
 | P3-1 | `ADR-278 §2.7` 补注（与 §2.3 的分工） | 文档 | `docs/adr/ADR-278-*.md` | 极低 | ✅ 采纳（已落地） |
-| P3-2 | 知识卡补记本轮审核结论 | 文档 | `docs/knowledge/app_content_diagnostics.md` | 极低 | ✅ 采纳（已落地） |
+| P3-2 | 知识卡补记本轮审核结论 | 文档 | `docs/knowledge/app-content-diagnostics.md` | 极低 | ✅ 采纳（已落地） |
 
 ---
 
@@ -256,7 +256,7 @@ export function perfScopeHint(mode: string): string {
 
 #### P3-2 知识卡补记
 
-`docs/knowledge/app_content_diagnostics.md` 追加本轮审核结论要点：无摆设控件（逐个对账 Go flag）、`--workers` 是档位上限、i18n parity 全绿 + 5 类措辞问题索引、两道穷尽护栏的位置与判据。**知识卡承担实施进度与事实**（ADR 只记决策方向）。
+`docs/knowledge/app-content-diagnostics.md` 追加本轮审核结论要点：无摆设控件（逐个对账 Go flag）、`--workers` 是档位上限、i18n parity 全绿 + 5 类措辞问题索引、两道穷尽护栏的位置与判据。**知识卡承担实施进度与事实**（ADR 只记决策方向）。
 
 ---
 

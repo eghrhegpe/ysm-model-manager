@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-naming-blacktalk.ts — 前端命名黑话防回潮检查器（frontend_naming 章程配套）。
+ * check-naming-blacktalk.ts — 前端命名黑话防回潮检查器（frontend-naming 章程配套）。
  *
  * 零依赖（仅 node:fs / node:path / node:url）。仿 check-boolean-naming.ts 范式。
  *
@@ -20,7 +20,7 @@
  *   node scripts/check-naming-blacktalk.ts --strict   # ERROR 级（built 家族）>0 → 退出码 1
  *   node scripts/check-naming-blacktalk.ts --json     # JSON（CI 用）
  *
- * 设计意图：built→content 主战役（ADR-161 + frontend_naming 扩大清理）已完成，
+ * 设计意图：built→content 主战役（ADR-161 + frontend-naming 扩大清理）已完成，
  * 本脚本防止「新增代码 reintroduce built 名词」与「三轴单字母挤一行」回潮。
  */
 import fs from "node:fs";
@@ -65,7 +65,7 @@ function scanFile(file: string) {
     const loc = `${rel}:${i + 1}`;
 
     // 1. built 名词家族（注释讲历史允许——先剥行内尾注释/块注释，再对正文匹配。
-    //    章程卡正文不卡注释，frontend_naming 卡正文即如此；纯注释行剥后为空自然落空）
+    //    章程卡正文不卡注释，frontend-naming 卡正文即如此；纯注释行剥后为空自然落空）
     const codeLine = line
       .replace(/\/\*.*?\*\/\s*/g, "") // 块注释（单行内）
       .replace(/\s+\/\/.*$/, ""); // 行内尾注释（// 前须有空白，防误剥 http:// 之类）
@@ -157,7 +157,7 @@ function main() {
   for (const r of results) {
     if (r.kind === "builtNoun") {
       console.log(
-        `  ❌ ${r.loc}  「${r.name}」built 名词黑话——build 返回值统一命名 content（frontend_naming 章程）`,
+        `  ❌ ${r.loc}  「${r.name}」built 名词黑话——build 返回值统一命名 content（frontend-naming 章程）`,
       );
     } else {
       console.log(

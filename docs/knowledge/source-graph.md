@@ -160,4 +160,4 @@ invariant_anchors:
 - `scripts/rollback-impact.ts`（revert 影响面分析，主力调用方）
 - `scripts/_attic/bloat-history.ts`（单文件膨胀轨迹，主力调用方，已归档）
 - `docs/adr/ADR-141-large-script-split-baseline.md`（2026-08-31 审计基线，含 source-graph 复用实证）
-- `docs/knowledge/script_shared_cores.md`（共享核登记卡）
+- `docs/knowledge/script-shared-cores.md`（共享核登记卡）

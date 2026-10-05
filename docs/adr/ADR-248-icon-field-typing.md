@@ -121,7 +121,7 @@ export type DataGlyph = string & { readonly [dataGlyphBrand]: true };
     「映射表 ↔ 实现双向对拍」；刻意避开已被 `success`/`error` 占用的 `✅`/`🚫`，防建议串味）；
   - `resolve.ts` 由「两表按优先级查找」简化为**单表查找**；过渡类型 `IconKitName` / `IconName`
     一并删除，结构槽字段直接写 `UiIconName`（或 `IconRef`）；
-  - 知识卡 `icon_kit.md` 转为 **superseded 存根**（保留「曾有此设计、为何移除」的可检索性）；
+  - 知识卡 `icon-kit.md` 转为 **superseded 存根**（保留「曾有此设计、为何移除」的可检索性）；
   - 多源能力（`emoji` / `font` 源与 `renderIcon`）随之删除；`.ficon` 样式另有独立消费者
     （app-tree 文件列表），不受影响。
   **方法论收获**：这是本 ADR「用类型取代清单」的延伸——**类型收紧会逼出隐藏的第二来源**：
@@ -132,7 +132,7 @@ export type DataGlyph = string & { readonly [dataGlyphBrand]: true };
 
 | 来源 | 结果 |
 |---|---|
-| 2026-09 分域迁移实测（5 批，见知识卡 `frontend_design_critique` 刀㉕） | 结构槽字形已归零；清债过程产出 2 份人工清单 + 1 条仓级扫描 |
+| 2026-09 分域迁移实测（5 批，见知识卡 `frontend-design-critique` 刀㉕） | 结构槽字形已归零；清债过程产出 2 份人工清单 + 1 条仓级扫描 |
 | 扫描口径四轮补盲：字段名 → 渲染槽 → 标点形态 → 剥注释 | 每次都是「闸只看得见被写死的位置」；证明文本扫描法的结构性成本 |
 | `UI_ICONS: Record<string, string>`（收紧前） | 无字面量联合 → 拼错图标名在编译期无任何提示 |
 | `resource_types.json` + Go 为类型判定唯一事实源（根 `AGENTS.md` 红线） | 数据图标必须与 UI 图标分流，故用品牌类型而非同名字符串 |

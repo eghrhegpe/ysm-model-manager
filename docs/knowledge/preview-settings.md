@@ -143,7 +143,7 @@ status: active
     （**`render.bloom` 已随 [ADR-250] 退场**——后处理开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`；它兼具性能总闸与模型门禁语义，属「一枚字段三重语义」，且档位切换会覆盖用户手动开关。）
   - per-scene 会话态（不落盘，1 条）：`ui.activeComponent`（`-1 = All`）
   - 探针路径（2 条，cap 内部状态上浮供 `visibleWhen` 谓词消费）：`ui.mode`（预览会话模式 shared/self）、`env.skyGroundCap`（环境能力可用性）
-  - 详见 [preview_state](./preview_state.md)（卡间口径以 10 条为准）
+  - 详见 [preview-state](./preview-state.md)（卡间口径以 10 条为准）
 
 ### 域三：截图 & 填充面板
 - `shot-panel-shared.ts`（6 角度按钮）、`skeleton-render.ts`（`saveScreenshot`）、`skeleton-fill-panel.ts`（组件选择 + 统计 + 纹理）
@@ -219,7 +219,7 @@ status: active
 ## 相关
 
 - [app-preview](./app-preview.md) — 预览面板组件入口
-- [preview_core](./preview_core.md) — 3D 预览核心外壳
+- [preview-core](./preview-core.md) — 3D 预览核心外壳
 - [preview-controls](./preview-controls.md) — 3D 控制器（截图按钮/材质/播放）
 - [export](./export.md) — 截图导出功能链路
 - [utils-export](./utils-export.md) — 截图/缓存工具函数层

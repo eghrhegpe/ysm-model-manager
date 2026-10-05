@@ -6,7 +6,7 @@ import { execFileSync } from "node:child_process";
  * 背景（2026-09-01 实证）：pre-commit 的 snap_docs 快照 diff 用「mtime/size 变化」
  * 判定 gen 产物——单会话成立，并发失效：并行会话手改的知识卡恰在快照窗口内被 touch，
  * 被误判为 gen 产物 stage 进 index，进而被 `--only` 路径限定提交卷带（实证：
- * fbx-cli-pipeline.md / frontend_test_audit.md 被卷进 e96b47e3）。
+ * fbx-cli-pipeline.md / frontend-test-audit.md 被卷进 e96b47e3）。
  *
  * 修复判定：stage 清单 = 快照变化文件 − 并行 dirty 文件。
  *   - dirty = `git status --porcelain` 中 docs/locales/completions 下有改动的文件

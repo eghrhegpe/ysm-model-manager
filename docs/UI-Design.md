@@ -236,7 +236,7 @@
 
 > 令牌档位以此处 + `frontend/css/variables.css` 为准，**仅此三档**。
 > 历史上的 `--tr-slow: 0.2s ease` 已作为零消费死令牌删除（见
-> `docs/knowledge/frontend_design_critique.md`），**不再恢复**——需要 0.2s 时
+> `docs/knowledge/frontend-design-critique.md`），**不再恢复**——需要 0.2s 时
 > 要么归入现有档位，要么说明为何非 0.2s 不可。
 
 ```css

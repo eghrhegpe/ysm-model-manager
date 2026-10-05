@@ -1,6 +1,6 @@
 // ===== 灯光纯数学/几何工具（无 envState、无能力注册表副作用）=====
 //
-// 为什么独立成叶（2026-10-05 审查，见 docs/knowledge/volumetric_cone.md 截图渲染段）：
+// 为什么独立成叶（2026-10-05 审查，见 docs/knowledge/volumetric-cone.md 截图渲染段）：
 //   截图渲染只需 3 个纯函数，但直 import light-capability.ts 会级联触发
 //   scene-capability-registry.ts 顶层 `sceneCapabilityRegistry.add(...)`，
 //   连带实例化全部 9 个 capability + three 全库 + env-state 状态层 + ring-log。

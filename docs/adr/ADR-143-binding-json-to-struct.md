@@ -1,10 +1,10 @@
 # ADR-143：绑定返回值去 string-JSON 化（铲债决策）
 
 - **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡 `binding_json_cleanup`（ADR 只记决策方向，不记实施进度）
+- **实施状态**：查知识卡 `binding-json-cleanup`（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-01
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/knowledge/binding_json_cleanup.md`、ADR-014（类型化渐进迁移）、ADR-049（平台双路由）
+- **相关**：`docs/knowledge/binding-json-cleanup.md`、ADR-014（类型化渐进迁移）、ADR-049（平台双路由）
 
 ---
 
@@ -22,7 +22,7 @@
 1. **`internal/app` 导出绑定禁止以 `string` 承载 JSON**：分批改为 struct/`[]T` 返回 + `error` 第二返回值，吃满 Wails codegen 类型红利。
 2. **错误通道统一 `(T, error)`**：废除 `"{}"` 吞错与 `{error:"..."}` 字段两种暗道；`error_json.go`（ErrorJSON/SyncErrorJSON/ResolveErrorJSON/DedupErrorJSON）随最后一批迁移退役。
 3. **豁免清单**（JSON 文本协议合法保留，见知识卡 §三）：`ExecuteCLI`/`GetAllowedCLICommands`（CLI 子进程 `--json` 跨进程协议）、`ExportModelStructureJSON`（导出物即 JSON 文件）。豁免项前端必须收敛**单一类型化解析器**（cli-bridge.ts 模式），禁止散落 `JSON.parse`。`Build3DSpecFromGeometryJSON` 不豁免：其输出与 `GetModel3DSpec` 同为 Spec3D 形状且消费方重叠，入参 geometryJSON 是 JSON 文本不违规（红线只管返回值），随 P0 同批 struct 化。
-4. **分批迁移** P0→P1→P2：每批 `npm run generate:bindings -ts` + 前端消费点同批切换 + 契约测试更新；批次划分与进度见知识卡 `binding_json_cleanup`。
+4. **分批迁移** P0→P1→P2：每批 `npm run generate:bindings -ts` + 前端消费点同批切换 + 契约测试更新；批次划分与进度见知识卡 `binding-json-cleanup`。
 5. **治理闸**：`binding-check` 增加静态规则——「`internal/app` 导出方法返回 `string` 须命中豁免白名单」，防新暗道回潮。
 6. **Deprecated 绑定直接删除**而非迁移：`ImportResourcePack`、`CountDuplicateFiles`（前端 0 消费）。
 
@@ -43,6 +43,6 @@
 
 ## 4. 数据溯源
 
-- 2026-09-01 审计：grep `internal/app` 导出签名 `) string {` 44 命中 → 逐个核语义 - 2026-09-01 审计：grep `internal/app` 导出签名 `) string {` 44 命中 → 逐个核语义 → 23 条 JSON 病灶（P0×6 + P1×17）+ 3 条豁免 + 2 条 Deprecated 直接删除 + 16 条真字符串（清单固化为知识卡 `binding_json_cleanup`）。
+- 2026-09-01 审计：grep `internal/app` 导出签名 `) string {` 44 命中 → 逐个核语义 - 2026-09-01 审计：grep `internal/app` 导出签名 `) string {` 44 命中 → 逐个核语义 → 23 条 JSON 病灶（P0×6 + P1×17）+ 3 条豁免 + 2 条 Deprecated 直接删除 + 16 条真字符串（清单固化为知识卡 `binding-json-cleanup`）。
 - 前端 `JSON.parse` 消费点 grep 149 命中（含测试），生产消费点见知识卡 §一 表格。
 - 假绿实证：`resource_bindings.go` voxelErrorJSON 注释「原契约下用户永远只看到体素为空」；`registry.ts` P2 修复注释「`{}` 被缓存 → 整会话空注册表」。

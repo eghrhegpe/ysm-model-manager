@@ -5,7 +5,7 @@
 - **日期**：2026-10-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：读侧还原表各 cap 手写双轨清单（新增键须两处登记），写侧已 schema 派生（G-8）而读侧仍靠契约锁绷带——治本需派生还原表键集，且涉及类型校验/迁移归一职责归属，是跨 cap 共享病（ground/water/sky/light），单 cap 开刀会造新不对称，须一次拍全局
-- **相关**：`docs/knowledge/ground_surface_spec.md（G-8 契约锁）/ frontend/src/preview-3d/caps/scene-capability.ts|restoreFields / frontend/src/preview-3d/state/env-state-schema.ts|getPresetKeys`
+- **相关**：`docs/knowledge/ground-surface-spec.md（G-8 契约锁）/ frontend/src/preview-3d/caps/scene-capability.ts|restoreFields / frontend/src/preview-3d/state/env-state-schema.ts|getPresetKeys`
 
 ---
 

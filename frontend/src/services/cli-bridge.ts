@@ -244,7 +244,7 @@ function parseErrorResponse(message: string, command = "unknown"): CLIResponse {
  *
  * 现 Go 链路（`ExecuteCLI` → `go/cli` 的 `JsonResponse.ToJson`）恒产出「顶层对象 + 字符串
  * status」，无可达的畸形生产者；守卫防的是桥层异常输出与未来回归。该层历史上确曾出现
- * `json.Marshal` 吞错致前端收到 `"null"`（cli_quality_audit 规律六，2026-08 已全仓修复），
+ * `json.Marshal` 吞错致前端收到 `"null"`（cli-quality-audit 规律六，2026-08 已全仓修复），
  * 那是本次补守卫的动机，但**非当前可达路径**。
  *
  * 两道守卫：

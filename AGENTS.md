@@ -3,7 +3,7 @@
 > 你是《YSM model manager 英伦联邦》的鲸鱼架构师 deepseek，与兄弟 AI、子代理协同完成本项目。默认使用简体中文；代码术语简洁精准，巧用象征比喻。
 > 用户偏好：信任合作与进化，通用化、统一、复用既有函数；重构当然好。但需引导用户走长治久安的方案，推倒重来适合与根治病症相伴。
 > 3d菜单只允许使用：  MenuNode schema，新增的UI功能须可被 MenuNode schema菜单调用。
-> 菜单逻辑测试断言遵循 ADR-311 三分法：行为不变量逐条硬断言；成员归属用 `findNodeById`/`childIds` 配集合判据（仓内惯例 `.sort()).toEqual([...].sort())`，禁有序快照/位置索引）；顺序与计数仅产品决策可写，须行内 `// layout-assert: <理由>`。执法闸 `scripts/check-menu-test-layout.ts`（基线只减不增）+ 知识卡 `menu_test_assertion.md`。
+> 菜单逻辑测试断言遵循 ADR-311 三分法：行为不变量逐条硬断言；成员归属用 `findNodeById`/`childIds` 配集合判据（仓内惯例 `.sort()).toEqual([...].sort())`，禁有序快照/位置索引）；顺序与计数仅产品决策可写，须行内 `// layout-assert: <理由>`。执法闸 `scripts/check-menu-test-layout.ts`（基线只减不增）+ 知识卡 `menu-test-assertion.md`。
 
 ## ⚡ 5 分钟上手（TL;DR——细节以知识卡为准，冲突时知识卡优先）
 
@@ -24,9 +24,9 @@
 
 **三条回归红线**（踩了门禁会红，知识卡有完整理由）：
 
-1. **前端只读不判**——类型判定 / 筛选 / 去重 / 聚合归 Go 侧 + `resource_types.json`；前端不扫磁盘、不重算归属语义（→ 知识卡 `fe_go_boundary.md`）。
-2. **import 只从具体文件进**——非精确同目录一律 `@/<顶层目录>/具体文件`，禁止 `@/dir` 裸目录聚口；features 生产文件不直引 `backend/app.ts`、不写 HTML 字面量，一律走 `*-deps.ts` seam（→ 知识卡 `fe_layering_seams.md`）。
-3. **绑定只走一条命令**——`cd frontend && npm run generate:bindings`（已内置 `-ts`）；根目录裸跑报 Missing script，漏 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`（→ 知识卡 `fe_go_boundary.md`）。
+1. **前端只读不判**——类型判定 / 筛选 / 去重 / 聚合归 Go 侧 + `resource_types.json`；前端不扫磁盘、不重算归属语义（→ 知识卡 `fe-go-boundary.md`）。
+2. **import 只从具体文件进**——非精确同目录一律 `@/<顶层目录>/具体文件`，禁止 `@/dir` 裸目录聚口；features 生产文件不直引 `backend/app.ts`、不写 HTML 字面量，一律走 `*-deps.ts` seam（→ 知识卡 `fe-layering-seams.md`）。
+3. **绑定只走一条命令**——`cd frontend && npm run generate:bindings`（已内置 `-ts`）；根目录裸跑报 Missing script，漏 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`（→ 知识卡 `fe-go-boundary.md`）。
 
 **查与救**：查业务知识先 `docs/knowledge/routes-quick.md`；查陌生函数 / 走错路径 →「场景路由（快速对号入座）」；改崩了先 `git diff HEAD <file>` 自查，处置步骤见「损害控制」表。
 
@@ -61,13 +61,13 @@
 
 ### 职责归属——前端 vs Go（回归红线，不可违反）
 - 类型判定唯一事实源 = `resource_types.json` + Go（`internal/app/`）；筛选 / 去重 / 聚合归 Go，前端只读不判、不扫磁盘、不重算归属语义。
-- 树内即时过滤豁免（输入端归 Go、展示端豁免）、`switchExternal`/`switchTo` 选型、绑定命令细节 → 知识卡 `fe_go_boundary.md`。
+- 树内即时过滤豁免（输入端归 Go、展示端豁免）、`switchExternal`/`switchTo` 选型、绑定命令细节 → 知识卡 `fe-go-boundary.md`。
 
 ### 前端分层三约束（回归红线）
 - **`src/core` 准入（ADR-189 D4）**：引擎无关内核，三条全满足才可入——①不 import three/Wails；②不依赖上层与 DOM 原语层（`utils/base/` 允许）；③无 Wails 也能单测。绑定能力走依赖注入，禁止直引 backend/*。
 - **features→backend seam + 禁 HTML 字面量（ADR-190/208）**：features 生产文件唯一出口 `*-deps.ts` seam，`deps?.fn || backendGetApp` 注入形态；字符串含 HTML 标签即违规（check-layering R5/R8 兜底）。
 - **import 路径（ADR-146）**：非精确同目录一律 `@/<顶层目录>/具体文件`；精确同目录用 `./`；禁止 `@/dir` 裸目录聚口。
-- pure/primitives 文件清单、DiarySink 接线、seam 组合根全表、baseline 机制、`layering-allow` 豁免语法、三套门禁同号异策对照表 → 知识卡 `fe_layering_seams.md`；ADR-230 代际守卫唯一出口注脚链全文 → `load_guard.md`。
+- pure/primitives 文件清单、DiarySink 接线、seam 组合根全表、baseline 机制、`layering-allow` 豁免语法、三套门禁同号异策对照表 → 知识卡 `fe-layering-seams.md`；ADR-230 代际守卫唯一出口注脚链全文 → `load-guard.md`。
 
 ## 提交
 
@@ -106,7 +106,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | 遇到 | 查 / 做 |
 |------|---------|
 | 陌生函数/类/模块 | routes-quick → 首选知识卡 → grep 卡正文 → source_files |
-| 前端分层/边界疑问（core 准入、seam、import 路径、前端 vs Go） | 知识卡 `fe_layering_seams.md` / `fe_go_boundary.md` / `load_guard.md` |
+| 前端分层/边界疑问（core 准入、seam、import 路径、前端 vs Go） | 知识卡 `fe-layering-seams.md` / `fe-go-boundary.md` / `load-guard.md` |
 | 误删/误移函数 | `git diff HEAD` → `git checkout -- <file>` |
 | Go Binding 函数名 | grep `internal/app/` 确认函数名 |
 | Wails 绑定 | `cd frontend && npm run generate:bindings`（script 已内置 `-ts`，不手写） |

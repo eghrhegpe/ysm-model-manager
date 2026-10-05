@@ -94,7 +94,7 @@
 
 ### 3.3 已知遗留（文档已自行登记，非本次新发现）
 
-- ~~`docs/knowledge/app_content_diagnostics.md`：诊断页**子 pill 无 role=tab / 无方向键**（嵌套 tablist 反模式 + 键盘可达性欠账），「待全站 a11y 专项」~~ **✅ 已闭合（2026-10，ADR-300 §3 遗留偿还，见 §5）**
+- ~~`docs/knowledge/app-content-diagnostics.md`：诊断页**子 pill 无 role=tab / 无方向键**（嵌套 tablist 反模式 + 键盘可达性欠账），「待全站 a11y 专项」~~ **✅ 已闭合（2026-10，ADR-300 §3 遗留偿还，见 §5）**
 - `docs/knowledge/ui-slide-menu.md + utils-dom.md`：2026-08-29 a11y 审查登记的边界测试盲区。
 - `docs/UI-Design.md §17.2`：表格「列表/树 Arrow 导航 ❌ 未建立集中式框架」——**此项与现况不符**（app-tree 已实现 Arrow 导航），文档待更新。
 

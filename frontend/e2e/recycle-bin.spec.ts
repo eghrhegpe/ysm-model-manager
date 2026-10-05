@@ -1,5 +1,5 @@
 // ===== E2E 测试：回收站（recycle-bin，ADR-037 覆盖深化）=====
-// 审计卡（frontend_test_audit.md）原列「recycle-bin 完全无 e2e」为 P3 盲区。
+// 审计卡（frontend-test-audit.md）原列「recycle-bin 完全无 e2e」为 P3 盲区。
 // 本 spec 补其 UI 接线冒烟：导航到 repository 页 → 切到 recycle 子 tab →
 // 断言回收站页真实挂载（清空/刷新控件可见）、条目级 restore/delete 钩子存在。
 // 与 sync-manager.spec 同深度：覆盖「点击 → 特性渲染」的 UI 接线，执行逻辑由

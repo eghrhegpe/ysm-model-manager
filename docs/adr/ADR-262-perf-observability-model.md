@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：ADR-200（结构化载荷 / 渲染与数据分离）、ADR-258（诊断页顶部 tab 范式）、ADR-230（代际守卫）、`frontend/src/preview-3d/infra/load-trace.ts`、`go/cli/flow.go`、`go/cli/bench_concurrent.go`、`docs/knowledge/app_content_diagnostics.md`
+- **相关**：ADR-200（结构化载荷 / 渲染与数据分离）、ADR-258（诊断页顶部 tab 范式）、ADR-230（代际守卫）、`frontend/src/preview-3d/infra/load-trace.ts`、`go/cli/flow.go`、`go/cli/bench_concurrent.go`、`docs/knowledge/app-content-diagnostics.md`
 
 ---
 

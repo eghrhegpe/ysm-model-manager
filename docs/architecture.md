@@ -343,7 +343,7 @@ readModelBytes(path) → Uint8Array        ← backend/read-model-bytes.ts（平
 > **ADR-228 变更说明**：原链路为 `ReadFileBytes(Go, base64) → atob → Uint8Array`，即**两个平台都**付 base64 往返
 > （实测峰值 ≈4.33× 文件大小：L1 base64 串 1.33N + L2 `atob` 串 1.0N + L3 `charCodeAt` 拷贝 1.0N + `HEAPU8.set` 1.0N）。
 > 网页版的文件本就在同进程的 IndexedDB 里（无 IPC/序列化边界），往返纯属浪费 → 已改为 `ArrayBuffer` 直出；
-> 桌面受 Wails JSON 传输限制**无法照做**（「资产服务器二进制路由」方案经核实 ROI 不足，见 `frontend_design_critique` 刀⑭）。
+> 桌面受 Wails JSON 传输限制**无法照做**（「资产服务器二进制路由」方案经核实 ROI 不足，见 `frontend-design-critique` 刀⑭）。
 > `wasm-decode.ts` 的读取契约相应从「base64 字符串」升格为「字节」（`InflightCtx.ReadBytes`），本地 `Base64ToBytes` 链已下沉到 seam。
 
 `views/app-preview/model3d-loader.ts` — `fetchSpec` 优先调 Go `GetModel3DSpec`，失败回退 `buildSpecFromModel`（JS 几何），LRU 20 条 spec 缓存。

@@ -4,13 +4,13 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/views/app-content/index.ts,frontend/src/views/app-content/diagnostics/dedup.ts,frontend_repo_audit.md,frontend_design_critique.md`
+- **相关**：`frontend/src/views/app-content/index.ts,frontend/src/views/app-content/diagnostics/dedup.ts,frontend-repo-audit.md,frontend-design-critique.md`
 
 ---
 
 ## 1. 背景（Context）
 
-`frontend/src/views/app-content/index.ts:147` 的 `_render()` 每次 `nav:changed` / `lang:changed` / `repo:search-creator` 都把 `this.state.root.innerHTML` 整段重建（`<div class="page">${page.html()}</div>`）。后果（2026-09-03 三路并发锐评实证，见 `frontend_design_critique.md`）：
+`frontend/src/views/app-content/index.ts:147` 的 `_render()` 每次 `nav:changed` / `lang:changed` / `repo:search-creator` 都把 `this.state.root.innerHTML` 整段重建（`<div class="page">${page.html()}</div>`）。后果（2026-09-03 三路并发锐评实证，见 `frontend-design-critique.md`）：
 
 1. **状态丢失**：切页后 `<app-tree>` 等 Web Component 全部走 connected→disconnected→connected 完整生命周期，展开节点、滚动位置、焦点全丢——用户「刚展开的子目录，切页回来又缩回去了」。（注意：裸写 `<app-tree>` 会被 VitePress 的 Vue 模板编译器当作未闭合元素，致整站构建失败——2026-09-11 修复；行内标签一律用反引号包裹。）
 2. **模块级全局锁悬空**：`diagnostics/dedup.ts:15,19` 的 `_dedupBusy`/`diagExecBusy` 挂在模块级，页面销毁不复位（`resetDedupConfig` 只清 config 不清 busy），再进 dedup tab 永久卡死（审计快照 2026-08-26 点名 4 个月未修）。
@@ -63,8 +63,8 @@
 
 ## 4. 数据溯源
 
-- 2026-08-26 `frontend_repo_audit.md`：dedup 模块级全局竞态隐患点名。
-- 2026-09-03 `frontend_design_critique.md`：三路并发锐评实证 `index.ts:147` 整重建 / `index.ts:108-109` bus 异化 / `dedup.ts:15,19` 无 reset；主模型抽查背书（✅ 6 项）。
-- 实施进度记录于知识卡 `frontend_design_critique.md`（不变量节），不写入本 ADR。
+- 2026-08-26 `frontend-repo-audit.md`：dedup 模块级全局竞态隐患点名。
+- 2026-09-03 `frontend-design-critique.md`：三路并发锐评实证 `index.ts:147` 整重建 / `index.ts:108-109` bus 异化 / `dedup.ts:15,19` 无 reset；主模型抽查背书（✅ 6 项）。
+- 实施进度记录于知识卡 `frontend-design-critique.md`（不变量节），不写入本 ADR。
 
 <!-- 文件名: content-page-tab-panel-persistent.md → 实际文件 ADR-163-content-page-tab-panel-persistent.md -->

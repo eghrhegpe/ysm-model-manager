@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-23
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`ADR-093 T4-b 多模型同台追加、preview-menu ➕ 按钮`；「➕ 三态行为」契约见 `docs/knowledge/preview_core.md`
+- **相关**：`ADR-093 T4-b 多模型同台追加、preview-menu ➕ 按钮`；「➕ 三态行为」契约见 `docs/knowledge/preview-core.md`
 
 ---
 
@@ -15,7 +15,7 @@
 
 **红线（本 ADR 唯一约束）**：跨类型追加必须走 `switchExternal(p, siblings, { keepInScene: true })` 主门路由（→ `openModel3DFullscreen({ cooperate })` → 有活跃会话时 `switchPreview(path, { keepInScene: true })` 按目标 rtype 路由到对应 opener 同台追加），**禁止把跨类型文件直接喂给当前会话 `adapter.build`**（走错适配器解析失败）。
 
-「➕ 三态行为」契约（同类型候选 → `switchTo` keepInScene / 跨类型候选 → `switchExternal` keepInScene / 行本体点击跨类型 → `switchExternal` 替换）已迁至 `docs/knowledge/preview_core.md`——行为细节不再入 ADR，避免治理膨胀（ADR 只留决策红线）。
+「➕ 三态行为」契约（同类型候选 → `switchTo` keepInScene / 跨类型候选 → `switchExternal` keepInScene / 行本体点击跨类型 → `switchExternal` 替换）已迁至 `docs/knowledge/preview-core.md`——行为细节不再入 ADR，避免治理膨胀（ADR 只留决策红线）。
 
 ## 3. 后果（Consequences）
 

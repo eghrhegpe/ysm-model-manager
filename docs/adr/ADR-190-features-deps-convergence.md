@@ -1,10 +1,10 @@
 # ADR-190：features 层职责收束与依赖注入真化
 
-- **状态**：✅ 已采纳 — D1–D6 已全部实质落地或按原意不落地（2026-09-14 调研核实，见下文「实施收口」）；实施进度记录见知识卡 `features_dialogs.md` / `oldest-models.md`（ADR 只记决策，不记进度）。
+- **状态**：✅ 已采纳 — D1–D6 已全部实质落地或按原意不落地（2026-09-14 调研核实，见下文「实施收口」）；实施进度记录见知识卡 `features-dialogs.md` / `oldest-models.md`（ADR 只记决策，不记进度）。
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/features/**`；实施进度：知识卡 `features_dialogs.md` / `oldest-models.md`（原指向 `docs/review/features-convergence-plan.md` 从未建立，2026-09-14 更正为知识卡）
+- **相关**：`frontend/src/features/**`；实施进度：知识卡 `features-dialogs.md` / `oldest-models.md`（原指向 `docs/review/features-convergence-plan.md` 从未建立，2026-09-14 更正为知识卡）
 
 ---
 

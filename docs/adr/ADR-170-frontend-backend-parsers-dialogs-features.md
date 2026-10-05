@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：前端架构锐评 P0-1（`docs/knowledge/frontend_design_critique.md`）、ADR-123（右键可达性单一事实源）
+- **相关**：前端架构锐评 P0-1（`docs/knowledge/frontend-design-critique.md`）、ADR-123（右键可达性单一事实源）
 
 ---
 

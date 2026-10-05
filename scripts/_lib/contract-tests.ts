@@ -57,6 +57,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_sidebar_gen.ts": ["docs", "tests"],
   "verify-adr-042.ts": ["docs"],
   "test_adr_tiering.ts": ["docs", "tests"], // ADR-320 分级：三区语法 + new-adr 双级 dry-run
+  "test_new_knowledge_card.ts": ["docs", "tests"], // new-knowledge-card 模板：kind kebab-case + 无失效占位锚
   // —— data ——
   "test_creators_schema.ts": ["data"],
   "test_resource_schema.ts": ["data"],
@@ -484,6 +485,11 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
   "test_sidebar_gen.ts": ["scripts/gen-vitepress-sidebar.ts"],
+  "test_new_knowledge_card.ts": [
+    "scripts/new-knowledge-card.ts",
+    "scripts/check-knowledge-drift.ts",
+    "scripts/gen-knowledge-index.ts",
+  ],
   "test_adr_tiering.ts": [
     "scripts/_lib/adr-files.ts",
     "scripts/_lib/frontmatter.ts",

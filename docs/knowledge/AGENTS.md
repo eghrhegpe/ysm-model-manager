@@ -32,6 +32,8 @@ node scripts/check-knowledge-drift.ts --affected <f>…  # 源码变更 → 受�
 node scripts/check-knowledge-drift.ts [--json]         # 被动全量漂移检查（--json 供 doctor --docs/CI）
 ```
 
+模板两处口径（2026-10-06 修正，`tests/test_new_knowledge_card.ts` 守护）：**kind 归一为 kebab-case**（`debt_ledger_refresh` → `debt-ledger-refresh`；仓内 181:1 事实标准 snake_case 是历史漏网，漂移的 `KIND_RE` 刻意兼容存量故不拦）；**模板不输出 `invariant_anchors`**——该字段格式须 `文件|模式`，校验器对 `TODO` 与 `[]` 同判 ERROR，而 architecture 卡**缺失**它只报 WARN，故宁可缺字段（WARN 提示作者补）不可填占位值（ERROR）。
+
 index.md 由 pre-commit 钩子自动 gen+stage，无需手动 `gen-knowledge-index.ts`。
 
 ## 钩子行为（全部非阻断，细节读 .githooks/ 对应脚本）

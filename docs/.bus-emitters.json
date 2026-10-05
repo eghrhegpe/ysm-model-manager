@@ -1,5 +1,5 @@
 {
-  "_comment": "bus 合法发射者登记表（ADR-270-d3）：{事件: [合法发射文件]}——新发射文件须显式登记（--update --force）或改走收敛通道；--update 只收不放。测试文件不入扫描域故天然豁免；HTML 内联发射以 frontend/index.html 整体登记。",
+  "_comment": "bus 合法发射者登记表（ADR-270-d3）：{事件: [合法发射文件]}——新发射文件须显式登记（--update --force）或改走收敛通道；--update 只收不放，表缺失时 --strict 硬错误（禁止静默缴械）。测试文件不入扫描域故天然豁免；frontend/*.html（顶层非递归）当前无 bus.emit——若出现，以对应 *.html 路径整体登记。",
   "avatar:refresh": [
     "frontend/src/features/community/download-queue-store.ts"
   ],

@@ -38,6 +38,8 @@ status: active
 | missing_payload | 非 void 事件 emit 缺第二参数 ★核心 | 硬错误 |
 | void_with_payload | void 事件 emit 多传 payload | 硬错误 |
 | voidDrift | VOID_EVENTS 清单 vs `: void` 标记双向漂移 | 硬错误 |
+| emitterAdditions | 在 `docs/.bus-emitters.json` 登记表外的文件发射了事件（ADR-270-d3） | 硬错误 |
+| emitterRemovable | 在册发射文件已不再发射（可收紧登记表） | 仅提示 |
 | 孤儿发射 / 鬼订阅 | emit 无订阅 / 订阅无 emit | 仅记录 |
 
 - **可选链盲区已修**：旧版正则要求接收者后紧跟 `.`，`window.bus?.emit(...)` 整行失明——
@@ -64,7 +66,17 @@ node scripts/event-graph.ts                 # 生成 docs/event-graph.md
 node scripts/event-graph.ts --check         # 校验生成物新鲜度（pre-push ALL_STATIC_TOOLS）
 node scripts/event-graph.ts --strict        # 硬错误阻断（pre-push FRONTEND_STATIC_TOOLS 已挂）
 node scripts/event-graph.ts --json          # 机读报告
+node scripts/event-graph.ts --update        # 按现扫收敛登记表（只减不增）
+node scripts/event-graph.ts --update --force # 显式新增登记（首次种表也必须带 --force）
 ```
+
+### 合法发射者登记表（ADR-270-d3）
+
+`docs/.bus-emitters.json` 登记 `{事件: [合法发射文件]}`（键序与数组序按码点排序），
+对照 bus 扇入面把发射端冻结成在册清单：表外文件发射 → `emitterAdditions` 硬错误，
+`--strict` 阻断（pre-push FRONTEND 档）。表只减不增，新增须 `--update --force` 显式登记。
+`--update` 缺表时即使无增长也拒绝整表重种（误删请从 git 恢复）——
+**表缺失 = 闸未武装 = 硬错误**，禁止静默缴械。
 
 ## 与其他子系统关系
 
@@ -78,6 +90,7 @@ node scripts/event-graph.ts --json          # 机读报告
 - 新增事件 → 只改 bus.ts 一处（类型表 + 必要时 VOID_EVENTS），守卫自动覆盖全部调用面
 - emit 非 void 事件必须带 payload；void 事件必须不带——违者 push 被闸
 - 孤儿/鬼订阅是设计信号非错误：新增事件先想清楚发射方与订阅方是否成对落地
+- 发射端只减不增：新增发射点须与登记表同步（`--update --force`）；登记表缺失 = 硬错误
 
 ## 相关
 

@@ -45,6 +45,8 @@ quick_risk_lines:
 invariant_anchors:
   - scripts/check-layering.ts|R5（零容忍）
   - scripts/check-layering.ts|R8（防回退）
+  - scripts/check-layering.ts|R9（防回退）
+  - scripts/check-layering.ts|R10（防回退）
 ---
 
 # 前端分层 seam 与 import 路径
@@ -62,7 +64,10 @@ invariant_anchors:
 | R4 | — | 越 `src` 边界阻断 | 禁 `display:none/block` 动画 |
 | R5 | features/views 生产文件禁直引 `backend/app.ts`（零容忍） | 兄弟文件用 `@/` 别名提示 | 禁硬编码颜色 |
 | R6 | core 测试文件禁 import backend/*（零容忍） | 禁 `@/dir` 裸目录聚口 | 禁 `public/` 放 JS |
+| R7 | preview-3d/menu/ 子目录内 import 方向按 rank 自顶向下（零容忍，ADR-270） | — | — |
 | R8 | features 生产文件禁 HTML 字面量（防回退） | — | 禁未转义拼接 HTML |
+| R9 | preview-3d 全区 import 方向闸（防回退，ADR-270-d1） | — | — |
+| R10 | views 禁穿透 preview-3d 内部件，仅入口面白名单（防回退，ADR-270-d2） | — | — |
 
 ## src/core 准入准则（ADR-189 D4）
 

@@ -270,7 +270,18 @@ console.log("[4] 登记表纯核 emitterDrift / readEmitterRegistry");
     reg !== null && !("_comment" in reg) && reg["a:b"].length === 1,
     "readEmitterRegistry 剥下划线元键",
   );
-  ok(readEmitterRegistry(path.join(tmp, "nope.json")) === null, "表缺失 → null（闸未武装）");
+  ok(
+    readEmitterRegistry(path.join(tmp, "nope.json")) === null,
+    "表缺失 → null（主流程据此判硬错误）",
+  );
+  fs.writeFileSync(path.join(tmp, "bad.json"), JSON.stringify({ "a:b": "x.ts" }), "utf-8");
+  let threw = false;
+  try {
+    readEmitterRegistry(path.join(tmp, "bad.json"));
+  } catch {
+    threw = true;
+  }
+  ok(threw, "表值非字符串数组 → 抛错不逐字符静默比对（形状闸）");
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
@@ -287,15 +298,17 @@ console.log("[4b] fixture 端到端：种表→阻断→拒增→force→收敛�
     path.join(fe, "src", "views", "a.ts"),
     `import { bus } from "../../bus.ts";\nbus.emit("b:typed", { x: "1" });\nbus.on("b:typed", () => {});\n`,
   );
-  // 表缺失 → 闸未武装，--strict 不因发射者维度阻断（存量 fixture 语义不变）
+  // 表缺失 = 硬错误（复核 WARN1：堵「删表→--strict 静默绿→无 force 重种」两步缴械通道）
   let r = run("--strict", "--json");
   ok(
-    r.status === 0 && JSON.parse(r.stdout)._summary.emitterRegistryArmed === false,
-    "表缺失 → 未武装且不阻断",
+    r.status === 1 && JSON.parse(r.stdout)._summary.emitterRegistryArmed === false,
+    "表缺失 → --strict 阻断（禁止静默缴械）",
   );
-  // 第一步：--update 种表
+  // 首次种表亦需 --force 显式确认（与 check-layering 缺基线拒 --update 对称）
   r = run("--update");
-  ok(r.status === 0 && fs.existsSync(regFp), "表缺失时 --update 种表");
+  ok(r.status === 1 && !fs.existsSync(regFp), "表缺失 --update 无 force 拒种");
+  r = run("--update", "--force");
+  ok(r.status === 0 && fs.existsSync(regFp), "--update --force 显式种表");
   r = run("--strict", "--json");
   let s = JSON.parse(r.stdout)._summary;
   ok(

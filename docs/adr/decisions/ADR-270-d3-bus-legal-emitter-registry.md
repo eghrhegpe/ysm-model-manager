@@ -15,7 +15,7 @@
 
 1. event-graph.ts 增「合法发射者」登记表闸：`docs/.bus-emitters.json` 登记 `{事件: [合法发射文件]}`，扫描到登记表外的文件发射该事件 → `emitterAdditions` **硬错误**（--strict 阻断，与未声明/缺参/漂移同级）；登记表有而扫描无（已收敛条目）→ `emitterRemovable` 仅提示不阻断。
 2. 首版由 `--update` 按当前扫描自动种入全部 66 发射文件（现状即合法，**不重构代码**）；此后只减不增——新增发射文件必须先 `--update --force` 显式登记（承认在册发射者）或改走既有收敛通道，收敛动作（如 toast 助手化）从表里删条目即为量化抓手。
-3. 口径：仅扫生产文件（collectSrcFiles 已排除 *.test/*.spec，测试发射天然豁免）；HTML 内联发射同表登记；登记表缺失 = 闸未武装（--update 种入前不阻断，fixture/新仓无感）；粒度=文件级，仿 R10 精确闭集。
+3. 口径：仅扫生产文件（collectSrcFiles 已排除 *.test/*.spec，测试发射天然豁免）；HTML 内联发射同表登记（`frontend/*.html` 顶层非递归——当前全仓无 `bus.emit`，若出现以对应 `*.html` 路径整体登记）；**登记表缺失 = 闸未武装 = `--strict` 硬错误**（2026-10-05 复核处置 WARN1：删表两步即可解除武装，与姊妹闸 check-layering 缺基线拒 `--update` 对称）；首次种表或整表重置必须显式 `--update --force`，单 `--update` 遇缺表即拒绝重种（误删从 git 恢复）；粒度=文件级，仿 R10 精确闭集。
 
 ## 后果（一句）
 

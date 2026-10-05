@@ -18,7 +18,8 @@
  *   emitterAdditions **硬错误**（--strict 阻断）；登记表有而扫描无（已收敛）→ emitterRemovable
  *   仅提示，--update 收表即销账。--update 按当前扫描重建表（只减不增——新增条目需 --force
  *   显式确认；无变化跳过写入防 churn）。仅扫生产文件（*.test/*.spec 天然豁免）；表缺失 =
- *   闸未武装，不阻断（fixture/迁移期无感）。
+ *   --strict 硬错误（复核 WARN1：堵「删表→静默缴械→无 force 重种」两步解除武装通道），
+ *   首次种表亦需 --update --force 显式确认。
  *
  * 用法：node scripts/event-graph.ts [--check] [--json] [--strict] [--update [--force]] [--root <dir>]
  *   --root 仅供测试 fixture 覆盖仓库根（默认取真实仓库根）。
@@ -496,17 +497,23 @@ export function emitterDrift(
     for (const file of files) if (!seen?.has(file)) removable.push({ event, file });
   }
   const byKey = (x: { event: string; file: string }) => `${x.event}:${x.file}`;
-  additions.sort((a, b) => byKey(a).localeCompare(byKey(b)));
-  removable.sort((a, b) => byKey(a).localeCompare(byKey(b)));
+  // 码点比较与 --update 种表的默认 .sort() 同源——跨 ICU locale 展示顺序稳定（复核 NIT4）
+  additions.sort((a, b) => (byKey(a) < byKey(b) ? -1 : byKey(a) > byKey(b) ? 1 : 0));
+  removable.sort((a, b) => (byKey(a) < byKey(b) ? -1 : byKey(a) > byKey(b) ? 1 : 0));
   return { additions, removable };
 }
 
-/** 读登记表：缺失 → null（闸未武装）；下划线开头的元键（如 _comment）剥除不参与比对。 */
+/** 读登记表：缺失 → null（主流程 --strict 视为硬错误）；下划线元键剥除；值须为字符串数组（手写表唯一入口，形状违规报错不静默）。 */
 export function readEmitterRegistry(fp: string): Record<string, string[]> | null {
   if (!fs.existsSync(fp)) return null;
-  const raw = JSON.parse(fs.readFileSync(fp, "utf-8")) as Record<string, string[]>;
+  const raw = JSON.parse(fs.readFileSync(fp, "utf-8")) as Record<string, unknown>;
   const out: Record<string, string[]> = {};
-  for (const [k, v] of Object.entries(raw)) if (!k.startsWith("_")) out[k] = v;
+  for (const [k, v] of Object.entries(raw)) {
+    if (k.startsWith("_")) continue;
+    if (!Array.isArray(v) || v.some((x) => typeof x !== "string"))
+      throw new Error(`登记表形状违规：${k} 的值须为字符串数组（${fp}）`);
+    out[k] = v as string[];
+  }
   return out;
 }
 
@@ -519,6 +526,7 @@ function renderMarkdown(
     additions: Array<{ event: string; file: string }>;
     removable: Array<{ event: string; file: string }>;
   },
+  registryArmed: boolean,
 ) {
   const out: string[] = [];
   out.push("# Bus 事件契约报告");
@@ -535,7 +543,8 @@ function renderMarkdown(
     anomalies.undeclared.length ||
     anomalies.arityIssues.length ||
     anomalies.voidDrift.length ||
-    drift.additions.length;
+    drift.additions.length ||
+    !registryArmed;
   const hasSoft = anomalies.orphans.length || anomalies.ghosts.length || drift.removable.length;
   if (hasHard || hasSoft) {
     out.push("## ⚠️ 异常摘要");
@@ -578,6 +587,12 @@ function renderMarkdown(
         const d = eventMap.get(ev);
         out.push(`- \`${ev}\` — on×${d.on.length}`);
       }
+      out.push("");
+    }
+    if (!registryArmed) {
+      out.push(
+        "### ⛔ 登记表缺失（硬错误——docs/.bus-emitters.json 不在；从 git 恢复，确需重种走 `--update --force`）",
+      );
       out.push("");
     }
     if (drift.additions.length) {
@@ -776,11 +791,19 @@ function main() {
   if (UPDATE) {
     const fresh: Record<string, string[]> = {};
     for (const ev of [...emitFilesByEvent.keys()].sort()) {
+      if (!contract.names.has(ev)) continue; // 未声明事件不入表——防 --force 重种时把拼错的事件名洗白入册
       const files = [...(emitFilesByEvent.get(ev) ?? [])].sort();
       if (files.length) fresh[ev] = files; // 无人发射的事件不登记（鬼订阅由既有检查管）
     }
     const registryOld = readEmitterRegistry(EMITTERS_FILE);
-    if (registryOld) {
+    if (!registryOld) {
+      if (!FORCE) {
+        console.error(
+          "❌ 登记表缺失：种表是显式行为（--update --force）——误删请先从 git 恢复，禁止无确认整表重种（那等于缴械）",
+        );
+        process.exit(1);
+      }
+    } else {
       const pairsOf = (reg: Record<string, string[]>) =>
         new Set(Object.entries(reg).flatMap(([ev, fl]) => fl.map((f) => `${ev}:${f}`)));
       const added = [...pairsOf(fresh)].filter((p) => !pairsOf(registryOld).has(p));
@@ -797,7 +820,7 @@ function main() {
       JSON.stringify(
         {
           _comment:
-            "bus 合法发射者登记表（ADR-270-d3）：{事件: [合法发射文件]}——新发射文件须显式登记（--update --force）或改走收敛通道；--update 只收不放。测试文件不入扫描域故天然豁免；HTML 内联发射以 frontend/index.html 整体登记。",
+            "bus 合法发射者登记表（ADR-270-d3）：{事件: [合法发射文件]}——新发射文件须显式登记（--update --force）或改走收敛通道；--update 只收不放，表缺失时 --strict 硬错误（禁止静默缴械）。测试文件不入扫描域故天然豁免；frontend/*.html（顶层非递归）当前无 bus.emit——若出现，以对应 *.html 路径整体登记。",
           ...fresh,
         },
         null,
@@ -819,13 +842,14 @@ function main() {
     ? emitterDrift(emitFilesByEvent, registry)
     : { additions: [], removable: [] };
   console.warn(
-    `[event-graph] 异常：未声明 ${anomalies.undeclared.length}，实参违约 ${anomalies.arityIssues.length}，清单漂移 ${anomalies.voidDrift.length}，孤儿发射 ${anomalies.orphans.length}，鬼订阅 ${anomalies.ghosts.length}，发射者表外 ${drift.additions.length}，表可收紧 ${drift.removable.length}${registry ? "" : "（登记表缺失，发射者闸未武装）"}`,
+    `[event-graph] 异常：未声明 ${anomalies.undeclared.length}，实参违约 ${anomalies.arityIssues.length}，清单漂移 ${anomalies.voidDrift.length}，孤儿发射 ${anomalies.orphans.length}，鬼订阅 ${anomalies.ghosts.length}，发射者表外 ${drift.additions.length}，表可收紧 ${drift.removable.length}${registry ? "" : "，⛔ 登记表缺失（--strict 硬错误）"}`,
   );
   const hardFailures =
     anomalies.undeclared.length +
     anomalies.arityIssues.length +
     anomalies.voidDrift.length +
-    drift.additions.length;
+    drift.additions.length +
+    (registry ? 0 : 1); // 表缺失不得静默缴械：删表两步解除武装的漏洞已堵（复核 WARN1，2026-10-05）
   // JSON 先行：机器消费方（doctor/CI/测试）无论成败都拿得到结构化报告
   if (JSON_OUT) {
     console.log(renderJSON(eventMap, anomalies, drift, !!registry));
@@ -840,11 +864,15 @@ function main() {
       console.error(`  ${a.type} ${a.event} @ ${a.file}:${a.line}`);
     for (const v of anomalies.voidDrift) console.error(`  清单漂移 ${v.event} — ${v.detail}`);
     for (const a of drift.additions) console.error(`  发射者表外 ${a.event} @ ${a.file}`);
+    if (!registry)
+      console.error(
+        "  登记表缺失 docs/.bus-emitters.json（从 git 恢复；确需重种走 --update --force）",
+      );
     process.exit(1);
   }
   if (CHECK) {
     const existing = fs.existsSync(OUT) ? fs.readFileSync(OUT, "utf-8") : "";
-    const md = renderMarkdown(eventMap, anomalies, drift);
+    const md = renderMarkdown(eventMap, anomalies, drift, !!registry);
     if (existing !== md) {
       console.error("❌ docs/event-graph.md 过期，运行 `node scripts/event-graph.ts` 刷新。");
       printAnomalyReport(anomalies, drift);
@@ -855,7 +883,7 @@ function main() {
     return;
   }
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
-  fs.writeFileSync(OUT, renderMarkdown(eventMap, anomalies, drift), "utf-8");
+  fs.writeFileSync(OUT, renderMarkdown(eventMap, anomalies, drift, !!registry), "utf-8");
   console.log(`📥 已写入 ${OUT}（${eventMap.size} 个事件）`);
   printAnomalyReport(anomalies, drift);
 }

@@ -9,7 +9,7 @@
 
 > **本 ADR 已取代**：Phase 1 反向代理架构验证后判定不可行（Wails v3 WebView2 反代理注入下载拦截工程复杂度超预期），Phase 2/3 废弃。核心结论「站点兼容性问题真实存在」仍有效，但解决方案转向其他路径（保留 iframe + 用户手动「在新标签打开」）。
 
-## 1. 背景
+## 1. 背景（Context）
 
 当前创意工坊页用 sandboxed `<iframe>` 直连外站，`X-Frame-Options: deny` 的站点（如 bowlroll.net）会白屏。曾有 `proxy.go` 反向代理（已删于 `502d3ca7`），但当初放弃是因为「拦截内嵌下载过于复杂」。
 
@@ -17,7 +17,7 @@
 
 ---
 
-## 2. 决策
+## 2. 决策（Decision）
 
 采用 **Wails v3 多窗口 + Go 反向代理** 方案，分两阶段实施。
 
@@ -111,7 +111,7 @@ Phase 1 仅实现 A 模式（代理窗口），B/C 模式复用现有 `OpenInBro
 
 ---
 
-## 4. 后果
+## 4. 后果（Consequences）
 
 ### 正面
 - bowlroll.net 等 `X-Frame-Options: deny` 站点可在窗口中正常浏览

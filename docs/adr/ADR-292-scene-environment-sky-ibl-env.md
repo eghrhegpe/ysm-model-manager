@@ -133,7 +133,7 @@ i18n 现状（`locales/zh-CN.ts`）：
 > - env cap 在 `envSource === "sky"` 时**真正调用** SkyCapability 烘焙取图，
 >   不再走 `drawEnvEquirect` 静态渐变路径；
 > - `envSource` 的**唯一职责**是表达「哪个数据源在供图」——解决
->   「`preset` 值为 `"sky"` 但用户其实不要天空 IBL」与「自定义 HDR」的区分，
+>   「`preset` 值为 `"sky"` 但用户不要天空 IBL」与「自定义 HDR」的区分，
 >   而非重复表达 preset 已有信息。
 >
 > 理由：概念最少、复用最多，且**不触发 `envPreset` 枚举迁移**（无需改写历史存档的 preset 值）。

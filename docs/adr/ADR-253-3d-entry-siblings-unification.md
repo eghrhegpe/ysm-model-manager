@@ -31,7 +31,7 @@
 - `resolveMmdSiblings` / `resolveFbxSiblings` / `resolveSceneSiblings` / `resolveMorphSiblings` /
   `resolveStageSiblings` 均为**零参数导出函数**（`siblings.ts`），不依赖 `ctx`、不碰 DOM。
 
-真正的错位是：**siblings 被当成「详情卡的上下文数据」在 `wireFab` 闭包里现算，而它实际上是
+真正的错位是：**siblings 被当成「详情卡的上下文数据」在 `wireFab` 闭包里现算，而它是
 「按 rtype 派生的仓库级候选」**——`resolveSiblingsByType` 走 `GetRepoRoot(rtype)` +
 `ScanModelEntriesFiltered(root, rtype, "", label)`（subtype 传空、递归整根），
 `mount-preview-core.ts:661` 的 `getSiblings` 也只 `filter(p => p !== session.currentPath)`，

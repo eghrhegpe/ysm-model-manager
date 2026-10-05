@@ -16,7 +16,7 @@
 2. **参数暴露碎且被前端砍掉**：`single-bench` Go 侧有 `model/iterations/baseline/save-baseline/threshold/format` 六参（含 CI 退化门禁），前端只传 `model` + `iterations`——`threshold`/`baseline`/`format` 全被丢弃，于是永远没有「好还是坏」的判定。
 3. **报告范式双轨**：`gui-flow` 走结构化 `resp.data.stages`（ADR-200 D2），`single-bench` 却**正则解析中文人类文案**（`perf-single-bench.ts` 旧实现），甚至把 `"总计"` 这个中文标签硬编码成解析锚点；`tests/test_cli_gui_flow_contract.ts` 还把 Go 的人类文案模板（`"[%d] %s (%.2fms)"`）钉成契约——**人类文案被当成了 API**。
 4. **口径混用致数字不可信**：`single-bench` 的 `stages` 是 N 次平均值，而 `total_ms` 是 N 次迭代的**累计墙钟**（`runSingleBenchSamples` 的 `totalStart` 包整个循环），UI 直接把累计值当「一次加载总耗时」渲染——迭代 3 次即虚高 3 倍。
-5. **估算混入总计**：`gui-flow` ⑤「数据准备」的耗时其实是重复调用的 `AnalyzeBedrockModel`（③也调过一次，同一分析计 3 次），IPC 大小按「假设 50MB/s」估算；⑥「渲染预估」无渲染管线，公式是 `boneCount*0.01+50 ~ *0.02+100`（Go 自承「真实首帧须在 GUI 验证」）。二者与实测阶段混在同一个 total 里。
+5. **估算混入总计**：`gui-flow` ⑤「数据准备」的耗时是重复调用的 `AnalyzeBedrockModel`（③也调过一次，同一分析计 3 次），IPC 大小按「假设 50MB/s」估算；⑥「渲染预估」无渲染管线，公式是 `boneCount*0.01+50 ~ *0.02+100`（Go 自承「真实首帧须在 GUI 验证」）。二者与实测阶段混在同一个 total 里。
 6. **阶段无归属、无样本统计**：阶段结构 `{status,name,ms,desc}` 没有「这段属于 Go / Rust 扫描器 / WASM 解析器 / JS / Three.js」的归属字段，也没有样本数与分位数；`gui-flow` 跑一次就出总耗时，无方差可言。
 7. **阈值分级三处并存**：Go 有 `stageMark`（人类 emoji）与 `stageStatus`（机器 token）同阈值（100/50/10ms），前端 `perf-single-bench.ts` 又自算一份 `ms > 100 / > 50` 决定配色。
 8. **类型表硬编码三张**：Go 的 `concurrent-bench` 写死 `.ysm`；`detectModelFormat` 写死扩展名→格式；前端 `LoadTrace.format` 是 `"mmd"|"vrm"|"fbx"|"ysm"|"litematic"|"other"` 字面量联合、6 个 adapter 各写死自己——最后一张**与「类型判定唯一事实源 = resource_types.json + Go」的职责红线直接冲突**。

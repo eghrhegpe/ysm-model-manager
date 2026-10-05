@@ -29,7 +29,7 @@ settings 面板是**横切面**（跨 cap、跨模块），既不在 A 的状态
 
 1. **同一开关两条真值来源**（`f0fa3e23`，22:52）：`wireframe-capability.ts:96-107` 已自报标准 `toggle` 控件（`id:"wireframe-toggle"`，getValue/setValue 齐备），settings 面板未接，另手写 29 行 `bsBuildWireframeToggle()`（`preview-menu-settings.ts:306-330`）；commit message 自陈「手动 schema，非自动 cap 聚合」。
 2. **visible 是温床**（`7fdfdcc7`，22:26）：`MenuControlDef.visible?`（`scene-capability.ts:30`）全仓仅 5 处调用点（water 2、ground 3），全手写在各 cap 控件工厂内，无注册表、无集中枚举、无契约测试；A 层另有同名不同义的 `visibleWhen`（`node-types.ts:84`）。
-3. **声明期求值 → 运行时冻结**（`preview-menu-settings.ts:108-123`）：`if (wfCap) nodes.push(...)` 在 schema 构建时求值，此后 cap 创建面板也不会长出该行——与 `05fe24b7`（22:39）所修「水池分组永不可见」同病；该 commit 以 `SceneCapability.subscribe?` + `rebuildEnvSubs` + `menu.refresh()` 手工补链路，实为「A 层无状态层可订阅」的补丁，构成事实上第四套机制。
+3. **声明期求值 → 运行时冻结**（`preview-menu-settings.ts:108-123`）：`if (wfCap) nodes.push(...)` 在 schema 构建时求值，此后 cap 创建面板也不会长出该行——与 `05fe24b7`（22:39）所修「水池分组永不可见」同病；该 commit 以 `SceneCapability.subscribe?` + `rebuildEnvSubs` + `menu.refresh()` 手工补链路，实为「A 层无状态层可订阅」的补丁，构成第四套机制。
 
 ### 1.3 状态通道散落（横切项无统一读写口）
 

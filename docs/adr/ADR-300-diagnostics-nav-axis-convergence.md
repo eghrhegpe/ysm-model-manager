@@ -122,7 +122,6 @@
 
 **已知遗留**
 
-- ~~子 pill 的 ARIA/键盘化~~：**已偿还（2026-10）**——toolbar+radiogroup 姿势（bar `role="toolbar"` + pill `role="radio"`/`aria-checked` + roving tabindex）；不套 tablist 的判据仍成立（顶层已是 tablist）。实现与契约测试见知识卡「a11y 接线」节。
 - 3D 菜单 MenuNode 若要深链诊断页子 pill：`diag-tab-<组>` + `data-sub=<id>` 两级 id 已留单源，深链本身不在本期。
 - `oldest` 页与诊断页共用路由分支（`app-content.methods.test.ts:163`）不在本期触碰范围。
 

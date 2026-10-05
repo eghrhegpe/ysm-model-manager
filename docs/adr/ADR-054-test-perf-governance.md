@@ -39,7 +39,7 @@
 - **正面**：real-data-fuzz 46s→<10s；vitest 全量 62s→20.3s（-68%）；doctor 全量 ~95s→67.7s（-29%）；git 仓库 -60MB+。验证：vitest 119 文件全绿（fixtures 精简后 1440 用例）、go test 全过、vite build + tsc 通过。
 - **负面 / 取舍**：
   - 模型覆盖样本从 30+ 模型收敛到 3+3 个代表（特殊形态 vehicle/controller/fp.arm 仍覆盖，批量多样性收窄）。
-  - ~~go/ysm 目录式回归测试静默 SKIP~~ **已修复**：第二轮移除作者目录层曾使 `TestFindComponentsInExtractedYSM_DirFixture_ShenFengling / _Xigelika / _SourceNameNoExt / _WineFoxAll` 静默 SKIP；第三轮重建极简目录样本（1.6KB）后 4 个测试恢复 PASS（`go test ./go/ysm/...` 验证）。目录式回归链路由"真实完整模型"降为"极简几何"——解析链路（ysm.json 声明序 + models/ 补扫 + SourceName 去扩展名）仍被覆盖，真实数据形态轰击由 vitest real-data-fuzz（49 文件）承担。
+  - 目录式回归样本由「真实完整模型」降为「极简几何」（1.6KB 重建样本）——解析链路（ysm.json 声明序 + models/ 补扫 + SourceName 去扩展名）仍被覆盖，真实数据形态轰击由 vitest real-data-fuzz（49 文件）承担。
   - 惰性化 3 个生产模块引入守卫分支（语义不变但需在新增模块顶层 window 副作用时保持此约定）。
 - **已知遗留**：环境累计仍 ~70-78s（60 个 happy-dom 文件为真 DOM/渲染路径）；`isolate: false` 与测试文件合并（MikuMikuAR ADR-256 路线）均评估不采纳——isolate 关闭有单例穿透风险，合并解决的是 import 成本（本项目仅 7-9s，非瓶颈）。
 

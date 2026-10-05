@@ -137,7 +137,7 @@ npx playwright test --config playwright.web.config.ts menu-3d-session
 
 ## 不变量
 
-- **截图进仓**：`e2e/_shots/`、`e2e-web/_shots/` 随代码提交，证据可复查
+- **截图不进版本库**：`_shots/`（含 `e2e/`、`e2e-web/`、`artifacts/**/_shots/`）是 e2e/探针每次运行重写的本地取证产物，已被 `.gitignore` 排除；复查证据用读图工具看本地图或附在 PR/Issue，**勿 `git add`**。Agent 看不到浏览器窗口，唯一通路＝脚本截图存 png → 读图工具回看（`artifacts/e2e-probe.mjs` 一次性探针）。
 - **单变量对照**：定位视觉异常时每次只动一个开关
 - **硬断言优先**：`toBe(1)` > `toBeGreaterThan(0)` > `if (n > 0)`
 - **临时 spec 用完即删**，不留在 `e2e-web/`

@@ -119,6 +119,12 @@ build/android/gen/
 frontend/e2e-report/
 frontend/test-results/
 
+# E2E / 探针 / 渲染对齐的本地取证截图（每次运行重写，不入版本库；复查用读图工具或附 PR/Issue）
+# 约定见 docs/knowledge/e2e-visual-feedback.md 不变量：截图不进版本库
+**/_shots/
+artifacts/e2e-shot.png
+_shots/
+
 # Web 版构建产物（ADR-049，GitHub Pages 部署用，不入库）
 frontend/dist-web/
 # Go coverprofile 产物（统一收纳 .coverage/，原根目录散名 go-cover 已迁）

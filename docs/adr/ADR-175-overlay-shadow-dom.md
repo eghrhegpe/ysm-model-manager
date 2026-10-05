@@ -70,7 +70,7 @@ e2e specs 的 overlay 真实选择器改 **shadow 穿透**形态（host id → s
 **D5 — 迁移分步执行（M1→M3），每步全量套件认证**：
 - **M1**：挂载点 shadow root 化（零视觉变更：mpc-overlay/mpc-body/mpc-* 类规则随 ensure 注入目标迁移；
   单例外壳 + app-tree 守卫 + aria 挂 host）。验证：overlay 单例复用测试 + 全量套件绿。
-  ✅ **已落地（2026-09-04）**：新增 overlay-style-bridge（8 个 ensure\*Styles + ensureFabStyles 注入目标
+  **实现形态**：新增 overlay-style-bridge（8 个 ensure\*Styles + ensureFabStyles 注入目标
   经桥迁移，无 overlay 时 head 兜底保 menu 族单测）；共享样式模块 adoptedStyleSheets 安装；
   attachShadow 缺失环境降级 light DOM；PreviewBuildCtx/SwitchContext.overlay 放宽 `HTMLElement | ShadowRoot`。
 - **M2**：~~slide 菜单 shadow 化~~ **取消**（见 D2 修订，2026-09-04）。

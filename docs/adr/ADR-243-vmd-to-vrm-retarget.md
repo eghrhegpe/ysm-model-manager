@@ -186,7 +186,7 @@ VMD 重定向写的是**归一化骨骼**，天然落在 `vrm.update(dt)` 之前
 
 > **实施注记（2026-09-15 二阶段）**：`loadVrmaAnims` 改名并扩为 `loadMotionClips`，拆出 `loadVrmaClips` / `loadVmdClips` / `listCustomAnimVmd` 三个小函数；顺序为「同目录 `.vrma` → 同目录 `.vmd` → 动作库 `.vmd`」，**按完整路径去重**（同名不同目录是两个不同资产，不合并）。两条边界：① 「全骨不可映射」的 VMD 直接跳过、不产条目——`tracks: []` 的动作点在面板上是「点了没反应」，比空态引导更糟；② 空态文案由 `VRM_PLAY_EMPTY_HINT` 单点持有（`emptyVrmPlayBridge` 与兜底节点共用），防两处漂移。逐文件读取（VMD 个头不大）；动作库规模若显著变大，可对齐 MMD 侧改走批量读。
 
-### 2.8 IK 决策项（**方案 A 已采纳并落地**，2026-09-15）
+### 2.8 IK 决策项（方案 A）
 
 VMD 的腿部动作主要活在 `左足ＩＫ`/`右足ＩＫ` 上，由 MMD 的 CCDIK 在**运行时**解算成 FK（`mmd-build-result.ts:61` `updateWithMixer(dt, mixer, { ik: true, grant: true })`）。而 `buildAnimation` 是纯关键帧搬运、**不解 IK**（`buildAnimation` 版 `buildSkeletalAnimation` 内无 IK 分支）；VRM 侧也无解算器。三个候选：
 
@@ -200,7 +200,7 @@ VMD 的腿部动作主要活在 `左足ＩＫ`/`右足ＩＫ` 上，由 MMD 的 
 
 1. **链根必须是骨盆语义（大腿的父骨），不是 `upperLeg` 自身**。`mmd-foot-ik.ts:48` 原本用 `extractIKChainFromTree(tree, leftUpperLeg, leftFoot)` 得到 `chain=[upperLeg, lowerLeg, foot]`，而 `solveIK` 的关节遍历是 `for (let j = chain.length - 2; j >= 1; j--)`（`ik-solver.ts:122`）——**跳过链根**。该链下 j 只能取 1（膝盖），大腿不动。链根改取大腿就多一节 ⇒ `chain=[骨盆, upperLeg, lowerLeg, foot]`，j 取 2、1 ⇒ **大腿与膝盖都参与、骨盆保持锚定**。零求解器改动。
    - **实施期修订（2026-09-15）**：原文写「链起点必须是 `hips`」，实现改为「取大腿的**直接父骨**（`boneTree.byId.get(upperLegId).parentId`），父骨缺失或悬空则回退大腿自身」。理由：MMD 的 `腰` 不保证是 `左足` 的祖先（不同模型派系里 `腰`/`下半身` 归属不一），硬编码语义 id 会让 `extractIKChainFromTree` 直接返回 null ⇒ 整腿静默失效；而 VRM 的大腿父骨恰好就是 `hips`，两者统一为「直接父骨」后同一份代码对两个格式都对。
-   - **实施期落地（2026-09-15 二阶段）**：该提取逻辑连同「链根取直接父骨」约定抽为 `bone/leg-chain.ts` 的 `extractLegChains()`，由 `mmd-foot-ik.ts`（待机锚地）与 `vrm-foot-ik.ts`（VMD 足ＩＫ 驱动）共用——两份实现分叉会让这条约定在某一路径上悄悄回退，症状是「某格式的腿只动膝盖」且不报错。
+   - **共用出口**：该提取逻辑连同「链根取直接父骨」约定抽为 `bone/leg-chain.ts` 的 `extractLegChains()`，由 `mmd-foot-ik.ts`（待机锚地）与 `vrm-foot-ik.ts`（VMD 足ＩＫ 驱动）共用——两份实现分叉会让这条约定在某一路径上悄悄回退，症状是「某格式的腿只动膝盖」且不报错。
 2. **角度钳制与符号方向**。膝/肘需单向钳制（`minAngle`/`maxAngle` 同号区间），而 `solveIK` 是 axis-angle 形式按角度**大小**钳制（`ik-solver.ts:146`），反向旋转的符号行为需实测；`poleTarget`/`poleWeight` 用于膝盖朝向矫正，MMD 的极向量约定需对照确定。
    - **实施期处置**：v1 刻意沿用 `mmd-foot-ik.ts` 那一组**已在实机跑过**的保守参数（4 轮 / damping 0.6 / ±π⁄3），不分叉——先让两条腿走同一组值，等实机肉眼校出问题再按需分叉，免得多一份未经实证的魔数。
 

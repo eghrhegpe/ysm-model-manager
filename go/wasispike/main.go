@@ -1,7 +1,16 @@
+//go:build wasispike
+
 // Package wasispike WASI 化解码器最小验证（spike，不进生产）：
 // wazero 纯 Go 实例化 -sSTANDALONE_WASM 编译的 YSMParser，
 // 直调 malloc / ysm_decode_to_memory 内存直出，绕过 Node.js 子进程。
 // 验证点：①imports 零 JS 依赖（10 wasi + 4 env 垫片）；②内存直解产出完整产物列表。
+//
+// 2026-10-06 补 //go:build wasispike（技术债审计 tech-debt-audit-2026-10-06.md §11.1）：
+// 使命已由 go/ysmwasi（ADR-316 生产化）承接，本包仅留作 wazero 直调参考实现。
+// 此前无 build tag，默认 `go test ./go/...` 会编译到它（暴露 0% 覆盖率红灯）；
+// 加 tag 后默认构建/测试跳过，手动跑需 `go run -tags wasispike ./go/wasispike`。
+// 与 go/rustbridge 的 rust_backend tag 相反：rustbridge 是生产路径被 tag 隔离（CI 才跑），
+// 本包是历史 spike 被 tag 隔离（仅手动参考）——两者语义不同，勿混用同一 tag。
 package main
 
 import (

@@ -89,7 +89,10 @@ node scripts/check-go-coverage-threshold.ts --json                   # CI / 子�
 
 ## 与其他子系统关系
 
-- 生成方：`go test ./go/... ./internal/... -coverprofile=.coverage/go-cover.out`（`.coverage/` 已被 `.gitignore` 覆盖）。
+- 生成方：`go test ./go/... ./internal/... ./ -coverprofile=.coverage/go-cover.out`（`.coverage/` 已被 `.gitignore` 覆盖）。
+  - **2026-10-06 补 `./`（root 包）**：原命令漏 root，root 包 19.6% 从未进 profile；且脚本对 profile 缺失的包不判 0%（SKIP_PACKAGES 已含 root），故 root 未误红。加 `./` 让 profile 反映全仓。
+  - **profile 必须现跑现用，勿复用陈旧文件**：`.coverage/go-cover.out` 无代码自动生成（脚本只读不写），靠手动/CI 跑 go test 生成。2026-10-06 实证：旧 profile 残留已删除的 `go/probe_fmt.go`（历史测试运行时创建的临时 probe，测完即删、当前源码零引用），其 1 条 0 覆盖语句被聚合到幽灵包 `ysm-model-manager/go`，使该伪包长期误判 0.0% < 20% 而误红。修法：把 `ysm-model-manager/go` 精确加入 `SKIP_PACKAGES` + 重新生成 profile。**改 go test 命令 / 加 build tag / 删源文件后，必须重新生成 profile 再跑本门禁**。
+  - 生成命令用**绝对路径** `-coverprofile="<abs>/.coverage/go-cover.out"` 更稳：相对路径在 PowerShell 多包模式下受包目录影响（实证：`go test ... -coverprofile=.coverage/go-cover.out` 成功 exit 0 但文件未落地）。
 - 同族门禁：`check-go-diff-coverage.ts`（增量行覆盖）、`scripts/hooks/go-coverage-hint.ts`
   （commit 时按包提示，非阻断）。
 - **本门禁刻意旁路** pre-commit/CI（见 doctor 覆盖口径输出），需手动或 CI 显式调用。

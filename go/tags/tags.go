@@ -1,5 +1,8 @@
 // Package tags 提供模型标签的持久化存储。
-// 标签存放在用户配置目录/YSM-Model-Manager/tags.json（跨平台：Windows %APPDATA%，Linux ~/.config，macOS ~/Library/Application Support），
+// 标签存放在 `os.UserConfigDir()/YSM-Model-Manager/tags.json`（跨平台单一 API：
+// Windows 返回 %AppData%，Linux 返回 $XDG_CONFIG_HOME 或 ~/.config，
+// macOS 返回 ~/Library/Application Support——由 os.UserConfigDir 统一解析，勿在此
+// 硬编码平台路径，ADR-011 路径分隔符治理 + 2026-10-06 技术债审计修正原 %APPDATA% 描述），
 // 以文件路径为 key，标签列表为 value。
 package tags
 

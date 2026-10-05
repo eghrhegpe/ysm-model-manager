@@ -160,6 +160,13 @@ const SKIP_PACKAGES = [
   // 但 main() 本体必然 0%。
   "ysm-model-manager/cmd/updater",
   "ysm-model-manager",
+  // 幽灵包（2026-10-06 技术债审计）：`go/probe_fmt.go` 是某个历史测试运行时创建的临时
+  // probe 文件，测完即删（当前源码零引用，`grep probe_fmt` 全仓无匹配），但 go test
+  // 的 -coverprofile 会把它的 1 条 0 覆盖语句聚合到 `ysm-model-manager/go` 伪包，
+  // 使该包被判 0.0% < 20% 而误红（doctor 曾长期把此误判当作 ysmwasi 之外的第二个 FAIL）。
+  // 该伪包无真实源码，覆盖率无意义，精确豁免不影响任何真实子包（includes 精确匹配）。
+  // 根治方向：定位创建该 probe 的测试并把临时文件写入 os.TempDir()，届时本条可删。
+  "ysm-model-manager/go",
 ];
 
 /** 读 profile 文件并聚合为包级语句统计；读取失败抛出（由 main 兜底为 exit 1）。 */

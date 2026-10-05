@@ -77,7 +77,13 @@ function findNdk() {
     process.env.ANDROID_SDK_ROOT ||
     readUserEnv("ANDROID_HOME") ||
     readUserEnv("ANDROID_SDK_ROOT") ||
-    (fs.existsSync("C:\\Android\\Sdk") ? "C:\\Android\\Sdk" : "");
+    // 2026-10-06 技术债审计：原硬编码 `C:\Android\Sdk` 是开发者本机路径，他人机器必不存在，
+    // 且违反跨平台。改用 %LOCALAPPDATA%\Android\Sdk（Android Studio 默认安装位）推导——
+    // 仍为「候选探测」兜底，真正单一事实源是 ANDROID_HOME 环境变量。
+    (process.env.LOCALAPPDATA &&
+    fs.existsSync(path.join(process.env.LOCALAPPDATA, "Android", "Sdk"))
+      ? path.join(process.env.LOCALAPPDATA, "Android", "Sdk")
+      : "");
   if (sdk) {
     const ndkDir = path.join(sdk.replace(/"/g, ""), "ndk");
     if (fs.existsSync(ndkDir)) {

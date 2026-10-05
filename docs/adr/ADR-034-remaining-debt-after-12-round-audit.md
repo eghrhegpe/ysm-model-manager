@@ -79,6 +79,14 @@ HTML 完整性、脚本输出。**Go Wails Binding 契约零覆盖**——前端
 
 **优先级**：P2。跨层守护空白，但需先确认 `bindings/` 生成机制。
 
+**守护方式演化（2026-10-06 回写，避免后人按原方案建冗余测试）**：本方向的目标不变量
+「Go Binding 签名与前端调用点一致性」最终由 **三个既有工具**承担，未新建
+`tests/test_binding_contract.ts`（实测 0 张该文件）：
+  1. `scripts/binding-check.ts` —— Go 176 个绑定函数 ↔ JS/TS bindings 全量对齐（issues=0）
+  2. `frontend/scripts/check-binding-usage.ts` —— 前端调用点静态守护
+  3. `scripts/web-binding-check.ts` —— web 模式（browserAdapter）绑定契约
+三者均由 doctor 门禁执行。**决策不变量不变，实现载体为三工具而非原方案文件**。
+
 ### 2.5 方向五：非 Windows 跨平台兼容性（🟠 P1-P2 分层）
 
 **现状**：项目默认 Windows 部署，但 Go 侧已做部分跨平台分支，

@@ -96,6 +96,21 @@ const ADVISORY_RULES: { glob: (rel: string) => boolean; maxLines: number; label:
     maxLines: 700,
     label: "scripts 顶层",
   },
+  {
+    // 2026-10-06 补登（技术债审计 tech-debt-audit-2026-10-06.md §4.2）：
+    // ADR-034 拆掉 site-view.ts 后，债务迁至 preview-3d/caps/ 与 backend —— 而旧 RULES 只
+    // 登记 3 个文件，caps 族 900+ 行完全脱管（sky-capability 1068 已超 mount-preview-core 的
+    // 红线值 1045 却无人拦截，属「拆 A 长 B」打地鼠）。此规则把前端生产层纳入软告警，
+    // 让 >900 行大文件可见化、驱动拆分排期。阈值 900 取 mount-preview-core 红线 1045 的
+    // 「预警水位」—— 未到硬红线但已进入拆分视野，避免「到 1045 才猛然硬断」。
+    // 硬红线（RULES）逐文件登记见 check-file-lines.md 知识卡；拆到 ≤900 后本条不再告警。
+    glob: (rel) =>
+      (rel.startsWith("frontend/src/preview-3d/") || rel.startsWith("frontend/src/backend/")) &&
+      rel.endsWith(".ts") &&
+      !rel.endsWith(".test.ts"),
+    maxLines: 900,
+    label: "前端生产层（preview-3d/backend）",
+  },
 ];
 
 const violations: Violation[] = [];
@@ -124,7 +139,24 @@ function listTsFiles(relDir: string): string[] {
   }
   return out;
 }
-const advisoryFiles = [...listTsFiles("scripts"), ...listTsFiles("scripts/_lib")];
+/** 递归版（覆盖 preview-3d 等多层目录；ADR-315 D3 口径：非测试 .ts） */
+function walkTsFiles(relDir: string): string[] {
+  const abs = path.join(ROOT, relDir);
+  if (!fs.existsSync(abs)) return [];
+  const out: string[] = [];
+  for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
+    const rel = `${relDir}/${entry.name}`;
+    if (entry.isDirectory()) out.push(...walkTsFiles(rel));
+    else if (entry.isFile() && entry.name.endsWith(".ts")) out.push(rel);
+  }
+  return out;
+}
+const advisoryFiles = [
+  ...listTsFiles("scripts"),
+  ...listTsFiles("scripts/_lib"),
+  ...walkTsFiles("frontend/src/preview-3d"),
+  ...walkTsFiles("frontend/src/backend"),
+];
 for (const rel of advisoryFiles) {
   for (const ar of ADVISORY_RULES) {
     if (!ar.glob(rel)) continue;
@@ -185,7 +217,9 @@ if (advisories.length) {
   for (const a of advisories)
     console.warn(`   ${a.label} ${a.file}: ${a.lines} 行 > 阈值 ${a.maxLines}`);
 } else {
-  console.log(`[check-file-lines] ✅ 肥膘扫描无超限（scripts/_lib ≤400、scripts 顶层 ≤700）`);
+  console.log(
+    `[check-file-lines] ✅ 肥膘扫描无超限（scripts/_lib ≤400、scripts 顶层 ≤700、前端生产层 ≤900）`,
+  );
 }
 
 // ── 报错即文档（ADR-315 执行 3）：违规/告警各附可执行的下一步指引，

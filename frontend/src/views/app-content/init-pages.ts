@@ -7,6 +7,7 @@ import { initRecycleBin } from "@/features/maintenance/recycle-bin.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc, escUnknown } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -226,11 +227,7 @@ export function bindTabs(host: AppContentHost, tabSelector: string, prefix: stri
             }
           } catch (e) {
             inited[tab] = false;
-            bus.emit("toast:show", {
-              msg: friendlyError(e, t("common.loadFailed")),
-              duration: TOAST_MS.verbose,
-              type: "error",
-            });
+            toast(friendlyError(e, t("common.loadFailed")), TOAST_MS.verbose, "error");
           }
         })();
         // 注意：resourcepacks/shaderpacks/blueprint/MMD/VRC/LITEMATIC 六个
@@ -343,12 +340,7 @@ export async function initSettingsPage(host: AppContentHost): Promise<void> {
     host.subs.addPage(cleanupKeymap);
   } catch (e) {
     logError("settings", "初始化失败", e);
-    bus.emit("toast:show", {
-      // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
-      msg: friendlyError(e, t("content.settingsInitFailed")),
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(friendlyError(e, t("content.settingsInitFailed")), TOAST_MS.long, "error");
   }
 }
 

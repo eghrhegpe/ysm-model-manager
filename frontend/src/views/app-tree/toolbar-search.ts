@@ -9,7 +9,6 @@ import {
   onStatsProgress,
 } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import {
   type AdvFilterResult,
@@ -19,6 +18,7 @@ import {
 import type { AppliedAdvFilter } from "@/features/dialogs/adv-filter-util.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
@@ -179,11 +179,7 @@ async function advFilterFetchTagPaths(tag: string): Promise<Set<string> | null> 
     const paths = await ListByTag(tag);
     return new Set(paths || []);
   } catch (e) {
-    bus.emit("toast:show", {
-      msg: t("tree.tagQueryFail", { msg: friendlyError(e) }),
-      duration: TOAST_MS.verbose,
-      type: "error",
-    });
+    toast(t("tree.tagQueryFail", { msg: friendlyError(e) }), TOAST_MS.verbose, "error");
     return null;
   }
 }
@@ -198,11 +194,7 @@ async function advFilterSearchModelPaths(
 ): Promise<advFilterSearchResult> {
   const filesRoot = vm.snapshot.filesRoot;
   if (!filesRoot) {
-    bus.emit("toast:show", {
-      msg: t("tree.needRepoDir"),
-      duration: TOAST_MS.success,
-      type: "warn",
-    });
+    toast(t("tree.needRepoDir"), TOAST_MS.success, "warn");
     return "cancel";
   }
   const isWebNum = isWebPlatform() && hasNumRange;
@@ -228,11 +220,7 @@ async function advFilterSearchModelPaths(
     return results?.length ? new Set(results.map((r) => r.path)) : new Set();
   } catch (e: unknown) {
     dbg("adv-filter", "search:error", { err: String(e) });
-    bus.emit("toast:show", {
-      msg: `${t("tree.advFilterFail")}: ${friendlyError(e)}`,
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(`${t("tree.advFilterFail")}: ${friendlyError(e)}`, TOAST_MS.long, "error");
     return "error";
   } finally {
     if (isWebNum) {
@@ -244,11 +232,7 @@ async function advFilterSearchModelPaths(
 
 function advFilterWarnWebDegraded(hasNumRange: boolean): void {
   if (isWebPlatform() && hasNumRange && consumeWebSearchDegraded()) {
-    bus.emit("toast:show", {
-      msg: t("tree.webStatsDegraded"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t("tree.webStatsDegraded"), TOAST_MS.normal, "warn");
     showStatsBadge(t("tree.statsBadgeDegraded"), "warning");
     setTimeout(hideStatsBadge, 3000);
   }
@@ -273,17 +257,9 @@ function advFilterIntersectPaths(
 function advFilterToastAndRender(vm: AppTree): void {
   const size = vm.snapshot.filterPaths?.size ?? 0;
   if (size > 0) {
-    bus.emit("toast:show", {
-      msg: t("tree.filterFound", { n: size }),
-      duration: TOAST_MS.quick,
-      type: "success",
-    });
+    toast(t("tree.filterFound", { n: size }), TOAST_MS.quick, "success");
   } else if (vm.snapshot.filterPaths && size === 0) {
-    bus.emit("toast:show", {
-      msg: t("tree.filterNone"),
-      duration: TOAST_MS.success,
-      type: "warn",
-    });
+    toast(t("tree.filterNone"), TOAST_MS.success, "warn");
   }
   vm._renderTree();
 }
@@ -346,20 +322,15 @@ export async function pickWebFilesAndImport(
         const r = await importWebFiles(files, rtype);
         await onLoaded();
         onRendered();
-        bus.emit("toast:show", {
-          msg:
-            r.failed > 0
-              ? t("tree.webImportPartial", { imported: r.imported, failed: r.failed })
-              : t("tree.webImportOk", { imported: r.imported }),
-          duration: TOAST_MS.verbose,
-          type: r.failed > 0 ? "warn" : "success",
-        });
+        toast(
+          r.failed > 0
+            ? t("tree.webImportPartial", { imported: r.imported, failed: r.failed })
+            : t("tree.webImportOk", { imported: r.imported }),
+          TOAST_MS.verbose,
+          r.failed > 0 ? "warn" : "success",
+        );
       } catch (e) {
-        bus.emit("toast:show", {
-          msg: `${friendlyError(e)}`,
-          duration: TOAST_MS.verbose,
-          type: "error",
-        });
+        toast(`${friendlyError(e)}`, TOAST_MS.verbose, "error");
       }
     })();
   });

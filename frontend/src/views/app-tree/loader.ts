@@ -1,9 +1,9 @@
 // ===== Go 数据加载层 =====
 
 import { getAndroidBridge } from "@/backend/platform.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -29,11 +29,11 @@ function toastLoadError(err: unknown): void {
   const now = Date.now();
   if (now - _lastErrorToastAt < ERROR_TOAST_MIN_GAP) return;
   _lastErrorToastAt = now;
-  bus.emit("toast:show", {
-    msg: `${t("tree.loadFailed")}: ${friendlyError(err, t("tree.repoLoadFailed"))}`,
-    duration: TOAST_MS.long,
-    type: "error",
-  });
+  toast(
+    `${t("tree.loadFailed")}: ${friendlyError(err, t("tree.repoLoadFailed"))}`,
+    TOAST_MS.long,
+    "error",
+  );
 }
 
 // ---- Android 存储授权引导（ADR-046 P2）----
@@ -53,11 +53,7 @@ function maybePromptAndroidStorage(): void {
   const now = Date.now();
   if (now - _lastStoragePromptAt < STORAGE_PROMPT_MIN_GAP) return;
   _lastStoragePromptAt = now;
-  bus.emit("toast:show", {
-    msg: t("settings.path.needStoragePermission"),
-    duration: TOAST_MS.verbose,
-    type: "warn",
-  });
+  toast(t("settings.path.needStoragePermission"), TOAST_MS.verbose, "warn");
   bridge.requestStoragePermission?.();
 }
 

@@ -14,11 +14,11 @@
 import { resolveAndroidRepoDir } from "@/backend/directory-picker.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getExts } from "@/utils/resource/extensions.ts";
@@ -58,18 +58,14 @@ async function runImport(
     // Go 侧 ImportByType 失败走 reject（@wailsio/runtime Call 语义），
     // 不能用 resolve 值判错（旧 string 签名时代的残留，失败路径永远进不去）
     const errMsg = e instanceof Error ? e.message : String(e);
-    bus.emit("toast:show", {
-      msg: t("tree.importFail", { msg: errMsg }),
-      duration: TOAST_MS.verbose,
-      type: "warn",
-    });
+    toast(t("tree.importFail", { msg: errMsg }), TOAST_MS.verbose, "warn");
     return;
   }
   const gen = vm._guard.current;
   await vm._load();
   if (vm._guard.stale(gen)) return;
   vm._renderTree();
-  bus.emit("toast:show", { msg: successMsg, duration: TOAST_MS.success, type: "success" });
+  toast(successMsg, TOAST_MS.success, "success");
 }
 
 /**
@@ -175,11 +171,7 @@ export const TOOLBAR_COMMANDS = {
       const { GenerateRepoIndex, GetRepoRoot } = await backendGetApp();
       const filesRoot = await GetRepoRoot(currentRepoType());
       if (!filesRoot) {
-        bus.emit("toast:show", {
-          msg: t("tree.needStoragePath"),
-          duration: TOAST_MS.success,
-          type: "warn",
-        });
+        toast(t("tree.needStoragePath"), TOAST_MS.success, "warn");
         return;
       }
       const idx = await GenerateRepoIndex(filesRoot);
@@ -193,11 +185,7 @@ export const TOOLBAR_COMMANDS = {
         document.body.removeChild(a);
         URL.revokeObjectURL(a.href);
       }
-      bus.emit("toast:show", {
-        msg: t("tree.indexGenerated"),
-        duration: TOAST_MS.normal,
-        type: "success",
-      });
+      toast(t("tree.indexGenerated"), TOAST_MS.normal, "success");
     } finally {
       btn.innerHTML = origHtml;
       btn.disabled = false;
@@ -216,10 +204,6 @@ export function runToolbarCommand(action: string, ctx: ToolbarCommandCtx, el: HT
   const cmd = (TOOLBAR_COMMANDS as Record<string, ToolbarCommand | undefined>)[action];
   if (!cmd) return;
   void Promise.resolve(cmd(ctx, el)).catch((err) => {
-    bus.emit("toast:show", {
-      msg: `${friendlyError(err)}`,
-      duration: TOAST_MS.verbose,
-      type: "error",
-    });
+    toast(`${friendlyError(err)}`, TOAST_MS.verbose, "error");
   });
 }

@@ -3,9 +3,9 @@
 // 本文件保留 initDiagnostics 编排壳，并 re-export createDedupSession 保持外部 import 路径（./diagnostics/init.ts）不变
 
 import { can } from "@/backend/capabilities.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { bindSubBar } from "@/views/app-content/tabs-shell.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -29,29 +29,16 @@ function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
   });
   root.getElementById("diag-clear")?.addEventListener("click", async () => {
     if (!can("ClearImportLogs")) {
-      bus.emit("toast:show", {
-        msg: t("diagnostics.webNoClearLogs"),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("diagnostics.webNoClearLogs"), TOAST_MS.normal, "warn");
       return;
     }
     try {
       const { ClearImportLogs } = await backendGetApp();
       await ClearImportLogs();
       loadDiagnosticsLogs(root, esc);
-      bus.emit("toast:show", {
-        msg: `🗑️ ${t("diagnostics.logsCleared")}`,
-        duration: TOAST_MS.success,
-        type: "info",
-      });
+      toast(`🗑️ ${t("diagnostics.logsCleared")}`, TOAST_MS.success, "info");
     } catch (e) {
-      bus.emit("toast:show", {
-        // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
-        msg: friendlyError(e, t("diagnostics.clearFailed")),
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
+      toast(friendlyError(e, t("diagnostics.clearFailed")), TOAST_MS.verbose, "error");
     }
   });
 }
@@ -101,11 +88,7 @@ function dgInCopyActiveLog(root: ShadowRoot): void {
   const rows = clone?.querySelectorAll(".log-row");
   const text = rows && rows.length > 0 ? (clone?.textContent ?? "").trim() : "";
   if (!text) {
-    bus.emit("toast:show", {
-      msg: `📋 ${t("diagnostics.noLogsToCopy")}`,
-      duration: TOAST_MS.success,
-      type: "info",
-    });
+    toast(`📋 ${t("diagnostics.noLogsToCopy")}`, TOAST_MS.success, "info");
     return;
   }
   // 曾经这里无条件弹「已复制」，而 catch 里的降级本身也会失败——失败时界面在撒谎。

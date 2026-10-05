@@ -12,6 +12,7 @@ import { initVersionUpdater } from "@/features/maintenance/version-updater.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
@@ -99,11 +100,7 @@ async function onMirrorChange(
   try {
     const { SetDownloadMirror } = await backendGetApp();
     await SetDownloadMirror(val);
-    bus.emit("toast:show", {
-      msg: t("settings.mirror.switched", { name: mirrorName(val) }),
-      duration: TOAST_MS.success,
-      type: "success",
-    });
+    toast(t("settings.mirror.switched", { name: mirrorName(val) }), TOAST_MS.success, "success");
   } catch (e) {
     toastErrorLocal(e);
   }
@@ -144,12 +141,7 @@ function stgBindUpdateInterval(
         const { SaveThresholds } = await backendGetApp();
         await SaveThresholds(Number(updateCheckSelect.value), cfgLocal.logMaxEntries || 500);
         cfgLocal.updateCheckIntervalMs = Number(updateCheckSelect.value);
-        bus.emit("toast:show", {
-          // ADR-267：状态图标由 type 驱动，msg 不带 ✅ 前缀
-          msg: t("settings.updateCheck.saved"),
-          duration: TOAST_MS.success,
-          type: "success",
-        });
+        toast(t("settings.updateCheck.saved"), TOAST_MS.success, "success");
       } catch (e) {
         toastErrorLocal(e);
       }
@@ -182,22 +174,20 @@ async function relinkOneInstance(
 /** 按 total/failed 汇总 relink 结果 toast（成功 / 部分失败 / 空列表） */
 function emitRelinkToast(total: number, failed: number): void {
   if (total === 0) {
-    bus.emit("toast:show", {
-      // ADR-267：状态图标由 type 驱动，msg 不带 ⚠️ 前缀
-      msg: failed > 0 ? t("settings.relinkFailed", { failed }) : t("settings.relinkNone"),
-      duration: TOAST_MS.normal,
-      type: failed > 0 ? "error" : "info",
-    });
+    toast(
+      failed > 0 ? t("settings.relinkFailed", { failed }) : t("settings.relinkNone"),
+      TOAST_MS.normal,
+      failed > 0 ? "error" : "info",
+    );
     return;
   }
-  bus.emit("toast:show", {
-    msg:
-      failed > 0
-        ? t("settings.relinkDonePartial", { total, failed })
-        : t("settings.relinkDone", { total }),
-    duration: TOAST_MS.normal,
-    type: "success",
-  });
+  toast(
+    failed > 0
+      ? t("settings.relinkDonePartial", { total, failed })
+      : t("settings.relinkDone", { total }),
+    TOAST_MS.normal,
+    "success",
+  );
 }
 
 /**
@@ -213,11 +203,7 @@ async function relinkAllInstancesInner(): Promise<void> {
   const cfg2 = await LoadAppConfig();
   const mcRoot = cfg2.mcRoot || "";
   if (!mcRoot) {
-    bus.emit("toast:show", {
-      msg: t("settings.setGameRootFirst"),
-      duration: TOAST_MS.info,
-      type: "warn",
-    });
+    toast(t("settings.setGameRootFirst"), TOAST_MS.info, "warn");
     return;
   }
   const instances = ((await ListVersionInstances(mcRoot)) || []).filter(
@@ -234,11 +220,11 @@ async function relinkAllInstancesInner(): Promise<void> {
     // 不闪重复条；单实例时天然跳过中间进度）
     done += 1;
     if (done < n) {
-      bus.emit("toast:show", {
-        msg: t("settings.relinkProgress", { done, total: n }),
-        duration: Math.round(TOAST_MS.info / 1.5),
-        type: "info",
-      });
+      toast(
+        t("settings.relinkProgress", { done, total: n }),
+        Math.round(TOAST_MS.info / 1.5),
+        "info",
+      );
     }
   }
   bus.emit("stats:refresh");
@@ -254,12 +240,7 @@ async function relinkAllInstances(): Promise<void> {
     try {
       await relinkAllInstancesInner();
     } catch (e) {
-      bus.emit("toast:show", {
-        // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
-        msg: friendlyError(e),
-        duration: TOAST_MS.long,
-        type: "error",
-      });
+      toast(friendlyError(e), TOAST_MS.long, "error");
     }
   });
 }
@@ -328,11 +309,11 @@ function stgBindLinkMode(
           await saveCfg({ linkMode: val });
           await SetLinkMode(val);
           curVal = val;
-          bus.emit("toast:show", {
-            msg: t("settings.linkModeSwitched", { val: linkModeName(val) }),
-            duration: TOAST_MS.success,
-            type: "success",
-          });
+          toast(
+            t("settings.linkModeSwitched", { val: linkModeName(val) }),
+            TOAST_MS.success,
+            "success",
+          );
           // 本回调持锁中，直调无守卫的 Inner——relinkAllInstances 的 withBusy 会因判忙
           // 直接拒绝；锁统一由 withBusy finally 释放，覆盖整个 relink 段
           await relinkAllInstancesInner();

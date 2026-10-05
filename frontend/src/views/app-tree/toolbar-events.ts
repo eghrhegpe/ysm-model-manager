@@ -14,6 +14,7 @@ import { dbg } from "@/utils/debug/debug.ts";
 import { initDropdown } from "@/utils/dom/dropdown.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { flashBtn } from "@/utils/dom/feedback.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { AuthorInfo } from "./authors.ts";
@@ -136,11 +137,7 @@ function atTlBindAdvFilter(ctx: AtTlCtx): void {
   advBtn?.addEventListener("click", () => {
     dbg("adv-filter", "btn:click");
     openAdvFilterDialog($, vm).catch((e) => {
-      bus.emit("toast:show", {
-        msg: `${friendlyError(e, t("tree.advFilterFail"))}`,
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
+      toast(`${friendlyError(e, t("tree.advFilterFail"))}`, TOAST_MS.verbose, "error");
     });
   });
   // 清除入口 = 模态框 afv-clear（cleared 回执 → advFilterClearAll 全清）；

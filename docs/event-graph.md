@@ -35,7 +35,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 91 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 45 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 15 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 | `ui:card-density` | 1 | 1 | 0 | 0 | ✅ |
@@ -76,7 +76,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 86 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 87 |
 
 ### `ctx:show`
 
@@ -178,7 +178,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 78 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 79 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 212 |
 
 ### `menu:show`
@@ -218,18 +218,18 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 66 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 191 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 67 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 187 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 267 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 50 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 222 |
 | bindFooter | `frontend/src/views/app-sidebar/events.ts` | 280 |
-| atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 87 |
+| atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 53 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 54 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 192 |
 
 ### `package:selected`
@@ -243,7 +243,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 72 |
+| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 73 |
 
 ### `repo:focus-search`
 
@@ -268,8 +268,8 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
-| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 120 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 303 |
+| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 121 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 300 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 214 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 130 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 307 |
@@ -285,7 +285,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 64 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 65 |
 
 ### `repo:subdir-changed`
 
@@ -317,9 +317,9 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 87 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 197 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 118 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 244 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 92 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 328 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 230 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 83 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 156 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 313 |
@@ -386,28 +386,6 @@
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 313 |
 | checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 187 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 32 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 43 |
-| dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 49 |
-| dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 104 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 181 |
-| bindTabs | `frontend/src/views/app-content/init-pages.ts` | 229 |
-| initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 346 |
-| onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 102 |
-| stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 147 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 185 |
-| emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 193 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 216 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 237 |
-| relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 257 |
-| stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 331 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 251 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 257 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 280 |
-| initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 286 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 309 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 329 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
@@ -420,14 +398,6 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 331 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 170 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 321 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 129 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 139 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 145 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 156 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 167 |
-| bindSiteEvents | `frontend/src/views/app-content/site/workshop-site-opener.ts` | 173 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 105 |
-| initWorkshopTabs | `frontend/src/views/app-content/site/workshop-tabs.ts` | 170 |
 | anBindViewerFab | `frontend/src/views/app-nav/index.ts` | 148 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 110 |
 | openModel3DFullscreen | `frontend/src/views/app-preview/preview-library.ts` | 149 |
@@ -457,22 +427,6 @@
 | show | `frontend/src/views/app-toast/index.ts` | 163 |
 | show | `frontend/src/views/app-toast/index.ts` | 182 |
 | show | `frontend/src/views/app-toast/index.ts` | 191 |
-| toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
-| maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
-| runImport | `frontend/src/views/app-tree/toolbar-commands.ts` | 61 |
-| runImport | `frontend/src/views/app-tree/toolbar-commands.ts` | 72 |
-| runImport | `frontend/src/views/app-tree/toolbar-commands.ts` | 178 |
-| runImport | `frontend/src/views/app-tree/toolbar-commands.ts` | 196 |
-| runToolbarCommand | `frontend/src/views/app-tree/toolbar-commands.ts` | 219 |
-| atTlBindAdvFilter | `frontend/src/views/app-tree/toolbar-events.ts` | 139 |
-| advFilterFetchTagPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 182 |
-| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 201 |
-| advFilterSearchModelPaths | `frontend/src/views/app-tree/toolbar-search.ts` | 231 |
-| advFilterWarnWebDegraded | `frontend/src/views/app-tree/toolbar-search.ts` | 247 |
-| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 276 |
-| advFilterToastAndRender | `frontend/src/views/app-tree/toolbar-search.ts` | 282 |
-| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 349 |
-| pickWebFilesAndImport | `frontend/src/views/app-tree/toolbar-search.ts` | 358 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -497,8 +451,8 @@
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 118 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 223 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 119 |
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 408 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 436 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 314 |
 
 **订阅方（on）：**
@@ -511,7 +465,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 72 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 73 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

@@ -5,6 +5,7 @@ import { isValidPage, resolveInitialPage } from "@/core/page-store.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { setPendingTreeSearch } from "@/utils/dom/search-pending.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { contentCSS } from "@/views/app-content/css/content-css.ts";
@@ -178,12 +179,7 @@ class AppContent extends WebComponentBase {
   /** 页面初始化失败统一出口（同步 throw 与 async reject 共用） */
   private _pageInitFailed(e: unknown): void {
     logError("app-content", "页面初始化失败", e);
-    bus.emit("toast:show", {
-      // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
-      msg: `${t("content.pageLoadFailed")}: ${friendlyError(e)}`,
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(`${t("content.pageLoadFailed")}: ${friendlyError(e)}`, TOAST_MS.long, "error");
     // 重置页面状态为仓库页，防止 nav 高亮与内容脱节；
     // 已在 repository 页时跳过，避免无效 nav:changed 触发链
     if (this.state.current !== "repository") {

@@ -8,6 +8,7 @@ import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalPicker } from "@/utils/dom/modal-picker.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -90,11 +91,7 @@ export function bindPathClick(
         refresh();
         refreshAdvanced();
         bus.emit("stats:refresh");
-        bus.emit("toast:show", {
-          msg: t("settings.path.updated"),
-          duration: TOAST_MS.success,
-          type: "success",
-        });
+        toast(t("settings.path.updated"), TOAST_MS.success, "success");
       } catch (e) {
         // P2 修复：pickDirectory/onSelect 失败要有出口，避免 unhandled rejection 静默
         toastError(e);
@@ -248,18 +245,13 @@ export function initAdvancedGrid(
           const found = advancedTypes.find((a) => a.rtype === rtype);
           if (found?.cfgKey) cfgAny[found.cfgKey] = pickResult.dir;
           refreshAdvanced();
-          bus.emit("toast:show", {
-            msg: t("settings.path.set"),
-            duration: TOAST_MS.success,
-            type: "success",
-          });
+          toast(t("settings.path.set"), TOAST_MS.success, "success");
         } catch (e) {
-          bus.emit("toast:show", {
-            // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
-            msg: friendlyError((e as Error)?.message || e, t("settings.saveFailed")),
-            duration: TOAST_MS.verbose,
-            type: "error",
-          });
+          toast(
+            friendlyError((e as Error)?.message || e, t("settings.saveFailed")),
+            TOAST_MS.verbose,
+            "error",
+          );
         }
       });
     });
@@ -277,18 +269,13 @@ export function initAdvancedGrid(
           cardRefreshers.forEach((fn) => {
             fn();
           });
-          bus.emit("toast:show", {
-            msg: t("settings.resetDefault"),
-            duration: TOAST_MS.success,
-            type: "success",
-          });
+          toast(t("settings.resetDefault"), TOAST_MS.success, "success");
         } catch (e) {
-          bus.emit("toast:show", {
-            // ADR-267：状态图标由 type 驱动，msg 不带 ❌ 前缀
-            msg: friendlyError((e as Error)?.message || e, t("settings.resetFailed")),
-            duration: TOAST_MS.verbose,
-            type: "error",
-          });
+          toast(
+            friendlyError((e as Error)?.message || e, t("settings.resetFailed")),
+            TOAST_MS.verbose,
+            "error",
+          );
         }
       });
     });
@@ -306,11 +293,7 @@ export function initMcDetect(root: ShadowRoot): void {
         const { GetMinecraftPaths } = await backendGetApp();
         const paths = await GetMinecraftPaths();
         if (!paths?.length) {
-          bus.emit("toast:show", {
-            msg: t("settings.mc.noFound"),
-            duration: TOAST_MS.normal,
-            type: "warn",
-          });
+          toast(t("settings.mc.noFound"), TOAST_MS.normal, "warn");
           return;
         }
         // 只有一个直接使用，多个让用户选
@@ -326,11 +309,7 @@ export function initMcDetect(root: ShadowRoot): void {
           fn();
         });
         bus.emit("stats:refresh");
-        bus.emit("toast:show", {
-          msg: t("content.mcPathSet", { path: selected }),
-          duration: TOAST_MS.normal,
-          type: "success",
-        });
+        toast(t("content.mcPathSet", { path: selected }), TOAST_MS.normal, "success");
       } catch (e) {
         // P2 修复：GetMinecraftPaths/SaveAppConfig 失败要有出口，避免 unhandled rejection 静默
         toastError(e);

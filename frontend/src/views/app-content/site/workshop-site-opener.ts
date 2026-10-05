@@ -2,10 +2,10 @@
 
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -126,56 +126,30 @@ export function bindSiteEvents(root: ShadowRoot, page: WorkshopPageState): void 
   root.getElementById("ws-export-btn")?.addEventListener("click", async () => {
     // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
     if (isWebPlatform()) {
-      bus.emit("toast:show", {
-        msg: t("workshop.exportWebUnsupported"),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("workshop.exportWebUnsupported"), TOAST_MS.normal, "warn");
       return;
     }
     try {
       const { ExportWorkshopSitesJSONFile } = await backendGetApp();
       const path = await ExportWorkshopSitesJSONFile();
-      bus.emit("toast:show", {
-        msg: t("workshop.action.exported", { path }),
-        duration: TOAST_MS.success,
-        type: "success",
-      });
+      toast(t("workshop.action.exported", { path }), TOAST_MS.success, "success");
     } catch (e) {
-      bus.emit("toast:show", {
-        // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
-        msg: friendlyError(e, t("workshop.exportFailed")),
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
+      toast(friendlyError(e, t("workshop.exportFailed")), TOAST_MS.verbose, "error");
     }
   });
   root.getElementById("ws-import-btn")?.addEventListener("click", async () => {
     // 网页版（ADR-049）：无本地文件系统，站点配置导出/导入不可用
     if (isWebPlatform()) {
-      bus.emit("toast:show", {
-        msg: t("workshop.importWebUnsupported"),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("workshop.importWebUnsupported"), TOAST_MS.normal, "warn");
       return;
     }
     try {
       const { ValidateWorkshopSites } = await backendGetApp();
       const n = await ValidateWorkshopSites();
       // TODO: 重新加载创作者列表
-      bus.emit("toast:show", {
-        msg: t("workshop.action.imported", { n }),
-        duration: TOAST_MS.success,
-        type: "success",
-      });
+      toast(t("workshop.action.imported", { n }), TOAST_MS.success, "success");
     } catch (e) {
-      bus.emit("toast:show", {
-        // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
-        msg: friendlyError(e, t("content.importFailed")),
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
+      toast(friendlyError(e, t("content.importFailed")), TOAST_MS.verbose, "error");
     }
   });
 }

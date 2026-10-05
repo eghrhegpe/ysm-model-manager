@@ -1,7 +1,6 @@
 // ===== 创意工坊 Tab 管理 =====
 
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import {
   type CommunityData,
@@ -11,6 +10,7 @@ import {
   mergeLocalAuthorsInto,
 } from "@/features/community/community-data.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc as escUtil } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -102,11 +102,7 @@ export function initWorkshopTabs(
     } catch (e) {
       // P2 修复（审核）：async handler 最外层 catch 出口（ADR-044 ①）——
       // loadCommunityData/showSiteView 抛错原逸出为 unhandled rejection
-      bus.emit("toast:show", {
-        msg: (e as Error)?.message || t("workshop.loadCommunityFailed"), // ADR-267：error 图标由 type 驱动
-        duration: TOAST_MS.normal,
-        type: "error",
-      });
+      toast((e as Error)?.message || t("workshop.loadCommunityFailed"), TOAST_MS.normal, "error");
     }
   };
 
@@ -167,11 +163,7 @@ export function initWorkshopTabs(
       } catch (e) {
         // P3 修复（审核）：定时器回调最外层 catch 出口——原 loadCommunityData 在 try 外，
         // getApp 失败逸出 unhandled rejection（与 showCreatorsBySite 同出口）
-        bus.emit("toast:show", {
-          msg: (e as Error)?.message || t("workshop.loadCommunityFailed"), // ADR-267：error 图标由 type 驱动
-          duration: TOAST_MS.normal,
-          type: "error",
-        });
+        toast((e as Error)?.message || t("workshop.loadCommunityFailed"), TOAST_MS.normal, "error");
       }
     }, WS_TAB_LOAD_DELAY_MS),
   );

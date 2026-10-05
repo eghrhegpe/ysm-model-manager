@@ -397,7 +397,7 @@ func (l *Logger) Clear() {
 	l.mu.Unlock()
 	l.save()
 	// 健康位显式复位（ADR-322 D1 锁存的唯一进程内复位点，与注释所记
-	//「Clear / 重启是两个显式复位点」对齐）：save 已成功返回的话通道已恢复可用。
+	// 「Clear / 重启是两个显式复位点」对齐）：save 已成功返回的话通道已恢复可用。
 	// 只在落盘态复位——内存态（path==""）save 是 no-op，复位会谎报可用。
 	if l.path != "" {
 		l.mu.Lock()

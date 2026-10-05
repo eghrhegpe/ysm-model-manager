@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 197 张知识卡
+> 总计: 192 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -39,7 +39,7 @@
 - **scripts-lib-adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
 - **scripts-readme-index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
-## core（24 张）
+## core（23 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -58,7 +58,6 @@
 | 🍃 event-graph-guard | Bus 事件契约守卫 | leaf | — | 未传参, 缺参, bus 事件, 事件契约, 事件漂移, 内联脚本, 可选链, 跨行调用 |
 | 🍃 fe-layering-seams | 前端分层 seam 与 import 路径 | leaf | — | src/core 想新增文件或依赖前, features 模块需要拿到 backend 能力时, 写 import 犹豫用 @/ 还是 ../ 时, 门禁报 check-layering / check-path-hygiene 编号不知道查哪条 |
 | 🏗 frontend-parsers | 解析簇 parsers/ 自 backend 迁出 | architecture | — | 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射, voxel 管线（voxel-bits/pipeline/三视图）/ ysm-header / nbt-parse 定位 |
-| 🏗 frontend-test-audit | 前端测试基建审计 | architecture | — | 代码审核, 测试基建, 契约测试, e2e, flaky, 假绿, 覆盖盲区 |
 | 🏗 global-handlers | 全局事件处理 global-handlers | architecture | — | 全局事件, 拖拽导入, 拖拽提示, 同步缺失, 清空整合包, 导出清单 |
 | 🏗 i18n | 国际化 i18n 模块 | architecture | — | 翻译, 多语言, i18n, t(), 语言切换, lang:changed |
 | 🍃 ik-solver | CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik | leaf | cpu-bound | IK 求解, 骨骼 IK, 足部锚地, foot IK, 极向量 / pole, CCD, 腿链提取 |
@@ -83,7 +82,6 @@
 - **event-graph-guard**（Bus 事件契约守卫）：`scripts/event-graph.ts` 是 Bus 事件契约的唯一机器守卫：从 `frontend/src/bus.ts` 的 `BusEvents`
 - **fe-layering-seams**（前端分层 seam 与 import 路径）：前端三大分层约束的完整版（原 AGENTS.md「src/core 准入」「features→backend seam」「前端 import 路径约定」三节全文迁入，2026-10-04 常驻层瘦身）。执法闸：`scripts/check-…
 - **frontend-parsers**（解析簇 parsers/ 自 backend 迁出）：`frontend/src/parsers/`：纯解析层，自 `backend/` 迁出（ADR-170 第一段）。含 YSM 头/摘要、NBT、体素（voxel，7cace0d59 拆为公共件 4 + 三视图 3）、zip 解包、pack…
-- **frontend-test-audit**（前端测试基建审计）：2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.ts` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（1…
 - **global-handlers**（全局事件处理 global-handlers）：全局 handler 注册入口在 ADR-188 中从 `core/handlers/global.ts` 汇编壳收敛为 **app-content 直接编排**：`connectedCallback` 依次调 `registerSync`…
 - **i18n**（国际化 i18n 模块）：`i18n` 模块是 YSM 前端的唯一翻译层，基于 ADR-045 设计。`t.ts` 提供纯函数式翻译（按 key 查表），`locale.ts` 管理语言状态、持久化与异步加载。支持简体中文（基准）、英语、日语三种语言，语言偏好持久化…
 - **ik-solver**（CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik）：自写精简版 CCD（Cyclic Coordinate Descent）IK 求解器（ADR-072 工具层纯净、零 DOM / 零 backend），
@@ -136,7 +134,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（51 张）
+## go（50 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -158,7 +156,6 @@
 | 🍃 go-config | Go 配置单持有点 go/config | leaf | — | 改配置注入/阈值逻辑，或消费包读阈值时 |
 | 🏗 go-container | 统一容器桥接层 go/container | architecture | — | 容器, 解包, zip, 7z, ContainerReader, 归档, 压缩包, 目录容器 |
 | 🏗 go-dedup | 去重 go/dedup | architecture | io-bound | 去重, 重复检测, dedup |
-| 🏗 go-design-critique | Go 后端设计锐评 | architecture | — | Go 后端评审, Go 锐评, Go 可读性审查, Go 命名审查, Wails 绑定审查, 隐式协议审查 |
 | 🏗 go-download | 下载器 go/download | architecture | io-bound, single-thread | 下载, 进度, download, 进度条, 下载进度 |
 | 🏗 go-executil | 进程隐藏窗口 go/executil | architecture | — | 子进程隐藏控制台窗口, 跨平台 HideWindow, 外部进程启动 |
 | 🏗 go-fileops | 文件操作 go/fileops | architecture | io-bound | 移动, 复制, 重命名, 删除, fileops, 启用禁用, .ban, ysm.json 整组操作 |
@@ -211,7 +208,6 @@
 - **go-config**（Go 配置单持有点 go/config）：运行阈值配置的共享单持有点（ADR-091 D12 收敛）：fileops/logs/download/scanner 原各持一份 `var configFunc func() types.AppConfig` 全局变量（写读无同步、仅靠启…
 - **go-container**（统一容器桥接层 go/container）：`go/container/` 包是统一容器桥接层（ADR-068）：收敛 ysm/geometry/avatar/packs 各自独立的「打开容器→找条目」实现（调研实测 zip.OpenReader 10 处 / zip.NewRead…
 - **go-dedup**（去重 go/dedup）：`go/dedup/` 包提供资源去重检测，避免重复导入相同资源。
-- **go-design-critique**（Go 后端设计锐评）：2026-09-03 三路子代理并发只读锐评（IO/扫描域 / 二进制解析域 / Wails 绑定与应用域），主模型对每份报告最强断言逐条实地抽查背书，**无幻觉指控**（3 处过激指控已被主模型仲裁修正，见「仲裁修正」）。安全防御层行业级…
 - **go-download**（下载器 go/download）：`go/download/` 包负责模型资源的纯 HTTP 下载（不依赖 Wails runtime），支持 ctx 取消中断、进度回调与失败半文件清理。镜像回退策略（raw/jsd/api 排序）在 `internal/app/app_d…
 - **go-executil**（进程隐藏窗口 go/executil）：`go/executil/` 包提供跨平台的外部进程执行工具，当前唯一功能是 **HideWindow**：在 Windows 上隐藏子进程控制台窗口，其他平台为 no-op。
 - **go-fileops**（文件操作 go/fileops）：`go/fileops/` 包实现文件 CRUD + 移动/复制/删除 + 文件夹整组导入 + 预览提取 + 启用禁用（ADR-003 P3 下沉，薄壳 `internal/app/app_files.go` 仅转发）。
@@ -292,7 +288,7 @@
 - **volumetric-cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），分轴布局：
 
-## ui（41 张）
+## ui（38 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -320,10 +316,7 @@
 | 🏗 dialog-tag-editor | 标签编辑器 tag-editor | architecture | — | 标签, 打标签, 编辑标签, tag, 标签弹窗, 分类标记 |
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, FAB 3D 预览入口, overlay, ADR-057 |
 | 🏗 features-dialogs | 业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选) | architecture | — | 批量重命名 / 标签编辑 / 高级筛选对话框, 找对话框入口符号 |
-| 🏗 frontend-design-critique | 前端设计锐评 | architecture | — | 设计评审, 前端设计, 锐评, 主题系统, 3D 性能审查, 生命周期审查, 技术债 |
-| 🍃 frontend-design-debt | 前端设计令牌债务 — 逐簇判定记录（快照） | leaf | — | 剩余设计令牌债务如何判定, 哪些 padding 值留存量, 输入框/容器是否归按钮档, 空态大图标字号立项, 设计令牌债收录尾 |
 | 🍃 frontend-naming | 前端命名章程（黑话治理） | leaf | — | 黑话, 命名, 缩写, 重命名, 可读性, 匈牙利前缀, 单字母变量, 动词名词化 |
-| 🏗 frontend-repo-audit | 前端 TS 整包审计 | architecture | — | 代码审核, 代码审查, 审计, 前端质量, 技术债, 重构排期, XSS, innerHTML |
 | 🍃 icon-kit | icon-kit 多源图标（已并入 UI_ICONS） | leaf | — | icon-kit, 多源图标, renderIcon, emoji 图标源, 图标字体 |
 | 🍃 menu-test-assertion | 菜单测试断言三分法 | leaf | — | 写 / 改 3D 菜单（cap/adapter/panel/state）测试，断言节点树结构, 菜单测试因加项、删项、重排而集体崩——判断该断言是否属于脆弱布局断言, 新增 cap/菜单节点后，测试该怎么写才不再随菜单变化而改, 看到 check-menu-test-layout 门禁红（新增布局快照断言超基线）, 评审菜单测试时，分不清「行为断言」与「布局快照」 |
 | 🍃 module-global-state | 模块级全局状态治理 | leaf | — | 模块级全局状态, 全局 Map 泛滥, reset 测试钩子, 单例收敛 |
@@ -363,9 +356,7 @@
 - **dialog-tag-editor**（标签编辑器 tag-editor）：`tag-editor.ts` 提供单个模型的标签编辑弹窗：加载该模型已有标签与全库已有标签，支持手工输入新标签（Enter 或「+ 添加」）与从建议列表点选，删除标签用标签内 ✕ 按钮。保存时把最终标签列表写回后端 go/tags Sto…
 - **dom-fab**（3D 预览悬浮 FAB 控制层）：3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu…
 - **features-dialogs**（业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)）：`frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整…
-- **frontend-design-critique**（前端设计锐评）：2026-09-05 三子代理串行只读锐评（架构 / UI/UX / 3D性能），主模型对每份报告的最强断言逐条实地抽查，**无幻觉指控**。基线：`frontend-repo-audit`（2026-08-26，4.1/5，偏代码质量）。…
 - **frontend-naming**（前端命名章程（黑话治理））：2026-09 ADR-161「渲染会话词汇章程」实施时扩大扫描 `frontend/src` 404 个生产 TS 文件，发现命名黑话远超章程六类，按模式统计：
-- **frontend-repo-audit**（前端 TS 整包审计）：2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全…
 - **menu-test-assertion**（菜单测试断言三分法）：菜单 UI 逻辑（cap 的 `getMenuNodes()` 树、adapter 产树、state 层控制项顺序）变化频繁，手写「布局快照」断言（有序 id 数组 `toEqual`、精确 `toHaveLength`、`nodes[i]…
 - **module-global-state**（模块级全局状态治理）：2026-09-04 锐评续刀 + ADR-178 期间对「模块级全局状态」的系统评估：modal 单例槽位试点收敛成功（`ModalSlotState`），locale/web-store 查证后**停止推广**（无净收益）。本卡沉淀判断…
 - **multi-model-select**（多模型选择菜单原语 multiModelSelectNode）：跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的

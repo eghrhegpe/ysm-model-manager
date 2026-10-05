@@ -227,10 +227,6 @@ export const autoSidebar = [
         "link": "/audit-doc-utility-2026-10-05"
       },
       {
-        "text": "3D 环境设计锐评（设计层，2026-10-05）",
-        "link": "/audit-env-design-critique"
-      },
-      {
         "text": "环境系统审查台账（活文档）",
         "link": "/audit-env-review"
       },
@@ -1650,10 +1646,6 @@ export const autoSidebar = [
             "link": "/knowledge/frontend-parsers"
           },
           {
-            "text": "前端测试基建审计",
-            "link": "/knowledge/frontend-test-audit"
-          },
-          {
             "text": "全局事件处理 global-handlers",
             "link": "/knowledge/global-handlers"
           },
@@ -1762,10 +1754,6 @@ export const autoSidebar = [
           {
             "text": "去重 go/dedup",
             "link": "/knowledge/go-dedup"
-          },
-          {
-            "text": "Go 后端设计锐评",
-            "link": "/knowledge/go-design-critique"
           },
           {
             "text": "下载器 go/download",
@@ -1998,20 +1986,8 @@ export const autoSidebar = [
             "link": "/knowledge/features-dialogs"
           },
           {
-            "text": "前端设计锐评",
-            "link": "/knowledge/frontend-design-critique"
-          },
-          {
-            "text": "前端设计令牌债务 — 逐簇判定记录（快照）",
-            "link": "/knowledge/frontend-design-debt"
-          },
-          {
             "text": "前端命名章程（黑话治理）",
             "link": "/knowledge/frontend-naming"
-          },
-          {
-            "text": "前端 TS 整包审计",
-            "link": "/knowledge/frontend-repo-audit"
           },
           {
             "text": "icon-kit 多源图标（已并入 UI_ICONS）",

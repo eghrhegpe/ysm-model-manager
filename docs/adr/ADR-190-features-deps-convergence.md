@@ -1,6 +1,7 @@
 # ADR-190：features 层职责收束与依赖注入真化
 
-- **状态**：✅ 已采纳 — D1–D6 已全部实质落地或按原意不落地（2026-09-14 调研核实，见下文「实施收口」）；实施进度记录见知识卡 `features-dialogs.md` / `oldest-models.md`（ADR 只记决策，不记进度）。
+- **状态**：✅ 已采纳（D1–D6 全部定稿）
+- **实施状态**：查知识卡 `docs/knowledge/features-dialogs.md` / `docs/knowledge/oldest-models.md`（ADR 只记决策，不记实施进度）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
@@ -78,12 +79,12 @@
 - `services/` 恢复为业务编排唯一归属地，`features/` 回归交互层语义，新人不再需要猜「这段代码该放哪」。
 - 依赖显式化后，单测可用真实 stub 替代 `vi.mock` 模块替换，测试体积预期下降，且测试失败时能定位到真实依赖而非 mock 矩阵。
 - `createDialog` 收全后，新增对话框从「复制 60 行 overlay」降为「传 buildBox + title」。
-- D5 落地后消除回收站 cleanup 后的幽灵 toast 与 bus 副作用（TDD 复核后确认：初判的「`:239` 赋值竞态」不成立——该段为同步代码，cleanup 无法插入；实际风险仅存在于 onclick 闭包的 await 之后）。
+- D5 消除回收站 cleanup 后的幽灵 toast 与 bus 副作用（TDD 复核：初判的「`:239` 赋值竞态」不成立——该段为同步代码，cleanup 无法插入；实际风险仅存在于 onclick 闭包的 await 之后）。
 
 **负面 / 成本**
 - D2 存量迁移涉及 20 个文件，需分 3 期（详见方案文档），期间新旧两种风格并存。
 - D1 的渲染函数回迁会触碰 `views/` 的既有实现，需与并行会话协调文件归属。
-- D4 若做全量收窄，`RESOURCE_TYPES` 是全局高频依赖（全前端多处 import），改动面大，故本次只定原则不落地。
+- D4 若做全量收窄，`RESOURCE_TYPES` 是全局高频依赖（全前端多处 import），改动面大，故只定原则、不实施。
 
 **已知遗留（明确不做）**
 - `community` 双渲染流水线（D6）。
@@ -112,20 +113,7 @@
 
 ---
 
-## 实施收口（2026-09-14 调研核实）
-
-D1–D6 已全部实质落地或按原意不落地，状态机自「🔄 部分采纳」转「✅ 已采纳」：
-
-| 条目 | 收口依据 |
-|---|---|
-| D1/D1a/D1b | `buildHeatmapHtml`/`renderOldestCardsHtml`/`renderRecycleListHtml` 已回迁 `views/app-content/tpl-{oldest,recycle}.ts`；sync/require-mcroot 按 D1b 维持 features（对 toast/bus 的编排归 features） |
-| D2 | 9 个 `*-deps.ts` seam 组合根全建；features 全仓**零真直连** `backend/app.ts`（grep 命中均为 seam 本身或注释字符串）；`_getApp=` 伪注入别名零残留 |
-| D3 | createDialog 统一标题渲染（buildTitleRow）已启用，rename/tag-editor/adv-filter 已迁移；**batch-rename.ts 弹窗壳记账保留**（见下） |
-| D4 | 按原意「本次不做全量替换」单独立项 |
-| D5 | createLoadGuard 已在 maintenance + diagnostics 域落地（ADR-230 收口，零残留） |
-| D6 | stripBanSuffix 生产残留零，community 双渲染现状未动 |
-
-### D3 记账保留：batch-rename.ts 弹窗壳
+## 豁免裁定：batch-rename.ts 弹窗壳
 
 `features/dialogs/batch-rename.ts:105-165` 仍手写 overlay 六步（createElement→tabIndex→className→role→aria-modal→onclick），**评估后刻意不迁移**，与 D6 同哲学（收益不足以支撑回归风险）：
 

@@ -34,7 +34,7 @@
 
 - **正面**：钉死否决理由，防止后人重复提案 tier3 Builder 化、浪费一轮评估；轻量 typed-base 修复即可捕获主要安全收益（编译期字段齐备校验）。
 - **负面 / 已知遗留**：`c` 运行时仍是单对象全闭包共享、跨 stage 可变；跨 stage 写入依赖管线序，未加额外不变式保护（tier2 Pick 收窄已限制各 stage 的*读域*，但未限制*写*）。若未来出现漏初始化 bug，再评估 typed-base 或局部 `Object.freeze`。
-- **后续待办（非本 ADR 实施进度）**：typed seeded base 轻量修复——消除 `mmd-adapter.ts:1141` 的 `as` 强转，改为类型校验的构造（预计 ~1–2 函数改动，10% churn）。
+- **后续待办**：typed seeded base 轻量修复——消除 `mmd-adapter.ts:1141` 的 `as` 强转，改为类型校验的构造（预计 ~1–2 函数改动，10% churn）。
 
 ## 4. 数据溯源
 

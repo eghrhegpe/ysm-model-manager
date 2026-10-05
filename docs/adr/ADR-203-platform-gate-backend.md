@@ -1,6 +1,6 @@
 # ADR-203：平台门控归位 backend——断 utils/dom→backend 依赖环
 
-- **状态**：🔄 部分采纳
+- **状态**：🔄 部分采纳（D1–D3 采纳；D4 `directory-picker.ts` 迁移暂缓）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-07
 - **决策人**：Jieling（人类首席架构师）、AI 代理
@@ -54,13 +54,13 @@ D1 的核心思路：**`android-bridge` 和 `capabilities` 是平台探测原语
 - 原文件 `utils/dom/capabilities.ts` 删除
 - 消费方（21 处）改 import 路径
 
-### D4 `directory-picker.ts` 保留但清理对 `backend/app.ts` 的运行时 import（采纳）
+### D4 `directory-picker.ts`（裁定：暂缓迁移）
 
 `directory-picker.ts` 用 `await getApp()` 仅用于获取 `GetDefaultRepoRoot` / `SelectDirectory`，这两个 binding 在 `browser-adapter.ts` 中也有对应实现。考虑：
 - 保留 `directory-picker.ts` 在 `utils/dom/`，但将 `getApp()` 调用改为通过 `backend/platform.ts` 的桥接口传入（类似 `registerErrorDiary` 的注入范式）
 - 或者：接受 `directory-picker.ts` 对 `backend/app.ts` 的依赖——它是「需要 Wails 绑定的 UI 原语」，与 ADR-189 D4 的「纯 DOM 原语」定位有差异但属灰区，可允许
 
-**折中方案（暂缓）**：`directory-picker.ts` 暂不迁移，仅在知识卡记录灰区，后续看是否有更多平台感知型组件需要归位时再统一处理。
+**处置**：仅记知识卡灰区；后续有更多平台感知型组件需归位时再统一处理。
 
 ---
 

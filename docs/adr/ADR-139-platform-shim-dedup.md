@@ -1,6 +1,6 @@
 # ADR-139：平台 shim 收敛 rustbridge 与 scanner 四 OS 重复
 
-- **状态**：🔄 部分采纳
+- **状态**：🔄 部分采纳（L3 跨 OS 抽象不在批准范围，需独立 ADR）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
@@ -71,20 +71,19 @@ GOOS=android CGO_ENABLED=0 go build -tags rust_backend ./go/scanner/
 
 **平台 shim 按「是否逐字相同」分三档治理，不搞一次性大爆炸重构；先用构建标签守卫止血，再去重。**
 
-### L1 — 构建标签守卫（部分已执行）
+### L1 — 构建标签守卫（止血措施，由 L2 取代）
 
-- `go/scanner`：已由 **L2 合并**从根上消除撞车（四文件 → 单文件 `rust_backend.go`，无 OS 约束），守卫不再需要。
-- `go/rustbridge`：`bridge_linux.go` 已加 `//go:build linux && !android && rust_backend` 守卫（只能减少文件纳入，不改变已纳入路径语义），待 L2 合并彻底取代。
+- `go/scanner`：**由 L2 合并从根上消除撞车**（四文件 → 单文件 `rust_backend.go`，无 OS 约束），守卫不需要。
 
 **理由（守卫是止血不是重构）**：加 `!android` 不可能改变任何现有可编译目标的语义；若后续 L2 合并成单文件，守卫自动作废。
 
-### L2 — 逐字相同文件合并（scanner 已执行；rustbridge 待批）
+### L2 — 逐字相同文件合并
 
-- `go/scanner`：**已执行**——四份 `*_<os>.go` 合并为 `rust_backend.go`（`//go:build rust_backend`），删 4 留 1。本地验证闭环完整：`go test -tags rust_backend ./go/scanner/...` 在本机 Windows 即可跑通（CI 同款，`.github/workflows/test.yml:166`），不依赖 NDK。
+- `go/scanner`：四份 `*_<os>.go` 合并为 `rust_backend.go`（`//go:build rust_backend`），删 4 留 1。**可行性验证**：`go test -tags rust_backend ./go/scanner/...` 在本机 Windows 即可跑通（CI 同款，`.github/workflows/test.yml:166`），不依赖 NDK。
 - `go/rustbridge`：`bridge_{darwin,linux,android}.go` 去注释后逐字相同（含 C 前导块），合并为 `bridge_cgo.go`（`//go:build (darwin || linux || android) && rust_backend`）。`bridge_windows.go` 单列（syscall/DLL，无 cgo，实现真实不同）。合并后 android 撞车同样由构造消失，**无需 `!android` 守卫**，且 `build/darwin` 与 `build/linux` 的 `-extldflags` 完全相同 → 链接侧无平台差异。
 - **android 纳入 L2**：初版顾虑「NDK/gomobile 链路、CI 零覆盖」而排除 android；但既然三份 cgo 文件去注释后逐字相同，合并不改变 android 的任何行为（仅仅是 android 与另外三者共用同一文件），顾虑已不成立。
 
-**已验证收益**：scanner 合并消 3 个文件对（android↔darwin / android↔linux 各 27 行、android↔windows 27 行）→ 170 → 167。rustbridge 合并预期再消 3 个（darwin↔linux 89 行、android↔darwin 82 行、android↔windows 11 行）→ 167 → 164。
+**收益测算**：scanner 合并消 3 个文件对（android↔darwin / android↔linux 各 27 行、android↔windows 27 行）→ 170 → 167。rustbridge 合并预期再消 3 个（darwin↔linux 89 行、android↔darwin 82 行、android↔windows 11 行）→ 167 → 164。
 
 ### L3 — 跨 OS 抽象（不在本 ADR 批准范围，需独立 ADR）
 

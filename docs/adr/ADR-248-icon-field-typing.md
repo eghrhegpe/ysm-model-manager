@@ -87,13 +87,6 @@ export type DataGlyph = string & { readonly [dataGlyphBrand]: true };
   `resolveIcon()` 的兜底分支**因此保留**（它对数据图标是承重的，非迁移残留）。
 
 **已知遗留（含 2026-09 核实更正）**：
-- ~~`isIconName()` 保留~~ → **已删除**（本条 D3 补齐后）：两处剩余结构槽字段（右键菜单项
-  `features/context-menu/menu-defs.ts`、工具栏项 `views/app-tree/toolbar-menus.ts`）本次一并
-  类型化；`views/context-menu/index.ts` 的「命中语义名 → SVG；否则 → `esc()` 文本」双源分支
-  随之退役（该分支在生产侧本就不可达——菜单项早已全语义名，仅测试夹具喂过字形）。
-  运行时判别统一为「`resolveIcon()` 是否返回空串」，不再需要二次查表函数。
-  ⚠️ 更正：本节初稿把它的使用处误记为 `views/app-nav/index.ts`（实为 `views/context-menu/index.ts`）——
-  同一处**凭印象书写**，与下面对 ICON_KIT 的误述同源。
 - **两条语义名来源未收敛**：`utils/icon/icon-kit/`（`ICON_KIT`）与 `UI_ICONS`，由 `resolveIcon()`
   定优先级（ICON_KIT 优先）。2026-09 核实其现状：
   - `ICON_KIT` 只注册 **2 个图标**（树工具栏的 `enableAll` / `disableAll`），且**两者 `src` 均为 `"svg"`**；

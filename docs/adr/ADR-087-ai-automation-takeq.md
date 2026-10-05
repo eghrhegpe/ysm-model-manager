@@ -222,26 +222,9 @@ git status --short 2>/dev/null | tail -15 || true
 
 ---
 
-## 7.5 落地确认（2026-08-17 补充）
-
-### 已落地
-
-| 项 | 状态 | 实现位置 | 实测 |
-|----|------|---------|------|
-| T1 智能 stage | ✅ | `.githooks/pre-commit`（gen 循环后、gofmt 前） | +0.1s/commit |
-| T2 drift --affected | ✅ | `.githooks/pre-commit`（gen 循环后、智能 stage 前） | +0.3s/commit |
-| T3 status 摘要 | ✅ | `.githooks/pre-commit` 末尾 | +0.05s/commit |
-| pre-commit 合计 | ✅ | — | ~1.5s（预算 5s 内） |
-
-### 指令节省实证（ADR-086 §5.1 真实指令审计）
+## 7.5 指令节省实证（ADR-086 §5.1 真实指令审计）
 
 3D 菜单重构轮实测：`git add` 测试文件 / `check-knowledge-drift --affected` / `git status --short` 三类无脑指令从 **4-6 次/功能 → 0**；pre-commit 自动输出「智能 stage ✅」「drift 受影响卡」「status 预览」，AI 不再需要为这三类事打指令。
-
-### 翻转条件保持待命
-
-- pre-commit 总耗时 > 5s → 回退 T1/T2 只留 T3（当前 1.5s，远未触发）
-- 智能 stage 误 stage 率 > 10%（月度统计）→ 收紧匹配规则
-- drift --affected 误报率 > 20% → 收紧过滤规则
 
 ---
 
@@ -273,6 +256,7 @@ git status --short 2>/dev/null | tail -15 || true
 | pre-commit 总耗时 > 5s | 回退 T1/T2，只保留 T3 |
 | 智能 stage 误 stage 率 > 10%（月度统计） | 收紧匹配规则或移除 T1 |
 | drift --affected 误报率 > 20%（月度统计） | 收紧过滤规则或移除 T2 |
+| pre-commit 输出 >50 行 | 截断为 30 行 + `[...]` N 行省略（防终端刷屏，但不丢 ERROR） |
 
 ---
 
@@ -325,22 +309,12 @@ git diff --cached --stat 2>/dev/null | tail -10 || true
 
 直接显示 staged 文件的变更统计（行数增删），与本次 commit 内容直接对应。
 
-### 11.4 未采纳建议
+### 11.4 其余建议处置
 
 | 建议 | 判定 | 理由 |
 |------|------|------|
-| Take巧 #4：`git diff --cached --stat` 预览 | ✅ 采纳 | 见 11.3 |
 | Take巧 #5：drift 加 `--quiet` 模式 | ❌ 不采纳 | `--quiet` 仅输出 stem 列表，丢失 ERROR/WARN 详情，对 AI 不如完整输出有用 |
 | Take巧 #6：commit 后 SHA 确认 | ❌ 不采纳 | 与 `prepare-commit-msg` 钩子的 commit message 回显重叠，且 pre-commit 在 commit 前运行，看不到 SHA |
 | Windows 路径分隔符归一化 | ⚠️ 观察 | 当前 `git diff --name-only` 在 Windows Git Bash 下输出 `/` 分隔符（MinGit 默认），暂未发现问题；若出现异常再添加 `tr '\\' '/'` |
 
 ---
-
-## 12. 翻转正则（修订版）
-
-| 条件 | 动作 |
-|------|------|
-| pre-commit 总耗时 > 5s | 回退 T1/T2，只保留 T3 |
-| 智能 stage 误 stage 率 > 10%（月度统计） | 收紧匹配规则或移除 T1 |
-| drift --affected 误报率 > 20%（月度统计） | 收紧过滤规则或移除 T2 |
-| pre-commit 输出 >50 行 | 截断为 30 行 + `[...] N 行省略`（防终端刷屏，但不丢 ERROR） |

@@ -90,6 +90,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_i18n_unused.ts": ["frontend", "tests"],
   "test_mock_contract.ts": ["frontend", "go"],
   "test_private_access_contract.ts": ["frontend"],
+  // port-align oracle 版本基线断言（P2① 补网）：基线常量在 scripts/port-align.ts（tests 域），
+  // 结论建在 TS 坐标端口 cube-mesh/quaternion 的语义上（frontend 域）
+  "test_port_align_baseline.ts": ["frontend", "tests"],
   "test_testid_contract.ts": ["frontend"],
   // 验证前端 setup 模块的 vi.hoisted 约束（--coverage 插桩兼容性）
   "test_vitest_coverage_setup.ts": ["frontend", "tests"],
@@ -297,6 +300,8 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_check_complexity.ts": ["scripts/check-complexity.ts"],
   "test_check_type_safety.ts": ["scripts/check-type-safety.ts"],
   "test_check_knowledge_content.ts": ["scripts/check-knowledge-content.ts"],
+  // port-align oracle 版本基线断言（P2①）：核 = checkOracleBaseline/ORACLE_BASELINE（在 port-align.ts 内）
+  "test_port_align_baseline.ts": ["scripts/port-align.ts"],
   "test_check_params.ts": ["scripts/check-params.ts"],
   // ADR-311 菜单测试布局闸：扫菜单区测试文件的布局快照形态 + 基线对账（只减不增）
   "test_check_menu_test_layout.ts": [

@@ -69,6 +69,8 @@ tests/python/__pycache__/
 .commandcode/
 .agent-teams/
 .dsh-tmp/
+# port-align 沙箱回落的本地 esbuild 临时目录（loadTsPort %TEMP% 写被拒时启用）
+.tmp-port-align-*
 .openclaw
 .autoclaw
 

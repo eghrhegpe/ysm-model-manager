@@ -11,23 +11,30 @@
  *   - 生成多样性 corpus（pivotSet / inflate / origin 符号 / rotation 轴数 / size 零厚度 笛卡尔积）
  *   - 每个 case 比对：8 角几何 + localPosition + localRotation
  *   - 另对 eulerToQuaternion 纯函数单独扫一遍（覆盖骨骼调用点，不仅是 cube）
- *   - 输出：覆盖矩阵（可见盲区）+ 分歧报告；退出码 0=全绿 / 1=有分歧
+ *   - 输出：覆盖矩阵（可见盲区）+ 分歧报告；退出码 0=全绿 / 1=有分歧或 oracle 基线漂移
  *
  * 用法：
  *   npm run verify:port          # 项目入口（等价 node scripts/port-align.ts）
  *   node scripts/port-align.ts  # 直接跑
+ *   env YSM_PORT_ALIGN_TMP=<dir>  # （可选）显式指定 esbuild 临时输出根目录；
+ *                                  # 不设则自动：OS tmpdir → 写被拒（沙箱 EPERM）回落仓库本地 .tmp-port-align-*
  *
  * 不依赖任何外部 fixture（wine_fox 等），纯合成 corpus → 无幽灵路径、可移植。
  *
  * 依赖：node:fs / node:os / node:url / node:module / node:path / _lib/proc.ts（零外部依赖）
  *
- * 退出码：0 = 全绿（端口对齐无分歧）；1 = 有分歧。
+ * 退出码：0 = 全绿（端口对齐无分歧）；1 = 有分歧或 oracle 版本基线漂移。
  *
  * 设计意图：cube/spec 坐标端口的手动对拍工具——用 Blockbench 权威 oracle 对
  * 真实 TS 端口（cube-mesh.ts / quaternion.ts）做多样性覆盖回归，数据收敛争论。
+ * Phase 0 版本基线断言（P2①）：oracle 是 Blockbench 语义的手工复刻，"权威"不能只
+ * 靠信任——钉死基线版本（ORACLE_BASELINE.blockbench），对机内 vendored 参照
+ * upstream/blockbench-master（.gitignore 排除、非 git 管理）做版本对账；漂移/
+ * 黄金参照符号缺失 → 本次对拍丧失权威 → 硬失败 exit 1，提示先复核 oracle 语义再
+ * 升基线。参照目录缺席（fresh clone 常态）→ 跳过断言（oracle 内嵌自洽，非致命）。
  */
 
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -48,38 +55,123 @@ const ESBUILD_BIN = resolve(dirname(ESBUILD_PKG), "bin", "esbuild");
 const TOL = 1e-3; // 几何/位置/四元数对照容差（吸收零厚度 0.001 微调；真实分歧 ≥ 1.0）
 
 // ============================================================
+// 0. Oracle 版本基线断言（P2①：钉死"权威"基线，不靠信任）
+// ============================================================
+// oracle 是 Blockbench 语义的手工复刻。vendored 参照 upstream/blockbench-master
+// 是机内参照（upstream/ 被 .gitignore 排除、0 个 git 跟踪文件），可被静默升级/丢失；
+// 仓内钉死的基线（本常量 + 知识卡 go-threejs.md 不变量段）是断言的唯一版本事实源。
+// 漂移 → 本次对拍的"权威"失效 → 硬失败（并入 failures → exit 1），提示先复核
+// oracle 语义、升基线常量与知识卡，再重跑。
+export const ORACLE_BASELINE = {
+  blockbench: "5.1.4",
+  goldenRefs: [
+    // cube.js L1289-1316：face_list 展开表 + mirror_uv 两步（box UV 黄金参照）
+    { file: "js/outliner/types/cube.js", symbol: "updateUV" },
+    // bedrock.js L648：parseCube（几何黄金参照，ADR-042 §2.1 三层 X 镜像/翻号）
+    { file: "js/formats/bedrock/bedrock.js", symbol: "parseCube" },
+  ],
+};
+
+export type BaselineResult =
+  | { status: "ok"; version: string }
+  | { status: "absent" } // vendored 参照目录缺席（fresh clone 常态）→ 跳过断言，非致命
+  | { status: "version-drift"; found: string }
+  | { status: "ref-missing"; file: string; symbol: string };
+
+/** 断言 vendored Blockbench 参照与钉死基线一致（纯函数，repoRoot 可注入，供契约测试）。 */
+export function checkOracleBaseline(repoRoot: string): BaselineResult {
+  const root = join(repoRoot, "upstream", "blockbench-master");
+  if (!existsSync(root)) return { status: "absent" };
+  let found = "<unreadable>";
+  try {
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
+      version?: string;
+    };
+    if (pkg.version) found = pkg.version;
+  } catch {
+    // package.json 不可读 → 保持 <unreadable>，下方按 version-drift 报
+  }
+  if (found !== ORACLE_BASELINE.blockbench) return { status: "version-drift", found };
+  for (const ref of ORACLE_BASELINE.goldenRefs) {
+    const p = join(root, ref.file);
+    if (!existsSync(p)) return { status: "ref-missing", file: ref.file, symbol: ref.symbol };
+    // 活形态校验（定义/真实调用任一）：符号被上游改名 → 黄金参照失效
+    if (!new RegExp(`\\b${ref.symbol}\\s*\\(`).test(readFileSync(p, "utf8")))
+      return { status: "ref-missing", file: ref.file, symbol: ref.symbol };
+  }
+  return { status: "ok", version: found };
+}
+
+// ============================================================
 // 1. 打包并导入真实 TS 端口
 // ============================================================
+// 临时目录候选链（P2①，2026-10）：env 逃生阀 YSM_PORT_ALIGN_TMP（显式指定，最优先）
+// → OS tmpdir → 仓库本地 .tmp-port-align-* 兜底。原因：harness 沙箱下 esbuild 原生 exe
+// 写 %TEMP% 会 EPERM（node/pwsh 豁免），写被拒时自动回落本地目录；esbuild 编译错误
+// （写文件之前）不换目录——写失败签名是 "Failed to write to output file / Access is denied"。
+function resolveTmpDirs(): string[] {
+  const dirs: string[] = [];
+  const envDir = process.env.YSM_PORT_ALIGN_TMP;
+  if (envDir) dirs.push(mkdtempSync(join(resolve(envDir), "port-align-")));
+  dirs.push(mkdtempSync(join(tmpdir(), "port-align-")));
+  dirs.push(mkdtempSync(join(REPO_ROOT, ".tmp-port-align-")));
+  return dirs;
+}
+
+function isWriteBlockError(out: string): boolean {
+  return /Failed to write to output file|Access is denied|EPERM/i.test(out);
+}
+
 async function loadTsPort() {
-  const tmp = mkdtempSync(join(tmpdir(), "port-align-"));
-  const outfile = join(tmp, "cube-mesh.bundle.mjs");
+  const tmps = resolveTmpDirs();
+  let used: string | undefined;
   try {
-    const r = run(
-      process.execPath,
-      [
-        ESBUILD_BIN,
-        CUBE_MESH_TS,
-        "--bundle",
-        "--format=esm",
-        "--platform=node",
-        `--outfile=${outfile}`,
-      ],
-      {},
-    );
-    if (!r.ok) {
-      // r.out 失败时含真实 esbuild 诊断（stdout+stderr 合并），r.err 只是通用「执行失败」；
-      // 不打印 r.out 会把打包错误文本吞掉，用户只能看到裸 rc（code review 004563ce P3）。
-      console.error(
-        "[port-align] esbuild 打包 TS 端口失败：",
-        r.out.trim() || r.err || `rc=${r.rc}`,
+    for (const tmp of tmps) {
+      const outfile = join(tmp, "cube-mesh.bundle.mjs");
+      const r = run(
+        process.execPath,
+        [
+          ESBUILD_BIN,
+          CUBE_MESH_TS,
+          "--bundle",
+          "--format=esm",
+          "--platform=node",
+          `--outfile=${outfile}`,
+        ],
+        {},
       );
-      rmSync(tmp, { recursive: true, force: true });
+      if (!r.ok && !isWriteBlockError(r.out)) {
+        // r.out 失败时含真实 esbuild 诊断（stdout+stderr 合并），r.err 只是通用「执行失败」；
+        // 不打印 r.out 会把打包错误文本吞掉，用户只能看到裸 rc（code review 004563ce P3）。
+        console.error(
+          "[port-align] esbuild 打包 TS 端口失败：",
+          r.out.trim() || r.err || `rc=${r.rc}`,
+        );
+        process.exit(2);
+      }
+      if (r.ok) {
+        used = tmp;
+        break;
+      }
+      console.warn(
+        `[port-align] 临时目录 ${tmp} 写被拒（${r.out.trim().split("\n")[0] ?? `rc=${r.rc}`}），尝试下一临时目录…`,
+      );
+    }
+    if (!used) {
+      console.error(
+        "[port-align] 全部临时目录写被拒，无法完成 esbuild 打包。可设 env YSM_PORT_ALIGN_TMP 指定可写目录后重跑。",
+      );
       process.exit(2);
     }
-    const mod = await import(pathToFileURL(outfile).href);
-    return { mod, cleanup: () => rmSync(tmp, { recursive: true, force: true }) };
+    const mod = await import(pathToFileURL(join(used, "cube-mesh.bundle.mjs")).href);
+    return {
+      mod,
+      cleanup: () => {
+        for (const d of tmps) rmSync(d, { recursive: true, force: true });
+      },
+    };
   } catch (e) {
-    rmSync(tmp, { recursive: true, force: true });
+    for (const d of tmps) rmSync(d, { recursive: true, force: true });
     throw e;
   }
 }
@@ -536,8 +628,15 @@ function makeUVSpec(
 }
 
 // ============================================================
-// 5. 主流程
+// 5. 主流程（isCli 守卫：被 import（契约测试）时只暴露纯函数，主流程不跑）
 // ============================================================
+const isCli = (() => {
+  const arg0 = process.argv[1];
+  if (!arg0) return false;
+  return resolve(fileURLToPath(import.meta.url)) === resolve(arg0);
+})();
+
+if (isCli) {
 console.log("╔══════════════════════════════════════════════════════════╗");
 console.log("║ port-align — cube/spec 坐标端口多样性对齐校验（手动工具） ║");
 console.log("╚══════════════════════════════════════════════════════════╝");
@@ -554,6 +653,27 @@ if (typeof buildCubeMeshData !== "function" || typeof eulerToQuaternion !== "fun
 const failures: { phase: string; label: string; why: string }[] = [];
 let cubeCases = 0;
 let cubePass = 0;
+
+// Phase 0：oracle 版本基线断言（P2①：钉死"权威"，不靠信任）
+const baseline = checkOracleBaseline(REPO_ROOT);
+if (baseline.status === "ok") {
+  console.log(
+    `\n── Phase 0: oracle 基线断言：vendored Blockbench ${baseline.version} == 钉死基线 ${ORACLE_BASELINE.blockbench}，黄金参照符号全活 ──`,
+  );
+} else if (baseline.status === "absent") {
+  console.log(
+    `\n── Phase 0: oracle 基线断言：upstream/blockbench-master 缺席（机内参照，.gitignore 排除）——跳过版本断言，oracle 按内嵌 ${ORACLE_BASELINE.blockbench} 基线跑 ──`,
+  );
+} else {
+  failures.push({
+    phase: "baseline",
+    label:
+      baseline.status === "version-drift"
+        ? `vendored Blockbench ${baseline.found} ≠ 钉死基线 ${ORACLE_BASELINE.blockbench}`
+        : `黄金参照缺失或符号漂移 ${baseline.file} (${baseline.symbol})`,
+    why: "oracle 声称对齐的版本与机内参照不一致——先对新版本复核 oracle 语义，更新 ORACLE_BASELINE 与 docs/knowledge/go-threejs.md 基线条目，再重跑",
+  });
+}
 
 console.log("\n── Phase 1: cube 几何 + localPosition + localRotation ──");
 for (const pivotSet of PIVOT_SET) {
@@ -824,3 +944,4 @@ console.log(
 );
 cleanup();
 process.exit(exitCode);
+}

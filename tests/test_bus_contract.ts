@@ -11,13 +11,16 @@
  *   3. void 事件 emit 多传 payload 报 void_with_payload；
  *   4. VOID_EVENTS 清单与 `: void` 标记漂移必须报 voidDrift；
  *   5. 注释里的调用不误报；可选链调用不漏报；
- *   6. 真实仓库当前零硬错误。
+ *   6. 真实仓库当前零硬错误；
+ *   7. [ADR-270-d3 刀 B] 合法发射者登记表：表外新增发射 = 硬错误（--strict 阻断），
+ *      --update 只减不增（增长需 --force），收敛残留条目仅提示不阻断。
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { emitterDrift, readEmitterRegistry } from "../scripts/event-graph.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GUARD = path.join(ROOT, "scripts", "event-graph.ts");
@@ -235,6 +238,113 @@ console.log("[2b] fn 所属函数提取");
   );
 }
 
+// ── 4. 合法发射者登记表（ADR-270-d3 刀 B）─────────────────
+// 纯核直测（import 不触发主流程——入口守卫已加）；fixture 端到端走 --update 两步制
+// （登记表键形状 = 扫描器 relPosix 产物，临时目录相对真实根不可预测，故必须先种再验，不手写形状）。
+console.log("[4] 登记表纯核 emitterDrift / readEmitterRegistry");
+{
+  const emit = new Map([
+    ["a:b", new Set(["x.ts", "y.ts"])],
+    ["c:d", new Set(["z.ts"])],
+  ]);
+  const full = emitterDrift(emit, { "a:b": ["x.ts", "y.ts"], "c:d": ["z.ts"] });
+  ok(full.additions.length === 0 && full.removable.length === 0, "全登记 → 零漂移");
+  const d1 = emitterDrift(emit, { "a:b": ["x.ts"], "c:d": ["z.ts", "gone.ts"] });
+  ok(
+    d1.additions.length === 1 && d1.additions[0].event === "a:b" && d1.additions[0].file === "y.ts",
+    "登记表缺文件发射 → additions（硬错误素材）",
+  );
+  ok(
+    d1.removable.length === 1 &&
+      d1.removable[0].event === "c:d" &&
+      d1.removable[0].file === "gone.ts",
+    "在册未被命中 → removable（提示不阻断）",
+  );
+  const d2 = emitterDrift(emit, {});
+  ok(d2.additions.length === 3 && d2.removable.length === 0, "空表登记 → 全部发射表外");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bus-reg-"));
+  const fp = path.join(tmp, "r.json");
+  fs.writeFileSync(fp, JSON.stringify({ _comment: "元键", "a:b": ["x.ts"] }), "utf-8");
+  const reg = readEmitterRegistry(fp);
+  ok(
+    reg !== null && !("_comment" in reg) && reg["a:b"].length === 1,
+    "readEmitterRegistry 剥下划线元键",
+  );
+  ok(readEmitterRegistry(path.join(tmp, "nope.json")) === null, "表缺失 → null（闸未武装）");
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+console.log("[4b] fixture 端到端：种表→阻断→拒增→force→收敛销账");
+{
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bus-registry-"));
+  const fe = path.join(tmp, "frontend");
+  fs.mkdirSync(path.join(fe, "src", "views"), { recursive: true });
+  const regFp = path.join(tmp, "docs", ".bus-emitters.json");
+  const run = (...args) =>
+    spawnSync(process.execPath, [GUARD, "--root", tmp, ...args], { encoding: "utf-8" });
+  fs.writeFileSync(path.join(fe, "src", "bus.ts"), BUS_TS);
+  fs.writeFileSync(
+    path.join(fe, "src", "views", "a.ts"),
+    `import { bus } from "../../bus.ts";\nbus.emit("b:typed", { x: "1" });\nbus.on("b:typed", () => {});\n`,
+  );
+  // 表缺失 → 闸未武装，--strict 不因发射者维度阻断（存量 fixture 语义不变）
+  let r = run("--strict", "--json");
+  ok(
+    r.status === 0 && JSON.parse(r.stdout)._summary.emitterRegistryArmed === false,
+    "表缺失 → 未武装且不阻断",
+  );
+  // 第一步：--update 种表
+  r = run("--update");
+  ok(r.status === 0 && fs.existsSync(regFp), "表缺失时 --update 种表");
+  r = run("--strict", "--json");
+  let s = JSON.parse(r.stdout)._summary;
+  ok(
+    r.status === 0 && s.emitterRegistryArmed === true && s.emitterAdditions.length === 0,
+    "种表后 armed 且零表外",
+  );
+  // 新发射文件 b.ts → 阻断并报 additions
+  fs.writeFileSync(
+    path.join(fe, "src", "views", "b.ts"),
+    `import { bus } from "../../bus.ts";\nbus.emit("b:typed", { x: "2" });\n`,
+  );
+  r = run("--strict", "--json");
+  s = JSON.parse(r.stdout)._summary;
+  ok(
+    r.status === 1 && s.emitterAdditions.some((a) => a.file.includes("b.ts")),
+    "表外新发射文件 → --strict 阻断 + additions 点名",
+  );
+  // --update 无 --force：拒绝增长，表不变
+  const before = fs.readFileSync(regFp, "utf-8");
+  r = run("--update");
+  ok(
+    r.status === 1 && fs.readFileSync(regFp, "utf-8") === before,
+    "--update 拒绝增长（rc=1 且表未动）",
+  );
+  // --update --force：显式登记
+  r = run("--update", "--force");
+  ok(
+    r.status === 0 && fs.readFileSync(regFp, "utf-8").includes("b.ts"),
+    "--update --force 显式登记新发射者",
+  );
+  // 收敛 b.ts：removable 仅提示不阻断；--update 收表销账
+  fs.rmSync(path.join(fe, "src", "views", "b.ts"));
+  r = run("--strict", "--json");
+  s = JSON.parse(r.stdout)._summary;
+  ok(
+    r.status === 0 && s.emitterRemovable.some((x) => x.file.includes("b.ts")),
+    "已收敛发射者 → 不阻断，removable 提示",
+  );
+  r = run("--update");
+  ok(
+    r.status === 0 && !fs.readFileSync(regFp, "utf-8").includes("b.ts"),
+    "--update 只减：收表销账",
+  );
+  // 幂等：再 --update 跳过写入
+  r = run("--update");
+  ok(r.status === 0 && /跳过写入/.test(r.stdout), "--update 幂等（无变化跳过写入）");
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
 // ── 3. 真实仓库零硬错误 ──────────────────────────────────
 console.log("[3] 真实仓库");
 {
@@ -253,7 +363,10 @@ console.log("[3] 真实仓库");
     r.status === 0 &&
     (s.undeclared ?? []).length === 0 &&
     (s.arityIssues ?? []).length === 0 &&
-    (s.voidDrift ?? []).length === 0;
+    (s.voidDrift ?? []).length === 0 &&
+    s.emitterRegistryArmed === true &&
+    (s.emitterAdditions ?? []).length === 0 &&
+    (s.emitterRemovable ?? []).length === 0;
   ok(
     clean,
     `零硬错误（exit=${r.status}）${clean ? "" : `\n    ${JSON.stringify({ u: s.undeclared, a: s.arityIssues, v: s.voidDrift }).slice(0, 400)}`}`,

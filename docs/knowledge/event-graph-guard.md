@@ -6,7 +6,9 @@ category: core
 source_files:
   - scripts/event-graph.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - emitterDrift
+    - readEmitterRegistry
 tests:
   - tests/test_bus_contract.ts
 use_when:

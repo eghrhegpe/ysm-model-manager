@@ -1549,6 +1549,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
       },
       {
+        "text": "ADR-270-d3：bus 合法发射者登记表闸（刀 B）：发射端从自由裸 emit 收敛为在册登记",
+        "link": "/adr/decisions/ADR-270-d3-bus-legal-emitter-registry"
+      },
+      {
         "text": "ADR-270-d2：views→preview-3d 入口面白名单闸（R10）：斩 DECODE_SOURCE/keymap 绕行边，存量债入基线",
         "link": "/adr/decisions/ADR-270-d2-views-p3d-r10-entry-whitelist"
       },

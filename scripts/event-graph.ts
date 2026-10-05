@@ -13,12 +13,19 @@
  *   - 新增 VOID_EVENTS 清单 vs BusEvents `: void` 标记双向漂移检测
  *     （运行时缺参告警靠这份清单，漂移 = 告警失明）。
  *
- * 用法：node scripts/event-graph.ts [--check] [--json] [--strict] [--root <dir>]
+ * 2026-10-05 刀 B（ADR-270-d3 合法发射者登记表）：发射端从「自由裸 emit」收敛为「在册登记」——
+ *   docs/.bus-emitters.json 登记 {事件: [合法发射文件]}，登记表外的文件发射该事件 →
+ *   emitterAdditions **硬错误**（--strict 阻断）；登记表有而扫描无（已收敛）→ emitterRemovable
+ *   仅提示，--update 收表即销账。--update 按当前扫描重建表（只减不增——新增条目需 --force
+ *   显式确认；无变化跳过写入防 churn）。仅扫生产文件（*.test/*.spec 天然豁免）；表缺失 =
+ *   闸未武装，不阻断（fixture/迁移期无感）。
+ *
+ * 用法：node scripts/event-graph.ts [--check] [--json] [--strict] [--update [--force]] [--root <dir>]
  *   --root 仅供测试 fixture 覆盖仓库根（默认取真实仓库根）。
  *
  * 依赖：node:fs / node:path / _lib/scan-files.ts / _lib/parse-args.ts（零外部依赖）
  *
- * 退出码：默认 0；--strict 且存在硬错误（未声明事件/缺参/漂移）→ 1；用法错误 → 2。
+ * 退出码：默认 0；--strict 且存在硬错误（未声明事件/缺参/清单漂移/发射者表外）→ 1；用法错误 → 2。
  *
  * 设计意图：Bus 事件契约守护者——从 bus.ts 的 BusEvents 接口提取权威事件清单，
  * 报告未声明事件/孤儿发射/鬼订阅/emit 缺参/void 多传/VOID_EVENTS 清单漂移，
@@ -26,15 +33,18 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { getRoot, relPosix } from "./_lib/scan-files.ts";
 
 const ARGS = parseArgs(process.argv.slice(2), {
-  bools: ["check", "json", "strict"],
+  bools: ["check", "json", "strict", "update", "force"],
   strings: ["root"],
 });
 if (ARGS.help) {
-  console.log("用法: node scripts/event-graph.ts [--check] [--json] [--strict] [--root <dir>]");
+  console.log(
+    "用法: node scripts/event-graph.ts [--check] [--json] [--strict] [--update [--force]] [--root <dir>]",
+  );
   process.exit(0);
 }
 if (ARGS.unknown.length) {
@@ -44,6 +54,8 @@ if (ARGS.unknown.length) {
 const CHECK = ARGS.check;
 const JSON_OUT = ARGS.json;
 const STRICT = ARGS.strict;
+const UPDATE = ARGS.update;
+const FORCE = ARGS.force;
 /** 测试 fixture 根覆盖（不影响生产默认路径） */
 const EFF_ROOT = ARGS.root ? path.resolve(ARGS.root as string) : getRoot();
 const SRC_DIR = path.join(EFF_ROOT, "frontend", "src");
@@ -56,6 +68,8 @@ const HTML_FILES = fs.existsSync(FE_DIR)
   : [];
 const BUS_TS = path.join(SRC_DIR, "bus.ts");
 const OUT = path.join(EFF_ROOT, "docs", "event-graph.md");
+/** [ADR-270-d3 刀 B] 合法发射者登记表：{事件: [合法发射文件 relPosix]}——手写基线（非文档生成物） */
+const EMITTERS_FILE = path.join(EFF_ROOT, "docs", ".bus-emitters.json");
 
 /* ---------------- bus.ts 契约解析 ---------------- */
 
@@ -456,9 +470,56 @@ function checkContract(eventMap: Map<string, any>, contract: any, arityIssues: a
   return { undeclared, orphans, ghosts, arityIssues, voidDrift };
 }
 
+/* ---------------- 合法发射者登记表（ADR-270-d3 刀 B） ---------------- */
+
+/**
+ * 登记表纯核（导出供契约测试直测非空转）：扫描到的事件→发射文件集合 vs 登记表。
+ * additions = 现场发射不在册（硬错误，新增发射文件必须先显式登记或改走收敛通道）；
+ * removable = 在册而现场无（发射已收敛，仅提示，--update 收表即销账）。
+ * 输出按 event:file 排序，跨平台稳定可比。
+ */
+export function emitterDrift(
+  emitFilesByEvent: Map<string, Set<string>>,
+  registry: Record<string, string[]>,
+): {
+  additions: Array<{ event: string; file: string }>;
+  removable: Array<{ event: string; file: string }>;
+} {
+  const additions: Array<{ event: string; file: string }> = [];
+  for (const [event, files] of emitFilesByEvent) {
+    const allowed = new Set(registry[event] ?? []);
+    for (const file of files) if (!allowed.has(file)) additions.push({ event, file });
+  }
+  const removable: Array<{ event: string; file: string }> = [];
+  for (const [event, files] of Object.entries(registry)) {
+    const seen = emitFilesByEvent.get(event);
+    for (const file of files) if (!seen?.has(file)) removable.push({ event, file });
+  }
+  const byKey = (x: { event: string; file: string }) => `${x.event}:${x.file}`;
+  additions.sort((a, b) => byKey(a).localeCompare(byKey(b)));
+  removable.sort((a, b) => byKey(a).localeCompare(byKey(b)));
+  return { additions, removable };
+}
+
+/** 读登记表：缺失 → null（闸未武装）；下划线开头的元键（如 _comment）剥除不参与比对。 */
+export function readEmitterRegistry(fp: string): Record<string, string[]> | null {
+  if (!fs.existsSync(fp)) return null;
+  const raw = JSON.parse(fs.readFileSync(fp, "utf-8")) as Record<string, string[]>;
+  const out: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(raw)) if (!k.startsWith("_")) out[k] = v;
+  return out;
+}
+
 /* ---------------- 报告渲染 ---------------- */
 
-function renderMarkdown(eventMap: Map<string, any>, anomalies: any) {
+function renderMarkdown(
+  eventMap: Map<string, any>,
+  anomalies: any,
+  drift: {
+    additions: Array<{ event: string; file: string }>;
+    removable: Array<{ event: string; file: string }>;
+  },
+) {
   const out: string[] = [];
   out.push("# Bus 事件契约报告");
   out.push("");
@@ -466,10 +527,16 @@ function renderMarkdown(eventMap: Map<string, any>, anomalies: any) {
   out.push(
     "> 基于 `frontend/src/bus.ts` 的 `BusEvents` 接口校验所有调用方（含 html 内联、可选链调用）。",
   );
+  out.push(
+    "> 合法发射者登记表闸（ADR-270-d3）：`docs/.bus-emitters.json` 之外新增发射文件 = 硬错误；表内未被命中条目 = 可收紧提示。",
+  );
   out.push("");
   const hasHard =
-    anomalies.undeclared.length || anomalies.arityIssues.length || anomalies.voidDrift.length;
-  const hasSoft = anomalies.orphans.length || anomalies.ghosts.length;
+    anomalies.undeclared.length ||
+    anomalies.arityIssues.length ||
+    anomalies.voidDrift.length ||
+    drift.additions.length;
+  const hasSoft = anomalies.orphans.length || anomalies.ghosts.length || drift.removable.length;
   if (hasHard || hasSoft) {
     out.push("## ⚠️ 异常摘要");
     out.push("");
@@ -513,10 +580,24 @@ function renderMarkdown(eventMap: Map<string, any>, anomalies: any) {
       }
       out.push("");
     }
+    if (drift.additions.length) {
+      out.push("### 发射者表外新增（硬错误——须改走收敛通道，或确认合法后 --update --force 登记）");
+      out.push("");
+      for (const a of drift.additions) out.push(`- \`${a.event}\` @ \`${a.file}\``);
+      out.push("");
+    }
+    if (drift.removable.length) {
+      out.push("### 登记表可收紧（发射已收敛，`--update` 自动收表销账）");
+      out.push("");
+      for (const r of drift.removable) out.push(`- \`${r.event}\` @ \`${r.file}\``);
+      out.push("");
+    }
   } else {
     out.push("## ✅ 无异常");
     out.push("");
-    out.push("所有调用均在 BusEvents 契约内，无孤儿发射 / 鬼订阅 / 未声明事件 / 缺参。");
+    out.push(
+      "所有调用均在 BusEvents 契约与合法发射者登记表内：无孤儿发射 / 鬼订阅 / 未声明事件 / 缺参 / 发射者表外新增。",
+    );
     out.push("");
   }
   const events = [...eventMap.keys()].sort();
@@ -574,7 +655,12 @@ function renderMarkdown(eventMap: Map<string, any>, anomalies: any) {
   return out.join("\n");
 }
 
-function renderJSON(eventMap: Map<string, any>, anomalies: any) {
+function renderJSON(
+  eventMap: Map<string, any>,
+  anomalies: any,
+  drift: { additions: unknown[]; removable: unknown[] },
+  registryArmed: boolean,
+) {
   const events = [...eventMap.keys()].sort();
   const data: Record<string, any> = {};
   for (const ev of events) {
@@ -595,6 +681,9 @@ function renderJSON(eventMap: Map<string, any>, anomalies: any) {
         ghosts: anomalies.ghosts,
         arityIssues: anomalies.arityIssues,
         voidDrift: anomalies.voidDrift,
+        emitterRegistryArmed: registryArmed,
+        emitterAdditions: drift.additions,
+        emitterRemovable: drift.removable,
       },
       events: data,
     },
@@ -603,13 +692,21 @@ function renderJSON(eventMap: Map<string, any>, anomalies: any) {
   );
 }
 
-function printAnomalyReport(anomalies: any) {
+function printAnomalyReport(
+  anomalies: any,
+  drift: {
+    additions: Array<{ event: string; file: string }>;
+    removable: Array<{ event: string; file: string }>;
+  },
+) {
   if (
     !anomalies.undeclared.length &&
     !anomalies.orphans.length &&
     !anomalies.ghosts.length &&
     !anomalies.arityIssues.length &&
-    !anomalies.voidDrift.length
+    !anomalies.voidDrift.length &&
+    !drift.additions.length &&
+    !drift.removable.length
   ) {
     console.warn("[event-graph] ✅ 无异常");
     return;
@@ -639,8 +736,18 @@ function printAnomalyReport(anomalies: any) {
     console.warn("👻 鬼订阅（on/once 无 emit）：");
     for (const ev of anomalies.ghosts) console.warn(`   ${ev}`);
   }
+  if (drift.additions.length) {
+    console.warn("⛔ 发射者表外新增（硬错误，登记表 docs/.bus-emitters.json）：");
+    for (const a of drift.additions) console.warn(`   ${a.event} @ ${a.file}`);
+  }
+  if (drift.removable.length) {
+    console.warn("🧹 登记表可收紧（发射已收敛，--update 收表销账）：");
+    for (const r of drift.removable) console.warn(`   ${r.event} @ ${r.file}`);
+  }
   console.warn("─".repeat(37));
-  console.warn("说明：未声明/实参违约/清单漂移是硬错误；孤儿/鬼订阅可能是有意设计，仅作记录。");
+  console.warn(
+    "说明：未声明/实参违约/清单漂移/发射者表外是硬错误；孤儿/鬼订阅/可收紧条目可能是有意设计，仅作记录。",
+  );
 }
 
 /* ---------------- 主流程 ---------------- */
@@ -662,14 +769,66 @@ function main() {
   const { eventMap } = scanFiles(files, true, contract, arityIssues);
   console.warn(`[event-graph] 扫描到事件：${eventMap.size} 个`);
   const anomalies = checkContract(eventMap, contract, arityIssues);
+  // [ADR-270-d3] 事件→发射文件集合（去重），与合法发射者登记表比对
+  const emitFilesByEvent = new Map<string, Set<string>>();
+  for (const [ev, d] of eventMap)
+    emitFilesByEvent.set(ev, new Set((d.emit as Array<{ file: string }>).map((e) => e.file)));
+  if (UPDATE) {
+    const fresh: Record<string, string[]> = {};
+    for (const ev of [...emitFilesByEvent.keys()].sort()) {
+      const files = [...(emitFilesByEvent.get(ev) ?? [])].sort();
+      if (files.length) fresh[ev] = files; // 无人发射的事件不登记（鬼订阅由既有检查管）
+    }
+    const registryOld = readEmitterRegistry(EMITTERS_FILE);
+    if (registryOld) {
+      const pairsOf = (reg: Record<string, string[]>) =>
+        new Set(Object.entries(reg).flatMap(([ev, fl]) => fl.map((f) => `${ev}:${f}`)));
+      const added = [...pairsOf(fresh)].filter((p) => !pairsOf(registryOld).has(p));
+      if (added.length && !FORCE) {
+        console.error(
+          `❌ --update 拒绝增长：${added.length} 条新增发射条目（增长是显式行为——确认合法后 --update --force）`,
+        );
+        for (const p of added.slice(0, 20)) console.error(`   + ${p}`);
+        process.exit(1);
+      }
+    }
+    const total = Object.values(fresh).reduce((n, v) => n + v.length, 0);
+    const serialized =
+      JSON.stringify(
+        {
+          _comment:
+            "bus 合法发射者登记表（ADR-270-d3）：{事件: [合法发射文件]}——新发射文件须显式登记（--update --force）或改走收敛通道；--update 只收不放。测试文件不入扫描域故天然豁免；HTML 内联发射以 frontend/index.html 整体登记。",
+          ...fresh,
+        },
+        null,
+        2,
+      ) + "\n";
+    if (fs.existsSync(EMITTERS_FILE) && fs.readFileSync(EMITTERS_FILE, "utf-8") === serialized) {
+      console.log("✅ 登记表已是最新，跳过写入。");
+      return;
+    }
+    fs.mkdirSync(path.dirname(EMITTERS_FILE), { recursive: true });
+    fs.writeFileSync(EMITTERS_FILE, serialized, "utf-8");
+    console.log(
+      `📥 登记表已更新: ${relPosix(EMITTERS_FILE)}（${Object.keys(fresh).length} 事件 / ${total} 发射条目）`,
+    );
+    return;
+  }
+  const registry = readEmitterRegistry(EMITTERS_FILE);
+  const drift = registry
+    ? emitterDrift(emitFilesByEvent, registry)
+    : { additions: [], removable: [] };
   console.warn(
-    `[event-graph] 异常：未声明 ${anomalies.undeclared.length}，实参违约 ${anomalies.arityIssues.length}，清单漂移 ${anomalies.voidDrift.length}，孤儿发射 ${anomalies.orphans.length}，鬼订阅 ${anomalies.ghosts.length}`,
+    `[event-graph] 异常：未声明 ${anomalies.undeclared.length}，实参违约 ${anomalies.arityIssues.length}，清单漂移 ${anomalies.voidDrift.length}，孤儿发射 ${anomalies.orphans.length}，鬼订阅 ${anomalies.ghosts.length}，发射者表外 ${drift.additions.length}，表可收紧 ${drift.removable.length}${registry ? "" : "（登记表缺失，发射者闸未武装）"}`,
   );
   const hardFailures =
-    anomalies.undeclared.length + anomalies.arityIssues.length + anomalies.voidDrift.length;
+    anomalies.undeclared.length +
+    anomalies.arityIssues.length +
+    anomalies.voidDrift.length +
+    drift.additions.length;
   // JSON 先行：机器消费方（doctor/CI/测试）无论成败都拿得到结构化报告
   if (JSON_OUT) {
-    console.log(renderJSON(eventMap, anomalies));
+    console.log(renderJSON(eventMap, anomalies, drift, !!registry));
     if (STRICT && hardFailures > 0) process.exit(1);
     return;
   }
@@ -680,23 +839,26 @@ function main() {
     for (const a of anomalies.arityIssues)
       console.error(`  ${a.type} ${a.event} @ ${a.file}:${a.line}`);
     for (const v of anomalies.voidDrift) console.error(`  清单漂移 ${v.event} — ${v.detail}`);
+    for (const a of drift.additions) console.error(`  发射者表外 ${a.event} @ ${a.file}`);
     process.exit(1);
   }
   if (CHECK) {
     const existing = fs.existsSync(OUT) ? fs.readFileSync(OUT, "utf-8") : "";
-    const md = renderMarkdown(eventMap, anomalies);
+    const md = renderMarkdown(eventMap, anomalies, drift);
     if (existing !== md) {
       console.error("❌ docs/event-graph.md 过期，运行 `node scripts/event-graph.ts` 刷新。");
-      printAnomalyReport(anomalies);
+      printAnomalyReport(anomalies, drift);
       process.exit(1);
     }
     console.log("✅ docs/event-graph.md 最新。");
-    printAnomalyReport(anomalies);
+    printAnomalyReport(anomalies, drift);
     return;
   }
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
-  fs.writeFileSync(OUT, renderMarkdown(eventMap, anomalies), "utf-8");
+  fs.writeFileSync(OUT, renderMarkdown(eventMap, anomalies, drift), "utf-8");
   console.log(`📥 已写入 ${OUT}（${eventMap.size} 个事件）`);
-  printAnomalyReport(anomalies);
+  printAnomalyReport(anomalies, drift);
 }
-main();
+
+// 契约测试直测纯核（emitterDrift/readEmitterRegistry）须 import 本模块而不触发主流程——入口守卫
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) main();

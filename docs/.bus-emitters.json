@@ -1,0 +1,174 @@
+{
+  "_comment": "bus 合法发射者登记表（ADR-270-d3）：{事件: [合法发射文件]}——新发射文件须显式登记（--update --force）或改走收敛通道；--update 只收不放。测试文件不入扫描域故天然豁免；HTML 内联发射以 frontend/index.html 整体登记。",
+  "avatar:refresh": [
+    "frontend/src/features/community/download-queue-store.ts"
+  ],
+  "batch:rename": [
+    "frontend/src/features/context-menu/context-menu-handlers.ts"
+  ],
+  "community:clear-cache": [
+    "frontend/src/features/community/download-queue.ts"
+  ],
+  "ctx:show": [
+    "frontend/src/features/community/repo-events-bindings.ts",
+    "frontend/src/features/context-menu/context-menus.setup.ts",
+    "frontend/src/views/app-sidebar/events.ts",
+    "frontend/src/views/app-tree/events.ts"
+  ],
+  "dir:batch-rename": [
+    "frontend/src/features/context-menu/context-menu-dir-handlers.ts"
+  ],
+  "dir:mkdir": [
+    "frontend/src/features/context-menu/context-menu-dir-handlers.ts"
+  ],
+  "dir:recycle": [
+    "frontend/src/features/context-menu/context-menu-dir-handlers.ts"
+  ],
+  "dir:rename": [
+    "frontend/src/features/context-menu/context-menu-dir-handlers.ts"
+  ],
+  "instance:clear": [
+    "frontend/src/features/context-menu/context-menu-handlers.ts"
+  ],
+  "instance:export-list": [
+    "frontend/src/features/context-menu/context-menu-handlers.ts"
+  ],
+  "lang:changed": [
+    "frontend/src/core/i18n/locale.ts"
+  ],
+  "menu:show": [
+    "frontend/src/features/context-menu/context-menus.ts"
+  ],
+  "model:select": [
+    "frontend/src/features/maintenance/oldest-models.ts",
+    "frontend/src/features/maintenance/recycle-bin.ts",
+    "frontend/src/views/app-content/diagnostics/dedup-render.ts",
+    "frontend/src/views/app-preview/detail-3d.ts",
+    "frontend/src/views/app-tree/events.ts",
+    "frontend/src/views/app-tree/index.ts"
+  ],
+  "nav:changed": [
+    "frontend/src/views/app-content/index.ts",
+    "frontend/src/views/app-content/site/events.ts",
+    "frontend/src/views/app-nav/index.ts",
+    "frontend/src/views/app-sidebar/events.ts",
+    "frontend/src/views/app-tree/toolbar-events.ts"
+  ],
+  "package:selected": [
+    "frontend/src/views/app-sidebar/events.ts"
+  ],
+  "repo:focus-search": [
+    "frontend/src/views/app-nav/index.ts"
+  ],
+  "repo:rtype-changed": [
+    "frontend/src/views/app-nav/index.ts"
+  ],
+  "repo:search-creator": [
+    "frontend/src/views/app-content/site/events.ts"
+  ],
+  "repo:subdir-changed": [
+    "frontend/src/views/app-nav/index.ts"
+  ],
+  "stats:refresh": [
+    "frontend/src/features/community/download-queue-web.ts",
+    "frontend/src/features/community/download-queue.ts",
+    "frontend/src/features/context-menu/context-menu-shared.ts",
+    "frontend/src/features/dnd/pack-dnd.ts",
+    "frontend/src/features/import/executor.ts",
+    "frontend/src/features/maintenance/recycle-bin.ts",
+    "frontend/src/features/pack-ops/instance-ops.ts",
+    "frontend/src/features/platform/android-events.ts",
+    "frontend/src/features/sync/sync.ts",
+    "frontend/src/views/app-content/diagnostics/dedup.ts",
+    "frontend/src/views/app-content/settings/init.ts",
+    "frontend/src/views/app-content/settings/path-cards.ts",
+    "frontend/src/views/app-sidebar/launcher-detect.ts",
+    "frontend/src/views/app-sidebar/sync-flow.ts",
+    "frontend/src/views/app-sync-manager/index.ts",
+    "frontend/src/views/app-tree/bus-handlers.ts",
+    "frontend/src/views/app-tree/events.ts"
+  ],
+  "sync:download:done": [
+    "frontend/src/features/sync/sync.ts"
+  ],
+  "sync:download:missing": [
+    "frontend/src/views/app-sidebar/sync-flow.ts"
+  ],
+  "sync:toggle:status": [
+    "frontend/src/views/app-tree/bus-handlers.ts",
+    "frontend/src/views/app-tree/events.ts"
+  ],
+  "toast:show": [
+    "frontend/src/app-modules.ts",
+    "frontend/src/backend/directory-picker.ts",
+    "frontend/src/features/community/download-queue-web.ts",
+    "frontend/src/features/community/download-queue.ts",
+    "frontend/src/features/community/repo-events-bindings.ts",
+    "frontend/src/features/dialogs/batch-rename-form.ts",
+    "frontend/src/features/dnd/import-dnd.ts",
+    "frontend/src/features/dnd/pack-dnd.ts",
+    "frontend/src/features/import/executor.ts",
+    "frontend/src/features/maintenance/recycle-bin.ts",
+    "frontend/src/features/maintenance/version-updater.ts",
+    "frontend/src/preview-3d/adapters/mount-preview-core.ts",
+    "frontend/src/preview-3d/adapters/switch-preview.ts",
+    "frontend/src/preview-3d/infra/gpu-budget.ts",
+    "frontend/src/preview-3d/infra/large-model.ts",
+    "frontend/src/preview-3d/infra/preview-loading.ts",
+    "frontend/src/utils/dom/toast.ts",
+    "frontend/src/views/app-content/diagnostics/copy-toast.ts",
+    "frontend/src/views/app-content/diagnostics/init.ts",
+    "frontend/src/views/app-content/diagnostics/web-gate.ts",
+    "frontend/src/views/app-content/index.ts",
+    "frontend/src/views/app-content/init-pages.ts",
+    "frontend/src/views/app-content/settings/default-page.ts",
+    "frontend/src/views/app-content/settings/init.ts",
+    "frontend/src/views/app-content/settings/keymap.ts",
+    "frontend/src/views/app-content/settings/path-cards.ts",
+    "frontend/src/views/app-content/settings/ui-prefs.ts",
+    "frontend/src/views/app-content/settings/worker-prefs.ts",
+    "frontend/src/views/app-content/site/drag.ts",
+    "frontend/src/views/app-content/site/edit.ts",
+    "frontend/src/views/app-content/site/events.ts",
+    "frontend/src/views/app-content/site/workshop-site-opener.ts",
+    "frontend/src/views/app-content/site/workshop-tabs.ts",
+    "frontend/src/views/app-nav/index.ts",
+    "frontend/src/views/app-preview/preview-library.ts",
+    "frontend/src/views/app-preview/preview-router.ts",
+    "frontend/src/views/app-preview/shot-panel-shared.ts",
+    "frontend/src/views/app-sidebar/events.ts",
+    "frontend/src/views/app-sidebar/launcher-detect.ts",
+    "frontend/src/views/app-sidebar/loader.ts",
+    "frontend/src/views/app-sidebar/sync-flow.ts",
+    "frontend/src/views/app-sync-manager/index.ts",
+    "frontend/src/views/app-sync-manager/network.ts",
+    "frontend/src/views/app-sync-manager/store.ts",
+    "frontend/src/views/app-toast/index.ts",
+    "frontend/src/views/app-tree/bus-handlers.ts",
+    "frontend/src/views/app-tree/events.ts",
+    "frontend/src/views/app-tree/index.ts",
+    "frontend/src/views/app-tree/loader.ts",
+    "frontend/src/views/app-tree/toolbar-commands.ts",
+    "frontend/src/views/app-tree/toolbar-events.ts",
+    "frontend/src/views/app-tree/toolbar-search.ts"
+  ],
+  "tree:reload": [
+    "frontend/src/features/community/download-queue-web.ts",
+    "frontend/src/features/community/download-queue.ts",
+    "frontend/src/features/context-menu/context-menu-shared.ts",
+    "frontend/src/features/dnd/pack-dnd.ts",
+    "frontend/src/features/import/executor.ts",
+    "frontend/src/features/maintenance/recycle-bin.ts",
+    "frontend/src/features/platform/android-events.ts",
+    "frontend/src/features/sync/sync.ts",
+    "frontend/src/views/app-content/diagnostics/dedup.ts",
+    "frontend/src/views/app-content/settings/init.ts",
+    "frontend/src/views/app-sidebar/sync-flow.ts"
+  ],
+  "tree:set-search": [
+    "frontend/src/views/app-content/index.ts"
+  ],
+  "ui:card-density": [
+    "frontend/src/views/app-content/settings/ui-prefs.ts"
+  ]
+}

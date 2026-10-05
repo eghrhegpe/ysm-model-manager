@@ -121,22 +121,7 @@ export function hl(text: string | null | undefined, query?: string): string {
 - 默认实例的 re-export 仍保留模块级状态——过渡期兼容，长期应迁移到显式实例化
 - tooltip 单可见不变量依赖「生产只用默认实例」约定——需在代码审查中把关
 
-## 4. 实施计划
-
-| 步骤 | 文件 | 内容 |
-|------|------|------|
-| 1 | `tooltip.ts` | 新增 `createTooltipManager()` 工厂，封装单例状态 |
-| 2 | `tooltip.ts` | 默认实例 + re-export 保持兼容 + HMR dispose |
-| 3 | `focus-restore.ts` | 新增 `createFocusRestoreManager()` 工厂 |
-| 4 | `focus-restore.ts` | 默认实例 + re-export 保持兼容 |
-| 5 | `input-block-stack.ts` | 新增 `createInputBlockStack()` 工厂 |
-| 6 | `input-block-stack.ts` | 默认实例 + re-export 保持兼容 |
-| 7 | `html.ts` | `hl()` 改为全匹配循环 |
-| 8 | `html.test.ts` | 新增全匹配测试用例 |
-| 9 | 验证 | `npx vite build && npm run typecheck && npx vitest` |
-| 10 | 提交 | `node scripts/commit-with-check.ts -m "refactor: dom 单例改工厂 + html hl 全匹配"` |
-
-## 5. 数据溯源
+## 4. 数据溯源
 
 - `tooltip.ts`：206 行，4 个模块变量（`st` / `_observer` / `_scrollHandler` / `_scrollRef`）
 - `focus-restore.ts`：64 行，`_triggerStack` 模块级数组

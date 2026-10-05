@@ -87,23 +87,9 @@ core 初始化
 
 ---
 
-## 3. 后续计划（Roadmap）
+## 3. 范围边界：未立项方向
 
-### L1（已落地，本 ADR 核心）
-
-- `LightCapability` 类 + core 注入 + 6 类预设 + 💡 面板
-- 4 adapter 内联灯光清除（vrm / mmd / litematic / pack-model）
-- 6 个面板 i18n key 三语补全
-
-### L2（已落地，`e19434a6` + `003dba7a`）
-
-- `EffectComposer + UnrealBloomPass + OutputPass` 后处理体积光管线
-- core animate 循环中按 `getVolumetricEngine()` 切换 `rd.render` ↔ `composer.render`
-- onResize 同步 composer 尺寸，fullCleanup 释放 composer
-- 运行中引擎切换自动创建/销毁 composer
-- 面板新增「锥引擎」下拉 select
-
-### L3（后续立项，未开始）
+### L3 体积光精化
 
 | 方向 | 说明 | 前置 |
 |------|------|------|
@@ -111,7 +97,7 @@ core 初始化
 | 物理衰减精调 | Spotlight 当前 decay=2（已近物理），但 DistanceAttenuation 系数需精调 | — |
 | 多聚光灯 | 面板允许新增/删除多束 spot light（当前只有 1 束） | 面板重构，支持可折叠的 light list |
 
-### L4（长期，非本 ADR 范围）
+### L4 长期候选
 
 - 实时光强度/色彩曲线（per-key/fill/rim 独立颜色选择器）
 - 场景保存/加载灯光布局

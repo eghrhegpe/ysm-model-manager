@@ -79,19 +79,7 @@ ADR-213 要给 `parseAxisItem` / `parseKeyValue` / `extractKeyframe` / `parseCha
 ### 风险
 - `foldMolangConstant` 是热路径函数，保留原位——无性能影响
 
-## 4. 实施计划
-
-| 步骤 | 文件 | 内容 |
-|------|------|------|
-| 1 | `animation-evaluator.ts`（新建） | 搬入求值器代码 + 从 animation.ts 导入类型 |
-| 2 | `animation.ts`（改写） | 删除求值器代码，保留解析器 + 类型定义 |
-| 3 | `preview-3d/ysm-animation-player.ts` | import 改为 `@/utils/animation/animation-evaluator.ts` |
-| 4 | `animation.test.ts`（拆分） | 拆为 `animation.test.ts`（解析） + `animation-evaluator.test.ts`（求值） |
-| 5 | 合并 ADR-213 改动 | 给 `parseAxisItem` 等加 `parser` 参数（同一 PR） |
-| 6 | 验证 | `npx vite build && npm run typecheck && npx vitest` |
-| 7 | 提交 | `animation 拆分 + molang 工厂化同一 PR` |
-
-## 5. 数据溯源
+## 4. 数据溯源
 
 - 当前文件：`frontend/src/utils/animation/animation.ts`
 - 测试文件：`frontend/src/utils/animation/animation.test.ts`

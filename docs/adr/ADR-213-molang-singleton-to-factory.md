@@ -91,21 +91,7 @@ export function parseBedrockAnimationJSON(
 ### 风险
 - `parseBedrockAnimationJSON` 的 `parser` 可选参数使函数签名变复杂——但内部兜底逻辑简单，不增加调用方负担
 
-## 4. 实施计划
-
-| 步骤 | 文件 | 内容 |
-|------|------|------|
-| 1 | `molang.ts` | 删除 `parser` 单例 + `getMolangParser` + 模块级 `compileMolang` |
-| 2 | `molang.ts` | 保留 `createMolangParser` 工厂 + `MolangParser` 接口 |
-| 3 | `animation.ts`（拆分后保留解析器的文件） | `parseBedrockAnimationJSON` 新增 `parser` 可选参数，内部创建兜底 |
-| 4 | `animation.ts` | `parseAxisItem` / `parseKeyValue` / `extractKeyframe` / `parseChannel` 增加 `parser` 参数 |
-| 5 | `animation.test.ts` | 移除 `getMolangParser` spy，改为工厂实例测试 |
-| 6 | `molang.test.ts` | 更新测试，验证工厂实例隔离性 |
-| 7 | `ysm-animation-player.test.ts` | 更新 mock 从单例改为工厂实例 |
-| 8 | 验证 | `npx vite build && npm run typecheck && npx vitest` |
-| 9 | 提交 | 与 ADR-212 同一 PR |
-
-## 5. 数据溯源
+## 4. 数据溯源
 
 - 当前文件：`frontend/src/utils/animation/molang.ts`
 - 单例定义：模块级 `const parser = new Molang()`

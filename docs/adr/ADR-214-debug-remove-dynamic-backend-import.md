@@ -88,19 +88,7 @@ if (_devMode && isDebugEnabled()) {
 ### 风险
 - `window.debugGetSpec` 在 `app-modules.ts` 中挂载，若 `app-modules.ts` 被 tree-shaking 或条件加载影响——但 `app-modules.ts` 是应用入口，不会被 shake
 
-## 4. 实施计划
-
-| 步骤 | 文件 | 内容 |
-|------|------|------|
-| 1 | `debug.ts` | 删除 `if (typeof window !== "undefined")` 块（`debugGetSpec` 定义） |
-| 2 | `debug.ts` | 删除 `declare global` 中 `debugGetSpec` 类型声明（或移至 `app-modules.ts`） |
-| 3 | `app-modules.ts` | 在启动链中增加 `debugGetSpec` 挂载逻辑（`_devMode && isDebugEnabled()` 条件） |
-| 4 | `debug.ring.test.ts` | 确认无 `debugGetSpec` 相关断言（如有则移除） |
-| 5 | `app-modules.test.ts` / `boot.test.ts` | 新增 `debugGetSpec` 挂载测试（如需要） |
-| 6 | 验证 | `npx vite build && npm run typecheck && npx vitest` |
-| 7 | 提交 | `node scripts/commit-with-check.ts -m "refactor: debugGetSpec 钩子搬离 debug.ts 到装配层"` |
-
-## 5. 数据溯源
+## 4. 数据溯源
 
 - 当前文件：`frontend/src/utils/debug/debug.ts`
 - 问题代码：`debugGetSpec` 定义 + `Window` interface 中的 `debugGetSpec` 类型声明

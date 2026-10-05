@@ -123,26 +123,9 @@ YSM L1 只有 1 个 clip，`clips.length === 1`，下拉框不渲染（与 MMD �
 
 ---
 
-## 4. 实施计划
+## 4. L4 扩展：Molang 求值器 + 欧拉序修复
 
-| 步骤 | 文件 | 内容 |
-|------|------|------|
-| 1 | `frontend/src/utils/3d/ysm-animation-player.ts`（新建） | `createYsmAnimPlayer` + `YsmAnimPlayer` 接口 |
-| 2 | `frontend/src/utils/3d/ysm-animation-player.test.ts`（新建） | 单元测试：apply/loop/暂停/多clip/slerp/骨骼缺失降级 |
-| 3 | `frontend/src/utils/3d/adapters/ysm-adapter.ts` | buildYsmScene 加 animation 扫描 + player 接入 update + 语义骨骼 + 呼吸 |
-| 3-fix | 同文件 P1 bug 修复 | boneByName 改为直接取 boneGroupMap 的 Group（非 children[0] as Bone） |
-| 4 | `frontend/src/views/app-preview/ysm-3d.ts` | 注入 `listAllFilePaths` + `readTextFile` 端口 |
-| 5 | `frontend/src/utils/3d/semantic-bones.ts` | 新增 `YSM_SEMANTIC_CANDIDATES` + `ysmSemanticBoneMap` |
-| 6 | ADR-100 本文档 | 决策记录 |
-| 7 | L3 平滑过渡 | `ysm-animation-player.ts` 三通道 alpha 混合 + base 姿态回落；`animation.ts` 新增 `ysmAnimClipLabels`；`ysm-adapter.ts` 全 clip 收录——切 clip 淡入 + 未触及骨骼渐回 + 多 clip 列表 |
-| 8 | L4 Molang 求值器 | `molang.ts`（内嵌 molangjs 源码 MIT）+ `animation.ts` postMolang/preMolang + evaluateKeyframes 求值贯通——表达式关键帧真动起来 |
-| 9 | L4 欧拉序修复 | `ysm-animation-player.ts:113` XYZ→ZYX——修复三轴非零旋转骨骼动画"乱飞" |
-
----
-
-## 3b. L4 扩展：Molang 求值器 + 欧拉序修复（2026-08-22）
-
-### 3b.1 Molang 表达式关键帧（L4a）
+### 4.1 Molang 表达式关键帧
 
 **问题**：`.animation.json` 中的字符串轴（如 `"rotation": { "0": "query.anim_time * 90" }`）
 在 `parseBedrockAnimationJSON` 中标记 `hasMolang=true`，但 `evaluateKeyframes` 对字符串值走
@@ -159,7 +142,7 @@ YSM L1 只有 1 个 clip，`clips.length === 1`，下拉框不渲染（与 MMD �
 - `compileMolang(expr)` 返回 `(animTime) => number`；编译失败/非法/空串 → null，调用方走零占位
 - `Infinity/NaN` 守卫：编译成功但运行时产生 Infinity（如 `"1e999"`）→ 零占位
 
-### 3b.2 欧拉序修复（L4b）
+### 4.2 欧拉序修复
 
 **问题**：`ysm-animation-player.ts:113` 用 `Euler(rx,ry,rz,'XYZ')` 构造目标四元数，
 而 `quaternion.ts`（spec 渲染层）和 Go `eulerToQuaternion` 早已是 **ZYX** 口径
@@ -168,7 +151,7 @@ YSM L1 只有 1 个 clip，`clips.length === 1`，下拉框不渲染（与 MMD �
 **修复**：`Euler(rz,ry,rx,'ZYX')`，与 Blockbench `bedrock.js L648-882` 对齐。
 spec 渲染层无需改动（已正确），仅播放器路径滞后；修复后静态渲染与动态播放口径统一。
 
-### 3b.3 文件清单（L4）
+### 4.3 文件清单
 
 | 文件 | 说明 |
 |------|------|

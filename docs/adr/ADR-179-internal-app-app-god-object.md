@@ -40,11 +40,7 @@
 2. **依赖单向**：子包**禁止 import `internal/app`**（自上而下单向）。需要 App 服务的以构造函数参数注入接口或回调；延续 ADR-173 的环规避手法。
 3. **锁随域走**：每把锁迁入所属 manager，禁止跨包加锁；迁移时顺带在 manager 注释中写明锁序，收敛 data race 面。
 
-### 2.3 实施顺序（每域独立提交、独立验证）
-
-`install`（最大域，先立样板）→ `bindings` → `config` → `scan` → `bridge`。每步验证：`go build ./...` + 全量 `go test -timeout`（Go 测试一律带 `-timeout`）。
-
-### 2.4 同场加映（P2 项，随切分顺带）
+### 2.3 同场加映（P2 项，随切分顺带）
 
 - 给 `scanner.ScanEntries*` 等 IO 入口补 `context.Context` 参数，复用 `appCtx` 取消源。
 - `wasm_decoder.go` 的包级 `var nodeJSPath = findNodeJS()` 改惰性 `sync.Once`。

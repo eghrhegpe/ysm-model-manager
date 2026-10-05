@@ -2,7 +2,6 @@
 import { runCommitChecks } from "./_lib/commit-check.ts";
 import { commitWithTempIndex, expandPathspecs } from "./_lib/commit-temp-index.ts";
 import { domainSummaryText, groupByDomain } from "./_lib/domain-classify.ts";
-import { GEN_CMDS } from "./_lib/gen-cmds.ts";
 import { run } from "./_lib/proc.ts";
 /**
  * commit-with-check.ts — 验证 + 自动提交（轻量级提交校验，2026-09-02 重构；
@@ -173,23 +172,18 @@ console.log("门禁: 轻量清单（红线 / 文档漂移 / 变更域契约测�
 console.log("");
 
 (async () => {
-  // gen 预刷新（仅文档相关变更）：避免 gen 产物过期 fail-closed
-  if (docsMode || byDomain.docs?.length || byDomain.adr?.length) {
-    let genOk = 0,
-      genFail = 0;
-    for (const cmd of GEN_CMDS) {
-      const r = run(process.execPath, [`scripts/${cmd}`], {
-        cwd: ROOT,
-        stdio: "ignore",
-        timeout: 30_000,
-      });
-      if (r.ok) genOk++;
-      else genFail++;
-    }
-    console.log(
-      `[gen] 已预刷新 ${genOk}/${GEN_CMDS.length} 个 gen 脚本${genFail ? `（${genFail} 个失败，不阻断）` : "（全绿）"}`,
-    );
-  }
+  // ⚠️ 此处原有一轮「gen 预刷新」（串行跑全 15 个 GEN_CMDS，~4s），2026-10-05 删除。三条理由：
+  //   ① **对本工具跑的检查无用**：本工具走 `--files` 裁剪模式，而唯一依赖 gen 产物的
+  //      「索引断链」检查在 `check-doc-drift.ts` 里被 `if (!FILES_SET)` 显式跳过
+  //      （实测：注入假断链后 `--files` 报 errors=0，全量模式报 errors=1）。
+  //      check-redlines / 契约测试亦不读 gen 产物。
+  //   ② **与 pre-commit 重复**：本工具经 commitWithTempIndex 走常规 git commit，
+  //      pre-commit 钩子会再跑一次 gen（用 xargs -P3 并行，~1s）——原实现是同一提交跑两遍。
+  //   ③ **有代价**：串行 15 次 node 冷启 ~4s 属纯开销；且写盘会 touch 无关产物
+  //      （cli-commands.md / locale JSON / completions），正是 gen-stage.ts 记录的
+  //      「并行会话快照误判卷带」的成因面。
+  //   gen 产物的新鲜度由 pre-commit / pre-push 保证，本工具不再承担。
+  //   （若将来本工具要跑依赖 gen 的全量检查，须改为「按域裁剪 GEN_CMDS」而非无条件全集。）
 
   // 轻量校验：独立清单，不复用 pre-push-gate（避免重型构建/全量静态工具双重付费）
   // 校验范围用 checkPaths（--docs 下含未暂存 docs 的校验裁剪）；提交白名单仍是 paths。

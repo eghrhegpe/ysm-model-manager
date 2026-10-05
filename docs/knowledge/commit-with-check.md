@@ -45,6 +45,17 @@ use_when:
   - 门禁后自动 commit
 pitfalls:
   - 并行会话活跃时禁止裸 git commit（含 --only 路径限定）——钩子快照窗口内会误判并行手改的卡为 gen 产物并 stage
+  - **2026-10-05 实测：本工具与并行会话共用 `.git/COMMIT_EDITMSG`，`-m` 写入的消息会被并行会话的提交抢用**
+    （实证：`651ccc62c` 的 message 是 A 会话写的、内容却是 B 会话的文件）——多会话并发时优先
+    `git commit -F <专属临时文件>` 或等对方提交完成
+  - **不要再给本工具加回「gen 预刷新」**（2026-10-05 已删，原为串行跑全 15 个 `GEN_CMDS` ~4s）：
+    ① 对本工具的检查**无用**——本工具走 `--files` 裁剪模式，而唯一读 gen 产物的「索引断链」检查在
+    `check-doc-drift.ts` 被 `if (!FILES_SET)` 显式跳过（**实证**：注入假断链后 `--files` 报 errors=0、
+    全量模式报 errors=1）；`check-redlines` / 契约测试亦不读 gen 产物。
+    ② 与 pre-commit **重复**——本工具经 `commitWithTempIndex` 走常规 git commit，pre-commit 还会再跑一次
+    （`xargs -P3` 并行 ~1s），原实现是同一提交跑两遍。③ 写盘会 touch 无关产物
+    （cli-commands.md / locale JSON / completions），正是 `gen-stage.ts` 记录的「并行快照误判卷带」成因面。
+    gen 新鲜度由 pre-commit / pre-push 保证；**若将来本工具要跑依赖 gen 的全量检查，须改为「按域裁剪 GEN_CMDS」而非无条件全集**。
   - 忘记传 --files 且主 index 为空 → 脚本 exit 1 报「无提交目标」
   - 越界文件校验是硬拦截（exit 1）：提交包含不在白名单 ∪ 生成物/测试清单内的文件时，需 git reset --soft HEAD~1 后重新用 --files
   - 临时索引进程被强杀时 finally 无法执行，index.ymm 临时索引文件恒残留（pid 后缀）
@@ -77,7 +88,8 @@ invariant_anchors:
 - **临时索引提交**（`commit-temp-index.ts`）：`GIT_INDEX_FILE=index.ymm.<pid>` → `read-tree HEAD` → `add -- paths` → `commit -m` → finally 删临时索引。pre-commit 钩子继承临时索引，其 `git add`（gen 产物/gofmt 修复/智能 stage 测试）全部落进本次提交；主 index 零接触
 - **提交后双条件校验**：越界文件（不在 `paths ∪ 生成物/测试白名单`）→ exit 1 打清单；并发插队（`HEAD^ != HEAD_BEFORE`）→ 仅 notice 不失败。非白名单文件按「随行钩子产物 / 越界」二分（`hookArtifacts` / `outOfScope`，互补），与 `paths` 内文件合起来 = 全部提交文件
 - **收尾清主 index**：`git reset -q HEAD -- <committed>`（仅当主 index 含这些路径）；`--keep-index` 关闭
-- **gen 清单单一事实源**：预刷新用 `_lib/gen-cmds.ts`（15 个全集，与原 pre-commit GEN_CMDS 对齐）
+- **gen 不在本工具职责内**（2026-10-05 删去原「预刷新全 15 个 `GEN_CMDS`」段）：本工具只做轻量校验 + 提交，
+  gen 新鲜度由 pre-commit（并行 `xargs -P3`）与 pre-push 保证。理由与实证见上方 pitfalls 第三条
 
 ## 对外 API / 入口
 

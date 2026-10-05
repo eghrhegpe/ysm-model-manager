@@ -1598,6 +1598,25 @@ func TestSaveBenchBaseline_RoundTrip(t *testing.T) {
 	}
 }
 
+// TestFindOptimizationLog_LocatesRealDoc 锁 findOptimizationLog 对真实仓库布局的解析：
+// 该函数按 docs/knowledge/optimization_log.md 单路径探测，7b6cec715 把该卡迁到
+// docs/archive/ 时漏改 → runPerfLog 报「文档不可读」、go/cli 全量红了 44 个提交。
+// TestPerfLog_Output 已在全量里覆盖了这条链路，但它的断言文案（"优化记录"/"当前瓶颈"/
+// "关键指标"）在文档再次搬家时**仍然通过**（解析器吃内容不吃路径），所以路径漂移对它
+// 不可见。此例直接从 cwd 向上探测并断言拿到真实文件，把「路径」而非「内容」钉住。
+func TestFindOptimizationLog_LocatesRealDoc(t *testing.T) {
+	p, err := findOptimizationLog()
+	if err != nil {
+		t.Fatalf("应能在仓库内定位优化记录文档, got %v", err)
+	}
+	if filepath.Base(filepath.Dir(p)) != "knowledge" && filepath.Base(filepath.Dir(p)) != "archive" {
+		t.Errorf("优化记录文档应位于 docs/knowledge/ 或 docs/archive/, got %s", p)
+	}
+	if _, err := os.Stat(p); err != nil {
+		t.Errorf("定位到的路径应真实存在: %v", err)
+	}
+}
+
 // ===== C-2 perf-log 文档驱动（optimization_log.md 表格）单测 =====
 
 const perfLogSample = `---

@@ -37,15 +37,26 @@ type optEntry struct {
 
 // findOptimizationLog 从当前工作目录向上探测仓库根定位优化日志文档
 // （CLI 运行时 cwd=仓库根，但 go test 的 cwd=包目录，需向上查找使路径对任意 cwd 健壮）
+//
+// 候选路径含 docs/knowledge/ 与 docs/archive/ 两处：7b6cec715 把该卡从 knowledge 迁到
+// archive（知识库减负）时漏改本函数，只留单路径 → runPerfLog 全量报错、go test 长期红。
+// 走「多候选逐个探测」而非硬改单路径：文档再被归档/迁回时只需加候选，不必记得回来改这里。
+// 顺序即优先级（knowledge 在前：迁回后新位置自动胜出，无需删候选）。
 func findOptimizationLog() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
+	candidates := []string{
+		filepath.Join("docs", "knowledge", "optimization_log.md"),
+		filepath.Join("docs", "archive", "optimization_log.md"),
+	}
 	for {
-		p := filepath.Join(dir, "docs", "knowledge", "optimization_log.md")
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
+		for _, rel := range candidates {
+			p := filepath.Join(dir, rel)
+			if _, err := os.Stat(p); err == nil {
+				return p, nil
+			}
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -58,7 +69,7 @@ func findOptimizationLog() (string, error) {
 func runPerfLog(ctx *CmdContext) error {
 	docPath, err := findOptimizationLog()
 	if err != nil {
-		return newRuntimeErrf("优化日志文档不可读 docs/knowledge/optimization_log.md: %v（优化记录已改为文档单一事实来源，需在仓库内运行）", err)
+		return newRuntimeErrf("优化日志文档不可读 docs/knowledge|docs/archive/optimization_log.md: %v（优化记录已改为文档单一事实来源，需在仓库内运行）", err)
 	}
 	data, err := os.ReadFile(docPath)
 	if err != nil {

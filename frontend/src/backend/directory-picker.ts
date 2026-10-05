@@ -8,8 +8,8 @@
 //
 // 隶属 backend/：平台抽象层，调用 Wails 桥（getApp）和平台检测（platform/platform-web）。
 
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { getApp } from "./app.ts";
 import { getAndroidBridge, isViewerMode } from "./platform.ts";
@@ -34,22 +34,14 @@ export async function resolveAndroidRepoDir(): Promise<string | null> {
       const { GetDefaultRepoRoot } = await getApp();
       const dir = await GetDefaultRepoRoot();
       if (!dir) return null;
-      bus.emit("toast:show", {
-        msg: `${t("settings.path.autoRepoRoot")} ${dir}`,
-        duration: TOAST_MS.verbose,
-        type: "info",
-      });
+      toast(`${t("settings.path.autoRepoRoot")} ${dir}`, TOAST_MS.verbose, "info");
       return dir;
     }
     return null; // 桌面：由调用方走 Wails Dialog
   }
   // 未授权：先检查「所有文件访问」授权
   if (!bridge.hasStoragePermission?.()) {
-    bus.emit("toast:show", {
-      msg: t("settings.path.needStoragePermission"),
-      duration: TOAST_MS.verbose,
-      type: "warn",
-    });
+    toast(t("settings.path.needStoragePermission"), TOAST_MS.verbose, "warn");
     bridge.requestStoragePermission?.();
     return null;
   }
@@ -57,11 +49,7 @@ export async function resolveAndroidRepoDir(): Promise<string | null> {
   const { GetDefaultRepoRoot } = await getApp();
   const dir = await GetDefaultRepoRoot();
   if (!dir) return null;
-  bus.emit("toast:show", {
-    msg: `${t("settings.path.autoRepoRoot")} ${dir}`,
-    duration: TOAST_MS.verbose,
-    type: "info",
-  });
+  toast(`${t("settings.path.autoRepoRoot")} ${dir}`, TOAST_MS.verbose, "info");
   return dir;
 }
 

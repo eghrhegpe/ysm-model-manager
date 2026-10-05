@@ -17,6 +17,7 @@ import { registerShortcut } from "@/utils/dom/key-router.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { takePendingTreeSearch } from "@/utils/dom/search-pending.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -97,11 +98,7 @@ function toastThrottled(e: unknown, fallback: string): void {
   const now = Date.now();
   if (now - _lastMountErrorToastAt < MOUNT_ERROR_TOAST_MIN_GAP) return;
   _lastMountErrorToastAt = now;
-  bus.emit("toast:show", {
-    msg: `${friendlyError(e, fallback)}`,
-    duration: TOAST_MS.long,
-    type: "error",
-  });
+  toast(`${friendlyError(e, fallback)}`, TOAST_MS.long, "error");
 }
 
 export class AppTree extends WebComponentBase {
@@ -416,11 +413,7 @@ export class AppTree extends WebComponentBase {
       this._renderTree();
     } catch (e) {
       logError("app-tree", "root change Error", e);
-      bus.emit("toast:show", {
-        msg: `${friendlyError(e)}`,
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
+      toast(`${friendlyError(e)}`, TOAST_MS.verbose, "error");
     }
   }
   disconnectedCallback(): void {
@@ -591,19 +584,11 @@ export class AppTree extends WebComponentBase {
       return false;
     const paths = [...(this.selectState?.keys || [])];
     if (!paths.length) {
-      bus.emit("toast:show", {
-        msg: t("tree.selectFilesFirst"),
-        duration: TOAST_MS.success,
-        type: "warn",
-      });
+      toast(t("tree.selectFilesFirst"), TOAST_MS.success, "warn");
       return true;
     }
     if (!can("DeleteResourcePack")) {
-      bus.emit("toast:show", {
-        msg: t("tree.webNoDelete"),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("tree.webNoDelete"), TOAST_MS.normal, "warn");
       return true;
     }
     e.preventDefault();
@@ -721,18 +706,10 @@ export class AppTree extends WebComponentBase {
       await this._load();
       if (this._guard.stale(gen)) return; // P2-1 root 切换/新加载已发起 → 丢弃过期渲染
       this._renderTree();
-      bus.emit("toast:show", {
-        msg: `${t("tree.deleted", { ok, fail: fail || 0 })}`,
-        duration: TOAST_MS.normal,
-        type: "success",
-      });
+      toast(`${t("tree.deleted", { ok, fail: fail || 0 })}`, TOAST_MS.normal, "success");
     } catch (e) {
       // P2 修复：getApp/删除/刷新任一环节失败都要有出口，避免 unhandled rejection 静默
-      bus.emit("toast:show", {
-        msg: `${friendlyError(e)}`,
-        duration: TOAST_MS.long,
-        type: "error",
-      });
+      toast(`${friendlyError(e)}`, TOAST_MS.long, "error");
     } finally {
       this._deleting = false;
     }

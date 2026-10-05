@@ -8,6 +8,7 @@ import { rememberModelPath } from "@/core/model-path-store.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { flashBtn } from "@/utils/dom/feedback.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { parseModelName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -73,19 +74,11 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
   if (flCk) {
     e.stopPropagation();
     if (!can("ToggleEnable")) {
-      bus.emit("toast:show", {
-        msg: t("tree.webNoToggle"),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("tree.webNoToggle"), TOAST_MS.normal, "warn");
       return true;
     }
     if (vm.toggleBusy || vm.batchBusy) {
-      bus.emit("toast:show", {
-        msg: t("ctx.busyWait"),
-        duration: TOAST_MS.quick,
-        type: "info",
-      });
+      toast(t("ctx.busyWait"), TOAST_MS.quick, "info");
       return true;
     }
     vm.toggleBusy = true;
@@ -106,13 +99,13 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
       })
       .catch((err) => {
         logWarn("tree", `ToggleEnable 失败: ${fullPath}`, err);
-        bus.emit("toast:show", {
-          msg: t("tree.toggleFail", {
+        toast(
+          t("tree.toggleFail", {
             name: fullPath ? fullPath.split(/[/\\]/).pop() || "" : "",
           }),
-          duration: TOAST_MS.normal,
-          type: "error",
-        });
+          TOAST_MS.normal,
+          "error",
+        );
       })
       .finally(() => {
         vm.toggleBusy = false;
@@ -133,11 +126,7 @@ function atTeOpenAuthor(author: string): void {
     .then(({ OpenInBrowser }) => OpenInBrowser(url))
     .catch((err) => {
       logWarn("tree", "OpenInBrowser 失败:", err);
-      bus.emit("toast:show", {
-        msg: `${t("tree.browserFailed")}`,
-        duration: TOAST_MS.normal,
-        type: "error",
-      });
+      toast(`${t("tree.browserFailed")}`, TOAST_MS.normal, "error");
     });
 }
 
@@ -166,11 +155,7 @@ function atTeClickRowPreview(_ctx: AtTeCtx, e: MouseEvent, haPreview: HTMLElemen
   if (author) {
     atTeOpenAuthor(author);
   } else {
-    bus.emit("toast:show", {
-      msg: t("tree.noAuthor"),
-      duration: TOAST_MS.success,
-      type: "warn",
-    });
+    toast(t("tree.noAuthor"), TOAST_MS.success, "warn");
   }
   return true;
 }
@@ -182,18 +167,10 @@ function atTeClickRowCopy(_ctx: AtTeCtx, e: MouseEvent, haCopy: HTMLElement): bo
   navigator.clipboard
     ?.writeText(name)
     .then(() => {
-      bus.emit("toast:show", {
-        msg: `📋 ${t("tree.copied", { name })}`,
-        duration: TOAST_MS.quick,
-        type: "info",
-      });
+      toast(`📋 ${t("tree.copied", { name })}`, TOAST_MS.quick, "info");
     })
     .catch(() => {
-      bus.emit("toast:show", {
-        msg: `${t("tree.copyFailed")}`,
-        duration: TOAST_MS.success,
-        type: "error",
-      });
+      toast(`${t("tree.copyFailed")}`, TOAST_MS.success, "error");
     });
   return true;
 }
@@ -391,11 +368,7 @@ function atTeBindRenameInput(ctx: AtTeCtx): () => void {
         if (!vm._guard.stale(gen)) vm._renderTree();
       })
       .catch((err) => {
-        bus.emit("toast:show", {
-          msg: `${friendlyError(err, t("ctx.renameFail"))}`,
-          duration: TOAST_MS.verbose,
-          type: "error",
-        });
+        toast(`${friendlyError(err, t("ctx.renameFail"))}`, TOAST_MS.verbose, "error");
       });
   };
   container.addEventListener("keydown", onKeyDown);
@@ -437,19 +410,11 @@ function collectDirEntries(entries: TreeEntry[], prefix: string): TreeEntry[] {
 // ===== 文件夹批量启用/禁用 =====
 async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> {
   if (vm.batchBusy || vm.toggleBusy) {
-    bus.emit("toast:show", {
-      msg: t("ctx.busyWait"),
-      duration: TOAST_MS.quick,
-      type: "info",
-    });
+    toast(t("ctx.busyWait"), TOAST_MS.quick, "info");
     return;
   }
   if (!can("ToggleEnable")) {
-    bus.emit("toast:show", {
-      msg: t("tree.webNoToggle"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t("tree.webNoToggle"), TOAST_MS.normal, "warn");
     return;
   }
   vm.batchBusy = true;
@@ -508,21 +473,17 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
         bus.emit("sync:toggle:status");
       }
     }
-    bus.emit("toast:show", {
-      msg: t("tree.folderToggleResult", {
+    toast(
+      t("tree.folderToggleResult", {
         action: enable ? t("tree.enable") : t("tree.disable"),
         ok,
         fail,
       }),
-      duration: TOAST_MS.long,
-      type: fail > 0 ? "warn" : "success",
-    });
+      TOAST_MS.long,
+      fail > 0 ? "warn" : "success",
+    );
   } catch (err) {
-    bus.emit("toast:show", {
-      msg: `${friendlyError(err, t("tree.batchToggleFail"))}`,
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(`${friendlyError(err, t("tree.batchToggleFail"))}`, TOAST_MS.long, "error");
   } finally {
     vm.batchBusy = false;
   }

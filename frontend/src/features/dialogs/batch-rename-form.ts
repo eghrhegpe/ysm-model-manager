@@ -4,9 +4,9 @@
 // 本模块不产 HTML；#br-changed 等查询改走 shell.overlay（不再 document 全局 id）。
 // 方向：batch-rename.ts（公共 API + 壳）单向 import 本模块；本模块对核心文件仅 type-only 依赖。
 
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type {
@@ -48,11 +48,7 @@ function dgBrApplyReplace(
       const cnt2 = overlay?.querySelector("#br-changed") as HTMLElement | null;
       if (cnt2 && !cnt2.dataset.regexErr) {
         cnt2.dataset.regexErr = "1";
-        bus.emit("toast:show", {
-          msg: `${t("dialog.regexInvalid")}`,
-          duration: TOAST_MS.normal,
-          type: "warn",
-        });
+        toast(`${t("dialog.regexInvalid")}`, TOAST_MS.normal, "warn");
       }
       return;
     }
@@ -263,11 +259,7 @@ function dgBrBindApplyClick(
   thisEl.querySelector("#br-apply")?.addEventListener("click", async (): Promise<void> => {
     const changed = items.filter((it) => it.selected && it.changed);
     if (!changed.length) {
-      bus.emit("toast:show", {
-        msg: t("dialog.noFilesToRename"),
-        duration: TOAST_MS.success,
-        type: "info",
-      });
+      toast(t("dialog.noFilesToRename"), TOAST_MS.success, "info");
       return;
     }
     const seen = new Set<string>();
@@ -277,11 +269,7 @@ function dgBrBindApplyClick(
       return false;
     });
     if (dup) {
-      bus.emit("toast:show", {
-        msg: `${t("dialog.renameConflict", { name: dup.newName })}`,
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
+      toast(`${t("dialog.renameConflict", { name: dup.newName })}`, TOAST_MS.verbose, "error");
       return;
     }
     const btn = thisEl.querySelector("#br-apply") as HTMLButtonElement;
@@ -296,11 +284,7 @@ function dgBrBindApplyClick(
         })),
       );
     } catch (e) {
-      bus.emit("toast:show", {
-        msg: `${t("dialog.batchRenameFailed")}: ${friendlyError(e)}`,
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
+      toast(`${t("dialog.batchRenameFailed")}: ${friendlyError(e)}`, TOAST_MS.verbose, "error");
     } finally {
       btn.innerHTML = `${UI_ICONS.edit} ${t("dialog.doRename")}`;
       btn.disabled = false;

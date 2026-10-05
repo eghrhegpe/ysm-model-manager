@@ -4,7 +4,6 @@
 // apply() 挂入场景，dispose() 移除并释放，作用域不泄漏到其它预览。
 
 import * as THREE from "three";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
@@ -21,6 +20,7 @@ import { clampFieldValue, getPresetKeys } from "@/preview-3d/state/env-state-sch
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { buildGroundNodes } from "./ground-menu.ts";
 import { normalizeGroundLegacyState } from "./ground-migrations.ts";
@@ -556,11 +556,7 @@ export class GroundCapability implements SceneCapability {
           // 失败对用户可见（锐评修复 2026-09-20：旧行为静默 dbg，选图失败零反馈）；
           // 口径对齐 infra/preview-loading showLoadFailure：bus 发 toast，cap 不直接碰 DOM。
           dbg("ground-tex-load-fail", { name: file.name });
-          bus.emit("toast:show", {
-            msg: t("preview.groundMatLoadFailed", { name: file.name }),
-            duration: TOAST_MS.normal,
-            type: "error",
-          });
+          toast(t("preview.groundMatLoadFailed", { name: file.name }), TOAST_MS.normal, "error");
         })
         .finally(() => URL.revokeObjectURL(url));
     };

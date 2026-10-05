@@ -10,6 +10,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { takeRepoSearchFocusPending } from "@/utils/dom/focus-pending.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { modalPrompt } from "@/utils/dom/modal-prompt.ts";
+import { toast, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -101,11 +102,11 @@ async function runBatchRename(
   vm.selectState.lastKey = null;
   await reload(vm);
   bus.emit("stats:refresh");
-  bus.emit("toast:show", {
-    msg: `${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
-    duration: TOAST_MS.normal,
-    type: fail > 0 ? "warn" : "success",
-  });
+  toast(
+    `${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
+    TOAST_MS.normal,
+    fail > 0 ? "warn" : "success",
+  );
 }
 
 async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
@@ -129,11 +130,7 @@ async function atBeHandleDirRename(vm: AppTree, dir: string): Promise<void> {
     await reload(vm);
     bus.emit("stats:refresh");
   } catch (e) {
-    bus.emit("toast:show", {
-      msg: `${friendlyError(e)}`,
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toastError(e);
   }
 }
 
@@ -154,11 +151,7 @@ async function atBeHandleDirMkdir(vm: AppTree, dir: string): Promise<void> {
     await CreateDir(absDir);
     await reload(vm);
   } catch (e) {
-    bus.emit("toast:show", {
-      msg: `${friendlyError(e)}`,
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toastError(e);
   }
 }
 
@@ -206,17 +199,9 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     const suffix = errors.length
       ? t("tree.recycledFailSuffix", { fail: errors.length, detail: errors.slice(0, 3).join("; ") })
       : "";
-    bus.emit("toast:show", {
-      msg: `♻️ ${t("tree.recycled", { count })}${suffix}`,
-      duration: TOAST_MS.normal,
-      type: "success",
-    });
+    toast(`♻️ ${t("tree.recycled", { count })}${suffix}`, TOAST_MS.normal, "success");
   } catch (e) {
-    bus.emit("toast:show", {
-      msg: `${friendlyError(e)}`,
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toastError(e);
   }
 }
 
@@ -229,11 +214,7 @@ async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void>
     const label = RESOURCE_TYPE_LABELS[rtype] || rtype;
     const entries = (await ScanModelEntriesFiltered(absDir, rtype, "", label)) || [];
     if (!entries?.length) {
-      bus.emit("toast:show", {
-        msg: `📂 ${t("tree.dirEmpty")}`,
-        duration: TOAST_MS.success,
-        type: "warn",
-      });
+      toast(`📂 ${t("tree.dirEmpty")}`, TOAST_MS.success, "warn");
       return;
     }
     await showBatchRenameDialog(
@@ -243,11 +224,7 @@ async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void>
       batchRenameTpl,
     );
   } catch (e) {
-    bus.emit("toast:show", {
-      msg: `${friendlyError(e)}`,
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toastError(e);
   }
 }
 
@@ -265,11 +242,7 @@ async function atBeHandleBatchRename(vm: AppTree, paths: string[]): Promise<void
       batchRenameTpl,
     );
   } catch (e) {
-    bus.emit("toast:show", {
-      msg: `${friendlyError(e)}`,
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toastError(e);
   }
 }
 
@@ -307,11 +280,7 @@ async function reload(vm: AppTree): Promise<void> {
     if (atBeStale(vm, gen)) return;
     logWarn("bus", "reload 失败:", err);
     vm.entries = [];
-    bus.emit("toast:show", {
-      msg: `${friendlyError(err, t("tree.reloadFailed"))}`,
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(`${friendlyError(err, t("tree.reloadFailed"))}`, TOAST_MS.long, "error");
   }
   if (atBeStale(vm, gen)) return;
   vm._renderTree();
@@ -323,19 +292,11 @@ async function runBatchToggle(
   opts: { prefix?: string; label: string },
 ): Promise<void> {
   if (!can("ToggleEnable")) {
-    bus.emit("toast:show", {
-      msg: t("tree.webNoToggle"),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t("tree.webNoToggle"), TOAST_MS.normal, "warn");
     return;
   }
   if (vm.batchBusy || vm.toggleBusy) {
-    bus.emit("toast:show", {
-      msg: t("tree.batchBusyWait"),
-      duration: TOAST_MS.quick,
-      type: "info",
-    });
+    toast(t("tree.batchBusyWait"), TOAST_MS.quick, "info");
     return;
   }
   vm.batchBusy = true;
@@ -376,17 +337,13 @@ async function runBatchToggle(
         bus.emit("sync:toggle:status");
       }
     }
-    bus.emit("toast:show", {
-      msg: `${opts.label}: ${ok} ${t("tree.success")}, ${fail} ${t("tree.failed")}`,
-      duration: TOAST_MS.normal,
-      type: fail > 0 ? "warn" : "success",
-    });
+    toast(
+      `${opts.label}: ${ok} ${t("tree.success")}, ${fail} ${t("tree.failed")}`,
+      TOAST_MS.normal,
+      fail > 0 ? "warn" : "success",
+    );
   } catch (err) {
-    bus.emit("toast:show", {
-      msg: `${friendlyError(err)}`,
-      duration: TOAST_MS.normal,
-      type: "error",
-    });
+    toastError(err);
   } finally {
     vm.batchBusy = false;
   }

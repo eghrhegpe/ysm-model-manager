@@ -8,13 +8,11 @@ import { installYsmDecodeBridge } from "@/backend/ysm-decode-bridge.ts";
 import { registerErrorDiary } from "@/core/error-diary.ts";
 import { initI18n, setLocaleHost } from "@/core/i18n/locale.ts";
 import { checkUpdateSilent } from "@/features/maintenance/version-updater.ts";
-import { friendlyError } from "@/utils/dom/errors.ts";
 import { registerShortcut } from "@/utils/dom/key-router.ts";
 import { makeLocaleHost } from "@/utils/dom/locale-host.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { applyUIPrefs } from "@/views/app-content/settings/ui-prefs.ts";
 import { registerCoiServiceWorker } from "@/workers/coi-sw.ts";
-import { bus } from "./bus.ts";
 import { revealMainWindow } from "./startup-reveal.ts";
 
 // ===== 懒加载 Web Component（原 utils/module-loader.ts，单消费者 → 并入装配层）=====
@@ -28,11 +26,7 @@ export const loadView = (name: string, importer: () => Promise<unknown>): Promis
     .then(() => undefined)
     .catch((e) => {
       console.warn(`[module] 组件加载失败: ${name}`, e);
-      bus.emit("toast:show", {
-        msg: `${friendlyError(e, "组件加载失败")}`,
-        duration: TOAST_MS.long,
-        type: "error",
-      });
+      toastError(e, "组件加载失败");
     });
 };
 
@@ -88,11 +82,7 @@ async function runStartupSteps(steps: StartupStep[]): Promise<void> {
     } catch (e) {
       console.warn(`[${step.tag}] ${step.failMsg}`, e);
       if (step.toast) {
-        bus.emit("toast:show", {
-          msg: step.toast.prefix + friendlyError(e, step.toast.fallback),
-          duration: TOAST_MS.long,
-          type: "error",
-        });
+        toastError(e, step.toast.fallback, step.toast.prefix.replace(/ $/, ""));
       }
     }
   }
@@ -182,14 +172,13 @@ if (typeof window !== "undefined") {
     const theme = safeGet("theme") || "system";
     if (theme === "system") {
       applyTheme("system");
-      bus.emit("toast:show", {
-        msg: `已跟随系统切换至${e.matches ? "深色" : "浅色"}主题`,
-        duration: TOAST_MS.success,
-        type: "info",
-      });
+      toast(`已跟随系统切换至${e.matches ? "深色" : "浅色"}主题`, TOAST_MS.success, "info");
     }
   });
 }
+
+// ===== 通知原语（ADR-270-d4）：toast:show 一律走 utils/dom/toast.ts，禁裸发 bus.emit =====
+import { toast, toastError } from "@/utils/dom/toast.ts";
 
 // ===== F12 / Ctrl+Shift+I 打开 DevTools（仅开发/调试环境）=====
 // 通过查询参数 ?dev=1 或 localStorage 标志启用

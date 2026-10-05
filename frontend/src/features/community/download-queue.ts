@@ -10,6 +10,7 @@ import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
@@ -309,11 +310,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
     const { GetRepoRoot } = await communityGetApp();
     const filesRoot = await GetRepoRoot(currentRepoType());
     if (!filesRoot) {
-      bus.emit("toast:show", {
-        msg: t("workshop.configureRepo"),
-        duration: TOAST_MS.normal,
-        type: "warn",
-      });
+      toast(t("workshop.configureRepo"), TOAST_MS.normal, "warn");
       return;
     }
     // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
@@ -333,11 +330,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
     await enqueueDownloads(tasks);
   } catch (e) {
     rollbackToIdle();
-    bus.emit("toast:show", {
-      msg: `${t("workshop.enqueueFailed")}: ${safeErrorMessage(e)}`,
-      duration: TOAST_MS.verbose,
-      type: "error",
-    });
+    toast(`${t("workshop.enqueueFailed")}: ${safeErrorMessage(e)}`, TOAST_MS.verbose, "error");
     cmDqCleanupProgressUI(ctx);
   }
 }

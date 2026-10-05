@@ -14,7 +14,6 @@
 
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { SemanticBoneMap } from "@/preview-3d/bone/semantic-bones.ts";
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
@@ -62,7 +61,7 @@ import {
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { noAnimationsCSS } from "@/utils/dom/css.ts";
 import { rememberTrigger } from "@/utils/dom/focus-restore.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
 // mount3D 生命周期闭包 → mount-session.ts；rAF 循环 → render-loop.ts
 import {
@@ -694,7 +693,7 @@ function mountRootMenu(ctx: MountCtx, deps: RootMenuDeps): PreviewMenuHandle {
     },
     unloadModel: (id: string) => unloadSessionModel(ctx, id),
     toast: (msg: string): void => {
-      bus.emit("toast:show", { msg, duration: TOAST_MS.normal });
+      toast(msg);
     },
     closeAllOverlays: (): void => {
       menuHandle.dispose();

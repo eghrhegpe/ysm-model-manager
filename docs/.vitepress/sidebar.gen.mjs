@@ -1553,6 +1553,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
       },
       {
+        "text": "ADR-270-d4：toast:show 发射端收敛战役：162 绕行点迁入 utils/dom/toast.ts 原语，登记表逐条销账",
+        "link": "/adr/decisions/ADR-270-d4-toast-emitter-convergence"
+      },
+      {
         "text": "ADR-270-d3：bus 合法发射者登记表闸（刀 B）：发射端从自由裸 emit 收敛为在册登记",
         "link": "/adr/decisions/ADR-270-d3-bus-legal-emitter-registry"
       },

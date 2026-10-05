@@ -2,9 +2,9 @@
 // 收敛两个 worker 解析开关：fbx-worker、mmd-pmx-worker（fbx-adapter.ts / mmd-adapter.ts 读取）。
 // 默认关闭（opt-in）：主线程解析为稳定基线；开启后走 worker 解析，失败自动降级主线程——
 // 设置页提供手动开关作为回退保险。读写统一走 safeGet/safeSet（隐私模式安全）。
-import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 // 魔法数值收敛：偏好变更成功 toast 展示时长（ms）
@@ -41,11 +41,7 @@ export function initWorkerPrefs(root: ShadowRoot): void {
     input.addEventListener("change", () => {
       const checked = input.checked;
       safeSet(storageKey, checked ? "1" : "0");
-      bus.emit("toast:show", {
-        msg: checked ? t(onMsg) : t(offMsg),
-        duration: TOAST_DURATION_MS,
-        type: "success",
-      });
+      toast(checked ? t(onMsg) : t(offMsg), TOAST_DURATION_MS, "success");
     });
   }
 }

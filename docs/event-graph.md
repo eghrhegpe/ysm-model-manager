@@ -35,7 +35,7 @@
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
-| `toast:show` | 172 | 2 | 0 | 0 | ✅ |
+| `toast:show` | 91 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 15 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
 | `ui:card-density` | 1 | 1 | 0 | 0 | ✅ |
@@ -64,14 +64,14 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 50 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 51 |
 
 ### `community:clear-cache`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 116 |
+| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 117 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -83,12 +83,12 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 133 |
+| cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 126 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 139 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 283 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 309 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 321 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 260 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 286 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 298 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -105,7 +105,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 45 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 46 |
 
 ### `dir:mkdir`
 
@@ -117,7 +117,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 35 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 36 |
 
 ### `dir:recycle`
 
@@ -129,7 +129,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 40 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 41 |
 
 ### `dir:rename`
 
@@ -141,7 +141,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 30 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 31 |
 
 ### `instance:clear`
 
@@ -203,9 +203,9 @@
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 247 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
-| atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 153 |
-| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 239 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 671 |
+| atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 142 |
+| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 216 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 656 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -255,7 +255,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 61 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 62 |
 
 ### `repo:rtype-changed`
 
@@ -305,11 +305,11 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 107 |
-| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 123 |
+| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 124 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 19 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 171 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 56 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 185 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 49 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 177 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 127 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 197 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 132 |
@@ -325,11 +325,11 @@
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 313 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 225 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 244 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 103 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 130 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 205 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 105 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 386 |
+| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 104 |
+| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 131 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 198 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 98 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 363 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -368,9 +368,9 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 376 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 103 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 508 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 337 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 96 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 473 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -382,59 +382,17 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| (顶层) | `frontend/src/app-modules.ts` | 31 |
-| runStartupSteps | `frontend/src/app-modules.ts` | 91 |
-| (顶层) | `frontend/src/app-modules.ts` | 185 |
-| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 37 |
-| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 48 |
-| resolveAndroidRepoDir | `frontend/src/backend/directory-picker.ts` | 60 |
-| runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 96 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 312 |
-| cmDqEnqueue | `frontend/src/features/community/download-queue.ts` | 336 |
-| cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 69 |
-| cmReBindDlSelected | `frontend/src/features/community/repo-events-bindings.ts` | 81 |
-| cmReHandleSingleDownload | `frontend/src/features/community/repo-events-bindings.ts` | 155 |
-| cmReBindRowClick | `frontend/src/features/community/repo-events-bindings.ts` | 205 |
-| cmReBindRowClick | `frontend/src/features/community/repo-events-bindings.ts` | 239 |
-| dgBrApplyReplace | `frontend/src/features/dialogs/batch-rename-form.ts` | 51 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 266 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 280 |
-| dgBrBindApplyClick | `frontend/src/features/dialogs/batch-rename-form.ts` | 299 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 45 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 63 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 82 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 92 |
-| handleTreeDrop | `frontend/src/features/dnd/import-dnd.ts` | 110 |
-| bindTreeDnD | `frontend/src/features/dnd/import-dnd.ts` | 221 |
 | (顶层) | `frontend/src/features/dnd/pack-dnd.ts` | 42 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 51 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 189 |
 | initRecycleBin | `frontend/src/features/maintenance/recycle-bin.ts` | 313 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 159 |
-| promptUpdate | `frontend/src/features/maintenance/version-updater.ts` | 168 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 194 |
-| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 203 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 224 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 259 |
-| initVersionUpdater | `frontend/src/features/maintenance/version-updater.ts` | 269 |
-| mountRootMenu | `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 697 |
-| beginSwitch | `frontend/src/preview-3d/adapters/switch-preview.ts` | 169 |
-| guardGpuBudget | `frontend/src/preview-3d/infra/gpu-budget.ts` | 54 |
-| warnLargeModelIfNeeded | `frontend/src/preview-3d/infra/large-model.ts` | 65 |
-| showLoadFailure | `frontend/src/preview-3d/infra/preview-loading.ts` | 44 |
+| checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 187 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
-| copyWithToast | `frontend/src/views/app-content/diagnostics/copy-toast.ts` | 26 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 32 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 43 |
 | dgInBindRefreshClear | `frontend/src/views/app-content/diagnostics/init.ts` | 49 |
 | dgInCopyActiveLog | `frontend/src/views/app-content/diagnostics/init.ts` | 104 |
-| webGate | `frontend/src/views/app-content/diagnostics/web-gate.ts` | 29 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 181 |
 | bindTabs | `frontend/src/views/app-content/init-pages.ts` | 229 |
 | initSettingsPage | `frontend/src/views/app-content/init-pages.ts` | 346 |
-| initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 59 |
-| initDefaultPagePrefs | `frontend/src/views/app-content/settings/default-page.ts` | 70 |
 | onMirrorChange | `frontend/src/views/app-content/settings/init.ts` | 102 |
 | stgBindUpdateInterval | `frontend/src/views/app-content/settings/init.ts` | 147 |
 | emitRelinkToast | `frontend/src/views/app-content/settings/init.ts` | 185 |
@@ -443,9 +401,6 @@
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 237 |
 | relinkAllInstances | `frontend/src/views/app-content/settings/init.ts` | 257 |
 | stgBindLinkMode | `frontend/src/views/app-content/settings/init.ts` | 331 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 153 |
-| tdRenderKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 167 |
-| initKeymap | `frontend/src/views/app-content/settings/keymap.ts` | 186 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 251 |
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 257 |
@@ -453,11 +408,6 @@
 | initAdvancedGrid | `frontend/src/views/app-content/settings/path-cards.ts` | 286 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 309 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 329 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 177 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 188 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 208 |
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 220 |
-| initWorkerPrefs | `frontend/src/views/app-content/settings/worker-prefs.ts` | 44 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
@@ -507,37 +457,6 @@
 | show | `frontend/src/views/app-toast/index.ts` | 163 |
 | show | `frontend/src/views/app-toast/index.ts` | 182 |
 | show | `frontend/src/views/app-toast/index.ts` | 191 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 104 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 132 |
-| atBeHandleDirMkdir | `frontend/src/views/app-tree/bus-handlers.ts` | 157 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 209 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 215 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 232 |
-| atBeHandleDirBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 246 |
-| atBeHandleBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 268 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 310 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 326 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 334 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 379 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 385 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 76 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 84 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 109 |
-| atTeOpenAuthor | `frontend/src/views/app-tree/events.ts` | 136 |
-| atTeClickRowPreview | `frontend/src/views/app-tree/events.ts` | 169 |
-| atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 185 |
-| atTeClickRowCopy | `frontend/src/views/app-tree/events.ts` | 192 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 394 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 440 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 448 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 511 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 521 |
-| toastThrottled | `frontend/src/views/app-tree/index.ts` | 100 |
-| _attrChangeReloadAsync | `frontend/src/views/app-tree/index.ts` | 419 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 594 |
-| _onKeyDelete | `frontend/src/views/app-tree/index.ts` | 602 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 724 |
-| _deleteSelected | `frontend/src/views/app-tree/index.ts` | 731 |
 | toastLoadError | `frontend/src/views/app-tree/loader.ts` | 32 |
 | maybePromptAndroidStorage | `frontend/src/views/app-tree/loader.ts` | 56 |
 | runImport | `frontend/src/views/app-tree/toolbar-commands.ts` | 61 |
@@ -567,11 +486,11 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 106 |
-| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 122 |
+| cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 123 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 172 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 57 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 184 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 50 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 128 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 198 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
@@ -585,7 +504,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 55 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 56 |
 
 ### `tree:set-search`
 
@@ -597,16 +516,16 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 304 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 301 |
 
 ### `ui:card-density`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 207 |
+| initUiPrefs | `frontend/src/views/app-content/settings/ui-prefs.ts` | 200 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 68 |
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 69 |

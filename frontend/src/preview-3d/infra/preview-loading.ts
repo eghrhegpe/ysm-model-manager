@@ -4,10 +4,10 @@
 // adapter 各自拼接的进度条 HTML（仅 emoji / 进度模式不同）。抽一处收口，
 // 改文案 / 改样式只需改这一处。
 
-import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -41,9 +41,5 @@ export function renderLoadingState(
 /** 3D 预览加载失败：loadingEl 渲染失败提示 + 全局 toast 报错 */
 export function showLoadFailure(loadingEl: HTMLElement, e: unknown): void {
   loadingEl.innerHTML = `<div style="font-size:var(--fs-xl)">${UI_ICONS.warning}</div><div>${t("preview.loadFailed")}: ${esc(safeErrorMessage(e))}</div>`;
-  bus.emit("toast:show", {
-    msg: `${friendlyError(e, t("preview.loadFailed"))}`,
-    duration: TOAST_MS.long,
-    type: "error",
-  });
+  toast(`${friendlyError(e, t("preview.loadFailed"))}`, TOAST_MS.long, "error");
 }

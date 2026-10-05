@@ -5,9 +5,9 @@
 // 判定口径 + toast 文案收在本模块，避免两处各写一遍导致漂移。
 
 import type * as THREE from "three";
-import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { textureCache } from "@/preview-3d/texture/texture-cache.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { evaluateGpuLoad, sampleGpuLoad } from "./gpu-load.ts";
 import { resolveGpuLoadLimits } from "./gpu-load-calibrate.ts";
@@ -51,10 +51,6 @@ export function guardGpuBudget(renderer: THREE.WebGLRenderer, exceededKey: Local
     resolveGpuLoadLimits(),
   );
   if (verdict.ok) return true;
-  bus.emit("toast:show", {
-    msg: t(exceededKey, { reasons: verdict.reasons.join("，") }),
-    duration: TOAST_MS.verbose,
-    type: "warn",
-  });
+  toast(t(exceededKey, { reasons: verdict.reasons.join("，") }), TOAST_MS.verbose, "warn");
   return false;
 }

@@ -6,6 +6,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -66,11 +67,7 @@ export function cmReBindDlSelected(ctx: CmReCtx, listeners: ListenerRef[]): void
   if (dlSelBtn) {
     cmReListen(listeners, dlSelBtn, "click", async () => {
       if (queue.isDownloading()) {
-        bus.emit("toast:show", {
-          msg: t("workshop.downloading"),
-          duration: TOAST_MS.success,
-          type: "info",
-        });
+        toast(t("workshop.downloading"), TOAST_MS.success, "info");
         return;
       }
       if (!selectedSet.size) return;
@@ -78,11 +75,7 @@ export function cmReBindDlSelected(ctx: CmReCtx, listeners: ListenerRef[]): void
         const tasks = buildDownloadTasks(models, selectedSet, dlPrefix);
         await queue.enqueue(tasks);
       } catch (e) {
-        bus.emit("toast:show", {
-          msg: friendlyError(e, "下载失败"),
-          duration: TOAST_MS.normal,
-          type: "error",
-        });
+        toast(friendlyError(e, "下载失败"), TOAST_MS.normal, "error");
       }
     });
   }
@@ -152,11 +145,7 @@ async function cmReHandleSingleDownload(
   const size = Number.isFinite(parsedSize) && parsedSize > 0 ? parsedSize : 0;
   const decision = classifyDownloadSize(size);
   if (decision === "reject") {
-    bus.emit("toast:show", {
-      msg: `${t("workshop.fileTooLarge")}`,
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(`${t("workshop.fileTooLarge")}`, TOAST_MS.normal, "warn");
     return;
   }
   if (decision === "confirm") {
@@ -202,11 +191,7 @@ export function cmReBindRowClick(ctx: CmReCtx, listeners: ListenerRef[]): void {
         const dlBtn = target.closest('.gh-icon-btn[data-action="download"]') as HTMLElement | null;
         if (dlBtn) {
           if (queue.isDownloading()) {
-            bus.emit("toast:show", {
-              msg: t("workshop.downloading"),
-              duration: TOAST_MS.success,
-              type: "info",
-            });
+            toast(t("workshop.downloading"), TOAST_MS.success, "info");
             return;
           }
           const row = dlBtn.closest(".gh-row");
@@ -236,11 +221,7 @@ export function cmReBindRowClick(ctx: CmReCtx, listeners: ListenerRef[]): void {
           return;
         }
       } catch (e) {
-        bus.emit("toast:show", {
-          msg: friendlyError(e, "操作失败"),
-          duration: TOAST_MS.normal,
-          type: "error",
-        });
+        toast(friendlyError(e, "操作失败"), TOAST_MS.normal, "error");
       }
     });
   }

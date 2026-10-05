@@ -21,6 +21,7 @@ import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { friendlyError, isFileExistsError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { CollectedEntry } from "./collector.ts";
 import { importGetApp } from "./import-deps.ts";
@@ -43,14 +44,6 @@ export interface ImportSession {
   ): Promise<{ imported: number; failed: number }>;
 }
 
-const toast = (
-  msg: string,
-  type: "success" | "error" | "warn" | "info",
-  duration: number = TOAST_MS.normal,
-): void => {
-  bus.emit("toast:show", { msg, duration, type });
-};
-
 /** 刷新仓库展示（统计 + 树） */
 const refreshRepo = (): void => {
   bus.emit("stats:refresh");
@@ -68,7 +61,7 @@ export function createImportSession(): ImportSession {
   /** 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） */
   async function directImport(file: File): Promise<void> {
     if (file.name.toLowerCase() === "ysm.json") {
-      toast(t("import.ysmJsonHint"), "warn", 4000);
+      toast(t("import.ysmJsonHint"), 4000, "warn");
       return;
     }
     if (file.size > MAX_IMPORT_BYTES) {
@@ -77,14 +70,14 @@ export function createImportSession(): ImportSession {
           name: file.name,
           mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
         }),
-        "warn",
         TOAST_MS.long,
+        "warn",
       );
       return;
     }
     const key = `${file.name}:${file.size}:${file.lastModified}`;
     if (inFlight.has(key)) {
-      toast(t("import.busyImporting"), "warn", TOAST_MS.success);
+      toast(t("import.busyImporting"), TOAST_MS.success, "warn");
       return;
     }
     inFlight.add(key);
@@ -93,9 +86,9 @@ export function createImportSession(): ImportSession {
       const { ImportModelFile } = await importGetApp();
       await ImportModelFile(file.name, base64);
       refreshRepo();
-      toast(`${t("import.success")}: ${file.name}`, "success", TOAST_MS.success);
+      toast(`${t("import.success")}: ${file.name}`, TOAST_MS.success, "success");
     } catch (e) {
-      toast(`${t("import.failed")}: ${friendlyError(e)}`, "error", TOAST_MS.verbose);
+      toast(`${t("import.failed")}: ${friendlyError(e)}`, TOAST_MS.verbose, "error");
     } finally {
       inFlight.delete(key);
     }
@@ -106,7 +99,7 @@ export function createImportSession(): ImportSession {
     const firstFile = files.length > 0 ? files[0].file : null;
     const dirKey = `${dir}:${firstFile ? `${firstFile.name}:${firstFile.size}:${firstFile.lastModified}` : ""}`;
     if (inFlight.has(dirKey)) {
-      toast(t("import.busyImporting"), "warn", TOAST_MS.success);
+      toast(t("import.busyImporting"), TOAST_MS.success, "warn");
       return;
     }
     inFlight.add(dirKey);
@@ -116,7 +109,7 @@ export function createImportSession(): ImportSession {
     try {
       const { items, skipped } = await buildFolderItems(dir, files);
       if (!items.length) {
-        toast(t("import.emptyFolder"), "error", TOAST_MS.verbose);
+        toast(t("import.emptyFolder"), TOAST_MS.verbose, "error");
         return;
       }
       const App = await importGetApp();
@@ -127,18 +120,18 @@ export function createImportSession(): ImportSession {
           console.warn(
             `[import] ImportModelFolderTo 不可用（旧桥/Android 时序），降级为内容推断：rtype=${rtype}`,
           );
-          toast(t("import.contextRouteUnavailable"), "warn", TOAST_MS.verbose);
+          toast(t("import.contextRouteUnavailable"), TOAST_MS.verbose, "warn");
         }
         await App.ImportModelFolder(folderName, subpath, items);
       }
       refreshRepo();
       const skipHint = skipped > 0 ? `（${skipped} 个文件读取失败已跳过）` : "";
-      toast(`${t("import.success")}: ${folderName}${skipHint}`, "success", TOAST_MS.info);
+      toast(`${t("import.success")}: ${folderName}${skipHint}`, TOAST_MS.info, "success");
     } catch (e) {
       if (isFileExistsError(e)) {
-        toast(`${folderName} ${t("import.alreadyExists")}`, "error", TOAST_MS.verbose);
+        toast(`${folderName} ${t("import.alreadyExists")}`, TOAST_MS.verbose, "error");
       } else {
-        toast(`${t("import.failed")}: ${friendlyError(e)}`, "error", TOAST_MS.verbose);
+        toast(`${t("import.failed")}: ${friendlyError(e)}`, TOAST_MS.verbose, "error");
       }
     } finally {
       inFlight.delete(dirKey);
@@ -173,24 +166,19 @@ export function createImportSession(): ImportSession {
   ): Promise<{ imported: number; failed: number }> {
     try {
       const r = await importWebFiles(files, currentRepoType());
-      bus.emit("toast:show", {
-        msg:
-          r.failed > 0
-            ? `✅ ${r.imported} 个导入成功，${r.failed} 个失败`
-            : `✅ ${r.imported} 个模型已导入浏览器模型库`,
-        duration: TOAST_MS.verbose,
-        type: r.failed > 0 ? "warn" : "success",
-      });
+      toast(
+        r.failed > 0
+          ? `${r.imported} 个导入成功，${r.failed} 个失败`
+          : `${r.imported} 个模型已导入浏览器模型库`,
+        TOAST_MS.verbose,
+        r.failed > 0 ? "warn" : "success",
+      );
       bus.emit("tree:reload");
       bus.emit("stats:refresh");
       return r;
     } catch (e) {
       console.error("[import-web] importWebFiles 失败:", e);
-      bus.emit("toast:show", {
-        msg: `${t("import.processError")}: ${friendlyError(e)}`,
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
+      toast(`${t("import.processError")}: ${friendlyError(e)}`, TOAST_MS.verbose, "error");
       return { imported: 0, failed: files.length };
     } finally {
       onFinally?.();

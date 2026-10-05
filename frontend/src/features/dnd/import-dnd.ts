@@ -4,7 +4,6 @@
 
 import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { CollectedEntry } from "@/features/import/collector.ts";
 import { executeCollected, importWebFilesWithToast } from "@/features/import/executor.ts";
@@ -14,6 +13,7 @@ import { logError } from "@/utils/base/primitives/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { ALL_EXTS } from "@/utils/resource/extensions.ts";
 import { isImportableFile } from "@/utils/resource/importable.ts";
@@ -42,11 +42,7 @@ export async function handleTreeDrop(
   if (isEditable(e.target)) return;
 
   if (isBusy()) {
-    bus.emit("toast:show", {
-      msg: `⏳ ${t("import.busyImporting")}`,
-      duration: TOAST_MS.success,
-      type: "info",
-    });
+    toast(`⏳ ${t("import.busyImporting")}`, TOAST_MS.success, "info");
     return;
   }
   setBusy(true);
@@ -60,11 +56,7 @@ export async function handleTreeDrop(
     if (isWebPlatform()) {
       const files = Array.from(e.dataTransfer?.files || []);
       if (files.length === 0) {
-        bus.emit("toast:show", {
-          msg: "网页版暂不支持文件夹导入，请拖入 .ysm 等模型文件",
-          duration: TOAST_MS.verbose,
-          type: "warn",
-        });
+        toast("网页版暂不支持文件夹导入，请拖入 .ysm 等模型文件", TOAST_MS.verbose, "warn");
         return;
       }
       await importWebFilesWithToast(files);
@@ -79,21 +71,17 @@ export async function handleTreeDrop(
     // 仅提示超限（避免 oversize toast 之后再误导性弹「未检测到支持文件」）
     if (collected0.length === 0) {
       logDrop("drop: 收集 0 文件（webkitGetAsEntry fallback 也空）");
-      bus.emit("toast:show", {
-        msg: `📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`,
-        duration: TOAST_MS.normal,
-        type: "info",
-      });
+      toast(`📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`, TOAST_MS.normal, "info");
       return;
     }
     // oversize 逐文件过滤
     const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
     if (oversized.length > 0) {
-      bus.emit("toast:show", {
-        msg: `${oversized.length} 个文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限已跳过（${oversized[0].file.name}${oversized.length > 1 ? " 等" : ""}）`,
-        duration: TOAST_MS.long,
-        type: "warn",
-      });
+      toast(
+        `${oversized.length} 个文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限已跳过（${oversized[0].file.name}${oversized.length > 1 ? " 等" : ""}）`,
+        TOAST_MS.long,
+        "warn",
+      );
     }
     const collected = collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
     if (collected.length === 0) return; // 全被 oversize 滤除：超限提示已足够
@@ -107,11 +95,7 @@ export async function handleTreeDrop(
     logDrop(`drop: 导入完成 folders=${r.folders} singles=${r.singles}`);
     if (r.folders === 0 && r.singles === 0 && total > 0) {
       logDrop("drop: execute 返回 0 成功但 total>0（全部被 filter 过滤）");
-      bus.emit("toast:show", {
-        msg: `📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`,
-        duration: TOAST_MS.normal,
-        type: "info",
-      });
+      toast(`📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`, TOAST_MS.normal, "info");
     }
   } finally {
     setBusy(false);
@@ -218,13 +202,7 @@ export function bindTreeDnD(
     const rt = typeof rtype === "function" ? rtype() : rtype;
     void handleTreeDrop(e, isBusy, setBusy, rt).catch((err) => {
       logError("tree-dnd", "拖放处理失败", err);
-      bus.emit("toast:show", {
-        // 显式化：friendlyError 展示 Go 结构化错误（ADR-082 续），
-        // 未归类 Code 透传 Reason/Suggestion 并剥离内部路径
-        msg: `${t("import.processError")}: ${friendlyError(err)}`,
-        duration: TOAST_MS.verbose,
-        type: "error",
-      });
+      toast(`${t("import.processError")}: ${friendlyError(err)}`, TOAST_MS.verbose, "error");
     });
   };
 

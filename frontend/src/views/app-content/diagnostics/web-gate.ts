@@ -13,8 +13,8 @@
 // 为什么不放进 perf-common.ts：本页不止性能面板需要它（conflicts 的两种扫描同样要拦），
 // 而 perf-common 是性能面板的共享层，让冲突扫描 import 它是跨域依赖；故单独成叶模块。
 import { isWebPlatform } from "@/backend/platform-web.ts";
-import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 /**
@@ -26,11 +26,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
  */
 export function webGate(key: LocaleKey): boolean {
   if (isWebPlatform()) {
-    bus.emit("toast:show", {
-      msg: t(key),
-      duration: TOAST_MS.normal,
-      type: "warn",
-    });
+    toast(t(key), TOAST_MS.normal, "warn");
     return true;
   }
   return false;

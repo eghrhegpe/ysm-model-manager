@@ -8,10 +8,10 @@
 //   勾选记忆 → 清除 ui-default-page（resolveInitialPage 落回 nav_page）
 //   取消勾选 → 写回下拉框当前值（钉死该页）
 // 读写统一走 safeGet/safeSet/safeRemove（隐私模式安全）。
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { sanitizePage } from "@/core/page-store.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 // 魔法数值收敛：偏好变更成功 toast 展示时长（ms）
@@ -56,21 +56,17 @@ export function initDefaultPagePrefs(root: ShadowRoot): void {
     syncUi(remember);
     if (remember) safeRemove("ui-default-page");
     else safeSet("ui-default-page", sel.value || FALLBACK_PAGE);
-    bus.emit("toast:show", {
-      msg: t(remember ? "settings.ui.rememberPageOn" : "settings.ui.rememberPageOff"),
-      duration: TOAST_DURATION_MS,
-      type: "success",
-    });
+    toast(
+      t(remember ? "settings.ui.rememberPageOn" : "settings.ui.rememberPageOff"),
+      TOAST_DURATION_MS,
+      "success",
+    );
   });
 
   // 固定页下拉框变更：仅记忆模式下才写入偏好（记忆模式中该控件已 disabled，此处为防御）
   sel.addEventListener("change", () => {
     if (rememberInput.checked) return;
     safeSet("ui-default-page", sel.value || FALLBACK_PAGE);
-    bus.emit("toast:show", {
-      msg: t("settings.ui.defaultPageSaved"),
-      duration: TOAST_DURATION_MS,
-      type: "success",
-    });
+    toast(t("settings.ui.defaultPageSaved"), TOAST_DURATION_MS, "success");
   });
 }

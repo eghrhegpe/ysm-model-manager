@@ -9,6 +9,7 @@ import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { modalProgress } from "@/utils/dom/modal-progress.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { fmtMB } from "@/utils/format/fmt-mb.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -156,20 +157,12 @@ async function promptUpdate(info: UpdateInfo, statusEl: HTMLElement | null): Pro
   // 先发一条「下载中」toast，避免用户点完更新后长时间无感知。
   // P3 修复（code_review）：10s 对慢网大文件不够，拉到 60s，保证覆盖整个下载窗口
   if (!statusEl) {
-    bus.emit("toast:show", {
-      msg: `${t("update.downloading", { version: info.latest })}`,
-      duration: TOAST_MS.sticky,
-      type: "info",
-    });
+    toast(`${t("update.downloading", { version: info.latest })}`, TOAST_MS.sticky, "info");
   }
   try {
     await doUpdate(info, statusEl);
   } catch (e) {
-    bus.emit("toast:show", {
-      msg: `${t("update.failed")}: ${friendlyError(e)}`,
-      duration: TOAST_MS.long,
-      type: "error",
-    });
+    toast(`${t("update.failed")}: ${friendlyError(e)}`, TOAST_MS.long, "error");
     // 不重新抛出（外层 initVersionUpdater 的 finally 会恢复按钮状态）
   }
 }
@@ -200,11 +193,7 @@ export async function checkUpdateSilent(): Promise<void> {
           // reject 会成为 unhandled rejection（手动路径有外层 try/catch，静默路径没有，
           // 错误边界不对称，ADR-044 ①）
           promptUpdate(info, null).catch((e) => {
-            bus.emit("toast:show", {
-              msg: `${friendlyError(e)}`,
-              duration: TOAST_MS.long,
-              type: "error",
-            });
+            toast(`${friendlyError(e)}`, TOAST_MS.long, "error");
           });
         },
       });
@@ -221,11 +210,7 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
   root.getElementById("set-check-update")?.addEventListener("click", async (): Promise<void> => {
     // ADR-047 平台守卫：查看器模式（Android/网页版）无更新链路，点击明确拒绝
     if (isViewerMode()) {
-      bus.emit("toast:show", {
-        msg: t("update.windowsOnly"),
-        duration: TOAST_MS.normal,
-        type: "info",
-      });
+      toast(t("update.windowsOnly"), TOAST_MS.normal, "info");
       return;
     }
     const btn = root.getElementById("set-check-update") as HTMLButtonElement;
@@ -256,21 +241,16 @@ export function initVersionUpdater(root: Document | ShadowRoot): void {
       ])) as UpdateInfo | null;
       markChecked();
       if (!info?.available) {
-        bus.emit("toast:show", {
-          // null（绑定契约允许）视为不可用；info?.current ?? "" 兜底避免空括号
-          msg: `${t("update.latest", { version: info?.current ?? "" })}`,
-          duration: TOAST_MS.normal,
-          type: "success",
-        });
+        toast(
+          `${t("update.latest", { version: info?.current ?? "" })}`,
+          TOAST_MS.normal,
+          "success",
+        );
         return;
       }
       await promptUpdate(info, btn);
     } catch (e) {
-      bus.emit("toast:show", {
-        msg: `${friendlyError(e)}`,
-        duration: TOAST_MS.long,
-        type: "error",
-      });
+      toast(`${friendlyError(e)}`, TOAST_MS.long, "error");
     } finally {
       clearTimeout(timeoutId);
       btn.innerHTML = idleHTML;

@@ -2,13 +2,13 @@
 // 持久化于 localStorage，与 model3d.ts 同源。
 // _activeCapture 随本段迁移（原 init.ts 模块级）：单一捕获守卫——同一时刻仅允许
 // 一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持。
-import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 // [ADR-270-d2 R10] loadTdKeymap 原址直引 infra/keymap.ts（2026-09-25 收缩立法：消费者一律直引原址；
 // 经 mesh/model3d.ts 再导出面绕行 584 行巨型文件的旧边斩掉）
 import { loadTdKeymap, TD_KEYMAP_REGISTRY, type TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import { TD_CAM_SPEED, TD_KEYMAP_KEY, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
 import { safeGet, safeRemove, safeSet } from "@/utils/base/primitives/storage.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 // 单一捕获守卫：同一时刻仅允许一个键位捕获，且设置页卸载后自动失效，杜绝全局 keydown 劫持
@@ -150,25 +150,25 @@ function tdRenderKeymap(root: ShadowRoot): void {
           ({ action }) => action !== key && cur[action] === ev.code,
         );
         if (conflict) {
-          bus.emit("toast:show", {
-            msg: t("settings.keymap.conflict", {
+          toast(
+            t("settings.keymap.conflict", {
               key: tdKeyLabel(ev.code),
               label: t(TD_ACTION_LABEL_KEYS[conflict.action]),
             }),
-            duration: TOAST_WARN_MS,
-            type: "warn",
-          });
+            TOAST_WARN_MS,
+            "warn",
+          );
           tdRenderKeymap(root);
           return;
         }
         cur[key] = ev.code;
         tdSaveKeymap(cur);
         tdRenderKeymap(root);
-        bus.emit("toast:show", {
-          msg: t("settings.keymap.bound", { label, key: tdKeyLabel(ev.code) }),
-          duration: TOAST_SUCCESS_MS,
-          type: "success",
-        });
+        toast(
+          t("settings.keymap.bound", { label, key: tdKeyLabel(ev.code) }),
+          TOAST_SUCCESS_MS,
+          "success",
+        );
       };
       _activeCapture = onKey;
       document.addEventListener("keydown", onKey, true);
@@ -183,11 +183,7 @@ export function initKeymap(root: ShadowRoot): void {
   root.getElementById("td-keymap-reset")?.addEventListener("click", () => {
     safeRemove(TD_KEYMAP_KEY);
     tdRenderKeymap(root);
-    bus.emit("toast:show", {
-      msg: t("settings.keymap.resetDone"),
-      duration: TOAST_SUCCESS_MS,
-      type: "success",
-    });
+    toast(t("settings.keymap.resetDone"), TOAST_SUCCESS_MS, "success");
   });
 
   // 相机移动速度

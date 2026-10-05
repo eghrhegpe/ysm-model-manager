@@ -15,8 +15,8 @@
 // 归属说明：判定 + 文案提示放 infra 横向层（decoder 是纯解析层，不引 i18n/bus）。
 
 import { isViewerMode } from "@/backend/platform.ts";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 /** 事前警示阈值：50MB（刻意低于 100MB 硬阈值）。峰值按 3× 估算即 150MB，
@@ -62,9 +62,5 @@ export function warnLargeModelIfNeeded(bytes: number, path: string): void {
   warnedPaths.add(path);
   const sizeMb = Math.round(bytes / (1024 * 1024));
   const peakMb = Math.round((bytes * PEAK_MEMORY_FACTOR) / (1024 * 1024));
-  bus.emit("toast:show", {
-    msg: `${t("preview.largeModelWarn", { size: sizeMb, peak: peakMb })}`,
-    duration: TOAST_MS.verbose,
-    type: "warn",
-  });
+  toast(`${t("preview.largeModelWarn", { size: sizeMb, peak: peakMb })}`, TOAST_MS.verbose, "warn");
 }

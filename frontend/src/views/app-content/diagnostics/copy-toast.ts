@@ -8,9 +8,9 @@
 //
 // 为何单独成叶模块：日志面板（init.ts）与性能面板（perf-common.ts）都要用它，而 perf-common 是
 // 性能面板的共享层，让日志模块 import 属跨域依赖（同 web-gate.ts 的取舍）。裸目录聚口同样不给。
-import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { copyText } from "@/utils/dom/clipboard.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 
 /**
@@ -23,12 +23,10 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
  */
 export async function copyWithToast(text: string, okKey: LocaleKey): Promise<boolean> {
   const result = await copyText(text);
-  bus.emit("toast:show", {
-    // 去 emoji 前缀（ADR-238 债务）：视觉反馈由 type 驱动（成功绿/失败红左边框），文案只放纯文本
-    msg: result.ok ? t(okKey) : t("diagnostics.copyFail"),
-    // 失败消息要留够阅读时间（用户得知道要手动框选），成功可以更快收走
-    duration: result.ok ? TOAST_MS.success : TOAST_MS.normal,
-    type: result.ok ? "success" : "error",
-  });
+  toast(
+    result.ok ? t(okKey) : t("diagnostics.copyFail"),
+    result.ok ? TOAST_MS.success : TOAST_MS.normal,
+    result.ok ? "success" : "error",
+  );
   return result.ok;
 }

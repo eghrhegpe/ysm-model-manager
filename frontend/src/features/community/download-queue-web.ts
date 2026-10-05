@@ -12,6 +12,7 @@ import { importWebFiles } from "@/backend/browser-adapter.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { DownloadTask } from "./download-queue-store.ts";
 
@@ -93,16 +94,15 @@ export async function runWebEnqueue(tasks: DownloadTask[], ctx: WebEnqueueCtx): 
       ctx.decrementRemaining();
     }
     // 汇总反馈对齐导入链路语义（importWebFilesWithToast 同款 toast + 刷新广播）
-    bus.emit("toast:show", {
-      msg:
-        failed > 0
-          ? t("community.downloadQueue.webDlFailed", { imported, fallback, failed })
-          : fallback > 0
-            ? t("community.downloadQueue.webDlFallback", { imported, fallback })
-            : t("community.downloadQueue.webDlOk", { imported }),
-      duration: TOAST_MS.verbose,
-      type: failed > 0 ? "warn" : "success",
-    });
+    toast(
+      failed > 0
+        ? t("community.downloadQueue.webDlFailed", { imported, fallback, failed })
+        : fallback > 0
+          ? t("community.downloadQueue.webDlFallback", { imported, fallback })
+          : t("community.downloadQueue.webDlOk", { imported }),
+      TOAST_MS.verbose,
+      failed > 0 ? "warn" : "success",
+    );
     bus.emit("tree:reload");
     bus.emit("stats:refresh");
   } catch (e) {

@@ -4,6 +4,7 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import {
   ROW_H_GRID_COMPACT,
@@ -174,22 +175,14 @@ export function initUiPrefs(root: ShadowRoot): void {
   root.getElementById("set-font-size")?.addEventListener("change", (e) => {
     safeSet("ui-font-size", (e.target as HTMLSelectElement).value);
     applyUIPref();
-    bus.emit("toast:show", {
-      msg: t("settings.ui.fontSizeUpdated"),
-      duration: TOAST_DURATION_MS,
-      type: "success",
-    });
+    toast(t("settings.ui.fontSizeUpdated"), TOAST_DURATION_MS, "success");
   });
 
   // 创作者字体变更
   root.getElementById("set-display-font")?.addEventListener("change", (e) => {
     safeSet("ui-display-font", (e.target as HTMLSelectElement).value);
     applyUIPref();
-    bus.emit("toast:show", {
-      msg: t("settings.ui.fontUpdated"),
-      duration: TOAST_DURATION_MS,
-      type: "success",
-    });
+    toast(t("settings.ui.fontUpdated"), TOAST_DURATION_MS, "success");
   });
 
   // 卡片密度变更
@@ -205,11 +198,7 @@ export function initUiPrefs(root: ShadowRoot): void {
     // 广播密度变更：app-tree 订阅后重排虚拟滚动（行高随密度变化需重算），
     // 整合包侧栏/旧式卡片为纯 CSS 变量驱动，setProperty 即时生效无需重排。
     bus.emit("ui:card-density", { density: val });
-    bus.emit("toast:show", {
-      msg: t("settings.ui.densityUpdated"),
-      duration: TOAST_DURATION_MS,
-      type: "success",
-    });
+    toast(t("settings.ui.densityUpdated"), TOAST_DURATION_MS, "success");
   });
 
   // 动画开关
@@ -217,11 +206,11 @@ export function initUiPrefs(root: ShadowRoot): void {
     const checked = (e.target as HTMLInputElement).checked;
     safeSet("ui-animations", checked ? "on" : "off");
     applyUIPref();
-    bus.emit("toast:show", {
-      msg: checked ? t("settings.ui.animOn") : t("settings.ui.animOff"),
-      duration: TOAST_DURATION_MS,
-      type: "success",
-    });
+    toast(
+      checked ? t("settings.ui.animOn") : t("settings.ui.animOff"),
+      TOAST_DURATION_MS,
+      "success",
+    );
   });
 
   // 默认页面变更已收编至 default-page.ts:initDefaultPagePrefs（与记忆开关联动，单源）

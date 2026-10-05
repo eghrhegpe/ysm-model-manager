@@ -8,7 +8,6 @@
 
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import type { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.ts";
 import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
@@ -24,6 +23,7 @@ import { MAX_MODELS, sceneRegistry } from "@/preview-3d/infra/scene-registry.ts"
 import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { PreviewBuildCtx, PreviewHandle, PreviewScene } from "./mount-preview-core.ts";
 import { guardSessionAlive, ownHandle } from "./mount-session.ts";
@@ -166,11 +166,11 @@ function beginSwitch(ctx: SwitchContext, newPath: string, keep: boolean): boolea
   // 否则上限命中提前 return 会把 inFlight 卡死 true（后续所有切换被静默丢弃）
   //（code review P1：其他 early-return 路径都重置了，此守卫曾漏——r12 竞态抑制后成死锁）
   if (keep && sceneRegistry.count() >= MAX_MODELS) {
-    bus.emit("toast:show", {
-      msg: t("preview.sceneModelLimit", { max: MAX_MODELS.toLocaleString() }),
-      duration: TOAST_MS.verbose,
-      type: "warn",
-    });
+    toast(
+      t("preview.sceneModelLimit", { max: MAX_MODELS.toLocaleString() }),
+      TOAST_MS.verbose,
+      "warn",
+    );
     return false;
   }
   // GPU 负载预算（审计卡共识榜 #3「MAX_MODELS 是计数非预算」的实测信号版）——

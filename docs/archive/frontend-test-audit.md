@@ -51,6 +51,9 @@ invariant_anchors:
 
 # 前端测试基建审计
 
+> ⚠️ **本卡已归档（2026-10-05）**——`status: snapshot` + `affected: false`，
+> 按 `docs/knowledge/AGENTS.md`「快照卡终局 = 归档迁出」执行。此处仅存史，不参与活文档体系。
+
 ## 概览
 
 2026-08-26 对测试基建层全量只读评审（两子代理并行）：`tests/*.ts` 契约层（33 文件，核心 4039 LOC；`port-verification/` 为一次性迁移诊断工具不计分）+ `frontend/e2e`（15 spec+3 支撑件 1668L）+ `e2e-web`（2 spec ~720L）。总分：契约层 **4/5**、e2e 整体 **4.3/5**。与 `frontend-repo-audit`（源码层）配套。

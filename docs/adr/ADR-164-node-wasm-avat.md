@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：[go-design-critique](../knowledge/go-design-critique.md)（锐评共识榜 #4 跨域双胞胎复制）、[go-avatar-decode](../knowledge/go-avatar-decode.md)、[ADR-044](ADR-044-code-writing-governance.md)（文件读写收敛、ReadLimitedEntry 统一口径）
+- **相关**：[go-design-critique](../archive/go-design-critique.md)（锐评共识榜 #4 跨域双胞胎复制）、[go-avatar-decode](../knowledge/go-avatar-decode.md)、[ADR-044](ADR-044-code-writing-governance.md)（文件读写收敛、ReadLimitedEntry 统一口径）
 
 ---
 

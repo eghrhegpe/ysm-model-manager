@@ -1411,6 +1411,9 @@ invariant_anchors:
 
 # 前端 TS 整包审计
 
+> ⚠️ **本卡已归档（2026-10-05）**——`status: snapshot` + `affected: false`，
+> 按 `docs/knowledge/AGENTS.md`「快照卡终局 = 归档迁出」执行。此处仅存史，不参与活文档体系。
+
 ## 概览
 
 2026-08-26 按 `.trae/skills/ts-package-review/SKILL.md` 对 `frontend/src/` 全量只读评审（七个子代理并行，排除 vendor）。前置：type-consistency 全一致、binding-check 188/188、check-redlines 仅 Warn 级、typecheck 全绿。总规模 \~66k LOC（源码），加权总分 **4.1/5**。与 Go 侧 `cli-quality-audit`（八轮沉淀）对应的前端版。

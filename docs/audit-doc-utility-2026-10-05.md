@@ -59,18 +59,15 @@
 
 ---
 
-### 2.2 `docs/audit-env-design-critique.md` — 99 行 · 零外部消费者（判据 A）
+### 2.2 `docs/audit-env-design-critique.md` — 零外部消费者（判据 A）✅ **已归档 2026-10-05**
 
-**为什么可动**：全仓 **0 引用**（已排除 `.vitepress/dist/` 构建产物）。唯一提及它的 `audit-env-review.md` 只是把它当**同一批审计的兄弟报告**列在头部（L7/L138/L141），不是内容依赖。
+**实证**：全仓 **0 引用**（排除 `.vitepress/dist/` 与代码/脚本侧）。唯一提及它的 `audit-env-review.md`
+是把它当**同批审计的兄弟报告**列在头部，非内容依赖。
 
-**证据**：
-```
-=== audit-env-design-critique.md (0)
-    （无）
-```
-
-**建议动作**：**合并进 `audit-env-review.md` §4**（后者 L141 已写「`audit-env-design-critique.md` §4」，说明内容本就该在同一篇里），或 `git mv docs/archive/`。
-**风险**：**极低**。0 引用 = 0 断链。
+**处置**：内容并入 `audit-env-review.md` **§5「设计层审：概念骨架」**（保留 F-1~F-5 裂缝表、F-1 证据表、
+跨代承重说明、判据盲区、两次假绿灯自查），随后 `git mv docs/archive/`（git 识别为 rename，历史保留）。
+归档件头部加「已归档 + 活文档指向」注记。
+**验证**：归档前把 `audit-env-review.md` 内 3 处实质指向改为内部 §5 引用；`doctor --docs` 23/23 PASS。
 
 ---
 
@@ -190,9 +187,17 @@ UI-Design-Fix-Plan.md         203 行  last=2026-10-04
 **成本**：分批 `git mv` + 改链 | **收益**：2,622 行离开活文档目录；**执行的是仓库自己已立的规矩**（`AGENTS.md:50`），不是新增规则 | **风险**：高，但**已有成文操作规程**（`AGENTS.md:51`「迁出前三查」）与血案教训（`go/cli/perf.go` 44 提交红灯）**
 先做引用最少的 `frontend-design-debt.md`（83 行）与 `frontend-test-audit.md` 试水，验证链路无误再批量。
 
-### ③ 合并 5 份 audit 报告为一份归档件（先处理零引用的那份）
-**成本**：中 | **收益**：顶层 814 行 → 1 份；消除互引成环；同时把「P0/P1/P2 规划」从文档迁往 ADR/知识卡（符合 `ADR-320`） | **风险**：中，需先处理 4 处入链硬引用**
-**起步动作（零风险）**：先只动 `audit-env-design-critique.md`（99 行，**0 引用**）——把它并回 `audit-env-review.md` §4（后者 L141 本就在引用它的 §4）。这一步证明合并流程可行，再动有入链的其余三份。
+### ③ 合并 audit 报告为一份归档件 🔄 **起步已完成（零引用那份，见 §2.2）；其余待做**
+
+**成本**：中 | **收益**：顶层行数下降；消除互引成环 | **风险**：中，需先处理入链硬引用
+
+**已完成**：`audit-env-design-critique.md`（0 引用）→ 并入 `audit-env-review.md` §5 + 归档。
+合并流程已验证可行（改内部指向 → git mv → 头部加归档注记 → 门禁绿）。
+
+**待做**：其余四份 `audit-*-critique/review.md` 互引成环，**读者要读五份才能拼出一次审计的全貌**。
+⚠️ 动前必须处理 3 处入链：`water.md:337`（引 water-critique）、`ADR-322:37`（引「九章第⑤条」，
+**编号是硬锚点**）、`preview-env-state.md:261`（引 postprocessing-critique）。
+建议把被引用的**不变量**提炼进对应知识卡，把未收口项立 ADR，再归档。
 
 ---
 

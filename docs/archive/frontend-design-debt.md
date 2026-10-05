@@ -18,6 +18,10 @@ source_files:
 
 # 前端设计令牌债务 — 逐簇判定记录（快照）
 
+> ⚠️ **本卡已归档（2026-10-05）**——`status: snapshot` + `affected: false`，
+> 按 `docs/knowledge/AGENTS.md`「快照卡终局 = 归档迁出」执行。此处仅存史，不参与活文档体系；
+> 实时条数以 `scripts/baseline/design-tokens-baseline.json` 为准。
+
 > 快照（2026-09；实时条数以 `scripts/baseline/design-tokens-baseline.json` 为准）：自 463 条基线逐步收敛至 135 条降为已知债务现场。本文件是**人工逐簇判定**的记录，
 > 非生成物、非机器索引。每次大门禁刷新基线后，此处 `count` 会高于实时值（本文件是判据存档）。
 >

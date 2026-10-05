@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳（决策 = 标记技术债 + 暂缓封装，非废弃；实施状态见正文 §2 与知识卡 go-design-critique）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`internal/app/app_scan.go:63`、`go/cli/appservice.go:19`、`go/cli/model.go:54/337/358`、`frontend/src/views/app-tree/toolbar-search.ts:195-204`、[go-design-critique](../knowledge/go-design-critique.md)
+- **相关**：`internal/app/app_scan.go:63`、`go/cli/appservice.go:19`、`go/cli/model.go:54/337/358`、`frontend/src/views/app-tree/toolbar-search.ts:195-204`、[go-design-critique](../archive/go-design-critique.md)
 
 ---
 
@@ -48,4 +48,4 @@ func (a *App) SearchModels(filesRoot string, keyword string, minBones, maxBones,
 
 ---
 
-*ADR 只记决策方向和理由，不记实施进度。实施进度见知识卡 [go-design-critique](../knowledge/go-design-critique.md) 动刀进度。*
+*ADR 只记决策方向和理由，不记实施进度。实施进度见知识卡 [go-design-critique](../archive/go-design-critique.md) 动刀进度。*

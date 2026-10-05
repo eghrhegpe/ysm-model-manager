@@ -94,4 +94,4 @@ invariant_anchors:
 ## 相关
 
 - [dialog-modal](dialog-modal.md)：modal 槽位收敛体细节
-- [frontend-design-critique](frontend-design-critique.md)：全局 Map 泛滥指控源
+- [frontend-design-critique](../archive/frontend-design-critique.md)：全局 Map 泛滥指控源

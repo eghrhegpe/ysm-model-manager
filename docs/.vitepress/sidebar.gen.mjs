@@ -2370,6 +2370,10 @@ export const autoSidebar = [
             "link": "/knowledge/extensibility-round2"
           },
           {
+            "text": "门禁委托链全景图（四入口横向拼图）",
+            "link": "/knowledge/gate-chain-map"
+          },
+          {
             "text": "孤儿导出检测器（扫描盲区）",
             "link": "/knowledge/orphan-export-scanner"
           },

@@ -101,7 +101,7 @@ invariant_anchors:
 
 ## 概览
 
-`.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（编译/测试/契约/链接）阻断推送，基线债务（红线新增、死代码）只报告不阻断——推送后修，发布前全量 doctor 兜底。
+`.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（编译/测试/契约/链接）阻断推送，基线债务（红线新增、死代码）只报告不阻断——推送后修，发布前全量 `doctor` 兜底。**本卡讲 push 环纵深；四入口（commit/push/doctor/CI）横向归属与「某检查项归哪一层」速查见 [门禁委托链全景图](./gate-chain-map.md)。**
 
 ## 核心职责
 
@@ -259,7 +259,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - **link-checker 扫描域 = git 跟踪 `.md` ∩ isScannable ∩ 磁盘存在**：被跟踪但工作区缺失的 md（并行会话删除未 add、手工误删）不得进扫描域——对其 readFileSync 进 catch 返空 + 锚点恒 0，该文件断链全盲致 `links_broken:0` 假绿（2026-09-16 review 2d51556ba P2 收口，契约测试 test_link_checker_scope 双侧同口径）
 - **菜单闸 kind 白名单分两层**（2026-09-15）：`check-menu-health` 根项走 `{panel,action,divider}`（可 dock 约定，无类型可推）；叶子节点走 `PreviewMenuNodeKind` 派生集（`menu-node-types.ts` 单一事实来源，含 `field/row/sectionTitle/card/controls…`）。**根项判据 = `const X: PreviewMenuNode[] = [...]` 数组元素 ∪ `X.push({...})` 实参**，其余一律叶子（独立 const 叶子、`children:[]` 内联字面量、工厂返回值）。id 唯一 / dockGroup / panel 渲染通道 / labelKey 必存在四条**只对根项生效**；叶子仅查 kind 白名单 + 已声明 labelKey 的 i18n。
   教训：旧版把「含 `id:`+`kind:` 的对象块」当根项代理 → `vrm-adapter.ts` 的独立 const 叶子 `VRM_PLAY_EMPTY_NODE`（`kind:"field"`，法定 `PreviewMenuNodeKind`）被按根白名单校验，令全仓 `commit-with-check`（前端域 hard block + `tests/test_check_menu_health.ts` 契约断言双路）假红 1 小时余。**判据要挂在容器归属上，别挂在对象块字段上**——后者是代理假设，一类新写法即破。
-- **门禁红灯的杀伤点在 push 而非 commit**：`.githooks/pre-commit` 不跑 `check-menu-health`/域级检查（只有 gen 同步 / 知识漂移 / 行级 biome），故前端域红灯期间本地 commit 照落（2026-09-15 实证：21:52、21:55 两笔在红灯下正常提交），真正拦截发生在 `pre-push-gate.ts` 的域块与 `node scripts/commit-with-check.ts`。CI 尚未同跑 gate ⇒ 本地钩子是唯一防线。排查「闸红了为什么还能提交」时先看这两条路径，别怀疑钩子没装（`core.hooksPath=.githooks`）。
+- **门禁红灯的杀伤点在 push 而非 commit**：`.githooks/pre-commit` 不跑 `check-menu-health`/域级检查（只有 gen 同步 / 知识漂移 / 行级 biome），故前端域红灯期间本地 commit 照落（2026-09-15 实证：21:52、21:55 两笔在红灯下正常提交），真正拦截发生在 `pre-push-gate.ts` 的域块与 `node scripts/commit-with-check.ts`。CI 已在 2026-09-14（`a35ed8ec5`）接静态治理层（`pre-push-gate --static`，见 test.yml），域级 build/test/契约仍只有本地 gate 兜底。排查「闸红了为什么还能提交」时先看这两条路径，别怀疑钩子没装（`core.hooksPath=.githooks`）。
 - **红线扫描不可用（rg 缺失）必须阻断**（fail-closed）；基线债务（红线新增）不阻断，推送后修
 - **`record()` 必须把 `blockPolicy` 一路落进 `results`**（2026-09-13 修复）：它不只是「是否阻断」的输入，更是 FAIL 明细归属标签（存量债／失守／本次引入）的事实源。漏存 → 所有 FAIL 被误标「本次引入」
 - **阻断矩阵：只有 `hard`（及未声明策略）置 `blocked`；`debt` / `failClosed` 一律不阻断**（`_lib/gate-ctx.ts:188`：`if (!ok && blockPolicy !== "debt" && blockPolicy !== "failClosed") blocked = true`）。故**「FAIL 列表非空」≠「推送被卡」**：`check-deadcode-baseline` / `check-complexity`（实测 85 条）/ `check-params`（16 条）三项恒报存量为 `debt`，结论行照写「53/56 通过」却是 `PASS ✅ 放行推送`。判读顺序 = 先逐项看 `[归属]` 标签：`[存量债]`=debt 放行，`[本次引入]`／`[待归因]`=hard 才须修。2026-09-15 实证：89 笔一次性推送，6 项 FAIL 里只 3 项 hard（go test 计时 flaky + golangci-lint 4 条 + check-file-lines 破线），修完即 PASS——**别把存量债当自己的回归去清零**

@@ -532,9 +532,11 @@
 | 检查某 _lib 模块是否被绕开手搓 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | [] | - |
 | 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
 | 门禁检查项有哪些 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过 | - |
+| 排查「闸红了为什么还能提交」 | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
 | 盘点当前技术债并刷新 7 本账本 | [技术债账本刷新与盘点方法论](./debt_ledger_refresh.md) | 未提交改动在多 AI 并行期会被 worktree reset 冲掉——改账本 / 文档后必须立即 --files 提交锁定 | - |
 | 判定「新增重复对」是真实新增还是文件搬迁/拆分 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
 | 判定违规是「真残留」还是「误报」 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
+| 判断某个检查项归属哪一层 | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
 | 提交前文档自动同步 | [提交前钩子 pre-commit](./pre-commit-hook.md) | 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2） | - |
 | 通用红线 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 判定字段必须写进 _summary（用 buildScanVerdict），写顶层 ok 会被解析器短路 | - |
 | 推送被门禁阻断怎么办 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查 | - |
@@ -543,6 +545,7 @@
 | 为新的共享模块加一条守护规则 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
 | 修复登记漂移（补全缺失的登记） | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | - | - |
 | 验证新增脚本是否已正确登记 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | README 是唯一事实源，AGENTS.md 工具口令表只是指针 | - |
+| 一眼看清 commit/push/CI 各环谁在哪拦 | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
 | 运行 Go 重复门禁 / 检查是否有新增重复对 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
 | check-orphan-exports 三类漏检修复 | [孤儿导出检测器（扫描盲区）](./orphan-export-scanner.md) | - | - |
 | CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | - | - |
@@ -753,6 +756,9 @@
 | extract.ts detectContainerType 走中央目录口径(parseZipCentralDir),勿回退 LFLH 游走(data descriptor/zip64 漏条目,Go 侧明令禁用) | - | - |
 | voxel-colors.ts resolveBlockName 映射表来自 voxel-colors-data.json(63K),新增方块名须更新 JSON 而非硬编码 | - | - |
 | ADR-170 二段部分收口(2026-09):base64 原语已归位 utils/base/primitives/base64.ts, parsers 对 backend/web-common 依赖已消除;web-* 族其余归位未动 | - | - |
+| 本卡是横向拼图，单环纵深细节读 pre-commit-hook / pre-push-gate 两卡；勿用本卡替代细读 | - | - |
+| 判定必须看它所在清单的 blockPolicy（hard/debt/failClosed），FAIL 非空 ≠ 被拦 | `某检查项是否真阻断` | - |
+| 注释与知识卡的曾三处口径不一（钩子写尚未、同卡两行一写已接线一写尚未）；判断现状只认 .github/workflows/test.yml 实况 | `CI 是否同跑 gate` | - |
 | 各页面各自注册全局事件 | - | 重复绑定、冲突处理；必须经 global-handlers 单点 |
 | 拖拽导入未进 import-dnd | - | 与全局拖拽状态冲突；必须经 features/import-dnd.ts |
 | 陷阱：Android 上 xdg-open/exec 链静默失败会掩盖问题 | `静默成功` | 必须返回含「请手动」提示的明确错误 |

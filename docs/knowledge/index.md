@@ -2,11 +2,11 @@
 
 # 知识卡索引
 
-> 总计: 192 张知识卡
+> 总计: 193 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（13 张）
+## config（14 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
@@ -18,6 +18,7 @@
 | 🍃 experience | 发版冒烟组——CI 同口径预演（ADR-318） | leaf | — | 发版前预演 CI（tag 推送前）, lockfile 与 package.json 是否同步存疑, Go 文件 import OS 专属包要确认 build 标签, 发版 CI 连红要本地快速定位口径差 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单, 拓展点探索 |
+| 🏗 gate-chain-map | 门禁委托链全景图（四入口横向拼图） | architecture | — | 门禁委托链, 找门禁流程, 钩子在哪拦, 为什么还能提交, 哪个入口阻断, 门禁总览 |
 | 🍃 orphan-export-scanner | 孤儿导出检测器（扫描盲区） | leaf | — | 修改 check-orphan-exports.ts 扫描逻辑, 门禁报孤儿导出，判定是真死代码还是扫描漏检, 新增 export * 转发壳 / 测试包装函数后复核孤儿读数 |
 | 🏗 resource-registry | 资源注册表 registry | architecture | — | 资源类型, 注册表, resource_types, registry, 文件类型 |
 | 🏗 scripts-argv | 脚本 argv 规范与已知豁免 parse-args.ts | architecture | — | 脚本参数, argv, parseArgs, 手写参数解析, positional, 未知 flag, 脚本卫生, hygiene |
@@ -32,6 +33,7 @@
 - **check-threshold-scanners**（三档阈值扫描器（复杂度/参数/类型安全））：`check-complexity`（认知复杂度 + 最大嵌套）、`check-params`（长参数列表 / 布尔陷阱）、
 - **debt_ledger_refresh**（技术债账本刷新与盘点方法论）：技术债在本仓是**受控存量**：baseline 账本只减不增、门禁不阻断存量债、新增零容忍。因此「还能发现多少债」分三层答——**已记账存量**（7 本 baseline）、**裸露代码标记**（TODO/FIXME）、**账本外盲区**…
 - **experience**（发版冒烟组——CI 同口径预演（ADR-318））：v1.15.0 发版跑了五轮 CI 才成功，复盘结论：**不是测试太严，是本地验证口径与 CI 冻结口径不同构**。本卡记录冒烟组（`node scripts/release-smoke.ts`，≤3 分钟）的检查项与各自预演的 CI 步骤…
+- **gate-chain-map**（门禁委托链全景图（四入口横向拼图））：单环细读是清楚的（[pre-commit-hook](./pre-commit-hook.md) / [pre-push-gate](./pre-push-gate.md) 各讲一环纵深），**环与环之间没有一张拼图**才是「从 git 钩…
 - **orphan-export-scanner**（孤儿导出检测器（扫描盲区））：`scripts/check-orphan-exports.ts` 审计 `frontend/src/` 下零消费者的导出符号。它同时扫描 `.ts` 与 `.js`（ADR-014 后并存），用文本正则（零依赖，不建 AST）解析导出与消…
 - **resource-registry**（资源注册表 registry）：`resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。
 - **scripts-argv**（脚本 argv 规范与已知豁免 parse-args.ts）：`scripts/*.mjs` 的命令行参数解析**统一走共享层 `scripts/_lib/parse-args.ts`**，禁止手写 `process.argv` 解析。核心动机（2026-08-04 全量审核 + 2026-08-30…

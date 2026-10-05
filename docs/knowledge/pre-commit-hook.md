@@ -92,5 +92,6 @@ status: active
 - ADR-232 — scripts/hooks 并发竞态/审计留痕/退化降级三修复（D1 配对 / D2 留痕 / D3 reconcile 退化降级）
 - ADR-150 — pre-commit 兜底收窄（禁用 git add -u docs/ 吞并发漂移）
 - ADR-087 — drift --affected 秒级接入
-- [pre-push-gate](./pre-push-gate.md) — 逃生留痕对账（gate-audit-reconcile）
+- [pre-push-gate](./pre-push-gate.md) — 推送门禁纵深（逃生留痕对账 gate-audit-reconcile）
+- [门禁委托链全景图](./gate-chain-map.md) — 四入口（commit/push/doctor/CI）横向归属拼图；本卡讲 commit 环纵深，跨环「某闸归哪层」查全景图
 - [scripts-readme-index](./scripts-readme-index.md) — 钩子/脚本总览

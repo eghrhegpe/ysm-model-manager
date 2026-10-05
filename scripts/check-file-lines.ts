@@ -32,11 +32,14 @@ const RULES: { file: string; maxLines: number; adr: string; why: string }[] = [
   {
     // ADR-315 D3：水能力沿真缝拆三刀（分派表→water-params.ts / 倒影子系统→water-reflect.ts /
     // 类体留水 cap，原 4 组导出经 re-export 垫片保持消费者 import 零改动）后实测 845 行。
-    // 红线 860 = 实测 + ~2% 余量（防后续注释增补自然回弹），扩肥须沿真缝再拆或发新 ADR。
+    // 2026-10-05 后续收口：倒影子系统 / 锐评注释使文件回弹至 931 行超限，故把最大真缝
+    // 「波浪 shader 注入」再拆至 water-shader.ts（纯函数 + GLSL 注入串 + 六锚点守卫，
+    // 实例量经 WaterShaderCtx 惰性传入，行为零变更）→ 实测 649 行。
+    // 红线 655 = 实测 + ~1% 余量（防后续注释增补自然回弹），扩肥须沿真缝再拆或发新 ADR。
     file: "frontend/src/preview-3d/caps/water-capability.ts",
-    maxLines: 860,
-    adr: "ADR-315 D1/D3",
-    why: "1132 行巨型文件沿真缝拆三刀（分派表 water-params / 倒影 water-reflect / 类体留 cap）降至 845；红线锁死再膨胀，超限须沿真缝拆分或发新 ADR",
+    maxLines: 655,
+    adr: "ADR-315 D1/D3（+2026-10-05 行数红线收口）",
+    why: "1132→845→931（回弹超限）→649 行；波浪 shader 注入沿真缝再拆至 water-shader.ts 后锁红；超限须沿真缝拆分或发新 ADR",
   },
   {
     // ADR-315 D3：VRM 适配器沿真缝拆三刀（动作通道→vrm-motion.ts / 感知层→vrm-perception.ts /

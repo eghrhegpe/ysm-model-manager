@@ -34,6 +34,7 @@ auto_fields:
     - buildShadowNodes
     - buildSkyNodes
     - buildWaterNodes
+    - buildWaveWaterMaterial
     - CapabilityId
     - CapabilityMap
     - clampPoolRoundness
@@ -215,6 +216,7 @@ auto_fields:
     - WaterPartRole
     - WaterReflectCtx
     - WaterReflectState
+    - WaterShaderCtx
     - WaterTopMesh
     - WaterUniformName
     - WAVE_AA_FULL_VERTS

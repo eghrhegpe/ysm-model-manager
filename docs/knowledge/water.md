@@ -19,11 +19,13 @@ source_files:
   - frontend/src/preview-3d/caps/water-migrations.ts
   - frontend/src/preview-3d/caps/water-params.ts
   - frontend/src/preview-3d/caps/water-reflect.ts
+  - frontend/src/preview-3d/caps/water-shader.ts
   - frontend/src/preview-3d/caps/water-state.ts
 auto_fields:
   symbols_with_lines:
     - applyReflectionUniforms
     - buildWaterNodes
+    - buildWaveWaterMaterial
     - clampPoolRoundness
     - createWaterReflectState
     - disposeReflector
@@ -58,6 +60,7 @@ auto_fields:
     - WaterPartRole
     - WaterReflectCtx
     - WaterReflectState
+    - WaterShaderCtx
     - WaterTopMesh
     - WaterUniformName
     - WAVE_AA_FULL_VERTS
@@ -86,7 +89,7 @@ pitfalls:
   - '**（已修复 2026-09，ADR-272 §5.1）** pool 的 waterPoolHeight / waterPoolWallThickness 曾走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——拖动即每帧重建 10 个 mesh。现壁几何单位化：壁高走 `scale.y`、外偏 = `size/2 + t` 运行期现算。教训：**任何结构参数只要被烘焙进几何，就必然在滑块拖动时变成重建风暴**'
   - waterSize 值域：合法域 [1, 300]（下界来自「0/负数会让水面退化成一个点」）、展示域 10–300；钳制在 `setEnvState`（ADR-283），shader 侧另有 max(uSize, 0.001) 兜底
   - 圆角裁剪用世界坐标 max(|x|,|z|) 对比 uHalfSize，隐含「水面恒在世界原点」这一假设——已登记（2026-09-20），2026-10-04 已补测试钉子（`水面 root 恒在原点` describe：film/pool 切换 + 水位/尺寸/池深变更均不移动 root 的 xz）。若未来支持移动/放置水面（脱离原点），圆角裁剪会静默把整块水面裁成隐形，需先改为相对水面自身中心的局部坐标
-  - '⏰ 升级 three ≥ r190 前必读：buildWaveWaterMaterial 的 assertRevisionRange allowed 窗口为 [185,190)（water-capability.ts）——r190 起 water 材质构造会故意 throw（registry 工厂兜底使 cap 缺失，拒绝静默降级）。升级时须重新审计 wave shader 注入的 chunk 锚点（common / normal_fragment_maps 在 onBeforeCompile 期仍存在）后收窄/前移窗口，不可无脑放行'
+  - '**波浪 shader 实现已迁至 water-shader.ts（2026-10-05 行数红线收口）**：`water-capability.ts\|buildWaveWaterMaterial` 现在只是**薄转发封装**（装配 `WaterShaderCtx` = waterTime / reflect / reflectionActive 惰性 getter 后调用 `water-shader.ts\|buildWaveWaterMaterial`）。改波浪 / REVISION 窗口 / 六锚点 / GLSL 注入串请去 `water-shader.ts`，cap 侧那条私有方法只代表「材质从哪来」。拆分动机：ADR-315 拆三刀后红线锁 860 行，倒影与锐评注释使文件回弹至 931 行超限（check-file-lines 阻断），故把最大真缝（波浪注入 ~289 行）抽出，实测 649 行、红线下调至 655'
   - '**透明度预设失效（已修复 2026-09）**：`applyChangedParams` 中 `waterOpacity` 变更路径只更新 `top.material.opacity`，漏同步 shader uniform `uBaseOpacity`。shader 用 `min(gl_FragColor.a, uBaseOpacity)` clamp 透明度，`uBaseOpacity` 固化在构建期，导致增大 opacity 不生效（减小偶然正常）。修复：补调 `syncBaseOpacityUniform`，与 `waterWetness` 路径同口径'
   - '**派发键是类型化键域（2026-09）**：`EnvCallback.changed` 为 `Set<EnvStateKey>`，`changed.has("拼错")` 编译不过；新增参数必须先在 `env-state-schema.ts` 声明（含 `group: "water"`），否则派发链与持久化都抓不到它'
   - '**water 持久化由 schema 派生**：`saveState` 遍历 `getPresetKeys("water")`（不再手抄键表）；写侧统一 `water*` 规范键，历史键名 `size` / `pool*` 由 `loadState` 双轨吸收——新增参数只需进 schema，读侧按需补别名。**legacy 别名还原表是带退役时钟的兼容层**（锐评 P1-2）：新存档恒为纯规范键（legacy 分支只在「water 键无存档」时读 ground 旧记录），用户任一次 saveState 刷新后即永久走新记录——该表**只减不增、不得新增别名**，退役判定 = 用户面 legacy 存档刷新周期届满（发布一个维护周期后），届时整表连同 ground legacy 解包段一起删，勿长期挂着无时钟的兼容层'
@@ -121,6 +124,7 @@ quick_intents:
 quick_risk_lines:
   - 水面 shader 有 REVISION 断言与注入守卫（vertex 波浪函数 / objectNormal 覆盖 / 圆角段 / 微细节覆写点 / 倒影混合块）：升级 three 后必须重跑 water-capability.test.ts
 invariant_anchors:
+  - frontend/src/preview-3d/caps/water-shader.ts|buildWaveWaterMaterial
   - frontend/src/preview-3d/caps/water-capability.ts|buildWaveWaterMaterial
   - frontend/src/preview-3d/caps/water-capability.ts|applyChangedParams
   - frontend/src/preview-3d/caps/water-capability.ts|rebuildWaterContainer
@@ -134,13 +138,14 @@ invariant_anchors:
 
 ## 概览
 
-水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），四轴分离：
+水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），分轴布局：
 
 | 文件 | 轴 | 特征 |
 |---|---|---|
 | `water-state.ts` | 类型 | `WaterMode = "film" \| "pool"`，零 THREE、零副作用 |
 | `water-menu.ts` | 声明 | 纯节点树：`water-enabled` 平铺 toggle + form/look/pool/wave/reflect 组 folder（组内全原生控件） |
-| `water-capability.ts` | 渲染 | 波浪 shader 注入、微细节法线、容器装配、参数应用、持久化 |
+| `water-shader.ts` | 渲染 | 波浪 shader 注入（Gerstner 位移 + 解析法线 + fragment 微细节法线 + 圆角衰减 + 倒影混合）与六锚点守卫；纯函数 + GLSL 注入串，实例量经 `WaterShaderCtx` 惰性传入 |
+| `water-capability.ts` | 渲染 | 容器装配、参数应用、持久化；波浪材质仅经 `buildCtx` 装配 `WaterShaderCtx` 转发 |
 | `water-body-strategies.ts` | 策略 | 形态注册表；**新增形态 = 注册一项，现有实现零改动**（结构参数语义固化为 `transformLinks`） |
 
 两形态语义：`film` = 贴地薄水膜（单位平面 × scale，受 wetness 门控，无体积光学）；
@@ -148,7 +153,7 @@ invariant_anchors:
 
 ## 核心职责
 
-1. **波浪**：`buildWaveWaterMaterial` 于 `onBeforeCompile` 注入 6 波 Gerstner 余摆线——
+1. **波浪**：`water-shader.ts\|buildWaveWaterMaterial` 于 `onBeforeCompile` 注入 6 波 Gerstner 余摆线——
    顶点同时水平 + 垂直位移（波峰尖、波谷平）；解析法线（GPU Gems 1 ch.1）覆盖 `objectNormal`。
    方向/相位由 wave index hash 播种，陡度钳制 `Σσ·k ≤ 0.8` 防自交；**退化门**（锐评 2026-10-04 P0-1）：
    `wa = freq·amp` 低于 `water-state.ts|WAVE_DEGENERATE_WA` 的波整波跳过——静水态（浪高/水位归零）由此

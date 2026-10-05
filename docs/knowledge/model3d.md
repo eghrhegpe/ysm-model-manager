@@ -131,6 +131,7 @@ auto_fields:
     - buildVrmBoneTree
     - buildVrmScene
     - buildWaterNodes
+    - buildWaveWaterMaterial
     - buildYsmObject
     - buildYsmScene
     - cacheGet
@@ -996,6 +997,7 @@ auto_fields:
     - WaterPartRole
     - WaterReflectCtx
     - WaterReflectState
+    - WaterShaderCtx
     - WaterTopMesh
     - WaterUniformName
     - WAVE_AA_FULL_VERTS

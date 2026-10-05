@@ -27,10 +27,10 @@
 - keyframe 统一名 `tabIn`；**两份各自定义一份**（settings 在 ShadowRoot 内本地定义、repo 在全局定义）——不可只留全局一份，否则设置页 shadow 内动画静默失效（B1 根因）。`stgTabIn`/`fadeSlideDown` 退役。
 - 须跑 `css-layer-check`（ADR-189 D4 分层门禁）确认共享模块不越层；抽取后 `extractClasses` 死 CSS 信号以新类名为准。
 
-**D2 — viewer 缺席告知下探到 section 级**：
+**D2 — viewer 下 section 级缺席按卡片粒度门控**：
 - `settingsHTML` 把 `viewerMode`/`viewerNotice` 接给 `renderTabs`（对齐 repo 页 ADR-300 §2.5），消除「算了 isViewer 却不用」的半截接线。
-- 引入 **section 级缺席**机制：`desktopOnly` 维持 tab 级（留给未来整 tab 才通用的场景），新增 section 级缺席标记供各渲染函数本地判定——**输入端（哪些 section 在 viewer 下无意义）由调用方声明，展示端（空串 vs 占位告知）由前端消费**，不回退到「前端按平台手搓空判断」。占位走共享 `renderAbsentSection(noticeKey)`，落位与 ADR-300 告知行同哲学（可见缺席，非沉默消失）。
-- **缺席范围（实施前源码复查后裁定）**：只有 `links` / `mirror` 卡该 absent——链接模式与下载镜像源是桌面·网络概念，安卓无意义。
+- 引入 **section 级缺席**机制：`desktopOnly` 维持 tab 级（留给未来整 tab 才通用的场景），section 内改为**卡片粒度过滤**——**输入端（哪些卡片在 viewer 下无意义）由调用方声明**，不回退到「前端按平台手搓空判断」。**不引入占位告知卡片**（原拟 `renderAbsentSection` 未采纳）：ADR-300 §2.5 的「可见缺席」针对 **tab 级**——整模块消失、用户无据可查，须告知行；卡片级缺席是平台自然的，逐卡占位反成噪音。可见缺席改由**段标题改写**承载——viewer 下「路径配置」→「文件来源」，标题本身即传达「这里是来源入口，不是可配置路径」的语义边界。
+- **缺席范围**：只有 `links` / `mirror` 卡该 absent——链接模式与下载镜像源是桌面·网络概念，安卓无意义。
 - **`storage` 卡（set-files-root）与 `mc-path` 卡严禁 absent**：二者点击均走 `pickDirectory()` → `resolveAndroidRepoDir()`（`directory-picker.ts` / `path-cards.ts bindPathClick` 实证），**未授权弹 warn toast + `bridge.requestStoragePermission()` 跳系统「所有文件访问」授权页，授权后 `GetDefaultRepoRoot` 自动定位**（ADR-046 P2，Java 桥而非 Go 侧权限请求）。它们是 viewer 下的**真授权入口**，不是缺席 section。
 - **原「路径/存储段整体 absent」裁定作废**：`renderStgBasicPaths` 的 `if(!isViewer) return ""` 是**过度隐藏**（连同样可用的 mc-path 卡一起埋掉）；`isViewer` 守卫须拆到卡片粒度，而非整体回空串。
 
@@ -43,9 +43,9 @@
 
 ## 3. 后果（Consequences）
 
-- **正面**：D1 消除两份同步漂移点（keyframe 名 + 18 属性），改 tab 外观只动一处；D2 把 ADR-300「可见缺席」原则收口到设置页，viewer 用户不再面对半页空白无说明；D3 把设置项扩展从「四文件裸改无兜底」升为「schema 一处声明 + 编译护栏」，加项成本与出错率同降。
+- **正面**：D1 消除两份同步漂移点（keyframe 名 + 18 属性），改 tab 外观只动一处；D2 把 viewer 下设置页从「整段沉默消失」改为卡片粒度过滤 + 段标题改写，viewer 用户不再面对半页空白；D3 把设置项扩展从「四文件裸改无兜底」升为「schema 一处声明 + 编译护栏」，加项成本与出错率同降。
 - **负面 / 代价**：D1 抽基类要过 `css-layer-check`，且 shadow/全局双 keyframe 不能省——误合成单份全局 keyframe 会让设置页动画失效（回归 B1 根因）；D3 是存量迁移（镜像源/字体/密度/更新间隔四处裸字面量回填进 schema），churn 不小，须配契约测试防回退。
-- **已知遗留**：D2 的 `renderAbsentSection` 占位文案需三语键；D3 把 `MIRROR_I18N_KEY` 收紧为联合类型后，`init.ts` 的 `??` 运行时兜底须同步收缩为「仅真未知值兜底」，否则兜底会掩盖漏键；本 ADR 不解决 P2 之外的事（如密度/字体是否真值得进 schema，按实际扩展频率定）。
+- **已知遗留**：D3 把 `MIRROR_I18N_KEY` 收紧为联合类型后，`init.ts` 的 `??` 运行时兜底须同步收缩为「仅真未知值兜底」，否则兜底会掩盖漏键；本 ADR 不解决 P2 之外的事（如密度/字体是否真值得进 schema，按实际扩展频率定）。
 
 ## 4. 数据溯源
 

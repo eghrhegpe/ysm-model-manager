@@ -33,7 +33,7 @@ use_when:
   - 缓存清理 / 缓存状态 / 缓存校验
   - 缓存占用异常 / 磁盘膨胀
 quick_groups:
-  - 缓存
+  - 3D 预览与模型追加
 quick_intents:
   - 纹理缓存、KTX2 缓存
   - 缓存清理、cache-clear

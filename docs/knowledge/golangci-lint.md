@@ -25,16 +25,15 @@ pitfalls:
   - 「别启用 govet/gofmt/dupl」→ govet 与既有 `go vet` 重复；gofmt/dupl 自研机制有自动 stage 与漂移账本，golangci-lint 接不住（ADR-205 §2.2）
   - 「版本 < v1.64 解析 go1.26 directive 直接失败」→ 必须 v1.64+ / v2.x，实测 v2.13.2 built with go1.26.3 通过
 quick_groups:
-  - 门禁
-  - Go
-  - 静态分析
+  - 门禁与脚本
 quick_intents:
   - 为什么 Go 侧要引入 golangci-lint
   - lint 报了多少存量债
   - push 被 golangci-lint 阻断怎么办
 quick_risk_lines:
-  - .golangci.yml|default: none
-  - scripts/pre-push-gate.ts|--new-from-rev
+  - Go 曾是静态分析真空面（go vet 独苗）：golangci-lint 白名单制补齐——.golangci.yml 为 default: none + 显式 enable，勿开 enable-all
+  - 存量债不惩罚：pre-push-gate 跑 --new-from-rev 只拦本次引入（全量必红，errcheck 存量 623 条），未安装/无基线自动降级跳过
+  - push 被阻断先看 FAIL 块定位 linter 与文件；语义误报用 //nolint 注明 linter 名与理由，禁止 git push --no-verify 绕过
 invariant_anchors:
   - .golangci.yml|default: none
   - .golangci.yml|ADR-205

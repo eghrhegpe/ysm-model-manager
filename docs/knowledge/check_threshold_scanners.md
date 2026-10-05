@@ -39,8 +39,8 @@ pitfalls:
   - "把 debt 档 FAIL 当成推送被拦 → gate 只在 hard 档阻断，debt 只记录"
   - "为把 p6 压到 p5 硬塞语义无关形参进 options 对象 → 为过闸而扭曲 API"
 quick_groups:
-  - 门禁
-  - 重构
+  - 门禁与脚本
+  - 重构与域切分
 quick_intents:
   - "知道 check-complexity 报错会不会阻断推送"
   - "把认知复杂度降到阈值下却分数不变"

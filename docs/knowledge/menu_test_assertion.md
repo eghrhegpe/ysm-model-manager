@@ -31,7 +31,7 @@ pitfalls:
   - 把 `toHaveLength(N)` 当行为断言留下——计数属「顺序/计数」档，非产品决策即删或改写成员集合断言；确属产品决策须行内 `// layout-assert: <理由>`
   - 把 helper 写回 menu-test-fixtures.ts 复用——它顶层 import preview-state 有副作用，`@vitest-environment node` 测试引它即拖整条状态层依赖链（R6 反桶精神）；纯树断言 helper 在 menu-test-helpers.ts 独立叶
 quick_groups:
-  - 菜单测试 / cap 节点树断言 / 布局快照债务
+  - 测试与验证
 quick_intents:
   - 菜单测试怎么写才长久
   - 布局断言收敛三分法

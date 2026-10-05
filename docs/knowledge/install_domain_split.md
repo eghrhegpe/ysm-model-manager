@@ -42,8 +42,7 @@ pitfalls:
   - 硬切高内聚复合域会把 App god-object 换成「接口版 god-object」，且连带拉扯共享 helper 的宿主域（伪切分）
   - 包级私有 helper 被多域/多测试直调时，迁移需连带改造测试，成本随调用面放大
 quick_groups:
-  - install: queue / linkMode / launcher
-  - shared (不迁): logger / runtimeLogs / scan cache / config
+  - 重构与域切分
 quick_intents:
   - 该子域是否仅依赖注入回调与 DTO 即可运转？是 → 可切（纯域）
   - 该子域是否直读 App 的共享基础设施字段？是 → 不切（复合域）

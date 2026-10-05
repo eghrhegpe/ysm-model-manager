@@ -33,7 +33,7 @@ pitfalls:
   - 单变量对照实验
   - readPixels 需自建 renderer
 quick_groups:
-  - 视觉验证
+  - 测试与验证
 quick_intents:
   - 想知道界面长什么样，用截图取证而非断言计数
   - 视觉异常说不清来源时，做单变量开关对照实验

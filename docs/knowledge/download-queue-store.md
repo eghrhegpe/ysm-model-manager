@@ -50,7 +50,7 @@ tests:
   - frontend/src/features/community/download-queue-ui.test.ts
   - frontend/src/features/community/download-tasks.test.ts
 quick_groups:
-  - 创意工坊下载
+  - 下载与社区
 quick_intents:
   - DownloadState 队列状态
   - DownloadTask 下载任务

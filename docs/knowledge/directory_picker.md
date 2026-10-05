@@ -22,7 +22,7 @@ pitfalls:
   - Android 无目录选择器（Wails V3 dialogs_android.go 拒绝、SAF 亦废弃）→ 只能授权检查 + 自动定位公共仓库目录，勿指望对话框
   - 网页版无系统目录对话框（browser adapter 的 SelectDirectory fail-fast 抛 WebUnsupportedError）→ 只定位虚拟根，勿调用桌面专属对话框
 quick_groups:
-  - 跨平台目录选择与路径解析
+  - 文件操作与标签
 quick_intents:
   - 选择目录、SelectDirectory、Wails 对话框
   - 打开文件夹、导入文件夹、目录路径

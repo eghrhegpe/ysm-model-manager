@@ -77,7 +77,7 @@ use_when:
   - 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射
   - voxel 管线（voxel-bits/pipeline/三视图）/ ysm-header / nbt-parse 定位
 quick_groups:
-  - 解析与数据
+  - 前端分层与边界
 quick_intents:
   - 找 YSM 头部解析 / NBT 解析 / 体素解析 / zip 解包 / 颜色映射
 quick_risk_lines:

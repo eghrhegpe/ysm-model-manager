@@ -26,7 +26,7 @@ auto_fields:
     - RESOURCE_EXTS
     - shouldEnterForm
 quick_groups:
-  - 拖拽导入与平台适配
+  - 文件操作与标签
 quick_intents:
   - DnD 文件收集
   - import-dnd 拖拽导入

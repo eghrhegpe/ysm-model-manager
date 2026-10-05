@@ -118,7 +118,7 @@ tests:
   - frontend/src/workers/stats-core.test.ts
   - frontend/src/workers/stats.worker.test.ts
 quick_groups:
-  - 3D 预览菜单系统
+  - 3D 预览与模型追加
 quick_intents:
   - PreviewMenuNode 声明式菜单
   - visibleWhen 谓词

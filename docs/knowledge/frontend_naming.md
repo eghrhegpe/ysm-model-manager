@@ -27,8 +27,7 @@ pitfalls:
   - 单字母业务量（w/h/l、b、v、m、d）比缩写更隐蔽——类型是 number 不携带语义，w/h/l 三个单字母挤一行只能靠顺序猜
   - 生命周期动词家族一义多词（dispose/destroy/unload/unmount/detach/remove/close/clear/cleanup 等全仓 1683 次），同语义多动词 = 语义边界未定义
 quick_groups:
-  - 命名与可读性
-  - 黑话治理
+  - 前端分层与边界
 quick_intents:
   - 前端有没有黑话 / 命名烂在哪
   - 重命名某个变量/函数

@@ -30,7 +30,7 @@ tests:
   - frontend/src/preview-3d/state/preview-state.test.ts
   - frontend/src/preview-3d/state/preview-paths.test.ts
 quick_groups:
-  - 预览状态层契约
+  - 3D 预览与模型追加
 quick_intents:
   - KNOWN_PATHS 状态路径
   - PreviewStatePath 类型契约

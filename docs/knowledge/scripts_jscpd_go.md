@@ -23,10 +23,7 @@ pitfalls:
   - 「与前端 deadcode baseline 零耦合」→ 绝不要往 deadcode-baseline.json 的 jscpd 段写回，两账本独立演进
   - 「迁移 Windows 路径时归一化 POSIX」→ normPair 处理 `\`，但原始 key 仍可能含反斜杠
 quick_groups:
-  - 门禁集成与 pre-push 流程
-  - baseline 维护与冻结策略
-  - 重复对详情定位
-  - 搬迁漂移研判与豁免决策
+  - 门禁与脚本
 quick_intents:
   - 运行 Go 重复门禁 / 检查是否有新增重复对
   - 冻结当前 Go 重复债务到 baseline（治理后收紧）

@@ -51,7 +51,7 @@ pitfalls:
   - 收敛只改内部表示不动导出函数签名（modal 范式）——外部/测试零改动是「试点成功」判据
   - 模块级 let busy 锁必须有 reset 路径或注释豁免理由（dedup.ts 案例：tab 卸载后 busy 卡 true → 再进永久卡死）
 quick_groups:
-  - 状态管理
+  - 前端分层与边界
 quick_intents:
   - 全局 Map / 模块级 let 何时收敛成对象
   - 测试污染 reset 钩子怎么处理

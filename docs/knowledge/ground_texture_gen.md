@@ -44,9 +44,7 @@ pitfalls:
   - anti-repeat 的输入 tile **必须本身无缝**（周期=S）；非无缝输入它不补接缝，只治重复。本项目的程序化材质（tiledFbm）与已平铺无缝的 PNG 满足
   - macro 的 `macroStrength=0` 必须退化为原平铺（factor=1 逐像素相等）——改 macro 时此回归用例（anti-repeat.test.ts）会锁死
 quick_groups:
-  - 地面材质
-  - 程序化贴图
-  - 噪声生成
+  - 3D 预览与模型追加
 quick_intents:
   # 注：值内的引号用中文「」而非 YAML 的 " "——以双引号开头会被当成 YAML 字符串定界符，
   #   闭合后的 `→ ...` 尾部即成非法内容（VitePress 报 bad indentation of a sequence entry，Pages 长期红）。

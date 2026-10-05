@@ -45,16 +45,15 @@ pitfalls:
   - edgeFade 语义已改：0=均匀壳，1=边缘辉光主导（旧版是「压暗边缘」），中间段观感整体约暗 20%，用 opacity 补偿
   - 重建成本：只有 type/enabled/angle/penumbra 影响几何（`CONE_GEO_CHANGES`）；方位角/仰角走 syncPosition，color/intensity/distance/decay 走 updateUniforms——误加回「任意灯字段变更即 rebuild」会恢复拖滑块抖动
 quick_groups:
-  - preview-3d
+  - 3D 预览与模型追加
 quick_intents:
   - 改体积光外观 / 加锥体参数
   - 排查光柱穿帮、过曝、开关不生效
   - 截图/导出里没有光柱或亮度与预览不符
 quick_risk_lines:
-  - frontend/src/preview-3d/caps/light-cone.ts|applyTransform
-  - frontend/src/preview-3d/caps/light-cone.ts|VOLUMETRIC_CONE_FRAG
-  - frontend/src/preview-3d/caps/light-capability.ts|CONE_GEO_CHANGES
-  - frontend/src/preview-3d/screenshot/screenshot-cone.ts|applyVolumetricCone
+  - 锥体几何/着色/状态机单点在 light-cone.ts（rebuild + VOLUMETRIC_CONE_FRAG），禁止外挂第二套光柱实现
+  - 重建触发面只有 CONE_GEO_CHANGES（type/enabled/angle/penumbra）；驱动源是 envState 键 lightVolumetricDriver，与 activeLight 彻底脱钩
+  - 截图必须经 screenshot-cone.ts 的 applyVolumetricCone 复用同一锥体类，离屏 renderer 逐字段镜像预览 toneMapping 现值
 invariant_anchors:
   - frontend/src/preview-3d/caps/light-cone.ts|VolumetricCone
   - frontend/src/preview-3d/caps/light-cone.ts|rebuild

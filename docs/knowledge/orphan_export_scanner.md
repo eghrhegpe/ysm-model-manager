@@ -14,7 +14,7 @@ use_when:
   - 门禁报孤儿导出，判定是真死代码还是扫描漏检
   - 新增 export * 转发壳 / 测试包装函数后复核孤儿读数
 quick_groups:
-  - 工具与门禁
+  - 门禁与脚本
 quick_intents:
   - 孤儿导出误报、扫描盲区、转发即消费
   - check-orphan-exports 三类漏检修复

@@ -48,7 +48,7 @@ use_when:
   - 批量重命名 / 标签编辑 / 高级筛选对话框
   - 找对话框入口符号
 quick_groups:
-  - 业务对话框
+  - UI 交互与弹窗
 quick_intents:
   - 批量重命名实现 / 标签编辑器定位 / 高级筛选弹窗
 quick_risk_lines:

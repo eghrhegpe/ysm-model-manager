@@ -33,7 +33,7 @@ invariant_anchors:
   - .githooks/pre-commit|PARENT_OID
   - .githooks/post-commit|HEAD~1..HEAD
 quick_groups:
-  - 提交与钩子
+  - 门禁与脚本
 quick_intents:
   - 提交前文档自动同步
   - 防吞并发会话未提交漂移

@@ -114,6 +114,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_token_shift_audit.ts": ["tests"],
   // 速查表 pitfalls 列切分（gen-routes-quick.parsePitfall）——产出 docs 产物，docs 域变更亦触发
   "test_gen_routes_quick_pitfall.ts": ["docs", "tests"],
+  // 速查表分组封闭词表（gen-routes-quick.render + knowledge-cards.QUICK_GROUPS）——docs 域变更亦触发
+  "test_gen_routes_quick_groups.ts": ["docs", "tests"],
   "test_check_path_hygiene.ts": ["frontend", "tests"],
   "test_check_mock_paths.ts": ["frontend", "tests"],
   // 应用配置写唯一实参点（ADR-313）：扫 frontend/src 生产文件的 SaveAppConfig 调点 +
@@ -257,6 +259,10 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_diff_source.ts": ["scripts/_lib/diff-source.ts", "scripts/_lib/git-hunks.ts"],
   "test_token_shift_audit.ts": ["scripts/token-shift-audit.ts", "scripts/_lib/design-tokens.ts"],
   "test_gen_routes_quick_pitfall.ts": ["scripts/gen-routes-quick.ts"],
+  "test_gen_routes_quick_groups.ts": [
+    "scripts/gen-routes-quick.ts",
+    "scripts/_lib/knowledge-cards.ts",
+  ],
   "test_link_checker_scope.ts": ["scripts/link-checker.ts", "scripts/_lib/scan-files.ts"],
   "test_check_path_hygiene.ts": [
     "scripts/check-path-hygiene.ts",

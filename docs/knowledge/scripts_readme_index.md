@@ -32,7 +32,7 @@ pitfalls:
   - 同一脚本在登记性表格（第一列）出现 ≥2 行 → duplicateRegistrations 报重复登记（check-go-coverage-threshold 曾错放生成器表）
   - 已删脚本名仍在「已删除」区块之外被引用 → ghostReferences 报幽灵引用（event-audit 曾残留于检查类定义与一致性校验表）
 quick_groups:
-  - 脚本治理与文档一致性
+  - 门禁与脚本
 quick_intents:
   - 检查哪些脚本未登记在 README
   - 验证新增脚本是否已正确登记

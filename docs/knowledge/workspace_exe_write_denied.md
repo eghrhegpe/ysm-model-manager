@@ -34,7 +34,7 @@ pitfalls:
   - ⚠️ 勿把配置目录迁去 LocalAppData 来"绕开"：Temp 被拦才是硬伤（os.CreateTemp/wails/更新器都依赖系统 Temp，绕不开），且白名单随策略版本可能变化——治本在沙箱设置不在应用代码
   - 区分两类现象：仓内 exe 写被拒（本卡）≠ 未签名 exe 复制后运行弹 SmartScreen「无法验证发布者」（Mark of the Web 常规警告，见签名话题）
 quick_groups:
-  - 排查「读正常写拒绝」类雷霆：先做「换位置」对照实验（仓内 vs 仓外），再查 ACL/令牌/安全软件记录
+  - 文件操作与标签
 quick_intents:
   - 应用临时文件创建全部失败但功能正常
   - 同一 exe 换个位置跑行为不同

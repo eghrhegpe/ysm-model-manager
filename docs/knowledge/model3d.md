@@ -1039,11 +1039,7 @@ invariant_anchors:
   - frontend/src/preview-3d/mesh/cube-mesh.ts|computeBoneLocalPos
   - frontend/src/preview-3d/mesh/mesh-builder.ts|addMeshToBoneGroup
 quick_groups:
-  - 3D 渲染与预览核心
-  - 多模型同框与场景管理
-  - 骨骼/几何渲染层
-  - 相机与漫游控制
-  - 纹理缓存与渲染性能调优
+  - 3D 预览与模型追加
 quick_intents:
   - 挂载/切换 3D 预览（mount3D / switchPreview）
   - 多模型同框叠加（keepInScene=true）

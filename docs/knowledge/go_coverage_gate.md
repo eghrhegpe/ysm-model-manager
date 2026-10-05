@@ -31,12 +31,12 @@ pitfalls:
   - "本脚本用具名导出供契约测试 import，退出必须用 process.exitCode + 自然返回；用 process.exit(N) 会在 Windows 句柄清理阶段触发 libuv 断言（0xC0000409）"
   - "入口包（根 main / cmd/updater / 代码生成器）的 main() 测试内不可达，必然 0%，应进 SKIP_PACKAGES 而非当失败"
 quick_groups:
-  - Go 覆盖率
+  - 门禁与脚本
 quick_intents:
   - "Go 覆盖率门禁怎么算包覆盖率"
   - "为什么某包报 0% 覆盖率"
 quick_risk_lines:
-  - scripts/check-go-coverage-threshold.ts|aggregateByPackage
+  - 包覆盖率口径 = aggregateByPackage 语句加权（covered 语句/总语句）——「文件内函数百分比最小值」口径会让单个 0% 函数拖垮整包
 invariant_anchors:
   - scripts/check-go-coverage-threshold.ts|aggregateByPackage
   - scripts/check-go-coverage-threshold.ts|resolveThreshold

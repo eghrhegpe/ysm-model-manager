@@ -35,7 +35,7 @@ pitfalls:
   - core 测试文件同样受 check-layering R6 约束（引擎无关对 type 感知不成立）
   - HTML 字面量存量在 baseline 只减不增，触碰即顺手收敛，新增即红
 quick_groups:
-  - 前端分层
+  - 前端分层与边界
 quick_intents:
   - core 准入三条全满足才可入；绑定能力走依赖注入不走直引
   - features 拿 backend 能力唯一出口是 *-deps.ts seam + 注入形态

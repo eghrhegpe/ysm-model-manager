@@ -58,14 +58,13 @@ pitfalls:
   - 新增命令参数若不登记 ParamSpec，桥接层走 legacy 降级（空串/0/false 丢弃）——与 ADR-173 前行为等价，但拿不到声明序输出与显式空值能力；无 flag 命令（cache-status/perf-log）无需登记
   - scripts/_lib/cli-registry.ts 的 CMD_RE 只解析到 runFn 不强制收尾 `)`——RegisterCommandC 尾随变参 ParamSpec 拆行注册合法（2026-09-03 教训：曾要求完整 `)` 闭合致 5 命令从注册表解析消失、completions/文档 parity 双双拉红）
 quick_groups:
-  - CLI 桥
-  - 参数序列化
+  - 后端桥接与数据存储
 quick_intents:
   - GUI 调 CLI 参数为何丢失
   - 如何给命令登记 ParamSpec
   - 参数规格存在哪（单一事实源）
 quick_risk_lines:
-  - RegisterCommandC(" 新增参数
+  - 新增命令参数必须经 RegisterCommandC 登记 ParamSpec——未登记走 legacy 降级（空串/0/false 丢弃，拿不到声明序与显式空值）
 invariant_anchors:
   - go/cli/registry.go|type ParamSpec struct
   - internal/app/cli_bridge.go|func buildCLIArgs

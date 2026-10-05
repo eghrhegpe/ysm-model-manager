@@ -66,7 +66,7 @@ auto_fields:
     - TRANSITION_TOKEN_DURATIONS
     - TRANSITION_TOKEN_VALUES
 quick_groups:
-  - emoji 摸排 / UI_ICONS 消费 / 孤儿图标 / 迁移残留
+  - UI 交互与弹窗
 quick_intents:
   - emoji
   - UI_ICONS

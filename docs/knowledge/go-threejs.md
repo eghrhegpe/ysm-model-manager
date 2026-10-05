@@ -15,7 +15,7 @@ auto_fields:
     - Model3DSpec
     - ModelGroup
 quick_groups:
-  - 3D spec 渲染与模型追加
+  - 3D 预览与模型追加
 quick_intents:
   - 3D 骨骼 spec、three.js
   - 顶点 / UV / 四元数

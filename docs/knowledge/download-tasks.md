@@ -35,7 +35,7 @@ auto_fields:
     - rollbackToIdle
     - subscribe
 quick_groups:
-  - 创意工坊下载
+  - 下载与社区
 quick_intents:
   - buildDownloadTasks 任务构建
   - classifyDownloadSize 大小策略

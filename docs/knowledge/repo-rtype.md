@@ -27,7 +27,7 @@ auto_fields:
     - ToastPayload
     - useCurrentResourceType
 quick_groups:
-  - 资源类型与仓库状态
+  - 配置与注册表
 quick_intents:
   - currentRepoType 当前资源类型
   - useCurrentResourceType 订阅类型切换

@@ -93,13 +93,12 @@ pitfalls:
   - "matchZipEntryTS 是注册表顺序首命中、忽略 priority；Go MatchZipEntry 同构，但容器级 detectZipType 走 priority desc 裁决——两者不可直接对拍（ADR-154 §2.4）"
   - "TS 测试读仓库根 fixture 不得用 import 语句（ADR-146 R4 冻结基线会 FAIL），须用 readFileSync + process.cwd() 向上定位"
 quick_groups:
-  - 契约对拍
-  - 双端互锁
+  - 测试与验证
 quick_intents:
   - 确认 Go-TS 解析层是否漂移 → 跑 go test ./go/types ./go/litematic + vitest src/backend/*.parity.test.ts
   - 修改识别层指纹后自检 → 重跑两端 parity 测试（fixture 期望值以 Go 输出为准）
 quick_risk_lines:
-  - MatchZipEntry|matchZipEntryTS 首命中序依赖 resource_types.json 顺序
+  - Go MatchZipEntry 与 TS matchZipEntryTS 的首命中序依赖 resource_types.json 顺序——重排类型定义即两端漂移
   - voxel-colors-data.json 无复跑生成器（gen/main.go 只生成 block_ids_data.go），靠 parity_voxel_test.go 兜底
 invariant_anchors:
   - go/types/registry/parity_zipentry_test.go|TestParity_MatchZipEntry

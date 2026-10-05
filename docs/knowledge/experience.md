@@ -18,7 +18,7 @@ pitfalls:
   - Wails 应用本地 GOOS 交叉编译受 CGO 限制不可行——跨平台执法只能走静态 import 检查（ADR-318 D3）
   - lockfile-frontend 检查假红排查：先手动 `cd frontend && pnpm install --frozen-lockfile` 看真实报错
 quick_groups:
-  - 构建与发版
+  - 门禁与脚本
 quick_intents:
   - 发版冒烟、CI 预演、lockfile 同步、跨平台标签
 quick_risk_lines:

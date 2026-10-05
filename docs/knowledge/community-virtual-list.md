@@ -14,7 +14,7 @@ auto_fields:
     - VirtualList
     - VirtualListOpts
 quick_groups:
-  - 社区与创意工坊
+  - 下载与社区
 quick_intents:
   - 定高虚拟列表
   - 2000 级索引窗口化

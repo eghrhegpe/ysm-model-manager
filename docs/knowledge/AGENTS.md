@@ -17,7 +17,8 @@ frontmatter 必填字段：`kind`（kebab-case，=文件名）/ `name`（=H1 标
 | 字段 | 语义 | 维护 | drift |
 |------|------|------|-------|
 | `source_files` / `tests` / `symbols` / `auto_fields.symbols_with_lines`（纯符号名无行号，ADR-162） | 机器推导 | gen 脚本自动 | ERROR 阻断 |
-| `use_when`(≤8) / `quick_intents`(≤5) / `pitfalls` / `quick_groups` / `quick_risk_lines` / 正文 | 人工策展：用户自然语言关键词与陷阱 | 手写 | WARN |
+| `use_when`(≤8) / `quick_intents`(≤5) / `pitfalls` / `quick_risk_lines` / 正文 | 人工策展：用户自然语言关键词与陷阱 | 手写 | WARN |
+| `quick_groups` | **受控词表**（`scripts/_lib/knowledge-cards.ts` QUICK_GROUPS，14 组，数组序 = 路由表渲染序）：词表外组名入 routes-quick「未归类」桶并 WARN；新增合法组名只改词表常量，勿在卡里发明野生组名。`quick_risk_lines` 写面向 AI/人的自然语言，禁写 `文件\|符号` 锚语法（那是 `invariant_anchors` 的语法） | 手写 | 词表外 WARN |
 | `invariant_anchors`（`文件\|符号`） | 机制锚点，architecture 卡必须声明 | 手写声明 + 机器校验存在性 | ERROR 阻断 |
 | `affected: false` | 仅此值合法：快照/报告型卡退出 `--affected` 匹配 | 手写 | — |
 | `status` | 卡生命周期（受控词表 `scripts/_lib/knowledge-cards.ts` CARD_STATUS）：`active`（默认，随源码演进）/ `draft`（起草中，`new-knowledge-card.ts` 模板默认，定稿后改 active）/ `snapshot`（一次性快照/报告，**应配 `affected: false`**）/ `archived`（已归档）/ `superseded`（被取代，应在正文标注取代关系）。区别于 ADR 采纳状态（`adr-status-categories.ts`） | 手写 | 词表外 ERROR；snapshot 缺 `affected: false` WARN |

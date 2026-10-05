@@ -16,7 +16,7 @@ auto_fields:
     - resolvePlatformMode
     - Window
 quick_groups:
-  - 后端桥接与运行时
+  - 后端桥接与数据存储
 quick_intents:
   - Wails Events 事件抽象
   - Wails Window 窗口抽象

@@ -25,12 +25,12 @@ pitfalls:
   - app-toast msg 槽走 esc() 转义，塞 SVG 会以字面 svg 标签文本显示，不能直接承载图标（ADR-267 盲区根因）
   - .toast 已按 type 左边框着色，msg 载荷 emoji 前缀是信息冗余，应交给 type 驱动
 quick_groups:
-  - toast 收债
+  - UI 交互与弹窗
 quick_intents:
   - toast emoji
   - 消息弹窗图标
 quick_risk_lines:
-  - app-toast/index.ts|innerHTML
+  - toast 图标位只喂 resolveIcon 的语义 SVG，msg 载荷禁拼裸 emoji 前缀（esc 文本槽塞 SVG 会字面显示，ADR-267 盲区）
 invariant_anchors:
   - frontend/src/views/app-toast/index.ts|show
 ---

@@ -80,11 +80,7 @@ pitfalls:
   - 将负向定时器窗口换成短 sleep 会导致防抖真坏了也漏报
   - testid 值禁止含空格或大小写混排（UI-Design.md §19.1），本层未做入口校验（P3）
 quick_groups:
-  - testid 查询与元素选择
-  - 异步等待策略与 flaky 治理
-  - 事件模拟（fire 系列）
-  - 组件挂载/卸载编排
-  - 异步等待进阶
+  - 测试与验证
 quick_intents:
   - 按 testid 查询/匹配 DOM 元素
   - 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定

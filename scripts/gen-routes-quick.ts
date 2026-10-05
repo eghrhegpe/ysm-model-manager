@@ -6,15 +6,19 @@
  * 字段生成 docs/knowledge/routes-quick.md，替代手工维护版。
  *
  * 输入（知识卡 frontmatter，全部可选；缺字段视为该卡不参与急速表）:
- *   quick_groups:     场景分组名（值即分组标题；与 quick_intents 循环配对）
+ *   quick_groups:     场景分组名（值即分组标题；与 quick_intents 循环配对）。
+ *                     受控词表 = scripts/_lib/knowledge-cards.ts 的 QUICK_GROUPS——
+ *                     词表外组名入「未归类」桶并 WARN，勿在卡里发明野生组名
  *   quick_intents:    用户意图关键词（每行一个，与 quick_groups 循环配对：
  *                     意图多于分组时并入最后分组，分组多于意图时多余分组不输出；
  *                     配对不均恒打 WARN，绝不静默丢弃——2026-08-31 审计修复）
- *   quick_risk_lines: 红线警告（按索引与 quick_intents 配对；缺省则该行红线填 -）
+ *   quick_risk_lines: 红线警告（按索引与 quick_intents 配对；缺省则该行红线填 -）。
+ *                     面向 AI/人的自然语言，禁写 `file|symbol` 锚语法（那是 invariant_anchors 的语法）
  *   pitfalls:         陷阱列表，格式 "「位置」描述 → 正确做法"（如无前缀则整段作陷阱描述）
  *
  * 输出分组:
- *   - 按 quick_groups 值分组，组内按 quick_intents 排序（稳定）
+ *   - 按 QUICK_GROUPS 受控词表序渲染（2026-10-05 治理：80 野生组收敛 14 组；
+ *     词表外组名并入「未归类」桶置尾 + WARN），组内按 quick_intents 排序（稳定）
  *   - pitfalls 独立汇总到「高频陷阱速查」段
  *   - 关联 ADR 取自卡片的 adr: 字段；无则填 -
  *   - 仅处理 status ∈ {active, 缺省} 且带 quick_groups 的卡（2026-10 由 tier: architecture 闸换成
@@ -34,13 +38,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getList, getScalar, parseFrontmatter } from "./_lib/frontmatter.ts";
-import { KNOW_DIR, KNOWLEDGE_NON_CARDS } from "./_lib/knowledge-cards.ts";
+import { KNOW_DIR, KNOWLEDGE_NON_CARDS, QUICK_GROUPS } from "./_lib/knowledge-cards.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 
 const OUT_PATH = path.join(KNOW_DIR, "routes-quick.md");
 const BANNER =
   "<!-- 本文件由 scripts/gen-routes-quick.ts 自动生成，请勿手改。重跑：node scripts/gen-routes-quick.ts -->";
 const END_MARK = "<!--  END_GENERATED_SECTION -->";
+/** 词表外组名的收容桶标题（置尾渲染，WARN 提示回填规范组名）。 */
+export const UNCLASSIFIED_GROUP = "未归类";
+const GROUP_RANK = new Map(QUICK_GROUPS.map((g, i) => [g, i] as const));
 
 function fm(text: string, key: string) {
   return getScalar(parseFrontmatter(text), key);
@@ -120,7 +127,7 @@ export function excessRiskLines(risks: string[], intents: string[]): string[] {
   return risks.slice(intents.length);
 }
 
-function render(
+export function render(
   cards: Array<{
     file: string;
     name: string;
@@ -132,6 +139,10 @@ function render(
   }>,
 ) {
   const rows: Array<{ group: string; intent: string; risk: string; adr: string; card: any }> = [];
+  // 词表外组名收容（2026-10-05 治理）：组名漂移曾把本表拖成 80 组（69 组只挂 1 卡）。
+  // 封闭词表 QUICK_GROUPS 之外的名字一律并入「未归类」桶置尾渲染 + 恒 WARN——
+  // 让野生组名当场可见，而不是安静地再多长一个分组标题。
+  const unknownGroups = new Map<string, Set<string>>();
   // 意图 ↔ 分组循环配对（2026-08-31 审计修复）：
   // 旧实现 Math.min(groups, intents) 仅按索引配对，go-scanner 1 组 5 意图只出 1 行、
   // preview_core 1 组 4 意图只出 1 行——其余意图静默丢弃、零警告（routes-quick 覆盖空转）。
@@ -140,6 +151,12 @@ function render(
   for (const c of cards) {
     const gLen = c.groups.length;
     const iLen = c.intents.length;
+    for (const g of c.groups) {
+      if (!GROUP_RANK.has(g)) {
+        if (!unknownGroups.has(g)) unknownGroups.set(g, new Set());
+        unknownGroups.get(g)!.add(c.file);
+      }
+    }
     // 降噪（2026-09-03）：单分组多意图（占全库 90/97 张）属正常形态，不再鸣笛；
     // 仅「分组≥2 且意图>分组」（疑似漏写分组名）或「分组>意图」（悬空分组）才 WARN，
     // 让真正的配对异常可见。输出逻辑不变，生成物字节级一致 → CI/doctor 零漂移。
@@ -161,8 +178,9 @@ function render(
         `⚠️  ${c.file}: ${c.risks.length} 条红线 > ${iLen} 条意图，多余 ${excess.length} 条不输出（风险行按索引与意图配对）: ${excess.join("、")}`,
       );
     for (let i = 0; i < iLen; i++) {
+      const rawGroup = c.groups[Math.min(i, gLen - 1)]!;
       rows.push({
-        group: c.groups[Math.min(i, gLen - 1)]!,
+        group: GROUP_RANK.has(rawGroup) ? rawGroup : UNCLASSIFIED_GROUP,
         intent: c.intents[i]!,
         risk: c.risks.length > i ? c.risks[i]! : "-",
         adr: c.adr,
@@ -170,18 +188,26 @@ function render(
       });
     }
   }
+  for (const [g, files] of unknownGroups) {
+    console.warn(
+      `⚠️  quick_groups 词表外组名「${g}」（卡: ${[...files].sort().join("、")}）→ 已渲染入「${UNCLASSIFIED_GROUP}」桶；规范词表 = scripts/_lib/knowledge-cards.ts 的 QUICK_GROUPS`,
+    );
+  }
   const pitfalls = cards.flatMap((c) => c.pitfalls.map((p) => parsePitfall(p)));
 
-  // 按 group 值分组（保留首次出现顺序），组内按 intent 排序
-  const groupOrder: string[] = [];
+  // 按 group 值分组：渲染序 = QUICK_GROUPS 词表序（高频域在前），词表外（未归类桶）置尾；
+  // 同秩（理论上是桶内同名）按名稳定排序。组内按 intent 排序。
   const groupMap = new Map();
   for (const r of rows) {
-    if (!groupMap.has(r.group)) {
-      groupOrder.push(r.group);
-      groupMap.set(r.group, []);
-    }
+    if (!groupMap.has(r.group)) groupMap.set(r.group, []);
     groupMap.get(r.group).push(r);
   }
+  const groupOrder = [...groupMap.keys()].sort((a: string, b: string) => {
+    const ra = GROUP_RANK.get(a) ?? Number.MAX_SAFE_INTEGER;
+    const rb = GROUP_RANK.get(b) ?? Number.MAX_SAFE_INTEGER;
+    if (ra !== rb) return ra - rb;
+    return a.localeCompare(b, "zh-CN");
+  });
   for (const g of groupOrder) {
     groupMap.get(g).sort((a: any, b: any) => a.intent.localeCompare(b.intent, "zh-CN"));
   }
@@ -190,7 +216,7 @@ function render(
   out.push(BANNER, "", "# AI 急速版路由表（高频场景）", "");
   out.push("> 本表由知识卡 frontmatter 的 `quick_*` 字段自动生成。");
   out.push(
-    "> 新增高频场景请在对应知识卡 frontmatter 补充 `quick_groups`/`quick_intents`/`quick_risk_lines`/`pitfalls`。",
+    "> 新增高频场景请在对应知识卡 frontmatter 补充 `quick_groups`/`quick_intents`/`quick_risk_lines`/`pitfalls`；组名必须取自受控词表（scripts/_lib/knowledge-cards.ts 的 QUICK_GROUPS），词表外组名落入「未归类」。",
   );
   out.push("");
 

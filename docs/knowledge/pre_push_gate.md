@@ -52,7 +52,7 @@ use_when:
   - 契约测试
   - 工具输出解析
 quick_groups:
-  - 提交与钩子
+  - 门禁与脚本
 quick_intents:
   - 推送被门禁阻断怎么办
   - 门禁检查项有哪些

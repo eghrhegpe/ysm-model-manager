@@ -22,7 +22,7 @@ pitfalls:
   - 「D1/D2 已落地」≠「全仓零手搓」——范围性目标非穷举保证，判断干净必须 grep 实证
   - LoadGuard 只管代际不管并发；「单飞 + 尾随补跑」属并发控制，勿混入
 quick_groups:
-  - 代际守卫
+  - 前端分层与边界
 quick_intents:
   - 新增代际逻辑时，唯一出口是 createLoadGuard() 四件套
   - 想迁移/收敛 load-guard.ts 前，先查 ADR-230

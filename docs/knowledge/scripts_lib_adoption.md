@@ -27,10 +27,7 @@ pitfalls:
   - 「薄包装误报」→ `return walk(dir, {...})` 体内无 readdirSync，须靠自研特征而非函数名判定
   - 「名字过泛误报」→ collectSymbols 这类通用名可能是聚合上层逻辑，列入 smell 会持续误报
 quick_groups:
-  - 新增/调整守护规则（RULES 表）
-  - 违规研判与误报排除
-  - 共享层自身收敛（_lib 内手搓）
-  - 采用率全景解读
+  - 门禁与脚本
 quick_intents:
   - 检查某 _lib 模块是否被绕开手搓
   - 为新的共享模块加一条守护规则

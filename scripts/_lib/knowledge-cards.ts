@@ -82,5 +82,31 @@ export const CARD_STATUS: Record<string, string> = {
   superseded: "被更新卡取代（应在正文标注取代关系）",
 };
 
+/**
+ * QUICK_GROUPS — 路由表（routes-quick）场景分组受控词表（2026-10-05 治理）。
+ *
+ * 背景：quick_groups 原是每卡自由文本，组名漂移把 routes-quick 拖成 80 组
+ * （69 组只挂 1 张卡；近重复名成堆——3D×4 / 后端桥接×3 / 门禁×3），浏览式检索失效。
+ * 现收敛为封闭词表：gen-routes-quick 按本数组顺序渲染分组，词表外组名并入
+ * 「未归类」桶并 WARN（fail-visible）——新增合法组名只改本常量，勿在卡里发明新组名。
+ * 数组顺序 = 路由表渲染顺序（高频域在前）。
+ */
+export const QUICK_GROUPS = [
+  "3D 预览与模型追加",
+  "UI 交互与弹窗",
+  "跨组件通信与页面",
+  "模型扫描与仓库管理",
+  "文件操作与标签",
+  "后端桥接与数据存储",
+  "配置与注册表",
+  "下载与社区",
+  "截图导出与缓存",
+  "前端分层与边界",
+  "重构与域切分",
+  "门禁与脚本",
+  "测试与验证",
+  "能力门控与平台判定",
+];
+
 /** 知识卡目录（供各 gen-* 脚本复用，避免各自 path.join 漂移）。 */
 export const KNOW_DIR = path.join(ROOT, "docs", "knowledge");

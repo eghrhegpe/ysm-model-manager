@@ -23,7 +23,7 @@ pitfalls:
   - 本产品无 GUI display 渲染上下文，gui_light/display/ambientocclusion 是「有意不消费」的死解析数据，不是漏接
   - 禁止接入 LightCapability：ADR-282 解耦 + envState source 优先级复写用户设置 + 仅 pack 带此字段跨类型不一致
 quick_groups:
-  - pack 模型光照
+  - 3D 预览与模型追加
 quick_intents:
   - gui_light 是什么意思
   - 为什么模型声明了光照偏好却不生效

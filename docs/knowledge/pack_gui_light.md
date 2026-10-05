@@ -52,7 +52,7 @@ Java 资源包模型 JSON 里的三个「光照/显示元数据」字段——`g
 
 ## 与其他子系统关系
 
-- 灯光系统 `caps/light-capability.ts`（LightCapability）：**禁止**消费本卡三字段。ADR-282 已令灯光与模型类别解耦（灯光是场景属性，不是内容元数据），且 envState 写路径有 source 优先级（manual > auto-model）——接入要么复写用户设置、要么被 shouldOverwrite 挡住，且换模型灯架跳变。
+- 灯光系统 `preview-3d/caps/light-capability.ts`（LightCapability）：**禁止**消费本卡三字段。ADR-282 已令灯光与模型类别解耦（灯光是场景属性，不是内容元数据），且 envState 写路径有 source 优先级（manual > auto-model）——接入要么复写用户设置、要么被 shouldOverwrite 挡住，且换模型灯架跳变。
 - pack 适配器 `pack-model-adapter.ts`：内容层自给光照的正确落点——顶点色烘焙（biome tint / AO）已有成例，见知识卡 `mc-ao-tint`。
 
 ## 不变量

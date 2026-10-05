@@ -61,7 +61,7 @@ status: active
 
 ## 与其他子系统关系
 
-- renderFormattedText 消费方：`utils/display.ts`（文件名着色）、`utils/summarize.ts`（tips）、`app-sync-manager/tpl.ts`、`app-preview/preview-detail.ts` + `preview-litematic-meta.ts`、`features/import-queue.ts`（`app-resource-manager` 已删除，2026-08-24）
+- renderFormattedText 消费方：`utils/display.ts`（文件名着色）、`app-sync-manager/tpl.ts`、`app-preview/preview-detail.ts` + `preview-litematic-meta.ts`、`features/import-queue.ts`（`app-resource-manager` 已删除，2026-08-24；原 utils/summarize.ts tips 消费方也已删除，summarize 逻辑现居 views/app-preview/tpl-summary.ts）
 - describeVersionRange 消费方：`app-preview/detail.ts`（资源包/光影包详情，原 app-resource-manager 资源包卡片已随组件删除）
 - PackMeta 上游为 Go 端包元数据读取 binding（见 [go_packs](./go-packs.md)）
 

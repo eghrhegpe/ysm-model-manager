@@ -61,7 +61,7 @@ status: active
 
 ## 与其他子系统关系
 
-- 消费方：`features/dnd-shared.ts`（拖拽过滤 ALL_EXTS）、`features/import-dnd.ts`、`features/import-queue.ts`（导入队列 ALL_EXTS）、`views/app-tree/loader.ts` + `views/app-tree/toolbar-events.ts`（getExts）
+- 消费方：`features/dnd-shared.ts`（拖拽过滤 ALL_EXTS）、`features/import-dnd.ts`、`features/import-queue.ts`（导入队列 ALL_EXTS）、`views/app-tree/toolbar-search.ts` + `views/app-tree/toolbar-commands.ts`（getExts）
 - 一致性对端：`resource_types.json`（单一事实源）↔ Go `LoadRegistry()` 运行时加载（无静态 ResourceExts 表）↔ 本文件
 
 ## 不变量

@@ -137,7 +137,7 @@ ADR-306 表情通道（P2）：morph 轨道不再整体丢弃——幽灵 morph 
 | `adapters/vrm/vmd-retarget-map.ts` | 纯数据：`VMD_RETARGET_CANDIDATES`（53 骨映射 + 候选顺序即优先级）/ `VMD_RETARGET_UNMAPPED`（显式不映射 + 原因）/ `VMD_FOOT_IK_CANDIDATES` / `VMD_TOE_ROTATION_CANDIDATES`（つま先ＩＫ quaternion FK 源，P1b）/ 缩放常量 |
 | `adapters/vrm/vmd-expression-map.ts` | 纯数据（ADR-306）：`VMD_EXPRESSION_CANDIDATES`（MMD morph 名 → VRM 表情 preset，五母音/眨眼/情感）/ `VMD_EXPRESSION_UNMAPPED`（neutral/单眼 wink/视线族显式不映射 + 原因） |
 | `adapters/vrm/vmd-retarget.ts` | 纯逻辑：绑定解析 / 表情映射解析（`collectVmdExpressionMap`）/ 幽灵骨架（骨 + morph 白名单）/ 轨道重写（含 morph 改道）/ 足 IK 目标采样器 |
-| `bone/vrm-foot-ik.ts` | VMD 足ＩＫ → CCD 求解（写**原始骨**，晚于 `vrm.update`）；脚尖链（ADR-306 P1b：`semanticBones["leftToes"/"rightToes"]` + 防乱挂校验，`TOE_IK_CONFIG` 钳制比腿保守） |
+| `preview-3d/bone/vrm-foot-ik.ts` | `createVrmFootIKController` VMD 足ＩＫ → CCD 求解（写**原始骨**，晚于 `vrm.update`）；脚尖链（ADR-306 P1b：`semanticBones["leftToes"/"rightToes"]` + 防乱挂校验，`TOE_IK_CONFIG` 钳制比腿保守） |
 | `bone/leg-chain.ts` | 腿链提取（链根取大腿的**直接父骨**，`endEffectorId` = 足骨），MMD 待机锚地与 VRM 足 IK 共用 |
 | `adapters/vrm/vrm-adapter.ts` | 接入：`loadMotionClips`（同目录 `.vrma` + `.vmd`（local），追加 `CustomAnim` 动作库 `.vmd`（library）；`.vmd` 经 `buildVmdRetargetClip` 传 `expressionManager` 启用表情通道；**ADR-309 D6：自动播只选 local 条目，库动作只进列表**）+ 每帧驱动（**ADR-309 D2：lookAt 让道** `autoUpdate = !(animActive && drivesEyes)`） |
 
@@ -158,7 +158,7 @@ ADR-306 表情通道（P2）：morph 轨道不再整体丢弃——幽灵 morph 
 ## 与其他子系统关系
 
 - **ADR-081 语义骨骼层**：重定向映射表**刻意不复用**语义层的形状（语义层是「感知层实际需要的子集」），但沿用同一套「候选顺序即优先级、首个命中胜出」约定。注意 toes（`leftToes`/`rightToes`）于 ADR-306 P1b 起**已进语义层**（`semantic-bones.ts` `SemanticBoneId`，MMD/YSM/VRM 三表均有 toes 候选）——脚链 CCD（`vrm-foot-ik`）与感知层共用该语义；重定向映射表自身仍独立。
-- **`bone/ik-solver.ts`**：CCD 求解器（自写，参考 babylon-mmd）。`solveIK` 的关节遍历**跳过链根**，因此链根取谁决定几节参与解算——取大腿自身则只有膝盖能动。脚尖链（`vrm-foot-ik` `TOE_IK_CONFIG`）链根取踝（2 节链 ⇒ 只转脚尖关节）。
+- **`preview-3d/bone/ik-solver.ts`**：CCD 求解器（自写，参考 babylon-mmd）。`solveIK` 的关节遍历**跳过链根**，因此链根取谁决定几节参与解算——取大腿自身则只有膝盖能动。脚尖链（`vrm-foot-ik` `TOE_IK_CONFIG`）链根取踝（2 节链 ⇒ 只转脚尖关节）。
 - **`bone/mmd-foot-ik.ts`**：待机锚地，与本模块的 VMD 足 IK 以 `animActive` **互斥**（待机走锚地、动画走 VMD 目标）。
 - **`adapters/mmd/mmd-anim-library.ts`**：复用其 `getCustomAnimPath()`（`GetRepoRoot("CustomAnim")`）取 MMD 动作库根。
 - **归属红线**：磁盘枚举一律走 Go 交付的 `listAllFilePaths`，前端不自行扫描磁盘（AGENTS.md）。

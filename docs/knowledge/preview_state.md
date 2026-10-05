@@ -71,9 +71,9 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 
 | 项 | 旧（ADR-125） | 新（P4-A） |
 |----|--------------|-----------|
-| 模块 | `state/settings-state.ts` | `state/preview-state.ts` |
-| 路径类型 | `SettingsPath`（六项窄联合） | 并入 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀归位；**2026-09 收紧 = `typeof KNOWN_PATHS[number]`，类型契约即运行时实现**，未落地键编译期报错） |
-| 已知路径常量 | `SETTINGS_PATHS` | `KNOWN_PATHS`（清单以 `state/preview-paths.ts` 为准，勿在卡内维护计数；探针入册门槛见 [ADR-291]。ui.activeComponent 已由 per-scene 闭包取代、移出数组不再写入） |
+| 模块 | `views/app-content/settings/settings-schema.ts`（原 settings-state.ts，ADR-125 后更名） | `preview-3d/state/preview-state.ts` |
+| 路径类型 | `SettingsPath`（六项窄联合） | 并入 `PreviewStatePath`（`preview-3d/state/preview-state.ts`，ADR-129 第一刀归位；**2026-09 收紧 = `typeof KNOWN_PATHS[number]`，类型契约即运行时实现**，未落地键编译期报错） |
+| 已知路径常量 | `SETTINGS_PATHS` | `KNOWN_PATHS`（清单以 `preview-3d/state/preview-paths.ts` 为准，勿在卡内维护计数；探针入册门槛见 [ADR-291]。ui.activeComponent 已由 per-scene 闭包取代、移出数组不再写入） |
 | 快照函数 | `settingsSnapshot()` | `previewSnapshot()` |
 | 公共函数名 | `getStateValue/setStateValue/subscribeSettings/isPathAvailable/resetSettingsListeners/toStatePath` | **保持同名**（通用名，跨子步零额外回归） |
 

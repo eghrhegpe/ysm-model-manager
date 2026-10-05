@@ -108,7 +108,7 @@ mount-preview-core.ts 现 983 行（8-27 快照 1202 行 → 经 §5 二次拆�
 
 - 上游：`views/app-preview/*` 经 `mount3D` 进入 3D 预览
 - 下游：`PreviewAdapter`（vrm/litematic/mmd/pack-model/ysm）经 `build(ctx, path)` 注入内容层
-- 横向：`cleanup-3d.ts`（**已删除僵尸实现**，cleanup 已内联至 fullCleanup）/ `switch-preview.ts`（`switchToSession`）/ `input-and-animation.ts`（`bindInputHandlers`）/ `preview-menu/core.ts`（`mountPreviewRootMenu`）
+- 横向：`cleanup-3d.ts`（**已删除僵尸实现**，cleanup 已内联至 fullCleanup）/ `switch-preview.ts`（`switchToSession`）/ `input-and-animation.ts`（`bindInputHandlers`）/ `preview-3d/menu/engine/core.ts`（`mountPreviewRootMenu`）
 
 ## 不变量
 

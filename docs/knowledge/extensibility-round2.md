@@ -54,15 +54,15 @@ invariant_anchors:
 | JSON 声明 | `resource_types.json` | ✅ | 在 `resourceTypes` 数组末尾追加条目 |
 | Go 注册表 | `go/types/registry/resource.go`（`ResourceType` struct） | ✅ | 所有字段（含 `hashable/dirLevelSync/zipEntries/installExts/scanDir/preview/detector`）均已定义 |
 | Go 检测 | `go/packs/mcmeta.go`（`DetectResourceType`） | ✅（zipentry / extension / ""） | switch 覆盖 `ysm/mcmeta/shader/zipentry/extension/空`——zipentry 与 extension 全走注册表 |
-| 内容指纹 | `go/packs/mcmeta.go`（`matchZipArchive`）+ `container.Open` | ✅ | `.zip/.7z` 均走 `container.Open` 统一打开（ADR-068）→ 按 `rt.ZipEntries` 匹配 |
-| 导入器 | `go/importer/importer_file.go`（`DetectZipType`） | ✅ | 注册表驱动；zipEntries 命中即定类型 |
+| 内容指纹 | `go/packs/classify.go`（`MatchZipArchive`）+ `container.Open` | ✅ | `.zip/.7z` 均走 `container.Open` 统一打开（ADR-068）→ 按 `rt.ZipEntries` 匹配 |
+| 导入器 | `go/importer/importer_file.go`（`DetectContainerType`） | ✅ | 注册表驱动；zipEntries 命中即定类型 |
 | 安装白名单 | `go/types/registry/extensions.go`（`InstallExtsFor`） | ✅ | 空 = 全部放行（仅可执行文件黑名单除外）；`installer.InstallDir` 已走此 |
 | 哈希 | `go/types/registry/extensions.go`（`ShouldHashExt`） | ✅ | `hashable:true` 即参与；`types_extra_test.go` 钉住清单 |
 | 目录型同步 | `go/types/registry/extensions.go`（`IsDirLevelSync`） | ✅ | `dirLevelSync:true` → `SyncResourcesDirLevel` |
 | 前端 RESOURCE_TYPES 键 | `frontend/src/utils/resource/types.ts`（`RESOURCE_TYPES`） | ❌ 手改 | 需加键值（如 `POTION: "potion-3d"`） |
 | 前端短标签 | `types.ts`（`RESOURCE_TYPE_LABELS`） | ❌ 手改 | 参与 Go `ScanModelEntriesWithLabel` 匹配 |
 | 前端派生能力 | `types.ts`（`RESOURCE_CAPS`） | ✅ | 从 JSON 派生 extensions/preview/icon |
-| 预览派发 | `frontend/src/views/app-preview/index.ts`（`PREVIEW_HANDLERS`） | ❌ 手改 | ADR-072 已把 if 链换成注册表查表，但 handler 注册仍需手工一行 |
+| 预览派发 | `frontend/src/views/app-preview/preview-registry.ts`（`PREVIEW_HANDLERS`） | ❌ 手改 | ADR-072 已把 if 链换成注册表查表，但 handler 注册仍需手工一行 |
 | 侧栏菜单 | `frontend/src/views/app-sidebar/tpl.ts` | 部分自动 | `ALL_RESOURCE_TYPES` 驱动子菜单生成，但顶部模型 tab 是手写的 |
 | 图标 | `frontend/src/utils/icon/icon.ts`（`fileIcon`） | ❌ 手改 | `fileIcon` 手写表 |
 
@@ -78,7 +78,7 @@ invariant_anchors:
    ```
 2. `go/types` 无需改；`DetectResourceType` 已覆盖 `zipentry`；`MatchZipEntry` 会自动命中。
 3. `go/types/types_extra_test.go` 补 `TestShouldHashExt_PinnedList` 断言（.p3d 应被哈希）。
-4. 前端：`types.ts` 加 `POTION: "potion-3d"`；`types.ts` 加标签；`icon.ts` 加图标；`app-preview/index.ts` 加一行 `PREVIEW_HANDLERS`。
+4. 前端：`types.ts` 加 `POTION: "potion-3d"`；`types.ts` 加标签；`icon.ts` 加图标；`views/app-preview/preview-registry.ts` 加一行 `PREVIEW_HANDLERS`。
 5. `app-sidebar/tpl.ts` 顶部模型 tab 手写补一行；其余菜单条由 `ALL_RESOURCE_TYPES` 自动补。
 6. `go/internal/app` 若新增 AppConfig 字段（如 `PotionRoot`），需重新 `npm run generate:bindings`。
 
@@ -105,7 +105,7 @@ invariant_anchors:
 | 打开分派 | `container.go`（`Open`） | 需加 switch | `ext == ".zip" || ".7z" || info.IsDir()`，其他扩展返回"不支持" |
 | 内容指纹 | `container.go`（`matchZipArchive`） + `types.go`（`MatchZipEntry`） | 自动（对已有容器） | `matchZipEntry` 只认已注册的容器打开器 |
 | 前端 WASM 预览 | `frontend/src/preview-3d/decoder/wasm-decode.ts` + `preview-3d/adapters/` | 需加适配器 | YSM/WASM 硬编码 `.ysm`；Litematic/VRM/MMD 有独立适配器 |
-| 预览派发 | `app-preview/index.ts`（`PREVIEW_HANDLERS`） | 需加 handler | 统一外壳（D2，mount-preview-core）**已部分落地**——`mount3D` 提供单例外壳 / rAF / 会话生命周期 / `_gen` 代际守卫，但适配器各自实现 `build()` 内容层；handler 注册仍需手工一行 |
+| 预览派发 | `views/app-preview/preview-registry.ts`（`PREVIEW_HANDLERS`） | 需加 handler | 统一外壳（D2，mount-preview-core）**已部分落地**——`mount3D` 提供单例外壳 / rAF / 会话生命周期 / `_gen` 代际守卫，但适配器各自实现 `build()` 内容层；handler 注册仍需手工一行 |
 
 ### 步骤
 
@@ -115,7 +115,7 @@ invariant_anchors:
    - 自动获得 `MatchZipEntry` 内容指纹匹配能力。
 2. **新解析**（如 `.vrm` 的完整解析，目前仅做 meta 卡）：
    - 前端：在 `preview-3d/adapters/` 新增 `vrm-adaptor.ts`（或扩 `vrm-3d.ts`），实现统一 `decode/preview` 接口。
-   - `app-preview/index.ts` 挂 `PREVIEW_HANDLERS`。
+   - `views/app-preview/preview-registry.ts` 挂 `PREVIEW_HANDLERS`。
 3. **预览核心统一**（ADR-066 D2，"mount-preview-core"）：
    - **已部分落地**：`mount3D` 薄壳已统一外壳 / rAF / 生命周期 / `_gen` 并发守卫（见 [mount3D 巨函数现状](./mount3d-584-giant.md)），但 `YsmAdapter/LitematicAdapter/VRMAdapter/MmdAdapter` 仍各自实现 `build()` 内容层（差异注入）。下一步建议把 `PreviewCtx` + `showXxx` 进一步收敛到 `mountPreview(ctx, adapterFn, config)` 声明式入口，让内容层也走注册表。
 
@@ -250,7 +250,7 @@ invariant_anchors:
 | 1 | `frontend/src/utils/resource/types.ts`（`RESOURCE_TYPES`） | 加键 |
 | 2 | `types.ts`（`RESOURCE_TYPE_LABELS`） | 加标签 |
 | 3 | `frontend/src/utils/icon/icon.ts`（`fileIcon`） | 加图标 |
-| 4 | `app-preview/index.ts`（`PREVIEW_HANDLERS`） | 加一行 |
+| 4 | `views/app-preview/preview-registry.ts`（`PREVIEW_HANDLERS`） | 加一行 |
 | 5 | `app-sidebar/tpl.ts` | 加顶部模型 tab 一行（子菜单自动） |
 | 6 | `app-sidebar/index.ts` | 若新类型属模型类需补 |
 | 7 | `app-content/tpl.ts` | 加 repo 副 tab |

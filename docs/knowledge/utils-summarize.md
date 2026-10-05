@@ -62,7 +62,7 @@ status: active
 ## 与其他子系统关系
 
 - 唯一消费方：`app-preview/detail.ts`（预览面板详情区）
-- 依赖 `utils/model-name/display.ts`（parseModelName 回退）、`utils/html/mc-format.ts`（renderFormattedText 着色）、`utils/dom/html.ts`（esc）
+- 依赖 `utils/model-name/display.ts`（parseModelName 回退）、`utils/html/mc-format.ts`（renderFormattedText 着色）、`utils/html/html.ts`（esc）
 - 上游数据来自 Go 端模型分析 binding（summary/header），解析链路见 [go_ysm_parser](./go-ysm-parser.md)
 
 ## 不变量

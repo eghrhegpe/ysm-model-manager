@@ -1,7 +1,7 @@
 # ADR-075：3D 预览环境控件收进环境菜单契约
 
 - **状态**：✅ 已采纳
-- **被补充**：[ADR-106] 在本 ADR 的环境菜单外壳之上，扩展两级下钻、分组折叠、跨 cap 预设联动、4 种可视化控件类型（image/color/timeline/histogram）、水面湿润表面模式、环境亮度直方图
+- **被补充**：[ADR-106](./ADR-106-preview-env-menu-drill-visual.md) 在本 ADR 的环境菜单外壳之上，扩展两级下钻、分组折叠、跨 cap 预设联动、4 种可视化控件类型（image/color/timeline/histogram）、水面湿润表面模式、环境亮度直方图
 - **日期**：2026-08-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理（Riku）
 - **相关**：`ADR-073、ADR-066`、`frontend/src/utils/3d/adapters/mount-preview-core.ts`、`frontend/src/ui/ui-slide-menu.ts`、`frontend/src/ui/ui-header-toggle.ts`

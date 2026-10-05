@@ -1,8 +1,8 @@
 # ADR-076：3D 预览通用导航与弹窗脚手架收敛契约（v3 — 声明式根菜单 + 适配器项收编）
 
 - **状态**：✅ 已采纳
-- **被取代**：[ADR-079] 取代
-- **被补充**：[ADR-106] 在本 ADR 的声明式根菜单外壳之上，扩展两级下钻、分组折叠、跨 cap 预设联动、4 种可视化控件类型（image/color/timeline/histogram）
+- **被取代**：[ADR-079](./ADR-079-wasm-pthread-mt-decode.md) 取代
+- **被补充**：[ADR-106](./ADR-106-preview-env-menu-drill-visual.md) 在本 ADR 的声明式根菜单外壳之上，扩展两级下钻、分组折叠、跨 cap 预设联动、4 种可视化控件类型（image/color/timeline/histogram）
 - **日期**：2026-08-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/utils/3d/adapters/mount-preview-core.ts`、`frontend/src/utils/3d/adapters/preview-menu-defs.ts`、`frontend/src/utils/3d/adapters/preview-menu.ts`、`frontend/src/views/app-preview/ysm-controls.ts`、`frontend/src/views/app-preview/mmd-controls.ts`、`ADR-075`、`ADR-073`、`ADR-072`、`ADR-077`、`ADR-066`、`ADR-021`

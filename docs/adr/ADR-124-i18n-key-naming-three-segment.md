@@ -1,7 +1,7 @@
 # ADR-124：i18n 键名三段式规范
 
 - **状态**：已采纳（Accepted）
-- **被取代**：[ADR-045] 已被本 ADR 收编（"i18n 框架"层面"扁平键"的决定保留，键名结构由本 ADR 升级为三段式）
+- **被取代**：[ADR-045](./ADR-045-i18n-framework.md) 已被本 ADR 收编（"i18n 框架"层面"扁平键"的决定保留，键名结构由本 ADR 升级为三段式）
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-28
 - **决策人**：Jieling（人类首席架构师）、AI 代理
@@ -10,7 +10,7 @@
   - 翻译函数：`frontend/src/core/i18n/t.ts`
   - 一致性测试：`frontend/src/core/i18n/locales-consistency.test.ts`
   - 命名检查脚本：`scripts/i18n-key-naming.ts`（本 ADR 新增）
-  - 取代 [ADR-045]（i18n 框架）
+  - 取代 [ADR-045](./ADR-045-i18n-framework.md)（i18n 框架）
 
 ---
 

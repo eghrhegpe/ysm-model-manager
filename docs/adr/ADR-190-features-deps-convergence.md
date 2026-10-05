@@ -43,12 +43,12 @@
 | 渲染种类 | 归属 | 依据 |
 |---|---|---|
 | **DOM HTML 模板**（字符串拼接、内联 style、页面骨架/条目） | `views/`（沿用 §4.2 `tpl-*.ts` / `render.ts` 惯例） | `views/app-content/tpl-recycle.ts` 与 `features/maintenance/recycle-bin.ts:44` 服务同一页面却被劈成两半——模板归 views 是既有惯例，非新规 |
-| **3D/WebGL 渲染**（scene/camera/renderer/WebGL 管线） | `src/preview-3d/` 顶层领域根（2026-09-05 考古订正：ADR-129 升格后又经 [ADR-138] 于 8/31 上提，已不在 `features/` 下；2D 画布三件套 model2d 已落 `views/app-preview/model2d/`） | ADR-129 总纲 + ADR-138 收尾已定，**不得**以此 D1 反向回迁 |
+| **3D/WebGL 渲染**（scene/camera/renderer/WebGL 管线） | `src/preview-3d/` 顶层领域根（2026-09-05 考古订正：ADR-129 升格后又经 [ADR-138](./ADR-138-preview-3d-to-src.md) 于 8/31 上提，已不在 `features/` 下；2D 画布三件套 model2d 已落 `views/app-preview/model2d/`） | ADR-129 总纲 + ADR-138 收尾已定，**不得**以此 D1 反向回迁 |
 
 依赖方向不变量：`features/` 永不 import `views/`（当前 0 命中，回迁时必须保持）。违反此二分的迁移（把 DOM 模板搬进 features 或把领域编排搬进 views）即为「来回迁移」的根源，禁止。
 
 **D1b — 编排下沉 services 的边界修正（2026-09-05 考古后补，Jieling 拍板）。**
-原 D1 口诀「不编排多个 Go 调用给 `services`」与 [ADR-188] 冲突：ADR-188 已裁决
+原 D1 口诀「不编排多个 Go 调用给 `services`」与 [ADR-188](./ADR-188-core-handlers-sync-features-require-mcroot-features.md) 冲突：ADR-188 已裁决
 `sync.ts`（bus handler + Go 绑定业务单元）与 `require-mcroot.ts`（含 toast 的交互守卫）归 `features/`，
 且是当日迁移成果。执行 D1 原文即是第三次搬动。修正为：
 

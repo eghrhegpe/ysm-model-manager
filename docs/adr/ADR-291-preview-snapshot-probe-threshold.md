@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-21
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/state/preview-paths.ts`、`frontend/src/preview-3d/state/preview-state.ts`、`docs/knowledge/preview-menu.md`、`docs/knowledge/preview_paths.md`（routes 卡 `preview-paths.md`）、[ADR-126] P4/P5、[ADR-168] 二期、[ADR-195] 刀2.5
+- **相关**：`frontend/src/preview-3d/state/preview-paths.ts`、`frontend/src/preview-3d/state/preview-state.ts`、`docs/knowledge/preview-menu.md`、`docs/knowledge/preview_paths.md`（routes 卡 `preview-paths.md`）、[ADR-126](./ADR-126-menu-schema-final-form.md) P4/P5、[ADR-168](./ADR-168-capability-preview-state.md) 二期、[ADR-195](./ADR-195-menucontroldef-menunode-cap.md) 刀2.5
 
 ---
 
@@ -28,13 +28,13 @@ env 菜单的控件显隐走 B 轨铁律：`visibleWhen: (s: PreviewSnapshot) =>
 **否决的替代方案**：
 - *让谓词直吃 envState*：违反 AGENTS.md「visibleWhen 只从快照取数」铁律（cap ⇄ preview-state type 环正是为此才用 ADR-168 叶子拆掉的），开倒车。
 - *把全部 envState 键批量镜像进快照*：`previewSnapshot()` 每次渲染逐键求值，全量镜像 = 每次 filter 遍历上百 binding，热路径荒谬；按需探针才是本意。
-- *删探针改 cap 闭包（A 轨）*：A 轨 `visible?` 闭包已被 [ADR-126] P5 明令退役（快照冻结类 bug 根源），不可回退。
+- *删探针改 cap 闭包（A 轨）*：A 轨 `visible?` 闭包已被 [ADR-126](./ADR-126-menu-schema-final-form.md) P5 明令退役（快照冻结类 bug 根源），不可回退。
 
 ## 3. 后果（Consequences）
 
 - ✅ 正面：双轨成本被封在「≤ 六个离散模式键」的量级里，新增有明确准入问句（「你的判定输入住哪？」）；三步走 + 编译期白名单使漏登记不可能静默通过。
 - ⚠️ 负面/成本：新键入册仍是三处手工登记，比单源方案多两次编辑——接受为铁律（谓词纯度 vs 单一事实源）的兑换价。
-- 📌 已知遗留：`ui.activeComponent` 键位保留仅作类型兼容（[ADR-126] 注），待未来触碰时按门槛 2 的「零消费者退表」清理。
+- 📌 已知遗留：`ui.activeComponent` 键位保留仅作类型兼容（[ADR-126](./ADR-126-menu-schema-final-form.md) 注），待未来触碰时按门槛 2 的「零消费者退表」清理。
 
 ## 4. 数据溯源
 

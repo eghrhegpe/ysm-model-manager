@@ -1,7 +1,7 @@
 # ADR-099：3D 预览 SceneCapability 注册表架构与能力分层（九 cap 接入、顶层五 tab 菜单映射、反射模式三档 SSR 闭环）
 
 - **状态**：✅ 已采纳
-- **被补充**：[ADR-106] 在本 ADR 的九 cap 接入与五 tab 映射之上，扩展两级下钻、分组折叠、跨 cap 预设联动、4 种可视化控件类型（image/color/timeline/histogram）、水面湿润表面模式、环境亮度直方图
+- **被补充**：[ADR-106](./ADR-106-preview-env-menu-drill-visual.md) 在本 ADR 的九 cap 接入与五 tab 映射之上，扩展两级下钻、分组折叠、跨 cap 预设联动、4 种可视化控件类型（image/color/timeline/histogram）、水面湿润表面模式、环境亮度直方图
 - **日期**：2026-08-18
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-073 ADR-081 ADR-085 ADR-094 ADR-095`

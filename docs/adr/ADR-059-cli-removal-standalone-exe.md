@@ -4,7 +4,7 @@
 - **日期**：2026-08-14
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`cli_export.go / internal/app/cli.go / go/updater/updater.go / scripts/build-release.ps1`
-- **修订关联**：[ADR-102] 确立内嵌 `--cli` 诊断协同平台定位（非独立分发），本 ADR 的「裸 exe 发布」「`export` 不随包分发」决策保持有效
+- **修订关联**：[ADR-102](./ADR-102-cli-embedded-return-diagnostic-platform.md) 确立内嵌 `--cli` 诊断协同平台定位（非独立分发），本 ADR 的「裸 exe 发布」「`export` 不随包分发」决策保持有效
 
 ---
 

@@ -1,7 +1,7 @@
 # ADR-097：3D SceneCapability 注册表 + 模型切换复用架构
 
 - **状态**：✅ 已采纳
-- **被补充**：[ADR-106] 在本 ADR 的注册表之上，扩展两级下钻、分组折叠、跨 cap 预设联动、4 种可视化控件类型（image/color/timeline/histogram）
+- **被补充**：[ADR-106](./ADR-106-preview-env-menu-drill-visual.md) 在本 ADR 的注册表之上，扩展两级下钻、分组折叠、跨 cap 预设联动、4 种可视化控件类型（image/color/timeline/histogram）
 - **日期**：2026-08-18
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-073`（3D 菜单声明式）、`ADR-081`（后处理体积光）、`ADR-084`（L2 资源释放）、`ADR-093`（多模型同框）

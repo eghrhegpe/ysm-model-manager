@@ -1,6 +1,6 @@
 # ADR-247：后处理收口：联动读意图而非可见性、SSR 抑制态显式化、总闸门禁内移
 
-> ⚠️ **D3（总闸门禁内移）已被 [ADR-250] 取代**（2026-09-16）。
+> ⚠️ **D3（总闸门禁内移）已被 [ADR-250](./ADR-250-cap-composer-sky.md) 取代**（2026-09-16）。
 > D3 新增的 `perTypeGate` / `perfMaster` / `syncEffectiveEnabled()` 三件套已全部退役：
 > 核查发现 `perTypeGate` 实为 ADR-196 删掉的 `params.enabled` 改名复活，且「一枚字段三重语义」
 > 是后续回归的母体（本 ADR §3.1 R1 阻断级回归即其产物——补一条写路径、漏一条的结构必然后果）。

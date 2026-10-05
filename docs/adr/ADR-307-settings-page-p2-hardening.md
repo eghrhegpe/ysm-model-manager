@@ -28,13 +28,11 @@
 - 须跑 `css-layer-check`（ADR-189 D4 分层门禁）确认共享模块不越层；抽取后 `extractClasses` 死 CSS 信号以新类名为准。
 
 **D2 — viewer 缺席告知下探到 section 级**：
-- `settingsHTML` 把 `viewerMode`/`viewerNotice` 接给 `renderTabs`（对齐 repo 页 ADR-300 §2.5 已落地形态），消除「算了 isViewer 却不用」的半截接线。
-- 引入 **section 级缺席**机制：路径/存储段在 `isViewer` 时不返回空串，改调共享 `renderAbsentSection(noticeKey)` 产出一行 muted 占位（文案如「此平台无路径/存储配置」），落位与 ADR-300 告知行同哲学（可见缺席，非沉默消失）。
-- 粒度扩展：`desktopOnly` 维持 tab 级（留给未来整 tab 才通用的场景），新增 section 级 `viewerAbsent` 标记供各渲染函数本地判定——**输入端（哪些 section 在 viewer 下无意义）由 Go/调用方声明，展示端（空串 vs 占位告知）由前端消费**，不回退到「前端按平台手搓空判断」。
-
-> ⚠️ **查实修正（2026-09-25，实施前源码复查，推翻上款假设）**：上款「路径/存储段在 viewer 下无意义 → absent 占位」**不成立**。复查 `directory-picker.ts:18-66` + `path-cards.ts:67-95 bindPathClick` 证实：安卓 viewer 下 `set-files-root`（存储卡）与 `set-mc-path`（路径卡）点击均走 `pickDirectory()` → `resolveAndroidRepoDir()`——**未授权弹 warn toast + `bridge.requestStoragePermission()` 跳系统「所有文件访问」授权页，授权后 `GetDefaultRepoRoot` 自动定位 `/storage/emulated/0/YSM-Model-Manager`**（ADR-046 P2 已落地，Java 桥而非 Go 侧权限请求）。即 **storage 卡与 mc-path 卡是 viewer 下的真授权入口，不是缺席 section，严禁 absent 占位**。真正该 absent 的只有 `links`/`mirror` 卡（链接模式 / 下载镜像源是桌面 / 网络概念，安卓无意义）。原「路径 / 存储段整体 absent」裁定作废，落地以本注脚为准：**storage 卡（set-files-root）与 mc-path 卡保留（授权定位入口）；`links`/`mirror` 卡 absent**；`renderStgBasicPaths` 当前 `if(!isViewer) return ""` 整体消失是**过度隐藏**（埋了同样可用的 mc-path 卡），须拆 `isViewer` 守卫到卡片粒度，而非整体回空串。
-
-> 📌 **落地形态（2026-09-25，继 a04597a97）**：`renderStgBasicPaths` / `renderStgStorageCard` 的平台守卫已收口为 `PATH_CARD_PLATFORMS: Record<cardId, SettingsPlatform[]>` 单一声明源（tpl-settings.ts），渲染函数一律 `cardSupportedOn(id, resolveSettingsPlatform(isViewer, isWebPlatform()))` 消费——同语义不再由两函数各手搓 flag（消除 storage 用 isWebViewer / mc-path 用 isViewer 的漂移温床）。D3 将把该表并入 settings-schema 作为平台字段。
+- `settingsHTML` 把 `viewerMode`/`viewerNotice` 接给 `renderTabs`（对齐 repo 页 ADR-300 §2.5），消除「算了 isViewer 却不用」的半截接线。
+- 引入 **section 级缺席**机制：`desktopOnly` 维持 tab 级（留给未来整 tab 才通用的场景），新增 section 级缺席标记供各渲染函数本地判定——**输入端（哪些 section 在 viewer 下无意义）由调用方声明，展示端（空串 vs 占位告知）由前端消费**，不回退到「前端按平台手搓空判断」。占位走共享 `renderAbsentSection(noticeKey)`，落位与 ADR-300 告知行同哲学（可见缺席，非沉默消失）。
+- **缺席范围（实施前源码复查后裁定）**：只有 `links` / `mirror` 卡该 absent——链接模式与下载镜像源是桌面·网络概念，安卓无意义。
+- **`storage` 卡（set-files-root）与 `mc-path` 卡严禁 absent**：二者点击均走 `pickDirectory()` → `resolveAndroidRepoDir()`（`directory-picker.ts` / `path-cards.ts bindPathClick` 实证），**未授权弹 warn toast + `bridge.requestStoragePermission()` 跳系统「所有文件访问」授权页，授权后 `GetDefaultRepoRoot` 自动定位**（ADR-046 P2，Java 桥而非 Go 侧权限请求）。它们是 viewer 下的**真授权入口**，不是缺席 section。
+- **原「路径/存储段整体 absent」裁定作废**：`renderStgBasicPaths` 的 `if(!isViewer) return ""` 是**过度隐藏**（连同样可用的 mc-path 卡一起埋掉）；`isViewer` 守卫须拆到卡片粒度，而非整体回空串。
 
 **D3 — 非 3D 设置项收编进 settings-schema（ADR-303 同款护栏）**：
 - 扩展 `settings-schema` 覆盖非 3D 域：`MirrorSource`（jsdelivr/githubapi/direct 联合）、`FontFamily`、`UiDensity`、`UpdateCheckInterval`（6/12/24/'off' 联合）等，值域/默认值/枚举同源声明。
@@ -47,7 +45,7 @@
 
 - **正面**：D1 消除两份同步漂移点（keyframe 名 + 18 属性），改 tab 外观只动一处；D2 把 ADR-300「可见缺席」原则收口到设置页，viewer 用户不再面对半页空白无说明；D3 把设置项扩展从「四文件裸改无兜底」升为「schema 一处声明 + 编译护栏」，加项成本与出错率同降。
 - **负面 / 代价**：D1 抽基类要过 `css-layer-check`，且 shadow/全局双 keyframe 不能省——误合成单份全局 keyframe 会让设置页动画失效（回归 B1 根因）；D3 是存量迁移（镜像源/字体/密度/更新间隔四处裸字面量回填进 schema），churn 不小，须配契约测试防回退。
-- **已知遗留**：D2 的 `renderAbsentSection` 文案需三语；D3 落地后 `MIRROR_I18N_KEY` 旧 `string` 消费点（`:65` 的 `??`）要同步收紧；本 ADR 不解决 P2 之外的事（如密度/字体是否真值得进 schema，按实际扩展频率定）。
+- **已知遗留**：D2 的 `renderAbsentSection` 占位文案需三语键；D3 把 `MIRROR_I18N_KEY` 收紧为联合类型后，`init.ts` 的 `??` 运行时兜底须同步收缩为「仅真未知值兜底」，否则兜底会掩盖漏键；本 ADR 不解决 P2 之外的事（如密度/字体是否真值得进 schema，按实际扩展频率定）。
 
 ## 4. 数据溯源
 
@@ -55,7 +53,5 @@
 - B2 实证：`frontend/src/views/app-content/tabs-shell.ts:35/59/65/86`（`desktopOnly`/`viewerMode`/`viewerNotice` + `renderTabs`）；`frontend/src/views/app-content/settings/tpl-settings.ts:505-507`（`settingsHTML` 算 isViewer 未接 `renderTabs`）、`:140-142` 类 viewer 分支返回空串；`.repo-tabs-notice` 机制见 `content-repo.ts:14-16`（ADR-300 §2.5 D3）。
 - B3 实证：`frontend/src/views/app-content/settings/init.ts:39-43`（`MIRROR_I18N_KEY: Record<string, LocaleKey>`）、`:65`（`?? "settings.mirror.nameDirect"` 运行时兜底）；对照护栏 `frontend/src/views/app-content/settings/tpl-settings.ts:428-431`（`ROT_MODE_LABEL: Record<TdRotMode, LocaleKey>`）+ `settings-schema`（ADR-303）。
 - 锐评来源：2026-09-25 设置页菜单锐评（美观易懂与可扩展性）P2 三条，收尾 P0+P1（commit `2f7b400ba`）后单开本 ADR。
-
-<!-- 文件名: settings-page-p2-hardening.md → 实际文件 ADR-307-settings-page-p2-hardening.md -->
 
 <!-- 文件名: settings-page-p2-hardening.md → 实际文件 ADR-307-settings-page-p2-hardening.md -->

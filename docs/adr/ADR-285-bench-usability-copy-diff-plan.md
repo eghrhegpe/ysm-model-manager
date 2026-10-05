@@ -1,7 +1,7 @@
 # ADR-285：跑基准可用性收口：动作与参数同序、文案去重、术语本地化
 
-- **状态**：🔄 部分采纳（2026-09-20 首轮拍板：P0-1/2/4、P1-1、P3-1/2 已落地；P2-1 只改了三语标签那一路（随 P0-4）；P0-3 已决定不做；P1-2/1-3、P2-2/2-3 留待后续拍板 → 2026-09-24 续：**P1-2（公共区上移）与 P1-3（分组显示）由 [ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md) 的 bench 组重构吸收落地**——公共区（测什么/排序）收进 `data-perf-mode="single conc"` 常驻行置顶、single/conc/scan 三子屏 pill 分组；剩 P2-2/2-3 仍待拍板）
-- **实施情况**：已落地的部分记在知识卡 `docs/knowledge/app-content-diagnostics.md`（**本 ADR 只记决策，实施进度看知识卡**，钩子会自动查漂移）
+- **状态**：🔄 部分采纳（P0-1/2/4、P1-1、P3-1/2 采纳；P2-1 部分采纳（仅三语 label 终值，语义项另立）；**P0-3 否决**（见 §2.1）；P1-2/1-3 由 [ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md) 的 bench 组重构吸收；P2-2/2-3 未拍板，不属本 ADR 范围）
+- **实施状态**：查知识卡 `docs/knowledge/app-content-diagnostics.md`（ADR 只记决策方向与理由，不记实施进度）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-278 / ADR-262 / frontend/src/views/app-content/tpl.ts / frontend/src/views/app-content/diagnostics/perf.ts / frontend/src/locales`
@@ -66,25 +66,25 @@
 
 ## 2. 决策（Decision）
 
-### 2.0 拍板清单（逐条勾选；勾「采纳」即按下方 diff 执行）
+### 2.0 拍板清单（结果列只记决策；落点明细见各小节与知识卡）
 
 | 编号 | 改动 | 类别 | 触点 | 风险 | 结果 |
-| P0-1 | 运行按钮 title 去重复播报（删机制句尾部的 scope 尾巴） | 零风险 | 三语 6 文件各 2 处 | 极低（已核契约测试不锁全文） | ✅ 采纳（已落地） |
-| P0-2 | `#diag-perf-conc-run` 补 `accent` | 零风险 | `tpl.ts:232` | 极低（无 class 断言） | ✅ 采纳（已落地，随 P1-1） |
-| P0-3 | zh「最多模型数」→「取样上限」 | 零风险 | `zh-CN.ts:487` + 2 处注释 | 低 | ❌ **否**（推翻旧结论 + 连带 6+ 处，实为中高风险；保持现状，详见 §2.1） |
-| P0-4 | 中 / 日 `workers` 术语本地化（一次落 P2-1 终值） | 零风险 | zh 4 处 + ja 4 处 | 极低（键名不变） | ✅ 采纳（已落地，zh「最大并发路数」/ja「最大並列数」） |
-| P1-1 | 运行按钮移到该模式参数**之后**（先配置后执行） | 布局 | `tpl.ts` bench body | 低（门槛：input/select 行的 `data-perf-mode` 不变） | ✅ 采纳＋方案 A（已落地） |
-| P1-2 | 公共区提到最上（落实 §2.7 原话，模式行下移） | 布局 | `tpl.ts:200-251` | 中（阅读顺序变更，需用户拍） | ☐ 采纳 ☐ 否 |
-| P1-3 | `.perf-controls` 内加视觉分组（公共区 / 该模式参数 / 基准） | 布局 | `content-diag.ts:98-108` + `tpl.ts` | 中（新 CSS 类要走 css-layer-check 命名域） | ☐ 采纳 ☐ 否 |
-| P2-1 | worker label →「最大并发路数」（说清是档位上限） | 语义 | 三语 6 文件 | 低 | 🔄 部分采纳：仅经 P0-4 落三语 label 终值（zh「最大并发路数」/ en「Max concurrent workers」/ ja「最大並列数」）；其余语义项留待 |
-| P2-2 | 并发目标集改口带原因：「测哪些（并发没有单模型）」 | 语义 | 三语 6 文件 | 低 | ☐ 采纳 ☐ 否 |
-| P2-3 | `perfScopeHint` 前缀「测什么：」→「这次测的是：」（消撞名） | 语义 | `perf.ts:93` + 三语 | 低 | ☐ 采纳 ☐ 否 |
-| P3-1 | `ADR-278 §2.7` 补注（与 §2.3 的分工） | 文档 | `docs/adr/ADR-278-*.md` | 极低 | ✅ 采纳（已落地） |
-| P3-2 | 知识卡补记本轮审核结论 | 文档 | `docs/knowledge/app-content-diagnostics.md` | 极低 | ✅ 采纳（已落地） |
+| P0-1 | 运行按钮 title 去重复播报（删机制句尾部的 scope 尾巴） | 零风险 | 三语 6 文件各 2 处 | 极低（已核契约测试不锁全文） | ✅ 采纳 |
+| P0-2 | `#diag-perf-conc-run` 补 `accent` | 零风险 | `tpl.ts` 一处 | 极低（无 class 断言） | ✅ 采纳 |
+| P0-3 | zh「最多模型数」→「取样上限」 | 零风险 | `zh-CN.ts` + 2 处注释 | 低（原判） | ❌ **否**（核实后推翻：连带 6+ 处，非零风险，详见 §2.1） |
+| P0-4 | 中 / 日 `workers` 术语本地化（一次落 P2-1 终值） | 零风险 | zh 4 处 + ja 4 处 | 极低（键名不变） | ✅ 采纳 |
+| P1-1 | 运行按钮移到该模式参数**之后**（先配置后执行） | 布局 | `tpl.ts` bench body | 低（门槛：input/select 行的 `data-perf-mode` 不变） | ✅ 采纳＋方案 A |
+| P1-2 | 公共区提到最上（落实 §2.7 原话，模式行下移） | 布局 | `tpl.ts` bench body | 中（阅读顺序变更） | ➡️ 由 [ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md) 吸收 |
+| P1-3 | `.perf-controls` 内加视觉分组（公共区 / 该模式参数 / 基准） | 布局 | `content-diag.ts` + `tpl.ts` | 中（新 CSS 类） | ➡️ 由 [ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md) 吸收 |
+| P2-1 | worker label →「最大并发路数」（说清是档位上限） | 语义 | 三语 6 文件 | 低 | 🔄 部分采纳：仅经 P0-4 落三语 label 终值 |
+| P2-2 | 并发目标集改口带原因：「测哪些（并发没有单模型）」 | 语义 | 三语 6 文件 | 低 | ⏸ 未拍板（不属本 ADR 范围） |
+| P2-3 | `perfScopeHint` 前缀「测什么：」→「这次测的是：」（消撞名） | 语义 | `perf.ts` + 三语 | 低 | ⏸ 未拍板（不属本 ADR 范围） |
+| P3-1 | `ADR-278 §2.7` 补注（与 §2.3 的分工） | 文档 | `docs/adr/ADR-278-*.md` | 极低 | ✅ 采纳 |
+| P3-2 | 知识卡补记本轮审核结论 | 文档 | `docs/knowledge/app-content-diagnostics.md` | 极低 | ✅ 采纳 |
 
 ---
 
-### 2.1 P0 零风险批（4 条，可一批提交）
+### 2.1 P0 零风险批（4 条）
 
 #### P0-1 运行按钮 title 去重复播报
 
@@ -100,7 +100,7 @@ export function perfScopeHint(mode: string): string {
 }
 ```
 
-**diff 预案（方案 A，推荐）**：不动组装，只删机制句尾部的 scope 尾巴（scope 句已在前半播过一次）：
+**方案 A（采纳）**：不动组装，只删机制句尾部的 scope 尾巴（scope 句已在前半播过一次）：
 
 | 文件:行 | before（尾段） | after |
 |---|---|---|
@@ -144,15 +144,11 @@ export function perfScopeHint(mode: string): string {
 - e2e 确实读该标签正文（`diagnostics.spec.ts:484-490` `readMaxLabelText`），但断言是 `expect(texts).toEqual([texts[0], texts[0], texts[0]])`（`:734`）——**比较三种目标集下的读数彼此相等**，不比对字面量 → 改文案不红 ✓
 - 命中字面量的两处注释须同步：`diagnostics.spec.ts:483`（helper 文档注释）、`tpl.ts:26-27`（`VIEW_TESTIDS` 注释自陈「标签文案恒为『最多模型数』」）→ 属同一批顺手改，避免注释与实装脱节
 
-**⚠️ 用户决定：P0-3 不做了（2026-09-20）**
-
-这个改动想把「最多模型数」改回「取样上限」，理由是「最多模型数」在选『每个类型各取几条』时叫得名不副实。动手前核实发现它没有想象中简单，于是决定不碰：
+**⚠️ P0-3 否决（用户裁定）**：原判「零风险」，核实后推翻——保持现状（仍叫「最多模型数」，三语一致）：
 
 - **翻了旧账**：当年（ADR-278）是专门把「取样上限」当作黑话，统一改成「最多模型数」的。现在改回去，等于推翻一个已经定过的结论。
 - **会连带一堆地方**：单测里有断言就锁死「最多模型数」（`perf-matrix.test.ts:610,615`），还有好几处注释也这么说。当时方案只列了 3 处，实际要连带 6+ 处——说它是「零风险」不实。
 - **将来的路**：如果哪天真觉得「最多模型数」叫得不对，就单独立一个 ADR，把所有地方一起改了再走评审，不在这里顺手微调。
-
-结果：保持现状不动（仍叫「最多模型数」），三语一致。
 
 #### P0-4 中 / 日 `workers` 术语本地化
 
@@ -171,13 +167,13 @@ export function perfScopeHint(mode: string): string {
 
 ---
 
-### 2.2 P1 布局批（3 条，需拍板选方案）
+### 2.2 P1 布局批（3 条）
 
 #### P1-1 运行按钮移到「该模式参数之后」（推荐方案 A）
 
 **现状**：按钮与模型路径框同行（`tpl.ts:222-226`），而它消费的迭代 / 上限 / 基准三件套在下方（`:227-251`）。
 
-**diff 预案**：把两处运行按钮各自拆成独立行，置于本模式参数之后——
+**落点**：把两处运行按钮各自拆成独立行，置于本模式参数之后——
 
 ```
 单模型模式（data-perf-mode="single"）   并发模式（data-perf-mode="conc"）
@@ -198,7 +194,7 @@ export function perfScopeHint(mode: string): string {
 
 **现状**：模式行在最上，公共区（测什么 / 排序）在其下——与 §2.7「公共区置于控制条**最上**」字面不符（§1.5）。
 
-**diff 预案**：把「测什么」「排序」两行整体上移到模式行之前（阅读顺序 = 范围 → 命令 → 参数 → 执行）。
+**落点**：把「测什么」「排序」两行整体上移到模式行之前（阅读顺序 = 范围 → 命令 → 参数 → 执行）。
 
 **⚠️ 连带改动（易漏）**：`perfModeHint` 三语都写着「**下方**「测什么」」/ "「What to test」**below**" / 「**下**の「何を測るか」」（`zh-CN.ts:517-518`、`en.ts:530-531`、`ja.ts:525-526`）→ 上移后必须同步改成「上方」/ "above" / 「上」。漏改就是**界面自我矛盾**。
 
@@ -208,7 +204,7 @@ export function perfScopeHint(mode: string): string {
 
 **现状**：`.perf-controls` 是无分组纵向框（`content-diag.ts:99`），single 下 7 行控件仅靠底部一条 border 收口。
 
-**diff 预案**：模板加三个分组的包裹行 + `content-diag.ts` 增 `.perf-group` / `.perf-group-title` 两条规则（标题小字、`--fs-xs`、`color:var(--muted)`，与既有 `.perf-section` 同语汇）。分组：① 公共区（怎么跑 / 测什么 / 排序）② 该模式参数 ③ 基准对比。
+**落点**：模板加三个分组的包裹行 + `content-diag.ts` 增 `.perf-group` / `.perf-group-title` 两条规则（标题小字、`--fs-xs`、`color:var(--muted)`，与既有 `.perf-section` 同语汇）。分组：① 公共区（怎么跑 / 测什么 / 排序）② 该模式参数 ③ 基准对比。
 
 **风险**：中。新类名走 `scripts/css-layer-check.ts` 检查 3 的**自推导命名域**（本域已定义 `.perf-*` ⇒ `perf-` 属本域，新同类名自动纳入判定 ✓）；若分组标题用文案，须补三语键（+3 键 × 3 语）。
 
@@ -260,7 +256,7 @@ export function perfScopeHint(mode: string): string {
 
 ---
 
-### 2.5 护栏影响矩阵（已逐条核实，实施时照此裁剪验证）
+### 2.5 护栏影响矩阵（已逐条核实）
 
 | 检查 | 是否受影响 | 核实结论 |
 |---|---|---|
@@ -275,8 +271,6 @@ export function perfScopeHint(mode: string): string {
 | `scripts/i18n-check.ts` | 否 | 只改值不改键/占位符，parity 保持全绿 |
 | `scripts/css-layer-check.ts` | P1-3 需过 | 新 `perf-*` 类自动纳入本域命名域检查 |
 | `frontend/public/locales/*.json` | 生成物 | 只改 `src/locales/*.ts`，pre-commit 的 GEN_CMDS 自动同步 |
-
-**实施后统一验证口令**：`cd frontend && npx vite build && npm run typecheck` + `node scripts/check-biome.ts --files <改动文件...>` + `node scripts/contract-tests.ts`；e2e 若跑则须覆盖 `diagnostics.spec.ts`。
 
 ### 2.6 未纳入本方案的观察项（仅备案，不拍板）
 
@@ -297,17 +291,15 @@ export function perfScopeHint(mode: string): string {
 
 - 主按钮权重统一（三处运行入口同 `accent`），新手不必在「哪个是要点的」上做判断。
 - 运行按钮 title 不再把同一件事播报三遍——三语皆然。
-- zh 上限标签名实相符（与 en / ja 的中性措辞对齐），消掉「叫最多模型数，却出现更多模型」的读后困惑。
 - 中 / 日界面不再夹英文 `workers`。
-- P1-1 若采纳：阅读顺序变成「范围 → 命令 → 参数 → 执行」，与 ADR-278 §2.7「先选命令，再圈范围」的心智模型同向。
-- 全部改动均为**文案 / class / 行序**级：**零 Go 改动、零契约载荷改动**，可分批提交、逐条回退。
+- 阅读顺序变成「范围 → 命令 → 参数 → 执行」，与 ADR-278 §2.7「先选命令，再圈范围」的心智模型同向（P1-1）。
+- 全部改动均为**文案 / class / 行序**级：**零 Go 改动、零契约载荷改动**，可逐条回退。
 
 **负面 / 代价**
 
 - P1-1 移动用户肌肉记忆（运行按钮从第 4 行到末行），老用户需一次适应。
-- P1-2 若采纳，必须连带改三语 `perfModeHint` 的「下方 / below / 下」（§2.2 已标）——漏改即界面自相矛盾，正是本 ADR 要防的那类账。
-- P0-3 改文案后老用户一时找不到「最多模型数」，但 title 解释仍在（`zh-CN.ts:489-490`）；按「标签恒定、单位只进 title」的既有契约，这是唯一正确落点。
-- P1-3 是本节唯一「增加维护面」的项（新 CSS 类 + 可选 3 个文案键 × 3 语）。
+- 公共区上移（P1-2，由 ADR-300 吸收）必须连带改三语 `perfModeHint` 的「下方 / below / 下」——漏改即界面自相矛盾，正是本 ADR 要防的那类账（§2.2 已标）。
+- P1-3 是本 ADR 唯一「增加维护面」的项（新 CSS 类 + 可选 3 个文案键 × 3 语）。
 
 **已知遗留 / 边界（明确不做）**
 

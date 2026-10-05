@@ -219,16 +219,9 @@ env cap callback (envSource / envPreset / envResolution / envUseAsBackground 变
 这一个布尔，经既有 `caps` 查询器向 sky 问一句即可（`getTypedCap(this.caps,"sky")` 先例），
 **不新增通用协议、不破坏所有权收口**。
 
-**已落地**：迁移纯函数 `frontend/src/preview-3d/caps/environment-migrations.ts`
-（`migrateEnvSource` / `normalizeEnvLegacyState`）——零 THREE / 零 DOM / 零 envState，
-node 可测，对齐 `ground-migrations.ts` 先例；21 例测试覆盖三判据 + 类型异常容错 + 幂等/无 mutate。
-
-**仍未定**：
-- **`custom` 缓存判定落点**：`migrateEnvSource` 只看 `preset === "custom"`；
-  「HDR 缓存是否仍在」由 cap 侧在 `loadState` 结合，与既有 custom 无缓存回退 studio 行为一致。
-- **`prevEnvironment` 语义**：三写点收敛后，构造期快照/失败回滚目标需重新定义。
-- **`envIntensity` 跨来源一致性**：`applyEnvIntensity` 作用于 `[this.scene]`，
-  来源切换（预设 Canvas ↔ 真天空烘焙，分辨率/色域差异）后强度手感是否一致，需视觉验证。
+**形态约束（判据的可测性要求）**：三条判据是**纯函数**——只看 `preset` 字符串，不读缓存、不触 DOM。
+「HDR 缓存是否仍在」由 cap 侧在 `loadState` 结合（与既有 custom 无缓存回退 studio 行为一致），
+**不进入迁移判据**。理由：纯函数才可测、可幂等、无 mutate；把缓存状态掺进判据会让迁移结果依赖运行期环境。
 
 **已定：`skyForceEnv` 的处置（批次二，2026-09-21）**
 
@@ -292,9 +285,9 @@ node 可测，对齐 `ground-migrations.ts` 先例；21 例测试覆盖三判据
 > 文案。它与环境面板总开关互不知晓、后写者赢，UI 上两个开关都「开」却只有一个生效——
 > 这正是本次收口的病根。供图者现由环境面板「来源」单选统一表达。
 
-### 3.4 ADR 起草期间的事实更正（留档）
+### 3.4 事实更正（防复现）
 
-起草本 ADR 时曾据记忆写出两个错误事实，已在核验后更正，留档以防复现：
+起草时曾凭前序会话记忆写出两个错误事实，已核验更正：
 
 1. **`envEnabled` 键不存在**：env 面板的「环境」toggle 实为 cap 级 `this.enabled`
    （UI 节点 `env-enabled` → `cap.setEnabled`），**并非 envState 键**。grep `envEnabled` 零命中。
@@ -302,7 +295,7 @@ node 可测，对齐 `ground-migrations.ts` 先例；21 例测试覆盖三判据
    `"studio"` 只是 custom 无缓存时的**回退目标**（`environment-capability.ts:329`）。
    此更正直接改变了迁移推理（见 §3.3 默认路径），并催生了 §1.2b 的「既有 sky 预设」发现。
 
-教训：ADR 的背景/事实陈述必须逐条以当前源码树核验，不得凭前序会话记忆落笔。
+**教训**：ADR 的背景与事实陈述必须逐条以当前源码树核验，不得凭前序会话记忆落笔。
 
 ## 4. 数据溯源
 
@@ -321,7 +314,7 @@ node 可测，对齐 `ground-migrations.ts` 先例；21 例测试覆盖三判据
 | `environment-capability.ts:495-508` `saveState` / `:510-559` `loadState` | env 槽键形（`enabled` 为 cap 级总开关，非 envState 键） |
 | `environment-capability.ts:558` `buildEnvironment()` | loadState 末尾显式 build ⇒ **env 后写胜出**是迁移判据总纲的依据 |
 | `environment-capability.ts:319` `envUseAsBackground` 默认 `false` | 与 `skyEnvironment` 默认 `true` 对比 |
-| `environment-migrations.ts`（本次新增） | 迁移纯函数落地 + 21 例测试 |
+| `environment-migrations.ts` | 迁移纯函数的形态（零 THREE / 零 DOM / 零 envState，node 可测）依据 |
 | `locales/zh-CN.ts:1372 / 1198-1199` | 文案撞名证据 |
 | `scene-capability.ts:42-81` `SceneCapabilityLookup` / `getTypedCap` | 跨 cap 协调的合法通道（D7 落点依据） |
 | ADR-268（环境面板插件式归属）、ADR-195（cap 直产节点）、ADR-196（统一状态层） | 归属与 UI 机制的既有立法 |

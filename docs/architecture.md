@@ -86,7 +86,7 @@ Web 版 (GitHub Pages):
   - `SetApp(app)` / `SetMainWindow(wnd)` 注入运行时引用，避免启动期 `Window.Current()` 返回 nil（:28, :37）。
   - 窗口 **1280×800**，URL `/`（:30-35）。
 - **Android 入口**：Wails v3 自动生成 Android 工程资产（`build/android/`），Go 以 `-buildmode=c-shared -tags android` 编译 `libwails.so` → `build/android/app/src/main/jniLibs/{arm64-v8a,x86_64}/libwails.so`，Gradle `assembleDebug`/`assembleRelease` 打包 APK。Java 宿主层详见 §2.2。
-- **Web 版入口**：`frontend/web.html`（Tier 0 声明 `globalThis.__YSM_BACKEND__ = "browser"`） + `frontend/vite.web.config.ts`（`mode: "web"`, 输出 `dist-web`）。纯静态托管，无 Go 编译、无 Wails 壳，所有 binding 走 `browserAdapter` Proxy。详见 §6.6。
+- **Web 版入口**：单入口 `frontend/index.html`（原双入口 `web.html` + `src/web-spike/` 已随 2026-09-05 归一删除） + `frontend/vite.web.config.ts`（`mode: "web"`, 输出 `dist-web`）。纯静态托管，无 Go 编译、无 Wails 壳；Web 模式经 `MODE=web`（Tier 1）判 `resolveWebMode()` 走 `browserAdapter` Proxy。详见 §6.6。
 - **资源注入** `embed.go`（`//go:build` 无限制，双构建均编译）：`//go:embed creators.json resource_types.json workshop-github.json workshop_sites.json` + `frontend/dist/wasm/YSMParser.wasm` + `frontend/public/wasm/YSMParser.js`，经 `init()` → `app.SetEmbedded(...)`（:21-23）。
 
 ### 绑定模式
@@ -181,7 +181,7 @@ Java → JS 事件通过 `bridge.emitEvent` → Wails CustomEvent 通道（**勿
 | `go/updater/updater_other.go` | `!windows` | 自更新（拒绝，非 Windows 不支持） |
 | `go/fsutil/hardlink_windows.go` | `windows` | 硬链接检测（收敛自原 sync/checkHardLink + recycle/isHardLink） |
 | `go/fsutil/hardlink_other.go` | `!windows` | 硬链接检测（含目录排除 ADR-038） |
-| `go/recycle/crossdevice_windows.go` / `_other.go` | `windows` / `!windows` | 跨设备判断 |
+| `go/fsutil/crossdevice_windows.go` / `_other.go` | `windows` / `!windows` | 跨设备判断（收敛自 recycle 至 fsutil） |
 
 约 **150 个导出方法**构成绑定面。
 
@@ -276,6 +276,77 @@ type CliCommand struct {
 | 看到 CLI 和 GUI 共享业务包 → 以为"一个修好另一个就好" | 入口参数校验/错误处理/输出格式各自独立 | 漏修入口层，GUI 仍挂 |
 
 **注册表 ↔ 文档的自动同步**：`scripts/gen-cli-doc.ts` 消费 `RegisterCommandC` 调用 + `print*Usage` 正则，生成 `docs/cli-commands.md`；`tests/test_cli_doc_parity.ts` 锁双向一致；pre-commit 阶段 `--check` 守护。新增 CLI 命令只需改 `go/cli/*.go` 源码 + 重跑 `node scripts/gen-cli-doc.ts`，文档自动跟上。
+
+### 3.6 源码树模块全路径索引
+
+> 逐字登记源码树全部顶层子模块（`frontend/src/*` / `go/*` / `internal/*`），双用途：
+> ① 读者「某模块职责 / 在哪节」的检索入口；② `check-doc-drift` 架构树维度的比对事实源——
+> **新增顶层模块须在此补一行**，否则计入 unregistered（INFO 基线，`node scripts/check-doc-drift.ts --fix` 刷新 `scripts/baseline/doc-drift-baseline.json`）。
+> 行级 filter（`/^[a-z][a-z0-9-]*$/`）排除下划线目录（如 `go/texture_cache`），故未列入本表。
+
+**`frontend/src/`（12）**
+
+| 模块 | 职责 |
+|------|------|
+| `frontend/src/backend` | Wails 桥接 + 平台分层：`app.ts`（`getApp` 唯一入口）/ `browser-adapter.ts`（Web 代理）/ `platform.ts`（Tier 判定）/ `web-fs.ts`（IDB 数据层） |
+| `frontend/src/core` | 基础设施：i18n / page-store / bus 事件总线 |
+| `frontend/src/features` | 业务功能模块：import / community / maintenance / context-menu / pack-ops / repo |
+| `frontend/src/locales` | 三语言包 zh-CN / en / ja（ADR-045） |
+| `frontend/src/parsers` | 格式解析器：ysm-header / bedrock-geometry / voxel |
+| `frontend/src/preview-3d` | 3D 预览子系统：adapters / caps / menu / decoder / infra / bone / model / state / vendor |
+| `frontend/src/services` | 服务层：cli-bridge（resource-registry 已随 ADR-269 D3 删除） |
+| `frontend/src/test-utils` | 测试工具：render / queryByTestId / waitFor（ADR-035） |
+| `frontend/src/utils` | 工具函数：base(pure/primitives) / dom / format / icon / resource / animation / cache / async / html / storage / model-name |
+| `frontend/src/views` | Web Component 视图：app-tree / app-preview / app-content / app-sidebar / app-sync-manager / app-toast / context-menu |
+| `frontend/src/wasm` | YSMParser WASM 胶水层（`ysm-parser.ts` / `*-data.js`） |
+| `frontend/src/workers` | Web Worker：stats-protocol / mmd-anim |
+
+**`go/`（36）**
+
+| 包 | 职责 |
+|----|------|
+| `go/ysm` | YSM 解析：header 文本头扫描 / summary / extracted / texsize |
+| `go/geometry` | Bedrock geometry 解析（zip/7z） |
+| `go/threejs` | 3D 数据准备（`spec.go`，移植 YSMViewer `ThreeJsPayloadBuilder`：坐标/旋转/UV/顶点公式） |
+| `go/types` | 注册表核心（ADR-192：`registry/` 子包）：`go/types/registry/resource.go` `LoadRegistry` / `go/types/registry/extensions.go`（root `resource_types.json` 单源 embed） |
+| `go/litematic` | MCEdit Lite 图格式（NBT/voxel 解析，`block_ids_data.go` 生成） |
+| `go/importer` | 模型导入策略接口（按资源类型分派） |
+| `go/installer` | 安装编排 |
+| `go/instance` | Minecraft 版本实例发现 + 同步 |
+| `go/packs` | 整合包 mcmeta 解析 |
+| `go/scanner` | 仓库扫描 / 索引 |
+| `go/dedup` | 去重 |
+| `go/download` | 下载 |
+| `go/sync` | 硬/软链接同步 |
+| `go/updater` | 版本自更新（Windows-only） |
+| `go/fileops` | 文件 CRUD + 文件夹导入 |
+| `go/fsutil` | 硬链接 / 路径安全 / 跨设备判断 |
+| `go/paths` | 路径工具 |
+| `go/recycle` | 回收站（含跨设备回退） |
+| `go/watcher` | fsnotify 目录监听 |
+| `go/avatar` | 创作者头像提取 |
+| `go/conc` | 通用泛型并发工具（`Parallel`：worker 池 + 输入序收集 + ok 跳过） |
+| `go/version` | 版本号常量 |
+| `go/logs` | 统一日志 |
+| `go/tags` | 标签 |
+| `go/config` | 应用配置单持有点（`atomic.Pointer` provider） |
+| `go/container` | 容器数据访问（统一接管 zip/7z） |
+| `go/launcher` | 启动器 / 外部进程拉起 |
+| `go/repoaudit` | 仓库审计（`doctor` 依赖） |
+| `go/rustbridge` | Rust 桥接（Android/桌面 `rust_backend` 路径） |
+| `go/cli` | CLI 命令注册与执行（`//go:build cli`，≠ Wails 绑定，见 §3.5） |
+| `go/executil` | 外部进程执行辅助（隐藏窗口等） |
+| `go/ccheck` | Go 认知复杂度 + 嵌套深度扫描（`check-complexity.ts` 的 Go 镜像，ADR-154 双端契约向量互锁） |
+| `go/internal` | 仅本仓库内可 import 的内部包（Go 可见性规则） |
+| `go/wasispike` | WASI 化解码 spike（wazero 纯 Go 直调 YSMParser，不进生产） |
+| `go/ysmwasi` | wazero 纯 Go 宿主解码 .ysm（ADR-316：Node 子进程桥退役） |
+| `go/ysmwebview` | Android WebView 桥解码请求管理器（ADR-317，解码委托前端 wasm） |
+
+**`internal/`（1）**
+
+| 模块 | 职责 |
+|------|------|
+| `internal/app` | Wails 应用入口 + 绑定注册 + 平台抽象（PathManager / Guard，见 §3.1） |
 
 ---
 
@@ -406,12 +477,12 @@ readModelBytes(path) → Uint8Array        ← backend/read-model-bytes.ts（平
 
 ### 三处消费链（由测试守护一致性）
 
-1. **Go 运行时** — `go/types/resource.go` `LoadRegistry()`，`registryPath` 可测试替换；`go/types/resource_types_embed.go`（generated, DO NOT EDIT）为兜底基线。
-2. **Go 派生** — `go/types/extensions.go` `AllExts()`/`IsSupportedExt()`/`StorageSubDir()` 全部注册表驱动。
+1. **Go 运行时** — `go/types/registry/resource.go` `LoadRegistry()`，`registryPath` 可测试替换；root `resource_types.json` 单源 embed（旧手工副本已废）为兜底基线。
+2. **Go 派生** — `go/types/registry/extensions.go` `AllExts()`/`IsSupportedExt()`/`StorageSubDir()` 全部注册表驱动。
 3. **绑定** — `internal/app/resource_bindings.go:21` `LoadResourceTypes()` 返回原始 JSON 串。
 4. **前端静态镜像** — `js/utils/extensions.ts` `RESOURCE_EXTS`（:8-16，头部注释显式声明同步流程）；`js/utils/resource-types.ts` `RESOURCE_TYPES`/`RESOURCE_TYPE_LABELS`；`js/utils/resource-registry.ts`。
 
-> 一致性由 `tests/test_resource_schema.ts` + `go/types/registry_test.go`（TestAllExts/IsSupportedExt/ExtBelongsTo/StorageSubDir/SubDirMap）双向守护；新增资源类型必须同步上述四处。
+> 一致性由 `tests/test_resource_schema.ts` + `go/types/registry/registry_test.go`（TestAllExts/IsSupportedExt/ExtBelongsTo/StorageSubDir/SubDirMap）双向守护；新增资源类型必须同步上述四处。
 
 ### 配套数据 JSON
 
@@ -474,7 +545,7 @@ index.ts（编排：constructor → shadow → connected→disconnected）
 参见 [ADR-049](./adr/ADR-049-web-edition-bridge.md)。网页版是纯静态托管（GitHub Pages），无 Wails 壳、无 Go 编译。
 
 **入口与判定**：
-- `frontend/web.html` — Spike 调试页，声明 `globalThis.__YSM_BACKEND__ = "browser"`（Tier 0 权威信号）
+- `frontend/index.html` — Web 版单入口（原 `web.html` Spike 调试页已随 2026-09-05 归一删除），经 `MODE=web`（Tier 1）判 `resolveWebMode()` 走 browserAdapter
 - `frontend/vite.web.config.ts` — `mode: "web"`, 输出 `dist-web`；复用 `wails-bindings-resolve` 插件
 - `frontend/src/backend/platform.ts` — Tier 分层判定：Tier 0 `__YSM_BACKEND__` > Tier 1 `MODE=web` > Tier 2 `window.go`/`window.wails`
 - `frontend/src/backend/app.ts:22` — `resolveWebMode()` 为真 → 返回 `browserAdapter`（跳过 Wails binding import）
@@ -802,7 +873,7 @@ app-content/community/core.ts:35-36
 | 层 | 载体 | 守护内容 |
 |----|------|----------|
 | 契约测试 | `tests/*.ts`（101 个，CI 禁改；入口 `node scripts/contract-tests.ts`） | `test_resource_schema.ts`（resource_types.json 必填字段 / kebab-case id / 唯一性 / extensions 以 `.` 开头 / installDir 尾斜杠 / 枚举 preview·detector·actions / configField 须 PascalCase+Root）、`test_creators_schema.ts`、`test_workshop_schema.ts`、`test_config_defaults/syntax.ts`、`test_html_integrity.ts`、`test_scripts_json.ts` 等 |
-| Go 单测 | `go/*_test.go`（260 个） | `go/types/registry_test.go`（JSON↔Go 扩展名一致性）、`go/ysm`、`go/sync`、`go/installer`、`go/recycle`、`go/threejs`、`go/updater`、`go/watcher`、`go/importer`、`go/dedup`、`go/packs`、`go/avatar`、`go/fsutil`、`go/tags` 等 |
+| Go 单测 | `go/*_test.go`（260 个） | `go/types/registry/registry_test.go`（JSON↔Go 扩展名一致性）、`go/ysm`、`go/sync`、`go/installer`、`go/recycle`、`go/threejs`、`go/updater`、`go/watcher`、`go/importer`、`go/dedup`、`go/packs`、`go/avatar`、`go/fsutil`、`go/tags` 等 |
 | 前端 Vitest | `*.test.ts`（405 个） | `core/context-menus.test.ts`、`features/community/download-queue.test.ts`、`utils/model2d`、`utils/animation`、`utils/summarize`、`utils/extensions` 等 |
 
 > 测试为**宪法基石，禁止修改**（AGENTS.md 硬约束）。改完即验：`node scripts/contract-tests.ts` + `go test ./... -count=1` + `npm run typecheck`。

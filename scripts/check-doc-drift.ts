@@ -37,11 +37,10 @@ import { parseArgs } from "./_lib/parse-args.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
 const KC_DIR = path.join(ROOT, "docs/knowledge");
-const ARCH_DOCS = [
-  "docs/archive/architecture.md",
-  "docs/archive/3D/3D-RENDERING-PLAN.md",
-  "docs/archive/3D/3d-rendering-report.md",
-];
+// 活文档（单一权威视图）。原三份归档（archive/architecture.md、archive/3D/*）已随文档
+// 治理删除，架构树维度改比对活文档 docs/architecture.md：源码顶层模块全路径须在其正文
+// 出现（见「3.6 模块全路径索引」），缺失者入 unregistered（INFO 基线，--fix 刷新）。
+const ARCH_DOCS = ["docs/architecture.md"];
 const BASELINE_FILE = path.join(ROOT, "scripts/baseline/doc-drift-baseline.json");
 
 const args = parseArgs(process.argv.slice(2), {

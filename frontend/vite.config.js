@@ -23,6 +23,47 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    rollupOptions: {
+      output: {
+        // manualChunks 拆分（2026-10 审计：主 chunk app-content 达 ~2.76 MB，>500 kB 告警）。
+        // 只按 node_modules 归属路由，判定条件只依赖稳定路径前缀，业务文件增删不改分法，
+        // 因此 vendor 不会因业务改动漂哈希。
+        // 分法依据（代码读不出的信息——基线实测）：
+        //   基线主 chunk 2,764 kB 里 ~2.2 MB 是 vendor：three 本体（~738 kB）、three 生态插件
+        //   @moeru/three-mmd* + @pixiv/three-vrm*（~247 kB）、MMD 物理引擎 ammojs-typed
+        //   （~1.75 MB，被 @moeru/three-mmd-physics-ammo 引入）、@wailsio/runtime。拆出后
+        //   app-content 落到 ~553 kB（见下方「为什么不拆 preview-3d」）。
+        //   1. `three` 单拆：单一大 vendor，且 app-modules.ts:159 已动态 import("three") 预加载
+        //      （ADR-101），天然独立 chunk 边界——单独成包可长期走 HTTP 缓存。
+        //   2. `@moeru`/`@pixiv` 归 vendor-three-ecosystem：只被 preview-3d 消费、与 three 同频
+        //      升级（同包缓存命中高），不与主 UI 混。
+        //   3. `ammojs-typed`（ammo）单独成包 vendor-ammo：MMD 骨骼物理的 WASM 包装库，体积
+        //      ~1.75 MB，与 three 生态无耦合、独立演进；塞进 ecosystem 会让它膨胀到 ~2 MB。
+        //   4. `@wailsio/runtime` 归 vendor-runtime：Wails 运行时桥，版本由 Go 侧 bindings 决定，
+        //      与前端业务改动无关。
+        //   5. 其余 node_modules 归 vendor-misc：fflate 等小工具，量小且几乎不变。
+        // 为什么不把 preview-3d 单拆出去：preview-3d 是 app-content/index.ts 副作用
+        //   `import "@/views/app-preview/index.ts"` 静态拉入的，且内部值导入成环——
+        //   menu 值导入 adapters（vrm-bone-ui）与 caps（scene-capability-registry），
+        //   adapters/caps 又值导入 infra（render-host 等）。按子目录拆成 core/features 两组
+        //   必然产生 circular chunk（模块被重复打包）；整拆一坨则从 553 kB 变成 ~3.8 MB 单文件，
+        //   比主 chunk 更糟。故此处不动 preview-3d，交给 Rolldown 既有的动态 import 边界
+        //   （shared-infra / preview-library / texture-cache / gpu-load-calibrate）分流。
+        // 不做：动态 import 化 app-preview（改时序/引入 loading 态，属 src 层决策，超本文件边界）。
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            // 先判更具体的生态插件与 ammo，再判 three 本体（three/addons 也含 node_modules/three）
+            if (id.includes("node_modules/@moeru") || id.includes("node_modules/@pixiv"))
+              return "vendor-three-ecosystem";
+            if (id.includes("node_modules/ammojs-typed")) return "vendor-ammo";
+            if (id.includes("node_modules/three")) return "vendor-three";
+            if (id.includes("node_modules/@wailsio")) return "vendor-runtime";
+            return "vendor-misc";
+          }
+          return undefined;
+        },
+      },
+    },
   },
   // ADR-146 别名解析：目录级白名单 + `#root` 过渡别名（catch-all `@/*` 永不在列）。
   // vite 字符串 find 做前缀匹配，本仓顶层目录无前缀包含关系（ui≠utils 等），无歧义。

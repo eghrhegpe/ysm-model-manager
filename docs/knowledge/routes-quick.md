@@ -550,7 +550,7 @@
 | 运行 Go 重复门禁 / 检查是否有新增重复对 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
 | check-orphan-exports 三类漏检修复 | [孤儿导出检测器（扫描盲区）](./orphan-export-scanner.md) | - | - |
 | CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | - | - |
-| lint 报了多少存量债 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | 存量债不惩罚：pre-push-gate 跑 --new-from-rev 只拦本次引入（全量必红，errcheck 存量 623 条），未安装/无基线自动降级跳过 | - |
+| lint 报了多少存量债 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | 存量债不惩罚：pre-push-gate 跑 --new-from-rev 只拦本次引入（全量必红），未安装/无基线自动降级跳过 | - |
 | mock 路径守卫怎么豁免 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | - | - |
 | push 被 golangci-lint 阻断怎么办 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | push 被阻断先看 FAIL 块定位 linter 与文件；语义误报用 //nolint 注明 linter 名与理由，禁止 git push --no-verify 绕过 | - |
 | vi.mock 改了路径结果静默不起作用 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | vi.mock("<内部spec>") 指向不存在的模块路径时 vitest 静默不命中——mock 路径写错就悄悄失效，测试照常通过 | - |
@@ -859,7 +859,7 @@
 | watcher 未读 errs/done 通道 | - | goroutine 泄漏；必须 drain 通道 |
 | 前端手写 YSM 解析 | - | 与 Go 解析结果不一致；必须交 Go 解析 |
 | 跳过 ExtractYsmSummary 走全文解析 | - | 详情展示性能差；摘要必须复用 |
-| 全量跑会撞 736 条存量债 | `全量跑会撞 736 条存量债` | 门禁只能跑 `--new-from-rev`，全量必红（errcheck 623 占 85%），存量清零另案 |
+| 全量跑必红 | `全量跑必红` | 门禁只能跑 `--new-from-rev`，全量存量债会淹没信号；清零另案（条数刻意不写死，ADR-162） |
 | 未安装不是失败 | `未安装不是失败` | pre-push 检测不到二进制时降级 debt 跳过，不阻断；安装走 `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest` |
 | 无基线 rev 不是失败 | `无基线 rev 不是失败` | 孤儿分支/无远端时解析不出 merge-base，同款降级跳过，避免存量债堵门 |
 | 别开 enable-all | `别开 enable-all` | 一次性抛数百条历史债直接堵死 push 通道；白名单只收 6 类零覆盖 linter |

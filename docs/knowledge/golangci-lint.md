@@ -18,7 +18,7 @@ use_when:
   - new-from-rev
   - 增量 lint
 pitfalls:
-  - 「全量跑会撞 736 条存量债」→ 门禁只能跑 `--new-from-rev`，全量必红（errcheck 623 占 85%），存量清零另案
+  - 「全量跑必红」→ 门禁只能跑 `--new-from-rev`，全量存量债会淹没信号；清零另案（条数刻意不写死，ADR-162）
   - 「未安装不是失败」→ pre-push 检测不到二进制时降级 debt 跳过，不阻断；安装走 `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest`
   - 「无基线 rev 不是失败」→ 孤儿分支/无远端时解析不出 merge-base，同款降级跳过，避免存量债堵门
   - 「别开 enable-all」→ 一次性抛数百条历史债直接堵死 push 通道；白名单只收 6 类零覆盖 linter
@@ -32,7 +32,7 @@ quick_intents:
   - push 被 golangci-lint 阻断怎么办
 quick_risk_lines:
   - Go 曾是静态分析真空面（go vet 独苗）：golangci-lint 白名单制补齐——.golangci.yml 为 default: none + 显式 enable，勿开 enable-all
-  - 存量债不惩罚：pre-push-gate 跑 --new-from-rev 只拦本次引入（全量必红，errcheck 存量 623 条），未安装/无基线自动降级跳过
+  - 存量债不惩罚：pre-push-gate 跑 --new-from-rev 只拦本次引入（全量必红），未安装/无基线自动降级跳过
   - push 被阻断先看 FAIL 块定位 linter 与文件；语义误报用 //nolint 注明 linter 名与理由，禁止 git push --no-verify 绕过
 invariant_anchors:
   - .golangci.yml|default: none
@@ -83,17 +83,28 @@ golangci-lint 结构上接不住。
 → `origin/HEAD` → `origin/main` → `origin/master`。与 `resolveChanges()` 的 fallback 链**同口径**，
 改一处须同步另一处，否则「新增代码」判定与「变更文件」判定会漂移。
 
-## 实测数据（2026-09-08）
+## 实测数据（2026-10-06 复测）
+
+> **具体条数刻意不写死**（ADR-162 去行号/去计数精神：数字随收债与并行改动漂移、无人维护，
+> 本卡曾写死「736 条（errcheck 623 占 85%）」而 errcheck 清零后无人发现——活生生的漂移案例）。
+> 需要数字时**当场跑**：全量 `golangci-lint run ./...`，增量 `golangci-lint run --new-from-rev=<base> ./...`。
 
 | 指标 | 实测 |
 |------|------|
-| 全量存量债 | **736 条**（errcheck 623 / gocyclo 51 / gocritic 40 / staticcheck 12 / unused 6 / ineffassign 4） |
-| 全量耗时 | 18.8s（冷），缓存命中后 10–30s |
-| 增量（`origin/main..HEAD`） | **23 条**（errcheck 13 / staticcheck 4 / gocritic 3 / gocyclo 2 / ineffassign 1） |
-| 增量过滤率 | 3.1%（23 / 736）→ `--new-from-rev` 过滤有效，非全量泄漏 |
+| 债的**构成**（比条数有用） | **errcheck 已清零**（2026-10-06 本轮清零，此前为最重一类）；余以 **gocyclo（复杂度）+ gocritic（惯用法）** 为主，staticcheck / ineffassign / unused 少量 |
+| 债的**性质变化** | 从「错误被静默吞掉」（缺陷债）转为「函数过长/写法不地道」（可维护性债）——**两者优先级不同，别再用旧判词评估** |
+| 全量耗时 | 冷跑十秒级，缓存命中后 10–30s |
+| 增量过滤率 | 2026-09-08 首跑实测约 3%（增量 / 全量）→ `--new-from-rev` 过滤有效，非全量泄漏 |
 | 版本兼容 | v2.13.2 built with go1.26.3 通过 |
+
+**口径坑（2026-10-06 实证）**：命令行 `--default none --enable <x>` 的 `--enable` 是**追加**到
+`.golangci.yml` 的 enable 列表，**不替换**。想复现门禁口径（也是「全量存量债条数」的权威口径）
+必须**裸跑** `golangci-lint run ./...`——带头跑出来的数字偏少且不完整（易被误读成「只剩这几条」）。
 
 ## 已知遗留
 
-- **736 条存量债未清零**：门禁靠增量规避；若哪天需要全量门禁，须先清零或建 baseline 账本（另案，参照 jscpd-go 的 `baseline/` 范式）。
-- **未推送改动已检出 23 条**：本地 push 会被真实阻断，属预期行为（新代码不许新增 lint 问题），需修完再推。
+- **errcheck 已清零**（2026-10-06）：生产代码的未检查错误返回归零；测试文件由配置本身豁免。
+- **其余类别存量债未清零**（以复杂度/惯用法为主）：门禁靠增量规避；若哪天需要全量门禁，须先清零或
+  建 baseline 账本（另案，参照 jscpd-go 的 `scripts/baseline/` 范式）。
+- **收债靠改代码，不靠关闸**：门槛（`gocyclo.min-complexity`）与测试文件豁免是 ADR-205 的拍板结果，
+  为让全量转绿而放宽配置＝把门禁废掉，禁止。

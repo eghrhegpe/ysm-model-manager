@@ -153,7 +153,7 @@ func captureStdout() (*outputBuffer, func()) {
 	var once sync.Once
 	return buf, func() {
 		once.Do(func() {
-			w.Close()
+			_ = w.Close() // 关写端以通知读 goroutine EOF，恢复 stdout
 			os.Stdout = orig
 		})
 	}
@@ -166,7 +166,7 @@ type outputBuffer struct {
 }
 
 func (b *outputBuffer) readFrom(r *os.File) {
-	defer r.Close() // 读端退出即关闭，防止每次 --json 捕获泄漏一个 fd（#2）
+	defer func() { _ = r.Close() }() // 读端退出即关闭，防止每次 --json 捕获泄漏一个 fd（#2）
 	buf := make([]byte, 4096)
 	for {
 		n, err := r.Read(buf)

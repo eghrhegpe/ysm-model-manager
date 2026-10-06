@@ -108,7 +108,7 @@ func runRecycleEmpty(ctx *CmdContext) error {
 	if !*yes {
 		fmt.Print("⚠️  确认清空所有回收站？此操作不可恢复 [y/N]: ")
 		var input string
-		fmt.Scanln(&input)
+		_, _ = fmt.Scanln(&input)
 		if strings.ToLower(strings.TrimSpace(input)) != "y" {
 			fmt.Println("已取消")
 			return nil

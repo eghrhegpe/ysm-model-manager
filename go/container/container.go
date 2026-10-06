@@ -315,7 +315,7 @@ func ZipMatchesEntries(path string, match func(string) bool) bool {
 	if err != nil {
 		return false
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	for _, e := range rc.Entries() {
 		if match(strings.ToLower(e.Name())) {
 			return true

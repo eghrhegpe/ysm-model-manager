@@ -79,7 +79,7 @@ func (w *Watcher) Start() error {
 	w.running = true
 
 	// 递归添加子目录
-	filepath.WalkDir(w.filesRoot, func(path string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(w.filesRoot, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("[watcher] WalkDir 跳过 %s: %v", path, err)
 			return nil
@@ -122,7 +122,9 @@ func (w *Watcher) Stop() {
 	}
 	close(w.done)
 	if w.w != nil {
-		w.w.Close()
+		// 关闭 fsnotify 监听：释放 inotify/ReadDirectoryChangesW 句柄；Close 错误不影响
+		// Stop 语义（循环已在下方按 loopDone 收敛），按最佳努力处理
+		_ = w.w.Close()
 		// 关闭即置 nil：与 loop panic 恢复路径（同样 Close+nil）保持同一不变量——
 		// 谁关闭谁置空，杜绝「已 Close 的 watcher 再被 recover 分支二次 Close」；
 		// Start 每次 NewWatcher 重建，置 nil 不影响 Stop→Start 重启。
@@ -183,7 +185,8 @@ func (w *Watcher) loop() {
 			// panic 后必须关闭 fsnotify watcher，否则其 inotify/句柄永久泄漏——
 			// Stop 因 !running 早退不会清理（原实现），再次 Start 又新建一个 → 泄漏累积
 			if w.w != nil {
-				w.w.Close()
+				// panic 恢复路径：必须释放句柄防泄漏，Close 错误不再处理（已处于异常态）
+				_ = w.w.Close()
 				w.w = nil
 			}
 			w.mu.Unlock()

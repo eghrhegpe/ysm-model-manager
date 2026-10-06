@@ -38,7 +38,7 @@ func openGzRoot(path string) (map[string]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return openGzRootFromReader(f)
 }
 
@@ -51,7 +51,7 @@ func openGzRootFromReader(r io.Reader) (map[string]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("gzip: %w", err)
 	}
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 	root, err := readRootCompound(gz)
 	if err != nil {
 		return nil, fmt.Errorf("nbt: %w", err)

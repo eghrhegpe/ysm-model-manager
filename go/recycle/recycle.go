@@ -207,7 +207,7 @@ func (tm *TrashManager) rollbackAfterSourceRemoveFail(src, dst string, srcErr er
 // 不再拆散成 ysm.json / 几何 / 动画 / 语言 json 等单文件；Restore 保持目录级还原。
 func (tm *TrashManager) List() []types.ModelEntry {
 	entries := []types.ModelEntry{}
-	filepath.WalkDir(tm.recycleDir, func(p string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(tm.recycleDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("[recycle] WalkDir 错误 %s: %v", p, err)
 			return nil

@@ -165,7 +165,7 @@ func DetectContainerType(data []byte) string {
 	if err != nil {
 		return ""
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	var entries []string
 	for _, e := range r.Entries() {
 		entries = append(entries, e.Name())

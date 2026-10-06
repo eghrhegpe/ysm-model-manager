@@ -349,7 +349,7 @@ func runCacheClear(ctx *CmdContext) error {
 	if !*yes {
 		fmt.Print("⚠️  确定要清空所有缓存吗？(y/N): ")
 		var confirm string
-		fmt.Scanln(&confirm)
+		_, _ = fmt.Scanln(&confirm)
 		if confirm != "y" && confirm != "Y" {
 			fmt.Println("❌ 已取消")
 			return nil
@@ -433,7 +433,8 @@ func runCacheDiag(ctx *CmdContext) error {
 		fmt.Printf("   💡 可能是权限不足，请检查目录的写入权限\n")
 	} else {
 		fmt.Printf("   ✅ 目录创建权限正常\n")
-		os.Remove(testDir)
+		// 诊断子目录清理失败不影响判定结果，忽略
+		_ = os.Remove(testDir)
 	}
 
 	fmt.Printf("\n🔐 2. 哈希计算测试\n")
@@ -444,12 +445,12 @@ func runCacheDiag(ctx *CmdContext) error {
 		fmt.Printf("   ❌ 无法创建测试文件: %v\n", err)
 	} else {
 		testFile := tmpFile.Name()
-		defer os.Remove(testFile) // 中途分支早退也清理
+		defer func() { _ = os.Remove(testFile) }() // 中途分支早退也清理
 		if _, werr := tmpFile.Write([]byte("YSM Cache Diagnostic Test Content")); werr != nil {
-			tmpFile.Close()
+			_ = tmpFile.Close()
 			fmt.Printf("   ❌ 无法写入测试文件: %v\n", werr)
 		} else {
-			tmpFile.Close()
+			_ = tmpFile.Close()
 			hash, herr := texture_cache.TextureHash(testFile)
 			if herr != nil {
 				fmt.Printf("   ❌ 哈希计算失败: %v\n", herr)

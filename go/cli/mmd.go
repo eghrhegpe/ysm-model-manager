@@ -158,7 +158,7 @@ func runFileBench(ctx *CmdContext) error {
 	if *filePath != "" {
 		files = append(files, *filePath)
 	} else if *testDir != "" {
-		filepath.WalkDir(*testDir, func(path string, d iofs.DirEntry, err error) error {
+		_ = filepath.WalkDir(*testDir, func(path string, d iofs.DirEntry, err error) error {
 			if err != nil {
 				walkErrCount++
 				return nil
@@ -583,7 +583,7 @@ func runScanDir(ctx *CmdContext) error {
 	if *detail && totalFiles > 0 {
 		fmt.Printf("\n📝 文件详情 (前 20 个):\n")
 		count := 0
-		filepath.WalkDir(*dirPath, func(path string, d iofs.DirEntry, err error) error {
+		_ = filepath.WalkDir(*dirPath, func(path string, d iofs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || count >= 20 {
 				return nil
 			}

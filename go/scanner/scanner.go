@@ -714,7 +714,7 @@ func ScanEntriesLiteCtx(ctx context.Context, dir string) []types.ModelEntry {
 		return []types.ModelEntry{}
 	}
 	entries := []types.ModelEntry{}
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if ctx.Err() != nil {
 			return fs.SkipAll
 		}

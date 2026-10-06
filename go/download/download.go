@@ -354,7 +354,7 @@ func prepareAtomicWrite(savePath string) (*atomicFile, func(), error) {
 		}
 		// Windows 顺序必须 Close→Remove：句柄未释放时 Remove 必然失败
 		// Close 对已关闭文件返回 error 不影响清理结果（成功路径 committed=true 不进这里）
-		tmp.Close()
+		_ = tmp.Close()
 		if err := os.Remove(af.tmpName); err != nil {
 			log.Printf("[download] 清理半截临时文件失败 %s: %v", af.tmpName, err)
 		}
@@ -504,7 +504,7 @@ func (d *Downloader) downloadTo(ctx context.Context, url, savePath, accept strin
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 阶段 ③：HTTP 安全三道守卫（StatusCode/Content-Range/ContentType）
 	// 【续传注意】此处完整响应路径的 Content-Range 防线不可绕过；续传 206 校验需另建函数。

@@ -349,7 +349,7 @@ const benchFileLimit = 30
 func collectTestFiles(root string, maxSizeMB int64) []string {
 	var files []string
 
-	filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil // 测试数据收集尽力而为，坏路径跳过
 		}

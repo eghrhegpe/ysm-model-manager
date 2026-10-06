@@ -384,7 +384,7 @@ func collectEntriesWalk(rootDir string, rtype string) (map[string]string, bool) 
 	entries := make(map[string]string)
 	partialFail := false
 	memo := make(nestedDirMemo)
-	filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+	if werr := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Printf("[sync] Walk 错误 %s: %v", path, err)
 			partialFail = true
@@ -429,7 +429,12 @@ func collectEntriesWalk(rootDir string, rtype string) (map[string]string, bool) 
 		}
 		// 非模型子目录：继续递归（可能包含深层嵌套的模型文件夹/文件）
 		return nil
-	})
+	}); werr != nil {
+		// 根目录 Walk 返回错误（rootDir 消失/不可读等）：标记 partialFail，
+		// 让残缺结果不入 30s 缓存（与 partialFail 双守卫同口径，不静默吞错）
+		log.Printf("[sync] collectEntriesWalk Walk 根目录失败 %s: %v", rootDir, werr)
+		partialFail = true
+	}
 	return entries, partialFail
 }
 
@@ -713,7 +718,7 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 	if cached, ok := loadSyncScanCache[map[string]string](&syncFolderScanCache, cacheKey); ok {
 		return cached
 	}
-	filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+	if werr := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Printf("[sync] collectFolderFiles Walk 错误 %s: %v", path, err)
 			partialFail = true
@@ -737,7 +742,12 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 			entries[relSlash] = path
 		}
 		return nil
-	})
+	}); werr != nil {
+		// 根目录 Walk 返回错误（folder 消失/不可读）：标记 partialFail，
+		// 避免残缺 entries 被 30s 缓存当权威（不静默吞错）
+		log.Printf("[sync] collectFolderFiles Walk 根目录失败 %s: %v", folder, werr)
+		partialFail = true
+	}
 	// 完整 Walk 才入缓存（对齐 sync.go 双守卫）：子树读失败时残缺结果不入缓存当权威。
 	// partialFail 已覆盖 folder 不存在（首回调即 err），原 os.Stat 守卫与完整性无关。
 	if !partialFail {

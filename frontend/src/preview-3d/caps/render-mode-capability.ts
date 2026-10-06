@@ -292,7 +292,9 @@ export class RenderModeCapability implements SceneCapability {
     // [锐评 F-2] 恢复路径来源纪律（fog F-2 / light L-1 / ground / reflector 同口径）：
     // 存档恢复是**程序化动作**，非用户手改 → auto-model。原实现写 manual 把 renderMode
     // 组 5 键的 lastWriteSource 冻成最高优先级，此后同轨 auto-model 写入被
-    // shouldOverwrite 静默吞掉（值不变、无报错）。
+    // shouldOverwrite 静默吞掉（值不变、无报错）。dispose 同理（见下方 dispose）：
+    // 同样不得写 manual，否则下会话 loadState 的 auto-model 恢复被本会话残留戳静默拒
+    // ——这是 W1 跨会话污染的唯一来源，现已一并收口。
     if (Object.keys(partial).length > 0) setEnvState(partial, { source: "auto-model" });
     this.sync();
   }
@@ -302,6 +304,13 @@ export class RenderModeCapability implements SceneCapability {
   dispose(): void {
     this.unsubscribeEnv();
     if (this.snapshot.size > 0) this.restoreSnapshot();
+    // [W1 修复] 清回默认须走 auto-model + force，不得 manual：
+    // ① dispose 是「程序化清回默认」，与 loadState 同源（恢复路径来源纪律）；
+    // ② 本会话用户可能手改过该键（prev="manual"），不 force 会被 shouldOverwrite 静默拒、
+    //    override 值残留到下会话；force 才真把值清回 null；
+    // ③ force 写入把 _writeSource 戳置为 auto-model（而非 manual）——否则下会话
+    //   loadState 的 auto-model 恢复被本会话残留戳静默拒（renderMode 覆盖关预览再开
+    //   不复现，是 W1 跨会话污染的唯一来源：全仓仅此一处 dispose 写 envState manual）。
     setEnvState(
       {
         renderModeWireframe: null,
@@ -310,7 +319,7 @@ export class RenderModeCapability implements SceneCapability {
         renderModeSide: null,
         renderModeDepthWrite: null,
       },
-      { source: "manual" },
+      { source: "auto-model", force: true },
     );
     this.snapshot.clear();
     this.coveredProps.clear();

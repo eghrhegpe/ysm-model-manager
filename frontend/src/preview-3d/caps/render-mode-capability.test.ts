@@ -503,3 +503,32 @@ describe("RenderModeCapability — 恢复路径来源纪律（锐评 F-2）", ()
     expect(cap.getWireframe(), "恢复后程序化写入仍须能落地").toBe(false);
   });
 });
+
+// [W1 修复回归] 跨会话仲裁戳污染：F-2 只覆盖 loadState→auto-model 方向，且 beforeEach
+// 调 resetEnvState 把单例戳清掉，永远触发不到「dispose 的 manual 戳残留进下会话」的真路径。
+// 本块刻意**不重置单例**，复现生产跨会话（环境系统单例不跨会话重置）：会话 N 用户手改 →
+// dispose 清回默认 → 会话 N+1 从持久化 loadState 恢复。断言恢复成功；旧实现 dispose 写 manual
+// 会把戳冻死，下会话 auto-model 恢复被 shouldOverwrite 静默拒 → 这里仍是 null（覆盖不复现）。
+describe("RenderModeCapability — 跨会话仲裁戳（W1 修复回归）", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetEnvState();
+  });
+  afterEach(() => localStorage.clear());
+
+  it("[W1] dispose 不得冻结跨会话 auto-model 恢复（关预览再开覆盖须复现）", () => {
+    const cap = newCap(makeMesh());
+    cap.setWireframe(true); // 会话 N：用户手改 → manual 戳
+    expect(cap.getWireframe()).toBe(true);
+    cap.dispose(); // 会话 N 结束：清回默认
+    expect(cap.getWireframe(), "dispose 须把值清回 null").toBeNull();
+    // 会话 N+1：从持久化恢复（loadState 走 auto-model）
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ wireframe: true }));
+    const cap2 = newCap(makeMesh());
+    cap2.loadState();
+    expect(
+      cap2.getWireframe(),
+      "跨会话覆盖须恢复成功（旧 bug 下被 dispose 残留 manual 戳静默拒）",
+    ).toBe(true);
+  });
+});

@@ -106,7 +106,7 @@ WARN  : 2     ← 正文硬编码行号 L123 / L180
 | 事实 | 数字 |
 |---|---|
 | 架构卡 `invariant_anchors` 缺失 | **0**（131 张 architecture 卡全声明） |
-| `invariant_anchors` 总锚数 | 413 条，0 失效 |
+| `invariant_anchors` 总锚数 | 411 条（同口径复算），0 失效 |
 | ADR 引用 | 1487 处，**0 处指向不存在的 ADR**（ADR 全集 321 个，1..323） |
 | `snapshot` 卡 `affected:false` 合规 | 全部合规（0 张 snapshot，均已按"归档迁出"规则处理） |
 | `archived` 卡是否被路由误推 | **0 次**——4 张 archived 卡在 routes-quick / routes 均 0 命中，状态被正确尊重 |
@@ -123,3 +123,27 @@ WARN  : 2     ← 正文硬编码行号 L123 / L180
 **一句话**：这个知识库的可靠性上限不在"卡写得够不够好"，而在"闸门够不够亮"。承重墙（frontmatter + 锚点 + ADR）已经做到了 fail-closed 且有测试守护；散文层还停在"建议"。真正的杠杆点是**把 `文件:行号` 分支和裸文件名锚定补进正则**——两处改动，能让现有闸门从"守路径"升级到"守一半的文字"。
 
 **引用规范**：正文一律写「`文件|符号`」而非行号（ADR-162 精神）；判断机制现状只认源码树，不认 ADR 背景与卡正文。
+
+---
+
+## 七、整改记录（2026-10-06 同日闭环，commit `779e93ff1`）
+
+本报告第三节的杠杆点建议已落地，以下是整改后的现状——**上文第一~六节仍是审计时的快照，勿当现状读**。
+
+| 项 | 整改前 | 整改后 |
+|---|---|---|
+| `BODY_LINE_RE_FINAL` 分支 | 3 个（L 形 / N 行 / N 个X） | **4 个**（+ 冒号形 `文件.ext:行号` / 区间 / L 前缀 / 目录前缀） |
+| 冒号形违规可见性 | **18 处全在盲区** | 闸门报 **14 卡 / 2 frontmatter 卡** 全现形 |
+| `frontmatter` 注入 routes-quick 的硬编码行号 | 2 处 | **0**（`download-queue-store` / `workspace-exe-write-denied` 已改写成 `文件\|符号` 锚） |
+| 契约测试断言 | 16 | **21**（新增 5 条：冒号形命中 2 + 区间/目录前缀 1 + 豁免 1 + frontmatter 冒号形 1） |
+| `preview-env-state` 装配链声称 | 声称「两个命名入口」含已被 ADR-250 删除的 `applyPostProcDefaults` | 已纠正为「单命名入口 + 一行内联 post-apply」，并**新增锚** `shared-infra.ts\|applyModelDefaults` |
+| `extensibility-round2` binding 对账声称 | 声称 `AssertSubset` / `WebImplGoKeys`（两者全树零命中） | 已纠正为 `satisfies Partial<GoBindingShape>` + `WEB_ONLY_ALLOWLIST`，并**新增 3 锚**（`GoBindingShape` / `PROTOTYPE_MEMBERS` / `WEB_ONLY_ALLOWLIST`），`last_verified` 2026-08-27 → 2026-10-06 |
+| 新增锚总数 | — | **+4 条**（411 → 415，`preview-env-state` +1 / `extensibility-round2` +3；绝对值随计数正则口径浮动，增量已实测核验） |
+
+**整改方法论（可复用）**：失准声称的修法不是把行号改成正确行号，而是**把散文升格为 `invariant_anchors`**——散文声称无锚故漂移不阻断，锚失名即 ERROR。这是本次两处失准卡共同的根因，也是「散文层零校验」这个缺口唯一经济的补法（逐条给 839 处裸文件名补锚不现实，但给承重墙机制补锚可行）。
+
+**未闭环（留给后续）**：
+1. 14 张卡的正文冒号形行号仍留 WARN（闸门已可见，非阻断）——改写需逐条查真实符号，风险高于收益，建议按需分批。
+2. 839 处裸文件名机制引用（占机制引用 55%）零校验——正则无法可靠判断裸文件名是否指向「含该机制」，需人工升格锚。
+3. 23% 卡的源码领先于卡更新——属 `--affected` 主动匹配范畴，非检查器缺分支。
+4. `extensibility-round2` 同时 `status: active` + `affected: false`：它被 routes-quick 注入（一跳层），却退出 `--affected` 匹配——本次失准静默 6 周的直接原因。属卡元数据语义问题，未擅改，待评审拍板。

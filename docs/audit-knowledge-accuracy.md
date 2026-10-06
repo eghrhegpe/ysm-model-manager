@@ -168,3 +168,7 @@ node scripts/check-knowledge-drift.ts 的 BODY_LINE_RE_FINAL 直跑 16 个样例
 ```
 
 只读核验，未修改任何既有文件。
+
+---
+
+> **整改状态（2026-10-06 同日，commit `779e93ff1`）**：本报告「最严重 3 张卡」中的 2 张已修复——`preview-env-state.md`（`applyPostProcDefaults` 失准声称已纠正 + 新增 `shared-infra.ts|applyModelDefaults` 锚）与 `extensibility-round2.md`（`AssertSubset` / `WebImplGoKeys` 失准声称已纠正 + 新增 3 锚 + `last_verified` 更新至 2026-10-06）。整改方法与未闭环项见 `docs/audit-knowledge-reliability.md` 第七节。

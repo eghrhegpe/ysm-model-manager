@@ -316,10 +316,7 @@ func ExtBelongsToBy(ext string, reg *ResourceTypeRegistry) []string {
 // subtype 自声明 extensions 驱动，父类型 extensions 字段仅作文档记录）。
 // 无 subtypes 时直接返回父类型 extensions（独立类型的常规路径）。
 func SupportedExtsForType(rtype string) []string {
-	rt := RegistryType(rtype)
-	if rt == nil {
-		rt = RegistryType(strings.ToLower(rtype))
-	}
+	rt := resolveRegistryType(rtype)
 	if rt == nil {
 		return nil
 	}
@@ -412,18 +409,12 @@ func resolveSubDir(rt ResourceType) string {
 
 // SubDirMap 返回指定资源类型在整合包实例版本目录中的实例子目录
 func SubDirMap(rtype string) string {
-	if rt := RegistryType(rtype); rt != nil {
-		if d := resolveSubDir(*rt); d != "" {
-			return d
-		}
+	// 解析口径统一走 resolveRegistryType（精确 → 小写回退），勿在此另写一份回退。
+	rt := resolveRegistryType(rtype)
+	if rt == nil {
+		return ""
 	}
-	// 小写兜底（向后兼容）
-	if rt := RegistryType(strings.ToLower(rtype)); rt != nil {
-		if d := resolveSubDir(*rt); d != "" {
-			return d
-		}
-	}
-	return ""
+	return resolveSubDir(*rt)
 }
 
 // SubDirAll 返回所有资源类型在整合包实例中的版本子目录映射

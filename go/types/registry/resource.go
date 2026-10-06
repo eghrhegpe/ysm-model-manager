@@ -474,6 +474,23 @@ func RegistryType(id string) *ResourceType {
 	return reg.FindByID(id)
 }
 
+// resolveRegistryType 是「id → 资源类型」的**唯一解析口**：先精确匹配，未命中再小写回退
+// （向后兼容历史调用方传大小写变体）。不存在时返回 nil。
+//
+// 为什么必须有这一层（2026-10-06 修复）：此前小写回退散落在个别调用点
+// （SupportedExtsForType / SubDirMap 各自写一份），而 FindInstDir 只做精确匹配——
+// 同一份 rtype 在不同函数里「能否解析出类型」不一致。后果不是少个扩展名，而是
+// FindInstDir 在 `!rt.ScanInstance` 处对 nil 解引用 panic：前端经绑定入参
+// （app_install_instance.go 的 d.RType、resource_bindings.go 的 rtype）传个大小写变体
+// 即可触发进程级崩溃。调用方若拿 rt 判分支，一律走本函数而非 RegistryType——
+// 让「解析口径」只有一处可漂移。
+func resolveRegistryType(id string) *ResourceType {
+	if rt := RegistryType(id); rt != nil {
+		return rt
+	}
+	return RegistryType(strings.ToLower(id))
+}
+
 // FindByID 按 id 查找资源类型，不存在时返回 nil（深拷贝）
 func (reg *ResourceTypeRegistry) FindByID(id string) *ResourceType {
 	for i := range reg.ResourceTypes {

@@ -38,7 +38,7 @@ func TestSchemaGuard_ScanCurrentResourceTypes(t *testing.T) {
 		if strings.Contains(v, "存储路径冲突") {
 			subDirCount++
 		}
-		if strings.Contains(v, "配置槽查询歧义") {
+		if strings.Contains(v, "配置槽归属歧义") {
 			cfgCount++
 		}
 	}

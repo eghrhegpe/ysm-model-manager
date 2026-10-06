@@ -71,7 +71,7 @@ func dirContainsFlag(root, flag string) bool {
 func FindInstDir(versionDir, subDir, rtype string) string {
 	standard := filepath.Join(versionDir, subDir)
 	// 消费注册表 detector 字段（ADR-065 合规），不硬编码 rtype。
-	rt := RegistryType(rtype)
+	rt := resolveRegistryType(rtype)
 	ev := buildInstDirEvidence(rtype, rt)
 	// 标准目录存在且包含该类型文件 → 标准优先返回（行为不变）
 	if info, err := os.Stat(standard); err == nil && info.IsDir() {
@@ -95,7 +95,9 @@ func FindInstDir(versionDir, subDir, rtype string) string {
 	// 其余类型（含全部 MMD 子类型 / ysm / resourcepack 等）标准目录缺失或空时
 	// 一律返回标准路径，绝不越界扫描 versionDir 一级目录——避免同步 / 回收站
 	// 对错误目录（如 config 树）做删改，安全性归零。
-	if !rt.ScanInstance {
+	// rt == nil（未知类型，resolveRegistryType 未命中）同样归入此门：类型未知即无权
+	// 开启越界扫描，返回标准路径是唯一安全解（此前漏此判据 → 空指针 panic）。
+	if rt == nil || !rt.ScanInstance {
 		return standard
 	}
 	// 标准目录不存在 / 存在但无该类型文件（仅 ScanInstance 类型）→ 兜底扫描其他子目录

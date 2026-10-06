@@ -597,13 +597,42 @@ func ResolveSavePath(rawURL, saveDir string) (savePath string, jsdURL, apiURL st
 		urlPath = rawURL // 降级：无法解析时使用原始 URL
 	}
 
-	relPath := ""
-	repoPath := ""
-	branch := ""
-	// raw.githubusercontent.com 结构化定位：/{owner}/{repo}/{branch}/{path...} 固定四段式，
-	// 分支名任意（dev/develop/release/1.0 等）都能拿到完整 relPath 与带正确分支的
-	// jsd/api 回退源，不再依赖 /main/ /master/ 枚举（枚举只对默认分支恰好是二者的仓库有效）。
-	// host 大小写不敏感（RFC 3986），且 u 已在上方 Parse——不用字符串前缀判定
+	repoPath, branch, relPath := resolveRepoRelPath(u, rawURL, urlPath)
+	relPath = sanitizeRelPath(relPath)
+	if relPath == "" {
+		log.Printf("[download] 拒绝空路径（URL 路径仅含 .recycle/.git 段）: %s", rawURL)
+		return "", "", ""
+	}
+	// NUL 字节跨平台差异修复——Windows filepath.Abs 遇到 NUL 直接报错（攻击失效），
+	// Linux/macOS filepath.Abs 放行，但 os.Create("file.ysm\x00.exe") 实际创建的是 "file.ysm"
+	// （C 字符串以 NUL 截断，后缀被剥离），攻击者可绕过前端扩展名校验。
+	// 主动剔除，跨平台一致行为。
+	if strings.Contains(relPath, "\x00") {
+		log.Printf("[download] 拒绝含 NUL 字节的路径: %s", rawURL)
+		return "", "", ""
+	}
+	savePath, ok := joinSavePathUnderDir(saveDir, relPath)
+	if !ok {
+		return "", "", ""
+	}
+
+	if repoPath != "" {
+		normalized := filepath.ToSlash(relPath)
+		if branch == "" {
+			branch = "main"
+		}
+		jsdURL = "https://cdn.jsdelivr.net/gh/" + repoPath + "@" + branch + "/" + normalized
+		apiURL = "https://api.github.com/repos/" + repoPath + "/contents/" + normalized
+	}
+	return
+}
+
+// resolveRepoRelPath 解析 owner/repo、分支与仓库内相对路径（三段式回退）。
+// raw.githubusercontent.com 结构化定位：/{owner}/{repo}/{branch}/{path...} 固定四段式，
+// 分支名任意（dev/develop/release/1.0 等）都能拿到完整 relPath 与带正确分支的
+// jsd/api 回退源，不再依赖 /main/ /master/ 枚举（枚举只对默认分支恰好是二者的仓库有效）。
+// host 大小写不敏感（RFC 3986），且 u 已在上方 Parse——不用字符串前缀判定。
+func resolveRepoRelPath(u *neturl.URL, rawURL, urlPath string) (repoPath, branch, relPath string) {
 	if strings.EqualFold(u.Host, "raw.githubusercontent.com") {
 		if parts := strings.SplitN(strings.TrimPrefix(urlPath, "/"), "/", 4); len(parts) == 4 &&
 			parts[0] != "" && parts[1] != "" && parts[2] != "" && parts[3] != "" {
@@ -629,6 +658,11 @@ func ResolveSavePath(rawURL, saveDir string) (savePath string, jsdURL, apiURL st
 			relPath = filepath.Base(rawURL)
 		}
 	}
+	return repoPath, branch, relPath
+}
+
+// sanitizeRelPath 归一化仓库内相对路径：分隔符转本机、剔除 .git/ 前缀、逐段剔除 .recycle。
+func sanitizeRelPath(relPath string) string {
 	relPath = strings.ReplaceAll(relPath, "/", string(filepath.Separator))
 	// BUG-B-8 修复：剔除 .git/ 前缀，防止下载 .git/config 泄露仓库 token/远端配置。
 	relPath = strings.TrimPrefix(relPath, ".git"+string(filepath.Separator))
@@ -637,47 +671,28 @@ func ResolveSavePath(rawURL, saveDir string) (savePath string, jsdURL, apiURL st
 	// 视为回收站）。若下载落到 saveDir 下任意 .recycle 子树：扫描器会跳过该文件（不可见）、
 	// 回收站 Empty() 会 RemoveAll 整目录（下载文件被静默清除），Windows 大小写不敏感下
 	// .Recycle/.RECYCLE 亦指向同一目录。逐段剔除保证下载不落入任何回收站目录。
-	relPath = stripRecycleSegments(relPath)
-	if relPath == "" {
-		log.Printf("[download] 拒绝空路径（URL 路径仅含 .recycle/.git 段）: %s", rawURL)
-		return "", "", ""
-	}
-	// NUL 字节跨平台差异修复——Windows filepath.Abs 遇到 NUL 直接报错（攻击失效），
-	// Linux/macOS filepath.Abs 放行，但 os.Create("file.ysm\x00.exe") 实际创建的是 "file.ysm"
-	// （C 字符串以 NUL 截断，后缀被剥离），攻击者可绕过前端扩展名校验。
-	// 主动剔除，跨平台一致行为。
-	if strings.Contains(relPath, "\x00") {
-		log.Printf("[download] 拒绝含 NUL 字节的路径: %s", rawURL)
-		return "", "", ""
-	}
-	savePath = filepath.Join(saveDir, relPath)
+	return stripRecycleSegments(relPath)
+}
 
-	// 路径遍历防护——确保 savePath 经 Clean 后仍在 saveDir 下
-	savePath = filepath.Clean(savePath)
+// joinSavePathUnderDir 拼接 saveDir 与 relPath 并做路径遍历防护——
+// 确保 savePath 经 Clean 后仍在 saveDir 下；越界或路径异常返回 ok=false（并留日志）。
+func joinSavePathUnderDir(saveDir, relPath string) (savePath string, ok bool) {
+	savePath = filepath.Clean(filepath.Join(saveDir, relPath))
 	absSaveDir, err := filepath.Abs(saveDir)
 	if err != nil {
 		log.Printf("[download] saveDir 路径异常 %s: %v", saveDir, err)
-		return "", "", ""
+		return "", false
 	}
 	absSavePath, err := filepath.Abs(savePath)
 	if err != nil {
 		log.Printf("[download] savePath 路径异常 %s: %v", savePath, err)
-		return "", "", ""
+		return "", false
 	}
 	if !strings.HasPrefix(absSavePath, absSaveDir+string(filepath.Separator)) && absSavePath != absSaveDir {
 		log.Printf("[download] 拒绝路径越界: %s (期望在 %s 内)", absSavePath, absSaveDir)
-		return "", "", ""
+		return "", false
 	}
-
-	if repoPath != "" {
-		normalized := filepath.ToSlash(relPath)
-		if branch == "" {
-			branch = "main"
-		}
-		jsdURL = "https://cdn.jsdelivr.net/gh/" + repoPath + "@" + branch + "/" + normalized
-		apiURL = "https://api.github.com/repos/" + repoPath + "/contents/" + normalized
-	}
-	return
+	return savePath, true
 }
 
 // stripRecycleSegments 移除 relPath 中所有名为 .recycle 的目录段（大小写不敏感，

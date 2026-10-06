@@ -57,67 +57,70 @@ func ExtractPreviewTexture(modelPath string) string {
 	if registry.IsDisableSuffix(extPath) {
 		extPath = registry.StripDisableSuffix(extPath)
 	}
-	ext := strings.ToLower(filepath.Ext(extPath))
-	var png []byte
-
-	switch ext {
-	case ".zip":
-		data := readLimitedFile(readPath)
-		if data == nil {
-			return ""
-		}
-		png = extractFirstPNGFromZip(data, int64(len(data)))
-	case ".7z":
-		data := readLimitedFile(readPath)
-		if data == nil {
-			return ""
-		}
-		png = extractFirstPNGFrom7z(data, int64(len(data)))
-	case ".ysm":
-		if r, err := extractTextureViaYSM(readPath); err == nil {
-			png = r
-		}
-	case ".json":
-		// 解压后的 YSM 模型：查找 textures/ 子目录中的 PNG（目录取实际文件所在目录）
-		dir := filepath.Dir(readPath)
-		texDir := filepath.Join(dir, "textures")
-		if d, err := os.Stat(texDir); err == nil && d.IsDir() {
-			entries, _ := os.ReadDir(texDir)
-			for _, e := range entries {
-				if e.IsDir() {
-					continue
-				}
-				if strings.HasSuffix(strings.ToLower(e.Name()), ".png") {
-					texPath := filepath.Join(texDir, e.Name())
-					png = readLimitedFile(texPath)
-					if len(png) > 0 {
-						break
-					}
-				}
-			}
-		}
-		// 也搜同目录 PNG
-		if len(png) == 0 {
-			entries, _ := os.ReadDir(dir)
-			for _, e := range entries {
-				if e.IsDir() {
-					continue
-				}
-				if strings.HasSuffix(strings.ToLower(e.Name()), ".png") {
-					texPath := filepath.Join(dir, e.Name())
-					png = readLimitedFile(texPath)
-					if len(png) > 0 {
-						break
-					}
-				}
-			}
-		}
-	}
-
+	png := extractPreviewPNG(strings.ToLower(filepath.Ext(extPath)), readPath)
 	if len(png) == 0 {
 		return ""
 	}
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+}
+
+// extractPreviewPNG 按扩展名分派预览纹理提取（zip/7z/ysm/json），返回原始 PNG 字节。
+// readPath 恒为磁盘上的原始路径（禁用后缀已剥 / 未剥由调用方决定）——读取一律用原始路径。
+func extractPreviewPNG(ext, readPath string) []byte {
+	switch ext {
+	case ".zip":
+		data := readLimitedFile(readPath)
+		if data == nil {
+			return nil
+		}
+		return extractFirstPNGFromZip(data, int64(len(data)))
+	case ".7z":
+		data := readLimitedFile(readPath)
+		if data == nil {
+			return nil
+		}
+		return extractFirstPNGFrom7z(data, int64(len(data)))
+	case ".ysm":
+		if r, err := extractTextureViaYSM(readPath); err == nil {
+			return r
+		}
+	case ".json":
+		// 解压后的 YSM 模型：查找 textures/ 子目录中的 PNG（目录取实际文件所在目录）
+		return extractPreviewPNGFromJSONModel(readPath)
+	}
+	return nil
+}
+
+// extractPreviewPNGFromJSONModel 解压后的 YSM 模型（.json）：先搜 textures/ 子目录中的 PNG，
+// 未命中再搜 json 同目录的 PNG。
+func extractPreviewPNGFromJSONModel(readPath string) []byte {
+	dir := filepath.Dir(readPath)
+	texDir := filepath.Join(dir, "textures")
+	if d, err := os.Stat(texDir); err == nil && d.IsDir() {
+		if png := firstPNGInDir(texDir); len(png) > 0 {
+			return png
+		}
+	}
+	// 也搜同目录 PNG
+	return firstPNGInDir(dir)
+}
+
+// firstPNGInDir 返回 dir 下第一个非空 .png 的内容（按 ReadDir 顺序），无则 nil。
+// 子目录跳过；空文件不中断搜索（继续尝试后续候选，与原内联循环同语义）。
+// ReadDir 失败按「无预览」静默降级。
+func firstPNGInDir(dir string) []byte {
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		if strings.HasSuffix(strings.ToLower(e.Name()), ".png") {
+			if png := readLimitedFile(filepath.Join(dir, e.Name())); len(png) > 0 {
+				return png
+			}
+		}
+	}
+	return nil
 }
 
 // extractTextureViaYSM 从 .ysm 提取预览纹理。

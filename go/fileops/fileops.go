@@ -205,57 +205,16 @@ func MoveModelFile(root, src, dstDir string) error {
 	if root == "" {
 		log.Printf("[fileops] MoveModelFile: root 为空，跳过仓库边界校验")
 	}
-	if root != "" {
-		absRoot, err := filepath.Abs(root)
-		if err != nil {
-			return err
-		}
-		absSrc, err := filepath.Abs(src)
-		if err != nil {
-			return err
-		}
-		relSrc, err := filepath.Rel(absRoot, absSrc)
-		if err != nil || relSrc == "." || relSrc == ".." || strings.HasPrefix(relSrc, ".."+string(filepath.Separator)) {
-			return fmt.Errorf("源文件必须在仓库内: %s", src)
-		}
-		absDst, err := filepath.Abs(dstDir)
-		if err != nil {
-			return err
-		}
-		relDst, err := filepath.Rel(absRoot, absDst)
-		if err != nil || relDst == ".." || strings.HasPrefix(relDst, ".."+string(filepath.Separator)) {
-			return fmt.Errorf("目标目录必须在仓库内: %s", dstDir)
-		}
-		// 同 WriteModelFolder.checkNoSymlinkInPath 口径：dstDir 中间组件为指向仓库外
-		// 已存在目录的 symlink 时，MkdirAll 放行、rename/copy 穿透写出
-		if err := checkNoSymlinkInPath(absRoot, relDst); err != nil {
-			return err
-		}
+	if err := checkMoveWithinRoot(root, src, dstDir); err != nil {
+		return err
 	}
 	// ysm.json 是模型目录清单：整组移动父目录（包内 geometry/animation/语言资源随目录一起走）。
 	// 提升判定须在自嵌套检查之前执行——自嵌套检查必须用提升后的 src（目录）判定，
 	// 否则 dstDir 位于模型目录内部时会穿透检查、MkdirAll 后在模型目录内留下空 junk 目录
 	// 再 rename 失败（对齐 CopyModelFile 的「先提升、后自嵌套检查」顺序）。
-	// 根级 ysm.json（父目录 == 仓库根）：不整组提升，回退单文件移动（防移走整个仓库）。
-	liftToParent := false
-	if registry.IsYsmEntryJSON(filepath.Base(src)) {
-		if root != "" {
-			absRoot, err := filepath.Abs(root)
-			if err != nil {
-				return fmt.Errorf("解析仓库根路径失败: %w", err)
-			}
-			absSrc, err := filepath.Abs(src)
-			if err != nil {
-				return fmt.Errorf("解析源文件路径失败: %w", err)
-			}
-			if rel, err := filepath.Rel(absRoot, filepath.Dir(absSrc)); err == nil && rel == "." {
-				liftToParent = false // 根级 ysm.json：单文件移动（走下方通用路径）
-			} else {
-				liftToParent = true
-			}
-		} else {
-			liftToParent = true
-		}
+	liftToParent, err := shouldLiftYsmParent(root, src)
+	if err != nil {
+		return err
 	}
 	if liftToParent {
 		src = filepath.Dir(src)
@@ -272,6 +231,67 @@ func MoveModelFile(root, src, dstDir string) error {
 	if _, err := os.Lstat(dst); err == nil {
 		return fmt.Errorf("目标已存在: %s", dst)
 	}
+	return moveSrcToDst(src, dst, dstDir, created)
+}
+
+// checkMoveWithinRoot 校验 src 与 dstDir 均落在 root 内（空 root 整条跳过），
+// 并拒绝 dstDir 中间组件为指向仓库外已存在目录的 symlink。
+// 守卫顺序即错误优先级：源越界 > 目标越界 > symlink 中间段。
+func checkMoveWithinRoot(root, src, dstDir string) error {
+	if root == "" {
+		return nil
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+	absSrc, err := filepath.Abs(src)
+	if err != nil {
+		return err
+	}
+	relSrc, err := filepath.Rel(absRoot, absSrc)
+	if err != nil || relSrc == "." || relSrc == ".." || strings.HasPrefix(relSrc, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("源文件必须在仓库内: %s", src)
+	}
+	absDst, err := filepath.Abs(dstDir)
+	if err != nil {
+		return err
+	}
+	relDst, err := filepath.Rel(absRoot, absDst)
+	if err != nil || relDst == ".." || strings.HasPrefix(relDst, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("目标目录必须在仓库内: %s", dstDir)
+	}
+	// 同 WriteModelFolder.checkNoSymlinkInPath 口径：dstDir 中间组件为指向仓库外
+	// 已存在目录的 symlink 时，MkdirAll 放行、rename/copy 穿透写出
+	return checkNoSymlinkInPath(absRoot, relDst)
+}
+
+// shouldLiftYsmParent 判定 src（ysm.json，模型目录清单）是否提升为「移动整个模型目录」。
+// 根级 ysm.json（父目录 == 仓库根）：不整组提升，回退单文件移动（防移走整个仓库）。
+func shouldLiftYsmParent(root, src string) (bool, error) {
+	if !registry.IsYsmEntryJSON(filepath.Base(src)) {
+		return false, nil
+	}
+	if root == "" {
+		return true, nil
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return false, fmt.Errorf("解析仓库根路径失败: %w", err)
+	}
+	absSrc, err := filepath.Abs(src)
+	if err != nil {
+		return false, fmt.Errorf("解析源文件路径失败: %w", err)
+	}
+	if rel, err := filepath.Rel(absRoot, filepath.Dir(absSrc)); err == nil && rel == "." {
+		return false, nil // 根级 ysm.json：单文件移动（走通用路径）
+	}
+	return true, nil
+}
+
+// moveSrcToDst 执行实际搬移：symlink 前置守卫 → renameForMove；
+// 跨设备（EXDEV）失败回退「复制 + 删除源」。
+func moveSrcToDst(src, dst, dstDir string, created bool) error {
 	// P3-3：MoveModelFile 非 EXDEV 路径直接 renameForMove(src, dst)
 	// （= os.Rename），不检查 src 是否为 symlink；若仓库内混入 symlink 文件，
 	// Rename 仅移动链接本身、目标仍指仓库外，仓库内出现逃逸 symlink。
@@ -281,35 +301,45 @@ func MoveModelFile(root, src, dstDir string) error {
 		return fmt.Errorf("拒绝移动符号链接（防仓库内逃逸 symlink）: %s", src)
 	}
 	if err := renameForMove(src, dst); err != nil {
-		// 跨设备/跨卷移动：os.Rename 返回 EXDEV，回退到复制+删除源。
-		// 禁用态是文件名重命名约定（ToggleModelEnable 把 path 重命名为
-		// path+".disabled"），后缀随文件/目录名自然携带，无需额外处理兄弟文件
 		if !fsutil.IsCrossDeviceErr(err) {
-			// P3-2：仅当 dstDir 由本次 MkdirAll 新建时才清理，
-			// 避免删除预存在的目标目录及其内容（静默数据破坏）。
-			if created {
-				_ = os.RemoveAll(dstDir)
-			}
-			return err
+			return abortMoveOnRenameFailure(err, dstDir, created)
 		}
-		info, statErr := os.Stat(src)
-		if statErr != nil {
-			return statErr
+		return crossDeviceCopyThenDeleteSource(src, dst)
+	}
+	return nil
+}
+
+// abortMoveOnRenameFailure 非跨设备 rename 失败后的收尾：仅当 dstDir 由本次 MkdirAll
+// 新建时才清理（P3-2），避免删除预存在的目标目录及其内容（静默数据破坏）。
+func abortMoveOnRenameFailure(renameErr error, dstDir string, created bool) error {
+	if created {
+		_ = os.RemoveAll(dstDir)
+	}
+	return renameErr
+}
+
+// crossDeviceCopyThenDeleteSource 跨设备/跨卷移动的回退：os.Rename 返回 EXDEV 时复制 + 删除源。
+// 禁用态是文件名重命名约定（ToggleModelEnable 把 path 重命名为 path+".disabled"），
+// 后缀随文件/目录名自然携带，无需额外处理兄弟文件。
+// go/AGENTS.md：硬链接跨卷失败不自动降级，而本回退是刻意保留的必要防线，
+// 不得为降复杂度合并或删除。
+func crossDeviceCopyThenDeleteSource(src, dst string) error {
+	info, statErr := os.Stat(src)
+	if statErr != nil {
+		return statErr
+	}
+	if info.IsDir() {
+		if cpErr := copyDirRecursive(src, dst); cpErr != nil {
+			return cpErr
 		}
-		if info.IsDir() {
-			if cpErr := copyDirRecursive(src, dst); cpErr != nil {
-				return cpErr
-			}
-		} else {
-			if cpErr := copyFile(src, dst); cpErr != nil {
-				return cpErr
-			}
+	} else {
+		if cpErr := copyFile(src, dst); cpErr != nil {
+			return cpErr
 		}
-		// 复制成功，尽力删除源；删除失败时数据已安全到达目标，返回错误但不回滚复制
-		if rmErr := os.RemoveAll(src); rmErr != nil {
-			return fmt.Errorf("跨设备移动：复制成功但删除源失败: %w", rmErr)
-		}
-		return nil
+	}
+	// 复制成功，尽力删除源；删除失败时数据已安全到达目标，返回错误但不回滚复制
+	if rmErr := os.RemoveAll(src); rmErr != nil {
+		return fmt.Errorf("跨设备移动：复制成功但删除源失败: %w", rmErr)
 	}
 	return nil
 }

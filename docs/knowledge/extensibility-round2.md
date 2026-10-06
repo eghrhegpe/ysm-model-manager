@@ -28,10 +28,12 @@ quick_intents:
   - 新增同步逻辑：JSON 加 dirLevelSync 布尔 / 改 ResourceDiff diff key
   - 排查"新类型不生效"：detector switch / isContainer 判定 / PushSingleResource 硬编码
 status: active
-# 2026-10-06 治理：原 affected: false + 无 source_files 使本卡对源码漂移完全不可见
+# 2026-10-06 治理：原先 affected: false + 无 source_files = 卡对源码漂移完全不可见
 # （退出 --affected 匹配 + 覆盖盲区检查也点不到）——正文 2 个已删除符号静默 6 周才被发现。
-# 现补 source_files（本卡枚举的拓展点实体）并退出豁免，回 --affected 匹配；
-# 代价是提交触及这些文件时会被 prepare-commit-msg 提示复核，属可接受的通知。
+# 保留 affected: false（退出逐次提交匹配：本卡跨类型注册表/同步/预览/侧栏/后端，
+# 逐次点名只会制造噪音，原作者的降噪取舍是对的），补 source_files 只做覆盖登记，
+# 让覆盖盲区检查至少能看见它认领了哪些文件。见 check-knowledge-drift 检查 5.12。
+affected: false
 source_files:
   - resource_types.json
   - go/types/registry/extensions.go

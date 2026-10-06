@@ -242,6 +242,80 @@ func TestBuildNbtVoxelDataFromRoot_BedrockDispatch(t *testing.T) {
 	})
 }
 
+// ===== 拆解时被移动的守卫：反 panic（ADR-039 P3）+ 逐轴包围盒聚合 =====
+
+func TestBuildNbtVoxelDataFromRoot_MalformedSizeTypes(t *testing.T) {
+	// size 元素非 int32：必须返回 error，而非裸类型断言 panic
+	// （守卫随拆解迁入 parseNbtSize，三条类型分支各覆盖一次）。
+	for i, size := range [][]any{
+		{"1", int32(1), int32(1)}, // size[0] 类型畸形
+		{int32(1), "1", int32(1)}, // size[1] 类型畸形
+		{int32(1), int32(1), "1"}, // size[2] 类型畸形
+	} {
+		root := map[string]any{"size": size, "blocks": []any{}, "palette": []any{}}
+		if _, err := BuildNbtVoxelDataFromRoot(root, 100); err == nil {
+			t.Errorf("case %d: size=%v 含非 int32 元素应返回 error", i, size)
+		}
+	}
+}
+
+func TestBuildNbtVoxelDataFromRoot_MalformedBlockEntries(t *testing.T) {
+	// 畸形 blocks 条目（pos 元素类型错 / state 类型错 / pos 长度非 3 / pos 缺失 / 元素非 compound）
+	// 一律跳过——既不得 panic，也不得降级成坐标错乱的假方块（守卫随拆解迁入 nbtBlockPos16）。
+	palette := []any{
+		map[string]any{"Name": "minecraft:air"},
+		map[string]any{"Name": "minecraft:stone"},
+	}
+	blocks := []any{
+		map[string]any{"pos": []any{"0", int32(0), int32(0)}, "state": int32(1)},      // pos[0] 类型畸形
+		map[string]any{"pos": []any{int32(0), int32(0), int32(0)}, "state": "1"},      // state 类型畸形
+		map[string]any{"pos": []any{int32(0), int32(0)}, "state": int32(1)},           // pos 长度非 3
+		map[string]any{"state": int32(1)},                                             // pos 缺失
+		"not-a-compound",                                                              // 元素非 compound
+		map[string]any{"pos": []any{int32(2), int32(0), int32(0)}, "state": int32(1)}, // 唯一合法方块
+	}
+	root := map[string]any{
+		"size":    []any{int32(3), int32(1), int32(1)},
+		"blocks":  blocks,
+		"palette": palette,
+	}
+	vd, err := BuildNbtVoxelDataFromRoot(root, 100)
+	if err != nil {
+		t.Fatalf("畸形条目应被跳过而非报错: %v", err)
+	}
+	assertVoxelPositions(t, vd, map[string][][3]int16{
+		"#7F7F7F": {{2, 0, 0}},
+	})
+}
+
+func TestBuildBedrockVoxelData_AggBoundsAllAxes(t *testing.T) {
+	// 两个 sub_level 在三个轴上各自更小/更大 → 聚合包围盒逐轴取 min/max：
+	//   sub0 bounds (1,2,3)-(4,5,6)，sub1 bounds (-1,0,7)-(2,8,9)
+	//   → gMin(-1,0,3)、gMax(4,8,9) → Size [6,9,7]
+	// blocks 置空（空文件仍贡献包围盒）：只观察包围盒本身。
+	// 逐轴比对能抓住把 maxZ 写成 maxY 一类的串轴笔误（尺寸立刻对不上）。
+	sub := func(minX, minY, minZ, maxX, maxY, maxZ int32) map[string]any {
+		return map[string]any{
+			"local_bounds": map[string]any{
+				"min_x": minX, "min_y": minY, "min_z": minZ,
+				"max_x": maxX, "max_y": maxY, "max_z": maxZ,
+			},
+			"block_palette": []any{map[string]any{"Name": "minecraft:stone"}},
+			"blocks":        []any{},
+		}
+	}
+	vd, err := buildBedrockVoxelData([]any{sub(1, 2, 3, 4, 5, 6), sub(-1, 0, 7, 2, 8, 9)}, 100)
+	if err != nil {
+		t.Fatalf("buildBedrockVoxelData 失败: %v", err)
+	}
+	if vd.Size != [3]int{6, 9, 7} {
+		t.Errorf("Size = %v, want [6 9 7]（逐轴 gMax-gMin+1）", vd.Size)
+	}
+	if len(vd.Groups) != 0 {
+		t.Errorf("blocks 为空应无方块组, 得到 %d", len(vd.Groups))
+	}
+}
+
 // ===== buildRegionInfo：int16 边界的接受侧（原测试只覆盖拒绝侧）=====
 
 func TestBuildRegionInfo_Int16BoundaryAccepted(t *testing.T) {

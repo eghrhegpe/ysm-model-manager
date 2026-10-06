@@ -48,10 +48,17 @@ export function fallbackBranchRevs(localRef: string): string[] {
  *      首个成功即基线；
  *   3. 全失败返回 ""（孤儿分支 / 无远端），由调用方降级。
  *
+ * 空 remoteOid 与全 0 remoteOid 同型（2026-10-06 修复）：非 push 模式（doctor
+ * --all/--docs）不产生 push stdin，remoteOid 为空串——旧守卫 `/^0+$/.test("")` 为
+ * false 使空串被当「权威基线」短路返回 ""，fallback 链从未走到（golangci 在 doctor
+ * 侧 53 次「跳过：无基线 rev」的根因，与 go-domain 的 `pushLocalOid || "HEAD"` 同型
+ * 缺陷的远端半边）。现加 remoteOid 非空前置：空串落入 fallback 链，孤儿仓库仍合法
+ * 返回 ""（由调用方降级，契约测试 test_gate_fallback 以「空串路径 ≡ 全 0 路径」钉死）。
+ *
  * @returns 基线 rev；取不到返回 ""。
  */
 export function resolveBaseRev(localOid: string, remoteOid: string, localRef: string): string {
-  if (!/^0+$/.test(remoteOid || "") && remoteOid !== localOid) return remoteOid;
+  if (remoteOid && !/^0+$/.test(remoteOid) && remoteOid !== localOid) return remoteOid;
   for (const ref of fallbackBranchRevs(localRef)) {
     const r = git(["merge-base", localOid, ref]);
     const mb = r.rc === 0 ? r.out.trim() : "";

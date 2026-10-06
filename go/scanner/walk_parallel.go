@@ -39,22 +39,18 @@ type queueItem struct {
 // （outstanding += k），再对自身递减（outstanding -= 1）；因此 outstanding 只在
 // 「最后一个无子目录的目录」被处理完时才落到 0，此时可安全 close(q)。
 // 这个入队先于递减的顺序是关键——反序会让最后一个 worker 观察到瞬时 0 而提前关闭队列。
+//
+// 2026-10 拆解（gocyclo 25→≤20，ADR-324 并行遍历收口）：根目录阶段抽 startParallelWalk、
+// 单目录项处理抽 handleDirItem、worker 主循环抽 workerLoop——行为不变量由
+// walk_parallel_test.go 的 WalkDir 等价 + SkipDir/SkipAll/首错/竞态用例锁死。
 func walkDirParallel(root string, fn fs.WalkDirFunc) error {
 	// --- 根目录：Lstat + 首次回调（与 WalkDir 一致：根先于子目录）---
-	rootEntry, lerr := os.Lstat(root)
-	if lerr != nil {
-		// 根不存在/无权限：WalkDir 仅回调一次 err 后返回，不调用子目录遍历
-		return fn(root, nil, lerr)
+	rootDirEntry, err := startParallelWalk(root, fn)
+	if err != nil {
+		return err
 	}
-	rootDirEntry := fs.FileInfoToDirEntry(rootEntry)
-	if ferr := fn(root, rootDirEntry, nil); ferr != nil {
-		if ferr == fs.SkipDir {
-			return nil // SkipDir：跳过根的子树，WalkDir 返回 nil
-		}
-		return ferr // SkipAll 或其他错误：WalkDir 原样返回
-	}
-	if !rootDirEntry.IsDir() {
-		return nil // 根是文件：WalkDir 到此结束
+	if rootDirEntry == nil || !rootDirEntry.IsDir() {
+		return nil // 根子树被跳（SkipDir）或根是文件：WalkDir 到此结束
 	}
 
 	// --- 并行阶段 ---
@@ -90,52 +86,7 @@ func walkDirParallel(root string, fn fs.WalkDirFunc) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for {
-				select {
-				case <-abortCh:
-					return
-				case it, ok := <-q:
-					if !ok {
-						return
-					}
-					names, err := os.ReadDir(it.path)
-					if err != nil {
-						// ReadDir 失败：WalkDir 口径——再次回调该目录（带 err）
-						ferr := fn(it.path, it.entry, err)
-						if ferr == fs.SkipAll {
-							abort()
-						} else if ferr != nil && ferr != fs.SkipDir {
-							setErr(ferr)
-						}
-					} else {
-						for _, en := range names {
-							select {
-							case <-abortCh:
-								return
-							default:
-							}
-							p := filepath.Join(it.path, en.Name())
-							ferr := fn(p, en, nil)
-							switch {
-							case ferr == fs.SkipAll:
-								abort()
-								return
-							case ferr != nil:
-								if ferr != fs.SkipDir {
-									setErr(ferr)
-								}
-								continue // SkipDir 或首错：不展开该条目
-							case en.IsDir():
-								atomic.AddInt32(&outstanding, 1)
-								q <- queueItem{path: p, entry: en}
-							}
-						}
-					}
-					if atomic.AddInt32(&outstanding, -1) == 0 {
-						qOnce.Do(func() { close(q) })
-					}
-				}
-			}
+			workerLoop(q, abortCh, fn, &outstanding, &qOnce, setErr, abort)
 		}()
 	}
 	q <- queueItem{path: root, entry: rootDirEntry}
@@ -148,4 +99,101 @@ func walkDirParallel(root string, fn fs.WalkDirFunc) error {
 	errMu.Lock()
 	defer errMu.Unlock()
 	return firstErr
+}
+
+// startParallelWalk 处理根目录（Lstat + 首次回调，与 WalkDir 同语义）。
+// 返回 (rootDirEntry, err)：err 非 nil 即遍历终止（SkipAll/首错，调用方原样返回）；
+// err 为 nil 且 rootDirEntry 为 nil = 根子树被 SkipDir 跳过（调用方返回 nil）。
+func startParallelWalk(root string, fn fs.WalkDirFunc) (fs.DirEntry, error) {
+	rootEntry, lerr := os.Lstat(root)
+	if lerr != nil {
+		// 根不存在/无权限：WalkDir 仅回调一次 err 后返回，不调用子目录遍历
+		return nil, fn(root, nil, lerr)
+	}
+	rootDirEntry := fs.FileInfoToDirEntry(rootEntry)
+	if ferr := fn(root, rootDirEntry, nil); ferr != nil {
+		if ferr == fs.SkipDir {
+			return nil, nil // SkipDir：跳过根的子树，WalkDir 返回 nil
+		}
+		return nil, ferr // SkipAll 或其他错误：WalkDir 原样返回
+	}
+	return rootDirEntry, nil
+}
+
+// handleDirItem 处理一个目录项：ReadDir 成功则逐子项回调并入队子目录，
+// 失败则按 WalkDir 口径再次回调该目录（带 err）。返回 true = 触发 SkipAll，
+// 调用方（worker）应立即退出。入队先于 worker 侧递减的顺序契约见 walkDirParallel 头注。
+func handleDirItem(
+	it queueItem,
+	fn fs.WalkDirFunc,
+	q chan queueItem,
+	abortCh <-chan struct{},
+	outstanding *int32,
+	setErr func(error),
+	abort func(),
+) bool {
+	names, err := os.ReadDir(it.path)
+	if err != nil {
+		// ReadDir 失败：WalkDir 口径——再次回调该目录（带 err）
+		ferr := fn(it.path, it.entry, err)
+		if ferr == fs.SkipAll {
+			abort()
+		} else if ferr != nil && ferr != fs.SkipDir {
+			setErr(ferr)
+		}
+		return false
+	}
+	for _, en := range names {
+		select {
+		case <-abortCh:
+			return true
+		default:
+		}
+		p := filepath.Join(it.path, en.Name())
+		ferr := fn(p, en, nil)
+		switch {
+		case ferr == fs.SkipAll:
+			abort()
+			return true
+		case ferr != nil:
+			if ferr != fs.SkipDir {
+				setErr(ferr)
+			}
+			continue // SkipDir 或首错：不展开该条目
+		case en.IsDir():
+			atomic.AddInt32(outstanding, 1)
+			q <- queueItem{path: p, entry: en}
+		}
+	}
+	return false
+}
+
+// workerLoop 单个 worker 的主循环：取队列 → 处理目录项 → 对自身 outstanding 递减；
+// 队列关闭（所有目录处理完）或 SkipAll/中止时退出。最后一个 outstanding 归零者
+// 经 qOnce 安全 close(q)。
+func workerLoop(
+	q chan queueItem,
+	abortCh <-chan struct{},
+	fn fs.WalkDirFunc,
+	outstanding *int32,
+	qOnce *sync.Once,
+	setErr func(error),
+	abort func(),
+) {
+	for {
+		select {
+		case <-abortCh:
+			return
+		case it, ok := <-q:
+			if !ok {
+				return
+			}
+			if handleDirItem(it, fn, q, abortCh, outstanding, setErr, abort) {
+				return // SkipAll：abort 已触发，立即退出
+			}
+			if atomic.AddInt32(outstanding, -1) == 0 {
+				qOnce.Do(func() { close(q) })
+			}
+		}
+	}
 }

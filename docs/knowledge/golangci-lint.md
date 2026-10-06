@@ -7,8 +7,14 @@ status: active
 source_files:
   - .golangci.yml
   - scripts/pre-push-gate.ts
+  - scripts/_lib/gate-blocks/go-domain.ts
+  - scripts/_lib/gate-resolve.ts
 auto_fields:
-  symbols_with_lines: []
+  symbols_with_lines:
+    - fallbackBranchRevs
+    - resolveBaseRev
+    - resolveChanges
+    - runGoDomain
 use_when:
   - golangci-lint
   - Go 静态分析
@@ -20,7 +26,8 @@ use_when:
 pitfalls:
   - 「全量跑必红」→ 门禁只能跑 `--new-from-rev`，全量存量债会淹没信号；清零另案（条数刻意不写死，ADR-162）
   - 「未安装不是失败」→ pre-push 检测不到二进制时降级 debt 跳过，不阻断；安装走 `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest`
-  - 「无基线 rev 不是失败」→ 孤儿分支/无远端时解析不出 merge-base，同款降级跳过，避免存量债堵门
+  - 「无基线 rev 不是失败」→ 真孤儿（无 origin ref 可解析 merge-base）时同款降级跳过，避免存量债堵门
+  - 「空 remoteOid 会短路 fallback 链」→ 非 push 模式（doctor --all）远端 oid 是空串而非全零，`!/^0+$/.test` 守卫对空串判假 → 空串被当权威基线直接 return，永远走不到 fallback 链（ADR-234 只补了 localOid 半边）；空 ≡ 全零，同走 fallback 链
   - 「别开 enable-all」→ 一次性抛数百条历史债直接堵死 push 通道；白名单只收 6 类零覆盖 linter
   - 「别启用 govet/gofmt/dupl」→ govet 与既有 `go vet` 重复；gofmt/dupl 自研机制有自动 stage 与漂移账本，golangci-lint 接不住（ADR-205 §2.2）
   - 「版本 < v1.64 解析 go1.26 directive 直接失败」→ 必须 v1.64+ / v2.x，实测 v2.13.2 built with go1.26.3 通过
@@ -76,12 +83,19 @@ golangci-lint 结构上接不住。
 | 位置 | 说明 |
 |------|------|
 | `.golangci.yml` | 白名单配置（`default: none` + 6 类 enable），显式排除 `upstream/` `build/` `node_modules/` |
-| `scripts/pre-push-gate.ts` | Go 域，`go vet` 之后执行 `golangci-lint run --new-from-rev=<base> ./...` |
+| `scripts/pre-push-gate.ts` → `scripts/_lib/gate-blocks/go-domain.ts` | 实际执行点：`go vet` 之后跑 `golangci-lint run --new-from-rev=<base> ./...`；pre-push-gate 解析推送上下文（local/remote oid）并 import 调用 |
 | `.github/workflows/test.yml` | 「Go 静态分析（golangci-lint，仅增量）」step + `actions/cache` 缓存分析结果 |
 
-基线 rev 解析走 `resolveBaseRev()`（pre-push-gate.ts 模块级）：远端 oid → `merge-base origin/<branch>`
-→ `origin/HEAD` → `origin/main` → `origin/master`。与 `resolveChanges()` 的 fallback 链**同口径**，
-改一处须同步另一处，否则「新增代码」判定与「变更文件」判定会漂移。
+基线 rev 解析走 `resolveBaseRev()`（`scripts/_lib/gate-resolve.ts`，pre-push-gate.ts 与 go-domain
+共用单一事实源）：远端 oid → `merge-base origin/<branch>` → `origin/HEAD` → `origin/main` →
+`origin/master`。与 `resolveChanges()` 的 fallback 链**同口径**，改一处须同步另一处，否则「新增代码」
+判定与「变更文件」判定会漂移。
+
+**远端 oid 的两种「无权威基线」形态（2026-10-06 修）**：全零（新建分支推送）与空串（非 push 模式
+doctor --all/--docs）都必须走 fallback 链。早期守卫 `!/^0+$/.test(remoteOid || "")` 对空串判假 →
+空串被当权威基线直接 `return ""`，fallback 链永远不可达——ADR-234 只补了 localOid 半边
+（`pushLocalOid || "HEAD"`），于是 doctor --all 一直只记录假「跳过：孤儿分支」（真因是空 oid）。
+修法：守卫前置 `remoteOid &&`，`tests/test_gate_fallback.ts` 以「空 ≡ 全零」等价断言钉住防回归。
 
 ## 实测数据（2026-10-06 复测）
 
@@ -107,5 +121,8 @@ golangci-lint 结构上接不住。
   gocritic / staticcheck / ineffassign / unused 全量归零——收债只改代码，未放宽配置、未加 `//nolint`。
 - **gocyclo 存量债未清零**（复杂度重构另案：逐函数拆解，不能用机械改写收口）：门禁靠增量规避；
   若哪天需要全量门禁，须先清零或建 baseline 账本（另案，参照 jscpd-go 的 `scripts/baseline/` 范式）。
+- **doctor --all 的增量 lint 已从「只记录假跳过」转为真跑**（2026-10-06）：空 remoteOid 短路修好后，
+  非 push 模式基线取 `merge-base HEAD origin/main`；首次挂载按「先观察一轮再议升级 hard」走 `debt`
+  （push 侧仍 hard，口径不变），观察一轮后另案议升硬。
 - **收债靠改代码，不靠关闸**：门槛（`gocyclo.min-complexity`）与测试文件豁免是 ADR-205 的拍板结果，
   为让全量转绿而放宽配置＝把门禁废掉，禁止。

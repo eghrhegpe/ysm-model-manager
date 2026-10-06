@@ -82,6 +82,18 @@ console.log(
   `  ✓ resolveBaseRev：remoteOid 权威优先 + 新分支走 fallback 链（base=${base.slice(0, 7) || "(空/孤儿)"}）`,
 );
 
+// 非 push 模式（doctor --all/--docs）remoteOid 为空串——必须与全 0（新仓库）同型走 fallback 链，
+// 不得短路返回空串（2026-10-06 实证：空串绕过全 0 守卫 → 短路 "" → golangci 基线恒解析失败，
+// doctor 全量模式 53 次「跳过：无基线 rev」，Go 增量 lint 在 doctor 侧从未生效过）。
+// 断言用「与全 0 路径结果相等」而非「非空」——孤儿仓库（无 origin/ ref）下两条路径都合法返回 ""。
+const baseEmpty = resolveBaseRev(localOid, "", `refs/heads/${branch}`);
+assert.equal(
+  baseEmpty,
+  base,
+  `空 remoteOid 应与全 0（新仓库）同型走 fallback 链（全 0 路径 base="${base.slice(0, 7) || "(空/孤儿)"}"，空串路径="${baseEmpty.slice(0, 7) || "(空/孤儿)"}"）`,
+);
+console.log("  ✓ resolveBaseRev：空 remoteOid（非 push 模式）与全 0 同型，不走短路（golangci doctor 侧基线修复）");
+
 // ── 3. resolveChanges（ADR-206 阶段 1 迁址自 pre-push-gate）──
 
 // remoteOid === localOid（同源）：跳过远程 diff，走 fallback 链。

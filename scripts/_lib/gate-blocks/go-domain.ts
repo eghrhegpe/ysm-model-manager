@@ -135,7 +135,9 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
 
   // golangci-lint（ADR-205）：补齐 Go 静态分析真空面（errcheck/unused/ineffassign/
   // gocritic/gocyclo/staticcheck）。两条硬约束：
-  //   ① 只跑增量（--new-from-rev）——全量会撞 736 条存量债（errcheck 623 占 85%），
+  //   ① 只跑增量（--new-from-rev）——机械档（errcheck/gocritic/staticcheck/ineffassign/
+  //      unused）存量债 2026-10 已收债清零，仅剩 gocyclo 复杂度档（债性质与条数见
+  //      知识卡 golangci-lint「实测数据」节，刻意不写死）；全量跑仍会撞存量复杂度债，
   //      等于每次 push 必红，门禁即废。存量清零另案，不在此处惩罚。
   //   ② 未安装 / 无基线 rev → 降级 debt（只记录不阻断），与 gofmt 不可用同口径
   //      （.githooks/pre-commit:235）——不给未装工具的开发机或孤儿分支添堵。
@@ -168,7 +170,11 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
     } else {
       // ADR-234：非 push 模式（--all/--files）localOid 为
       // 空串 → merge-base 空 rev 必失败 → fallback 链恒返回 ""，doctor 每次记录误导性
-      // 「跳过：孤儿分支」（真实原因是空 oid）；以 HEAD 为本地侧走 fallback 链
+      // 「跳过：孤儿分支」（真实原因是空 oid）；以 HEAD 为本地侧走 fallback 链。
+      // 2026-10-06 补完另一半：remoteOid 空串（非 push 模式）原先同样绕过
+      // resolveBaseRev 的全零守卫直接 return ""，永远走不到 fallback 链——该空串短路
+      // 已修（空 ≡ 全零，同走 fallback 链，tests/test_gate_fallback.ts 钉住），
+      // doctor --all 从此真跑增量 lint，而非 53 连跳的假「孤儿分支」
       const baseRev = resolveBaseRev(
         ctx.pushLocalOid || "HEAD",
         ctx.pushRemoteOid,
@@ -181,7 +187,7 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
       if (!baseRev || !hexOk) {
         ctx.record("golangci-lint（跳过：无基线 rev）", true, {
           time: Date.now() - tGL,
-          note: `${glVerLine} 已安装，但无法解析 --new-from-rev 基线（孤儿分支/无远端/基线非 hex）；全量跑会撞 736 条存量债，故跳过而非阻断`,
+          note: `${glVerLine} 已安装，但无法解析 --new-from-rev 基线（无 origin ref 可走 fallback 链 / 基线非 hex）；全量跑会撞存量复杂度债（条数见知识卡 golangci-lint，刻意不写死），故跳过而非阻断`,
           blockPolicy: "debt",
         });
       } else if (
@@ -203,10 +209,15 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
         const gl = procRun("golangci-lint", ["run", `--new-from-rev=${baseRev}`, "./..."], {
           cwd: ROOT,
         });
+        // 非 push 模式（doctor --all/--docs）= 首次真正挂载增量 lint：按仓内
+        // 「先观察一轮再议升级 hard」惯例走 debt（同 check-type-safety 升硬口径）；
+        // push 侧保持既有 hard 不变。条件展开而非传 undefined
+        // （exactOptionalPropertyTypes 禁显式 undefined）
         ctx.record(glLabel, gl.rc === 0, {
           time: Date.now() - tGL,
-          note: `增量基线 ${baseRev.slice(0, 8)}（只检新增代码；存量 736 条另案清零）`,
+          note: `增量基线 ${baseRev.slice(0, 8)}（只检新增代码；存量复杂度债另案清零）`,
           tail: gl.rc ? gl.out.trim().split("\n").slice(-8).join("\n") : "",
+          ...(ctx.pushLocalOid ? {} : { blockPolicy: "debt" as const }),
         });
       }
     }

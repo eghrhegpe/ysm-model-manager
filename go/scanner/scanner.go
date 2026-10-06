@@ -653,6 +653,8 @@ func ComputeFileHash(path string) string {
 // 语义与旧内联路径逐字节一致：仅 ShouldHashExt 条目参与、超 MaxImportSize 由
 // ComputeFileHash 内部跳过、空哈希补 emitScanError（同旧回调内口径）；worker 数 =
 // min(runtime.NumCPU, 待哈希数)，条目顺序不变（按下标回填）。
+// 为何不收敛到 conc：本实现按下标原地写 entries[i].Hash 并保留全部结果（失败置空
+// 由调用方 emitScanError 决定），conc 的 []R 值返回 + 仅返回 ok=true 契约不契合。
 func hashEntriesParallel(entries []types.ModelEntry) {
 	var jobs []int
 	for i := range entries {

@@ -17,10 +17,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
+	"ysm-model-manager/go/conc"
 	"ysm-model-manager/go/dedup"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
@@ -405,53 +405,29 @@ func measureCacheHitRateCtx(ctx context.Context, texturePaths []string) (hits, m
 
 	type tally struct{ hit, miss, bad int }
 
-	// 分块并发：按 cacheHitWorkers 切块，每块一个 goroutine 串行处理块内纹理。
-	// 为何不用 conc.ParallelCtx：其内部固定 worker=NumCPU（不可外部传），
+	// 已收敛到 conc.ParallelN（worker 数外部可控），替代此前的手写分块池。
+	// 为何不用 conc.ParallelCtx：其内部固定 worker=max(NumCPU,2)、不可外部传，
 	// 无法落实本包 cacheHitWorkers 的限流意图（体检是 GUI 交互路径，
-	// 不能与用户的前台操作争抢全部 CPU）。切块后并发度显式可控。
-	workers := cacheHitWorkers
-	if workers < 1 {
-		workers = 1
-	}
-	if workers > len(texturePaths) {
-		workers = len(texturePaths)
-	}
-	chunk := (len(texturePaths) + workers - 1) / workers
-
-	tallies := make([]tally, workers)
-	var wg sync.WaitGroup
-	for w := range workers {
-		start := w * chunk
-		end := start + chunk
-		if start >= len(texturePaths) {
-			break
+	// 不能与用户的前台操作争抢全部 CPU）——ParallelN 让调用方显式传并发度。
+	// ADR 脉络保留：ADR-119 确定性契约保证 tally 按输入序归约，结果与并行度无关。
+	// 取消语义：ctx 取消即停止派发，未处理纹理不入计数（与旧实现 break 行为一致）。
+	tallies := conc.ParallelN(ctx, cacheHitWorkers, texturePaths, func(ctx context.Context, _ int, path string) (tally, bool) {
+		if ctx.Err() != nil {
+			return tally{}, false
 		}
-		if end > len(texturePaths) {
-			end = len(texturePaths)
+		var t tally
+		hash, err := texture_cache.TextureHash(path)
+		if err != nil {
+			t.bad++
+			return t, true
 		}
-		wg.Add(1)
-		go func(w, start, end int) {
-			defer wg.Done()
-			var t tally
-			for _, path := range texturePaths[start:end] {
-				if ctx.Err() != nil {
-					break
-				}
-				hash, err := texture_cache.TextureHash(path)
-				if err != nil {
-					t.bad++
-					continue
-				}
-				if _, ok := cachedHashes[hash]; ok {
-					t.hit++
-				} else {
-					t.miss++
-				}
-			}
-			tallies[w] = t
-		}(w, start, end)
-	}
-	wg.Wait()
+		if _, ok := cachedHashes[hash]; ok {
+			t.hit++
+		} else {
+			t.miss++
+		}
+		return t, true
+	})
 
 	for _, t := range tallies {
 		hits += t.hit

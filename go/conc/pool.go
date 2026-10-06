@@ -31,6 +31,26 @@ func Parallel[T, R any](items []T, fn func(i int, item T) (R, bool)) []R {
 //     内部按 index 写入预留切片，不依赖 resultCh 到达序。
 //   - 取消只保证「尽快停止派发」：派发循环 select ctx.Done，worker 每取一个任务前复查。
 func ParallelCtx[T, R any](ctx context.Context, items []T, fn func(ctx context.Context, i int, item T) (R, bool)) []R {
+	// worker 数推导保持历史口径：max(NumCPU, 2)（不设阈值双路径），
+	// 后续 clamp 交由 parallelN 统一处理。
+	workers := runtime.NumCPU()
+	if workers < 2 {
+		workers = 2
+	}
+	return parallelN(ctx, workers, items, fn)
+}
+
+// ParallelN 同 ParallelCtx，但 worker 数由调用方显式指定（clamp 到 [1, len(items)]）。
+// 用于需要限流的路径（如 GUI 交互路径，不能与用户前台操作争抢全部 CPU）——
+// ParallelCtx 的 worker=max(NumCPU,2) 不可外部传，无法落实调用方的并发度上限。
+func ParallelN[T, R any](ctx context.Context, workers int, items []T, fn func(ctx context.Context, i int, item T) (R, bool)) []R {
+	return parallelN(ctx, workers, items, fn)
+}
+
+// parallelN 是 ParallelCtx / ParallelN 的唯一实现体（单一事实源，避免两份语义漂移）。
+// 语义：结果按输入序收集（ADR-119 确定性契约）、panic 单点隔离、ctx 取消停止派发、
+// 缓冲=workers、返回 ok=true 的过滤切片——三个入口完全一致。
+func parallelN[T, R any](ctx context.Context, workers int, items []T, fn func(ctx context.Context, i int, item T) (R, bool)) []R {
 	n := len(items)
 	if n == 0 {
 		return nil
@@ -38,9 +58,9 @@ func ParallelCtx[T, R any](ctx context.Context, items []T, fn func(ctx context.C
 	if err := ctx.Err(); err != nil {
 		return []R{}
 	}
-	workers := runtime.NumCPU()
-	if workers < 2 {
-		workers = 2
+	// clamp：workers 越界一律收进 [1, n]，杜绝调用方传 0/负数开零 worker 池。
+	if workers < 1 {
+		workers = 1
 	}
 	if workers > n {
 		workers = n

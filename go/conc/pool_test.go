@@ -2,6 +2,7 @@ package conc
 
 import (
 	"context"
+	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -173,5 +174,144 @@ func TestParallelCtx_Delegate(t *testing.T) {
 	})
 	if len(got) != 3 || got[0] != 2 || got[2] != 6 {
 		t.Fatalf("结果错误: %#v", got)
+	}
+}
+
+// ===== ParallelN：显式 worker 数变体 =====
+
+// TestParallelN_OrderPreserved：结果序 = 输入序（与完成序无关，ADR-119）。
+// 用人为延迟反转完成序：后一个元素先做完，验证仍按输入序收集。
+func TestParallelN_OrderPreserved(t *testing.T) {
+	items := []int{10, 20, 30, 40, 50}
+	got := ParallelN(context.Background(), 3, items, func(_ context.Context, i int, v int) (int, bool) {
+		// 让下标越小的睡越久，刻意反转完成序
+		time.Sleep(time.Duration(len(items)-i) * 2 * time.Millisecond)
+		return v * 2, true
+	})
+	want := []int{20, 40, 60, 80, 100}
+	if len(got) != len(want) {
+		t.Fatalf("长度不符: got %d want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("index %d: got %d want %d", i, got[i], want[i])
+		}
+	}
+}
+
+// measureMaxActive 返回 fn 运行期观测到的最大并发数（辅助 clamp 断言）。
+func measureMaxActive(n, workers int, fn func(ctx context.Context, i int) (int, bool)) ([]int, int) {
+	var mu sync.Mutex
+	var active, maxActive int
+	items := make([]int, n)
+	got := ParallelN(context.Background(), workers, items, func(ctx context.Context, i int, _ int) (int, bool) {
+		mu.Lock()
+		active++
+		if active > maxActive {
+			maxActive = active
+		}
+		mu.Unlock()
+		fn(ctx, i)
+		mu.Lock()
+		active--
+		mu.Unlock()
+		return i, true
+	})
+	mu.Lock()
+	defer mu.Unlock()
+	return got, maxActive
+}
+
+// TestParallelN_WorkerClamp_Low：workers=0 → 等效 1（clamp 下限），不 panic。
+func TestParallelN_WorkerClamp_Low(t *testing.T) {
+	got0, max0 := measureMaxActive(5, 0, func(ctx context.Context, _ int) (int, bool) {
+		return 0, true
+	})
+	got1, _ := measureMaxActive(5, 1, func(ctx context.Context, _ int) (int, bool) {
+		return 0, true
+	})
+	if !reflect.DeepEqual(got0, got1) {
+		t.Fatalf("workers=0 与 workers=1 结果应一致: %#v vs %#v", got0, got1)
+	}
+	if max0 != 1 {
+		t.Errorf("workers=0 应 clamp 到 1, 观测并发 %d", max0)
+	}
+}
+
+// TestParallelN_WorkerClamp_High：workers=1000 且 n=3 → clamp 到 3（上限 = n），不 panic。
+func TestParallelN_WorkerClamp_High(t *testing.T) {
+	gotHi, maxHi := measureMaxActive(3, 1000, func(ctx context.Context, i int) (int, bool) {
+		time.Sleep(5 * time.Millisecond) // 制造重叠窗口
+		return i, true
+	})
+	gotCap, _ := measureMaxActive(3, 3, func(ctx context.Context, i int) (int, bool) {
+		time.Sleep(5 * time.Millisecond)
+		return i, true
+	})
+	if !reflect.DeepEqual(gotHi, gotCap) {
+		t.Fatalf("workers=1000 与 workers=3 结果应一致: %#v vs %#v", gotHi, gotCap)
+	}
+	if maxHi > 3 {
+		t.Errorf("并发不得超过 n=3, 观测 %d", maxHi)
+	}
+	if runtime.NumCPU() >= 2 && maxHi != 3 {
+		t.Errorf("n=3 应可观测并发=3, 观测 %d", maxHi)
+	}
+}
+
+// TestParallelN_Cancel：cancel 后不 panic、长度 ≤ n（不硬跑完）。
+func TestParallelN_Cancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	n := 200
+	var started atomic.Int32
+	got := ParallelN(ctx, 4, make([]int, n), func(_ context.Context, _ int, _ int) (int, bool) {
+		if started.Add(1) == 5 {
+			cancel()
+		}
+		return 1, true
+	})
+	if len(got) > n {
+		t.Fatalf("结果长度超过输入: %d > %d", len(got), n)
+	}
+	if s := started.Load(); int(s) >= n {
+		t.Errorf("取消后仍跑完全部任务: %d", s)
+	}
+}
+
+// TestParallelN_PanicIsolation：某 item 的 fn panic，其余 worker 仍产出，该位被跳过（ok=false）。
+func TestParallelN_PanicIsolation(t *testing.T) {
+	items := []int{0, 1, 2, 3, 4, 5, 6}
+	got := ParallelN(context.Background(), 4, items, func(_ context.Context, i int, v int) (int, bool) {
+		if v == 3 {
+			panic("boom")
+		}
+		return v * 10, true
+	})
+	want := []int{0, 10, 20, 40, 50, 60} // 跳过 v==3 的位
+	if len(got) != len(want) {
+		t.Fatalf("长度不符: got %#v want %#v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("index %d: got %d want %d", i, got[i], want[i])
+		}
+	}
+}
+
+// TestParallelN_EqualsParallelCtx：worker 数传 runtime.NumCPU() 时与 ParallelCtx 输出一致。
+func TestParallelN_EqualsParallelCtx(t *testing.T) {
+	items := []int{3, 1, 4, 1, 5, 9, 2, 6}
+	// 结果依赖完成序的场景：人为延迟，若收集顺序漂移即暴露差异
+	fn := func(ctx context.Context, i int, v int) (int, bool) {
+		time.Sleep(time.Duration(len(items)-i) * time.Millisecond)
+		if ctx.Err() != nil {
+			return 0, false
+		}
+		return v * v, v%2 == 0
+	}
+	a := ParallelCtx(context.Background(), items, fn)
+	b := ParallelN(context.Background(), runtime.NumCPU(), items, fn)
+	if !reflect.DeepEqual(a, b) {
+		t.Fatalf("ParallelN 与 ParallelCtx 输出不一致: %#v vs %#v", b, a)
 	}
 }

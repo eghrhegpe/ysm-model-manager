@@ -129,6 +129,9 @@ func collectFiles(ctx context.Context, dir string, skipRecycle bool) ([]fileInfo
 // 不可能同 hash，唯一 size 的文件必不成组——跳过其哈希省一次 I/O，输出不变。
 // 代价：唯一 size 文件不被打开，若其本身读失败则不可见（同 size 文件读失败会
 // log-and-skip）——这是设计，不是 bug。
+// 为何不收敛到 conc：本实现按下标原地写 results[f.idx] 并保留全部结果（失败置
+// ok=false 由调用方见 log-and-skip），conc 的 []R 值返回 + 仅返回 ok=true 契约
+// 不契合；另有 ADR-314 投递侧取消检查点（投递即作废、完整跑完输出不受影响）。
 func hashFilesParallel(ctx context.Context, files []fileInfo, algo HashAlgorithm) ([]hashResult, error) {
 	n := len(files)
 	results := make([]hashResult, n)

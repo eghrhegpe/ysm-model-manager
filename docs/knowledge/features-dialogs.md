@@ -40,8 +40,10 @@ auto_fields:
     - ModalLabels
     - modalTagEditor
     - registerDlg
+    - RenameTpl
     - showBatchRenameDialog
     - showRenameDialog
+    - TagEditorTpl
     - trapFocus
     - VIEW_TESTIDS
 use_when:

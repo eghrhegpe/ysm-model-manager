@@ -16,6 +16,7 @@ const appContentStyle = createShadowStyle(contentCSS, "app-content");
 
 export { appContentStyle };
 
+import { injectFileDialogDeps } from "@/features/context-menu/context-menu-file-handlers.ts";
 import { registerContextMenus } from "@/features/context-menu/context-menus.ts";
 import { registerInstanceOps } from "@/features/pack-ops/instance-ops.ts";
 import { registerAndroidEvents } from "@/features/platform/android-events.ts";
@@ -25,6 +26,9 @@ import "@/views/app-preview/index.ts";
 import { t } from "@/core/i18n/t.ts";
 import { clearAllCommunityCache } from "@/features/community/community-data.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+// 对话框 DOM 模板（ADR-190 D1a）：组合根在此装配，features 不自渲染
+import { renameTpl } from "@/views/app-tree/tpl-rename.ts";
+import { tagEditorTpl } from "@/views/app-tree/tpl-tag-editor.ts";
 import { initPreviewResize } from "./init-preview.ts";
 import { resetAvatarConfigLoaded } from "./init-workshop.ts";
 import { PAGE_REGISTRY } from "./page-registry.ts";
@@ -90,6 +94,8 @@ class AppContent extends WebComponentBase {
     // app-content 直接注册各 features 全局 handler——core 不设壳层）
     const globalUnsubs: Array<() => void> = [];
     registerSync(globalUnsubs);
+    // ADR-190 D1a：对话框 DOM 模板由组合根注入（features 不自渲染、不 import views）
+    injectFileDialogDeps({ renameTpl, tagEditorTpl });
     registerContextMenus(globalUnsubs);
     registerInstanceOps(globalUnsubs);
     registerAndroidEvents(globalUnsubs);

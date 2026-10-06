@@ -76,7 +76,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 87 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 91 |
 
 ### `ctx:show`
 
@@ -178,7 +178,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 79 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 83 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 209 |
 
 ### `menu:show`
@@ -218,8 +218,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 67 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 187 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 71 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 193 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 267 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 51 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 219 |
@@ -229,7 +229,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 54 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 58 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 189 |
 
 ### `package:selected`
@@ -285,7 +285,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 65 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 69 |
 
 ### `repo:subdir-changed`
 
@@ -437,7 +437,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 73 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 77 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

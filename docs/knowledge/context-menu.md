@@ -20,9 +20,11 @@ auto_fields:
     - DirCtx
     - FILE_HANDLERS
     - FileCtx
+    - FileDialogDeps
     - getMenuDef
     - HANDLERS
     - HandlerTable
+    - injectFileDialogDeps
     - isUnsafeFolderName
     - MENU_DEFS
     - MenuAction

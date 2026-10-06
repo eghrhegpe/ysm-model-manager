@@ -13,12 +13,13 @@ vi.mock("@/backend/app.ts", async () => {
 });
 
 import { showRenameDialog } from "./rename.ts";
+import { renameTpl } from "@/views/app-tree/tpl-rename.ts";
 
 async function openDlg(
   currentName: string,
   filePath: string | null = "/mc/" + currentName,
 ) {
-  const p = showRenameDialog(filePath, currentName);
+  const p = showRenameDialog(filePath, currentName, { tpl: renameTpl });
   await new Promise((r) => setTimeout(r, 0)); // 等 DOM 挂载
   const overlay = document.querySelector(".dlg-overlay") as HTMLElement;
   const box = overlay.querySelector(".dlg-box") as HTMLElement;

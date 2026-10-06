@@ -11,6 +11,7 @@ auto_fields:
     - addTagToSet
     - MAX_TAG_LENGTH
     - modalTagEditor
+    - TagEditorTpl
     - TagSetResult
   tests:
     - frontend/src/features/dialogs/tag-editor.test.ts

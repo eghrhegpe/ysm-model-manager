@@ -42,6 +42,7 @@ auto_fields:
     - openAdvFilterDialog
     - pickWebFilesAndImport
     - rememberModelPath
+    - renameTpl
     - renderDropdown
     - RenderMode
     - renderRepoLabel
@@ -58,6 +59,7 @@ auto_fields:
     - setRenderMode
     - setVsRows
     - spinnerHTML
+    - tagEditorTpl
     - toggleSelect
     - TOOLBAR_COMMANDS
     - ToolbarCommandCtx

@@ -176,7 +176,7 @@ check("R8 纯核 htmlLiteralHits：模板/字符串 HTML 命中，注释/泛型/
   );
 });
 
-check("R8 集成：features 零新增 HTML 字面量（存量在基线，增量阻断）+ 基线非空防扫描器空转", () => {
+check("R8 集成：features 零新增 HTML 字面量（存量在基线，增量阻断）+ 扫描器非空转", () => {
   const { out } = runLayering(["--json"]);
   const data = JSON.parse(out);
   const r8reg = (data.regressions ?? []).filter((v) => v.rule === "R8");
@@ -185,9 +185,11 @@ check("R8 集成：features 零新增 HTML 字面量（存量在基线，增量�
     0,
     `R8 新增违规 ${r8reg.length} 条：${r8reg.map((v) => `${v.from}:${v.line}`).join(", ")}`,
   );
+  // 防扫描器空转：R8 html-literal 存量已全清（ADR-190 D1a tpl 注入收口），基线债务可合法为 0；
+  // 扫描器非空转由上方「R8 纯核 htmlLiteralHits」合成样本用例保证，此处只断言扫描确实产出结构。
   assert.ok(
-    (data.debt ?? []).some((e) => e.includes(":html-literal")),
-    "R8 基线债务为空——扫描器疑似对真实树空转（或存量全清零却未收紧注释）",
+    Array.isArray(data.debt),
+    "check-layering --json 未产出 debt 数组——扫描疑似未运行",
   );
 });
 

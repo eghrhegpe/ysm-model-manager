@@ -1,12 +1,14 @@
 // ===== 模型重命名对话框（类型化版 — ADR-014 P3 dialogs）=====
-// 用法: showRenameDialog(filePath, currentName) → 确认后调用 RenameFile
+// 用法: showRenameDialog(filePath, currentName, { tpl }) → 确认后调用 RenameFile
 // ADR-190 D2 注入真化 + ADR-208 D1（R5 门禁）：生产默认 getApp 经 backend-deps seam 单出口
+// ADR-190 D1a 收口（R8 html-literal 销账）：内容区 DOM 模板经 RenameTpl 注入
+// （views/app-tree/tpl-rename.ts，组合根注入），本文件只留 type + 行为接线，不自渲染。
 
 import { t } from "@/core/i18n/t.ts";
 import { createDialog } from "@/utils/dom/modal-core.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { parseModelName } from "@/utils/model-name/display.ts";
+import { type ParsedModelName, parseModelName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { dialogsGetApp } from "./dialogs-deps.ts";
 import { buildRenameName, type RenameFields, validateRenameFields } from "./rename-format.ts";
@@ -18,6 +20,15 @@ type DgRnReadFn = () => RenameFields;
 type DgRnGetExtFn = () => string;
 type DgRnUpdateFn = () => void;
 
+/**
+ * DOM 模板注入契约（ADR-190 D1a：DOM 模板归 views，组合根注入；
+ * 先例 BatchRenameTpl / AdvFilterTpl）。views/app-tree/tpl-rename.ts 提供实现。
+ */
+export interface RenameTpl {
+  /** 内容区 HTML（标题行由 createDialog 统一渲染 — ADR-190 D3） */
+  boxHTML: (parsed: ParsedModelName, currentName: string) => string;
+}
+
 /** 标题行「读取头部」按钮（经 titleExtra 挂入统一标题行右侧） */
 function dgRnBuildHeaderBtn(): HTMLButtonElement {
   const btn = document.createElement("button");
@@ -26,29 +37,6 @@ function dgRnBuildHeaderBtn(): HTMLButtonElement {
   btn.title = t("dialog.readHeaderTitle");
   btn.innerHTML = `${UI_ICONS.book} ${t("dialog.readHeader")}`;
   return btn;
-}
-
-function dgRnBuildBoxHTML(parsed: ReturnType<typeof parseModelName>, currentName: string): string {
-  // 标题行由 createDialog 统一渲染（ADR-190 D3），此处只管内容区
-  return `
-      <div class="dlg-sub">${esc(currentName)}</div>
-      <div class="dlg-row">
-        <input id="rn-author" class="dlg-input-bg" style="flex:2" placeholder="${t("import.author")}" value="${esc(parsed.author)}">
-        <input id="rn-work" class="dlg-input-bg" style="flex:2" placeholder="${t("import.brand")}" value="${esc(parsed.work === "未知" ? "" : parsed.work)}">
-        <input id="rn-chara" class="dlg-input-bg" style="flex:2" placeholder="${t("dialog.chara")}" value="${esc(parsed.chara)}">
-        <input id="rn-variant" class="dlg-input-bg" style="flex:1;min-width:50px" placeholder="${t("import.variant")}">
-        <input id="rn-date" class="dlg-input-bg" style="flex:1;min-width:50px" placeholder="${t("import.date")}" value="${esc(parsed.date)}">
-      </div>
-      <div id="rn-tips" class="dlg-tips"></div>
-      <div class="dlg-preview-box">
-        <span class="dlg-preview-old">${esc(currentName)}</span> → <span id="rn-preview" class="dlg-preview-new">-</span>
-      </div>
-      <div class="dlg-footer" style="margin-top:2px">
-        <button id="rn-cancel" class="dlg-btn">${t("dialog.cancelEsc")}</button>
-        <button id="rn-ok" class="dlg-btn dlg-btn-primary">${UI_ICONS.edit} ${t("dialog.renameEnter")}</button>
-      </div>
-      <div id="rn-err" class="dlg-err"></div>
-    `;
 }
 
 function dgRnBindReadHeaderBtn(
@@ -177,13 +165,15 @@ function dgRnBindOkCancel(
  * 弹出重命名对话框
  * @param filePath 模型文件路径
  * @param currentName 当前文件名
+ * @param opts.tpl DOM 模板（ADR-190 D1a）：生产调用由组合根注入
+ *   views/app-tree/tpl-rename.ts 的 renameTpl，缺失即编译期 fail-loud
+ * @param opts.getApp 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现
  * @returns 新文件名，取消返回 null
  */
 export async function showRenameDialog(
   filePath: string | null,
   currentName: string,
-  /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
-  deps?: { getApp?: GetAppFn },
+  opts: { tpl: RenameTpl; getApp?: GetAppFn },
 ): Promise<string | null> {
   return new Promise((resolve) => {
     const parsed = parseModelName(currentName);
@@ -196,7 +186,7 @@ export async function showRenameDialog(
       cancelValue: null,
       resolve,
       buildBox: (el) => {
-        el.innerHTML = dgRnBuildBoxHTML(parsed, currentName);
+        el.innerHTML = opts.tpl.boxHTML(parsed, currentName);
       },
     });
     // Enter → 触发确认（Esc / 遮罩关闭已由 createDialog 脚手架处理）
@@ -211,7 +201,7 @@ export async function showRenameDialog(
     const readFn: DgRnReadFn = () => dgRnReadFields(box);
     const update: DgRnUpdateFn = () => dgRnUpdatePreview(box, readFn, getExt, disableTail);
 
-    dgRnBindReadHeaderBtn(filePath, overlay, box, update, deps?.getApp || dialogsGetApp);
+    dgRnBindReadHeaderBtn(filePath, overlay, box, update, opts.getApp || dialogsGetApp);
     dgRnBindFieldInputs(box, update);
     dgRnBindOkCancel(close, box, readFn, getExt, disableTail);
     update();

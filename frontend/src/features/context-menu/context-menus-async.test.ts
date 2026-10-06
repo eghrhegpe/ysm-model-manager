@@ -274,7 +274,10 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
     showRenameDialogMock.mockResolvedValue("新名字.ysm");
     RenameFileMock.mockResolvedValue(undefined);
     await clickAsync("file", "file.rename", { path: "/dir/旧.ysm" });
-    expect(showRenameDialogMock).toHaveBeenCalledWith("/dir/旧.ysm", "旧.ysm");
+    // ADR-190 D1a：DOM 模板经组合根注入（测试未注入 → fail-loud 占位），断言形如 { tpl }
+    expect(showRenameDialogMock).toHaveBeenCalledWith("/dir/旧.ysm", "旧.ysm", {
+      tpl: expect.objectContaining({ boxHTML: expect.any(Function) }),
+    });
     expect(RenameFileMock).toHaveBeenCalledWith("/dir/旧.ysm", "新名字.ysm");
     expect(reloaded()).toBe(true);
   });
@@ -402,7 +405,14 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
   it("file.edit-tags 保存 → toast 显示标签数", async () => {
     modalTagEditorMock.mockResolvedValue(["tag1", "tag2"]);
     await clickAsync("file", "file.edit-tags", { path: "/a.ysm" });
-    expect(modalTagEditorMock).toHaveBeenCalledWith("/a.ysm");
+    // ADR-190 D1a：DOM 模板经组合根注入（测试未注入 → fail-loud 占位），断言形如 { tpl }
+    expect(modalTagEditorMock).toHaveBeenCalledWith("/a.ysm", {
+      tpl: expect.objectContaining({
+        boxHTML: expect.any(Function),
+        tagsHTML: expect.any(Function),
+        suggestionsHTML: expect.any(Function),
+      }),
+    });
     expect(toasts().some((t) => t.msg.includes("已保存 2 个标签"))).toBe(true);
   });
 

@@ -13,6 +13,7 @@ auto_fields:
     - buildRenameName
     - ModelNameFields
     - RenameFields
+    - RenameTpl
     - showRenameDialog
     - validateRenameFields
   tests:

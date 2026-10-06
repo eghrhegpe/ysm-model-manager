@@ -1,16 +1,29 @@
 // ===== 模型标签编辑弹窗（类型化版 — ADR-014 P3 dialogs）=====
 // 读取/写入模型标签，支持输入新标签和选择已有标签
 // ADR-190 D2 注入真化 + ADR-208 D1（R5 门禁）：生产默认 getApp 经 backend-deps seam 单出口
+// ADR-190 D1a 收口（R8 html-literal 销账）：内容区 DOM 模板经 TagEditorTpl 注入
+// （views/app-tree/tpl-tag-editor.ts，组合根注入），本文件只留 type + 行为接线，不自渲染。
 
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { createDialog } from "@/utils/dom/modal-core.ts";
-import { esc } from "@/utils/html/html.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { dialogsGetApp } from "./dialogs-deps.ts";
 import { addTagToSet } from "./tag-set.ts";
 
 type GetAppFn = typeof dialogsGetApp;
+
+/**
+ * DOM 模板注入契约（ADR-190 D1a：DOM 模板归 views，组合根注入；
+ * 先例 BatchRenameTpl / AdvFilterTpl / RenameTpl）。views/app-tree/tpl-tag-editor.ts 提供实现。
+ */
+export interface TagEditorTpl {
+  /** 弹窗内容区 HTML（标题行由 createDialog 统一渲染 — ADR-190 D3；样式全部走 components.css） */
+  boxHTML: (modelPath: string) => string;
+  /** 已选标签 chips HTML */
+  tagsHTML: (tags: string[]) => string;
+  /** 建议区（未使用标签）HTML */
+  suggestionsHTML: (allTags: string[], current: string[]) => string;
+}
 
 interface DgTeShell {
   overlay: HTMLElement;
@@ -23,23 +36,13 @@ interface DgTeShell {
   loading: boolean;
   loadFailed: boolean;
   disposed: boolean;
+  /** DOM 模板（buildBox 时写入；渲染函数经 shell 读取） */
+  tpl: TagEditorTpl;
   close: (result: string[] | null) => void;
 }
 
 function dgTeRenderTags(shell: DgTeShell): void {
-  shell.tagsEl.innerHTML = shell.tags
-    .map(
-      (tag) =>
-        '<span class="te-tag">' +
-        esc(tag) +
-        '<button class="te-tag-del" data-tag="' +
-        esc(tag) +
-        '">' +
-        UI_ICONS.close + // ADR-238 §1.4：结构槽图标位走 SVG（原字面 glyph "✕"）
-        "</button>" +
-        "</span>",
-    )
-    .join("");
+  shell.tagsEl.innerHTML = shell.tpl.tagsHTML(shell.tags);
   shell.tagsEl.querySelectorAll(".te-tag-del").forEach((btn) => {
     (btn as HTMLElement).onclick = (): void => {
       const tag = (btn as HTMLElement).dataset.tag;
@@ -50,12 +53,7 @@ function dgTeRenderTags(shell: DgTeShell): void {
 }
 
 function dgTeRenderSuggestions(shell: DgTeShell, allTags: string[]): void {
-  const unused = allTags.filter((tag) => !shell.tags.includes(tag));
-  shell.suggestEl.innerHTML = unused.length
-    ? unused
-        .map((tag) => `<button class="te-sug-btn" data-tag="${esc(tag)}">+${esc(tag)}</button>`)
-        .join("")
-    : `<span class="te-suggest-empty">${t("dialog.noOtherTags")}</span>`;
+  shell.suggestEl.innerHTML = shell.tpl.suggestionsHTML(allTags, shell.tags);
   shell.suggestEl.querySelectorAll(".te-sug-btn").forEach((btn) => {
     (btn as HTMLElement).onclick = (): void => {
       const tag = (btn as HTMLElement).dataset.tag;
@@ -80,33 +78,11 @@ function dgTeAddTag(shell: DgTeShell, raw: string): void {
   shell.inputEl.value = "";
 }
 
-/** 弹窗内容区 HTML（标题行由 createDialog 统一渲染 — ADR-190 D3；样式全部走 components.css） */
-function dgTeBuildBoxHTML(modelPath: string): string {
-  return `
-    <div class="te-path">${esc(modelPath)}</div>
-
-    <div id="te-tags" class="te-tags"></div>
-
-    <div class="te-input-row">
-      <input id="te-input" class="te-input" maxlength="20" placeholder="${t("dialog.tagInputHint")}">
-      <button id="te-add" class="dlg-btn dlg-btn-primary te-add-btn">+ ${t("dialog.add")}</button>
-    </div>
-
-    <details class="te-suggest-details">
-      <summary class="te-suggest-summary">${UI_ICONS.tag} ${t("dialog.existingTags")}</summary>
-      <div id="te-suggest" class="te-suggest-wrap"></div>
-    </details>
-
-    <div id="te-err" class="dlg-err"></div>
-
-    <div class="dlg-footer te-footer">
-      <button id="te-cancel" class="dlg-btn">${t("common.cancel")}</button>
-      <button id="te-save" class="dlg-btn dlg-btn-primary">${UI_ICONS.save} ${t("common.save")}</button>
-    </div>
-  `;
-}
-
-function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => void): DgTeShell {
+function dgTeBuildShell(
+  modelPath: string,
+  resolve: (value: string[] | null) => void,
+  tpl: TagEditorTpl,
+): DgTeShell {
   let shell!: DgTeShell;
   const {
     overlay,
@@ -124,7 +100,7 @@ function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => 
       shell.disposed = true;
     },
     buildBox: (el) => {
-      el.innerHTML = dgTeBuildBoxHTML(modelPath);
+      el.innerHTML = tpl.boxHTML(modelPath);
     },
   });
 
@@ -139,6 +115,7 @@ function dgTeBuildShell(modelPath: string, resolve: (value: string[] | null) => 
     loading: true,
     loadFailed: false,
     disposed: false,
+    tpl,
     close: (result: string[] | null): void => settleClose(result),
   };
 
@@ -207,16 +184,18 @@ function dgTeBindEvents(shell: DgTeShell, modelPath: string, getApp: GetAppFn): 
 /**
  * 弹出标签编辑弹窗
  * @param modelPath 模型文件路径
+ * @param opts.tpl DOM 模板（ADR-190 D1a）：生产调用由组合根注入
+ *   views/app-tree/tpl-tag-editor.ts 的 tagEditorTpl，缺失即编译期 fail-loud
+ * @param opts.getApp 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现
  * @returns 保存后的标签列表，取消返回 null
  */
 export function modalTagEditor(
   modelPath: string,
-  /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
-  deps?: { getApp?: GetAppFn },
+  opts: { tpl: TagEditorTpl; getApp?: GetAppFn },
 ): Promise<string[] | null> {
-  const getAppFn = deps?.getApp || dialogsGetApp;
+  const getAppFn = opts.getApp || dialogsGetApp;
   return new Promise((resolve) => {
-    const shell = dgTeBuildShell(modelPath, resolve);
+    const shell = dgTeBuildShell(modelPath, resolve, opts.tpl);
     dgTeLoadData(shell, modelPath, getAppFn);
     dgTeBindEvents(shell, modelPath, getAppFn);
   });

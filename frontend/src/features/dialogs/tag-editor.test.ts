@@ -21,11 +21,12 @@ vi.mock("@/backend/app.ts", () => ({
 }));
 
 import { modalTagEditor } from "./tag-editor.ts";
+import { tagEditorTpl } from "@/views/app-tree/tpl-tag-editor.ts";
 import { closeActiveDialog, __resetModalStateForTest } from "@/utils/dom/modal-core.ts";
 import { t } from "@/core/i18n/t.ts";
 
 async function open(modelPath = "/m/a.ysm") {
-  const pending = modalTagEditor(modelPath);
+  const pending = modalTagEditor(modelPath, { tpl: tagEditorTpl });
   // setTimeout(0) 是 macrotask，必然晚于加载链的微任务 → 加载已完成
   await new Promise((r) => setTimeout(r, 0));
   const overlay = document.querySelector(".dlg-overlay")!;
@@ -165,7 +166,7 @@ describe("modalTagEditor — 关闭路径与 disposed 竞态", () => {
     mocks.GetModelTags.mockImplementationOnce(
       () => new Promise<string[]>((r) => (resolveTags = r)),
     );
-    const pending = modalTagEditor("/m/d.ysm");
+    const pending = modalTagEditor("/m/d.ysm", { tpl: tagEditorTpl });
     await new Promise((r) => setTimeout(r, 0)); // 加载链挂起
     const overlay = document.querySelector(".dlg-overlay")!;
     overlay.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); // disposed = true
@@ -209,7 +210,7 @@ describe("依赖注入（ADR-190 D2 注入真化）", () => {
       AllTags: vi.fn().mockResolvedValue([]),
       SetModelTags: vi.fn().mockResolvedValue(undefined),
     });
-    const pending = modalTagEditor("/m/b.ysm", { getApp: injectedGetApp });
+    const pending = modalTagEditor("/m/b.ysm", { tpl: tagEditorTpl, getApp: injectedGetApp });
     await new Promise((r) => setTimeout(r, 0));
 
     expect(injectedGetApp).toHaveBeenCalled();

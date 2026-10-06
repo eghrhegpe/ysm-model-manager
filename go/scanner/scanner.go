@@ -405,31 +405,42 @@ retry:
 		h()
 	}
 	entries := []types.ModelEntry{}
-	// 根目录级 walk 失败标记——目录不存在/无权限时 WalkDir
-	// 仅回调一次 err 后结束，原实现打印后返回空列表并照常 Store 进缓存 30s，
-	// 用户无法区分「目录真空」与「目录不可读」（失败结果被当成功缓存）
-	walkFailed := false
-	// 接收 WalkDir 返回 error——根 lstat 失败时 WalkDir 不调 callback
-	// 直接返回 error，旧实现忽略该返回值导致 walkFailed 恒 false，空结果照常缓存。
-	if werr := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+	// 并行遍历：filepath.WalkDir 是纯顺序 DFS，单次 readdir 阻塞后续全部目录——
+	// walkDirParallel 用目录工作队列 + worker 池并行展开（契约见 walk_parallel.go）。
+	// 回调并行执行，entries append 与 walkFailed 写入须加锁/原子化。
+	// 根目录级 walk 失败标记——目录不存在/无权限时遍历仅回调一次 err 后结束，
+	// 原实现打印后返回空列表并照常 Store 进缓存 30s，用户无法区分「目录真空」与
+	// 「目录不可读」（失败结果被当成功缓存）
+	var entriesMu sync.Mutex
+	var walkFailed atomic.Bool
+	// 接收遍历返回 error——根 lstat 失败时仅回调一次即返回，旧实现忽略该返回值
+	// 导致 walkFailed 恒 false，空结果照常缓存。
+	if werr := walkDirParallel(dir, func(p string, d os.DirEntry, err error) error {
 		if ctx.Err() != nil {
 			return fs.SkipAll // ADR-197：取消即中止整个 walk
 		}
 		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true)
 		if rootFailed {
-			walkFailed = true
+			walkFailed.Store(true)
 			return nil
 		}
 		if walkRet != nil {
 			return walkRet
 		}
 		if entry != nil {
+			entriesMu.Lock()
 			entries = append(entries, *entry)
+			entriesMu.Unlock()
 		}
 		return nil
 	}); werr != nil {
-		walkFailed = true
+		walkFailed.Store(true)
 	}
+	// 并行遍历产出非确定顺序——按路径排序恢复 filepath.WalkDir 的字典序口径，
+	// 防同输入不同输出（缓存内容/索引行序/前端展示顺序）。
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].Path < entries[j].Path
+	})
 	// SHA256 并行哈希回填：旧实现哈希在 WalkDir 回调内串行
 	// 全量读盘（大库冷扫逐文件同步 IO）；walk 期间 deferHash 跳过计算，收集完条目后
 	// 按 worker 池并行回填——条目序/错误口径不变（见 hashEntriesParallel）。
@@ -443,7 +454,7 @@ retry:
 	if ctx.Err() != nil {
 		return entries, false
 	}
-	tryStoreScanCache(dir, stored, startTime, gen, keyVersion, walkFailed)
+	tryStoreScanCache(dir, stored, startTime, gen, keyVersion, walkFailed.Load())
 	return entries, false
 }
 
@@ -714,7 +725,8 @@ func ScanEntriesLiteCtx(ctx context.Context, dir string) []types.ModelEntry {
 		return []types.ModelEntry{}
 	}
 	entries := []types.ModelEntry{}
-	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+	var entriesMu sync.Mutex
+	_ = walkDirParallel(dir, func(p string, d os.DirEntry, err error) error {
 		if ctx.Err() != nil {
 			return fs.SkipAll
 		}
@@ -723,9 +735,15 @@ func ScanEntriesLiteCtx(ctx context.Context, dir string) []types.ModelEntry {
 			return walkRet
 		}
 		if entry != nil {
+			entriesMu.Lock()
 			entries = append(entries, *entry)
+			entriesMu.Unlock()
 		}
 		return nil
+	})
+	// 并行遍历产出非确定顺序——按路径排序恢复 filepath.WalkDir 的字典序口径
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].Path < entries[j].Path
 	})
 	return entries
 }

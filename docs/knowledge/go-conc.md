@@ -37,7 +37,7 @@ status: active
 ## 核心职责
 
 - 对任意 `[]T` 做泛型并行映射，结果**按输入序收集**（确定性契约，不依赖 goroutine 完成序）
-- worker 数 = `max(NumCPU, 2)`，不超过输入长度（空输入返回 nil）
+- worker 数 = `max(NumCPU, 2)`（`ParallelCtx`），不超过输入长度；`ParallelN` 由调用方显式传 worker 数（内部 clamp 到 `[1, len(items)]`），用于需限流的 GUI 交互路径（不能与用户前台操作争抢全部 CPU）；空输入返回 nil
 - 支持 `ok=false` 跳过项（结果中不出现该位置）
 
 ## 对外 API
@@ -45,12 +45,14 @@ status: active
 ```go
 func Parallel[T, R any](items []T, fn func(i int, item T) (R, bool)) []R                    // 兼容壳
 func ParallelCtx[T, R any](ctx context.Context, items []T, fn func(ctx context.Context, i int, item T) (R, bool)) []R
+func ParallelN[T, R any](ctx context.Context, workers int, items []T, fn func(ctx context.Context, i int, item T) (R, bool)) []R
 ```
 
 - `fn(i, item) → (R, bool)`：`bool=false` 表示跳过（ctx 变体的 fn 收 ctx，取消时应尽早返回 false）
 - 返回 `[]R`，仅含 `ok=true` 的项，**保持输入序**
 - **取消语义（ADR-197）**：ctx 取消后停止派发新任务，在途任务不受强制打断；预取消返回空切片（非 nil）
 - 新代码一律走 ParallelCtx；Parallel 仅存量调用方兼容用
+- 需外部控制并发度时走 `ParallelN`（如 `go/repoaudit` 缓存命中率按 `cacheHitWorkers` 限流）；`scanner.hashEntriesParallel` / `dedup` 并行哈希**未**收敛——它们按下标原地写结果并保留全部（失败置 ok 由调用方决定），与 conc 的 `[]R` 值返回 + 仅 ok=true 契约不契合
 
 ## 与其他子系统关系
 

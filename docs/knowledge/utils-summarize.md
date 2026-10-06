@@ -15,14 +15,14 @@ auto_fields:
     - YSMHeader
     - YsmSummary
   tests:
-    - frontend/src/views/app-preview/summarize.test.ts
+    - frontend/src/views/app-preview/tpl-summary.test.ts
 quick_groups:
   - 截图导出与缓存
 quick_intents:
   - 模型详情、摘要卡片、summaryCardHTML
   - 预览卡片、加密模型、作者信息、动画分组、免费付费
 quick_risk_lines:
-  - 模型摘要必须走 summarize.ts 的 summaryCardHTML，禁止手写详情卡片 HTML
+  - 模型摘要必须走 tpl-summary.ts 的 summaryCardHTML，禁止手写详情卡片 HTML
 pitfalls:
   - 手写详情卡片 → 与 summaryCardHTML 样式不一致、作者信息重复；必须经 summaryCardHTML
   - 加密模型未走安全提取路径 → 加密内容泄露；必须经 summaryCardHTML 渲染

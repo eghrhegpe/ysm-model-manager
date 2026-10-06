@@ -4,10 +4,11 @@
 
 > 本表由知识卡 frontmatter 的 `quick_*` 字段自动生成。
 > 新增高频场景请在对应知识卡 frontmatter 补充 `quick_groups`/`quick_intents`/`quick_risk_lines`/`pitfalls`；组名必须取自受控词表（scripts/_lib/knowledge-cards.ts 的 QUICK_GROUPS），词表外组名落入「未归类」。
+> **本表是索引（意图→首选知识卡），不是决策记录。** 红线按物种分三类，效力预期不同：唯一入口类（走 Y 禁止 X，须有执法等级，见 `redline-enforcement-grade.md`）/ 过程纪律类（禁止裸调·直写·绕过，由 lint/CI 覆盖）/ 元规则类（AGENTS.md 铁律，常驻+钩子兜底）。「主 ADR(如有)」列填 `-` **不意味「背后无决策」或「补录」**——勿据 `-` 推断决策记录缺失。
 
 ## 🎯 3D 预览与模型追加
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 「草为什么是圆斑不像纤维」→ 各向异性坐标拉伸（grass.ts 的 ANISO_X） | [程序化地面贴图生成 surface-pixels](./ground-texture-gen.md) | 改生成器算法前确认 surfaceSpecKey 不含像素字段（否则触发无谓重建） | - |
 | 「大理石没有脉络像团块」→ domain warping（marble.ts 的 sin(x + k·fbm)） | [程序化地面贴图生成 surface-pixels](./ground-texture-gen.md) | - | - |
@@ -138,7 +139,7 @@
 
 ## 🎯 UI 交互与弹窗
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 按标签筛选、条件过滤 | [高级筛选 adv-filter](./dialog-adv-filter.md) | - | - |
 | 菜单行为执行、ctx:show | [右键菜单系统](./context-menu.md) | 禁止 view 层手写菜单项 | - |
@@ -186,7 +187,7 @@
 
 ## 🎯 跨组件通信与页面
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 报错落日记、error toast 落盘、运行时日志环 | [UI 报错落日记 error-diary](./core-error-diary.md) | error/warn toast、未捕获异常、未处理拒绝、logWarn/logError 四路都经 error-diary 落日记（注入式 DiarySink，不直连 backend） | - |
 | 侧边栏、整合包列表、版本卡片 | [侧边栏 app-sidebar](./app-sidebar.md) | 侧边栏的 push/pull 必须经 events.ts 的 runPush/runPull 转发到 sync-manager，禁止直接调 API | - |
@@ -272,7 +273,7 @@
 
 ## 🎯 模型扫描与仓库管理
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 仓库审计、健康分 | [扫描核心 go/scanner](./go-scanner.md) | - | - |
 | 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | ADR-064 |
@@ -325,7 +326,7 @@
 
 ## 🎯 文件操作与标签
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 创意工坊、社区下载、下载队列 | [社区下载 community](./community-feature.md) | 社区下载必须走 community download-queue 排队，禁止各组件各自发下载请求 | - |
 | 存储授权、requestStoragePermission | [跨平台目录选择器](./directory-picker.md) | - | - |
@@ -371,7 +372,7 @@
 
 ## 🎯 后端桥接与数据存储
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 并发工具、Parallel 泛型并行 | [通用泛型并发工具 go/conc](./go-conc.md) | - | - |
 | 参数规格存在哪（单一事实源） | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173-gui-cli-paramspec.md) | - | - |
@@ -415,7 +416,7 @@
 
 ## 🎯 配置与注册表
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 版本号、版本检查、go-version | [版本号 go/version](./go-version.md) | 版本号必须走 go/version 的 LoadVersion，禁止在多处手写版本号读取 | - |
 | 存储子目录、storageSubDir、资源类型同步视图、schema.ts | [资源类型工具 resource-types](./utils-resource-types.md) | - | - |
@@ -444,7 +445,7 @@
 
 ## 🎯 下载与社区
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 2000 级索引窗口化 | [社区虚拟滚动 community-virtual-list](./community-virtual-list.md) | - | - |
 | 定高虚拟列表 | [社区虚拟滚动 community-virtual-list](./community-virtual-list.md) | - | - |
@@ -462,12 +463,12 @@
 
 ## 🎯 截图导出与缓存
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 截图 / 导出 PNG / 多角度四角度截图 | [截图与导出 export](./utils-export.md) | 离屏截图渲染器资源与 blob URL 必须释放，防内存泄漏 | - |
 | 截图、导出 PNG、多角度截图 | [截图导出 export](./export.md) | 离屏截图渲染器资源与 blob URL 必须显式释放，禁止依赖 GC 回收 | ADR-127 |
 | 离屏截图渲染器 | [截图导出 export](./export.md) | - | ADR-127 |
-| 模型详情、摘要卡片、summaryCardHTML | [摘要生成 summarize](./utils-summarize.md) | 模型摘要必须走 summarize.ts 的 summaryCardHTML，禁止手写详情卡片 HTML | - |
+| 模型详情、摘要卡片、summaryCardHTML | [摘要生成 summarize](./utils-summarize.md) | 模型摘要必须走 tpl-summary.ts 的 summaryCardHTML，禁止手写详情卡片 HTML | - |
 | 透明背景 / 预览缓存 / blob URL | [截图导出 export](./export.md) | - | ADR-127 |
 | 透明背景截图 / preserveDrawingBuffer | [截图与导出 export](./utils-export.md) | - | - |
 | 预览缓存 cacheGet / cacheSet / cacheSetEvictHandler | [截图与导出 export](./utils-export.md) | - | - |
@@ -476,7 +477,7 @@
 
 ## 🎯 前端分层与边界
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 测试污染 reset 钩子怎么处理 | [模块级全局状态治理](./module-global-state.md) | 判断标准：reset 钩子依赖（有 → 收敛有测试收益）vs resetModules 重载（无 → 收敛仅为组织价值） | - |
 | 磁盘级筛选与高级搜索归 Go（SearchModels），前端不扫磁盘 | [前端只读不判边界与豁免](./fe-go-boundary.md) | - | - |
@@ -501,7 +502,7 @@
 
 ## 🎯 重构与域切分
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | "把认知复杂度降到阈值下却分数不变" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | - | - |
 | "给 exported 函数消参数陷阱但不扭曲 API" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | - | - |
@@ -510,7 +511,7 @@
 
 ## 🎯 门禁与脚本
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | "本地复现三档扫描器的门禁范围" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | - | - |
 | "为什么某包报 0% 覆盖率" | [覆盖率门禁语句加权口径](./go-coverage-gate.md) | - | - |
@@ -551,7 +552,7 @@
 
 ## 🎯 测试与验证
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 按 testid 查询/匹配 DOM 元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用固定 sleep 等待正向结果——真 flaky | - |
 | 布局断言收敛三分法 | [菜单测试断言三分法](./menu-test-assertion.md) | helper 必须在 node/jsdom 双环境可 import（menu-test-helpers 零上层依赖叶） | - |
@@ -569,7 +570,7 @@
 
 ## 🎯 能力门控与平台判定
 
-| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | can binding 可用性 | [能力门控 capabilities](./capabilities.md) | - | - |
 | canWebAction viewer 模式右键菜单 | [能力门控 capabilities](./capabilities.md) | - | - |

@@ -21,7 +21,7 @@
  *   - 按 QUICK_GROUPS 受控词表序渲染（2026-10-05 治理：80 野生组收敛 14 组；
  *     词表外组名并入「未归类」桶置尾 + WARN），组内按 quick_intents 排序（稳定）
  *   - pitfalls 独立汇总到「高频陷阱速查」段
- *   - 关联 ADR 取自卡片的 adr: 字段；无则填 -
+ *   - 「主 ADR(如有)」取自卡片的 adr: 字段；填 - 仅表示该红线属于 AGENTS.md 元规则或知识卡级约束，不意味着「背后无决策」或「补录」
  *   - 仅处理 status ∈ {active, 缺省} 且带 quick_groups 的卡（2026-10 由 tier: architecture 闸换成
  *     status 闸：原过滤静默挡掉 52 张带 quick_* 的 leaf 卡、反向放行 6 张 draft/snapshot arch 卡；
  *     路由表该管生命周期（活/冻结），不卡入口/细节层级。draft/snapshot/archived/superseded 一律剔除）
@@ -222,6 +222,9 @@ export function render(
   out.push(
     "> 新增高频场景请在对应知识卡 frontmatter 补充 `quick_groups`/`quick_intents`/`quick_risk_lines`/`pitfalls`；组名必须取自受控词表（scripts/_lib/knowledge-cards.ts 的 QUICK_GROUPS），词表外组名落入「未归类」。",
   );
+  out.push(
+    "> **本表是索引（意图→首选知识卡），不是决策记录。** 红线按物种分三类，效力预期不同：唯一入口类（走 Y 禁止 X，须有执法等级，见 `redline-enforcement-grade.md`）/ 过程纪律类（禁止裸调·直写·绕过，由 lint/CI 覆盖）/ 元规则类（AGENTS.md 铁律，常驻+钩子兜底）。「主 ADR(如有)」列填 `-` **不意味「背后无决策」或「补录」**——勿据 `-` 推断决策记录缺失。",
+  );
   out.push("");
 
   for (const g of groupOrder) {
@@ -229,7 +232,7 @@ export function render(
     out.push(
       `## 🎯 ${g}`,
       "",
-      "| 用户意图 | 首选卡 | 红线警告 | 关联 ADR |",
+      "| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |",
       "|----------|--------|----------|----------|",
     );
     for (const r of rs) {

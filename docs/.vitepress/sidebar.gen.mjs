@@ -1694,6 +1694,10 @@ export const autoSidebar = [
             "link": "/knowledge/pointer-events"
           },
           {
+            "text": "唯一入口红线执法等级表（37 条审计）",
+            "link": "/knowledge/redline-enforcement-grade"
+          },
+          {
             "text": "主题系统 theme",
             "link": "/knowledge/theme"
           },

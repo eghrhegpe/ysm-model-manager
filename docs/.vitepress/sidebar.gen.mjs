@@ -270,6 +270,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-325：App 瘦身走域下沉：拒绝 Wails 多 Service 外壳",
+        "link": "/adr/architecture/ADR-325-app-domain-sinking-over-multi-service"
+      },
+      {
         "text": "ADR-324：并行目录遍历替代 filepath.WalkDir",
         "link": "/adr/architecture/ADR-324-parallel-walkdir"
       },

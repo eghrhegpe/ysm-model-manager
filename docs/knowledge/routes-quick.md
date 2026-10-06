@@ -712,7 +712,7 @@
 | ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On 无对应 Off（app 级单例，_registered 守卫防重复注册） | - | - |
 | 非 app 级模块禁止复制此模式 | - | - |
 | isActiveStatus 必须同时认 "downloading" 和 "enqueued"（Go 端入队后只发 enqueued，从不发 downloading）；UI 控制器 run/ended 分支同样走 isActiveStatus，勿再裸比较单字符串（2026-09 修复：idle→enqueued 直跳曾跳过 run 分支致按钮不 disable） | - | - |
-| remaining 所有权归 Go file-start 载荷（pos/left 语义，queue.go:254——末文件 left=0），**前端 file-done 禁止本地递减**：递减会在「本文件 done | - | 下一文件 start」窗口造成假归零，completeTimer `remaining>0` 守卫被击穿 → 批次中途假完成提前收口（2026-09 实证证伪「死代码」推断的教训）；done/cancelled 事件前端强制 remaining=0 仅限收口清残值 |
+| remaining 所有权归 Go file-start 载荷（pos/left 语义，——末文件 left=0），**前端 file-done 禁止本地递减**：递减会在「本文件 done | `internal/app/install/queue.go\|consume` | 下一文件 start」窗口造成假归零，completeTimer `remaining>0` 守卫被击穿 → 批次中途假完成提前收口（2026-09 实证证伪「死代码」推断的教训）；done/cancelled 事件前端强制 remaining=0 仅限收口清残值 |
 | 队列收口 onAllDone 载荷的 errorList 必须是 getStateSnapshot 拷贝（与 onTimedCompletion 路径防御级对齐），活体引用会静默污染 STATE | - | - |
 | web 下载入库上限 50MB（WEB_DOWNLOAD_IDB_LIMIT），超限回退浏览器直链 | - | - |
 | fetch 15s 超时兜底（WEB_DOWNLOAD_FETCH_TIMEOUT_MS），防挂起服务器永久卡队列 | - | - |
@@ -1154,7 +1154,7 @@
 | '**可见性单门 + 一形态一旋钮（2026-10-04 修复，锐评 P2-1）**：① 水面可见性曾与 film 的 `wetness > 0` 相与——把拖到 0，一级行 master 开关仍显示 ON 而场景无水（对开关撒谎，与 fog/reflector 已治的同族病）；现收归**单门** `envState.waterEnabled`。② film 的 alpha 曾 = `opacity × wetness`（两个旋钮一个自由度，用户不知该转哪根）；现 **film 下隐藏 `waterOpacity`**，浓度由 wetness 独占 ⇒ 一形态一旋钮。③ 旗标 `wetnessGated` | `水膜浓度` | `wetnessScalesOpacity`（它已不再管可见性，名字必须跟着语义走）。**判「两参数是否重叠」的方法** = 问「能不能构造两组不同取值而画面完全一致」（`(0.5,0.5)` vs `(0.25,1.0)` 即实锤）。另：旧用例「film wetness=0 → 不可见」在 `waterEnabled` 默认 false 下**恒真**（从未开水）——**改默认值会让老断言变成恒真**，改默认时须回扫本 cap 全部断言' |
 | '**倒影 RT 的 MSAA 是隐形成本（2026-10-04 修复，锐评 P2-3）**：three 上游  默认 `multisample = 4`（构造参数缺省），叠加 half-float ⇒ 2048 档约 **134 MB**（本仓 schema 原先只按分辨率档计价，读者易以为 33 MB）。现 `water-reflect.ts\|ensureReflector` 显式传 `multisample: 0`：实付 ≈ 边长²×8B（512 档 ≈ 2 MB / 2048 档 ≈ 33 MB）。倒影经水 shader 斜率扰动采样 + fresnel 混合，边缘抗锯齿的边际收益不抵这笔显存/带宽。行为断言 = `getRenderTarget().samples === 0`（**别只断言源码里写了 multisample**）' | `Reflector` | - |
 | "**拦截键是 exe 镜像路径在 AI 代理工作区内，与文件名/哈希无关**（2026-09-27 四组对照实验实锤）：仓内 bin 的 exe 必失败，复制到 %TEMP% 原名跑零失败；从未被标记的探针复制进 bin 立即失败" | - | - |
-| 症状极具迷惑性：读全正常 + 目录 ACL/属主全正常 + 代码就是裸 os.CreateTemp（go/fsutil/write.go:44 createTempFile = os.CreateTemp 无花样），会把排查引向死胡同 | `代码 bug / ACL / 目录锁 / 沙箱令牌` | - |
+| 症状极具迷惑性：读全正常 + 目录 ACL/属主全正常 + 代码就是裸 os.CreateTemp（`go/fsutil/write.go\|createTempFile` = os.CreateTemp 无花样），会把排查引向死胡同 | `代码 bug / ACL / 目录锁 / 沙箱令牌` | - |
 | "**火绒（HipsDaemon 在跑）是被冤枉的红鲱鱼**：其防护记录无任何 YSM 条目（仅无关 ssh.exe）；不等于「是它干的」，先看它的防护记录有无条目再定罪" | `有安全软件在跑` | - |
 | ACL 里的 CodexSandboxUsers:(RX) 继承项（Codex CLI 沙箱产物）同样是无害红鲱鱼；AI 代理 shell 令牌经 whoami /groups 核实无沙箱组，前后台任务写探测均成功 | - | - |
 | 变量剥离要彻底：第一次换名实验同时改变了两个变量，差点把「按名字拦截」的错误结论写进卡里——**一次只动一个变量** | `名字+位置` | - |

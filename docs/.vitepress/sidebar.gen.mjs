@@ -231,6 +231,14 @@ export const autoSidebar = [
         "link": "/audit-ground-review"
       },
       {
+        "text": "知识库内容准确性抽样核验报告",
+        "link": "/audit-knowledge-accuracy"
+      },
+      {
+        "text": "知识库闸门可靠性锐评（元层面）",
+        "link": "/audit-knowledge-reliability"
+      },
+      {
         "text": "后处理系统锐评（2026-10-04）",
         "link": "/audit-postprocessing-critique"
       },

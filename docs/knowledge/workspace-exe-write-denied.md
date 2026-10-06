@@ -22,7 +22,7 @@ use_when:
   - wails3 dev / 仓内 bin 下 exe 写失败；同一 exe 复制到仓外跑恢复正常
 pitfalls:
   - "**拦截键是 exe 镜像路径在 AI 代理工作区内，与文件名/哈希无关**（2026-09-27 四组对照实验实锤）：仓内 bin 的 exe 必失败，复制到 %TEMP% 原名跑零失败；从未被标记的探针复制进 bin 立即失败"
-  - 症状极具迷惑性：读全正常 + 目录 ACL/属主全正常 + 代码就是裸 os.CreateTemp（go/fsutil/write.go:44 createTempFile = os.CreateTemp 无花样），会把排查引向「代码 bug / ACL / 目录锁 / 沙箱令牌」死胡同
+  - 症状极具迷惑性：读全正常 + 目录 ACL/属主全正常 + 代码就是裸 os.CreateTemp（`go/fsutil/write.go|createTempFile` = os.CreateTemp 无花样），会把排查引向「代码 bug / ACL / 目录锁 / 沙箱令牌」死胡同
   - "**火绒（HipsDaemon 在跑）是被冤枉的红鲱鱼**：其防护记录无任何 YSM 条目（仅无关 ssh.exe）；「有安全软件在跑」不等于「是它干的」，先看它的防护记录有无条目再定罪"
   - ACL 里的 CodexSandboxUsers:(RX) 继承项（Codex CLI 沙箱产物）同样是无害红鲱鱼；AI 代理 shell 令牌经 whoami /groups 核实无沙箱组，前后台任务写探测均成功
   - 变量剥离要彻底：第一次换名实验同时改变了「名字+位置」两个变量，差点把「按名字拦截」的错误结论写进卡里——**一次只动一个变量**

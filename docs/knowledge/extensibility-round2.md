@@ -24,16 +24,21 @@ pitfalls:
 quick_intents:
   - 新增资源类型：JSON 声明 + 前端三处键/标签/图标 + 预览 handler
   - 新增文件格式：容器适配器实现 + WASM 预览适配器 + PREVIEW_HANDLERS
-  - 新增网页桥接 binding：web*Bindings 对象追加 + 编译期 AssertSubset 校验
+  - 新增网页桥接 binding：web*Bindings 对象追加 + 编译期 satisfies Partial<GoBindingShape> 对账
   - 新增同步逻辑：JSON 加 dirLevelSync 布尔 / 改 ResourceDiff diff key
   - 排查"新类型不生效"：detector switch / isContainer 判定 / PushSingleResource 硬编码
 affected: false
 status: active
 supersedes: extensibility-index
-last_verified: 2026-08-27
+last_verified: 2026-10-06
 invariant_anchors:
   - go/types/registry/extensions.go|ShouldHashExt
   - go/types/registry/resource.go|ResourceType
+  # 2026-10-06 复核补锚（原正文的 AssertSubset / WebImplGoKeys 已不存在，失准静默 6 周——
+  # 散文声称无锚故不阻断；升格为锚后机制失名即 ERROR）：
+  - frontend/src/backend/browser-adapter.ts|GoBindingShape
+  - frontend/src/backend/browser-adapter.ts|PROTOTYPE_MEMBERS
+  - scripts/web-binding-check.ts|WEB_ONLY_ALLOWLIST
 ---
 
 # 拓展点 / 扩展入口 探索报告（Round 2）
@@ -133,26 +138,26 @@ invariant_anchors:
 
 ### 入口 & 机制
 
-| 维度 | 入口（文件:行） | 机制 |
+| 维度 | 入口 | 机制 |
 |---|---|---|
-| 装配点 | `frontend/src/backend/browser-adapter.ts` webImpls 装配 | 四个 `web*Bindings` 对象 spread 到一个 `webImpls`；`satisfies` 兜住 `(...args: never[]) => Promise<unknown>` |
+| 装配点 | `frontend/src/backend/browser-adapter.ts` `webImpls` 装配 | **五个** `web*Bindings` 对象 spread 到一个 `webImpls`；`satisfies Partial<GoBindingShape>` 兜住 `(...args: never[]) => Promise<unknown>` |
 | Proxy 门控 | `browser-adapter.ts` Proxy get/has trap | `get` trap 命中 `webImpls` 自有键 → 返回实现；否则 `makeFailFast`；`has` trap 供 `'X' in adapter` 能力探测 |
-| 类型对账 | `browser-adapter.ts` `AssertSubset` | `AssertSubset<WebImplGoKeys>` 编译期确保 webImpls 键 ⊆ AppBindings（除白名单 `SelectLocalRepo/GetFsaAuthState`） |
-| 职责模块 | `web-common.ts`（原语）/ `web-fs.ts`（文件）/ `web-store.ts`（配置/日志）/ `web-community.ts`（社区） | 每个模块导出一个 `web*Bindings` 对象 |
+| 类型对账 | `browser-adapter.ts` `satisfies Partial<GoBindingShape>` | 编译期确保 web 实现值形态与 `AppBindings` 键名对齐。**注意 `Partial` 允许 web 侧多键 → Go 删 binding 后 web 残留孤儿名不在编译期报错**；孤儿/覆盖率检测由 `scripts/web-binding-check.ts` 的键名集合比对承担（白名单 `WEB_ONLY_ALLOWLIST` = `GetFsaAuthState`/`SelectLocalRepo`，均在 `web-fs.ts` 声明）。该脚本**只做键名覆盖率/孤儿，不做参数与返回结构漂移检测**——结构漂移防线是运行期（见 `browser-adapter.ts` 内注） |
+| 职责模块 | `web-common.ts`（原语）/ `web-fs.ts`（文件）/ `web-store.ts`（配置/日志）/ `web-community.ts`（社区）/ `web-cli.ts`（CLI） | 每个模块导出一个 `web*Bindings` 对象 |
 
 ### 加一个新 binding 的步骤
 
 1. 在对应职责模块（如新逻辑属文件系统 → `web-fs.ts`）新增 `web*Bindings` 字段，值为 async 函数。
 2. 无需改 `browser-adapter.ts`——spread 装配自动纳入。
-3. 类型对账自动暴露编译错误（拼错键名 / 不在 AppBindings 导出）。
-4. 若函数签名是 `(...args: never[]) => Promise<unknown>`，`satisfies` 校验通过；否则需放宽或改为 `(...args: any[])`。
+3. 类型对账**只部分**暴露编译错误：模块内字面量拼错键名会被 excess property check 拦住；但装配层 `webImpls` 走 spread，**孤儿键 / typo 键不报错**（spread 关闭 excess property check）——故新增 binding 后须补跑 `node scripts/web-binding-check.ts` 做键名集合比对。
+4. 值必须是 `(...args: never[]) => Promise<unknown>` 形态（`WebBinding`），否则需放宽或改为 `(...args: any[])`。
 
 ### 评估：binding 注册表痛点是否仍在
 
 - **装配层已注册表化**（ADR-049/066）：不再手写大对象字面量。
 - **但仍是"对象字面量 merge"而非真正注册表**：
   - 缺 `registerBinding(name, fn, metadata)` API；
-  - 缺 `webOnly/desktopOnly` 能力标记（现在靠白名单字面量 `SelectLocalRepo/GetFsaAuthState`，L51 `Exclude<...>` 单行声明，38 行硬编码已收敛）；
+  - 缺 `webOnly/desktopOnly` 能力标记（现靠 `scripts/web-binding-check.ts` 的 `WEB_ONLY_ALLOWLIST` 白名单兜：`GetFsaAuthState`/`SelectLocalRepo` 两个网页版专属扩展在 `web-fs.ts` 声明，Go 侧 `AppBindings` 无同名导出）；
   - 拼错键名的编译期保护有限（`satisfies` 只查函数签名，不查具体参数类型）；
   - 无元数据（文档、废弃、能力依赖）。
 - **结论**：痛点**基本解决**（从 40+ 行手写降到 4 个对象 merge），但**仍非理想注册表**。下一步建议抽 `createBindingRegistry` + 显式 `register(name, fn, {desktopOnly?: bool})`。
@@ -161,7 +166,7 @@ invariant_anchors:
 
 - 新增 binding 若参数需 `ReadFileBytes` 类 IO 语义，需保证桌面端 Go 侧同名导出存在；否则桌面端正常、web 端 fail-fast。
 - `WebUnsupportedError` 抛出后调用方需显式 catch，否则堆栈穿透。
-- `PROTOTYPE_MEMBERS`（L100-107）白名单若新增同名函数会冲突。
+- `PROTOTYPE_MEMBERS` 白名单（`browser-adapter.ts`，Object.prototype 自有成员：toString / valueOf / hasOwnProperty 等）若新增同名 binding 会冲突——Proxy `get` / `has` trap 对它豁免：`get` 返回原型链真实值、`has` 恒 `false`，该名字**静默失效**（既不 fail-fast，能力门控也判定为未实现）。
 
 ---
 

@@ -186,6 +186,68 @@ try {
     !out.warns.some((w) => w.includes(CARD_STEM)),
     `定性描述不应触发 WARN: ${out.warns.join("; ").slice(0, 200)}`,
   );
+  // 11. 冒号形行号（2026-10-06 补网）：`文件名.ext:行号` 是仓内最主流的硬编码形态，
+  //     此前三个分支只认 L123 / N 行 / N 个X，冒号形完全失明
+  //     →「0 WARN 与 18 处实际违规共存」（知识库锐评实证）
+  writeTmpCard(["remaining 所有权归 Go 载荷（queue.go:254——末文件 left=0），前端禁止本地递减。"]);
+  ({ status, out } = runDrift());
+  ok(
+    "正文冒号形 `queue.go:254` → WARN",
+    out.warns.some((w) => w.includes(CARD_STEM) && w.includes("queue.go:254")),
+    `期望 WARN 含卡名与 queue.go:254: ${out.warns.join("; ").slice(0, 300)}`,
+  );
+  ok("冒号形 WARN 级不阻断 → 退出码 0", status === 0, `status=${status}`);
+
+  // 12. 冒号形行号区间 / 目录前缀 / L 前缀
+  writeTmpCard([
+    "释放链见 watcher.go:268-280。",
+    "装配入口见 frontend/src/utils/base/pure/array.ts:L12。",
+    "并发基准见 bench_concurrent_json.go:77。",
+  ]);
+  ({ status, out } = runDrift());
+  ok(
+    "正文冒号形区间形态 → WARN",
+    out.warns.some((w) => w.includes(CARD_STEM) && w.includes("watcher.go:268-280")),
+    `期望 WARN 含区间形态: ${out.warns.join("; ").slice(0, 300)}`,
+  );
+
+  // 13. 冒号形豁免：无数字的裸文件名 / URL / 版本号 / 非源码扩展名（.md 章节结构稳定，
+  //     不随源码漂移，且 ADR 的 L 形已单列豁免）/ 文件|符号 锚定形态
+  writeTmpCard([
+    "裸文件名 queue.go 见上节。",
+    "示例地址 http://example.com:27 不含冒号行号。",
+    "版本 v1.2.3:27 不是源码行号。",
+    "文档章节 ADR-042.md:34 不入治理范围。",
+    "锚定写法 `mount-preview-core.ts|mount3D` 是机器可验形态。",
+  ]);
+  ({ status, out } = runDrift());
+  ok(
+    "裸文件名/URL/版本号/.md/文件|符号 均不误报冒号形",
+    !out.warns.some((w) => w.includes(CARD_STEM) && w.includes("行号")),
+    `冒号形豁免失败: ${out.warns
+      .filter((w) => w.includes(CARD_STEM))
+      .join(" | ")
+      .slice(0, 300)}`,
+  );
+
+  // 14. 冒号形进入 frontmatter 人工字段（5.10）：quick_risk_lines 原样注入速查表，
+  //     是一跳层，行坐标漂移比正文更值得护栏
+  writeTmpCard([], [
+    "quick_risk_lines:",
+    "  - 后处理门禁写死在 postprocessing-capability.ts:147，勿绕过",
+  ]);
+  ({ status, out } = runDrift());
+  ok(
+    "frontmatter quick_risk_lines 冒号形 → 5.10 WARN",
+    out.warns.some(
+      (w) =>
+        w.includes(CARD_STEM) &&
+        w.includes("frontmatter") &&
+        w.includes("postprocessing-capability.ts:147"),
+    ),
+    `期望 frontmatter 冒号形 WARN: ${out.warns.join("; ").slice(0, 300)}`,
+  );
+
 } finally {
   if (fs.existsSync(TMP_DIR)) fs.rmSync(TMP_DIR, { recursive: true, force: true });
 }

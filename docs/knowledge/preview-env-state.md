@@ -88,6 +88,9 @@ invariant_anchors:
   - frontend/src/preview-3d/state/env-state-schema.ts|ENV_STATE_SCHEMA
   - frontend/src/preview-3d/state/env-dispatcher.ts|registerEnvCallback
   - frontend/src/preview-3d/state/env-dispatcher.ts|dispatchEnvChange
+  # 装配链唯一命名入口。2026-10-06 补锚：此前正文声称「两个命名入口」含 applyPostProcDefaults，
+  # 该符号已被 ADR-250 删除而正文未同步（无锚故静默漂移 3 周）——升格为锚后入口失名即 ERROR 阻断。
+  - frontend/src/preview-3d/adapters/shared-infra.ts|applyModelDefaults
 ---
 
 # 3D 预览统一状态层 envState（ADR-196）
@@ -124,8 +127,8 @@ invariant_anchors:
 
 - `state/model-defaults.ts`：`MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>>` 收敛模型类别预设（default/ysm/vrm/mmd/mmd-scene/litematic/resourcepack），**已合并**此前散落的 7 张表（MODEL_SKY_PRESETS / FOG_PRESETS / ENV_PRESET_BY_MODEL / LIGHT_PRESETS / REFLECTOR_PRESETS / POSTPROC_PRESETS / SHADOW_PRESET_BY_MODEL）——前 6 张物理删除，POSTPROC_PRESETS 残留为 cap 专属数据源（known gap，见下）。**[ADR-282] light 已退出本表；[ADR-284] sky 大气散射段 + reflector 噪声键（opacity/color）+ `shadowType:"hard"` no-op 已退出——本表现只承载「场景尺度」（fog near/far/density、reflectorSize/Resolution）与「离散语义」（envPreset、shadowType:soft、ppEnabled）两类合法耦合；`skyForceEnv` 不在本表（系 sky cap 硬置的 IBL 重建脉冲，非类别值，**是活键**——见「核心职责」的 ADR-292 D8 更正）。**
 - `state/atmosphere-presets.ts`：`ATMOSPHERE_PRESETS` 完整氛围快照（含 light 强度/色温 + postproc exposure/bloom 氛围语义），取代 ENV_PRESET_LINKAGE 硬编码联动。
-- **预设套用收口态（刀3.5/刀5 + 装配链收尾）**：`SceneCapability.setPreset` 接口**已删除**（2026-09-07），各 cap 预设套用方法降级为非接口 public——sky/fog/shadow/reflector/environment 统一命名 `applyModelPreset(modelType)`，postprocessing 为 `applyPostProcDefaults(modelType)`。这些 cap 内部读 `MODEL_DEFAULTS` 只取自己关注的键并 `setEnvState(..., {source:'auto-model'})`，侧效（isStateLoaded 守卫、shadow needsUpdate、reflector 重建、sky regenerateEnvironment 后置）仍留在 cap 内。**（[ADR-282] 原列表中的 light 已退役；[ADR-284] sky 现仅硬置 skyForceEnv 重建脉冲不再读表取大气参数，reflector 仅取 size/resolution。）**
-- **装配链已收敛（2026-09-07；[ADR-282] 2026-09-20 缩为 5 cap）**：adapters/shared-infra.ts 由 7 个散落 `cap.setPreset(adapter.id)` 改为两个命名入口——`applyModelDefaults(modelType, deps)`（预 apply **5** cap：sky→fog→shadow→reflector→environment）+ `applyPostProcDefaults(postProcCap, modelType)`（post-apply 1 cap，在 apply/syncShadowLights 之后、setReflectorCap 之前）。**刻意不做**「字面单一 `setEnvState(MODEL_DEFAULTS[adapter.id])`」：isStateLoaded 全量守卫、postproc enabled 侧效无法被单次 setEnvState 等效替代，钝直合并会回归。装配序逐字复刻原行为。light 已退出本链（见 ADR-282）。
+- **预设套用收口态（刀3.5/刀5 + 装配链收尾）**：`SceneCapability.setPreset` 接口**已删除**（2026-09-07），各 cap 预设套用方法降级为非接口 public——sky/fog/shadow/reflector/environment/postprocessing **统一命名 `applyModelPreset(modelType)`**。**[ADR-250] postprocessing 原专属入口 `applyPostProcDefaults` 已删除**：它按模型类别写 cap 私有门禁（`perTypeGate`），既让类别伸进 cap 内部，又因门禁翻转触发 composer 整组重建，且与总闸相与造成「一枚字段三重语义」——现「默认是否开后处理」由 `MODEL_DEFAULTS` 的 `ppEnabled` 状态参数表达（契约测试钉死：`scene-capability.test.ts` 断言 `PostprocessingCapability.prototype` 无 `setPreset` / 无 `applyPostProcDefaults`、有 `applyModelPreset`）。这些 cap 内部读 `MODEL_DEFAULTS` 只取自己关注的键并 `setEnvState(..., {source:'auto-model'})`，侧效（isStateLoaded 守卫、shadow needsUpdate、reflector 重建、sky regenerateEnvironment 后置）仍留在 cap 内。**（[ADR-282] 原列表中的 light 已退役；[ADR-284] sky 现仅硬置 skyForceEnv 重建脉冲不再读表取大气参数，reflector 仅取 size/resolution。）**
+- **装配链已收敛（2026-09-07；[ADR-282] 2026-09-20 缩为 5 cap；[ADR-250] 2026-09 缩为单命名入口 + 内联 post-apply）**：adapters/shared-infra.ts 由 7 个散落 `cap.setPreset(adapter.id)` 收敛为**一个命名入口** `applyModelDefaults(modelType, deps)`（预 apply **5** cap：sky→fog→shadow→reflector→environment；light 已退出本链，见 ADR-282）+ **一行内联** `postProc?.applyModelPreset(adapter.id)`（post-apply，落在 `cap.apply()` / `syncShadowLights` 之后，composer 时序无约束）。**刻意不做**「字面单一 `setEnvState(MODEL_DEFAULTS[adapter.id])`」：isStateLoaded 全量守卫、postproc enabled 侧效无法被单次 setEnvState 等效替代，钝直合并会回归。postprocessing 也不并入 `applyModelDefaults`——该函数 deps 签名只收 5 个预 apply cap（属地接口不扩张），单独一行更显式。装配序逐字复刻原行为（契约测试钉死 5 cap 顺序 sky→fog→shadow→reflector→environment）。
 
 ## 与其他子系统关系
 

@@ -797,6 +797,14 @@ function checkNoCuratedInAutoFields(cards: any[]) {
 //   L100-200    行号区间
 //   888 行      行数引用（≥2 位数字 + 「行」，避免「1 行代码」类叙述噪音）
 //   8 个能力    计数引用（受限词表：能力/控件/守卫/单例/参数/事件 —— 防「1 个能力」噪音）
+//   file.ts:27  冒号形行号（`文件.ext:行号` / `文件.ext:行号-行号`）——2026-10-06 补网：
+//                这是仓内**最主流**的硬编码形态（实测量占硬编码行号引用的一半以上），此前三
+//                个分支只认 `L123`/`N 行`/`N 个X`，冒号形完全失明 → 「0 WARN 与 18 处实际违规
+//                共存」（2026-10-06 知识库锐评实证：app-content-diagnostics ×6 / preview-menu ×3
+//                / go-repoaudit ×2 / go-ts-golden ×2 / go-download / go-instance / go-launcher /
+//                go-litematic / go-watcher 各 1）。范围收敛在源码扩展名（ts/tsx/go/js）——
+//                `.md` 未纳入：ADR 等文档章节结构稳定不随源码漂移，且 `ADR-\d+ ` 前缀的 L 形
+//                已单列豁免，纳入 .md 会制造噪音。
 // 注意 JS `\b` 只认 ASCII 词字符（[A-Za-z0-9_]），「行/能力」等 CJK 后接中文标点（，、（ ）时
 // \b 不成立（均为非词字符）——所以 CJK 尾部一律用负向前瞻 (?![0-9A-Za-z_]) 而非 \b。
 // 细节（实测定拄）：
@@ -811,7 +819,7 @@ function checkNoCuratedInAutoFields(cards: any[]) {
 const BODY_LINE_RE_FINAL =
   // L 形：行号/行号区间；L0 已排除（游戏层级符号，app-preview 实证）；追加层级符号豁免：
   // L\d{1,2} 后跟「空白+ASCII 字母或反引号」是层级枚举（L1 base64 / L2 `atob` 串，model3d 实证），非行号
-  /(?<![A-Za-z0-9_-])(?<!ADR-\d{1,4} )L[1-9]\d{0,3}(?:-\d{1,4})?(?![0-9A-Za-z_])(?!\s+[A-Za-z`])|(?<![→~–—≤-])\b\d{2,}\s*行(?!红线)(?![0-9A-Za-z_\u4e00-\u9fff])|\b\d{1,2}\s*个(?:能力|控件|守卫|单例|参数|事件)(?![0-9A-Za-z_])/g;
+  /(?<![A-Za-z0-9_-])(?<!ADR-\d{1,4} )L[1-9]\d{0,3}(?:-\d{1,4})?(?![0-9A-Za-z_])(?!\s+[A-Za-z`])|(?<![→~–—≤-])\b\d{2,}\s*行(?!红线)(?![0-9A-Za-z_\u4e00-\u9fff])|\b\d{1,2}\s*个(?:能力|控件|守卫|单例|参数|事件)(?![0-9A-Za-z_])|(?<![A-Za-z0-9_.-])[\w][\w.-]*\.(?:ts|tsx|go|js)\s*:\s*L?\d{1,4}(?:\s*-\s*L?\d{1,4})?(?!\d)(?!\.\d)/g;
 /** 提取 frontmatter 块结束后的正文行（带行号）。 */
 function bodyLinesWithNumbers(text: string): Array<{ lineNo: number; line: string }> {
   const clean = text.replace(/^\uFEFF/, "");

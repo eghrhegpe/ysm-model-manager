@@ -311,28 +311,13 @@ func (a *App) startProxy(target string) (string, error) {
 	}
 
 	rp := &httputil.ReverseProxy{
-		// Rewrite（Go 1.26 起 Director 弃用）：pr.Out 为出站请求副本，目标 URL 走 SetURL。
-		// SetURL 会重置 Out.Host，这里显式回填以保持旧 Director 的 r.Host = u.Host 行为
-		// （出站 Host 头即目标 host）；同时剥离 Rewrite 默认注入的 X-Forwarded-*，
-		// 与原实现（不注入）行为等价。
+		// Rewrite（Go 1.26 起 Director 弃用）：pr.Out 为出站请求副本。
+		// 行为等价旧 Director：只替换 Scheme/Host，保留入站 Path/RawQuery，
+		// **不**用 SetURL —— 后者会 singleJoiningSlash 拼接 u.Path（base path），
+		// 与旧实现「丢弃 u.Path」不一致；plaza/工坊 target 常带路径，会造成静默回归。
+		// 剥离 X-Forwarded-* 是为防浏览器伪造转发头（旧实现不注入，此处主动删除更安全）。
 		Rewrite: func(pr *httputil.ProxyRequest) {
-			pr.SetURL(u)
-			pr.Out.Host = u.Host
-			pr.Out.Header.Del("X-Forwarded-For")
-			pr.Out.Header.Del("X-Forwarded-Host")
-			pr.Out.Header.Del("X-Forwarded-Proto")
-			pr.Out.Header.Set("Host", u.Host)
-			pr.Out.Header.Del("X-Frame-Options")
-			pr.Out.Header.Del("Content-Security-Policy")
-			pr.Out.Header.Del("Content-Security-Policy-Report-Only")
-			pr.Out.Header.Del("X-XSS-Protection")
-			pr.Out.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
-			cookies := session.jar.Cookies(pr.Out.URL)
-			if len(cookies) > 0 {
-				for _, c := range cookies {
-					pr.Out.AddCookie(c)
-				}
-			}
+			rewritePlazaRequest(pr, u, session.jar)
 		},
 		Transport: session.transport,
 		ModifyResponse: func(r *http.Response) error {
@@ -390,6 +375,29 @@ func (a *App) startProxy(target string) (string, error) {
 	proxyURL := fmt.Sprintf("http://127.0.0.1:%d/", actualPort)
 	log.Printf("[proxy] started on :%d -> %s", actualPort, target)
 	return proxyURL, nil
+}
+
+// rewritePlazaRequest 是 startProxy 的 Rewrite 实现，独立成函数以便单测行为等价性。
+// 语义对齐旧 Director（勿改成 SetURL）：仅替换 Out.URL 的 Scheme/Host，入站 Path/RawQuery
+// 原样透传，u.Path 一律忽略；Out.Host 与 Host 头同步为 u.Host。
+func rewritePlazaRequest(pr *httputil.ProxyRequest, u *url.URL, jar *cookieJar) {
+	pr.Out.URL.Scheme = u.Scheme
+	pr.Out.URL.Host = u.Host
+	pr.Out.Host = u.Host
+	pr.Out.Header.Set("Host", u.Host)
+	pr.Out.Header.Del("X-Forwarded-For")
+	pr.Out.Header.Del("X-Forwarded-Host")
+	pr.Out.Header.Del("X-Forwarded-Proto")
+	pr.Out.Header.Del("X-Frame-Options")
+	pr.Out.Header.Del("Content-Security-Policy")
+	pr.Out.Header.Del("Content-Security-Policy-Report-Only")
+	pr.Out.Header.Del("X-XSS-Protection")
+	pr.Out.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+	if jar != nil {
+		for _, c := range jar.Cookies(pr.Out.URL) {
+			pr.Out.AddCookie(c)
+		}
+	}
 }
 
 func (a *App) stopProxy(target string) {

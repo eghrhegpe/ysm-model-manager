@@ -1,10 +1,48 @@
 package app
 
 import (
+	"context"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"testing"
 )
+
+// 回归测试（堵 717eb4af2 迁移后的行为回归缺口）：Rewrite 必须等价旧 Director——
+// 只替换 Scheme/Host、保留入站 Path/RawQuery、**忽略 u.Path**。
+// SetURL(u) 会用 singleJoiningSlash 拼接 base path，带路径 target 下会静默改写路径，
+// 故此处显式断言入站路径不被 target 的 /browse/skins 前缀污染。
+func TestRewritePlazaRequest_PreservesInboundPathIgnoresTargetPath(t *testing.T) {
+	target, err := url.Parse("https://site.example/browse/skins?tag=a")
+	if err != nil {
+		t.Fatalf("parse target: %v", err)
+	}
+	inbound, err := http.NewRequest("GET", "http://127.0.0.1:39999/assets/foo.js?v=1", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	out := inbound.Clone(context.Background())
+	rewritePlazaRequest(&httputil.ProxyRequest{In: inbound, Out: out}, target, nil)
+
+	if out.URL.Scheme != "https" {
+		t.Errorf("Scheme 应为 https，实际 %q", out.URL.Scheme)
+	}
+	if out.URL.Host != "site.example" {
+		t.Errorf("Host 应为 site.example，实际 %q", out.URL.Host)
+	}
+	if out.URL.Path != "/assets/foo.js" {
+		t.Errorf("入站路径应保留（不拼接 u.Path），实际 %q", out.URL.Path)
+	}
+	if out.URL.RawQuery != "v=1" {
+		t.Errorf("入站 RawQuery 应保留，实际 %q", out.URL.RawQuery)
+	}
+	if out.Host != "site.example" {
+		t.Errorf("Out.Host 应为 target host，实际 %q", out.Host)
+	}
+	if out.Header.Get("X-Forwarded-For") != "" {
+		t.Error("不应注入/保留 X-Forwarded-For")
+	}
+}
 
 func TestIsBlockedIP(t *testing.T) {
 	tests := []struct {

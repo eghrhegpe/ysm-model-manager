@@ -121,6 +121,7 @@ quick_risk_lines:
 pitfalls:
   - 各组件各自发下载请求 → 并发冲突、进度丢失；必须经 download-queue 排队
   - 镜像源未走 gh-links → 下载慢、镜像不可用；必须经 gh-links 的 CDN 分流
+  - 远程 JSON（GitHub API base64 content）用裸 `JSON.parse(atob(...))` 解码 → atob 产 Latin-1，UTF-8 字节被逐字节当码位，非 ASCII 名落盘成双重编码乱码（2026-09-21 曾把 197 条乱码当新作者入库，按 name 去重失效）；须 base64ToBytes → TextDecoder(UTF-8)
 
 use_when:
   - 创意工坊
@@ -136,6 +137,7 @@ perf:
 invariant_anchors:
   - frontend/src/features/community/download-queue.ts|isActiveStatus
   - frontend/src/features/community/data.ts|Promise.any
+  - frontend/src/features/community/community-fetch.ts|fetchWithFallback
 status: active
 ---
 
@@ -189,6 +191,7 @@ status: active
 - 菜单载荷（ctx:show 的 `workshop.name` 等 → menu-defs label → `menu:show`）传原文，转义职责归 context-menu 组件（二次 esc 会出现 `&amp;`）
 - 本目录已无动态 `import()`：`parseModelName` 等依赖一律顶层静态导入，禁止回退到 `await import(...)` 或带 `.js` 后缀的路径
 - **创意工坊 index 过滤 `.recycle` 回收站条目**（[G5 收口] 单一实现 `utils/recycle-path.ts` `hasRecycleSegment`，命名对齐 Go `sync.hasRecycleSegment` 段语义 EqualFold——注意区别于 `fsutil.IsRecycleDir` 基名版，一次性路径判定须用段判定）：`tryFetchModels`（`data.ts`）加载远端 index 后过滤 path 含 `.recycle` 段的条目，web `generateWebRepoIndex`（`backend/web-community.ts`）生成时同样过滤——回收站下"已删/待清理"文件不应出现在工坊下载列表；若不滤，文件经 Go 下载器 `stripRecycleSegments` 剥段落盘，剥后仅剩文件名者落到仓库根（观感同「下载平铺」）。原 isRecyclePath（feature 层）/ isRecycleRel（backend 层）双实现已删（原「避免跨层回引」为过度设计：helper 落 utils 纯函数域零跨层引用），Go 桌面 scanner 已跳过回收站，此过滤兜底远端作者生成的旧 index
+- **远程 JSON api 路解码必须走 UTF-8 字节还原**（提交 4bb5eb38）：`community-fetch.ts|fetchWithFallback` 的 `api` 分支（GitHub contents.content = base64(UTF-8 字节)）须 `base64ToBytes` → `new TextDecoder("utf-8").decode`，**禁止裸 `JSON.parse(atob(...))`**——atob 产 Latin-1 串（每字节→同码位），非 ASCII 创作者名变双重编码乱码落盘（2026-09-21 一次社区合并把 197 条乱码当新作者追加，Go `MergeCommunityCreatorsFromJSON` 按 name 去重失效，乱码名 ≠ 干净名）。同口径已在 `data.ts` 模型列表 api 路（`atob → Uint8Array.from(charCodeAt) → TextDecoder`）落地，`community-fetch.ts` 拆分时（ADR-040 §2.1）曾漏用此模式；Go 侧另有 `app_workshop.go|repairMojibake` 合并闸作防劣化兜底（还原后乱码名恢复真实码位、与既有干净条目同名走 update）。回归锁 `frontend/src/features/community/community-fetch.test.ts` + `internal/app/app_workshop_mojibake_test.go`
 - **P3 观察（2026-08 复审）**：① `enqueue` 在 isActiveStatus 守卫后有 `await getApp()`/`await GetRepoRoot()` 才进 `enqueueDownloads`——快速连点两个不同文件可双双通过守卫，第二批次被 `enqueueDownloads` 守卫静默丢弃（无 toast）；② 8s `AbortController` 超时在 headers 到达即 clearTimeout，`resp.json()` body 读取无超时保护（body 卡死可无限挂起）；③ progress=100% 后 3s `completeTimer` 回调只查 isActiveStatus 不校验当前文件已 file-done，大文件落盘慢时提前拆除 UI 并二次触发 onAllDone；④ 下载 URL `dlPrefix + m.path` 未 encodeURIComponent，文件名含 `#`/`?` 时 URL 截断。均属低触发面，未证实用户可见影响
 
 ## 已知边界 / 待治理

@@ -661,6 +661,7 @@
 | 新增资源类型未更新 priority | - | 冲突时优先级错乱；必须经 classify.go 的 priority 表 |
 | 各组件各自发下载请求 | - | 并发冲突、进度丢失；必须经 download-queue 排队 |
 | 镜像源未走 gh-links | - | 下载慢、镜像不可用；必须经 gh-links 的 CDN 分流 |
+| 远程 JSON（GitHub API base64 content）用裸  解码 | `JSON.parse(atob(...))` | atob 产 Latin-1，UTF-8 字节被逐字节当码位，非 ASCII 名落盘成双重编码乱码（2026-09-21 曾把 197 条乱码当新作者入库，按 name 去重失效）；须 base64ToBytes → TextDecoder(UTF-8) |
 | 前提：定高行；不等高布局（如创作者卡片网格）不适用 | - | - |
 | 零高度（jsdom / 首帧 clientHeight=0）→ 自动降级全量渲染 | - | - |
 | 全量渲染阈值：低于  不值得虚拟化 | `FULL_RENDER_THRESHOLD` | - |

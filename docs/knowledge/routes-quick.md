@@ -25,7 +25,7 @@
 | 把 MMD 动作放到 VRM 模型上播放 | [VMD→VRM 动作重定向 vmd-retarget](./vmd-vrm-retarget.md) | 重建 track = 丢贝塞尔插值（卡点且不报错） | ADR-243, ADR-306, ADR-309 |
 | 材质重建与原地更新的判别（needsRebuild） | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | - | - |
 | 参考网格显隐 / 关不掉自带网格（groundGridVisible） | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | - | - |
-| 拆 mount3D 巨函数 | [mount3D 巨函数现状（2026-08-27 已部分拆分）](./mount3d-584-giant.md) | mount3D 本体 527 行（L351-877，预置顶复核节实测），仍超 100 行红线；继续往里加新逻辑需评审 | ADR-091 |
+| 拆 mount3D 巨函数 | [mount3D 巨函数拆分现状（2026-10-06 复核）](./mount3d-584-giant.md) | mount3D 本体仍超 100 行红线（已从巨函数收缩为薄壳装配器，量级降至约 1.3 倍）；继续往里加新逻辑需评审 | ADR-091 |
 | 场景参数 / envState / 统一状态层 | [3D 预览统一状态层 envState（ADR-196）](./preview-env-state.md) | cap 参数必须存 envState，禁止各自 this.params 私有化（ADR-196） | ADR-196, ADR-293-d1 |
 | 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene-capability-registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | ADR-132 |
 | 程序化纹理生成 | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | - | - |
@@ -58,7 +58,7 @@
 | 排查光柱穿帮、过曝、开关不生效 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric-cone.md) | 重建触发面只有 CONE_GEO_CHANGES（type/enabled/angle/penumbra）；驱动源是 envState 键 lightVolumetricDriver，与 activeLight 彻底脱钩 | ADR-266, ADR-266-d1, ADR-177, ADR-246, ADR-290 |
 | 排查设置项改了不生效 / 重开面板值不对 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview-menu-settings-state.md) | - | - |
 | 评审 ground-capability.ts 菜单构建 | [ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）](./ground-cap-materialgroup-factories.md) | 地面菜单必须经 ground-menu.ts 的 buildGroundNodes 直产 PreviewMenuNode[]，禁止手写控件结构 | - |
-| 评审 mount-preview-core.ts | [mount3D 巨函数现状（2026-08-27 已部分拆分）](./mount3d-584-giant.md) | - | ADR-091 |
+| 评审 mount-preview-core.ts | [mount3D 巨函数拆分现状（2026-10-06 复核）](./mount3d-584-giant.md) | - | ADR-091 |
 | 前视图、骨骼热区、鼠标拾取、线框图 | [2D 预览渲染 model2d](./model2d.md) | - | - |
 | 数字滚动、stagger 入场、关闭动画 | [动画系统 animation](./animation-system.md) | - | - |
 | 水面/水池/water/波浪/wave | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | 水面 shader 有 REVISION 断言与注入守卫（vertex 波浪函数 / objectNormal 覆盖 / 圆角段 / 微细节覆写点 / 倒影混合块）：升级 three 后必须重跑 water-capability.test.ts | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
@@ -919,7 +919,7 @@
 | 引用相等分派（ring === webImportLogs）是隐式建模信号——收敛成显式对象能消灭，但改动面大需评估 ROI | - | - |
 | 收敛只改内部表示不动导出函数签名（modal 范式）——外部/测试零改动是判据 | `试点成功` | - |
 | 模块级 let busy 锁必须有 reset 路径或注释豁免理由（dedup.ts 案例：tab 卸载后 busy 卡 true | - | 再进永久卡死） |
-| mount3D 本体 527 行（L351-877，2026-09-05 实测）→ 每加逻辑都会进一步膨胀；新逻辑应先拆为模块级函数（mount-session.ts / shared-infra.ts）再调用 | - | - |
+| mount3D 本体仍超 100 行红线 | - | 每加逻辑都会进一步膨胀；新逻辑应先拆为模块级函数（mount-session.ts / shared-infra.ts）再调用 |
 | safeDispose 未复用 | - | 重复写释放逻辑、资源泄漏；必须经 safeDispose 原语 |
 | adapter 直接遍历 entry 数组 | - | 容器内多模型顺序不稳定、缺用户选择点；必须走 multiModelSelectNode |
 | litematic zip 多 nbt 未走 select | - | 默认取第一个，用户无法换选；必须复用 multiModelSelectNode |
@@ -993,7 +993,7 @@
 | schemaId 必显式声明（panel id 不再隐式兜底作 schema key，防 id 撞注册键渲染错内容） | - | - |
 | fillers 仅 roles 一项（G3 删 fill* 后唯一残留），health.test 白名单守卫——禁止新增 filler | - | - |
 | renderCustom 是末段逃生舱，schemaId 未注册时走 renderCustom 会 console.warn | - | - |
-| 预览菜单真实 DOM 渲染需要**足够完备的 ctx**，不是：dock 按钮 `visibleWhen` 谓词（如 `env.skyGroundCap`）读 `sceneCapabilityRegistry` 的 cap 实例可用性，stub 得太薄就退化成「dock 空壳」——overlay 内有 dock/popup 容器但按钮行零渲染。**2026-10-04 实测反驳「e2e 渲不出菜单」**：e2e 层用 `mountPreviewRootMenu` + 含 `getCamBridge`/`getSiblings` 的 ctx 渲出了完整 L3 面板（`menu-visual.spec.ts` + `e2e/_shots/menu-03-scene-*.png`）；e2e-web 层起真 3D 会话（`openEmpty3DFullscreen`）后更渲出 30 控件的后处理面板与 `dock-env` 分组——**两者都只有真上下文才可见**。结论是**分层选工具，不是二选一**：happy-dom 单测（`items.test.ts` / `sky-capability.test.ts`）验成员归属与拓扑契约（快、稳）；e2e 截图验视觉呈现与 cap 真实可用性（方法见 `e2e-visual-feedback.md`）。headless 无 GPU 时天空/水面观感属软渲染伪影，不作美术判据。 | `浏览器渲不出菜单` | - |
+| 预览菜单真实 DOM 渲染需要**足够完备的 ctx**，不是：dock 按钮 `visibleWhen` 谓词（如 `env.skyGroundCap`）读 `sceneCapabilityRegistry` 的 cap 实例可用性，stub 得太薄就退化成「dock 空壳」——overlay 内有 dock/popup 容器但按钮行零渲染。**2026-10-04 实测反驳「e2e 渲不出菜单」**：e2e 层用 `mountPreviewRootMenu` + 含 `getCamBridge`/`getSiblings` 的 ctx 渲出了完整三级面板（`menu-visual.spec.ts` + `e2e/_shots/menu-03-scene-*.png`）；e2e-web 层起真 3D 会话（`openEmpty3DFullscreen`）后更渲出 30 控件的后处理面板与 `dock-env` 分组——**两者都只有真上下文才可见**。结论是**分层选工具，不是二选一**：happy-dom 单测（`items.test.ts` / `sky-capability.test.ts`）验成员归属与拓扑契约（快、稳）；e2e 截图验视觉呈现与 cap 真实可用性（方法见 `e2e-visual-feedback.md`）。headless 无 GPU 时天空/水面观感属软渲染伪影，不作美术判据。 | `浏览器渲不出菜单` | - |
 | adapter 手写 DOM | - | 与声明式菜单系统不一致、面板内容不出现；必须走声明式节点 |
 | renderCustom 与 children 混用 | - | 渲染通道冲突；必须二选一 |
 | 新增路径必须两步走，缺一步编译不过 | `扩 KNOWN_PATHS + 填 binding` | - |
@@ -1127,7 +1127,7 @@
 | '**（已修复 2026-09，ADR-272 §5.1）** pool 的 waterPoolHeight / waterPoolWallThickness 曾走全量重建（wall 的 y 尺寸与外壁偏移烘焙进几何）——拖动即每帧重建 10 个 mesh。现壁几何单位化：壁高走 、外偏 = `size/2 + t` 运行期现算。教训：**任何结构参数只要被烘焙进几何，就必然在滑块拖动时变成重建风暴**' | `scale.y` | - |
 | waterSize 值域：合法域 [1, 300]（下界来自）、展示域 10–300；钳制在 `setEnvState`（ADR-283），shader 侧另有 max(uSize, 0.001) 兜底 | `0/负数会让水面退化成一个点` | - |
 | 圆角裁剪用世界坐标 max(\|x\|,\|z\|) 对比 uHalfSize，隐含这一假设——已登记（2026-09-20），2026-10-04 已补测试钉子（`水面 root 恒在原点` describe：film/pool 切换 + 水位/尺寸/池深变更均不移动 root 的 xz）。若未来支持移动/放置水面（脱离原点），圆角裁剪会静默把整块水面裁成隐形，需先改为相对水面自身中心的局部坐标 | `水面恒在世界原点` | - |
-| '**波浪 shader 实现已迁至 water-shader.ts（2026-10-05 行数红线收口）**：`water-capability.ts\\|buildWaveWaterMaterial` 现在只是**薄转发封装**（装配 `WaterShaderCtx` = waterTime / reflect / reflectionActive 惰性 getter 后调用 `water-shader.ts\\|buildWaveWaterMaterial`）。改波浪 / REVISION 窗口 / 六锚点 / GLSL 注入串请去 `water-shader.ts`，cap 侧那条私有方法只代表。拆分动机：ADR-315 拆三刀后红线锁 860 行，倒影与锐评注释使文件回弹至 931 行超限（check-file-lines 阻断），故把最大真缝（波浪注入 ~289 行）抽出，实测 649 行、红线下调至 655' | `材质从哪来` | - |
+| '**波浪 shader 实现已迁至 water-shader.ts（2026-10-05 行数红线收口）**：`water-capability.ts\\|buildWaveWaterMaterial` 现在只是**薄转发封装**（装配 `WaterShaderCtx` = waterTime / reflect / reflectionActive 惰性 getter 后调用 `water-shader.ts\\|buildWaveWaterMaterial`）。改波浪 / REVISION 窗口 / 六锚点 / GLSL 注入串请去 `water-shader.ts`，cap 侧那条私有方法只代表。拆分动机：ADR-315 拆三刀后文件逼近红线超限（check-file-lines 阻断），故把最大真缝（波浪注入段）抽出、红线额度相应下调' | `材质从哪来` | - |
 | '**透明度预设失效（已修复 2026-09）**： 中 `waterOpacity` 变更路径只更新 `top.material.opacity`，漏同步 shader uniform `uBaseOpacity`。shader 用 `min(gl_FragColor.a, uBaseOpacity)` clamp 透明度，`uBaseOpacity` 固化在构建期，导致增大 opacity 不生效（减小偶然正常）。修复：补调 `syncBaseOpacityUniform`，与 `waterWetness` 路径同口径' | `applyChangedParams` | - |
 | '**派发键是类型化键域（2026-09）**： 为 `Set<EnvStateKey>`，`changed.has("拼错")` 编译不过；新增参数必须先在 `env-state-schema.ts` 声明（含 `group: "water"`），否则派发链与持久化都抓不到它' | `EnvCallback.changed` | - |
 | '**water 持久化由 schema 派生**：`saveState` 遍历 `getPresetKeys("water")`（不再手抄键表）；写侧统一 `water*` 规范键，历史键名 `size` / `pool*` 由 `loadState` 双轨吸收——新增参数只需进 schema，读侧按需补别名。**legacy 别名还原表是带退役时钟的兼容层**（锐评 P1-2）：新存档恒为纯规范键（legacy 分支只在时读 ground 旧记录），用户任一次 saveState 刷新后即永久走新记录——该表**只减不增、不得新增别名**，退役判定 = 用户面 legacy 存档刷新周期届满（发布一个维护周期后），届时整表连同 ground legacy 解包段一起删，勿长期挂着无时钟的兼容层' | `water 键无存档` | - |

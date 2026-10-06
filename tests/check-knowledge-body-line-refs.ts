@@ -12,7 +12,7 @@ const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "ysm-bodyref-contract-"));
 const TMP_CARD = path.join(TMP_DIR, "zzz-body-line-refs-tmp.md");
 const CARD_STEM = "zzz-body-line-refs-tmp";
 
-function writeTmpCard(bodyExtraLines = []) {
+function writeTmpCard(bodyExtraLines: string[] = [], fmExtraLines: string[] = []) {
   const fm = [
     "---",
     `kind: ${CARD_STEM}`,
@@ -25,6 +25,7 @@ function writeTmpCard(bodyExtraLines = []) {
     "  - 临时测试",
     "symbols_with_lines:",
     "  - SomeLegacySymbol:42",
+    ...fmExtraLines,
     "---",
     "",
     `# 正文行号引用契约测试临时卡`,
@@ -145,6 +146,45 @@ try {
     "WARN 含改写指引（文件|符号）",
     hint.includes("文件") && hint.includes("符号"),
     `期望指引「文件|符号」: ${hint.slice(0, 300)}`,
+  );
+
+  // 9. 正文含 `---` 水平线（markdown 分隔线）后仍须扫描（5.9 解析器回归：旧实现 toggle
+  //    误判水平线为 frontmatter 重开，分隔线后整段正文漏扫——mount3d-584-giant 实证假绿）
+  writeTmpCard(["正文甲。", "---", "分隔线后的正文 L123 引用。"]);
+  ({ status, out } = runDrift());
+  ok(
+    "水平线后的正文 L123 仍须 WARN",
+    !!out.warns.some((w) => w.includes(CARD_STEM) && w.includes("L123")),
+    `期望分隔线后的 L123 被扫到: ${out.warns.join("; ").slice(0, 300)}`,
+  );
+  ok("水平线用例退出码 0（WARN 不阻断）", status === 0, `status=${status}`);
+
+  // 9.5. 层级符号豁免：L1/L2/L3 后跟「空白+ASCII 字母或反引号」是层级枚举非行号
+  //      （model3d 解码拷贝链 L1 base64 / L2 `atob` 串实证；L0 游戏层级早已豁免）
+  writeTmpCard(["L1 base64 串 + L2 `atob` 串 + L3 `charCodeAt` 拷贝 = 4.33N。"]);
+  ({ status, out } = runDrift());
+  ok(
+    "层级符号 L1/L2/L3 不误报",
+    !out.warns.some((w) => w.includes(CARD_STEM) && w.includes("行号")),
+    `层级符号不应触发 WARN: ${out.warns.join("; ").slice(0, 200)}`,
+  );
+
+  // 10. frontmatter 人工字段（quick_risk_lines）行号引用 → 5.10 WARN（注入速查表的一跳层）
+  writeTmpCard([], ["quick_risk_lines:", "  - mount3D 本体 527 行（L351-877，预置顶复核节实测）"]);
+  ({ status, out } = runDrift());
+  ok(
+    "frontmatter quick_risk_lines 行号 → WARN 且注明 frontmatter",
+    !!out.warns.some((w) => w.includes(CARD_STEM) && w.includes("frontmatter")),
+    `期望 frontmatter WARN: ${out.warns.join("; ").slice(0, 300)}`,
+  );
+
+  // 10.5. frontmatter 定性描述（无行号）不误报
+  writeTmpCard([], ["quick_risk_lines:", "  - 仍超 100 行红线，勿写死行号"]);
+  ({ status, out } = runDrift());
+  ok(
+    "frontmatter 定性描述不误报",
+    !out.warns.some((w) => w.includes(CARD_STEM)),
+    `定性描述不应触发 WARN: ${out.warns.join("; ").slice(0, 200)}`,
   );
 } finally {
   if (fs.existsSync(TMP_DIR)) fs.rmSync(TMP_DIR, { recursive: true, force: true });

@@ -47,6 +47,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "check-knowledge-hook.ts": ["docs"],
   "check-knowledge-perf-tags.ts": ["docs"],
   "check-knowledge-body-line-refs.ts": ["docs", "tests"],
+  "check-gen-routes-status.ts": ["docs", "tests"], // gen-routes status 闸隔离契约：--kc-dir 模拟冻结/草稿剔除 + --check 自洽
+  "check-knowledge-frontmatter-line-refs.ts": ["docs", "tests"], // 5.10 frontmatter 人工字段行号引用 WARN
+  "check-knowledge-card-references.ts": ["docs", "tests"], // 5.11 卡间引用断链 WARN
   "check-knowledge-anchor-def-kind.ts": ["docs", "tests"],
   "check-knowledge-card-status.ts": ["docs", "tests"],
   "check-knowledge-rename-migration.ts": ["docs", "tests"],
@@ -263,6 +266,9 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_diff_source.ts": ["scripts/_lib/diff-source.ts", "scripts/_lib/git-hunks.ts"],
   "test_token_shift_audit.ts": ["scripts/token-shift-audit.ts", "scripts/_lib/design-tokens.ts"],
   "test_gen_routes_quick_pitfall.ts": ["scripts/gen-routes-quick.ts"],
+  "check-gen-routes-status.ts": ["scripts/gen-routes.ts", "scripts/_lib/knowledge-cards.ts"],
+  "check-knowledge-frontmatter-line-refs.ts": ["scripts/check-knowledge-drift.ts"],
+  "check-knowledge-card-references.ts": ["scripts/check-knowledge-drift.ts", "scripts/_lib/knowledge-cards.ts"],
   "test_gen_routes_quick_groups.ts": [
     "scripts/gen-routes-quick.ts",
     "scripts/_lib/knowledge-cards.ts",

@@ -809,26 +809,27 @@ function checkNoCuratedInAutoFields(cards: any[]) {
 //       * `≤15 行`/`~137 行`/`1504→827 行`/`301–360 行`/`20-30 行` 前缀 ≤ ~ → – - 均为
 //         上限约定 / 估算 / 历史变化 / 区间描述，不指向当前源码位置 → lookbehind 排除
 const BODY_LINE_RE_FINAL =
-  /(?<![A-Za-z0-9_-])(?<!ADR-\d{1,4} )L[1-9]\d{0,3}(?:-\d{1,4})?(?![0-9A-Za-z_])|(?<![→~–—≤-])\b\d{2,}\s*行(?!红线)(?![0-9A-Za-z_\u4e00-\u9fff])|\b\d{1,2}\s*个(?:能力|控件|守卫|单例|参数|事件)(?![0-9A-Za-z_])/g;
+  // L 形：行号/行号区间；L0 已排除（游戏层级符号，app-preview 实证）；追加层级符号豁免：
+  // L\d{1,2} 后跟「空白+ASCII 字母或反引号」是层级枚举（L1 base64 / L2 `atob` 串，model3d 实证），非行号
+  /(?<![A-Za-z0-9_-])(?<!ADR-\d{1,4} )L[1-9]\d{0,3}(?:-\d{1,4})?(?![0-9A-Za-z_])(?!\s+[A-Za-z`])|(?<![→~–—≤-])\b\d{2,}\s*行(?!红线)(?![0-9A-Za-z_\u4e00-\u9fff])|\b\d{1,2}\s*个(?:能力|控件|守卫|单例|参数|事件)(?![0-9A-Za-z_])/g;
 /** 提取 frontmatter 块结束后的正文行（带行号）。 */
 function bodyLinesWithNumbers(text: string): Array<{ lineNo: number; line: string }> {
   const clean = text.replace(/^\uFEFF/, "");
-  // 第一次 `---` 与第二次 `---` 之间 = frontmatter；之后 = 正文
+  // 三态状态机：0=文件头（待 frontmatter 开）→ 第 1 个 `---` 进 1（frontmatter 内）→
+  // 第 2 个 `---` 永久进 2（正文）。正文里的 `---` 水平线（markdown 分隔线）不得再触发
+  // 状态翻转——旧实现每见 `---` 就 toggle，水平线后的整段正文被误判为 frontmatter 而漏扫
+  // （实证：mount3d-584-giant 的 L67 水平线后「当前残留问题」节对 5.9 检查不可见，行号漂移假绿）。
   const lines = clean.split(/\r?\n/);
-  let inFrontmatter = false;
+  let state = 0; // 0=frontmatter 外，1=frontmatter 内，2=正文
   const body: Array<{ lineNo: number; line: string }> = [];
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i]?.trim();
     if (t === "---") {
-      if (!inFrontmatter) {
-        inFrontmatter = true;
-        continue;
-      }
-      inFrontmatter = false;
+      if (state === 0) state = 1;
+      else if (state === 1) state = 2;
       continue;
     }
-    if (inFrontmatter) continue;
-    body.push({ lineNo: i + 1, line: lines[i]! });
+    if (state === 2) body.push({ lineNo: i + 1, line: lines[i]! });
   }
   return body;
 }
@@ -864,6 +865,93 @@ function checkBodyLineRefs(cards: any[]) {
   }
 }
 
+// ── 检查 5.10：frontmatter 人工策展字段的行号/行数/计数引用（WARN）──
+// 5.9 只扫正文；quick_risk_lines / pitfalls / use_when 会被 gen-routes-quick 原样注入
+// 速查表——AI 第一跳读到的正是这些行。行坐标同样会漂移且无人维护（实证：mount3d-584-giant
+// 的 quick_risk_lines「527 行（L351-877）」，实测 mount3D 本体仅剩 130 行），故对这三个
+// 人工字段套 5.9 同款正则，WARN 级护栏。豁免同 5.9：快照/报告卡（affected:false）行号是「当时」事实记录。
+const FM_REF_KEYS = ["quick_risk_lines", "pitfalls", "use_when"];
+function checkFrontmatterLineRefs(cards: any[]) {
+  for (const { cf, fm } of cards) {
+    if (!fm) continue;
+    if (KNOWLEDGE_NON_CARDS.has(cf)) continue; // 生成物（index/routes/quick）禁手改，不参与手写治理
+    if (getScalar(fm, "affected") === "false") continue;
+    const hits: string[] = [];
+    for (const key of FM_REF_KEYS) {
+      for (const entry of getList(fm, key)) {
+        BODY_LINE_RE_FINAL.lastIndex = 0;
+        let m: RegExpExecArray | null;
+        while ((m = BODY_LINE_RE_FINAL.exec(entry)) !== null) hits.push(`${key}「${m[0]}」`);
+      }
+    }
+    if (hits.length === 0) continue;
+    warns.push(
+      `知识卡 ${cf} 的 frontmatter 人工字段含硬编码行号/行数/计数引用: ${hits.slice(0, 3).join("、")}（quick_risk_lines/pitfalls 会注入速查表且不机器校验时效——行坐标会静默漂移，请改写成「文件|符号」或定性描述）`,
+    );
+  }
+}
+
+// ── 检查 5.11：卡间引用断链（WARN）──
+// 卡正文「相关」节的 markdown 相对链接与标记性卡名引用（兄弟卡/归档卡/相关卡/首选卡）不得
+// 指向不存在的卡；目标仅存于 docs/archive 时给出改名建议。设计取舍：
+//   - 只查 `](./x.md)` / `](../adr/x.md)` 与「标记词 + 反引号卡名」——全库裸反引号 token 扫描
+//     误报不可控（CSS 类名 / data-* 属性 / CLI flag 全是 kind 形，实测 469 个未命中）；
+//   - WARN 级：正文散文属人工策展字段（ADR-162 解法 B 口径，不阻断）；
+//   - 卡名 token 兼容 .md 后缀（ground-cap-materialgroup-factories 写「`ground-surface-spec.md`」）。
+const CARD_LINK_RE = /\]\(\.\/([a-zA-Z0-9_.\-\u4e00-\u9fff]+\.md)\)/g;
+const ADR_LINK_RE = /\]\(\.\.\/adr\/([a-zA-Z0-9_.-]+\.md)\)/g;
+const CARD_NAME_MARK_RE = /(兄弟卡|归档卡|相关卡|首选卡)\s*[：:]\s*`([^\s`]{2,})`/g;
+function checkCardReferences(cards: any[]) {
+  const archiveDir = path.join(ROOT, "docs", "archive");
+  const archiveStems = fs.existsSync(archiveDir)
+    ? new Set(
+        fs
+          .readdirSync(archiveDir)
+          .filter((f) => f.endsWith(".md"))
+          .map((f) => f.replace(/\.md$/, "")),
+      )
+    : new Set<string>();
+  for (const { cf, text } of cards) {
+    if (!text) continue;
+    // tier 1：markdown 相对链接
+    for (const m of text.matchAll(CARD_LINK_RE)) {
+      const target = m[1]!;
+      if (fs.existsSync(path.join(KC_DIR, target))) continue;
+      const stem = target.replace(/\.md$/, "");
+      warns.push(
+        archiveStems.has(stem)
+          ? `知识卡 ${cf} 的相关链接 ./${target} 目标已归档（docs/archive/${target}），建议改指 archive 路径`
+          : `知识卡 ${cf} 的相关链接 ./${target} 指向不存在的卡（docs/knowledge 与 docs/archive 均无）`,
+      );
+    }
+    for (const m of text.matchAll(ADR_LINK_RE)) {
+      const target = m[1]!;
+      if (fs.existsSync(path.join(ROOT, "docs", "adr", target))) continue;
+      warns.push(`知识卡 ${cf} 的 ADR 链接 ../adr/${target} 指向不存在的 ADR`);
+    }
+    // tier 2：标记性反引号卡名
+    // 语义：兄弟卡/归档卡/相关卡/首选卡 后的卡名，指向 live 卡或已归档卡均为合法
+    // （「归档卡：X」本就是指向 archive 的合法形态）——只对 knowledge/archive 均查无此名的
+    // 真悬空报警（迁出改名实证：「3d-超大文件-code-split-可行性」→ 3d-oversize-file-codesplit-feasibility.md）
+    for (const m of text.matchAll(CARD_NAME_MARK_RE)) {
+      const raw = m[2]!.trim();
+      const tok = raw.replace(/\.md$/, "").replace(/\.ts$/, "");
+      if (!tok) continue;
+      const known = cards.some((c) => c.cf.replace(/\.md$/, "") === tok);
+      if (known || archiveStems.has(tok)) continue;
+      // 模糊：token 的 ASCII 段（≥4 字母）被某 archive 词干包含 → 疑似改名
+      const ascii = tok.replace(/[\u4e00-\u9fff]+/g, "");
+      const runs: string[] = ascii.match(/[a-z]{4,}/gi) ?? [];
+      const fuzzy = [...archiveStems].find((s) => runs.some((r) => s.toLowerCase().includes(r.toLowerCase())));
+      warns.push(
+        fuzzy
+          ? `知识卡 ${cf} 的「${m[1]}」引用 \`${raw}\` 在 knowledge/archive 均未命中，疑似已改名归档为 docs/archive/${fuzzy}.md，请更新引用`
+          : `知识卡 ${cf} 的「${m[1]}」引用 \`${raw}\` 在 knowledge/archive 均未命中，疑似指向不存在的卡`,
+      );
+    }
+  }
+}
+
 // ── 主流程 ────────────────────────────────────────────
 
 function main() {
@@ -889,6 +977,8 @@ function main() {
   checkAutoFieldsFormat(cards); // 解法 B：机器推导字段格式校验
   checkNoCuratedInAutoFields(cards); // 解法 B：auto_fields 禁人工策展子字段（ERROR）
   checkBodyLineRefs(cards); // P1：正文散文禁硬编码行号/行数/计数（WARN）
+  checkFrontmatterLineRefs(cards); // 5.10：frontmatter 人工策展字段行号引用（WARN）
+  checkCardReferences(cards); // 5.11：卡间引用断链 + 归档改名建议（WARN）
   checkKnowledgeCoverage(cards);
 
   const result = { _summary: { errors: errors.length, warns: warns.length }, errors, warns };

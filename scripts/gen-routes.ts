@@ -20,6 +20,7 @@
  *   node scripts/gen-routes.ts            # 写入 docs/knowledge/routes.md
  *   node scripts/gen-routes.ts --check    # 只校验不写入（CI）
  *   node scripts/gen-routes.ts --json     # JSON 摘要（pre-push-gate runTools 契约，--check 可组合）
+ *   node scripts/gen-routes.ts --kc-dir <dir>  # 隔离模式：扫描指定目录并写入其下 routes.md（契约测试用）
  *
  * 零依赖（仅 node:fs / node:path）。
  * 设计意图：路由表生成器
@@ -34,6 +35,11 @@ import { KNOW_DIR, KNOWLEDGE_NON_CARDS as NON_CARDS } from "./_lib/knowledge-car
 import { parseArgs } from "./_lib/parse-args.ts";
 
 const OUT_PATH = path.join(KNOW_DIR, "routes.md");
+
+/** 隔离模式目录（--kc-dir）：指向临时知识卡目录（契约测试用，避免临时卡污染 docs/knowledge/）。 */
+function resolveKcDir(arg?: string | string[]): string {
+  return arg ? path.resolve(String(arg)) : KNOW_DIR;
+}
 
 const BANNER =
   "<!-- 本文件由 scripts/gen-routes.ts 自动生成，请勿手改。重跑：node scripts/gen-routes.ts -->";
@@ -150,9 +156,11 @@ function renderRoutes(
 function main() {
   const args = parseArgs(process.argv.slice(2), {
     bools: ["check", "json"],
-    strings: [],
+    strings: ["kc-dir"],
     defaults: {},
   });
+  const KC_DIR = resolveKcDir(args["kc-dir"] ? String(args["kc-dir"]) : undefined);
+  const outPath = args["kc-dir"] ? path.join(KC_DIR, "routes.md") : OUT_PATH;
   const JSON_OUT = args.json;
   if (args.help) {
     const _src = fs.readFileSync(process.argv[1]!, "utf-8");
@@ -185,12 +193,17 @@ function main() {
     adrs: number[];
     summary: string;
   }> = [];
-  for (const f of fs.readdirSync(KNOW_DIR).filter((f) => f.endsWith(".md"))) {
+  for (const f of fs.readdirSync(KC_DIR).filter((f) => f.endsWith(".md"))) {
     if (NON_CARDS.has(f)) continue;
-    const text = fs.readFileSync(path.join(KNOW_DIR, f), "utf8");
+    const text = fs.readFileSync(path.join(KC_DIR, f), "utf8");
     if (!parseFrontmatter(text)) continue;
     const tier = fm(text, "tier");
     if (tier !== "architecture") continue;
+    // status 闸（与 gen-routes-quick 同构，2026-10 治理口径）：只收 active（缺省 active）卡。
+    // draft/snapshot/archived/superseded 是冻结/草稿，不承载「首选卡」路由——此前兜底表
+    // 放行 superseded（extensibility-index 与其取代者并排）与 archived（cli-quality-audit 等）。
+    const status = fm(text, "status") || "active";
+    if (status !== "active") continue;
     cards.push({
       file: f,
       name: fm(text, "name") || f.replace(/\.md$/, ""),
@@ -244,23 +257,23 @@ function main() {
     });
 
   if (isCheck) {
-    const existing = fs.existsSync(OUT_PATH) ? fs.readFileSync(OUT_PATH, "utf8") : "";
+    const existing = fs.existsSync(outPath) ? fs.readFileSync(outPath, "utf8") : "";
     const synced = existing === output;
     if (JSON_OUT) {
       console.log(summary(synced, true, false));
     } else if (synced) {
-      console.log(`✅ ${OUT_PATH} 已同步`);
+      console.log(`✅ ${outPath} 已同步`);
     } else {
-      console.error(`❌ ${OUT_PATH} 未同步，请运行：node scripts/gen-routes.ts`);
+      console.error(`❌ ${outPath} 未同步，请运行：node scripts/gen-routes.ts`);
     }
     process.exit(synced ? 0 : 1);
   }
 
-  fs.writeFileSync(OUT_PATH, output);
+  fs.writeFileSync(outPath, output);
   if (JSON_OUT) {
     console.log(summary(true, false, true));
   } else {
-    console.log(`✅ 已写入 ${path.relative(process.cwd(), OUT_PATH)}`);
+    console.log(`✅ 已写入 ${path.relative(process.cwd(), outPath)}`);
   }
 }
 

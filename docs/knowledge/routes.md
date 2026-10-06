@@ -16,7 +16,6 @@
 | 3D 渲染循环优化、Vector3 复用、纹理缓存、AbortController 事件管理、资源生命周期 dispose、循环依赖破壁、审核驱动开发、并发防护 gen 守卫 | [3D 区审核与修复模式提炼](./3d-patterns.md) | — |
 | toast msg 载荷带 emoji 前缀（✅/❌/⚠️）不知如何处理、toast undo 按钮图标迁移、ADR-238 emoji→SVG 收债的 toast 盲区量不到不拦 | [toast-emoji-svg](./adr.md) | `<app-toast>` 渲染层 `<span class="msg">${esc(msg)}</span>` 走 esc 转义文本槽， |
 | 修改 GUI 桥可调用 CLI 命令的参数时（新增 flag / 需要传空值语义）、排查 ExecuteCLI 参数丢失（空串/0/false 不见、顺序不定、拼写错误静默丢参）、理解 internal/app 与 go/cli 之间参数规格如何跨包传递 | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173-gui-cli-paramspec.md) | GUI→CLI 参数链路（frontend buildArgsMap → Wails map → ExecuteCLI → os/exec 子进程 --cli）曾有四重损耗： |
-| AI 审查器（code_review）finding 的取舍与查证流程、新层/新范式落地后的回归审核 | [AI 审查器偏差与查证方法论（9 轮实战沉淀）](./ai-review-pitfalls.md) | 9 轮 AI 审查器（code_review deep）实战沉淀：~57 条 finding 中真缺陷 15 处、假阳性/已覆盖 ~31 条、留档 ~11 条。本文记录审查器的系统性偏差模式与对应的查证方法论，供后续「审核产出」工作流直接命… |
 | Android、存储授权、目录选择、MANAGE_EXTERNAL_STORAGE、SAF | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) ⚠️歧义（另见 rust-android-bridge.md） | Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 WebView，桌面端无此桥返回 `null`）与跨平台目录选择器。解决 Android 上 Wails 官方**拒绝目录选择**（… |
 | android:back、返回键、弹窗、系统事件、ScreenLocked、NetworkChanged | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) ⚠️歧义（另见 dialog-modal.md） | 前端消费 Java 层经 Wails 事件总线转发的 `android:*` 系统事件（ADR-046 P2，参照 MikuMikuAR ADR-017 A3-04）。桌面端无 Java 层，这些事件永不触发，注册无害。生命周期由 `reg… |
 | 动画、骨骼动画、关键帧、Molang、数字滚动、stagger 入场 | [动画系统 animation](./animation-system.md) ⚠️歧义（另见 go-geometry.md） | 前端动画体系分两层：**模型骨骼动画**（基岩版 animation.json 解析 + 关键帧插值求值）与 **UI 动效**（数字里程表滚动、stagger 入场延迟）。UI 层的 CSS 动画可被全局 `no-animations` … |
@@ -33,7 +32,6 @@
 | 网页版、浏览器模式、browser adapter、IndexedDB、跨域隔离 | [网页版后端 backend-web](./backend-web.md) ⚠️歧义（另见 backend-idb.md、wails-bridge.md等） | — |
 | string-JSON、JSON.parse 断言、绑定 struct 化、铲债清单、错误通道统一、ADR-143、绑定返回 string | [string-JSON 绑定铲债清单](./binding-json-cleanup.md) | ADR-143 的实施进度账本。2026-09-01 审计 `internal/app` 全部导出绑定：返回 `string` 的 44 个签名逐个核语义，分四档——**23 条 JSON 病灶**（P0×6 + P1×17，该 struc… |
 | 整合包分类、路由、zipentry 指纹、蓝图、回归、last-wins | [分类路由与回归护栏](./classify-routing.md) ⚠️歧义（另见 go-litematic.md） | 整合包分类的「路由不变量 + 回归护栏」设计备忘录。核心结论：**location 路由只在「同文件夹 = 同类型」时成立；一旦出现「同文件夹多类型」，必须降级到内容指纹（zipentry/ysm/mcmeta/shader），且各容器型需… |
-| CLI、质量摸排、代码审核、代码审查、bug 排查、审计、白名单、绑定层 | [CLI 质量摸排 Checklist](./cli-quality-audit.md) ⚠️歧义（另见 fbx-cli-pipeline.md） | 本文档记录 YSM 项目 Go CLI 层（`go/cli/` + `internal/app/` + `frontend/src/services/`）代码审核的**高频问题模式**与**修复 Checklist**。2026-08-19… |
 | commit-with-check、自动提交、并发提交、临时索引、白名单提交、门禁后自动 commit | [提交脚本 commit-with-check](./commit-with-check.md) | `commit-with-check.ts` 把「改代码→tsc→build→test→git add→commit」压缩为单条命令：门禁委托 `pre-push-gate.ts`（唯一检查清单源头），全绿后**临时索引白名单提交**（AD… |
 | 创意工坊、社区、下载队列、镜像源、批量下载、github 仓库、下载进度、workshop | [社区下载 community](./community-feature.md) ⚠️歧义（另见 go-download.md） | `features/community/` 是创意工坊（GitHub 模型仓库）浏览与批量下载的前端业务层，多文件分工：`data.ts` 抓取远端 index.json（多镜像竞速）、`render.ts` 渲染仓库模型列表行与表头、`e… |
 | 右键菜单、右键、上下文菜单、ctx:show、menu:show、批量操作、移入回收站 | [右键菜单系统](./context-menu.md) | 右键菜单系统采用「声明与行为分离」的三层结构：`menu-defs.ts` 声明菜单结构（唯一事实来源），`features/context-menu/context-menus.ts` 把 `ctx:show` 事件翻译成带行为的 `me… |
@@ -46,12 +44,10 @@
 | 标签、打标签、编辑标签、tag、标签弹窗、分类标记 | [标签编辑器 tag-editor](./dialog-tag-editor.md) ⚠️歧义（另见 go-tags.md等） | `tag-editor.ts` 提供单个模型的标签编辑弹窗：加载该模型已有标签与全库已有标签，支持手工输入新标签（Enter 或「+ 添加」）与从建议列表点选，删除标签用标签内 ✕ 按钮。保存时把最终标签列表写回后端 go/tags Sto… |
 | FAB、悬浮按钮、FAB 3D 预览入口、overlay、ADR-057 | [3D 预览悬浮 FAB 控制层](./dom-fab.md) | 3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu… |
 | 下载队列状态、入队 / 取消 / 恢复、Wails 进度事件、社区下载状态层 | [下载队列状态机 download-queue-store](./download-queue-store.md) | 创意工坊批量下载队列的状态层（模块级 Store）。ADR-040 ≤400 行红线拆分产物：自 `download-queue.ts`（原超长文件）拆出，类型 / STATE / Go 调用 / 后端事件注册全部内聚于此。v2：模块级持久… |
-| 漂移检测、双轨、重复实现、口径漂移、常量硬编码、错误链断裂、资源泄漏、定时器泄漏 | [drift-scan（双轨漂移检测）](./drift-scan.md) ⚠️歧义（另见 extensibility-index.md） | — |
 | 事件、事件总线、通信、emit、跨组件通信、bus | [事件总线 bus.ts](./event-bus.md) | — |
 | 截图、导出 PNG、多角度截图、透明背景、预览缓存、blob URL、saveScreenshot、renderMultiAngle | [截图导出 export](./export.md) ⚠️歧义（另见 utils-export.md等） | > **差异化定位**：`utils-export.md`（utils 分类）回答"截图/缓存**怎么写**"（API 签名、淘汰策略、dispose 顺序）；本 feature 卡回答"用户点截图按钮后**发生了什么**"——从触发入口到… |
-| 可拓展点、扩展入口、硬编码、重复实现、插件化 | [可拓展点发掘索引（extensibility inventory）](./extensibility-index.md) ⚠️歧义（另见 drift-scan.md） | — |
 | 新增资源类型、新增文件格式、新增网页桥接、新增同步逻辑、残留手改清单、拓展点探索 | [拓展点 / 扩展入口 探索报告（Round 2）](./extensibility-round2.md) | — |
-| FBX、CLI、命令行、转换、glTF、GLB、fbx2gltf、assimp | [FBX CLI 处理管线 fbx-cli-pipeline](./fbx-cli-pipeline.md) ⚠️歧义（另见 cli-quality-audit.md） | **CLI 模式处理 FBX 的成熟路径，不是「Go 直接解析 FBX」，而是「现成转换器转中间格式 + 成熟库读取」的双段式**： |
+| FBX、CLI、命令行、转换、glTF、GLB、fbx2gltf、assimp | [FBX CLI 处理管线 fbx-cli-pipeline](./fbx-cli-pipeline.md) | **CLI 模式处理 FBX 的成熟路径，不是「Go 直接解析 FBX」，而是「现成转换器转中间格式 + 成熟库读取」的双段式**： |
 | 批量重命名 / 标签编辑 / 高级筛选对话框、找对话框入口符号 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | `frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整… |
 | 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射、voxel 管线（voxel-bits/pipeline/三视图）/ ysm-header / nbt-parse 定位 | [解析簇 parsers/ 自 backend 迁出](./frontend-parsers.md) | `frontend/src/parsers/`：纯解析层，自 `backend/` 迁出（ADR-170 第一段）。含 YSM 头/摘要、NBT、体素（voxel，7cace0d59 拆为公共件 4 + 三视图 3）、zip 解包、pack… |
 | 门禁委托链、找门禁流程、钩子在哪拦、为什么还能提交、哪个入口阻断、门禁总览、门禁块写法、新块怎么写 | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | 单环细读是清楚的（[pre-commit-hook](./pre-commit-hook.md) / [pre-push-gate](./pre-push-gate.md) 各讲一环纵深），**环与环之间没有一张拼图**才是「从 git 钩… |
@@ -71,7 +67,7 @@
 | 整合包、实例、版本实例、VersionInstance、同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) ⚠️歧义（另见 go-sync.md） | `go/instance/` 包处理整合包（Minecraft 版本实例）的资源同步项构建与侧栏计数折叠，是 `internal/app/app_install_instance.go` 中 `GetInstanceSyncStatus` … |
 | 投影、litematic、schematic、nbt、蓝图、体素、方块 | [Litematic 解析 go/litematic](./go-litematic.md) ⚠️歧义（另见 classify-routing.md） | `go/litematic/` 包解析 Minecraft 建筑蓝图文件：Litematica 投影（`.litematic`，NBT gzip）、MCEdit 旧版 `.schematic`、原版结构 `.nbt`，产出元数据、方块统计（… |
 | 导入日志、操作记录、操作日志、import log、历史 | [导入日志 go/logs](./go-logs.md) | `go/logs/` 包提供两套互不相干的日志设施：**操作日志**（`Logger`，持久化）把导入/扫描/下载/同步/重命名/删除/UI 报错等操作的成败结果写入用户配置目录下的 `ysm-import-logs.json`；**运行时… |
-| 资源包、光影包、mcmeta、pack_format、包封面缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) ⚠️歧义（另见 resource-packs.md等） | `go/packs/` 包解析 Minecraft 资源包/光影包的 `pack.mcmeta`（目录或 ZIP 两种形态），提取 pack_format 版本信息与 pack.png 缩略图，并承担「一个文件到底属于哪种资源类型」的内容级… |
+| 资源包、光影包、mcmeta、pack_format、包封面缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) | `go/packs/` 包解析 Minecraft 资源包/光影包的 `pack.mcmeta`（目录或 ZIP 两种形态），提取 pack_format 版本信息与 pack.png 缩略图，并承担「一个文件到底属于哪种资源类型」的内容级… |
 | 路径、安全、path、路径校验 | [路径安全 go/paths](./go-paths.md) | `go/paths/` 包提供路径安全校验，防止路径穿越攻击和非法路径访问。 |
 | 回收站、删除、恢复、recycle、软删除 | [回收站 go/recycle](./go-recycle.md) ⚠️歧义（另见 recycle-bin.md、go-fileops.md等） | `go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`），包级函数… |
 | 仓库审计、健康分数、完整性检查、缓存命中率、repoaudit、health-report、去重 | [仓库审计 go/repoaudit](./go-repoaudit.md) ⚠️歧义（另见 go-dedup.md） | `go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL… |
@@ -108,9 +104,7 @@
 | 预览状态路径、KNOWN_PATHS 扩展、PreviewStatePath 类型、状态层快照契约 | [预览状态路径契约 preview-paths](./preview-paths.md) | 预览状态层的路径契约叶子（ADR-168 二期下沉产物）。零依赖叶子：`KNOWN_PATHS`（值）+ `PreviewStatePath` + `PreviewSnapshot`（类型）。自 `preview-state.ts` 下沉—… |
 | 预览设置、显示控制、骨骼名称、帧率、截图灯光 | [预览面板设置与显示控制](./preview-settings.md) | > **重要前提**：预览面板设置**不是单一 settings 面板**，而是分散在 **3 域**（2D 显示控制 / 3D 全域状态层 / 截图 & 填充面板）。本 feature 卡汇总三域设置项的语义、持久化点、广播契约与相互依赖… |
 | 回收站、恢复文件、清空回收站、软删除、recycle、还原 | [回收站界面 recycle-bin](./recycle-bin.md) ⚠️歧义（另见 go-recycle.md等） | `recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调… |
-| 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）、判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） | [win-filename-rules](./reference.md) | Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol… |
 | 联邦渲染、shared renderer、rAF 复用、多 3D 场景 | [联邦渲染能力 (Render Federation)](./render-federation.md) | — |
-| 资源包、光影包、resourcepack、shaderpack | [资源包功能 resource-packs（已归档）](./resource-packs.md) ⚠️歧义（另见 go-packs.md等） | **已删除（2026-08-18）**。原 `frontend/src/features/resource-packs.ts` 是一个薄 wrapper，把仓库页的各类资源包 tab 统一委托给 `<app-resource-manager… |
 | 资源类型、注册表、resource_types、registry、文件类型 | [资源注册表 registry](./resource-registry.md) ⚠️歧义（另见 utils-resource-types.md、go-types.md） | `resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。 |
 | Android、Linux、macOS、rust_backend、CGO | [Rust Scanner Bridge 全平台支持](./rust-android-bridge.md) ⚠️歧义（另见 android-bridge.md、rustbridge.md） | — |
 | Rust 扫描器、rust_backend、桥 DLL、Wails 后端迁移 Rust | [Rust 桥 rustbridge](./rustbridge.md) ⚠️歧义（另见 rust-android-bridge.md） | — |
@@ -126,7 +120,6 @@
 | 整合包同步、推送、拉取、跨组件同步编排、缺包回拉、PullSingleResource、sync:download:missing | [整合包同步管理器 sync-manager](./sync-manager.md) ⚠️歧义（另见 app-sync-manager.md、app-sidebar.md等） | `app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**： |
 | 测试税、测试文件过大、mock 复印机、双胞胎测试、墓碑测试、stubBlobUrls、夹具沉淀 | [测试税减负三刀方法论](./test-tax-reduction.md) | 测试税 ≠ 测试太多，而是「mock 复印机」与「双胞胎测试」这两种结构病。 |
 | 测试工具、testid、getByTestId、waitFor、sleep、flaky、异步等待、组件测试 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | `frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / UI-Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 … |
-| 在 frontend/src 任何位置新增 data-testid / dataset.testid / buttonTestid / panelTestid、修改某个视图的 VIEW_TESTIDS 数组、testid 契约测试报 ORPHAN 或 MISSING、想给诊断页/仓库页/工坊等顶层 tab 补测试钩子 | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | `tests/test_testid_contract.ts`（ADR-133 阶段 B）是前端测试钩子的红线门禁：所有 `data-testid` |
 | UI 组件、卡片组件、加载动画、滑块、幻灯片菜单 | [UI 组件簇（原 ui 收容所，已归位）](./ui-components.md) | 原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front… |
 | 数组排序、拖拽排序、moveItem、列表 reorder | [数组工具 moveItem](./utils-array.md) | 纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。 |
 | 错误提示、友好错误、friendlyError、toast 文案、报错翻译、网络错误、文件被占用 | [错误处理 errors](./utils-errors.md) | 把 Go 端/运行时返回的原始错误转换为用户可读的中文提示，是异常路径 toast 文案的统一入口（治理红线：所有异常路径必须有 toast 反馈）。 |

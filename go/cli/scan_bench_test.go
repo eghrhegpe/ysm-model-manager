@@ -119,7 +119,7 @@ func TestRunScanBench_Guards(t *testing.T) {
 	}
 }
 
-// TestRunScanBench_TextModeDoesNotFabricate 文本报告不得把未采集写成 0.00ms。
+// TestRunScanBench_TextModeDoesNotFabricate 文本报告不得把未采集/亚分辨率写成 0.00ms。
 func TestRunScanBench_TextModeDoesNotFabricate(t *testing.T) {
 	root := filepath.Join("..", "..", "tests", "fixtures", "ysm")
 	ctx := &CmdContext{FilesRoot: root, Args: []string{"--iterations", "1"}}
@@ -128,7 +128,17 @@ func TestRunScanBench_TextModeDoesNotFabricate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("scan-bench 文本模式报错: %v", err)
 	}
-	if strings.Contains(out, "0.00ms") {
-		t.Errorf("未采集不得渲染成 0.00ms:\n%s", out)
+	// 断言语义 = 「报告的耗时字段不得渲染成 0.00」。
+	//
+	// 2026-10-07 修：原实现是裸子串 `strings.Contains(out, "0.00ms")`，有两重假红（实测约 1/3）：
+	//   ① 生产侧把**合法采集到的亚分辨率样本**（粗时钟粒度下 time.Since 可为 0s）渲染成 0.00ms
+	//      ——违反 scan_bench.go 诚实红线 #2，已在生产侧改渲染 `<0.01ms`；
+	//   ② 裸子串会命中 `10.00ms` / `20.00ms` 的**子串**——这条与测量快慢无关，纯属断言写法缺陷。
+	// 故此处锚定**字段位**而非裸子串；亚分辨率与样本列表的口径由
+	// scan_bench_format_test.go 的 formatMs/formatMsList 单测直接钉住。
+	for _, field := range []string{"中位 0.00ms", "p95 0.00ms"} {
+		if strings.Contains(out, field) {
+			t.Errorf("耗时字段不得渲染成 0.00ms（亚分辨率应写 <0.01ms）：%s\n%s", field, out)
+		}
 	}
 }

@@ -11,7 +11,8 @@ package cli
 //     ——缓存命中的那一次根本没走引擎，若计进样本就是把「省下的时间」当成扫描速度。
 //     本命令用 `scanner.ScanEngineStats()` 的前后差**实测归属**，不猜；
 //  2. **拿不到就说不采集**：未参与时 `used=false` + 原因 token，绝不填 0.00ms
-//     （0ms 会被读成「快到测不出」，正好相反）；
+//     （0ms 会被读成「快到测不出」，正好相反）；采集到但低于时钟分辨率的样本渲染成
+//     `<0.01ms`（formatMs/formatMsList），同样不与 0.00 混淆。
 //  3. **缓存命中不算测量**：逐次前 `scanner.InvalidateCache()`，并如实回报命中数。
 
 import (
@@ -98,10 +99,10 @@ func init() {
 //   - 计数差不为 1 = 期间有并发扫描交叉，无法把这一次归给谁（宁可弃样本，不猜）。
 func scanEngineDelta(before, after scanner.ScanEngineStat) (engine, reason string, ok bool) {
 	dGo := after.GoWalk - before.GoWalk
-	switch {
-	case dGo == 1:
+	switch dGo {
+	case 1:
 		return "go", "", true
-	case dGo == 0:
+	case 0:
 		return "", scanBenchReasonCacheHit, false
 	default:
 		return "", scanBenchReasonInterfered, false
@@ -181,8 +182,8 @@ func printScanBenchText(sb *scanBenchJSON) {
 			fmt.Printf("   ⏭️  %-5s 未采集（%s）\n", e.Engine, scanBenchReasonText(e.Reason))
 			continue
 		}
-		fmt.Printf("   ✅ %-5s 中位 %.2fms  p95 %.2fms  条目 %d  （样本 %d 次: %s）\n",
-			e.Engine, e.MedianMs, e.P95Ms, e.Entries, len(e.RunsMs), formatMsList(e.RunsMs))
+		fmt.Printf("   ✅ %-5s 中位 %s  p95 %s  条目 %d  （样本 %d 次: %s）\n",
+			e.Engine, formatMs(e.MedianMs), formatMs(e.P95Ms), e.Entries, len(e.RunsMs), formatMsList(e.RunsMs))
 		if e.Skipped > 0 {
 			fmt.Printf("        （另有 %d 次未计入样本：缓存命中/归属不可判定）\n", e.Skipped)
 		}
@@ -203,10 +204,27 @@ func scanBenchReasonText(token string) string {
 func formatMsList(xs []float64) string {
 	parts := make([]string, 0, len(xs))
 	for _, x := range xs {
-		parts = append(parts, fmt.Sprintf("%.2f", x))
+		parts = append(parts, formatMsValue(x))
 	}
 	return strings.Join(parts, ", ")
 }
+
+// formatMsValue 渲染毫秒数值（不含单位）。亚分辨率——即会 `%.2f` 舍成 0.00 的那一段
+// （< 0.005）——写成 `<0.01`。
+//
+// 为什么必须这样（本文件诚实红线 #2）：`0.00` 与「未采集」在字面上不可区分，且会被读反成
+// 「快到测不出」。粗时钟粒度下（Windows 单调时钟，2MB 热缓存读实测 `time.Since` 可为 0s）
+// **合法测量值本就可能是 0**，所以「测得 0」只能靠这个标记与「没测」分开，不能靠一个同样
+// 写 0.00 的裸值。回归守卫：`scan_bench_format_test.go`。
+func formatMsValue(ms float64) string {
+	if ms < 0.005 {
+		return "<0.01"
+	}
+	return fmt.Sprintf("%.2f", ms)
+}
+
+// formatMs 带单位的人类报告字段版（中位 / p95）。
+func formatMs(ms float64) string { return formatMsValue(ms) + "ms" }
 
 // emitScanBench 双出口（ADR-200 D1/D5）：文本走人类报告，json 走结构化载荷。
 func emitScanBench(ctx *CmdContext, sb scanBenchJSON, format string) error {

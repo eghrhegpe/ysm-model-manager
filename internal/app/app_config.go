@@ -362,7 +362,7 @@ func (a *App) DoUpdate(url string, expectedHash string) (string, error) {
 		return "", err
 	}
 	if err := updater.InstallUpdate(exePath); err != nil {
-		os.Remove(exePath) // 失败路径：手动清理（无 os.Exit）
+		_ = os.Remove(exePath) // 失败路径：手动清理（无 os.Exit）
 		if errors.Is(err, updater.ErrExitRequested) {
 			// helper 已在侧等待，主进程必须退出以完成 exe 替换。
 			// os.Exit 会跳过 defer，故上方已手动 Remove。
@@ -370,7 +370,7 @@ func (a *App) DoUpdate(url string, expectedHash string) (string, error) {
 		}
 		return "", fmt.Errorf("安装失败: %w", err)
 	}
-	os.Remove(exePath) // 成功路径（理论上不可达，InstallUpdate 成功恒返 ErrExitRequested）
+	_ = os.Remove(exePath) // 成功路径（理论上不可达，InstallUpdate 成功恒返 ErrExitRequested）
 	return "success", nil
 }
 
@@ -420,7 +420,10 @@ func (a *App) SaveWindowPosition(x, y, width, height int) {
 	cfg.WinRelY = safePct(y-vy, vh)
 	cfg.WinScrW = vw
 	cfg.WinScrH = vh
-	a.saveConfig(cfg)
+	// 窗口位置持久化失败不影响本次会话生效，但需落日志（避免静默吞错）
+	if err := a.saveConfig(cfg); err != nil {
+		log.Printf("[window] 保存窗口位置失败: %v", err)
+	}
 }
 
 // clampWindowSize 窗口尺寸兜底：<=0 回落默认 1200×800（「未配置」哨兵判据依赖该值），

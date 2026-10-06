@@ -70,7 +70,8 @@ func main() {
 
 	// 4. 清理临时文件
 	tmpDir := filepath.Dir(newPath)
-	os.RemoveAll(tmpDir)
+	// 已成功替换并拉起新进程，残留临时目录清理为最佳努力（即将 os.Exit）
+	_ = os.RemoveAll(tmpDir)
 
 	os.Exit(0)
 }
@@ -98,16 +99,16 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return fmt.Errorf("打开源文件失败: %w", err)
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
 	dstFile, err := os.Create(dst)
 	if err != nil {
 		return fmt.Errorf("创建目标文件失败: %w", err)
 	}
-	defer dstFile.Close()
+	defer func() { _ = dstFile.Close() }()
 
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
-		os.Remove(dst) // 清理不完整的文件
+		_ = os.Remove(dst) // 清理不完整的文件
 		return fmt.Errorf("写入失败: %w", err)
 	}
 
@@ -121,19 +122,19 @@ func replaceExe(newPath, targetPath string) error {
 	tmp := targetPath + ".new"
 	// 1) 先写 .new：target 仍在原位，拷贝失败/断电时应用目录始终有可用 exe
 	if err := copyFile(newPath, tmp); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("复制失败: %w", err)
 	}
 	// 2) 备份旧 exe（Go os.Rename 在 Windows 为 MoveFileEx+REPLACE_EXISTING，残留 .old 会被覆盖）
 	if err := os.Rename(targetPath, backup); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("备份目标失败: %w", err)
 	}
 	// 3) .new → target：与 2) 之间是唯一缺失窗口（微秒级）
 	if err := os.Rename(tmp, targetPath); err != nil {
 		// 回滚前先清理 .new 残留（第 3 步失败时 tmp 可能仍在，
 		// CleanupOldVersion 只清 .old 不清 .new，残留会成为应用目录垃圾）
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		if rbErr := os.Rename(backup, targetPath); rbErr != nil {
 			log.Printf("[updater] 回滚失败 %s→%s: %v", backup, targetPath, rbErr)
 		}

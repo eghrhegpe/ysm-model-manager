@@ -69,7 +69,7 @@ func (a *App) ListPackModels(path string) ([]string, error) {
 		log.Printf("[packs] ListPackModels 打开失败 %s: %v", path, err)
 		return nil, err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	seen := map[string]bool{}
 	var out []string
 	for _, e := range r.Entries() {
@@ -96,7 +96,7 @@ func (a *App) ListPackModelsDetail(path string) (*types.PackModelDetailList, err
 		log.Printf("[packs] ListPackModelsDetail 打开失败 %s: %v", path, err)
 		return nil, err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	seen := map[string]bool{}
 	// 单次遍历同时收集「全量清单」与「name→entry 索引」：cubes 解析直取句柄，
 	// 避免每条模型全量重扫 Entries（O(models×entries) → O(entries)）。
@@ -160,7 +160,7 @@ func (a *App) ReadPackEntry(path, entry string) []byte {
 		log.Printf("[packs] ReadPackEntry 打开失败 %s: %v", path, err)
 		return nil
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	for _, e := range r.Entries() {
 		if e.IsDir() || !strings.EqualFold(e.Name(), entry) {
 			continue

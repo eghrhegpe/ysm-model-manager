@@ -76,7 +76,7 @@ func (a *App) ListContainerEntries(path string, exts string) ([]string, error) {
 		log.Printf("[container] ListContainerEntries 打开失败 %s: %v", path, err)
 		return nil, err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	extSet := parseContainerExts(exts)
 	seen := map[string]bool{}
 	out := []string{}
@@ -115,7 +115,7 @@ func (a *App) GetVoxelDataInContainer(path string, entry string, ext string) (*r
 		log.Printf("[container] GetVoxelDataInContainer 打开失败 %s: %v", path, err)
 		return nil, err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	for _, e := range r.Entries() {
 		if e.IsDir() || !strings.EqualFold(e.Name(), entry) {
 			continue

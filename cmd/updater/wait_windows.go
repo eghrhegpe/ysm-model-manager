@@ -67,7 +67,7 @@ func waitMainExit(pid uint32, waitTimeout time.Duration) error {
 		}
 		var code uint32
 		ecErr := windows.GetExitCodeProcess(handle, &code)
-		windows.CloseHandle(handle)
+		_ = windows.CloseHandle(handle) // 句柄释放为最佳努力，轮询继续按退出码判定
 		if ecErr == nil && code != stillActive {
 			return nil
 		}

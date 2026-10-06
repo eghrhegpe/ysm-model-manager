@@ -230,7 +230,10 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	}
 	ysmRoot, _ := a.GetRepoRoot("ysm")
 	if needsWrite {
-		a.saveConfig(cfg)
+		// 配置持久化失败不中断启动（窗口/目录已在内存生效），但必须落日志而非静默吞错
+		if err := a.saveConfig(cfg); err != nil {
+			log.Printf("[startup] 写入配置文件失败: %v", err)
+		}
 		if cfg.McRoot != "" {
 			log.Printf("[startup] 配置文件已创建/更新, mcRoot: %s", cfg.McRoot)
 		}

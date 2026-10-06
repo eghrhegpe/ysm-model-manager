@@ -224,7 +224,7 @@ func proxyWebSocket(ctx context.Context, target *url.URL, w http.ResponseWriter,
 	if err != nil {
 		return err
 	}
-	defer targetConn.Close()
+	defer func() { _ = targetConn.Close() }()
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
@@ -234,7 +234,7 @@ func proxyWebSocket(ctx context.Context, target *url.URL, w http.ResponseWriter,
 	if err != nil {
 		return err
 	}
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	if tc, ok := targetConn.(*tls.Conn); ok {
 		if err := tc.Handshake(); err != nil {
@@ -257,11 +257,12 @@ func proxyWebSocket(ctx context.Context, target *url.URL, w http.ResponseWriter,
 
 	done := make(chan struct{}, 2)
 	go func() {
-		io.Copy(targetConn, clientConn)
+		// 双向拷贝错误由下方显式 Close 收口（对端断开/EOF 均正常），无需上报
+		_, _ = io.Copy(targetConn, clientConn)
 		done <- struct{}{}
 	}()
 	go func() {
-		io.Copy(clientConn, targetConn)
+		_, _ = io.Copy(clientConn, targetConn)
 		done <- struct{}{}
 	}()
 	// 两个方向都要等待：原 <-done 只收一次，另一拷贝 goroutine 靠 defer Close

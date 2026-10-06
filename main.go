@@ -112,7 +112,9 @@ func main() {
 					if r.URL.Path == "/wails/custom.js" {
 						w.Header().Set("Content-Type", "application/javascript")
 						w.WriteHeader(http.StatusOK)
-						w.Write([]byte("// Wails custom.js — empty in desktop mode\n"))
+						// http.ResponseWriter 写入错误无法经 handler 签名上抛（框架层处理连接关闭），
+						// 固定字节 stub 写失败视为连接已被客户端断开，此处最佳努力即可
+						_, _ = w.Write([]byte("// Wails custom.js — empty in desktop mode\n"))
 						return
 					}
 					next.ServeHTTP(w, r)

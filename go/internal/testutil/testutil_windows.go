@@ -25,8 +25,8 @@ func LockDirExclusive(t *testing.T, dir string) {
 	}
 	// 探针：锁应令 ReadDir 失败，否则该环境不执行共享锁语义，跳过测试
 	if _, err := os.ReadDir(dir); err == nil {
-		syscall.CloseHandle(h)
+		_ = syscall.CloseHandle(h)
 		t.Skip("环境未执行共享锁（ReadDir 仍成功），跳过")
 	}
-	t.Cleanup(func() { syscall.CloseHandle(h) })
+	t.Cleanup(func() { _ = syscall.CloseHandle(h) })
 }

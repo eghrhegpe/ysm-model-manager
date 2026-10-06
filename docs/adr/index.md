@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **329** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **330** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 5 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 299 |
+| [✅ 已采纳](#已采纳) | 300 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -56,7 +56,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（299）
+### ✅ 已采纳（300）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -114,6 +114,7 @@ permalink: /adr/
 | [ADR-270-d2](./decisions/ADR-270-d2-views-p3d-r10-entry-whitelist.md) | views→preview-3d 入口面白名单闸（R10）：斩 DECODE_SOURCE/keymap 绕行边，存量债入基线 | ✅ 已采纳 |
 | [ADR-270-d3](./decisions/ADR-270-d3-bus-legal-emitter-registry.md) | bus 合法发射者登记表闸（刀 B）：发射端从自由裸 emit 收敛为在册登记 | ✅ 已采纳 |
 | [ADR-270-d4](./decisions/ADR-270-d4-toast-emitter-convergence.md) | toast:show 发射端收敛战役：162 绕行点迁入 utils/dom/toast.ts 原语，登记表逐条销账 | ✅ 已采纳 |
+| [ADR-270-d5](./decisions/ADR-270-d5-r10-y-sm-preview-pipeline-ownership.md) | R10 穿透债归属纠正：YSM 预览数据装配流水线自 views 迁入 preview-3d/adapters（否决再导出面） | ✅ 已采纳 |
 | [ADR-269](./ADR-269-resource-manifest-single-source.md) | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定 | ✅ 已采纳 |
 | [ADR-268](./ADR-268-env-cap-self-placement.md) | 环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单 | ✅ 已采纳 |
 | [ADR-267](./ADR-267-toast-emoji-esc.md) | toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区 | ✅ 已采纳 |
@@ -716,6 +717,7 @@ permalink: /adr/
 | ADR-270-d2 | views→preview-3d 入口面白名单闸（R10）：斩 DECODE_SOURCE/keymap 绕行边，存量债入基线 | ✅ 已采纳 | 2026-10-05 |
 | ADR-270-d3 | bus 合法发射者登记表闸（刀 B）：发射端从自由裸 emit 收敛为在册登记 | ✅ 已采纳 | 2026-10-05 |
 | ADR-270-d4 | toast:show 发射端收敛战役：162 绕行点迁入 utils/dom/toast.ts 原语，登记表逐条销账 | ✅ 已采纳 | 2026-10-05 |
+| ADR-270-d5 | R10 穿透债归属纠正：YSM 预览数据装配流水线自 views 迁入 preview-3d/adapters（否决再导出面） | ✅ 已采纳 | 2026-10-06 |
 | ADR-266-d1 | 体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像） | ✅ 已采纳 | 2026-10-04 |
 | ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 | 2026-10-06 |
 

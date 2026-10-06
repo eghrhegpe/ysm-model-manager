@@ -1573,6 +1573,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
       },
       {
+        "text": "ADR-270-d5：R10 穿透债归属纠正：YSM 预览数据装配流水线自 views 迁入 preview-3d/adapters（否决再导出面）",
+        "link": "/adr/decisions/ADR-270-d5-r10-y-sm-preview-pipeline-ownership"
+      },
+      {
         "text": "ADR-270-d4：toast:show 发射端收敛战役：162 绕行点迁入 utils/dom/toast.ts 原语，登记表逐条销账",
         "link": "/adr/decisions/ADR-270-d4-toast-emitter-convergence"
       },

@@ -55,7 +55,6 @@ beforeEach(() => {
   ctx = {
     root: root,
     loadPreviewImage: vi.fn().mockResolvedValue(null),
-    decodeYsmViaWasm: vi.fn(),
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
     active3DClose: null,

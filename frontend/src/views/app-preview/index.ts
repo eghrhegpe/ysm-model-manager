@@ -14,33 +14,17 @@ import { previewCSS } from "./css.ts";
 const appPreviewStyle = createShadowStyle(previewCSS, "app-preview");
 
 import { t } from "@/core/i18n/t.ts";
-import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import {
-  cacheGet,
-  cacheSet,
-  cacheSetEvictHandler,
-  collectBlobUrls,
-} from "@/preview-3d/decoder/model-cache.ts";
-import type { DecodedYsm } from "@/preview-3d/decoder/utils.ts";
-import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
+import { loadYsmPreviewImage } from "@/preview-3d/adapters/ysm-preview-cache.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { isYsmWasmPreview } from "@/utils/resource/types.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
 import { PREVIEW_CLEANUP, PREVIEW_INVALIDATE } from "./preview-registry.ts";
 import { routeModelPreview, routePackInfo } from "./preview-router.ts";
 import { closeActive3DOverlay } from "./skeleton.ts";
 import { bigIconHTML, modelDetailHTML, placeholderHTML } from "./tpl.ts";
 import type { PreviewCtx } from "./utils.ts";
 
-// 注册缓存淘汰回调：释放 blob URL（Set 去重：重复 URL 只 revoke 一次，revoke 幂等无害）
-cacheSetEvictHandler((_key, val) => {
-  if (!val) return;
-  const urls = collectBlobUrls(val);
-  for (const u of urls) {
-    if (u?.startsWith("blob:")) URL.revokeObjectURL(u);
-  }
-});
+// 缓存淘汰回调（blob URL 释放）随缓存所有者模块 import 自注册——见
+// preview-3d/adapters/ysm-preview-cache.ts（ADR-270-d5：缓存生命周期归引擎层）。
 
 class AppPreview extends WebComponentBase implements PreviewCtx {
   root: ShadowRoot;
@@ -136,45 +120,13 @@ class AppPreview extends WebComponentBase implements PreviewCtx {
     this.root.innerHTML = modelDetailHTML(null);
   }
 
-  /** 自动匹配缩略图：查缓存 → .ysm/.json 走 WASM → Go 兜底 */
+  /**
+   * 自动匹配缩略图：缓存 → .ysm/.json 走 WASM → Go 兜底。
+   * 装配链（含缓存读写）归 preview-3d/adapters/ysm-preview-cache.ts（ADR-270-d5）——
+   * 本方法只是视图侧注入缝（PreviewImageLoader 契约，detail/maid 经 ctx 消费）。
+   */
   async loadPreviewImage(modelPath: string): Promise<string | null> {
-    // 查缓存（模块级，跨组件生命周期持久）
-    const cached = cacheGet(modelPath);
-    if (cached?.texture) return cached.texture;
-    const cachedGeo = cached?.geometry as BedrockGeometry | undefined;
-    if (cachedGeo?.texture) return cachedGeo.texture;
-
-    // .ysm 或 .json（解压的 ysm.json）走前端 WASM 解码；.zip/.7z 容器由下方 Go 兜底（ADR-066 解墙）
-    if (isYsmWasmPreview(modelPath)) {
-      const decoded = await this.decodeYsmViaWasm(modelPath);
-      if (decoded?.texture) {
-        cacheSet(modelPath, { ...decoded });
-        return decoded.texture;
-      }
-      if (decoded?.geometry) {
-        // 有 geometry 数据（含 _ysmMeta）但无纹理，缓存以备 _loadModel2D 使用
-        cacheSet(modelPath, { ...decoded });
-      }
-      // WASM 完全失败 → 不缓存空条目，直接走 Go 兜底
-    }
-    try {
-      const { FindPreviewImage, ExtractPreviewTexture } = await backendGetApp();
-      const loose = await FindPreviewImage(modelPath);
-      if (loose) {
-        cacheSet(modelPath, { texture: loose });
-        return loose;
-      }
-      const tex = await ExtractPreviewTexture(modelPath);
-      if (tex) cacheSet(modelPath, { texture: tex });
-      return tex || null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /** 通过前端 WASM 解码 .ysm，返回 { texture, geometry }（缓存复用） */
-  async decodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null> {
-    return decodeYsmViaWasm(modelPath);
+    return loadYsmPreviewImage(modelPath);
   }
 
   /** 在预览区追加调试小字 */

@@ -2,7 +2,11 @@
 // 从 index.ts 拆分：模块级函数和状态
 // ADR-137 第五刀拆分：纯领域部分（DecodedYsm / stripYsgpTextHeader / devLog）
 // 已归位 preview-3d/decoder/utils.ts——本文件只留视图接口与状态。
+// ADR-270-d5：YsmDecoder（WASM 解码注入）已随装配流水线迁入
+// preview-3d/adapters/ysm-preview-pipeline.ts（解码归 p3d 自持，视图不再持有该能力）；
+// PreviewDebugger 是流水线的输入契约（调试输出通道），同样由流水线模块定义。
 
+import type { PreviewDebugger } from "@/preview-3d/adapters/ysm-preview-pipeline.ts";
 import type { LoadGuard } from "@/utils/async/load-guard.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 
@@ -23,19 +27,7 @@ export interface PreviewRoot {
   active3DClose: (() => void) | null;
 }
 
-/** WASM 解码能力（loader/skeleton 消费） */
-export interface YsmDecoder {
-  decodeYsmViaWasm(
-    path: string,
-  ): Promise<import("@/preview-3d/decoder/utils.ts").DecodedYsm | null>;
-}
-
-/** 调试输出能力（loader/skeleton 消费） */
-export interface PreviewDebugger {
-  appendDebug(container: HTMLElement | null, msg: string): void;
-}
-
-/** 预览图加载能力（detail 消费） */
+/** 预览图加载能力（detail/maid 消费）：实现 = 缓存所有者的缩略图装配链 */
 export interface PreviewImageLoader {
   loadPreviewImage(path: string): Promise<string | null>;
 }
@@ -54,11 +46,11 @@ export interface DetailGenGuard {
 }
 
 /** 组合接口：实现方（AppPreview）与兼容旧调用方的完整视图。
- * 消费方按需收窄参数到小接口（见 detail/litematic-meta/loader/skeleton），
- * 测试 mock 只需提供被测字段，消除「mock 全套」压力。 */
+ * 消费方按需收窄参数到小接口（见 detail/litematic-meta/skeleton），
+ * 测试 mock 只需提供被测字段，消除「mock 全套」压力。
+ * ADR-270-d5：不再 extends YsmDecoder——解码归流水线自持，视图不提供解码实现。 */
 export interface PreviewCtx
   extends PreviewRoot,
-    YsmDecoder,
     PreviewDebugger,
     PreviewImageLoader,
     Prefer3DState,

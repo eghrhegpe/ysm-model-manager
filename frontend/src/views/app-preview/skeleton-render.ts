@@ -3,8 +3,11 @@
 
 import type { Model3DSpec } from "@/bindings/ysm-model-manager/go/threejs/models.ts";
 import { t } from "@/core/i18n/t.ts";
+import {
+  buildYsmShotRenderArgs,
+  type PreviewDebugger,
+} from "@/preview-3d/adapters/ysm-preview-pipeline.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { toScreenshotLights } from "@/preview-3d/screenshot/screenshot-lights.ts";
 import { renderMultiAngle } from "@/preview-3d/screenshot/screenshot-render.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
@@ -14,7 +17,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { buildBoneNamesText } from "./bone-names.ts";
 import { statsCardHTML } from "./tpl.ts";
 import { safeUrl } from "./tpl-summary.ts";
-import type { PreviewDebugger, PreviewRoot, YsmDecoder } from "./utils.ts";
+import type { PreviewRoot } from "./utils.ts";
 
 // fill3DPanel 命令式旧轨已删除（ADR-126 P5 声明式迁移完成）；
 // 骨骼渲染逻辑保留在本文件。
@@ -124,7 +127,7 @@ export async function buildStatsCard(
     _modelPath?: string;
   },
   modelPath: string,
-  _ctx: PreviewRoot & YsmDecoder & PreviewDebugger,
+  _ctx: PreviewRoot & PreviewDebugger,
 ): Promise<void> {
   const card = document.createElement("div");
   card.className = "pv-card";
@@ -295,15 +298,14 @@ async function renderFrame(
   },
   key: string,
 ): Promise<string | null> {
-  const texUrls =
-    model.textures && model.textures.length > 1 ? model.textures : [model.texture || ""];
   const lights = toScreenshotLights();
-  const results = await renderMultiAngle(model._modelPath || "", texUrls, {
+  // 纹理槽清单 + 渲染选项（含 WASM 解码缝）由流水线组装（ADR-270-d5）：
+  // 解码是 p3d 内部件，视图不再直接注入 decoder。
+  const { texUrls, options } = buildYsmShotRenderArgs(model, {
     size: 512,
-    ...(model.componentTextures != null ? { componentTextures: model.componentTextures } : {}),
     ...(lights != null ? { lights } : {}),
-    decodeYsm: decodeYsmViaWasm, // ADR-136：features 不反向 import views，WASM 兜底由视图层注入
   });
+  const results = await renderMultiAngle(model._modelPath || "", texUrls, options);
   if (!results) return null;
   const hit = results.find((r) => r.name === key);
   return hit?.base64 ?? null;

@@ -5,8 +5,7 @@
 // detailGen 已迁至 AppPreview 实例（多实例隔离防串扰，快速切换时各实例在途请求互不影响）。
 
 import { t } from "@/core/i18n/t.ts";
-import { cacheGet, cacheSet } from "@/preview-3d/decoder/model-cache.ts";
-import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
+import { loadYsmSummaryMeta } from "@/preview-3d/adapters/ysm-preview-cache.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
@@ -80,18 +79,16 @@ export async function showModelDetail(
 
     // 加密 .ysm：Go 仅返回基本摘要（无动画/配置/作者），补取自 WASM 解码缓存
     // （解密产物已含完整 ysm.json，属识别级统计，符合 ADR-026 边界）
+    // 解码 + 缓存写回归 preview-3d/adapters/ysm-preview-cache.ts（ADR-270-d5）：
+    // 视图只传代际守卫，不再直接触碰 decoder/缓存内部件。
     let enriched: YsmSummary | null = summary;
     if (!hasRealSummary) {
-      const dec = await decodeYsmViaWasm(path);
-      if (ctx.detailGen.stale(gen)) return;
-      const decHasInfo = !!(
-        dec?.animGroups?.length ||
-        dec?.configMenus?.length ||
-        dec?.authors?.length
+      const { dec, hasInfo: decHasInfo } = await loadYsmSummaryMeta(
+        path,
+        () => !ctx.detailGen.stale(gen),
       );
-      if (decHasInfo) {
-        const existing = cacheGet(path) || {};
-        cacheSet(path, existing);
+      if (ctx.detailGen.stale(gen)) return;
+      if (decHasInfo && dec) {
         enriched = {
           name: header?.name || summary?.name || basename.replace(/\.[^.]+$/, ""),
           authors: (dec.authors || []).map((a) => ({

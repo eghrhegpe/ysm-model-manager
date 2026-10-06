@@ -1,5 +1,5 @@
 // @vitest-environment node
-// ===== 模型数据加载（loader.ts）测试 =====
+// ===== 模型数据装配流水线（ysm-preview-pipeline.ts，原 views/app-preview/loader.ts）测试 =====
 // 覆盖：缓存命中 / WASM 解码成功 / WASM 空结果回退 Go / Go 兜底 + texMappingLog /
 //       .json 目录 authors 填补 / 缓存 authors 填补 / 空结果返回 null
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -34,7 +34,7 @@ vi.mock("@/utils/animation/animation.ts", () => ({
   parseBedrockAnimationJSON: parseAnimMock,
 }));
 
-import { loadModelData, fillAuthorsAsync } from "./loader.ts";
+import { loadModelData, fillAuthorsAsync } from "./ysm-preview-pipeline.ts";
 
 /** 构造一个带骨骼的几何对象（测试用，走 cast 绕开 BedrockBone 细节） */
 function geo(over: Partial<BedrockGeometry> = {}): BedrockGeometry {

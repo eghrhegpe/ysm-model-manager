@@ -1,8 +1,18 @@
-// ===== 3D 模型加载器（类型化版 — ADR-014 P2）=====
-// loadTextures 已随 ADR-136 第四刀归位 preview-3d/texture-loader.ts
-// ADR-161 §2.1：spec 契约单一镜像——本地 unknown 袋 ModelSpec 退役，
-// 出口类型锚定 Go 绑定 Model3DSpec（字段含 texArrOrder/componentTextures/_cubeCount，不再静默丢）。
+// ===== YSM 3D spec / 纹理预加载流水线（类型化版 — ADR-014 P2）=====
+//
+// 【归属：为什么在 preview-3d/adapters 而非 views（ADR-270-d5）】
+// 本模块原住 `views/app-preview/model3d-loader.ts`，内容是**纯引擎装配**：
+// spec 获取（Go 绑定唯一事实源）→ 无 Node 通道时的 WASM 兜底解码 → spec LRU 缓存 →
+// 纹理装载（含 ADR-114 perComponent）→ R1 纹理契约校验 → load trace。它直接 import
+// `preview-3d/decoder|model|texture` 内部件，正是 R10 基线里 views→p3d 穿透的成因。
+// 故整段迁入 `preview-3d/adapters/`（R10 入口面目录）：装配本领归引擎层，views 侧
+// 只留视图壳注入（`preload: (model) => preloadModel(...)` 的接线）。
+//
+// ADR: ADR-270-d5（本迁移的法律依据）、ADR-161 §2.1（spec 契约单一镜像：出口类型锚定
+// Go 绑定 Model3DSpec）、ADR-136（loadTextures 归位 preview-3d/texture-loader.ts）。
+
 import type * as THREE from "three";
+import { getApp } from "@/backend/app.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import type { Model3DSpec } from "@/bindings/ysm-model-manager/go/threejs/models.ts";
@@ -11,7 +21,6 @@ import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-tra
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
 import { loadTextures, releaseTextureUrls } from "@/preview-3d/texture/texture-loader.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
 
 /** 模型对象（轻量接口，覆盖 loadTextures/fetchSpec/preloadModel 用到的字段） */
 export interface ModelLike {
@@ -50,14 +59,12 @@ function getCachedSpec(path: string): string | undefined {
   return data;
 }
 
-/** 并行加载纹理 URL 列表，返回 THREE.Texture 数组（ADR-136 归位 preview-3d/texture-loader.ts） */
-
 /** 获取模型 spec（Go 绑定为唯一事实来源，ADR-004；Android 等无 Node 环境降级前端 WASM 解码兜底） */
 async function fetchSpec(model: ModelLike): Promise<Model3DSpec> {
   if (!model._modelPath) return { models: [] };
   let jsonStr = getCachedSpec(model._modelPath);
   if (!jsonStr) {
-    const { GetModel3DSpec } = await backendGetApp();
+    const { GetModel3DSpec } = await getApp();
     const spec = await GetModel3DSpec(model._modelPath);
     // typed spec → string 缓存（缓存接口维持 string 类型不变）
     jsonStr = spec ? JSON.stringify(spec) : "{}";
@@ -98,7 +105,7 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
       return spec;
     } else {
       // Android：Go binding 可用（返回 typed Model3DSpec | null）
-      const { Build3DSpecFromGeometryJSON } = await backendGetApp();
+      const { Build3DSpecFromGeometryJSON } = await getApp();
       const spec = await Build3DSpecFromGeometryJSON(decoded.geometryRaw);
       if (!spec) return null;
       const specStr = JSON.stringify(spec);

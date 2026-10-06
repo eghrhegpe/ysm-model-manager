@@ -50,7 +50,6 @@ auto_fields:
     - Prefer3DState
     - PREVIEW_FRAME_INTERVAL_MS
     - PreviewCtx
-    - PreviewDebugger
     - PreviewImageLoader
     - previewPixelRatio
     - PreviewRoot
@@ -72,7 +71,6 @@ auto_fields:
     - shouldRenderPreviewFrame
     - subscribeSettings
     - toStatePath
-    - YsmDecoder
     - ysmModelStats
     - YsmModelStats
     - ysmModelTextureSlots
@@ -198,7 +196,7 @@ status: active
 
 - **与 `app-preview/index.ts`**：主组件是派发层（`PREVIEW_HANDLERS` 按 `RESOURCE_TYPES` 分派），不持有具体设置；设置持久化分散在各子模块
 - **与 `model2d/model2d.ts`**：`renderModel2D` 渲染核心无设置态，设置项（`ysm_showBoneLabels`）的存储读写在 `skeleton-render.ts::buildToggleRow`
-- **与 `model3d-loader.ts` / 各 adapter**：`skeleton-fill-panel.ts::fill3DPanel` 消费 `Model3DHandleX`/`YsmContentHandle`
+- **与 `preview-3d/adapters/ysm-model-preloader.ts` / 各 adapter**：`skeleton-fill-panel.ts::fill3DPanel` 消费 `Model3DHandleX`/`YsmContentHandle`
 - **与 `preview-3d/state/preview-state.ts`**：本模块唯一状态源，`visibleWhen` 谓词统一消费 `previewSnapshot()`；YSM model 面板 schema 读 `snapshot["ui.activeComponent"]` 作回退
 - **与 `preview-3d/caps/*`**：`preview-state.ts` 的 cap 派生路径惰性解析 cap（不持有实例）；`screenshot-lights.ts` 从 `LightCapability` 提取截图灯光
 - **与 `utils-export` / `preview-controls` / `export`**：截图面板共享按钮（`shot-panel-shared.ts`）被 preview-controls 装配；截图链路（`screenshot.ts`/`screenshot-render.ts`/`screenshot-lights.ts`）由 export 卡详述

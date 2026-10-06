@@ -18,6 +18,8 @@ import {
   mount3D,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { makeYsmAdapter } from "@/preview-3d/adapters/ysm-adapter.ts";
+import { type ModelLike, preloadModel } from "@/preview-3d/adapters/ysm-model-preloader.ts";
+import { loadModelData } from "@/preview-3d/adapters/ysm-preview-pipeline.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
@@ -25,8 +27,6 @@ import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { loadModelData } from "./loader.ts";
-import { type ModelLike, preloadModel } from "./model3d-loader.ts";
 import { type OpenerOptions, registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { componentCountsFromSpec } from "./skeleton-render.ts";
 import {

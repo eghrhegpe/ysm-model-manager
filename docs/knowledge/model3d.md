@@ -7,10 +7,10 @@ adr:
 category: rendering
 source_files:
   - frontend/src/preview-3d/
-  - frontend/src/views/app-preview/model3d-loader.ts
+  - frontend/src/preview-3d/adapters/ysm-model-preloader.ts
 tests:
   - frontend/src/preview-3d/mesh/model3d.test.ts
-  - frontend/src/views/app-preview/model3d-loader.test.ts
+  - frontend/src/preview-3d/adapters/ysm-model-preloader.test.ts
 auto_fields:
   symbols_with_lines:
     - __resetLargeModelWarnForTest
@@ -134,6 +134,7 @@ auto_fields:
     - buildWaveWaterMaterial
     - buildYsmObject
     - buildYsmScene
+    - buildYsmShotRenderArgs
     - cacheGet
     - cacheSet
     - cacheSetEvictHandler
@@ -304,6 +305,7 @@ auto_fields:
     - fcMasterToggleNode
     - FieldKind
     - FieldRestorer
+    - fillAuthorsAsync
     - FILM_WETNESS_ALPHA_BASE
     - filmStrategy
     - filterAnimFiles
@@ -470,6 +472,8 @@ auto_fields:
     - LiveSessionEntry
     - LoadingProgressMode
     - loadMcTints
+    - loadModelData
+    - LoadModelOpts
     - loadMotionClips
     - loadTdCamSpeed
     - loadTdKeymap
@@ -482,6 +486,8 @@ auto_fields:
     - LoadTraceTexture
     - loadVmdClips
     - loadVrmaClips
+    - loadYsmPreviewImage
+    - loadYsmSummaryMeta
     - lowFreqMask
     - luminanceHistogram
     - makeBonePanelRenderer
@@ -659,6 +665,7 @@ auto_fields:
     - PreviewControlDef
     - PreviewControlKind
     - PreviewControlSpec
+    - PreviewDebugger
     - PreviewDockGroup
     - PreviewHandle
     - PreviewMenuCtx
@@ -1017,13 +1024,18 @@ auto_fields:
     - YsmAuthorMetadata
     - YsmContentHandle
     - YsmControlsContext
+    - YsmDecoder
     - ysmMenuItems
     - YsmMenuItemsOpts
     - YsmMeta
     - YsmModel
+    - YsmModelLoadCtx
     - YsmObjectHandle
     - YsmPreloadedModel
     - ysmSemanticBoneMap
+    - YsmShotModel
+    - YsmShotRenderArgs
+    - YsmSummaryDecode
     - YSW_FAB_CSS
     - zipFindEntry
 use_when:
@@ -1037,7 +1049,7 @@ use_when:
   - spec 兜底
 invariant_anchors:
   - frontend/src/preview-3d/mesh/model3d.ts|Spec3D
-  - frontend/src/views/app-preview/model3d-loader.ts|preloadModel
+  - frontend/src/preview-3d/adapters/ysm-model-preloader.ts|preloadModel
   - frontend/src/preview-3d/mesh/cube-mesh.ts|computeBoneLocalPos
   - frontend/src/preview-3d/mesh/mesh-builder.ts|addMeshToBoneGroup
 quick_groups:
@@ -1074,11 +1086,11 @@ perf:
 
 ## 概览
 
-`frontend/src/preview-3d/` + `frontend/src/views/app-preview/model3d-loader.ts` 构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲染层**——将 Go 端 spec 或 WASM 解码产物（BedrockGeometry）转成 Three.js 场景图，供 `mount-preview-core` 外壳挂载渲染。本层只管"数据→Three 对象"，不管会话外壳/菜单/rAF（归 preview-core）。
+`frontend/src/preview-3d/`（含 `adapters/ysm-model-preloader.ts`）构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲染层**——将 Go 端 spec 或 WASM 解码产物（BedrockGeometry）转成 Three.js 场景图，供 `mount-preview-core` 外壳挂载渲染。本层只管"数据→Three 对象"，不管会话外壳/菜单/rAF（归 preview-core）。
 
 ## 核心职责
 
-- **模型加载与解码**（`model3d-loader.ts`）：`preloadModel(path)` → 缓存 → Go `GetModel3DSpec` → 失败兜 WASM `decodeYsmViaWasm` → 输出 `BedrockGeometry`（bones/cubes/materials/textures）；`textureCache` 引用计数池跨模型复用（同 URL 只 upload 一次 GPU）
+- **模型加载与解码**（`adapters/ysm-model-preloader.ts`，ADR-270-d5 自 `views/app-preview/model3d-loader.ts` 迁入）：`preloadModel(path)` → 缓存 → Go `GetModel3DSpec` → 失败兜 WASM `decodeYsmViaWasm` → 输出 `BedrockGeometry`（bones/cubes/materials/textures）；`textureCache` 引用计数池跨模型复用（同 URL 只 upload 一次 GPU）
 - **几何/骨骼/立方体**（`geometry.ts`/`cube-mesh.ts`/`mesh-builder.ts`/`bone-tools.ts`/`model-group-builder.ts`）：BedrockGeometry → Three.js Mesh（按骨骼组拆分、按面 alpha 分 split、perComponent 纹理 slot 绑定）；`BoneTree` 跨格式抽象；`semantic-bones.ts` 语义骨骼 id 集（VRM/MMD/YSM 三格式统一，宽容缺省；含 toes——ADR-306 P1b 起脚尖链 CCD 需要）
   - **cube UV 双端逐值同构（foxcar 贴图颠倒修复，2026-09）**：网页兜底链（`spec-builder.ts → model-group-builder.ts → cube-mesh.ts`）的 `expandBoxUV`/`mdCmBuildFace` 必须与 Go `spec.go`/`packFaceVertices` 同构——canonical UV 槽位 + up/down 在打包点反转角点（负 uv_size 有符号、禁止归一化），细节与黄金参照见 [go-threejs](./go-threejs.md) 不变量「per-face/box UV 的 up/down 角点定向」。旧 JS 兜底 `model3d-spec.ts`（角点序与 Go 漂移的第二套实现）已于 2026-09 删除，`CUBE_EPS` 单点并入 cube-mesh.ts；WASM 解码的诊断纹理范围估算（`wasm-decode.ts|computeBoneTexRange`）同口径——faceUV 优先且负 uv_size 取有符号包围盒
 - **材质与纹理**（`texture-loader.ts`/`texture-cache.ts`/`texture-alpha.ts`/`mc-tints.ts`）：`loadTextures` 并行 acquire + 50ms 轮询 complete（P2 修复加 15s 超时兜底，悬挂 URL 不再永久 pending）；KTX2 压缩管线（WASM BasisEncoder → base64 → Go `SaveCachedTexture` 缓存）
@@ -1095,7 +1107,7 @@ perf:
 
 ## 对外 API / 入口
 
-- `preloadModel(path)` — 加载 + 缓存 spec（`model3d-loader.ts`）
+- `preloadModel(path)` — 加载 + 缓存 spec（`adapters/ysm-model-preloader.ts`）
 - `loadTextures(urls)` / `releaseTextureUrls(urls)` — 纹理加载 + 引用归还（配对使用，禁止 dispose）
 - `buildYsmObject(geo)` / `buildYsmScene(ctx)` — YSM 适配器内容层
 - `renderMultiAngle(path, urls, opts)` — 离屏多角度渲染
@@ -1126,7 +1138,7 @@ perf:
 ## 相关
 
 - `frontend/src/preview-3d/` — 全部 3D 渲染工具
-- `frontend/src/views/app-preview/model3d-loader.ts` — 模型加载入口
+- `frontend/src/preview-3d/adapters/ysm-model-preloader.ts` — 模型加载入口（ADR-270-d5 自 views 迁入）
 - `frontend/src/views/app-preview/skeleton.ts` — 2D 预览 + 3D 升级
 - 知识卡：`preview-core`、`3d_patterns`、`export`、`vmd-vrm-retarget`
 - ADR-129（3D 渲染层升格）、ADR-178（能力接口拆分）、ADR-101（纹理缓存 + release 模式）、ADR-136（纹理加载器归位）、ADR-309（VRM 播 VMD 播放语义收口）

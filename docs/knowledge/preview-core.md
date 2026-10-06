@@ -62,6 +62,7 @@ auto_fields:
     - buildVrmBoneTree
     - buildVrmScene
     - buildYsmScene
+    - buildYsmShotRenderArgs
     - CameraControlScene
     - captureTextureName
     - cleanupPreview
@@ -105,6 +106,7 @@ auto_fields:
     - FbxSceneData
     - fbxSceneToData
     - FbxSkeletonData
+    - fillAuthorsAsync
     - filterAnimFiles
     - findAncestorBoneId
     - getBoneDetail
@@ -131,9 +133,13 @@ auto_fields:
     - LitematicAdapterDeps
     - LitematicBuildOpts
     - LiveSessionEntry
+    - loadModelData
+    - LoadModelOpts
     - loadMotionClips
     - loadVmdClips
     - loadVrmaClips
+    - loadYsmPreviewImage
+    - loadYsmSummaryMeta
     - makeBonePanelRenderer
     - makeFbxAdapter
     - makeLitematicAdapter
@@ -152,6 +158,7 @@ auto_fields:
     - MmdMenuItemsOpts
     - MmdPanelHooks
     - MmdZipConfig
+    - ModelLike
     - mount3D
     - Mount3DOptions
     - MountCtx
@@ -188,9 +195,11 @@ auto_fields:
     - PmxRigidBodyData
     - PmxVertexData
     - PoseScene
+    - preloadModel
     - prepareMmdZipInput
     - PreviewAdapter
     - PreviewBuildCtx
+    - PreviewDebugger
     - PreviewHandle
     - PreviewScene
     - ReadFileBytes
@@ -293,9 +302,14 @@ auto_fields:
     - workerMmdUpdateWithMixer
     - writeVmdPositionScale
     - YsmAdapterOptions
+    - YsmDecoder
     - ysmMenuItems
     - YsmMenuItemsOpts
+    - YsmModelLoadCtx
     - YsmPreloadedModel
+    - YsmShotModel
+    - YsmShotRenderArgs
+    - YsmSummaryDecode
     - zipFindEntry
 tests:
   - frontend/src/preview-3d/adapters/mmd/mmd-adapter.test.ts

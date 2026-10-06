@@ -20,7 +20,8 @@ vi.mock("@/preview-3d/decoder/wasm-decode.ts", () => ({ decodeYsmViaWasm: vi.fn(
 
 import { setup2DCanvas, buildToggleRow, buildStatsCard, buildBoneExportRow, saveScreenshot } from "./skeleton-render.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import type { PreviewRoot, YsmDecoder, PreviewDebugger } from "./utils.ts";
+import type { PreviewDebugger } from "@/preview-3d/adapters/ysm-preview-pipeline.ts";
+import type { PreviewRoot } from "./utils.ts";
 
 /** 最小可用 BedrockGeometry（各测试按需 override） */
 function makeModel(overrides: Partial<BedrockGeometry & { textures?: string[] | null }> = {}): BedrockGeometry & { textures?: string[] | null; _modelPath?: string } {
@@ -35,8 +36,8 @@ function makeModel(overrides: Partial<BedrockGeometry & { textures?: string[] | 
   };
 }
 
-/** 构造 PreviewRoot & YsmDecoder & PreviewDebugger 兼容 ctx */
-function makeCtx(): PreviewRoot & YsmDecoder & PreviewDebugger {
+/** 构造 PreviewRoot & PreviewDebugger 兼容 ctx */
+function makeCtx(): PreviewRoot & PreviewDebugger {
   const root = document.createElement("div");
   root.innerHTML = `<div id="preview-content"></div>`;
   (root as unknown as { getElementById: (id: string) => HTMLElement | null }).getElementById =
@@ -44,7 +45,6 @@ function makeCtx(): PreviewRoot & YsmDecoder & PreviewDebugger {
   return {
     root: root as unknown as ShadowRoot,
     appendDebug: vi.fn(),
-    decodeYsmViaWasm: vi.fn(() => Promise.resolve(null)),
     unsubs: [] as Array<() => void>,
     dragAbortCtrl: null,
     active3DClose: null,

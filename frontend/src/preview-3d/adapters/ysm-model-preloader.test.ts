@@ -1,5 +1,5 @@
 // @vitest-environment node
-// ===== 3D 模型加载器测试 =====
+// ===== 3D spec/纹理预加载流水线（ysm-model-preloader.ts，原 views/app-preview/model3d-loader.ts）测试 =====
 // 覆盖：fetchSpec LRU 缓存、preloadModel R1 纹理序契约校验（texArrOrder vs textureNames 不一致 warn）
 // loadTextures 单测已随 ADR-136 第四刀迁至 preview-3d/texture-loader.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -41,7 +41,7 @@ vi.mock("@/preview-3d/texture/texture-cache.ts", () => ({
   textureCache: fakeTextureCache,
 }));
 
-import { preloadModel } from "./model3d-loader.ts";
+import { preloadModel } from "./ysm-model-preloader.ts";
 import { getLoadTraces, clearLoadTraces } from "@/preview-3d/infra/load-trace.ts";
 import { FakeImage } from "@/test-utils/fake-image.ts";
 

@@ -34,10 +34,10 @@ vi.mock("@/preview-3d/adapters/mount-preview-core.ts", () => ({
 vi.mock("@/preview-3d/adapters/ysm-adapter.ts", () => ({
   makeYsmAdapter: makeAdapterMock,
 }));
-vi.mock("./loader.ts", () => ({
+vi.mock("@/preview-3d/adapters/ysm-preview-pipeline.ts", () => ({
   loadModelData: loadModelDataMock,
 }));
-vi.mock("./model3d-loader.ts", () => ({
+vi.mock("@/preview-3d/adapters/ysm-model-preloader.ts", () => ({
   preloadModel: preloadMock,
 }));
 vi.mock("./ysm-controls.ts", () => ({
@@ -66,7 +66,6 @@ function makeCtx(over: Partial<PreviewCtx> = {}): PreviewCtx {
     root,
     loadPreviewImage: vi.fn().mockResolvedValue(null),
     unsubs: [],
-    decodeYsmViaWasm: vi.fn(),
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
     active3DClose: null,

@@ -12,13 +12,12 @@ import {
   mount3D,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
 import { makeYsmAdapter } from "@/preview-3d/adapters/ysm-adapter.ts";
+import { type ModelLike, preloadModel } from "@/preview-3d/adapters/ysm-model-preloader.ts";
+import { loadModelData } from "@/preview-3d/adapters/ysm-preview-pipeline.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { loadModelData } from "./loader.ts";
 import { playNodes } from "./mmd-controls.ts";
-import { type ModelLike, preloadModel } from "./model3d-loader.ts";
 import { type OpenerOptions, registerReRoute, withPreviewExtras } from "./preview-library.ts";
 import { readFileBytes } from "./view-shell.ts";
 import { registerYsmModelSchema, ysmShotNodes } from "./ysm-controls.ts";
@@ -29,10 +28,10 @@ async function listAllFilePaths(dir: string): Promise<string[] | null> {
   return await App.ListAllFilePaths(dir);
 }
 
-/** 跨类型换角色路由用：注入轻量 loader ctx（decodeYsmViaWasm + 空 appendDebug） */
+/** 跨类型换角色路由用：装配流水线自持解码与调试通道（ADR-270-d5），视图无需注入 ctx */
 async function openYsmFullscreen(path: string, opts?: OpenerOptions): Promise<void> {
   await createYsm3D(path, 0, {
-    loader: async (p) => await loadModelData(p, { decodeYsmViaWasm, appendDebug: () => {} }),
+    loader: async (p) => await loadModelData(p),
     // ADR-253 D6：转发路由兜底算出的 siblings（entry 为资源包专用通道，YSM 不消费）
     ...(opts?.siblings != null ? { siblings: opts.siblings } : {}),
   });
@@ -41,7 +40,7 @@ async function openYsmFullscreen(path: string, opts?: OpenerOptions): Promise<vo
 registerReRoute(RESOURCE_TYPES.YSM, openYsmFullscreen);
 
 export interface YsmOpenOptions {
-  /** path → model 加载器（skeleton 层注入：loadModelData(p, ctx)，含缓存/WASM/Go 兜底） */
+  /** path → model 加载器（skeleton 层注入：loadModelData(p)，含缓存/WASM/Go 兜底） */
   loader: (path: string) => Promise<BedrockGeometry | null>;
   /** core 关闭（ESC / 关闭按钮 / 切模型 cleanup）时回调：复位调用方状态 + 注销 android-back */
   onClose?: () => void;

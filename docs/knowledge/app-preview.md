@@ -52,7 +52,6 @@ auto_fields:
     - drawMiniView
     - drawView
     - errorPlaceholderHTML
-    - fillAuthorsAsync
     - getRegisteredRoutes
     - HitZone
     - invalidateEmptyPreview
@@ -64,8 +63,6 @@ auto_fields:
     - invalidateVrmPreview
     - invalidateYsmPreview
     - loadModel2D
-    - loadModelData
-    - LoadModelOpts
     - MaidOpenOptions
     - makeMmdDataPort
     - MmdBottomNavCtx
@@ -75,7 +72,6 @@ auto_fields:
     - Model2DOptions
     - modelDetailHTML
     - ModelDetailMeta
-    - ModelLike
     - openEmpty3DFullscreen
     - OpenerOptions
     - openFullPreview
@@ -86,13 +82,11 @@ auto_fields:
     - placeholderHTML
     - playNodes
     - Prefer3DState
-    - preloadModel
     - PREVIEW_CLEANUP
     - PREVIEW_HANDLERS
     - PREVIEW_INVALIDATE
     - previewCSS
     - PreviewCtx
-    - PreviewDebugger
     - PreviewImageLoader
     - PreviewRoot
     - PreviewRouterCtx
@@ -143,7 +137,6 @@ auto_fields:
     - vrmShotNodes
     - withPreviewExtras
     - YsmControlsContext
-    - YsmDecoder
     - YSMHeader
     - ysmModelStats
     - YsmModelStats
@@ -189,7 +182,7 @@ invariant_anchors:
   - frontend/src/views/app-preview/detail.ts|detailGen
   - frontend/src/utils/async/load-guard.ts|createLoadGuard
   - frontend/src/views/app-preview/skeleton.ts|closeActive3DOverlay
-  - frontend/src/views/app-preview/loader.ts|loadModelData
+  - frontend/src/preview-3d/adapters/ysm-preview-pipeline.ts|loadModelData
 status: active
 ---
 
@@ -202,7 +195,8 @@ status: active
 ## 核心职责
 
 - `index.ts` — `<app-preview>` 生命周期编排：监听 `model:select`（回调开头 `this._previewGuard.invalidate()`），按 `DetectResourceType` 结果分流（pack → `showResourcePack`；ysm/空 → `showModelDetail`；litematic/blueprint → `showLitematic`；shaderpack → `showShaderpack`；MMD EntityPlayer → `PREVIEW_HANDLERS` 查表按 variants 分发；其他已知类型 → `showSimplePreview`）。
-- `loader.ts` — `loadModelData`：统一模型加载（缓存 → WASM → Go `AnalyzeBedrockModel` 兜底）；WASM 能力判定由 `matchTypeByExt(modelPath, RESOURCE_TYPES.YSM)`（注册表驱动，防 `.7z` 漏判）；`.zip`/`.json` 支持 `ysm.json` manifest 按声明序合并多角色 geometry 与纹理。
+- `preview-3d/adapters/ysm-preview-pipeline.ts`（ADR-270-d5 自 `views/app-preview/loader.ts` 迁入）— `loadModelData` / `fillAuthorsAsync`：模型装配流水线（缓存 → WASM → Go `AnalyzeBedrockModel` 兜底 → 动画 clips/纹理映射日志 → 作者头像回填）+ 截图渲染实参组装 `buildYsmShotRenderArgs`；views 侧只经入口面消费，不再穿透 decoder。
+- `preview-3d/adapters/ysm-preview-cache.ts`（ADR-270-d5）— 缓存所有者：淘汰回调（blob URL 释放）+ `loadYsmPreviewImage`（缩略图三级装配）+ `loadYsmSummaryMeta`（加密 .ysm 摘要补全解码）。
 - `detail.ts` — `showModelDetail` / `showResourcePack` / `showShaderpack` / `showSimplePreview`：详情面板渲染（Go 侧 `ExtractYsmSummary` / `ExtractYSMHeader` / `ReadPackMeta` / `ReadShaderpackLang`）；`showVrmMeta` / `showMmdPreview` 已迁出至 `detail-3d.ts`。
 - `card-shell.ts` — **统一详情卡壳**（ADR-253 D4 自 `detail-3d.ts` 迁出的叶子模块）：`showCard(ctx, path, CardShowConfig)`，`fetchMeta` / `renderCard` / `wireFab` / `postRender` 四件套；**7 张卡全部经它渲染**（6 种格式卡 + 资源包）。`wireFab` 槽位保留但**当前各卡均为 no-op**（ADR-253 D7 删除详情卡 3D 入口 FAB 后无按钮可绑）；有 `fetchMeta` 时壳预写加载占位，**错误态只渲染错误占位、不渲染 FAB**。`showModelDetail`（YSM）因需「详情/骨骼」tab 行**尚未收编**。
 - `siblings.ts` — `resolveSiblingsByType` 统一底座 + 各格式 `resolve*` 薄封装 + **`resolveSiblingsForRoute`（ADR-253 D1 路由层单一出口）**：`openModel3DFullscreen` 在调用方未传 `siblings` 时按 routeKey 自算，空结果归一为 `undefined`。
@@ -271,7 +265,7 @@ status: active
   **ADR-253 D7 已随 `_prefer3D` 自动弹整块移除**（无 rAF 回调 → 无需该守卫）。
 - 预览缓存淘汰时必须 `URL.revokeObjectURL` 释放 blob URL
 - mount-preview-core 拆分为 `mount3D`（shell 装配 + infra 创建 + 输入绑定 + rAF 管线）+ `cleanupPreview` / `switchPreview` / `_resetSingletons`
-- Three.js 现为静态依赖（`litematic-3d.ts` / `model3d-loader.ts` / `screenshot-render.ts` / `model3d.ts` 均静态 `import * as THREE`）
+- Three.js 现为静态依赖（`litematic-3d.ts` / `preview-3d/adapters/ysm-model-preloader.ts` / `screenshot-render.ts` / `model3d.ts` 均静态 `import * as THREE`）
 - 坐标变换遵循 ysmview 口径（改 model2d/model3d 前先 grep bug-chronicle）
 - **纹理口径对称**：`decoder/texture-order.ts` 与 Go `internal/app/texture_order.go` 口径严格对称，改一侧须同步另一侧
 - **3D overlay 单例钩子**（`ctx.active3DClose` 挂组件实例，原模块级 `_active3DClose` 已迁移至实例——P1 修复，多实例互不串扰）：全局同时只允许一个活跃 3D overlay——新开 3D 前先调上一份的 `ctx.active3DClose` 关掉旧层（`app-preview/index.ts` 在 `model:select` 时调用 `closeActive3DOverlay`）

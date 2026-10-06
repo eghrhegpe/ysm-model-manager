@@ -49,7 +49,12 @@ vi.mock("@/core/i18n/t.ts", () => ({
     return `${key}{${ps}}`;
   },
 }));
-vi.mock("./loader.ts", () => ({ loadModelData, fillAuthorsAsync: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/preview-3d/adapters/ysm-preview-pipeline.ts", () => ({
+  loadModelData,
+  fillAuthorsAsync: vi.fn().mockResolvedValue(undefined),
+  // 视图侧仅类型引用 PreviewDebugger（vi.mock 工厂需导出被测模块被 import 的运行时符号；
+  // 类型符号运行时不存在，无需列出）
+}));
 vi.mock("./model2d/model2d.ts", () => ({ renderModel2D }));
 vi.mock("./zoom.ts", () => ({ openFullPreview }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
@@ -58,7 +63,7 @@ vi.mock("@/utils/dom/errors.ts", () => ({ friendlyError }));
 vi.mock("./tpl.ts", () => ({ statsCardHTML }));
 vi.mock("./bone-names.ts", () => ({ buildBoneNamesText }));
 vi.mock("@/preview-3d/screenshot/screenshot-render.ts", () => ({ renderMultiAngle }));
-vi.mock("./model3d-loader.ts", () => ({ preloadModel }));
+vi.mock("@/preview-3d/adapters/ysm-model-preloader.ts", () => ({ preloadModel }));
 // §5.7 shared 化：3D 打开收敛到 ysm-3d（path 驱动），骨架层测试 mock 编排层——
 // shared 外壳（挂 scene/导航/raycast）集成由 ysm-3d.test.ts（three stub）覆盖
 // ADR-072 根治：ysm-3d 薄包装已归位 views/app-preview（视图壳注入层），mock 路径同目录

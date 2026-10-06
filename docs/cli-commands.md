@@ -252,7 +252,7 @@ app --cli --files-root <路径> perf-snapshot [选项...]
 
 
 ### `scan-bench`
-扫描引擎基准（Go / Rust 对照，ADR-262 D3）
+扫描基准（Go walk 单引擎耗时测量）
 
 ```bash
 app --cli --files-root <路径> scan-bench [选项...]
@@ -261,7 +261,7 @@ app --cli --files-root <路径> scan-bench [选项...]
 
 | 选项 | 类型 | 说明 |
 |------|------|------|
-| `--iterations` | int — 每个引擎重复扫描次数（取中位/p95） |
+| `--iterations` | int — 每次扫描重复次数（取中位/p95） |
 | `--format` | string （默认: text）— 输出格式: text（人类可读）/ json（AI 友好） |
 
 

@@ -211,7 +211,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | initPerfPanel | `frontend/src/views/app-content/diagnostics/perf.ts` | 222 |
-| connectedCallback | `frontend/src/views/app-preview/index.ts` | 88 |
+| connectedCallback | `frontend/src/views/app-preview/index.ts` | 72 |
 
 ### `nav:changed`
 

@@ -70,7 +70,6 @@ function makeCtx(detailGen?: LoadGuard): PreviewCtx {
     root,
     loadPreviewImage: vi.fn().mockResolvedValue(null),
     unsubs: [],
-    decodeYsmViaWasm: vi.fn(),
     appendDebug: vi.fn(),
     dragAbortCtrl: null,
     active3DClose: null,

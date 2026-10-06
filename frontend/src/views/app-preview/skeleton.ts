@@ -2,6 +2,11 @@
 // 加载统一走 loadModelData，本文件只做 2D 骨骼渲染编排
 
 import { t } from "@/core/i18n/t.ts";
+import {
+  fillAuthorsAsync,
+  loadModelData,
+  type PreviewDebugger,
+} from "@/preview-3d/adapters/ysm-preview-pipeline.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
@@ -9,14 +14,13 @@ import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderModel2D } from "@/views/app-preview/model2d/model2d.ts";
-import { fillAuthorsAsync, loadModelData } from "./loader.ts";
 import {
   buildBoneExportRow,
   buildStatsCard,
   buildToggleRow,
   setup2DCanvas,
 } from "./skeleton-render.ts";
-import type { Prefer3DState, PreviewDebugger, PreviewRoot, YsmDecoder } from "./utils.ts";
+import type { Prefer3DState, PreviewRoot } from "./utils.ts";
 import { openFullPreview } from "./zoom.ts";
 
 // 2D 拖拽的 window 监听器使用 AbortController 管理，避免模块级单例竞态（审核 P3）
@@ -40,7 +44,7 @@ export function setActive3DClose(ctx: PreviewRoot, fn: (() => void) | null): voi
 
 /** 加载模型 2D 骨骼线条图（+ 可选统计卡容器：传入则统计卡渲染到该容器，骨架区只留图） */
 export async function loadModel2D(
-  ctx: PreviewRoot & YsmDecoder & PreviewDebugger & Prefer3DState,
+  ctx: PreviewRoot & PreviewDebugger & Prefer3DState,
   modelPath: string,
   skelContainer: HTMLElement | null,
   statsContainer?: HTMLElement | null,
@@ -59,8 +63,8 @@ export async function loadModel2D(
   // loader 与 android-back 注册（见 ysm-3d.ts openYsmFullscreen）。
 
   try {
+    // 解码能力由流水线自持（ADR-270-d5）——视图只注入调试输出通道
     const model = await loadModelData(modelPath, {
-      decodeYsmViaWasm: (p) => ctx.decodeYsmViaWasm(p),
       appendDebug: (_c, msg) => ctx.appendDebug(container, msg),
     });
     if (!container.isConnected) return;

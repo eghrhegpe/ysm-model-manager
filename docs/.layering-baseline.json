@@ -3,19 +3,9 @@
   "generatedAt": "2026-10-06",
   "entries": [
     "preview-3d/state/env-state-schema.ts:preview-3d/caps/ground-surface-spec.ts",
-    "views/app-preview/detail.ts:preview-3d/decoder/model-cache.ts",
-    "views/app-preview/detail.ts:preview-3d/decoder/wasm-decode.ts",
-    "views/app-preview/index.ts:preview-3d/decoder/model-cache.ts",
-    "views/app-preview/index.ts:preview-3d/decoder/wasm-decode.ts",
-    "views/app-preview/loader.ts:preview-3d/decoder/model-cache.ts",
     "views/app-preview/mmd-controls.ts:preview-3d/menu/panels/multi-model.ts",
-    "views/app-preview/model3d-loader.ts:preview-3d/decoder/wasm-decode.ts",
-    "views/app-preview/model3d-loader.ts:preview-3d/model/spec-builder.ts",
-    "views/app-preview/model3d-loader.ts:preview-3d/texture/texture-loader.ts",
     "views/app-preview/skeleton-fill-panel.ts:preview-3d/menu/panels/multi-model.ts",
-    "views/app-preview/skeleton-render.ts:preview-3d/decoder/wasm-decode.ts",
     "views/app-preview/skeleton-render.ts:preview-3d/screenshot/screenshot-lights.ts",
-    "views/app-preview/skeleton-render.ts:preview-3d/screenshot/screenshot-render.ts",
-    "views/app-preview/ysm-3d.ts:preview-3d/decoder/wasm-decode.ts"
+    "views/app-preview/skeleton-render.ts:preview-3d/screenshot/screenshot-render.ts"
   ]
 }

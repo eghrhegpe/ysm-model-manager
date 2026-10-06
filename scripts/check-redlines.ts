@@ -679,6 +679,29 @@ function runChecks() {
     "卡片结构一律走 stg-card.ts|stgCard() 构造器（icon/title/body/header 参数化），禁手写 stg-card/-hdr/-body 字面量",
   );
 
+  // W10（范式契约执法，2026-10 立法，源自 redline-enforcement-grade.md #204 C→B 打样）：
+  // 按钮外观唯一造法 = utils/dom/css.ts 的 btnBaseCSS（`.btn-base` 选择器唯一出处）。
+  // 禁在 css.ts 之外手写 `.btn-base {` 规则定义（消费方只应引用 class 名或在自身 stylesheet
+  // 追加更高优先级覆盖选择器，如 `.btn-base.xxx{}`，而非重新定义 `.btn-base{}` 基线外观——
+  // 后者会让按钮间距/圆角/动画各自为政，迟早漂移，恰是 stg-card 曾踩的坑）。
+  // css.ts 本体豁免；测试文件豁免（断言构造器输出合法消费）。当前仓库仅 css.ts:2 一处定义，
+  // 本闸为防御闸：未来新增第二处定义即被 pre-push 拦截。
+  add(
+    "W10",
+    "button base style single source (btnBaseCSS)",
+    rgTracked('\\.btn-base\\s*[{]', "frontend/src", ["*.ts"])
+      .filter((l) => {
+        const [f] = parseRgLine(l);
+        return !f.replace(/\\/g, "/").endsWith("utils/dom/css.ts");
+      })
+      .filter((l) => {
+        const [f] = parseRgLine(l);
+        return !f.includes(".test.");
+      })
+      .filter((l) => !/:\d+:\s*(?:\/\/|\/\*|\*)/.test(l)),
+    "按钮外观一律走 utils/dom/css.ts|btnBaseCSS（`.btn-base` 唯一出处），禁在 css.ts 外手写 `.btn-base {` 基线规则",
+  );
+
   return results;
 }
 

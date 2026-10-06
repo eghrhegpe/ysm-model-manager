@@ -10,6 +10,12 @@ source_files:
   - frontend/src/preview-3d/menu/schema/menu-node-types.ts
   - frontend/src/views/app-content/settings/stg-card.ts
   - frontend/src/utils/resource/schema.ts
+tests:
+  - frontend/src/preview-3d/adapters/shared/perception/core.test.ts
+  - frontend/src/preview-3d/infra/schema-registry.test.ts
+  - frontend/src/preview-3d/menu/engine/core.test.ts
+  - frontend/src/utils/resource/schema.test.ts
+  - frontend/src/views/app-content/settings/stg-card.test.ts
 invariant_anchors:
   - scripts/check-redlines.ts|W6
   - scripts/check-redlines.ts|W9

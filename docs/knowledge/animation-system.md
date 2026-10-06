@@ -14,6 +14,8 @@ source_files:
   - frontend/src/utils/animation/molang-lib/easing.js
   - frontend/src/utils/animation/molang-lib/math.js
   - frontend/src/preview-3d/model/ysm-animation-player.ts
+  - frontend/src/utils/animation/molang-lib/molang.d.ts
+  - frontend/src/views/css/keyframes.ts
 auto_fields:
   symbols_with_lines:
     - animateNumber
@@ -32,6 +34,7 @@ auto_fields:
     - evaluateClip
     - evaluateKeyframes
     - executeTimeline
+    - FADE_SLIDE_LEFT
     - findControllerForAnimation
     - Keyframe
     - Molang

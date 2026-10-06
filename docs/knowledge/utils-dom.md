@@ -5,6 +5,7 @@ tier: leaf
 category: utils
 source_files:
   - frontend/src/utils/dom/
+  - frontend/src/utils/html/html.ts
 auto_fields:
   symbols_with_lines:
     - __getTriggerForTest
@@ -33,6 +34,8 @@ auto_fields:
     - DropdownHandle
     - DropdownOptions
     - ensureTooltipStyles
+    - esc
+    - escUnknown
     - findCollisions
     - findTabbableAcrossShadow
     - FLASH_DURATION_MS
@@ -42,6 +45,7 @@ auto_fields:
     - focusVisibleCSS
     - friendlyError
     - getStackDepth
+    - hl
     - initDropdown
     - InputBlockStack
     - installScrollSync

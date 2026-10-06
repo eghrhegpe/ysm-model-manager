@@ -16,6 +16,9 @@ source_files:
   - frontend/src/parsers/litematic-voxel.ts
   - frontend/src/parsers/nbt-voxel.ts
   - frontend/src/parsers/schematic-voxel.ts
+  - frontend/src/parsers/bedrock-geometry.ts
+  - frontend/src/parsers/ysm-authors.ts
+  - frontend/src/parsers/ysm-json.ts
 tests:
   - frontend/src/parsers/extract.test.ts
   - frontend/src/parsers/nbt-parse.test.ts
@@ -30,6 +33,10 @@ auto_fields:
   symbols_with_lines:
     - asByteArray
     - asLongArray
+    - BedrockBone
+    - BedrockCube
+    - BedrockGeometry
+    - BedrockSubModel
     - bitsPerEntry
     - decodeVoxelNbt
     - detectContainerType
@@ -53,12 +60,16 @@ auto_fields:
     - nbtVoxelView
     - packPngToThumbnail
     - paletteToColors
+    - parseBedrockGeometryFromJSON
     - parseNbtRoot
     - parseNbtRootExact
     - parsePackMetaJson
     - parseShaderpackLang
+    - parseYsmAuthors
     - parseYsmHeaderFromBytes
+    - parseYsmJsonDirect
     - parseZipCentralDir
+    - RawYsmAuthor
     - readVarInt
     - RegionInfo
     - resolveBlockName
@@ -69,6 +80,8 @@ auto_fields:
     - VoxelBlock
     - VoxelData
     - VoxelGroup
+    - YsmAuthor
+    - YsmAuthorMetadata
     - YsmHeaderShape
     - YsmSummaryShape
     - ZipEntryMeta

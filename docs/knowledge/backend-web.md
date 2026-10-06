@@ -13,6 +13,18 @@ source_files:
   - frontend/src/backend/web-store.ts
   - frontend/src/backend/web-stats.ts
   - frontend/src/backend/web-community.ts
+  - frontend/src/backend/web-fs-auth.ts
+  - frontend/src/backend/web-fs-bedrock.ts
+  - frontend/src/backend/web-fs-container.ts
+  - frontend/src/backend/web-fs-import.ts
+  - frontend/src/backend/web-fs-pack.ts
+  - frontend/src/backend/web-fs-read.ts
+  - frontend/src/backend/web-fs-shared.ts
+  - frontend/src/backend/web-cli.ts
+  - frontend/src/backend/cli-allowlist.ts
+  - frontend/src/backend/read-model-bytes.ts
+  - frontend/src/backend/ysm-decode-bridge.ts
+  - frontend/src/workers/coi-sw.ts
 auto_fields:
   symbols_with_lines:
     - __resetWebLogStateForTest

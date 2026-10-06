@@ -347,7 +347,7 @@ pitfalls:
 
 ## 核心职责
 
-- **外壳装配**（`mount3D`）：cleanup 旧会话 → `sceneCapabilityRegistry.createAll()` 创建 10 个能力（天空/地面/水面/环境/雾/阴影/反射/后处理/灯光/渲染模式）→ `adapter.build(ctx, path)` 挂内容层 → 相机取景 → 注册 rAF 循环 + ESC handler + 菜单 + 输入监听 + focus trap
+- **外壳装配**（`mount3D`）：cleanup 旧会话 → `sceneCapabilityRegistry.createAll()` 创建全量能力（天空/地面/水面/环境/雾/阴影/反射/后处理/灯光/渲染模式）→ `adapter.build(ctx, path)` 挂内容层 → 相机取景 → 注册 rAF 循环 + ESC handler + 菜单 + 输入监听 + focus trap
 - **会话切换**：`switchPreview(path)` 复用外壳重建内容层（`switchPreview({ keepInScene: true })` 同台追加多模型，计数上限 8 + **GPU 负载实测预算**（刀⑩ 立、刀⑪ 补强、刀⑬ 补全口径：`infra/gpu-budget.ts|guardGpuBudget` 统一判定 **4 维**——draw calls / `triangles` / 纹理数 / `textureBytes`。字节维度取**双口径较大的那个**：场景图快照（`infra/texture-bytes|estimateSceneTextureBytes`，由 `register-built-scene` 于构建后写入，**覆盖 MMD/VRM/FBX 等不进池的格式**）与池累计（`textureCache|getTotalBytes`，覆盖已 acquire 未挂场景的 YSM/pack 纹理）。超限 toast 附实测值；`MAX_MODELS` 保留为兜底硬顶。预算上限取 `gpu-load-calibrate|resolveGpuLoadLimits()`：真机标定值优先（clamp 到默认 ×0.1~×10 防自锁）、缺省回落 `DEFAULT_GPU_LOAD_LIMITS`））；跨类型 / 关旧开新走 `openModel3DFullscreen`
   - **两条入口共用一道门**：`switch-preview|beginSwitch`（keep 追加通道，inFlight 置位前判不卡死）与 `mount-preview-core|mount3D`（**直挂通道**——无活跃会话时 preview-library 的 cooperate 退化为直挂，超限走 `runFullCleanup` 完整回收）。缺一条即「某路径裸奔」，勿只加一侧。
 - **生命周期清理**：

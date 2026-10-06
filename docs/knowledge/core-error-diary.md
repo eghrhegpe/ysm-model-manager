@@ -5,13 +5,24 @@ tier: leaf
 category: core
 source_files:
   - frontend/src/core/error-diary.ts
+  - frontend/src/backend/diary-outbox.ts
+  - frontend/src/backend/diary-sink.ts
+  - frontend/src/backend/global-error-listeners.ts
 auto_fields:
   symbols_with_lines:
+    - __resetDiaryOutboxForTest
     - DiaryEntry
     - DiaryHandle
     - DiarySink
     - DiaryStatus
+    - drainDiaryOutbox
+    - drainDiaryOutboxToMainChannel
+    - enqueueDiaryOutbox
+    - installGlobalErrorListeners
+    - makeDiarySink
+    - OUTBOX_KEY
     - pushToDiary
+    - readDiaryOutbox
     - registerErrorDiary
     - unregisterErrorDiary
   tests:

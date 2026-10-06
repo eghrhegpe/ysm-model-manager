@@ -9,8 +9,10 @@ source_files:
   - frontend/src/app-modules.ts
   - frontend/src/theme-core.ts
   - frontend/css/variables.css
+  - frontend/src/views/config-write.ts
 auto_fields:
   symbols_with_lines:
+    - AppConfigPatch
     - applyTheme
     - applyThemeAuto
     - applyTimeTheme
@@ -27,6 +29,7 @@ auto_fields:
     - ThemeCard
     - timeThemeForHour
     - unregisterDevtools
+    - writeAppConfig
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

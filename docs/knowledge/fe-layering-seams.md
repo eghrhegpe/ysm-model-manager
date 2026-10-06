@@ -8,16 +8,38 @@ source_files:
   - scripts/check-layering.ts
   - scripts/check-path-hygiene.ts
   - frontend/src/features/backend-deps.ts
+  - frontend/src/views/backend-deps.ts
+  - frontend/src/features/context-menu/context-menu-deps.ts
+  - frontend/src/features/context-menu/context-menus.setup.ts
+  - frontend/src/features/dialogs/dialogs-deps.ts
+  - frontend/src/features/dnd/dnd-deps.ts
+  - frontend/src/features/import/import-deps.ts
+  - frontend/src/features/maintenance/maintenance-deps.ts
+  - frontend/src/features/pack-ops/pack-ops-deps.ts
+  - frontend/src/features/sync/sync-deps.ts
 auto_fields:
   symbols_with_lines:
+    - AppBindings
     - backendGetApp
+    - contextMenuGetApp
+    - dialogsGetApp
+    - dndGetApp
+    - emitted
+    - expectItemsMatchDef
+    - getMocks
     - htmlLiteralHits
+    - importGetApp
+    - maintenanceGetApp
     - matchImports
     - MENU_SUB_RANK
+    - menuShows
     - menuSubOf
+    - menuUnsubs
     - P3D_LOWER_SUBS
     - P3D_UPPER_SUBS
     - p3dSubOf
+    - packOpsGetApp
+    - payloadCtx
     - R10_WHITELIST_FILES
     - R10_WHITELIST_PREFIXES
     - r10EdgeViolates
@@ -25,6 +47,10 @@ auto_fields:
     - r7EdgeViolates
     - R8_ALLOW_MARKER
     - r9EdgeViolates
+    - resetForCase
+    - showMenu
+    - syncGetApp
+    - TRACKED
 use_when:
   - src/core 想新增文件或依赖前
   - features 模块需要拿到 backend 能力时

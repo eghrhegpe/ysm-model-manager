@@ -130,7 +130,7 @@ pitfalls:
   - schemaId 必显式声明（panel id 不再隐式兜底作 schema key，防 id 撞注册键渲染错内容）
   - fillers 仅 roles 一项（G3 删 fill* 后唯一残留），health.test 白名单守卫——禁止新增 filler
   - renderCustom 是末段逃生舱，schemaId 未注册时走 renderCustom 会 console.warn
-  - 预览菜单真实 DOM 渲染需要**足够完备的 ctx**，不是「浏览器渲不出菜单」：dock 按钮 `visibleWhen` 谓词（如 `env.skyGroundCap`）读 `sceneCapabilityRegistry` 的 cap 实例可用性，stub 得太薄就退化成「dock 空壳」——overlay 内有 dock/popup 容器但按钮行零渲染。**2026-10-04 实测反驳「e2e 渲不出菜单」**：e2e 层用 `mountPreviewRootMenu` + 含 `getCamBridge`/`getSiblings` 的 ctx 渲出了完整 L3 面板（`menu-visual.spec.ts` + `e2e/_shots/menu-03-scene-*.png`）；e2e-web 层起真 3D 会话（`openEmpty3DFullscreen`）后更渲出 30 控件的后处理面板与 `dock-env` 分组——**两者都只有真上下文才可见**。结论是**分层选工具，不是二选一**：happy-dom 单测（`items.test.ts` / `sky-capability.test.ts`）验成员归属与拓扑契约（快、稳）；e2e 截图验视觉呈现与 cap 真实可用性（方法见 `e2e-visual-feedback.md`）。headless 无 GPU 时天空/水面观感属软渲染伪影，不作美术判据。
+  - 预览菜单真实 DOM 渲染需要**足够完备的 ctx**，不是「浏览器渲不出菜单」：dock 按钮 `visibleWhen` 谓词（如 `env.skyGroundCap`）读 `sceneCapabilityRegistry` 的 cap 实例可用性，stub 得太薄就退化成「dock 空壳」——overlay 内有 dock/popup 容器但按钮行零渲染。**2026-10-04 实测反驳「e2e 渲不出菜单」**：e2e 层用 `mountPreviewRootMenu` + 含 `getCamBridge`/`getSiblings` 的 ctx 渲出了完整三级面板（`menu-visual.spec.ts` + `e2e/_shots/menu-03-scene-*.png`）；e2e-web 层起真 3D 会话（`openEmpty3DFullscreen`）后更渲出 30 控件的后处理面板与 `dock-env` 分组——**两者都只有真上下文才可见**。结论是**分层选工具，不是二选一**：happy-dom 单测（`items.test.ts` / `sky-capability.test.ts`）验成员归属与拓扑契约（快、稳）；e2e 截图验视觉呈现与 cap 真实可用性（方法见 `e2e-visual-feedback.md`）。headless 无 GPU 时天空/水面观感属软渲染伪影，不作美术判据。
 use_when:
   - 3D 预览菜单
   - 声明式菜单节点

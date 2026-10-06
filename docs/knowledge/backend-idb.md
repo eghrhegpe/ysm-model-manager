@@ -19,8 +19,10 @@ source_files:
   - frontend/src/workers/stats-core.ts
   - frontend/src/workers/stats-protocol.ts
   - frontend/src/workers/stats.worker.ts
+  - frontend/src/utils/storage/idb.ts
 auto_fields:
   symbols_with_lines:
+    - __resetDBForTest
     - __resetWebLogProbeForTest
     - __resetWebLogStateForTest
     - __setStatsRunnerForTest
@@ -36,6 +38,14 @@ auto_fields:
     - getAndroidBridge
     - getApp
     - getStatsPoolSize
+    - idbDel
+    - idbGet
+    - idbGetAll
+    - idbGetAllMetadata
+    - idbKeys
+    - IdbOp
+    - idbSet
+    - idbTx
     - importWebFiles
     - isCrossOriginIsolated
     - isValidStatsRequest
@@ -45,6 +55,7 @@ auto_fields:
     - isWebPlatform
     - MAX_IMPORT_BYTES
     - onStatsProgress
+    - openDB
     - parseAnyGeometry
     - PlatformMode
     - prefetchStatsWorker
@@ -64,6 +75,7 @@ auto_fields:
     - StatsWorkerRequest
     - StatsWorkerResponse
     - StatsWorkerResult
+    - Store
     - terminateStatsWorker
     - typeFromWebDir
     - u8ToBase64

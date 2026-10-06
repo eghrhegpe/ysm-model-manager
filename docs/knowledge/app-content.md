@@ -29,6 +29,9 @@ source_files:
   - frontend/src/views/app-content/site/workshop-tabs.ts
   - frontend/src/views/app-content/site/workshop-site-opener.ts
   - frontend/src/utils/icon/workshop-icons.ts
+  - frontend/src/views/app-content/tabs-a11y.ts
+  - frontend/src/views/app-content/tabs-shell.ts
+  - frontend/src/views/app-content/css/content-gh.ts
 auto_fields:
   symbols_with_lines:
     - aboutPageBody
@@ -36,10 +39,14 @@ auto_fields:
     - AppContentState
     - appContentStyle
     - bindSiteEvents
+    - bindSubBar
+    - bindTabA11y
+    - BindTabA11ySpec
     - bindTabs
     - contentCreatorCSS
     - contentCSS
     - contentDiagCSS
+    - contentGhCSS
     - contentLayoutCSS
     - contentRepoCSS
     - contentStgCSS
@@ -67,11 +74,18 @@ auto_fields:
     - PageDefinition
     - recycleHTML
     - renderRecycleListHtml
+    - renderSubBar
+    - renderTabs
     - RepoCacheEntry
     - repositoryHTML
     - resetAvatarConfigLoaded
     - settingsHTML
     - SubscriptionBucket
+    - SubTabSpec
+    - TabA11yHandle
+    - TabSpec
+    - TabsShell
+    - TabsShellSpec
     - VIEW_TESTIDS
     - workshopHTML
     - WorkshopPageState

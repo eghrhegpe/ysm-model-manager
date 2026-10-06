@@ -5,9 +5,11 @@ tier: leaf
 category: utils
 source_files:
   - frontend/src/utils/format/format.ts
+  - frontend/src/utils/format/fmt-mb.ts
 auto_fields:
   symbols_with_lines:
     - fmtDate
+    - fmtMB
     - formatBytes
     - formatClock
     - shortenPath

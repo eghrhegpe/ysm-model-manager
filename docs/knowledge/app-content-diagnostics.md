@@ -15,44 +15,104 @@ source_files:
   - frontend/src/views/app-content/diagnostics/perf-common.ts
   - frontend/src/views/app-content/diagnostics/perf-single-bench.ts
   - frontend/src/views/app-content/diagnostics/perf-trace.ts
+  - frontend/src/views/app-content/diagnostics/
+  - frontend/src/utils/health-report.ts
 auto_fields:
   symbols_with_lines:
     - __resetChannelHealthForTest
     - applyPerfModeUI
     - BASELINE_CONTROL_IDS
+    - bindCancelButton
+    - bindKeepPolicyChange
     - bindPerfCopyHandlers
+    - bindPreviewClicks
+    - bindPriorityPathInput
+    - bindStrategyChange
+    - buildConfigPanel
+    - Cancellable
     - CLIResp
+    - collectTargets
+    - concParsePayload
+    - copyWithToast
     - createDedupSession
+    - DEDUP_DEFAULTS
     - DedupConfigShape
     - DedupFileLike
+    - DedupRegType
     - DedupSession
     - DgCfScanTarget
     - dgLsResetCapsMemo
     - EscFn
+    - FindDuplicateFilesFn
     - formatSize
     - getDefaultKeepIdx
+    - GetRepoRootFn
+    - HealthReport
     - initDiagnostics
     - initHealthPanel
     - initPerfPanel
     - initSyncConflictPanel
     - loadDiagnosticsLogs
     - loadRuntimeLogs
+    - MoveToRecycleFn
+    - msgRowHTML
+    - OptionRow
+    - optionRows
+    - parseHealthReport
+    - parsePerfTargetValue
+    - PERF_ORDER_PATH
+    - PERF_ORDER_SIZE
     - PERF_RUN_BUTTON_MODE_KEYS
+    - PERF_TARGET_ALL
+    - PERF_TARGET_REPO
     - PERF_UNREAD_MODES
     - PERF_UNREAD_TARGETS
     - PerfIdentity
+    - PerfMatrixModel
+    - PerfMatrixPayload
+    - PerfMatrixSpec
+    - PerfOrder
     - perfScopeHint
+    - PerfTargetChoice
+    - PerfTargetEcho
+    - perfTargetEchoHTML
+    - PerfTypeSummary
     - populatePerfTargetOptions
     - readActiveBenchMode
+    - readPerfOrder
     - renderChannelHealth
+    - renderConfigHtml
     - renderHealthReport
     - renderLoadTraceSection
+    - renderPerfMatrix
+    - renderPerfTrendSection
+    - renderResultsHtml
+    - renderScanBench
+    - runConcurrentBench
     - runHealthAudit
+    - runScanBench
     - runSingleBench
     - runSyncConflictScan
+    - savePerfRecord
+    - SCAN_BENCH_REASON_KEYS
+    - ScanBenchEngine
+    - ScanBenchParity
+    - scanBenchParsePayload
+    - ScanBenchPayload
+    - ScanBenchSpec
+    - scanEachDirectory
+    - ScanFile
+    - ScanGroup
+    - ScanGroupResult
+    - scanRowWithCancelHTML
+    - ScanTarget
     - sectionHeader
     - singleBenchReadIterations
+    - statRowHTML
+    - StatusRowKind
+    - StatusRowOpts
     - syncPerfBaselineControls
+    - webGate
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts

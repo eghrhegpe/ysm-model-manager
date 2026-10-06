@@ -6,8 +6,10 @@ category: ui
 source_files:
   - frontend/src/views/app-tree/index.ts
   - frontend/src/views/app-tree/
+  - frontend/src/core/model-path-store.ts
 auto_fields:
   symbols_with_lines:
+    - __resetLastModelPathForTest
     - advFilterClearAll
     - advFilterTpl
     - AppTree
@@ -29,6 +31,7 @@ auto_fields:
     - folderRowCommon
     - folderRowHTML
     - footerHTML
+    - getLastModelPath
     - getRenderMode
     - getVsMode
     - getVsRows
@@ -39,6 +42,7 @@ auto_fields:
     - loadEntries
     - openAdvFilterDialog
     - pickWebFilesAndImport
+    - rememberModelPath
     - renderDropdown
     - RenderMode
     - renderRepoLabel

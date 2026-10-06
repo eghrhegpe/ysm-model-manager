@@ -12,10 +12,13 @@ source_files:
   - frontend/src/views/app-content/site/types.ts
   - frontend/src/views/app-content/site/workshop-data.ts
   - frontend/src/views/app-content/site/workshop-browse-mode.ts
+  - frontend/src/views/app-content/site/edit-drag.ts
+  - frontend/src/views/app-content/tpl-workshop.ts
 auto_fields:
   symbols_with_lines:
     - bindBrowseEvents
     - bindDragEvents
+    - bindDragSort
     - bindEditEvents
     - BrowseMode
     - BrowseModeRef
@@ -29,6 +32,8 @@ auto_fields:
     - createCrCard
     - CreatorIdentity
     - CreatorIdentityInput
+    - DragSortSpec
+    - DragStateShell
     - FAV_CREATORS_KEY
     - getCreatorIdentity
     - getTagDisplayLabel
@@ -46,6 +51,7 @@ auto_fields:
     - saveBrowseMode
     - SiteViewState
     - toggleFav
+    - workshopTpl
     - WS_ACTIVE_TAG_KEY
     - WS_LAST_TAB_KEY
     - WS_SEARCH_KW_KEY

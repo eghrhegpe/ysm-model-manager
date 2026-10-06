@@ -110,7 +110,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | 误删/误移函数 | `git diff HEAD` → `git checkout -- <file>` |
 | Go Binding 函数名 | grep `internal/app/` 确认函数名 |
 | Wails 绑定 | `cd frontend && npm run generate:bindings`（script 已内置 `-ts`，不手写） |
-| Bug 历史 | `bug-search <关键词>` |
+| Bug 历史 | `git log --oneline -S <关键词> -- <path>`（原 `bug-search` 脚本已归档 `scripts/_attic/`、不再维护，勿引用） |
 | CLI 命令参数 | `docs/cli-commands.md`（`gen-cli-doc.ts` 自动生成，单一事实源 = 源码注册） |
 | 缓存问题 | `texture_cache` 包 + `cache-status`/`cache-verify`；清理走 `cache-clear` |
 | 性能诊断 | `file-bench` / `analyze-mmd` / `scan-dir` |
@@ -130,8 +130,9 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | `check-biome` | biome 增量闸门：**必须显式点名** `node scripts/check-biome.ts --files <改动文件...>`（无参/`--changed` 默认模式在 main 直提工作流下恒空转，实测恒绿；真正防线 = pre-commit 行级闸 `check-biome-lines`）。`--write` 自动修复；勿在 frontend/ 外裸跑（配置在 `frontend/biome.json`）；能清除债务就用这个清除，禁止回退 |
 | `audit-split` / `rollback-impact` | 拆分 / revert 影响面分析（函数去向、红线、断链调用方） |
 | `api-break` | 两 ref 破坏性变更检测（合分支 / 发版前） |
-| `bug-search` | Bug 历史搜索 |
 | `check-redlines` / `type-consistency` / `binding-check` | 治理红线 / 单一事实来源派生守卫 / 绑定契约检查 |
+
+> 本表只列 `scripts/` 下**现行**脚本；CLI 命令口令（`file-bench` / `cache-status` / `cache-verify` / `cache-clear` / `analyze-mmd` / `scan-dir` 等）不在本表，见 `docs/cli-commands.md`（`gen-cli-doc.ts` 自动生成）。已归档脚本在 `scripts/_attic/`，`check-script-hygiene` 兜底防止死引用回流。
 
 ## ADR 与审核
 

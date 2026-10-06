@@ -27,59 +27,80 @@ func IsModJar(jarPath, modID, displayName string) bool {
 
 	for _, f := range r.Entries() {
 		// 支持 mods.toml 和 neoforge.mods.toml
-		name := strings.ToLower(f.Name())
-		if name != "meta-inf/mods.toml" && name != "meta-inf/neoforge.mods.toml" {
+		if !isModsTomlEntry(f.Name()) {
 			continue
 		}
-		rc, err := f.Open()
-		if err != nil {
-			continue
-		}
-		// limit+1 探测截断——LimitReader 截断后 ReadAll 返回 nil 错误（ADR-033 陷阱），
-		// >1MB 的 mods.toml 会以截断数据继续匹配，导致 IsYSMJar 误判 false。
-		// ADR-044 策略 A：统一走 fsutil.ReadLimitedEntry（超限/错误返回 nil → 跳过）
-		const maxModsToml = 1 << 20
-		data := fsutil.ReadLimitedEntry(rc, int64(maxModsToml))
+		data := readModsToml(f)
 		if data == nil {
-			continue // 读取失败或超过 1MB 上限，视为畸形文件跳过
+			continue
 		}
-
-		content := string(data)
-		lines := strings.Split(content, "\n")
-		inModsBlock := false
-		foundModID := false
-		foundDisplayName := false
-		for _, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed == "[[mods]]" {
-				inModsBlock = true
-				foundModID = false
-				foundDisplayName = false
-				continue
-			}
-			if inModsBlock {
-				if strings.HasPrefix(trimmed, "[[") || strings.HasPrefix(trimmed, "[") {
-					if foundModID && foundDisplayName {
-						return true
-					}
-					inModsBlock = false
-					continue
-				}
-				if strings.HasPrefix(trimmed, `modId="`+modID+`"`) ||
-					strings.HasPrefix(trimmed, `modId = "`+modID+`"`) {
-					foundModID = true
-				}
-				if strings.HasPrefix(trimmed, `displayName="`+displayName+`"`) ||
-					strings.HasPrefix(trimmed, `displayName = "`+displayName+`"`) {
-					foundDisplayName = true
-				}
-			}
-		}
-		if inModsBlock && foundModID && foundDisplayName {
+		if modsTomlDeclares(string(data), modID, displayName) {
 			return true
 		}
 	}
 	return false
+}
+
+// maxModsToml mods.toml 读取上限（超限即视为畸形文件跳过）。
+const maxModsToml = 1 << 20
+
+// isModsTomlEntry 判断 ZIP 条目是否为 mods.toml / neoforge.mods.toml（大小写不敏感）。
+func isModsTomlEntry(name string) bool {
+	n := strings.ToLower(name)
+	return n == "meta-inf/mods.toml" || n == "meta-inf/neoforge.mods.toml"
+}
+
+// readModsToml 读取 mods.toml 内容；打开失败或超限返回 nil（调用方跳过）。
+// limit+1 探测截断——LimitReader 截断后 ReadAll 返回 nil 错误（ADR-033 陷阱），
+// >1MB 的 mods.toml 会以截断数据继续匹配，导致 IsYSMJar 误判 false。
+// ADR-044 策略 A：统一走 fsutil.ReadLimitedEntry（超限/错误返回 nil → 跳过）
+func readModsToml(f container.Entry) []byte {
+	rc, err := f.Open()
+	if err != nil {
+		return nil
+	}
+	return fsutil.ReadLimitedEntry(rc, int64(maxModsToml))
+}
+
+// modsTomlDeclares 扫描 [[mods]] 块，判定是否存在 modId 与 displayName 同时命中的块。
+// 每个块在遇到下一个 [ 开头的表头或文件结尾时结算；结算点命中即返回。
+func modsTomlDeclares(content, modID, displayName string) bool {
+	inModsBlock := false
+	foundModID := false
+	foundDisplayName := false
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[[mods]]" {
+			inModsBlock = true
+			foundModID = false
+			foundDisplayName = false
+			continue
+		}
+		if !inModsBlock {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "[[") || strings.HasPrefix(trimmed, "[") {
+			if foundModID && foundDisplayName {
+				return true
+			}
+			inModsBlock = false
+			continue
+		}
+		if tomlLineDeclaresValue(trimmed, "modId", modID) {
+			foundModID = true
+		}
+		if tomlLineDeclaresValue(trimmed, "displayName", displayName) {
+			foundDisplayName = true
+		}
+	}
+	return inModsBlock && foundModID && foundDisplayName
+}
+
+// tomlLineDeclaresValue 判断 toml 行是否以 key="value" 或 key = "value" 写法声明指定值——
+// mods.toml 的历史写法不统一（有无空格两种），两种都要认。
+func tomlLineDeclaresValue(trimmed, key, value string) bool {
+	return strings.HasPrefix(trimmed, key+`="`+value+`"`) ||
+		strings.HasPrefix(trimmed, key+` = "`+value+`"`)
 }
 
 // HasModInDir 检查 mods 目录是否有匹配指定类型关键词的 jar

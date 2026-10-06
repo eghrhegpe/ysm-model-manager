@@ -130,84 +130,112 @@ func parsePlayerModel(data []byte) *playerModel {
 		return nil
 	}
 	pm := &playerModel{filesObj: filesObj}
-	for key, val := range filesObj {
-		if key != "player" {
+	// JSON 对象键唯一 → "player" 至多命中一次，原先的 range + key 过滤等价于直接取值
+	playerRaw, ok := filesObj["player"]
+	if !ok {
+		return pm
+	}
+	var player struct {
+		Model   json.RawMessage `json:"model"`
+		Texture json.RawMessage `json:"texture"`
+	}
+	if err := json.Unmarshal(playerRaw, &player); err != nil {
+		log.Printf("[ysm] 解析 player 失败: %v", err)
+		return pm
+	}
+	parsePlayerModelNames(player.Model, pm)
+	parsePlayerTextureDecl(player.Texture, pm)
+	return pm
+}
+
+// parsePlayerModelNames 解析 files.player.model 三分支（原逻辑逐字搬迁，无行为差异）。
+func parsePlayerModelNames(raw json.RawMessage, pm *playerModel) {
+	if len(raw) == 0 {
+		return
+	}
+	trimmed := strings.TrimSpace(string(raw))
+	switch {
+	case strings.HasPrefix(trimmed, `{`):
+		// map 格式：JSON 对象**写入序**即 Bedrock 声明序（main 通常最先声明）。
+		names, mm := parseModelOrderedMap(raw)
+		pm.names = append(pm.names, names...)
+		pm.mapOrig = mm
+	case strings.HasPrefix(trimmed, `[`):
+		var arr []string
+		if json.Unmarshal(raw, &arr) == nil {
+			pm.names = arr
+		}
+	default:
+		pm.names = append(pm.names, strings.Trim(trimmed, `"`))
+	}
+}
+
+// parseModelOrderedMap 解析 model 对象的声明序。
+// Go map 丢失写入序，必须 json.Decoder Token 流式保序遍历（P2 修复）。
+// 非字符串 value（数字/对象/数组）Decode 报错且已消费完该值；
+// 若 break 则后续好键（main 等）全部丢失 → 跳过继续（declPos 保序）。
+func parseModelOrderedMap(raw json.RawMessage) (names []string, mm map[string]string) {
+	mm = make(map[string]string)
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+		return names, mm
+	}
+	for dec.More() {
+		keyTok, err := dec.Token()
+		if err != nil {
+			break
+		}
+		key, _ := keyTok.(string)
+		var val string
+		if err := dec.Decode(&val); err != nil {
 			continue
 		}
-		var player struct {
-			Model   json.RawMessage `json:"model"`
-			Texture json.RawMessage `json:"texture"`
-		}
-		if err := json.Unmarshal(val, &player); err != nil {
-			log.Printf("[ysm] 解析 player 失败: %v", err)
-			continue
-		}
-		// model 三分支（原逻辑逐字搬迁，无行为差异）
-		if len(player.Model) > 0 {
-			modelRaw := string(player.Model)
-			trimmed := strings.TrimSpace(modelRaw)
-			switch {
-			case strings.HasPrefix(trimmed, `{`):
-				// map 格式：JSON 对象**写入序**即 Bedrock 声明序（main 通常最先声明）。
-				// Go map 丢失写入序，必须 json.Decoder Token 流式保序遍历（P2 修复）。
-				mm := make(map[string]string)
-				dec := json.NewDecoder(bytes.NewReader(player.Model))
-				if tok, err := dec.Token(); err == nil && tok == json.Delim('{') {
-					for dec.More() {
-						keyTok, err := dec.Token()
-						if err != nil {
-							break
-						}
-						key, _ := keyTok.(string)
-						var val string
-						// 非字符串 value（数字/对象/数组）Decode 报错且已消费完该值；
-						// 若 break 则后续好键（main 等）全部丢失 → 跳过继续（declPos 保序）
-						if err := dec.Decode(&val); err != nil {
-							continue
-						}
-						if val != "" {
-							pm.names = append(pm.names, val)
-							mm[key] = val
-						}
-					}
-				}
-				pm.mapOrig = mm
-			case strings.HasPrefix(trimmed, `[`):
-				var arr []string
-				if json.Unmarshal(player.Model, &arr) == nil {
-					pm.names = arr
-				}
-			default:
-				pm.names = append(pm.names, strings.Trim(trimmed, `"`))
-			}
-		}
-		// texture 数组：抛回原始值（含来源标记），裁剪留各消费方
-		if len(player.Texture) > 0 {
-			texRaw := string(player.Texture)
-			if strings.HasPrefix(strings.TrimSpace(texRaw), `[`) {
-				var arr []json.RawMessage
-				if json.Unmarshal(player.Texture, &arr) == nil {
-					for _, item := range arr {
-						s := strings.TrimSpace(string(item))
-						if strings.HasPrefix(s, `{`) {
-							var obj struct {
-								Uv string `json:"uv"`
-							}
-							if json.Unmarshal(item, &obj) == nil && obj.Uv != "" {
-								pm.texDecl = append(pm.texDecl, texDeclItem{value: obj.Uv})
-							}
-						} else {
-							var sval string
-							if json.Unmarshal(item, &sval) == nil && sval != "" {
-								pm.texDecl = append(pm.texDecl, texDeclItem{value: sval, isStr: true})
-							}
-						}
-					}
-				}
-			}
+		if val != "" {
+			names = append(names, val)
+			mm[key] = val
 		}
 	}
-	return pm
+	return names, mm
+}
+
+// parsePlayerTextureDecl 解析 files.player.texture 数组：抛回原始值（含来源标记），
+// 裁剪留各消费方（Geometry 带扩展名做 orderMap 键、Components 去扩展名喂前端 R1）。
+func parsePlayerTextureDecl(raw json.RawMessage, pm *playerModel) {
+	if len(raw) == 0 {
+		return
+	}
+	if !strings.HasPrefix(strings.TrimSpace(string(raw)), `[`) {
+		return
+	}
+	var arr []json.RawMessage
+	if json.Unmarshal(raw, &arr) != nil {
+		return
+	}
+	for _, item := range arr {
+		if it, ok := parseTexDeclItem(item); ok {
+			pm.texDecl = append(pm.texDecl, it)
+		}
+	}
+}
+
+// parseTexDeclItem 解析单项纹理声明：对象取 .uv，裸字符串原样。
+// isStr 标记来源，供消费方复刻两分支不同裁剪（obj 切 '/\'、裸仅切 '/'）。
+func parseTexDeclItem(item json.RawMessage) (texDeclItem, bool) {
+	s := strings.TrimSpace(string(item))
+	if strings.HasPrefix(s, `{`) {
+		var obj struct {
+			Uv string `json:"uv"`
+		}
+		if json.Unmarshal(item, &obj) == nil && obj.Uv != "" {
+			return texDeclItem{value: obj.Uv}, true
+		}
+		return texDeclItem{}, false
+	}
+	var sval string
+	if json.Unmarshal(item, &sval) == nil && sval != "" {
+		return texDeclItem{value: sval, isStr: true}, true
+	}
+	return texDeclItem{}, false
 }
 
 // texFile 已发现的纹理文件（全路径 + 小写 basename 含扩展名）。

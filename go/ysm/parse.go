@@ -41,28 +41,106 @@ type ysmGeometry struct {
 	Faces    json.RawMessage `json:"faces"`    // 数组，取长度
 }
 
+// validateYsmModelExt 校验扩展名：.ysm/.zip 直接放行（.ysm 也可能没有扩展名）；
+// 其余形态剥离禁用后缀后再查一次。返回 (true, "") 通过，(false, 文案) 拒绝。
+func validateYsmModelExt(path string) (ok bool, errMsg string) {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext != ".ysm" && ext != ".zip" {
+		// 去掉禁用后缀再检查
+		if !registry.IsDisableSuffix(path) {
+			return false, "不支持的文件类型，仅支持 .ysm"
+		}
+		base := registry.StripDisableSuffix(path)
+		ext2 := strings.ToLower(filepath.Ext(base))
+		if ext2 != ".ysm" && ext2 != ".zip" {
+			return false, "不支持的文件类型"
+		}
+	}
+	return true, ""
+}
+
+// checkZipEntrySizes 校验 ZIP 条目尺寸不超过 registry.MaxImportSize。
+// 返回 (true, "") 通过，(false, 文案) 拒绝。
+//
+// P1 修复：防止恶意构造的多文件 ZIP 撑爆内存。
+// int64 溢出防线：单条目 UncompressedSize64 > MaxInt64 时 int64() 转换会回绕为负，
+// 使 totalSize 累加后绕过 500MB 上限（zip 中央目录可声明伪造巨型未压缩大小）。
+// 先按 uint64 逐条比较（无符号比较不会回绕），再累加 int64 总量。
+func checkZipEntrySizes(r container.Reader) (ok bool, errMsg string) {
+	var totalSize int64
+	for _, f := range r.Entries() {
+		uncomp := f.UncompressedSize64()
+		if uncomp > uint64(registry.MaxImportSize) {
+			return false, fmt.Sprintf("ZIP 包过大（%d MB），超过 %d MB 上限", uncomp/(1024*1024), registry.MaxImportSizeMB)
+		}
+		totalSize += int64(uncomp)
+		if totalSize > int64(registry.MaxImportSize) {
+			return false, fmt.Sprintf("ZIP 包过大（%d MB），超过 %d MB 上限", totalSize/(1024*1024), registry.MaxImportSizeMB)
+		}
+	}
+	return true, ""
+}
+
+// findZipEntryByBase 按 basename（大小写不敏感）查找容器条目；未找到返回 nil。
+// 只匹配 basename——zip 内 model.json 可位于任意子目录。
+func findZipEntryByBase(r container.Reader, base string) container.Entry {
+	for _, f := range r.Entries() {
+		if strings.ToLower(filepath.Base(f.Name())) == base {
+			return f
+		}
+	}
+	return nil
+}
+
+// countJSONArrayLen 统计 raw JSON 数组元素数；空 / 非数组 / 非法一律 0
+// （调用方按「未声明」处理，不留 NaN 之类的歧义态）。
+func countJSONArrayLen(raw json.RawMessage) int {
+	if len(raw) == 0 {
+		return 0
+	}
+	var arr []json.RawMessage
+	if err := json.Unmarshal(raw, &arr); err != nil {
+		return 0
+	}
+	return len(arr)
+}
+
+// countJSONArrayOrObjectLen 统计 raw JSON 元素数：数组取长度，对象取键数。
+// textures 段两种形态都出现过，先后尝试；两者皆非法 → 0。
+func countJSONArrayOrObjectLen(raw json.RawMessage) int {
+	if len(raw) == 0 {
+		return 0
+	}
+	var arr []json.RawMessage
+	if json.Unmarshal(raw, &arr) == nil {
+		return len(arr)
+	}
+	var obj map[string]json.RawMessage
+	if json.Unmarshal(raw, &obj) == nil {
+		return len(obj)
+	}
+	return 0
+}
+
+// populateYsmModelCounts 填充 bones/textures/animations/vertices/faces 计数。
+func populateYsmModelCounts(meta *YSMModelMeta, m *ysmModelJSON) {
+	meta.Bones = countJSONArrayLen(m.Bones)
+	meta.Textures = countJSONArrayOrObjectLen(m.Textures)
+	meta.Animations = countJSONArrayLen(m.Animations)
+	if m.Model != nil {
+		meta.Vertices = countJSONArrayLen(m.Model.Vertices)
+		meta.Faces = countJSONArrayLen(m.Model.Faces)
+	}
+}
+
 // AnalyzeYSMModel 解析 .ysm 文件，提取模型元数据
 func AnalyzeYSMModel(path string) YSMModelMeta {
 	meta := YSMModelMeta{}
 
-	// 只处理 .ysm 文件
-	ext := strings.ToLower(filepath.Ext(path))
-	// .ysm 也可能没有扩展名或 .zip 扩展
-	if ext != ".ysm" && ext != ".zip" {
-		// 去掉禁用后缀再检查
-		if registry.IsDisableSuffix(path) {
-			base := registry.StripDisableSuffix(path)
-			ext2 := strings.ToLower(filepath.Ext(base))
-			if ext2 != ".ysm" && ext2 != ".zip" {
-				meta.HasError = true
-				meta.ErrorMsg = "不支持的文件类型"
-				return meta
-			}
-		} else {
-			meta.HasError = true
-			meta.ErrorMsg = "不支持的文件类型，仅支持 .ysm"
-			return meta
-		}
+	if ok, errMsg := validateYsmModelExt(path); !ok {
+		meta.HasError = true
+		meta.ErrorMsg = errMsg
+		return meta
 	}
 
 	// 打开 ZIP
@@ -75,35 +153,14 @@ func AnalyzeYSMModel(path string) YSMModelMeta {
 	defer func() { _ = r.Close() }()
 
 	// P1 修复：检查 ZIP 总大小，防止恶意构造的多文件 ZIP 撑爆内存
-	var totalSize int64
-	for _, f := range r.Entries() {
-		// int64 溢出防线：单条目 UncompressedSize64 > MaxInt64 时 int64() 转换会回绕为负，
-		// 使 totalSize 累加后绕过 500MB 上限（zip 中央目录可声明伪造巨型未压缩大小）。
-		// 先按 uint64 逐条比较（无符号比较不会回绕），再累加 int64 总量。
-		uncomp := f.UncompressedSize64()
-		if uncomp > uint64(registry.MaxImportSize) {
-			meta.HasError = true
-			meta.ErrorMsg = fmt.Sprintf("ZIP 包过大（%d MB），超过 %d MB 上限", uncomp/(1024*1024), registry.MaxImportSizeMB)
-			return meta
-		}
-		totalSize += int64(uncomp)
-		if totalSize > int64(registry.MaxImportSize) {
-			meta.HasError = true
-			meta.ErrorMsg = fmt.Sprintf("ZIP 包过大（%d MB），超过 %d MB 上限", totalSize/(1024*1024), registry.MaxImportSizeMB)
-			return meta
-		}
+	if ok, errMsg := checkZipEntrySizes(r); !ok {
+		meta.HasError = true
+		meta.ErrorMsg = errMsg
+		return meta
 	}
 
 	// 查找 model.json
-	var modelFile container.Entry
-	for _, f := range r.Entries() {
-		name := strings.ToLower(filepath.Base(f.Name()))
-		if name == "model.json" {
-			modelFile = f
-			break
-		}
-	}
-
+	modelFile := findZipEntryByBase(r, "model.json")
 	if modelFile == nil {
 		meta.HasError = true
 		meta.ErrorMsg = "未找到 model.json（不是有效的 YSM 模型）"
@@ -143,44 +200,7 @@ func AnalyzeYSMModel(path string) YSMModelMeta {
 	meta.Version = m.Version
 
 	// 统计数组长度
-	if len(m.Bones) > 0 {
-		var arr []json.RawMessage
-		if err := json.Unmarshal(m.Bones, &arr); err == nil {
-			meta.Bones = len(arr)
-		}
-	}
-	if len(m.Textures) > 0 {
-		// textures 可能是数组或对象
-		var arr []json.RawMessage
-		if err := json.Unmarshal(m.Textures, &arr); err == nil {
-			meta.Textures = len(arr)
-		} else {
-			var obj map[string]json.RawMessage
-			if err := json.Unmarshal(m.Textures, &obj); err == nil {
-				meta.Textures = len(obj)
-			}
-		}
-	}
-	if len(m.Animations) > 0 {
-		var arr []json.RawMessage
-		if err := json.Unmarshal(m.Animations, &arr); err == nil {
-			meta.Animations = len(arr)
-		}
-	}
-	if m.Model != nil {
-		if len(m.Model.Vertices) > 0 {
-			var arr []json.RawMessage
-			if err := json.Unmarshal(m.Model.Vertices, &arr); err == nil {
-				meta.Vertices = len(arr)
-			}
-		}
-		if len(m.Model.Faces) > 0 {
-			var arr []json.RawMessage
-			if err := json.Unmarshal(m.Model.Faces, &arr); err == nil {
-				meta.Faces = len(arr)
-			}
-		}
-	}
+	populateYsmModelCounts(&meta, &m)
 
 	return meta
 }

@@ -44,134 +44,217 @@ type YSMHeader struct {
 	Tips string `json:"tips,omitempty"`
 }
 
+// headerScanState 是 scanHeader 的行扫描累积状态（段游标 + 两类自由文本行）。
+type headerScanState struct {
+	section  string   // 当前段：metadata/tips/export/codec/source；空 = 未选定
+	tips     []string // --- [Tips] 段的正文行
+	preamble []string // 未选定段时的自由行（无 tips 段时降级为 tips）
+}
+
+// headerLineAction 是单行扫描的结果。
+type headerLineAction int
+
+const (
+	headerLineNext headerLineAction = iota
+	headerLineStop                  // 命中 === 或二进制段分隔符 → 结束扫描
+)
+
 // scanHeader 从 bufio.Scanner 读取 YSM 头部，提取元数据
 func scanHeader(scanner *bufio.Scanner) YSMHeader {
 	h := YSMHeader{}
 	limit := 0
-	currentSection := ""
-	var tipsLines []string
-	var preambleLines []string
+	st := headerScanState{}
 
 	for scanner.Scan() && limit < 200 {
 		limit++
-		line := strings.TrimLeft(scanner.Text(), "\uFEFF")
-
-		if line == ysgpMagic {
-			h.IsYSM = true
-			continue
-		}
-		if strings.HasPrefix(line, "---") && strings.Contains(line, "[") {
-			switch {
-			case strings.Contains(line, "Metadata"):
-				currentSection = "metadata"
-			case strings.Contains(line, "Tips"):
-				currentSection = "tips"
-			case strings.Contains(line, "Export"):
-				currentSection = "export"
-			case strings.Contains(line, "Codec"):
-				currentSection = "codec"
-			case strings.Contains(line, "SHA-256") || strings.Contains(line, "Source"):
-				currentSection = "source"
-			default:
-				currentSection = ""
-			}
-			continue
-		}
-		if strings.HasPrefix(line, "===") {
+		if scanHeaderLine(scanner, &h, &st) == headerLineStop {
 			break
-		}
-		// 连续的 ---（无 [）是段落的结束分隔符，之后是二进制数据
-		if strings.HasPrefix(line, "---") && !strings.Contains(line, "[") && len(line) >= 10 {
-			// 跳过可能存在的空行，然后停止扫描
-			for scanner.Scan() {
-				if strings.TrimSpace(scanner.Text()) != "" {
-					break
-				}
-			}
-			break
-		}
-		if strings.HasPrefix(line, "<") {
-			if idx := strings.Index(line, ">"); idx > 0 {
-				tag := strings.TrimSpace(line[1:idx])
-				value := stripClosingTag(strings.TrimSpace(line[idx+1:]))
-				switch currentSection {
-				case "metadata":
-					switch strings.ToLower(tag) {
-					case "name":
-						h.Name = value
-					case "free":
-						h.IsFree = value == "true"
-						h.HasFree = true
-					case "hash":
-						h.Hash = value
-					case "license":
-						if value == "" {
-							continue
-						}
-						h.License = value
-					case "link-home":
-						h.LinkHome = value
-					case "link-update", "link_update":
-						h.LinkUpdate = value
-					}
-				case "export":
-				case "codec":
-					switch tag {
-					case "format":
-						h.Format = parseInt(value)
-					case "crypto":
-						h.Crypto = parseInt(value)
-					}
-				}
-			}
-			if currentSection != "" {
-				continue
-			}
-		}
-		if currentSection == "tips" && strings.TrimSpace(line) != "" {
-			tipsLines = append(tipsLines, strings.TrimSpace(line))
-		}
-		if strings.HasPrefix(strings.TrimSpace(line), "<") && strings.Contains(line, ">") {
-			trimmed := strings.TrimSpace(line)
-			if idx := strings.Index(trimmed, ">"); idx > 0 {
-				tag := strings.ToLower(trimmed[1:idx])
-				value := stripClosingTag(strings.TrimSpace(trimmed[idx+1:]))
-				switch tag {
-				case "name":
-					if h.AuthorName == "" {
-						h.AuthorName = value
-					}
-				case "role":
-					h.AuthorRole = value
-				case "contact-bilibili", "contact_bilibili", "contactbilibili":
-					h.AuthorBilibili = value
-				case "contact-afdian", "contact_afdian", "contactafdian":
-					h.AuthorAfdian = value
-				}
-			}
-		}
-		if currentSection == "" && strings.TrimSpace(line) != "" {
-			preambleLines = append(preambleLines, line)
 		}
 	}
 
-	if len(tipsLines) > 0 {
-		h.Tips = strings.Join(tipsLines, "\n")
-	} else if len(preambleLines) > 0 {
-		for i, l := range preambleLines {
-			cleaned := strings.TrimSpace(l)
-			cleaned = strings.TrimPrefix(cleaned, "//")
-			cleaned = strings.TrimPrefix(cleaned, "#")
-			cleaned = strings.TrimPrefix(cleaned, ";")
-			preambleLines[i] = strings.TrimSpace(cleaned)
-		}
-		h.Tips = strings.Join(preambleLines, "\n")
-	}
+	h.Tips = buildHeaderTips(st.tips, st.preamble)
 	// 检查 scanner.Err()，超长行（>64KB）时 log 标记
 	if err := scanner.Err(); err != nil {
 		log.Printf("[ysm] scanHeader scanner error: %v", err)
 	}
 	return h
+}
+
+// scanHeaderLine 处理单行：魔数识别 / 段分隔符 / 终止符 / 标签分派 / 自由文本收集。
+// 拆自原 scanHeader 大循环体（逐字复刻分支语义，含「段已选定即吞掉整行」规则）。
+func scanHeaderLine(scanner *bufio.Scanner, h *YSMHeader, st *headerScanState) headerLineAction {
+	line := strings.TrimLeft(scanner.Text(), "\uFEFF")
+
+	if line == ysgpMagic {
+		h.IsYSM = true
+		return headerLineNext
+	}
+	if sec, ok := headerSectionFromDelim(line); ok {
+		st.section = sec
+		return headerLineNext
+	}
+	if strings.HasPrefix(line, "===") {
+		return headerLineStop
+	}
+	// 连续的 ---（无 [）是段落的结束分隔符，之后是二进制数据
+	if isBinarySectionEnd(line) {
+		skipTrailingBlankLines(scanner)
+		return headerLineStop
+	}
+	if strings.HasPrefix(line, "<") {
+		if tag, value, ok := splitTagValue(line); ok {
+			applyHeaderTag(h, st.section, tag, value)
+		}
+		// 段已选定 → 本行归属于该段，不再落作者块 / preamble
+		if st.section != "" {
+			return headerLineNext
+		}
+	}
+	collectHeaderFreeText(line, h, st)
+	return headerLineNext
+}
+
+// headerSectionFromDelim 识别 `--- [Xxx]` 段分隔符并映射段名。
+// ok=false 表示本行不是段分隔符；ok=true 且 section 为空即原 default 分支
+// （未知段名）——调用方据此把段游标清空，后续自由行降级为 preamble。
+func headerSectionFromDelim(line string) (section string, ok bool) {
+	if !strings.HasPrefix(line, "---") || !strings.Contains(line, "[") {
+		return "", false
+	}
+	switch {
+	case strings.Contains(line, "Metadata"):
+		return "metadata", true
+	case strings.Contains(line, "Tips"):
+		return "tips", true
+	case strings.Contains(line, "Export"):
+		return "export", true
+	case strings.Contains(line, "Codec"):
+		return "codec", true
+	case strings.Contains(line, "SHA-256") || strings.Contains(line, "Source"):
+		return "source", true
+	default:
+		return "", true
+	}
+}
+
+// isBinarySectionEnd 判断本行是否为「段结束分隔符」：--- 且不含 [ 且长度 ≥ 10。
+// 其后是二进制数据，扫描须终止。
+func isBinarySectionEnd(line string) bool {
+	return strings.HasPrefix(line, "---") && !strings.Contains(line, "[") && len(line) >= 10
+}
+
+// skipTrailingBlankLines 跳过二进制段前可能存在的空行，然后停止扫描。
+func skipTrailingBlankLines(scanner *bufio.Scanner) {
+	for scanner.Scan() {
+		if strings.TrimSpace(scanner.Text()) != "" {
+			break
+		}
+	}
+}
+
+// splitTagValue 拆分 `<tag>value</tag>` 形态，要求首个 '>' 的位置 > 0
+// （idx==0 即无标签名）。调用方保证 line 以 '<' 开头。
+func splitTagValue(line string) (tag, value string, ok bool) {
+	idx := strings.Index(line, ">")
+	if idx <= 0 {
+		return "", "", false
+	}
+	tag = strings.TrimSpace(line[1:idx])
+	value = stripClosingTag(strings.TrimSpace(line[idx+1:]))
+	return tag, value, true
+}
+
+// applyHeaderTag 按当前段分派 `<tag>value`：
+//   - metadata 段：name/free/hash/license/link-home/link-update（tag 小写比较）
+//   - codec 段：format/crypto（tag 原样比较，与 metadata 的大小写口径不同）
+//   - export 段无字段；source 等段一律忽略（但仍算「段已选定」，不落作者块）
+//
+// 空 license 视为「未声明」而不置空。原实现在该分支 `continue` 提前结束本行，
+// 但只有 section == "metadata" 才可能到达，与调用方「段非空即结束本行」等价，
+// 故此处只做「不赋值」。
+func applyHeaderTag(h *YSMHeader, section, tag, value string) {
+	switch section {
+	case "metadata":
+		switch strings.ToLower(tag) {
+		case "name":
+			h.Name = value
+		case "free":
+			h.IsFree = value == "true"
+			h.HasFree = true
+		case "hash":
+			h.Hash = value
+		case "license":
+			if value != "" {
+				h.License = value
+			}
+		case "link-home":
+			h.LinkHome = value
+		case "link-update", "link_update":
+			h.LinkUpdate = value
+		}
+	case "codec":
+		switch tag {
+		case "format":
+			h.Format = parseInt(value)
+		case "crypto":
+			h.Crypto = parseInt(value)
+		}
+	}
+}
+
+// collectHeaderFreeText 收集未被「段已选定」规则吞掉的自由行：
+//   - tips 段正文 → tipsLines
+//   - 形如 `<tag>value` 的行 → 作者块（缩进行在段未选定时才走到这里）
+//   - 段未选定且非空的行 → preambleLines
+func collectHeaderFreeText(line string, h *YSMHeader, st *headerScanState) {
+	if st.section == "tips" && strings.TrimSpace(line) != "" {
+		st.tips = append(st.tips, strings.TrimSpace(line))
+	}
+	if strings.HasPrefix(strings.TrimSpace(line), "<") && strings.Contains(line, ">") {
+		if tag, value, ok := splitTagValue(strings.TrimSpace(line)); ok {
+			applyAuthorTag(h, strings.ToLower(tag), value)
+		}
+	}
+	if st.section == "" && strings.TrimSpace(line) != "" {
+		st.preamble = append(st.preamble, line)
+	}
+}
+
+// applyAuthorTag 作者块标签分派（tag 已小写）。历史头部同时存在
+// 连字符 / 下划线 / 无分隔三种写法，三种都收。
+func applyAuthorTag(h *YSMHeader, tag, value string) {
+	switch tag {
+	case "name":
+		if h.AuthorName == "" {
+			h.AuthorName = value
+		}
+	case "role":
+		h.AuthorRole = value
+	case "contact-bilibili", "contact_bilibili", "contactbilibili":
+		h.AuthorBilibili = value
+	case "contact-afdian", "contact_afdian", "contactafdian":
+		h.AuthorAfdian = value
+	}
+}
+
+// buildHeaderTips 组装 Tips：优先 tips 段正文，否则用 preamble 行
+// （逐行剥 // # ; 注释前缀）。
+func buildHeaderTips(tipsLines, preambleLines []string) string {
+	if len(tipsLines) > 0 {
+		return strings.Join(tipsLines, "\n")
+	}
+	if len(preambleLines) == 0 {
+		return ""
+	}
+	cleaned := make([]string, len(preambleLines))
+	for i, l := range preambleLines {
+		s := strings.TrimSpace(l)
+		s = strings.TrimPrefix(s, "//")
+		s = strings.TrimPrefix(s, "#")
+		s = strings.TrimPrefix(s, ";")
+		cleaned[i] = strings.TrimSpace(s)
+	}
+	return strings.Join(cleaned, "\n")
 }
 
 // AnalyzeYSMHeader 读取 YSM 文件的文本头部，提取元数据

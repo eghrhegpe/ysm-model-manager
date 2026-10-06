@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"log"
 	"net/http"
@@ -147,10 +148,46 @@ func Check(current string) (*UpdateInfo, error) {
 	return CheckWithClient(&http.Client{Timeout: apiTimeout}, api, current)
 }
 
-// CheckWithClient 可注入 client 与 API URL 的测试变体（Check 的内部实现）
+// CheckWithClient 可注入 client 与 API URL 的测试变体（Check 的内部实现）。
+// 拆三段：拉取 release 数组 → 挑最新正式版与下载链接 → 解析期望哈希（fail-closed）。
 func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, error) {
-	cur := normalize(current)
+	rels, err := fetchReleaseList(client, apiURL, current)
+	if err != nil {
+		return nil, err
+	}
 
+	latestTag, latestAssetURL, latestSHASumsURL, notes := pickLatestRelease(rels, normalize(current))
+	if latestTag == "" {
+		return &UpdateInfo{Current: current}, nil
+	}
+
+	// 从 SHA256SUMS 中解析对应 zip 的 hash
+	// 哈希不可得时 Available=false，阻断无完整性校验的更新下载。
+	// 旧实现「hash 缺失仍可下载」契约已废弃——攻击者只需阻断 SHA256SUMS 获取即可绕过完整性校验。
+	expectedHash, ok := resolveExpectedHash(latestSHASumsURL)
+	if !ok {
+		return &UpdateInfo{Current: current, Latest: latestTag}, nil
+	}
+
+	// latestTag 已由 pickLatestRelease 早退保证非空，此处只需判 asset URL 空
+	if latestAssetURL == "" {
+		// 有新版本但无本平台安装包（如仅发布其他平台）→ 视为不可更新
+		return &UpdateInfo{Current: current, Latest: latestTag}, nil
+	}
+
+	return &UpdateInfo{
+		Available:     true,
+		Latest:        latestTag,
+		Current:       current,
+		URL:           latestAssetURL,
+		SHA256SUMSURL: latestSHASumsURL,
+		ExpectedHash:  expectedHash,
+		ReleaseNotes:  notes,
+	}, nil
+}
+
+// fetchReleaseList 拉取并解析 release 数组（GitHub API 轻量请求）。
+func fetchReleaseList(client *http.Client, apiURL, current string) ([]Release, error) {
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return nil, err
@@ -167,14 +204,7 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 	// 显式检查状态码：403（rate limit）/ 404 等错误体不是 release 数组，
 	// 直接 Decode 会返回误导性错误；解析 GitHub 错误 message 给出可读提示
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
-		var ghErr struct {
-			Message string `json:"message"`
-		}
-		if json.Unmarshal(body, &ghErr) == nil && ghErr.Message != "" {
-			return nil, fmt.Errorf("检查更新失败：GitHub API 返回 %d（%s）", resp.StatusCode, ghErr.Message)
-		}
-		return nil, fmt.Errorf("检查更新失败：GitHub API 返回 %d", resp.StatusCode)
+		return nil, githubStatusError(resp)
 	}
 
 	var rels []Release
@@ -183,13 +213,27 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&rels); err != nil {
 		return nil, err
 	}
+	return rels, nil
+}
 
-	var latestTag string
-	var latestAssetURL string
-	var latestSHASumsURL string
-	var expectedHash string
+// githubStatusError 把非 200 响应体里的 GitHub message 拼成可读错误（错误体最多读 4KB，
+// 非 JSON / 无 message 时退回仅状态码文案）。
+func githubStatusError(resp *http.Response) error {
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
+	var ghErr struct {
+		Message string `json:"message"`
+	}
+	if json.Unmarshal(body, &ghErr) == nil && ghErr.Message != "" {
+		return fmt.Errorf("检查更新失败：GitHub API 返回 %d（%s）", resp.StatusCode, ghErr.Message)
+	}
+	return fmt.Errorf("检查更新失败：GitHub API 返回 %d", resp.StatusCode)
+}
+
+// pickLatestRelease 挑出「非 draft / 非 prerelease 且新于 cur」的最新正式版，
+// 返回其 tag、本平台 asset URL、SHA256SUMS URL，并聚合所有新版本的更新日志。
+// 无新版本时返回空 tag（调用方据此返回不可更新）。
+func pickLatestRelease(rels []Release, cur string) (latestTag, assetURL, sumsURL, notes string) {
 	var notesBuf strings.Builder
-
 	for _, rel := range rels {
 		if rel.Draft || rel.Prerelease {
 			continue
@@ -201,57 +245,45 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 		// 记录最新的 tag 和下载链接
 		if latestTag == "" || isNewer(tag, normalize(latestTag)) {
 			latestTag = rel.TagName
-			pattern := assetPattern()
-			for _, a := range rel.Assets {
-				if strings.EqualFold(a.Name, pattern) {
-					latestAssetURL = a.BrowserDownloadURL
-				}
-				if strings.EqualFold(a.Name, "SHA256SUMS") {
-					latestSHASumsURL = a.BrowserDownloadURL
-				}
-			}
+			assetURL, sumsURL = pickReleaseAssets(rel.Assets)
 		}
 		// 聚合日志：标记版本号 + body
 		if rel.Body != "" {
 			fmt.Fprintf(&notesBuf, "【%s】\n%s\n\n", rel.TagName, rel.Body)
 		}
 	}
+	return latestTag, assetURL, sumsURL, strings.TrimSpace(notesBuf.String())
+}
 
-	if latestTag == "" {
-		return &UpdateInfo{Current: current}, nil
-	}
-
-	// 从 SHA256SUMS 中解析对应 zip 的 hash
-	// 哈希不可得时 Available=false，阻断无完整性校验的更新下载。
-	// 旧实现「hash 缺失仍可下载」契约已废弃——攻击者只需阻断 SHA256SUMS 获取即可绕过完整性校验。
-	if latestSHASumsURL != "" {
-		hash, err := fetchExpectedHash(latestSHASumsURL, assetPattern())
-		if err != nil {
-			log.Printf("[updater] 获取期望哈希失败（更新不可用）: %v", err)
-			return &UpdateInfo{Current: current, Latest: latestTag}, nil
+// pickReleaseAssets 在 asset 列表里按当前平台命名模板挑安装包与 SHA256SUMS（大小写不敏感）；
+// 同一 release 内后者覆盖前者，与拆分前逐字一致。
+func pickReleaseAssets(assets []ReleaseAsset) (assetURL, sumsURL string) {
+	pattern := assetPattern()
+	for _, a := range assets {
+		if strings.EqualFold(a.Name, pattern) {
+			assetURL = a.BrowserDownloadURL
 		}
-		expectedHash = hash
-	} else {
+		if strings.EqualFold(a.Name, "SHA256SUMS") {
+			sumsURL = a.BrowserDownloadURL
+		}
+	}
+	return assetURL, sumsURL
+}
+
+// resolveExpectedHash 取 SHA256SUMS 里本平台包的哈希；无 URL 或拉取失败时 ok=false，
+// 调用方据此返回 Available=false 的 UpdateInfo（fail-closed，不给无校验更新开口子）。
+func resolveExpectedHash(sumsURL string) (string, bool) {
+	if sumsURL == "" {
 		// 无 SHA256SUMS URL 的 release，哈希不可得
 		log.Printf("[updater] release 无 SHA256SUMS，更新不可用")
-		return &UpdateInfo{Current: current, Latest: latestTag}, nil
+		return "", false
 	}
-
-	// latestTag 已在 L214 早退保证非空，此处只需判 asset URL 空
-	if latestAssetURL == "" {
-		// 有新版本但无本平台安装包（如仅发布其他平台）→ 视为不可更新
-		return &UpdateInfo{Current: current, Latest: latestTag}, nil
+	hash, err := fetchExpectedHash(sumsURL, assetPattern())
+	if err != nil {
+		log.Printf("[updater] 获取期望哈希失败（更新不可用）: %v", err)
+		return "", false
 	}
-
-	return &UpdateInfo{
-		Available:     true,
-		Latest:        latestTag,
-		Current:       current,
-		URL:           latestAssetURL,
-		SHA256SUMSURL: latestSHASumsURL,
-		ExpectedHash:  expectedHash,
-		ReleaseNotes:  strings.TrimSpace(notesBuf.String()),
-	}, nil
+	return hash, true
 }
 
 // Download 下载更新包（裸 exe）到临时目录，返回更新包路径（无进度回调，兼容旧调用方）。
@@ -312,13 +344,14 @@ var newDownloadClient = func() *http.Client {
 	return c
 }
 
-// downloadOnce 单源下载尝试：HTTP GET + 大小截断防护 + SHA256 校验
+// downloadOnce 单源下载尝试：HTTP GET + 大小截断防护 + SHA256 校验。
+// 按职责拆分：建请求 → 空 hash 前置拒绝 → 响应校验 → 落盘（writeBodyToTemp）
+// → 完整性校验（verifyDownloadedTemp）；各失败路径的清理由调用方统一收口，重试语义不变。
 func downloadOnce(assetURL string, expectedHash string, onProgress func(done, total int64)) (string, error) {
-	req, err := http.NewRequest("GET", assetURL, nil)
+	req, err := newUpdateRequest(assetURL)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "YSM-Model-Manager/")
 
 	// 哈希不可得时**下载前**即拒绝——
 	// 空 hash 时换任何源结果相同，重试 ghProxy 纯属浪费；也不为已知
@@ -334,48 +367,15 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	// 非 200 直接拒绝——原实现不检查状态码，asset URL 返回 404 时
-	// 在 expectedHash=="" 场景下错误页 HTML 会被当更新包写入 tmp 并返回成功
-	// （随后 InstallUpdate 才报 exe 打开失败，用户被误导为已下载成功）
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("更新包下载失败: HTTP %d（%s）", resp.StatusCode, assetURL)
-	}
-
-	// BUG(INFO-CT) 修复：Content-Type 为 HTML/XML 时拒绝——
-	// 攻击者返回 text/html 错误页（含恶意内容），downloadOnce 无 Content-Type 校验会将其当作更新包写入。
-	// 与 go/download HTTP-5 同源问题，对齐防御口径（仅拒绝 HTML/XML，保留 text/plain 等）。
-	if ct := resp.Header.Get("Content-Type"); ct != "" {
-		low := strings.ToLower(ct)
-		isTextHTML := strings.Contains(low, "text/html") || strings.Contains(low, "application/xhtml+xml")
-		isXML := strings.Contains(low, "application/xml") || strings.Contains(low, "text/xml")
-		if isTextHTML || isXML {
-			return "", fmt.Errorf("更新包 Content-Type 非二进制: %s", ct)
-		}
-	}
-
-	// BUG(INFO-RANGE) 修复：Content-Range 部分响应拒绝——
-	// 攻击者返回 200+Content-Range 截断更新包，导致安装后版本不完整。
-	// 与 go/download HTTP-2 同源问题，对齐防御口径。
-	if resp.Header.Get("Content-Range") != "" {
-		return "", fmt.Errorf("更新包部分响应（Content-Range）: %s", resp.Header.Get("Content-Range"))
+	if err := validateUpdateResponse(resp, assetURL); err != nil {
+		return "", err
 	}
 
 	// 固定可预测临时名（filepath.Base(assetURL)）有 TOCTOU/
 	// 多实例同名冲突/非法文件名风险——改 os.CreateTemp 唯一名
-	f, err := os.CreateTemp("", "ysm-update-*.tmp")
+	f, tmp, err := createUpdateTempFile()
 	if err != nil {
 		return "", err
-	}
-	tmp := f.Name()
-
-	// 临时文件 symlink 劫持防护。
-	// os.CreateTemp 在系统临时目录创建文件，若 TMPDIR 被设为攻击者可写路径，
-	// 或临时目录存在符号链接劫持，下载的 exe 可被替换。
-	// 创建后用 os.Lstat 校验：若发现是符号链接则拒绝（fail-closed）。
-	if fi, lerr := os.Lstat(tmp); lerr == nil && fi.Mode()&os.ModeSymlink != 0 {
-		_ = f.Close()
-		_ = os.Remove(tmp) // 最佳努力清理，失败不影响拒绝返回
-		return "", fmt.Errorf("临时文件 %s 是符号链接，拒绝写入（防 symlink 劫持）", tmp)
 	}
 
 	// 限制下载大小（最大 500MB），同时计算 SHA256
@@ -384,71 +384,152 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 		// 超限早退前先 Close 再 Remove——原 os.Remove(tmp)
 		// 时 f 未关闭，Windows 删除打开中的文件必然失败（错误被忽略 → 文件残留）
 		// 且 f 句柄泄漏（该路径无任何 Close）
-		_ = f.Close()
-		_ = os.Remove(tmp) // 最佳努力清理，失败不影响拒绝返回
+		removeTempFile(f, tmp)
 		return "", fmt.Errorf("更新包过大（%d 字节），超过 %d 字节上限: %w", resp.ContentLength, maxDownloadSize, ErrDownloadTooBig)
 	}
-	total := resp.ContentLength
-	if total < 0 {
-		total = 0 // 分块传输：大小未知，进度按字节节流回调
-	}
-	hasher := sha256.New()
-	prog := &progressWriter{total: total, onProgress: onProgress}
-	n, err := io.Copy(
-		io.MultiWriter(f, prog),
-		io.TeeReader(io.LimitReader(resp.Body, maxDownloadSize), hasher),
-	)
-	// 截断检测：读到上限后再读 1 字节，若仍有数据说明更新包超限被截断
-	// （无 Content-Length 的分块传输场景兜底，防止截断包被装盘）
-	// 探测读错误不再忽略——chunked 服务器发满后卡死时
-	// Read 阻塞到超时返回 (0, timeout err)，原 `extra, _ :=` 把 extra==0 当"未截断"
-	// 接受截断文件（陷阱 #33 残余命中）；只放行正常 EOF，其余一律拒绝
-	if n >= maxDownloadSize {
-		one := make([]byte, 1)
-		extra, probeErr := resp.Body.Read(one)
-		if extra > 0 || (probeErr != nil && probeErr != io.EOF) {
-			_ = f.Close()
-			_ = os.Remove(tmp) // 最佳努力清理，失败不影响拒绝返回
-			return "", fmt.Errorf("更新包超过 %d 字节上限（截断探测失败: %v）: %w", maxDownloadSize, probeErr, ErrDownloadTooBig)
-		}
-	}
-	closeErr := f.Close()
-	if err != nil {
-		_ = os.Remove(tmp) // 最佳努力清理，失败不影响报错返回
-		return "", err
-	}
-	if closeErr != nil {
-		_ = os.Remove(tmp)
-		return "", closeErr
-	}
 
-	// BUG(INFO-CL) 修复：完整性校验——Content-Length 已知时实收字节必须一致，
-	// 防限流器/代理在「干净 EOF」下静默截断（陷阱 #11 限流器截断静默）。
-	// 标准 http client 对提前关闭的 CL 响应返回 unexpected EOF（由上面 err 分支拒绝），
-	// 此检查为纵深防御，兜底自定义传输层返回「n<total 且 err==nil」的异常场景。
-	if total > 0 && n != total {
-		_ = os.Remove(tmp) // 最佳努力清理，失败不影响报错返回
-		return "", fmt.Errorf("%w：期望 %d 字节，实际收到 %d 字节", ErrDownloadIncomplete, total, n)
+	hasher := sha256.New()
+	n, prog, err := writeBodyToTemp(f, resp, hasher, onProgress)
+	if err != nil {
+		_ = os.Remove(tmp) // 最佳努力清理，失败不影响报错返回（写侧错误路径已在 helper 内 Close）
+		return "", err
 	}
 
 	// 未知长度（chunked）下载的尾块补发——progressWriter 按
 	// 512KB 节流，最后不足 512KB 的尾块与 <512KB 的短包全程零回调，前端进度条
 	// 停在陈旧字节数；补发最终 (n, 0) 保证进度弹窗显示真实最终字节数。
-	// 已知长度分支在 Copy 内已由 written>=total 触发 100% 回调，无需补发
-	if onProgress != nil && total <= 0 && n > prog.lastBytes {
+	// 已知长度分支在 Copy 内已由 written>=total 触发 100% 回调，无需补发。
+	// （prog.total <= 0 与下面的长度一致性校验 total > 0 互斥，顺序无可观测差异）
+	if onProgress != nil && prog.total <= 0 && n > prog.lastBytes {
 		onProgress(n, 0)
 	}
 
-	// 校验 SHA256（空 hash 已由 downloadOnce 开头前置拒绝，此处恒非空）
-	{
-		actual := hex.EncodeToString(hasher.Sum(nil))
-		if !strings.EqualFold(actual, expectedHash) {
-			_ = os.Remove(tmp) // 最佳努力清理，失败不影响报错返回
-			return "", fmt.Errorf("%w：\n期望 %s\n实际 %s\n文件可能被篡改或下载不完整", ErrHashMismatch, expectedHash, actual)
-		}
+	// 校验完整性：长度一致 + SHA256 匹配（空 hash 已由本函数开头前置拒绝，此处恒非空）
+	if err := verifyDownloadedTemp(tmp, n, prog.total, expectedHash, hex.EncodeToString(hasher.Sum(nil))); err != nil {
+		return "", err
 	}
 
 	return tmp, nil
+}
+
+// newUpdateRequest 构造下载请求（带 UA；URL 非法时在发起网络请求前返回错误）。
+func newUpdateRequest(assetURL string) (*http.Request, error) {
+	req, err := http.NewRequest("GET", assetURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "YSM-Model-Manager/")
+	return req, nil
+}
+
+// validateUpdateResponse 响应头校验，三道与 go/download 对齐的防御口径：
+//   - 非 200 直接拒绝——原实现不检查状态码，asset URL 返回 404 时
+//     在 expectedHash=="" 场景下错误页 HTML 会被当更新包写入 tmp 并返回成功
+//     （随后 InstallUpdate 才报 exe 打开失败，用户被误导为已下载成功）；
+//   - BUG(INFO-CT) 修复：Content-Type 为 HTML/XML 时拒绝——
+//     攻击者返回 text/html 错误页（含恶意内容），downloadOnce 无 Content-Type 校验会将其当作更新包写入。
+//     与 go/download HTTP-5 同源问题，对齐防御口径（仅拒绝 HTML/XML，保留 text/plain 等）；
+//   - BUG(INFO-RANGE) 修复：Content-Range 部分响应拒绝——
+//     攻击者返回 200+Content-Range 截断更新包，导致安装后版本不完整。
+//     与 go/download HTTP-2 同源问题，对齐防御口径。
+func validateUpdateResponse(resp *http.Response, assetURL string) error {
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("更新包下载失败: HTTP %d（%s）", resp.StatusCode, assetURL)
+	}
+
+	if ct := resp.Header.Get("Content-Type"); ct != "" {
+		low := strings.ToLower(ct)
+		isTextHTML := strings.Contains(low, "text/html") || strings.Contains(low, "application/xhtml+xml")
+		isXML := strings.Contains(low, "application/xml") || strings.Contains(low, "text/xml")
+		if isTextHTML || isXML {
+			return fmt.Errorf("更新包 Content-Type 非二进制: %s", ct)
+		}
+	}
+
+	if cr := resp.Header.Get("Content-Range"); cr != "" {
+		return fmt.Errorf("更新包部分响应（Content-Range）: %s", cr)
+	}
+	return nil
+}
+
+// createUpdateTempFile 建唯一名临时文件并做 symlink 劫持防护，返回句柄与路径。
+//
+// os.CreateTemp 在系统临时目录创建文件，若 TMPDIR 被设为攻击者可写路径，
+// 或临时目录存在符号链接劫持，下载的 exe 可被替换。
+// 创建后用 os.Lstat 校验：若发现是符号链接则拒绝（fail-closed）。
+func createUpdateTempFile() (*os.File, string, error) {
+	f, err := os.CreateTemp("", "ysm-update-*.tmp")
+	if err != nil {
+		return nil, "", err
+	}
+	tmp := f.Name()
+	if fi, lerr := os.Lstat(tmp); lerr == nil && fi.Mode()&os.ModeSymlink != 0 {
+		removeTempFile(f, tmp)
+		return nil, "", fmt.Errorf("临时文件 %s 是符号链接，拒绝写入（防 symlink 劫持）", tmp)
+	}
+	return f, tmp, nil
+}
+
+// removeTempFile 关闭并删除下载临时文件（最佳努力：两个错误都忽略，不影响拒绝/报错返回）。
+// 先 Close 再 Remove 是 Windows 硬要求——删除打开中的文件必然失败，错误被忽略后
+// 文件残留且句柄泄漏（原「超限早退」路径的历史 bug）。
+func removeTempFile(f *os.File, path string) {
+	_ = f.Close()
+	_ = os.Remove(path)
+}
+
+// writeBodyToTemp 把响应体写入 f（上限 maxDownloadSize 截断）并同步喂给 hasher，
+// 末尾关闭 f；返回实收字节数与进度计数器（prog.total 为归一化期望长度，0=分块未知）。
+//
+// 语义与拆分前逐字一致：限流拷贝 → 读到上限后再读 1 字节做截断探测 → Close；
+// copy 错误优先于 close 错误上报（清理统一由调用方按错误返回收口）。
+//
+// 截断检测：读到上限后再读 1 字节，若仍有数据说明更新包超限被截断
+// （无 Content-Length 的分块传输场景兜底，防止截断包被装盘）。
+// 探测读错误不再忽略——chunked 服务器发满后卡死时
+// Read 阻塞到超时返回 (0, timeout err)，原 `extra, _ :=` 把 extra==0 当"未截断"
+// 接受截断文件（陷阱 #33 残余命中）；只放行正常 EOF，其余一律拒绝。
+func writeBodyToTemp(f *os.File, resp *http.Response, hasher hash.Hash, onProgress func(done, total int64)) (int64, *progressWriter, error) {
+	total := resp.ContentLength
+	if total < 0 {
+		total = 0 // 分块传输：大小未知，进度按字节节流回调
+	}
+	prog := &progressWriter{total: total, onProgress: onProgress}
+	n, err := io.Copy(
+		io.MultiWriter(f, prog),
+		io.TeeReader(io.LimitReader(resp.Body, maxDownloadSize), hasher),
+	)
+	if n >= maxDownloadSize {
+		one := make([]byte, 1)
+		extra, probeErr := resp.Body.Read(one)
+		if extra > 0 || (probeErr != nil && probeErr != io.EOF) {
+			_ = f.Close()
+			return n, prog, fmt.Errorf("更新包超过 %d 字节上限（截断探测失败: %v）: %w", maxDownloadSize, probeErr, ErrDownloadTooBig)
+		}
+	}
+	closeErr := f.Close()
+	if err != nil {
+		return n, prog, err
+	}
+	return n, prog, closeErr
+}
+
+// verifyDownloadedTemp 完整性收口：Content-Length 已知时实收字节必须一致，且 SHA256 必须匹配；
+// 任一失败即清理临时文件并报错（空 hash 已由 downloadOnce 开头前置拒绝，此处恒非空）。
+//
+// BUG(INFO-CL) 修复：完整性校验防限流器/代理在「干净 EOF」下静默截断（陷阱 #11 限流器截断静默）。
+// 标准 http client 对提前关闭的 CL 响应返回 unexpected EOF（由 writeBodyToTemp 的 copy 错误分支
+// 拒绝），此检查为纵深防御，兜底自定义传输层返回「n<total 且 err==nil」的异常场景。
+func verifyDownloadedTemp(tmp string, n, total int64, expectedHash, actual string) error {
+	if total > 0 && n != total {
+		_ = os.Remove(tmp) // 最佳努力清理，失败不影响报错返回
+		return fmt.Errorf("%w：期望 %d 字节，实际收到 %d 字节", ErrDownloadIncomplete, total, n)
+	}
+	if !strings.EqualFold(actual, expectedHash) {
+		_ = os.Remove(tmp) // 最佳努力清理，失败不影响报错返回
+		return fmt.Errorf("%w：\n期望 %s\n实际 %s\n文件可能被篡改或下载不完整", ErrHashMismatch, expectedHash, actual)
+	}
+	return nil
 }
 
 // CleanupOldVersion 启动时清理上一次更新留下的 .old 文件

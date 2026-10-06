@@ -136,6 +136,176 @@ func summarizeBench(avgMs, thrpt []float64) benchSummary {
 	}
 }
 
+// benchFileInfo 待测文件（路径 + 大小）——runFileBench 内部聚合用。
+type benchFileInfo struct {
+	path string
+	size int64
+}
+
+// collectBenchFiles 解析 --file / --dir 得到待测文件清单：
+// --file 直接采信（stat 失败由 statBenchFiles 剔除）；--dir 走 WalkDir 收集大于
+// cliLargeFileThreshold 的文件，异常路径只计数跳过、不中断整轮扫描。
+func collectBenchFiles(testDir, filePath string) ([]string, error) {
+	var files []string
+	var walkErrCount int
+
+	switch {
+	case filePath != "":
+		files = append(files, filePath)
+	case testDir != "":
+		_ = filepath.WalkDir(testDir, func(path string, d iofs.DirEntry, err error) error {
+			if err != nil {
+				walkErrCount++
+				return nil
+			}
+			if !d.IsDir() {
+				info, ierr := d.Info()
+				if ierr != nil {
+					walkErrCount++
+					return nil
+				}
+				if info.Size() > cliLargeFileThreshold {
+					files = append(files, path)
+				}
+			}
+			return nil
+		})
+		if walkErrCount > 0 {
+			fmt.Printf("⚠️  扫描跳过 %d 个异常路径\n", walkErrCount)
+		}
+	default:
+		return nil, newParamErrf("请指定 --dir 或 --file 参数")
+	}
+
+	return files, nil
+}
+
+// statBenchFiles 对清单逐个 stat，剔除扫描后被删的路径（失败跳过，不中断）。
+func statBenchFiles(files []string) []benchFileInfo {
+	var out []benchFileInfo
+	for _, f := range files {
+		info, err := os.Stat(f)
+		if err != nil {
+			continue
+		}
+		out = append(out, benchFileInfo{path: f, size: info.Size()})
+	}
+	return out
+}
+
+// printBenchFileList 打印待测文件清单（超长名截断到 47+...），返回总大小
+// （批量吞吐与 IPC 度量共用同一口径）。
+func printBenchFileList(fileInfos []benchFileInfo) int64 {
+	fmt.Println("📁 待测试文件:")
+	totalSize := int64(0)
+	for i, fi := range fileInfos {
+		name := filepath.Base(fi.path)
+		if len(name) > 50 {
+			name = name[:47] + "..."
+		}
+		fmt.Printf("   [%d] %-50s %s\n", i+1, name, fsutil.FormatSize(fi.size))
+		totalSize += fi.size
+	}
+	fmt.Printf("\n   总大小: %s\n\n", fsutil.FormatSize(totalSize))
+	return totalSize
+}
+
+// measureSingleRead 逐文件重复读取 iterations 次，打印每文件平均耗时/吞吐，
+// 返回文件级平均毫秒与吞吐（供 SingleRead 汇总归档，#8：测量曾做但不写 JSON）。
+func measureSingleRead(ctx *CmdContext, fileInfos []benchFileInfo, iterations int) (avgMs, thrpt []float64) {
+	avgMs = make([]float64, 0, len(fileInfos))
+	thrpt = make([]float64, 0, len(fileInfos))
+	for _, fi := range fileInfos {
+		name := filepath.Base(fi.path)
+		readTimes := make([]time.Duration, iterations)
+
+		for i := 0; i < iterations; i++ {
+			start := time.Now()
+			data := ctx.App.ReadFileBytes(fi.path)
+			readTimes[i] = time.Since(start)
+			_ = data
+		}
+
+		avgTime := avgDuration(readTimes)
+		throughput := 0.0
+		if avgTime > 0 {
+			throughput = float64(fi.size) / avgTime.Seconds() / (1024 * 1024)
+		}
+		avgMs = append(avgMs, float64(avgTime)/float64(time.Millisecond))
+		thrpt = append(thrpt, throughput)
+
+		fmt.Printf("   %s (%s):\n", name, fsutil.FormatSize(fi.size))
+		fmt.Printf("     平均耗时: %v | 吞吐: %.1f MB/s\n", avgTime, throughput)
+	}
+	return avgMs, thrpt
+}
+
+// measureBatchRead 批量读取测量并打印报告段；文件数 ≤1 时不测量，返回零值汇总
+// （零值即「未测」标记，JSON 载荷与拆分前逐字段一致）。
+func measureBatchRead(ctx *CmdContext, fileInfos []benchFileInfo, totalSize int64, iterations int) benchSummary {
+	if len(fileInfos) <= 1 {
+		return benchSummary{}
+	}
+	fmt.Println("\n📊 批量读取测试 (模拟 ReadFileBytesBatch):")
+	paths := make([]string, len(fileInfos))
+	for i, fi := range fileInfos {
+		paths[i] = fi.path
+	}
+
+	batchTimes := make([]time.Duration, iterations)
+	for i := 0; i < iterations; i++ {
+		start := time.Now()
+		results := ctx.App.ReadFileBytesBatch(paths)
+		batchTimes[i] = time.Since(start)
+		_ = results
+	}
+
+	avgBatch := avgDuration(batchTimes)
+	minBatch, maxBatch := durationMinMax(batchTimes)
+	batchThroughput := 0.0
+	if avgBatch > 0 {
+		batchThroughput = float64(totalSize) / avgBatch.Seconds() / (1024 * 1024)
+	}
+	fmt.Printf("   %d 个文件, 总大小 %s:\n", len(fileInfos), fsutil.FormatSize(totalSize))
+	fmt.Printf("     平均耗时: %v | 吞吐: %.1f MB/s\n", avgBatch, batchThroughput)
+
+	return benchSummary{
+		AvgMs:      float64(avgBatch) / float64(time.Millisecond),
+		MinMs:      float64(minBatch) / float64(time.Millisecond),
+		MaxMs:      float64(maxBatch) / float64(time.Millisecond),
+		Throughput: batchThroughput,
+	}
+}
+
+// buildBenchResult 组装基准 JSON 载荷（--output 落盘与 --compare 真对比共用，#8 补全归档）。
+func buildBenchResult(benchItems []fileBenchItem, fileThrpt []float64, single, batch benchSummary, ipc ipcEstimate) fileBenchResult {
+	result := fileBenchResult{
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		Files:       make([]fileBenchFile, len(benchItems)),
+		SingleRead:  single,
+		BatchRead:   batch,
+		IPCOverhead: ipc,
+	}
+	for i, f := range benchItems {
+		result.Files[i] = fileBenchFile{Path: f.Path, Size: f.Size, AvgMs: f.AvgMs, ThroughputMBps: fileThrpt[i]}
+	}
+	return result
+}
+
+// saveBenchResult 把基准 JSON 落盘（--output）。
+// 序列化失败显式上报（原实现静默吞——吞吐 Inf/异常值会使 JSON 静默不落盘）。
+func saveBenchResult(output string, result fileBenchResult) error {
+	jsonBytes, merr := json.MarshalIndent(result, "", "  ")
+	if merr != nil {
+		return newRuntimeErrf("序列化基准 JSON 失败: %v", merr)
+	}
+	if err := os.WriteFile(output, jsonBytes, fsutil.FilePerms); err != nil {
+		return newRuntimeErrf("保存基准 JSON 失败: %v", err)
+	}
+	fmt.Printf("\n💾 基准已保存到: %s\n", output)
+	return nil
+}
+
 // runFileBench 测试大文件读取性能（支持 JSON 输出和基准对比）
 func runFileBench(ctx *CmdContext) error {
 	fs := newCmdFlagSet("file-bench")
@@ -152,35 +322,9 @@ func runFileBench(ctx *CmdContext) error {
 		return newParamErrf("--iterations 必须大于 0")
 	}
 
-	var files []string
-	var walkErrCount int
-
-	switch {
-	case *filePath != "":
-		files = append(files, *filePath)
-	case *testDir != "":
-		_ = filepath.WalkDir(*testDir, func(path string, d iofs.DirEntry, err error) error {
-			if err != nil {
-				walkErrCount++
-				return nil
-			}
-			if !d.IsDir() {
-				info, ierr := d.Info()
-				if ierr != nil {
-					walkErrCount++
-					return nil
-				}
-				if info.Size() > 1*1024*1024 {
-					files = append(files, path)
-				}
-			}
-			return nil
-		})
-		if walkErrCount > 0 {
-			fmt.Printf("⚠️  扫描跳过 %d 个异常路径\n", walkErrCount)
-		}
-	default:
-		return newParamErrf("请指定 --dir 或 --file 参数")
+	files, err := collectBenchFiles(*testDir, *filePath)
+	if err != nil {
+		return err
 	}
 
 	if len(files) == 0 {
@@ -192,85 +336,15 @@ func runFileBench(ctx *CmdContext) error {
 	fmt.Printf("   文件数: %d\n", len(files))
 	fmt.Printf("   迭代次数: %d\n\n", *iterations)
 
-	type fileInfo struct {
-		path string
-		size int64
-	}
-	var fileInfos []fileInfo
-	for _, f := range files {
-		info, err := os.Stat(f)
-		if err != nil {
-			continue
-		}
-		fileInfos = append(fileInfos, fileInfo{path: f, size: info.Size()})
-	}
-
-	fmt.Println("📁 待测试文件:")
-	totalSize := int64(0)
-	for i, fi := range fileInfos {
-		name := filepath.Base(fi.path)
-		if len(name) > 50 {
-			name = name[:47] + "..."
-		}
-		fmt.Printf("   [%d] %-50s %s\n", i+1, name, fsutil.FormatSize(fi.size))
-		totalSize += fi.size
-	}
-	fmt.Printf("\n   总大小: %s\n\n", fsutil.FormatSize(totalSize))
+	fileInfos := statBenchFiles(files)
+	totalSize := printBenchFileList(fileInfos)
 
 	fmt.Println("📊 单文件读取测试:")
 	// 收集每文件平均耗时/吞吐，供 SingleRead 汇总归档（#8：测量曾做但不写 JSON）
-	fileAvgMs := make([]float64, 0, len(fileInfos))
-	fileThrpt := make([]float64, 0, len(fileInfos))
-	for _, fi := range fileInfos {
-		name := filepath.Base(fi.path)
-		readTimes := make([]time.Duration, *iterations)
-
-		for i := 0; i < *iterations; i++ {
-			start := time.Now()
-			data := ctx.App.ReadFileBytes(fi.path)
-			readTimes[i] = time.Since(start)
-			_ = data
-		}
-
-		avgTime := avgDuration(readTimes)
-		throughput := 0.0
-		if avgTime > 0 {
-			throughput = float64(fi.size) / avgTime.Seconds() / (1024 * 1024)
-		}
-		fileAvgMs = append(fileAvgMs, float64(avgTime)/float64(time.Millisecond))
-		fileThrpt = append(fileThrpt, throughput)
-
-		fmt.Printf("   %s (%s):\n", name, fsutil.FormatSize(fi.size))
-		fmt.Printf("     平均耗时: %v | 吞吐: %.1f MB/s\n", avgTime, throughput)
-	}
+	fileAvgMs, fileThrpt := measureSingleRead(ctx, fileInfos, *iterations)
 
 	// 批量读取汇总（文件数 >1 时才测量，零值表示未测）
-	var avgBatch time.Duration
-	var minBatch, maxBatch time.Duration
-	var batchThroughput float64
-	if len(fileInfos) > 1 {
-		fmt.Println("\n📊 批量读取测试 (模拟 ReadFileBytesBatch):")
-		paths := make([]string, len(fileInfos))
-		for i, fi := range fileInfos {
-			paths[i] = fi.path
-		}
-
-		batchTimes := make([]time.Duration, *iterations)
-		for i := 0; i < *iterations; i++ {
-			start := time.Now()
-			results := ctx.App.ReadFileBytesBatch(paths)
-			batchTimes[i] = time.Since(start)
-			_ = results
-		}
-
-		avgBatch = avgDuration(batchTimes)
-		minBatch, maxBatch = durationMinMax(batchTimes)
-		if avgBatch > 0 {
-			batchThroughput = float64(totalSize) / avgBatch.Seconds() / (1024 * 1024)
-		}
-		fmt.Printf("   %d 个文件, 总大小 %s:\n", len(fileInfos), fsutil.FormatSize(totalSize))
-		fmt.Printf("     平均耗时: %v | 吞吐: %.1f MB/s\n", avgBatch, batchThroughput)
-	}
+	batchStats := measureBatchRead(ctx, fileInfos, totalSize, *iterations)
 
 	benchItems := make([]fileBenchItem, len(fileInfos))
 	for i, f := range fileInfos {
@@ -284,34 +358,12 @@ func runFileBench(ctx *CmdContext) error {
 	fmt.Printf("   序列化开销:   ~%s\n", durationFormat(overheadEstimate.SerDescOverheadMs))
 
 	// 基准结果无条件组装：--output 落盘与 --compare 真对比共用（#8 补全归档）
-	result := fileBenchResult{
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		Files:       make([]fileBenchFile, len(benchItems)),
-		SingleRead:  summarizeBench(fileAvgMs, fileThrpt),
-		IPCOverhead: overheadEstimate,
-	}
-	if len(fileInfos) > 1 {
-		result.BatchRead = benchSummary{
-			AvgMs:      float64(avgBatch) / float64(time.Millisecond),
-			MinMs:      float64(minBatch) / float64(time.Millisecond),
-			MaxMs:      float64(maxBatch) / float64(time.Millisecond),
-			Throughput: batchThroughput,
-		}
-	}
-	for i, f := range benchItems {
-		result.Files[i] = fileBenchFile{Path: f.Path, Size: f.Size, AvgMs: f.AvgMs, ThroughputMBps: fileThrpt[i]}
-	}
+	result := buildBenchResult(benchItems, fileThrpt, summarizeBench(fileAvgMs, fileThrpt), batchStats, overheadEstimate)
 
 	if *output != "" {
-		// 序列化失败显式上报（原实现静默吞——吞吐 Inf/异常值会使 JSON 静默不落盘）
-		jsonBytes, merr := json.MarshalIndent(result, "", "  ")
-		if merr != nil {
-			return newRuntimeErrf("序列化基准 JSON 失败: %v", merr)
+		if err := saveBenchResult(*output, result); err != nil {
+			return err
 		}
-		if err := os.WriteFile(*output, jsonBytes, fsutil.FilePerms); err != nil {
-			return newRuntimeErrf("保存基准 JSON 失败: %v", err)
-		}
-		fmt.Printf("\n💾 基准已保存到: %s\n", *output)
 	}
 
 	if *compare != "" {
@@ -439,6 +491,167 @@ type largeFile struct {
 	Size int64  `json:"size"`
 }
 
+// dirWalkStats scan-dir 的遍历累加器：总数 / 按扩展名分组 / 大文件清单 / 异常路径。
+type dirWalkStats struct {
+	totalFiles int
+	totalDirs  int
+	totalSize  int64
+	extCount   map[string]int
+	extSize    map[string]int64
+	largest    []largeFile
+	walkErrors []string
+}
+
+// walkDirStats 遍历目录累计统计；单个路径不可访问只记入 walkErrors 并继续，
+// 不中断整轮扫描（根目录本身不存在时 Walk 仅回调一次错误即返回 nil，见调用方口径）。
+func walkDirStats(dirPath string) (*dirWalkStats, error) {
+	st := &dirWalkStats{
+		extCount: make(map[string]int),
+		extSize:  make(map[string]int64),
+	}
+	threshold := cliScanLargeFileThreshold
+
+	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			st.walkErrors = append(st.walkErrors, fmt.Sprintf("%s: %v", path, err))
+			return nil
+		}
+
+		if info.IsDir() {
+			st.totalDirs++
+			return nil
+		}
+
+		ext := strings.ToLower(filepath.Ext(path))
+		size := info.Size()
+		st.totalFiles++
+		st.totalSize += size
+
+		st.extCount[ext]++
+		st.extSize[ext] += size
+
+		if size > threshold {
+			st.largest = append(st.largest, largeFile{Path: path, Size: size})
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
+}
+
+// printWalkErrors 逐条打印遍历异常路径（扫到但读不到的路径如实回报，不静默丢弃）。
+func printWalkErrors(walkErrors []string) {
+	if len(walkErrors) == 0 {
+		return
+	}
+	fmt.Printf("⚠️  扫描跳过 %d 个异常路径:\n", len(walkErrors))
+	for _, w := range walkErrors {
+		fmt.Printf("   - %s\n", w)
+	}
+	fmt.Println()
+}
+
+// buildScanDirResult 把遍历累加器转成 JSON 载荷（按扩展名分组 + 大文件清单）。
+func buildScanDirResult(dirPath string, st *dirWalkStats) scanDirResult {
+	result := scanDirResult{
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		Directory:   dirPath,
+		TotalFiles:  st.totalFiles,
+		TotalDirs:   st.totalDirs,
+		TotalSize:   st.totalSize,
+		ByExtension: make([]extStatItem, 0, len(st.extCount)),
+		Largest:     make([]largeFile, 0, len(st.largest)),
+	}
+	for ext, count := range st.extCount {
+		result.ByExtension = append(result.ByExtension, extStatItem{
+			Ext:   ext,
+			Count: count,
+			Size:  st.extSize[ext],
+		})
+	}
+	result.Largest = append(result.Largest, st.largest...)
+	return result
+}
+
+// saveScanDirJSON 落盘扫描结果（--output）：写成功后打印路径并收口，不再打印文本报告。
+func saveScanDirJSON(output string, result scanDirResult) error {
+	jsonBytes, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return newRuntimeErrf("JSON 序列化失败: %v", err)
+	}
+	if err := os.WriteFile(output, jsonBytes, fsutil.FilePerms); err != nil {
+		return newRuntimeErrf("保存 JSON 文件失败: %v", err)
+	}
+	fmt.Printf("💾 JSON 已保存到: %s\n\n", output)
+	return nil
+}
+
+// printScanDirReport 打印文本报告：目录统计 + 按扩展名分组（按大小降序）+ 大文件清单（前 10）。
+func printScanDirReport(st *dirWalkStats, dirPath string) {
+	fmt.Printf("📊 目录统计:\n")
+	fmt.Printf("   目录数:   %d\n", st.totalDirs)
+	fmt.Printf("   文件数:   %d\n", st.totalFiles)
+	fmt.Printf("   总大小:   %s\n\n", fsutil.FormatSize(st.totalSize))
+
+	fmt.Println("📋 按扩展名分组:")
+	type extStat struct {
+		ext   string
+		count int
+		size  int64
+	}
+	var stats []extStat
+	for ext, count := range st.extCount {
+		stats = append(stats, extStat{ext, count, st.extSize[ext]})
+	}
+	// 按大小降序（sort.Slice 替代手写选择排序，#7）
+	sort.Slice(stats, func(i, j int) bool { return stats[i].size > stats[j].size })
+
+	fmt.Printf("   %-10s %-8s %s\n", "扩展名", "数量", "总大小")
+	fmt.Println("   " + strings.Repeat("-", 50))
+	for _, s := range stats {
+		fmt.Printf("   %-10s %-8d %s\n", s.ext, s.count, fsutil.FormatSize(s.size))
+	}
+
+	if len(st.largest) == 0 {
+		return
+	}
+	fmt.Printf("\n⚠️  大文件列表 (>10MB, 共 %d 个):\n", len(st.largest))
+	for i, lf := range st.largest {
+		if i >= 10 {
+			fmt.Printf("   ... 还有 %d 个\n", len(st.largest)-10)
+			break
+		}
+		relPath := strings.TrimPrefix(lf.Path, dirPath)
+		fmt.Printf("   [%d] %s (%s)\n", i+1, relPath, fsutil.FormatSize(lf.Size))
+	}
+}
+
+// printScanDirDetail --detail：列前 20 个文件。count 到 20 后仍走完遍历
+// （保持原「只截断输出、不提前终止遍历」语义），末尾补剩余计数。
+func printScanDirDetail(dirPath string, totalFiles int) {
+	fmt.Printf("\n📝 文件详情 (前 20 个):\n")
+	count := 0
+	_ = filepath.WalkDir(dirPath, func(path string, d iofs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || count >= 20 {
+			return nil
+		}
+		relPath := strings.TrimPrefix(path, dirPath)
+		info, ierr := d.Info()
+		if ierr != nil {
+			return nil
+		}
+		fmt.Printf("   %s (%s)\n", relPath, fsutil.FormatSize(info.Size()))
+		count++
+		return nil
+	})
+	if totalFiles > 20 {
+		fmt.Printf("   ... 还有 %d 个文件\n", totalFiles-20)
+	}
+}
+
 // runScanDir 扫描目录结构（支持 JSON 输出）
 func runScanDir(ctx *CmdContext) error {
 	fs := newCmdFlagSet("scan-dir")
@@ -456,150 +669,21 @@ func runScanDir(ctx *CmdContext) error {
 
 	fmt.Printf("📁 扫描目录: %s\n\n", *dirPath)
 
-	var (
-		totalFiles   int
-		totalDirs    int
-		totalSize    int64
-		extCount     = make(map[string]int)
-		extSize      = make(map[string]int64)
-		largestFiles []struct {
-			path string
-			size int64
-		}
-	)
-
-	threshold := cliScanLargeFileThreshold
-
-	var walkErrors []string
-
-	err = filepath.Walk(*dirPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			walkErrors = append(walkErrors, fmt.Sprintf("%s: %v", path, err))
-			return nil
-		}
-
-		if info.IsDir() {
-			totalDirs++
-			return nil
-		}
-
-		ext := strings.ToLower(filepath.Ext(path))
-		size := info.Size()
-		totalFiles++
-		totalSize += size
-
-		extCount[ext]++
-		extSize[ext] += size
-
-		if size > threshold {
-			largestFiles = append(largestFiles, struct {
-				path string
-				size int64
-			}{path: path, size: size})
-		}
-
-		return nil
-	})
-
+	st, err := walkDirStats(*dirPath)
 	if err != nil {
 		return newRuntimeErrf("扫描目录失败: %v", err)
 	}
 
-	if len(walkErrors) > 0 {
-		fmt.Printf("⚠️  扫描跳过 %d 个异常路径:\n", len(walkErrors))
-		for _, w := range walkErrors {
-			fmt.Printf("   - %s\n", w)
-		}
-		fmt.Println()
-	}
-
-	result := scanDirResult{
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		Directory:   *dirPath,
-		TotalFiles:  totalFiles,
-		TotalDirs:   totalDirs,
-		TotalSize:   totalSize,
-		ByExtension: make([]extStatItem, 0, len(extCount)),
-		Largest:     make([]largeFile, 0, len(largestFiles)),
-	}
-	for ext, count := range extCount {
-		result.ByExtension = append(result.ByExtension, extStatItem{
-			Ext:   ext,
-			Count: count,
-			Size:  extSize[ext],
-		})
-	}
-	for _, f := range largestFiles {
-		result.Largest = append(result.Largest, largeFile{Path: f.path, Size: f.size})
-	}
+	printWalkErrors(st.walkErrors)
 
 	if *output != "" {
-		if jsonBytes, err := json.MarshalIndent(result, "", "  "); err == nil {
-			if err := os.WriteFile(*output, jsonBytes, fsutil.FilePerms); err != nil {
-				return newRuntimeErrf("保存 JSON 文件失败: %v", err)
-			}
-			fmt.Printf("💾 JSON 已保存到: %s\n\n", *output)
-			return nil
-		} else {
-			return newRuntimeErrf("JSON 序列化失败: %v", err)
-		}
+		return saveScanDirJSON(*output, buildScanDirResult(*dirPath, st))
 	}
 
-	fmt.Printf("📊 目录统计:\n")
-	fmt.Printf("   目录数:   %d\n", totalDirs)
-	fmt.Printf("   文件数:   %d\n", totalFiles)
-	fmt.Printf("   总大小:   %s\n\n", fsutil.FormatSize(totalSize))
+	printScanDirReport(st, *dirPath)
 
-	fmt.Println("📋 按扩展名分组:")
-	type extStat struct {
-		ext   string
-		count int
-		size  int64
-	}
-	var stats []extStat
-	for ext, count := range extCount {
-		stats = append(stats, extStat{ext, count, extSize[ext]})
-	}
-	// 按大小降序（sort.Slice 替代手写选择排序，#7）
-	sort.Slice(stats, func(i, j int) bool { return stats[i].size > stats[j].size })
-
-	fmt.Printf("   %-10s %-8s %s\n", "扩展名", "数量", "总大小")
-	fmt.Println("   " + strings.Repeat("-", 50))
-	for _, s := range stats {
-		fmt.Printf("   %-10s %-8d %s\n", s.ext, s.count, fsutil.FormatSize(s.size))
-	}
-
-	if len(largestFiles) > 0 {
-		fmt.Printf("\n⚠️  大文件列表 (>10MB, 共 %d 个):\n", len(largestFiles))
-		for i, lf := range largestFiles {
-			if i >= 10 {
-				fmt.Printf("   ... 还有 %d 个\n", len(largestFiles)-10)
-				break
-			}
-			relPath := strings.TrimPrefix(lf.path, *dirPath)
-			fmt.Printf("   [%d] %s (%s)\n", i+1, relPath, fsutil.FormatSize(lf.size))
-		}
-	}
-
-	if *detail && totalFiles > 0 {
-		fmt.Printf("\n📝 文件详情 (前 20 个):\n")
-		count := 0
-		_ = filepath.WalkDir(*dirPath, func(path string, d iofs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || count >= 20 {
-				return nil
-			}
-			relPath := strings.TrimPrefix(path, *dirPath)
-			info, ierr := d.Info()
-			if ierr != nil {
-				return nil
-			}
-			fmt.Printf("   %s (%s)\n", relPath, fsutil.FormatSize(info.Size()))
-			count++
-			return nil
-		})
-		if totalFiles > 20 {
-			fmt.Printf("   ... 还有 %d 个文件\n", totalFiles-20)
-		}
+	if *detail && st.totalFiles > 0 {
+		printScanDirDetail(*dirPath, st.totalFiles)
 	}
 
 	return nil

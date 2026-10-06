@@ -73,6 +73,8 @@ status: active
 
 ## 不变量
 
+- **职责拆分不换契约（2026-10-07 拆 gocyclo）**：`go/updater/updater.go|downloadOnce` 的落盘段收敛到 `writeBodyToTemp`（限流拷贝 + 截断探测 + Close，copy 错误优先于 close 错误上报）与 `verifyDownloadedTemp`（长度一致 + SHA256，失败即清临时文件），响应头校验（状态码 / Content-Type / Content-Range）收敛到 `validateUpdateResponse`，临时文件创建与清理收敛到 `createUpdateTempFile` / `removeTempFile`（**先 Close 再 Remove**——Windows 删打开中的文件必失败，错误被忽略就留残包）；`CheckWithClient` 拆为 `fetchReleaseList` + `pickLatestRelease`/`pickReleaseAssets` + `resolveExpectedHash`。契约零变更：**空 hash 仍在发起请求前 fail-fast**（`newUpdateRequest` 建请求 → 判 `expectedHash == ""` → 才 `client.Do`，与拆分前同序，`TestDownloadOnce_InvalidURL` 等既有用例依赖此序）；每处失败路径仍是 Close + Remove；`ErrHashMismatch`/`ErrDownloadTooBig`/`ErrDownloadIncomplete` 哨兵与错误文案逐字不变。
+- **恰好 N 字节 ≠ 截断（ADR-033 邻接面，勿放大）**：`io.LimitReader` 在「数据恰好 `maxDownloadSize`」与「被截断到上限」之间不可区分，靠「读到上限后再读 1 字节，只放行正常 EOF」区分；`go/updater/updater_refactor_guard_test.go` 钉住「恰好 N → 成功且字节数精确」（`TestDownloadOnceExactLimitIsNotTruncation`）、HTML/Content-Range 拒绝、进度收口与哈希后落盘。空 hash 前置拒绝会让 HTTP 校验分支在旧用例里不可达——补测一律传**正确**哈希，确保拒绝确因 Content-Type/Content-Range 而非哈希。
 - 更新操作需要用户确认
 - 下载多源回退任一成功即返回；`ghProxyPrefixes` 为第三方公开服务，域名失效时改常量即可（测试可整体替换为本地 server 隔离真实网络）
 - 每源独立 90s 超时：慢/卡源快速切镜像，全源失败才聚合报错（含源标识便于判断直连还是镜像问题）

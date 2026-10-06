@@ -18,6 +18,122 @@ import (
 // CleanOpLogger 清理操作日志回调（薄壳注入 App.logger.Add）
 type CleanOpLogger func(name, src, dst string, size int64, status, msg string)
 
+// isDedupableDir 防御性守卫：拒绝空 dir 与文件系统根目录，
+// 防止误遍历/误删整个盘符根。dir 由 App 层薄壳注入（整合包实例目录），
+// 允许在 filesRoot 外（如 mcRoot 下），故不加 IsInsideResolved 守卫。
+func isDedupableDir(dir string) bool {
+	if dir == "" {
+		return false
+	}
+	// 拒绝文件系统根目录（P1-1 修正）：
+	// Windows 上 filepath.VolumeName("C:\\") 返回 "C:"（无尾随 \），
+	// 直接与 cleaned 比较会漏掉盘符根。正确比较：
+	// cleaned == "/"（Unix 根）或 cleaned == vol + "\\"（Windows 盘符根）。
+	cleaned := filepath.Clean(dir)
+	if cleaned == string(filepath.Separator) {
+		return false // Unix 根 "/"
+	}
+	vol := filepath.VolumeName(cleaned)
+	if vol != "" && cleaned == vol+string(filepath.Separator) {
+		return false // Windows 盘符根（VolumeName 无尾随分隔符，此处补回再比）
+	}
+	return true
+}
+
+// buildRepoFileIndex 预加载仓库文件索引：文件名(小写) → 完整路径列表（同名可能散布多处）。
+func buildRepoFileIndex(filesRoot string) map[string][]string {
+	repoFiles := make(map[string][]string)
+	for _, p := range fsutil.WalkAllFiles(filesRoot, true) {
+		name := strings.ToLower(filepath.Base(p))
+		repoFiles[name] = append(repoFiles[name], p)
+	}
+	return repoFiles
+}
+
+// fileHashCache 候选仓库文件的大小/哈希惰性缓存——同一候选被多个实例文件比对时不重复读盘。
+type fileHashCache struct {
+	sizes  map[string]int64
+	hashes map[string]string
+}
+
+func newFileHashCache() *fileHashCache {
+	return &fileHashCache{sizes: make(map[string]int64), hashes: make(map[string]string)}
+}
+
+// sizeOf Stat 尺寸（带缓存）；失败返回 ok=false，调用方保守跳过。
+func (c *fileHashCache) sizeOf(path string) (int64, bool) {
+	if s, ok := c.sizes[path]; ok {
+		return s, true
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0, false
+	}
+	c.sizes[path] = fi.Size()
+	return fi.Size(), true
+}
+
+// hashOf 内容哈希（带缓存）；失败/超限返回空串 → 调用方保守保留。
+func (c *fileHashCache) hashOf(path string) string {
+	if h, ok := c.hashes[path]; ok {
+		return h
+	}
+	h := scanner.ComputeFileHash(path)
+	c.hashes[path] = h
+	return h
+}
+
+// contentMatchesAnyRepoCandidate 判定 p 的内容是否与某个仓库同名副本逐字节一致。
+// 内容必须与某仓库副本一致才清理——go-installer 卡语义「只删仓库同名副本、
+// 保留整合包用户自装资源」：同名不同内容是自装改版，仅按名匹配会误删。
+// 先比大小（SHA256 相等必同大小，免读盘哈希），再比哈希；
+// 哈希/Stat 失败或超限返回空 → 一律保守不匹配。
+func contentMatchesAnyRepoCandidate(p string, candidates []string, cache *fileHashCache) bool {
+	targetSize, ok := cache.sizeOf(p)
+	if !ok {
+		return false
+	}
+	targetHash := cache.hashOf(p)
+	if targetHash == "" {
+		return false
+	}
+	for _, c := range candidates {
+		// 大小预筛：SHA256 相等必同大小，先比大小跳过绝大多数不同候选，免读盘哈希
+		cs, ok := cache.sizeOf(c)
+		if !ok || cs != targetSize {
+			continue
+		}
+		if h := cache.hashOf(c); h == targetHash {
+			return true
+		}
+	}
+	return false
+}
+
+// removeDuplicateFile 按「是否在 recycleRoot 解析树内」选移入回收站（可恢复）或直接删
+// （仓库侧无损可重推）；失败逐条上报 logger 并返回 false（不计入清理数）。
+// 两种处置路径的失败文案保持原样，供上层归因「清理数偏少」。
+func removeDuplicateFile(p, recycleRoot string, logger CleanOpLogger) bool {
+	if recycleRoot != "" && paths.IsInsideResolved(recycleRoot, p) == nil {
+		// 实例文件在仓库根内 → 移回收站（可恢复）
+		if err := Move(p, recycleRoot); err != nil {
+			if logger != nil {
+				logger(filepath.Base(p), p, "", 0, types.StatusFailed, "移入回收站失败: "+err.Error())
+			}
+			return false
+		}
+		return true
+	}
+	// 实例文件不在仓库根内（常见情况：整合包在 mcRoot 下）→ 直接删
+	if err := os.Remove(p); err != nil {
+		if logger != nil {
+			logger(filepath.Base(p), p, "", 0, types.StatusFailed, "直接删除失败: "+err.Error())
+		}
+		return false
+	}
+	return true
+}
+
 // RemoveRepoDuplicates 清理整合包子目录中仓库已有的文件：
 // 在 recycleRoot 内的移入回收站（可恢复），否则直接删除（仓库侧无损可重推）。
 // logger 可为 nil（nil 时失败仅静默跳过）；非 nil 时移动/删除失败逐条上报
@@ -27,52 +143,12 @@ func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogg
 		// 没有仓库根目录时不做处理（守卫前移，避免空根时白走一遍遍历）
 		return 0
 	}
-	// 防御性守卫：拒绝空 dir 与文件系统根目录，
-	// 防止误遍历/误删整个盘符根。dir 由 App 层薄壳注入（整合包实例目录），
-	// 允许在 filesRoot 外（如 mcRoot 下），故不加 IsInsideResolved 守卫。
-	if dir == "" {
-		return 0
-	}
-	// 拒绝文件系统根目录（P1-1 修正）：
-	// Windows 上 filepath.VolumeName("C:\\") 返回 "C:"（无尾随 \），
-	// 直接与 cleaned 比较会漏掉盘符根。正确比较：
-	// cleaned == "/"（Unix 根）或 cleaned == vol + "\\"（Windows 盘符根）。
-	cleaned := filepath.Clean(dir)
-	vol := filepath.VolumeName(cleaned)
-	sep := string(filepath.Separator)
-	isRoot := cleaned == sep || (vol != "" && cleaned == vol+sep)
-	if isRoot {
+	if !isDedupableDir(dir) {
 		return 0
 	}
 	targets := fsutil.WalkAllFiles(dir, true)
-	// 预加载仓库文件索引：文件名(小写) → 完整路径列表（同名可能散布多处）
-	repoFiles := make(map[string][]string)
-	for _, p := range fsutil.WalkAllFiles(filesRoot, true) {
-		name := strings.ToLower(filepath.Base(p))
-		repoFiles[name] = append(repoFiles[name], p)
-	}
-	// 候选仓库文件哈希缓存：同一候选被多个实例文件比对时不重复读盘
-	candidateHashes := make(map[string]string)
-	candidateSizes := make(map[string]int64)
-	sizeOf := func(path string) (int64, bool) {
-		if s, ok := candidateSizes[path]; ok {
-			return s, true
-		}
-		fi, err := os.Stat(path)
-		if err != nil {
-			return 0, false
-		}
-		candidateSizes[path] = fi.Size()
-		return fi.Size(), true
-	}
-	hashOf := func(path string) string {
-		if h, ok := candidateHashes[path]; ok {
-			return h
-		}
-		h := scanner.ComputeFileHash(path)
-		candidateHashes[path] = h
-		return h
-	}
+	repoFiles := buildRepoFileIndex(filesRoot)
+	cache := newFileHashCache()
 	count := 0
 	for _, p := range targets {
 		candidates, ok := repoFiles[strings.ToLower(filepath.Base(p))]
@@ -80,50 +156,12 @@ func RemoveRepoDuplicates(dir, filesRoot, recycleRoot string, logger CleanOpLogg
 			// 仓库没有此文件，跳过（整合包自带资源）
 			continue
 		}
-		// 内容必须与某仓库副本一致才清理——go-installer 卡语义「只删仓库同名副本、
-		// 保留整合包用户自装资源」：同名不同内容是自装改版，仅按名匹配会误删。
-		// 哈希失败/超限返回空 → 一律保守保留。
-		targetSize, ok := sizeOf(p)
-		if !ok {
+		if !contentMatchesAnyRepoCandidate(p, candidates, cache) {
 			continue
 		}
-		targetHash := hashOf(p)
-		if targetHash == "" {
-			continue
+		if removeDuplicateFile(p, recycleRoot, logger) {
+			count++
 		}
-		matched := false
-		for _, c := range candidates {
-			// 大小预筛：SHA256 相等必同大小，先比大小跳过绝大多数不同候选，免读盘哈希
-			cs, ok := sizeOf(c)
-			if !ok || cs != targetSize {
-				continue
-			}
-			if h := hashOf(c); h == targetHash {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			continue
-		}
-		if recycleRoot != "" && paths.IsInsideResolved(recycleRoot, p) == nil {
-			// 实例文件在仓库根内 → 移回收站（可恢复）
-			if err := Move(p, recycleRoot); err != nil {
-				if logger != nil {
-					logger(filepath.Base(p), p, "", 0, types.StatusFailed, "移入回收站失败: "+err.Error())
-				}
-				continue
-			}
-		} else {
-			// 实例文件不在仓库根内（常见情况：整合包在 mcRoot 下）→ 直接删
-			if err := os.Remove(p); err != nil {
-				if logger != nil {
-					logger(filepath.Base(p), p, "", 0, types.StatusFailed, "直接删除失败: "+err.Error())
-				}
-				continue
-			}
-		}
-		count++
 	}
 	// 清理空目录
 	fsutil.CleanEmptyDirs(dir, true)

@@ -68,7 +68,7 @@
 | 导入日志、操作记录、操作日志、import log、历史 | [导入日志 go/logs](./go-logs.md) | `go/logs/` 包提供两套互不相干的日志设施：**操作日志**（`Logger`，持久化）把导入/扫描/下载/同步/重命名/删除/UI 报错等操作的成败结果写入用户配置目录下的 `ysm-import-logs.json`；**运行时… |
 | 资源包、光影包、mcmeta、pack_format、包封面缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) | `go/packs/` 包解析 Minecraft 资源包/光影包的 `pack.mcmeta`（目录或 ZIP 两种形态），提取 pack_format 版本信息与 pack.png 缩略图，并承担「一个文件到底属于哪种资源类型」的内容级… |
 | 路径、安全、path、路径校验 | [路径安全 go/paths](./go-paths.md) | `go/paths/` 包提供路径安全校验，防止路径穿越攻击和非法路径访问。 |
-| 回收站、删除、恢复、recycle、软删除 | [回收站 go/recycle](./go-recycle.md) ⚠️歧义（另见 recycle-bin.md、go-fileops.md等） | `go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`），包级函数… |
+| 回收站、删除、恢复、recycle、软删除 | [回收站 go/recycle](./go-recycle.md) ⚠️歧义（另见 recycle-bin.md、go-fileops.md等） | `go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`）。 |
 | 仓库审计、健康分数、完整性检查、缓存命中率、repoaudit、health-report、去重 | [仓库审计 go/repoaudit](./go-repoaudit.md) ⚠️歧义（另见 go-dedup.md） | `go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL… |
 | 扫描、文件树、哈希、缓存、作者提取、ScanEntries、ScanEntriesCtx 取消扫描、索引生成 | [扫描核心 go/scanner](./go-scanner.md) ⚠️歧义（另见 go-avatar.md） | `go/scanner/` 包实现仓库文件扫描、哈希计算、缓存失效、作者提取、索引生成（ADR-003 P2 下沉，薄壳 `internal/app/app_scan.go` 仅保留依赖 App 的方法）。 |
 | 整合包、同步、硬链接、缺失、多余 | [整合包同步 go/sync](./go-sync.md) ⚠️歧义（另见 go-instance.md） | `go/sync/` 包负责模型库（全局仓库）与 Minecraft 整合包实例之间的同步：发现实例（原版 / PrismLauncher 布局）、按 SHA256 哈希对比出缺失/多余/禁用文件、按文件名或文件夹对比资源包差异、检测目标文… |

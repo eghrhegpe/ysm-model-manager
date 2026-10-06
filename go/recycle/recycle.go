@@ -88,81 +88,97 @@ func generateConflictFreeDest(dst string, guard func(string) error) (string, err
 	}
 }
 
-func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
-	if tm.recycleDir == "" {
-		return nil, fmt.Errorf("回收站目录未设置")
-	}
-	rootDir := filepath.Dir(tm.recycleDir)
+// prepareMoveSource moveEx 前置：越权守卫 + Lstat + 链接直删。
+// 返回 (info, done, err)：done 非 nil 表示「已是终态结果」（符号链接/硬链接直接删除），
+// 调用方原样返回即可，不再走回收站落点计算。
+func (tm *TrashManager) prepareMoveSource(rootDir, src string) (os.FileInfo, *MoveResult, error) {
 	// IsInside 对 path==baseDir（rel=="."）放行——src==rootDir
 	// 时 rel=="."、dst==recycleDir 命中回收站自身，整树 rename 会把回收站搬进自己
 	// （目标已存在报错，但守卫语义错位）；显式拒绝 src 等于资源根（对齐 AGENTS.md
 	// 「IsInside 相等放行时额外 Clean 相等拒绝」范式）
 	if paths.IsInsideResolved(rootDir, src) != nil || filepath.Clean(src) == filepath.Clean(rootDir) {
-		return nil, fmt.Errorf("路径越权: %s 不在资源目录下", src)
+		return nil, nil, fmt.Errorf("路径越权: %s 不在资源目录下", src)
 	}
 	info, err := os.Lstat(src)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if info.Mode()&os.ModeSymlink != 0 {
 		if err := os.Remove(src); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return &MoveResult{Action: "deleted_link", Reason: "符号链接，已直接删除"}, nil
+		return info, &MoveResult{Action: "deleted_link", Reason: "符号链接，已直接删除"}, nil
 	}
 	// 硬链接检测：统一走 fsutil.IsHardLink（含目录排除 ADR-038）
 	if fsutil.IsHardLink(src) {
 		if err := os.Remove(src); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return &MoveResult{Action: "deleted_link", Reason: "硬链接，已直接删除"}, nil
+		return info, &MoveResult{Action: "deleted_link", Reason: "硬链接，已直接删除"}, nil
 	}
+	return info, nil, nil
+}
+
+// resolveTrashDest 计算回收站内落点（<recycleDir>/<rel>）并做冲突后缀消解。
+// 先做前缀越权校验，再把同一校验作为 guard 交给 generateConflictFreeDest——
+// 每个候选（含 (1)、(2)…）都重新过一遍越权检查。
+func (tm *TrashManager) resolveTrashDest(rootDir, src string) (string, error) {
 	if err := os.MkdirAll(tm.recycleDir, fsutil.DirPerms); err != nil {
-		return nil, err // fail-fast：回收站目录创建失败（权限/磁盘满）提前暴露，避免后续 rename 报无关错误
+		return "", err // fail-fast：回收站目录创建失败（权限/磁盘满）提前暴露，避免后续 rename 报无关错误
 	}
 	rel, err := filepath.Rel(rootDir, src)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	dst := filepath.Join(tm.recycleDir, rel)
 	// dst 由 tm.recycleDir + rel 构造，安全检查
-	cleanDst := filepath.Clean(dst)
 	cleanRecycle := filepath.Clean(tm.recycleDir)
-	if !strings.HasPrefix(cleanDst, cleanRecycle+string(filepath.Separator)) && cleanDst != cleanRecycle {
-		return nil, fmt.Errorf("路径越权: %s 不在回收站目录下", dst)
-	}
-	// 冲突后缀循环（与 Restore 共用 generateConflictFreeDest）；guard 保持越权校验
-	dst, err = generateConflictFreeDest(dst, func(candidate string) error {
+	insideRecycle := func(candidate string) error {
 		cd := filepath.Clean(candidate)
 		if !strings.HasPrefix(cd, cleanRecycle+string(filepath.Separator)) && cd != cleanRecycle {
 			return fmt.Errorf("路径越权: %s 不在回收站目录下", candidate)
 		}
 		return nil
-	})
+	}
+	if err := insideRecycle(dst); err != nil {
+		return "", err
+	}
+	// 冲突后缀循环（与 Restore 共用 generateConflictFreeDest）；guard 保持越权校验
+	dst, err = generateConflictFreeDest(dst, insideRecycle)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	// 优先瞬时移动（同分区原子操作，避免大模型文件全量复制）；
-	// 仅跨设备（EXDEV）回退复制后删；权限/占用等其他失败直接报错，
-	// 避免无谓全量复制，以及「副本已入站、源未删」的重试堆积
+	// 落点父目录（嵌套 rel 的中间层）在冲突后缀消解「之后」创建——保证最终选定的
+	// 路径父目录必定存在，且 (1)、(2)… 的候选探测发生在空目录之上。
+	// 该 MkdirAll 同时是上层清理失败的确定性归因点：落点目录被同名普通文件占用时
+	// 必然返回 "not a directory"（RemoveRepoDuplicates 的 failed 上报契约依赖此行为）。
 	if err := os.MkdirAll(filepath.Dir(dst), fsutil.DirPerms); err != nil {
-		return nil, err
+		return "", err
 	}
-	if err := tm.renameForMove(src, dst); err == nil {
-		// rename 成功后事后校验：dst 仍落在 recycleDir 内（P2-3）。
-		// 防御文件系统 TOCTOU——rename 前父目录被换 symlink 可能让文件落到回收站之外。
-		// 虽 TrashManager 自身无共享内存状态，但文件系统 TOCTOU 面存在；
-		// 命中时尝试 os.Rename 回滚，回滚失败则报错让上层决策。
-		if rerr := paths.IsInsideResolved(tm.recycleDir, dst); rerr != nil {
-			if rbErr := os.Rename(dst, src); rbErr != nil {
-				return nil, fmt.Errorf("rename 后 dst 越出回收站且回滚失败: %w（源 %s, 副本 %s）", rerr, src, dst)
-			}
-			return nil, fmt.Errorf("rename 后 dst 越出回收站, 已回滚: %w", rerr)
+	return dst, nil
+}
+
+// verifyRenamedInside rename 成功后事后校验（P2-3）：dst 仍落在 recycleDir 内。
+// 防御文件系统 TOCTOU——rename 前父目录被换 symlink 可能让文件落到回收站之外。
+// 虽 TrashManager 自身无共享内存状态，但文件系统 TOCTOU 面存在；
+// 命中时尝试 os.Rename 回滚，回滚失败则报错让上层决策。
+func (tm *TrashManager) verifyRenamedInside(src, dst string) (*MoveResult, error) {
+	if rerr := paths.IsInsideResolved(tm.recycleDir, dst); rerr != nil {
+		if rbErr := os.Rename(dst, src); rbErr != nil {
+			return nil, fmt.Errorf("rename 后 dst 越出回收站且回滚失败: %w（源 %s, 副本 %s）", rerr, src, dst)
 		}
-		return &MoveResult{Action: "recycled", Reason: ""}, nil
-	} else if !fsutil.IsCrossDeviceErr(err) {
-		return nil, err
+		return nil, fmt.Errorf("rename 后 dst 越出回收站, 已回滚: %w", rerr)
 	}
+	return &MoveResult{Action: "recycled", Reason: ""}, nil
+}
+
+// copyThenRemove 跨设备（EXDEV）回退：先把 src 复制到 dst（目录递归 / 文件单拷），
+// 复制中断时清理半截副本（logHalfCleanup），源删除失败时回滚副本
+// （rollbackAfterSourceRemoveFail），恢复「源还在 + 副本已清理」可安全重试状态。
+//
+// ⚠️ 这条「复制后删」是跨卷移动的必要防线（go/AGENTS.md 明写：不得「简化」）：
+// 同卷 rename 是原子操作，跨卷则不行，只能复制 + 删源。
+func (tm *TrashManager) copyThenRemove(src, dst string, info os.FileInfo) (*MoveResult, error) {
 	// 跨设备回退：目录（文件夹型模型）递归复制整棵树；文件走 copyFile
 	if info.IsDir() {
 		if err := tm.copyDirForMove(src, dst); err != nil {
@@ -182,6 +198,37 @@ func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
 		return nil, tm.rollbackAfterSourceRemoveFail(src, dst, err, false)
 	}
 	return &MoveResult{Action: "recycled", Reason: ""}, nil
+}
+
+// moveEx 把 src 移入回收站：守卫/链接直删（prepareMoveSource）→ 落点计算
+// （resolveTrashDest）→ 同卷 rename（+ 越界事后校验）→ 跨设备复制后删（copyThenRemove）。
+func (tm *TrashManager) moveEx(src string) (*MoveResult, error) {
+	if tm.recycleDir == "" {
+		return nil, fmt.Errorf("回收站目录未设置")
+	}
+	rootDir := filepath.Dir(tm.recycleDir)
+	info, done, err := tm.prepareMoveSource(rootDir, src)
+	if err != nil {
+		return nil, err
+	}
+	if done != nil {
+		return done, nil
+	}
+	dst, err := tm.resolveTrashDest(rootDir, src)
+	if err != nil {
+		return nil, err
+	}
+	// 优先瞬时移动（同分区原子操作，避免大模型文件全量复制）；
+	// 仅跨设备（EXDEV）回退复制后删；权限/占用等其他失败直接报错，
+	// 避免无谓全量复制，以及「副本已入站、源未删」的重试堆积
+	renameErr := tm.renameForMove(src, dst)
+	if renameErr == nil {
+		return tm.verifyRenamedInside(src, dst)
+	}
+	if !fsutil.IsCrossDeviceErr(renameErr) {
+		return nil, renameErr
+	}
+	return tm.copyThenRemove(src, dst, info)
 }
 
 // rollbackAfterSourceRemoveFail 跨设备 move 源删除失败时的副本回滚（P2-2）。
@@ -286,66 +333,69 @@ func dirSize(dir string) int64 {
 	return total
 }
 
-// Restore 从回收站恢复到原目录
-func (tm *TrashManager) Restore(src string) error {
+// resolveRestoreDest Restore 前置：越权守卫 + 目标路径计算 + 冲突后缀消解。
+// 守卫顺序与迁移前逐条一致：越权/根级守卫 → Rel → Join → IsInside → MkdirAll 父目录
+// → 冲突后缀循环。
+func (tm *TrashManager) resolveRestoreDest(src string) (string, error) {
 	// IsInside 对 path==baseDir 放行——src==recycleDir 时
 	// rel=="."、dst==rootDir，整个回收站会被 rename 成 rootDir 的兄弟目录
 	// （rootDir(1)），回收站被整体搬走；显式拒绝 src 等于回收站本身
 	if paths.IsInsideResolved(tm.recycleDir, src) != nil || filepath.Clean(src) == filepath.Clean(tm.recycleDir) {
-		return fmt.Errorf("路径越权: %s 不在回收站目录下", src)
+		return "", fmt.Errorf("路径越权: %s 不在回收站目录下", src)
 	}
 	rootDir := filepath.Dir(tm.recycleDir)
 	rel, err := filepath.Rel(tm.recycleDir, src)
 	if err != nil {
-		return err
+		return "", err
 	}
 	dst := filepath.Join(rootDir, rel)
 	if err := paths.IsInside(rootDir, dst); err != nil {
-		return err
+		return "", err
 	}
 	dstDir := filepath.Dir(dst)
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
-		return err
+		return "", err
 	}
 	// 冲突后缀循环（与 moveEx 共用 generateConflictFreeDest）；guard 保持越权校验
-	dst, err = generateConflictFreeDest(dst, func(candidate string) error {
+	return generateConflictFreeDest(dst, func(candidate string) error {
 		return paths.IsInside(rootDir, candidate)
 	})
-	if err != nil {
-		return err
+}
+
+// restoreSymlinkEntry 恢复符号链接条目本身（不跟随读取目标内容，与 moveEx 的 Lstat 语义对齐）。
+// moveEx 对符号链接直接删除不入回收站，但若回收站已有历史符号链接条目（手动放入/旧版本遗留），
+// Restore 需正确处理：读取链接目标 → 重建链接 → 删除回收站侧旧链接。
+// 返回 handled=true 表示 src 是符号链接、本函数已接管，err 即终态（成功为 nil）。
+func restoreSymlinkEntry(src, dst string) (handled bool, err error) {
+	info, statErr := os.Lstat(src)
+	if statErr != nil || info.Mode()&os.ModeSymlink == 0 {
+		return false, nil
 	}
-	// 符号链接处理：恢复链接本身而非跟随读取目标内容（与 moveEx 的 Lstat 语义对齐）。
-	// moveEx 对符号链接直接删除不入回收站，但若回收站已有历史符号链接条目（手动放入/旧版本遗留），
-	// Restore 需正确处理：读取链接目标 → 重建链接 → 删除回收站侧旧链接。
-	if info, statErr := os.Lstat(src); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
-		target, readErr := os.Readlink(src)
-		if readErr != nil {
-			return fmt.Errorf("读取符号链接目标失败 %s: %w", src, readErr)
-		}
-		// 删除回收站侧旧链接（unlink，不影响链接目标）
-		if removeErr := os.Remove(src); removeErr != nil {
-			return fmt.Errorf("删除回收站符号链接失败 %s: %w", src, removeErr)
-		}
-		// 在原位置重建符号链接
-		if linkErr := os.Symlink(target, dst); linkErr != nil {
-			// 回滚：恢复回收站侧链接。回滚失败时 log 并在错误中追加信息，
-			// 让调用方知道回收站侧链接已永久丢失（旧实现 _ 静默吞掉）。
-			if rbErr := os.Symlink(target, src); rbErr != nil {
-				log.Printf("[recycle] 回收站侧链接回滚失败 %s: %v（回收站条目已丢失）", src, rbErr)
-				return fmt.Errorf("恢复符号链接失败 %s -> %s: %w; 回收站侧链接回滚失败: %v", dst, target, linkErr, rbErr)
-			}
-			return fmt.Errorf("恢复符号链接失败 %s -> %s: %w（已回滚回收站侧链接）", dst, target, linkErr)
-		}
-		return nil
+	target, readErr := os.Readlink(src)
+	if readErr != nil {
+		return true, fmt.Errorf("读取符号链接目标失败 %s: %w", src, readErr)
 	}
-	// 优先瞬时移动（同分区原子操作）；跨设备时回退复制后删，语义不变
-	// 与 moveEx 共用 renameForMove/copyDirForMove/copyFileForMove 注入点，
-	// 跨设备回退分支可被单测确定性覆盖（EXDEV 在单机不可稳定复现）
-	if err := tm.renameForMove(src, dst); err == nil {
-		return nil
-	} else if !fsutil.IsCrossDeviceErr(err) {
-		return err // 权限/占用等非跨设备错误直接返回，不尝试复制
+	// 删除回收站侧旧链接（unlink，不影响链接目标）
+	if removeErr := os.Remove(src); removeErr != nil {
+		return true, fmt.Errorf("删除回收站符号链接失败 %s: %w", src, removeErr)
 	}
+	// 在原位置重建符号链接
+	if linkErr := os.Symlink(target, dst); linkErr != nil {
+		// 回滚：恢复回收站侧链接。回滚失败时 log 并在错误中追加信息，
+		// 让调用方知道回收站侧链接已永久丢失（旧实现 _ 静默吞掉）。
+		if rbErr := os.Symlink(target, src); rbErr != nil {
+			log.Printf("[recycle] 回收站侧链接回滚失败 %s: %v（回收站条目已丢失）", src, rbErr)
+			return true, fmt.Errorf("恢复符号链接失败 %s -> %s: %w; 回收站侧链接回滚失败: %v", dst, target, linkErr, rbErr)
+		}
+		return true, fmt.Errorf("恢复符号链接失败 %s -> %s: %w（已回滚回收站侧链接）", dst, target, linkErr)
+	}
+	return true, nil
+}
+
+// copyBackThenRemove 跨设备（EXDEV）恢复回退：复制回原位置 + 删除回收站条目。
+// 与 copyThenRemove 对称（目录递归 / 文件单拷 + 半截清理 + 源删失败回滚），
+// 同样共用 moveEx 的 copyDirForMove/copyFileForMove 注入点——EXDEV 在单机不可稳定复现。
+func (tm *TrashManager) copyBackThenRemove(src, dst string) error {
 	// 目录（整组合并条目）跨设备：递归复制整棵树；文件走 copyFile
 	if info, statErr := os.Lstat(src); statErr == nil && info.IsDir() {
 		if err := tm.copyDirForMove(src, dst); err != nil {
@@ -367,6 +417,33 @@ func (tm *TrashManager) Restore(src string) error {
 		return tm.rollbackAfterSourceRemoveFail(src, dst, err, false)
 	}
 	return nil
+}
+
+// Restore 从回收站恢复到原目录。
+// 路径：落点计算（resolveRestoreDest）→ 符号链接条目专路（restoreSymlinkEntry）
+// → 同卷 rename → 跨设备复制后删（copyBackThenRemove）。
+func (tm *TrashManager) Restore(src string) error {
+	dst, err := tm.resolveRestoreDest(src)
+	if err != nil {
+		return err
+	}
+	// 符号链接处理：恢复链接本身而非跟随读取目标内容（与 moveEx 的 Lstat 语义对齐）。
+	// moveEx 对符号链接直接删除不入回收站，但若回收站已有历史符号链接条目（手动放入/旧版本遗留），
+	// Restore 需正确处理：读取链接目标 → 重建链接 → 删除回收站侧旧链接。
+	if handled, symlinkErr := restoreSymlinkEntry(src, dst); handled || symlinkErr != nil {
+		return symlinkErr
+	}
+	// 优先瞬时移动（同分区原子操作）；跨设备时回退复制后删，语义不变
+	// 与 moveEx 共用 renameForMove/copyDirForMove/copyFileForMove 注入点，
+	// 跨设备回退分支可被单测确定性覆盖（EXDEV 在单机不可稳定复现）
+	renameErr := tm.renameForMove(src, dst)
+	if renameErr == nil {
+		return nil
+	}
+	if !fsutil.IsCrossDeviceErr(renameErr) {
+		return renameErr // 权限/占用等非跨设备错误直接返回，不尝试复制
+	}
+	return tm.copyBackThenRemove(src, dst)
 }
 
 // logHalfCleanup 复制/移动中断时清理半截目标并记录日志（避免回收站残留损坏数据）。

@@ -58,12 +58,15 @@ status: active
 ## 核心职责
 
 - `mcmeta.go` — pack.mcmeta 读取与 BOM 清理、pack.png base64 缩略图、按注册表 Detector 做内容检测、光影包 lang 显示名提取
+- 读取层按职责分层（gocyclo 清偿时拆出，行为与原实现逐条对齐）：`readCapped` 是 **`io.LimitReader` + `limit+1` 截断探测（ADR-033）的唯一出口**，返回「原样读到的字节 + 是否超限」，由调用方按各自口径决定丢弃（缩略图）还是据此报错（目录形态 pack.mcmeta 要报实际字节数）；`readDirPackMeta`/`readZipPackMeta` 分别承载目录/ZIP 两种形态，`readDirLangFile`/`readZipLangEntry` 取 lang 原文，`parseLangEntries` 只做 `.lang` 语法解析，`readShaderpackLangBytes` 按形态分派
+- **目录形态 pack.mcmeta 超限立即短路返回 `ErrPackMetaTooLarge`**（不再尝试读 pack.png）；该短路与 `st.Size() <= maxPackPng` 预检的顺序是原有契约，拆函数时逐条保持
 
 ## 对外 API / 入口
 
 - `ReadPackMeta(path string) (*types.PackMeta, string, error)` — 从目录或 .zip 读取 pack.mcmeta，返回解析结果 + pack.png 的 data URI 缩略图；自动去 UTF-8 BOM；找不到 mcmeta 报错
 - `DetectResourceType(path string, registry *types.ResourceTypeRegistry) string` — 按扩展名筛候选类型后，用注册表 `detector` 字段做内容判定：`"ysm"`（zip 内含 ysm.json 或 models/）、`"mcmeta"`（zip 内含 pack.mcmeta）、`"shader"`（zip 内含 shaders/）、**`"zipentry"`（ADR-067：裸文件按扩展名直判；`.zip` 容器按 `rt.ZipEntries` 内容指纹匹配 `matchZipArchive`）**，其余按扩展名直接命中
 - `ReadShaderpackLang(path string) string` — 从光影包（目录或 zip）读 `lang/en_us.lang`，返回 `{name, entries}` JSON 字符串，name 供前端展示（空时前端用文件名兜底）；**lang 文件设 1MB 上限**（P3 修复：dir 分支 stat 预检 + zip 分支 limit+1 截断探测，超限置空返回空 name——原 `os.ReadFile`/`io.ReadAll` 全量读入，畸形/超大 lang 可拖垮内存）；**统一小写比较**（CodeReview 第六轮：原 `low == "lang/en_US.lang"` 永远不成立，因 `low` 已 `ToLower`，不可能含大写 US）
+- `ReadShaderpackLangParts(path) (string, map[string]string)` — `ReadShaderpackLang` 的解析内核（后者只多一层 JSON 序列化）。**调用方有两个、并非零调用**：同包 `ReadShaderpackLang`，以及 `internal/app/resource_bindings.go` 的 App 绑定**直接调用本函数**（不经 `ReadShaderpackLang`）。测试侧此前只经 `ReadShaderpackLang` 间接进入——执行到了函数体，但从不构造被 `continue` 跳过的输入（空行 / `#` 注释 / 无 `=` / 空 key / 空 value），这些分支**有覆盖无断言**；`mcmeta_langparts_test.go` 已改为直调并逐条钉住。
 
 ## 与其他子系统关系
 
@@ -79,6 +82,8 @@ status: active
 - **zip 化资源识别（ADR-067）**：`.zip` 可包裹任意类型（mmd/vrc/蓝图/投影的 `extensions` 已含 `.zip`），检测依赖 `zipEntries` 内容指纹而非扩展名——`detector:"zipentry"` 的类型必须声明 `zipEntries` 且 extensions 含 `.zip/.7z`（契约测试 `test_resource_schema.mjs` 强制），否则容器分支永不执行
 - **冲突优先级 = 注册表顺序**（ADR-067 S3）：一个 `.zip` 同时满足多个 zipEntries 时，`DetectResourceType` 按注册表顺序首命中胜出（ysm 的 `ysm.json`/`models/` 根标记天然排前，比 `.pmx` 更具体）
 - `supported_formats` 兼容三种 JSON 形态（int / [min,max] 数组 / {min_inclusive,max_inclusive} 对象），由 `types.FormatRange` 承接
+- **`.lang` 解析契约（`parseLangEntries`，2026-10 直调补测钉住）**：只有「含 `=` 且 key、value 经 `TrimSpace` 后均非空」的行进 `entries`；空行、纯空白行、`#` 前缀注释、无 `=` 行、空 key（`=v`）、空 value（`k=`）一律跳过且**不入表**。显示名取**首个**命中的 `pack.name` / `shaderpack.name` / 裸 `title` / `*.title`（精确匹配，避免误匹配 `pack.namespace`、`*.subtitle`），后续命中不覆盖；无显示名 key 时 `name` 为空但 `entries` 仍完整。非目录且非 `.zip` 的路径（含缺失路径）一律不解析、返回空——不要把普通文件当光影包读
+- **zip 形态只取首个匹配条目**（lang 的 `break` 跳出的是 `r.File` 循环、不是 switch）：拆函数时该语义由「命中即 `return`」承载，照抄成 `switch` case 会退化成语义漂移
 - **`.json` 扩展名的 YSM 恒不被 DetectResourceType 识别**（P3 观察：注册表 ysm 声明 `.json` 扩展名，但 `isYsmFile` 对非 `.ysm/.zip/.7z` 恒返回 false——前端以 `""` 兜底走 model detail，功能可用但类型标签错误；二选一修复方向：isYsmFile 加 `.json` 内容判定或从注册表移除 `.json`）
 - **有效扩展名集预计算（2026-09 落地）**：`classifyByLocationStrict` / `classifyByFingerprint` 原在「祖先×类型」双层循环内调用 `rt.EffectiveExtensions()`——该函数每次 `make` 新切片 + 逐元素 `strings.ToLower`，扫描 N 文件时放量为 O(N×祖先×类型) 次分配。现两函数入口各预计算一次 `extsByType [][]string` 后复用（注册表为不可变配置，不存在失同步问题——与「sort 比较器预计算 key」陷阱的区别：后者排序中切片元素会位移，此处配置不变）。`hasExtIn` 仍保留内部 `ToLower`（防御语义，调用方可能传未小写集合）
 

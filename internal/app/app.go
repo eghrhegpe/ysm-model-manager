@@ -198,38 +198,19 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	// 恢复窗口位置
 	pos := a.GetWindowPosition()
 	if a.mainWindow != nil && pos.Width > 0 && pos.Height > 0 {
-		// 双屏切换后坐标可能落到屏幕外：X/Y 过大或过负时居中。
-		// 阈值经验值：-200 覆盖左侧副屏未连接残留；4000 需大于主流单屏宽度
-		// （5K/6K 横屏 5120/6016 px 下单屏合法窗口会被误判居中——已知局限，
-		// 修法是接入屏幕工作区实际边界，暂以常量收口魔数）。
-		const offscreenNegLimit = -200
-		const offscreenPosLimit = 4000
-		if pos.X < offscreenNegLimit || pos.X > offscreenPosLimit ||
-			pos.Y < offscreenNegLimit || pos.Y > offscreenPosLimit {
-			a.mainWindow.SetSize(pos.Width, pos.Height)
+		// 两个分支都先 SetSize：尺寸与位置判定无关，统一提到判据之前
+		a.mainWindow.SetSize(pos.Width, pos.Height)
+		if isWindowOffscreen(pos.X, pos.Y) {
 			a.mainWindow.Center()
 		} else {
-			a.mainWindow.SetSize(pos.Width, pos.Height)
 			a.mainWindow.SetPosition(pos.X, pos.Y)
 		}
 	}
 
 	// 确保配置文件存在（如果被删除则重建）
 	cfg := a.LoadAppConfig()
-	needsWrite := false
-	if _, err := os.Stat(configPath()); os.IsNotExist(err) {
-		// 配置文件不存在 → 创建默认文件
-		needsWrite = true
-	}
-	if cfg.McRoot == "" {
-		paths := scanMinecraftDirs()
-		if len(paths) > 0 {
-			cfg.McRoot = paths[0]
-			needsWrite = true
-		}
-	}
-	ysmRoot, _ := a.GetRepoRoot("ysm")
-	if needsWrite {
+	_, statErr := os.Stat(configPath())
+	if resolveStartupConfigBootstrap(&cfg, os.IsNotExist(statErr), scanMinecraftDirs) {
 		// 配置持久化失败不中断启动（窗口/目录已在内存生效），但必须落日志而非静默吞错
 		if err := a.saveConfig(cfg); err != nil {
 			log.Printf("[startup] 写入配置文件失败: %v", err)
@@ -238,25 +219,12 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 			log.Printf("[startup] 配置文件已创建/更新, mcRoot: %s", cfg.McRoot)
 		}
 	}
+	ysmRoot, _ := a.GetRepoRoot("ysm")
 
 	// 创建所有存储子目录（注册表驱动，防手写漂移；ADR-092 两层路由：有 group 则建 FilesRoot/{group}/{storageSubDir}）
 	if cfg.FilesRoot != "" {
 		migrateFlatStorageToGrouped(cfg.FilesRoot)
-		reg := registry.LoadRegistry()
-		seen := make(map[string]bool, len(reg.ResourceTypes))
-		for _, rt := range reg.ResourceTypes {
-			if rt.StorageSubDir != "" {
-				rel := registry.GroupStorageRoot(rt.ID)
-				if !seen[rel] {
-					seen[rel] = true
-					// 权限统一走 fsutil.DirPerms（原裸 0755 漏收口，防漂移）
-					// errcheck：建目录失败须留痕——静默忽略会让后续写入抛出误导性错误（查不到真因）
-					if err := os.MkdirAll(filepath.Join(cfg.FilesRoot, rel), fsutil.DirPerms); err != nil {
-						log.Printf("[startup] 存储子目录创建失败 %s: %v", rel, err)
-					}
-				}
-			}
-		}
+		ensureStorageSubdirs(cfg.FilesRoot, storageSubdirRelPaths(registry.LoadRegistry().ResourceTypes))
 	}
 
 	a.app.Event.Emit("config-loaded", ysmRoot, cfg.McRoot, cfg.LinkMode)
@@ -288,6 +256,65 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 		a.watcherMu.Unlock()
 	}
 	return nil
+}
+
+// isWindowOffscreen 判断恢复的窗口坐标是否落到屏幕工作区之外（双屏切换后残留）。
+// 从 ServiceStartup 抽出：生命周期壳需 Wails runtime 才能跑，坐标判据是纯函数、可直测。
+// 阈值经验值：-200 覆盖左侧副屏未连接残留；4000 需大于主流单屏宽度
+// （5K/6K 横屏 5120/6016 px 下单屏合法窗口会被误判居中——已知局限，
+// 修法是接入屏幕工作区实际边界，暂以常量收口魔数）。
+func isWindowOffscreen(x, y int) bool {
+	const offscreenNegLimit = -200
+	const offscreenPosLimit = 4000
+	return x < offscreenNegLimit || x > offscreenPosLimit ||
+		y < offscreenNegLimit || y > offscreenPosLimit
+}
+
+// resolveStartupConfigBootstrap 计算启动期配置是否需要落盘补齐，并就地补齐缺失的 McRoot。
+// configFileMissing 由调用方 os.Stat(configPath()) 判定；discoverMcRoots 仅在
+// cfg.McRoot 为空时惰性调用（免去每次启动都全盘探测 Minecraft 目录）。
+// 返回 true 表示调用方应 saveConfig（写盘失败不中断启动，见 ServiceStartup）。
+func resolveStartupConfigBootstrap(cfg *types.AppConfig, configFileMissing bool, discoverMcRoots func() []string) bool {
+	needsWrite := configFileMissing
+	if cfg.McRoot == "" {
+		if paths := discoverMcRoots(); len(paths) > 0 {
+			cfg.McRoot = paths[0]
+			needsWrite = true
+		}
+	}
+	return needsWrite
+}
+
+// storageSubdirRelPaths 从注册表派生需要创建的存储子目录（相对 FilesRoot 的子路径）。
+// ADR-092 两层路由：有 group 则 FilesRoot/{group}/{storageSubDir}，无 group 单级平铺。
+// 按注册表声明序去重——同组多类型共用一个分组根目录，只建一次。
+// StorageSubDir 为空的类型跳过（该类型不落本地存储，非手写清单）。
+func storageSubdirRelPaths(rts []registry.ResourceType) []string {
+	seen := make(map[string]bool, len(rts))
+	var rels []string
+	for _, rt := range rts {
+		if rt.StorageSubDir == "" {
+			continue
+		}
+		rel := registry.GroupStorageRoot(rt.ID)
+		if seen[rel] {
+			continue
+		}
+		seen[rel] = true
+		rels = append(rels, rel)
+	}
+	return rels
+}
+
+// ensureStorageSubdirs 在 FilesRoot 下创建存储子目录。
+// 权限统一走 fsutil.DirPerms（原裸 0755 漏收口，防漂移）；
+// errcheck：建目录失败须留痕——静默忽略会让后续写入抛出误导性错误（查不到真因）。
+func ensureStorageSubdirs(filesRoot string, rels []string) {
+	for _, rel := range rels {
+		if err := os.MkdirAll(filepath.Join(filesRoot, rel), fsutil.DirPerms); err != nil {
+			log.Printf("[startup] 存储子目录创建失败 %s: %v", rel, err)
+		}
+	}
 }
 
 // ctxOrBackground 返回应用生命周期 context（ADR-197）：ServiceShutdown 触发 appCancel

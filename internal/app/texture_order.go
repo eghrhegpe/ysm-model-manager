@@ -200,15 +200,44 @@ func orderTexBySize(names, datas []string, items []ysmTexItem) ([]string, []stri
 }
 
 // imagePixelArea 解析 PNG/JPEG 图片像素面积；无法解析返回 0。
+// 优先级：先 PNG 后 JPEG（两分支互斥，签名不同），均不匹配即 0。
 func imagePixelArea(data []byte) int {
-	// PNG：签名 0x89 'P' 'N' 'G' + IHDR 块头（宽度/高度为 big-endian）
+	if n, ok := pngPixelArea(data); ok {
+		return n
+	}
+	if n, ok := jpegPixelArea(data); ok {
+		return n
+	}
+	return 0
+}
+
+// pngPixelArea：PNG 签名 0x89 'P' 'N' 'G' + IHDR 块头（宽度/高度为 big-endian）。
+// 非 PNG 或头不足 24 字节返回 ok=false（调用方回落 JPEG 分支）。
+func pngPixelArea(data []byte) (int, bool) {
 	if len(data) >= 24 && data[0] == 0x89 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G' &&
 		string(data[12:16]) == "IHDR" {
 		w := binary.BigEndian.Uint32(data[16:20])
 		h := binary.BigEndian.Uint32(data[20:24])
-		return int(w * h)
+		return int(w * h), true
 	}
-	// JPEG：扫描标记段找 SOF（0xC0-0xCF，排除无尺寸的 DHT/DAC/RST 等）
+	return 0, false
+}
+
+// jpegMarkerHasNoLength 无长度字段的 JPEG 标记：SOI(0xD8)/EOI(0xD9)/RSTn(0xD0-0xD7)。
+// 这类标记后无 2 字节段长，扫描时只前进 2 字节。
+func jpegMarkerHasNoLength(marker byte) bool {
+	return marker == 0xD8 || marker == 0xD9 || (marker >= 0xD0 && marker <= 0xD7)
+}
+
+// jpegMarkerIsSOF SOF 帧头（0xC0-0xCF 内有尺寸字段的段），排除同区间无尺寸的
+// DHT(0xC4)/JPG(0xC8)/DAC(0xCC)——误判会把段内数据当宽高读出错误面积。
+func jpegMarkerIsSOF(marker byte) bool {
+	return marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC
+}
+
+// jpegPixelArea：扫描标记段找 SOF（0xC0-0xCF，排除无尺寸的 DHT/DAC/RST 等）。
+// 未找到 SOF / 数据被截断返回 ok=false。
+func jpegPixelArea(data []byte) (int, bool) {
 	if len(data) >= 4 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
 		i := 2
 		for i+9 <= len(data) {
@@ -217,7 +246,7 @@ func imagePixelArea(data []byte) int {
 				continue
 			}
 			marker := data[i+1]
-			if marker == 0xD8 || marker == 0xD9 || (marker >= 0xD0 && marker <= 0xD7) {
+			if jpegMarkerHasNoLength(marker) {
 				i += 2
 				continue
 			}
@@ -225,15 +254,15 @@ func imagePixelArea(data []byte) int {
 				break
 			}
 			segLen := int(binary.BigEndian.Uint16(data[i+2 : i+4]))
-			if marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC {
+			if jpegMarkerIsSOF(marker) {
 				if i+9 <= len(data) {
 					h := int(binary.BigEndian.Uint16(data[i+5 : i+7]))
 					w := int(binary.BigEndian.Uint16(data[i+7 : i+9]))
-					return w * h
+					return w * h, true
 				}
 			}
 			i += 2 + segLen
 		}
 	}
-	return 0
+	return 0, false
 }

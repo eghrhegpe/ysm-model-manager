@@ -203,46 +203,7 @@ func buildCLIArgs(command string, base []string, args map[string]interface{}, sp
 		if !present {
 			continue
 		}
-		switch spec.Type {
-		case "string":
-			s, ok := v.(string)
-			if !ok {
-				warnings = append(warnings, fmt.Sprintf("参数 --%s 期望 string，实际 %T（已跳过）", spec.Key, v))
-				continue
-			}
-			if s != "" {
-				base = append(base, "--"+spec.Key, s)
-			} else if spec.AllowEmpty {
-				// 显式空串：--key=（flag 空串形态）
-				base = append(base, "--"+spec.Key+"=")
-			}
-		case "number":
-			f, ok := v.(float64)
-			if !ok {
-				warnings = append(warnings, fmt.Sprintf("参数 --%s 期望 number，实际 %T（已跳过）", spec.Key, v))
-				continue
-			}
-			if f != 0 {
-				base = append(base, "--"+spec.Key, formatCLINumber(f))
-			} else if spec.AllowEmpty {
-				// 显式 0：--key 0
-				base = append(base, "--"+spec.Key, "0")
-			}
-		case "bool":
-			b, ok := v.(bool)
-			if !ok {
-				warnings = append(warnings, fmt.Sprintf("参数 --%s 期望 bool，实际 %T（已跳过）", spec.Key, v))
-				continue
-			}
-			if b {
-				base = append(base, "--"+spec.Key)
-			} else if spec.AllowEmpty {
-				// 显式 false：--key=false（flag bool 可解析形态）
-				base = append(base, "--"+spec.Key+"=false")
-			}
-		default:
-			warnings = append(warnings, fmt.Sprintf("规格类型 %q 未知（key=%s，已跳过）", spec.Type, spec.Key))
-		}
+		base = appendSpecKey(base, spec, v, &warnings)
 	}
 
 	// 规格外键（含拼写错误）：告警 + legacy 规则尾部追加——渐进期不丢参
@@ -280,6 +241,56 @@ func buildLegacyArgs(base []string, args map[string]interface{}) ([]string, []st
 		base = appendLegacyKey(base, k, args[k], &warnings)
 	}
 	return base, warnings
+}
+
+// appendSpecKey 按 ParamSpec 序列化单个已声明键（规格路径的逐键规则，与 appendLegacyKey 对称）。
+// AllowEmpty 决定显式空值是否产出（--key= / --key 0 / --key=false），实现「未传 vs 传了空值」可区分；
+// AllowEmpty=false 维持「空值=未传」现状语义。类型不符或规格类型未知：告警 + 不产出（不静默丢参）。
+func appendSpecKey(base []string, spec ParamSpecDTO, v interface{}, warnings *[]string) []string {
+	switch spec.Type {
+	case "string":
+		s, ok := v.(string)
+		if !ok {
+			*warnings = append(*warnings, fmt.Sprintf("参数 --%s 期望 string，实际 %T（已跳过）", spec.Key, v))
+			return base
+		}
+		if s != "" {
+			return append(base, "--"+spec.Key, s)
+		}
+		if spec.AllowEmpty {
+			// 显式空串：--key=（flag 空串形态）
+			return append(base, "--"+spec.Key+"=")
+		}
+	case "number":
+		f, ok := v.(float64)
+		if !ok {
+			*warnings = append(*warnings, fmt.Sprintf("参数 --%s 期望 number，实际 %T（已跳过）", spec.Key, v))
+			return base
+		}
+		if f != 0 {
+			return append(base, "--"+spec.Key, formatCLINumber(f))
+		}
+		if spec.AllowEmpty {
+			// 显式 0：--key 0
+			return append(base, "--"+spec.Key, "0")
+		}
+	case "bool":
+		b, ok := v.(bool)
+		if !ok {
+			*warnings = append(*warnings, fmt.Sprintf("参数 --%s 期望 bool，实际 %T（已跳过）", spec.Key, v))
+			return base
+		}
+		if b {
+			return append(base, "--"+spec.Key)
+		}
+		if spec.AllowEmpty {
+			// 显式 false：--key=false（flag bool 可解析形态）
+			return append(base, "--"+spec.Key+"=false")
+		}
+	default:
+		*warnings = append(*warnings, fmt.Sprintf("规格类型 %q 未知（key=%s，已跳过）", spec.Type, spec.Key))
+	}
+	return base
 }
 
 // appendLegacyKey 按 legacy 规则序列化单个键（规格路径与 legacy 路径共用）

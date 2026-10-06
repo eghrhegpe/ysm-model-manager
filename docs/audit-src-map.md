@@ -13,13 +13,13 @@
 
 | 包 | 用途 |
 |----|------|
-| `avatar/` | 创作者头像提取与缓存 〔源码 7: avatar.go avatar_decode.go avatar_extract.go avatar_extract_container.go avatar_extract_json.go a… · 测试 6 · 子目录 1: testdata/〕 |
+| `avatar/` | 创作者头像提取与缓存 〔源码 6: avatar.go avatar_extract.go avatar_extract_container.go avatar_extract_json.go avatar_extract_ysm… · 测试 5 · 子目录 1: testdata/〕 |
 | `ccheck/` | 契约核验工具（emit/parity 测试支撑） 〔源码 1: ccheck.go · 测试 2〕 |
 | `cli/` | CLI 命令（脱离 GUI 的模型管理/诊断/缓存操作，入口 main.go 经 cli.RunCLI 接线） 〔源码 32 · 测试 29〕 |
 | `conc/` | 通用泛型并行工具（`Parallel[T,R]`，worker 池 + 序号还原，预期收敛 `internal/app` 三处手写并发） 〔源码 1: pool.go · 测试 1〕 |
 | `config/` | 运行阈值配置共享单持有点（ADR-091 D12：atomic 存 provider，取代 4 包各自 configFunc） 〔源码 1: config.go · 测试 1〕 |
 | `container/` | 统一容器桥接层（zip/7z/目录 Entry-Reader 抽象，ADR-068） 〔源码 2: container.go encoding.go · 测试 4〕 |
-| `dedup/` | 文件去重检测（纯函数，不绑回收站/UI） 〔源码 2: dedup.go strategy.go · 测试 5〕 |
+| `dedup/` | 文件去重检测（纯函数，不绑回收站/UI） 〔源码 2: dedup.go strategy.go · 测试 6〕 |
 | `download/` | 纯下载逻辑（不依赖 Wails runtime） 〔源码 1: download.go · 测试 8〕 |
 | `executil/` | 外部进程工具（HideWindow 平台双实现，收敛自三处副本） 〔源码 2: hidewindow_other.go hidewindow_windows.go · 测试 3〕 |
 | `fileops/` | 文件操作 + 预览提取 + 包信息（ADR-003 P3 下沉） 〔源码 4: fileops.go fileops_enable.go fileops_preview.go folder_import.go · 测试 10〕 |
@@ -31,7 +31,7 @@
 | `internal/` | Go 内部工具（testutil 测试工具） 〔子目录 1: testutil/〕 |
 | `launcher/` | 桌面启动器（HMCL/PCL/Minecraft）实例自动检测 〔源码 1: detect.go · 测试 1〕 |
 | `litematic/` | Litematica 投影文件 (.litematic) 解析与预览数据 〔源码 10: bedrock.go block_colors.go block_ids.go block_ids_data.go nbt.go palette.go parser.go schematic.g… · 测试 9 · 子目录 1: gen/〕 |
-| `logs/` | 导入日志 〔源码 2: logs.go runtime.go · 测试 5〕 |
+| `logs/` | 导入日志 〔源码 3: logs.go ring.go runtime.go · 测试 6〕 |
 | `packs/` | 资源包元数据读取（pack.mcmeta / 光影包 lang / 资源类型检测） 〔源码 2: classify.go mcmeta.go · 测试 7 · 子目录 1: testdata/〕 |
 | `paths/` | 路径安全 〔源码 1: safe.go · 测试 4〕 |
 | `recycle/` | 回收站管理 〔源码 2: recycle.go recycle_clean.go · 测试 12〕 |
@@ -42,11 +42,14 @@
 | `tags/` | 模型标签持久化存储 〔源码 1: tags.go · 测试 4〕 |
 | `texture_cache/` | 纹理缓存管理（KTX2/PNG 缓存，支持后台编码与快速命中） 〔源码 1: texture_cache.go · 测试 2〕 |
 | `threejs/` | 3D 骨骼计算（对齐 YSMViewer 口径） 〔源码 3: spec-bones.go spec-cube.go spec.go · 测试 8〕 |
-| `types/` | 共享类型 + 注册表 〔源码 3: bedrock.go config.go types.go · 测试 5 · 子目录 1: registry/〕 |
+| `types/` | 共享类型 + 注册表 〔源码 3: bedrock.go config.go types.go · 测试 4 · 子目录 1: registry/〕 |
 | `updater/` | 自动更新 〔源码 3: updater.go updater_other.go updater_windows.go · 测试 8〕 |
 | `version/` | 版本号 〔源码 1: version.go · 测试 1〕 |
+| `wasispike/` | ⚠️ 用途待补（在 docs/audit-src-map.md 本表补一句） 〔源码 2: main.go probe.mjs〕 |
 | `watcher/` | 文件监听 〔源码 1: watcher.go · 测试 4〕 |
 | `ysm/` | YSM 解析 + 摘要 〔源码 8: cli.go decode_inject.go extracted.go header.go parse.go summary.go texsize.go ysm.go · 测试 21〕 |
+| `ysmwasi/` | ⚠️ 用途待补（在 docs/audit-src-map.md 本表补一句） 〔源码 1: ysmwasi.go · 测试 3〕 |
+| `ysmwebview/` | ⚠️ 用途待补（在 docs/audit-src-map.md 本表补一句） 〔源码 1: bridge.go · 测试 1〕 |
 
 <!-- /GEN: go-structure -->
 
@@ -66,12 +69,12 @@
 
 | 路径 | 用途 |
 |------|------|
-| `backend/` | 后端适配层：Wails 绑定入口（app.ts）+ 平台判定（platform.ts）+ 浏览器适配（browser-adapter.ts）+ IndexedDB 模型库（idb.ts） 〔源码 26 · 测试 23〕 |
+| `backend/` | 后端适配层：Wails 绑定入口（app.ts）+ 平台判定（platform.ts）+ 浏览器适配（browser-adapter.ts）+ IndexedDB 模型库（idb.ts） 〔源码 28 · 测试 25〕 |
 | `core/` | 基础设施（buttons / global-handlers / theme / context-menus） 〔源码 3: error-diary.ts model-path-store.ts page-store.ts · 测试 3 · 子目录 1: i18n/〕 |
 | `features/` | 业务功能（import-queue / recycle-bin / version-updater / community） 〔源码 2: backend-deps.ts require-mcroot.ts · 测试 1 · 子目录 10: community/ context-menu/ dialogs/ dnd/ import/ maintenance/ pack-ops/ platform/ repo/ sync/〕 |
 | `locales/` | 前端 i18n 多语言资源包（en.ts / ja.ts / zh-CN.ts），UI 文案按语言加载的 locale JSON 〔源码 3: en.ts ja.ts zh-CN.ts〕 |
 | `parsers/` | 前端解析簇（ADR-170 下沉）：YSM 头/NBT/资源包元数据/体素颜色/纹理提取 〔源码 15 · 测试 9〕 |
-| `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 1: deferred.ts · 子目录 14: adapters/ bone/ caps/ decoder/ infra/ materials/ menu/ mesh/ model/ screenshot/ shader-patches/ state/ texture/ vendor/〕 |
+| `preview-3d/` | 3D 预览领域根（ADR-129 升格、ADR-138 上提）：menu/adapters/caps/state/perception/decoder/vendor + 骨骼/材质/贴图/渲染工具族 〔源码 2: deferred.ts ring-log.ts · 子目录 14: adapters/ bone/ caps/ decoder/ infra/ materials/ menu/ mesh/ model/ screenshot/ shader-patches/ state/ texture/ vendor/〕 |
 | `services/` | 服务注册（registry.ts） 〔源码 1: cli-bridge.ts · 测试 1〕 |
 | `test-utils/` | 测试工具（G-1 抗脆弱测试基础设施 — ADR-035 §19.1：getByTestId / getAllByTestId / waitFor） 〔源码 14 · 测试 5〕 |
 | `utils/` | 工具函数（display / fmt / dom / icon / summarize / model3d） 〔源码 2: health-report.ts types-re-export.ts · 测试 1 · 子目录 12: animation/ async/ base/ cache/ debug/ dom/ format/ html/ icon/ model-name/ resource/ storage/〕 |

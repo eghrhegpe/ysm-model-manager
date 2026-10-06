@@ -59,186 +59,257 @@ func readRootCompound(r io.Reader) (root map[string]any, err error) {
 	return root, nil
 }
 
+// maxDecodeBudget P2-4：物化体积预算——累计 list 元素数与字符串长度（compound 键名
+// 亦计），超限判畸形（防 100MB 输入物化数 GB 内存触发 runtime OOM）。
+const maxDecodeBudget = 512 << 20 // 估计物化体积上限 512MB
+
+// nbtProbe 轻量扫描游标：只推进 off、不物化数据；used 累计物化体积估算，
+// maxDepth 记录见到的最大嵌套深度（拆解前这三个状态由闭包捕获，语义未变）。
+type nbtProbe struct {
+	data     []byte
+	off      int
+	used     int
+	maxDepth int
+}
+
+// read 推进 n 字节；负长度、越界、或 off+n 回绕（溢出）判畸形。
+func (p *nbtProbe) read(n int) bool {
+	if n < 0 || p.off+n > len(p.data) || p.off+n < p.off {
+		return false
+	}
+	p.off += n
+	return true
+}
+
+// charge 记入 n 字节物化体积估算；负值、超预算、累加回绕判畸形。
+func (p *nbtProbe) charge(n int) bool {
+	if n < 0 || p.used+n > maxDecodeBudget || p.used+n < p.used {
+		return false
+	}
+	p.used += n
+	return true
+}
+
+// skipName 跳过 tag 名字（2 字节长度 + 内容）。
+func (p *nbtProbe) skipName() bool {
+	n, ok := p.readUint16Len()
+	if !ok {
+		return false
+	}
+	return p.read(n)
+}
+
+// readUint16Len 读 uint16 长度字段（tag 名字 / string payload）。
+func (p *nbtProbe) readUint16Len() (int, bool) {
+	if !p.read(2) {
+		return 0, false
+	}
+	return int(binary.BigEndian.Uint16(p.data[p.off-2:])), true
+}
+
+// readInt32Len 读 int32 长度字段（byteArray/list/intArray/longArray 共用）。
+func (p *nbtProbe) readInt32Len() (int, bool) {
+	if !p.read(4) {
+		return 0, false
+	}
+	return int(int32(binary.BigEndian.Uint32(p.data[p.off-4:]))), true
+}
+
+// fixedScalarPayloadSize 定长标量 payload 的字节数（tag 1..6，无子结构）；
+// 非定长类型返回 false（标签类型与 NBT 规范一一对应）。
+func fixedScalarPayloadSize(tagType byte) (int, bool) {
+	switch tagType {
+	case 1: // byte
+		return 1, true
+	case 2: // short
+		return 2, true
+	case 3: // int
+		return 4, true
+	case 4: // long
+		return 8, true
+	case 5: // float
+		return 4, true
+	case 6: // double
+		return 8, true
+	}
+	return 0, false
+}
+
+// walkPayload 解析一个 tag 的 payload（无名字；list 元素与 compound 子 payload 共用）。
+// 深度在入口记录（含「超深被中断」的那一层），maxDepth 只增不减。
+func (p *nbtProbe) walkPayload(tagType byte, depth int) bool {
+	if depth > p.maxDepth {
+		p.maxDepth = depth
+	}
+	if depth > maxNbtDepth {
+		return false // 超深：中断扫描（最终由 readRootCompound 报错）
+	}
+	if n, ok := fixedScalarPayloadSize(tagType); ok {
+		return p.read(n)
+	}
+	switch tagType {
+	case 7:
+		return p.walkByteArray()
+	case 8:
+		return p.walkString()
+	case 9:
+		return p.walkList(depth)
+	case 10:
+		return p.walkCompound(depth)
+	case 11:
+		return p.walkIntArray()
+	case 12:
+		return p.walkLongArray()
+	default:
+		return false // P4-1：未知 tag 类型：畸形，调用方拒绝
+	}
+}
+
+// walkByteArray 解析 byteArray payload：int32 长度 + N 字节。
+func (p *nbtProbe) walkByteArray() bool {
+	n, ok := p.readInt32Len()
+	if !ok {
+		return false
+	}
+	// 声明长度超过剩余数据直接判畸形（防 go-mc 按 2^31-1 物化 OOM）
+	if n < 0 || n > len(p.data) {
+		return false
+	}
+	// P3-1：byteArray 也计入物化预算（n 字节）
+	if !p.charge(n) {
+		return false
+	}
+	return p.read(n)
+}
+
+// walkString 解析 string payload：uint16 长度 + N 字节。
+func (p *nbtProbe) walkString() bool {
+	n, ok := p.readUint16Len()
+	if !ok {
+		return false
+	}
+	if !p.charge(n) {
+		return false
+	}
+	return p.read(n)
+}
+
+// walkList 解析 list payload：元素类型 + int32 长度 + N × 元素 payload（元素无名字）。
+func (p *nbtProbe) walkList(depth int) bool {
+	if !p.read(1) {
+		return false
+	}
+	elemType := p.data[p.off-1]
+	n, ok := p.readInt32Len()
+	if !ok {
+		return false
+	}
+	// 声明长度超过剩余数据直接判畸形（防 go-mc 物化超大 slice OOM）
+	if n < 0 || n > len(p.data) {
+		return false
+	}
+	// P2-4：物化体积预算——每个 list 元素按 16 字节估算
+	if !p.charge(n * 16) {
+		return false
+	}
+	for i := 0; i < n; i++ {
+		if !p.walkPayload(elemType, depth+1) {
+			return false
+		}
+	}
+	return true
+}
+
+// walkCompound 解析 compound payload：循环 { 子类型 + 名字 + payload } 直到 end(0)。
+func (p *nbtProbe) walkCompound(depth int) bool {
+	for {
+		if !p.read(1) {
+			return false
+		}
+		childType := p.data[p.off-1]
+		if childType == 0 {
+			return true
+		}
+		nameLen, ok := p.readUint16Len()
+		if !ok {
+			return false
+		}
+		// P2：物化体积预算——compound 键名同样计入（list 分支已按元素计费，
+		// compound 分支漏掉键名，畸形文件可借海量长键名绕过 512MB 预算）。
+		// 值物化估计：键长 + 每键 16 字节映射槽开销（与 list 元素 16B 口径一致）
+		if !p.charge(nameLen + 16) {
+			return false
+		}
+		if !p.read(nameLen) {
+			return false
+		}
+		if !p.walkPayload(childType, depth+1) {
+			return false
+		}
+	}
+}
+
+// walkIntArray 解析 intArray payload：int32 长度 + 4N 字节。
+func (p *nbtProbe) walkIntArray() bool {
+	n, ok := p.readInt32Len()
+	if !ok {
+		return false
+	}
+	// 防乘法溢出——原 `read(4*n)` 在 n=2^30 时 4*n 溢出为 0 绕过长度检查，
+	// go-mc 按 2^30 物化 4GB slice → OOM；显式按剩余数据约束
+	if n < 0 || n > len(p.data)/4 {
+		return false
+	}
+	// P2-1：intArray 物化为 4*n 字节，计入预算防 OOM
+	if !p.charge(4 * n) {
+		return false
+	}
+	return p.read(4 * n)
+}
+
+// walkLongArray 解析 longArray payload：int32 长度 + 8N 字节。
+func (p *nbtProbe) walkLongArray() bool {
+	n, ok := p.readInt32Len()
+	if !ok {
+		return false
+	}
+	// 同 intArray，防乘法溢出与超大物化 OOM
+	if n < 0 || n > len(p.data)/8 {
+		return false
+	}
+	// P2-1：longArray 物化为 8*n 字节，计入预算防 OOM
+	if !p.charge(8 * n) {
+		return false
+	}
+	return p.read(8 * n)
+}
+
 // probeNbtDepth 轻量 NBT 结构扫描：只推进 offset 不物化数据，返回最大嵌套深度。
 // 返回 (depth, ok)：ok=false 表示畸形/截断/超长长度声明（调用方应直接拒绝，
 // 不得放行给 go-mc——见 readRootCompound 的 OOM 防线注释）。
 func probeNbtDepth(data []byte) (int, bool) {
-	off := 0
-	maxDepth := 0
-	read := func(n int) bool {
-		if n < 0 || off+n > len(data) || off+n < off {
-			return false
-		}
-		off += n
-		return true
-	}
-	// P2-4：物化体积预算——累计 list 元素数与字符串长度，超限判畸形
-	// （防 100MB 输入物化数 GB 内存触发 runtime OOM）
-	const maxDecodeBudget = 512 << 20 // 估计物化体积上限 512MB
-	used := 0
-	charge := func(n int) bool {
-		if n < 0 || used+n > maxDecodeBudget || used+n < used {
-			return false
-		}
-		used += n
-		return true
-	}
-	// 跳过 tag 名字（2 字节长度 + 内容）
-	skipName := func() bool {
-		if !read(2) {
-			return false
-		}
-		n := int(binary.BigEndian.Uint16(data[off-2:]))
-		return read(n)
-	}
-	// walkPayload 解析一个 tag 的 payload（无名字；list 元素与 compound 子 payload 共用）
-	var walkPayload func(tagType byte, depth int) bool
-	walkPayload = func(tagType byte, depth int) bool {
-		if depth > maxDepth {
-			maxDepth = depth
-		}
-		if depth > maxNbtDepth {
-			return false // 超深：中断扫描（最终由 readRootCompound 报错）
-		}
-		switch tagType {
-		case 1: // byte
-			return read(1)
-		case 2: // short
-			return read(2)
-		case 3: // int
-			return read(4)
-		case 4: // long
-			return read(8)
-		case 5: // float
-			return read(4)
-		case 6: // double
-			return read(8)
-		case 7: // byteArray: int32 长度 + N
-			if !read(4) {
-				return false
-			}
-			n := int(int32(binary.BigEndian.Uint32(data[off-4:])))
-			// 声明长度超过剩余数据直接判畸形（防 go-mc 按 2^31-1 物化 OOM）
-			if n < 0 || n > len(data) {
-				return false
-			}
-			// P3-1：byteArray 也计入物化预算（n 字节）
-			if !charge(n) {
-				return false
-			}
-			return read(n)
-		case 8: // string: uint16 长度 + N
-			if !read(2) {
-				return false
-			}
-			n := int(binary.BigEndian.Uint16(data[off-2:]))
-			if !charge(n) {
-				return false
-			}
-			return read(n)
-		case 9: // list: 元素类型 + int32 长度 + N × payload（元素无名字）
-			if !read(1) {
-				return false
-			}
-			elemType := data[off-1]
-			if !read(4) {
-				return false
-			}
-			n := int(int32(binary.BigEndian.Uint32(data[off-4:])))
-			// 声明长度超过剩余数据直接判畸形（防 go-mc 物化超大 slice OOM）
-			if n < 0 || n > len(data) {
-				return false
-			}
-			// P2-4：物化体积预算——每个 list 元素按 16 字节估算
-			if !charge(n * 16) {
-				return false
-			}
-			for i := 0; i < n; i++ {
-				if !walkPayload(elemType, depth+1) {
-					return false
-				}
-			}
-			return true
-		case 10: // compound: 循环 { 子类型 + 名字 + payload } 直到 end(0)
-			for {
-				if !read(1) {
-					return false
-				}
-				childType := data[off-1]
-				if childType == 0 {
-					return true
-				}
-				if !read(2) {
-					return false
-				}
-				nameLen := int(binary.BigEndian.Uint16(data[off-2:]))
-				// P2：物化体积预算——compound 键名同样计入（list 分支已按元素计费，
-				// compound 分支漏掉键名，畸形文件可借海量长键名绕过 512MB 预算）。
-				// 值物化估计：键长 + 每键 16 字节映射槽开销（与 list 元素 16B 口径一致）
-				if !charge(nameLen + 16) {
-					return false
-				}
-				if !read(nameLen) {
-					return false
-				}
-				if !walkPayload(childType, depth+1) {
-					return false
-				}
-			}
-		case 11: // intArray: int32 长度 + 4N
-			if !read(4) {
-				return false
-			}
-			n := int(int32(binary.BigEndian.Uint32(data[off-4:])))
-			// 防乘法溢出——原 `read(4*n)` 在 n=2^30 时 4*n 溢出为 0 绕过长度检查，
-			// go-mc 按 2^30 物化 4GB slice → OOM；显式按剩余数据约束
-			if n < 0 || n > len(data)/4 {
-				return false
-			}
-			// P2-1：intArray 物化为 4*n 字节，计入预算防 OOM
-			if !charge(4 * n) {
-				return false
-			}
-			return read(4 * n)
-		case 12: // longArray: int32 长度 + 8N
-			if !read(4) {
-				return false
-			}
-			n := int(int32(binary.BigEndian.Uint32(data[off-4:])))
-			// 同 intArray，防乘法溢出与超大物化 OOM
-			if n < 0 || n > len(data)/8 {
-				return false
-			}
-			// P2-1：longArray 物化为 8*n 字节，计入预算防 OOM
-			if !charge(8 * n) {
-				return false
-			}
-			return read(8 * n)
-		default:
-			return false // P4-1：未知 tag 类型：畸形，调用方拒绝
-		}
-	}
+	p := &nbtProbe{data: data}
 	// 根 tag：1 字节类型 + 名字（2 字节长度 + 内容），与 go-mc Decode 读根名字的语义一致
-	if !read(1) {
+	if !p.read(1) {
 		return 0, false
 	}
-	rootType := data[off-1]
+	rootType := p.data[p.off-1]
 	if rootType == 0 {
 		return 0, false
 	}
-	if !skipName() {
+	if !p.skipName() {
 		return 0, false
 	}
-	if !walkPayload(rootType, 0) {
+	if !p.walkPayload(rootType, 0) {
 		// 超深中断时返回实际深度哨兵（maxDepth 已在 walkPayload
 		// 开头记录），而非 0——0 与「畸形输入」同值，readRootCompound 的
 		// `depth > maxNbtDepth` 检查会被放行，深嵌套文件静默穿透解码（栈溢出风险）
-		if maxDepth > maxNbtDepth {
-			return maxDepth, true
+		if p.maxDepth > maxNbtDepth {
+			return p.maxDepth, true
 		}
 		return 0, false // 畸形：调用方拒绝
 	}
-	return maxDepth, true
+	return p.maxDepth, true
 }
 
 func getCompound(m map[string]any, key string) map[string]any {

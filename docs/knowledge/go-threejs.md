@@ -4,7 +4,6 @@ name: 3D 骨骼 spec go/threejs
 tier: architecture
 category: go
 source_files:
-  - go/threejs/spec.go
   - go/threejs/
 auto_fields:
   symbols_with_lines:

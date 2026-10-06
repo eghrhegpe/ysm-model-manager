@@ -4,13 +4,6 @@ name: Litematic 解析 go/litematic
 tier: architecture
 category: go
 source_files:
-  - go/litematic/parser.go
-  - go/litematic/schematic.go
-  - go/litematic/structure.go
-  - go/litematic/bedrock.go
-  - go/litematic/palette.go
-  - go/litematic/nbt.go
-  - go/litematic/voxel.go
   - go/litematic/
 auto_fields:
   symbols_with_lines:

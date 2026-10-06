@@ -7,12 +7,6 @@ adr:
   - ADR-192
 category: go
 source_files:
-  - go/types/types.go
-  - go/types/config.go
-  - go/types/bedrock.go
-  - go/types/registry/resource.go
-  - go/types/registry/extensions.go
-  - go/types/registry/
   - go/types/
   - resource_types.json
 auto_fields:

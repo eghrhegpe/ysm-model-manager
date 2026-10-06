@@ -4,14 +4,6 @@ name: 文件基础设施 go/fsutil
 tier: leaf
 category: go
 source_files:
-  - go/fsutil/walk.go
-  - go/fsutil/write.go
-  - go/fsutil/copy.go
-  - go/fsutil/perms.go
-  - go/fsutil/bom.go
-  - go/fsutil/b64.go
-  - go/fsutil/hardlink_other.go
-  - go/fsutil/crossdevice_other.go
   - go/fsutil/
 auto_fields:
   symbols_with_lines:

@@ -4,17 +4,6 @@ name: 诊断页 diagnostics
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/views/app-content/diagnostics/init.ts
-  - frontend/src/views/app-content/diagnostics/channel-health.ts
-  - frontend/src/views/app-content/diagnostics/logs.ts
-  - frontend/src/views/app-content/diagnostics/dedup.ts
-  - frontend/src/views/app-content/diagnostics/dedup-policy.ts
-  - frontend/src/views/app-content/diagnostics/health.ts
-  - frontend/src/views/app-content/diagnostics/conflicts.ts
-  - frontend/src/views/app-content/diagnostics/perf.ts
-  - frontend/src/views/app-content/diagnostics/perf-common.ts
-  - frontend/src/views/app-content/diagnostics/perf-single-bench.ts
-  - frontend/src/views/app-content/diagnostics/perf-trace.ts
   - frontend/src/views/app-content/diagnostics/
   - frontend/src/utils/health-report.ts
 auto_fields:

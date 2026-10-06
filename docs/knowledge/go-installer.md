@@ -4,7 +4,6 @@ name: 模型安装 go/installer
 tier: architecture
 category: go
 source_files:
-  - go/installer/installer.go
   - go/installer/
 auto_fields:
   symbols_with_lines:

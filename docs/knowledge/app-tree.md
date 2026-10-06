@@ -4,7 +4,6 @@ name: 资源树 app-tree
 tier: architecture
 category: ui
 source_files:
-  - frontend/src/views/app-tree/index.ts
   - frontend/src/views/app-tree/
   - frontend/src/core/model-path-store.ts
 auto_fields:

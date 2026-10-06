@@ -4,7 +4,6 @@ name: 头像 go/avatar
 tier: architecture
 category: go
 source_files:
-  - go/avatar/avatar.go
   - go/avatar/
 auto_fields:
   symbols_with_lines:

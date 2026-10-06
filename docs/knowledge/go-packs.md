@@ -4,7 +4,6 @@ name: 资源包 mcmeta go/packs
 tier: architecture
 category: go
 source_files:
-  - go/packs/mcmeta.go
   - go/packs/
 auto_fields:
   symbols_with_lines:

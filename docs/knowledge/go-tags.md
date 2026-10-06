@@ -4,7 +4,6 @@ name: 标签系统 go/tags
 tier: architecture
 category: go
 source_files:
-  - go/tags/tags.go
   - go/tags/
 auto_fields:
   symbols_with_lines:

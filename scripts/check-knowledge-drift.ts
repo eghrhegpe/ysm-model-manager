@@ -908,6 +908,31 @@ function checkClaimOverlap(cards: any[]) {
   }
 }
 
+// ── 检查 5.16：卡内 source_files 包含冗余（WARN）──
+// 背景（2026-10-06）：同一张卡既列某条目、又列被它前缀包含的条目 = 对同一覆盖双重登记。
+// 实证：app-content-diagnostics.md 曾列 11 个 diagnostics/*.ts 文件 + 装着它们的 diagnostics/
+// 目录（13 条 source_files 里 11 条被目录吞掉）；go-types.md 曾同时列 go/types/ 与
+// go/types/registry/（目录套目录，内层被外层吞）。此类冗余一度被 35 张卡携带共 99 条
+// （2026-10-06 一次性清理）。
+// 覆盖不受影响（--affected 的 covers() 走 startsWith 展开目录条目），纯 frontmatter 膨胀
+// + 「这张卡认领了什么」读起来像重复劳动。
+// 与 5.15 互补：5.15 管**跨卡**重复认领（不同卡争同一文件），本检查管**单卡内部**重复登记。
+function checkSourceFilesContainment(cards: any[]) {
+  for (const { cf, fm } of cards) {
+    if (!fm) continue;
+    const srcs = parseSourceFiles(fm);
+    const dirs = srcs.filter((s) => s.endsWith("/"));
+    if (dirs.length === 0) continue;
+    // 目录内具体文件 + 目录套目录两种形态都算冗余；s !== d 排除完全重复的同条目
+    const sub = srcs.filter((s) => dirs.some((d) => s !== d && s.startsWith(d)));
+    if (sub.length) {
+      warns.push(
+        `知识卡 ${cf} 的 source_files ${sub.length} 条被同卡目录条目「${dirs.join("」/「")}」吞掉——目录已覆盖其下条目，重复登记。请删除这些被覆盖的条目（仅保留目录条目与目录外的文件）`,
+      );
+    }
+  }
+}
+
 // ── 检查 5.9：正文散文禁硬编码行号/行数/计数（WARN，P1 落地 ADR-162 精神到散文层）──
 // 背景（2026-09-05 P1）：ADR-162 已把 frontmatter symbols_with_lines 去行号（纯符号名，
 // 行号位移不再触发重写）。但正文散文里的手写行号（`L164`、`983 行`、`8 个能力`）从未纳入
@@ -1114,6 +1139,7 @@ function main() {
   checkNoCuratedInAutoFields(cards); // 解法 B：auto_fields 禁人工策展子字段（ERROR）
   checkDerivedSymbolCount(cards); // 解法 B：派生元数据体量护栏（WARN）
   checkClaimOverlap(cards); // 解法 B：跨卡认领重复（WARN）
+  checkSourceFilesContainment(cards); // 解法 B：卡内 source_files 包含冗余（WARN）
   checkBodyLineRefs(cards); // P1：正文散文禁硬编码行号/行数/计数（WARN）
   checkFrontmatterLineRefs(cards); // 5.10：frontmatter 人工策展字段行号引用（WARN）
   checkCardReferences(cards); // 5.11：卡间引用断链 + 归档改名建议（WARN）

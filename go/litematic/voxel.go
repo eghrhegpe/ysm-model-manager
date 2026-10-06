@@ -32,6 +32,13 @@ type voxelBlock struct {
 	X, Y, Z int16
 }
 
+// withinInt16 判断坐标三元组是否落在体素输出坐标 [3]int16 的可表示范围内。
+// 三格式（litematic region / structure NBT / schematic）共用口径：越界坐标直接
+// 转换会静默回绕（±32768 外坐标 3D 渲染位置错乱），一律丢弃该方块。
+func withinInt16(x, y, z int) bool {
+	return x >= -32768 && x <= 32767 && y >= -32768 && y <= 32767 && z >= -32768 && z <= 32767
+}
+
 // openGzRoot 打开 gzip NBT 文件并解码 root compound（路径入口）。
 func openGzRoot(path string) (map[string]any, error) {
 	f, err := os.Open(path)
@@ -191,30 +198,18 @@ func BuildVoxelDataFromRoot(root map[string]any, maxBlocks int) (*registry.Litem
 	return finalizeVoxelData(encSize, colorGroups, truncated, maxBlocks), nil
 }
 
-// buildRegionInfo 标准化一个 region 的遍历信息。
-// 返回 (*regionInfo, error)：
-//
-//	(nil, nil)    — 合法空 region（无 palette、零尺寸、单一空气 palette），跳过即可
-//	(nil, err)    — 数据损坏（缺少必填字段、BlockStates 长度不匹配声明尺寸等）
-//	(info, nil)   — 有效 region
-func buildRegionInfo(region map[string]any) (*regionInfo, error) {
-	paletteList := getList(region, "BlockStatePalette")
-	if len(paletteList) <= 1 {
-		return nil, nil
-	}
-
-	palette := paletteColorsFromNames(extractPaletteNames(paletteList))
-
+// parseRegionGeometry 解析并标准化一个 region 的 origin / size。
+// 负 size 标准化：Minecraft 允许负 size 表示反向延伸，origin 需相应平移 (size+1)。
+func parseRegionGeometry(region map[string]any) (ox, oy, oz, sx, sy, sz int, err error) {
 	sizeCompound := getCompound(region, "Size")
 	if sizeCompound == nil {
-		return nil, fmt.Errorf("region 缺少 Size compound")
+		return 0, 0, 0, 0, 0, 0, fmt.Errorf("region 缺少 Size compound")
 	}
-	sx, _ := getInt(sizeCompound, "x")
-	sy, _ := getInt(sizeCompound, "y")
-	sz, _ := getInt(sizeCompound, "z")
+	sx, _ = getInt(sizeCompound, "x")
+	sy, _ = getInt(sizeCompound, "y")
+	sz, _ = getInt(sizeCompound, "z")
 
 	posCompound := getCompound(region, "Position")
-	ox, oy, oz := 0, 0, 0
 	if posCompound != nil {
 		ox, _ = getInt(posCompound, "x")
 		oy, _ = getInt(posCompound, "y")
@@ -234,15 +229,92 @@ func buildRegionInfo(region map[string]any) (*regionInfo, error) {
 		oz += sz + 1
 		sz = -sz
 	}
+	return ox, oy, oz, sx, sy, sz, nil
+}
+
+// regionBlockStates 取 region 的 BlockStates LongArray；非空尺寸缺数据即视为损坏。
+func regionBlockStates(region map[string]any, sx, sy, sz int) ([]int64, error) {
+	longs, ok := getLongArray(region, "BlockStates")
+	if !ok || len(longs) == 0 {
+		return nil, fmt.Errorf("region 缺少 BlockStates（尺寸 %d×%d×%d 非空）", sx, sy, sz)
+	}
+	return longs, nil
+}
+
+// checkRegionAxisLimits 按维度上限拒绝离谱声明的 region——
+// sx/sy/sz 来自 NBT int32（可达 2^31-1），三者乘积可到 ~1e28 远超 int64 max，
+// 直接 `int64(sx)*int64(sy)*int64(sz)` 会回绕（负值使 total > capacity 恒假，守卫失效）。
+// 真实 litematic region 每轴远小于 2^21，超限直接丢弃该 region（同时收紧 DoS 扫描上界）。
+func checkRegionAxisLimits(sx, sy, sz int) error {
+	const maxRegionAxis = 1 << 21
+	if sx > maxRegionAxis || sy > maxRegionAxis || sz > maxRegionAxis {
+		log.Printf("[litematic] region Size 超出合理范围，跳过: %d×%d×%d", sx, sy, sz)
+		return fmt.Errorf("region Size 超出合理范围: %d×%d×%d", sx, sy, sz)
+	}
+	return nil
+}
+
+// checkRegionCoordRange origin+size 超出 int16 表示范围的 region 丢弃——坐标源是 int32
+// （origin/px/py/pz），体素输出 `[3]int16`（voxelBlock / registry.VoxelGroup.Positions）
+// 会静默回绕（±32768 外坐标 3D 渲染位置错乱）。与 maxRegionAxis 口径一致：合理 litematic
+// 坐标远在 int16 内，超限属损坏/畸形文件，丢弃并记录。
+// 双侧校验 + 上界 off-by-one——原仅查正上界 `ox > maxCoord`，
+// 负 origin（如 -40000）会回绕成 25536 产生错误渲染位；且 `ox+sx > maxCoord` 会拒绝
+// `ox+sx-1 == 32767` 的可表示坐标（origin 0 + size 32768 含 x=32767 合法）。
+// int16 范围是 [-32768, 32767]，故拒绝 `origin < -32768` 或 `origin+size-1 > 32767`。
+func checkRegionCoordRange(ox, oy, oz, sx, sy, sz int) error {
+	const maxCoord = 32767  // int16 表示上限（体素输出坐标 [3]int16 的容纳范围）
+	const minCoord = -32768 // int16 表示下限
+	if ox < minCoord || ox+sx-1 > maxCoord ||
+		oy < minCoord || oy+sy-1 > maxCoord ||
+		oz < minCoord || oz+sz-1 > maxCoord {
+		// P3-3：移除 log.Printf，错误信息已通过 fmt.Errorf 返回给调用方。
+		// 高频畸形文件会刷日志，降级为纯 error 返回。
+		return fmt.Errorf("region 坐标超出 int16 表示范围: origin=(%d,%d,%d) size=%d×%d×%d", ox, oy, oz, sx, sy, sz)
+	}
+	return nil
+}
+
+// checkRegionCapacity BlockStates 可用位数须容纳 size 声明的方块总数。
+func checkRegionCapacity(longs []int64, bpe, sx, sy, sz int) error {
+	total := int64(sx) * int64(sy) * int64(sz)
+	capacity := int64(len(longs)) * 64 / int64(bpe)
+	if total > capacity {
+		return fmt.Errorf("region BlockStates 容量不足: size=%d 需 %d 位，实际 %d 位", total, total, capacity)
+	}
+	return nil
+}
+
+// buildRegionInfo 标准化一个 region 的遍历信息。
+// 返回 (*regionInfo, error)：
+//
+//	(nil, nil)    — 合法空 region（无 palette、零尺寸、单一空气 palette），跳过即可
+//	(nil, err)    — 数据损坏（缺少必填字段、BlockStates 长度不匹配声明尺寸等）
+//	(info, nil)   — 有效 region
+//
+// 校验顺序即错误优先级：几何解析 → 零尺寸短路 → BlockStates 存在性 → bpe 短路
+// → 轴上限 → int16 坐标范围 → 容量交叉校验。
+func buildRegionInfo(region map[string]any) (*regionInfo, error) {
+	paletteList := getList(region, "BlockStatePalette")
+	if len(paletteList) <= 1 {
+		return nil, nil
+	}
+
+	palette := paletteColorsFromNames(extractPaletteNames(paletteList))
+
+	ox, oy, oz, sx, sy, sz, err := parseRegionGeometry(region)
+	if err != nil {
+		return nil, err
+	}
 
 	// 零尺寸 = 合法空 region（无内容需渲染），静默跳过
 	if sx == 0 || sy == 0 || sz == 0 {
 		return nil, nil
 	}
 
-	longs, ok := getLongArray(region, "BlockStates")
-	if !ok || len(longs) == 0 {
-		return nil, fmt.Errorf("region 缺少 BlockStates（尺寸 %d×%d×%d 非空）", sx, sy, sz)
+	longs, err := regionBlockStates(region, sx, sy, sz)
+	if err != nil {
+		return nil, err
 	}
 
 	bpe := bitsPerEntry(len(palette))
@@ -251,36 +323,14 @@ func buildRegionInfo(region map[string]any) (*regionInfo, error) {
 		return nil, nil
 	}
 
-	// 先按维度上限拒绝离谱声明，再做容量交叉校验——
-	// sx/sy/sz 来自 NBT int32（可达 2^31-1），三者乘积可到 ~1e28 远超 int64 max，
-	// 直接 `int64(sx)*int64(sy)*int64(sz)` 会回绕（负值使 total > capacity 恒假，守卫失效）。
-	// 真实 litematic region 每轴远小于 2^21，超限直接丢弃该 region（同时收紧 DoS 扫描上界）。
-	const maxRegionAxis = 1 << 21
-	const maxCoord = 32767 // int16 表示上限（体素输出坐标 [3]int16 的容纳范围）
-	if sx > maxRegionAxis || sy > maxRegionAxis || sz > maxRegionAxis {
-		log.Printf("[litematic] region Size 超出合理范围，跳过: %d×%d×%d", sx, sy, sz)
-		return nil, fmt.Errorf("region Size 超出合理范围: %d×%d×%d", sx, sy, sz)
+	if err := checkRegionAxisLimits(sx, sy, sz); err != nil {
+		return nil, err
 	}
-	// origin+size 超出 int16 表示范围的 region 丢弃——坐标源是 int32（origin/px/py/pz），
-	// 体素输出 `[3]int16`（voxel.go:30 / registry.VoxelGroup.Positions）会静默回绕
-	// （±32768 外坐标 3D 渲染位置错乱）。与 maxRegionAxis 口径一致：合理 litematic
-	// 坐标远在 int16 内，超限属损坏/畸形文件，丢弃并记录。
-	// 双侧校验 + 上界 off-by-one——原仅查正上界 `ox > maxCoord`，
-	// 负 origin（如 -40000）会回绕成 25536 产生错误渲染位；且 `ox+sx > maxCoord` 会拒绝
-	// `ox+sx-1 == 32767` 的可表示坐标（origin 0 + size 32768 含 x=32767 合法）。
-	// int16 范围是 [-32768, 32767]，故拒绝 `origin < -32768` 或 `origin+size-1 > 32767`。
-	const minCoord = -32768 // int16 表示下限
-	if ox < minCoord || ox+sx-1 > maxCoord ||
-		oy < minCoord || oy+sy-1 > maxCoord ||
-		oz < minCoord || oz+sz-1 > maxCoord {
-		// P3-3：移除 log.Printf，错误信息已通过 fmt.Errorf 返回给调用方。
-		// 高频畸形文件会刷日志，降级为纯 error 返回。
-		return nil, fmt.Errorf("region 坐标超出 int16 表示范围: origin=(%d,%d,%d) size=%d×%d×%d", ox, oy, oz, sx, sy, sz)
+	if err := checkRegionCoordRange(ox, oy, oz, sx, sy, sz); err != nil {
+		return nil, err
 	}
-	total := int64(sx) * int64(sy) * int64(sz)
-	capacity := int64(len(longs)) * 64 / int64(bpe)
-	if total > capacity {
-		return nil, fmt.Errorf("region BlockStates 容量不足: size=%d 需 %d 位，实际 %d 位", total, total, capacity)
+	if err := checkRegionCapacity(longs, bpe, sx, sy, sz); err != nil {
+		return nil, err
 	}
 
 	return &regionInfo{
@@ -301,6 +351,86 @@ func BuildNbtVoxelData(path string, maxBlocks int) (*registry.LitematicVoxelData
 	return BuildNbtVoxelDataFromRoot(root, maxBlocks)
 }
 
+// structureSlices 取 structure NBT 的三个顶层列表，缺一即非 structure 文件。
+func structureSlices(root map[string]any) (sizeList, blocksList, paletteList []any, err error) {
+	sizeList = getList(root, "size")
+	blocksList = getList(root, "blocks")
+	paletteList = getList(root, "palette")
+	if sizeList == nil || blocksList == nil || paletteList == nil {
+		return nil, nil, nil, fmt.Errorf("not a structure NBT file")
+	}
+	return sizeList, blocksList, paletteList, nil
+}
+
+// parseNbtSize 解析 structure 的 size 三元组。
+// ADR-039 P3：comma-ok 防畸形 NBT 裸断言 panic。
+func parseNbtSize(sizeList []any) (sx, sy, sz int, err error) {
+	if len(sizeList) != 3 {
+		return 0, 0, 0, fmt.Errorf("invalid size")
+	}
+	sxTag, ok := sizeList[0].(int32)
+	if !ok {
+		return 0, 0, 0, fmt.Errorf("invalid size[0] type")
+	}
+	syTag, ok := sizeList[1].(int32)
+	if !ok {
+		return 0, 0, 0, fmt.Errorf("invalid size[1] type")
+	}
+	szTag, ok := sizeList[2].(int32)
+	if !ok {
+		return 0, 0, 0, fmt.Errorf("invalid size[2] type")
+	}
+	return int(sxTag), int(syTag), int(szTag), nil
+}
+
+// nbtBlockPos16 解析 blocks 元素的 pos 三元组为 int16 坐标。
+// ADR-039 P3：comma-ok 防畸形 NBT 的 pos 元素非 int32 时裸断言 panic（与 sizeList 一致）；
+// 越界 int16 丢弃——与 buildRegionInfo 的 int16 口径一致。
+func nbtBlockPos16(posList []any) (x, y, z int16, ok bool) {
+	px, okx := posList[0].(int32)
+	py, oky := posList[1].(int32)
+	pz, okz := posList[2].(int32)
+	if !okx || !oky || !okz {
+		return 0, 0, 0, false
+	}
+	if !withinInt16(int(px), int(py), int(pz)) {
+		return 0, 0, 0, false
+	}
+	return int16(px), int16(py), int16(pz), true
+}
+
+// nextNbtBlock 从 blocksList[start] 起扫描首个可渲染方块，返回方块与下一个扫描位置
+// （供 groupVoxelStream 的生成器闭包推进游标）。
+//
+// 空气判定按 palette 条目实际颜色（MapColor 对 air/cave_air/void_air 返回 ""），
+// 而非 `state == 0`——structure NBT 的 palette 索引 0 不保证是 air
+// （structure_block 保存时常不含 air 条目，palette[0] 即首个非空气方块，
+// 原实现会把 state=0 的真实方块整批丢弃；反过来 air 位于非 0 索引时
+// 原实现会保留一个空颜色 group）。
+func nextNbtBlock(blocksList []any, start int, paletteColors []string) (voxelBlock, int, bool) {
+	for bi := start; bi < len(blocksList); bi++ {
+		block, ok := blocksList[bi].(map[string]any)
+		if !ok {
+			continue
+		}
+		posList := getList(block, "pos")
+		stateTag := block["state"]
+		if posList == nil || stateTag == nil || len(posList) != 3 {
+			continue
+		}
+		state, ok := stateTag.(int32)
+		if !ok || int(state) < 0 || int(state) >= len(paletteColors) || paletteColors[state] == "" {
+			continue // air（空颜色）或 invalid
+		}
+		x, y, z, ok := nbtBlockPos16(posList)
+		if !ok {
+			continue
+		}
+		return voxelBlock{Color: paletteColors[state], X: x, Y: y, Z: z}, bi + 1, true
+	}
+	return voxelBlock{}, len(blocksList), false
+}
+
 // BuildNbtVoxelDataFromRoot 从已解码 root compound 构建 structure NBT 体素（容器内条目复用）。
 func BuildNbtVoxelDataFromRoot(root map[string]any, maxBlocks int) (*registry.LitematicVoxelData, error) {
 	// 基岩版 1.21+ structure 新格式：根含 sub_levels 时走聚合分支
@@ -309,84 +439,129 @@ func BuildNbtVoxelDataFromRoot(root map[string]any, maxBlocks int) (*registry.Li
 		return buildBedrockVoxelData(subLevels, maxBlocks)
 	}
 
-	sizeList := getList(root, "size")
-	blocksList := getList(root, "blocks")
-	paletteList := getList(root, "palette")
-	if sizeList == nil || blocksList == nil || paletteList == nil {
-		return nil, fmt.Errorf("not a structure NBT file")
+	sizeList, blocksList, paletteList, err := structureSlices(root)
+	if err != nil {
+		return nil, err
 	}
-	if len(sizeList) != 3 {
-		return nil, fmt.Errorf("invalid size")
+	sx, sy, sz, err := parseNbtSize(sizeList)
+	if err != nil {
+		return nil, err
 	}
-
-	// ADR-039 P3：comma-ok 防畸形 NBT 裸断言 panic
-	sxTag, ok := sizeList[0].(int32)
-	if !ok {
-		return nil, fmt.Errorf("invalid size[0] type")
-	}
-	syTag, ok := sizeList[1].(int32)
-	if !ok {
-		return nil, fmt.Errorf("invalid size[1] type")
-	}
-	szTag, ok := sizeList[2].(int32)
-	if !ok {
-		return nil, fmt.Errorf("invalid size[2] type")
-	}
-	sx, sy, sz := int(sxTag), int(syTag), int(szTag)
 
 	paletteColors := paletteColorsFromNames(extractPaletteNames(paletteList))
 
-	// 方块生成器：顺序推进 blocks 列表，跳过 air/invalid（状态由闭包捕获）
+	// 方块生成器：顺序推进 blocks 列表，跳过 air/invalid（游标由闭包捕获）
 	bi := 0
 	next := func() (voxelBlock, bool) {
-		for bi < len(blocksList) {
-			elem := blocksList[bi]
-			bi++
-			block, ok := elem.(map[string]any)
-			if !ok {
-				continue
-			}
-			posList := getList(block, "pos")
-			stateTag := block["state"]
-			if posList == nil || stateTag == nil || len(posList) != 3 {
-				continue
-			}
-			state, ok := stateTag.(int32)
-			// 空气判定按 palette 条目实际颜色（MapColor 对 air/cave_air/void_air 返回 ""），
-			// 而非 `state == 0`——structure NBT 的 palette 索引 0 不保证是 air
-			// （structure_block 保存时常不含 air 条目，palette[0] 即首个非空气方块，
-			// 原实现会把 state=0 的真实方块整批丢弃；反过来 air 位于非 0 索引时
-			// 原实现会保留一个空颜色 group）
-			if !ok || int(state) < 0 || int(state) >= len(paletteColors) || paletteColors[state] == "" {
-				continue // air（空颜色）或 invalid
-			}
-			// ADR-039 P3：comma-ok 防畸形 NBT 的 pos 元素非 int32 时裸断言 panic（与 sizeList 一致）
-			px, ok := posList[0].(int32)
-			if !ok {
-				continue
-			}
-			py, ok := posList[1].(int32)
-			if !ok {
-				continue
-			}
-			pz, ok := posList[2].(int32)
-			if !ok {
-				continue
-			}
-			if px < -32768 || px > 32767 || py < -32768 || py > 32767 || pz < -32768 || pz > 32767 {
-				continue // 与 buildRegionInfo 的 int16 口径一致，越界丢弃
-			}
-			return voxelBlock{
-				Color: paletteColors[state],
-				X:     int16(px),
-				Y:     int16(py),
-				Z:     int16(pz),
-			}, true
-		}
-		return voxelBlock{}, false
+		b, nextBi, ok := nextNbtBlock(blocksList, bi, paletteColors)
+		bi = nextBi
+		return b, ok
 	}
 	colorGroups, truncated := groupVoxelStream(next, maxBlocks)
 	return finalizeVoxelData([3]int{sx, sy, sz}, colorGroups, truncated, maxBlocks), nil
+}
+
+// bedrockSubInfo 单个 sub_level 的遍历信息：origin = local_bounds.min（全局坐标基准），
+// 包围盒供跨 sub_level 聚合出总 size。
+type bedrockSubInfo struct {
+	originX, originY, originZ int
+	minX, minY, minZ          int
+	maxX, maxY, maxZ          int
+	palette                   []string
+	blocks                    []any
+}
+
+// bedrockAggBounds 体素侧跨 sub_level 聚合的全局包围盒。
+// 与 bedrock.go 的 bedrockBounds 同名不同用：那边服务 ParseBedrockStructure 的
+// 「字段缺失即跳过」语义（getInt 带 ok），这边保持体素侧原口径——缺失字段按 0 参与
+// 数值比较（`minX, _ := getInt(...)`），故不复用，避免静默改变畸形输入的包围盒。
+// hasBounds=false 表示尚无有效包围盒。
+type bedrockAggBounds struct {
+	minX, minY, minZ, maxX, maxY, maxZ int
+	hasBounds                          bool
+}
+
+// mergeLocalBounds 并入一个 sub_level 的 local_bounds（首个无条件赋值，其后按 min 取小 / max 取大）。
+func (b *bedrockAggBounds) mergeLocalBounds(minX, minY, minZ, maxX, maxY, maxZ int) {
+	if !b.hasBounds {
+		b.minX, b.minY, b.minZ = minX, minY, minZ
+		b.maxX, b.maxY, b.maxZ = maxX, maxY, maxZ
+		b.hasBounds = true
+		return
+	}
+	if minX < b.minX {
+		b.minX = minX
+	}
+	if minY < b.minY {
+		b.minY = minY
+	}
+	if minZ < b.minZ {
+		b.minZ = minZ
+	}
+	if maxX > b.maxX {
+		b.maxX = maxX
+	}
+	if maxY > b.maxY {
+		b.maxY = maxY
+	}
+	if maxZ > b.maxZ {
+		b.maxZ = maxZ
+	}
+}
+
+// parseBedrockSubLevel 解析一个 sub_level 的包围盒 / blocks / palette；
+// 缺 local_bounds 或 blocks 即无效（对齐 parseBedrockStructure 的字段口径）。
+// block_palette：Name → MapColor（缺失 Name / 非 compound 元素兜底灰）。
+func parseBedrockSubLevel(sub map[string]any) (bedrockSubInfo, bool) {
+	lb := getCompound(sub, "local_bounds")
+	blocks := getList(sub, "blocks")
+	if lb == nil || blocks == nil {
+		return bedrockSubInfo{}, false
+	}
+	info := bedrockSubInfo{blocks: blocks}
+	info.minX, _ = getInt(lb, "min_x")
+	info.minY, _ = getInt(lb, "min_y")
+	info.minZ, _ = getInt(lb, "min_z")
+	info.maxX, _ = getInt(lb, "max_x")
+	info.maxY, _ = getInt(lb, "max_y")
+	info.maxZ, _ = getInt(lb, "max_z")
+	info.originX, info.originY, info.originZ = info.minX, info.minY, info.minZ
+	info.palette = paletteColorsFromNames(extractPaletteNames(getList(sub, "block_palette")))
+	return info, true
+}
+
+// bedrockBlockAt 解析一个 sub_level 的 block 元素为体素；air / 畸形 / 越界返回 ok=false。
+// 空气判定按 palette 条目实际颜色（MapColor 对 air 系返回 ""），而非 `pid == 0`——
+// 基岩版 block_palette 索引 0 不保证是 air（palette 随 sub_level 各自携带）。
+func bedrockBlockAt(bm map[string]any, info bedrockSubInfo, gMinX, gMinY, gMinZ int) (voxelBlock, bool) {
+	pid, ok := getInt(bm, "palette_id")
+	if !ok || pid < 0 || pid >= len(info.palette) || info.palette[pid] == "" {
+		return voxelBlock{}, false // air or invalid
+	}
+	lp := getCompound(bm, "local_pos")
+	if lp == nil {
+		return voxelBlock{}, false
+	}
+	lx, okx := getInt(lp, "x")
+	ly, oky := getInt(lp, "y")
+	lz, okz := getInt(lp, "z")
+	if !okx || !oky || !okz {
+		return voxelBlock{}, false
+	}
+	// 全局坐标 = local_bounds.min + local_pos - 聚合 min（平移归零）；
+	// int16 守卫与 Java 分支口径一致（越界丢弃）
+	gx := info.originX + lx - gMinX
+	gy := info.originY + ly - gMinY
+	gz := info.originZ + lz - gMinZ
+	if !withinInt16(gx, gy, gz) {
+		return voxelBlock{}, false
+	}
+	return voxelBlock{
+		Color: info.palette[pid],
+		X:     int16(gx),
+		Y:     int16(gy),
+		Z:     int16(gz),
+	}, true
 }
 
 // buildBedrockVoxelData 基岩版 1.21+ structure 体素聚合。
@@ -407,64 +582,26 @@ func BuildNbtVoxelDataFromRoot(root map[string]any, maxBlocks int) (*registry.Li
 // 空气判定按 palette 颜色为空（MapColor 对 air 系返回 ""），与 Java 分支口径一致。
 func buildBedrockVoxelData(subLevels []any, maxBlocks int) (*registry.LitematicVoxelData, error) {
 	// 第一遍：聚合全局包围盒 + 各 sub_level 遍历信息（origin=local_bounds.min）
-	var gMinX, gMinY, gMinZ, gMaxX, gMaxY, gMaxZ int
-	hasBounds := false
-	type subInfo struct {
-		originX, originY, originZ int
-		palette                   []string
-		blocks                    []any
-	}
-	infos := make([]subInfo, 0, len(subLevels))
+	var gb bedrockAggBounds
+	infos := make([]bedrockSubInfo, 0, len(subLevels))
 	for _, sl := range subLevels {
 		sub, ok := sl.(map[string]any)
 		if !ok {
 			continue
 		}
-		lb := getCompound(sub, "local_bounds")
-		blocks := getList(sub, "blocks")
-		if lb == nil || blocks == nil {
+		info, ok := parseBedrockSubLevel(sub)
+		if !ok {
 			continue
 		}
-		minX, _ := getInt(lb, "min_x")
-		minY, _ := getInt(lb, "min_y")
-		minZ, _ := getInt(lb, "min_z")
-		maxX, _ := getInt(lb, "max_x")
-		maxY, _ := getInt(lb, "max_y")
-		maxZ, _ := getInt(lb, "max_z")
-		if !hasBounds {
-			gMinX, gMinY, gMinZ = minX, minY, minZ
-			gMaxX, gMaxY, gMaxZ = maxX, maxY, maxZ
-			hasBounds = true
-		} else {
-			if minX < gMinX {
-				gMinX = minX
-			}
-			if minY < gMinY {
-				gMinY = minY
-			}
-			if minZ < gMinZ {
-				gMinZ = minZ
-			}
-			if maxX > gMaxX {
-				gMaxX = maxX
-			}
-			if maxY > gMaxY {
-				gMaxY = maxY
-			}
-			if maxZ > gMaxZ {
-				gMaxZ = maxZ
-			}
-		}
-		// block_palette：Name → MapColor（缺失 Name / 非 compound 元素兜底灰）
-		palette := paletteColorsFromNames(extractPaletteNames(getList(sub, "block_palette")))
-		infos = append(infos, subInfo{originX: minX, originY: minY, originZ: minZ, palette: palette, blocks: blocks})
+		gb.mergeLocalBounds(info.minX, info.minY, info.minZ, info.maxX, info.maxY, info.maxZ)
+		infos = append(infos, info)
 	}
-	if !hasBounds {
+	if !gb.hasBounds {
 		return nil, fmt.Errorf("not a structure NBT file（sub_levels 无有效包围盒）")
 	}
-	size := [3]int{gMaxX - gMinX + 1, gMaxY - gMinY + 1, gMaxZ - gMinZ + 1}
+	size := [3]int{gb.maxX - gb.minX + 1, gb.maxY - gb.minY + 1, gb.maxZ - gb.minZ + 1}
 
-	// 方块生成器：跨 sub_level 顺序推进，跳过 air/invalid（状态由闭包捕获）
+	// 方块生成器：跨 sub_level 顺序推进，跳过 air/invalid（游标由闭包捕获）
 	si, bi := 0, 0
 	next := func() (voxelBlock, bool) {
 		for si < len(infos) {
@@ -476,36 +613,9 @@ func buildBedrockVoxelData(subLevels []any, maxBlocks int) (*registry.LitematicV
 				if !ok {
 					continue
 				}
-				pid, ok := getInt(bm, "palette_id")
-				// 空气判定按 palette 条目实际颜色（MapColor 对 air 系返回 ""），
-				// 而非 `pid == 0`——基岩版 block_palette 索引 0 不保证是 air
-				if !ok || pid < 0 || pid >= len(info.palette) || info.palette[pid] == "" {
-					continue // air or invalid
+				if b, ok := bedrockBlockAt(bm, info, gb.minX, gb.minY, gb.minZ); ok {
+					return b, true
 				}
-				lp := getCompound(bm, "local_pos")
-				if lp == nil {
-					continue
-				}
-				lx, okx := getInt(lp, "x")
-				ly, oky := getInt(lp, "y")
-				lz, okz := getInt(lp, "z")
-				if !okx || !oky || !okz {
-					continue
-				}
-				// 全局坐标 = local_bounds.min + local_pos - 聚合 min（平移归零）；
-				// int16 守卫与 Java 分支口径一致（越界丢弃）
-				gx := info.originX + lx - gMinX
-				gy := info.originY + ly - gMinY
-				gz := info.originZ + lz - gMinZ
-				if gx < -32768 || gx > 32767 || gy < -32768 || gy > 32767 || gz < -32768 || gz > 32767 {
-					continue
-				}
-				return voxelBlock{
-					Color: info.palette[pid],
-					X:     int16(gx),
-					Y:     int16(gy),
-					Z:     int16(gz),
-				}, true
 			}
 			si++
 			bi = 0
@@ -525,119 +635,169 @@ func BuildSchematicVoxelData(path string, maxBlocks int) (*registry.LitematicVox
 	return BuildSchematicVoxelDataFromRoot(root, maxBlocks)
 }
 
-// BuildSchematicVoxelDataFromRoot 从已解码 root compound 构建 schematic 体素（容器内条目复用）。
-func BuildSchematicVoxelDataFromRoot(root map[string]any, maxBlocks int) (*registry.LitematicVoxelData, error) {
+// schematicDims schematic 遍历所需的尺寸信息（total / wl64 预计算为 int64 防溢出）。
+type schematicDims struct {
+	w, h, l int
+	total   int
+	wl64    int64
+}
+
+// schematicCursor schematic 方块生成器的跨调用游标：
+// i = 已消费的方块顺序索引，offset = BlockData 字节偏移。避免每次从头扫描。
+type schematicCursor struct {
+	i, offset int
+}
+
+// schematicDimsFromRoot 读 schematic 尺寸三元组，缺一即非 schematic 文件。
+func schematicDimsFromRoot(root map[string]any) (w, h, l int, err error) {
 	w, wok := getInt(root, "Width")
 	h, hok := getInt(root, "Height")
 	l, lok := getInt(root, "Length")
 	if !wok || !hok || !lok {
-		return nil, fmt.Errorf("not a schematic file")
+		return 0, 0, 0, fmt.Errorf("not a schematic file")
+	}
+	return w, h, l, nil
+}
+
+// layoutSchematic 预计算 total / wl64 并做溢出守卫。
+// ⚠️ w/h/l 来自 NBT int32（可达 2^31-1），三者乘积可溢出 int。
+// 溢出后 total 变为负数（循环不执行→静默返回空数据）或小正数（循环次数错误→
+// 坐标计算 w*l 也溢出→y/z 坐标错乱→渲染错位方块）。
+// 用 int64 计算并钳到合理上限（512M 方块 ≈ 800³，远超任何合理投影）。
+// w*l 用于坐标反推 y := (i-1)/(w*l)，同样可能溢出 int（w=1e6, l=1e6→1e12），
+// 故一并预计算为 int64，坐标除法走 int64 算术。
+func layoutSchematic(w, h, l int) (schematicDims, error) {
+	total64 := int64(w) * int64(h) * int64(l)
+	const maxSchematicBlocks = 512_000_000
+	if total64 < 0 || total64 > maxSchematicBlocks {
+		return schematicDims{}, fmt.Errorf("schematic 尺寸 %d×%d×%d 超出合理范围（溢出或过大）", w, h, l)
+	}
+	return schematicDims{
+		w: w, h: h, l: l,
+		total: int(total64),
+		wl64:  int64(w) * int64(l),
+	}, nil
+}
+
+// schematicPaletteMap 取 Palette compound 的 blockID → MapColor 映射（缺 Palette 返回 nil，
+// 下游据 nil 走 v1 的 ResolveBlockName 回退路径）。
+func schematicPaletteMap(root map[string]any) map[int]string {
+	paletteCompound := getCompound(root, "Palette")
+	if paletteCompound == nil {
+		return nil
+	}
+	paletteMap := make(map[int]string)
+	for name, v := range paletteCompound {
+		if id, ok := v.(int32); ok {
+			paletteMap[int(id)] = MapColor(name)
+		}
+	}
+	return paletteMap
+}
+
+// schematicCoord 由方块顺序索引 i（1 基，已消费数）反推坐标。
+// Minecraft 存储顺序 X→Z→Y：i-1 = x + z*w + y*w*l。
+// int16 坐标守卫：Width/Height/Length 来自 NBT int32（可达 2^31-1），坐标由索引反推
+// （范围 [0, size-1]），超出 int16 表示范围直接转换会静默回绕——与 buildRegionInfo
+// 的 int16 口径一致，越界跳过该方块。
+func schematicCoord(i int, dims schematicDims) (x, y, z int16, ok bool) {
+	idx := i - 1
+	px := idx % dims.w
+	py := int(int64(idx) / dims.wl64)
+	pz := (idx / dims.w) % dims.l
+	if !withinInt16(px, py, pz) {
+		return 0, 0, 0, false
+	}
+	return int16(px), int16(py), int16(pz), true
+}
+
+// nextSchematicV2Block v2 路径：varint BlockData，推进游标扫描首个非空气方块。
+// blockID 缺 Palette 条目时兜底灰 #7F7F7F（与 v1 一致）。
+func nextSchematicV2Block(c *schematicCursor, blockDataBA []byte, paletteMap map[int]string, dims schematicDims) (voxelBlock, bool) {
+	for c.i < dims.total && c.offset < len(blockDataBA) {
+		blockID, newOff := readVarInt(blockDataBA, c.offset)
+		c.offset = newOff
+		c.i++
+		if blockID == 0 {
+			continue
+		}
+		color := "#7F7F7F"
+		if col, ok := paletteMap[blockID]; ok {
+			color = col
+		}
+		x, y, z, ok := schematicCoord(c.i, dims)
+		if !ok {
+			continue
+		}
+		return voxelBlock{Color: color, X: x, Y: y, Z: z}, true
+	}
+	return voxelBlock{}, false
+}
+
+// nextSchematicV1Block v1 路径：raw Blocks byte array；有 Data 字节时经
+// ResolveBlockName 查 id+data 对应的方块名（无 Palette 的老格式回退）。
+func nextSchematicV1Block(c *schematicCursor, blocksBA, dataBA []byte, paletteMap map[int]string, dims schematicDims) (voxelBlock, bool) {
+	for c.i < dims.total && c.i < len(blocksBA) {
+		blockID := int(blocksBA[c.i])
+		c.i++
+		if blockID == 0 {
+			continue
+		}
+		color := "#7F7F7F"
+		if paletteMap != nil {
+			if col, ok := paletteMap[blockID]; ok {
+				color = col
+			}
+		} else {
+			var d byte
+			if dataBA != nil && c.i-1 < len(dataBA) {
+				d = dataBA[c.i-1]
+			}
+			if name := ResolveBlockName(blockID, d); name != "" {
+				color = MapColor(name)
+			}
+		}
+		x, y, z, ok := schematicCoord(c.i, dims)
+		if !ok {
+			continue
+		}
+		return voxelBlock{Color: color, X: x, Y: y, Z: z}, true
+	}
+	return voxelBlock{}, false
+}
+
+// BuildSchematicVoxelDataFromRoot 从已解码 root compound 构建 schematic 体素（容器内条目复用）。
+func BuildSchematicVoxelDataFromRoot(root map[string]any, maxBlocks int) (*registry.LitematicVoxelData, error) {
+	w, h, l, err := schematicDimsFromRoot(root)
+	if err != nil {
+		return nil, err
+	}
+
+	dims, err := layoutSchematic(w, h, l)
+	if err != nil {
+		return nil, err
 	}
 
 	blocksBA, _ := getByteArray(root, "Blocks")
 	blockDataBA, _ := getByteArray(root, "BlockData")
 	dataBA, _ := getByteArray(root, "Data")
 
-	paletteCompound := getCompound(root, "Palette")
-	var paletteMap map[int]string
-	if paletteCompound != nil {
-		paletteMap = make(map[int]string)
-		for name, v := range paletteCompound {
-			if id, ok := v.(int32); ok {
-				paletteMap[int(id)] = MapColor(name)
-			}
-		}
-	}
-
-	// ⚠️ w/h/l 来自 NBT int32（可达 2^31-1），三者乘积可溢出 int。
-	// 溢出后 total 变为负数（循环不执行→静默返回空数据）或小正数（循环次数错误→
-	// 坐标计算 w*l 也溢出→y/z 坐标错乱→渲染错位方块）。
-	// 用 int64 计算并钳到合理上限（512M 方块 ≈ 800³，远超任何合理投影）。
-	total64 := int64(w) * int64(h) * int64(l)
-	const maxSchematicBlocks = 512_000_000
-	if total64 < 0 || total64 > maxSchematicBlocks {
-		return nil, fmt.Errorf("schematic 尺寸 %d×%d×%d 超出合理范围（溢出或过大）", w, h, l)
-	}
-	total := int(total64)
-	// w*l 用于坐标反推 y := (i-1)/(w*l)，同样可能溢出 int（w=1e6, l=1e6→1e12）。
-	// 预计算为 int64，坐标除法用 int64 算术（下方闭包内引用 wl64）。
-	wl64 := int64(w) * int64(l)
-
 	if blockDataBA == nil && blocksBA == nil {
 		return nil, fmt.Errorf("schematic has no Blocks or BlockData")
 	}
 
+	paletteMap := schematicPaletteMap(root)
+
 	// 方块生成器：v1 raw Blocks / v2 varint BlockData 双路径，跳过 air（blockID 0）
-	// i/offset 由闭包捕获，跨调用推进，避免每次从头扫描
-	i, offset := 0, 0
+	// 游标由闭包捕获，跨调用推进，避免每次从头扫描
+	c := &schematicCursor{}
 	next := func() (voxelBlock, bool) {
 		if blockDataBA != nil && paletteMap != nil {
 			// v2: varint BlockData
-			for i < total && offset < len(blockDataBA) {
-				blockID, newOff := readVarInt(blockDataBA, offset)
-				offset = newOff
-				i++
-				if blockID == 0 {
-					continue
-				}
-				color := "#7F7F7F"
-				if c, ok := paletteMap[blockID]; ok {
-					color = c
-				}
-				// int16 坐标守卫：Width/Height/Length 来自 NBT int32（可达 2^31-1），
-				// 坐标由索引反推（范围 [0, size-1]），超出 int16 表示范围直接转换会
-				// 静默回绕——与 buildRegionInfo 的 int16 口径一致，越界跳过该方块
-				x := (i - 1) % w
-				y := int(int64(i-1) / wl64)
-				z := ((i - 1) / w) % l
-				if x < -32768 || x > 32767 || y < -32768 || y > 32767 || z < -32768 || z > 32767 {
-					continue
-				}
-				return voxelBlock{
-					Color: color,
-					X:     int16(x),
-					Y:     int16(y),
-					Z:     int16(z),
-				}, true
-			}
-			return voxelBlock{}, false
+			return nextSchematicV2Block(c, blockDataBA, paletteMap, dims)
 		}
 		// v1: raw Blocks byte array
-		for i < total && i < len(blocksBA) {
-			blockID := int(blocksBA[i])
-			i++
-			if blockID == 0 {
-				continue
-			}
-			color := "#7F7F7F"
-			if paletteMap != nil {
-				if c, ok := paletteMap[blockID]; ok {
-					color = c
-				}
-			} else {
-				var d byte
-				if dataBA != nil && i-1 < len(dataBA) {
-					d = dataBA[i-1]
-				}
-				if name := ResolveBlockName(blockID, d); name != "" {
-					color = MapColor(name)
-				}
-			}
-			// int16 坐标守卫：与 v2 路径一致（见 v2 注释），越界跳过该方块
-			x := (i - 1) % w
-			y := int(int64(i-1) / wl64)
-			z := ((i - 1) / w) % l
-			if x < -32768 || x > 32767 || y < -32768 || y > 32767 || z < -32768 || z > 32767 {
-				continue
-			}
-			return voxelBlock{
-				Color: color,
-				X:     int16(x),
-				Y:     int16(y),
-				Z:     int16(z),
-			}, true
-		}
-		return voxelBlock{}, false
+		return nextSchematicV1Block(c, blocksBA, dataBA, paletteMap, dims)
 	}
 	colorGroups, truncated := groupVoxelStream(next, maxBlocks)
 	return finalizeVoxelData([3]int{w, h, l}, colorGroups, truncated, maxBlocks), nil

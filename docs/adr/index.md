@@ -18,9 +18,9 @@ permalink: /adr/
 |------|------|
 | [📝 提议中](#提议中) | 5 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 14 |
+| [🔄 部分采纳](#部分采纳) | 15 |
 | [✅ 已采纳](#已采纳) | 298 |
-| [❌ 已取代](#已取代) | 8 |
+| [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
@@ -36,7 +36,7 @@ permalink: /adr/
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 |
 
-### 🔄 部分采纳（14）
+### 🔄 部分采纳（15）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -54,6 +54,7 @@ permalink: /adr/
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
+| [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
 ### ✅ 已采纳（298）
 
@@ -358,7 +359,7 @@ permalink: /adr/
 | [ADR-002](./ADR-002-project-health-assessment.md) | 项目全面评估与改进方向 | ✅ 已采纳 |
 | [ADR-001](./ADR-001-wails3-migration.md) | 升级至 Wails 3 | ✅ 已采纳 |
 
-### ❌ 已取代（8）
+### ❌ 已取代（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -369,7 +370,6 @@ permalink: /adr/
 | [ADR-125](./ADR-125-preview-menu-unified-state-single-renderer.md) | 3D 预览菜单统一：settingsState 横切状态层 + 单渲染器 + visible 规则 | ❌ 已取代 ⚠️ 被 [ADR-126] |
 | [ADR-081](./ADR-081-semantic-bone-layer.md) | 语义骨骼层——跨格式语义骨骼统一抽象 | ❌ 已取代 |
 | [ADR-077](./ADR-077-bottom-nav-shell-convergence.md) | 底部导航通用外壳收敛（D1+D3 落地） | ❌ 已取代 ⚠️ 被 [ADR-076] |
-| [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | ❌ 已取代 |
 
 ### 🧊 已废弃（3）
 
@@ -655,7 +655,7 @@ permalink: /adr/
 | ADR-053 | 网页版桥接能力边界（ADR-049 增强 B1–B3 收尾） | ✅ 已采纳 | 2026-08-12 |
 | ADR-052 | RenderSession 对象化：model3d 场景状态收敛与回调方法化 | ✅ 已采纳 | 2026-08-11 |
 | ADR-051 | 错误分类单一事实来源：结构化错误码替代双份文本匹配表 | ✅ 已采纳 | 2026-08-11 |
-| ADR-050 | 模型广场 · 浏览器窗口（Wails 第二窗口） | ❌ 已取代 | 2026-08-11 |
+| ADR-050 | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 | 2026-08-11 |
 | ADR-049 | 网页版（Web 端）桥接：backend 适配器 + IndexedDB 模型库 | ✅ 已采纳 | 2026-08-10 |
 | ADR-048 | CI 工作流架构：双 workflow 拆分 + 可复用测试门禁 + 三层缓存 + 版本单点 | ✅ 已采纳 | 2026-08-10 |
 | ADR-047 | Android 可用性落地规划：触屏交互 + FileAccessor 抽象（ADR-046 P2 实施） | ✅ 已采纳 | 2026-08-09 |

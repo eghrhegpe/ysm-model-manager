@@ -1,13 +1,13 @@
 # ADR-050：模型广场 · 浏览器窗口（Wails 第二窗口）
 
-- **状态**：❌ 已取代（Phase 1 反向代理实现已验证不可行：Wails v3 WebView2 多窗口反代理注入下载拦截在 Windows 环境下反复踩坑，决策废弃 Phase 2/3）
+- **状态**：🔄 部分采纳（A 模式·反向代理 Phase 1 实施后判定不推进；B 模式·直连窗口 `NavigatePlazaWindow(url, true)` 为现行路径，已落地）
 - **日期**：2026-08-11
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **关联**：ADR-003（下载策略）、ADR-049（网页版桥接）、MikuMikuAR ADR-075/087（模型广场基础架构+浏览器体验增强）
 
 ---
 
-> **本 ADR 已取代**：Phase 1 反向代理架构验证后判定不可行（Wails v3 WebView2 反代理注入下载拦截工程复杂度超预期），Phase 2/3 废弃。核心结论「站点兼容性问题真实存在」仍有效，但解决方案转向其他路径（保留 iframe + 用户手动「在新标签打开」）。
+> **状态与代码现状核对（2026-10-06）**：本 ADR **无独立后继 ADR** 取代——取代发生在 ADR 内部：A 模式（Go 反代，`proxy.go startProxy`，前端传 `direct=false`）实施后判定不再推进（Wails v3 WebView2 反代理注入下载拦截在 Windows 反复踩坑），改为 B 模式（直连窗口，`NavigatePlazaWindow(url, true)`；前端 `views/app-content/site/workshop-site-opener.ts` 的「窗口模式」即此调用）。故首部不写「被 [ADR-NNN] 取代」，改为如实标 `部分采纳`。核心结论「站点兼容性问题真实存在」仍有效；Phase 2/3（下载拦截 `/__plaza_dl__`、URL 追踪）未推进。`proxy.go` / `plaza_window.go` 反代分支仍保留在代码中但非现行入口。
 
 ## 1. 背景（Context）
 

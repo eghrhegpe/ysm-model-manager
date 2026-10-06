@@ -355,3 +355,68 @@ func TestBuildRegionInfo_Int16BoundaryAccepted(t *testing.T) {
 		t.Errorf("origin 32767 + size 2（末位 32768）应被拒绝, 得到 info=%+v err=%v", info, err)
 	}
 }
+
+// ===== int16 坐标守卫的「丢弃」侧：越界方块不得回绕成假坐标 =====
+
+func TestBuildSchematicVoxelDataFromRoot_CoordOverInt16Skipped(t *testing.T) {
+	// w=32769 > int16 上限：末位索引 idx=32768 → x=32768 越界。
+	// 该方块必须被丢弃，而不是 int16(32768) 回绕成 -32768（渲染位错乱的经典来源）。
+	// 同文件内合法位置 (0,0,0) 仍须保留——守卫只能丢越界项，不能整批失败。
+	blocks := make([]byte, 32769)
+	blocks[0] = 1     // 合法：(0,0,0)
+	blocks[32768] = 1 // 越界：x=32768 → 丢弃
+	root := map[string]any{
+		"Width":  int32(32769),
+		"Height": int32(1),
+		"Length": int32(1),
+		"Blocks": blocks,
+		"Data":   make([]byte, 32769),
+		"Palette": map[string]any{
+			"minecraft:stone": int32(1),
+		},
+	}
+	vd, err := BuildSchematicVoxelDataFromRoot(root, 100)
+	if err != nil {
+		t.Fatalf("BuildSchematicVoxelDataFromRoot 失败: %v", err)
+	}
+	// Size 取自声明值（不因丢弃越界方块而缩水）
+	if vd.Size != [3]int{32769, 1, 1} {
+		t.Errorf("Size = %v, want [32769 1 1]", vd.Size)
+	}
+	assertVoxelPositions(t, vd, map[string][][3]int16{
+		"#7F7F7F": {{0, 0, 0}},
+	})
+}
+
+func TestBuildBedrockVoxelData_CoordOverInt16Skipped(t *testing.T) {
+	// local_pos 使全局坐标跨出 int16 两侧（+40000 / -40000）→ 一律丢弃；
+	// 同 sub 内合法方块保留。守卫随拆解迁入 bedrockBlockAt（withinInt16）。
+	palette := []any{
+		map[string]any{"Name": "minecraft:air"},
+		map[string]any{"Name": "minecraft:stone"},
+	}
+	block := func(x int32) map[string]any {
+		return map[string]any{
+			"local_pos":  map[string]any{"x": x, "y": int32(0), "z": int32(0)},
+			"palette_id": int32(1),
+		}
+	}
+	sub := map[string]any{
+		"local_bounds": map[string]any{
+			"min_x": int32(0), "min_y": int32(0), "min_z": int32(0),
+			"max_x": int32(0), "max_y": int32(0), "max_z": int32(0),
+		},
+		"block_palette": palette,
+		"blocks":        []any{block(40000), block(-40000), block(0)},
+	}
+	vd, err := buildBedrockVoxelData([]any{sub}, 100)
+	if err != nil {
+		t.Fatalf("buildBedrockVoxelData 失败: %v", err)
+	}
+	if vd.Size != [3]int{1, 1, 1} {
+		t.Errorf("Size = %v, want [1 1 1]", vd.Size)
+	}
+	assertVoxelPositions(t, vd, map[string][][3]int16{
+		"#7F7F7F": {{0, 0, 0}},
+	})
+}

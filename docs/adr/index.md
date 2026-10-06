@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **328** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **329** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 5 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 298 |
+| [✅ 已采纳](#已采纳) | 299 |
 | [❌ 已取代](#已取代) | 7 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -56,10 +56,11 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（298）
+### ✅ 已采纳（299）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-324](./architecture/ADR-324-parallel-walkdir.md) | 并行目录遍历替代 filepath.WalkDir | ✅ 已采纳 |
 | [ADR-322](./architecture/ADR-322-meta-failure-log-channel-health.md) | 元失败层：日志通道健康锁存 + 第二落盘通道 + 不可驱逐保留位 | ✅ 已采纳 |
 | [ADR-320](./architecture/ADR-320-adr-tiering.md) | ADR 体系分级：架构决策与执行决策日志分治 | ✅ 已采纳 |
 | [ADR-319](./ADR-319-water-spectrum-scale-normalization.md) | 水面波场尺度归一与泡沫判据可达性 | ✅ 已采纳 |
@@ -383,6 +384,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-324 | 并行目录遍历替代 filepath.WalkDir | ✅ 已采纳 | 2026-10-06 |
 | ADR-323 | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 🔄 部分采纳 | 2026-10-06 |
 | ADR-322 | 元失败层：日志通道健康锁存 + 第二落盘通道 + 不可驱逐保留位 | ✅ 已采纳 | 2026-10-05 |
 | ADR-321 | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 | 2026-10-04 |

@@ -270,6 +270,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-324：并行目录遍历替代 filepath.WalkDir",
+        "link": "/adr/architecture/ADR-324-parallel-walkdir"
+      },
+      {
         "text": "ADR-323：pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化",
         "link": "/adr/architecture/ADR-323-pre-commit-commit-blocks"
       },

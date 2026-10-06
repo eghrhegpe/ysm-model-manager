@@ -62,6 +62,32 @@ source_files:
   - frontend/src/backend/web-community.ts
   - scripts/web-binding-check.ts
   - frontend/vite.web.config.ts
+tests:
+  - frontend/src/backend/browser-adapter.contract-b1.test.ts
+  - frontend/src/backend/browser-adapter.contract-b2.test.ts
+  - frontend/src/backend/browser-adapter.contract-b3.test.ts
+  - frontend/src/backend/browser-adapter.test.ts
+  - frontend/src/backend/web-cli.test.ts
+  - frontend/src/backend/web-common.test.ts
+  - frontend/src/backend/web-fs-shared.test.ts
+  - frontend/src/backend/web-fs.bindings.test.ts
+  - frontend/src/backend/web-fs.test.ts
+  - frontend/src/backend/web-store.logs.test.ts
+  - frontend/src/preview-3d/decoder/wasm-decode.test.ts
+  - frontend/src/test-utils/index.test.ts
+  - frontend/src/utils/icon/icon.test.ts
+  - frontend/src/utils/resource/types.test.ts
+  - frontend/src/views/app-content/tpl-structure.test.ts
+  - frontend/src/views/app-content/tpl-workshop.test.ts
+  - frontend/src/views/app-content/tpl.test.ts
+  - frontend/src/views/app-nav/index.test.ts
+  - frontend/src/views/app-preview/tpl.test.ts
+  - frontend/src/views/app-sync-manager/index.branches.test.ts
+  - frontend/src/views/app-sync-manager/index.test.ts
+  - frontend/src/views/app-sync-manager/tpl.test.ts
+  - frontend/src/views/app-toast/index.test.ts
+  - frontend/src/views/app-tree/index.extra.test.ts
+  - frontend/src/views/context-menu/index.test.ts
 auto_fields:
   symbols_with_lines:
     - __resetWebLogProbeForTest

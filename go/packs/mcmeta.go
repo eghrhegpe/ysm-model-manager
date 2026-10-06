@@ -249,8 +249,7 @@ func ReadShaderpackLangParts(path string) (string, map[string]string) {
 		// 常见的显示名 key（精确匹配，避免误匹配 pack.namespace / subtitle 等；
 		// 裸 title 是合法 key，测试钉住）
 		lowKey := strings.ToLower(key)
-		switch {
-		case lowKey == "pack.name" || lowKey == "shaderpack.name" || lowKey == "title" || strings.HasSuffix(lowKey, ".title"):
+		if lowKey == "pack.name" || lowKey == "shaderpack.name" || lowKey == "title" || strings.HasSuffix(lowKey, ".title") {
 			if name == "" {
 				name = val
 			}

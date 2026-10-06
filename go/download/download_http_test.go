@@ -685,11 +685,12 @@ func TestHTTP_ErrorClassification_OverReadTruncationError(t *testing.T) {
 
 	// 无论走 TruncationError 路径还是 IO 错误路径，err 应非 nil
 	var truncErr *TruncationError
-	if errors.As(err, &truncErr) {
+	switch {
+	case errors.As(err, &truncErr):
 		t.Logf("OK: 截断被分类为 TruncationError: %v", truncErr)
-	} else if errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF) {
+	case errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, io.EOF):
 		t.Logf("OK: 截断通过 IO 错误路径被检测: %v", err)
-	} else {
+	default:
 		t.Logf("OK: 截断被检测到（其他错误路径）: %v", err)
 	}
 }

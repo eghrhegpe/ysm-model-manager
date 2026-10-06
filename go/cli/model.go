@@ -265,11 +265,12 @@ func runVerify(ctx *CmdContext) error {
 			}
 		}
 
-		if hasError {
+		switch {
+		case hasError:
 			errorCount++
-		} else if hasWarning {
+		case hasWarning:
 			warningCount++
-		} else {
+		default:
 			validCount++
 		}
 	}

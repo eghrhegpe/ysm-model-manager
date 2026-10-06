@@ -47,8 +47,8 @@ func TestOrderTexByYSM_NoYSM(t *testing.T) {
 		t.Fatalf("无 ysm.json 时应保持原序: %v / %v", gotNames, gotData)
 	}
 	gotNames, gotData = orderTexByYSM(names, data, []byte(`{"files":{}}`))
-	if !reflect.DeepEqual(gotNames, names) {
-		t.Fatalf("无 texture 声明时应保持原序: %v", gotNames)
+	if !reflect.DeepEqual(gotNames, names) || !reflect.DeepEqual(gotData, data) {
+		t.Fatalf("无 texture 声明时应保持原序: %v / %v", gotNames, gotData)
 	}
 }
 

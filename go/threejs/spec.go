@@ -414,25 +414,26 @@ func eulerToQuaternion(rxDeg, ryDeg, rzDeg float64) [4]float64 {
 	m22 := cosY * cosX
 	trace := m00 + m11 + m22
 	var qw, qx, qy, qz float64
-	if trace > 0 {
+	switch {
+	case trace > 0:
 		s := 0.5 / math.Sqrt(trace+1.0)
 		qw = 0.25 / s
 		qx = (m21 - m12) * s
 		qy = (m02 - m20) * s
 		qz = (m10 - m01) * s
-	} else if m00 > m11 && m00 > m22 {
+	case m00 > m11 && m00 > m22:
 		s := 2.0 * math.Sqrt(1.0+m00-m11-m22)
 		qw = (m21 - m12) / s
 		qx = 0.25 * s
 		qy = (m01 + m10) / s
 		qz = (m02 + m20) / s
-	} else if m11 > m22 {
+	case m11 > m22:
 		s := 2.0 * math.Sqrt(1.0+m11-m00-m22)
 		qw = (m02 - m20) / s
 		qx = (m01 + m10) / s
 		qy = 0.25 * s
 		qz = (m12 + m21) / s
-	} else {
+	default:
 		s := 2.0 * math.Sqrt(1.0+m22-m00-m11)
 		qw = (m10 - m01) / s
 		qx = (m02 + m20) / s

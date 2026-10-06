@@ -60,23 +60,24 @@ func ExtractPreviewTexture(modelPath string) string {
 	ext := strings.ToLower(filepath.Ext(extPath))
 	var png []byte
 
-	if ext == ".zip" {
+	switch ext {
+	case ".zip":
 		data := readLimitedFile(readPath)
 		if data == nil {
 			return ""
 		}
 		png = extractFirstPNGFromZip(data, int64(len(data)))
-	} else if ext == ".7z" {
+	case ".7z":
 		data := readLimitedFile(readPath)
 		if data == nil {
 			return ""
 		}
 		png = extractFirstPNGFrom7z(data, int64(len(data)))
-	} else if ext == ".ysm" {
+	case ".ysm":
 		if r, err := extractTextureViaYSM(readPath); err == nil {
 			png = r
 		}
-	} else if ext == ".json" {
+	case ".json":
 		// 解压后的 YSM 模型：查找 textures/ 子目录中的 PNG（目录取实际文件所在目录）
 		dir := filepath.Dir(readPath)
 		texDir := filepath.Join(dir, "textures")

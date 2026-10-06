@@ -345,8 +345,8 @@ func TestScanHeader_OverlongLine(t *testing.T) {
 
 // BOM + 不含 YSGP 的文本：AnalyzeYSMHeader 应正常走 scanHeader 分支
 func TestAnalyzeYSMHeader_BOMNoMagic(t *testing.T) {
-	bom := []byte{0xEF, 0xBB, 0xBF}
-	content := append(bom, []byte("--- [Metadata]\n<name>boom</name>\n===\n")...)
+	content := []byte{0xEF, 0xBB, 0xBF}
+	content = append(content, []byte("--- [Metadata]\n<name>boom</name>\n===\n")...)
 	h := AnalyzeYSMHeaderFromBytes(content)
 	if h.Name != "boom" {
 		t.Errorf("BOM + 文本头 Name = %q, want boom", h.Name)

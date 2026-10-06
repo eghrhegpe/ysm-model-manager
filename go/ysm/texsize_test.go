@@ -131,11 +131,9 @@ func TestReadTexSizeFromFile_7zWithTexData(t *testing.T) {
 	if err := os.WriteFile(path, content, 0644); err != nil {
 		t.Fatal(err)
 	}
-	w, h := readTexSizeFromFile(path)
-	if w != 0 || h != 0 {
-		// 当前实现不完整，返回 0,0 是预期行为
-		// 此测试仅验证不会崩溃
-	}
+	// 当前实现不完整，7z 不解析 tex 尺寸（返回 0,0 是预期行为）；
+	// 本用例只验证不 panic，不锁返回值
+	readTexSizeFromFile(path)
 }
 
 // ====== readTexFromZip ======

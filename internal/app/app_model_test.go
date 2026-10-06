@@ -161,8 +161,10 @@ func TestReadFileBytesBatch_PathGuardConcurrent(t *testing.T) {
 		os.WriteFile(p, []byte("ok"), 0o644)
 		validPaths[i] = p
 	}
-	// 混入 3 个非法路径
-	paths := append(validPaths,
+	// 混入 3 个非法路径（独立切片，不覆写 validPaths 的底层数组）
+	paths := make([]string, 0, len(validPaths)+3)
+	paths = append(paths, validPaths...)
+	paths = append(paths,
 		filepath.Join(base, "..", "outside.bin"),
 		"",
 		filepath.Join(base, "nonexistent", "dir", "file.bin"),

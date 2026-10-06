@@ -155,9 +155,10 @@ func runFileBench(ctx *CmdContext) error {
 	var files []string
 	var walkErrCount int
 
-	if *filePath != "" {
+	switch {
+	case *filePath != "":
 		files = append(files, *filePath)
-	} else if *testDir != "" {
+	case *testDir != "":
 		_ = filepath.WalkDir(*testDir, func(path string, d iofs.DirEntry, err error) error {
 			if err != nil {
 				walkErrCount++
@@ -178,7 +179,7 @@ func runFileBench(ctx *CmdContext) error {
 		if walkErrCount > 0 {
 			fmt.Printf("⚠️  扫描跳过 %d 个异常路径\n", walkErrCount)
 		}
-	} else {
+	default:
 		return newParamErrf("请指定 --dir 或 --file 参数")
 	}
 
@@ -749,12 +750,13 @@ func printOverallAssessment(modelSize, textureSize int64) {
 	totalAssetsSize := modelSize + textureSize
 	fmt.Printf("   模型+贴图总大小: %s\n", fsutil.FormatSize(totalAssetsSize))
 
-	if totalAssetsSize > cliPerformanceWarning {
+	switch {
+	case totalAssetsSize > cliPerformanceWarning:
 		fmt.Printf("   🔴 大于 %s，首次加载预计 > 10s\n", fsutil.FormatSize(cliPerformanceWarning))
 		fmt.Printf("   💡 建议: 使用 KTX2 压缩贴图，可减少 60-70%% 体积\n")
-	} else if totalAssetsSize > cliPerformanceCaution {
+	case totalAssetsSize > cliPerformanceCaution:
 		fmt.Printf("   🟡 %s-%s，首次加载可能 5-10s\n", fsutil.FormatSize(cliPerformanceCaution), fsutil.FormatSize(cliPerformanceWarning))
-	} else {
+	default:
 		fmt.Printf("   🟢 小于 %s，加载性能应该可以接受\n", fsutil.FormatSize(cliPerformanceCaution))
 	}
 }

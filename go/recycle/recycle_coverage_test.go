@@ -18,7 +18,7 @@ import (
 // 收敛各跨设备测试重复的注入样板（jscpd 新增对收敛）。
 func setupCrossDevice(tm *TrashManager) {
 	tm.renameForMove = func(_, _ string) error { return syscall.EXDEV }
-	tm.copyFileForMove = func(s, d string) error { return fsutil.CopyFile(s, d) }
+	tm.copyFileForMove = fsutil.CopyFile
 	tm.copyDirForMove = func(s, d string) error {
 		return fsutil.CopyDirRecursive(s, d, fsutil.CopyDirOptions{RejectSymlink: false, Overwrite: true, Rollback: false})
 	}

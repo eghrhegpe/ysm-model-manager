@@ -140,7 +140,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 				// 用 CopyFile 装到 customDir 平铺位置——
 				// installer.Install 按 rel(srcPath, repoRoot) 推导目标，仓库侧文件在子目录时
 				// 会装到 <customDir>/<subdir>/<base> 而平铺位置 <customDir>/<base> 残留陈旧副本
-				//（报告成功但游戏实际加载的文件未重链）。CopyFile 直接落地到平铺目录。
+				// （报告成功但游戏实际加载的文件未重链）。CopyFile 直接落地到平铺目录。
 				if _, err := installer.CopyFileLocked(srcPath, customDir); err != nil {
 					if logger != nil {
 						logger(ce.Name, ce.Path, customDir, 0, types.StatusFailed, "relink 失败: "+err.Error())

@@ -83,7 +83,7 @@ func main() {
 	}
 	sort.Slice(variants, func(i, j int) bool { return variants[i].key < variants[j].key })
 	for _, ve := range variants {
-		sb.WriteString(fmt.Sprintf("\t%q: %q,\n", ve.key, ve.val))
+		fmt.Fprintf(&sb, "\t%q: %q,\n", ve.key, ve.val)
 	}
 	sb.WriteString("}\n\n")
 
@@ -101,7 +101,7 @@ func main() {
 	}
 	sort.Slice(zhEntries, func(i, j int) bool { return zhEntries[i].key < zhEntries[j].key })
 	for _, e := range zhEntries {
-		sb.WriteString(fmt.Sprintf("\t%q: %q,\n", e.key, e.val))
+		fmt.Fprintf(&sb, "\t%q: %q,\n", e.key, e.val)
 	}
 	sb.WriteString("}\n")
 

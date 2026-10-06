@@ -227,11 +227,12 @@ func (a *App) analyzeBedrockModelUncached(modelPath string) types.BedrockModel {
 	var texData [][]byte
 	var animJSONs []string
 
-	if ext == ".zip" {
+	switch ext {
+	case ".zip":
 		geoJSON, texData, animJSONs = parseBedrockFromZip(data, int64(len(data)))
-	} else if ext == ".7z" {
+	case ".7z":
 		geoJSON, texData = parseBedrockFrom7z(data, int64(len(data)))
-	} else if ext == ".json" {
+	case ".json":
 		geoJSON, texData = ysm.FindGeometryInExtractedYSM(modelPath)
 	}
 

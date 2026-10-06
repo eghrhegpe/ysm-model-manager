@@ -428,7 +428,7 @@ func TestMergeWorkshopSitesFromJSON_FreshUser(t *testing.T) {
 	}
 	// 基准 = bundled 默认站（bilibili/afdian/github）：导入的两个默认站 id 命中
 	// 同值/同 id → updated（DeepEqual 判定变更），github 保留——默认站不被抹掉
-	//（code_review 31d30fb7 #1：空基准会让首次部分导入静默删除未出现的默认站）
+	// （code_review 31d30fb7 #1：空基准会让首次部分导入静默删除未出现的默认站）
 	if added != 0 || updated != 2 {
 		t.Fatalf("期望 added=0 updated=2（命中默认站）, got added=%d updated=%d", added, updated)
 	}

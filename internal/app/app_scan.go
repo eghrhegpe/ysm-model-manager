@@ -542,8 +542,5 @@ func (a *App) isPathInRoot(path string) bool {
 		return false
 	}
 	sep := string(filepath.Separator)
-	if strings.HasPrefix(rel, ".."+sep) {
-		return false
-	}
-	return true
+	return !strings.HasPrefix(rel, ".."+sep)
 }

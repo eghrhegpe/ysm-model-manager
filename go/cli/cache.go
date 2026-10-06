@@ -230,12 +230,13 @@ func printCacheVerifySummary(hitCount, missCount int, hitSize int64, totalFiles 
 		hitRate = float64(hitCount) / float64(totalFiles) * 100
 	}
 
-	if hitCount == totalFiles {
+	switch {
+	case hitCount == totalFiles:
 		fmt.Printf("   🟢 所有贴图都已缓存，加载时将获得最佳性能\n")
-	} else if hitCount > 0 {
+	case hitCount > 0:
 		fmt.Printf("   🟡 部分贴图已缓存 (%.1f%%)，首次加载会有解码开销\n", hitRate)
 		fmt.Printf("   💡 建议: 打开包含此模型的页面，系统会自动缓存剩余贴图\n")
-	} else {
+	default:
 		fmt.Printf("   🔴 所有贴图均未缓存，首次加载会较慢\n")
 		fmt.Printf("   💡 建议: 打开包含此模型的页面，系统会自动缓存贴图\n")
 	}
@@ -461,11 +462,12 @@ func runCacheDiag(ctx *CmdContext) error {
 
 				// 二次哈希错误也参与判定（原 _ = 吞错后仍比较，出错时比较无意义）
 				hash2, herr2 := texture_cache.TextureHash(testFile)
-				if herr2 != nil {
+				switch {
+				case herr2 != nil:
 					fmt.Printf("   ❌ 二次哈希计算失败: %v\n", herr2)
-				} else if hash == hash2 {
+				case hash == hash2:
 					fmt.Printf("      ✅ 哈希一致性验证通过\n")
-				} else {
+				default:
 					fmt.Printf("      ❌ 哈希不一致！\n")
 				}
 			}

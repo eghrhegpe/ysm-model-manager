@@ -163,7 +163,7 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 		return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: "仅支持 ysm.json 清单文件", Suggestion: "YSM 包内 json 资源（geometry/animation/语言文件）不可单独导入，请导入 .ysm/.zip/.7z 或解压目录中的 ysm.json"}
 	}
 	// base64 受限解码：预检+解码+复检统一走 fsutil.DecodeBase64Limited
-	//（原「解码后才查 len(data)」会在 500MB 输入上先白白物化再拒绝，与 importer_file.go 口径不一）
+	// （原「解码后才查 len(data)」会在 500MB 输入上先白白物化再拒绝，与 importer_file.go 口径不一）
 	data, err := fsutil.DecodeBase64Limited(base64Data, registry.MaxImportSize)
 	if errors.Is(err, fsutil.ErrB64TooLarge) {
 		// 文案绑定 MaxImportSizeMB 常量——原硬编码 "500MB"

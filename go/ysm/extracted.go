@@ -146,7 +146,8 @@ func parsePlayerModel(data []byte) *playerModel {
 		if len(player.Model) > 0 {
 			modelRaw := string(player.Model)
 			trimmed := strings.TrimSpace(modelRaw)
-			if strings.HasPrefix(trimmed, `{`) {
+			switch {
+			case strings.HasPrefix(trimmed, `{`):
 				// map 格式：JSON 对象**写入序**即 Bedrock 声明序（main 通常最先声明）。
 				// Go map 丢失写入序，必须 json.Decoder Token 流式保序遍历（P2 修复）。
 				mm := make(map[string]string)
@@ -171,12 +172,12 @@ func parsePlayerModel(data []byte) *playerModel {
 					}
 				}
 				pm.mapOrig = mm
-			} else if strings.HasPrefix(trimmed, `[`) {
+			case strings.HasPrefix(trimmed, `[`):
 				var arr []string
 				if json.Unmarshal(player.Model, &arr) == nil {
 					pm.names = arr
 				}
-			} else {
+			default:
 				pm.names = append(pm.names, strings.Trim(trimmed, `"`))
 			}
 		}

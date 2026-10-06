@@ -116,11 +116,7 @@ func parseOptimizationEntries(lines []string) []optEntry {
 			// 表内分隔行 `|---|---|`
 			if !strings.HasPrefix(line, "|") {
 				// 空行/新段落 → 离开表格
-				if line == "" {
-					inTable = false
-				} else {
-					inTable = false
-				}
+				inTable = false
 				continue
 			}
 			if strings.Contains(line, "---") {

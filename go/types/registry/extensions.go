@@ -241,6 +241,7 @@ func IsDirLevelSync(rtype string) bool {
 // 文件（含嵌套），同名不同目录不再 map 去重丢失，原兜底 Walk 无新增条目可补，
 // 本函数无调用方（2026-08-15 审核确认），保留定义仅为兼容资源类型注册表
 // scanInstance 字段解析；新增代码禁止使用。
+//
 // Deprecated: 无消费方，计划随 scanInstance 字段一并移除。
 func IsScanInstance(rtype string) bool {
 	if rt := RegistryType(rtype); rt != nil {

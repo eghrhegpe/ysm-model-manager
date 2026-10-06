@@ -202,9 +202,6 @@ func TestWalkDirParallel_ContextCancel(t *testing.T) {
 	}
 }
 
-// BenchmarkWalkDirParallel_Compare 对标 filepath.WalkDir 的吞吐——
-// 40 文件夹 × 4 文件（对齐生产扫描器形态），直接比 readdir 并行收益。
-
 func buildTree(root string, folders, per int) {
 	for f := 0; f < folders; f++ {
 		d := filepath.Join(root, fmt.Sprintf("model_%04d", f))
@@ -215,22 +212,8 @@ func buildTree(root string, folders, per int) {
 	}
 }
 
-func benchWalkSeq(b *testing.B, root string) {
-	for i := 0; i < b.N; i++ {
-		_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
-			return nil
-		})
-	}
-}
-
-func benchWalkParallel(b *testing.B, root string) {
-	for i := 0; i < b.N; i++ {
-		_ = walkDirParallel(root, func(p string, d fs.DirEntry, err error) error {
-			return nil
-		})
-	}
-}
-
+// TestWalkDirParallel_Benchmark 对标 filepath.WalkDir 的吞吐——
+// 40 文件夹 × 4 文件（对齐生产扫描器形态），直接比 readdir 并行收益。
 func TestWalkDirParallel_Benchmark(t *testing.T) {
 	root := t.TempDir()
 	buildTree(root, 40, 4)

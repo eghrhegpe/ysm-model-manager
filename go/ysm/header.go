@@ -61,17 +61,18 @@ func scanHeader(scanner *bufio.Scanner) YSMHeader {
 			continue
 		}
 		if strings.HasPrefix(line, "---") && strings.Contains(line, "[") {
-			if strings.Contains(line, "Metadata") {
+			switch {
+			case strings.Contains(line, "Metadata"):
 				currentSection = "metadata"
-			} else if strings.Contains(line, "Tips") {
+			case strings.Contains(line, "Tips"):
 				currentSection = "tips"
-			} else if strings.Contains(line, "Export") {
+			case strings.Contains(line, "Export"):
 				currentSection = "export"
-			} else if strings.Contains(line, "Codec") {
+			case strings.Contains(line, "Codec"):
 				currentSection = "codec"
-			} else if strings.Contains(line, "SHA-256") || strings.Contains(line, "Source") {
+			case strings.Contains(line, "SHA-256") || strings.Contains(line, "Source"):
 				currentSection = "source"
-			} else {
+			default:
 				currentSection = ""
 			}
 			continue
@@ -341,10 +342,11 @@ func parseInt(s string) int {
 	}
 	neg := false
 	start := 0
-	if s[0] == '-' {
+	switch s[0] {
+	case '-':
 		neg = true
 		start = 1
-	} else if s[0] == '+' {
+	case '+':
 		start = 1
 	}
 	n := 0

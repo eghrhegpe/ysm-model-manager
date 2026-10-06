@@ -338,7 +338,7 @@ func ExtractYsmSummary(path string) (YsmSummary, error) {
 			return summary, fmt.Errorf("无法打开 ysm.json: %w", err)
 		}
 		// 立即登记关闭：ReadLimitedEntry 只读不负责关句柄，本分支全部返回路径
-		//（超限错误 / 解析错误 / 成功）都必须释放——os.File 双关无害（runtime 兜底）
+		// （超限错误 / 解析错误 / 成功）都必须释放——os.File 双关无害（runtime 兜底）
 		defer func() { _ = f.Close() }()
 		data := fsutil.ReadLimitedEntry(f, registry.MaxReadLimit)
 		if data == nil {

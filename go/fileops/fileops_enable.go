@@ -78,7 +78,7 @@ func ToggleModelEnable(root, path string) (bool, error) {
 			fileNew := registry.StripDisableSuffix(path)
 			// 存在性检查对照旧父目录下 fileNew——两段式 Rename（先父目录后文件）
 			// 会把旧父目录内的同名文件随父目录一起带到落点，检查旧路径恰好预判该冲突
-			//（TestToggleModelEnable_DirBanFileNewExists 锁定：误改检查路径致冲突漏检）
+			// （TestToggleModelEnable_DirBanFileNewExists 锁定：误改检查路径致冲突漏检）
 			if _, err := os.Lstat(fileNew); err == nil {
 				return false, fmt.Errorf("目标已存在: %s", fileNew)
 			}

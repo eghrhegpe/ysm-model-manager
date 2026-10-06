@@ -95,17 +95,18 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 		}
 
 		// 内容冲突判定：两端都存在且哈希不同
-		if localInfo.Hash != remoteInfo.Hash && localInfo.Hash != "" && remoteInfo.Hash != "" {
+		switch {
+		case localInfo.Hash != remoteInfo.Hash && localInfo.Hash != "" && remoteInfo.Hash != "":
 			conflict := newConflict(path, localInfo, remoteInfo,
 				ConflictContentModified, suggestStrategy(localInfo.ModTime, remoteInfo.ModTime), false)
 			conflicts = append(conflicts, conflict)
-		} else if localInfo.Size != remoteInfo.Size {
+		case localInfo.Size != remoteInfo.Size:
 			// 大小不匹配但哈希可能一致（极端情况），标记为 size_mismatch 供参考
 			// 注：哈希一致但大小不同在理论上不可能，此分支为防御性分支
 			conflict := newConflict(path, localInfo, remoteInfo,
 				ConflictSizeMismatch, suggestStrategy(localInfo.ModTime, remoteInfo.ModTime), false)
 			conflicts = append(conflicts, conflict)
-		} else if localInfo.Size == remoteInfo.Size && (localInfo.Hash == "" || remoteInfo.Hash == "") {
+		case localInfo.Size == remoteInfo.Size && (localInfo.Hash == "" || remoteInfo.Hash == ""):
 			// 两端 size 相同但任一端 hash 失败：
 			// 旧实现在此情况静默跳过（hash 空时 L91 条件不满足），
 			// 导致哈希失败的真实冲突文件被漏报。
@@ -136,7 +137,7 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 // 先备份再操作，确保安全
 func ResolveConflict(conflict FileConflict, strategy ResolutionStrategy, localDir, remoteDir string) error {
 	// 路径守卫：防 conflict.Path 含 ".." 穿越到 localDir/remoteDir 之外
-	//（与 sync_push.go 同款 RelInside 防线对齐）。
+	// （与 sync_push.go 同款 RelInside 防线对齐）。
 	// 此处由调用方 ResolveConflictsLocked 在持锁前提下调用，路径来自前端 JSON 传入，信任面需显式守卫。
 	if _, err := paths.RelInside(localDir, filepath.Join(localDir, conflict.Path)); err != nil {
 		return fmt.Errorf("冲突路径越界 %q: %w", conflict.Path, err)

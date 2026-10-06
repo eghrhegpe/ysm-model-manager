@@ -168,10 +168,8 @@ func TestLoadRegistry_Edge_ExtraFields_Ignored(t *testing.T) {
 	}
 	if rt := RegistryType("ysm"); rt == nil {
 		t.Fatal("RegistryType('ysm') 应存在")
-	} else {
-		if rt.Extensions[0] != ".ysm" {
-			t.Errorf("ysm.Extensions[0] = %q，期望 '.ysm'", rt.Extensions[0])
-		}
+	} else if rt.Extensions[0] != ".ysm" {
+		t.Errorf("ysm.Extensions[0] = %q，期望 '.ysm'", rt.Extensions[0])
 	}
 	t.Log("OK: 额外未知字段被 encoding/json 静默忽略（预期行为）。")
 }

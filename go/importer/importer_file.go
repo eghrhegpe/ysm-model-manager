@@ -58,7 +58,7 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 		return "", "", types.AppError{Code: types.ErrFileNameInvalid, Operation: "导入模型", SourcePath: fileName, Reason: "文件名包含非法路径分隔符", Suggestion: "请使用纯文件名，不要包含路径"}
 	}
 	// base64 受限解码：预检+解码+复检统一走 fsutil.DecodeBase64Limited
-	//（预检避免超大 base64 字符串解码后才命中上限、白白分配内存的峰值尖刺）
+	// （预检避免超大 base64 字符串解码后才命中上限、白白分配内存的峰值尖刺）
 	data, err := fsutil.DecodeBase64Limited(base64Data, regreg.MaxImportSize)
 	if errors.Is(err, fsutil.ErrB64TooLarge) {
 		return "", "", types.AppError{Code: types.ErrFileTooLarge, Operation: "导入模型", SourcePath: fileName, Reason: fmt.Sprintf("文件大小超过 %dMB 限制", regreg.MaxImportSizeMB), Suggestion: fmt.Sprintf("请压缩文件至 %dMB 以内", regreg.MaxImportSizeMB)}
@@ -104,11 +104,12 @@ func ImportFromBase64(fileName, base64Data string, opts ImportOptions, rootFn fu
 				logger(fileName, fileName, targetRoot, 0, types.StatusWarn, msg)
 			}
 		}
-		if ext == ".zip" || ext == ".ysm" {
+		switch ext {
+		case ".zip", ".ysm":
 			if !bytes.HasPrefix(data, zipLocalHeaderSig) {
 				warn("文件头不匹配标准ZIP格式，可能为旧版或非标准YSM文件，已导入")
 			}
-		} else if ext == ".7z" {
+		case ".7z":
 			if !bytes.HasPrefix(data, sevenZipSig) {
 				warn("文件头不匹配标准7z格式，已导入")
 			}

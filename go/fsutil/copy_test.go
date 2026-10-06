@@ -365,8 +365,8 @@ func TestCopyDirRecursive_AtomicRename_SrcIsFile(t *testing.T) {
 
 func TestRelJoin(t *testing.T) {
 	// 使用 filepath.Join 构造跨平台兼容路径
-	dst := filepath.Join("dst")
-	src := filepath.Join("src")
+	dst := "dst"
+	src := "src"
 
 	tests := []struct {
 		p        string

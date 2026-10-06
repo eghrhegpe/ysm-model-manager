@@ -118,7 +118,7 @@ func RelInside(baseDir, path string) (string, error) {
 		return "", err
 	}
 	// IsInside 已用 Abs(Clean) 归一验证通过；此处同归一后 Rel——同卷同盘，Rel 不再失败
-	//（跨卷在 IsInside 内已报 ErrRelFailed 提前返回）。err 仍透传不吞。
+	// （跨卷在 IsInside 内已报 ErrRelFailed 提前返回）。err 仍透传不吞。
 	absBase, _ := filepath.Abs(filepath.Clean(baseDir))
 	absPath, _ := filepath.Abs(filepath.Clean(path))
 	return filepath.Rel(absBase, absPath)

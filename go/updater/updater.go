@@ -213,7 +213,7 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 		}
 		// 聚合日志：标记版本号 + body
 		if rel.Body != "" {
-			notesBuf.WriteString(fmt.Sprintf("【%s】\n%s\n\n", rel.TagName, rel.Body))
+			fmt.Fprintf(&notesBuf, "【%s】\n%s\n\n", rel.TagName, rel.Body)
 		}
 	}
 

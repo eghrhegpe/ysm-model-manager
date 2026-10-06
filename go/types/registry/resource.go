@@ -502,13 +502,14 @@ func (fr *FormatRange) UnmarshalJSON(b []byte) error {
 	// 尝试 int 数组（长度 1 或 2）: [min, max] 或 [min]
 	var arr []int
 	if err := json.Unmarshal(b, &arr); err == nil {
-		if len(arr) == 1 {
+		switch {
+		case len(arr) == 1:
 			fr.Min = arr[0]
 			fr.Max = arr[0]
-		} else if len(arr) >= 2 {
+		case len(arr) >= 2:
 			fr.Min = arr[0]
 			fr.Max = arr[1]
-		} else {
+		default:
 			return fmt.Errorf("FormatRange: 数组长度不足")
 		}
 		return nil

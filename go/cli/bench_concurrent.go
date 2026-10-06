@@ -1385,7 +1385,7 @@ func runSingleModelBench(a AppService, modelPath, filesRoot string) []singleBenc
 	})
 
 	cacheStart := time.Now()
-	cacheNotes := "🔍 缓存目录不可用"
+	var cacheNotes string
 	if hash, err := texture_cache.TextureHash(modelPath); err == nil {
 		if cached, ok, _ := texture_cache.ReadCached(hash); ok && cached != nil {
 			cacheNotes = fmt.Sprintf("✅ 缓存命中 (%s, %s)", fsutil.FormatSize(int64(len(cached))), hash[:12]+"...")

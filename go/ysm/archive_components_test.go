@@ -6,19 +6,6 @@ import (
 	"testing"
 )
 
-// 最小 Bedrock geometry：Root + 1 cube
-const miniGeo = `{
-  "format_version": "1.12.0",
-  "minecraft:geometry": [{
-    "description": {"identifier": "test", "texture_width": 64, "texture_height": 32},
-    "bones": [{
-      "name": "Root",
-      "pivot": [0, 0, 0],
-      "cubes": [{"origin": [-1, 0, -1], "size": [2, 2, 2], "uv": [0, 0]}]
-    }]
-  }]
-}`
-
 // 带指定骨骼名的 Bedrock geometry（各组件用不同骨骼名，便于断言排序/归属）
 func geoWithBone(boneName string) string {
 	return `{

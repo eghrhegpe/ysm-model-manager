@@ -55,6 +55,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "check-knowledge-rename-migration.ts": ["docs", "tests"],
   "check-gen-autogen-stale-cleanup.ts": ["docs", "tests"], // gen-knowledge-autogen：source_files 消失时回收 tests/auto_fields 派生块
   "check-knowledge-derived-symbol-count.ts": ["docs", "tests"], // 5.14 派生元数据体量护栏（≥100 符号 WARN）
+  "check-knowledge-claim-overlap.ts": ["docs", "tests"], // 5.15 跨卡认领重复（≥3 条认领且 0 条独占 WARN）
   "test_check_readme_index.ts": ["docs", "tests"],
   "test_check_knowledge_content.ts": ["docs", "tests"], // 知识卡正文机制锚探针（P1 补网）
   // link-checker 扫描域 = git 跟踪 ∩ 可扫（防未跟踪 md 拦住全仓推送）——docs 域变更亦触发
@@ -406,6 +407,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "check-knowledge-rename-migration.ts": ["scripts/check-knowledge-drift.ts"],
   "check-gen-autogen-stale-cleanup.ts": ["scripts/gen-knowledge-autogen.ts"],
   "check-knowledge-derived-symbol-count.ts": ["scripts/check-knowledge-drift.ts"],
+  "check-knowledge-claim-overlap.ts": ["scripts/check-knowledge-drift.ts"],
   "test_redlines_changed_files.ts": ["scripts/check-redlines.ts"],
   "test_scripts_lib.ts": [
     "scripts/_lib/scan-files.ts",

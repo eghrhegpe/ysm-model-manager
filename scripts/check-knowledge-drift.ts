@@ -875,6 +875,39 @@ function checkDerivedSymbolCount(cards: any[]) {
   }
 }
 
+// ── 检查 5.15：跨卡认领重复（WARN）──
+// 背景（2026-10-06 知识库复核）：source_files 是**覆盖登记**——登记一份路径，等于承诺
+// 本卡对该路径的知识负责。实测 191 张有 source_files 的卡里，130 个路径被 ≥2 张卡认领，
+// 每张卡的重叠比例中位 14% / p75 67% / p90 100%；32 张卡 0 条独占认领（最高 multi-model-select
+// 7/7 全与他人重叠、features-dialogs 6/6、utils-export 5/5）。零独占的登记是重复劳动，
+// 却看起来和真覆盖一样权威——此前无任何检查覆盖，全靠人翻 tag。
+// 阈值：≥CLAIM_OVERLAP_MIN 条认领且 0 条独占。下限 3 的原因——1~2 条全重叠多半是
+// 跨切面视图（卡提供独特解读而非独特覆盖），单卡误伤率高；3 条及以上全重叠才是明确信号。
+// 已知局限：仅比对**精确路径字符串**，目录认领（`go/types/`）与其中具体文件
+// （`go/types/registry/extensions.go`）的包含关系不计为重叠——故本检查给出的是下界，
+// 真实重叠更多。扩到包含关系会引入误伤，留待后续。
+// WARN 级：100% 重叠是 smell 不是 defect（跨切面卡有意为之也合理），只现形促人拍板。
+const CLAIM_OVERLAP_MIN = 3;
+
+function checkClaimOverlap(cards: any[]) {
+  const claim: Record<string, string[]> = {};
+  for (const { cf, fm } of cards) {
+    if (!fm) continue;
+    for (const p of parseSourceFiles(fm)) (claim[p] = claim[p] || []).push(cf);
+  }
+  for (const { cf, fm } of cards) {
+    if (!fm) continue;
+    const srcs = parseSourceFiles(fm);
+    if (srcs.length < CLAIM_OVERLAP_MIN) continue;
+    const unique = srcs.filter((p) => (claim[p] || []).length === 1);
+    if (unique.length === 0) {
+      warns.push(
+        `知识卡 ${cf} 的 source_files ${srcs.length} 条全部被其他卡认领（0 条独占）——source_files 是覆盖登记，无独占覆盖等于登记重复劳动；请收窄到独有路径，或确认本卡为跨切面视图、有意为之`,
+      );
+    }
+  }
+}
+
 // ── 检查 5.9：正文散文禁硬编码行号/行数/计数（WARN，P1 落地 ADR-162 精神到散文层）──
 // 背景（2026-09-05 P1）：ADR-162 已把 frontmatter symbols_with_lines 去行号（纯符号名，
 // 行号位移不再触发重写）。但正文散文里的手写行号（`L164`、`983 行`、`8 个能力`）从未纳入
@@ -1080,6 +1113,7 @@ function main() {
   checkAutoFieldsFormat(cards); // 解法 B：机器推导字段格式校验
   checkNoCuratedInAutoFields(cards); // 解法 B：auto_fields 禁人工策展子字段（ERROR）
   checkDerivedSymbolCount(cards); // 解法 B：派生元数据体量护栏（WARN）
+  checkClaimOverlap(cards); // 解法 B：跨卡认领重复（WARN）
   checkBodyLineRefs(cards); // P1：正文散文禁硬编码行号/行数/计数（WARN）
   checkFrontmatterLineRefs(cards); // 5.10：frontmatter 人工策展字段行号引用（WARN）
   checkCardReferences(cards); // 5.11：卡间引用断链 + 归档改名建议（WARN）

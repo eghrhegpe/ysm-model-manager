@@ -801,6 +801,56 @@ function checkNoCuratedInAutoFields(cards: any[]) {
   }
 }
 
+// ── 检查 5.14：派生元数据体量护栏（WARN，不阻断）──
+// 背景（2026-10-06）：auto_fields.symbols_with_lines 由 gen 从 source_files 派生，但全仓
+// 零信息消费者——仅 gen 生产、本检查器校验格式、_lib/machine-diff 用其**形状**做脏文件
+// 分类（ADR-151，不读值）。故只膨胀 frontmatter、不产信息。实测 181/193 张卡带派生符号，
+// ≥100 个的 7 张（model3d 1013 / preview-core 282 / scene-capability-registry 214 /
+// go-types 153 / resource-registry 153 / app-preview 140 / wails-bindings 118），
+// frontmatter 最大 1064 行。此前列出全靠人翻 tag 撞见。
+// 阈值 100：分布上 118 与 99 之间存在自然断层；100 个符号名以上无人可读可核。
+// 触发含义：source_files 认领过宽，或所指文件是超大 god-file——应收窄认领或评估拆文件。
+// WARN 级：体量本身不是错误（符号索引未来可能被检索消费），只现形不改判。
+const SYM_COUNT_WARN = 100;
+
+/** 统计 auto_fields.symbols_with_lines 条目数（嵌套 2 层：auto_fields: → symbols_with_lines: → 项）。 */
+function countDerivedSymbols(fm: string): number {
+  let inAF = false;
+  let inSym = false;
+  let n = 0;
+  for (const line of fm.split(/\r?\n/)) {
+    if (/^auto_fields\s*:/.test(line)) {
+      inAF = true;
+      inSym = false;
+      continue;
+    }
+    if (inAF && /^\S/.test(line)) {
+      inAF = false;
+      inSym = false;
+      continue;
+    }
+    if (inAF && /^ {2}symbols_with_lines\s*:/.test(line)) {
+      inSym = true;
+      continue;
+    }
+    if (inSym && /^ {2}\w/.test(line)) inSym = false; // 同级其他子键 → 块结束
+    if (inSym && /^ {4,}-\s+/.test(line)) n++;
+  }
+  return n;
+}
+
+function checkDerivedSymbolCount(cards: any[]) {
+  for (const { cf, fm } of cards) {
+    if (!fm) continue;
+    const n = countDerivedSymbols(fm);
+    if (n >= SYM_COUNT_WARN) {
+      warns.push(
+        `知识卡 ${cf} 的派生符号 ${n} 个（≥${SYM_COUNT_WARN}）——auto_fields.symbols_with_lines 全仓零信息消费者，纯 frontmatter 膨胀；请收窄 source_files 认领或评估所指文件是否该拆分`,
+      );
+    }
+  }
+}
+
 // ── 检查 5.9：正文散文禁硬编码行号/行数/计数（WARN，P1 落地 ADR-162 精神到散文层）──
 // 背景（2026-09-05 P1）：ADR-162 已把 frontmatter symbols_with_lines 去行号（纯符号名，
 // 行号位移不再触发重写）。但正文散文里的手写行号（`L164`、`983 行`、`8 个能力`）从未纳入
@@ -1005,6 +1055,7 @@ function main() {
   checkCuratedFields(cards); // 解法 B：人工策展字段漂移（WARN）
   checkAutoFieldsFormat(cards); // 解法 B：机器推导字段格式校验
   checkNoCuratedInAutoFields(cards); // 解法 B：auto_fields 禁人工策展子字段（ERROR）
+  checkDerivedSymbolCount(cards); // 解法 B：派生元数据体量护栏（WARN）
   checkBodyLineRefs(cards); // P1：正文散文禁硬编码行号/行数/计数（WARN）
   checkFrontmatterLineRefs(cards); // 5.10：frontmatter 人工策展字段行号引用（WARN）
   checkCardReferences(cards); // 5.11：卡间引用断链 + 归档改名建议（WARN）

@@ -26,11 +26,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getList, getScalar, parseFrontmatter } from "./_lib/frontmatter.ts";
-import { KNOW_DIR, KNOWLEDGE_NON_CARDS as NON_CARDS } from "./_lib/knowledge-cards.ts";
+import { KNOW_DIR as KNOW_DIR_DEFAULT, KNOWLEDGE_NON_CARDS as NON_CARDS } from "./_lib/knowledge-cards.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
 // ---------- auto_fields 字段解析 ----------
+
+// 机器派生块：由 source_files 推导。source_files 消失时这些块必须一并回收
+// （tests 由 gen-knowledge-symbols 同族生成，形态与 auto_fields 同属机器区）。
+const MACHINE_BLOCKS = ["tests", "auto_fields"];
 
 // 解析 auto_fields: 块（嵌套映射），无该字段返回 null
 // 格式示例：
@@ -77,6 +81,37 @@ function parseAutoFields(fm: string) {
     }
   }
   return out;
+}
+
+// 移除 frontmatter 中指定顶层字段块（键行 + 其下缩进项）。
+// 「source_files 为空 → 派生产物必须回收」：gen 只按符号名增删，从不在输入消失时
+// 删除整块，实证 extensibility-round2.md 删 source_files 后 278 行 tests/auto_fields 残留。
+// 边界与 parseAutoFields 对齐：块内空行跳过；未出现正文行即遇空行停止（不吞块间空行）。
+function stripFmBlock(fm: string, key: string): string {
+  const lines = fm.split(/\r?\n/);
+  const re = new RegExp(`^${key}\\s*:`);
+  let idx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (re.test(lines[i]!)) {
+      idx = i;
+      break;
+    }
+  }
+  if (idx === -1) return fm;
+  let end = idx + 1;
+  let sawBody = false;
+  while (end < lines.length) {
+    const line = lines[end]!;
+    if (/^\S/.test(line)) break; // 下一个顶层键 → 块结束
+    if (line.trim() === "") {
+      if (!sawBody) break;
+      end++;
+      continue;
+    }
+    sawBody = true;
+    end++;
+  }
+  return [...lines.slice(0, idx), ...lines.slice(end)].join("\n");
 }
 
 // 用新 auto_fields 替换 frontmatter 中的 auto_fields: 块；若原本无该字段则插入到 source_files 后
@@ -309,15 +344,21 @@ function collectSymbolsWithLines(sourceFiles: string[]): Array<{ symbol: string;
 // ---------- 主流程 ----------
 
 function main() {
-  const parsed = parseArgs(process.argv.slice(2), { bools: ["check", "full", "json"] });
+  const parsed = parseArgs(process.argv.slice(2), {
+    bools: ["check", "full", "json"],
+    strings: ["kc-dir"],
+  });
   if (parsed.unknown.length) {
-    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --check --full --json）`);
+    console.error(`❌ 未知参数: ${parsed.unknown.join(", ")}（支持 --check --full --json --kc-dir <dir>）`);
     process.exit(1);
   }
   const { check: isCheck, full: isFull, json: wantJson } = parsed;
+  // --kc-dir 指向自定义卡片目录（契约测试用）；source_files 仍按仓库根解析
+  const kcDirArg = parsed["kc-dir"] as string | null;
+  const KNOW_DIR = kcDirArg ? path.resolve(process.cwd(), kcDirArg) : KNOW_DIR_DEFAULT;
 
   if (!fs.existsSync(KNOW_DIR)) {
-    console.error("❌ docs/knowledge/ 不存在，请确认在仓库根目录运行");
+    console.error(`❌ ${KNOW_DIR} 不存在，请确认在仓库根目录运行`);
     process.exit(1);
   }
 
@@ -329,6 +370,8 @@ function main() {
   let skippedNoSources = 0;
   let skippedFrozen = 0;
   let frozenCleaned = 0;
+  let staleBlocks = 0;
+  let cleanedBlocks = 0;
   const drifts: Array<{ file: string; added: string[]; removed: string[]; moved: string[] }> = [];
 
   for (const cf of cards) {
@@ -339,7 +382,25 @@ function main() {
 
     const sources = getList(fm, "source_files");
     if (sources.length === 0) {
-      skippedNoSources++;
+      // 无 source_files → 派生产物必须回收（见 stripFmBlock 头注实证）。
+      // 只清 tests / auto_fields 两个机器块；注释与人工字段原样保留。
+      const present = MACHINE_BLOCKS.filter((k) => new RegExp(`^${k}\\s*:`, "m").test(fm));
+      if (present.length === 0) {
+        skippedNoSources++;
+        continue;
+      }
+      if (isCheck) {
+        console.error(
+          `⚠️ ${cf} → 无 source_files 但残留 ${present.join(" / ")} 派生块（共 ${present.length} 块）——运行 gen 清理`,
+        );
+        staleBlocks++;
+        continue;
+      }
+      let stripped = fm;
+      for (const k of present) stripped = stripFmBlock(stripped, k);
+      fs.writeFileSync(file, text.replace(/^---\r?\n[\s\S]*?\r?\n---/, () => `---\n${stripped}\n---`));
+      cleanedBlocks++;
+      console.log(`🧹 ${cf} → 回收无 source_files 的派生块: ${present.join(" / ")}`);
       continue;
     }
 
@@ -443,13 +504,14 @@ function main() {
   }
 
   if (isCheck) {
-    if (drifts.length) {
+    if (drifts.length || staleBlocks > 0) {
       if (wantJson) {
         console.log(
           JSON.stringify({
             _summary: {
               ok: false,
               drifts: drifts.length,
+              staleBlocks: staleBlocks,
               scanned: cards.length,
               frozen: skippedFrozen,
             },
@@ -457,7 +519,7 @@ function main() {
         );
       } else {
         console.error(
-          `❌ ${drifts.length} 张卡 auto_fields 漂移，请运行：node scripts/gen-knowledge-autogen.ts`,
+          `❌ ${drifts.length} 张卡 auto_fields 漂移 / ${staleBlocks} 张卡残留无来源派生块，请运行：node scripts/gen-knowledge-autogen.ts`,
         );
         for (const d of drifts) {
           const parts: string[] = [];

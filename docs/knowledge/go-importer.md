@@ -102,6 +102,10 @@ status: active
 - 目录复制先写入 `MkdirTemp` 临时目录再 `os.Rename` 落地，保证原子性（失败 `defer RemoveAll` 清理）
 - `sanitizePath` 是防御纵深：上层 `installer.Install` 已用 `paths.IsInside` 严校验，包被独立使用时仍拒绝 `..`
 - base64 解码统一走 `fsutil.DecodeBase64Limited`（2026-08-30 审核修复：原「预检 + 解码 + 复检」三段手写在 `ImportFromBase64`，现收敛为 helper，`ErrB64TooLarge` 映射回 `FILE_TOO_LARGE` 文案；app 层 `importModelFileWithSubpath` 同口径）
+- **尾部探针 `ok` 与 `id` 是两个正交维度（2026-10 数据级锁定）**：`DetectContainerTypeFromBase64Tail` 的 `ok=true` = 尾部探针**已给出确定答案**（`id` 可以是空串——确为 zip 但无匹配类型，不猜）；`ok=false` = 无法从尾部判定，调用方**必须**回退整包解码。四条降级判据（zip64 字段触顶 / 中央目录超出尾部窗口 / 中央目录解析不完整 / 解析条目数与 EOCD 声明不符）任何一条被误改成 `ok=true` 都会让 50~500MB 合法包的类型判定静默走偏。数据级护栏见 `detect_tail_data_lock_test.go`（手工拼 zip 尾部构造真实 `zip.Writer` 造不出的降级形态）；`decodeBase64TailWindow` 的「长度 < 8」先于「填充 > 2」判定（`A===` 走前者、`AAAAAAAAA===` 才走后者）
+- **`DetectContainerTypeFromBase64Tail` 的 `ClassContainer/ClassOther` 分支是构造性死代码**：`packs.DetectByEntries` 只返回 `""` 或注册表里真实存在的 type ID，而 `container`/`other` 不是注册类型（`resource_types.json` 无此 id），故该分支永不进入；它保留作防御，覆盖率为构造性上限而非测试缺口
+- **`.7z` 魔数告警分支只能由「扩展名 .7z + 内容实为 zip」触达**：坏 7z 在类型检测阶段即被拦（无特征 → 空 rtype → 报错），走不到魔数校验；故 `warnImportMagicMismatch` 里「类型判定看内容、魔数校验看扩展名」是刻意的双口径，改动前先读 `importer_file_magic_lock_test.go`
+- **ImportFromBase64 拆解后的阶段顺序即拒绝优先级（2026-10，gocyclo 25 → ≤20）**：`validateImportFileName`（扩展名 → ysm.json 白名单 → 穿越 → 分隔符）→ `decodeImportPayload`（受限解码 → 非空）→ `resolveImportRtype`（内容检测 → 扩展名反查 → 报错）→ `warnImportMagicMismatch` → 落盘。守卫顺序与 `ImportFromBase64 校验链`一节的表逐行对应，重排即改错误优先级
 - **R30 修复链（2026-08-31）**：
   - P2-1 `copyDirContents` symlink 路径穿越防护：`os.Readlink` 拿到 target 后直接 `os.Symlink`，绝对路径或含 `..` 的相对路径会指向仓库外。修复：解析 target 为绝对路径，判定是否在源目录树内，越界则拒绝。
   - code_review P1-2 symlink 基目录修正：相对 target 必须解析为相对于符号链接自身目录（`filepath.Dir(srcPath)`），而非 `src`（`copyDirContents` 的当前递归目录）——OS 也是这样解析的。`filepath.Abs` 错误必须传播（fail-closed），不能 `_` 吞掉（旧实现 fail-open）。

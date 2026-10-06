@@ -392,80 +392,155 @@ func appendUniqueProjTexs(texOrder []string, projModels []projEntry) []string {
 //   - 动画/控制器 JSON 走 fsutil.ReadLimitedEntry（+1 探测，超限返回 nil；ADR-033
 //     陷阱：原 io.ReadAll(io.LimitReader) 无 +1 探测，恰好 50MB 被截断后静默下发）。
 //   - IsArmModelName 检查发生在 Open+Read 之后（保持原序，勿"顺手优化"成先判断再读）。
+//
+// 2026-10 拆解：原单函数 32 复杂度按「条目分派 / 准入过滤 / 三条物化通道」切成
+// mergedCollector 游标 + 具名 helper。条目枚举序、过滤先后（命名空间过滤先于 Open）、
+// 三条通道的封顶 break 语义逐条不变——只搬移，不改判据。
 func collectMergedFiles(entries []container.Entry, maidNs string) (geoFiles []geoEntry, animJSONs []string, pngs [][]byte, pngNames []string) {
-	var totalBytes int64
-	var animBytes int64
+	c := &mergedCollector{}
 	for _, e := range entries {
-		low := strings.ToLower(e.Name())
-		if strings.HasSuffix(low, ".json") && !e.IsDir() {
-			if registry.IsYsmEntryJSON(filepath.Base(e.Name())) {
-				continue
-			}
-			if maidNs != "" {
-				if !strings.HasPrefix(low, maidNs) || strings.HasSuffix(low, "maid_model.json") || strings.HasSuffix(low, "maid_chair.json") || strings.HasSuffix(low, "maid_sound.json") {
-					continue
-				}
-			}
-			if strings.Contains(low, "animation") || strings.Contains(low, "controller") {
-				rc, err := e.Open()
-				if err != nil {
-					continue
-				}
-				buf := fsutil.ReadLimitedEntry(rc, maxExtractSize)
-				if len(buf) > 2 {
-					animJSONs = append(animJSONs, string(buf))
-					animBytes += int64(len(buf))
-					// 条目/累计字节双封顶：与 collectPngEntries 同构
-					if len(animJSONs) >= maxMaterializeEntries || animBytes >= maxMaterializeBytes {
-						log.Printf("[geometry] collectMergedFiles 动画达到物化封顶 (entries=%d bytes=%d), 截断", len(animJSONs), animBytes)
-						break
-					}
-				}
-				continue
-			}
-			rc, err := e.Open()
-			if err != nil {
-				continue
-			}
-			buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
-			if len(buf) == 0 {
-				continue // nil/空 buf 不占物化槽位（F-4 防御）
-			}
-			if IsArmModelName(e.Name()) {
-				continue // 排除第一人称手臂模型 arm.json（与 main 手臂重叠 → 双手臂）
-			}
-			geoFiles = append(geoFiles, geoEntry{name: e.Name(), data: buf})
-			totalBytes += int64(len(buf))
-			if len(geoFiles) >= maxMaterializeEntries || totalBytes >= maxMaterializeBytes {
-				log.Printf("[geometry] collectMergedFiles geo 达到物化封顶 (entries=%d bytes=%d), 截断", len(geoFiles), totalBytes)
-				break
-			}
+		if e.IsDir() {
+			continue
 		}
-		if (strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg")) && !e.IsDir() && !strings.Contains(low, "avatar/") && !strings.Contains(low, "gui/") {
-			// maid-model 命名空间过滤：只收集首个 namespace 的纹理
-			if maidNs != "" && !strings.HasPrefix(low, maidNs) {
-				continue
-			}
-			rc, err := e.Open()
-			if err != nil {
-				continue
-			}
-			pngData := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
-			// 与 .ysm 解压路径口径对齐：不按尺寸过滤小纹理（64×64 合法贴图可 <4KB），
-			// 头像/预览图仅由 avatar/ 路径与基名前缀排除
-			if len(pngData) > 0 {
-				name := baseName(e.Name())
-				pngNames = append(pngNames, trimTexExt(name))
-				pngs = append(pngs, pngData)
-				totalBytes += int64(len(pngData))
-				if len(pngs) >= maxMaterializeEntries || totalBytes >= maxMaterializeBytes {
-					log.Printf("[geometry] collectMergedFiles 纹理达到物化封顶 (entries=%d bytes=%d), 截断", len(pngs), totalBytes)
-					break
-				}
-			}
+		c.collectMergedEntry(e, maidNs)
+		if c.stop {
+			// 原实现在条目循环里直接 break：三条通道任一触顶即整体停止，
+			// 后续条目（含纹理）一律不再收——语义由游标带出，勿改成只跳单通道。
+			break
 		}
 	}
-	return geoFiles, animJSONs, pngs, pngNames
+	return c.geoFiles, c.animJSONs, c.pngs, c.pngNames
+}
+
+// mergedCollector 合并版收集游标：三个物化集合 + geo/纹理共用的 totalBytes 与
+// 动画独立的 animBytes 两个累计计数。stop 承载原 `break` 语义——若把 break 写进
+// switch case，它只跳 switch 不跳条目循环（经典陷阱），故用游标显式带出。
+type mergedCollector struct {
+	geoFiles   []geoEntry
+	animJSONs  []string
+	pngs       [][]byte
+	pngNames   []string
+	totalBytes int64
+	animBytes  int64
+	stop       bool
+}
+
+// collectMergedEntry 单条目分派：.json 走「动画/控制器 vs geometry」二选一，
+// 纹理（.png/.jpg）走独立通道。两条互斥（同一条目名不可能既是 .json 又是 .png），
+// 与原实现「两个并列 if + 各自 !e.IsDir() 卫语句」等价（目录已在调用点前置跳过）。
+func (c *mergedCollector) collectMergedEntry(e container.Entry, maidNs string) {
+	low := strings.ToLower(e.Name())
+	switch {
+	case strings.HasSuffix(low, ".json"):
+		if !mergedJSONAccepted(low, maidNs) {
+			return
+		}
+		if strings.Contains(low, "animation") || strings.Contains(low, "controller") {
+			c.appendMergedAnimJSON(e)
+			return
+		}
+		c.appendMergedGeoFile(e)
+	case strings.HasSuffix(low, ".png") || strings.HasSuffix(low, ".jpg"):
+		if mergedTextureRejected(low, maidNs) {
+			return
+		}
+		c.appendMergedTexture(e)
+	}
+}
+
+// mergedJSONAccepted .json 条目的合并版准入裁决（返回 false 即不 Open、不入列）：
+//   - YSM 入口清单 ysm.json 不参与合并收集。判定走 IsYsmEntryJSON（EqualFold），
+//     故对已小写化的条目名取 basename 与对原名取 basename 等价（YSM.JSON 同样被拒）。
+//   - maidNs 非空时只收首个命名空间，并排除三份女仆清单
+//     （maid_model / maid_chair / maid_sound）——过滤先于 Open，被拒条目无 reader 泄漏。
+func mergedJSONAccepted(low, maidNs string) bool {
+	if registry.IsYsmEntryJSON(filepath.Base(low)) {
+		return false
+	}
+	if maidNs == "" {
+		return true
+	}
+	if !strings.HasPrefix(low, maidNs) {
+		return false
+	}
+	return !strings.HasSuffix(low, "maid_model.json") &&
+		!strings.HasSuffix(low, "maid_chair.json") &&
+		!strings.HasSuffix(low, "maid_sound.json")
+}
+
+// mergedTextureRejected 纹理条目的合并版排除：avatar/ 与 gui/ 路径（头像/预览图）
+// + maidNs 非空时的非首个命名空间。
+func mergedTextureRejected(low, maidNs string) bool {
+	if strings.Contains(low, "avatar/") || strings.Contains(low, "gui/") {
+		return true
+	}
+	return maidNs != "" && !strings.HasPrefix(low, maidNs)
+}
+
+// appendMergedAnimJSON 动画/控制器 JSON 物化。ADR-033 陷阱：必须走
+// fsutil.ReadLimitedEntry（+1 探测，超限返回 nil 即跳过），不得退回
+// io.ReadAll(io.LimitReader)——恰好 50MB 的条目会被截断后静默下发。len(buf) > 2 为原判据。
+func (c *mergedCollector) appendMergedAnimJSON(e container.Entry) {
+	rc, err := e.Open()
+	if err != nil {
+		return
+	}
+	buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
+	if len(buf) <= 2 {
+		return
+	}
+	c.animJSONs = append(c.animJSONs, string(buf))
+	c.animBytes += int64(len(buf))
+	// 条目/累计字节双封顶：与 collectPngEntries 同构
+	if len(c.animJSONs) >= maxMaterializeEntries || c.animBytes >= maxMaterializeBytes {
+		log.Printf("[geometry] collectMergedFiles 动画达到物化封顶 (entries=%d bytes=%d), 截断", len(c.animJSONs), c.animBytes)
+		c.stop = true
+	}
+}
+
+// appendMergedGeoFile geometry JSON 物化。IsArmModelName 判定置于 Open+Read 之后
+// （保持原序，勿"顺手优化"成先判断再读）：排除第一人称手臂模型 arm.json，它与 main
+// 的手臂几何重叠会渲染成双手臂。nil/空 buf 不占物化槽位（F-4 防御）。
+func (c *mergedCollector) appendMergedGeoFile(e container.Entry) {
+	rc, err := e.Open()
+	if err != nil {
+		return
+	}
+	buf := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
+	if len(buf) == 0 {
+		return // nil/空 buf 不占物化槽位（F-4 防御）
+	}
+	if IsArmModelName(e.Name()) {
+		return // 排除第一人称手臂模型 arm.json（与 main 手臂重叠 → 双手臂）
+	}
+	c.geoFiles = append(c.geoFiles, geoEntry{name: e.Name(), data: buf})
+	c.totalBytes += int64(len(buf))
+	if len(c.geoFiles) >= maxMaterializeEntries || c.totalBytes >= maxMaterializeBytes {
+		log.Printf("[geometry] collectMergedFiles geo 达到物化封顶 (entries=%d bytes=%d), 截断", len(c.geoFiles), c.totalBytes)
+		c.stop = true
+	}
+}
+
+// appendMergedTexture 纹理物化：与 .ysm 解压路径口径对齐——不按尺寸过滤小纹理
+// （64×64 合法贴图可 <4KB），头像/预览图仅由 avatar/ 与 gui/ 路径排除
+// （见 mergedTextureRejected），不靠尺寸阈值。
+func (c *mergedCollector) appendMergedTexture(e container.Entry) {
+	rc, err := e.Open()
+	if err != nil {
+		return
+	}
+	pngData := fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
+	if len(pngData) == 0 {
+		return
+	}
+	pngNames := baseName(e.Name())
+	c.pngNames = append(c.pngNames, trimTexExt(pngNames))
+	c.pngs = append(c.pngs, pngData)
+	c.totalBytes += int64(len(pngData))
+	if len(c.pngs) >= maxMaterializeEntries || c.totalBytes >= maxMaterializeBytes {
+		log.Printf("[geometry] collectMergedFiles 纹理达到物化封顶 (entries=%d bytes=%d), 截断", len(c.pngs), c.totalBytes)
+		c.stop = true
+	}
 }
 
 // sortByModelOrder 将 geoFiles 按声明序排序：main/player 模型先、投射物后，未声明项稳定落尾。
@@ -781,17 +856,12 @@ func parseModelFromEntries(entries []container.Entry, logTag string) (*types.Bed
 	var pngs [][]byte
 	var pngNames []string
 	var animJSONs []string
-	var ysmMeta types.YsmMetadata // ysm.json metadata 段（return 前挂到 geo）
 
 	// ysm.json 统一解析（结构解码共享；口径后处理留在本函数）。metadata 段单独容错：
 	// 失败仅忽略（保持零值不挂载），核心解析不受影响。
 	md := parseYsmArchive(entries, logPrefix)
-	if len(md.Metadata) > 0 {
-		if err := json.Unmarshal(md.Metadata, &ysmMeta); err != nil {
-			log.Printf("%s metadata 段解析失败（忽略）: %v", logPrefix, err)
-			ysmMeta = types.YsmMetadata{} // 失败即清零：Go json 部分填充会残留非 nil 指针（如 License），防误挂载
-		}
-	}
+	// ysmMeta：ysm.json metadata 段（return 前挂到 geo）；段缺失/解析失败走零值
+	ysmMeta := parseYsmMetadataSegment(md.Metadata, logPrefix)
 
 	// model/tex 声明序派生（② 阶段）：player 纹理先、投射物后；modelOrder 与 texOrder 同序
 	modelOrder, texOrder, texCategories, projModels := deriveModelTexOrder(*md)
@@ -837,23 +907,7 @@ func parseModelFromEntries(entries []container.Entry, logTag string) (*types.Bed
 
 		// texCategories 与 texOrder 同序，需要按 pngNames 排序后的顺序重排
 		if len(texCategories) > 0 && len(texOrder) > 0 {
-			ordered := make([]string, len(pngNames))
-			for i, pn := range pngNames {
-				// 在 texOrder 中找到 pngNames[i] 对应的位置，取同位置的 texCategories。
-				// texOrder 已小写（475/495 行），pngNames 保留 zip 原始大小写——比较须
-				// 大小写不敏感（同函数 958/966 行排序比较器均已 ToLower，此处保持口径一致）。
-				lowPn := strings.ToLower(pn)
-				for j, tn := range texOrder {
-					bn := trimTexExt(tn)
-					if bn == lowPn || strings.ToLower(tn) == lowPn {
-						if j < len(texCategories) {
-							ordered[i] = texCategories[j]
-						}
-						break
-					}
-				}
-			}
-			geo.TextureCategories = ordered
+			geo.TextureCategories = applyTexCategoryOrder(pngNames, texOrder, texCategories)
 		}
 
 		// SubModels 清单（L0 manifest 优先 → L1 兜底）已收编 buildSubModels
@@ -880,6 +934,45 @@ func parseModelFromEntries(entries []container.Entry, logTag string) (*types.Bed
 		geo.Metadata = parseLegacyMetadata(entries)
 	}
 	return geo, pngs, animJSONs, geoFiles
+}
+
+// parseYsmMetadataSegment 解析 ysm.json 的 metadata 段（原文由 parseYsmArchive 取出）。
+// 单独容错：段缺失或解析失败仅忽略（保持零值不挂载），核心解析不受影响。
+// 失败即清零点值回传——Go json 部分填充会残留非 nil 指针（如 License），防误挂载。
+func parseYsmMetadataSegment(raw json.RawMessage, logPrefix string) types.YsmMetadata {
+	var meta types.YsmMetadata
+	if len(raw) == 0 {
+		return meta
+	}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		log.Printf("%s metadata 段解析失败（忽略）: %v", logPrefix, err)
+		return types.YsmMetadata{}
+	}
+	return meta
+}
+
+// applyTexCategoryOrder 把 texCategories（与 texOrder 同序）重排成与 pngNames 同序：
+// 逐个 pngName 在 texOrder 中找对应位置，取同位置的 texCategories；找不到则留空串、
+// 下标越界（texOrder 比 texCategories 长）同样留空串。
+//
+// texOrder 已小写（原内联位置 475/495 行，2026-10 拆解后行号漂移），pngNames 保留 zip
+// 原始大小写——比较须大小写不敏感（原注释所指 958/966 行排序比较器均已 ToLower，此处
+// 保持口径一致；口径锚点＝sortByTexOrder 与 matchGeoEntryBySubPath 的 ToLower 归一化）。
+func applyTexCategoryOrder(pngNames, texOrder, texCategories []string) []string {
+	ordered := make([]string, len(pngNames))
+	for i, pn := range pngNames {
+		lowPn := strings.ToLower(pn)
+		for j, tn := range texOrder {
+			bn := trimTexExt(tn)
+			if bn == lowPn || strings.ToLower(tn) == lowPn {
+				if j < len(texCategories) {
+					ordered[i] = texCategories[j]
+				}
+				break
+			}
+		}
+	}
+	return ordered
 }
 
 // ParseFromZip 从 ZIP 字节中解析 Bedrock Geometry 并提取纹理和动画。

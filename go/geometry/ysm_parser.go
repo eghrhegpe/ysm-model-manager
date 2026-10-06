@@ -184,67 +184,96 @@ func parseProjModels(raw json.RawMessage) []projEntry {
 }
 
 // parseModelOrder 解析 player.model 字段（字符串/数组/对象/map 四格式），返回原文顺序。
+// 2026-10 拆解：三形态各收一个具名 helper，本函数只做首字符分派；形态内判据
+// （空元素跳过、path 优先 name 兜底、map 写入序）逐条不变。
 func parseModelOrder(raw string) []string {
-	var result []string
 	if len(raw) == 0 {
-		return result
+		return nil
 	}
 	switch raw[0] {
 	case '[':
-		var arr []json.RawMessage
-		if json.Unmarshal([]byte(raw), &arr) == nil {
-			for _, item := range arr {
-				s := strings.TrimSpace(string(item))
-				if len(s) == 0 {
-					continue
-				}
-				if s[0] == '{' {
-					var obj struct {
-						Path string `json:"path"`
-						Name string `json:"name"`
-					}
-					if json.Unmarshal(item, &obj) == nil {
-						n := obj.Path
-						if n == "" {
-							n = obj.Name
-						}
-						if n != "" {
-							result = append(result, n)
-						}
-					}
-				} else {
-					var sval string
-					if json.Unmarshal(item, &sval) == nil && sval != "" {
-						result = append(result, sval)
-					}
-				}
-			}
-		}
+		return parseModelOrderArray(raw)
 	case '{':
-		// map 格式：JSON 对象写入序即 Bedrock 声明序（Go map 丢失序，必须 Token 流保序）
-		// ⚠️ 非字符串 value（数字/对象/数组）Decode 报错且已消费完该值；
-		// 若 break 则后续好键（main 等）全部丢失 → 跳过继续（与 extracted.go parsePlayerModel 对齐）
-		dec := json.NewDecoder(bytes.NewReader([]byte(raw)))
-		if tok, err := dec.Token(); err == nil && tok == json.Delim('{') {
-			for dec.More() {
-				keyTok, err := dec.Token()
-				if err != nil {
-					continue
-				}
-				_, _ = keyTok.(string) // 键名仅作引用，写入序即声明序
-				var val string
-				if err := dec.Decode(&val); err != nil {
-					continue
-				}
-				if val != "" {
-					result = append(result, val)
-				}
-			}
-		}
+		return parseModelOrderMap(raw)
 	default:
-		var sval string
-		if json.Unmarshal([]byte(raw), &sval) == nil && sval != "" {
-			result = append(result, sval)
+		return parseModelOrderSingle(raw)
+	}
+}
+
+// parseModelOrderSingle 单字符串形态（player.model 声明为 "xxx.geo.json"）。
+func parseModelOrderSingle(raw string) []string {
+	var sval string
+	if json.Unmarshal([]byte(raw), &sval) == nil && sval != "" {
+		return []string{sval}
+	}
+	return nil
+}
+
+// parseModelOrderArray 数组形态：元素可以是字符串，也可以是 {path|name} 对象。
+// 解析失败的数组整体丢弃（返回 nil）；单个元素解析失败仅丢该元素，不影响其余声明序。
+func parseModelOrderArray(raw string) []string {
+	var arr []json.RawMessage
+	if json.Unmarshal([]byte(raw), &arr) != nil {
+		return nil
+	}
+	var result []string
+	for _, item := range arr {
+		if n := parseModelOrderArrayItem(item); n != "" {
+			result = append(result, n)
+		}
+	}
+	return result
+}
+
+// parseModelOrderArrayItem 数组单元素：字符串直读；对象取 path，缺省回退 name。
+// 空元素 / 解析失败 / 取值为空 → ""（由调用方丢弃，不占声明序槽位）。
+func parseModelOrderArrayItem(item json.RawMessage) string {
+	s := strings.TrimSpace(string(item))
+	if len(s) == 0 {
+		return ""
+	}
+	if s[0] == '{' {
+		var obj struct {
+			Path string `json:"path"`
+			Name string `json:"name"`
+		}
+		if json.Unmarshal(item, &obj) != nil {
+			return ""
+		}
+		if obj.Path != "" {
+			return obj.Path
+		}
+		return obj.Name
+	}
+	var sval string
+	if json.Unmarshal(item, &sval) == nil {
+		return sval
+	}
+	return ""
+}
+
+// parseModelOrderMap map 形态：JSON 对象写入序即 Bedrock 声明序（Go map 丢失序，必须 Token 流保序）。
+func parseModelOrderMap(raw string) []string {
+	dec := json.NewDecoder(strings.NewReader(raw))
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+		return nil
+	}
+	var result []string
+	for dec.More() {
+		if _, err := dec.Token(); err != nil {
+			// 键 token 读取失败＝语法已损坏，解码器不再前进。此处**必须 break**：
+			// 原实现 continue 不推进游标 → dec.More() 恒真 → 死循环（2026-10 实测挂死，
+			// 回归守卫见 TestParseModelOrder_MalformedObjectTerminates）。
+			break
+		}
+		var val string
+		if err := dec.Decode(&val); err != nil {
+			// ⚠️ 非字符串 value（数字/对象/数组）Decode 报错且已消费完该值；
+			// 若 break 则后续好键（main 等）全部丢失 → 跳过继续（与 extracted.go parsePlayerModel 对齐）
+			continue
+		}
+		if val != "" {
+			result = append(result, val)
 		}
 	}
 	return result

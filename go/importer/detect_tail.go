@@ -29,17 +29,46 @@ const (
 // 返回 (id, ok)：ok=true 表示尾部探针已给出确定答案（含空串——确为 zip 但无匹配类型）；
 // ok=false 表示无法从尾部判定（非 zip / zip64 / 中央目录超出窗口 / 解码失败），
 // 调用方应回退到整包解码路径。
+//
+// 2026-10 拆解：原单函数 24 复杂度按「窗口解码 / EOCD 定位 / 中央目录解析 / 指纹裁决」
+// 切成具名 helper；每条降级判据与卫语句顺序逐条不变（ok=false 的四种语义仍由各
+// helper 自证，本函数只串接）。
 func DetectContainerTypeFromBase64Tail(b64 string) (string, bool) {
+	data, fileTailOffset, ok := decodeBase64TailWindow(b64)
+	if !ok {
+		return "", false
+	}
+
+	eocd := findZipEOCD(data)
+	if eocd < 0 {
+		return "", false // 无 EOCD：非 zip 或尾部截断，交全量兜底
+	}
+
+	entries, ok := parseZipCentralEntries(data, eocd, fileTailOffset)
+	if !ok {
+		return "", false
+	}
+
+	id := packs.DetectByEntries(entries, regreg.LoadRegistry())
+	if id == packs.ClassContainer || id == packs.ClassOther {
+		return "", true
+	}
+	return id, true
+}
+
+// decodeBase64TailWindow base64 契约校验 + 尾部窗口解码。
+// 返回窗口字节、窗口在原文件中的起始偏移（fileTailOffset）、是否可用。
+func decodeBase64TailWindow(b64 string) (data []byte, fileTailOffset int, ok bool) {
 	// base64 契约：标准填充编码（len%4==0），与 DecodeBase64Limited 同源输入
 	if len(b64) < 8 || len(b64)%4 != 0 {
-		return "", false
+		return nil, 0, false
 	}
 	pad := 0
 	for i := len(b64) - 1; i >= 0 && b64[i] == '='; i-- {
 		pad++
 	}
 	if pad > 2 {
-		return "", false
+		return nil, 0, false
 	}
 	rawLen := len(b64)/4*3 - pad
 
@@ -50,12 +79,14 @@ func DetectContainerTypeFromBase64Tail(b64 string) (string, bool) {
 	}
 	data, err := base64.StdEncoding.DecodeString(b64[len(b64)-tailChars:])
 	if err != nil {
-		return "", false
+		return nil, 0, false
 	}
-	fileTailOffset := rawLen - len(data) // 尾部窗口在原文件中的起始偏移
+	return data, rawLen - len(data), true // 尾部窗口在原文件中的起始偏移
+}
 
-	// 从末尾定位 EOCD（容许注释区，向前最多搜 22+65535 字节）
-	eocd := -1
+// findZipEOCD 从末尾定位 EOCD（容许注释区，向前最多搜 22+65535 字节）。
+// 返回 -1 表示未找到：非 zip 或尾部截断，交全量兜底。
+func findZipEOCD(data []byte) int {
 	minIdx := len(data) - 22 - zipEOCDMaxComment
 	if minIdx < 0 {
 		minIdx = 0
@@ -66,23 +97,27 @@ func DetectContainerTypeFromBase64Tail(b64 string) (string, bool) {
 		}
 		commentLen := int(le16(data[i+20:]))
 		if i+22+commentLen == len(data) {
-			eocd = i
-			break
+			return i
 		}
 	}
-	if eocd < 0 {
-		return "", false // 无 EOCD：非 zip 或尾部截断，交全量兜底
-	}
+	return -1
+}
+
+// parseZipCentralEntries 解析中央目录的条目名列表并按 EOCD 声明的条目数校验。
+// ok=false 覆盖四条降级判据（统一「宁可兜底不误判」）：
+// zip64 字段触顶 / 中央目录超出尾部窗口 / 中央目录签名错位或条目名长越界（解析不完整）/
+// 解析到的条目数与 EOCD 声明不符。
+func parseZipCentralEntries(data []byte, eocd, fileTailOffset int) ([]string, bool) {
 	totalEntries := int(le16(data[eocd+10:]))
 	cdSize := int(le32(data[eocd+12:]))
 	cdOffset := int(le32(data[eocd+16:]))
 	// zip64（字段触顶 0xFFFF/0xFFFFFFFF）不在本探针范围，交全量兜底
 	if totalEntries == 0xFFFF || cdSize == 0xFFFFFFFF || cdOffset == 0xFFFFFFFF {
-		return "", false
+		return nil, false
 	}
-	cdStart := cdOffset - int(fileTailOffset)
+	cdStart := cdOffset - fileTailOffset
 	if cdStart < 0 || cdStart+cdSize > len(data) {
-		return "", false // 中央目录超出窗口（条目数超出 tailProbeMaxRaw 容量），交全量兜底
+		return nil, false // 中央目录超出窗口（条目数超出 tailProbeMaxRaw 容量），交全量兜底
 	}
 
 	entries := make([]string, 0, totalEntries)
@@ -102,13 +137,9 @@ func DetectContainerTypeFromBase64Tail(b64 string) (string, bool) {
 		idx += 46 + nameLen + extraLen + commentLen
 	}
 	if len(entries) != totalEntries {
-		return "", false // 条目数对不上：解析不完整，宁可兜底不误判
+		return nil, false // 条目数对不上：解析不完整，宁可兜底不误判
 	}
-	id := packs.DetectByEntries(entries, regreg.LoadRegistry())
-	if id == packs.ClassContainer || id == packs.ClassOther {
-		return "", true
-	}
-	return id, true
+	return entries, true
 }
 
 // le16/le32 小端读取：importer 包统一入口（DetectContainerType 与尾部探针共用，避免逐位移位漂移）

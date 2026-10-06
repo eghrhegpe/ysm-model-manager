@@ -856,7 +856,8 @@
 | 跳过 ExtractYsmSummary 走全文解析 | - | 详情展示性能差；摘要必须复用 |
 | 全量跑必红 | `全量跑必红` | 门禁只能跑 `--new-from-rev`，全量存量债会淹没信号；清零另案（条数刻意不写死，ADR-162） |
 | 未安装不是失败 | `未安装不是失败` | pre-push 检测不到二进制时降级 debt 跳过，不阻断；安装走 `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest` |
-| 无基线 rev 不是失败 | `无基线 rev 不是失败` | 孤儿分支/无远端时解析不出 merge-base，同款降级跳过，避免存量债堵门 |
+| 无基线 rev 不是失败 | `无基线 rev 不是失败` | 真孤儿（无 origin ref 可解析 merge-base）时同款降级跳过，避免存量债堵门 |
+| → 非 push 模式（doctor --all）远端 oid 是空串而非全零，`!/^0+$/.test` 守卫对空串判假 | `空 remoteOid 会短路 fallback 链` | 空串被当权威基线直接 return，永远走不到 fallback 链（ADR-234 只补了 localOid 半边）；空 ≡ 全零，同走 fallback 链 |
 | 别开 enable-all | `别开 enable-all` | 一次性抛数百条历史债直接堵死 push 通道；白名单只收 6 类零覆盖 linter |
 | 别启用 govet/gofmt/dupl | `别启用 govet/gofmt/dupl` | govet 与既有 `go vet` 重复；gofmt/dupl 自研机制有自动 stage 与漂移账本，golangci-lint 接不住（ADR-205 §2.2） |
 | 版本 < v1.64 解析 go1.26 directive 直接失败 | `版本 < v1.64 解析 go1.26 directive 直接失败` | 必须 v1.64+ / v2.x，实测 v2.13.2 built with go1.26.3 通过 |

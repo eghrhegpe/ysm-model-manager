@@ -809,7 +809,11 @@ function checkNoCuratedInAutoFields(cards: any[]) {
 // go-types 153 / resource-registry 153 / app-preview 140 / wails-bindings 118），
 // frontmatter 最大 1064 行。此前列出全靠人翻 tag 撞见。
 // 阈值 100：分布上 118 与 99 之间存在自然断层；100 个符号名以上无人可读可核。
-// 触发含义：source_files 认领过宽，或所指文件是超大 god-file——应收窄认领或评估拆文件。
+// 根因（2026-10-06 复核）：主因是**目录级 source_files**——gen 递归整个目录，
+// 191 张有 source_files 的卡里 40 张（21%）含目录条目，其符号数中位 25 / p75 66 / 最大 1013，
+// 纯文件卡中位 13 / p75 28 / 最大 118；TOP10 符号卡中 9 张含目录。故 WARN 文案优先给出
+// 「收窄目录认领到具体文件」而非「拆文件」——后者只适用于真正的神文件（如 wails-bindings
+// 11 个 internal/app/*.go 共 118 符号，属真宽认领）。
 // WARN 级：体量本身不是错误（符号索引未来可能被检索消费），只现形不改判。
 const SYM_COUNT_WARN = 100;
 
@@ -839,13 +843,33 @@ function countDerivedSymbols(fm: string): number {
   return n;
 }
 
+/** 取出 source_files 中真实指向目录的条目（gen 会递归整个目录，符号数由此爆炸）。 */
+function dirSourceEntries(fm: string): string[] {
+  const out: string[] = [];
+  for (const raw of parseSourceFiles(fm)) {
+    if (raw.endsWith("/")) {
+      out.push(raw);
+      continue;
+    }
+    try {
+      if (fs.existsSync(path.join(ROOT, raw)) && fs.statSync(path.join(ROOT, raw)).isDirectory()) {
+        out.push(raw);
+      }
+    } catch {}
+  }
+  return out;
+}
+
 function checkDerivedSymbolCount(cards: any[]) {
   for (const { cf, fm } of cards) {
     if (!fm) continue;
     const n = countDerivedSymbols(fm);
     if (n >= SYM_COUNT_WARN) {
+      const dirs = dirSourceEntries(fm);
       warns.push(
-        `知识卡 ${cf} 的派生符号 ${n} 个（≥${SYM_COUNT_WARN}）——auto_fields.symbols_with_lines 全仓零信息消费者，纯 frontmatter 膨胀；请收窄 source_files 认领或评估所指文件是否该拆分`,
+        dirs.length > 0
+          ? `知识卡 ${cf} 的派生符号 ${n} 个（≥${SYM_COUNT_WARN}）——主因是目录级 source_files「${dirs.join("」/「")}」被 gen 全量递归（191 张卡里 40 张含目录，占 TOP10 符号卡 9 张）；auto_fields.symbols_with_lines 全仓零信息消费者，纯 frontmatter 膨胀。请把目录认领收窄到实际涉及的具体文件`
+          : `知识卡 ${cf} 的派生符号 ${n} 个（≥${SYM_COUNT_WARN}）——source_files 认领过宽（纯文件卡符号数 p75 仅 28）；auto_fields.symbols_with_lines 全仓零信息消费者，纯 frontmatter 膨胀。请收窄 source_files 认领，或评估所指文件是否该拆分`,
       );
     }
   }

@@ -96,13 +96,46 @@ try {
     `warns=${out.warns.filter((w) => w.includes(CARD)).join(" / ").slice(0, 200)}`,
   );
 
-  // 4. 1013 个（model3d 实测值）→ WARN 给出可执行建议
+  // 4. 1013 个（model3d 实测值，纯文件认领）→ WARN 给出收窄建议
   writeCard(1013);
   ({ status, out } = runCheck());
   ok(
-    "1013 个 → WARN 含收窄 source_files 建议",
-    out.warns.some((w) => w.includes(CARD) && w.includes("收窄 source_files")),
+    "1013 个纯文件认领 → WARN 含收窄 source_files 建议",
+    out.warns.some((w) => w.includes(CARD) && w.includes("认领过宽")),
     `warns=${out.warns.filter((w) => w.includes(CARD)).join(" / ").slice(0, 200)}`,
+  );
+
+  // 5. 目录级 source_files（app-preview 实测形态：1 条目录认领 140 符号）→
+  //    WARN 点名目录并建议收窄到具体文件——这才是体量爆炸的主因，不是「拆文件」
+  fs.writeFileSync(
+    path.join(TMP_DIR, CARD),
+    [
+      "---",
+      "kind: zzz-symcount-tmp",
+      "name: 派生体量契约临时卡",
+      "tier: leaf",
+      "category: utils",
+      "source_files:",
+      "  - frontend/src/utils/base/pure/",
+      "use_when:",
+      "  - 派生体量护栏",
+      "auto_fields:",
+      "  symbols_with_lines:",
+      ...Array.from({ length: 100 }, (_, i) => `    - Symbol${i}`),
+      "---",
+      "",
+      "# 派生体量契约临时卡",
+      "",
+    ].join("\r\n"),
+    "utf8",
+  );
+  ({ status, out } = runCheck());
+  ok(
+    "目录级认领 → WARN 点名目录并建议收窄到具体文件",
+    out.warns.some(
+      (w) => w.includes(CARD) && w.includes("目录级 source_files") && w.includes("收窄到实际涉及的具体文件"),
+    ),
+    `warns=${out.warns.filter((w) => w.includes(CARD)).join(" / ").slice(0, 300)}`,
   );
 } finally {
   if (fs.existsSync(TMP_DIR)) fs.rmSync(TMP_DIR, { recursive: true, force: true });

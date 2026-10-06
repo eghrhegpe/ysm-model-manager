@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-05T01:31:55.643Z",
+  "generated": "2026-10-06T15:07:29.200Z",
   "count": 112,
   "note": "设计令牌存量债账本（ADR-256：已不参与门禁判定，只供 doctor 报告 / 收债排期）；清理后重跑 --update-baseline 收缩",
   "violations": [
@@ -20,7 +20,6 @@
     "frontend/css/components.css:97:css-padding",
     "frontend/css/dialogs.css:12:css-padding",
     "frontend/css/variables.css:400:css-padding",
-    "frontend/src/features/dialogs/rename.ts:44:emoji-icon",
     "frontend/src/preview-3d/infra/preview-shell.ts:22:css-padding",
     "frontend/src/preview-3d/menu/panels/roles-views.ts:55:css-padding",
     "frontend/src/preview-3d/menu/panels/roles-views.ts:80:css-padding",
@@ -114,6 +113,7 @@
     "frontend/src/views/app-tree/app-tree-styles.ts:43:css-padding",
     "frontend/src/views/app-tree/app-tree-styles.ts:45:css-padding",
     "frontend/src/views/app-tree/app-tree-styles.ts:61:css-padding",
-    "frontend/src/views/app-tree/app-tree-styles.ts:62:css-font-size"
+    "frontend/src/views/app-tree/app-tree-styles.ts:62:css-font-size",
+    "frontend/src/views/app-tree/tpl-rename.ts:27:emoji-icon"
   ]
 }

@@ -36,46 +36,14 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	// dstSnapshots + os.SameFile 复验（ADR-296 D4），收窄「锁外快照→锁内 rename」
 	// 窗口内 dstParent 被 rename 走/替换为异体目录导致的搬错对象；残余窗口见
 	// dstSnapshots 收集处注释。
-	repoEntries := scanFn(filesRoot)
-	repoByHash := make(map[string][]types.ModelEntry)
-	for _, e := range repoEntries {
-		// 重链备份目录尸体不得充当重链源（ADR-296 D3，谓词说明见 isRelinkBackupPath）
-		if isRelinkBackupPath(e.Path) {
-			continue
-		}
-		if e.Hash == "" {
-			continue
-		}
-		// 仓库侧禁用条目只是禁用标记，不能作为重链接源（与 sync.go 对齐）
-		if registry.IsDisableSuffix(e.Name) {
-			continue
-		}
-		repoByHash[e.Hash] = append(repoByHash[e.Hash], e)
-	}
+	repoByHash := buildRelinkRepoIndex(scanFn(filesRoot))
 	customEntries := scanFn(customDir)
 
 	// ADR-296 D4：目录级替换分支的 dstParent 锁外快照——rename/回滚的原子性前提是
 	// 「锁内搬的就是扫描时观察到的那个目录」。对将走整目录替换的条目（isDirType 且非
 	// 根层平铺）在锁外 Lstat 父目录，锁内 rename 前经 verifyDirSnapshot 复验。
 	// 仅逐条 Lstat（微秒级），不违 TestRelinkDir_ScanNotHeldLock 的「全量扫描不持锁」契约。
-	dirSnaps := make(map[string]os.FileInfo)
-	if registry.IsDirLevelSync(rtype) {
-		for _, ce := range customEntries {
-			baseName := registry.StripDisableSuffix(strings.ToLower(filepath.Base(ce.Path)))
-			if !packs.IsTypeModelFile(baseName, rtype) {
-				continue
-			}
-			dstParent := filepath.Dir(ce.Path)
-			if strings.EqualFold(filepath.Clean(dstParent), filepath.Clean(customDir)) {
-				continue // 平铺分支不做整目录 rename，无需复验
-			}
-			if info, err := os.Lstat(dstParent); err == nil {
-				dirSnaps[ce.Path] = info
-			}
-			// Lstat 失败（目录不存在/竞态中消失）→ 无快照 → 复验放行，
-			// 由锁内 rename 走原有失败路径记 logger（行为与加固前一致）
-		}
-	}
+	dirSnaps := snapshotRelinkDirTargets(customEntries, rtype, customDir)
 
 	// 整段持 installer.InstallLock（仅覆盖操作段，不含锁外扫描）：RelinkDir 自身对 custom
 	// 目录做 os.Rename/os.RemoveAll（目录级分支的备份/回滚/清理）——ADR-056 要求同步与
@@ -89,31 +57,13 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 
 	count := 0
 	for _, ce := range customEntries {
-		// 重链备份目录尸体不参与重链（斩断 rename→InstallDir→新备份 套娃，ADR-296 D3）
-		if isRelinkBackupPath(ce.Path) {
+		// 重链备份目录尸体不参与重链（斩断 rename→InstallDir→新备份 套娃，ADR-296 D3）；
+		// 无哈希无法做内容关联；禁用条目跳过——禁用文件保持禁用，否则 Install 会把仓库
+		// 活跃版装回实例、用户禁用被悄悄撤销。
+		if isRelinkEntrySkippable(ce) {
 			continue
 		}
-		if ce.Hash == "" {
-			continue
-		}
-		// 重链接不得静默恢复禁用状态——禁用文件跳过（保持禁用），
-		// 否则 Install 会把仓库活跃版装回实例、用户禁用被悄悄撤销
-		if registry.IsDisableSuffix(ce.Name) {
-			continue
-		}
-		entries, found := repoByHash[ce.Hash]
-		if !found {
-			continue
-		}
-		var srcPath string
-		for _, e := range entries {
-			// 防御：即使构建时已跳过，查询仍只取第一个非禁用条目
-			if registry.IsDisableSuffix(e.Name) {
-				continue
-			}
-			srcPath = e.Path
-			break
-		}
+		srcPath := pickRelinkSource(repoByHash[ce.Hash])
 		if srcPath == "" {
 			continue
 		}
@@ -125,98 +75,169 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		// 原 ce.Path 未剥后缀时 filepath.Ext 得 ".ban" 不匹配任何扩展集，测试红）。
 		// 代价：MMD 目录型 .zip 在 relink 不识别（裸名 zip 分支开不了文件）——
 		// 如需 zip 目录型 relink，需拆路径感知 + 剥离感知的专门 API（本轮不做）
-		if isDirType {
-			srcDir := filepath.Dir(srcPath)
-			// ce.Path 已在目标子目录内，父层才是 InstallDir 要写入的基础目录
-			dstParent := filepath.Dir(ce.Path)
-			// ysm.json/.pmx 平铺在 customDir 根层时（dstParent == customDir），
-			// InstallDir 的「挪走整目录→重建→回滚」会连带把同目录其他模型一起 rename 走、
-			// 重建失败回滚后其他模型也随备份 RemoveAll 丢失。根层平铺退化为单文件落地，
-			// 不做整目录替换。
-			// flat 判定大小写敏感——Windows 上实例目录名
-			// 大小写与 customDir 不一致时落入 dir 分支，把整个 customDir 当模型目录
-			// rename 走（数据丢失复现）。对齐 ADR-044③ 用 EqualFold。
-			if strings.EqualFold(filepath.Clean(dstParent), filepath.Clean(customDir)) {
-				// 用 CopyFile 装到 customDir 平铺位置——
-				// installer.Install 按 rel(srcPath, repoRoot) 推导目标，仓库侧文件在子目录时
-				// 会装到 <customDir>/<subdir>/<base> 而平铺位置 <customDir>/<base> 残留陈旧副本
-				// （报告成功但游戏实际加载的文件未重链）。CopyFile 直接落地到平铺目录。
-				if _, err := installer.CopyFileLocked(srcPath, customDir); err != nil {
-					if logger != nil {
-						logger(ce.Name, ce.Path, customDir, 0, types.StatusFailed, "relink 失败: "+err.Error())
-					}
-					continue
-				}
-				count++
+		if !isDirType {
+			// 传入基础 customDir，让 installer.Install 自行计算相对路径。
+			// Install 内部对已存在的旧文件做原子替换（临时链接 + rename），失败不破坏原文件
+			if err := installer.InstallLocked(srcPath, customDir, filesRoot, linkMode); err != nil {
+				logRelinkFailure(ce, customDir, "relink 失败: "+err.Error(), logger)
 				continue
 			}
-			// 但 InstallDir 会自动创建 {targetSubDir}，如果 dstParent 已经是模型目录
-			// 则会二次嵌套。正确的做法：上一层目录作为 dstDir，让 InstallDir 创建子目录
-			dstBase := filepath.Dir(dstParent)
-			// ADR-296 D4 锁内复验：搬前确认 dstParent 仍是锁外快照观察到的那个对象
-			// （谓词与残余窗口说明见 verifyDirSnapshot）
-			snap, hasSnap := dirSnaps[ce.Path]
-			if !hasSnap {
-				// 锁外 Lstat 即失败（目录不存在/竞态窗口中消失）——拒绝搬一个
-				// 从未观察到的对象；改名/删除竞态中重建的同名目录不是快照对象
-				if logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "relink 跳过: 目标目录快照缺失（已不存在或扫描窗口中被改动）")
-				}
-				continue
-			}
-			if ok, reason := verifyDirSnapshot(snap, dstParent); !ok {
-				if logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "relink 跳过: "+reason)
-				}
-				continue
-			}
-			// 原子替换：先把旧目录挪走作备份，InstallDir 重建成功后再清理备份；
-			// 失败则回滚恢复，避免目录整体丢失（旧实现先 RemoveAll 后重建，失败即丢）
-			// 备份名带时间戳（P2-4）：旧实现固定 ".relink-bak" + 无条件 RemoveAll，
-			// 上一次 relink 失败留有的备份目录会被本次删除——恢复点丢失。
-			// 时间戳版与 conflict.go 的 .bak-<ts> 口径对齐，避免备份覆盖。
-			backup := fmt.Sprintf("%s.relink-bak-%d", dstParent, time.Now().UnixNano())
-			if err := os.Rename(dstParent, backup); err != nil {
-				if logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "relink 备份目录失败: "+err.Error())
-				}
-				continue
-			}
-			if err := installer.InstallDirLocked(srcDir, dstBase, filesRoot, linkMode, rtype); err != nil {
-				// 回滚：删除半成品，恢复原目录。删除失败仅记日志不吞净——
-				// 残留半成品目录提示用户确实需要清理（P2 修复，替代静默 `_ =`）。
-				if rmErr := os.RemoveAll(filepath.Join(dstBase, filepath.Base(srcDir))); rmErr != nil && logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "回滚删除半成品失败: "+rmErr.Error())
-				}
-				// 回滚 rename 失败不再静默吞——原 `_ =` 吞错，
-				// 原目录滞留 .relink-bak、实例目录缺失且函数继续执行（静默数据不可达）；
-				// 记 logger 供用户排查（不 return——目录已损坏，继续无意义）
-				if rbErr := os.Rename(backup, dstParent); rbErr != nil {
-					if logger != nil {
-						logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed,
-							"relink 失败且回滚失败，原目录滞留 "+filepath.Base(backup)+": "+rbErr.Error())
-					}
-				}
-				if logger != nil {
-					logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "relink 失败: "+err.Error())
-				}
-				continue
-			}
-			removeRelinkBackup(backup, ce, dstParent, logger)
 			count++
 			continue
 		}
-		// 传入基础 customDir，让 installer.Install 自行计算相对路径。
-		// Install 内部对已存在的旧文件做原子替换（临时链接 + rename），失败不破坏原文件
-		if err := installer.InstallLocked(srcPath, customDir, filesRoot, linkMode); err != nil {
-			if logger != nil {
-				logger(ce.Name, ce.Path, customDir, 0, types.StatusFailed, "relink 失败: "+err.Error())
+		dstParent := filepath.Dir(ce.Path)
+		// ce.Path 已在目标子目录内，父层才是 InstallDir 要写入的基础目录。
+		// ysm.json/.pmx 平铺在 customDir 根层时（dstParent == customDir），
+		// InstallDir 的「挪走整目录→重建→回滚」会连带把同目录其他模型一起 rename 走、
+		// 重建失败回滚后其他模型也随备份 RemoveAll 丢失。根层平铺退化为单文件落地，
+		// 不做整目录替换。
+		// flat 判定大小写敏感——Windows 上实例目录名
+		// 大小写与 customDir 不一致时落入 dir 分支，把整个 customDir 当模型目录
+		// rename 走（数据丢失复现）。对齐 ADR-044③ 用 EqualFold。
+		if strings.EqualFold(filepath.Clean(dstParent), filepath.Clean(customDir)) {
+			if relinkFlatEntry(ce, srcPath, customDir, logger) {
+				count++
 			}
 			continue
 		}
-		count++
+		if relinkReplaceDirTree(ce, filepath.Dir(srcPath), dstParent, dirSnaps, filesRoot, linkMode, rtype, logger) {
+			count++
+		}
 	}
 	return count, nil
+}
+
+// isRelinkEntrySkippable 报告扫描条目是否必须剔出重链（索引构建与主循环共用同一谓词）。
+// 三类：重链备份目录尸体（ADR-296 D3）、空哈希（无法内容关联）、禁用标记条目
+// （仓库侧禁用条目只是标记不得充当重链源；实例侧禁用文件保持禁用不静默恢复）。
+func isRelinkEntrySkippable(e types.ModelEntry) bool {
+	return isRelinkBackupPath(e.Path) ||
+		e.Hash == "" ||
+		registry.IsDisableSuffix(e.Name)
+}
+
+// buildRelinkRepoIndex 按哈希归并仓库条目为「hash → 候选源」，先剔出可跳过条目
+// （备份尸体/空哈希/禁用），使主循环只做 O(1) 命中查询。
+// 调用方须在 installer.InstallLock 之外调用（含 SHA256 的全量扫描不得持锁）。
+func buildRelinkRepoIndex(repoEntries []types.ModelEntry) map[string][]types.ModelEntry {
+	repoByHash := make(map[string][]types.ModelEntry)
+	for _, e := range repoEntries {
+		if isRelinkEntrySkippable(e) {
+			continue
+		}
+		repoByHash[e.Hash] = append(repoByHash[e.Hash], e)
+	}
+	return repoByHash
+}
+
+// snapshotRelinkDirTargets 锁外 Lstat 将走整目录替换的条目的 dstParent（ADR-296 D4），
+// 供锁内 verifyDirSnapshot 复验「锁内搬的就是扫描时观察到的那个目录」。
+// 仅收目录级同步类型下的模型文件条目；dstParent 即 customDir 根层的平铺条目不做整目录
+// rename，无需快照。Lstat 失败（目录不存在/竞态中消失）→ 无快照 → 由 verifyDirSnapshot
+// 的调用方拒绝搬运并记 logger（行为与加固前一致）。
+func snapshotRelinkDirTargets(customEntries []types.ModelEntry, rtype, customDir string) map[string]os.FileInfo {
+	dirSnaps := make(map[string]os.FileInfo)
+	if !registry.IsDirLevelSync(rtype) {
+		return dirSnaps
+	}
+	for _, ce := range customEntries {
+		baseName := registry.StripDisableSuffix(strings.ToLower(filepath.Base(ce.Path)))
+		if !packs.IsTypeModelFile(baseName, rtype) {
+			continue
+		}
+		dstParent := filepath.Dir(ce.Path)
+		if strings.EqualFold(filepath.Clean(dstParent), filepath.Clean(customDir)) {
+			continue // 平铺分支不做整目录 rename，无需复验
+		}
+		if info, err := os.Lstat(dstParent); err == nil {
+			dirSnaps[ce.Path] = info
+		}
+	}
+	return dirSnaps
+}
+
+// pickRelinkSource 取该哈希下的第一个非禁用源路径（防御：即使索引构建时已跳过禁用，
+// 查询仍只取第一个非禁用条目）。无可用源返回空串，调用方据此跳过该条目。
+func pickRelinkSource(entries []types.ModelEntry) string {
+	for _, e := range entries {
+		if registry.IsDisableSuffix(e.Name) {
+			continue
+		}
+		return e.Path
+	}
+	return ""
+}
+
+// relinkFlatEntry 把仓库源平铺落到 customDir 根层，返回是否计入成功数。
+// 用 CopyFile 而非 Install：Install 按 rel(srcPath, repoRoot) 推导目标，仓库侧文件在
+// 子目录时会装到 <customDir>/<subdir>/<base>，而平铺位置 <customDir>/<base> 残留陈旧
+// 副本（报告成功但游戏实际加载的文件未重链）。
+// 调用方须持 installer.InstallLock（走 *Locked 变体，避免重入死锁）。
+func relinkFlatEntry(ce types.ModelEntry, srcPath, customDir string, logger Logger) bool {
+	if _, err := installer.CopyFileLocked(srcPath, customDir); err != nil {
+		logRelinkFailure(ce, customDir, "relink 失败: "+err.Error(), logger)
+		return false
+	}
+	return true
+}
+
+// relinkReplaceDirTree 整目录原子替换：rename 旧目录为带时间戳备份 → InstallDir 重建 →
+// 成功清理备份 / 失败回滚（删半成品 + 备份 rename 回原位）。返回是否计入成功数。
+// 时间戳备份名（P2-4）与 conflict.go 的 .bak-<ts> 口径对齐，避免上一次失败遗留的恢复点
+// 被本次无条件 RemoveAll 掉。srcDir 为仓库侧模型文件夹，dstParent 为实例侧待替换目录。
+// 调用方须持 installer.InstallLock（os.Rename/os.RemoveAll 与 InstallDirLocked 同段互斥）。
+func relinkReplaceDirTree(ce types.ModelEntry, srcDir, dstParent string, dirSnaps map[string]os.FileInfo,
+	filesRoot, linkMode, rtype string, logger Logger) bool {
+	// 上一层目录作为 dstDir，让 InstallDir 自动创建 {targetSubDir}——若直接传 dstParent
+	// 则 InstallDir 会在已是模型目录的它之下二次嵌套。
+	dstBase := filepath.Dir(dstParent)
+	// ADR-296 D4 锁内复验：搬前确认 dstParent 仍是锁外快照观察到的那个对象
+	// （谓词与残余窗口说明见 verifyDirSnapshot）
+	snap, hasSnap := dirSnaps[ce.Path]
+	if !hasSnap {
+		// 锁外 Lstat 即失败（目录不存在/竞态窗口中消失）——拒绝搬一个
+		// 从未观察到的对象；改名/删除竞态中重建的同名目录不是快照对象
+		logRelinkFailure(ce, dstParent, "relink 跳过: 目标目录快照缺失（已不存在或扫描窗口中被改动）", logger)
+		return false
+	}
+	if ok, reason := verifyDirSnapshot(snap, dstParent); !ok {
+		logRelinkFailure(ce, dstParent, "relink 跳过: "+reason, logger)
+		return false
+	}
+	backup := fmt.Sprintf("%s.relink-bak-%d", dstParent, time.Now().UnixNano())
+	if err := os.Rename(dstParent, backup); err != nil {
+		logRelinkFailure(ce, dstParent, "relink 备份目录失败: "+err.Error(), logger)
+		return false
+	}
+	if err := installer.InstallDirLocked(srcDir, dstBase, filesRoot, linkMode, rtype); err != nil {
+		rollbackRelinkReplace(ce, dstParent, dstBase, srcDir, backup, logger)
+		logRelinkFailure(ce, dstParent, "relink 失败: "+err.Error(), logger)
+		return false
+	}
+	removeRelinkBackup(backup, ce, dstParent, logger)
+	return true
+}
+
+// rollbackRelinkReplace 是整目录替换失败后的恢复路径：先删半成品重建目录，再把备份
+// rename 回原位。两步失败都只记 logger 不吞净——残留半成品/滞留 .relink-bak 都是
+// 用户需要知道的现场（原 `_ =` 静默吞错会让实例目录缺失且无人知晓）。
+func rollbackRelinkReplace(ce types.ModelEntry, dstParent, dstBase, srcDir, backup string, logger Logger) {
+	if rmErr := os.RemoveAll(filepath.Join(dstBase, filepath.Base(srcDir))); rmErr != nil {
+		logRelinkFailure(ce, dstParent, "回滚删除半成品失败: "+rmErr.Error(), logger)
+	}
+	// 回滚 rename 失败不再静默吞——原目录滞留 .relink-bak、实例目录缺失且函数继续执行
+	// （静默数据不可达）；记 logger 供用户排查（不 return——目录已损坏，继续无意义）
+	if rbErr := os.Rename(backup, dstParent); rbErr != nil {
+		logRelinkFailure(ce, dstParent,
+			"relink 失败且回滚失败，原目录滞留 "+filepath.Base(backup)+": "+rbErr.Error(), logger)
+	}
+}
+
+// logRelinkFailure 是重链各失败路径的统一出口：logger 为 nil 时静默（薄壳可不注入）。
+func logRelinkFailure(ce types.ModelEntry, dst, msg string, logger Logger) {
+	if logger != nil {
+		logger(ce.Name, ce.Path, dst, 0, types.StatusFailed, msg)
+	}
 }
 
 // isRelinkBackupPath 判断路径是否落在某次 relink 的备份目录（`<目录名>.relink-bak-<UnixNano>`）子树内。
@@ -261,7 +282,7 @@ func verifyDirSnapshot(snap os.FileInfo, dstParent string) (bool, string) {
 // 残留 .relink-bak-<ts> 提示用户确有恢复点未清理，静默 `_ =` 会让备份目录
 // 在用户模型目录堆积且无人知晓（P2 修复，替代旧 `_ = os.RemoveAll(backup)`）。
 func removeRelinkBackup(backup string, ce types.ModelEntry, dstParent string, logger Logger) {
-	if err := os.RemoveAll(backup); err != nil && logger != nil {
-		logger(ce.Name, ce.Path, dstParent, 0, types.StatusFailed, "清理 relink 备份目录失败: "+err.Error())
+	if err := os.RemoveAll(backup); err != nil {
+		logRelinkFailure(ce, dstParent, "清理 relink 备份目录失败: "+err.Error(), logger)
 	}
 }

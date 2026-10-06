@@ -40,85 +40,27 @@ type toggleFileInfo struct {
 	actualPath        string
 }
 
+// toggleRenameOp 一条待执行的启禁改名（阶段 3 计划 → 阶段 4 执行）。
+// 提为包级类型：阶段 3/4 已拆为独立函数，局部类型无法跨函数传递。
+type toggleRenameOp struct {
+	src string
+	dst string
+}
+
 // SyncToggleStatus 同步启用/禁用状态
 // 持锁分段设计：阶段 1 与阶段 3+4 各为独立持锁段（段内 defer 释放），
 // 中间锁外算哈希。若锁外阶段 panic，不会出现「头部 defer Unlock 对已手动
 // 释放的锁二次 Unlock」而掩盖原错误的场景——每段锁的生命周期由段内 defer 保证。
+// 拆解后各阶段的锁归属不变：阶段 1 的锁在 collectToggleRepoIndex 内自持自放；
+// 阶段 3（planToggleRenames）与阶段 4（applyToggleRenames）由本函数下方同一段
+// Lock/defer Unlock 覆盖，两者之间不存在释放点。
 func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int, int, error) {
 	if scanFn == nil {
 		return 0, 0, fmt.Errorf("scanFn 为空")
 	}
 
 	// 阶段 1（持锁）：构建仓库禁启用索引 + 收集实例目录文件清单。
-	repoHash, repoName, fileInfos, err := func() (map[string]bool, map[string]bool, []toggleFileInfo, error) {
-		installer.InstallLocker.Lock()
-		defer installer.InstallLocker.Unlock()
-
-		repoEntries := scanFn(filesRoot)
-		repoHash := make(map[string]bool) // hash → banned
-		repoName := make(map[string]bool) // relPath(去禁用后缀) → banned，用于同名不同文件夹的文件
-		filesRootClean := strings.ToLower(filepath.Clean(filesRoot)) + string(filepath.Separator)
-		for _, e := range repoEntries {
-			banned := registry.IsDisableSuffix(e.Name)
-			// 用路径前缀限定：relPath 带至少一级父文件夹，避免跨文件夹撞名
-			ePath := strings.ToLower(e.Path)
-			if strings.HasPrefix(ePath, filesRootClean) {
-				rel := strings.TrimPrefix(ePath, filesRootClean)
-				rel = registry.StripDisableSuffix(rel)
-				repoName[rel] = banned
-			} else {
-				// fallback：纯文件名（顶层文件）
-				baseName := strings.ToLower(e.Name)
-				baseName = registry.StripDisableSuffix(baseName)
-				repoName[baseName] = banned
-			}
-			if e.Hash != "" {
-				repoHash[e.Hash] = banned
-			}
-		}
-		if len(repoHash) == 0 && len(repoName) == 0 {
-			return nil, nil, nil, fmt.Errorf("仓库中未找到模型文件")
-		}
-
-		// 收集实例目录中的文件路径（不计算哈希）
-		// WalkDir 仅用于遍历，遍历中途错误已在回调内逐条 log 并跳过；
-		// 返回值仅反映「回调是否主动中断」，本处回调恒返回 nil，故 best-effort 丢弃。
-		var fileInfos []toggleFileInfo
-		_ = filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
-			if err != nil {
-				log.Printf("[sync] WalkDir 错误 %s: %v", p, err)
-				return nil
-			}
-			if d.IsDir() {
-				return nil
-			}
-			// 逐段判定（对齐 fsutil.IsRecycleDir/download.stripRecycleSegments 口径）：
-			if hasRecycleSegment(p) {
-				return nil
-			}
-			// relink 备份尸体同样剔除（ADR-296 D3）：尸体哈希匹配仓库原件，
-			// 不跳则对备份目录内的模型做 .disabled 改名，污染恢复点
-			if isRelinkBackupPath(p) {
-				return nil
-			}
-			actualPath := p
-			isCurrentlyBanned := registry.IsDisableSuffix(p)
-			if isCurrentlyBanned {
-				actualPath = registry.StripDisableSuffix(p)
-			}
-			ext := strings.ToLower(filepath.Ext(actualPath))
-			if !registry.IsSupportedExt(ext) {
-				return nil
-			}
-			fileInfos = append(fileInfos, toggleFileInfo{
-				path:              p,
-				isCurrentlyBanned: isCurrentlyBanned,
-				actualPath:        actualPath,
-			})
-			return nil
-		})
-		return repoHash, repoName, fileInfos, nil
-	}()
+	repoHash, repoName, fileInfos, err := collectToggleRepoIndex(filesRoot, instanceCustomDir, scanFn)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -128,8 +70,102 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 	// 且哈希仅作 relKey miss 时的改名/移动文件的内容关联兜底，改名场景下文件名已变、
 	// 内容匹配是近似判定。若文件被修改导致哈希变化，纯文件名 fallback 仍会兜底匹配。
 	customDirClean := strings.ToLower(filepath.Clean(instanceCustomDir)) + string(filepath.Separator)
+	precomputedHashes := precomputeRelKeyMissHashes(fileInfos, customDirClean, repoName)
 
-	// 收集 relKey miss 的文件路径
+	// 重新持锁，执行匹配 + rename（阶段 3+4 必须同段：计划与执行之间不得有并发改名）
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
+	defer InvalidateSyncScanCaches() // 启禁会改实例目录名，清同步扫盘缓存防陈旧
+
+	ops := planToggleRenames(fileInfos, customDirClean, repoName, repoHash, precomputedHashes)
+	disableCount, enableCount, failures := applyToggleRenames(ops)
+	if len(failures) > 0 {
+		return disableCount, enableCount, fmt.Errorf("同步完成: 成功禁用 %d 启用 %d，失败 %d: %s",
+			disableCount, enableCount, len(failures), strings.Join(failures, "; "))
+	}
+	return disableCount, enableCount, nil
+}
+
+// collectToggleRepoIndex 是 SyncToggleStatus 阶段 1：在 InstallLock 内构建仓库
+// 禁用状态索引（hash → banned 与 relPath → banned 两路）并收集实例目录待判清单。
+// 锁由本函数自持自放（段内 defer）——调用方不得在此之后再假定锁仍被自己持有。
+func collectToggleRepoIndex(filesRoot, instanceCustomDir string, scanFn ScanFunc) (map[string]bool, map[string]bool, []toggleFileInfo, error) {
+	installer.InstallLocker.Lock()
+	defer installer.InstallLocker.Unlock()
+
+	repoEntries := scanFn(filesRoot)
+	repoHash := make(map[string]bool) // hash → banned
+	repoName := make(map[string]bool) // relPath(去禁用后缀) → banned，用于同名不同文件夹的文件
+	filesRootClean := strings.ToLower(filepath.Clean(filesRoot)) + string(filepath.Separator)
+	for _, e := range repoEntries {
+		banned := registry.IsDisableSuffix(e.Name)
+		// 用路径前缀限定：relPath 带至少一级父文件夹，避免跨文件夹撞名
+		ePath := strings.ToLower(e.Path)
+		if strings.HasPrefix(ePath, filesRootClean) {
+			rel := strings.TrimPrefix(ePath, filesRootClean)
+			rel = registry.StripDisableSuffix(rel)
+			repoName[rel] = banned
+		} else {
+			// fallback：纯文件名（顶层文件）
+			baseName := strings.ToLower(e.Name)
+			baseName = registry.StripDisableSuffix(baseName)
+			repoName[baseName] = banned
+		}
+		if e.Hash != "" {
+			repoHash[e.Hash] = banned
+		}
+	}
+	if len(repoHash) == 0 && len(repoName) == 0 {
+		return nil, nil, nil, fmt.Errorf("仓库中未找到模型文件")
+	}
+	return repoHash, repoName, collectToggleFileInfos(instanceCustomDir), nil
+}
+
+// collectToggleFileInfos 遍历实例目录收集待判文件路径（不计算哈希）。
+// WalkDir 仅用于遍历，遍历中途错误已在回调内逐条 log 并跳过；
+// 返回值仅反映「回调是否主动中断」，本处回调恒返回 nil，故 best-effort 丢弃。
+func collectToggleFileInfos(instanceCustomDir string) []toggleFileInfo {
+	var fileInfos []toggleFileInfo
+	_ = filepath.WalkDir(instanceCustomDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			log.Printf("[sync] WalkDir 错误 %s: %v", p, err)
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		// 逐段判定（对齐 fsutil.IsRecycleDir/download.stripRecycleSegments 口径）：
+		if hasRecycleSegment(p) {
+			return nil
+		}
+		// relink 备份尸体同样剔除（ADR-296 D3）：尸体哈希匹配仓库原件，
+		// 不跳则对备份目录内的模型做 .disabled 改名，污染恢复点
+		if isRelinkBackupPath(p) {
+			return nil
+		}
+		actualPath := p
+		isCurrentlyBanned := registry.IsDisableSuffix(p)
+		if isCurrentlyBanned {
+			actualPath = registry.StripDisableSuffix(p)
+		}
+		ext := strings.ToLower(filepath.Ext(actualPath))
+		if !registry.IsSupportedExt(ext) {
+			return nil
+		}
+		fileInfos = append(fileInfos, toggleFileInfo{
+			path:              p,
+			isCurrentlyBanned: isCurrentlyBanned,
+			actualPath:        actualPath,
+		})
+		return nil
+	})
+	return fileInfos
+}
+
+// precomputeRelKeyMissHashes 是 SyncToggleStatus 阶段 2（锁外）：对 relKey 未命中的
+// 文件预计算内容哈希，供阶段 3 的内容关联兜底。分两趟（先分类、后哈希）是刻意的——
+// 哈希只对确定 miss 的文件算，避免为路径已能对应的文件白读盘。
+func precomputeRelKeyMissHashes(fileInfos []toggleFileInfo, customDirClean string, repoName map[string]bool) map[string]string {
 	relKeyMissPaths := make([]string, 0, len(fileInfos))
 	for _, fi := range fileInfos {
 		pLower := strings.ToLower(fi.path)
@@ -143,27 +179,22 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			relKeyMissPaths = append(relKeyMissPaths, fi.path)
 		}
 	}
-
-	// 预计算哈希（锁外）
 	precomputedHashes := make(map[string]string, len(relKeyMissPaths))
 	for _, p := range relKeyMissPaths {
 		precomputedHashes[p] = computeHash(p)
 	}
+	return precomputedHashes
+}
 
-	// 重新持锁，执行匹配 + rename
-	installer.InstallLocker.Lock()
-	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 启禁会改实例目录名，清同步扫盘缓存防陈旧
-
-	// 阶段 3：匹配并收集待 Rename 的文件
-	type renameOp struct {
-		src string
-		dst string
-	}
-	var ops []renameOp
+// planToggleRenames 是 SyncToggleStatus 阶段 3：按 relKey（路径对应）→ 哈希（内容对应）
+// → 纯文件名兜底 的顺序判定每个实例文件的目标启禁态，产出待执行改名计划。
+// 只读盘（os.Stat 目标存在性预检）不改名——阶段 4 才动盘，使目录结构在执行期内稳定。
+// 调用方须持 installer.InstallLock（本函数不自行加锁，避免 sync.Mutex 重入死锁）。
+func planToggleRenames(fileInfos []toggleFileInfo, customDirClean string,
+	repoName, repoHash map[string]bool, precomputedHashes map[string]string) []toggleRenameOp {
+	var ops []toggleRenameOp
 	for _, fi := range fileInfos {
 		p := fi.path
-		// 匹配顺序：relKey（路径对应）→ 哈希（内容对应）→ 纯文件名兜底。
 		var shouldBeBanned bool
 		var matched bool
 		pLower := strings.ToLower(p)
@@ -184,28 +215,33 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			baseName := strings.ToLower(filepath.Base(fi.actualPath))
 			shouldBeBanned, matched = repoName[baseName]
 		}
-		if !matched {
+		if !matched || shouldBeBanned == fi.isCurrentlyBanned {
 			continue
 		}
-
-		if shouldBeBanned && !fi.isCurrentlyBanned {
+		if shouldBeBanned {
 			// 禁用统一收敛到新标准后缀（.disabled）。
 			newPath := p + registry.DisabledSuffix()
 			if _, err := os.Stat(newPath); err == nil {
 				continue // 目标已存在，跳过
 			}
-			ops = append(ops, renameOp{src: p, dst: newPath})
-		} else if !shouldBeBanned && fi.isCurrentlyBanned {
-			newPath := registry.StripDisableSuffix(p)
-			// 启用分支补目标存在性检查
-			if _, err := os.Stat(newPath); err == nil {
-				continue
-			}
-			ops = append(ops, renameOp{src: p, dst: newPath})
+			ops = append(ops, toggleRenameOp{src: p, dst: newPath})
+			continue
 		}
+		newPath := registry.StripDisableSuffix(p)
+		// 启用分支补目标存在性检查
+		if _, err := os.Stat(newPath); err == nil {
+			continue
+		}
+		ops = append(ops, toggleRenameOp{src: p, dst: newPath})
 	}
+	return ops
+}
 
-	// 阶段 4：统一执行 Rename（目录结构已稳定，无竞态）
+// applyToggleRenames 是 SyncToggleStatus 阶段 4：统一执行改名（目录结构已稳定，无竞态）。
+// 返回禁用数/启用数与失败明细；被占用（Windows 共享锁）的文件只记日志不计失败——
+// 瞬时争用不是数据错误，报成失败会让整次同步以 error 收场。
+// 调用方须持 installer.InstallLock（本函数不自行加锁，避免 sync.Mutex 重入死锁）。
+func applyToggleRenames(ops []toggleRenameOp) (int, int, []string) {
 	disableCount := 0
 	enableCount := 0
 	var failures []string
@@ -230,11 +266,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 			enableCount++
 		}
 	}
-	if len(failures) > 0 {
-		return disableCount, enableCount, fmt.Errorf("同步完成: 成功禁用 %d 启用 %d，失败 %d: %s",
-			disableCount, enableCount, len(failures), strings.Join(failures, "; "))
-	}
-	return disableCount, enableCount, nil
+	return disableCount, enableCount, failures
 }
 
 // 文件级同步深度上限：SyncResources 仅收集 scanDir 顶层文件，不递归进入嵌套子目录。

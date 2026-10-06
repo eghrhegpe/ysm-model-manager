@@ -121,78 +121,14 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 	for _, src := range result.Extra {
 		fi, stErr := os.Stat(src)
 		isDir := stErr == nil && fi.IsDir()
+		var err error
 		if registry.IsDirLevelSync(rtype) {
-			// 相对 targetDir 映射到 globalDir，保留子目录层级（EntityPlayer/角色A →
-			// mmd/EntityPlayer/角色A）；越界无法映射时回退文件名（旧行为）
-			rel, relErr := paths.RelInside(targetDir, src)
-			if relErr != nil {
-				rel = filepath.Base(src)
-			}
-			dstPath := filepath.Join(globalDir, rel)
-			if isDir {
-				// 递归复制整个目录（保留相对路径）——MMD/YSM 模型文件夹的深层子目录
-				// （textures/toon 等）不能丢弃；失败时 copyDirRecursive 已回滚清理
-				if err := copyDirRecursive(src, dstPath); err != nil {
-					failed++
-					if logger != nil {
-						logger(filepath.Base(src), src, dstPath, 0, types.StatusFailed, "拉取失败: "+err.Error())
-					}
-					continue
-				}
-				count++
-			} else {
-				if err := os.MkdirAll(filepath.Dir(dstPath), fsutil.DirPerms); err != nil {
-					failed++
-					if logger != nil {
-						logger(filepath.Base(src), src, filepath.Dir(dstPath), 0, types.StatusFailed, "创建目录失败: "+err.Error())
-					}
-					continue
-				}
-				if err := fsutil.CopyFile(src, dstPath); err != nil {
-					failed++
-					if logger != nil {
-						logger(filepath.Base(src), src, dstPath, 0, types.StatusFailed, "拉取失败: "+err.Error())
-					}
-					continue
-				}
-				count++
-			}
-			continue
+			err = pullDirLevelEntry(src, globalDir, targetDir, isDir, logger)
+		} else {
+			err = pullFileLevelEntry(src, globalDir, targetDir, isDir, logger)
 		}
-		mapped, mapErr := mapSrcToGlobal(src, targetDir, globalDir)
-		if mapErr != nil {
+		if err != nil {
 			failed++
-			if logger != nil {
-				logger(filepath.Base(src), src, globalDir, 0, types.StatusFailed, "路径映射失败: "+mapErr.Error())
-			}
-			continue
-		}
-		dstDir := filepath.Dir(mapped)
-		if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
-			failed++
-			if logger != nil {
-				logger(filepath.Base(src), src, dstDir, 0, types.StatusFailed, "拉取失败: "+err.Error())
-			}
-			continue
-		}
-		// 文件级类型的目录条目（如 resourcepack 的 pack.mcmeta 文件夹 Extra）：
-		// copyFile 对目录会失败——审核补丁，目录整体复制到映射目标（保留 rel）
-		if isDir {
-			if err := copyDirRecursive(src, mapped); err != nil {
-				failed++
-				if logger != nil {
-					logger(filepath.Base(src), src, mapped, 0, types.StatusFailed, "拉取失败: "+err.Error())
-				}
-				continue
-			}
-			count++
-			continue
-		}
-		if err := fsutil.CopyFile(src, filepath.Join(dstDir, filepath.Base(src))); err != nil {
-			failed++
-			if logger != nil {
-				logger(filepath.Base(src), src, dstDir, 0, types.StatusFailed, "拉取失败: "+err.Error())
-			}
 			continue
 		}
 		count++
@@ -201,6 +137,76 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 		return count, fmt.Errorf("%w: 成功 %d，失败 %d", ErrPartialSync, count, failed)
 	}
 	return count, nil
+}
+
+// pullDirLevelEntry 把文件夹级类型的一条 extra 拉回仓库：相对 targetDir 映射到 globalDir
+// 并保留子目录层级（EntityPlayer/角色A → mmd/EntityPlayer/角色A），越界无法映射时回退
+// 文件名（旧行为）。目录整树递归复制，文件先建父目录再复制。
+// 失败已按原实现的逐分支 dst 记 logger，返回非 nil 供调用方记账。
+// 调用方须持 installer.InstallLock（本函数不自行加锁，避免 sync.Mutex 重入死锁）。
+func pullDirLevelEntry(src, globalDir, targetDir string, isDir bool, logger Logger) error {
+	rel, relErr := paths.RelInside(targetDir, src)
+	if relErr != nil {
+		rel = filepath.Base(src)
+	}
+	dstPath := filepath.Join(globalDir, rel)
+	if isDir {
+		// 递归复制整个目录（保留相对路径）——MMD/YSM 模型文件夹的深层子目录
+		// （textures/toon 等）不能丢弃；失败时 copyDirRecursive 已回滚清理
+		if err := copyDirRecursive(src, dstPath); err != nil {
+			logPullFailure(src, dstPath, "拉取失败: "+err.Error(), logger)
+			return err
+		}
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(dstPath), fsutil.DirPerms); err != nil {
+		logPullFailure(src, filepath.Dir(dstPath), "创建目录失败: "+err.Error(), logger)
+		return err
+	}
+	if err := fsutil.CopyFile(src, dstPath); err != nil {
+		logPullFailure(src, dstPath, "拉取失败: "+err.Error(), logger)
+		return err
+	}
+	return nil
+}
+
+// pullFileLevelEntry 把文件级类型的一条 extra 拉回仓库：mapSrcToGlobal 求目标位置后
+// 先建父目录再复制；目录条目（如 resourcepack 的 pack.mcmeta 文件夹 Extra，copyFile
+// 对目录会失败）整树复制到映射目标（保留 rel）。
+// 失败已按原实现的逐分支 dst 记 logger，返回非 nil 供调用方记账。
+// 调用方须持 installer.InstallLock（本函数不自行加锁，避免 sync.Mutex 重入死锁）。
+func pullFileLevelEntry(src, globalDir, targetDir string, isDir bool, logger Logger) error {
+	mapped, mapErr := mapSrcToGlobal(src, targetDir, globalDir)
+	if mapErr != nil {
+		logPullFailure(src, globalDir, "路径映射失败: "+mapErr.Error(), logger)
+		return mapErr
+	}
+	dstDir := filepath.Dir(mapped)
+	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
+		logPullFailure(src, dstDir, "拉取失败: "+err.Error(), logger)
+		return err
+	}
+	if isDir {
+		if err := copyDirRecursive(src, mapped); err != nil {
+			logPullFailure(src, mapped, "拉取失败: "+err.Error(), logger)
+			return err
+		}
+		return nil
+	}
+	if err := fsutil.CopyFile(src, filepath.Join(dstDir, filepath.Base(src))); err != nil {
+		logPullFailure(src, dstDir, "拉取失败: "+err.Error(), logger)
+		return err
+	}
+	return nil
+}
+
+// logPullFailure 是拉取各失败路径的统一出口：logger 为 nil 时静默（薄壳可不注入）。
+// dst 逐分支传「实际被操作的对象」（目标文件/其父目录/globalDir），使日志能指示
+// 出错的具体位置，故调用方不收敛成一个固定值。
+func logPullFailure(src, dst, msg string, logger Logger) {
+	if logger != nil {
+		logger(filepath.Base(src), src, dst, 0, types.StatusFailed, msg)
+	}
 }
 
 // PullSingleResource 拉取单个资源（文件夹/文件）回仓库
@@ -294,6 +300,20 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 	}
 
 	repoEntries := scanFn(repoDir)
+	repoHashes, repoNames := buildRepoIndex(repoEntries)
+
+	count := 0
+	for _, e := range srcEntries {
+		if copyCustomEntryToRepo(e, customDir, repoDir, repoHashes, repoNames, logger) {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// buildRepoIndex 归并仓库既有条目的哈希集（内容去重）与 Name 集（basename 去重），
+// 供收编循环做 O(1) 命中查询。
+func buildRepoIndex(repoEntries []types.ModelEntry) (map[string]bool, map[string]bool) {
 	repoHashes := make(map[string]bool)
 	repoNames := make(map[string]bool)
 	for _, re := range repoEntries {
@@ -302,60 +322,58 @@ func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.Mod
 		}
 		repoNames[re.Name] = true
 	}
+	return repoHashes, repoNames
+}
 
-	count := 0
-	for _, e := range srcEntries {
-		if e.Hash != "" && repoHashes[e.Hash] {
-			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, types.StatusSkipped, "仓库已存在同哈希文件，跳过")
-			}
-			continue
-		}
-		// 名称去重用 basename（保守策略，P3-5 确认）：
-		// 同名不同子目录的文件也会被跳过——避免仓库内同名文件被覆盖。
-		// 不改为 relKey（相对路径）去重：relKey 会放宽去重，
-		// 让 a/model.ysm 与仓库已有 b/model.ysm 共存，用户侧看到两个同名模型易混淆。
-		// basename 去重的代价是「同名不同内容」文件无法推入仓库，
-		// 但哈希去重（L286）已覆盖「同名同内容」场景，此处仅挡「同名不同内容」。
-		if repoNames[e.Name] {
-			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, types.StatusSkipped, "仓库已存在同名文件，跳过")
-			}
-			continue
-		}
-		rel, err := paths.RelInside(customDir, e.Path)
-		if err != nil {
-			// P0 修复：防路径穿越——e.Path 不在 customDir 下时，丢弃 err 会生成 "..\\leaked\\m.ysm"
-			// 并 MkdirAll 到 customDir 外部。显式拒绝越界条目。
-			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, types.StatusFailed,
-					"跳过越界路径（不在 customDir 下）: "+e.Path)
-			}
-			continue
-		}
-		if rel == "" {
-			rel = e.Name
-		}
-		dstPath := filepath.Join(repoDir, rel)
-		dstDir := filepath.Dir(dstPath)
-		if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
-			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, types.StatusFailed, "创建目录失败: "+err.Error())
-			}
-			continue
-		}
-		if _, err := installer.CopyFileLocked(e.Path, dstDir); err != nil {
-			if logger != nil {
-				logger(e.Name, e.Path, repoDir, 0, types.StatusFailed, "复制失败: "+err.Error())
-			}
-			continue
-		}
-		count++
-		if logger != nil {
-			logger(e.Name, e.Path, repoDir, 0, types.StatusSuccess, "已复制到仓库")
-		}
+// copyCustomEntryToRepo 收编单个实例条目到仓库：哈希去重 → 同名去重 → 越界拒绝 →
+// 建父目录 → 复制。跳过与各类失败均已记 logger，返回 true 表示确实落地了一份
+// （调用方据此计数）。
+// 调用方须持 installer.InstallLock（走 *Locked 变体，避免 sync.Mutex 重入死锁）。
+func copyCustomEntryToRepo(e types.ModelEntry, customDir, repoDir string,
+	repoHashes, repoNames map[string]bool, logger Logger) bool {
+	if e.Hash != "" && repoHashes[e.Hash] {
+		logCustomToRepo(e, repoDir, types.StatusSkipped, "仓库已存在同哈希文件，跳过", logger)
+		return false
 	}
-	return count, nil
+	// 名称去重用 basename（保守策略，P3-5 确认）：
+	// 同名不同子目录的文件也会被跳过——避免仓库内同名文件被覆盖。
+	// 不改为 relKey（相对路径）去重：relKey 会放宽去重，
+	// 让 a/model.ysm 与仓库已有 b/model.ysm 共存，用户侧看到两个同名模型易混淆。
+	// basename 去重的代价是「同名不同内容」文件无法推入仓库，
+	// 但哈希去重（上一步）已覆盖「同名同内容」场景，此处仅挡「同名不同内容」。
+	if repoNames[e.Name] {
+		logCustomToRepo(e, repoDir, types.StatusSkipped, "仓库已存在同名文件，跳过", logger)
+		return false
+	}
+	rel, err := paths.RelInside(customDir, e.Path)
+	if err != nil {
+		// P0 修复：防路径穿越——e.Path 不在 customDir 下时，丢弃 err 会生成 "..\\leaked\\m.ysm"
+		// 并 MkdirAll 到 customDir 外部。显式拒绝越界条目。
+		logCustomToRepo(e, repoDir, types.StatusFailed, "跳过越界路径（不在 customDir 下）: "+e.Path, logger)
+		return false
+	}
+	if rel == "" {
+		rel = e.Name
+	}
+	dstPath := filepath.Join(repoDir, rel)
+	dstDir := filepath.Dir(dstPath)
+	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
+		logCustomToRepo(e, repoDir, types.StatusFailed, "创建目录失败: "+err.Error(), logger)
+		return false
+	}
+	if _, err := installer.CopyFileLocked(e.Path, dstDir); err != nil {
+		logCustomToRepo(e, repoDir, types.StatusFailed, "复制失败: "+err.Error(), logger)
+		return false
+	}
+	logCustomToRepo(e, repoDir, types.StatusSuccess, "已复制到仓库", logger)
+	return true
+}
+
+// logCustomToRepo 是收编各分支的统一 logger 出口：logger 为 nil 时静默（薄壳可不注入）。
+func logCustomToRepo(e types.ModelEntry, repoDir, status, msg string, logger Logger) {
+	if logger != nil {
+		logger(e.Name, e.Path, repoDir, 0, status, msg)
+	}
 }
 
 // mapSrcToGlobal P3 修复：原用 strings.Replace(src, targetDir, globalDir, 1)

@@ -149,37 +149,6 @@ func (a *App) importModelFileWithOptions(fileName, base64Data string, opts impor
 	return destPath, rtype, err
 }
 
-// importModelFileMMD 导入 MMD 模型文件。
-// 壳-叶架构已移除：mmdSubdir 现在作为资源类型 ID（如 EntityPlayer、SceneModel），
-// 直接走该类型的存储根目录与扩展名校验。
-func (a *App) importModelFileMMD(fileName, subpath, mmdSubdir, base64Data string, overwrite bool) error {
-	rtype := mmdSubdir
-	if rtype == "" {
-		rtype = "EntityPlayer"
-	}
-	root, _ := a.GetRepoRoot(rtype)
-	if root == "" {
-		return fmt.Errorf("请先设置文件存储路径")
-	}
-	// 扩展名校验：按资源类型自声明的 extensions 白名单
-	if allowedExts := registry.SupportedExtsForType(rtype); len(allowedExts) > 0 {
-		ext := strings.ToLower(filepath.Ext(fileName))
-		extSet := make(map[string]bool, len(allowedExts))
-		for _, e := range allowedExts {
-			extSet[strings.ToLower(e)] = true
-		}
-		if !extSet[ext] {
-			return types.AppError{Code: types.ErrUnsupportedType, Operation: "导入模型", SourcePath: fileName, Reason: fmt.Sprintf("文件格式不被 %s 类型支持", rtype), Suggestion: "仅允许: " + strings.Join(allowedExts, " / ")}
-		}
-	}
-	// 拼接子目录：mmdSubdir 在前，subpath 在后（如有）。
-	fullSubpath := mmdSubdir
-	if subpath != "" {
-		fullSubpath = mmdSubdir + "/" + subpath
-	}
-	return a.importModelFileWithSubpath(fileName, fullSubpath, base64Data, overwrite)
-}
-
 func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, overwrite bool) error {
 	root, _ := a.GetRepoRoot("ysm")
 	if root == "" {

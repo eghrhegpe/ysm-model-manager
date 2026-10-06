@@ -311,20 +311,26 @@ func (a *App) startProxy(target string) (string, error) {
 	}
 
 	rp := &httputil.ReverseProxy{
-		Director: func(r *http.Request) {
-			r.URL.Scheme = u.Scheme
-			r.URL.Host = u.Host
-			r.Host = u.Host
-			r.Header.Set("Host", u.Host)
-			r.Header.Del("X-Frame-Options")
-			r.Header.Del("Content-Security-Policy")
-			r.Header.Del("Content-Security-Policy-Report-Only")
-			r.Header.Del("X-XSS-Protection")
-			r.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
-			cookies := session.jar.Cookies(r.URL)
+		// Rewrite（Go 1.26 起 Director 弃用）：pr.Out 为出站请求副本，目标 URL 走 SetURL。
+		// SetURL 会重置 Out.Host，这里显式回填以保持旧 Director 的 r.Host = u.Host 行为
+		// （出站 Host 头即目标 host）；同时剥离 Rewrite 默认注入的 X-Forwarded-*，
+		// 与原实现（不注入）行为等价。
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(u)
+			pr.Out.Host = u.Host
+			pr.Out.Header.Del("X-Forwarded-For")
+			pr.Out.Header.Del("X-Forwarded-Host")
+			pr.Out.Header.Del("X-Forwarded-Proto")
+			pr.Out.Header.Set("Host", u.Host)
+			pr.Out.Header.Del("X-Frame-Options")
+			pr.Out.Header.Del("Content-Security-Policy")
+			pr.Out.Header.Del("Content-Security-Policy-Report-Only")
+			pr.Out.Header.Del("X-XSS-Protection")
+			pr.Out.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+			cookies := session.jar.Cookies(pr.Out.URL)
 			if len(cookies) > 0 {
 				for _, c := range cookies {
-					r.AddCookie(c)
+					pr.Out.AddCookie(c)
 				}
 			}
 		},

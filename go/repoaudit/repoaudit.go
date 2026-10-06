@@ -218,7 +218,7 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 	var totalSize int64
 	var largestFile string
 	var largestSize int64
-	// texturePaths 命中率统计的纹理样本（上限 cacheHitSampleLimit，见 measureCacheHitRate）
+	// texturePaths 命中率统计的纹理样本（上限 cacheHitSampleLimit，见 measureCacheHitRateCtx）
 	var texturePaths []string
 	resources := map[string]int{}
 	// 注册表加载提升到 walk 外——per-file TypeByLocation 不再
@@ -267,7 +267,7 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 		result.Resources.TotalFiles++
 		totalSize += size
 
-		// 收集纹理路径供命中率统计（延后到 walk 外并发执行，见 measureCacheHitRate）。
+		// 收集纹理路径供命中率统计（延后到 walk 外并发执行，见 measureCacheHitRateCtx）。
 		// 此处只 append 不计算哈希——walk 回调内做 SHA256 会串行拖垮大仓库。
 		// 扩展名口径委托 registry.IsTextureExt（单一事实源）。
 		if registry.IsTextureExt(ext) && len(texturePaths) < cacheHitSampleLimit {
@@ -327,7 +327,7 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 		result.Completeness.Percentage = 100.0
 	}
 
-	// 缓存状态 + 命中率（真命中率见 measureCacheHitRate：逐纹理哈希查缓存）
+	// 缓存状态 + 命中率（真命中率见 measureCacheHitRateCtx：逐纹理哈希查缓存）
 	stats := texture_cache.GetCacheStats()
 	result.Cache.CacheDir = stats.Dir
 	result.Cache.CacheFiles = stats.FileCount
@@ -358,7 +358,7 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 	return result, nil
 }
 
-// measureCacheHitRate 统计给定纹理列表的缓存命中数/未命中数/探测失败数。
+// measureCacheHitRateCtx 统计给定纹理列表的缓存命中数/未命中数/探测失败数（ctx 版，ADR-314）。
 //
 // 口径（与 `cache-verify` 命令一致，勿退回旧的错误算法）：
 //   - 命中 = 纹理**内容哈希**（TextureHash）对应的 KTX2 缓存文件存在；
@@ -376,12 +376,9 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 //
 // 失败语义：哈希失败/缓存探测失败 **不计入** 分子也不计入分母（计入失败数）——
 // 「探测故障」≠「未缓存」，否则磁盘/权限故障会被误读成「该纹理没缓存」。
-func measureCacheHitRate(texturePaths []string) (hits, misses, scanErrs int) {
-	return measureCacheHitRateCtx(context.Background(), texturePaths)
-}
-
-// measureCacheHitRateCtx ctx 版（ADR-314）：worker 每纹理一查（单纹理 SHA256 开销
-// 远大于检查），取消即提前收工——结果作废，调用方据 ctx.Err() 判定。
+//
+// ctx 版：worker 每纹理一查（单纹理 SHA256 开销远大于检查），取消即提前收工——
+// 结果作废，调用方据 ctx.Err() 判定。
 func measureCacheHitRateCtx(ctx context.Context, texturePaths []string) (hits, misses, scanErrs int) {
 	if len(texturePaths) == 0 {
 		return 0, 0, 0

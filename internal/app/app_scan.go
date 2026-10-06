@@ -547,9 +547,3 @@ func (a *App) isPathInRoot(path string) bool {
 	}
 	return true
 }
-
-// isDir 路径存在且为目录
-func isDir(p string) bool {
-	info, err := os.Stat(p)
-	return err == nil && info.IsDir()
-}

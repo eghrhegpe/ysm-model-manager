@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -26,16 +25,6 @@ import (
 )
 
 // 受限整读上限共用 registry.MaxReadLimit（50MB 口径，防 YSMParser 被篡改输出 GB 级 JSON 撑爆内存）
-
-// readLimitedFileBedrock 受限整读 JSON 文件（仅用于 parseBedrockGeometry 输入）
-// 返回 nil 表示读失败或超限（对齐 fileops readLimitedFile 风格）
-func readLimitedFileBedrock(path string) []byte {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil
-	}
-	return fsutil.ReadLimitedEntry(f, registry.MaxReadLimit)
-}
 
 func (a *App) AnalyzeYSMModel(path string) ysm.YSMModelMeta {
 	return ysm.AnalyzeYSMModel(path)
@@ -496,29 +485,10 @@ func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 	return types.BedrockModel{}
 }
 
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
-}
-
 func parseBedrockFromZip(data []byte, size int64) (*types.BedrockModel, [][]byte, []string) {
 	return geometry.ParseFromZip(data, size)
 }
 
 func parseBedrockFrom7z(data []byte, size int64) (*types.BedrockModel, [][]byte) {
 	return geometry.ParseFrom7z(data, size)
-}
-
-func parseBedrockGeometry(data []byte) *types.BedrockModel {
-	return geometry.ParseBedrockGeometry(data)
 }

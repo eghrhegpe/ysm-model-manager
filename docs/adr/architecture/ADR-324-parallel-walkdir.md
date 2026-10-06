@@ -41,7 +41,7 @@
 - 回调并行执行引入数据竞争风险——scanner 回调的 `entries` append 与 `walkFailed` 已加锁/原子化，`processScanDirEntry` 内部无共享可变状态（registry 用 mutex、`IsRecycleDir` 纯函数、`d.Info()` 是 I/O）
 
 **已知遗留**：
-- Rust `jwalk 0.9` 已废弃但仍在 CI 编译路径上——删除 Rust 基础设施是独立决策，本 ADR 不涵盖
+- ~~Rust `jwalk 0.9` 已废弃但仍在 CI 编译路径上——删除 Rust 基础设施是独立决策，本 ADR 不涵盖~~（已于 2026-10-06 完成：Rust 扫描后端、rustbridge、Rust 构建脚本与 CI cargo 作业全部删除，`scan-bench` 退化为 Go-only 单引擎耗时测量）
 
 ## 4. 数据溯源
 

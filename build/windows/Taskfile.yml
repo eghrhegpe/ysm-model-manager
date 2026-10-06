@@ -109,16 +109,6 @@ tasks:
       CGO_ENABLED: '{{.CGO_ENABLED | default "0"}}'
       GOARCH: '{{.ARCH | default ARCH}}'
 
-  build:rust-bridge:
-    summary: Builds the embedded Rust scanner bridge
-    internal: true
-    # code review P2：非 Windows 主机交叉构建（build:native 的 platforms [linux, darwin] 路径）
-    # 无 powershell/不产 .dll（Linux 产 .so）——限定 Windows 主机才构建桥 DLL
-    platforms: [windows]
-    cmds:
-      - cargo build --release --locked --manifest-path rust-wails-bridge/Cargo.toml
-      - powershell -NoProfile -Command "New-Item -ItemType Directory -Force 'go/rustbridge/bin' | Out-Null; Copy-Item -Force 'rust-wails-bridge/target/release/ysm_model_manager_wails_bridge.dll' 'go/rustbridge/bin/ysm_model_manager_wails_bridge.dll'"
-
   build:native:
     summary: Builds the application using native Go cross-compilation
     internal: true
@@ -126,8 +116,6 @@ tasks:
       - task: common:go:mod:tidy
       # embed 前置：构建内嵌的更新助手 helper（见 build:helper）
       - task: build:helper
-      # code review P2：仅 Windows 主机构建 Rust 桥（非 Windows 交叉编译无 powershell/不产 .dll）
-      - '{{if eq OS "windows"}}task: build:rust-bridge{{end}}'
       - task: common:build:frontend
         vars:
           BUILD_FLAGS:
@@ -150,7 +138,7 @@ tasks:
       - cmd: rm -f *.syso
         platforms: [linux, darwin]
     vars:
-      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .ARCH "amd64"}},rust_backend{{end}}{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui -X ysm-model-manager/go/version.Version={{.APP_VERSION}}"{{end}}'
+      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui -X ysm-model-manager/go/version.Version={{.APP_VERSION}}"{{end}}'
     env:
       GOOS: windows
       CGO_ENABLED: '{{.CGO_ENABLED | default "0"}}'

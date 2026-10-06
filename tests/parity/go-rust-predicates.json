@@ -1,5 +1,5 @@
 {
-  "_comment": "Rust-Go 边界契约向量（单一事实源）：被 go test（go/types/parity_test.go）与 cargo test（rust-core/src/tests.rs）双端读取，锁死 strip_disable_suffix / is_ysm_entry_json / is_disable_suffix 三个谓词的 input→output 对。改动任一端口径，另一端 CI 当场红。新增/改向量时两端必须同步（Go 是 ADR-038 D2 单点权威）。",
+  "_comment": "谓词契约向量（单一事实源）：被 go test（go/types/registry/parity_test.go）读取，锁死 strip_disable_suffix / is_ysm_entry_json / is_disable_suffix 三个谓词的 input→output 对。Rust 扫描后端已于 2026-10-06 删除，本文件从「双端锁定」退化为 Go 单端权威（ADR-038 D2）。改动口径只需改本 fixture。",
   "strip_disable_suffix": [
     ["foo.ysm", "foo.ysm"],
     ["foo.ysm.ban", "foo.ysm"],

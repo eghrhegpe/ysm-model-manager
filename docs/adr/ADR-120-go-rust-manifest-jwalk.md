@@ -1,9 +1,9 @@
 # ADR-120：Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk
 
-- **状态**：已采纳（Accepted）— 生产触发路径不存在（见 §3 修正说明）
+- **状态**：❌ 已取代 — 2026-10-06 Rust 扫描基础设施整体删除（Go 并行遍历 walk_parallel.go 取代，见 ADR-324）
 - **日期**：2026-08-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`go/rustbridge/bridge_windows.go|go/scanner/scanner.go|rust-core/src/scan.rs|rust-wails-bridge/src/abi.rs|docs/knowledge/rustbridge.md`
+- **相关**：`go/scanner/scanner.go`（Rust 相关代码已删除）
 
 ---
 

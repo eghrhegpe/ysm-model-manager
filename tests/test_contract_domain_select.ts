@@ -27,9 +27,8 @@ for (const f of goSet) {
   const doms = CONTRACT_TEST_DOMAINS[f] || [];
   check(doms.includes("go"), `${f} 应属 go/mixed 域（映射 ${JSON.stringify(doms)}），却进 go 子集`);
 }
-// go 域代表：CLI parity / config / rust bridge
+// go 域代表：CLI parity / config
 check(has(goSet, "test_cli_completion_parity.ts"), "go 子集应含 test_cli_completion_parity");
-check(has(goSet, "test_rust_bridge_tags.ts"), "go 子集应含 test_rust_bridge_tags");
 // 不应含纯前端/data/docs/tests
 check(!has(goSet, "test_bus_contract.ts"), "go 子集不应含纯前端 test_bus_contract");
 check(!has(goSet, "test_resource_schema.ts"), "go 子集不应含纯 data test_resource_schema");

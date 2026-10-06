@@ -76,7 +76,6 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_cli_completion_parity.ts": ["go"],
   "test_cli_doc_parity.ts": ["go", "docs"],
   "test_config_defaults.ts": ["go"],
-  "test_rust_bridge_tags.ts": ["go"],
   // —— frontend ——
   "test_bus_contract.ts": ["frontend"],
   // check-a11y 覆盖基线守卫（ADR-308 D3）——扫描域为 frontend/src 生产 .ts；

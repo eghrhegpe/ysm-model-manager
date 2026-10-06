@@ -48,8 +48,8 @@ type guiFlowResult struct {
 	Estimated time.Duration
 	// Note 估算依赖的假设/公式（D2 要求估算显式标注来源），实测阶段留空
 	Note string
-	// Runtime 阶段运行归属（go|rust|wasm|js|three，ADR-262 D2）。由装配点打上（withRuntime），
-	// 不逐个 return 字面量重复书写。② 模型扫描填**实际扫描后端**（scanner.ScanBackend），
+	// Runtime 阶段运行归属（go|wasm|js|three，ADR-262 D2）。由装配点打上（withRuntime），
+	// 不逐个 return 字面量重复书写。② 模型扫描填**实际扫描后端**（scanner.ScanBackend，恒 "go"），
 	// ⑥ 渲染预估归 three（它是 Three.js 首帧的估算，估算性质由 Kind 承载）。
 	Runtime string
 }
@@ -67,7 +67,7 @@ type guiFlowStageItem struct {
 	EstimatedMs float64 `json:"estimated_ms,omitempty"`
 	// Note 估算假设/公式
 	Note string `json:"note,omitempty"`
-	// Runtime 阶段运行归属（go|rust|wasm|js|three，ADR-262 D2）
+	// Runtime 阶段运行归属（go|wasm|js|three，ADR-262 D2）
 	Runtime string `json:"runtime"`
 }
 

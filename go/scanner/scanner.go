@@ -62,14 +62,11 @@ var walkCount atomic.Int64
 var flightJoins atomic.Int64
 
 // walkStartHookFn 走盘开始钩子（仅测试注入：制造确定性在途重叠；生产恒 nil）。
-// rustScanHookFn 仅测试注入：覆盖 Rust 扫描快路径结果，制造 tryRustScan 的 handled 分支；
-// 生产恒 nil（Rust 后端仅在 -tags rust_backend 下编译，普通单测走 stub 返回 handled=false）。
 // 旧实现是裸包级变量、无任何并发防护——现经 hookMu 读写（Set* 注入 / get* 快照读取，
 // 与 SetErrorSink 同款范式）；测试注入走 Set 接口，禁止生产调用。
 var (
 	hookMu          sync.RWMutex
 	walkStartHookFn func()
-	rustScanHookFn  func(dir string) ([]types.ModelEntry, bool, bool)
 )
 
 // setWalkStartHook 注入/清除走盘开始钩子（仅同包测试 seam，包外不可见；传 nil 清除）。
@@ -87,20 +84,7 @@ func getWalkStartHook() func() {
 	return walkStartHookFn
 }
 
-// setRustScanHook 注入/清除 Rust 扫描钩子（仅同包测试 seam，包外不可见；传 nil 清除）。
-// ADR-176 2.2：改为未导出，生产/绑定 API 不再暴露可写函数指针。
-func setRustScanHook(fn func(dir string) ([]types.ModelEntry, bool, bool)) {
-	hookMu.Lock()
-	rustScanHookFn = fn
-	hookMu.Unlock()
-}
-
-// getRustScanHook 快照读取 Rust 扫描钩子（生产路径恒 nil）。
-func getRustScanHook() func(dir string) ([]types.ModelEntry, bool, bool) {
-	hookMu.RLock()
-	defer hookMu.RUnlock()
-	return rustScanHookFn
-}
+// 注意：ADR-176 2.2 将测试注入 seam 改为未导出；当前仅剩 walkStartHookFn 一条 seam。
 
 type scanFlight struct {
 	wg         sync.WaitGroup
@@ -392,13 +376,7 @@ retry:
 		fl.wg.Done()
 	}()
 
-	// owner 身份已定（waiter 已并入航班）——Rust 结果同样记录到航班供 waiter 取。
-	// ctx 传入：Rust 快路径同样须遵守 ADR-197 取消语义（原先只 walk 路径检查 ctx，
-	// Windows 生产路径 handled=true 直接返回，预取消 ctx 仍产出结果——
-	// rust_backend 标签下才编译，本地默认构建测不到，CI 长期红）。
-	if entries, ok := tryRustScan(ctx, dir, gen, keyVersion, startTime, fl); ok {
-		return entries, false
-	}
+	// owner 身份已定（waiter 已并入航班）——Go walk 结果同样记录到航班供 waiter 取。
 
 	walkCount.Add(1)
 	if h := getWalkStartHook(); h != nil {
@@ -497,52 +475,6 @@ func joinInFlightWaiter(dir string, fl *scanFlight) joinResult {
 		return joinResult{entries: append([]types.ModelEntry{}, other.entries...), hit: true}
 	}
 	return joinResult{retry: true} // 版本已变，调用方 goto retry
-}
-
-// tryRustScan 尝试 Rust scanner 快路径，成功时把可缓存结果写入 scanCache
-// （版本守卫通过时）并把结果写入航班 fl.entries 供 waiter 取。
-// 返回 (entries, true) 表示 Rust 已处理，调用方可直接返回；(nil, false) 走 Go 路径。
-func tryRustScan(
-	ctx context.Context,
-	dir string,
-	gen, keyVersion uint64,
-	startTime time.Time,
-	fl *scanFlight,
-) ([]types.ModelEntry, bool) {
-	// ADR-197：预取消 / 已取消时不得产出结果，也不得写入缓存。
-	// 置于后端分发之前——无论 Rust 还是 hook，取消态一律短路，与 walk 路径
-	// 的 fs.SkipAll 同语义（取消产生的空结果同样不可缓存）。
-	if ctx.Err() != nil {
-		return nil, false
-	}
-	// 基准专用强制开关（ADR-262 D3 跨引擎对照）：跳过 Rust 快路径，让对照的另一端跑同一条
-	// 生产 Go walk。置于钩子**之前**——钩子是测试注入的引擎替身，能被它压制，基准才测得到「纯 Go」。
-	// 生产恒 false，故本分支对生产不可达（它只是把「Rust 不可用时的既有兜底」变成可控）。
-	if forceGoEngine.Load() {
-		return nil, false
-	}
-	// 测试注入优先：rustScanHook 非空时替代真实后端（普通单测走 stub 恒 handled=false，
-	// 无法触达 Rust handled 分支，故用钩子制造该路径）。
-	var rustEntries []types.ModelEntry
-	var cacheable, handled bool
-	if hook := getRustScanHook(); hook != nil {
-		rustEntries, cacheable, handled = hook(dir)
-	} else {
-		rustEntries, cacheable, handled = scanEntriesWithRust(dir)
-	}
-	if !handled {
-		return nil, false
-	}
-	// 引擎归属记账（ADR-262 D3）：只有**真正**由 Rust 处理完才计数——报告据此区分
-	// 「Rust 在跑」与「静默回退 Go」，否则会把 Go 的耗时记在 Rust 头上。
-	rustHandledCount.Add(1)
-	stored := append([]types.ModelEntry(nil), rustEntries...)
-	kvNow, _ := keyVersions.LoadOrStore(dir, &atomic.Uint64{})
-	if cacheable && cacheGen.Load() == gen && kvNow.(*atomic.Uint64).Load() == keyVersion {
-		scanCache.Store(dir, scanCacheEntry{entries: stored, expiresAt: startTime.Add(scanTTL())})
-	}
-	fl.entries = stored
-	return rustEntries, true
 }
 
 // processScanDirEntry 处理 WalkDir 单个回调：错误上报、目录级 Skip 判定（recycle/.github/禁用后缀）、

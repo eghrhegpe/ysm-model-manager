@@ -337,7 +337,6 @@ type CliCommand struct {
 | `go/container` | 容器数据访问（统一接管 zip/7z） |
 | `go/launcher` | 启动器 / 外部进程拉起 |
 | `go/repoaudit` | 仓库审计（`doctor` 依赖） |
-| `go/rustbridge` | Rust 桥接（Android/桌面 `rust_backend` 路径） |
 | `go/cli` | CLI 命令注册与执行（`//go:build cli`，≠ Wails 绑定，见 §3.5） |
 | `go/executil` | 外部进程执行辅助（隐藏窗口等） |
 | `go/ccheck` | Go 认知复杂度 + 嵌套深度扫描（`check-complexity.ts` 的 Go 镜像，ADR-154 双端契约向量互锁） |

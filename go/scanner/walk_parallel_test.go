@@ -171,15 +171,19 @@ func TestWalkDirParallel_RootNotExist(t *testing.T) {
 // TestWalkDirParallel_ContextCancel 验证 ctx 取消时中止遍历（ADR-197）。
 func TestWalkDirParallel_ContextCancel(t *testing.T) {
 	root := t.TempDir()
-	for i := 0; i < 100; i++ {
+	// 树够大 + cancel 延迟够短：并行 worker 尚未跑完时 cancel 必然已触发。
+	// 曾因树太小（100 文件）+ 5ms 延迟，24 核机器上 walk 在 cancel 前就结束——误报「未返回 SkipAll」。
+	for i := 0; i < 800; i++ {
 		d := filepath.Join(root, fmt.Sprintf("d%03d", i))
 		os.MkdirAll(d, 0o755)
-		os.WriteFile(filepath.Join(d, "f.ysm"), []byte("x"), 0o644)
+		for j := 0; j < 4; j++ {
+			os.WriteFile(filepath.Join(d, fmt.Sprintf("f%02d.ysm", j)), []byte("x"), 0o644)
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(time.Millisecond)
 		cancel()
 	}()
 
@@ -197,8 +201,8 @@ func TestWalkDirParallel_ContextCancel(t *testing.T) {
 	if err != fs.SkipAll {
 		t.Fatalf("ctx 取消后预期返回 fs.SkipAll，实际: %v", err)
 	}
-	if visited.Load() >= 100 {
-		t.Errorf("ctx 取消后不应访问全部 100 个文件，实际: %d", visited.Load())
+	if visited.Load() >= 3200 {
+		t.Errorf("ctx 取消后不应访问全部文件，实际: %d", visited.Load())
 	}
 }
 

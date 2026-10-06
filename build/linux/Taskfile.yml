@@ -31,10 +31,9 @@ tasks:
       - task: check:deps
       - task: common:go:mod:tidy
       - task: common:build:frontend
-      - task: compile:rust
     cmds:
       - mkdir -p "{{.BIN_DIR}}"
-      - go build -tags production,rust_backend -trimpath -buildvcs=false -ldflags="-w -s -X ysm-model-manager/go/version.Version={{.APP_VERSION}}" -extldflags="-L{{.ROOT_DIR}}/go/rustbridge/static-lib {{.ROOT_DIR}}/go/rustbridge/static-lib/libysm_model_manager_wails_bridge.a" -o "{{.BIN_DIR}}/{{.APP_NAME}}" .
+      - go build -tags production -trimpath -buildvcs=false -ldflags="-w -s -X ysm-model-manager/go/version.Version={{.APP_VERSION}}" -o "{{.BIN_DIR}}/{{.APP_NAME}}" .
     env:
       GOOS: linux
       CGO_ENABLED: '{{.CGO_ENABLED | default "1"}}'
@@ -49,12 +48,6 @@ tasks:
     env:
       GOOS: linux
       CGO_ENABLED: '{{.CGO_ENABLED | default "1"}}'
-
-  compile:rust:
-    summary: Compiles Rust scanner bridge as staticlib for Linux
-    internal: true
-    cmds:
-      - node scripts/compile-rust-static.mjs --output "{{.ROOT_DIR}}/go/rustbridge/static-lib"
 
   run:
     preconditions:

@@ -86,10 +86,9 @@ ok(
   "表头缺「性能」列",
 );
 ok(
-  "汇总段含 rustbridge（concurrent）",
-  /concurrent[^\n]*rustbridge|rustbridge[^\n]*\n/.test(indexText) &&
-    indexText.includes("rustbridge"),
-  "性能画像未收录 rustbridge",
+  "汇总段收录带 perf 标签的卡",
+  /concurrent|cpu-bound|io-bound|memory-heavy/.test(indexText),
+  "性能画像未收录任何 perf 标签卡",
 );
 
 // 已知标注卡抽查：model3d 应带 gpu-bound（3D 渲染主题；抽查对象须为在世卡，

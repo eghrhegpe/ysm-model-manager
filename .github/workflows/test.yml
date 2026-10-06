@@ -172,7 +172,7 @@ jobs:
       # ⚠️ 顺序约束：main.go 有 `//go:embed all:frontend/dist`，任何 `go build ./...` /
       # `go vet ./...` / `go test ./...` 都要求 frontend/dist 已存在，否则报
       # 「pattern all:frontend/dist: no matching files found」直接失败。
-      # 故前端构建必须早于「Go 检查」，且早于下方所有 ./... 步骤（Rust 桥测试、覆盖率报告）。
+      # 故前端构建必须早于「Go 检查」，且早于下方所有 ./... 步骤（覆盖率报告）。
       # 前端依赖已于上方「安装前端依赖」装好，此处构建零额外前置。
       - name: 前端构建（embed 前置：main.go //go:embed all:frontend/dist 依赖此产物）
         working-directory: frontend
@@ -242,39 +242,6 @@ jobs:
           }
           Write-Host "golangci-lint 增量基线: $base"
           golangci-lint run --new-from-rev=$base ./...
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      # 缓存 Rust 依赖仓库（registry/git）与两个 crate 的 target 编译产物——
-      # cargo test + cargo build --release（生产 DLL）每次全量编译是校正流程最重的一环。
-      # key 锚定两个 Cargo.lock，restore-keys 兜底低版本命中，参照 Go 模块缓存同款写法。
-      - name: 缓存 Rust 依赖与编译产物（命中免编译）
-        uses: actions/cache@v5.1.0
-        with:
-          path: |
-            ${{ runner.os == 'Windows' && '~\.cargo\registry' || '~/.cargo/registry' }}
-            ${{ runner.os == 'Windows' && '~\.cargo\git' || '~/.cargo/git' }}
-            rust-core/target
-            rust-wails-bridge/target
-          key: cargo-cache-${{ runner.os }}-${{ hashFiles('rust-core/Cargo.lock', 'rust-wails-bridge/Cargo.lock') }}
-          restore-keys: |
-            cargo-cache-${{ runner.os }}-
-
-      - name: Rust 扫描器单测（code review P2：此前 CI 零 Rust 覆盖——rust_backend 路径全被 //go:build 排除）
-        shell: pwsh
-        run: |
-          cargo test --manifest-path rust-core/Cargo.toml
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo test --manifest-path rust-wails-bridge/Cargo.toml
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Rust 桥 DLL + rust_backend Go 测试（Windows 生产路径，code review P2）
-        shell: pwsh
-        run: |
-          cargo build --release --locked --manifest-path rust-wails-bridge/Cargo.toml
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          New-Item -ItemType Directory -Force 'go/rustbridge/bin' | Out-Null
-          Copy-Item -Force 'rust-wails-bridge/target/release/ysm_model_manager_wails_bridge.dll' 'go/rustbridge/bin/ysm_model_manager_wails_bridge.dll'
-          go test -tags rust_backend ./go/scanner/... -count=1 -timeout 5m | Out-String -Width 400
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Go 覆盖率报告（非阻断，趋势可见）

@@ -678,11 +678,10 @@ for (const field of [
   );
 }
 
-// 四个「未参与原因」token 的常量值必须与前端映射表字面一致：token 是文案映射的判定依据，
-// 改了值前端映射全落空（落到通用句），用户再也看不成「为什么没测到 Rust」。
+// 「未参与原因」token 的常量值必须与前端映射表字面一致：token 是文案映射的判定依据，
+// 改了值前端映射全落空（落到通用句），用户再也看不成「为什么没测到」。
+// 2026-10-06：Rust 后端删除后仅剩 cache_hit / interfered 两个 token。
 const SCAN_BENCH_REASONS = {
-  scanBenchReasonUnavailable: "unavailable",
-  scanBenchReasonFellBack: "fell_back",
   scanBenchReasonCacheHit: "cache_hit",
   scanBenchReasonInterfered: "interfered",
 };

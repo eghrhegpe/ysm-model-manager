@@ -80,7 +80,7 @@ status: active
 - **appendItem 前缀检查无分隔符守卫**（instance.go appendItem）：`strings.HasPrefix(p, globalDir)` 未带 `basedir+sep` 守卫——同文件 `relOf` 特意加了守卫防 `D:\repo` vs `D:\repo-instance` 误归属，此处口径不一；当前 p 来自双侧 Walk 结果通常安全，但属防御范式漏网
 - **legacy 在容器层被抹平**：`aggregateStatus` 把 legacy（旧硬链接）归入 hasPull → 含 legacy 子项的容器聚合为 optional（📤 可拉取），legacy 语义丢失、legacy tab 下看不到该容器（与前端 applyFilter 不递归叠加，见 [app-sync-manager](./app-sync-manager.md)）
 - **`__self` 魔法段名边缘冲突**：真实子目录恰名 `__self` 时与防御性自引用子项同 key 相互覆盖（极低概率，记录在案即可）
-- **R34 P2-13 前缀守卫修复**（instance.go:225）：`appendOneItem` 中 `strings.HasPrefix(p, c.globalDir)` 用裸前缀匹配，全局根是另一全局根前缀（`D:\repo\a` vs `D:\repo\abc`）时算出错误实例侧路径。修复：`HasPrefix(p, c.globalDir+sep)` + `TrimPrefix` 同口径，与 `relOf` 一致。
+- **R34 P2-13 前缀守卫修复**（`go/instance/instance.go|appendOneItem`）：`appendOneItem` 中 `strings.HasPrefix(p, c.globalDir)` 用裸前缀匹配，全局根是另一全局根前缀（`D:\repo\a` vs `D:\repo\abc`）时算出错误实例侧路径。修复：`HasPrefix(p, c.globalDir+sep)` + `TrimPrefix` 同口径，与 `relOf` 一致。
 - **sizeOf 静默吞错**：条目尺寸 `os.Stat` 失败返回 0 无告警，显示失真不可察觉
 - **混合夹平铺文件重复列示（面板链既有，2026-09 ADR-310 审计实证）**：`absorbSelfMarker` 把目录 marker 的直接子文件并入容器，而同一文件又以「平铺文件叶」身份独立注册 → 容器 `children` 里同一路径出现两次（实测 `global/A/{flat.pmx, B/deep.pmx}` → 子项含 `flat.pmx` ×2），面板 UI 表现为同名两行。侧栏 `BuildInstanceStatusCounts` 已对清单去重（防重复安装），**面板树本身的重复行未治**——修它须动 `nestDirLevelTree`/`absorbSelfMarker` 并有对应面板回归
 - ~~**无可推送文件的单元只能由面板单行推送修**~~ **已收口（2026-09 审计后）**：改为整夹进 `MissingDirs`，一键安装走 folder-aware 的 `PushSingleResourceToInstance`，计数与可修性一致（见「对外 API」节）

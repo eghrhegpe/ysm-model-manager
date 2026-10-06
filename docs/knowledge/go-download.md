@@ -101,7 +101,7 @@ status: active
 - **`consume` 的 running 复位与 panicked 解耦**：无论是否 panic，消费循环退出都把 `running` 置 false（否则 `Status().Running` 永久为真、前端卡 downloading）；`panicked` 只抑制 done 的发送（panic 时队列 fail-stop 停在 panic 任务上，假 done 会让前端误判整体完成）
 - **取消后不消费新批次**：`consume` 入口先判 `len(tasks)==0` 即返回且**不置 running**——`Cancel` 已清空 tasks，故陈旧消费驱动不会把已取消的队列重新标记为运行中（原由 epoch 比对守卫的同一保护目标，现为结构保证）
 - **`commitAtomicWrite` 的 Sync 失败分支必须显式 `Close` 释放句柄**（R26 P2-2 修复）：旧实现 Sync 失败直接 return，Close 没被调用，依赖外层 cleanup 的 Close 顺序。Windows 上句柄未释放会导致后续 Remove 失败、`.part-*` 残留。修复：Sync 失败分支显式 `_ = af.tmp.Close()` 释放句柄后再 return。Close 的错误被丢弃——Sync 已失败，Close 失败不影响错误分类。
-- **`len(via) >= 10` 重定向上限与标准库对齐，非 off-by-one**（R26 P2-1 误判澄清）：Go 语义里 `via` 是「已发起的请求」（含原始请求），`len(via) >= 10` 拒绝第 10 次重定向（第 11 个请求），允许 9 次重定向——与标准库 `net/http/client.go:834` 的 `defaultMaxRedirect=10` 语义完全对齐。子代理曾误判为 off-by-one，核查标准库源码后确认不修。
+- **`len(via) >= 10` 重定向上限与标准库对齐，非 off-by-one**（R26 P2-1 误判澄清）：Go 语义里 `via` 是「已发起的请求」（含原始请求），`len(via) >= 10` 拒绝第 10 次重定向（第 11 个请求），允许 9 次重定向——与 Go 标准库 `net/http` 的 `defaultMaxRedirect=10` 语义完全对齐（外部源码，不在本仓）。子代理曾误判为 off-by-one，核查标准库源码后确认不修。
 
 ## 相关
 

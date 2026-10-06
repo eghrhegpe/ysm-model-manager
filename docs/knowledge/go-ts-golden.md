@@ -127,7 +127,7 @@ invariant_anchors:
 ## 与其他子系统关系
 
 - 上游事实源：`resource_types.json`（zipEntries 指纹）、`go/litematic/blocks_1_12.json`（方块表）。
-- 对拍对象：`frontend/src/utils/resource/types.ts:376 matchZipEntryTS`、`frontend/src/parsers/voxel-colors.ts`、`go/types/registry/extensions.go:257 MatchZipEntry`、`go/litematic/block_colors.go`/`block_ids.go`。
+- 对拍对象：`frontend/src/utils/resource/types.ts|matchZipEntryTS`、`frontend/src/parsers/voxel-colors.ts`、`go/types/registry/extensions.go|MatchZipEntry`、`go/litematic/block_colors.go`/`block_ids.go`。
 - 更新口径（ADR-154 §2.5）：Go 行为变更（有意）→ 两端重跑、同一批 fixture 期望值同步更新并带 diff 审查；生成物变更 → golden 测试即过期检测器。
 
 ## 实施进度

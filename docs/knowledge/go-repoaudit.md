@@ -86,7 +86,7 @@ status: active
 - CLI 与 GUI 共用同一 `Audit` 实现，审计口径唯一（防双轨漂移）
 - 目录不存在/不可用必须先报错——`filepath.Walk` 对不存在目录只回错误回调却返回 nil，会静默产出「空报告 = 假绿」
 - 符号链接守卫：拒绝根目录符号链接，跳过子树内符号链接（与 dedup 包对齐）
-  - **R34 P2-3 根 symlink 守卫 filepath.Clean 修复**（repoaudit.go:159）：原 `path == dirPath` 字符串比较，含尾斜杠/`..`/未 clean 路径时比较失败，根符号链接被静默跳过，产出空报告。修复：`path == filepath.Clean(dirPath)`。
+  - **R34 P2-3 根 symlink 守卫 filepath.Clean 修复**（`go/repoaudit/repoaudit.go|AuditCtx`）：原 `path == dirPath` 字符串比较，含尾斜杠/`..`/未 clean 路径时比较失败，根符号链接被静默跳过，产出空报告。修复：`path == filepath.Clean(dirPath)`。
 - 健康分数有下限 `scoreFloor = 30`，避免多问题叠加直接归零失去区分度
 - `Classify` 未命中任何注册表类型 → `"other"`（不报错）
 - **`Resources.ByType` 只在 walk 结束后一次性赋值（2026-09 落地）**：`DirAuditResult` 字面量初始化时不再预 `make` `ByType` map——原实现先 make 一个随即被下方 `result.Resources.ByType = resources`（局部 map 累积结果）整体覆盖，属无谓分配。后续改动须保持「局部 map 累积 → walk 后赋值」形态，勿在字面量里提前构造。
@@ -98,7 +98,7 @@ status: active
 ## 已知问题 / 待治理（R34 审计记录）
 
 - **无界 JSON 解码 OOM 风险（已修复 2026-09-14）**：`isModelFileValid` 现走 `fsutil.ReadLimitedEntry(f, modelFileReadLimit)`（默认 `registry.MaxReadLimit` 50MB，limit+1 探测截断，超限判无效）——与 go/ysm `readFileLimited` 同族口径；包级 var 供测试注入小值（`TestIsModelFileValid_SizeLimit` 钉住）。
-- **无 context/超时**（repoaudit.go:125/256，R34 P3-5 待修）：`Audit` 与 `HealthReportFor` 无 `context.Context`/超时，大仓库审计可能长时阻塞 GUI 绑定层。
+- **context 取消已补、内建超时仍缺**（`go/repoaudit/repoaudit.go|Audit` / `HealthReportFor`，R34 P3-5 **部分修**）：2026-10-06 核实已补 `AuditCtx` / `HealthReportForCtx` 变体，按 ADR-314 取消检查点降频查 `ctx.Err()`（每 64 项一查，因 `ctx.Err()` 内部带锁）——**已可取消**。但**无内建超时上限**：大仓库审计能否及时中止取决于调用方是否套 `context.WithTimeout`，绑定层裸调仍可能长时阻塞 GUI。
 - **P2-4 WalkDir 回调对 `err != nil`**（无权限目录）仅 `append` warning 后 `return nil`，部分目录不可达时 `TotalFiles` 偏低但分数仍可能 100，静默偏绿。修复方向：累计访问异常计数，超过阈值标记 `partial=true`。
 - **P2-5 `isModelFileValid` 对未识别扩展名 `return true` 放行**，若未来调用方放宽 gate，未知扩展名被误判有效。修复方向：函数内对未识别扩展名 `return false` 防御性收紧。
 - **P3-6 `HealthReportFor` 中 dedup 扫描失败直接 `return HealthReport{}, err`**，丢弃已成功的 `audit` 结果。修复方向：dedup 失败时保留 audit 部分、Dedup 置零并在 warnings 追加。

@@ -51,30 +51,31 @@ func InvalidateSyncItemsCache() {
 // 使用 xxhash 结构化摘要：新增字段不需要手动加进 key，哈希自动覆盖所有输入。
 func buildSyncItemsKey(ins *types.VersionInstance, rtypes []registry.ResourceType, filesRoots map[string]string, subtype string) string {
 	h := xxhash.New()
-	h.WriteString(ins.Name)
-	h.Write([]byte{0})
-	h.WriteString(ins.VersionDir)
-	h.Write([]byte{0})
-	h.WriteString(subtype)
-	h.Write([]byte{0})
+	// hash.Hash 契约：Write/WriteString 恒返回 nil 错误；仍显式忽略以满足 errcheck
+	_, _ = h.WriteString(ins.Name)
+	_, _ = h.Write([]byte{0})
+	_, _ = h.WriteString(ins.VersionDir)
+	_, _ = h.Write([]byte{0})
+	_, _ = h.WriteString(subtype)
+	_, _ = h.Write([]byte{0})
 	rootKeys := make([]string, 0, len(filesRoots))
 	for k := range filesRoots {
 		rootKeys = append(rootKeys, k)
 	}
 	sort.Strings(rootKeys)
 	for _, k := range rootKeys {
-		h.WriteString(k)
-		h.Write([]byte("="))
-		h.WriteString(filesRoots[k])
-		h.Write([]byte{0})
+		_, _ = h.WriteString(k)
+		_, _ = h.Write([]byte("="))
+		_, _ = h.WriteString(filesRoots[k])
+		_, _ = h.Write([]byte{0})
 	}
 	for _, rt := range rtypes {
-		h.WriteString(rt.ID)
-		h.Write([]byte{'|'})
-		h.WriteString(rt.Name)
-		h.Write([]byte{'|'})
-		h.WriteString(rt.Icon)
-		h.Write([]byte{0})
+		_, _ = h.WriteString(rt.ID)
+		_, _ = h.Write([]byte{'|'})
+		_, _ = h.WriteString(rt.Name)
+		_, _ = h.Write([]byte{'|'})
+		_, _ = h.WriteString(rt.Icon)
+		_, _ = h.Write([]byte{0})
 	}
 	// 十六进制编码 8 字节 hash → 16 字符短键
 	return fmt.Sprintf("%016x", h.Sum64())

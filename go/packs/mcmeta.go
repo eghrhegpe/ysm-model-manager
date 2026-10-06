@@ -52,7 +52,7 @@ func ReadPackMeta(path string) (*registry.PackMeta, string, error) {
 				// 恰 1MB 被截断后静默继续，与 pack.png/lang 的 LimitReader+1 口径不一致
 				// （对齐 lang 分支 mcmeta.go:235 的写法：Open + LimitReader + 长度判断）
 				data, _ = io.ReadAll(io.LimitReader(meta, maxMcmetaSize+1))
-				meta.Close()
+				_ = meta.Close()
 				if len(data) > maxMcmetaSize {
 					return nil, "", fmt.Errorf("%w（实际 %d 字节）", ErrPackMetaTooLarge, len(data))
 				}
@@ -65,7 +65,7 @@ func ReadPackMeta(path string) (*registry.PackMeta, string, error) {
 		if st, err := os.Stat(pngPath); err == nil && st.Size() <= maxPackPng && st.Mode().IsRegular() {
 			if png, err := os.Open(pngPath); err == nil {
 				packPng, _ = io.ReadAll(io.LimitReader(png, maxPackPng+1))
-				png.Close()
+				_ = png.Close()
 				if len(packPng) > maxPackPng {
 					packPng = nil // 超限视为无效，缩略图可选
 				}
@@ -77,7 +77,7 @@ func ReadPackMeta(path string) (*registry.PackMeta, string, error) {
 		if err != nil {
 			return nil, "", fmt.Errorf("打开资源包 %s: %w", path, err)
 		}
-		defer r.Close()
+		defer func() { _ = r.Close() }()
 		for _, f := range r.File {
 			low := strings.ToLower(f.Name)
 			// 任意层级段匹配（与检测层 MatchZipEntry 的 ADR-082 S1 口径一致）：
@@ -90,7 +90,7 @@ func ReadPackMeta(path string) (*registry.PackMeta, string, error) {
 				// 限制 pack.mcmeta 大小（1MB），与 pack.png 的 LimitReader 保护对齐
 				// +1 截断探测（ADR-033）——恰 1MB 被截断后静默继续
 				readData, readErr := io.ReadAll(io.LimitReader(rc, maxMcmetaSize+1))
-				rc.Close()
+				_ = rc.Close()
 				if readErr == nil && len(readData) <= maxMcmetaSize {
 					data = readData
 				} else if readErr == nil {
@@ -105,7 +105,7 @@ func ReadPackMeta(path string) (*registry.PackMeta, string, error) {
 				// limit+1 探测截断（ADR-033 陷阱）——超 10MB 的 pack.png 被截断后
 				// readErr==nil，损坏 PNG 会被 base64 包装展示。超限时置空跳过
 				readData, readErr := io.ReadAll(io.LimitReader(rc, maxPackPng+1))
-				rc.Close()
+				_ = rc.Close()
 				if readErr == nil && len(readData) <= maxPackPng {
 					packPng = readData
 				}
@@ -189,7 +189,7 @@ func ReadShaderpackLangParts(path string) (string, map[string]string) {
 		if st, err := os.Stat(langPath); err == nil && st.Mode().IsRegular() {
 			if lf, err := os.Open(langPath); err == nil {
 				langData, _ = io.ReadAll(io.LimitReader(lf, maxLangSize+1))
-				lf.Close()
+				_ = lf.Close()
 				if len(langData) > maxLangSize {
 					langData = nil // 超限视为无效，返回空 name（前端用文件名兜底）
 				}
@@ -200,7 +200,7 @@ func ReadShaderpackLangParts(path string) (string, map[string]string) {
 		if err != nil {
 			return "", map[string]string{}
 		}
-		defer r.Close()
+		defer func() { _ = r.Close() }()
 		for _, f := range r.File {
 			low := strings.ToLower(f.Name)
 			// 统一小写比较——原 `low == "lang/en_US.lang"` 永远不成立
@@ -218,7 +218,7 @@ func ReadShaderpackLangParts(path string) (string, map[string]string) {
 				if len(langData) > maxLangSize {
 					langData = nil // 超限视为无效，返回空 name（前端用文件名兜底）
 				}
-				rc.Close()
+				_ = rc.Close()
 				break
 			}
 		}

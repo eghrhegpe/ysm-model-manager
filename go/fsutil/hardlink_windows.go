@@ -38,7 +38,7 @@ func IsHardLink(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer syscall.CloseHandle(handle)
+	defer func() { _ = syscall.CloseHandle(handle) }()
 	var bhi syscall.ByHandleFileInformation
 	if err := syscall.GetFileInformationByHandle(handle, &bhi); err == nil && bhi.NumberOfLinks > 1 {
 		return true

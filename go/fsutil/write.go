@@ -58,7 +58,7 @@ var (
 // 读取错误同样返回 nil（调用方跳过该条目）。rc 由本函数 Close。
 // 收敛自 go/geometry/archive.go 的 readLimitedEntry——ysm/packs 等各档上限探测统一引用本函数。
 func ReadLimitedEntry(rc io.ReadCloser, limit int64) []byte {
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	// limit<=0 边界不对称——limit==0 时空条目返回非 nil 空切片
 	// （调用方视为有效数据）、非空条目返回 nil；limit<0 恒返回 nil；limit==MaxInt64 时
 	// limit+1 溢出为负 → LimitReader 读 0 字节 → 静默返回空切片（被误当有效）。
@@ -97,27 +97,27 @@ func WriteFileAtomic(destPath string, data []byte) error {
 	}
 	tmpName := tmp.Name()
 	if err := writeToFile(tmp, data); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName) // 最佳努力清理，失败不影响报错返回
 		return fmt.Errorf("%w: %w", ErrWriteFailed, err)
 	}
 	// Sync 确保数据落盘后再 Close+Rename——与 installer/recycle/importer 的
 	// copyFile 落盘检查对齐（ADR-033 截断静默反模式：不 Sync 时崩溃可能零长度文件装盘）
 	if err := syncFile(tmp); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
 		return fmt.Errorf("%w: %w", ErrSyncFailed, err)
 	}
 	if err := closeFile(tmp); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName)
 		return fmt.Errorf("%w: %w", ErrCloseFailed, err)
 	}
 	if err := chmodFile(tmpName, FilePerms); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName)
 		return fmt.Errorf("%w: %w", ErrChmodFailed, err)
 	}
 	if err := renameFile(tmpName, destPath); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName)
 		return fmt.Errorf("%w: %w", ErrRenameFailed, err)
 	}
 	return nil
@@ -130,7 +130,7 @@ func SHA256File(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return "", err

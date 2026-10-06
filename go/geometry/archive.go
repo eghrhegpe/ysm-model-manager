@@ -122,7 +122,7 @@ func readPNGEntry(e container.Entry) []byte {
 	if err != nil {
 		return nil
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	return fsutil.ReadLimitedEntry(rc, int64(maxExtractSize))
 }
 
@@ -132,7 +132,7 @@ func ExtractFirstPNGFromZip(data []byte, size int64) []byte {
 	if err != nil {
 		return nil
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	return extractFirstPNG(r)
 }
 
@@ -142,7 +142,7 @@ func ExtractFirstPNGFrom7z(data []byte, size int64) []byte {
 	if err != nil {
 		return nil
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	return extractFirstPNG(r)
 }
 
@@ -993,7 +993,7 @@ func parseComponentsFromArchive(data []byte, size int64, sevenZip bool) ([]types
 	if err != nil {
 		return nil, nil, err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	collected := collectArchiveFiles(r.Entries())
 	models, texNames := buildComponents(collected.geoFiles, collected.modelOrder, collected.texOrder, collected.pngs, collected.pngNames, collected.modelTexName)
 	// 文件归属清单（只识别不解析）：每个组件挂同一容器清单，前端取任一组件即可得
@@ -1249,7 +1249,7 @@ func parseModelFromArchive(data []byte, size int64, sevenZip bool) (*types.Bedro
 	if err != nil {
 		return nil, nil, nil, nil
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	return parseModelFromEntries(r.Entries(), archiveLogTag(sevenZip))
 }
 
@@ -1263,7 +1263,7 @@ func parseFromArchiveEntry(data []byte, size int64, subPath string, sevenZip boo
 	if err != nil {
 		return nil, nil
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	entries := r.Entries()
 	// PNG 全量须与 ParseFromZip 同口径：L0 清单过滤（否则 SubModel.TexSlot = i 会指错纹理数组下标）。
 	_, pngs, _, geoFiles := parseModelFromEntries(entries, archiveLogTag(sevenZip))

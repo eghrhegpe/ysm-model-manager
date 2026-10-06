@@ -162,7 +162,7 @@ func CheckWithClient(client *http.Client, apiURL, current string) (*UpdateInfo, 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 显式检查状态码：403（rate limit）/ 404 等错误体不是 release 数组，
 	// 直接 Decode 会返回误导性错误；解析 GitHub 错误 message 给出可读提示
@@ -332,7 +332,7 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 非 200 直接拒绝——原实现不检查状态码，asset URL 返回 404 时
 	// 在 expectedHash=="" 场景下错误页 HTML 会被当更新包写入 tmp 并返回成功
@@ -373,8 +373,8 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 	// 或临时目录存在符号链接劫持，下载的 exe 可被替换。
 	// 创建后用 os.Lstat 校验：若发现是符号链接则拒绝（fail-closed）。
 	if fi, lerr := os.Lstat(tmp); lerr == nil && fi.Mode()&os.ModeSymlink != 0 {
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp) // 最佳努力清理，失败不影响拒绝返回
 		return "", fmt.Errorf("临时文件 %s 是符号链接，拒绝写入（防 symlink 劫持）", tmp)
 	}
 
@@ -384,8 +384,8 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 		// 超限早退前先 Close 再 Remove——原 os.Remove(tmp)
 		// 时 f 未关闭，Windows 删除打开中的文件必然失败（错误被忽略 → 文件残留）
 		// 且 f 句柄泄漏（该路径无任何 Close）
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp) // 最佳努力清理，失败不影响拒绝返回
 		return "", fmt.Errorf("更新包过大（%d 字节），超过 %d 字节上限: %w", resp.ContentLength, maxDownloadSize, ErrDownloadTooBig)
 	}
 	total := resp.ContentLength
@@ -407,18 +407,18 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 		one := make([]byte, 1)
 		extra, probeErr := resp.Body.Read(one)
 		if extra > 0 || (probeErr != nil && probeErr != io.EOF) {
-			f.Close()
-			os.Remove(tmp)
+			_ = f.Close()
+			_ = os.Remove(tmp) // 最佳努力清理，失败不影响拒绝返回
 			return "", fmt.Errorf("更新包超过 %d 字节上限（截断探测失败: %v）: %w", maxDownloadSize, probeErr, ErrDownloadTooBig)
 		}
 	}
 	closeErr := f.Close()
 	if err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp) // 最佳努力清理，失败不影响报错返回
 		return "", err
 	}
 	if closeErr != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return "", closeErr
 	}
 
@@ -427,7 +427,7 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 	// 标准 http client 对提前关闭的 CL 响应返回 unexpected EOF（由上面 err 分支拒绝），
 	// 此检查为纵深防御，兜底自定义传输层返回「n<total 且 err==nil」的异常场景。
 	if total > 0 && n != total {
-		os.Remove(tmp)
+		_ = os.Remove(tmp) // 最佳努力清理，失败不影响报错返回
 		return "", fmt.Errorf("%w：期望 %d 字节，实际收到 %d 字节", ErrDownloadIncomplete, total, n)
 	}
 
@@ -443,7 +443,7 @@ func downloadOnce(assetURL string, expectedHash string, onProgress func(done, to
 	{
 		actual := hex.EncodeToString(hasher.Sum(nil))
 		if !strings.EqualFold(actual, expectedHash) {
-			os.Remove(tmp)
+			_ = os.Remove(tmp) // 最佳努力清理，失败不影响报错返回
 			return "", fmt.Errorf("%w：\n期望 %s\n实际 %s\n文件可能被篡改或下载不完整", ErrHashMismatch, expectedHash, actual)
 		}
 	}
@@ -502,40 +502,40 @@ func InstallUpdate(exePath string) error {
 	var magic [2]byte
 	_, err = io.ReadFull(f, magic[:])
 	if err != nil || string(magic[:]) != "MZ" {
-		f.Close()
+		_ = f.Close()
 		return ErrInvalidPackage
 	}
 	// 读取 PE header 偏移（MZ + 0x3C）
 	if _, err := f.Seek(0x3C, io.SeekStart); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("%w：读取 PE 偏移失败: %v", ErrInvalidPackage, err)
 	}
 	var peOffsetBytes [4]byte
 	if _, err := io.ReadFull(f, peOffsetBytes[:]); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("%w：读取 PE 偏移失败: %v", ErrInvalidPackage, err)
 	}
 	peOffset := int(peOffsetBytes[0]) | int(peOffsetBytes[1])<<8 | int(peOffsetBytes[2])<<16 | int(peOffsetBytes[3])<<24
 	// 偏移合理性检查：PE header 不可能在 MZ header 之前，也不能太远（PE 文件通常 < 1GB）
 	if peOffset < 64 || peOffset > 1<<30 {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("%w：PE 偏移非法 %d", ErrInvalidPackage, peOffset)
 	}
 	// 读取 PE 签名（"PE\0\0"）
 	if _, err := f.Seek(int64(peOffset), io.SeekStart); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("%w：定位 PE 签名失败: %v", ErrInvalidPackage, err)
 	}
 	var peSig [4]byte
 	if _, err := io.ReadFull(f, peSig[:]); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("%w：读取 PE 签名失败: %v", ErrInvalidPackage, err)
 	}
 	if string(peSig[:]) != "PE\x00\x00" {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("%w：PE 签名不匹配", ErrInvalidPackage)
 	}
-	f.Close()
+	_ = f.Close()
 
 	// 准备临时目录：复制新 exe + 释放 helper
 	tmpDir, err := os.MkdirTemp("", "ysm-update")
@@ -544,12 +544,12 @@ func InstallUpdate(exePath string) error {
 	}
 	newPath := filepath.Join(tmpDir, "YSM-Model-Manager.exe")
 	if err := fsutil.CopyFile(exePath, newPath); err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir) // 最佳努力清理，失败不影响报错返回
 		return fmt.Errorf("准备新 exe 失败: %w", err)
 	}
 	helperPath := filepath.Join(tmpDir, "ysm-updater-helper.exe")
 	if err := extractEmbeddedHelper(helperPath); err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 		return fmt.Errorf("释放更新助手失败: %w", err)
 	}
 
@@ -561,7 +561,7 @@ func InstallUpdate(exePath string) error {
 	// （Windows 实装 SW_HIDE，其他平台空操作；updater 是唯一生产 exec.Command 调用点）
 	executil.HideWindow(cmd)
 	if err := cmd.Start(); err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 		return fmt.Errorf("启动更新助手失败: %w", err)
 	}
 
@@ -655,7 +655,7 @@ func fetchExpectedHash(sumsURL string, fileName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("SHA256SUMS 获取失败: HTTP %d", resp.StatusCode)

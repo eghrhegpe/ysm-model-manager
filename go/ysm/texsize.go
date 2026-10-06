@@ -64,7 +64,7 @@ func readTexFromZip(path string) (int, int) {
 	if err != nil {
 		return 0, 0
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	// 遍历所有 .json 条目（含非标准命名）找含 minecraft:geometry 的几何 JSON。
 	// 原实现为两个逐字节相同的循环（首循环注释误标「查找 geometry JSON」却未按名过滤，
@@ -102,7 +102,7 @@ func readTexFrom7z(path string) (int, int) {
 	if err != nil {
 		return 0, 0
 	}
-	defer zr.Close()
+	defer func() { _ = zr.Close() }()
 	// 条目遍历模式对齐 readTexFromZip：非 .json 跳过，ysm.json 自身无 geometry 也跳过
 	for _, f := range zr.Entries() {
 		name := strings.ToLower(f.Name())

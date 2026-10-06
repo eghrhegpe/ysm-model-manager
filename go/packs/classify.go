@@ -382,7 +382,7 @@ func openContainerEntries(path string) []container.Entry {
 	if err != nil {
 		return nil
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	return r.Entries()
 }
 

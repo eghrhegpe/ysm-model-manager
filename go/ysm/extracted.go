@@ -224,7 +224,7 @@ type texFile struct {
 func collectTextureFiles(texDir string) []texFile {
 	var files []texFile
 	if d, err := os.Stat(texDir); err == nil && d.IsDir() {
-		filepath.WalkDir(texDir, func(path string, d os.DirEntry, err error) error {
+		_ = filepath.WalkDir(texDir, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
@@ -355,7 +355,7 @@ func fallbackWalkDir(dir, ysmPath string) *types.BedrockModel {
 	excludeDirs := map[string]bool{"animations": true, "controller": true, "avatar": true}
 	var found *types.BedrockModel
 	probes := 0
-	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("[ysm] WalkDir 错误 (忽略): %v", err)
 			return nil

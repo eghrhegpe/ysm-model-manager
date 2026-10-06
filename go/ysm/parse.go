@@ -72,7 +72,7 @@ func AnalyzeYSMModel(path string) YSMModelMeta {
 		meta.ErrorMsg = fmt.Sprintf("无法打开文件: %v", err)
 		return meta
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	// P1 修复：检查 ZIP 总大小，防止恶意构造的多文件 ZIP 撑爆内存
 	var totalSize int64

@@ -23,7 +23,7 @@ func IsModJar(jarPath, modID, displayName string) bool {
 	if err != nil {
 		return false
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	for _, f := range r.Entries() {
 		// 支持 mods.toml 和 neoforge.mods.toml

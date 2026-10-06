@@ -74,24 +74,24 @@ func CopyFile(src, dst string) error {
 		return stepErr(StepOpen, err)
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), DirPerms); err != nil {
-		in.Close()
+		_ = in.Close()
 		return stepErr(StepMkdir, err)
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(dst), ".copy-*.tmp")
 	if err != nil {
-		in.Close()
+		_ = in.Close()
 		return stepErr(StepCreateTmp, err)
 	}
 	tmpName := tmp.Name()
 	ok := false
 	defer func() {
-		tmp.Close()
+		_ = tmp.Close()
 		if !ok {
-			os.Remove(tmpName)
+			_ = os.Remove(tmpName)
 		}
 	}()
 	if _, err := io.Copy(tmp, in); err != nil {
-		in.Close()
+		_ = in.Close()
 		return stepErr(StepCopy, err)
 	}
 	// 读取完成后立即关闭源文件——Windows 上文件被进程持有句柄时
@@ -109,11 +109,11 @@ func CopyFile(src, dst string) error {
 		return stepErr(StepClose, err)
 	}
 	if err := os.Chmod(tmpName, FilePerms); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName)
 		return stepErr(StepChmod, err)
 	}
 	if err := os.Rename(tmpName, dst); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName)
 		return stepErr(StepRename, err)
 	}
 	ok = true
@@ -171,7 +171,7 @@ func CopyDirRecursive(src, dst string, opts CopyDirOptions) error {
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(tmpDir) // 失败或 rename 后 tmpDir 已不存在，安全
+		defer func() { _ = os.RemoveAll(tmpDir) }() // 失败或 rename 后 tmpDir 已不存在，安全
 
 		if err := copyDirRecursiveWalk(src, tmpDir, opts); err != nil {
 			return err

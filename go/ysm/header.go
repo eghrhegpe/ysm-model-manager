@@ -182,7 +182,7 @@ func AnalyzeYSMHeader(path string) YSMHeader {
 			f, err := os.Open(path)
 			if err == nil {
 				rich := scanHeader(bufio.NewScanner(f))
-				f.Close()
+				_ = f.Close()
 				// 合并
 				if rich.Name != "" {
 					h.Name = rich.Name
@@ -230,7 +230,7 @@ func AnalyzeYSMHeader(path string) YSMHeader {
 	if err != nil {
 		return YSMHeader{}
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return scanHeader(bufio.NewScanner(f))
 }
 
@@ -240,7 +240,7 @@ func hasTextHeader(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var buf [512]byte
 	n, _ := io.ReadFull(f, buf[:])
 	if n < 16 {
@@ -272,7 +272,7 @@ func detectYSGPHeader(path string) *YSMHeader {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// 读取前 100 字节分析头部
 	var header [100]byte

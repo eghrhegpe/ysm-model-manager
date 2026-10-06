@@ -71,7 +71,7 @@ func CountFiles(dir string, skipRecycle bool) int {
 // 不为拿 len 而白白物化整棵文件树（大目录）；遍历语义与 WalkAllFiles 完全一致。
 func walkFilesStream(dir string, skipRecycle bool, visit func(p string)) int {
 	count := 0
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			log.Printf("[fsutil] WalkDir 访问 %s 失败: %v", p, err)
 			return nil

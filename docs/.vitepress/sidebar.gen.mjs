@@ -1577,6 +1577,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
       },
       {
+        "text": "ADR-270-d6：R10 收尾：截图多角度编排与菜单候选派生归属纠正（适配器域知识回迁 preview-3d/adapters）",
+        "link": "/adr/decisions/ADR-270-d6-r10-screenshot-menu-adapter-domain-knowledge"
+      },
+      {
         "text": "ADR-270-d5：R10 穿透债归属纠正：YSM 预览数据装配流水线自 views 迁入 preview-3d/adapters（否决再导出面）",
         "link": "/adr/decisions/ADR-270-d5-r10-y-sm-preview-pipeline-ownership"
       },

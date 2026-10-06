@@ -493,3 +493,63 @@ func TestFindInstDir_Blueprint_SableSchematicsCaseInsensitive(t *testing.T) {
 		t.Fatalf("Sable-Schematics 大小写变体应兜底命中: got=%s, 期望 %s", got, want)
 	}
 }
+
+// ====== 兜底扫描内部路径（拆解前的现状钉桩）======
+
+// TestFindInstDir_VersionDirMissing_ReadDirError versionDir 整目录不存在 ⇒
+// 兜底扫描的 os.ReadDir 报错，必须落回标准路径（不 panic、不返回空串）。
+func TestFindInstDir_VersionDirMissing_ReadDirError(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "no-such-version-dir")
+	want := filepath.Join(missing, "schematics")
+	if got := FindInstDir(missing, "schematics", "blueprint"); got != want {
+		t.Fatalf("versionDir 不存在应返回标准路径: got=%s, 期望 %s", got, want)
+	}
+}
+
+// TestFindInstDir_FallbackSkipsNonDirEntries versionDir 一级条目含普通文件时，
+// 兜底循环必须跳过非目录条目（对文件做 WalkDir/索引会报错并刷日志），继续命中
+// fallbackDir 声明的目录。文件名 "0-stray.txt" 排序在 "Sable-Schematics" 之前
+// （os.ReadDir 按名排序），确保非目录分支先行触发。
+func TestFindInstDir_FallbackSkipsNonDirEntries(t *testing.T) {
+	versionDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(versionDir, "0-stray.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sable := filepath.Join(versionDir, "Sable-Schematics", "core")
+	if err := os.MkdirAll(sable, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(sable, "c1.nbt"), []byte("nbt"), 0o644)
+	want := filepath.Join(versionDir, "Sable-Schematics")
+	got := FindInstDir(versionDir, "schematics", "blueprint")
+	if got != want {
+		t.Fatalf("兜底应跳过非目录条目并命中 Sable-Schematics: got=%s, 期望 %s", got, want)
+	}
+}
+
+// TestFindInstDir_FallbackNoDirFilterSkipsStandard fallbackDir 为空 ⇒ 兜底不限定目录名
+// （真实注册表无此形态：守卫 6 强制 scanInstance=true 必须声明 fallbackDir），
+// 故用临时注册表注入该形态，钉住两点：标准目录自身在兜底循环中被跳过（不重复扫描），
+// 且无名限定时兄弟目录仍可命中。
+func TestFindInstDir_FallbackNoDirFilterSkipsStandard(t *testing.T) {
+	writeTempRegistry(t, `{"resourceTypes": [
+		{"id": "synthscan", "name": "合成兜底型", "group": "g",
+		 "instanceDir": "a-standard", "scanInstance": true, "extensions": [".nbt"]}
+	]}`)
+	defer SetRegistryPath("")
+
+	versionDir := t.TempDir()
+	// 标准目录（空）名排序在前 ⇒ 先被遍历到，命中「跳过标准目录」分支
+	if err := os.MkdirAll(filepath.Join(versionDir, "a-standard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	other := filepath.Join(versionDir, "zz-other")
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(filepath.Join(other, "s.nbt"), []byte("nbt"), 0o644)
+
+	if got := FindInstDir(versionDir, "a-standard", "synthscan"); got != other {
+		t.Fatalf("fallbackDir 为空应不限定目录名、跳过标准目录并命中兄弟目录: got=%s, 期望 %s", got, other)
+	}
+}

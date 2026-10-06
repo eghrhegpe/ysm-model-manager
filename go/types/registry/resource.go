@@ -244,10 +244,24 @@ func LoadRegistry() *ResourceTypeRegistry {
 // LoadRegistry 侧对每条违规 log.Printf 告警（WARN 级，不阻断——生产注册表可能
 // 含历史债，硬 fail 会让 IsSupportedExt 全线失效）；真实注册表的硬断言由 schema
 // 契约测试（tests/test_resource_schema.mjs）承担，CI 拦在提交前。
+//
+// 每个守卫是「独立遍历 reg → 追加违规」的封闭单元，彼此无共享可变状态，
+// 故各成一个具名函数；本函数只保留调用序列——追加顺序即对外可见的违规顺序契约。
 func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 	var violations []string
+	violations = append(violations, guardStorageSubDirUnique(reg)...)
+	violations = append(violations, guardConfigFieldGroupUnique(reg)...)
+	violations = append(violations, guardConfigFallbackResolvable(reg)...)
+	violations = append(violations, guardNakedSharedExt(reg)...)
+	violations = append(violations, guardSharedZipAnchorPriority(reg)...)
+	violations = append(violations, guardScanInstanceFallbackDir(reg)...)
+	return violations
+}
 
-	// 守卫 1：storageSubDir 全局唯一
+// guardStorageSubDirUnique 守卫 1：storageSubDir 全局唯一。
+// 重复值意味着两个类型落盘到同一路径——存储冲突。
+func guardStorageSubDirUnique(reg *ResourceTypeRegistry) []string {
+	var violations []string
 	subDirOwners := make(map[string][]string) // storageSubDir → []typeID
 	for _, rt := range reg.ResourceTypes {
 		if rt.StorageSubDir != "" {
@@ -260,11 +274,15 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 				"storageSubDir=%q 被多个类型声明: %v——存储路径冲突", subDir, owners))
 		}
 	}
+	return violations
+}
 
-	// 守卫 2：configField 组内唯一
-	// 同组共享合法（mmd 家族 9 类型共享 MmdRoot 配置槽——用户配一次、组内各
-	// storageSubDir 挂其下；守卫 3 范例 L「vrc 经 configFallback 回退 MmdRoot」同
-	// 一族多消费方设计）；违规仅限同一字段被**不同组**的类型声明——配置槽归属歧义。
+// guardConfigFieldGroupUnique 守卫 2：configField 组内唯一。
+// 同组共享合法（mmd 家族 9 类型共享 MmdRoot 配置槽——用户配一次、组内各
+// storageSubDir 挂其下；守卫 3 范例 L「vrc 经 configFallback 回退 MmdRoot」同
+// 一族多消费方设计）；违规仅限同一字段被**不同组**的类型声明——配置槽归属歧义。
+func guardConfigFieldGroupUnique(reg *ResourceTypeRegistry) []string {
+	var violations []string
 	configOwners := make(map[string]map[string][]string) // configField → group → []typeID
 	for _, rt := range reg.ResourceTypes {
 		if rt.ConfigField != "" {
@@ -286,8 +304,13 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 				"configField=%q 被多个组的类型声明: %v——配置槽归属歧义", cfg, ids))
 		}
 	}
+	return violations
+}
 
-	// 守卫 3：configFallback 必须指向已声明的 configField
+// guardConfigFallbackResolvable 守卫 3：configFallback 必须指向已声明的 configField，
+// 否则该回退字段永远解析不到配置槽——孤儿回退。
+func guardConfigFallbackResolvable(reg *ResourceTypeRegistry) []string {
+	var violations []string
 	declaredFields := make(map[string]bool, len(reg.ResourceTypes))
 	for _, rt := range reg.ResourceTypes {
 		if rt.ConfigField != "" {
@@ -301,22 +324,18 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 				rt.ConfigFallback, rt.ID))
 		}
 	}
+	return violations
+}
 
-	// 守卫 4：裸扩展名 last-wins 防护——仅靠共享扩展名、无任何锚点/指纹/嵌套模式的类型
-	// 在收敛后的 ClassifyExt（多声明者→"other"）下无法被识别，是历史 last-wins 回归源。
-	// 仅当该类型确有「裸扩展名兜底」需求（无 location 锚点、无指纹、无嵌套模式）
-	// 且至少依赖一个被多类型共享的扩展名时才告警——单一声明者的裸扩展名（如 .fbx）合法。
-	isNaked := func(rt ResourceType) bool {
-		hasAnchor := rt.StorageSubDir != "" || rt.InstanceDir != ""
-		hasFingerprint := len(rt.ZipEntries) > 0 ||
-			strings.EqualFold(rt.Detector, "ysm") ||
-			strings.EqualFold(rt.Detector, "mcmeta") ||
-			strings.EqualFold(rt.Detector, "shader") ||
-			strings.EqualFold(rt.Detector, "zipentry")
-		return !hasAnchor && !hasFingerprint && len(rt.NestedPatterns) == 0
-	}
+// guardNakedSharedExt 守卫 4：裸扩展名 last-wins 防护——仅靠共享扩展名、无任何
+// 锚点/指纹/嵌套模式的类型在收敛后的 ClassifyExt（多声明者→"other"）下无法被识别，
+// 是历史 last-wins 回归源。仅当该类型确有「裸扩展名兜底」需求（无 location 锚点、
+// 无指纹、无嵌套模式）且至少依赖一个被多类型共享的扩展名时才告警——
+// 单一声明者的裸扩展名（如 .fbx）合法。
+func guardNakedSharedExt(reg *ResourceTypeRegistry) []string {
+	var violations []string
 	for _, rt := range reg.ResourceTypes {
-		if !isNaked(rt) {
+		if !isNakedExtType(rt) {
 			continue
 		}
 		for _, ext := range rt.EffectiveExtensions() {
@@ -328,41 +347,33 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 			}
 		}
 	}
+	return violations
+}
 
-	// 守卫 5：共享 .zip 且 location 锚点碰撞的容器型必须显式 priority。
-	// 收敛后 tiebreak 为 (priority desc, id asc)，但 priority==0 仍隐含「同 priority 取 id」，
-	// 为消除「注册序兜底」遗留语义，要求碰撞组内的 .zip 容器型显式声明 priority。
-	// 典型碰撞：blueprint 与 litematic 共享 instanceDir="schematics" 且均声明 .zip。
-	anchorOwners := make(map[string]map[string]ResourceType) // anchor → typeID → ResourceType
-	for _, rt := range reg.ResourceTypes {
-		declaresZip := false
-		for _, e := range rt.EffectiveExtensions() {
-			if e == ".zip" {
-				declaresZip = true
-				break
-			}
-		}
-		if !declaresZip {
-			continue
-		}
-		containerCapable := len(rt.ZipEntries) > 0 ||
-			strings.EqualFold(rt.Detector, "ysm") ||
-			strings.EqualFold(rt.Detector, "mcmeta") ||
-			strings.EqualFold(rt.Detector, "shader") ||
-			strings.EqualFold(rt.Detector, "zipentry")
-		if !containerCapable {
-			continue
-		}
-		for _, a := range []string{rt.StorageSubDir, rt.InstanceDir} {
-			if a == "" {
-				continue
-			}
-			if anchorOwners[a] == nil {
-				anchorOwners[a] = make(map[string]ResourceType)
-			}
-			anchorOwners[a][rt.ID] = rt
-		}
-	}
+// isNakedExtType 判断类型是否「裸」：无 location 锚点、无容器指纹、无嵌套模式——
+// 三重定位依据全缺，只能靠扩展名本身识别。
+func isNakedExtType(rt ResourceType) bool {
+	hasAnchor := rt.StorageSubDir != "" || rt.InstanceDir != ""
+	return !hasAnchor && !hasContainerFingerprint(rt) && len(rt.NestedPatterns) == 0
+}
+
+// hasContainerFingerprint 判断类型是否具备容器内容识别能力（zip 条目特征或容器型 detector）。
+// 守卫 4 的「指纹」与守卫 5 的「容器型」是同一判据，共用此处避免两处清单漂移。
+func hasContainerFingerprint(rt ResourceType) bool {
+	return len(rt.ZipEntries) > 0 ||
+		strings.EqualFold(rt.Detector, "ysm") ||
+		strings.EqualFold(rt.Detector, "mcmeta") ||
+		strings.EqualFold(rt.Detector, "shader") ||
+		strings.EqualFold(rt.Detector, "zipentry")
+}
+
+// guardSharedZipAnchorPriority 守卫 5：共享 .zip 且 location 锚点碰撞的容器型必须显式 priority。
+// 收敛后 tiebreak 为 (priority desc, id asc)，但 priority==0 仍隐含「同 priority 取 id」，
+// 为消除「注册序兜底」遗留语义，要求碰撞组内的 .zip 容器型显式声明 priority。
+// 典型碰撞：blueprint 与 litematic 共享 instanceDir="schematics" 且均声明 .zip。
+func guardSharedZipAnchorPriority(reg *ResourceTypeRegistry) []string {
+	var violations []string
+	anchorOwners := collectZipAnchorOwners(reg)
 	for anchor, owners := range anchorOwners {
 		if len(owners) < 2 {
 			continue
@@ -379,11 +390,46 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 			}
 		}
 	}
+	return violations
+}
 
-	// 守卫 6：scanInstance=true 必须声明 fallbackDir——兜底扫描（ScanInstance）目前
-	// 只允许「注册表显式点名的兄弟目录」；缺 fallbackDir 会退回“任一兄弟目录含扩展名
-	// 即命中”的危险行为（structures/数据包混入）。未来类型若确需兼容多个目录名，
-	// 应显式扩展 fallbackDir 语义而非留空走非限定。
+// collectZipAnchorOwners 收集 location 锚点（storageSubDir / instanceDir）→ 类型 ID → 类型的
+// 归属表，仅收录「声明 .zip 且具容器识别能力」的类型——非容器型共用目录名不构成检测碰撞。
+func collectZipAnchorOwners(reg *ResourceTypeRegistry) map[string]map[string]ResourceType {
+	anchorOwners := make(map[string]map[string]ResourceType) // anchor → typeID → ResourceType
+	for _, rt := range reg.ResourceTypes {
+		if !declaresZipExt(rt) || !hasContainerFingerprint(rt) {
+			continue
+		}
+		for _, a := range []string{rt.StorageSubDir, rt.InstanceDir} {
+			if a == "" {
+				continue
+			}
+			if anchorOwners[a] == nil {
+				anchorOwners[a] = make(map[string]ResourceType)
+			}
+			anchorOwners[a][rt.ID] = rt
+		}
+	}
+	return anchorOwners
+}
+
+// declaresZipExt 判断类型的有效扩展名集是否含 .zip（EffectiveExtensions 已小写化）。
+func declaresZipExt(rt ResourceType) bool {
+	for _, e := range rt.EffectiveExtensions() {
+		if e == ".zip" {
+			return true
+		}
+	}
+	return false
+}
+
+// guardScanInstanceFallbackDir 守卫 6：scanInstance=true 必须声明 fallbackDir——兜底扫描
+// （ScanInstance）目前只允许「注册表显式点名的兄弟目录」；缺 fallbackDir 会退回“任一兄弟目录
+// 含扩展名即命中”的危险行为（structures/数据包混入）。未来类型若确需兼容多个目录名，
+// 应显式扩展 fallbackDir 语义而非留空走非限定。
+func guardScanInstanceFallbackDir(reg *ResourceTypeRegistry) []string {
+	var violations []string
 	for _, rt := range reg.ResourceTypes {
 		if rt.ScanInstance && rt.FallbackDir == "" {
 			violations = append(violations, fmt.Sprintf(
@@ -391,7 +437,6 @@ func validateRegistrySchema(reg *ResourceTypeRegistry) []string {
 				rt.ID))
 		}
 	}
-
 	return violations
 }
 

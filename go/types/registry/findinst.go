@@ -70,40 +70,12 @@ func dirContainsFlag(root, flag string) bool {
 // 兜底扫描完全失效（回归守卫 TestFindInstDir_ResourcepackZipKept）。
 func FindInstDir(versionDir, subDir, rtype string) string {
 	standard := filepath.Join(versionDir, subDir)
-	exts := SupportedExtsForType(rtype)
-	extSet := make(map[string]bool)
-	// 容器扩展名（zip/7z 可包裹任意资源，属弱证据）——
-	// 容器集合单源：registry.IsContainerExt / ContainerExts，禁止硬编码 map。
-	hasNonContainer := false
-	for _, e := range exts {
-		low := strings.ToLower(e)
-		if low == ".json" {
-			continue // ADR-095：.json 弱证据，仅以 ysm.json 标志文件识别
-		}
-		extSet[low] = true
-		if !IsContainerExt(low) {
-			hasNonContainer = true
-		}
-	}
-	// ADR-104 续：有非容器主证据时剔除容器弱证据；纯容器类型保留
-	if hasNonContainer {
-		for _, c := range ContainerExts() {
-			delete(extSet, c)
-		}
-	}
-	// hit 判定：扩展名命中（剔除 .json/.zip/.7z 弱证据）或 ysm 标志文件命中
 	// 消费注册表 detector 字段（ADR-065 合规），不硬编码 rtype。
 	rt := RegistryType(rtype)
-	isYsm := rt != nil && rt.Detector == "ysm"
-	hit := func(root string) bool {
-		if dirContainsExt(root, extSet) {
-			return true
-		}
-		return isYsm && dirContainsFlag(root, "ysm.json")
-	}
+	ev := buildInstDirEvidence(rtype, rt)
 	// 标准目录存在且包含该类型文件 → 标准优先返回（行为不变）
 	if info, err := os.Stat(standard); err == nil && info.IsDir() {
-		if hit(standard) {
+		if ev.hit(standard) {
 			return standard
 		}
 		// 标准目录存在但无该类型文件：
@@ -111,11 +83,11 @@ func FindInstDir(versionDir, subDir, rtype string) string {
 		// 容器证据无法区分「整合包其他目录里的压缩包」与「本类型资源包」，兜底会
 		// 误命中 mods/缓存目录（标准 resourcepacks 为空时误报 extra）。
 		// 非容器类型（blueprint 的 .nbt 等）保持兜底（P5：Sable-Schematics）。
-		if !hasNonContainer {
+		if !ev.hasNonContainer {
 			return standard
 		}
 	}
-	if len(extSet) == 0 && !isYsm {
+	if len(ev.extSet) == 0 && !ev.isYsm {
 		return standard // 没有扩展名信息，返回标准路径（ysm 仍可经标志文件判定）
 	}
 	// 兜底扫描门控：默认关闭，仅注册表显式声明 ScanInstance==true 的类型开启
@@ -127,6 +99,54 @@ func FindInstDir(versionDir, subDir, rtype string) string {
 		return standard
 	}
 	// 标准目录不存在 / 存在但无该类型文件（仅 ScanInstance 类型）→ 兜底扫描其他子目录
+	return scanFallbackDirs(versionDir, standard, rt, ev)
+}
+
+// instDirEvidence 实例目录判定的证据集：extSet 已剔除弱证据（.json；有非容器主证据时的
+// .zip/.7z），isYsm 表示该类型以 ysm.json 标志文件识别，hasNonContainer 表示扩展集含
+// 非容器主证据（决定兜底是否开启）。
+type instDirEvidence struct {
+	extSet          map[string]bool
+	hasNonContainer bool
+	isYsm           bool
+}
+
+// hit 判定目录是否属于该资源类型：扩展名命中（已剔弱证据）或 ysm 标志文件命中。
+func (ev instDirEvidence) hit(root string) bool {
+	if dirContainsExt(root, ev.extSet) {
+		return true
+	}
+	return ev.isYsm && dirContainsFlag(root, "ysm.json")
+}
+
+// buildInstDirEvidence 依注册表声明构建证据集。rt 可传 nil（未知类型），此时 isYsm=false。
+func buildInstDirEvidence(rtype string, rt *ResourceType) instDirEvidence {
+	ev := instDirEvidence{extSet: make(map[string]bool)}
+	// 容器扩展名（zip/7z 可包裹任意资源，属弱证据）——
+	// 容器集合单源：registry.IsContainerExt / ContainerExts，禁止硬编码 map。
+	for _, e := range SupportedExtsForType(rtype) {
+		low := strings.ToLower(e)
+		if low == ".json" {
+			continue // ADR-095：.json 弱证据，仅以 ysm.json 标志文件识别
+		}
+		ev.extSet[low] = true
+		if !IsContainerExt(low) {
+			ev.hasNonContainer = true
+		}
+	}
+	// ADR-104 续：有非容器主证据时剔除容器弱证据；纯容器类型保留
+	if ev.hasNonContainer {
+		for _, c := range ContainerExts() {
+			delete(ev.extSet, c)
+		}
+	}
+	ev.isYsm = rt != nil && rt.Detector == "ysm"
+	return ev
+}
+
+// scanFallbackDirs 在 versionDir 一级子目录中兜底查找命中目录，无命中返回 standard。
+// 仅在 rt.ScanInstance==true 时被调用（门控在 FindInstDir）。
+func scanFallbackDirs(versionDir, standard string, rt *ResourceType, ev instDirEvidence) string {
 	entries, err := os.ReadDir(versionDir)
 	if err != nil {
 		return standard
@@ -146,7 +166,7 @@ func FindInstDir(versionDir, subDir, rtype string) string {
 		if strings.EqualFold(sub, standard) {
 			continue
 		}
-		if hit(sub) {
+		if ev.hit(sub) {
 			return sub
 		}
 	}

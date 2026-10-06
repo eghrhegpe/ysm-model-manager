@@ -44,6 +44,64 @@ func writeTempRegistry(t *testing.T, payload string) string {
 	return path
 }
 
+// ===== 逐字节钉住：六守卫文案 + 跨守卫追加顺序 =====
+
+// TestSchemaGuard_AllGuards_ExactStringsAndOrder 单次载荷同时触发守卫 1~6，
+// 每条守卫恰好产出一条违规 ⇒ violations[i] 的守卫归属唯一，可锁「跨守卫追加顺序」：
+//
+//	[0]=守卫1 storageSubDir  [1]=守卫2 configField  [2]=守卫3 configFallback
+//	[3]=守卫4 裸扩展名        [4]=守卫5 zip 锚点      [5]=守卫6 scanInstance
+//
+// 守卫 2/5 的文案内嵌「ID 列表」，其顺序源自 map 遍历（原实现本就非确定：
+// 同一次运行的不同轮次可产出不同排列），故以允许集（原实现可产出的全部排列）比对；
+// 其余四条为单元素集 ⇒ 逐字节相等。任何文案改写、守卫顺序调换、去重/合并都会被此测试抓住。
+func TestSchemaGuard_AllGuards_ExactStringsAndOrder(t *testing.T) {
+	payload := `{
+		"resourceTypes": [
+			{"id": "dupA", "name": "A", "group": "g", "storageSubDir": "dup", "extensions": [".shared"]},
+			{"id": "dupB", "name": "B", "group": "g", "storageSubDir": "dup", "extensions": [".b"]},
+			{"id": "cfgA", "name": "CA", "group": "g", "storageSubDir": "cfgA", "configField": "SharedRoot", "extensions": [".ca"]},
+			{"id": "cfgB", "name": "CB", "group": "h", "storageSubDir": "cfgB", "configField": "SharedRoot", "extensions": [".cb"]},
+			{"id": "orphan", "name": "O", "group": "g", "storageSubDir": "orphan", "configFallback": "GhostRoot", "extensions": [".o"]},
+			{"id": "naked", "name": "N", "group": "g", "extensions": [".shared"], "detector": "extension"},
+			{"id": "zipbp", "name": "Z1", "group": "g", "storageSubDir": "zipbp", "instanceDir": "schematics", "priority": 5, "extensions": [".zip"], "detector": "zipentry", "zipEntries": [{"name": ".nbt", "match": "suffix"}]},
+			{"id": "ziplm", "name": "Z2", "group": "g", "storageSubDir": "ziplm", "instanceDir": "schematics", "extensions": [".zip"], "detector": "zipentry", "zipEntries": [{"name": ".litematic", "match": "suffix"}]},
+			{"id": "scanless", "name": "S", "group": "g", "storageSubDir": "scanless", "scanInstance": true, "extensions": [".sl"]}
+		]
+	}`
+	violations := guardViolations(t, payload)
+	allowed := [][]string{
+		{`storageSubDir="dup" 被多个类型声明: [dupA dupB]——存储路径冲突`},
+		{
+			`configField="SharedRoot" 被多个组的类型声明: [cfgA cfgB]——配置槽归属歧义`,
+			`configField="SharedRoot" 被多个组的类型声明: [cfgB cfgA]——配置槽归属歧义`,
+		},
+		{`configFallback="GhostRoot" 引用了不存在的 configField（类型 orphan）——孤儿回退`},
+		{`类型 naked 仅靠裸扩展名 .shared 识别（无 location 锚点/无指纹），且该扩展名被 [dupA naked] 共享——last-wins 回归源，必须补锚点或指纹`},
+		{
+			`类型 ziplm 与 [zipbp ziplm] 共享 location 锚点 "schematics" 且均声明 .zip——必须显式 priority 以消除注册序兜底`,
+			`类型 ziplm 与 [ziplm zipbp] 共享 location 锚点 "schematics" 且均声明 .zip——必须显式 priority 以消除注册序兜底`,
+		},
+		{`类型 scanless scanInstance=true 必须声明 fallbackDir（限定兜底目录名），否则兜底会越界扫兄弟目录`},
+	}
+	if len(violations) != len(allowed) {
+		t.Fatalf("违规条数 = %d，期望 %d\n实际逐条: %q", len(violations), len(allowed), violations)
+	}
+	for i, wantSet := range allowed {
+		matched := false
+		for _, want := range wantSet {
+			if violations[i] == want {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			t.Errorf("violations[%d] = %q\n不在允许集内: %q\n（守卫顺序或文案已漂移）",
+				i, violations[i], wantSet)
+		}
+	}
+}
+
 // ===== 守卫 1：storageSubDir 全局唯一 =====
 
 func TestSchemaGuard_DuplicateStorageSubDir_Warns(t *testing.T) {

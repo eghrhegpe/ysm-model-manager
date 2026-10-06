@@ -239,10 +239,31 @@ function checkKnowledgeMeta(cards: any[]) {
         `知识卡 ${cf} 的 status: snapshot 未配 affected: false（快照/报告型卡应退出 --affected 匹配，见 AGENTS.md affected 字段语义）`,
       );
     }
+    // 5.12 演进态 status + affected:false + 无 source_files → 无漂移安全网（WARN，不阻断）
+    // 演进态 = active / draft（随源码演进维护）；冻结态 snapshot / archived / superseded 退出匹配合理。
+    // 同时放弃 --affected 匹配又不登记 source_files，则「覆盖盲区」检查也无从点名它——卡对源码漂移
+    // 完全不可见。实证：extensibility-round2.md 曾以 active + affected:false + 无 source_files 存在，
+    // 源码领先卡 6 周无人告警，2026-10 审计才发现 2 个已删除符号（AssertSubset/WebImplGoKeys）写进正文。
+    // 只 WARN 不阻断：affected:false 可能是刻意的降噪取舍（有 source_files 时覆盖登记仍在，不报）。
+    if (
+      getScalar(fm, "affected") === "false" &&
+      (statusVal === "active" || statusVal === "draft") &&
+      getList(fm, "source_files").length === 0
+    ) {
+      warns.push(
+        `知识卡 ${cf} 无漂移安全网：status: ${statusVal}（随源码演进）却配 affected: false（退出 --affected 匹配）且未声明 source_files（覆盖盲区检查也点不到它）——须补 source_files 并去掉 affected: false，或改冻结态 status（snapshot/archived/superseded）`,
+      );
+    }
 
     // H1 vs name 一致性（WARN）
+    // 只扫正文（frontmatter 之后的部分）：text 含 frontmatter，而 frontmatter 内列 0 的 YAML
+    // 注释「# 说明」与 Markdown H1 字形全同，扫全文会把 provenance 注释误判为 H1（实证：
+    // extensibility-round2.md 的治理注记曾触发假 WARN）。H1 属正文结构，语义上也只应在正文取。
     const name = getScalar(fm, "name");
-    const h1Match = text.match(/^#\s+(.+)$/m);
+    const cleanText = text.replace(/^\uFEFF/, "");
+    const fmBlock = cleanText.match(/^---\r?\n[\s\S]*?\r?\n---/);
+    const bodyText = fmBlock ? cleanText.slice(fmBlock[0].length) : cleanText;
+    const h1Match = bodyText.match(/^#\s+(.+)$/m);
     if (h1Match && name && h1Match[1].trim() !== name) {
       warns.push(`知识卡 ${cf} 的 H1 标题「${h1Match[1].trim()}」与 name「${name}」不一致`);
     }

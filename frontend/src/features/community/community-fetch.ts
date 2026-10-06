@@ -7,11 +7,12 @@ import type {
   WorkshopSite,
 } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { t } from "@/core/i18n/t.ts";
+import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 
 /**
  * 三路回退拉取 JSON 数组（raw → jsdelivr → GitHub API）。
- * mirror 为 "jsdelivr" / "githubapi" 时调整优先级；api 源经 atob 解码 base64 内容。
+ * mirror 为 "jsdelivr" / "githubapi" 时调整优先级；api 源解 base64 后按 UTF-8 解码（禁裸 atob，见下方）。
  * 每路 8s 超时（AbortController）；全部失败返回 []。
  * @param attempts - 候选源列表（按尝试顺序）
  * @param mirror - 镜像配置，调整回退优先级
@@ -38,7 +39,13 @@ async function fetchWithFallback<T>(
       if (a.name === "api") {
         const json = (await resp.json()) as { content?: string };
         if (!json.content) throw new Error("no content");
-        data = JSON.parse(atob(json.content.replace(/\s/g, "")));
+        // GitHub API contents.content = base64(UTF-8 字节)。须 base64→字节→按 UTF-8 解码，
+        // 不能裸 JSON.parse(atob(...))：atob 产 Latin-1（每字节→同码位字符），非 ASCII
+        // 名会变双重编码乱码（雾雨波波沙→é¾é¨…），2026-09-21 曾以此落盘 197 条脏数据。
+        // 复用 base64ToBytes 原语（同 data.ts 模型列表 api 路口径，消双实现漂移）。
+        const bytes = base64ToBytes(json.content.replace(/[\r\n\s]/g, ""));
+        if (!bytes) throw new Error("bad base64");
+        data = JSON.parse(new TextDecoder("utf-8").decode(bytes));
       } else {
         data = await resp.json();
       }

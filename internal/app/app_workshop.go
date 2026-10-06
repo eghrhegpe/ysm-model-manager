@@ -496,9 +496,14 @@ func (a *App) MergeCommunityCreatorsFromJSON(communityJSON string) (int, int, er
 		return 0, 0, err
 	}
 	// 逐字段净化：name 必须非空字符串，非法元素过滤（防 __proto__ 注入 / 畸形数据
-	// 污染；与 web 桥 web-community.ts 逐字段校验同源；新分配同上）
+	// 污染；与 web 桥 web-community.ts 逐字段校验同源；新分配同上）。
+	// 先还原双重编码乱码（mojibake）：前端 GitHub API 路历史用 atob 产 Latin-1，UTF-8
+	// 字节被当码位落盘（2026-09-21 污染事件：197 条乱码按 name 去重失效当新作者追加）。
+	// 还原后乱码名恢复为真实码位，与既有干净条目同名走 update 段并入、全新条目落干净名——
+	// 这是合并闸的防劣化兜底，不依赖前端 fetch 是否已修（见 app_workshop_mojibake.go）。
 	cleaned := make([]types.WorkshopCreator, 0, len(imported))
 	for _, cr := range imported {
+		repairCreatorMojibake(&cr.Name, &cr.Desc, &cr.Type, &cr.Role)
 		if cr.Name != "" {
 			cleaned = append(cleaned, cr)
 		}

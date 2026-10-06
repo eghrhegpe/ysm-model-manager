@@ -19,8 +19,8 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 5 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 300 |
-| [❌ 已取代](#已取代) | 7 |
+| [✅ 已采纳](#已采纳) | 299 |
+| [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
 
@@ -56,7 +56,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（300）
+### ✅ 已采纳（299）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -245,7 +245,6 @@ permalink: /adr/
 | [ADR-124](./ADR-124-i18n-key-naming-three-segment.md) | i18n 键名三段式规范 | ✅ 已采纳 ⚠️ 被 [ADR-045] |
 | [ADR-123](./ADR-123-cross-environment-downgrade-strategy.md) | 跨环境降级策略统一 | ✅ 已采纳 |
 | [ADR-121](./ADR-121-shadow-dom.md) | Shadow DOM 样式隔离铁律 | ✅ 已采纳 |
-| [ADR-120](./ADR-120-go-rust-manifest-jwalk.md) | Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk | ✅ 已采纳 |
 | [ADR-119](./ADR-119-dedup-parallel-hash.md) | dedup 并行化：共享并行哈希管道（串行收集+并行哈希+序号还原） | ✅ 已采纳 |
 | [ADR-118](./ADR-118-face-level-translucency.md) | 面级透明分类：mesh 级 alpha 误判数据与分阶段落地 | ✅ 已采纳 |
 | [ADR-117](./ADR-117-ground-material-spec.md) | 地面材质 spec 单一事实源 | ✅ 已采纳 |
@@ -361,7 +360,7 @@ permalink: /adr/
 | [ADR-002](./ADR-002-project-health-assessment.md) | 项目全面评估与改进方向 | ✅ 已采纳 |
 | [ADR-001](./ADR-001-wails3-migration.md) | 升级至 Wails 3 | ✅ 已采纳 |
 
-### ❌ 已取代（7）
+### ❌ 已取代（8）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -370,6 +369,7 @@ permalink: /adr/
 | [ADR-137](./ADR-137-ysm-decoder-homecoming.md) | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
 | [ADR-136](./ADR-136-screenshot-domain-homecoming.md) | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
 | [ADR-125](./ADR-125-preview-menu-unified-state-single-renderer.md) | 3D 预览菜单统一：settingsState 横切状态层 + 单渲染器 + visible 规则 | ❌ 已取代 ⚠️ 被 [ADR-126] |
+| [ADR-120](./ADR-120-go-rust-manifest-jwalk.md) | Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk | ❌ 已取代 |
 | [ADR-081](./ADR-081-semantic-bone-layer.md) | 语义骨骼层——跨格式语义骨骼统一抽象 | ❌ 已取代 |
 | [ADR-077](./ADR-077-bottom-nav-shell-convergence.md) | 底部导航通用外壳收敛（D1+D3 落地） | ❌ 已取代 ⚠️ 被 [ADR-076] |
 
@@ -589,7 +589,7 @@ permalink: /adr/
 | ADR-123 | 跨环境降级策略统一 | ✅ 已采纳 | 2026-08-27 |
 | ADR-122 | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 | 2026-08-26 |
 | ADR-121 | Shadow DOM 样式隔离铁律 | ✅ 已采纳 | 2026-08-24 |
-| ADR-120 | Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk | ✅ 已采纳 | 2026-08-24 |
+| ADR-120 | Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk | ❌ 已取代 | 2026-08-24 |
 | ADR-119 | dedup 并行化：共享并行哈希管道（串行收集+并行哈希+序号还原） | ✅ 已采纳 | 2026-08-24 |
 | ADR-118 | 面级透明分类：mesh 级 alpha 误判数据与分阶段落地 | ✅ 已采纳 | 2026-08-23 |
 | ADR-117 | 地面材质 spec 单一事实源 | ✅ 已采纳 | 2026-08-23 |

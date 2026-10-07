@@ -451,7 +451,7 @@ removePerFrame + stopIfIdle），**不做** ④⑤（拆容器/overlay/单例）
   ```
 - `mmd-3d.ts`：`registerReRoute(RESOURCE_TYPES.MMD, (path, opts) => createMmd3D(path, opts));`（**ADR-253 D6：opts 必须转发**，否则 `openModel3DFullscreen` 兜底算出的 siblings 与 entry 在 opener 处被静默丢弃；pack 额外把 `entry` 映射为 `startEntry`）
 - `ysm-3d.ts`：`registerReRoute(RESOURCE_TYPES.YSM, openYsmFullscreen);`
-- `preview-library.ts`：查表派发逻辑（`openModel3DFullscreen` 内 `_openers[rtype]`）
+- `preview-library.ts`：查表派发逻辑在**同文件顶层 `resolveOpenerFor(path, routeKey, rtype)`**（`_openers[routeKey]` → 未命中按扩展名 `resolvePreviewKeyByExt` → 容器扩展名取 `resolveDefaultPreviewKey(rtype)`，三级兜底；语义与短路顺序未变，仅从 `openModel3DFullscreen` 体内提为顶层具名函数——2026-10-07 认知复杂度削平，`openModel3DFullscreen` 53→10）
 
 ### 适用场景
 - 多模块互相依赖的循环引用

@@ -15,14 +15,7 @@ auto_fields:
     - ExtractFirstPNGFrom7z
     - ExtractFirstPNGFromZip
     - IsArmModelName
-    - IsMainModelName
     - ParseBedrockGeometry
-    - ParseComponentsFrom7z
-    - ParseComponentsFromZip
-    - ParseFrom7z
-    - ParseFrom7zEntry
-    - ParseFromZip
-    - ParseFromZipEntry
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

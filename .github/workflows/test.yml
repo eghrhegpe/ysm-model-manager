@@ -316,8 +316,14 @@ jobs:
       # 若日后要把它升为门禁，删掉 if 即可——但那时应改用方案 A（与 -race 合并成一次编译），
       # 而不是让两条独立编译键各自冷跑一遍。
       # ⚠️ 同样只能留在 Windows（理由见上一步）：需真跑 `go test`，Linux 上测试代码编不过。
+      # ⚠️ continue-on-error（2026-10-08 实证补上）：本步自称「非阻断」，却一直是**裸 step**——
+      # coverprofile 插桩下 internal/app 有已知 flaky（本轮 main CI 即因
+      # `TestScanModelEntriesFiltered_BannedFieldFilled` 挂掉，而上一轮同代码全绿；
+      # check-go-diff-coverage 内部正为同一类抖动留了「失败重试一次」，本步却没有）。
+      # 一个趋势展示不该让 main 因抖动变红 ⇒ 显式 continue-on-error，兑现「非阻断」契约。
       - name: Go 覆盖率报告（非阻断，趋势可见；仅 main）
         if: github.ref == 'refs/heads/main'
+        continue-on-error: true
         shell: pwsh
         run: |
           # -p 1 串行：多包并行跑 coverprofile 时 go/scanner 测试存在隔离冲突（flaky），
@@ -409,8 +415,11 @@ jobs:
           url="https://github.com/golangci/golangci-lint/releases/download/v$v/golangci-lint-$v-linux-amd64.tar.gz"
           curl -sSL -o /tmp/gl.tar.gz "$url"
           tar -xzf /tmp/gl.tar.gz -C /tmp
-          echo "/tmp/golangci-lint-$v-linux-amd64" >> "$GITHUB_PATH"
-          golangci-lint --version
+          # ⚠️ 2026-10-08 实证的坑：`$GITHUB_PATH` 只对**后续 step** 生效，同一 step 内不能靠
+          # 裸命令名调用（否则 exit 127 command not found，首轮实验即栽在这）。故此处用绝对路径验证。
+          bin="/tmp/golangci-lint-$v-linux-amd64/golangci-lint"
+          echo "$(dirname "$bin")" >> "$GITHUB_PATH"
+          "$bin" --version
 
       - name: Go 静态分析（golangci-lint，仅增量）
         run: |

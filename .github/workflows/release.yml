@@ -76,10 +76,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: 缓存 Go 模块（含 wails3，命中免下载）
+      # ⚡ Windows 上停用（2026-10-07 实测，同 test.yml）：缓存恢复 1m22s vs 冷
+      # `go mod download all` 34.5s + 后续 build 7.5s；Windows Defender 扫解压小文件
+      # 是瓶颈，不缓存更快。Linux/macOS 解压快，保留。
+      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快）
+        if: runner.os != 'Windows'
         uses: actions/cache@v5.1.0
         with:
-          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          path: ~/go/pkg/mod
           key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
@@ -134,10 +138,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: 缓存 Go 模块（含 wails3，命中免下载）
+      # ⚡ Windows 上停用（2026-10-07 实测，同 test.yml）：缓存恢复 1m22s vs 冷
+      # `go mod download all` 34.5s + 后续 build 7.5s；Windows Defender 扫解压小文件
+      # 是瓶颈，不缓存更快。Linux/macOS 解压快，保留。
+      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快）
+        if: runner.os != 'Windows'
         uses: actions/cache@v5.1.0
         with:
-          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          path: ~/go/pkg/mod
           key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
@@ -202,10 +210,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: 缓存 Go 模块（含 wails3，命中免下载）
+      # ⚡ Windows 上停用（2026-10-07 实测，同 test.yml）：缓存恢复 1m22s vs 冷
+      # `go mod download all` 34.5s + 后续 build 7.5s；Windows Defender 扫解压小文件
+      # 是瓶颈，不缓存更快。Linux/macOS 解压快，保留。
+      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快）
+        if: runner.os != 'Windows'
         uses: actions/cache@v5.1.0
         with:
-          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          path: ~/go/pkg/mod
           key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
@@ -260,10 +272,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: 缓存 Go 模块（含 wails3，命中免下载）
+      # ⚡ Windows 上停用（2026-10-07 实测，同 test.yml）：缓存恢复 1m22s vs 冷
+      # `go mod download all` 34.5s + 后续 build 7.5s；Windows Defender 扫解压小文件
+      # 是瓶颈，不缓存更快。Linux/macOS 解压快，保留。
+      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快）
+        if: runner.os != 'Windows'
         uses: actions/cache@v5.1.0
         with:
-          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          path: ~/go/pkg/mod
           key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-

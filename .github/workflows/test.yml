@@ -60,10 +60,19 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: 缓存 Go 模块（命中免下载）
+      # ⚡ 2026-10-07 实测后**在 Windows 上停用**本缓存：action cache 恢复 791MB 包
+      # 全程 1m22s（下载仅 5s / tar 2s，余下 ~75s 是 Windows Defender 扫解压出的小文件）；
+      # 而冷 `go mod download all` 本机实测 **34.5~34.8s**（1896MB 落盘），随后 `go build ./go/...`
+      # 仅 7.5s ⇒ 冷路径 ~42s **快于**缓存路径 ~82s。即在 Windows runner 上，
+      # 「不缓存」比「缓存」每次省约 40s，且省掉缓存配额与写入成本。
+      # Linux/darwin 解压快，故仍保留（`runner.os != 'Windows'` 条件）。
+      # 复测方法：清空 ~/go/pkg/mod 后 `go mod download all` 计时，与 CI 日志的
+      # 「缓存 Go 模块」步耗时对比；若 runner 磁盘/Defender 行为变化需重新裁决。
+      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快，见上）
+        if: runner.os != 'Windows'
         uses: actions/cache@v5.1.0
         with:
-          path: ${{ runner.os == 'Windows' && '~\go\pkg\mod' || '~/go/pkg/mod' }}
+          path: ~/go/pkg/mod
           key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-

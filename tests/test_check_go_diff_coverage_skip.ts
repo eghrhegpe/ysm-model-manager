@@ -34,14 +34,35 @@ function runGo(args) {
 
 const goos = runGo(["env", "GOOS"]);
 
-// 平台替身对：`_windows.go` 仅在 Windows 编译，`_other.go` 在非 Windows 编译。
-const BRIDGE = {
-  windows: "go/fsutil/crossdevice_windows.go",
-  other: "go/fsutil/crossdevice_other.go",
-};
-const others = Object.entries(BRIDGE)
-  .filter(([os]) => os !== goos)
-  .map(([, f]) => f);
+// 平台替身对：`_windows.go` 带 `//go:build windows`（仅 Windows 编译）；
+// `_other.go` 带 `//go:build !windows`（**除 Windows 外所有平台**都编译）。
+//
+// ⚠️ 判据必须问 Go 工具链「当前 GOOS 下这个包实际编哪些文件」，不能拿 GOOS 去撞文件名标签。
+// （2026-10-07 修 Linux/darwin CI 恒红）原实现 `Object.entries(BRIDGE).filter(([os]) => os !== goos)`
+// 把 `"other"` 当成 GOOS 名——Windows 下恰好只留下 `_other.go`（对），但 **Linux/darwin 下两个键
+// 都不等于 `"linux"` ⇒ 两个文件全留**；而 `!windows` 的文件在 Linux **本就在编译集内**、不该豁免，
+// 于是断言 `skipped.length === others.length` 必失败（实测 Linux 报「期望 2 个非当前平台文件被豁免，
+// 实际 0」）。Windows 开发机只留 1 个故恒绿——典型「本地绿 CI 红」。
+//
+// 现改为 `go list` 编译集自推导（与 check-go-diff-coverage 的 envMismatch 判据**同源**）：
+// 候选文件里「不在 hostGOOS 编译集内」的才是应豁免者，每平台自动得 1 个（Windows →
+// `_other.go`；Linux/darwin → `_windows.go`）。未来 platform/tag 变动无需再手改本表。
+const CROSSDEVICE_CANDIDATES = [
+  "go/fsutil/crossdevice_windows.go",
+  "go/fsutil/crossdevice_other.go",
+];
+/** `go list` 给出的当前 GOOS 编译集（fsutil 包）；失败返回 null（调用方退化为「全为应豁免」并如实报错）。 */
+const compiledNames = (() => {
+  const out = runGo(["list", "-f", "{{.GoFiles}}", "./go/fsutil/"]);
+  const names = new Set<string>();
+  for (const m of out.matchAll(/([^/\s]+\.go)/g)) names.add(m[1]!);
+  return names.size ? names : null;
+})();
+const others = CROSSDEVICE_CANDIDATES.filter((f) => {
+  const base = f.split("/").pop()!;
+  // 不在编译集 ⇒ 环境不匹配 ⇒ 应被豁免
+  return compiledNames ? !compiledNames.has(base) : false;
+});
 
 if (others.length === 0) {
   console.log("OK: 无他平台文件可验（当前 GOOS 覆盖全部）");

@@ -67,9 +67,139 @@ export interface RovingHandle {
 const stateAttrOf = (preset: RovingPreset): "aria-checked" | "aria-selected" =>
   preset === "radio" ? "aria-checked" : "aria-selected";
 
+/** 归一后的朝向（spec.orientation 缺省 "both"） */
+type RovingOrientation = "vertical" | "horizontal" | "both";
+
+/**
+ * roving 运行时上下文：键处理提到顶层具名函数后，闭包状态（stateIndex/disposed/layout/
+ * itemsOf）经此显式传递。提到顶层是刻意的——扫描器递归函数体 AST，传给 addEventListener
+ * 的箭头回调不重置嵌套深度，写在 if 里的事件体要按外层 depth 逐条计分。
+ */
+interface RovingRuntime {
+  spec: RovingSpec;
+  root: ShadowRoot | Document;
+  preset: RovingPreset;
+  orientation: RovingOrientation;
+  cyclic: boolean;
+  homeEnd: boolean;
+  activeElementBase: boolean;
+  itemsOf: () => HTMLElement[];
+  layout: (items: HTMLElement[]) => number;
+  getStateIndex: () => number;
+  setStateIndex: (index: number) => void;
+  isDisposed: () => boolean;
+}
+
+/** target 落在哪个 item 内（直接命中或后代）；-1 = 不在任何 item 内 */
+function indexOfTarget(items: HTMLElement[], target: EventTarget | null): number {
+  if (!(target instanceof Node)) return -1;
+  for (let i = 0; i < items.length; i++) if (items[i].contains(target)) return i;
+  return -1;
+}
+
+/** 可编辑目标守卫：输入中不接管方向键（与 app-tree 裸键让路同口径） */
+function isEditable(el: HTMLElement | null): boolean {
+  return (
+    el instanceof HTMLElement &&
+    (el.tagName === "INPUT" ||
+      el.tagName === "TEXTAREA" ||
+      el.tagName === "SELECT" ||
+      el.isContentEditable)
+  );
+}
+
+/**
+ * 方向键轴向判定：+1 前进 / -1 后退 / 0 该键在此朝向无效。
+ * 前进键：vertical 认 Down、horizontal 认 Right、both 双认（后退键同构：vertical 认 Up、
+ * horizontal 认 Left）。与原 switch 两 case 体逐键等价：Down/Right 与 Up/Left 键名互斥，
+ * 合并判定不改变任何分支可达性。
+ */
+function rovingStepOf(orientation: RovingOrientation, key: string): number {
+  const isFwd = key === "ArrowDown" || key === "ArrowRight";
+  const isBwd = key === "ArrowUp" || key === "ArrowLeft";
+  if (!isFwd && !isBwd) return 0;
+  if (orientation === "both") return isFwd ? 1 : -1;
+  const wantFwd = orientation === "vertical" ? "ArrowDown" : "ArrowRight";
+  const wantBwd = orientation === "vertical" ? "ArrowUp" : "ArrowLeft";
+  if (key === wantFwd) return 1;
+  if (key === wantBwd) return -1;
+  return 0;
+}
+
+/**
+ * 移动基准（已在 items 位序内 clamp）。
+ * 基准：activeElementBase → 实际焦点项（slide-menu 冻结契约：键派发到容器时
+ * 焦点项才是移动基准）；缺省 → e.target 所在 item（后代命中同认）；
+ * 均落空 → stateIndex 位序（clamp）。
+ */
+function rovingBaseIndexOf(
+  rt: RovingRuntime,
+  items: HTMLElement[],
+  target: EventTarget | null,
+): number {
+  const clampState = (): number => Math.min(Math.max(rt.getStateIndex(), 0), items.length - 1);
+  if (!rt.activeElementBase) {
+    const cur = indexOfTarget(items, target);
+    return cur >= 0 ? cur : clampState();
+  }
+  const ae = rt.root.activeElement as HTMLElement | null;
+  const ai = ae ? items.indexOf(ae) : -1;
+  return ai >= 0 ? ai : clampState();
+}
+
+/**
+ * 单键 → 目标位序（无效键/被门控 → null）：Home/End 受 homeEnd 门控，
+ * 方向键受朝向门控；cyclic 首尾回绕，否则端点 clamp。
+ */
+function rovingNextIndexOf(
+  rt: RovingRuntime,
+  key: string,
+  base: number,
+  len: number,
+): number | null {
+  if (key === "Home") return rt.homeEnd ? 0 : null;
+  if (key === "End") return rt.homeEnd ? len - 1 : null;
+  const step = rovingStepOf(rt.orientation, key);
+  if (step === 0) return null;
+  if (step > 0) return rt.cyclic ? (base + 1) % len : Math.min(base + 1, len - 1);
+  return rt.cyclic ? (base - 1 + len) % len : Math.max(base - 1, 0);
+}
+
+/** 单次 keydown 委托体（挂在 container 上唯一监听；顶层具名 → 不吃消费方嵌套深度） */
+function rovingOnKeydown(rt: RovingRuntime, e: KeyboardEvent): void {
+  if (rt.isDisposed()) return;
+  if (rt.spec.when && !rt.spec.when(e)) return;
+  // 修饰键方向键让路给全局组合键（key-router 管 Ctrl+F 之类，本原语只管裸导航键）
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const items = rt.itemsOf();
+  if (!items.length) return;
+
+  const target = e.target instanceof HTMLElement ? e.target : (null as HTMLElement | null);
+  if (isEditable(target)) return;
+
+  const base = rovingBaseIndexOf(rt, items, e.target);
+
+  // 激活键先于移动仲裁（键名与 Home/End/Arrow* 互斥，短路顺序等价原 switch case 组）
+  if (e.key === "Enter" || e.key === " " || e.key === "Space") {
+    e.preventDefault();
+    rt.spec.onActivate?.(items[base], base);
+    return;
+  }
+
+  const next = rovingNextIndexOf(rt, e.key, base, items.length);
+  if (next === null) return;
+  e.preventDefault();
+  if (next === base) return; // 端点不动：不回调、不重排（幂等连按安全）
+  rt.setStateIndex(next);
+  rt.layout(items);
+  items[next].focus();
+  rt.spec.onMove?.(items[next], next);
+  if (rt.preset !== "tab") rt.spec.onActivate?.(items[next], next);
+}
+
 export function bindRoving(spec: RovingSpec): RovingHandle {
   const preset: RovingPreset = spec.preset ?? "list";
-  const orientation = spec.orientation ?? "both";
+  const orientation: RovingOrientation = spec.orientation ?? "both";
   const cyclic = spec.cyclic === true;
   const homeEnd = spec.homeEnd !== false;
   const activeElementBase = spec.activeElementBase === true;
@@ -99,19 +229,22 @@ export function bindRoving(spec: RovingSpec): RovingHandle {
     return idx;
   };
 
-  /** target 落在哪个 item 内（直接命中或后代）；-1 = 不在任何 item 内 */
-  const indexOfTarget = (items: HTMLElement[], target: EventTarget | null): number => {
-    if (!(target instanceof Node)) return -1;
-    for (let i = 0; i < items.length; i++) if (items[i].contains(target)) return i;
-    return -1;
+  const rt: RovingRuntime = {
+    spec,
+    root: spec.root,
+    preset,
+    orientation,
+    cyclic,
+    homeEnd,
+    activeElementBase,
+    itemsOf,
+    layout,
+    getStateIndex: () => stateIndex,
+    setStateIndex: (index: number): void => {
+      stateIndex = index;
+    },
+    isDisposed: () => disposed,
   };
-
-  const isEditable = (el: HTMLElement | null): boolean =>
-    el instanceof HTMLElement &&
-    (el.tagName === "INPUT" ||
-      el.tagName === "TEXTAREA" ||
-      el.tagName === "SELECT" ||
-      el.isContentEditable);
 
   let onKeydown: ((e: KeyboardEvent) => void) | null = null;
   /** 实注册监听：Element 的 addEventListener 无泛型 EventMap 重载（仅字符串版收
@@ -119,75 +252,7 @@ export function bindRoving(spec: RovingSpec): RovingHandle {
   let keyListener: ((e: Event) => void) | null = null;
 
   if (container) {
-    onKeydown = (e: KeyboardEvent): void => {
-      if (disposed) return;
-      if (spec.when && !spec.when(e)) return;
-      // 修饰键方向键让路给全局组合键（key-router 管 Ctrl+F 之类，本原语只管裸导航键）
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      const items = itemsOf();
-      if (!items.length) return;
-
-      const target = e.target instanceof HTMLElement ? e.target : (null as HTMLElement | null);
-      if (isEditable(target)) return; // 输入中不接管（与 app-tree 裸键让路同口径）
-
-      // 基准：activeElementBase → 实际焦点项（slide-menu 冻结契约：键派发到容器时
-      // 焦点项才是移动基准）；缺省 → e.target 所在 item（后代命中同认）；
-      // 均落空 → stateIndex 位序（clamp）
-      let base: number;
-      if (activeElementBase) {
-        const ae = spec.root.activeElement as HTMLElement | null;
-        const ai = ae ? items.indexOf(ae) : -1;
-        base = ai >= 0 ? ai : Math.min(Math.max(stateIndex, 0), items.length - 1);
-      } else {
-        const cur = indexOfTarget(items, e.target);
-        base = cur >= 0 ? cur : Math.min(Math.max(stateIndex, 0), items.length - 1);
-      }
-
-      let next: number | null = null;
-      switch (e.key) {
-        case "Home":
-          if (homeEnd) next = 0;
-          break;
-        case "End":
-          if (homeEnd) next = items.length - 1;
-          break;
-        case "ArrowDown":
-        case "ArrowRight": {
-          // 前进键：vertical 认 Down、horizontal 认 Right、both 双认
-          const fwd =
-            orientation === "both" ||
-            (orientation === "vertical" && e.key === "ArrowDown") ||
-            (orientation === "horizontal" && e.key === "ArrowRight");
-          if (fwd) next = cyclic ? (base + 1) % items.length : Math.min(base + 1, items.length - 1);
-          break;
-        }
-        case "ArrowUp":
-        case "ArrowLeft": {
-          const bwd =
-            orientation === "both" ||
-            (orientation === "vertical" && e.key === "ArrowUp") ||
-            (orientation === "horizontal" && e.key === "ArrowLeft");
-          if (bwd) next = cyclic ? (base - 1 + items.length) % items.length : Math.max(base - 1, 0);
-          break;
-        }
-        case "Enter":
-        case " ":
-        case "Space":
-          e.preventDefault();
-          spec.onActivate?.(items[base], base);
-          return;
-        default:
-          return;
-      }
-      if (next === null) return;
-      e.preventDefault();
-      if (next === base) return; // 端点不动：不回调、不重排（幂等连按安全）
-      stateIndex = next;
-      layout(items);
-      items[next].focus();
-      spec.onMove?.(items[next], next);
-      if (preset !== "tab") spec.onActivate?.(items[next], next);
-    };
+    onKeydown = (e: KeyboardEvent): void => rovingOnKeydown(rt, e);
     keyListener = (e: Event) => onKeydown?.(e as KeyboardEvent);
     container.addEventListener("keydown", keyListener);
   }

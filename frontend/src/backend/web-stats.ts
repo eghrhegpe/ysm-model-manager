@@ -333,133 +333,174 @@ export function batchStatsWebModels(paths: string[]): Promise<WebModelStats[] | 
   return job;
 }
 
-/** 池执行体：分片 → 池内轮询分发 → 合并（由 batchChain 保证单批在途） */
-async function runPoolBatch(paths: string[]): Promise<WebModelStats[] | null> {
-  const ws = getWorkerPool();
-  if (!ws || ws.length === 0) {
-    markDegraded();
-    return null;
+/** 池批执行期的跨 chunk 共享状态（runPoolChunk/runPoolWorkerQueue/收尾共用一份） */
+interface PoolBatchState {
+  /** chunks 下标 → 该 chunk 逐模型结果（null = 整批降级标记） */
+  results: Array<Array<WebModelStatsWithPath> | null>;
+  /** 整批降级标志（瞬态 error 重试耗尽 / 主动取消 / 无 replacement） */
+  failed: boolean;
+  /** 已回包模型数（进度回调用） */
+  progressDone: number;
+  /** 本批模型总数（进度回调上界） */
+  total: number;
+}
+
+/** 并发游标：多个 worker 队列并发抢 chunk（单线程 JS 下 ++ 原子） */
+interface PoolChunkCursor {
+  next: number;
+}
+
+/** 重试决策（ADR-219 D3/D4）：瞬态 error 预算 / 静默杀预算 / chunk 墙钟三路收口 */
+type PoolRetryPlan = "retry" | "break" | "degrade";
+
+/**
+ * 判定本轮重试后的走向：
+ *  - 瞬态 error（WASM 初始化失败等）：预算耗尽 → 系统级 → 整批降级（保留既有语义）；
+ *    即 errorRetries>=1 → degrade，否则 retry
+ *  - silence / deadline：静默杀预算（2 次）或墙钟到点 → break（细粒度耗尽，不降级）；否则 retry
+ * 返回的 silenceKills 为计入本轮后的值（silence 才 +1）。
+ */
+function poolRetryPlan(
+  outcome: ChunkOutcome,
+  errorRetries: number,
+  silenceKills: number,
+  deadline: number,
+): { plan: PoolRetryPlan; silenceKills: number } {
+  if (outcome === "error") {
+    return { plan: errorRetries >= 1 ? "degrade" : "retry", silenceKills };
   }
-  // 分片：paths → ≤200 的 chunks（记录原起始索引）；任务队列轮询分给池内 worker（每 worker 同时 1 片）
+  const kills = outcome === "silence" ? silenceKills + 1 : silenceKills;
+  const exhausted = kills >= CHUNK_SILENCE_KILLS || Date.now() >= deadline;
+  return { plan: exhausted ? "break" : "retry", silenceKills: kills };
+}
+
+/** 分片：paths → ≤200 的 chunks（STATS_BATCH_LIMIT，记录原起始索引）；任务队列轮询分给池内
+ *  worker（每 worker 同时 1 片） */
+function buildStatsChunks(paths: string[]): Array<{ slice: string[]; offset: number }> {
   const chunks: Array<{ slice: string[]; offset: number }> = [];
   for (let i = 0; i < paths.length; i += STATS_BATCH_LIMIT) {
     chunks.push({ slice: paths.slice(i, i + STATS_BATCH_LIMIT), offset: i });
   }
-  const results: Array<Array<WebModelStatsWithPath> | null> = new Array(chunks.length).fill(null);
-  let nextChunk = 0;
-  let progressDone = 0;
-  let failed = false;
+  return chunks;
+}
 
-  /** 跑完一个 chunk（ADR-219 D2/D3/D4）：逐模型累积 + 静默看门狗 + 剩余模型重试。
-   *  收尾三路：① 正常/细粒度耗尽 → results[ci] = 已回包 ∪ 剩余全标 EMPTY_ERROR（hasError，
-   *  整批不降级）；② 瞬态 error 重试耗尽 / 主动取消 → failed + results[ci]=null（系统级
-   *  边界，整批降级保留既有语义）；③ 返回本轮存活 worker（专属 replacement 已入池），
-   *  供该队列后续 chunk 接续（原 worker 可能已被静默杀）。 */
-  const runChunk = async (
-    w: Worker,
-    ci: number,
-    slice: string[],
-  ): Promise<{ broken: boolean; lastWorker: Worker }> => {
-    let currentW = w;
-    let errorRetries = 0; // 瞬态 error 重试预算（每次 1 次，ADR-218 既有契约；chunk 内独立）
-    let silenceKills = 0; // 静默杀计数（每 chunk 至多 CHUNK_SILENCE_KILLS 次，ADR-219 D4）
-    // currentW 是否已被 terminateWorker 终结（silence/deadline/error 三态均在
-    // statsOneChunk 内终结当前 worker）——终结后 postMessage 静默丢弃，不能把
-    // 死 worker 当 lastWorker 交给下个 chunk（code_review 38e975b0e P2：
-    // 否则每后续 chunk 空转整个 30s 静默窗口 + 浪费一次静默杀预算）
-    let currentWDied = false;
-    // 逐模型累积（同 chunk 跨重试共享：重试只发「剩余未回包」模型，已回包不重放，D1）
-    const accounted = new Map<string, WebModelStatsWithPath>();
-    let remaining = slice;
-    // chunk 墙钟预算：自首起算、跨重试共享（超预算 → 强制耗尽，D4）
-    const deadline = Date.now() + STATS_CHUNK_TIMEOUT_MS;
-    let chunkBroken = false; // 瞬态耗尽/取消 → 整批降级（系统级故障边界，D3）
+/**
+ * 跑完一个 chunk（ADR-219 D2/D3/D4）：逐模型累积 + 静默看门狗 + 剩余模型重试。
+ * 收尾三路：① 正常/细粒度耗尽 → results[ci] = 已回包 ∪ 剩余全标 EMPTY_ERROR（hasError，
+ * 整批不降级）；② 瞬态 error 重试耗尽 / 主动取消 → failed + results[ci]=null（系统级
+ * 边界，整批降级保留既有语义）；③ 返回本轮存活 worker（专属 replacement 已入池），
+ * 供该队列后续 chunk 接续（原 worker 可能已被静默杀）。
+ */
+async function runPoolChunk(
+  st: PoolBatchState,
+  w: Worker,
+  ci: number,
+  slice: string[],
+): Promise<{ broken: boolean; lastWorker: Worker }> {
+  let currentW = w;
+  let errorRetries = 0; // 瞬态 error 重试预算（每次 1 次，ADR-218 既有契约；chunk 内独立）
+  let silenceKills = 0; // 静默杀计数（每 chunk 至多 CHUNK_SILENCE_KILLS 次，ADR-219 D4）
+  // currentW 是否已被 terminateWorker 终结（silence/deadline/error 三态均在
+  // statsOneChunk 内终结当前 worker）——终结后 postMessage 静默丢弃，不能把
+  // 死 worker 当 lastWorker 交给下个 chunk（code_review 38e975b0e P2：
+  // 否则每后续 chunk 空转整个 30s 静默窗口 + 浪费一次静默杀预算）
+  let currentWDied = false;
+  // 逐模型累积（同 chunk 跨重试共享：重试只发「剩余未回包」模型，已回包不重放，D1）
+  const accounted = new Map<string, WebModelStatsWithPath>();
+  let remaining = slice;
+  // chunk 墙钟预算：自首起算、跨重试共享（超预算 → 强制耗尽，D4）
+  const deadline = Date.now() + STATS_CHUNK_TIMEOUT_MS;
+  let chunkBroken = false; // 瞬态耗尽/取消 → 整批降级（系统级故障边界，D3）
 
-    while (remaining.length > 0 && !failed) {
-      const outcome = await statsOneChunk(currentW, ++requestSeq, remaining, {
-        onPartial: (r) => {
-          // 防御去重（chunk 内 paths 唯一是契约；跨请求隔离由 requestId 保证）
-          if (accounted.has(r.path)) return;
-          accounted.set(r.path, r);
-          progressDone++;
-          statsProgressCb?.(Math.min(progressDone, paths.length), paths.length);
-        },
-        deadline,
-      });
-      if (outcome === "complete") break; // 流结束（逐模型结果已累积；缺条目走下方防御补位）
-      if (outcome === "cancelled") {
-        chunkBroken = true; // 主动取消 → 整批降级（保留既有语义）
-        break;
-      }
-      // 走到这里 outcome ∈ {silence, deadline, error}——当前 worker 已被终结
-      currentWDied = true;
-      // 重试派发：remaining = 尚未回包模型
-      remaining = slice.filter((p) => !accounted.has(p));
-      if (!remaining.length) break; // 防御：全部已回包（仅结束标记缺失）→ 收尾补位
-      if (outcome === "error") {
-        // 瞬态 error（WASM 初始化失败等）：预算耗尽 → 系统级 → 整批降级（保留既有语义）
-        if (errorRetries >= 1) {
-          chunkBroken = true;
-          break;
-        }
-        errorRetries++;
-      } else {
-        // silence / deadline：挂死类局部故障（D3）→ 专属新 worker 重试剩余，或细粒度耗尽。
-        // 出错 worker 已被 statsOneChunk 内 terminateWorker 移出池；重试必须新建专属
-        // replacement，不可复用池内既有 worker——其余 worker 正被并发 runWorkerQueue
-        // 持有在途请求（单 onmessage 槽位契约），复用会覆盖对方槽位致其回复被
-        // requestId 过滤丢弃（重试特性反而整体降级）。
-        if (outcome === "silence") silenceKills++;
-        if (silenceKills >= CHUNK_SILENCE_KILLS || Date.now() >= deadline) {
-          break; // 静默杀预算耗尽 / 墙钟到点 → 细粒度耗尽：剩余全 hasError，整批不降级
-        }
-      }
-      const retryW = spawnReplacementWorker();
-      if (!retryW) {
-        // 无 replacement 可用（池上限/构造失败）：瞬态 error → 整批降级（保留既有）；
-        // 挂死类 → 细粒度耗尽（不拖整批，D3 边界）
-        chunkBroken = outcome === "error";
-        break;
-      }
-      currentW = retryW;
+  while (remaining.length > 0 && !st.failed) {
+    const outcome = await statsOneChunk(currentW, ++requestSeq, remaining, {
+      onPartial: (r) => {
+        // 防御去重（chunk 内 paths 唯一是契约；跨请求隔离由 requestId 保证）
+        if (accounted.has(r.path)) return;
+        accounted.set(r.path, r);
+        st.progressDone++;
+        statsProgressCb?.(Math.min(st.progressDone, st.total), st.total);
+      },
+      deadline,
+    });
+    if (outcome === "complete") break; // 流结束（逐模型结果已累积；缺条目走下方防御补位）
+    if (outcome === "cancelled") {
+      chunkBroken = true; // 主动取消 → 整批降级（保留既有语义）
+      break;
+    }
+    // 走到这里 outcome ∈ {silence, deadline, error}——当前 worker 已被终结
+    currentWDied = true;
+    // 重试派发：remaining = 尚未回包模型
+    remaining = slice.filter((p) => !accounted.has(p));
+    if (!remaining.length) break; // 防御：全部已回包（仅结束标记缺失）→ 收尾补位
+    // silence / deadline：挂死类局部故障（D3）→ 专属新 worker 重试剩余，或细粒度耗尽。
+    // 出错 worker 已被 statsOneChunk 内 terminateWorker 移出池；重试必须新建专属
+    // replacement，不可复用池内既有 worker——其余 worker 正被并发 runWorkerQueue
+    // 持有在途请求（单 onmessage 槽位契约），复用会覆盖对方槽位致其回复被
+    // requestId 过滤丢弃（重试特性反而整体降级）。
+    const step = poolRetryPlan(outcome, errorRetries, silenceKills, deadline);
+    silenceKills = step.silenceKills;
+    if (step.plan !== "retry") {
+      chunkBroken = step.plan === "degrade";
+      break;
+    }
+    if (outcome === "error") errorRetries++;
+    const retryW = spawnReplacementWorker();
+    if (!retryW) {
+      // 无 replacement 可用（池上限/构造失败）：瞬态 error → 整批降级（保留既有）；
+      // 挂死类 → 细粒度耗尽（不拖整批，D3 边界）
+      chunkBroken = outcome === "error";
+      break;
+    }
+    currentW = retryW;
+    currentWDied = false;
+  }
+
+  if (chunkBroken || st.failed) {
+    st.failed = true;
+    st.results[ci] = null;
+    return { broken: true, lastWorker: currentW };
+  }
+  // 细粒度耗尽/防御收尾 break 时 currentW 已死：先尝试补一个活 worker 接续
+  // 队列（避免下个 chunk 派发到死 worker 空转 30s）；池满拿不到时维持原样，
+  // 由下个 chunk 的静默看门狗兜底（既有语义，不新增失败路径）
+  if (currentWDied) {
+    const live = spawnReplacementWorker();
+    if (live) {
+      currentW = live;
       currentWDied = false;
     }
+  }
+  // 正常收尾/细粒度耗尽：逐模型结果 = 已回包 ∪ 剩余全标 EMPTY_ERROR（hasError——
+  // 统计失败在数值搜索中被排除，与 Go BoneCount==0 口径一致，D3）
+  st.results[ci] = slice.map((p) => accounted.get(p) ?? { ...EMPTY_ERROR, path: p });
+  return { broken: false, lastWorker: currentW };
+}
 
-    if (chunkBroken || failed) {
-      failed = true;
-      results[ci] = null;
-      return { broken: true, lastWorker: currentW };
-    }
-    // 细粒度耗尽/防御收尾 break 时 currentW 已死：先尝试补一个活 worker 接续
-    // 队列（避免下个 chunk 派发到死 worker 空转 30s）；池满拿不到时维持原样，
-    // 由下个 chunk 的静默看门狗兜底（既有语义，不新增失败路径）
-    if (currentWDied) {
-      const live = spawnReplacementWorker();
-      if (live) {
-        currentW = live;
-        currentWDied = false;
-      }
-    }
-    // 正常收尾/细粒度耗尽：逐模型结果 = 已回包 ∪ 剩余全标 EMPTY_ERROR（hasError——
-    // 统计失败在数值搜索中被排除，与 Go BoneCount==0 口径一致，D3）
-    results[ci] = slice.map((p) => accounted.get(p) ?? { ...EMPTY_ERROR, path: p });
-    return { broken: false, lastWorker: currentW };
-  };
+/** 单 worker 队列：从并发游标抢 chunk 依次跑，携带最近存活 worker 接续（原 worker 可能已被静默杀） */
+async function runPoolWorkerQueue(
+  st: PoolBatchState,
+  w: Worker,
+  chunks: Array<{ slice: string[]; offset: number }>,
+  cursor: PoolChunkCursor,
+): Promise<void> {
+  let currentW = w;
+  while (!st.failed) {
+    const ci = cursor.next++;
+    if (ci >= chunks.length) return;
+    const r = await runPoolChunk(st, currentW, ci, chunks[ci].slice);
+    if (r.broken) return; // 整批已判降级（failed=true），本队列退出
+    currentW = r.lastWorker; // 后续 chunk 接续最近存活 worker（原 worker 可能已被静默杀）
+  }
+}
 
-  const runWorkerQueue = async (w: Worker): Promise<void> => {
-    let currentW = w;
-    while (!failed) {
-      const ci = nextChunk++;
-      if (ci >= chunks.length) return;
-      const r = await runChunk(currentW, ci, chunks[ci].slice);
-      if (r.broken) return; // 整批已判降级（failed=true），本队列退出
-      currentW = r.lastWorker; // 后续 chunk 接续最近存活 worker（原 worker 可能已被静默杀）
-    }
-  };
-
-  await Promise.all(ws.map(runWorkerQueue));
-
-  if (failed || results.some((r) => r === null)) {
+/** 收尾：降级判定 + 按 path 对齐合并（chunks 顺序 = paths 顺序），对齐失败则整体降级 */
+function collectPoolResults(
+  st: PoolBatchState,
+  chunks: Array<{ slice: string[]; offset: number }>,
+  paths: string[],
+): WebModelStats[] | null {
+  if (st.failed || st.results.some((r) => r === null)) {
     markDegraded();
     return null;
   }
@@ -468,7 +509,7 @@ async function runPoolBatch(paths: string[]): Promise<WebModelStats[] | null> {
   const out: Array<WebModelStats | null> = new Array(paths.length);
   for (let ci = 0; ci < chunks.length; ci++) {
     const { slice, offset } = chunks[ci];
-    const res = results[ci] as Array<WebModelStatsWithPath>;
+    const res = st.results[ci] as Array<WebModelStatsWithPath>;
     const byPath = new Map(res.map((r) => [r.path, r]));
     for (let i = 0; i < slice.length; i++) {
       const s = byPath.get(slice[i]);
@@ -491,4 +532,23 @@ async function runPoolBatch(paths: string[]): Promise<WebModelStats[] | null> {
   }
   statsProgressCb?.(paths.length, paths.length); // 全部完成
   return out as WebModelStats[];
+}
+
+/** 池执行体：分片 → 池内轮询分发 → 合并（由 batchChain 保证单批在途） */
+async function runPoolBatch(paths: string[]): Promise<WebModelStats[] | null> {
+  const ws = getWorkerPool();
+  if (!ws || ws.length === 0) {
+    markDegraded();
+    return null;
+  }
+  const chunks = buildStatsChunks(paths);
+  const st: PoolBatchState = {
+    results: new Array(chunks.length).fill(null),
+    failed: false,
+    progressDone: 0,
+    total: paths.length,
+  };
+  const cursor: PoolChunkCursor = { next: 0 };
+  await Promise.all(ws.map((w) => runPoolWorkerQueue(st, w, chunks, cursor)));
+  return collectPoolResults(st, chunks, paths);
 }

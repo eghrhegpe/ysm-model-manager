@@ -415,3 +415,196 @@ describe("RovingHandle", () => {
     }).not.toThrow();
   });
 });
+
+// ---------- 分支补盲（认知复杂度战役 4c 特征测试）----------
+// 动机：生产 5 处消费方（slide-menu / dropdown / tabs-shell / app-nav / sync-manager）
+// **全部**传 Element 容器，而上方用例只覆盖字符串选择器分支——`typeof spec.container
+// === "string"` 的另一半（Element 直挂）此前零断言；`activeElementBase` 与 Element 容器
+// 的**真实组合**同样只有字符串容器的等价覆盖。以下逐条锁住该分支及其余无断言的不变量。
+
+/** 与 setup 同构，但 container 以 Element 直传（生产调用形态） */
+function setupElementContainer(
+  count = 3,
+  spec: Partial<RovingSpec> = {},
+): { root: ShadowRoot; container: HTMLDivElement; items: HTMLDivElement[]; handle: ReturnType<typeof bindRoving> } {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = host.attachShadow({ mode: "open" });
+  const container = document.createElement("div");
+  container.setAttribute("role", "listbox");
+  for (let i = 0; i < count; i++) {
+    const item = document.createElement("div");
+    item.className = "item";
+    item.setAttribute("role", "option");
+    item.textContent = `item-${i}`;
+    container.appendChild(item);
+  }
+  root.appendChild(container);
+  const handle = bindRoving({
+    root,
+    container,
+    itemSelector: ".item",
+    preset: "list",
+    orientation: "vertical",
+    ...spec,
+  });
+  return { root, container, items: Array.from(container.querySelectorAll(".item")), handle };
+}
+
+describe("Element 容器直挂（生产 5 处消费方的真实调用形态）", () => {
+  it("不经 root.querySelector：按键/状态位/解绑全通", () => {
+    const onMove = vi.fn();
+    const h = setupElementContainer(3, { onMove });
+    expect(h.items[0].tabIndex).toBe(0);
+    expect(h.items[0].getAttribute("aria-selected")).toBe("true");
+    key(h.items[0], "ArrowDown");
+    expect(h.root.activeElement).toBe(h.items[1]);
+    expect(h.items[1].tabIndex).toBe(0);
+    expect(h.items[1].getAttribute("aria-selected")).toBe("true");
+    h.handle.dispose();
+    key(h.items[1], "ArrowDown");
+    expect(onMove).toHaveBeenCalledTimes(1); // 解绑后不再接管
+  });
+
+  it("容器不在 root 作用域内也照常工作（反证未走 root.querySelector）", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = host.attachShadow({ mode: "open" });
+    const outside = document.createElement("div");
+    for (let i = 0; i < 3; i++) {
+      const item = document.createElement("div");
+      item.className = "item";
+      outside.appendChild(item);
+    }
+    document.body.appendChild(outside); // 亮 DOM，root（shadow）内查不到
+    const onMove = vi.fn();
+    const handle = bindRoving({
+      root,
+      container: outside,
+      itemSelector: ".item",
+      preset: "list",
+      orientation: "vertical",
+      onMove,
+    });
+    const items = Array.from(outside.querySelectorAll(".item")) as HTMLDivElement[];
+    const e = key(items[0], "ArrowDown");
+    expect(e.defaultPrevented).toBe(true);
+    expect(onMove).toHaveBeenCalledTimes(1);
+    expect(items[1].tabIndex).toBe(0);
+    handle.dispose();
+  });
+
+  it("Element 容器 + activeElementBase + cyclic：焦点项为基准回绕（slide-menu 真实组合）", () => {
+    const h = setupElementContainer(3, { activeElementBase: true, cyclic: true });
+    h.items[2].focus(); // roving 仍在 0（stateIndex=0）
+    key(h.container, "ArrowDown");
+    expect(h.items.map((el) => el.tabIndex)).toEqual([0, -1, -1]);
+  });
+});
+
+describe("target 定位与修饰键（补盲）", () => {
+  it("后代（非可编辑）target 以宿主 item 为基准", () => {
+    const h = setup(3);
+    const span = document.createElement("span");
+    h.items[0].appendChild(span);
+    key(span, "ArrowDown");
+    expect(h.root.activeElement).toBe(h.items[1]);
+    expect(h.items[1].tabIndex).toBe(0);
+  });
+
+  it("altKey / metaKey 方向键同样让路（原仅断言 ctrlKey）", () => {
+    const onMove = vi.fn();
+    const h = setup(3, { onMove });
+    key(h.items[0], "ArrowDown", { altKey: true });
+    key(h.items[0], "ArrowDown", { metaKey: true });
+    expect(onMove).not.toHaveBeenCalled();
+    expect(h.items[0].tabIndex).toBe(0);
+    expect(h.items[1].tabIndex).toBe(-1);
+  });
+
+  it("when 放行（收到事件且返回 true）时正常接管", () => {
+    const seen: string[] = [];
+    const onMove = vi.fn();
+    const h = setup(3, {
+      when: (e) => {
+        seen.push(e.key);
+        return e.key === "ArrowDown";
+      },
+      onMove,
+    });
+    key(h.items[0], "ArrowDown");
+    expect(seen).toEqual(["ArrowDown"]);
+    expect(onMove).toHaveBeenCalledTimes(1);
+    key(h.items[1], "ArrowUp"); // when 返回 false → 让路
+    expect(seen).toEqual(["ArrowDown", "ArrowUp"]);
+    expect(onMove).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Home/End 与 stateAttr 覆盖（补盲）", () => {
+  it("End 触发 preventDefault + onMove + onActivate；homeEnd:false 时不 preventDefault", () => {
+    const onMove = vi.fn();
+    const onActivate = vi.fn();
+    const h = setup(3, { onMove, onActivate });
+    const eEnd = key(h.items[0], "End");
+    expect(eEnd.defaultPrevented).toBe(true);
+    expect(h.root.activeElement).toBe(h.items[2]);
+    expect(onMove).toHaveBeenCalledTimes(1);
+    expect(onActivate).toHaveBeenCalledTimes(1);
+    expect(onActivate.mock.calls[0]?.[1]).toBe(2);
+
+    const onMove2 = vi.fn();
+    const h2 = setup(3, { homeEnd: false, onMove: onMove2 });
+    const eHome = key(h2.items[0], "Home");
+    expect(eHome.defaultPrevented).toBe(false);
+    expect(onMove2).not.toHaveBeenCalled();
+  });
+
+  it("stateAttr 显式覆盖 preset 派生（list→aria-checked / radio→aria-selected）", () => {
+    const h = setup(3, { stateAttr: "aria-checked" });
+    expect(h.items[0].getAttribute("aria-checked")).toBe("true");
+    expect(h.items[1].getAttribute("aria-checked")).toBe("false");
+    expect(h.items[0].hasAttribute("aria-selected")).toBe(false);
+
+    const h2 = setup(3, { preset: "radio", stateAttr: "aria-selected" });
+    expect(h2.items[0].getAttribute("aria-selected")).toBe("true");
+    expect(h2.items[0].hasAttribute("aria-checked")).toBe(false);
+  });
+});
+
+describe("句柄边界（补盲）", () => {
+  it("initialIndex 越界 → bind 时 clamp 到末项（不抛、不夺焦）", () => {
+    const h = setup(3, { initialIndex: 99 });
+    expect(h.items[2].tabIndex).toBe(0);
+    expect(h.items[2].getAttribute("aria-selected")).toBe("true");
+    expect(h.root.activeElement).toBeNull();
+  });
+
+  it("syncIndex 越界双向 clamp（高位→末项 / 负位→首项）", () => {
+    const h = setup(3);
+    h.handle.syncIndex(99);
+    expect(h.items[2].tabIndex).toBe(0);
+    expect(h.items[2].getAttribute("aria-selected")).toBe("true");
+    h.handle.syncIndex(-5);
+    expect(h.items[0].tabIndex).toBe(0);
+    expect(h.items[0].getAttribute("aria-selected")).toBe("true");
+    expect(h.items[2].tabIndex).toBe(-1);
+  });
+
+  it("dispose 后 activate() 安全 no-op（不回调、不抛）", () => {
+    const onActivate = vi.fn();
+    const h = setup(3, { onActivate });
+    h.handle.dispose();
+    expect(() => h.handle.activate()).not.toThrow();
+    expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  it("dispose 只解自己的 keydown 监听，不误伤同容器上的其他监听", () => {
+    const h = setup(3);
+    const other = vi.fn();
+    h.container.addEventListener("keydown", other);
+    h.handle.dispose();
+    key(h.container, "ArrowDown");
+    expect(other).toHaveBeenCalledTimes(1);
+  });
+});

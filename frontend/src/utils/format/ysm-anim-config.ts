@@ -38,6 +38,54 @@ export interface YsmProperties {
 
 const asStr = (v: unknown): string => (typeof v === "string" ? v : "");
 
+/** 非空对象收窄（extra_animation 内嵌映射的形状守卫） */
+const hasOwn = (o: unknown): o is Record<string, unknown> => !!o && typeof o === "object";
+
+/** 单个分类组的组名：name 优先，为空则按 #id 回查 extra_animation（Go 同口径） */
+function animGroupNameOf(
+  g: { id?: string; name?: string },
+  extraAnim: Record<string, unknown>,
+): string {
+  if (g.name) return g.name;
+  if (!g.id) return "";
+  return asStr(extraAnim[`#${g.id}`]);
+}
+
+/** 单个分类组的展示项：跳过 # 内部引用，只留中文展示名（整组皆内部引用 → 空数组） */
+function animGroupItemsOf(g: { extra_animation?: Record<string, unknown> | null }): string[] {
+  const ea = hasOwn(g.extra_animation) ? g.extra_animation : {};
+  const items: string[] = [];
+  for (const k of Object.keys(ea)) {
+    const dv = asStr(ea[k]);
+    // 跳过内部引用（# 开头的值），只留中文展示名
+    if (dv && !dv.startsWith("#")) items.push(dv);
+  }
+  return items;
+}
+
+/** 已被任一分类组引用的动画键集合（松散动画兜底判据） */
+function classifiedAnimKeysOf(
+  groups: Array<{ extra_animation?: Record<string, unknown> | null }>,
+): Set<string> {
+  const classified = new Set<string>();
+  for (const g of groups) {
+    const ea = hasOwn(g.extra_animation) ? g.extra_animation : {};
+    for (const k of Object.keys(ea)) classified.add(k);
+  }
+  return classified;
+}
+
+/** 松散动画兜底：未被任何分类组引用、且非 # 内部引用的顶层动画 */
+function looseAnimNamesOf(extraAnim: Record<string, unknown>, classified: Set<string>): string[] {
+  const loose: string[] = [];
+  for (const [k, v] of Object.entries(extraAnim)) {
+    if (k.startsWith("#")) continue; // 组名跳过
+    const dv = asStr(v);
+    if (dv && !dv.startsWith("#") && !classified.has(k)) loose.push(dv);
+  }
+  return loose;
+}
+
 /**
  * 从 ysm.json properties 提取动画分组与配置菜单。
  * 返回空数组表示无可用信息（调用方据此跳过渲染）。
@@ -51,38 +99,19 @@ export function extractAnimGroupsAndConfigs(p?: YsmProperties | null): {
   if (!p) return { animGroups, configMenus };
 
   const extraAnim = p.extra_animation ?? {};
-  const hasOwn = (o: unknown): o is Record<string, unknown> => !!o && typeof o === "object";
+  const groups = p.extra_animation_classify ?? [];
 
   // 1) 分类组：extra_animation_classify
-  for (const g of p.extra_animation_classify ?? []) {
-    let name = g.name ?? "";
-    if (!name && g.id) {
-      const v = asStr(extraAnim[`#${g.id}`]);
-      if (v) name = v;
-    }
-    const items: string[] = [];
-    const ea = hasOwn(g.extra_animation) ? g.extra_animation : {};
-    for (const k of Object.keys(ea)) {
-      const dv = asStr(ea[k]);
-      // 跳过内部引用（# 开头的值），只留中文展示名
-      if (dv && !dv.startsWith("#")) items.push(dv);
-    }
+  for (const g of groups) {
+    const items = animGroupItemsOf(g);
     // 整组都是内部引用时跳过整个组（与 Go 行为一致）
-    if (items.length > 0) animGroups.push({ name, items, ...(g.id != null ? { id: g.id } : {}) });
+    if (!items.length) continue;
+    const name = animGroupNameOf(g, extraAnim);
+    animGroups.push({ name, items, ...(g.id != null ? { id: g.id } : {}) });
   }
 
   // 2) 松散动画兜底：未被任何分类组引用、且非 # 内部引用的顶层动画
-  const classified = new Set<string>();
-  for (const g of p.extra_animation_classify ?? []) {
-    const ea = hasOwn(g.extra_animation) ? g.extra_animation : {};
-    for (const k of Object.keys(ea)) classified.add(k);
-  }
-  const loose: string[] = [];
-  for (const [k, v] of Object.entries(extraAnim)) {
-    if (k.startsWith("#")) continue; // 组名跳过
-    const dv = asStr(v);
-    if (dv && !dv.startsWith("#") && !classified.has(k)) loose.push(dv);
-  }
+  const loose = looseAnimNamesOf(extraAnim, classifiedAnimKeysOf(groups));
   if (loose.length > 0) {
     animGroups.push({ id: "_loose", name: "其他动画", items: loose });
   }

@@ -70,6 +70,20 @@ function cmPgClearCompleteTimer(ctx: CmPgCtx): void {
   }
 }
 
+/** 集中清 _stuckTimer（幂等；三条锁定/复位路径共用） */
+function cmPgClearStuckTimer(ctx: CmPgCtx): void {
+  if (!ctx._stuckTimer) return;
+  clearTimeout(ctx._stuckTimer);
+  ctx._stuckTimer = null;
+}
+
+/** 集中清 _dotTimer（菊花点动画收口） */
+function cmPgClearDotTimer(ctx: CmPgCtx): void {
+  if (!ctx._dotTimer) return;
+  clearInterval(ctx._dotTimer);
+  ctx._dotTimer = null;
+}
+
 function cmPgStuckGuardReset(ctx: CmPgCtx): void {
   ctx._lastPct = -1;
   ctx._stuckLocked = false;
@@ -117,6 +131,57 @@ function cmPgCalcPct(s: DownloadState): CmPgCalcPctResult {
   return { pct, label, isTiny, total };
 }
 
+/**
+ * 大文件锁 2s 后的菊花点动画：⏳ + 点循环（400ms 帧）。
+ * isConnected 守卫：pctEl 被重渲染/移除后文本永远停在 ⏳，原判据（textContent
+ * 变 100%）不再触发 → 脱文档即自清（帧数/timer 已在闭包，自清不依赖节点属性）。
+ */
+function cmPgStartDotAnimation(ctx: CmPgCtx, pctEl: HTMLElement): void {
+  pctEl.innerHTML = UI_ICONS.refresh;
+  pctEl.style.fontSize = "var(--fs-micro)";
+  if (ctx._dotTimer) clearInterval(ctx._dotTimer); // 双次进锁不留孤儿动画
+  ctx._dots = 0;
+  ctx._dotTimer = setInterval(() => {
+    if (!pctEl.isConnected || pctEl.textContent === "100%") {
+      cmPgClearDotTimer(ctx);
+      return;
+    }
+    ctx._dots = (ctx._dots + 1) % 4;
+    pctEl.innerHTML = `${UI_ICONS.refresh}${".".repeat(ctx._dots)}`;
+  }, DOT_INTERVAL_MS);
+}
+
+/** 小文件卡 99% 锁定：300ms 后强制 100%（不转菊花） */
+function cmPgLockTiny(ctx: CmPgCtx, qs: HTMLElement): void {
+  ctx._stuckLocked = true;
+  cmPgClearStuckTimer(ctx);
+  ctx._stuckTimer = setTimeout(() => {
+    const pctEl2 = qs?.querySelector(".gh-progress-pct") as HTMLElement | null;
+    const fillEl2 = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
+    if (pctEl2) pctEl2.textContent = "100%";
+    if (fillEl2) {
+      fillEl2.style.transition = "width .3s";
+      fillEl2.style.width = "100%";
+    }
+    ctx._stuckTimer = null;
+    ctx._stuckLocked = false;
+  }, STUCK_TINY_MS);
+}
+
+/** 大文件卡 99% 锁定：立即写 99%，2s 后无事发生则转菊花 + fill 宽 99% */
+function cmPgLockLarge(ctx: CmPgCtx, qs: HTMLElement, label: string): void {
+  ctx._stuckLocked = true;
+  cmPgClearStuckTimer(ctx);
+  const lockPctEl = qs.querySelector(".gh-progress-pct") as HTMLElement | null;
+  if (lockPctEl) lockPctEl.textContent = label;
+  ctx._stuckTimer = setTimeout(() => {
+    const pctEl = qs?.querySelector(".gh-progress-pct") as HTMLElement | null;
+    const fillEl = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
+    if (pctEl && pctEl.textContent !== "100%") cmPgStartDotAnimation(ctx, pctEl);
+    if (fillEl) fillEl.style.width = "99%";
+  }, STUCK_LARGE_MS);
+}
+
 function cmPgApplyLock(
   ctx: CmPgCtx,
   qs: HTMLElement,
@@ -128,73 +193,24 @@ function cmPgApplyLock(
   let outPct = pct;
   let outLabel = label;
 
-  if (isTiny && ctx._lastPct < STUCK_PCT_THRESHOLD && pct >= 99 && !ctx.completeTimer) {
+  // 首见 99% 判据（两条锁定路径共用）。_lastPct 只在函数尾更新，故此处提前取值与
+  // 原「先 tiny 后 large」逐段判读等价；又 tiny 要求 isTiny、large 要求 !isTiny，
+  // 两路互斥，故合并判据不改变任何分支可达性。
+  const justLocked = ctx._lastPct < STUCK_PCT_THRESHOLD && pct >= 99;
+
+  if (justLocked && isTiny && !ctx.completeTimer) {
     outLabel = "99%";
     outPct = 99;
-    ctx._stuckLocked = true;
-    if (ctx._stuckTimer) {
-      clearTimeout(ctx._stuckTimer);
-      ctx._stuckTimer = null;
-    }
-    ctx._stuckTimer = setTimeout(() => {
-      const pctEl2 = qs?.querySelector(".gh-progress-pct") as HTMLElement | null;
-      const fillEl2 = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
-      if (pctEl2) pctEl2.textContent = "100%";
-      if (fillEl2) {
-        fillEl2.style.transition = "width .3s";
-        fillEl2.style.width = "100%";
-      }
-      ctx._stuckTimer = null;
-      ctx._stuckLocked = false;
-    }, STUCK_TINY_MS);
+    cmPgLockTiny(ctx, qs);
   }
 
-  const hasCL = total > 0 && pct > 0;
-  if (
-    hasCL &&
-    !isTiny &&
-    ctx._lastPct < STUCK_PCT_THRESHOLD &&
-    pct >= 99 &&
-    total > LARGE_FILE_BYTES
-  ) {
+  const largeLocked = justLocked && !isTiny && total > 0 && pct > 0 && total > LARGE_FILE_BYTES;
+  if (largeLocked) {
     outLabel = "99%";
     outPct = 99;
-    ctx._stuckLocked = true;
-    if (ctx._stuckTimer) {
-      clearTimeout(ctx._stuckTimer);
-      ctx._stuckTimer = null;
-    }
-    const lockPctEl = qs.querySelector(".gh-progress-pct") as HTMLElement | null;
-    if (lockPctEl) lockPctEl.textContent = outLabel;
-    ctx._stuckTimer = setTimeout(() => {
-      const pctEl = qs?.querySelector(".gh-progress-pct") as HTMLElement | null;
-      const fillEl = qs?.querySelector(".gh-progress-fill") as HTMLElement | null;
-      if (pctEl && pctEl.textContent !== "100%") {
-        pctEl.innerHTML = UI_ICONS.refresh;
-        pctEl.style.fontSize = "var(--fs-micro)";
-        if (ctx._dotTimer) clearInterval(ctx._dotTimer); // 双次进锁不留孤儿动画
-        ctx._dots = 0;
-        ctx._dotTimer = setInterval(() => {
-          // isConnected 守卫：pctEl 被重渲染/移除后文本永远停在 ⏳，原判据（textContent
-          // 变 100%）不再触发 → 脱文档即自清（帧数/timer 已在闭包，自清不依赖节点属性）。
-          if (!pctEl.isConnected || pctEl.textContent === "100%") {
-            if (ctx._dotTimer) {
-              clearInterval(ctx._dotTimer);
-              ctx._dotTimer = null;
-            }
-            return;
-          }
-          ctx._dots = (ctx._dots + 1) % 4;
-          pctEl.innerHTML = `${UI_ICONS.refresh}${".".repeat(ctx._dots)}`;
-        }, DOT_INTERVAL_MS);
-      }
-      if (fillEl) fillEl.style.width = "99%";
-    }, STUCK_LARGE_MS);
+    cmPgLockLarge(ctx, qs, outLabel);
   } else if (!ctx._stuckLocked) {
-    if (ctx._stuckTimer) {
-      clearTimeout(ctx._stuckTimer);
-      ctx._stuckTimer = null;
-    }
+    cmPgClearStuckTimer(ctx);
   }
   ctx._lastPct = outPct;
 

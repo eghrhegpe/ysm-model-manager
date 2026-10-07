@@ -70,76 +70,112 @@ async function mergeBedrockFromManifest(
   meta: YsmManifestMeta,
   readFile: (rel: string) => Promise<Uint8Array | null>,
 ): Promise<BedrockGeometry | null> {
-  const allBones: BedrockGeometry["bones"] = [];
+  const geo = await mergeManifestGeometry(meta, readFile);
+  if (!geo.bones.length) return null;
+  const tex = await mergeManifestTextures(meta, readFile);
+  return {
+    bones: geo.bones,
+    boneCount: geo.boneCount,
+    cubeCount: geo.cubeCount,
+    texWidth: geo.texWidth,
+    texHeight: geo.texHeight,
+    textures: tex.textures,
+    textureNames: tex.textureNames,
+  };
+}
+
+/** manifest 条目取声明路径：字符串本身，或 {path}/{uv} 对象字段；缺省 "" */
+function manifestPathOf(v: unknown, key: "path" | "uv"): string {
+  if (typeof v === "string") return v;
+  return ((v as Record<string, unknown>)?.[key] as string) || "";
+}
+
+/** 依序读第一个命中的候选路径（zip entries 查表 / IDB 读文件均可能全部落空） */
+async function readFirstAvailable(
+  readFile: (rel: string) => Promise<Uint8Array | null>,
+  candidates: string[],
+): Promise<Uint8Array | null> {
+  for (const c of candidates) {
+    const bytes = await readFile(c);
+    if (bytes) return bytes;
+  }
+  return null;
+}
+
+/** geometry 候选路径：缺 models/ 前缀则补。
+ *  兼容 manifest 里只写 baseName（如 "main"）而磁盘上是 main.json / main.geo.json */
+function geomCandidatesOf(raw: string): string[] {
+  const rel = raw.startsWith("models/") || raw.startsWith("models\\") ? raw : `models/${raw}`;
+  return [rel, raw, `${rel}.json`, `${rel}.geo.json`, `${raw}.json`, `${raw}.geo.json`];
+}
+
+/** 纹理候选路径：缺 textures/ 前缀则补（png/jpg 双格式探测） */
+function texCandidatesOf(raw: string): string[] {
+  const rel = raw.startsWith("textures/") || raw.startsWith("textures\\") ? raw : `textures/${raw}`;
+  return [rel, raw, `${rel}.png`, `${rel}.jpg`, `${raw}.png`, `${raw}.jpg`];
+}
+
+/** 末段去扩展名的显示名（无段 / 无扩展名 → ""） */
+function basenameNoExt(p: string): string {
+  return (
+    p
+      .split(/[/\\]/)
+      .pop()
+      ?.replace(/\.[^.]+$/, "") || ""
+  );
+}
+
+/** manifest 声明的 model 文件按序读取 + 解析，累加骨骼/立方体/纹理尺寸（无骨骼条目跳过） */
+async function mergeManifestGeometry(
+  meta: YsmManifestMeta,
+  readFile: (rel: string) => Promise<Uint8Array | null>,
+): Promise<{
+  bones: BedrockGeometry["bones"];
+  boneCount: number;
+  cubeCount: number;
+  texWidth: number;
+  texHeight: number;
+}> {
+  const bones: BedrockGeometry["bones"] = [];
   let boneCount = 0;
   let cubeCount = 0;
-  let maxTexW = 0;
-  let maxTexH = 0;
+  let texWidth = 0;
+  let texHeight = 0;
   const processed = new Set<string>();
 
   for (const mf of meta.modelFiles || []) {
-    const raw = typeof mf === "string" ? mf : (mf as { path?: string })?.path || "";
+    const raw = manifestPathOf(mf, "path");
     if (!raw || processed.has(raw)) continue;
     processed.add(raw);
-    const rel = raw.startsWith("models/") || raw.startsWith("models\\") ? raw : `models/${raw}`;
-    // 兼容 manifest 里只写 baseName（如 "main"）而磁盘上是 main.json / main.geo.json
-    const candidates = [
-      rel,
-      raw,
-      `${rel}.json`,
-      `${rel}.geo.json`,
-      `${raw}.json`,
-      `${raw}.geo.json`,
-    ];
-    let bytes: Uint8Array | null = null;
-    for (const c of candidates) {
-      bytes = await readFile(c);
-      if (bytes) break;
-    }
+    const bytes = await readFirstAvailable(readFile, geomCandidatesOf(raw));
     if (!bytes) continue;
     const parsed = parseBedrockGeometryFromJSON(new TextDecoder("utf-8").decode(bytes));
     if (!parsed?.bones?.length) continue;
-    allBones.push(...parsed.bones);
+    bones.push(...parsed.bones);
     boneCount += parsed.boneCount;
     cubeCount += parsed.cubeCount;
-    maxTexW = Math.max(maxTexW, parsed.texWidth);
-    maxTexH = Math.max(maxTexH, parsed.texHeight);
+    texWidth = Math.max(texWidth, parsed.texWidth);
+    texHeight = Math.max(texHeight, parsed.texHeight);
   }
+  return { bones, boneCount, cubeCount, texWidth, texHeight };
+}
 
-  if (!allBones.length) return null;
-
+/** manifest 声明的 texture 文件按序读取 → data URI + 去扩展名显示名 */
+async function mergeManifestTextures(
+  meta: YsmManifestMeta,
+  readFile: (rel: string) => Promise<Uint8Array | null>,
+): Promise<{ textures: string[]; textureNames: string[] }> {
   const textures: string[] = [];
   const textureNames: string[] = [];
   for (const tf of meta.texFiles || []) {
-    const raw = typeof tf === "string" ? tf : (tf as { uv?: string })?.uv || "";
+    const raw = manifestPathOf(tf, "uv");
     if (!raw) continue;
-    const rel =
-      raw.startsWith("textures/") || raw.startsWith("textures\\") ? raw : `textures/${raw}`;
-    const candidates = [rel, raw, `${rel}.png`, `${rel}.jpg`, `${raw}.png`, `${raw}.jpg`];
-    let bytes: Uint8Array | null = null;
-    for (const c of candidates) {
-      bytes = await readFile(c);
-      if (bytes) break;
-    }
+    const bytes = await readFirstAvailable(readFile, texCandidatesOf(raw));
     if (!bytes) continue;
     textures.push(imageDataUri(bytes, imageMimeOfPath(raw)));
-    textureNames.push(
-      raw
-        .split(/[/\\]/)
-        .pop()
-        ?.replace(/\.[^.]+$/, "") || "",
-    );
+    textureNames.push(basenameNoExt(raw));
   }
-
-  return {
-    bones: allBones,
-    boneCount,
-    cubeCount,
-    texWidth: maxTexW,
-    texHeight: maxTexH,
-    textures,
-    textureNames,
-  };
+  return { textures, textureNames };
 }
 
 /** 找模型同目录候选预览图（对齐 fileops.FindPreviewImage 的候选顺序） */
@@ -282,6 +318,133 @@ function toBedrockModelContract(
   };
 }
 
+/** 单文件 geometry 嗅探（前 1MB 解码 + "minecraft:geometry" 标记预筛）；不命中 → null */
+function probeGeometryBytes(fbytes: Uint8Array): BedrockGeometry | null {
+  try {
+    const text = new TextDecoder().decode(fbytes.subarray(0, 1 << 20));
+    if (!text.includes('"minecraft:geometry"')) return null;
+    const parsed = parseBedrockGeometryFromJSON(text);
+    return parsed?.bones?.length ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 同目录扫第一个含 geometry 的 .json（列举顺序；无命中 → null） */
+async function findFirstGeometryInDir(files: string[]): Promise<BedrockGeometry | null> {
+  for (const p of files) {
+    if (!/\.json$/i.test(p)) continue;
+    const fb64 = await readWebFile(p);
+    if (!fb64) continue;
+    const fbytes = base64ToBytes(fb64);
+    if (!fbytes) continue;
+    const parsed = probeGeometryBytes(fbytes);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+/** 同目录 PNG → data URI + 去扩展名显示名（按目录列举顺序） */
+async function collectDirPngTextures(
+  files: string[],
+): Promise<{ textures: string[]; textureNames: string[] }> {
+  const textures: string[] = [];
+  const textureNames: string[] = [];
+  for (const p of files) {
+    if (!/\.png$/i.test(p)) continue;
+    const uri = await readImageDataUri(p);
+    if (!uri) continue;
+    textures.push(uri);
+    textureNames.push(basenameNoExt(p));
+  }
+  return { textures, textureNames };
+}
+
+/** 目录相对路径读字节（manifest 声明的关联文件；读不到 → null） */
+async function readWebRelBytes(dir: string, rel: string): Promise<Uint8Array | null> {
+  const b64 = await readWebFile(`${dir}/${rel}`);
+  return b64 ? base64ToBytes(b64) : null;
+}
+
+/** 解析产出三态：geo 未命中即 null；textures/textureNames/animations 缺省为空数组 */
+interface BedrockAnalyzeResult {
+  geo: BedrockGeometry | null;
+  textures: string[];
+  textureNames: string[];
+  animations: string[];
+}
+
+/** 非 .zip/.json 扩展名的空产出（geo null → 上游 return {}） */
+const EMPTY_BEDROCK_ANALYZE: BedrockAnalyzeResult = {
+  geo: null,
+  textures: [],
+  textureNames: [],
+  animations: [],
+};
+
+/** .zip 分支：ysm.json manifest 优先（按声明序合并多角色），未命中回退「首个 geometry」+ 全量纹理 */
+async function analyzeZipBedrock(bytes: Uint8Array): Promise<BedrockAnalyzeResult> {
+  const { entries } = extractZip(bytes);
+  // 先尝试 ysm.json manifest：按声明序合并多角色 geometry + 纹理
+  const ysmBytes = findEntryByRel(entries, "ysm.json");
+  const manifestMeta = ysmBytes ? parseYsmManifestMeta(ysmBytes) : null;
+  let geo = manifestMeta
+    ? await mergeBedrockFromManifest(manifestMeta, async (rel) => findEntryByRel(entries, rel))
+    : null;
+  let textures: string[] = geo?.textures || [];
+  let textureNames: string[] = geo?.textureNames || [];
+  if (!geo?.bones?.length) {
+    const geoKey = findGeometryEntryKey(entries);
+    if (geoKey) geo = parseBedrockGeometryFromJSON(new TextDecoder().decode(entries[geoKey]));
+    const tex = collectTexturesFromEntries(entries);
+    textures = tex.textures;
+    textureNames = tex.textureNames;
+  }
+  const animations = Object.keys(entries)
+    .filter((k) => /\.animation\.json$/i.test(k))
+    .map((k) => new TextDecoder().decode(entries[k]));
+  return { geo, textures, textureNames, animations };
+}
+
+/**
+ * .json 主文件分支：同目录 ysm.json manifest 优先（按声明序读关联文件合并）。
+ * 无 manifest 或 manifest 未命中 → 回退“找第一个 geometry”；纹理独立兜底——
+ * manifest 未带纹理时仍扫同目录 PNG。
+ */
+async function analyzeJsonBedrock(
+  bytes: Uint8Array,
+  modelPath: string,
+): Promise<BedrockAnalyzeResult> {
+  const slash = modelPath.lastIndexOf("/");
+  const dir = slash > 0 ? modelPath.slice(0, slash) : "";
+  const files = dir ? await listWebModelDirFiles(dir) : [];
+  // 当前文件若是 ysm.json 且带 manifest → 按声明序合并
+  const manifestMeta = parseYsmManifestMeta(bytes);
+  const manifestGeo = manifestMeta
+    ? await mergeBedrockFromManifest(manifestMeta, (rel) => readWebRelBytes(dir, rel))
+    : null;
+  const geo = manifestGeo?.bones?.length ? manifestGeo : await findFirstGeometryInDir(files);
+  let textures: string[] = manifestGeo?.textures || [];
+  let textureNames: string[] = manifestGeo?.textureNames || [];
+  if (!textures.length) {
+    const tex = await collectDirPngTextures(files);
+    textures = tex.textures;
+    textureNames = tex.textureNames;
+  }
+  return { geo, textures, textureNames, animations: [] };
+}
+
+/** 按扩展名分派解析分支（.ysm 已在 webAnalyzeBedrockModel 上游短路） */
+function analyzeBedrockByExt(
+  ext: string,
+  bytes: Uint8Array,
+  modelPath: string,
+): Promise<BedrockAnalyzeResult> | BedrockAnalyzeResult {
+  if (ext === ".zip") return analyzeZipBedrock(bytes);
+  if (ext === ".json") return analyzeJsonBedrock(bytes, modelPath);
+  return EMPTY_BEDROCK_ANALYZE;
+}
+
 /** web AnalyzeBedrockModel：.zip 读 IDB→解包→找 geometry JSON→复用户内解析器；.json 扫模型组文件 */
 export async function webAnalyzeBedrockModel(modelPath: string): Promise<Record<string, unknown>> {
   const dot = modelPath.lastIndexOf(".");
@@ -292,98 +455,18 @@ export async function webAnalyzeBedrockModel(modelPath: string): Promise<Record<
   const bytes = base64ToBytes(b64);
   if (!bytes) return {};
 
-  let geo: BedrockGeometry | null = null;
-  let textures: string[] = [];
-  let textureNames: string[] = [];
-  let animations: string[] = [];
-
+  let result: BedrockAnalyzeResult;
   try {
-    if (ext === ".zip") {
-      const { entries } = extractZip(bytes);
-      // 先尝试 ysm.json manifest：按声明序合并多角色 geometry + 纹理
-      const ysmBytes = findEntryByRel(entries, "ysm.json");
-      const manifestMeta = ysmBytes ? parseYsmManifestMeta(ysmBytes) : null;
-      if (manifestMeta) {
-        geo = await mergeBedrockFromManifest(manifestMeta, async (rel) =>
-          findEntryByRel(entries, rel),
-        );
-        if (geo) {
-          textures = geo.textures || [];
-          textureNames = geo.textureNames || [];
-        }
-      }
-      if (!geo?.bones?.length) {
-        const geoKey = findGeometryEntryKey(entries);
-        if (geoKey) geo = parseBedrockGeometryFromJSON(new TextDecoder().decode(entries[geoKey]));
-        const tex = collectTexturesFromEntries(entries);
-        textures = tex.textures;
-        textureNames = tex.textureNames;
-      }
-      animations = Object.keys(entries)
-        .filter((k) => /\.animation\.json$/i.test(k))
-        .map((k) => new TextDecoder().decode(entries[k]));
-    } else if (ext === ".json") {
-      const slash = modelPath.lastIndexOf("/");
-      const dir = slash > 0 ? modelPath.slice(0, slash) : "";
-      const files = dir ? await listWebModelDirFiles(dir) : [];
-      // 当前文件若是 ysm.json 且带 manifest → 按声明序合并
-      const manifestMeta = parseYsmManifestMeta(bytes);
-      if (manifestMeta) {
-        geo = await mergeBedrockFromManifest(manifestMeta, async (rel) => {
-          const p = `${dir}/${rel}`;
-          const b64 = await readWebFile(p);
-          return b64 ? base64ToBytes(b64) : null;
-        });
-        if (geo) {
-          textures = geo.textures || [];
-          textureNames = geo.textureNames || [];
-        }
-      }
-      // 无 manifest 或 manifest 未命中 → 回退“找第一个 geometry”
-      if (!geo?.bones?.length) {
-        for (const p of files) {
-          if (!/\.json$/i.test(p)) continue;
-          const fb64 = await readWebFile(p);
-          if (!fb64) continue;
-          const fbytes = base64ToBytes(fb64);
-          if (!fbytes) continue;
-          try {
-            const text = new TextDecoder().decode(fbytes.subarray(0, 1 << 20));
-            if (text.includes('"minecraft:geometry"')) {
-              const parsed = parseBedrockGeometryFromJSON(text);
-              if (parsed?.bones?.length) {
-                geo = parsed;
-                break;
-              }
-            }
-          } catch {}
-        }
-      }
-      if (textures.length === 0) {
-        for (const p of files) {
-          if (!/\.png$/i.test(p)) continue;
-          const uri = await readImageDataUri(p);
-          if (uri) {
-            textures.push(uri);
-            textureNames.push(
-              p
-                .split(/[/\\]/)
-                .pop()
-                ?.replace(/\.[^.]+$/, "") ?? "",
-            );
-          }
-        }
-      }
-    }
+    result = await analyzeBedrockByExt(ext, bytes, modelPath);
   } catch {
     return {};
   }
 
-  if (!geo?.bones?.length) return {};
-  return toBedrockModelContract(geo, {
-    textures,
-    textureNames,
-    animations,
+  if (!result.geo?.bones?.length) return {};
+  return toBedrockModelContract(result.geo, {
+    textures: result.textures,
+    textureNames: result.textureNames,
+    animations: result.animations,
   });
 }
 

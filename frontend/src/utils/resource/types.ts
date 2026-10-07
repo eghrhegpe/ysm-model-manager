@@ -10,7 +10,7 @@
 // maid-model 的中文全名为 "车万女仆模型"（JSON name 字段）；如需短标签 "车万女仆"，
 // 走 short-label.ts 的 i18n 短标签体系（t("rtype.maid")）。
 // ALL_RESOURCE_TYPES 等派生表统一消费 schema.ts 的 allResourceTypes（T2 单点解析）。
-import { allResourceTypes } from "./schema.ts";
+import { allResourceTypes, type ZipEntryMatch } from "./schema.ts";
 
 /** 资源类型 ID（键为类型标签，值为内部 ID） */
 export const RESOURCE_TYPES: Record<string, string> = {
@@ -400,23 +400,36 @@ function segmentSuffixes(name: string): string[] {
 }
 
 /**
+ * 单条 zipEntries 规则 × 单个层级段：命中判定（exact/prefix/suffix 三模式）。
+ * match 非 prefix/suffix 一律按 exact 语义（与 Go types.MatchZipEntry 同口径）——
+ * 前缀/后缀先 return，等价于原「三段并列 if」的短路顺序。
+ */
+function zipEntrySegmentHits(m: ZipEntryMatch, seg: string, mlow: string): boolean {
+  if (m.match === "prefix") return seg.startsWith(mlow);
+  if (m.match === "suffix") return seg.endsWith(mlow);
+  return seg === mlow;
+}
+
+/** 单条 zipEntries 规则 × 条目全部层级段：任一命中即命中（空 name = 该规则不参与） */
+function zipEntryRuleHits(m: ZipEntryMatch, segs: string[]): boolean {
+  const mlow = (m.name || "").toLowerCase();
+  if (!mlow) return false;
+  return segs.some((seg) => zipEntrySegmentHits(m, seg, mlow));
+}
+
+/**
  * 按注册表 zipEntries 指纹匹配 ZIP 条目名，返回命中的资源类型 ID（ADR-082 S4：
  * 前端指纹注册表化，与 Go types.MatchZipEntry 同构——任意层级段后缀语义，
  * 新增类型只改 JSON）。命中规则来自 resource_types.json 的 zipEntries
  * （exact/prefix/suffix 三种模式），未命中返回 null。
+ * 条目段后缀（segmentSuffixes(name)）是 name 的纯函数，提到类型循环外算一次；
+ * 类型间优先级 = allResourceTypes 顺序（原「逐类型逐规则逐段」短路顺序不变）。
  */
 export function matchZipEntryTS(name: string): string | null {
+  const segs = segmentSuffixes(name);
   for (const t of allResourceTypes) {
     if (!t.id || !t.zipEntries || t.zipEntries.length === 0) continue;
-    for (const m of t.zipEntries) {
-      const mlow = (m.name || "").toLowerCase();
-      if (!mlow) continue;
-      for (const seg of segmentSuffixes(name)) {
-        if (m.match === "prefix" && seg.startsWith(mlow)) return t.id;
-        if (m.match === "suffix" && seg.endsWith(mlow)) return t.id;
-        if (m.match !== "prefix" && m.match !== "suffix" && seg === mlow) return t.id;
-      }
-    }
+    if (t.zipEntries.some((m) => zipEntryRuleHits(m, segs))) return t.id;
   }
   return null;
 }

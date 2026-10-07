@@ -93,23 +93,19 @@ export function statsFromDecodedFiles(files: YsmDecodedFile[]): WebModelStats {
   for (const f of files) {
     const low = f.path.toLowerCase();
     if (low.endsWith(".json")) {
-      if (low.endsWith("ysm.json")) continue;
-      if (low.includes("/animations/") || low.startsWith("animations/")) continue;
-      const parsed = parseAnyGeometry(new TextDecoder("utf-8").decode(f.data));
+      const parsed = geometryStatsOfDecodedFile(low, f.data);
       if (!parsed) continue;
       boneCount += parsed.boneCount;
       cubeCount += parsed.cubeCount;
       if (parsed.texWidth > texW) texW = parsed.texWidth;
       if (parsed.texHeight > texH) texH = parsed.texHeight;
-    } else if (low.endsWith(".png") || low.endsWith(".jpg") || low.endsWith(".jpeg")) {
-      // avatar/ 头像不参与模型纹理统计（对齐 Go decodeYSMViaNodeJS 跳过逻辑）
-      if (low.includes("/avatar/") || low.startsWith("avatar/")) continue;
-      const s = sniffTexSize(f.data);
-      if (s) {
-        if (s.w > texW) texW = s.w;
-        if (s.h > texH) texH = s.h;
-      }
+      continue;
     }
+    if (!isTexturePath(low)) continue;
+    const s = textureStatsOfDecodedFile(low, f.data);
+    if (!s) continue;
+    if (s.w > texW) texW = s.w;
+    if (s.h > texH) texH = s.h;
   }
   return {
     boneCount,
@@ -120,8 +116,104 @@ export function statsFromDecodedFiles(files: YsmDecodedFile[]): WebModelStats {
   };
 }
 
+/** 纹理扩展名判定（.png/.jpg/.jpeg；其余文件不参与纹理嗅探） */
+function isTexturePath(low: string): boolean {
+  return low.endsWith(".png") || low.endsWith(".jpg") || low.endsWith(".jpeg");
+}
+
+/** 单个 .json 解码产物 → 统计（ysm.json 元信息 / animations 动画 JSON 跳过 → null） */
+function geometryStatsOfDecodedFile(
+  low: string,
+  data: Uint8Array,
+): { boneCount: number; cubeCount: number; texWidth: number; texHeight: number } | null {
+  if (low.endsWith("ysm.json")) return null;
+  if (low.includes("/animations/") || low.startsWith("animations/")) return null;
+  const parsed = parseAnyGeometry(new TextDecoder("utf-8").decode(data));
+  if (!parsed) return null;
+  return {
+    boneCount: parsed.boneCount,
+    cubeCount: parsed.cubeCount,
+    texWidth: parsed.texWidth,
+    texHeight: parsed.texHeight,
+  };
+}
+
+/** 单个图片解码产物 → 纹理尺寸。
+ *  avatar/ 头像不参与模型纹理统计（对齐 Go decodeYSMViaNodeJS 跳过逻辑） */
+function textureStatsOfDecodedFile(low: string, data: Uint8Array): { w: number; h: number } | null {
+  if (low.includes("/avatar/") || low.startsWith("avatar/")) return null;
+  return sniffTexSize(data);
+}
+
 /** 读取相对路径文件的回调（Worker 内 = IDB 读取；测试可注入内存 Map） */
 export type StatsRelReader = (rel: string) => Promise<Uint8Array | null>;
+
+/** 单值/数组归一为数组（ysm.json spec 的 model / texture 两字段同规则） */
+function asSpecArray(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : v ? [v] : [];
+}
+
+/** ysm.json spec 条目取文件路径：字符串或 {path|name} 对象。
+ *  路径归一化：ysm.json spec 可能声明 Windows 风格路径分隔符（反斜杠），
+ *  统一转正斜杠，避免补前缀/读关联文件时与正斜杠 IDB key 错位。 */
+function specFilePathOf(v: unknown): string {
+  const raw =
+    typeof v === "string"
+      ? v
+      : (v as { path?: string })?.path || (v as { name?: string })?.name || "";
+  return raw.replace(/\\/g, "/");
+}
+
+/** spec 声明的 model 文件逐一读入 → 宽松 geometry 解析 → 累加骨骼/立方体/纹理尺寸。
+ *  路径归一化：补 models/ 前缀，失败回退原始路径（对齐 wasm.ts JSON 分支）。 */
+async function accumulateSpecModels(
+  modelFiles: unknown[],
+  readRel: StatsRelReader,
+): Promise<{ boneCount: number; cubeCount: number; texW: number; texH: number }> {
+  let boneCount = 0;
+  let cubeCount = 0;
+  let texW = 0;
+  let texH = 0;
+  const processed = new Set<string>();
+  for (const mf of modelFiles) {
+    const name = specFilePathOf(mf);
+    if (!name || processed.has(name)) continue;
+    processed.add(name);
+    const prefixed = name.startsWith("models/") ? name : `models/${name}`;
+    const raw = (await readRel(prefixed)) ?? (await readRel(name));
+    if (!raw) continue;
+    const parsed = parseAnyGeometry(new TextDecoder("utf-8").decode(raw));
+    if (!parsed) continue;
+    boneCount += parsed.boneCount;
+    cubeCount += parsed.cubeCount;
+    if (parsed.texWidth > texW) texW = parsed.texWidth;
+    if (parsed.texHeight > texH) texH = parsed.texHeight;
+  }
+  return { boneCount, cubeCount, texW, texH };
+}
+
+/** spec 声明的 texture 文件逐一读入 → 纹理尺寸嗅探（路径补 textures/ 前缀，失败回退原始路径） */
+async function accumulateSpecTextures(
+  texFiles: unknown[],
+  readRel: StatsRelReader,
+): Promise<{ texW: number; texH: number }> {
+  let texW = 0;
+  let texH = 0;
+  const texProcessed = new Set<string>();
+  for (const tf of texFiles) {
+    const name = specFilePathOf(tf);
+    if (!name || texProcessed.has(name)) continue;
+    texProcessed.add(name);
+    const prefixed = name.startsWith("textures/") ? name : `textures/${name}`;
+    const raw = (await readRel(prefixed)) ?? (await readRel(name));
+    if (!raw) continue;
+    const s = sniffTexSize(raw);
+    if (!s) continue;
+    if (s.w > texW) texW = s.w;
+    if (s.h > texH) texH = s.h;
+  }
+  return { texW, texH };
+}
 
 /**
  * 从 .json 主文件字节计算统计（解压目录入口，ADR-038 ysm.json 语义）：
@@ -146,60 +238,15 @@ export async function statsFromJsonBytes(
   // ysm.json spec：geometry 在独立 model 文件中，按声明读入合并（对齐 wasm.ts JSON 分支）
   if (obj?.spec !== undefined && obj?.files?.player) {
     const player = obj.files.player;
-    const modelFiles = Array.isArray(player.model)
-      ? player.model
-      : player.model
-        ? [player.model]
-        : [];
-    const texFiles = Array.isArray(player.texture)
-      ? player.texture
-      : player.texture
-        ? [player.texture]
-        : [];
-
-    let boneCount = 0;
-    let cubeCount = 0;
-    let texW = 0;
-    let texH = 0;
-    const processed = new Set<string>();
-    /** 路径归一化：ysm.json spec 可能声明 Windows 风格路径分隔符（反斜杠），
-     *  统一转正斜杠，避免补前缀/读关联文件时与正斜杠 IDB key 错位。 */
-    const normPath = (s: string): string => s.replace(/\\/g, "/");
-    const filePathOf = (v: unknown): string =>
-      typeof v === "string"
-        ? v
-        : (v as { path?: string; name?: string })?.path || (v as { name?: string })?.name || "";
-
-    for (const mf of modelFiles) {
-      const name = normPath(filePathOf(mf));
-      if (!name || processed.has(name)) continue;
-      processed.add(name);
-      // 路径归一化：补 models/ 前缀，失败回退原始路径（对齐 wasm.ts JSON 分支）
-      const prefixed = name.startsWith("models/") ? name : `models/${name}`;
-      const raw = (await readRel(prefixed)) ?? (await readRel(name));
-      if (!raw) continue;
-      const parsed = parseAnyGeometry(new TextDecoder("utf-8").decode(raw));
-      if (!parsed) continue;
-      boneCount += parsed.boneCount;
-      cubeCount += parsed.cubeCount;
-      if (parsed.texWidth > texW) texW = parsed.texWidth;
-      if (parsed.texHeight > texH) texH = parsed.texHeight;
-    }
-    const texProcessed = new Set<string>();
-    for (const tf of texFiles) {
-      const name = normPath(filePathOf(tf));
-      if (!name || texProcessed.has(name)) continue;
-      texProcessed.add(name);
-      const prefixed = name.startsWith("textures/") ? name : `textures/${name}`;
-      const raw = (await readRel(prefixed)) ?? (await readRel(name));
-      if (!raw) continue;
-      const s = sniffTexSize(raw);
-      if (s) {
-        if (s.w > texW) texW = s.w;
-        if (s.h > texH) texH = s.h;
-      }
-    }
-    return { boneCount, cubeCount, texWidth: texW, texHeight: texH, hasError: boneCount === 0 };
+    const models = await accumulateSpecModels(asSpecArray(player.model), readRel);
+    const tex = await accumulateSpecTextures(asSpecArray(player.texture), readRel);
+    return {
+      boneCount: models.boneCount,
+      cubeCount: models.cubeCount,
+      texWidth: Math.max(models.texW, tex.texW),
+      texHeight: Math.max(models.texH, tex.texH),
+      hasError: models.boneCount === 0,
+    };
   }
 
   // 标准 bedrock geometry JSON（minecraft:geometry / 兼容形态）→ 直接解析

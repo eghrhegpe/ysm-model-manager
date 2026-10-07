@@ -66,6 +66,7 @@ auto_fields:
     - resolveWebMode
     - scanAllWebModels
     - scanWebModels
+    - searchWebModels
     - STATS_BATCH_LIMIT
     - statsFromDecodedFiles
     - statsFromJsonBytes

@@ -44,6 +44,17 @@ import type { PreviewAdapter } from "./mount-preview-core.ts";
  * 本函数调用点（buildSharedInfra）传 adapter.id 来自 RESOURCE_TYPES 已知集合，
  * 不经 toModelType——保持装配期与 runtime 恢复的入口分工。
  */
+/**
+ * 按模型类别套用场景预设（ADR-196 装配链收敛的单一入口）。
+ *
+ * [锐评 2026-10-07 #3 顺序契约收口] 内部固定调用序 sky→fog→shadow→reflector→environment 是
+ * **实现序而非依赖序**：五个 cap 的 applyModelPreset 写**互不相交**的 envState 键组
+ * （skyForceEnv / fog* / shadowType / reflector* / envPreset+envIntensity），各自只读
+ * MODEL_DEFAULTS（pickModelDefaultFields）与自家键——**终态与调用序无关**，顺序可安全调整。
+ * sky 的重建侧效走 ADR-292 D10 路由器（读 cap 在场与 envSource，均非本链顺序决定），不构成
+ * 顺序依赖。若未来某 cap 的 applyModelPreset 开始读其他 cap 刚写的键（引入真实顺序依赖），
+ * 须据此注释重判并恢复全序守卫——member 语义由 shared-infra.test.ts「各调一次」用例守卫。
+ */
 export function applyModelDefaults(
   modelType: ModelType,
   deps: {

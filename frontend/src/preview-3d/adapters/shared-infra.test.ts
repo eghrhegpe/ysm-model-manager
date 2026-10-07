@@ -69,8 +69,10 @@ describe("teardownSharedInfra", () => {
 });
 
 // ===== ADR-196 装配链收敛契约（applyModelDefaults / applyPostProcDefaults） =====
-// 断言「7 个散落 setPreset 调用收敛为 2 个命名入口」后，编排仍逐字复刻原顺序，
-// 且按 modelType 透传（未知类型由各 cap 内部回落 default，装配层不越权）。
+// 断言「7 个散落 setPreset 调用收敛为 2 个命名入口」，按 modelType 透传（未知类型由各 cap
+// 内部回落 default，装配层不越权）。内部调用序为**实现序**——5 cap 写互不相交 envState 键组、
+// 互不读对方，终态与序无关（[锐评 2026-10-07 #3]，见 shared-infra.ts|applyModelDefaults doc），
+// 故只断言「每 cap 恰被调一次」的 member 语义。
 // [ADR-282] light 已退出本链（灯光与模型类别解耦）——预 apply cap 6 → 5。
 describe("applyModelDefaults（ADR-196 装配链收敛契约）", () => {
   function makeDeps() {
@@ -86,20 +88,17 @@ describe("applyModelDefaults（ADR-196 装配链收敛契约）", () => {
     };
   }
 
-  it("applyModelDefaults 对 5 个预 apply cap 各调一次 applyModelPreset，顺序 sky→fog→shadow→reflector→environment", async () => {
+  it("applyModelDefaults 对 5 个预 apply cap 各调一次 applyModelPreset（member 语义；顺序为实现序，终态与序无关）", async () => {
     const { applyModelDefaults } = await import("./shared-infra.ts");
     const { deps, spies } = makeDeps();
     applyModelDefaults("vrm", deps as never);
     for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
     for (const spy of spies) expect(spy).toHaveBeenCalledWith("vrm");
-    // 调用顺序：sky→fog→shadow→reflector→environment 逐字复刻原 7 处散落
-    // setPreset 顺序——code_review 13b8b4e5f #4：全序断言（原只比首尾，中间序互换
-    // 全过）。invocationCallOrder 是全局计数（非本次调用从 1 起，实测前置测试已
-    // 消耗计数），故断言相对严格递增而非硬编码 [1..5]
-    const order = spies.map((s) => s.mock.invocationCallOrder[0]);
-    for (let i = 1; i < order.length; i++) {
-      expect(order[i]).toBeGreaterThan(order[i - 1]);
-    }
+    // [锐评 2026-10-07 #3] 原断言含全序校验（sky→fog→shadow→reflector→environment，
+    // code_review 13b8b4e5f #4 硬化）——实测各 cap 写互不相交 envState 键组、互不读对方，
+    // **终态与调用序无关**，全序断言钉的是实现细节（未来安全重排会误红）。已解除，只保留
+    // member 语义；不变量声明见 shared-infra.ts|applyModelDefaults doc。若未来出现真实顺序
+    // 依赖（cap 读其他 cap 刚写的键），须重判并恢复全序守卫。
   });
 
   it("未知 modelType 透传到各 cap（内部回落 default 的文案保留在 cap 侧，装配层不吞）", async () => {

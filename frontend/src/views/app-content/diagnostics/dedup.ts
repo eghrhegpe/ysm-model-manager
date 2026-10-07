@@ -44,9 +44,16 @@ export interface DedupSession {
   lastScannedType(): string | null;
 }
 
-/** 组内当前选中项索引（无勾选控件 → 0；-1 = keep-all 由调用方判早退） */
-function dedupSelectedIndex(groupEl: HTMLElement | undefined): number {
-  const selEl = groupEl?.querySelector<HTMLInputElement>('input[type="radio"]:checked');
+/** 组内当前选中项索引（无勾选控件 → 0；-1 = keep-all 由调用方判早退）。
+ *  ⚠️ 定义（2026-10-07 拍板）：**缺失容器（groupEl undefined）返回 -1（keep-all）**——
+ *  删除路径的降级必须 fail toward preservation：容器缺失 = 该组未被渲染/未被用户看到，
+ *  按「整组不删」处理；**绝不回落 0**（0 会让 `dedupDeleteGroup(files, 0)` 删掉该组第 0 项
+ *  以外的全部文件——用户在没见过的组上被静默清空）。渲染器当前对每个 group 无条件产出
+ *  容器（`dedup-render.ts renderResultsHtml` 全函数），故本分支构造不可达，属防御硬化；
+ *  容器存在但未勾选时仍返回 0（那是 renderResultsHtml 按 `getDefaultKeepIdx` 预选的默认保留项）。 */
+export function dedupSelectedIndex(groupEl: HTMLElement | undefined): number {
+  if (!groupEl) return -1;
+  const selEl = groupEl.querySelector<HTMLInputElement>('input[type="radio"]:checked');
   return selEl ? parseInt(selEl.value, 10) : 0;
 }
 

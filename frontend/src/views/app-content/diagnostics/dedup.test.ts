@@ -4,13 +4,46 @@
 // 会话工厂特性：每测试新开会话，状态互不串扰。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
-import { createDedupSession } from "./dedup.ts";
+import { createDedupSession, dedupSelectedIndex } from "./dedup.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 
 const { busEmit, getApp } = vi.hoisted(() => ({
   busEmit: vi.fn(),
   getApp: vi.fn(),
 }));
+
+// ===== dedupSelectedIndex：缺失容器必须回落 keep-all（fail toward preservation）=====
+// 定义（2026-10-07）：`runExecDelete` 用 `groupEls[gi]` 索引渲染平铺的 `.diag-dedup-group`；
+// 渲染器当前对每个 group 无条件产出容器（renderResultsHtml 全函数），故「容器缺失」构造
+// 不可达，但**缺容器时不能回落 0**——0 会让该组按「保留第 0 项、删除其余」执行（用户没
+// 见过的组被静默清空）。删除路径的降级方向必须是**朝向保全**：缺失 → -1（keep-all，整组
+// 不删）。容器存在但未勾选 → 仍 0（设计的默认保留项）。
+describe("dedupSelectedIndex 缺失容器降级", () => {
+  it("容器缺失（undefined）→ -1（keep-all）：整组跳过不删，绝不误回落 0", () => {
+    expect(dedupSelectedIndex(undefined)).toBe(-1);
+  });
+
+  it("容器存在但未勾选任何 radio → 0（设计的默认：保留第 0 项）", () => {
+    const el = document.createElement("div");
+    el.innerHTML = `<input type="radio" name="dedup-keep-0" value="0">
+    <input type="radio" name="dedup-keep-0" value="-1">`;
+    expect(dedupSelectedIndex(el)).toBe(0);
+  });
+
+  it("勾选了 keep-all（value=-1）→ -1", () => {
+    const el = document.createElement("div");
+    el.innerHTML = `<input type="radio" name="dedup-keep-1" value="0">
+    <input type="radio" name="dedup-keep-1" value="-1" checked>`;
+    expect(dedupSelectedIndex(el)).toBe(-1);
+  });
+
+  it("勾选了非 0 保留项（value=2）→ 2（选中项保留、其余删除的口径不变）", () => {
+    const el = document.createElement("div");
+    el.innerHTML = `<input type="radio" name="dedup-keep-2" value="2" checked>
+    <input type="radio" name="dedup-keep-2" value="-1">`;
+    expect(dedupSelectedIndex(el)).toBe(2);
+  });
+});;
 
 vi.mock("@/bus", () => ({ bus: { emit: busEmit } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));

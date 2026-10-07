@@ -28,6 +28,7 @@ auto_fields:
     - DedupConfigShape
     - DedupFileLike
     - DedupRegType
+    - dedupSelectedIndex
     - DedupSession
     - DgCfScanTarget
     - dgLsResetCapsMemo

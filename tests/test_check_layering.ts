@@ -208,10 +208,9 @@ check("R9 零新增（preview-3d 底层→上层运行时反向边，超基线�
     0,
     `R9 新增反向边 ${r9reg.length} 条：${r9reg.map((v) => `${v.from}:${v.line} → ${v.to}`).join(", ")}`,
   );
-  assert.ok(
-    (data.debt ?? []).some((e) => e.startsWith("preview-3d/") && e.endsWith(".ts")),
-    "R9 基线债务为空——扫描器疑似对真实树空转（或存量全收敛但基线未 --update 收紧）",
-  );
+  // R9 债务可真实清零（2026-10-07 锐评：env-state-schema→caps 反向边下沉 state 叶子后归零）。
+  // 债务为空时的扫描器非空转由「R9 纯核 r9EdgeViolates」合成样本用例（本文件 217 行）独立保证；
+  // 此处不再做「债务非空」的集成级软断言——债务清零会误报扫描器空转（历史断言已删）。
 });
 
 check("R9 纯核 r9EdgeViolates：底层→上层判违规，下行/同层/越界放行", () => {

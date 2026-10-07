@@ -3,18 +3,19 @@
 // 仿 MikuMikuAR ENV_STATE_SCHEMA 模式，新增字段只需在此追加。
 //
 // ⚠️ 默认值单一事实源（ADR-249 §2.6）：地面材质字段的默认值取自
-// ground-surface-spec.ts 的 DEFAULT_GROUND_SURFACE_PARAMS，**不在此重写字面量**。
+// ground-surface-defaults.ts 的 DEFAULT_GROUND_SURFACE_PARAMS，**不在此重写字面量**。
 // 历史缺陷：两处各自声明默认值且不一致（matGridSize 10 vs 8、matRoughness 0.8 vs 0.85、
 // matLineColor/matColor2 亦分歧），实际渲染读 spec 侧 → schema 侧为死值，
 // 用户看到的数值与 schema 声明对不上。同类病例参照 MikuMikuAR bd65c02f（常量双源）。
+
+import { clamp } from "@/utils/base/pure/clamp.ts";
 import {
   GROUND_CANVAS_STYLES,
   DEFAULT_GROUND_SURFACE_PARAMS as GROUND_DEFAULTS,
   GROUND_MATERIAL_PRESET_IDS,
   GROUND_OVERLAY_STYLES,
   GROUND_SOURCE_KINDS,
-} from "@/preview-3d/caps/ground-surface-spec.ts";
-import { clamp } from "@/utils/base/pure/clamp.ts";
+} from "./ground-surface-defaults.ts";
 
 type FieldDefaultMap = {
   number: number;

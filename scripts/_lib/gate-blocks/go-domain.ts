@@ -93,38 +93,51 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
   const goTestCmd =
     `go test -race ${racePkgs} ${freshGoTest ? "-count=1 " : ""}-timeout 60s ` +
     `&& go test ${otherPkgs.join(" ")} ${freshGoTest ? "-count=1 " : ""}-timeout 60s`;
-  const goTestRace = await yieldThenRun(
-    "go",
-    [
-      "test",
-      "-race",
-      ...racePkgs.split(" "),
-      ...(freshGoTest ? ["-count=1"] : []),
-      "-timeout",
-      "60s",
-    ],
-    { cwd: ROOT, timeout: GATE_TIMEOUT_MS },
-  );
-  const goTestRest = goTestRace.rc
-    ? { rc: goTestRace.rc, out: "" }
-    : await yieldThenRun(
-        "go",
-        ["test", ...otherPkgs, ...(freshGoTest ? ["-count=1"] : []), "-timeout", "60s"],
-        { cwd: ROOT, timeout: GATE_TIMEOUT_MS },
-      );
-  // 合并两段结果：任一非零即 FAIL；out 合并两段输出（tail 取尾部可读）
-  const goTest = {
-    rc: goTestRace.rc || goTestRest.rc,
-    out: `${goTestRace.out}\n${goTestRest.out}`.trim(),
-  };
-  // 记录命令：并发敏感包 -race + 其余包普通跑（ADR-202 刀5 分级）
-  ctx.record(goTestCmd, goTest.rc === 0, {
-    time: Date.now() - t1,
-    tail: goTest.rc ? goTest.out.trim().split("\n").slice(-4).join("\n") : "",
-    note: freshGoTest
-      ? "YSM_FRESH_GO_TEST=1 强制新鲜跑"
-      : "ADR-202 刀5：-race 仅并发敏感包 + 普通全量",
-  });
+  // ⚡ 2026-10-07 本地轻量化（同 frontend-domain 的 YSM_FAST_PUSH）：`go test`（-race 段
+  // 尤重）交 CI「Go 检查（build + vet + test）」步；本地保留 go build + go vet——
+  // 这两项秒级且能拦住「编译不过」这类最廉价的错误，是推送前最有性价比的本地信号。
+  // 逃生阀：YSM_FAST_PUSH=0 恢复本地全量（发版前自检 / 改并发代码时建议开）。
+  const heavyGoLocal = process.env.YSM_FAST_PUSH !== "0";
+  if (heavyGoLocal) {
+    ctx.record(`${goTestCmd}`, true, {
+      time: 0,
+      note: "跳过（本地轻量模式：交 CI「Go 检查」步；YSM_FAST_PUSH=0 可本地跑）",
+      blockPolicy: "debt",
+    });
+  } else {
+    const goTestRace = await yieldThenRun(
+      "go",
+      [
+        "test",
+        "-race",
+        ...racePkgs.split(" "),
+        ...(freshGoTest ? ["-count=1"] : []),
+        "-timeout",
+        "60s",
+      ],
+      { cwd: ROOT, timeout: GATE_TIMEOUT_MS },
+    );
+    const goTestRest = goTestRace.rc
+      ? { rc: goTestRace.rc, out: "" }
+      : await yieldThenRun(
+          "go",
+          ["test", ...otherPkgs, ...(freshGoTest ? ["-count=1"] : []), "-timeout", "60s"],
+          { cwd: ROOT, timeout: GATE_TIMEOUT_MS },
+        );
+    // 合并两段结果：任一非零即 FAIL；out 合并两段输出（tail 取尾部可读）
+    const goTest = {
+      rc: goTestRace.rc || goTestRest.rc,
+      out: `${goTestRace.out}\n${goTestRest.out}`.trim(),
+    };
+    // 记录命令：并发敏感包 -race + 其余包普通跑（ADR-202 刀5 分级）
+    ctx.record(goTestCmd, goTest.rc === 0, {
+      time: Date.now() - t1,
+      tail: goTest.rc ? goTest.out.trim().split("\n").slice(-4).join("\n") : "",
+      note: freshGoTest
+        ? "YSM_FRESH_GO_TEST=1 强制新鲜跑"
+        : "ADR-202 刀5：-race 仅并发敏感包 + 普通全量",
+    });
+  }
 
   const tV = Date.now();
   const goVet = await ctx.shAsync("go vet ./go/... ./internal/app/...");

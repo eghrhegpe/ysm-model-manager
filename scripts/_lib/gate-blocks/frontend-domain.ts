@@ -154,37 +154,58 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
   // npm 三件套并行优化：vite build ∥ tsc --noEmit，vitest 串行在后
   // （vitest 是重活儿，独占资源更稳；build 与 tsc 无依赖，墙钟减半）
   // tsc 路径解析：优先 npx 探测（workspace hoisting 兼容），回退硬编码路径
-  const t0 = Date.now();
-  const [fb, tscResult] = await Promise.all([
-    ctx.shAsync("npx vite build", { cwd: path.join(ROOT, "frontend") }),
-    // npx tsc --version 探测（最简且最鲁棒的 monorepo 兼容方案）
-    ctx
-      .shAsync("npx tsc --version")
-      .then((r) => {
-        if (r.rc !== 0) return { rc: -1, out: "" };
-        // tsc 可用，再跑 --noEmit 检查
-        return ctx.shAsync("npx tsc --noEmit", { cwd: path.join(ROOT, "frontend") });
-      })
-      .catch(() => ({ rc: -1, out: "" })),
-  ]);
-  const wallA = Date.now() - t0;
-  const tscRc = tscResult.rc ?? -1;
-  ctx.record("cd frontend && npx vite build", fb.rc === 0, {
-    time: wallA,
-    tail: fb.rc ? fb.out.trim().split("\n").slice(-4).join("\n") : "",
-  });
-  if (tscRc >= 0) {
-    const lines = tscResult.out.trim().split("\n").filter(Boolean);
-    ctx.record("cd frontend && npx tsc --noEmit", tscRc === 0, {
-      time: wallA,
-      note: tscRc === 0 ? "" : `${lines.length} errors`,
-      tail: tscRc === 0 ? "" : lines.slice(-5).join("\n"),
+  //
+  // ⚡ 2026-10-07 本地轻量化（YSM_SKIP_HEAVY_LOCAL=1，默认开）：vite build / tsc / vitest
+  // 三者是 pre-push 的**全部重型成本**（本地实测数分钟），而 CI 的 test.yml 已各自独立承担
+  // 同一份检查（「前端构建」「前端类型检查」「前端测试（Vitest）」三步）——本地重跑一遍
+  // 属纯重复付费，只在「CI 要等十几分钟才知道结果」这一前提下才有意义。
+  // 决策依据（用户 2026-10-07 拍板）：推送应秒级返回；重型门禁全面交 CI。
+  // 逃生阀：YSM_FAST_PUSH=0 显式关掉，恢复旧的「本地全量」行为（发版前自检用）。
+  const heavyLocal = process.env.YSM_FAST_PUSH !== "0";
+  if (heavyLocal) {
+    ctx.record("cd frontend && npx vite build", true, {
+      time: 0,
+      note: "跳过（本地轻量模式：交 CI「前端构建」步；YSM_FAST_PUSH=0 可本地跑）",
+      blockPolicy: "debt",
+    });
+    ctx.record("cd frontend && npx tsc --noEmit", true, {
+      time: 0,
+      note: "跳过（本地轻量模式：交 CI「前端类型检查」步；YSM_FAST_PUSH=0 可本地跑）",
+      blockPolicy: "debt",
     });
   } else {
-    ctx.record("cd frontend && npx tsc --noEmit", false, {
-      time: 0,
-      note: "tsc 未安装（npx tsc --version 失败）——请 npm ci 后重推",
+    const t0 = Date.now();
+    const [fb, tscResult] = await Promise.all([
+      ctx.shAsync("npx vite build", { cwd: path.join(ROOT, "frontend") }),
+      // npx tsc --version 探测（最简且最鲁棒的 monorepo 兼容方案）
+      ctx
+        .shAsync("npx tsc --version")
+        .then((r) => {
+          if (r.rc !== 0) return { rc: -1, out: "" };
+          // tsc 可用，再跑 --noEmit 检查
+          return ctx.shAsync("npx tsc --noEmit", { cwd: path.join(ROOT, "frontend") });
+        })
+        .catch(() => ({ rc: -1, out: "" })),
+    ]);
+    const wallA = Date.now() - t0;
+    const tscRc = tscResult.rc ?? -1;
+    ctx.record("cd frontend && npx vite build", fb.rc === 0, {
+      time: wallA,
+      tail: fb.rc ? fb.out.trim().split("\n").slice(-4).join("\n") : "",
     });
+    if (tscRc >= 0) {
+      const lines = tscResult.out.trim().split("\n").filter(Boolean);
+      ctx.record("cd frontend && npx tsc --noEmit", tscRc === 0, {
+        time: wallA,
+        note: tscRc === 0 ? "" : `${lines.length} errors`,
+        tail: tscRc === 0 ? "" : lines.slice(-5).join("\n"),
+      });
+    } else {
+      ctx.record("cd frontend && npx tsc --noEmit", false, {
+        time: 0,
+        note: "tsc 未安装（npx tsc --version 失败）——请 npm ci 后重推",
+      });
+    }
   }
 
   // 视图层 token 消费门禁（审计 UI-Design-Audit-2026-09.md §5.2 第 3 步）：
@@ -212,6 +233,14 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
   // 与 frontend/package.json test 对齐：--maxWorkers 8（24 核默认并发过载反慢 ~10s）
   // 命令保持**字面量直传**：test_gate_sh_invariants.ts 禁未登记的动态 ctx.sh/shAsync 实参，
   // 提取成常量再传入会触发「未登记插值来源」断言（复跑同样用同一字面量，勿抽变量）。
+  if (heavyLocal) {
+    ctx.record("cd frontend && npx vitest run --maxWorkers 8", true, {
+      time: 0,
+      note: "跳过（本地轻量模式：交 CI「前端测试（Vitest）」步；YSM_FAST_PUSH=0 可本地跑）",
+      blockPolicy: "debt",
+    });
+    return;
+  }
   const ft = await ctx.shAsync("npx vitest run --maxWorkers 8", {
     cwd: path.join(ROOT, "frontend"),
   });

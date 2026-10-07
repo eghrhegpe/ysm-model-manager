@@ -4,51 +4,39 @@ name: 资源注册表 registry
 tier: architecture
 category: config
 source_files:
+  - go/types/registry/
   - resource_types.json
-  - go/types/
+  - internal/app/resource_bindings.go
 auto_fields:
   symbols_with_lines:
     - AllExts
     - AllSubDirs
-    - AppConfig
-    - AppError
-    - AppError.Error
-    - AppError.Unwrap
-    - AppError.WithCause
-    - AuthorInfo
-    - BedrockModel
-    - Bone2D
+    - App.DeleteResourcePack
+    - App.DetectResourceType
+    - App.EnsureStorageDirs
+    - App.FindDuplicateFiles
+    - App.GetDefaultRepoRoot
+    - App.GetLitematicVoxelData
+    - App.GetNbtVoxelData
+    - App.GetRepoRoot
+    - App.GetSchematicVoxelData
+    - App.ImportByType
+    - App.InstallResourceToInstance
+    - App.InvalidateScanCache
+    - App.ReadLitematicMeta
+    - App.ReadNbtStructure
+    - App.ReadPackMeta
+    - App.ReadSchematic
+    - App.ReadShaderpackLang
+    - App.RepoHealthAudit
+    - App.ResetResourceRoot
+    - App.SelectImportFile
+    - App.SetResourceRoot
     - BundledRegistryJSON
-    - ChannelReasonMarshalFailed
-    - ChannelReasonMemoryState
-    - ChannelReasonMkdirFailed
-    - ChannelReasonWriteFailed
     - ContainerExts
-    - Cube2D
-    - CustomFileInfo
-    - DedupConfig
     - DisabledSuffix
-    - DownloadTask
-    - ErrAlreadyExists
-    - ErrDecodeFailed
-    - ErrFileEmpty
-    - ErrFileExists
-    - ErrFileNameInvalid
-    - ErrFileTooLarge
-    - ErrInvalidParam
-    - ErrInvalidPath
-    - ErrIO
-    - ErrLinkFailed
-    - ErrMcRootNotSet
-    - ErrMkdirFailed
-    - ErrorCode
-    - ErrUnknown
-    - ErrUnsupportedFmt
-    - ErrUnsupportedType
-    - ErrWriteFailed
     - ExtBelongsTo
     - ExtBelongsToBy
-    - FileInventory
     - FindInstDir
     - FormatRange
     - FormatRange.UnmarshalJSON
@@ -56,10 +44,7 @@ auto_fields:
     - GroupLabel
     - GroupOf
     - GroupStorageRoot
-    - ImportFileItem
-    - ImportLog
     - InstallExtsFor
-    - InstanceStatus
     - IsContainerExt
     - IsDirLevelSync
     - IsDisableSuffix
@@ -70,96 +55,45 @@ auto_fields:
     - IsSupportedExt
     - IsTextureExt
     - IsYsmEntryJSON
-    - LauncherInstance
-    - LevelDebug
-    - LevelError
-    - LevelFatal
-    - LevelInfo
-    - LevelWarn
-    - LinkCopy
-    - LinkHard
-    - LinkSym
-    - LinkType
-    - LinkUnknown
     - LitematicBlockStat
     - LitematicMeta
     - LitematicVoxelData
     - LoadRegistry
-    - LogCaps
-    - LogChannelHealth
-    - LogLevel
-    - LogStatus
     - MatchZipEntry
     - MaxImportSize
     - MaxImportSizeMB
     - MaxReadLimit
-    - ModelEntry
     - ModKeywordsFor
     - ModMetaFor
     - ModRequirement
     - NestedPattern
     - NestedPatternsFor
     - NormalizeResourceName
-    - PackInfo
     - PackMeta
     - PackMeta.Desc
-    - PackMetaView
-    - PackModelDetail
-    - PackModelDetailList
-    - QueueStatusInfo
     - RegistryType
     - RenderableTextureExts
-    - ResourceSyncItem
-    - ResourceSyncResult
     - ResourceType
     - ResourceType.EffectiveExtensions
     - ResourceType.MatchZipEntry
     - ResourceTypeRegistry
     - ResourceTypeRegistry.FindByID
-    - RuntimeLog
-    - SearchResult
     - SetBundledRegistryJSON
     - SetRegistryPath
-    - ShaderpackLang
     - ShouldHashExt
-    - StatusFailed
-    - StatusSkipped
-    - StatusSuccess
-    - StatusToLevel
-    - StatusWarn
     - StorageSubDir
     - StripBanSuffix
     - StripDisableSuffix
     - SubDirAll
     - SubDirEntry
     - SubDirMap
-    - SubModel
     - SupportedExtsForSubtype
     - SupportedExtsForType
     - SupportedTextureExts
-    - SyncConfig
-    - SyncResolveResult
-    - SyncScanDirs
-    - SyncStatus
-    - SyncStatusDisabled
-    - SyncStatusDiverged
-    - SyncStatusLegacy
-    - SyncStatusMissing
-    - SyncStatusOptional
-    - SyncStatusSynced
     - TextureMIME
     - TypeByLocation
-    - ValidLinkMode
     - Variant
-    - VersionInstance
     - VoxelGroup
-    - WindowState
-    - WorkshopCreator
-    - WorkshopPresetSearch
-    - WorkshopSite
-    - YsmAuthor
-    - YsmLicense
-    - YsmMetadata
     - ZipEntryMatch
   tests:
     - frontend/src/utils/resource/schema.test.ts
@@ -171,7 +105,9 @@ use_when:
   - 文件类型
 invariant_anchors:
   - internal/app/resource_bindings.go|DetectResourceType
-
+  - go/types/registry/resource.go|LoadRegistry
+  - go/types/registry/resource.go|ResourceType
+  - go/types/registry/extensions.go|ShouldHashExt
 quick_groups:
   - 配置与注册表
 quick_intents:

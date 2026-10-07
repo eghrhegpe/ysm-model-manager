@@ -5,10 +5,7 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/preview-3d/screenshot/screenshot-render.ts
-  - frontend/src/preview-3d/screenshot/screenshot-lights.ts
-  - frontend/src/preview-3d/texture/texture-loader.ts
   - frontend/src/preview-3d/decoder/model-cache.ts
-  - frontend/src/preview-3d/screenshot/screenshot.ts
 auto_fields:
   symbols_with_lines:
     - AngleShot
@@ -17,15 +14,8 @@ auto_fields:
     - cacheSetEvictHandler
     - CacheValue
     - collectBlobUrls
-    - loadTextures
-    - releaseTextureUrls
     - renderMultiAngle
     - RenderMultiAngleOptions
-    - screenshotFromRenderer
-    - ScreenshotLights
-    - ScreenshotOpts
-    - ScreenshotVolumetric
-    - toScreenshotLights
   tests:
     - frontend/src/preview-3d/decoder/cache.test.ts
     - frontend/src/preview-3d/screenshot-render.test.ts

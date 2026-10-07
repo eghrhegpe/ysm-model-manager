@@ -6,7 +6,6 @@ category: ui
 source_files:
   - frontend/src/preview-3d/state/preview-state.ts
   - frontend/src/preview-3d/menu/panels/settings.ts
-  - frontend/src/preview-3d/menu/schema/node-types.ts
 auto_fields:
   symbols_with_lines:
     - buildCameraSchema
@@ -16,18 +15,14 @@ auto_fields:
     - buildSettingsControls
     - buildSettingsSchema
     - buildShadowSchema
-    - collectPreviewLeafNodes
-    - collectPreviewNodeIds
     - collectSettingsCapControls
     - collectSettingsCapSections
     - disposeSceneCapSubscriptions
     - getStateValue
     - isPathAvailable
-    - isPreviewFolderNode
     - KNOWN_PATHS
     - PathInput
     - PathValue
-    - PreviewMenuCtx
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath

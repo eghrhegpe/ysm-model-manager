@@ -8,31 +8,22 @@ category: core
 source_files:
   - frontend/src/backend/app.ts
   - frontend/src/backend/platform.ts
-  - frontend/src/parsers/extract.ts
-  - frontend/src/backend/browser-adapter.ts
 auto_fields:
   symbols_with_lines:
     - AppBindings
-    - browserAdapter
-    - detectContainerType
     - emitAndroidBack
-    - ExtractResult
-    - extractZip
     - getAndroidBridge
     - getApp
     - isViewerMode
     - isViewerPlatform
     - isWebEntryMode
     - isWebPlatform
-    - parseZipCentralDir
     - PlatformMode
     - readDeclaredBackend
     - registerAndroidBackHandler
     - resolveTier
     - resolveWebMode
     - WailsAndroidBridge
-    - ZipEntryMeta
-    - ZipType
   tests:
     - frontend/src/views/app-content/app-content.component.test.ts
     - frontend/src/views/app-preview/app-preview.component.test.ts

@@ -8,25 +8,41 @@ adr:
   - ADR-253
 category: ui
 source_files:
-  - frontend/src/views/app-preview/
+  - frontend/src/views/app-preview/index.ts
+  - frontend/src/views/app-preview/detail.ts
+  - frontend/src/views/app-preview/detail-3d.ts
+  - frontend/src/views/app-preview/card-shell.ts
+  - frontend/src/views/app-preview/siblings.ts
+  - frontend/src/views/app-preview/skeleton.ts
+  - frontend/src/views/app-preview/litematic-3d.ts
+  - frontend/src/views/app-preview/litematic-meta.ts
+  - frontend/src/views/app-preview/maid-3d.ts
+  - frontend/src/views/app-preview/utils.ts
+  - frontend/src/views/app-preview/tpl.ts
+  - frontend/src/views/app-preview/css.ts
+  - frontend/src/views/app-preview/zoom.ts
+  - frontend/src/views/app-preview/fbx-3d.ts
+  - frontend/src/views/app-preview/mmd-3d.ts
+  - frontend/src/views/app-preview/pack-3d.ts
+  - frontend/src/views/app-preview/scene-3d.ts
+  - frontend/src/views/app-preview/vrm-3d.ts
+  - frontend/src/views/app-preview/ysm-3d.ts
+  - frontend/src/views/app-preview/bone-names.ts
+  - frontend/src/views/app-preview/empty-3d.ts
+  - frontend/src/views/app-preview/mmd-data-port.ts
+  - frontend/src/views/app-preview/preview-registry.ts
+  - frontend/src/views/app-preview/preview-router.ts
+  - frontend/src/utils/async/load-guard.ts
+  - frontend/src/preview-3d/adapters/ysm-preview-pipeline.ts
+  - frontend/src/preview-3d/adapters/ysm-preview-cache.ts
 auto_fields:
   symbols_with_lines:
-    - addOpLog
     - appendLitematicPreview
-    - BedrockBone
-    - BedrockCube
-    - BedrockModel
     - bigIconHTML
     - bindPreviewTabs
-    - BoneBounds
     - BoneEntry
-    - BoundsOpts
-    - buildBoneExportRow
     - buildBoneNamesText
-    - buildStatsCard
-    - buildToggleRow
-    - buildYsmModelSchema
-    - calcBoneHitZones
+    - buildYsmShotRenderArgs
     - CardShowConfig
     - cleanupEmpty3D
     - cleanupLitematic3D
@@ -38,22 +54,17 @@ auto_fields:
     - cleanupVrm3D
     - cleanupYsm3D
     - closeActive3DOverlay
-    - collectBoneBounds
-    - componentCountsFromSpec
     - createFbx3D
     - createLitematic3D
+    - createLoadGuard
     - createMmd3D
     - createPack3D
     - createScene3D
     - createVrm3D
     - createYsm3D
-    - cubeVec
     - DetailGenGuard
-    - drawMiniView
-    - drawView
     - errorPlaceholderHTML
-    - getRegisteredRoutes
-    - HitZone
+    - fillAuthorsAsync
     - invalidateEmptyPreview
     - invalidateLitematicPreview
     - invalidateMaidPreview
@@ -62,40 +73,33 @@ auto_fields:
     - invalidateScenePreview
     - invalidateVrmPreview
     - invalidateYsmPreview
+    - LoadGuard
     - loadModel2D
+    - loadModelData
+    - LoadModelOpts
+    - loadYsmPreviewImage
+    - loadYsmSummaryMeta
     - MaidOpenOptions
     - makeMmdDataPort
-    - MmdBottomNavCtx
-    - mmdModelInfoNodes
-    - MmdPlayBridge
-    - mmdShotNodes
-    - Model2DOptions
     - modelDetailHTML
     - ModelDetailMeta
     - openEmpty3DFullscreen
-    - OpenerOptions
     - openFullPreview
-    - openModel3DFullscreen
-    - OpenModel3DOptions
     - pageShellHTML
     - PlaceholderHint
     - placeholderHTML
-    - playNodes
     - Prefer3DState
     - PREVIEW_CLEANUP
     - PREVIEW_HANDLERS
     - PREVIEW_INVALIDATE
     - previewCSS
     - PreviewCtx
+    - PreviewDebugger
     - PreviewImageLoader
     - PreviewRoot
     - PreviewRouterCtx
     - PreviewShowFn
     - PreviewTabSpec
-    - readFileBytes
-    - registerReRoute
-    - registerYsmModelSchema
-    - renderModel2D
     - resolveFbxSiblings
     - resolveMmdSiblings
     - resolveMorphSiblings
@@ -106,12 +110,7 @@ auto_fields:
     - routeModelPreview
     - routePackInfo
     - routeTypeMeta
-    - safeUrl
-    - saveScreenshot
-    - scanModelsByType
     - setActive3DClose
-    - setup2DCanvas
-    - shotButtonNodes
     - showCard
     - showFbxPreview
     - showLitematic
@@ -127,23 +126,13 @@ auto_fields:
     - showVrmMeta
     - statsCardHTML
     - StatsCardModel
-    - SummaryAnimGroup
-    - SummaryAuthor
-    - summaryCardHTML
-    - SummaryConfigMenu
     - tabbedShellHTML
-    - VrmMaterialControlBridge
-    - vrmModelInfoNodes
-    - vrmShotNodes
-    - withPreviewExtras
-    - YsmControlsContext
-    - YSMHeader
-    - ysmModelStats
-    - YsmModelStats
-    - ysmModelTextureSlots
+    - YsmDecoder
+    - YsmModelLoadCtx
     - YsmOpenOptions
-    - ysmShotNodes
-    - YsmSummary
+    - YsmShotModel
+    - YsmShotRenderArgs
+    - YsmSummaryDecode
   tests:
     - frontend/src/views/app-nav/index.test.ts
     - frontend/src/views/app-preview/utils.test.ts

@@ -78,6 +78,8 @@ invariant_anchors:
 
 # YSM (Bedrock) 动画管线
 
+> **source_files 覆盖声明**：本卡为跨切面视图（YSM 动画解析-求值-注入管线，横跨 preview-3d/model 与 utils/animation），source_files 覆盖为有意为之，非重复登记。
+
 ## 概述
 
 YSM 模型的动画并非硬编码在渲染核心 `model3d.ts` 中，而是由**适配器层 (`ysm-adapter.ts`)** 托管的独立玩家对象 `YsmAnimPlayer` 驱动。这种设计解耦了渲染与动画逻辑，使得 Bedrock 动画与 MMD (VMD) 动画各走各的通道。

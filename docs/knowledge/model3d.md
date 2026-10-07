@@ -7,7 +7,6 @@ adr:
 category: rendering
 source_files:
   - frontend/src/preview-3d/
-  - frontend/src/preview-3d/adapters/ysm-model-preloader.ts
 tests:
   - frontend/src/preview-3d/mesh/model3d.test.ts
   - frontend/src/preview-3d/adapters/ysm-model-preloader.test.ts
@@ -1081,6 +1080,8 @@ perf:
 ---
 
 # 3D 预览渲染 model3d
+
+> **目录级覆盖为有意为之**：本卡为 3D 渲染层（YSM/VRM/MMD/Litematic/FBX）索引卡，source_files 有意覆盖 `frontend/src/preview-3d/` 全部源文件（含 `adapters/ysm-model-preloader.ts`），提供全层符号表供路由直跳。
 
 > **架构事实已迁移至 **[architecture.md#4-ysm-模型解析与渲染threejs-ysmparser-wasm](../architecture.md#4-ysm-模型解析与渲染threejs-ysmparser-wasm)。
 > 本卡仅保留 frontmatter 机器字段（symbols/tests/quick_risk_lines），架构描述以 architecture.md 为准。

@@ -5,7 +5,6 @@ tier: leaf
 category: feature
 source_files:
   - frontend/src/features/repo/repo-rtype.ts
-  - frontend/src/utils/base/primitives/storage.ts
   - frontend/src/bus.ts
 auto_fields:
   symbols_with_lines:
@@ -15,15 +14,10 @@ auto_fields:
     - BusEvents
     - CtxShowPayload
     - currentRepoType
-    - isStorageAccessible
     - MenuItem
     - ModelSelectPayload
     - NavPagePayload
     - PageName
-    - safeGet
-    - safeGetJSON
-    - safeRemove
-    - safeSet
     - ToastPayload
     - useCurrentResourceType
 quick_groups:

@@ -50,6 +50,8 @@ status: active
 
 # 拖拽平台适配 dnd-shared
 
+> **source_files 覆盖声明**：本卡为跨切面视图（拖拽平台适配横跨 `features/import` 与 `utils/resource` 多张他卡主领文件），source_files 覆盖为有意为之，非重复登记。
+
 ## 概览
 
 拖拽导入共享逻辑层。解决 WebView2 特殊性（dragover 读不到文件名、drop 用 webkitGetAsEntry、entry.file Promise 化、DataTransferItem 无 name）的同时，为 `import-dnd` / `pack-dnd` / `import-executor` 提供统一的文件收集、扩展名判定、文件夹分组、File → base64 编码等共享能力。**可导入判定纯函数已下沉 `utils/resource/importable.ts`**（`isSupportedFile`/`isImportableFile`/`getExt`；backend/web-fs-auth 也要用同一口径，为避免 backend → features 反向依赖而下沉，shared.ts 内部依赖、不再 re-export）。

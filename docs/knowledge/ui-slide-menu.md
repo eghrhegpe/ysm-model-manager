@@ -44,6 +44,8 @@ status: active
 
 # ADR 去桶化 slide-menu 外壳组件
 
+> **source_files 覆盖声明**：本卡为跨切面视图（slide-menu 外壳组件含样式安装，横跨 shell 与 style 两目录），source_files 覆盖为有意为之，非重复登记。
+
 ## 概览
 
 `frontend/src/preview-3d/menu/shell/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 slide-menu 视觉卡片（menu-wrapper / slide-viewport / slide-panel / slide-list / slide-header），但不搬其菜单导航引擎（registry/schema/stack 等业务层）。在外壳层提供一组**轻量导航栈**能力（`home`/`navigate`/`back`/`refresh`/`isShowing`/`reset`/`isAtRoot`），供调用方以最小成本组织多级菜单（如 YSM 的「模型信息 → 表情 / 切换模型」两级）。

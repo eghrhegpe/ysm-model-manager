@@ -70,6 +70,8 @@ status: active
 
 # Web Worker 模型统计层 model-stats
 
+> **source_files 覆盖声明**：本卡为跨切面视图（Worker 批量统计层主领卡，横跨 workers 与 backend/web-stats），source_files 覆盖为有意为之，非重复登记。
+
 ## 概览
 
 `frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchModels` 数值条件（`minBones`/`maxBones`/`minCubes`/`maxCubes`/`minTex`/`maxTex`）提供统计来源。Worker 内独立加载 WASM 解码 + `open` IndexedDB（同源）逐个模型解析统计，主线程零解析负载——大库后台跑不卡 UI。

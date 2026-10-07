@@ -7,12 +7,15 @@ adr:
   - ADR-192
 category: go
 source_files:
-  - go/types/
+  - go/types/types.go
+  - go/types/config.go
+  - go/types/bedrock.go
+  - go/types/registry/findinst.go
+  - go/types/registry/location.go
+  - go/types/registry/texture.go
   - resource_types.json
 auto_fields:
   symbols_with_lines:
-    - AllExts
-    - AllSubDirs
     - AppConfig
     - AppError
     - AppError.Error
@@ -21,16 +24,13 @@ auto_fields:
     - AuthorInfo
     - BedrockModel
     - Bone2D
-    - BundledRegistryJSON
     - ChannelReasonMarshalFailed
     - ChannelReasonMemoryState
     - ChannelReasonMkdirFailed
     - ChannelReasonWriteFailed
-    - ContainerExts
     - Cube2D
     - CustomFileInfo
     - DedupConfig
-    - DisabledSuffix
     - DownloadTask
     - ErrAlreadyExists
     - ErrDecodeFailed
@@ -49,30 +49,13 @@ auto_fields:
     - ErrUnsupportedFmt
     - ErrUnsupportedType
     - ErrWriteFailed
-    - ExtBelongsTo
-    - ExtBelongsToBy
     - FileInventory
     - FindInstDir
-    - FormatRange
-    - FormatRange.UnmarshalJSON
-    - GroupIcon
-    - GroupLabel
-    - GroupOf
-    - GroupStorageRoot
     - ImportFileItem
     - ImportLog
-    - InstallExtsFor
     - InstanceStatus
-    - IsContainerExt
-    - IsDirLevelSync
-    - IsDisableSuffix
-    - IsNestedModelDir
     - IsRenderableTextureExt
-    - IsResourceAllowed
-    - IsScanInstance
-    - IsSupportedExt
     - IsTextureExt
-    - IsYsmEntryJSON
     - LauncherInstance
     - LevelDebug
     - LevelError
@@ -84,61 +67,28 @@ auto_fields:
     - LinkSym
     - LinkType
     - LinkUnknown
-    - LitematicBlockStat
-    - LitematicMeta
-    - LitematicVoxelData
-    - LoadRegistry
     - LogCaps
     - LogChannelHealth
     - LogLevel
     - LogStatus
-    - MatchZipEntry
-    - MaxImportSize
-    - MaxImportSizeMB
-    - MaxReadLimit
     - ModelEntry
-    - ModKeywordsFor
-    - ModMetaFor
-    - ModRequirement
-    - NestedPattern
-    - NestedPatternsFor
-    - NormalizeResourceName
     - PackInfo
-    - PackMeta
-    - PackMeta.Desc
     - PackMetaView
     - PackModelDetail
     - PackModelDetailList
     - QueueStatusInfo
-    - RegistryType
     - RenderableTextureExts
     - ResourceSyncItem
     - ResourceSyncResult
-    - ResourceType
-    - ResourceType.EffectiveExtensions
-    - ResourceType.MatchZipEntry
-    - ResourceTypeRegistry
-    - ResourceTypeRegistry.FindByID
     - RuntimeLog
     - SearchResult
-    - SetBundledRegistryJSON
-    - SetRegistryPath
     - ShaderpackLang
-    - ShouldHashExt
     - StatusFailed
     - StatusSkipped
     - StatusSuccess
     - StatusToLevel
     - StatusWarn
-    - StorageSubDir
-    - StripBanSuffix
-    - StripDisableSuffix
-    - SubDirAll
-    - SubDirEntry
-    - SubDirMap
     - SubModel
-    - SupportedExtsForSubtype
-    - SupportedExtsForType
     - SupportedTextureExts
     - SyncConfig
     - SyncResolveResult
@@ -153,9 +103,7 @@ auto_fields:
     - TextureMIME
     - TypeByLocation
     - ValidLinkMode
-    - Variant
     - VersionInstance
-    - VoxelGroup
     - WindowState
     - WorkshopCreator
     - WorkshopPresetSearch
@@ -163,7 +111,6 @@ auto_fields:
     - YsmAuthor
     - YsmLicense
     - YsmMetadata
-    - ZipEntryMatch
 quick_groups:
   - 配置与注册表
 quick_intents:
@@ -185,11 +132,8 @@ use_when:
   - LinkType
   - BedrockModel
 invariant_anchors:
-  - go/types/registry/resource.go|LoadRegistry
   - go/types/config.go|AppConfig
   - go/types/config.go|DedupConfig
-  - go/types/registry/resource.go|ResourceType
-  - go/types/registry/extensions.go|ShouldHashExt
   - go/types/types.go|ErrorCode
 status: active
 ---
@@ -200,7 +144,7 @@ status: active
 
 `go/types/` 包是全应用的共享类型层：应用配置（AppConfig）、各子系统交换的数据结构（模型条目/实例状态/同步结果/日志/投影元数据等）、以及资源类型注册表的 Go 端加载与扩展名查询。与 [resource_registry](./resource-registry.md) 互补：那张卡讲 `resource_types.json` 单一事实源，本卡讲 Go 端的类型定义与配置结构。
 
-**ADR-192（2026-09-05 两刀收官）**：注册表域拆入新子包 `go/types/registry/`（`resource.go`/`extensions.go`/`findinst.go`/`location.go`/`texture.go` + 测试）。第一刀用门面（`registry_facade.go`，type alias + wrapper 承接旧路径）使 77 个 Go 消费方零改动过渡；**第二刀（本刀）门面已退役**——46 个消费方改直接 `import go/types/registry`、测试同步迁移，`registry_facade.go` 已删除。`go/types` 为**纯 DTO 包**（types.go/config.go/bedrock.go）。依赖单向：`go/types/registry` 禁止 import `go/types`。前端绑定 `go/types/models.ts` 仅剩留守 5 类型（ModelEntry/WorkshopCreator/WorkshopPresetSearch/WorkshopSite/YsmMetadata），迁出类型生成到 `go/types/registry/models.ts`（前端无消费者）。本卡对 registry 域的查询：分支到 `source_files` 对应 registry 路径。
+**ADR-192（2026-09-05 两刀收官）**：注册表域拆入新子包 `go/types/registry/`（`resource.go`/`extensions.go`/`findinst.go`/`location.go`/`texture.go` + 测试）。第一刀用门面（`registry_facade.go`，type alias + wrapper 承接旧路径）使 77 个 Go 消费方零改动过渡；**第二刀（本刀）门面已退役**——46 个消费方改直接 `import go/types/registry`、测试同步迁移，`registry_facade.go` 已删除。`go/types` 为**纯 DTO 包**（types.go/config.go/bedrock.go）。依赖单向：`go/types/registry` 禁止 import `go/types`。前端绑定 `go/types/models.ts` 仅剩留守 5 类型（ModelEntry/WorkshopCreator/WorkshopPresetSearch/WorkshopSite/YsmMetadata），迁出类型生成到 `go/types/registry/models.ts`（前端无消费者）。本卡对 registry 域的查询：分支到 [resource_registry](./resource-registry.md) 的 source_files 对应 registry 子包路径。
 
 ## 核心职责
 

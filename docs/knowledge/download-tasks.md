@@ -5,35 +5,14 @@ tier: leaf
 category: feature
 source_files:
   - frontend/src/features/community/download-tasks.ts
-  - frontend/src/features/community/download-queue-store.ts
-  - frontend/src/features/community/download-queue.ts
 auto_fields:
   symbols_with_lines:
-    - addQueueError
     - buildDownloadTasks
-    - cancelDownloads
     - classifyDownloadSize
-    - createDownloadQueue
-    - decrementRemaining
     - DOWNLOAD_CONFIRM_BYTES
     - DOWNLOAD_REJECT_BYTES
     - DownloadCandidate
-    - DownloadQueue
     - DownloadSizeDecision
-    - DownloadState
-    - DownloadTask
-    - enqueueDownloads
-    - getState
-    - getStateSnapshot
-    - isActiveStatus
-    - markCurrentFile
-    - QueueController
-    - QueueControllerOptions
-    - QueueError
-    - resetProgress
-    - resume
-    - rollbackToIdle
-    - subscribe
 quick_groups:
   - 下载与社区
 quick_intents:

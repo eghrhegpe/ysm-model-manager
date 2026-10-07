@@ -165,6 +165,8 @@ status: active
 
 # Wails Binding API 总览 internal/app
 
+> **文件级覆盖为有意为之**：本卡是全部 Wails Binding 方法的 API 字典，source_files 有意覆盖 `internal/app/` 全部绑定文件（11 个），方法清单以生成 `app.ts` 为权威。
+
 ## 概览
 
 `internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp()`（见 [wails_bridge](./wails-bridge.md) 卡）调用这些方法，禁止 `window.go.main.App` 直连。

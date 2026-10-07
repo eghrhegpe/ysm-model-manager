@@ -73,6 +73,8 @@ invariant_anchors:
 
 # 业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)
 
+> **source_files 覆盖声明**：本卡为跨切面视图（features/dialogs 业务对话框全景，横跨各对话框专属卡与 modal-core），source_files 覆盖为有意为之，非重复登记。
+
 ## 概览
 
 `frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整业务功能，不再误住 utils 叶子层。

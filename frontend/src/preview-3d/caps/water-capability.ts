@@ -23,12 +23,11 @@ import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { type EnvStateKey, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
+import { oneOf, restoreFields } from "./persist-utils.ts";
 import {
   type EnvPlacement,
-  oneOf,
   persistState,
   restoreBySchema,
-  restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";

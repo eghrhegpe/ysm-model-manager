@@ -35,11 +35,11 @@ import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 // 暗线 B 收口：scene.environment 槽位所有权纯判定（与 environment-capability.dispose 共用单事实源）
 import { envOwnsSceneEnvironment } from "./environment-ownership.ts";
+import { restoreFields } from "./persist-utils.ts";
 import {
   type EnvPlacement,
   getTypedCap,
   persistState,
-  restoreFields,
   restoreState,
   ringLog,
   type SceneCapability,

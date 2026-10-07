@@ -4,6 +4,7 @@
 //   1. 实现 SceneCapability 接口
 //   2. 在 registry.add() 注册一行
 // 菜单/持久化/生命周期全部由框架驱动，零手工 wiring。
+// （锐评 2026-10-07 #6 拆轴：存档工具箱 → caps/persist-utils.ts，分层偏移 → caps/layer-offsets.ts）
 
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import {
@@ -193,79 +194,6 @@ export interface SceneCapability {
 // ringLog 下沉至叶子模块 @/preview-3d/ring-log.ts（打破 env-dispatcher 循环依赖），此处保留 re-export。
 export { ringLog } from "@/preview-3d/ring-log.ts";
 
-/**
- * 贴地平面分层偏移（世界单位；Minecraft 1 单位 = 1 方块，0.01 即厘米级）。
- * z-fighting 防御的唯一口径（2026-09 锐评 P4 收敛）：ground 承接面最上、pool 底微抬、
- * reflector 平面下沉让位——各层方向与量级语义各异，取用时按名引用，禁止互相推导。
- *
- * 注：原 `waterFilm: 0.01`（film 水膜写死高度）已随 ADR-257 删除——film 的水面 y 现由
- * `envState.waterLevel` 驱动（schema 默认 0.15；ADR-319 D1 从 0.01 抬升——水位同时是波高预算的
- * 下钳上限，0.01 会把浪高钳死成平面），是唯一事实源，不再是本分层的常量成员。
- * ⚠️ 与本层 `groundSurface`（0.005）的跨层耦合：`waterLevel` 低于它时水膜被承接面吞掉——
- * 逐字段 schema `range` 管不到这条，登记见 `docs/audit-water-critique.md` P2-1④。
- */
-export const GROUND_LAYER_OFFSETS = {
-  /** ground 承接面（SurfaceMesh）相对 y=0 的微抬 */
-  groundSurface: 0.005,
-  /** ADR-249 §2.3 装饰叠加层（透明格线，位于 surface 之上） */
-  groundOverlay: 0.007,
-  /** water pool 池底相对 y=0 的微抬（贴 GridHelper 基准面） */
-  waterPoolBottom: 0.0001,
-  /** reflector 平面下沉（位于 ground 承接面之下，两层不相交即无 z-fighting） */
-  reflector: -0.01,
-} as const;
-
-/** 持久化字段种别：普通字段按 typeof 分发；枚举字段走 oneOf 白名单 */
-export type FieldKind = "number" | "boolean" | { oneOf: readonly string[] };
-
-/**
- * 持久化种别表绑定到目标对象，生成 restoreFields 的 restorer 表（表驱动持久化基建，
- * 2026-09 锐评 P2-1：params 接口 + 种别表两处互锁后，save/load 自动跟随，四处手工同步收敛为两处）。
- * 对 target 的写入用一次受控宽化 cast——运行时安全由 restoreFields 的 typeof 分发保证：
- * restorer 只在存档值类型与种别匹配时被调用，写入类型必然正确。
- */
-export function bindFieldRestorers<P extends object>(
-  target: P,
-  spec: { [K in keyof P]?: FieldKind },
-): Record<string, FieldRestorer> {
-  const out: Record<string, FieldRestorer> = {};
-  const writable = target as unknown as Record<string, number | boolean | string>;
-  for (const key of Object.keys(spec) as Array<keyof P & string>) {
-    const kind = spec[key];
-    if (kind === undefined) continue;
-    if (kind === "number") {
-      out[key] = {
-        number: (v) => {
-          writable[key] = v;
-        },
-      };
-    } else if (kind === "boolean") {
-      out[key] = {
-        boolean: (v) => {
-          writable[key] = v;
-        },
-      };
-    } else {
-      out[key] = oneOf(kind.oneOf, (v) => {
-        writable[key] = v;
-      });
-    }
-  }
-  return out;
-}
-
-/** 按种别表键集从 source 导出白名单对象（saveState 的表驱动形态，键集与表恒等） */
-export function pickPersistFields<P extends object>(
-  source: P,
-  spec: { [K in keyof P]?: FieldKind },
-): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const key of Object.keys(spec) as Array<keyof P & string>) {
-    out[key] = source[key];
-  }
-  return out;
-}
-
 const STORAGE_PREFIX = "ysm-scene-cap-";
 
 /** 保存 JSON 到 localStorage */
@@ -293,72 +221,6 @@ export function restoreState(capId: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
-}
-
-/** 单字段恢复器：按存档值的实际类型分派，类型不匹配则跳过（等价于手写 typeof 守卫） */
-export interface FieldRestorer {
-  number?: (v: number) => void;
-  boolean?: (v: boolean) => void;
-  string?: (v: string) => void;
-  /**
-   * 枚举白名单：值为 string 且命中 values 才 apply（取代手写
-   * `typeof v === "string" && (v === "a" || v === "b")` 的枚举守卫）。
-   * 与 string 同配时 string 优先（oneOf 仅作缺省的受约束分发）。
-   */
-  oneOf?: { values: readonly string[]; apply: (v: string) => void };
-}
-
-/**
- * 枚举白名单恢复器工厂：保持调用方零断言（apply 收到窄化后的枚举类型）。
- * apply 的宽化断言收敛在这一处——运行时分发前已过 `values.includes` 校验，
- * 传入 v 必然 ∈ values，断言不引入不安全。
- */
-export function oneOf<T extends string>(
-  values: readonly T[],
-  apply: (v: T) => void,
-): FieldRestorer {
-  return { oneOf: { values, apply: apply as (v: string) => void } };
-}
-
-/**
- * 类型安全的字段批量恢复器（取代各 cap `loadState` 里逐行手写的
- * `if (typeof state.x === "number") this.params.x = state.x;`）。
- *
- * 收敛动机：该样板在 ground / sky / water 等 cap 之间构成 jscpd 10 行级重复块
- * （`ground-capability#sky-capability` 等），且每新增一个持久化字段就多复制一行。
- *
- * @returns 至少一个字段成功回填 true；无存档、或存档值全部类型不匹配（含损坏数据）
- *   返回 false——「无存档」与「有存档但什么都没恢复」对调用方是同一早退语义。
- */
-export function restoreFields(
-  state: Record<string, unknown> | null,
-  spec: Record<string, FieldRestorer>,
-): boolean {
-  if (!state) return false;
-  let applied = false;
-  for (const [key, restorer] of Object.entries(spec)) {
-    const v = state[key];
-    if (typeof v === "number") {
-      if (restorer.number) {
-        restorer.number(v);
-        applied = true;
-      }
-    } else if (typeof v === "boolean") {
-      if (restorer.boolean) {
-        restorer.boolean(v);
-        applied = true;
-      }
-    } else if (typeof v === "string") {
-      if (restorer.string) {
-        restorer.string(v);
-        applied = true;
-      } else if (restorer.oneOf?.values.includes(v)) {
-        restorer.oneOf.apply(v);
-        applied = true;
-      }
-    }
-  }
-  return applied;
 }
 
 /**

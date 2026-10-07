@@ -17,11 +17,10 @@ import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 // ADR-216：监听器集合工厂提级共享原语（water 同源；fog 模式切换 notify 用）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { buildFogNodes } from "./fog-menu.ts";
+import { oneOf, restoreFields } from "./persist-utils.ts";
 import {
   type EnvPlacement,
-  oneOf,
   persistState,
-  restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";

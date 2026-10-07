@@ -31,7 +31,7 @@
 import * as THREE from "three";
 import { envState } from "@/preview-3d/state/env-state.ts";
 import { clampFieldValue, type EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
-import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
+import { GROUND_LAYER_OFFSETS } from "./layer-offsets.ts";
 import { WATER_WAVE_SEGMENTS, type WaterMode } from "./water-state.ts";
 
 /** 池内壁相对水面不透明度的衰减因子（池壁比水面更实，观感更稳）。

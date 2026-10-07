@@ -12,7 +12,7 @@ import {
   bindFieldRestorers,
   pickPersistFields,
   restoreFields,
-} from "./scene-capability.ts";
+} from "./persist-utils.ts";
 
 // ADR-196 装配链收敛：SceneCapability 接口已删 setPreset，cap 预设套用方法
 // 降级为非接口 public（六 cap 的 applyModelPreset + postprocessing 的 applyModelPreset）。

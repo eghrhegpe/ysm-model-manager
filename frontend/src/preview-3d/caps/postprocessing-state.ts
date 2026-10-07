@@ -1,4 +1,4 @@
-import type { FieldKind } from "./scene-capability.ts";
+import type { FieldKind } from "./persist-utils.ts";
 
 // ===== 后处理能力状态/序列化层（拆轴自 postprocessing-capability.ts）=====
 // 本文件收敛纯数据 + 纯类型轴：ReflectionMode / PostprocessingParams / 默认值 / 键表，

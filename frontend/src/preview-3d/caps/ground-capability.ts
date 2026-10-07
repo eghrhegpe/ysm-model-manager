@@ -49,12 +49,11 @@ import {
   overlayNeedsRebuild,
   textureRepeat,
 } from "./ground-surface-spec.ts";
+import { GROUND_LAYER_OFFSETS } from "./layer-offsets.ts";
+import { oneOf, restoreFields } from "./persist-utils.ts";
 import {
   type EnvPlacement,
-  GROUND_LAYER_OFFSETS,
-  oneOf,
   persistState,
-  restoreFields,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";

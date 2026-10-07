@@ -21,7 +21,7 @@ import {
   type LightSlot,
   readLightParams,
 } from "./light-params.ts";
-import { oneOf, restoreFields } from "./scene-capability.ts";
+import { oneOf, restoreFields } from "./persist-utils.ts";
 /* ============ saveState：envState → 持久化嵌套结构（纯读，由 FLATTEN_MAP 逆读口派生） ============ */
 
 /** [锐评根治 2026-09] 旧实现逐字段手抄 30 个 envState 键裸字面量——新增灯光字段时

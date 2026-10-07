@@ -13,11 +13,10 @@ import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 // [锐评 X-6 / 方案 C 2026-10-04] 菜单局部刷新订阅原语（fog/water/reflector 同源）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
+import { oneOf, restoreFields } from "./persist-utils.ts";
 import {
   getTypedCap,
-  oneOf,
   persistState,
-  restoreFields,
   restoreState,
   type SceneCapability,
   type SceneCapabilityLookup,

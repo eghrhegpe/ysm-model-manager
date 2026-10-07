@@ -6,7 +6,7 @@ import { ReflectorCapability } from "./reflector-capability.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
-import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
+import { GROUND_LAYER_OFFSETS } from "./layer-offsets.ts";
 import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
 // ADR-196：构造即注册全局 env 回调、仅 dispose 注销；与 ground/sky/water 同侪一致，

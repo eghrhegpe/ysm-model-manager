@@ -12,12 +12,12 @@ import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { type ModelType, pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 // ADR-216：监听器集合工厂提级共享原语（fog/light/ground/water/sky/environment 同源；菜单局部刷新 notify 用）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
+import { GROUND_LAYER_OFFSETS } from "./layer-offsets.ts";
+import { restoreFields } from "./persist-utils.ts";
 import { buildReflectorNodes } from "./reflector-menu.ts";
 import {
   type EnvPlacement,
-  GROUND_LAYER_OFFSETS,
   persistState,
-  restoreFields,
   restoreState,
   ringLog,
   type SceneCapability,

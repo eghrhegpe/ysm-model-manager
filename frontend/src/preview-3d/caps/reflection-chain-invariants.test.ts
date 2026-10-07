@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vitest";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
-import { GROUND_LAYER_OFFSETS } from "./scene-capability.ts";
+import { GROUND_LAYER_OFFSETS } from "./layer-offsets.ts";
 import * as THREE from "three";
 
 function makeFakeRenderer() {

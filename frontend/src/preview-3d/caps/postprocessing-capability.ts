@@ -49,6 +49,7 @@ import { pickModelDefaultFields, toModelType } from "@/preview-3d/state/model-de
 // [锐评 X-6 / 方案 C 2026-10-04] 菜单局部刷新订阅原语（fog/water/reflector 同源）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import type { LightCapability } from "./light-capability.ts";
+import { type FieldRestorer, oneOf, restoreFields } from "./persist-utils.ts";
 import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
 // 状态/序列化轴（PostprocessingParams / 默认值 / toneMapping 键表）已下沉
 // postprocessing-state.ts；此处透传导出，保持既有调用方（postprocessing-capability.test.ts、
@@ -65,11 +66,8 @@ import {
 } from "./postprocessing-state.ts";
 import type { ReflectorCapability } from "./reflector-capability.ts";
 import {
-  type FieldRestorer,
   getTypedCap,
-  oneOf,
   persistState,
-  restoreFields,
   restoreState,
   type SceneCapability,
   type SceneCapabilityLookup,

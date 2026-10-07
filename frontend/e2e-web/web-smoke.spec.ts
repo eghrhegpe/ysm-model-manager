@@ -102,19 +102,6 @@ async function idbFileBody(page: Page, key: string): Promise<string> {
   }, key);
 }
 
-// 2026-10-08 实证：CI swiftshader 负载下 vite dev 页面导航偶发基础设施竞态——
-// "Protocol error (Page.reload): Not attached to an active page" / "net::ERR_ABORTED;
-// maybe frame was detached?"（HMR 全量重载与手动导航相撞）。仅对这两类已知抖动重试一次，
-// 断言失败仍硬红（同 check-go-diff-coverage「瞬态失败重试一次」口径，不掩盖竞态）。
-async function navOnce(nav: () => Promise<unknown>): Promise<void> {
-  try {
-    await nav();
-  } catch (e) {
-    if (!/Not attached to an active page|ERR_ABORTED|frame was detached/.test(String(e))) throw e;
-    await nav();
-  }
-}
-
 test.describe("网页版主链路（ADR-049）", () => {
   // P1 修复（审核发现，陷阱 #16）：此前无 pageerror/console error 守卫，页面内 JS
   // 崩溃/报错时用例仍可能假绿。现在统一在 beforeEach 收集，每个用例末尾断言零错误。
@@ -138,12 +125,14 @@ test.describe("网页版主链路（ADR-049）", () => {
     // 在 CI 上 3/4 轮红），而其余 e2e-web spec 全部用 domcontentloaded 稳定通过（web-preview
     // 同负载下裸 domcontentloaded 也绿）。真正的就绪门槛是下方 waitForAppReady，
     // networkidle 的额外严格毫无收益、纯增抖动面。
-    await navOnce(() => page.goto("/", { waitUntil: "domcontentloaded" }));
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     await clearIdb(page);
-    // clearIdb 后重新引导应用：用 goto("/") 而非 reload（2026-10-08 实证：reload 在
-    // swiftshader 负载下偶发 "Not attached to an active page" / "frame was detached"——
-    // HMR 全量重载与手动 reload 相撞；其余 e2e-web spec 均以 goto 引导，本处对齐）。
-    await navOnce(() => page.goto("/", { waitUntil: "domcontentloaded" }));
+    // 不做第二次导航（2026-10-08 实证根因）：应用启动链会自触发一次同 URL reload
+    // （coi-sw.ts:88 为解锁跨源隔离而 location.reload()；web-ready.ts 头注「多个 spec 头注
+    // 记载的竞态」），手动 reload/goto 与之相撞 → "Not attached"/"frame was detached"/
+    // "navigation is interrupted"。清库后「重引导」意图由下方 waitForAppReady（自带导航
+    // 静默窗口）+ 用例自身 IndexedDB 断言承担——与稳定全绿的 web-preview beforeEach 完全一致。
+    await waitForAppReady(page);
     // 应用启动链落定（tree-root 就绪）再交棒用例——用例体内第一步就是派发 DnD，
     // 此前无任何启动等待，CI 慢启动下必撞「tree-root 未就绪」
     await waitForAppReady(page);

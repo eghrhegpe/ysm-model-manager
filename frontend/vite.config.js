@@ -23,8 +23,22 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    rollupOptions: {
+    // vite 8 起 rolldown 内核：构建选项迁到 rolldownOptions（rollupOptions 已弃用，会吐告警）。
+    // 仅桌面构建去掉 chunk/asset 内容哈希、纯固定产物名——桌面整包同发、无 CDN 长缓存需求，
+    // 且 chunk 名（app / vendor-* / shared-infra / preview-library …）彼此不撞、也不与入口 index 撞。
+    // web 构建（vite.web.config.ts）刻意保留哈希以走 Pages CDN 缓存失效，本文件不动它。
+    rolldownOptions: {
       output: {
+        entryFileNames: "assets/[name].js",
+        // 唯一真冲突：虚拟模块 `_wasm-data-stub_*` 被主线程与 worker 双构建各自产出同名 chunk，
+        // 纯固定名会互相覆盖、致 worker 引用坏包；对其保留内容哈希，其余稳定 chunk 名纯固定。
+        chunkFileNames(chunkInfo) {
+          if (chunkInfo.name.startsWith("_wasm-data-stub")) {
+            return "assets/[name]-[hash].js";
+          }
+          return "assets/[name].js";
+        },
+        assetFileNames: "assets/[name].[ext]",
         // manualChunks 拆分（2026-10 审计：主 chunk app-content 达 ~2.76 MB，>500 kB 告警）。
         // 只按 node_modules 归属路由，判定条件只依赖稳定路径前缀，业务文件增删不改分法，
         // 因此 vendor 不会因业务改动漂哈希。

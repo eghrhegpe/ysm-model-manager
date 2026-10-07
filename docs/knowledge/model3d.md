@@ -51,6 +51,7 @@ auto_fields:
     - ArmStats
     - assembleBoneSelectInfo
     - AssembledShell
+    - assembleShell
     - AssertCommonFieldIsExact
     - assertNoDuplicateIds
     - assertRevisionRange

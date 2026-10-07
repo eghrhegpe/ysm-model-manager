@@ -38,7 +38,7 @@ import { normalizeEnvLegacyState } from "./environment-migrations.ts";
 // 暗线 B 收口：scene.environment 槽位所有权纯判定（dispose 安全边界）下沉本文件，
 // 与 env-pixels.ts 同范式——令 ADR-292 所有权契约集中在可单测一处，替代原 4 处手抄排除集。
 import { envOwnsSceneEnvironment, isEnvDisposableSource } from "./environment-ownership.ts";
-import type { EnvPreset, EnvPresetId } from "./environment-state.ts";
+import type { EnvPreset, EnvPresetId, SelectableEnvPresetId } from "./environment-state.ts";
 // ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
 import { ENV_PRESETS } from "./environment-state.ts";
 import {
@@ -53,7 +53,7 @@ import {
 
 // P2 抽取：drawEnvEquirect 已下沉 env-pixels.ts，保留透传导出（测试/调用方仍从 cap 文件导入）。
 export { drawEnvEquirect } from "./env-pixels.ts";
-export type { EnvPreset, EnvPresetId };
+export type { EnvPreset, EnvPresetId, SelectableEnvPresetId };
 // ENV_PRESETS（程序化天空数据表）仍被 cap/菜单/测试消费，保留透传导出。
 export { ENV_PRESETS };
 
@@ -347,7 +347,7 @@ export class EnvironmentCapability implements SceneCapability {
   /** 从程序化预设生成缩略图 dataURL（thumbW×thumbH/2，2:1 比例）。custom 预设返回 null。 */
   getPresetThumbnail(id: EnvPresetId, thumbW: number): string | null {
     if (id === "custom") return null;
-    const preset = ENV_PRESETS[id as Exclude<EnvPresetId, "custom">];
+    const preset = ENV_PRESETS[id as SelectableEnvPresetId];
     if (!preset) return null;
     const canvas = document.createElement("canvas");
     canvas.width = thumbW;
@@ -383,8 +383,7 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   private buildPresetEquirectTex(): THREE.Texture | null {
-    const preset =
-      ENV_PRESETS[envState.envPreset as Exclude<EnvPresetId, "custom">] ?? ENV_PRESETS.sky;
+    const preset = ENV_PRESETS[envState.envPreset as SelectableEnvPresetId] ?? ENV_PRESETS.sky;
     const W = envState.envResolution;
     const H = Math.floor(W / 2);
     const canvas = document.createElement("canvas");
@@ -844,7 +843,7 @@ export class EnvironmentCapability implements SceneCapability {
           partial.envPreset = "custom";
           partial.envSource = "custom";
         }
-      } else if (ENV_PRESETS[p as Exclude<EnvPresetId, "custom">]) {
+      } else if (ENV_PRESETS[p as SelectableEnvPresetId]) {
         partial.envPreset = p;
       }
     }

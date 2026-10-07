@@ -28,7 +28,7 @@ import type {
 import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
 import type { EnvSource } from "./environment-migrations.ts";
-import type { EnvPresetId } from "./environment-state.ts";
+import type { EnvPresetId, SelectableEnvPresetId } from "./environment-state.ts";
 import { ENV_PRESETS } from "./environment-state.ts";
 
 const ENV_GROUP_PRESET: LocaleKey = "preview.envGroupPreset";
@@ -101,7 +101,7 @@ function envPresetControlsNode(cap: EnvironmentCapability): NodeFor<"controls"> 
       // [预设冗余标签] 外层 folder 折叠头已叫「预设」，隐藏控件内部多余的「预设预览」label 行
       hideLabel: true,
       options: (() => {
-        const keys = Object.keys(ENV_PRESETS) as Array<Exclude<EnvPresetId, "custom">>;
+        const keys = Object.keys(ENV_PRESETS) as Array<SelectableEnvPresetId>;
         return keys.map((id) => ({
           value: id,
           label: ENV_PRESETS[id].label,

@@ -9,7 +9,7 @@
 // ADR-168 preview-paths 同法）；此处 import 引入作用域 + re-export 保公共面，既有消费方零改动。
 import type { EnvPresetId, SelectableEnvPresetId } from "@/preview-3d/state/env-preset-types.ts";
 
-export type { EnvPresetId };
+export type { EnvPresetId, SelectableEnvPresetId };
 
 export interface EnvPreset {
   id: SelectableEnvPresetId;

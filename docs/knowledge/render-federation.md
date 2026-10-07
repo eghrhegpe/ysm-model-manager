@@ -56,6 +56,7 @@ auto_fields:
     - sceneCapabilityRegistry
     - SceneCapabilityRegistry
     - ScreenshotScene
+    - SelectableEnvPresetId
     - SemanticScene
     - ShadowCapability
     - ShadowType

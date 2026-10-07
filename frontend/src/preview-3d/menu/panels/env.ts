@@ -9,7 +9,7 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import { tOf } from "@/core/i18n/t.ts";
-import type { EnvPresetId } from "@/preview-3d/caps/environment-capability.ts";
+import type { SelectableEnvPresetId } from "@/preview-3d/caps/environment-capability.ts";
 import type {
   EnvPlacement,
   EnvSectionId,
@@ -102,7 +102,7 @@ function collectEnvEntries(): EnvEntry[] {
 }
 function applyPreset(
   _ctx: PreviewMenuCtx,
-  presetId: Exclude<EnvPresetId, "custom">,
+  presetId: SelectableEnvPresetId,
   _menu?: SlideMenuHandle,
 ): void {
   // ADR-196 刀4：氛围预设收口——ATMOSPHERE_PRESETS[presetId] 完整快照经 setEnvState
@@ -122,9 +122,9 @@ function applyPreset(
  * 旧实现用模块级单值，多挂载/新会话共用模块时 A 实例选中的预设会串到 B 实例（跨会话污染）
  * ——收口为 WeakMap 后各 menu 独立，menu 句柄回收即随键消散。
  */
-const DEFAULT_ENV_PRESET: Exclude<EnvPresetId, "custom"> = "studio";
-const _lastEnvPresetByMenu = new WeakMap<SlideMenuHandle, Exclude<EnvPresetId, "custom">>();
-function getLastEnvPreset(menu: SlideMenuHandle | undefined): Exclude<EnvPresetId, "custom"> {
+const DEFAULT_ENV_PRESET: SelectableEnvPresetId = "studio";
+const _lastEnvPresetByMenu = new WeakMap<SlideMenuHandle, SelectableEnvPresetId>();
+function getLastEnvPreset(menu: SlideMenuHandle | undefined): SelectableEnvPresetId {
   return (menu && _lastEnvPresetByMenu.get(menu)) || DEFAULT_ENV_PRESET;
 }
 
@@ -312,7 +312,7 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
           return cur && cur !== "custom" ? cur : getLastEnvPreset(menu);
         },
         set: (v) => {
-          const preset = v as Exclude<EnvPresetId, "custom">;
+          const preset = v as SelectableEnvPresetId;
           if (menu) _lastEnvPresetByMenu.set(menu, preset);
           applyPreset(ctx, preset, menu);
         },

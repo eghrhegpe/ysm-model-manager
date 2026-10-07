@@ -19,6 +19,7 @@ import {
   drawEnvEquirect,
   type EnvPreset,
   type EnvPresetId,
+  type SelectableEnvPresetId,
 } from "./environment-capability.ts";
 import { MODEL_DEFAULTS, toModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-196：统一状态层
@@ -586,7 +587,7 @@ describe("EnvironmentCapability — 缩略图与直方图", () => {
 
   it("getPresetThumbnail 每个预设返回 dataURL；custom 返回 null", () => {
     const cap = newCap();
-    for (const id of Object.keys(ENV_PRESETS) as Array<Exclude<EnvPresetId, "custom">>) {
+    for (const id of Object.keys(ENV_PRESETS) as Array<SelectableEnvPresetId>) {
       const dataUrl = cap.getPresetThumbnail(id, 64);
       expect(dataUrl).toBe("data:image/png;base64,mock");
     }

@@ -9,9 +9,12 @@ import { localChromiumUse } from "./e2e/browser-path.ts";
 export default defineConfig({
   testDir: "./e2e-web",
   timeout: 20000,
-  // 2026-10 扩限：SwiftShader 软渲染（CI headless 无 GPU）逐例成本高于本地 GPU 机，
-  // 14 例自然时长贴 3min 曲线即假红——5min 留余量（本地 GPU 机更快，不受影响）
-  globalTimeout: 5 * 60 * 1000,
+  // 2026-10 扩限 + 2026-10-08 再扩：SwiftShader 软渲染（CI headless 无 GPU）逐例成本高于本地
+  // GPU 机。5min 曾留余量，但加载偏慢的 runner 上 20 例实测 5.0~5.5min——globalTimeout 5min
+  // 顶满会把最后一个用例（web-ysm-3d）掐掉，报「1 did not run + 2 errors not a part of any test」
+  // （2026-10-08 实证：19 passed 仍 exit 1）。扩到 7min，与主配置 playwright.config.ts 同口径；
+  // 本地 GPU 机更快不受影响。
+  globalTimeout: 7 * 60 * 1000,
   maxFailures: 2,
   retries: 0,
   workers: 1,

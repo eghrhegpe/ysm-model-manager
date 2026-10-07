@@ -47,6 +47,7 @@ auto_fields:
     - switchPreview
     - switchToSession
     - syncLightTargetFromContent
+    - syncNewModelRoots
     - unregisterSchema
     - UpdateableScene
     - YSM_MODEL_SCHEMA_ID

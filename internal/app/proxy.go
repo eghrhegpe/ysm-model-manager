@@ -11,14 +11,11 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"golang.org/x/net/publicsuffix"
 )
 
 // isCGNAT 判断 IPv4 是否落在 CGNAT 共享地址段 100.64.0.0/10（RFC 6598）：
@@ -153,18 +150,6 @@ func (j *cookieJar) Cookies(u *url.URL) []*http.Cookie {
 	defer j.mu.Unlock()
 	dom := u.Hostname()
 	return append([]*http.Cookie(nil), j.store[dom]...)
-}
-
-func (j *cookieJar) cookiesString(u *url.URL) string {
-	cookies := j.Cookies(u)
-	if len(cookies) == 0 {
-		return ""
-	}
-	parts := make([]string, 0, len(cookies))
-	for _, c := range cookies {
-		parts = append(parts, c.Name+"="+c.Value)
-	}
-	return strings.Join(parts, "; ")
 }
 
 func sanitizeLocation(loc, proxyBase, targetHost string) string {
@@ -440,50 +425,4 @@ func (a *App) addHTTPServer(srv *http.Server) {
 	a.proxyMu.Lock()
 	defer a.proxyMu.Unlock()
 	a.httpServers = append(a.httpServers, srv)
-}
-
-func isIPAddress(host string) bool {
-	return net.ParseIP(host) != nil
-}
-
-func getEffectiveTLDPlusOne(host string) string {
-	tldPlusOne, err := publicsuffix.EffectiveTLDPlusOne(host)
-	if err != nil {
-		return host
-	}
-	return tldPlusOne
-}
-
-func isSameSiteNavigation(targetURL, currentURL string) bool {
-	t, err := url.Parse(targetURL)
-	if err != nil {
-		return false
-	}
-	c, err := url.Parse(currentURL)
-	if err != nil {
-		return false
-	}
-	return getEffectiveTLDPlusOne(t.Hostname()) == getEffectiveTLDPlusOne(c.Hostname())
-}
-
-var _cspCleanRe = regexp.MustCompile(`(?i)frame-ancestors\s+[^;]+;?`)
-
-func stripCSPFrameAncestors(header http.Header) {
-	for k, vv := range header {
-		if strings.EqualFold(k, "Content-Security-Policy") {
-			cleaned := make([]string, 0, len(vv))
-			for _, v := range vv {
-				stripped := _cspCleanRe.ReplaceAllString(v, "")
-				stripped = strings.TrimSpace(stripped)
-				if stripped != "" {
-					cleaned = append(cleaned, stripped)
-				}
-			}
-			if len(cleaned) == 0 {
-				delete(header, k)
-			} else {
-				header[k] = cleaned
-			}
-		}
-	}
 }

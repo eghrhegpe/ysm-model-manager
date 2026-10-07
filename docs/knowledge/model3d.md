@@ -893,6 +893,7 @@ auto_fields:
     - switchTabHighlightBg
     - switchToSession
     - syncLightTargetFromContent
+    - syncNewModelRoots
     - TD_CAM_SPEED
     - TD_KEYMAP_KEY
     - TD_KEYMAP_REGISTRY

@@ -176,84 +176,6 @@ func TestCookieJar(t *testing.T) {
 	}
 }
 
-func TestCookiesString(t *testing.T) {
-	jar := newCookieJar()
-	u, _ := url.Parse("https://example.com/test")
-
-	// Empty
-	if s := jar.cookiesString(u); s != "" {
-		t.Errorf("expected empty string, got %q", s)
-	}
-
-	// With cookies
-	jar.SetCookies(u, []*http.Cookie{
-		{Name: "a", Value: "1", Domain: "example.com"},
-		{Name: "b", Value: "2", Domain: "example.com"},
-	})
-	s := jar.cookiesString(u)
-	if s == "" {
-		t.Error("expected non-empty cookie string")
-	}
-}
-
-func TestGetEffectiveTLDPlusOne(t *testing.T) {
-	tests := []struct {
-		host string
-		want string
-	}{
-		{"www.example.com", "example.com"},
-		{"sub.example.co.jp", "example.co.jp"},
-		{"localhost", "localhost"},
-	}
-	for _, tt := range tests {
-		got := getEffectiveTLDPlusOne(tt.host)
-		if got != tt.want {
-			t.Errorf("getEffectiveTLDPlusOne(%q) = %q, want %q", tt.host, got, tt.want)
-		}
-	}
-}
-
-func TestIsIPAddress(t *testing.T) {
-	tests := []struct {
-		host string
-		want bool
-	}{
-		{"127.0.0.1", true},
-		{"example.com", false},
-		{"::1", true},
-		{"[::1]:8080", false},
-	}
-	for _, tt := range tests {
-		got := isIPAddress(tt.host)
-		if got != tt.want {
-			t.Errorf("isIPAddress(%q) = %v, want %v", tt.host, got, tt.want)
-		}
-	}
-}
-
-func TestStripCSPFrameAncestors(t *testing.T) {
-	tests := []struct {
-		name         string
-		input        string
-		expectExists bool // whether CSP header should still exist after stripping
-	}{
-		{"single directive", "frame-ancestors 'none';", false},
-		{"mixed directives", "default-src 'self'; frame-ancestors 'self';", true},
-		{"no frame-ancestors", "default-src 'self'", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := http.Header{}
-			h.Set("Content-Security-Policy", tt.input)
-			stripCSPFrameAncestors(h)
-			_, exists := h["Content-Security-Policy"]
-			if exists != tt.expectExists {
-				t.Errorf("stripCSPFrameAncestors: header exists=%v, want exists=%v", exists, tt.expectExists)
-			}
-		})
-	}
-}
-
 func TestNewSSRFTransport(t *testing.T) {
 	tr := newSSRFTransport()
 	if tr == nil {
@@ -314,25 +236,6 @@ func TestAppStopProxyNonexistentSession(t *testing.T) {
 	a := &App{proxySessions: make(map[proxyServerKey]*proxySession)}
 	// Should not panic
 	a.stopProxy("http://nonexistent.example.com")
-}
-
-func TestIsSameSiteNavigation(t *testing.T) {
-	tests := []struct {
-		name         string
-		target       string
-		current      string
-		wantSameSite bool
-	}{
-		{"same site", "https://example.com/page1", "https://example.com/page2", true},
-		{"same site www", "https://www.example.com/page", "https://example.com/page", true},
-		{"different site", "https://example.com/page", "https://other.com/page", false},
-	}
-	for _, tt := range tests {
-		got := isSameSiteNavigation(tt.target, tt.current)
-		if got != tt.wantSameSite {
-			t.Errorf("isSameSiteNavigation(%s, %s) = %v, want %v", tt.target, tt.current, got, tt.wantSameSite)
-		}
-	}
 }
 
 func TestNewCookieJar(t *testing.T) {
@@ -418,15 +321,6 @@ func TestProxySessionsMapCreation(t *testing.T) {
 	// Should not panic, proxySessions should be nil initially
 }
 
-func TestCookieJarEmptyString(t *testing.T) {
-	jar := newCookieJar()
-	u, _ := url.Parse("https://example.com")
-	s := jar.cookiesString(u)
-	if s != "" {
-		t.Errorf("expected empty string, got %q", s)
-	}
-}
-
 func TestGetProxyPort(t *testing.T) {
 	a := &App{proxySessions: make(map[proxyServerKey]*proxySession)}
 	key := proxyServerKey{host: "example.com"}
@@ -448,12 +342,6 @@ func TestAddHTTPServer(t *testing.T) {
 	}
 }
 
-func TestIsIPAddressEmpty(t *testing.T) {
-	if isIPAddress("") {
-		t.Error("expected false for empty string")
-	}
-}
-
 func TestIsBlockedIPDomain(t *testing.T) {
 	// 域名不是 IP，不被 isBlockedIP 拦截（安全性由 ssrfGuardDial 做 DNS 解析后校验）
 	if isBlockedIP("bowlroll.net") {
@@ -464,25 +352,10 @@ func TestIsBlockedIPDomain(t *testing.T) {
 	}
 }
 
-func TestGetEffectiveTLDPlusOneInvalid(t *testing.T) {
-	// Invalid TLD should return the host itself
-	got := getEffectiveTLDPlusOne("not-a-valid-domain")
-	if got == "" {
-		t.Error("expected non-empty result")
-	}
-}
-
 func TestSanitizeLocationEmpty(t *testing.T) {
 	got := sanitizeLocation("", "http://127.0.0.1:8080/", "example.com")
 	if got == "" {
 		t.Error("expected non-empty result")
-	}
-}
-
-func TestIsSameSiteNavigationInvalidURLs(t *testing.T) {
-	got := isSameSiteNavigation("://invalid", "://also-invalid")
-	if got {
-		t.Error("expected false for invalid URLs")
 	}
 }
 

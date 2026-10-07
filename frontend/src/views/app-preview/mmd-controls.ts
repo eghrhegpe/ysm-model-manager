@@ -5,11 +5,11 @@
 // （self 模式由 visibleWhen: s["ui.mode"]!=="self" 谓词隐藏，[doc:adr-126-p4-d]）。
 // 材质面板 buildMaterialControls 保留复用（纯渲染层，状态经 bridge 下沉 mmd-materials.ts，ADR-072）。
 
+import { mmdModelSelectNode } from "@/preview-3d/adapters/mmd/mmd-model-select.ts";
 // [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
 // import 供本文件函数签名本地绑定；导出面收敛（knip）：CameraControlBridge /
 // MaterialControlBridge 消费方直连 adapters 单源，此处不再原位转发
 import type { MmdBottomNavCtx, MmdPlayBridge } from "@/preview-3d/infra/content-bridges.ts";
-import { multiModelSelectNode } from "@/preview-3d/menu/panels/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { shotButtonNodes } from "./shot-panel-shared.ts";
 
@@ -24,22 +24,10 @@ export type { MmdBottomNavCtx, MmdPlayBridge };
 export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
   const pmx = ctx.mmd.pmx;
   const nodes: PreviewMenuNode[] = [];
-  // [doc:adr-132] zip 多 pmx：模型选择 select（统一原语 multiModelSelectNode，ADR-132）。
-  // 候选 = zipModelCandidates（虚拟路径，mmd-adapter.ts:392 暴露）；get 保持 basename 匹配
-  // 语义（modelName = 虚拟路径 basename）；set → switchTo(虚拟路径) 重建内容层。
-  const candidates = (ctx.zipModelCandidates ?? []).map((p) => ({
-    id: p,
-    label: p.split(/[/\\]/).pop() || p,
-  }));
-  const select = multiModelSelectNode({
-    entries: candidates,
-    nodeId: "mmd-model-select",
-    activeId: (): string =>
-      candidates.find((c) => c.label === ctx.modelName)?.id ?? candidates[0]?.id ?? "",
-    onSelect: (id: string): void => {
-      if (ctx.switchTo && id) void ctx.switchTo(id);
-    },
-  });
+  // [doc:adr-132][doc:adr-270-d6] zip 多 pmx：模型选择 select 的候选派生/切换语义归
+  // adapters/mmd/mmd-model-select.ts（虚拟路径 → basename 显示名、basename 匹配取 activeId、
+  // switchTo(虚拟路径) 重建内容层）。本层只注入会话态并消费节点。
+  const select = mmdModelSelectNode(ctx);
   if (select) nodes.push(select);
   nodes.push(
     {

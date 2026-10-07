@@ -156,6 +156,8 @@ auto_fields:
     - mmdDiag
     - mmdMenuItems
     - MmdMenuItemsOpts
+    - MmdModelSelectCtx
+    - mmdModelSelectNode
     - MmdPanelHooks
     - MmdZipConfig
     - ModelLike
@@ -209,6 +211,7 @@ auto_fields:
     - readWebFile
     - recoverMountFailure
     - removeOwnHandle
+    - renderModelShotFrame
     - RenderVrmBonePanel
     - requireSharedInfra
     - rescaleVmdMotionClips
@@ -302,6 +305,8 @@ auto_fields:
     - workerMmdUpdateWithMixer
     - writeVmdPositionScale
     - YsmAdapterOptions
+    - YsmComponentSelectCtx
+    - ysmComponentSelectNode
     - YsmDecoder
     - ysmMenuItems
     - YsmMenuItemsOpts

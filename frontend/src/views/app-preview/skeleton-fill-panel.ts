@@ -1,8 +1,8 @@
 // ===== skeleton-fill-panel.ts — YSM 模型面板声明式 schema（ADR-126 P5）=====
 // 填充 3D 信息面板：统计 + 纹理 + 模型选择（声明式节点）
-import { t } from "@/core/i18n/t.ts";
+
+import { ysmComponentSelectNode } from "@/preview-3d/adapters/ysm-component-select.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import { multiModelSelectNode } from "@/preview-3d/menu/panels/multi-model.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
@@ -88,35 +88,16 @@ export function buildYsmModelSchema(
   const slots = ysmModelTextureSlots(ctx.spec, rawIdx, ctx.texArr.length);
 
   // 组件选择（多组件才显示；-1 = All 选项恒在）
-  // [doc:adr-132] 迁 multiModelSelectNode 统一原语（对齐 MMD zip/资源包）：
-  // entries 首项 "-1" = All（「全部组件」），其余为组件下标；get/set 走 per-scene 会话态闭包
-  // （sessionActiveComponent，6b080b33 Bug B 范式）；refreshOnChange 切档后 stats/纹理行重建。
-  // 注意：显式 `mgCount > 1` 守卫——「-1 = All」恒选项使 entries 恒 ≥2，不能依赖原语的
-  // 单候选 null 判断（单组件时也不显示 select，对齐旧语义）。
-  // 快照回退（审核修复）：get 与 rawIdxRaw 同表达式——闭包缺省（旧调用/测试）时读
-  // snapshot["ui.activeComponent"]，面板内部口径一致（select 显示 = stats/纹理聚合行）；
-  // set 在闭包缺省时无写入目标（snapshot 只读）→ 静默 no-op，legacy 路径为只读展示。
+  // [doc:adr-132][doc:adr-270-d6] 候选派生/切换语义归 adapters/ysm-component-select.ts
+  // （「-1 = All」哨兵 + 组件下标 entries + `mgCount > 1` 守卫 + per-scene 会话态闭包读写）。
+  // 本层只注入会话态（sessionActiveComponent）并消费节点：快照回退（审核修复）与 stats/纹理
+  // 聚合行共用同一 sessionActiveComponent 口径（select 显示 = stats/纹理聚合行）。
   const nodes: PreviewMenuNode[] = [];
-  if (mgCount > 1) {
-    const allLabel = t("preview.allComponents");
-    const select = multiModelSelectNode({
-      nodeId: "ysm-component-select",
-      labelKey: "preview.component",
-      refreshOnChange: true,
-      entries: [
-        { id: "-1", label: allLabel === "preview.allComponents" ? "全部组件" : allLabel },
-        ...(ctx.spec.models ?? []).map((mg, i) => ({
-          id: String(i),
-          label: `${(mg as { name?: string; id?: string })?.name || (mg as { id?: string })?.id || "model"} (${(mg as { bones?: unknown[] })?.bones?.length ?? 0})`,
-        })),
-      ],
-      activeId: (): string => String(sessionActiveComponent ? sessionActiveComponent.get() : -1),
-      onSelect: (id: string): void => {
-        sessionActiveComponent?.set(Number.isFinite(Number(id)) ? Number(id) : -1);
-      },
-    });
-    if (select) nodes.push(select);
-  }
+  const select = ysmComponentSelectNode({
+    models: ctx.spec.models,
+    sessionActiveComponent,
+  });
+  if (select) nodes.push(select);
 
   // 统计
   nodes.push(

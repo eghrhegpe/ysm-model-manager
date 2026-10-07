@@ -3,13 +3,9 @@
 
 import type { Model3DSpec } from "@/bindings/ysm-model-manager/go/threejs/models.ts";
 import { t } from "@/core/i18n/t.ts";
-import {
-  buildYsmShotRenderArgs,
-  type PreviewDebugger,
-} from "@/preview-3d/adapters/ysm-preview-pipeline.ts";
+import type { PreviewDebugger } from "@/preview-3d/adapters/ysm-preview-pipeline.ts";
+import { renderModelShotFrame } from "@/preview-3d/adapters/ysm-shot-frame.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
-import { toScreenshotLights } from "@/preview-3d/screenshot/screenshot-lights.ts";
-import { renderMultiAngle } from "@/preview-3d/screenshot/screenshot-render.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -264,8 +260,8 @@ export async function saveScreenshot(
       // ADR-052 P3：首选活跃渲染器截图（实时、当前视角）
       b64 = await screenshotFn();
     } else {
-      // fallback：无活跃渲染器时复用 renderMultiAngle 取 front 帧
-      b64 = await renderFrontFrame(model);
+      // fallback：无活跃渲染器时复用离屏多角度截图取 front 帧
+      b64 = await renderModelShotFrame(model, "front");
     }
     if (!b64) {
       // 抛错而非静默吞错：让消费者统一 catch（setIcon ❌ + toast），
@@ -278,40 +274,13 @@ export async function saveScreenshot(
     for (const k of ["front", "45", "side", "back45"])
       await saveScreenshot(model, k, setShotState, screenshotFn);
   } else {
-    // 按请求视角渲染对应帧（renderFrame 内 renderMultiAngle 返回 front/45/side/back45
-    // 并按 key 匹配 name——审查 P1：误用 renderFrontFrame 会让 45/side/back45 全部
-    // 保存 front 帧，文件名与内容错位）
-    const b64 = await renderFrame(model, key);
+    // 按请求视角渲染对应帧（编排在 preview-3d/adapters/ysm-shot-frame.ts 的
+    // renderModelShotFrame：renderMultiAngle 返回 front/45/side/back45 并按 key 匹配 name——
+    // 审查 P1：误用 front 帧会让 45/side/back45 全部保存 front 帧，文件名与内容错位）
+    const b64 = await renderModelShotFrame(model, key);
     if (!b64) return;
     await SaveScreenshotFile(`${base}_${key}.png`, b64);
   }
   setShotState("\u2705");
   setTimeout(() => setShotState("\u{1F4F7}"), 2000);
-}
-
-/** 无活跃渲染器时复用 renderMultiAngle 渲染指定视角帧（front/45/side/back45/all 共用；key 传 "front" 等） */
-async function renderFrame(
-  model: BedrockGeometry & {
-    textures?: string[] | null;
-    componentTextures?: Record<string, string[]>;
-    _modelPath?: string;
-  },
-  key: string,
-): Promise<string | null> {
-  const lights = toScreenshotLights();
-  // 纹理槽清单 + 渲染选项（含 WASM 解码缝）由流水线组装（ADR-270-d5）：
-  // 解码是 p3d 内部件，视图不再直接注入 decoder。
-  const { texUrls, options } = buildYsmShotRenderArgs(model, {
-    size: 512,
-    ...(lights != null ? { lights } : {}),
-  });
-  const results = await renderMultiAngle(model._modelPath || "", texUrls, options);
-  if (!results) return null;
-  const hit = results.find((r) => r.name === key);
-  return hit?.base64 ?? null;
-}
-
-/** 无活跃渲染器 fallback：取 front 帧 base64（key === "current" 分支） */
-async function renderFrontFrame(model: Parameters<typeof renderFrame>[0]): Promise<string | null> {
-  return renderFrame(model, "front");
 }

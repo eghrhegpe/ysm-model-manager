@@ -15,6 +15,7 @@ source_files:
   - frontend/src/preview-3d/decoder/model-cache.ts
   - frontend/src/views/app-preview/skeleton-render.ts
   - frontend/src/views/app-preview/shot-panel-shared.ts
+  - frontend/src/preview-3d/adapters/ysm-shot-frame.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts
 auto_fields:
   symbols_with_lines:
@@ -33,6 +34,7 @@ auto_fields:
     - loadTextures
     - makeYsmAdapter
     - releaseTextureUrls
+    - renderModelShotFrame
     - renderMultiAngle
     - RenderMultiAngleOptions
     - saveScreenshot
@@ -109,7 +111,9 @@ shotButton action → makeShotAction → saveScreenshot(key="current")
 
 ```
 shotButton action → saveScreenshot(key="front/45/side/back45/all")
-  → renderFrame → renderMultiAngle(modelPath, texUrls, opts)
+  → renderModelShotFrame（adapters/ysm-shot-frame.ts，[doc:adr-270-d6] 自 skeleton-render 回迁）
+  → toScreenshotLights() [三点布光] + buildYsmShotRenderArgs（纹理槽 + 解码缝）
+  → renderMultiAngle(modelPath, texUrls, opts)
   → GetModel3DSpec(modelPath) [Go binding] → Spec3D
   → 兜底 decodeYsmViaWasm + buildSpecFromGeometryJSON（ADR-071）
   → loadTextures(texUrls) + Promise.all(componentTextures) → THREE.Texture[]
@@ -137,6 +141,7 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 | `texture-cache.ts` | 纹理缓存池：引用计数 + LRU 淘汰零引用条目（上限 200），`disposeAll` 由 `mount-preview-core fullCleanup` 统一释放 |
 | `decoder/cache.ts` | 模型预览数据持久缓存：模块级 Map，FIFO 上限 50，覆盖/淘汰走 `onEvict` 回调释放 blob URL（覆盖时新旧 blob URL 差集判定，防误 revoke） |
 | `skeleton-render.ts` | 截图保存入口：`saveScreenshot` 六角度分支 + 活跃渲染器 vs 离屏重建两条路径 |
+| `adapters/ysm-shot-frame.ts` | 离屏截图编排 `renderModelShotFrame(model, key)`：取截图灯光 → `buildYsmShotRenderArgs` 组装实参 → `renderMultiAngle` → 按视角 key 匹配 name 取帧（[doc:adr-270-d6] 自 `skeleton-render.ts` 的 `renderFrame` 回迁适配器层） |
 | `shot-panel-shared.ts` | 截图面板共享层：`shotButtonNodes` 6 角度按钮 + `makeShotAction` 防连点副作用 |
 | `ysm-adapter.ts` | YSM 适配器注入 `screenshot` 能力（`screenshotFromRenderer` 共享活跃渲染器）；6 适配器统一走 `screenshotFromRenderer`（ADR-052 P3） |
 
@@ -150,6 +155,7 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 | `applyVolumetricCone(scene, lights, origin): VolumetricCone \| null` | screenshot-cone.ts | 离屏建锥（复用预览实现，调用方 finally 释放） |
 | `loadTextures(urls?): Promise<(THREE.Texture \| null)[]>` | texture-loader.ts | 纹理加载（含 invalidate） |
 | `saveScreenshot(model, key, setShotState, screenshotFn?)` | skeleton-render.ts | 六角度分支 + 两条路径选择 |
+| `renderModelShotFrame(model, key): Promise<string \| null>` | adapters/ysm-shot-frame.ts | 离屏截图编排（灯光 → 实参 → 多角度渲染 → 按 key 取帧） |
 | `makeShotAction(modelForSave, screenshotFn)` | shot-panel-shared.ts | 防连点副作用 |
 | `shotButtonNodes(modelForSave, screenshotFn)` | shot-panel-shared.ts | 6 角度声明式按钮 |
 

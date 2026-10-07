@@ -553,6 +553,8 @@ auto_fields:
     - MmdMaterialListItem
     - mmdMenuItems
     - MmdMenuItemsOpts
+    - MmdModelSelectCtx
+    - mmdModelSelectNode
     - MmdPanelHooks
     - MmdPlayBridge
     - mmdSemanticBoneMap
@@ -725,6 +727,7 @@ auto_fields:
     - renderMenu
     - RenderMenuDeps
     - RenderModeCapability
+    - renderModelShotFrame
     - renderMultiAngle
     - RenderMultiAngleOptions
     - renderPreviewPanel
@@ -1022,6 +1025,8 @@ auto_fields:
     - YsmAnimPlayer
     - YsmAuthor
     - YsmAuthorMetadata
+    - YsmComponentSelectCtx
+    - ysmComponentSelectNode
     - YsmContentHandle
     - YsmControlsContext
     - YsmDecoder

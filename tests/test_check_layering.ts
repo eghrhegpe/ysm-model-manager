@@ -253,9 +253,21 @@ check("R10 零新增（views→preview-3d 内部细节穿透，超基线即阻�
     0,
     `R10 新增穿透边 ${r10reg.length} 条：${r10reg.map((v) => `${v.from}:${v.line} → ${v.to}`).join(", ")}`,
   );
+  // ADR-270-d6 收尾：R10 存量已全清（截图编排 / 菜单候选派生回迁 preview-3d/adapters），
+  // 基线 4 → 0。原「债务非空」守卫在此形态下必假红——它自己的断言文案已预告该分支
+  // （「或存量全收敛但基线未 --update 收紧」）。换成等强 + 更严的两条：
+  //   ① 扫描确实产出结构（同 R8 全清后的既定范式，见上方 R8 集成块）；
+  //   ② R10 债务条目恒为 0——堵「把 views→preview-3d 边写回基线放宽」这条旁路：边一旦入基线，
+  //      regressions 恒 0（ADR-270-d6 决策 3 明确否决给 menu/panels 开赦免，基线放行同理）。
+  // 扫描器非空转由下方「R10 纯核 r10EdgeViolates」「R10 r10TargetAllowed」合成样本用例保证。
   assert.ok(
-    (data.debt ?? []).some((e) => e.startsWith("views/") && e.includes(":preview-3d/")),
-    "R10 基线债务为空——扫描器疑似对真实树空转（或存量全收敛但基线未 --update 收紧）",
+    Array.isArray(data.debt),
+    "check-layering --json 未产出 debt 数组——扫描疑似未运行",
+  );
+  assert.equal(
+    (data.debt ?? []).filter((e) => e.startsWith("views/") && e.includes(":preview-3d/")).length,
+    0,
+    "R10 债务条目应恒为 0（ADR-270-d6 全收敛）——出现即基线被放宽",
   );
 });
 

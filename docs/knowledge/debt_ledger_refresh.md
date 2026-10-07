@@ -17,6 +17,7 @@ pitfalls:
   - 误判「文件数变多 = 债恶化」——须读内容判是合理扩展还是失控（见「数文件数 ≠ 债」）
   - check-deadcode-baseline 默认模式会自动收编写基线，只读务必带 --json
   - check-doc-drift 的 ARCH_DOCS 若指向已删文档 → archText 空 → unregistered 虚报全部模块
+  - 架构树引用的构建产物（dist/*.wasm、*.exe）在干净检出里不存在——未豁免 git 忽略项即 CI 恒红
   - 有未治新债时误用 --update-baseline 会把债冻结进账本
 quick_groups:
   - 门禁与脚本
@@ -26,6 +27,8 @@ quick_risk_lines:
   - 未提交改动在多 AI 并行期会被 worktree reset 冲掉——改账本 / 文档后必须立即 --files 提交锁定
 invariant_anchors:
   - scripts/check-doc-drift.ts|CODE_PATH_RE
+  - scripts/check-doc-drift.ts|checkArchRefs
+  - scripts/check-doc-drift.ts|isGitIgnored
   - scripts/check-doc-drift.ts|collectSourceModules
   - scripts/check-doc-drift.ts|checkArchCoverage
 ---
@@ -75,6 +78,7 @@ invariant_anchors:
 - **多 AI 并行期 worktree 会被 reset 冲掉未提交改动**：实证本会话连续 3 次把 §3.6 / 账本改动做完、`doctor` 已绿，`git diff HEAD` 却突然全空（被并行会话 / 钩子 reset 回 HEAD）。**改账本 / 文档后须立即 `commit-with-check --files` 锁定**，勿攒批。「`git diff HEAD` 全空但行为刚变过」= 被冲信号。
 - **check-doc-drift 假象**：`ARCH_DOCS` 若指向已删除文档（曾指三份归档），`archText` 为空 → `checkArchCoverage` 把 `collectSourceModules()` 全判 unregistered（虚报全部顶层模块）。比对对象必须是活文档 `docs/architecture.md`。
 - **`CODE_PATH_RE` 只匹配「反引号 + `frontend/`/`go/`/`internal/`/`scripts/` 前缀」的路径**：文档里裸文件名（`web.html`）/ 树行无反引号**不触发** `checkArchRefs`；写「已删除的旧路径」时勿用全路径反引号（会报引用漂移），改说「旧 X 已废，现 root `resource_types.json` 单源」。
+- **架构树引用「构建产物」必须豁免 git 忽略项，否则 CI 结构性恒红**（2026-10-07 根因修，`checkArchRefs`）：`docs/architecture.md` 合法登记产物路径（`frontend/dist/wasm/YSMParser.wasm`、`go/updater/ysm-updater-helper.exe`、`frontend/src/wasm/ysm-wasm-data*.js`），它们被 `.gitignore` 排除、**从不入 git** ⇒ 干净检出（CI 全新 clone）里必然不存在 ⇒ 原实现一律 `fs.existsSync` 报 ERROR。**形态是「本地绿 CI 红」且与改动无关**：开发机跑过 build 故文件在、恒绿；CI 全新 clone 恒红。实证 2026-10-04 `2ee0d7fd8` 起连红多轮（含两轮先于本次推送）——本地 `contract-tests` 122/122 绿、CI 却挂 `tests/test_gate_static_tools.ts` 第 8 组（`runScopedDocDrift` 传不存在文件要求 `matched=0` 合法 PASS）。修法：交 git 裁决（`git check-ignore -q -- <ref>`，命中即视为「产物未构建」记 INFO 而非 ERROR），勿手抄 glob（忽略规则散在 `.gitignore` 多行，必漂移）。**复现手法**：`git worktree add --detach <dir> HEAD` 建干净检出再跑 `node scripts/contract-tests.ts`——本机工作树因残留产物而掩盖此病。
 
 ## 相关
 

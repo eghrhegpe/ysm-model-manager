@@ -23,6 +23,7 @@
  * 退出码：发现 ERROR → 1；否则 0（INFO/WARN 不阻断）。
  * 设计意图：文档漂移检查器（代码现实 vs 架构文档声称）
  */
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { ADR_DIR, listAdrFiles, REG_ROW_ID_RE } from "./_lib/adr-files.ts";
@@ -181,6 +182,34 @@ function checkKnowledge() {
 
 const CODE_PATH_RE = /`((?:frontend|go|internal|scripts)\/[a-zA-Z0-9_./-]+)`/g;
 
+/**
+ * 该路径是否被 .gitignore 排除（= 构建产物 / 生成物，从不入 git）。
+ *
+ * 判据交给 git 本尊裁决（`git check-ignore`），不手写 glob——仓内忽略规则散在
+ * .gitignore 多行（`frontend/dist`、`*.exe`、`frontend/src/wasm/ysm-wasm-data*.js`…），
+ * 手抄一份必然漂移。数组式传参（仓内惯例），不走 shell 拼接。
+ * fail-open：git 不可用 / 非 git 环境时不豁免（保持原有「报 ERROR」的严格性），
+ * 避免把「判不了」静默变成「放过」。
+ */
+const gitIgnoredCache = new Map<string, boolean>();
+function isGitIgnored(ref: string): boolean {
+  const cached = gitIgnoredCache.get(ref);
+  if (cached !== undefined) return cached;
+  let ignored = false;
+  try {
+    // check-ignore 命中 → exit 0；未命中 → exit 1（故不能只看异常）
+    execFileSync("git", ["check-ignore", "-q", "--", ref], {
+      cwd: ROOT,
+      stdio: "ignore",
+    });
+    ignored = true;
+  } catch {
+    ignored = false;
+  }
+  gitIgnoredCache.set(ref, ignored);
+  return ignored;
+}
+
 /** 提取架构文档中的代码路径引用并验证存在性。已知过期引用记录在基线 staleRefs 中。 */
 function checkArchRefs() {
   let baseline: Record<string, any> = { staleRefs: [] };
@@ -207,6 +236,17 @@ function checkArchRefs() {
       const ref = m[1]!;
       if (staleRefs.has(ref)) continue;
       if (!fs.existsSync(path.join(ROOT, ref))) {
+        // 生成物豁免（2026-10-07 根因修）：架构文档合法地会登记**构建产物**路径
+        // （frontend/dist/wasm/YSMParser.wasm、go/updater/ysm-updater-helper.exe、
+        // frontend/src/wasm/ysm-wasm-data*.js 等），它们被 .gitignore 排除、**从不入 git**，
+        // 故在干净检出（CI 全新 clone）里必然不存在。原实现一律报 ERROR ⇒ CI 结构性恒红
+        // 且与改动无关（本地因跑过 build 而恒绿，属「本地绿 CI 红」形态）。
+        // 判据：交给 git 裁决「是否被忽略」——被忽略即视为「产物未构建」而非「文档过期」，
+        // 与仓内「生成物不承担提交归属」口径一致（AGENTS.md 归属原则）。
+        if (isGitIgnored(ref)) {
+          infos.push(`[架构树] ${doc} 引用构建产物（git 忽略，未构建时不存在）: ${ref}`);
+          continue;
+        }
         errors.push(`[架构树] ${doc} 引用不存在的路径: ${ref}`);
       }
     }

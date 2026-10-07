@@ -689,6 +689,7 @@
 | 误判——须读内容判是合理扩展还是失控（见「数文件数 ≠ 债」） | `文件数变多 = 债恶化` | - |
 | check-deadcode-baseline 默认模式会自动收编写基线，只读务必带 --json | - | - |
 | check-doc-drift 的 ARCH_DOCS 若指向已删文档 | - | archText 空 → unregistered 虚报全部模块 |
+| 架构树引用的构建产物（dist/*.wasm、*.exe）在干净检出里不存在——未豁免 git 忽略项即 CI 恒红 | - | - |
 | 有未治新债时误用 --update-baseline 会把债冻结进账本 | - | - |
 | 手写 adv-filter 弹窗 DOM | - | 与全局弹窗样式 / 焦点陷阱不一致；必须复用 modal.ts 的 registerDlg |
 | adv-filter 输入不校验就提交 | - | min > max 传后端报错；必须在 validate() 拦截并在 |

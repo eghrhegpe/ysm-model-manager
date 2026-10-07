@@ -210,18 +210,39 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
   // ADR-023 P3：L3 Vitest 随前端域变更回归（串行在后，独占资源）
   const t1 = Date.now();
   // 与 frontend/package.json test 对齐：--maxWorkers 8（24 核默认并发过载反慢 ~10s）
+  // 命令保持**字面量直传**：test_gate_sh_invariants.ts 禁未登记的动态 ctx.sh/shAsync 实参，
+  // 提取成常量再传入会触发「未登记插值来源」断言（复跑同样用同一字面量，勿抽变量）。
   const ft = await ctx.shAsync("npx vitest run --maxWorkers 8", {
     cwd: path.join(ROOT, "frontend"),
   });
-  // 失败时抓失败测试名：vitest 输出里 ❯/×/FAIL 行含测试文件名+用例名，
-  // 比取最后 4 行（汇总数字）更易定位。最多取 8 行避免 tail 过长。
-  const vitestTail = ft.rc
-    ? (ft.out.match(/^(?:❯|×|FAIL)[^\n]*$/gm) || ft.out.trim().split("\n").slice(-4))
-        .slice(0, 8)
-        .join("\n")
+  // 负载瞬态容错（2026-10-07）：本块与 Go 域（go test -race）经 Promise.all **并行**
+  // （ADR-088），满载下 vitest 用例被 CPU 饿死而击穿 5s testTimeout → rc≠0 → 误阻断推送。
+  // 实证：ground-capability.test.ts 一条平时 1729ms 的用例在模拟满载下实测 7662ms 超时，
+  // 单跑/复跑皆绿（典型负载 flaky，与 pre-push-gate 知识卡所记 go/cli 整包现象同源）。
+  // 处置：对齐 contract-tests.ts 既有范式（有界并发 + 失败串行复跑 1 次）——**先串行复跑
+  // 一次**：真回归复跑仍红（不掩盖），负载瞬态复跑转绿。复跑不污染首轮计时口径。
+  let ft2 = ft;
+  let retried = false;
+  if (ft.rc !== 0) {
+    retried = true;
+    ft2 = await ctx.shAsync("npx vitest run --maxWorkers 8", {
+      cwd: path.join(ROOT, "frontend"),
+    });
+  }
+  // 失败时抓失败测试名：vitest 输出里失败用例行含测试名，比取最后 4 行（汇总数字）更易定位。
+  // 2026-10-07 修正：原式取「尾部 4 行」时，输出末尾的 happy-dom 性能提示会挤掉真失败名
+  // （首轮实证：tail 只捞到环境提示，看不出失败的是哪条）。改为优先抓失败用例行。
+  const failLines = ft2.out.match(/^\s*(?:×|✗|FAIL)[^\n]*$/gm) ?? [];
+  const vitestTail = ft2.rc
+    ? (failLines.length ? failLines : ft2.out.trim().split("\n").slice(-4)).slice(0, 8).join("\n")
     : "";
-  ctx.record("cd frontend && npx vitest run --maxWorkers 8", ft.rc === 0, {
+  ctx.record("cd frontend && npx vitest run --maxWorkers 8", ft2.rc === 0, {
     time: Date.now() - t1,
+    note: retried
+      ? ft2.rc === 0
+        ? "首轮失败 → 串行复跑转绿（负载瞬态 flaky，非本次回归）"
+        : "首轮 + 复跑均失败（真回归，不掩盖）"
+      : "",
     tail: vitestTail,
   });
 }

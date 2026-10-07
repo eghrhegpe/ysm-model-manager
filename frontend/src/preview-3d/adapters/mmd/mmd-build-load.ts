@@ -12,7 +12,7 @@ import { createPmxParser } from "./mmd-pmx-parser.ts";
 import { mmdDiag, trackAlloc } from "./mmd-shared.ts";
 import { getTextureDecoder } from "./mmd-texture-decoder.ts";
 import type { detectFormatCtx, Stage1bCtx, Stage1Ctx, Stage2Ctx } from "./mmd-types.ts";
-import { concurrentMap, isLikelyTga, TEXTURE_EXTS } from "./mmd-utils.ts";
+import { concurrentMap, isLikelyTga, materialList, TEXTURE_EXTS } from "./mmd-utils.ts";
 import { prepareMmdZipInput } from "./mmd-zip-overlay.ts";
 
 export function detectFormat(c: detectFormatCtx): "pmx" | "pmd" {
@@ -263,6 +263,113 @@ async function Stage1bFileScan(c: Stage1bCtx): Promise<void> {
   }
 }
 
+/** 纹理尺寸 → 张数直方图（onLoad 统计用；非图片/无尺寸的槽跳过） */
+function countTextureDimensions(mats: THREE.Material[]): Map<string, number> {
+  const dimCount = new Map<string, number>();
+  for (const m of mats) {
+    const img = (m as { map?: { image?: HTMLImageElement } })?.map?.image;
+    if (img?.width && img?.height) {
+      const key = `${img.width}x${img.height}`;
+      dimCount.set(key, (dimCount.get(key) ?? 0) + 1);
+    }
+  }
+  return dimCount;
+}
+
+/** 直方图 → 估算 GPU 字节（w*h*4*张数；尺寸串不可解析的条目跳过） */
+function estimateDimensionGpuBytes(dimCount: Map<string, number>): number {
+  let gpuBytes = 0;
+  for (const [dim, n] of dimCount) {
+    const [w, h] = dim.split("x").map(Number);
+    if (w && h) gpuBytes += w * h * 4 * n;
+  }
+  return gpuBytes;
+}
+
+/** LoadingManager.onLoad：纹理加载完成时刻 + parse/texture/build 分段耗时与 GPU 估算上报 */
+function reportTextureLoadPerf(c: Stage2Ctx): void {
+  c.textureLoadedAt = performance.now();
+  if (c.tParseEnd === 0) return;
+  const buildMs = c.tBuildEnd > 0 ? Math.max(0, c.tBuildEnd - c.tParseEnd) : 0;
+  const mats = materialList(c.mmd?.mesh?.material);
+  const dimCount = countTextureDimensions(mats);
+  const texSizes = [...dimCount.entries()].map(([k, n]) => `${k}x${n}`).join(",") || "none";
+  const gpuMb = (estimateDimensionGpuBytes(dimCount) / (1024 * 1024)).toFixed(1);
+  c._traceGpuMb = parseFloat(gpuMb);
+  void mmdDiag(
+    c.effectivePort,
+    "perf",
+    c.effectivePath,
+    "ok",
+    `parse=${Math.round(c.tParseEnd - c.tParseStart)}ms texture=${Math.round(c.textureLoadedAt - c.tParseEnd)}ms build=${Math.round(buildMs)}ms tex=${texSizes} gpu≈${gpuMb}MB`,
+  );
+}
+
+/** URLModifier：按「最长后缀匹配」把磁盘相对路径换成 blob URL（越具体的 key 优先），未命中放行原 url */
+function createTexUrlModifier(texMap: Map<string, string>): (url: string) => string {
+  return (url: string): string => {
+    const lower = url.toLowerCase().replace(/\\/g, "/");
+    let best: string | undefined;
+    let bestLen = -1;
+    for (const [key, blobUrl] of texMap) {
+      if (key.length > bestLen && lower.endsWith(key)) {
+        best = blobUrl;
+        bestLen = key.length;
+      }
+    }
+    return best ?? url;
+  };
+}
+
+/** KTX2 直读 loader 的 hash 解析：basename 后缀匹配 texHashMap（最长者优先）；
+ *  toon 纹理不走 KTX2 直读（共享 toon 不参与缓存） */
+function resolveTexHashByUrl(url: string, texHashMap: Map<string, string>): string | undefined {
+  const lower = url.toLowerCase().replace(/\\/g, "/");
+  const base = lower.split("/").pop() ?? "";
+  if (base.startsWith("toon") || lower.includes("/toon/")) return undefined;
+  let best: string | undefined;
+  let bestLen = -1;
+  for (const [rel, hash] of texHashMap) {
+    const rl = rel.toLowerCase();
+    if (rl.endsWith(base) && rl.length > bestLen) {
+      best = hash;
+      bestLen = rl.length;
+    }
+  }
+  return best;
+}
+
+/** 端口 KTX2 缓存直取（缺失方法/桥异常 → null，保留原守卫语义） */
+async function getCachedTextureByHashSafe(
+  port: Stage2Ctx["effectivePort"],
+  hash: string,
+): Promise<string | null> {
+  try {
+    // ADR-072：适配器 0 backend import——KTX2 缓存经 port 注入（壳层实现），
+    // port 未提供该方法（可选）→ undefined || null；空串/缺绑定均归一 null（保留原守卫语义）
+    return (await port.getCachedTextureByHash?.(hash)) || null;
+  } catch {
+    return null;
+  }
+}
+
+/** 渲染器路径：注册 KTX2 直读 handler（纹理经缓存 hash 直载，未命中回落 MMDLoader 内建加载） */
+function installKtx2DirectLoader(c: Stage2Ctx, renderer: THREE.WebGLRenderer): void {
+  const ktx2DirectLoader = new Ktx2TextureLoader({
+    resolveHash: (url: string): string | undefined => resolveTexHashByUrl(url, c.texHashMap),
+    getCachedTextureByHash: (hash: string): Promise<string | null> =>
+      getCachedTextureByHashSafe(c.effectivePort, hash),
+    // biome-ignore lint/suspicious/noAssignInExpressions: ktx2Loader 惰性初始化 + 写回缓存
+    ktx2Loader: (c.ktx2Loader = new KTX2Loader()
+      .setTranscoderPath("/basis/")
+      .detectSupport(renderer)),
+    fallbackLoader: new THREE.TextureLoader(c.manager),
+  });
+  // KTX2 直读 loader 是 GPU 资源——分配即登记失败释放（2026-09-03 注册表化）
+  trackAlloc(c, "ktx2Loader", () => c.ktx2Loader?.dispose());
+  c.manager.addHandler(/\.(png|jpe?g|bmp|gif|webp)$/i, ktx2DirectLoader);
+}
+
 export async function Stage2LoadingManager(c: Stage2Ctx): Promise<void> {
   c.manager = new THREE.LoadingManager();
   c.textureLoadedAt = 0;
@@ -275,86 +382,10 @@ export async function Stage2LoadingManager(c: Stage2Ctx): Promise<void> {
     const bar = c.ctx.loadingEl.querySelector<HTMLElement>("#ysm-mmd-progress");
     if (bar) bar.style.width = `${Math.max(5, pct)}%`;
   };
-  c.manager.onLoad = (): void => {
-    c.textureLoadedAt = performance.now();
-    if (c.tParseEnd === 0) return;
-    const buildMs = c.tBuildEnd > 0 ? Math.max(0, c.tBuildEnd - c.tParseEnd) : 0;
-    const dimCount = new Map<string, number>();
-    const mmdMesh = c.mmd?.mesh;
-    const mats = Array.isArray(mmdMesh?.material)
-      ? mmdMesh.material
-      : mmdMesh?.material
-        ? [mmdMesh.material]
-        : [];
-    for (const m of mats) {
-      const img = (m as { map?: { image?: HTMLImageElement } })?.map?.image;
-      if (img?.width && img?.height) {
-        const key = `${img.width}x${img.height}`;
-        dimCount.set(key, (dimCount.get(key) ?? 0) + 1);
-      }
-    }
-    const texSizes = [...dimCount.entries()].map(([k, n]) => `${k}x${n}`).join(",") || "none";
-    let gpuBytes = 0;
-    for (const [dim, n] of dimCount) {
-      const [w, h] = dim.split("x").map(Number);
-      if (w && h) gpuBytes += w * h * 4 * n;
-    }
-    const gpuMb = (gpuBytes / (1024 * 1024)).toFixed(1);
-    c._traceGpuMb = parseFloat(gpuMb);
-    void mmdDiag(
-      c.effectivePort,
-      "perf",
-      c.effectivePath,
-      "ok",
-      `parse=${Math.round(c.tParseEnd - c.tParseStart)}ms texture=${Math.round(c.textureLoadedAt - c.tParseEnd)}ms build=${Math.round(buildMs)}ms tex=${texSizes} gpu≈${gpuMb}MB`,
-    );
-  };
-  c.manager.setURLModifier((url: string): string => {
-    const lower = url.toLowerCase().replace(/\\/g, "/");
-    let best: string | undefined;
-    let bestLen = -1;
-    for (const [key, blobUrl] of c.texMap) {
-      if (key.length > bestLen && lower.endsWith(key)) {
-        best = blobUrl;
-        bestLen = key.length;
-      }
-    }
-    return best ?? url;
-  });
-  if (c.ctx.renderer) {
-    const ktx2DirectLoader = new Ktx2TextureLoader({
-      resolveHash: (url: string): string | undefined => {
-        const lower = url.toLowerCase().replace(/\\/g, "/");
-        const base = lower.split("/").pop() ?? "";
-        if (base.startsWith("toon") || lower.includes("/toon/")) return undefined;
-        let best: string | undefined;
-        let bestLen = -1;
-        for (const [rel, hash] of c.texHashMap) {
-          const rl = rel.toLowerCase();
-          if (rl.endsWith(base) && rl.length > bestLen) {
-            best = hash;
-            bestLen = rl.length;
-          }
-        }
-        return best;
-      },
-      getCachedTextureByHash: async (hash: string): Promise<string | null> => {
-        try {
-          // ADR-072：适配器 0 backend import——KTX2 缓存经 port 注入（壳层实现），
-          // port 未提供该方法（可选）→ undefined || null；空串/缺绑定均归一 null（保留原守卫语义）
-          return (await c.effectivePort.getCachedTextureByHash?.(hash)) || null;
-        } catch {
-          return null;
-        }
-      },
-      // biome-ignore lint/suspicious/noAssignInExpressions: ktx2Loader 惰性初始化 + 写回缓存
-      ktx2Loader: (c.ktx2Loader = new KTX2Loader()
-        .setTranscoderPath("/basis/")
-        .detectSupport(c.ctx.renderer)),
-      fallbackLoader: new THREE.TextureLoader(c.manager),
-    });
-    // KTX2 直读 loader 是 GPU 资源——分配即登记失败释放（2026-09-03 注册表化）
-    trackAlloc(c, "ktx2Loader", () => c.ktx2Loader?.dispose());
-    c.manager.addHandler(/\.(png|jpe?g|bmp|gif|webp)$/i, ktx2DirectLoader);
+  c.manager.onLoad = (): void => reportTextureLoadPerf(c);
+  c.manager.setURLModifier(createTexUrlModifier(c.texMap));
+  const renderer = c.ctx.renderer;
+  if (renderer) {
+    installKtx2DirectLoader(c, renderer);
   }
 }

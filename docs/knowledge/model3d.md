@@ -510,6 +510,7 @@ auto_fields:
     - matchSemanticMorph
     - MaterialBridgeLike
     - MaterialControlBridge
+    - materialList
     - MaterialNameFn
     - materialNodes
     - MaterialOpacityChangedFn
@@ -1015,6 +1016,7 @@ auto_fields:
     - WAVE_DEGENERATE_WA
     - WAVE_STEEP_SIZE_REF
     - WAVE_STEEP_SUM_LIMIT
+    - withEnvCallbacksSuspended
     - WorkerBridge
     - WorkerErrorStrategy
     - workerMmdUpdateWithMixer

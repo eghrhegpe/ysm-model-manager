@@ -877,4 +877,127 @@ describe("pmxObjectToResponse — 转换器（权威 PmxObject → PmxParseRespo
     expect(r.ok).toBe(false);
     expect(r.error).toBeDefined();
   });
+
+  // ===== 骨骼展平缺口分支（skinning 静默损坏类：写错不崩、只错位）=====
+  // 以下用例锁「此前从无断言」的宽度/补零/降级分支——原覆盖只到
+  // BDEF1/2/4 规范形态 + boneIndexSize 1/2，坏数据与 4 字节宽度无人钉。
+
+  it("boneIndexSize=4 → boneIndices 为 Uint32Array（>65535 骨骼不截断）", () => {
+    // 原覆盖只到 Uint8Array/Uint16Array 两档，else 分支（Uint32Array）此前从无断言
+    const pmx = syntheticPmx({ vertices: [vertex(0, { boneIndices: 70000, boneWeights: null })] });
+    pmx.header.boneIndexSize = 4;
+    const r = pmxObjectToResponse(pmx, 0);
+    expect(r.vertices!.boneIndices).toBeInstanceOf(Uint32Array);
+    expect(r.vertices!.boneIndices[0]).toBe(70000);
+  });
+
+  it("BDEF2 索引数组短于 4 槽 → 缺位补零（不写 undefined）", () => {
+    const pmx = syntheticPmx({
+      vertices: [vertex(1, { boneIndices: [7] as unknown as number[], boneWeights: 1 })],
+    });
+    const r = pmxObjectToResponse(pmx, 0);
+    expect(Array.from(r.vertices!.boneIndices)).toEqual([7, 0, 0, 0]);
+    expect(r.vertices!.boneWeights[0]).toBe(1);
+    expect(r.vertices!.boneWeights[1]).toBe(0);
+  });
+
+  it("BDEF4 权重数组短于 4 列 → 缺位补零", () => {
+    const pmx = syntheticPmx({
+      vertices: [vertex(2, { boneIndices: [1, 2, 3, 4], boneWeights: [0.5] as unknown as number[] })],
+    });
+    const r = pmxObjectToResponse(pmx, 0);
+    expect(Array.from(r.vertices!.boneIndices)).toEqual([1, 2, 3, 4]);
+    expect(r.vertices!.boneWeights[0]).toBeCloseTo(0.5);
+    expect(r.vertices!.boneWeights[1]).toBe(0);
+    expect(r.vertices!.boneWeights[2]).toBe(0);
+    expect(r.vertices!.boneWeights[3]).toBe(0);
+  });
+
+  it("多骨骼索引但权重段为 null → 四列全 0（不误置单骨骼权重 1）", () => {
+    const pmx = syntheticPmx({
+      vertices: [vertex(2, { boneIndices: [1, 2, 3, 4], boneWeights: null })],
+    });
+    const r = pmxObjectToResponse(pmx, 0);
+    expect(Array.from(r.vertices!.boneIndices)).toEqual([1, 2, 3, 4]);
+    expect(Array.from(r.vertices!.boneWeights)).toEqual([0, 0, 0, 0]);
+  });
+
+  it("SDEF 对象缺 boneWeight0 → 权重全 0（不误按 BDEF2 取缺失字段）", () => {
+    const pmx = syntheticPmx({
+      vertices: [
+        vertex(3, {
+          boneIndices: [1, 2],
+          boneWeights: { c: [0, 0, 0], r0: [0, 0, 0], r1: [0, 0, 0] },
+        } as unknown as PmxObject["vertices"][number]["boneWeight"]),
+      ],
+    });
+    const r = pmxObjectToResponse(pmx, 0);
+    expect(Array.from(r.vertices!.boneWeights)).toEqual([0, 0, 0, 0]);
+  });
+
+  it("boneWeight 整段缺失（坏数据）→ 该顶点全 0 跳过，不崩不产出 NaN", () => {
+    const pmx = syntheticPmx({
+      vertices: [
+        vertex(0, undefined as unknown as PmxObject["vertices"][number]["boneWeight"]),
+        vertex(0, { boneIndices: 5, boneWeights: null }),
+      ],
+    });
+    const r = pmxObjectToResponse(pmx, 0);
+    expect(r.vertices!.count).toBe(2);
+    expect(Array.from(r.vertices!.boneIndices)).toEqual([0, 0, 0, 0, 5, 0, 0, 0]);
+    expect(Array.from(r.vertices!.boneWeights)).toEqual([0, 0, 0, 0, 1, 0, 0, 0]);
+  });
+
+  // ===== morph 元素构造缺口分支（表情/口型静默失效类）=====
+
+  it("BoneMorph（type 2）→ 同 VertexMorph 取位移偏移", () => {
+    const pmx = syntheticPmx({
+      morphs: [
+        {
+          name: "b", englishName: "", category: 0, type: 2,
+          indices: new Int32Array([3]),
+          positions: new Float32Array([1, 2, 3]),
+          rotations: new Float32Array([0, 0, 0, 1]),
+        },
+      ],
+    });
+    const r = pmxObjectToResponse(pmx, 0);
+    expect(r.morphs![0].elements).toEqual([{ index: 3, offset: [1, 2, 3] }]);
+  });
+
+  it("UvMorph（type 3）→ offsets 按 4 分量步长取前 3 分量（非 3 步长）", () => {
+    const pmx = syntheticPmx({
+      morphs: [
+        {
+          name: "uv", englishName: "", category: 0, type: 3,
+          indices: new Int32Array([0, 1]),
+          offsets: new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
+        },
+      ],
+    });
+    const r = pmxObjectToResponse(pmx, 0);
+    expect(r.morphs![0].elements.length).toBe(2);
+    expect(r.morphs![0].elements[0].index).toBe(0);
+    expect(r.morphs![0].elements[0].offset[0]).toBeCloseTo(0.1);
+    expect(r.morphs![0].elements[0].offset[1]).toBeCloseTo(0.2);
+    expect(r.morphs![0].elements[0].offset[2]).toBeCloseTo(0.3);
+    // 第 2 元素从 offsets[4] 起——若步长写成 3 会取到 0.4/0.5/0.6（UV 串位）
+    expect(r.morphs![0].elements[1].index).toBe(1);
+    expect(r.morphs![0].elements[1].offset[0]).toBeCloseTo(0.5);
+    expect(r.morphs![0].elements[1].offset[1]).toBeCloseTo(0.6);
+    expect(r.morphs![0].elements[1].offset[2]).toBeCloseTo(0.7);
+  });
+
+  it("morph 无 indices / 数据段缺失 / 未知类型 → elements 空（不产出半截位移）", () => {
+    const pmx = syntheticPmx({
+      morphs: [
+        { name: "noIdx", englishName: "", category: 0, type: 1, positions: new Float32Array([1, 2, 3]) },
+        { name: "noPos", englishName: "", category: 0, type: 1, indices: new Int32Array([0]) },
+        { name: "unknown", englishName: "", category: 0, type: 99, indices: new Int32Array([0]) },
+      ],
+    });
+    const r = pmxObjectToResponse(pmx, 0);
+    expect(r.morphs!.map((m) => m.elements)).toEqual([[], [], []]);
+    expect(r.morphs!.map((m) => m.type)).toEqual([1, 1, 99]);
+  });
 });

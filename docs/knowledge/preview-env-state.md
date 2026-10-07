@@ -62,6 +62,7 @@ auto_fields:
     - suspendEnvCallbacks
     - teardownSharedInfra
     - toModelType
+    - withEnvCallbacksSuspended
     - WriteSource
 perf: gpu-bound
 use_when:

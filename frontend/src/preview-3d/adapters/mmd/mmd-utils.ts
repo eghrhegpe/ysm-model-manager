@@ -35,6 +35,16 @@ export const DISPOSE_TEX_KEYS = [
 export type MatTexSlots = Record<string, unknown>;
 export const matTexSlots = (mat: THREE.Material): MatTexSlots => mat as unknown as MatTexSlots;
 
+/** 材质槽归一：单材质 / 材质数组 / 缺失（self 模式或未建材质）→ 统一材质数组。
+ *  原「Array.isArray(x) ? x : x ? [x] : []」三元链散落在 stage2/3/parse/纹理解码四处，
+ *  嵌进循环后每处按当前深度重复计分；收成一个具名归一函数。 */
+export function materialList(
+  material: THREE.Material | THREE.Material[] | null | undefined,
+): THREE.Material[] {
+  if (Array.isArray(material)) return material;
+  return material ? [material] : [];
+}
+
 /** 估算纹理 GPU 内存（字节）。
  *
  *  ⚠️ 刀⑳：本函数原在此处**重复实现**（`w*h*4`），与单一事实源

@@ -5,7 +5,12 @@
 
 import * as THREE from "three";
 import { createWorkerParser } from "@/preview-3d/infra/worker-bridge.ts";
-import type { PmxBoneData, PmxParseResponse } from "./mmd-pmx-parser.worker.ts";
+import type {
+  PmxBoneData,
+  PmxMaterialData,
+  PmxMorphData,
+  PmxParseResponse,
+} from "./mmd-pmx-parser.worker.ts";
 
 // ===== PMX 格式常量 =====
 /** PMX 材质 DrawFlag bit0：双面绘制（no cull）—— PMX 2.0 规范 */
@@ -59,28 +64,147 @@ export function createPmxParser(): PmxParser {
   return createWorkerParser<PmxParseResponse>("./mmd-pmx-parser.worker.ts", "PMX 解析超时（>30s）");
 }
 
-/**
- * 从 Worker 解析结果构建 Three.js 场景对象。
- * 构建核心几何 + 材质 + 骨骼 + 顶点 morph targets；group/bone/uv morph 与
- * toon/sdf/physics 仍为 worker 路径显式降级项（morphSkipped 计数，调用方打 worker-limit 诊断）。
- * config.sliced 时异步分帧构建（rAF yield 让出主线程），避免大模型单帧长卡顿。
- */
-export async function buildPmxScene(
+/** 切片粒度：切片模式每帧处理 1/4 批（至少 1 条）；同步模式一次全量 */
+function itemsPerFrame(sliced: boolean, count: number): number {
+  return sliced ? Math.max(1, Math.ceil(count / 4)) : count;
+}
+
+/** 切片模式：每到 slice 边界就绪让出主线程一帧（同步模式恒不让出） */
+async function yieldEverySlice(sliced: boolean, index: number, slice: number): Promise<void> {
+  if (sliced && index > 0 && index % slice === 0) await yieldToFrame();
+}
+
+/** 材质引用的延迟纹理：PMX 原始大小写 vs texMap key 全 lowercase → 统一 toLowerCase 再查
+ *  （basename 兜底）。延迟纹理挂 pendingTexture（worker 解码完成后同步应用，避免
+ *  TextureLoader.load() 竞态）。守卫顺序不变：无材质 → 无纹理索引 → 无路径声明 → 无 blobUrl。 */
+function resolvePmxPendingTexture(
   parsed: PmxParseResponse,
-  config: PmxBuilderConfig,
-): Promise<PmxBuildResult | null> {
-  if (!parsed.ok || !parsed.vertices || !parsed.faces) return null;
+  pmxMat: PmxMaterialData | undefined,
+  texUrlMap: Map<string, string>,
+): { relPath: string; blobUrl: string } | undefined {
+  if (!pmxMat || pmxMat.textureIndex < 0 || !parsed.textures) return undefined;
+  const texPath = parsed.textures[pmxMat.textureIndex];
+  if (!texPath) return undefined;
+  const normalizedPath = texPath.toLowerCase().replace(/\\/g, "/");
+  const blobUrl =
+    texUrlMap.get(normalizedPath) ?? texUrlMap.get(normalizedPath.split("/").pop() ?? "");
+  if (!blobUrl) return undefined;
+  return { relPath: normalizedPath, blobUrl };
+}
 
-  const { vertices, faces, materials: pmxMaterials, bones: pmxBones } = parsed;
-  const sliced = config.sliced ?? false;
-  const frameStart = performance.now();
+/** 单个 PMX 材质 → MeshStandardMaterial（漫反射/透明/双面从 PMX 字段派生，缺材质给中性默认） */
+function buildPmxMaterial(
+  parsed: PmxParseResponse,
+  pmxMat: PmxMaterialData | undefined,
+  index: number,
+  texUrlMap: Map<string, string>,
+): THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({
+    name: pmxMat?.name ?? `material_${index}`,
+    color: pmxMat
+      ? new THREE.Color(pmxMat.diffuse[0], pmxMat.diffuse[1], pmxMat.diffuse[2])
+      : new THREE.Color(1, 1, 1),
+    transparent: pmxMat ? pmxMat.diffuse[3] < 1 : false,
+    opacity: pmxMat ? pmxMat.diffuse[3] : 1,
+    side: pmxMat
+      ? (pmxMat.flags & PMX_MAT_FLAG_DOUBLE_SIDE) !== 0
+        ? THREE.DoubleSide
+        : THREE.FrontSide
+      : THREE.FrontSide,
+    metalness: 0,
+    roughness: 1,
+  });
 
-  // 切片模式：构建阶段间超预算则让出主线程；同步模式空转
-  const maybeYield = async (): Promise<void> => {
-    if (sliced && performance.now() - frameStart > FRAME_BUDGET_MS) await yieldToFrame();
-  };
+  const pending = resolvePmxPendingTexture(parsed, pmxMat, texUrlMap);
+  if (pending) mat.userData.pendingTexture = pending;
 
-  // --- 1. 创建 BufferGeometry ---
+  return mat;
+}
+
+/** 顶点 morph 位移累加缓冲：同 morph 内同顶点多次位移按 += 叠加，越界索引跳过不崩 */
+function buildMorphDelta(m: PmxMorphData, vertexCount: number): Float32Array {
+  const arr = new Float32Array(vertexCount * 3);
+  for (const el of m.elements) {
+    const vi = el.index;
+    if (vi < 0 || vi >= vertexCount) continue; // 损坏 PMX：越界索引跳过不崩
+    arr[vi * 3] += el.offset[0];
+    arr[vi * 3 + 1] += el.offset[1];
+    arr[vi * 3 + 2] += el.offset[2];
+  }
+  return arr;
+}
+
+/** 构建顶点 morph targets（切片模式分帧）。
+ *  review P1：parsed.morphs 此前在 buildPmxScene 原地烂掉 → 表情/口型/眨眼/VPD/autoDance
+ *  全静默失效。顶点 morph 烘成 morphAttributes.position，字典/影响数组挂 mesh——消费方
+ *  （mmd-build-result blink、build-menu lipIndices、morph-controls 面板、mmd-vpd-mesh）
+ *  统一按名查 influence index。group/bone/uv morph 显式降级计数（标准表情全是顶点型；
+ *  group 需要权重级联，three 无原生支持，留死影响槽比缺名更有害）。 */
+function buildMorphTargets(
+  parsed: PmxParseResponse,
+  geometry: THREE.BufferGeometry,
+  mesh: THREE.SkinnedMesh,
+  vertices: NonNullable<PmxParseResponse["vertices"]>,
+): { morphBuilt: number; morphSkipped: number } {
+  let morphBuilt = 0;
+  let morphSkipped = 0;
+  const morphs = parsed.morphs;
+  if (morphs && morphs.length > 0) {
+    const vertexCount = vertices.positions.length / 3;
+    const deltas: Float32Array[] = [];
+    const dict: Record<string, number> = {};
+    for (const m of morphs) {
+      if (m.type !== 1 || dict[m.name] !== undefined) {
+        morphSkipped++;
+        continue;
+      }
+      const arr = buildMorphDelta(m, vertexCount);
+      dict[m.name] = deltas.length;
+      deltas.push(arr);
+      morphBuilt++;
+    }
+    if (deltas.length > 0) {
+      // PMX morph 位移是相对基准位置的增量 → relative 语义，勿用默认的绝对目标
+      geometry.morphTargetsRelative = true;
+      geometry.morphAttributes.position = deltas.map((a) => new THREE.BufferAttribute(a, 3));
+      mesh.morphTargetDictionary = dict;
+      mesh.morphTargetInfluences = deltas.map(() => 0);
+    }
+  }
+  return { morphBuilt, morphSkipped };
+}
+
+/** 创建骨骼 + 父子关系（切片模式各分 4 帧；父索引越界视为无父不挂，防坏数据建环） */
+async function buildBones(pmxBones: PmxBoneData[], sliced: boolean): Promise<THREE.Bone[]> {
+  const bones: THREE.Bone[] = [];
+  const boneSlice = itemsPerFrame(sliced, pmxBones.length);
+  for (let i = 0; i < pmxBones.length; i++) {
+    await yieldEverySlice(sliced, i, boneSlice);
+    const pmxBone = pmxBones[i];
+    const bone = new THREE.Bone();
+    bone.name = pmxBone.name;
+    bone.position.set(pmxBone.position[0], pmxBone.position[1], pmxBone.position[2]);
+    bones.push(bone);
+  }
+
+  // 构建父子关系（切片模式分 4 帧）
+  const relSlice = itemsPerFrame(sliced, pmxBones.length);
+  for (let i = 0; i < pmxBones.length; i++) {
+    await yieldEverySlice(sliced, i, relSlice);
+    const parent = pmxBones[i].parentBoneIndex;
+    if (parent >= 0 && parent < bones.length) {
+      bones[parent].add(bones[i]);
+    }
+  }
+  return bones;
+}
+
+/** 1. 创建 BufferGeometry：position/normal 恒在；uv/skinIndex/skinWeight 缺失即不建属性
+ *  （消费方按 attribute 存在与否判定，空数组建零长度属性反而误导） */
+function buildPmxGeometry(
+  vertices: NonNullable<PmxParseResponse["vertices"]>,
+  faces: NonNullable<PmxParseResponse["faces"]>,
+): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
 
   // 位置
@@ -108,72 +232,58 @@ export async function buildPmxScene(
 
   // 索引
   geometry.setIndex(new THREE.BufferAttribute(faces.indices, 1));
+  return geometry;
+}
+
+/** 2. 创建材质（切片模式分 4 帧；PMX 无材质声明时建 1 个中性默认材质兜底） */
+async function buildPmxMaterials(
+  parsed: PmxParseResponse,
+  pmxMaterials: PmxMaterialData[] | undefined,
+  config: PmxBuilderConfig,
+): Promise<THREE.MeshStandardMaterial[]> {
+  const materialCount = pmxMaterials?.length ?? 1;
+  const materials: THREE.MeshStandardMaterial[] = [];
+  const materialSlice = itemsPerFrame(config.sliced ?? false, materialCount);
+  for (let i = 0; i < materialCount; i++) {
+    await yieldEverySlice(config.sliced ?? false, i, materialSlice);
+    materials.push(buildPmxMaterial(parsed, pmxMaterials?.[i], i, config.texUrlMap));
+  }
+  return materials;
+}
+
+/**
+ * 从 Worker 解析结果构建 Three.js 场景对象。
+ * 构建核心几何 + 材质 + 骨骼 + 顶点 morph targets；group/bone/uv morph 与
+ * toon/sdf/physics 仍为 worker 路径显式降级项（morphSkipped 计数，调用方打 worker-limit 诊断）。
+ * config.sliced 时异步分帧构建（rAF yield 让出主线程），避免大模型单帧长卡顿。
+ */
+export async function buildPmxScene(
+  parsed: PmxParseResponse,
+  config: PmxBuilderConfig,
+): Promise<PmxBuildResult | null> {
+  if (!parsed.ok || !parsed.vertices || !parsed.faces) return null;
+
+  const { vertices, faces, materials: pmxMaterials, bones: pmxBones } = parsed;
+  const sliced = config.sliced ?? false;
+  const frameStart = performance.now();
+
+  // 切片模式：构建阶段间超预算则让出主线程；同步模式空转
+  const maybeYield = async (): Promise<void> => {
+    if (sliced && performance.now() - frameStart > FRAME_BUDGET_MS) await yieldToFrame();
+  };
+
+  // --- 1. 创建 BufferGeometry ---
+  const geometry = buildPmxGeometry(vertices, faces);
   await maybeYield();
 
   // --- 2. 创建材质（切片模式分 4 帧）---
-  const materialCount = pmxMaterials?.length ?? 1;
-  const materials: THREE.MeshStandardMaterial[] = [];
-  const materialSlice = sliced ? Math.max(1, Math.ceil(materialCount / 4)) : materialCount;
-  for (let i = 0; i < materialCount; i++) {
-    if (sliced && i > 0 && i % materialSlice === 0) await yieldToFrame();
-    const pmxMat = pmxMaterials?.[i];
-    const mat = new THREE.MeshStandardMaterial({
-      name: pmxMat?.name ?? `material_${i}`,
-      color: pmxMat
-        ? new THREE.Color(pmxMat.diffuse[0], pmxMat.diffuse[1], pmxMat.diffuse[2])
-        : new THREE.Color(1, 1, 1),
-      transparent: pmxMat ? pmxMat.diffuse[3] < 1 : false,
-      opacity: pmxMat ? pmxMat.diffuse[3] : 1,
-      side: pmxMat
-        ? (pmxMat.flags & PMX_MAT_FLAG_DOUBLE_SIDE) !== 0
-          ? THREE.DoubleSide
-          : THREE.FrontSide
-        : THREE.FrontSide,
-      metalness: 0,
-      roughness: 1,
-    });
-
-    // 纹理：PMX 原始大小写 vs texMap key 全 lowercase → 统一 toLowerCase 再查（basename 兜底）。
-    // 延迟纹理挂 pendingTexture（worker 解码完成后同步应用，避免 TextureLoader.load() 竞态）。
-    if (pmxMat && pmxMat.textureIndex >= 0 && parsed.textures) {
-      const texPath = parsed.textures[pmxMat.textureIndex];
-      if (texPath) {
-        const normalizedPath = texPath.toLowerCase().replace(/\\/g, "/");
-        const blobUrl =
-          config.texUrlMap.get(normalizedPath) ??
-          config.texUrlMap.get(normalizedPath.split("/").pop() ?? "");
-        if (blobUrl) {
-          mat.userData.pendingTexture = { relPath: normalizedPath, blobUrl };
-        }
-      }
-    }
-
-    materials.push(mat);
-  }
+  const materials = await buildPmxMaterials(parsed, pmxMaterials, config);
   await maybeYield();
 
   // --- 3. 创建骨骼（切片模式分 4 帧）---
-  const bones: THREE.Bone[] = [];
+  let bones: THREE.Bone[] = [];
   if (pmxBones && pmxBones.length > 0) {
-    const boneSlice = sliced ? Math.max(1, Math.ceil(pmxBones.length / 4)) : pmxBones.length;
-    for (let i = 0; i < pmxBones.length; i++) {
-      if (sliced && i > 0 && i % boneSlice === 0) await yieldToFrame();
-      const pmxBone = pmxBones[i];
-      const bone = new THREE.Bone();
-      bone.name = pmxBone.name;
-      bone.position.set(pmxBone.position[0], pmxBone.position[1], pmxBone.position[2]);
-      bones.push(bone);
-    }
-
-    // 构建父子关系（切片模式分 4 帧）
-    const relSlice = sliced ? Math.max(1, Math.ceil(pmxBones.length / 4)) : pmxBones.length;
-    for (let i = 0; i < pmxBones.length; i++) {
-      if (sliced && i > 0 && i % relSlice === 0) await yieldToFrame();
-      const parent = pmxBones[i].parentBoneIndex;
-      if (parent >= 0 && parent < bones.length) {
-        bones[parent].add(bones[i]);
-      }
-    }
+    bones = await buildBones(pmxBones, sliced);
   }
   await maybeYield();
 
@@ -183,44 +293,8 @@ export async function buildPmxScene(
   attachRootBones(mesh, bones, pmxBones);
   mesh.bind(skeleton);
 
-  // --- 5. Morph targets（review P1：parsed.morphs 此前在此原地烂掉 → 表情/口型/眨眼
-  //     /VPD/autoDance 全静默失效）。顶点 morph 烘成 morphAttributes.position，
-  //     字典/影响数组挂 mesh——消费方（mmd-build-result blink、build-menu lipIndices、
-  //     morph-controls 面板、mmd-vpd-mesh）统一按名查 influence index。
-  //     group/bone/uv morph 显式降级计数（标准表情全是顶点型；group 需要权重级联，
-  //     three 无原生支持，留死影响槽比缺名更有害）。
-  let morphBuilt = 0;
-  let morphSkipped = 0;
-  const morphs = parsed.morphs;
-  if (morphs && morphs.length > 0) {
-    const vertexCount = vertices.positions.length / 3;
-    const deltas: Float32Array[] = [];
-    const dict: Record<string, number> = {};
-    for (const m of morphs) {
-      if (m.type !== 1 || dict[m.name] !== undefined) {
-        morphSkipped++;
-        continue;
-      }
-      const arr = new Float32Array(vertexCount * 3);
-      for (const el of m.elements) {
-        const vi = el.index;
-        if (vi < 0 || vi >= vertexCount) continue; // 损坏 PMX：越界索引跳过不崩
-        arr[vi * 3] += el.offset[0];
-        arr[vi * 3 + 1] += el.offset[1];
-        arr[vi * 3 + 2] += el.offset[2];
-      }
-      dict[m.name] = deltas.length;
-      deltas.push(arr);
-      morphBuilt++;
-    }
-    if (deltas.length > 0) {
-      // PMX morph 位移是相对基准位置的增量 → relative 语义，勿用默认的绝对目标
-      geometry.morphTargetsRelative = true;
-      geometry.morphAttributes.position = deltas.map((a) => new THREE.BufferAttribute(a, 3));
-      mesh.morphTargetDictionary = dict;
-      mesh.morphTargetInfluences = deltas.map(() => 0);
-    }
-  }
+  // --- 5. Morph targets ---
+  const { morphBuilt, morphSkipped } = buildMorphTargets(parsed, geometry, mesh, vertices);
 
   return { mesh, geometry, materials, bones, skeleton, morphBuilt, morphSkipped };
 }

@@ -15,47 +15,73 @@ import type {
   PmxVertexData,
 } from "./mmd-pmx-parser.worker.ts";
 
+/** PMX 顶点骨骼索引数组宽度选择。PMX 2.0：宽度随头部 boneIndexSize（非 vertexIndexSize）——
+ *  否则 >255 骨骼模型的索引写进 Uint8Array 被截断，蒙皮静默损坏 */
+function createBoneIndexArray(
+  count: number,
+  boneIndexSize: number,
+): Uint8Array | Uint16Array | Uint32Array {
+  if (boneIndexSize <= 1) return new Uint8Array(count * 4);
+  if (boneIndexSize === 2) return new Uint16Array(count * 4);
+  return new Uint32Array(count * 4);
+}
+
+/** 单顶点骨骼索引写入：BDEF1 单骨骼直写首槽；数组形态（BDEF2/4、QDEF、SDEF）原样 4 槽、缺位补零 */
+function writeBoneIndices(
+  idxArr: Uint8Array | Uint16Array | Uint32Array,
+  o: number,
+  boneIndices: number | number[],
+): void {
+  if (typeof boneIndices === "number") {
+    idxArr[o] = boneIndices;
+    return;
+  }
+  for (let j = 0; j < 4; j++) idxArr[o + j] = boneIndices[j] ?? 0;
+}
+
+/** 单顶点权重展开为 4 列：BDEF1 → [1,0,0,0]；BDEF2/SDEF → [w0,1-w0,0,0]；BDEF4/QDEF → 原样 */
+function writeBoneWeights(
+  weights: Float32Array,
+  o: number,
+  bw: PmxObject["vertices"][number]["boneWeight"],
+): void {
+  if (typeof bw.boneIndices === "number") {
+    // BDEF1：单骨骼，权重 1
+    weights[o] = 1;
+    return;
+  }
+  if (typeof bw.boneWeights === "number") {
+    // BDEF2：w0 + (1-w0)
+    weights[o] = bw.boneWeights;
+    weights[o + 1] = 1 - bw.boneWeights;
+    return;
+  }
+  if (Array.isArray(bw.boneWeights)) {
+    // BDEF4 / QDEF
+    for (let j = 0; j < 4; j++) weights[o + j] = bw.boneWeights[j] ?? 0;
+    return;
+  }
+  if (bw.boneWeights && typeof bw.boneWeights.boneWeight0 === "number") {
+    // SDEF：主权重 + 补零（近似 BDEF2，SDEF 细节主线程 MMDLoader 路径才完整）
+    weights[o] = bw.boneWeights.boneWeight0;
+    weights[o + 1] = 1 - bw.boneWeights.boneWeight0;
+  }
+}
+
 /** 顶点骨骼数据展平为 4 列压缩数组（BDEF4/QDEF 原样；BDEF1/2/SDEF 展开补零） */
 function flattenBoneData(
   vertices: PmxObject["vertices"],
   boneIndexSize: number,
 ): { boneIndices: Uint8Array | Uint16Array | Uint32Array; boneWeights: Float32Array } {
   const count = vertices.length;
-  // PMX 2.0：顶点蒙皮骨骼索引宽度随头部 boneIndexSize（非 vertexIndexSize）——
-  // 否则 >255 骨骼模型的索引写进 Uint8Array 被截断，蒙皮静默损坏
-  let idxArr: Uint8Array | Uint16Array | Uint32Array;
-  if (boneIndexSize <= 1) {
-    idxArr = new Uint8Array(count * 4);
-  } else if (boneIndexSize === 2) {
-    idxArr = new Uint16Array(count * 4);
-  } else {
-    idxArr = new Uint32Array(count * 4);
-  }
+  const idxArr = createBoneIndexArray(count, boneIndexSize);
   const weights = new Float32Array(count * 4);
   for (let i = 0; i < count; i++) {
     const bw = vertices[i].boneWeight;
     const o = i * 4;
     if (!bw || bw.boneIndices == null) continue; // 防御：坏数据跳过（权重 0，不参与蒙皮）
-    if (typeof bw.boneIndices === "number") {
-      // BDEF1：单骨骼，权重 1
-      idxArr[o] = bw.boneIndices;
-      weights[o] = 1;
-    } else {
-      const idxs = bw.boneIndices;
-      for (let j = 0; j < 4; j++) idxArr[o + j] = idxs[j] ?? 0;
-      if (typeof bw.boneWeights === "number") {
-        // BDEF2：w0 + (1-w0)
-        weights[o] = bw.boneWeights;
-        weights[o + 1] = 1 - bw.boneWeights;
-      } else if (Array.isArray(bw.boneWeights)) {
-        // BDEF4 / QDEF
-        for (let j = 0; j < 4; j++) weights[o + j] = bw.boneWeights[j] ?? 0;
-      } else if (bw.boneWeights && typeof bw.boneWeights.boneWeight0 === "number") {
-        // SDEF：主权重 + 补零（近似 BDEF2，SDEF 细节主线程 MMDLoader 路径才完整）
-        weights[o] = bw.boneWeights.boneWeight0;
-        weights[o + 1] = 1 - bw.boneWeights.boneWeight0;
-      }
-    }
+    writeBoneIndices(idxArr, o, bw.boneIndices);
+    writeBoneWeights(weights, o, bw);
   }
   return { boneIndices: idxArr, boneWeights: weights };
 }
@@ -122,41 +148,58 @@ function convertBone(b: PmxObject["bones"][number]): PmxBoneData {
   };
 }
 
-function convertMorph(m: PmxObject["morphs"][number]): PmxMorphData {
+/** 权威解析器 morph 条目（PmxObject["morphs"][number] 别名，供各元素构造器签名复用） */
+type PmxMorph = PmxObject["morphs"][number];
+
+/** VertexMorph / BoneMorph：逐元素位移偏移（两型同构，offset 取位移三分量） */
+function positionMorphElements(
+  idxs: Int32Array,
+  positions: Float32Array,
+): PmxMorphData["elements"] {
   const elements: PmxMorphData["elements"] = [];
-  const idxs = m.indices;
-  if (idxs) {
-    if (m.type === 1 && m.positions) {
-      // VertexMorph：顶点位移
-      for (let i = 0; i < idxs.length; i++) {
-        elements.push({
-          index: idxs[i],
-          offset: [m.positions[i * 3], m.positions[i * 3 + 1], m.positions[i * 3 + 2]],
-        });
-      }
-    } else if (m.type === 0 && m.ratios) {
-      // GroupMorph：组比例（offset 借位存 ratio）
-      for (let i = 0; i < idxs.length; i++) {
-        elements.push({ index: idxs[i], offset: [m.ratios[i], 0, 0] });
-      }
-    } else if (m.type === 2 && m.positions) {
-      // BoneMorph：位移 + 旋转（offset 取位移）
-      for (let i = 0; i < idxs.length; i++) {
-        elements.push({
-          index: idxs[i],
-          offset: [m.positions[i * 3], m.positions[i * 3 + 1], m.positions[i * 3 + 2]],
-        });
-      }
-    } else if (m.type >= 3 && m.offsets) {
-      // UvMorph / AdditionalUv：UV 偏移（offset 取前 3 分量）
-      for (let i = 0; i < idxs.length; i++) {
-        elements.push({
-          index: idxs[i],
-          offset: [m.offsets[i * 4], m.offsets[i * 4 + 1], m.offsets[i * 4 + 2]],
-        });
-      }
-    }
+  for (let i = 0; i < idxs.length; i++) {
+    elements.push({
+      index: idxs[i],
+      offset: [positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]],
+    });
   }
+  return elements;
+}
+
+/** GroupMorph：组比例（offset 借位存 ratio） */
+function groupMorphElements(idxs: Int32Array, ratios: Float32Array): PmxMorphData["elements"] {
+  const elements: PmxMorphData["elements"] = [];
+  for (let i = 0; i < idxs.length; i++) {
+    elements.push({ index: idxs[i], offset: [ratios[i], 0, 0] });
+  }
+  return elements;
+}
+
+/** UvMorph / AdditionalUv：UV 偏移（offset 取前 3 分量） */
+function uvMorphElements(idxs: Int32Array, offsets: Float32Array): PmxMorphData["elements"] {
+  const elements: PmxMorphData["elements"] = [];
+  for (let i = 0; i < idxs.length; i++) {
+    elements.push({
+      index: idxs[i],
+      offset: [offsets[i * 4], offsets[i * 4 + 1], offsets[i * 4 + 2]],
+    });
+  }
+  return elements;
+}
+
+/** 按 PMX morph 类型选取元素构造器：守卫顺序即类型判定顺序，对应数据段缺失 → 空元素
+ *  （原 if/else-if 链每层都嵌进上一层，深度随分支数递增；改早退守卫后逐条平铺） */
+function morphElements(m: PmxMorph, idxs: Int32Array): PmxMorphData["elements"] {
+  if (m.type === 1 && m.positions) return positionMorphElements(idxs, m.positions);
+  if (m.type === 0 && m.ratios) return groupMorphElements(idxs, m.ratios);
+  if (m.type === 2 && m.positions) return positionMorphElements(idxs, m.positions);
+  if (m.type >= 3 && m.offsets) return uvMorphElements(idxs, m.offsets);
+  return [];
+}
+
+function convertMorph(m: PmxMorph): PmxMorphData {
+  const idxs = m.indices;
+  const elements: PmxMorphData["elements"] = idxs ? morphElements(m, idxs) : [];
   return { name: m.name, type: m.type, elements };
 }
 

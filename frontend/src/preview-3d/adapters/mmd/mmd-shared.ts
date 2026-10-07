@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { AllocEntry, MmdDataPort } from "./mmd-types.ts";
-import { DISPOSE_TEX_KEYS, estimateTexGpuBytes, matTexSlots } from "./mmd-utils.ts";
+import { DISPOSE_TEX_KEYS, estimateTexGpuBytes, materialList, matTexSlots } from "./mmd-utils.ts";
 
 /** 环形日志面板诊断（AGENTS.md：排查卡顿往环形日志塞日志而非死盯 console）；失败静默不阻断 */
 export async function mmdDiag(
@@ -28,11 +28,7 @@ export async function disposeMmdMesh(
   op: string,
 ): Promise<void> {
   // 收集材质（单材质 / 多材质数组）
-  const allMats: THREE.Material[] = Array.isArray(mesh.material)
-    ? mesh.material
-    : mesh.material
-      ? [mesh.material]
-      : [];
+  const allMats = materialList(mesh.material);
   let texCount = 0;
   let totalGpuBytes = 0;
   for (const mat of allMats) {

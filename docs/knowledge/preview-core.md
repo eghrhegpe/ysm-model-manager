@@ -148,6 +148,7 @@ auto_fields:
     - makeVrmAdapter
     - makeYsmAdapter
     - makeZipOverlayPort
+    - materialList
     - matTexSlots
     - MatTexSlots
     - MAX_CHAIN_DEPTH

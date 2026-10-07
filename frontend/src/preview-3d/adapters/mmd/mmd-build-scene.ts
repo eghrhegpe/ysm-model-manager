@@ -9,7 +9,7 @@ import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { mmdDiag, trackAlloc } from "./mmd-shared.ts";
 import type { Stage3Ctx } from "./mmd-types.ts";
-import { DISPOSE_TEX_KEYS, matTexSlots } from "./mmd-utils.ts";
+import { DISPOSE_TEX_KEYS, materialList, matTexSlots } from "./mmd-utils.ts";
 
 export async function Stage3SceneMesh(c: Stage3Ctx): Promise<void> {
   c.buildSucceeded = false;
@@ -119,70 +119,115 @@ function replaceHashSlots(
   });
 }
 
-// 3.2 KTX2 缓存命中 → 按 hash 聚槽 → 单次解码替换（读路径）
-async function Stage3Ktx2Hydrate(c: Stage3Ctx): Promise<void> {
-  if (c.blobUrlToHash.size > 0 && c.ctx.renderer) {
-    // ADR-072：适配器 0 backend import——KTX2 缓存经 port 注入（壳层实现）；
-    // port 缺方法（可选）→ 跳过缓存优化（保留原 typeof-function 守卫语义）
-    const hasCachedTextures = c.effectivePort.hasCachedTextures;
-    const getCachedTextureByHash = c.effectivePort.getCachedTextureByHash;
-    if (typeof hasCachedTextures === "function" && typeof getCachedTextureByHash === "function") {
-      const allHashes = [...new Set(c.blobUrlToHash.values())];
-      const cacheStatus = (await hasCachedTextures(allHashes)) ?? {};
-      c.cachedHashes = new Set(allHashes.filter((h) => cacheStatus[h]));
-      if (c.cachedHashes.size > 0) {
-        c.ktx2CacheLoader = new KTX2Loader()
-          .setTranscoderPath("/basis/")
-          .detectSupport(c.ctx.renderer);
-        // KTX2 缓存 loader 分配即登记失败释放（2026-09-03 注册表化）
-        trackAlloc(c, "ktx2CacheLoader", () => c.ktx2CacheLoader?.dispose());
-        const allMats: THREE.Material[] = Array.isArray(c.mesh.material)
-          ? c.mesh.material
-          : c.mesh.material
-            ? [c.mesh.material]
-            : [];
-        // P2-6（审核）：按 hash 聚合材质槽，一个 hash 只 loadAsync 一次——原逐槽替换
-        // 会让共享同一纹理的 N 个材质槽各解码一次 KTX2（three-mmd 用 ctx.textures[fullPath]
-        // 缓存共享身份），浪费 GPU 内存且破坏纹理共享。聚合后同一 hash 的所有槽
-        // 赋同一份 CompressedTexture 实例，保持与原纹理一致的共享语义。
-        const slotsByHash = new Map<string, MatTexSlotRef[]>();
-        for (const mat of allMats) {
-          for (const key of DISPOSE_TEX_KEYS) {
-            const tex = matTexSlots(mat)[key];
-            if (!(tex instanceof THREE.Texture)) continue;
-            const img = tex.image as HTMLImageElement | undefined;
-            if (!img?.src?.startsWith("blob:")) continue;
-            const hash = c.blobUrlToHash.get(img.src);
-            if (!hash || !c.cachedHashes.has(hash)) continue;
-            const arr = slotsByHash.get(hash);
-            if (arr) arr.push({ mat, key });
-            else slotsByHash.set(hash, [{ mat, key }]);
-          }
-        }
-        // 逐 hash 单次替换：loadAsync 一次 → 同一份压缩纹理赋给所有共享槽
-        const replaceTasks: Array<Promise<void>> = [];
-        for (const [hash, slots] of slotsByHash) {
-          replaceTasks.push(replaceHashSlots(c, hash, slots, getCachedTextureByHash));
-        }
-        await Promise.all(replaceTasks);
-        await mmdDiag(
-          c.effectivePort,
-          "ktx2-replace",
-          "cache-hit",
-          "ok",
-          `cached=${c.cachedHashes.size} replaced=${replaceTasks.length} slots=${slotsByHash.size} total=${allHashes.length}`,
-        );
-      } else {
-        await mmdDiag(
-          c.effectivePort,
-          "ktx2-replace",
-          "cache-miss",
-          "warn",
-          `total=${allHashes.length}（缓存未命中，将后台编码）`,
-        );
-      }
+/** 槽纹理 → KTX2 缓存 hash（非 Texture / 非 blob: / 未命中缓存 → undefined 跳过） */
+function slotCachedHash(
+  slotValue: unknown,
+  blobUrlToHash: Map<string, string>,
+  cachedHashes: Set<string>,
+): string | undefined {
+  if (!(slotValue instanceof THREE.Texture)) return undefined;
+  const img = slotValue.image as HTMLImageElement | undefined;
+  if (!img?.src?.startsWith("blob:")) return undefined;
+  const hash = blobUrlToHash.get(img.src);
+  if (!hash || !cachedHashes.has(hash)) return undefined;
+  return hash;
+}
+
+/** 向 hash 聚槽表追加槽引用（首次出现建桶） */
+function addSlotRef(
+  slotsByHash: Map<string, MatTexSlotRef[]>,
+  hash: string,
+  ref: MatTexSlotRef,
+): void {
+  const arr = slotsByHash.get(hash);
+  if (arr) arr.push(ref);
+  else slotsByHash.set(hash, [ref]);
+}
+
+// P2-6（审核）：按 hash 聚合材质槽，一个 hash 只 loadAsync 一次——原逐槽替换
+// 会让共享同一纹理的 N 个材质槽各解码一次 KTX2（three-mmd 用 ctx.textures[fullPath]
+// 缓存共享身份），浪费 GPU 内存且破坏纹理共享。聚合后同一 hash 的所有槽
+// 赋同一份 CompressedTexture 实例，保持与原纹理一致的共享语义。
+function collectSlotsByHash(
+  allMats: THREE.Material[],
+  blobUrlToHash: Map<string, string>,
+  cachedHashes: Set<string>,
+): Map<string, MatTexSlotRef[]> {
+  const slotsByHash = new Map<string, MatTexSlotRef[]>();
+  for (const mat of allMats) {
+    for (const key of DISPOSE_TEX_KEYS) {
+      const hash = slotCachedHash(matTexSlots(mat)[key], blobUrlToHash, cachedHashes);
+      if (!hash) continue;
+      addSlotRef(slotsByHash, hash, { mat, key });
     }
   }
+  return slotsByHash;
+}
+
+/** 3.2 命中分支：建缓存 loader（分配即登记失败释放）+ 聚槽 + 逐 hash 单次解码替换 */
+async function hydrateCachedKtx2Textures(
+  c: Stage3Ctx,
+  renderer: THREE.WebGLRenderer,
+  allHashes: string[],
+  cachedHashes: Set<string>,
+  getCachedTextureByHash: (hash: string) => Promise<string | null>,
+): Promise<void> {
+  c.ktx2CacheLoader = new KTX2Loader().setTranscoderPath("/basis/").detectSupport(renderer);
+  // KTX2 缓存 loader 分配即登记失败释放（2026-09-03 注册表化）
+  trackAlloc(c, "ktx2CacheLoader", () => c.ktx2CacheLoader?.dispose());
+  const slotsByHash = collectSlotsByHash(
+    materialList(c.mesh.material),
+    c.blobUrlToHash,
+    cachedHashes,
+  );
+  // 逐 hash 单次替换：loadAsync 一次 → 同一份压缩纹理赋给所有共享槽
+  const replaceTasks: Array<Promise<void>> = [];
+  for (const [hash, slots] of slotsByHash) {
+    replaceTasks.push(replaceHashSlots(c, hash, slots, getCachedTextureByHash));
+  }
+  await Promise.all(replaceTasks);
+  await mmdDiag(
+    c.effectivePort,
+    "ktx2-replace",
+    "cache-hit",
+    "ok",
+    `cached=${cachedHashes.size} replaced=${replaceTasks.length} slots=${slotsByHash.size} total=${allHashes.length}`,
+  );
+}
+
+/** 3.2 未命中分支：只上报，后台编码交由 3.3 调度 */
+async function reportKtx2CacheMiss(c: Stage3Ctx, allHashes: string[]): Promise<void> {
+  await mmdDiag(
+    c.effectivePort,
+    "ktx2-replace",
+    "cache-miss",
+    "warn",
+    `total=${allHashes.length}（缓存未命中，将后台编码）`,
+  );
+}
+
+// 3.2 KTX2 缓存命中 → 按 hash 聚槽 → 单次解码替换（读路径）
+// 守卫顺序：无 blob 哈希 / 无 renderer → 整段跳过；port 缺 KTX2 缓存方法 → 跳过缓存优化；
+// 缓存零命中 → 仅上报。三条短路语义与原嵌套 if 逐条等价。
+async function Stage3Ktx2Hydrate(c: Stage3Ctx): Promise<void> {
+  const renderer = c.ctx.renderer;
+  if (c.blobUrlToHash.size === 0 || !renderer) return;
+  // ADR-072：适配器 0 backend import——KTX2 缓存经 port 注入（壳层实现）；
+  // port 缺方法（可选）→ 跳过缓存优化（保留原 typeof-function 守卫语义）
+  const hasCachedTextures = c.effectivePort.hasCachedTextures;
+  const getCachedTextureByHash = c.effectivePort.getCachedTextureByHash;
+  if (typeof hasCachedTextures !== "function" || typeof getCachedTextureByHash !== "function") {
+    return;
+  }
+  const allHashes = [...new Set(c.blobUrlToHash.values())];
+  const cacheStatus = (await hasCachedTextures(allHashes)) ?? {};
+  const cachedHashes = new Set(allHashes.filter((h) => cacheStatus[h]));
+  c.cachedHashes = cachedHashes;
+  if (cachedHashes.size === 0) {
+    await reportKtx2CacheMiss(c, allHashes);
+    return;
+  }
+  await hydrateCachedKtx2Textures(c, renderer, allHashes, cachedHashes, getCachedTextureByHash);
 }
 
 // 3.3 后台编码调度（写路径持久化通道，gate = saveCachedTexture）

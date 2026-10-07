@@ -256,3 +256,197 @@ describe("超时 late response 位图清理（GPU 泄漏修复）", () => {
     decoder.dispose();
   });
 });
+
+describe("decodeAll 批次结算边界（空批 / 失败回包 / dispose 清算）", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("decodeAll([]) → 空 Map 且不派发任何任务", async () => {
+    installFakeWorker();
+    const decoder = createTextureDecoder({ maxWorkers: 2 });
+    const results = await decoder.decodeAll([]);
+    expect(results.size).toBe(0);
+    expect(createdWorkers).toHaveLength(2); // 建池但无任务派发
+    decoder.dispose();
+  });
+
+  it("worker 回包 ok:false（无位图）→ 不计入结果但结算任务，批次不悬挂", async () => {
+    installFakeWorker();
+    respondWith = () => "fail";
+    const decoder = createTextureDecoder({ maxWorkers: 1, timeoutMs: 50 });
+    const results = await decoder.decodeAll([
+      { relPath: "a.png", bytes: new ArrayBuffer(4), mimeType: "image/png" },
+      { relPath: "b.png", bytes: new ArrayBuffer(4), mimeType: "image/png" },
+    ]);
+    expect(results.size).toBe(0);
+    decoder.dispose();
+  });
+
+  it("dispose() 立即清算在途任务为 ok:false（不悬挂 Promise，不空等超时）", async () => {
+    installFakeWorker(200); // worker 迟迟不回，靠 dispose 结算
+    const decoder = createTextureDecoder({ maxWorkers: 1, timeoutMs: 10_000 });
+    const pending = decoder.decodeAll([
+      { relPath: "x.png", bytes: new ArrayBuffer(4), mimeType: "image/png" },
+    ]);
+    decoder.dispose();
+    const results = await pending;
+    expect(results.size).toBe(0);
+    expect(createdWorkers[0].terminated).toBe(true);
+  });
+});
+
+describe("applyWorkerDecodedTextures Fallback 路径（blob URL 纹理原位替换）", () => {
+  /** 造一个 image 为 blob: HTMLImageElement 的 Texture（Fallback 路径的可溯源载体） */
+  function blobTexture(src: string): THREE.Texture {
+    const img = document.createElement("img");
+    img.src = src;
+    return new THREE.Texture(img);
+  }
+
+  function decodedOne(relPath: string, bitmap: ImageBitmap): Map<string, DecodedTexture> {
+    return new Map<string, DecodedTexture>([
+      [relPath, { relPath, bitmap, width: 1, height: 1, refCount: 0 }],
+    ]);
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("blob: 纹理命中原位替换：沿用采样参数 + 旧纹理 dispose + total/replaced 计数", () => {
+    const mat = new THREE.MeshStandardMaterial();
+    const oldTex = blobTexture("blob:face-a");
+    oldTex.wrapS = THREE.RepeatWrapping;
+    oldTex.wrapT = THREE.MirroredRepeatWrapping;
+    oldTex.repeat.set(2, 3);
+    oldTex.anisotropy = 4;
+    const disposeSpy = vi.spyOn(oldTex, "dispose");
+    (mat as unknown as { map: THREE.Texture }).map = oldTex;
+    const mesh = { material: mat } as unknown as THREE.Mesh;
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+    const decoded = decodedOne("face.png", bitmap);
+
+    const { replaced, total, fallback } = applyWorkerDecodedTextures(
+      mesh,
+      decoded,
+      new Map([["blob:face-a", "face.png"]]),
+    );
+
+    expect(replaced).toBe(1);
+    expect(total).toBe(1);
+    expect(fallback).toBe(0);
+    const next = (mat as unknown as { map: THREE.Texture }).map;
+    expect(next).not.toBe(oldTex);
+    expect(next.image).toBe(bitmap);
+    // ImageBitmap 已按正确方向解码 → flipY=false（不复制旧纹理的 flipY）
+    expect(next.flipY).toBe(false);
+    expect(next.wrapS).toBe(THREE.RepeatWrapping);
+    expect(next.wrapT).toBe(THREE.MirroredRepeatWrapping);
+    expect(next.repeat.x).toBe(2);
+    expect(next.repeat.y).toBe(3);
+    expect(next.anisotropy).toBe(4);
+    expect(disposeSpy).toHaveBeenCalledTimes(1);
+    expect(decoded.get("face.png")!.refCount).toBe(1);
+  });
+
+  it("非 blob: / 未登记的槽计 total 但不替换（保留原纹理）", () => {
+    const mat = new THREE.MeshStandardMaterial();
+    const notBlob = blobTexture("file:///disk/face.png");
+    const unregistered = blobTexture("blob:not-in-map");
+    (mat as unknown as { map: THREE.Texture }).map = notBlob;
+    (mat as unknown as { emissiveMap: THREE.Texture }).emissiveMap = unregistered;
+    const mesh = { material: mat } as unknown as THREE.Mesh;
+
+    const { replaced, total, fallback } = applyWorkerDecodedTextures(
+      mesh,
+      decodedOne("face.png", { close: vi.fn() } as unknown as ImageBitmap),
+      new Map([["blob:other", "face.png"]]),
+    );
+
+    expect(replaced).toBe(0);
+    // total 计「槽位是 Texture」的，与是否可溯源无关
+    expect(total).toBe(2);
+    expect(fallback).toBe(0);
+    expect((mat as unknown as { map: THREE.Texture }).map).toBe(notBlob);
+    expect((mat as unknown as { emissiveMap: THREE.Texture }).emissiveMap).toBe(unregistered);
+  });
+
+  it("共享位图：两槽同一 relPath → refCount=2，逐个 dispose 归零才 close", () => {
+    const matA = new THREE.MeshStandardMaterial();
+    const matB = new THREE.MeshStandardMaterial();
+    (matA as unknown as { map: THREE.Texture }).map = blobTexture("blob:x");
+    (matB as unknown as { emissiveMap: THREE.Texture }).emissiveMap = blobTexture("blob:y");
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+    const mats = [matA, matB];
+    let written: unknown;
+    const mesh = {
+      get material() {
+        return mats;
+      },
+      set material(v: unknown) {
+        written = v;
+      },
+    } as unknown as THREE.Mesh;
+
+    const decoded = decodedOne("shared.png", bitmap);
+    const { replaced, total } = applyWorkerDecodedTextures(
+      mesh,
+      decoded,
+      new Map([
+        ["blob:x", "shared.png"],
+        ["blob:y", "shared.png"],
+      ]),
+    );
+
+    expect(replaced).toBe(2);
+    expect(total).toBe(2);
+    expect(decoded.get("shared.png")!.refCount).toBe(2);
+    // total>0 → mesh.material 回写（多材质回写数组本身，供 three 重建材质绑定）
+    expect(written).toBe(mats);
+
+    const texA = (matA as unknown as { map: THREE.Texture }).map;
+    const texB = (matB as unknown as { emissiveMap: THREE.Texture }).emissiveMap;
+    texA.dispatchEvent({ type: "dispose" });
+    expect(decoded.get("shared.png")!.refCount).toBe(1);
+    // 共享位图仍在用 → 首个纹理释放不得 close
+    expect(bitmap.close).not.toHaveBeenCalled();
+    texB.dispatchEvent({ type: "dispose" });
+    expect(decoded.get("shared.png")!.refCount).toBe(0);
+    expect(bitmap.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("pendingTexture 三级查找：basename 兜底命中（PMX 记子目录路径、decoded 按 basename 登记）", () => {
+    const mat = new THREE.MeshStandardMaterial();
+    mat.userData.pendingTexture = { relPath: "textures/face.png", blobUrl: "blob:fb" };
+    const mesh = { material: mat } as unknown as THREE.Mesh;
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+
+    const { replaced, fallback } = applyWorkerDecodedTextures(
+      mesh,
+      decodedOne("face.png", bitmap),
+      new Map(),
+    );
+
+    expect(replaced).toBe(1);
+    expect(fallback).toBe(0);
+    expect((mat as unknown as { map: THREE.Texture }).map.image).toBe(bitmap);
+  });
+
+  it("pendingTexture 三级查找：blobUrl→rel 反查命中（PMX 路径与磁盘路径完全不同名）", () => {
+    const mat = new THREE.MeshStandardMaterial();
+    mat.userData.pendingTexture = { relPath: "face.png", blobUrl: "blob:src" };
+    const mesh = { material: mat } as unknown as THREE.Mesh;
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+
+    const { replaced, fallback } = applyWorkerDecodedTextures(
+      mesh,
+      decodedOne("textures/face_v2.png", bitmap),
+      new Map([["blob:src", "textures/face_v2.png"]]),
+    );
+
+    expect(replaced).toBe(1);
+    expect(fallback).toBe(0);
+    expect((mat as unknown as { map: THREE.Texture }).map.image).toBe(bitmap);
+  });
+});

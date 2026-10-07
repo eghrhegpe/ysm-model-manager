@@ -6,15 +6,24 @@ category: core
 status: active
 source_files:
   - frontend/e2e/browser-path.ts
+  - frontend/e2e-web/web-ready.ts
 auto_fields:
   symbols_with_lines:
     - browsersRoot
+    - clearIdbBestEffort
     - findLocalChromium
+    - FRAMES_TIMEOUT
     - fullExeRels
     - localChromiumUse
+    - OVERLAY_READY_TIMEOUT
     - pinnedChromiumOrThrow
     - registryFacts
     - shellExeRels
+    - treeRootFound
+    - waitForAppReady
+    - waitForOverlayReady
+    - waitForRenderFrames
+    - WEB_READY_TIMEOUT
 tests:
   - frontend/e2e-web/menu-3d-session.spec.ts
   - frontend/e2e/menu-visual.spec.ts
@@ -32,15 +41,18 @@ pitfalls:
   - 假绿灯三重门
   - 单变量对照实验
   - readPixels 需自建 renderer
+  - 固定 sleep 等启动就绪（本地绿 CI 红）
 quick_groups:
   - 测试与验证
 quick_intents:
   - 想知道界面长什么样，用截图取证而非断言计数
   - 视觉异常说不清来源时，做单变量开关对照实验
   - 测试报绿但没验到东西时，查静默吞异常与条件跳过
+  - 本地 e2e 绿但 CI 恒红时，先查固定 sleep 与启动就绪
 quick_risk_lines:
   - 元素在 Shadow DOM 内，页面内 querySelector 查不到而截图里明明有
   - 断言写成 if (count() > 0) 或 .catch(() => {}) 会让未生效的流程报绿
+  - 用 waitForTimeout 等应用启动（而非轮询就绪条件）在本机恒绿、CI 慢启动必红
 invariant_anchors:
   - frontend/e2e/browser-path.ts|findLocalChromium
   - frontend/e2e-web/menu-3d-session.spec.ts|start3D
@@ -142,6 +154,7 @@ npx playwright test --config playwright.web.config.ts menu-3d-session
 - **硬断言优先**：`toBe(1)` > `toBeGreaterThan(0)` > `if (n > 0)`
 - **临时 spec 用完即删**，不留在 `e2e-web/`
 - **不改生产渲染参数**来迁就测试（`preserveDrawingBuffer` / `logarithmicDepthBuffer` 皆有代价）
+- **启动就绪必须靠轮询，禁固定 `waitForTimeout` 等正向结果**（2026-10-07 根因修，E2E-Web CI 恒红）：`e2e-web/` 多个 spec 曾用「`page.goto("/")` → `waitForTimeout(2000~2500)` → 立刻派发组件级 DnD / 起 3D」，那是**墙钟等待**，只对「本机冷启动 < 2s」成立；CI runner（ubuntu + SwiftShader 软渲染）启动链 + WASM 初始化远慢于此 ⇒ `tree-root` 还没建出来就动手，报 `app-tree tree-root 未就绪`；`menu-3d-session` 首个用例又缺 `test.slow()`，直接撞 20s 默认超时。判据见知识卡 `test-utils.md`「禁止用固定 sleep 等待正向结果——真 flaky」。**共享件 `e2e-web/web-ready.ts`**：`waitForAppReady`（轮询双层 shadow 下的 `tree-root`，**外加 800ms 无导航静默窗**）/ `waitForOverlayReady` / `waitForRenderFrames`（观察 rAF 帧计数增量而非等毫秒）/ `clearIdbBestEffort`。两个易错点：① **应用启动链自发一次同 URL 导航**，`tree-root` 可能在那次导航**之前**就存在——只等它会立刻返回、随后 `evaluate` 撞导航抛 `Execution context was destroyed`（旧 `networkidle+2s` 侥幸盖住了这个窗口）；② 探针容错**只吞**「导航销毁上下文」一类，其余 evaluate 错误必须原样抛，否则就绪等待会退化成「恒 false 直到超时」，把真故障伪装成慢启动（假绿前身）。
 
 ## 相关
 

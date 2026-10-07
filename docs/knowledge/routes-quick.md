@@ -565,10 +565,11 @@
 | 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 按 testid 查询/匹配 DOM 元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用固定 sleep 等待正向结果——真 flaky | - |
+| 本地 e2e 绿但 CI 恒红时，先查固定 sleep 与启动就绪 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | - | - |
 | 布局断言收敛三分法 | [菜单测试断言三分法](./menu-test-assertion.md) | helper 必须在 node/jsdom 双环境可 import（menu-test-helpers 零上层依赖叶） | - |
 | 菜单测试怎么写才长久 | [菜单测试断言三分法](./menu-test-assertion.md) | 门禁只减不增：新增布局断言即红，触碰即收敛 | - |
 | 菜单测试债务门禁 check-menu-test-layout | [菜单测试断言三分法](./menu-test-assertion.md) | - | - |
-| 测试报绿但没验到东西时，查静默吞异常与条件跳过 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | - | - |
+| 测试报绿但没验到东西时，查静默吞异常与条件跳过 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | 用 waitForTimeout 等应用启动（而非轮询就绪条件）在本机恒绿、CI 慢启动必红 | - |
 | 测试窗口、固定时钟、确定性等待 helper | [测试辅助函数 go/internal/testutil](./go-testutil.md) | - | - |
 | 测试辅助函数、go/internal/testutil 包在哪 | [测试辅助函数 go/internal/testutil](./go-testutil.md) | 测试 helper 必须走 go/internal/testutil 跨包复用，禁止各包各自实现同名 helper | - |
 | 创建测试文件、构造内存 ZIP、跨包复用测试 helper | [测试辅助函数 go/internal/testutil](./go-testutil.md) | - | - |
@@ -735,6 +736,7 @@
 | 假绿灯三重门 | - | - |
 | 单变量对照实验 | - | - |
 | readPixels 需自建 renderer | - | - |
+| 固定 sleep 等启动就绪（本地绿 CI 红） | - | - |
 | once off 错对象 | `bus.off(event, 原fn)` | 用 once 返回的 unsub 函数取消 |
 | Windows 下 pnpm/npm 是 .cmd 垫片——execFileSync 直调 ENOENT，必须 shell:true（本卡 run() 已封装） | - | - |
 | npm ci 真跑会清 node_modules——本地预演必须 --dry-run | - | - |
